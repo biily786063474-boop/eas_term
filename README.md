@@ -46,6 +46,22 @@ npm run dist               # 打包分发：DMG + ZIP 输出到 ~/Eas-Term-relea
 - 项目位于外置卷（`/Volumes/biily`，非 APFS）：electron-builder 的 asar 在该卷上会损坏，因此 `dist` 脚本把输出目录定向到 `$HOME/Eas-Term-release` 并带 `COPYFILE_DISABLE=1` 排除 AppleDouble（`._*`）文件——不要把输出目录改回项目内。
 - 运行时依赖只有 `node-pty`（原生模块，已 `asarUnpack`）；React/xterm/CodeMirror 等都在 devDependencies，由 Vite 打进 `out/`，不进安装包。
 
+## 跨平台与 Windows 构建
+
+代码**运行时按 `process.platform` 自适应**，一份代码同时支持 macOS / Windows，换平台构建无需改代码。平台差异点：
+
+- 快捷键：mac 用 ⌘、Windows/Linux 用 Ctrl（preload 暴露 `platform`）
+- PTY：mac/Linux 启动登录 shell（`-l`），Windows 用 PowerShell（不传 `-l`）
+- 运行中检测：unix 用 `ps`，Windows 用 PowerShell `Get-CimInstance`
+- 窗口：mac 用 vibrancy + 隐藏式标题栏，Windows 用系统标题栏 + 不透明深色底
+- 字体：等宽字体回退表包含 SF Mono（mac）与 Cascadia Code / Consolas（Windows）
+
+**node-pty 是原生模块，不能在 Mac 上交叉编译 Windows 版**——必须在 Windows 环境编译。仓库已配 GitHub Actions（`.github/workflows/build.yml`）：
+
+- 触发：打 `v*` tag 或在 Actions 页手动 Run workflow
+- 在 macOS 和 Windows runner 上各自 `npm install`（编译对应平台 node-pty）+ `npm run dist:ci`
+- 产物：mac 的 `.dmg`/`.zip` 与 Windows 的 `.exe`（NSIS 安装包），上传为 Artifacts；打 tag 时还会发布到 GitHub Release
+
 ## 功能
 
 | 功能 | 操作 |
