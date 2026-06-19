@@ -9,7 +9,8 @@ import type {
   BizoneProject,
   BizoneMedia,
   InsertResult,
-  OpResult
+  OpResult,
+  PathProbe
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -42,7 +43,9 @@ const api = {
     showInFolder: (target: string): Promise<void> => ipcRenderer.invoke('fs:showInFolder', target),
     rename: (oldPath: string, newName: string): Promise<OpResult> =>
       ipcRenderer.invoke('fs:rename', oldPath, newName),
-    trash: (target: string): Promise<OpResult> => ipcRenderer.invoke('fs:trash', target)
+    trash: (target: string): Promise<OpResult> => ipcRenderer.invoke('fs:trash', target),
+    probePaths: (inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> =>
+      ipcRenderer.invoke('fs:probePaths', inputs, baseCwd)
   },
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text)
@@ -81,6 +84,7 @@ const api = {
       ipcRenderer.send('pty:kill', id)
     },
     busyByIds: (ids: string[]): Promise<string[]> => ipcRenderer.invoke('pty:busyByIds', ids),
+    cwd: (id: string): Promise<string | null> => ipcRenderer.invoke('pty:cwd', id),
     onData: (id: string, cb: (data: string) => void): (() => void) => {
       const channel = `pty:data:${id}`
       const pending = pendingBuffers.get(id)

@@ -50,6 +50,46 @@ function shellsWithChildren(shellPids: number[]): Promise<Set<number>> {
   })
 }
 
+// 取某个 shell 进程的当前工作目录（供终端相对路径链接解析用）。
+// 用户 cd 后 shell 进程的 cwd 随之变化，因此能反映"终端现在在哪"。
+// linux 读 /proc；mac 用 lsof（绝对路径 /usr/sbin/lsof，打包应用 PATH 受限）；
+// Windows 无简单等价手段，返回 null，由渲染层回退到终端启动目录。
+function cwdOfPid(pid: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      resolve(null)
+      return
+    }
+    if (process.platform === 'linux') {
+      try {
+        resolve(fs.readlinkSync(`/proc/${pid}/cwd`))
+      } catch {
+        resolve(null)
+      }
+      return
+    }
+    execFile(
+      '/usr/sbin/lsof',
+      ['-a', '-d', 'cwd', '-p', String(pid), '-Fn'],
+      { timeout: 2000 },
+      (err, stdout) => {
+        if (err) {
+          resolve(null)
+          return
+        }
+        for (const line of stdout.split('\n')) {
+          // -Fn 输出里 cwd 的路径行以 'n' 开头，后接绝对路径
+          if (line.startsWith('n') && line[1] === '/') {
+            resolve(line.slice(1))
+            return
+          }
+        }
+        resolve(null)
+      }
+    )
+  })
+}
+
 /** 是否有任意终端正在运行命令（供退出确认用） */
 export async function anyPtyBusy(): Promise<boolean> {
   const pids: number[] = []
@@ -113,6 +153,13 @@ export function registerPtyHandlers(): void {
         // 已退出
       }
     }
+  })
+
+  // 终端当前工作目录（供相对路径链接解析），取不到返回 null
+  ipcMain.handle('pty:cwd', (_e, id: string): Promise<string | null> => {
+    const pid = ptys.get(id)?.pty.pid
+    if (typeof pid !== 'number') return Promise.resolve(null)
+    return cwdOfPid(pid)
   })
 
   // 给定一组 pty id，返回其中正在运行命令的那些

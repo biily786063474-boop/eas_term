@@ -1,8 +1,10 @@
 import { clipboard, ipcMain, shell } from 'electron'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
-import type { DirEntry, TextFileResult, ImageFileResult, OpResult } from '../shared/types'
+import { fileURLToPath } from 'url'
+import type { DirEntry, TextFileResult, ImageFileResult, OpResult, PathProbe } from '../shared/types'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
 // 改用 `open -R` 既能定位文件又能激活 Finder；失败再回退到原 API。
@@ -154,4 +156,31 @@ export function registerFsHandlers(): void {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
     return Promise.resolve()
   })
+
+  // 终端链接解析：把候选路径（绝对 / ~ / file:// / 相对 baseCwd）解析为绝对路径，
+  // 仅返回真实存在者，null 表示该候选不是文件/目录（不渲染为链接）。
+  ipcMain.handle(
+    'fs:probePaths',
+    (_e, inputs: string[], baseCwd: string): (PathProbe | null)[] => {
+      const base = baseCwd && path.isAbsolute(baseCwd) ? baseCwd : os.homedir()
+      return inputs.map((input) => {
+        try {
+          let p = String(input).trim()
+          if (!p) return null
+          if (p.startsWith('file://')) {
+            p = fileURLToPath(p)
+          } else {
+            // 去掉编译器/grep 常见的 :行 或 :行:列 后缀
+            p = p.replace(/:(\d+)(:\d+)?$/, '')
+            if (p === '~' || p.startsWith('~/')) p = path.join(os.homedir(), p.slice(1))
+            if (!path.isAbsolute(p)) p = path.resolve(base, p)
+          }
+          const st = fs.statSync(p)
+          return { absPath: p, isDir: st.isDirectory() }
+        } catch {
+          return null
+        }
+      })
+    }
+  )
 }

@@ -70,3 +70,10 @@ export interface OpResult {
   path?: string
   error?: string
 }
+
+// 终端链接：把终端输出里的候选路径解析成绝对路径并确认其存在。
+// null 表示该候选不是真实存在的文件/目录（不应渲染为可点击链接）。
+export interface PathProbe {
+  absPath: string
+  isDir: boolean
+}
