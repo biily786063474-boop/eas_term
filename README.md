@@ -58,7 +58,7 @@ npm run dist               # 打包分发：DMG + ZIP 输出到 ~/Eas-Term-relea
 
 **node-pty 是原生模块，不能在 Mac 上交叉编译 Windows 版**——必须在 Windows 环境编译。仓库已配 GitHub Actions（`.github/workflows/build.yml`）：
 
-- 触发：打 `v*` tag 或在 Actions 页手动 Run workflow
+- 触发：push 到 `main` 自动构建；打 `v*` tag 额外发布到 Release；也可在 Actions 页手动 Run workflow
 - 在 macOS 和 Windows runner 上各自 `npm install`（编译对应平台 node-pty）+ `npm run dist:ci`
 - 产物：mac 的 `.dmg`/`.zip` 与 Windows 的 `.exe`（NSIS 安装包），上传为 Artifacts；打 tag 时还会发布到 GitHub Release
 
