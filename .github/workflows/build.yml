@@ -1,0 +1,58 @@
+name: Build
+
+# 打 tag（v1.0.0 之类）或在 Actions 页手动触发时，分别在 macOS 和 Windows runner 上
+# 各自编译原生模块 node-pty 并产出安装包。一份代码，两端自动构建。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: mac
+          - os: windows-latest
+            artifact: win
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # npm install 会触发 postinstall（electron-rebuild），在当前系统上编译 node-pty
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build & package
+        run: npm run dist:ci
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-term-${{ matrix.artifact }}
+          path: |
+            release/*.dmg
+            release/*.exe
+            release/*.zip
+          if-no-files-found: ignore
+
+      # 打 tag 时把安装包发布到 GitHub Release，方便直接下载
+      - name: Publish to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.dmg
+            release/*.exe
+            release/*.zip
+          fail_on_unmatched_files: false
