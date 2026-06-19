@@ -15,7 +15,9 @@ permissions:
 
 jobs:
   build-win:
-    runs-on: windows-latest
+    # 固定 windows-2022（VS 2022 / v17）：windows-latest 已升级到 VS 2026 (v18)，
+    # 当前 Electron 配套的 node-gyp 还识别不了，会导致 node-pty 编译失败
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
