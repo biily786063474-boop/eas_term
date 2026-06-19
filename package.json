@@ -45,7 +45,17 @@
       "darkModeSupport": true
     },
     "dmg": {
-      "title": "Eas-Term ${version}"
+      "title": "Eas-Term ${version}",
+      "background": "build/dmg-bg.png",
+      "iconSize": 120,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        { "x": 150, "y": 222, "type": "file" },
+        { "x": 390, "y": 222, "type": "link", "path": "/Applications" }
+      ]
     },
     "win": {
       "target": [

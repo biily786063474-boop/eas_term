@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0.12" y1="0.04" x2="0.9" y2="0.98">
+      <stop offset="0" stop-color="#5BB4FF"/>
+      <stop offset="0.5" stop-color="#3A6BFF"/>
+      <stop offset="1" stop-color="#1E2AD2"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="24" stdDeviation="32" flood-color="#0b1230" flood-opacity="0.40"/>
+    </filter>
+    <filter id="symbolShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="7" stdDeviation="12" flood-color="#0a1a55" flood-opacity="0.38"/>
+    </filter>
+    <clipPath id="sq"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+
+  <!-- 圆角方形主体 + 投影 -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  </g>
+
+  <!-- 玻璃高光（裁切到圆角内） -->
+  <g clip-path="url(#sq)">
+    <rect x="100" y="100" width="824" height="470" fill="url(#gloss)"/>
+    <ellipse cx="330" cy="250" rx="380" ry="240" fill="#ffffff" opacity="0.10"/>
+  </g>
+  <!-- 顶部内描边高光 -->
+  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="2.5"/>
+
+  <!-- 终端提示符 >_ （圆端点，呼应应用图标语言） -->
+  <g filter="url(#symbolShadow)" fill="none" stroke="#ffffff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M370 404 L498 512 L370 620"/>
+    <line x1="544" y1="620" x2="654" y2="620"/>
+  </g>
+</svg>
