@@ -152,6 +152,8 @@ export function registerFsHandlers(): void {
     clipboard.writeText(text)
   })
 
+  ipcMain.handle('clipboard:readText', () => clipboard.readText())
+
   ipcMain.handle('shell:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
     return Promise.resolve()

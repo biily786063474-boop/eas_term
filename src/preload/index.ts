@@ -48,7 +48,8 @@ const api = {
       ipcRenderer.invoke('fs:probePaths', inputs, baseCwd)
   },
   clipboard: {
-    writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text)
+    writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),
+    readText: (): Promise<string> => ipcRenderer.invoke('clipboard:readText')
   },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url)

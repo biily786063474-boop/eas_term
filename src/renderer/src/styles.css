@@ -368,6 +368,16 @@ body {
   color: #0d0f16;
 }
 
+.context-menu button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.context-menu button:disabled:hover {
+  background: none;
+  color: var(--fg);
+}
+
 .glass-menu-item.selected {
   background: var(--accent);
   color: #0d0f16;

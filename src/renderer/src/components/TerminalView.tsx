@@ -66,10 +66,13 @@ interface HoveredPath {
   absPath: string
   isDir: boolean
 }
-interface PathMenu {
+interface TermMenu {
   x: number
   y: number
-  target: HoveredPath
+  // 右键时鼠标恰好悬停命中的文件/目录路径（没命中则 null，仍弹通用文本菜单）
+  target: HoveredPath | null
+  // 右键时终端里是否有选中的文字（决定「复制」是否可用）
+  hasSelection: boolean
 }
 
 // 路径相对当前活动项目根的展示（复制相对路径用）；不在项目内则原样返回
@@ -106,7 +109,21 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
   const termRef = useRef<Terminal | null>(null)
   // 鼠标当前悬停命中的路径（link provider 的 hover/leave 维护），右键时读取
   const hoveredRef = useRef<HoveredPath | null>(null)
-  const [menu, setMenu] = useState<PathMenu | null>(null)
+  const [menu, setMenu] = useState<TermMenu | null>(null)
+
+  // 选区/剪贴板操作（菜单与快捷键共用，统一走 termRef.current）
+  const copySelection = (clearAfter: boolean): void => {
+    const term = termRef.current
+    if (!term) return
+    const sel = term.getSelection()
+    if (sel) void window.api.clipboard.writeText(sel)
+    // 快捷键复制后清除选区，让随后的 Ctrl+C 能正常发中断信号；右键复制则保留选区
+    if (clearAfter) term.clearSelection()
+  }
+  const pasteToTerm = async (): Promise<void> => {
+    const text = await window.api.clipboard.readText()
+    if (text) window.api.pty.write(ptyId, text)
+  }
 
   // 右键菜单关闭：点击别处 / Esc
   useEffect(() => {
@@ -139,6 +156,31 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       allowTransparency: true
     })
     termRef.current = term
+
+    // 选择文字复制 / 粘贴 / 全选：返回 false 表示该按键由我们处理、不再发给 PTY。
+    // 关键取舍：终端里 Ctrl+C 本是「中断信号」，所以只有「有选区」时才拦截为复制，
+    // 没选区时放行让它正常发 SIGINT。全选 / 粘贴只拦 mac 的 ⌘ 组合，避免劫持
+    // 其他平台 readline 的 Ctrl+A（行首）/ Ctrl+V（literal-next）。
+    const isMac = window.api.platform === 'darwin'
+    term.attachCustomKeyEventHandler((e): boolean => {
+      if (e.type !== 'keydown') return true
+      const mod = isMac ? e.metaKey : e.ctrlKey
+      const k = e.key.toLowerCase()
+      if (mod && k === 'c' && term.hasSelection()) {
+        copySelection(true)
+        return false
+      }
+      if (isMac && e.metaKey && k === 'a') {
+        term.selectAll()
+        return false
+      }
+      if (isMac && e.metaKey && k === 'v') {
+        void pasteToTerm()
+        return false
+      }
+      return true
+    })
+
     const fit = new FitAddon()
     term.loadAddon(fit)
     // 仅在按住 ⌘（mac）/ Ctrl（其他平台）时点击才打开网址，避免误触
@@ -239,13 +281,17 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     const onFocus = (): void => useStore.getState().setActiveLeaf(tabId, leafId)
     el.addEventListener('focusin', onFocus)
 
-    // 右键命中路径（鼠标正悬停在被识别的链接上）→ 弹路径菜单；否则不拦截
+    // 右键弹菜单：命中路径时附带「在此打开/cd/复制路径」等项，并始终带上
+    // 复制选区 / 粘贴 / 全选 / 清屏 等通用文本操作。
     const onContextMenu = (e: MouseEvent): void => {
-      const target = hoveredRef.current
-      if (!target) return
       e.preventDefault()
       e.stopPropagation()
-      setMenu({ x: e.clientX, y: e.clientY, target })
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
+        target: hoveredRef.current,
+        hasSelection: term.hasSelection()
+      })
     }
     el.addEventListener('contextmenu', onContextMenu)
 
@@ -285,8 +331,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     setMenu(null)
   }
 
-  // 存进局部 const，保证下面回调闭包里对 m.target 的类型收窄稳定
+  // 存进局部 const，保证下面回调闭包里对 target 的类型收窄稳定
   const m = menu
+  const target = m?.target ?? null
 
   return (
     <div ref={containerRef} className="terminal-host">
@@ -297,52 +344,64 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
             style={{ left: m.x, top: m.y }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            {m.target.isDir ? (
+            {target && (
               <>
+                {target.isDir ? (
+                  <>
+                    <button
+                      onClick={run(() =>
+                        void useStore
+                          .getState()
+                          .openTerminal({ projectId: useStore.getState().activeProjectId, cwd: target.absPath })
+                      )}
+                    >
+                      在此打开新终端
+                    </button>
+                    <button onClick={run(() => cdInTerminal(ptyId, target.absPath))}>
+                      cd 进此目录
+                    </button>
+                    <button onClick={run(() => void window.api.fs.showInFolder(target.absPath))}>
+                      在访达中显示
+                    </button>
+                    <button onClick={run(() => void window.api.fs.openPath(target.absPath))}>
+                      用访达打开
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={run(() => void useStore.getState().openFile(target.absPath))}>
+                      在面板中预览
+                    </button>
+                    <button onClick={run(() => void window.api.fs.openPath(target.absPath))}>
+                      用默认应用打开
+                    </button>
+                    <button onClick={run(() => void window.api.fs.showInFolder(target.absPath))}>
+                      在访达中显示
+                    </button>
+                    <button onClick={run(() => cdInTerminal(ptyId, dirnameOf(target.absPath)))}>
+                      cd 到所在文件夹
+                    </button>
+                  </>
+                )}
+                <div className="menu-sep" />
+                <button onClick={run(() => void window.api.clipboard.writeText(target.absPath))}>
+                  复制路径
+                </button>
                 <button
-                  onClick={run(() =>
-                    void useStore
-                      .getState()
-                      .openTerminal({ projectId: useStore.getState().activeProjectId, cwd: m.target.absPath })
-                  )}
+                  onClick={run(() => void window.api.clipboard.writeText(relativeToProject(target.absPath)))}
                 >
-                  在此打开新终端
+                  复制相对路径
                 </button>
-                <button onClick={run(() => cdInTerminal(ptyId, m.target.absPath))}>
-                  cd 进此目录
-                </button>
-                <button onClick={run(() => void window.api.fs.showInFolder(m.target.absPath))}>
-                  在访达中显示
-                </button>
-                <button onClick={run(() => void window.api.fs.openPath(m.target.absPath))}>
-                  用访达打开
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={run(() => void useStore.getState().openFile(m.target.absPath))}>
-                  在面板中预览
-                </button>
-                <button onClick={run(() => void window.api.fs.openPath(m.target.absPath))}>
-                  用默认应用打开
-                </button>
-                <button onClick={run(() => void window.api.fs.showInFolder(m.target.absPath))}>
-                  在访达中显示
-                </button>
-                <button onClick={run(() => cdInTerminal(ptyId, dirnameOf(m.target.absPath)))}>
-                  cd 到所在文件夹
-                </button>
+                <div className="menu-sep" />
               </>
             )}
+            <button disabled={!m.hasSelection} onClick={run(() => copySelection(false))}>
+              复制
+            </button>
+            <button onClick={run(() => void pasteToTerm())}>粘贴</button>
+            <button onClick={run(() => termRef.current?.selectAll())}>全选</button>
             <div className="menu-sep" />
-            <button onClick={run(() => void window.api.clipboard.writeText(m.target.absPath))}>
-              复制路径
-            </button>
-            <button
-              onClick={run(() => void window.api.clipboard.writeText(relativeToProject(m.target.absPath)))}
-            >
-              复制相对路径
-            </button>
+            <button onClick={run(() => termRef.current?.clear())}>清屏</button>
           </div>,
           document.body
         )}
