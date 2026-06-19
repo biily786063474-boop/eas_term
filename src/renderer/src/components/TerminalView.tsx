@@ -29,7 +29,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       lineHeight: 1.25,
       cursorBlink: true,
       macOptionIsMeta: true,
-      scrollback: 10000,
+      scrollback: 100000,
       allowProposedApi: true,
       allowTransparency: true
     })
