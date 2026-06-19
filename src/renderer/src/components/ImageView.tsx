@@ -234,6 +234,13 @@ function BizoneHistory(): JSX.Element {
       return
     }
     const result = await window.api.bizone.insertToVAssets(item.mediaId, activeProject.path)
+    if (result.ok) {
+      // 通知文件树刷新：根目录（让新建的 V-assets 文件夹显示）+ V-assets 自身（若已展开则更新内容）
+      window.dispatchEvent(new CustomEvent('fs-dir-changed', { detail: activeProject.path }))
+      window.dispatchEvent(
+        new CustomEvent('fs-dir-changed', { detail: `${activeProject.path}/V-assets` })
+      )
+    }
     showNotice(
       result.ok ? `已插入 ${activeProject.name}/${result.relPath}` : `插入失败：${result.error}`
     )
