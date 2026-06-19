@@ -56,11 +56,12 @@ npm run dist               # 打包分发：DMG + ZIP 输出到 ~/Eas-Term-relea
 - 窗口：mac 用 vibrancy + 隐藏式标题栏，Windows 用系统标题栏 + 不透明深色底
 - 字体：等宽字体回退表包含 SF Mono（mac）与 Cascadia Code / Consolas（Windows）
 
-**node-pty 是原生模块，不能在 Mac 上交叉编译 Windows 版**——必须在 Windows 环境编译。仓库已配 GitHub Actions（`.github/workflows/build.yml`）：
+**node-pty 是原生模块，不能在 Mac 上交叉编译 Windows 版**——必须在 Windows 环境编译。分工：
 
-- 触发：push 到 `main` 自动构建；打 `v*` tag 额外发布到 Release；也可在 Actions 页手动 Run workflow
-- 在 macOS 和 Windows runner 上各自 `npm install`（编译对应平台 node-pty）+ `npm run dist:ci`
-- 产物：mac 的 `.dmg`/`.zip` 与 Windows 的 `.exe`（NSIS 安装包），上传为 Artifacts；打 tag 时还会发布到 GitHub Release
+- **macOS 版**：本地 `npm run dist`（见上方「分发」），不占 GitHub 的 macOS runner 额度
+- **Windows 版**：GitHub Actions（`.github/workflows/build.yml`）在 windows runner 上 `npm install`（编译 Windows 版 node-pty）+ `npm run dist:ci`
+  - 触发：push 到 `main` 自动构建；打 `v*` tag 额外发布到 Release；也可在 Actions 页手动 Run workflow
+  - 产物：`.exe`（NSIS 安装包），上传为 Artifact `eas-term-win`；打 tag 时还会发布到 GitHub Release
 
 ## 功能
 

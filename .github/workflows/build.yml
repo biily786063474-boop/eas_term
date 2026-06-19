@@ -1,7 +1,7 @@
-name: Build
+name: Build Windows
 
-# 打 tag（v1.0.0 之类）或在 Actions 页手动触发时，分别在 macOS 和 Windows runner 上
-# 各自编译原生模块 node-pty 并产出安装包。一份代码，两端自动构建。
+# Windows 版在云端构建（node-pty 原生模块需在 Windows 上编译）。
+# macOS 版在本地用 `npm run dist` 构建，不占用 GitHub 的 macOS runner 额度。
 on:
   push:
     branches:
@@ -14,16 +14,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            artifact: mac
-          - os: windows-latest
-            artifact: win
-    runs-on: ${{ matrix.os }}
+  build-win:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -31,30 +23,24 @@ jobs:
         with:
           node-version: 20
 
-      # npm install 会触发 postinstall（electron-rebuild），在当前系统上编译 node-pty
+      # npm install 会触发 postinstall（electron-rebuild），在 Windows 上编译 node-pty
       - name: Install dependencies
         run: npm install
 
       - name: Build & package
         run: npm run dist:ci
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: eas-term-${{ matrix.artifact }}
-          path: |
-            release/*.dmg
-            release/*.exe
-            release/*.zip
-          if-no-files-found: ignore
+          name: eas-term-win
+          path: release/*.exe
+          if-no-files-found: error
 
       # 打 tag 时把安装包发布到 GitHub Release，方便直接下载
       - name: Publish to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            release/*.dmg
-            release/*.exe
-            release/*.zip
+          files: release/*.exe
           fail_on_unmatched_files: false
