@@ -663,6 +663,16 @@ body {
   height: 100%;
 }
 
+/* 终端与代码预览要能选中文字复制——覆盖全局 body 的 user-select: none，
+   否则鼠标松手时浏览器会立刻清掉选区（高亮一闪就没）。 */
+.terminal-host,
+.terminal-host *,
+.code-view,
+.code-view * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 /* ---------- 代码预览 ---------- */
 .code-view {
   position: absolute;

@@ -207,6 +207,12 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     }
     const linkProvider = term.registerLinkProvider({
       provideLinks(y, callback) {
+        // 有选区时不提供链接：链接装饰的（异步）渲染会刷新终端行，把刚选好的
+        // 文字冲掉，表现为"松手即丢选区"。等用户取消选区后再 hover 即可恢复链接。
+        if (term.hasSelection()) {
+          callback(undefined)
+          return
+        }
         const text = term.buffer.active.getLine(y - 1)?.translateToString(true) ?? ''
         const cands = extractPathCandidates(text)
         if (!cands.length) {
@@ -222,6 +228,11 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
               cwd
             )
           } catch {
+            callback(undefined)
+            return
+          }
+          // 异步查询期间用户可能已经选好文字——再次确认，避免渲染链接冲掉选区
+          if (term.hasSelection()) {
             callback(undefined)
             return
           }
