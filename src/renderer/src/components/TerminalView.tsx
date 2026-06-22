@@ -58,6 +58,27 @@ function extractPathCandidates(line: string): { raw: string; start: number; end:
     if (!pathish) continue
     out.push({ raw: tok, start, end })
   }
+
+  // 带空格的路径（如 ".../vibe coding/terminal"）会被上面按空白分词拆断；
+  // 这里再补一个候选：从行内第一个路径起始符一直取到行尾（去掉尾部空白与标点）。
+  // 是否真的存在仍由主进程 statSync 把关，所以放宽点无妨。
+  const startRe = /(?:~\/|\.{1,2}\/|\/|[A-Za-z]:\\)/
+  const sm = startRe.exec(line)
+  if (sm) {
+    const start = sm.index
+    let seg = line.slice(start).replace(/\s+$/, '')
+    const tail = seg.match(TAIL_TRIM)
+    if (tail) seg = seg.slice(0, seg.length - tail[0].length)
+    const end = start + seg.length
+    if (
+      seg.length > 1 &&
+      (seg.includes('/') || seg.includes('\\')) &&
+      !out.some((c) => c.start === start && c.end === end)
+    ) {
+      out.push({ raw: seg, start, end })
+    }
+  }
+
   return out
 }
 
@@ -237,9 +258,17 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
             return
           }
           const links: ILink[] = []
-          cands.forEach((c, i) => {
+          const used: { start: number; end: number }[] = []
+          // 优先更长的候选（带空格的完整路径），并跳过与已选区间重叠者，避免重复下划线
+          const order = Array.from(cands.keys()).sort(
+            (a, b) => cands[b].end - cands[b].start - (cands[a].end - cands[a].start)
+          )
+          for (const i of order) {
             const r = probed[i]
-            if (!r) return
+            if (!r) continue
+            const c = cands[i]
+            if (used.some((u) => c.start < u.end && c.end > u.start)) continue
+            used.push({ start: c.start, end: c.end })
             const target: HoveredPath = { absPath: r.absPath, isDir: r.isDir }
             links.push({
               text: c.raw,
@@ -255,7 +284,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
                 if (hoveredRef.current === target) hoveredRef.current = null
               }
             })
-          })
+          }
           callback(links.length ? links : undefined)
         })()
       }
