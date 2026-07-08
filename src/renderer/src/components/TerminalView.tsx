@@ -143,7 +143,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
   }
   const pasteToTerm = async (): Promise<void> => {
     const text = await window.api.clipboard.readText()
-    if (text) window.api.pty.write(ptyId, text)
+    // 走 xterm 的 paste 管线（换行规范化 + bracketed paste），由 onData 统一写入 PTY
+    if (text) termRef.current?.paste(text)
   }
 
   // 右键菜单关闭：点击别处 / Esc
@@ -188,14 +189,20 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       const mod = isMac ? e.metaKey : e.ctrlKey
       const k = e.key.toLowerCase()
       if (mod && k === 'c' && term.hasSelection()) {
+        // preventDefault 阻断系统菜单的 copy role，避免它在选区被清后再动一次剪贴板
+        e.preventDefault()
         copySelection(true)
         return false
       }
       if (isMac && e.metaKey && k === 'a') {
+        e.preventDefault()
         term.selectAll()
         return false
       }
       if (isMac && e.metaKey && k === 'v') {
+        // 必须 preventDefault：返回 false 只是让 xterm 不处理按键，事件仍会触发
+        // 菜单 paste role → 原生 paste 事件 → xterm 内置粘贴，导致粘贴两次
+        e.preventDefault()
         void pasteToTerm()
         return false
       }
