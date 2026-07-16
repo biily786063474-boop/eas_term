@@ -109,6 +109,8 @@ interface AppState {
   activeTabId: string | null
   /** 每个项目上次激活的标签，切换项目时据此恢复 */
   activeTabByProject: Record<string, string | null>
+  /** 最近聚焦过的终端（供名词词典等非终端面板把文本插入光标处；打开词典后 activeLeaf 是词典自己，故单独记） */
+  lastActiveTerminal: { tabId: string; ptyId: string } | null
   /** 危险操作确认弹窗（终端运行中关闭/退出时触发） */
   pendingConfirm: PendingConfirm | null
   requestConfirm: (c: PendingConfirm) => void
@@ -147,6 +149,7 @@ export const useStore = create<AppState>((set, get) => ({
   tabs: [],
   activeTabId: null,
   activeTabByProject: {},
+  lastActiveTerminal: null,
   pendingConfirm: null,
   theme: loadTheme(),
 
@@ -445,6 +448,8 @@ export const useStore = create<AppState>((set, get) => ({
     if (kind === 'terminal') {
       const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
       pane = { kind: 'terminal', ptyId }
+    } else if (kind === 'dict') {
+      pane = { kind: 'dict' }
     } else {
       pane = { kind, filePath: null }
     }

@@ -5,10 +5,12 @@ import type { LeafNode, PaneKind, Rect } from '../layout'
 import { TerminalView } from './TerminalView'
 import { CodeView } from './CodeView'
 import { ImageView } from './ImageView'
+import { DictView } from './DictView'
 import {
   TerminalIcon,
   CodeIcon,
   ImageIcon,
+  DictIcon,
   ChevronDownIcon,
   CloseIcon,
   SplitHIcon,
@@ -21,7 +23,8 @@ const PANE_GAP = 3
 const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }[] = [
   { kind: 'terminal', label: '终端', Icon: TerminalIcon },
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
-  { kind: 'image', label: '图片预览', Icon: ImageIcon }
+  { kind: 'image', label: '图片预览', Icon: ImageIcon },
+  { kind: 'dict', label: '名词词典', Icon: DictIcon }
 ]
 
 function PaneKindSelect({
@@ -104,8 +107,8 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
 
   const pane = leaf.pane
-  const fileName =
-    pane.kind !== 'terminal' && pane.filePath ? pane.filePath.split('/').pop() : null
+  const hasFile = pane.kind === 'code' || pane.kind === 'image'
+  const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 
   return (
     <div
@@ -124,7 +127,7 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
           onChange={(k) => void setPaneKind(tabId, leaf.id, k)}
         />
         {fileName && (
-          <span className="pane-file" title={pane.kind !== 'terminal' ? (pane.filePath ?? '') : ''}>
+          <span className="pane-file" title={hasFile ? (pane.filePath ?? '') : ''}>
             {fileName}
           </span>
         )}
@@ -163,6 +166,7 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
         )}
         {pane.kind === 'code' && <CodeView filePath={pane.filePath} />}
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
+        {pane.kind === 'dict' && <DictView />}
       </div>
     </div>
   )

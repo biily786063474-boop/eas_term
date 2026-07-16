@@ -324,8 +324,12 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
     const titleDisp = term.onTitleChange((title) => store.setTabTitle(tabId, title))
 
-    // 点击/聚焦该终端时标记为活动面板
-    const onFocus = (): void => useStore.getState().setActiveLeaf(tabId, leafId)
+    // 点击/聚焦该终端时标记为活动面板，并记住它是「最近活动终端」
+    // （供名词词典等面板把文本插入到这个终端的光标处——那时 activeLeaf 已是词典自己）
+    const onFocus = (): void => {
+      useStore.getState().setActiveLeaf(tabId, leafId)
+      useStore.setState({ lastActiveTerminal: { tabId, ptyId } })
+    }
     el.addEventListener('focusin', onFocus)
 
     // 右键弹菜单：命中路径时附带「在此打开/cd/复制路径」等项，并始终带上

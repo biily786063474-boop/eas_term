@@ -159,3 +159,9 @@ export const CopyIcon = (p: IconProps): JSX.Element => (
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </Svg>
 )
+
+export const DictIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M12 6.5A2.5 2.5 0 0 0 9.5 4H3v14h6a2 2 0 0 1 2 2M12 6.5A2.5 2.5 0 0 1 14.5 4H21v14h-6a2 2 0 0 0-2 2M12 6.5V21" />
+  </Svg>
+)

@@ -2,13 +2,15 @@
 // 所有终端叶子以绝对定位渲染在同一容器里，分屏/调整比例只改坐标，
 // 不改变 React 元素层级，从而保证 xterm 实例永不重挂载、滚动缓冲不丢失。
 
-// Blender 式编辑器区域：每个叶子是一个"面板"，可通过下拉框切换功能类型
-export type PaneKind = 'terminal' | 'code' | 'image'
+// Blender 式编辑器区域：每个叶子是一个"面板"，可通过下拉框切换功能类型。
+// 'dict'(专业名词词典) 从面板下拉框打开：查词条 → 点击把实现逻辑插入活动终端光标处。
+export type PaneKind = 'terminal' | 'code' | 'image' | 'dict'
 
 export type PaneState =
   | { kind: 'terminal'; ptyId: string }
   | { kind: 'code'; filePath: string | null }
   | { kind: 'image'; filePath: string | null }
+  | { kind: 'dict' }
 
 export interface LeafNode {
   type: 'leaf'
