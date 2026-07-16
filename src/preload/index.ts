@@ -10,7 +10,14 @@ import type {
   BizoneMedia,
   InsertResult,
   OpResult,
-  PathProbe
+  PathProbe,
+  GitStatus,
+  GitDiffResult,
+  GitCommit,
+  GitCommitFile,
+  AiResult,
+  SessionIndex,
+  SessionExchange
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -47,9 +54,36 @@ const api = {
     probePaths: (inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> =>
       ipcRenderer.invoke('fs:probePaths', inputs, baseCwd)
   },
+  git: {
+    status: (cwd: string): Promise<GitStatus> => ipcRenderer.invoke('git:status', cwd),
+    diff: (cwd: string, relPath: string, mode: 'worktree' | 'staged'): Promise<GitDiffResult> =>
+      ipcRenderer.invoke('git:diff', cwd, relPath, mode),
+    stage: (cwd: string, paths: string[]): Promise<OpResult> =>
+      ipcRenderer.invoke('git:stage', cwd, paths),
+    unstage: (cwd: string, paths: string[]): Promise<OpResult> =>
+      ipcRenderer.invoke('git:unstage', cwd, paths),
+    discard: (cwd: string, paths: string[], untracked: boolean): Promise<OpResult> =>
+      ipcRenderer.invoke('git:discard', cwd, paths, untracked),
+    commit: (cwd: string, message: string): Promise<OpResult> =>
+      ipcRenderer.invoke('git:commit', cwd, message),
+    log: (cwd: string, limit: number): Promise<GitCommit[]> =>
+      ipcRenderer.invoke('git:log', cwd, limit),
+    commitFiles: (cwd: string, hash: string): Promise<GitCommitFile[]> =>
+      ipcRenderer.invoke('git:commitFiles', cwd, hash),
+    commitDiff: (cwd: string, hash: string, relPath: string): Promise<GitDiffResult> =>
+      ipcRenderer.invoke('git:commitDiff', cwd, hash, relPath),
+    describe: (cwd: string, hash: string): Promise<AiResult> =>
+      ipcRenderer.invoke('git:describe', cwd, hash)
+  },
+  session: {
+    index: (cwd: string): Promise<SessionIndex> => ipcRenderer.invoke('session:index', cwd),
+    exchange: (cwd: string, uuid: string): Promise<SessionExchange> =>
+      ipcRenderer.invoke('session:exchange', cwd, uuid)
+  },
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),
-    readText: (): Promise<string> => ipcRenderer.invoke('clipboard:readText')
+    readText: (): Promise<string> => ipcRenderer.invoke('clipboard:readText'),
+    hasImage: (): Promise<boolean> => ipcRenderer.invoke('clipboard:hasImage')
   },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url)

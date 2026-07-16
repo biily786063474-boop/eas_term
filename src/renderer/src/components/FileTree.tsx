@@ -8,7 +8,6 @@ import {
   FolderIcon,
   FolderOpenIcon,
   ChevronRightIcon,
-  RefreshIcon,
   TerminalIcon,
   PencilIcon,
   TrashIcon,
@@ -48,8 +47,13 @@ function insertPathToTerminal(p: string): boolean {
   return true
 }
 
-export function FileTree({ rootPath }: { rootPath: string }): JSX.Element {
-  const [refreshKey, setRefreshKey] = useState(0)
+export function FileTree({
+  rootPath,
+  refreshKey
+}: {
+  rootPath: string
+  refreshKey: number
+}): JSX.Element {
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const openTerminal = useStore((s) => s.openTerminal)
@@ -78,13 +82,7 @@ export function FileTree({ rootPath }: { rootPath: string }): JSX.Element {
     p.startsWith(rootPath + '/') ? p.slice(rootPath.length + 1) : p
 
   return (
-    <div className="filetree">
-      <div className="filetree-header">
-        <span>资源管理器</span>
-        <button className="icon-btn" title="刷新" onClick={() => setRefreshKey((k) => k + 1)}>
-          <RefreshIcon size={13} />
-        </button>
-      </div>
+    <>
       <div className="filetree-body">
         <DirChildren
           key={refreshKey}
@@ -169,7 +167,7 @@ export function FileTree({ rootPath }: { rootPath: string }): JSX.Element {
           </div>,
           document.body
         )}
-    </div>
+    </>
   )
 }
 

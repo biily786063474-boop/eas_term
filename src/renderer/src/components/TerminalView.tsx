@@ -144,7 +144,16 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
   const pasteToTerm = async (): Promise<void> => {
     const text = await window.api.clipboard.readText()
     // 走 xterm 的 paste 管线（换行规范化 + bracketed paste），由 onData 统一写入 PTY
-    if (text) termRef.current?.paste(text)
+    if (text) {
+      termRef.current?.paste(text)
+      return
+    }
+    // ⚠️ 别删这段：剪贴板"无文本但有图片"时，仍发一次 paste——bracketed 模式下即空的
+    // `\e[200~\e[201~`，作为"发生了粘贴"的信号，让 Claude Code 去读系统剪贴板里的图片并附到对话。
+    // 背景：⌘V「粘贴两次」修复(ed4e471)加了 preventDefault，挡掉了菜单 paste role 的原生粘贴，
+    // 而图片粘贴恰恰依赖那次原生粘贴发出的这个空信号——于是图片粘贴一起失效了。这里在自定义
+    // 路径里补回信号，兼顾"文本不双击 + 图片可粘"。改动 ⌘V/粘贴逻辑时务必保留此分支。
+    if (await window.api.clipboard.hasImage()) termRef.current?.paste('')
   }
 
   // 右键菜单关闭：点击别处 / Esc
@@ -174,6 +183,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       cursorBlink: true,
       macOptionIsMeta: true,
       scrollback: 100000,
+      scrollSensitivity: 3, // 普通缓冲滚轮步长加大，读长输出更快
       allowProposedApi: true,
       allowTransparency: true
     })
@@ -302,6 +312,123 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       // WebGL 不可用时回退到 DOM 渲染
     }
 
+    // 常驻自绘滚动条：xterm 原生滚动条在「备用屏」(vim/top/Claude Code 等全屏 TUI) 里
+    // 因缓冲无溢出会隐藏 thumb（表现为「滚动条不见了」）。这里自绘一个始终可见、可拖拽、
+    // 随缓冲状态同步的滚动条，盖在原生滚动条预留的 gutter 上（原生 thumb 已在 CSS 置透明，
+    // 仅保留占位宽度，避免文字被盖）。备用屏里 Claude Code 用它自己的滚轮滚动，这里只做可见提示。
+    const scrollbar = document.createElement('div')
+    scrollbar.className = 'term-scrollbar'
+    const thumb = document.createElement('div')
+    thumb.className = 'term-scrollbar-thumb'
+    scrollbar.appendChild(thumb)
+    el.appendChild(scrollbar)
+
+    // 「回到最新」常驻按钮：普通终端直接跳到底；备用屏(Claude Code)里连发向下滚轮把应用推到底。
+    const jumpBtn = document.createElement('button')
+    jumpBtn.className = 'term-jump'
+    jumpBtn.title = '回到最新'
+    jumpBtn.textContent = '↓ 最新'
+    el.appendChild(jumpBtn)
+
+    // 派发合成滚轮事件到 xterm 屏幕元素：由 xterm 按当前模式自行编码——普通缓冲滚 scrollback，
+    // 备用屏+鼠标接管时转成鼠标滚轮上报给应用（如 Claude Code），故对 Claude Code 也有效。
+    const dispatchWheel = (deltaY: number, x?: number, y?: number): void => {
+      const tgt = (el.querySelector('.xterm-screen') as HTMLElement | null) ?? el
+      const r = tgt.getBoundingClientRect()
+      tgt.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY,
+          deltaMode: 0,
+          bubbles: true,
+          cancelable: true,
+          clientX: x ?? r.left + r.width / 2,
+          clientY: y ?? r.top + r.height / 2
+        })
+      )
+    }
+    const jumpBottom = (): void => {
+      const t = termRef.current
+      if (!t) return
+      if (t.buffer.active.type === 'alternate' && t.modes.mouseTrackingMode !== 'none') {
+        for (let i = 0; i < 80; i++) dispatchWheel(120) // 备用屏无法直接定位底部，连发把它推到最新
+      } else {
+        t.scrollToBottom()
+      }
+    }
+    jumpBtn.addEventListener('click', jumpBottom)
+
+    // 备用屏(Claude Code)里把一次真实滚轮放大成约 3 次，读长输出更快（普通缓冲走 scrollSensitivity）
+    let synthesizing = false
+    const onWheelAmplify = (e: WheelEvent): void => {
+      if (synthesizing) return
+      const t = termRef.current
+      if (!t) return
+      if (t.buffer.active.type !== 'alternate' || t.modes.mouseTrackingMode === 'none') return
+      synthesizing = true
+      dispatchWheel(e.deltaY, e.clientX, e.clientY)
+      dispatchWheel(e.deltaY, e.clientX, e.clientY)
+      synthesizing = false
+    }
+    el.addEventListener('wheel', onWheelAmplify, { capture: true, passive: true })
+
+    const updateScrollbar = (): void => {
+      const t = termRef.current
+      if (!t) return
+      const buf = t.buffer.active
+      // 全屏 TUI（备用屏：Claude Code / vim / top…）里，滚动完全由应用自己管，
+      // 终端拿不到它的内部滚动进度，画出来只会是条误导人的"假滚动条"——直接隐藏；
+      // 但「回到最新」按钮常显（应用可能已滚上去）。普通 shell（正常缓冲）才画常驻滚动条。
+      if (buf.type === 'alternate') {
+        scrollbar.style.display = 'none'
+        jumpBtn.style.display = ''
+        return
+      }
+      jumpBtn.style.display = buf.viewportY < buf.baseY ? '' : 'none' // 滚上去了才显示
+      scrollbar.style.display = ''
+      const total = Math.max(buf.length, t.rows)
+      const H = scrollbar.clientHeight
+      if (!H) return
+      const thumbH = Math.max(28, Math.min(1, t.rows / total) * H)
+      const maxTop = Math.max(0, H - thumbH)
+      const topRatio = total > t.rows ? buf.viewportY / total : 0
+      thumb.style.height = `${thumbH}px`
+      thumb.style.top = `${Math.min(maxTop, Math.max(0, topRatio * H))}px`
+    }
+    const renderDisp = term.onRender(updateScrollbar)
+
+    // 拖拽 thumb 滚动（仅普通缓冲有 scrollback 时有效；备用屏无处可滚）
+    let dragging = false
+    let dragStartY = 0
+    let dragStartTop = 0
+    const onThumbDown = (e: MouseEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      dragging = true
+      dragStartY = e.clientY
+      dragStartTop = parseFloat(thumb.style.top || '0')
+      document.body.style.userSelect = 'none'
+    }
+    const onDragMove = (e: MouseEvent): void => {
+      if (!dragging) return
+      const t = termRef.current
+      if (!t) return
+      const buf = t.buffer.active
+      const total = Math.max(buf.length, t.rows)
+      if (total <= t.rows) return
+      const H = scrollbar.clientHeight
+      const maxTop = Math.max(1, H - thumb.offsetHeight)
+      const newTop = Math.min(maxTop, Math.max(0, dragStartTop + (e.clientY - dragStartY)))
+      const targetLine = Math.round((newTop / H) * total)
+      t.scrollToLine(Math.min(buf.baseY, Math.max(0, targetLine)))
+    }
+    const onDragUp = (): void => {
+      dragging = false
+      document.body.style.userSelect = ''
+    }
+    thumb.addEventListener('mousedown', onThumbDown)
+    window.addEventListener('mousemove', onDragMove)
+    window.addEventListener('mouseup', onDragUp)
+
     const doFit = (): void => {
       if (el.offsetWidth > 0 && el.offsetHeight > 0) {
         try {
@@ -310,6 +437,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
           // 容器尺寸异常时跳过
         }
       }
+      updateScrollbar()
     }
     doFit()
     window.api.pty.resize(ptyId, term.cols, term.rows)
@@ -355,6 +483,14 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       ro.disconnect()
       el.removeEventListener('focusin', onFocus)
       el.removeEventListener('contextmenu', onContextMenu)
+      renderDisp.dispose()
+      thumb.removeEventListener('mousedown', onThumbDown)
+      window.removeEventListener('mousemove', onDragMove)
+      window.removeEventListener('mouseup', onDragUp)
+      jumpBtn.removeEventListener('click', jumpBottom)
+      el.removeEventListener('wheel', onWheelAmplify, { capture: true } as EventListenerOptions)
+      jumpBtn.remove()
+      scrollbar.remove()
       unsubData()
       unsubExit()
       dataDisp.dispose()

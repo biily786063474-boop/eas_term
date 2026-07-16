@@ -154,6 +154,9 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle('clipboard:readText', () => clipboard.readText())
 
+  // 剪贴板是否有图片：终端粘贴时据此判断"无文本但有图"，好补发粘贴信号让 Claude Code 读图
+  ipcMain.handle('clipboard:hasImage', () => !clipboard.readImage().isEmpty())
+
   ipcMain.handle('shell:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
     return Promise.resolve()

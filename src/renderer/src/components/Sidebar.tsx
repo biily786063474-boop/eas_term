@@ -1,6 +1,53 @@
+import { useState } from 'react'
 import { useStore } from '../store'
+import type { Project } from '../../../shared/types'
 import { FileTree } from './FileTree'
-import { PlusIcon, CloseIcon, TerminalIcon } from './Icons'
+import { SidebarGit } from './SidebarGit'
+import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon } from './Icons'
+
+// 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
+function WorkspacePanel({ project }: { project: Project }): JSX.Element {
+  const [tab, setTab] = useState<'files' | 'git'>('files')
+  const [filesRefresh, setFilesRefresh] = useState(0)
+
+  return (
+    <div className="workspace">
+      <div className="workspace-tabs">
+        <button
+          className={`ws-tab${tab === 'files' ? ' active' : ''}`}
+          onClick={() => setTab('files')}
+        >
+          <FilesIcon size={13} />
+          <span>文件</span>
+        </button>
+        <button
+          className={`ws-tab${tab === 'git' ? ' active' : ''}`}
+          onClick={() => setTab('git')}
+        >
+          <GitBranchIcon size={13} />
+          <span>版本</span>
+        </button>
+        <span className="pane-spacer" />
+        {tab === 'files' && (
+          <button
+            className="icon-btn"
+            title="刷新文件树"
+            onClick={() => setFilesRefresh((k) => k + 1)}
+          >
+            <RefreshIcon size={13} />
+          </button>
+        )}
+      </div>
+      <div className="workspace-body">
+        {tab === 'files' ? (
+          <FileTree key={project.id} rootPath={project.path} refreshKey={filesRefresh} />
+        ) : (
+          <SidebarGit key={project.id} cwd={project.path} />
+        )}
+      </div>
+    </div>
+  )
+}
 
 export function Sidebar(): JSX.Element {
   const projects = useStore((s) => s.projects)
@@ -23,9 +70,7 @@ export function Sidebar(): JSX.Element {
         </div>
         <div className="project-list">
           {projects.length === 0 && (
-            <div className="tree-msg">
-              还没有项目，点击 ＋ 选择或新建一个项目文件夹
-            </div>
+            <div className="tree-msg">还没有项目，点击 ＋ 选择或新建一个项目文件夹</div>
           )}
           {projects.map((p) => (
             <div
@@ -64,7 +109,7 @@ export function Sidebar(): JSX.Element {
       </div>
       {activeProject && (
         <div className="sidebar-section tree-section">
-          <FileTree key={activeProject.id} rootPath={activeProject.path} />
+          <WorkspacePanel project={activeProject} />
         </div>
       )}
     </aside>

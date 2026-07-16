@@ -160,6 +160,55 @@ export const CopyIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const GitBranchIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <line x1="6" y1="3" x2="6" y2="15" />
+    <circle cx="18" cy="6" r="3" />
+    <circle cx="6" cy="18" r="3" />
+    <path d="M18 9a9 9 0 0 1-9 9" />
+  </Svg>
+)
+
+export const MinusIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </Svg>
+)
+
+export const UndoIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M3 7v6h6" />
+    <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
+  </Svg>
+)
+
+export const SparkleIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+    <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" />
+  </Svg>
+)
+
+export const ClockIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12 7 12 12 15 14" />
+  </Svg>
+)
+
+export const FilesIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+  </Svg>
+)
+
+export const MessageIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+  </Svg>
+)
+
 export const DictIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <path d="M12 6.5A2.5 2.5 0 0 0 9.5 4H3v14h6a2 2 0 0 1 2 2M12 6.5A2.5 2.5 0 0 1 14.5 4H21v14h-6a2 2 0 0 0-2 2M12 6.5V21" />

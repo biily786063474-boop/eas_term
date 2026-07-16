@@ -3,13 +3,26 @@
 // 不改变 React 元素层级，从而保证 xterm 实例永不重挂载、滚动缓冲不丢失。
 
 // Blender 式编辑器区域：每个叶子是一个"面板"，可通过下拉框切换功能类型。
+// 源代码管理不占主面板（它在侧栏「版本」标签里），但 Git diff 会作为一种“代码面板”
+// 开在主区域——code 面板带 diff 参数时渲染 DiffView，否则渲染普通只读 CodeView。
+// 'history'(SourceTree 式 Git 历史) 和 'chat'(Claude Code 对话导航) 都是大视图，
+// 分别从侧栏「版本」和终端头部按钮打开，不出现在面板下拉框里。
 // 'dict'(专业名词词典) 从面板下拉框打开：查词条 → 点击把实现逻辑插入活动终端光标处。
-export type PaneKind = 'terminal' | 'code' | 'image' | 'dict'
+export type PaneKind = 'terminal' | 'code' | 'image' | 'history' | 'chat' | 'dict'
+
+/** Git diff 在主区域的展示参数（由侧栏「版本」标签点击文件时下发） */
+export interface DiffSpec {
+  cwd: string
+  relPath: string
+  mode: 'worktree' | 'staged'
+}
 
 export type PaneState =
   | { kind: 'terminal'; ptyId: string }
-  | { kind: 'code'; filePath: string | null }
+  | { kind: 'code'; filePath: string | null; diff?: DiffSpec }
   | { kind: 'image'; filePath: string | null }
+  | { kind: 'history'; cwd: string }
+  | { kind: 'chat'; cwd: string }
   | { kind: 'dict' }
 
 export interface LeafNode {

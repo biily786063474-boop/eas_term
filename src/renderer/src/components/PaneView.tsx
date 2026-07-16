@@ -4,12 +4,17 @@ import { useStore } from '../store'
 import type { LeafNode, PaneKind, Rect } from '../layout'
 import { TerminalView } from './TerminalView'
 import { CodeView } from './CodeView'
+import { DiffView } from './DiffView'
 import { ImageView } from './ImageView'
+import { HistoryView } from './HistoryView'
+import { ChatNavView } from './ChatNavView'
 import { DictView } from './DictView'
 import {
   TerminalIcon,
   CodeIcon,
   ImageIcon,
+  GitBranchIcon,
+  MessageIcon,
   DictIcon,
   ChevronDownIcon,
   CloseIcon,
@@ -20,12 +25,23 @@ import {
 
 const PANE_GAP = 3
 
+// 下拉框可切换到的面板类型（不含 history —— 它只从侧栏「版本」打开）
 const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }[] = [
   { kind: 'terminal', label: '终端', Icon: TerminalIcon },
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
   { kind: 'dict', label: '名词词典', Icon: DictIcon }
 ]
+
+// 显示当前类型用（含 history，供头部展示）
+const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }> = {
+  terminal: { label: '终端', Icon: TerminalIcon },
+  code: { label: '代码预览', Icon: CodeIcon },
+  image: { label: '图片预览', Icon: ImageIcon },
+  history: { label: '历史', Icon: GitBranchIcon },
+  chat: { label: '对话', Icon: MessageIcon },
+  dict: { label: '名词词典', Icon: DictIcon }
+}
 
 function PaneKindSelect({
   kind,
@@ -48,7 +64,7 @@ function PaneKindSelect({
     return () => window.removeEventListener('mousedown', close)
   }, [open])
 
-  const current = KIND_OPTIONS.find((o) => o.kind === kind)!
+  const current = KIND_LABEL[kind]
 
   return (
     <>
@@ -105,6 +121,8 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
   const splitLeaf = useStore((s) => s.splitLeaf)
   const closeLeaf = useStore((s) => s.closeLeafSafely)
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
+  const openChat = useStore((s) => s.openChat)
+  const tabCwd = useStore((s) => s.tabs.find((t) => t.id === tabId)?.cwd ?? '')
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
@@ -132,6 +150,15 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
           </span>
         )}
         <span className="pane-spacer" />
+        {pane.kind === 'terminal' && (
+          <button
+            className="icon-btn"
+            title="Claude Code 对话导航"
+            onClick={() => openChat(tabCwd)}
+          >
+            <MessageIcon />
+          </button>
+        )}
         <button
           className="icon-btn"
           title="向右分屏（⌘D）"
@@ -164,8 +191,15 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
             isActive={isActive}
           />
         )}
-        {pane.kind === 'code' && <CodeView filePath={pane.filePath} />}
+        {pane.kind === 'code' &&
+          (pane.diff ? (
+            <DiffView cwd={pane.diff.cwd} relPath={pane.diff.relPath} mode={pane.diff.mode} />
+          ) : (
+            <CodeView filePath={pane.filePath} />
+          ))}
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
+        {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
+        {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
         {pane.kind === 'dict' && <DictView />}
       </div>
     </div>

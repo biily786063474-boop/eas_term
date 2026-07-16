@@ -7,6 +7,7 @@ import {
   SplitNode,
   PaneKind,
   PaneState,
+  DiffSpec,
   collectLeaves,
   replaceLeaf,
   removeLeaf,
@@ -125,6 +126,9 @@ interface AppState {
 
   openTerminal: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
   openFile: (filePath: string) => Promise<void>
+  openDiff: (spec: DiffSpec) => void
+  openHistory: (cwd: string) => void
+  openChat: (cwd: string) => void
   closeTab: (tabId: string) => void
   closeTabSafely: (tabId: string) => Promise<void>
   setActiveTab: (tabId: string) => void
@@ -295,6 +299,174 @@ export const useStore = create<AppState>((set, get) => ({
     }))
   },
 
+  // 侧栏「版本」标签点击变更文件：把该文件的 diff 开在主区域（复用代码面板，习惯同 openFile）
+  openDiff: (spec) => {
+    const s = get()
+    const pane: PaneState = { kind: 'code', filePath: spec.relPath, diff: spec }
+    let tab = s.tabs.find((t) => t.id === s.activeTabId)
+
+    if (!tab) {
+      const project = s.projects.find((p) => p.id === s.activeProjectId) ?? null
+      const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+      const newTab: TermTab = {
+        id: uid('tab'),
+        title: project?.name ?? '改动',
+        projectId: project?.id ?? null,
+        cwd: project?.path ?? spec.cwd,
+        root: leaf,
+        activeLeafId: leaf.id
+      }
+      set((st) => ({
+        tabs: [...st.tabs, newTab],
+        activeTabId: newTab.id,
+        activeTabByProject: {
+          ...st.activeTabByProject,
+          [projectKey(newTab.projectId)]: newTab.id
+        }
+      }))
+      return
+    }
+
+    const existing = collectLeaves(tab.root).find((l) => l.pane.kind === 'code')
+    if (existing) {
+      set((st) => ({
+        tabs: st.tabs.map((t) =>
+          t.id === tab!.id
+            ? { ...t, root: updatePane(t.root, existing.id, pane), activeLeafId: existing.id }
+            : t
+        )
+      }))
+      return
+    }
+
+    const newLeaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tab!.id) return t
+        const target = collectLeaves(t.root).find((l) => l.id === t.activeLeafId)
+        if (!target) return t
+        const split: SplitNode = {
+          type: 'split',
+          id: uid('split'),
+          dir: 'row',
+          ratio: 0.5,
+          children: [target, newLeaf]
+        }
+        return { ...t, root: replaceLeaf(t.root, target.id, split), activeLeafId: newLeaf.id }
+      })
+    }))
+  },
+
+  // 侧栏「版本」→「分支图」：在主区域开 SourceTree 式历史大视图（复用已有 history 面板，否则分屏）
+  openHistory: (cwd) => {
+    const s = get()
+    const pane: PaneState = { kind: 'history', cwd }
+    const tab = s.tabs.find((t) => t.id === s.activeTabId)
+
+    if (!tab) {
+      const project = s.projects.find((p) => p.id === s.activeProjectId) ?? null
+      const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+      const newTab: TermTab = {
+        id: uid('tab'),
+        title: project?.name ?? '历史',
+        projectId: project?.id ?? null,
+        cwd: project?.path ?? cwd,
+        root: leaf,
+        activeLeafId: leaf.id
+      }
+      set((st) => ({
+        tabs: [...st.tabs, newTab],
+        activeTabId: newTab.id,
+        activeTabByProject: { ...st.activeTabByProject, [projectKey(newTab.projectId)]: newTab.id }
+      }))
+      return
+    }
+
+    const existing = collectLeaves(tab.root).find((l) => l.pane.kind === 'history')
+    if (existing) {
+      set((st) => ({
+        tabs: st.tabs.map((t) =>
+          t.id === tab.id
+            ? { ...t, root: updatePane(t.root, existing.id, pane), activeLeafId: existing.id }
+            : t
+        )
+      }))
+      return
+    }
+
+    const newLeaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tab.id) return t
+        const target = collectLeaves(t.root).find((l) => l.id === t.activeLeafId)
+        if (!target) return t
+        const split: SplitNode = {
+          type: 'split',
+          id: uid('split'),
+          dir: 'row',
+          ratio: 0.5,
+          children: [target, newLeaf]
+        }
+        return { ...t, root: replaceLeaf(t.root, target.id, split), activeLeafId: newLeaf.id }
+      })
+    }))
+  },
+
+  // 终端头部「对话导航」→ 在主区域开 Claude Code 对话回看（复用/分屏，同 openHistory）
+  openChat: (cwd) => {
+    const s = get()
+    const pane: PaneState = { kind: 'chat', cwd }
+    const tab = s.tabs.find((t) => t.id === s.activeTabId)
+
+    if (!tab) {
+      const project = s.projects.find((p) => p.id === s.activeProjectId) ?? null
+      const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+      const newTab: TermTab = {
+        id: uid('tab'),
+        title: project?.name ?? '对话',
+        projectId: project?.id ?? null,
+        cwd: project?.path ?? cwd,
+        root: leaf,
+        activeLeafId: leaf.id
+      }
+      set((st) => ({
+        tabs: [...st.tabs, newTab],
+        activeTabId: newTab.id,
+        activeTabByProject: { ...st.activeTabByProject, [projectKey(newTab.projectId)]: newTab.id }
+      }))
+      return
+    }
+
+    const existing = collectLeaves(tab.root).find((l) => l.pane.kind === 'chat')
+    if (existing) {
+      set((st) => ({
+        tabs: st.tabs.map((t) =>
+          t.id === tab.id
+            ? { ...t, root: updatePane(t.root, existing.id, pane), activeLeafId: existing.id }
+            : t
+        )
+      }))
+      return
+    }
+
+    const newLeaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane }
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tab.id) return t
+        const target = collectLeaves(t.root).find((l) => l.id === t.activeLeafId)
+        if (!target) return t
+        const split: SplitNode = {
+          type: 'split',
+          id: uid('split'),
+          dir: 'row',
+          ratio: 0.5,
+          children: [target, newLeaf]
+        }
+        return { ...t, root: replaceLeaf(t.root, target.id, split), activeLeafId: newLeaf.id }
+      })
+    }))
+  },
+
   closeTab: (tabId) => {
     const s = get()
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -448,6 +620,10 @@ export const useStore = create<AppState>((set, get) => ({
     if (kind === 'terminal') {
       const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
       pane = { kind: 'terminal', ptyId }
+    } else if (kind === 'history') {
+      pane = { kind: 'history', cwd: tab.cwd }
+    } else if (kind === 'chat') {
+      pane = { kind: 'chat', cwd: tab.cwd }
     } else if (kind === 'dict') {
       pane = { kind: 'dict' }
     } else {

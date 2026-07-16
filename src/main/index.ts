@@ -3,6 +3,8 @@ import path from 'path'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy } from './pty'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
+import { registerGitHandlers } from './git'
+import { registerSessionHandlers } from './session'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 registerBizoneScheme()
@@ -124,6 +126,8 @@ app.whenReady().then(() => {
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()
+  registerGitHandlers()
+  registerSessionHandlers()
   registerBizoneHandlers()
   buildMenu()
   createWindow()
