@@ -39,11 +39,13 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         )}
       </div>
       <div className="workspace-body">
-        {tab === 'files' ? (
+        {/* 两个面板常挂载、display 切换：卸载会丢文件树的展开/滚动状态（expanded 在组件内部） */}
+        <div className="ws-keep" style={{ display: tab === 'files' ? undefined : 'none' }}>
           <FileTree key={project.id} rootPath={project.path} refreshKey={filesRefresh} />
-        ) : (
-          <SidebarGit key={project.id} cwd={project.path} />
-        )}
+        </div>
+        <div className="ws-keep" style={{ display: tab === 'git' ? undefined : 'none' }}>
+          <SidebarGit key={project.id} cwd={project.path} active={tab === 'git'} />
+        </div>
       </div>
     </div>
   )

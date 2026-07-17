@@ -77,8 +77,8 @@ const api = {
   },
   session: {
     index: (cwd: string): Promise<SessionIndex> => ipcRenderer.invoke('session:index', cwd),
-    exchange: (cwd: string, uuid: string): Promise<SessionExchange> =>
-      ipcRenderer.invoke('session:exchange', cwd, uuid)
+    exchange: (cwd: string, uuid: string, sessionId?: string): Promise<SessionExchange> =>
+      ipcRenderer.invoke('session:exchange', cwd, uuid, sessionId)
   },
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),

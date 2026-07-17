@@ -59,9 +59,16 @@ interface AiState {
   error?: string
 }
 
+// 重命名/复制条目要把新旧两个路径都交给 git：只传新路径会留下旧路径的半截暂存态
+// （如取消暂存 R 条目后旧路径仍是 staged 删除，提交会默默删掉旧文件）
+function pathsOf(f: GitFileEntry): string[] {
+  return f.origPath ? [f.path, f.origPath] : [f.path]
+}
+
 // 侧栏「版本」标签：分支 + 变更 + 提交 + 历史（每条可按需 AI 总结）。
 // 变更/提交都作用于当前项目根目录；点变更文件 → diff 开在主区域。
-export function SidebarGit({ cwd }: { cwd: string }): JSX.Element {
+// active=false（侧栏切到「文件」标签）时暂停轮询，切回时立即刷新。
+export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boolean }): JSX.Element {
   const openDiff = useStore((s) => s.openDiff)
   const openHistory = useStore((s) => s.openHistory)
   const requestConfirm = useStore((s) => s.requestConfirm)
@@ -83,17 +90,26 @@ export function SidebarGit({ cwd }: { cwd: string }): JSX.Element {
     if (s.isRepo) setLog(await window.api.git.log(cwd, LOG_LIMIT))
   }, [cwd])
 
+  const activeRef = useRef(active)
+  activeRef.current = active
+
+  useEffect(() => {
+    if (active) void refresh() // 切回「版本」标签立即刷新
+  }, [active, refresh])
+
   useEffect(() => {
     void refresh()
-    const timer = window.setInterval(() => void refresh(), POLL_MS)
-    const onDirChanged = (): void => void refresh()
-    const onFocus = (): void => void refresh()
-    window.addEventListener('fs-dir-changed', onDirChanged)
-    window.addEventListener('focus', onFocus)
+    // 组件常挂载（display 切换），隐藏时不轮询
+    const tick = (): void => {
+      if (activeRef.current) void refresh()
+    }
+    const timer = window.setInterval(tick, POLL_MS)
+    window.addEventListener('fs-dir-changed', tick)
+    window.addEventListener('focus', tick)
     return () => {
       window.clearInterval(timer)
-      window.removeEventListener('fs-dir-changed', onDirChanged)
-      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('fs-dir-changed', tick)
+      window.removeEventListener('focus', tick)
     }
   }, [refresh])
 
@@ -118,9 +134,9 @@ export function SidebarGit({ cwd }: { cwd: string }): JSX.Element {
   }
 
   const stage = (f: GitFileEntry): Promise<void> =>
-    run(() => window.api.git.stage(cwd, [f.path]), '暂存失败')
+    run(() => window.api.git.stage(cwd, pathsOf(f)), '暂存失败')
   const unstage = (f: GitFileEntry): Promise<void> =>
-    run(() => window.api.git.unstage(cwd, [f.path]), '取消暂存失败')
+    run(() => window.api.git.unstage(cwd, pathsOf(f)), '取消暂存失败')
   const discard = (f: GitFileEntry): void => {
     requestConfirm({
       message: f.untracked
@@ -136,7 +152,7 @@ export function SidebarGit({ cwd }: { cwd: string }): JSX.Element {
   const changedFiles = files.filter((f) => f.unstaged)
 
   const stageAll = (): Promise<void> =>
-    run(() => window.api.git.stage(cwd, changedFiles.map((f) => f.path)), '暂存失败')
+    run(() => window.api.git.stage(cwd, changedFiles.flatMap(pathsOf)), '暂存失败')
 
   const doCommit = (): void => {
     void run(async () => {

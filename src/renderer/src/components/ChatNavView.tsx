@@ -17,6 +17,7 @@ function fmtTime(ms: number): string {
 export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
   const [found, setFound] = useState(true)
   const [turns, setTurns] = useState<SessionTurn[]>([])
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined)
   const [selected, setSelected] = useState<string | null>(null)
   const [exchange, setExchange] = useState<SessionExchange | null>(null)
   const [loading, setLoading] = useState(false)
@@ -29,6 +30,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
     const idx = await window.api.session.index(cwd)
     setFound(idx.found)
     setTurns(idx.turns)
+    setSessionId(idx.sessionId)
   }, [cwd])
 
   useEffect(() => {
@@ -45,7 +47,8 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
     }
     let cancelled = false
     setLoading(true)
-    void window.api.session.exchange(cwd, selected).then((ex) => {
+    // 带上 sessionId 锁定文件：避免点击瞬间出现更新的会话文件导致 uuid 查错文件
+    void window.api.session.exchange(cwd, selected, sessionId).then((ex) => {
       if (cancelled) return
       setExchange(ex)
       setLoading(false)
@@ -53,7 +56,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
     return () => {
       cancelled = true
     }
-  }, [selected, cwd])
+  }, [selected, cwd, sessionId])
 
   if (!found) {
     return (

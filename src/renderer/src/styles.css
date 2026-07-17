@@ -1218,6 +1218,12 @@ body {
   position: relative;
 }
 
+/* 文件/版本两个面板常挂载（display 切换保状态）的包裹层 */
+.ws-keep {
+  height: 100%;
+  min-height: 0;
+}
+
 /* ---------- 侧栏「版本」(Git) ---------- */
 .git-view {
   position: absolute;

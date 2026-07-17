@@ -61,7 +61,7 @@ function userText(o: { type?: string; isSidechain?: boolean; message?: { content
   if (
     !t ||
     t.startsWith('Base directory for this skill') ||
-    t.startsWith('<') ||
+    INJECTED_TAG_RE.test(t) ||
     t.startsWith('[Request interrupted') ||
     t.startsWith('Caveat:')
   ) {
@@ -69,6 +69,11 @@ function userText(o: { type?: string; isSidechain?: boolean; message?: { content
   }
   return t
 }
+
+// 只过滤已知的注入包装标签（skill/hook/系统提醒等），不能一刀切过滤所有 '<' 开头——
+// 用户粘贴 HTML/JSX 提问（如「<div ...> 这个组件怎么居中」）是合法消息
+const INJECTED_TAG_RE =
+  /^<(command-name|command-message|command-args|local-command|system-reminder|task-notification|bash-input|bash-stdout|bash-stderr|user-prompt|session-start)/
 
 // 抽 Claude 回答文本（含可见文本 + 工具调用标注）
 function assistantText(o: { type?: string; isSidechain?: boolean; message?: { content?: unknown } }): string | null {
@@ -151,13 +156,24 @@ export function registerSessionHandlers(): void {
     }
   })
 
-  ipcMain.handle('session:exchange', (_e, cwd: string, uuid: string): SessionExchange => {
-    try {
-      const file = latestJsonl(projectDir(cwd))
-      if (!file) return { userText: '', assistantText: '', at: 0 }
-      return parse(file).exchanges.get(uuid) ?? { userText: '', assistantText: '', at: 0 }
-    } catch {
-      return { userText: '', assistantText: '', at: 0 }
+  ipcMain.handle(
+    'session:exchange',
+    (_e, cwd: string, uuid: string, sessionId?: string): SessionExchange => {
+      try {
+        const dir = projectDir(cwd)
+        // 优先按 index 时的 sessionId 定位文件（transcript 以 <sessionId>.jsonl 命名）：
+        // 若期间同项目出现了更新的会话文件，重新取"最新"会查错文件、uuid 落空
+        let file: string | null = null
+        if (sessionId && /^[\w-]+$/.test(sessionId)) {
+          const p = path.join(dir, `${sessionId}.jsonl`)
+          if (fs.existsSync(p)) file = p
+        }
+        if (!file) file = latestJsonl(dir)
+        if (!file) return { userText: '', assistantText: '', at: 0 }
+        return parse(file).exchanges.get(uuid) ?? { userText: '', assistantText: '', at: 0 }
+      } catch {
+        return { userText: '', assistantText: '', at: 0 }
+      }
     }
-  })
+  )
 }

@@ -1,6 +1,7 @@
 import { ipcMain, shell } from 'electron'
 import { execFile } from 'child_process'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import type {
   GitStatus,
@@ -18,6 +19,36 @@ import type {
 const MAX_BUFFER = 24 * 1024 * 1024 // status/diff 输出上限
 const MAX_DIFF_BYTES = 2 * 1024 * 1024 // 单文件 diff 内容上限，超出截断
 
+// 打包 GUI 应用的 PATH 受限（/usr/bin:/bin:...），Homebrew / npm 全局装的命令找不到
+// （同 fs.ts 用绝对路径 /usr/bin/open 之因）。按常见安装位置解析绝对路径，都没有再退回裸命令交给 PATH。
+const binCache = new Map<string, string>()
+function resolveBin(name: string): string {
+  if (process.platform === 'win32') return name // Windows GUI 继承用户 PATH
+  const hit = binCache.get(name)
+  if (hit) return hit
+  const home = os.homedir()
+  const candidates = [
+    `/opt/homebrew/bin/${name}`,
+    `/usr/local/bin/${name}`,
+    `/usr/bin/${name}`,
+    path.join(home, '.claude', 'local', name),
+    path.join(home, '.local', 'bin', name),
+    path.join(home, '.npm-global', 'bin', name)
+  ]
+  let found = name
+  for (const c of candidates) {
+    try {
+      fs.accessSync(c, fs.constants.X_OK)
+      found = c
+      break
+    } catch {
+      // 试下一个
+    }
+  }
+  binCache.set(name, found)
+  return found
+}
+
 interface GitRun {
   ok: boolean
   stdout: string
@@ -28,7 +59,7 @@ interface GitRun {
 function git(cwd: string, args: string[]): Promise<GitRun> {
   return new Promise((resolve) => {
     execFile(
-      'git',
+      resolveBin('git'),
       args,
       { cwd, maxBuffer: MAX_BUFFER, windowsHide: true, encoding: 'utf8' },
       (err, stdout, stderr) => {
@@ -196,15 +227,19 @@ export function registerGitHandlers(): void {
     }
   )
 
+  // ⚠️ porcelain 状态给出的路径相对仓库根；项目可能是大仓库的子目录（monorepo），
+  // 命令行 pathspec 相对 cwd 解析，所以带路径的写操作必须在仓库根目录执行才能命中。
   ipcMain.handle('git:stage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
-    const r = await git(cwd, ['add', '--', ...paths])
+    const root = (await repoRoot(cwd)) ?? cwd
+    const r = await git(root, ['add', '--', ...paths])
     return r.ok ? { ok: true } : { ok: false, error: r.stderr.trim() }
   })
 
   ipcMain.handle('git:unstage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
+    const root = (await repoRoot(cwd)) ?? cwd
     // 有 HEAD 时用 reset 取消暂存；仓库尚无提交时用 rm --cached
-    let r = await git(cwd, ['reset', '-q', 'HEAD', '--', ...paths])
-    if (!r.ok) r = await git(cwd, ['rm', '-q', '--cached', '--', ...paths])
+    let r = await git(root, ['reset', '-q', 'HEAD', '--', ...paths])
+    if (!r.ok) r = await git(root, ['rm', '-q', '--cached', '--', ...paths])
     return r.ok ? { ok: true } : { ok: false, error: r.stderr.trim() }
   })
 
@@ -222,7 +257,13 @@ export function registerGitHandlers(): void {
           return { ok: false, error: err instanceof Error ? err.message : String(err) }
         }
       }
-      const r = await git(cwd, ['checkout', '--', ...paths])
+      const root = (await repoRoot(cwd)) ?? cwd
+      let r = await git(root, ['checkout', '--', ...paths])
+      // 冲突（unmerged）路径 `checkout --` 会拒绝（"path ... is unmerged"）；
+      // 此时改用 HEAD 版本覆盖，同时清掉该路径的冲突状态
+      if (!r.ok && /unmerged|needs merge/i.test(r.stderr)) {
+        r = await git(root, ['checkout', 'HEAD', '--', ...paths])
+      }
       return r.ok ? { ok: true } : { ok: false, error: r.stderr.trim() }
     }
   )
@@ -275,14 +316,12 @@ export function registerGitHandlers(): void {
   ipcMain.handle(
     'git:commitFiles',
     async (_e, cwd: string, hash: string): Promise<GitCommitFile[]> => {
-      const r = await git(cwd, [
-        'diff-tree',
-        '--no-commit-id',
-        '--name-status',
-        '-r',
-        '-z',
-        hash
-      ])
+      // 对第一父提交 diff（普通提交 = 唯一父；合并提交 = 取对第一父的差异，diff-tree 默认对
+      // 合并提交输出为空）。根提交没有父 → 退回 diff-tree --root 对空树 diff。
+      let r = await git(cwd, ['diff', '--name-status', '-z', `${hash}^`, hash])
+      if (!r.ok) {
+        r = await git(cwd, ['diff-tree', '--no-commit-id', '--name-status', '-r', '-z', '--root', hash])
+      }
       if (!r.ok) return []
       const parts = r.stdout.split('\0')
       const files: GitCommitFile[] = []
@@ -351,7 +390,7 @@ export function registerGitHandlers(): void {
 function callClaude(cwd: string, prompt: string): Promise<AiResult> {
   return new Promise((resolve) => {
     execFile(
-      'claude',
+      resolveBin('claude'),
       ['-p', prompt],
       { cwd, maxBuffer: MAX_BUFFER, windowsHide: true, encoding: 'utf8', timeout: 60000 },
       (err, stdout, stderr) => {

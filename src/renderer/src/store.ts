@@ -614,7 +614,10 @@ export const useStore = create<AppState>((set, get) => ({
     const tab = s.tabs.find((t) => t.id === tabId)
     if (!tab) return
     const target = collectLeaves(tab.root).find((l) => l.id === leafId)
-    if (!target || target.pane.kind === kind) return
+    if (!target) return
+    // 同类切换直接忽略——唯一例外：code 面板带 diff 时选「代码预览」= 去掉 diff 回到普通预览
+    const isDiffPane = target.pane.kind === 'code' && !!target.pane.diff
+    if (target.pane.kind === kind && !(kind === 'code' && isDiffPane)) return
     killPanePty(target.pane)
     let pane: PaneState
     if (kind === 'terminal') {

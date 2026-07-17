@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
+import { collectLeaves } from '../layout'
 import { DictIcon } from './Icons'
 import bundle from '../dictionary-bundle.json'
 
@@ -82,8 +83,18 @@ export function DictView(): JSX.Element {
   }, [hover])
 
   const insert = (term: DictTerm): void => {
-    const t = useStore.getState().lastActiveTerminal
-    if (!t) {
+    const s = useStore.getState()
+    const t = s.lastActiveTerminal
+    // 记录的终端可能已被关闭（pty 死后 write 是静默 no-op，会假成功）：
+    // 校验该 ptyId 仍存在于某个面板里，不在则提示而不是闪"已插入"
+    const alive =
+      !!t &&
+      s.tabs.some((tab) =>
+        collectLeaves(tab.root).some(
+          (l) => l.pane.kind === 'terminal' && l.pane.ptyId === t.ptyId
+        )
+      )
+    if (!t || !alive) {
       setNotice('没有可插入的终端——先点一下某个终端面板')
       if (noticeTimer.current) clearTimeout(noticeTimer.current)
       noticeTimer.current = setTimeout(() => setNotice(''), 2600)
