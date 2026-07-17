@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { SessionTurn, SessionExchange } from '../../../../shared/types'
-import { MessageIcon, RefreshIcon } from '../../ui/Icons'
+import { MessageIcon, RefreshIcon, ImageIcon } from '../../ui/Icons'
 import './chat.css'
 
 function fmtTime(ms: number): string {
@@ -22,6 +23,17 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
   const [selected, setSelected] = useState<string | null>(null)
   const [exchange, setExchange] = useState<SessionExchange | null>(null)
   const [loading, setLoading] = useState(false)
+  // 点击图片放大查看（data: URI），Esc / 点击任意处关闭
+  const [zoomSrc, setZoomSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!zoomSrc) return
+    const onEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setZoomSrc(null)
+    }
+    window.addEventListener('keydown', onEsc, { capture: true })
+    return () => window.removeEventListener('keydown', onEsc, { capture: true })
+  }, [zoomSrc])
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!cwd) {
@@ -95,6 +107,12 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
               <div className="chat-item-top">
                 <span className="chat-item-idx">#{i + 1}</span>
                 <span className="chat-item-time">{fmtTime(t.at)}</span>
+                {!!t.imageCount && (
+                  <span className="chat-item-img" title={`${t.imageCount} 张图片`}>
+                    <ImageIcon size={11} />
+                    {t.imageCount > 1 ? ` ×${t.imageCount}` : ''}
+                  </span>
+                )}
               </div>
               <div className="chat-item-preview">{t.preview}</div>
             </div>
@@ -109,7 +127,23 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
             <div className="chat-thread">
               <div className="chat-msg user">
                 <div className="chat-msg-role">你 · {fmtTime(exchange.at)}</div>
-                <div className="chat-msg-body">{exchange.userText}</div>
+                {!!exchange.images?.length && (
+                  <div className="chat-msg-imgs">
+                    {exchange.images.map((img, k) => {
+                      const src = `data:${img.mediaType};base64,${img.data}`
+                      return (
+                        <img
+                          key={k}
+                          className="chat-msg-img"
+                          src={src}
+                          alt={`图片 ${k + 1}`}
+                          onClick={() => setZoomSrc(src)}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+                {exchange.userText && <div className="chat-msg-body">{exchange.userText}</div>}
               </div>
               <div className="chat-msg assistant">
                 <div className="chat-msg-role">Claude</div>
@@ -123,6 +157,14 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
           )}
         </div>
       </div>
+      {zoomSrc &&
+        // Portal 到 body：玻璃面板 backdrop-filter 会裁切 fixed 后代
+        createPortal(
+          <div className="chat-lightbox" onClick={() => setZoomSrc(null)}>
+            <img src={zoomSrc} alt="放大查看" />
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

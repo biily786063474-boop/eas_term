@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import type { SessionIndex, SessionTurn, SessionExchange } from '../shared/types'
+import type { SessionIndex, SessionTurn, SessionExchange, SessionImage } from '../shared/types'
 
 // 读 Claude Code 的会话 transcript：~/.claude/projects/<编码后的cwd>/<sessionId>.jsonl
 // 每行一个 JSON（type: user/assistant/…）。抽出用户真实消息 + 对应的 Claude 回答，
@@ -46,28 +46,53 @@ function latestJsonl(dir: string): string | null {
   return best
 }
 
-// 抽用户真实消息文本（过滤 tool_result、技能启动、系统注入、中断标记）
-function userText(o: { type?: string; isSidechain?: boolean; message?: { content?: unknown } }): string | null {
+interface UserContent {
+  text: string // 纯图消息为 ''
+  images: SessionImage[]
+}
+
+// 抽用户真实消息：文本 + 粘贴的图片（过滤 tool_result、技能启动、系统注入、中断标记）。
+// 纯图无文字的消息也算一条（text=''），否则会从导航里消失、回答错挂到上一条。
+function userContent(o: {
+  type?: string
+  isSidechain?: boolean
+  message?: { content?: unknown }
+}): UserContent | null {
   if (o?.type !== 'user' || o?.isSidechain) return null
   const c = o.message?.content
-  let text: string | null = null
-  if (typeof c === 'string') text = c
-  else if (Array.isArray(c)) {
-    const tb = c.filter((b) => (b as { type?: string })?.type === 'text').map((b) => (b as { text?: string }).text ?? '')
-    if (tb.length) text = tb.join('\n')
+  let text = ''
+  const images: SessionImage[] = []
+  if (typeof c === 'string') {
+    text = c
+  } else if (Array.isArray(c)) {
+    for (const b of c) {
+      const blk = b as {
+        type?: string
+        text?: string
+        source?: { type?: string; media_type?: string; data?: string }
+      }
+      // 含 tool_result 的是工具回执消息（其中的图片是工具截图），不是用户发言
+      if (blk?.type === 'tool_result') return null
+      if (blk?.type === 'text' && blk.text) text += (text ? '\n' : '') + blk.text
+      else if (blk?.type === 'image' && blk.source?.type === 'base64' && blk.source.data) {
+        images.push({ mediaType: blk.source.media_type ?? 'image/png', data: blk.source.data })
+      }
+    }
   }
-  if (!text) return null
   const t = text.trim()
-  if (
-    !t ||
-    t.startsWith('Base directory for this skill') ||
-    INJECTED_TAG_RE.test(t) ||
-    t.startsWith('[Request interrupted') ||
-    t.startsWith('Caveat:')
-  ) {
-    return null
+  if (t) {
+    if (
+      t.startsWith('Base directory for this skill') ||
+      INJECTED_TAG_RE.test(t) ||
+      t.startsWith('[Request interrupted') ||
+      t.startsWith('Caveat:')
+    ) {
+      return null
+    }
+    return { text: t, images }
   }
-  return t
+  // 无文字：只有带图时才算一条用户消息
+  return images.length ? { text: '', images } : null
 }
 
 // 只过滤已知的注入包装标签（skill/hook/系统提醒等），不能一刀切过滤所有 '<' 开头——
@@ -118,11 +143,16 @@ function parse(file: string): Parsed {
       continue
     }
     if (o.sessionId) sessionId = o.sessionId
-    const ut = userText(o)
-    if (ut !== null && o.uuid) {
+    const uc = userContent(o)
+    if (uc !== null && o.uuid) {
       // 中断重发等会让同一条消息连续出现两次：不新增，让后续回答接到上一条
       const prev = turns[turns.length - 1]
-      if (prev && exchanges.get(prev.uuid)?.userText === ut) {
+      const prevEx = prev ? exchanges.get(prev.uuid) : undefined
+      if (
+        prevEx &&
+        prevEx.userText === uc.text &&
+        (prevEx.images?.length ?? 0) === uc.images.length
+      ) {
         flush()
         curUuid = prev.uuid
         continue
@@ -130,8 +160,21 @@ function parse(file: string): Parsed {
       flush()
       curUuid = o.uuid
       const at = o.timestamp ? Date.parse(o.timestamp) : 0
-      turns.push({ uuid: o.uuid, at, preview: ut.replace(/\s+/g, ' ').slice(0, 120) })
-      exchanges.set(o.uuid, { userText: ut, assistantText: '', at })
+      const preview = uc.text
+        ? uc.text.replace(/\s+/g, ' ').slice(0, 120)
+        : `〔图片 ×${uc.images.length}〕`
+      turns.push({
+        uuid: o.uuid,
+        at,
+        preview,
+        imageCount: uc.images.length || undefined
+      })
+      exchanges.set(o.uuid, {
+        userText: uc.text,
+        assistantText: '',
+        at,
+        images: uc.images.length ? uc.images : undefined
+      })
       continue
     }
     const at2 = assistantText(o)
@@ -140,6 +183,11 @@ function parse(file: string): Parsed {
   flush()
 
   const parsed: Parsed = { mtimeMs, sessionId, turns, exchanges }
+  // 简单上限：只保留最近解析的几份（exchange 里含 base64 图片，别让缓存无限膨胀）
+  if (cache.size >= 4) {
+    const oldest = cache.keys().next().value
+    if (oldest !== undefined) cache.delete(oldest)
+  }
   cache.set(file, parsed)
   return parsed
 }

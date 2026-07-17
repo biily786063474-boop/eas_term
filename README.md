@@ -83,19 +83,33 @@ npm run dist               # 打包分发：DMG + ZIP 输出到 ~/Eas-Term-relea
 | 生图历史（笔纵画板联动） | 读取笔纵画板本地媒体库，按项目分类浏览图片/视频；**分页渲染**（首屏 60 项，滚动到底部前 600px 自动追加，工具栏显示 `60 / 366 项` 进度）；点击放大到整个面板（Esc 关闭）；右键插入到当前仓库的 `V-assets/`；未安装时给出官网与下载链接 |
 | 文件树右键 | 在面板中预览 / 用默认应用打开 / 在访达中显示 / 重命名（内联） / 删除（废纸篓） / 插入路径到终端 / 复制路径 / 复制相对路径；文件夹另有「在此打开终端」 |
 | 代码预览 | 只读，语法高亮按文件名自动匹配，超 2MB 截断提示，二进制自动识别 |
+| 版本管理（侧栏「版本」标签） | git status 轮询 + 变更分组（暂存/更改）+ stage/unstage/discard/commit；点变更文件 → diff 开在主区域（绿增红删）；提交历史带分支轨道图，每条可「AI 总结」（app 内 `claude -p` 翻成一句人话） |
+| 历史大视图（分支图） | SourceTree 式：曲线轨道图 + 提交表 + 提交内文件列表与 diff；支持根提交/合并提交 |
+| 对话导航 | 终端头部气泡按钮 → 读 Claude Code transcript 只读回看：左侧你发的消息目录、右侧消息+回答；**粘贴的图片直接显示**（含纯图消息），点击图片全屏放大（Esc 关闭） |
+| 名词词典 | 面板下拉框「名词词典」：242 个前端专业名词胶囊平铺，搜索/分类筛选；hover 看 SVG 图解+实现逻辑；点击把逻辑文本插入活动终端光标处（不执行） |
 
 ## 架构要点
 
 ```
 src/
-  main/        主进程：窗口、PTY 管理(pty.ts)、项目持久化(projects.ts)、文件系统(fs.ts)
+  main/        主进程，按域一文件：窗口(index) / PTY(pty) / 项目持久化(projects) /
+               文件系统(fs) / Git(git) / Claude 会话解析(session) / 笔纵画板联动(bizone)
   preload/     contextBridge 桥接 + PTY 首批输出缓冲（防止 shell 提示符丢失）
   shared/      主进程/渲染进程共享类型
-  renderer/    React UI
-    src/layout.ts   面板二叉分割树 → 扁平矩形布局（PaneState 区分终端/代码/图片）
-    src/store.ts    zustand 全局状态（项目、标签页、面板树、文件打开路由）
-    src/components/ Sidebar / FileTree / TabBar / TabContent
-                    PaneView（区域头部+下拉框）/ TerminalView / CodeView / ImageView
+  renderer/src/
+    layout.ts        面板二叉分割树 → 扁平矩形布局（PaneState 判别联合）
+    store/           zustand 全局状态，按域切片：projectsSlice / tabsSlice / uiSlice
+                     （index.ts 组合导出，组件一律 `from '../store'`）
+    styles/base.css  设计令牌 / 主题 / 全局浮层与弹窗；其余 CSS 跟随所属 feature
+    features/        每个功能区域一个文件夹（组件 + 私有逻辑 + 自己的 CSS）：
+      workspace/  Sidebar / TabBar / TabContent / PaneView（区域骨架与面板头）
+      terminal/   TerminalView + pathLinks（路径识别纯函数）
+      editor/     CodeView / DiffView        files/  FileTree
+      git/        SidebarGit / HistoryView / gitGraph（lane 布局）/ gitUi
+      chat/       ChatNavView（Claude Code 对话导航，含图片回看）
+      dict/       DictView + 词典 bundle（React.lazy 懒加载，不进主包）
+      image/      ImageView（文件预览 + 笔纵画板生图历史）
+    ui/              跨区共享基础件：Icons / ConfirmDialog / ThemeSelect
 ```
 
 - **终端面板按项目隔离**：每个标签带 `projectId`，TabBar 只显示当前项目的标签；切换项目时右侧整组切换并恢复该项目上次激活的标签（`activeTabByProject` 记忆）。所有项目的 TabContent 始终挂载、用 `display:none` 保活，切来切去不丢终端状态与滚动缓冲。移除项目会关闭其名下所有标签的 PTY。

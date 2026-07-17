@@ -145,6 +145,13 @@ export interface SessionTurn {
   uuid: string
   at: number // 时间戳（ms）
   preview: string // 消息文本预览
+  imageCount?: number // 该消息附带的图片数（粘贴的截图等）
+}
+
+// 消息里附带的一张图片（transcript 中以 base64 内联）
+export interface SessionImage {
+  mediaType: string // 如 image/png
+  data: string // base64
 }
 
 // 某条用户消息 + 当时 Claude 的回答（点击后展开）
@@ -152,6 +159,7 @@ export interface SessionExchange {
   userText: string
   assistantText: string
   at: number
+  images?: SessionImage[]
 }
 
 export interface SessionIndex {
