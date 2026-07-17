@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { DirEntry } from '../../../shared/types'
-import { useStore } from '../store'
-import { collectLeaves } from '../layout'
+import type { DirEntry } from '../../../../shared/types'
+import { useStore } from '../../store'
+import { collectLeaves } from '../../layout'
+import './files.css'
 import {
   FileIcon,
   FolderIcon,
@@ -12,7 +13,7 @@ import {
   PencilIcon,
   TrashIcon,
   CopyIcon
-} from './Icons'
+} from '../../ui/Icons'
 
 interface MenuState {
   x: number

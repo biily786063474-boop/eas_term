@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { SessionTurn, SessionExchange } from '../../../shared/types'
-import { MessageIcon, RefreshIcon } from './Icons'
+import type { SessionTurn, SessionExchange } from '../../../../shared/types'
+import { MessageIcon, RefreshIcon } from '../../ui/Icons'
+import './chat.css'
 
 function fmtTime(ms: number): string {
   if (!ms) return ''

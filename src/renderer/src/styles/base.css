@@ -1,0 +1,385 @@
+/* ========== 设计令牌 / 主题 / reset / 标题栏 ========== */
+:root {
+  /* 液态玻璃设计令牌（背景暗度对齐黑粉主题，仅保留中性偏蓝色相） */
+  --glass-1: rgba(15, 17, 23, 0.5); /* 最轻的玻璃：侧边栏、标题栏 */
+  --glass-2: rgba(11, 13, 19, 0.62); /* 面板玻璃 */
+  --glass-3: rgba(25, 28, 38, 0.82); /* 浮层玻璃：菜单、下拉 */
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-strong: rgba(255, 255, 255, 0.14);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --blur: blur(28px) saturate(160%);
+
+  --fg: #e2e4ea;
+  --fg-dim: #969aa8;
+  /* 柔和雾霾蓝：低饱和不扎眼，亮度(HSL≈76%)对齐粉主题的粉色背景 */
+  --accent: #a2b9e0;
+  --accent-rgb: 162, 185, 224;
+  --accent-soft: rgba(var(--accent-rgb), 0.16);
+  --folder-icon: #a8bee4;
+  --bg-grad-1: rgba(7, 8, 13, 0.72);
+  --bg-grad-2: rgba(3, 4, 6, 0.85);
+
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 7px;
+
+  --titlebar-h: 42px;
+}
+
+/* ---------- 黑粉主题：纯黑背景 + 粉色系高亮 ---------- */
+:root[data-theme='pink'] {
+  --glass-1: rgba(20, 14, 18, 0.5);
+  --glass-2: rgba(16, 10, 14, 0.62);
+  --glass-3: rgba(34, 22, 30, 0.82);
+  --accent: #f78bb0;
+  --accent-rgb: 247, 139, 176;
+  --folder-icon: #f0a3c0;
+  --bg-grad-1: rgba(10, 7, 9, 0.72);
+  --bg-grad-2: rgba(4, 3, 5, 0.85);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  /* 透出窗口 vibrancy，叠一层深色渐变保证可读性 */
+  background: linear-gradient(165deg, var(--bg-grad-1), var(--bg-grad-2));
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ---------- 标题栏 ---------- */
+.titlebar {
+  height: var(--titlebar-h);
+  flex: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+  padding: 0 90px;
+  overflow: hidden;
+}
+
+.titlebar-actions {
+  position: absolute;
+  right: 12px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.theme-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.titlebar-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.92;
+}
+
+/* 当前项目徽章：accent 胶囊，明确标识"现在在哪个项目" */
+.titlebar-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(72%, 660px);
+  height: 26px;
+  padding: 0 14px 0 11px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(var(--accent-rgb), 0.36);
+  border-radius: 999px;
+  box-shadow: var(--glass-highlight), 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.titlebar-project-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.titlebar-project-name {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: 0.01em;
+}
+
+.titlebar-project-path {
+  min-width: 0;
+  padding-left: 2px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+.titlebar-project-path::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  vertical-align: middle;
+  opacity: 0.6;
+}
+
+/* ========== 浮层玻璃：菜单 / 下拉（全局共用） ========== */
+/* ---------- 浮层玻璃：菜单 / 下拉 ---------- */
+.context-menu,
+.glass-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 172px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 5px;
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.context-menu button,
+.glass-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.context-menu button:hover,
+.glass-menu-item:hover {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.context-menu button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.context-menu button:disabled:hover {
+  background: none;
+  color: var(--fg);
+}
+
+.glass-menu-item.selected {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.glass-menu-check {
+  margin-left: auto;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--glass-border);
+}
+
+.tree-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-family: inherit;
+  padding: 1px 6px;
+  outline: none;
+}
+
+/* ========== 空状态 / 通用控件 ========== */
+/* ---------- 空状态 / 通用 ---------- */
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: min(460px, 100%);
+  padding: 40px 48px;
+  background: var(--glass-1);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  box-shadow: var(--glass-highlight), 0 14px 48px rgba(0, 0, 0, 0.3);
+}
+
+.empty-title {
+  font-size: 16px;
+  color: var(--fg-dim);
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.primary-btn {
+  padding: 9px 20px;
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  backdrop-filter: var(--blur);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--glass-highlight);
+  transition: background 0.15s;
+}
+
+.primary-btn:hover {
+  background: rgba(var(--accent-rgb), 0.28);
+}
+
+/* ========== 危险操作确认弹窗 ========== */
+/* ---------- 危险操作确认弹窗 ---------- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 10, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.confirm-dialog {
+  width: min(384px, 84vw);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 22px 18px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+}
+
+.confirm-message {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--fg);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.danger-btn {
+  padding: 8px 18px;
+  border: 1px solid rgba(247, 118, 142, 0.5);
+  border-radius: 999px;
+  background: rgba(247, 118, 142, 0.18);
+  color: #ff8fa3;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.danger-btn:hover {
+  background: rgba(247, 118, 142, 0.3);
+  color: #ffb3c0;
+}
+
+.icon-btn {
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--fg);
+}
+
+/* ========== 全局滚动条 ========== */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  border: 2.5px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

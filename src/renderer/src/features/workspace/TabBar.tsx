@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useStore } from '../store'
-import { PlusIcon, CloseIcon } from './Icons'
+import { useStore } from '../../store'
+import { PlusIcon, CloseIcon } from '../../ui/Icons'
 
 function TabRenameInput({
   tabId,

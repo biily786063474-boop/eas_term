@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
-import { useStore, TermTab } from '../store'
-import { computeLayout, LeafRect, DividerRect } from '../layout'
+import { useStore, TermTab } from '../../store'
+import { computeLayout, LeafRect, DividerRect } from '../../layout'
 import { PaneView } from './PaneView'
 
 interface Props {

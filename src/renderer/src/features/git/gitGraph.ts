@@ -3,7 +3,7 @@
 // 连线坐标用 lane 索引 + 归一化 y（0=行顶, 0.5=节点, 1=行底），渲染时乘列宽/行高即可，
 // 因此对可变行高天然适配（每行 SVG 撑满自身高度）。
 
-import type { GitCommit } from '../../shared/types'
+import type { GitCommit } from '../../../../shared/types'
 
 export interface GraphSegment {
   fromLane: number

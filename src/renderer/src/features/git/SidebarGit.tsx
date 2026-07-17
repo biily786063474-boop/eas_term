@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useStore } from '../store'
-import type { GitStatus, GitFileEntry, GitCommit } from '../../../shared/types'
-import { computeGraphRows, parseRefs } from '../gitGraph'
+import { useStore } from '../../store'
+import type { GitStatus, GitFileEntry, GitCommit } from '../../../../shared/types'
+import { computeGraphRows, parseRefs } from './gitGraph'
+import { statusInfo } from './gitUi'
+import './git.css'
 import {
   GitBranchIcon,
   RefreshIcon,
@@ -11,31 +13,13 @@ import {
   CheckIcon,
   SparkleIcon,
   ClockIcon
-} from './Icons'
+} from '../../ui/Icons'
 
 const LANE_W = 14 // 轨道图每列宽度（px）
 const MAX_LANES = 5 // 侧栏 gutter 最多显示的轨道数
 
 const POLL_MS = 3000
 const LOG_LIMIT = 40
-
-function statusInfo(letter: string): { label: string; cls: string } {
-  switch (letter) {
-    case 'A':
-    case '?':
-      return { label: letter === '?' ? 'U' : 'A', cls: 'add' }
-    case 'D':
-      return { label: 'D', cls: 'del' }
-    case 'U':
-    case '!':
-      return { label: 'U', cls: 'conflict' }
-    case 'R':
-    case 'C':
-      return { label: letter, cls: 'mod' }
-    default:
-      return { label: 'M', cls: 'mod' }
-  }
-}
 
 function splitName(p: string): { dir: string; base: string } {
   const idx = p.lastIndexOf('/')

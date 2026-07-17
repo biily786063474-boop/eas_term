@@ -2,7 +2,7 @@ import ReactDOM from 'react-dom/client'
 import { App } from './App'
 import { useStore } from './store'
 import { applyTheme, loadTheme } from './themes'
-import './styles.css'
+import './styles/base.css'
 
 // 渲染前先套用持久化的主题，避免首帧闪默认色
 applyTheme(loadTheme())

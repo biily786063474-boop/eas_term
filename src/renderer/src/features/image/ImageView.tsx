@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { BizoneCheck, BizoneProject, BizoneMedia } from '../../../shared/types'
-import { useStore } from '../store'
+import type { BizoneCheck, BizoneProject, BizoneMedia } from '../../../../shared/types'
+import { useStore } from '../../store'
+import './image.css'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -11,7 +12,7 @@ import {
   ImageIcon,
   PlayIcon,
   CheckIcon
-} from './Icons'
+} from '../../ui/Icons'
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`

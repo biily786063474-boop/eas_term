@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useStore } from '../store'
-import type { LeafNode, PaneKind, Rect } from '../layout'
-import { TerminalView } from './TerminalView'
-import { CodeView } from './CodeView'
-import { DiffView } from './DiffView'
-import { ImageView } from './ImageView'
-import { HistoryView } from './HistoryView'
-import { ChatNavView } from './ChatNavView'
-import { DictView } from './DictView'
+import { useStore } from '../../store'
+import type { LeafNode, PaneKind, Rect } from '../../layout'
+import { TerminalView } from '../terminal/TerminalView'
+import { CodeView } from '../editor/CodeView'
+import { DiffView } from '../editor/DiffView'
+import { ImageView } from '../image/ImageView'
+import { HistoryView } from '../git/HistoryView'
+import { ChatNavView } from '../chat/ChatNavView'
+
+// 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
+const DictView = lazy(() =>
+  import('../dict/DictView').then((m) => ({ default: m.DictView }))
+)
 import {
   TerminalIcon,
   CodeIcon,
@@ -21,7 +25,7 @@ import {
   SplitHIcon,
   SplitVIcon,
   CheckIcon
-} from './Icons'
+} from '../../ui/Icons'
 
 const PANE_GAP = 3
 
@@ -200,7 +204,11 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
-        {pane.kind === 'dict' && <DictView />}
+        {pane.kind === 'dict' && (
+          <Suspense fallback={<div className="pane-placeholder">加载词典…</div>}>
+            <DictView />
+          </Suspense>
+        )}
       </div>
     </div>
   )

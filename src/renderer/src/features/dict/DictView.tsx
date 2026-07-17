@@ -1,9 +1,10 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useStore } from '../store'
-import { collectLeaves } from '../layout'
-import { DictIcon } from './Icons'
-import bundle from '../dictionary-bundle.json'
+import { useStore } from '../../store'
+import { collectLeaves } from '../../layout'
+import { DictIcon } from '../../ui/Icons'
+import bundle from './dictionary-bundle.json'
+import './dict.css'
 
 // 专业名词词典：词条以胶囊平铺，hover 弹浮层看 SVG 图 + 实现逻辑，
 // 点击把「实现逻辑」文本插入到最近活动终端的命令行光标处（不带回车，不执行）。

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useStore } from '../store'
-import type { Project } from '../../../shared/types'
-import { FileTree } from './FileTree'
-import { SidebarGit } from './SidebarGit'
-import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon } from './Icons'
+import { useStore } from '../../store'
+import type { Project } from '../../../../shared/types'
+import { FileTree } from '../files/FileTree'
+import { SidebarGit } from '../git/SidebarGit'
+import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon } from '../../ui/Icons'
+import './workspace.css'
 
 // 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
 function WorkspacePanel({ project }: { project: Project }): JSX.Element {

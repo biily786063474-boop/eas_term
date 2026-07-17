@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { GitCommit, GitCommitFile } from '../../../shared/types'
-import { computeGraphRows, parseRefs, type GraphSegment } from '../gitGraph'
-import { DiffView } from './DiffView'
-import { RefreshIcon, GitBranchIcon } from './Icons'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { GitCommit, GitCommitFile } from '../../../../shared/types'
+import { computeGraphRows, parseRefs, type GraphSegment } from './gitGraph'
+import { statusInfo } from './gitUi'
+import { DiffView } from '../editor/DiffView'
+import { RefreshIcon, GitBranchIcon } from '../../ui/Icons'
 
 const ROW_H = 30 // 提交表行高（固定，保证轨道图与各列对齐）
 const LANE_W = 18 // 主视图轨道列宽
@@ -19,13 +20,6 @@ function fmtFull(sec: number): string {
   const d = new Date(sec * 1000)
   const p = (n: number): string => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-function statusCls(s: string): string {
-  if (s === 'A') return 'add'
-  if (s === 'D') return 'del'
-  if (s === 'R' || s === 'C') return 'mod'
-  return 'mod'
 }
 
 // 一段轨道线的 SVG path（同 lane 竖直；跨 lane 走 S 形曲线，SourceTree 观感）
@@ -107,7 +101,8 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
     )
   }
 
-  const rows = computeGraphRows(log)
+  // 拖分隔条时每次 mousemove 都会重渲染，lane 布局只需随 log 变化重算
+  const rows = useMemo(() => computeGraphRows(log), [log])
   const maxLanes = Math.min(rows.reduce((m, r) => Math.max(m, r.laneCount), 1), MAX_LANES)
   const gutterW = maxLanes * LANE_W
   const cx = (l: number): number => Math.min(l, maxLanes - 1) * LANE_W + LANE_W / 2
@@ -192,7 +187,7 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
                       title={f.path}
                       onClick={() => setActiveFile(f.path)}
                     >
-                      <span className={`git-badge ${statusCls(f.status)}`}>{f.status}</span>
+                      <span className={`git-badge ${statusInfo(f.status).cls}`}>{f.status}</span>
                       <span className="git-file-name">{base}</span>
                     </div>
                   )

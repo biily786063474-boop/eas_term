@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import { useStore } from './store'
-import { Sidebar } from './components/Sidebar'
-import { TabBar } from './components/TabBar'
-import { TabContent } from './components/TabContent'
-import { ThemeSelect } from './components/ThemeSelect'
-import { ConfirmDialog } from './components/ConfirmDialog'
-import { FolderIcon } from './components/Icons'
+import { Sidebar } from './features/workspace/Sidebar'
+import { TabBar } from './features/workspace/TabBar'
+import { TabContent } from './features/workspace/TabContent'
+import { ThemeSelect } from './ui/ThemeSelect'
+import { ConfirmDialog } from './ui/ConfirmDialog'
+import { FolderIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
   const tabs = useStore((s) => s.tabs)

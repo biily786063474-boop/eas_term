@@ -1,0 +1,452 @@
+/* ========== 主体布局：侧栏骨架 / 项目列表 ========== */
+/* ---------- 主体布局：浮动玻璃卡片 ---------- */
+.body {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  min-height: 0;
+  padding: 0 10px 10px;
+}
+
+.sidebar {
+  width: 242px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--glass-1);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.projects-section {
+  flex: none;
+  max-height: 40%;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.tree-section {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-header,
+.filetree-header {
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+}
+
+.project-list {
+  overflow-y: auto;
+  padding: 0 6px 8px;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background 0.12s;
+}
+
+.project-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.project-item.active {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.project-item.active .icon-btn {
+  color: rgba(13, 15, 22, 0.65);
+}
+
+.project-item.active .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #0d0f16;
+}
+
+.project-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-actions {
+  display: none;
+  gap: 2px;
+}
+
+.project-item:hover .project-actions {
+  display: inline-flex;
+}
+
+/* ========== 主区域 / 标签栏 ========== */
+/* ---------- 主区域 / 标签栏 ---------- */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  gap: 8px;
+}
+
+.tabbar {
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  background: var(--glass-1);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight);
+}
+
+.tabbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  min-width: 0;
+  height: 100%;
+  padding: 4px 0;
+}
+
+.tabbar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 12px;
+  max-width: 200px;
+  min-width: 104px;
+  border-radius: var(--radius-md);
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 12.5px;
+  transition: background 0.12s;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.tab-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.tab.active .tab-dot {
+  background: #0d0f16;
+  opacity: 0.75;
+}
+
+.tab.active .tab-close {
+  color: rgba(13, 15, 22, 0.6);
+}
+
+.tab.active .tab-close:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #0d0f16;
+}
+
+.tab-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-rename-input {
+  flex: 1;
+  min-width: 0;
+  width: 90px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 1px 6px;
+  outline: none;
+}
+
+.tab-close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close {
+  visibility: visible;
+}
+
+.tab-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--fg);
+}
+
+.tabbar-new {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+.tabbar-new:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ========== 标签内容栈 ========== */
+/* ---------- 终端区域 ---------- */
+.tab-stack {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.tab-content {
+  position: absolute;
+  inset: -3px; /* 抵消面板自身的 3px 间隙，让边缘对齐 */
+}
+
+/* ========== Blender 式功能面板（面板头部/下拉） ========== */
+/* ---------- Blender 式功能面板：浮动玻璃卡片 ---------- */
+.pane {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-2);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 8px 28px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pane.active {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow:
+    var(--glass-highlight),
+    0 8px 28px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(var(--accent-rgb), 0.12);
+}
+
+.pane-header {
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.pane-kind-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.pane-kind-btn:hover,
+.pane-kind-btn.open {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--glass-border);
+}
+
+.pane-kind-chevron {
+  opacity: 0.55;
+}
+
+.pane-file {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane-spacer {
+  flex: 1;
+}
+
+.pane-header .icon-btn {
+  visibility: hidden;
+}
+
+.pane:hover .pane-header .icon-btn {
+  visibility: visible;
+}
+
+.pane-body {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ========== 资源管理器标签（文件 / 版本） ========== */
+/* ---------- 资源管理器标签（文件 / 版本） ---------- */
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.workspace-tabs {
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.ws-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.ws-tab:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ws-tab.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ws-tab svg {
+  flex: none;
+  opacity: 0.9;
+}
+
+.workspace-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* 文件/版本两个面板常挂载（display 切换保状态）的包裹层 */
+.ws-keep {
+  height: 100%;
+  min-height: 0;
+}
+
+/* ========== 分屏分割线 ========== */
+/* ---------- 分屏分割线 ---------- */
+.divider {
+  position: absolute;
+  z-index: 10;
+  background: transparent;
+  border-radius: 3px;
+}
+
+.divider:hover,
+body.dragging-col .divider-v,
+body.dragging-row .divider-h {
+  background: rgba(var(--accent-rgb), 0.45);
+}
+
+.divider-v {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.divider-h {
+  height: 6px;
+  cursor: row-resize;
+}
+
+body.dragging-col {
+  cursor: col-resize;
+}
+
+body.dragging-row {
+  cursor: row-resize;
+}
+
+body.dragging-col *,
+body.dragging-row * {
+  pointer-events: none;
+}

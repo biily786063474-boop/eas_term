@@ -5,6 +5,7 @@ import { EditorState } from '@codemirror/state'
 import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
+import './editor.css'
 
 // 覆盖 oneDark 的不透明背景，让玻璃层透出来
 const glassTheme = EditorView.theme(
