@@ -18,6 +18,8 @@
   --folder-icon: #a8bee4;
   --bg-grad-1: rgba(7, 8, 13, 0.72);
   --bg-grad-2: rgba(3, 4, 6, 0.85);
+  /* 自定义 tooltip：比画布背景再暗一点的近黑 */
+  --tooltip-bg: rgba(3, 4, 7, 0.97);
 
   --radius-xl: 18px;
   --radius-lg: 14px;
@@ -37,6 +39,35 @@
   --folder-icon: #f0a3c0;
   --bg-grad-1: rgba(10, 7, 9, 0.72);
   --bg-grad-2: rgba(4, 3, 5, 0.85);
+  --tooltip-bg: rgba(6, 3, 5, 0.97);
+}
+
+/* ---------- 全局自定义 tooltip（替代原生 title） ---------- */
+.app-tooltip {
+  position: fixed;
+  z-index: 9999;
+  transform: translateX(-50%);
+  max-width: 280px;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--tooltip-bg);
+  color: var(--fg);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-line;
+  text-align: center;
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  animation: app-tooltip-in 0.11s ease;
+}
+.app-tooltip.above {
+  transform: translate(-50%, -100%);
+}
+@keyframes app-tooltip-in {
+  from {
+    opacity: 0;
+  }
 }
 
 * {

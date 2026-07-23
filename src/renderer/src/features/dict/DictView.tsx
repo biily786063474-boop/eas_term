@@ -156,7 +156,7 @@ export function DictView(): JSX.Element {
             // 移开该胶囊就收起预览（不等移出整个列表——停在空白处不该残留浮层）
             onMouseLeave={() => setHover(null)}
             onClick={() => insert(term)}
-            title="点击把实现逻辑插入到活动终端光标处"
+            data-tip="点击把实现逻辑插入到活动终端光标处"
           >
             <span className={`dict-dot cat-${term.category}`} />
             <span className="dict-pill-zh">{term.zh}</span>

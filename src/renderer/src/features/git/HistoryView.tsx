@@ -117,7 +117,7 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
           <span className="history-branch">{branch || '历史'}</span>
           <span className="history-count">{log.length} 个提交</span>
           <span className="pane-spacer" />
-          <button className="icon-btn" title="刷新" onClick={() => void refresh()}>
+          <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
             <RefreshIcon size={13} />
           </button>
         </div>
@@ -184,7 +184,7 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
                     <div
                       key={f.path}
                       className={`git-row${activeFile === f.path ? ' active' : ''}`}
-                      title={f.path}
+                      data-tip={f.path}
                       onClick={() => setActiveFile(f.path)}
                     >
                       <span className={`git-badge ${statusInfo(f.status).cls}`}>{f.status}</span>

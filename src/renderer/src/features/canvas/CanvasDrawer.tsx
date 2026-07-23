@@ -42,7 +42,20 @@ export function CanvasDrawer(): JSX.Element {
   const addComponentNode = useStore((s) => s.addComponentNode)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
+  const tabs = useStore((s) => s.tabs)
+  const attentionPtys = useStore((s) => s.attentionPtys)
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
+
+  // 该项目是否有终端「需处理」（响铃未查看）——用于条目呼吸高亮
+  const projectHasAttention = (pid: string): boolean =>
+    attentionPtys.length > 0 &&
+    tabs.some(
+      (t) =>
+        t.projectId === pid &&
+        collectLeaves(t.root).some(
+          (l) => l.pane.kind === 'terminal' && attentionPtys.includes(l.pane.ptyId)
+        )
+    )
 
   const focusFrame = (frameId: string): void => {
     const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
@@ -83,7 +96,10 @@ export function CanvasDrawer(): JSX.Element {
       const vpEl = document.querySelector('.canvas-viewport')
       vpEl?.classList.remove('drop-active')
       if (!start.started) {
+        // 点击项目：激活 + 把画布聚焦到该项目的 Frame
         setActiveProject(project.id)
+        const frame = useStore.getState().canvas.frames.find((f) => f.projectId === project.id)
+        if (frame) focusFrame(frame.id)
         return
       }
       if (!vpEl) return
@@ -251,7 +267,7 @@ export function CanvasDrawer(): JSX.Element {
 
   if (collapsed) {
     return (
-      <button className="drawer-expand" title="展开资源" onClick={() => setCollapsed(false)}>
+      <button className="drawer-expand" data-tip="展开资源" onClick={() => setCollapsed(false)}>
         <ChevronLeftIcon size={16} />
       </button>
     )
@@ -261,7 +277,7 @@ export function CanvasDrawer(): JSX.Element {
     <aside className="canvas-drawer">
       <div className="cd-head">
         <span className="cd-drawer-title">资源</span>
-        <button className="cd-collapse" title="收起抽屉" onClick={() => setCollapsed(true)}>
+        <button className="cd-collapse" data-tip="收起抽屉" onClick={() => setCollapsed(true)}>
           <ChevronRightIcon size={15} />
         </button>
       </div>
@@ -274,7 +290,7 @@ export function CanvasDrawer(): JSX.Element {
             <span className="cd-sec-title">项目</span>
             <button
               className="cd-add"
-              title="添加项目文件夹"
+              data-tip="添加项目文件夹"
               onClick={(e) => {
                 e.stopPropagation()
                 void addProject()
@@ -290,8 +306,8 @@ export function CanvasDrawer(): JSX.Element {
                 return (
                   <div
                     key={p.id}
-                    className={`cd-proj${p.id === activeProjectId ? ' active' : ''}`}
-                    title={p.path}
+                    className={`cd-proj${p.id === activeProjectId ? ' active' : ''}${projectHasAttention(p.id) ? ' breathing' : ''}`}
+                    data-tip={p.path}
                     onMouseDown={(e) => startProjectDrag(p, e)}
                     onDoubleClick={() => void openTerminal({ projectId: p.id })}
                   >
@@ -340,7 +356,7 @@ export function CanvasDrawer(): JSX.Element {
                 <div
                   key={c.id}
                   className="cd-comp"
-                  title={c.description ?? c.name}
+                  data-tip={c.description ?? c.name}
                   onMouseDown={(e) => startComponentDrag(c, e)}
                 >
                   <c.Icon size={13} />

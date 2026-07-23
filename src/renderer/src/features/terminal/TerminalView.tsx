@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Terminal, type ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
-import { WebglAddon } from '@xterm/addon-webgl'
+import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
 import { useStore } from '../../store'
 import { xtermTheme } from '../../themes'
@@ -91,7 +91,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       cursorBlink: true,
       macOptionIsMeta: true,
       scrollback: 100000,
-      scrollSensitivity: 3, // 普通缓冲滚轮步长加大，读长输出更快
+      scrollSensitivity: 2, // 普通缓冲滚轮步长（略调慢翻屏速度）
       allowProposedApi: true,
       allowTransparency: true
     })
@@ -215,9 +215,12 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       }
     })
     try {
-      term.loadAddon(new WebglAddon())
+      // Canvas 渲染后端：正确合成半透明背景（毛玻璃），避免 WebGL 增量重绘在快速滚动
+      // 大量文本时用半透明色「擦除」旧像素造成的叠影/残留花屏。吞吐略低于 WebGL，由下方
+      // rAF 写入合并补偿。历史上曾用 WebglAddon，因半透明背景叠影改回 Canvas（见 docs/终端花屏）。
+      term.loadAddon(new CanvasAddon())
     } catch {
-      // WebGL 不可用时回退到 DOM 渲染
+      // Canvas 不可用时回退到 DOM 渲染
     }
 
     // 常驻自绘滚动条：xterm 原生滚动条在「备用屏」(vim/top/Claude Code 等全屏 TUI) 里
@@ -265,7 +268,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     }
     jumpBtn.addEventListener('click', jumpBottom)
 
-    // 备用屏(Claude Code)里把一次真实滚轮放大成约 3 次，读长输出更快（普通缓冲走 scrollSensitivity）
+    // 备用屏(Claude Code)里把一次真实滚轮放大成约 2 次，读长输出更快（普通缓冲走 scrollSensitivity）
     let synthesizing = false
     const onWheelAmplify = (e: WheelEvent): void => {
       if (synthesizing) return
@@ -273,7 +276,6 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       if (!t) return
       if (t.buffer.active.type !== 'alternate' || t.modes.mouseTrackingMode === 'none') return
       synthesizing = true
-      dispatchWheel(e.deltaY, e.clientX, e.clientY)
       dispatchWheel(e.deltaY, e.clientX, e.clientY)
       synthesizing = false
     }
@@ -351,7 +353,21 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     window.api.pty.resize(ptyId, term.cols, term.rows)
 
     const store = useStore.getState()
-    const unsubData = window.api.pty.onData(ptyId, (data) => term.write(data))
+    // PTY 高吞吐时逐块直写会让渲染与缓冲错位（撕裂/掉帧型花屏）。这里把一帧内到达的多块
+    // 累积起来，用 rAF 合并成一次 term.write：一帧一写、对齐刷新节奏，消除撕裂并降 CPU。
+    let pendingWrites: string[] = []
+    let writeRaf = 0
+    const flushWrites = (): void => {
+      writeRaf = 0
+      if (!pendingWrites.length) return
+      const chunk = pendingWrites.join('')
+      pendingWrites = []
+      term.write(chunk)
+    }
+    const unsubData = window.api.pty.onData(ptyId, (data) => {
+      pendingWrites.push(data)
+      if (!writeRaf) writeRaf = requestAnimationFrame(flushWrites)
+    })
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
       useStore.getState().closeLeaf(tabId, leafId, { alreadyExited: true, ptyId })
@@ -359,11 +375,17 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     const dataDisp = term.onData((data) => window.api.pty.write(ptyId, data))
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
     const titleDisp = term.onTitleChange((title) => store.setTabTitle(tabId, title))
+    // 终端响铃（CLI 完成一轮 / 需确认审批时通常会响铃 BEL）→ 未聚焦则标记「需处理」，
+    // 供右侧抽屉里该项目条目呼吸高亮提示用户去处理
+    const bellDisp = term.onBell(() => {
+      if (!el.contains(document.activeElement)) useStore.getState().flagAttention(ptyId)
+    })
 
     // 点击/聚焦该终端时标记为活动面板，并记住它是「最近活动终端」
     // （供名词词典等面板把文本插入到这个终端的光标处——那时 activeLeaf 已是词典自己）
     const onFocus = (): void => {
       useStore.getState().setActiveLeaf(tabId, leafId)
+      useStore.getState().clearAttention(ptyId)
       useStore.setState({ lastActiveTerminal: { tabId, ptyId } })
     }
     el.addEventListener('focusin', onFocus)
@@ -399,11 +421,13 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       el.removeEventListener('wheel', onWheelAmplify, { capture: true } as EventListenerOptions)
       jumpBtn.remove()
       scrollbar.remove()
+      if (writeRaf) cancelAnimationFrame(writeRaf)
       unsubData()
       unsubExit()
       dataDisp.dispose()
       resizeDisp.dispose()
       titleDisp.dispose()
+      bellDisp.dispose()
       linkProvider.dispose()
       term.dispose()
       termRef.current = null

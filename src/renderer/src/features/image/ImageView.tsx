@@ -66,7 +66,7 @@ function FilePreview({ filePath }: { filePath: string }): JSX.Element {
         {dataUrl && (
           <img
             src={dataUrl}
-            title={actualSize ? '点击切换为适应窗口' : '点击查看原始大小'}
+            data-tip={actualSize ? '点击切换为适应窗口' : '点击查看原始大小'}
             onClick={() => setActualSize((v) => !v)}
             onLoad={(e) =>
               setDims({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
@@ -284,7 +284,7 @@ function BizoneHistory(): JSX.Element {
         <span className="pane-spacer" />
         <button
           className="icon-btn"
-          title="刷新"
+          data-tip="刷新"
           onClick={() => {
             void reload()
             window.api.bizone.listMedia(projectId).then(setMedia)
@@ -299,7 +299,7 @@ function BizoneHistory(): JSX.Element {
           <div
             key={item.mediaId}
             className="gallery-item"
-            title={item.prompt || item.title || formatDate(item.createdAt)}
+            data-tip={item.prompt || item.title || formatDate(item.createdAt)}
             onClick={() => setViewer(item)}
             onContextMenu={(e) => {
               e.preventDefault()
@@ -326,7 +326,7 @@ function BizoneHistory(): JSX.Element {
           <button
             className="icon-btn"
             disabled={pageIdx === 0}
-            title="上一页"
+            data-tip="上一页"
             onClick={() => gotoPage(pageIdx - 1)}
           >
             <ChevronLeftIcon size={13} />
@@ -337,7 +337,7 @@ function BizoneHistory(): JSX.Element {
           <button
             className="icon-btn"
             disabled={pageIdx >= pageCount - 1}
-            title="下一页"
+            data-tip="下一页"
             onClick={() => gotoPage(pageIdx + 1)}
           >
             <ChevronRightIcon size={13} />
@@ -422,7 +422,7 @@ export function ImageView({ filePath }: { filePath: string | null }): JSX.Elemen
           <button
             className={mode === 'file' ? 'active' : ''}
             disabled={!filePath}
-            title={filePath ? '' : '在文件树中点击一张图片'}
+            data-tip={filePath ? '' : '在文件树中点击一张图片'}
             onClick={() => setMode('file')}
           >
             文件预览

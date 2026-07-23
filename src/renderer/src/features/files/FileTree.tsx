@@ -275,7 +275,7 @@ function DirChildren({
             key={entry.path}
             className={`tree-item${entry.isHidden ? ' hidden-file' : ''}`}
             style={{ paddingLeft: 10 + depth * 14 }}
-            title={entry.path}
+            data-tip={entry.path}
             onContextMenu={(e) => onContextMenu(e, entry)}
             onClick={() => void openFile(entry.path)}
             onDoubleClick={() => void window.api.fs.openPath(entry.path)}
@@ -310,7 +310,7 @@ function DirNode({
       <div
         className={`tree-item dir${entry.isHidden ? ' hidden-file' : ''}`}
         style={{ paddingLeft: 10 + depth * 14 }}
-        title={entry.path}
+        data-tip={entry.path}
         onClick={() => setExpanded((v) => !v)}
         onContextMenu={(e) => onContextMenu(e, entry)}
       >

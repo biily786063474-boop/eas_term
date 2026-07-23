@@ -26,7 +26,7 @@ export function ThemeSelect(): JSX.Element {
       <button
         ref={btnRef}
         className="icon-btn"
-        title="主题"
+        data-tip="主题"
         onClick={() => {
           const r = btnRef.current!.getBoundingClientRect()
           setPos({ x: r.right - 170, y: r.bottom + 6 })

@@ -1,6 +1,7 @@
 // 画布组件节点（画布独有）：按 node.component.type 查注册表渲染，Frame 注入 projectId/cwd。
 // 外壳（头部/拖动/resize）复用文件预览节点的 .cfile-* 样式。
 
+import { useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
@@ -19,6 +20,8 @@ export function CanvasComponentNode({
   const moveNode = useStore((s) => s.moveNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
+  const renameNode = useStore((s) => s.renameNode)
+  const [editing, setEditing] = useState(false)
   const project = useStore((s) => s.projects.find((p) => p.id === frame.projectId))
   const comp = node.component
   const def = comp ? getCanvasComponent(comp.type) : undefined
@@ -70,12 +73,29 @@ export function CanvasComponentNode({
       data-frame-id={frame.id}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
     >
-      <div className="cfile-head" onMouseDown={startDrag}>
+      <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <def.Icon size={11} />
-        <span className="cfile-title" title={def.name}>
-          {def.name}
-        </span>
-        <button className="cfile-x" title="删除组件" onClick={() => removeNode(frame.id, node.id)}>
+        {editing ? (
+          <input
+            className="cfile-rename"
+            defaultValue={node.name ?? def.name}
+            autoFocus
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              renameNode(frame.id, node.id, e.target.value.trim() || def.name)
+              setEditing(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+          />
+        ) : (
+          <span className="cfile-title" data-tip={def.name}>
+            {node.name ?? def.name}
+          </span>
+        )}
+        <button className="cfile-x" data-tip="删除组件" onClick={() => removeNode(frame.id, node.id)}>
           ×
         </button>
       </div>

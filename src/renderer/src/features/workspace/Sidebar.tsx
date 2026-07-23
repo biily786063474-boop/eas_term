@@ -32,7 +32,7 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         {tab === 'files' && (
           <button
             className="icon-btn"
-            title="刷新文件树"
+            data-tip="刷新文件树"
             onClick={() => setFilesRefresh((k) => k + 1)}
           >
             <RefreshIcon size={13} />
@@ -67,7 +67,7 @@ export function Sidebar(): JSX.Element {
       <div className="sidebar-section projects-section">
         <div className="sidebar-header">
           <span>项目</span>
-          <button className="icon-btn" title="添加项目文件夹" onClick={() => void addProject()}>
+          <button className="icon-btn" data-tip="添加项目文件夹" onClick={() => void addProject()}>
             <PlusIcon size={13} />
           </button>
         </div>
@@ -79,7 +79,7 @@ export function Sidebar(): JSX.Element {
             <div
               key={p.id}
               className={`project-item${p.id === activeProjectId ? ' active' : ''}`}
-              title={p.path}
+              data-tip={p.path}
               onClick={() => setActiveProject(p.id)}
               onDoubleClick={() => void openTerminal({ projectId: p.id })}
             >
@@ -87,7 +87,7 @@ export function Sidebar(): JSX.Element {
               <span className="project-actions">
                 <button
                   className="icon-btn"
-                  title="在此项目打开新终端"
+                  data-tip="在此项目打开新终端"
                   onClick={(e) => {
                     e.stopPropagation()
                     void openTerminal({ projectId: p.id })
@@ -97,7 +97,7 @@ export function Sidebar(): JSX.Element {
                 </button>
                 <button
                   className="icon-btn"
-                  title="从列表移除（不删除文件）"
+                  data-tip="从列表移除（不删除文件）"
                   onClick={(e) => {
                     e.stopPropagation()
                     void removeProject(p.id)

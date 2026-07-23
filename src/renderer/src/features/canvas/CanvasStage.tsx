@@ -2,10 +2,10 @@
 // 这一层只画「死内容」（Frame 边框/标题/点阵/缩放条），可随意位图缩放。
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
-import { PlusIcon, MinusIcon } from '../../ui/Icons'
+import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
@@ -25,6 +25,8 @@ export function CanvasStage(): JSX.Element {
   const moveFrame = useStore((s) => s.moveFrame)
   const resizeFrame = useStore((s) => s.resizeFrame)
   const toggleCollapse = useStore((s) => s.toggleCollapse)
+  const projects = useStore((s) => s.projects)
+  const addTerminalNode = useStore((s) => s.addTerminalNode)
   const shapes = useStore((s) => s.canvas.shapes)
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
@@ -34,7 +36,12 @@ export function CanvasStage(): JSX.Element {
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
   const renameFrame = useStore((s) => s.renameFrame)
-  const [sel, setSel] = useState<Set<string>>(new Set())
+  // 选中集合提到 store（含浮层终端节点）：这里派生成 Set 供读取，写用 store action
+  const canvasSel = useStore((s) => s.canvasSel)
+  const setCanvasSel = useStore((s) => s.setCanvasSel)
+  const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
+  const clearCanvasSel = useStore((s) => s.clearCanvasSel)
+  const sel = useMemo(() => new Set(canvasSel), [canvasSel])
   const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const spaceHeld = useRef(false)
 
@@ -55,19 +62,20 @@ export function CanvasStage(): JSX.Element {
         }
       }
       e.preventDefault()
-      const r = el.getBoundingClientRect()
-      const px = e.clientX - r.left
-      const py = e.clientY - r.top
       const cur = useStore.getState().canvas.viewport
-      if (e.ctrlKey || Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
-        const factor = e.ctrlKey ? 1 - e.deltaY * 0.01 : 1 - e.deltaY * 0.0016
-        const s2 = clamp(cur.scale * factor, SCALE_MIN, SCALE_MAX)
+      if (e.ctrlKey) {
+        // 触控板捏合（pinch，macOS 合成为 ctrl+wheel）/ ⌃+滚轮 → 以光标为锚缩放
+        const r = el.getBoundingClientRect()
+        const px = e.clientX - r.left
+        const py = e.clientY - r.top
+        const s2 = clamp(cur.scale * (1 - e.deltaY * 0.01), SCALE_MIN, SCALE_MAX)
         setViewport({
           scale: s2,
           x: px - (px - cur.x) * (s2 / cur.scale),
           y: py - (py - cur.y) * (s2 / cur.scale)
         })
       } else {
+        // 双指滑动（上下左右）/ 鼠标滚轮 → 平移
         setViewport({ x: cur.x - e.deltaX, y: cur.y - e.deltaY })
       }
     }
@@ -169,7 +177,7 @@ export function CanvasStage(): JSX.Element {
             st.removeNode(fid, nid)
           }
         })
-        setSel(new Set())
+        clearCanvasSel()
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         const st = useStore.getState()
@@ -190,6 +198,48 @@ export function CanvasStage(): JSX.Element {
                 color: sh.color
               })
           }
+        })
+      } else if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // F：把画面聚焦到选中内容（fit + 居中）
+        e.preventDefault()
+        const cv = useStore.getState().canvas
+        const boxes: { x: number; y: number; w: number; h: number }[] = []
+        sel.forEach((k) => {
+          if (k[0] === 's') {
+            const sh = cv.shapes.find((s2) => s2.id === k.slice(2))
+            if (sh)
+              boxes.push({
+                x: Math.min(sh.x, sh.x + sh.w),
+                y: Math.min(sh.y, sh.y + sh.h),
+                w: Math.abs(sh.w),
+                h: Math.abs(sh.h)
+              })
+          } else if (k[0] === 'f') {
+            const fr = cv.frames.find((x) => x.id === k.slice(2))
+            if (fr) boxes.push({ x: fr.x, y: fr.y, w: fr.w, h: fr.collapsed ? HEAD_H : fr.h })
+          } else if (k[0] === 'n') {
+            const [, fid, nid] = k.split(':')
+            const fr = cv.frames.find((x) => x.id === fid)
+            const n = fr?.nodes.find((x) => x.id === nid)
+            if (fr && n) boxes.push({ x: fr.x + n.x, y: fr.y + n.y, w: n.w, h: n.h })
+          }
+        })
+        const el = viewportRef.current
+        if (!boxes.length || !el) return
+        const x1 = Math.min(...boxes.map((b) => b.x))
+        const y1 = Math.min(...boxes.map((b) => b.y))
+        const x2 = Math.max(...boxes.map((b) => b.x + b.w))
+        const y2 = Math.max(...boxes.map((b) => b.y + b.h))
+        const pad = 80
+        const sc = clamp(
+          Math.min(el.clientWidth / (x2 - x1 + pad * 2), el.clientHeight / (y2 - y1 + pad * 2)),
+          SCALE_MIN,
+          SCALE_MAX
+        )
+        setViewport({
+          scale: sc,
+          x: el.clientWidth / 2 - ((x1 + x2) / 2) * sc,
+          y: el.clientHeight / 2 - ((y1 + y2) / 2) * sc
         })
       }
     }
@@ -239,15 +289,7 @@ export function CanvasStage(): JSX.Element {
   }
 
   const selectElement = (key: string, additive: boolean): void => {
-    setSel((prev) => {
-      if (additive) {
-        const s = new Set(prev)
-        s.has(key) ? s.delete(key) : s.add(key)
-        return s
-      }
-      if (prev.has(key)) return prev
-      return new Set([key])
-    })
+    toggleCanvasSel(key, additive)
   }
 
   const rectsIntersect = (
@@ -260,7 +302,7 @@ export function CanvasStage(): JSX.Element {
     const start = screenToWorld(e.clientX, e.clientY)
     const shift = e.shiftKey
     const base = shift ? new Set(sel) : new Set<string>()
-    setSel(base)
+    setCanvasSel([...base])
     let moved = false
     const onMove = (ev: MouseEvent): void => {
       const p = screenToWorld(ev.clientX, ev.clientY)
@@ -288,20 +330,18 @@ export function CanvasStage(): JSX.Element {
           next.add('f:' + f.id)
         if (!f.collapsed)
           f.nodes.forEach((n) => {
-            if (
-              (n.pane || n.component) &&
-              rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect)
-            )
+            // 含终端节点（leafId）在内，全部可被框选
+            if (rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect))
               next.add('n:' + f.id + ':' + n.id)
           })
       })
-      setSel(next)
+      setCanvasSel([...next])
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       setBand(null)
-      if (!moved && !shift) setSel(new Set())
+      if (!moved && !shift) clearCanvasSel()
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
@@ -579,10 +619,29 @@ export function CanvasStage(): JSX.Element {
               ) : (
                 <b className="cframe-name">{f.name}</b>
               )}
-              <span className="cframe-count">{f.nodes.length} 面板</span>
+              <span className="cframe-spacer" />
               <button
                 className="cframe-btn"
-                title={f.collapsed ? '展开' : '折叠'}
+                data-tip="新建终端"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => void addTerminalNode(f.id)}
+              >
+                <TerminalIcon size={13} />
+              </button>
+              <button
+                className="cframe-btn"
+                data-tip="单击复制路径"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  const path = projects.find((p) => p.id === f.projectId)?.path
+                  if (path) void window.api.clipboard.writeText(path)
+                }}
+              >
+                <CopyIcon size={13} />
+              </button>
+              <button
+                className="cframe-btn"
+                data-tip={f.collapsed ? '展开' : '折叠'}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => toggleCollapse(f.id)}
               >
@@ -622,7 +681,7 @@ export function CanvasStage(): JSX.Element {
       <div className="canvas-toolbar">
         <button
           className={`ctool${tool === 'select' ? ' on' : ''}`}
-          title="选择 / 移动"
+          data-tip="选择 / 移动"
           onClick={() => setTool('select')}
         >
           <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
@@ -632,7 +691,7 @@ export function CanvasStage(): JSX.Element {
         <div className="ctool-sep" />
         <button
           className={`ctool${tool === 'rect' ? ' on' : ''}`}
-          title="矩形"
+          data-tip="矩形"
           onClick={() => setTool('rect')}
         >
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
@@ -641,7 +700,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'arrow' ? ' on' : ''}`}
-          title="箭头"
+          data-tip="箭头"
           onClick={() => setTool('arrow')}
         >
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
@@ -650,7 +709,7 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className={`ctool${tool === 'sticky' ? ' on' : ''}`}
-          title="便签"
+          data-tip="便签"
           onClick={() => setTool('sticky')}
         >
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
@@ -663,20 +722,20 @@ export function CanvasStage(): JSX.Element {
       <div className="canvas-zoombar">
         <button
           onClick={() => setScale(useStore.getState().canvas.viewport.scale / 1.15)}
-          title="缩小"
+          data-tip="缩小"
         >
           <MinusIcon size={14} />
         </button>
-        <button className="zoom-pct" onClick={() => setScale(1)} title="重置 100%">
+        <button className="zoom-pct" onClick={() => setScale(1)} data-tip="重置 100%">
           {Math.round(vp.scale * 100)}%
         </button>
         <button
           onClick={() => setScale(useStore.getState().canvas.viewport.scale * 1.15)}
-          title="放大"
+          data-tip="放大"
         >
           <PlusIcon size={14} />
         </button>
-        <button className="zoom-fit" onClick={fitAll} title="适应全部">
+        <button className="zoom-fit" onClick={fitAll} data-tip="适应全部">
           ⤢
         </button>
       </div>

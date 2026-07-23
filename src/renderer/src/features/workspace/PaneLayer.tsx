@@ -56,7 +56,8 @@ export function PaneLayer(): JSX.Element {
           frameId: f.id,
           nodeId: n.id,
           nodeX: n.x,
-          nodeY: n.y
+          nodeY: n.y,
+          name: n.name
         })
       })
     })

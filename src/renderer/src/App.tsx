@@ -7,6 +7,7 @@ import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
+import { Tooltip } from './ui/Tooltip'
 import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
@@ -63,8 +64,8 @@ export function App(): JSX.Element {
   return (
     <div className="app">
       <div className="titlebar">
-        {activeProject ? (
-          <div className="titlebar-project" title={activeProject.path}>
+        {viewMode === 'split' && activeProject ? (
+          <div className="titlebar-project" data-tip={activeProject.path}>
             <FolderIcon size={14} className="titlebar-project-icon" />
             <span className="titlebar-project-name">{activeProject.name}</span>
             <span className="titlebar-project-path">{activeProject.path}</span>
@@ -125,6 +126,7 @@ export function App(): JSX.Element {
         </main>
       </div>
       <ConfirmDialog />
+      <Tooltip />
     </div>
   )
 }

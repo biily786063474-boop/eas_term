@@ -65,7 +65,7 @@ export function TabBar(): JSX.Element {
             <div
               key={tab.id}
               className={`tab${tab.id === activeTabId ? ' active' : ''}`}
-              title={`${tab.cwd}\n双击重命名`}
+              data-tip={`${tab.cwd}\n双击重命名`}
               onClick={() => setActiveTab(tab.id)}
               onDoubleClick={() => setEditingTabId(tab.id)}
               onAuxClick={(e) => {
@@ -84,7 +84,7 @@ export function TabBar(): JSX.Element {
               )}
               <button
                 className="tab-close"
-                title="关闭标签页"
+                data-tip="关闭标签页"
                 onClick={(e) => {
                   e.stopPropagation()
                   closeTab(tab.id)
@@ -98,7 +98,7 @@ export function TabBar(): JSX.Element {
       </div>
       <button
         className="tabbar-new"
-        title="新建终端（⌘T）"
+        data-tip="新建终端（⌘T）"
         onClick={() => void openTerminal()}
       >
         <PlusIcon size={14} />

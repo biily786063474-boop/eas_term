@@ -72,6 +72,10 @@
   white-space: nowrap;
 }
 
+.cframe-spacer {
+  flex: 1;
+}
+
 .cframe-btn {
   width: 22px;
   height: 22px;
@@ -453,6 +457,87 @@
   color: #f7768e;
 }
 
+/* 节点头部小图标按钮（复制绝对/相对路径） */
+.cfile-btn {
+  position: relative;
+  flex: none;
+  width: 19px;
+  height: 19px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.cfile-node:hover .cfile-btn {
+  opacity: 0.7;
+}
+
+.cfile-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+
+/* 相对路径按钮右下小圆点区分 */
+.cfile-btn-rel::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* 节点重命名输入 */
+.cfile-rename {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 0 5px;
+  outline: none;
+}
+
+/* 终端节点（PaneView）画布模式下的名称 / 重命名 */
+.pane-node-name {
+  font-size: 11px;
+  color: var(--fg-dim);
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+
+.pane-node-name:hover {
+  color: var(--fg);
+}
+
+.pane-node-rename {
+  min-width: 0;
+  width: 130px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 0 5px;
+  outline: none;
+}
+
 .cfile-body {
   flex: 1;
   position: relative;
@@ -717,10 +802,38 @@
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 10px 32px rgba(0, 0, 0, 0.5);
 }
 
+/* 浮层终端节点（PaneView）选中高亮 —— 与文件/组件节点视觉一致 */
+.pane-layer.canvas-mode .pane.sel {
+  border-color: rgba(var(--accent-rgb), 0.8);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.6), 0 10px 32px rgba(0, 0, 0, 0.5);
+}
+
 .canvas-band {
   position: absolute;
   background: var(--accent-soft);
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   border-radius: 3px;
   pointer-events: none;
+}
+
+/* ---------- 项目「需处理」呼吸高亮 ---------- */
+@keyframes cd-breathe {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(var(--accent-rgb), 0);
+    background: rgba(var(--accent-rgb), 0.05);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 0 12px 0 rgba(var(--accent-rgb), 0.3);
+    background: rgba(var(--accent-rgb), 0.16);
+  }
+}
+
+.cd-proj.breathing {
+  animation: cd-breathe 1.7s ease-in-out infinite;
+  color: var(--accent);
+}
+
+.cd-proj.breathing .cd-proj-dot {
+  background: var(--accent);
 }

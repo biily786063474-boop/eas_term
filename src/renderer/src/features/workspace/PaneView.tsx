@@ -80,7 +80,7 @@ function PaneKindSelect({
       <button
         ref={btnRef}
         className={`pane-kind-btn${open ? ' open' : ''}`}
-        title="切换面板功能"
+        data-tip="切换面板功能"
         onClick={() => {
           const r = btnRef.current!.getBoundingClientRect()
           setMenuPos({ x: r.left, y: r.bottom + 6 })
@@ -129,6 +129,8 @@ export interface CanvasPlacement {
   nodeId: string
   nodeX: number
   nodeY: number
+  /** 自定义名称（画布节点重命名） */
+  name?: string
 }
 
 interface Props {
@@ -151,6 +153,12 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
   const openChat = useStore((s) => s.openChat)
   const tabCwd = useStore((s) => s.tabs.find((t) => t.id === tabId)?.cwd ?? '')
+  const renameNode = useStore((s) => s.renameNode)
+  const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
+  const [editingName, setEditingName] = useState(false)
+  // 画布模式下本终端节点的选中 key，供高亮 + 点选
+  const selKey = canvasRect ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
+  const selected = useStore((s) => (selKey ? s.canvasSel.includes(selKey) : false))
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
@@ -181,6 +189,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
     e.stopPropagation()
+    if (selKey) toggleCanvasSel(selKey, e.shiftKey)
     const { frameId, nodeId, nodeX, nodeY, scale } = canvasRect
     const sx = e.clientX
     const sy = e.clientY
@@ -214,7 +223,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
 
   return (
     <div
-      className={`pane${isActive ? ' active' : ''}`}
+      className={`pane${isActive ? ' active' : ''}${selected ? ' sel' : ''}`}
       data-leaf-id={leaf.id}
       style={paneStyle}
       onMouseDown={canvasRect ? undefined : () => setActiveLeaf(tabId, leaf.id)}
@@ -228,8 +237,34 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           kind={pane.kind}
           onChange={(k) => void setPaneKind(tabId, leaf.id, k)}
         />
+        {canvasRect &&
+          (editingName ? (
+            <input
+              className="pane-node-rename"
+              defaultValue={canvasRect.name ?? ''}
+              autoFocus
+              placeholder="命名此模块"
+              onMouseDown={(e) => e.stopPropagation()}
+              onBlur={(e) => {
+                renameNode(canvasRect.frameId, canvasRect.nodeId, e.target.value.trim())
+                setEditingName(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') setEditingName(false)
+              }}
+            />
+          ) : (
+            <span
+              className="pane-node-name"
+              data-tip="双击重命名"
+              onDoubleClick={() => setEditingName(true)}
+            >
+              {canvasRect.name || '未命名'}
+            </span>
+          ))}
         {fileName && (
-          <span className="pane-file" title={hasFile ? (pane.filePath ?? '') : ''}>
+          <span className="pane-file" data-tip={hasFile ? (pane.filePath ?? '') : ''}>
             {fileName}
           </span>
         )}
@@ -237,7 +272,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'terminal' && (
           <button
             className="icon-btn"
-            title="Claude Code 对话导航"
+            data-tip="Claude Code 对话导航"
             onClick={() => openChat(tabCwd)}
           >
             <MessageIcon />
@@ -245,21 +280,21 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         )}
         <button
           className="icon-btn"
-          title="向右分屏（⌘D）"
+          data-tip="向右分屏（⌘D）"
           onClick={() => void splitLeaf(tabId, leaf.id, 'row')}
         >
           <SplitHIcon />
         </button>
         <button
           className="icon-btn"
-          title="向下分屏（⌘⇧D）"
+          data-tip="向下分屏（⌘⇧D）"
           onClick={() => void splitLeaf(tabId, leaf.id, 'column')}
         >
           <SplitVIcon />
         </button>
         <button
           className="icon-btn"
-          title="关闭面板（⌘W）"
+          data-tip="关闭面板（⌘W）"
           onClick={() => closeLeaf(tabId, leaf.id)}
         >
           <CloseIcon />

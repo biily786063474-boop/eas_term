@@ -91,7 +91,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
         <span className="chat-title">对话导航</span>
         <span className="chat-count">{turns.length} 条消息</span>
         <span className="pane-spacer" />
-        <button className="icon-btn" title="刷新" onClick={() => void refresh()}>
+        <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
           <RefreshIcon size={13} />
         </button>
       </div>
@@ -108,7 +108,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
                 <span className="chat-item-idx">#{i + 1}</span>
                 <span className="chat-item-time">{fmtTime(t.at)}</span>
                 {!!t.imageCount && (
-                  <span className="chat-item-img" title={`${t.imageCount} 张图片`}>
+                  <span className="chat-item-img" data-tip={`${t.imageCount} 张图片`}>
                     <ImageIcon size={11} />
                     {t.imageCount > 1 ? ` ×${t.imageCount}` : ''}
                   </span>

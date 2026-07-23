@@ -24,6 +24,8 @@ export interface CanvasNode {
   pane?: PaneState
   /** 画布组件（如版本管理）；画布独有，type 查 features/canvas/components/registry */
   component?: { type: string; props?: Record<string, unknown> }
+  /** 自定义名称（可重命名）；未设则用默认标题 */
+  name?: string
   x: number
   y: number
   w: number
@@ -96,6 +98,16 @@ export interface CanvasSlice {
   removeFrame: (id: string) => void
   /** 复制画布独有节点（文件/组件；终端节点不复制，pty 唯一） */
   duplicateNode: (frameId: string, nodeId: string) => void
+  /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
+  addTerminalNode: (frameId: string) => Promise<void>
+  /** 重命名节点（自定义名称） */
+  renameNode: (frameId: string, nodeId: string, name: string) => void
+  /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点，含终端节点）。
+   *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */
+  canvasSel: string[]
+  setCanvasSel: (keys: string[]) => void
+  toggleCanvasSel: (key: string, additive: boolean) => void
+  clearCanvasSel: () => void
 }
 
 const initialScene: CanvasScene = {
@@ -143,18 +155,28 @@ function makeProjectFrame(
   }
 }
 
-/** 把新节点放进 Frame：纵向堆叠到现有节点下方（避免重叠），Frame 随之扩大到容纳它 */
+/**
+ * 让 Frame 宽高恰好裹住内部所有节点（右/下留 PAD 边距）——既能自动长大，也能收缩。
+ * 节点坐标相对 Frame，左/上边界由 moveNode 钳制（≥PAD / ≥HEAD+PAD），故此处只需管右/下。
+ */
+function fitFrameToNodes(frame: CanvasFrame): CanvasFrame {
+  if (!frame.nodes.length) return frame
+  const right = Math.max(...frame.nodes.map((n) => n.x + n.w))
+  const bottom = Math.max(...frame.nodes.map((n) => n.y + n.h))
+  return {
+    ...frame,
+    w: Math.max(240, right + PAD),
+    h: Math.max(HEAD + PAD, bottom + PAD)
+  }
+}
+
+/** 把新节点放进 Frame：纵向堆叠到现有节点下方（避免重叠），Frame 随之裹住它 */
 function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode): CanvasFrame {
   const bottom = frame.nodes.length
     ? Math.max(...frame.nodes.map((n) => n.y + n.h)) + GAP
     : HEAD + PAD
   const placed = { ...node, x: PAD, y: bottom }
-  return {
-    ...frame,
-    w: Math.max(frame.w, PAD + placed.w + PAD),
-    h: Math.max(frame.h, placed.y + placed.h + PAD),
-    nodes: [...frame.nodes, placed]
-  }
+  return fitFrameToNodes({ ...frame, nodes: [...frame.nodes, placed] })
 }
 
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
@@ -211,9 +233,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === id ? { ...f, w: Math.max(240, w), h: Math.max(120, h) } : f
-        )
+        frames: s.canvas.frames.map((f) => {
+          if (f.id !== id) return f
+          // 手动 resize 不得小于内容包围盒，避免模块溢出 Frame
+          const minW = f.nodes.length ? Math.max(...f.nodes.map((n) => n.x + n.w)) + PAD : 240
+          const minH = f.nodes.length ? Math.max(...f.nodes.map((n) => n.y + n.h)) + PAD : 120
+          return { ...f, w: Math.max(minW, w), h: Math.max(minH, h) }
+        })
       }
     })),
 
@@ -231,7 +257,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         ...s.canvas,
         frames: s.canvas.frames.map((f) =>
           f.id === frameId
-            ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) }
+            ? fitFrameToNodes({
+                ...f,
+                // 钳制左/上边界，避免模块跑到 Frame 头部或左侧外；右/下由 fit 自动裹住
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId ? { ...n, x: Math.max(PAD, x), y: Math.max(HEAD + PAD, y) } : n
+                )
+              })
             : f
         )
       }
@@ -243,12 +275,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         ...s.canvas,
         frames: s.canvas.frames.map((f) =>
           f.id === frameId
-            ? {
+            ? fitFrameToNodes({
                 ...f,
                 nodes: f.nodes.map((n) =>
                   n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
                 )
-              }
+              })
             : f
         )
       }
@@ -284,7 +316,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvas: {
         ...s.canvas,
         frames: s.canvas.frames.map((f) =>
-          f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
+          f.id === frameId
+            ? fitFrameToNodes({ ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) })
+            : f
         )
       }
     })),
@@ -333,8 +367,65 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           if (f.id !== frameId) return f
           const n = f.nodes.find((x) => x.id === nodeId)
           if (!n || n.leafId) return f
-          return { ...f, nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }] }
+          return fitFrameToNodes({
+            ...f,
+            nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }]
+          })
         })
       }
+    })),
+
+  addTerminalNode: async (frameId) => {
+    const frame = get().canvas.frames.find((f) => f.id === frameId)
+    if (!frame) return
+    const before = new Set(
+      get()
+        .tabs.filter((t) => t.projectId === frame.projectId)
+        .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+    )
+    await get().openTerminal({ projectId: frame.projectId })
+    const newLeaf = get()
+      .tabs.filter((t) => t.projectId === frame.projectId)
+      .flatMap((t) => collectLeaves(t.root))
+      .find((l) => !before.has(l.id))
+    if (!newLeaf) return
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? placeNodeInFrame(f, { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H })
+            : f
+        )
+      }
     }))
+  },
+
+  renameNode: (frameId, nodeId, name) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, name } : n)) }
+            : f
+        )
+      }
+    })),
+
+  canvasSel: [],
+  setCanvasSel: (keys) => set({ canvasSel: keys }),
+  toggleCanvasSel: (key, additive) =>
+    set((s) => {
+      if (additive)
+        return {
+          canvasSel: s.canvasSel.includes(key)
+            ? s.canvasSel.filter((k) => k !== key)
+            : [...s.canvasSel, key]
+        }
+      // 非累加：已是唯一选中则保持，否则替换为仅此项
+      if (s.canvasSel.length === 1 && s.canvasSel[0] === key) return s
+      return { canvasSel: [key] }
+    }),
+  clearCanvasSel: () => set((s) => (s.canvasSel.length ? { canvasSel: [] } : s))
 })

@@ -175,7 +175,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
       <div
         key={`${group}:${f.path}`}
         className="git-row"
-        title={f.path}
+        data-tip={f.path}
         onClick={() => openDiff({ cwd, relPath: f.path, mode })}
       >
         <span className={`git-badge ${info.cls}`}>{info.label}</span>
@@ -183,15 +183,15 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         <span className="git-row-actions" onClick={(e) => e.stopPropagation()}>
           {group === 'changed' ? (
             <>
-              <button className="icon-btn" title="丢弃改动" onClick={() => discard(f)}>
+              <button className="icon-btn" data-tip="丢弃改动" onClick={() => discard(f)}>
                 <UndoIcon size={13} />
               </button>
-              <button className="icon-btn" title="暂存" onClick={() => void stage(f)}>
+              <button className="icon-btn" data-tip="暂存" onClick={() => void stage(f)}>
                 <PlusIcon size={14} />
               </button>
             </>
           ) : (
-            <button className="icon-btn" title="取消暂存" onClick={() => void unstage(f)}>
+            <button className="icon-btn" data-tip="取消暂存" onClick={() => void unstage(f)}>
               <MinusIcon size={14} />
             </button>
           )}
@@ -204,7 +204,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
     <div className="git-view">
       <div className="git-branch-row">
         <GitBranchIcon size={13} />
-        <span className="git-branch-name" title={status?.branch ?? ''}>
+        <span className="git-branch-name" data-tip={status?.branch ?? ''}>
           {status?.branch ?? '—'}
         </span>
         {!!(status?.ahead || status?.behind) && (
@@ -216,13 +216,13 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         <span className="pane-spacer" />
         <button
           className="git-graph-btn"
-          title="在主区域打开分支图 / 历史大视图"
+          data-tip="在主区域打开分支图 / 历史大视图"
           onClick={() => openHistory(cwd)}
         >
           <GitBranchIcon size={12} />
           <span>分支图</span>
         </button>
-        <button className="icon-btn" title="刷新" onClick={() => void refresh()}>
+        <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
           <RefreshIcon size={13} />
         </button>
       </div>
@@ -239,7 +239,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
         />
         <button
           className="git-commit-btn"
-          title="提交已暂存的更改（⌘/Ctrl+Enter）"
+          data-tip="提交已暂存的更改（⌘/Ctrl+Enter）"
           disabled={!message.trim() || stagedFiles.length === 0}
           onClick={doCommit}
         >
@@ -263,7 +263,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
             <span>更改</span>
             <span className="git-group-count">{changedFiles.length}</span>
             {changedFiles.length > 0 && (
-              <button className="git-group-action" title="全部暂存" onClick={() => void stageAll()}>
+              <button className="git-group-action" data-tip="全部暂存" onClick={() => void stageAll()}>
                 <PlusIcon size={13} />
               </button>
             )}
@@ -322,7 +322,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
                       <span className="git-commit-subject">{a?.text ?? c.subject}</span>
                       <button
                         className={`git-ai-btn${a?.text ? ' done' : ''}`}
-                        title={a?.text ? 'AI 已总结' : '让 AI 用人话总结这次改动'}
+                        data-tip={a?.text ? 'AI 已总结' : '让 AI 用人话总结这次改动'}
                         disabled={a?.loading}
                         onClick={() => void describe(c.hash)}
                       >
@@ -336,7 +336,7 @@ export function SidebarGit({ cwd, active = true }: { cwd: string; active?: boole
                       <span className="git-commit-dot">·</span>
                       <span>{c.files} 个文件</span>
                       {a?.text && (
-                        <span className="git-commit-orig" title={c.subject}>
+                        <span className="git-commit-orig" data-tip={c.subject}>
                           {c.subject}
                         </span>
                       )}

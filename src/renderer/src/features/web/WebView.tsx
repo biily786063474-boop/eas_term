@@ -17,10 +17,10 @@ export function WebView({ url }: { url: string | null }): JSX.Element {
     <div className="web-view">
       <div className="web-bar">
         <GlobeIcon size={12} />
-        <span className="web-url" title={url}>
+        <span className="web-url" data-tip={url}>
           {url}
         </span>
-        <button className="web-reload" title="刷新" onClick={() => setNonce((n) => n + 1)}>
+        <button className="web-reload" data-tip="刷新" onClick={() => setNonce((n) => n + 1)}>
           <RefreshIcon size={12} />
         </button>
       </div>

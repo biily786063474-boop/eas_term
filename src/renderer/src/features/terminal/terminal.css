@@ -84,7 +84,7 @@
   color: var(--accent);
 }
 
-/* WebGL 渲染的各层 canvas（如 link 层）是纯绘制层，但默认会拦截鼠标事件；
+/* Canvas 渲染后端的各层 canvas（如 link 层）是纯绘制层，但默认会拦截鼠标事件；
    link 层还全宽覆盖到滚动条上方（z-index: 2），导致滚动条能看不能拖。
    xterm 的选字/链接点击都监听在容器元素上，穿透这些画布不影响任何交互。 */
 .terminal-host .xterm-screen canvas {

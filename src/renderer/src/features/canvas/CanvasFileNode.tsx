@@ -1,12 +1,13 @@
 // 画布独有的文件预览节点（不进分屏）：渲染在装饰层 world 内，随视口矢量缩放。
 // 内容复用 CodeView / ImageView / WebView；头部可拖动、右下可 resize、× 删除。
 
+import { useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { ImageView } from '../image/ImageView'
 import { WebView } from '../web/WebView'
-import { CodeIcon, ImageIcon, GlobeIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon } from '../../ui/Icons'
 
 export function CanvasFileNode({
   frameId,
@@ -22,15 +23,29 @@ export function CanvasFileNode({
   const moveNode = useStore((s) => s.moveNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
+  const renameNode = useStore((s) => s.renameNode)
+  const projectPath = useStore((s) => {
+    const fr = s.canvas.frames.find((f) => f.id === frameId)
+    return s.projects.find((p) => p.id === fr?.projectId)?.path ?? ''
+  })
+  const [editing, setEditing] = useState(false)
   const pane = node.pane
   if (!pane) return null
 
-  const title =
+  const fileName =
     pane.kind === 'web'
       ? (pane.url ?? '网页')
       : pane.kind === 'code' || pane.kind === 'image'
         ? (pane.filePath?.split('/').pop() ?? '未命名')
         : '预览'
+  const absPath =
+    pane.kind === 'web'
+      ? (pane.url ?? '')
+      : pane.kind === 'code' || pane.kind === 'image'
+        ? (pane.filePath ?? '')
+        : ''
+  const relPath =
+    projectPath && absPath.startsWith(projectPath + '/') ? absPath.slice(projectPath.length + 1) : absPath
   const Icon = pane.kind === 'image' ? ImageIcon : pane.kind === 'web' ? GlobeIcon : CodeIcon
 
   const startDrag = (e: React.MouseEvent): void => {
@@ -79,16 +94,47 @@ export function CanvasFileNode({
       data-frame-id={frameId}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
     >
-      <div className="cfile-head" onMouseDown={startDrag}>
+      <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <Icon size={11} />
-        <span className="cfile-title" title={title}>
-          {title}
-        </span>
-        <button
-          className="cfile-x"
-          title="删除节点"
-          onClick={() => removeNode(frameId, node.id)}
-        >
+        {editing ? (
+          <input
+            className="cfile-rename"
+            defaultValue={node.name ?? fileName}
+            autoFocus
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              renameNode(frameId, node.id, e.target.value.trim() || fileName)
+              setEditing(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+          />
+        ) : (
+          <span className="cfile-title" data-tip={absPath || fileName}>
+            {node.name ?? fileName}
+          </span>
+        )}
+        {absPath && (
+          <>
+            <button
+              className="cfile-btn"
+              data-tip="复制绝对路径"
+              onClick={() => void window.api.clipboard.writeText(absPath)}
+            >
+              <CopyIcon size={11} />
+            </button>
+            <button
+              className="cfile-btn cfile-btn-rel"
+              data-tip="复制相对路径"
+              onClick={() => void window.api.clipboard.writeText(relPath)}
+            >
+              <CopyIcon size={11} />
+            </button>
+          </>
+        )}
+        <button className="cfile-x" data-tip="删除节点" onClick={() => removeNode(frameId, node.id)}>
           ×
         </button>
       </div>
