@@ -68,6 +68,11 @@ export interface CanvasSlice {
   viewMode: ViewMode
   canvas: CanvasScene
   setViewMode: (mode: ViewMode) => void
+  /** app 启动时从磁盘恢复画布场景（frames/shapes/viewport/viewMode）。
+   *  终端节点已剥离旧 leafId → 占位，进画布时 materialize 重开绑定。 */
+  loadCanvas: () => Promise<void>
+  /** 把画布里的终端占位节点（无 leafId/pane/component）逐个重开终端并绑定 leafId */
+  materializeCanvas: () => Promise<void>
   setViewport: (vp: Partial<CanvasViewport>) => void
   /** 把当前项目的所有 leaf 铺成一个 Frame（幂等：已有该项目 Frame 则跳过） */
   seedCanvas: () => void
@@ -115,6 +120,34 @@ const initialScene: CanvasScene = {
   frames: [],
   shapes: []
 }
+
+/** 落盘的画布场景（含 viewMode）。终端节点的 leafId 已剥离（会话相关，重开时重绑）。 */
+export interface PersistedCanvas {
+  viewMode: ViewMode
+  viewport: CanvasViewport
+  frames: CanvasFrame[]
+  shapes: CanvasShape[]
+}
+
+/** 序列化画布用于落盘：剥离每个节点的 leafId（会话相关，重开时按占位重开终端重绑） */
+export function serializeCanvas(canvas: CanvasScene, viewMode: ViewMode): PersistedCanvas {
+  return {
+    viewMode,
+    viewport: canvas.viewport,
+    frames: canvas.frames.map((f) => ({
+      ...f,
+      nodes: f.nodes.map((n) => {
+        const copy = { ...n }
+        delete copy.leafId
+        return copy
+      })
+    })),
+    shapes: canvas.shapes
+  }
+}
+
+// materializeCanvas 防重入（避免恢复与进画布同时触发导致重复 spawn）
+let materializing = false
 
 // 节点网格布局参数（终端节点默认高度保证 ≥20 行：body≈NODE_H-30，行高 fontSize13×1.25≈16.25px）
 const NODE_W = 440
@@ -185,8 +218,71 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   setViewMode: (mode) => {
     set({ viewMode: mode })
-    // 首次进画布时，把当前项目的终端 seed 成 Frame（若尚未 seed）
-    if (mode === 'canvas') get().seedCanvas()
+    if (mode === 'canvas') {
+      // 首次进画布时，把当前项目的终端 seed 成 Frame（若尚未 seed）
+      get().seedCanvas()
+      // 恢复来的终端占位节点在此重开绑定（幂等，无占位则空转）
+      void get().materializeCanvas()
+    }
+  },
+
+  loadCanvas: async () => {
+    const raw = (await window.api.canvas.load()) as PersistedCanvas | null
+    if (!raw || !Array.isArray(raw.frames)) return
+    set(() => ({
+      canvas: {
+        viewport: raw.viewport ?? initialScene.viewport,
+        frames: raw.frames,
+        shapes: Array.isArray(raw.shapes) ? raw.shapes : []
+      }
+    }))
+    // 上次退出停在画布 → 恢复到画布并立即重开终端
+    if (raw.viewMode === 'canvas') {
+      set({ viewMode: 'canvas' })
+      await get().materializeCanvas()
+    }
+  },
+
+  materializeCanvas: async () => {
+    if (materializing) return
+    materializing = true
+    try {
+      const frames = get().canvas.frames
+      for (const f of frames) {
+        // 项目已被删除的 Frame：跳过重开终端（避免开到 home）
+        if (f.projectId && !get().projects.some((p) => p.id === f.projectId)) continue
+        for (const n of f.nodes) {
+          if (n.leafId || n.pane || n.component) continue // 已绑定 / 文件 / 组件 → 跳过
+          // 终端占位 → 重开一个终端绑定到该节点（全新 shell）
+          const before = new Set(
+            get()
+              .tabs.filter((t) => t.projectId === f.projectId)
+              .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+          )
+          await get().openTerminal({ projectId: f.projectId })
+          const newLeaf = get()
+            .tabs.filter((t) => t.projectId === f.projectId)
+            .flatMap((t) => collectLeaves(t.root))
+            .find((l) => !before.has(l.id))
+          if (!newLeaf) continue
+          set((s) => ({
+            canvas: {
+              ...s.canvas,
+              frames: s.canvas.frames.map((fr) =>
+                fr.id === f.id
+                  ? {
+                      ...fr,
+                      nodes: fr.nodes.map((nn) => (nn.id === n.id ? { ...nn, leafId: newLeaf.id } : nn))
+                    }
+                  : fr
+              )
+            }
+          }))
+        }
+      }
+    } finally {
+      materializing = false
+    }
   },
 
   setViewport: (vp) =>

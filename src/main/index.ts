@@ -5,6 +5,7 @@ import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
+import { registerCanvasHandlers } from './canvas'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 registerBizoneScheme()
@@ -128,6 +129,7 @@ app.whenReady().then(() => {
   registerFsHandlers()
   registerGitHandlers()
   registerSessionHandlers()
+  registerCanvasHandlers()
   registerBizoneHandlers()
   buildMenu()
   createWindow()

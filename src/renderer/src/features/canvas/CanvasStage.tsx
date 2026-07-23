@@ -247,14 +247,20 @@ export function CanvasStage(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey, { capture: true })
   }, [sel])
 
-  // 空格键临时切换为平移手势（空白拖拽默认是框选）
+  // 空格键临时切换为平移手势（空白拖拽默认是框选）+ 抓手光标（.space-pan）
   useEffect(() => {
     const down = (e: KeyboardEvent): void => {
       const tag = (e.target as HTMLElement)?.tagName
-      if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA') spaceHeld.current = true
+      if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
+        spaceHeld.current = true
+        viewportRef.current?.classList.add('space-pan')
+      }
     }
     const up = (e: KeyboardEvent): void => {
-      if (e.code === 'Space') spaceHeld.current = false
+      if (e.code === 'Space') {
+        spaceHeld.current = false
+        viewportRef.current?.classList.remove('space-pan')
+      }
     }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)

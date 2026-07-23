@@ -40,6 +40,11 @@ const api = {
     addViaDialog: (): Promise<Project[]> => ipcRenderer.invoke('projects:addViaDialog'),
     remove: (id: string): Promise<Project[]> => ipcRenderer.invoke('projects:remove', id)
   },
+  canvas: {
+    // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
+    load: (): Promise<unknown> => ipcRenderer.invoke('canvas:load'),
+    save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene)
+  },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
     readTextFile: (filePath: string): Promise<TextFileResult> =>

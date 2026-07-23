@@ -4,8 +4,13 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  cursor: grab;
+  cursor: default; /* 画板默认箭头，不是手 */
   background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.4px, transparent 1.4px);
+}
+
+/* 按住空格进入平移手势（空白判定区）才显示抓手 */
+.canvas-viewport.space-pan {
+  cursor: grab;
 }
 
 .canvas-viewport.panning {

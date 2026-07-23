@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useStore } from './store'
+import { useStore, serializeCanvas } from './store'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { PaneLayer } from './features/workspace/PaneLayer'
@@ -15,14 +15,34 @@ export function App(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const loadProjects = useStore((s) => s.loadProjects)
+  const loadCanvas = useStore((s) => s.loadCanvas)
   const openTerminal = useStore((s) => s.openTerminal)
   const addProject = useStore((s) => s.addProject)
   const viewMode = useStore((s) => s.viewMode)
   const setViewMode = useStore((s) => s.setViewMode)
 
+  // 启动：先载项目（画布 Frame 引用 projectId），再恢复画布场景；恢复完成后才挂保存订阅，
+  // 避免空画布把持久化文件覆盖掉。之后画布/viewMode 变化防抖 500ms 落盘。
   useEffect(() => {
-    void loadProjects()
-  }, [loadProjects])
+    let unsub = (): void => {}
+    let timer: number | undefined
+    void (async () => {
+      await loadProjects()
+      await loadCanvas()
+      unsub = useStore.subscribe((s, prev) => {
+        if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return
+        clearTimeout(timer)
+        timer = window.setTimeout(() => {
+          const st = useStore.getState()
+          void window.api.canvas.save(serializeCanvas(st.canvas, st.viewMode))
+        }, 500)
+      })
+    })()
+    return () => {
+      clearTimeout(timer)
+      unsub()
+    }
+  }, [loadProjects, loadCanvas])
 
   // 全局快捷键：mac 用 ⌘、Windows/Linux 用 Ctrl。T 新终端、W 关面板、D 右分屏、⇧D 下分屏、1-9 切标签
   useEffect(() => {
