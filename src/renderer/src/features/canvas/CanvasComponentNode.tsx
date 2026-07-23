@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
+import { makeSubframeDrop } from './subframeDrop'
 
 export function CanvasComponentNode({
   frame,
@@ -31,17 +32,22 @@ export function CanvasComponentNode({
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     e.preventDefault()
-    onSelect?.(e.shiftKey)
+    // 选中由根节点的 onMouseDownCapture 统一处理
     const scale = useStore.getState().canvas.viewport.scale
     const sx = e.clientX
     const sy = e.clientY
     const x0 = node.x
     const y0 = node.y
-    const onMove = (ev: MouseEvent): void =>
+    const drop = makeSubframeDrop(frame.id, node.id)
+    const onMove = (ev: MouseEvent): void => {
+      drop.track(ev.clientX, ev.clientY)
+      if (drop.done) return
       moveNode(frame.id, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
+    }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      drop.end()
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
@@ -71,6 +77,9 @@ export function CanvasComponentNode({
       className={`cfile-node${selected ? ' sel' : ''}`}
       data-node-id={node.id}
       data-frame-id={frame.id}
+      onMouseDownCapture={(e) => {
+        if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
+      }}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>

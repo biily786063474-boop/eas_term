@@ -88,6 +88,8 @@ export interface CanvasSlice {
   toggleCollapse: (id: string) => void
   moveNode: (frameId: string, nodeId: string, x: number, y: number) => void
   resizeNode: (frameId: string, nodeId: string, w: number, h: number) => void
+  /** 把节点从一个 Frame 移到另一个 Frame（拖模块进子 Frame，悬停 1s 判定） */
+  moveNodeToFrame: (fromFrameId: string, nodeId: string, toFrameId: string) => void
   /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
   addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
   /** 拖组件入 Frame：新增一个画布组件节点（尺寸由调用方从 registry 取，避免循环依赖） */
@@ -425,6 +427,22 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
               )
             }
           : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
+
+  moveNodeToFrame: (fromFrameId, nodeId, toFrameId) =>
+    set((s) => {
+      if (fromFrameId === toFrameId) return s
+      const fromF = s.canvas.frames.find((f) => f.id === fromFrameId)
+      const node = fromF?.nodes.find((n) => n.id === nodeId)
+      if (!fromF || !node) return s
+      // 先从原 Frame 摘除，再堆叠进目标 Frame（保留节点 id 与内容），最后全场景 reflow
+      let frames = s.canvas.frames.map((f) =>
+        f.id === fromFrameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
+      )
+      frames = frames.map((f) =>
+        f.id === toFrameId ? placeNodeInFrame(f, { ...node }, frames) : f
       )
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),

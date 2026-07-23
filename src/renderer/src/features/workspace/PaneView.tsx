@@ -10,6 +10,7 @@ import { ImageView } from '../image/ImageView'
 import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
 import { WebView } from '../web/WebView'
+import { makeSubframeDrop } from '../canvas/subframeDrop'
 
 // 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
 const DictView = lazy(() =>
@@ -239,15 +240,20 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
     e.stopPropagation()
-    if (selKey) toggleCanvasSel(selKey, e.shiftKey)
+    // 选中由 pane 的 onMouseDownCapture 统一处理
     const { frameId, nodeId, nodeX, nodeY, scale } = canvasRect
     const sx = e.clientX
     const sy = e.clientY
-    const onMove = (ev: MouseEvent): void =>
+    const drop = makeSubframeDrop(frameId, nodeId)
+    const onMove = (ev: MouseEvent): void => {
+      drop.track(ev.clientX, ev.clientY) // 悬停子 Frame 1s → 移入
+      if (drop.done) return
       moveNode(frameId, nodeId, nodeX + (ev.clientX - sx) / scale, nodeY + (ev.clientY - sy) / scale)
+    }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      drop.end()
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
@@ -278,6 +284,15 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       data-leaf-id={leaf.id}
       style={paneStyle}
       onMouseDown={canvasRect ? undefined : () => setActiveLeaf(tabId, leaf.id)}
+      // 画布：点终端任意部分即选中该模块（捕获阶段，不 preventDefault 故仍可在终端里输入/选字）
+      onMouseDownCapture={
+        canvasRect && selKey
+          ? (e) => {
+              if (!(e.target as HTMLElement).closest('button, input'))
+                toggleCanvasSel(selKey, e.shiftKey)
+            }
+          : undefined
+      }
     >
       <div
         className="pane-header"

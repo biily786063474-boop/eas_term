@@ -54,6 +54,9 @@ export function CanvasStage(): JSX.Element {
       const t = e.target as HTMLElement | null
       const body = t?.closest?.('.cfile-body')
       if (body) {
+        // 图片宫格是显式打开的浏览视图 → 滚轮始终交给它滚（不要求选中）
+        const grid = t?.closest?.('.civ-grid-scroll') as HTMLElement | null
+        if (grid && grid.scrollHeight - grid.clientHeight > 1) return
         const nodeEl = t?.closest?.('.cfile-node[data-node-id]') as HTMLElement | null
         const nid = nodeEl?.dataset.nodeId
         const fid = nodeEl?.dataset.frameId

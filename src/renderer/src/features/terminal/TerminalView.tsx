@@ -142,6 +142,15 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       new WebLinksAddon((event, uri) => {
         if (!(event.metaKey || event.ctrlKey)) return
         const url = /^https?:\/\//i.test(uri) ? uri : `https://${uri}`
+        // 画布模式：优先在该终端所在的 Frame 里建一个网页预览节点就地渲染，而非弹外部浏览器
+        const st = useStore.getState()
+        if (st.viewMode === 'canvas') {
+          const frame = st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
+          if (frame) {
+            st.addFileNode(frame.id, { kind: 'web', url }, 0, 0)
+            return
+          }
+        }
         void window.api.shell.openExternal(url)
       })
     )

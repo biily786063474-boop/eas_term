@@ -752,16 +752,19 @@
   position: absolute;
   inset: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 4px;
-  padding: 6px;
+  grid-auto-rows: 84px; /* 固定行高 → 缩略图不被自然高度顶开、不纵向重叠；放不下的溢出滚动 */
+  gap: 6px;
+  padding: 8px;
   align-content: start;
 }
 .civ-cell {
-  aspect-ratio: 1;
+  width: 100%;
+  height: 84px;
   border: 1.5px solid transparent;
-  border-radius: 5px;
+  border-radius: 6px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
@@ -1048,6 +1051,29 @@
 .cfile-node.sel {
   border-color: rgba(var(--accent-rgb), 0.8);
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 10px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* 拖模块悬停在子 Frame 上（计时中）→ 虚线高亮提示「松开将移入」 */
+.cframe-drop-pending {
+  outline: 2px dashed rgba(var(--accent-rgb), 0.85);
+  outline-offset: 3px;
+  background: rgba(var(--accent-rgb), 0.08);
+}
+/* 悬停满 1s 判定进入 → 缩放弹一下作反馈 */
+@keyframes cframe-drop-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.cframe-drop-pop {
+  animation: cframe-drop-pop 0.44s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 6;
 }
 
 /* 浮层终端节点（PaneView）选中高亮 —— 与文件/组件节点视觉一致 */
