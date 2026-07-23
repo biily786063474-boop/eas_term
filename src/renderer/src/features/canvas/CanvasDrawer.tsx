@@ -13,11 +13,13 @@ import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon, ChevronLeftIcon } from '../../ui/Icons'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
+const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
 
 function paneForFile(path: string): PaneState {
   const ext = path.split('.').pop()?.toLowerCase() ?? ''
   if (ext === 'html' || ext === 'htm') return { kind: 'web', url: 'file://' + path }
-  if (IMAGE_EXTS.has(ext)) return { kind: 'image', filePath: path }
+  // 图片 / 动图(gif,webp) / 视频 都归 image 型媒体节点，由 CanvasFileNode 按扩展名分流渲染
+  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return { kind: 'image', filePath: path }
   return { kind: 'code', filePath: path }
 }
 
@@ -39,6 +41,7 @@ export function CanvasDrawer(): JSX.Element {
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
   const addFileNode = useStore((s) => s.addFileNode)
+  const addSubFrame = useStore((s) => s.addSubFrame)
   const addComponentNode = useStore((s) => s.addComponentNode)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
@@ -115,6 +118,58 @@ export function CanvasDrawer(): JSX.Element {
       const wx = (ev.clientX - r.left - vp.x) / vp.scale
       const wy = (ev.clientY - r.top - vp.y) / vp.scale
       void addProjectFrame(project.id, wx - 60, wy - 17)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  // 拖文件夹 → 落到某 Frame（或落终端节点回溯其 Frame）→ 在其内新增一个空的子 Frame（嵌套）
+  const startFolderDrag = (path: string, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const start = { x: e.clientX, y: e.clientY, started: false }
+    let ghost: HTMLDivElement | null = null
+    const name = path.split('/').pop() ?? path
+    const clearDrop = (): void =>
+      document.querySelectorAll('.cframe.drop-target').forEach((el) => el.classList.remove('drop-target'))
+    const targetUnder = (ev: MouseEvent): Element | null => {
+      if (ghost) ghost.style.display = 'none'
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      if (ghost) ghost.style.display = ''
+      return under
+    }
+    const onMove = (ev: MouseEvent): void => {
+      if (!start.started) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return
+        start.started = true
+        ghost = document.createElement('div')
+        ghost.className = 'canvas-drag-ghost'
+        ghost.textContent = '📁 ' + name
+        document.body.appendChild(ghost)
+      }
+      if (ghost) {
+        ghost.style.left = ev.clientX + 12 + 'px'
+        ghost.style.top = ev.clientY + 10 + 'px'
+      }
+      clearDrop()
+      const cframe = targetUnder(ev)?.closest('.cframe')
+      if (cframe) cframe.classList.add('drop-target')
+    }
+    const onUp = (ev: MouseEvent): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      const under = start.started ? targetUnder(ev) : null
+      ghost?.remove()
+      clearDrop()
+      if (!start.started || !under) return
+      const frames = useStore.getState().canvas.frames
+      let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
+      if (!frameId) {
+        const lid = (under.closest('.pane[data-leaf-id]') as HTMLElement | null)?.dataset.leafId
+        if (lid) frameId = frames.find((f) => f.nodes.some((n) => n.leafId === lid))?.id
+      }
+      if (!frameId) return
+      addSubFrame(frameId, path, name)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
@@ -332,10 +387,12 @@ export function CanvasDrawer(): JSX.Element {
             <div
               className="cd-files"
               onMouseDown={(e) => {
-                const item = (e.target as HTMLElement).closest('.tree-item')
-                if (!item || item.classList.contains('dir')) return
-                const path = item.getAttribute('title')
-                if (path) startFileDrag(path, e)
+                const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
+                if (!item) return
+                const path = item.dataset.path
+                if (!path) return
+                if (item.dataset.dir) startFolderDrag(path, e)
+                else startFileDrag(path, e)
               }}
             >
               <FileTree key={activeProject.id} rootPath={activeProject.path} refreshKey={0} />

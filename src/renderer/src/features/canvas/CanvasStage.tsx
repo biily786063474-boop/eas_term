@@ -23,7 +23,6 @@ export function CanvasStage(): JSX.Element {
   const vp = useStore((s) => s.canvas.viewport)
   const setViewport = useStore((s) => s.setViewport)
   const moveFrame = useStore((s) => s.moveFrame)
-  const resizeFrame = useStore((s) => s.resizeFrame)
   const toggleCollapse = useStore((s) => s.toggleCollapse)
   const projects = useStore((s) => s.projects)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
@@ -439,25 +438,6 @@ export function CanvasStage(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
-  const startFrameResize = (f: CanvasFrame, e: React.MouseEvent): void => {
-    if (e.button !== 0) return
-    e.stopPropagation()
-    e.preventDefault()
-    const scale = useStore.getState().canvas.viewport.scale
-    const sx = e.clientX
-    const sy = e.clientY
-    const w0 = f.w
-    const h0 = f.h
-    const onMove = (ev: MouseEvent): void =>
-      resizeFrame(f.id, w0 + (ev.clientX - sx) / scale, h0 + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }
-
   const setScale = (s2: number): void => {
     const cur = useStore.getState().canvas.viewport
     const el = viewportRef.current
@@ -597,7 +577,7 @@ export function CanvasStage(): JSX.Element {
         {frames.map((f) => (
           <div
             key={f.id}
-            className={`cframe${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}`}
+            className={`cframe${f.parentId ? ' sub' : ''}${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}`}
             data-fid={f.id}
             style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
           >
@@ -639,7 +619,8 @@ export function CanvasStage(): JSX.Element {
                 data-tip="单击复制路径"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
-                  const path = projects.find((p) => p.id === f.projectId)?.path
+                  // 子 Frame 复制其文件夹路径，项目 Frame 复制项目根路径
+                  const path = f.folderPath ?? projects.find((p) => p.id === f.projectId)?.path
                   if (path) void window.api.clipboard.writeText(path)
                 }}
               >
@@ -677,9 +658,6 @@ export function CanvasStage(): JSX.Element {
                     />
                   )
                 )}
-            {!f.collapsed && (
-              <div className="cframe-rz" onMouseDown={(e) => startFrameResize(f, e)} />
-            )}
           </div>
         ))}
       </div>

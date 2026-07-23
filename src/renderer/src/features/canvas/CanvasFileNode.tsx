@@ -7,7 +7,19 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { ImageView } from '../image/ImageView'
 import { WebView } from '../web/WebView'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon } from '../../ui/Icons'
+
+const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
+const isVideoPath = (p: string): boolean => VIDEO_EXTS.has(p.split('.').pop()?.toLowerCase() ?? '')
+
+/** 把绝对路径编码成 easfile:// 媒体 URL（base64url，避开 URL 转义坑；主进程按白名单流式返回） */
+function easfileUrl(p: string): string {
+  const b64 = btoa(unescape(encodeURIComponent(p)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+  return 'easfile://media/' + b64
+}
 
 export function CanvasFileNode({
   frameId,
@@ -46,7 +58,14 @@ export function CanvasFileNode({
         : ''
   const relPath =
     projectPath && absPath.startsWith(projectPath + '/') ? absPath.slice(projectPath.length + 1) : absPath
-  const Icon = pane.kind === 'image' ? ImageIcon : pane.kind === 'web' ? GlobeIcon : CodeIcon
+  const isVid = pane.kind === 'image' && !!pane.filePath && isVideoPath(pane.filePath)
+  const Icon = isVid
+    ? PlayIcon
+    : pane.kind === 'image'
+      ? ImageIcon
+      : pane.kind === 'web'
+        ? GlobeIcon
+        : CodeIcon
 
   const startDrag = (e: React.MouseEvent): void => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
@@ -140,7 +159,18 @@ export function CanvasFileNode({
       </div>
       <div className="cfile-body">
         {pane.kind === 'code' && <CodeView filePath={pane.filePath} />}
-        {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
+        {pane.kind === 'image' &&
+          (isVid ? (
+            <video
+              className="cfile-video"
+              src={easfileUrl(pane.filePath!)}
+              controls
+              loop
+              playsInline
+            />
+          ) : (
+            <ImageView filePath={pane.filePath} />
+          ))}
         {pane.kind === 'web' && <WebView url={pane.url} />}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />

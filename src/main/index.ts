@@ -5,10 +5,11 @@ import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
-import { registerCanvasHandlers } from './canvas'
+import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 registerBizoneScheme()
+registerMediaScheme()
 
 function createWindow(): void {
   const isMac = process.platform === 'darwin'

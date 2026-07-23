@@ -32,7 +32,8 @@ export interface CanvasNode {
   h: number
 }
 
-/** Frame：对应一个项目，容纳若干节点 */
+/** Frame：对应一个项目（顶层）或一个文件夹（子 Frame），容纳若干节点。
+ *  子 Frame：parentId 指向父 Frame、folderPath 记文件夹路径；坐标同为世界坐标。 */
 export interface CanvasFrame {
   id: string
   projectId: string | null
@@ -43,6 +44,10 @@ export interface CanvasFrame {
   h: number
   collapsed: boolean
   nodes: CanvasNode[]
+  /** 父 Frame id（子 Frame 才有）；顶层项目 Frame 为 undefined/null */
+  parentId?: string | null
+  /** 子 Frame 对应的文件夹绝对路径 */
+  folderPath?: string
 }
 
 /** 图形/便签：世界坐标 */
@@ -99,8 +104,10 @@ export interface CanvasSlice {
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void
   renameFrame: (id: string, name: string) => void
-  /** 删除 Frame：逐个 closeLeaf 杀掉成员终端，再移除 Frame */
+  /** 删除 Frame：连同后代子 Frame 一起删，逐个 closeLeaf 杀掉各自成员终端 */
   removeFrame: (id: string) => void
+  /** 拖文件夹入某 Frame → 在其内新增一个空的子 Frame（父随之裹住） */
+  addSubFrame: (parentId: string, folderPath: string, name: string) => void
   /** 复制画布独有节点（文件/组件；终端节点不复制，pty 唯一） */
   duplicateNode: (frameId: string, nodeId: string) => void
   /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
@@ -188,28 +195,73 @@ function makeProjectFrame(
   }
 }
 
-/**
- * 让 Frame 宽高恰好裹住内部所有节点（右/下留 PAD 边距）——既能自动长大，也能收缩。
- * 节点坐标相对 Frame，左/上边界由 moveNode 钳制（≥PAD / ≥HEAD+PAD），故此处只需管右/下。
- */
-function fitFrameToNodes(frame: CanvasFrame): CanvasFrame {
-  if (!frame.nodes.length) return frame
-  const right = Math.max(...frame.nodes.map((n) => n.x + n.w))
-  const bottom = Math.max(...frame.nodes.map((n) => n.y + n.h))
-  return {
-    ...frame,
-    w: Math.max(240, right + PAD),
-    h: Math.max(HEAD + PAD, bottom + PAD)
+/** 一个 Frame 恰好裹住其「节点 + 子 Frame」所需的宽高（右/下留 PAD）。子 Frame 用世界坐标，
+ *  换算成相对本 Frame 的偏移参与计算。空 Frame → 最小 240×120（可用的空容器）。 */
+function frameExtent(frame: CanvasFrame, allFrames: CanvasFrame[]): { w: number; h: number } {
+  let right = 0
+  let bottom = 0
+  for (const n of frame.nodes) {
+    right = Math.max(right, n.x + n.w)
+    bottom = Math.max(bottom, n.y + n.h)
   }
+  for (const c of allFrames) {
+    if (c.parentId !== frame.id) continue
+    const ch = c.collapsed ? HEAD : c.h
+    right = Math.max(right, c.x - frame.x + c.w)
+    bottom = Math.max(bottom, c.y - frame.y + ch)
+  }
+  return { w: Math.max(240, right + PAD), h: Math.max(120, bottom + PAD) }
 }
 
-/** 把新节点放进 Frame：纵向堆叠到现有节点下方（避免重叠），Frame 随之裹住它 */
-function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode): CanvasFrame {
-  const bottom = frame.nodes.length
-    ? Math.max(...frame.nodes.map((n) => n.y + n.h)) + GAP
-    : HEAD + PAD
-  const placed = { ...node, x: PAD, y: bottom }
-  return fitFrameToNodes({ ...frame, nodes: [...frame.nodes, placed] })
+/** 全场景重排：每个 Frame 的宽高都收紧到「裹住自身节点 + 子 Frame」。
+ *  由深到浅处理（先定子尺寸，父再据此裹住），保持既能长大也能收缩（Req G）。 */
+function reflowFrames(frames: CanvasFrame[]): CanvasFrame[] {
+  const depthOf = (f: CanvasFrame): number => {
+    let d = 0
+    let cur: CanvasFrame | undefined = f
+    const seen = new Set<string>()
+    while (cur?.parentId && !seen.has(cur.id)) {
+      seen.add(cur.id)
+      cur = frames.find((x) => x.id === cur!.parentId)
+      if (cur) d++
+    }
+    return d
+  }
+  const order = [...frames].sort((a, b) => depthOf(b) - depthOf(a)) // 深 → 浅
+  const byId = new Map(frames.map((f) => [f.id, { ...f }]))
+  for (const f of order) {
+    const cur = byId.get(f.id)!
+    const ext = frameExtent(cur, [...byId.values()])
+    cur.w = ext.w
+    cur.h = ext.h
+  }
+  return frames.map((f) => byId.get(f.id)!)
+}
+
+/** 某 Frame 的所有后代 Frame id（递归，用于拖父带子 / 删父连子） */
+function collectDescendants(frames: CanvasFrame[], id: string): Set<string> {
+  const out = new Set<string>()
+  const stack = [id]
+  while (stack.length) {
+    const cur = stack.pop()!
+    for (const f of frames) {
+      if (f.parentId === cur && !out.has(f.id)) {
+        out.add(f.id)
+        stack.push(f.id)
+      }
+    }
+  }
+  return out
+}
+
+/** 把新节点放进 Frame：纵向堆叠到现有节点/子 Frame 下方（避免重叠）。尺寸交给 reflowFrames。 */
+function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode, allFrames: CanvasFrame[]): CanvasFrame {
+  const nodeBottom = frame.nodes.length ? Math.max(...frame.nodes.map((n) => n.y + n.h)) : HEAD
+  const childBottom = allFrames
+    .filter((c) => c.parentId === frame.id)
+    .reduce((m, c) => Math.max(m, c.y - frame.y + (c.collapsed ? HEAD : c.h)), HEAD)
+  const bottom = Math.max(nodeBottom, childBottom, HEAD) + (frame.nodes.length ? GAP : PAD)
+  return { ...frame, nodes: [...frame.nodes, { ...node, x: PAD, y: bottom }] }
 }
 
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
@@ -318,26 +370,25 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   },
 
   moveFrame: (id, x, y) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) => (f.id === id ? { ...f, x, y } : f))
-      }
-    })),
+    set((s) => {
+      const target = s.canvas.frames.find((f) => f.id === id)
+      if (!target) return s
+      const dx = x - target.x
+      const dy = y - target.y
+      const desc = collectDescendants(s.canvas.frames, id) // 拖父带子：后代同步位移
+      const moved = s.canvas.frames.map((f) =>
+        f.id === id ? { ...f, x, y } : desc.has(f.id) ? { ...f, x: f.x + dx, y: f.y + dy } : f
+      )
+      // 移动的若是子 Frame，其父需重新裹住 → 全场景 reflow
+      return { canvas: { ...s.canvas, frames: reflowFrames(moved) } }
+    }),
 
-  resizeFrame: (id, w, h) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) => {
-          if (f.id !== id) return f
-          // 手动 resize 不得小于内容包围盒，避免模块溢出 Frame
-          const minW = f.nodes.length ? Math.max(...f.nodes.map((n) => n.x + n.w)) + PAD : 240
-          const minH = f.nodes.length ? Math.max(...f.nodes.map((n) => n.y + n.h)) + PAD : 120
-          return { ...f, w: Math.max(minW, w), h: Math.max(minH, h) }
-        })
-      }
-    })),
+  // 帧尺寸由 reflowFrames 依内容自动裹紧（Req G），无手动 resize；保留方法只作兜底 reflow
+  resizeFrame: (id) =>
+    set((s) => {
+      if (!s.canvas.frames.some((f) => f.id === id)) return s
+      return { canvas: { ...s.canvas, frames: reflowFrames(s.canvas.frames) } }
+    }),
 
   toggleCollapse: (id) =>
     set((s) => ({
@@ -348,76 +399,65 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     })),
 
   moveNode: (frameId, nodeId, x, y) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? fitFrameToNodes({
-                ...f,
-                // 钳制左/上边界，避免模块跑到 Frame 头部或左侧外；右/下由 fit 自动裹住
-                nodes: f.nodes.map((n) =>
-                  n.id === nodeId ? { ...n, x: Math.max(PAD, x), y: Math.max(HEAD + PAD, y) } : n
-                )
-              })
-            : f
-        )
-      }
-    })),
+    set((s) => {
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? {
+              ...f,
+              // 钳制左/上边界，避免模块跑到 Frame 头部或左侧外；右/下由 reflow 自动裹住
+              nodes: f.nodes.map((n) =>
+                n.id === nodeId ? { ...n, x: Math.max(PAD, x), y: Math.max(HEAD + PAD, y) } : n
+              )
+            }
+          : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   resizeNode: (frameId, nodeId, w, h) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? fitFrameToNodes({
-                ...f,
-                nodes: f.nodes.map((n) =>
-                  n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
-                )
-              })
-            : f
-        )
-      }
-    })),
+    set((s) => {
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? {
+              ...f,
+              nodes: f.nodes.map((n) =>
+                n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
+              )
+            }
+          : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   addFileNode: (frameId, pane, x, y) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) => {
-          if (f.id !== frameId) return f
-          const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
-          const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
-          return placeNodeInFrame(f, { id: uid('cnode'), pane, x, y, w, h })
-        })
-      }
-    })),
+    set((s) => {
+      const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
+      const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? placeNodeInFrame(f, { id: uid('cnode'), pane, x, y, w, h }, s.canvas.frames)
+          : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   addComponentNode: (frameId, type, x, y, w, h) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? placeNodeInFrame(f, { id: uid('cnode'), component: { type }, x, y, w, h })
-            : f
-        )
-      }
-    })),
+    set((s) => {
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? placeNodeInFrame(f, { id: uid('cnode'), component: { type }, x, y, w, h }, s.canvas.frames)
+          : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   removeNode: (frameId, nodeId) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? fitFrameToNodes({ ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) })
-            : f
-        )
-      }
-    })),
+    set((s) => {
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   addShape: (shape) =>
     set((s) => ({
@@ -442,34 +482,64 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvas: { ...s.canvas, frames: s.canvas.frames.map((f) => (f.id === id ? { ...f, name } : f)) }
     })),
 
+  // 删 Frame：连同所有后代子 Frame 一起删，逐个 closeLeaf 杀掉各自的成员终端
   removeFrame: (id) => {
     const s = get()
-    const frame = s.canvas.frames.find((f) => f.id === id)
-    if (frame) {
-      frame.nodes.forEach((n) => {
-        if (!n.leafId) return
-        const tab = s.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === n.leafId))
-        if (tab) s.closeLeaf(tab.id, n.leafId)
-      })
-    }
-    set((st) => ({ canvas: { ...st.canvas, frames: st.canvas.frames.filter((f) => f.id !== id) } }))
+    const desc = collectDescendants(s.canvas.frames, id)
+    const toRemove = new Set([id, ...desc])
+    s.canvas.frames
+      .filter((f) => toRemove.has(f.id))
+      .forEach((frame) =>
+        frame.nodes.forEach((n) => {
+          if (!n.leafId) return
+          const tab = s.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === n.leafId))
+          if (tab) s.closeLeaf(tab.id, n.leafId)
+        })
+      )
+    set((st) => ({
+      canvas: {
+        ...st.canvas,
+        frames: reflowFrames(st.canvas.frames.filter((f) => !toRemove.has(f.id)))
+      }
+    }))
   },
 
-  duplicateNode: (frameId, nodeId) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) => {
-          if (f.id !== frameId) return f
-          const n = f.nodes.find((x) => x.id === nodeId)
-          if (!n || n.leafId) return f
-          return fitFrameToNodes({
-            ...f,
-            nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }]
-          })
-        })
+  addSubFrame: (parentId, folderPath, name) =>
+    set((s) => {
+      const parent = s.canvas.frames.find((f) => f.id === parentId)
+      if (!parent) return s
+      // 堆叠到父 Frame 现有内容（节点 + 已有子 Frame）下方，避免与终端等重叠（世界坐标）
+      const nodeBottom = parent.nodes.length ? Math.max(...parent.nodes.map((n) => n.y + n.h)) : HEAD
+      const childBottom = s.canvas.frames
+        .filter((c) => c.parentId === parentId)
+        .reduce((m, c) => Math.max(m, c.y - parent.y + (c.collapsed ? HEAD : c.h)), HEAD)
+      const offY = Math.max(nodeBottom, childBottom, HEAD) + GAP
+      const sub: CanvasFrame = {
+        id: uid('frame'),
+        projectId: parent.projectId,
+        name,
+        parentId,
+        folderPath,
+        x: parent.x + PAD,
+        y: parent.y + offY,
+        w: 320,
+        h: 140,
+        collapsed: false,
+        nodes: []
       }
-    })),
+      return { canvas: { ...s.canvas, frames: reflowFrames([...s.canvas.frames, sub]) } }
+    }),
+
+  duplicateNode: (frameId, nodeId) =>
+    set((s) => {
+      const frames = s.canvas.frames.map((f) => {
+        if (f.id !== frameId) return f
+        const n = f.nodes.find((x) => x.id === nodeId)
+        if (!n || n.leafId) return f
+        return { ...f, nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }] }
+      })
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
 
   addTerminalNode: async (frameId) => {
     const frame = get().canvas.frames.find((f) => f.id === frameId)
@@ -488,10 +558,16 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? placeNodeInFrame(f, { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H })
-            : f
+        frames: reflowFrames(
+          s.canvas.frames.map((f) =>
+            f.id === frameId
+              ? placeNodeInFrame(
+                  f,
+                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  s.canvas.frames
+                )
+              : f
+          )
         )
       }
     }))
