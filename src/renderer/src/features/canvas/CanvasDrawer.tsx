@@ -47,7 +47,12 @@ export function CanvasDrawer(): JSX.Element {
   const frames = useStore((s) => s.canvas.frames)
   const tabs = useStore((s) => s.tabs)
   const attentionPtys = useStore((s) => s.attentionPtys)
+  const canvasSel = useStore((s) => s.canvasSel)
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
+
+  // 该项目的 Frame 是否被选中（画布里点选 Frame → 抽屉对应项高亮）
+  const projectFrameSelected = (pid: string): boolean =>
+    frames.some((f) => f.projectId === pid && canvasSel.includes('f:' + f.id))
 
   // 该项目是否有终端「需处理」（响铃未查看）——用于条目呼吸高亮
   const projectHasAttention = (pid: string): boolean =>
@@ -361,7 +366,7 @@ export function CanvasDrawer(): JSX.Element {
                 return (
                   <div
                     key={p.id}
-                    className={`cd-proj${p.id === activeProjectId ? ' active' : ''}${projectHasAttention(p.id) ? ' breathing' : ''}`}
+                    className={`cd-proj${p.id === activeProjectId ? ' active' : ''}${projectHasAttention(p.id) ? ' breathing' : ''}${projectFrameSelected(p.id) ? ' framesel' : ''}`}
                     data-tip={p.path}
                     onMouseDown={(e) => startProjectDrag(p, e)}
                     onDoubleClick={() => void openTerminal({ projectId: p.id })}

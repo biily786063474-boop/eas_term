@@ -54,14 +54,18 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
 
 function PaneKindSelect({
   kind,
-  onChange
+  onChange,
+  canvasMode
 }: {
   kind: PaneKind
   onChange: (kind: PaneKind) => void
+  /** 画布模式下排除「名词词典」——它改由悬浮气泡承载（且作为画布节点会崩溃） */
+  canvasMode?: boolean
 }): JSX.Element {
   const [open, setOpen] = useState(false)
   const [menuPos, setMenuPos] = useState({ x: 0, y: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
+  const options = canvasMode ? KIND_OPTIONS.filter((o) => o.kind !== 'dict') : KIND_OPTIONS
 
   useEffect(() => {
     if (!open) return
@@ -96,7 +100,7 @@ function PaneKindSelect({
         // 相对面板定位并被 overflow:hidden 裁切，必须逃逸出去
         createPortal(
           <div className="glass-menu" style={{ left: menuPos.x, top: menuPos.y }}>
-            {KIND_OPTIONS.map(({ kind: k, label, Icon }) => (
+            {options.map(({ kind: k, label, Icon }) => (
               <button
                 key={k}
                 className={`glass-menu-item${k === kind ? ' selected' : ''}`}
@@ -155,10 +159,43 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const tabCwd = useStore((s) => s.tabs.find((t) => t.id === tabId)?.cwd ?? '')
   const renameNode = useStore((s) => s.renameNode)
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
+  const setViewport = useStore((s) => s.setViewport)
   const [editingName, setEditingName] = useState(false)
+  const paneRef = useRef<HTMLDivElement>(null)
   // 画布模式下本终端节点的选中 key，供高亮 + 点选
   const selKey = canvasRect ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
   const selected = useStore((s) => (selKey ? s.canvasSel.includes(selKey) : false))
+  const isCanvas = !!canvasRect
+
+  // 画布模式：滚轮落在本模块上时——「选中」才让模块内部（终端/预览）自己滚动，
+  // 「未选中」则拦下滚轮平移/缩放画板（与画板空白处一致，鼠标经过模块不再抢走 pan）。
+  // 终端浮在 pane-layer、滚轮不经 canvas-viewport，故这里在 pane 上加原生捕获监听（passive:false 方可 preventDefault）。
+  useEffect(() => {
+    const el = paneRef.current
+    if (!el || !isCanvas) return
+    const onWheel = (e: WheelEvent): void => {
+      if (selKey && useStore.getState().canvasSel.includes(selKey)) return // 选中 → 放行给模块内容
+      e.preventDefault()
+      e.stopPropagation()
+      const cur = useStore.getState().canvas.viewport
+      if (e.ctrlKey) {
+        const vp = document.querySelector('.canvas-viewport')?.getBoundingClientRect()
+        if (!vp) return
+        const px = e.clientX - vp.left
+        const py = e.clientY - vp.top
+        const s2 = Math.min(2.2, Math.max(0.2, cur.scale * (1 - e.deltaY * 0.01)))
+        setViewport({
+          scale: s2,
+          x: px - (px - cur.x) * (s2 / cur.scale),
+          y: py - (py - cur.y) * (s2 / cur.scale)
+        })
+      } else {
+        setViewport({ x: cur.x - e.deltaX, y: cur.y - e.deltaY })
+      }
+    }
+    el.addEventListener('wheel', onWheel, { capture: true, passive: false })
+    return () => el.removeEventListener('wheel', onWheel, { capture: true })
+  }, [isCanvas, selKey, setViewport])
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
@@ -236,6 +273,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
 
   return (
     <div
+      ref={paneRef}
       className={`pane${isActive ? ' active' : ''}${selected ? ' sel' : ''}`}
       data-leaf-id={leaf.id}
       style={paneStyle}
@@ -255,6 +293,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       >
         <PaneKindSelect
           kind={pane.kind}
+          canvasMode={!!canvasRect}
           onChange={(k) => void setPaneKind(tabId, leaf.id, k)}
         />
         {canvasRect &&

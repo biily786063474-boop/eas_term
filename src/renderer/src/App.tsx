@@ -5,6 +5,7 @@ import { TabBar } from './features/workspace/TabBar'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
+import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
@@ -142,6 +143,7 @@ export function App(): JSX.Element {
             {viewMode === 'canvas' && <CanvasStage />}
             <PaneLayer />
             {viewMode === 'canvas' && <CanvasDrawer />}
+            {viewMode === 'canvas' && <CanvasDictBubble />}
           </div>
         </main>
       </div>

@@ -346,6 +346,16 @@
   background: var(--accent);
 }
 
+/* 画布里选中该项目 Frame → 抽屉对应项高亮（accent 描边环，区别于 active 的底色） */
+.cd-proj.framesel {
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--fg);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55);
+}
+.cd-proj.framesel .cd-proj-dot {
+  background: var(--accent);
+}
+
 .cd-proj-name {
   flex: 1;
   font-size: 12.5px;
@@ -548,6 +558,86 @@
   position: relative;
   overflow: hidden;
   min-height: 0;
+}
+
+/* ---------- 名词词典悬浮气泡 + 弹出面板 ---------- */
+.cdict-bubble {
+  position: fixed;
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 6px 20px rgba(0, 0, 0, 0.45);
+  color: var(--fg-dim);
+  cursor: grab;
+  transition: color 0.12s, border-color 0.12s;
+}
+.cdict-bubble:hover {
+  color: var(--fg);
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.cdict-bubble:active {
+  cursor: grabbing;
+}
+.cdict-bubble.on {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+.cdict-pop {
+  position: fixed;
+  z-index: 60;
+  width: 360px;
+  height: 464px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-2);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 16px 44px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.cdict-pop-head {
+  flex: none;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--fg);
+  font-size: 12px;
+}
+.cdict-pop-head > span {
+  flex: 1;
+}
+.cdict-pop-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.cdict-pop-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+.cdict-pop-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 /* 画布视频预览节点 */

@@ -49,15 +49,22 @@ export function CanvasStage(): JSX.Element {
     const el = viewportRef.current
     if (!el) return
     const onWheel = (e: WheelEvent): void => {
-      // 光标落在节点内容的可滚动区（组件/文件预览）→ 让内容自己滚，不缩放/平移画布
+      // 仅当模块「被选中」时，光标落在其可滚动区（组件/文件预览）才把滚轮交给内容滚动；
+      // 未选中则保持画板平移/缩放（避免鼠标经过模块就抢走 pan）。
       const t = e.target as HTMLElement | null
       const body = t?.closest?.('.cfile-body')
       if (body) {
-        let sc: HTMLElement | null = t
-        while (sc && sc !== body.parentElement) {
-          const oy = getComputedStyle(sc).overflowY
-          if (sc.scrollHeight - sc.clientHeight > 1 && (oy === 'auto' || oy === 'scroll')) return
-          sc = sc.parentElement
+        const nodeEl = t?.closest?.('.cfile-node[data-node-id]') as HTMLElement | null
+        const nid = nodeEl?.dataset.nodeId
+        const fid = nodeEl?.dataset.frameId
+        const isSel = !!nid && !!fid && useStore.getState().canvasSel.includes('n:' + fid + ':' + nid)
+        if (isSel) {
+          let sc: HTMLElement | null = t
+          while (sc && sc !== body.parentElement) {
+            const oy = getComputedStyle(sc).overflowY
+            if (sc.scrollHeight - sc.clientHeight > 1 && (oy === 'auto' || oy === 'scroll')) return
+            sc = sc.parentElement
+          }
         }
       }
       e.preventDefault()
