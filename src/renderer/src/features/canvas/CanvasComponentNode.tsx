@@ -1,33 +1,24 @@
-// 画布独有的文件预览节点（不进分屏）：渲染在装饰层 world 内，随视口矢量缩放。
-// 内容复用 CodeView / ImageView / WebView；头部可拖动、右下可 resize、× 删除。
+// 画布组件节点（画布独有）：按 node.component.type 查注册表渲染，Frame 注入 projectId/cwd。
+// 外壳（头部/拖动/resize）复用文件预览节点的 .cfile-* 样式。
 
 import { useStore } from '../../store'
-import type { CanvasNode } from '../../store'
-import { CodeView } from '../editor/CodeView'
-import { ImageView } from '../image/ImageView'
-import { WebView } from '../web/WebView'
-import { CodeIcon, ImageIcon, GlobeIcon } from '../../ui/Icons'
+import type { CanvasNode, CanvasFrame } from '../../store'
+import { getCanvasComponent } from './components/registry'
 
-export function CanvasFileNode({
-  frameId,
+export function CanvasComponentNode({
+  frame,
   node
 }: {
-  frameId: string
+  frame: CanvasFrame
   node: CanvasNode
 }): JSX.Element | null {
   const moveNode = useStore((s) => s.moveNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
-  const pane = node.pane
-  if (!pane) return null
-
-  const title =
-    pane.kind === 'web'
-      ? (pane.url ?? '网页')
-      : pane.kind === 'code' || pane.kind === 'image'
-        ? (pane.filePath?.split('/').pop() ?? '未命名')
-        : '预览'
-  const Icon = pane.kind === 'image' ? ImageIcon : pane.kind === 'web' ? GlobeIcon : CodeIcon
+  const project = useStore((s) => s.projects.find((p) => p.id === frame.projectId))
+  const comp = node.component
+  const def = comp ? getCanvasComponent(comp.type) : undefined
+  if (!comp || !def) return null
 
   const startDrag = (e: React.MouseEvent): void => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
@@ -39,7 +30,7 @@ export function CanvasFileNode({
     const x0 = node.x
     const y0 = node.y
     const onMove = (ev: MouseEvent): void =>
-      moveNode(frameId, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
+      moveNode(frame.id, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
@@ -58,7 +49,7 @@ export function CanvasFileNode({
     const w0 = node.w
     const h0 = node.h
     const onMove = (ev: MouseEvent): void =>
-      resizeNode(frameId, node.id, w0 + (ev.clientX - sx) / scale, h0 + (ev.clientY - sy) / scale)
+      resizeNode(frame.id, node.id, w0 + (ev.clientX - sx) / scale, h0 + (ev.clientY - sy) / scale)
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
@@ -71,26 +62,26 @@ export function CanvasFileNode({
     <div
       className="cfile-node"
       data-node-id={node.id}
-      data-frame-id={frameId}
+      data-frame-id={frame.id}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
     >
       <div className="cfile-head" onMouseDown={startDrag}>
-        <Icon size={11} />
-        <span className="cfile-title" title={title}>
-          {title}
+        <def.Icon size={11} />
+        <span className="cfile-title" title={def.name}>
+          {def.name}
         </span>
-        <button
-          className="cfile-x"
-          title="删除节点"
-          onClick={() => removeNode(frameId, node.id)}
-        >
+        <button className="cfile-x" title="删除组件" onClick={() => removeNode(frame.id, node.id)}>
           ×
         </button>
       </div>
       <div className="cfile-body">
-        {pane.kind === 'code' && <CodeView filePath={pane.filePath} />}
-        {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
-        {pane.kind === 'web' && <WebView url={pane.url} />}
+        {def.render({
+          nodeId: node.id,
+          frameId: frame.id,
+          projectId: frame.projectId,
+          cwd: project?.path ?? '',
+          props: comp.props
+        })}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />
     </div>

@@ -22,6 +22,8 @@ export interface CanvasNode {
   id: string
   leafId?: string
   pane?: PaneState
+  /** 画布组件（如版本管理）；画布独有，type 查 features/canvas/components/registry */
+  component?: { type: string; props?: Record<string, unknown> }
   x: number
   y: number
   w: number
@@ -76,7 +78,24 @@ export interface CanvasSlice {
   resizeNode: (frameId: string, nodeId: string, w: number, h: number) => void
   /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
   addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
+  /** 拖组件入 Frame：新增一个画布组件节点（尺寸由调用方从 registry 取，避免循环依赖） */
+  addComponentNode: (
+    frameId: string,
+    type: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ) => void
   removeNode: (frameId: string, nodeId: string) => void
+  addShape: (shape: Omit<CanvasShape, 'id'>) => void
+  updateShape: (id: string, patch: Partial<CanvasShape>) => void
+  removeShape: (id: string) => void
+  renameFrame: (id: string, name: string) => void
+  /** 删除 Frame：逐个 closeLeaf 杀掉成员终端，再移除 Frame */
+  removeFrame: (id: string) => void
+  /** 复制画布独有节点（文件/组件；终端节点不复制，pty 唯一） */
+  duplicateNode: (frameId: string, nodeId: string) => void
 }
 
 const initialScene: CanvasScene = {
@@ -121,6 +140,20 @@ function makeProjectFrame(
     h: HEAD + PAD * 2 + rows * NODE_H + (rows - 1) * GAP,
     collapsed: false,
     nodes
+  }
+}
+
+/** 把新节点放进 Frame：纵向堆叠到现有节点下方（避免重叠），Frame 随之扩大到容纳它 */
+function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode): CanvasFrame {
+  const bottom = frame.nodes.length
+    ? Math.max(...frame.nodes.map((n) => n.y + n.h)) + GAP
+    : HEAD + PAD
+  const placed = { ...node, x: PAD, y: bottom }
+  return {
+    ...frame,
+    w: Math.max(frame.w, PAD + placed.w + PAD),
+    h: Math.max(frame.h, placed.y + placed.h + PAD),
+    nodes: [...frame.nodes, placed]
   }
 }
 
@@ -229,9 +262,20 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           if (f.id !== frameId) return f
           const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
           const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
-          const node: CanvasNode = { id: uid('cnode'), pane, x, y, w, h }
-          return { ...f, nodes: [...f.nodes, node] }
+          return placeNodeInFrame(f, { id: uid('cnode'), pane, x, y, w, h })
         })
+      }
+    })),
+
+  addComponentNode: (frameId, type, x, y, w, h) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? placeNodeInFrame(f, { id: uid('cnode'), component: { type }, x, y, w, h })
+            : f
+        )
       }
     })),
 
@@ -242,6 +286,55 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         frames: s.canvas.frames.map((f) =>
           f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
         )
+      }
+    })),
+
+  addShape: (shape) =>
+    set((s) => ({
+      canvas: { ...s.canvas, shapes: [...s.canvas.shapes, { ...shape, id: uid('shape') }] }
+    })),
+
+  updateShape: (id, patch) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        shapes: s.canvas.shapes.map((sh) => (sh.id === id ? { ...sh, ...patch } : sh))
+      }
+    })),
+
+  removeShape: (id) =>
+    set((s) => ({
+      canvas: { ...s.canvas, shapes: s.canvas.shapes.filter((sh) => sh.id !== id) }
+    })),
+
+  renameFrame: (id, name) =>
+    set((s) => ({
+      canvas: { ...s.canvas, frames: s.canvas.frames.map((f) => (f.id === id ? { ...f, name } : f)) }
+    })),
+
+  removeFrame: (id) => {
+    const s = get()
+    const frame = s.canvas.frames.find((f) => f.id === id)
+    if (frame) {
+      frame.nodes.forEach((n) => {
+        if (!n.leafId) return
+        const tab = s.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === n.leafId))
+        if (tab) s.closeLeaf(tab.id, n.leafId)
+      })
+    }
+    set((st) => ({ canvas: { ...st.canvas, frames: st.canvas.frames.filter((f) => f.id !== id) } }))
+  },
+
+  duplicateNode: (frameId, nodeId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) => {
+          if (f.id !== frameId) return f
+          const n = f.nodes.find((x) => x.id === nodeId)
+          if (!n || n.leafId) return f
+          return { ...f, nodes: [...f.nodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }] }
+        })
       }
     }))
 })

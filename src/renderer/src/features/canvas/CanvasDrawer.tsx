@@ -8,6 +8,8 @@ import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
 import type { PaneState } from '../../layout'
 import { FileTree } from '../files/FileTree'
+import { CANVAS_COMPONENTS } from './components/registry'
+import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon, ChevronLeftIcon } from '../../ui/Icons'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
@@ -27,6 +29,9 @@ export function CanvasDrawer(): JSX.Element {
   const [collapsed, setCollapsed] = useState(false)
   const [projOpen, setProjOpen] = useState(true)
   const [filesOpen, setFilesOpen] = useState(true)
+  const [compOpen, setCompOpen] = useState(true)
+  const [projH, setProjH] = useState(180)
+  const [compH, setCompH] = useState(110)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
@@ -34,6 +39,7 @@ export function CanvasDrawer(): JSX.Element {
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
   const addFileNode = useStore((s) => s.addFileNode)
+  const addComponentNode = useStore((s) => s.addComponentNode)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
@@ -170,6 +176,79 @@ export function CanvasDrawer(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
+  // 拖组件：落 Frame → 新增组件节点（needsProject 组件要求 Frame 绑定了项目）
+  const startComponentDrag = (comp: CanvasComponentDef, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const start = { x: e.clientX, y: e.clientY, started: false }
+    let ghost: HTMLDivElement | null = null
+    const clearDrop = (): void =>
+      document.querySelectorAll('.cframe.drop-target').forEach((el) => el.classList.remove('drop-target'))
+    const targetUnder = (ev: MouseEvent): Element | null => {
+      if (ghost) ghost.style.display = 'none'
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      if (ghost) ghost.style.display = ''
+      return under
+    }
+    const onMove = (ev: MouseEvent): void => {
+      if (!start.started) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return
+        start.started = true
+        ghost = document.createElement('div')
+        ghost.className = 'canvas-drag-ghost'
+        ghost.textContent = comp.name
+        document.body.appendChild(ghost)
+      }
+      if (ghost) {
+        ghost.style.left = ev.clientX + 12 + 'px'
+        ghost.style.top = ev.clientY + 10 + 'px'
+      }
+      clearDrop()
+      const cframe = targetUnder(ev)?.closest('.cframe')
+      if (cframe) cframe.classList.add('drop-target')
+    }
+    const onUp = (ev: MouseEvent): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      const under = start.started ? targetUnder(ev) : null
+      ghost?.remove()
+      clearDrop()
+      if (!start.started || !under) return
+      // 落点认 Frame，或落在终端节点上时回溯它所属的 Frame（Frame 被终端占满时也能接住）
+      const frames = useStore.getState().canvas.frames
+      let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
+      if (!frameId) {
+        const lid = (under.closest('.pane[data-leaf-id]') as HTMLElement | null)?.dataset.leafId
+        if (lid) frameId = frames.find((f) => f.nodes.some((n) => n.leafId === lid))?.id
+      }
+      const frame = frames.find((f) => f.id === frameId)
+      if (!frame) return
+      if (comp.needsProject && !frame.projectId) return
+      // 坐标交给 placeNodeInFrame 自动堆叠（Frame 会扩大到合适位置）
+      addComponentNode(frame.id, comp.id, 0, 0, comp.defaultSize.w, comp.defaultSize.h)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  // 分区之间的分隔线：拖动调整项目区 / 组件区高度（文件区自适应剩余空间）
+  const startResize = (which: 'proj' | 'comp', e: React.MouseEvent): void => {
+    e.preventDefault()
+    const startY = e.clientY
+    const start0 = which === 'proj' ? projH : compH
+    const onMove = (ev: MouseEvent): void => {
+      const dy = ev.clientY - startY
+      if (which === 'proj') setProjH(Math.max(60, start0 + dy))
+      else setCompH(Math.max(48, start0 - dy))
+    }
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   if (collapsed) {
     return (
       <button className="drawer-expand" title="展开资源" onClick={() => setCollapsed(false)}>
@@ -187,7 +266,7 @@ export function CanvasDrawer(): JSX.Element {
         </button>
       </div>
       <div className="cd-scroll">
-        <section className="cd-section">
+        <section className="cd-section" style={projOpen ? { height: projH, flex: 'none' } : undefined}>
           <div className="cd-sec-head" onClick={() => setProjOpen((v) => !v)}>
             <span className={`cd-chev${projOpen ? ' open' : ''}`}>
               <ChevronRightIcon size={12} />
@@ -225,6 +304,7 @@ export function CanvasDrawer(): JSX.Element {
             </div>
           )}
         </section>
+        {projOpen && <div className="cd-resizer" onMouseDown={(e) => startResize('proj', e)} />}
         <section className="cd-section cd-section-grow">
           <div className="cd-sec-head" onClick={() => setFilesOpen((v) => !v)}>
             <span className={`cd-chev${filesOpen ? ' open' : ''}`}>
@@ -243,6 +323,31 @@ export function CanvasDrawer(): JSX.Element {
               }}
             >
               <FileTree key={activeProject.id} rootPath={activeProject.path} refreshKey={0} />
+            </div>
+          )}
+        </section>
+        {compOpen && <div className="cd-resizer" onMouseDown={(e) => startResize('comp', e)} />}
+        <section className="cd-section" style={compOpen ? { height: compH, flex: 'none' } : undefined}>
+          <div className="cd-sec-head" onClick={() => setCompOpen((v) => !v)}>
+            <span className={`cd-chev${compOpen ? ' open' : ''}`}>
+              <ChevronRightIcon size={12} />
+            </span>
+            <span className="cd-sec-title">组件</span>
+          </div>
+          {compOpen && (
+            <div className="cd-sec-body">
+              {CANVAS_COMPONENTS.map((c) => (
+                <div
+                  key={c.id}
+                  className="cd-comp"
+                  title={c.description ?? c.name}
+                  onMouseDown={(e) => startComponentDrag(c, e)}
+                >
+                  <c.Icon size={13} />
+                  <span className="cd-comp-name">{c.name}</span>
+                  <span className="cd-comp-hint">拖入画布</span>
+                </div>
+              ))}
             </div>
           )}
         </section>

@@ -2,11 +2,14 @@
 // 这一层只画「死内容」（Frame 边框/标题/点阵/缩放条），可随意位图缩放。
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { CanvasFrame } from '../../store'
+import type { CanvasFrame, CanvasShape } from '../../store'
 import { PlusIcon, MinusIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
+import { CanvasComponentNode } from './CanvasComponentNode'
+import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
+import { collectLeaves } from '../../layout'
 import './canvas.css'
 
 const SCALE_MIN = 0.2
@@ -22,12 +25,32 @@ export function CanvasStage(): JSX.Element {
   const moveFrame = useStore((s) => s.moveFrame)
   const resizeFrame = useStore((s) => s.resizeFrame)
   const toggleCollapse = useStore((s) => s.toggleCollapse)
+  const shapes = useStore((s) => s.canvas.shapes)
+  const addShape = useStore((s) => s.addShape)
+  const updateShape = useStore((s) => s.updateShape)
+  const [tool, setTool] = useState<'select' | 'rect' | 'arrow' | 'sticky'>('select')
+  const [draft, setDraft] = useState<Omit<CanvasShape, 'id'> | null>(null)
+  const [editingSticky, setEditingSticky] = useState<string | null>(null)
+  const [editingFrame, setEditingFrame] = useState<string | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
+  const renameFrame = useStore((s) => s.renameFrame)
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
   useEffect(() => {
     const el = viewportRef.current
     if (!el) return
     const onWheel = (e: WheelEvent): void => {
+      // 光标落在节点内容的可滚动区（组件/文件预览）→ 让内容自己滚，不缩放/平移画布
+      const t = e.target as HTMLElement | null
+      const body = t?.closest?.('.cfile-body')
+      if (body) {
+        let sc: HTMLElement | null = t
+        while (sc && sc !== body.parentElement) {
+          const oy = getComputedStyle(sc).overflowY
+          if (sc.scrollHeight - sc.clientHeight > 1 && (oy === 'auto' || oy === 'scroll')) return
+          sc = sc.parentElement
+        }
+      }
       e.preventDefault()
       const r = el.getBoundingClientRect()
       const px = e.clientX - r.left
@@ -49,6 +72,84 @@ export function CanvasStage(): JSX.Element {
     return () => el.removeEventListener('wheel', onWheel)
   }, [setViewport])
 
+  // 右键菜单：按目标（终端 / 文件·组件节点 / Frame / 图形 / 空白）构造统一 CRUD 菜单
+  useEffect(() => {
+    const onCtx = (e: MouseEvent): void => {
+      const t = e.target as HTMLElement
+      if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer')) return
+      e.preventDefault()
+      const st = useStore.getState()
+      const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
+      const nodeEl = t.closest('.cfile-node[data-node-id]') as HTMLElement | null
+      const shapeEl = t.closest('.cshape[data-sid]') as HTMLElement | null
+      const frameEl = t.closest('.cframe') as HTMLElement | null
+      let items: CanvasMenuItem[]
+      if (paneEl?.dataset.leafId) {
+        const leafId = paneEl.dataset.leafId
+        let fid = ''
+        let nid = ''
+        for (const f of st.canvas.frames) {
+          const n = f.nodes.find((x) => x.leafId === leafId)
+          if (n) {
+            fid = f.id
+            nid = n.id
+            break
+          }
+        }
+        items = [
+          {
+            label: '关闭终端',
+            danger: true,
+            onClick: () => {
+              if (fid && nid) st.removeNode(fid, nid)
+              const tab = st.tabs.find((tb) => collectLeaves(tb.root).some((l) => l.id === leafId))
+              if (tab) st.closeLeaf(tab.id, leafId)
+            }
+          }
+        ]
+      } else if (nodeEl?.dataset.nodeId && nodeEl.dataset.frameId) {
+        const fid = nodeEl.dataset.frameId
+        const nid = nodeEl.dataset.nodeId
+        const node = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)
+        items = [
+          ...(node && !node.leafId
+            ? [{ label: '复制', kbd: '⌘D', onClick: () => st.duplicateNode(fid, nid) }]
+            : []),
+          { label: '删除节点', danger: true, onClick: () => st.removeNode(fid, nid) }
+        ]
+      } else if (shapeEl?.dataset.sid) {
+        const sid = shapeEl.dataset.sid
+        const shape = st.canvas.shapes.find((s2) => s2.id === sid)
+        items = [
+          ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
+          { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
+        ]
+      } else if (frameEl?.dataset.fid) {
+        const fid = frameEl.dataset.fid
+        const frame = st.canvas.frames.find((f) => f.id === fid)
+        items = [
+          { label: '重命名', onClick: () => setEditingFrame(fid) },
+          { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
+          { label: '删除 Frame', danger: true, onClick: () => st.removeFrame(fid) }
+        ]
+      } else {
+        const r = viewportRef.current?.getBoundingClientRect()
+        const cur = st.canvas.viewport
+        const wx = r ? (e.clientX - r.left - cur.x) / cur.scale : 0
+        const wy = r ? (e.clientY - r.top - cur.y) / cur.scale : 0
+        items = [
+          {
+            label: '新建便签',
+            onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
+          }
+        ]
+      }
+      setMenu({ x: e.clientX, y: e.clientY, items })
+    }
+    document.addEventListener('contextmenu', onCtx)
+    return () => document.removeEventListener('contextmenu', onCtx)
+  }, [])
+
   const startPan = (e: React.MouseEvent): void => {
     if (e.button !== 0) return
     const cur = useStore.getState().canvas.viewport
@@ -62,6 +163,77 @@ export function CanvasStage(): JSX.Element {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       el?.classList.remove('panning')
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  const screenToWorld = (clientX: number, clientY: number): { wx: number; wy: number } => {
+    const r = viewportRef.current!.getBoundingClientRect()
+    const cur = useStore.getState().canvas.viewport
+    return { wx: (clientX - r.left - cur.x) / cur.scale, wy: (clientY - r.top - cur.y) / cur.scale }
+  }
+
+  // 空白按下：select 模式平移；图形工具模式绘制
+  const onViewportDown = (e: React.MouseEvent): void => {
+    if (e.button !== 0 || editingSticky) return
+    if (tool === 'select') {
+      startPan(e)
+      return
+    }
+    const { wx, wy } = screenToWorld(e.clientX, e.clientY)
+    if (tool === 'sticky') {
+      addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
+      setTool('select')
+      return
+    }
+    const type = tool
+    let d: Omit<CanvasShape, 'id'> = { type, x: wx, y: wy, w: 0, h: 0 }
+    setDraft(d)
+    const onMove = (ev: MouseEvent): void => {
+      const p = screenToWorld(ev.clientX, ev.clientY)
+      d = { ...d, w: p.wx - d.x, h: p.wy - d.y }
+      setDraft(d)
+    }
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      let { x, y, w, h } = d
+      if (type === 'rect') {
+        if (w < 0) {
+          x += w
+          w = -w
+        }
+        if (h < 0) {
+          y += h
+          h = -h
+        }
+        if (w < 8 && h < 8) {
+          w = 160
+          h = 90
+        }
+      }
+      addShape({ type, x, y, w, h })
+      setDraft(null)
+      setTool('select')
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  const startShapeDrag = (sh: CanvasShape, e: React.MouseEvent): void => {
+    if (e.button !== 0 || tool !== 'select') return
+    e.stopPropagation()
+    const scale = useStore.getState().canvas.viewport.scale
+    const sx = e.clientX
+    const sy = e.clientY
+    const x0 = sh.x
+    const y0 = sh.y
+    const onMove = (ev: MouseEvent): void =>
+      updateShape(sh.id, { x: x0 + (ev.clientX - sx) / scale, y: y0 + (ev.clientY - sy) / scale })
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
@@ -134,11 +306,94 @@ export function CanvasStage(): JSX.Element {
     })
   }
 
+  const renderShape = (sh: Omit<CanvasShape, 'id'> & { id?: string }, isDraft = false): JSX.Element => {
+    const id = sh.id ?? '__draft__'
+    const left = Math.min(sh.x, sh.x + sh.w)
+    const top = Math.min(sh.y, sh.y + sh.h)
+    const w = Math.abs(sh.w)
+    const h = Math.abs(sh.h)
+    const onDown = (e: React.MouseEvent): void => {
+      if (!isDraft) startShapeDrag(sh as CanvasShape, e)
+    }
+    if (sh.type === 'sticky') {
+      const sw = Math.max(w, 120)
+      const shh = Math.max(h, 60)
+      if (!isDraft && editingSticky === id) {
+        return (
+          <textarea
+            key={id}
+            className="cshape cshape-sticky editing"
+            style={{ left, top, width: sw, height: shh }}
+            defaultValue={sh.text}
+            autoFocus
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              updateShape(id, { text: e.target.value })
+              setEditingSticky(null)
+            }}
+          />
+        )
+      }
+      return (
+        <div
+          key={id}
+          className="cshape cshape-sticky"
+          data-sid={id}
+          style={{ left, top, width: sw, height: shh }}
+          onMouseDown={onDown}
+          onDoubleClick={() => !isDraft && setEditingSticky(id)}
+        >
+          {sh.text}
+        </div>
+      )
+    }
+    if (sh.type === 'rect') {
+      return (
+        <div
+          key={id}
+          className="cshape cshape-rect"
+          data-sid={id}
+          style={{ left, top, width: w, height: h }}
+          onMouseDown={onDown}
+        />
+      )
+    }
+    // arrow
+    const ax1 = sh.w >= 0 ? 0 : w
+    const ay1 = sh.h >= 0 ? 0 : h
+    const ax2 = sh.w >= 0 ? w : 0
+    const ay2 = sh.h >= 0 ? h : 0
+    return (
+      <svg
+        key={id}
+        className="cshape cshape-arrow"
+        data-sid={id}
+        style={{ left, top, width: Math.max(w, 2), height: Math.max(h, 2), overflow: 'visible' }}
+        onMouseDown={onDown}
+      >
+        <defs>
+          <marker id={`ah-${id}`} markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)" />
+          </marker>
+        </defs>
+        <line
+          x1={ax1}
+          y1={ay1}
+          x2={ax2}
+          y2={ay2}
+          stroke="var(--accent)"
+          strokeWidth="2"
+          markerEnd={`url(#ah-${id})`}
+        />
+      </svg>
+    )
+  }
+
   return (
     <div
       ref={viewportRef}
-      className="canvas-viewport"
-      onMouseDown={startPan}
+      className={`canvas-viewport${tool !== 'select' ? ' drawing' : ''}`}
+      onMouseDown={onViewportDown}
       style={{
         backgroundSize: `${26 * vp.scale}px ${26 * vp.scale}px`,
         backgroundPosition: `${vp.x}px ${vp.y}px`
@@ -148,6 +403,8 @@ export function CanvasStage(): JSX.Element {
         className="canvas-world"
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}
       >
+        {shapes.map((sh) => renderShape(sh))}
+        {draft && renderShape(draft, true)}
         {frames.map((f) => (
           <div
             key={f.id}
@@ -155,9 +412,30 @@ export function CanvasStage(): JSX.Element {
             data-fid={f.id}
             style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
           >
-            <div className="cframe-head" onMouseDown={(e) => startFrameDrag(f, e)}>
+            <div
+              className="cframe-head"
+              onMouseDown={(e) => startFrameDrag(f, e)}
+              onDoubleClick={() => setEditingFrame(f.id)}
+            >
               <span className="cframe-dot" />
-              <b className="cframe-name">{f.name}</b>
+              {editingFrame === f.id ? (
+                <input
+                  className="cframe-rename"
+                  defaultValue={f.name}
+                  autoFocus
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onBlur={(e) => {
+                    renameFrame(f.id, e.target.value.trim() || f.name)
+                    setEditingFrame(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    if (e.key === 'Escape') setEditingFrame(null)
+                  }}
+                />
+              ) : (
+                <b className="cframe-name">{f.name}</b>
+              )}
               <span className="cframe-count">{f.nodes.length} 面板</span>
               <button
                 className="cframe-btn"
@@ -171,13 +449,60 @@ export function CanvasStage(): JSX.Element {
             {!f.collapsed && f.nodes.length === 0 && <div className="cframe-empty">空 Frame</div>}
             {!f.collapsed &&
               f.nodes
-                .filter((n) => n.pane)
-                .map((n) => <CanvasFileNode key={n.id} frameId={f.id} node={n} />)}
+                .filter((n) => n.pane || n.component)
+                .map((n) =>
+                  n.component ? (
+                    <CanvasComponentNode key={n.id} frame={f} node={n} />
+                  ) : (
+                    <CanvasFileNode key={n.id} frameId={f.id} node={n} />
+                  )
+                )}
             {!f.collapsed && (
               <div className="cframe-rz" onMouseDown={(e) => startFrameResize(f, e)} />
             )}
           </div>
         ))}
+      </div>
+
+      <div className="canvas-toolbar">
+        <button
+          className={`ctool${tool === 'select' ? ' on' : ''}`}
+          title="选择 / 移动"
+          onClick={() => setTool('select')}
+        >
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+            <path d="M5 3l6 16 2.5-6.5L20 10z" />
+          </svg>
+        </button>
+        <div className="ctool-sep" />
+        <button
+          className={`ctool${tool === 'rect' ? ' on' : ''}`}
+          title="矩形"
+          onClick={() => setTool('rect')}
+        >
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="4" y="5" width="16" height="14" rx="2" />
+          </svg>
+        </button>
+        <button
+          className={`ctool${tool === 'arrow' ? ' on' : ''}`}
+          title="箭头"
+          onClick={() => setTool('arrow')}
+        >
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 19L19 5M19 5h-7M19 5v7" />
+          </svg>
+        </button>
+        <button
+          className={`ctool${tool === 'sticky' ? ' on' : ''}`}
+          title="便签"
+          onClick={() => setTool('sticky')}
+        >
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 4h16v11l-5 5H4z" />
+            <path d="M20 15h-5v5" />
+          </svg>
+        </button>
       </div>
 
       <div className="canvas-zoombar">
@@ -200,6 +525,10 @@ export function CanvasStage(): JSX.Element {
           ⤢
         </button>
       </div>
+
+      {menu && (
+        <CanvasContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+      )}
     </div>
   )
 }
