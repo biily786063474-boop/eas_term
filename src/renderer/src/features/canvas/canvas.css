@@ -700,3 +700,27 @@
   outline: none;
   width: 150px;
 }
+
+/* ---------- 多选高亮 + 框选橡皮筋 ---------- */
+.cshape.sel {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cframe.sel {
+  border-color: rgba(var(--accent-rgb), 0.85);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.6), 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.cfile-node.sel {
+  border-color: rgba(var(--accent-rgb), 0.8);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 10px 32px rgba(0, 0, 0, 0.5);
+}
+
+.canvas-band {
+  position: absolute;
+  background: var(--accent-soft);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: 3px;
+  pointer-events: none;
+}

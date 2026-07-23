@@ -10,10 +10,14 @@ import { CodeIcon, ImageIcon, GlobeIcon } from '../../ui/Icons'
 
 export function CanvasFileNode({
   frameId,
-  node
+  node,
+  selected,
+  onSelect
 }: {
   frameId: string
   node: CanvasNode
+  selected?: boolean
+  onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
   const moveNode = useStore((s) => s.moveNode)
   const resizeNode = useStore((s) => s.resizeNode)
@@ -33,6 +37,7 @@ export function CanvasFileNode({
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     e.preventDefault()
+    onSelect?.(e.shiftKey)
     const scale = useStore.getState().canvas.viewport.scale
     const sx = e.clientX
     const sy = e.clientY
@@ -69,7 +74,7 @@ export function CanvasFileNode({
 
   return (
     <div
-      className="cfile-node"
+      className={`cfile-node${selected ? ' sel' : ''}`}
       data-node-id={node.id}
       data-frame-id={frameId}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}

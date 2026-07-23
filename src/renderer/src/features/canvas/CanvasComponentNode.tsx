@@ -7,10 +7,14 @@ import { getCanvasComponent } from './components/registry'
 
 export function CanvasComponentNode({
   frame,
-  node
+  node,
+  selected,
+  onSelect
 }: {
   frame: CanvasFrame
   node: CanvasNode
+  selected?: boolean
+  onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
   const moveNode = useStore((s) => s.moveNode)
   const resizeNode = useStore((s) => s.resizeNode)
@@ -24,6 +28,7 @@ export function CanvasComponentNode({
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
     e.stopPropagation()
     e.preventDefault()
+    onSelect?.(e.shiftKey)
     const scale = useStore.getState().canvas.viewport.scale
     const sx = e.clientX
     const sy = e.clientY
@@ -60,7 +65,7 @@ export function CanvasComponentNode({
 
   return (
     <div
-      className="cfile-node"
+      className={`cfile-node${selected ? ' sel' : ''}`}
       data-node-id={node.id}
       data-frame-id={frame.id}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}

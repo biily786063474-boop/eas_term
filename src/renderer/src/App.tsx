@@ -29,6 +29,8 @@ export function App(): JSX.Element {
     const onKeyDown = (e: KeyboardEvent): void => {
       if (isMac ? !e.metaKey : !e.ctrlKey) return
       const s = useStore.getState()
+      // 画布模式有自己的 ⌘D/Delete（复制/删除选中），不走分屏标签快捷键
+      if (s.viewMode !== 'split') return
       const key = e.key.toLowerCase()
       if (key === 't') {
         e.preventDefault()

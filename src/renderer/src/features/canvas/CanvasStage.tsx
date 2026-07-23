@@ -34,6 +34,9 @@ export function CanvasStage(): JSX.Element {
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
   const renameFrame = useStore((s) => s.renameFrame)
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const spaceHeld = useRef(false)
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
   useEffect(() => {
@@ -150,6 +153,67 @@ export function CanvasStage(): JSX.Element {
     return () => document.removeEventListener('contextmenu', onCtx)
   }, [])
 
+  // 键盘：Delete 删除选中 / ⌘D 复制选中（画布模式；分屏快捷键已按 viewMode 屏蔽）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || !sel.size) return
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        const st = useStore.getState()
+        sel.forEach((k) => {
+          if (k[0] === 's') st.removeShape(k.slice(2))
+          else if (k[0] === 'f') st.removeFrame(k.slice(2))
+          else if (k[0] === 'n') {
+            const [, fid, nid] = k.split(':')
+            st.removeNode(fid, nid)
+          }
+        })
+        setSel(new Set())
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        const st = useStore.getState()
+        sel.forEach((k) => {
+          if (k[0] === 'n') {
+            const [, fid, nid] = k.split(':')
+            st.duplicateNode(fid, nid)
+          } else if (k[0] === 's') {
+            const sh = st.canvas.shapes.find((s2) => s2.id === k.slice(2))
+            if (sh)
+              st.addShape({
+                type: sh.type,
+                x: sh.x + 22,
+                y: sh.y + 22,
+                w: sh.w,
+                h: sh.h,
+                text: sh.text,
+                color: sh.color
+              })
+          }
+        })
+      }
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [sel])
+
+  // 空格键临时切换为平移手势（空白拖拽默认是框选）
+  useEffect(() => {
+    const down = (e: KeyboardEvent): void => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA') spaceHeld.current = true
+    }
+    const up = (e: KeyboardEvent): void => {
+      if (e.code === 'Space') spaceHeld.current = false
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
   const startPan = (e: React.MouseEvent): void => {
     if (e.button !== 0) return
     const cur = useStore.getState().canvas.viewport
@@ -174,11 +238,81 @@ export function CanvasStage(): JSX.Element {
     return { wx: (clientX - r.left - cur.x) / cur.scale, wy: (clientY - r.top - cur.y) / cur.scale }
   }
 
-  // 空白按下：select 模式平移；图形工具模式绘制
+  const selectElement = (key: string, additive: boolean): void => {
+    setSel((prev) => {
+      if (additive) {
+        const s = new Set(prev)
+        s.has(key) ? s.delete(key) : s.add(key)
+        return s
+      }
+      if (prev.has(key)) return prev
+      return new Set([key])
+    })
+  }
+
+  const rectsIntersect = (
+    a: { x: number; y: number; w: number; h: number },
+    b: { x: number; y: number; w: number; h: number }
+  ): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+
+  // 空白拖拽：橡皮筋框选（相交即选中 图形 / Frame / 文件·组件节点）
+  const startBoxSelect = (e: React.MouseEvent): void => {
+    const start = screenToWorld(e.clientX, e.clientY)
+    const shift = e.shiftKey
+    const base = shift ? new Set(sel) : new Set<string>()
+    setSel(base)
+    let moved = false
+    const onMove = (ev: MouseEvent): void => {
+      const p = screenToWorld(ev.clientX, ev.clientY)
+      const rect = {
+        x: Math.min(start.wx, p.wx),
+        y: Math.min(start.wy, p.wy),
+        w: Math.abs(p.wx - start.wx),
+        h: Math.abs(p.wy - start.wy)
+      }
+      if (rect.w + rect.h > 3) moved = true
+      setBand(rect)
+      const cv = useStore.getState().canvas
+      const next = new Set(base)
+      cv.shapes.forEach((sh) => {
+        const box = {
+          x: Math.min(sh.x, sh.x + sh.w),
+          y: Math.min(sh.y, sh.y + sh.h),
+          w: Math.abs(sh.w),
+          h: Math.abs(sh.h)
+        }
+        if (rectsIntersect(box, rect)) next.add('s:' + sh.id)
+      })
+      cv.frames.forEach((f) => {
+        if (rectsIntersect({ x: f.x, y: f.y, w: f.w, h: f.collapsed ? HEAD_H : f.h }, rect))
+          next.add('f:' + f.id)
+        if (!f.collapsed)
+          f.nodes.forEach((n) => {
+            if (
+              (n.pane || n.component) &&
+              rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect)
+            )
+              next.add('n:' + f.id + ':' + n.id)
+          })
+      })
+      setSel(next)
+    }
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setBand(null)
+      if (!moved && !shift) setSel(new Set())
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  // 空白按下：select 模式框选（空格+拖为平移）；图形工具模式绘制
   const onViewportDown = (e: React.MouseEvent): void => {
     if (e.button !== 0 || editingSticky) return
     if (tool === 'select') {
-      startPan(e)
+      if (spaceHeld.current) startPan(e)
+      else startBoxSelect(e)
       return
     }
     const { wx, wy } = screenToWorld(e.clientX, e.clientY)
@@ -224,6 +358,7 @@ export function CanvasStage(): JSX.Element {
   const startShapeDrag = (sh: CanvasShape, e: React.MouseEvent): void => {
     if (e.button !== 0 || tool !== 'select') return
     e.stopPropagation()
+    selectElement('s:' + sh.id, e.shiftKey)
     const scale = useStore.getState().canvas.viewport.scale
     const sx = e.clientX
     const sy = e.clientY
@@ -242,6 +377,7 @@ export function CanvasStage(): JSX.Element {
   const startFrameDrag = (f: CanvasFrame, e: React.MouseEvent): void => {
     if (e.button !== 0) return
     e.stopPropagation()
+    selectElement('f:' + f.id, e.shiftKey)
     const scale = useStore.getState().canvas.viewport.scale
     const sx = e.clientX
     const sy = e.clientY
@@ -312,6 +448,7 @@ export function CanvasStage(): JSX.Element {
     const top = Math.min(sh.y, sh.y + sh.h)
     const w = Math.abs(sh.w)
     const h = Math.abs(sh.h)
+    const selCls = !isDraft && sel.has('s:' + id) ? ' sel' : ''
     const onDown = (e: React.MouseEvent): void => {
       if (!isDraft) startShapeDrag(sh as CanvasShape, e)
     }
@@ -337,7 +474,7 @@ export function CanvasStage(): JSX.Element {
       return (
         <div
           key={id}
-          className="cshape cshape-sticky"
+          className={`cshape cshape-sticky${selCls}`}
           data-sid={id}
           style={{ left, top, width: sw, height: shh }}
           onMouseDown={onDown}
@@ -351,7 +488,7 @@ export function CanvasStage(): JSX.Element {
       return (
         <div
           key={id}
-          className="cshape cshape-rect"
+          className={`cshape cshape-rect${selCls}`}
           data-sid={id}
           style={{ left, top, width: w, height: h }}
           onMouseDown={onDown}
@@ -366,7 +503,7 @@ export function CanvasStage(): JSX.Element {
     return (
       <svg
         key={id}
-        className="cshape cshape-arrow"
+        className={`cshape cshape-arrow${selCls}`}
         data-sid={id}
         style={{ left, top, width: Math.max(w, 2), height: Math.max(h, 2), overflow: 'visible' }}
         onMouseDown={onDown}
@@ -405,10 +542,16 @@ export function CanvasStage(): JSX.Element {
       >
         {shapes.map((sh) => renderShape(sh))}
         {draft && renderShape(draft, true)}
+        {band && (
+          <div
+            className="canvas-band"
+            style={{ left: band.x, top: band.y, width: band.w, height: band.h }}
+          />
+        )}
         {frames.map((f) => (
           <div
             key={f.id}
-            className={`cframe${f.collapsed ? ' collapsed' : ''}`}
+            className={`cframe${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}`}
             data-fid={f.id}
             style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
           >
@@ -452,9 +595,21 @@ export function CanvasStage(): JSX.Element {
                 .filter((n) => n.pane || n.component)
                 .map((n) =>
                   n.component ? (
-                    <CanvasComponentNode key={n.id} frame={f} node={n} />
+                    <CanvasComponentNode
+                      key={n.id}
+                      frame={f}
+                      node={n}
+                      selected={sel.has('n:' + f.id + ':' + n.id)}
+                      onSelect={(add) => selectElement('n:' + f.id + ':' + n.id, add)}
+                    />
                   ) : (
-                    <CanvasFileNode key={n.id} frameId={f.id} node={n} />
+                    <CanvasFileNode
+                      key={n.id}
+                      frameId={f.id}
+                      node={n}
+                      selected={sel.has('n:' + f.id + ':' + n.id)}
+                      onSelect={(add) => selectElement('n:' + f.id + ':' + n.id, add)}
+                    />
                   )
                 )}
             {!f.collapsed && (
