@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { LeafNode, PaneKind, Rect } from '../../layout'
@@ -113,15 +114,33 @@ function PaneKindSelect({
   )
 }
 
+/** 画布模式下节点的屏幕像素定位（世界坐标 × 视口换算的结果 + 拖动所需上下文） */
+export interface CanvasPlacement {
+  left: number
+  top: number
+  w: number
+  h: number
+  scale: number
+  frameId: string
+  nodeId: string
+  nodeX: number
+  nodeY: number
+}
+
 interface Props {
   tabId: string
   leaf: LeafNode
   rect: Rect
   isActive: boolean
+  /** 隐藏但保持挂载（非激活 tab 或画布模式下的 leaf）——终端不断连的关键 */
+  hidden?: boolean
+  /** 画布模式定位；存在时用像素 + transform 缩放，否则用分屏百分比 rect */
+  canvasRect?: CanvasPlacement
 }
 
-export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
+export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Props): JSX.Element {
   const setPaneKind = useStore((s) => s.setPaneKind)
+  const moveNode = useStore((s) => s.moveNode)
   const splitLeaf = useStore((s) => s.splitLeaf)
   const closeLeaf = useStore((s) => s.closeLeafSafely)
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
@@ -132,18 +151,55 @@ export function PaneView({ tabId, leaf, rect, isActive }: Props): JSX.Element {
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
   const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 
-  return (
-    <div
-      className={`pane${isActive ? ' active' : ''}`}
-      style={{
+  // 画布模式：像素定位 + 整体位图缩放；分屏模式：百分比 rect
+  const paneStyle: CSSProperties = canvasRect
+    ? {
+        display: hidden ? 'none' : undefined,
+        left: canvasRect.left,
+        top: canvasRect.top,
+        width: canvasRect.w,
+        height: canvasRect.h,
+        transform: `scale(${canvasRect.scale})`,
+        transformOrigin: '0 0'
+      }
+    : {
+        display: hidden ? 'none' : undefined,
         left: `calc(${rect.x * 100}% + ${PANE_GAP}px)`,
         top: `calc(${rect.y * 100}% + ${PANE_GAP}px)`,
         width: `calc(${rect.w * 100}% - ${PANE_GAP * 2}px)`,
         height: `calc(${rect.h * 100}% - ${PANE_GAP * 2}px)`
-      }}
-      onMouseDown={() => setActiveLeaf(tabId, leaf.id)}
+      }
+
+  // 画布模式下拖动节点头部 → 改节点相对坐标（moveNode）
+  const onCanvasHeadDown = (e: React.MouseEvent): void => {
+    if (!canvasRect || e.button !== 0) return
+    if ((e.target as HTMLElement).closest('button')) return
+    e.preventDefault()
+    e.stopPropagation()
+    const { frameId, nodeId, nodeX, nodeY, scale } = canvasRect
+    const sx = e.clientX
+    const sy = e.clientY
+    const onMove = (ev: MouseEvent): void =>
+      moveNode(frameId, nodeId, nodeX + (ev.clientX - sx) / scale, nodeY + (ev.clientY - sy) / scale)
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div
+      className={`pane${isActive ? ' active' : ''}`}
+      style={paneStyle}
+      onMouseDown={canvasRect ? undefined : () => setActiveLeaf(tabId, leaf.id)}
     >
-      <div className="pane-header">
+      <div
+        className="pane-header"
+        style={canvasRect ? { cursor: 'move' } : undefined}
+        onMouseDown={canvasRect ? onCanvasHeadDown : undefined}
+      >
         <PaneKindSelect
           kind={pane.kind}
           onChange={(k) => void setPaneKind(tabId, leaf.id, k)}

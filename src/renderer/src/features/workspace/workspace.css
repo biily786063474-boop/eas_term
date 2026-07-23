@@ -266,6 +266,13 @@
   inset: -3px; /* 抵消面板自身的 3px 间隙，让边缘对齐 */
 }
 
+/* 全局活内容层：取代「每 tab 一个 .tab-content」，所有 leaf 常驻于此，切模式只改 style */
+.pane-layer {
+  position: absolute;
+  inset: -3px;
+}
+
+
 /* ========== Blender 式功能面板（面板头部/下拉） ========== */
 /* ---------- Blender 式功能面板：浮动玻璃卡片 ---------- */
 .pane {
@@ -449,4 +456,43 @@ body.dragging-row {
 body.dragging-col *,
 body.dragging-row * {
   pointer-events: none;
+}
+
+/* ========== 视图切换分段控件（终端 / 画布） ========== */
+.view-seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 999px;
+}
+
+.view-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.view-seg button.on {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.view-seg button:not(.on):hover {
+  color: var(--fg);
+}
+
+.view-seg svg {
+  flex: none;
 }

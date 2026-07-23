@@ -123,6 +123,15 @@ export const CheckIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const CanvasIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+  </Svg>
+)
+
 export const PlayIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <polygon points="6 3 20 12 6 21 6 3" />

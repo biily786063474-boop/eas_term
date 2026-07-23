@@ -2,19 +2,21 @@ import { useEffect } from 'react'
 import { useStore } from './store'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
-import { TabContent } from './features/workspace/TabContent'
+import { PaneLayer } from './features/workspace/PaneLayer'
+import { CanvasStage } from './features/canvas/CanvasStage'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
-import { FolderIcon } from './ui/Icons'
+import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
   const tabs = useStore((s) => s.tabs)
-  const activeTabId = useStore((s) => s.activeTabId)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const loadProjects = useStore((s) => s.loadProjects)
   const openTerminal = useStore((s) => s.openTerminal)
   const addProject = useStore((s) => s.addProject)
+  const viewMode = useStore((s) => s.viewMode)
+  const setViewMode = useStore((s) => s.setViewMode)
 
   useEffect(() => {
     void loadProjects()
@@ -68,15 +70,31 @@ export function App(): JSX.Element {
           <span className="titlebar-title">Eas-Term</span>
         )}
         <div className="titlebar-actions">
+          <div className="view-seg">
+            <button
+              className={viewMode === 'split' ? 'on' : ''}
+              onClick={() => setViewMode('split')}
+            >
+              <TerminalIcon size={13} />
+              终端
+            </button>
+            <button
+              className={viewMode === 'canvas' ? 'on' : ''}
+              onClick={() => setViewMode('canvas')}
+            >
+              <CanvasIcon size={13} />
+              画布
+            </button>
+          </div>
           <ThemeSelect />
         </div>
       </div>
       <div className="body">
         <Sidebar />
         <main className="main">
-          <TabBar />
+          {viewMode === 'split' && <TabBar />}
           <div className="tab-stack">
-            {!hasProjectTabs && (
+            {viewMode === 'split' && !hasProjectTabs && (
               <div className="empty-state">
                 <div className="empty-card">
                   <div className="empty-title">没有打开的终端</div>
@@ -97,9 +115,8 @@ export function App(): JSX.Element {
                 </div>
               </div>
             )}
-            {tabs.map((tab) => (
-              <TabContent key={tab.id} tab={tab} visible={tab.id === activeTabId} />
-            ))}
+            {viewMode === 'canvas' && <CanvasStage />}
+            <PaneLayer />
           </div>
         </main>
       </div>

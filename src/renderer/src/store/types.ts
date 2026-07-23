@@ -3,5 +3,6 @@
 import type { ProjectsSlice } from './projectsSlice'
 import type { TabsSlice } from './tabsSlice'
 import type { UiSlice } from './uiSlice'
+import type { CanvasSlice } from './canvasSlice'
 
-export type AppState = ProjectsSlice & TabsSlice & UiSlice
+export type AppState = ProjectsSlice & TabsSlice & UiSlice & CanvasSlice

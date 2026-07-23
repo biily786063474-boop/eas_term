@@ -5,14 +5,17 @@ import { create } from 'zustand'
 import { createProjectsSlice } from './projectsSlice'
 import { createTabsSlice } from './tabsSlice'
 import { createUiSlice } from './uiSlice'
+import { createCanvasSlice } from './canvasSlice'
 import type { AppState } from './types'
 
 export type { AppState } from './types'
 export type { TermTab } from './shared'
+export type { ViewMode, CanvasScene, CanvasFrame, CanvasNode, CanvasShape } from './canvasSlice'
 export { paneKindForFile } from './shared'
 
 export const useStore = create<AppState>()((...a) => ({
   ...createProjectsSlice(...a),
   ...createTabsSlice(...a),
-  ...createUiSlice(...a)
+  ...createUiSlice(...a),
+  ...createCanvasSlice(...a)
 }))

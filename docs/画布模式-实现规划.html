@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>无限画布模式 · 实现规划 v2 · Eas-Term</title>
+<style>
+  :root{
+    --glass-1:rgba(15,17,23,.5); --glass-2:rgba(11,13,19,.62); --glass-3:rgba(25,28,38,.82);
+    --glass-border:rgba(255,255,255,.09); --glass-border-strong:rgba(255,255,255,.14);
+    --glass-highlight:inset 0 1px 0 rgba(255,255,255,.07); --blur:blur(28px) saturate(160%);
+    --fg:#e2e4ea; --fg-dim:#969aa8; --fg-mute:#6b7180;
+    --accent:#a2b9e0; --accent-rgb:162,185,224; --accent-soft:rgba(162,185,224,.16);
+    --pink:#f78bb0; --green:#9ece6a; --amber:#e0af68; --red:#f7768e; --cyan:#7dcfff;
+    --radius-xl:18px; --radius-lg:14px; --radius-md:10px; --radius-sm:7px;
+    --bg-grad-1:rgba(7,8,13,.72); --bg-grad-2:rgba(3,4,6,.85);
+    --mono:"SF Mono",Menlo,Monaco,"Cascadia Code",Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(900px 480px at 82% -6%,rgba(162,185,224,.10),transparent 60%),
+      radial-gradient(720px 400px at 4% 4%,rgba(247,139,176,.06),transparent 55%),
+      linear-gradient(165deg,var(--bg-grad-1),var(--bg-grad-2)),#07080d;
+    color:var(--fg); font-family:var(--sans); line-height:1.72; font-size:14.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:60px 30px 120px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  h1{font-size:31px;line-height:1.28;margin-bottom:14px;font-weight:680;letter-spacing:-.01em}
+  .sub{color:var(--fg-dim);max-width:76ch;font-size:15.5px}
+  .meta{margin-top:22px;display:flex;gap:9px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:11.5px;padding:5px 11px;border:1px solid var(--glass-border-strong);border-radius:999px;color:var(--fg-dim);background:var(--glass-1)}
+
+  h2{font-size:22px;margin:60px 0 6px;font-weight:660;letter-spacing:-.01em;scroll-margin-top:20px}
+  h2 .n{font-family:var(--mono);color:var(--accent);font-size:15px;margin-right:12px;opacity:.85}
+  h3{font-size:16.5px;margin:28px 0 8px;font-weight:640}
+  .lead{color:var(--fg-dim);border-bottom:1px solid var(--glass-border);padding-bottom:16px;margin-bottom:8px}
+  p{margin:12px 0}
+  a{color:var(--cyan);text-decoration:none;border-bottom:1px dotted rgba(125,207,255,.4)}
+  strong{color:#fff;font-weight:640}
+  em{color:var(--fg);font-style:normal;opacity:.92}
+  code{font-family:var(--mono);font-size:12.6px;background:rgba(10,11,15,.85);border:1px solid var(--glass-border);border-radius:5px;padding:1.5px 6px;color:var(--cyan)}
+  .path{color:var(--amber)}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0;color:var(--fg-dim)}
+  li strong{color:var(--fg)}
+
+  .toc{background:var(--glass-1);backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:20px 24px;margin:36px 0;box-shadow:var(--glass-highlight)}
+  .toc b{display:block;color:var(--fg-mute);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+  .toc li{margin:5px 0}.toc a{border:none;color:var(--fg-dim)}.toc a:hover{color:var(--cyan)}
+
+  pre{background:rgba(8,9,13,.9);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:16px 18px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:12.6px;line-height:1.62;color:#cdd3e0}
+  pre .c{color:#5c6472;font-style:italic}
+  pre .k{color:#c3a3e0}pre .s{color:var(--green)}pre .t{color:var(--cyan)}pre .n{color:var(--amber)}pre .add{color:var(--green)}pre .p{color:var(--pink)}pre .del{color:var(--red)}
+
+  .card{background:linear-gradient(180deg,var(--glass-1),var(--glass-2));border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:20px 22px;margin:16px 0;box-shadow:var(--glass-highlight);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--edge,var(--accent))}
+  .card .t{font-size:16px;font-weight:640;color:#fff;margin-bottom:4px}
+  .card.win{--edge:var(--green)}.card.risk{--edge:var(--amber)}.card.hard{--edge:var(--pink)}.card.key{--edge:var(--cyan)}
+
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--glass-border);vertical-align:top}
+  th{color:var(--fg-mute);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:rgba(255,255,255,.02)}
+  td strong{color:var(--fg)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:6px;border:1px solid var(--glass-border-strong)}
+  .g{color:var(--green);border-color:rgba(158,206,106,.4)}
+  .a{color:var(--amber);border-color:rgba(224,175,104,.4)}
+  .r{color:var(--red);border-color:rgba(247,118,142,.4)}
+  .b{color:var(--accent);border-color:rgba(162,185,224,.4)}
+
+  .note{background:var(--accent-soft);border:1px solid rgba(162,185,224,.28);border-radius:var(--radius-md);padding:14px 18px;margin:18px 0;font-size:13.5px;color:var(--fg-dim)}
+  .note b{color:var(--accent)}
+  .note.warn{background:rgba(224,175,104,.07);border-color:rgba(224,175,104,.28)}.note.warn b{color:var(--amber)}
+  .note.stop{background:rgba(247,118,142,.07);border-color:rgba(247,118,142,.3)}.note.stop b{color:var(--red)}
+
+  .phase{display:flex;gap:16px;margin:14px 0;align-items:flex-start}
+  .phase .badge{flex:none;width:64px;height:64px;border-radius:var(--radius-md);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--glass-2);border:1px solid var(--glass-border-strong);font-family:var(--mono)}
+  .phase .badge .p{font-size:19px;font-weight:700;color:var(--accent)}
+  .phase .badge .w{font-size:10px;color:var(--fg-mute);margin-top:2px}
+  .phase .body{flex:1;min-width:0}
+  .phase .body .h{font-weight:640;color:#fff;font-size:15px;margin-bottom:2px}
+
+  .diagram{background:rgba(8,9,13,.6);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:20px;margin:16px 0;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--fg-dim);overflow-x:auto}
+  .diagram .lay{color:var(--cyan)}.diagram .live{color:var(--green)}.diagram .deco{color:var(--amber)}.diagram .cmt{color:var(--fg-mute)}
+
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--glass-border);color:var(--fg-mute);font-size:12.5px;font-family:var(--mono)}
+  @media(max-width:640px){.toc ol{columns:1}.wrap{padding:40px 18px 80px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Feature Plan v2 · Global Infinite Canvas</div>
+  <h1>无限画布模式 —— 实现规划</h1>
+  <p class="sub">在现有「分屏终端」之外增开一个<strong>全局唯一</strong>的无限画布视图:每个项目 = 一个 <strong>Frame</strong>(Figma frame 概念,带边界/标题/折叠),Frame 内自由摆放终端 / 代码 / 图片 / md / <strong>HTML 网页预览器</strong>节点;右侧资源抽屉负责拖拽入画布;CRUD 齐全。本文是 v2 定稿——把旧的「tab 级 canvas + group」模型升级为全局画布 + Frame + 抽屉 + web 预览,并给出经代码核验的数据模型、不断连的双层渲染架构、交互设计、评审团结论与分期施工路线。</p>
+  <div class="meta">
+    <span class="tag">全局画布 · 项目=Frame</span>
+    <span class="tag">共享 leaf · 终端两视图同源</span>
+    <span class="tag">双层渲染 · xterm 不重挂载</span>
+    <span class="tag">自研引擎 · 零新增依赖</span>
+    <span class="tag">配套原型:画布模式-原型.html</span>
+  </div>
+</header>
+
+<div class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#s0">本次定稿的两个决策</a></li>
+    <li><a href="#s1">需求拆解</a></li>
+    <li><a href="#s2">现有架构的同构点</a></li>
+    <li><a href="#s3">形态总览</a></li>
+    <li><a href="#s4">数据模型</a></li>
+    <li><a href="#s5">最硬的三个技术点</a></li>
+    <li><a href="#s6">坐标数学</a></li>
+    <li><a href="#s7">交互设计</a></li>
+    <li><a href="#s8">CRUD 全表</a></li>
+    <li><a href="#s9">技术选型评审团</a></li>
+    <li><a href="#s10">分期路线</a></li>
+    <li><a href="#s11">风险与对策</a></li>
+    <li><a href="#s12">设计令牌落地</a></li>
+    <li><a href="#s13">落点清单</a></li>
+  </ol>
+</div>
+
+<!-- 0 -->
+<h2 id="s0"><span class="n">00</span>本次定稿锁定的两个决策</h2>
+<p class="lead">这两条是全局画布相对旧「tab 级 canvas」方案的根本变化,决定了数据模型与 P0 骨架,已确认。</p>
+
+<div class="card key">
+  <div class="t">决策 ① · 终端「共享」——同一批终端,两种摆法</div>
+  <p style="margin:6px 0 0">画布不是独立工作区。切到画布 = 把当前项目已有的终端/面板按项目铺成 Frame;在画布里新建的终端,切回分屏也能看到。<strong>同一个 <code>leaf</code>(含 pane / ptyId)被 split 树和 canvas 节点共同引用,共用同一个 <code>PaneView</code> 实例</strong>——这既是"两视图同源"的产品语义,也是"终端不断连"的技术前提。反面(独立工作区)被否决:同一终端不能两边看到、要维护两套状态。</p>
+</div>
+
+<div class="card key">
+  <div class="t">决策 ② · 双层渲染——装饰层可缩放,活内容层永不换父</div>
+  <p style="margin:6px 0 0">原型用 <code>world { transform: scale() }</code> 整体缩放、节点嵌在 frame DOM 内——那是<em>假终端</em>才成立。真实的活终端 <code>PaneView</code> 一旦从「分屏容器」移进「画布 frame」,父 DOM 变了就会被 React 卸载重建 → xterm 重挂载 → 会话与滚动缓冲全丢。<strong>解法:活内容层(所有 PaneView)常驻一个全局容器永不换父,frame 边框/标题/点阵/图形是另一层装饰,可随意 <code>transform scale</code></strong>。见 §5-A。</p>
+</div>
+
+<!-- 1 -->
+<h2 id="s1"><span class="n">01</span>需求拆解</h2>
+<p class="lead">把敲定的形态拆成可实现条目,并标注每条落到代码哪一层。</p>
+<table>
+  <thead><tr><th>形态</th><th>拆解为</th><th>落点</th></tr></thead>
+  <tbody>
+    <tr><td>顶栏切换:终端 / 画布</td><td><strong>全局</strong> <code>viewMode:'split'|'canvas'</code>(非 per-tab),titlebar 右侧分段控件切换</td><td><span class="path">App.tsx</span> titlebar · <span class="path">uiSlice</span></td></tr>
+    <tr><td>每个项目 = 一个 Frame</td><td>Frame 绑 <code>projectId</code>,带边界/标题栏/面板计数/折叠;首次进画布按项目自动 seed</td><td>新 <span class="path">canvasSlice</span> + CanvasStage</td></tr>
+    <tr><td>Frame 内摆放各类节点</td><td>节点 body 复用现有 <code>PaneView</code>(terminal/code/image/dict)+ 新增 <code>web</code></td><td>复用 <span class="path">PaneView</span></td></tr>
+    <tr><td>HTML 网页预览器</td><td>新 <code>PaneKind:'web'</code>,<code>&lt;iframe sandbox&gt;</code>(MVP)</td><td>PaneState + 新 WebView</td></tr>
+    <tr><td>右侧资源抽屉</td><td>项目列表 + 文件树;整体可收起、分区可折叠、目录可折叠</td><td>新 <span class="path">CanvasDrawer</span>(复用 FileTree)</td></tr>
+    <tr><td>拖拽入画布</td><td>拖项目→Frame;拖文件→Frame 内节点 / 拖到终端→插路径;拖 <code>.html</code>→web</td><td>CanvasStage drag 层</td></tr>
+    <tr><td>平移 / 缩放</td><td>拖空白平移;滚轮以光标锚点缩放;缩放条 ± / 适应 / <code>⌘0</code></td><td>viewport 变换</td></tr>
+    <tr><td>基本图形</td><td>矩形 / 箭头 / 便签,存 <code>shapes</code>(便签可双击编辑)</td><td>CanvasStage 图形层</td></tr>
+    <tr><td>CRUD 齐全</td><td>增(拖入/右键/工具栏)· 删(节点×/Frame✕/Delete)· 改(切类型/重命名/复制⌘D/resize)</td><td>canvasSlice actions + 右键菜单</td></tr>
+    <tr><td>视觉 / 圆角按规范</td><td>全部引用 <span class="path">base.css</span> glass / accent / radius 令牌,双主题自动</td><td>见 §12</td></tr>
+  </tbody>
+</table>
+
+<!-- 2 -->
+<h2 id="s2"><span class="n">02</span>现有架构的同构点(已核验)</h2>
+<p class="lead">项目现有架构里藏着与无限画布同构的基建,复用它们能省掉一半工作、并绕开最大的坑。以下均已对读源码确认。</p>
+
+<div class="card win">
+  <div class="t">① 布局已是「绝对定位 + 坐标计算」,不是 DOM 嵌套</div>
+  <p style="margin:6px 0 0"><span class="path">layout.ts</span> 顶注:<em>"所有终端叶子以绝对定位渲染在同一容器里,分屏/调整比例只改坐标,不改变 React 元素层级,从而保证 xterm 实例永不重挂载"</em>。<span class="path">computeLayout</span> 产出 <code>0~1</code> 比例矩形,<span class="path">PaneView</span> 据此算 <code>left/top/width/height</code> 百分比(PaneView.tsx:138-143)。画布节点只是把 rect 来源换成"世界坐标×视口"。</p>
+</div>
+
+<div class="card win">
+  <div class="t">② PaneView 已是「可切换内容的卡片」,leaf 已是「内容单元」</div>
+  <p style="margin:6px 0 0"><span class="path">PaneView</span> 接 <code>{tabId, leaf, rect, isActive}</code>,按 <code>pane.kind</code> 渲染 Terminal/Code/Diff/Image/History/Chat/Dict(PaneView.tsx:188-212)。<span class="path">leaf</span>(<code>{id, pane}</code>,pane 含 ptyId)是内容单元,现挂在 <code>tab.root</code> 树里(shared.ts:6-15)。画布节点<strong>不重写内容渲染</strong>——只是换一个引用同一 leaf 的外壳。</p>
+</div>
+
+<div class="card win">
+  <div class="t">③ 所有 tab 的所有面板本就常驻挂载</div>
+  <p style="margin:6px 0 0">App.tsx:100-102 <code>tabs.map(tab =&gt; &lt;TabContent visible={tab.id===activeTabId}/&gt;)</code>——非激活 tab 用 <code>display:none</code> 隐藏而非卸载,所以跨 tab 切换终端也不断连。<strong>这正是"统一渲染层"要推广的机制:把"每 tab 一个容器"升级为"一个全局内容层容纳所有 leaf"。</strong></p>
+</div>
+
+<div class="card win">
+  <div class="t">④ 入口 action 齐全,画布零平行逻辑</div>
+  <p style="margin:6px 0 0"><code>openTerminal({projectId,cwd})</code> / <code>openFile</code> / <code>openInPane</code>(复用同类面板或分屏)/ <code>setPaneKind</code> / <code>closeLeaf</code> 均已存在(tabsSlice.ts)。画布的"新建终端 / 拖文件预览 / 切类型 / 删节点"全部复用它们,<strong>不建平行 CRUD</strong>。</p>
+</div>
+
+<div class="note"><b>结论:</b>不引入 react-flow / tldraw,自研轻画布引擎。最难的"活终端塞进画布还不断连"这件事,只要坚持<strong>所有 PaneView 始终挂同一父容器、同一 <code>key={leaf.id}</code>,切模式只改 style</strong> 即可解决——这是自研契合现有架构、第三方库无法替代的优势。</div>
+
+<!-- 3 -->
+<h2 id="s3"><span class="n">03</span>形态总览</h2>
+<p class="lead">对齐配套原型(画布模式-原型.html)的既定形态。注意与现有分屏视图的两处布局差异。</p>
+<ul>
+  <li><strong>顶栏</strong>:中间项目药丸,右侧分段控件 <code>[终端 · 画布]</code> + 主题点。<span class="pill a">差异</span>画布模式<em>不显示 TabBar</em>。</li>
+  <li><strong>主体</strong>:左为画布舞台 <code>.stage</code>,右为资源抽屉 <code>.sidebar</code>。<span class="pill a">差异</span>抽屉在<em>右侧</em>(现分屏 Sidebar 在左侧);画布模式下左侧 Sidebar 让位给舞台。</li>
+  <li><strong>舞台</strong>:<code>.viewport</code>(裁剪 + 点阵背景,背景随缩放)→ <code>.world</code>(装饰层,<code>transform: translate + scale</code>)。活内容层 <code>.pane-layer</code> 覆盖其上(见 §5-A)。</li>
+  <li><strong>Frame</strong>:head(圆点 + 名称 + 路径 + "N 面板"计数 + 新建终端 + 折叠 + 删除✕)· body(容纳节点,空时提示)· 右下 resize 手柄。可拖 / 折叠(只剩 head)/ resize / 重命名。</li>
+  <li><strong>Node</strong>:head(类型胶囊 kind-pill + 标题 + 删除×)· body(按 kind 渲染)· 右下 resize。可拖 / resize / 切类型 / 重命名 / 复制 / 删除。</li>
+  <li><strong>Shape</strong>:矩形 / 箭头 / 便签,直接在世界坐标;便签双击编辑文本。</li>
+  <li><strong>浮动控件</strong>:左侧竖排工具栏(选择/新建Frame/矩形/箭头/便签);右下缩放胶囊(− 100% + ⤢);顶部提示条;收起抽屉后右上浮动展开按钮。</li>
+</ul>
+
+<!-- 4 -->
+<h2 id="s4"><span class="n">04</span>数据模型</h2>
+<p class="lead">核心思想:<strong>leaf 是共享内容单元,split 树与 canvas 场景各存一份布局、共引同一批 leaf</strong>。画布是<em>全局单例</em>,不属于任何 tab。</p>
+
+<pre><span class="c">// 新增 canvasSlice —— 全局画布场景(单例),挂进 store</span>
+<span class="k">interface</span> <span class="t">CanvasSlice</span> {
+  <span class="add">viewMode</span>: <span class="s">'split'</span> | <span class="s">'canvas'</span>        <span class="c">// 全局视图,titlebar 分段控件切换</span>
+  <span class="add">canvas</span>: <span class="t">CanvasScene</span>
+  <span class="c">/* actions 见下 */</span>
+}
+
+<span class="k">interface</span> <span class="t">CanvasScene</span> {
+  viewport: { x: <span class="t">number</span>; y: <span class="t">number</span>; scale: <span class="t">number</span> }  <span class="c">// 平移 + 缩放(世界→屏幕)</span>
+  frames: <span class="t">CanvasFrame</span>[]
+  shapes: <span class="t">CanvasShape</span>[]
+}
+
+<span class="k">interface</span> <span class="t">CanvasFrame</span> {
+  id: <span class="t">string</span>
+  <span class="p">projectId</span>: <span class="t">string</span> | <span class="k">null</span>   <span class="c">// 绑定项目(null=画布内新建的临时 Frame)</span>
+  name: <span class="t">string</span>                <span class="c">// 默认取项目名,可重命名</span>
+  x: <span class="t">number</span>; y: <span class="t">number</span>        <span class="c">// 世界坐标(Frame 左上角)</span>
+  w: <span class="t">number</span>; h: <span class="t">number</span>
+  collapsed: <span class="t">boolean</span>
+  nodes: <span class="t">CanvasNode</span>[]         <span class="c">// 成员节点</span>
+}
+
+<span class="k">interface</span> <span class="t">CanvasNode</span> {
+  id: <span class="t">string</span>
+  <span class="p">leafId</span>: <span class="t">string</span>            <span class="c">// ← 引用共享 leaf(与 split 树同一份)→ 终端不重挂载</span>
+  x: <span class="t">number</span>; y: <span class="t">number</span>    <span class="c">// 相对 Frame 局部坐标(Frame 拖动时无需改)</span>
+  w: <span class="t">number</span>; h: <span class="t">number</span>
+}
+
+<span class="k">interface</span> <span class="t">CanvasShape</span> {
+  id: <span class="t">string</span>
+  type: <span class="s">'rect'</span> | <span class="s">'arrow'</span> | <span class="s">'sticky'</span>
+  x: <span class="t">number</span>; y: <span class="t">number</span>; w: <span class="t">number</span>; h: <span class="t">number</span>   <span class="c">// 世界坐标</span>
+  text?: <span class="t">string</span>; color?: <span class="t">string</span>
+}</pre>
+
+<div class="note"><b>为什么 node 坐标是"相对 Frame"而非世界坐标:</b>Frame 拖动/折叠时,成员节点应整体跟随。存局部坐标后,Frame 移动只改 <code>frame.x/y</code>,节点世界坐标 = <code>frame + node</code> 实时算出,天然联动、绝不脱节(对齐原型 <code>body.appendChild(nodeEl)</code> 的相对定位语义)。</div>
+
+<h3>leaf 池:如何"共享"</h3>
+<p>现有 leaf 存在各 <code>tab.root</code> 树里。canvas node 通过 <code>leafId</code> 引用它们。新增一个纯查找工具,跨所有 tab 收集 leaf:</p>
+<pre><span class="c">// 跨全部 tab 找 leaf —— canvas 与 split 共用的解引用</span>
+<span class="k">const</span> allLeaves = <span class="t">tabs</span>.flatMap(t =&gt; collectLeaves(t.root))
+<span class="k">const</span> leafById = (id) =&gt; allLeaves.find(l =&gt; l.id === id)</pre>
+
+<h3>Store actions(canvasSlice)</h3>
+<pre><span class="k">setViewMode</span>(mode)                          <span class="c">// 全局切换;首次进 canvas 且 frames 为空 → seedCanvas</span>
+<span class="k">seedCanvas</span>()                               <span class="c">// 把每个项目的全部 leaf 按项目铺成 Frame + 网格节点</span>
+<span class="k">setViewport</span>({x,y,scale})
+<span class="k">addFrame</span>(projectId?) / <span class="k">moveFrame</span>(id,x,y) / <span class="k">resizeFrame</span>(id,w,h)
+<span class="k">renameFrame</span>(id,name) / <span class="k">toggleCollapse</span>(id) / <span class="k">removeFrame</span>(id)   <span class="c">// removeFrame 复用 closeLeaf 杀 pty</span>
+<span class="k">addNode</span>(frameId, leafId, x, y) / <span class="k">moveNode</span>(id,x,y) / <span class="k">resizeNode</span>(id,w,h)
+<span class="k">removeNode</span>(id, {close=<span class="k">true</span>})           <span class="c">// 默认 close → closeLeafSafely 杀 pty(两视图都移除);close:false → 仅解除画布引用,终端保活</span>
+<span class="k">addShape</span>(shape) / <span class="k">updateShape</span> / <span class="k">removeShape</span></pre>
+<p>"新建终端 / 切类型 / 拖文件预览"<strong>不写在 canvasSlice</strong>,而是复用 <code>openTerminal / setPaneKind / openFile</code> 产生/改动 leaf,再由 canvasSlice 把新 leaf 挂进 Frame。持久化:<code>viewMode</code> + <code>canvas</code> 随现有 tab 持久化机制一起落 localStorage。</p>
+
+<!-- 5 -->
+<h2 id="s5"><span class="n">05</span>最硬的三个技术点</h2>
+<p class="lead">其余都是标准 2D 变换。真正需要设计权衡的只有这三点。</p>
+
+<div class="card hard">
+  <div class="t">难点 A · 跨模式 / 平移缩放,xterm 绝不能重挂载 —— 双层渲染</div>
+  <p style="margin:6px 0 8px">React 里只要 <code>PaneView</code> 的父 DOM 变(分屏容器 → 画布 frame),就会卸载重建。原型把节点嵌进 frame 里,真实实现<strong>不能照抄</strong>。</p>
+  <p style="margin:6px 0 4px"><strong>对策:装饰层 + 活内容层,双层叠加,共用同一视口变换。</strong></p>
+  <div class="diagram">
+<span class="cmt">.workspace                      // 全局工作区,始终挂载</span>
+├─ <span class="deco">.canvas-stage</span>   <span class="cmt">(装饰层, 仅 viewMode==='canvas')</span>
+│   └─ <span class="deco">.world { transform: translate+scale }</span>
+│       ├─ Frame 卡片 <span class="cmt">// 边框/标题栏/计数/折叠/resize 手柄 — 死内容</span>
+│       ├─ 空 Frame 提示、Shape(矩形/箭头/便签)、点阵背景
+│       └─ <span class="cmt">位图缩放无所谓(无活终端)</span>
+│
+└─ <span class="live">.pane-layer</span>     <span class="cmt">(活内容层, 始终存在, 永不换父)</span>
+    └─ allLeaves.map(leaf =&gt;
+         <span class="live">&lt;PaneView key={leaf.id} rect={rectFor(leaf)} /&gt;</span>)  <span class="cmt">// ← key 不变 → 不断连</span>
+
+<span class="cmt">rectFor(leaf) 按全局 viewMode 决定像素矩形 + 可见性:</span>
+  <span class="lay">split </span>: 属激活 tab → computeLayout(百分比→像素);其余 leaf → display:none
+  <span class="lay">canvas</span>: 被某 node 引用 → worldToScreen(frame+node);未引用 → display:none
+  </div>
+  <p style="margin:8px 0 0"><code>PaneView</code> 恒在 <code>.pane-layer</code>、父不变、<code>key=leaf.id</code> 不变 → React 走 update 而非 remount。Frame 拖动/折叠/resize 只是<em>重算成员节点的 rect</em>(纯坐标,不触碰 DOM 挂载)。两层用同一 <code>viewport</code> 保证像素对齐:装饰层靠 world 的 transform,活内容层靠每个 PaneView 的 <code>left/top/w/h</code> + <code>scale</code>。</p>
+  <p style="margin:8px 0 0"><span class="pill b">代价</span>Frame 与其成员节点的坐标联动、装饰层与活内容层的对齐,都需在一处封装(见 §6),别让坐标散落。</p>
+</div>
+
+<div class="card hard">
+  <div class="t">难点 B · 缩放时终端文字的清晰度</div>
+  <p style="margin:6px 0 8px">整体缩放若用 CSS <code>scale()</code>,xterm 的 canvas 会被<em>位图</em>拉伸,放大时文字发虚。只影响终端节点——code/image/md/web 是 DOM 文本,CSS scale 下始终清晰。</p>
+  <ul>
+    <li><strong>MVP:</strong>活内容层每个 PaneView 用 <code>transform: scale(vp.scale)</code>。缩小看全局时位图缩放完全可接受;≈100% 时本就清晰。先能用。</li>
+    <li><strong>进阶(聚焦真渲):</strong>双击节点进入"聚焦"→ 该节点 <code>scale=1</code> 真实像素渲染 + 对 xterm <code>fit()</code> 真 resize,文字锐利。失焦回位图缩放。</li>
+    <li><strong>阈值优化:</strong><code>scale∈[0.9,1.1]</code> 时对可见终端做一次真实 fit,常用区间始终清晰。</li>
+  </ul>
+</div>
+
+<div class="card hard">
+  <div class="t">难点 C · HTML 网页预览器 —— 必须 iframe,不能 BrowserView</div>
+  <p style="margin:6px 0 8px">新 <code>PaneKind:'web'</code>。<strong>严禁用 Electron <code>BrowserView</code> / <code>WebContentsView</code></strong>:它们是原生叠加层,不受 CSS transform 控制,无法跟随画布缩放/平移/裁剪,会"浮"在画布之上错位。</p>
+  <ul>
+    <li><strong>MVP:</strong><code>&lt;iframe sandbox="allow-scripts" referrerpolicy="no-referrer"&gt;</code>。用途:预览 docs 里的 HTML 报告(<code>srcdoc</code> 或 <code>file://</code>)+ 嵌 dev server(<code>localhost:5173</code>)实时预览。</li>
+    <li><strong>进阶(可选):</strong>需要跨域/持久会话时改 <code>&lt;webview&gt;</code>(仍是 DOM,受 transform 控制),但要开 <code>webviewTag</code> 且承担其不稳定性,非 MVP。</li>
+  </ul>
+</div>
+
+<!-- 6 -->
+<h2 id="s6"><span class="n">06</span>坐标数学(封装在一处)</h2>
+<pre><span class="c">// viewport = {x, y, scale}</span>
+<span class="k">const</span> worldToScreen = (wx, wy, vp) =&gt; ({ x: wx*vp.scale + vp.x, y: wy*vp.scale + vp.y })
+
+<span class="c">// 节点世界坐标 = Frame + 节点局部坐标;再转屏幕 + 乘 scale 得像素 rect</span>
+<span class="k">function</span> <span class="t">rectForNode</span>(frame, node, vp) {
+  <span class="k">const</span> wx = frame.x + node.x, wy = frame.y + node.y
+  <span class="k">const</span> p = worldToScreen(wx, wy, vp)
+  <span class="k">return</span> { left: p.x, top: p.y, w: node.w*vp.scale, h: node.h*vp.scale, scale: vp.scale }
+}
+
+<span class="c">// 屏幕 → 世界(拖拽落点、右键新建定位)</span>
+<span class="k">const</span> screenToWorld = (sx, sy, vp) =&gt; ({ x: (sx-vp.x)/vp.scale, y: (sy-vp.y)/vp.scale })
+
+<span class="c">// 滚轮缩放以光标为锚点,保持指针下世界点不动</span>
+<span class="k">const</span> zoomAt = (px, py, factor, vp) =&gt; {
+  <span class="k">const</span> s2 = clamp(vp.scale*factor, 0.2, 2.2)
+  <span class="k">return</span> { x: px-(px-vp.x)*(s2/vp.scale), y: py-(py-vp.y)*(s2/vp.scale), scale: s2 }
+}</pre>
+
+<!-- 7 -->
+<h2 id="s7"><span class="n">07</span>交互设计</h2>
+<p class="lead">全部对齐 macOS 直觉与项目现有快捷键(⌘T/⌘D/⌘W…),并复刻原型手感。</p>
+<table>
+  <thead><tr><th>动作</th><th>操作</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>切视图</td><td>titlebar 分段控件 [终端 · 画布]</td><td>改全局 viewMode,内容不断连</td></tr>
+    <tr><td>平移画布</td><td>拖空白 / 触控板双指滚动</td><td>改 viewport.x/y</td></tr>
+    <tr><td>缩放</td><td>滚轮(光标锚点)/ ⌃+滚 / 右下 − 100% + / <code>⌘0</code> 适应全部</td><td>改 viewport.scale,clamp[0.2,2.2]</td></tr>
+    <tr><td>移动 Frame</td><td>拖 Frame 头部</td><td>成员节点整体跟随</td></tr>
+    <tr><td>移动 / 缩放节点</td><td>拖节点头部 / 拖右下手柄</td><td>终端节点松手后 fit()</td></tr>
+    <tr><td>聚焦节点</td><td>双击节点</td><td>放大 1:1 真实渲染(难点B)</td></tr>
+    <tr><td>拖项目入画布</td><td>从抽屉拖项目 → 落画布</td><td>生成 Frame;已在则聚焦</td></tr>
+    <tr><td>拖文件入画布</td><td>拖文件 → Frame 内=预览节点 / 拖到终端节点=插路径</td><td>复用 openFile / insertPath</td></tr>
+    <tr><td>拖 .html</td><td>拖 <code>.html</code> → Frame 内</td><td>生成 web 预览器节点(iframe)</td></tr>
+    <tr><td>图形 / 便签</td><td>左侧工具栏选工具 → 画布拖出</td><td>矩形/箭头/便签</td></tr>
+    <tr><td>重命名</td><td>双击 Frame 名 / 节点右键重命名</td><td>复用 <code>.tree-rename-input</code> 样式</td></tr>
+    <tr><td>复制 / 删除</td><td><code>⌘D</code> 复制选中节点 · <code>Delete</code> 删除选中</td><td>见 §8</td></tr>
+    <tr><td>右键</td><td>节点 / Frame / Shape / 空白各有菜单</td><td>CRUD 统一入口(§8)</td></tr>
+  </tbody>
+</table>
+
+<!-- 8 -->
+<h2 id="s8"><span class="n">08</span>CRUD 全表(右键菜单为统一入口)</h2>
+<table>
+  <thead><tr><th>对象</th><th>增</th><th>删</th><th>改</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Frame</strong></td><td>拖项目 / 工具栏新建 / 右键空白「新建 Frame」</td><td>头部 ✕ / 右键删除 / 选中 Delete(复用 closeLeaf 杀成员 pty)</td><td>拖动 · resize · 折叠 · 双击/右键重命名</td></tr>
+    <tr><td><strong>Node</strong></td><td>拖文件 / Frame 头「新建终端」/ 复制</td><td>头部 ×=<strong>关闭终端</strong>(closeLeafSafely,运行中先确认)· 右键「仅移出画布」保活 · 选中 Delete=关闭</td><td>拖动 · resize · kind-pill 切类型 · 右键重命名 · ⌘D 复制</td></tr>
+    <tr><td><strong>Shape</strong></td><td>工具栏(矩形/箭头/便签)/ 右键空白「新建便签」</td><td>右键删除 / 选中 Delete</td><td>拖动 · resize · 便签双击编辑文本</td></tr>
+  </tbody>
+</table>
+<div class="note"><b>删除语义(已定):</b>节点 <code>×</code> 与分屏面板 <code>×</code> 完全一致 = <strong>关闭该终端</strong>(<code>closeLeafSafely</code> 杀 pty,运行中先弹确认),画布与分屏同时移除——符合"同一个终端"的直觉。需要保活时走右键「仅移出画布」:只解除画布引用,终端仍在分屏视图存活。Frame <code>✕</code> = 逐个 closeLeaf 关闭其全部成员终端。</div>
+
+<!-- 9 -->
+<h2 id="s9"><span class="n">09</span>技术选型评审团</h2>
+<p class="lead">按完成性 / 体验 / Token-包体 / 风险四维评审。结论——自研。</p>
+<table>
+  <thead><tr><th>方案</th><th>完成性</th><th>体验(不断连&amp;设计一致)</th><th>Token/包体</th><th>风险</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>自研画布</strong> <span class="pill g">选它</span></td>
+      <td><span class="pill g">高</span> 复用 PaneView/leaf/action</td>
+      <td><span class="pill g">最佳</span> 双层渲染 100% 复用不断连基建 + 直套 base.css</td>
+      <td><span class="pill g">零依赖</span> 引擎+抽屉+图形 ≈1200 行</td>
+      <td><span class="pill a">中</span> 双层对齐 + 缩放清晰度需自理</td>
+    </tr>
+    <tr>
+      <td>react-flow</td>
+      <td><span class="pill a">中</span></td>
+      <td><span class="pill r">差</span> 它托管节点 DOM,活 xterm 塞进去要跟其渲染周期对抗</td>
+      <td><span class="pill a">+~50KB</span></td>
+      <td><span class="pill r">高</span> 与"同容器不重挂载"哲学冲突</td>
+    </tr>
+    <tr>
+      <td>tldraw</td>
+      <td><span class="pill g">高</span></td>
+      <td><span class="pill r">差</span> 自绘 canvas 世界,嵌活终端 DOM 是逆用法;难对齐毛玻璃</td>
+      <td><span class="pill r">重</span></td>
+      <td><span class="pill r">高</span> 断连风险 + 设计割裂</td>
+    </tr>
+  </tbody>
+</table>
+<div class="note"><b>为什么第三方库反而更难:</b>它们都<em>自己托管节点的挂载/卸载</em>,而本项目命脉是"xterm 永不重挂载"。让外部库配合这条约束,比自研一个契合现有架构的轻画布更费劲、更脆,且视觉难对齐毛玻璃令牌。</div>
+
+<!-- 10 -->
+<h2 id="s10"><span class="n">10</span>分期路线</h2>
+<p class="lead">每期独立验收、独立回退。P0 是垂直切片——直接证明"活终端在画布里不断连地摆放缩放"这条命脉。</p>
+
+<div class="phase"><div class="badge"><span class="p">P0</span><span class="w">~1.5天</span></div><div class="body">
+  <div class="h">骨架 + 统一渲染层 + 不断连验证</div>
+  uiSlice 加全局 <code>viewMode</code>;titlebar 分段控件;把 <code>tab-stack/TabContent</code> 重构为「<strong>全局 pane-layer</strong>(所有 leaf)+ 装饰层」,split 模式行为<em>完全不变</em>(回归保护第一);canvas 模式:点阵 world + 平移 + 缩放;<code>seedCanvas</code> 把当前项目 leaf 铺成裸节点浮在画布,可拖动。<em>验收:切到画布,现有终端不断连地浮着、能拖能缩放;切回分屏一切如常。</em>
+</div></div>
+<div class="phase"><div class="badge"><span class="p">P1</span><span class="w">~2天</span></div><div class="body">
+  <div class="h">Frame 化 + 右侧抽屉 + 拖拽入画布 + web 预览器</div>
+  裸节点归入 Frame(项目边界/标题/计数/折叠/resize);右侧资源抽屉(项目列表 + 复用 FileTree,整体收起/分区折叠);拖项目→Frame、拖文件→节点、拖到终端→插路径;新 <code>PaneKind:'web'</code> + iframe 预览器;缩放条 + 适应全部。<em>验收:拖项目生成 Frame、拖 .html 出网页预览、终端不断连。</em>
+</div></div>
+<div class="phase"><div class="badge"><span class="p">P2</span><span class="w">~1.5天</span></div><div class="body">
+  <div class="h">图形 + 便签 + 多选 + 右键 CRUD 统一</div>
+  左侧工具栏(矩形/箭头/便签);框选多选 + ⇧点选;节点/Frame/Shape/空白四类右键菜单;⌘D 复制、Delete 删除、双击重命名/编辑便签。<em>验收:能圈标注、加便签,CRUD 从右键一处触达。</em>
+</div></div>
+<div class="phase"><div class="badge"><span class="p">P3</span><span class="w">~1天</span></div><div class="body">
+  <div class="h">打磨</div>
+  画布布局持久化(重开还原);双击聚焦真渲 + <code>[0.9,1.1]</code> 自动 fit;视口外节点降帧 / <code>content-visibility</code>;可选 minimap / 对齐吸附。<em>验收:重开还原;常用缩放区间终端清晰;多终端不卡。</em>
+</div></div>
+
+<!-- 11 -->
+<h2 id="s11"><span class="n">11</span>风险与对策</h2>
+<div class="card risk"><div class="t">R1 · 统一渲染层重构回归分屏</div><p style="margin:4px 0 0">P0 第一优先级是"split 行为零改变"。做法:先抽出 pane-layer 让 split 走它、canvas 为空,确认分屏无回归后再填 canvas。分两步提交,便于二分回退。</p></div>
+<div class="card risk"><div class="t">R2 · 终端缩放发虚</div><p style="margin:4px 0 0">难点B 分层解:MVP 位图 + 聚焦真渲 + 常用区间自动 fit。非阻塞。</p></div>
+<div class="card risk"><div class="t">R3 · 多终端 × 画布重绘性能</div><p style="margin:4px 0 0">非聚焦终端降帧/暂停 rAF(呼应已做的写入合并);视口外节点 <code>content-visibility:auto</code> 或只留占位卡。</p></div>
+<div class="card risk"><div class="t">R4 · 状态复杂度 / 坐标散落</div><p style="margin:4px 0 0">canvas 独立成 <code>canvasSlice</code>,action 收敛;世界↔屏幕变换只在 §6 一处封装。</p></div>
+<div class="card risk"><div class="t">R5 · iframe 安全</div><p style="margin:4px 0 0"><code>sandbox</code> 最小授权(<code>allow-scripts</code>,按需加 <code>allow-same-origin</code>);不放开 <code>allow-top-navigation</code>;遵守项目沙箱红线,不绕过安全规则。</p></div>
+
+<!-- 12 -->
+<h2 id="s12"><span class="n">12</span>设计令牌落地</h2>
+<p class="lead">画布所有元素引用 <span class="path">base.css</span> 现有令牌,与终端/侧栏同源。配套原型已按此实现,可直接抄 class。</p>
+<table>
+  <thead><tr><th>画布元素</th><th>令牌 / 复用 class</th></tr></thead>
+  <tbody>
+    <tr><td>Frame 卡片 / 边 / 圆角</td><td><code>rgba(accent,.045)</code> 底 · <code>rgba(accent,.34)</code> 边 · <code>--radius-xl(18px)</code></td></tr>
+    <tr><td>Frame 头部 / 计数胶囊</td><td>accent 渐变头 · <code>--accent-soft</code> 计数药丸</td></tr>
+    <tr><td>Node 卡片 / 头部 / 类型胶囊</td><td><code>--glass-2</code>+<code>--blur</code> · 同 <code>.pane-header</code> / <code>.pane-kind-btn</code></td></tr>
+    <tr><td>便签 / 图形描边</td><td>便签 <code>--amber</code> 系 · 矩形 <code>--accent</code> 描边 · <code>--radius-sm</code></td></tr>
+    <tr><td>工具栏 / 缩放条 / 右键菜单</td><td>玻璃 <code>--glass-3</code>+<code>--blur</code>,选中 accent 反色(同 <code>.glass-menu-item.selected</code>)</td></tr>
+    <tr><td>框选 / 高亮 / droptarget</td><td><code>--accent-soft</code> 填充 + <code>--accent</code> 描边;文件落终端用 <code>--amber</code></td></tr>
+    <tr><td>重命名输入</td><td>复用 <code>.tree-rename-input</code></td></tr>
+    <tr><td>双主题</td><td>令牌随 <code>data-theme</code> 自动(蓝 / 黑粉),画布无需额外适配</td></tr>
+  </tbody>
+</table>
+
+<!-- 13 -->
+<h2 id="s13"><span class="n">13</span>落点清单(施工时逐条对照)</h2>
+<table>
+  <thead><tr><th>文件</th><th>改动</th><th>期</th></tr></thead>
+  <tbody>
+    <tr><td><span class="path">store/canvasSlice.ts</span> <span class="pill g">新增</span></td><td>viewMode + CanvasScene + 全部 canvas actions + seedCanvas</td><td>P0</td></tr>
+    <tr><td><span class="path">store/index.ts</span></td><td>组合 canvasSlice</td><td>P0</td></tr>
+    <tr><td><span class="path">store/types.ts</span> / <span class="path">layout.ts</span></td><td>CanvasFrame/Node/Shape 类型;PaneKind 加 <code>'web'</code>;PaneState 加 web 分支</td><td>P0/P1</td></tr>
+    <tr><td><span class="path">App.tsx</span></td><td>titlebar 分段控件;body 按 viewMode 切「分屏 chrome / 画布 chrome」;抽出 <strong>pane-layer</strong></td><td>P0</td></tr>
+    <tr><td><span class="path">features/workspace/PaneLayer.tsx</span> <span class="pill g">新增</span></td><td>全局活内容层:allLeaves.map(PaneView),rect 双来源</td><td>P0</td></tr>
+    <tr><td><span class="path">features/canvas/CanvasStage.tsx</span> <span class="pill g">新增</span></td><td>viewport/world 装饰层:Frame 卡片 + Shape + 平移缩放 + drag</td><td>P0/P1</td></tr>
+    <tr><td><span class="path">features/canvas/CanvasDrawer.tsx</span> <span class="pill g">新增</span></td><td>右侧资源抽屉(项目列表 + 复用 FileTree)</td><td>P1</td></tr>
+    <tr><td><span class="path">features/canvas/canvas.css</span> <span class="pill g">新增</span></td><td>照抄原型 class(frame/node/toolbar/zoombar/ctx-menu…)</td><td>P0-P2</td></tr>
+    <tr><td><span class="path">features/workspace/PaneView.tsx</span></td><td>接受 canvas 传入的像素 rect + scale;加 web 分支渲染</td><td>P0/P1</td></tr>
+    <tr><td><span class="path">features/web/WebView.tsx</span> <span class="pill g">新增</span></td><td>iframe sandbox 网页预览器</td><td>P1</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  Eas-Term · 无限画布模式实现规划 v2 · 依据 main@ea2f1ae 源码核验 ·
+  证据锚点:layout.ts:1-3 / TabContent.tsx:59-67 / App.tsx:100-102 / PaneView.tsx:188-212 / tabsSlice.ts / shared.ts:6-15 ·
+  配套交互原型见同目录 画布模式-原型.html · 定稿决策:①共享 leaf ②双层渲染
+</footer>
+
+</div>
+</body>
+</html>
