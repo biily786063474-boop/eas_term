@@ -164,17 +164,30 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
   const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 
-  // 画布模式：像素定位 + 整体位图缩放；分屏模式：百分比 rect
+  const cs = canvasRect?.scale ?? 1
+  // 画布终端走「字体缩放」而非 CSS transform：终端 pane 用实际像素尺寸、不变形，
+  // 字号按 cs 放大（TerminalView 内），使 xterm 鼠标坐标精准；头部用 zoom 缩放（布局感知、按钮仍可点）。
+  const canvasTerm = !!canvasRect && pane.kind === 'terminal'
+
+  // 画布模式：终端=实际像素尺寸(无变形)；其它节点=像素定位 + 整体位图缩放；分屏=百分比 rect
   const paneStyle: CSSProperties = canvasRect
-    ? {
-        display: hidden ? 'none' : undefined,
-        left: canvasRect.left,
-        top: canvasRect.top,
-        width: canvasRect.w,
-        height: canvasRect.h,
-        transform: `scale(${canvasRect.scale})`,
-        transformOrigin: '0 0'
-      }
+    ? canvasTerm
+      ? {
+          display: hidden ? 'none' : undefined,
+          left: canvasRect.left,
+          top: canvasRect.top,
+          width: canvasRect.w * cs,
+          height: canvasRect.h * cs
+        }
+      : {
+          display: hidden ? 'none' : undefined,
+          left: canvasRect.left,
+          top: canvasRect.top,
+          width: canvasRect.w,
+          height: canvasRect.h,
+          transform: `scale(${cs})`,
+          transformOrigin: '0 0'
+        }
     : {
         display: hidden ? 'none' : undefined,
         left: `calc(${rect.x * 100}% + ${PANE_GAP}px)`,
@@ -230,7 +243,14 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     >
       <div
         className="pane-header"
-        style={canvasRect ? { cursor: 'move' } : undefined}
+        style={
+          canvasRect
+            ? // 画布终端：头部用 zoom 随缩放（布局感知，按钮仍精准可点），body 不变形供 xterm 精准取坐标
+              canvasTerm
+              ? { cursor: 'move', zoom: cs }
+              : { cursor: 'move' }
+            : undefined
+        }
         onMouseDown={canvasRect ? onCanvasHeadDown : undefined}
       >
         <PaneKindSelect
@@ -308,6 +328,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             leafId={leaf.id}
             ptyId={pane.ptyId}
             isActive={isActive}
+            canvasScale={canvasTerm ? cs : 1}
           />
         )}
         {pane.kind === 'code' &&

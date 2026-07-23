@@ -31,11 +31,18 @@ interface Props {
   leafId: string
   ptyId: string
   isActive: boolean
+  /** 画布模式下的缩放比：终端不走 CSS transform（会让 xterm 鼠标坐标点偏），改按此比放大字号，
+   *  行列数保持不变、鼠标坐标精准。分屏模式恒为 1。 */
+  canvasScale?: number
 }
 
-export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Element {
+const BASE_FONT = 13
+const scaledFont = (s: number): number => Math.max(4, BASE_FONT * s)
+
+export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
   // 鼠标当前悬停命中的路径（link provider 的 hover/leave 维护），右键时读取
   const hoveredRef = useRef<HoveredPath | null>(null)
   const [menu, setMenu] = useState<TermMenu | null>(null)
@@ -86,7 +93,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
       // 跨平台等宽字体回退：mac 用 SF Mono，Windows 用 Cascadia Code/Consolas
       fontFamily:
         '"SF Mono", Menlo, Monaco, "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace',
-      fontSize: 13,
+      fontSize: scaledFont(canvasScale),
       lineHeight: 1.25,
       cursorBlink: true,
       macOptionIsMeta: true,
@@ -128,6 +135,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
     })
 
     const fit = new FitAddon()
+    fitRef.current = fit
     term.loadAddon(fit)
     // 仅在按住 ⌘（mac）/ Ctrl（其他平台）时点击才打开网址，避免误触
     term.loadAddon(
@@ -444,6 +452,26 @@ export function TerminalView({ tabId, leafId, ptyId, isActive }: Props): JSX.Ele
   useEffect(() => {
     if (termRef.current) termRef.current.options.theme = xtermTheme(theme)
   }, [theme])
+
+  // 画布缩放变化 → 按比放大字号后重新 fit（配合 PaneView 把容器设成实际像素尺寸，
+  // 行列数不变、xterm 的 getBoundingClientRect 与字符尺寸同步缩放 → 鼠标坐标精准）。
+  useEffect(() => {
+    const term = termRef.current
+    const fit = fitRef.current
+    if (!term || !fit) return
+    const size = scaledFont(canvasScale)
+    if (term.options.fontSize === size) return
+    term.options.fontSize = size
+    requestAnimationFrame(() => {
+      if (containerRef.current && containerRef.current.offsetWidth > 0) {
+        try {
+          fit.fit()
+        } catch {
+          // 容器尺寸异常时跳过
+        }
+      }
+    })
+  }, [canvasScale])
 
   const run = (fn: () => void) => (): void => {
     fn()
