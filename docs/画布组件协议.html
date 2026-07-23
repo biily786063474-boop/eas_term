@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>画布组件协议 · Eas-Term</title>
+<style>
+  :root{
+    --glass-1:rgba(15,17,23,.5); --glass-2:rgba(11,13,19,.62); --glass-3:rgba(25,28,38,.82);
+    --glass-border:rgba(255,255,255,.09); --glass-border-strong:rgba(255,255,255,.14);
+    --glass-highlight:inset 0 1px 0 rgba(255,255,255,.07); --blur:blur(28px) saturate(160%);
+    --fg:#e2e4ea; --fg-dim:#969aa8; --fg-mute:#6b7180;
+    --accent:#a2b9e0; --accent-rgb:162,185,224; --accent-soft:rgba(162,185,224,.16);
+    --pink:#f78bb0; --green:#9ece6a; --amber:#e0af68; --red:#f7768e; --cyan:#7dcfff;
+    --radius-xl:18px; --radius-lg:14px; --radius-md:10px; --radius-sm:7px;
+    --bg-grad-1:rgba(7,8,13,.72); --bg-grad-2:rgba(3,4,6,.85);
+    --mono:"SF Mono",Menlo,Monaco,"Cascadia Code",Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(900px 480px at 82% -6%,rgba(162,185,224,.10),transparent 60%),
+      radial-gradient(720px 400px at 4% 4%,rgba(247,139,176,.06),transparent 55%),
+      linear-gradient(165deg,var(--bg-grad-1),var(--bg-grad-2)),#07080d;
+    color:var(--fg); font-family:var(--sans); line-height:1.72; font-size:14.5px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:60px 30px 120px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  h1{font-size:31px;line-height:1.28;margin-bottom:14px;font-weight:680;letter-spacing:-.01em}
+  .sub{color:var(--fg-dim);max-width:76ch;font-size:15.5px}
+  .meta{margin-top:22px;display:flex;gap:9px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:11.5px;padding:5px 11px;border:1px solid var(--glass-border-strong);border-radius:999px;color:var(--fg-dim);background:var(--glass-1)}
+  h2{font-size:22px;margin:60px 0 6px;font-weight:660;letter-spacing:-.01em;scroll-margin-top:20px}
+  h2 .n{font-family:var(--mono);color:var(--accent);font-size:15px;margin-right:12px;opacity:.85}
+  h3{font-size:16.5px;margin:28px 0 8px;font-weight:640}
+  .lead{color:var(--fg-dim);border-bottom:1px solid var(--glass-border);padding-bottom:16px;margin-bottom:8px}
+  p{margin:12px 0}
+  a{color:var(--cyan);text-decoration:none;border-bottom:1px dotted rgba(125,207,255,.4)}
+  strong{color:#fff;font-weight:640}
+  em{color:var(--fg);font-style:normal;opacity:.92}
+  code{font-family:var(--mono);font-size:12.6px;background:rgba(10,11,15,.85);border:1px solid var(--glass-border);border-radius:5px;padding:1.5px 6px;color:var(--cyan)}
+  .path{color:var(--amber)}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0;color:var(--fg-dim)}
+  li strong{color:var(--fg)}
+  .toc{background:var(--glass-1);backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:20px 24px;margin:36px 0;box-shadow:var(--glass-highlight)}
+  .toc b{display:block;color:var(--fg-mute);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+  .toc li{margin:5px 0}.toc a{border:none;color:var(--fg-dim)}.toc a:hover{color:var(--cyan)}
+  pre{background:rgba(8,9,13,.9);border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:16px 18px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:12.6px;line-height:1.62;color:#cdd3e0}
+  pre .c{color:#5c6472;font-style:italic}
+  pre .k{color:#c3a3e0}pre .s{color:var(--green)}pre .t{color:var(--cyan)}pre .n{color:var(--amber)}pre .add{color:var(--green)}pre .p{color:var(--pink)}
+  .card{background:linear-gradient(180deg,var(--glass-1),var(--glass-2));border:1px solid var(--glass-border);border-radius:var(--radius-lg);padding:20px 22px;margin:16px 0;box-shadow:var(--glass-highlight);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--edge,var(--accent))}
+  .card .t{font-size:16px;font-weight:640;color:#fff;margin-bottom:4px}
+  .card.win{--edge:var(--green)}.card.key{--edge:var(--cyan)}.card.warn{--edge:var(--amber)}
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--glass-border);vertical-align:top}
+  th{color:var(--fg-mute);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:rgba(255,255,255,.02)}
+  td strong{color:var(--fg)}
+  td code{white-space:nowrap}
+  .note{background:var(--accent-soft);border:1px solid rgba(162,185,224,.28);border-radius:var(--radius-md);padding:14px 18px;margin:18px 0;font-size:13.5px;color:var(--fg-dim)}
+  .note b{color:var(--accent)}
+  .note.warn{background:rgba(224,175,104,.07);border-color:rgba(224,175,104,.28)}.note.warn b{color:var(--amber)}
+  .step{display:flex;gap:14px;margin:14px 0;align-items:flex-start}
+  .step .num{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-soft);border:1px solid rgba(var(--accent-rgb),.4);color:var(--accent);font-family:var(--mono);font-weight:700;font-size:13px}
+  .step .body{flex:1;min-width:0}
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--glass-border);color:var(--fg-mute);font-size:12.5px;font-family:var(--mono)}
+  @media(max-width:640px){.toc ol{columns:1}.wrap{padding:40px 18px 80px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Spec · Canvas Component Protocol</div>
+  <h1>画布组件协议</h1>
+  <p class="sub">无限画布右侧抽屉「组件」分区里的每一项都是一个<strong>画布组件</strong>：用户从抽屉拖进画布的 Frame，就得到一个该组件的节点。本文定义组件的注册协议、渲染契约、拖拽落点规则，以及<strong>如何新增一个组件</strong>。目标：加组件 = 写一个 <code>CanvasComponentDef</code> 并注册，<em>不改动任何其它文件</em>。</p>
+  <div class="meta">
+    <span class="tag">注册表驱动</span>
+    <span class="tag">组件节点 = 画布独有</span>
+    <span class="tag">Frame 注入 ctx</span>
+    <span class="tag">首个组件：版本管理</span>
+  </div>
+</header>
+
+<div class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#s1">是什么</a></li>
+    <li><a href="#s2">数据模型</a></li>
+    <li><a href="#s3">组件协议 CanvasComponentDef</a></li>
+    <li><a href="#s4">渲染上下文 ctx 契约</a></li>
+    <li><a href="#s5">渲染与拖拽流程</a></li>
+    <li><a href="#s6">如何新增一个组件</a></li>
+    <li><a href="#s7">首个组件：版本管理</a></li>
+    <li><a href="#s8">约束与边界</a></li>
+    <li><a href="#s9">落点清单</a></li>
+  </ol>
+</div>
+
+<h2 id="s1"><span class="n">01</span>是什么</h2>
+<p class="lead">画布节点有三类来源，组件是第三类。</p>
+<table>
+  <thead><tr><th>节点类型</th><th>内容来源</th><th>归属</th><th>渲染</th></tr></thead>
+  <tbody>
+    <tr><td><strong>终端节点</strong></td><td><code>leafId</code> 引用共享 leaf</td><td>两视图同源（分屏也在）</td><td>pane-layer（不断连）</td></tr>
+    <tr><td><strong>文件预览节点</strong></td><td><code>pane</code> 自带（code/image/web）</td><td>画布独有</td><td>装饰层（矢量缩放）</td></tr>
+    <tr><td><strong>组件节点</strong> <span style="color:var(--accent)">← 本文</span></td><td><code>component</code>（type 查注册表）</td><td>画布独有</td><td>装饰层（矢量缩放）</td></tr>
+  </tbody>
+</table>
+<p>组件节点和文件预览节点是<strong>同一类</strong>——画布独有、不进分屏、渲染在装饰层（world）内随视口矢量缩放。区别只是内容来自「注册表里的组件」而非「某个文件」。</p>
+
+<h2 id="s2"><span class="n">02</span>数据模型</h2>
+<p class="lead">组件节点在 <span class="path">store/canvasSlice.ts</span> 的 <code>CanvasNode</code> 上多一个 <code>component</code> 字段。</p>
+<pre><span class="k">interface</span> <span class="t">CanvasNode</span> {
+  id: <span class="t">string</span>
+  leafId?: <span class="t">string</span>                              <span class="c">// 终端（共享）</span>
+  pane?: <span class="t">PaneState</span>                            <span class="c">// 文件预览（画布独有）</span>
+  <span class="add">component</span>?: { type: <span class="t">string</span>; props?: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt; }  <span class="c">// 组件（画布独有）</span>
+  x: <span class="t">number</span>; y: <span class="t">number</span>; w: <span class="t">number</span>; h: <span class="t">number</span>       <span class="c">// 相对 Frame 局部坐标</span>
+}</pre>
+<p><code>component.type</code> 是组件的 <code>id</code>（如 <code>'git'</code>），持久化时只存这个字符串 + 可选 <code>props</code>；组件的实现（图标、尺寸、渲染）全在注册表里按 type 查。<strong>所以 type 一旦发布就不要改名</strong>（否则旧画布里的节点失效）。</p>
+
+<h2 id="s3"><span class="n">03</span>组件协议 <code>CanvasComponentDef</code></h2>
+<p class="lead">定义在 <span class="path">features/canvas/components/registry.tsx</span>。</p>
+<pre><span class="k">interface</span> <span class="t">CanvasComponentDef</span> {
+  id: <span class="t">string</span>                 <span class="c">// 唯一标识，存进 node.component.type，勿改名</span>
+  name: <span class="t">string</span>               <span class="c">// 抽屉里显示的名称</span>
+  Icon: (p: { size?: <span class="t">number</span> }) =&gt; <span class="t">JSX.Element</span>   <span class="c">// 抽屉图标</span>
+  description?: <span class="t">string</span>       <span class="c">// 一句话简介（hover 提示）</span>
+  defaultSize: { w: <span class="t">number</span>; h: <span class="t">number</span> }         <span class="c">// 拖入时默认节点尺寸</span>
+  needsProject?: <span class="t">boolean</span>     <span class="c">// true → 必须落在绑定项目的 Frame，否则拒绝</span>
+  render: (ctx: <span class="t">CanvasComponentCtx</span>) =&gt; <span class="t">JSX.Element</span>  <span class="c">// 渲染节点 body</span>
+}
+
+<span class="k">const</span> <span class="t">CANVAS_COMPONENTS</span>: <span class="t">CanvasComponentDef</span>[] = [ gitComponent ]   <span class="c">// ← 在这里追加</span>
+<span class="k">const</span> getCanvasComponent = (id) =&gt; CANVAS_COMPONENTS.find(c =&gt; c.id === id)</pre>
+
+<h2 id="s4"><span class="n">04</span>渲染上下文 <code>ctx</code> 契约</h2>
+<p class="lead">组件的 <code>render(ctx)</code> 从所属 Frame 拿到运行所需的一切，<strong>不要自己去 store 找“当前项目”</strong>——画布是多项目并置的，ctx 才是唯一正确来源。</p>
+<pre><span class="k">interface</span> <span class="t">CanvasComponentCtx</span> {
+  nodeId: <span class="t">string</span>
+  frameId: <span class="t">string</span>
+  projectId: <span class="t">string</span> | <span class="k">null</span>   <span class="c">// 所属 Frame 绑定的项目；needsProject 组件保证非空</span>
+  cwd: <span class="t">string</span>               <span class="c">// 项目工作目录（needsProject 组件的 cwd）</span>
+  props?: <span class="t">Record</span>&lt;<span class="t">string</span>, <span class="t">unknown</span>&gt;   <span class="c">// 拖入时携带的额外参数</span>
+}</pre>
+<div class="note"><b>为什么给 ctx 而不让组件自取：</b>同一个组件可能在画布上被拖入多个不同项目的 Frame（比如给两个项目各放一个版本管理）。每个实例必须绑定自己 Frame 的项目，靠 <code>ctx.cwd</code> 区分——组件内部若用全局“activeProject”会串项目。</div>
+
+<h2 id="s5"><span class="n">05</span>渲染与拖拽流程</h2>
+<div class="card key">
+  <div class="t">渲染</div>
+  <p style="margin:6px 0 0"><span class="path">CanvasStage</span> 遍历 <code>frame.nodes</code>，<code>n.component</code> 的交给 <span class="path">CanvasComponentNode</span>。后者按 <code>type</code> 查注册表 → 用 Frame 的 projectId/cwd 组出 <code>ctx</code> → 调 <code>def.render(ctx)</code> 塞进节点 body。外壳（头部/拖动/resize/删除）复用文件节点的 <code>.cfile-*</code> 样式与 <code>moveNode/resizeNode/removeNode</code>。</p>
+</div>
+<div class="card key">
+  <div class="t">拖拽</div>
+  <p style="margin:6px 0 0"><span class="path">CanvasDrawer</span> 的「组件」分区遍历 <code>CANVAS_COMPONENTS</code> 渲染可拖项。手动拖拽（mousedown + ghost，非 HTML5）：落点 <code>elementFromPoint</code> 命中 <code>.cframe</code> → 换算 Frame 内局部坐标 → <code>addComponentNode(frameId, type, x, y, w, h)</code>。<code>needsProject</code> 组件落到无项目 Frame 会被拒绝（无操作）。</p>
+</div>
+
+<h2 id="s6"><span class="n">06</span>如何新增一个组件</h2>
+<p class="lead">三步，全部发生在 <span class="path">registry.tsx</span> 一个文件内。</p>
+<div class="step"><div class="num">1</div><div class="body">
+  <strong>写一个内容组件</strong>（或复用现成的）。它接受 props（一般是 <code>cwd</code> / <code>projectId</code>），渲染面板内容。版本管理直接复用了侧栏的 <code>SidebarGit</code>。
+</div></div>
+<div class="step"><div class="num">2</div><div class="body">
+  <strong>写 <code>CanvasComponentDef</code></strong>：填 id / name / Icon / defaultSize，在 <code>render(ctx)</code> 里返回内容组件并把 <code>ctx.cwd</code> 传进去。需要项目就设 <code>needsProject:true</code>。
+</div></div>
+<div class="step"><div class="num">3</div><div class="body">
+  <strong>push 进 <code>CANVAS_COMPONENTS</code></strong>。完。抽屉分区自动出现新项、可拖入、可渲染，无需改 CanvasStage / CanvasDrawer / store。
+</div></div>
+<pre><span class="c">// 例：加一个「待办清单」组件</span>
+<span class="k">const</span> todoComponent: <span class="t">CanvasComponentDef</span> = {
+  id: <span class="s">'todo'</span>,
+  name: <span class="s">'待办清单'</span>,
+  Icon: <span class="t">CheckIcon</span>,
+  defaultSize: { w: <span class="n">280</span>, h: <span class="n">360</span> },
+  render: (ctx) =&gt; &lt;<span class="t">TodoPanel</span> projectId={ctx.projectId} /&gt;
+}
+<span class="k">export const</span> <span class="t">CANVAS_COMPONENTS</span> = [ gitComponent, <span class="add">todoComponent</span> ]</pre>
+
+<h2 id="s7"><span class="n">07</span>首个组件：版本管理</h2>
+<p class="lead">复用侧栏「版本」面板 <span class="path">SidebarGit</span>（Git 变更 / 暂存 / 提交 / 历史入口）。</p>
+<pre><span class="k">const</span> gitComponent: <span class="t">CanvasComponentDef</span> = {
+  id: <span class="s">'git'</span>,
+  name: <span class="s">'版本管理'</span>,
+  Icon: <span class="t">GitBranchIcon</span>,
+  description: <span class="s">'Git 变更 / 暂存 / 提交 / 历史'</span>,
+  defaultSize: { w: <span class="n">320</span>, h: <span class="n">440</span> },
+  needsProject: <span class="k">true</span>,
+  render: (ctx) =&gt; &lt;<span class="t">SidebarGit</span> cwd={ctx.cwd} active /&gt;
+}</pre>
+<p>拖「版本管理」到某项目的 Frame → 该 Frame 内出现一个 git 面板节点，操作的是该 Frame 绑定项目的仓库。</p>
+
+<h2 id="s8"><span class="n">08</span>约束与边界</h2>
+<div class="card warn"><div class="t">组件节点是画布独有</div><p style="margin:4px 0 0">不进分屏、不共享 leaf。适合<em>无状态或自持状态的视图</em>（git、待办、看板…）。真正的「活会话」（终端）不走组件，走 leafId 共享节点。</p></div>
+<div class="card warn"><div class="t">render 是纯展示，副作用走 ctx</div><p style="margin:4px 0 0">组件内若要「在主区域打开 diff / 历史」这类动作，注意画布模式下它们会落到分屏。组件应尽量自包含；跨视图动作后续由协议扩展 ctx 提供回调，不要在组件里直接摸全局 activeTab。</p></div>
+<div class="card warn"><div class="t">id 稳定</div><p style="margin:4px 0 0"><code>id</code>/<code>type</code> 是持久化键，发布后改名会让旧画布节点失效。要重命名走迁移，不要直接改。</p></div>
+
+<h2 id="s9"><span class="n">09</span>落点清单</h2>
+<table>
+  <thead><tr><th>文件</th><th>职责</th></tr></thead>
+  <tbody>
+    <tr><td><span class="path">features/canvas/components/registry.tsx</span></td><td><strong>协议 + 组件清单</strong>（加组件只动这里）</td></tr>
+    <tr><td><span class="path">features/canvas/CanvasComponentNode.tsx</span></td><td>组件节点外壳：查表 render + 拖/resize/删</td></tr>
+    <tr><td><span class="path">store/canvasSlice.ts</span></td><td><code>CanvasNode.component</code> + <code>addComponentNode</code></td></tr>
+    <tr><td><span class="path">features/canvas/CanvasStage.tsx</span></td><td>遍历节点，component 型交给 CanvasComponentNode</td></tr>
+    <tr><td><span class="path">features/canvas/CanvasDrawer.tsx</span></td><td>抽屉「组件」分区（文件下方）+ 拖组件落点</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  Eas-Term · 画布组件协议 · 首个组件：版本管理（git）· 抽屉分区位置：项目 / 文件 / <b style="color:var(--accent)">组件</b>
+</footer>
+
+</div>
+</body>
+</html>
