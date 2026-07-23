@@ -138,8 +138,18 @@ export interface PersistedCanvas {
   shapes: CanvasShape[]
 }
 
-/** 序列化画布用于落盘：剥离每个节点的 leafId（会话相关，重开时按占位重开终端重绑） */
-export function serializeCanvas(canvas: CanvasScene, viewMode: ViewMode): PersistedCanvas {
+/**
+ * 序列化画布用于落盘。leafId 是会话相关的，一律剥离：
+ *  · 终端 leaf 节点 → 落成占位（重开时重开终端重绑）；
+ *  · 被切成图片/代码/网页预览的 leaf 节点 → 落成带 pane 的文件节点，
+ *    重开时按 pane 恢复（不再当终端占位重新 spawn，避免「图片重开变终端」）。
+ * leafPaneOf：按 leafId 取该 leaf 当前的 pane（从 tabs 里查，调用方注入）。
+ */
+export function serializeCanvas(
+  canvas: CanvasScene,
+  viewMode: ViewMode,
+  leafPaneOf: (leafId: string) => PaneState | undefined
+): PersistedCanvas {
   return {
     viewMode,
     viewport: canvas.viewport,
@@ -147,6 +157,12 @@ export function serializeCanvas(canvas: CanvasScene, viewMode: ViewMode): Persis
       ...f,
       nodes: f.nodes.map((n) => {
         const copy = { ...n }
+        if (n.leafId) {
+          const pane = leafPaneOf(n.leafId)
+          if (pane && (pane.kind === 'code' || pane.kind === 'image' || pane.kind === 'web')) {
+            copy.pane = pane // 非终端 leaf → 存成文件节点
+          }
+        }
         delete copy.leafId
         return copy
       })

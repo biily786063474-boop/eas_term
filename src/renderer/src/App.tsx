@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore, serializeCanvas } from './store'
+import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { PaneLayer } from './features/workspace/PaneLayer'
@@ -35,7 +36,15 @@ export function App(): JSX.Element {
         clearTimeout(timer)
         timer = window.setTimeout(() => {
           const st = useStore.getState()
-          void window.api.canvas.save(serializeCanvas(st.canvas, st.viewMode))
+          // 按 leafId 取该 leaf 当前 pane（供序列化区分「终端」与「被切成图片/代码/网页的节点」）
+          const leafPaneOf = (leafId: string) => {
+            for (const t of st.tabs) {
+              const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+              if (leaf) return leaf.pane
+            }
+            return undefined
+          }
+          void window.api.canvas.save(serializeCanvas(st.canvas, st.viewMode, leafPaneOf))
         }, 500)
       })
     })()

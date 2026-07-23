@@ -110,6 +110,8 @@ export function CanvasFileNode({
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
+      // 冒泡阶段拦下，避免事件冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 把选中清掉）
+      onMouseDown={(e) => e.stopPropagation()}
       style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
