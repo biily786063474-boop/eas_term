@@ -3,7 +3,7 @@
 // 节点通过 leafId 引用 split 树里的 leaf → 两视图同一个 PaneView 实例 → 终端不断连。
 
 import type { StateCreator } from 'zustand'
-import { collectLeaves } from '../layout'
+import { collectLeaves, LeafNode, PaneState } from '../layout'
 import { uid } from './shared'
 import type { AppState } from './types'
 
@@ -15,10 +15,13 @@ export interface CanvasViewport {
   scale: number
 }
 
-/** 画布节点：引用一个共享 leaf（leafId），坐标相对所属 Frame（含头部偏移） */
+/** 画布节点：坐标相对所属 Frame（含头部偏移）。
+ *  终端节点用 leafId 引用共享 leaf（两视图同源，pane-layer 渲染）；
+ *  文件预览节点用 pane 自带内容（画布独有，装饰层渲染，不进分屏）。二者二选一。 */
 export interface CanvasNode {
   id: string
-  leafId: string
+  leafId?: string
+  pane?: PaneState
   x: number
   y: number
   w: number
@@ -62,12 +65,18 @@ export interface CanvasSlice {
   canvas: CanvasScene
   setViewMode: (mode: ViewMode) => void
   setViewport: (vp: Partial<CanvasViewport>) => void
-  /** 把当前项目的所有 leaf 铺成一个 Frame + 网格节点（幂等：已有该项目 Frame 则跳过） */
+  /** 把当前项目的所有 leaf 铺成一个 Frame（幂等：已有该项目 Frame 则跳过） */
   seedCanvas: () => void
+  /** 拖项目入画布：已有 Frame 则跳过（由调用方聚焦），否则（必要时先开终端）在落点建 Frame */
+  addProjectFrame: (projectId: string | null, x: number, y: number) => Promise<void>
   moveFrame: (id: string, x: number, y: number) => void
   resizeFrame: (id: string, w: number, h: number) => void
   toggleCollapse: (id: string) => void
   moveNode: (frameId: string, nodeId: string, x: number, y: number) => void
+  resizeNode: (frameId: string, nodeId: string, w: number, h: number) => void
+  /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
+  addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
+  removeNode: (frameId: string, nodeId: string) => void
 }
 
 const initialScene: CanvasScene = {
@@ -83,6 +92,37 @@ const GAP = 22
 const HEAD = 34 // Frame 头部高度
 const PAD = 16
 const COLS = 2
+
+/** 依据一批共享 leaf 生成一个网格布局的 Frame（纯函数，不落 state） */
+function makeProjectFrame(
+  leaves: LeafNode[],
+  name: string,
+  projectId: string | null,
+  x: number,
+  y: number
+): CanvasFrame {
+  const nodes: CanvasNode[] = leaves.map((leaf, i) => ({
+    id: uid('cnode'),
+    leafId: leaf.id,
+    x: PAD + (i % COLS) * (NODE_W + GAP),
+    y: HEAD + PAD + Math.floor(i / COLS) * (NODE_H + GAP),
+    w: NODE_W,
+    h: NODE_H
+  }))
+  const cols = Math.min(COLS, Math.max(1, leaves.length))
+  const rows = Math.max(1, Math.ceil(leaves.length / COLS))
+  return {
+    id: uid('frame'),
+    projectId,
+    name,
+    x,
+    y,
+    w: PAD * 2 + cols * NODE_W + (cols - 1) * GAP,
+    h: HEAD + PAD * 2 + rows * NODE_H + (rows - 1) * GAP,
+    collapsed: false,
+    nodes
+  }
+}
 
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
@@ -100,41 +140,29 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   seedCanvas: () => {
     const s = get()
     const projectId = s.activeProjectId
-    // 已为该项目建过 Frame → 跳过（幂等）
     if (s.canvas.frames.some((f) => f.projectId === projectId)) return
-    const projectTabs = s.tabs.filter((t) => t.projectId === projectId)
-    const leaves = projectTabs.flatMap((t) => collectLeaves(t.root))
+    const leaves = s.tabs.filter((t) => t.projectId === projectId).flatMap((t) => collectLeaves(t.root))
     if (!leaves.length) return
     const project = s.projects.find((p) => p.id === projectId)
+    const frame = makeProjectFrame(leaves, project?.name ?? '未命名', projectId ?? null, 80, 80)
+    set((st) => ({ canvas: { ...st.canvas, frames: [...st.canvas.frames, frame] } }))
+  },
 
-    const nodes: CanvasNode[] = leaves.map((leaf, i) => ({
-      id: uid('cnode'),
-      leafId: leaf.id,
-      x: PAD + (i % COLS) * (NODE_W + GAP),
-      y: HEAD + PAD + Math.floor(i / COLS) * (NODE_H + GAP),
-      w: NODE_W,
-      h: NODE_H
-    }))
-    const cols = Math.min(COLS, leaves.length)
-    const rows = Math.ceil(leaves.length / COLS)
-    const w = PAD * 2 + cols * NODE_W + (cols - 1) * GAP
-    const h = HEAD + PAD * 2 + rows * NODE_H + (rows - 1) * GAP
-
-    // 新 Frame 摆在现有 Frame 右侧，避免重叠
-    const rightMost = s.canvas.frames.reduce((mx, f) => Math.max(mx, f.x + f.w), 0)
-    const x = s.canvas.frames.length ? rightMost + 60 : 80
-
-    const frame: CanvasFrame = {
-      id: uid('frame'),
-      projectId: projectId ?? null,
-      name: project?.name ?? '未命名',
-      x,
-      y: 80,
-      w,
-      h,
-      collapsed: false,
-      nodes
+  addProjectFrame: async (projectId, x, y) => {
+    if (get().canvas.frames.some((f) => f.projectId === projectId)) return
+    // 项目还没终端 → 先开一个，Frame 里才有内容
+    let leaves = get()
+      .tabs.filter((t) => t.projectId === projectId)
+      .flatMap((t) => collectLeaves(t.root))
+    if (!leaves.length) {
+      await get().openTerminal({ projectId })
+      leaves = get()
+        .tabs.filter((t) => t.projectId === projectId)
+        .flatMap((t) => collectLeaves(t.root))
     }
+    if (!leaves.length) return
+    const project = get().projects.find((p) => p.id === projectId)
+    const frame = makeProjectFrame(leaves, project?.name ?? '未命名', projectId ?? null, x, y)
     set((st) => ({ canvas: { ...st.canvas, frames: [...st.canvas.frames, frame] } }))
   },
 
@@ -172,6 +200,47 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           f.id === frameId
             ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) }
             : f
+        )
+      }
+    })),
+
+  resizeNode: (frameId, nodeId, w, h) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
+                )
+              }
+            : f
+        )
+      }
+    })),
+
+  addFileNode: (frameId, pane, x, y) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) => {
+          if (f.id !== frameId) return f
+          const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
+          const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
+          const node: CanvasNode = { id: uid('cnode'), pane, x, y, w, h }
+          return { ...f, nodes: [...f.nodes, node] }
+        })
+      }
+    })),
+
+  removeNode: (frameId, nodeId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
         )
       }
     }))

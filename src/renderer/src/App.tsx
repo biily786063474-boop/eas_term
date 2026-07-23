@@ -4,6 +4,7 @@ import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
+import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
@@ -90,7 +91,7 @@ export function App(): JSX.Element {
         </div>
       </div>
       <div className="body">
-        <Sidebar />
+        {viewMode === 'split' && <Sidebar />}
         <main className="main">
           {viewMode === 'split' && <TabBar />}
           <div className="tab-stack">
@@ -117,6 +118,7 @@ export function App(): JSX.Element {
             )}
             {viewMode === 'canvas' && <CanvasStage />}
             <PaneLayer />
+            {viewMode === 'canvas' && <CanvasDrawer />}
           </div>
         </main>
       </div>

@@ -46,6 +46,7 @@ export function PaneLayer(): JSX.Element {
     canvas.frames.forEach((f) => {
       if (f.collapsed) return
       f.nodes.forEach((n) => {
+        if (!n.leafId) return
         m.set(n.leafId, {
           left: vp.x + (f.x + n.x) * vp.scale,
           top: vp.y + (f.y + n.y) * vp.scale,

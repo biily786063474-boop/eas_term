@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame } from '../../store'
 import { PlusIcon, MinusIcon } from '../../ui/Icons'
+import { CanvasFileNode } from './CanvasFileNode'
 import './canvas.css'
 
 const SCALE_MIN = 0.2
@@ -19,6 +20,7 @@ export function CanvasStage(): JSX.Element {
   const vp = useStore((s) => s.canvas.viewport)
   const setViewport = useStore((s) => s.setViewport)
   const moveFrame = useStore((s) => s.moveFrame)
+  const resizeFrame = useStore((s) => s.resizeFrame)
   const toggleCollapse = useStore((s) => s.toggleCollapse)
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
@@ -83,6 +85,25 @@ export function CanvasStage(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
+  const startFrameResize = (f: CanvasFrame, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    e.preventDefault()
+    const scale = useStore.getState().canvas.viewport.scale
+    const sx = e.clientX
+    const sy = e.clientY
+    const w0 = f.w
+    const h0 = f.h
+    const onMove = (ev: MouseEvent): void =>
+      resizeFrame(f.id, w0 + (ev.clientX - sx) / scale, h0 + (ev.clientY - sy) / scale)
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   const setScale = (s2: number): void => {
     const cur = useStore.getState().canvas.viewport
     const el = viewportRef.current
@@ -131,6 +152,7 @@ export function CanvasStage(): JSX.Element {
           <div
             key={f.id}
             className={`cframe${f.collapsed ? ' collapsed' : ''}`}
+            data-fid={f.id}
             style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
           >
             <div className="cframe-head" onMouseDown={(e) => startFrameDrag(f, e)}>
@@ -147,6 +169,13 @@ export function CanvasStage(): JSX.Element {
               </button>
             </div>
             {!f.collapsed && f.nodes.length === 0 && <div className="cframe-empty">空 Frame</div>}
+            {!f.collapsed &&
+              f.nodes
+                .filter((n) => n.pane)
+                .map((n) => <CanvasFileNode key={n.id} frameId={f.id} node={n} />)}
+            {!f.collapsed && (
+              <div className="cframe-rz" onMouseDown={(e) => startFrameResize(f, e)} />
+            )}
           </div>
         ))}
       </div>

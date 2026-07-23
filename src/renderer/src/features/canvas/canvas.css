@@ -101,6 +101,27 @@
   opacity: 0.6;
 }
 
+.cframe-rz {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  z-index: 3;
+}
+
+.cframe-rz::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(var(--accent-rgb), 0.6);
+  border-bottom: 2px solid rgba(var(--accent-rgb), 0.6);
+}
+
 /* ---------- 缩放条 ---------- */
 .canvas-zoombar {
   position: absolute;
@@ -151,4 +172,304 @@
 
 .pane-layer.canvas-mode .pane {
   pointer-events: auto;
+}
+
+/* ---------- 右侧资源抽屉 ---------- */
+.canvas-drawer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 238px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-1);
+  backdrop-filter: var(--blur);
+  border-left: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.cd-head {
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 14px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.cd-drawer-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  letter-spacing: 0.04em;
+}
+
+.cd-collapse,
+.cd-add {
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+
+.cd-collapse {
+  width: 24px;
+  height: 24px;
+}
+
+.cd-collapse:hover,
+.cd-add:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+.cd-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cd-section-grow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-section {
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.cd-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px 9px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+
+.cd-sec-head:hover {
+  color: var(--fg);
+}
+
+.cd-chev {
+  display: flex;
+  transition: transform 0.16s;
+}
+
+.cd-chev.open {
+  transform: rotate(90deg);
+}
+
+.cd-sec-title {
+  flex: 1;
+}
+
+.cd-add {
+  width: 20px;
+  height: 20px;
+}
+
+.cd-sec-body {
+  padding: 0 6px 8px;
+}
+
+.cd-proj {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: var(--radius-md);
+  cursor: grab;
+  color: var(--fg-dim);
+}
+
+.cd-proj:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+}
+
+.cd-proj.active {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.cd-proj-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  flex: none;
+}
+
+.cd-proj.active .cd-proj-dot {
+  background: var(--accent);
+}
+
+.cd-proj-name {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd-proj-badge {
+  font-size: 9.5px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.cd-files {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* 收起后浮动展开按钮 */
+.drawer-expand {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 31;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--fg-dim);
+  cursor: pointer;
+  box-shadow: var(--glass-highlight), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.drawer-expand:hover {
+  color: var(--fg);
+}
+
+/* 拖拽 ghost + 落区高亮 */
+.canvas-drag-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  padding: 5px 11px;
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.canvas-viewport.drop-active {
+  box-shadow: inset 0 0 0 2px rgba(var(--accent-rgb), 0.45);
+}
+
+/* ---------- 画布文件预览节点（画布独有，装饰层内） ---------- */
+.cfile-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.cfile-head {
+  height: 28px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 5px 0 9px;
+  cursor: move;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--accent);
+}
+
+.cfile-title {
+  flex: 1;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfile-x {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.cfile-x:hover {
+  background: rgba(247, 118, 142, 0.2);
+  color: #f7768e;
+}
+
+.cfile-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cfile-rz {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+}
+
+.cfile-rz::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--fg-dim);
+  border-bottom: 2px solid var(--fg-dim);
+  opacity: 0.6;
+}
+
+/* 拖文件落区高亮 */
+.cframe.drop-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5), 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.pane.drop-target {
+  outline: 2px solid #e0af68;
+  outline-offset: -1px;
 }

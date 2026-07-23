@@ -9,6 +9,7 @@ import { DiffView } from '../editor/DiffView'
 import { ImageView } from '../image/ImageView'
 import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
+import { WebView } from '../web/WebView'
 
 // 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
 const DictView = lazy(() =>
@@ -25,7 +26,8 @@ import {
   CloseIcon,
   SplitHIcon,
   SplitVIcon,
-  CheckIcon
+  CheckIcon,
+  GlobeIcon
 } from '../../ui/Icons'
 
 const PANE_GAP = 3
@@ -35,6 +37,7 @@ const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }
   { kind: 'terminal', label: '终端', Icon: TerminalIcon },
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
+  { kind: 'web', label: '网页', Icon: GlobeIcon },
   { kind: 'dict', label: '名词词典', Icon: DictIcon }
 ]
 
@@ -45,7 +48,8 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   image: { label: '图片预览', Icon: ImageIcon },
   history: { label: '历史', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
-  dict: { label: '名词词典', Icon: DictIcon }
+  dict: { label: '名词词典', Icon: DictIcon },
+  web: { label: '网页', Icon: GlobeIcon }
 }
 
 function PaneKindSelect({
@@ -192,6 +196,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   return (
     <div
       className={`pane${isActive ? ' active' : ''}`}
+      data-leaf-id={leaf.id}
       style={paneStyle}
       onMouseDown={canvasRect ? undefined : () => setActiveLeaf(tabId, leaf.id)}
     >
@@ -265,6 +270,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             <DictView />
           </Suspense>
         )}
+        {pane.kind === 'web' && <WebView url={pane.url} />}
       </div>
     </div>
   )

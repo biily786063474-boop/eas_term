@@ -132,6 +132,14 @@ export const CanvasIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const GlobeIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+  </Svg>
+)
+
 export const PlayIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <polygon points="6 3 20 12 6 21 6 3" />
