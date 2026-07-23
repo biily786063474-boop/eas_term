@@ -104,6 +104,7 @@ body {
   height: var(--titlebar-h);
   flex: none;
   position: relative;
+  z-index: 100; /* 始终盖在画布模块之上（画布终端浮层不得压过标题栏） */
   display: flex;
   align-items: center;
   justify-content: center;
