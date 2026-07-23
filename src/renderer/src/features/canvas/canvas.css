@@ -473,3 +473,26 @@
   outline: 2px solid #e0af68;
   outline-offset: -1px;
 }
+
+/* 画布模式终端节点右下角 resize 手柄 */
+.pane-rz {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 5;
+}
+
+.pane-rz::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--fg-dim);
+  border-bottom: 2px solid var(--fg-dim);
+  opacity: 0.5;
+}

@@ -85,9 +85,9 @@ const initialScene: CanvasScene = {
   shapes: []
 }
 
-// 节点网格布局参数
-const NODE_W = 360
-const NODE_H = 240
+// 节点网格布局参数（终端节点默认高度保证 ≥20 行：body≈NODE_H-30，行高 fontSize13×1.25≈16.25px）
+const NODE_W = 440
+const NODE_H = 380
 const GAP = 22
 const HEAD = 34 // Frame 头部高度
 const PAD = 16

@@ -145,6 +145,7 @@ interface Props {
 export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Props): JSX.Element {
   const setPaneKind = useStore((s) => s.setPaneKind)
   const moveNode = useStore((s) => s.moveNode)
+  const resizeNode = useStore((s) => s.resizeNode)
   const splitLeaf = useStore((s) => s.splitLeaf)
   const closeLeaf = useStore((s) => s.closeLeafSafely)
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
@@ -185,6 +186,24 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     const sy = e.clientY
     const onMove = (ev: MouseEvent): void =>
       moveNode(frameId, nodeId, nodeX + (ev.clientX - sx) / scale, nodeY + (ev.clientY - sy) / scale)
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  // 画布模式下拖右下角 → 调节节点尺寸（终端会经 ResizeObserver 自动 fit 重算行列）
+  const onCanvasResize = (e: React.MouseEvent): void => {
+    if (!canvasRect || e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const { frameId, nodeId, w, h, scale } = canvasRect
+    const sx = e.clientX
+    const sy = e.clientY
+    const onMove = (ev: MouseEvent): void =>
+      resizeNode(frameId, nodeId, w + (ev.clientX - sx) / scale, h + (ev.clientY - sy) / scale)
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
@@ -272,6 +291,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         )}
         {pane.kind === 'web' && <WebView url={pane.url} />}
       </div>
+      {canvasRect && <div className="pane-rz" onMouseDown={onCanvasResize} />}
     </div>
   )
 }
