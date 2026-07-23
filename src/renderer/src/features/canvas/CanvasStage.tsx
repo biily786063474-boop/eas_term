@@ -41,8 +41,36 @@ export function CanvasStage(): JSX.Element {
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
   const clearCanvasSel = useStore((s) => s.clearCanvasSel)
   const sel = useMemo(() => new Set(canvasSel), [canvasSel])
+  const clearAttention = useStore((s) => s.clearAttention)
   const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const spaceHeld = useRef(false)
+
+  // 选中终端节点 / 其所在 Frame → 视为已知晓，清除该终端的「需处理」呼吸标记
+  useEffect(() => {
+    if (!canvasSel.length) return
+    const st = useStore.getState()
+    const leaves = st.tabs.flatMap((t) => collectLeaves(t.root))
+    const ptyOf = (leafId?: string): string | null => {
+      if (!leafId) return null
+      const l = leaves.find((x) => x.id === leafId)
+      return l?.pane.kind === 'terminal' ? l.pane.ptyId : null
+    }
+    canvasSel.forEach((key) => {
+      if (key[0] === 'n') {
+        const [, fid, nid] = key.split(':')
+        const n = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((x) => x.id === nid)
+        const p = ptyOf(n?.leafId)
+        if (p) clearAttention(p)
+      } else if (key[0] === 'f') {
+        st.canvas.frames
+          .find((f) => f.id === key.slice(2))
+          ?.nodes.forEach((n) => {
+            const p = ptyOf(n.leafId)
+            if (p) clearAttention(p)
+          })
+      }
+    })
+  }, [canvasSel, clearAttention])
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
   useEffect(() => {

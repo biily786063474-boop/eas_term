@@ -373,7 +373,11 @@ export function CanvasDrawer(): JSX.Element {
                   >
                     <span className="cd-proj-dot" />
                     <span className="cd-proj-name">{p.name}</span>
-                    {onCanvas && <span className="cd-proj-badge">画布中</span>}
+                    {projectHasAttention(p.id) ? (
+                      <span className="cd-proj-badge attn">待处理</span>
+                    ) : onCanvas ? (
+                      <span className="cd-proj-badge">画布中</span>
+                    ) : null}
                   </div>
                 )
               })}

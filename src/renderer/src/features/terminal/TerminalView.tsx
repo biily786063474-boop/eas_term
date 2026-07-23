@@ -381,9 +381,24 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       pendingWrites = []
       term.write(chunk)
     }
+    // 输出静止检测：一段输出后 1.2s 内无新输出、且当前没聚焦在该终端 → 大概率一轮回答/命令
+    // 跑完、在等用户处理（比 BEL 可靠，不依赖 CLI 是否响铃）→ 标记「需处理」供抽屉呼吸提示。
+    // 启动 3s 内不标记：避开刚开终端时 shell 初始 prompt 输出静止导致的误报。
+    const bornAt = Date.now()
+    let idleTimer = 0
+    let burstBytes = 0
     const unsubData = window.api.pty.onData(ptyId, (data) => {
       pendingWrites.push(data)
       if (!writeRaf) writeRaf = requestAnimationFrame(flushWrites)
+      burstBytes += data.length
+      if (idleTimer) window.clearTimeout(idleTimer)
+      idleTimer = window.setTimeout(() => {
+        if (burstBytes > 16 && Date.now() - bornAt > 3000 && !el.contains(document.activeElement)) {
+          useStore.getState().flagAttention(ptyId)
+        }
+        burstBytes = 0
+        idleTimer = 0
+      }, 1200)
     })
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
@@ -439,6 +454,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       jumpBtn.remove()
       scrollbar.remove()
       if (writeRaf) cancelAnimationFrame(writeRaf)
+      if (idleTimer) window.clearTimeout(idleTimer)
       unsubData()
       unsubExit()
       dataDisp.dispose()
