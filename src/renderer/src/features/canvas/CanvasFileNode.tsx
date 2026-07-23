@@ -5,21 +5,10 @@ import { useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
-import { ImageView } from '../image/ImageView'
 import { WebView } from '../web/WebView'
+import { CanvasImageViewer } from './CanvasImageViewer'
 import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon } from '../../ui/Icons'
-
-const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
-const isVideoPath = (p: string): boolean => VIDEO_EXTS.has(p.split('.').pop()?.toLowerCase() ?? '')
-
-/** 把绝对路径编码成 easfile:// 媒体 URL（base64url，避开 URL 转义坑；主进程按白名单流式返回） */
-function easfileUrl(p: string): string {
-  const b64 = btoa(unescape(encodeURIComponent(p)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-  return 'easfile://media/' + b64
-}
+import { easfileUrl, isVideoPath } from './media'
 
 export function CanvasFileNode({
   frameId,
@@ -169,7 +158,7 @@ export function CanvasFileNode({
               playsInline
             />
           ) : (
-            <ImageView filePath={pane.filePath} />
+            <CanvasImageViewer filePath={pane.filePath} />
           ))}
         {pane.kind === 'web' && <WebView url={pane.url} />}
       </div>

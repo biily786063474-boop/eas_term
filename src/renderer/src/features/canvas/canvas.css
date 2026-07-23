@@ -559,6 +559,150 @@
   display: block;
 }
 
+/* 画布图片节点：文件夹图集查看器（左右切换 + 宫格） */
+.civ {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.civ-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.civ-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+.civ:hover .civ-nav {
+  opacity: 0.75;
+}
+.civ-nav:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.65);
+}
+.civ-nav.left {
+  left: 0;
+  border-radius: 0 8px 8px 0;
+}
+.civ-nav.right {
+  right: 0;
+  border-radius: 8px 0 0 8px;
+}
+.civ-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.civ:hover .civ-bar {
+  opacity: 1;
+}
+.civ-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+}
+.civ-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+.civ-count {
+  font-size: 11px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.civ-name {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+/* 宫格阵列 */
+.civ-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #0a0a0d;
+}
+.civ-grid-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 4px;
+  padding: 6px;
+  align-content: start;
+}
+.civ-cell {
+  aspect-ratio: 1;
+  border: 1.5px solid transparent;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  padding: 0;
+}
+.civ-cell.cur {
+  border-color: var(--accent);
+}
+.civ-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.civ-grid-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+
 .cfile-rz {
   position: absolute;
   right: 0;
