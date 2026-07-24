@@ -119,10 +119,32 @@ export function registerPtyHandlers(): void {
       env: { ...process.env, TERM_PROGRAM: 'Eas-Term' } as Record<string, string>
     })
     const wc = e.sender
-    proc.onData((data) => {
+    // 输出合批背压:高吞吐(cat 大文件 / 刷屏 / 构建日志)时逐块 wc.send 会用海量小 IPC 消息
+    // 灌满通道、拖垮渲染主线程(卡死甚至 OOM 崩溃→白屏)。这里按 pty 累积,~16ms 或积到 64KB
+    // 再合并成一条发,大幅降 IPC 次数。渲染侧本就有 rAF 写入合并,两端配合更稳。
+    let outBuf: string[] = []
+    let outBytes = 0
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+    const flushOut = (): void => {
+      if (flushTimer) {
+        clearTimeout(flushTimer)
+        flushTimer = null
+      }
+      if (!outBuf.length) return
+      const data = outBuf.join('')
+      outBuf = []
+      outBytes = 0
       if (!wc.isDestroyed()) wc.send(`pty:data:${id}`, data)
+    }
+    proc.onData((data) => {
+      outBuf.push(data)
+      outBytes += data.length
+      if (outBytes >= 64 * 1024)
+        flushOut() // 大 burst 立即发,别攒出明显延迟
+      else if (!flushTimer) flushTimer = setTimeout(flushOut, 16)
     })
     proc.onExit(({ exitCode }) => {
+      flushOut() // 把残留输出先发完再发 exit,避免丢尾巴
       ptys.delete(id)
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
     })

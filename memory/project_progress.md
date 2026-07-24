@@ -200,7 +200,14 @@
 - **dev 眼验(CDP)**：造畸形 canvas.json(null 帧/缺 nodes 帧/坐标 null/scale=null/含 null shape)→ 加载**零崩溃、无 Error Boundary**：null 帧+null shape 丢弃、缺 nodes 补 []、坏坐标补 0、viewport 缺 y 补 0+scale 钳 1，app 正常渲染。验证前备份、验证后恢复真实档(frames:4)，release app 全程未碰。
 - typecheck+build 通过，调试端口已删。**未 commit**。
 
-**待办**：P2(scrollback 100000→10k~20k、缩放 fit 去抖到手势结束+合并 RO 双触发、pty 输出主进程合批背压、viewport rAF 节流)见 `docs/白屏隐患-系统级代码审查.html` 分期。**Codex 接入 + P0 + P1 都在工作区未 commit**，等用户指示 commit / 打包上机。
+**P2 内存/性能已实现并 dev 眼验**（待 commit）：
+- `TerminalView.tsx`：`scrollback` 100000→**20000**(每终端省数十 MB)；**去抖 fit**——新增 `scheduleFit`(trailing 100ms)，`canvasScale` effect 与 ResizeObserver 都改走它(原来双触发每帧 fit)，`doFit` 合并「改字号+fit」+ 隐藏终端(offset=0)跳过 + cleanup 取消 fitTimer + 加 `canvasScaleRef`/`scheduleFitRef`。消除连续缩放每帧重建 4 张 GPU canvas/字形图集的显存暴涨崩溃。
+- `pty.ts`：主进程输出**合批背压**——按 pty 累积，~16ms 或积到 64KB 再合并成一条 `wc.send`(原逐块发)，onExit 先 flush 再发 exit。刷屏不再用海量小 IPC 灌垮渲染。
+- **dev CDP 眼验**：给 pty 灌 4 万行 → **零崩溃**、输出完整顺序正确(结束于 40000+BATCH_MARKER_END)；短命令正常显示；6 终端 42% 缩放下正确 re-fit。验证前后备份/恢复 canvas.json，release app 未碰。
+
+**Codex 接入 + P0 + P1 已 commit**(`4875bb8`/`cb4978a`/`ca12fdb`)，P2 待 commit。**均未打包上机**——打包/发只在用户指示时做。
+**P2 未做(留后续，见报告)**：viewport 更新 rAF 节流(H2 wheel→全 PaneView 重渲，纯性能)、头部 zoom→transform、图片宫格虚拟化、长时隐藏终端 dispose CanvasAddon(LRU)。
+**工作区仍有非本次改动**：`CanvasDrawer.tsx`(上个会话抽屉边缘箭头 polish，未提)、几个上个会话遗留未跟踪文件。
 
 ## ③ 环境坑（已修，已记 memory）
 

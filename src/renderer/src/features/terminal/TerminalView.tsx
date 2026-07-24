@@ -43,6 +43,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
+  // 最新缩放比 + 去抖 fit 句柄（供画布缩放 effect 与 ResizeObserver 共用同一条去抖 fit）
+  const canvasScaleRef = useRef(canvasScale)
+  const scheduleFitRef = useRef<(() => void) | null>(null)
   // 鼠标当前悬停命中的路径（link provider 的 hover/leave 维护），右键时读取
   const hoveredRef = useRef<HoveredPath | null>(null)
   const [menu, setMenu] = useState<TermMenu | null>(null)
@@ -97,7 +100,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       lineHeight: 1.25,
       cursorBlink: true,
       macOptionIsMeta: true,
-      scrollback: 100000,
+      // 每终端固定成本:10 万行缓冲可达数十 MB,多终端长跑内存单调增长压垮 GPU 进程 → 白屏。
+      // 2 万行足够回看,内存降一大截。
+      scrollback: 20000,
       scrollSensitivity: 2, // 普通缓冲滚轮步长（略调慢翻屏速度）
       allowProposedApi: true,
       allowTransparency: true
@@ -356,16 +361,29 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     window.addEventListener('mousemove', onDragMove)
     window.addEventListener('mouseup', onDragUp)
 
+    // fit = 按容器+字号重算 cols/rows，会重分配 CanvasAddon 的 4 张 GPU 后备存储 + 重建字形图集。
+    // 隐藏(display:none → offset 尺寸为 0)的终端一律跳过，别为看不见的终端烧 GPU。
     const doFit = (): void => {
-      if (el.offsetWidth > 0 && el.offsetHeight > 0) {
-        try {
-          fit.fit()
-        } catch {
-          // 容器尺寸异常时跳过
-        }
+      const t = termRef.current
+      if (!t) return
+      if (el.offsetWidth === 0 || el.offsetHeight === 0) return
+      const size = scaledFont(canvasScaleRef.current)
+      if (t.options.fontSize !== size) t.options.fontSize = size
+      try {
+        fit.fit()
+      } catch {
+        // 容器尺寸异常时跳过
       }
       updateScrollbar()
     }
+    // 去抖 fit：把「改字号 + fit」合并到手势停止后一次做。消除连续缩放时 canvasScale effect 与
+    // ResizeObserver 双触发、每帧 fit 反复重建 GPU canvas/字形图集导致的显存暴涨崩溃(白屏主因之一)。
+    let fitTimer = 0
+    const scheduleFit = (): void => {
+      if (fitTimer) clearTimeout(fitTimer)
+      fitTimer = window.setTimeout(doFit, 100)
+    }
+    scheduleFitRef.current = scheduleFit
     doFit()
     window.api.pty.resize(ptyId, term.cols, term.rows)
 
@@ -433,7 +451,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     }
     el.addEventListener('contextmenu', onContextMenu)
 
-    const ro = new ResizeObserver(() => doFit())
+    // 尺寸变化(窗口/分屏/画布缩放导致的像素尺寸变)→ 走去抖 fit，不每帧直 fit
+    const ro = new ResizeObserver(() => scheduleFit())
     ro.observe(el)
 
     term.focus()
@@ -450,6 +469,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       el.removeEventListener('wheel', onWheelAmplify, { capture: true } as EventListenerOptions)
       jumpBtn.remove()
       scrollbar.remove()
+      if (fitTimer) clearTimeout(fitTimer)
       if (writeRaf) cancelAnimationFrame(writeRaf)
       unsubData()
       unsubExit()
@@ -474,24 +494,12 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     if (termRef.current) termRef.current.options.theme = xtermTheme(theme)
   }, [theme])
 
-  // 画布缩放变化 → 按比放大字号后重新 fit（配合 PaneView 把容器设成实际像素尺寸，
-  // 行列数不变、xterm 的 getBoundingClientRect 与字符尺寸同步缩放 → 鼠标坐标精准）。
+  // 画布缩放变化 → 记下最新缩放比,走共享去抖 fit（改字号 + fit 合并到手势停止后一次做）。
+  // 配合 PaneView 把容器设成实际像素尺寸，行列数不变、坐标与字符尺寸同步缩放 → 鼠标精准；
+  // 去抖避免连续缩放每帧重建 GPU canvas（见挂载 effect 里 scheduleFit 的说明）。
   useEffect(() => {
-    const term = termRef.current
-    const fit = fitRef.current
-    if (!term || !fit) return
-    const size = scaledFont(canvasScale)
-    if (term.options.fontSize === size) return
-    term.options.fontSize = size
-    requestAnimationFrame(() => {
-      if (containerRef.current && containerRef.current.offsetWidth > 0) {
-        try {
-          fit.fit()
-        } catch {
-          // 容器尺寸异常时跳过
-        }
-      }
-    })
+    canvasScaleRef.current = canvasScale
+    scheduleFitRef.current?.()
   }, [canvasScale])
 
   const run = (fn: () => void) => (): void => {
