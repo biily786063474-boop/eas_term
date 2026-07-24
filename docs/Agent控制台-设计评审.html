@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent 控制台 · 设计评审</title>
+    <style>
+      :root {
+        --bg: #0b0d12;
+        --bg2: #111319;
+        --card: #15171e;
+        --line: rgba(255, 255, 255, 0.08);
+        --line2: rgba(255, 255, 255, 0.14);
+        --fg: #e4e6ec;
+        --dim: #969aa8;
+        --accent: #a2b9e0;
+        --accent-rgb: 162, 185, 224;
+        --green: #7fd18a;
+        --amber: #e6c07b;
+        --red: #e88;
+        --radius: 12px;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: radial-gradient(1200px 700px at 70% -10%, #14171f, var(--bg));
+        color: var(--fg);
+        font: 14.5px/1.7 -apple-system, "SF Pro SC", "PingFang SC", "Segoe UI", sans-serif;
+        padding: 48px 20px 90px;
+      }
+      .wrap { max-width: 940px; margin: 0 auto; }
+      h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.3px; }
+      h1 .sub { display: block; font-size: 13.5px; font-weight: 400; color: var(--dim); margin-top: 8px; }
+      h2 {
+        font-size: 18px; margin: 42px 0 14px; font-weight: 650;
+        padding-left: 12px; border-left: 3px solid var(--accent);
+      }
+      h3 { font-size: 15px; margin: 20px 0 8px; color: #cdd2df; }
+      p { color: #d4d7e0; margin: 9px 0; }
+      .lead { color: var(--dim); }
+      code {
+        background: #1c1f27; border: 1px solid var(--line); border-radius: 5px;
+        padding: 1px 6px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; color: #c7d4ea;
+      }
+      .card {
+        background: var(--card); border: 1px solid var(--line);
+        border-radius: var(--radius); padding: 18px 20px; margin: 14px 0;
+      }
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      ul { margin: 6px 0 6px 4px; list-style: none; }
+      li { padding: 3px 0 3px 20px; position: relative; color: #d4d7e0; }
+      li::before { content: "▸"; position: absolute; left: 2px; color: var(--accent); opacity: 0.75; }
+      .tag {
+        display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px;
+        border: 1px solid var(--line2); color: var(--dim); vertical-align: middle; margin-left: 6px;
+      }
+      .tag.ok { color: var(--green); border-color: rgba(127, 209, 138, 0.4); }
+      .tag.warn { color: var(--amber); border-color: rgba(230, 192, 123, 0.4); }
+      .tag.no { color: var(--red); border-color: rgba(238, 136, 136, 0.4); }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { color: var(--dim); font-weight: 600; font-size: 12px; background: rgba(255, 255, 255, 0.02); }
+      td code { font-size: 11.5px; }
+      .note { border-left: 3px solid var(--amber); background: rgba(230, 192, 123, 0.06); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+      .note.bad { border-color: var(--red); background: rgba(238, 136, 136, 0.06); }
+      .note.good { border-color: var(--green); background: rgba(127, 209, 138, 0.06); }
+      .note b { color: var(--fg); }
+
+      /* ------- 界面 mockup ------- */
+      .mock {
+        background: #0e1015; border: 1px solid var(--line2); border-radius: 14px;
+        overflow: hidden; margin: 16px 0; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      }
+      .mock-head {
+        display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+        border-bottom: 1px solid var(--line); background: #12141b;
+      }
+      .seg { display: inline-flex; background: #191c24; border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+      .seg span { font-size: 12.5px; padding: 4px 12px; border-radius: 6px; color: var(--dim); cursor: default; }
+      .seg span.on { background: rgba(var(--accent-rgb), 0.9); color: #0b0d12; font-weight: 600; }
+      .mock-head .grow { flex: 1; }
+      .quota { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--dim); }
+      .quota .bar { width: 90px; height: 6px; border-radius: 3px; background: #23262f; overflow: hidden; }
+      .quota .bar i { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, var(--green), var(--amber)); }
+      .mock-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 14px; border-bottom: 1px solid var(--line); align-items: center; }
+      .ctl { display: flex; flex-direction: column; gap: 5px; }
+      .ctl label { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.4px; }
+      .pill { background: #191c24; border: 1px solid var(--line2); border-radius: 8px; padding: 6px 11px; font-size: 12.5px; color: var(--fg); display: inline-flex; align-items: center; gap: 7px; }
+      .pill .ch { color: var(--dim); font-size: 10px; }
+      .effort { display: inline-flex; gap: 3px; }
+      .effort b { width: 24px; text-align: center; font-size: 11px; font-weight: 500; color: var(--dim); padding: 5px 0; border-radius: 6px; background: #191c24; border: 1px solid var(--line); }
+      .effort b.on { color: #0b0d12; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+      .toggle { width: 34px; height: 19px; border-radius: 999px; background: rgba(var(--accent-rgb),0.8); position: relative; }
+      .toggle::after { content: ""; position: absolute; right: 2px; top: 2px; width: 15px; height: 15px; border-radius: 50%; background: #0b0d12; }
+      .launch { margin-left: auto; background: rgba(var(--accent-rgb), 0.92); color: #0b0d12; font-weight: 650; font-size: 13px; padding: 8px 18px; border-radius: 9px; border: none; }
+      .mock-term { padding: 14px 16px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; color: #b7c0d4; background: #0b0d12; min-height: 86px; }
+      .mock-term .cmd { color: var(--accent); }
+      .mock-term .dim { color: #666b78; }
+      .mock-cap { font-size: 12px; color: var(--dim); text-align: center; padding: 8px; }
+
+      .phase { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+      .phase .no { flex: none; width: 30px; height: 30px; border-radius: 8px; background: rgba(var(--accent-rgb),0.14); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+      .decide { background: rgba(var(--accent-rgb), 0.06); border: 1px solid rgba(var(--accent-rgb), 0.25); border-radius: 10px; padding: 14px 18px; margin: 12px 0; }
+      .decide h3 { margin-top: 0; color: var(--accent); }
+      .rec { color: var(--green); font-weight: 600; }
+      .foot { color: var(--dim); font-size: 12px; margin-top: 40px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>
+        Agent 控制台
+        <span class="sub">画布模式下把 Claude Code / Codex 的 CLI 包一层图形前端 · 设计评审 v1 · 2026-07-23</span>
+      </h1>
+
+      <p class="lead">
+        目标：在<b>画布模式</b>下，终端模块顶部可切 <code>Claude Code</code> / <code>Codex</code>，切换后出现一层
+        <b>Codex 风格</b>的控制台——模型、effort、审批等做成可鼠标交互的控件，点一下就把对应 CLI 命令喂给底层真实终端启动。
+        切回<b>终端模式</b>时这层前端消失，只剩原始终端与命令。<b>底层始终是真实 CLI，前端只是把常用参数/命令可视化。</b>
+      </p>
+
+      <h2>一、推荐架构（先讲清楚"是什么"）</h2>
+      <div class="card">
+        <p><b>它不是</b>重写 Claude Code / Codex 的对话界面（去解析它们的输出再自绘——那是解析地狱、极脆弱、不做）。</p>
+        <p><b>它是</b>：给画布终端节点加一层<b>「控制条 + 启动器」</b>覆盖层（canvas-only chrome）：</p>
+        <ul>
+          <li>顶部左侧：<b>Agent 切换段控件</b>（Claude Code / Codex）。</li>
+          <li>控制条：<b>模型下拉、effort 段控件、审批/沙箱开关、常用命令按钮</b>（继续/恢复/清屏/新会话…）。</li>
+          <li>右上：<b>额度可视化</b>（见第四节，有硬限制）。</li>
+          <li>「启动 / 发送」按钮：把当前控件组合成一条 CLI 命令，<code>pty.write</code> 进真实终端执行。</li>
+          <li>下方：<b>还是那个真实终端</b>（xterm），显示 CLI 的真实输出——这才是"CLI 命令驱动"。</li>
+        </ul>
+        <p>
+          数据落在终端节点上（<code>CanvasNode</code> 加一个可选 <code>agent</code> 配置：kind / model / effort / …）。
+          画布模式渲染控制条；<b>分屏模式的 <code>PaneView</code> 不渲染这层</b>，只显示裸终端——天然满足"切回终端模式无前端"。
+        </p>
+      </div>
+
+      <h2>二、界面 mockup（参考 Codex 风格）</h2>
+      <div class="mock">
+        <div class="mock-head">
+          <div class="seg"><span class="on">◆ Claude Code</span><span>✳ Codex</span></div>
+          <div class="grow"></div>
+          <div class="quota">
+            <span>本轮 · 会话用量</span>
+            <div class="bar"><i></i></div>
+            <span>~62%</span>
+          </div>
+        </div>
+        <div class="mock-controls">
+          <div class="ctl"><label>模型</label><span class="pill">opus <span class="ch">▾</span></span></div>
+          <div class="ctl"><label>Effort</label><div class="effort"><b>low</b><b>med</b><b class="on">high</b><b>xhi</b><b>max</b></div></div>
+          <div class="ctl"><label>权限</label><span class="pill">默认询问 <span class="ch">▾</span></span></div>
+          <div class="ctl" style="flex-direction: row; align-items: center; gap: 8px"><label style="text-transform: none">跳过确认</label><span class="toggle"></span></div>
+          <button class="launch">▶ 启动</button>
+        </div>
+        <div class="mock-term">
+          <span class="dim">$</span> <span class="cmd">claude --model opus --effort high --permission-mode default</span><br />
+          <span class="dim">╭─ Claude Code ────────────────────────────╮</span><br />
+          <span class="dim">│ 会话已启动，等待输入…</span>
+        </div>
+      </div>
+      <div class="mock-cap">切到 Codex 时：段控件高亮 Codex，模型下拉变成 gpt-5-codex/o3…，effort 走 <code>model_reasoning_effort</code>，权限变 <code>--ask-for-approval / --sandbox</code>。</div>
+
+      <h2>三、控件 → CLI 映射（真实参数，已本机核对 Claude）</h2>
+      <table>
+        <tr><th>控件</th><th>Claude Code <span class="tag ok">已装机核对</span></th><th>Codex <span class="tag warn">待装机核对</span></th></tr>
+        <tr><td><b>模型</b></td><td><code>--model opus|sonnet|haiku|fable|&lt;id&gt;</code></td><td><code>-m gpt-5-codex|o3|o4-mini…</code></td></tr>
+        <tr><td><b>Effort</b></td><td><code>--effort low|medium|high|xhigh|max</code></td><td><code>-c model_reasoning_effort=low|medium|high</code></td></tr>
+        <tr><td><b>权限 / 审批</b></td><td><code>--permission-mode &lt;mode&gt;</code> · <code>--dangerously-skip-permissions</code></td><td><code>--ask-for-approval untrusted|on-failure|never</code> · <code>--sandbox …</code> · <code>--full-auto</code></td></tr>
+        <tr><td><b>继续 / 恢复</b></td><td><code>-c</code> 继续 · <code>-r [id]</code> 恢复 · <code>--fork-session</code></td><td><code>codex resume</code></td></tr>
+        <tr><td><b>常用按钮</b></td><td colspan="2">清屏 / 新会话 / 中断(Ctrl-C) / 直接把 slash 命令(<code>/model</code> <code>/cost</code>)写进去——都只是 <code>pty.write</code> 预置字符串。</td></tr>
+      </table>
+      <div class="note good"><b>好消息</b>：Claude 与 Codex <b>都支持 <code>--model</code> 和 effort</b>（Claude 直接有 <code>--effort</code>，Codex 走 config），所以"模型 + effort 做成控件"两边都成立、可行性高。</div>
+
+      <h2>四、额度可视化 —— 诚实说：有硬限制</h2>
+      <div class="note bad">
+        <b>CLI 不提供"订阅剩余额度"的干净读取接口。</b> Claude Code 的 <code>/cost</code>/<code>/status</code> 只给<b>当前会话</b>的 token 用量，不是订阅周期的剩余额度；Codex 同理。想要"还剩多少 5 小时额度"这种，<b>没有官方 API 能稳定拿到</b>。
+      </div>
+      <p>三个折中，按你要的"简约可视化"排序：</p>
+      <ul>
+        <li><b>A（推荐，务实）</b>：可视化<b>本会话 token 用量</b>——解析 <code>/cost</code> 或 stream-json 的 usage，画一根进度条+数字。真实、不吹牛，就是"这轮花了多少"。</li>
+        <li><b>B</b>：让用户手填"周期额度上限"，我们累计本机各会话用量做近似进度条——半真半估。</li>
+        <li><b>C</b>：先不做额度，占位留接口，等有稳定数据源再接。</li>
+      </ul>
+
+      <h2>五、多维评审</h2>
+      <table>
+        <tr><th>维度</th><th>结论</th></tr>
+        <tr><td>可行性</td><td>控制条+启动器+映射 CLI：<b class="rec">高</b>。额度真实剩余：<b style="color:var(--red)">低</b>（走会话用量折中）。</td></tr>
+        <tr><td>体验</td><td>把最常调的 model/effort/权限从"记命令"变成"点两下"，对你这种多 agent 并行盯着的场景增益大。</td></tr>
+        <tr><td>完成性</td><td>分屏无前端、画布有前端——天然由 viewMode 分流，干净。参数持久化复用已有画布持久化。</td></tr>
+        <tr><td>token 成本（对你）</td><td>前端本身不耗 token；反而 effort/model 可视化能帮你有意识地控成本（该用 haiku/low 时顺手降）。</td></tr>
+        <tr><td>风险</td><td>① Codex 参数需装机核对；② 不同版本 CLI flag 会变（做成配置表、易改）；③ 额度别过度承诺。</td></tr>
+      </table>
+
+      <h2>六、分期计划</h2>
+      <div class="phase"><div class="no">P0</div><div><b>骨架 + Claude Code</b>：终端节点加 agent 配置 + 控制条 UI（段控件/模型下拉/effort/权限/启动按钮）→ 组装命令 <code>pty.write</code>。画布独有，分屏隐藏。<span class="tag ok">可独立交付</span></div></div>
+      <div class="phase"><div class="no">P1</div><div><b>Codex 接入</b>（装机核对参数后）+ 常用命令按钮（继续/恢复/清屏/中断）+ 命令表抽成可维护配置。</div></div>
+      <div class="phase"><div class="no">P2</div><div><b>用量可视化</b>（方案 A：会话 token 进度条）+ 视觉打磨到贴近 Codex 前端。</div></div>
+
+      <h2>七、待你拍板的决策</h2>
+      <div class="decide">
+        <h3>决策 1 · 前端范围</h3>
+        <p><b>A（推荐）</b> 控制条 + 启动器覆盖在真实终端上（终端输出照常显示）；<b>B</b> 更激进：连 CLI 的对话输出也解析后自绘成卡片式 UI（工作量×5、易碎、不建议）。<span class="rec">我强烈建议 A。</span></p>
+      </div>
+      <div class="decide">
+        <h3>决策 2 · 额度可视化</h3>
+        <p>选 <b>A 会话用量条（推荐）</b> / <b>B 手填上限估算</b> / <b>C 先不做</b>。（真实订阅剩余拿不到，别期待"精确剩余"。）</p>
+      </div>
+      <div class="decide">
+        <h3>决策 3 · 先做哪个 Agent</h3>
+        <p>Claude 本机已装、参数已核对，<span class="rec">建议 P0 先只做 Claude Code 跑通闭环</span>，Codex 等你装好/给我参数再接（P1）。</p>
+      </div>
+
+      <p class="foot">评审文档 · 你在上面三个决策上回我选项，我就按 P0 动手。— Eas-Term 画布</p>
+    </div>
+  </body>
+</html>
