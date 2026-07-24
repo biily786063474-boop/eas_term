@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>终端花屏：渲染逻辑成因分析与优化方案 · Eas-Term</title>
+<style>
+  :root{
+    --bg:#0b0c10; --bg2:#0e1016; --panel:#12141c; --panel2:#161923;
+    --border:#232838; --border2:#2c3346;
+    --fg:#e6e8ef; --fg-dim:#9aa2b5; --fg-mute:#6b7385;
+    --accent:#7aa2f7; --accent2:#b48ead;
+    --red:#f7768e; --amber:#e0af68; --green:#9ece6a; --cyan:#7dcfff;
+    --code-bg:#0a0b0f; --code-border:#1c2130;
+    --mono:"SF Mono",Menlo,Monaco,"Cascadia Code",Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:
+      radial-gradient(900px 500px at 78% -8%,rgba(122,162,247,.09),transparent 60%),
+      radial-gradient(760px 420px at 8% 6%,rgba(180,142,173,.07),transparent 55%),
+      var(--bg);
+    color:var(--fg);font-family:var(--sans);line-height:1.7;
+    font-size:15px;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:64px 28px 120px}
+  header.hero{margin-bottom:48px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  h1{font-size:30px;line-height:1.3;margin:0 0 14px;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--fg-dim);font-size:15.5px;max-width:70ch}
+  .meta{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:11.5px;padding:4px 10px;border:1px solid var(--border2);border-radius:999px;color:var(--fg-dim);background:var(--panel)}
+
+  h2{font-size:21px;margin:56px 0 6px;font-weight:640;letter-spacing:-.01em;scroll-margin-top:24px}
+  h2 .n{font-family:var(--mono);color:var(--accent);font-size:15px;margin-right:10px;opacity:.85}
+  h3{font-size:16.5px;margin:30px 0 8px;font-weight:620;color:var(--fg)}
+  .lead{color:var(--fg-dim);margin:4px 0 20px;border-bottom:1px solid var(--border);padding-bottom:18px}
+  p{margin:12px 0}
+  a{color:var(--cyan);text-decoration:none;border-bottom:1px dotted rgba(125,207,255,.4)}
+  strong{color:#fff;font-weight:620}
+  code{font-family:var(--mono);font-size:12.8px;background:var(--code-bg);border:1px solid var(--code-border);border-radius:5px;padding:1.5px 6px;color:var(--cyan)}
+  .path{color:var(--amber)}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:24px 0 8px;font-family:var(--mono);font-size:12.5px}
+  .flow .node{background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;min-width:0}
+  .flow .node b{color:var(--fg);display:block;font-size:13px;margin-bottom:2px}
+  .flow .node span{color:var(--fg-mute);font-size:11px}
+  .flow .arrow{align-self:center;color:var(--accent);padding:0 12px;font-size:16px}
+
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;margin:22px 0}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:20px 22px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sev)}
+  .card.sev-crit{--sev:var(--red)}
+  .card.sev-high{--sev:var(--amber)}
+  .card.sev-mid{--sev:var(--cyan)}
+  .card.sev-fix{--sev:var(--green)}
+  .card .head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .card .head .t{font-size:16.5px;font-weight:640;color:#fff}
+  .badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--sev);color:var(--sev)}
+  .card .ev{font-family:var(--mono);font-size:11.5px;color:var(--fg-mute);margin:4px 0 12px}
+  .card .ev .path{color:var(--amber)}
+  .why{color:var(--fg-dim);font-size:14px}
+  .why b{color:var(--fg)}
+
+  pre{background:var(--code-bg);border:1px solid var(--code-border);border-radius:10px;padding:16px 18px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:12.6px;line-height:1.6;color:#cdd3e0}
+  pre .c{color:#5c6472;font-style:italic}
+  pre .k{color:var(--accent2)}
+  pre .s{color:var(--green)}
+  pre .f{color:var(--accent)}
+  pre .del{color:var(--red)}
+  pre .add{color:var(--green)}
+  pre .n{color:var(--amber)}
+
+  table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border)}
+  th{color:var(--fg-mute);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;background:var(--panel)}
+  td .path{font-family:var(--mono);font-size:12px}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--border2)}
+  .p0{color:var(--red);border-color:rgba(247,118,142,.4)}
+  .p1{color:var(--amber);border-color:rgba(224,175,104,.4)}
+  .p2{color:var(--cyan);border-color:rgba(125,207,255,.4)}
+
+  ul{margin:10px 0;padding-left:22px}
+  li{margin:6px 0;color:var(--fg-dim)}
+  li strong{color:var(--fg)}
+  .note{background:rgba(122,162,247,.06);border:1px solid rgba(122,162,247,.22);border-radius:10px;padding:14px 18px;margin:18px 0;font-size:13.5px;color:var(--fg-dim)}
+  .note b{color:var(--accent)}
+  .warn{background:rgba(224,175,104,.06);border-color:rgba(224,175,104,.25)}
+  .warn b{color:var(--amber)}
+
+  .toc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:36px 0;font-size:14px}
+  .toc b{display:block;color:var(--fg-mute);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:36px}
+  .toc li{margin:5px 0}
+  .toc a{border:none;color:var(--fg-dim)}
+  .toc a:hover{color:var(--cyan)}
+
+  footer{margin-top:72px;padding-top:24px;border-top:1px solid var(--border);color:var(--fg-mute);font-size:12.5px;font-family:var(--mono)}
+  @media(max-width:640px){.toc ol{columns:1}.wrap{padding:40px 18px 80px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Rendering Analysis · Eas-Term Terminal</div>
+  <h1>终端花屏：大量文本快速滚动时的渲染成因与优化方案</h1>
+  <p class="sub">从数据流全链路（node-pty → IPC → xterm.js → WebGL）逐层定位花屏根因，给出按渲染后端 / 缓冲区 / 局部重绘 / 滚动刷新四个维度分层的可落地改进方案。</p>
+  <div class="meta">
+    <span class="tag">xterm.js 5.5 + addon-webgl 0.18</span>
+    <span class="tag">Electron 37</span>
+    <span class="tag">2026-07-22</span>
+    <span class="tag">分析报告 · 未改代码</span>
+  </div>
+</header>
+
+<div class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#s1">现象与一句话结论</a></li>
+    <li><a href="#s2">渲染数据流全景</a></li>
+    <li><a href="#s3">成因分级（含代码证据）</a></li>
+    <li><a href="#s4">方案 A · 渲染后端</a></li>
+    <li><a href="#s5">方案 B · 缓冲区与写入</a></li>
+    <li><a href="#s6">方案 C · 局部重绘</a></li>
+    <li><a href="#s7">方案 D · 滚动刷新策略</a></li>
+    <li><a href="#s8">落地优先级与验证</a></li>
+  </ol>
+</div>
+
+<!-- ============ 1 ============ -->
+<h2 id="s1"><span class="n">01</span>现象与一句话结论</h2>
+<p class="lead">终端在 <code>cat 大文件</code> / <code>yes</code> / 大量日志刷屏这类高吞吐场景下，画面出现叠影、脏条纹、残留字符、跳行撕裂。</p>
+
+<p><strong>一句话结论：</strong>这不是单点 bug，而是「<strong>半透明背景 + WebGL 增量重绘</strong>」和「<strong>PTY 数据逐块直写、无批处理</strong>」两条主线叠加的结果——前者制造<strong>叠影型</strong>花屏，后者制造<strong>撕裂/掉帧型</strong>花屏，再被每帧强制同步布局的滚动条更新进一步放大。慢速输出时看不出，是因为误差需要「高频重绘」才会被逐帧累积放大。</p>
+
+<div class="note"><b>为什么偏偏「快速滚动」才花屏？</b> 两个主因都对重绘频率敏感：半透明擦除的透光误差要一帧帧叠加才可见；写入队列要在吞吐超过消费速度时才错位。静止或慢速时每格通常能被干净地整格重绘一次，误差不累积，所以平时看不到。</p>
+
+<!-- ============ 2 ============ -->
+<h2 id="s2"><span class="n">02</span>渲染数据流全景</h2>
+<p class="lead">先建立坐标系：一段 PTY 输出从 shell 到屏幕像素，走过下面这条链路。花屏根因分布在链路的两端（渲染后端）和中段（无批处理）。</p>
+
+<div class="flow">
+  <div class="node"><b>node-pty</b><span>shell 子进程</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>主进程 onData</b><span>pty.ts:122 每块直发</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>IPC</b><span>pty:data:id 逐条</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>preload cb</b><span>index.ts:131 透传</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>term.write</b><span>TerminalView:354 逐块</span></div>
+  <div class="arrow">→</div>
+  <div class="node"><b>WebglAddon</b><span>半透明背景增量重绘</span></div>
+</div>
+
+<p>关键事实（每一处都有代码依据，见下节）：</p>
+<ul>
+  <li>主进程 <span class="path">pty.ts:122</span> —— node-pty 每来一块 data 就 <code>wc.send</code>，<strong>不做任何合并</strong>。</li>
+  <li>preload <span class="path">preload/index.ts:131</span> —— <code>cb(data)</code> 逐条透传（只有启动前的 <code>pendingBuffers</code> 做过一次性回放）。</li>
+  <li>渲染 <span class="path">TerminalView.tsx:354</span> —— <code>onData(ptyId, (data) => term.write(data))</code>，<strong>每块直接 write，无 rAF 批处理、无背压</strong>。</li>
+  <li>渲染后端 <span class="path">TerminalView.tsx:96 + 218</span> —— <code>allowTransparency: true</code> 且加载 <code>WebglAddon</code>，主题背景 <span class="path">themes.ts:41/48</span> 是 <code>rgba(…,0.45)</code> / <code>rgba(…,0.5)</code> 半透明。</li>
+  <li>每帧 <span class="path">TerminalView.tsx:305</span> —— <code>term.onRender(updateScrollbar)</code>，回调里读 <code>clientHeight</code>/<code>buf.length</code> 后写 <code>thumb.style</code>。</li>
+</ul>
+
+<!-- ============ 3 ============ -->
+<h2 id="s3"><span class="n">03</span>成因分级</h2>
+<p class="lead">按对花屏的贡献度排序：两个主因 + 三个加剧因。每条都标注了代码位置、机理、以及它制造的花屏类型。</p>
+
+<div class="grid">
+
+  <div class="card sev-crit">
+    <div class="head"><span class="t">主因 ① 半透明背景 + WebGL 增量重绘 → 叠影型花屏</span><span class="badge">CRITICAL</span></div>
+    <div class="ev"><span class="path">TerminalView.tsx:96</span> <code>allowTransparency:true</code> · <span class="path">:218</span> <code>new WebglAddon()</code> · <span class="path">themes.ts:41/48</span> <code>background: rgba(14,15,20,0.45)</code></div>
+    <div class="why">
+      <b>机理：</b>WebGL 渲染器为性能只重绘脏 cell——先用该格<b>背景色</b>把旧像素「擦掉」，再画新字形。当背景 <b>alpha &lt; 1</b> 时，这次擦除是<b>半透明</b>的，旧帧像素透过来没被盖住；快速滚动时每一帧都留一点旧像素，逐帧叠加即成重影 / 脏条纹 / 残留字符。这是 xterm.js WebGL renderer 对 transparency 支持不完整的<b>已知局限</b>，也是本项目毛玻璃观感付出的代价。<b>这是花屏最可能的主因。</b>
+    </div>
+  </div>
+
+  <div class="card sev-crit">
+    <div class="head"><span class="t">主因 ② PTY 逐块直写、无批处理 → 撕裂/掉帧型花屏</span><span class="badge">CRITICAL</span></div>
+    <div class="ev"><span class="path">TerminalView.tsx:354</span> <code>onData((data) =&gt; term.write(data))</code> · 上游 <span class="path">pty.ts:122</span> 逐块 IPC</div>
+    <div class="why">
+      <b>机理：</b>高吞吐时 node-pty 把输出切成大量小块，每块一次 IPC、每块一次 <code>term.write</code>。解析与渲染跟不上生产速度时，渲染帧与缓冲状态<b>错位</b>——表现为跳行、局部未刷新、撕裂。逐块 IPC 还叠加了主↔渲染进程的<b>序列化开销</b>，进一步拖慢消费。没有任何 rAF 合并把「一帧内到达的多块」并成一次写，也没有背压。
+    </div>
+  </div>
+
+  <div class="card sev-high">
+    <div class="head"><span class="t">加剧因 ③ onRender 内强制同步布局（layout thrashing）</span><span class="badge">HIGH</span></div>
+    <div class="ev"><span class="path">TerminalView.tsx:282–304</span> <code>updateScrollbar</code> 读 <code>scrollbar.clientHeight</code>/<code>buf.length</code> → 写 <code>thumb.style.height/top</code></div>
+    <div class="why">
+      <b>机理：</b><code>onRender</code> 在<b>每次渲染刷新</b>时触发。回调先读 DOM 几何（<code>clientHeight</code>）触发一次强制重排，再写 style，下一帧再读——读写交替造成反复 reflow。快速滚动时渲染本就吃满帧预算，这部分占用会直接<b>加剧掉帧</b>，让撕裂更明显。
+    </div>
+  </div>
+
+  <div class="card sev-high">
+    <div class="head"><span class="t">加剧因 ④ WebGL 上下文丢失未处理 → 冻结/黑屏不恢复</span><span class="badge">HIGH</span></div>
+    <div class="ev"><span class="path">TerminalView.tsx:217–221</span> <code>new WebglAddon()</code> 未监听 <code>onContextLoss</code></div>
+    <div class="why">
+      <b>机理：</b>持续高负载 / GPU 压力 / 切后台，WebKit 可能主动丢弃 WebGL 上下文。当前只在<b>加载时</b> try/catch 回退 DOM，<b>运行期</b>丢上下文没有任何处理——画布会冻结在最后一帧（正是花屏那一帧）且不自动恢复。必须监听 <code>onContextLoss</code> 后 dispose 重建或回退 DOM。
+    </div>
+  </div>
+
+  <div class="card sev-mid">
+    <div class="head"><span class="t">加剧因 ⑤ scrollback 100000 + 无 flow control</span><span class="badge">MEDIUM</span></div>
+    <div class="ev"><span class="path">TerminalView.tsx:93</span> <code>scrollback: 100000</code> · 全链路无背压 / pause-resume</div>
+    <div class="why">
+      <b>机理：</b>十万行回滚缓冲放大了内存占用与滚动时的行重排压力；同时没有背压——node-pty 高速吐字时渲染端来不及消费，写入队列只增不减，内存与卡顿累积，间接加重前两个主因。非首因，但会拉长「卡→花」的持续时间。
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ 4 ============ -->
+<h2 id="s4"><span class="n">04</span>方案 A · 渲染后端</h2>
+<p class="lead">目标：在保住毛玻璃观感的前提下，消除半透明擦除叠影，并让 WebGL 具备运行期自愈能力。</p>
+
+<h3>A1. 把「透明」从 xterm 内部移到容器下层（推荐，根治主因①）</h3>
+<p>核心思路：<strong>让 xterm 画不透明背景，通透感由它下面的 DOM 用 <code>backdrop-filter</code> 提供</strong>。这样 WebGL 每格都是<strong>不透明擦除</strong>，叠影从根上消失，还能安全吃满 WebGL 快路径。</p>
+<pre><span class="c">// TerminalView.tsx —— 关掉 xterm 透明，背景改不透明</span>
+const term = new Terminal({
+  <span class="del">- allowTransparency: true,</span>
+  <span class="add">+ allowTransparency: false,</span>
+  ...
+})
+<span class="c">// themes.ts —— background 用不透明色（去掉 alpha）</span>
+<span class="del">- background: 'rgba(14, 15, 20, 0.45)',</span>
+<span class="add">+ background: '#0e0f14',   // 不透明；毛玻璃交给容器</span></pre>
+<pre><span class="c">/* terminal.css —— 通透感放到 host 的下层，而不是字符格里 */</span>
+.terminal-host{ position:absolute; inset:0; background:rgba(14,15,20,.45); backdrop-filter:blur(24px); }
+.terminal-host .xterm,
+.terminal-host .xterm-viewport{ background:transparent !important; } <span class="c">/* 让容器透出来 */</span></pre>
+<div class="note"><b>要点：</b>xterm 的 canvas 层保持不透明可消除叠影；把半透明 + blur 放到 <code>.terminal-host</code> 这一 DOM 层，视觉上仍是毛玻璃终端，但 GPU 合成的是「不透明文字层 ⊕ 独立模糊层」，两者不再互相污染。</p></div>
+
+<h3>A2. 若产品上必须让「字符格本身」半透明 → 换 Canvas 后端</h3>
+<p>DOM/Canvas 渲染器对 transparency 的处理是<strong>正确</strong>的（整格合成而非半透明擦除），代价是吞吐性能低于 WebGL。做法：不加载 <code>WebglAddon</code>，改用 <code>@xterm/addon-canvas</code>。</p>
+<pre><span class="c">// 二选一：透明优先 → Canvas；性能优先 → WebGL（配 A1 的不透明背景）</span>
+import { CanvasAddon } from '@xterm/addon-canvas'
+term.loadAddon(new CanvasAddon())   <span class="c">// 正确渲染半透明，但吞吐较低</span></pre>
+<p class="why" style="margin-top:8px">决策建议：<strong>优先 A1</strong>（不透明背景 + 容器 blur + WebGL），既解决叠影又保留高吞吐；只有当设计上坚持字符格逐格透背景时才退到 A2。</p>
+
+<h3>A3. WebGL 运行期自愈（修加剧因④）</h3>
+<pre><span class="c">// TerminalView.tsx —— 监听上下文丢失，dispose 后重建；再失败才回退 DOM</span>
+try {
+  const webgl = new WebglAddon()
+  webgl.onContextLoss(() =&gt; {
+    webgl.dispose()                 <span class="c">// 释放坏掉的 GL 资源</span>
+    try { term.loadAddon(new WebglAddon()) }   <span class="c">// 重建一次</span>
+    catch { /* 仍失败：此时 term 自动退回 DOM 渲染 */ }
+  })
+  term.loadAddon(webgl)
+} catch { /* 初始不可用：DOM 渲染 */ }</pre>
+
+<!-- ============ 5 ============ -->
+<h2 id="s5"><span class="n">05</span>方案 B · 缓冲区与写入策略</h2>
+<p class="lead">目标：把「一帧内到达的多块 PTY 数据」合并成一次写入，对齐刷新节奏，消除撕裂；并加背压防止队列无限堆积。</p>
+
+<h3>B1. 渲染端 rAF 写入合并（根治主因②，收益最大）</h3>
+<p>不再每块直写，而是把 chunk 累积进队列，用 <code>requestAnimationFrame</code> 每帧 flush 一次 <code>term.write</code>。天然一帧一写、与显示刷新对齐，撕裂消失，CPU 也降下来。</p>
+<pre><span class="c">// TerminalView.tsx —— 用 rAF 批处理替换 line 354 的直写</span>
+<span class="del">- const unsubData = window.api.pty.onData(ptyId, (data) =&gt; term.write(data))</span>
+
+<span class="add">+ let pending: string[] = []</span>
+<span class="add">+ let raf = 0</span>
+<span class="add">+ const flush = () =&gt; {</span>
+<span class="add">+   raf = 0</span>
+<span class="add">+   if (!pending.length) return</span>
+<span class="add">+   const chunk = pending.join('')   // 合并成一次 write，xterm 一次解析</span>
+<span class="add">+   pending = []</span>
+<span class="add">+   term.write(chunk)</span>
+<span class="add">+ }</span>
+<span class="add">+ const unsubData = window.api.pty.onData(ptyId, (data) =&gt; {</span>
+<span class="add">+   pending.push(data)</span>
+<span class="add">+   if (!raf) raf = requestAnimationFrame(flush)</span>
+<span class="add">+ })</span>
+<span class="c">// cleanup 里补：if (raf) cancelAnimationFrame(raf)</span></pre>
+
+<h3>B2. 主进程 IPC 微批（降 IPC 条数与序列化开销）</h3>
+<p>在 <span class="path">pty.ts:122</span> 侧把 node-pty 的碎块攒一小会儿再发：积到约 8–16 KB 或 ~4 ms 就 flush 一次，IPC 消息数可降一个数量级。</p>
+<pre><span class="c">// pty.ts —— proc.onData 加微批（示意）</span>
+let buf = '', timer: NodeJS.Timeout | null = null
+const flush = () =&gt; { timer = null; if (buf &amp;&amp; !wc.isDestroyed()){ wc.send(`pty:data:${id}`, buf); buf='' } }
+proc.onData((d) =&gt; {
+  buf += d
+  if (buf.length &gt;= 16384) flush()             <span class="c">// 大块立即发，别攒出延迟</span>
+  else if (!timer) timer = setTimeout(flush, 4) <span class="c">// 小块 4ms 合并窗口</span>
+})</pre>
+
+<h3>B3. 背压 / flow control（修加剧因⑤）</h3>
+<p>用 xterm <code>write(data, cb)</code> 的回调判断消费进度，未消费的写入积压超阈值时让 PTY 暂停，消费追上再恢复。node-pty 的 <code>IPty</code> 提供 <code>pause()/resume()</code>。</p>
+<pre><span class="c">// 思路：渲染端统计 in-flight 字节，越阈值经 IPC 通知主进程 pty.pause()，回落后 resume()</span>
+<span class="c">// 渲染：term.write(chunk, () =&gt; ackBytes(chunk.length))  // cb 表示这批已被解析</span>
+<span class="c">// 主进程：积压高水位 proc.pause()；低水位 proc.resume()  —— 防止内存与卡顿无限增长</span></pre>
+
+<h3>B4. scrollback 回落到合理值</h3>
+<pre><span class="del">- scrollback: 100000,</span>
+<span class="add">+ scrollback: 20000,   // 兼顾回滚需求与内存/重排压力，按需再调</span></pre>
+
+<!-- ============ 6 ============ -->
+<h2 id="s6"><span class="n">06</span>方案 C · 局部重绘</h2>
+<p class="lead">目标：让每帧 onRender 只做纯计算，不再触发强制重排；滚动条更新与渲染解耦。</p>
+
+<h3>C1. 缓存几何，onRender 内不读 DOM（修加剧因③）</h3>
+<p>把 <code>scrollbar.clientHeight</code> 这种触发 reflow 的读取，从「每帧读」改成「只在 resize 时读一次缓存」，onRender 里只用缓存值算、只写 style。</p>
+<pre><span class="c">// TerminalView.tsx —— updateScrollbar 去掉每帧 clientHeight 读取</span>
+<span class="add">+ let sbH = 0                                   // 缓存滚动条像素高</span>
+<span class="add">+ const measure = () =&gt; { sbH = scrollbar.clientHeight }</span>
+const updateScrollbar = () =&gt; {
+  const t = termRef.current; if (!t) return
+  const buf = t.buffer.active
+  if (buf.type === 'alternate'){ scrollbar.style.display='none'; jumpBtn.style.display=''; return }
+  ...
+  <span class="del">- const H = scrollbar.clientHeight          // ← 每帧强制 reflow</span>
+  <span class="add">+ const H = sbH                              // ← 用缓存，onRender 内零 DOM 读</span>
+  if (!H) return
+  ...
+}
+<span class="c">// measure() 只在初始 doFit 和 ResizeObserver 回调里调用</span></pre>
+
+<h3>C2. 滚动条更新与渲染节流解耦</h3>
+<p>滚动条不必跟着每帧渲染更新——高频输出时 <code>onRender</code> 每秒可触发数十上百次，而 thumb 位置变化肉眼无差别。用一个 rAF 去抖 + 仅在 <code>viewportY/baseY</code> 变化时更新。</p>
+<pre>let sbRaf = 0, lastVY = -1, lastBY = -1
+const scheduleScrollbar = () =&gt; {
+  if (sbRaf) return
+  sbRaf = requestAnimationFrame(() =&gt; {
+    sbRaf = 0
+    const b = termRef.current?.buffer.active; if (!b) return
+    if (b.viewportY === lastVY &amp;&amp; b.baseY === lastBY) return  <span class="c">// 无变化就跳过</span>
+    lastVY = b.viewportY; lastBY = b.baseY
+    updateScrollbar()
+  })
+}
+const renderDisp = term.onRender(scheduleScrollbar)  <span class="c">// 替换 :305 的直接调用</span></pre>
+
+<!-- ============ 7 ============ -->
+<h2 id="s7"><span class="n">07</span>方案 D · 滚动刷新策略</h2>
+<p class="lead">目标：把「写入合并 → 一帧一刷」贯彻到滚动与 resize 路径，避免刷新与几何变更打架时产生瞬时花屏。</p>
+
+<ul>
+  <li><strong>一帧一刷（由 B1 达成）：</strong>rAF 合并写入后，xterm 在一帧内只解析一次、只刷新一次，滚动跟随写入天然同步——这是消除撕裂最直接的杠杆。</li>
+  <li><strong>fit/resize 去抖（<span class="path">TerminalView.tsx:385</span>）：</strong>当前 <code>ResizeObserver(() =&gt; doFit())</code> 无去抖，拖拽窗口时每一像素都触发 <code>fit()→resize→reflow→重渲</code>，resize 中途最易出现半刷新花屏。给 <code>doFit</code> 套 rAF 去抖：</li>
+</ul>
+<pre>let fitRaf = 0
+const ro = new ResizeObserver(() =&gt; {
+  if (fitRaf) return
+  fitRaf = requestAnimationFrame(() =&gt; { fitRaf = 0; measure(); doFit() })  <span class="c">// 顺带刷新几何缓存</span>
+})</pre>
+<ul>
+  <li><strong>快速滚动不逐行滚：</strong>合并写入后由 xterm 自行合并滚动增量，避免「每行一次 scroll」的高频重排；「回到最新」在普通缓冲直接 <code>scrollToBottom()</code> 已是合并跳转，保持即可。</li>
+  <li><strong>选区期间跳过链接层重绘（现状已做，保留）：</strong><span class="path">TerminalView.tsx:158/181</span> 有选区时不 provideLinks，避免链接装饰刷新冲掉选区——这条逻辑与高频输出下的重绘压力一致，无需改动。</li>
+</ul>
+
+<!-- ============ 8 ============ -->
+<h2 id="s8"><span class="n">08</span>落地优先级与验证</h2>
+<p class="lead">按「收益 / 风险 / 改动量」排序，建议分三批推进。P0 两项即可覆盖两个主因，是性价比最高的止血。</p>
+
+<table>
+  <thead><tr><th>优先级</th><th>动作</th><th>对应成因</th><th>风险</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill p0">P0</span></td><td>A1 背景不透明化 + 容器 blur</td><td>主因① 叠影</td><td>低（纯视觉等价替换）</td></tr>
+    <tr><td><span class="pill p0">P0</span></td><td>B1 渲染端 rAF 写入合并</td><td>主因② 撕裂</td><td>低（局部改 onData）</td></tr>
+    <tr><td><span class="pill p0">P0</span></td><td>A3 WebGL context-loss 自愈</td><td>加剧因④ 冻结</td><td>低（加监听）</td></tr>
+    <tr><td><span class="pill p1">P1</span></td><td>C1 几何缓存去 layout thrash</td><td>加剧因③ 掉帧</td><td>中（需覆盖 resize 路径）</td></tr>
+    <tr><td><span class="pill p1">P1</span></td><td>C2 滚动条更新解耦 + D fit 去抖</td><td>加剧因③ / resize 花屏</td><td>中</td></tr>
+    <tr><td><span class="pill p2">P2</span></td><td>B2 IPC 微批 + B3 背压 + B4 scrollback</td><td>加剧因⑤ 堆积</td><td>中高（跨进程节流需实测）</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn"><b>验证方法（务必亲眼看，别只跑构建）：</b> 复现脚本 —— <code>cat 大日志文件</code>、<code>yes | head -n 500000</code>、<code>find / 2&gt;/dev/null</code>、以及 <code>seq 1 200000</code> 快速刷屏；同时快速拖动滚轮上下滚。改一批 → <code>npm run dev</code> 热更 → 眼看「叠影 / 撕裂 / 残留」是否消失；再用 <code>npm run build</code> 打包版复测一遍（WebGL 行为在打包与 dev 下可能不同）。每一项都对比改前改后同一命令的输出画面。</div>
+
+<div class="note"><b>关联记忆：</b>滚动条 / 备用屏相关逻辑见 <span class="path">memory/终端滚动条-altscreen.md</span>——本方案的 C 系列改动会碰 <code>updateScrollbar</code>，改时保持「普通缓冲画、alternate 屏隐藏」的既有语义不变。</p></div>
+
+<footer>
+  Eas-Term · 终端渲染分析 · 依据代码快照 main@ea2f1ae ·
+  证据锚点：TerminalView.tsx / pty.ts / preload/index.ts / themes.ts / terminal.css ·
+  本文为分析报告，未改动任何源码。
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1215 @@
+{
+  "lastHash": "eb0bf66c06e86fb8ae4db9152204e711ac3fb6f8",
+  "documented": [
+    {
+      "id": "debounce",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "throttle",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "skeleton",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "virtual-list",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "easing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "keyframes",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "stagger",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "parallax",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "glassmorphism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "neumorphism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "gradient",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "elevation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "autosave",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "optimistic-ui",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "ime-composition",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "request-cancellation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "stale-while-revalidate",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "request-deduplication",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "retry-backoff",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "cursor-pagination",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "race-condition-guard",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "polling",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "server-sent-events",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "react-suspense",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "streaming-ssr",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "concurrent-rendering",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "memoization",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "request-idle-callback",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "content-visibility",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "passive-event-listener",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "layout-thrashing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "hydration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "partial-hydration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "resumability",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "code-splitting",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "infinite-scroll",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "pull-to-refresh",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "intersection-observer",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "lazy-loading",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-restoration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "resource-hints",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "intent-prefetch",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "speculation-rules",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "bfcache",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "normalized-cache",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "offline-first",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "background-sync",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "service-worker-cache",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "lqip",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "blurhash",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "thumbhash",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "progressive-image",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "drag-and-drop",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "swipe-gesture",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "long-press",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "pinch-zoom",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "swipe-to-dismiss",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "bottom-sheet",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "hover-intent",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "marquee-selection",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "hit-area",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "context-menu",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "resizable",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "sortable",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "focus-trap",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "roving-tabindex",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "keyboard-shortcut",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "command-palette",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "skip-link",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "focus-visible",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-snap",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-spy",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "sticky-header",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-lock",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "modal-dialog",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "drawer",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "popover",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "tooltip",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "accordion",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "tabs",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "carousel",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "stepper-wizard",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "toast-snackbar",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "inline-edit",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "multi-select",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "combobox-autocomplete",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "affordance",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "empty-state",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "loading-state",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "undo-snackbar",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "cubic-bezier",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "timing-function-keywords",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "steps-easing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "linear-easing-function",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "spring-physics",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "stiffness",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "damping",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "spring-mass",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "overshoot",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "rubber-banding",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "momentum-scroll",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "decay-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "interpolation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "tween",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "motion-blur",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "flip-technique",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-delay",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-duration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-iteration-count",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-fill-mode",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-direction",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "animation-play-state",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-driven-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "offset-path",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "will-change",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "compositor-layer",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "compositor-only-properties",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "reflow-repaint",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "request-animation-frame",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "frame-budget",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "jank",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "hardware-acceleration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "backface-visibility",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "web-animations-api",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "transform-origin",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "perspective",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "transform-3d",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "matrix-transform",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "preserve-3d",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "shape-morphing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "view-progress-timeline",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-triggered-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "view-transitions-api",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "shared-element-transition",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "hero-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "ripple-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "shimmer-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "pulse-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "count-up",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "number-ticker",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "typewriter-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "marquee",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "lottie-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "svg-path-drawing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "gooey-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "confetti-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "micro-interaction",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "state-transition",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "gesture-driven-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "page-transition",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "reveal-on-scroll",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-pinning",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "text-scramble",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "loading-spinner",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "progress-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "timeline-orchestration",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "magnetic-button",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "cursor-follow",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scrollytelling",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "smooth-scroll",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "container-transform",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "shared-axis-transition",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "fade-through",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "text-split-animation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "clip-path-reveal",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "tilt-effect",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "skeuomorphism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "flat-design",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "material-design",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "brutalism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "claymorphism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "bento-grid",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "memphis-design",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "swiss-style",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "y2k-aesthetic",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "vaporwave",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "minimalism",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "mesh-gradient",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "aurora-gradient",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "duotone",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "monochrome",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "accent-color",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "tint-and-shade",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "design-tokens",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "dark-mode",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "high-contrast",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "iridescent",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "holographic",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "text-gradient",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "noise-grain",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "halftone",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "pattern-tiling",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "dot-grid",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "emboss-deboss",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "drop-cap",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "metallic",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scanlines-crt",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "glow",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "vignette",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "inner-shadow",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "long-shadow",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "drop-shadow",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "bevel",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "gloss-specular",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "alpha-compositing",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "flexbox",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "css-grid",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "subgrid",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "masonry-layout",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "gap",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "place-items",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "inset",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "position-sticky",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "aspect-ratio",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "object-fit",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "multi-column",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "writing-mode",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "logical-properties",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "container-query",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "has-selector",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "anchor-positioning",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "cascade-layers",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "custom-properties",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "color-mix",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "oklch",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "text-wrap-balance",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "clamp-fluid-typography",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scrollbar-gutter",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "scroll-behavior",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "overscroll-behavior",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "feature-queries",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "css-containment",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "clip-path",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "mask",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "shape-outside",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "mix-blend-mode",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "backdrop-filter",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "filter",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "isolation",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "safe-area-inset",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "line-clamp",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    },
+    {
+      "id": "stacking-context",
+      "commit": "2c77c066",
+      "firstSeen": "2026-07-16"
+    }
+  ]
+}
