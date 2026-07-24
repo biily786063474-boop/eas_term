@@ -231,3 +231,11 @@ export const DictIcon = (p: IconProps): JSX.Element => (
     <path d="M12 6.5A2.5 2.5 0 0 0 9.5 4H3v14h6a2 2 0 0 1 2 2M12 6.5A2.5 2.5 0 0 1 14.5 4H21v14h-6a2 2 0 0 0-2 2M12 6.5V21" />
   </Svg>
 )
+
+export const MicIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+    <line x1="12" y1="19" x2="12" y2="22" />
+  </Svg>
+)

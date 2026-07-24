@@ -6,3 +6,6 @@ release/
 .DS_Store
 ._*
 *.log
+
+# 语音识别模型(sherpa-onnx，~88MB，本地下载/打包时经 extraResources 附带，不入库)
+resources/models/

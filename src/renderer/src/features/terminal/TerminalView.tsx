@@ -15,6 +15,7 @@ import {
   dirnameOf,
   type HoveredPath
 } from './pathLinks'
+import { VoiceButton } from '../voice/VoiceButton'
 import './terminal.css'
 
 interface TermMenu {
@@ -256,13 +257,6 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     scrollbar.appendChild(thumb)
     el.appendChild(scrollbar)
 
-    // 「回到最新」常驻按钮：普通终端直接跳到底；备用屏(Claude Code)里连发向下滚轮把应用推到底。
-    const jumpBtn = document.createElement('button')
-    jumpBtn.className = 'term-jump'
-    jumpBtn.title = '回到最新'
-    jumpBtn.textContent = '↓ 最新'
-    el.appendChild(jumpBtn)
-
     // 派发合成滚轮事件到 xterm 屏幕元素：由 xterm 按当前模式自行编码——普通缓冲滚 scrollback，
     // 备用屏+鼠标接管时转成鼠标滚轮上报给应用（如 Claude Code），故对 Claude Code 也有效。
     const dispatchWheel = (deltaY: number, x?: number, y?: number): void => {
@@ -279,17 +273,6 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
         })
       )
     }
-    const jumpBottom = (): void => {
-      const t = termRef.current
-      if (!t) return
-      if (t.buffer.active.type === 'alternate' && t.modes.mouseTrackingMode !== 'none') {
-        for (let i = 0; i < 80; i++) dispatchWheel(120) // 备用屏无法直接定位底部，连发把它推到最新
-      } else {
-        t.scrollToBottom()
-      }
-    }
-    jumpBtn.addEventListener('click', jumpBottom)
-
     // 备用屏(Claude Code)里把一次真实滚轮放大成约 2 次，读长输出更快（普通缓冲走 scrollSensitivity）
     let synthesizing = false
     const onWheelAmplify = (e: WheelEvent): void => {
@@ -308,14 +291,12 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       if (!t) return
       const buf = t.buffer.active
       // 全屏 TUI（备用屏：Claude Code / vim / top…）里，滚动完全由应用自己管，
-      // 终端拿不到它的内部滚动进度，画出来只会是条误导人的"假滚动条"——直接隐藏；
-      // 但「回到最新」按钮常显（应用可能已滚上去）。普通 shell（正常缓冲）才画常驻滚动条。
+      // 终端拿不到它的内部滚动进度，画出来只会是条误导人的"假滚动条"——直接隐藏。
+      // 普通 shell（正常缓冲）才画常驻滚动条。
       if (buf.type === 'alternate') {
         scrollbar.style.display = 'none'
-        jumpBtn.style.display = ''
         return
       }
-      jumpBtn.style.display = buf.viewportY < buf.baseY ? '' : 'none' // 滚上去了才显示
       scrollbar.style.display = ''
       const total = Math.max(buf.length, t.rows)
       const H = scrollbar.clientHeight
@@ -465,9 +446,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       thumb.removeEventListener('mousedown', onThumbDown)
       window.removeEventListener('mousemove', onDragMove)
       window.removeEventListener('mouseup', onDragUp)
-      jumpBtn.removeEventListener('click', jumpBottom)
       el.removeEventListener('wheel', onWheelAmplify, { capture: true } as EventListenerOptions)
-      jumpBtn.remove()
       scrollbar.remove()
       if (fitTimer) clearTimeout(fitTimer)
       if (writeRaf) cancelAnimationFrame(writeRaf)
@@ -514,6 +493,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
   return (
     <div ref={containerRef} className="terminal-host">
+      <VoiceButton ptyId={ptyId} />
       {m &&
         createPortal(
           <div

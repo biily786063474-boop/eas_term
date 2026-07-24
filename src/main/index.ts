@@ -7,6 +7,7 @@ import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
+import { registerSttHandlers } from './stt'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 // 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
@@ -104,6 +105,12 @@ function createWindow(): void {
   // 页面卡死无响应 → 记录(暂不强制处理,交给用户或后续等待 responsive)
   win.on('unresponsive', () => console.error('[window:unresponsive]'))
 
+  // 放行渲染进程的麦克风/媒体请求(语音输入用 getUserMedia)。Electron 默认拦截 getUserMedia,
+  // 不设 handler 则采麦直接失败。web 节点浏览器用 persist:browser 独立 session,不受此影响。
+  win.webContents.session.setPermissionRequestHandler((_wc, permission, cb) => {
+    cb(permission === 'media')
+  })
+
 
   // 退出/关窗口前：若仍有终端在运行命令，弹窗确认，避免误杀进程。
   // 覆盖红绿灯关闭按钮与 ⌘Q（before-quit 会触发窗口的 close）
@@ -194,6 +201,7 @@ app.whenReady().then(() => {
   registerSessionHandlers()
   registerCanvasHandlers()
   registerAgentHandlers()
+  registerSttHandlers()
   registerBizoneHandlers()
   buildMenu()
   createWindow()

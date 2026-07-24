@@ -26,7 +26,14 @@
       "!**/._*"
     ],
     "asarUnpack": [
-      "**/node_modules/node-pty/**"
+      "**/node_modules/node-pty/**",
+      "**/node_modules/sherpa-onnx/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/models",
+        "to": "models"
+      }
     ],
     "mac": {
       "target": [
@@ -92,7 +99,8 @@
   },
   "dependencies": {
     "@codemirror/merge": "^6.12.2",
-    "node-pty": "^1.0.0"
+    "node-pty": "^1.0.0",
+    "sherpa-onnx": "^1.13.4"
   },
   "devDependencies": {
     "@codemirror/language": "^6.12.3",
