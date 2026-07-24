@@ -131,7 +131,13 @@ export function registerPtyHandlers(): void {
   })
 
   ipcMain.on('pty:write', (_e, id: string, data: string) => {
-    ptys.get(id)?.pty.write(data)
+    // pty 可能已 exit/被杀但 onExit 尚未从 map 删除，此时对已关闭 fd 写会同步抛 EPIPE/EIO。
+    // 不包 try/catch 的话 → uncaughtException → 主进程退出 → 全窗口白屏（与 resize/kill 一致做法）。
+    try {
+      ptys.get(id)?.pty.write(data)
+    } catch {
+      // pty 正在退出，忽略这次写入
+    }
   })
 
   ipcMain.on('pty:resize', (_e, id: string, cols: number, rows: number) => {

@@ -1,0 +1,72 @@
+// 渲染层错误边界:拦截渲染期未捕获异常,避免 React 把整棵树卸载成永久白屏(白屏根因头号放大器)。
+// fallback 提供两个逃生入口:重新加载;若疑似坏画布存档导致启动即崩,「重置画布并重载」清空 canvas.json 再开。
+
+import { Component, ErrorInfo, ReactNode } from 'react'
+
+interface Props {
+  children: ReactNode
+  /** 边界标识(区分根级 / 画布级,用于日志) */
+  label?: string
+}
+interface State {
+  error: Error | null
+}
+
+// 空画布存档(结构对齐 serializeCanvas 落盘格式:viewMode/viewport/frames/shapes)
+const EMPTY_CANVAS = {
+  viewMode: 'split',
+  viewport: { x: 0, y: 0, scale: 1 },
+  frames: [],
+  shapes: []
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { error }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error(
+      `[ErrorBoundary${this.props.label ? ':' + this.props.label : ''}]`,
+      error,
+      info.componentStack
+    )
+  }
+
+  private reload = (): void => location.reload()
+
+  private resetCanvas = async (): Promise<void> => {
+    try {
+      await window.api.canvas.save(EMPTY_CANVAS)
+    } catch {
+      // 存不了也照样重载
+    }
+    location.reload()
+  }
+
+  render(): ReactNode {
+    const { error } = this.state
+    if (!error) return this.props.children
+    return (
+      <div className="err-boundary">
+        <div className="err-card">
+          <div className="err-title">界面遇到了一个错误</div>
+          <div className="err-desc">
+            渲染时发生未处理异常,已被拦截,避免整个窗口变空白。可以重新加载;如果反复在启动时出错,多半是画布存档损坏,点「重置画布并重载」清空后重开(不影响项目文件)。
+          </div>
+          <pre className="err-msg">{error.message || String(error)}</pre>
+          <div className="err-btns">
+            <button className="err-btn primary" onClick={this.reload}>
+              重新加载
+            </button>
+            <button className="err-btn" onClick={this.resetCanvas}>
+              重置画布并重载
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+}

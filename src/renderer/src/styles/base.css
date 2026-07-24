@@ -423,3 +423,80 @@ body {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* ========== 渲染层错误边界兜底 UI（自包含深色，错误态必须能稳渲染） ========== */
+.err-boundary {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #0a0b0f;
+  -webkit-app-region: drag;
+}
+.err-card {
+  -webkit-app-region: no-drag;
+  max-width: 460px;
+  width: 100%;
+  background: #12141b;
+  border: 1px solid #2e3444;
+  border-radius: 16px;
+  padding: 26px 26px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
+}
+.err-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ff5c6c;
+  margin-bottom: 10px;
+}
+.err-desc {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #9aa1b2;
+}
+.err-msg {
+  margin: 14px 0 16px;
+  padding: 10px 12px;
+  background: #0b0d13;
+  border: 1px solid #232734;
+  border-radius: 8px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #d4a8ae;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+}
+.err-btns {
+  display: flex;
+  gap: 10px;
+}
+.err-btn {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid #2e3444;
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6e8ee;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, filter 0.15s;
+}
+.err-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.err-btn.primary {
+  border: none;
+  background: #7c8cff;
+  color: #0b0d12;
+}
+.err-btn.primary:hover {
+  filter: brightness(1.08);
+}

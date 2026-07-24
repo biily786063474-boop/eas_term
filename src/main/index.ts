@@ -9,6 +9,33 @@ import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
+// 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
+// 只记录、不退出——白屏根因之一就是这里缺兜底,一个 EPIPE/EIO 就能整死主进程。
+process.on('uncaughtException', (err) => {
+  console.error('[main:uncaughtException]', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[main:unhandledRejection]', reason)
+})
+
+// GPU/工具进程崩溃 → 若拖垮了某个窗口渲染,重载该窗口(节流防崩溃循环)
+app.on('child-process-gone', (_e, details) => {
+  console.error('[main:child-process-gone]', details.type, details.reason)
+  if (details.type === 'GPU' && details.reason !== 'clean-exit') {
+    for (const w of BrowserWindow.getAllWindows()) reloadWindowThrottled(w)
+  }
+})
+
+// 渲染/GPU 崩溃自动重载的节流:同一窗口 3s 内不重复 reload,避免「崩溃—重载—再崩」死循环
+const lastReloadAt = new WeakMap<BrowserWindow, number>()
+function reloadWindowThrottled(win: BrowserWindow): void {
+  if (win.isDestroyed()) return
+  const now = Date.now()
+  if (now - (lastReloadAt.get(win) ?? 0) < 3000) return
+  lastReloadAt.set(win, now)
+  win.reload()
+}
+
 registerBizoneScheme()
 registerMediaScheme()
 
@@ -43,6 +70,15 @@ function createWindow(): void {
   const wcId = win.webContents.id
   win.webContents.on('did-navigate', () => killPtysForWebContents(wcId))
   win.on('closed', () => killPtysForWebContents(wcId))
+
+  // 渲染进程崩溃/被杀(OOM 等)→ 自动重载,避免永久白屏(白屏根因之一:崩了没恢复机制)。
+  // clean-exit(正常导航/关闭)不处理;节流防崩溃循环。画布存档已持久化,重载能还原布局。
+  win.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[render-process-gone]', details.reason)
+    if (details.reason !== 'clean-exit') reloadWindowThrottled(win)
+  })
+  // 页面卡死无响应 → 记录(暂不强制处理,交给用户或后续等待 responsive)
+  win.on('unresponsive', () => console.error('[window:unresponsive]'))
 
   // 退出/关窗口前：若仍有终端在运行命令，弹窗确认，避免误杀进程。
   // 覆盖红绿灯关闭按钮与 ⌘Q（before-quit 会触发窗口的 close）

@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Eas-Term 白屏隐患 · 系统级代码审查</title>
+<style>
+  :root{
+    --bg:#0a0b0f; --bg2:#0f1117; --panel:#12141b; --panel2:#161923;
+    --border:#232734; --border2:#2e3444;
+    --fg:#e6e8ee; --fg-dim:#9aa1b2; --fg-mute:#6b7280;
+    --accent:#7c8cff; --accent-soft:rgba(124,140,255,.14);
+    --fatal:#ff5c6c; --fatal-bg:rgba(255,92,108,.10);
+    --high:#ff9e3d; --high-bg:rgba(255,158,61,.10);
+    --mid:#ffd54a; --mid-bg:rgba(255,213,74,.08);
+    --low:#6b7280; --low-bg:rgba(107,114,128,.08);
+    --ok:#43d19e; --ok-bg:rgba(67,209,158,.10);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 700px at 20% -10%,#131622 0%,var(--bg) 55%);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,sans-serif;line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:0 0 90px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header{padding:52px 0 30px;border-bottom:1px solid var(--border)}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);border:1px solid rgba(124,140,255,.28);padding:5px 12px;border-radius:999px}
+  h1{font-size:30px;margin:18px 0 8px;letter-spacing:-.01em;font-weight:700}
+  .sub{color:var(--fg-dim);font-size:15px;max-width:760px}
+  .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--fg-mute)}
+  .meta span{background:var(--panel);border:1px solid var(--border);padding:5px 11px;border-radius:8px}
+
+  h2{font-size:20px;margin:44px 0 14px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:4px;height:20px;border-radius:2px;background:var(--accent)}
+  h3{font-size:15px;margin:26px 0 10px;color:var(--fg-dim);font-weight:600;letter-spacing:.02em}
+
+  .lead{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--border2);border-radius:16px;
+    padding:22px 24px;margin:26px 0}
+  .lead p{margin:0 0 10px}
+  .lead p:last-child{margin:0}
+  .lead b{color:#fff}
+  .hl{color:var(--fatal);font-weight:600}
+  .hl2{color:var(--high);font-weight:600}
+
+  .evgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.evgrid{grid-template-columns:1fr}}
+  .ev{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .ev .t{font-size:13px;color:var(--accent);font-weight:600;margin-bottom:6px}
+  .ev .d{font-size:13.5px;color:var(--fg-dim)}
+  .ev .d b{color:var(--fg)}
+
+  .conv{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 6px}
+  @media(max-width:760px){.conv{grid-template-columns:1fr 1fr}}
+  .conv .c{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+  .conv .c .n{font-size:22px;font-weight:700;color:var(--accent)}
+  .conv .c .l{font-size:11.5px;color:var(--fg-mute);margin-top:2px}
+
+  .card{border:1px solid var(--border);border-left-width:3px;border-radius:12px;background:var(--panel);
+    padding:16px 18px;margin:12px 0}
+  .card.fatal{border-left-color:var(--fatal)}
+  .card.high{border-left-color:var(--high)}
+  .card.mid{border-left-color:var(--mid)}
+  .card.low{border-left-color:var(--low)}
+  .card.ok{border-left-color:var(--ok);background:var(--ok-bg)}
+  .chead{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:6px;white-space:nowrap;text-transform:uppercase}
+  .tag.fatal{color:var(--fatal);background:var(--fatal-bg);border:1px solid rgba(255,92,108,.3)}
+  .tag.high{color:var(--high);background:var(--high-bg);border:1px solid rgba(255,158,61,.3)}
+  .tag.mid{color:var(--mid);background:var(--mid-bg);border:1px solid rgba(255,213,74,.3)}
+  .tag.low{color:var(--fg-dim);background:var(--low-bg);border:1px solid var(--border2)}
+  .tag.ok{color:var(--ok);background:var(--ok-bg);border:1px solid rgba(67,209,158,.3)}
+  .tag.area{color:var(--fg-dim);background:transparent;border:1px solid var(--border2)}
+  .ctitle{font-size:15px;font-weight:650;flex:1;min-width:200px}
+  .cbody{margin-top:10px;font-size:13.5px;color:var(--fg-dim)}
+  .cbody .row{margin:7px 0}
+  .cbody .k{color:var(--fg-mute);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-right:6px}
+  .cbody b{color:var(--fg)}
+  code,.loc{font-family:var(--mono);font-size:12.5px;background:#0b0d13;border:1px solid var(--border);
+    border-radius:5px;padding:1.5px 6px;color:#c8cfe0}
+  .fix{color:var(--ok)}
+  .why{color:#d4a8ae}
+
+  .plan{margin:16px 0}
+  .phase{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:12px 0}
+  .phase .ph{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:650;margin-bottom:4px}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+  .pill.p0{color:var(--fatal);background:var(--fatal-bg);border:1px solid rgba(255,92,108,.3)}
+  .pill.p1{color:var(--high);background:var(--high-bg);border:1px solid rgba(255,158,61,.3)}
+  .pill.p2{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(124,140,255,.3)}
+  .phase .pd{font-size:13px;color:var(--fg-mute);margin-bottom:10px}
+  ol.steps{margin:6px 0 0;padding-left:20px}
+  ol.steps li{margin:7px 0;font-size:13.5px;color:var(--fg-dim)}
+  ol.steps li b{color:var(--fg)}
+
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--border);color:var(--fg-mute);font-size:12.5px}
+  .note{background:var(--high-bg);border:1px solid rgba(255,158,61,.25);border-radius:12px;padding:14px 18px;margin:20px 0;font-size:13.5px;color:#f3d3ac}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="kicker">● 系统级代码审查</span>
+    <h1>Eas-Term「用着用着就白屏」隐患审查</h1>
+    <p class="sub">四路并行专项审查(主进程恢复力 · 渲染崩溃面 · 画布内存/GPU · 状态持久化)+ 主报告人复核,定位导致整个应用突然白屏/无内容/卡死的系统级冲突,并给出分期修复方案。</p>
+    <div class="meta">
+      <span>2026-07-23</span>
+      <span>范围 · src/main + src/renderer + src/preload</span>
+      <span>发现 · 4 致命 · 8 高 · 11 中 · 5 低</span>
+      <span>只读审查,未改动代码</span>
+    </div>
+  </header>
+
+  <!-- 执行摘要 -->
+  <h2><span class="bar"></span>一句话结论</h2>
+  <div class="lead">
+    <p>白屏的<b>机制</b>是:项目<span class="hl">既没有 React Error Boundary,主进程也没有 uncaughtException 兜底,更没有渲染/GPU 崩溃后的自动重载</span>——三道安全网全缺。于是<b>任何一处局部异常都会被放大成"整屏白且永不自愈"</b>。</p>
+    <p>最可能的<b>扳机</b>有三条独立路径,任一命中都足以白屏:<br>
+      ① <span class="hl2">在刚退出的终端里继续敲字</span> → <code>pty:write</code> 裸写已关闭 fd 抛 EPIPE → 主进程退出;<br>
+      ② <span class="hl2">多终端连续缩放画布</span> → 每帧对每个终端重复 fit → GPU canvas 反复重分配 → GPU 进程 OOM;<br>
+      ③ <span class="hl2">一份"能解析但成员畸形"的 canvas.json</span> → 渲染期 <code>f.nodes.length</code> 抛错 → 因启动即进画布模式,<b>每次开机都白、且订阅未挂无法覆盖坏档 → 永久打不开</b>。</p>
+    <p>关键实据:你机器 <code>~/Library/Logs/DiagnosticReports</code> 里<b>零条 Eas-Term 崩溃报告</b> → 白屏不是原生段错误,而是 JS 层异常把 React 整树卸载,与"缺 Error Boundary"完全对应。另:你正式 app 的 canvas.json 里 agent 仍是旧字符串结构 → <b>你在跑的是旧构建,此白屏是它本就有的老隐患</b>,与本次 Codex 改动无关。</p>
+  </div>
+
+  <div class="evgrid">
+    <div class="ev"><div class="t">证据 A · 无原生崩溃报告</div><div class="d">DiagnosticReports 中 <b>0 条</b> Eas-Term/electron 报告 → 排除段错误/驱动崩溃,指向 <b>JS 异常卸载 React 树</b>(无 Error Boundary 时即全白,不产报告)。</div></div>
+    <div class="ev"><div class="t">证据 B · 三处独立扳机收敛</div><div class="d">四路审查<b>各自独立</b>指向同一批安全网缺失(Error Boundary、主进程兜底、崩溃恢复),互相印证,非孤例。</div></div>
+  </div>
+
+  <div class="conv">
+    <div class="c"><div class="n">0</div><div class="l">Error Boundary</div></div>
+    <div class="c"><div class="n">0</div><div class="l">主进程异常兜底</div></div>
+    <div class="c"><div class="n">0</div><div class="l">渲染崩溃自动重载</div></div>
+    <div class="c"><div class="n">100k</div><div class="l">每终端 scrollback 行</div></div>
+  </div>
+
+  <!-- 致命 -->
+  <h2><span class="bar" style="background:var(--fatal)"></span>致命 · 白屏的直接机制(先补这四道网)</h2>
+
+  <div class="card fatal">
+    <div class="chead"><span class="tag fatal">致命 F1</span><span class="tag area">渲染</span>
+      <span class="ctitle">全项目零 React Error Boundary —— 任意 render 抛错 = 整屏白且永不自愈</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/renderer/src/main.tsx:15</span>(根渲染裸挂 <code>&lt;App/&gt;</code>;全局 <code>ErrorBoundary/componentDidCatch/getDerivedStateFromError</code> 命中 0)</div>
+      <div class="row"><span class="k">场景</span>React 18 里任一组件一次渲染异常即卸载整棵树、页面纯白、不自愈(只能重启)。它是下面所有坏数据问题的<b>放大器</b>——把局部 bug 变全局灾难。</div>
+      <div class="row"><span class="fix">▶ 修</span>根级 class ErrorBoundary 包 <code>&lt;App/&gt;</code>(<code>getDerivedStateFromError</code> 渲染兜底 UI + "重置画布/重载"按钮);再套一层包画布层,崩了只白一块。</div>
+    </div>
+  </div>
+
+  <div class="card fatal">
+    <div class="chead"><span class="tag fatal">致命 F2</span><span class="tag area">主进程</span>
+      <span class="ctitle">无 uncaughtException / unhandledRejection 兜底 —— 主进程一抛即退,全窗口瞬灭</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/main/index.ts</span>(全项目命中 0)</div>
+      <div class="row"><span class="k">场景</span>主进程任一同步抛出(如 <code>ipcMain.on</code> 监听器抛错)或 EventEmitter 的 <code>'error'</code> 无人听(node-pty socket 的 EIO/EPIPE)→ Node 默认 <code>process.exit(1)</code> → 所有窗口消失。它同时是 H1/H3 等的放大器。</div>
+      <div class="row"><span class="fix">▶ 修</span><code>process.on('uncaughtException')</code> / <code>'unhandledRejection'</code> 至少记录并阻止默认退出;致命时优雅重建窗口而非静默死亡。</div>
+    </div>
+  </div>
+
+  <div class="card fatal">
+    <div class="chead"><span class="tag fatal">致命 F3</span><span class="tag area">主进程</span>
+      <span class="ctitle">渲染/GPU 进程崩溃无监听、无自动重载 —— 白了就永远白</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/main/index.ts:43-45</span>(只挂了 did-navigate/closed);无 <code>render-process-gone</code>/<code>unresponsive</code>/<code>child-process-gone</code></div>
+      <div class="row"><span class="k">场景</span>本 app 用 xterm CanvasAddon(GPU 密集),GPU 进程崩溃或渲染 OOM 是现实事件。一旦发生,窗口永久白屏,直到用户手动 ⌘R 或重启。</div>
+      <div class="row"><span class="fix">▶ 修</span>监听 <code>render-process-gone</code>(reason≠clean-exit)/<code>child-process-gone</code> → <code>win.reload()</code>(带节流防崩溃循环);<code>unresponsive</code> → 等待/提示。</div>
+    </div>
+  </div>
+
+  <div class="card fatal">
+    <div class="chead"><span class="tag fatal">致命 F4</span><span class="tag area">持久化</span>
+      <span class="ctitle">loadCanvas 不校验 frame/node 结构 —— 坏档启动即白且永久打不开</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span>校验仅 <span class="loc">canvasSlice.ts:357</span> <code>Array.isArray(raw.frames)</code>;崩点 <span class="loc">CanvasStage.tsx:676-680</span>、<span class="loc">PaneLayer.tsx:46-48</span>(<code>f.nodes.length/.filter/.forEach</code>,PaneLayer 不受 viewMode 门控恒渲染)</div>
+      <div class="row"><span class="k">场景</span>"能 parse 但成员畸形"的 JSON(<code>frames:[null]</code>、某 frame 缺 <code>nodes</code>、node 缺字段——来自无版本号的 schema 演进 / <code>JSON.stringify</code> 丢弃 undefined 键 / 崩溃残留)→ <code>undefined.length</code> 抛错。因 loadCanvas 同时把 <code>viewMode</code> 恢复成 <code>'canvas'</code>,<b>启动首帧就渲染坏数据 → 白 → 保存订阅还没挂 → 不覆盖坏档 → 每次启动复现,用户无法自救</b>。</div>
+      <div class="row"><span class="why">※ 注</span>截断/非法 JSON 反而<b>安全</b>(canvas.ts 的 try/catch 已降级为空画布);危险的是能解析但畸形的档。</div>
+      <div class="row"><span class="fix">▶ 修</span><code>sanitizeCanvas(raw)</code>:逐 frame 过滤非对象/无 id,<code>nodes = Array.isArray? filter(合法) : []</code>,数值 <code>Number.isFinite</code> 兜默认;坏 frame 丢弃而非整档;给 <code>PersistedCanvas</code> 加 <code>version</code>;整体 try/catch 降级 + 备份 <code>canvas.corrupt.json</code>。</div>
+    </div>
+  </div>
+
+  <!-- 高 -->
+  <h2><span class="bar" style="background:var(--high)"></span>高 · 最常见的三条扳机 + 内存主线</h2>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H1</span><span class="tag area">主进程</span>
+      <span class="ctitle">pty:write 无 try/catch —— write-after-kill 的 EPIPE 直接崩主进程</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/main/pty.ts:133-135</span> · 报告人已亲自复核:同文件 <code>pty:resize</code>(:137)、<code>pty:kill</code>(:146)<b>都有</b> try/catch,唯独 <code>write</code> 漏了</div>
+      <div class="row"><span class="k">场景</span>在刚 exit/崩溃/被杀但 <code>onExit</code> 尚未删除 map 的终端里继续敲字(或 IME 回填、粘贴)→ 对已关闭 fd <code>.write()</code> 同步抛 EPIPE/EIO → 叠加 F2 = 主进程崩 = 全窗口白。"正打着字终端就没了"完全吻合。</div>
+      <div class="row"><span class="fix">▶ 修</span>给 <code>pty.write</code> 包 try/catch(与 resize 一致)+ 给 pty 实例挂 <code>.on('error')</code> 兜底。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H2</span><span class="tag area">画布/GPU</span>
+      <span class="ctitle">缩放时对所有可见终端重复 fit + 字号重建风暴 → GPU OOM</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">TerminalView.tsx:479-495</span>(canvasScale effect)叠加 <span class="loc">:436-437</span>(ResizeObserver→doFit)</div>
+      <div class="row"><span class="k">场景</span>画布缩放走"字号缩放":捏合时 <code>vp.scale</code> 每 wheel 变 → 每个终端 <b>每帧被 fit 两次</b>(effect + RO),每次 fit 重分配 4 张 canvas 后备存储 + 重建字形图集 + 一次 pty.resize。开 3~5+ 终端连续缩放几秒 → GPU 显存反复暴涨 → GPU 进程 OOM/上下文丢失 → 整窗口白。</div>
+      <div class="row"><span class="fix">▶ 修</span>fit 去抖到手势结束(trailing ~120ms),过程中只改 CSS;与 RO 合流避免双 fit;hidden 终端跳过 fit。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H3</span><span class="tag area">画布/内存</span>
+      <span class="ctitle">全终端常驻挂载 + scrollback 100000 + 每终端 4 张 GPU canvas → 内存单调增长</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">PaneLayer.tsx:68-78</span>(恒全量挂载)、<span class="loc">TerminalView.tsx:100</span>(<code>scrollback:100000</code>)、<span class="loc">:238</span>(4 张 canvas/终端)</div>
+      <div class="row"><span class="k">场景</span>为"终端不断连"所有 leaf 永远 mount,10 万行缓冲(每终端数十 MB)+ 4 张随字号放大的 GPU canvas。终端越多、跑越久,JS 堆 + GPU 显存<b>单调增长</b>,最终压垮 GPU 进程 → 白。非单实例泄漏,是设计导致的可无限累积占用,与"用着用着"吻合。</div>
+      <div class="row"><span class="fix">▶ 修</span><code>scrollback</code> 降到 10k~20k;长时间隐藏的终端降级 DOM 渲染 / 按 LRU dispose CanvasAddon;同时挂载的 CanvasAddon 数量设上限。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H4</span><span class="tag area">主进程</span>
+      <span class="ctitle">pty 输出无背压 —— 大输出把渲染进程冲到卡死/OOM</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/main/pty.ts:122-124</span>(<code>onData</code> 每 chunk 直接 <code>wc.send</code>,无节流/合批)</div>
+      <div class="row"><span class="k">场景</span>误 <code>cat</code> 大文件 / <code>tail -f</code> 高频日志 / 构建刷屏 → IPC 被海量小消息灌满,渲染主线程忙于 xterm 写入 + 重绘 → 无响应/卡死,重则渲染 OOM 崩溃。</div>
+      <div class="row"><span class="fix">▶ 修</span>主进程侧 onData 合批(~16ms 聚合成一条再 send)或限速;可选 pty pause/resume 背压。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H5</span><span class="tag area">持久化</span>
+      <span class="ctitle">恢复的 viewport 无字段校验/scale 无钳制 → scale(NaN)/0 → 画布内容整体消失</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">canvasSlice.ts:360</span>(<code>raw.viewport ?? 默认</code>,仅防整体 null);<span class="loc">:415</span> setViewport 不钳制 scale</div>
+      <div class="row"><span class="k">场景</span>存档 viewport 残缺(<code>{x:10}</code> 缺 scale,或 scale 为 0/负/NaN)→ <code>26*vp.scale</code>、<code>scale(NaN)</code>、终端 placement <code>vp.x+(f.x+n.x)*vp.scale</code>=NaN → 终端定位到 NaN 处<b>整屏消失</b>;scale=0 时拖拽 <code>dx/scale</code>=Infinity 进一步腐化存档。"画布啥都不显示"吻合。</div>
+      <div class="row"><span class="fix">▶ 修</span>loadCanvas 对 viewport 逐字段兜底:x/y <code>Number.isFinite?v:0</code>,scale <code>clamp(finite?v:1, 0.2, 2.2)</code>;setViewport 内也钳制。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H6</span><span class="tag area">主进程</span>
+      <span class="ctitle">pty.spawn 无 try/catch —— fork 耗尽(EAGAIN/ENOMEM)裸抛</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">src/main/pty.ts:114-120</span></div>
+      <div class="row"><span class="k">场景</span>SHELL 指向不存在的二进制 / cwd 竞态被删 / 反复开大量终端导致 fork 耗尽 → 同步抛出。虽在 handle 内(reject 回渲染主进程能活),但无干净错误返回、渲染侧没 catch 则 unhandledrejection。</div>
+      <div class="row"><span class="fix">▶ 修</span>包 try/catch,失败 <code>return {id:null,error}</code> 让渲染优雅提示。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H7</span><span class="tag area">渲染</span>
+      <span class="ctitle">无全局 error / unhandledrejection 监听 —— 渲染异常静默,白屏无从诊断</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">main.tsx</span>、<span class="loc">App.tsx</span> 均无</div>
+      <div class="row"><span class="k">场景</span><code>materializeCanvas</code>/<code>loadCanvas</code> 等 async 抛错变 unhandled rejection 静默丢失;出问题连报错都看不到(本身不白屏,但让白屏无法定位)。</div>
+      <div class="row"><span class="fix">▶ 修</span>main.tsx 加 <code>window.addEventListener('error'/'unhandledrejection')</code>,至少 console + 可选落盘。</div>
+    </div>
+  </div>
+
+  <div class="card high">
+    <div class="chead"><span class="tag high">高 H8</span><span class="tag area">渲染</span>
+      <span class="ctitle">computeGraphRows 在 render 期读 commit.parents.length,无防护</span></div>
+    <div class="cbody">
+      <div class="row"><span class="k">位置</span><span class="loc">features/git/gitGraph.ts:59-66</span> 经 <span class="loc">HistoryView.tsx:105</span> 的 useMemo 在渲染期执行(画布"版本管理"组件 + 分屏历史面板都吃这条)</div>
+      <div class="row"><span class="k">场景</span>主进程 git 解析返回的某 commit 缺 <code>parents</code> 字段 → <code>undefined.length</code> 在 render 期抛 → 无 boundary → 白。</div>
+      <div class="row"><span class="fix">▶ 修</span><code>const parents = commit.parents ?? []</code>;或 IPC 边界保证字段。</div>
+    </div>
+  </div>
+
+  <!-- 中 -->
+  <h2><span class="bar" style="background:var(--mid)"></span>中 · 加固恢复健壮性与缩放性能</h2>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">持久化</span><span class="ctitle">materializeCanvas 无逐节点 try/catch → 一个坏节点掐掉整轮恢复 + 保存订阅</span></div>
+    <div class="cbody"><div class="row"><span class="loc">canvasSlice.ts:372-412</span> · 坏 frame/node 抛错向上冒 → <code>App.tsx:33</code> await loadCanvas 抛 → <code>:34</code> 保存订阅永不挂载(整会话不落盘)。<span class="fix">修:</span>逐节点 try/catch 跳过坏项;启动 IIFE 加 <code>.catch</code>,先挂订阅再 materialize。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">持久化</span><span class="ctitle">materialize 靠 leafId diff 识别新终端,失败即留占位 → 反复进出画布可能 spawn 孤儿终端</span></div>
+    <div class="cbody"><div class="row"><span class="loc">canvasSlice.ts:383-393</span> · 识别失败(<code>!newLeaf continue</code>)则终端已开但未绑,下次进画布再开一个。当前概率低但设计脆弱。<span class="fix">修:</span>给占位加一次性 materialize 标记,或让 openTerminal 直接返回新 leafId。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">画布</span><span class="ctitle">wheel(平移/缩放)→ setViewport → 全部 PaneView 重渲染</span></div>
+    <div class="cbody"><div class="row"><span class="loc">PaneLayer.tsx:42-65</span> · <code>canvasByLeaf</code> useMemo 依赖整个 canvas 对象,viewport 一变全量重算。<span class="fix">修:</span>viewport 更新 rAF 节流;placement 选择器按 leaf 拆分。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">画布</span><span class="ctitle">canvasScale 的 rAF 未保存句柄、未取消</span></div>
+    <div class="cbody"><div class="row"><span class="loc">TerminalView.tsx:486</span> · 与同文件 onData 写合并的正确 <code>cancelAnimationFrame</code>(:453)不一致,卸载靠判空兜底存在竞态。<span class="fix">修:</span>存 handle,cleanup/重排前 cancel。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">画布</span><span class="ctitle">ResizeObserver ↔ fit 潜在回环抖动</span></div>
+    <div class="cbody"><div class="row"><span class="loc">TerminalView.tsx:359-368,436-437</span> · RO 回调同步 fit 可能触发 "ResizeObserver loop" 抖动。<span class="fix">修:</span>RO 回调包 rAF 再 fit;先比对 cols/rows 真变了才执行。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">主进程</span><span class="ctitle">session transcript 同步 readFileSync 巨型 jsonl + 缓存 base64 图片</span></div>
+    <div class="cbody"><div class="row"><span class="loc">session.ts:122</span> · 长会话 transcript 可达数百 MB,同步整读阻塞主线程 + 缓存 base64 内存走高。<span class="fix">修:</span>异步读 + 大小上限/流式;缓存别存原始 base64。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">主进程</span><span class="ctitle">easfile:// / bizone:// 协议 new URL / net.fetch 未全包 try/catch(TOCTOU)</span></div>
+    <div class="cbody"><div class="row"><span class="loc">canvas.ts:61-77</span>、<span class="loc">bizone.ts:70-78</span> · 文件在 existsSync 后被删 / 畸形 url → handler reject → 画布媒体裂开加载失败(体验级,非硬崩)。<span class="fix">修:</span>new URL + net.fetch 纳入 try/catch,失败返回 404/500 Response。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">preload</span><span class="ctitle">pendingBuffers 无上限 → 渲染进程内存泄漏/OOM</span></div>
+    <div class="cbody"><div class="row"><span class="loc">preload/index.ts:26-35</span> · pty 创建但始终没被订阅(UI 未挂载 xterm)且刷屏时 chunks 无限增长。<span class="fix">修:</span>每 id 缓冲设字节/条数上限,超限丢旧或停缓。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">画布</span><span class="ctitle">头部/控制条用 zoom:cs,每步触发子树 reflow</span></div>
+    <div class="cbody"><div class="row"><span class="loc">PaneView.tsx:306,382</span> · zoom 是非合成属性,缩放时每个终端头部子树每步 reflow(与 H2 叠加)。<span class="fix">修:</span>改 <code>transform:scale()</code>,或缩放中冻结头部松手再更新。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">画布</span><span class="ctitle">图片宫格一次性渲染整文件夹全部 &lt;img&gt;</span></div>
+    <div class="cbody"><div class="row"><span class="loc">CanvasImageViewer.tsx:53-67</span> · 虽 lazy 不全解码,但为每张图建 DOM,上千张时宫格打开即卡。<span class="fix">修:</span>虚拟滚动或截断 + 触底加载。</div></div></div>
+
+  <div class="card mid"><div class="chead"><span class="tag mid">中</span><span class="tag area">主进程</span><span class="ctitle">fs:readDir 无 try/catch(与其它 fs handler 不一致)</span></div>
+    <div class="cbody"><div class="row"><span class="loc">fs.ts:38-63</span> · 目录不存在/无权限时裸 reject;同文件 readTextFile/readImageFile 都返回 {ok:false}。<span class="fix">修:</span>包 try/catch,失败返回空数组或带 error 结构。</div></div></div>
+
+  <!-- 低 -->
+  <h2><span class="bar" style="background:var(--low)"></span>低 · 边角与观察项</h2>
+  <div class="card low"><div class="cbody"><div class="row"><b>拖拽期 mouseup 丢失 → document 监听泄漏</b> · 多处 startDrag/startPan/startResize(<code>PaneView.tsx:261</code>、<code>CanvasStage.tsx:324,437</code>、<code>CanvasFileNode.tsx:83</code>)。拖出窗外松手/拖拽中元素卸载 → mouseup 收不到、监听残留。修:改 pointer 事件 + setPointerCapture + pointercancel/blur 兜底。</div>
+    <div class="row"><b>视频节点各持解码器</b> <code>CanvasFileNode.tsx:167</code> · 非可视时 preload="none"/卸 src。</div>
+    <div class="row"><b>easfile 图片主视图全分辨率 img</b> <code>CanvasImageViewer.tsx:74</code> · 多图叠加内存偏高(非泄漏),按显示尺寸降采样。</div>
+    <div class="row"><b>win.on('close') promise 链无 .catch</b> <code>index.ts:50-72</code> · 补 .catch。</div>
+    <div class="row"><b>easfile 将 SVG 以 privileged 提供</b> <code>canvas.ts:26</code> · img/canvas 中 SVG 脚本不执行,风险低,仅提示。</div></div></div>
+
+  <!-- 排除项 -->
+  <h2><span class="bar" style="background:var(--ok)"></span>已排除 · 确认做得对,不必再动</h2>
+  <div class="card ok"><div class="cbody">
+    <div class="row"><span class="tag ok">安全</span> <b>NodeAgent string→Record 迁移安全</b> · 读处 <code>agent?.model?.[kind]</code> 对老字符串返回 undefined 不抛;写处 <code>rec()</code> 守卫防污染;<code>serializeCanvas</code> 只浅拷。<b>本次 Codex 改动不是白屏源。</b></div>
+    <div class="row"><span class="tag ok">安全</span> <b>防抖落盘无死循环/无抖动</b> · 引用比较提前返回,save 是纯 IPC 不回写 store,呼吸标记在 uiSlice 不触发保存。</div>
+    <div class="row"><span class="tag ok">安全</span> <b>单实例资源回收正确</b> · onData 写合并 rAF 有 cancel;term.dispose() 卸载时调用(连带 dispose CanvasAddon);IPC listener 正确解绑;每 pty 独立 channel 不撞 10 监听上限;主进程在 did-navigate/窗口关闭/webContents 销毁时统一回收 pty。</div>
+    <div class="row"><span class="tag ok">安全</span> <b>IPC clone 边界安全</b> · 序列化产物全为原始值/纯数据 union,无函数/DOM/循环引用;JSON.stringify 异常被 try/catch 吞(静默丢一次保存,非崩溃)。截断/非法 JSON 已降级为空画布。</div>
+  </div></div>
+
+  <!-- 修复方案 -->
+  <h2><span class="bar"></span>建议修复方案(分三期,先血止再根治)</h2>
+  <div class="note">先补安全网再修扳机:安全网(P0)成本极低、收益最大——即便还有未知扳机,白屏也能被兜住/自愈,不再"用着用着全没了"。</div>
+
+  <div class="plan">
+    <div class="phase">
+      <div class="ph"><span class="pill p0">P0 血止</span> 三道安全网 + 最硬扳机(约半天,改动小)</div>
+      <div class="pd">目标:任何异常都不再放大成"永久白屏",且白了能自愈。</div>
+      <ol class="steps">
+        <li><b>根 Error Boundary</b>(main.tsx)+ 画布层子 boundary + 全局 <code>error/unhandledrejection</code> 监听 <span style="color:var(--fg-mute)">→ F1/H7</span></li>
+        <li><b>主进程 <code>uncaughtException/unhandledRejection</code> 兜底</b> <span style="color:var(--fg-mute)">→ F2</span></li>
+        <li><b>渲染/GPU 崩溃 → <code>win.reload()</code></b>(带节流防崩溃循环)<span style="color:var(--fg-mute)">→ F3</span></li>
+        <li><b><code>pty:write</code> 包 try/catch + pty <code>.on('error')</code></b> <span style="color:var(--fg-mute)">→ H1</span></li>
+      </ol>
+    </div>
+    <div class="phase">
+      <div class="ph"><span class="pill p1">P1 根治坏档</span> 存档校验与迁移(约半天)</div>
+      <div class="pd">目标:再脏的 canvas.json 也不能让 app 打不开。</div>
+      <ol class="steps">
+        <li><b><code>sanitizeCanvas</code></b>:frames/nodes 逐项规范化过滤 + <code>PersistedCanvas</code> 加 <code>version</code> + try/catch 降级 + 坏档备份 <span style="color:var(--fg-mute)">→ F4</span></li>
+        <li><b>viewport 逐字段 finite 校验 + scale clamp</b>(loadCanvas 与 setViewport 两处)<span style="color:var(--fg-mute)">→ H5</span></li>
+        <li><b>materializeCanvas 逐节点 try/catch + 启动 IIFE .catch</b>(先挂订阅再 materialize)<span style="color:var(--fg-mute)">→ 中·恢复健壮性</span></li>
+      </ol>
+    </div>
+    <div class="phase">
+      <div class="ph"><span class="pill p2">P2 内存/性能</span> 消除单调增长与缩放卡顿(1~2 天)</div>
+      <div class="pd">目标:多终端长时间使用不再越用越卡、缩放不再冲崩 GPU。</div>
+      <ol class="steps">
+        <li><b><code>scrollback</code> 100000 → 10k~20k</b> <span style="color:var(--fg-mute)">→ H3</span></li>
+        <li><b>缩放 fit 去抖到手势结束</b> + 合并 ResizeObserver 双触发 + hidden 终端跳过 fit <span style="color:var(--fg-mute)">→ H2/中</span></li>
+        <li><b>主进程 pty 输出合批限速</b>(背压)<span style="color:var(--fg-mute)">→ H4</span></li>
+        <li><b>viewport 更新 rAF 节流</b> + 头部改 transform + 宫格虚拟化 <span style="color:var(--fg-mute)">→ 中</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <h2><span class="bar"></span>改完怎么验(只在 dev 端)</h2>
+  <div class="lead">
+    <p>① <b>压力测试</b>:dev 实例开 5+ 终端跑长输出(<code>cat 大文件</code>/<code>yes</code>)+ 反复捏合缩放 10 分钟,活动监视器盯 GPU 进程内存是否还单调上涨、是否仍白。</p>
+    <p>② <b>坏档演练</b>:手造一份畸形 canvas.json(某 frame 删 nodes / viewport 塞 NaN)→ 确认 Error Boundary + sanitize 兜住、app 正常打开而非白屏。</p>
+    <p>③ <b>崩溃自愈</b>:dev 里 <code>process.crash()</code> 掉渲染进程 → 确认 F3 自动 reload 恢复。</p>
+    <p style="color:var(--fg-mute);margin-top:6px">全程只在 <code>npm run dev</code> 的独立实例上做,绝不触碰 <code>~/Eas-Term-release</code> 的正式 app。</p>
+  </div>
+
+  <footer>
+    Eas-Term 白屏隐患系统级审查 · 4 路并行专项(主进程恢复力 / 渲染崩溃面 / 画布内存 / 状态持久化)+ 复核 · 2026-07-23<br>
+    本报告为只读审查产物,未改动任何源码。文件路径与行号以审查时的 <code>feat/canvas-p0</code> 分支工作区为准。
+  </footer>
+</div>
+</body>
+</html>
