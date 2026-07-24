@@ -133,6 +133,8 @@ export interface CanvasSlice {
   duplicateNode: (frameId: string, nodeId: string) => void
   /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
   addTerminalNode: (frameId: string) => Promise<void>
+  /** 在 Frame 里新开一个迷你浏览器节点（web pane，空地址，自动堆叠） */
+  addBrowserNode: (frameId: string) => void
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
@@ -839,6 +841,24 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     }))
   },
+
+  addBrowserNode: (frameId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: reflowFrames(
+          s.canvas.frames.map((f) =>
+            f.id === frameId
+              ? placeNodeInFrame(
+                  f,
+                  { id: uid('cnode'), pane: { kind: 'web', url: null }, x: 0, y: 0, w: 480, h: 340 },
+                  s.canvas.frames
+                )
+              : f
+          )
+        )
+      }
+    })),
 
   renameNode: (frameId, nodeId, name) =>
     set((s) => ({

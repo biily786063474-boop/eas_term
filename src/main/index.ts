@@ -61,7 +61,9 @@ function createWindow(): void {
           backgroundColor: '#0f1117'
         }),
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js')
+      preload: path.join(__dirname, '../preload/index.js'),
+      // 画布「迷你浏览器」节点用 <webview>（唯一能跟随画布 CSS transform 缩放的真 Chromium 内核）
+      webviewTag: true
     }
   })
 

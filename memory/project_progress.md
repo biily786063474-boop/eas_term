@@ -232,6 +232,19 @@
 - **语音**：provider 抽象层。Web Speech API 在 Electron 打包后不可用(排除)。默认建议**离线 sherpa-onnx + Paraformer 中文流式**(零 key/免费/隐私/真流式/中文一流),云档 OpenAI Realtime/火山(1元时)/讯飞 可切换(需 API key)。key 只在主进程、渲染层采麦、partial 回填输入框(committed/interim)。替换 `TerminalView.tsx` 的 `↓最新` 按钮为麦克风(「回到最新」建议挪位不删)。
 - 用户已选:**先修这个持久化 bug**(已做完)。浏览器/语音待用户拍板顺序 + 语音默认档(离线 vs 云)。
 
+### 2026-07-24 进展：Chrome 内核迷你浏览器 P1（webview，dev 眼验，待 commit）
+
+按 `docs/浏览器+语音输入-功能规划.html` P1 做。**用 `<webview>`**（唯一能跟随画布 CSS transform 缩放的真 Chromium 内核；`WebContentsView` 原生层不跟手，iframe 挡站/无 chrome）。
+- `main/index.ts`：`webPreferences.webviewTag: true`。
+- `WebView.tsx`：iframe → **命令式 `<webview>`**（`document.createElement('webview')` 避开 React/TS 自定义元素类型坑，部分属性须 attach 前设）+ 浏览器 chrome：前进/后退(canGoBack/goBack)、刷新/停止(加载态切)、地址栏(normalizeUrl：补 https/转搜索，Enter→loadURL)、加载转圈、错误浮层(重试)、空态。`partition="persist:browser"` 共享会话、`allowpopups`。事件：did-start/stop-loading、did-navigate(-in-page)、did-fail-load(忽略 -3)。**go() 加 src 兜底**（dom-ready 前 loadURL 会抛）。
+- `web.css`：重写 chrome 条/地址栏/转圈/错误页样式。
+- `canvasSlice.ts`：加 `addBrowserNode(frameId)`（建 `{kind:'web',url:null}` 节点，placeNodeInFrame 自动堆叠）。
+- `CanvasStage.tsx:647`：frame 头"新建终端"右侧加 **GlobeIcon 新建浏览器**按钮。
+- `.html/.htm` 路由(`CanvasDrawer.tsx:20` → `{kind:'web',url:'file://'}`)自动改用 webview 打开。
+- **dev CDP 眼验(铁证)**：命运呐 frame 新建浏览器节点 → 加载 **github.com**(iframe 被 X-Frame-Options 挡、webview 能开)完整渲染；画布缩放 **50%/85%/150% 三档 webview 都单次缩放跟随、清晰、布局不变、平移跟手**（报告 #1 待验证项——过！）。typecheck+build 通过。
+
+**P1 未做(留 P2)**：标题/favicon 回填节点名、新窗口→新节点(主进程 did-attach-webview+setWindowOpenHandler)、url 持久化(did-navigate 回写→重开还原)、右键(devtools/复制链接)、多 webview 懒挂载/离屏治理、iframe feature-flag 兜底。**导航 back/forward 按钮已接 API 但未逐一 live 点验**（标准 webview API，低风险）。
+
 ## ③ 环境坑（已修，已记 memory）
 
 见 [[npm-install-会破坏electron和nodepty原生模块]]：这台机器 `npm install` 会因 allow-scripts 破坏 electron dist + node-pty spawn-helper，导致 dev 起不来。修法已记。眼验 Electron UI 用 [[CDP眼验法-破解多实例抢焦点]]（本会话靠它验花屏 + 原型）。

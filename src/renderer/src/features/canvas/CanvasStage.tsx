@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
-import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon } from '../../ui/Icons'
+import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
@@ -26,6 +26,7 @@ export function CanvasStage(): JSX.Element {
   const toggleCollapse = useStore((s) => s.toggleCollapse)
   const projects = useStore((s) => s.projects)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
+  const addBrowserNode = useStore((s) => s.addBrowserNode)
   const shapes = useStore((s) => s.canvas.shapes)
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
@@ -651,6 +652,14 @@ export function CanvasStage(): JSX.Element {
                 onClick={() => void addTerminalNode(f.id)}
               >
                 <TerminalIcon size={13} />
+              </button>
+              <button
+                className="cframe-btn"
+                data-tip="新建浏览器"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => addBrowserNode(f.id)}
+              >
+                <GlobeIcon size={13} />
               </button>
               <button
                 className="cframe-btn"
