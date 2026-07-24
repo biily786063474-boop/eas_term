@@ -24,7 +24,7 @@ export type PaneState =
   | { kind: 'history'; cwd: string }
   | { kind: 'chat'; cwd: string }
   | { kind: 'dict' }
-  | { kind: 'web'; url: string | null }
+  | { kind: 'web'; url: string | null; title?: string }
 
 export interface LeafNode {
   type: 'leaf'

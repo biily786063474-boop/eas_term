@@ -137,6 +137,8 @@ export interface CanvasSlice {
   addBrowserNode: (frameId: string) => void
   /** 更新 web 节点的当前地址（浏览器导航时回写，重开还原到上次页面） */
   setNodeUrl: (frameId: string, nodeId: string, url: string) => void
+  /** 更新 web 节点的页面标题（存 pane.title；节点头部显示时手动 name 优先，其次标题） */
+  setWebNodeTitle: (frameId: string, nodeId: string, title: string) => void
   /** 把画布平移到某节点居中（保持当前缩放）——如浏览器里点链接开新页时聚焦过去 */
   focusCanvasNode: (frameId: string, nodeId: string) => void
   /** 重命名节点（自定义名称） */
@@ -927,6 +929,25 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                 nodes: f.nodes.map((n) =>
                   n.id === nodeId && n.pane?.kind === 'web'
                     ? { ...n, pane: { ...n.pane, url } }
+                    : n
+                )
+              }
+            : f
+        )
+      }
+    })),
+
+  setWebNodeTitle: (frameId, nodeId, title) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId && n.pane?.kind === 'web'
+                    ? { ...n, pane: { ...n.pane, title } }
                     : n
                 )
               }

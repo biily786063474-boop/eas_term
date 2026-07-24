@@ -35,9 +35,21 @@ export function CanvasFileNode({
   const pane = node.pane
   if (!pane) return null
 
+  // web 节点头部：页面标题优先，其次主机名/文件名，最后「网页」（手动 node.name 更优先，见下方 ?? ）
+  const webLabel = (): string => {
+    if (pane.kind !== 'web') return '网页'
+    if (pane.title) return pane.title
+    if (!pane.url) return '网页'
+    try {
+      const u = new URL(pane.url)
+      return u.protocol === 'file:' ? (u.pathname.split('/').pop() || pane.url) : u.hostname
+    } catch {
+      return pane.url
+    }
+  }
   const fileName =
     pane.kind === 'web'
-      ? (pane.url ?? '网页')
+      ? webLabel()
       : pane.kind === 'code' || pane.kind === 'image'
         ? (pane.filePath?.split('/').pop() ?? '未命名')
         : '预览'

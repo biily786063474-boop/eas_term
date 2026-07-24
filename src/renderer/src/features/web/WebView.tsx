@@ -75,17 +75,11 @@ export function WebView({
     const host = hostRef.current
     if (!host) return
     ensureFocusListener()
-    const wv = document.createElement('webview') as unknown as WebviewEl
-    wv.className = 'web-frame'
-    wv.setAttribute('partition', 'persist:browser') // 多浏览器节点共享会话，与主应用隔离
-    // 允许 window.open/target=_blank 触达主进程 setWindowOpenHandler（否则被直接禁掉、拦不成同 view 导航）
-    wv.setAttribute('allowpopups', 'true')
-    if (initialUrl) wv.setAttribute('src', initialUrl)
-    host.appendChild(wv)
-    wvRef.current = wv
+    let wv: WebviewEl | null = null
     let guestId = -1
 
     const syncNav = (): void => {
+      if (!wv) return
       try {
         setCanBack(wv.canGoBack())
         setCanFwd(wv.canGoForward())
@@ -122,31 +116,66 @@ export function WebView({
       const favs = (e as unknown as { favicons?: string[] }).favicons
       setFavicon(favs && favs.length ? favs[0] : null)
     }
+    const onTitle = (e: Event): void => {
+      // 页面标题回写节点(存 pane.title；节点头部手动 name 优先，其次标题)
+      const t = (e as unknown as { title?: string }).title
+      if (t && frameId && nodeId) useStore.getState().setWebNodeTitle(frameId, nodeId, t)
+    }
     const onDomReady = (): void => {
+      if (!wv) return
       guestId = wv.getWebContentsId()
       // 注册聚焦回调：主进程拦到链接开新窗 → 通知 → 把画布平移到本浏览器节点
       focusRegistry.set(guestId, () => {
         if (frameId && nodeId) useStore.getState().focusCanvasNode(frameId, nodeId)
       })
     }
-    wv.addEventListener('did-start-loading', onStart)
-    wv.addEventListener('did-stop-loading', onStop)
-    wv.addEventListener('did-navigate', onNav)
-    wv.addEventListener('did-navigate-in-page', onNavInPage)
-    wv.addEventListener('did-fail-load', onFail)
-    wv.addEventListener('page-favicon-updated', onFavicon)
-    wv.addEventListener('dom-ready', onDomReady)
+
+    // 懒挂载：节点首次进入视口才创建 webview。离屏的浏览器节点（如恢复一堆书签）不建 Chromium 进程，省内存。
+    const create = (): void => {
+      if (wv) return
+      wv = document.createElement('webview') as unknown as WebviewEl
+      wv.className = 'web-frame'
+      wv.setAttribute('partition', 'persist:browser') // 多浏览器节点共享会话，与主应用隔离
+      // 允许 window.open/target=_blank 触达主进程 setWindowOpenHandler（否则被禁、拦不成同 view 导航）
+      wv.setAttribute('allowpopups', 'true')
+      if (initialUrl) wv.setAttribute('src', initialUrl)
+      host.appendChild(wv)
+      wvRef.current = wv
+      wv.addEventListener('did-start-loading', onStart)
+      wv.addEventListener('did-stop-loading', onStop)
+      wv.addEventListener('did-navigate', onNav)
+      wv.addEventListener('did-navigate-in-page', onNavInPage)
+      wv.addEventListener('did-fail-load', onFail)
+      wv.addEventListener('page-favicon-updated', onFavicon)
+      wv.addEventListener('page-title-updated', onTitle)
+      wv.addEventListener('dom-ready', onDomReady)
+    }
+
+    const io = new IntersectionObserver(
+      (ents) => {
+        if (ents.some((e) => e.isIntersecting)) {
+          create()
+          io.disconnect()
+        }
+      },
+      { threshold: 0.01 }
+    )
+    io.observe(host)
 
     return () => {
-      wv.removeEventListener('did-start-loading', onStart)
-      wv.removeEventListener('did-stop-loading', onStop)
-      wv.removeEventListener('did-navigate', onNav)
-      wv.removeEventListener('did-navigate-in-page', onNavInPage)
-      wv.removeEventListener('did-fail-load', onFail)
-      wv.removeEventListener('page-favicon-updated', onFavicon)
-      wv.removeEventListener('dom-ready', onDomReady)
-      if (guestId >= 0) focusRegistry.delete(guestId)
-      wv.remove()
+      io.disconnect()
+      if (wv) {
+        wv.removeEventListener('did-start-loading', onStart)
+        wv.removeEventListener('did-stop-loading', onStop)
+        wv.removeEventListener('did-navigate', onNav)
+        wv.removeEventListener('did-navigate-in-page', onNavInPage)
+        wv.removeEventListener('did-fail-load', onFail)
+        wv.removeEventListener('page-favicon-updated', onFavicon)
+        wv.removeEventListener('page-title-updated', onTitle)
+        wv.removeEventListener('dom-ready', onDomReady)
+        if (guestId >= 0) focusRegistry.delete(guestId)
+        wv.remove()
+      }
       wvRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
