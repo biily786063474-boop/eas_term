@@ -39,6 +39,12 @@
   opacity: 0.32;
   cursor: default;
 }
+.web-more {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.5px;
+}
 
 .web-addr {
   flex: 1;

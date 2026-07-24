@@ -5,6 +5,7 @@
 // 且部分属性必须在 attach 前 setAttribute)。
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon } from '../../ui/Icons'
 import './web.css'
@@ -20,6 +21,7 @@ interface WebviewEl extends HTMLElement {
   goForward(): void
   canGoBack(): boolean
   canGoForward(): boolean
+  openDevTools(): void
 }
 
 // guestId → 聚焦该浏览器节点的回调。主进程拦截「链接开新窗」后按 guest webContents id 通知，
@@ -59,6 +61,15 @@ export function WebView({
   const [canBack, setCanBack] = useState(false)
   const [canFwd, setCanFwd] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [menu, setMenu] = useState<DOMRect | null>(null) // ⋯ 溢出菜单锚点
+
+  // 菜单外部点击 / Esc 关闭
+  useEffect(() => {
+    if (!menu) return
+    const close = (): void => setMenu(null)
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [menu])
 
   useEffect(() => {
     const host = hostRef.current
@@ -189,6 +200,14 @@ export function WebView({
           />
           {loading && <span className="web-spin" />}
         </div>
+        <button
+          className="web-nav web-more"
+          data-tip="更多"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => setMenu(menu ? null : e.currentTarget.getBoundingClientRect())}
+        >
+          ⋯
+        </button>
       </div>
       <div className="web-body" ref={hostRef}>
         {!initialUrl && !addr && (
@@ -205,6 +224,43 @@ export function WebView({
           </div>
         )}
       </div>
+      {menu &&
+        createPortal(
+          <div
+            className="context-menu"
+            style={{ left: Math.max(8, menu.right - 176), top: menu.bottom + 4 }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                const u = wvRef.current?.getURL()
+                if (u) void window.api.clipboard.writeText(u)
+                setMenu(null)
+              }}
+            >
+              复制网址
+            </button>
+            <button
+              onClick={() => {
+                const u = wvRef.current?.getURL()
+                if (u) void window.api.shell.openExternal(u)
+                setMenu(null)
+              }}
+            >
+              用系统浏览器打开
+            </button>
+            <div className="menu-sep" />
+            <button
+              onClick={() => {
+                wvRef.current?.openDevTools()
+                setMenu(null)
+              }}
+            >
+              开发者工具
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
