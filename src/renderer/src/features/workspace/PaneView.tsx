@@ -11,6 +11,7 @@ import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
 import { WebView } from '../web/WebView'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
+import { CanvasAgentBar } from '../canvas/CanvasAgentBar'
 
 // 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
 const DictView = lazy(() =>
@@ -374,6 +375,16 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           <CloseIcon />
         </button>
       </div>
+      {canvasTerm && pane.kind === 'terminal' && (
+        // Agent 控制台控制条（画布终端专属；用 zoom 随缩放，与头部一致）
+        <div className="agentbar-wrap" style={{ zoom: cs }}>
+          <CanvasAgentBar
+            frameId={canvasRect!.frameId}
+            nodeId={canvasRect!.nodeId}
+            ptyId={pane.ptyId}
+          />
+        </div>
+      )}
       <div className="pane-body">
         {pane.kind === 'terminal' && (
           <TerminalView

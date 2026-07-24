@@ -1140,3 +1140,118 @@
   background: var(--accent);
   animation: cd-dot-breathe 1.5s ease-in-out infinite;
 }
+
+/* ---------- 画布终端 Agent 控制台控制条 ---------- */
+.agentbar-wrap {
+  flex: none;
+}
+.agentbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 11.5px;
+}
+.ab-seg {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 2px;
+}
+.ab-seg button {
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ab-seg button.on {
+  background: var(--accent);
+  color: #0b0d12;
+  font-weight: 600;
+}
+.ab-seg button.soon {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ab-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-dim);
+}
+.ab-ctl > span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.ab-ctl select {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--glass-border);
+  border-radius: 7px;
+  color: var(--fg);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 3px 6px;
+  outline: none;
+}
+.ab-effort {
+  display: inline-flex;
+  gap: 2px;
+}
+.ab-effort button {
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ab-effort button.on {
+  background: var(--accent);
+  color: #0b0d12;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.ab-cont {
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--fg-dim);
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ab-cont.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.ab-launch {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(var(--accent-rgb), 0.92);
+  color: #0b0d12;
+  font-weight: 650;
+  font-size: 11.5px;
+  padding: 5px 13px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ab-launch:hover {
+  filter: brightness(1.08);
+}

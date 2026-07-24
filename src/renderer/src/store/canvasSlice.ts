@@ -15,6 +15,18 @@ export interface CanvasViewport {
   scale: number
 }
 
+/** 终端节点上的「Agent 控制台」配置（画布独有 chrome，分屏不渲染；底层仍是真实 CLI）。
+ *  未设(undefined)= 纯终端；设了则显示控制条，点启动把参数拼成 CLI 命令写进终端。 */
+export interface NodeAgent {
+  kind: 'claude' | 'codex'
+  model?: string
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+  /** 默认询问 / 接受编辑 / 规划 / 跳过全部确认 */
+  permission?: 'default' | 'acceptEdits' | 'plan' | 'skip'
+  /** 启动时带 -c 继续上次会话 */
+  cont?: boolean
+}
+
 /** 画布节点：坐标相对所属 Frame（含头部偏移）。
  *  终端节点用 leafId 引用共享 leaf（两视图同源，pane-layer 渲染）；
  *  文件预览节点用 pane 自带内容（画布独有，装饰层渲染，不进分屏）。二者二选一。 */
@@ -26,6 +38,8 @@ export interface CanvasNode {
   component?: { type: string; props?: Record<string, unknown> }
   /** 自定义名称（可重命名）；未设则用默认标题 */
   name?: string
+  /** 终端节点的 Agent 控制台配置（画布独有；持久化，重开保留选择） */
+  agent?: NodeAgent
   x: number
   y: number
   w: number
@@ -116,6 +130,8 @@ export interface CanvasSlice {
   addTerminalNode: (frameId: string) => Promise<void>
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
+  /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
+  setNodeAgent: (frameId: string, nodeId: string, agent: NodeAgent | null) => void
   /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点，含终端节点）。
    *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */
   canvasSel: string[]
@@ -614,6 +630,23 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         frames: s.canvas.frames.map((f) =>
           f.id === frameId
             ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, name } : n)) }
+            : f
+        )
+      }
+    })),
+
+  setNodeAgent: (frameId, nodeId, agent) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId ? { ...n, agent: agent ?? undefined } : n
+                )
+              }
             : f
         )
       }
