@@ -2,7 +2,7 @@
 // 拖项目 → 落画布生成 Frame（已在画布则聚焦）；双击项目 → 新开终端。
 // 文件树复用 FileTree（拖文件入画布在下一步接入）。
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../../store'
 import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
@@ -28,7 +28,8 @@ function shellQuote(p: string): string {
 }
 
 export function CanvasDrawer(): JSX.Element {
-  const [collapsed, setCollapsed] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [edgeHover, setEdgeHover] = useState(false)
   const [projOpen, setProjOpen] = useState(true)
   const [filesOpen, setFilesOpen] = useState(true)
   const [compOpen, setCompOpen] = useState(true)
@@ -65,6 +66,22 @@ export function CanvasDrawer(): JSX.Element {
           (l) => l.pane.kind === 'terminal' && attentionPtys.includes(l.pane.ptyId)
         )
     )
+
+  // 待处理项目数（收起时右上角气泡显示）
+  const attentionCount = projects.filter((p) => projectHasAttention(p.id)).length
+
+  // 抽屉打开时：在抽屉以外任何地方点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent): void => {
+      if (!(e.target as HTMLElement).closest?.('.canvas-drawer')) setOpen(false)
+    }
+    const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
+    return () => {
+      window.clearTimeout(t)
+      document.removeEventListener('mousedown', onDown, true)
+    }
+  }, [open])
 
   const focusFrame = (frameId: string): void => {
     const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
@@ -344,23 +361,43 @@ export function CanvasDrawer(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
-  if (collapsed) {
-    return (
-      <button className="drawer-expand" data-tip="展开资源" onClick={() => setCollapsed(false)}>
-        <ChevronLeftIcon size={16} />
-      </button>
-    )
-  }
-
   return (
-    <aside className="canvas-drawer">
-      <div className="cd-head">
-        <span className="cd-drawer-title">资源</span>
-        <button className="cd-collapse" data-tip="收起抽屉" onClick={() => setCollapsed(true)}>
-          <ChevronRightIcon size={15} />
-        </button>
-      </div>
-      <div className="cd-scroll">
+    <>
+      {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡 */}
+      {!open && (
+        <>
+          <div
+            className={`cd-edge${edgeHover ? ' hot' : ''}`}
+            onMouseEnter={() => setEdgeHover(true)}
+            onMouseLeave={() => setEdgeHover(false)}
+            onClick={() => {
+              setEdgeHover(false)
+              setOpen(true)
+            }}
+          >
+            <span className="cd-edge-arrow">
+              <ChevronLeftIcon size={18} />
+            </span>
+          </div>
+          {attentionCount > 0 && (
+            <button
+              className="cd-attn-bubble"
+              data-tip="有待处理内容，点击展开"
+              onClick={() => setOpen(true)}
+            >
+              {attentionCount}
+            </button>
+          )}
+        </>
+      )}
+      <aside className={`canvas-drawer${open ? ' open' : ' closed'}`}>
+        <div className="cd-head">
+          <span className="cd-drawer-title">资源</span>
+          <button className="cd-collapse" data-tip="收起抽屉" onClick={() => setOpen(false)}>
+            <ChevronRightIcon size={15} />
+          </button>
+        </div>
+        <div className="cd-scroll">
         <section className="cd-section" style={projOpen ? { height: projH, flex: 'none' } : undefined}>
           <div className="cd-sec-head" onClick={() => setProjOpen((v) => !v)}>
             <span className={`cd-chev${projOpen ? ' open' : ''}`}>
@@ -454,5 +491,6 @@ export function CanvasDrawer(): JSX.Element {
         </section>
       </div>
     </aside>
+    </>
   )
 }

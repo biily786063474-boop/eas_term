@@ -199,6 +199,106 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
   overflow: hidden;
+  /* 弹簧物理感：末端回弹的 back 曲线 */
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.28s ease;
+  will-change: transform;
+}
+.canvas-drawer.closed {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+.canvas-drawer.open {
+  transform: translateX(0);
+}
+
+/* 右缘悬停感应区：辉光条 + 中部左箭头 */
+.cd-edge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: pointer;
+}
+.cd-edge::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgba(var(--accent-rgb), 0);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.cd-edge.hot::before {
+  background: rgba(var(--accent-rgb), 0.75);
+  box-shadow: 0 0 20px 4px rgba(var(--accent-rgb), 0.4);
+}
+.cd-edge-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 48px;
+  margin-right: 1px;
+  border-radius: 12px 0 0 12px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border);
+  border-right: none;
+  color: var(--fg-dim);
+  opacity: 0;
+  transform: translateX(10px);
+  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
+}
+.cd-edge.hot .cd-edge-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--accent);
+}
+
+/* 收起态右上角「待处理」气泡 */
+.cd-attn-bubble {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 31;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.95);
+  color: #0b0d12;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.55);
+  animation: cd-bubble-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), cd-bubble-pulse 1.7s ease-in-out infinite;
+}
+@keyframes cd-bubble-pop {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes cd-bubble-pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.45);
+  }
+  50% {
+    box-shadow: 0 4px 22px 3px rgba(var(--accent-rgb), 0.75);
+  }
 }
 
 .cd-head {
