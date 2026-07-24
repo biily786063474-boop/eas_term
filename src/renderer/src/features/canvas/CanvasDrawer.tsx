@@ -2,7 +2,7 @@
 // 拖项目 → 落画布生成 Frame（已在画布则聚焦）；双击项目 → 新开终端。
 // 文件树复用 FileTree（拖文件入画布在下一步接入）。
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
@@ -82,6 +82,23 @@ export function CanvasDrawer(): JSX.Element {
       document.removeEventListener('mousedown', onDown, true)
     }
   }, [open])
+
+  // 收起态右缘触发器：鼠标越靠右边缘，左箭头越向左「探出」跟手（橡皮筋趋势）；离开时回弹
+  const edgeArrowRef = useRef<HTMLSpanElement>(null)
+  const onEdgeMove = (e: React.MouseEvent): void => {
+    const el = edgeArrowRef.current
+    if (!el) return
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const t = Math.max(0, Math.min(1, 1 - (r.right - e.clientX) / r.width))
+    el.style.transition = 'transform 0.1s ease-out, opacity 0.22s ease'
+    el.style.transform = `translateX(${(-9 * t).toFixed(2)}px)`
+  }
+  const resetEdgeArrow = (): void => {
+    const el = edgeArrowRef.current
+    if (!el) return
+    el.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease'
+    el.style.transform = ''
+  }
 
   const focusFrame = (frameId: string): void => {
     const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
@@ -369,13 +386,17 @@ export function CanvasDrawer(): JSX.Element {
           <div
             className={`cd-edge${edgeHover ? ' hot' : ''}`}
             onMouseEnter={() => setEdgeHover(true)}
-            onMouseLeave={() => setEdgeHover(false)}
+            onMouseMove={onEdgeMove}
+            onMouseLeave={() => {
+              setEdgeHover(false)
+              resetEdgeArrow()
+            }}
             onClick={() => {
               setEdgeHover(false)
               setOpen(true)
             }}
           >
-            <span className="cd-edge-arrow">
+            <span className="cd-edge-arrow" ref={edgeArrowRef}>
               <ChevronLeftIcon size={18} />
             </span>
           </div>
@@ -391,12 +412,6 @@ export function CanvasDrawer(): JSX.Element {
         </>
       )}
       <aside className={`canvas-drawer${open ? ' open' : ' closed'}`}>
-        <div className="cd-head">
-          <span className="cd-drawer-title">资源</span>
-          <button className="cd-collapse" data-tip="收起抽屉" onClick={() => setOpen(false)}>
-            <ChevronRightIcon size={15} />
-          </button>
-        </div>
         <div className="cd-scroll">
         <section className="cd-section" style={projOpen ? { height: projH, flex: 'none' } : undefined}>
           <div className="cd-sec-head" onClick={() => setProjOpen((v) => !v)}>
