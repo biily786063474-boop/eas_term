@@ -149,6 +149,8 @@ const initialScene: CanvasScene = {
 
 /** 落盘的画布场景（含 viewMode）。终端节点的 leafId 已剥离（会话相关，重开时重绑）。 */
 export interface PersistedCanvas {
+  /** schema 版本；读时按版本迁移（当前恢复路径统一走 sanitizeCanvas 兜底，不强依赖） */
+  version?: number
   viewMode: ViewMode
   viewport: CanvasViewport
   frames: CanvasFrame[]
@@ -168,6 +170,7 @@ export function serializeCanvas(
   leafPaneOf: (leafId: string) => PaneState | undefined
 ): PersistedCanvas {
   return {
+    version: CANVAS_VERSION,
     viewMode,
     viewport: canvas.viewport,
     frames: canvas.frames.map((f) => ({
@@ -338,6 +341,102 @@ function placeNodeAtPoint(frame: CanvasFrame, node: CanvasNode, prefX: number, p
   return { ...frame, nodes: [...frame.nodes, { ...node, x, y }] }
 }
 
+// ---- 坏存档防御 ----
+// 磁盘 canvas.json 可能「能 parse 但成员畸形」(schema 无版本演进 / JSON.stringify 丢 undefined 键 /
+// 崩溃半截写入 / 手改)。直接灌进 state → 渲染期 `f.nodes.forEach`、`vp.scale(NaN)` 抛错 → 无 Error
+// Boundary 时整树白、且因订阅未挂覆盖不了坏档 → 永久打不开。sanitizeCanvas 逐项规范化:坏 frame/node
+// 丢弃而非整档,数值兜有限值,scale 钳到画布合法区间(与 CanvasStage 的 SCALE_MIN/MAX 一致)。
+const VP_SCALE_MIN = 0.2
+const VP_SCALE_MAX = 2.2
+const CANVAS_VERSION = 1
+const finiteOr = (v: unknown, dflt: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : dflt
+const clampScale = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(VP_SCALE_MAX, Math.max(VP_SCALE_MIN, v)) : 1
+
+function sanitizeViewport(raw: unknown): CanvasViewport {
+  const v = (raw ?? {}) as Record<string, unknown>
+  return { x: finiteOr(v.x, 0), y: finiteOr(v.y, 0), scale: clampScale(v.scale) }
+}
+
+function sanitizeNode(raw: unknown): CanvasNode | null {
+  if (!raw || typeof raw !== 'object') return null
+  const n = raw as Record<string, unknown>
+  if (typeof n.id !== 'string') return null
+  return {
+    ...(n as unknown as CanvasNode),
+    id: n.id,
+    x: finiteOr(n.x, 0),
+    y: finiteOr(n.y, 0),
+    w: finiteOr(n.w, NODE_W),
+    h: finiteOr(n.h, NODE_H)
+  }
+}
+
+function sanitizeFrame(raw: unknown): CanvasFrame | null {
+  if (!raw || typeof raw !== 'object') return null
+  const f = raw as Record<string, unknown>
+  if (typeof f.id !== 'string') return null
+  const nodes = Array.isArray(f.nodes)
+    ? f.nodes.map(sanitizeNode).filter((n): n is CanvasNode => n !== null)
+    : []
+  return {
+    ...(f as unknown as CanvasFrame),
+    id: f.id,
+    projectId: typeof f.projectId === 'string' ? f.projectId : null,
+    name: typeof f.name === 'string' ? f.name : '未命名',
+    x: finiteOr(f.x, 0),
+    y: finiteOr(f.y, 0),
+    w: finiteOr(f.w, NODE_W + PAD * 2),
+    h: finiteOr(f.h, NODE_H + HEAD + PAD * 2),
+    collapsed: f.collapsed === true,
+    nodes
+  }
+}
+
+const SHAPE_TYPES = new Set(['rect', 'arrow', 'sticky'])
+function sanitizeShape(raw: unknown): CanvasShape | null {
+  if (!raw || typeof raw !== 'object') return null
+  const s = raw as Record<string, unknown>
+  if (typeof s.id !== 'string' || !SHAPE_TYPES.has(s.type as string)) return null
+  return {
+    ...(s as unknown as CanvasShape),
+    id: s.id,
+    type: s.type as CanvasShape['type'],
+    x: finiteOr(s.x, 0),
+    y: finiteOr(s.y, 0),
+    w: finiteOr(s.w, 100),
+    h: finiteOr(s.h, 100)
+  }
+}
+
+/** 把磁盘读来的原始对象规范化成安全的 PersistedCanvas;整体异常兜底为空场景。
+ *  droppedFrames：被丢弃的坏 frame 数(用于 log,避免静默丢数据)。 */
+function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedFrames: number } {
+  try {
+    const r = (raw ?? {}) as Record<string, unknown>
+    const rawFrames = Array.isArray(r.frames) ? r.frames : []
+    const frames = rawFrames.map(sanitizeFrame).filter((f): f is CanvasFrame => f !== null)
+    const shapes = Array.isArray(r.shapes)
+      ? r.shapes.map(sanitizeShape).filter((s): s is CanvasShape => s !== null)
+      : []
+    return {
+      scene: {
+        viewMode: r.viewMode === 'canvas' ? 'canvas' : 'split',
+        viewport: sanitizeViewport(r.viewport),
+        frames,
+        shapes
+      },
+      droppedFrames: rawFrames.length - frames.length
+    }
+  } catch {
+    return {
+      scene: { viewMode: 'split', viewport: { x: 0, y: 0, scale: 1 }, frames: [], shapes: [] },
+      droppedFrames: 0
+    }
+  }
+}
+
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
   canvas: initialScene,
@@ -353,17 +452,20 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   },
 
   loadCanvas: async () => {
-    const raw = (await window.api.canvas.load()) as PersistedCanvas | null
-    if (!raw || !Array.isArray(raw.frames)) return
-    set(() => ({
-      canvas: {
-        viewport: raw.viewport ?? initialScene.viewport,
-        frames: raw.frames,
-        shapes: Array.isArray(raw.shapes) ? raw.shapes : []
-      }
-    }))
+    let raw: unknown = null
+    try {
+      raw = await window.api.canvas.load()
+    } catch (e) {
+      console.error('[loadCanvas] 读盘失败,保持空场景', e)
+      return
+    }
+    if (raw == null) return
+    // 坏档防御:逐项规范化,坏 frame/node 丢弃而非让渲染崩成永久白屏
+    const { scene, droppedFrames } = sanitizeCanvas(raw)
+    if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
+    set(() => ({ canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes } }))
     // 上次退出停在画布 → 恢复到画布并立即重开终端
-    if (raw.viewMode === 'canvas') {
+    if (scene.viewMode === 'canvas') {
       set({ viewMode: 'canvas' })
       await get().materializeCanvas()
     }
@@ -375,35 +477,46 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     try {
       const frames = get().canvas.frames
       for (const f of frames) {
-        // 项目已被删除的 Frame：跳过重开终端（避免开到 home）
-        if (f.projectId && !get().projects.some((p) => p.id === f.projectId)) continue
-        for (const n of f.nodes) {
-          if (n.leafId || n.pane || n.component) continue // 已绑定 / 文件 / 组件 → 跳过
-          // 终端占位 → 重开一个终端绑定到该节点（全新 shell）
-          const before = new Set(
-            get()
-              .tabs.filter((t) => t.projectId === f.projectId)
-              .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
-          )
-          await get().openTerminal({ projectId: f.projectId })
-          const newLeaf = get()
-            .tabs.filter((t) => t.projectId === f.projectId)
-            .flatMap((t) => collectLeaves(t.root))
-            .find((l) => !before.has(l.id))
-          if (!newLeaf) continue
-          set((s) => ({
-            canvas: {
-              ...s.canvas,
-              frames: s.canvas.frames.map((fr) =>
-                fr.id === f.id
-                  ? {
-                      ...fr,
-                      nodes: fr.nodes.map((nn) => (nn.id === n.id ? { ...nn, leafId: newLeaf.id } : nn))
-                    }
-                  : fr
+        try {
+          // 项目已被删除的 Frame：跳过重开终端（避免开到 home）
+          if (f.projectId && !get().projects.some((p) => p.id === f.projectId)) continue
+          for (const n of f.nodes) {
+            try {
+              if (n.leafId || n.pane || n.component) continue // 已绑定 / 文件 / 组件 → 跳过
+              // 终端占位 → 重开一个终端绑定到该节点（全新 shell）
+              const before = new Set(
+                get()
+                  .tabs.filter((t) => t.projectId === f.projectId)
+                  .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
               )
+              await get().openTerminal({ projectId: f.projectId })
+              const newLeaf = get()
+                .tabs.filter((t) => t.projectId === f.projectId)
+                .flatMap((t) => collectLeaves(t.root))
+                .find((l) => !before.has(l.id))
+              if (!newLeaf) continue
+              set((s) => ({
+                canvas: {
+                  ...s.canvas,
+                  frames: s.canvas.frames.map((fr) =>
+                    fr.id === f.id
+                      ? {
+                          ...fr,
+                          nodes: fr.nodes.map((nn) =>
+                            nn.id === n.id ? { ...nn, leafId: newLeaf.id } : nn
+                          )
+                        }
+                      : fr
+                  )
+                }
+              }))
+            } catch (e) {
+              // 单个节点重开失败不中断整轮恢复（否则一个坏节点连带掐掉后续 + 保存订阅）
+              console.error('[materializeCanvas] 节点重开失败,跳过', e)
             }
-          }))
+          }
+        } catch (e) {
+          console.error('[materializeCanvas] frame 恢复失败,跳过', e)
         }
       }
     } finally {
@@ -412,7 +525,17 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   },
 
   setViewport: (vp) =>
-    set((s) => ({ canvas: { ...s.canvas, viewport: { ...s.canvas.viewport, ...vp } } })),
+    set((s) => {
+      const cur = s.canvas.viewport
+      const next = { ...cur, ...vp }
+      // 兜死 NaN/0/超界:scale=0 会让终端 placement 变 NaN 整屏消失、拖拽 dx/scale=Infinity 腐化存档
+      return {
+        canvas: {
+          ...s.canvas,
+          viewport: { x: finiteOr(next.x, cur.x), y: finiteOr(next.y, cur.y), scale: clampScale(next.scale) }
+        }
+      }
+    }),
 
   seedCanvas: () => {
     const s = get()

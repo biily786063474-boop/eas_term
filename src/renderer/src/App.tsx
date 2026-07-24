@@ -29,8 +29,13 @@ export function App(): JSX.Element {
     let unsub = (): void => {}
     let timer: number | undefined
     void (async () => {
-      await loadProjects()
-      await loadCanvas()
+      // 启动加载失败也不能吞掉后续:务必挂上保存订阅,否则整会话只出不进(数据不落盘)
+      try {
+        await loadProjects()
+        await loadCanvas()
+      } catch (e) {
+        console.error('[App:startup] 加载项目/画布失败', e)
+      }
       unsub = useStore.subscribe((s, prev) => {
         if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return
         clearTimeout(timer)
