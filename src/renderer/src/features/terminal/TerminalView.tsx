@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Terminal, type ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -43,9 +43,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
-  // 最新缩放比 + 去抖 fit 句柄（供画布缩放 effect 与 ResizeObserver 共用同一条去抖 fit）
+  // 最新缩放比 + 立即 fit 句柄（缩放落定时用；ResizeObserver 另有去抖 fit）
   const canvasScaleRef = useRef(canvasScale)
-  const scheduleFitRef = useRef<(() => void) | null>(null)
+  const fitNowRef = useRef<(() => void) | null>(null)
   // 鼠标当前悬停命中的路径（link provider 的 hover/leave 维护），右键时读取
   const hoveredRef = useRef<HoveredPath | null>(null)
   const [menu, setMenu] = useState<TermMenu | null>(null)
@@ -383,7 +383,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       if (fitTimer) clearTimeout(fitTimer)
       fitTimer = window.setTimeout(doFit, 100)
     }
-    scheduleFitRef.current = scheduleFit
+    fitNowRef.current = doFit // 缩放落定时立即 fit(见 canvasScale 的 useLayoutEffect),无闪烁
     doFit()
     window.api.pty.resize(ptyId, term.cols, term.rows)
 
@@ -494,12 +494,13 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     if (termRef.current) termRef.current.options.theme = xtermTheme(theme)
   }, [theme])
 
-  // 画布缩放变化 → 记下最新缩放比,走共享去抖 fit（改字号 + fit 合并到手势停止后一次做）。
-  // 配合 PaneView 把容器设成实际像素尺寸，行列数不变、坐标与字符尺寸同步缩放 → 鼠标精准；
-  // 去抖避免连续缩放每帧重建 GPU canvas（见挂载 effect 里 scheduleFit 的说明）。
-  useEffect(() => {
+  // canvasScale = PaneView 传入的 committedScale（缩放「落定」值，只在手势停止后变一次，不逐帧变）。
+  // 故这里可以**立即** fit（落真实字号 + 重排行列）而非去抖——缩放过程中的实时视觉由 PaneView 的
+  // transform 预览承担,不经这里;落定这一次用 useLayoutEffect 在 paint 前 fit,避免「容器已变大、
+  // 内容还是旧字号」的一帧闪烁。连续缩放期间 canvasScale 不变 → 此 effect 不触发 → 不会每帧重建 GPU。
+  useLayoutEffect(() => {
     canvasScaleRef.current = canvasScale
-    scheduleFitRef.current?.()
+    fitNowRef.current?.()
   }, [canvasScale])
 
   const run = (fn: () => void) => (): void => {

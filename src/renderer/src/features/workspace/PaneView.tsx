@@ -204,20 +204,28 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
   const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 
-  const cs = canvasRect?.scale ?? 1
-  // 画布终端走「字体缩放」而非 CSS transform：终端 pane 用实际像素尺寸、不变形，
-  // 字号按 cs 放大（TerminalView 内），使 xterm 鼠标坐标精准；头部用 zoom 缩放（布局感知、按钮仍可点）。
+  const cs = canvasRect?.scale ?? 1 // 实时缩放比(每帧跟手)
+  // 落定的缩放比:画布终端的字号/头部按它渲染;缩放手势中它不变,pane 用 transform 做实时预览,
+  // 手势停止后才落到 cs(此时终端才真正落字号+fit,鼠标坐标精准)。见 canvasSlice.canvasCommittedScale。
+  const committedScale = useStore((s) => s.canvasCommittedScale)
+  // 画布终端走「字体缩放」而非常驻 CSS transform（为了鼠标坐标精准）；但缩放手势进行中(cs≠committed)
+  // 临时套一层 transform 做实时视觉预览，手势停定后 transform 归 1、落真实字号。
   const canvasTerm = !!canvasRect && pane.kind === 'terminal'
+  const zoomPreview = canvasTerm && Math.abs(cs - committedScale) > 0.0005
 
-  // 画布模式：终端=实际像素尺寸(无变形)；其它节点=像素定位 + 整体位图缩放；分屏=百分比 rect
+  // 画布模式：终端=按 committed 像素尺寸 + 缩放手势中 transform 预览；其它节点=像素定位 + 整体位图缩放；分屏=百分比 rect
   const paneStyle: CSSProperties = canvasRect
     ? canvasTerm
       ? {
           display: hidden ? 'none' : undefined,
           left: canvasRect.left,
           top: canvasRect.top,
-          width: canvasRect.w * cs,
-          height: canvasRect.h * cs
+          width: canvasRect.w * committedScale,
+          height: canvasRect.h * committedScale,
+          // 手势中：把按 committed 渲染的终端整体缩放到实时 cs（丝滑、不重建 GPU）；停定后 =scale(1)
+          transform: zoomPreview ? `scale(${cs / committedScale})` : undefined,
+          transformOrigin: '0 0',
+          willChange: zoomPreview ? 'transform' : undefined
         }
       : {
           display: hidden ? 'none' : undefined,
@@ -301,9 +309,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         className="pane-header"
         style={
           canvasRect
-            ? // 画布终端：头部用 zoom 随缩放（布局感知，按钮仍精准可点），body 不变形供 xterm 精准取坐标
+            ? // 画布终端：头部按 committed 缩放（缩放手势中由 pane transform 提供实时增量），按钮仍精准可点
               canvasTerm
-              ? { cursor: 'move', zoom: cs }
+              ? { cursor: 'move', zoom: committedScale }
               : { cursor: 'move' }
             : undefined
         }
@@ -378,8 +386,8 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         </button>
       </div>
       {canvasTerm && pane.kind === 'terminal' && (
-        // Agent 控制台控制条（画布终端专属；用 zoom 随缩放，与头部一致）
-        <div className="agentbar-wrap" style={{ zoom: cs }}>
+        // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
+        <div className="agentbar-wrap" style={{ zoom: committedScale }}>
           <CanvasAgentBar
             frameId={canvasRect!.frameId}
             nodeId={canvasRect!.nodeId}
@@ -395,7 +403,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             leafId={leaf.id}
             ptyId={pane.ptyId}
             isActive={isActive}
-            canvasScale={canvasTerm ? cs : 1}
+            canvasScale={canvasTerm ? committedScale : 1}
           />
         )}
         {pane.kind === 'code' &&

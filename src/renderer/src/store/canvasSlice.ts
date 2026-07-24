@@ -92,6 +92,10 @@ export interface CanvasSlice {
   /** 把画布里的终端占位节点（无 leafId/pane/component）逐个重开终端并绑定 leafId */
   materializeCanvas: () => Promise<void>
   setViewport: (vp: Partial<CanvasViewport>) => void
+  /** 「落定的缩放比」：画布终端的字号/头部按它渲染;缩放手势中它不变(终端靠 pane 的 transform 做实时预览),
+   *  手势停止 ~160ms 后才落到当前 viewport.scale(此时才真正落字号+fit,鼠标坐标恢复精准)。
+   *  文件/图形节点无此顾虑(本就用 transform),不受影响。 */
+  canvasCommittedScale: number
   /** 把当前项目的所有 leaf 铺成一个 Frame（幂等：已有该项目 Frame 则跳过） */
   seedCanvas: () => void
   /** 拖项目入画布：已有 Frame 则跳过（由调用方聚焦），否则（必要时先开终端）在落点建 Frame */
@@ -193,6 +197,9 @@ export function serializeCanvas(
 
 // materializeCanvas 防重入（避免恢复与进画布同时触发导致重复 spawn）
 let materializing = false
+
+// 缩放手势结束判定:每次 scale 变都重置,停 160ms 无新缩放 → 把 committedScale 落到当前 scale
+let commitScaleTimer: ReturnType<typeof setTimeout> | null = null
 
 // 节点网格布局参数（终端节点默认高度保证 ≥20 行：body≈NODE_H-30，行高 fontSize13×1.25≈16.25px）
 const NODE_W = 440
@@ -440,6 +447,7 @@ function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedFrames: 
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
   canvas: initialScene,
+  canvasCommittedScale: 1,
 
   setViewMode: (mode) => {
     set({ viewMode: mode })
@@ -463,7 +471,11 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     // 坏档防御:逐项规范化,坏 frame/node 丢弃而非让渲染崩成永久白屏
     const { scene, droppedFrames } = sanitizeCanvas(raw)
     if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
-    set(() => ({ canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes } }))
+    // committedScale 跟随恢复的 scale,使启动时 pane transform=1(不误缩放)
+    set(() => ({
+      canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes },
+      canvasCommittedScale: scene.viewport.scale
+    }))
     // 上次退出停在画布 → 恢复到画布并立即重开终端
     if (scene.viewMode === 'canvas') {
       set({ viewMode: 'canvas' })
@@ -524,7 +536,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     }
   },
 
-  setViewport: (vp) =>
+  setViewport: (vp) => {
     set((s) => {
       const cur = s.canvas.viewport
       const next = { ...cur, ...vp }
@@ -535,7 +547,17 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           viewport: { x: finiteOr(next.x, cur.x), y: finiteOr(next.y, cur.y), scale: clampScale(next.scale) }
         }
       }
-    }),
+    })
+    // 缩放手势:scale 变了 → 进入「transform 预览」(committedScale 不动,终端保持字号靠 pane transform 实时缩放),
+    // 手势停 160ms 后把 committedScale 落到当前 scale——此刻终端才真正落字号+fit,鼠标坐标恢复精准。
+    // 纯平移(只改 x/y)不触发。避免连续缩放每帧重建 GPU canvas(P2 白屏根因),又保留实时跟随。
+    if (vp.scale !== undefined && get().canvas.viewport.scale !== get().canvasCommittedScale) {
+      if (commitScaleTimer) clearTimeout(commitScaleTimer)
+      commitScaleTimer = setTimeout(() => {
+        set((s) => ({ canvasCommittedScale: s.canvas.viewport.scale }))
+      }, 160)
+    }
+  },
 
   seedCanvas: () => {
     const s = get()

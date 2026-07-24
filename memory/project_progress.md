@@ -209,6 +209,15 @@
 **P2 未做(留后续，见报告)**：viewport 更新 rAF 节流(H2 wheel→全 PaneView 重渲，纯性能)、头部 zoom→transform、图片宫格虚拟化、长时隐藏终端 dispose CanvasAddon(LRU)。
 **工作区仍有非本次改动**：`CanvasDrawer.tsx`(上个会话抽屉边缘箭头 polish，未提)、几个上个会话遗留未跟踪文件。
 
+### 2026-07-24 进展：修 P2 缩放回归 —— 画布终端缩放 transform 预览(方案 A，dev 眼验)
+
+**问题**(用户报)：画布缩放时 Claude/Codex CLI 全屏 TUI 不实时跟随。**根因**(4 路并行诊断+真机复现)：画布终端故意用「字号缩放」而非 CSS transform(为鼠标坐标精准)；而 P2(`5a92b42`)为修白屏把「改字号」也塞进 100ms 去抖 → 缩放中字号根本不变、只外框在长大,松手才 snap。全屏 TUI 满屏网格 + alt-screen 需 SIGWINCH 整屏重绘,最明显。
+**方案 A(用户选)**：画布终端里一切(字号/头部/agentbar)都按 **`canvasCommittedScale`**(落定缩放)渲染；缩放**手势中**由 pane 一层 `transform: scale(cs/committed)` 做实时视觉预览(丝滑、不重建 GPU)；手势停 **160ms** 后 committed 落到当前 scale,此刻才真正落字号+fit(鼠标恢复精准)。手势中不点终端→不影响精准。
+- `canvasSlice.ts`：加 `canvasCommittedScale`(初始 1，loadCanvas 落到存档 scale)；`setViewport` 里 scale 变则重置 160ms 计时器,停手落 committed(纯平移不触发)。
+- `PaneView.tsx`：终端 pane 尺寸/头部 zoom/agentbar zoom/TerminalView canvasScale 全改用 `committedScale`；缩放中(`zoomPreview=|cs-committed|>0.0005`)加 `transform: scale(cs/committed)` + willChange。文件/图形节点本就用 transform,不动。
+- `TerminalView.tsx`：canvasScale(=committed) 只在停手变一次 → 那次 fit 改用 **useLayoutEffect 立即 fit**(paint 前落字号,消除 snap 闪烁)；加 fitNowRef,删无用 scheduleFitRef;ResizeObserver 仍用去抖 scheduleFit(窗口/节点 resize)。
+- **dev CDP 眼验**：跑 top,连续缩放 mid-gesture(committed 0.837/live 1.42)→ 内容跟 transform 实时放大填满框(对比修复前冻结在角落);settled(committed=live=1.87)→ 字号真实重渲清晰、cols/rows 重 fit;静止时终端 pane `transform:none` → 鼠标精准。typecheck+build 通过。
+
 ## ③ 环境坑（已修，已记 memory）
 
 见 [[npm-install-会破坏electron和nodepty原生模块]]：这台机器 `npm install` 会因 allow-scripts 破坏 electron dist + node-pty spawn-helper，导致 dev 起不来。修法已记。眼验 Electron UI 用 [[CDP眼验法-破解多实例抢焦点]]（本会话靠它验花屏 + 原型）。
