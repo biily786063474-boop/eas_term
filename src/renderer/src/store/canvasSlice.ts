@@ -104,6 +104,8 @@ export interface CanvasSlice {
   resizeNode: (frameId: string, nodeId: string, w: number, h: number) => void
   /** 把节点从一个 Frame 移到另一个 Frame（拖模块进子 Frame，悬停 1s 判定） */
   moveNodeToFrame: (fromFrameId: string, nodeId: string, toFrameId: string) => void
+  /** 拖动结束后：若该节点与同 Frame 其它模块重叠，挪到离当前位置最近的空位（防碰撞） */
+  settleNode: (frameId: string, nodeId: string) => void
   /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
   addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
   /** 拖组件入 Frame：新增一个画布组件节点（尺寸由调用方从 registry 取，避免循环依赖） */
@@ -298,6 +300,45 @@ function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode, allFrames: Canva
   return { ...frame, nodes: [...frame.nodes, { ...node, x: PAD, y: bottom }] }
 }
 
+interface Box {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+const boxOverlap = (a: Box, b: Box): boolean =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+
+/** 在 Frame 内找一个不与 others 重叠、且离首选点 (prefX,prefY) 最近的空位（螺旋环形外扩搜索）。
+ *  左/上边界钳制到 PAD / HEAD+PAD。找不到则回落首选点。 */
+function findFreePos(others: Box[], w: number, h: number, prefX: number, prefY: number): { x: number; y: number } {
+  const cx = (x: number): number => Math.max(PAD, x)
+  const cy = (y: number): number => Math.max(HEAD + PAD, y)
+  const fits = (x: number, y: number): boolean => !others.some((o) => boxOverlap({ x, y, w, h }, o))
+  const px = cx(prefX)
+  const py = cy(prefY)
+  if (fits(px, py)) return { x: px, y: py }
+  const step = 24
+  for (let r = 1; r <= 80; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue // 只走当前环
+        const nx = cx(px + dx * step)
+        const ny = cy(py + dy * step)
+        if (fits(nx, ny)) return { x: nx, y: ny }
+      }
+    }
+  }
+  return { x: px, y: py }
+}
+
+/** 把新节点放到「离松手鼠标点最近的空位」（拖入判定用），避开已有模块重叠。 */
+function placeNodeAtPoint(frame: CanvasFrame, node: CanvasNode, prefX: number, prefY: number): CanvasFrame {
+  const others = frame.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }))
+  const { x, y } = findFreePos(others, node.w, node.h, prefX, prefY)
+  return { ...frame, nodes: [...frame.nodes, { ...node, x, y }] }
+}
+
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
   canvas: initialScene,
@@ -463,6 +504,21 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
 
+  settleNode: (frameId, nodeId) =>
+    set((s) => {
+      const f0 = s.canvas.frames.find((f) => f.id === frameId)
+      const node = f0?.nodes.find((n) => n.id === nodeId)
+      if (!f0 || !node) return s
+      const others = f0.nodes.filter((n) => n.id !== nodeId).map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }))
+      // 不重叠则不动（保留用户手放的位置）
+      if (!others.some((o) => boxOverlap({ x: node.x, y: node.y, w: node.w, h: node.h }, o))) return s
+      const { x, y } = findFreePos(others, node.w, node.h, node.x, node.y)
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) } : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+    }),
+
   moveNodeToFrame: (fromFrameId, nodeId, toFrameId) =>
     set((s) => {
       if (fromFrameId === toFrameId) return s
@@ -483,10 +539,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => {
       const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
       const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
+      // 插到离松手鼠标点最近的空位（x,y 已是相对 Frame 的落点），避开已有模块重叠
       const frames = s.canvas.frames.map((f) =>
-        f.id === frameId
-          ? placeNodeInFrame(f, { id: uid('cnode'), pane, x, y, w, h }, s.canvas.frames)
-          : f
+        f.id === frameId ? placeNodeAtPoint(f, { id: uid('cnode'), pane, x, y, w, h }, x, y) : f
       )
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
@@ -495,7 +550,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => {
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId
-          ? placeNodeInFrame(f, { id: uid('cnode'), component: { type }, x, y, w, h }, s.canvas.frames)
+          ? placeNodeAtPoint(f, { id: uid('cnode'), component: { type }, x, y, w, h }, x, y)
           : f
       )
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }

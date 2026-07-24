@@ -153,6 +153,7 @@ interface Props {
 export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Props): JSX.Element {
   const setPaneKind = useStore((s) => s.setPaneKind)
   const moveNode = useStore((s) => s.moveNode)
+  const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const splitLeaf = useStore((s) => s.splitLeaf)
   const closeLeaf = useStore((s) => s.closeLeafSafely)
@@ -255,6 +256,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       drop.end()
+      if (!drop.done) settleNode(frameId, nodeId)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

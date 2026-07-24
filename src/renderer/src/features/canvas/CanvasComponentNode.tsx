@@ -19,6 +19,7 @@ export function CanvasComponentNode({
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
   const moveNode = useStore((s) => s.moveNode)
+  const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
   const renameNode = useStore((s) => s.renameNode)
@@ -48,6 +49,7 @@ export function CanvasComponentNode({
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       drop.end()
+      if (!drop.done) settleNode(frame.id, node.id)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

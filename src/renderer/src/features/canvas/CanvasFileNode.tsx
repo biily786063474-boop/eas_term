@@ -23,6 +23,7 @@ export function CanvasFileNode({
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
   const moveNode = useStore((s) => s.moveNode)
+  const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
   const renameNode = useStore((s) => s.renameNode)
@@ -77,6 +78,7 @@ export function CanvasFileNode({
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       drop.end()
+      if (!drop.done) settleNode(frameId, node.id) // 未移入子 Frame → 松手若与他人重叠则挪开
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
