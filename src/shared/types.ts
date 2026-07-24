@@ -167,3 +167,11 @@ export interface SessionIndex {
   sessionId?: string
   turns: SessionTurn[]
 }
+
+// Agent CLI 探测结果：开终端时探测。
+// - claude：从 `claude --help` 真实解析模型别名 + effort 档位（随 CLI 升级自动跟随，不写死）。
+// - codex：`--help` 不暴露模型/档位（服务端 catalog 驱动），故 models/efforts 是主进程给的已知默认。
+export interface AgentProbe {
+  claude: { installed: boolean; models: string[]; efforts: string[] }
+  codex: { installed: boolean; models: string[]; efforts: string[] }
+}

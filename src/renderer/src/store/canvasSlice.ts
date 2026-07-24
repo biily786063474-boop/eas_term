@@ -18,13 +18,12 @@ export interface CanvasViewport {
 /** 终端节点上的「Agent 控制台」配置（画布独有 chrome，分屏不渲染；底层仍是真实 CLI）。
  *  未设(undefined)= 纯终端；设了则显示控制条，点启动把参数拼成 CLI 命令写进终端。 */
 export interface NodeAgent {
+  /** 当前选中的 agent（段控件切换；决定胶囊选项、启动命令） */
   kind: 'claude' | 'codex'
-  model?: string
-  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max'
-  /** 默认询问 / 接受编辑 / 规划 / 跳过全部确认 */
-  permission?: 'default' | 'acceptEdits' | 'plan' | 'skip'
-  /** 启动时带 -c 继续上次会话 */
-  cont?: boolean
+  /** 模型：按 agent 各记一套（Claude→opus/sonnet…，Codex→gpt-5-codex/gpt-5…），切 agent 互不覆盖。键=kind */
+  model?: Partial<Record<'claude' | 'codex', string>>
+  /** 思考档位：同样按 agent 各记一套。值来自探测（Claude 真实 / Codex 已知默认），放宽为 string 随 CLI 演进 */
+  effort?: Partial<Record<'claude' | 'codex', string>>
 }
 
 /** 画布节点：坐标相对所属 Frame（含头部偏移）。

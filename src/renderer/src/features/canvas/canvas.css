@@ -220,7 +220,7 @@
   right: 0;
   top: 0;
   bottom: 0;
-  width: 22px;
+  width: 34px;
   z-index: 29;
   display: flex;
   align-items: center;
@@ -1248,110 +1248,280 @@
 .agentbar {
   display: flex;
   align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
+  gap: 8px;
   padding: 6px 10px;
   background: rgba(255, 255, 255, 0.03);
   border-bottom: 1px solid var(--glass-border);
   font-size: 11.5px;
 }
-.ab-seg {
-  display: inline-flex;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  padding: 2px;
+
+/* ---- 品牌小图标 + [Claude|Codex] 段控件 ---- */
+.ab-brand {
+  flex: none;
+  color: var(--accent);
+  opacity: 0.9;
 }
-.ab-seg button {
+.ab-seg {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.28);
+}
+.ab-seg-b {
   border: none;
   background: none;
   color: var(--fg-dim);
-  font-size: 11px;
-  padding: 3px 9px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 11px;
   border-radius: 6px;
   cursor: pointer;
-  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
 }
-.ab-seg button.on {
+.ab-seg-b:hover:not(:disabled):not(.on) {
+  color: var(--fg);
+}
+.ab-seg-b.on {
   background: var(--accent);
   color: #0b0d12;
-  font-weight: 600;
+  box-shadow: 0 1px 6px rgba(var(--accent-rgb), 0.4);
 }
-.ab-seg button.soon {
+.ab-seg-b:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.ab-ctl {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--fg-dim);
-}
-.ab-ctl > span {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.ab-ctl select {
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid var(--glass-border);
-  border-radius: 7px;
-  color: var(--fg);
-  font-size: 11.5px;
-  font-family: inherit;
-  padding: 3px 6px;
-  outline: none;
-}
-.ab-effort {
-  display: inline-flex;
-  gap: 2px;
-}
-.ab-effort button {
-  border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.22);
-  color: var(--fg-dim);
-  font-size: 10.5px;
-  padding: 3px 7px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.ab-effort button.on {
-  background: var(--accent);
-  color: #0b0d12;
-  border-color: var(--accent);
-  font-weight: 600;
-}
-.ab-cont {
-  border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.22);
-  color: var(--fg-dim);
-  font-size: 11px;
-  padding: 4px 9px;
-  border-radius: 7px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.ab-cont.on {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.5);
-}
+
+/* ---- ▶ 启动（推到最右） ---- */
 .ab-launch {
+  flex: none;
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(var(--accent-rgb), 0.92);
-  color: #0b0d12;
-  font-weight: 650;
-  font-size: 11.5px;
-  padding: 5px 13px;
-  border-radius: 7px;
+  white-space: nowrap;
   border: none;
-  cursor: pointer;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 650;
   font-family: inherit;
+  padding: 5px 13px;
+  cursor: pointer;
+  background: var(--accent);
+  color: #0b0d12;
+  transition: filter 0.15s, opacity 0.15s;
 }
-.ab-launch:hover {
+.ab-launch:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+.ab-launch:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.ab-launch svg {
+  color: #0b0d12;
+}
+
+/* ---- 模型 / 思考胶囊（选项跟随当前 agent） ---- */
+.ab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--fg);
+  border-radius: 999px;
+  padding: 4px 10px 4px 9px;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ab-pill:hover {
+  border-color: var(--glass-border-strong);
+  background: rgba(0, 0, 0, 0.4);
+}
+.ab-pill-k {
+  font-size: 10px;
+  color: var(--fg-dim);
+  letter-spacing: 0.3px;
+}
+.ab-pill b {
+  color: var(--accent);
+  font-weight: 650;
+}
+.ab-pill svg {
+  color: var(--fg-dim);
+}
+
+/* ---- 浮层（回溯弹窗 / 模型菜单 / 思考滑块），portal 到 body ---- */
+.ab-pop {
+  position: fixed;
+  z-index: 1200;
+  min-width: 168px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 8px;
+  box-shadow: var(--glass-highlight), 0 16px 44px rgba(0, 0, 0, 0.55);
+  animation: ab-pop-in 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes ab-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+}
+
+/* 回溯弹窗 */
+.ab-ask {
+  width: 232px;
+}
+.ab-ask-t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--fg);
+}
+.ab-ask-t svg {
+  color: var(--accent);
+}
+.ab-ask-d {
+  margin: 6px 0 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.ab-ask-btns {
+  display: flex;
+  gap: 7px;
+}
+.ab-ask-yes,
+.ab-ask-no {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+.ab-ask-yes {
+  border: none;
+  background: var(--accent);
+  color: #0b0d12;
+}
+.ab-ask-yes:hover {
+  filter: brightness(1.08);
+}
+.ab-ask-no {
+  border: 1px solid var(--glass-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+}
+.ab-ask-no:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* 模型菜单 */
+.ab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ab-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.ab-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.ab-menu-item.on {
+  color: var(--accent);
+  font-weight: 650;
+}
+.ab-menu-item svg {
+  color: var(--accent);
+}
+.ab-menu-custom {
+  color: var(--fg-dim);
+  border-top: 1px solid var(--glass-border);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  margin-top: 2px;
+}
+.ab-menu-empty {
+  padding: 8px 9px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.ab-custom-input {
+  width: 220px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 8px;
+  outline: none;
+}
+
+/* 思考滑块 */
+.ab-slider {
+  width: 208px;
+  padding: 4px 4px 2px;
+}
+.ab-slider input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+.ab-slider input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+}
+.ab-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.ab-slider-ticks span {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.ab-slider-ticks span.on {
+  color: var(--accent);
+  font-weight: 700;
 }

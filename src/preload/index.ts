@@ -17,7 +17,8 @@ import type {
   GitCommitFile,
   AiResult,
   SessionIndex,
-  SessionExchange
+  SessionExchange,
+  AgentProbe
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -44,6 +45,10 @@ const api = {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
     load: (): Promise<unknown> => ipcRenderer.invoke('canvas:load'),
     save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene)
+  },
+  agent: {
+    // 开终端时探测：从 `claude --help` 真实解析 模型别名 / effort 档位（不硬编码）
+    probe: (): Promise<AgentProbe> => ipcRenderer.invoke('agent:probe')
   },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
