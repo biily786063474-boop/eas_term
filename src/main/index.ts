@@ -18,6 +18,28 @@ process.on('unhandledRejection', (reason) => {
   console.error('[main:unhandledRejection]', reason)
 })
 
+// 画布迷你浏览器(webview):点链接 / target=_blank / window.open 都在**同一 webview 内**导航
+// (不弹原生新窗),并通知渲染层「聚焦到这个浏览器节点」(画布模式下 pan 过去)。
+// 用 web-contents-created 捕获所有 webview guest(比 did-attach-webview 对命令式创建的 webview 更可靠)。
+app.on('web-contents-created', (_e, contents) => {
+  if (contents.getType() !== 'webview') return
+  contents.setWindowOpenHandler(({ url }) => {
+    // 在 handler 里同步 loadURL 会被 Electron 忽略 → setImmediate 延迟到 handler 返回后导航
+    setImmediate(() => {
+      if (contents.isDestroyed()) return
+      try {
+        void contents.loadURL(url)
+      } catch {
+        /* 非法 url 忽略 */
+      }
+      for (const w of BrowserWindow.getAllWindows()) {
+        if (!w.isDestroyed()) w.webContents.send('browser:focus', contents.id)
+      }
+    })
+    return { action: 'deny' }
+  })
+})
+
 // GPU/工具进程崩溃 → 若拖垮了某个窗口渲染,重载该窗口(节流防崩溃循环)
 app.on('child-process-gone', (_e, details) => {
   console.error('[main:child-process-gone]', details.type, details.reason)
@@ -81,6 +103,7 @@ function createWindow(): void {
   })
   // 页面卡死无响应 → 记录(暂不强制处理,交给用户或后续等待 responsive)
   win.on('unresponsive', () => console.error('[window:unresponsive]'))
+
 
   // 退出/关窗口前：若仍有终端在运行命令，弹窗确认，避免误杀进程。
   // 覆盖红绿灯关闭按钮与 ⌘Q（before-quit 会触发窗口的 close）

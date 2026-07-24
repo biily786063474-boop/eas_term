@@ -54,6 +54,14 @@ const api = {
     // 开终端时探测：从 `claude --help` 真实解析 模型别名 / effort 档位（不硬编码）
     probe: (): Promise<AgentProbe> => ipcRenderer.invoke('agent:probe')
   },
+  browser: {
+    // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)
+    onFocus: (cb: (guestId: number) => void): (() => void) => {
+      const h = (_e: unknown, guestId: number): void => cb(guestId)
+      ipcRenderer.on('browser:focus', h)
+      return () => ipcRenderer.removeListener('browser:focus', h)
+    }
+  },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
     readTextFile: (filePath: string): Promise<TextFileResult> =>

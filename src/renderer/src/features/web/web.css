@@ -60,6 +60,13 @@
   flex: none;
   color: var(--fg-mute);
 }
+.web-fav {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  object-fit: contain;
+}
 .web-addr input {
   flex: 1;
   min-width: 0;

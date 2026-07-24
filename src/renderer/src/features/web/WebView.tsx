@@ -5,6 +5,7 @@
 // 且部分属性必须在 attach 前 setAttribute)。
 
 import { useEffect, useRef, useState } from 'react'
+import { useStore } from '../../store'
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon } from '../../ui/Icons'
 import './web.css'
 
@@ -12,12 +13,23 @@ import './web.css'
 interface WebviewEl extends HTMLElement {
   loadURL(url: string): Promise<void>
   getURL(): string
+  getWebContentsId(): number
   reload(): void
   stop(): void
   goBack(): void
   goForward(): void
   canGoBack(): boolean
   canGoForward(): boolean
+}
+
+// guestId → 聚焦该浏览器节点的回调。主进程拦截「链接开新窗」后按 guest webContents id 通知，
+// 我们据此把画布 pan 到对应浏览器节点。模块级单例监听，多个浏览器节点共享。
+const focusRegistry = new Map<number, () => void>()
+let focusBound = false
+function ensureFocusListener(): void {
+  if (focusBound) return
+  focusBound = true
+  window.api.browser.onFocus((guestId) => focusRegistry.get(guestId)?.())
 }
 
 // 地址归一化：有协议头/file:// 直接用；像域名(含点、无空格)补 https://；否则当搜索词
@@ -29,10 +41,20 @@ function normalizeUrl(raw: string): string {
   return 'https://www.google.com/search?q=' + encodeURIComponent(u)
 }
 
-export function WebView({ url: initialUrl }: { url: string | null }): JSX.Element {
+export function WebView({
+  url: initialUrl,
+  frameId,
+  nodeId
+}: {
+  url: string | null
+  /** 画布 web 节点的归属（用于导航回写 url 持久化 + 链接开新窗时聚焦过去）；分屏无 */
+  frameId?: string
+  nodeId?: string
+}): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const wvRef = useRef<WebviewEl | null>(null)
   const [addr, setAddr] = useState(initialUrl ?? '') // 地址栏输入
+  const [favicon, setFavicon] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [canBack, setCanBack] = useState(false)
   const [canFwd, setCanFwd] = useState(false)
@@ -41,14 +63,16 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
+    ensureFocusListener()
     const wv = document.createElement('webview') as unknown as WebviewEl
     wv.className = 'web-frame'
-    // 多个浏览器节点共享会话(cookie/登录)、并与主应用隔离
-    wv.setAttribute('partition', 'persist:browser')
+    wv.setAttribute('partition', 'persist:browser') // 多浏览器节点共享会话，与主应用隔离
+    // 允许 window.open/target=_blank 触达主进程 setWindowOpenHandler（否则被直接禁掉、拦不成同 view 导航）
     wv.setAttribute('allowpopups', 'true')
     if (initialUrl) wv.setAttribute('src', initialUrl)
     host.appendChild(wv)
     wvRef.current = wv
+    let guestId = -1
 
     const syncNav = (): void => {
       try {
@@ -68,7 +92,11 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
     }
     const onNav = (e: Event): void => {
       const url = (e as unknown as { url?: string }).url
-      if (url) setAddr(url)
+      if (url) {
+        setAddr(url)
+        // 回写节点 url → 随 canvas.json 持久化，重开还原到上次页面
+        if (frameId && nodeId) useStore.getState().setNodeUrl(frameId, nodeId, url)
+      }
       syncNav()
     }
     const onNavInPage = (e: Event): void => {
@@ -77,14 +105,26 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
     }
     const onFail = (e: Event): void => {
       const ev = e as unknown as { errorCode?: number; errorDescription?: string; isMainFrame?: boolean }
-      // -3 = ABORTED(用户/重定向打断)，不算错误
       if (ev.isMainFrame && ev.errorCode !== -3) setError(ev.errorDescription || '页面加载失败')
+    }
+    const onFavicon = (e: Event): void => {
+      const favs = (e as unknown as { favicons?: string[] }).favicons
+      setFavicon(favs && favs.length ? favs[0] : null)
+    }
+    const onDomReady = (): void => {
+      guestId = wv.getWebContentsId()
+      // 注册聚焦回调：主进程拦到链接开新窗 → 通知 → 把画布平移到本浏览器节点
+      focusRegistry.set(guestId, () => {
+        if (frameId && nodeId) useStore.getState().focusCanvasNode(frameId, nodeId)
+      })
     }
     wv.addEventListener('did-start-loading', onStart)
     wv.addEventListener('did-stop-loading', onStop)
     wv.addEventListener('did-navigate', onNav)
     wv.addEventListener('did-navigate-in-page', onNavInPage)
     wv.addEventListener('did-fail-load', onFail)
+    wv.addEventListener('page-favicon-updated', onFavicon)
+    wv.addEventListener('dom-ready', onDomReady)
 
     return () => {
       wv.removeEventListener('did-start-loading', onStart)
@@ -92,6 +132,9 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
       wv.removeEventListener('did-navigate', onNav)
       wv.removeEventListener('did-navigate-in-page', onNavInPage)
       wv.removeEventListener('did-fail-load', onFail)
+      wv.removeEventListener('page-favicon-updated', onFavicon)
+      wv.removeEventListener('dom-ready', onDomReady)
+      if (guestId >= 0) focusRegistry.delete(guestId)
       wv.remove()
       wvRef.current = null
     }
@@ -105,7 +148,7 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
     if (!wv) return
     setError(null)
     setAddr(u)
-    // dom-ready 前 loadURL 会抛 → 回退到设 src(初始导航同样生效)
+    // dom-ready 前 loadURL 会抛 → 回退到设 src（初始导航同样生效）
     try {
       void wv.loadURL(u)
     } catch {
@@ -116,20 +159,10 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
   return (
     <div className="web-view">
       <div className="web-bar">
-        <button
-          className="web-nav"
-          data-tip="后退"
-          disabled={!canBack}
-          onClick={() => wvRef.current?.goBack()}
-        >
+        <button className="web-nav" data-tip="后退" disabled={!canBack} onClick={() => wvRef.current?.goBack()}>
           <ChevronLeftIcon size={14} />
         </button>
-        <button
-          className="web-nav"
-          data-tip="前进"
-          disabled={!canFwd}
-          onClick={() => wvRef.current?.goForward()}
-        >
+        <button className="web-nav" data-tip="前进" disabled={!canFwd} onClick={() => wvRef.current?.goForward()}>
           <ChevronRightIcon size={14} />
         </button>
         <button
@@ -140,7 +173,11 @@ export function WebView({ url: initialUrl }: { url: string | null }): JSX.Elemen
           {loading ? <CloseIcon size={12} /> : <RefreshIcon size={12} />}
         </button>
         <div className="web-addr">
-          <GlobeIcon size={11} />
+          {favicon ? (
+            <img className="web-fav" src={favicon} alt="" onError={() => setFavicon(null)} />
+          ) : (
+            <GlobeIcon size={11} />
+          )}
           <input
             value={addr}
             spellCheck={false}

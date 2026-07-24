@@ -245,6 +245,19 @@
 
 **P1 未做(留 P2)**：标题/favicon 回填节点名、新窗口→新节点(主进程 did-attach-webview+setWindowOpenHandler)、url 持久化(did-navigate 回写→重开还原)、右键(devtools/复制链接)、多 webview 懒挂载/离屏治理、iframe feature-flag 兜底。**导航 back/forward 按钮已接 API 但未逐一 live 点验**（标准 webview API，低风险）。
 
+### 2026-07-24 进展：浏览器 P2 + 链接同view/聚焦 + frame 去重叠 + 画布边缘死区修复（dev 眼验，待 commit）
+
+**浏览器 P2**：
+- url 持久化：`WebView` 加 `frameId/nodeId` prop，did-navigate → `setNodeUrl`(新 store action)回写 `node.pane.url` → 随 canvas.json 持久化,重开还原到上次页面。**关键**：画布 web 节点是 `CanvasFileNode` 渲染(不是 PaneView),frameId/nodeId 要在 `CanvasFileNode.tsx:177` 传(PaneView 也传了给 leaf 型 web 兜底)。
+- favicon：page-favicon-updated → 地址栏左侧显示。
+- **链接在同一内嵌浏览器导航(用户要求)**：主进程 `app.on('web-contents-created')`(比 did-attach-webview 对命令式 webview 更可靠)对 webview guest `setWindowOpenHandler`：`setImmediate(()=>guest.loadURL(url))`(handler 里同步 loadURL 会被忽略)+ `deny` + 广播 `browser:focus` IPC。**WebView 必须有 `allowpopups`**(P2 重写时丢了→window.open 被直接禁、拦不到 handler,加回才通)。
+- **画布聚焦(用户要求)**：`focusCanvasNode(frameId,nodeId)` store action(保持缩放、pan 到节点居中,查 `.canvas-viewport` 尺寸算)。WebView 在 dom-ready 注册 `getWebContentsId()→聚焦回调` 到模块级 registry,`window.api.browser.onFocus` 单例监听按 guest id 分发。
+- **dev CDP 眼验**：地址栏输入 example.com → 导航 + 节点 url 回写✓;`executeJavaScript('window.open',userGesture=true)` → webview 同 view 跳 github/features + 画布 pan 聚焦回节点✓。
+
+**frame 去重叠(用户要求)**：`deoverlapFrames`(顶层 frame 按阅读顺序放置,重叠者下移到邻居下方 +GAP,连同后代一起移)+ `reflowSeparate=deoverlap(reflow)`。只在「加节点」actions(addBrowserNode/addTerminalNode/addFileNode/addComponentNode)用,**不介入手动拖拽 moveFrame**(避免拖动被弹开)。眼验:加浏览器后顶层 4 frame 无重叠。
+
+**画布右侧空白死区修复(用户报 bug)**：根因 `.body { padding: 0 10px 10px; gap:10px }`(分屏给侧栏留边距),画布模式侧栏隐藏了这右/左/下 10px 就成无点阵死区暗带、画布边界内收。CDP 实测:tab-stack 右边界 1137 vs 窗口 1147 = 10px 隙。修:`canvas.css` 加 `.app.canvas .body { padding:0; gap:0 }` → 画布 edge-to-edge。眼验:tab-stack 右到 1147、点阵铺满、版本管理面板到边。
+
 ## ③ 环境坑（已修，已记 memory）
 
 见 [[npm-install-会破坏electron和nodepty原生模块]]：这台机器 `npm install` 会因 allow-scripts 破坏 electron dist + node-pty spawn-helper，导致 dev 起不来。修法已记。眼验 Electron UI 用 [[CDP眼验法-破解多实例抢焦点]]（本会话靠它验花屏 + 原型）。

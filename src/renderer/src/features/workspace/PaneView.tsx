@@ -420,7 +420,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             <DictView />
           </Suspense>
         )}
-        {pane.kind === 'web' && <WebView url={pane.url} />}
+        {pane.kind === 'web' && (
+          <WebView url={pane.url} frameId={canvasRect?.frameId} nodeId={canvasRect?.nodeId} />
+        )}
       </div>
       {canvasRect && <div className="pane-rz" onMouseDown={onCanvasResize} />}
     </div>

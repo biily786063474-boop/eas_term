@@ -135,6 +135,10 @@ export interface CanvasSlice {
   addTerminalNode: (frameId: string) => Promise<void>
   /** 在 Frame 里新开一个迷你浏览器节点（web pane，空地址，自动堆叠） */
   addBrowserNode: (frameId: string) => void
+  /** 更新 web 节点的当前地址（浏览器导航时回写，重开还原到上次页面） */
+  setNodeUrl: (frameId: string, nodeId: string, url: string) => void
+  /** 把画布平移到某节点居中（保持当前缩放）——如浏览器里点链接开新页时聚焦过去 */
+  focusCanvasNode: (frameId: string, nodeId: string) => void
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
@@ -283,6 +287,58 @@ function reflowFrames(frames: CanvasFrame[]): CanvasFrame[] {
     cur.h = ext.h
   }
   return frames.map((f) => byId.get(f.id)!)
+}
+
+// 顶层 Frame 去重叠：按阅读顺序(先上后左)放置，后来者与已放置的重叠则下移到其下方(连同后代一起移)。
+// 只在「加节点导致 Frame 长大」等结构增长后调用，不介入手动拖拽(moveFrame)——避免拖动时被弹开。
+const FRAME_GAP = 24
+function deoverlapFrames(frames: CanvasFrame[]): CanvasFrame[] {
+  const fh = (f: CanvasFrame): number => (f.collapsed ? HEAD : f.h)
+  const overlap = (a: CanvasFrame, b: CanvasFrame): boolean =>
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + fh(b) && a.y + fh(a) > b.y
+  const work = new Map(frames.map((f) => [f.id, { ...f }]))
+  const tops = [...frames]
+    .filter((f) => !f.parentId)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+  const placed: string[] = []
+  for (const t of tops) {
+    const f = work.get(t.id)!
+    let guard = 0
+    let moved = true
+    while (moved && guard++ < 100) {
+      moved = false
+      for (const pid of placed) {
+        const p = work.get(pid)!
+        if (overlap(f, p)) {
+          f.y = p.y + fh(p) + FRAME_GAP // 下移到该 Frame 下方
+          moved = true
+        }
+      }
+    }
+    placed.push(t.id)
+  }
+  // 顶层 Frame 的位移带上后代(子 Frame 世界坐标同步)
+  const result = frames.map((f) => ({ ...f }))
+  const rid = new Map(result.map((f) => [f.id, f]))
+  for (const t of tops) {
+    const nf = work.get(t.id)!
+    const dx = nf.x - t.x
+    const dy = nf.y - t.y
+    if (dx === 0 && dy === 0) continue
+    rid.get(t.id)!.x = nf.x
+    rid.get(t.id)!.y = nf.y
+    for (const d of collectDescendants(frames, t.id)) {
+      const rd = rid.get(d)!
+      rd.x += dx
+      rd.y += dy
+    }
+  }
+  return result
+}
+
+/** 收紧尺寸 + 顶层去重叠：用于「加节点」类会让 Frame 长大的结构变更 */
+function reflowSeparate(frames: CanvasFrame[]): CanvasFrame[] {
+  return deoverlapFrames(reflowFrames(frames))
 }
 
 /** 某 Frame 的所有后代 Frame id（递归，用于拖父带子 / 删父连子） */
@@ -707,7 +763,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId ? placeNodeAtPoint(f, { id: uid('cnode'), pane, x, y, w, h }, x, y) : f
       )
-      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 
   addComponentNode: (frameId, type, x, y, w, h) =>
@@ -717,7 +773,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           ? placeNodeAtPoint(f, { id: uid('cnode'), component: { type }, x, y, w, h }, x, y)
           : f
       )
-      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 
   removeNode: (frameId, nodeId) =>
@@ -827,7 +883,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
-        frames: reflowFrames(
+        frames: reflowSeparate(
           s.canvas.frames.map((f) =>
             f.id === frameId
               ? placeNodeInFrame(
@@ -846,7 +902,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
-        frames: reflowFrames(
+        frames: reflowSeparate(
           s.canvas.frames.map((f) =>
             f.id === frameId
               ? placeNodeInFrame(
@@ -859,6 +915,39 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     })),
+
+  setNodeUrl: (frameId, nodeId, url) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId && n.pane?.kind === 'web'
+                    ? { ...n, pane: { ...n.pane, url } }
+                    : n
+                )
+              }
+            : f
+        )
+      }
+    })),
+
+  focusCanvasNode: (frameId, nodeId) => {
+    const s = get()
+    const f = s.canvas.frames.find((x) => x.id === frameId)
+    const n = f?.nodes.find((x) => x.id === nodeId)
+    if (!f || !n) return
+    const vp = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const vw = vp?.clientWidth ?? window.innerWidth
+    const vh = vp?.clientHeight ?? window.innerHeight
+    const scale = s.canvas.viewport.scale // 保持当前缩放，只平移
+    const cx = f.x + n.x + n.w / 2
+    const cy = f.y + n.y + n.h / 2
+    get().setViewport({ x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale })
+  },
 
   renameNode: (frameId, nodeId, name) =>
     set((s) => ({

@@ -1,5 +1,12 @@
 /* ========== 无限画布 · 装饰层 ========== */
 
+/* 画布模式：画板 edge-to-edge 铺满窗口。分屏用的 .body padding/gap（给侧栏留边距）在画布模式
+ * 侧栏已隐藏，会在右/左/下留一条无点阵的死区暗带、让画布边界内收——这里清零。 */
+.app.canvas .body {
+  padding: 0;
+  gap: 0;
+}
+
 .canvas-viewport {
   position: absolute;
   inset: 0;
