@@ -44,7 +44,11 @@ const api = {
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
     load: (): Promise<unknown> => ipcRenderer.invoke('canvas:load'),
-    save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene)
+    save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene),
+    // 同步落盘：退出/刷新前(beforeunload)调,阻塞到写完再放行,防「改完就退」丢失
+    saveSync: (scene: unknown): void => {
+      ipcRenderer.sendSync('canvas:save-sync', scene)
+    }
   },
   agent: {
     // 开终端时探测：从 `claude --help` 真实解析 模型别名 / effort 档位（不硬编码）

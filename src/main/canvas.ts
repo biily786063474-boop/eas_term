@@ -47,13 +47,19 @@ export function registerCanvasHandlers(): void {
     }
   })
 
-  ipcMain.handle('canvas:save', (_e, scene: unknown) => {
+  const writeScene = (scene: unknown): void => {
     try {
       fs.mkdirSync(path.dirname(storeFile()), { recursive: true })
       fs.writeFileSync(storeFile(), JSON.stringify(scene, null, 2), 'utf8')
     } catch {
       // 写盘失败（磁盘满 / 权限）不阻塞 UI，静默跳过
     }
+  }
+  ipcMain.handle('canvas:save', (_e, scene: unknown) => writeScene(scene))
+  // 同步落盘：退出/刷新前(beforeunload)用它,阻塞到写完再放行,杜绝「改完就退,防抖没落盘」丢失。
+  ipcMain.on('canvas:save-sync', (e, scene: unknown) => {
+    writeScene(scene)
+    e.returnValue = true
   })
 
   // easfile://media/<base64url(绝对路径)> → 流式返回媒体文件，带正确 Content-Type。

@@ -218,6 +218,20 @@
 - `TerminalView.tsx`：canvasScale(=committed) 只在停手变一次 → 那次 fit 改用 **useLayoutEffect 立即 fit**(paint 前落字号,消除 snap 闪烁)；加 fitNowRef,删无用 scheduleFitRef;ResizeObserver 仍用去抖 scheduleFit(窗口/节点 resize)。
 - **dev CDP 眼验**：跑 top,连续缩放 mid-gesture(committed 0.837/live 1.42)→ 内容跟 transform 实时放大填满框(对比修复前冻结在角落);settled(committed=live=1.87)→ 字号真实重渲清晰、cols/rows 重 fit;静止时终端 pane `transform:none` → 鼠标精准。typecheck+build 通过。
 
+### 2026-07-24 进展：修「思考/模型重启不记忆」bug（dev 眼验，待 commit）+ 浏览器/语音规划报告
+
+**bug 根因(dev 实测确认)**：① 画布落盘是改动后 500ms 防抖，**改完就退/切走**时那次改动没落盘就被取消 → 丢失(实测:设值后立刻 reload,磁盘改动确实丢)；② 接 Codex 时 `NodeAgent.model/effort` 从字符串改成 `{[kind]:值}` 对象，**旧存档里的字符串**新代码 `agent.model?.[kind]` 读得 undefined → 回落默认。
+**修法(已实现+dev 眼验)**：
+- `main/canvas.ts` + `preload`：加 `canvas.saveSync`(`ipcRenderer.sendSync('canvas:save-sync')` 同步落盘)。
+- `App.tsx`：落盘订阅加脏标记 + `flush(sync)`；**失焦(blur)异步 flush、退出/刷新(beforeunload)同步 flush**、卸载前也 flush。根治防抖丢失。
+- `canvasSlice.ts`：`sanitizeNode` 加 `migrateAgent`——旧字符串 model/effort 按 `agent.kind` 转成 `{[kind]:值}`，让旧选择恢复。
+- **dev CDP 眼验**：设 haiku + 立刻 beforeunload → 磁盘瞬间有 haiku(不等 500ms)✓；写旧字符串 `model:'sonnet'/effort:'xhigh'` + reload → store 迁移成 `{claude:'sonnet'}/{claude:'xhigh'}`、胶囊显示 Sonnet/超高 ✓。typecheck+build 通过。
+
+**浏览器 + 语音输入功能规划报告**(用户要求,`docs/浏览器+语音输入-功能规划.html`,2 路并行调研)：
+- **浏览器**：用 `<webview>`(唯一能跟随画布 CSS transform 的真 Chromium 内核;`WebContentsView` 原生层不跟手排除;iframe 留可信本地内容兜底)。开 `webviewTag:true`、`WebView.tsx` iframe→webview + chrome 条(地址栏/前进后退/刷新/加载态/错误页)、`CanvasStage.tsx:647` 加浏览器 icon、`.html` 路由已在 `CanvasDrawer.tsx:20`。**待验证第一条**:webview 在 transform 画布里是否单次缩放跟手。
+- **语音**：provider 抽象层。Web Speech API 在 Electron 打包后不可用(排除)。默认建议**离线 sherpa-onnx + Paraformer 中文流式**(零 key/免费/隐私/真流式/中文一流),云档 OpenAI Realtime/火山(1元时)/讯飞 可切换(需 API key)。key 只在主进程、渲染层采麦、partial 回填输入框(committed/interim)。替换 `TerminalView.tsx` 的 `↓最新` 按钮为麦克风(「回到最新」建议挪位不删)。
+- 用户已选:**先修这个持久化 bug**(已做完)。浏览器/语音待用户拍板顺序 + 语音默认档(离线 vs 云)。
+
 ## ③ 环境坑（已修，已记 memory）
 
 见 [[npm-install-会破坏electron和nodepty原生模块]]：这台机器 `npm install` 会因 allow-scripts 破坏 electron dist + node-pty spawn-helper，导致 dev 起不来。修法已记。眼验 Electron UI 用 [[CDP眼验法-破解多实例抢焦点]]（本会话靠它验花屏 + 原型）。

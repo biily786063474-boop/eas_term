@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Eas-Term 功能规划 · Chrome 内核浏览器 + 语音输入</title>
+<style>
+  :root{
+    --bg:#0a0b0f; --panel:#12141b; --panel2:#161923;
+    --border:#232734; --border2:#2e3444;
+    --fg:#e6e8ee; --fg-dim:#9aa1b2; --fg-mute:#6b7280;
+    --accent:#7c8cff; --accent-soft:rgba(124,140,255,.14);
+    --ok:#43d19e; --ok-bg:rgba(67,209,158,.10);
+    --warn:#ff9e3d; --warn-bg:rgba(255,158,61,.10);
+    --bad:#ff5c6c; --bad-bg:rgba(255,92,108,.10);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 700px at 20% -10%,#131622 0%,var(--bg) 55%);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,sans-serif;line-height:1.62;
+    -webkit-font-smoothing:antialiased;padding:0 0 90px}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+  header{padding:52px 0 28px;border-bottom:1px solid var(--border)}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);background:var(--accent-soft);border:1px solid rgba(124,140,255,.28);padding:5px 12px;border-radius:999px}
+  h1{font-size:29px;margin:18px 0 8px;letter-spacing:-.01em;font-weight:700}
+  .sub{color:var(--fg-dim);font-size:15px;max-width:820px}
+  .meta{margin-top:16px;display:flex;flex-wrap:wrap;gap:9px;font-size:12.5px;color:var(--fg-mute)}
+  .meta span{background:var(--panel);border:1px solid var(--border);padding:5px 11px;border-radius:8px}
+
+  h2{font-size:22px;margin:46px 0 6px;letter-spacing:-.01em;display:flex;align-items:center;gap:11px}
+  h2 .num{width:30px;height:30px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#0b0d12;border-radius:9px;font-size:15px;font-weight:800}
+  h2 .en{color:var(--fg-mute);font-size:13px;font-weight:500;letter-spacing:.02em}
+  h3{font-size:15.5px;margin:28px 0 10px;color:var(--fg);font-weight:650;display:flex;align-items:center;gap:8px}
+  h3::before{content:'';width:3px;height:15px;background:var(--accent);border-radius:2px}
+  p{margin:10px 0}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(124,140,255,.3)}
+
+  .lead{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--border2);border-radius:14px;
+    padding:18px 22px;margin:20px 0}
+  .lead b{color:#fff}
+  .tldr{border-left:3px solid var(--ok);background:var(--ok-bg)}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:6px;vertical-align:middle}
+  .t-ok{color:var(--ok);background:var(--ok-bg);border:1px solid rgba(67,209,158,.3)}
+  .t-warn{color:var(--warn);background:var(--warn-bg);border:1px solid rgba(255,158,61,.3)}
+  .t-bad{color:var(--bad);background:var(--bad-bg);border:1px solid rgba(255,92,108,.3)}
+  .t-rec{color:var(--accent);background:var(--accent-soft);border:1px solid rgba(124,140,255,.3)}
+
+  .scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--border);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--panel2);color:var(--fg-dim);font-weight:600;font-size:12px;white-space:nowrap;position:sticky;top:0}
+  tr:last-child td{border-bottom:none}
+  td.pick{background:rgba(124,140,255,.06)}
+  .yes{color:var(--ok);font-weight:600}
+  .no{color:var(--bad);font-weight:600}
+  .mid{color:var(--warn);font-weight:600}
+  code,.loc{font-family:var(--mono);font-size:12px;background:#0b0d13;border:1px solid var(--border);border-radius:5px;padding:1.5px 6px;color:#c8cfe0}
+
+  .card{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:16px 18px;margin:12px 0}
+  .card.rec{border-color:rgba(124,140,255,.4);background:linear-gradient(180deg,rgba(124,140,255,.06),var(--panel))}
+  .card h4{margin:0 0 8px;font-size:14.5px}
+  .card .why{font-size:13px;color:var(--fg-dim)}
+
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:6px 0;font-size:13.5px;color:var(--fg-dim)}
+  li b,li strong{color:var(--fg)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+
+  .phase{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:15px 18px;margin:10px 0}
+  .phase .ph{display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:650;margin-bottom:4px}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(124,140,255,.3)}
+  .pill.p1{color:var(--ok);background:var(--ok-bg);border-color:rgba(67,209,158,.3)}
+  .pill.p2{color:var(--warn);background:var(--warn-bg);border-color:rgba(255,158,61,.3)}
+
+  .flow{font-family:var(--mono);font-size:12px;background:#0b0d13;border:1px solid var(--border);border-radius:10px;padding:14px 16px;color:#c8cfe0;overflow-x:auto;line-height:1.7;margin:14px 0}
+  .verify{background:var(--warn-bg);border:1px solid rgba(255,158,61,.25);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:13.5px;color:#f3d3ac}
+  .verify b{color:#ffce8a}
+  footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--border);color:var(--fg-mute);font-size:12.5px}
+  .src{font-size:12px;color:var(--fg-mute)}
+  .src a{color:var(--fg-dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="kicker">● 功能规划报告</span>
+    <h1>Chrome 内核迷你浏览器 + 语音输入（STT）</h1>
+    <p class="sub">两路并行调研（Web 检索 2025–2026 实况）+ 主报告人核对源码后的落地规划。含方案对比、推荐、分期实现、落地锚点、坑与规避、待验证项，以及顺带诊断出的「思考/模型不记忆」bug 修法。</p>
+    <div class="meta">
+      <span>2026-07-24</span>
+      <span>Electron 37 · Chromium ≈126+</span>
+      <span>目标：feat/canvas-p0</span>
+      <span>本报告只规划，未改动功能代码</span>
+    </div>
+  </header>
+
+  <!-- 概览 -->
+  <div class="lead tldr">
+    <p><b>三件事，一句话各一条：</b></p>
+    <ul>
+      <li><b>① Chrome 内核迷你浏览器</b> → 用 <code>&lt;webview&gt;</code>（不是 WebContentsView）。它是 DOM 元素、会跟随你画布的 CSS transform 缩放平移、又是真 Chromium 有完整导航能力。<span class="tag t-rec">唯一正确解</span></li>
+      <li><b>② 语音输入</b> → 做一个「STT provider 抽象层」+ 合理默认档。默认走<b>本地离线 sherpa-onnx 中文流式</b>（零 key、免费、隐私、准+快），云端 <b>OpenAI Realtime / 火山 / 讯飞</b> 作可切换升级档。<span class="tag t-rec">可配置</span></li>
+      <li><b>③ 顺带修</b> → 「思考/模型重启不记忆」是真 bug（防抖未落盘 + 旧字符串格式），小改动可根治。</li>
+    </ul>
+  </div>
+
+  <!-- ============ 功能一 ============ -->
+  <h2><span class="num">1</span> Chrome 内核迷你浏览器 <span class="en">canvas-embedded mini browser</span></h2>
+
+  <div class="lead">
+    <p><b>结论</b>：在「必须作为画布节点、跟随 CSS <code>transform: scale()</code> 缩放平移」这个<b>硬约束</b>下，<code>&lt;webview&gt;</code> 是唯一同时满足「真浏览器内核 + 能被 CSS 变换的 DOM 元素」的中间态。你的预判成立。</p>
+    <p>你项目里 <code>WebView.tsx</code> 第 1–3 行早就写了「严禁 BrowserView/WebContentsView——原生叠加层不受 CSS transform 控制」——本次调研<b>证实这条记录完全正确</b>，并给出从 iframe 升级到 webview 的路径。而我刚给你做的画布缩放正是 CSS transform（<code>PaneView.tsx</code> 非终端节点 <code>transform: scale(cs)</code>），webview 作为 DOM 元素会自动跟随，和图片/代码节点走同一条路。</p>
+  </div>
+
+  <h3>三方案对比</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>维度</th><th>&lt;iframe&gt;（现状）</th><th>&lt;webview&gt; · 推荐</th><th>WebContentsView（原生）</th></tr></thead>
+    <tbody>
+      <tr><td>本质</td><td>DOM 元素</td><td class="pick">DOM 元素（OOPIF 进程外 iframe）</td><td>原生视图层</td></tr>
+      <tr><td>跟随画布 CSS 缩放/平移</td><td class="yes">✅ 完美</td><td class="pick yes">✅ 跟随（像跨域 iframe 被合成）</td><td class="no">❌ 完全不跟，只认像素 setBounds</td></tr>
+      <tr><td>被 DOM 裁剪/遮挡/圆角</td><td class="yes">✅</td><td class="pick yes">✅（CSS 全套）</td><td class="no">❌ 永远浮最上层、盖住一切</td></tr>
+      <tr><td>真 Chromium 浏览器能力</td><td class="mid">是内核，但无浏览器能力</td><td class="pick yes">✅ 完整、独立进程</td><td class="yes">✅ 完整</td></tr>
+      <tr><td>导航 API（前进/后退/历史/URL）</td><td class="no">❌ 跨域读不到</td><td class="pick yes">✅ 全套 loadURL/goBack/reload/getURL…</td><td class="yes">✅ webContents.*</td></tr>
+      <tr><td>加载态/标题/图标事件</td><td class="mid">⚠️ 仅 onload</td><td class="pick yes">✅ did-start/stop-loading、page-title/favicon…</td><td class="yes">✅</td></tr>
+      <tr><td>第三方站点可加载</td><td class="no">❌ X-Frame-Options/CSP 挡死大量站</td><td class="pick yes">✅ 顶层导航不受限</td><td class="yes">✅</td></tr>
+      <tr><td>崩溃隔离</td><td class="no">❌ 与主界面同进程</td><td class="pick yes">✅ 独立进程，崩了不炸 App</td><td class="yes">✅ 独立进程</td></tr>
+      <tr><td>官方态度(2025)</td><td>推荐(简单场景)</td><td class="pick mid">⚠️ 软性弃用、仍可用、需手动开</td><td class="yes">✅ 官方主推(但不契合本约束)</td></tr>
+      <tr><td>与本画布约束契合度</td><td>中（仅可信本地内容）</td><td class="pick yes">✅✅ 最佳</td><td class="no">❌ 根本性不契合</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>关键实况（决定推荐，务必知道）</h3>
+  <ul>
+    <li><b>webview 现在是 OOPIF（进程外 iframe）</b>：本质就是一个被浏览器合成器合成的跨域 iframe，祖先的 2D transform 会像作用于任何跨域 iframe 一样<b>作用一次</b>并被 overflow/圆角裁剪——正是我们要的。<span class="tag t-warn">纪律</span> webview 自身的 <code>zoomFactor</code> 必须<b>恒为 1</b>，缩放只交给外层 CSS transform，否则叠乘。</li>
+    <li><b>「webview 已弃用」是软性的、且有个常见误读</b>：网上「webview 2025 年 1 月结束支持」指的是 <b>Google Chrome Apps</b> 的 webview，<b>不是 Electron 的</b>。Electron 37 里 webview 仍存在、可用、功能完整，无移除时间表。官方只是「不推荐、自担风险、未来无保证」。规避：把 webview 收敛进一个薄封装组件，将来若真出问题好整体替换。</li>
+    <li><b>WebContentsView 连「缩放」本身都无法正确复现</b>：只能 (a) <code>setZoomFactor</code>——那是页面级重排缩放（文字重新排版，非几何缩放一个矩形，还有 ~0.25x 下限）；或 (b) 只改 bounds——内容不缩放、只是透过更小的窗口看 100% 的页。都不是「节点作为可缩放矩形贴在画布上」。要让它「假装」是 DOM 节点（Electrobun 那套：移屏外 20000px + 渲染/交互层分离 + 图像遮罩打洞 + 光标 swizzling）成本极高<b>且仍达不到真缩放跟手</b>。单人项目不该碰。</li>
+  </ul>
+
+  <h3>迷你浏览器 chrome 架构（DOM 层，套在 &lt;webview&gt; 之上）</h3>
+  <p>节点外框/头部/拖动/缩放/resize 已由 <code>PaneView</code> 提供，浏览器 chrome 只需在 <code>.web-view</code> 内做一条工具条 + 一个错误浮层：</p>
+  <ul>
+    <li><b>地址栏</b>：受控 input，<code>did-navigate</code> 同步当前 URL；回车归一化（补 <code>https://</code>、非 URL 转搜索）→ <code>webview.loadURL()</code>。</li>
+    <li><b>后退/前进</b>：禁用态取自 <code>canGoBack()/canGoForward()</code>；<b>刷新/停止</b>按加载态切图标（<code>reload()/stop()</code>）。</li>
+    <li><b>加载态</b>：<code>did-start-loading</code>→顶部不定态进度条，<code>did-stop-loading</code>→收起。<b>标题/图标</b>：<code>page-title-updated</code>回填节点名、<code>page-favicon-updated</code>放地址栏左侧。</li>
+    <li><b>错误页</b>：<code>did-fail-load</code>（忽略 <code>-3 ABORTED</code>）→ 你自己的 React 错误浮层（DOM 可直接盖在 webview 上）+ 重试。</li>
+    <li><b>新窗口/弹窗</b>：<code>new-window</code> 事件 E22 已删 → 主进程 <code>did-attach-webview</code> + <code>guest.setWindowOpenHandler</code>（deny 原生窗）→ IPC 通知渲染层<b>新开一个 web 画布节点</b>加载目标 url。</li>
+    <li><b>会话/安全</b>：<code>partition="persist:browser"</code> 多 web 节点共享 cookie、与主应用会话隔离；guest 侧关 nodeIntegration、开 contextIsolation。</li>
+  </ul>
+
+  <h3>落地锚点（已核对源码）</h3>
+  <ul>
+    <li><b>开关</b>：<code>src/main/index.ts</code> 的 <code>BrowserWindow.webPreferences</code> 加一行 <code>webviewTag: true</code>（当前只有 preload）。</li>
+    <li><b>改 <code>WebView.tsx</code></b>：<code>&lt;iframe&gt;</code> → <code>&lt;webview&gt;</code> + 上面那条 chrome bar。<b>红利</b>：<code>PaneView.tsx</code> 已给非终端节点套了 <code>transform: scale(cs)</code>，webview 自动跟随，<b>无需任何特殊定位代码</b>。</li>
+    <li><b>frame 头部新建浏览器 icon</b>：<code>CanvasStage.tsx:647</code>「新建终端」按钮右侧加一个 <code>GlobeIcon</code> 按钮，调新 store action <code>addBrowserNode(frameId)</code>（照 <code>addFileNode</code> 建一个 <code>{kind:'web', url:null}</code> 节点）。</li>
+    <li><b>所有网页文件都用它打开</b>：现有路由 <code>CanvasDrawer.tsx:20</code> 已把 <code>.html/.htm</code> → <code>{kind:'web', url:'file://…'}</code>；WebView 换成 webview 后，本地 HTML 与远程站点<b>一个组件通吃</b>。</li>
+    <li><b>持久化</b>：<code>{kind:'web', url}</code> 够用；<code>did-navigate</code> 回写 url 即可「重开还原到上次页面」，沿用现有 canvas.json sanitize。</li>
+    <li><b>崩溃自愈对齐</b>：给 webview 加 <code>render-process-gone</code> → 错误浮层 + 一键重载，风格同 P0 已有的窗口自愈。</li>
+  </ul>
+
+  <h3>分期</h3>
+  <div class="phase"><div class="ph"><span class="pill p1">P1 · 半天</span> 打通 webview 替换 iframe</div>
+    <div class="why"><code>webviewTag:true</code> + WebView 换 webview + 地址栏/前进后退/刷新/加载态 + frame 头「新建浏览器」icon + addBrowserNode。<b>先验证画布缩放跟手</b>（见待验证）。</div></div>
+  <div class="phase"><div class="ph"><span class="pill p2">P2 · 半天</span> 浏览器体验完善</div>
+    <div class="why">错误页 + 标题/favicon 回填 + 新窗口→新节点(setWindowOpenHandler) + partition 会话隔离 + 右键(devtools/复制链接) + url 持久化还原。</div></div>
+  <div class="phase"><div class="ph"><span class="pill p2">P3 · 可选</span> 治理与打磨</div>
+    <div class="why">多 webview 懒挂载/离屏治理省内存 + iframe 作为 feature-flag 兜底(webview 万一某版本不稳) + 搜索引擎兜底(非 URL 转搜索)。</div></div>
+
+  <div class="verify">
+    <b>⚠️ 落地后必须在 app 内亲验（据架构推断，未实机验证）</b>：① webview 放进 <code>transform: scale()</code> 画布节点后，在 0.2 / 1 / 2.2 各档<b>是否单次缩放、清晰、平移跟手不飘</b>（这是本方案成立前提，第一件要验的事）；② webview <code>zoomFactor</code> 恒 1 时缩放是否与图片/代码节点视觉一致；③ 极端缩放下点击/输入焦点命中是否准；④ 加载 Google/GitHub 等（iframe 会被 X-Frame-Options 挡）确认 webview 能开、iframe 打不开——坐实「真浏览器」价值。
+  </div>
+
+  <!-- ============ 功能二 ============ -->
+  <h2><span class="num">2</span> 语音转文字麦克风输入 <span class="en">streaming speech-to-text</span></h2>
+
+  <div class="lead">
+    <p><b>结论</b>：需求本质是「做一个<b>可切换的 STT provider 抽象层</b> + 一个合理默认档」，把用户说话<b>流式</b>转文字追加到输入框。<b>Web Speech API 在打包后的 Electron 里基本不可用</b>（Chromium 语音后端走 Google 内部 API、Electron 构建不含 key，官方 issue #46143 已确认），直接排除。</p>
+    <p><b>把当前终端右下角的「↓ 最新」按钮替换成麦克风按钮</b>（<code>TerminalView.tsx</code> 的 <code>jumpBtn</code>）——点击申请麦克风权限、开始识别，说的话流式回填输入框。</p>
+  </div>
+
+  <h3>方案对比（2025–2026 实况）</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>方案</th><th>真流式</th><th>延迟</th><th>中文准确度</th><th>价格</th><th>离线</th><th>定位</th></tr></thead>
+    <tbody>
+      <tr><td>Web Speech API</td><td class="no">—</td><td>—</td><td>—</td><td>免费</td><td class="no">❌</td><td class="no">打包后不可用 · 排除</td></tr>
+      <tr class="pick"><td><b>OpenAI Realtime 转写</b></td><td class="yes">✅</td><td>数百ms~1s</td><td class="yes">强(&gt;Whisper)</td><td>$0.003–0.006/分</td><td class="no">❌</td><td class="mid">云主选(需 API key)</td></tr>
+      <tr class="pick"><td><b>sherpa-onnx + Paraformer 中文流式</b></td><td class="yes">✅</td><td>首字~600ms</td><td class="yes">优(中文原生 CER 1.95%)</td><td class="yes">免费</td><td class="yes">✅</td><td class="yes">离线 · 零 key 默认</td></tr>
+      <tr><td>火山引擎 豆包流式</td><td class="yes">✅</td><td>低</td><td class="yes">优(中英)</td><td class="yes">1 元/小时</td><td class="no">❌</td><td>便宜中文云档</td></tr>
+      <tr><td>讯飞 RTASR</td><td class="yes">✅</td><td>数百ms</td><td class="yes">⭐第一+方言</td><td>几元/小时</td><td class="no">❌</td><td>中文最强云档</td></tr>
+      <tr><td>Deepgram Nova-3</td><td class="yes">✅</td><td class="yes">&lt;300ms</td><td class="mid">良(含粤语)</td><td>$0.0048–0.0077/分</td><td class="no">❌</td><td>国际最低延迟</td></tr>
+      <tr><td>Azure Speech</td><td class="yes">✅</td><td>~300–500ms</td><td class="mid">良</td><td>$0.017/分</td><td>可容器</td><td>企业备选</td></tr>
+      <tr><td>AssemblyAI</td><td class="yes">✅</td><td>~300ms</td><td class="no">❌ 流式无中文</td><td>—</td><td class="no">❌</td><td class="no">中文场景排除</td></tr>
+      <tr><td>whisper.cpp / faster-whisper</td><td class="mid">伪流式/分块</td><td>0.5–2s</td><td class="mid">良</td><td>免费</td><td class="yes">✅</td><td>Mac 不如 sherpa(无 Metal/需 Python)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>推荐</h3>
+  <div class="grid2">
+    <div class="card rec">
+      <h4>默认档（开箱即用）<span class="tag t-ok">零配置</span></h4>
+      <div class="why"><b>本地 sherpa-onnx + Paraformer-zh 流式</b>。纯 Node 原生插件（npm <code>sherpa-onnx</code>，<b>免 Python</b>）、Mac 可跑、完全离线、真流式、中文一流（CER 1.95%）、零成本、隐私不外泄。契合「本地优先的开发者工具」气质。代价：随包或首次下模型（中英流式约几十~两百 MB）。</div>
+    </div>
+    <div class="card rec">
+      <h4>云端升级档（可切换）<span class="tag t-rec">更准/更快</span></h4>
+      <div class="why"><b>OpenAI Realtime</b>（<code>gpt-4o-mini-transcribe</code> 默认，可升 <code>gpt-4o-transcribe</code>）——真流式、中文强、$0.003/分几乎免费、和「AI 中心」调性一致，<b>但需一个 OpenAI API key</b>。国内场景另给 <b>火山豆包(1元/时)/讯飞(中文第一)</b>，要最低延迟给 <b>Deepgram</b>。</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="why"><span class="tag t-warn">决策点</span> 你跑 Codex 是 <b>ChatGPT 登录</b>，未必有独立的 OpenAI <b>API key</b>（Realtime 转写要的是 API key，不是登录）。所以两条路线：<b>A</b> 默认离线 sherpa-onnx（零 key，装了就能用），云档等你填 key 再开；<b>B</b> 你若已有/愿意配 OpenAI 或国内厂商 key，直接上云档更准更省心。<b>我的建议：先做「provider 抽象层 + 离线 sherpa-onnx 默认档」，云档作为设置里可选项</b>——既满足「可配置」、又不强依赖 key、又契合软件本地优先特性。</div>
+  </div>
+
+  <h3>接入架构（安全关键：key 只在主进程）</h3>
+  <div class="flow">渲染进程(Chromium)  ── getUserMedia 采麦 + AudioWorklet 取 PCM + 降采样(16k/24k) + Int16
+      │  只碰音频与 UI，绝不碰 API key
+      ▼ IPC(MessagePort 传 ArrayBuffer，二进制零拷贝)
+主进程(Node)  ── 持有 key(沿用现有 key 管理) + provider 抽象层(策略模式，按配置 new 不同 adapter)
+      │            ├─ OpenAI:  wss://api.openai.com/v1/realtime?intent=transcription
+      │            ├─ 火山/讯飞/Deepgram: 各自 WebSocket
+      │            └─ 离线:    直接调 sherpa-onnx streaming recognizer 喂 PCM 帧
+      ▼ 回传 partial / final
+渲染进程输入框 ── committed(已定稿) + interim(灰色/下划线弱化)；final 时 committed+=，清 interim</div>
+  <ul>
+    <li><b>权限(macOS 易漏)</b>：<code>Info.plist</code> 加 <code>NSMicrophoneUsageDescription</code>、签名 entitlements 加 <code>device.audio-input</code>；主进程 <code>systemPreferences.askForMediaAccess('microphone')</code>；<b>必须</b> <code>session.setPermissionRequestHandler</code> 放行渲染层 media 请求(否则 Electron 默认拦 getUserMedia)。</li>
+    <li><b>防闪烁</b>：partial 更新 interim（弱化显示）、final 才并入 committed；delta 渲染做防抖，避免逐字重渲卡顿。</li>
+    <li><b>关键 npm/API</b>：<code>ws</code>、<code>openai</code>(realtime)、<code>@deepgram/sdk</code>、<code>sherpa-onnx</code>(离线)、<code>AudioWorklet</code>(采麦/降采样)、Electron 内置 <code>systemPreferences</code>。</li>
+  </ul>
+
+  <h3>落地锚点 + 分期</h3>
+  <ul>
+    <li><b>替换 ↓最新 按钮</b>：<code>TerminalView.tsx</code> 里 <code>jumpBtn</code>(约 255–259 行创建、<code>jumpBottom</code> 逻辑)改成麦克风按钮；点击 toggle 录音态(动画/波形)。<span class="tag t-warn">注意</span>「回到最新」是有用的功能——建议不是删除而是<b>挪位</b>（如移到滚动条区或右键菜单），别丢失。</li>
+  </ul>
+  <div class="phase"><div class="ph"><span class="pill p1">P1 · 1天</span> 离线默认档跑通</div>
+    <div class="why">麦克风权限 + AudioWorklet 采麦 + 主进程 sherpa-onnx 流式 + partial/final 回填输入框(committed/interim) + 麦克风按钮替换 ↓最新。</div></div>
+  <div class="phase"><div class="ph"><span class="pill p2">P2 · 1天</span> provider 抽象 + 云档</div>
+    <div class="why">provider 策略层 + 设置里选 provider/model + OpenAI Realtime adapter(填 key) + 火山/讯飞/Deepgram 可选 + 弱网自动回退离线。</div></div>
+
+  <!-- ============ 顺带 bug ============ -->
+  <h2><span class="num">3</span> 顺带：「思考/模型」重启不记忆 bug <span class="en">bonus fix</span></h2>
+  <div class="lead">
+    <p><b>已诊断(dev 实测确认)</b>，两个叠加成因：</p>
+    <ol>
+      <li><b>防抖未落盘</b>：画布落盘是改动后 <b>500ms 防抖</b>。你改完胶囊很快退出/切走时，那次改动还没落盘就随页面卸载被取消了 → 重启读到旧值。<b>实测铁证</b>：设值后立刻 reload，磁盘上的改动确实丢失。</li>
+      <li><b>旧字符串格式读不出</b>：我接 Codex 时把 <code>model/effort</code> 从「字符串」改成「按 agent 分的对象」<code>{claude:'sonnet'}</code>。你旧存档里部分节点 <code>model</code> 还是字符串 <code>'opus'</code>，新代码 <code>agent.model?.[kind]</code> 读它得 undefined → 回落默认(默认恰好也是 opus，所以"看着对"但没读你存的值)。</li>
+    </ol>
+    <p><b>修法(小改动)</b>：① <b>退出/失焦时 flush 待落盘的画布</b>（<code>beforeunload</code> 走同步 IPC，或主进程 before-quit 让渲染层立即序列化保存）——根治防抖丢失；② <b>loadCanvas 里迁移旧字符串</b>：<code>agent.model/effort</code> 若是字符串 → 转成 <code>{[agent.kind]: 值}</code>，你之前的选择就回来了。新格式本身<b>持久化+恢复已验证是好的</b>（我实测设 Sonnet/中 → reload → 完好保留）。</p>
+  </div>
+
+  <!-- 决策 -->
+  <h2><span class="num">✓</span> 需要你拍板的决策点</h2>
+  <div class="card">
+    <ul style="margin:2px 0">
+      <li><b>浏览器</b>：确认走 <code>&lt;webview&gt;</code>（软性弃用但唯一契合画布约束，我会封装成薄组件降风险）？iframe 保留作可信本地内容兜底？</li>
+      <li><b>语音默认档</b>：默认<b>离线 sherpa-onnx</b>（零 key、随包带模型约百 MB）？还是你有 OpenAI/国内厂商 <b>API key</b> 想直接上云档？</li>
+      <li><b>「↓最新」</b>：改成麦克风后，「回到最新」挪到哪（滚动条区 / 右键菜单）还是直接去掉？</li>
+      <li><b>顺序</b>：先修「思考/模型」bug（小、快），还是先做浏览器 / 先做语音？</li>
+    </ul>
+  </div>
+
+  <footer>
+    Eas-Term 功能规划 · 2 路并行调研(语音 STT / Chrome 内核浏览器嵌入)+ 主报告人核对源码 · 2026-07-24 · 本报告只规划，未改动功能代码。
+    <div class="src" style="margin-top:10px">
+      主要来源：Electron 官方 webview-tag / web-embeds / migrate-to-webcontentsview 文档；electron#46143(Web Speech)、#13869(webview OOPIF)；blackboard.sh「Building a Better OOPIF」；OpenAI Realtime 转写指南；Deepgram Nova-3；讯飞 RTASR / 火山豆包 / 阿里腾讯云文档；k2-fsa sherpa-onnx / FunASR。
+    </div>
+  </footer>
+</div>
+</body>
+</html>

@@ -366,11 +366,27 @@ function sanitizeViewport(raw: unknown): CanvasViewport {
   return { x: finiteOr(v.x, 0), y: finiteOr(v.y, 0), scale: clampScale(v.scale) }
 }
 
+// 迁移旧 agent 格式:接 Codex 时 model/effort 从「字符串」改成「按 agent 分的对象」{[kind]:值}。
+// 旧存档里的字符串(如 model:'opus')新代码读 agent.model?.[kind] 得 undefined → 回落默认,导致
+// 「重启不记忆思考/模型」。这里按 agent.kind 把字符串转成对象,让旧选择恢复。
+function migrateAgent(raw: unknown): NodeAgent | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const a = raw as Record<string, unknown>
+  const kind: 'claude' | 'codex' = a.kind === 'codex' ? 'codex' : 'claude'
+  const toRec = (v: unknown): Partial<Record<'claude' | 'codex', string>> | undefined =>
+    typeof v === 'string'
+      ? { [kind]: v }
+      : v && typeof v === 'object'
+        ? (v as Partial<Record<'claude' | 'codex', string>>)
+        : undefined
+  return { kind, model: toRec(a.model), effort: toRec(a.effort) }
+}
+
 function sanitizeNode(raw: unknown): CanvasNode | null {
   if (!raw || typeof raw !== 'object') return null
   const n = raw as Record<string, unknown>
   if (typeof n.id !== 'string') return null
-  return {
+  const node: CanvasNode = {
     ...(n as unknown as CanvasNode),
     id: n.id,
     x: finiteOr(n.x, 0),
@@ -378,6 +394,8 @@ function sanitizeNode(raw: unknown): CanvasNode | null {
     w: finiteOr(n.w, NODE_W),
     h: finiteOr(n.h, NODE_H)
   }
+  if (n.agent) node.agent = migrateAgent(n.agent)
+  return node
 }
 
 function sanitizeFrame(raw: unknown): CanvasFrame | null {

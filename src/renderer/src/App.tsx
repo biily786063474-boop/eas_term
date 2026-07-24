@@ -25,9 +25,36 @@ export function App(): JSX.Element {
 
   // 启动：先载项目（画布 Frame 引用 projectId），再恢复画布场景；恢复完成后才挂保存订阅，
   // 避免空画布把持久化文件覆盖掉。之后画布/viewMode 变化防抖 500ms 落盘。
+  // 关键：改动后 500ms 才落盘 → 若「改完就退/切走」这段没落盘会丢(如刚选的思考/模型档)。
+  // 故失焦(blur)异步 flush、退出/刷新(beforeunload)同步 flush，杜绝这类丢失。
   useEffect(() => {
     let unsub = (): void => {}
     let timer: number | undefined
+    let dirty = false // 有未落盘的画布改动
+
+    const buildScene = (): unknown => {
+      const st = useStore.getState()
+      // 按 leafId 取该 leaf 当前 pane（供序列化区分「终端」与「被切成图片/代码/网页的节点」）
+      const leafPaneOf = (leafId: string) => {
+        for (const t of st.tabs) {
+          const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+          if (leaf) return leaf.pane
+        }
+        return undefined
+      }
+      return serializeCanvas(st.canvas, st.viewMode, leafPaneOf)
+    }
+    const flush = (sync = false): void => {
+      if (!dirty) return
+      dirty = false
+      clearTimeout(timer)
+      const scene = buildScene()
+      if (sync) window.api.canvas.saveSync(scene)
+      else void window.api.canvas.save(scene)
+    }
+    const onBlur = (): void => flush(false) // 失焦：还有时间，异步落盘
+    const onBeforeUnload = (): void => flush(true) // 退出/刷新：同步落盘，阻塞到写完
+
     void (async () => {
       // 启动加载失败也不能吞掉后续:务必挂上保存订阅,否则整会话只出不进(数据不落盘)
       try {
@@ -38,24 +65,19 @@ export function App(): JSX.Element {
       }
       unsub = useStore.subscribe((s, prev) => {
         if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return
+        dirty = true
         clearTimeout(timer)
-        timer = window.setTimeout(() => {
-          const st = useStore.getState()
-          // 按 leafId 取该 leaf 当前 pane（供序列化区分「终端」与「被切成图片/代码/网页的节点」）
-          const leafPaneOf = (leafId: string) => {
-            for (const t of st.tabs) {
-              const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
-              if (leaf) return leaf.pane
-            }
-            return undefined
-          }
-          void window.api.canvas.save(serializeCanvas(st.canvas, st.viewMode, leafPaneOf))
-        }, 500)
+        timer = window.setTimeout(() => flush(false), 500)
       })
+      window.addEventListener('blur', onBlur)
+      window.addEventListener('beforeunload', onBeforeUnload)
     })()
     return () => {
+      flush(true) // 卸载(如热更/切路由)前也落一次,别丢
       clearTimeout(timer)
       unsub()
+      window.removeEventListener('blur', onBlur)
+      window.removeEventListener('beforeunload', onBeforeUnload)
     }
   }, [loadProjects, loadCanvas])
 
