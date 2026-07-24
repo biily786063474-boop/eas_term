@@ -47,6 +47,7 @@ export function CanvasDrawer(): JSX.Element {
   const frames = useStore((s) => s.canvas.frames)
   const tabs = useStore((s) => s.tabs)
   const attentionPtys = useStore((s) => s.attentionPtys)
+  const clearAttention = useStore((s) => s.clearAttention)
   const canvasSel = useStore((s) => s.canvasSel)
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
@@ -104,8 +105,15 @@ export function CanvasDrawer(): JSX.Element {
       const vpEl = document.querySelector('.canvas-viewport')
       vpEl?.classList.remove('drop-active')
       if (!start.started) {
-        // 点击项目：激活 + 把画布聚焦到该项目的 Frame
+        // 点击项目：激活 + 聚焦该项目 Frame + 消除该项目终端的「需处理」呼吸（点一次即知晓）
         setActiveProject(project.id)
+        tabs
+          .filter((t) => t.projectId === project.id)
+          .forEach((t) =>
+            collectLeaves(t.root).forEach((l) => {
+              if (l.pane.kind === 'terminal') clearAttention(l.pane.ptyId)
+            })
+          )
         const frame = useStore.getState().canvas.frames.find((f) => f.projectId === project.id)
         if (frame) focusFrame(frame.id)
         return

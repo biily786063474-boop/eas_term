@@ -381,24 +381,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       pendingWrites = []
       term.write(chunk)
     }
-    // 输出静止检测：一段输出后 5s 内无新输出、且当前没聚焦在该终端 → 大概率一轮回答/命令
-    // 跑完、在等用户处理（比 BEL 可靠，不依赖 CLI 是否响铃）→ 标记「需处理」供抽屉呼吸提示。
-    // 启动 3s 内不标记：避开刚开终端时 shell 初始 prompt 输出静止导致的误报。
-    const bornAt = Date.now()
-    let idleTimer = 0
-    let burstBytes = 0
     const unsubData = window.api.pty.onData(ptyId, (data) => {
       pendingWrites.push(data)
       if (!writeRaf) writeRaf = requestAnimationFrame(flushWrites)
-      burstBytes += data.length
-      if (idleTimer) window.clearTimeout(idleTimer)
-      idleTimer = window.setTimeout(() => {
-        if (burstBytes > 16 && Date.now() - bornAt > 3000 && !el.contains(document.activeElement)) {
-          useStore.getState().flagAttention(ptyId)
-        }
-        burstBytes = 0
-        idleTimer = 0
-      }, 5000)
     })
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
@@ -406,9 +391,21 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     })
     const dataDisp = term.onData((data) => window.api.pty.write(ptyId, data))
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
-    const titleDisp = term.onTitleChange((title) => store.setTabTitle(tabId, title))
-    // 终端响铃（CLI 完成一轮 / 需确认审批时通常会响铃 BEL）→ 未聚焦则标记「需处理」，
-    // 供右侧抽屉里该项目条目呼吸高亮提示用户去处理
+    // Agent 状态检测靠「终端标题」：Claude Code 工作时把标题设成「<盲文 spinner> 名字」（⠋⠙⠹…，
+    // U+2800–U+28FF），一轮跑完 / 出选项 / 需审批（在等你操作）时设成「✳ 名字」（非 spinner）。
+    // 标题从 spinner 跃迁到非 spinner、且当前没聚焦在该终端 → 标记「需处理」供抽屉呼吸提示。
+    // 纯 shell 的标题是 cwd（无 spinner），永不误报；比"输出静止"精确、不乱闪。
+    let prevTitleSpinner = false
+    const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
+    const titleDisp = term.onTitleChange((title) => {
+      store.setTabTitle(tabId, title)
+      const spinner = isSpinnerTitle(title)
+      if (prevTitleSpinner && !spinner && !el.contains(document.activeElement)) {
+        useStore.getState().flagAttention(ptyId)
+      }
+      prevTitleSpinner = spinner
+    })
+    // 独立响铃 BEL（部分 CLI 会在需确认时响铃）→ 未聚焦也标记（次要兜底；OSC 标题终止符的 BEL 不会触发此事件）
     const bellDisp = term.onBell(() => {
       if (!el.contains(document.activeElement)) useStore.getState().flagAttention(ptyId)
     })
@@ -454,7 +451,6 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       jumpBtn.remove()
       scrollbar.remove()
       if (writeRaf) cancelAnimationFrame(writeRaf)
-      if (idleTimer) window.clearTimeout(idleTimer)
       unsubData()
       unsubExit()
       dataDisp.dispose()
