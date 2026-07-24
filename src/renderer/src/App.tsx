@@ -92,7 +92,7 @@ export function App(): JSX.Element {
   const hasProjectTabs = tabs.some((t) => t.projectId === activeProjectId)
 
   return (
-    <div className="app">
+    <div className={`app${viewMode === 'canvas' ? ' canvas' : ''}`}>
       <div className="titlebar">
         {viewMode === 'split' && activeProject ? (
           <div className="titlebar-project" data-tip={activeProject.path}>
