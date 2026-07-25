@@ -1,0 +1,254 @@
+/* PresetAnimationPicker — modal layout with three-tab card picker */
+
+.pap-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9050;
+  backdrop-filter: blur(4px);
+  animation: pap-fade 0.12s ease;
+}
+@keyframes pap-fade { from { opacity: 0 } to { opacity: 1 } }
+
+.pap-modal {
+  background: var(--glass-bg, #1a1a1d);
+  backdrop-filter: var(--glass-blur, blur(18px));
+  -webkit-backdrop-filter: var(--glass-blur, blur(18px));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  width: min(880px, 92vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pap-up 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+@keyframes pap-up {
+  from { transform: translateY(8px) scale(0.97); opacity: 0 }
+  to   { transform: translateY(0) scale(1); opacity: 1 }
+}
+
+/* Header */
+.pap-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
+}
+.pap-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1, #fff);
+  letter-spacing: 0.2px;
+}
+.pap-hint {
+  font-size: 12px;
+  color: var(--text-3, rgba(255, 255, 255, 0.5));
+}
+.pap-spacer { flex: 1; }
+.pap-close {
+  width: 28px; height: 28px;
+  border: none; background: transparent;
+  color: var(--text-3, rgba(255, 255, 255, 0.6));
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.pap-close:hover { background: var(--bg-elevated, rgba(255, 255, 255, 0.06)); color: var(--text-1, #fff); }
+
+/* Tabs */
+.pap-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 14px 0;
+  border-bottom: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
+}
+.pap-tab {
+  position: relative;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-3, rgba(255, 255, 255, 0.55));
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: color 0.12s, background 0.12s;
+}
+.pap-tab:hover { color: var(--text-1, #fff); }
+.pap-tab--on {
+  color: var(--text-1, #fff);
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.04));
+  box-shadow: inset 0 -2px 0 var(--accent, #7c6aed);
+}
+.pap-tab-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #7c6aed);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* Toolbar (categories + search) */
+.pap-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border-2, rgba(255, 255, 255, 0.04));
+}
+.pap-cats {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.pap-cat {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-3, rgba(255, 255, 255, 0.55));
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.pap-cat:hover { color: var(--text-1, #fff); }
+.pap-cat--on {
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.08));
+  color: var(--text-1, #fff);
+  border-color: var(--border-2, rgba(255, 255, 255, 0.1));
+}
+.pap-search {
+  width: 180px;
+  padding: 6px 10px;
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.08));
+  border-radius: 7px;
+  color: var(--text-1, #fff);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.pap-search:focus { border-color: var(--accent, #7c6aed); }
+
+/* Card grid */
+.pap-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 14px 18px;
+  align-content: start;
+}
+.pap-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-3, rgba(255, 255, 255, 0.4));
+  font-size: 12px;
+}
+
+.pap-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px 8px;
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
+  border-radius: 9px;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, background 0.12s;
+}
+.pap-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent, #7c6aed);
+  background: rgba(124, 106, 237, 0.06);
+}
+.pap-card--on {
+  border-color: var(--accent, #7c6aed);
+  background: rgba(124, 106, 237, 0.12);
+  box-shadow: 0 0 0 1px var(--accent, #7c6aed);
+}
+.pap-card-canvas {
+  width: 72px; height: 48px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.pap-card-label {
+  font-size: 11px;
+  color: var(--text-2, rgba(255, 255, 255, 0.75));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+/* Param strip */
+.pap-params {
+  border-top: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
+  padding: 12px 18px;
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pap-param-title {
+  font-size: 12px;
+  color: var(--text-3, rgba(255, 255, 255, 0.65));
+}
+.pap-param-title strong { color: var(--text-1, #fff); font-weight: 600; }
+.pap-param-empty {
+  font-size: 12px;
+  color: var(--text-3, rgba(255, 255, 255, 0.45));
+  text-align: center;
+  padding: 6px 0;
+}
+
+.pap-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.pap-slider-label {
+  width: 40px;
+  color: var(--text-3, rgba(255, 255, 255, 0.6));
+}
+.pap-slider input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent, #7c6aed);
+}
+.pap-slider-val {
+  width: 56px;
+  text-align: right;
+  color: var(--text-2, rgba(255, 255, 255, 0.75));
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+
+.pap-clear {
+  align-self: flex-start;
+  padding: 4px 12px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  border-radius: 6px;
+  color: rgba(255, 130, 130, 0.95);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.pap-clear:hover { background: rgba(255, 80, 80, 0.18); }

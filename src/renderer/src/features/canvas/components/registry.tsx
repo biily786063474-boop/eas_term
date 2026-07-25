@@ -5,7 +5,7 @@
 
 import type { JSX } from 'react'
 import { HistoryView } from '../../git/HistoryView'
-import { DesignNode, type DesignState } from '../../design/DesignNode'
+import { DesignNode, type SavedBlob } from '../../design/DesignNode'
 import { GitBranchIcon, DesignIcon } from '../../../ui/Icons'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
@@ -64,7 +64,9 @@ const designComponent: CanvasComponentDef = {
       cwd={ctx.cwd}
       frameId={ctx.frameId}
       nodeId={ctx.nodeId}
-      savedState={(ctx.props?.designState as DesignState | undefined) ?? null}
+      savedState={
+        ((ctx.props?.unifiedState ?? ctx.props?.designState) as SavedBlob | undefined) ?? null
+      }
     />
   )
 }

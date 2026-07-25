@@ -1,0 +1,747 @@
+/* MotionComposer — keyframe animation workspace
+   ─── Visual language: liquid-glass + design-system tokens (P1-6)
+   - 顶层壳走 var(--glass-bg) + backdrop-filter: var(--glass-blur)
+   - 按钮统一 .btn-secondary 视觉(local size variants 保留为 modifier)
+   - 颜色 / 字号 / spacing / radius 全走 token,不写硬编码 */
+
+/* ═══════════════════════════════════════════════════════════════════
+   [Eas-Term 移植] 动效令牌桥接(port shim)
+   animate 的 styles.css 大量用 spacing / font / 派生色 token,且多为无 fallback 的
+   裸 var(--space-2) / var(--font-sm) —— 未定义会导致 padding/gap/字号整段失效、布局塌陷。
+   designer/styles.css 的 :root shim 已覆盖 bg/text/glass/danger 等共享 token;
+   base.css 已有 --accent / --accent-soft / --radius-sm / --glass-border。
+   这里只补 animate 专属、且上述两处都没有的缺口 token(值取自 taptv src/index.css,
+   派生色改用 color-mix(var(--accent)/var(--danger)) 以贴合 Eas-Term 当前主题)。
+   集成时若统一主题,可把本块搬到 base.css。已有同名 token 不重复定义(让真实主题赢)。
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-1-5: 6px;
+  --space-2:   8px;
+  --space-2-5: 10px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --font-2xs:  10px;
+  --font-xs:   11px;
+  --font-sm:   12px;
+  --font-md:   14px;
+  --accent-dark:   color-mix(in srgb, var(--accent) 78%, #000);
+  --accent-softer: color-mix(in srgb, var(--accent) 8%, transparent);
+  --bg-active:     rgba(255, 255, 255, 0.08);
+  --bg-elevated:   #1e2023;
+  --danger-mute:   color-mix(in srgb, var(--danger) 28%, transparent);
+  --warning:       #f5a623;
+  --z-modal:       10000;
+}
+
+.ua {
+  position: fixed;
+  top: 32px; left: 0; right: 0; bottom: 0;
+  z-index: var(--z-modal, 10000);
+  display: flex; flex-direction: column;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-size: var(--font-sm);
+}
+
+/* ── Top bar ── liquid-glass header */
+.ua__top {
+  height: 44px;
+  display: flex; align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ua__title { font-size: var(--font-md); font-weight: 600; color: var(--text-1); }
+.ua__spacer { flex: 1; }
+.ua__top-field {
+  display: flex; align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--text-2);
+}
+.ua__top-field input {
+  width: 46px;
+  padding: var(--space-0-5) var(--space-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--glass-bg) 70%, transparent);
+  color: var(--text-1);
+  font-size: var(--font-sm);
+  text-align: center;
+  transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+.ua__top-field input:hover { border-color: var(--border-2); }
+.ua__top-field input:focus,
+.ua__top-field input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-softer);
+}
+
+/* ── Composer-internal button (preserves .ua__btn--sm / --accent / --disabled
+   size + state modifiers).  Visual base 对齐 .btn-secondary 玻璃语言。 */
+.ua__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.ua__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-1);
+}
+.ua__btn:disabled,
+.ua__btn--disabled { opacity: 0.45; cursor: not-allowed; }
+.ua__btn--sm {
+  padding: var(--space-0-5) var(--space-2);
+  font-size: var(--font-xs);
+  min-width: 24px;
+  gap: 0;
+}
+/* accent state — 强调(导出按钮 / 定界框开关高亮),用 accent token 跟随主题 */
+.ua__btn--accent {
+  color: var(--accent-fg);
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  border-color: transparent;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.ua__btn--accent:hover:not(:disabled) {
+  filter: brightness(1.08);
+  color: var(--accent-fg);
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+.ua__sep { width: 1px; height: 20px; background: var(--border); margin: 0 var(--space-0-5); flex-shrink: 0; }
+.ua__top-zoom { font-size: var(--font-xs); color: var(--text-2); min-width: 32px; text-align: center; }
+
+/* ── Main area ── */
+.ua__main { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+/* ── 左侧 figure layers panel(动画态)──
+   class 用 designer 的 .uc__layers 系列(LayersPanel fork from designer),
+   外层 .ua__left 只管尺寸/边框,内部样式吃 designer styles.css 的 .uc__layers-* */
+.ua__left {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Preview ── */
+.ua__preview {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-app);
+  min-width: 0; overflow: hidden; position: relative;
+}
+.ua__preview canvas { display: block; border: 1px solid var(--border); cursor: default; }
+/* Floating preview controls — true glass language */
+.ua__preview-bar {
+  position: absolute;
+  bottom: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-0-5);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+.ua__pbtn {
+  padding: var(--space-1) var(--space-2-5);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-xs);
+  background: transparent;
+  border: none;
+  color: var(--text-1);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) ease;
+}
+.ua__pbtn:hover { background: rgba(255, 255, 255, 0.1); }
+.ua__pbtn--label { cursor: default; color: var(--text-2); min-width: 36px; text-align: center; }
+.ua__pbtn-color {
+  width: 22px; height: 22px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 0; cursor: pointer; background: none;
+}
+
+/* ── Resize handles ── */
+.ua__resize-v { width: 5px; cursor: col-resize; background: transparent; flex-shrink: 0; position: relative; z-index: 2; }
+.ua__resize-v:hover, .ua__resize-v:active { background: var(--accent); opacity: 0.5; }
+.ua__resize-h { height: 5px; cursor: row-resize; background: transparent; flex-shrink: 0; position: relative; z-index: 2; }
+.ua__resize-h:hover, .ua__resize-h:active { background: var(--accent); opacity: 0.5; }
+
+/* ── Right panel ── */
+.ua__right { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+
+/* ── Layers ── */
+.ua__layers { display: flex; flex-direction: column; max-height: 50%; }
+.ua__layers-head {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+.ua__layers-list { overflow-y: auto; padding: var(--space-0-5) 0; }
+.ua__layer {
+  display: flex; align-items: center;
+  gap: var(--space-1-5);
+  padding: 5px var(--space-3);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background var(--dur-fast) ease, border-left-color var(--dur-fast) ease;
+}
+.ua__layer:hover { background: var(--bg-hover); }
+.ua__layer--on { background: var(--bg-active); border-left-color: var(--accent); }
+.ua__layer-icon { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.ua__layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ua__layer-eye { opacity: 0.3; cursor: pointer; font-size: var(--font-2xs); }
+.ua__layer-eye:hover { opacity: 1; }
+.ua__empty { padding: var(--space-5); text-align: center; color: var(--text-3); }
+
+/* ── Keyframe panel ── */
+.ua__kf-panel { flex: 1; overflow-y: auto; border-top: 1px solid var(--border); padding: var(--space-1-5) 0; }
+
+/* ── Preset chips (top of keyframe panel) ── */
+.ua__preset-bar { padding: var(--space-1) var(--space-3) var(--space-2); border-bottom: 1px solid var(--border); margin-bottom: var(--space-1); }
+.ua__preset-bar-title { font-size: var(--font-xs); font-weight: 600; color: var(--text-2); margin-bottom: var(--space-1-5); }
+.ua__preset-chips { display: flex; flex-direction: column; gap: var(--space-1); }
+.ua__preset-chip { display: flex; align-items: center; gap: var(--space-1); }
+.ua__preset-chip-btn {
+  flex: 1;
+  display: flex; align-items: center; gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--glass-bg) 60%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: border-color var(--dur-fast), color var(--dur-fast), background var(--dur-fast);
+  text-align: left;
+  min-width: 0;
+}
+.ua__preset-chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-1);
+  background: var(--accent-softer);
+}
+.ua__preset-chip-stage {
+  font-size: var(--font-2xs);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+.ua__preset-chip-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ua__preset-chip--on .ua__preset-chip-btn {
+  border-color: var(--accent);
+  color: var(--text-1);
+  background: var(--accent-soft);
+}
+.ua__preset-chip--on .ua__preset-chip-stage { color: var(--accent); }
+.ua__preset-chip-clear {
+  width: 18px; height: 18px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-3);
+  font-size: var(--font-sm);
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+.ua__preset-chip-clear:hover {
+  color: var(--danger);
+  border-color: var(--danger-mute);
+}
+
+.ua__kf-head {
+  padding: var(--space-1) var(--space-3) var(--space-1-5);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ua__kf-row { display: flex; align-items: center; gap: var(--space-1); padding: 3px var(--space-3); }
+.ua__kf-label { width: 36px; font-size: var(--font-xs); color: var(--text-3); text-align: right; flex-shrink: 0; }
+.ua__kf-input {
+  width: 54px;
+  padding: var(--space-0-5) var(--space-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--glass-bg) 70%, transparent);
+  color: var(--text-1);
+  font-size: var(--font-xs);
+  text-align: center;
+  font-family: 'SF Mono', monospace;
+  transition: border-color var(--dur-fast) ease;
+}
+.ua__kf-input:hover { border-color: var(--border-2); }
+.ua__kf-input:focus,
+.ua__kf-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-softer);
+}
+.ua__kf-diamond {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: var(--font-2xs);
+  padding: var(--space-0-5);
+}
+.ua__kf-diamond:hover { color: var(--accent); }
+
+/* ── NumDragInput(横向拖值数字控件,Figma/AE 风)── */
+.ua__numdrag {
+  width: 54px;
+  padding: 3px var(--space-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--glass-bg) 70%, transparent);
+  color: var(--text-1);
+  font-size: var(--font-xs);
+  text-align: center;
+  font-family: 'SF Mono', monospace;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease;
+  display: inline-block;
+  line-height: 1.4;
+}
+.ua__numdrag:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--glass-bg) 70%);
+}
+.ua__numdrag:active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--glass-bg) 60%);
+  border-color: var(--accent);
+}
+/* 编辑模式 input(双击进入)*/
+.ua__numdrag-input {
+  width: 54px;
+  padding: 3px var(--space-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-size: var(--font-xs);
+  text-align: center;
+  font-family: 'SF Mono', monospace;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-softer);
+  /* 隐藏 number 默认的上下箭头 */
+  -moz-appearance: textfield;
+}
+.ua__numdrag-input::-webkit-outer-spin-button,
+.ua__numdrag-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ua__kf-diamond--on { color: var(--accent); }
+.ua__kf-easing {
+  padding: 1px var(--space-0-5);
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--glass-bg) 70%, transparent);
+  color: var(--text-1);
+  font-size: var(--font-2xs);
+  max-width: 58px;
+}
+
+/* ── Timeline ── */
+.ua__timeline { border-top: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+.ua__tl-controls {
+  display: flex; align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ua__tl-time { font-family: 'SF Mono', monospace; font-size: var(--font-sm); min-width: 56px; color: var(--text-1); }
+.ua__tl-time--dim { opacity: 0.4; }
+.ua__tl-zoom-hint { font-size: var(--font-2xs); color: var(--text-3); }
+.ua__tl-zoom-val { font-size: var(--font-xs); min-width: 32px; text-align: center; color: var(--text-2); }
+
+.ua__tl-body { flex: 1; position: relative; overflow: auto; cursor: pointer; }
+
+/* Ruler */
+.ua__tl-ruler {
+  height: 24px; position: sticky; top: 0;
+  z-index: 5;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border);
+}
+.ua__tl-tick { position: absolute; top: 0; width: 1px; height: 100%; background: rgba(255,255,255,0.15); }
+.ua__tl-tick--minor { height: 40%; bottom: 0; top: auto; background: rgba(255,255,255,0.06); }
+.ua__tl-tick-label { position: absolute; top: 4px; font-size: 9px; color: var(--text-3); transform: translateX(-50%); user-select: none; pointer-events: none; }
+.ua__tl-tick-label--minor { top: auto; bottom: 2px; font-size: 8px; color: var(--text-3); }
+
+/* Tracks */
+.ua__tl-tracks { position: relative; min-height: 60px; }
+.ua__tl-track { height: 28px; display: flex; align-items: center; position: relative; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.ua__tl-track-label {
+  position: sticky; left: 0; z-index: 3;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-2xs);
+  color: var(--text-2);
+  padding: 0 var(--space-1) 0 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--bg-app);
+}
+/* 子轨道(展开后,缩进 + 弱化色) */
+.ua__tl-track-label--sub {
+  padding-left: 28px;
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+
+/* 展开按钮 ▶ ▼ */
+.ua__tl-expand {
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--text-3); padding: 0; border-radius: 4px;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.ua__tl-expand:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+/* Layer 主行(可双击展开)— hover 时整行高亮提示 */
+.ua__tl-track--layer { cursor: pointer; }
+.ua__tl-track--layer:hover {
+  background: color-mix(in srgb, var(--text-1) 4%, transparent);
+}
+.ua__tl-track--layer.is-expanded {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.ua__tl-track--layer.is-expanded:hover {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+/* Group / mask 主行:更暗的底 + 左侧色条提示这是父级容器 */
+.ua__tl-track--group {
+  background: color-mix(in srgb, var(--text-1) 5%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ua__tl-track--group:hover {
+  background: color-mix(in srgb, var(--text-1) 8%, transparent);
+}
+.ua__tl-track--group.is-expanded {
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.ua__tl-track--group.is-expanded:hover {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+/* 子轨道(属性行)样式弱化 */
+.ua__tl-track--prop {
+  height: 22px;
+  background: color-mix(in srgb, var(--text-1) 2%, transparent);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: height 0.15s ease;
+}
+.ua__tl-track--prop:hover {
+  background: color-mix(in srgb, var(--text-1) 4%, transparent);
+}
+/* graph mode:子轨道高度扩展,内部 SVG 显示插值曲线 */
+.ua__tl-track--prop.is-graph {
+  height: 52px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--text-1) 3%);
+}
+.ua__tl-track--empty {
+  background: transparent;
+  opacity: 0.6;
+}
+/* 属性行的 kf 容器(占据 layer bar 同位置) */
+.ua__tl-prop-lane {
+  position: absolute;
+  top: 0; bottom: 0;
+}
+
+/* 曲线开关 icon(子轨道左边 label 内) */
+.ua__tl-graph-toggle {
+  width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; cursor: pointer;
+  color: var(--text-3); padding: 0; border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.ua__tl-graph-toggle:hover { background: var(--bg-hover); color: var(--accent); }
+.ua__tl-graph-toggle.is-on {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+/* 曲线 SVG */
+.ua__tl-curve-svg {
+  display: block;
+}
+
+/* ── 右键 ContextMenu(关键帧菜单)── */
+.ua__ctx {
+  position: fixed;
+  z-index: 10000;
+  min-width: 200px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+  padding: 4px;
+  font-size: 12px;
+  user-select: none;
+  animation: ua-ctx-in 0.12s ease;
+}
+@keyframes ua-ctx-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ua__ctx-head {
+  padding: 6px 10px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ua__ctx-section {
+  display: flex; flex-direction: column;
+}
+.ua__ctx-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+.ua__ctx-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px 6px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.ua__ctx-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-1);
+}
+.ua__ctx-item.is-active {
+  color: var(--accent);
+}
+.ua__ctx-item--danger {
+  color: #f87171;
+}
+.ua__ctx-item--danger:hover {
+  background: rgba(248,113,113,0.12);
+  color: #f87171;
+}
+.ua__ctx-check {
+  width: 12px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ua__tl-bar { position: absolute; height: 20px; border-radius: var(--radius-sm); opacity: 0.45; top: 4px; cursor: pointer; overflow: visible; }
+.ua__tl-bar--on { opacity: 1; box-shadow: 0 0 0 1px rgba(255,255,255,0.3); }
+
+/* 关键帧包装(SVG 形状外层 div,负责绝对定位 + 事件) */
+.ua__tl-kf-wrap {
+  position: absolute; top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+  cursor: grab;
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.55));
+  transition: transform 0.1s ease, filter 0.1s ease;
+  touch-action: none;
+  user-select: none;
+  z-index: 4;
+}
+.ua__tl-kf-wrap:hover {
+  transform: translate(-50%, -50%) scale(1.35);
+  filter: drop-shadow(0 0 5px rgba(0,0,0,0.7));
+}
+.ua__tl-kf-wrap:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.5);
+}
+.ua__tl-kf-wrap--group-active {
+  transform: translate(-50%, -50%) scale(1.3);
+  filter: drop-shadow(0 0 0 var(--accent)) drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+/* 选中状态(点击 kf 后,Backspace 删除目标)— accent 光晕 + 缩放 */
+.ua__tl-kf-wrap--selected {
+  transform: translate(-50%, -50%) scale(1.45);
+  filter:
+    drop-shadow(0 0 0 white)
+    drop-shadow(0 0 4px var(--accent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 80%, transparent));
+}
+.ua__tl-kf-wrap--selected:hover {
+  transform: translate(-50%, -50%) scale(1.55);
+}
+
+/* legacy:graph mode 内 SVG 的小圆点(kf 位置 marker)+ 手柄拖动光标 */
+.ua__tl-handles circle:hover { fill: white; r: 5; }
+
+/* ───────────────────────────────────────────────────
+ * Timeline marquee 框选(2026-06-04 task #86 Phase 1)
+ *   - 拖出虚线矩形选中范围内 kf
+ *   - 视觉沿用 ua__marquee(画布层 marquee)的 accent + 12% bg
+ *   - pointer-events: none → 不挡 kf 点击/拖动
+ * ─────────────────────────────────────────────────── */
+.ua__tl-marquee {
+  position: absolute;
+  border: 1px dashed var(--accent, #a78bfa);
+  background: color-mix(in srgb, var(--accent, #a78bfa) 10%, transparent);
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* ───────────────────────────────────────────────────
+ * Timeline 拉伸手柄(2026-06-04 task #86 Phase 1)
+ *   - 多选跨 ≥ 2 个 unique time 时,在最早/最晚 time 上方显示
+ *   - 视觉:倒三角 + 1px 锚定线,橙色(警示用户这是批量编辑入口)
+ *   - 拖左手柄改 newStart,拖右手柄改 newEnd
+ *   - z-index: 11 高于 playhead(playhead = 10)以便点击不被 playhead 抢
+ * ─────────────────────────────────────────────────── */
+.ua__tl-stretch-handle {
+  position: absolute;
+  top: 0;
+  width: 16px;
+  height: 18px;
+  margin-left: -8px;
+  cursor: ew-resize;
+  z-index: 11;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: auto;
+}
+.ua__tl-stretch-handle::before {
+  /* 倒三角 ▼,顶在 ruler 下方 0 处 */
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--warning, #f59e0b);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+  transition: transform 0.12s ease;
+}
+.ua__tl-stretch-handle::after {
+  /* 1px 锚定线贯穿整条 tracks 区 */
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: -9999px; /* 由父容器 overflow 裁掉 */
+  left: 50%;
+  width: 1px;
+  margin-left: -0.5px;
+  background: color-mix(in srgb, var(--warning, #f59e0b) 60%, transparent);
+  pointer-events: none;
+}
+.ua__tl-stretch-handle:hover::before,
+.ua__tl-stretch-handle.is-dragging::before {
+  transform: scale(1.25);
+}
+.ua__tl-stretch-handle.is-dragging::after {
+  background: var(--warning, #f59e0b);
+}
+
+/* Playhead — semantic红色 (固定不跟主题,playhead 跟视频剪辑软件惯例一致) */
+.ua__tl-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--danger); z-index: 10; pointer-events: none; }
+.ua__tl-playhead::before {
+  content: '';
+  position: absolute; top: 0; left: -5px;
+  width: 12px; height: 12px;
+  background: var(--danger);
+  clip-path: polygon(0 0, 100% 0, 50% 80%);
+}
+
+/* ── 图层条 in/out 拖拽手柄(2026-06-05)── */
+.ua__tl-bar { cursor: grab; }
+.ua__tl-bar:active { cursor: grabbing; }
+.ua__tl-bar-handle {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ua__tl-bar-handle--l { left: -3px; }
+.ua__tl-bar-handle--r { right: -3px; }
+.ua__tl-bar-handle::after {
+  content: '';
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.45);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.ua__tl-bar:hover .ua__tl-bar-handle::after,
+.ua__tl-bar--on .ua__tl-bar-handle::after { opacity: 1; }
+.ua__tl-bar-handle:hover::after { background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.4); }
