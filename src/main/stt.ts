@@ -226,8 +226,22 @@ async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: s
 
 // 会话态
 let stream: unknown = null
-let chunks: Float32Array[] = []
+let chunks: Float32Array[] = [] // 当前这一句的音频（自动切句后清空）
 let committed = ''
+
+// 「停顿 ~2s 自动落字」用的静音检测：能量低于阈值即视为静音，连续静音够久就切句。
+const SILENCE_RMS = 0.012 // 静音能量阈值（经验值：环境底噪之上、正常说话之下）
+const SILENCE_MS = 1200 // 连续静音多久算「说完一句」（+ 采集/识别耗时 ≈ 用户体感 2s）
+const MIN_SPEECH_MS = 400 // 一句至少要有这么多语音，避免咳嗽/键盘声触发
+let silentMs = 0
+let speechMs = 0
+let sentenceBusy = false // 正在跑 SenseVoice（避免同一句重复触发）
+
+function rms(f: Float32Array): number {
+  let s = 0
+  for (let i = 0; i < f.length; i++) s += f[i] * f[i]
+  return Math.sqrt(s / Math.max(1, f.length))
+}
 
 function concatChunks(): Float32Array {
   const total = chunks.reduce((n, c) => n + c.length, 0)
@@ -238,6 +252,31 @@ function concatChunks(): Float32Array {
     off += c.length
   }
   return out
+}
+
+// 一句说完：用 SenseVoice 出定稿 → 发给渲染层直接落字；清空缓存继续听下一句。
+// 处理发生在「用户已经停下来」的静音里，用户感知不到等待，也不需要任何 loading 态。
+function flushSentence(wc: WebContents): void {
+  if (sentenceBusy) return
+  const audio = concatChunks()
+  chunks = []
+  const streamFallback = committed
+  committed = ''
+  silentMs = 0
+  speechMs = 0
+  if (!audio.length) return
+  sentenceBusy = true
+  try {
+    const text = transcribeOffline(audio) ?? streamFallback
+    if (text && !wc.isDestroyed()) wc.send('stt:final', text)
+    // 该句已落字：清掉预览，流式识别器也重置，避免下一句串上一句的残留
+    if (!wc.isDestroyed()) wc.send('stt:partial', '')
+    if (recognizer && stream) recognizer.reset(stream)
+  } catch (e) {
+    console.error('[stt] 自动切句失败', e)
+  } finally {
+    sentenceBusy = false
+  }
 }
 
 export function registerSttHandlers(): void {
@@ -265,6 +304,9 @@ export function registerSttHandlers(): void {
     stream = r.createStream()
     chunks = []
     committed = ''
+    silentMs = 0
+    speechMs = 0
+    sentenceBusy = false
     return { ok: true }
   })
 
@@ -275,11 +317,21 @@ export function registerSttHandlers(): void {
       const i16 = new Int16Array(buf)
       const f32 = new Float32Array(i16.length)
       for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768
-      chunks.push(f32)
+      const wc = e.sender as WebContents
+      const ms = (f32.length / 16000) * 1000
+      const loud = rms(f32) >= SILENCE_RMS
+      // 静音期只在「已经说过话」之后才累积缓存，避免开头的空录音把一句撑长
+      if (loud || chunks.length) chunks.push(f32)
+      if (loud) {
+        speechMs += ms
+        silentMs = 0
+      } else if (chunks.length) {
+        silentMs += ms
+      }
       ;(stream as { acceptWaveform(sr: number, s: Float32Array): void }).acceptWaveform(16000, f32)
       while (r.isReady(stream)) r.decode(stream)
       const seg = r.getResult(stream).text.trim()
-      const wc = e.sender as WebContents
+      // 说话中：流式预览（灰字），让用户看到在听
       if (r.isEndpoint(stream)) {
         committed = (committed + seg).trim()
         r.reset(stream)
@@ -287,11 +339,14 @@ export function registerSttHandlers(): void {
       } else if (!wc.isDestroyed()) {
         wc.send('stt:partial', (committed + seg).trim())
       }
+      // 停顿够久且这一句确实有内容 → 就地用 SenseVoice 出定稿并落字（处理藏在静音里，无 loading）
+      if (silentMs >= SILENCE_MS && speechMs >= MIN_SPEECH_MS) flushSentence(wc)
     } catch (err) {
       console.error('[stt:audio]', err)
     }
   })
 
+  // 停止录音：只需收尾「最后一句还没到静音阈值就被手动停掉」的残句（已自动落字的不重复）
   ipcMain.handle('stt:stop', (): { text: string } => {
     const r = recognizer
     let streamTail = ''
@@ -305,11 +360,15 @@ export function registerSttHandlers(): void {
       }
     }
     const all = chunks.length ? concatChunks() : new Float32Array(0)
-    const offlineText = all.length ? transcribeOffline(all) : null
-    const text = offlineText ?? (committed + streamTail).trim()
+    // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字
+    const offlineText = all.length / 16000 > 0.3 ? transcribeOffline(all) : null
+    const text = (offlineText ?? (committed + streamTail).trim()).trim()
     stream = null
     chunks = []
     committed = ''
+    silentMs = 0
+    speechMs = 0
+    sentenceBusy = false
     return { text }
   })
 }

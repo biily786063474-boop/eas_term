@@ -9,19 +9,34 @@ import './voice.css'
 
 const TOTAL_MB = 305 // 两个模型合计约 305MB（进度显示参考值）
 
-export function VoiceButton({ ptyId }: { ptyId: string }): JSX.Element {
+export function VoiceButton({
+  ptyId,
+  scale = 1
+}: {
+  ptyId: string
+  /** 画布终端的落定缩放比：按它整体缩放，跟终端内容（字号缩放）保持相对静止 */
+  scale?: number
+}): JSX.Element {
   const [rec, setRec] = useState(false)
   const [interim, setInterim] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [dlMb, setDlMb] = useState<number | null>(null) // 下载中的已收 MB（null=非下载态）
   const capRef = useRef<VoiceCapture | null>(null)
 
-  // 录音时订阅 partial：显灰色预览（定稿由 stop 的返回值写入，不再走 onFinal）
+  // 录音时：partial 显灰色预览；final = 主进程检测到「停顿 ~2s」后就地出的定稿 → 直接落进输入框。
+  // 用户不用点麦克风，也看不到任何处理态（识别发生在他停下来的那段静音里），可以接着说下一句。
   useEffect(() => {
     if (!rec) return
     const offP = window.api.stt.onPartial((t) => setInterim(t))
-    return () => offP()
-  }, [rec])
+    const offF = window.api.stt.onFinal((t) => {
+      if (t) window.api.pty.write(ptyId, t)
+      setInterim('')
+    })
+    return () => {
+      offP()
+      offF()
+    }
+  }, [rec, ptyId])
 
   // 卸载确保停掉采麦
   useEffect(
@@ -90,7 +105,11 @@ export function VoiceButton({ ptyId }: { ptyId: string }): JSX.Element {
   }
 
   return (
-    <div className="voice-ctl">
+    <div
+      className="voice-ctl"
+      // 以右下角为锚点整体缩放：位置与大小都跟随终端内容比例，缩放时不再「漂移/失配」
+      style={scale === 1 ? undefined : { transform: `scale(${scale})`, transformOrigin: '100% 100%' }}
+    >
       {downloading && (
         <div className="voice-interim">
           首次使用 · 下载语音模型 {dlMb!.toFixed(0)} / ≈{TOTAL_MB} MB
