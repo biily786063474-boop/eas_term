@@ -149,7 +149,13 @@ const api = {
     hasImage: (): Promise<boolean> => ipcRenderer.invoke('clipboard:hasImage')
   },
   shell: {
-    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url)
+    openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
+    // 终端里 CLI 调 `open <url>` 被 shim 劫持后，主进程经此通知渲染层在画板浏览器打开
+    onOpenInCanvas: (cb: (url: string) => void): (() => void) => {
+      const h = (_e: unknown, url: string): void => cb(url)
+      ipcRenderer.on('shell:openInCanvas', h)
+      return () => ipcRenderer.removeListener('shell:openInCanvas', h)
+    }
   },
   bizone: {
     check: (): Promise<BizoneCheck> => ipcRenderer.invoke('bizone:check'),

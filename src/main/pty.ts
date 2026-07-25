@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import * as pty from 'node-pty'
 import os from 'os'
 import fs from 'fs'
+import path from 'path'
 import { execFile } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
 
@@ -16,6 +17,76 @@ let nextId = 1
 function defaultShell(): string {
   if (process.platform === 'win32') return 'powershell.exe'
   return process.env.SHELL || '/bin/zsh'
+}
+
+// 「跳出的网页默认用画板内嵌浏览器」的最后一环：终端里的 CLI(如 AI 工具)常直接调
+// macOS 的 `open <url>` 打开系统浏览器(Safari)——那是子进程直接找系统，前端拦不到。
+// 这里在 userData 放一个 shim `open`，把它的目录塞到 PTY 的 PATH 最前：
+//   · 参数是 http(s) 网址 → 写进一个「待打开」文件，主进程监听后在画板浏览器打开；
+//   · 其它参数(开文件/开 app) → 原样转发给真正的 /usr/bin/open。
+// 同时设 BROWSER，照顾按 xdg/BROWSER 约定的工具。
+let shimDirCache: string | null = null
+const urlQueueFile = (): string => path.join(app.getPath('userData'), 'open-url.queue')
+
+function ensureOpenShim(): string | null {
+  if (process.platform !== 'darwin') return null
+  if (shimDirCache) return shimDirCache
+  try {
+    const dir = path.join(app.getPath('userData'), 'bin')
+    fs.mkdirSync(dir, { recursive: true })
+    const shim = path.join(dir, 'open')
+    const script = `#!/bin/sh
+# Eas-Term: 把 open <url> 劫持到画板内嵌浏览器；其它参数转发系统 open
+for a in "$@"; do
+  case "$a" in
+    http://*|https://*)
+      printf '%s\\n' "$a" >> "${urlQueueFile()}"
+      exit 0
+      ;;
+  esac
+done
+exec /usr/bin/open "$@"
+`
+    fs.writeFileSync(shim, script, { mode: 0o755 })
+    fs.chmodSync(shim, 0o755)
+    shimDirCache = dir
+    return dir
+  } catch (e) {
+    console.error('[pty] 创建 open shim 失败(终端链接将回落系统浏览器)', e)
+    return null
+  }
+}
+
+// 监听待打开队列：有新 URL 就通知渲染层在画板浏览器打开
+function watchUrlQueue(): void {
+  const file = urlQueueFile()
+  try {
+    fs.writeFileSync(file, '')
+  } catch {
+    return
+  }
+  let last = 0
+  setInterval(() => {
+    try {
+      const st = fs.statSync(file)
+      if (st.size <= last) {
+        if (st.size < last) last = 0
+        return
+      }
+      const fd = fs.openSync(file, 'r')
+      const buf = Buffer.alloc(st.size - last)
+      fs.readSync(fd, buf, 0, buf.length, last)
+      fs.closeSync(fd)
+      last = st.size
+      for (const url of buf.toString('utf8').split('\n').map((s) => s.trim()).filter(Boolean)) {
+        for (const w of BrowserWindow.getAllWindows()) {
+          if (!w.webContents.isDestroyed()) w.webContents.send('shell:openInCanvas', url)
+        }
+      }
+    } catch {
+      /* 文件还没建/被清空，忽略 */
+    }
+  }, 400)
 }
 
 // 判断哪些 shell 进程"忙"：一次性取系统所有进程的父 PID，
@@ -101,6 +172,7 @@ export async function anyPtyBusy(): Promise<boolean> {
 }
 
 export function registerPtyHandlers(): void {
+  watchUrlQueue() // 监听 CLI 经 open shim 投递的网址 → 通知渲染层在画板浏览器打开
   ipcMain.handle('pty:create', (e, opts: PtyCreateOptions) => {
     const id = String(nextId++)
     let cwd = opts.cwd || os.homedir()
@@ -116,7 +188,19 @@ export function registerPtyHandlers(): void {
       cols: opts.cols ?? 80,
       rows: opts.rows ?? 24,
       cwd,
-      env: { ...process.env, TERM_PROGRAM: 'Eas-Term' } as Record<string, string>
+      env: (() => {
+        const env: Record<string, string> = {
+          ...(process.env as Record<string, string>),
+          TERM_PROGRAM: 'Eas-Term'
+        }
+        // open shim 目录塞到 PATH 最前 → CLI 的 `open <url>` 命中我们的劫持，落到画板浏览器
+        const shimDir = ensureOpenShim()
+        if (shimDir) {
+          env.PATH = `${shimDir}:${env.PATH ?? ''}`
+          env.BROWSER = path.join(shimDir, 'open') // 照顾按 BROWSER 约定的工具
+        }
+        return env
+      })()
     })
     const wc = e.sender
     // 输出合批背压:高吞吐(cat 大文件 / 刷屏 / 构建日志)时逐块 wc.send 会用海量小 IPC 消息

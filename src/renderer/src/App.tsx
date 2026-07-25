@@ -82,6 +82,23 @@ export function App(): JSX.Element {
     }
   }, [loadProjects, loadCanvas])
 
+  // 终端里的 CLI 调 `open <url>`（AI 工具弹网页等）被 open shim 劫持 → 这里在画板内嵌浏览器打开，
+  // 而不是弹系统 Safari。没有任何画布 Frame 时才回落系统浏览器。
+  useEffect(() => {
+    return window.api.shell.onOpenInCanvas((url) => {
+      const s = useStore.getState()
+      const frame =
+        s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
+        s.canvas.frames.find((f) => !f.parentId)
+      if (!frame) {
+        void window.api.shell.openExternal(url)
+        return
+      }
+      if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+      s.addWebNode(frame.id, url)
+    })
+  }, [])
+
   // 全局快捷键：mac 用 ⌘、Windows/Linux 用 Ctrl。T 新终端、W 关面板、D 右分屏、⇧D 下分屏、1-9 切标签
   useEffect(() => {
     const isMac = window.api.platform === 'darwin'
