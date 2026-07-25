@@ -8,6 +8,7 @@ import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
 import { registerSttHandlers } from './stt'
+import { registerDesignHandlers } from './design'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 // 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
@@ -202,6 +203,7 @@ app.whenReady().then(() => {
   registerCanvasHandlers()
   registerAgentHandlers()
   registerSttHandlers()
+  registerDesignHandlers()
   registerBizoneHandlers()
   buildMenu()
   createWindow()

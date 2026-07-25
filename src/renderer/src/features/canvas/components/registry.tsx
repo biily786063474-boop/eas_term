@@ -5,7 +5,8 @@
 
 import type { JSX } from 'react'
 import { HistoryView } from '../../git/HistoryView'
-import { GitBranchIcon } from '../../../ui/Icons'
+import { DesignNode } from '../../design/DesignNode'
+import { GitBranchIcon, DesignIcon } from '../../../ui/Icons'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
 export interface CanvasComponentCtx {
@@ -50,7 +51,18 @@ const gitComponent: CanvasComponentDef = {
   render: (ctx) => <HistoryView cwd={ctx.cwd} />
 }
 
-export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent]
+/** 设计模块（Step 1：渲染 + 导出到 <项目>/demo/；后续接 Konva 设计画布） */
+const designComponent: CanvasComponentDef = {
+  id: 'design',
+  name: '设计模块',
+  Icon: DesignIcon,
+  description: '设计 / 动效，导出到项目 demo/',
+  defaultSize: { w: 380, h: 320 },
+  needsProject: true,
+  render: (ctx) => <DesignNode cwd={ctx.cwd} />
+}
+
+export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent, designComponent]
 
 export const getCanvasComponent = (id: string): CanvasComponentDef | undefined =>
   CANVAS_COMPONENTS.find((c) => c.id === id)
