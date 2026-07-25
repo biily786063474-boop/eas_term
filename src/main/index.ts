@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
 import path from 'path'
+import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy } from './pty'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
@@ -195,6 +196,15 @@ function buildMenu(): void {
 }
 
 app.whenReady().then(() => {
+  // dev 下 dock 也显示项目图标（打包版的图标由 electron-builder 用 build/icon.icns 写进 .app）
+  if (!app.isPackaged && process.platform === 'darwin') {
+    const devIcon = path.join(app.getAppPath(), 'build', 'icon.png')
+    try {
+      if (fs.existsSync(devIcon)) app.dock?.setIcon(devIcon)
+    } catch {
+      /* 图标缺失不影响启动 */
+    }
+  }
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()
