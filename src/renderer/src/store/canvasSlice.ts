@@ -562,11 +562,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes },
       canvasCommittedScale: scene.viewport.scale
     }))
-    // 上次退出停在画布 → 恢复到画布并立即重开终端
-    if (scene.viewMode === 'canvas') {
-      set({ viewMode: 'canvas' })
-      await get().materializeCanvas()
-    }
+    // 恢复上次停留的视图
+    if (scene.viewMode === 'canvas') set({ viewMode: 'canvas' })
+    // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
+    // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
+    // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。
+    await get().materializeCanvas()
   },
 
   materializeCanvas: async () => {
