@@ -327,6 +327,13 @@
 .pane-layer {
   position: absolute;
   inset: -3px;
+  /* 层本身不吃点击：空态时它仍覆盖全区，会挡住底下的「打开终端」等空状态按钮。
+     只让真正的面板/分隔条接管指针事件（画布模式的穿透规则同理，见 canvas.css）。 */
+  pointer-events: none;
+}
+.pane-layer > .pane,
+.pane-layer > .divider {
+  pointer-events: auto;
 }
 
 
