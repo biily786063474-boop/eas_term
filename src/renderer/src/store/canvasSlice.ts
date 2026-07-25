@@ -998,17 +998,39 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     get().setViewport({ x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale })
   },
 
+  // 重命名画布节点 → 同步分屏那边的标签名（两个模式的终端名双向一致）
   renameNode: (frameId, nodeId, name) =>
-    set((s) => ({
-      canvas: {
-        ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === frameId
-            ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, name } : n)) }
-            : f
-        )
-      }
-    })),
+    set((s) => {
+      const trimmed = name.trim()
+      const leafId = s.canvas.frames
+        .find((f) => f.id === frameId)
+        ?.nodes.find((n) => n.id === nodeId)?.leafId
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? {
+              ...f,
+              nodes: f.nodes.map((n) =>
+                n.id === nodeId ? { ...n, name: trimmed || undefined } : n
+              )
+            }
+          : f
+      )
+      // 该节点绑定着某个 leaf → 把它所属 tab 的标题一并改掉（清空则恢复自动标题）
+      const tabs = leafId
+        ? s.tabs.map((t) =>
+            collectLeaves(t.root).some((l) => l.id === leafId)
+              ? trimmed
+                ? { ...t, title: trimmed, customTitle: true }
+                : {
+                    ...t,
+                    title: s.projects.find((p) => p.id === t.projectId)?.name ?? '终端',
+                    customTitle: false
+                  }
+              : t
+          )
+        : s.tabs
+      return { canvas: { ...s.canvas, frames }, tabs }
+    }),
 
   setNodeAgent: (frameId, nodeId, agent) =>
     set((s) => ({

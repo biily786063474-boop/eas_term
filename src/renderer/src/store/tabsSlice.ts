@@ -236,19 +236,32 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       )
     })),
 
-  // 用户手动重命名；传空字符串则恢复自动标题
+  // 用户手动重命名；传空字符串则恢复自动标题。同时同步画布里对应终端节点的名字（双向一致）
   renameTab: (tabId, title) =>
-    set((s) => ({
+    set((s) => {
+      const trimmed = title.trim()
+      const tab = s.tabs.find((t) => t.id === tabId)
+      const leafIds = new Set(tab ? collectLeaves(tab.root).map((l) => l.id) : [])
+      const frames = leafIds.size
+        ? s.canvas.frames.map((f) => ({
+            ...f,
+            nodes: f.nodes.map((n) =>
+              n.leafId && leafIds.has(n.leafId) ? { ...n, name: trimmed || undefined } : n
+            )
+          }))
+        : s.canvas.frames
+      return {
+      canvas: { ...s.canvas, frames },
       tabs: s.tabs.map((t) => {
         if (t.id !== tabId) return t
-        const trimmed = title.trim()
         if (!trimmed) {
           const project = s.projects.find((p) => p.id === t.projectId)
           return { ...t, title: project?.name ?? '终端', customTitle: false }
         }
         return { ...t, title: trimmed, customTitle: true }
       })
-    })),
+      }
+    }),
 
   // Blender 风格：分屏克隆当前面板的类型与内容（终端则新开一个 shell）
   splitLeaf: async (tabId, leafId, dir) => {

@@ -38,6 +38,13 @@ export function PaneLayer(): JSX.Element {
     return m
   }, [leaves])
 
+  // leafId → 所属 tab 标题：画布节点没被手动命名时，节点头显示分屏那边的标签名（两个模式看到同一个名字）
+  const titleByLeaf = useMemo(() => {
+    const m = new Map<string, string>()
+    tabs.forEach((t) => collectLeaves(t.root).forEach((l) => m.set(l.id, t.title)))
+    return m
+  }, [tabs])
+
   // canvas 模式：每个被 Frame 节点引用的 leaf → 屏幕像素 placement（世界坐标 × 视口）
   const canvasByLeaf = useMemo(() => {
     const m = new Map<string, CanvasPlacement>()
@@ -57,12 +64,12 @@ export function PaneLayer(): JSX.Element {
           nodeId: n.id,
           nodeX: n.x,
           nodeY: n.y,
-          name: n.name
+          name: n.name ?? titleByLeaf.get(n.leafId)
         })
       })
     })
     return m
-  }, [viewMode, canvas])
+  }, [viewMode, canvas, titleByLeaf])
 
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
   const allLeaves = useMemo(() => {
