@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Eas-Term app 图标：黑色渐变圆角矩形 + 白色终端提示符 >_ -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#33343A"/>
+      <stop offset="0.55" stop-color="#15161A"/>
+      <stop offset="1" stop-color="#08090B"/>
+    </linearGradient>
+    <!-- 左上角微高光，避免纯平死黑 -->
+    <linearGradient id="gloss" x1="120" y1="60" x2="620" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="232" fill="url(#gloss)"/>
+  <!-- 内描边：深色图标在深色 dock 上不糊成一团 -->
+  <rect x="3" y="3" width="1018" height="1018" rx="229" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="6"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="82" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M348 372 L556 512 L348 652"/>
+    <path d="M578 652 H716"/>
+  </g>
+</svg>
