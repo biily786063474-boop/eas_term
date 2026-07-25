@@ -26,6 +26,8 @@ import {
   DictIcon,
   ChevronDownIcon,
   CloseIcon,
+  MaximizeIcon,
+  RestoreIcon,
   SplitHIcon,
   SplitVIcon,
   CheckIcon,
@@ -137,6 +139,8 @@ export interface CanvasPlacement {
   nodeY: number
   /** 自定义名称（画布节点重命名） */
   name?: string
+  /** 最大化沉浸：铺满画布视口、1:1 字号、盖住其它内容 */
+  maximized?: boolean
 }
 
 interface Props {
@@ -208,10 +212,14 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   // 落定的缩放比:画布终端的字号/头部按它渲染;缩放手势中它不变,pane 用 transform 做实时预览,
   // 手势停止后才落到 cs(此时终端才真正落字号+fit,鼠标坐标精准)。见 canvasSlice.canvasCommittedScale。
   const committedScale = useStore((s) => s.canvasCommittedScale)
+  const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   // 画布终端走「字体缩放」而非常驻 CSS transform（为了鼠标坐标精准）；但缩放手势进行中(cs≠committed)
   // 临时套一层 transform 做实时视觉预览，手势停定后 transform 归 1、落真实字号。
   const canvasTerm = !!canvasRect && pane.kind === 'terminal'
-  const zoomPreview = canvasTerm && Math.abs(cs - committedScale) > 0.0005
+  const isMax = !!canvasRect?.maximized
+  // 最大化：脱离画布缩放，按 1:1 渲染（字号正常，真沉浸）
+  const effScale = isMax ? 1 : committedScale
+  const zoomPreview = canvasTerm && !isMax && Math.abs(cs - committedScale) > 0.0005
 
   // 画布模式：终端=按 committed 像素尺寸 + 缩放手势中 transform 预览；其它节点=像素定位 + 整体位图缩放；分屏=百分比 rect
   const paneStyle: CSSProperties = canvasRect
@@ -220,8 +228,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           display: hidden ? 'none' : undefined,
           left: canvasRect.left,
           top: canvasRect.top,
-          width: canvasRect.w * committedScale,
-          height: canvasRect.h * committedScale,
+          width: canvasRect.w * effScale,
+          height: canvasRect.h * effScale,
+          zIndex: isMax ? 200 : undefined,
           // 手势中：把按 committed 渲染的终端整体缩放到实时 cs（丝滑、不重建 GPU）；停定后 =scale(1)
           transform: zoomPreview ? `scale(${cs / committedScale})` : undefined,
           transformOrigin: '0 0',
@@ -233,8 +242,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           top: canvasRect.top,
           width: canvasRect.w,
           height: canvasRect.h,
-          transform: `scale(${cs})`,
-          transformOrigin: '0 0'
+          transform: isMax ? undefined : `scale(${cs})`,
+          transformOrigin: '0 0',
+          zIndex: isMax ? 200 : undefined
         }
     : {
         display: hidden ? 'none' : undefined,
@@ -311,7 +321,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           canvasRect
             ? // 画布终端：头部按 committed 缩放（缩放手势中由 pane transform 提供实时增量），按钮仍精准可点
               canvasTerm
-              ? { cursor: 'move', zoom: committedScale }
+              ? { cursor: 'move', zoom: effScale }
               : { cursor: 'move' }
             : undefined
         }
@@ -363,6 +373,19 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             <MessageIcon />
           </button>
         )}
+        {canvasRect && (
+          <button
+            className="icon-btn"
+            data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+            onClick={() =>
+              setMaximizedNode(
+                isMax ? null : { frameId: canvasRect.frameId, nodeId: canvasRect.nodeId }
+              )
+            }
+          >
+            {isMax ? <RestoreIcon /> : <MaximizeIcon />}
+          </button>
+        )}
         <button
           className="icon-btn"
           data-tip="向右分屏（⌘D）"
@@ -387,7 +410,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       </div>
       {canvasTerm && pane.kind === 'terminal' && (
         // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
-        <div className="agentbar-wrap" style={{ zoom: committedScale }}>
+        <div className="agentbar-wrap" style={{ zoom: effScale }}>
           <CanvasAgentBar
             frameId={canvasRect!.frameId}
             nodeId={canvasRect!.nodeId}
@@ -403,7 +426,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             leafId={leaf.id}
             ptyId={pane.ptyId}
             isActive={isActive}
-            canvasScale={canvasTerm ? committedScale : 1}
+            canvasScale={canvasTerm ? effScale : 1}
           />
         )}
         {pane.kind === 'code' &&

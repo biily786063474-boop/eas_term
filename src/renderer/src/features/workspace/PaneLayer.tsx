@@ -20,6 +20,8 @@ export function PaneLayer(): JSX.Element {
   const viewMode = useStore((s) => s.viewMode)
   const canvas = useStore((s) => s.canvas)
   const setSplitRatio = useStore((s) => s.setSplitRatio)
+  const maximizedNode = useStore((s) => s.maximizedNode)
+  const committedScale = useStore((s) => s.canvasCommittedScale)
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
 
@@ -50,10 +52,33 @@ export function PaneLayer(): JSX.Element {
     const m = new Map<string, CanvasPlacement>()
     if (viewMode !== 'canvas') return m
     const vp = canvas.viewport
+    // 有节点最大化时：该节点铺满画布视口（1:1 字号，沉浸式），其余终端一律隐藏
+    const vpEl = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const cw = vpEl?.clientWidth ?? window.innerWidth
+    const ch = vpEl?.clientHeight ?? window.innerHeight
     canvas.frames.forEach((f) => {
-      if (f.collapsed) return
+      if (f.collapsed && !(maximizedNode && maximizedNode.frameId === f.id)) return
       f.nodes.forEach((n) => {
         if (!n.leafId) return
+        const isMax = !!maximizedNode && maximizedNode.frameId === f.id && maximizedNode.nodeId === n.id
+        if (maximizedNode && !isMax) return // 其它节点隐藏
+        if (isMax) {
+          m.set(n.leafId, {
+            left: 0,
+            top: 0,
+            // PaneView 用 w*scale 算像素宽高：最大化走 1:1，所以直接给视口尺寸
+            w: cw,
+            h: ch,
+            scale: 1,
+            maximized: true,
+            frameId: f.id,
+            nodeId: n.id,
+            nodeX: n.x,
+            nodeY: n.y,
+            name: n.name ?? titleByLeaf.get(n.leafId)
+          })
+          return
+        }
         m.set(n.leafId, {
           left: vp.x + (f.x + n.x) * vp.scale,
           top: vp.y + (f.y + n.y) * vp.scale,
@@ -69,7 +94,7 @@ export function PaneLayer(): JSX.Element {
       })
     })
     return m
-  }, [viewMode, canvas, titleByLeaf])
+  }, [viewMode, canvas, titleByLeaf, maximizedNode, committedScale])
 
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
   const allLeaves = useMemo(() => {

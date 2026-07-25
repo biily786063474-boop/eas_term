@@ -231,6 +231,19 @@ export function CanvasStage(): JSX.Element {
     return () => document.removeEventListener('contextmenu', onCtx)
   }, [])
 
+  // Esc：退出「最大化沉浸」，模块回到画布原位
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      if (useStore.getState().maximizedNode) {
+        e.preventDefault()
+        useStore.getState().setMaximizedNode(null)
+      }
+    }
+    window.addEventListener('keydown', onEsc, true)
+    return () => window.removeEventListener('keydown', onEsc, true)
+  }, [])
+
   // 键盘：Delete 删除选中 / ⌘D 复制选中（画布模式；分屏快捷键已按 viewMode 屏蔽）
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {

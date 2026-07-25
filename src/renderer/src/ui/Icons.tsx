@@ -247,6 +247,18 @@ export const BellIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const MaximizeIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />
+  </Svg>
+)
+
+export const RestoreIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M9 4v5H4M15 20v-5h5M20 9h-5V4M4 15h5v5" />
+  </Svg>
+)
+
 export const DesignIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <rect x="3" y="3" width="9" height="9" rx="2" />

@@ -6,6 +6,7 @@ import { useStore } from '../../store'
 import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
 import { makeSubframeDrop } from './subframeDrop'
+import { MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 
 export function CanvasComponentNode({
   frame,
@@ -22,6 +23,24 @@ export function CanvasComponentNode({
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
+  const maximizedNode = useStore((s) => s.maximizedNode)
+  const setMaximizedNode = useStore((s) => s.setMaximizedNode)
+  const vp = useStore((s) => s.canvas.viewport)
+  const isMax = maximizedNode?.frameId === frame.id && maximizedNode?.nodeId === node.id
+  // 最大化：撑成「当前可视区」在世界坐标下的矩形（节点坐标相对 Frame）
+  const maxStyle = ((): React.CSSProperties | null => {
+    if (!isMax) return null
+    const el = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const cw = el?.clientWidth ?? window.innerWidth
+    const ch = el?.clientHeight ?? window.innerHeight
+    return {
+      left: -vp.x / vp.scale - frame.x,
+      top: -vp.y / vp.scale - frame.y,
+      width: cw / vp.scale,
+      height: ch / vp.scale,
+      zIndex: 200
+    }
+  })()
   const renameNode = useStore((s) => s.renameNode)
   const [editing, setEditing] = useState(false)
   const project = useStore((s) => s.projects.find((p) => p.id === frame.projectId))
@@ -84,7 +103,7 @@ export function CanvasComponentNode({
       }}
       // 冒泡阶段拦下，避免冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 清掉选中）
       onMouseDown={(e) => e.stopPropagation()}
-      style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+      style={maxStyle ?? { left: node.x, top: node.y, width: node.w, height: node.h }}
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <def.Icon size={11} />
@@ -108,6 +127,13 @@ export function CanvasComponentNode({
             {node.name ?? def.name}
           </span>
         )}
+        <button
+          className="cfile-btn"
+          data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+          onClick={() => setMaximizedNode(isMax ? null : { frameId: frame.id, nodeId: node.id })}
+        >
+          {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
+        </button>
         <button className="cfile-x" data-tip="删除组件" onClick={() => removeNode(frame.id, node.id)}>
           ×
         </button>

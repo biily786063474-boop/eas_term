@@ -153,6 +153,9 @@ export interface CanvasSlice {
     nodeId: string,
     props: Record<string, unknown>
   ) => void
+  /** 最大化沉浸的节点（画布模式下铺满整个视口工作；再点还原回原位）。不持久化 */
+  maximizedNode: { frameId: string; nodeId: string } | null
+  setMaximizedNode: (v: { frameId: string; nodeId: string } | null) => void
   /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点，含终端节点）。
    *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */
   canvasSel: string[]
@@ -1068,6 +1071,8 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     })),
 
+  maximizedNode: null,
+  setMaximizedNode: (v) => set({ maximizedNode: v }),
   canvasSel: [],
   setCanvasSel: (keys) => set({ canvasSel: keys }),
   toggleCanvasSel: (key, additive) =>

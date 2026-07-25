@@ -7,7 +7,7 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 
@@ -26,6 +26,27 @@ export function CanvasFileNode({
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
   const removeNode = useStore((s) => s.removeNode)
+  const maximizedNode = useStore((s) => s.maximizedNode)
+  const setMaximizedNode = useStore((s) => s.setMaximizedNode)
+  const vp = useStore((s) => s.canvas.viewport)
+  const frames = useStore((s) => s.canvas.frames)
+  const isMax = maximizedNode?.frameId === frameId && maximizedNode?.nodeId === node.id
+  // 最大化：把节点撑成「当前屏幕可视区」在世界坐标下对应的矩形（节点坐标相对 Frame）
+  const maxStyle = ((): React.CSSProperties | null => {
+    if (!isMax) return null
+    const frame = frames.find((f) => f.id === frameId)
+    if (!frame) return null
+    const el = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const cw = el?.clientWidth ?? window.innerWidth
+    const ch = el?.clientHeight ?? window.innerHeight
+    return {
+      left: -vp.x / vp.scale - frame.x,
+      top: -vp.y / vp.scale - frame.y,
+      width: cw / vp.scale,
+      height: ch / vp.scale,
+      zIndex: 200
+    }
+  })()
   const renameNode = useStore((s) => s.renameNode)
   const projectPath = useStore((s) => {
     const fr = s.canvas.frames.find((f) => f.id === frameId)
@@ -126,7 +147,7 @@ export function CanvasFileNode({
       }}
       // 冒泡阶段拦下，避免事件冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 把选中清掉）
       onMouseDown={(e) => e.stopPropagation()}
-      style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+      style={maxStyle ?? { left: node.x, top: node.y, width: node.w, height: node.h }}
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <Icon size={11} />
@@ -168,6 +189,13 @@ export function CanvasFileNode({
             </button>
           </>
         )}
+        <button
+          className="cfile-btn"
+          data-tip={isMax ? '还原到画布（Esc）' : '最大化沉浸'}
+          onClick={() => setMaximizedNode(isMax ? null : { frameId, nodeId: node.id })}
+        >
+          {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
+        </button>
         <button className="cfile-x" data-tip="删除节点" onClick={() => removeNode(frameId, node.id)}>
           ×
         </button>
