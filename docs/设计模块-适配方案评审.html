@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>设计模块 · 适配方案评审 · Eas-Term</title>
+<style>
+  :root {
+    --bg: #0c0e13; --bg2: #12151c; --panel: #161a22; --panel2: #1b202a;
+    --border: #262c38; --border2: #333c4c;
+    --fg: #e6e9ef; --fg-dim: #9aa3b2; --fg-mute: #6b7484;
+    --accent: #a2b9e0; --accent2: #7fa0d8;
+    --good: #78c98a; --warn: #e0c07a; --bad: #e08a8a;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1200px 700px at 70% -10%, #151a24 0%, var(--bg) 60%); color: var(--fg);
+    font: 15px/1.7 -apple-system, "PingFang SC", "Microsoft Yahei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 48px 24px 96px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { margin-bottom: 40px; }
+  .eyebrow { color: var(--accent); font-size: 12.5px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; }
+  h1 { font-size: 30px; margin: 10px 0 8px; letter-spacing: .5px; }
+  .sub { color: var(--fg-dim); font-size: 14px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip { background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; color: var(--fg-dim); }
+  .chip b { color: var(--fg); font-weight: 600; }
+  h2 { font-size: 20px; margin: 44px 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 15.5px; margin: 24px 0 8px; color: var(--accent); }
+  p { color: var(--fg-dim); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; margin: 14px 0; }
+  .tldr { background: linear-gradient(180deg, #182233, #141922); border-color: var(--border2); }
+  .tldr b { color: var(--fg); }
+  code { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-size: 12.5px; color: #cdd6e6; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+  pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; color: #cdd6e6; font-family: "SF Mono", ui-monospace, Menlo, monospace; line-height: 1.55; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--fg-mute); font-weight: 600; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+  td b { color: var(--fg); }
+  .tier { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .tierhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .tierhead .n { font-size: 17px; font-weight: 700; color: var(--fg); }
+  .tag { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; font-weight: 700; }
+  .tag.rec { background: rgba(127,160,216,.18); color: var(--accent); border: 1px solid rgba(127,160,216,.4); }
+  .tag.lite { background: rgba(120,201,138,.14); color: var(--good); border: 1px solid rgba(120,201,138,.32); }
+  .tag.big { background: rgba(224,138,138,.12); color: var(--bad); border: 1px solid rgba(224,138,138,.3); }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+  .g { background: var(--good);} .w{ background: var(--warn);} .b{ background: var(--bad);}
+  ul { margin: 8px 0; padding-left: 20px; color: var(--fg-dim); }
+  li { margin: 4px 0; }
+  .rating b { font-weight: 700; }
+  .foot { margin-top: 40px; color: var(--fg-mute); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .kbd { color: var(--accent); }
+  strong { color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">方案评审 · 大功能</div>
+    <h1>设计模块 —— taptv「设计与动效 Composer」适配 Eas-Term</h1>
+    <div class="sub">参考 <code>taptv pad / UnifiedComposer</code>(designer + animate,16,028 行),适配进 Eas-Term 画布,支持导出到 <code>&lt;项目&gt;/demo/</code>。</div>
+    <div class="meta">
+      <span class="chip">来源 <b>UnifiedComposer</b> · 33 文件</span>
+      <span class="chip">栈 <b>React18 + zustand + Electron</b></span>
+      <span class="chip">生成 <b>2026-07-24</b></span>
+      <span class="chip">状态 <b>待你定范围</b></span>
+    </div>
+  </header>
+
+  <div class="card tldr">
+    <h3 style="margin-top:0">结论先行</h3>
+    <p style="margin-bottom:6px">这套 composer 是个<strong>自治盒子</strong>——它的契约（<code>CONTRACT.md §6</code>）<strong>明令禁止 import 任何宿主 store</strong>，对外只走 6 个 prop，<strong>落盘由宿主负责</strong>（<code>onExport(blob, format)</code>）。所以「结合本软件适配」的接口面极小、极干净。</p>
+    <ul style="margin-bottom:0">
+      <li><strong>动效渲染 + 导出整条链不依赖 Konva</strong>（纯 Canvas 2D）——这是最省事的部分，几乎零改动可复用。</li>
+      <li><strong>静态设计画布强依赖 Konva</strong>（<code>KonvaCanvas.jsx</code> 3026 行）——要交互式设计就得装 <code>konva + react-konva</code>。</li>
+      <li>taptv 专有耦合<strong>极少</strong>：硬耦合只有 <code>composerStateMigration</code>（可带过来），AI 可干净剥离，其余 1–2 行桩掉。</li>
+      <li>量级：MVP 约<strong>移植 12–14K 行</strong>（多为照搬 + 改前缀/路径，非重写）+ <strong>自写 150–300 行</strong>宿主胶水。</li>
+      <li><strong>推荐：方案 B（精简 MVP）</strong>——完整交互式「设计 + 预设动效 + 导出 demo/」，砍掉钢笔/布尔/SVG/文字轮廓等高级功能与其 3 个依赖。</li>
+    </ul>
+  </div>
+
+  <h2>1 · 它是什么</h2>
+  <p><code>UnifiedComposer</code> = 两个编辑器合体：<strong>designer</strong>（Konva 静态设计）+ <strong>animate</strong>（Canvas 2D 关键帧动效）。顶层单一状态 blob 挂在节点上：</p>
+  <pre>type UnifiedState = {
+  v: 1, mode: 'design' | 'animate',
+  designState: { objects[], canvasWidth, canvasHeight, backgroundColor } | null,
+  motionState: { layers[/* 带 keyframes + presets */], duration, fps, ... } | null,
+}</pre>
+  <table>
+    <tr><th>能力</th><th>引擎</th><th>导出</th><th>依赖</th></tr>
+    <tr><td><b>设计</b> 形状/文本/图片/图层/组/蒙版/滤镜</td><td>Konva（<code>stage.toDataURL</code>）</td><td>PNG / JPG</td><td><code>konva</code> <code>react-konva</code></td></tr>
+    <tr><td><b>动效</b> 关键帧 + 57 预设（enter/continuous/exit）</td><td>纯 Canvas 2D（<code>renderer.js</code>，无 Konva）</td><td>WebM（原生 MediaRecorder，零依赖）· MP4（WebCodecs + muxer）</td><td>WebM 无 · MP4 装 <code>mp4-muxer</code></td></tr>
+  </table>
+
+  <h2>2 · 三个分层方案</h2>
+
+  <div class="card tier">
+    <div class="tierhead"><span class="n">方案 A · 程序化导出核心</span><span class="tag lite">最轻</span></div>
+    <p>只搬 <strong>animate 渲染+导出链</strong>（<code>renderer / presetEngine / presets / exporter / exporterMp4 / precompRender / rebuildMotion</code>，约 <b>2,300 行，零 Konva</b>，只装 <code>mp4-muxer</code>）。把一个 <code>_unifiedState</code> 直接渲成 PNG/WebM/MP4 落到 <code>demo/</code>。</p>
+    <p style="margin:6px 0 0"><span class="dot g"></span><b>没有交互式设计 UI</b>——状态得由代码/上游喂入。适合「一键把某状态导出成图/视频」，不适合「用户在里面画」。</p>
+  </div>
+
+  <div class="card tier">
+    <div class="tierhead"><span class="n">方案 B · 精简 MVP（推荐）</span><span class="tag rec">推荐</span></div>
+    <p>完整交互式「基础设计（形状/文本/图片 + 图层）+ 预设动效 + 导出 demo/」。<strong>砍掉</strong>钢笔路径 / 布尔运算 / SVG 导入 / 文字转轮廓等高级功能（约 1,240 行 + 3 个 npm 依赖 <code>svgpath/polygon-clipping/imagetracerjs</code>），<strong>剥离 AI</strong>（约 680 行）。</p>
+    <ul>
+      <li>移植：designer 核心（Konva，约 6K 行）+ animate 核心（无 Konva，约 5.5K 行）+ 胶水（<code>index/rebuildMotion/ErrorBoundary</code>）+ 带上 <code>composerStateMigration</code>。</li>
+      <li>新增依赖：<code>konva</code>、<code>react-konva</code>、<code>mp4-muxer</code>（<code>zustand</code> 已有）。</li>
+      <li>Eas-Term 侧自写：画布节点类型 + modal 挂载 + <code>onExport→demo/</code> 落盘（约 150–300 行）。</li>
+    </ul>
+  </div>
+
+  <div class="card tier">
+    <div class="tierhead"><span class="n">方案 C · 完整移植</span><span class="tag big">最重</span></div>
+    <p>方案 B 全部 + 钢笔/布尔/SVG/文字轮廓 + 组件库 +（可选）AI 动效。约 <b>16K 行</b>全量搬，装全部依赖。功能对齐 taptv，但打包体积、依赖面、验证成本都最大，且 AI 部分在 Eas-Term 没有对应基建。</p>
+  </div>
+
+  <h2>3 · 分维度评审</h2>
+  <table>
+    <tr><th>维度</th><th>A 程序化核心</th><th>B 精简 MVP（推荐）</th><th>C 完整</th></tr>
+    <tr>
+      <td><b>完成性</b><br><span style="font-size:12px;color:var(--fg-mute)">对「用户能设计并导出」的满足</span></td>
+      <td><span class="dot b"></span>低 · 无设计 UI</td>
+      <td><span class="dot g"></span>高 · 该有的都有</td>
+      <td><span class="dot g"></span>满 · 含高级/AI</td>
+    </tr>
+    <tr>
+      <td><b>体验</b></td>
+      <td>无编辑，只导出</td>
+      <td>真编辑器（Konva 交互 + 预设动效 + 实时预览）</td>
+      <td>同 B + 钢笔/布尔/AI 动效</td>
+    </tr>
+    <tr>
+      <td><b>工作量 / token</b></td>
+      <td><span class="dot g"></span>小 · 移植 ~2.3K 行 + 胶水</td>
+      <td><span class="dot w"></span>中大 · 移植 ~12–13K 行（照搬为主）+ 150–300 行自写</td>
+      <td><span class="dot b"></span>大 · ~16K 行 + AI 基建缺口</td>
+    </tr>
+    <tr>
+      <td><b>风险</b></td>
+      <td><span class="dot g"></span>低 · 纯 Canvas2D，无新 UI 依赖</td>
+      <td><span class="dot w"></span>中 · Konva 打包体积 / WebCodecs MP4 需 Electron37 验证 / 迁移桩</td>
+      <td><span class="dot b"></span>较高 · 依赖面最大 + AI 无处落地</td>
+    </tr>
+    <tr>
+      <td><b>可分期</b></td>
+      <td>可作为 B 的第一阶段先落</td>
+      <td>建议：先 animate 导出链跑通 → 再挂 Konva designer → 再接 demo 落盘</td>
+      <td>在 B 之上增量加</td>
+    </tr>
+  </table>
+
+  <h2>4 · 集成方式（Eas-Term 侧）</h2>
+  <ul>
+    <li><strong>作为画布组件</strong>：新增一个 <code>CanvasComponentDef</code>（和「版本管理」节点同机制，见 <code>features/canvas/components/registry.tsx</code>），节点里挂 composer（或点开进全屏 modal 编辑）。</li>
+    <li><strong>状态持久化</strong>：<code>_unifiedState</code> 存进节点 <code>component.props</code>，随 <code>canvas.json</code> 落盘，重开还原。契约的 <code>onSaveState</code> 正好对上。</li>
+    <li><strong>导出落盘</strong>：<code>onExport(blob, format)</code> → 渲染层 <code>blob.arrayBuffer()</code> → IPC → 主进程新 handler <code>fs.writeFile('&lt;项目&gt;/demo/design-&lt;时间戳&gt;.{png|webm|mp4}')</code>（按 <code>blob.type</code> 推扩展名，目录不存在则先建）。约 30–60 行。</li>
+  </ul>
+
+  <h2>5 · 风险与必验点</h2>
+  <ul>
+    <li><span class="dot w"></span><strong>Konva 打包体积</strong>：设计态引入 konva + react-konva，包会变大（可接受，但要知道）。</li>
+    <li><span class="dot w"></span><strong>MP4 走 WebCodecs</strong>：需 Eas-Term 的 Electron 37 / Chromium 支持——taptv 在 Electron 36 已验证可用，37 只会更好，但要在 dev 亲测导出一次。</li>
+    <li><span class="dot w"></span><strong>composerStateMigration</strong>：带全套 286 行最稳；若想极简桩成 identity，需确认不破坏 restore。</li>
+    <li><span class="dot g"></span><strong>无深耦合</strong>：契约禁止 import 宿主 store，没有对云/资产/i18n/路由的耦合——这是最大的利好。</li>
+  </ul>
+
+  <h2>6 · 推荐路径</h2>
+  <p><strong>选方案 B，分三步走、每步在 dev 眼验：</strong></p>
+  <ul>
+    <li><strong>Step 1</strong>：移植 animate 无 Konva 导出核心 + 写 <code>onExport→demo/</code> 落盘胶水 → 先把「一个状态导出成 WebM/MP4/PNG 到 demo/」跑通（低风险、快见效，等价方案 A）。</li>
+    <li><strong>Step 2</strong>：装 konva/react-konva，挂 designer 交互画布（砍高级功能）→ 用户能画形状/文本/图片 + 图层。</li>
+    <li><strong>Step 3</strong>：接 animate 预设动效 + 设计→动画同步（<code>rebuildMotion</code>）→ 完整「设计 + 动效 + 导出」。</li>
+  </ul>
+  <p>这样即使中途你想收手，Step 1 已经是一个能用的「导出到 demo/」能力，不浪费。</p>
+
+  <div class="foot">
+    评审依据：只读探索 <code>/Users/biily/Biily/Projects/taptv pad/src/components/UnifiedComposer/</code>（含 CONTRACT.md、designer/、animate/、index.jsx）。落盘、数据模型、依赖清单均来自实际代码。未改动 taptv 任何文件。
+  </div>
+</div>
+</body>
+</html>
