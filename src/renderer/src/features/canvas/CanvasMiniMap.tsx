@@ -103,16 +103,30 @@ export function CanvasMiniMap(): JSX.Element | null {
     window.addEventListener('mouseup', onUp)
   }
 
+  // 收起态：只留一个小图标按钮（画布左下角不被占用）
+  if (collapsed) {
+    return (
+      <button
+        className="canvas-minimap-mini"
+        data-tip="展开画布缩略图"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => setCollapsed(false)}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z" />
+          <path d="M9 4v13.5M15 6.5V20" />
+        </svg>
+      </button>
+    )
+  }
+
   return (
-    <div
-      className={`canvas-minimap${collapsed ? ' collapsed' : ''}`}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <div className="cmm-head" onClick={() => setCollapsed((v) => !v)}>
+    <div className="canvas-minimap" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="cmm-head" onClick={() => setCollapsed(true)}>
         <span className="cmm-title">缩略图</span>
-        <span className="cmm-hint">{collapsed ? '展开' : '点击跳转 · 拖框平移'}</span>
+        <span className="cmm-hint">点击标题收起</span>
       </div>
-      {!collapsed && (
+      {(
         <svg
           ref={svgRef}
           className="cmm-svg"

@@ -1692,3 +1692,28 @@
   text-anchor: middle;
   opacity: 0.6;
 }
+
+/* 缩略图收起态：左下角一个小图标按钮 */
+.canvas-minimap-mini {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 41;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  color: var(--fg-dim);
+  cursor: pointer;
+  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: color 0.14s, border-color 0.14s;
+}
+.canvas-minimap-mini:hover {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.55);
+}
