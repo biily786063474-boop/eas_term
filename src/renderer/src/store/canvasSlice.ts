@@ -135,6 +135,8 @@ export interface CanvasSlice {
   addTerminalNode: (frameId: string) => Promise<void>
   /** 在 Frame 里新开一个迷你浏览器节点（web pane，空地址，自动堆叠） */
   addBrowserNode: (frameId: string) => void
+  /** 在 Frame 里新开一个带地址的浏览器节点并聚焦（终端/外部链接「跳出的网页」默认走画板浏览器） */
+  addWebNode: (frameId: string, url: string) => void
   /** 更新 web 节点的当前地址（浏览器导航时回写，重开还原到上次页面） */
   setNodeUrl: (frameId: string, nodeId: string, url: string) => void
   /** 更新 web 节点的页面标题（存 pane.title；节点头部显示时手动 name 优先，其次标题） */
@@ -924,6 +926,24 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     })),
+
+  addWebNode: (frameId, url) => {
+    const id = uid('cnode')
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: reflowSeparate(
+          s.canvas.frames.map((f) =>
+            f.id === frameId
+              ? placeNodeInFrame(f, { id, pane: { kind: 'web', url }, x: 0, y: 0, w: 480, h: 340 }, s.canvas.frames)
+              : f
+          )
+        )
+      }
+    }))
+    // 聚焦到新建的浏览器节点（画布 pan 过去）
+    get().focusCanvasNode(frameId, id)
+  },
 
   setNodeUrl: (frameId, nodeId, url) =>
     set((s) => ({

@@ -148,16 +148,22 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       new WebLinksAddon((event, uri) => {
         if (!(event.metaKey || event.ctrlKey)) return
         const url = /^https?:\/\//i.test(uri) ? uri : `https://${uri}`
-        // 画布模式：优先在该终端所在的 Frame 里建一个网页预览节点就地渲染，而非弹外部浏览器
+        // 跳出的网页默认走「画板内嵌浏览器」：找该终端所在 Frame；split 模式先切画布并落到该项目的
+        // Frame；实在没有任何画布 Frame 才回退系统浏览器。
         const st = useStore.getState()
-        if (st.viewMode === 'canvas') {
-          const frame = st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
-          if (frame) {
-            st.addFileNode(frame.id, { kind: 'web', url }, 0, 0)
-            return
-          }
+        let frame = st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
+        if (!frame) {
+          const projectId = st.tabs.find((t) => t.id === tabId)?.projectId
+          frame =
+            st.canvas.frames.find((f) => !f.parentId && f.projectId === projectId) ??
+            st.canvas.frames.find((f) => !f.parentId)
         }
-        void window.api.shell.openExternal(url)
+        if (frame) {
+          if (st.viewMode !== 'canvas') st.setViewMode('canvas')
+          st.addWebNode(frame.id, url)
+        } else {
+          void window.api.shell.openExternal(url)
+        }
       })
     )
     term.open(el)
