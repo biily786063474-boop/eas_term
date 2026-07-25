@@ -64,7 +64,8 @@ const api = {
   },
   stt: {
     // 离线语音转文字(sherpa-onnx 流式)。渲染进程采麦送 16kHz Int16 PCM,主进程回传 partial/final。
-    start: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('stt:start'),
+    start: (): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> =>
+      ipcRenderer.invoke('stt:start'),
     sendAudio: (buf: ArrayBuffer): void => ipcRenderer.send('stt:audio', buf),
     stop: (): Promise<{ text: string }> => ipcRenderer.invoke('stt:stop'),
     onPartial: (cb: (text: string) => void): (() => void) => {
@@ -76,6 +77,18 @@ const api = {
       const h = (_e: unknown, t: string): void => cb(t)
       ipcRenderer.on('stt:final', h)
       return () => ipcRenderer.removeListener('stt:final', h)
+    },
+    // 模型「首次使用下载」：查状态 / 触发下载 / 订阅进度
+    modelStatus: (): Promise<{ ready: boolean; missing: string[] }> =>
+      ipcRenderer.invoke('stt:modelStatus'),
+    downloadModels: (): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('stt:downloadModels'),
+    onDownloadProgress: (
+      cb: (p: { phase: string; received?: number; error?: string }) => void
+    ): (() => void) => {
+      const h = (_e: unknown, p: { phase: string; received?: number; error?: string }): void => cb(p)
+      ipcRenderer.on('stt:downloadProgress', h)
+      return () => ipcRenderer.removeListener('stt:downloadProgress', h)
     }
   },
   design: {

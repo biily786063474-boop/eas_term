@@ -1,26 +1,64 @@
 // 离线语音转文字(STT)服务 —— 混合双模型，零 key、离线、隐私：
-//  · 录音中：流式 zipformer(streaming) 实时出「易变预览」(partial)，边说边看，手感好但准确率一般；
-//  · 停手时：用离线大模型 SenseVoice 对「整段缓存音频」重跑一次，出「准确定稿」(带标点/数字规整)，
-//    准确率高一档。渲染层：录音显灰色 interim 预览，停手把 SenseVoice 定稿写进终端。
-//  · SenseVoice 模型缺失/加载失败 → 优雅回退到流式的收尾结果，功能不中断。
+//  · 录音中：流式 zipformer 出「易变预览」(partial)，边说边看；
+//  · 停手时：用离线大模型 SenseVoice 对整段缓存音频重跑，出「准确定稿」(带标点/数字规整)。
+//  · SenseVoice 缺失/失败 → 回退流式收尾，不中断。
+// 模型「首次使用时下载」：不随包附带(省 ~300MB 包体)，按需从 hf-mirror 拉到 userData/models。
+//  dev 若 resources/models 已有则直接用，不触发下载。
 import { app, ipcMain, systemPreferences, WebContents } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
-// 模型目录：dev 用项目 resources/models；打包用 process.resourcesPath/models(electron-builder extraResources)。
 const STREAM_MODEL = 'sherpa-onnx-streaming-zipformer-multi-zh-hans-int8-2023-12-13'
 const SENSE_VOICE = 'sherpa-onnx-sense-voice'
-function modelDir(name: string): string | null {
-  const candidates = app.isPackaged
-    ? [path.join(process.resourcesPath, 'models', name)]
-    : [
-        path.join(app.getAppPath(), 'resources', 'models', name),
-        path.join(process.cwd(), 'resources', 'models', name)
-      ]
-  return candidates.find((d) => fs.existsSync(d)) ?? null
+
+// 每个模型：需要的文件 + 下载 URL(hf-mirror 国内快)。判定「就绪」= 这些文件都在。
+interface ModelSpec {
+  name: string
+  files: { file: string; url: string }[]
+}
+const HF = 'https://hf-mirror.com'
+const MODELS: Record<'stream' | 'sense', ModelSpec> = {
+  stream: {
+    name: STREAM_MODEL,
+    files: [
+      'encoder-epoch-20-avg-1-chunk-16-left-128.int8.onnx',
+      'decoder-epoch-20-avg-1-chunk-16-left-128.onnx',
+      'joiner-epoch-20-avg-1-chunk-16-left-128.int8.onnx',
+      'tokens.txt'
+    ].map((f) => ({ file: f, url: `${HF}/csukuangfj/${STREAM_MODEL}/resolve/main/${f}` }))
+  },
+  sense: {
+    name: SENSE_VOICE,
+    files: [
+      { file: 'model.int8.onnx', url: `${HF}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.int8.onnx` },
+      { file: 'tokens.txt', url: `${HF}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt` }
+    ]
+  }
 }
 
-// 在模型目录里找 encoder/decoder/joiner（优先 int8 量化版）
+// 下载目标：userData/models（可写）。dev/旧包可能放 resources/models（只读）。
+function userModelsRoot(): string {
+  return path.join(app.getPath('userData'), 'models')
+}
+// 候选目录（userData 优先，其次 dev 的 resources / 打包的 resourcesPath）
+function candidateDirs(name: string): string[] {
+  const c = [path.join(userModelsRoot(), name)]
+  if (app.isPackaged) c.push(path.join(process.resourcesPath, 'models', name))
+  else {
+    c.push(path.join(app.getAppPath(), 'resources', 'models', name))
+    c.push(path.join(process.cwd(), 'resources', 'models', name))
+  }
+  return c
+}
+// 返回「所有必需文件齐全」的目录；没有则 null
+function readyDir(spec: ModelSpec): string | null {
+  for (const dir of candidateDirs(spec.name)) {
+    if (spec.files.every((f) => fs.existsSync(path.join(dir, f.file)))) return dir
+  }
+  return null
+}
+
+// 在模型目录里找 encoder/decoder/joiner（优先 int8）
 function pick(dir: string, kind: 'encoder' | 'decoder' | 'joiner'): string {
   const files = fs.readdirSync(dir).filter((f) => f.startsWith(kind) && f.endsWith('.onnx'))
   const int8 = files.find((f) => f.includes('int8'))
@@ -40,9 +78,9 @@ let recognizer: Recognizer | null = null
 let loadError: string | null = null
 function ensureRecognizer(): Recognizer | null {
   if (recognizer || loadError) return recognizer
-  const dir = modelDir(STREAM_MODEL)
+  const dir = readyDir(MODELS.stream)
   if (!dir) {
-    loadError = '未找到流式语音模型(resources/models/…)'
+    loadError = '流式语音模型未下载'
     return null
   }
   try {
@@ -84,16 +122,9 @@ let offline: OfflineRecognizer | null = null
 let offlineError: string | null = null
 function ensureOffline(): OfflineRecognizer | null {
   if (offline || offlineError) return offline
-  const dir = modelDir(SENSE_VOICE)
+  const dir = readyDir(MODELS.sense)
   if (!dir) {
-    offlineError = '未找到 SenseVoice 离线模型'
-    return null
-  }
-  const model = ['model.int8.onnx', 'model.onnx']
-    .map((f) => path.join(dir, f))
-    .find((p) => fs.existsSync(p))
-  if (!model) {
-    offlineError = 'SenseVoice 模型文件缺失'
+    offlineError = 'SenseVoice 未下载'
     return null
   }
   try {
@@ -102,7 +133,7 @@ function ensureOffline(): OfflineRecognizer | null {
     offline = sherpa.createOfflineRecognizer({
       featConfig: { sampleRate: 16000, featureDim: 80 },
       modelConfig: {
-        senseVoice: { model, language: 'auto', useInverseTextNormalization: 1 },
+        senseVoice: { model: path.join(dir, 'model.int8.onnx'), language: 'auto', useInverseTextNormalization: 1 },
         tokens: path.join(dir, 'tokens.txt'),
         numThreads: 2,
         provider: 'cpu',
@@ -117,7 +148,6 @@ function ensureOffline(): OfflineRecognizer | null {
   return offline
 }
 
-// 用 SenseVoice 对整段音频出定稿；失败/无模型返回 null（调用方回退流式）
 function transcribeOffline(samples: Float32Array): string | null {
   const r = ensureOffline()
   if (!r) return null
@@ -132,10 +162,72 @@ function transcribeOffline(samples: Float32Array): string | null {
   }
 }
 
-// 会话态（单窗口够用）
-let stream: unknown = null // 流式流
-let chunks: Float32Array[] = [] // 录音期间缓存的原始音频(供停手离线重跑)
-let committed = '' // 已过端点的流式片段累积(interim 预览用)
+// ---------- 首次使用下载模型 ----------
+let downloading = false
+// 下一个文件写到 dir/<file>.part 再原子改名；进度经 stt:downloadProgress 回传渲染层
+async function downloadFile(url: string, dest: string, onChunk: (n: number) => void): Promise<void> {
+  const res = await fetch(url)
+  if (!res.ok || !res.body) throw new Error(`下载失败 ${res.status} ${url}`)
+  const tmp = dest + '.part'
+  const out = fs.createWriteStream(tmp)
+  const reader = res.body.getReader()
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      out.write(Buffer.from(value))
+      onChunk(value.byteLength)
+    }
+  } finally {
+    await new Promise<void>((r) => out.end(r))
+  }
+  fs.renameSync(tmp, dest)
+}
+
+// 下载所有「未就绪」的模型到 userData/models
+async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: string }> {
+  if (downloading) return { ok: false, error: '正在下载中' }
+  downloading = true
+  const send = (p: object): void => {
+    if (!wc.isDestroyed()) wc.send('stt:downloadProgress', p)
+  }
+  try {
+    const pending = [MODELS.stream, MODELS.sense].filter((m) => !readyDir(m))
+    if (!pending.length) return { ok: true }
+    let received = 0
+    for (const spec of pending) {
+      const dir = path.join(userModelsRoot(), spec.name)
+      fs.mkdirSync(dir, { recursive: true })
+      for (const f of spec.files) {
+        const dest = path.join(dir, f.file)
+        if (fs.existsSync(dest)) continue
+        send({ phase: 'downloading', model: spec.name, file: f.file, received })
+        await downloadFile(f.url, dest, (n) => {
+          received += n
+          send({ phase: 'downloading', model: spec.name, file: f.file, received })
+        })
+      }
+    }
+    // 下完清缓存的加载错误,让下次 ensure 重新建
+    loadError = null
+    offlineError = null
+    recognizer = null
+    offline = null
+    send({ phase: 'done', received })
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    send({ phase: 'error', error: msg })
+    return { ok: false, error: msg }
+  } finally {
+    downloading = false
+  }
+}
+
+// 会话态
+let stream: unknown = null
+let chunks: Float32Array[] = []
+let committed = ''
 
 function concatChunks(): Float32Array {
   const total = chunks.reduce((n, c) => n + c.length, 0)
@@ -149,8 +241,16 @@ function concatChunks(): Float32Array {
 }
 
 export function registerSttHandlers(): void {
-  ipcMain.handle('stt:start', async (): Promise<{ ok: boolean; error?: string }> => {
-    // macOS 系统麦克风权限
+  // 模型是否就绪(渲染层点麦克风前先查；缺则引导下载)
+  ipcMain.handle('stt:modelStatus', (): { ready: boolean; missing: string[] } => {
+    const missing = [MODELS.stream, MODELS.sense].filter((m) => !readyDir(m)).map((m) => m.name)
+    return { ready: missing.length === 0, missing }
+  })
+
+  // 首次使用下载模型(带进度事件 stt:downloadProgress)
+  ipcMain.handle('stt:downloadModels', (e) => downloadModels(e.sender as WebContents))
+
+  ipcMain.handle('stt:start', async (): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> => {
     if (process.platform === 'darwin') {
       const st = systemPreferences.getMediaAccessStatus('microphone')
       if (st !== 'granted') {
@@ -158,6 +258,8 @@ export function registerSttHandlers(): void {
         if (!ok) return { ok: false, error: '麦克风权限被拒绝' }
       }
     }
+    // 流式模型缺失 → 让渲染层去下载(而非报死)
+    if (!readyDir(MODELS.stream)) return { ok: false, error: '语音模型未下载', needDownload: true }
     const r = ensureRecognizer()
     if (!r) return { ok: false, error: loadError ?? '识别器不可用' }
     stream = r.createStream()
@@ -166,7 +268,6 @@ export function registerSttHandlers(): void {
     return { ok: true }
   })
 
-  // 渲染进程送来的 16kHz Int16 PCM 帧：喂流式出预览 + 缓存原始音频供停手离线重跑
   ipcMain.on('stt:audio', (e, buf: ArrayBuffer) => {
     const r = recognizer
     if (!r || !stream) return
@@ -174,13 +275,11 @@ export function registerSttHandlers(): void {
       const i16 = new Int16Array(buf)
       const f32 = new Float32Array(i16.length)
       for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768
-      chunks.push(f32) // 缓存整段音频
-      // sherpa 的 acceptWaveform 是「位置参数」(sampleRate, samples)
+      chunks.push(f32)
       ;(stream as { acceptWaveform(sr: number, s: Float32Array): void }).acceptWaveform(16000, f32)
       while (r.isReady(stream)) r.decode(stream)
       const seg = r.getResult(stream).text.trim()
       const wc = e.sender as WebContents
-      // 只做「易变预览」：不逐段写终端(定稿统一等停手用 SenseVoice 出)，interim 显累积的运行文本
       if (r.isEndpoint(stream)) {
         committed = (committed + seg).trim()
         r.reset(stream)
@@ -195,7 +294,6 @@ export function registerSttHandlers(): void {
 
   ipcMain.handle('stt:stop', (): { text: string } => {
     const r = recognizer
-    // 先收掉流式(拿回退用的尾段 + 释放)
     let streamTail = ''
     if (r && stream) {
       try {
@@ -206,7 +304,6 @@ export function registerSttHandlers(): void {
         /* 忽略 */
       }
     }
-    // 优先用 SenseVoice 对整段音频出准确定稿；无模型/失败 → 回退流式(累积 + 尾段)
     const all = chunks.length ? concatChunks() : new Float32Array(0)
     const offlineText = all.length ? transcribeOffline(all) : null
     const text = offlineText ?? (committed + streamTail).trim()
