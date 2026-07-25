@@ -151,16 +151,24 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
 
   // 文件树点击：图片进图片面板，其余进代码面板
   openFile: async (filePath) => {
-    // 网页类文件（HTML）→ 在画布新建一个浏览器节点打开（AI 产出的报告/页面直接可交互预览），
-    // 分屏模式下会先切到画布；画布里一个顶层 Frame 都没有时才回退到代码预览。
+    // 网页类文件（HTML）用浏览器打开，但**不跨模式跳转**：
+    //  · 画布模式 → 在画布新建一个浏览器节点（就地预览 + 聚焦）
+    //  · 终端(分屏)模式 → 在分屏里开一个网页面板预览（留在当前模式，不跳画布）
     if (isWebFile(filePath)) {
       const s = get()
-      const frame =
-        s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
-        s.canvas.frames.find((f) => !f.parentId)
-      if (frame) {
-        if (s.viewMode !== 'canvas') s.setViewMode('canvas')
-        s.addWebNode(frame.id, fileUrlOf(filePath))
+      if (s.viewMode === 'canvas') {
+        const frame =
+          s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
+          s.canvas.frames.find((f) => !f.parentId)
+        if (frame) {
+          s.addWebNode(frame.id, fileUrlOf(filePath))
+          return
+        }
+      } else {
+        openInPane(set, get, { kind: 'web', url: fileUrlOf(filePath) }, 'web', {
+          title: '预览',
+          cwd: ''
+        })
         return
       }
     }
