@@ -9,6 +9,20 @@ const MAP_H = 150
 const PAD = 8
 const HEAD_H = 34 // Frame 折叠时的视觉高度（与 CanvasStage/canvasSlice 一致）
 
+// 地图标签用短名：按显示宽度截断（中文/日文算 2 单位、其它算 1，上限 4 单位）
+// → 中文取前 2 个字，英文取前 4 个字符，各标签长度观感一致
+function shortName(name: string): string {
+  let out = ''
+  let w = 0
+  for (const ch of name.trim()) {
+    const cw = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/.test(ch) ? 2 : 1
+    if (w + cw > 4) break
+    out += ch
+    w += cw
+  }
+  return out || name.slice(0, 4)
+}
+
 export function CanvasMiniMap(): JSX.Element | null {
   const frames = useStore((s) => s.canvas.frames)
   const vp = useStore((s) => s.canvas.viewport)
@@ -152,26 +166,15 @@ export function CanvasMiniMap(): JSX.Element | null {
             rx={4}
             className="cmm-board"
           />
+          {/* 只标「Frame 左上角的位置 + 名称」，不画 Frame 大小；名称等大、统一截断 */}
           {frames.map((f) => {
             const p = w2m(f.x, f.y)
-            const w = Math.max(2, f.w * map.scale)
-            const h = Math.max(2, fh(f) * map.scale)
-            const showName = w >= 26 && h >= 9
             return (
               <g key={f.id}>
-                <rect
-                  x={p.x}
-                  y={p.y}
-                  width={w}
-                  height={h}
-                  rx={1.5}
-                  className={`cmm-frame${f.parentId ? ' sub' : ''}`}
-                />
-                {showName && (
-                  <text x={p.x + 3} y={p.y + 8} className="cmm-name" clipPath="url(#cmm-clip)">
-                    {f.name.length > Math.floor(w / 5) ? f.name.slice(0, Math.floor(w / 5)) + '…' : f.name}
-                  </text>
-                )}
+                <circle cx={p.x} cy={p.y} r={2} className={`cmm-dot${f.parentId ? ' sub' : ''}`} />
+                <text x={p.x + 4} y={p.y + 3} className={`cmm-name${f.parentId ? ' sub' : ''}`}>
+                  {shortName(f.name)}
+                </text>
               </g>
             )
           })}
