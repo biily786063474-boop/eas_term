@@ -5,6 +5,7 @@
 // 模型「首次使用时下载」：不随包附带(省 ~300MB 包体)，按需从 hf-mirror 拉到 userData/models。
 //  dev 若 resources/models 已有则直接用，不触发下载。
 import { app, ipcMain, systemPreferences, WebContents } from 'electron'
+import { Worker } from 'worker_threads'
 import fs from 'fs'
 import path from 'path'
 
@@ -112,54 +113,105 @@ function ensureRecognizer(): Recognizer | null {
   return recognizer
 }
 
-// ---------- 离线识别器 SenseVoice（停手定稿，更准） ----------
-interface OfflineRecognizer {
-  createStream(): unknown
-  decode(s: unknown): void
-  getResult(s: unknown): { text: string }
-}
-let offline: OfflineRecognizer | null = null
-let offlineError: string | null = null
-function ensureOffline(): OfflineRecognizer | null {
-  if (offline || offlineError) return offline
+// ---------- 离线识别器 SenseVoice（跑在 worker 线程，绝不阻塞主进程） ----------
+// SenseVoice 解码是 CPU 密集的同步调用（~1s 量级）。放主进程会把整个 app 冻住（IPC 积压、窗口卡顿），
+// 与「处理无感知」的目标冲突 → 放进 worker_threads，主进程只发音频、收文本。
+let worker: Worker | null = null
+let workerDead = false
+let seq = 1
+const pending = new Map<number, (text: string | null) => void>()
+
+function ensureWorker(): Worker | null {
+  if (worker || workerDead) return worker
   const dir = readyDir(MODELS.sense)
   if (!dir) {
-    offlineError = 'SenseVoice 未下载'
+    workerDead = true
     return null
   }
+  let sherpaPath: string
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const sherpa = require('sherpa-onnx')
-    offline = sherpa.createOfflineRecognizer({
-      featConfig: { sampleRate: 16000, featureDim: 80 },
-      modelConfig: {
-        senseVoice: { model: path.join(dir, 'model.int8.onnx'), language: 'auto', useInverseTextNormalization: 1 },
-        tokens: path.join(dir, 'tokens.txt'),
-        numThreads: 2,
-        provider: 'cpu',
-        debug: 0
-      },
-      decodingMethod: 'greedy_search'
-    }) as OfflineRecognizer
-  } catch (e) {
-    offlineError = e instanceof Error ? e.message : String(e)
-    console.error('[stt] 加载 SenseVoice 失败,回退流式', e)
+    // 传绝对路径进 worker：打包后 asarUnpack 的模块用相对名可能解析不到
+    sherpaPath = require.resolve('sherpa-onnx')
+  } catch {
+    workerDead = true
+    return null
   }
-  return offline
+  const code = `
+    const { parentPort, workerData } = require('worker_threads')
+    let rec = null
+    try {
+      const sherpa = require(workerData.sherpaPath)
+      rec = sherpa.createOfflineRecognizer({
+        featConfig: { sampleRate: 16000, featureDim: 80 },
+        modelConfig: {
+          senseVoice: { model: workerData.dir + '/model.int8.onnx', language: 'auto', useInverseTextNormalization: 1 },
+          tokens: workerData.dir + '/tokens.txt', numThreads: 2, provider: 'cpu', debug: 0
+        },
+        decodingMethod: 'greedy_search'
+      })
+      parentPort.postMessage({ type: 'ready' })
+    } catch (e) {
+      parentPort.postMessage({ type: 'fatal', err: String(e) })
+    }
+    parentPort.on('message', (m) => {
+      if (!rec) { parentPort.postMessage({ type: 'result', id: m.id, text: '' }); return }
+      try {
+        const s = rec.createStream()
+        s.acceptWaveform(16000, m.samples)
+        rec.decode(s)
+        parentPort.postMessage({ type: 'result', id: m.id, text: String(rec.getResult(s).text || '').trim() })
+      } catch (e) {
+        parentPort.postMessage({ type: 'result', id: m.id, text: '' })
+      }
+    })
+  `
+  try {
+    worker = new Worker(code, { eval: true, workerData: { dir, sherpaPath } })
+    worker.unref() // 别因为它挡住退出
+    worker.on('message', (m: { type: string; id?: number; text?: string; err?: string }) => {
+      if (m.type === 'result' && typeof m.id === 'number') {
+        pending.get(m.id)?.(m.text ?? '')
+        pending.delete(m.id)
+      } else if (m.type === 'fatal') {
+        console.error('[stt worker] 初始化失败,回退流式', m.err)
+        workerDead = true
+      }
+    })
+    worker.on('error', (e) => {
+      console.error('[stt worker] 错误', e)
+      worker = null
+      pending.forEach((r) => r(null))
+      pending.clear()
+    })
+  } catch (e) {
+    console.error('[stt worker] 启动失败', e)
+    workerDead = true
+    worker = null
+  }
+  return worker
 }
 
-function transcribeOffline(samples: Float32Array): string | null {
-  const r = ensureOffline()
-  if (!r) return null
-  try {
-    const s = r.createStream()
-    ;(s as { acceptWaveform(sr: number, x: Float32Array): void }).acceptWaveform(16000, samples)
-    r.decode(s)
-    return r.getResult(s).text.trim()
-  } catch (e) {
-    console.error('[stt] SenseVoice 识别失败,回退流式', e)
-    return null
-  }
+// 异步识别一段音频；worker 不可用/超时 → null（调用方回退流式结果）
+function transcribeAsync(samples: Float32Array): Promise<string | null> {
+  const w = ensureWorker()
+  if (!w) return Promise.resolve(null)
+  const id = seq++
+  return new Promise((resolve) => {
+    pending.set(id, resolve)
+    try {
+      w.postMessage({ id, samples }, [samples.buffer as ArrayBuffer])
+    } catch {
+      pending.delete(id)
+      resolve(null)
+      return
+    }
+    setTimeout(() => {
+      if (pending.has(id)) {
+        pending.delete(id)
+        resolve(null)
+      }
+    }, 20000)
+  })
 }
 
 // ---------- 首次使用下载模型 ----------
@@ -210,9 +262,10 @@ async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: s
     }
     // 下完清缓存的加载错误,让下次 ensure 重新建
     loadError = null
-    offlineError = null
     recognizer = null
-    offline = null
+    workerDead = false
+    worker?.terminate()
+    worker = null
     send({ phase: 'done', received })
     return { ok: true }
   } catch (e) {
@@ -231,11 +284,10 @@ let committed = ''
 
 // 「停顿 ~2s 自动落字」用的静音检测：能量低于阈值即视为静音，连续静音够久就切句。
 const SILENCE_RMS = 0.012 // 静音能量阈值（经验值：环境底噪之上、正常说话之下）
-const SILENCE_MS = 1200 // 连续静音多久算「说完一句」（+ 采集/识别耗时 ≈ 用户体感 2s）
+const SILENCE_MS = 650 // 连续静音多久算「说完一句」（+ 采集/识别耗时 ≈ 用户体感 1s）
 const MIN_SPEECH_MS = 400 // 一句至少要有这么多语音，避免咳嗽/键盘声触发
 let silentMs = 0
 let speechMs = 0
-let sentenceBusy = false // 正在跑 SenseVoice（避免同一句重复触发）
 
 function rms(f: Float32Array): number {
   let s = 0
@@ -256,26 +308,23 @@ function concatChunks(): Float32Array {
 
 // 一句说完：用 SenseVoice 出定稿 → 发给渲染层直接落字；清空缓存继续听下一句。
 // 处理发生在「用户已经停下来」的静音里，用户感知不到等待，也不需要任何 loading 态。
-function flushSentence(wc: WebContents): void {
-  if (sentenceBusy) return
+async function flushSentence(wc: WebContents): Promise<void> {
   const audio = concatChunks()
+  if (!audio.length) return
+  // 同步部分只做「取走音频 + 复位计数」，之后立刻返回；识别在 worker 里跑，主进程不阻塞，
+  // 用户可以马上接着说下一句（新音频进新的一批 chunks，worker 内部按序处理，不会串）。
   chunks = []
   const streamFallback = committed
   committed = ''
   silentMs = 0
   speechMs = 0
-  if (!audio.length) return
-  sentenceBusy = true
+  if (recognizer && stream) recognizer.reset(stream)
+  if (!wc.isDestroyed()) wc.send('stt:partial', '')
   try {
-    const text = transcribeOffline(audio) ?? streamFallback
+    const text = (await transcribeAsync(audio)) || streamFallback
     if (text && !wc.isDestroyed()) wc.send('stt:final', text)
-    // 该句已落字：清掉预览，流式识别器也重置，避免下一句串上一句的残留
-    if (!wc.isDestroyed()) wc.send('stt:partial', '')
-    if (recognizer && stream) recognizer.reset(stream)
   } catch (e) {
     console.error('[stt] 自动切句失败', e)
-  } finally {
-    sentenceBusy = false
   }
 }
 
@@ -306,7 +355,6 @@ export function registerSttHandlers(): void {
     committed = ''
     silentMs = 0
     speechMs = 0
-    sentenceBusy = false
     return { ok: true }
   })
 
@@ -340,14 +388,14 @@ export function registerSttHandlers(): void {
         wc.send('stt:partial', (committed + seg).trim())
       }
       // 停顿够久且这一句确实有内容 → 就地用 SenseVoice 出定稿并落字（处理藏在静音里，无 loading）
-      if (silentMs >= SILENCE_MS && speechMs >= MIN_SPEECH_MS) flushSentence(wc)
+      if (silentMs >= SILENCE_MS && speechMs >= MIN_SPEECH_MS) void flushSentence(wc)
     } catch (err) {
       console.error('[stt:audio]', err)
     }
   })
 
   // 停止录音：只需收尾「最后一句还没到静音阈值就被手动停掉」的残句（已自动落字的不重复）
-  ipcMain.handle('stt:stop', (): { text: string } => {
+  ipcMain.handle('stt:stop', async (): Promise<{ text: string }> => {
     const r = recognizer
     let streamTail = ''
     if (r && stream) {
@@ -360,15 +408,14 @@ export function registerSttHandlers(): void {
       }
     }
     const all = chunks.length ? concatChunks() : new Float32Array(0)
-    // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字
-    const offlineText = all.length / 16000 > 0.3 ? transcribeOffline(all) : null
-    const text = (offlineText ?? (committed + streamTail).trim()).trim()
+    const fallback = (committed + streamTail).trim()
     stream = null
     chunks = []
     committed = ''
     silentMs = 0
     speechMs = 0
-    sentenceBusy = false
-    return { text }
+    // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字；识别同样走 worker，不卡主进程
+    const offlineText = all.length / 16000 > 0.3 ? await transcribeAsync(all) : null
+    return { text: (offlineText || fallback).trim() }
   })
 }

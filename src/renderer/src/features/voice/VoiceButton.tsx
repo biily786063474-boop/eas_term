@@ -23,7 +23,7 @@ export function VoiceButton({
   const [dlMb, setDlMb] = useState<number | null>(null) // 下载中的已收 MB（null=非下载态）
   const capRef = useRef<VoiceCapture | null>(null)
 
-  // 录音时：partial 显灰色预览；final = 主进程检测到「停顿 ~2s」后就地出的定稿 → 直接落进输入框。
+  // 录音时：partial 显灰色预览；final = 主进程检测到「停顿 ~1s」后就地出的定稿 → 直接落进输入框。
   // 用户不用点麦克风，也看不到任何处理态（识别发生在他停下来的那段静音里），可以接着说下一句。
   useEffect(() => {
     if (!rec) return
@@ -37,6 +37,17 @@ export function VoiceButton({
       offF()
     }
   }, [rec, ptyId])
+
+  // 用户按回车「发送」→ 自动收麦，避免发出去之后麦克风还在偷偷录着
+  const stopRef = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    if (!rec) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Enter') void stopRef.current?.()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [rec])
 
   // 卸载确保停掉采麦
   useEffect(
@@ -88,14 +99,16 @@ export function VoiceButton({
     }
   }
 
-  const stop = async (): Promise<void> => {
+  // writeTail=false：因「发送」而收麦时丢弃残句——消息都发出去了，残字再落进去只会污染下一条输入
+  const stop = async (writeTail = true): Promise<void> => {
     capRef.current?.stop()
     capRef.current = null
     setRec(false)
     setInterim('')
     const { text } = await window.api.stt.stop() // SenseVoice 定稿
-    if (text) window.api.pty.write(ptyId, text)
+    if (writeTail && text) window.api.pty.write(ptyId, text)
   }
+  stopRef.current = () => stop(false) // 回车发送时收麦：只停，不补残句
 
   const downloading = dlMb !== null
   const onClick = (): void => {
