@@ -15,7 +15,7 @@ export function CanvasMiniMap(): JSX.Element | null {
   const setViewport = useStore((s) => s.setViewport)
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{ offX: number; offY: number } | null>(null)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true) // 默认收起：只在左下角留一个小图标，不占画布
 
   const fh = (f: { collapsed: boolean; h: number }): number => (f.collapsed ? HEAD_H : f.h)
 
