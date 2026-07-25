@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { DirEntry } from '../../../../shared/types'
 import { useStore } from '../../store'
@@ -56,6 +56,23 @@ export function FileTree({
   refreshKey: number
 }): JSX.Element {
   const [menu, setMenu] = useState<MenuState | null>(null)
+  // 右键菜单边界收敛：菜单 portal 到 body，但若鼠标靠近窗口右/下缘，菜单会伸出窗口被裁掉。
+  // 渲染后实测尺寸再夹回可视区（useLayoutEffect 在 paint 前跑，不会闪）。
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!menu) {
+      setMenuPos(null)
+      return
+    }
+    const el = menuRef.current
+    const w = el?.offsetWidth ?? 200
+    const h = el?.offsetHeight ?? 160
+    setMenuPos({
+      x: Math.max(8, Math.min(menu.x, window.innerWidth - w - 8)),
+      y: Math.max(8, Math.min(menu.y, window.innerHeight - h - 8))
+    })
+  }, [menu])
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const openTerminal = useStore((s) => s.openTerminal)
   const openFile = useStore((s) => s.openFile)
@@ -97,8 +114,13 @@ export function FileTree({
       {menu &&
         createPortal(
           <div
+            ref={menuRef}
             className="context-menu"
-            style={{ left: menu.x, top: menu.y }}
+            style={{
+              left: menuPos?.x ?? menu.x,
+              top: menuPos?.y ?? menu.y,
+              visibility: menuPos ? 'visible' : 'hidden'
+            }}
             onMouseDown={(e) => e.stopPropagation()}
           >
             {!menu.entry.isDir && (
