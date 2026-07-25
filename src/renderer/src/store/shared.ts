@@ -26,6 +26,16 @@ export const uid = (prefix: string): string =>
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
 
+// 网页类文件（HTML）统一走画板内嵌浏览器，不再当代码预览
+export function isWebFile(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
+  return ext === 'html' || ext === 'htm'
+}
+// 本地路径 → file:// URL（路径含空格/中文时必须转义，否则 webview 加载失败）
+export function fileUrlOf(filePath: string): string {
+  return 'file://' + encodeURI(filePath)
+}
+
 export function paneKindForFile(filePath: string): 'code' | 'image' {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
   return IMAGE_EXTS.has(ext) ? 'image' : 'code'
