@@ -275,6 +275,14 @@ export function registerGitHandlers(): void {
     return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
   })
 
+  // 回退到指定版本：git reset --hard <hash>（当前分支 HEAD 移到该提交，丢弃其后提交与未提交改动）。
+  // 破坏性操作，渲染层调用前必须弹确认。hash 白名单校验（参数以数组传，无 shell 注入，仍做格式兜底）。
+  ipcMain.handle('git:resetHard', async (_e, cwd: string, hash: string): Promise<OpResult> => {
+    if (!/^[0-9a-fA-F]{7,40}$/.test(hash)) return { ok: false, error: '非法的提交哈希' }
+    const r = await git(cwd, ['reset', '--hard', hash])
+    return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
+  })
+
   // 历史版本列表：一次 log + numstat，解析出 hash/时间/信息/文件数
   ipcMain.handle('git:log', async (_e, cwd: string, limit: number): Promise<GitCommit[]> => {
     const root = await repoRoot(cwd)

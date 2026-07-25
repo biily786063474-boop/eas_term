@@ -4,6 +4,8 @@ import { computeGraphRows, parseRefs, type GraphSegment } from './gitGraph'
 import { statusInfo } from './gitUi'
 import { DiffView } from '../editor/DiffView'
 import { RefreshIcon, GitBranchIcon } from '../../ui/Icons'
+import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { useStore } from '../../store'
 
 const ROW_H = 30 // 提交表行高（固定，保证轨道图与各列对齐）
 const LANE_W = 18 // 主视图轨道列宽
@@ -41,7 +43,24 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
   const [files, setFiles] = useState<GitCommitFile[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [topRatio, setTopRatio] = useState(0.58)
+  const [menu, setMenu] = useState<{ x: number; y: number; hash: string; subject: string } | null>(
+    null
+  )
   const wrapRef = useRef<HTMLDivElement>(null)
+  const requestConfirm = useStore((s) => s.requestConfirm)
+
+  // 右键「回退到该版本」→ 弹确认 → git reset --hard 到该提交（破坏性，故先确认），成功后刷新历史
+  const askReset = (hash: string, subject: string): void => {
+    requestConfirm({
+      message: `回退到「${subject}」(${hash.slice(0, 8)})？当前分支会重置到该提交，之后的提交与未提交改动都会丢失。`,
+      confirmLabel: '回退到该版本',
+      onConfirm: () => {
+        void window.api.git.resetHard(cwd, hash).then((r) => {
+          if (r.ok) void refresh()
+        })
+      }
+    })
+  }
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!cwd) return
@@ -136,6 +155,12 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
                 className={`history-row${selected === c.hash ? ' active' : ''}`}
                 style={{ height: ROW_H }}
                 onClick={() => setSelected(c.hash)}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation() // 别冒泡到画布节点的右键菜单（复制/删除节点）
+                  setSelected(c.hash)
+                  setMenu({ x: e.clientX, y: e.clientY, hash: c.hash, subject: c.subject })
+                }}
               >
                 <svg className="history-graph" width={gutterW} height={ROW_H}>
                   {row.segments.map((s, i) => (
@@ -207,6 +232,20 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
           <div className="git-diff-hint">在上方选择一个提交，查看这次改了什么</div>
         )}
       </div>
+      {menu && (
+        <CanvasContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={[
+            {
+              label: '回退到该版本',
+              danger: true,
+              onClick: () => askReset(menu.hash, menu.subject)
+            }
+          ]}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   )
 }

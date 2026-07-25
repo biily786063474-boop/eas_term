@@ -78,6 +78,16 @@ const api = {
       return () => ipcRenderer.removeListener('stt:final', h)
     }
   },
+  design: {
+    // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
+    exportToDemo: (
+      projectPath: string,
+      filename: string,
+      data: ArrayBuffer
+    ): Promise<{ ok: boolean; error?: string; path?: string }> =>
+      ipcRenderer.invoke('design:exportToDemo', projectPath, filename, data),
+    revealDemo: (filePath: string): Promise<void> => ipcRenderer.invoke('design:revealDemo', filePath)
+  },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
     readTextFile: (filePath: string): Promise<TextFileResult> =>
@@ -111,7 +121,9 @@ const api = {
     commitDiff: (cwd: string, hash: string, relPath: string): Promise<GitDiffResult> =>
       ipcRenderer.invoke('git:commitDiff', cwd, hash, relPath),
     describe: (cwd: string, hash: string): Promise<AiResult> =>
-      ipcRenderer.invoke('git:describe', cwd, hash)
+      ipcRenderer.invoke('git:describe', cwd, hash),
+    resetHard: (cwd: string, hash: string): Promise<OpResult> =>
+      ipcRenderer.invoke('git:resetHard', cwd, hash)
   },
   session: {
     index: (cwd: string): Promise<SessionIndex> => ipcRenderer.invoke('session:index', cwd),
