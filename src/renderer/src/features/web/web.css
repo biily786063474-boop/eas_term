@@ -117,6 +117,15 @@
   background: #0a0810;
 }
 
+/* 未选中态透明遮罩：盖在 webview 之上（z-index 高于 .web-frame），拦住网页，
+   让双指滚动冒泡到画布 viewport 触发 pan；点击经画布节点捕获阶段完成选中。 */
+.web-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: transparent;
+}
+
 /* 空态 */
 .web-empty {
   position: absolute;

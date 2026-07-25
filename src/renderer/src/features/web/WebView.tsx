@@ -46,12 +46,15 @@ function normalizeUrl(raw: string): string {
 export function WebView({
   url: initialUrl,
   frameId,
-  nodeId
+  nodeId,
+  selected
 }: {
   url: string | null
   /** 画布 web 节点的归属（用于导航回写 url 持久化 + 链接开新窗时聚焦过去）；分屏无 */
   frameId?: string
   nodeId?: string
+  /** 画布中该节点是否被选中：未选中时盖透明遮罩，双指手势冒泡给画布 pan（不进网页内部滚动） */
+  selected?: boolean
 }): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const wvRef = useRef<WebviewEl | null>(null)
@@ -252,6 +255,9 @@ export function WebView({
             <button onClick={() => wvRef.current?.reload()}>重试</button>
           </div>
         )}
+        {/* 未选中：透明遮罩盖住 webview，双指手势打在遮罩上 → 冒泡给画布 pan；点击经节点捕获选中。
+            选中(true)/分屏(undefined) 不盖，网页正常内部滚动与交互。 */}
+        {selected === false && <div className="web-shield" />}
       </div>
       {menu &&
         createPortal(

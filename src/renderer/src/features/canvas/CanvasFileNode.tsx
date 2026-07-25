@@ -186,7 +186,9 @@ export function CanvasFileNode({
           ) : (
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
-        {pane.kind === 'web' && <WebView url={pane.url} frameId={frameId} nodeId={node.id} />}
+        {pane.kind === 'web' && (
+          <WebView url={pane.url} frameId={frameId} nodeId={node.id} selected={selected} />
+        )}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />
     </div>
