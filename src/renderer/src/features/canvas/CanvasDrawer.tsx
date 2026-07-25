@@ -10,7 +10,7 @@ import type { PaneState } from '../../layout'
 import { FileTree } from '../files/FileTree'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
-import { PlusIcon, ChevronRightIcon, ChevronLeftIcon } from '../../ui/Icons'
+import { PlusIcon, ChevronRightIcon } from '../../ui/Icons'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
 const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
@@ -383,21 +383,23 @@ export function CanvasDrawer(): JSX.Element {
       {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡 */}
       {!open && (
         <>
-          <div
-            className={`cd-edge${edgeHover ? ' hot' : ''}`}
-            onMouseEnter={() => setEdgeHover(true)}
-            onMouseMove={onEdgeMove}
-            onMouseLeave={() => {
-              setEdgeHover(false)
-              resetEdgeArrow()
-            }}
-            onClick={() => {
-              setEdgeHover(false)
-              setOpen(true)
-            }}
-          >
-            <span className="cd-edge-arrow" ref={edgeArrowRef}>
-              <ChevronLeftIcon size={18} />
+          <div className={`cd-edge${edgeHover ? ' hot' : ''}`}>
+            <span
+              className="cd-edge-guide"
+              ref={edgeArrowRef}
+              data-tip="展开资源抽屉"
+              onMouseEnter={() => setEdgeHover(true)}
+              onMouseMove={onEdgeMove}
+              onMouseLeave={() => {
+                setEdgeHover(false)
+                resetEdgeArrow()
+              }}
+              onClick={() => {
+                setEdgeHover(false)
+                setOpen(true)
+              }}
+            >
+              <span className="cd-edge-label">文件信息</span>
             </span>
           </div>
           {attentionCount > 0 && (

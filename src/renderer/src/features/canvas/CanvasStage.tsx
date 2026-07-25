@@ -45,6 +45,37 @@ export function CanvasStage(): JSX.Element {
   const clearAttention = useStore((s) => s.clearAttention)
   const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const spaceHeld = useRef(false)
+  // 左侧「基本操作」工具抽屉：收起态左缘 guide，点击滑入；动效/交互镜像右侧资源抽屉
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const [toolsHover, setToolsHover] = useState(false)
+  const toolsEdgeRef = useRef<HTMLSpanElement>(null)
+  // 收起态左缘触发器：鼠标越靠左边缘，guide 越向右「探出」跟手（橡皮筋）；离开回弹
+  const onToolsEdgeMove = (e: React.MouseEvent): void => {
+    const el = toolsEdgeRef.current
+    if (!el) return
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const t = Math.max(0, Math.min(1, 1 - (e.clientX - r.left) / r.width))
+    el.style.transition = 'transform 0.1s ease-out, opacity 0.22s ease'
+    el.style.transform = `translateX(${(9 * t).toFixed(2)}px)`
+  }
+  const resetToolsEdge = (): void => {
+    const el = toolsEdgeRef.current
+    if (!el) return
+    el.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease'
+    el.style.transform = ''
+  }
+  // 抽屉打开时：在工具栏以外点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
+  useEffect(() => {
+    if (!toolsOpen) return
+    const onDown = (e: MouseEvent): void => {
+      if (!(e.target as HTMLElement).closest?.('.canvas-toolbar')) setToolsOpen(false)
+    }
+    const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
+    return () => {
+      window.clearTimeout(t)
+      document.removeEventListener('mousedown', onDown, true)
+    }
+  }, [toolsOpen])
 
   // 选中终端节点 / 其所在 Frame → 视为已知晓，清除该终端的「需处理」呼吸标记
   useEffect(() => {
@@ -204,12 +235,20 @@ export function CanvasStage(): JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || !sel.size) return
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault()
+      // 只认 Delete 删除；Backspace 退回给文字编辑（曾在语音态误删运行中的终端）。
+      // 且终端节点(有 leafId)与 Frame 一律不由键盘删——终端只能点右上角关闭(带运行中确认)，杜绝误删丢会话。
+      if (e.key === 'Delete') {
         const st = useStore.getState()
-        sel.forEach((k) => {
+        const isTerminalNode = (k: string): boolean => {
+          if (k[0] !== 'n') return false
+          const [, fid, nid] = k.split(':')
+          return !!st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)?.leafId
+        }
+        const dels = [...sel].filter((k) => k[0] !== 'f' && !isTerminalNode(k))
+        if (!dels.length) return
+        e.preventDefault()
+        dels.forEach((k) => {
           if (k[0] === 's') st.removeShape(k.slice(2))
-          else if (k[0] === 'f') st.removeFrame(k.slice(2))
           else if (k[0] === 'n') {
             const [, fid, nid] = k.split(':')
             st.removeNode(fid, nid)
@@ -369,15 +408,14 @@ export function CanvasStage(): JSX.Element {
         }
         if (rectsIntersect(box, rect)) next.add('s:' + sh.id)
       })
+      // 框选只选「模块（节点）」，不波及 Frame；Frame 唯一选中方式是点它的 top bar
       cv.frames.forEach((f) => {
-        if (rectsIntersect({ x: f.x, y: f.y, w: f.w, h: f.collapsed ? HEAD_H : f.h }, rect))
-          next.add('f:' + f.id)
-        if (!f.collapsed)
-          f.nodes.forEach((n) => {
-            // 含终端节点（leafId）在内，全部可被框选
-            if (rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect))
-              next.add('n:' + f.id + ':' + n.id)
-          })
+        if (f.collapsed) return
+        f.nodes.forEach((n) => {
+          // 含终端节点（leafId）在内，全部可被框选
+          if (rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect))
+            next.add('n:' + f.id + ':' + n.id)
+        })
       })
       setCanvasSel([...next])
     }
@@ -709,7 +747,30 @@ export function CanvasStage(): JSX.Element {
         ))}
       </div>
 
-      <div className="canvas-toolbar">
+      {/* 收起态：左缘竖排「基本操作」引导（镜像右侧「文件信息」），点击滑出工具栏 */}
+      {!toolsOpen && (
+        <div className={`ctd-edge${toolsHover ? ' hot' : ''}`}>
+          <span
+            className="ctd-edge-guide"
+            ref={toolsEdgeRef}
+            data-tip="展开基本操作"
+            onMouseEnter={() => setToolsHover(true)}
+            onMouseMove={onToolsEdgeMove}
+            onMouseLeave={() => {
+              setToolsHover(false)
+              resetToolsEdge()
+            }}
+            onClick={() => {
+              setToolsHover(false)
+              setToolsOpen(true)
+            }}
+          >
+            <span className="ctd-edge-label">基本操作</span>
+          </span>
+        </div>
+      )}
+
+      <div className={`canvas-toolbar${toolsOpen ? ' open' : ' closed'}`}>
         <button
           className={`ctool${tool === 'select' ? ' on' : ''}`}
           data-tip="选择 / 移动"

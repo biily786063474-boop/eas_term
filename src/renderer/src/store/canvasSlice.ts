@@ -723,7 +723,8 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             }
           : f
       )
-      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+      // 放大模块撑大所属 Frame 后，顶层 Frame 之间去重叠（把被压的邻居往下让），防相互遮挡
+      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 
   settleNode: (frameId, nodeId) =>
