@@ -12,7 +12,8 @@ const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(
 
 export function CanvasDictBubble(): JSX.Element {
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState(() => ({ x: 24, y: Math.max(96, window.innerHeight - 104) }))
+  // 默认落在左下角缩略图（约 200px 高）之上，避免压住它；用户可自行拖到任意位置
+  const [pos, setPos] = useState(() => ({ x: 24, y: Math.max(96, window.innerHeight - 320) }))
   const draggedRef = useRef(false)
 
   const onBubbleDown = (e: React.MouseEvent): void => {

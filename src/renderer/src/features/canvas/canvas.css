@@ -1615,3 +1615,80 @@
   color: var(--accent);
   font-weight: 700;
 }
+
+/* ---------- 左下角画布缩略图（小地图） ---------- */
+.canvas-minimap {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 41;
+  width: 216px;
+  padding: 6px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  user-select: none;
+}
+.canvas-minimap.collapsed {
+  width: auto;
+}
+.cmm-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 4px 6px;
+  cursor: pointer;
+}
+.cmm-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+.cmm-hint {
+  font-size: 9.5px;
+  color: var(--fg-dim);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+.cmm-svg {
+  display: block;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: crosshair;
+  background: rgba(0, 0, 0, 0.22);
+}
+.cmm-board {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: var(--glass-border);
+  stroke-width: 1;
+}
+.cmm-frame {
+  fill: rgba(var(--accent-rgb), 0.42);
+  stroke: rgba(var(--accent-rgb), 0.7);
+  stroke-width: 0.8;
+}
+.cmm-frame.sub {
+  fill: rgba(var(--accent-rgb), 0.2);
+  stroke: rgba(var(--accent-rgb), 0.42);
+}
+.cmm-name {
+  font-size: 6.5px;
+  font-weight: 600;
+  fill: var(--fg);
+  opacity: 0.9;
+  pointer-events: none;
+}
+.cmm-view {
+  fill: rgba(255, 255, 255, 0.1);
+  stroke: #fff;
+  stroke-width: 1.2;
+  cursor: grab;
+}
+.cmm-empty {
+  font-size: 10px;
+  fill: var(--fg-dim);
+  text-anchor: middle;
+  opacity: 0.6;
+}

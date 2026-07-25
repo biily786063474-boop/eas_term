@@ -7,6 +7,7 @@ import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
+import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { collectLeaves } from '../../layout'
@@ -432,6 +433,8 @@ export function CanvasStage(): JSX.Element {
   // 空白按下：select 模式框选（空格+拖为平移）；图形工具模式绘制
   const onViewportDown = (e: React.MouseEvent): void => {
     if (e.button !== 0 || editingSticky) return
+    // 在缩略图等浮层控件上按下不启动画布框选/平移
+    if ((e.target as HTMLElement).closest?.('.canvas-minimap')) return
     if (tool === 'select') {
       if (spaceHeld.current) startPan(e)
       else startBoxSelect(e)
@@ -810,6 +813,8 @@ export function CanvasStage(): JSX.Element {
           </svg>
         </button>
       </div>
+
+      <CanvasMiniMap />
 
       <div className="canvas-zoombar">
         <button
