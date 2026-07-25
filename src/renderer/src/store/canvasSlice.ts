@@ -145,6 +145,12 @@ export interface CanvasSlice {
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
   setNodeAgent: (frameId: string, nodeId: string, agent: NodeAgent | null) => void
+  /** 更新画布组件节点的 props（如设计模块把 designState 存回节点，随 canvas.json 持久化） */
+  setNodeComponentProps: (
+    frameId: string,
+    nodeId: string,
+    props: Record<string, unknown>
+  ) => void
   /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点，含终端节点）。
    *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */
   canvasSel: string[]
@@ -993,6 +999,25 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                 ...f,
                 nodes: f.nodes.map((n) =>
                   n.id === nodeId ? { ...n, agent: agent ?? undefined } : n
+                )
+              }
+            : f
+        )
+      }
+    })),
+
+  setNodeComponentProps: (frameId, nodeId, props) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  n.id === nodeId && n.component
+                    ? { ...n, component: { ...n.component, props: { ...n.component.props, ...props } } }
+                    : n
                 )
               }
             : f

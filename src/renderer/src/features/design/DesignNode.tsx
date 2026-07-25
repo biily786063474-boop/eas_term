@@ -1,183 +1,89 @@
-// 设计模块（Step 1）：先把「渲染 + 导出到 <项目>/demo/」这条链跑通。
-// 目前用一个内置 demo 动效状态（Step 2 会换成 Konva 设计画布产出的真实状态）。
-// 复用移植自 taptv 的零依赖渲染/导出核心：renderFrame(单帧) / exportMotion(WebM)。
-import { useEffect, useRef, useState } from 'react'
-// 移植来的纯逻辑（.js，allowJs）——单帧渲染 + WebM 导出
-import { renderFrame, preloadMedia } from './composer/animate/renderer'
-import { exportMotion } from './composer/animate/exporter'
+// 设计模块（Step 2）：画布节点是入口卡片，点「打开设计」全屏挂 Konva 设计画布（DesignerView，
+// 移植自 taptv）。用户画形状/文本/图片 + 图层，导出 PNG 落到 <项目>/demo/，设计状态存回节点持久化。
+// DesignerView 是 position:fixed 全屏覆盖层 → 必须 portal 到 body，否则被画布 transform 困住/错位。
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useStore } from '../../store'
+import { DesignIcon } from '../../ui/Icons'
+// 移植来的 Konva 设计器（default export，.jsx，allowJs）
+import DesignerView from './composer/designer/DesignerView'
 import './design.css'
 
-const CW = 320
-const CH = 200
-const BG = '#0c0e13'
-const DURATION = 4
-const FPS = 30
+export interface DesignState {
+  objects?: unknown[]
+  canvasWidth?: number
+  canvasHeight?: number
+  [k: string]: unknown
+}
 
-// 内置 demo 动效：一个旋转呼吸的圆角矩形 + 淡入上移的标题（base 静态属性 + keyframes 动画）
-const DEMO_LAYERS = [
-  {
-    id: 'card',
-    type: 'rect',
-    visible: true,
-    inPoint: 0,
-    outPoint: DURATION,
-    base: {
-      x: 50,
-      y: 46,
-      width: 220,
-      height: 108,
-      fill: '#7fa0d8',
-      fillType: 'solid',
-      cornerRadius: 20,
-      opacity: 1,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1
-    },
-    keyframes: {
-      rotation: [
-        { t: 0, v: -4, easing: 'easeInOut' },
-        { t: 2, v: 4, easing: 'easeInOut' },
-        { t: 4, v: -4 }
-      ],
-      scaleX: [
-        { t: 0, v: 0.96, easing: 'easeInOut' },
-        { t: 2, v: 1.02, easing: 'easeInOut' },
-        { t: 4, v: 0.96 }
-      ]
-    },
-    presets: null
-  },
-  {
-    id: 'title',
-    type: 'text',
-    visible: true,
-    inPoint: 0,
-    outPoint: DURATION,
-    base: {
-      x: 74,
-      y: 84,
-      text: 'Eas-Term',
-      fontSize: 34,
-      fontFamily: 'sans-serif',
-      fill: '#0b0d12',
-      opacity: 1,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      width: 180,
-      height: 44,
-      textSizing: 'auto'
-    },
-    keyframes: {
-      opacity: [
-        { t: 0, v: 0, easing: 'easeOut' },
-        { t: 1, v: 1 }
-      ],
-      y: [
-        { t: 0, v: 104, easing: 'easeOut' },
-        { t: 1, v: 84 }
-      ]
-    },
-    presets: null
-  }
-]
-
-export function DesignNode({ cwd }: { cwd: string }): JSX.Element {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [busy, setBusy] = useState<null | string>(null)
+export function DesignNode({
+  cwd,
+  frameId,
+  nodeId,
+  savedState
+}: {
+  cwd: string
+  frameId: string
+  nodeId: string
+  savedState: DesignState | null
+}): JSX.Element {
+  const [editing, setEditing] = useState(false)
+  const [design, setDesign] = useState<DesignState | null>(savedState ?? null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const setNodeComponentProps = useStore((s) => s.setNodeComponentProps)
 
-  // 实时预览：rAF 循环按 wall-clock 时间渲染 demo 动效（循环播放）
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    let raf = 0
-    let start = performance.now()
-    let alive = true
-    void preloadMedia(DEMO_LAYERS)
-    const loop = (): void => {
-      if (!alive) return
-      const t = ((performance.now() - start) / 1000) % DURATION
-      renderFrame(ctx, DEMO_LAYERS, t, CW, CH, BG)
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => {
-      alive = false
-      cancelAnimationFrame(raf)
-    }
-  }, [])
+  const objCount = Array.isArray(design?.objects) ? design!.objects!.length : 0
 
   const flash = (ok: boolean, text: string): void => {
     setMsg({ ok, text })
     setTimeout(() => setMsg(null), 4000)
   }
 
-  const write = async (blob: Blob, ext: string): Promise<void> => {
-    const buf = await blob.arrayBuffer()
-    const name = `design-${Date.now()}.${ext}`
-    const r = await window.api.design.exportToDemo(cwd, name, buf)
-    if (r.ok) flash(true, `已导出 → demo/${name}`)
-    else flash(false, r.error ?? '导出失败')
-  }
-
-  const exportPng = async (): Promise<void> => {
-    setBusy('PNG')
+  // designer 顶栏「导出」→ ExportDialog → 这里拿到 PNG/JPG Blob → 落盘到项目 demo/
+  const onExport = async (blob: Blob, format: string): Promise<void> => {
     try {
-      const off = document.createElement('canvas')
-      off.width = CW
-      off.height = CH
-      const ctx = off.getContext('2d')!
-      await preloadMedia(DEMO_LAYERS)
-      renderFrame(ctx, DEMO_LAYERS, 0, CW, CH, BG)
-      const blob = await new Promise<Blob | null>((res) => off.toBlob(res, 'image/png'))
-      if (blob) await write(blob, 'png')
+      const buf = await blob.arrayBuffer()
+      const name = `design-${Date.now()}.${format === 'jpeg' ? 'jpg' : format}`
+      const r = await window.api.design.exportToDemo(cwd, name, buf)
+      if (r.ok) flash(true, `已导出 → demo/${name}`)
+      else flash(false, r.error ?? '导出失败')
     } catch (e) {
       flash(false, e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(null)
     }
   }
 
-  const exportWebm = async (): Promise<void> => {
-    setBusy('WebM')
-    try {
-      const blob = await exportMotion({
-        layers: DEMO_LAYERS,
-        canvasWidth: CW,
-        canvasHeight: CH,
-        backgroundColor: BG,
-        fps: FPS,
-        duration: DURATION,
-        onProgress: (p: number) => setBusy(`WebM ${Math.round(p * 100)}%`)
-      })
-      await write(blob, 'webm')
-    } catch (e) {
-      flash(false, e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(null)
-    }
+  // designer 自动保存 → 存回节点 component.props.designState（随 canvas.json 持久化）
+  const onSaveState = (state: DesignState): void => {
+    setDesign(state)
+    setNodeComponentProps(frameId, nodeId, { designState: state })
   }
 
   return (
     <div className="design-node">
-      <div className="design-preview">
-        <canvas ref={canvasRef} width={CW} height={CH} />
-      </div>
-      <div className="design-bar">
-        <span className="design-hint">设计模块 · Step 1（导出链）</span>
-        <span className="design-spacer" />
-        <button className="design-btn" disabled={!!busy} onClick={() => void exportPng()}>
-          {busy === 'PNG' ? '导出中…' : '导出 PNG'}
-        </button>
-        <button className="design-btn primary" disabled={!!busy} onClick={() => void exportWebm()}>
-          {busy === 'WebM' ? '录制中…' : '导出动效 WebM'}
+      <div className="design-card" onDoubleClick={() => setEditing(true)}>
+        <DesignIcon size={30} />
+        <div className="design-card-title">设计模块</div>
+        <div className="design-card-sub">
+          {objCount > 0 ? `${objCount} 个元素 · ${design?.canvasWidth ?? 1920}×${design?.canvasHeight ?? 1080}` : '空设计 · 双击或点下方打开'}
+        </div>
+        <button className="design-btn primary" onClick={() => setEditing(true)}>
+          打开设计
         </button>
       </div>
       {msg && <div className={`design-msg${msg.ok ? ' ok' : ' err'}`}>{msg.text}</div>}
+      {editing &&
+        createPortal(
+          <DesignerView
+            nodeId={nodeId}
+            savedState={design}
+            mediaInputs={[]}
+            onExport={onExport}
+            onSaveState={onSaveState}
+            onClose={() => setEditing(false)}
+            topbarCenter={null}
+          />,
+          document.body
+        )}
     </div>
   )
 }

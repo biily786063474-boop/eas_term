@@ -100,7 +100,9 @@
   },
   "dependencies": {
     "@codemirror/merge": "^6.12.2",
+    "konva": "^9.3.22",
     "node-pty": "^1.0.0",
+    "react-konva": "^18.2.16",
     "sherpa-onnx": "^1.13.4"
   },
   "devDependencies": {

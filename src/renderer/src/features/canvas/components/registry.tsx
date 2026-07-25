@@ -5,7 +5,7 @@
 
 import type { JSX } from 'react'
 import { HistoryView } from '../../git/HistoryView'
-import { DesignNode } from '../../design/DesignNode'
+import { DesignNode, type DesignState } from '../../design/DesignNode'
 import { GitBranchIcon, DesignIcon } from '../../../ui/Icons'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
@@ -59,7 +59,14 @@ const designComponent: CanvasComponentDef = {
   description: '设计 / 动效，导出到项目 demo/',
   defaultSize: { w: 380, h: 320 },
   needsProject: true,
-  render: (ctx) => <DesignNode cwd={ctx.cwd} />
+  render: (ctx) => (
+    <DesignNode
+      cwd={ctx.cwd}
+      frameId={ctx.frameId}
+      nodeId={ctx.nodeId}
+      savedState={(ctx.props?.designState as DesignState | undefined) ?? null}
+    />
+  )
 }
 
 export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent, designComponent]
