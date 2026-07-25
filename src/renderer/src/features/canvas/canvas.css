@@ -1636,10 +1636,9 @@
 }
 .cmm-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  padding: 2px 4px 6px;
-  cursor: pointer;
+  padding: 1px 2px 6px 4px;
 }
 .cmm-title {
   font-size: 11px;
@@ -1716,4 +1715,27 @@
 .canvas-minimap-mini:hover {
   color: var(--accent);
   border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+/* 缩略图标题栏：右侧收起按钮（图标，不再用文字提示） */
+.cmm-spacer {
+  flex: 1;
+}
+.cmm-fold {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.cmm-fold:hover {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
 }

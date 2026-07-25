@@ -122,9 +122,17 @@ export function CanvasMiniMap(): JSX.Element | null {
 
   return (
     <div className="canvas-minimap" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="cmm-head" onClick={() => setCollapsed(true)}>
+      <div className="cmm-head">
         <span className="cmm-title">缩略图</span>
-        <span className="cmm-hint">点击标题收起</span>
+        <span className="cmm-spacer" />
+        <button className="cmm-fold" data-tip="收起缩略图" onClick={() => setCollapsed(true)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 14h6v6" />
+            <path d="M20 10h-6V4" />
+            <path d="M14 10 21 3" />
+            <path d="M3 21l7-7" />
+          </svg>
+        </button>
       </div>
       {(
         <svg
