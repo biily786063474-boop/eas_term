@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.biily.easterm",
     "productName": "Eas-Term",
+    "afterPack": "build/afterPack.js",
     "directories": {
       "buildResources": "build",
       "output": "release"
