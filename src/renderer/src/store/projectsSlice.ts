@@ -65,6 +65,18 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
   setActiveProject: (id) => {
     const s = get()
     if (s.activeProjectId === id) return
-    set({ activeProjectId: id, activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, id) })
+    // 切到某项目 → 清除其终端的「任务完成」提醒（满足「点击项目后消除」）
+    const ptys = new Set(
+      s.tabs
+        .filter((t) => t.projectId === id)
+        .flatMap((t) => collectLeaves(t.root))
+        .filter((l) => l.pane.kind === 'terminal')
+        .map((l) => (l.pane as { ptyId: string }).ptyId)
+    )
+    set({
+      activeProjectId: id,
+      activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, id),
+      attentionPtys: ptys.size ? s.attentionPtys.filter((p) => !ptys.has(p)) : s.attentionPtys
+    })
   }
 })

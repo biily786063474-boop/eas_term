@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useStore } from '../../store'
+import { collectLeaves } from '../../layout'
 import type { Project } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { SidebarGit } from '../git/SidebarGit'
@@ -59,8 +60,27 @@ export function Sidebar(): JSX.Element {
   const addProject = useStore((s) => s.addProject)
   const removeProject = useStore((s) => s.removeProject)
   const openTerminal = useStore((s) => s.openTerminal)
+  const attentionPtys = useStore((s) => s.attentionPtys)
+  const tabs = useStore((s) => s.tabs)
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
+
+  // 有「任务完成」提醒的项目 id（终端完成任务后 flagAttention；切到该项目即清除）
+  const attnProjectIds = useMemo(() => {
+    if (!attentionPtys.length) return new Set<string>()
+    const attn = new Set(attentionPtys)
+    const ids = new Set<string>()
+    for (const t of tabs) {
+      if (!t.projectId) continue
+      if (
+        collectLeaves(t.root).some(
+          (l) => l.pane.kind === 'terminal' && attn.has((l.pane as { ptyId: string }).ptyId)
+        )
+      )
+        ids.add(t.projectId)
+    }
+    return ids
+  }, [attentionPtys, tabs])
 
   return (
     <aside className="sidebar">
@@ -83,6 +103,9 @@ export function Sidebar(): JSX.Element {
               onClick={() => setActiveProject(p.id)}
               onDoubleClick={() => void openTerminal({ projectId: p.id })}
             >
+              {attnProjectIds.has(p.id) && (
+                <span className="project-attn-dot" data-tip="该项目有任务完成" />
+              )}
               <span className="project-name">{p.name}</span>
               <span className="project-actions">
                 <button
