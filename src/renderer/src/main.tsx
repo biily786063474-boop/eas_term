@@ -3,10 +3,14 @@ import { App } from './App'
 import { useStore } from './store'
 import { applyTheme, loadTheme } from './themes'
 import { ErrorBoundary } from './ui/ErrorBoundary'
+import { registerMcpHandler } from './mcpHandler'
 import './styles/base.css'
 
 // 渲染前先套用持久化的主题，避免首帧闪默认色
 applyTheme(loadTheme())
+
+// MCP：接住主进程转来的 AI 工具调用（画板能力对 Claude/Codex 开放）
+registerMcpHandler()
 
 // 全局错误兜底:渲染侧未捕获异常/拒绝不再静默丢失(白屏时至少能在控制台看到根因)
 window.addEventListener('error', (e) => console.error('[window:error]', e.error ?? e.message))

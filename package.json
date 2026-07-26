@@ -90,7 +90,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Eas-Term"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "mcp",
+        "to": "mcp"
+      }
+    ]
   },
   "dependencies": {
     "@codemirror/merge": "^6.12.2",

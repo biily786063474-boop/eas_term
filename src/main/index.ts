@@ -10,6 +10,7 @@ import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
+import { registerMcpBridge } from './mcpBridge'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
 // 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
@@ -205,6 +206,7 @@ app.whenReady().then(() => {
       /* 图标缺失不影响启动 */
     }
   }
+  registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()

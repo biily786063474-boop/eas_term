@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
+import { mcpEnv } from './mcpBridge'
 
 interface Entry {
   pty: pty.IPty
@@ -199,6 +200,9 @@ export function registerPtyHandlers(): void {
           env.PATH = `${shimDir}:${env.PATH ?? ''}`
           env.BROWSER = path.join(shimDir, 'open') // 照顾按 BROWSER 约定的工具
         }
+        // MCP 上下文：跑在这个终端里的 AI 据此知道「我是哪个终端」→ 反查所属 Frame，
+        // 于是 open_html 之类的工具不用问就能开在正确的 Frame 里
+        Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))
         return env
       })()
     })

@@ -91,6 +91,18 @@ const api = {
       return () => ipcRenderer.removeListener('stt:downloadProgress', h)
     }
   },
+  mcp: {
+    // MCP 桥：主进程把 AI 的工具调用转过来，渲染层执行 store action 后回传结果
+    onInvoke: (
+      cb: (p: { id: number; tool: string; args: unknown; ctx: { ptyId?: string; project?: string } }) => void
+    ): (() => void) => {
+      const h = (_e: unknown, p: { id: number; tool: string; args: unknown; ctx: { ptyId?: string; project?: string } }): void => cb(p)
+      ipcRenderer.on('mcp:invoke', h)
+      return () => ipcRenderer.removeListener('mcp:invoke', h)
+    },
+    reply: (r: { id: number; ok: boolean; data?: unknown; error?: string }): void =>
+      ipcRenderer.send('mcp:result', r)
+  },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
     exportToDemo: (
