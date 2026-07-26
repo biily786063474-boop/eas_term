@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
-import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon } from '../../ui/Icons'
+import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasComponentNode } from './CanvasComponentNode'
@@ -28,6 +28,7 @@ export function CanvasStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
   const addBrowserNode = useStore((s) => s.addBrowserNode)
+  const tidyFrame = useStore((s) => s.tidyFrame)
   const shapes = useStore((s) => s.canvas.shapes)
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
@@ -699,6 +700,14 @@ export function CanvasStage(): JSX.Element {
                 <b className="cframe-name">{f.name}</b>
               )}
               <span className="cframe-spacer" />
+              <button
+                className="cframe-btn"
+                data-tip="整理排列（模块按大小从左上对齐）"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => tidyFrame(f.id)}
+              >
+                <TidyIcon size={13} />
+              </button>
               <button
                 className="cframe-btn"
                 data-tip="新建终端"

@@ -247,6 +247,15 @@ export const BellIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const TidyIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="8" height="6" rx="1.5" />
+    <rect x="13" y="3" width="8" height="6" rx="1.5" />
+    <rect x="3" y="13" width="8" height="8" rx="1.5" />
+    <rect x="13" y="13" width="8" height="5" rx="1.5" />
+  </Svg>
+)
+
 export const MaximizeIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />

@@ -143,6 +143,8 @@ export interface CanvasSlice {
   setWebNodeTitle: (frameId: string, nodeId: string, title: string) => void
   /** 把画布平移到某节点居中（保持当前缩放）——如浏览器里点链接开新页时聚焦过去 */
   focusCanvasNode: (frameId: string, nodeId: string) => void
+  /** 一键整理 Frame 内模块：按各自大小从左上角起流式重排，行内对齐、消除重叠与空隙 */
+  tidyFrame: (frameId: string) => void
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
@@ -1000,6 +1002,44 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const cy = f.y + n.y + n.h / 2
     get().setViewport({ x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale })
   },
+
+  // 一键整理：以左上角为基准，按模块自身大小做「行式打包」重排——
+  // 同一行顶端对齐、行间等距，宽度放不下就换行；不改模块大小，只改位置。
+  tidyFrame: (frameId) =>
+    set((s) => {
+      const frame = s.canvas.frames.find((f) => f.id === frameId)
+      if (!frame || !frame.nodes.length) return s
+      // 若 Frame 里有子 Frame，模块从子 Frame 下方开始排，避免压住它们
+      const childBottom = s.canvas.frames
+        .filter((c) => c.parentId === frameId)
+        .reduce((m, c) => Math.max(m, c.y - frame.y + (c.collapsed ? HEAD : c.h)), 0)
+      const startY = childBottom ? childBottom + GAP : HEAD + PAD
+      // 保持用户原有布局意图：按阅读顺序（先上后左）决定排列先后
+      const order = [...frame.nodes].sort((a, b) => a.y - b.y || a.x - b.x)
+      // 行宽：至少放得下最宽的模块，默认沿用 Frame 当前内容宽度
+      const maxW = Math.max(frame.w - PAD * 2, ...order.map((n) => n.w))
+      let x = PAD
+      let y = startY
+      let rowH = 0
+      const placed = new Map<string, { x: number; y: number }>()
+      for (const n of order) {
+        if (x > PAD && x + n.w > PAD + maxW) {
+          x = PAD
+          y += rowH + GAP
+          rowH = 0
+        }
+        placed.set(n.id, { x, y })
+        x += n.w + GAP
+        rowH = Math.max(rowH, n.h)
+      }
+      // 按原数组顺序写回（数组下标即 z 序，不要因排序改变层级）
+      const frames = s.canvas.frames.map((f) =>
+        f.id === frameId
+          ? { ...f, nodes: f.nodes.map((n) => ({ ...n, ...(placed.get(n.id) ?? {}) })) }
+          : f
+      )
+      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
+    }),
 
   // 重命名画布节点 → 同步分屏那边的标签名（两个模式的终端名双向一致）
   renameNode: (frameId, nodeId, name) =>
