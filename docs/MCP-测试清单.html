@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term MCP 测试清单</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+@media(max-width:640px){h1{font-size:29px}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">EAS-TERM · MCP</span>
+  <a href="#结论">结论</a>
+  <a href="#怎么测">怎么测</a>
+  <a href="#清单">逐项清单</a>
+  <a href="#工具">13 个工具</a>
+  <a href="#边界">安全边界</a>
+  <a href="#坑">已知坑</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">测试清单 · P1 + P2 已完成</div>
+  <h1>MCP 接入测试怎么跑</h1>
+  <p class="lede">Claude / Codex 现在能直接操控画板：开预览、聚焦、最大化、整理、贴便签、发通知。
+     这页是给你自己验收用的 —— 每条都写清「说什么话」和「应该看到什么」。</p>
+  <div class="meta">
+    <span>日期 <b>2026-07-26</b></span>
+    <span>工具数 <b>13 个</b></span>
+    <span>验证方式 <b>开发版 + 真实 MCP 协议</b></span>
+    <span>状态 <b>代码全通，等你人工体验</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">先看这一句</div>
+  <p class="secnote">你不用配置任何东西。在 Eas-Term 的终端里起 Claude Code，工具自动就在。</p>
+
+  <div class="verdict">
+    <div class="vlabel">核心机制</div>
+    <p style="margin:0">端口和令牌由 app 在<b>创建终端时注入环境变量</b>，MCP server 因此天然知道
+      「我在哪个终端 → 属于哪个 Frame → 相对路径该按哪个项目解析」。
+      <b>所以 AI 不需要你告诉它 frame id，产出直接开在它自己所在的 Frame 里。</b></p>
+  </div>
+
+  <div class="grid g4" style="margin-top:24px">
+    <div class="stat"><div class="num n-em">13</div><div class="lab">开放的工具</div></div>
+    <div class="stat"><div class="num n-sk">3</div><div class="lab">安全锁（本地/令牌/路径）</div></div>
+    <div class="stat"><div class="num n-am">0</div><div class="lab">需要你手动配置的项</div></div>
+    <div class="stat"><div class="num n-vi">1</div><div class="lab">一键掐断开关</div></div>
+  </div>
+</section>
+
+<section id="怎么测">
+  <h2>Setup</h2>
+  <div class="sectitle">开始之前：两步</div>
+  <p class="secnote">测试必须在 <b>Eas-Term 自己的终端里</b>进行 —— 外面起的 Claude Code 拿不到注入的环境变量，工具会报「未检测到 Eas-Term 环境」。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一步</div>
+      <div class="tt">启动开发版</div>
+      <div class="td">项目目录下 <code>npm run dev</code>。（我没有打包——你没说打包）</div>
+    </div>
+    <div class="it on">
+      <div class="tm">第二步</div>
+      <div class="tt">在 app 内的终端里起 Claude Code</div>
+      <div class="td">画布模式任一终端节点，或终端模式任一标签页，输入 <code>claude</code> 回车。
+        起来后打 <code>/mcp</code> 应该能看到 <b>eas-term</b> 已连接、13 个工具。</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">如果 /mcp 里没有 eas-term</div>
+    <p style="margin:0">说明 <code>~/.claude.json</code> 那条自动配置没写上（或被别的进程覆盖）。
+      重启一次 app 即可 —— app 每次启动都会检查并补写。
+      写之前会备份成 <code>~/.claude.json.eas-backup</code>，解析失败时直接跳过不写，不会动你的配置。</p>
+  </div>
+</section>
+
+<section id="清单">
+  <h2>Checklist</h2>
+  <div class="sectitle">逐项测试：说这句话 → 该看到什么</div>
+  <p class="secnote">直接把左栏的话说给 app 里的 Claude 听。右栏是判定标准，不符合就是 bug。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:31%">对 Claude 说</th><th>应该看到</th><th style="width:15%">验过没</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>「把 docs/MCP-测试清单.html 在画板里打开」</b></td>
+        <td>自动切到画布模式，当前 Frame 里多出一个浏览器节点，显示的就是这一页</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「读一下画板现在什么状态」</b></td>
+        <td>它能报出每个 Frame 名字、里面有几个模块、都是什么类型（终端 / 浏览器 / 代码 / 设计），以及它自己在哪个 Frame</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「把刚才那个预览最大化，我要仔细看」</b></td>
+        <td>该节点铺满整个画布视口（沉浸模式）</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「还原」</b></td>
+        <td>退出沉浸，回到画布里原来的位置和大小</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「把这个预览重命名成『测试清单』」</b></td>
+        <td>节点标题变了，<b>左下角缩略图上的名字也跟着变</b></td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「整理一下这个 Frame」</b></td>
+        <td>模块按大小从左上角流式重排，重叠和空隙消失（等同你手点「整理」按钮）</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「贴张便签：明天要改 XX」</b></td>
+        <td>Frame <b>右侧外边</b>出现一张便签，写着这句话；再贴一张会自动往下排，不重叠</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「新开一个终端」</b></td>
+        <td>Frame 里多一个终端模块。<b>它只开不打命令</b>——留给你自己跑</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「聚焦到那个终端」</b></td>
+        <td>画布视口移过去并选中它</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「把刚才开的预览关掉」</b></td>
+        <td>预览节点消失</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「把那个终端关掉」</b><span class="b b-ro" style="margin-left:6px">故意的</span></td>
+        <td><b>必须被拒绝</b>：「终端节点不允许由 AI 关闭，请让用户手动关」</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「任务做完了，通知我一下」</b></td>
+        <td>标题栏铃铛亮起 + 侧边栏项目徽标（跟 CLI 跑完任务的提醒同一套）</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「打开 github.com 我看看」</b></td>
+        <td>画布里新建浏览器节点并加载（内嵌 Chromium）</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「打开 ~/.ssh/config」</b><span class="b b-ro" style="margin-left:6px">故意的</span></td>
+        <td><b>必须被拒绝</b>：路径越界，只允许项目目录内</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+      <tr>
+        <td><b>「打开 docs/根本不存在.html」</b><span class="b b-ro" style="margin-left:6px">故意的</span></td>
+        <td><b>必须报错</b>「文件不存在」，而不是开出一个空白预览让 AI 以为成功了</td>
+        <td><span class="b b-em">代码已验</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>还要看一眼的：标题栏指示灯</h3>
+  <p>只要 AI 动过画板，标题栏就会出现一个<b>插头图标 + 计数</b>（平时完全不占位）。</p>
+  <ul class="clean">
+    <li>调用发生时它会<b>亮一下</b>（1.2 秒）——你能感知到「刚才 AI 动了东西」</li>
+    <li>点开是<b>流水记录</b>：什么工具、动了什么、多久之前；失败的显红</li>
+    <li>右上角有<b>总开关</b>：关掉之后所有 MCP 调用立刻被拒，<b>不用去改 Claude 配置</b></li>
+  </ul>
+</section>
+
+<section id="工具">
+  <h2>Tools</h2>
+  <div class="sectitle">13 个工具都是什么</div>
+  <p class="secnote">P1 是「让 AI 把东西摆到你眼前」，P2 是「让 AI 收拾画板」。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">工具</th><th>作用</th><th style="width:12%">阶段</th></tr></thead>
+    <tbody>
+      <tr><td><code>canvas_open_html</code></td><td>把本地 HTML 开成浏览器节点（写完报告自己开预览）</td><td><span class="b b-sk">P1</span></td></tr>
+      <tr><td><code>canvas_open_file</code></td><td>开文件预览：代码 / Markdown 走代码视图，图片视频走媒体视图</td><td><span class="b b-sk">P1</span></td></tr>
+      <tr><td><code>canvas_open_url</code></td><td>开网址（查文档、看部署结果）</td><td><span class="b b-sk">P1</span></td></tr>
+      <tr><td><code>notify</code></td><td>发「需要处理」提醒，点亮铃铛</td><td><span class="b b-sk">P1</span></td></tr>
+      <tr><td><code>canvas_list_frames</code></td><td>列 Frame（轻量版）</td><td><span class="b b-sk">P1</span></td></tr>
+      <tr><td><code>canvas_get_state</code></td><td>读完整状态：每个模块的 id / 类型 / 标题 / 位置大小</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_focus_node</code></td><td>把视口移到某个模块并选中</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_maximize_node</code></td><td>最大化沉浸 / 还原</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_close_node</code></td><td>关模块（<b>终端除外</b>）</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_rename_node</code></td><td>重命名模块（缩略图上能认出来）</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_tidy_frame</code></td><td>一键整理布局</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_new_terminal</code></td><td>新开终端模块（只开不输命令）</td><td><span class="b b-vi">P2</span></td></tr>
+      <tr><td><code>canvas_add_note</code></td><td>贴便签（结论 / 待办留在画板上）</td><td><span class="b b-vi">P2</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="边界">
+  <h2>Boundaries</h2>
+  <div class="sectitle">安全边界：哪些是死活不给的</div>
+  <p class="secnote">开放能力的同时，这几条是硬拦的 —— 不是「AI 应该不会那么做」，是代码层面调不到。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">三道锁</h4>
+      <ul class="clean" style="margin:0">
+        <li>HTTP 桥<b>只听 127.0.0.1</b>，外网碰不到</li>
+        <li>每次启动<b>随机令牌</b>，只经 PTY 环境变量给 app 自己起的终端</li>
+        <li>路径白名单：只允许<b>调用方项目</b>或<b>目标 Frame 项目</b>目录内</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">明确不开放</h4>
+      <ul class="clean" style="margin:0">
+        <li><code>pty.write</code> —— AI 不能替你往终端里打命令</li>
+        <li><code>git.resetHard</code> —— 不能回退版本</li>
+        <li><code>removeFrame</code> —— 不能删 Frame</li>
+        <li><code>fs.trash</code> —— 不能删文件</li>
+        <li><b>关终端</b> —— 判断不了里面有没有在跑的活，一律拒绝</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">为什么终端一个都不给碰</div>
+    <p style="margin:0">你之前因为快捷键误删终端吃过亏。AI 看不到终端里跑到哪一步了，
+      关错 = 一个跑了半小时的任务没了。所以 <code>canvas_close_node</code> 遇到终端节点直接抛错，
+      写命令的能力压根没开放。</p>
+  </div>
+</section>
+
+<section id="坑">
+  <h2>Gotchas</h2>
+  <div class="sectitle">已知的坑 · 修过的两个真 bug</div>
+  <p class="secnote">P1 阶段自己写出来又自己抓到的，记在这里免得以后重犯。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:24%">问题</th><th>后果</th><th style="width:34%">怎么修的</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>相对路径按错项目解析</b></td>
+        <td>AI 说 <code>docs/a.html</code>，结果按「回落 Frame 的项目」找，开出别的项目的文件</td>
+        <td>基准改为<b>优先取调用方自己的项目</b>；两个项目都算合法范围</td>
+      </tr>
+      <tr>
+        <td><b>文件不存在也返回成功</b></td>
+        <td>开出一个空白预览，AI 以为成功了继续往下走</td>
+        <td>先 <code>probePaths</code> 校验存在性和「是不是目录」，不过就报错</td>
+      </tr>
+      <tr>
+        <td><b><code>~/.claude.json</code> 覆盖风险</b><span class="b b-am" style="margin-left:6px">高危</span></td>
+        <td>解析失败会从空配置写入，<b>抹掉整份 Claude 配置</b>（你那份有 79 个顶层键）</td>
+        <td>解析失败<b>直接跳过不写</b> + 写前备份；实测 79 个键完好</td>
+      </tr>
+      <tr>
+        <td><b>指示灯弹窗看不见</b></td>
+        <td>DOM 里有内容但屏幕上是透明的一片字</td>
+        <td>标题栏 <code>overflow:hidden</code> 裁掉了它、画布 webview 遮罩盖住了它 → 改 <b>portal 到 body + fixed 定位</b>；顺带修了 CSS 变量名写错导致的背景透明</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>使用上要知道的</h3>
+  <ul>
+    <li><b>开发版和打包版会互相覆盖那条配置</b>：两者的 <code>~/.claude.json</code> 里 <code>eas-term</code> 指向各自的可执行文件。同时装了就以最后启动的为准。</li>
+    <li><b>外部终端里的 Claude 用不了</b>：没有注入的环境变量，工具会明确报「请在 Eas-Term 的终端里运行」。这是设计如此，不是 bug。</li>
+    <li><b>MCP 目录要随包发</b>：已在 <code>package.json</code> 的 <code>extraResources</code> 里配好，打包时 <code>mcp/</code> 会进 Resources。</li>
+  </ul>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步可选</div>
+  <p class="secnote">P1 + P2 已经是完整闭环，下面这些是锦上添花。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">方向</th><th>做什么</th><th style="width:14%">成本</th></tr></thead>
+    <tbody>
+      <tr><td><b>打包体验</b></td><td>把 MCP + 整理按钮 + 最大化打进 app（这些都还没进你现在用的包）</td><td><span class="b b-em">小</span></td></tr>
+      <tr><td><b>画布截图</b></td><td><code>canvas_screenshot</code> —— 让 AI「看见」画板当前长什么样，做视觉自查</td><td><span class="b b-am">中</span></td></tr>
+      <tr><td><b>设计模块接入</b></td><td>让 AI 直接往设计模块塞画布内容、触发导出到 <code>demo/</code></td><td><span class="b b-am">中</span></td></tr>
+      <tr><td><b>逐工具授权</b></td><td>现在是一个总开关；可以细到「允许开预览，但改布局要问我」</td><td><span class="b b-am">中</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">回复决策码</div>
+    <div class="dcmd">打包 &nbsp;|&nbsp; 截图 &nbsp;|&nbsp; 设计接入 &nbsp;|&nbsp; 逐工具授权 &nbsp;|&nbsp; 先这样</div>
+  </div>
+</section>
+
+<hr>
+<footer style="color:#525252;font-size:12.5px">
+  <p style="margin:0 0 6px">相关文件：<code>src/main/mcpBridge.ts</code> · <code>src/renderer/src/mcpHandler.ts</code> ·
+    <code>mcp/eas-mcp.mjs</code> · <code>src/renderer/src/features/workspace/McpIndicator.tsx</code></p>
+  <p style="margin:0">方案梳理见 <code>docs/MCP-开放画板能力-方案梳理.html</code> · 分支 <code>feat/canvas-p0</code></p>
+</footer>
+</main>
+</body>
+</html>

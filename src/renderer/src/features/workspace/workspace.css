@@ -560,3 +560,121 @@ body.dragging-row * {
 .view-seg svg {
   flex: none;
 }
+
+/* ========== MCP 指示灯（标题栏：AI 通过 MCP 动画板时亮起） ========== */
+.mcp-ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.mcp-ind:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}
+.mcp-ind.flash {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.16);
+}
+.mcp-ind.off {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+.mcp-ind-count {
+  line-height: 1;
+}
+.mcp-pop {
+  /* portal 到 body，用 fixed —— 标题栏 overflow:hidden，绝对定位会被裁掉 */
+  position: fixed;
+  z-index: 1000;
+  width: 300px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.mcp-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.mcp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.mcp-pop-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.mcp-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.mcp-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.mcp-row-tool {
+  flex: none;
+  color: var(--fg);
+  font-weight: 600;
+}
+.mcp-row.bad .mcp-row-tool {
+  color: #e58c8c;
+}
+.mcp-row-detail {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mcp-row-at {
+  flex: none;
+  opacity: 0.55;
+}
+.mcp-empty {
+  padding: 10px 4px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  text-align: center;
+}
+.mcp-clear {
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+.mcp-clear:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}

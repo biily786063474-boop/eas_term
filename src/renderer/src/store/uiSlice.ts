@@ -19,13 +19,32 @@ export interface UiSlice {
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
+  /** MCP 调用流水（AI 通过 MCP 操作画板时留痕）：标题栏指示灯据此亮起 + 展开查看做了什么。
+   *  只留最近 20 条，不持久化——它是「刚才 AI 动了什么」的即时可见性，不是审计日志。 */
+  mcpLog: { id: number; tool: string; detail: string; ok: boolean; at: number }[]
+  /** MCP 总开关：关掉后所有工具调用一律拒绝（不用改 Claude 配置就能立刻断开） */
+  mcpEnabled: boolean
+  setMcpEnabled: (v: boolean) => void
+  logMcp: (e: { tool: string; detail: string; ok: boolean }) => void
+  clearMcpLog: () => void
 }
+
+let mcpSeq = 1
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
   theme: loadTheme(),
   pendingConfirm: null,
   lastActiveTerminal: null,
   attentionPtys: [],
+  mcpLog: [],
+  mcpEnabled: true,
+
+  setMcpEnabled: (v) => set({ mcpEnabled: v }),
+  logMcp: (e) =>
+    set((s) => ({
+      mcpLog: [{ id: mcpSeq++, ...e, at: Date.now() }, ...s.mcpLog].slice(0, 20)
+    })),
+  clearMcpLog: () => set({ mcpLog: [] }),
 
   flagAttention: (ptyId) =>
     set((s) => (s.attentionPtys.includes(ptyId) ? s : { attentionPtys: [...s.attentionPtys, ptyId] })),

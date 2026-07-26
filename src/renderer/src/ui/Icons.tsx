@@ -274,3 +274,13 @@ export const DesignIcon = (p: IconProps): JSX.Element => (
     <circle cx="16.5" cy="16.5" r="4.5" />
   </Svg>
 )
+
+/** MCP 接入指示：插头 —— 表示「外部 AI 接进来了」 */
+export const PlugIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M9 3v5" />
+    <path d="M15 3v5" />
+    <path d="M6 8h12v3a6 6 0 0 1-12 0z" />
+    <path d="M12 17v4" />
+  </Svg>
+)

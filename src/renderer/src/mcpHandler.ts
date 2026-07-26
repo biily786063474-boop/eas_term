@@ -5,6 +5,8 @@
 import { useStore } from './store'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
+import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
+import type { PaneState } from './layout'
 
 interface Ctx {
   ptyId?: string
@@ -62,10 +64,132 @@ function safePath(input: string, projectPath: string, ctxProject?: string): stri
   return norm
 }
 
+// nodeId 全局唯一（uid('cnode')），所以 AI 只用给 node_id，不必再指定 frame
+function findNode(nodeId: string): { frame: CanvasFrame; node: CanvasNode } | null {
+  for (const f of useStore.getState().canvas.frames) {
+    const node = f.nodes.find((n) => n.id === nodeId)
+    if (node) return { frame: f, node }
+  }
+  return null
+}
+
+// 按 leafId 取当前 pane：终端节点可能已被切成图片/代码/网页，kind 得看实时 pane
+function paneOfLeaf(leafId: string): PaneState | undefined {
+  for (const t of useStore.getState().tabs) {
+    const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+    if (leaf) return leaf.pane
+  }
+  return undefined
+}
+
+// 给 AI 看的节点描述：类型 + 可读标题（它据此决定聚焦/关闭谁）
+function describeNode(n: CanvasNode): Record<string, unknown> {
+  let kind = 'unknown'
+  let title = n.name ?? ''
+  if (n.leafId) {
+    kind = 'terminal'
+    const pane = paneOfLeaf(n.leafId)
+    if (pane && pane.kind !== 'terminal') kind = pane.kind
+    if (!title) title = kind === 'terminal' ? '终端' : ''
+  } else if (n.component) {
+    kind = 'component:' + n.component.type
+  } else if (n.pane) {
+    kind = n.pane.kind
+    if (!title) {
+      const p = n.pane as { filePath?: string; url?: string | null; title?: string }
+      title = p.title || p.filePath?.split('/').pop() || p.url || ''
+    }
+  }
+  return { id: n.id, kind, title, x: n.x, y: n.y, w: n.w, h: n.h }
+}
+
 type Args = Record<string, unknown>
 
 async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
   const s = useStore.getState()
+
+  if (tool === 'canvas_get_state') {
+    const cur = resolveFrame(ctx)
+    return {
+      viewMode: s.viewMode,
+      maximized: s.maximizedNode?.nodeId ?? null,
+      currentFrameId: cur?.frameId ?? null,
+      currentNodeId: cur?.nodeId ?? null,
+      frames: s.canvas.frames.map((f) => ({
+        id: f.id,
+        name: f.name,
+        isSub: !!f.parentId,
+        collapsed: f.collapsed,
+        project: s.projects.find((p) => p.id === f.projectId)?.path ?? null,
+        nodes: f.nodes.map(describeNode)
+      }))
+    }
+  }
+
+  if (tool === 'canvas_focus_node' || tool === 'canvas_maximize_node' || tool === 'canvas_close_node' || tool === 'canvas_rename_node') {
+    // 还原最大化不需要 node_id
+    if (tool === 'canvas_maximize_node' && args.restore) {
+      s.setMaximizedNode(null)
+      return { restored: true }
+    }
+    const nodeId = String(args.node_id ?? '')
+    if (!nodeId) throw new Error('缺少 node_id（先用 canvas_get_state 查）')
+    const hit = findNode(nodeId)
+    if (!hit) throw new Error(`找不到节点 ${nodeId}`)
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+
+    if (tool === 'canvas_focus_node') {
+      s.focusCanvasNode(hit.frame.id, nodeId)
+      return { focused: nodeId, frameId: hit.frame.id }
+    }
+    if (tool === 'canvas_maximize_node') {
+      s.setMaximizedNode({ frameId: hit.frame.id, nodeId })
+      return { maximized: nodeId }
+    }
+    if (tool === 'canvas_rename_node') {
+      const name = String(args.name ?? '').trim()
+      if (!name) throw new Error('缺少 name')
+      s.renameNode(hit.frame.id, nodeId, name)
+      return { renamed: nodeId, name }
+    }
+    // canvas_close_node：终端一律不给关。AI 判断不了里面有没有在跑的活，关错代价太大（用户已因误删终端吃过亏）
+    if (hit.node.leafId) {
+      const pane = paneOfLeaf(hit.node.leafId)
+      if (!pane || pane.kind === 'terminal') {
+        throw new Error('终端节点不允许由 AI 关闭，请让用户手动关')
+      }
+    }
+    s.removeNode(hit.frame.id, nodeId)
+    return { closed: nodeId }
+  }
+
+  if (tool === 'canvas_tidy_frame' || tool === 'canvas_new_terminal' || tool === 'canvas_add_note') {
+    const loc = resolveFrame(ctx)
+    const frameId = String(args.frame_id ?? '') || loc?.frameId
+    if (!frameId) throw new Error('画布里还没有 Frame')
+    const frame = s.canvas.frames.find((f) => f.id === frameId)
+    if (!frame) throw new Error(`找不到 Frame ${frameId}`)
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+
+    if (tool === 'canvas_tidy_frame') {
+      s.tidyFrame(frameId)
+      return { tidied: frameId, nodes: frame.nodes.length }
+    }
+    if (tool === 'canvas_new_terminal') {
+      await s.addTerminalNode(frameId)
+      const after = useStore.getState().canvas.frames.find((f) => f.id === frameId)
+      const added = after?.nodes[after.nodes.length - 1]
+      return { opened: added?.id ?? null, frameId }
+    }
+    // 便签贴在 Frame 右侧外，已有的往下顺延，不互相盖
+    const text = String(args.text ?? '').trim()
+    if (!text) throw new Error('缺少 text')
+    const nx = frame.x + frame.w + 24
+    let ny = frame.y
+    while (s.canvas.shapes.some((sh) => Math.abs(sh.x - nx) < 8 && Math.abs(sh.y - ny) < 8)) ny += 110
+    s.addShape({ type: 'sticky', x: nx, y: ny, w: 190, h: 96, text, color: String(args.color ?? '') || undefined })
+    return { noted: text, at: { x: nx, y: ny } }
+  }
 
   if (tool === 'canvas_list_frames') {
     return {
@@ -141,14 +265,29 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
   throw new Error(`未知工具：${tool}`)
 }
 
+// 指示灯上显示的一句话：优先展示这次动了什么（路径/网址/名字），不然只显示工具名
+function detailOf(tool: string, args: Args): string {
+  const a = args as { path?: string; url?: string; message?: string; text?: string; name?: string; node_id?: string }
+  const v = a.path ?? a.url ?? a.message ?? a.text ?? a.name ?? a.node_id ?? ''
+  const short = String(v).split('/').pop() ?? ''
+  return short.length > 40 ? short.slice(0, 40) + '…' : short
+}
+
 export function registerMcpHandler(): void {
   window.api.mcp.onInvoke(({ id, tool, args, ctx }) => {
     void (async () => {
+      const a = (args ?? {}) as Args
       try {
-        const data = await runTool(tool, (args ?? {}) as Args, ctx ?? {})
+        if (!useStore.getState().mcpEnabled) {
+          throw new Error('用户已在 Eas-Term 里关闭 MCP 接入')
+        }
+        const data = await runTool(tool, a, ctx ?? {})
+        useStore.getState().logMcp({ tool, detail: detailOf(tool, a), ok: true })
         window.api.mcp.reply({ id, ok: true, data })
       } catch (e) {
-        window.api.mcp.reply({ id, ok: false, error: e instanceof Error ? e.message : String(e) })
+        const msg = e instanceof Error ? e.message : String(e)
+        useStore.getState().logMcp({ tool, detail: msg, ok: false })
+        window.api.mcp.reply({ id, ok: false, error: msg })
       }
     })()
   })

@@ -4,6 +4,7 @@ import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
+import { McpIndicator } from './features/workspace/McpIndicator'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
@@ -150,6 +151,7 @@ export function App(): JSX.Element {
         )}
         <div className="titlebar-actions">
           {viewMode === 'split' && <TerminalAttention />}
+          <McpIndicator />
           <div className="view-seg">
             <button
               className={viewMode === 'split' ? 'on' : ''}

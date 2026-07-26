@@ -57,6 +57,86 @@ const TOOLS = [
     name: 'canvas_list_frames',
     description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。',
     inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'canvas_get_state',
+    description:
+      '读取画板完整状态：每个 Frame 下所有模块的 node_id / 类型 / 标题 / 位置大小，以及当前终端所在的 Frame 和节点。要操作某个模块（聚焦/最大化/关闭/重命名）之前先调它拿 node_id。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'canvas_focus_node',
+    description: '把画板视口移到某个模块并选中它（用户注意力引过去）。node_id 来自 canvas_get_state。',
+    inputSchema: {
+      type: 'object',
+      properties: { node_id: { type: 'string', description: '模块 id' } },
+      required: ['node_id']
+    }
+  },
+  {
+    name: 'canvas_maximize_node',
+    description:
+      '把某个模块最大化成沉浸视图（铺满画布），适合让用户仔细看某个预览；传 restore=true 则还原回画布。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        node_id: { type: 'string', description: '要最大化的模块 id' },
+        restore: { type: 'boolean', description: '传 true 表示还原（此时不用给 node_id）' }
+      }
+    }
+  },
+  {
+    name: 'canvas_close_node',
+    description:
+      '关掉一个模块（清理自己开出来的预览/浏览器节点）。注意：终端节点不允许关，会被拒绝。',
+    inputSchema: {
+      type: 'object',
+      properties: { node_id: { type: 'string', description: '模块 id' } },
+      required: ['node_id']
+    }
+  },
+  {
+    name: 'canvas_rename_node',
+    description: '给模块改个有意义的名字（比如把浏览器节点改成「性能报告」），方便用户在缩略图里认出来。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        node_id: { type: 'string', description: '模块 id' },
+        name: { type: 'string', description: '新名称' }
+      },
+      required: ['node_id', 'name']
+    }
+  },
+  {
+    name: 'canvas_tidy_frame',
+    description: '一键整理 Frame 内的模块：按各自大小从左上角起流式重排，消除重叠和空隙。开了一堆预览之后调它收拾干净。',
+    inputSchema: {
+      type: 'object',
+      properties: { frame_id: { type: 'string', description: '不传则整理当前终端所在的 Frame' } }
+    }
+  },
+  {
+    name: 'canvas_new_terminal',
+    description:
+      '在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。',
+    inputSchema: {
+      type: 'object',
+      properties: { frame_id: { type: 'string', description: '不传则开在当前终端所在的 Frame' } }
+    }
+  },
+  {
+    name: 'canvas_add_note',
+    description:
+      '在 Frame 旁边贴一张便签（写结论/待办/提醒，留在画板上不会随对话滚走）。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '便签内容' },
+        frame_id: { type: 'string', description: '不传则贴在当前终端所在的 Frame 右侧' },
+        color: { type: 'string', description: '可选颜色（CSS 色值）' }
+      },
+      required: ['text']
+    }
   }
 ]
 
