@@ -181,7 +181,10 @@ rl.on('line', async (line) => {
     } else if (method === 'notifications/initialized' || method?.startsWith('notifications/')) {
       // 通知无需响应
     } else if (method === 'tools/list') {
-      ok(id, { tools: TOOLS })
+      // 不在 Eas-Term 的终端里（没有注入的端口/令牌）就一个工具都不报。
+      // 这条配置是全局的（~/.claude.json / ~/.codex/config.toml），用户在别处起 claude 也会连上这个
+      // server —— 那时候报一堆调用必失败的工具纯属噪声，不如干脆不显示，用户完全无感。
+      ok(id, { tools: PORT && TOKEN ? TOOLS : [] })
     } else if (method === 'tools/call') {
       const name = params?.name
       if (!TOOLS.some((t) => t.name === name)) {

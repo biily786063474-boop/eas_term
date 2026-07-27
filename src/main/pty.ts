@@ -5,7 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
-import { mcpEnv, ensureAgentShims } from './mcpBridge'
+import { mcpEnv } from './mcpBridge'
 
 interface Entry {
   pty: pty.IPty
@@ -37,12 +37,6 @@ function ensureOpenShim(): string | null {
   try {
     const dir = path.join(app.getPath('userData'), 'bin')
     fs.mkdirSync(dir, { recursive: true })
-    ensureAgentShims(dir)
-    if (process.platform !== 'darwin') {
-      // open 劫持是 macOS 专属（Linux 走 BROWSER/xdg-open），但 agent 包装脚本已经装好了
-      shimDirCache = dir
-      return dir
-    }
     const shim = path.join(dir, 'open')
     const script = `#!/bin/sh
 # Eas-Term: 把 open <url> 劫持到画板内嵌浏览器；其它参数转发系统 open
