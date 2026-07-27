@@ -392,6 +392,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     })
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
+      useStore.getState().setPtyRunning(ptyId, false)
       useStore.getState().closeLeaf(tabId, leafId, { alreadyExited: true, ptyId })
     })
     const dataDisp = term.onData((data) => window.api.pty.write(ptyId, data))
@@ -405,6 +406,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const titleDisp = term.onTitleChange((title) => {
       store.setTabTitle(tabId, title)
       const spinner = isSpinnerTitle(title)
+      // 同一个信号也用来做左上角的「谁在自动跑」提示
+      useStore.getState().setPtyRunning(ptyId, spinner)
       if (prevTitleSpinner && !spinner && !el.contains(document.activeElement)) {
         useStore.getState().flagAttention(ptyId)
       }

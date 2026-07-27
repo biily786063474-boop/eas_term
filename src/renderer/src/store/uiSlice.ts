@@ -19,6 +19,10 @@ export interface UiSlice {
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
+  /** 正在自动跑 agent 任务的终端 ptyId。判据同「任务完成」提醒：Claude Code 干活时
+   *  把终端标题设成「<盲文 spinner> 名字」，停下等人时是非 spinner。纯 shell 永不误报。 */
+  runningPtys: string[]
+  setPtyRunning: (ptyId: string, running: boolean) => void
   /** MCP 调用流水（AI 通过 MCP 操作画板时留痕）：标题栏指示灯据此亮起 + 展开查看做了什么。
    *  只留最近 20 条，不持久化——它是「刚才 AI 动了什么」的即时可见性，不是审计日志。 */
   mcpLog: { id: number; tool: string; detail: string; ok: boolean; at: number }[]
@@ -38,6 +42,18 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   attentionPtys: [],
   mcpLog: [],
   mcpEnabled: true,
+  runningPtys: [],
+
+  setPtyRunning: (ptyId, running) =>
+    set((s) => {
+      const has = s.runningPtys.includes(ptyId)
+      if (has === running) return s
+      return {
+        runningPtys: running
+          ? [...s.runningPtys, ptyId]
+          : s.runningPtys.filter((p) => p !== ptyId)
+      }
+    }),
 
   setMcpEnabled: (v) => set({ mcpEnabled: v }),
   logMcp: (e) =>

@@ -885,3 +885,51 @@ body.dragging-row * {
   opacity: 0.5;
   cursor: default;
 }
+
+/* ========== 左上角「谁在自动跑」（刻意做得极不显眼） ========== */
+.agent-progress {
+  position: absolute;
+  left: 90px; /* 让开 macOS 红绿灯 */
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 34vw;
+  color: var(--fg-dim);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  opacity: 0.34; /* 余光可见即可，不抢注意力 */
+  transition: opacity 0.25s;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+.agent-progress:hover {
+  opacity: 0.85;
+}
+.ap-dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ap-breathe 2.4s ease-in-out infinite;
+}
+@keyframes ap-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.ap-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ap-more {
+  flex: none;
+  opacity: 0.7;
+}
