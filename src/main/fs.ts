@@ -178,6 +178,32 @@ export function registerFsHandlers(): void {
   // 剪贴板是否有图片：终端粘贴时据此判断"无文本但有图"，好补发粘贴信号让 Claude Code 读图
   ipcMain.handle('clipboard:hasImage', () => !clipboard.readImage().isEmpty())
 
+  // 把剪贴板里的图片落盘到 <项目>/assets/img/。截图/复制的图直接粘进项目，
+  // 不用先存桌面再拖进来。
+  ipcMain.handle(
+    'clipboard:saveImage',
+    async (_e, projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> => {
+      try {
+        const img = clipboard.readImage()
+        if (img.isEmpty()) return { ok: false, error: '剪贴板里没有图片' }
+        if (!projectPath || !path.isAbsolute(projectPath))
+          return { ok: false, error: '没有当前项目，不知道该存到哪' }
+        const dir = path.join(projectPath, 'assets', 'img')
+        await fs.promises.mkdir(dir, { recursive: true })
+        // 文件名带时间戳，按名字排序就是按粘贴顺序；秒级重名再补一位序号
+        const d = new Date()
+        const p2 = (n: number): string => String(n).padStart(2, '0')
+        const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`
+        let file = path.join(dir, `pasted-${stamp}.png`)
+        for (let i = 2; fs.existsSync(file); i++) file = path.join(dir, `pasted-${stamp}-${i}.png`)
+        await fs.promises.writeFile(file, img.toPNG())
+        return { ok: true, path: file }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
+  )
+
   ipcMain.handle('shell:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
     return Promise.resolve()

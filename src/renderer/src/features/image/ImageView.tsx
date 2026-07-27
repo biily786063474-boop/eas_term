@@ -408,11 +408,96 @@ function BizoneHistory(): JSX.Element {
 
 /* ---------- 图片面板主组件 ---------- */
 
-export function ImageView({ filePath }: { filePath: string | null }): JSX.Element {
-  const [mode, setMode] = useState<'file' | 'history'>(filePath ? 'file' : 'history')
+/** 空图片窗口的粘贴区：⌘V 把剪贴板里的图存进 <项目>/assets/img/ 再就地预览。
+ *  截图完直接粘进来，省掉「存桌面 → 拖进项目」那两步。 */
+function PasteDrop({ cwd, onSaved }: { cwd?: string; onSaved: (p: string) => void }): JSX.Element {
+  const projects = useStore((s) => s.projects)
+  const activeProjectId = useStore((s) => s.activeProjectId)
+  // 优先用**这个面板自己所属**的项目目录（tab.cwd）：画布上的图片节点常常不在当前
+  // 活动项目的 Frame 里，用 activeProject 会把图存进别的项目。
+  const project = cwd
+    ? { path: cwd, name: cwd.split('/').filter(Boolean).pop() ?? cwd }
+    : (projects.find((p) => p.id === activeProjectId) ?? null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
+
+  const save = useCallback(async (): Promise<void> => {
+    if (busy) return
+    if (!project) return setErr('没有当前项目，不知道该存到哪')
+    setBusy(true)
+    setErr(null)
+    const r = await window.api.clipboard.saveImage(project.path)
+    setBusy(false)
+    if (r.ok && r.path) onSaved(r.path)
+    else setErr(r.error ?? '粘贴失败')
+  }, [busy, project, onSaved])
+
+  // 只接管落在本预览内的粘贴：终端、编辑器里的 ⌘V 不能被抢走
+  useEffect(() => {
+    const h = (e: ClipboardEvent): void => {
+      const host = hostRef.current
+      if (!host) return
+      // 事件目标在里面、或焦点在里面，都算「粘到这个预览上」
+      const inside =
+        host.contains(e.target as Node) ||
+        (!!document.activeElement && host.contains(document.activeElement))
+      if (!inside) return
+      e.preventDefault()
+      void save()
+    }
+    document.addEventListener('paste', h)
+    return () => document.removeEventListener('paste', h)
+  }, [save])
+
+  return (
+    <div
+      className="img-paste"
+      ref={hostRef}
+      tabIndex={0}
+      onClick={() => hostRef.current?.focus()}
+      onDoubleClick={() => void save()}
+    >
+      <ImageIcon size={26} className="img-paste-icon" />
+      <div className="img-paste-title">{busy ? '保存中…' : '粘贴一张图片'}</div>
+      <div className="img-paste-hint">
+        点一下这里，再按 <b>⌘V</b>
+      </div>
+      <button className="img-paste-btn" disabled={busy} onClick={() => void save()}>
+        从剪贴板粘贴
+      </button>
+      <div className="img-paste-path">
+        {project ? (
+          <>
+            存到 <code>{project.name}/assets/img/</code>
+          </>
+        ) : (
+          '未选择项目'
+        )}
+      </div>
+      {err && <div className="img-paste-err">{err}</div>}
+    </div>
+  )
+}
+
+export function ImageView({
+  filePath,
+  cwd
+}: {
+  filePath: string | null
+  cwd?: string
+}): JSX.Element {
+  // 空窗口也默认停在「文件预览」——那里现在是粘贴区，图片节点的主职就是放图
+  const [mode, setMode] = useState<'file' | 'history'>('file')
+  // 粘贴进来的图（组件内记住，不改节点数据；文件本身已经落盘在项目里了）
+  const [pasted, setPasted] = useState<string | null>(null)
+  const shown = filePath ?? pasted
 
   useEffect(() => {
-    if (filePath) setMode('file')
+    if (filePath) {
+      setMode('file')
+      setPasted(null)
+    }
   }, [filePath])
 
   return (
@@ -421,8 +506,7 @@ export function ImageView({ filePath }: { filePath: string | null }): JSX.Elemen
         <div className="segmented">
           <button
             className={mode === 'file' ? 'active' : ''}
-            disabled={!filePath}
-            data-tip={filePath ? '' : '在文件树中点击一张图片'}
+            data-tip={shown ? '' : '空窗口可直接粘贴剪贴板里的图'}
             onClick={() => setMode('file')}
           >
             文件预览
@@ -436,7 +520,15 @@ export function ImageView({ filePath }: { filePath: string | null }): JSX.Elemen
         </div>
       </div>
       <div className="image-body">
-        {mode === 'file' && filePath ? <FilePreview filePath={filePath} /> : <BizoneHistory />}
+        {mode === 'file' ? (
+          shown ? (
+            <FilePreview filePath={shown} />
+          ) : (
+            <PasteDrop cwd={cwd} onSaved={setPasted} />
+          )
+        ) : (
+          <BizoneHistory />
+        )}
       </div>
     </div>
   )

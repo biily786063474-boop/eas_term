@@ -435,7 +435,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           ) : (
             <CodeView filePath={pane.filePath} />
           ))}
-        {pane.kind === 'image' && <ImageView filePath={pane.filePath} />}
+        {pane.kind === 'image' && <ImageView filePath={pane.filePath} cwd={tabCwd} />}
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
         {pane.kind === 'dict' && (

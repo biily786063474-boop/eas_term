@@ -358,3 +358,80 @@
   border-top: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.025);
 }
+
+/* ========== 空图片窗口的粘贴区 ========== */
+.img-paste {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  outline: none;
+  cursor: pointer;
+  color: var(--fg-dim);
+  /* 聚焦后才吃 ⌘V，给个明确的「已选中」反馈 */
+  border: 1px dashed transparent;
+  border-radius: var(--radius-md);
+  transition: border-color 0.16s, background 0.16s;
+}
+.img-paste:hover {
+  border-color: var(--glass-border);
+}
+.img-paste:focus {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.04);
+}
+.img-paste-icon {
+  opacity: 0.4;
+  margin-bottom: 2px;
+}
+.img-paste-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.img-paste-hint {
+  font-size: 11.5px;
+}
+.img-paste-hint b {
+  color: var(--fg);
+  font-weight: 600;
+}
+.img-paste-btn {
+  margin-top: 4px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-strong);
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s;
+}
+.img-paste-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.img-paste-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.img-paste-path {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+.img-paste-path code {
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.img-paste-err {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #e58c8c;
+}

@@ -170,7 +170,10 @@ const api = {
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),
     readText: (): Promise<string> => ipcRenderer.invoke('clipboard:readText'),
-    hasImage: (): Promise<boolean> => ipcRenderer.invoke('clipboard:hasImage')
+    hasImage: (): Promise<boolean> => ipcRenderer.invoke('clipboard:hasImage'),
+    // 剪贴板图片 → <项目>/assets/img/pasted-<时间戳>.png
+    saveImage: (projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> =>
+      ipcRenderer.invoke('clipboard:saveImage', projectPath)
   },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
