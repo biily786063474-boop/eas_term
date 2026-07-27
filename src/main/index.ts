@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy } from './pty'
+import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerGitHandlers } from './git'
@@ -231,6 +231,21 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
+// 退出时清场：把所有终端连同它们底下跑的进程（claude / 构建 / dev server）一起收掉。
+// 分两拍是为了给 CLI 存会话的机会：先 SIGTERM，300ms 后仍活着的一律 SIGKILL。
+// 不这么做的话，app 退了那些进程还在，变成占着 CPU 和端口的孤儿。
+let quitting = false
+app.on('before-quit', (e) => {
+  if (quitting) return
+  quitting = true
+  e.preventDefault()
+  killAllPtys() // 软的
+  setTimeout(() => {
+    if (anyPtyAlive()) killAllPtys(true) // 硬的
+    app.quit()
+  }, 300)
+})
+
 app.on('will-quit', () => {
-  killAllPtys()
+  killAllPtys(true) // 兜底：任何路径走到这里都确保清干净
 })

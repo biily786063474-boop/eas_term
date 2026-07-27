@@ -3,7 +3,7 @@ import * as pty from 'node-pty'
 import os from 'os'
 import fs from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
+import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
 
@@ -265,11 +265,7 @@ export function registerPtyHandlers(): void {
     const entry = ptys.get(id)
     if (entry) {
       ptys.delete(id)
-      try {
-        entry.pty.kill()
-      } catch {
-        // 已退出
-      }
+      killTree(entry) // 连里面跑的 claude / 构建进程一起收掉，别留孤儿
     }
   })
 
@@ -292,26 +288,91 @@ export function registerPtyHandlers(): void {
   })
 }
 
+/** 干掉一个终端及其**整棵进程树**。
+ *
+ *  判据是 controlling terminal（node-pty 的 ptsName，形如 /dev/ttys004），
+ *  不是父子关系也不是进程组。踩过的两个坑：
+ *   · 只 entry.pty.kill()：那只给 shell 发一个 SIGHUP，底下跑的 claude / 构建进程
+ *     可能忽略它，app 退了照样活着，变成占 CPU 和端口的孤儿。
+ *   · 只 kill(-pid) 打进程组：交互式 zsh 有 job control，`cmd &` 起的后台作业在
+ *     **独立进程组**，进程组信号抓不到。实测 `sleep 900 &` 就这么活下来了。
+ *   · 按会话（sid）也不行：macOS 的 ps 根本不认 sid 这个 keyword，pgrep 也没有 -s。
+ *  而 `ps -t ttys004` 一次列全：前台、后台作业、nohup 的、甚至 `(cmd &)` 那种
+ *  已经被 init 收养的孤儿——只要它的 controlling terminal 还是这个 pty，就跑不掉。
+ */
+function ttyPids(entry: Entry): number[] {
+  if (process.platform === 'win32') return []
+  const pts = (entry.pty as unknown as { ptsName?: string }).ptsName
+  const name = pts?.replace(/^\/dev\//, '')
+  if (!name) return []
+  try {
+    const out = execFileSync('ps', ['-t', name, '-o', 'pid='], { encoding: 'utf8' })
+    return out
+      .split('\n')
+      .map((l) => Number(l.trim()))
+      .filter((n) => n > 0)
+  } catch {
+    return [] // 该 tty 上没进程了，ps 会以非 0 退出
+  }
+}
+
+function killTree(entry: Entry, signal: NodeJS.Signals = 'SIGTERM'): void {
+  const pid = entry.pty.pid
+  if (process.platform === 'win32') {
+    try {
+      entry.pty.kill()
+    } catch {
+      /* 已退出 */
+    }
+    return
+  }
+  // 先收后代（含脱离的），最后收 shell 自己——反过来的话 shell 一死，
+  // ps -t 就查不到它了，剩下的进程会失联
+  for (const p of ttyPids(entry)) {
+    if (p === pid) continue
+    try {
+      process.kill(p, signal)
+    } catch {
+      /* 已退出 */
+    }
+  }
+  try {
+    process.kill(-pid, signal) // 进程组再兜一遍
+  } catch {
+    /* 组没了 */
+  }
+  try {
+    process.kill(pid, signal)
+  } catch {
+    /* shell 已退出 */
+  }
+}
+
 export function killPtysForWebContents(wcId: number): void {
   for (const [id, entry] of ptys) {
     if (entry.wcId === wcId) {
       ptys.delete(id)
-      try {
-        entry.pty.kill()
-      } catch {
-        // 已退出
-      }
+      killTree(entry)
     }
   }
 }
 
-export function killAllPtys(): void {
+/** 退出时清场。分两拍：先 SIGTERM 给 CLI 存会话的机会，没走的再 SIGKILL。
+ *  `hard` 由调用方控制节奏（before-quit 先软的，等一小会儿再硬的）。 */
+export function killAllPtys(hard = false): void {
+  for (const [, entry] of ptys) killTree(entry, hard ? 'SIGKILL' : 'SIGTERM')
+  if (hard) ptys.clear()
+}
+
+/** 还有活着的终端吗（退出流程用来判断要不要再补一刀） */
+export function anyPtyAlive(): boolean {
   for (const [, entry] of ptys) {
     try {
-      entry.pty.kill()
+      process.kill(entry.pty.pid, 0) // 信号 0 = 只探活不真发信号
+      return true
     } catch {
-      // 已退出
+      /* 已经没了 */
     }
   }
-  ptys.clear()
+  return false
 }
