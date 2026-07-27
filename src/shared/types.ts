@@ -175,3 +175,23 @@ export interface AgentProbe {
   claude: { installed: boolean; models: string[]; efforts: string[] }
   codex: { installed: boolean; models: string[]; efforts: string[] }
 }
+
+/** 某个 AI CLI 的技能包状态 */
+export interface AgentStatus {
+  /** CLI 装没装（找不到就不用提示装技能包了） */
+  hasCli: boolean
+  /** 技能包装没装 */
+  installed: boolean
+  /** 装的是不是当前版本（app 升级后技能包内容可能变） */
+  outdated: boolean
+}
+
+/** 配套技能包的整体状态：告诉 AI「什么时候该用画板工具」的那份指引 */
+export interface SkillStatus {
+  claude: AgentStatus
+  codex: AgentStatus
+  /** 用户点过「永远不要提醒」 */
+  muted: boolean
+  /** 有任何一个装了 CLI 但没装（或版本旧了）技能包 —— 渲染层据此决定要不要弹窗 */
+  needsAttention: boolean
+}

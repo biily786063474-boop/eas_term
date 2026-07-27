@@ -678,3 +678,210 @@ body.dragging-row * {
   background: rgba(255, 255, 255, 0.07);
   color: var(--fg);
 }
+
+/* ========== 扩展能力（技能包安装：标题栏按钮 + 面板 + 启动提示） ========== */
+.skill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.skill-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}
+.skill-btn.has-todo {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+.skill-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.skill-pop {
+  position: fixed;
+  z-index: 1000;
+  width: 320px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+.skill-pop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.skill-done {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+}
+.skill-pop-note {
+  margin: 0 4px 10px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--fg-dim);
+}
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-top: 1px solid var(--glass-border);
+}
+.skill-row-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--fg);
+}
+.skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.skill-tag.ok {
+  color: #7fd6a8;
+  background: rgba(80, 200, 140, 0.14);
+}
+.skill-tag.todo {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.16);
+}
+.skill-tag.dim {
+  color: var(--fg-dim);
+  background: rgba(255, 255, 255, 0.06);
+}
+.skill-mini,
+.skill-remind {
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.14s, border-color 0.14s;
+}
+.skill-mini:hover:not(:disabled),
+.skill-remind:hover {
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+.skill-mini:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.skill-remind {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* 启动提示弹窗 */
+.skill-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(3px);
+}
+.skill-modal {
+  width: 430px;
+  max-width: calc(100vw - 40px);
+  padding: 22px 24px 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+.skill-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fg);
+  margin-bottom: 10px;
+}
+.skill-modal-body {
+  margin: 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--fg-dim);
+}
+.skill-modal-body b {
+  color: var(--fg);
+  font-weight: 600;
+}
+.skill-modal-note {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  opacity: 0.8;
+}
+.skill-modal-note code {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.skill-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.skill-spacer {
+  flex: 1;
+}
+.skill-ghost,
+.skill-primary {
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.skill-ghost {
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+}
+.skill-ghost:hover {
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+.skill-primary {
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+  font-weight: 600;
+}
+.skill-primary:hover:not(:disabled) {
+  background: rgba(var(--accent-rgb), 0.3);
+}
+.skill-primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

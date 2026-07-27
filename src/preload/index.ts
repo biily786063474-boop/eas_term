@@ -18,7 +18,8 @@ import type {
   AiResult,
   SessionIndex,
   SessionExchange,
-  AgentProbe
+  AgentProbe,
+  SkillStatus
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -102,6 +103,15 @@ const api = {
     },
     reply: (r: { id: number; ok: boolean; data?: unknown; error?: string }): void =>
       ipcRenderer.send('mcp:result', r)
+  },
+  skill: {
+    // 配套技能包（告诉 AI 什么时候该用画板工具）：查状态 / 安装 / 关掉启动提醒
+    status: (): Promise<SkillStatus> => ipcRenderer.invoke('skill:status'),
+    install: (
+      targets: ('claude' | 'codex')[]
+    ): Promise<{ ok: boolean; error?: string; done?: string[]; status?: SkillStatus }> =>
+      ipcRenderer.invoke('skill:install', targets),
+    mute: (muted: boolean): Promise<SkillStatus> => ipcRenderer.invoke('skill:mute', muted)
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
