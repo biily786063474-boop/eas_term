@@ -29,6 +29,8 @@ function shellQuote(p: string): string {
 }
 
 export function CanvasDrawer(): JSX.Element {
+  // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
+  const maximizedNode = useStore((s) => s.maximizedNode)
   const [open, setOpen] = useState(false)
   const [edgeHover, setEdgeHover] = useState(false)
   const [projOpen, setProjOpen] = useState(true)
@@ -379,6 +381,7 @@ export function CanvasDrawer(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
+  if (maximizedNode) return <></>
   return (
     <>
       {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡 */}

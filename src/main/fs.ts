@@ -62,6 +62,27 @@ export function registerFsHandlers(): void {
     return entries
   })
 
+  // 写回文本文件（代码预览里的「编辑」用）。先写临时文件再 rename——中途崩了也不会
+  // 留下半截内容把用户原文件毁掉。
+  ipcMain.handle(
+    'fs:writeTextFile',
+    async (_e, filePath: string, content: string): Promise<OpResult> => {
+      try {
+        if (!path.isAbsolute(filePath)) return { ok: false, error: '需要绝对路径' }
+        const stat = await fs.promises.stat(filePath).catch(() => null)
+        if (stat && !stat.isFile()) return { ok: false, error: '目标不是文件' }
+        // 只读时读的是前 2MB，写回会截断剩下的——这种文件一律不给存
+        if (stat && stat.size > MAX_TEXT_BYTES) return { ok: false, error: '文件超过 2MB，未开放编辑' }
+        const tmp = filePath + '.eas-tmp'
+        await fs.promises.writeFile(tmp, content, 'utf8')
+        await fs.promises.rename(tmp, filePath)
+        return { ok: true }
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
+  )
+
   ipcMain.handle('fs:readTextFile', async (_e, filePath: string): Promise<TextFileResult> => {
     try {
       const stat = await fs.promises.stat(filePath)

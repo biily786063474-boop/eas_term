@@ -127,6 +127,8 @@ const api = {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
     readTextFile: (filePath: string): Promise<TextFileResult> =>
       ipcRenderer.invoke('fs:readTextFile', filePath),
+    writeTextFile: (filePath: string, content: string): Promise<OpResult> =>
+      ipcRenderer.invoke('fs:writeTextFile', filePath, content),
     readImageFile: (filePath: string): Promise<ImageFileResult> =>
       ipcRenderer.invoke('fs:readImageFile', filePath),
     openPath: (target: string): Promise<string> => ipcRenderer.invoke('fs:openPath', target),

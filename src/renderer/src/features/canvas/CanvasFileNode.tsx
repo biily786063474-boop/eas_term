@@ -32,6 +32,7 @@ export function CanvasFileNode({
   const frames = useStore((s) => s.canvas.frames)
   const isMax = maximizedNode?.frameId === frameId && maximizedNode?.nodeId === node.id
   // 最大化：把节点撑成「当前屏幕可视区」在世界坐标下对应的矩形（节点坐标相对 Frame）
+  const hiddenByMax = !!maximizedNode && !isMax
   const maxStyle = ((): React.CSSProperties | null => {
     if (!isMax) return null
     const frame = frames.find((f) => f.id === frameId)
@@ -147,7 +148,15 @@ export function CanvasFileNode({
       }}
       // 冒泡阶段拦下，避免事件冒泡到 canvas-viewport 触发框选（其 onUp 会 clearCanvasSel 把选中清掉）
       onMouseDown={(e) => e.stopPropagation()}
-      style={maxStyle ?? { left: node.x, top: node.y, width: node.w, height: node.h }}
+      style={
+        maxStyle ??
+        // 有别的节点最大化时把自己藏起来。不能只靠最大化节点的 z-index：
+        // 浏览器节点是 <webview>（跨进程合成），永远浮在普通 DOM 之上，压不住。
+        // 用 display:none 而不是不渲染，webview 的页面状态才不会丢。
+        (hiddenByMax
+          ? { display: 'none' }
+          : { left: node.x, top: node.y, width: node.w, height: node.h })
+      }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <Icon size={11} />

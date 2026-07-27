@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Compartment } from '@codemirror/state'
 import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { renderMarkdown } from './markdown'
+import { CodeIcon, FilesIcon, PencilIcon, CheckIcon } from '../../ui/Icons'
 import './editor.css'
+
+const isMarkdown = (p: string): boolean => /\.(md|markdown|mdx)$/i.test(p)
 
 // 覆盖 oneDark 的不透明背景，让玻璃层透出来
 const glassTheme = EditorView.theme(
@@ -25,58 +29,117 @@ interface CodeMenu {
 }
 
 export function CodeView({ filePath }: { filePath: string | null }): JSX.Element {
+  const rootRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [menu, setMenu] = useState<CodeMenu | null>(null)
+  // Markdown 默认看排版（层级一眼可见），右下角按钮切到源码看符号
+  const [text, setText] = useState<string | null>(null)
+  const [showSource, setShowSource] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const roRef = useRef(new Compartment())
+  const md = !!filePath && isMarkdown(filePath)
+  // 编辑一律在源码上进行（渲染出来的排版不是可编辑的原文）
+  const rendered = md && !showSource && !editing
 
+  // 读文件：内容进 state，两种视图共用（切换视图不重新读盘）
   useEffect(() => {
     if (!filePath) return
-    const host = hostRef.current!
-    let view: EditorView | null = null
     let cancelled = false
+    setText(null)
     setStatus('加载中…')
-
-    const load = async (): Promise<void> => {
+    setShowSource(false)
+    setEditing(false)
+    setDirty(false)
+    void (async () => {
       const result = await window.api.fs.readTextFile(filePath)
       if (cancelled) return
-      if (!result.ok) {
-        setStatus(`无法读取文件：${result.error ?? '未知错误'}`)
-        return
-      }
-      if (result.binary) {
-        setStatus('二进制文件，无法以文本预览')
-        return
-      }
-      const fileName = filePath.split('/').pop() ?? filePath
-      const langDesc = LanguageDescription.matchFilename(languages, fileName)
-      const langSupport = langDesc ? await langDesc.load() : null
-      if (cancelled) return
-
-      // 只用 readOnly（不用 editable.of(false)）：内容不可改，但仍可获得焦点、
-      // 选中文字、用 ⌘/Ctrl+C 复制、⌘/Ctrl+A 全选——这些都是 CodeMirror 默认键位。
-      const extensions = [basicSetup, oneDark, glassTheme, EditorState.readOnly.of(true)]
-      if (langSupport) extensions.push(langSupport)
-
-      view = new EditorView({
-        state: EditorState.create({ doc: result.content, extensions }),
-        parent: host
-      })
-      viewRef.current = view
+      if (!result.ok) return setStatus(`无法读取文件：${result.error ?? '未知错误'}`)
+      if (result.binary) return setStatus('二进制文件，无法以文本预览')
+      setText(result.content)
       setStatus(
         result.truncated
           ? `文件超过 2MB，仅显示开头部分（共 ${(result.size / 1024 / 1024).toFixed(1)}MB）`
           : null
       )
+    })()
+    return () => {
+      cancelled = true
     }
-    void load()
+  }, [filePath])
 
+  // CodeMirror：只在源码视图下建（Markdown 渲染态不需要编辑器）
+  useEffect(() => {
+    if (text === null || !filePath || rendered) return
+    const host = hostRef.current
+    if (!host) return
+    let view: EditorView | null = null
+    let cancelled = false
+    void (async () => {
+      const fileName = filePath.split('/').pop() ?? filePath
+      const langDesc = LanguageDescription.matchFilename(languages, fileName)
+      const langSupport = langDesc ? await langDesc.load() : null
+      if (cancelled) return
+      // 只用 readOnly（不用 editable.of(false)）：内容不可改，但仍可获得焦点、
+      // 选中文字、用 ⌘/Ctrl+C 复制、⌘/Ctrl+A 全选——这些都是 CodeMirror 默认键位。
+      const extensions = [
+        basicSetup,
+        oneDark,
+        glassTheme,
+        roRef.current.of(EditorState.readOnly.of(!editing)),
+        EditorView.updateListener.of((u) => {
+          if (u.docChanged) setDirty(true)
+        })
+      ]
+      if (langSupport) extensions.push(langSupport)
+      view = new EditorView({ state: EditorState.create({ doc: text, extensions }), parent: host })
+      viewRef.current = view
+    })()
     return () => {
       cancelled = true
       view?.destroy()
       viewRef.current = null
     }
+  }, [text, filePath, rendered])
+
+  useEffect(() => {
+    const v = viewRef.current
+    if (!v) return
+    v.dispatch({ effects: roRef.current.reconfigure(EditorState.readOnly.of(!editing)) })
+    if (editing) v.focus()
+  }, [editing])
+
+  const save = useCallback(async (): Promise<void> => {
+    const v = viewRef.current
+    if (!v || !filePath) return
+    const content = v.state.doc.toString()
+    const r = await window.api.fs.writeTextFile(filePath, content)
+    if (r.ok) {
+      setText(content) // 同步给渲染视图，切回排版时看到的是新内容
+      setDirty(false)
+      setSaveMsg('已保存')
+      setTimeout(() => setSaveMsg(null), 1800)
+    } else {
+      setSaveMsg('保存失败：' + (r.error ?? '未知错误'))
+    }
   }, [filePath])
+
+  // ⌘S / Ctrl+S 保存（只在编辑态、且焦点在本预览内时接管）
+  useEffect(() => {
+    if (!editing) return
+    const h = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        if (!rootRef.current?.contains(document.activeElement)) return
+        e.preventDefault()
+        void save()
+      }
+    }
+    window.addEventListener('keydown', h, { capture: true })
+    return () => window.removeEventListener('keydown', h, { capture: true })
+  }, [editing, save])
 
   // 右键菜单关闭：点击别处 / Esc
   useEffect(() => {
@@ -103,6 +166,7 @@ export function CodeView({ filePath }: { filePath: string | null }): JSX.Element
   const copyAll = (): void => {
     const v = viewRef.current
     if (v) void window.api.clipboard.writeText(v.state.doc.toString())
+    else if (text !== null) void window.api.clipboard.writeText(text)
   }
   const selectAll = (): void => {
     const v = viewRef.current
@@ -127,6 +191,7 @@ export function CodeView({ filePath }: { filePath: string | null }): JSX.Element
 
   return (
     <div
+      ref={rootRef}
       className="code-view"
       onContextMenu={(e) => {
         if (!viewRef.current) return
@@ -135,7 +200,59 @@ export function CodeView({ filePath }: { filePath: string | null }): JSX.Element
       }}
     >
       {status && <div className="pane-status">{status}</div>}
-      <div ref={hostRef} className="code-view-host" />
+      {rendered ? (
+        <div
+          className="md-view"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(text ?? '', filePath) }}
+        />
+      ) : (
+        <div ref={hostRef} className="code-view-host" />
+      )}
+      {text !== null && (
+        <div className="pv-actions">
+          {!!saveMsg && <span className="pv-msg">{saveMsg}</span>}
+          {md && !editing && (
+            <button
+              className="pv-btn"
+              data-tip={rendered ? '看原始 Markdown 符号' : '回到排版视图'}
+              onClick={() => setShowSource((v) => !v)}
+            >
+              {rendered ? <CodeIcon size={12} /> : <FilesIcon size={12} />}
+              {rendered ? '源代码' : '排版'}
+            </button>
+          )}
+          {editing ? (
+            <>
+              <button
+                className={`pv-btn${dirty ? ' dirty' : ''}`}
+                data-tip="保存（⌘S）"
+                onClick={() => void save()}
+              >
+                <CheckIcon size={12} />
+                保存
+                {dirty && <span className="pv-dot" />}
+              </button>
+              <button
+                className="pv-btn"
+                data-tip={dirty ? '有未保存的改动，会先保存再退出' : '退出编辑'}
+                onClick={() => {
+                  void (async () => {
+                    if (dirty) await save()
+                    setEditing(false)
+                  })()
+                }}
+              >
+                完成
+              </button>
+            </>
+          ) : (
+            <button className="pv-btn" data-tip="编辑这个文件" onClick={() => setEditing(true)}>
+              <PencilIcon size={12} />
+              编辑
+            </button>
+          )}
+        </div>
+      )}
       {menu &&
         createPortal(
           <div

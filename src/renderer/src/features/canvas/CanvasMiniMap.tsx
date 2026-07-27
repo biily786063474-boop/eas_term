@@ -24,6 +24,7 @@ function shortName(name: string): string {
 }
 
 export function CanvasMiniMap(): JSX.Element | null {
+  const maximizedNode = useStore((s) => s.maximizedNode)
   const frames = useStore((s) => s.canvas.frames)
   const vp = useStore((s) => s.canvas.viewport)
   const setViewport = useStore((s) => s.setViewport)
@@ -118,6 +119,7 @@ export function CanvasMiniMap(): JSX.Element | null {
   }
 
   // 收起态：只留一个小图标按钮（画布左下角不被占用）
+  if (maximizedNode) return null // 最大化时让位（沉浸式）
   if (collapsed) {
     return (
       <button

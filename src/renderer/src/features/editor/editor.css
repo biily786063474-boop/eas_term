@@ -54,3 +54,265 @@
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* ========== Markdown 排版视图（.md 默认显示，右下角可切源码） ========== */
+.md-view {
+  height: 100%;
+  overflow: auto;
+  /* 节点面板本身是半透明玻璃，长文档直接透出下面的画布没法读——叠一层黑压住。
+     用黑色而不是固定色值，是为了跟随各主题自己的玻璃色调。 */
+  background: rgba(0, 0, 0, 0.5);
+  padding: 22px 26px 60px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--fg);
+  /* 正文用无衬线，代码另算——技术文档读起来比等宽舒服得多 */
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 标题：层级靠字号 + 字重 + 上下留白拉开，一眼能扫出结构 */
+.md-view .md-h {
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin: 1.6em 0 0.6em;
+  color: var(--fg);
+}
+.md-view .md-h:first-child {
+  margin-top: 0;
+}
+.md-view .md-h1 {
+  font-size: 23px;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--glass-border);
+}
+.md-view .md-h2 {
+  font-size: 18.5px;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--glass-border);
+}
+.md-view .md-h3 {
+  font-size: 16px;
+}
+.md-view .md-h4 {
+  font-size: 14.5px;
+}
+.md-view .md-h5,
+.md-view .md-h6 {
+  font-size: 13.5px;
+  color: var(--fg-dim);
+}
+
+.md-view .md-p {
+  margin: 0 0 1em;
+}
+.md-view strong {
+  font-weight: 650;
+  color: var(--fg);
+}
+.md-view em {
+  font-style: italic;
+  opacity: 0.92;
+}
+.md-view del {
+  opacity: 0.5;
+}
+.md-view a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.35);
+}
+.md-view a:hover {
+  border-bottom-color: var(--accent);
+}
+.md-view .md-link {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.md-view code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.88em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6d5a7;
+}
+.md-view .md-pre {
+  position: relative;
+  margin: 0 0 1.2em;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.3);
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.md-view .md-pre code {
+  background: none;
+  padding: 0;
+  color: var(--fg);
+  font-size: inherit;
+}
+.md-view .md-pre[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+  opacity: 0.6;
+}
+
+.md-view .md-ul,
+.md-view .md-ol {
+  margin: 0 0 1em;
+  padding-left: 1.5em;
+}
+.md-view li {
+  margin-bottom: 0.35em;
+}
+.md-view li::marker {
+  color: var(--fg-dim);
+}
+.md-view .md-ul .md-ul,
+.md-view .md-ol .md-ol,
+.md-view .md-ul .md-ol,
+.md-view .md-ol .md-ul {
+  margin: 0.35em 0 0;
+}
+.md-view .md-task {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-right: 7px;
+  vertical-align: -1px;
+  border-radius: 3px;
+  border: 1px solid var(--glass-border-strong);
+  font-size: 9px;
+  line-height: 1;
+}
+.md-view .md-task.on {
+  background: rgba(var(--accent-rgb), 0.25);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--accent);
+}
+
+.md-view .md-quote {
+  margin: 0 0 1em;
+  padding: 2px 0 2px 14px;
+  border-left: 2px solid rgba(var(--accent-rgb), 0.4);
+  color: var(--fg-dim);
+}
+.md-view .md-quote > *:last-child {
+  margin-bottom: 0;
+}
+
+.md-view .md-hr {
+  border: none;
+  border-top: 1px solid var(--glass-border);
+  margin: 1.8em 0;
+}
+
+.md-view .md-tw {
+  overflow-x: auto;
+  margin: 0 0 1.2em;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+.md-view .md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.md-view .md-table th {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--glass-border);
+}
+.md-view .md-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--glass-border);
+  vertical-align: top;
+}
+.md-view .md-table tr:last-child td {
+  border-bottom: none;
+}
+
+.md-view img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  margin: 0.4em 0;
+}
+.md-view .md-img-miss {
+  font-size: 12px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+
+/* 右下角操作条：Markdown 的 排版/源代码 切换 + 编辑/保存 */
+.pv-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.4;
+  transition: opacity 0.16s;
+}
+.code-view:hover .pv-actions,
+.pv-actions:focus-within {
+  opacity: 1;
+}
+.pv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.16s, border-color 0.16s;
+}
+.pv-btn:hover {
+  color: var(--fg);
+}
+.pv-btn.dirty {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.pv-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.pv-msg {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+/* 编辑态给个边框提示：正在改真文件，不是只读预览 */
+.code-view:has(.pv-btn.dirty) .code-view-host,
+.code-view-host:focus-within {
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.18);
+}

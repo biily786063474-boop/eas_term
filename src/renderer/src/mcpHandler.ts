@@ -56,7 +56,10 @@ function safePath(input: string, projectPath: string, ctxProject?: string): stri
   }
   const norm = '/' + parts.join('/')
   // 允许范围：调用方项目 与 目标 Frame 项目 都算合法（AI 可能把产出开到另一个项目的 Frame）
-  const allows = [ctxProject, projectPath].filter(Boolean).map((x) => x!.replace(/\/$/, ''))
+  // 去重：终端在自己项目的 Frame 里时两者相同，不去重的话越界报错会把同一路径打印两遍
+  const allows = [
+    ...new Set([ctxProject, projectPath].filter(Boolean).map((x) => x!.replace(/\/$/, '')))
+  ]
   const allow = allows.find((a) => norm === a || norm.startsWith(a + '/')) ?? ''
   if (!allow) {
     throw new Error(`路径越界，只允许项目目录内：${allows.join(' 或 ') || '(未知项目)'}`)
