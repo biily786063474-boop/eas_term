@@ -6,7 +6,6 @@ import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { SkillPanel } from './features/workspace/SkillPanel'
-import { AgentProgress } from './features/workspace/AgentProgress'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
@@ -142,7 +141,6 @@ export function App(): JSX.Element {
   return (
     <div className={`app${viewMode === 'canvas' ? ' canvas' : ''}`}>
       <div className="titlebar">
-        <AgentProgress />
         {viewMode === 'split' && activeProject ? (
           <div className="titlebar-project" data-tip={activeProject.path}>
             <FolderIcon size={14} className="titlebar-project-icon" />

@@ -8,6 +8,7 @@ import type { CanvasFrame, CanvasShape } from '../../store'
 import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
+import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { collectLeaves } from '../../layout'
@@ -837,6 +838,7 @@ export function CanvasStage(): JSX.Element {
       </div>
 
       <CanvasMiniMap />
+      <CanvasRunMonitor />
 
       <div className="canvas-zoombar">
         <button
