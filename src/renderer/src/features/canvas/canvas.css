@@ -1756,22 +1756,34 @@
 /* ========== 画布右上角「运行监视窗」（刻意做得很淡） ========== */
 .crm,
 .crm-mini {
+  /* 放左上：右侧是「完成 / 待处理」那一侧（标题栏铃铛、抽屉待处理气泡都在右边），
+     进行中的信息挤过去会和它们抢注意力，两类状态分列左右才不混。 */
   position: absolute;
-  right: 14px;
+  left: 14px;
   top: 14px;
-  z-index: 40;
+  z-index: 42;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
-  background: var(--glass-2);
+  /* 「不显眼」靠文字本身淡，不靠整体 opacity：整体压到 .34 的话画布节点会从
+     半透明背景里透上来，字和节点内容糊成一片，反而看不清。背景做实、文字做淡才对。 */
+  background: var(--glass-3);
   backdrop-filter: var(--blur);
   color: var(--fg-dim);
-  opacity: 0.34; /* 余光可见即可，不抢注意力 */
-  transition: opacity 0.25s;
+  transition: color 0.25s;
   -webkit-app-region: no-drag;
 }
-.crm:hover,
+/* 淡的是「字」不是「面板」：整体 opacity 会把背景一起变透，
+   画布节点就从底下透上来和文字糊在一起。背景必须实，字才能淡得下去。 */
+.crm-title,
+.crm-row,
+.crm-mini {
+  color: color-mix(in srgb, var(--fg-dim) 62%, transparent);
+  transition: color 0.25s;
+}
+.crm:hover .crm-title,
+.crm:hover .crm-row,
 .crm-mini:hover {
-  opacity: 0.92;
+  color: var(--fg);
 }
 
 .crm {
