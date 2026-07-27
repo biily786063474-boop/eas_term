@@ -5,7 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
-import { mcpEnv } from './mcpBridge'
+import { mcpEnv, ensureAgentShims } from './mcpBridge'
 
 interface Entry {
   pty: pty.IPty
@@ -29,12 +29,20 @@ function defaultShell(): string {
 let shimDirCache: string | null = null
 const urlQueueFile = (): string => path.join(app.getPath('userData'), 'open-url.queue')
 
+// 同一个 shim 目录还放 claude / codex 的包装脚本（见 mcpBridge.ensureAgentShims），
+// 让 app 内起的 AI CLI 自动带上画板 MCP —— 所以这里 win32 之外都要建目录，不再只给 darwin。
 function ensureOpenShim(): string | null {
-  if (process.platform !== 'darwin') return null
+  if (process.platform === 'win32') return null
   if (shimDirCache) return shimDirCache
   try {
     const dir = path.join(app.getPath('userData'), 'bin')
     fs.mkdirSync(dir, { recursive: true })
+    ensureAgentShims(dir)
+    if (process.platform !== 'darwin') {
+      // open 劫持是 macOS 专属（Linux 走 BROWSER/xdg-open），但 agent 包装脚本已经装好了
+      shimDirCache = dir
+      return dir
+    }
     const shim = path.join(dir, 'open')
     const script = `#!/bin/sh
 # Eas-Term: 把 open <url> 劫持到画板内嵌浏览器；其它参数转发系统 open

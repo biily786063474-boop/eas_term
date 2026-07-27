@@ -97,6 +97,7 @@ hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
   <a href="#怎么测">怎么测</a>
   <a href="#清单">逐项清单</a>
   <a href="#工具">13 个工具</a>
+  <a href="#分发">分发方式</a>
   <a href="#边界">安全边界</a>
   <a href="#坑">已知坑</a>
   <a href="#下一步">下一步</a>
@@ -104,7 +105,7 @@ hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
 
 <main>
 <header class="hero">
-  <div class="eyebrow">测试清单 · P1 + P2 已完成</div>
+  <div class="eyebrow">测试清单 · P1 + P2 + 分发方式已完成</div>
   <h1>MCP 接入测试怎么跑</h1>
   <p class="lede">Claude / Codex 现在能直接操控画板：开预览、聚焦、最大化、整理、贴便签、发通知。
      这页是给你自己验收用的 —— 每条都写清「说什么话」和「应该看到什么」。</p>
@@ -112,6 +113,7 @@ hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
     <span>日期 <b>2026-07-26</b></span>
     <span>工具数 <b>13 个</b></span>
     <span>验证方式 <b>开发版 + 真实 MCP 协议</b></span>
+    <span>分发 <b>零配置，app 内自动生效</b></span>
     <span>状态 <b>代码全通，等你人工体验</b></span>
   </div>
 </header>
@@ -157,9 +159,9 @@ hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
 
   <div class="warn">
     <div class="vlabel">如果 /mcp 里没有 eas-term</div>
-    <p style="margin:0">说明 <code>~/.claude.json</code> 那条自动配置没写上（或被别的进程覆盖）。
-      重启一次 app 即可 —— app 每次启动都会检查并补写。
-      写之前会备份成 <code>~/.claude.json.eas-backup</code>，解析失败时直接跳过不写，不会动你的配置。</p>
+    <p style="margin:0">包装脚本是在<b>第一次创建终端时</b>装的。如果 app 刚装好就打 <code>claude</code> 可能还没装上，
+      关掉这个终端重开一个即可。检查：<code>command -v claude</code> 应该指向
+      <code>~/Library/Application Support/Eas-Term/bin/claude</code>。</p>
   </div>
 </section>
 
@@ -281,6 +283,64 @@ hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
       <tr><td><code>canvas_add_note</code></td><td>贴便签（结论 / 待办留在画板上）</td><td><span class="b b-vi">P2</span></td></tr>
     </tbody>
   </table></div>
+</section>
+
+<section id="分发">
+  <h2>Distribution</h2>
+  <div class="sectitle">分发给用户时怎么做到「即插即用」</div>
+  <p class="secnote">目标：用户装上 app 就能用，不用配置任何东西；同时<b>不碰用户的全局配置</b>，app 外面一切照旧。</p>
+
+  <div class="verdict">
+    <div class="vlabel">做法</div>
+    <p style="margin:0">app 在自己的 shim 目录里放 <code>claude</code> / <code>codex</code> <b>包装脚本</b>，
+      这个目录只出现在 app 自己终端的 PATH 里。脚本自动带上 MCP 参数后 exec 真正的 CLI。
+      <b>用户的 <code>~/.claude.json</code> 和 <code>~/.codex/config.toml</code> 一个字都不改。</b></p>
+  </div>
+
+  <pre><code>Eas-Term 的终端里：
+  claude  <span class="dim">→</span> <span class="flow">shim/claude</span> <span class="dim">→</span> exec 真claude <span class="hi">--mcp-config=&lt;app生成的json&gt;</span>
+  codex   <span class="dim">→</span> <span class="flow">shim/codex</span>  <span class="dim">→</span> exec 真codex  <span class="hi">-c mcp_servers.eas-term...</span>
+
+iTerm / 系统终端里：
+  claude  <span class="dim">→</span> 真claude，干干净净，没有 eas-term</code></pre>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:30%">检查项</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td>app 内真实 Claude 会话调工具</td><td>✅ <code>claude -p</code> 成功调用 <code>canvas_list_frames</code>，返回「9 个」</td></tr>
+      <tr><td>app 内 Codex 认得 eas-term</td><td>✅ <code>codex mcp list</code> 显示 eas-term + 用户原有的 bizone-canvas</td></tr>
+      <tr><td>app 外零污染</td><td>✅ 只有用户自己的 bizone-canvas，没有 eas-term</td></tr>
+      <tr><td>用户全局配置未被修改</td><td>✅ <code>~/.claude.json</code> 79 个键完好、无 eas-term；<code>~/.codex/config.toml</code> 无 eas-term</td></tr>
+      <tr><td>不破坏正常 CLI 使用</td><td>✅ 位置参数、带空格带引号的参数都正常透传</td></tr>
+      <tr><td>找不到真程序时</td><td>✅ 一行提示 + exit 127，不死循环、不报语法错</td></tr>
+      <tr><td>Windows</td><td><span class="b b-am">暂不支持</span> .cmd 包装的转义没法在本机验证，宁可没有不可写坏</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>路上踩的两个坑</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">坑</th><th>后果</th><th style="width:32%">修法</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b><code>--mcp-config</code> 吞参数</b><span class="b b-ro" style="margin-left:6px">严重</span></td>
+        <td>它声明为可变参数 <code>&lt;configs...&gt;</code>，空格分隔会把用户自己的位置参数一并吃掉 ——
+          <code>claude mcp list</code> 把 <code>mcp</code>、<code>list</code> 当成配置文件路径直接报错。
+          <b>用户所有带位置参数的 claude 调用都会坏。</b></td>
+        <td>改写成 <code>--mcp-config=&lt;file&gt;</code>（等号形式只取一个值）</td>
+      </tr>
+      <tr>
+        <td><b>脚本依赖外部命令</b></td>
+        <td>原本用 <code>tr</code> / <code>grep</code> / <code>paste</code> 切 PATH，PATH 异常的环境里脚本直接挂</td>
+        <td>改成纯 shell 内建（<code>IFS</code> 分割 + 字符串拼接），零外部依赖</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">Codex 会问一次审批</div>
+    <p style="margin:0">Codex 首次调用 MCP 工具时会弹审批提示 —— 这是 Codex 自己的安全机制，交互模式下点同意即可。
+      <b>没有替用户关掉它</b>：那等于降低用户的安全防线，不该由 app 代做决定。</p>
+  </div>
 </section>
 
 <section id="边界">
