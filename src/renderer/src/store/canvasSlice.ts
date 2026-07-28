@@ -24,6 +24,11 @@ export interface NodeAgent {
   model?: Partial<Record<'claude' | 'codex', string>>
   /** 思考档位：同样按 agent 各记一套。值来自探测（Claude 真实 / Codex 已知默认），放宽为 string 随 CLI 演进 */
   effort?: Partial<Record<'claude' | 'codex', string>>
+  /** 这个终端节点**自己的**会话 id（按 agent 各记一套）。
+   *  没有它的话，「回溯」只能用 `claude -c` / `codex resume --last`，语义是
+   *  「继续这个目录里最近的会话」——同一项目开几个终端就会互相抢，
+   *  终端 A 续到终端 B 的对话。绑定之后每个终端只回自己的那条线。 */
+  session?: Partial<Record<'claude' | 'codex', string>>
 }
 
 /** 画布节点：坐标相对所属 Frame（含头部偏移）。

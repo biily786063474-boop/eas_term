@@ -28,10 +28,23 @@ const cap = (m: string): string => (m ? m.charAt(0).toUpperCase() + m.slice(1) :
 // Claude 别名首字母大写好看（Opus/Sonnet）；Codex 是全名（gpt-5-codex）原样显示
 const modelLabel = (m: string, kind: Kind): string => (kind === 'claude' ? cap(m) : m)
 
-/** 拼 Claude Code 启动命令（权限已按需求取消，不再拼 --permission-mode） */
-function buildClaudeCmd(model?: string, effort?: string, cont?: boolean): string {
+/** 拼 Claude Code 启动命令（权限已按需求取消，不再拼 --permission-mode）。
+ *
+ *  会话绑定：每个终端节点记着自己的 session id。
+ *   · 全新 → --session-id <新uuid>（建一条属于这个终端的会话线）
+ *   · 回溯 → --resume <自己的uuid>（精确回到这条线）
+ *  不能图省事用同一个参数：--session-id 撞到已存在的 id 会报「already in use」，
+ *  --resume 撞到不存在的 id 会报「No conversation found」，两边都验过。
+ *  节点还没有 id 时（老数据 / 手动起过），回溯回落到 -c 的旧行为。 */
+function buildClaudeCmd(
+  model?: string,
+  effort?: string,
+  cont?: boolean,
+  sessionId?: string
+): string {
   const p = ['claude']
-  if (cont) p.push('-c')
+  if (cont) p.push(...(sessionId ? ['--resume', sessionId] : ['-c']))
+  else if (sessionId) p.push('--session-id', sessionId)
   if (model) p.push('--model', model)
   if (effort) p.push('--effort', effort)
   return p.join(' ')
@@ -39,8 +52,14 @@ function buildClaudeCmd(model?: string, effort?: string, cont?: boolean): string
 
 /** 拼 Codex 启动命令。回溯 = `codex resume --last`（沿用原会话配置）；
  *  全新 = `codex -m <model> -c model_reasoning_effort=<effort>`（本机 codex 0.145 核对，权限已取消不拼 sandbox/approval）。 */
-function buildCodexCmd(model?: string, effort?: string, cont?: boolean): string {
-  if (cont) return 'codex resume --last'
+function buildCodexCmd(
+  model?: string,
+  effort?: string,
+  cont?: boolean,
+  sessionId?: string
+): string {
+  // 回溯：有绑定就精确恢复这个终端自己的会话，没有才回落「最近一个」
+  if (cont) return sessionId ? `codex resume ${sessionId}` : 'codex resume --last'
   const p = ['codex']
   if (model) p.push('-m', model)
   if (effort) p.push('-c', `model_reasoning_effort=${effort}`)
@@ -158,11 +177,37 @@ export function CanvasAgentBar({
     setPop((cur) => (cur?.type === 'ask' ? null : { type: 'ask', rect: el.getBoundingClientRect() }))
   }
 
+  /** 这个终端节点自己的会话 id（按 agent 各记一套） */
+  const sessionId = agent?.session?.[kind]
+
   const launch = (cont: boolean): void => {
     setPop(null)
+    let sid = sessionId
+    if (!cont && kind === 'claude') {
+      // 全新会话：当场发一个 id 并记进节点，以后「回溯」就能精确回到这条线
+      sid = crypto.randomUUID()
+      mutate({ session: { ...rec(agent?.session), claude: sid } })
+    }
     const cmd =
-      kind === 'claude' ? buildClaudeCmd(model, effort, cont) : buildCodexCmd(model, effort, cont)
+      kind === 'claude'
+        ? buildClaudeCmd(model, effort, cont, cont ? sessionId : sid)
+        : buildCodexCmd(model, effort, cont, sessionId)
     window.api.pty.write(ptyId, cmd + '\r')
+
+    // Codex 没有指定会话 id 的启动参数，只能起完之后按 cwd 去 sessions 目录捞。
+    // 给它 4 秒把 session_meta 写出来；多个候选（同项目同时起两个）就放弃绑定，
+    // 宁可维持现状，也不要瞎猜一个错的——那等于把「偶尔串台」变成「稳定串错」。
+    if (!cont && kind === 'codex') {
+      void window.api.pty.cwd(ptyId).then((cwd) => {
+        if (!cwd) return
+        const since = Date.now() - 2000
+        setTimeout(() => {
+          void window.api.agent.captureCodexSession(cwd, since).then((r) => {
+            if (r.id) mutate({ session: { ...rec(agent?.session), codex: r.id } })
+          })
+        }, 4000)
+      })
+    }
   }
 
   return (

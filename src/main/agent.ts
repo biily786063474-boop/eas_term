@@ -1,4 +1,6 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
+import fs from 'fs'
+import path from 'path'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { AgentProbe } from '../shared/types'
@@ -57,4 +59,47 @@ export function registerAgentHandlers(): void {
     const [claude, codex] = await Promise.all([probeClaude(), probeCodex()])
     return { claude, codex }
   })
+
+/** Codex 没有 --session-id 这类参数指定会话标识，只能起完之后去 sessions 目录捞。
+ *  会话文件第一行 session_meta 里有 cwd，按它过滤能把竞态压到「同一项目同时起两个
+ *  codex」才可能撞——真撞上（多个候选）就放弃绑定，宁可保持现状也不要瞎猜一个错的。 */
+ipcMain.handle(
+  'codex:captureSession',
+  async (_e, cwd: string, sinceMs: number): Promise<{ id: string | null }> => {
+    try {
+      const root = path.join(app.getPath('home'), '.codex', 'sessions')
+      const found: string[] = []
+      const walk = async (dir: string): Promise<void> => {
+        for (const ent of await fs.promises.readdir(dir, { withFileTypes: true })) {
+          const full = path.join(dir, ent.name)
+          if (ent.isDirectory()) await walk(full)
+          else if (ent.name.endsWith('.jsonl')) {
+            const st = await fs.promises.stat(full)
+            if (st.mtimeMs >= sinceMs) found.push(full)
+          }
+        }
+      }
+      await walk(root)
+      const hits: string[] = []
+      for (const f of found) {
+        // 只读开头一小段：session_meta 是第一行，不必把整个会话读进内存
+        const fd = await fs.promises.open(f, 'r')
+        try {
+          const buf = Buffer.alloc(4096)
+          const { bytesRead } = await fd.read(buf, 0, 4096, 0)
+          const line = buf.subarray(0, bytesRead).toString('utf8').split('\n')[0]
+          const meta = JSON.parse(line) as { payload?: { cwd?: string; session_id?: string } }
+          if (meta.payload?.cwd === cwd && meta.payload.session_id) hits.push(meta.payload.session_id)
+        } catch {
+          /* 半截文件或格式变了，跳过 */
+        } finally {
+          await fd.close()
+        }
+      }
+      return { id: hits.length === 1 ? hits[0] : null }
+    } catch {
+      return { id: null }
+    }
+  }
+)
 }

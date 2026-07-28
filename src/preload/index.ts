@@ -53,7 +53,10 @@ const api = {
   },
   agent: {
     // 开终端时探测：从 `claude --help` 真实解析 模型别名 / effort 档位（不硬编码）
-    probe: (): Promise<AgentProbe> => ipcRenderer.invoke('agent:probe')
+    probe: (): Promise<AgentProbe> => ipcRenderer.invoke('agent:probe'),
+    // Codex 起完之后按 cwd 捞它的 session id（Codex 没有指定会话 id 的启动参数）
+    captureCodexSession: (cwd: string, sinceMs: number): Promise<{ id: string | null }> =>
+      ipcRenderer.invoke('codex:captureSession', cwd, sinceMs)
   },
   browser: {
     // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)
