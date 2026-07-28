@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eas-Term —— 左边是终端，右边是一块无限画布</title>
+    <meta
+      name="description"
+      content="Eas-Term 是给 Vibe Coding 用的桌面工作台：多终端任意分屏 + 无限画布，内置 Claude Code / Codex 控制台与 MCP 画板控制。macOS 与 Windows 可用。"
+    />
+    <link rel="icon" href="assets/icon.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="index.html">
+          <img src="assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="#scenes">核心场景</a>
+          <a href="#features">能力清单</a>
+          <a href="#ai">AI 接入</a>
+          <a class="nav-cta" href="download.html">下载</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ============ Hero ============ -->
+      <section class="hero">
+        <div class="wrap">
+          <img class="hero-icon" src="assets/icon.png" alt="Eas-Term 应用图标" width="104" height="104" />
+          <h1 class="hero-title">Eas-Term</h1>
+          <p class="hero-tagline">左边是终端，右边是一块无限画布。</p>
+          <p class="hero-sub">
+            给 Vibe Coding 用的桌面工作台。终端里跑 AI，产出直接摆在画布上——网页预览、代码、设计稿、图片、Git
+            记录，都在同一块视野里，不用来回切窗口。
+          </p>
+
+          <div class="hero-actions">
+            <!-- 待填 GitHub Release 地址 -->
+            <a class="btn btn-primary" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M4 19h16" />
+              </svg>
+              下载 macOS 版
+            </a>
+            <!-- 待填 GitHub Release 地址 -->
+            <a class="btn btn-ghost" href="#">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v12" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M4 19h16" />
+              </svg>
+              下载 Windows 版
+            </a>
+          </div>
+          <p class="hero-req">macOS 11+（Apple Silicon 与 Intel 通用）· Windows 10+（x64）</p>
+
+          <figure class="shot shot-hero">
+            <div class="shot-box" style="aspect-ratio: 16 / 10">
+              <span class="shot-text">界面截图 · 待补</span>
+            </div>
+            <figcaption class="shot-cap">主界面：左侧终端区 + 右侧无限画布</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ============ 核心场景 ============ -->
+      <section id="scenes" class="section">
+        <div class="wrap">
+          <p class="eyebrow">核心场景</p>
+          <h2 class="section-title">终端和画布在一起，工作流就不用来回跳了</h2>
+
+          <div class="scene">
+            <div class="scene-text">
+              <h3>AI 写完，画布上直接看</h3>
+              <p>
+                终端里让 Claude Code 生成一个页面，产出的 HTML 会被开成画布上的预览节点，就摆在终端旁边。改一版看一版，不用在编辑器、浏览器、终端三个窗口之间找来找去。
+              </p>
+              <ul class="ticks">
+                <li>网页预览节点用内嵌 Chromium 渲染，CLI 里打开的链接不跳出应用</li>
+                <li>代码、图片、Markdown、设计稿都是同一块画布上的模块</li>
+                <li>画布可缩放平移，模块按项目分组成 Frame</li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <div class="shot-box" style="aspect-ratio: 16 / 10">
+                <span class="shot-text">界面截图 · 待补</span>
+              </div>
+              <figcaption class="shot-cap">终端节点旁边挂着网页预览节点</figcaption>
+            </figure>
+          </div>
+
+          <div class="scene scene-rev">
+            <div class="scene-text">
+              <h3>一个项目一组标签，终端想怎么切就怎么切</h3>
+              <p>
+                像编辑器那样横竖分屏，几个终端并排跑。每个项目有自己的一组标签，切项目就是切一整套上下文，不用重新
+                <code>cd</code> 一遍。
+              </p>
+              <ul class="ticks">
+                <li>任意横竖切分，布局跟着项目走</li>
+                <li>运行监视：哪个终端还有进程在跑，一眼看到</li>
+                <li>关面板、退应用前会拦一道，不误杀正在跑的命令</li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <div class="shot-box" style="aspect-ratio: 16 / 10">
+                <span class="shot-text">界面截图 · 待补</span>
+              </div>
+              <figcaption class="shot-cap">多终端分屏 + 项目标签组</figcaption>
+            </figure>
+          </div>
+
+          <div class="scene">
+            <div class="scene-text">
+              <h3>每个终端一个 AI 会话，不会串台</h3>
+              <p>
+                任意终端节点一键起 Claude Code 或 Codex，模型和思考档位记得住。会话和终端是绑定的——回溯历史只会回溯这一个终端的，不会翻到别的终端的对话里去。
+              </p>
+              <ul class="ticks">
+                <li>Claude Code / Codex 一键启动，配置记忆</li>
+                <li>会话与终端绑定，多个 Agent 同时开也互不干扰</li>
+                <li>离线语音输入：说话转文字进终端，本地跑，不上传</li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <div class="shot-box" style="aspect-ratio: 16 / 10">
+                <span class="shot-text">界面截图 · 待补</span>
+              </div>
+              <figcaption class="shot-cap">AI Agent 控制台</figcaption>
+            </figure>
+          </div>
+
+          <div class="scene scene-rev">
+            <div class="scene-text">
+              <h3>看文档、改文案、翻提交记录，都不用离开画布</h3>
+              <p>
+                <code>.md</code> 文件默认渲染成排版好的样子，右下角一键切源码；所有文本预览都能就地编辑保存。Git
+                的提交历史、diff、回退，也都是画布上的模块。
+              </p>
+              <ul class="ticks">
+                <li>Markdown 排版预览，源码 / 排版随时切</li>
+                <li>文本预览就地编辑，改完直接存回文件</li>
+                <li>Git 提交历史、diff、回退在画布模块里完成</li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <div class="shot-box" style="aspect-ratio: 16 / 10">
+                <span class="shot-text">界面截图 · 待补</span>
+              </div>
+              <figcaption class="shot-cap">Markdown 排版预览与 Git 模块</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 能力清单 ============ -->
+      <section id="features" class="section">
+        <div class="wrap">
+          <p class="eyebrow">能力清单</p>
+          <h2 class="section-title">装上就有的东西</h2>
+
+          <div class="cards">
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="M12 4v16" />
+                <path d="M12 12h9" />
+              </svg>
+              <h3>多终端 + 任意分屏</h3>
+              <p>像编辑器那样横竖切分，每个项目一组标签。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="5" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                <rect x="14" y="12" width="7" height="9" rx="1.5" />
+              </svg>
+              <h3>无限画布</h3>
+              <p>终端、网页预览、代码、图片、设计稿都是画布上的模块，按项目分组成 Frame，可缩放平移。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="6" width="16" height="12" rx="2" />
+                <path d="M8 11l2.5 2L8 15" />
+                <path d="M13.5 15H16" />
+              </svg>
+              <h3>AI Agent 控制台</h3>
+              <p>每个终端节点一键起 Claude Code / Codex，记住模型和思考档位；会话与终端绑定，回溯不串台。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <circle cx="5" cy="6" r="2" />
+                <circle cx="19" cy="6" r="2" />
+                <circle cx="12" cy="20" r="2" />
+                <path d="M6.6 7.4 10 10.6" />
+                <path d="M17.4 7.4 14 10.6" />
+                <path d="M12 15v3" />
+              </svg>
+              <h3>MCP 画板控制</h3>
+              <p>AI 能直接操控画布：把产出的 HTML 开成预览、整理布局、发完成通知。13 个工具，装上即用，不用配置。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18" />
+                <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
+              </svg>
+              <h3>内嵌 Chromium 浏览器</h3>
+              <p>终端里 CLI 打开的链接直接在画布里开，不跳出去。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="3" width="6" height="11" rx="3" />
+                <path d="M5 11a7 7 0 0 0 14 0" />
+                <path d="M12 18v3" />
+              </svg>
+              <h3>离线语音输入</h3>
+              <p>说话转文字进终端，本地跑，不上传。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 18c0-3 2-4 4-4s2.5 1.4 2.5 2.6C10.5 18.2 9 19 7.5 19 5.6 19 4 18.6 4 18Z" />
+                <path d="M10.5 15.5 19 6a2 2 0 0 0-2.8-2.8L7 11.5" />
+              </svg>
+              <h3>设计模块</h3>
+              <p>画布上直接做设计和动效，导出到项目的 <code>demo/</code>。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M7 15V9l2.5 3L12 9v6" />
+                <path d="M16 9v6" />
+                <path d="M14 13l2 2 2-2" />
+              </svg>
+              <h3>Markdown 排版预览</h3>
+              <p><code>.md</code> 默认渲染成排版，右下角切源码；所有文本预览都能就地编辑保存。</p>
+            </article>
+
+            <article class="card">
+              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="6.5" cy="6" r="2.5" />
+                <circle cx="6.5" cy="18" r="2.5" />
+                <circle cx="17.5" cy="12" r="2.5" />
+                <path d="M6.5 8.5v7" />
+                <path d="M15 12H9.5A3 3 0 0 1 6.5 9" />
+              </svg>
+              <h3>Git 版本管理</h3>
+              <p>提交历史、diff、回退，都在画布模块里。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ AI 接入 ============ -->
+      <section id="ai" class="section">
+        <div class="wrap">
+          <div class="panel">
+            <p class="eyebrow">AI 接入</p>
+            <h2 class="section-title">让 AI 自己去摆画布</h2>
+            <p class="lede">
+              Eas-Term 自带一个 MCP 服务，装上应用就已经接好。终端里跑的 Claude Code 或 Codex
+              不只是给你回一段文本——它能直接把产出摆到你眼前。
+            </p>
+
+            <div class="split">
+              <div class="split-col">
+                <h3 class="minor">AI 能做的事</h3>
+                <ul class="ticks">
+                  <li>把生成的 HTML / 图片 / 代码开成预览节点，摆在你眼前</li>
+                  <li>打开网址、最大化某个节点让你细看</li>
+                  <li>整理 Frame 布局，把散乱的模块排整齐</li>
+                  <li>新开终端节点、重命名、关掉不用的节点</li>
+                  <li>贴便签写说明，任务跑完发系统通知</li>
+                </ul>
+                <p class="note">共 13 个工具，随应用内置，不用手写配置文件。</p>
+              </div>
+
+              <div class="split-col">
+                <h3 class="minor">和 CLI 的配合</h3>
+                <ul class="ticks">
+                  <li>任意终端节点一键启动 <strong>Claude Code</strong> 或 <strong>Codex</strong></li>
+                  <li>模型、思考档位选一次就记住，下次直接起</li>
+                  <li>会话与终端一一绑定，多开 Agent 也不会串到别的终端</li>
+                  <li>Agent 打开的链接落进画布的内嵌浏览器，视线不离开工作台</li>
+                </ul>
+              </div>
+            </div>
+
+            <figure class="shot">
+              <div class="shot-box" style="aspect-ratio: 16 / 9">
+                <span class="shot-text">界面截图 · 待补</span>
+              </div>
+              <figcaption class="shot-cap">AI 通过 MCP 在画布上开出预览节点</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 下载 ============ -->
+      <section id="download" class="section">
+        <div class="wrap">
+          <p class="eyebrow">下载</p>
+          <h2 class="section-title">拿去用</h2>
+
+          <div class="dl-grid">
+            <article class="dl-card">
+              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 7c-2.5 0-4.5 2-4.5 5.2 0 3.4 2.1 7.3 3.7 7.3.8 0 1-.5 1.8-.5s1 .5 1.8.5c1.6 0 3.7-3.9 3.7-7.3C18.5 9 16.5 7 14 7c-.9 0-1.4.4-2 .4S12.9 7 12 7Z" />
+                <path d="M13 4.2c.9-1 1.9-1.2 2.6-1.2.1 1-.3 2-.9 2.7-.6.7-1.5 1.2-2.4 1.1-.1-.9.2-1.8.7-2.6Z" />
+              </svg>
+              <h3>macOS</h3>
+              <p class="dl-meta">macOS 11+ · universal（Apple Silicon 与 Intel 通用）</p>
+              <!-- 待填 GitHub Release 地址 -->
+              <a class="btn btn-primary" href="#">下载 .dmg</a>
+              <p class="note">已公证（notarized），双击直接开，不会被 Gatekeeper 拦。</p>
+            </article>
+
+            <article class="dl-card">
+              <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 6.5 11 5.4v5.9H4Z" />
+                <path d="M12.5 5.2 20 4v7.3h-7.5Z" />
+                <path d="M4 12.7h7v5.9L4 17.5Z" />
+                <path d="M12.5 12.7H20V20l-7.5-1.2Z" />
+              </svg>
+              <h3>Windows</h3>
+              <p class="dl-meta">Windows 10+ · x64</p>
+              <!-- 待填 GitHub Release 地址 -->
+              <a class="btn btn-primary" href="#">下载安装包</a>
+              <p class="note">NSIS 安装包，装完就能用。</p>
+            </article>
+          </div>
+
+          <p class="dl-more">
+            想看完整版本列表和更新记录？<a href="download.html">去下载页 →</a>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="页脚导航">
+          <a href="#features">能力清单</a>
+          <a href="download.html">下载</a>
+          <!-- 待填 GitHub 仓库地址 -->
+          <a href="#">GitHub</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+  </body>
+</html>
