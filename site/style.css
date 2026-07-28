@@ -362,6 +362,16 @@ strong {
   margin-top: 52px;
 }
 
+/* 真截图：和占位块一样的外框，换图后视觉不跳 */
+.shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
 .shot-box {
   width: 100%;
   display: flex;
