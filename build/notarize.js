@@ -25,12 +25,13 @@ exports.default = async function notarizeHook(context) {
   const appName = context.packager.appInfo.productFilename
   const appPath = path.join(context.appOutDir, `${appName}.app`)
   const keychainProfile = process.env.EAS_NOTARY_PROFILE || 'eas-notary'
-  // 显式指定 login 钥匙串：afterSign 跑在 electron-builder 的后台上下文里，
-  // 它的钥匙串 search list 可能不含 login（Aurora 项目踩过这个坑：
-  // 报 No Keychain password item found for profile），写死路径绕开这个依赖。
-  const keychain =
-    process.env.EAS_KEYCHAIN || require('os').homedir() + '/Library/Keychains/login.keychain-db'
+  // 默认**不传** keychain 路径。新版 notarytool 的 store-credentials 把凭证存进
+  // data protection keychain，不是文件式的 login.keychain-db——显式传路径反而查不到
+  // （实测：`notarytool history --keychain-profile eas-notary` 能用，
+  //  加上 `--keychain ~/Library/Keychains/login.keychain-db` 就报
+  //  No Keychain password item found）。真遇到查找不到再用 EAS_KEYCHAIN 显式指定。
+  const keychain = process.env.EAS_KEYCHAIN
   console.log(`[notarize] 提交公证：${appPath}（档案「${keychainProfile}」）…上传 Apple，通常几分钟`)
-  await notarize({ tool: 'notarytool', appPath, keychainProfile, keychain })
+  await notarize({ tool: 'notarytool', appPath, keychainProfile, ...(keychain ? { keychain } : {}) })
   console.log('[notarize] ✓ 公证 + staple 完成')
 }
