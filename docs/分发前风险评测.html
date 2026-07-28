@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term 分发前风险评测</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:640px){h1{font-size:29px}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">EAS-TERM · 分发评测</span>
+  <a href="#结论">结论</a>
+  <a href="#阻塞">装不上</a>
+  <a href="#功能">功能失效</a>
+  <a href="#windows">Windows</a>
+  <a href="#正常">确认正常</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">分发前风险评测 · 代码审查 + 实测</div>
+  <h1>分发出去之后，哪些会不好使</h1>
+  <p class="lede">按「别人的机器」这个前提把整个包过了一遍：签名、架构、外部依赖、
+     首次运行会动用户什么东西、跨平台分支。下面按<b>严重程度</b>排，不按模块。</p>
+  <div class="meta">
+    <span>日期 <b>2026-07-27</b></span>
+    <span>被测包 <b>~/Eas-Term-release-next</b></span>
+    <span>方式 <b>代码审查 + spctl/lipo 实测</b></span>
+    <span>阻塞项 <b>2</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">一句话</div>
+  <p class="secnote">功能本身没什么大坑，<b>坑在「能不能装上」</b>——现在这个包别人下载后打不开，而且只能在 Apple 芯片上跑。</p>
+
+  <div class="dissent">
+    <div class="vlabel">两个阻塞项</div>
+    <p style="margin:0 0 8px"><b>1. Gatekeeper 直接拒绝</b> —— 实测 <code>spctl -a</code> 返回 <code>rejected</code>，
+      没有公证 ticket。别人从网上下载 dmg，双击会弹「已损坏，无法打开，您应将它移到废纸篓」。</p>
+    <p style="margin:0"><b>2. 只打了 arm64</b> —— Intel Mac 用户完全跑不起来
+      （<code>node-pty</code> 是原生模块，架构不匹配直接崩）。</p>
+  </div>
+
+  <div class="grid g4" style="margin-top:24px">
+    <div class="stat"><div class="num n-ro">2</div><div class="lab">阻塞：装不上 / 跑不了</div></div>
+    <div class="stat"><div class="num n-am">3</div><div class="lab">功能级：能跑但会失效</div></div>
+    <div class="stat"><div class="num n-sk">1</div><div class="lab">会动用户的文件</div></div>
+    <div class="stat"><div class="num n-vi">20</div><div class="lab">天没在 Windows 上构建过</div></div>
+  </div>
+</section>
+
+<section id="阻塞">
+  <h2>Blockers</h2>
+  <div class="sectitle">一、装不上 / 跑不了</div>
+  <p class="secnote">这两条不解决，后面的功能再好也轮不到用户体验。</p>
+
+  <h3>1. 签名：Gatekeeper 拒绝 <span class="b b-ro">阻塞</span></h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">实测</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td><code>spctl -a -vvv</code></td><td><b>rejected</b></td></tr>
+      <tr><td><code>xcrun stapler validate</code></td><td>does not have a ticket stapled to it（无公证）</td></tr>
+      <tr><td>签名类型</td><td>ad-hoc（<code>mac.identity: null</code>，靠 afterPack 钩子自签）</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>用户会看到什么：</b>从网页/微信/网盘下载的文件带 <code>com.apple.quarantine</code> 属性，
+     双击弹「"Eas-Term" 已损坏，无法打开」——注意措辞是<b>「已损坏」</b>而不是「无法验证开发者」，
+     很多人看到会直接扔垃圾桶，不会想到去右键。</p>
+
+  <div class="warn">
+    <div class="vlabel">三条路，成本递减</div>
+    <ul class="clean" style="margin:0">
+      <li><b>Apple 开发者账号（$99/年）</b> → Developer ID 签名 + 公证 + stapler。用户双击直接开，零心智负担。要长期分发就走这条。</li>
+      <li><b>教用户绕过</b> → 分发时附一句 <code>xattr -dr com.apple.quarantine /Applications/Eas-Term.app</code>，
+        或者「右键 → 打开 → 再点打开」。零成本，但每个用户都要过这一关，劝退率不低。</li>
+      <li><b>只发给熟人</b> → 当前状态就够，口头教一次即可。</li>
+    </ul>
+  </div>
+
+  <h3>2. 架构：只有 arm64 <span class="b b-ro">阻塞</span></h3>
+  <p>实测 <code>lipo -archs</code> = <code>arm64</code>，包里的 <code>pty.node</code> 也是 arm64。
+     Intel Mac（2020 年前的机器）装上直接崩。</p>
+  <p><b>修法</b>：<code>package.json</code> 的 <code>mac.target.arch</code> 加 <code>x64</code>，
+     或者改成 <code>universal</code>。代价是包体翻倍（现在 111MB → 约 220MB），构建时间也翻倍。
+     取决于你的用户里还有多少 Intel 机器。</p>
+</section>
+
+<section id="功能">
+  <h2>Degradations</h2>
+  <div class="sectitle">二、能跑起来，但这些功能会失效</div>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:20%">功能</th><th>在别人机器上</th><th style="width:16%">严重度</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>生图历史</b><br>（图片预览的第二个标签）</td>
+        <td>依赖本机装了<b>笔纵画板</b>并跑在 13140 端口。别人没装 = 空面板。
+          <br>代码里做了降级：检测未安装会显示官网引导（<code>bzone.biily.top</code>）——<b>不算 bug，但对方会看到一个你自己产品的推广位</b>，
+          分发给外人时要想清楚这是不是你想要的。</td>
+        <td><span class="b b-am">中</span></td>
+      </tr>
+      <tr>
+        <td><b>语音输入</b></td>
+        <td>首次点麦克风要下 <b>305MB</b> 模型，源是 <code>hf-mirror.com</code>（国内镜像）。
+          <br>· 国内用户：快，没问题<br>· <b>海外用户：这个镜像可能慢或不通</b>，没有回落到官方 HuggingFace 的逻辑
+          <br>· 好消息：sherpa-onnx 是 <b>WASM 版</b>不是原生模块，跨架构跨平台都能跑</td>
+        <td><span class="b b-am">中</span></td>
+      </tr>
+      <tr>
+        <td><b>MCP / 技能包</b></td>
+        <td>没装 Claude Code / Codex 的用户：检测得到，不会弹提示 ✓。
+          <br>但见下面「会动用户文件」那条——<b>配置文件仍然会写</b>。</td>
+        <td><span class="b b-am">中</span></td>
+      </tr>
+      <tr>
+        <td><b>两个实例同开</b></td>
+        <td>共用同一份 <code>canvas.json</code>，<b>后保存的覆盖先保存的</b>。
+          今天验证会话绑定时真撞上了：打包版实例把开发版刚写的数据抹掉。
+          没有单实例锁。用户如果开了两个（比如新旧版本各一个），画布会互相吞。</td>
+        <td><span class="b b-am">中</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>会动用户的文件 —— 有一处不一致</h3>
+  <div class="dissent">
+    <div class="vlabel">这是个真缺陷，一行能修</div>
+    <p style="margin:0"><code>writeCodexConfig</code> 会先判断 <code>~/.codex</code> 目录存在才写（没装 Codex 就不碰）；
+      但 <code>writeClaudeConfig</code> <b>没有这个判断</b>——用户哪怕从没装过 Claude Code，
+      启动 app 也会在 home 目录凭空多出一个 <code>~/.claude.json</code>。
+      两边行为不一致，而且对不用 AI CLI 的用户来说是莫名其妙的文件。</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:30%">文件</th><th>什么时候写</th><th style="width:14%">有防护吗</th></tr></thead>
+    <tbody>
+      <tr><td><code>~/.claude.json</code></td><td>每次启动检查并补写 <code>mcpServers.eas-term</code></td>
+        <td><span class="b b-am">部分</span><br>写前备份 + 解析失败跳过，但<b>不判断是否装了 claude</b></td></tr>
+      <tr><td><code>~/.codex/config.toml</code></td><td>同上，写 <code>[mcp_servers.eas-term]</code></td>
+        <td><span class="b b-em">好</span><br>目录不存在就不写；按行替换保留注释</td></tr>
+      <tr><td><code>~/.claude/skills/eas-term/</code></td><td>用户点「安装」才写</td><td><span class="b b-em">好</span></td></tr>
+      <tr><td><code>~/.codex/AGENTS.md</code></td><td>用户点「安装」才写</td><td><span class="b b-em">好</span><br>标记划段，不碰用户内容</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="secnote" style="margin-top:18px">还有一条要知道：<b>卸载 app 后这些配置会残留</b>，
+    <code>eas-term</code> 那条 MCP 指向一个不存在的文件，用户起 claude 会看到一个连接失败的 server。
+    没有卸载清理机制。</p>
+</section>
+
+<section id="windows">
+  <h2>Windows</h2>
+  <div class="sectitle">三、Windows 版基本是未知数</div>
+  <p class="secnote">有 GitHub Actions 在构建，但<b>最后一次成功是 2026-07-08</b>——之后 20 天加的所有功能都没在 Windows 上跑过。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:24%">功能</th><th>Windows 上的实际情况</th><th style="width:14%">判断</th></tr></thead>
+    <tbody>
+      <tr><td>浏览器劫持<br>（<code>open &lt;url&gt;</code>）</td><td>整个 shim 机制是 <code>darwin</code> only，Windows 上直接 return null。
+        终端里 CLI 打开的链接会走系统浏览器，不进画板。</td><td><span class="b b-ro">失效</span></td></tr>
+      <tr><td>退出清场</td><td><code>killTree</code> 在 win32 回落到 <code>pty.kill()</code>——只杀 shell，
+        底下的 claude / 构建进程照样变孤儿。macOS 那套按 tty 清的方案用不了。</td><td><span class="b b-ro">失效</span></td></tr>
+      <tr><td>MCP 桥</td><td>代码有 win32 分支（<code>runnerFor</code> 回落 Electron），逻辑上应该能跑，<b>但从没验证过</b>。</td><td><span class="b b-am">未验证</span></td></tr>
+      <tr><td>技能包安装</td><td>路径用 <code>path.join</code> ✓，但 <code>hasCli</code> 的候选路径写死了 unix 风格
+        （<code>~/.local/bin</code>、<code>/opt/homebrew/bin</code>），Windows 上只能靠 PATH 兜底。</td><td><span class="b b-am">未验证</span></td></tr>
+      <tr><td>语音输入</td><td>WASM 实现，理论上能跑。未验证。</td><td><span class="b b-am">未验证</span></td></tr>
+      <tr><td>设计模块导出</td><td>WebCodecs / MediaRecorder，Chromium 自带。理论上没问题。</td><td><span class="b b-am">未验证</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">建议</div>
+    <p style="margin:0">要么<b>先只发 macOS</b>，Windows 那条线明确标注「暂不支持」；
+      要么专门跑一轮 Windows 验证再发。现在这个状态发给 Windows 用户，
+      大概率是「装上了但一半功能怪怪的」，比不发更伤口碑。</p>
+  </div>
+</section>
+
+<section id="正常">
+  <h2>Verified OK</h2>
+  <div class="sectitle">四、这些确认没问题</div>
+  <p class="secnote">查过了确实没有对本机环境的隐藏依赖。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">没有硬编码本机路径</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">全量 grep <code>/Users/biily</code>，源码里零命中。
+        唯一出现的是笔纵画板官网域名，那是有意的。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">CLI 探测不靠本机 PATH</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">主进程 GUI 启动时 PATH 很贫瘠，
+        所以 <code>hasCli</code> / <code>runnerFor</code> 是探常见安装位置而不是 <code>which</code>——
+        homebrew、<code>/usr/local</code>、<code>~/.local/bin</code>、bun、npm-global 都覆盖了。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">语音是 WASM 不是原生模块</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">sherpa-onnx 走 <code>sherpa-onnx-wasm-nodejs.wasm</code>（20MB），
+        跨架构跨平台都能跑。唯一的原生模块是 node-pty。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">首次运行有引导</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">没有项目时侧栏显示「还没有项目，点击 ＋ 选择或新建一个项目文件夹」；
+        麦克风走系统权限弹窗，<code>NSMicrophoneUsageDescription</code> 已声明。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">MCP 不污染 app 外</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">检测不到 Eas-Term 环境时 <code>tools/list</code> 返回空，
+        用户在别处起 claude 看不到任何多余工具。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">资源随包发</h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3"><code>mcp/</code> 和 <code>skills/</code> 都在 extraResources 里，
+        打包后在 Resources 下，路径按 <code>app.isPackaged</code> 分支取。</p>
+    </div>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">按投入产出排的建议</div>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">做什么</th><th>为什么</th><th style="width:14%">成本</th></tr></thead>
+    <tbody>
+      <tr><td><b>修 ~/.claude.json 那处不一致</b></td><td>没装 Claude Code 的用户不该凭空多个文件。和 Codex 那边对齐即可</td><td><span class="b b-em">一行</span></td></tr>
+      <tr><td><b>写一句安装说明</b></td><td>把 <code>xattr -dr com.apple.quarantine</code> 或右键打开写进分发页，
+        否则「已损坏」这四个字会劝退大部分人</td><td><span class="b b-em">小</span></td></tr>
+      <tr><td><b>加单实例锁</b></td><td>防止开两个实例互吞画布。<code>requestSingleInstanceLock</code> 现在没用</td><td><span class="b b-em">小</span></td></tr>
+      <tr><td><b>补 x64 架构</b></td><td>Intel Mac 用户才能装。包体和构建时间翻倍</td><td><span class="b b-am">中</span></td></tr>
+      <tr><td><b>Apple 开发者账号 + 公证</b></td><td>唯一能让「双击就能开」的办法。$99/年</td><td><span class="b b-am">中</span></td></tr>
+      <tr><td><b>Windows 专项验证</b></td><td>或者干脆标注暂不支持。现状发出去伤口碑</td><td><span class="b b-ro">大</span></td></tr>
+      <tr><td><b>卸载清理</b></td><td>移除写进用户配置的 eas-term 条目。优先级最低</td><td><span class="b b-am">中</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">回复决策码</div>
+    <div class="dcmd">修配置不一致 &nbsp;|&nbsp; 加单实例锁 &nbsp;|&nbsp; 补 x64 &nbsp;|&nbsp; 都做 &nbsp;|&nbsp; 先这样</div>
+  </div>
+</section>
+
+<hr>
+<footer style="color:#525252;font-size:12.5px">
+  <p style="margin:0 0 6px">实测命令：<code>spctl -a -vvv</code> · <code>xcrun stapler validate</code> ·
+    <code>lipo -archs</code> · <code>gh run list</code> · 全量 grep 硬编码路径与 <code>process.platform</code> 分支</p>
+  <p style="margin:0">被测包 <code>~/Eas-Term-release-next/mac-arm64/Eas-Term.app</code> · 分支 <code>feat/canvas-p0</code></p>
+</footer>
+</main>
+</body>
+</html>
