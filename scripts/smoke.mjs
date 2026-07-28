@@ -12,6 +12,13 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { setTimeout as sleep } from 'timers/promises'
 
+// 原生 WebSocket 是 Node 22+ 才有的；低版本直接说清楚，别让人对着
+// 「WebSocket is not defined」猜半天（CI 上第一次跑就撞了这个）
+if (typeof WebSocket === 'undefined') {
+  console.error(`✗ 需要 Node 22+（当前 ${process.version}）——冒烟测试用原生 WebSocket 连 CDP`)
+  process.exit(2)
+}
+
 const APP = process.argv[2]
 const PORT = 9321
 const OUT = 'smoke-out'

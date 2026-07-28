@@ -35,6 +35,12 @@ jobs:
       # 冒烟测试：把打好的包真的启动一次。只验「能构建」等于没验——
       # 白屏、渲染进程崩、原生模块加载失败，这些构建阶段全看不出来。
       # 走 CDP 直接问渲染层，重点验 node-pty（Windows 走 conpty，最可能挂的地方）。
+      # 冒烟脚本用原生 WebSocket 连 CDP，那是 Node 22+ 才有的。
+      # 只给这一步换新 node——构建和 node-pty 编译仍然用上面的 20，不动那套已验证的环境。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 
