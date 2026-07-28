@@ -66,6 +66,7 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
 { \"version\": \"$VERSION\",
   \"mac\": \"/download/v$VERSION/Eas-Term-$VERSION-universal.dmg\",
   \"macZip\": \"/download/v$VERSION/Eas-Term-$VERSION-universal-mac.zip\",
+  \"win\": \"/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe\",
   \"published\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }
 JSON"
   echo "  ✓ latest.json"

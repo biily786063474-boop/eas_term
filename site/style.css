@@ -37,6 +37,9 @@
   --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 
   /* 版心 */
+  /* 内容宽度随屏幕放宽（分档见文件末尾的 min-width 查询）。
+     放宽是安全的：正文段落自己有 max-width: 66ch / 60ch 兜底，不会拉成难读的长行；
+     真正受益的是截图、能力清单栅格和图文交替那几块。 */
   --wrap: 1080px;
 }
 
@@ -856,4 +859,35 @@ tbody tr:last-child td {
   * {
     transition: none !important;
   }
+}
+
+/* ==========================================================================
+   大屏放宽 —— 1080px 在 2K/4K 上两侧留白过多，显得逼仄
+   正文有 66ch/60ch 兜底，放宽不会把行拉长到难读；受益的是截图、栅格和图文交替
+   ========================================================================== */
+
+@media (min-width: 1400px) {
+  :root { --wrap: 1240px; }
+}
+
+@media (min-width: 1700px) {
+  :root { --wrap: 1440px; }
+  /* 卡片列数跟着加，否则单张卡被拉得过宽、里面的短文案会很空 */
+  .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 2100px) {
+  :root { --wrap: 1680px; }
+}
+
+@media (min-width: 2500px) {
+  :root { --wrap: 1880px; }
+}
+
+/* 主视觉在大屏上突破容器——Hero 图是这页最该被看清的东西 */
+@media (min-width: 1700px) {
+  .shot-hero { margin-left: -60px; margin-right: -60px; }
+}
+@media (min-width: 2100px) {
+  .shot-hero { margin-left: -110px; margin-right: -110px; }
 }
