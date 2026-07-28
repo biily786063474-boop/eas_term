@@ -24,7 +24,8 @@
     },
     "files": [
       "out/**/*",
-      "!**/._*"
+      "!**/._*",
+      "!**/node_modules/node-pty/build/**"
     ],
     "asarUnpack": [
       "**/node_modules/node-pty/**",
@@ -35,13 +36,13 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64"
+            "universal"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64"
+            "universal"
           ]
         }
       ],
@@ -52,7 +53,8 @@
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "x64ArchFiles": "**/node_modules/node-pty/prebuilds/**"
     },
     "dmg": {
       "title": "Eas-Term ${version}",

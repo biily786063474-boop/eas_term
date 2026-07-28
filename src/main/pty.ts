@@ -319,10 +319,19 @@ function ttyPids(entry: Entry): number[] {
 function killTree(entry: Entry, signal: NodeJS.Signals = 'SIGTERM'): void {
   const pid = entry.pty.pid
   if (process.platform === 'win32') {
+    // Windows 没有 controlling terminal 那套，但有 taskkill /T（按进程树杀）。
+    // 只 pty.kill() 的话跟 macOS 一样的问题：shell 下面跑的 claude / 构建进程会变孤儿。
     try {
-      entry.pty.kill()
+      execFileSync('taskkill', ['/PID', String(pid), '/T', ...(signal === 'SIGKILL' ? ['/F'] : [])], {
+        stdio: 'ignore'
+      })
     } catch {
-      /* 已退出 */
+      // taskkill 找不到进程会非 0 退出；再兜一次 pty 自己的 kill
+      try {
+        entry.pty.kill()
+      } catch {
+        /* 已退出 */
+      }
     }
     return
   }

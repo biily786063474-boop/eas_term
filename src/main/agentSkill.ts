@@ -50,17 +50,25 @@ function sourceText(): string | null {
 /** CLI 在不在。主进程 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin），所以是探常见安装位置而不是 which。 */
 function hasCli(bin: string): boolean {
   const home = app.getPath('home')
-  const cands = [
-    path.join(home, '.local', 'bin', bin),
-    '/opt/homebrew/bin/' + bin,
-    '/usr/local/bin/' + bin,
-    path.join(home, '.bun', 'bin', bin),
-    path.join(home, '.npm-global', 'bin', bin)
-  ]
+  const win = process.platform === 'win32'
+  // Windows 的可执行文件带扩展名（npm 装的 CLI 通常是 .cmd），只查裸名会漏——
+  // 结果就是「明明装了 Claude Code 却检测不到、不提示装技能包」
+  const exts = win ? ['.cmd', '.exe', '.bat', '.ps1', ''] : ['']
+  const dirs = win
+    ? [path.join(process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'), 'npm')]
+    : [
+        path.join(home, '.local', 'bin'),
+        '/opt/homebrew/bin',
+        '/usr/local/bin',
+        path.join(home, '.bun', 'bin'),
+        path.join(home, '.npm-global', 'bin')
+      ]
   // PATH 里也找一遍（从终端起的 app 能拿到完整 PATH）
   for (const d of (process.env.PATH ?? '').split(path.delimiter)) {
-    if (d) cands.push(path.join(d, bin))
+    if (d) dirs.push(d)
   }
+  const cands: string[] = []
+  for (const d of dirs) for (const e of exts) cands.push(path.join(d, bin + e))
   return cands.some((c) => {
     try {
       return fs.existsSync(c)
