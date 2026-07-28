@@ -138,6 +138,23 @@ export function App(): JSX.Element {
   // 当前项目是否有标签；没有则显示空状态（其他项目的标签仍挂载但隐藏）
   const hasProjectTabs = tabs.some((t) => t.projectId === activeProjectId)
 
+  // 这些容器设计上永远不该滚——但 overflow:hidden **不阻止程序性滚动**。
+  // 浏览器在退出 HTML5 全屏、focus() 或 scrollIntoView() 时会去滚动祖先滚动容器，
+  // 画布世界比视口大得多（实测可滚 4700x7100），一滚整块 UI 就顶上去、顶部被裁，
+  // 而且 viewport 状态没变，用户平移也拉不回来。一旦被滚就立刻复位。
+  useEffect(() => {
+    const GUARDED = '.canvas-viewport, .canvas-world, .pane-layer, .app, #root'
+    const onScroll = (e: Event): void => {
+      const el = e.target
+      if (!(el instanceof HTMLElement) || !el.matches(GUARDED)) return
+      if (el.scrollTop) el.scrollTop = 0
+      if (el.scrollLeft) el.scrollLeft = 0
+    }
+    // 捕获阶段：scroll 不冒泡，只有 capture 能听到子元素的
+    document.addEventListener('scroll', onScroll, true)
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
+
   return (
     <div className={`app${viewMode === 'canvas' ? ' canvas' : ''}`}>
       <div className="titlebar">
