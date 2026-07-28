@@ -103,7 +103,12 @@ function runnerFor(serverPath: string): { command: string; args: string[]; env?:
  *  脚本默认就装在 ~/.local/bin。实测确认会被绕过，所以那条路走不通。 */
 function writeClaudeConfig(serverPath: string): void {
   try {
-    const cfgFile = path.join(app.getPath('home'), '.claude.json')
+    const home = app.getPath('home')
+    const cfgFile = path.join(home, '.claude.json')
+    // 没装 Claude Code 就别碰用户的 home——否则从没用过 claude 的人也会凭空
+    // 多出一个 ~/.claude.json。判据取「配置文件或 ~/.claude 目录任一存在」，
+    // 跟 writeCodexConfig 检查 ~/.codex 目录是一个道理。
+    if (!fs.existsSync(cfgFile) && !fs.existsSync(path.join(home, '.claude'))) return
     let cfg: Record<string, unknown> = {}
     if (fs.existsSync(cfgFile)) {
       // 关键：文件存在但读不动/解析失败时**绝不写**——否则会把用户整份 Claude 配置覆盖没

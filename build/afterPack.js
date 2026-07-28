@@ -9,6 +9,14 @@ const path = require('path')
 
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
+  // 配了正式 Developer ID 之后就别再 ad-hoc 重签了：electron-builder 会在 afterPack
+  // **之后**用真证书完整签一遍（含所有 Helper + entitlements），这里再插一手纯属多余，
+  // 还会拖慢构建。只有 identity:null（本地快速打包）时才需要这套兜底。
+  const identity = context.packager.platformSpecificBuildOptions.identity
+  if (identity) {
+    console.log('[afterPack] 已配置正式签名(' + identity + ')，跳过 ad-hoc 重签')
+    return
+  }
   const appName = context.packager.appInfo.productFilename // "Eas-Term"
   const appPath = path.join(context.appOutDir, `${appName}.app`)
   const entitlements = path.join(context.packager.projectDir, 'build', 'entitlements.mac.plist')

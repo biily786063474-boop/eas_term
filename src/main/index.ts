@@ -197,6 +197,20 @@ function buildMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+// 单实例：两个实例会共用同一份 userData（canvas.json 尤其致命——后保存的直接覆盖
+// 先保存的，画布互吞）。第二个实例直接退出，把已开的那个窗口唤到前台。
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
+  })
+}
+
 app.whenReady().then(() => {
   // dev 下 dock 也显示项目图标（打包版的图标由 electron-builder 用 build/icon.icns 写进 .app）
   if (!app.isPackaged && process.platform === 'darwin') {
