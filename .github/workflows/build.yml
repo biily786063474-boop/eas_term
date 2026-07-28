@@ -32,6 +32,20 @@ jobs:
       - name: Build & package
         run: npm run dist:ci
 
+      # 冒烟测试：把打好的包真的启动一次。只验「能构建」等于没验——
+      # 白屏、渲染进程崩、原生模块加载失败，这些构建阶段全看不出来。
+      # 走 CDP 直接问渲染层，重点验 node-pty（Windows 走 conpty，最可能挂的地方）。
+      - name: Smoke test
+        run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
+
+      - name: Upload smoke result
+        if: always()          # 失败时更需要看截图和 stderr
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-win
+          path: smoke-out/
+          if-no-files-found: warn
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
