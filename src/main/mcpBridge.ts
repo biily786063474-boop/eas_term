@@ -44,10 +44,21 @@ function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeRe
   const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
   if (!win) return Promise.resolve({ ok: false, error: '窗口未就绪' })
   const id = seq++
+  // 大多数工具是纯 store 操作，15 秒绰绰有余。
+  // 但归档计划要**等人在界面上点确认**，几十秒到几分钟都正常——
+  // 用 15 秒卡它等于这个功能永远超时。
+  const ms = tool === 'wiki_archive_plan' ? 10 * 60 * 1000 : 15000
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      if (pending.delete(id)) resolve({ ok: false, error: '渲染层超时未响应' })
-    }, 15000)
+      if (pending.delete(id))
+        resolve({
+          ok: false,
+          error:
+            tool === 'wiki_archive_plan'
+              ? '用户一直没有确认这份归档计划（已等 10 分钟）。先别动文件，等他回来再说。'
+              : '渲染层超时未响应'
+        })
+    }, ms)
     pending.set(id, (r) => {
       clearTimeout(timer)
       resolve(r)

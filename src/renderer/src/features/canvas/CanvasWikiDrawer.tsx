@@ -8,7 +8,7 @@
 // 「最早一份来自 23 天前」才让人意识到只进不出。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { WikiStatus, RulesStatus, Backlink, WikiHit } from '../../../../shared/types'
+import type { WikiStatus, RulesStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { paneForFile } from './media'
 import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
@@ -28,6 +28,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [hits, setHits] = useState<WikiHit[]>([])
   const [suggest, setSuggest] = useState('')
   const [settings, setSettings] = useState(false)
+  const [history, setHistory] = useState<WikiCommit[] | null>(null)
   const edgeRef = useRef<HTMLSpanElement>(null)
   const addFileNode = useStore((s) => s.addFileNode)
   const openTerminal = useStore((s) => s.openTerminal)
@@ -270,6 +271,62 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               <div className="wk-dim wk-tiny">
                 换位置和解绑都<b>不会动你的文件</b>，只改这个软件指向哪里。
               </div>
+              <div className="wk-set-k" style={{ marginTop: 4 }}>
+                版本管理{st.hasGit ? '' : '（未开启）'}
+              </div>
+              {st.hasGit ? (
+                <>
+                  <button
+                    className="wk-ghost"
+                    onClick={() => void window.api.wiki.history(20).then(setHistory)}
+                  >
+                    看历史 / 回滚
+                  </button>
+                  {history && (
+                    <div className="wk-hist">
+                      {history.length === 0 && <div className="wk-dim wk-tiny">还没有提交</div>}
+                      {history.map((c) => (
+                        <button
+                          key={c.sha}
+                          className="wk-hist-row"
+                          onClick={() =>
+                            void (async () => {
+                              // 回滚前先把现状另存一个提交——「回滚」本身也该是可撤销的
+                              const r = await window.api.wiki.rollback(c.sha)
+                              if (r.ok) {
+                                await refresh()
+                                setTreeKey((k) => k + 1)
+                                setHistory(await window.api.wiki.history(20))
+                              }
+                            })()
+                          }
+                          data-tip={`退回到这里（当前状态会先另存一份，可再退回来）`}
+                        >
+                          <span>{c.subject.replace(/^\[eas\]\s*/, '')}</span>
+                          <em>{new Date(c.at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</em>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    className="wk-ghost"
+                    onClick={() =>
+                      void window.api.wiki.gitInit().then(async () => {
+                        await refresh()
+                      })
+                    }
+                  >
+                    用 git 管起来（推荐）
+                  </button>
+                  <div className="wk-dim wk-tiny">
+                    <b>没有 git 就没有「一键撤销」</b>。AI 归档一次会移动原件、
+                    新建笔记、改十几篇老笔记的双链，靠人工还原是不可能的。
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -300,6 +357,23 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             )}
             <PlusIcon size={12} />
           </button>
+
+          {!!st.inbox && (
+            <button
+              className="wk-tidy"
+              onClick={() => {
+                // 不代跑：在知识库目录开个终端把指令填进去，回车由用户按。
+                // agent 会走 wiki_inbox → wiki_archive_plan（弹审批面板）→ wiki_archive_exec
+                void openTerminal({ projectId: null, cwd: st.path ?? undefined })
+                setTimeout(() => {
+                  const t = useStore.getState().lastActiveTerminal
+                  if (t) window.api.pty.write(t.ptyId, '整理一下收件箱')
+                }, 900)
+              }}
+            >
+              让 agent 整理这 {st.inbox} 个
+            </button>
+          )}
 
           {/* ── 规则状态：失效是静默的，必须显式说 ── */}
           {rules && (

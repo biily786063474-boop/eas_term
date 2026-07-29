@@ -64,6 +64,26 @@ export interface WikiInboxItem {
   at: number
 }
 
+/** 归档计划里的一条：agent 提出、用户过目后才执行 */
+export interface ArchiveItem {
+  /** 收件箱里的文件名 */
+  name: string
+  /** 归档时改成什么名字（可选，只取 basename——不接受路径成分） */
+  rename?: string
+  /** 打算归到哪个目录、写成哪篇笔记（给人看的，执行时不据此写文件） */
+  note?: string
+  /** 一句话说明为什么这么归 */
+  reason?: string
+}
+
+export interface WikiCommit {
+  sha: string
+  at: number
+  subject: string
+  /** 是不是 Eas-Term 打的提交（回滚只在这些之间做） */
+  mine: boolean
+}
+
 /** 搜索命中 */
 export interface WikiHit {
   file: string

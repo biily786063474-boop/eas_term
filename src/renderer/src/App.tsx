@@ -7,6 +7,7 @@ import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
+import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
@@ -230,6 +231,7 @@ export function App(): JSX.Element {
       </div>
       <ConfirmDialog />
       <AgentOnboarding />
+      <ArchivePlanPanel />
       <Tooltip />
     </div>
   )

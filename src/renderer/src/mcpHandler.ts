@@ -7,6 +7,7 @@ import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
+import type { ArchiveItem } from '../../shared/types'
 
 interface Ctx {
   ptyId?: string
@@ -240,6 +241,47 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
     s.addWebNode(loc.frameId, url)
     return { opened: url, frameId: loc.frameId }
+  }
+
+  // ── 知识库归档 ────────────────────────────────────────────────
+  if (tool === 'wiki_inbox') {
+    const items = await window.api.wiki.inbox()
+    const now = Date.now()
+    return {
+      items: items.map((x) => ({
+        name: x.name,
+        size: x.size,
+        days: Math.floor((now - x.at) / 86400000)
+      }))
+    }
+  }
+
+  if (tool === 'wiki_archive_plan') {
+    const raw = Array.isArray(args.items) ? (args.items as ArchiveItem[]) : []
+    const items = raw
+      .map((x) => ({
+        name: String(x?.name ?? '').trim(),
+        rename: x?.rename ? String(x.rename) : undefined,
+        note: x?.note ? String(x.note) : undefined,
+        reason: x?.reason ? String(x.reason) : undefined
+      }))
+      .filter((x) => x.name)
+    if (!items.length) throw new Error('计划是空的')
+    // 阻塞等用户在界面上过目。这是整个第 2 期的安全核心：
+    // 失败模式不是「分类不准」，是「我那个文件去哪了」——发生一次就再没人敢往里放东西
+    const approved = await s.requestArchivePlan(items)
+    if (!approved) return { approved: [], cancelled: true, hint: '用户取消了这次归档，什么都没动。' }
+    return {
+      approved,
+      hint: '用户批准了这些。接下来：先调 wiki_archive_exec 搬文件，再写笔记、更新 index.md 和 log.md。'
+    }
+  }
+
+  if (tool === 'wiki_archive_exec') {
+    const raw = Array.isArray(args.items) ? (args.items as ArchiveItem[]) : []
+    const r = await window.api.wiki.archive(raw)
+    if (!r.ok) throw new Error(r.error ?? '归档失败')
+    return { moved: r.moved, failed: r.failed }
   }
 
   if (tool === 'canvas_open_html' || tool === 'canvas_open_file') {

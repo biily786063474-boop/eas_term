@@ -2,7 +2,7 @@
 
 import type { StateCreator } from 'zustand'
 import { ThemeId, loadTheme, applyTheme } from '../themes'
-import type { AgentRole } from '../../../shared/types'
+import type { AgentRole, ArchiveItem } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 
@@ -39,6 +39,11 @@ export interface UiSlice {
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
+  /** 待用户过目的归档计划。agent 提交后挂在这里，界面渲染成审批面板 */
+  pendingArchive: { items: ArchiveItem[]; resolve: (approved: ArchiveItem[] | null) => void } | null
+  /** MCP 侧调用：提交计划并**等**用户点头。返回 null = 用户取消 */
+  requestArchivePlan: (items: ArchiveItem[]) => Promise<ArchiveItem[] | null>
+  resolveArchivePlan: (approved: ArchiveItem[] | null) => void
   /** 整表写回（编辑器改完调它）。主进程会再 sanitize 一遍，全是坏数据时拒绝写入 */
   saveRoles: (roles: AgentRole[]) => Promise<string | null>
   /** 恢复内置角色（用户自建的保留） */
@@ -47,7 +52,7 @@ export interface UiSlice {
 
 let mcpSeq = 1
 
-export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => ({
+export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   theme: loadTheme(),
   pendingConfirm: null,
   lastActiveTerminal: null,
@@ -57,6 +62,22 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   runningPtys: [],
   agentCli: null,
   roles: [],
+  pendingArchive: null,
+
+  requestArchivePlan: (items) =>
+    new Promise((resolve) => {
+      // 同一时刻只允许一份待审计划：第二份进来时先把上一份当作取消，
+      // 免得两个面板叠在一起、用户点了哪个都说不清
+      const prev = get().pendingArchive
+      prev?.resolve(null)
+      set({ pendingArchive: { items, resolve } })
+    }),
+
+  resolveArchivePlan: (approved) =>
+    set((s) => {
+      s.pendingArchive?.resolve(approved)
+      return { pendingArchive: null }
+    }),
 
   loadRoles: async () => {
     try {

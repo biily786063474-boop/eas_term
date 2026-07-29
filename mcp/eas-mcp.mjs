@@ -15,6 +15,61 @@ const CTX = { ptyId: process.env.EAS_PTY_ID, project: process.env.EAS_PROJECT }
 
 const TOOLS = [
   {
+    name: 'wiki_inbox',
+    description:
+      '列出用户知识库收件箱里待整理的文件（名字/大小/放进来多久）。要整理收件箱时先调它，别去 shell 里 ls。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'wiki_archive_plan',
+    description:
+      '提交归档计划给用户过目，**等他在界面上确认**后返回他批准的条目。' +
+      '这个调用会阻塞几十秒到几分钟（要等人点），是正常的。' +
+      '规矩：先调 wiki_inbox 看有什么，再为每个文件想清楚归到哪、写成哪篇笔记，一次提交整批。' +
+      '返回 approved 后：先把批准的文件用 wiki_archive_exec 搬到素材目录，再写笔记、更新 index.md 和 log.md。' +
+      '用户没批准的条目不要动。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: '每个文件一条',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: '收件箱里的文件名' },
+              rename: { type: 'string', description: '归档后改成什么名字（可选）' },
+              note: { type: 'string', description: '打算写成哪篇笔记，如 方法/三秒法则.md' },
+              reason: { type: 'string', description: '一句话说明为什么这么归' }
+            },
+            required: ['name']
+          }
+        }
+      },
+      required: ['items']
+    }
+  },
+  {
+    name: 'wiki_archive_exec',
+    description:
+      '把用户批准的文件从收件箱搬到 素材/<年月>/。只移动不删除、重名自动加后缀。' +
+      '**只搬文件，笔记要你自己写。** 返回每个文件的新路径，写 front-matter 的 source 字段时用它。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { name: { type: 'string' }, rename: { type: 'string' } },
+            required: ['name']
+          }
+        }
+      },
+      required: ['items']
+    }
+  },
+  {
     name: 'canvas_open_html',
     description:
       '把一个本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦。产出报告/预览页后调它，用户抬头就能看到。路径可用相对项目根的路径。',

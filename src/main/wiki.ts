@@ -7,10 +7,11 @@
 // 这个模块只管**文件层**：建骨架、统计、往收件箱放东西、算反向链接。
 // 「agent 什么时候该来查」那套规则在 agentRules.ts。
 import { app, dialog, ipcMain, shell } from 'electron'
+import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-import type { WikiStatus, WikiInboxItem, Backlink, WikiHit } from '../shared/types'
+import type { WikiStatus, WikiInboxItem, Backlink, WikiHit, ArchiveItem, WikiCommit } from '../shared/types'
 
 const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
 
@@ -279,7 +280,162 @@ function uniqueName(dir: string, name: string): string {
   return out
 }
 
+// ── git：AI 动用户文件时唯一能**整体**撤销的机制 ─────────────────────
+//
+// 为什么非要它：一次归档会移动若干原件、新建若干笔记、还会改十几篇老笔记的双链。
+// 出问题时靠人工逐个还原是不可能的。原文也直说了：
+// 「The wiki is just a git repo of markdown files. You get version history … for free.」
+//
+// 全部走 execFileSync + 参数数组，不拼 shell 字符串——路径里有空格中文都不会出事。
+const MARK = '[eas]' // 我们打的 commit 前缀，回滚列表按它筛
+
+function git(root: string, args: string[]): string {
+  return execFileSync('git', ['-C', root, ...args], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 16 * 1024 * 1024
+  })
+}
+function gitOk(root: string, args: string[]): boolean {
+  try {
+    git(root, args)
+    return true
+  } catch {
+    return false
+  }
+}
+function isRepo(root: string): boolean {
+  return gitOk(root, ['rev-parse', '--git-dir'])
+}
+/** 工作区有没有未提交的改动 */
+function isDirty(root: string): boolean {
+  try {
+    return git(root, ['status', '--porcelain']).trim().length > 0
+  } catch {
+    return true
+  }
+}
+
+/** 提交当前全部改动。没有改动就返回当前 HEAD（不产生空提交） */
+function commitAll(root: string, message: string): string | null {
+  try {
+    if (isDirty(root)) {
+      git(root, ['add', '-A'])
+      git(root, ['commit', '-m', `${MARK} ${message}`, '--no-verify'])
+    }
+    return git(root, ['rev-parse', 'HEAD']).trim()
+  } catch {
+    return null
+  }
+}
+
 export function registerWikiHandlers(): void {
+  ipcMain.handle('wiki:gitInit', () => {
+    const root = wikiPath()
+    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    try {
+      if (!isRepo(root)) {
+        git(root, ['init'])
+        // **收件箱绝不能 gitignore。**
+        // 曾经这么写过（理由是「大视频不该进版本库」），结果是个会毁文件的洞：
+        // 归档把文件从「不受管的收件箱」搬进「受管的素材/」，回滚时 git 会把它从
+        // 素材/ 删掉，而收件箱里早就没有了 —— 文件彻底消失。
+        // 而且那个理由本身不成立：同一批大文件归档后照样进 素材/ 并被跟踪，
+        // 忽略收件箱一个字节都没省下，只换来了这个洞。
+        const ig = path.join(root, '.gitignore')
+        if (!fs.existsSync(ig)) fs.writeFileSync(ig, '.DS_Store\n.eas-sources.json\n')
+      }
+      const sha = commitAll(root, '初始化')
+      return { ok: true, sha, status: wikiStatus() }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  /** 归档前的快照：把当前状态先落一个提交，回滚就退到这里 */
+  ipcMain.handle('wiki:snapshot', (_e, label: string) => {
+    const root = wikiPath()
+    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    const sha = commitAll(root, `归档前快照 · ${label}`)
+    return sha ? { ok: true, sha } : { ok: false, error: '快照失败' }
+  })
+
+  ipcMain.handle('wiki:commit', (_e, message: string) => {
+    const root = wikiPath()
+    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    const sha = commitAll(root, message)
+    return sha ? { ok: true, sha } : { ok: false, error: '提交失败' }
+  })
+
+  ipcMain.handle('wiki:history', (_e, limit = 20): WikiCommit[] => {
+    const root = wikiPath()
+    if (!root || !isRepo(root)) return []
+    try {
+      return git(root, ['log', `-${limit}`, '--pretty=format:%H\u0001%at\u0001%s'])
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => {
+          const [sha, at, subject] = l.split('\u0001')
+          return { sha, at: Number(at) * 1000, subject, mine: subject.startsWith(MARK) }
+        })
+    } catch {
+      return []
+    }
+  })
+
+  /** 一键回滚到某个提交。**只在我们自己打的提交之间用**，且会先把当前状态另存一个提交，
+   *  这样「回滚」本身也是可撤销的——用户后悔了还能再回来。 */
+  ipcMain.handle('wiki:rollback', (_e, sha: string) => {
+    const root = wikiPath()
+    if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
+    try {
+      commitAll(root, '回滚前保留现场')
+      git(root, ['reset', '--hard', sha])
+      return { ok: true, status: wikiStatus() }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  /**
+   * 执行归档的**文件搬运**部分：把收件箱里的原件挪到 素材/<年月>/。
+   * 写笔记是 agent 的活，这里只负责搬得安全：
+   *   · 只移动，不删除、不覆盖（重名加后缀）
+   *   · 目标固定在 素材/ 下，不接受任意路径 —— 防止一个坏计划把文件扔到库外
+   */
+  ipcMain.handle('wiki:archive', (_e, items: ArchiveItem[]) => {
+    const root = wikiPath()
+    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    const ym = new Date().toISOString().slice(0, 7)
+    const destDir = path.join(root, '素材', ym)
+    const moved: { from: string; to: string }[] = []
+    const failed: { name: string; error: string }[] = []
+    try {
+      fs.mkdirSync(destDir, { recursive: true })
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+    for (const it of items ?? []) {
+      const name = path.basename(String(it?.name ?? ''))
+      if (!name) continue
+      const src = path.join(root, INBOX, name)
+      try {
+        if (!fs.existsSync(src)) {
+          failed.push({ name, error: '收件箱里没有这个文件' })
+          continue
+        }
+        // 允许 agent 指定新名字，但只取 basename —— 不接受任何路径成分
+        const want = path.basename(String(it.rename || name))
+        const finalName = uniqueName(destDir, want)
+        fs.renameSync(src, path.join(destDir, finalName))
+        moved.push({ from: `${INBOX}/${name}`, to: `素材/${ym}/${finalName}` })
+      } catch (e) {
+        failed.push({ name, error: e instanceof Error ? e.message : String(e) })
+      }
+    }
+    return { ok: true, moved, failed, status: wikiStatus() }
+  })
+
   ipcMain.handle('wiki:status', () => wikiStatus())
 
   ipcMain.handle('wiki:pickPath', async () => {

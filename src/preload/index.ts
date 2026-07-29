@@ -28,6 +28,8 @@ import type {
   WikiInboxItem,
   Backlink,
   WikiHit,
+  ArchiveItem,
+  WikiCommit,
   RulesStatus,
   Footprint,
   InstallPlan
@@ -185,7 +187,27 @@ const api = {
       ipcRenderer.invoke('wiki:search', q, limit),
     /** 换位置：只改指向，不搬文件 */
     setPath: (root: string): Promise<{ ok: boolean; error?: string; status?: WikiStatus }> =>
-      ipcRenderer.invoke('wiki:setPath', root)
+      ipcRenderer.invoke('wiki:setPath', root),
+    // ── 归档的安全底座：git 快照 / 提交 / 回滚 ──
+    gitInit: (): Promise<{ ok: boolean; error?: string; sha?: string | null; status?: WikiStatus }> =>
+      ipcRenderer.invoke('wiki:gitInit'),
+    snapshot: (label: string): Promise<{ ok: boolean; error?: string; sha?: string }> =>
+      ipcRenderer.invoke('wiki:snapshot', label),
+    commit: (message: string): Promise<{ ok: boolean; error?: string; sha?: string }> =>
+      ipcRenderer.invoke('wiki:commit', message),
+    history: (limit?: number): Promise<WikiCommit[]> => ipcRenderer.invoke('wiki:history', limit),
+    rollback: (sha: string): Promise<{ ok: boolean; error?: string; status?: WikiStatus }> =>
+      ipcRenderer.invoke('wiki:rollback', sha),
+    /** 只搬文件到 素材/<年月>/，笔记由 agent 写 */
+    archive: (
+      items: ArchiveItem[]
+    ): Promise<{
+      ok: boolean
+      error?: string
+      moved?: { from: string; to: string }[]
+      failed?: { name: string; error: string }[]
+      status?: WikiStatus
+    }> => ipcRenderer.invoke('wiki:archive', items)
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）
