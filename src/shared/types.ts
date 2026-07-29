@@ -49,6 +49,15 @@ export interface WikiInboxItem {
   at: number
 }
 
+/** 搜索命中 */
+export interface WikiHit {
+  file: string
+  title: string
+  snippet: string
+  /** 标题命中（排在正文命中前面——找笔记时通常是记得名字） */
+  titleHit: boolean
+}
+
 /** 反向链接：哪篇笔记的哪一行引用了当前这篇 */
 export interface Backlink {
   file: string

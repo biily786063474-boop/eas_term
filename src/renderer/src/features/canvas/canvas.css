@@ -2759,3 +2759,121 @@
   background: rgba(var(--accent-rgb), 0.22);
   color: var(--accent);
 }
+
+/* 知识库：搜索 / 设置 / 命中列表 */
+.wk-search {
+  margin: 8px 8px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-size: 11.5px;
+  font-family: inherit;
+  outline: none;
+}
+.wk-search:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+.wk-icon.on {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+}
+.wk-settings {
+  margin: 8px 8px 0;
+  padding: 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wk-set-k {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+.wk-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  direction: rtl;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wk-set-btns {
+  display: flex;
+  gap: 6px;
+}
+.wk-set-btns button {
+  flex: 1;
+  border: 1px solid var(--glass-border);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 4px 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.wk-set-btns button:hover {
+  color: var(--fg);
+}
+.wk-set-btns button.danger:hover {
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.5);
+}
+.wk-ghost {
+  border: 1px solid var(--glass-border);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 5px 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.wk-ghost:hover {
+  color: var(--fg);
+}
+.wk-hits {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin-top: 6px;
+}
+.wk-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wk-hit:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.wk-hit b {
+  font-size: 12px;
+  color: var(--fg);
+  font-weight: 600;
+}
+.wk-hit span {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.75;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wk-pad {
+  padding: 12px;
+}

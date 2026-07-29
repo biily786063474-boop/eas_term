@@ -27,6 +27,7 @@ import type {
   WikiStatus,
   WikiInboxItem,
   Backlink,
+  WikiHit,
   RulesStatus,
   InstallPlan
 } from '../shared/types'
@@ -176,7 +177,12 @@ const api = {
       failed?: { file: string; error: string }[]
       status?: WikiStatus
     }> => ipcRenderer.invoke('wiki:addToInbox', files, move),
-    backlinks: (target: string): Promise<Backlink[]> => ipcRenderer.invoke('wiki:backlinks', target)
+    backlinks: (target: string): Promise<Backlink[]> => ipcRenderer.invoke('wiki:backlinks', target),
+    search: (q: string, limit?: number): Promise<WikiHit[]> =>
+      ipcRenderer.invoke('wiki:search', q, limit),
+    /** 换位置：只改指向，不搬文件 */
+    setPath: (root: string): Promise<{ ok: boolean; error?: string; status?: WikiStatus }> =>
+      ipcRenderer.invoke('wiki:setPath', root)
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）

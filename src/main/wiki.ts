@@ -10,7 +10,7 @@ import { app, dialog, ipcMain, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
-import type { WikiStatus, WikiInboxItem, Backlink } from '../shared/types'
+import type { WikiStatus, WikiInboxItem, Backlink, WikiHit } from '../shared/types'
 
 const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
 
@@ -405,6 +405,58 @@ export function registerWikiHandlers(): void {
     } catch {
       return []
     }
+  })
+
+  /**
+   * 全库搜索：标题 + summary + 正文。
+   *
+   * 不做索引、不做向量——按原文给的刻度，几百篇之内直接扫就够快，
+   * 「省掉了整套 embedding RAG 基建」。真越过那个规模再接 qmd（本地混合搜索，
+   * 同时提供 CLI 和 MCP server，agent 和界面都能用）。
+   */
+  ipcMain.handle('wiki:search', (_e, q: string, limit = 40): WikiHit[] => {
+    const root = wikiPath()
+    const query = String(q ?? '').trim().toLowerCase()
+    if (!root || query.length < 1) return []
+    const out: WikiHit[] = []
+    for (const rel of walkNotes(root)) {
+      if (out.length >= limit) break
+      const title = path.basename(rel, path.extname(rel))
+      let text = ''
+      try {
+        text = fs.readFileSync(path.join(root, rel), 'utf8')
+      } catch {
+        continue
+      }
+      const low = text.toLowerCase()
+      const inTitle = title.toLowerCase().includes(query)
+      const at = low.indexOf(query)
+      if (!inTitle && at < 0) continue
+      // 命中处的上下文：标题命中就给 summary，正文命中就给那一行
+      let snippet = ''
+      if (at >= 0) {
+        const s0 = low.lastIndexOf('\n', at) + 1
+        const e0 = low.indexOf('\n', at)
+        snippet = text.slice(s0, e0 < 0 ? text.length : e0).trim().slice(0, 140)
+        // 命中落在 front-matter 的字段行上时，把 `summary:` 这类前缀去掉——
+        // 列表里显示 "summary: xxx" 是把实现细节漏给用户看
+        snippet = snippet.replace(/^\w+:\s*/, '')
+      } else {
+        const m = /^summary:\s*(.+)$/m.exec(text)
+        snippet = (m?.[1] ?? '').trim().slice(0, 140)
+      }
+      // 标题命中排前面：找笔记时通常是记得名字
+      out.push({ file: rel, title, snippet, titleHit: inTitle })
+    }
+    out.sort((a, b) => Number(b.titleHit) - Number(a.titleHit))
+    return out
+  })
+
+  /** 换位置：只改指向，**不搬文件也不删文件**——搬家的决定该由用户在访达里做 */
+  ipcMain.handle('wiki:setPath', (_e, root: string) => {
+    if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
+    setWikiPath(root)
+    return { ok: true, status: wikiStatus() }
   })
 
   /**

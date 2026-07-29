@@ -8,10 +8,10 @@
 // 「最早一份来自 23 天前」才让人意识到只进不出。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { WikiStatus, RulesStatus, Backlink } from '../../../../shared/types'
+import type { WikiStatus, RulesStatus, Backlink, WikiHit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { paneForFile } from './media'
-import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon } from '../../ui/Icons'
+import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
 
 export function CanvasWikiDrawer(): JSX.Element | null {
   const maximizedNode = useStore((s) => s.maximizedNode)
@@ -24,6 +24,10 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [sel, setSel] = useState<string | null>(null)
   const [links, setLinks] = useState<Backlink[]>([])
   const [treeKey, setTreeKey] = useState(0)
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<WikiHit[]>([])
+  const [suggest, setSuggest] = useState('')
+  const [settings, setSettings] = useState(false)
   const edgeRef = useRef<HTMLSpanElement>(null)
   const addFileNode = useStore((s) => s.addFileNode)
   const openTerminal = useStore((s) => s.openTerminal)
@@ -34,7 +38,18 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   }, [])
   useEffect(() => {
     void refresh()
+    void window.api.wiki.suggestPath().then(setSuggest)
   }, [refresh])
+
+  // 搜索防抖：每敲一个字就全库扫一遍没必要，200ms 足够跟手
+  useEffect(() => {
+    if (!q.trim()) {
+      setHits([])
+      return
+    }
+    const t = window.setTimeout(() => void window.api.wiki.search(q).then(setHits), 200)
+    return () => window.clearTimeout(t)
+  }, [q])
 
   // 抽屉打开时点外面收起（延后一拍挂载，避开「开抽屉那一下」）
   useEffect(() => {
@@ -69,9 +84,13 @@ export function CanvasWikiDrawer(): JSX.Element | null {
     el.style.transform = ''
   }
 
-  const setup = async (): Promise<void> => {
-    setBusy('选择位置…')
-    const picked = (await window.api.wiki.pickPath()) ?? null
+  /** pick=true 时弹目录选择器，否则直接用建议位置——大多数人不需要挑，给个好默认就行 */
+  const setup = async (pick: boolean): Promise<void> => {
+    let picked = suggest
+    if (pick) {
+      setBusy('选择位置…')
+      picked = (await window.api.wiki.pickPath()) ?? ''
+    }
     if (!picked) {
       setBusy('')
       return
@@ -171,6 +190,13 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             >
               <TerminalIcon size={12} />
             </button>
+            <button
+              className={`wk-icon${settings ? ' on' : ''}`}
+              data-tip="位置设置"
+              onClick={() => setSettings((v) => !v)}
+            >
+              <GearIcon size={12} />
+            </button>
           </>
         )}
       </div>
@@ -194,8 +220,12 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           {st?.configured && !st.exists && (
             <div className="wk-warn">上次设的位置找不到了（{st.path}）—— 可能被移走或网络盘没挂上。</div>
           )}
-          <button className="wk-primary" disabled={!!busy} onClick={() => void setup()}>
-            {busy || '选个位置，建起来'}
+          <button className="wk-primary" disabled={!!busy} onClick={() => void setup(false)}>
+            {busy || '建在建议位置'}
+          </button>
+          {!!suggest && !busy && <span className="wk-dim wk-tiny wk-path">{suggest}</span>}
+          <button className="wk-ghost" disabled={!!busy} onClick={() => void setup(true)}>
+            选别的地方…
           </button>
           <span className="wk-dim wk-tiny">
             可以直接指向你已有的 Obsidian 库 —— 同名文件不会被覆盖。
@@ -203,6 +233,54 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </div>
       ) : (
         <>
+          {settings && (
+            <div className="wk-settings">
+              <div className="wk-set-k">当前位置</div>
+              <div className="wk-path" title={st.path ?? ''}>
+                {st.path}
+              </div>
+              <div className="wk-set-btns">
+                <button
+                  onClick={async () => {
+                    const p = await window.api.wiki.pickPath()
+                    if (!p) return
+                    // 换位置只改指向，不搬文件——搬家的决定该由用户在访达里做
+                    await window.api.wiki.setPath(p)
+                    await window.api.wiki.init(p)
+                    await window.api.rules.sync()
+                    await refresh()
+                    setTreeKey((k) => k + 1)
+                    setSettings(false)
+                  }}
+                >
+                  换个位置
+                </button>
+                <button
+                  className="danger"
+                  onClick={async () => {
+                    await window.api.wiki.forget()
+                    await window.api.rules.sync()
+                    await refresh()
+                    setSettings(false)
+                  }}
+                >
+                  解除绑定
+                </button>
+              </div>
+              <div className="wk-dim wk-tiny">
+                换位置和解绑都<b>不会动你的文件</b>，只改这个软件指向哪里。
+              </div>
+            </div>
+          )}
+
+          <input
+            className="wk-search"
+            placeholder="搜标题 / 摘要 / 正文…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            spellCheck={false}
+          />
+
           {/* ── 收件箱：给压力不只给数字 ── */}
           <button className={`wk-inbox${st.inbox ? ' has' : ''}`} onClick={() => void pickFiles()}>
             <span className="wk-inbox-k">收件箱</span>
@@ -243,9 +321,35 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             </div>
           )}
 
+          {/* 搜到东西时用结果替换文件树——同时显示两个会让人不知道该看哪 */}
+          {q.trim() ? (
+            <div className="wk-hits">
+              {hits.length === 0 ? (
+                <div className="wk-dim wk-tiny wk-pad">没找到「{q}」</div>
+              ) : (
+                hits.map((h) => (
+                  <button
+                    key={h.file}
+                    className="wk-hit"
+                    onClick={() => {
+                      const abs = st.path + '/' + h.file
+                      void selectNote(abs)
+                      const frame = useStore.getState().canvas.frames.find((f) => !f.parentId)
+                      if (frame) addFileNode(frame.id, paneForFile(abs), 0, 0)
+                    }}
+                  >
+                    <b>{h.title}</b>
+                    <span>{h.snippet}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          ) : null}
+
           {/* ── 文件树 ── */}
           <div
             className="wk-tree"
+            style={q.trim() ? { display: 'none' } : undefined}
             onMouseDown={(e) => {
               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
               const p = item?.dataset.path
