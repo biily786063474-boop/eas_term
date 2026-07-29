@@ -1,6 +1,9 @@
 /* 终端模式下的知识库面板：左树右正文 */
+/* 父级 .pane-body 是 display:block —— 在块级容器里 flex:1 是无效的，
+   子元素会按内容高度收缩（实测只撑到 150px，图谱挤成一条）。
+   所以这里必须用 height:100% 顶满，不能指望 flex。 */
 .wikiv {
-  flex: 1;
+  height: 100%;
   min-height: 0;
   display: flex;
 }
@@ -344,4 +347,155 @@
 .ap-ghost:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* 树 / 图谱 / 体检 三视图切换 */
+.wikiv-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 5px 6px;
+  flex: none;
+  border-bottom: 1px solid var(--glass-border);
+}
+.wikiv-tabs button {
+  flex: 1;
+  padding: 4px 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.wikiv-tabs button.on {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+}
+.wikiv-lint {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0;
+}
+.wikiv-lint-h,
+.wikiv-lint-ok {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.wikiv-lint-ok {
+  color: #6ee7b7;
+}
+.wikiv-lint-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 5px 12px 5px 14px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wikiv-lint-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.wikiv-lint-row b {
+  font-size: 11.5px;
+  color: var(--fg);
+  font-weight: 600;
+}
+.wikiv-lint-row span {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+}
+/* 死链最该先修：它是「本该有页却还没写」的信号 */
+.wikiv-lint-row.k-deadlink {
+  border-left-color: #fda4af;
+}
+.wikiv-lint-row.k-orphan {
+  border-left-color: #fcd34d;
+}
+.wikiv-lint-row.k-noindex {
+  border-left-color: #7dd3fc;
+}
+.wikiv-lint-foot {
+  padding: 10px 12px;
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--fg-dim);
+  opacity: 0.8;
+}
+.wikiv-lint-foot code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+.wikiv-stats {
+  flex: none;
+  padding: 6px 12px;
+  border-top: 1px solid var(--glass-border);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wikiv-stats.warn {
+  color: #fcd34d;
+}
+.wikiv-stats em {
+  font-style: normal;
+  opacity: 0.9;
+}
+
+/* 图谱 */
+.wg {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.wg canvas {
+  display: block;
+  cursor: pointer;
+}
+.wg-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+.wg-legend em {
+  font-style: normal;
+  color: #fcd34d;
+}
+.wg-legend span {
+  opacity: 0.6;
+}
+.wg-tip {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border);
+  font-size: 11.5px;
+  color: var(--fg);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  pointer-events: none;
+}
+.wg-tip em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--fg-dim);
 }

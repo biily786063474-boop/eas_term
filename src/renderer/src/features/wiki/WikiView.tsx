@@ -4,7 +4,8 @@
 //
 // 和画布左抽屉共用同一套 IPC，但形态不同：这里空间大，直接文件树 + 正文预览左右分。
 import { useCallback, useEffect, useState } from 'react'
-import type { WikiStatus, Backlink } from '../../../../shared/types'
+import type { WikiStatus, Backlink, LintFinding, WikiStats } from '../../../../shared/types'
+import { WikiGraph } from './WikiGraph'
 import { FileTree } from '../files/FileTree'
 import { renderMarkdown } from '../editor/markdown'
 import { FolderOpenIcon } from '../../ui/Icons'
@@ -45,12 +46,16 @@ export function WikiView(): JSX.Element {
   const [body, setBody] = useState('')
   const [links, setLinks] = useState<Backlink[]>([])
   const [raw, setRaw] = useState(false)
+  const [view, setView] = useState<'tree' | 'graph' | 'lint'>('tree')
+  const [lint, setLint] = useState<LintFinding[] | null>(null)
+  const [stats, setStats] = useState<WikiStats | null>(null)
 
   const refresh = useCallback(async (): Promise<void> => {
     setSt(await window.api.wiki.status())
   }, [])
   useEffect(() => {
     void refresh()
+    void window.api.wiki.stats().then(setStats)
   }, [refresh])
 
   const openNote = async (p: string): Promise<void> => {
@@ -81,8 +86,31 @@ export function WikiView(): JSX.Element {
             <FolderOpenIcon size={12} />
           </button>
         </div>
+        <div className="wikiv-tabs">
+          <button className={view === 'tree' ? 'on' : ''} onClick={() => setView('tree')}>
+            文件
+          </button>
+          <button
+            className={view === 'graph' ? 'on' : ''}
+            onClick={() => setView('graph')}
+            data-tip="看清知识库的形状：谁是枢纽、谁是孤儿"
+          >
+            图谱
+          </button>
+          <button
+            className={view === 'lint' ? 'on' : ''}
+            onClick={() => {
+              setView('lint')
+              void window.api.wiki.lint().then(setLint)
+            }}
+            data-tip="结构体检：死链、孤儿页、缺字段、索引漏收"
+          >
+            体检
+          </button>
+        </div>
         <div
           className="wikiv-tree"
+          style={view === 'tree' ? undefined : { display: 'none' }}
           onMouseDown={(e) => {
             const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
             const p = item?.dataset.path
@@ -91,10 +119,47 @@ export function WikiView(): JSX.Element {
         >
           <FileTree rootPath={st.path!} refreshKey={0} />
         </div>
+        {view === 'lint' && (
+          <div className="wikiv-lint">
+            {!lint ? (
+              <div className="pane-placeholder">体检中…</div>
+            ) : lint.length === 0 ? (
+              <div className="wikiv-lint-ok">结构上没发现问题</div>
+            ) : (
+              <>
+                <div className="wikiv-lint-h">{lint.length} 条 · 只是结构问题</div>
+                {lint.slice(0, 200).map((f, i) => (
+                  <button
+                    key={i}
+                    className={`wikiv-lint-row k-${f.kind}`}
+                    onClick={() => void openNote(st.path + '/' + f.file)}
+                  >
+                    <b>{f.file.split('/').pop()}</b>
+                    <span>{f.detail}</span>
+                  </button>
+                ))}
+                <div className="wikiv-lint-foot">
+                  矛盾、被新素材推翻的旧结论这些要读懂内容才能发现，
+                  在终端里让 agent 跑一次 <code>wiki_lint</code> 再做那半边。
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {!!stats && (
+          <div className={`wikiv-stats${stats.added > 20 && stats.query * 5 < stats.added ? ' warn' : ''}`}>
+            放入 {stats.added} · 查询 {stats.query}
+            {stats.added > 20 && stats.query * 5 < stats.added && (
+              <em>只进不出，它正在变成仓库而不是工具</em>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="wikiv-main">
-        {!sel ? (
+        {view === 'graph' ? (
+          <WikiGraph onOpen={(rel) => { setView('tree'); void openNote(st.path + '/' + rel) }} />
+        ) : !sel ? (
           <div className="pane-placeholder">左边选一篇笔记</div>
         ) : (
           <>

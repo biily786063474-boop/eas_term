@@ -11,7 +11,17 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
-import type { WikiStatus, WikiInboxItem, Backlink, WikiHit, ArchiveItem, WikiCommit } from '../shared/types'
+import type {
+  WikiStatus,
+  WikiInboxItem,
+  Backlink,
+  WikiHit,
+  ArchiveItem,
+  WikiCommit,
+  WikiGraph,
+  LintFinding,
+  WikiStats
+} from '../shared/types'
 
 const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
 
@@ -33,7 +43,14 @@ export function wikiPath(): string | null {
 }
 function setWikiPath(p: string | null): void {
   fs.mkdirSync(path.dirname(cfgFile()), { recursive: true })
-  fs.writeFileSync(cfgFile(), JSON.stringify({ path: p }, null, 2))
+  let cur: Record<string, unknown> = {}
+  try {
+    cur = JSON.parse(fs.readFileSync(cfgFile(), 'utf8')) as Record<string, unknown>
+  } catch {
+    cur = {}
+  }
+  // 保留 added 等统计字段，别因为换个位置就把计数清零
+  fs.writeFileSync(cfgFile(), JSON.stringify({ ...cur, path: p }, null, 2))
 }
 
 const MD = new Set(['.md', '.markdown'])
@@ -56,6 +73,9 @@ function walkNotes(root: string, rel = '', out: string[] = [], budget = { n: 200
       if (r === INBOX || r === '素材') continue // 原始素材不是笔记，不进索引也不算反链
       walkNotes(root, r, out, budget)
     } else if (d.isFile() && isMd(d.name)) {
+      // CLAUDE.md / AGENTS.md 是给 agent 看的**约定文件**，不是笔记。
+      // 不排掉的话它们会被当成孤儿页、缺 summary、正文里的 [[双链]] 示例还会被判成死链
+      if (rel === '' && (d.name === 'CLAUDE.md' || d.name === 'AGENTS.md')) continue
       out.push(r)
     }
   }
@@ -331,7 +351,210 @@ function commitAll(root: string, message: string): string | null {
   }
 }
 
+/** 一篇笔记的原始信息：给图谱和体检共用，只扫一遍盘 */
+interface NoteInfo {
+  rel: string
+  title: string
+  summary: string
+  tags: string[]
+  links: string[]
+  mtime: number
+  /** 去掉 front-matter 后的正文字数（按字符不按字节：中文一个字三字节，
+   *  用字节判「太薄」会把正常长度的中文笔记全误报） */
+  bodyChars: number
+}
+
+function scanNotes(root: string): NoteInfo[] {
+  const out: NoteInfo[] = []
+  for (const rel of walkNotes(root)) {
+    let text = ''
+    let mtime = 0
+    try {
+      const full = path.join(root, rel)
+      text = fs.readFileSync(full, 'utf8')
+      mtime = fs.statSync(full).mtimeMs
+    } catch {
+      continue
+    }
+    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
+    let summary = ''
+    let tags: string[] = []
+    if (fm) {
+      for (const line of fm[1].split('\n')) {
+        const kv = /^(\w+)\s*:\s*(.*)$/.exec(line.trim())
+        if (!kv) continue
+        if (kv[1] === 'summary') summary = kv[2].trim()
+        else if (kv[1] === 'tags')
+          tags = kv[2].replace(/^\[|\]$/g, '').split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean)
+      }
+    }
+    const links = [...text.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) =>
+      path.basename(m[1].trim())
+    )
+    const body = fm ? text.slice(fm[0].length) : text
+    out.push({
+      rel,
+      title: path.basename(rel, path.extname(rel)),
+      summary,
+      tags,
+      links,
+      mtime,
+      bodyChars: body.replace(/\s/g, '').length
+    })
+  }
+  return out
+}
+
 export function registerWikiHandlers(): void {
+  /**
+   * 知识图谱：节点=笔记，边=[[双链]]。
+   *
+   * 卡帕西原话说 Obsidian 的图谱是「看清 wiki 形状最好的方式 —— 什么连着什么、
+   * 哪些是枢纽、哪些是孤儿」。注意他说的用途是**看形状**，不是日常查询，
+   * 所以这块和体检放在一起做（孤儿页正是体检要处理的东西）。
+   */
+  ipcMain.handle('wiki:graph', (): WikiGraph => {
+    const root = wikiPath()
+    if (!root) return { nodes: [], edges: [] }
+    const notes = scanNotes(root)
+    const byTitle = new Map(notes.map((n) => [n.title, n.rel]))
+    const inbound = new Map<string, number>()
+    const edges: { from: string; to: string }[] = []
+    for (const n of notes) {
+      for (const l of new Set(n.links)) {
+        const target = byTitle.get(l)
+        if (!target || target === n.rel) continue // 死链不画（体检会单独报）
+        edges.push({ from: n.rel, to: target })
+        inbound.set(target, (inbound.get(target) ?? 0) + 1)
+      }
+    }
+    return {
+      nodes: notes.map((n) => ({
+        id: n.rel,
+        title: n.title,
+        tags: n.tags,
+        inbound: inbound.get(n.rel) ?? 0,
+        outbound: new Set(n.links.filter((l) => byTitle.has(l))).size
+      })),
+      edges
+    }
+  })
+
+  /**
+   * 体检的**结构部分**。
+   *
+   * 分工要说清楚：矛盾、过期结论这些需要真读懂内容，那是 agent 的活；
+   * 这里只做纯结构检查 —— 免费、瞬时、结果确定。
+   * agent 拿到这份清单后再去做语义那半边，不用自己先把整个库扫一遍。
+   */
+  ipcMain.handle('wiki:lint', (): LintFinding[] => {
+    const root = wikiPath()
+    if (!root) return []
+    const notes = scanNotes(root)
+    const byTitle = new Map(notes.map((n) => [n.title, n.rel]))
+    const inbound = new Map<string, number>()
+    for (const n of notes)
+      for (const l of new Set(n.links))
+        if (byTitle.has(l) && byTitle.get(l) !== n.rel)
+          inbound.set(byTitle.get(l)!, (inbound.get(byTitle.get(l)!) ?? 0) + 1)
+
+    const out: LintFinding[] = []
+    const SKIP = new Set(['index', 'log', '从这里开始'])
+    const now = Date.now()
+    for (const n of notes) {
+      if (SKIP.has(n.title)) continue
+      // 死链：写了 [[X]] 但库里没有 X。最该先修的一类——它是「本该有页却还没写」的信号
+      for (const l of new Set(n.links)) {
+        if (!byTitle.has(l))
+          out.push({ kind: 'deadlink', file: n.rel, detail: `[[${l}]] 指向的笔记不存在`, hint: '要么建这一页，要么改掉链接' })
+      }
+      if (!n.summary)
+        out.push({ kind: 'nosummary', file: n.rel, detail: '缺 summary', hint: 'agent 靠它判断相关性，缺了这个库一过百篇就没法用' })
+      if (!n.tags.length) out.push({ kind: 'notags', file: n.rel, detail: '缺 tags', hint: '同上' })
+      if (!(inbound.get(n.rel) ?? 0))
+        out.push({ kind: 'orphan', file: n.rel, detail: '没有任何笔记链接到它', hint: '要么从相关笔记连过来，要么它本来就该被合并掉' })
+      const days = Math.floor((now - n.mtime) / 86400000)
+      if (days > 180)
+        out.push({ kind: 'stale', file: n.rel, detail: `${days} 天没动过`, hint: '看看还成不成立，或者有没有被新素材推翻' })
+      if (n.bodyChars < 80)
+        out.push({ kind: 'thin', file: n.rel, detail: `正文只有 ${n.bodyChars} 字`, hint: '要么写完，要么并进别的页' })
+    }
+    // index.md 该收录却没收录的
+    try {
+      const idx = fs.readFileSync(path.join(root, 'index.md'), 'utf8')
+      // 聚合成一条：漏收通常是成片发生的（比如索引一直没人维护），
+      // 逐条列出来就是几十行一模一样的内容，没人看得下去
+      const miss = notes.filter((n) => !SKIP.has(n.title) && !idx.includes(n.title))
+      if (miss.length)
+        out.push({
+          kind: 'noindex',
+          file: 'index.md',
+          detail: `${miss.length} 篇没进索引：${miss.slice(0, 6).map((n) => n.title).join('、')}${miss.length > 6 ? ' 等' : ''}`,
+          hint: '索引是 agent 回答问题时唯一先读的东西，漏了等于这几页不存在'
+        })
+    } catch {
+      /* 没有 index.md */
+    }
+    return out
+  })
+
+  /**
+   * 往 log.md 追加一条。格式固定成 `## [日期] 动作 | 标题`，
+   * 这样 `grep "^## \[" log.md | tail -5` 能直接看最近动静（原文给的技巧）。
+   * 同时它也是「放入 vs 查询」统计的唯一数据源。
+   */
+  ipcMain.handle('wiki:log', (_e, action: string, title: string) => {
+    const root = wikiPath()
+    if (!root) return { ok: false }
+    const act = ['ingest', 'query', 'lint'].includes(String(action)) ? String(action) : 'query'
+    try {
+      const f = path.join(root, 'log.md')
+      const day = new Date().toISOString().slice(0, 10)
+      const line = `\n## [${day}] ${act} | ${String(title).replace(/\n/g, ' ').slice(0, 120)}\n`
+      fs.appendFileSync(f, line)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  })
+
+  /**
+   * 放入 vs 查询。
+   *
+   * 这是「这东西是不是变成了数字仓鼠窝」的唯一判据：
+   * 一个月后如果放 100 次问 3 次，说明它没长成工具、只长成了仓库。
+   * 数据来自 log.md（agent 按约定记）+ 我们自己记的放入次数，两边都不完美，
+   * 但方向足够说明问题。
+   */
+  ipcMain.handle('wiki:stats', (): WikiStats => {
+    const root = wikiPath()
+    const empty = { added: 0, ingest: 0, query: 0, lint: 0, notes: 0 }
+    if (!root) return empty
+    let ingest = 0
+    let query = 0
+    let lint = 0
+    try {
+      for (const l of fs.readFileSync(path.join(root, 'log.md'), 'utf8').split('\n')) {
+        const m = /^## \[[\d-]+\]\s*(\w+)/.exec(l.trim())
+        if (!m) continue
+        if (m[1] === 'ingest') ingest++
+        else if (m[1] === 'query') query++
+        else if (m[1] === 'lint') lint++
+      }
+    } catch {
+      /* 没有 log.md */
+    }
+    let added = 0
+    try {
+      added = Number(
+        (JSON.parse(fs.readFileSync(cfgFile(), 'utf8') || '{}') as { added?: number }).added ?? 0
+      )
+    } catch {
+      added = 0
+    }
+    return { added, ingest, query, lint, notes: walkNotes(root).length }
+  })
+
   ipcMain.handle('wiki:gitInit', () => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
@@ -540,6 +763,14 @@ export function registerWikiHandlers(): void {
       } catch (e) {
         failed.push({ file: f, error: e instanceof Error ? e.message : String(e) })
       }
+    }
+    // 记一笔「放入」次数：和 log.md 里的 query 次数一起构成「仓鼠窝判据」
+    try {
+      const cur = JSON.parse(fs.readFileSync(cfgFile(), 'utf8') || '{}') as Record<string, unknown>
+      cur.added = Number(cur.added ?? 0) + done.length
+      fs.writeFileSync(cfgFile(), JSON.stringify(cur, null, 2))
+    } catch {
+      /* 统计失败无所谓，不影响文件已经放进来 */
     }
     try {
       fs.writeFileSync(srcFile, JSON.stringify(sources, null, 2))

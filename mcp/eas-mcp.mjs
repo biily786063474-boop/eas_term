@@ -21,6 +21,31 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'wiki_lint',
+    description:
+      '给知识库做**结构体检**：死链、孤儿页、缺 summary/tags、index.md 漏收、长期没动过、内容过薄。' +
+      '这些是免费瞬时算出来的，你不用自己扫全库。' +
+      '拿到结果后再去做需要读懂内容的那半边——页面之间的矛盾、被新素材推翻的旧结论、' +
+      '反复被提到却没有独立页面的概念。**只出报告，改什么由用户点头。**',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'wiki_log',
+    description:
+      '往知识库的 log.md 追加一条记录。**每次你依据知识库回答完问题，都调一次 query**；' +
+      '归档完调 ingest；体检完调 lint。' +
+      '这既是知识库的时间线，也是判断「这东西有没有真被用起来」的唯一数据来源——' +
+      '只往里放不去查，说明它没长成工具。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['ingest', 'query', 'lint'] },
+        title: { type: 'string', description: '一句话说清这次干了什么／问了什么' }
+      },
+      required: ['action', 'title']
+    }
+  },
+  {
     name: 'wiki_transcript',
     description:
       '读收件箱里某个视频/音频已经转好的逐字稿（本机离线转的，不花 token）。' +

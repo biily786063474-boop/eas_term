@@ -256,6 +256,23 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     }
   }
 
+  if (tool === 'wiki_lint') {
+    const findings = await window.api.wiki.lint()
+    return {
+      findings,
+      total: findings.length,
+      hint:
+        '以上只是结构问题。还需要你读内容才能发现的：页面之间的矛盾、被新素材推翻的旧结论、' +
+        '反复出现却没有独立页面的概念。只出报告，别自动改。'
+    }
+  }
+
+  if (tool === 'wiki_log') {
+    const action = String(args.action ?? 'query') as 'ingest' | 'query' | 'lint'
+    const r = await window.api.wiki.log(action, String(args.title ?? ''))
+    return { ok: r.ok }
+  }
+
   if (tool === 'wiki_transcript') {
     const name = String(args.name ?? '')
     if (!name) throw new Error('缺少 name')

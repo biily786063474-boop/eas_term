@@ -30,6 +30,9 @@ import type {
   WikiHit,
   ArchiveItem,
   WikiCommit,
+  WikiGraph,
+  LintFinding,
+  WikiStats,
   RulesStatus,
   Footprint,
   InstallPlan
@@ -218,7 +221,14 @@ const api = {
     ): Promise<{ ok: boolean; error?: string; path?: string; rel?: string }> =>
       ipcRenderer.invoke('wiki:saveTranscript', mediaName, text),
     transcript: (mediaName: string): Promise<string | null> =>
-      ipcRenderer.invoke('wiki:transcript', mediaName)
+      ipcRenderer.invoke('wiki:transcript', mediaName),
+    graph: (): Promise<WikiGraph> => ipcRenderer.invoke('wiki:graph'),
+    /** 结构体检（免费瞬时）；语义那半边是 agent 的活 */
+    lint: (): Promise<LintFinding[]> => ipcRenderer.invoke('wiki:lint'),
+    /** 往 log.md 追加一条：`## [日期] 动作 | 标题` */
+    log: (action: 'ingest' | 'query' | 'lint', title: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('wiki:log', action, title),
+    stats: (): Promise<WikiStats> => ipcRenderer.invoke('wiki:stats')
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）

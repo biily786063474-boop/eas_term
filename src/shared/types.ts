@@ -84,6 +84,29 @@ export interface WikiCommit {
   mine: boolean
 }
 
+/** 知识图谱：节点=笔记，边=[[双链]] */
+export interface WikiGraph {
+  nodes: { id: string; title: string; tags: string[]; inbound: number; outbound: number }[]
+  edges: { from: string; to: string }[]
+}
+
+/** 体检发现的一条。只有结构问题——矛盾、过期结论那种要读懂内容的，是 agent 的活 */
+export interface LintFinding {
+  kind: 'deadlink' | 'orphan' | 'nosummary' | 'notags' | 'stale' | 'thin' | 'noindex'
+  file: string
+  detail: string
+  hint: string
+}
+
+/** 「是不是变成了数字仓鼠窝」的判据：放进去多少次 vs 真去问了多少次 */
+export interface WikiStats {
+  added: number
+  ingest: number
+  query: number
+  lint: number
+  notes: number
+}
+
 /** 搜索命中 */
 export interface WikiHit {
   file: string
