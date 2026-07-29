@@ -23,13 +23,34 @@ SITE_ONLY=${1:-}
 
 say() { printf "\033[1m%s\033[0m\n" "$*"; }
 
+# ── 版本号回填 ──────────────────────────────────────────────────────
+# 下载链接的版本号写死在 HTML 里，散在两个文件的 18 处。手改必然漏一两处，
+# 而漏掉的那处会指向一个已经被 KEEP=5 清理掉的目录 —— 404 且没人发现。
+# 以 package.json 为准，发布前统一回填，改动留在仓库里（git diff 看得见）。
+say "▸ 版本号 → v$VERSION"
+CHANGED=0
+for f in site/index.html site/download.html; do
+  before=$(shasum "$f" | cut -d' ' -f1)
+  # 两种形态：标记注释 <!-- v0.1.0 --> 和链接里的 /download/v0.1.0/Eas-Term-0.1.0-
+  sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
+                s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-#/download/v$VERSION/Eas-Term-$VERSION-#g" "$f"
+  [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
+done
+[ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
+# 回填完必须没有残留的旧版本号。只查**我们真正改写的那两种写法** ——
+# 别在全文里搜 x.y.z：SVG 的 path 坐标长得一模一样（`3.7 0 1-.5 1.8-.5`），
+# 会把每次发布都拦下来，然后人就学会了无视这个检查。
+STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
+          site/index.html site/download.html | grep -v "$VERSION" || true)
+[ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
+
 # ── 网页 ────────────────────────────────────────────────────────────
 say "▸ 网页 → $WEB"
 ssh $HOST "mkdir -p $WEB/assets"
 for f in index.html download.html style.css; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
-  [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 $R）"; exit 1; }
+  [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
   echo "  ✓ $f"
 done
 for f in site/assets/*; do
@@ -44,31 +65,53 @@ done
 if [ "$SITE_ONLY" != "--site-only" ]; then
   PKG_DIR="$HOME/Eas-Term-notarized"
   say "▸ 安装包 v$VERSION → $DL/v$VERSION"
-  [ -d "$PKG_DIR" ] || { echo "  ✗ 找不到 $PKG_DIR，先跑 EAS_NOTARIZE=1 npm run dist"; exit 1; }
+  [ -d "$PKG_DIR" ] || { echo "  ✗ 找不到 ${PKG_DIR}，先跑 EAS_NOTARIZE=1 npm run dist"; exit 1; }
 
   # 传之前先看磁盘（红线：这台机器只有 40G）
   ssh $HOST "df -h / | tail -1 | sed 's/^/  磁盘: /'"
 
+  # 只传**当前版本**的包。以前是 `$PKG_DIR/*.dmg` 通配整个目录 ——
+  # 那个目录会攒下历代产物，于是发 v0.2.2 时会把 v0.1.0、v0.2.1 的包
+  # 一起塞进 v0.2.2/ 目录：下载页链接是对的，但目录里多出几百 MB 无人认领的旧包，
+  # 而这台机器只剩 19G。文件名形如 Eas-Term-<版本>-universal.dmg，按版本号筛。
   ssh $HOST "mkdir -p $DL/v$VERSION"
-  for f in "$PKG_DIR"/*.dmg "$PKG_DIR"/*.zip; do
+  FOUND=0
+  for f in "$PKG_DIR"/*-"$VERSION"-*.dmg "$PKG_DIR"/*-"$VERSION"-*.zip "$PKG_DIR"/*-"$VERSION"-*.exe; do
     [ -e "$f" ] || continue
+    FOUND=$((FOUND + 1))
     n=$(basename "$f")
-    echo "  传 $n（$(( $(stat -f%z "$f") / 1048576 )) MB）…"
+    echo "  传 ${n}（$(( $(stat -f%z "$f") / 1048576 )) MB）…"
     scp -q "$f" "$HOST:$DL/v$VERSION/$n"
     L=$(shasum -a 256 "$f" | cut -d' ' -f1)
     R=$(ssh $HOST "sha256sum $DL/v$VERSION/$n | cut -d' ' -f1")
     [ "$L" = "$R" ] || { echo "  ✗ $n SHA256 不符，远端已删"; ssh $HOST "rm -f $DL/v$VERSION/$n"; exit 1; }
     echo "    ✓ 校验通过"
   done
+  [ "$FOUND" -gt 0 ] || { echo "  ✗ $PKG_DIR 里没有 v$VERSION 的包，先跑 EAS_NOTARIZE=1 npm run dist"; exit 1; }
 
-  # latest.json：给「最新版」链接和将来的自动更新用
-  ssh $HOST "cat > $DL/latest.json <<JSON
-{ \"version\": \"$VERSION\",
-  \"mac\": \"/download/v$VERSION/Eas-Term-$VERSION-universal.dmg\",
-  \"macZip\": \"/download/v$VERSION/Eas-Term-$VERSION-universal-mac.zip\",
-  \"win\": \"/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe\",
-  \"published\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }
-JSON"
+  # latest.json 本地生成再传，不用远端 heredoc：
+  # 那条路要穿过 ssh 的一层双引号，转义写出来的是带反斜杠的坏 JSON。
+  # 顺带也跟网页一样走「传完核对大小」。
+  # win 字段只在**包真的在**时才写 —— Windows 包是 CI 产物、得手动拉下来放进目录，
+  # 忘了拉还照写的话，下载页上就挂着一个 404 链接。
+  TMP_JSON=$(mktemp)
+  {
+    echo "{ \"version\": \"$VERSION\","
+    echo "  \"mac\": \"/download/v$VERSION/Eas-Term-$VERSION-universal.dmg\","
+    echo "  \"macZip\": \"/download/v$VERSION/Eas-Term-$VERSION-universal-mac.zip\","
+    if [ -e "$PKG_DIR/Eas-Term-$VERSION-x64-setup.exe" ]; then
+      echo "  \"win\": \"/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe\","
+    else
+      echo "  ⚠ 没有 Windows 包，latest.json 不写 win 字段" >&2
+    fi
+    echo "  \"published\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }"
+  } > "$TMP_JSON"
+  node -e "JSON.parse(require('fs').readFileSync('$TMP_JSON','utf8'))" ||
+    { echo "  ✗ latest.json 不是合法 JSON，没传"; rm -f "$TMP_JSON"; exit 1; }
+  scp -q "$TMP_JSON" "$HOST:$DL/latest.json"
+  L=$(stat -f%z "$TMP_JSON"); R=$(ssh $HOST "stat -c%s $DL/latest.json")
+  rm -f "$TMP_JSON"
+  [ "$L" = "$R" ] || { echo "  ✗ latest.json 大小不符"; exit 1; }
   echo "  ✓ latest.json"
 
   # ── 清理：只留最近 KEEP 个版本 ──────────────────────────────────
@@ -84,7 +127,7 @@ JSON"
       ssh $HOST "rm -rf $DL/$old"          # 只删版本子目录，绝不动 $DL 本身
     done
   else
-    echo "  当前 $TOTAL 个版本，未超过 $KEEP，不删"
+    echo "  当前 $TOTAL 个版本，未超过 ${KEEP}，不删"
   fi
 fi
 
