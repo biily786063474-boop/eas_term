@@ -115,7 +115,10 @@ footer a:hover{text-decoration:underline}
   <a href="#评审团">评审团</a>
   <a href="#形态">知识库形态</a>
   <a href="#收件箱">收件箱</a>
+  <a href="#时机">整理时机</a>
   <a href="#界面">界面</a>
+  <a href="#规范">agent 规范</a>
+  <a href="#托管">规则托管纪律</a>
   <a href="#初始化">初始化</a>
   <a href="#分歧">分歧</a>
   <a href="#规划">执行规划</a>
@@ -575,6 +578,93 @@ updated: 2026-07-29
   </div>
 </section>
 
+<!-- ═══════════ 时机 ═══════════ -->
+<section id="时机">
+  <h2>Timing</h2>
+  <div class="sectitle">agent 什么时候来整理</div>
+  <p class="secnote">用户提到才整理？定时整理？还是结合？——结论是结合，但切分的那条线不在「频率」上。</p>
+
+  <div class="verdict">
+    <div class="vlabel">切分的那条线</div>
+    <p style="margin:0"><b>不是按「多久一次」切，是按「花不花钱、动不动文件」切。</b>
+    <br><br><b>自动的部分绝不写 wiki、绝不花 token；花钱或动文件的部分，一定有人在场。</b>
+    <br><br>这条线一划，「定时 vs 手动」就不再是个二选一的问题了 ——
+    该自动的部分自动到底，该有人的部分一次都不能少。</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>阶段</th><th>谁触发</th><th>花 token</th><th>动文件</th><th>为什么这么定</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>① 发现</b><br><span style="font-size:12px;color:#737373">收件箱里有新东西</span></td>
+        <td><span class="b b-em">全自动</span><br>静默</td><td>否</td><td>否</td>
+        <td>只是数一下文件数。零成本零风险，没有任何理由要人点</td>
+      </tr>
+      <tr>
+        <td><b>② 预处理</b><br><span style="font-size:12px;color:#737373">视频转录、读元数据</span></td>
+        <td><span class="b b-em">自动</span><br>后台队列，空闲时跑</td><td><b>否</b><br>本机模型</td>
+        <td>只在素材旁边生成 <code>.txt</code></td>
+        <td>转录是纯机械劳动，本机跑不花钱，而且<b>不碰 wiki 一个字</b>。
+          等到用户想整理时，最耗时的一步已经做完了</td>
+      </tr>
+      <tr>
+        <td><b>③ 提议</b><br><span style="font-size:12px;color:#737373">出归档计划</span></td>
+        <td><span class="b b-am">攒够再提醒</span><br>徽章，不弹窗</td><td>少量</td><td><b>否</b><br>只读</td>
+        <td>不提醒的话收件箱会变成杂物抽屉，功能悄悄死掉；
+          但弹窗打断正在干活的人更糟。<b>攒够 N 个或超过 X 天 → 抽屉上亮个徽章</b>，
+          和现在「待处理终端」那个气泡一个做法</td>
+      </tr>
+      <tr>
+        <td><b>④ 执行</b><br><span style="font-size:12px;color:#737373">写笔记、更新双链</span></td>
+        <td><span class="b b-ro">必须人点</span></td><td><b>是</b></td><td><b>是</b></td>
+        <td>见下方三条理由</td>
+      </tr>
+      <tr>
+        <td><b>⑤ 体检</b><br><span style="font-size:12px;color:#737373">lint</span></td>
+        <td><span class="b b-ro">人点</span><br>可每月提醒一次</td><td>大</td><td>会碰很多页</td>
+        <td>一次 lint 可能改动几十页。这种规模的改动没有人在场，出问题追都没法追</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>为什么第 ④ 步不能定时自动跑</h3>
+  <div class="grid g3">
+    <div class="card">
+      <h4 style="margin-top:0">原作者自己就不这么干</h4>
+      <p style="margin:0;font-size:13.5px">原文：<b>「我个人偏好一次 ingest 一份、并且全程参与 ——
+      我读摘要、检查改动、指导 LLM 该强调什么。」</b>
+      他把批量无监督 ingest 列为「你也可以这样」，而不是推荐做法。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">自动化掉的正好是人该干的那部分</h4>
+      <p style="margin:0;font-size:13.5px">原文对分工写得很清楚：<b>人负责搜集素材、指导分析、提好问题</b>，
+      LLM 负责其余的杂活。<b>「什么值得留」本身就是判断</b> ——
+      把它自动化，产出的是量，不是知识。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">睡一觉多出 30 页你没读过的东西</h4>
+      <p style="margin:0;font-size:13.5px">那不叫知识库，叫失控。
+      <b>你会不再确定里面有什么</b> —— 而「我知道里面有什么」正是它比搜索引擎强的唯一理由。
+      一旦丢掉，这东西就退化成一个更慢的网盘。</p>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">提醒的分寸</div>
+    <p style="margin:0">徽章而不是弹窗，而且<b>可以永久关掉</b>。
+    这个提醒的目的是「别让收件箱烂掉」，不是催工。
+    如果用户连着忽略三次，就该降低频率而不是加大声量 ——
+    那说明他现在不需要，不是他没看见。</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">一个例外：用户明说了就立刻做</h4>
+    <p style="margin:0">「整理一下收件箱」「把这个视频归档」——
+    这类明确指令直接进第 ③④ 步，不用等攒够、不用等提醒。
+    <b>提醒机制只服务于「用户没主动想起来」的情况。</b></p>
+  </div>
+</section>
+
 <!-- ═══════════ 界面 ═══════════ -->
 <section id="界面">
   <h2>UI</h2>
@@ -621,6 +711,171 @@ updated: 2026-07-29
   <p>从所有笔记的 <code>[[双链]]</code> 抽出边，力导向布局，用 <code>konva</code> 画
   （已是依赖，设计模块在用）。点节点跳到笔记，按标签染色。
   <b>但请记住席 1 和席 6 的意见：先有反向链接，再谈图谱。</b></p>
+</section>
+
+<!-- ═══════════ 规范 ═══════════ -->
+<section id="规范">
+  <h2>Spec</h2>
+  <div class="sectitle">让 agent 主动想起知识库</div>
+  <p class="secnote">
+    规范全文已写成 <code>docs/知识库-agent规范草案.md</code>。这里只讲两个设计决定和一个必须堵的洞。
+  </p>
+
+  <h3>决定一 · 规范要写两份，不是一份</h3>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>全局触发规则</th><th>库内 schema</th></tr></thead>
+    <tbody>
+      <tr><td><b>装在哪</b></td>
+        <td><code>~/.claude/skills/eas-wiki/</code><br><code>~/.codex/AGENTS.md</code> 标记段</td>
+        <td><code>&lt;知识库&gt;/CLAUDE.md</code><br><code>&lt;知识库&gt;/AGENTS.md</code></td></tr>
+      <tr><td><b>何时被读到</b></td><td><b>任何项目、任何会话</b></td><td>只有工作目录是知识库时</td></tr>
+      <tr><td><b>管什么</b></td><td><b>什么时候该去看</b></td><td>看到之后怎么读、怎么写、怎么维护</td></tr>
+      <tr><td><b>长度</b></td><td><b>必须极短</b>（常驻，每轮都在花钱）</td><td>可以长（按需加载）</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>一份写不了。</b>你在代码项目里问「这个交互以前是怎么定的」，
+  agent 的工作目录是代码项目，<b>根本读不到知识库里的 CLAUDE.md</b>。
+  所以「什么时候该去看」必须住在全局；而详细读写约定放全局，就是每轮都在烧 token。</p>
+
+  <h3>决定二 · 触发条件要具体，且第一步必须便宜</h3>
+  <pre><code><span class="dim">命中任一即查：</span>
+· 「怎么做…」「有没有更好的做法」这类<span class="hi">方法</span>问题
+· 提到某个<span class="hi">人名 / 博主 / 作者</span>
+· 问<span class="hi">过去的决定、踩过的坑、复盘</span>
+· 让你产出<span class="hi">文案 / 脚本 / 设计 / 剪辑方案</span>（先看有没有现成方法可用）
+· 明说「查知识库」
+
+<span class="dim">动作：</span>
+<span class="flow">先只读 index.md</span> <span class="dim">（一个文件，全是一行摘要）</span> → 挑 1–3 篇相关的读 → 回答时注明出处
+
+<span class="dim">不查：</span>纯代码调试 / 纯执行任务 / 同一轮已经查过
+
+<span class="dim">硬规矩：</span><span class="hi">索引里没有就直说没有</span>，不要用知识库里不存在的内容假装引用</code></pre>
+  <p>「先只读 <code>index.md</code>」这一条是成本控制的关键 ——
+  它让「要不要深入」这个判断只花一个文件的钱。这正是原文设计 index 的用意。</p>
+
+  <h3>洞：规则失效是静默的</h3>
+  <div class="warn">
+    <div class="vlabel">三个会让规则悄悄失效的缺口</div>
+    <div class="tw" style="margin-top:12px"><table>
+      <thead><tr><th>缺口</th><th>后果</th><th>对策</th></tr></thead>
+      <tbody>
+        <tr><td>规则里嵌着知识库路径，而技能包是<b>安装那一刻</b>写死的</td>
+          <td>先装技能包、后建知识库 → 规则里没有路径</td>
+          <td><b>知识库初始化 / 改位置时主动重写规则</b>，不等用户再点一次</td></tr>
+        <tr><td>用户当初点过「永远不要提醒我」或拒装</td>
+          <td>知识库建好了，agent 却永远想不起它</td>
+          <td>知识库抽屉里显示<b>规则安装状态</b>，没装就明说</td></tr>
+        <tr><td>用户手动删了 skills 目录 / 换了台机器</td>
+          <td>静默失效，<b>不报任何错</b></td>
+          <td>每次打开知识库抽屉校验一次</td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin:12px 0 0"><b>为什么这三条值得单列</b>：规则失效不会报错 ——
+    agent 只是「没想起来」去查，用户看到的现象是<b>「这知识库没什么用」</b>，
+    然后就不用了。功能死于一个静默的配置问题，而不是死于设计不好。
+    所以抽屉里那行状态不是装饰：</p>
+    <pre style="margin:10px 0 0"><code>规则已就绪  Claude ✓  Codex ✓
+规则未安装  agent 不会主动查知识库  <span class="hi">[安装]</span></code></pre>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">好消息：投递通道已经建好并跑通了</h4>
+    <p style="margin:0">本机实测：<code>~/.claude/skills/eas-term/SKILL.md</code> 在（6116 字节），
+    <code>~/.codex/AGENTS.md</code> 里有 <code>eas-term:begin</code> 标记段。
+    也就是说<b>「把规则装进两个 CLI」这件事已经验证过一整轮</b>（技能包 + 钩子都走的这套），
+    知识库规则直接复用，不用重新趟一遍。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 托管 ═══════════ -->
+<section id="托管">
+  <h2>Governance</h2>
+  <div class="sectitle">多个模块都要往系统规则里写，怎么不打架</div>
+  <p class="secnote">
+    MCP 配置、画板技能包、知识钩子、知识库规则 —— 已经四个模块要动用户的全局配置了，
+    以后还会更多。先定纪律，不然迟早变成一坨。
+  </p>
+
+  <div class="dissent">
+    <div class="vlabel">先说个现在就存在的问题（实测）</div>
+    <p style="margin:0 0 10px">本机 <code>~/.codex/AGENTS.md</code> 共 3306 字符，
+    <b>我们的托管段占了 3284 字符 —— 99%</b>。而这个文件是 Codex 的<b>常驻上下文，每一轮都在花钱</b>。</p>
+    <p style="margin:0">原因：画板技能包那份内容是<b>照着 Claude 的 skill 机制写的</b>
+    （按需加载，平时只露一行描述），安装到 Codex 时被<b>原样整份灌进了常驻文件</b>。
+    结果是：你在 Codex 里干任何事 —— 哪怕只是改一行代码 ——
+    都要先付这 6KB 的画板使用指南。<b>Claude 那边几乎不花，Codex 这边每轮都花。</b>
+    <br><br>知识库规则如果照这个路子再加一段，就是雪上加霜。所以纪律得现在定。</p>
+  </div>
+
+  <h3>四条纪律</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>纪律</th><th>怎么落地</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>1</b></td>
+        <td><b>每个 CLI 只允许有<u>一个</u>托管区</b></td>
+        <td>不是「一个模块一段标记」，而是<b>整个 Eas-Term 共用一段</b>，
+          内容按当前启用的模块<b>整段重新生成</b>。
+          这样永远不会出现第二个 <code>begin</code>，加模块减模块都只是重写这一段。
+          用户写在区外的内容一个字不碰</td>
+      </tr>
+      <tr>
+        <td><b>2</b></td>
+        <td><b>常驻区只放「触发条件 + 去哪读」，不放「怎么做」</b></td>
+        <td>这是解决体积的关键。<b>触发条件必须常驻</b>（模型得知道什么时候该动），
+          但详细约定、示例、边界说明<b>放磁盘按需读</b>。
+          Claude 那边天然如此（skill 的 description 就是触发器）；
+          Codex 没有这个机制，就手工做成这个形状</td>
+      </tr>
+      <tr>
+        <td><b>3</b></td>
+        <td><b>一个事实只写一处</b></td>
+        <td>画板怎么用写在画板那份，知识库怎么读写在知识库那份，不互相抄。
+          需要引用就写路径，不复制正文。<b>复制过的东西必然分叉</b> ——
+          改了一处忘了另一处，过段时间就开始互相矛盾</td>
+      </tr>
+      <tr>
+        <td><b>4</b></td>
+        <td><b>有一处总账，能一眼看到我们动过什么</b></td>
+        <td>「扩展能力」面板列全部触点：改了哪个文件、装了什么、<b>常驻区占多少字符</b>、
+          能逐个卸。现在这个面板只管技能包，钩子和知识库都在别处 ——
+          分散的开关等于没有开关</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>常驻区应该长什么样</h3>
+  <pre><code><span class="dim">&lt;!-- eas-term:begin 由 Eas-Term 维护，勿手改；删掉整段即可移除 --&gt;</span>
+# Eas-Term 扩展能力
+
+你运行在 Eas-Term 里。下面是已启用的能力和<span class="hi">各自的触发条件</span>，
+详细约定按路径去读，<span class="dim">不用背下来</span>。
+
+<span class="flow">画板</span>：产出了给人看的东西（报告/预览/图）→ 用画板工具摆到用户眼前，别只说"已生成"
+      详细：<span class="hi">~/.eas/agent/canvas.md</span>
+<span class="flow">知识库</span>：用户问方法、提到人名、问过去的决定、要你产出文案脚本设计
+      → 先读 <span class="hi">&lt;知识库&gt;/index.md</span>，挑 1–3 篇相关的看
+      详细：<span class="hi">&lt;知识库&gt;/AGENTS.md</span>
+<span class="dim">&lt;!-- eas-term:end --&gt;</span>
+
+<span class="dim">约 300 字符，现在是 3284 —— 缩到十分之一，触发能力不变</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">为什么「触发条件」不能也挪到磁盘</div>
+    <p style="margin:0">因为按需读盘要求模型<b>先意识到该读</b>。
+    详细做法可以晚点读，<b>但「什么时候该动」必须在它眼前</b> ——
+    这条挪走了，agent 就永远想不起来去查知识库，
+    退回到那个静默失效的老问题。
+    <br><br>所以切分线是：<b>常驻「什么时候 + 去哪」，磁盘放「具体怎么做」。</b></p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">Claude 侧几乎不用改</h4>
+    <p style="margin:0"><code>~/.claude/skills/&lt;模块&gt;/</code> 天生就是一模块一目录、按需加载、能独立删。
+    知识库直接新建 <code>skills/eas-wiki/</code> 即可，和现有的 <code>eas-term/</code> 互不干扰。
+    <b>要改的只有 Codex 侧那一段。</b></p>
+  </div>
 </section>
 
 <!-- ═══════════ 初始化 ═══════════ -->
