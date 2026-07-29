@@ -2685,11 +2685,13 @@
   cursor: pointer;
 }
 
+/* 同 .wikiv-tree：FileTree 内部是 absolute+inset:0，缺定位祖先就会盖住上面的内容 */
 .wk-tree {
   flex: 1;
   min-height: 0;
   overflow: auto;
   margin-top: 6px;
+  position: relative;
 }
 .wk-back {
   flex: none;

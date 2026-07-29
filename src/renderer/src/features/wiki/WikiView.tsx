@@ -61,8 +61,22 @@ export function WikiView(): JSX.Element {
   const openNote = async (p: string): Promise<void> => {
     setSel(p)
     const r = await window.api.fs.readTextFile(p)
-    setBody(r.ok ? r.content : '读不出来：' + (r.error ?? ''))
-    setLinks(await window.api.wiki.backlinks(p))
+    if (r.ok) {
+      setBody(r.content)
+      setLinks(await window.api.wiki.backlinks(p))
+      return
+    }
+    // 读不到通常不是这一篇的问题，是整个知识库目录被移走/删了/网络盘没挂上。
+    // 甩一句 ENOENT 加一长串路径给用户看没有任何用，直接说人话并刷新状态，
+    // 让上面的「还没有知识库」空态接管
+    setLinks([])
+    const fresh = await window.api.wiki.status()
+    setSt(fresh)
+    setBody(
+      fresh.exists
+        ? `这篇打不开了 —— 可能刚被改名或删掉。\n\n${r.error ?? ''}`
+        : `知识库目录不在了：${fresh.path}\n\n可能被移走、删掉，或者它在一块没挂上的网络盘上。\n切到画布模式，在左边的知识库里重新指一个位置。`
+    )
   }
 
   if (!st) return <div className="pane-placeholder">读取知识库…</div>
