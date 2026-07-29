@@ -6,6 +6,7 @@ import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { SkillPanel } from './features/workspace/SkillPanel'
+import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
@@ -224,6 +225,7 @@ export function App(): JSX.Element {
         </main>
       </div>
       <ConfirmDialog />
+      <AgentOnboarding />
       <Tooltip />
     </div>
   )

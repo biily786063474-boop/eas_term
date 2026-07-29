@@ -31,6 +31,10 @@ export interface UiSlice {
   setMcpEnabled: (v: boolean) => void
   logMcp: (e: { tool: string; detail: string; ok: boolean }) => void
   clearMcpLog: () => void
+  /** Claude Code / Codex 这两个 CLI 装没装。null = 还没探测出结果。
+   *  一个都没有时 agent 相关控件整体隐藏——摆一堆点了没反应的按钮比没有更糟。 */
+  agentCli: { claude: boolean; codex: boolean } | null
+  refreshAgentCli: () => Promise<void>
 }
 
 let mcpSeq = 1
@@ -43,6 +47,17 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   mcpLog: [],
   mcpEnabled: true,
   runningPtys: [],
+  agentCli: null,
+
+  refreshAgentCli: async () => {
+    try {
+      const s = await window.api.skill.status()
+      set({ agentCli: { claude: s.claude.hasCli, codex: s.codex.hasCli } })
+    } catch {
+      // 探测失败按「有」处理：宁可多显示控件，也别把已经装了 CLI 的用户的功能藏起来
+      set({ agentCli: { claude: true, codex: true } })
+    }
+  },
 
   setPtyRunning: (ptyId, running) =>
     set((s) => {

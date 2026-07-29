@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
@@ -18,6 +18,9 @@ interface DictTerm {
   keywords: string[]
   logic: string
   svg: string
+  /** 以下只有自建词条有：第一次遇到的日期 / 在哪个项目里遇到的 */
+  firstSeen?: string
+  project?: string
 }
 interface DictBundle {
   version: number
@@ -27,7 +30,9 @@ interface DictBundle {
 }
 
 const dict = bundle as unknown as DictBundle
-const CATS = dict.categories // { interaction: '交互行为', motion: '动效', visual: 'UI视觉' }
+// 内置三类 + 「自建」：后者是「提交即复盘」hook 沉淀进 ~/.eas/dict-user.json 的词，
+// 单列一类是为了能一键筛掉——启发式抓来的词有噪声，混在内置词里会稀释词典的可信度
+const CATS: Record<string, string> = { ...dict.categories, user: '自建' }
 const CAT_KEYS = Object.keys(CATS)
 
 const POP_W = 320
@@ -50,16 +55,44 @@ export function DictView(): JSX.Element {
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // 用户自建词条：运行时从 ~/.eas/dict-user.json 读，和编译进包的 242 条合并。
+  // 词典 bundle 是 Vite 静态 import（编译期定死），不做这一步的话 hook 沉淀多少词都看不见。
+  const [userTerms, setUserTerms] = useState<DictTerm[]>([])
+  useEffect(() => {
+    let alive = true
+    void window.api.fs.userTerms().then((list) => {
+      if (!alive) return
+      setUserTerms(
+        list.map((u) => ({
+          id: 'user:' + u.id, // 加前缀，避免和内置词条 id 撞车
+          zh: u.zh || u.en, // 脚本不生成中文名，空就用英文顶上
+          en: u.en,
+          category: 'user',
+          keywords: u.keywords,
+          logic: u.logic,
+          svg: '',
+          firstSeen: u.firstSeen,
+          project: u.project
+        }))
+      )
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const allTerms = useMemo(() => [...dict.terms, ...userTerms], [userTerms])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return dict.terms.filter((t) => {
+    return allTerms.filter((t) => {
       if (cat !== 'all' && t.category !== cat) return false
       if (!q) return true
       if (t.zh.toLowerCase().includes(q)) return true
       if (t.en.toLowerCase().includes(q)) return true
       return t.keywords.some((k) => k.toLowerCase().includes(q))
     })
-  }, [query, cat])
+  }, [query, cat, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   useLayoutEffect(() => {
@@ -101,8 +134,11 @@ export function DictView(): JSX.Element {
       noticeTimer.current = setTimeout(() => setNotice(''), 2600)
       return
     }
+    // 自建词条的 logic 是空的（脚本不花 token 生成解释）→ 退回插入英文名，
+    // 至少能拿去问 agent；插一个空字符串会闪「已插入」但什么也没发生
+    const text = term.logic || term.en
     // 不带 \n = 插入到光标，不执行（logic 均为单行文本，已确认无换行）
-    window.api.pty.write(t.ptyId, term.logic)
+    window.api.pty.write(t.ptyId, text)
     setFlashId(term.id)
     if (flashTimer.current) clearTimeout(flashTimer.current)
     flashTimer.current = setTimeout(() => setFlashId(null), 1100)
@@ -114,7 +150,7 @@ export function DictView(): JSX.Element {
         <DictIcon size={13} />
         <span className="dict-title">名词词典</span>
         <span className="dict-count">
-          {filtered.length} / {dict.count}
+          {filtered.length} / {allTerms.length}
         </span>
         <span className="pane-spacer" />
         <input
@@ -182,14 +218,27 @@ export function DictView(): JSX.Element {
           >
             <div className="dict-pop-head">
               <span className="dict-zh">{hover.term.zh}</span>
-              <span className="dict-en">{hover.term.en}</span>
+              {/* 自建词条没有中文名时 zh 回落成了 en，别把同一个词并排印两遍 */}
+              {hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
               <span className={`dict-tag cat-${hover.term.category}`}>
                 {CATS[hover.term.category] ?? hover.term.category}
               </span>
             </div>
-            {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制 */}
-            <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
-            <div className="dict-pop-logic">{hover.term.logic}</div>
+            {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制。
+                自建词条没有配图，别渲染一个空盒子撑出留白 */}
+            {!!hover.term.svg && (
+              <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
+            )}
+            {hover.term.logic ? (
+              <div className="dict-pop-logic">{hover.term.logic}</div>
+            ) : (
+              <div className="dict-pop-logic dim">
+                还没写解释。这是提交时自动沉淀的术语
+                {hover.term.project ? `（${hover.term.project}` : ''}
+                {hover.term.firstSeen ? ` · ${hover.term.firstSeen}）` : hover.term.project ? '）' : ''}
+                ，想补的话改 <code>~/.eas/dict-user.json</code>。
+              </div>
+            )}
           </div>,
           document.body
         )}

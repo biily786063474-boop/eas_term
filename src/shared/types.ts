@@ -12,6 +12,30 @@ export interface DirEntry {
   isHidden: boolean
 }
 
+/** 用户自建词条：由「提交即复盘」hook 发现「用了但词典没收录」的术语时沉淀下来。
+ *  zh / logic 通常是空的 —— 脚本不花 token 生成解释，留给用户按需补。 */
+export interface UserTerm {
+  id: string
+  en: string
+  zh: string
+  keywords: string[]
+  logic: string
+  /** 第一次遇到的日期 */
+  firstSeen: string
+  /** 在哪个项目里遇到的 */
+  project: string
+}
+
+/** 「最近产生的文件」条目：给画布插入菜单按时间倒序用 */
+export interface RecentFile {
+  name: string
+  path: string
+  /** 相对项目根的路径（菜单里显示它，好区分同名文件） */
+  rel: string
+  /** 创建时间；取不到 birthtime 的文件系统退回修改时间 */
+  time: number
+}
+
 export interface PtyCreateOptions {
   cwd?: string
   cols?: number
@@ -194,4 +218,32 @@ export interface SkillStatus {
   muted: boolean
   /** 有任何一个装了 CLI 但没装（或版本旧了）技能包 —— 渲染层据此决定要不要弹窗 */
   needsAttention: boolean
+  /** 一个 CLI 都没有：agent 能力整体不可用，界面要降级而不是摆一堆点不动的控件 */
+  noCli: boolean
+}
+
+/** 一条可执行的安装命令。我们只负责填进终端，回车由用户自己按。 */
+export interface InstallOption {
+  /** 安装方式的名字（官方安装脚本 / Homebrew / npm / WinGet） */
+  via: string
+  cmd: string
+  /** 这条命令需要的 shell（目前只有 Windows 的 PowerShell 需要标注） */
+  shell?: 'powershell'
+}
+
+export interface AgentInstallInfo {
+  name: string
+  vendor: string
+  /** 候选安装方式，最合适的排第一 */
+  options: InstallOption[]
+  /** 装完之后用来登录 / 启动的命令 */
+  loginHint: string
+}
+
+export interface InstallPlan {
+  platform: string
+  hasNode: boolean
+  hasBrew: boolean
+  claude: AgentInstallInfo
+  codex: AgentInstallInfo
 }

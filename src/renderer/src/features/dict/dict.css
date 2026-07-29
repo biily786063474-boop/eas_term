@@ -268,3 +268,23 @@
   color: var(--fg);
   overflow-wrap: anywhere;
 }
+
+/* 自建词条（hook 沉淀）：色相区别于内置三类，一眼看出是「自己攒的」 */
+.dict-chip.cat-user.active,
+.dict-dot.cat-user {
+  background: #c4b5fd;
+}
+.dict-tag.cat-user {
+  background: rgba(139, 92, 246, 0.16);
+  color: #c4b5fd;
+}
+/* 还没写解释时的占位说明 */
+.dict-pop-logic.dim {
+  opacity: 0.62;
+  font-style: normal;
+}
+.dict-pop-logic.dim code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  opacity: 0.85;
+}

@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type {
   Project,
   DirEntry,
+  RecentFile,
+  UserTerm,
   PtyCreateOptions,
   TextFileResult,
   ImageFileResult,
@@ -19,7 +21,8 @@ import type {
   SessionIndex,
   SessionExchange,
   AgentProbe,
-  SkillStatus
+  SkillStatus,
+  InstallPlan
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -114,7 +117,9 @@ const api = {
       targets: ('claude' | 'codex')[]
     ): Promise<{ ok: boolean; error?: string; done?: string[]; status?: SkillStatus }> =>
       ipcRenderer.invoke('skill:install', targets),
-    mute: (muted: boolean): Promise<SkillStatus> => ipcRenderer.invoke('skill:mute', muted)
+    mute: (muted: boolean): Promise<SkillStatus> => ipcRenderer.invoke('skill:mute', muted),
+    // 一个 CLI 都没装时，按这台机器的实际情况给出该跑哪条安装命令（只给命令，不代执行）
+    installPlan: (): Promise<InstallPlan> => ipcRenderer.invoke('agent:installPlan')
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
@@ -128,6 +133,10 @@ const api = {
   },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
+    recentFiles: (rootPath: string, limit?: number): Promise<RecentFile[]> =>
+      ipcRenderer.invoke('fs:recentFiles', rootPath, limit),
+    // 用户自建词条（~/.eas/dict-user.json，由「提交即复盘」hook 沉淀）
+    userTerms: (): Promise<UserTerm[]> => ipcRenderer.invoke('dict:userTerms'),
     readTextFile: (filePath: string): Promise<TextFileResult> =>
       ipcRenderer.invoke('fs:readTextFile', filePath),
     writeTextFile: (filePath: string, content: string): Promise<OpResult> =>

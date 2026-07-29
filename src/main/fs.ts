@@ -4,7 +4,15 @@ import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
 import { fileURLToPath } from 'url'
-import type { DirEntry, TextFileResult, ImageFileResult, OpResult, PathProbe } from '../shared/types'
+import type {
+  DirEntry,
+  RecentFile,
+  UserTerm,
+  TextFileResult,
+  ImageFileResult,
+  OpResult,
+  PathProbe
+} from '../shared/types'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
 // 改用 `open -R` 既能定位文件又能激活 Finder；失败再回退到原 API。
@@ -34,6 +42,20 @@ const IMAGE_MIME: Record<string, string> = {
   '.avif': 'image/avif'
 }
 
+// 递归扫描时跳过的目录（依赖 / 构建产物 / 虚拟环境）
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'out',
+  'build',
+  'release',
+  'target',
+  'vendor',
+  'venv',
+  '__pycache__',
+  'Pods'
+])
+
 export function registerFsHandlers(): void {
   ipcMain.handle('fs:readDir', async (_e, dirPath: string): Promise<DirEntry[]> => {
     const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true })
@@ -61,6 +83,82 @@ export function registerFsHandlers(): void {
     })
     return entries
   })
+
+  // 用户自建词库：~/.eas/dict-user.json。由「提交即复盘」hook 在发现「用了但词典没收录」
+  // 的术语时写入，词典气泡把它和内置的 242 条合并显示。
+  //
+  // 这里逐条 sanitize 而不是整包信任：这个文件是用户和外部脚本都能改的，
+  // 一条畸形数据不该让整个词典打不开（同 canvasSlice 里 sanitizeCanvas 的思路）。
+  ipcMain.handle('dict:userTerms', async (): Promise<UserTerm[]> => {
+    try {
+      const f = path.join(os.homedir(), '.eas', 'dict-user.json')
+      const raw = JSON.parse(await fs.promises.readFile(f, 'utf8')) as unknown
+      const list = (raw as { terms?: unknown })?.terms
+      if (!Array.isArray(list)) return []
+      const out: UserTerm[] = []
+      for (const it of list) {
+        const t = it as Record<string, unknown>
+        const id = typeof t.id === 'string' ? t.id.trim() : ''
+        const en = typeof t.en === 'string' ? t.en.trim() : ''
+        if (!id || !en) continue // 连个名字都没有的条目没有展示价值
+        out.push({
+          id,
+          en,
+          zh: typeof t.zh === 'string' ? t.zh : '',
+          keywords: Array.isArray(t.keywords) ? t.keywords.filter((k): k is string => typeof k === 'string') : [],
+          logic: typeof t.logic === 'string' ? t.logic : '',
+          firstSeen: typeof t.firstSeen === 'string' ? t.firstSeen : '',
+          project: typeof t.project === 'string' ? t.project : ''
+        })
+      }
+      return out
+    } catch {
+      return [] // 文件不存在（大多数情况）或坏了 → 就当没有，词典照常用内置词库
+    }
+  })
+
+  // 项目内「最近产生的文件」：递归扫描 + 按创建时间倒序。画布双击插入菜单的「最近」排序用。
+  // 跳过依赖/产物目录和隐藏目录——node_modules 一个就能把扫描时间拖到几十秒，且没人想插它。
+  ipcMain.handle(
+    'fs:recentFiles',
+    async (_e, rootPath: string, limit = 60): Promise<RecentFile[]> => {
+      const out: RecentFile[] = []
+      let budget = 20000 // 扫描条目上限：超大仓库别把主进程钉死
+      const walk = async (dir: string, depth: number): Promise<void> => {
+        if (depth > 8 || budget <= 0) return
+        let dirents: fs.Dirent[]
+        try {
+          dirents = await fs.promises.readdir(dir, { withFileTypes: true })
+        } catch {
+          return // 没权限就跳过这一支，别整个失败
+        }
+        for (const d of dirents) {
+          if (budget-- <= 0) return
+          if (d.name.startsWith('.') || SKIP_DIRS.has(d.name)) continue
+          const full = path.join(dir, d.name)
+          if (d.isDirectory()) {
+            await walk(full, depth + 1)
+            continue
+          }
+          if (!d.isFile()) continue
+          try {
+            const st = await fs.promises.stat(full)
+            out.push({
+              name: d.name,
+              path: full,
+              rel: path.relative(rootPath, full),
+              time: st.birthtimeMs || st.mtimeMs
+            })
+          } catch {
+            /* 读不到就当没有 */
+          }
+        }
+      }
+      await walk(rootPath, 0)
+      out.sort((a, b) => b.time - a.time)
+      return out.slice(0, limit)
+    }
+  )
 
   // 写回文本文件（代码预览里的「编辑」用）。先写临时文件再 rename——中途崩了也不会
   // 留下半截内容把用户原文件毁掉。

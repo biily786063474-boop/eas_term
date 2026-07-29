@@ -1182,6 +1182,10 @@
   position: fixed;
   z-index: 1000;
   min-width: 168px;
+  /* 项目多了这菜单能长到几百像素——超过就自己滚，别顶出窗口 */
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 5px;
   background: var(--glass-3);
   backdrop-filter: var(--blur);
@@ -1220,10 +1224,179 @@
   color: #150a0d;
 }
 
-.cctx-kbd {
+.cctx-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cctx-kbd,
+.cctx-hint {
   margin-left: auto;
   font-size: 10.5px;
   opacity: 0.6;
+  flex: none;
+}
+
+.cctx-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cctx-item:disabled:hover {
+  background: none;
+  color: var(--fg);
+}
+
+.cctx-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--glass-border);
+}
+
+/* ---------- 双击 Frame 空白 → 插入文件选择器 ---------- */
+.canvas-picker {
+  position: fixed;
+  z-index: 1000;
+  width: 286px;
+  padding: 5px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  color: var(--fg);
+}
+
+.cpk-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 8px 6px;
+}
+
+.cpk-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cpk-scope {
+  font-size: 10.5px;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cpk-tabs {
+  display: flex;
+  gap: 3px;
+  padding: 0 4px 5px;
+}
+
+.cpk-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 1;
+  padding: 5px 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  opacity: 0.65;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.cpk-tabs button:hover {
+  opacity: 0.9;
+}
+
+.cpk-tabs button.on {
+  background: rgba(var(--accent-rgb), 0.22);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.cpk-path {
+  padding: 0 9px 5px;
+  font-size: 10.5px;
+  opacity: 0.5;
+  direction: rtl; /* 路径长了从左边省略，保留末级目录名 */
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cpk-list {
+  max-height: 312px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cpk-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 9px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cpk-row:hover {
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.cpk-row.faint {
+  opacity: 0.5;
+}
+
+.cpk-row.up {
+  opacity: 0.7;
+}
+
+.cpk-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 相对目录前缀：跟在文件名后面的小灰字，用来区分同名文件 */
+.cpk-rel {
+  margin-left: 6px;
+  font-size: 10px;
+  font-style: normal;
+  opacity: 0.5;
+}
+
+.cpk-time,
+.cpk-arrow {
+  flex: none;
+  font-size: 10.5px;
+  opacity: 0.55;
+}
+
+.cpk-empty {
+  padding: 14px 10px;
+  font-size: 11.5px;
+  opacity: 0.5;
+  text-align: center;
 }
 
 /* Frame 重命名输入 */

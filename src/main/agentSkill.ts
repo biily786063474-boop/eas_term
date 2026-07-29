@@ -120,7 +120,9 @@ export function skillStatus(): SkillStatus {
     claude,
     codex,
     muted: !!prefs.muted,
-    needsAttention: !!src && (pending(claude) || pending(codex))
+    needsAttention: !!src && (pending(claude) || pending(codex)),
+    // 一个都没装：以前这种情况什么提示都不给，用户只看到一堆点了没反应的 agent 控件
+    noCli: !claude.hasCli && !codex.hasCli
   }
 }
 

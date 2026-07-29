@@ -2,7 +2,7 @@
 // 这一层只画「死内容」（Frame 边框/标题/点阵/缩放条），可随意位图缩放。
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon } from '../../ui/Icons'
@@ -11,6 +11,8 @@ import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
+import { CanvasFilePicker } from './CanvasFilePicker'
+import { paneForFile } from './media'
 import { collectLeaves } from '../../layout'
 import './canvas.css'
 
@@ -38,6 +40,19 @@ export function CanvasStage(): JSX.Element {
   const [editingSticky, setEditingSticky] = useState<string | null>(null)
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
+  // Frame 内双击 → 「插入文件」选择器（wx/wy 是双击处的世界坐标，插进来的节点就落在那儿）
+  const [picker, setPicker] = useState<{
+    x: number
+    y: number
+    frameId: string
+    root: string
+    rootName: string
+    wx: number
+    wy: number
+  } | null>(null)
+  const addProject = useStore((s) => s.addProject)
+  const addProjectFrame = useStore((s) => s.addProjectFrame)
+  const addFileNode = useStore((s) => s.addFileNode)
   const renameFrame = useStore((s) => s.renameFrame)
   // 选中集合提到 store（含浮层终端节点）：这里派生成 Set 供读取，写用 store action
   const canvasSel = useStore((s) => s.canvasSel)
@@ -363,23 +378,43 @@ export function CanvasStage(): JSX.Element {
     }
   }, [])
 
+  const beginPan = useCallback(
+    (clientX: number, clientY: number): void => {
+      const cur = useStore.getState().canvas.viewport
+      const el = viewportRef.current
+      el?.classList.add('panning')
+      const onMove = (ev: MouseEvent): void =>
+        setViewport({ x: cur.x + (ev.clientX - clientX), y: cur.y + (ev.clientY - clientY) })
+      const onUp = (): void => {
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+        el?.classList.remove('panning')
+      }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    },
+    [setViewport]
+  )
+
   const startPan = (e: React.MouseEvent): void => {
     if (e.button !== 0) return
-    const cur = useStore.getState().canvas.viewport
-    const sx = e.clientX
-    const sy = e.clientY
-    const el = viewportRef.current
-    el?.classList.add('panning')
-    const onMove = (ev: MouseEvent): void =>
-      setViewport({ x: cur.x + (ev.clientX - sx), y: cur.y + (ev.clientY - sy) })
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      el?.classList.remove('panning')
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
+    beginPan(e.clientX, e.clientY)
   }
+
+  // 鼠标中键拖动 → 平移画布。走 document 捕获阶段：在终端、模块上按下也照样能拖，
+  // 不然一屏被终端占满时中键就没地方按（等价于空格+左键拖，但不用腾出一只手）。
+  useEffect(() => {
+    const onDown = (e: MouseEvent): void => {
+      if (e.button !== 1) return
+      const t = e.target as HTMLElement
+      if (!t.closest?.('.canvas-viewport') && !t.closest?.('.pane-layer')) return
+      e.preventDefault()
+      e.stopPropagation()
+      beginPan(e.clientX, e.clientY)
+    }
+    document.addEventListener('mousedown', onDown, true)
+    return () => document.removeEventListener('mousedown', onDown, true)
+  }, [beginPan])
 
   const screenToWorld = (clientX: number, clientY: number): { wx: number; wy: number } => {
     const r = viewportRef.current!.getBoundingClientRect()
@@ -389,6 +424,71 @@ export function CanvasStage(): JSX.Element {
 
   const selectElement = (key: string, additive: boolean): void => {
     toggleCanvasSel(key, additive)
+  }
+
+  const centerOnFrame = (f: CanvasFrame): void => {
+    const el = viewportRef.current
+    if (!el) return
+    const sc = useStore.getState().canvas.viewport.scale
+    setViewport({
+      x: el.clientWidth / 2 - (f.x + f.w / 2) * sc,
+      y: el.clientHeight / 2 - (f.y + (f.collapsed ? HEAD_H : f.h) / 2) * sc
+    })
+  }
+
+  // 选文件夹加项目 → 直接把它的 Frame 落在双击的位置（否则用户还得再拖一次）
+  const addProjectAt = async (wx: number, wy: number): Promise<void> => {
+    const before = new Set(useStore.getState().projects.map((p) => p.id))
+    await addProject()
+    const added = useStore.getState().projects.find((p) => !before.has(p.id))
+    if (added) await addProjectFrame(added.id, wx - 60, wy - 17)
+  }
+
+  // 双击空白：一级菜单选项目 → Frame 落在双击处
+  // 双击 Frame 内空白：改为「插入项目文件」选择器 → 文件节点落在双击处
+  const onViewportDblClick = (e: React.MouseEvent): void => {
+    const t = e.target as HTMLElement
+    // 这些各自有双击行为（模块头改名 / 终端选词 / 便签编辑 / Frame 标题改名），浮层控件也不是画布
+    if (
+      t.closest(
+        '.cfile-node, .pane, .cshape, .cframe-head, .canvas-toolbar, .canvas-zoombar, .canvas-minimap, .crm, .crm-mini, .canvas-drawer, .cd-edge, .ctd-edge'
+      )
+    )
+      return
+    const st = useStore.getState()
+    const { wx, wy } = screenToWorld(e.clientX, e.clientY)
+    const fid = (t.closest('.cframe') as HTMLElement | null)?.dataset.fid
+    if (fid) {
+      const frame = st.canvas.frames.find((f) => f.id === fid)
+      if (!frame) return
+      // 子 Frame 认自己的文件夹，项目 Frame 认项目根
+      const root = frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path
+      if (!root) {
+        setMenu({
+          x: e.clientX,
+          y: e.clientY,
+          items: [{ label: '这个 Frame 没有绑定文件夹', disabled: true, onClick: () => {} }]
+        })
+        return
+      }
+      setPicker({ x: e.clientX, y: e.clientY, frameId: fid, root, rootName: frame.name, wx, wy })
+      return
+    }
+    const items: CanvasMenuItem[] = st.projects.map((p) => {
+      const exist = st.canvas.frames.find((f) => f.projectId === p.id)
+      return {
+        label: p.name,
+        hint: exist ? '已在画布' : undefined,
+        onClick: () => {
+          // 已经在画布上就不重复建，改为把视图挪过去
+          if (exist) centerOnFrame(exist)
+          else void addProjectFrame(p.id, wx - 60, wy - 17)
+        }
+      }
+    })
+    if (items.length) items.push({ label: '', sep: true, onClick: () => {} })
+    items.push({ label: '添加项目文件夹…', onClick: () => void addProjectAt(wx, wy) })
+    setMenu({ x: e.clientX, y: e.clientY, items })
   }
 
   const rectsIntersect = (
@@ -652,6 +752,7 @@ export function CanvasStage(): JSX.Element {
       ref={viewportRef}
       className={`canvas-viewport${tool !== 'select' ? ' drawing' : ''}`}
       onMouseDown={onViewportDown}
+      onDoubleClick={onViewportDblClick}
       style={{
         backgroundSize: `${26 * vp.scale}px ${26 * vp.scale}px`,
         backgroundPosition: `${vp.x}px ${vp.y}px`
@@ -863,6 +964,27 @@ export function CanvasStage(): JSX.Element {
 
       {menu && (
         <CanvasContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+      )}
+
+      {picker && (
+        <CanvasFilePicker
+          x={picker.x}
+          y={picker.y}
+          root={picker.root}
+          rootName={picker.rootName}
+          onClose={() => setPicker(null)}
+          onPick={(filePath) => {
+            // 重新取 Frame：菜单开着的这会儿它可能已被 reflow 挪过位置
+            const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
+            if (!frame) return
+            addFileNode(
+              picker.frameId,
+              paneForFile(filePath),
+              picker.wx - frame.x - 90,
+              picker.wy - frame.y - 15
+            )
+          }}
+        />
       )}
     </div>
   )

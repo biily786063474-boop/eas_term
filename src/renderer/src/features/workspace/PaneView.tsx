@@ -216,6 +216,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   // 画布终端走「字体缩放」而非常驻 CSS transform（为了鼠标坐标精准）；但缩放手势进行中(cs≠committed)
   // 临时套一层 transform 做实时视觉预览，手势停定后 transform 归 1、落真实字号。
   const canvasTerm = !!canvasRect && pane.kind === 'terminal'
+  // 还没探测出结果（null）时按「可用」渲染，避免启动瞬间控制条闪一下才出现
+  const agentCli = useStore((s) => s.agentCli)
+  const agentAvailable = !agentCli || agentCli.claude || agentCli.codex
   const isMax = !!canvasRect?.maximized
   // 最大化：脱离画布缩放，按 1:1 渲染（字号正常，真沉浸）
   const effScale = isMax ? 1 : committedScale
@@ -386,20 +389,26 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             {isMax ? <RestoreIcon /> : <MaximizeIcon />}
           </button>
         )}
-        <button
-          className="icon-btn"
-          data-tip="向右分屏（⌘D）"
-          onClick={() => void splitLeaf(tabId, leaf.id, 'row')}
-        >
-          <SplitHIcon />
-        </button>
-        <button
-          className="icon-btn"
-          data-tip="向下分屏（⌘⇧D）"
-          onClick={() => void splitLeaf(tabId, leaf.id, 'column')}
-        >
-          <SplitVIcon />
-        </button>
+        {/* 分屏只在分屏模式给：画布模式的节点是自由摆放的，没有「向右/向下切一半」这回事，
+            按钮点了也无处生效——摆着就是误导 */}
+        {!canvasRect && (
+          <>
+            <button
+              className="icon-btn"
+              data-tip="向右分屏（⌘D）"
+              onClick={() => void splitLeaf(tabId, leaf.id, 'row')}
+            >
+              <SplitHIcon />
+            </button>
+            <button
+              className="icon-btn"
+              data-tip="向下分屏（⌘⇧D）"
+              onClick={() => void splitLeaf(tabId, leaf.id, 'column')}
+            >
+              <SplitVIcon />
+            </button>
+          </>
+        )}
         <button
           className="icon-btn"
           data-tip="关闭面板（⌘W）"
@@ -408,8 +417,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           <CloseIcon />
         </button>
       </div>
-      {canvasTerm && pane.kind === 'terminal' && (
+      {canvasTerm && pane.kind === 'terminal' && agentAvailable && (
         // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
+        // 一个 CLI 都没装时整个藏掉：那条控制条上的模型/档位/启动全是死的，摆着只会让人困惑
+        // （引导弹窗会告诉用户为什么没有、怎么装）
         <div className="agentbar-wrap" style={{ zoom: effScale }}>
           <CanvasAgentBar
             frameId={canvasRect!.frameId}

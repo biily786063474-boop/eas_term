@@ -4,25 +4,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import { fileUrlOf } from '../../store/shared'
 import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
-import type { PaneState } from '../../layout'
 import { FileTree } from '../files/FileTree'
+import { paneForFile } from './media'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon } from '../../ui/Icons'
-
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
-const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
-
-function paneForFile(path: string): PaneState {
-  const ext = path.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'html' || ext === 'htm') return { kind: 'web', url: fileUrlOf(path) }
-  // 图片 / 动图(gif,webp) / 视频 都归 image 型媒体节点，由 CanvasFileNode 按扩展名分流渲染
-  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return { kind: 'image', filePath: path }
-  return { kind: 'code', filePath: path }
-}
 
 function shellQuote(p: string): string {
   return /[^\w@%+=:,./-]/.test(p) ? `'${p.replace(/'/g, "'\\''")}'` : p

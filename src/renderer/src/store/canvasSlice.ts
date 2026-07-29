@@ -138,6 +138,9 @@ export interface CanvasSlice {
   duplicateNode: (frameId: string, nodeId: string) => void
   /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
   addTerminalNode: (frameId: string) => Promise<void>
+  /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
+   *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */
+  prefillTerminal: (cmd: string) => Promise<void>
   /** 在 Frame 里新开一个迷你浏览器节点（web pane，空地址，自动堆叠） */
   addBrowserNode: (frameId: string) => void
   /** 在 Frame 里新开一个带地址的浏览器节点并聚焦（终端/外部链接「跳出的网页」默认走画板浏览器） */
@@ -918,6 +921,28 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     }))
+  },
+
+  prefillTerminal: async (cmd) => {
+    const s = get()
+    const before = new Set(s.tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id)))
+    // 画布模式且有顶层 Frame → 开成画布上的终端节点（用户正看着那儿）；否则退回普通新终端
+    const frame = s.viewMode === 'canvas' ? s.canvas.frames.find((f) => !f.parentId) : undefined
+    if (frame) await get().addTerminalNode(frame.id)
+    else await get().openTerminal()
+    const leaf = get()
+      .tabs.flatMap((t) => collectLeaves(t.root))
+      .find((l) => !before.has(l.id))
+    if (leaf?.pane.kind !== 'terminal') return
+    const ptyId = leaf.pane.ptyId
+    // 新开的终端要先把 shell 的启动输出（提示符、rc 脚本回显）吐完，
+    // 太早写进去会被冲掉，用户看到的是一行残缺命令
+    setTimeout(() => window.api.pty.write(ptyId, cmd), 700)
+    // 顺手把画布挪到这个新终端上，不然它可能落在视口外
+    if (frame) {
+      const node = get().canvas.frames.find((f) => f.id === frame.id)?.nodes.find((n) => n.leafId === leaf.id)
+      if (node) get().focusCanvasNode(frame.id, node.id)
+    }
   },
 
   addBrowserNode: (frameId) =>
