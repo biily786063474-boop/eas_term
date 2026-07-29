@@ -161,35 +161,35 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
   if (maximizedNode) return null
 
-  // ── 还没配置：收起态引导 ──────────────────────────────────────
-  if (!open) {
-    return (
-      <div className={`wk-edge${hover ? ' hot' : ''}`}>
-        <span
-          className="wk-edge-guide"
-          ref={edgeRef}
-          data-tip={st?.configured ? '展开知识库' : '还没建知识库，点开看看'}
-          onMouseEnter={() => setHover(true)}
-          onMouseMove={onEdgeMove}
-          onMouseLeave={() => {
-            setHover(false)
-            resetEdge()
-          }}
-          onClick={() => {
-            setHover(false)
-            setOpen(true)
-          }}
-        >
-          <span className="wk-edge-label">知识库</span>
-          {!!st?.inbox && <span className="wk-edge-dot">{st.inbox}</span>}
-        </span>
-      </div>
-    )
-  }
-
+  // 抽屉本体**始终挂载**，收起时靠 transform 移出画面——和右侧资源抽屉同一套做法。
+  // 以前是 `if (!open) return <边缘触发器>`，整个组件不渲染，所以展开是「啪」地出现，
+  // 没有任何过渡可言。要动画就必须有个能从 A 补间到 B 的元素在那儿。
   return (
+    <>
+      {!open && (
+        <div className={`wk-edge${hover ? ' hot' : ''}`}>
+          <span
+            className="wk-edge-guide"
+            ref={edgeRef}
+            data-tip={st?.configured ? '展开知识库' : '还没建知识库，点开看看'}
+            onMouseEnter={() => setHover(true)}
+            onMouseMove={onEdgeMove}
+            onMouseLeave={() => {
+              setHover(false)
+              resetEdge()
+            }}
+            onClick={() => {
+              setHover(false)
+              setOpen(true)
+            }}
+          >
+            <span className="wk-edge-label">知识库</span>
+            {!!st?.inbox && <span className="wk-edge-dot">{st.inbox}</span>}
+          </span>
+        </div>
+      )}
     <aside
-      className={`wiki-drawer${dropping ? ' dropping' : ''}`}
+      className={`wiki-drawer${open ? ' open' : ' closed'}${dropping ? ' dropping' : ''}`}
       onDragOver={(e) => {
         if (!st?.exists) return
         e.preventDefault()
@@ -521,5 +521,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </>
       )}
     </aside>
+    </>
   )
 }

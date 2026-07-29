@@ -30,6 +30,7 @@ export function App(): JSX.Element {
   const viewMode = useStore((s) => s.viewMode)
   const setViewMode = useStore((s) => s.setViewMode)
   const wikiDrawerOpen = useStore((s) => s.wikiDrawerOpen)
+  const resDrawerOpen = useStore((s) => s.resDrawerOpen)
 
   // 启动：先载项目（画布 Frame 引用 projectId），再恢复画布场景；恢复完成后才挂保存订阅，
   // 避免空画布把持久化文件覆盖掉。之后画布/viewMode 变化防抖 500ms 落盘。
@@ -163,7 +164,7 @@ export function App(): JSX.Element {
 
   return (
     <div
-      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}`}
+      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}`}
     >
       <div className="titlebar">
         {viewMode === 'split' && activeProject ? (

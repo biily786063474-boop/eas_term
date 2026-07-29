@@ -143,6 +143,8 @@
   position: absolute;
   right: 16px;
   bottom: 14px;
+  /* 右侧资源抽屉展开时整体左移让位（见 .app.res-open）。跟抽屉同一条弹簧曲线 */
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1900,7 +1902,13 @@
   color: var(--fg-dim);
   cursor: pointer;
   box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.35);
-  transition: color 0.14s, border-color 0.14s;
+  /* left 必须和抽屉走同一条曲线：这里原本只有 0.14s 的 color/border 过渡，
+     于是抽屉还在弹的时候缩略图已经瞬移到位了，看着像两个东西各飞各的。
+     展开态的 .canvas-minimap 早就配了，漏的是这个默认渲染的收起态 */
+  transition:
+    color 0.14s,
+    border-color 0.14s,
+    left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .canvas-minimap-mini:hover {
   color: var(--accent);
@@ -2509,6 +2517,20 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
   overflow: hidden;
+  /* 和右侧资源抽屉同一条弹簧曲线（末端回弹的 back），只是方向取反。
+     两侧抽屉手感不一致的话，会让人觉得是两个不同年代拼起来的软件 */
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.28s ease;
+  will-change: transform;
+}
+.wiki-drawer.closed {
+  transform: translateX(calc(-100% - 20px));
+  opacity: 0;
+  pointer-events: none;
+}
+.wiki-drawer.open {
+  transform: translateX(0);
 }
 .wiki-drawer.dropping {
   border-color: rgba(var(--accent-rgb), 0.8);
@@ -2738,11 +2760,21 @@
   left: 266px;
 }
 
+/* 右侧资源抽屉展开 → 贴着右边的基本操作条 + 缩放条整体左移，避开抽屉。
+   用 transform 而不是各改各的 right：两条栏是并排的，只要挪同样的距离
+   相对关系就还在，只需维护一个数字（抽屉 238 宽，让开它就够）。
+   逻辑同左边的 .app.wiki-open 之于缩略图。 */
+.app.res-open .canvas-zoombar,
+.app.res-open .ctoolbar-mini {
+  transform: translateX(-238px);
+}
+
 /* 基本操作：从整个抽屉收成缩放条左边的一条图标栏 */
 .ctoolbar-mini {
   position: absolute;
   right: 178px;
   bottom: 14px;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 20;
   display: flex;
   align-items: center;

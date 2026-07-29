@@ -40,6 +40,10 @@ export interface UiSlice {
    *  要跟着让位——那些组件和抽屉没有父子关系，靠 class 传状态最省事。 */
   wikiDrawerOpen: boolean
   setWikiDrawerOpen: (v: boolean) => void
+  /** 右侧资源抽屉开着没有。同上：右下角的基本操作条和缩放条贴着右边，
+   *  抽屉展开会正好压在它们身上，得跟着往左让。 */
+  resDrawerOpen: boolean
+  setResDrawerOpen: (v: boolean) => void
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
@@ -108,6 +112,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   roles: [],
   wikiDrawerOpen: false,
   setWikiDrawerOpen: (v) => set({ wikiDrawerOpen: v }),
+  resDrawerOpen: false,
+  setResDrawerOpen: (v) => set({ resDrawerOpen: v }),
   pendingArchive: null,
   ttQueue: [],
 

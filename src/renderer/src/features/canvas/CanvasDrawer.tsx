@@ -19,7 +19,10 @@ function shellQuote(p: string): string {
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
   const maximizedNode = useStore((s) => s.maximizedNode)
-  const [open, setOpen] = useState(false)
+  // 开合状态放 store 而不是本地 state：右下角的基本操作条 / 缩放条在 CanvasStage 里，
+  // 和抽屉是兄弟不是父子，拿不到本地 state；靠根节点 class 通知它们让位最省事
+  const open = useStore((s) => s.resDrawerOpen)
+  const setOpen = useStore((s) => s.setResDrawerOpen)
   const [edgeHover, setEdgeHover] = useState(false)
   const [projOpen, setProjOpen] = useState(true)
   const [filesOpen, setFilesOpen] = useState(true)
