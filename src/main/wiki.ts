@@ -20,6 +20,8 @@ export const WIKI_DIRS = ['00-收件箱', '人物', '方法', '领域', '项目'
 const INBOX = WIKI_DIRS[0]
 /** 收件箱里记「这份文件原来在哪」的映射表。点号开头 → 访达里不显示，也不会被数进徽章 */
 const SOURCES = '.eas-sources.json'
+/** 收件箱里存逐字稿的隐藏目录（点号开头：访达看不见、不进徽章计数） */
+const TRANSCRIPTS = '.逐字稿'
 
 export function wikiPath(): string | null {
   try {
@@ -429,6 +431,17 @@ export function registerWikiHandlers(): void {
         const finalName = uniqueName(destDir, want)
         fs.renameSync(src, path.join(destDir, finalName))
         moved.push({ from: `${INBOX}/${name}`, to: `素材/${ym}/${finalName}` })
+        // 逐字稿跟着走：它是这份素材的一部分，留在收件箱里会变成孤儿
+        try {
+          const tSrc = path.join(root, INBOX, TRANSCRIPTS, name + '.txt')
+          if (fs.existsSync(tSrc)) {
+            const tDir = path.join(destDir, '逐字稿')
+            fs.mkdirSync(tDir, { recursive: true })
+            fs.renameSync(tSrc, path.join(tDir, uniqueName(tDir, finalName + '.txt')))
+          }
+        } catch {
+          /* 逐字稿搬不动不影响主文件已经归位 */
+        }
       } catch (e) {
         failed.push({ name, error: e instanceof Error ? e.message : String(e) })
       }
@@ -620,6 +633,40 @@ export function registerWikiHandlers(): void {
    * 全库扫一遍 [[链接]] —— 几百篇的规模下这点 IO 可以忽略，
    * 上千篇再谈索引缓存（那时候本来也该接 qmd 了）。
    */
+  /**
+   * 存逐字稿。
+   *
+   * 落点是**收件箱里的隐藏目录**，不是 wiki 正文区 —— 两个理由：
+   *   1. 转录是「预处理」，按定的纪律它是自动跑的，而自动的部分不该往 wiki 里写东西
+   *   2. 三万字逐字稿是中间产物不是知识，直接进知识库等于污染
+   * 点号开头 → 访达里看不见、也不会被数进收件箱徽章。
+   * 归档时它会跟着媒体文件一起搬进 素材/。
+   */
+  ipcMain.handle('wiki:saveTranscript', (_e, mediaName: string, text: string) => {
+    const root = wikiPath()
+    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    try {
+      const dir = path.join(root, INBOX, TRANSCRIPTS)
+      fs.mkdirSync(dir, { recursive: true })
+      const f = path.join(dir, path.basename(String(mediaName)) + '.txt')
+      fs.writeFileSync(f, text)
+      return { ok: true, path: f, rel: path.relative(root, f) }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  /** 读某个收件箱条目的逐字稿（agent 归档时用它来写笔记） */
+  ipcMain.handle('wiki:transcript', (_e, mediaName: string): string | null => {
+    const root = wikiPath()
+    if (!root) return null
+    try {
+      return fs.readFileSync(path.join(root, INBOX, TRANSCRIPTS, path.basename(String(mediaName)) + '.txt'), 'utf8')
+    } catch {
+      return null
+    }
+  })
+
   ipcMain.handle('wiki:backlinks', (_e, target: string): Backlink[] => {
     const root = wikiPath()
     if (!root) return []

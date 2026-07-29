@@ -84,6 +84,23 @@ export function registerFsHandlers(): void {
     return entries
   })
 
+  /** 读原始字节：给渲染层的 WebAudio 解码音频用（视频/音频转录）。
+   *  2GB 上限——再大 decodeAudioData 那边也会先撑爆内存，早点说清楚比崩了强。 */
+  ipcMain.handle(
+    'fs:readBinary',
+    async (_e, filePath: string): Promise<{ ok: boolean; data: ArrayBuffer; error?: string }> => {
+      try {
+        const st = await fs.promises.stat(filePath)
+        if (st.size > 2 * 1024 * 1024 * 1024)
+          return { ok: false, data: new ArrayBuffer(0), error: '文件超过 2GB，转录不了' }
+        const buf = await fs.promises.readFile(filePath)
+        return { ok: true, data: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) }
+      } catch (e) {
+        return { ok: false, data: new ArrayBuffer(0), error: e instanceof Error ? e.message : String(e) }
+      }
+    }
+  )
+
   // 用户自建词库：~/.eas/dict-user.json。由「提交即复盘」hook 在发现「用了但词典没收录」
   // 的术语时写入，词典气泡把它和内置的 242 条合并显示。
   //

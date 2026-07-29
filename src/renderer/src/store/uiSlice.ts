@@ -44,6 +44,9 @@ export interface UiSlice {
   /** MCP 侧调用：提交计划并**等**用户点头。返回 null = 用户取消 */
   requestArchivePlan: (items: ArchiveItem[]) => Promise<ArchiveItem[] | null>
   resolveArchivePlan: (approved: ArchiveItem[] | null) => void
+  /** 转录队列。串行跑——CPU 密集，并行只会互相拖慢 */
+  ttQueue: { name: string; path: string; state: 'wait' | 'run' | 'done' | 'fail'; done: number; total: number; error?: string }[]
+  enqueueTranscribe: (files: { name: string; path: string }[]) => void
   /** 整表写回（编辑器改完调它）。主进程会再 sanitize 一遍，全是坏数据时拒绝写入 */
   saveRoles: (roles: AgentRole[]) => Promise<string | null>
   /** 恢复内置角色（用户自建的保留） */
@@ -51,6 +54,43 @@ export interface UiSlice {
 }
 
 let mcpSeq = 1
+let ttRunning = false
+
+/**
+ * 串行消费转录队列。
+ *
+ * 这一步是「预处理」：本机跑、不花 token、**不往 wiki 正文写东西**
+ * （逐字稿落在收件箱的隐藏目录里）。按定的时机纪律，这类动作可以自动跑；
+ * 真正花钱和动文件的归档必须等人点头。
+ */
+async function runTranscribeQueue(
+  set: (fn: (s: UiSlice) => Partial<UiSlice>) => void,
+  get: () => UiSlice
+): Promise<void> {
+  if (ttRunning) return
+  ttRunning = true
+  try {
+    const { transcribeFile } = await import('../features/wiki/transcribe')
+    for (;;) {
+      const next = get().ttQueue.find((x) => x.state === 'wait')
+      if (!next) break
+      const upd = (patch: Partial<(typeof next)>): void =>
+        set((s) => ({
+          ttQueue: s.ttQueue.map((x) => (x.path === next.path ? { ...x, ...patch } : x))
+        }))
+      upd({ state: 'run' })
+      const r = await transcribeFile(next.path, (p) => upd({ done: p.done, total: p.total }))
+      if (r.ok) {
+        await window.api.wiki.saveTranscript(next.name, r.text)
+        upd({ state: 'done' })
+      } else {
+        upd({ state: 'fail', error: r.error })
+      }
+    }
+  } finally {
+    ttRunning = false
+  }
+}
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   theme: loadTheme(),
@@ -63,6 +103,17 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   agentCli: null,
   roles: [],
   pendingArchive: null,
+  ttQueue: [],
+
+  enqueueTranscribe: (files) => {
+    const have = new Set(get().ttQueue.map((x) => x.path))
+    const add = files.filter((f) => !have.has(f.path))
+    if (!add.length) return
+    set((s) => ({
+      ttQueue: [...s.ttQueue, ...add.map((f) => ({ ...f, state: 'wait' as const, done: 0, total: 0 }))]
+    }))
+    void runTranscribeQueue(set, get)
+  },
 
   requestArchivePlan: (items) =>
     new Promise((resolve) => {

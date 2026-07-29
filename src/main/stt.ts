@@ -192,7 +192,10 @@ function ensureWorker(): Worker | null {
 }
 
 // 异步识别一段音频；worker 不可用/超时 → null（调用方回退流式结果）
-function transcribeAsync(samples: Float32Array): Promise<string | null> {
+//
+// timeoutMs 可调：麦克风那条路是短句，20 秒足够；
+// 文件转录一段是 20–30 秒音频，CPU 上解码要久一些，用 20 秒卡它会把长句全丢掉。
+function transcribeAsync(samples: Float32Array, timeoutMs = 20000): Promise<string | null> {
   const w = ensureWorker()
   if (!w) return Promise.resolve(null)
   const id = seq++
@@ -210,7 +213,7 @@ function transcribeAsync(samples: Float32Array): Promise<string | null> {
         pending.delete(id)
         resolve(null)
       }
-    }, 20000)
+    }, timeoutMs)
   })
 }
 
@@ -330,6 +333,20 @@ async function flushSentence(wc: WebContents): Promise<void> {
 
 export function registerSttHandlers(): void {
   // 模型是否就绪(渲染层点麦克风前先查；缺则引导下载)
+  /**
+   * 文件转录用：识别一段已经重采样到 16kHz 单声道的音频。
+   *
+   * 解码放在渲染层做（WebAudio 能吃 mp4/m4a/mp3/wav，是 Chromium 自带的编解码器，
+   * 不用引 ffmpeg）；这里只负责把样本喂给已有的 SenseVoice worker。
+   * 模型支持 zh/en/ja/ko/yue 且 language:'auto'，参考视频基本都覆盖得到。
+   */
+  ipcMain.handle('stt:transcribeChunk', async (_e, buf: ArrayBuffer): Promise<string> => {
+    const samples = new Float32Array(buf)
+    if (!samples.length) return ''
+    // 一段最长 30 秒，给 90 秒余量——慢机器上 CPU 解码确实要这么久
+    return (await transcribeAsync(samples, 90000)) ?? ''
+  })
+
   ipcMain.handle('stt:modelStatus', (): { ready: boolean; missing: string[] } => {
     const missing = [MODELS.stream, MODELS.sense].filter((m) => !readyDir(m)).map((m) => m.name)
     return { ready: missing.length === 0, missing }

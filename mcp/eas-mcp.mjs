@@ -21,6 +21,18 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'wiki_transcript',
+    description:
+      '读收件箱里某个视频/音频已经转好的逐字稿（本机离线转的，不花 token）。' +
+      '整理这类素材时先调它拿内容，再决定归到哪、写成什么笔记。' +
+      '返回 null 表示还没转完或转不出来（比如那个文件里没有音轨）。',
+    inputSchema: {
+      type: 'object',
+      properties: { name: { type: 'string', description: '收件箱里的文件名' } },
+      required: ['name']
+    }
+  },
+  {
     name: 'wiki_archive_plan',
     description:
       '提交归档计划给用户过目，**等他在界面上确认**后返回他批准的条目。' +

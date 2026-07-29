@@ -97,6 +97,9 @@ const api = {
       ipcRenderer.invoke('stt:start'),
     sendAudio: (buf: ArrayBuffer): void => ipcRenderer.send('stt:audio', buf),
     stop: (): Promise<{ text: string }> => ipcRenderer.invoke('stt:stop'),
+    /** 识别一段 16kHz 单声道 Float32 音频（文件转录用） */
+    transcribeChunk: (buf: ArrayBuffer): Promise<string> =>
+      ipcRenderer.invoke('stt:transcribeChunk', buf),
     onPartial: (cb: (text: string) => void): (() => void) => {
       const h = (_e: unknown, t: string): void => cb(t)
       ipcRenderer.on('stt:partial', h)
@@ -207,7 +210,15 @@ const api = {
       moved?: { from: string; to: string }[]
       failed?: { name: string; error: string }[]
       status?: WikiStatus
-    }> => ipcRenderer.invoke('wiki:archive', items)
+    }> => ipcRenderer.invoke('wiki:archive', items),
+    /** 逐字稿存 素材/<年月>/逐字稿/ —— 不进 wiki 正文，那是中间产物不是知识 */
+    saveTranscript: (
+      mediaName: string,
+      text: string
+    ): Promise<{ ok: boolean; error?: string; path?: string; rel?: string }> =>
+      ipcRenderer.invoke('wiki:saveTranscript', mediaName, text),
+    transcript: (mediaName: string): Promise<string | null> =>
+      ipcRenderer.invoke('wiki:transcript', mediaName)
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）
@@ -251,6 +262,9 @@ const api = {
       ipcRenderer.invoke('fs:readTextFile', filePath),
     writeTextFile: (filePath: string, content: string): Promise<OpResult> =>
       ipcRenderer.invoke('fs:writeTextFile', filePath, content),
+    /** 原始字节（给 WebAudio 解码音频用） */
+    readBinary: (filePath: string): Promise<{ ok: boolean; data: ArrayBuffer; error?: string }> =>
+      ipcRenderer.invoke('fs:readBinary', filePath),
     readImageFile: (filePath: string): Promise<ImageFileResult> =>
       ipcRenderer.invoke('fs:readImageFile', filePath),
     openPath: (target: string): Promise<string> => ipcRenderer.invoke('fs:openPath', target),

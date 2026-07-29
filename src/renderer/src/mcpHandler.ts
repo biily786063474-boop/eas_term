@@ -256,6 +256,13 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     }
   }
 
+  if (tool === 'wiki_transcript') {
+    const name = String(args.name ?? '')
+    if (!name) throw new Error('缺少 name')
+    const text = await window.api.wiki.transcript(name)
+    return text ? { name, text } : { name, text: null, hint: '还没转完，或者这个文件里没有可识别的音轨' }
+  }
+
   if (tool === 'wiki_archive_plan') {
     const raw = Array.isArray(args.items) ? (args.items as ArchiveItem[]) : []
     const items = raw

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { WikiStatus, RulesStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
-import { paneForFile } from './media'
+import { paneForFile, isImagePath, isVideoPath } from './media'
 import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
 
 export function CanvasWikiDrawer(): JSX.Element | null {
@@ -29,6 +29,8 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [suggest, setSuggest] = useState('')
   const [settings, setSettings] = useState(false)
   const [history, setHistory] = useState<WikiCommit[] | null>(null)
+  const ttQueue = useStore((s) => s.ttQueue)
+  const enqueueTranscribe = useStore((s) => s.enqueueTranscribe)
   const edgeRef = useRef<HTMLSpanElement>(null)
   const addFileNode = useStore((s) => s.addFileNode)
   const openTerminal = useStore((s) => s.openTerminal)
@@ -110,10 +112,22 @@ export function CanvasWikiDrawer(): JSX.Element | null {
     setTreeKey((k) => k + 1)
   }
 
+  /** 视频/音频进收件箱后自动排队转录：本机跑、不花 token、不碰 wiki 正文。
+   *  等用户想整理的时候，最耗时的那一步已经做完了 */
+  const queueMedia = async (names: string[]): Promise<void> => {
+    const st2 = await window.api.wiki.status()
+    if (!st2.path) return
+    const media = names
+      .filter((n) => isVideoPath(n) || /\.(mp3|m4a|wav|aac|flac|ogg|opus)$/i.test(n))
+      .map((n) => ({ name: n, path: `${st2.path}/00-收件箱/${n}` }))
+    if (media.length) enqueueTranscribe(media)
+  }
+
   const addFiles = async (paths: string[]): Promise<void> => {
     if (!paths.length) return
     setBusy(`放入 ${paths.length} 个…`)
     const r = await window.api.wiki.addToInbox(paths)
+    void queueMedia(r.done ?? [])
     await refresh()
     setBusy(r.failed?.length ? `${r.done?.length ?? 0} 个已放入，${r.failed.length} 个失败` : '')
     if (!r.failed?.length) setTimeout(() => setBusy(''), 1800)
@@ -373,6 +387,41 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             >
               让 agent 整理这 {st.inbox} 个
             </button>
+          )}
+
+          {/* 转录进度：半小时的视频要跑几分钟，不给进度就像卡住了 */}
+          {ttQueue.some((x) => x.state === 'run' || x.state === 'wait') && (
+            <div className="wk-tt">
+              {ttQueue
+                .filter((x) => x.state === 'run' || x.state === 'wait')
+                .slice(0, 3)
+                .map((x) => (
+                  <div key={x.path} className="wk-tt-row">
+                    <span className="wk-tt-name">{x.name}</span>
+                    <em>
+                      {x.state === 'wait'
+                        ? '排队中'
+                        : x.total
+                          ? `转录 ${x.done}/${x.total}`
+                          : '解码中'}
+                    </em>
+                  </div>
+                ))}
+              <div className="wk-dim wk-tiny">本机离线转录，不花 token</div>
+            </div>
+          )}
+          {ttQueue.some((x) => x.state === 'fail') && (
+            <div className="wk-tt fail">
+              {ttQueue
+                .filter((x) => x.state === 'fail')
+                .slice(0, 2)
+                .map((x) => (
+                  <div key={x.path} className="wk-tt-row">
+                    <span className="wk-tt-name">{x.name}</span>
+                    <em>{x.error?.slice(0, 40)}</em>
+                  </div>
+                ))}
+            </div>
           )}
 
           {/* ── 规则状态：失效是静默的，必须显式说 ── */}
