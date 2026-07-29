@@ -2968,3 +2968,35 @@
 .wk-tt.fail .wk-tt-row em {
   color: #fda4af;
 }
+/* 角色下拉：每行右侧的编辑铅笔（悬停才显形，别干扰选择这个主动作） */
+.ab-role-line {
+  display: flex;
+  align-items: center;
+}
+.ab-role-line .ab-menu-item {
+  flex: 1;
+  min-width: 0;
+}
+.ab-role-edit {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+.ab-role-line:hover .ab-role-edit {
+  opacity: 0.7;
+}
+.ab-role-edit:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}

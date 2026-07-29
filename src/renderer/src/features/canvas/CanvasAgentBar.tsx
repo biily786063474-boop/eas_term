@@ -10,7 +10,8 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
 import type { AgentProbe } from '../../../../shared/types'
-import { SparkleIcon, UndoIcon, PlayIcon, CheckIcon } from '../../ui/Icons'
+import { SparkleIcon, UndoIcon, PlayIcon, CheckIcon, PencilIcon, PlusIcon } from '../../ui/Icons'
+import { CanvasRoleEditor } from './CanvasRoleEditor'
 
 type Kind = 'claude' | 'codex'
 
@@ -141,6 +142,9 @@ export function CanvasAgentBar({
 
   const [probe, setProbe] = useState<AgentProbe | null>(probeCache?.data ?? null)
   const [pop, setPop] = useState<Pop | null>(null)
+  // 角色编辑器：null=没开，''=新建，其余=编辑该角色。
+  // 入口只此一处——右抽屉那份已经撤掉，角色的一切都收在终端这条控制条上
+  const [editRole, setEditRole] = useState<string | null>(null)
   const [customModel, setCustomModel] = useState<string | null>(null) // null=菜单模式，string=自定义输入模式
   const popRef = useRef<HTMLDivElement>(null)
   const anchorRef = useRef<HTMLElement | null>(null)
@@ -287,6 +291,9 @@ export function CanvasAgentBar({
 
   return (
     <div className="agentbar" onMouseDown={(e) => e.stopPropagation()}>
+      {editRole !== null && (
+        <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
+      )}
       <SparkleIcon size={13} className="ab-brand" />
 
       {/* [Claude | Codex] 段控件：选当前 agent，胶囊/启动随之切换 */}
@@ -386,22 +393,44 @@ export function CanvasAgentBar({
                     <div key={g}>
                       <div className="ab-menu-group">{g === 'main' ? '主序列' : '产出型'}</div>
                       {list.map((r) => (
-                        <button
-                          key={r.id}
-                          className={`ab-menu-item${r.id === role?.id ? ' on' : ''}`}
-                          onClick={() => pickRole(r.id)}
-                          data-tip={r.desc}
-                        >
-                          <span className="ab-role-dot" style={{ background: r.color }} />
-                          <span>{r.name}</span>
-                          {/* 角色钉死了 CLI 的话标出来，免得用户奇怪段控件为什么动不了 */}
-                          {r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
-                          {r.id === role?.id && <CheckIcon size={12} />}
-                        </button>
+                        <div key={r.id} className="ab-role-line">
+                          <button
+                            className={`ab-menu-item${r.id === role?.id ? ' on' : ''}`}
+                            onClick={() => pickRole(r.id)}
+                            data-tip={r.desc}
+                          >
+                            <span className="ab-role-dot" style={{ background: r.color }} />
+                            <span>{r.name}</span>
+                            {/* 角色钉死了 CLI 的话标出来，免得用户奇怪段控件为什么动不了 */}
+                            {r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
+                            {r.id === role?.id && <CheckIcon size={12} />}
+                          </button>
+                          <button
+                            className="ab-role-edit"
+                            data-tip="编辑这个角色"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setPop(null)
+                              setEditRole(r.id)
+                            }}
+                          >
+                            <PencilIcon size={11} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )
                 })}
+                <button
+                  className="ab-menu-item ab-menu-custom"
+                  onClick={() => {
+                    setPop(null)
+                    setEditRole('')
+                  }}
+                >
+                  <PlusIcon size={12} />
+                  <span>新建角色…</span>
+                </button>
               </div>
             )}
 
