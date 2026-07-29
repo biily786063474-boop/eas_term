@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>知识库 · 调研与执行规划</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+footer a{color:#7dd3fc;text-decoration:none}
+footer a:hover{text-decoration:underline}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="navwrap">
+  <span class="navbrand">知识库调研</span>
+  <a href="#结论">结论</a>
+  <a href="#卡帕西">卡帕西模式</a>
+  <a href="#缺口">缺口</a>
+  <a href="#评审团">评审团</a>
+  <a href="#形态">知识库形态</a>
+  <a href="#收件箱">收件箱</a>
+  <a href="#界面">界面</a>
+  <a href="#初始化">初始化</a>
+  <a href="#分歧">分歧</a>
+  <a href="#规划">执行规划</a>
+</div></nav>
+
+<main>
+
+<header class="hero">
+  <span class="eyebrow">调研 + 评审 + 执行规划 · v1.1（已核对一手来源）· 待决策</span>
+  <h1>知识库：让素材自己长成能用的东西</h1>
+  <p class="lede">
+    参考 Karpathy 的 LLM wiki 模式，结合超级个体的真实素材形态（视频、图、杂乱文件，而不只是文章），
+    给出一套能落地的知识库方案。六席评审团已就形态、安全边界和界面取舍给出裁决，
+    已核对卡帕西的 gist 原文并据此更正了两处判断。
+    六席评审团就形态、安全边界和界面取舍给出裁决，并保留三条未消解的分歧。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-07-29</b></span>
+    <span>项目 <b>Eas-Term</b></span>
+    <span>状态 <b>等你拍板</b></span>
+  </div>
+</header>
+
+<!-- ═══════════ 结论 ═══════════ -->
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">先给结论</div>
+  <p class="secnote">四条裁决，两条是好消息，两条是我要泼的冷水。</p>
+
+  <div class="grid g4" style="margin-bottom:26px">
+    <div class="stat"><div class="num n-em">0</div><div class="lab">视频转录要加的<br>新依赖数</div></div>
+    <div class="stat"><div class="num n-em">0</div><div class="lab">让 cc / codex 认识<br>知识库要写的代码</div></div>
+    <div class="stat"><div class="num n-am">4</div><div class="lab">被你「取消」的工具<br>需要重新安置</div></div>
+    <div class="stat"><div class="num n-ro">3</div><div class="lab">保留的分歧<br>需要你裁决</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁决一 · 视频这块比想象中容易</div>
+    <p style="margin:0">你要把「博主的参考视频」放进知识库 —— 卡帕西那套只处理文本，覆盖不了。
+    但这个 app <b>已经内置了离线语音识别</b>（<code>sherpa-onnx</code> + SenseVoice 模型，
+    支持中/英/日/韩/粤，<code>language: 'auto'</code>），现在用于语音输入。
+    视频 → 用 Electron 自带的 Chromium 解码出音轨 → 喂给它 → 拿到转录文本 → 交给 agent 写成笔记。
+    <b>零新依赖、零 token、全离线。</b></p>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁决二 · cc / codex 兼容根本不用写代码</div>
+    <p style="margin:0">卡帕西那套的精髓是「知识库就是一个 markdown 文件夹」。
+    所以兼容方案是：<b>在知识库根目录同时放 <code>CLAUDE.md</code> 和 <code>AGENTS.md</code>，内容相同</b>，
+    写明目录约定、front-matter 格式、链接写法、ingest/lint 的规矩。
+    Claude Code 自动读 cwd 的 CLAUDE.md，Codex 自动读 cwd 的 AGENTS.md ——
+    在知识库目录里起终端，两边立刻都懂规矩。不需要 MCP，不需要适配层。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">裁决三 · 修订：图谱不是可有可无，但它服务的是「体检」不是「查询」</div>
+    <p style="margin:0 0 10px"><b>我初版的判断被原文部分推翻了，如实更正。</b>
+    我原来说「图谱是最少被用来干活的功能，降到最后一期」。卡帕西原话是：
+    <b>「Obsidian's graph view is the best way to see the shape of your wiki —
+    what's connected to what, which pages are hubs, which are orphans.」</b></p>
+    <p style="margin:0 0 10px">但注意他说的用途：<b>看清形状、找出枢纽页和孤儿页</b> ——
+    这些正是 lint 要处理的东西。所以准确的定位是：</p>
+    <div class="tw" style="margin:0 0 10px"><table>
+      <thead><tr><th></th><th>回答什么问题</th><th>用的频率</th><th>该排哪</th></tr></thead>
+      <tbody>
+        <tr><td><b>反向链接</b></td><td>「这篇被谁引用了」</td><td>每天，读笔记时顺手看</td>
+          <td><span class="b b-em">第 1 期</span></td></tr>
+        <tr><td><b>图谱</b></td><td>「整个库长歪了没、哪些页是孤儿」</td><td>偶尔，做体检时</td>
+          <td><span class="b b-am">和 lint 同期</span></td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin:0"><b>结论仍是图谱排后面，但理由变了</b>：不是「它没用」，
+    而是<b>它和 lint 是一对，该一起做</b> —— 光有图谱看到一堆孤儿页却没有 lint 去修，
+    等于只给你添堵。执行规划第 4 期本来就是「图谱与体检」，这个安排正好对上，不用改。
+    <br><br>实现上：项目里没有 d3，但 <code>konva</code> 已是依赖（设计模块在用），
+    力导向那点数学手写一百来行就够，不必为此加库。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">裁决四 · 「AI 帮我整理杂乱文件」是这套方案里最危险的一环</div>
+    <p style="margin:0">这个功能的失败模式不是「分类不准」，是<b>「我那个文件去哪了」</b>。
+    一旦发生一次，用户再也不会往收件箱里放东西 —— 功能就死了。
+    所以它必须满足三条硬约束：<b>先出计划让人过目、绝不删除原件、每次归档一个 git commit 可整体回滚。</b>
+    详见「收件箱」一节。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 卡帕西 ═══════════ -->
+<section id="卡帕西">
+  <h2>Research</h2>
+  <div class="sectitle">卡帕西的 LLM wiki 是什么</div>
+  <p class="secnote">先说清楚它解决什么问题、和 RAG 的区别在哪，以及我这份调研的可信度边界。</p>
+
+  <div class="verdict">
+    <div class="vlabel">v1.1 更新 · 拿到一手来源了</div>
+    <p style="margin:0 0 10px">初版只找到二手转述。现在拿到了<b>卡帕西本人的原文</b>
+    （gist，已原样存档到 <code>docs/reference/karpathy-llm-wiki.md</code>）。核对之后：</p>
+    <div class="tw" style="margin:12px 0 0"><table>
+      <thead><tr><th>我原来写的</th><th>原文怎么说</th><th>处置</th></tr></thead>
+      <tbody>
+        <tr><td>cc/codex 兼容靠根目录放 CLAUDE.md + AGENTS.md</td>
+          <td>原文明写：schema 就是「<b>a document (e.g. CLAUDE.md for Claude Code or AGENTS.md for Codex)</b>」</td>
+          <td><span class="b b-em">证实</span></td></tr>
+        <tr><td>知识库建议 git 化</td>
+          <td>原文：「The wiki is just a git repo of markdown files. You get version history… for free.」</td>
+          <td><span class="b b-em">证实</span></td></tr>
+        <tr><td>知识图谱建议降到最后一期</td>
+          <td>原文：「<b>Obsidian's graph view is the best way to see the shape of your wiki</b>」</td>
+          <td><span class="b b-ro">部分推翻</span> 见下方修订</td></tr>
+        <tr><td>每个目录一份 INDEX.md</td>
+          <td>原文是<b>全库一份 <code>index.md</code> + 一份 <code>log.md</code></b>，各有明确分工</td>
+          <td><span class="b b-am">改正</span></td></tr>
+        <tr><td>—（漏了）</td>
+          <td>三层架构里<b>原始素材是 immutable 的</b>：「the LLM reads from them but never modifies them」</td>
+          <td><span class="b b-am">补入</span></td></tr>
+        <tr><td>—（漏了）</td>
+          <td><b>查询的好答案要归档回 wiki</b>，让探索也参与复利</td>
+          <td><span class="b b-am">补入</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <h3>核心思路：把 LLM 当编译器，而不是检索器</h3>
+  <div class="tw"><table>
+    <thead><tr><th></th><th>传统 RAG</th><th>LLM wiki</th></tr></thead>
+    <tbody>
+      <tr><td><b>存什么</b></td><td>原始文档切块 + 向量</td><td><b>已经被消化过的 markdown 笔记</b></td></tr>
+      <tr><td><b>问的时候</b></td><td>检索相似片段，拼进上下文</td><td>直接读已经写好的笔记</td></tr>
+      <tr><td><b>新增一份资料</b></td><td>切块、嵌入、入库</td><td>读它 → 写一篇新笔记 → <b>顺手更新被它牵动的老笔记</b></td></tr>
+      <tr><td><b>需要的基建</b></td><td>向量库、嵌入模型、检索调参</td><td><b>一个文件夹</b></td></tr>
+      <tr><td><b>会腐烂吗</b></td><td>会（旧块永远躺在那）</td><td>也会 —— 所以有 lint</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>三层架构（原文的说法）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>层</th><th>谁负责</th><th>关键约束</th></tr></thead>
+    <tbody>
+      <tr><td><b>Raw sources</b> 原始素材</td><td>你负责搜集</td>
+        <td><b>不可变</b> —— 「the LLM reads from them but <b>never modifies</b> them」。这是你的真相来源</td></tr>
+      <tr><td><b>The wiki</b> 笔记层</td><td><b>LLM 全权拥有</b></td>
+        <td>「You read it; the LLM writes it.」你几乎不该手写 wiki</td></tr>
+      <tr><td><b>The schema</b> 约定文件</td><td>你和 LLM 一起共同演进</td>
+        <td>就是 <code>CLAUDE.md</code> / <code>AGENTS.md</code>。原文称它是
+          「让 LLM 成为一个守纪律的 wiki 维护者，而不是一个通用聊天机器人」的关键配置</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>三个动作</h3>
+  <pre><code><span class="flow">Ingest</span>  把原始资料丢进 inbox → LLM 读完 → 写成结构化的笔记，
+        <span class="dim">并且回头去改相关的老笔记（交叉链接、标记矛盾）</span>
+
+<span class="flow">Query</span>   提问时不检索原文，<span class="hi">直接读已经消化好的笔记</span>回答
+        <span class="dim">而且：好答案要**归档回 wiki 成为新页面**——</span>
+        <span class="dim">你的每次探索也参与复利，不是消散在聊天记录里</span>
+
+<span class="flow">Lint</span>    让 AI 体检：找矛盾、找过期、找孤儿页（没人链接它）、
+        <span class="dim">找该连没连的交叉引用</span></code></pre>
+
+  <p><b>为什么这个模式值得抄：</b>它把「整理」这件事从一次性劳动变成了 agent 的日常动作。
+  你每加一份资料、每问一个问题，知识库都更厚一点 —— 而且厚的是<b>已经想明白的部分</b>，
+  不是原始材料的堆积。对一个人干所有活的超级个体来说，这正是最稀缺的东西。</p>
+
+  <h3>它约定的结构</h3>
+  <pre><code>wiki/
+├── _templates/     <span class="dim">笔记模板</span>
+├── projects/
+├── research/
+├── reference/
+├── meetings/
+└── inbox/          <span class="dim">还没整理的粗料</span></code></pre>
+  <p>每篇笔记开头一定有 <b>一句话摘要 + 标签</b>，
+  用意是让 agent <b>不读全文就能判断这篇相不相关</b> —— 这是整个模式能在几百篇规模上跑起来的关键。
+  笔记之间用 Obsidian 那种 <code>[[双链]]</code> 互指。</p>
+  <h3>两个特殊文件（原文点名，我初版漏了）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>文件</th><th>是什么</th><th>怎么用</th></tr></thead>
+    <tbody>
+      <tr><td><code>index.md</code></td>
+        <td><b>内容目录</b>：每页一行链接 + 一句话摘要，按类别分组。每次 ingest 后 LLM 更新</td>
+        <td>回答问题时<b>先读它</b>再决定深入哪几页。原文说这个做法
+          「在 ~100 份源、几百页的规模下出奇地好用，<b>省掉了整套 embedding RAG 基建</b>」</td></tr>
+      <tr><td><code>log.md</code></td>
+        <td><b>只追加的时间线</b>：每次 ingest / query / lint 记一条</td>
+        <td>原文给了个实用技巧：每条以固定前缀开头
+          （<code>## [2026-04-02] ingest | 文章标题</code>），
+          这样 <code>grep "^## \[" log.md | tail -5</code> 就能看最近五条</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>原文还有一句提醒值得抄：<b>「别过度设计。」</b>
+  以及一句更重要的自我定位 —— <b>「这份文档故意写得抽象。它只负责传达这个模式，
+  具体怎么落地由你和你的 agent 一起定。」</b>所以下面那套目录结构是我给的<b>起点</b>，不是标准答案。</p>
+
+  <div class="verdict">
+    <div class="vlabel">一个对这个软件极有利的巧合</div>
+    <p style="margin:0">原文描述他自己的工作方式：<b>「我一边开着 LLM agent，一边开着 Obsidian。
+    LLM 根据我们的对话改文件，我实时浏览结果 —— 跟着链接走、看图谱、读更新过的页面。
+    <u>Obsidian 是 IDE，LLM 是程序员，wiki 是代码库。</u>」</b>
+    <br><br>这正是 Eas-Term 已经有的形态：一侧终端跑 agent，一侧面板浏览。
+    <b>别人要开两个应用来回切，这里天生就是一个窗口。</b>
+    这不是附加功能，这是这个软件最贴合的用法之一。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 缺口 ═══════════ -->
+<section id="缺口">
+  <h2>Gap</h2>
+  <div class="sectitle">照搬过来，有三个地方对不上</div>
+  <p class="secnote">卡帕西的场景是研究者读论文读文章。超级个体的素材长得不一样。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>差异</th><th>原方案</th><th>你的实际情况</th><th>怎么补</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>素材形态</b></td>
+        <td>文章、论文、图片</td>
+        <td><b>参考视频</b>是主力之一（博主的剪辑手法、口播节奏、镜头语言）</td>
+        <td>离线转录成文本再进 wiki，原件归档到 <code>素材/</code>。
+          用已有的 sherpa-onnx，见裁决一</td>
+      </tr>
+      <tr>
+        <td><b>主要实体</b></td>
+        <td>按<b>主题</b>组织（research / reference）</td>
+        <td>你是围绕<b>「人」</b>在学 —— 某个博主的思维模型、行为习惯、代表作</td>
+        <td>把「人物」提成一级目录。这是这套知识库和通用 wiki 最大的结构差异</td>
+      </tr>
+      <tr>
+        <td><b>跨领域</b></td>
+        <td>单一领域深挖</td>
+        <td>编程 / 设计 / 剪辑 / 文案<b>四条线并行</b>，而且经常互相借鉴</td>
+        <td>「方法」目录按<b>可迁移的做法</b>组织，而不是按领域切开 ——
+          剪辑的节奏感和写代码的节奏感是同一类知识</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="verdict">
+    <div class="vlabel">「人物」为什么值得单开一级</div>
+    <p style="margin:0">因为你的学习路径是「跟人学」，不是「查主题」。
+    你会问的是<b>「这个博主遇到这种情况会怎么做」</b>，而不是「关于转场的所有笔记」。
+    人物页把某个人的思维模型、口头禅、代表作、你的实测反馈聚在一起，
+    正好是 agent 回答这类问题时最该先读的那一页。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 评审团 ═══════════ -->
+<section id="评审团">
+  <h2>Panel</h2>
+  <div class="sectitle">六席评审</div>
+  <p class="secnote">各自只对自己那个维度负责。交锋点在后面的表里。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-sk">席 1</span> 知识管理 · 这套模式的边界</h4>
+      <p style="margin:0"><b>「它在几百篇的量级最好用，再往上会喘。」</b>
+      原文给了具体刻度：<b>约 100 份源、几百页</b>，靠一份 <code>index.md</code> 就够，
+      「省掉了整套 embedding RAG 基建」。再往上就需要真正的搜索 ——
+      原文点名推荐了 <a href="https://github.com/tobi/qmd" style="color:#7dd3fc">qmd</a>
+      （本地 markdown 搜索，BM25 + 向量混合、端上跑，同时提供 CLI 和 MCP server）。
+      <b>所以第一期照抄 index.md 就行，别过度设计</b>；等真的越过那个刻度，
+      再接 qmd —— 它既能被 agent shell 出去调，也能当 MCP 工具，两条路都通。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-vi">席 2</span> 多模态 · 视频怎么进来</h4>
+      <p style="margin:0"><b>「别指望 agent 直接看视频。」</b>
+      现实路径是转录成文本 + 关键帧截图。好消息是转录这块<b>本机已经有了</b>。
+      但要提醒两件事：<b>①</b> 一个小时的视频转录要跑几分钟，
+      必须是后台队列 + 进度可见，不能卡住界面；
+      <b>②</b> 转录稿是<b>中间产物不是知识</b> ——
+      直接把三万字逐字稿塞进 wiki 等于污染，必须让 agent 再消化一遍成笔记，
+      逐字稿单独存到 <code>素材/</code> 里备查。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-am">席 3</span> 架构 · 落到现有代码上</h4>
+      <p style="margin:0"><b>「大部分零件都是现成的。」</b>
+      文件树复用 <code>FileTree</code>，markdown 渲染层已经有（零依赖那份），
+      终端模式加一个面板类型和加「名词词典」是同一个改法（<code>PaneKind</code> 加一项）。
+      真正要新写的只有三样：<b>知识库左抽屉、收件箱归档流程、图谱</b>。
+      唯一的架构决定是<b>知识库到底是不是一个「项目」</b> ——
+      我的意见是<b>不是</b>：它是全局的，跨项目共享，不该混进项目列表。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-ro">席 4</span> 数据安全 · AI 动用户的文件</h4>
+      <p style="margin:0"><b>「这是整个方案里唯一可能造成真实损失的部分。」</b>
+      归档 = 移动文件 + 改名 + 写新文件。任何一步出错，用户丢的是<b>他自己的原始素材</b>。
+      三条不可让步：<b>先出计划让人过目</b>（哪个文件去哪、生成什么笔记）、
+      <b>原件绝不删除</b>（只移动，且落点固定在 <code>素材/</code>）、
+      <b>知识库 git 化</b>，每次归档一个 commit —— 出问题一条命令全退回去。
+      不接受「AI 应该不会出错」这种论证。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-gy">席 5</span> 产品 · 取消「基本操作」的代价</h4>
+      <p style="margin:0"><b>「那四个工具不能凭空消失。」</b>
+      左抽屉现在装的是 选择 / 矩形 / 箭头 / 便签。
+      换成知识库我同意 —— 知识库是天天用的，画矩形是偶尔用的，占一整个抽屉确实亏。
+      但删掉它们会让「在画布上圈一下、写个便签」这件事无处可做。
+      <b>建议把这四个收成右下角缩放条旁边的一条紧凑图标栏</b>（四个图标，一行，不占抽屉），
+      右键菜单里也保留「新建便签」（那条本来就有）。</p>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h4 style="margin-top:0"><span class="b b-em">席 6</span> 怀疑论 · 这功能会不会又变成一个没人用的抽屉</h4>
+      <p style="margin:0 0 10px"><b>「先承认：大多数个人知识库最后都变成了数字仓鼠窝。」</b>
+      收集的快感远大于使用的频率。判断这套东西成不成立，只有一个标准：
+      <b>你是不是真的会在干活时去问它</b>。所以我提两条否决性意见：</p>
+      <ul style="margin:0">
+        <li><b>入口必须在干活的地方，不是一个要专门去的页面。</b>左抽屉 ✓、终端模式下拉 ✓ ——
+          这两个位置选对了，说明产品直觉是对的。</li>
+        <li><b>第一期必须包含「问知识库」这个动作</b>，不能只做「往里放」。
+          只做收集端的知识库，三周后一定是死的。哪怕最简陋 ——
+          在知识库目录起一个终端、agent 自动带着 wiki 约定 —— 也算闭环。</li>
+      </ul>
+      <p style="margin:10px 0 0">另外给一条可验证的成败判据：<b>一个月后，你问知识库的次数是不是超过往里放的次数。</b>
+      如果放 100 次问 3 次，这就是个仓鼠窝，该砍。</p>
+    </div>
+  </div>
+
+  <h3>交锋点</h3>
+  <div class="tw"><table>
+    <thead><tr><th>争议</th><th>正方</th><th>反方</th><th>裁决</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>知识图谱做不做</b></td>
+        <td>你点名要；视觉上确实是知识库的门面</td>
+        <td>席 1/6：图谱是最贵、最少被用来干活的一块；反向链接才是日用品</td>
+        <td><span class="b b-am">降级</span> 反向链接进第一期，图谱排最后一期，做一个简版</td>
+      </tr>
+      <tr>
+        <td><b>知识库算不算一个「项目」</b></td>
+        <td>复用项目 Frame 的全套能力，省事</td>
+        <td>席 3：它是<b>全局</b>的、跨项目共享，混进项目列表会让「项目」这个概念变脏</td>
+        <td><span class="b b-em">不算</span> 独立配置项，但可以在画布上开一个知识库 Frame 干活</td>
+      </tr>
+      <tr>
+        <td><b>逐字稿要不要直接进 wiki</b></td>
+        <td>信息最全</td>
+        <td>席 2：三万字逐字稿是<b>中间产物</b>，直接进等于污染知识库</td>
+        <td><span class="b b-em">不进</span> 逐字稿存 <code>素材/</code>，wiki 里只放消化过的笔记 + 回链</td>
+      </tr>
+      <tr>
+        <td><b>归档要不要自动跑</b></td>
+        <td>无感知最省心</td>
+        <td>席 4：静默移动用户的文件，出一次事这功能就死了</td>
+        <td><span class="b b-ro">必须人工确认</span> 出计划 → 过目 → 执行 → git commit</td>
+      </tr>
+      <tr>
+        <td><b>四个画布工具怎么办</b></td>
+        <td>—</td>
+        <td>席 5：不能凭空消失</td>
+        <td><span class="b b-am">收成图标栏</span> 移到缩放条旁边，见「界面」一节</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════ 形态 ═══════════ -->
+<section id="形态">
+  <h2>Shape</h2>
+  <div class="sectitle">知识库长什么样</div>
+  <p class="secnote">目录结构、笔记格式、链接约定，以及怎么让两个 CLI 自动懂规矩。</p>
+
+  <h3>目录结构</h3>
+  <pre><code>&lt;你选的位置&gt;/
+├── <span class="hi">00-收件箱/</span>        <span class="dim">← 你唯一需要记住的目录。杂乱素材全丢这</span>
+├── 人物/               <span class="dim">博主 / 作者：思维模型、行为习惯、代表作、你的实测反馈</span>
+├── 方法/               <span class="dim">可迁移的做法：脚本结构、剪辑节奏、配色逻辑、调试套路</span>
+├── 领域/               <span class="dim">编程 / 设计 / 剪辑 / 文案 —— 各自的主题笔记</span>
+├── 项目/               <span class="dim">和 Eas-Term 里的项目对应，放决策记录和复盘</span>
+├── 素材/               <span class="dim">归档后的原件：视频、图、PDF、逐字稿</span>
+├── _模板/
+├── CLAUDE.md           <span class="dim">← 给 Claude Code 的规矩</span>
+└── AGENTS.md           <span class="dim">← 给 Codex 的同一份规矩</span></code></pre>
+  <p>六个顶层目录，比卡帕西那套多一个「人物」少一个 meetings —— 按你的实际用法调的。
+  <b>「别过度设计」这条建议照抄</b>：不够用了再加，比一开始铺二十个目录强。</p>
+
+  <h3>一篇笔记的样子</h3>
+  <pre><code>---
+summary: 他的口播节奏靠「三秒一个信息点」撑住，不靠语速
+tags: [口播, 节奏, 剪辑]
+source: 素材/2026-07/某某-如何做口播.mp4
+people: [[某某]]
+created: 2026-07-29
+updated: 2026-07-29
+---
+
+## 要点
+...
+
+## 我的实测
+<span class="dim">← 这一节是知识库真正值钱的地方：别人的方法 + 你试过的结果</span>
+
+## 相关
+- [[三秒法则]]
+- [[某某]]</code></pre>
+  <p><b>summary 和 tags 是硬约定</b>，不是装饰 —— agent 靠它们决定要不要读全文，
+  没有它们，知识库一过一百篇就开始卡。</p>
+
+  <div class="verdict">
+    <div class="vlabel">cc / codex 兼容：零代码</div>
+    <p style="margin:0 0 10px">知识库根目录放两份内容相同的说明文件：</p>
+    <ul class="clean" style="margin:0">
+      <li><code>CLAUDE.md</code> —— Claude Code 在该目录起会话时自动读</li>
+      <li><code>AGENTS.md</code> —— Codex 在该目录起会话时自动读</li>
+    </ul>
+    <p style="margin:10px 0 0">里面写清目录约定、front-matter 字段、双链写法、ingest / lint 的动作定义。
+    <b>在知识库目录里开终端，两个 CLI 立刻都懂规矩</b> —— 不需要 MCP 工具，不需要适配层，
+    也不会因为哪家 CLI 改了接口而失效。这正是「知识库就是个文件夹」这个设计的红利。
+    <br><br>这两份文件由 app 在初始化时生成，并在版本升级时提示更新（<b>按标记替换，不覆盖用户自己加的内容</b> ——
+    和技能包那边一个套路，那套已经验过）。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 收件箱 ═══════════ -->
+<section id="收件箱">
+  <h2>Inbox</h2>
+  <div class="sectitle">收件箱 → AI 归档</div>
+  <p class="secnote">这是最有价值也最危险的一环。安全设计写在功能设计前面。</p>
+
+  <h3>流程</h3>
+  <pre><code><span class="dim">你做的事：把任何东西丢进 00-收件箱/</span>
+
+<span class="flow">①</span> 扫描      <span class="dim">识别类型：视频 / 音频 / 图 / PDF / 文本 / 网页存档</span>
+<span class="flow">②</span> 预处理    <span class="dim">视频音频 → 离线转录（本机 sherpa-onnx，零 token）</span>
+                <span class="dim">图 → 记录尺寸/EXIF；PDF/文本 → 直接读</span>
+<span class="flow">③</span> <span class="hi">出计划</span>    <span class="dim">每个文件：归到哪个目录、改成什么名字、生成哪篇笔记、</span>
+                <span class="dim">会牵动哪些已有笔记 —— 全列出来，等你过目</span>
+<span class="flow">④</span> 你确认    <span class="dim">可以逐条改或剔除</span>
+<span class="flow">⑤</span> 执行      <span class="dim">移动原件到 素材/ → 写笔记 → 更新相关笔记的双链</span>
+<span class="flow">⑥</span> 落一个 commit  <span class="dim">整批一次，信息写清这次归了什么</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">三条不可让步的约束</div>
+    <div class="tw" style="margin-top:12px"><table>
+      <thead><tr><th>约束</th><th>为什么</th></tr></thead>
+      <tbody>
+        <tr><td><b>先出计划，人确认后才动</b></td>
+          <td>失败模式不是「分类不准」，是「我那个文件去哪了」。发生一次，用户再也不敢往里放东西</td></tr>
+        <tr><td><b>只移动，绝不删除、绝不覆盖</b></td>
+          <td>重名一律加后缀而不是覆盖。原件永远能找到，落点固定在 <code>素材/&lt;年月&gt;/</code></td></tr>
+        <tr><td><b>知识库 git 化，每批一个 commit</b></td>
+          <td>这是唯一能<b>整体</b>撤销的机制。AI 改了十篇笔记的双链，靠人工回滚是不可能的</td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin:12px 0 0"><b>git 是可选但强烈建议的</b>：初始化时问一句「要不要用 git 管这个知识库（推荐）」。
+    不用 git 的话，「AI 帮我整理」这个功能建议直接关掉 —— 没有撤销的自动整理不值得冒险。</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">成本与耗时（要如实告诉用户）</h4>
+    <ul style="margin:0">
+      <li><b>转录</b>：本机跑，不花 token。但一小时的视频要几分钟 —— 后台队列 + 进度条，不能卡界面</li>
+      <li><b>写笔记</b>：这一步花 token，量随素材数线性增长。归档计划里<b>要给出预估条数</b>，
+        大批量时提醒分批</li>
+      <li><b>更新相关笔记</b>：这是 Karpathy 模式最贵也最值钱的一步。建议默认只更新<b>直接相关</b>的，
+        全库交叉更新放到 lint 里手动触发</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════ 界面 ═══════════ -->
+<section id="界面">
+  <h2>UI</h2>
+  <div class="sectitle">界面怎么放</div>
+  <p class="secnote">按你定的方向：左抽屉换成知识库，终端模式走面板下拉。</p>
+
+  <h3>画布模式 · 左抽屉</h3>
+  <pre><code>┌─ 知识库 ────────────────┐
+│ 🔍 搜索                  │
+│ ─────────────────────── │
+│ <span class="hi">收件箱  ⑦</span>  ← 有货时才亮  │
+│ ─────────────────────── │
+│ ▸ 人物                   │
+│ ▸ 方法                   │
+│ ▾ 领域                   │
+│    剪辑                  │
+│    文案                  │
+│ ▸ 项目                   │
+│ ▸ 素材                   │
+│ ─────────────────────── │
+│ <span class="dim">反向链接（选中笔记时）</span>     │
+│ ← 三秒法则               │
+│ ← 某某                   │
+└─────────────────────────┘
+
+拖笔记到 Frame  → 开成 markdown 预览节点（已有能力）
+点收件箱徽章    → 进归档流程</code></pre>
+  <p>动效和交互直接镜像右侧的资源抽屉 —— 左缘 guide、点击滑入、点外面收起，那套已经调好了。</p>
+
+  <div class="warn">
+    <div class="vlabel">被腾走的四个工具去哪</div>
+    <p style="margin:0">选择 / 矩形 / 箭头 / 便签 —— <b>收成右下角缩放条左边的一条紧凑图标栏</b>，
+    一行四个图标，比一整个抽屉省得多。右键空白处的「新建便签」保留（本来就有）。
+    <b>不做这一步就直接删抽屉的话，画布上圈一下、写个便签这件事会无处可做。</b></p>
+  </div>
+
+  <h3>终端模式 · 面板下拉</h3>
+  <p>面板类型加一项「知识库」，和现有的「名词词典」完全同一个改法：</p>
+  <pre><code>终端 · 代码预览 · 图片预览 · 网页 · 名词词典 · <span class="hi">知识库</span></code></pre>
+  <p>选中后这个面板显示知识库浏览器（文件树 + 笔记预览），
+  和终端并排 —— 一边看笔记一边让 agent 干活，这是终端模式下最自然的用法。</p>
+
+  <h3>知识图谱（最后一期）</h3>
+  <p>从所有笔记的 <code>[[双链]]</code> 抽出边，力导向布局，用 <code>konva</code> 画
+  （已是依赖，设计模块在用）。点节点跳到笔记，按标签染色。
+  <b>但请记住席 1 和席 6 的意见：先有反向链接，再谈图谱。</b></p>
+</section>
+
+<!-- ═══════════ 初始化 ═══════════ -->
+<section id="初始化">
+  <h2>Onboarding</h2>
+  <div class="sectitle">第一次用怎么知道有这功能</div>
+  <p class="secnote">分发场景。复用刚做完的首启引导那套机制，不另起炉灶。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>时机</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>第一次进画布</b></td>
+        <td>左缘 guide 直接写「知识库」，未初始化时点开是一屏引导：
+          这是什么、能干什么、<b>一句话说清「把杂东西丢进收件箱，AI 帮你归位」</b></td>
+      </tr>
+      <tr>
+        <td><b>选位置</b></td>
+        <td>给一个默认建议（<code>~/Documents/Eas 知识库</code>）+「选个别的地方」。
+          <b>绝不能默认建在 app 内部</b> —— 卸载/升级会连人带货一起没。
+          路径存在 userData，跟着用户走</td>
+      </tr>
+      <tr>
+        <td><b>初始化</b></td>
+        <td>建六个目录 + <code>_模板/</code> + <code>CLAUDE.md</code> / <code>AGENTS.md</code>
+          + 一篇「怎么用这个知识库」的示例笔记（<b>让它一开始就不是空的</b>，
+          空知识库的启动摩擦极大）</td>
+      </tr>
+      <tr>
+        <td><b>git</b></td>
+        <td>问一句「用 git 管它吗（推荐，AI 归档出错时能整体撤销）」。
+          选否则「AI 归档」功能保持关闭并说明原因</td>
+      </tr>
+      <tr>
+        <td><b>已有 Obsidian 库的用户</b></td>
+        <td>允许直接指向现有目录。约定文件不覆盖已有内容，按标记插入 ——
+          这类用户是这个功能最天然的受众，别把他们挡在门外</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════ 分歧 ═══════════ -->
+<section id="分歧">
+  <h2>Dissent</h2>
+  <div class="sectitle">保留的分歧</div>
+  <p class="secnote">没有达成一致，或达成一致但风险仍在。不抹平。</p>
+
+  <div class="dissent">
+    <div class="vlabel">分歧 1 · 知识图谱的优先级</div>
+    <p style="margin:0">你点名要图谱，评审团建议降到最后一期。
+    <b>代价说清楚</b>：图谱是有观赏价值的，做完能让这个功能「看起来很完整」；
+    但它对「我干活时想不起某件事」这个真实场景帮助有限。
+    如果你要的是产品完整度（比如要拿去做演示），那它就该往前排 —— <b>这是产品定位问题，你定。</b></p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">分歧 2 · 会不会变成数字仓鼠窝</div>
+    <p style="margin:0">席 6 的保留意见：<b>个人知识库的经典死法是「只进不出」。</b>
+    建议做一个极轻的本地计数：<b>放入次数 vs 查询次数</b>。
+    一个月后如果放 100 次问 3 次，说明它没长成工具，只长成了仓库 ——
+    那时候该做的是砍掉收集端的花活，而不是继续加功能。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">风险 · 知识库变大之后 agent 读不动</div>
+    <p style="margin:0">Karpathy 模式靠「摘要行 + 标签」筛选，几百篇之内没问题，
+    上千篇之后光扫一遍目录就吃掉大量上下文。
+    <b>对策要在第一期就埋下：每个目录一份 <code>INDEX.md</code>，由 lint 维护</b>，
+    agent 先读索引再决定深入哪几篇。等真的长到那个规模再补，改造成本会大得多。</p>
+  </div>
+</section>
+
+<!-- ═══════════ 规划 ═══════════ -->
+<section id="规划">
+  <h2>Plan</h2>
+  <div class="sectitle">执行规划</div>
+  <p class="secnote">四期。每期能独立交付、独立验证；不做完也不留半截。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第 1 期 · 骨架与入口 <span class="b b-em" style="margin-left:6px">含闭环</span></div>
+      <div class="tt">知识库能建起来、能看、能问</div>
+      <div class="td">
+        ① 首次引导 + 选位置 + 建目录骨架 + 生成 <code>CLAUDE.md</code>/<code>AGENTS.md</code> + 示例笔记　·
+        ② 左抽屉换成知识库（文件树 + 搜索 + 收件箱徽章），
+        原四个画布工具收成右下角图标栏　·
+        ③ 终端模式面板下拉加「知识库」　·
+        ④ 拖笔记到 Frame 开成预览　·
+        ⑤ 反向链接面板　·
+        ⑥ 「在知识库里问」：一键在知识库目录开终端（agent 自动带约定）<br>
+        <b>验证：</b>拿一台干净机器走一遍 —— 从没有知识库到<b>问出第一个答案</b>，
+        全程不用看文档
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第 2 期 · 收件箱归档 <span class="b b-ro" style="margin-left:6px">最高风险</span></div>
+      <div class="tt">杂乱素材 → AI 归位</div>
+      <div class="td">
+        ① 扫描分类　· ② <b>出归档计划给人过目</b>（可逐条改/剔除）　·
+        ③ 执行：只移动不删除、重名加后缀　· ④ git 初始化 + 每批一个 commit + 一键回滚　·
+        ⑤ token 预估与分批提醒<br>
+        <b>验证：</b>丢 20 个杂文件进去跑一遍，然后<b>用 git 完整还原</b>到归档前 ——
+        还原不了就不算做完
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第 3 期 · 视频与音频</div>
+      <div class="tt">参考视频真正能进知识库</div>
+      <div class="td">
+        ① Chromium 解码音轨 → 重采样 16k → 喂 sherpa-onnx（复用现有语音识别，零新依赖）　·
+        ② 后台队列 + 进度可见　· ③ 逐字稿存 <code>素材/</code>，agent 消化成笔记　·
+        ④ 关键帧截图挂到笔记上<br>
+        <b>验证：</b>丢一个 30 分钟的博主视频进收件箱，产出一篇<b>能读</b>的方法笔记 +
+        原件和逐字稿都能追溯
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第 4 期 · 图谱与体检</div>
+      <div class="tt">看见知识之间的关系</div>
+      <div class="td">
+        ① 双链解析 → konva 力导向图谱，点节点跳笔记、按标签染色　·
+        ② lint 动作：找矛盾 / 过期 / 孤儿页 / 该连没连的　·
+        ③ 各目录 <code>INDEX.md</code> 自动维护　· ④ 放入 vs 查询计数<br>
+        <b>验证：</b>lint 能在一个刻意造脏的知识库里找出预埋的矛盾和孤儿页
+      </div>
+    </div>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">/pick 知识库第1期</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="font-size:13px;color:#737373;margin-top:-8px">
+    想调优先级就直接说，比如「图谱提前」「先做收件箱」。
+    目录结构、字段名、期数划分都是我的判断，不是定论 —— 不合用直接改。
+  </p>
+</section>
+
+<footer>
+  Eas-Term · 知识库调研与执行规划 v1 · 2026-07-29<br><br>
+  <b>一手出处</b>：<a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f">karpathy / LLM Wiki（gist 原文）</a>
+  —— 已原样存档到 <code>docs/reference/karpathy-llm-wiki.md</code>，本页所有引文出自它。<br><br>
+  <b>补充参考</b>（二手转述，用于交叉验证）：<br>
+  <a href="https://www.mindstudio.ai/blog/andrej-karpathy-llm-wiki-knowledge-base-claude-code">MindStudio · What Is Andrej Karpathy's LLM Wiki</a> ·
+  <a href="https://academy.dair.ai/blog/llm-knowledge-bases-karpathy">DAIR.AI Academy · LLM Knowledge Bases</a> ·
+  <a href="https://blog.starmorph.com/blog/karpathy-llm-wiki-knowledge-base-guide">Starmorph · Complete Guide to AI-Maintained Knowledge Bases</a> ·
+  <a href="https://www.aibuilderclub.com/blog/karpathy-llm-wiki">AI Builder Club · A Knowledge Base That Compounds</a><br><br>
+  <b>代码侧依据</b>：<code>src/main/stt.ts</code>（sherpa-onnx + SenseVoice zh-en-ja-ko-yue）·
+  <code>src/renderer/src/features/workspace/PaneView.tsx</code>（PaneKind 下拉）·
+  <code>src/renderer/src/features/canvas/CanvasStage.tsx</code>（左侧「基本操作」抽屉）·
+  <code>src/renderer/src/features/canvas/CanvasDrawer.tsx</code>（右抽屉，左抽屉的动效模板）·
+  <code>package.json</code>（konva 已是依赖，无 d3）<br>
+  本页为 report 预设固定视觉规格，断网可直接打开。
+</footer>
+
+</main>
+</body>
+</html>
