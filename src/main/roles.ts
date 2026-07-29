@@ -125,9 +125,21 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
-    // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」
-    // 变成「工具层面不可见」。第 3 期由 MCP 层按这个名单过滤 tools/list。
-    tools: { denyMcp: ['*image*', '*dalle*', '*imagen*', '*flux*', '*banana*', '*midjourney*'] },
+    // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」变成
+    // 「工具在模型上下文里根本不存在」。Claude 的 deny 支持通配且必须匹配完整工具名，
+    // 所以这里写 mcp__*xxx* 形态。这是**黑名单**，挡的是已知的那几类生图 MCP；
+    // 用户装了没被覆盖到的，得自己把 server 名字填进 denyServers。
+    tools: {
+      deny: [
+        'mcp__*image*',
+        'mcp__*dalle*',
+        'mcp__*imagen*',
+        'mcp__*flux*',
+        'mcp__*banana*',
+        'mcp__*midjourney*',
+        'mcp__*stable*diffusion*'
+      ]
+    },
     contract: [
       '你这一轮的职责是产出视觉素材。',
       '生图只允许走用户指定的生成路径。**不要**调用任何其他图像生成工具，',
@@ -190,7 +202,11 @@ function sanitize(raw: unknown): AgentRole[] {
       model: strMap(r.model),
       effort: strMap(r.effort),
       contract: str(r.contract),
-      tools: { allow: strList(tools.allow), deny: strList(tools.deny), denyMcp: strList(tools.denyMcp) },
+      tools: {
+        allow: strList(tools.allow),
+        deny: strList(tools.deny),
+        denyServers: strList(tools.denyServers)
+      },
       builtin: r.builtin === true
     })
   }

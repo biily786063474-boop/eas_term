@@ -41,7 +41,8 @@ function buildClaudeCmd(
   effort?: string,
   cont?: boolean,
   sessionId?: string,
-  contractFile?: string | null
+  contractFile?: string | null,
+  tools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
 ): string {
   const p = ['claude']
   if (cont) p.push(...(sessionId ? ['--resume', sessionId] : ['-c']))
@@ -51,6 +52,13 @@ function buildClaudeCmd(
   // 角色契约走文件而不是内联：内联会让命令变成难读的一长条，且契约里的换行/引号都要转义。
   // 回溯时不拼——--resume 不重放 system prompt，加了也是白加，反而让人误以为改角色生效了。
   if (!cont && contractFile) p.push('--append-system-prompt-file', shq(contractFile))
+  // 工具边界：回溯时也要拼 —— 它是 CLI 层的强制规则，和 system prompt 不同，
+  // 每次启动都重新生效，不拼等于恢复会话时把护栏卸了
+  const deny = [...(tools?.deny ?? []), ...(tools?.denyServers ?? []).map((n) => `mcp__${n}__*`)]
+  // 变长参数（<tools...>）放最后：夹在中间会把后面的选项一起吞掉，
+  // --mcp-config 那次已经栽过一回。通配符必须引起来，否则 zsh 会先替我们展开成文件名
+  if (tools?.allow?.length) p.push('--allowedTools', ...tools.allow.map(shq))
+  if (deny.length) p.push('--disallowedTools', ...deny.map(shq))
   return p.join(' ')
 }
 
@@ -61,7 +69,8 @@ function buildCodexCmd(
   effort?: string,
   cont?: boolean,
   sessionId?: string,
-  contract?: string
+  contract?: string,
+  denyServers?: string[]
 ): string {
   // 回溯：有绑定就精确恢复这个终端自己的会话，没有才回落「最近一个」
   if (cont) return sessionId ? `codex resume ${sessionId}` : 'codex resume --last'
@@ -72,6 +81,9 @@ function buildCodexCmd(
   // 在 0.145 里已被移除，实测报 unknown configuration field），只能内联 -c instructions=。
   // 因此压成单行并去掉双引号，避免把 -c 的取值解析弄乱。
   if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
+  // Codex 没有工具级 allow/deny（实测 tools.deny / allowed_tools 都是 unknown field），
+  // 能做的只有整个关掉某个 MCP server。粒度比 Claude 粗，UI 里要如实说明
+  for (const n of denyServers ?? []) p.push('-c', `mcp_servers.${n}.enabled=false`)
   return p.join(' ')
 }
 
@@ -247,9 +259,13 @@ export function CanvasAgentBar({
     let cmd: string
     if (kind === 'claude') {
       const f = contract ? await window.api.roles.contractFile(role!.id) : null
-      cmd = buildClaudeCmd(model, effort, cont, cont ? sessionId : sid, f)
+      cmd = buildClaudeCmd(model, effort, cont, cont ? sessionId : sid, f, role?.tools)
     } else {
-      cmd = buildCodexCmd(model, effort, cont, sessionId, contract)
+      // 只对**真实配置过**的 server 下发禁用：名字不存在时 codex 会直接拒绝启动
+      // （报 invalid transport），一个笔误就能让终端起不来
+      const want = role?.tools?.denyServers ?? []
+      const have = want.length ? await window.api.agent.codexServers() : []
+      cmd = buildCodexCmd(model, effort, cont, sessionId, contract, want.filter((n) => have.includes(n)))
     }
     window.api.pty.write(ptyId, cmd + '\r')
 

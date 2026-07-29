@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { AgentProbe } from '../shared/types'
@@ -54,7 +55,38 @@ async function probeCodex(): Promise<AgentProbe['codex']> {
   }
 }
 
+/**
+ * 用户在 ~/.codex/config.toml 里配了哪些 MCP server。
+ *
+ * 为什么需要：角色的「禁用 MCP server」在 Codex 侧走 -c mcp_servers.<名>.enabled=false，
+ * 而**名字不存在时 codex 会直接拒绝启动**（报 `invalid transport`，因为它试图现构造一个
+ * 没有 command/url 的 server）。也就是说一个笔误就能让终端起不来。
+ * 所以下发前先按这份清单过滤，并在编辑器里把可选名字摆出来，从源头避免手误。
+ *
+ * 逐行扫描找 [mcp_servers.<名>] 段头，不用正则整文件匹配 —— 上次用正则改这个文件
+ * 把用户真实配置截断过，教训还热着。
+ */
+function codexServers(): string[] {
+  try {
+    const raw = fs.readFileSync(path.join(os.homedir(), '.codex', 'config.toml'), 'utf8')
+    const out: string[] = []
+    for (const line of raw.split('\n')) {
+      const t = line.trim()
+      if (!t.startsWith('[mcp_servers.')) continue
+      const name = t.slice('[mcp_servers.'.length).replace(/\].*$/, '').trim()
+      // 带引号的键名（[mcp_servers."a.b"]）去掉引号
+      const clean = name.replace(/^"(.*)"$/, '$1')
+      if (clean && !out.includes(clean)) out.push(clean)
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 export function registerAgentHandlers(): void {
+  ipcMain.handle('agent:codexServers', () => codexServers())
+
   ipcMain.handle('agent:probe', async (): Promise<AgentProbe> => {
     const [claude, codex] = await Promise.all([probeClaude(), probeCodex()])
     return { claude, codex }

@@ -36,6 +36,8 @@ export function CanvasRoleEditor({
   const saveRoles = useStore((s) => s.saveRoles)
   const resetRoles = useStore((s) => s.resetRoles)
   const [probe, setProbe] = useState<AgentProbe | null>(null)
+  // 本机实际配了哪些 Codex MCP server —— 摆出来让用户点，别让他手打
+  const [servers, setServers] = useState<string[]>([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -65,6 +67,7 @@ export function CanvasRoleEditor({
   useEffect(() => {
     let live = true
     void getProbe().then((p) => live && setProbe(p))
+    void window.api.agent.codexServers().then((v) => live && setServers(v))
     return () => {
       live = false
     }
@@ -81,6 +84,12 @@ export function CanvasRoleEditor({
   const set = (patch: Partial<AgentRole>): void => setDraft((d) => ({ ...d, ...patch }))
   const setPer = (field: 'model' | 'effort', k: Kind, v: string): void =>
     setDraft((d) => ({ ...d, [field]: { ...(d[field] ?? {}), [k]: v || undefined } }))
+  // 一行一条；空行丢掉，末尾换行不会变成一条空规则
+  const setTools = (field: 'deny' | 'denyServers', text: string): void =>
+    setDraft((d) => ({
+      ...d,
+      tools: { ...(d.tools ?? {}), [field]: text.split('\n').map((x) => x.trim()).filter(Boolean) }
+    }))
 
   const commit = async (next: AgentRole[]): Promise<void> => {
     setBusy(true)
@@ -213,20 +222,63 @@ export function CanvasRoleEditor({
             </span>
           </div>
 
-          {!!draft.tools?.deny?.length || !!draft.tools?.denyMcp?.length ? (
-            <div className="re-field">
-              <span className="re-label">工具边界</span>
-              <div className="re-tools">
-                {[...(draft.tools?.deny ?? []), ...(draft.tools?.denyMcp ?? [])].map((t) => (
-                  <code key={t}>{t}</code>
-                ))}
+          <div className="re-field">
+            <span className="re-label">禁用的工具</span>
+            <textarea
+              className="re-list"
+              value={(draft.tools?.deny ?? []).join('\n')}
+              onChange={(e) => setTools('deny', e.target.value)}
+              placeholder={'一行一条，例如\nWrite\nEdit\nmcp__*image*'}
+              spellCheck={false}
+            />
+            <span className="re-hint">
+              <b>只对 Claude 生效</b>。裸工具名（<code>Write</code>）会让该工具从模型上下文里整个消失，
+              由 CLI 强制，不靠模型自觉；也支持通配（<code>mcp__*</code> = 所有 MCP 工具）。
+            </span>
+            <span className="re-hint warn">
+              这是护栏，不是牢笼：禁了 Write 但留着 Bash，模型仍可以用 <code>echo &gt; 文件</code> 绕过。
+              它挡的是「顺手就改了」，不是铁了心的规避。
+            </span>
+          </div>
+
+          <div className="re-field">
+            <span className="re-label">禁用的 MCP server</span>
+            <textarea
+              className="re-list re-list-sm"
+              value={(draft.tools?.denyServers ?? []).join('\n')}
+              onChange={(e) => setTools('denyServers', e.target.value)}
+              placeholder={'一行一个 server 名字'}
+              spellCheck={false}
+            />
+            {!!servers.length && (
+              <div className="re-chips">
+                <span className="re-chips-k">本机已配置：</span>
+                {servers.map((n) => {
+                  const on = (draft.tools?.denyServers ?? []).includes(n)
+                  return (
+                    <button
+                      key={n}
+                      className={`re-chip${on ? ' on' : ''}`}
+                      onClick={() => {
+                        const cur = draft.tools?.denyServers ?? []
+                        setTools('denyServers', (on ? cur.filter((x) => x !== n) : [...cur, n]).join('\n'))
+                      }}
+                    >
+                      {n}
+                    </button>
+                  )
+                })}
               </div>
-              <span className="re-hint warn">
-                这些还<b>没有强制力</b>，第 3 期接上 MCP 过滤和 <code>--allowedTools</code> 才真正生效。
-                现在只有上面契约里的文字约束。
-              </span>
-            </div>
-          ) : null}
+            )}
+            <span className="re-hint">
+              两边都生效，但粒度不同：Claude 展开成 <code>mcp__&lt;名&gt;__*</code> 按工具禁；
+              Codex 没有工具级开关，只能 <code>-c mcp_servers.&lt;名&gt;.enabled=false</code> 把整个 server 关掉。
+            </span>
+            <span className="re-hint warn">
+              名字必须和 <code>~/.codex/config.toml</code> 里的完全一致 —— 写错的话 Codex 会
+              <b>直接拒绝启动</b>。所以下发前会按上面这份清单过滤，对不上的静默跳过。
+            </span>
+          </div>
         </div>
 
         {!!err && <div className="re-err">{err}</div>}

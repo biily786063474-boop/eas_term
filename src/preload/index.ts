@@ -61,7 +61,9 @@ const api = {
     probe: (): Promise<AgentProbe> => ipcRenderer.invoke('agent:probe'),
     // Codex 起完之后按 cwd 捞它的 session id（Codex 没有指定会话 id 的启动参数）
     captureCodexSession: (cwd: string, sinceMs: number): Promise<{ id: string | null }> =>
-      ipcRenderer.invoke('codex:captureSession', cwd, sinceMs)
+      ipcRenderer.invoke('codex:captureSession', cwd, sinceMs),
+    // 用户配了哪些 Codex MCP server（禁用清单要按它过滤：名字不存在 codex 会拒绝启动）
+    codexServers: (): Promise<string[]> => ipcRenderer.invoke('agent:codexServers')
   },
   browser: {
     // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)

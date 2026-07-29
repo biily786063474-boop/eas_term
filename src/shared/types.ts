@@ -29,8 +29,12 @@ export interface AgentRole {
   effort?: Partial<Record<'claude' | 'codex', string>>
   /** 职责契约：产出什么、落在哪、什么算做完。启动时拼进命令 */
   contract: string
-  /** 工具边界。deny/allow 走 CLI 参数，denyMcp 走 MCP 层过滤——均在第 3 期落地 */
-  tools?: { allow?: string[]; deny?: string[]; denyMcp?: string[] }
+  /** 工具边界。两边能力不对等，如实分开：
+   *   allow/deny  —— Claude 的工具名/通配（--allowedTools / --disallowedTools）。
+   *                  裸工具名 deny = 该工具从模型上下文里整个消失，由 CLI 强制，不靠模型自觉。
+   *   denyServers —— MCP server 名字。Claude 侧展开成 mcp__<名>__* 加进 deny；
+   *                  Codex 侧走 -c mcp_servers.<名>.enabled=false（它没有工具级开关，只能整个 server 关）。 */
+  tools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
   /** 内置角色：可改可删，删了能一键恢复 */
   builtin?: boolean
 }
