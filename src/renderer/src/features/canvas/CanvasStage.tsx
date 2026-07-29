@@ -10,6 +10,7 @@ import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
+import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
 import { paneForFile } from './media'
@@ -138,78 +139,18 @@ export function CanvasStage(): JSX.Element {
     return () => el.removeEventListener('wheel', onWheel)
   }, [setViewport])
 
-  // 右键菜单：按目标（终端 / 文件·组件节点 / Frame / 图形 / 空白）构造统一 CRUD 菜单
+  // 右键菜单：按目标（终端 / 文件·组件节点 / Frame / 图形 / 空白）构造统一 CRUD 菜单。
+  // 菜单项的构造搬去了 stageMenu.ts —— 那 70 行的数据全部现取自 store，
+  // 不依赖组件渲染态，留在这里只是把手势 effect 之间的距离拉远。
   useEffect(() => {
     const onCtx = (e: MouseEvent): void => {
-      const t = e.target as HTMLElement
-      if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer')) return
+      const items = stageMenuItems(e, {
+        setEditingSticky,
+        setEditingFrame,
+        viewportEl: viewportRef.current
+      })
+      if (!items) return // 右键落在画布之外，让它走系统菜单
       e.preventDefault()
-      const st = useStore.getState()
-      const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
-      const nodeEl = t.closest('.cfile-node[data-node-id]') as HTMLElement | null
-      const shapeEl = t.closest('.cshape[data-sid]') as HTMLElement | null
-      const frameEl = t.closest('.cframe') as HTMLElement | null
-      let items: CanvasMenuItem[]
-      if (paneEl?.dataset.leafId) {
-        const leafId = paneEl.dataset.leafId
-        let fid = ''
-        let nid = ''
-        for (const f of st.canvas.frames) {
-          const n = f.nodes.find((x) => x.leafId === leafId)
-          if (n) {
-            fid = f.id
-            nid = n.id
-            break
-          }
-        }
-        items = [
-          {
-            label: '关闭终端',
-            danger: true,
-            onClick: () => {
-              if (fid && nid) st.removeNode(fid, nid)
-              const tab = st.tabs.find((tb) => collectLeaves(tb.root).some((l) => l.id === leafId))
-              if (tab) st.closeLeaf(tab.id, leafId)
-            }
-          }
-        ]
-      } else if (nodeEl?.dataset.nodeId && nodeEl.dataset.frameId) {
-        const fid = nodeEl.dataset.frameId
-        const nid = nodeEl.dataset.nodeId
-        const node = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)
-        items = [
-          ...(node && !node.leafId
-            ? [{ label: '复制', kbd: '⌘D', onClick: () => st.duplicateNode(fid, nid) }]
-            : []),
-          { label: '删除节点', danger: true, onClick: () => st.removeNode(fid, nid) }
-        ]
-      } else if (shapeEl?.dataset.sid) {
-        const sid = shapeEl.dataset.sid
-        const shape = st.canvas.shapes.find((s2) => s2.id === sid)
-        items = [
-          ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
-          { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
-        ]
-      } else if (frameEl?.dataset.fid) {
-        const fid = frameEl.dataset.fid
-        const frame = st.canvas.frames.find((f) => f.id === fid)
-        items = [
-          { label: '重命名', onClick: () => setEditingFrame(fid) },
-          { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
-          { label: '删除 Frame', danger: true, onClick: () => st.removeFrame(fid) }
-        ]
-      } else {
-        const r = viewportRef.current?.getBoundingClientRect()
-        const cur = st.canvas.viewport
-        const wx = r ? (e.clientX - r.left - cur.x) / cur.scale : 0
-        const wy = r ? (e.clientY - r.top - cur.y) / cur.scale : 0
-        items = [
-          {
-            label: '新建便签',
-            onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
-          }
-        ]
-      }
       setMenu({ x: e.clientX, y: e.clientY, items })
     }
     document.addEventListener('contextmenu', onCtx)
