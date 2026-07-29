@@ -11,6 +11,7 @@ import { paneForFile } from './media'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon } from '../../ui/Icons'
+import { CanvasRoleEditor } from './CanvasRoleEditor'
 
 function shellQuote(p: string): string {
   return /[^\w@%+=:,./-]/.test(p) ? `'${p.replace(/'/g, "'\\''")}'` : p
@@ -41,6 +42,8 @@ export function CanvasDrawer(): JSX.Element {
   // 一个 CLI 都没装时角色分区整个不显示：那些角色点了也起不来 agent
   const showRoles = !!roles.length && (!agentCli || agentCli.claude || agentCli.codex)
   const [rolesOpen, setRolesOpen] = useState(true)
+  // null = 未打开；'' = 新建；其余 = 编辑该角色
+  const [editRole, setEditRole] = useState<string | null>(null)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
   const tabs = useStore((s) => s.tabs)
@@ -330,7 +333,13 @@ export function CanvasDrawer(): JSX.Element {
       const under = start.started ? targetUnder(ev) : null
       ghost?.remove()
       clearDrop()
-      if (!start.started || !under) return
+      // 没拖动 = 点击 → 打开编辑器。拖 = 开终端。同一个手势两种意图，
+      // 和抽屉里「点项目=激活 / 拖项目=落画布」是同一套心智
+      if (!start.started) {
+        setEditRole(role.id)
+        return
+      }
+      if (!under) return
       // 落在终端节点上时回溯它所属的 Frame（Frame 被终端占满时也能接住）
       const frames = useStore.getState().canvas.frames
       let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
@@ -540,6 +549,16 @@ export function CanvasDrawer(): JSX.Element {
                 <ChevronRightIcon size={12} />
               </span>
               <span className="cd-sec-title">角色</span>
+              <button
+                className="cd-add"
+                data-tip="新建角色"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditRole('')
+                }}
+              >
+                <PlusIcon size={12} />
+              </button>
             </div>
             {rolesOpen && (
               <div className="cd-sec-body">
@@ -558,7 +577,7 @@ export function CanvasDrawer(): JSX.Element {
                         >
                           <span className="cd-role-dot" style={{ background: r.color }} />
                           <span className="cd-role-name">{r.name}</span>
-                          <span className="cd-comp-hint">拖到 Frame</span>
+                          <span className="cd-comp-hint">拖开终端 · 点编辑</span>
                         </div>
                       ))}
                     </div>
@@ -595,6 +614,9 @@ export function CanvasDrawer(): JSX.Element {
         </section>
       </div>
     </aside>
+    {editRole !== null && (
+      <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
+    )}
     </>
   )
 }

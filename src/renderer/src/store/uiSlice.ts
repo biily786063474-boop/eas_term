@@ -39,6 +39,10 @@ export interface UiSlice {
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
+  /** 整表写回（编辑器改完调它）。主进程会再 sanitize 一遍，全是坏数据时拒绝写入 */
+  saveRoles: (roles: AgentRole[]) => Promise<string | null>
+  /** 恢复内置角色（用户自建的保留） */
+  resetRoles: () => Promise<void>
 }
 
 let mcpSeq = 1
@@ -60,6 +64,20 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
     } catch {
       set({ roles: [] }) // 读不到就当没有角色，界面回落成「无角色」的裸终端
     }
+  },
+
+  saveRoles: async (roles) => {
+    const r = await window.api.roles.save(roles)
+    if (r.ok && r.roles) {
+      set({ roles: r.roles })
+      return null
+    }
+    return r.error ?? '保存失败'
+  },
+
+  resetRoles: async () => {
+    const r = await window.api.roles.reset()
+    if (r.ok && r.roles) set({ roles: r.roles })
   },
 
   refreshAgentCli: async () => {

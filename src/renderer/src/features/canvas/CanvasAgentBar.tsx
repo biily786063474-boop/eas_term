@@ -93,7 +93,7 @@ const pickEffort = (efforts: string[], kind: Kind): string =>
 // 应用内首次开终端时拉一次，之后 30s 内复用，过期或胶囊再开时重拉——满足「开终端时拉一遍更新」。
 let probeCache: { data: AgentProbe; at: number } | null = null
 let probeInflight: Promise<AgentProbe> | null = null
-async function getProbe(): Promise<AgentProbe> {
+export async function getProbe(): Promise<AgentProbe> {
   if (probeCache && Date.now() - probeCache.at < 30000) return probeCache.data
   if (probeInflight) return probeInflight
   probeInflight = window.api.agent
