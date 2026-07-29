@@ -36,6 +36,10 @@ export interface UiSlice {
    *  一个都没有时 agent 相关控件整体隐藏——摆一堆点了没反应的按钮比没有更糟。 */
   agentCli: { claude: boolean; codex: boolean } | null
   refreshAgentCli: () => Promise<void>
+  /** 左侧知识库抽屉开着没有。提到 store 是因为画布上别的浮层（左下角缩略图）
+   *  要跟着让位——那些组件和抽屉没有父子关系，靠 class 传状态最省事。 */
+  wikiDrawerOpen: boolean
+  setWikiDrawerOpen: (v: boolean) => void
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
@@ -102,6 +106,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   runningPtys: [],
   agentCli: null,
   roles: [],
+  wikiDrawerOpen: false,
+  setWikiDrawerOpen: (v) => set({ wikiDrawerOpen: v }),
   pendingArchive: null,
   ttQueue: [],
 

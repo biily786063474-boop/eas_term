@@ -16,6 +16,7 @@ import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, 
 export function CanvasWikiDrawer(): JSX.Element | null {
   const maximizedNode = useStore((s) => s.maximizedNode)
   const [open, setOpen] = useState(false)
+  const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
   const [hover, setHover] = useState(false)
   const [st, setSt] = useState<WikiStatus | null>(null)
   const [rules, setRules] = useState<RulesStatus | null>(null)
@@ -71,6 +72,12 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   useEffect(() => {
     if (open) void refresh()
   }, [open, refresh])
+
+  // 开合状态同步给全局：左下角缩略图要跟着让位
+  useEffect(() => {
+    setWikiDrawerOpen(open)
+    return () => setWikiDrawerOpen(false) // 切走视图时别把 class 留在身上
+  }, [open, setWikiDrawerOpen])
 
   const onEdgeMove = (e: React.MouseEvent): void => {
     const el = edgeRef.current

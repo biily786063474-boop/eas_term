@@ -1794,6 +1794,9 @@
   position: absolute;
   left: 14px;
   bottom: 14px;
+  /* 知识库抽屉展开时右移让位（见 .app.wiki-open）。跟着抽屉那条弹簧曲线走，
+     不然一个滑一个跳，看着像两个东西 */
+  transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 41;
   width: 216px;
   padding: 6px;
@@ -1883,6 +1886,7 @@
   position: absolute;
   left: 14px;
   bottom: 14px;
+  transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 41;
   width: 30px;
   height: 30px;
@@ -2494,7 +2498,9 @@
   top: 8px;
   bottom: 8px;
   width: 250px;
-  z-index: 30;
+  /* 必须高过左上角的运行监视窗(42)和左下角缩略图(41)——它们都占着左边缘，
+     抽屉在 30 的时候会被这两个压出两个洞 */
+  z-index: 45;
   display: flex;
   flex-direction: column;
   background: var(--glass-1);
@@ -2722,6 +2728,14 @@
   font-size: 10.5px;
   color: var(--accent);
   border-top: 1px solid var(--glass-border);
+}
+
+/* 知识库抽屉展开 → 左下角缩略图右移到抽屉外侧（8 + 250 + 8）。
+   展开态和收起态两个元素都要管——缩略图默认是收起的那个小按钮，
+   只写展开态的话实际用起来根本不动。 */
+.app.wiki-open .canvas-minimap,
+.app.wiki-open .canvas-minimap-mini {
+  left: 266px;
 }
 
 /* 基本操作：从整个抽屉收成缩放条左边的一条图标栏 */
