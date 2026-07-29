@@ -16,8 +16,9 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import type { RulesStatus } from '../shared/types'
+import type { RulesStatus, Footprint } from '../shared/types'
 import { wikiPath } from './wiki'
+import { mcpConfigStatus } from './mcpBridge'
 
 const BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
 const END = '<!-- eas-term:end -->'
@@ -189,7 +190,98 @@ export function rulesStatus(): RulesStatus {
   }
 }
 
+/** 卸载我们写进两个 CLI 的使用指引（MCP 条目和钩子各有各的开关，这里不碰） */
+export function removeRules(): void {
+  for (const n of ['eas-term', 'eas-wiki']) {
+    try {
+      fs.rmSync(path.dirname(claudeSkill(n)), { recursive: true, force: true })
+    } catch {
+      /* 没装过 */
+    }
+  }
+  writeCodexRegion(null)
+  try {
+    fs.rmSync(detailDir(), { recursive: true, force: true })
+  } catch {
+    /* 没写过 */
+  }
+}
+
 export function registerRulesHandlers(): void {
   ipcMain.handle('rules:status', () => rulesStatus())
   ipcMain.handle('rules:sync', () => ({ ...syncRules(), status: rulesStatus() }))
+  ipcMain.handle('rules:remove', () => {
+    removeRules()
+    return rulesStatus()
+  })
+
+  /**
+   * 一处总账：Eas-Term 在这台机器上写过的**全部**位置。
+   *
+   * 分散的开关等于没有开关——技能包在标题栏、钩子在词典里、知识库规则在知识库抽屉里，
+   * 用户根本没法回答「这软件到底动了我什么」。写隐私策略时这份清单就是依据。
+   */
+  ipcMain.handle('footprint:list', (): Footprint[] => {
+    const mcp = mcpConfigStatus()
+    const r = rulesStatus()
+    const kb = wikiPath()
+    const claudeSettings = path.join(app.getPath('home'), '.claude', 'settings.json')
+    const codexHooks = path.join(app.getPath('home'), '.codex', 'hooks.json')
+    const hookOn = ((): boolean => {
+      for (const f of [claudeSettings, codexHooks]) {
+        try {
+          if (fs.readFileSync(f, 'utf8').includes('eas-term:knowledge-hook')) return true
+        } catch {
+          /* 没有 */
+        }
+      }
+      return false
+    })()
+    return [
+      {
+        id: 'mcp',
+        name: 'MCP 接入',
+        desc: '让 agent 能操作画板（开预览、整理、通知）。不配这个，画板工具完全不可用',
+        installed: mcp.claude || mcp.codex,
+        files: mcp.files,
+        note: '装了 CLI 就会自动配上——这是画板功能的前提。端口和令牌不写进配置，只走终端环境变量',
+        removable: true
+      },
+      {
+        id: 'rules',
+        name: '使用指引',
+        desc: '告诉 agent 什么时候该用画板工具、什么时候该查知识库',
+        installed: r.claudeCanvas || r.claudeWiki || r.codexRegionChars > 0,
+        files: [
+          ...(r.claudeCanvas ? [claudeSkill('eas-term')] : []),
+          ...(r.claudeWiki ? [claudeSkill('eas-wiki')] : []),
+          ...(r.codexRegionChars > 0 ? [codexAgents()] : [])
+        ],
+        note:
+          r.codexRegionChars > 0
+            ? `Codex 侧常驻 ${r.codexRegionChars} 字符（每轮对话都会带上），详细正文放在 ~/.eas/agent/ 按需读取`
+            : '',
+        removable: true
+      },
+      {
+        id: 'hook',
+        name: '提交即复盘钩子',
+        desc: 'git commit 后扫一遍新增代码，把用到但词典没收录的术语存进自建词库',
+        installed: hookOn,
+        files: hookOn ? [claudeSettings, codexHooks].filter((f) => fs.existsSync(f)) : [],
+        // 这是侵入性最高的一项，措辞上不含糊
+        note: '**在你所有项目里、每一次 Bash 调用时都会触发**。纯本地脚本，零 token，不联网',
+        removable: true
+      },
+      {
+        id: 'wiki',
+        name: '知识库',
+        desc: '你自己选位置的 markdown 文件夹',
+        installed: !!kb,
+        files: kb ? [kb] : [],
+        note: kb ? '解除绑定只改指向，不动你的文件' : '',
+        removable: false
+      }
+    ]
+  })
 }

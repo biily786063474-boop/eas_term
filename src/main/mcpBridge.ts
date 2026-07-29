@@ -209,6 +209,82 @@ function writeCodexConfig(serverPath: string): void {
   }
 }
 
+// ── 状态与移除：MCP 条目是**静默**写进用户全局配置的（画板工具不配它就完全不能用），
+// 所以必须在界面上如实告知动了哪个文件，并且给一键移除。
+// 静默写入 + 不可见 + 不可撤 三者同时成立才是问题，只要后两条补上就是可接受的。
+
+const claudeCfg = (): string => path.join(app.getPath('home'), '.claude.json')
+const codexCfg = (): string => path.join(app.getPath('home'), '.codex', 'config.toml')
+const CODEX_HEAD = '[mcp_servers.eas-term]'
+
+export function mcpConfigStatus(): { claude: boolean; codex: boolean; files: string[] } {
+  const files: string[] = []
+  let claude = false
+  let codex = false
+  try {
+    const cfg = JSON.parse(fs.readFileSync(claudeCfg(), 'utf8')) as Record<string, unknown>
+    claude = !!(cfg.mcpServers as Record<string, unknown> | undefined)?.['eas-term']
+    if (claude) files.push(claudeCfg())
+  } catch {
+    /* 没装或读不到 */
+  }
+  try {
+    codex = fs
+      .readFileSync(codexCfg(), 'utf8')
+      .split('\n')
+      .some((l) => l.trim() === CODEX_HEAD)
+    if (codex) files.push(codexCfg())
+  } catch {
+    /* 没装或读不到 */
+  }
+  return { claude, codex, files }
+}
+
+/** 移除我们写进去的那条 MCP 条目。用户自己的配置一个字不动。 */
+export function removeMcpConfig(): void {
+  // Claude：解析失败就别写——宁可不删也不能把用户整份配置弄坏
+  try {
+    const f = claudeCfg()
+    const cfg = JSON.parse(fs.readFileSync(f, 'utf8')) as Record<string, unknown>
+    const servers = cfg.mcpServers as Record<string, unknown> | undefined
+    if (servers && servers['eas-term']) {
+      delete servers['eas-term']
+      try {
+        fs.copyFileSync(f, f + '.eas-backup')
+      } catch {
+        /* 备份失败不阻断 */
+      }
+      fs.writeFileSync(f, JSON.stringify(cfg, null, 2))
+    }
+  } catch {
+    /* 没有就算了 */
+  }
+  // Codex：同写入时的逐行做法，只摘自己那一段（不解析整个 TOML，免得丢注释和格式）
+  try {
+    const f = codexCfg()
+    const lines = fs.readFileSync(f, 'utf8').split('\n')
+    const at = lines.findIndex((l) => l.trim() === CODEX_HEAD)
+    if (at >= 0) {
+      let end = at + 1
+      while (end < lines.length && !lines[end].trimEnd().startsWith('[')) end++
+      // 段尾的空行/注释退回去——注释惯例属于下一个 table，吃掉等于删用户的注释
+      while (end > at + 1) {
+        const prev = lines[end - 1].trim()
+        if (prev === '' || prev.startsWith('#')) end--
+        else break
+      }
+      try {
+        fs.copyFileSync(f, f + '.eas-backup')
+      } catch {
+        /* 备份失败不阻断 */
+      }
+      fs.writeFileSync(f, [...lines.slice(0, at), ...lines.slice(end)].join('\n').replace(/\n{3,}/g, '\n\n'))
+    }
+  } catch {
+    /* 没有就算了 */
+  }
+}
+
 /** 清掉上一版留下的 claude / codex 包装脚本（PATH shim 方案已废弃，见 writeClaudeConfig 注释）。
  *  只删自己写的那两个文件，同目录的 open shim 还在用，不能碰。 */
 function removeLegacyAgentShims(): void {
@@ -234,6 +310,8 @@ function setupAgents(): void {
 }
 
 export function registerMcpBridge(): void {
+  ipcMain.handle('mcp:removeConfig', () => removeMcpConfig())
+
   ipcMain.on('mcp:result', (_e, r: { id: number; ok: boolean; data?: unknown; error?: string }) => {
     const done = pending.get(r.id)
     if (done) {

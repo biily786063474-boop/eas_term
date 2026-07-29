@@ -5,7 +5,7 @@ import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
-import { SkillPanel } from './features/workspace/SkillPanel'
+import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
@@ -174,7 +174,7 @@ export function App(): JSX.Element {
         <div className="titlebar-actions">
           {viewMode === 'split' && <TerminalAttention />}
           <McpIndicator />
-          <SkillPanel />
+          <FootprintPanel />
           <div className="view-seg">
             <button
               className={viewMode === 'split' ? 'on' : ''}

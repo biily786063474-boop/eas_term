@@ -29,6 +29,7 @@ import type {
   Backlink,
   WikiHit,
   RulesStatus,
+  Footprint,
   InstallPlan
 } from '../shared/types'
 
@@ -127,7 +128,9 @@ const api = {
       return () => ipcRenderer.removeListener('mcp:invoke', h)
     },
     reply: (r: { id: number; ok: boolean; data?: unknown; error?: string }): void =>
-      ipcRenderer.send('mcp:result', r)
+      ipcRenderer.send('mcp:result', r),
+    /** 移除写进用户全局配置的 MCP 条目（画板工具随之不可用，属于用户的选择） */
+    removeConfig: (): Promise<void> => ipcRenderer.invoke('mcp:removeConfig')
   },
   skill: {
     // 配套技能包（告诉 AI 什么时候该用画板工具）：查状态 / 安装 / 关掉启动提醒
@@ -188,7 +191,12 @@ const api = {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）
     status: (): Promise<RulesStatus> => ipcRenderer.invoke('rules:status'),
     sync: (): Promise<{ ok: boolean; codexChars: number; status: RulesStatus }> =>
-      ipcRenderer.invoke('rules:sync')
+      ipcRenderer.invoke('rules:sync'),
+    remove: (): Promise<RulesStatus> => ipcRenderer.invoke('rules:remove')
+  },
+  footprint: {
+    // 一处总账：这个软件在用户机器上写过的全部位置（隐私策略以此为准）
+    list: (): Promise<Footprint[]> => ipcRenderer.invoke('footprint:list')
   },
   roles: {
     // Agent 角色（~/.eas/roles.json）：列 / 存 / 恢复内置

@@ -12,6 +12,21 @@ export interface DirEntry {
   isHidden: boolean
 }
 
+/** 「足迹」：Eas-Term 在这台机器上写过的一处位置。
+ *  分散的开关等于没有开关——所有触点必须能在一个面板里看全、逐个卸。
+ *  这份清单同时是写隐私策略的依据。 */
+export interface Footprint {
+  id: 'mcp' | 'rules' | 'hook' | 'wiki'
+  name: string
+  desc: string
+  installed: boolean
+  /** 动过哪些文件（如实列出绝对路径） */
+  files: string[]
+  /** 需要额外说清楚的话（比如钩子每次 Bash 都触发） */
+  note: string
+  removable: boolean
+}
+
 /** 规则托管状态。codexRegionChars 是刻意暴露出来的——
  *  那一段是 Codex 的常驻上下文，每轮都在花钱，界面上要能看见它有多大。 */
 export interface RulesStatus {
