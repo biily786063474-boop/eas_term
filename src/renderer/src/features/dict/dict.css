@@ -269,7 +269,8 @@
   overflow-wrap: anywhere;
 }
 
-/* 自建词条（hook 沉淀）：色相区别于内置三类，一眼看出是「自己攒的」 */
+/* 自建词条：分类和内置三类共用（补全后它们是同一种东西），
+   所以「自建」只是一个筛子和一枚小徽章，不再抢占分类的色相位。 */
 .dict-chip.cat-user.active,
 .dict-dot.cat-user {
   background: #c4b5fd;
@@ -277,6 +278,19 @@
 .dict-tag.cat-user {
   background: rgba(139, 92, 246, 0.16);
   color: #c4b5fd;
+}
+/* 胶囊上的自建标记：一道左边框，够认但不喧宾夺主
+   （用真的边框而不是 ::before，免得和 flex gap 打架把文字挤歪） */
+.dict-pill.own {
+  border-left: 2px solid rgba(139, 92, 246, 0.65);
+}
+/* 浮层底部那行来源信息 */
+.dict-pop-meta {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--glass-border);
+  font-size: 10.5px;
+  color: var(--fg-dim);
 }
 /* 还没写解释时的占位说明 */
 .dict-pop-logic.dim {
@@ -309,6 +323,36 @@
   flex: none;
   margin-top: 2px;
   color: var(--accent);
+}
+/* 确认态：文案三行，横排会把按钮挤成一条缝，改成上下摞（图标退到左上角） */
+.dhb-invite.stack {
+  flex-wrap: wrap;
+}
+.dhb-invite.stack .dhb-text {
+  flex: 1 1 100%;
+}
+.dhb-invite.stack .dhb-acts {
+  width: 100%;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.dhb-text code,
+.dhb-badge {
+  font-size: 10.5px;
+}
+.dhb-text code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+}
+/* 「N 待补」：排着队但补全没开是最容易被忽略的状态，收起态就得看见 */
+.dhb-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
 }
 .dhb-text {
   flex: 1;

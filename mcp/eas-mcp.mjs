@@ -229,6 +229,61 @@ const TOOLS = [
       },
       required: ['text']
     }
+  },
+  {
+    name: 'dict_pending',
+    description:
+      '列出「提交即复盘」钩子扫出来、等你补全的术语。' +
+      '收到 [词典·待补全] 提示但没记全是哪几个词时调它。返回空数组就是没有待办，别自己找活干。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'dict_add',
+    description:
+      '往用户的名词词典里添加词条。**格式必须和内置的 242 条完全一致**，缺字段会被拒收——' +
+      '半截词条（只有英文名、没解释没图）混进去既帮不上忙又稀释整本词典的可信度。' +
+      '每条都要:中文名 + 英文名 + 三选一的分类 + 80-140 字讲清怎么实现的解释 + 一张 240x120 的极简示意 SVG。' +
+      '拿不准的词直接跳过，宁缺毋滥。返回里会说明哪些被拒、为什么。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        terms: {
+          type: 'array',
+          description: '一次提交整批，别一个一个调',
+          items: {
+            type: 'object',
+            properties: {
+              en: { type: 'string', description: '英文原名，如 scroll-snap-type' },
+              zh: { type: 'string', description: '中文名，如「滚动吸附」' },
+              category: {
+                type: 'string',
+                enum: ['interaction', 'motion', 'visual'],
+                description: 'interaction=交互行为，motion=动效，visual=UI视觉。不另开分类'
+              },
+              keywords: {
+                type: 'array',
+                items: { type: 'string' },
+                description: '检索词，中英文都放，用户搜哪个都能命中'
+              },
+              logic: {
+                type: 'string',
+                description:
+                  '80-140 字中文单行：它是什么、怎么实现的。写给「知道这个效果但不知道叫什么」的人看，不要同义反复'
+              },
+              svg: {
+                type: 'string',
+                description:
+                  '示意图，一个完整的 <svg> 元素：viewBox="0 0 240 120"，font-family="sans-serif"，' +
+                  '标注文字 #8a8f99、强调 #e0a45e、输出/结果 #6ea8fe。' +
+                  '禁止 script / 事件属性 / 外链 / foreignObject（会被清洗掉）'
+              }
+            },
+            required: ['en', 'zh', 'category', 'logic']
+          }
+        }
+      },
+      required: ['terms']
+    }
   }
 ]
 

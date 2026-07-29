@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
@@ -22,6 +22,8 @@ interface DictTerm {
   /** 以下只有自建词条有：第一次遇到的日期 / 在哪个项目里遇到的 */
   firstSeen?: string
   project?: string
+  /** 自建词条标记。分类和内置的三类共用，所以「是不是自建」只能单独记一个标志 */
+  user?: boolean
 }
 interface DictBundle {
   version: number
@@ -31,9 +33,11 @@ interface DictBundle {
 }
 
 const dict = bundle as unknown as DictBundle
-// 内置三类 + 「自建」：后者是「提交即复盘」hook 沉淀进 ~/.eas/dict-user.json 的词，
-// 单列一类是为了能一键筛掉——启发式抓来的词有噪声，混在内置词里会稀释词典的可信度
-const CATS: Record<string, string> = { ...dict.categories, user: '自建' }
+// 只有内置三类。自建词条**也归进这三类**，不再单开一个「自建」伪分类——
+// 补全后的词条和内置的是同一种东西（有中英文名、有解释、有示意图），按来源分类
+// 只会让「我想找个动效相关的词」这件事被拆到两个地方去。
+// 想单看自建的走下面那个 onlyUser 开关，它是个筛子而不是分类。
+const CATS: Record<string, string> = dict.categories
 const CAT_KEYS = Object.keys(CATS)
 
 const POP_W = 320
@@ -48,6 +52,8 @@ interface HoverState {
 export function DictView(): JSX.Element {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
+  // 「只看自建」：和分类正交的一个筛子，不是第四个分类
+  const [onlyUser, setOnlyUser] = useState(false)
   const [hover, setHover] = useState<HoverState | null>(null)
   const [popPos, setPopPos] = useState({ left: 0, top: 0, ready: false })
   const [flashId, setFlashId] = useState<string | null>(null)
@@ -57,43 +63,53 @@ export function DictView(): JSX.Element {
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 用户自建词条：运行时从 ~/.eas/dict-user.json 读，和编译进包的 242 条合并。
-  // 词典 bundle 是 Vite 静态 import（编译期定死），不做这一步的话 hook 沉淀多少词都看不见。
+  // 词典 bundle 是 Vite 静态 import（编译期定死），不做这一步的话补全多少词都看不见。
   const [userTerms, setUserTerms] = useState<DictTerm[]>([])
-  useEffect(() => {
-    let alive = true
+  const reloadUser = useCallback(() => {
     void window.api.fs.userTerms().then((list) => {
-      if (!alive) return
       setUserTerms(
         list.map((u) => ({
           id: 'user:' + u.id, // 加前缀，避免和内置词条 id 撞车
-          zh: u.zh || u.en, // 脚本不生成中文名，空就用英文顶上
+          zh: u.zh || u.en,
           en: u.en,
-          category: 'user',
+          category: u.category,
           keywords: u.keywords,
           logic: u.logic,
-          svg: '',
+          svg: u.svg,
           firstSeen: u.firstSeen,
-          project: u.project
+          project: u.project,
+          user: true
         }))
       )
     })
-    return () => {
-      alive = false
-    }
   }, [])
+  useEffect(reloadUser, [reloadUser])
+
+  // agent 通过 dict_add 写完词条后，词典得当场多出来——不然要关掉再打开才看得见，
+  // 用户根本不会知道刚才那一下成功了。MCP 流水里出现 dict_add 就重读一次，
+  // 比定时轮询精确，也不用另开一条 IPC 通知。
+  useEffect(
+    () =>
+      useStore.subscribe((s, prev) => {
+        if (s.mcpLog === prev.mcpLog) return
+        if (s.mcpLog[0]?.tool === 'dict_add' && s.mcpLog[0].ok) reloadUser()
+      }),
+    [reloadUser]
+  )
 
   const allTerms = useMemo(() => [...dict.terms, ...userTerms], [userTerms])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return allTerms.filter((t) => {
+      if (onlyUser && !t.user) return false
       if (cat !== 'all' && t.category !== cat) return false
       if (!q) return true
       if (t.zh.toLowerCase().includes(q)) return true
       if (t.en.toLowerCase().includes(q)) return true
       return t.keywords.some((k) => k.toLowerCase().includes(q))
     })
-  }, [query, cat, allTerms])
+  }, [query, cat, onlyUser, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   useLayoutEffect(() => {
@@ -179,6 +195,16 @@ export function DictView(): JSX.Element {
             {CATS[k]}
           </button>
         ))}
+        {/* 一条自建词条都没有时不显示这个筛子——空筛子只会让人点一下发现什么都没有 */}
+        {userTerms.length > 0 && (
+          <button
+            className={`dict-chip cat-user${onlyUser ? ' active' : ''}`}
+            onClick={() => setOnlyUser((v) => !v)}
+            data-tip="只看自动补全进来的词条"
+          >
+            自建 {userTerms.length}
+          </button>
+        )}
       </div>
 
       <DictHookBar />
@@ -188,7 +214,7 @@ export function DictView(): JSX.Element {
         {filtered.map((term) => (
           <button
             key={term.id}
-            className={`dict-pill cat-${term.category}${flashId === term.id ? ' flash' : ''}`}
+            className={`dict-pill cat-${term.category}${term.user ? ' own' : ''}${flashId === term.id ? ' flash' : ''}`}
             onMouseEnter={(e) =>
               setHover({ term, anchor: e.currentTarget.getBoundingClientRect() })
             }
@@ -221,14 +247,16 @@ export function DictView(): JSX.Element {
           >
             <div className="dict-pop-head">
               <span className="dict-zh">{hover.term.zh}</span>
-              {/* 自建词条没有中文名时 zh 回落成了 en，别把同一个词并排印两遍 */}
+              {/* 极少数情况下 zh 缺失会回落成 en，别把同一个词并排印两遍 */}
               {hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
               <span className={`dict-tag cat-${hover.term.category}`}>
                 {CATS[hover.term.category] ?? hover.term.category}
               </span>
+              {hover.term.user && <span className="dict-tag cat-user">自建</span>}
             </div>
             {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制。
-                自建词条没有配图，别渲染一个空盒子撑出留白 */}
+                自建词条的 SVG 是模型写的，写盘前已在主进程清洗过（见 main/dict.ts）。
+                真没有图的老条目别渲染一个空盒子撑出留白 */}
             {!!hover.term.svg && (
               <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
             )}
@@ -236,10 +264,16 @@ export function DictView(): JSX.Element {
               <div className="dict-pop-logic">{hover.term.logic}</div>
             ) : (
               <div className="dict-pop-logic dim">
-                还没写解释。这是提交时自动沉淀的术语
+                这条是旧版自动沉淀留下的空壳
                 {hover.term.project ? `（${hover.term.project}` : ''}
                 {hover.term.firstSeen ? ` · ${hover.term.firstSeen}）` : hover.term.project ? '）' : ''}
-                ，想补的话改 <code>~/.eas/dict-user.json</code>。
+                。让 agent 补一次就有解释和示意图了。
+              </div>
+            )}
+            {hover.term.user && !!hover.term.logic && !!hover.term.firstSeen && (
+              <div className="dict-pop-meta">
+                自动补全 · {hover.term.firstSeen}
+                {hover.term.project ? ` · ${hover.term.project}` : ''}
               </div>
             )}
           </div>,

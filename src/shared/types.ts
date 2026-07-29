@@ -169,18 +169,39 @@ export interface HookStatus {
   codex: HookAgentStatus
 }
 
-/** 用户自建词条：由「提交即复盘」hook 发现「用了但词典没收录」的术语时沉淀下来。
- *  zh / logic 通常是空的 —— 脚本不花 token 生成解释，留给用户按需补。 */
+/** 用户自建词条。
+ *
+ *  钩子只负责发现「用了但词典没收录」的术语并记进待办；条目本身由 agent 补全，
+ *  经 dict_add 校验后写入，**字段和内置的 242 条完全一致**——
+ *  半截词条（只有英文名、没解释没图）混在里面既难看也没用，那是上一版的教训。 */
 export interface UserTerm {
   id: string
   en: string
   zh: string
+  /** 必须落在内置三类里，自建词条不另开分类 */
+  category: 'interaction' | 'motion' | 'visual'
   keywords: string[]
   logic: string
+  /** 演示缩略图（内联 SVG，写入前已清洗） */
+  svg: string
   /** 第一次遇到的日期 */
   firstSeen: string
   /** 在哪个项目里遇到的 */
   project: string
+}
+
+/** 钩子扫出来、等 agent 补全的候选术语 */
+export interface DictPending {
+  name: string
+  project: string
+  at: number
+}
+
+/** 自动补全词条的开关状态。和钩子安装分开：钩子当初是按「零 token」承诺装的，
+ *  补全要花钱，不能靠那次同意顺带生效。 */
+export interface DictSinkStatus {
+  enabled: boolean
+  pending: number
 }
 
 /** 「最近产生的文件」条目：给画布插入菜单按时间倒序用 */

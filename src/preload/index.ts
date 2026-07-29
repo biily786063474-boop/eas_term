@@ -4,6 +4,8 @@ import type {
   DirEntry,
   RecentFile,
   UserTerm,
+  DictPending,
+  DictSinkStatus,
   PtyCreateOptions,
   TextFileResult,
   ImageFileResult,
@@ -163,6 +165,18 @@ const api = {
     ): Promise<{ ok: boolean; error?: string; status?: HookStatus }> =>
       ipcRenderer.invoke('hook:uninstall', targets)
   },
+  dict: {
+    // 自动补全词条：默认关，开启会花 token（模型要写解释和示意图）
+    sinkStatus: (): Promise<DictSinkStatus> => ipcRenderer.invoke('dict:sinkStatus'),
+    setSink: (on: boolean): Promise<DictSinkStatus> => ipcRenderer.invoke('dict:setSink', on),
+    pending: (): Promise<DictPending[]> => ipcRenderer.invoke('dict:pending'),
+    add: (
+      terms: unknown[]
+    ): Promise<{ ok: boolean; added: string[]; rejected: { name: string; why: string }[] }> =>
+      ipcRenderer.invoke('dict:add', terms),
+    remove: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('dict:remove', id)
+  },
   wiki: {
     // 个人知识库（用户自选位置的 markdown 文件夹）
     status: (): Promise<WikiStatus> => ipcRenderer.invoke('wiki:status'),
@@ -266,7 +280,8 @@ const api = {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
     recentFiles: (rootPath: string, limit?: number): Promise<RecentFile[]> =>
       ipcRenderer.invoke('fs:recentFiles', rootPath, limit),
-    // 用户自建词条（~/.eas/dict-user.json，由「提交即复盘」hook 沉淀）
+    // 用户自建词条（~/.eas/dict-user.json）。词典自己的读写在下面的 dict 里，
+    // 这个别名保留是因为词典组件一直这么调，改名没有收益
     userTerms: (): Promise<UserTerm[]> => ipcRenderer.invoke('dict:userTerms'),
     readTextFile: (filePath: string): Promise<TextFileResult> =>
       ipcRenderer.invoke('fs:readTextFile', filePath),

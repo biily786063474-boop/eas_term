@@ -15,6 +15,7 @@ import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
 import { registerRoleHandlers } from './roles'
 import { registerWikiHandlers } from './wiki'
+import { registerDictHandlers } from './dict'
 import { registerRulesHandlers } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
@@ -232,6 +233,7 @@ app.whenReady().then(() => {
   registerHookHandlers(hasCli)
   registerRoleHandlers()
   registerWikiHandlers()
+  registerDictHandlers()
   registerRulesHandlers()
   registerPtyHandlers()
   registerProjectHandlers()

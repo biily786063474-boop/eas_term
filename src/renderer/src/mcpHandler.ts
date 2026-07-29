@@ -331,11 +331,45 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return { opened: abs, as: pane.kind, frameId: loc.frameId }
   }
 
+  if (tool === 'dict_pending') {
+    const items = await window.api.dict.pending()
+    return {
+      pending: items.map((x) => ({ name: x.name, project: x.project })),
+      total: items.length,
+      hint: items.length
+        ? '为每个词写完整条目后一次性调 dict_add 提交。拿不准的跳过，宁缺毋滥。'
+        : '没有待补全的术语，不用做任何事。'
+    }
+  }
+
+  if (tool === 'dict_add') {
+    const list = Array.isArray((args as { terms?: unknown }).terms)
+      ? ((args as { terms: unknown[] }).terms as unknown[])
+      : []
+    if (!list.length) throw new Error('terms 是空的')
+    const r = await window.api.dict.add(list)
+    // 被拒的原样回给模型，让它知道差在哪、能补一次；不然它只会以为写成功了
+    return {
+      added: r.added,
+      rejected: r.rejected,
+      hint: r.rejected.length
+        ? '被拒的条目按 why 改好再提交一次。改不出来就跳过，不要硬凑。'
+        : '写完了，在回复最末尾用一行提一句即可。'
+    }
+  }
+
   throw new Error(`未知工具：${tool}`)
 }
 
 // 指示灯上显示的一句话：优先展示这次动了什么（路径/网址/名字），不然只显示工具名
 function detailOf(tool: string, args: Args): string {
+  // 词典写入没有路径可显示，但它是「AI 往我硬盘里加东西」，指示灯上必须说清加了几个
+  if (tool === 'dict_add') {
+    const n = Array.isArray((args as { terms?: unknown[] }).terms)
+      ? (args as { terms: unknown[] }).terms.length
+      : 0
+    return `${n} 个词条`
+  }
   const a = args as { path?: string; url?: string; message?: string; text?: string; name?: string; node_id?: string }
   const v = a.path ?? a.url ?? a.message ?? a.text ?? a.name ?? a.node_id ?? ''
   const short = String(v).split('/').pop() ?? ''
