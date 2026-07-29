@@ -11,6 +11,9 @@ import { paneForFile } from './media'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon } from '../../ui/Icons'
+import { SwipeRow } from '../../ui/SwipeRow'
+import { CanvasContextMenu } from './CanvasContextMenu'
+import { projectMenuItems } from '../workspace/projectMenu'
 
 function shellQuote(p: string): string {
   return /[^\w@%+=:,./-]/.test(p) ? `'${p.replace(/'/g, "'\\''")}'` : p
@@ -24,6 +27,8 @@ export function CanvasDrawer(): JSX.Element {
   const open = useStore((s) => s.resDrawerOpen)
   const setOpen = useStore((s) => s.setResDrawerOpen)
   const [edgeHover, setEdgeHover] = useState(false)
+  /** 项目行右键菜单的落点 */
+  const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   const [projOpen, setProjOpen] = useState(true)
   const [filesOpen, setFilesOpen] = useState(true)
   const [compOpen, setCompOpen] = useState(true)
@@ -34,6 +39,7 @@ export function CanvasDrawer(): JSX.Element {
   const setActiveProject = useStore((s) => s.setActiveProject)
   const openTerminal = useStore((s) => s.openTerminal)
   const addProject = useStore((s) => s.addProject)
+  const removeProject = useStore((s) => s.removeProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
   const addFileNode = useStore((s) => s.addFileNode)
   const addSubFrame = useStore((s) => s.addSubFrame)
@@ -432,12 +438,19 @@ export function CanvasDrawer(): JSX.Element {
               {projects.map((p) => {
                 const onCanvas = frames.some((f) => f.projectId === p.id)
                 return (
-                  <div
+                  // pointer={false}：这里左键拖拽是「拖到画布建 Frame」，方向也往左，
+                  // 两个手势抢同一个输入必然打架。这行只留触控板横滑 + 右键
+                  <SwipeRow
                     key={p.id}
+                    onRemove={() => void removeProject(p.id)}
                     className={`cd-proj${p.id === activeProjectId ? ' active' : ''}${projectHasAttention(p.id) ? ' breathing' : ''}${projectFrameSelected(p.id) ? ' framesel' : ''}`}
                     data-tip={p.path}
                     onMouseDown={(e) => startProjectDrag(p, e)}
                     onDoubleClick={() => void openTerminal({ projectId: p.id })}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
+                    }}
                   >
                     <span className="cd-proj-dot" />
                     <span className="cd-proj-name">{p.name}</span>
@@ -446,7 +459,7 @@ export function CanvasDrawer(): JSX.Element {
                     ) : onCanvas ? (
                       <span className="cd-proj-badge">画布中</span>
                     ) : null}
-                  </div>
+                  </SwipeRow>
                 )
               })}
             </div>
@@ -503,6 +516,14 @@ export function CanvasDrawer(): JSX.Element {
         </section>
       </div>
     </aside>
+    {projMenu && (
+      <CanvasContextMenu
+        x={projMenu.x}
+        y={projMenu.y}
+        items={projectMenuItems(projMenu.id)}
+        onClose={() => setProjMenu(null)}
+      />
+    )}
     </>
   )
 }

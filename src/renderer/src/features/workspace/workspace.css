@@ -1213,3 +1213,74 @@ body.dragging-row * {
   font-size: 10.5px;
   color: var(--accent);
 }
+
+/* ---------- 左滑移除 ---------- */
+/* 结构：外壳裁切 + 底层「移除」+ 上层行本体。
+   底层不用绝对定位铺满而是也参与流，是因为行高由内容决定，
+   写死高度的话侧栏和画布抽屉两处行高不一样，得维护两个数字。 */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  /* 滑出去之后把高度也收掉，不然会留一条空槽等 React 卸载，看着像卡了一下 */
+  transition: max-height 0.24s ease, opacity 0.24s ease;
+  max-height: 200px;
+}
+.swipe-row.gone {
+  max-height: 0;
+  opacity: 0;
+}
+.swipe-row-bg {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  background: rgba(220, 70, 70, 0.18);
+  color: #ff9b9b;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+/* 到阈值：整块变实，颜色也压深一档 —— 手感上「够了」得看得见，
+   光靠文字变化在余光里察觉不到 */
+.swipe-row-bg-in {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-left: 10px;
+}
+.swipe-row-bg.armed {
+  background: rgba(220, 70, 70, 0.34);
+  color: #ffd6d6;
+}
+.swipe-row-fg {
+  position: relative;
+  will-change: transform;
+  /* 触控板横滑时别让浏览器把它当成可横向滚动的内容 */
+  overscroll-behavior-x: contain;
+}
+
+/* 标题栏：把词典悬浮球放回来（只在藏起来之后出现） */
+.dictback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.dictback-btn:hover {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: var(--accent-soft);
+}

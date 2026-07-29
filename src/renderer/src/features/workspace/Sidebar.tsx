@@ -5,6 +5,9 @@ import type { Project } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { SidebarGit } from '../git/SidebarGit'
 import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon } from '../../ui/Icons'
+import { SwipeRow } from '../../ui/SwipeRow'
+import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { projectMenuItems } from './projectMenu'
 import './workspace.css'
 
 // 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
@@ -60,6 +63,8 @@ export function Sidebar(): JSX.Element {
   const addProject = useStore((s) => s.addProject)
   const removeProject = useStore((s) => s.removeProject)
   const openTerminal = useStore((s) => s.openTerminal)
+  /** 项目行右键菜单的落点 */
+  const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   const attentionPtys = useStore((s) => s.attentionPtys)
   const tabs = useStore((s) => s.tabs)
 
@@ -96,12 +101,19 @@ export function Sidebar(): JSX.Element {
             <div className="tree-msg">还没有项目，点击 ＋ 选择或新建一个项目文件夹</div>
           )}
           {projects.map((p) => (
-            <div
+            // 这里左键没被别的手势占，鼠标拖和触控板横滑都能用
+            <SwipeRow
               key={p.id}
+              pointer
+              onRemove={() => void removeProject(p.id)}
               className={`project-item${p.id === activeProjectId ? ' active' : ''}`}
               data-tip={p.path}
               onClick={() => setActiveProject(p.id)}
               onDoubleClick={() => void openTerminal({ projectId: p.id })}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
+              }}
             >
               {attnProjectIds.has(p.id) && (
                 <span className="project-attn-dot" data-tip="该项目有任务完成" />
@@ -129,7 +141,7 @@ export function Sidebar(): JSX.Element {
                   <CloseIcon size={12} />
                 </button>
               </span>
-            </div>
+            </SwipeRow>
           ))}
         </div>
       </div>
@@ -137,6 +149,14 @@ export function Sidebar(): JSX.Element {
         <div className="sidebar-section tree-section">
           <WorkspacePanel project={activeProject} />
         </div>
+      )}
+      {projMenu && (
+        <CanvasContextMenu
+          x={projMenu.x}
+          y={projMenu.y}
+          items={projectMenuItems(projMenu.id)}
+          onClose={() => setProjMenu(null)}
+        />
       )}
     </aside>
   )
