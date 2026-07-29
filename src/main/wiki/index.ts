@@ -4,15 +4,17 @@
 // 不做 RAG，让 agent 把原始素材「编译」成互相链接的笔记，并持续维护。
 // 三层：原始素材（不可变）/ wiki（agent 全权拥有）/ schema（CLAUDE.md + AGENTS.md）。
 //
-// 这个模块只管**文件层**：建骨架、统计、往收件箱放东西、算反向链接。
+// 这个文件现在**只做 IPC 编排**，具体实现分在四块里：
+//   paths.ts   位置与盘上形态（在哪、有几个）
+//   schema.ts  库内约定文件与建骨架（写给 agent 看的规矩）
+//   git.ts     快照与回滚（AI 动用户文件唯一的整体撤销手段）
+//   scan.ts    扫全库笔记（图谱和体检共用同一份数据）
 // 「agent 什么时候该来查」那套规则在 agentRules.ts。
 import { app, dialog, ipcMain, shell } from 'electron'
-import { execFileSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 
 import type {
-  WikiStatus,
   WikiInboxItem,
   Backlink,
   WikiHit,
@@ -21,423 +23,26 @@ import type {
   WikiGraph,
   LintFinding,
   WikiStats
-} from '../shared/types'
+} from '../../shared/types'
 
-const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
+import {
+  INBOX,
+  cfgFile,
+  SOURCES,
+  TRANSCRIPTS,
+  WIKI_DIRS,
+  isMd,
+  setWikiPath,
+  walkNotes,
+  wikiPath,
+  wikiStatus
+} from './paths'
+import { initWiki, uniqueName } from './schema'
+import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
+import { scanNotes } from './scan'
 
-/** 顶层目录。刻意只有六个 —— 原文的建议是「别过度设计」，不够用了再加比一开始铺二十个强。 */
-export const WIKI_DIRS = ['00-收件箱', '人物', '方法', '领域', '项目', '素材', '_模板']
-const INBOX = WIKI_DIRS[0]
-/** 收件箱里记「这份文件原来在哪」的映射表。点号开头 → 访达里不显示，也不会被数进徽章 */
-const SOURCES = '.eas-sources.json'
-/** 收件箱里存逐字稿的隐藏目录（点号开头：访达看不见、不进徽章计数） */
-const TRANSCRIPTS = '.逐字稿'
-
-export function wikiPath(): string | null {
-  try {
-    const v = JSON.parse(fs.readFileSync(cfgFile(), 'utf8')) as { path?: string }
-    return typeof v.path === 'string' && v.path ? v.path : null
-  } catch {
-    return null
-  }
-}
-function setWikiPath(p: string | null): void {
-  fs.mkdirSync(path.dirname(cfgFile()), { recursive: true })
-  let cur: Record<string, unknown> = {}
-  try {
-    cur = JSON.parse(fs.readFileSync(cfgFile(), 'utf8')) as Record<string, unknown>
-  } catch {
-    cur = {}
-  }
-  // 保留 added 等统计字段，别因为换个位置就把计数清零
-  fs.writeFileSync(cfgFile(), JSON.stringify({ ...cur, path: p }, null, 2))
-}
-
-const MD = new Set(['.md', '.markdown'])
-const isMd = (f: string): boolean => MD.has(path.extname(f).toLowerCase())
-
-/** 递归收集 .md（跳过素材/收件箱和隐藏目录，它们不是笔记） */
-function walkNotes(root: string, rel = '', out: string[] = [], budget = { n: 20000 }): string[] {
-  if (budget.n <= 0) return out
-  let ents: fs.Dirent[]
-  try {
-    ents = fs.readdirSync(path.join(root, rel), { withFileTypes: true })
-  } catch {
-    return out
-  }
-  for (const d of ents) {
-    if (budget.n-- <= 0) return out
-    if (d.name.startsWith('.')) continue
-    const r = rel ? path.join(rel, d.name) : d.name
-    if (d.isDirectory()) {
-      if (r === INBOX || r === '素材') continue // 原始素材不是笔记，不进索引也不算反链
-      walkNotes(root, r, out, budget)
-    } else if (d.isFile() && isMd(d.name)) {
-      // CLAUDE.md / AGENTS.md 是给 agent 看的**约定文件**，不是笔记。
-      // 不排掉的话它们会被当成孤儿页、缺 summary、正文里的 [[双链]] 示例还会被判成死链
-      if (rel === '' && (d.name === 'CLAUDE.md' || d.name === 'AGENTS.md')) continue
-      out.push(r)
-    }
-  }
-  return out
-}
-
-export function wikiStatus(): WikiStatus {
-  const p = wikiPath()
-  if (!p) return { configured: false, path: null, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false }
-  let exists = false
-  try {
-    exists = fs.statSync(p).isDirectory()
-  } catch {
-    exists = false
-  }
-  if (!exists) return { configured: true, path: p, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false }
-
-  const notes = walkNotes(p).length
-  // 收件箱压力：不只给数量，还给「最早一份放了多久」——
-  // 数字会涨但不扎人，「23 天前」才让人意识到只进不出
-  let inbox = 0
-  let oldest = Infinity
-  try {
-    for (const d of fs.readdirSync(path.join(p, INBOX), { withFileTypes: true })) {
-      // 和 wiki:inbox 的列表口径必须一致，否则徽章显示 6、点开只有 3 个
-      if (d.name.startsWith('.')) continue
-      inbox++
-      try {
-        const st = fs.statSync(path.join(p, INBOX, d.name))
-        oldest = Math.min(oldest, st.birthtimeMs || st.mtimeMs)
-      } catch {
-        /* 读不到就算了 */
-      }
-    }
-  } catch {
-    /* 收件箱不存在 */
-  }
-  return {
-    configured: true,
-    path: p,
-    exists: true,
-    notes,
-    inbox,
-    oldestInboxDays: inbox && Number.isFinite(oldest) ? Math.floor((Date.now() - oldest) / 86400000) : null,
-    hasGit: fs.existsSync(path.join(p, '.git'))
-  }
-}
-
-// ── 初始化时写进去的内容 ─────────────────────────────────────────
-
-/** 库内 schema。CLAUDE.md 和 AGENTS.md 内容相同 —— 两个 CLI 各自会自动读 cwd 的那一份。 */
-/** 约定文件的版本标记。升级时靠它判断「这份是我们生成的」→ 可以安全覆盖；
- *  没有标记就是用户自己写的，一个字都不碰。 */
-const SCHEMA_MARK = '<!-- eas-term:wiki-schema v2 -->'
-
-function schemaText(): string {
-  return `${SCHEMA_MARK}
-# 这个知识库怎么用
-
-你是这个知识库的维护者，不是通用助手。
-用户负责搜集素材、提问题、判断价值；你负责整理、归档、交叉引用和记账。
-
-## 目录
-
-- \`${INBOX}/\` 用户丢进来、还没整理的原始素材
-- \`人物/\` 博主 / 作者：思维模型、行为习惯、代表作、用户的实测反馈
-- \`方法/\` 可迁移的做法（跨领域组织，不按学科切）
-- \`领域/\` 编程 / 设计 / 剪辑 / 文案
-- \`项目/\` 决策记录与复盘
-- \`素材/\` 归档后的原件与逐字稿
-- \`index.md\` 全库目录：每页一行链接 + 一句话摘要
-- \`log.md\` 只追加的时间线
-
-## 三条不可违反
-
-1. **\`素材/\` 和 \`${INBOX}/\` 里的原始文件只读。** 可以移动、可以重命名，
-   **绝不修改内容、绝不删除**。它们是真相来源。
-2. **重名不覆盖**，加后缀。
-3. **归档前先出计划给用户过目**：哪个文件去哪、生成哪篇笔记、会牵动哪些老笔记。
-   用户确认后才动手。
-
-## 笔记格式
-
-每篇都要有 front-matter。\`summary\` 和 \`tags\` 是硬要求——
-索引和检索全靠它们，缺了这个库一过百篇就没法用。
-
-\`\`\`
----
-summary: 一句话说清这篇讲什么
-tags: [标签1, 标签2]
-source: 素材/2026-07/xxx.mp4
-people: [[某某]]
-created: 2026-07-29
-updated: 2026-07-29
----
-\`\`\`
-
-正文用 \`[[双链]]\` 互指。人物、方法、概念第一次出现就该有自己的页面。
-
-## 三个动作
-
-### Ingest（归档）
-
-**不要自己搬文件。** 按这个顺序走，每一步都有对应的工具：
-
-1. \`wiki_inbox\` —— 看收件箱里有什么
-2. \`wiki_transcript\` —— 视频/音频拿逐字稿（本机已离线转好，不花 token）
-3. \`wiki_archive_plan\` —— 一次提交整批计划。**这个调用会阻塞几十秒到几分钟等用户
-   在界面上逐条过目并确认，是正常的。** 用户没批准的条目一个都不要动
-4. \`wiki_archive_exec\` —— 搬被批准的文件（只搬文件，笔记要你自己写）
-5. 写摘要页 → 更新 \`index.md\` → 更新被牵动的人物/概念页（一份素材通常会碰 10–15 页）
-6. \`wiki_log\`（action=ingest）
-
-默认**一次一份、人在场**。用户明确要求批量时才批量，并先给出条数和成本预估。
-
-### Query（查询）
-先读 \`index.md\`，挑相关页读，回答带出处。**答完调一次 \`wiki_log\`（action=query）。**
-
-那一步不能省：它既是知识库的时间线，也是「放入多少次 vs 真去查了多少次」的**唯一**数据来源。
-不记的话查询数永远是 0，用户会看到一个「只进不出」的假象。
-
-**好答案要归档回知识库**：用户觉得有价值的对比、分析、结论，
-问他「要不要存成一篇」，同意就写成新页并更新索引。
-探索本身也该参与复利，不要让它消散在聊天记录里。
-
-### Lint（体检）
-用户要求时才跑。先调 \`wiki_lint\` 拿**结构问题**（死链、孤儿页、缺 summary/tags、
-索引漏收——免费瞬时算出来的，你不用自己扫全库），再去做需要**读懂内容**才能发现的那半边：
-页面之间的矛盾、被新素材推翻的旧结论、反复被提到却没有独立页面的概念。
-**只出报告，不自动改**——改什么由用户点头。完事调 \`wiki_log\`（action=lint）。
-
-## log.md 的格式
-
-每条以固定前缀开头，方便 \`grep "^## \\[" log.md | tail -5\` 看最近动静：
-
-\`\`\`
-## [2026-07-29] ingest | 某某-如何做口播
-## [2026-07-29] query  | 口播节奏怎么把控
-## [2026-07-30] lint   | 发现 3 处矛盾、2 个孤儿页
-\`\`\`
-`
-}
-
-const INDEX_MD = `# 索引
-
-全库目录。每页一行：链接 + 一句话摘要。**每次 ingest 后由 agent 更新。**
-回答问题时先读这一页，再决定深入哪几篇——这样判断「要不要读」只花一个文件的钱。
-
-## 人物
-
-## 方法
-
-## 领域
-
-## 项目
-`
-
-const LOG_MD = `# 日志
-
-只追加。每条以 \`## [日期] 动作 | 标题\` 开头，方便 \`grep "^## \\[" log.md | tail -5\`。
-`
-
-function readmeText(): string {
-  return `---
-summary: 这个知识库怎么用（初始化时自动生成，可以随便改或删）
-tags: [说明]
-created: ${new Date().toISOString().slice(0, 10)}
----
-
-# 从这里开始
-
-## 你要做的只有两件事
-
-1. **把东西丢进 \`${INBOX}/\`** —— 视频、文章、截图、随手记的想法，什么都行，不用整理。
-2. **干活时随口问** —— 「上次那个口播节奏是怎么定的」「有没有现成的方法」。
-
-剩下的归类、写笔记、连交叉引用，都是 agent 的活。
-
-## 为什么不是搜索
-
-这不是一个搜索引擎，是一个**会自己长大的笔记本**。
-每加一份素材、每问一个问题，它都比之前更厚一点——
-而且厚的是**已经想明白的部分**，不是原始材料的堆积。
-
-## 三个动作
-
-| 动作 | 你说什么 |
-|---|---|
-| 归档 | 「整理一下收件箱」 |
-| 查询 | 直接问就行，agent 会自己来查 |
-| 体检 | 「给知识库做个体检」——找矛盾、过期结论、没人链接的孤儿页 |
-
-## 一件要知道的事
-
-**\`素材/\` 和 \`${INBOX}/\` 里的原件，agent 只读不改。**
-它可以移动位置、可以重命名，但不会修改内容、不会删除。
-那些是你的真相来源。
-
-参考：[[index]]
-`
-}
-
-/** 建骨架。已存在的文件一律不覆盖 —— 允许用户把已有的 Obsidian 库直接指过来。 */
-function initWiki(root: string): { created: string[]; skipped: string[] } {
-  const created: string[] = []
-  const skipped: string[] = []
-  fs.mkdirSync(root, { recursive: true })
-  for (const d of WIKI_DIRS) {
-    const p = path.join(root, d)
-    if (fs.existsSync(p)) skipped.push(d + '/')
-    else {
-      fs.mkdirSync(p, { recursive: true })
-      created.push(d + '/')
-    }
-  }
-  const files: [string, string][] = [
-    ['CLAUDE.md', schemaText()],
-    ['AGENTS.md', schemaText()],
-    ['index.md', INDEX_MD],
-    ['log.md', LOG_MD],
-    ['从这里开始.md', readmeText()]
-  ]
-  for (const [name, body] of files) {
-    const p = path.join(root, name)
-    if (!fs.existsSync(p)) {
-      fs.writeFileSync(p, body)
-      created.push(name)
-      continue
-    }
-    // 约定文件（CLAUDE.md / AGENTS.md）带我们的标记 → 是上一版生成的，升级时覆盖成新规矩；
-    // 没有标记 = 用户自己写的（比如把已有的 Obsidian 库指过来），一个字都不碰。
-    // 不这么做的话，老知识库会永远停在旧约定上——新加的工具它根本不知道
-    const isSchema = name === 'CLAUDE.md' || name === 'AGENTS.md'
-    if (isSchema) {
-      try {
-        const cur = fs.readFileSync(p, 'utf8')
-        if (cur.includes('eas-term:wiki-schema') && cur !== body) {
-          fs.writeFileSync(p, body)
-          created.push(name + '（已更新到新版约定）')
-          continue
-        }
-      } catch {
-        /* 读不了就当用户的，别动 */
-      }
-    }
-    skipped.push(name)
-  }
-  return { created, skipped }
-}
-
-/** 重名不覆盖：a.md → a-2.md → a-3.md */
-function uniqueName(dir: string, name: string): string {
-  const ext = path.extname(name)
-  const base = name.slice(0, name.length - ext.length)
-  let n = 1
-  let out = name
-  while (fs.existsSync(path.join(dir, out))) out = `${base}-${++n}${ext}`
-  return out
-}
-
-// ── git：AI 动用户文件时唯一能**整体**撤销的机制 ─────────────────────
-//
-// 为什么非要它：一次归档会移动若干原件、新建若干笔记、还会改十几篇老笔记的双链。
-// 出问题时靠人工逐个还原是不可能的。原文也直说了：
-// 「The wiki is just a git repo of markdown files. You get version history … for free.」
-//
-// 全部走 execFileSync + 参数数组，不拼 shell 字符串——路径里有空格中文都不会出事。
-const MARK = '[eas]' // 我们打的 commit 前缀，回滚列表按它筛
-
-function git(root: string, args: string[]): string {
-  return execFileSync('git', ['-C', root, ...args], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    maxBuffer: 16 * 1024 * 1024
-  })
-}
-function gitOk(root: string, args: string[]): boolean {
-  try {
-    git(root, args)
-    return true
-  } catch {
-    return false
-  }
-}
-function isRepo(root: string): boolean {
-  return gitOk(root, ['rev-parse', '--git-dir'])
-}
-/** 工作区有没有未提交的改动 */
-function isDirty(root: string): boolean {
-  try {
-    return git(root, ['status', '--porcelain']).trim().length > 0
-  } catch {
-    return true
-  }
-}
-
-/** 提交当前全部改动。没有改动就返回当前 HEAD（不产生空提交） */
-function commitAll(root: string, message: string): string | null {
-  try {
-    if (isDirty(root)) {
-      git(root, ['add', '-A'])
-      git(root, ['commit', '-m', `${MARK} ${message}`, '--no-verify'])
-    }
-    return git(root, ['rev-parse', 'HEAD']).trim()
-  } catch {
-    return null
-  }
-}
-
-/** 一篇笔记的原始信息：给图谱和体检共用，只扫一遍盘 */
-interface NoteInfo {
-  rel: string
-  title: string
-  summary: string
-  tags: string[]
-  links: string[]
-  mtime: number
-  /** 去掉 front-matter 后的正文字数（按字符不按字节：中文一个字三字节，
-   *  用字节判「太薄」会把正常长度的中文笔记全误报） */
-  bodyChars: number
-}
-
-function scanNotes(root: string): NoteInfo[] {
-  const out: NoteInfo[] = []
-  for (const rel of walkNotes(root)) {
-    let text = ''
-    let mtime = 0
-    try {
-      const full = path.join(root, rel)
-      text = fs.readFileSync(full, 'utf8')
-      mtime = fs.statSync(full).mtimeMs
-    } catch {
-      continue
-    }
-    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
-    let summary = ''
-    let tags: string[] = []
-    if (fm) {
-      for (const line of fm[1].split('\n')) {
-        const kv = /^(\w+)\s*:\s*(.*)$/.exec(line.trim())
-        if (!kv) continue
-        if (kv[1] === 'summary') summary = kv[2].trim()
-        else if (kv[1] === 'tags')
-          tags = kv[2].replace(/^\[|\]$/g, '').split(',').map((t) => t.trim().replace(/^#/, '')).filter(Boolean)
-      }
-    }
-    const links = [...text.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g)].map((m) =>
-      path.basename(m[1].trim())
-    )
-    const body = fm ? text.slice(fm[0].length) : text
-    out.push({
-      rel,
-      title: path.basename(rel, path.extname(rel)),
-      summary,
-      tags,
-      links,
-      mtime,
-      bodyChars: body.replace(/\s/g, '').length
-    })
-  }
-  return out
-}
+// 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
+export { wikiPath, wikiStatus }
 
 export function registerWikiHandlers(): void {
   /**
@@ -961,3 +566,4 @@ export function registerWikiHandlers(): void {
     return out
   })
 }
+
