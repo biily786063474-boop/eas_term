@@ -288,3 +288,146 @@
   font-size: 11px;
   opacity: 0.85;
 }
+
+/* ---------- 词典里的「自动沉淀」开关条 ---------- */
+.dhb {
+  margin: 0 10px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11.5px;
+}
+.dhb-invite {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 11px;
+  border-color: rgba(var(--accent-rgb), 0.35);
+  background: rgba(var(--accent-rgb), 0.07);
+}
+.dhb-invite > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
+.dhb-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dhb-text b {
+  font-size: 12px;
+}
+.dhb-text span {
+  color: var(--fg-dim);
+  line-height: 1.6;
+}
+.dhb-acts {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.dhb-ghost,
+.dhb-primary,
+.dhb-mini {
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dhb-ghost,
+.dhb-mini {
+  border: 1px solid var(--glass-border);
+  background: none;
+  color: var(--fg-dim);
+}
+.dhb-ghost:hover,
+.dhb-mini:hover {
+  color: var(--fg);
+}
+.dhb-primary {
+  border: none;
+  background: var(--accent);
+  color: #0d0f16;
+  font-weight: 600;
+}
+.dhb-primary:disabled,
+.dhb-mini:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.dhb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 11px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.dhb-toggle svg {
+  flex: none;
+}
+.dhb-msg {
+  color: var(--accent);
+}
+.dhb-chev {
+  margin-left: auto;
+  opacity: 0.6;
+}
+.dhb-detail {
+  padding: 2px 11px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dhb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dhb-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg);
+}
+.dhb-tag {
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+.dhb-tag.ok {
+  background: rgba(110, 231, 183, 0.15);
+  color: #6ee7b7;
+}
+.dhb-tag.todo {
+  background: rgba(252, 211, 77, 0.15);
+  color: #fcd34d;
+}
+.dhb-tag.dim {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg-dim);
+}
+.dhb-note {
+  color: var(--fg-dim);
+  opacity: 0.72;
+  line-height: 1.65;
+  font-size: 10.5px;
+}
+.dhb-note.warn {
+  color: #fcd34d;
+  opacity: 0.85;
+}
+.dhb-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}

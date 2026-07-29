@@ -12,6 +12,25 @@ export interface DirEntry {
   isHidden: boolean
 }
 
+/** 「提交即复盘」钩子在某个 agent 上的安装状态 */
+export interface HookAgentStatus {
+  hasCli: boolean
+  installed: boolean
+  /** 装了，但命令里的路径已经对不上（换位置装过 app / 换过 node） */
+  outdated: boolean
+  /** 用户自己已经配过同一个脚本（不是我们装的）—— 不重复装，避免每次提交跑两遍 */
+  foreign: boolean
+  /** 写到哪个文件了 —— 界面上要如实告诉用户我们动了他哪份配置 */
+  configPath: string
+}
+
+export interface HookStatus {
+  /** 钩子脚本和 node 都齐了才谈得上装 */
+  available: boolean
+  claude: HookAgentStatus
+  codex: HookAgentStatus
+}
+
 /** 用户自建词条：由「提交即复盘」hook 发现「用了但词典没收录」的术语时沉淀下来。
  *  zh / logic 通常是空的 —— 脚本不花 token 生成解释，留给用户按需补。 */
 export interface UserTerm {

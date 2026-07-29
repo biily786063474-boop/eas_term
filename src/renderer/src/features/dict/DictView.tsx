@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import { DictIcon } from '../../ui/Icons'
+import { DictHookBar } from './DictHookBar'
 import bundle from './dictionary-bundle.json'
 import './dict.css'
 
@@ -179,6 +180,8 @@ export function DictView(): JSX.Element {
           </button>
         ))}
       </div>
+
+      <DictHookBar />
 
       <div className="dict-list" onMouseLeave={() => setHover(null)}>
         {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}

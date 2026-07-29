@@ -48,7 +48,7 @@ function sourceText(): string | null {
 }
 
 /** CLI 在不在。主进程 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin），所以是探常见安装位置而不是 which。 */
-function hasCli(bin: string): boolean {
+export function hasCli(bin: string): boolean {
   const home = app.getPath('home')
   const win = process.platform === 'win32'
   // Windows 的可执行文件带扩展名（npm 装的 CLI 通常是 .cmd），只查裸名会漏——

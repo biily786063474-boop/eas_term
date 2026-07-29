@@ -22,6 +22,7 @@ import type {
   SessionExchange,
   AgentProbe,
   SkillStatus,
+  HookStatus,
   InstallPlan
 } from '../shared/types'
 
@@ -120,6 +121,18 @@ const api = {
     mute: (muted: boolean): Promise<SkillStatus> => ipcRenderer.invoke('skill:mute', muted),
     // 一个 CLI 都没装时，按这台机器的实际情况给出该跑哪条安装命令（只给命令，不代执行）
     installPlan: (): Promise<InstallPlan> => ipcRenderer.invoke('agent:installPlan')
+  },
+  hook: {
+    // 「提交即复盘」钩子：查状态 / 装 / 卸。这是侵入性最高的一项，必须能一键卸干净
+    status: (): Promise<HookStatus> => ipcRenderer.invoke('hook:status'),
+    install: (
+      targets: ('claude' | 'codex')[]
+    ): Promise<{ ok: boolean; error?: string; done?: string[]; status?: HookStatus }> =>
+      ipcRenderer.invoke('hook:install', targets),
+    uninstall: (
+      targets: ('claude' | 'codex')[]
+    ): Promise<{ ok: boolean; error?: string; status?: HookStatus }> =>
+      ipcRenderer.invoke('hook:uninstall', targets)
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）

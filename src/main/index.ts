@@ -11,7 +11,8 @@ import { registerAgentHandlers } from './agent'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
-import { registerSkillHandlers } from './agentSkill'
+import { registerSkillHandlers, hasCli } from './agentSkill'
+import { registerHookHandlers } from './agentHook'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
@@ -225,6 +226,7 @@ app.whenReady().then(() => {
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerSkillHandlers()
   registerAgentInstallHandlers()
+  registerHookHandlers(hasCli)
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()
