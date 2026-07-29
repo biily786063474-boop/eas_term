@@ -42,15 +42,43 @@ import type {
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
-const pendingBuffers = new Map<string, { chunks: string[]; listener: (e: IpcRendererEvent, d: string) => void }>()
+//
+// **必须有上限。** 这个缓冲只在「创建完到 TerminalView 挂载」这几十毫秒里有用，
+// 正常情况下几 KB 就到头了。但它的清空只发生在 onData / kill 两处 ——
+// 一旦某个 pty 的视图始终没挂上（创建后 leaf 立刻被关、组件抛错被 ErrorBoundary 兜住、
+// MCP 建的终端节点还没渲染就被删），这个数组就再没人来取，
+// 而主进程那边还在源源不断往这个 channel 推。跑一晚上的 agent 输出全堆在这儿，
+// 表现就是「用着用着内存涨到崩」——且没有任何报错线索。
+// 超过上限就丢最老的：这几十毫秒的提示符丢了无所谓，内存爆了是事故。
+const PENDING_MAX_BYTES = 256 * 1024
+
+const pendingBuffers = new Map<
+  string,
+  { chunks: string[]; bytes: number; listener: (e: IpcRendererEvent, d: string) => void }
+>()
 
 function startBuffering(id: string): void {
-  const chunks: string[] = []
-  const listener = (_e: IpcRendererEvent, data: string): void => {
-    chunks.push(data)
+  const buf = {
+    chunks: [] as string[],
+    bytes: 0,
+    listener: (_e: IpcRendererEvent, data: string): void => {
+      buf.chunks.push(data)
+      buf.bytes += data.length
+      while (buf.bytes > PENDING_MAX_BYTES && buf.chunks.length > 1) {
+        buf.bytes -= buf.chunks.shift()!.length
+      }
+    }
   }
-  ipcRenderer.on(`pty:data:${id}`, listener)
-  pendingBuffers.set(id, { chunks, listener })
+  ipcRenderer.on(`pty:data:${id}`, buf.listener)
+  pendingBuffers.set(id, buf)
+}
+
+/** pty 自己退出时也要收摊：以前只在 onData / kill 里清，自然退出的那条路会漏下监听器 */
+function stopBuffering(id: string): void {
+  const pending = pendingBuffers.get(id)
+  if (!pending) return
+  ipcRenderer.removeListener(`pty:data:${id}`, pending.listener)
+  pendingBuffers.delete(id)
 }
 
 const api = {
@@ -368,11 +396,7 @@ const api = {
       ipcRenderer.send('pty:resize', id, cols, rows)
     },
     kill: (id: string): void => {
-      const pending = pendingBuffers.get(id)
-      if (pending) {
-        ipcRenderer.removeListener(`pty:data:${id}`, pending.listener)
-        pendingBuffers.delete(id)
-      }
+      stopBuffering(id)
       ipcRenderer.send('pty:kill', id)
     },
     busyByIds: (ids: string[]): Promise<string[]> => ipcRenderer.invoke('pty:busyByIds', ids),
@@ -391,7 +415,10 @@ const api = {
     },
     onExit: (id: string, cb: (exitCode: number) => void): (() => void) => {
       const channel = `pty:exit:${id}`
-      const listener = (_e: IpcRendererEvent, exitCode: number): void => cb(exitCode)
+      const listener = (_e: IpcRendererEvent, exitCode: number): void => {
+        stopBuffering(id) // 进程自己退了，缓冲区留着也没人取了
+        cb(exitCode)
+      }
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }
