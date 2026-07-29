@@ -13,6 +13,7 @@ import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
+import { DictBubbleToggle } from './features/canvas/DictBubbleToggle'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
@@ -179,6 +180,7 @@ export function App(): JSX.Element {
         <div className="titlebar-actions">
           {viewMode === 'split' && <TerminalAttention />}
           <McpIndicator />
+          <DictBubbleToggle />
           <FootprintPanel />
           <div className="view-seg">
             <button

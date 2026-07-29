@@ -2,6 +2,7 @@
 // 点 × 或再次点气泡收起。改成气泡是因为它作为画布节点会崩溃、且本就是随手查的工具。
 
 import { lazy, Suspense, useRef, useState } from 'react'
+import { useStore } from '../../store'
 import { DictIcon, CloseIcon } from '../../ui/Icons'
 
 const DictView = lazy(() => import('../dict/DictView').then((m) => ({ default: m.DictView })))
@@ -10,7 +11,9 @@ const POP_W = 360
 const POP_H = 464
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
 
-export function CanvasDictBubble(): JSX.Element {
+export function CanvasDictBubble(): JSX.Element | null {
+  const hidden = useStore((s) => s.dictBubbleHidden)
+  const setHidden = useStore((s) => s.setDictBubbleHidden)
   const [open, setOpen] = useState(false)
   // 默认落在左下角缩略图（约 200px 高）之上，避免压住它；用户可自行拖到任意位置
   const [pos, setPos] = useState(() => ({ x: 24, y: Math.max(96, window.innerHeight - 320) }))
@@ -50,13 +53,22 @@ export function CanvasDictBubble(): JSX.Element {
     top: clamp(pos.y - POP_H - 10, 52, window.innerHeight - POP_H - 8)
   }
 
+  // 藏起来后整个不渲染。恢复的入口在标题栏（见 DictBubbleToggle）——
+  // 留一个半透明的残影在原地，等于没藏
+  if (hidden) return null
+
   return (
     <>
       <button
         className={`cdict-bubble${open ? ' on' : ''}`}
         style={{ left: pos.x, top: pos.y }}
-        data-tip={open ? '收起名词词典' : '名词词典'}
+        data-tip={open ? '收起名词词典' : '名词词典（右键隐藏）'}
         onMouseDown={onBubbleDown}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setOpen(false) // 面板还开着就一起收，不然会剩一块没有来源的浮层
+          setHidden(true)
+        }}
       >
         <DictIcon size={20} />
       </button>

@@ -44,6 +44,10 @@ export interface UiSlice {
    *  抽屉展开会正好压在它们身上，得跟着往左让。 */
   resDrawerOpen: boolean
   setResDrawerOpen: (v: boolean) => void
+  /** 词典悬浮球被右键藏起来了。存 localStorage：藏它是个明确的意愿表达，
+   *  重启就冒出来等于没听见。藏起来后标题栏会出现一个恢复按钮。 */
+  dictBubbleHidden: boolean
+  setDictBubbleHidden: (v: boolean) => void
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
@@ -60,6 +64,8 @@ export interface UiSlice {
   /** 恢复内置角色（用户自建的保留） */
   resetRoles: () => Promise<void>
 }
+
+const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 
 let mcpSeq = 1
 let ttRunning = false
@@ -114,6 +120,12 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setWikiDrawerOpen: (v) => set({ wikiDrawerOpen: v }),
   resDrawerOpen: false,
   setResDrawerOpen: (v) => set({ resDrawerOpen: v }),
+  dictBubbleHidden: localStorage.getItem(DICT_HIDDEN_KEY) === '1',
+  setDictBubbleHidden: (v) => {
+    if (v) localStorage.setItem(DICT_HIDDEN_KEY, '1')
+    else localStorage.removeItem(DICT_HIDDEN_KEY)
+    set({ dictBubbleHidden: v })
+  },
   pendingArchive: null,
   ttQueue: [],
 
