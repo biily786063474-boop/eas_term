@@ -10,8 +10,9 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
 import type { AgentProbe } from '../../../../shared/types'
-import { SparkleIcon, UndoIcon, PlayIcon, CheckIcon, PencilIcon, PlusIcon } from '../../ui/Icons'
+import { SparkleIcon, UndoIcon, PlayIcon, CheckIcon, PencilIcon, PlusIcon, GearIcon } from '../../ui/Icons'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
+import { CanvasRoleManager } from './CanvasRoleManager'
 
 type Kind = 'claude' | 'codex'
 
@@ -145,6 +146,7 @@ export function CanvasAgentBar({
   // 角色编辑器：null=没开，''=新建，其余=编辑该角色。
   // 入口只此一处——右抽屉那份已经撤掉，角色的一切都收在终端这条控制条上
   const [editRole, setEditRole] = useState<string | null>(null)
+  const [manageRoles, setManageRoles] = useState(false)
   const [customModel, setCustomModel] = useState<string | null>(null) // null=菜单模式，string=自定义输入模式
   const popRef = useRef<HTMLDivElement>(null)
   const anchorRef = useRef<HTMLElement | null>(null)
@@ -294,6 +296,16 @@ export function CanvasAgentBar({
       {editRole !== null && (
         <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
       )}
+      {manageRoles && (
+        <CanvasRoleManager
+          onClose={() => setManageRoles(false)}
+          onEdit={(id) => {
+            // 从管理面板跳去编辑：先收起管理，不然两层弹窗叠在一起
+            setManageRoles(false)
+            setEditRole(id)
+          }}
+        />
+      )}
       <SparkleIcon size={13} className="ab-brand" />
 
       {/* [Claude | Codex] 段控件：选当前 agent，胶囊/启动随之切换 */}
@@ -421,6 +433,17 @@ export function CanvasAgentBar({
                     </div>
                   )
                 })}
+                <button
+                  className="ab-menu-item ab-menu-custom"
+                  onClick={() => {
+                    setPop(null)
+                    setManageRoles(true)
+                  }}
+                >
+                  <GearIcon size={12} />
+                  <span>管理角色…</span>
+                </button>
+                {/* 「新建」固定在最下面 */}
                 <button
                   className="ab-menu-item ab-menu-custom"
                   onClick={() => {
