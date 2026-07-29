@@ -2414,3 +2414,348 @@
   border-color: rgba(244, 63, 94, 0.4);
   color: #fda4af;
 }
+
+/* ---------- 左侧知识库抽屉（原「基本操作」的位置） ---------- */
+.wk-edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 150px;
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  pointer-events: none;
+}
+.wk-edge::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgba(var(--accent-rgb), 0);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.wk-edge.hot::before {
+  background: rgba(var(--accent-rgb), 0.75);
+  box-shadow: 0 0 20px 4px rgba(var(--accent-rgb), 0.4);
+}
+.wk-edge-guide {
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-dim);
+  opacity: 0.5;
+  transform: translateX(-2px);
+  transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
+}
+.wk-edge.hot .wk-edge-guide {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--accent);
+}
+.wk-edge-label {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 9px 3px;
+  border-radius: 10px;
+  background: var(--glass-3);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+  white-space: nowrap;
+  user-select: none;
+}
+/* 收件箱有货时的小角标：不弹窗，只在边上亮一下 */
+.wk-edge-dot {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0b0d12;
+  font-size: 10.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wiki-drawer {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 250px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-1);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+.wiki-drawer.dropping {
+  border-color: rgba(var(--accent-rgb), 0.8);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35), 0 10px 36px rgba(0, 0, 0, 0.28);
+}
+.wk-head {
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 13px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.wk-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  letter-spacing: 0.04em;
+}
+.wk-icon {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wk-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+/* 未配置时的一屏引导 */
+.wk-setup {
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+.wk-setup-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wk-setup b {
+  font-size: 13.5px;
+  color: var(--fg);
+}
+.wk-setup p {
+  margin: 0;
+  color: var(--fg-dim);
+  line-height: 1.75;
+  font-size: 11.5px;
+}
+.wk-dim {
+  color: var(--fg-dim);
+  opacity: 0.72;
+}
+.wk-tiny {
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+.wk-primary {
+  margin-top: 4px;
+  padding: 7px 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #0d0f16;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.wk-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.wk-warn {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* 收件箱：给压力不只给数字 */
+.wk-inbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 8px 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.wk-inbox:hover {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  color: var(--fg);
+}
+.wk-inbox.has {
+  border-style: solid;
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.07);
+}
+.wk-inbox-k {
+  flex: none;
+  font-weight: 600;
+}
+.wk-inbox-v {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wk-inbox-v b {
+  color: var(--accent);
+  font-size: 13px;
+}
+.wk-inbox-v em {
+  font-style: normal;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+.wk-inbox-v.empty {
+  opacity: 0.6;
+}
+
+/* 规则状态：失效是静默的，必须显式说 */
+.wk-rules {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 8px 0;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.wk-rules.ok {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.1);
+}
+.wk-rules.todo {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+}
+.wk-rules span {
+  flex: 1;
+}
+.wk-rules button {
+  flex: none;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  font-size: 10.5px;
+  font-family: inherit;
+  padding: 1px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.wk-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin-top: 6px;
+}
+.wk-back {
+  flex: none;
+  max-height: 150px;
+  overflow: auto;
+  border-top: 1px solid var(--glass-border);
+  padding: 8px 12px 10px;
+  font-size: 11px;
+}
+.wk-back-h {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-dim);
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.wk-back-row {
+  padding: 2px 0;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wk-busy {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 10.5px;
+  color: var(--accent);
+  border-top: 1px solid var(--glass-border);
+}
+
+/* 基本操作：从整个抽屉收成缩放条左边的一条图标栏 */
+.ctoolbar-mini {
+  position: absolute;
+  right: 178px;
+  bottom: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 5px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 999px;
+  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.ctoolbar-mini .ctool {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ctoolbar-mini .ctool:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+.ctoolbar-mini .ctool.on {
+  background: rgba(var(--accent-rgb), 0.22);
+  color: var(--accent);
+}

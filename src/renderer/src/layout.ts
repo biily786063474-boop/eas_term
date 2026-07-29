@@ -8,7 +8,7 @@
 // 'history'(SourceTree 式 Git 历史) 和 'chat'(Claude Code 对话导航) 都是大视图，
 // 分别从侧栏「版本」和终端头部按钮打开，不出现在面板下拉框里。
 // 'dict'(专业名词词典) 从面板下拉框打开：查词条 → 点击把实现逻辑插入活动终端光标处。
-export type PaneKind = 'terminal' | 'code' | 'image' | 'history' | 'chat' | 'dict' | 'web'
+export type PaneKind = 'terminal' | 'code' | 'image' | 'history' | 'chat' | 'dict' | 'web' | 'wiki'
 
 /** Git diff 在主区域的展示参数（由侧栏「版本」标签点击文件时下发） */
 export interface DiffSpec {
@@ -24,6 +24,7 @@ export type PaneState =
   | { kind: 'history'; cwd: string }
   | { kind: 'chat'; cwd: string }
   | { kind: 'dict' }
+  | { kind: 'wiki' }
   | { kind: 'web'; url: string | null; title?: string }
 
 export interface LeafNode {

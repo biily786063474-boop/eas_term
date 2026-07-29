@@ -12,6 +12,50 @@ export interface DirEntry {
   isHidden: boolean
 }
 
+/** 规则托管状态。codexRegionChars 是刻意暴露出来的——
+ *  那一段是 Codex 的常驻上下文，每轮都在花钱，界面上要能看见它有多大。 */
+export interface RulesStatus {
+  claudeCanvas: boolean
+  claudeWiki: boolean
+  /** Codex 常驻托管区的字符数 */
+  codexRegionChars: number
+  codexHasWiki: boolean
+  /** 规则里嵌的知识库路径和当前实际位置对不上（换过位置 / 先装规则后建库） */
+  stale: boolean
+}
+
+/** 知识库状态。inbox 那两个字段是刻意成对的——
+ *  只给数量不扎人，「最早一份放了 23 天」才让人意识到只进不出。 */
+export interface WikiStatus {
+  /** 用户设过位置了吗 */
+  configured: boolean
+  path: string | null
+  /** 那个目录还在不在（可能被删了或是网络盘没挂上） */
+  exists: boolean
+  /** 笔记数（不含收件箱和素材里的原件） */
+  notes: number
+  inbox: number
+  /** 收件箱里最早那份放了多少天 */
+  oldestInboxDays: number | null
+  hasGit: boolean
+}
+
+export interface WikiInboxItem {
+  name: string
+  path: string
+  isDir: boolean
+  size: number
+  /** 放进来的时间 */
+  at: number
+}
+
+/** 反向链接：哪篇笔记的哪一行引用了当前这篇 */
+export interface Backlink {
+  file: string
+  line: number
+  text: string
+}
+
 /** Agent 角色：把每次开终端要重复交代的东西固化成一份可执行配置。
  *  注意它不是人设——真正起作用的是模型档位、产出契约、工具边界。 */
 export interface AgentRole {

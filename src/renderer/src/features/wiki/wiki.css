@@ -1,0 +1,166 @@
+/* 终端模式下的知识库面板：左树右正文 */
+.wikiv {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.wikiv-empty {
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  padding: 0 24px;
+}
+.wikiv-empty b {
+  font-size: 14px;
+  color: var(--fg);
+}
+.wikiv-side {
+  width: 230px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--glass-border);
+  min-height: 0;
+}
+.wikiv-side-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  flex: none;
+  padding: 0 6px 0 12px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  border-bottom: 1px solid var(--glass-border);
+}
+.wikiv-side-h em {
+  font-style: normal;
+  color: var(--accent);
+}
+.wikiv-side-h button {
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  display: flex;
+}
+.wikiv-side-h button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+.wikiv-tree {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.wikiv-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.wikiv-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  flex: none;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 11.5px;
+}
+.wikiv-name {
+  color: var(--fg);
+  font-weight: 600;
+}
+.wikiv-bar button {
+  border: 1px solid var(--glass-border);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.wikiv-bar button:hover {
+  color: var(--fg);
+}
+.wikiv-md,
+.wikiv-raw {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 22px;
+}
+.wikiv-raw {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+}
+.wikiv-back {
+  flex: none;
+  max-height: 160px;
+  overflow: auto;
+  border-top: 1px solid var(--glass-border);
+  padding: 8px 14px 12px;
+  font-size: 11.5px;
+}
+.wikiv-back > b {
+  display: block;
+  color: var(--fg-dim);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.wikiv-back-row {
+  padding: 3px 0;
+  color: var(--fg);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.wikiv-back-row:hover {
+  color: var(--accent);
+}
+.wikiv-back-row em {
+  flex: 1;
+  min-width: 0;
+  font-style: normal;
+  color: var(--fg-dim);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* front-matter 剥出来做成顶部一行：summary 是「这篇一句话是什么」，比藏在源码里有用 */
+.wikiv-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.wikiv-sum {
+  flex: 1;
+  min-width: 200px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+}
+.wikiv-tag {
+  flex: none;
+  font-size: 10.5px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent);
+}

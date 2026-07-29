@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type {
   Project,
   DirEntry,
@@ -24,6 +24,10 @@ import type {
   SkillStatus,
   HookStatus,
   AgentRole,
+  WikiStatus,
+  WikiInboxItem,
+  Backlink,
+  RulesStatus,
   InstallPlan
 } from '../shared/types'
 
@@ -42,6 +46,16 @@ function startBuffering(id: string): void {
 
 const api = {
   platform: process.platform,
+  // 从访达拖进来的 File 取真实路径。
+  // Electron 32 起 File.path 被移除了，直接读会拿到 undefined 且**不报错**——
+  // 结果是一堆空路径还以为代码写对了。必须走 webUtils。
+  pathForFile: (f: File): string => {
+    try {
+      return webUtils.getPathForFile(f)
+    } catch {
+      return ''
+    }
+  },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),
     addViaDialog: (): Promise<Project[]> => ipcRenderer.invoke('projects:addViaDialog'),
@@ -136,6 +150,39 @@ const api = {
       targets: ('claude' | 'codex')[]
     ): Promise<{ ok: boolean; error?: string; status?: HookStatus }> =>
       ipcRenderer.invoke('hook:uninstall', targets)
+  },
+  wiki: {
+    // 个人知识库（用户自选位置的 markdown 文件夹）
+    status: (): Promise<WikiStatus> => ipcRenderer.invoke('wiki:status'),
+    suggestPath: (): Promise<string> => ipcRenderer.invoke('wiki:suggestPath'),
+    pickPath: (): Promise<string | null> => ipcRenderer.invoke('wiki:pickPath'),
+    pickFiles: (): Promise<string[]> => ipcRenderer.invoke('wiki:pickFiles'),
+    init: (
+      root: string
+    ): Promise<{ ok: boolean; error?: string; created?: string[]; skipped?: string[]; status?: WikiStatus }> =>
+      ipcRenderer.invoke('wiki:init', root),
+    forget: (): Promise<WikiStatus> => ipcRenderer.invoke('wiki:forget'),
+    /** 在访达/资源管理器里打开（sub 可给子目录名，如收件箱） */
+    reveal: (sub?: string): Promise<void> => ipcRenderer.invoke('wiki:reveal', sub),
+    inbox: (): Promise<WikiInboxItem[]> => ipcRenderer.invoke('wiki:inbox'),
+    /** 往收件箱放文件。默认复制不移动——移动会让用户原来的位置文件消失 */
+    addToInbox: (
+      files: string[],
+      move?: boolean
+    ): Promise<{
+      ok: boolean
+      error?: string
+      done?: string[]
+      failed?: { file: string; error: string }[]
+      status?: WikiStatus
+    }> => ipcRenderer.invoke('wiki:addToInbox', files, move),
+    backlinks: (target: string): Promise<Backlink[]> => ipcRenderer.invoke('wiki:backlinks', target)
+  },
+  rules: {
+    // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）
+    status: (): Promise<RulesStatus> => ipcRenderer.invoke('rules:status'),
+    sync: (): Promise<{ ok: boolean; codexChars: number; status: RulesStatus }> =>
+      ipcRenderer.invoke('rules:sync')
   },
   roles: {
     // Agent 角色（~/.eas/roles.json）：列 / 存 / 恢复内置

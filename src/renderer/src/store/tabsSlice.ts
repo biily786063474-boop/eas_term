@@ -372,6 +372,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       pane = { kind: 'chat', cwd: tab.cwd }
     } else if (kind === 'dict') {
       pane = { kind: 'dict' }
+    } else if (kind === 'wiki') {
+      pane = { kind: 'wiki' }
     } else if (kind === 'web') {
       pane = { kind: 'web', url: null }
     } else {

@@ -17,6 +17,7 @@ import { CanvasAgentBar } from '../canvas/CanvasAgentBar'
 const DictView = lazy(() =>
   import('../dict/DictView').then((m) => ({ default: m.DictView }))
 )
+const WikiView = lazy(() => import('../wiki/WikiView').then((m) => ({ default: m.WikiView })))
 import {
   TerminalIcon,
   CodeIcon,
@@ -31,7 +32,8 @@ import {
   SplitHIcon,
   SplitVIcon,
   CheckIcon,
-  GlobeIcon
+  GlobeIcon,
+  FilesIcon
 } from '../../ui/Icons'
 
 const PANE_GAP = 3
@@ -42,7 +44,8 @@ const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
   { kind: 'web', label: '网页', Icon: GlobeIcon },
-  { kind: 'dict', label: '名词词典', Icon: DictIcon }
+  { kind: 'dict', label: '名词词典', Icon: DictIcon },
+  { kind: 'wiki', label: '知识库', Icon: FilesIcon }
 ]
 
 // 显示当前类型用（含 history，供头部展示）
@@ -53,7 +56,8 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   history: { label: '历史', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
   dict: { label: '名词词典', Icon: DictIcon },
-  web: { label: '网页', Icon: GlobeIcon }
+  web: { label: '网页', Icon: GlobeIcon },
+  wiki: { label: '知识库', Icon: FilesIcon }
 }
 
 function PaneKindSelect({
@@ -449,6 +453,11 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} cwd={tabCwd} />}
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
+        {pane.kind === 'wiki' && (
+          <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>
+            <WikiView />
+          </Suspense>
+        )}
         {pane.kind === 'dict' && (
           <Suspense fallback={<div className="pane-placeholder">加载词典…</div>}>
             <DictView />

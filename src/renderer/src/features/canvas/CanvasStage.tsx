@@ -63,38 +63,6 @@ export function CanvasStage(): JSX.Element {
   const clearAttention = useStore((s) => s.clearAttention)
   const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const spaceHeld = useRef(false)
-  // 左侧「基本操作」工具抽屉：收起态左缘 guide，点击滑入；动效/交互镜像右侧资源抽屉
-  const [toolsOpen, setToolsOpen] = useState(false)
-  const [toolsHover, setToolsHover] = useState(false)
-  const toolsEdgeRef = useRef<HTMLSpanElement>(null)
-  // 收起态左缘触发器：鼠标越靠左边缘，guide 越向右「探出」跟手（橡皮筋）；离开回弹
-  const onToolsEdgeMove = (e: React.MouseEvent): void => {
-    const el = toolsEdgeRef.current
-    if (!el) return
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const t = Math.max(0, Math.min(1, 1 - (e.clientX - r.left) / r.width))
-    el.style.transition = 'transform 0.1s ease-out, opacity 0.22s ease'
-    el.style.transform = `translateX(${(9 * t).toFixed(2)}px)`
-  }
-  const resetToolsEdge = (): void => {
-    const el = toolsEdgeRef.current
-    if (!el) return
-    el.style.transition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease'
-    el.style.transform = ''
-  }
-  // 抽屉打开时：在工具栏以外点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
-  useEffect(() => {
-    if (!toolsOpen) return
-    const onDown = (e: MouseEvent): void => {
-      if (!(e.target as HTMLElement).closest?.('.canvas-toolbar')) setToolsOpen(false)
-    }
-    const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
-    return () => {
-      window.clearTimeout(t)
-      document.removeEventListener('mousedown', onDown, true)
-    }
-  }, [toolsOpen])
-
   // 选中终端节点 / 其所在 Frame → 视为已知晓，清除该终端的「需处理」呼吸标记
   useEffect(() => {
     if (!canvasSel.length) return
@@ -451,7 +419,7 @@ export function CanvasStage(): JSX.Element {
     // 这些各自有双击行为（模块头改名 / 终端选词 / 便签编辑 / Frame 标题改名），浮层控件也不是画布
     if (
       t.closest(
-        '.cfile-node, .pane, .cshape, .cframe-head, .canvas-toolbar, .canvas-zoombar, .canvas-minimap, .crm, .crm-mini, .canvas-drawer, .cd-edge, .ctd-edge'
+        '.cfile-node, .pane, .cshape, .cframe-head, .ctoolbar-mini, .canvas-zoombar, .canvas-minimap, .crm, .crm-mini, .canvas-drawer, .cd-edge, .wiki-drawer, .wk-edge'
       )
     )
       return
@@ -874,46 +842,24 @@ export function CanvasStage(): JSX.Element {
         ))}
       </div>
 
-      {/* 收起态：左缘竖排「基本操作」引导（镜像右侧「文件信息」），点击滑出工具栏 */}
-      {!toolsOpen && (
-        <div className={`ctd-edge${toolsHover ? ' hot' : ''}`}>
-          <span
-            className="ctd-edge-guide"
-            ref={toolsEdgeRef}
-            data-tip="展开基本操作"
-            onMouseEnter={() => setToolsHover(true)}
-            onMouseMove={onToolsEdgeMove}
-            onMouseLeave={() => {
-              setToolsHover(false)
-              resetToolsEdge()
-            }}
-            onClick={() => {
-              setToolsHover(false)
-              setToolsOpen(true)
-            }}
-          >
-            <span className="ctd-edge-label">基本操作</span>
-          </span>
-        </div>
-      )}
-
-      <div className={`canvas-toolbar${toolsOpen ? ' open' : ' closed'}`}>
+      {/* 基本操作收成一条紧凑图标栏（原来占着整个左抽屉，那个位置让给知识库了）。
+          删掉的话「在画布上圈一下、写个便签」就无处可做，所以是搬家不是删除。 */}
+      <div className="ctoolbar-mini">
         <button
           className={`ctool${tool === 'select' ? ' on' : ''}`}
           data-tip="选择 / 移动"
           onClick={() => setTool('select')}
         >
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
             <path d="M5 3l6 16 2.5-6.5L20 10z" />
           </svg>
         </button>
-        <div className="ctool-sep" />
         <button
           className={`ctool${tool === 'rect' ? ' on' : ''}`}
           data-tip="矩形"
           onClick={() => setTool('rect')}
         >
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="4" y="5" width="16" height="14" rx="2" />
           </svg>
         </button>
@@ -922,7 +868,7 @@ export function CanvasStage(): JSX.Element {
           data-tip="箭头"
           onClick={() => setTool('arrow')}
         >
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M5 19L19 5M19 5h-7M19 5v7" />
           </svg>
         </button>
@@ -931,7 +877,7 @@ export function CanvasStage(): JSX.Element {
           data-tip="便签"
           onClick={() => setTool('sticky')}
         >
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 4h16v11l-5 5H4z" />
             <path d="M20 15h-5v5" />
           </svg>

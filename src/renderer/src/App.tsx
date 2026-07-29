@@ -10,6 +10,7 @@ import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
+import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
@@ -222,6 +223,7 @@ export function App(): JSX.Element {
             {viewMode === 'canvas' && <CanvasStage />}
             <PaneLayer />
             {viewMode === 'canvas' && <CanvasDrawer />}
+            {viewMode === 'canvas' && <CanvasWikiDrawer />}
             {viewMode === 'canvas' && <CanvasDictBubble />}
           </div>
         </main>

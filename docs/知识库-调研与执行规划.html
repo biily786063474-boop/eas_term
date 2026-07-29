@@ -566,6 +566,57 @@ updated: 2026-07-29
     不用 git 的话，「AI 帮我整理」这个功能建议直接关掉 —— 没有撤销的自动整理不值得冒险。</p>
   </div>
 
+  <h3>怎么把东西丢进收件箱</h3>
+  <p class="secnote" style="margin-bottom:18px">
+    先纠一个词：<b>这不是「上传」</b>。收件箱是本地文件夹，没有服务器。
+    要做的是「不用离开这个软件就能把东西塞进去」。
+  </p>
+  <div class="tw"><table>
+    <thead><tr><th>入口</th><th>场景</th><th>期</th></tr></thead>
+    <tbody>
+      <tr><td><b>① 从访达拖一堆文件到知识库抽屉</b></td><td>真正的「批量」场景</td>
+        <td><span class="b b-em">第 1 期</span></td></tr>
+      <tr><td><b>② 收件箱那行的 ＋ → 多选文件选择器</b></td>
+        <td>不习惯拖拽的人；也是<b>可被发现</b>的那个入口</td><td><span class="b b-em">第 1 期</span></td></tr>
+      <tr><td><b>③ 在访达里打开收件箱</b></td>
+        <td>兜底。成本几乎为零，但省掉了「用户必须记住那个目录在哪」——
+          <b>「必须记住路径」是功能悄悄死掉的常见原因</b></td><td><span class="b b-em">第 1 期</span></td></tr>
+      <tr><td><b>④ 应用内右键「收进收件箱」</b></td><td>画布节点、文件树里的文件，零跳转</td>
+        <td><span class="b b-am">第 2 期</span></td></tr>
+      <tr><td><b>⑤ 浏览器节点「存进收件箱」</b></td>
+        <td>当前网页存成 markdown。<b>这是卡帕西点名的 Obsidian Web Clipper 的等价物</b> ——
+          别人要装浏览器扩展、在两个应用间倒腾，这里浏览器就在画布上，一个按钮的事</td>
+        <td><span class="b b-am">第 2 期</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">一个会静默坑人的技术点（已核对本机 Electron 37 类型定义）</div>
+    <p style="margin:0"><code>File.path</code> 在 Electron 里<b>已经被移除</b>了，
+    <code>electron.d.ts</code> 里只剩 <code>webUtils.getPathForFile(file: File): string</code>。
+    从访达拖文件进来时直接读 <code>e.dataTransfer.files[0].path</code> 拿到的是
+    <b><code>undefined</code>，而且不报错</b> —— 会得到一堆空路径还以为写对了。
+    必须在 preload 里包一层 <code>webUtils.getPathForFile</code>。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">要你拍板 · 复制还是移动</div>
+    <p style="margin:0"><b>移动</b> = 用户原来放文件的地方，文件没了 —— 这是会挨骂的。
+    <b>复制</b> = 安全，但复制一个 4GB 的视频很浪费。
+    <br><br><b>建议：默认复制</b>，笔记 front-matter 里记下原始路径（来源不丢）；
+    单个文件超过 200MB 时在那一条上标出来，给一个「改成移动」的选项。
+    <b>绝不静默移动。</b></p>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">一个反直觉的建议 · 别把入口做得太丝滑</div>
+    <p style="margin:0">「数字仓鼠窝」那条担忧，<b>恰恰会被一个顺手的批量导入放大</b>。
+    所以收件箱那行不要只显示数字，要显示<b>压力</b>：</p>
+    <pre style="margin:10px 0 0"><code>收件箱  <span class="hi">47 · 最早一份来自 23 天前</span></code></pre>
+    <p style="margin:10px 0 0">这比单纯的 <code>47</code> 有用得多 —— 数字会涨，但「23 天前」会扎人。
+    它让「只进不出」这件事<b>可见</b>。</p>
+  </div>
+
   <div class="card">
     <h4 style="margin-top:0">成本与耗时（要如实告诉用户）</h4>
     <ul style="margin:0">
