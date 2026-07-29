@@ -40,13 +40,17 @@ function buildClaudeCmd(
   model?: string,
   effort?: string,
   cont?: boolean,
-  sessionId?: string
+  sessionId?: string,
+  contractFile?: string | null
 ): string {
   const p = ['claude']
   if (cont) p.push(...(sessionId ? ['--resume', sessionId] : ['-c']))
   else if (sessionId) p.push('--session-id', sessionId)
   if (model) p.push('--model', model)
   if (effort) p.push('--effort', effort)
+  // 角色契约走文件而不是内联：内联会让命令变成难读的一长条，且契约里的换行/引号都要转义。
+  // 回溯时不拼——--resume 不重放 system prompt，加了也是白加，反而让人误以为改角色生效了。
+  if (!cont && contractFile) p.push('--append-system-prompt-file', shq(contractFile))
   return p.join(' ')
 }
 
@@ -56,14 +60,24 @@ function buildCodexCmd(
   model?: string,
   effort?: string,
   cont?: boolean,
-  sessionId?: string
+  sessionId?: string,
+  contract?: string
 ): string {
   // 回溯：有绑定就精确恢复这个终端自己的会话，没有才回落「最近一个」
   if (cont) return sessionId ? `codex resume ${sessionId}` : 'codex resume --last'
   const p = ['codex']
   if (model) p.push('-m', model)
   if (effort) p.push('-c', `model_reasoning_effort=${effort}`)
+  // Codex 没有 --append-system-prompt-file 这种文件参数（experimental_instructions_file
+  // 在 0.145 里已被移除，实测报 unknown configuration field），只能内联 -c instructions=。
+  // 因此压成单行并去掉双引号，避免把 -c 的取值解析弄乱。
+  if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
   return p.join(' ')
+}
+
+/** 单引号包裹 + 转义内部单引号：路径/契约里有空格、中文、引号都不会把命令拆散 */
+function shq(v: string): string {
+  return `'${v.replace(/'/g, "'\\''")}'`
 }
 
 const DEFAULT_MODEL: Record<Kind, string> = { claude: 'opus', codex: 'gpt-5-codex' }
@@ -96,7 +110,7 @@ async function getProbe(): Promise<AgentProbe> {
   return probeInflight
 }
 
-type Pop = { type: 'model' | 'effort' | 'ask'; rect: DOMRect }
+type Pop = { type: 'model' | 'effort' | 'ask' | 'role'; rect: DOMRect }
 
 export function CanvasAgentBar({
   frameId,
@@ -111,6 +125,7 @@ export function CanvasAgentBar({
     (s) => s.canvas.frames.find((f) => f.id === frameId)?.nodes.find((n) => n.id === nodeId)?.agent
   )
   const setNodeAgent = useStore((s) => s.setNodeAgent)
+  const requestConfirm = useStore((s) => s.requestConfirm)
 
   const [probe, setProbe] = useState<AgentProbe | null>(probeCache?.data ?? null)
   const [pop, setPop] = useState<Pop | null>(null)
@@ -142,15 +157,20 @@ export function CanvasAgentBar({
     return () => window.removeEventListener('mousedown', onDown, true)
   }, [pop])
 
-  const kind: Kind = agent?.kind ?? 'claude'
+  const roles = useStore((s) => s.roles)
+  const role = roles.find((r) => r.id === agent?.roleId) ?? null
+  // 角色可以钉死用哪个 CLI；kind='auto' 时听节点自己的选择
+  const kind: Kind = role && role.kind !== 'auto' ? role.kind : (agent?.kind ?? 'claude')
   const claudeReady = !probe || probe.claude.installed
   const codexReady = !!probe?.codex.installed
   const activeReady = kind === 'claude' ? claudeReady : codexReady
 
   const models = probe?.[kind].models ?? []
   const efforts = probe?.[kind].efforts ?? []
-  const model = agent?.model?.[kind] || pickModel(models, kind)
-  const effort = agent?.effort?.[kind] || pickEffort(efforts, kind)
+  // 优先级：节点自己选的 > 角色的默认 > 探测出的默认。
+  // 角色只提供**默认值**，用户在控制条上改过就以他的为准——否则每次选角色都把手动调整冲掉
+  const model = agent?.model?.[kind] || role?.model?.[kind] || pickModel(models, kind)
+  const effort = agent?.effort?.[kind] || role?.effort?.[kind] || pickEffort(efforts, kind)
 
   // 统一改写：始终保留 kind，模型/思考按当前 kind 各存一格（切 agent 互不覆盖）。
   // rec() 守卫旧结构：P0 时 model/effort 曾是字符串，直接 spread 会摊成 {0:'o',1:'p'…} 污染存档。
@@ -167,7 +187,41 @@ export function CanvasAgentBar({
     mutate({ kind: k })
   }
 
-  const openPop = (type: 'model' | 'effort', el: HTMLElement): void => {
+  /** 换角色。
+   *
+   *  硬约束：Claude 的 --resume 不重放 system prompt，Codex 的 resume 同样沿用原会话配置。
+   *  也就是说一条会话开始时是什么角色，它这辈子就是什么角色 —— 在这里改 roleId，
+   *  正在跑的那条会话**什么都不会变**。所以已经有 session 时必须让用户明确选一次，
+   *  默默改会让人以为生效了，这比不做这个功能更糟。 */
+  const pickRole = (id: string | null): void => {
+    setPop(null)
+    if ((agent?.roleId ?? null) === id) return
+    // 判据是「这个终端有没有**任何**绑定会话」，不是「当前 kind 有没有」。
+    // 只看当前 kind 的话：用户在 Codex 侧换角色时不弹窗，但控制条从此显示新角色，
+    // 而他一旦切回 Claude 回溯，跑的还是旧角色 —— 显示和实际对不上，正是要防的那种误解。
+    const bound = (['claude', 'codex'] as Kind[]).filter((k) => agent?.session?.[k])
+    if (!bound.length) {
+      mutate({ roleId: id ?? undefined })
+      return
+    }
+    const nm = id ? (roles.find((r) => r.id === id)?.name ?? '该角色') : '无角色'
+    requestConfirm({
+      message:
+        `这个终端已经绑了会话（${bound.map((k) => (k === 'claude' ? 'Claude' : 'Codex')).join(' / ')}）。\n\n` +
+        `换成「${nm}」不会影响正在跑的这条 —— CLI 的 resume 不重放系统提示词，` +
+        `会话开始时是什么角色就一直是什么角色。\n\n` +
+        `「只改下次启动」：当前会话照旧，下回全新启动时用新角色。\n` +
+        `「换角色并断开」：清掉会话绑定，下次启动是全新一条、新角色立刻生效，` +
+        `但这个终端的「回溯」就找不回旧对话了（旧会话本身还在，可以用 CLI 自己找）。`,
+      confirmLabel: '换角色并断开',
+      // 断开：把所有已绑会话一起解绑，否则切到另一个 CLI 又会撞上同样的错位
+      onConfirm: () => mutate({ roleId: id ?? undefined, session: {} }),
+      cancelLabel: '只改下次启动',
+      onCancel: () => mutate({ roleId: id ?? undefined })
+    })
+  }
+
+  const openPop = (type: 'model' | 'effort' | 'role', el: HTMLElement): void => {
     anchorRef.current = el
     setCustomModel(null)
     setPop((cur) => (cur?.type === type ? null : { type, rect: el.getBoundingClientRect() }))
@@ -180,7 +234,7 @@ export function CanvasAgentBar({
   /** 这个终端节点自己的会话 id（按 agent 各记一套） */
   const sessionId = agent?.session?.[kind]
 
-  const launch = (cont: boolean): void => {
+  const launch = async (cont: boolean): Promise<void> => {
     setPop(null)
     let sid = sessionId
     if (!cont && kind === 'claude') {
@@ -188,10 +242,15 @@ export function CanvasAgentBar({
       sid = crypto.randomUUID()
       mutate({ session: { ...rec(agent?.session), claude: sid } })
     }
-    const cmd =
-      kind === 'claude'
-        ? buildClaudeCmd(model, effort, cont, cont ? sessionId : sid)
-        : buildCodexCmd(model, effort, cont, sessionId)
+    // 角色契约只在**全新启动**时拼进去：resume 不重放系统提示词，回溯时加了也是白加
+    const contract = !cont && role?.contract.trim() ? role.contract : ''
+    let cmd: string
+    if (kind === 'claude') {
+      const f = contract ? await window.api.roles.contractFile(role!.id) : null
+      cmd = buildClaudeCmd(model, effort, cont, cont ? sessionId : sid, f)
+    } else {
+      cmd = buildCodexCmd(model, effort, cont, sessionId, contract)
+    }
     window.api.pty.write(ptyId, cmd + '\r')
 
     // Codex 没有指定会话 id 的启动参数，只能起完之后按 cwd 去 sessions 目录捞。
@@ -234,6 +293,19 @@ export function CanvasAgentBar({
         </button>
       </div>
 
+      {/* 角色胶囊：决定模型/档位的默认值和职责契约。空 = 裸终端 */}
+      {!!roles.length && (
+        <button
+          className={`ab-pill ab-role${role ? ' on' : ''}`}
+          onClick={(e) => openPop('role', e.currentTarget)}
+          data-tip={role ? role.desc : '不套任何规矩'}
+        >
+          {role && <span className="ab-role-dot" style={{ background: role.color }} />}
+          <span className="ab-pill-k">角色</span>
+          <b>{role?.name ?? '无'}</b>
+        </button>
+      )}
+
       {/* 模型 / 思考胶囊：选项跟随当前 agent */}
       <button className="ab-pill" onClick={(e) => openPop('model', e.currentTarget)}>
         <span className="ab-pill-k">模型</span>
@@ -272,13 +344,48 @@ export function CanvasAgentBar({
                   继续 {kind === 'claude' ? 'Claude Code' : 'Codex'} 最近一次会话，还是全新开始？
                 </div>
                 <div className="ab-ask-btns">
-                  <button className="ab-ask-yes" onClick={() => launch(true)}>
+                  <button className="ab-ask-yes" onClick={() => void launch(true)}>
                     <UndoIcon size={12} /> 是，回溯
                   </button>
-                  <button className="ab-ask-no" onClick={() => launch(false)}>
+                  <button className="ab-ask-no" onClick={() => void launch(false)}>
                     <PlayIcon size={12} /> 否，全新
                   </button>
                 </div>
+              </div>
+            )}
+
+            {pop.type === 'role' && (
+              <div className="ab-menu ab-role-menu">
+                <button
+                  className={`ab-menu-item${!role ? ' on' : ''}`}
+                  onClick={() => pickRole(null)}
+                >
+                  <span>无角色</span>
+                  {!role && <CheckIcon size={12} />}
+                </button>
+                {(['main', 'output'] as const).map((g) => {
+                  const list = roles.filter((r) => r.group === g)
+                  if (!list.length) return null
+                  return (
+                    <div key={g}>
+                      <div className="ab-menu-group">{g === 'main' ? '主序列' : '产出型'}</div>
+                      {list.map((r) => (
+                        <button
+                          key={r.id}
+                          className={`ab-menu-item${r.id === role?.id ? ' on' : ''}`}
+                          onClick={() => pickRole(r.id)}
+                          data-tip={r.desc}
+                        >
+                          <span className="ab-role-dot" style={{ background: r.color }} />
+                          <span>{r.name}</span>
+                          {/* 角色钉死了 CLI 的话标出来，免得用户奇怪段控件为什么动不了 */}
+                          {r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
+                          {r.id === role?.id && <CheckIcon size={12} />}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
             )}
 

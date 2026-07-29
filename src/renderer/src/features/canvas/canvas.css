@@ -2062,3 +2062,64 @@
     opacity: 1;
   }
 }
+
+/* ---------- Agent 控制条上的角色胶囊 ---------- */
+.ab-role.on {
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.ab-role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  margin-right: 1px;
+}
+.ab-role-menu .ab-menu-group {
+  padding: 6px 10px 3px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  opacity: 0.6;
+}
+.ab-role-kind {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-style: normal;
+  opacity: 0.55;
+  text-transform: uppercase;
+}
+
+/* ---------- 抽屉里的角色分区 ---------- */
+.cd-role-group {
+  padding: 6px 10px 3px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  opacity: 0.55;
+}
+.cd-role {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  font-size: 12px;
+  color: var(--fg);
+}
+.cd-role:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.cd-role-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+}
+.cd-role-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

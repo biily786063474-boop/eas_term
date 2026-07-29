@@ -22,6 +22,7 @@ export function App(): JSX.Element {
   const activeProjectId = useStore((s) => s.activeProjectId)
   const loadProjects = useStore((s) => s.loadProjects)
   const loadCanvas = useStore((s) => s.loadCanvas)
+  const loadRoles = useStore((s) => s.loadRoles)
   const openTerminal = useStore((s) => s.openTerminal)
   const addProject = useStore((s) => s.addProject)
   const viewMode = useStore((s) => s.viewMode)
@@ -64,6 +65,7 @@ export function App(): JSX.Element {
       try {
         await loadProjects()
         await loadCanvas()
+        void loadRoles() // 角色表：不阻塞首屏，读到就有
       } catch (e) {
         console.error('[App:startup] 加载项目/画布失败', e)
       }

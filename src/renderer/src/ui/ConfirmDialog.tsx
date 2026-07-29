@@ -11,6 +11,7 @@ export function ConfirmDialog(): JSX.Element | null {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         e.preventDefault()
+        pending.onCancel?.()
         cancel()
       } else if (e.key === 'Enter') {
         e.preventDefault()
@@ -25,12 +26,24 @@ export function ConfirmDialog(): JSX.Element | null {
   if (!pending) return null
 
   return createPortal(
-    <div className="confirm-overlay" onMouseDown={cancel}>
+    <div
+      className="confirm-overlay"
+      onMouseDown={() => {
+        pending.onCancel?.()
+        cancel()
+      }}
+    >
       <div className="confirm-dialog" onMouseDown={(e) => e.stopPropagation()}>
         <div className="confirm-message">{pending.message}</div>
         <div className="confirm-actions">
-          <button className="ghost-btn" onClick={cancel}>
-            取消
+          <button
+            className="ghost-btn"
+            onClick={() => {
+              pending.onCancel?.()
+              cancel()
+            }}
+          >
+            {pending.cancelLabel ?? '取消'}
           </button>
           <button
             className="danger-btn"

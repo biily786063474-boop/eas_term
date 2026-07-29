@@ -2,6 +2,7 @@
 
 import type { StateCreator } from 'zustand'
 import { ThemeId, loadTheme, applyTheme } from '../themes'
+import type { AgentRole } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 
@@ -35,6 +36,9 @@ export interface UiSlice {
    *  一个都没有时 agent 相关控件整体隐藏——摆一堆点了没反应的按钮比没有更糟。 */
   agentCli: { claude: boolean; codex: boolean } | null
   refreshAgentCli: () => Promise<void>
+  /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
+  roles: AgentRole[]
+  loadRoles: () => Promise<void>
 }
 
 let mcpSeq = 1
@@ -48,6 +52,15 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set) => (
   mcpEnabled: true,
   runningPtys: [],
   agentCli: null,
+  roles: [],
+
+  loadRoles: async () => {
+    try {
+      set({ roles: await window.api.roles.list() })
+    } catch {
+      set({ roles: [] }) // 读不到就当没有角色，界面回落成「无角色」的裸终端
+    }
+  },
 
   refreshAgentCli: async () => {
     try {

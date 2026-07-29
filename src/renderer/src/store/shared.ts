@@ -18,6 +18,10 @@ export interface PendingConfirm {
   message: string
   confirmLabel: string
   onConfirm: () => void
+  /** 「取消」那一侧不总是「什么都不做」——比如换角色时它的含义是「只改下次启动」。
+   *  这种时候写死的「取消」会误导人，所以允许改名并挂回调。 */
+  cancelLabel?: string
+  onCancel?: () => void
 }
 
 let seq = 1

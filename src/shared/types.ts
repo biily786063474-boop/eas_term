@@ -12,6 +12,29 @@ export interface DirEntry {
   isHidden: boolean
 }
 
+/** Agent 角色：把每次开终端要重复交代的东西固化成一份可执行配置。
+ *  注意它不是人设——真正起作用的是模型档位、产出契约、工具边界。 */
+export interface AgentRole {
+  id: string
+  name: string
+  /** 一句话说明（抽屉里显示） */
+  desc: string
+  /** main = 沿项目生命周期的主序列；output = 横切的产出型 */
+  group: 'main' | 'output'
+  color: string
+  /** 用哪个 CLI。auto = 装了哪个用哪个，两个都装则用上次用的 */
+  kind: 'claude' | 'codex' | 'auto'
+  /** 模型 / 思考档位按 kind 各存一套，切 agent 互不覆盖（沿用 NodeAgent 的结构） */
+  model?: Partial<Record<'claude' | 'codex', string>>
+  effort?: Partial<Record<'claude' | 'codex', string>>
+  /** 职责契约：产出什么、落在哪、什么算做完。启动时拼进命令 */
+  contract: string
+  /** 工具边界。deny/allow 走 CLI 参数，denyMcp 走 MCP 层过滤——均在第 3 期落地 */
+  tools?: { allow?: string[]; deny?: string[]; denyMcp?: string[] }
+  /** 内置角色：可改可删，删了能一键恢复 */
+  builtin?: boolean
+}
+
 /** 「提交即复盘」钩子在某个 agent 上的安装状态 */
 export interface HookAgentStatus {
   hasCli: boolean

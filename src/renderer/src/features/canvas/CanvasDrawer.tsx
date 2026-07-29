@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { Project } from '../../../../shared/types'
+import type { Project, AgentRole } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
 import { FileTree } from '../files/FileTree'
 import { paneForFile } from './media'
@@ -35,6 +35,12 @@ export function CanvasDrawer(): JSX.Element {
   const addFileNode = useStore((s) => s.addFileNode)
   const addSubFrame = useStore((s) => s.addSubFrame)
   const addComponentNode = useStore((s) => s.addComponentNode)
+  const addTerminalNode = useStore((s) => s.addTerminalNode)
+  const roles = useStore((s) => s.roles)
+  const agentCli = useStore((s) => s.agentCli)
+  // 一个 CLI 都没装时角色分区整个不显示：那些角色点了也起不来 agent
+  const showRoles = !!roles.length && (!agentCli || agentCli.claude || agentCli.codex)
+  const [rolesOpen, setRolesOpen] = useState(true)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
   const tabs = useStore((s) => s.tabs)
@@ -285,6 +291,60 @@ export function CanvasDrawer(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
+  // 拖角色：落 Frame → 按这个角色开一个终端节点。
+  // 和拖项目/拖文件/拖组件同一套心智——角色的使用时机就是「我要开个终端干活」那一刻，
+  // 所以它待在手边，而不是躲在一个要专门去访问的页面里。
+  const startRoleDrag = (role: AgentRole, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const start = { x: e.clientX, y: e.clientY, started: false }
+    let ghost: HTMLDivElement | null = null
+    const clearDrop = (): void =>
+      document.querySelectorAll('.cframe.drop-target').forEach((el) => el.classList.remove('drop-target'))
+    const targetUnder = (ev: MouseEvent): Element | null => {
+      if (ghost) ghost.style.display = 'none'
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      if (ghost) ghost.style.display = ''
+      return under
+    }
+    const onMove = (ev: MouseEvent): void => {
+      if (!start.started) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return
+        start.started = true
+        ghost = document.createElement('div')
+        ghost.className = 'canvas-drag-ghost'
+        ghost.textContent = role.name
+        document.body.appendChild(ghost)
+      }
+      if (ghost) {
+        ghost.style.left = ev.clientX + 12 + 'px'
+        ghost.style.top = ev.clientY + 10 + 'px'
+      }
+      clearDrop()
+      const cframe = targetUnder(ev)?.closest('.cframe')
+      if (cframe) cframe.classList.add('drop-target')
+    }
+    const onUp = (ev: MouseEvent): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      const under = start.started ? targetUnder(ev) : null
+      ghost?.remove()
+      clearDrop()
+      if (!start.started || !under) return
+      // 落在终端节点上时回溯它所属的 Frame（Frame 被终端占满时也能接住）
+      const frames = useStore.getState().canvas.frames
+      let frameId = (under.closest('.cframe') as HTMLElement | null)?.dataset.fid
+      if (!frameId) {
+        const lid = (under.closest('.pane[data-leaf-id]') as HTMLElement | null)?.dataset.leafId
+        if (lid) frameId = frames.find((f) => f.nodes.some((n) => n.leafId === lid))?.id
+      }
+      if (!frameId) return
+      void addTerminalNode(frameId, role.id)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   // 拖组件：落 Frame → 新增组件节点（needsProject 组件要求 Frame 绑定了项目）
   const startComponentDrag = (comp: CanvasComponentDef, e: React.MouseEvent): void => {
     if (e.button !== 0) return
@@ -473,6 +533,41 @@ export function CanvasDrawer(): JSX.Element {
             </div>
           )}
         </section>
+        {showRoles && (
+          <section className="cd-section" style={rolesOpen ? { flex: 'none' } : undefined}>
+            <div className="cd-sec-head" onClick={() => setRolesOpen((v) => !v)}>
+              <span className={`cd-chev${rolesOpen ? ' open' : ''}`}>
+                <ChevronRightIcon size={12} />
+              </span>
+              <span className="cd-sec-title">角色</span>
+            </div>
+            {rolesOpen && (
+              <div className="cd-sec-body">
+                {(['main', 'output'] as const).map((g) => {
+                  const list = roles.filter((r) => r.group === g)
+                  if (!list.length) return null
+                  return (
+                    <div key={g}>
+                      <div className="cd-role-group">{g === 'main' ? '主序列' : '产出型'}</div>
+                      {list.map((r) => (
+                        <div
+                          key={r.id}
+                          className="cd-role"
+                          data-tip={r.desc}
+                          onMouseDown={(e) => startRoleDrag(r, e)}
+                        >
+                          <span className="cd-role-dot" style={{ background: r.color }} />
+                          <span className="cd-role-name">{r.name}</span>
+                          <span className="cd-comp-hint">拖到 Frame</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        )}
         {compOpen && <div className="cd-resizer" onMouseDown={(e) => startResize('comp', e)} />}
         <section className="cd-section" style={compOpen ? { height: compH, flex: 'none' } : undefined}>
           <div className="cd-sec-head" onClick={() => setCompOpen((v) => !v)}>

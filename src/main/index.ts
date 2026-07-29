@@ -13,6 +13,7 @@ import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
 import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
+import { registerRoleHandlers } from './roles'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 
@@ -227,6 +228,7 @@ app.whenReady().then(() => {
   registerSkillHandlers()
   registerAgentInstallHandlers()
   registerHookHandlers(hasCli)
+  registerRoleHandlers()
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()

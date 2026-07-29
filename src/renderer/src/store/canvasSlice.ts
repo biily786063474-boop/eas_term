@@ -29,6 +29,11 @@ export interface NodeAgent {
    *  「继续这个目录里最近的会话」——同一项目开几个终端就会互相抢，
    *  终端 A 续到终端 B 的对话。绑定之后每个终端只回自己的那条线。 */
   session?: Partial<Record<'claude' | 'codex', string>>
+  /** 这个终端绑的角色 id（~/.eas/roles.json 里的一条）。
+   *  只影响**启动命令**怎么拼——模型/档位默认值 + 职责契约。
+   *  注意 --resume 不重放 system prompt：会话一旦起来，角色就定死了，
+   *  改 roleId 只对下一次全新启动生效（界面上必须说清楚，不能默默改）。 */
+  roleId?: string
 }
 
 /** 画布节点：坐标相对所属 Frame（含头部偏移）。
@@ -137,7 +142,7 @@ export interface CanvasSlice {
   /** 复制画布独有节点（文件/组件；终端节点不复制，pty 唯一） */
   duplicateNode: (frameId: string, nodeId: string) => void
   /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
-  addTerminalNode: (frameId: string) => Promise<void>
+  addTerminalNode: (frameId: string, roleId?: string) => Promise<void>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */
   prefillTerminal: (cmd: string) => Promise<void>
@@ -891,7 +896,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
 
-  addTerminalNode: async (frameId) => {
+  addTerminalNode: async (frameId, roleId) => {
     const frame = get().canvas.frames.find((f) => f.id === frameId)
     if (!frame) return
     const before = new Set(
@@ -913,7 +918,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             f.id === frameId
               ? placeNodeInFrame(
                   f,
-                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  {
+                    id: uid('cnode'),
+                    leafId: newLeaf.id,
+                    // 带角色开的终端：直接把 agent 配好，落下去就是那个岗位，
+                    // 不用用户再在控制条上点一遍。kind 取角色钉死的，没钉就默认 claude
+                    ...(roleId
+                      ? {
+                          agent: {
+                            kind: (() => {
+                              const r = get().roles.find((x) => x.id === roleId)
+                              return r && r.kind !== 'auto' ? r.kind : 'claude'
+                            })(),
+                            roleId
+                          } as NodeAgent
+                        }
+                      : {}),
+                    x: 0,
+                    y: 0,
+                    w: NODE_W,
+                    h: NODE_H
+                  },
                   s.canvas.frames
                 )
               : f

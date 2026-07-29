@@ -23,6 +23,7 @@ import type {
   AgentProbe,
   SkillStatus,
   HookStatus,
+  AgentRole,
   InstallPlan
 } from '../shared/types'
 
@@ -133,6 +134,17 @@ const api = {
       targets: ('claude' | 'codex')[]
     ): Promise<{ ok: boolean; error?: string; status?: HookStatus }> =>
       ipcRenderer.invoke('hook:uninstall', targets)
+  },
+  roles: {
+    // Agent 角色（~/.eas/roles.json）：列 / 存 / 恢复内置
+    list: (): Promise<AgentRole[]> => ipcRenderer.invoke('roles:list'),
+    save: (roles: AgentRole[]): Promise<{ ok: boolean; error?: string; roles?: AgentRole[] }> =>
+      ipcRenderer.invoke('roles:save', roles),
+    reset: (): Promise<{ ok: boolean; error?: string; roles?: AgentRole[] }> =>
+      ipcRenderer.invoke('roles:reset'),
+    // 角色契约落成文件，供 claude --append-system-prompt-file 引用
+    contractFile: (roleId: string): Promise<string | null> =>
+      ipcRenderer.invoke('roles:contractFile', roleId)
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
