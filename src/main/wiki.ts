@@ -127,8 +127,13 @@ export function wikiStatus(): WikiStatus {
 // ── 初始化时写进去的内容 ─────────────────────────────────────────
 
 /** 库内 schema。CLAUDE.md 和 AGENTS.md 内容相同 —— 两个 CLI 各自会自动读 cwd 的那一份。 */
+/** 约定文件的版本标记。升级时靠它判断「这份是我们生成的」→ 可以安全覆盖；
+ *  没有标记就是用户自己写的，一个字都不碰。 */
+const SCHEMA_MARK = '<!-- eas-term:wiki-schema v2 -->'
+
 function schemaText(): string {
-  return `# 这个知识库怎么用
+  return `${SCHEMA_MARK}
+# 这个知识库怎么用
 
 你是这个知识库的维护者，不是通用助手。
 用户负责搜集素材、提问题、判断价值；你负责整理、归档、交叉引用和记账。
@@ -173,22 +178,34 @@ updated: 2026-07-29
 ## 三个动作
 
 ### Ingest（归档）
-读素材 → 和用户讨论要点 → 写摘要页 → 更新 \`index.md\` →
-更新被牵动的人物/概念页（一份素材通常会碰 10–15 页）→ 往 \`log.md\` 追加一条。
+
+**不要自己搬文件。** 按这个顺序走，每一步都有对应的工具：
+
+1. \`wiki_inbox\` —— 看收件箱里有什么
+2. \`wiki_transcript\` —— 视频/音频拿逐字稿（本机已离线转好，不花 token）
+3. \`wiki_archive_plan\` —— 一次提交整批计划。**这个调用会阻塞几十秒到几分钟等用户
+   在界面上逐条过目并确认，是正常的。** 用户没批准的条目一个都不要动
+4. \`wiki_archive_exec\` —— 搬被批准的文件（只搬文件，笔记要你自己写）
+5. 写摘要页 → 更新 \`index.md\` → 更新被牵动的人物/概念页（一份素材通常会碰 10–15 页）
+6. \`wiki_log\`（action=ingest）
 
 默认**一次一份、人在场**。用户明确要求批量时才批量，并先给出条数和成本预估。
 
 ### Query（查询）
-先读 \`index.md\`，挑相关页读，回答带出处。
+先读 \`index.md\`，挑相关页读，回答带出处。**答完调一次 \`wiki_log\`（action=query）。**
+
+那一步不能省：它既是知识库的时间线，也是「放入多少次 vs 真去查了多少次」的**唯一**数据来源。
+不记的话查询数永远是 0，用户会看到一个「只进不出」的假象。
 
 **好答案要归档回知识库**：用户觉得有价值的对比、分析、结论，
 问他「要不要存成一篇」，同意就写成新页并更新索引。
 探索本身也该参与复利，不要让它消散在聊天记录里。
 
 ### Lint（体检）
-用户要求时才跑。检查：页面之间的矛盾、被新素材推翻的旧结论、
-没有任何入链的孤儿页、反复被提到却没有独立页面的概念、该连没连的交叉引用。
-**只出报告，不自动改**——改什么由用户点头。
+用户要求时才跑。先调 \`wiki_lint\` 拿**结构问题**（死链、孤儿页、缺 summary/tags、
+索引漏收——免费瞬时算出来的，你不用自己扫全库），再去做需要**读懂内容**才能发现的那半边：
+页面之间的矛盾、被新素材推翻的旧结论、反复被提到却没有独立页面的概念。
+**只出报告，不自动改**——改什么由用户点头。完事调 \`wiki_log\`（action=lint）。
 
 ## log.md 的格式
 
@@ -283,11 +300,28 @@ function initWiki(root: string): { created: string[]; skipped: string[] } {
   ]
   for (const [name, body] of files) {
     const p = path.join(root, name)
-    if (fs.existsSync(p)) skipped.push(name)
-    else {
+    if (!fs.existsSync(p)) {
       fs.writeFileSync(p, body)
       created.push(name)
+      continue
     }
+    // 约定文件（CLAUDE.md / AGENTS.md）带我们的标记 → 是上一版生成的，升级时覆盖成新规矩；
+    // 没有标记 = 用户自己写的（比如把已有的 Obsidian 库指过来），一个字都不碰。
+    // 不这么做的话，老知识库会永远停在旧约定上——新加的工具它根本不知道
+    const isSchema = name === 'CLAUDE.md' || name === 'AGENTS.md'
+    if (isSchema) {
+      try {
+        const cur = fs.readFileSync(p, 'utf8')
+        if (cur.includes('eas-term:wiki-schema') && cur !== body) {
+          fs.writeFileSync(p, body)
+          created.push(name + '（已更新到新版约定）')
+          continue
+        }
+      } catch {
+        /* 读不了就当用户的，别动 */
+      }
+    }
+    skipped.push(name)
   }
   return { created, skipped }
 }
