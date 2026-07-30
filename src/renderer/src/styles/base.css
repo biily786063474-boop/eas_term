@@ -511,27 +511,32 @@ body {
 .build-stamp {
   position: fixed;
   left: 50%;
-  bottom: 3px;
+  /* 别贴到 3px：那么低会被窗口圆角和底边阴影吃掉一截，看着像被裁了 */
+  bottom: 6px;
   transform: translateX(-50%);
   /* 比抽屉(45)/缩略图(41)都高：它只占几像素又不吃事件，被压住就白做了 */
   z-index: 60;
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9.5px;
+  /* 第一版是 9.5px + 透明度 0.28 —— 用户按「浅浅的」的要求做，结果做过头了：
+     实机看等于没有，他打开新版第一反应是「怎么没加版本号」。
+     一个看不见的版本号不解决任何问题（它存在的理由就是「一眼确认开的是哪个包」）。
+     现在这组是「不抢眼但一眼能读」的下限，别再往下调。 */
+  font-size: 11px;
   line-height: 1;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
   color: var(--fg-dim);
-  opacity: 0.28;
+  opacity: 0.5;
   /* 不吃点击、不可选中：它是块背景信息，不是控件 */
   pointer-events: none;
   user-select: none;
   transition: opacity 0.2s ease;
 }
-/* 光标移到底部附近时提亮一点，方便真的要读它的时候看清（仍然不吃事件） */
+/* 光标移到底部附近时提亮，方便真的要抄版本号的时候看清（仍然不吃事件） */
 .build-stamp:hover {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 /* 开发实例的标记：和正式包版本号相同但行为可能差一堆未提交的改动，必须区分 */
 .build-stamp em {
