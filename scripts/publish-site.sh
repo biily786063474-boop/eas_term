@@ -14,7 +14,11 @@ set -euo pipefail
 HOST=server
 WEB=/www/wwwroot/eas
 DL=/www/wwwroot/eas-dl
-KEEP=5                       # 保留最近几个版本
+# 线上只留最新一版。旧版本每发一次就删掉 —— 一个版本三个包近 500MB，
+# 而这台机器只有 40G 且还跑着三个生产站。
+# **代价要知道**：旧版本的下载链接会立刻 404，出问题时没法叫人「先退回上一版」。
+# 想留一版兜底就改成 2。
+KEEP=1
 OTHER_SITES=(www.biily.top aurora.biily.top)   # 每次 reload 都要确认没碰坏的
 
 cd "$(dirname "$0")/.."
@@ -123,9 +127,15 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
   if [ "$TOTAL" -gt "$KEEP" ]; then
     head -n $((TOTAL - KEEP)) /tmp/eas-vers.txt | while read -r old; do
       [ -n "$old" ] || continue
+      # 绝不删刚传上去的这一版。KEEP=1 时这条不是多余的谨慎：
+      # 万一补发一个比线上更老的版本（v0.2.2 而线上已有 v0.2.3），
+      # sort -V 会把刚传的排在前面 → 上一秒传完、下一秒自己把它删了，
+      # 而且 latest.json 已经指过去了，线上直接 404。
+      [ "$old" = "v$VERSION" ] && { echo "  跳过 $old（本次刚发布的）"; continue; }
       echo "  删除 $old"
       ssh $HOST "rm -rf $DL/$old"          # 只删版本子目录，绝不动 $DL 本身
     done
+    ssh $HOST "df -h / | tail -1 | sed 's/^/  清理后磁盘: /'"
   else
     echo "  当前 $TOTAL 个版本，未超过 ${KEEP}，不删"
   fi
