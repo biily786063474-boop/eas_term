@@ -95,7 +95,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Eas-Term"
+      "shortcutName": "Eas-Term",
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
     },
     "extraResources": [
       {
