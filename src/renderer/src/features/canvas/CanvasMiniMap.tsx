@@ -26,6 +26,7 @@ function shortName(name: string): string {
 export function CanvasMiniMap(): JSX.Element | null {
   const maximizedNode = useStore((s) => s.maximizedNode)
   const frames = useStore((s) => s.canvas.frames)
+  const freeNodes = useStore((s) => s.canvas.freeNodes)
   const vp = useStore((s) => s.canvas.viewport)
   const setViewport = useStore((s) => s.setViewport)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -34,9 +35,10 @@ export function CanvasMiniMap(): JSX.Element | null {
 
   const fh = (f: { collapsed: boolean; h: number }): number => (f.collapsed ? HEAD_H : f.h)
 
-  // 世界 bbox（四周各留 5%）——空画布给个虚拟窗口，避免除零
+  // 世界 bbox（四周各留 5%）——空画布给个虚拟窗口，避免除零。自由节点没有 Frame 兜着，
+  // 位置可能落在所有 Frame 之外，不算进 bbox 的话缩略图会把它们裁没了。
   const world = useMemo(() => {
-    if (!frames.length) return { minX: 0, minY: 0, w: 2000, h: 1500 }
+    if (!frames.length && !freeNodes.length) return { minX: 0, minY: 0, w: 2000, h: 1500 }
     let minX = Infinity
     let minY = Infinity
     let maxX = -Infinity
@@ -47,10 +49,16 @@ export function CanvasMiniMap(): JSX.Element | null {
       maxX = Math.max(maxX, f.x + f.w)
       maxY = Math.max(maxY, f.y + fh(f))
     }
+    for (const n of freeNodes) {
+      minX = Math.min(minX, n.x)
+      minY = Math.min(minY, n.y)
+      maxX = Math.max(maxX, n.x + n.w)
+      maxY = Math.max(maxY, n.y + n.h)
+    }
     const wW = Math.max(1, maxX - minX)
     const wH = Math.max(1, maxY - minY)
     return { minX: minX - wW * 0.05, minY: minY - wH * 0.05, w: wW * 1.1, h: wH * 1.1 }
-  }, [frames])
+  }, [frames, freeNodes])
 
   // fit-contain 到地图可用区并居中
   const map = useMemo(() => {
@@ -180,6 +188,11 @@ export function CanvasMiniMap(): JSX.Element | null {
               </g>
             )
           })}
+          {/* 自由节点：只打点不写名字（数量可能不少，缩略图上标满名字会糊成一团） */}
+          {freeNodes.map((n) => {
+            const p = w2m(n.x, n.y)
+            return <circle key={n.id} cx={p.x} cy={p.y} r={2} className="cmm-dot free" />
+          })}
           {/* 当前视口范围 */}
           <rect
             x={view.x}
@@ -189,7 +202,7 @@ export function CanvasMiniMap(): JSX.Element | null {
             rx={2}
             className="cmm-view"
           />
-          {!frames.length && (
+          {!frames.length && !freeNodes.length && (
             <text x={MAP_W / 2} y={MAP_H / 2} className="cmm-empty">
               暂无 Frame
             </text>

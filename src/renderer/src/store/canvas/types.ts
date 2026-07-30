@@ -47,6 +47,10 @@ export interface CanvasNode {
   name?: string
   /** 终端节点的 Agent 控制台配置（画布独有；持久化，重开保留选择） */
   agent?: NodeAgent
+  /** 只读预览：目前只有从知识库拖出来的自由节点会设——内容离开知识库目录后不该被改，
+   *  CodeView 读到这个标记就不出「编辑」按钮。跟「是不是自由节点」故意分开存：
+   *  这标的是「这份内容不让改」，不是「这节点没有 Frame」，两件事碰巧目前总是同时发生。 */
+  readOnly?: boolean
   x: number
   y: number
   w: number
@@ -87,6 +91,10 @@ export interface CanvasScene {
   viewport: CanvasViewport
   frames: CanvasFrame[]
   shapes: CanvasShape[]
+  /** 不属于任何 Frame 的自由节点：世界坐标（不像 frame.nodes 那样是相对 Frame）。
+   *  目前唯一的产生方式是从知识库拖文件出来——先例是 shapes（矩形/箭头/便签）同样用世界坐标、
+   *  同样独立于 Frame，自由节点是它的直接类比，不是节点系统的另一套并行实现。 */
+  freeNodes: CanvasNode[]
 }
 
 export interface CanvasSlice {
@@ -166,13 +174,29 @@ export interface CanvasSlice {
     nodeId: string,
     props: Record<string, unknown>
   ) => void
-  /** 最大化沉浸的节点（画布模式下铺满整个视口工作；再点还原回原位）。不持久化 */
-  maximizedNode: { frameId: string; nodeId: string } | null
-  setMaximizedNode: (v: { frameId: string; nodeId: string } | null) => void
-  /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点，含终端节点）。
+  /** 最大化沉浸的节点（画布模式下铺满整个视口工作；再点还原回原位）。不持久化。
+   *  frameId 缺省 = 自由节点（不属于任何 Frame，本来就没有 frameId 可填）。 */
+  maximizedNode: { frameId?: string; nodeId: string } | null
+  setMaximizedNode: (v: { frameId?: string; nodeId: string } | null) => void
+  /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点(含终端) / p:nodeId 自由节点）。
    *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */
   canvasSel: string[]
   setCanvasSel: (keys: string[]) => void
   toggleCanvasSel: (key: string, additive: boolean) => void
   clearCanvasSel: () => void
+  /** 拖知识库文件到画布任意位置（含 Frame 外）：新增一个自由 + 只读的文件预览节点，落在世界坐标 (x,y) */
+  addFreeFileNode: (pane: PaneState, x: number, y: number, opts?: { readOnly?: boolean }) => string
+  moveFreeNode: (nodeId: string, x: number, y: number) => void
+  resizeFreeNode: (nodeId: string, w: number, h: number) => void
+  removeFreeNode: (nodeId: string) => void
+  renameFreeNode: (nodeId: string, name: string) => void
+  /** 拖动结束后：若与其它自由节点重叠，挪到最近的空位（对齐 Frame 内 settleNode 的防碰撞行为） */
+  settleFreeNode: (nodeId: string) => void
+  /** 把画布平移到某自由节点居中（对齐 focusCanvasNode） */
+  focusFreeNode: (nodeId: string) => void
+  /** 自由网页节点导航回写（极少见——知识库里拖出个 .html 才会用到，为了 WebView 行为一致仍补齐） */
+  setFreeNodeUrl: (nodeId: string, url: string) => void
+  setFreeNodeTitle: (nodeId: string, title: string) => void
+  /** 复制自由节点（对齐 duplicateNode；自由节点没有终端，不用判 leafId） */
+  duplicateFreeNode: (nodeId: string) => void
 }

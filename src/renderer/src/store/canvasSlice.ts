@@ -36,7 +36,8 @@ import {
   placeNodeInFrame,
   reflowFrames,
   reflowSeparate,
-  findFreePos
+  findFreePos,
+  findFreePosWorld
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import type { PersistedCanvas } from './canvas/persist'
@@ -91,7 +92,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
     // committedScale 跟随恢复的 scale,使启动时 pane transform=1(不误缩放)
     set(() => ({
-      canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes },
+      canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes, freeNodes: scene.freeNodes },
       canvasCommittedScale: scene.viewport.scale
     }))
     // 恢复上次停留的视图
@@ -345,6 +346,120 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: { ...s.canvas, shapes: s.canvas.shapes.filter((sh) => sh.id !== id) }
     })),
+
+  // ── 自由节点：拖知识库文件到画布任意位置生成，不属于任何 Frame，世界坐标。
+  // 是 shapes 的直接类比（同样独立于 Frame、同样世界坐标），不是节点系统的第二套实现——
+  // 所以这几个 action 都不用碰 reflowFrames/placeNodeAtPoint 那套 Frame 专用几何逻辑。
+  addFreeFileNode: (pane, x, y, opts) => {
+    const id = uid('cnode')
+    const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
+    const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
+    const others = get().canvas.freeNodes.map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }))
+    const pos = findFreePosWorld(others, w, h, x, y)
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        freeNodes: [...s.canvas.freeNodes, { id, pane, x: pos.x, y: pos.y, w, h, readOnly: opts?.readOnly }]
+      }
+    }))
+    return id
+  },
+
+  moveFreeNode: (nodeId, x, y) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        freeNodes: s.canvas.freeNodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n))
+      }
+    })),
+
+  resizeFreeNode: (nodeId, w, h) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        freeNodes: s.canvas.freeNodes.map((n) =>
+          n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
+        )
+      }
+    })),
+
+  removeFreeNode: (nodeId) =>
+    set((s) => ({
+      canvas: { ...s.canvas, freeNodes: s.canvas.freeNodes.filter((n) => n.id !== nodeId) }
+    })),
+
+  // 自由节点只会是文件预览（pane），不会有 leafId → 不用像 renameNode 那样同步分屏 tab 标题
+  renameFreeNode: (nodeId, name) =>
+    set((s) => {
+      const trimmed = name.trim()
+      return {
+        canvas: {
+          ...s.canvas,
+          freeNodes: s.canvas.freeNodes.map((n) =>
+            n.id === nodeId ? { ...n, name: trimmed || undefined } : n
+          )
+        }
+      }
+    }),
+
+  settleFreeNode: (nodeId) =>
+    set((s) => {
+      const node = s.canvas.freeNodes.find((n) => n.id === nodeId)
+      if (!node) return s
+      const others = s.canvas.freeNodes
+        .filter((n) => n.id !== nodeId)
+        .map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }))
+      if (!others.some((o) => boxOverlap({ x: node.x, y: node.y, w: node.w, h: node.h }, o))) return s
+      const { x, y } = findFreePosWorld(others, node.w, node.h, node.x, node.y)
+      return {
+        canvas: { ...s.canvas, freeNodes: s.canvas.freeNodes.map((n) => (n.id === nodeId ? { ...n, x, y } : n)) }
+      }
+    }),
+
+  setFreeNodeUrl: (nodeId, url) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        freeNodes: s.canvas.freeNodes.map((n) =>
+          n.id === nodeId && n.pane?.kind === 'web' ? { ...n, pane: { ...n.pane, url } } : n
+        )
+      }
+    })),
+
+  setFreeNodeTitle: (nodeId, title) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        freeNodes: s.canvas.freeNodes.map((n) =>
+          n.id === nodeId && n.pane?.kind === 'web' ? { ...n, pane: { ...n.pane, title } } : n
+        )
+      }
+    })),
+
+  duplicateFreeNode: (nodeId) =>
+    set((s) => {
+      const n = s.canvas.freeNodes.find((x) => x.id === nodeId)
+      if (!n) return s
+      return {
+        canvas: {
+          ...s.canvas,
+          freeNodes: [...s.canvas.freeNodes, { ...n, id: uid('cnode'), x: n.x + 22, y: n.y + 22 }]
+        }
+      }
+    }),
+
+  focusFreeNode: (nodeId) => {
+    const s = get()
+    const n = s.canvas.freeNodes.find((x) => x.id === nodeId)
+    if (!n) return
+    const vp = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const vw = vp?.clientWidth ?? window.innerWidth
+    const vh = vp?.clientHeight ?? window.innerHeight
+    const scale = s.canvas.viewport.scale
+    const cx = n.x + n.w / 2
+    const cy = n.y + n.h / 2
+    get().setViewport({ x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale })
+  },
 
   renameFrame: (id, name) =>
     set((s) => ({

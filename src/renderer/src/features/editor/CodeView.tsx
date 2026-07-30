@@ -28,7 +28,15 @@ interface CodeMenu {
   hasSelection: boolean
 }
 
-export function CodeView({ filePath }: { filePath: string | null }): JSX.Element {
+export function CodeView({
+  filePath,
+  readOnly
+}: {
+  filePath: string | null
+  /** 只读预览：不出「编辑」按钮，从源头掐掉 editing 态（连带 ⌘S 保存也进不去）。
+   *  目前只有知识库拖出来的自由节点会传 true——内容离开知识库目录，不该在画布上被顺手改掉。 */
+  readOnly?: boolean
+}): JSX.Element {
   const rootRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -246,10 +254,12 @@ export function CodeView({ filePath }: { filePath: string | null }): JSX.Element
               </button>
             </>
           ) : (
-            <button className="pv-btn" data-tip="编辑这个文件" onClick={() => setEditing(true)}>
-              <PencilIcon size={12} />
-              编辑
-            </button>
+            !readOnly && (
+              <button className="pv-btn" data-tip="编辑这个文件" onClick={() => setEditing(true)}>
+                <PencilIcon size={12} />
+                编辑
+              </button>
+            )
           )}
         </div>
       )}

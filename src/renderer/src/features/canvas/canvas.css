@@ -566,6 +566,11 @@
   box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
+/* 自由节点：不属于任何 Frame，虚线边框跟常规文件节点拉开一眼可辨的区别（不是渲染出 bug 了） */
+.cfile-node-free {
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
 .cfile-head {
   height: 28px;
   flex: none;
@@ -1858,6 +1863,12 @@
 .cmm-dot.sub {
   fill: var(--fg-dim);
   opacity: 0.7;
+}
+.cmm-dot.free {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  opacity: 0.85;
 }
 .cmm-name {
   font-size: 7.5px;

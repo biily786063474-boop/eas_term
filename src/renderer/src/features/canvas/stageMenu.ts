@@ -61,6 +61,13 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
         : []),
       { label: '删除节点', danger: true, onClick: () => st.removeNode(fid, nid) }
     ]
+  } else if (nodeEl?.dataset.nodeId) {
+    // 有 data-node-id 但没有 data-frame-id → 自由节点（知识库拖出来的，不属于任何 Frame）
+    const nid = nodeEl.dataset.nodeId
+    items = [
+      { label: '复制', kbd: '⌘D', onClick: () => st.duplicateFreeNode(nid) },
+      { label: '删除节点', danger: true, onClick: () => st.removeFreeNode(nid) }
+    ]
   } else if (shapeEl?.dataset.sid) {
     const sid = shapeEl.dataset.sid
     const shape = st.canvas.shapes.find((s2) => s2.id === sid)

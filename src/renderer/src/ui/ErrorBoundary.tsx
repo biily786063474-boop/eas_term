@@ -12,12 +12,13 @@ interface State {
   error: Error | null
 }
 
-// 空画布存档(结构对齐 serializeCanvas 落盘格式:viewMode/viewport/frames/shapes)
+// 空画布存档(结构对齐 serializeCanvas 落盘格式:viewMode/viewport/frames/shapes/freeNodes)
 const EMPTY_CANVAS = {
   viewMode: 'split',
   viewport: { x: 0, y: 0, scale: 1 },
   frames: [],
-  shapes: []
+  shapes: [],
+  freeNodes: []
 }
 
 export class ErrorBoundary extends Component<Props, State> {

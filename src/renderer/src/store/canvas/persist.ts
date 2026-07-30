@@ -11,7 +11,8 @@ import { HEAD, NODE_H, NODE_W, PAD } from './layout'
 export const initialScene: CanvasScene = {
   viewport: { x: 0, y: 0, scale: 1 },
   frames: [],
-  shapes: []
+  shapes: [],
+  freeNodes: []
 }
 
 /** 落盘的画布场景（含 viewMode）。终端节点的 leafId 已剥离（会话相关，重开时重绑）。 */
@@ -22,6 +23,7 @@ export interface PersistedCanvas {
   viewport: CanvasViewport
   frames: CanvasFrame[]
   shapes: CanvasShape[]
+  freeNodes: CanvasNode[]
 }
 
 /**
@@ -54,7 +56,9 @@ export function serializeCanvas(
         return copy
       })
     })),
-    shapes: canvas.shapes
+    shapes: canvas.shapes,
+    // 自由节点只会是文件预览（拖知识库文件生成），不会有 leafId，原样落盘即可
+    freeNodes: canvas.freeNodes
   }
 }
 
@@ -169,18 +173,22 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
     const shapes = Array.isArray(r.shapes)
       ? r.shapes.map(sanitizeShape).filter((s): s is CanvasShape => s !== null)
       : []
+    const freeNodes = Array.isArray(r.freeNodes)
+      ? r.freeNodes.map(sanitizeNode).filter((n): n is CanvasNode => n !== null)
+      : []
     return {
       scene: {
         viewMode: r.viewMode === 'canvas' ? 'canvas' : 'split',
         viewport: sanitizeViewport(r.viewport),
         frames,
-        shapes
+        shapes,
+        freeNodes
       },
       droppedFrames: rawFrames.length - frames.length
     }
   } catch {
     return {
-      scene: { viewMode: 'split', viewport: { x: 0, y: 0, scale: 1 }, frames: [], shapes: [] },
+      scene: { viewMode: 'split', viewport: { x: 0, y: 0, scale: 1 }, frames: [], shapes: [], freeNodes: [] },
       droppedFrames: 0
     }
   }

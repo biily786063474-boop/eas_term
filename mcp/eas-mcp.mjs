@@ -174,7 +174,9 @@ const TOOLS = [
   {
     name: 'canvas_get_state',
     description:
-      '读取画板完整状态：每个 Frame 下所有模块的 node_id / 类型 / 标题 / 位置大小，以及当前终端所在的 Frame 和节点。要操作某个模块（聚焦/最大化/关闭/重命名）之前先调它拿 node_id。',
+      '读取画板完整状态：每个 Frame 下所有模块的 node_id / 类型 / 标题 / 位置大小，以及当前终端所在的 Frame 和节点。' +
+      '另有 freeNodes：不属于任何 Frame 的自由模块（用户从知识库拖出来的只读预览），同样有 node_id，聚焦/最大化/关闭/重命名对它们一样生效。' +
+      '要操作某个模块之前先调它拿 node_id。',
     inputSchema: { type: 'object', properties: {} }
   },
   {

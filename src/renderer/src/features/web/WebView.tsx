@@ -47,12 +47,16 @@ export function WebView({
   url: initialUrl,
   frameId,
   nodeId,
+  free,
   selected
 }: {
   url: string | null
   /** 画布 web 节点的归属（用于导航回写 url 持久化 + 链接开新窗时聚焦过去）；分屏无 */
   frameId?: string
   nodeId?: string
+  /** true = 自由节点（不属于任何 Frame，knowledge base 拖出来的 .html）：
+   *  导航回写/聚焦改走 setFreeNodeUrl/setFreeNodeTitle/focusFreeNode，忽略 frameId */
+  free?: boolean
   /** 画布中该节点是否被选中：未选中时盖透明遮罩，双指手势冒泡给画布 pan（不进网页内部滚动） */
   selected?: boolean
 }): JSX.Element {
@@ -103,7 +107,8 @@ export function WebView({
       if (url) {
         setAddr(url)
         // 回写节点 url → 随 canvas.json 持久化，重开还原到上次页面
-        if (frameId && nodeId) useStore.getState().setNodeUrl(frameId, nodeId, url)
+        if (free && nodeId) useStore.getState().setFreeNodeUrl(nodeId, url)
+        else if (frameId && nodeId) useStore.getState().setNodeUrl(frameId, nodeId, url)
       }
       syncNav()
     }
@@ -122,14 +127,18 @@ export function WebView({
     const onTitle = (e: Event): void => {
       // 页面标题回写节点(存 pane.title；节点头部手动 name 优先，其次标题)
       const t = (e as unknown as { title?: string }).title
-      if (t && frameId && nodeId) useStore.getState().setWebNodeTitle(frameId, nodeId, t)
+      if (t && nodeId) {
+        if (free) useStore.getState().setFreeNodeTitle(nodeId, t)
+        else if (frameId) useStore.getState().setWebNodeTitle(frameId, nodeId, t)
+      }
     }
     const onDomReady = (): void => {
       if (!wv) return
       guestId = wv.getWebContentsId()
       // 注册聚焦回调：主进程拦到链接开新窗 → 通知 → 把画布平移到本浏览器节点
       focusRegistry.set(guestId, () => {
-        if (frameId && nodeId) useStore.getState().focusCanvasNode(frameId, nodeId)
+        if (free && nodeId) useStore.getState().focusFreeNode(nodeId)
+        else if (frameId && nodeId) useStore.getState().focusCanvasNode(frameId, nodeId)
       })
     }
 

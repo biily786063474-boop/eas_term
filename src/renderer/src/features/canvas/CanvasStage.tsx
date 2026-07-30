@@ -7,6 +7,7 @@ import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
+import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
@@ -36,6 +37,7 @@ export function CanvasStage(): JSX.Element {
   const shapes = useStore((s) => s.canvas.shapes)
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
+  const freeNodes = useStore((s) => s.canvas.freeNodes)
   const [tool, setTool] = useState<'select' | 'rect' | 'arrow' | 'sticky'>('select')
   const [draft, setDraft] = useState<Omit<CanvasShape, 'id'> | null>(null)
   const [editingSticky, setEditingSticky] = useState<string | null>(null)
@@ -107,7 +109,12 @@ export function CanvasStage(): JSX.Element {
         const nodeEl = t?.closest?.('.cfile-node[data-node-id]') as HTMLElement | null
         const nid = nodeEl?.dataset.nodeId
         const fid = nodeEl?.dataset.frameId
-        const isSel = !!nid && !!fid && useStore.getState().canvasSel.includes('n:' + fid + ':' + nid)
+        // 有 fid 是 Frame 内节点（n:frameId:nodeId），没有则是自由节点（p:nodeId）
+        const isSel =
+          !!nid &&
+          (fid
+            ? useStore.getState().canvasSel.includes('n:' + fid + ':' + nid)
+            : useStore.getState().canvasSel.includes('p:' + nid))
         if (isSel) {
           let sc: HTMLElement | null = t
           while (sc && sc !== body.parentElement) {
@@ -192,7 +199,7 @@ export function CanvasStage(): JSX.Element {
           else if (k[0] === 'n') {
             const [, fid, nid] = k.split(':')
             st.removeNode(fid, nid)
-          }
+          } else if (k[0] === 'p') st.removeFreeNode(k.slice(2))
         })
         clearCanvasSel()
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
@@ -214,7 +221,7 @@ export function CanvasStage(): JSX.Element {
                 text: sh.text,
                 color: sh.color
               })
-          }
+          } else if (k[0] === 'p') st.duplicateFreeNode(k.slice(2))
         })
       } else if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         // F：把画面聚焦到选中内容（fit + 居中）
@@ -239,6 +246,9 @@ export function CanvasStage(): JSX.Element {
             const fr = cv.frames.find((x) => x.id === fid)
             const n = fr?.nodes.find((x) => x.id === nid)
             if (fr && n) boxes.push({ x: fr.x + n.x, y: fr.y + n.y, w: n.w, h: n.h })
+          } else if (k[0] === 'p') {
+            const n = cv.freeNodes.find((x) => x.id === k.slice(2))
+            if (n) boxes.push({ x: n.x, y: n.y, w: n.w, h: n.h })
           }
         })
         const el = viewportRef.current
@@ -441,6 +451,10 @@ export function CanvasStage(): JSX.Element {
           if (rectsIntersect({ x: f.x + n.x, y: f.y + n.y, w: n.w, h: n.h }, rect))
             next.add('n:' + f.id + ':' + n.id)
         })
+      })
+      // 自由节点已经是世界坐标，直接比较，不用叠加 Frame 偏移
+      cv.freeNodes.forEach((n) => {
+        if (rectsIntersect({ x: n.x, y: n.y, w: n.w, h: n.h }, rect)) next.add('p:' + n.id)
       })
       setCanvasSel([...next])
     }
@@ -780,6 +794,16 @@ export function CanvasStage(): JSX.Element {
                   )
                 )}
           </div>
+        ))}
+        {/* 自由节点：拖知识库文件到画布任意位置生成，不属于任何 Frame——世界坐标，直接渲染在
+            .canvas-world 下（跟 shapes 同级），随视口 transform 一起缩放平移，不用叠加 Frame 偏移。 */}
+        {freeNodes.map((n) => (
+          <CanvasFreeFileNode
+            key={n.id}
+            node={n}
+            selected={sel.has('p:' + n.id)}
+            onSelect={(add) => selectElement('p:' + n.id, add)}
+          />
         ))}
       </div>
 

@@ -68,13 +68,15 @@ function safePath(input: string, projectPath: string, ctxProject?: string): stri
   return norm
 }
 
-// nodeId 全局唯一（uid('cnode')），所以 AI 只用给 node_id，不必再指定 frame
-function findNode(nodeId: string): { frame: CanvasFrame; node: CanvasNode } | null {
+// nodeId 全局唯一（uid('cnode')），所以 AI 只用给 node_id，不必再指定 frame。
+// frame:null 表示这是个自由节点（不属于任何 Frame，用户从知识库拖出来的只读预览）。
+function findNode(nodeId: string): { frame: CanvasFrame | null; node: CanvasNode } | null {
   for (const f of useStore.getState().canvas.frames) {
     const node = f.nodes.find((n) => n.id === nodeId)
     if (node) return { frame: f, node }
   }
-  return null
+  const free = useStore.getState().canvas.freeNodes.find((n) => n.id === nodeId)
+  return free ? { frame: null, node: free } : null
 }
 
 // 按 leafId 取当前 pane：终端节点可能已被切成图片/代码/网页，kind 得看实时 pane
@@ -126,7 +128,9 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
         collapsed: f.collapsed,
         project: s.projects.find((p) => p.id === f.projectId)?.path ?? null,
         nodes: f.nodes.map(describeNode)
-      }))
+      })),
+      // 不属于任何 Frame 的自由模块（用户从知识库拖出来的只读预览）；node_id 一样能聚焦/最大化/关闭/重命名
+      freeNodes: s.canvas.freeNodes.map(describeNode)
     }
   }
 
@@ -141,29 +145,34 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     const hit = findNode(nodeId)
     if (!hit) throw new Error(`找不到节点 ${nodeId}`)
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    const frameId = hit.frame?.id // undefined = 自由节点
 
     if (tool === 'canvas_focus_node') {
-      s.focusCanvasNode(hit.frame.id, nodeId)
-      return { focused: nodeId, frameId: hit.frame.id }
+      if (frameId) s.focusCanvasNode(frameId, nodeId)
+      else s.focusFreeNode(nodeId)
+      return { focused: nodeId, frameId: frameId ?? null }
     }
     if (tool === 'canvas_maximize_node') {
-      s.setMaximizedNode({ frameId: hit.frame.id, nodeId })
+      s.setMaximizedNode(frameId ? { frameId, nodeId } : { nodeId })
       return { maximized: nodeId }
     }
     if (tool === 'canvas_rename_node') {
       const name = String(args.name ?? '').trim()
       if (!name) throw new Error('缺少 name')
-      s.renameNode(hit.frame.id, nodeId, name)
+      if (frameId) s.renameNode(frameId, nodeId, name)
+      else s.renameFreeNode(nodeId, name)
       return { renamed: nodeId, name }
     }
-    // canvas_close_node：终端一律不给关。AI 判断不了里面有没有在跑的活，关错代价太大（用户已因误删终端吃过亏）
+    // canvas_close_node：终端一律不给关（自由节点不可能是终端，天然跳过这条）。
+    // AI 判断不了里面有没有在跑的活，关错代价太大（用户已因误删终端吃过亏）
     if (hit.node.leafId) {
       const pane = paneOfLeaf(hit.node.leafId)
       if (!pane || pane.kind === 'terminal') {
         throw new Error('终端节点不允许由 AI 关闭，请让用户手动关')
       }
     }
-    s.removeNode(hit.frame.id, nodeId)
+    if (frameId) s.removeNode(frameId, nodeId)
+    else s.removeFreeNode(nodeId)
     return { closed: nodeId }
   }
 

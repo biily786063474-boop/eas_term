@@ -32,7 +32,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const ttQueue = useStore((s) => s.ttQueue)
   const enqueueTranscribe = useStore((s) => s.enqueueTranscribe)
   const edgeRef = useRef<HTMLSpanElement>(null)
-  const addFileNode = useStore((s) => s.addFileNode)
   const openTerminal = useStore((s) => s.openTerminal)
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -152,6 +151,61 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const selectNote = async (p: string): Promise<void> => {
     setSel(p)
     setLinks(await window.api.wiki.backlinks(p))
+  }
+
+  // 知识库文件 → 画布任意位置：统一走自由 + 只读节点（不用 Frame，不判断落点在不在 Frame 上）。
+  // 双击/搜索命中点击没有「松手点」，落在当前视口中心；真正拖拽落在松手时的世界坐标。
+  const openInCanvas = (path: string, wx: number, wy: number): void => {
+    useStore.getState().addFreeFileNode(paneForFile(path), wx, wy, { readOnly: true })
+  }
+  const viewportCenter = (): { wx: number; wy: number } => {
+    const el = document.querySelector('.canvas-viewport') as HTMLElement | null
+    const vp = useStore.getState().canvas.viewport
+    const cw = el?.clientWidth ?? window.innerWidth
+    const ch = el?.clientHeight ?? window.innerHeight
+    return { wx: (cw / 2 - vp.x) / vp.scale, wy: (ch / 2 - vp.y) / vp.scale }
+  }
+
+  // 拖文件树条目到画布任意位置（含 Frame 外）。5px 阈值内当普通点击处理（选中看反链），
+  // 阈值外才是真拖拽——和 CanvasDrawer 里项目文件树的拖拽手感保持一致。
+  const startWikiFileDrag = (path: string, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const start = { x: e.clientX, y: e.clientY, started: false }
+    let ghost: HTMLDivElement | null = null
+    const name = path.split('/').pop() ?? path
+    const onMove = (ev: MouseEvent): void => {
+      if (!start.started) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return
+        start.started = true
+        ghost = document.createElement('div')
+        ghost.className = 'canvas-drag-ghost'
+        ghost.textContent = name
+        document.body.appendChild(ghost)
+      }
+      if (ghost) {
+        ghost.style.left = ev.clientX + 12 + 'px'
+        ghost.style.top = ev.clientY + 10 + 'px'
+      }
+    }
+    const onUp = (ev: MouseEvent): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      ghost?.remove()
+      if (!start.started) {
+        void selectNote(path) // 没挪动 = 普通点击
+        return
+      }
+      const vpEl = document.querySelector('.canvas-viewport')
+      if (!vpEl) return
+      const r = vpEl.getBoundingClientRect()
+      const vp = useStore.getState().canvas.viewport
+      const wx = (ev.clientX - r.left - vp.x) / vp.scale
+      const wy = (ev.clientY - r.top - vp.y) / vp.scale
+      openInCanvas(path, wx - 90, wy - 15) // 偏移让节点头部大致居中在松手点（对齐 CanvasDrawer 的既有手感）
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
   }
 
   if (maximizedNode) return null
@@ -457,8 +511,8 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                     onClick={() => {
                       const abs = st.path + '/' + h.file
                       void selectNote(abs)
-                      const frame = useStore.getState().canvas.frames.find((f) => !f.parentId)
-                      if (frame) addFileNode(frame.id, paneForFile(abs), 0, 0)
+                      const { wx, wy } = viewportCenter()
+                      openInCanvas(abs, wx - 90, wy - 15)
                     }}
                   >
                     <b>{h.title}</b>
@@ -477,15 +531,15 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
               const p = item?.dataset.path
               if (!p || item?.dataset.dir) return
-              void selectNote(p)
+              startWikiFileDrag(p, e)
             }}
             onDoubleClick={(e) => {
-              // 双击笔记 → 开到画布上看（复用已有的文件节点）
+              // 双击笔记 → 开到画布上看（自由 + 只读节点，落在当前视口中心）
               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
               const p = item?.dataset.path
               if (!p || item?.dataset.dir) return
-              const frame = useStore.getState().canvas.frames.find((f) => !f.parentId)
-              if (frame) addFileNode(frame.id, paneForFile(p), 0, 0)
+              const { wx, wy } = viewportCenter()
+              openInCanvas(p, wx - 90, wy - 15)
             }}
           >
             <FileTree key={`${st.path}-${treeKey}`} rootPath={st.path!} refreshKey={treeKey} />

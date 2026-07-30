@@ -205,3 +205,22 @@ export function placeNodeAtPoint(frame: CanvasFrame, node: CanvasNode, prefX: nu
   const { x, y } = findFreePos(others, node.w, node.h, prefX, prefY)
   return { ...frame, nodes: [...frame.nodes, { ...node, x, y }] }
 }
+
+/** findFreePos 的世界坐标版：给自由节点用，不夹 PAD/HEAD（那是 Frame 内边距，世界坐标没有这个概念，
+ *  夹了反而会把偏左上的位置错误地推走）。只避开「其它自由节点」，不避 Frame——自由节点允许压在 Frame 上面。 */
+export function findFreePosWorld(others: Box[], w: number, h: number, prefX: number, prefY: number): { x: number; y: number } {
+  const fits = (x: number, y: number): boolean => !others.some((o) => boxOverlap({ x, y, w, h }, o))
+  if (fits(prefX, prefY)) return { x: prefX, y: prefY }
+  const step = 24
+  for (let r = 1; r <= 80; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue
+        const nx = prefX + dx * step
+        const ny = prefY + dy * step
+        if (fits(nx, ny)) return { x: nx, y: ny }
+      }
+    }
+  }
+  return { x: prefX, y: prefY }
+}
