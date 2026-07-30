@@ -17,6 +17,7 @@ import { DictBubbleToggle } from './features/canvas/DictBubbleToggle'
 import { ThemeSelect } from './ui/ThemeSelect'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
+import { BuildStamp } from './ui/BuildStamp'
 import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
@@ -239,6 +240,7 @@ export function App(): JSX.Element {
       <AgentOnboarding />
       <ArchivePlanPanel />
       <Tooltip />
+      <BuildStamp />
     </div>
   )
 }

@@ -81,8 +81,17 @@ function stopBuffering(id: string): void {
   pendingBuffers.delete(id)
 }
 
+/** 从 additionalArguments 里取主进程塞进来的构建信息（同步，界面首帧就能用） */
+function argOf(name: string): string {
+  const p = `--${name}=`
+  return process.argv.find((a) => a.startsWith(p))?.slice(p.length) ?? ''
+}
+
 const api = {
   platform: process.platform,
+  /** 这个包是哪一版、是不是打包过的。界面底部的水印用它 —— 装了三个版本还开着旧包
+   *  这种事真发生过，排查时先怀疑代码、最后才发现开的不是新包，白花很多时间。 */
+  build: { version: argOf('eas-version'), packaged: argOf('eas-packaged') === '1' },
   // 从访达拖进来的 File 取真实路径。
   // Electron 32 起 File.path 被移除了，直接读会拿到 undefined 且**不报错**——
   // 结果是一堆空路径还以为代码写对了。必须走 webUtils。

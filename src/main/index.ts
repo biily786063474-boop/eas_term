@@ -96,7 +96,14 @@ function createWindow(): void {
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       // 画布「迷你浏览器」节点用 <webview>（唯一能跟随画布 CSS transform 缩放的真 Chromium 内核）
-      webviewTag: true
+      webviewTag: true,
+      // 版本号走 additionalArguments 而不是 IPC：这样 preload 能**同步**拿到，
+      // 界面右下角那个水印首帧就是对的。走 IPC 的话会先渲染成空再补上，
+      // 而这个水印存在的意义恰恰是「一眼确认自己开的是哪个包」——闪一下就削弱了它。
+      additionalArguments: [
+        `--eas-version=${app.getVersion()}`,
+        `--eas-packaged=${app.isPackaged ? '1' : '0'}`
+      ]
     }
   })
 
