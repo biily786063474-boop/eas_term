@@ -87,7 +87,11 @@ done
 
 # ── 安装包 ──────────────────────────────────────────────────────────
 if [ "$SITE_ONLY" != "--site-only" ]; then
-  PKG_DIR="$HOME/Eas-Term-notarized"
+  # 必须和 package.json 的 dist 脚本输出目录一致 —— 它写的是 $HOME/Eas-Term-release
+  # （项目在外置卷上，asar 会损坏，所以输出定向到 home，见 README）。
+  # 这里以前写的是 Eas-Term-notarized，和构建脚本对不上，每次发版都得先手动把包搬过去，
+  # 忘了搬就报「没有 v0.2.x 的包」——而包明明刚打好，人会以为是打包失败。
+  PKG_DIR="$HOME/Eas-Term-release"
   say "▸ 安装包 v$VERSION → $DL/v$VERSION"
   [ -d "$PKG_DIR" ] || { echo "  ✗ 找不到 ${PKG_DIR}，先跑 EAS_NOTARIZE=1 npm run dist"; exit 1; }
 
