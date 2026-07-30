@@ -1163,21 +1163,68 @@
   background: rgba(224, 175, 104, 0.16);
   border: 1px solid rgba(224, 175, 104, 0.4);
   border-radius: var(--radius-sm);
-  padding: 9px 11px;
   font-size: 12px;
   color: #f0d9ad;
   line-height: 1.5;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   cursor: move;
-  overflow: hidden;
+  overflow: hidden; /* 圆角裁切用；真正滚动的是里面那层 */
+}
+
+/* 文字层。分成两层是因为：便签本体要能拖动，而拖动时鼠标一动
+   要是本体自己可滚，第一下就把内容滚跑了 */
+.cshape-sticky-body {
+  height: 100%;
+  padding: 9px 11px;
+  overflow-y: auto;
+  overscroll-behavior: contain; /* 滚到底不要把画布一起带跑 */
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 便签里的滚动条细一点，别在这么小的块上喧宾夺主 */
+.cshape-sticky-body::-webkit-scrollbar {
+  width: 6px;
+}
+.cshape-sticky-body::-webkit-scrollbar-thumb {
+  background: rgba(240, 217, 173, 0.28);
+  border-radius: 3px;
+}
+.cshape-sticky-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .cshape-sticky.editing {
   resize: none;
   outline: none;
   font-family: inherit;
+  padding: 9px 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 右下角缩放手柄。和文件节点的 .cfile-rz 是同一套手感，
+   但便签是 shape（世界坐标、不属于 Frame），所以单独一个类 */
+.cshape-rz {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  opacity: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    rgba(240, 217, 173, 0.5) 50%,
+    rgba(240, 217, 173, 0.5) 100%
+  );
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.cshape-sticky:hover .cshape-rz,
+.cshape-sticky.sel .cshape-rz {
+  opacity: 1;
 }
 
 .cshape-arrow {

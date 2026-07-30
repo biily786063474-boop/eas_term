@@ -25,6 +25,7 @@ export function CanvasFileNode({
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
+  const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
   const maximizedNode = useStore((s) => s.maximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
@@ -132,6 +133,8 @@ export function CanvasFileNode({
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      // 松手才让位。拖动过程中就推的话，邻居会跟着鼠标一路乱跳
+      settleResize(frameId, node.id)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

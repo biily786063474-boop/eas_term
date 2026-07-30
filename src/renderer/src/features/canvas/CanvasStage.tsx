@@ -101,6 +101,10 @@ export function CanvasStage(): JSX.Element {
       // 仅当模块「被选中」时，光标落在其可滚动区（组件/文件预览）才把滚轮交给内容滚动；
       // 未选中则保持画板平移/缩放（避免鼠标经过模块就抢走 pan）。
       const t = e.target as HTMLElement | null
+      // 便签写长了要能翻。它比模块小得多，要求「先选中」反而别扭——
+      // 光标已经落在一个真的溢出了的便签里，意图很明确，直接给它滚
+      const sticky = t?.closest?.('.cshape-sticky-body') as HTMLElement | null
+      if (sticky && sticky.scrollHeight - sticky.clientHeight > 1) return
       const body = t?.closest?.('.cfile-body')
       if (body) {
         // 图片宫格是显式打开的浏览视图 → 滚轮始终交给它滚（不要求选中）
@@ -537,6 +541,30 @@ export function CanvasStage(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }
 
+  /** 图形的右下角缩放。便签原来只能在新建时拖出大小，之后就定死了 ——
+   *  写长了的便签既看不全也改不了尺寸。 */
+  const startShapeResize = (sh: CanvasShape, e: React.MouseEvent): void => {
+    if (e.button !== 0) return
+    e.stopPropagation()
+    e.preventDefault()
+    const scale = useStore.getState().canvas.viewport.scale
+    const sx = e.clientX
+    const sy = e.clientY
+    const w0 = sh.w
+    const h0 = sh.h
+    const onMove = (ev: MouseEvent): void =>
+      updateShape(sh.id, {
+        w: Math.max(120, w0 + (ev.clientX - sx) / scale),
+        h: Math.max(60, h0 + (ev.clientY - sy) / scale)
+      })
+    const onUp = (): void => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
   const startFrameDrag = (f: CanvasFrame, e: React.MouseEvent): void => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -621,10 +649,18 @@ export function CanvasStage(): JSX.Element {
           className={`cshape cshape-sticky${selCls}`}
           data-sid={id}
           style={{ left, top, width: sw, height: shh }}
-          onMouseDown={onDown}
+          onMouseDown={(e) => {
+            // 按在滚动条上时不要启动拖拽 —— 否则想翻内容，结果整个便签跟着鼠标跑
+            const b = (e.target as HTMLElement).closest('.cshape-sticky-body') as HTMLElement | null
+            if (b && b.scrollHeight > b.clientHeight && e.nativeEvent.offsetX > b.clientWidth) return
+            onDown(e)
+          }}
           onDoubleClick={() => !isDraft && setEditingSticky(id)}
         >
-          {sh.text}
+          {/* 文字单独一层：便签本体不滚，滚的是这里。
+              本体要是可滚的，拖动便签时鼠标一动就会先滚内容 */}
+          <div className="cshape-sticky-body">{sh.text}</div>
+          {!isDraft && <div className="cshape-rz" onMouseDown={(e) => startShapeResize(sh as CanvasShape, e)} />}
         </div>
       )
     }

@@ -199,6 +199,48 @@ export function findFreePos(others: Box[], w: number, h: number, prefX: number, 
   return { x: px, y: py }
 }
 
+/**
+ * 把被 anchor 压住的同 Frame 模块**垂直推开**（连锁）。
+ *
+ * 用在「放大一个模块之后」：它变大了会盖住下面的邻居，松手时得让位。
+ *
+ * 为什么是往下推、而不是复用 findFreePos 找最近空位：
+ * 最近空位会让模块往左右窜，把用户排好的列打散 —— 明明只是把一个模块拉高了一点，
+ * 结果整个 Frame 的布局重新洗牌。只往下推的话，相对上下关系不变，看起来就是
+ * 「下面那些整体让开了一截」，和直觉一致。
+ *
+ * 连锁是自然发生的：A 被推下去之后可能压到 B，轮到 B 时它会以 A 的新位置为准继续下推，
+ * 所以「下面有多个模块就一起向下移」不用特殊处理。
+ */
+export function pushDownOverlaps(frame: CanvasFrame, anchorId: string): CanvasFrame {
+  const anchor = frame.nodes.find((n) => n.id === anchorId)
+  if (!anchor) return frame
+  // anchor 固定不动；其余按「先上后左」处理 —— 顺序决定了谁给谁让位，
+  // 按阅读顺序来才符合用户看到的排版
+  const others = frame.nodes
+    .filter((n) => n.id !== anchorId)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+  const placed: Box[] = [{ x: anchor.x, y: anchor.y, w: anchor.w, h: anchor.h }]
+  const moved = new Map<string, number>()
+  for (const n of others) {
+    let y = n.y
+    // 逐个躲开已放置的：躲开一个之后可能又撞上另一个，所以要循环到干净为止。
+    // guard 是防御性的，正常情况下最多循环 placed.length 次
+    for (let guard = 0; guard < 200; guard++) {
+      const hit = placed.find((p) => boxOverlap({ x: n.x, y, w: n.w, h: n.h }, p))
+      if (!hit) break
+      y = hit.y + hit.h + GAP
+    }
+    if (y !== n.y) moved.set(n.id, y)
+    placed.push({ x: n.x, y, w: n.w, h: n.h })
+  }
+  if (!moved.size) return frame
+  return {
+    ...frame,
+    nodes: frame.nodes.map((n) => (moved.has(n.id) ? { ...n, y: moved.get(n.id)! } : n))
+  }
+}
+
 /** 把新节点放到「离松手鼠标点最近的空位」（拖入判定用），避开已有模块重叠。 */
 export function placeNodeAtPoint(frame: CanvasFrame, node: CanvasNode, prefX: number, prefY: number): CanvasFrame {
   const others = frame.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }))

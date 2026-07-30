@@ -22,6 +22,7 @@ export function CanvasComponentNode({
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
+  const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
   const maximizedNode = useStore((s) => s.maximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
@@ -89,6 +90,7 @@ export function CanvasComponentNode({
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      settleResize(frame.id, node.id) // 松手让位，见 canvas/layout.ts 的 pushDownOverlaps
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

@@ -37,7 +37,8 @@ import {
   reflowFrames,
   reflowSeparate,
   findFreePos,
-  findFreePosWorld
+  findFreePosWorld,
+  pushDownOverlaps
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import type { PersistedCanvas } from './canvas/persist'
@@ -266,6 +267,17 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           : f
       )
       // 放大模块撑大所属 Frame 后，顶层 Frame 之间去重叠（把被压的邻居往下让），防相互遮挡
+      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
+    }),
+
+  settleResize: (frameId, nodeId) =>
+    set((s) => {
+      const f0 = s.canvas.frames.find((f) => f.id === frameId)
+      if (!f0) return s
+      const next = pushDownOverlaps(f0, nodeId)
+      if (next === f0) return s // 没压住谁，别白白触发一次重排
+      const frames = s.canvas.frames.map((f) => (f.id === frameId ? next : f))
+      // 推开之后 Frame 会变高，所以要再收紧一次并让顶层 Frame 之间去重叠
       return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 

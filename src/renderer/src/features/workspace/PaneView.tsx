@@ -163,6 +163,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
+  const settleResize = useStore((s) => s.settleResize)
   const splitLeaf = useStore((s) => s.splitLeaf)
   const closeLeaf = useStore((s) => s.closeLeafSafely)
   const setActiveLeaf = useStore((s) => s.setActiveLeaf)
@@ -300,6 +301,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      settleResize(frameId, nodeId) // 松手让位，见 canvas/layout.ts 的 pushDownOverlaps
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

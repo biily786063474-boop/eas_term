@@ -29,24 +29,44 @@ say() { printf "\033[1m%s\033[0m\n" "$*"; }
 
 # ── 版本号回填 ──────────────────────────────────────────────────────
 # 下载链接的版本号写死在 HTML 里，散在两个文件的 18 处。手改必然漏一两处，
-# 而漏掉的那处会指向一个已经被 KEEP=5 清理掉的目录 —— 404 且没人发现。
+# 而漏掉的那处会指向一个已经被 KEEP 清理掉的目录 —— 404 且没人发现。
 # 以 package.json 为准，发布前统一回填，改动留在仓库里（git diff 看得见）。
-say "▸ 版本号 → v$VERSION"
-CHANGED=0
-for f in site/index.html site/download.html; do
-  before=$(shasum "$f" | cut -d' ' -f1)
-  # 两种形态：标记注释 <!-- v0.1.0 --> 和链接里的 /download/v0.1.0/Eas-Term-0.1.0-
-  sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
-                s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-#/download/v$VERSION/Eas-Term-$VERSION-#g" "$f"
-  [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
-done
-[ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
-# 回填完必须没有残留的旧版本号。只查**我们真正改写的那两种写法** ——
-# 别在全文里搜 x.y.z：SVG 的 path 坐标长得一模一样（`3.7 0 1-.5 1.8-.5`），
-# 会把每次发布都拦下来，然后人就学会了无视这个检查。
-STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
-          site/index.html site/download.html | grep -v "$VERSION" || true)
-[ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
+#
+# **--site-only 时不回填**：那条路径不传安装包，回填等于把下载链接指到一个
+# 服务器上根本不存在的版本目录 —— 改个文案就把下载页搞成 404。
+# （原来是无条件回填的，只要 package.json 比线上包新就会踩到。）
+if [ "$SITE_ONLY" = "--site-only" ]; then
+  say "▸ 版本号保持不动（--site-only 不传包，下载链接仍指向线上已有的那一版）"
+  # 但要确认它指向的那些版本**服务器上真的有** —— 否则这次发布会把下载页变成 404
+  WANT=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/' site/index.html site/download.html \
+           | sed -E 's#^/download/##; s#/$##' | sort -u)
+  HAVE=$(ssh $HOST "ls $DL 2>/dev/null" || true)
+  MISSING=$(comm -23 <(echo "$WANT") <(echo "$HAVE" | sort -u))
+  if [ -n "$MISSING" ]; then
+    echo "  ✗ HTML 里引用了这些版本，但服务器 $DL/ 下没有："
+    echo "$MISSING" | sed 's/^/      /'
+    echo "    发上去下载页就是 404。要么先发包（去掉 --site-only），要么把链接改回线上已有的版本。"
+    exit 1
+  fi
+  echo "  ✓ 下载链接指向的版本服务器上都有：$(echo "$WANT" | tr '\n' ' ')"
+else
+  say "▸ 版本号 → v$VERSION"
+  CHANGED=0
+  for f in site/index.html site/download.html; do
+    before=$(shasum "$f" | cut -d' ' -f1)
+    # 两种形态：标记注释 <!-- v0.1.0 --> 和链接里的 /download/v0.1.0/Eas-Term-0.1.0-
+    sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
+                  s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-#/download/v$VERSION/Eas-Term-$VERSION-#g" "$f"
+    [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
+  done
+  [ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
+  # 回填完必须没有残留的旧版本号。只查**我们真正改写的那两种写法** ——
+  # 别在全文里搜 x.y.z：SVG 的 path 坐标长得一模一样（`3.7 0 1-.5 1.8-.5`），
+  # 会把每次发布都拦下来，然后人就学会了无视这个检查。
+  STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
+            site/index.html site/download.html | grep -v "$VERSION" || true)
+  [ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
+fi
 
 # ── 网页 ────────────────────────────────────────────────────────────
 say "▸ 网页 → $WEB"

@@ -125,6 +125,9 @@ export interface CanvasSlice {
   moveNodeToFrame: (fromFrameId: string, nodeId: string, toFrameId: string) => void
   /** 拖动结束后：若该节点与同 Frame 其它模块重叠，挪到离当前位置最近的空位（防碰撞） */
   settleNode: (frameId: string, nodeId: string) => void
+  /** 缩放结束后：把被这个模块压住的邻居垂直推开（下方有多个就连锁一起下移）。
+   *  和 settleNode 不同——那个是让**自己**找空位，这个是让**别人**给自己让路。 */
+  settleResize: (frameId: string, nodeId: string) => void
   /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
   addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
   /** 拖组件入 Frame：新增一个画布组件节点（尺寸由调用方从 registry 取，避免循环依赖） */
