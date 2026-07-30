@@ -56,7 +56,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent): void => {
-      if (!(e.target as HTMLElement).closest?.('.wiki-drawer')) setOpen(false)
+      const t = e.target as HTMLElement
+      // 右键菜单/确认弹窗 portal 到 body，DOM 上不在抽屉里但逻辑上属于它。
+      // 不放过的话：右键笔记点「重命名」，抽屉当场收起，输入框跟着滑出屏幕
+      if (t.closest?.('.canvas-ctxmenu') || t.closest?.('.context-menu') || t.closest?.('.confirm-overlay')) return
+      if (!t.closest?.('.wiki-drawer')) setOpen(false)
     }
     const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
     return () => {
@@ -528,6 +532,9 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             className="wk-tree"
             style={q.trim() ? { display: 'none' } : undefined}
             onMouseDown={(e) => {
+              // 内联输入框（重命名）上的 mousedown 让给它自己：不跳过的话这里会把它
+              // 当成「拖笔记去画布」的起手，输入框里划选文字会变成拖拽手势
+              if ((e.target as HTMLElement).closest('input')) return
               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
               const p = item?.dataset.path
               if (!p || item?.dataset.dir) return

@@ -126,6 +126,8 @@ export function WikiView(): JSX.Element {
           className="wikiv-tree"
           style={view === 'tree' ? undefined : { display: 'none' }}
           onMouseDown={(e) => {
+            // 内联输入框（重命名）上不要顺手把笔记打开
+            if ((e.target as HTMLElement).closest('input')) return
             const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
             const p = item?.dataset.path
             if (p && !item?.dataset.dir) void openNote(p)

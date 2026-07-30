@@ -44,9 +44,11 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         )}
       </div>
       <div className="workspace-body">
-        {/* 两个面板常挂载、display 切换：卸载会丢文件树的展开/滚动状态（expanded 在组件内部） */}
+        {/* 两个面板常挂载、display 切换：卸载会丢文件树的滚动位置和选中态 */}
         <div className="ws-keep" style={{ display: tab === 'files' ? undefined : 'none' }}>
-          <FileTree key={project.id} rootPath={project.path} refreshKey={filesRefresh} />
+          {/* editable：项目文件树是唯一开 IDE 式文件操作的地方。
+              画布的资源/知识库抽屉不开——那两处的外层已经用 mousedown 做「拖到画布」了 */}
+          <FileTree key={project.id} rootPath={project.path} refreshKey={filesRefresh} editable />
         </div>
         <div className="ws-keep" style={{ display: tab === 'git' ? undefined : 'none' }}>
           <SidebarGit key={project.id} cwd={project.path} active={tab === 'git'} />
@@ -63,8 +65,11 @@ export function Sidebar(): JSX.Element {
   const addProject = useStore((s) => s.addProject)
   const removeProject = useStore((s) => s.removeProject)
   const openTerminal = useStore((s) => s.openTerminal)
+  const renameProject = useStore((s) => s.renameProject)
   /** 项目行右键菜单的落点 */
   const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
+  /** 正在内联改名的项目 id（双击项目名进入） */
+  const [editingProject, setEditingProject] = useState<string | null>(null)
   const attentionPtys = useStore((s) => s.attentionPtys)
   const tabs = useStore((s) => s.tabs)
 
@@ -109,7 +114,8 @@ export function Sidebar(): JSX.Element {
               className={`project-item${p.id === activeProjectId ? ' active' : ''}`}
               data-tip={p.path}
               onClick={() => setActiveProject(p.id)}
-              onDoubleClick={() => void openTerminal({ projectId: p.id })}
+              // 双击 = 重命名（原来是「开新终端」，已移到右键菜单和行尾的终端图标按钮）
+              onDoubleClick={() => setEditingProject(p.id)}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
@@ -118,7 +124,28 @@ export function Sidebar(): JSX.Element {
               {attnProjectIds.has(p.id) && (
                 <span className="project-attn-dot" data-tip="该项目有任务完成" />
               )}
-              <span className="project-name">{p.name}</span>
+              {editingProject === p.id ? (
+                <input
+                  className="project-rename"
+                  defaultValue={p.name}
+                  autoFocus
+                  // SwipeRow 用 pointer 事件做横滑删除，不挡住就会一边打字一边把行滑走
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onBlur={(e) => {
+                    void renameProject(p.id, e.target.value)
+                    setEditingProject(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    if (e.key === 'Escape') setEditingProject(null)
+                  }}
+                />
+              ) : (
+                <span className="project-name">{p.name}</span>
+              )}
               <span className="project-actions">
                 <button
                   className="icon-btn"
@@ -154,7 +181,7 @@ export function Sidebar(): JSX.Element {
         <CanvasContextMenu
           x={projMenu.x}
           y={projMenu.y}
-          items={projectMenuItems(projMenu.id)}
+          items={projectMenuItems(projMenu.id, setEditingProject)}
           onClose={() => setProjMenu(null)}
         />
       )}

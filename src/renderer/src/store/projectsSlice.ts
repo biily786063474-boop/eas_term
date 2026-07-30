@@ -12,6 +12,9 @@ export interface ProjectsSlice {
   loadProjects: () => Promise<void>
   addProject: () => Promise<void>
   removeProject: (id: string) => Promise<void>
+  /** 改项目显示名（不动磁盘目录）。连带同步那些「还没被用户手动改过名」的
+   *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
+  renameProject: (id: string, name: string) => Promise<void>
   setActiveProject: (id: string | null) => void
 }
 
@@ -60,6 +63,29 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
       activeTabId = pickActiveTab(remainingTabs, activeTabByProject, activeProjectId)
     }
     set({ projects, tabs: remainingTabs, activeProjectId, activeTabId, activeTabByProject })
+  },
+
+  renameProject: async (id, name) => {
+    const old = get().projects.find((p) => p.id === id)?.name
+    const projects = await window.api.projects.rename(id, name)
+    const next = projects.find((p) => p.id === id)?.name
+    if (!next || next === old) {
+      set({ projects })
+      return
+    }
+    set((s) => ({
+      projects,
+      // Frame 名等于旧项目名 = 用户没手动改过它（创建时就是拷的项目名），跟着更新；
+      // 已经被改成别的了就别动 —— 那是用户自己起的名字
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.projectId === id && f.name === old ? { ...f, name: next } : f
+        )
+      },
+      // 标签标题有 customTitle 明确标记「用户改过」，直接照它判断
+      tabs: s.tabs.map((t) => (t.projectId === id && !t.customTitle ? { ...t, title: next } : t))
+    }))
   },
 
   setActiveProject: (id) => {

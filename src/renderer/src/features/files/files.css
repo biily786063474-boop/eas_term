@@ -35,6 +35,53 @@
   opacity: 0.45;
 }
 
+/* 当前选中项：键盘导航、新建、删除都以它为基准，必须一眼看得出是哪一行 */
+.tree-item.selected {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.tree-item.selected:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* 已剪切、等着粘贴的项：调淡表示「它即将从这儿离开」（对齐访达/资源管理器） */
+.tree-item.cut {
+  opacity: 0.42;
+}
+
+/* 拖拽移动时，鼠标底下那个能接收的目录 */
+.tree-item.drop-into {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -1px;
+}
+
+/* 新建时的占位行（磁盘上还没有这个东西，只有一个输入框） */
+.tree-item.creating {
+  cursor: default;
+}
+
+/* 操作失败的提示。浮在文件树底部——原来 rename 失败是完全静默的，
+   用户改了个重名只会看到名字弹回去，没有任何解释 */
+.tree-toast {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  /* 危险色在这个项目里是硬编码的 rgba(247,118,142,…)（见 base.css 的 .danger-btn），
+     没有全局 --danger 变量，这里跟着用同一组值 */
+  background: rgba(247, 118, 142, 0.18);
+  border: 1px solid rgba(247, 118, 142, 0.5);
+  color: #ffb3c0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: normal;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
 .tree-arrow {
   flex: none;
   width: 12px;

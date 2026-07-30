@@ -106,7 +106,10 @@ const api = {
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),
     addViaDialog: (): Promise<Project[]> => ipcRenderer.invoke('projects:addViaDialog'),
-    remove: (id: string): Promise<Project[]> => ipcRenderer.invoke('projects:remove', id)
+    remove: (id: string): Promise<Project[]> => ipcRenderer.invoke('projects:remove', id),
+    /** 只改侧栏显示名，不动磁盘目录名 */
+    rename: (id: string, name: string): Promise<Project[]> =>
+      ipcRenderer.invoke('projects:rename', id, name)
   },
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
@@ -337,6 +340,15 @@ const api = {
     rename: (oldPath: string, newName: string): Promise<OpResult> =>
       ipcRenderer.invoke('fs:rename', oldPath, newName),
     trash: (target: string): Promise<OpResult> => ipcRenderer.invoke('fs:trash', target),
+    // 以下四个都只在「项目根 / 知识库根之内」生效，见 main/fsGuard.ts
+    mkdir: (parentDir: string, name: string): Promise<OpResult> =>
+      ipcRenderer.invoke('fs:mkdir', parentDir, name),
+    createFile: (parentDir: string, name: string): Promise<OpResult> =>
+      ipcRenderer.invoke('fs:createFile', parentDir, name),
+    move: (src: string, destDir: string): Promise<OpResult> =>
+      ipcRenderer.invoke('fs:move', src, destDir),
+    copy: (src: string, destDir: string): Promise<OpResult> =>
+      ipcRenderer.invoke('fs:copy', src, destDir),
     probePaths: (inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> =>
       ipcRenderer.invoke('fs:probePaths', inputs, baseCwd)
   },

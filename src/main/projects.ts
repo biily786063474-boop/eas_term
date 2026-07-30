@@ -52,4 +52,17 @@ export function registerProjectHandlers(): void {
     saveProjects(list)
     return list
   })
+
+  /** 改项目显示名。只改列表里的 name，**不动磁盘上的目录名** ——
+   *  项目名一开始是 path.basename 推导出来的，但它是个显示标签：
+   *  用户可能有两个都叫 web 的目录，想在侧栏区分开，不该被迫去动真实目录。 */
+  ipcMain.handle('projects:rename', (_e, id: string, name: string) => {
+    const trimmed = String(name ?? '').trim().slice(0, 60)
+    const list = loadProjects()
+    const p = list.find((x) => x.id === id)
+    // 名字清空 → 回落到目录名（和「重命名成空」这个操作的直觉一致，不留空白项）
+    if (p) p.name = trimmed || path.basename(p.path)
+    saveProjects(list)
+    return list
+  })
 }

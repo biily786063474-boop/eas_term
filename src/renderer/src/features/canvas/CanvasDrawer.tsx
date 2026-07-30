@@ -74,7 +74,12 @@ export function CanvasDrawer(): JSX.Element {
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent): void => {
-      if (!(e.target as HTMLElement).closest?.('.canvas-drawer')) setOpen(false)
+      const t = e.target as HTMLElement
+      // 右键菜单和确认弹窗都是 portal 到 body 的，DOM 上不在抽屉内部但**逻辑上是抽屉的一部分**。
+      // 不放过它们的话：在抽屉里右键文件点「重命名」，抽屉当场收起、重命名框跟着滑出屏幕，
+      // 这个功能等于不存在。
+      if (t.closest?.('.canvas-ctxmenu') || t.closest?.('.context-menu') || t.closest?.('.confirm-overlay')) return
+      if (!t.closest?.('.canvas-drawer')) setOpen(false)
     }
     const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
     return () => {
@@ -477,6 +482,10 @@ export function CanvasDrawer(): JSX.Element {
             <div
               className="cd-files"
               onMouseDown={(e) => {
+                // 落在文件树的内联输入框上（重命名/新建）→ 让给输入框。
+                // 不跳过的话：closest('.tree-item') 会命中它的父行，于是这里 preventDefault()
+                // 掉 mousedown，输入框里就既定位不了光标也划不了选
+                if ((e.target as HTMLElement).closest('input')) return
                 const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                 if (!item) return
                 const path = item.dataset.path

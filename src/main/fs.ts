@@ -12,6 +12,7 @@ import type {
   OpResult,
   PathProbe
 } from '../shared/types'
+import { guardDir, guardPath, invalidNameReason } from './fsGuard'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
 // 改用 `open -R` 既能定位文件又能激活 Finder；失败再回退到原 API。
@@ -232,11 +233,14 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle('fs:rename', async (_e, oldPath: string, newName: string): Promise<OpResult> => {
     try {
-      if (!newName || /[/\\:]/.test(newName)) return { ok: false, error: '名称不合法' }
-      const target = path.join(path.dirname(oldPath), newName)
-      if (target === oldPath) return { ok: true, path: target }
-      if (fs.existsSync(target)) return { ok: false, error: '同名文件已存在' }
-      await fs.promises.rename(oldPath, target)
+      const bad = invalidNameReason(newName)
+      if (bad) return { ok: false, error: bad }
+      const g = guardPath(oldPath)
+      if (!g.ok) return g
+      const target = path.join(path.dirname(g.path), newName)
+      if (target === g.path) return { ok: true, path: target }
+      if (fs.existsSync(target)) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      await fs.promises.rename(g.path, target)
       return { ok: true, path: target }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
@@ -245,8 +249,97 @@ export function registerFsHandlers(): void {
 
   ipcMain.handle('fs:trash', async (_e, target: string): Promise<OpResult> => {
     try {
-      await shell.trashItem(target)
+      const g = guardPath(target)
+      if (!g.ok) return g
+      await shell.trashItem(g.path)
       return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  // ── 以下是文件树的 IDE 式操作。共同点：目标路径一律先过守卫，之后只用守卫返回的
+  // 真实路径（realpath 解析过、确认在项目/知识库内），不再碰调用方传进来的原始字符串。
+
+  ipcMain.handle('fs:mkdir', async (_e, parentDir: string, name: string): Promise<OpResult> => {
+    try {
+      const bad = invalidNameReason(name)
+      if (bad) return { ok: false, error: bad }
+      const g = guardDir(parentDir)
+      if (!g.ok) return g
+      const target = path.join(g.path, name)
+      // 不用 recursive：那样 name 里带路径分隔符时会静默建出一串深目录。
+      // 名字已经被 invalidNameReason 挡掉了斜杠，这里再用非递归兜一层。
+      await fs.promises.mkdir(target)
+      return { ok: true, path: target }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('EEXIST')) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      return { ok: false, error: msg }
+    }
+  })
+
+  ipcMain.handle('fs:createFile', async (_e, parentDir: string, name: string): Promise<OpResult> => {
+    try {
+      const bad = invalidNameReason(name)
+      if (bad) return { ok: false, error: bad }
+      const g = guardDir(parentDir)
+      if (!g.ok) return g
+      const target = path.join(g.path, name)
+      // 'wx' = 独占创建：目标已存在就直接失败。用 existsSync 先探再写会有竞态，
+      // 让内核来保证「不覆盖已有文件」这件事。
+      const fh = await fs.promises.open(target, 'wx')
+      await fh.close()
+      return { ok: true, path: target }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('EEXIST')) return { ok: false, error: '同名的文件或文件夹已经存在' }
+      return { ok: false, error: msg }
+    }
+  })
+
+  /** 移动（拖拽 / 剪切粘贴）。跨目录，所以不能复用 fs:rename —— 那个的目标目录是硬编码的 dirname(oldPath)。 */
+  ipcMain.handle('fs:move', async (_e, src: string, destDir: string): Promise<OpResult> => {
+    try {
+      const gs = guardPath(src)
+      if (!gs.ok) return gs
+      const gd = guardDir(destDir)
+      if (!gd.ok) return gd
+      // 把目录移进它自己的子孙里 → 会把这棵子树从文件系统上摘掉。必须挡。
+      if (gd.path === gs.path || gd.path.startsWith(gs.path + path.sep)) {
+        return { ok: false, error: '不能把一个文件夹移动到它自己里面' }
+      }
+      const target = path.join(gd.path, path.basename(gs.path))
+      if (target === gs.path) return { ok: true, path: target } // 原地放下，什么都不用做
+      if (fs.existsSync(target)) return { ok: false, error: '目标位置已经有同名的文件或文件夹' }
+      await fs.promises.rename(gs.path, target)
+      return { ok: true, path: target }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  /** 复制（复制粘贴 / 复制副本）。目标同名时自动加「副本」后缀，不覆盖、不报错 ——
+   *  复制粘贴到同一个目录是很常见的意图，这时报「已存在」等于什么也没干。 */
+  ipcMain.handle('fs:copy', async (_e, src: string, destDir: string): Promise<OpResult> => {
+    try {
+      const gs = guardPath(src)
+      if (!gs.ok) return gs
+      const gd = guardDir(destDir)
+      if (!gd.ok) return gd
+      if (gd.path === gs.path || gd.path.startsWith(gs.path + path.sep)) {
+        return { ok: false, error: '不能把一个文件夹复制到它自己里面' }
+      }
+      const base = path.basename(gs.path)
+      const ext = path.extname(base)
+      const stem = ext ? base.slice(0, -ext.length) : base
+      let target = path.join(gd.path, base)
+      // 「foo.ts」→「foo 副本.ts」→「foo 副本 2.ts」…（对齐访达的中文习惯）
+      for (let i = 1; fs.existsSync(target); i++) {
+        target = path.join(gd.path, `${stem} 副本${i > 1 ? ' ' + i : ''}${ext}`)
+      }
+      await fs.promises.cp(gs.path, target, { recursive: true, errorOnExist: true, force: false })
+      return { ok: true, path: target }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }

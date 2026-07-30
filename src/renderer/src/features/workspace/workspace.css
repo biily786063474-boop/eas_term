@@ -93,6 +93,20 @@
   text-overflow: ellipsis;
 }
 
+/* 项目名双击后的内联改名框。撑满剩余宽度（min-width:0 才能真的收缩），
+   视觉上尽量贴着原来那行文字，避免进入编辑态时行高跳一下 */
+.project-rename {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
 /* 「任务完成」徽标点：绝对定位落在项目条目左缘 padding 内，不扰乱 flex；切到该项目即消失 */
 .project-item {
   position: relative;

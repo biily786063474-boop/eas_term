@@ -4,7 +4,11 @@ import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from '../canvas/CanvasContextMenu'
 
-export function projectMenuItems(projectId: string): CanvasMenuItem[] {
+export function projectMenuItems(
+  projectId: string,
+  /** 让调用方接管「进入内联改名态」（侧栏有输入框，画布抽屉没有就不传） */
+  onStartRename?: (projectId: string) => void
+): CanvasMenuItem[] {
   const s = useStore.getState()
   const p = s.projects.find((x) => x.id === projectId)
   if (!p) return []
@@ -17,8 +21,18 @@ export function projectMenuItems(projectId: string): CanvasMenuItem[] {
   return [
     {
       label: '在此项目打开新终端',
+      // 双击项目行原来是这个动作，现在双击让位给重命名了，这里是它的主入口
       onClick: () => void s.openTerminal({ projectId })
     },
+    ...(onStartRename
+      ? [
+          {
+            label: '重命名',
+            hint: '只改显示名，不动文件夹',
+            onClick: () => onStartRename(projectId)
+          } as CanvasMenuItem
+        ]
+      : []),
     {
       label: '在访达中显示',
       onClick: () => void window.api.fs.showInFolder(p.path)
