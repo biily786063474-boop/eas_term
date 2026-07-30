@@ -18,7 +18,13 @@ import {
 const LANE_W = 14 // 轨道图每列宽度（px）
 const MAX_LANES = 5 // 侧栏 gutter 最多显示的轨道数
 
-const POLL_MS = 3000
+// 兜底轮询间隔。**真正让它跟手的是 fs-dir-changed 和 focus 两个事件**（见下面的 effect），
+// 这个 interval 只管「文件在应用外被改、而且没有触发目录监听」这种漏网情况。
+// 原来 3s：一次 refresh 要起两个 git 进程（status + log），也就是每分钟 40 次进程创建；
+// 本仓库 216 个文件时单次 20-30ms，换成几千文件的仓库会到几百毫秒，
+// 于是「开着版本标签挂一下午」就变成持续几个百分点的占用。
+// 有事件兜着，15s 足够，进程创建量降到 1/5。
+const POLL_MS = 15000
 const LOG_LIMIT = 40
 
 function splitName(p: string): { dir: string; base: string } {

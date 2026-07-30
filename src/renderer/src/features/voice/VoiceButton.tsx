@@ -95,6 +95,9 @@ export function VoiceButton({
     } catch {
       flash('麦克风打不开')
       void window.api.stt.stop()
+      // 先 stop 再丢引用。VoiceCapture.start() 里 getUserMedia 已经成功、
+      // 后面某步才抛的情况下，麦克风是开着的；直接置 null 就再没人能关它了
+      capRef.current?.stop()
       capRef.current = null
     }
   }

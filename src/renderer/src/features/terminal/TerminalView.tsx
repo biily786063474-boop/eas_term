@@ -379,9 +379,22 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 累积起来，用 rAF 合并成一次 term.write：一帧一写、对齐刷新节奏，消除撕裂并降 CPU。
     let pendingWrites: string[] = []
     let writeRaf = 0
+    let lastFlush = 0
+    // 最快每 16ms 写一次（≈60Hz）。原来是「每一帧写一次」，在 ProMotion 屏上
+    // rAF 实测跑 120.6fps —— 于是 agent 刷屏时 xterm 每秒被写 120 次、跟着重排重绘 120 次。
+    // 文字终端 60Hz 和 120Hz 人眼分不出来，但工作量差一倍，
+    // 而「让 agent 跑几小时」恰好是这个应用最常见、也最该省电的状态。
+    const MIN_FLUSH_MS = 16
     const flushWrites = (): void => {
       writeRaf = 0
       if (!pendingWrites.length) return
+      const now = performance.now()
+      if (now - lastFlush < MIN_FLUSH_MS) {
+        // 离上次写太近 → 这一帧不写，攒着，下一帧再来（数据不丢，只是晚一帧）
+        writeRaf = requestAnimationFrame(flushWrites)
+        return
+      }
+      lastFlush = now
       const chunk = pendingWrites.join('')
       pendingWrites = []
       term.write(chunk)

@@ -60,7 +60,13 @@ exec /usr/bin/open "$@"
   }
 }
 
-// 监听待打开队列：有新 URL 就通知渲染层在画板浏览器打开
+// 监听待打开队列：有新 URL 就通知渲染层在画板浏览器打开。
+//
+// **改成事件驱动了。** 原来是每 400ms `statSync` 一次，也就是每小时 9000 次系统调用、
+// 每秒 2.5 次把 CPU 从深睡里叫起来 —— 而且应用完全空闲、窗口在后台时照跑。
+// 这个队列一天可能就用几次（终端里 CLI 调 `open <url>` 才写），拿常驻轮询换它不划算：
+// 空闲功耗看的不是 CPU 时间，是唤醒频次。
+// fs.watch 在没人写文件时零唤醒；watch 起不来（某些文件系统不支持）才退回轮询。
 function watchUrlQueue(): void {
   const file = urlQueueFile()
   try {
@@ -69,11 +75,12 @@ function watchUrlQueue(): void {
     return
   }
   let last = 0
-  setInterval(() => {
+
+  const drain = (): void => {
     try {
       const st = fs.statSync(file)
       if (st.size <= last) {
-        if (st.size < last) last = 0
+        if (st.size < last) last = 0 // 被清空/换了新文件 → 从头读
         return
       }
       const fd = fs.openSync(file, 'r')
@@ -89,7 +96,30 @@ function watchUrlQueue(): void {
     } catch {
       /* 文件还没建/被清空，忽略 */
     }
-  }, 400)
+  }
+
+  try {
+    // 一次写入可能触发多个事件（rename + change），30ms 合并掉，免得同一批 URL 读两遍
+    let t: ReturnType<typeof setTimeout> | null = null
+    const w = fs.watch(file, () => {
+      if (t) clearTimeout(t)
+      t = setTimeout(() => {
+        t = null
+        drain()
+      }, 30)
+    })
+    w.on('error', () => {
+      // watch 中途失效（文件被删/替换）→ 退回轮询，别让这个功能整体失灵
+      try {
+        w.close()
+      } catch {
+        /* 已经关了 */
+      }
+      setInterval(drain, 400)
+    })
+  } catch {
+    setInterval(drain, 400) // 文件系统不支持 watch
+  }
 }
 
 // 判断哪些 shell 进程"忙"：一次性取系统所有进程的父 PID，
