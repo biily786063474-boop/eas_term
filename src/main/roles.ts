@@ -29,6 +29,35 @@ const file = (): string => path.join(os.homedir(), '.eas', 'roles.json')
  */
 export const BUILTIN_ROLES: AgentRole[] = [
   {
+    // 和下面 scout→builder→inspector 那条「分三次会话接力」的序列不是一回事——
+    // 这个角色是那条序列的**替代品**：一个人在一条会话里从头走到尾，
+    // 用外部方法论(obra/superpowers)的纪律把「一个人干全部」这件事的风险摁住。
+    // 放在数组最前面：新装用户看到的第一个选项就是「要不要一杆到底」。
+    id: 'e2e',
+    name: '全流程',
+    desc: '0→1 生产级应用，一条会话走完调研到验收；方法论对齐 GitHub obra/superpowers',
+    group: 'main',
+    color: '#fb923c',
+    kind: 'auto',
+    model: { claude: 'opus' },
+    effort: { claude: 'high', codex: 'high' },
+    tools: {},
+    contract: [
+      '你这一轮的职责是把一个想法从 0 做到 1，做成生产级应用——不是「调研」「实现」「审查」分三次会话，',
+      '是你一个人在这一条会话里从头走到尾，但纪律不能因为省了交接就松。',
+      '方法论对齐 GitHub obra/superpowers 那套：',
+      '1. 先把需求问清楚、写成 spec，分段给用户看、等他确认，再动手——不要一上来就写代码。',
+      '2. spec 定下来后先写实施计划，再开工，别边写边想。',
+      '3. 严格 TDD：先写一个会失败的测试，再写让它通过的代码。代码写在测试前面的话，删掉重来——这条最核心，不是可选项。',
+      '4. 排障走「先复现、再定位、再修」，不要靠猜改代码。',
+      '5. 任务里有能拆开、互不依赖的部分，用 Agent 工具分给子任务并行做，不要自己从头串到尾。',
+      '完成判据：跑得起来、测试是绿的、UI/交互类改动亲眼验证过效果——代码改了不算做完了。',
+      '如果这条会话是 Claude Code、且还没装 superpowers 插件：找合适的时机告诉用户一次就够，',
+      '官方市场安装命令是 `/plugin install superpowers@claude-plugins-official`，这行要用户自己在这条会话里敲、自己确认，不要替他自动执行。',
+      '不是 Claude Code（比如这条会话用的是 Codex）时，插件那件事不用管，上面 1-5 条纪律照样是硬性的——那是方法论本身，不依赖某个具体工具装没装。'
+    ].join('\n')
+  },
+  {
     id: 'scout',
     name: '勘探员',
     desc: '前期调研 + 架构，只读不写代码',
@@ -213,10 +242,35 @@ function sanitize(raw: unknown): AgentRole[] {
   return out
 }
 
+/**
+ * 把「存档里没有、但当前版本内置」的角色补进来。
+ *
+ * 不这样做的话，新版本加一个内置角色（比如这次的「全流程」），对**已经存过档**的用户
+ * 是永远不可见的——load() 只要读到非空文件就直接用它，BUILTIN_ROLES 里新加的那条
+ * 无从触达。不能指望用户自己想起来去点「恢复内置」，那等于新功能默认对老用户隐藏。
+ *
+ * 只追加、不改已有项的顺序和内容：新角色统一接在数组末尾，然后立刻写回磁盘一次。
+ * 关键在这个「写回」——之后每次 load() 读到的就是包含新角色的那份存档，
+ * missing 算出来是空的，直接原样返回，不会再重新计算出别的位置。
+ * 用户在「管理角色」里怎么拖过的顺序，也不会被这一步打乱。
+ */
+function reconcileBuiltins(saved: AgentRole[]): AgentRole[] {
+  const have = new Set(saved.map((r) => r.id))
+  const missing = BUILTIN_ROLES.filter((r) => !have.has(r.id))
+  if (!missing.length) return saved
+  const next = [...saved, ...missing.map((r) => ({ ...r, builtin: true }))]
+  try {
+    save(next)
+  } catch {
+    /* 这次写不进去就先用着，下次启动再补 */
+  }
+  return next
+}
+
 function load(): AgentRole[] {
   try {
     const parsed = sanitize(JSON.parse(fs.readFileSync(file(), 'utf8')))
-    if (parsed.length) return parsed
+    if (parsed.length) return reconcileBuiltins(parsed)
   } catch {
     /* 没这个文件（第一次用）或读坏了 */
   }

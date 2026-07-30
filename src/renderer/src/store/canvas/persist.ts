@@ -80,6 +80,13 @@ export function sanitizeViewport(raw: unknown): CanvasViewport {
 // 迁移旧 agent 格式:接 Codex 时 model/effort 从「字符串」改成「按 agent 分的对象」{[kind]:值}。
 // 旧存档里的字符串(如 model:'opus')新代码读 agent.model?.[kind] 得 undefined → 回落默认,导致
 // 「重启不记忆思考/模型」。这里按 agent.kind 把字符串转成对象,让旧选择恢复。
+//
+// **这个函数早于角色系统。** 它写于「接 Codex」那一阶段,当时 NodeAgent 只有
+// kind/model/effort 三个字段;后来角色系统加了 roleId 和 session,但没人回来
+// 补这里 —— 于是每次画布落盘再读回(重启、甚至只是失焦触发的防抖保存),
+// 这两个字段被原样吃掉。表现就是「选好的角色重启后弹回无角色」,
+// 而且「回溯上次会话」也跟着失效(session 没了,回溯只能靠 CLI 自己的 -c/--resume --last,
+// 会在同项目多个终端间互相抢)。这是真会发生的数据丢失,不是显示问题。
 export function migrateAgent(raw: unknown): NodeAgent | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const a = raw as Record<string, unknown>
@@ -90,7 +97,13 @@ export function migrateAgent(raw: unknown): NodeAgent | undefined {
       : v && typeof v === 'object'
         ? (v as Partial<Record<'claude' | 'codex', string>>)
         : undefined
-  return { kind, model: toRec(a.model), effort: toRec(a.effort) }
+  return {
+    kind,
+    model: toRec(a.model),
+    effort: toRec(a.effort),
+    session: toRec(a.session),
+    roleId: typeof a.roleId === 'string' ? a.roleId : undefined
+  }
 }
 
 export function sanitizeNode(raw: unknown): CanvasNode | null {
