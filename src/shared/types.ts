@@ -53,6 +53,12 @@ export interface WikiStatus {
   /** 收件箱里最早那份放了多少天 */
   oldestInboxDays: number | null
   hasGit: boolean
+  /** 目录存在，但里面**看不到任何知识库该有的东西**（index.md / CLAUDE.md / 任一顶层目录）。
+   *  用来区分两件长得一样但原因完全不同的事：
+   *    · 真的是个空库（刚建、还没往里放东西）—— 那至少有骨架文件
+   *    · 指错了目录、或目录读不出来（网络卷没权限、挂载失效）—— 骨架也看不到
+   *  以前这两种都显示成「空知识库」，用户会以为文件被删了。真实踩过一次。 */
+  looksEmpty: boolean
 }
 
 export interface WikiInboxItem {

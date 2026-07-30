@@ -17,7 +17,9 @@ import os from 'os'
 import path from 'path'
 
 import type { RulesStatus, Footprint } from '../shared/types'
-import { wikiPath } from './wiki'
+// 只从 wiki/paths 取（它是叶子模块，不反向依赖这里）——
+// 从 './wiki' 取会和下面 wiki/index 调 syncRules 形成循环依赖
+import { inboxOf, sourcesOf, wikiPath } from './wiki/paths'
 import { mcpConfigStatus } from './mcpBridge'
 
 const BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
@@ -99,7 +101,7 @@ description: 用户的个人知识库（一个 markdown 文件夹）。当用户
 ## 硬规矩
 
 - 索引里没有相关内容 → **直说没有**。不要用知识库里不存在的内容假装引用。
-- \`素材/\` 和 \`00-收件箱/\` 里的原始文件**只读**：可以移动、可以重命名，
+- \`${sourcesOf(kb)}/\` 和 \`${inboxOf(kb)}/\` 里的原始文件**只读**：可以移动、可以重命名，
   绝不修改内容、绝不删除。那是用户的真相来源。
 - 每篇笔记必须有 front-matter 的 \`summary\` 和 \`tags\` —— 索引和检索全靠它们。
 - 笔记之间用 \`[[双链]]\` 互指。人物、方法、概念第一次出现就该有自己的页面。

@@ -224,7 +224,9 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       </div>
 
       {/* ── 未配置：一屏引导 ── */}
-      {!st?.configured || !st.exists ? (
+      {/* looksEmpty 也走引导页：那种状态下用户需要的是「重新指向 / 换个位置」这两个按钮，
+          而不是一棵空树。显示空树等于让他自己去猜文件哪儿去了。 */}
+      {!st?.configured || !st.exists || st.looksEmpty ? (
         <div className="wk-setup">
           <div className="wk-setup-icon">
             <SparkleIcon size={18} />
@@ -241,6 +243,18 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           </p>
           {st?.configured && !st.exists && (
             <div className="wk-warn">上次设的位置找不到了（{st.path}）—— 可能被移走或网络盘没挂上。</div>
+          )}
+          {/* 目录在、但骨架一个都读不到。这种情况以前会显示成一个正常的空知识库，
+              人会以为文件被删了 —— 必须把「可能是指错了 / 读不出来」摆到台面上。 */}
+          {st?.configured && st.exists && st.looksEmpty && (
+            <div className="wk-warn">
+              这个目录里看不到知识库该有的东西（{st.path}）。
+              <br />
+              可能是指错了位置，也可能是这个目录读不出来 —— 放在网络盘或外置盘上时，
+              系统可能没给本应用读取权限（系统设置 → 隐私与安全性 → 文件与文件夹）。
+              <br />
+              <b>先去访达里确认那个目录下有没有文件，再决定重新指向还是修权限。</b>
+            </div>
           )}
           <button className="wk-primary" disabled={!!busy} onClick={() => void setup(false)}>
             {busy || '建在建议位置'}

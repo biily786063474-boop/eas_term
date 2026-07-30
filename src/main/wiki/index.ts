@@ -28,6 +28,9 @@ import type {
 import {
   INBOX,
   cfgFile,
+  inboxOf,
+  sourcesOf,
+  transcriptsOf,
   SOURCES,
   TRANSCRIPTS,
   WIKI_DIRS,
@@ -40,6 +43,10 @@ import {
 import { initWiki, uniqueName } from './schema'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotes } from './scan'
+// 规则里嵌着知识库路径和目录名。**改位置必须同步，不能等调用方自觉** ——
+// 界面上那个「换个位置」按钮记得调，但任何别的调用点（MCP、以后新写的流程）
+// 一漏就是 agent 拿着旧路径去读，读不到还不报错。放在这一层，谁调都跑得到。
+import { syncRules } from '../agentRules'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
@@ -271,7 +278,10 @@ export function registerWikiHandlers(): void {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     const ym = new Date().toISOString().slice(0, 7)
-    const destDir = path.join(root, '素材', ym)
+    // 目录名按这个库盘上的实际情况取（新库英文、老库中文），不能写死
+    const inbox = inboxOf(root)
+    const sources = sourcesOf(root)
+    const destDir = path.join(root, sources, ym)
     const moved: { from: string; to: string }[] = []
     const failed: { name: string; error: string }[] = []
     try {
@@ -282,7 +292,7 @@ export function registerWikiHandlers(): void {
     for (const it of items ?? []) {
       const name = path.basename(String(it?.name ?? ''))
       if (!name) continue
-      const src = path.join(root, INBOX, name)
+      const src = path.join(root, inbox, name)
       try {
         if (!fs.existsSync(src)) {
           failed.push({ name, error: '收件箱里没有这个文件' })
@@ -292,12 +302,12 @@ export function registerWikiHandlers(): void {
         const want = path.basename(String(it.rename || name))
         const finalName = uniqueName(destDir, want)
         fs.renameSync(src, path.join(destDir, finalName))
-        moved.push({ from: `${INBOX}/${name}`, to: `素材/${ym}/${finalName}` })
+        moved.push({ from: `${inbox}/${name}`, to: `${sources}/${ym}/${finalName}` })
         // 逐字稿跟着走：它是这份素材的一部分，留在收件箱里会变成孤儿
         try {
-          const tSrc = path.join(root, INBOX, TRANSCRIPTS, name + '.txt')
+          const tSrc = path.join(root, inbox, transcriptsOf(path.join(root, inbox)), name + '.txt')
           if (fs.existsSync(tSrc)) {
-            const tDir = path.join(destDir, '逐字稿')
+            const tDir = path.join(destDir, 'transcripts')
             fs.mkdirSync(tDir, { recursive: true })
             fs.renameSync(tSrc, path.join(tDir, uniqueName(tDir, finalName + '.txt')))
           }
@@ -322,10 +332,12 @@ export function registerWikiHandlers(): void {
     return r.canceled ? null : (r.filePaths[0] ?? null)
   })
 
-  /** 默认建议位置。绝不放 app 内部 —— 卸载或升级会连人带货一起没 */
-  ipcMain.handle('wiki:suggestPath', () =>
-    path.join(app.getPath('documents'), 'Eas 知识库')
-  )
+  /** 默认建议位置。两条硬约束：
+   *  1. 绝不放 app 内部 —— 卸载或升级会连人带货一起没
+   *  2. **不带空格、不带中文** —— 这个路径会被拼进 shell 命令、agent 规则、脚本参数，
+   *     带空格就得处处记得加引号，漏一处就出错（本项目被 `vibe coding` 那个空格
+   *     坑掉过 node-pty 编译）。老的默认值是「Eas 知识库」，正是空格的来源。 */
+  ipcMain.handle('wiki:suggestPath', () => path.join(app.getPath('documents'), 'eas-wiki'))
 
   /** 收件箱的「＋」入口：多选文件。拖拽之外必须有这个——不习惯拖的人也得进得来 */
   ipcMain.handle('wiki:pickFiles', async (): Promise<string[]> => {
@@ -342,6 +354,7 @@ export function registerWikiHandlers(): void {
     try {
       const r = initWiki(root)
       setWikiPath(root)
+      syncRules() // 建完立刻同步：先装规则后建库的话规则里是空路径，且失效不报错
       return { ok: true, ...r, status: wikiStatus() }
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -351,6 +364,7 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:forget', () => {
     // 只忘掉位置，不删任何文件 —— 用户的笔记不该因为一次点击消失
     setWikiPath(null)
+    syncRules() // 解绑后规则里也不该再留着知识库那一段
     return wikiStatus()
   })
 
@@ -368,7 +382,7 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:addToInbox', async (_e, files: string[], move = false) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
-    const dir = path.join(root, INBOX)
+    const dir = path.join(root, inboxOf(root))
     try {
       fs.mkdirSync(dir, { recursive: true })
     } catch {
@@ -422,7 +436,7 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:inbox', (): WikiInboxItem[] => {
     const root = wikiPath()
     if (!root) return []
-    const dir = path.join(root, INBOX)
+    const dir = path.join(root, inboxOf(root))
     try {
       return fs
         .readdirSync(dir, { withFileTypes: true })
@@ -494,7 +508,17 @@ export function registerWikiHandlers(): void {
   /** 换位置：只改指向，**不搬文件也不删文件**——搬家的决定该由用户在访达里做 */
   ipcMain.handle('wiki:setPath', (_e, root: string) => {
     if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
+    // **必须拦住不存在的目录。** 以前这里照收，于是绑到一个打错的路径上之后，
+    // 界面显示的是「知识库是空的」——和「文件真的被删了」长得一模一样。
+    // 真实踩过：路径少了一个空格，人以为整个知识库丢了。
+    // 建新库走 wiki:init（它负责创建），这个接口只管「指向一个已经存在的库」。
+    try {
+      if (!fs.statSync(root).isDirectory()) return { ok: false, error: '这不是一个文件夹' }
+    } catch {
+      return { ok: false, error: `这个路径不存在：${root}` }
+    }
     setWikiPath(root)
+    syncRules() // 路径变了，agent 侧的规则跟着重写
     return { ok: true, status: wikiStatus() }
   })
 
@@ -516,7 +540,8 @@ export function registerWikiHandlers(): void {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     try {
-      const dir = path.join(root, INBOX, TRANSCRIPTS)
+      const inbox = inboxOf(root)
+      const dir = path.join(root, inbox, transcriptsOf(path.join(root, inbox)))
       fs.mkdirSync(dir, { recursive: true })
       const f = path.join(dir, path.basename(String(mediaName)) + '.txt')
       fs.writeFileSync(f, text)
@@ -531,7 +556,11 @@ export function registerWikiHandlers(): void {
     const root = wikiPath()
     if (!root) return null
     try {
-      return fs.readFileSync(path.join(root, INBOX, TRANSCRIPTS, path.basename(String(mediaName)) + '.txt'), 'utf8')
+      const inbox = inboxOf(root)
+      return fs.readFileSync(
+        path.join(root, inbox, transcriptsOf(path.join(root, inbox)), path.basename(String(mediaName)) + '.txt'),
+        'utf8'
+      )
     } catch {
       return null
     }

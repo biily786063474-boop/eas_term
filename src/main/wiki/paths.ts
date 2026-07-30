@@ -11,13 +11,67 @@ import type { WikiStatus } from '../../shared/types'
 /** 记「库在哪」的配置文件。统计字段（added 等）也放这儿 */
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
 
-/** 顶层目录。刻意只有六个 —— 原文的建议是「别过度设计」，不够用了再加比一开始铺二十个强。 */
-export const WIKI_DIRS = ['00-收件箱', '人物', '方法', '领域', '项目', '素材', '_模板']
-export const INBOX = WIKI_DIRS[0]
+/**
+ * 顶层目录。刻意只有七个 —— 原文的建议是「别过度设计」，不够用了再加比一开始铺二十个强。
+ *
+ * **全英文、无空格。** 这些名字会被拼进 shell 命令、agent 的规则文本、URL 和脚本参数，
+ * 每多一个空格就多一处引号漏了就出错的地方 —— 本项目自己就被路径里的一个空格
+ * 坑掉过一次 node-pty 编译。中文目录名本身不出错，但英文让 agent 引用时不用纠结引号。
+ */
+export const WIKI_DIRS = ['00-inbox', 'people', 'methods', 'domains', 'projects', 'sources', '_templates']
+
 /** 收件箱里记「这份文件原来在哪」的映射表。点号开头 → 访达里不显示，也不会被数进徽章 */
 export const SOURCES = '.eas-sources.json'
+
+/**
+ * 老库兼容表：英文名 → 曾经用的中文名。
+ *
+ * 改名之前建的库（目录是中文的）直接指过来也必须能用 —— 否则用户换个版本
+ * 就发现「知识库空了」，而文件明明还在盘上。这个坑刚踩过一次，不能靠改名再造一次。
+ * 判据是**盘上有哪个用哪个**，不做自动搬迁：搬用户的文件该由用户在访达里决定。
+ */
+const LEGACY: Record<string, string> = {
+  '00-inbox': '00-收件箱',
+  people: '人物',
+  methods: '方法',
+  domains: '领域',
+  projects: '项目',
+  sources: '素材',
+  _templates: '_模板'
+}
+
+/** 这个库在盘上实际用的目录名：优先英文，老库回落中文 */
+export function dirOf(root: string, key: string): string {
+  const legacy = LEGACY[key]
+  if (!legacy) return key
+  try {
+    if (!fs.existsSync(path.join(root, key)) && fs.existsSync(path.join(root, legacy))) return legacy
+  } catch {
+    /* 读不到就按新名走 */
+  }
+  return key
+}
+
+export const INBOX = '00-inbox'
+export const inboxOf = (root: string): string => dirOf(root, INBOX)
+export const sourcesOf = (root: string): string => dirOf(root, 'sources')
+
+/** 原始素材区（收件箱 + 素材）：不是笔记，不进索引也不算反链。含老库中文名 */
+const RAW_DIRS = new Set(['00-inbox', '00-收件箱', 'sources', '素材'])
+export const isRawDir = (rel: string): boolean => RAW_DIRS.has(rel)
+
 /** 收件箱里存逐字稿的隐藏目录（点号开头：访达看不见、不进徽章计数） */
-export const TRANSCRIPTS = '.逐字稿'
+export const TRANSCRIPTS = '.transcripts'
+/** 老库的逐字稿目录叫 .逐字稿，同样是有哪个用哪个 */
+export function transcriptsOf(inboxAbs: string): string {
+  try {
+    if (!fs.existsSync(path.join(inboxAbs, TRANSCRIPTS)) && fs.existsSync(path.join(inboxAbs, '.逐字稿')))
+      return '.逐字稿'
+  } catch {
+    /* 按新名走 */
+  }
+  return TRANSCRIPTS
+}
 
 export function wikiPath(): string | null {
   try {
@@ -56,7 +110,7 @@ export function walkNotes(root: string, rel = '', out: string[] = [], budget = {
     if (d.name.startsWith('.')) continue
     const r = rel ? path.join(rel, d.name) : d.name
     if (d.isDirectory()) {
-      if (r === INBOX || r === '素材') continue // 原始素材不是笔记，不进索引也不算反链
+      if (isRawDir(r)) continue // 原始素材不是笔记，不进索引也不算反链（含老库的中文目录名）
       walkNotes(root, r, out, budget)
     } else if (d.isFile() && isMd(d.name)) {
       // CLAUDE.md / AGENTS.md 是给 agent 看的**约定文件**，不是笔记。
@@ -68,16 +122,34 @@ export function walkNotes(root: string, rel = '', out: string[] = [], budget = {
   return out
 }
 
+/** 这个目录里有没有知识库该有的东西。判据取最宽松的一组：
+ *  骨架文件或任一顶层目录（含老库中文名）存在，就认。全都看不到才叫「不像」。 */
+function looksLikeWiki(root: string): boolean {
+  try {
+    for (const f of ['index.md', 'CLAUDE.md', 'AGENTS.md', 'log.md']) {
+      if (fs.existsSync(path.join(root, f))) return true
+    }
+    for (const key of WIKI_DIRS) {
+      if (fs.existsSync(path.join(root, dirOf(root, key)))) return true
+    }
+  } catch {
+    /* 读不到就是不像 */
+  }
+  return false
+}
+
 export function wikiStatus(): WikiStatus {
   const p = wikiPath()
-  if (!p) return { configured: false, path: null, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false }
+  if (!p)
+    return { configured: false, path: null, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false }
   let exists = false
   try {
     exists = fs.statSync(p).isDirectory()
   } catch {
     exists = false
   }
-  if (!exists) return { configured: true, path: p, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false }
+  if (!exists)
+    return { configured: true, path: p, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false }
 
   const notes = walkNotes(p).length
   // 收件箱压力：不只给数量，还给「最早一份放了多久」——
@@ -85,12 +157,13 @@ export function wikiStatus(): WikiStatus {
   let inbox = 0
   let oldest = Infinity
   try {
-    for (const d of fs.readdirSync(path.join(p, INBOX), { withFileTypes: true })) {
+    const inboxDir = inboxOf(p) // 别叫 inbox —— 上面那个 inbox 是计数器
+    for (const d of fs.readdirSync(path.join(p, inboxDir), { withFileTypes: true })) {
       // 和 wiki:inbox 的列表口径必须一致，否则徽章显示 6、点开只有 3 个
       if (d.name.startsWith('.')) continue
       inbox++
       try {
-        const st = fs.statSync(path.join(p, INBOX, d.name))
+        const st = fs.statSync(path.join(p, inboxDir, d.name))
         oldest = Math.min(oldest, st.birthtimeMs || st.mtimeMs)
       } catch {
         /* 读不到就算了 */
@@ -106,6 +179,9 @@ export function wikiStatus(): WikiStatus {
     notes,
     inbox,
     oldestInboxDays: inbox && Number.isFinite(oldest) ? Math.floor((Date.now() - oldest) / 86400000) : null,
-    hasGit: fs.existsSync(path.join(p, '.git'))
+    hasGit: fs.existsSync(path.join(p, '.git')),
+    // 骨架一个都看不到 → 这不像一个知识库。要么指错了目录，要么这个目录读不出来
+    // （网络卷没权限、挂载失效）。和「刚建好的空库」区分开 —— 后者至少有 index.md。
+    looksEmpty: !looksLikeWiki(p)
   }
 }
