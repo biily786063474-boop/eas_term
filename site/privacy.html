@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>隐私与数据说明 · Eas-Term</title>
+    <meta
+      name="description"
+      content="Eas-Term 会在你的机器上写哪些文件、读哪些数据、什么时候联网，以及怎么全部撤销。逐条对照代码写的。"
+    />
+    <link rel="icon" href="assets/icon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 这一页是长文，正文排版比落地页更紧凑一些 */
+      .pv-body { max-width: 780px; }
+      .pv-body h2 {
+        margin: 48px 0 14px;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+      .pv-body h3 {
+        margin: 30px 0 10px;
+        font-size: 16px;
+        color: var(--fg, #e8eaf2);
+      }
+      .pv-body p, .pv-body li { line-height: 1.75; }
+      .pv-body ul { margin: 10px 0 10px 20px; }
+      .pv-body li { margin: 5px 0; }
+      .pv-body code {
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 0.9em;
+        word-break: break-all;
+      }
+      .pv-tldr {
+        margin: 26px 0 8px;
+        padding: 18px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .pv-tldr ul { margin-bottom: 0; }
+      /* 需要用户特别留意的段落：左侧一道竖线，不用红色吓人 */
+      .pv-flag {
+        margin: 16px 0;
+        padding: 12px 16px;
+        border-left: 3px solid var(--accent, #7aa2f7);
+        background: rgba(122, 162, 247, 0.07);
+        border-radius: 0 8px 8px 0;
+      }
+      .pv-table-wrap { overflow-x: auto; margin: 16px 0; }
+      .pv-body table {
+        width: 100%;
+        min-width: 560px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      .pv-body th, .pv-body td {
+        padding: 9px 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        vertical-align: top;
+      }
+      .pv-body th {
+        font-weight: 600;
+        color: var(--fg, #e8eaf2);
+        border-bottom-color: rgba(255, 255, 255, 0.18);
+      }
+      .pv-updated { color: var(--fg-dim, #9aa0b4); font-size: 14px; }
+      .pv-toc {
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+      }
+      .pv-toc a { font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="index.html">
+          <img src="assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="index.html#scenes">核心场景</a>
+          <a href="index.html#features">能力清单</a>
+          <a href="index.html#ai">AI 接入</a>
+          <a class="nav-cta" href="download.html">下载</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">隐私与数据</p>
+          <h1 class="section-title">它在你机器上做了什么</h1>
+          <p class="lede">
+            Eas-Term 是装在你自己电脑上的桌面软件，没有账号、没有服务器、不收集任何数据。
+            但它确实会往你的机器上写文件，也会读一些你可能没想到的东西 —— 这一页把每一条都列出来，
+            包括怎么全部撤销。
+          </p>
+          <ul class="pv-toc">
+            <li><a href="#tldr">一句话版本</a></li>
+            <li><a href="#write">写了哪些文件</a></li>
+            <li><a href="#read">读了哪些数据</a></li>
+            <li><a href="#net">什么时候联网</a></li>
+            <li><a href="#wiki">知识库</a></li>
+            <li><a href="#voice">语音与转录</a></li>
+            <li><a href="#undo">怎么全部撤销</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top: 0">
+        <div class="wrap pv-body">
+          <h2 id="tldr">一句话版本</h2>
+          <div class="pv-tldr">
+            <ul>
+              <li><strong>没有账号，没有服务器，没有埋点。</strong>不生成任何设备标识或用户 ID，不做崩溃上报，不做使用统计。</li>
+              <li><strong>你的代码、笔记、录音、对话默认都不出这台电脑。</strong>唯一的例外是你主动点的那个「AI 简述」按钮（下面第 3 节写清楚了）。</li>
+              <li><strong>它会往你的 home 目录写东西</strong> —— 主要是让 Claude Code / Codex 认识这块画布。全部可以一键撤销，写之前都留了备份。</li>
+              <li><strong>有一处是不问自取的</strong>：把自己注册成 MCP 服务。这是唯一未经询问就动你全局配置的地方，我们把它单列出来说明。</li>
+            </ul>
+          </div>
+
+          <h2 id="write">一、它在你机器上写了哪些文件</h2>
+
+          <h3>1.1 把自己注册成 MCP 服务（唯一不问自取的一处）</h3>
+          <p>
+            为了让 Claude Code / Codex 能操控画布，软件启动时会往下面两个文件里加一条记录：
+          </p>
+          <ul>
+            <li><code>~/.claude.json</code> 的 <code>mcpServers["eas-term"]</code></li>
+            <li><code>~/.codex/config.toml</code> 的 <code>[mcp_servers.eas-term]</code></li>
+          </ul>
+          <div class="pv-flag">
+            <p>
+              <strong>这一步是静默的，没有弹窗问过你。</strong>我们认为这个设计是可以接受的，
+              前提是后面两条必须成立 —— 而它们确实成立：
+            </p>
+            <ul>
+              <li><strong>可见</strong>：软件里「扩展能力」面板列出了它写过的每一个位置。</li>
+              <li><strong>可撤</strong>：面板里点「移除」就干净卸掉，只删我们自己那一条，你原有的其它 MCP 配置一个字都不动。</li>
+              <li><strong>有备份</strong>：改写这两个文件之前会先存一份 <code>.eas-backup</code>。</li>
+              <li><strong>只在你已经装过对应 CLI 时才写</strong>：没装 Claude Code 就不碰 <code>~/.claude.json</code>，没有 <code>~/.codex</code> 目录就不碰 Codex 的配置。</li>
+            </ul>
+            <p style="margin-bottom: 0">
+              另外：<strong>通信端口和访问令牌不写进这些配置文件</strong>。它们只通过 Eas-Term 自己开出来的终端的环境变量传递，
+              所以那条配置本身不含任何机密，服务也只监听本机回环地址（<code>127.0.0.1</code>），不对外网开放。
+            </p>
+          </div>
+
+          <h3>1.2 使用指引（要你点「安装」才写）</h3>
+          <p>
+            第一次打开时会问你要不要装「使用指引」—— 一段告诉 AI「你运行在一块画布里、什么时候该把产出开成预览」的说明。
+            点了「安装」才会写，点「以后再说」或「永远不要提醒我」就什么都不发生。装的话写三个位置：
+          </p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>位置</th><th>内容</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>~/.claude/skills/eas-term/SKILL.md</code></td><td>画板操作指引全文</td></tr>
+                <tr><td><code>~/.codex/AGENTS.md</code></td><td>只写一小段路由（几百字），夹在 <code>eas-term:begin/end</code> 标记之间。标记之外你自己写的内容一个字不动</td></tr>
+                <tr><td><code>~/.eas/agent/canvas.md</code></td><td>指引正文，供 AI 需要时再读，避免长期占用上下文</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>面板里点「卸载」全部删掉，改写 <code>AGENTS.md</code> 前同样留 <code>.eas-backup</code>。</p>
+
+          <h3>1.3 「提交即复盘」钩子（默认关闭，要你手动开）</h3>
+          <p>
+            这是侵入性最强的一项，所以<strong>默认不装</strong>，必须你在「扩展能力」面板里主动点「开启」。
+            开启后会往 <code>~/.claude/settings.json</code> 的 <code>hooks.PostToolUse</code>
+            和 <code>~/.codex/hooks.json</code> 各加一条记录。
+          </p>
+          <div class="pv-flag">
+            <p><strong>关于触发频率，需要说得比「提交时触发」更准确：</strong></p>
+            <p>
+              它挂在 <code>Bash</code> 工具调用上，也就是说 —— <strong>你在任何项目里、每一次让 AI 跑 shell 命令，
+              都会启动一次我们的脚本</strong>，不限于 git 提交，不限于用 Eas-Term 的时候，直到你卸载它为止。
+            </p>
+            <p style="margin-bottom: 0">
+              实际上绝大多数情况它在几毫秒内就退出了：脚本第一件事是看这条命令里有没有 <code>git commit</code>，
+              没有就直接结束。但你有权知道它确实每次都被唤起了。
+            </p>
+          </div>
+          <p>确实是一次 git 提交时，它会做这些事：</p>
+          <ul>
+            <li><strong>读</strong>：这次提交的代码 diff（只看新增的行）、随包的名词词库、你自己的词库。</li>
+            <li><strong>写</strong>：项目内的 <code>docs/knowledge-data.json</code>（进度记录）和 <code>docs/knowledge-manual.html</code>（一份可以直接打开看的名词手册）。</li>
+            <li><strong>不联网</strong>：这个脚本里没有任何网络请求，你的代码不会因为它离开这台电脑。</li>
+          </ul>
+          <p>
+            <strong>会进入 AI 对话的只有一句话</strong>，形如「新收录了 3 个名词」或「发现 2 个没收录的术语」。
+            原始代码 diff 不会被塞进对话，因此也不会随对话上行到模型厂商。
+          </p>
+          <p>
+            <strong>关于花钱</strong>：扫描和生成手册是纯本地的，不消耗任何 token。
+            但「让 AI 补全术语解释」需要模型干活，那是要花你的钱的 —— 所以它是<strong>另一个独立开关，默认关</strong>。
+            装了钩子不等于同意花钱，这两件事我们特意分开了。
+          </p>
+
+          <h3>1.4 软件自己的配置目录 <code>~/.eas/</code></h3>
+          <ul>
+            <li><code>dict-user.json</code> —— 你自建的名词词条</li>
+            <li><code>dict-pending.json</code> —— 钩子扫出来的待补全术语（含项目文件夹名）</li>
+            <li><code>dict-sink.json</code> —— 上面说的那个补全开关</li>
+            <li><code>roles.json</code> —— AI 角色配置</li>
+            <li><code>agent/canvas.md</code> —— 见 1.2</li>
+          </ul>
+
+          <h3>1.5 你的项目文件夹里</h3>
+          <p>软件能改你文件的范围是有明确边界的：<strong>只有你自己在侧栏加过的项目文件夹，和你自己指定的知识库文件夹。</strong>其它任何位置（包括你的 home 目录、系统目录、别的项目的兄弟目录）一律拒绝。</p>
+          <p>这个边界是按真实路径判定的（会解析软链接），所以在项目里放一个指向别处的快捷方式也绕不过去。</p>
+          <div class="pv-flag" style="margin-bottom: 0">
+            <p style="margin-bottom: 0">
+              <strong>删除文件一律是「移到废纸篓」，不是永久删除</strong>（用系统的废纸篓，你随时能捡回来）。
+              软件里没有任何一处会真正抹掉你的文件。
+            </p>
+          </div>
+
+          <h2 id="read">二、它读了你哪些数据</h2>
+          <p>下面这些都是<strong>本地读取、用完即弃、不上传、不缓存到磁盘</strong>，但因为不那么显而易见，必须列出来。</p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>读什么</th><th>用来干嘛</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>~/.claude/projects/**/*.jsonl</code><br />（你和 Claude Code 的完整对话记录）</td>
+                  <td>软件里的「对话导航」视图 —— 让你能翻回去看这个项目里聊过什么。包括你发过的图片。</td>
+                </tr>
+                <tr>
+                  <td><code>~/.codex/sessions/**/*.jsonl</code> 的文件头</td>
+                  <td>只读开头几 KB，取出会话 id，用来把终端和它自己那条会话绑定上（这样「回溯上次对话」不会串到别的终端去）</td>
+                </tr>
+                <tr>
+                  <td><code>~/.codex/config.toml</code></td>
+                  <td>列出你配了哪些 MCP 服务，好让你在角色设置里选择禁用其中某些</td>
+                </tr>
+                <tr>
+                  <td>剪贴板</td>
+                  <td>只在你按粘贴的时候读。没有任何后台或定时的剪贴板读取。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            第一条值得强调一下：<strong>本软件会读取你与 AI 的历史对话原文。</strong>
+            这些内容一个字节都不会离开你的电脑，我们也不写副本 —— 但你应该知道这件事，而不是哪天自己发现。
+          </p>
+
+          <h2 id="net">三、它什么时候联网</h2>
+          <p>软件本身<strong>没有更新检查、没有崩溃上报、没有使用统计</strong>。会产生网络请求的只有这几种情况：</p>
+          <div class="pv-table-wrap">
+            <table>
+              <thead>
+                <tr><th>什么时候</th><th>连去哪</th><th>传了什么</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>你第一次点麦克风、且语音模型还没下载</td>
+                  <td><code>hf-mirror.com</code></td>
+                  <td>只下载模型文件，不上传任何东西。不用语音就永远不会发生。</td>
+                </tr>
+                <tr>
+                  <td>你打开「笔纵画板」相关面板、且本机没装它</td>
+                  <td><code>bzone.biily.top</code></td>
+                  <td>取一个安装包下载地址。不发送你的任何信息。</td>
+                </tr>
+                <tr>
+                  <td>你在画布里开浏览器节点</td>
+                  <td>你输入的网址</td>
+                  <td>就是个普通的 Chromium 浏览器，和你平时上网一样。</td>
+                </tr>
+                <tr>
+                  <td><strong>你点了 Git 面板某条提交的「AI 简述」</strong></td>
+                  <td>你自己的 Claude CLI → Anthropic</td>
+                  <td><strong>那次提交的代码 diff（前 6000 字）</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pv-flag">
+            <p style="margin-bottom: 0">
+              <strong>最后一条是唯一会把你的内容主动送出本机的功能</strong>，所以单独说明：它走的是你自己已经登录好的
+              Claude 命令行工具，等同于你自己把这段 diff 贴给 Claude。我们不经手、不留存、不做中转，
+              数据到了那边之后适用 Anthropic 的条款。不点这个按钮就不会发生。
+            </p>
+          </div>
+
+          <h2 id="wiki">四、知识库：AI 会动你的文件吗</h2>
+          <p>会，但范围很窄，而且每一次都要你点头。</p>
+          <ul>
+            <li>
+              <strong>只会「移动」，不会删除或改写你的原件。</strong>把收件箱里的素材搬进 <code>sources/年月/</code> 归档，
+              重名自动加后缀，不覆盖。
+            </li>
+            <li>
+              <strong>必须你逐条确认。</strong>AI 只能提出一份归档计划，软件会停下来等你在界面上过目、
+              你点了同意才真的动手，你取消就什么都不做。
+            </li>
+            <li>
+              <strong>可以回滚。</strong>如果你点过「用 git 管起来」，每批归档都是一次提交，能整体撤销；
+              回滚之前还会先把当前状态提交一次，不会把你新写的东西弄丢。这个 git 仓库<strong>不会自动创建</strong>，
+              要你主动点。
+            </li>
+            <li>
+              <strong>往收件箱里放东西默认是复制不是移动</strong>，你原来那份文件还在原地。
+            </li>
+            <li>
+              <strong>知识库内容怎么给到 AI</strong>：只通过软件内置的一个专用工具，而且这个工具只在 Eas-Term
+              自己开出来的终端里可见。你在系统终端或别的软件里起 Claude，它连这个工具的存在都发现不了，
+              更读不到你的知识库。
+            </li>
+            <li>不想用了，「解除绑定」只是让软件忘掉这个位置，<strong>不删你任何文件</strong>。</li>
+          </ul>
+
+          <h2 id="voice">五、语音输入与音视频转录</h2>
+          <p>这一块最容易被误解，所以说细一点。</p>
+          <ul>
+            <li>
+              <strong>识别全程在你的电脑上跑</strong>，用的是随软件附带的开源模型。
+              <strong>音频不上传、不落盘</strong> —— 录音只在内存里存在几秒，识别完就丢，只有识别出来的文字留下。
+            </li>
+            <li>
+              <strong>但第一次用要联网。</strong>模型文件（约 300MB）不随安装包附带，第一次点麦克风时才下载。
+              下完之后就完全离线了。「本地识别」和「完全不联网」是两件事，这里说清楚。
+            </li>
+            <li>
+              <strong>往知识库收件箱里放音视频会自动转录。</strong>放进去就开始跑，不会额外问你。
+              同样是本机识别、不花钱、不联网，逐字稿存在收件箱下的一个隐藏文件夹里，不会混进你的笔记正文。
+              也就是说 —— 你拖进去的会议录音，软件确实把它转成文字存下来了，但那份文字只在你自己的硬盘上。
+            </li>
+            <li>麦克风权限走 macOS 系统授权，你可以随时在系统设置里收回。</li>
+          </ul>
+
+          <h2 id="undo">六、怎么把它写的东西全部撤销</h2>
+          <p>
+            软件里有个「扩展能力」面板（标题栏上那个），列出了它在你机器上写过的<strong>每一个位置</strong>，
+            每一项旁边都有卸载按钮：
+          </p>
+          <ul>
+            <li><strong>使用指引</strong> —— 点「卸载」，删掉 1.2 说的那三个文件</li>
+            <li><strong>MCP 接入</strong> —— 点「移除」，从两个 CLI 配置里摘掉我们那一条</li>
+            <li><strong>提交即复盘钩子</strong> —— 点「关闭」，摘掉钩子记录</li>
+            <li><strong>知识库</strong> —— 显示当前位置，「解除绑定」不删文件</li>
+          </ul>
+          <p>
+            所有改写全局配置的操作都会先留一份 <code>.eas-backup</code>，实在不放心可以直接拿它覆盖回去。
+            剩下的就是删掉 <code>~/.eas/</code> 目录和应用本身。
+          </p>
+
+          <h2>七、关于这份说明</h2>
+          <p>
+            这一页是对着代码逐条核对写出来的，不是模板。如果你发现哪一条和软件的实际行为对不上，
+            那是我们的疏漏，请告诉我们 —— 软件是开源的，每一条都可以自己去代码里验证。
+          </p>
+          <p class="pv-updated">最后更新：2026 年 7 月 · 对应版本 0.2.8</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="页脚导航">
+          <a href="index.html#features">能力清单</a>
+          <a href="download.html">下载</a>
+          <a href="privacy.html">隐私与数据</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+  </body>
+</html>

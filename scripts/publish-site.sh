@@ -51,7 +51,7 @@ STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[
 # ── 网页 ────────────────────────────────────────────────────────────
 say "▸ 网页 → $WEB"
 ssh $HOST "mkdir -p $WEB/assets"
-for f in index.html download.html style.css; do
+for f in index.html download.html privacy.html style.css; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
@@ -153,7 +153,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /style.css; do
+for u in / /download.html /privacy.html /style.css; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

@@ -152,14 +152,20 @@ export function registerFsHandlers(): void {
     'fs:writeTextFile',
     async (_e, filePath: string, content: string): Promise<OpResult> => {
       try {
-        if (!path.isAbsolute(filePath)) return { ok: false, error: '需要绝对路径' }
-        const stat = await fs.promises.stat(filePath).catch(() => null)
+        // 和 rename/trash/mkdir 那几个走同一道边界：只能写项目根或知识库根之内。
+        // 漏了它的话，「所有文件写操作都限制在你自己加过的目录内」这句话就是假的——
+        // 这个 handler 面向的是同一个 preload，webview / MCP 场景都够得着它。
+        const g = guardPath(filePath)
+        // 这个场景（预览里点了「编辑」再保存）值得给条出路：用户多半是从终端链接点开了
+        // 项目外的文件，告诉他把那个文件夹加成项目就能编辑，比只说「不允许」有用
+        if (!g.ok) return { ok: false, error: g.error + '。把它所在的文件夹加成项目就能编辑' }
+        const stat = await fs.promises.stat(g.path).catch(() => null)
         if (stat && !stat.isFile()) return { ok: false, error: '目标不是文件' }
         // 只读时读的是前 2MB，写回会截断剩下的——这种文件一律不给存
         if (stat && stat.size > MAX_TEXT_BYTES) return { ok: false, error: '文件超过 2MB，未开放编辑' }
-        const tmp = filePath + '.eas-tmp'
+        const tmp = g.path + '.eas-tmp'
         await fs.promises.writeFile(tmp, content, 'utf8')
-        await fs.promises.rename(tmp, filePath)
+        await fs.promises.rename(tmp, g.path)
         return { ok: true }
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) }
