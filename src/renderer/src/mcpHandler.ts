@@ -231,16 +231,28 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return { notified: flagged > 0, message: msg }
   }
 
-  // 以下工具都要落到某个 Frame
-  const loc = resolveFrame(ctx)
-  if (!loc) throw new Error('画布里还没有 Frame，无法打开预览')
-
-  if (tool === 'canvas_open_url') {
-    const url = String(args.url ?? '')
-    if (!/^https?:\/\//i.test(url)) throw new Error('只接受 http(s) 网址')
-    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
-    s.addWebNode(loc.frameId, url)
-    return { opened: url, frameId: loc.frameId }
+  // ── 知识库查询：内容离开本机进程边界的唯一通道，见 preload wiki.query 的注释 ──
+  if (tool === 'wiki_query') {
+    const r = await window.api.wiki.query()
+    if (!r.configured) return { configured: false, hint: '用户还没配置知识库，不用做任何事，也别主动建议他去建一个' }
+    if (!r.exists || r.looksEmpty) {
+      return {
+        configured: true,
+        exists: r.exists,
+        looksEmpty: r.looksEmpty,
+        hint: r.looksEmpty
+          ? '目录存在但读不到里面的内容，可能是指错了位置，也可能是权限/挂载问题——别猜内容，直接告诉用户这个情况'
+          : '上次设的位置现在找不到了，可能被移走或网络盘没挂上'
+      }
+    }
+    return {
+      path: r.path,
+      dirs: r.dirs,
+      index: r.index,
+      hint:
+        'index 是全库摘要，挑 1-3 篇相关的用 Read 读那几篇原文，回答注明出处，答完调一次 wiki_log(action=query)。' +
+        '产出要带用户个人风格、或他问关于自己的问题时，先看 dirs.me（和 dirs.people 别混，那是他研究的别人）。'
+    }
   }
 
   // ── 知识库归档 ────────────────────────────────────────────────
@@ -308,29 +320,6 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return { moved: r.moved, failed: r.failed }
   }
 
-  if (tool === 'canvas_open_html' || tool === 'canvas_open_file') {
-    const p = String(args.path ?? '')
-    if (!p) throw new Error('缺少 path')
-    const abs = safePath(p, loc.projectPath, ctx.project)
-    // 校验文件真实存在：否则会开出一个空白预览节点，AI 还以为成功了
-    const probe = await window.api.fs.probePaths([abs], loc.projectPath || ctx.project || '/')
-    if (!probe[0]) throw new Error(`文件不存在：${abs}`)
-    if (probe[0].isDir) throw new Error(`这是目录不是文件：${abs}`)
-    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
-    if (tool === 'canvas_open_html' || isWebFile(abs)) {
-      s.addWebNode(loc.frameId, fileUrlOf(abs))
-      return { opened: abs, as: 'browser', frameId: loc.frameId }
-    }
-    // 其它文件：按扩展名给出预览节点（图片/视频走 image，其余走 code）
-    const ext = abs.split('.').pop()?.toLowerCase() ?? ''
-    const media = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'mp4', 'm4v', 'webm', 'mov', 'mkv']
-    const pane = media.includes(ext)
-      ? ({ kind: 'image', filePath: abs } as const)
-      : ({ kind: 'code', filePath: abs } as const)
-    s.addFileNode(loc.frameId, pane, 0, 0)
-    return { opened: abs, as: pane.kind, frameId: loc.frameId }
-  }
-
   if (tool === 'dict_pending') {
     const items = await window.api.dict.pending()
     return {
@@ -356,6 +345,41 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
         ? '被拒的条目按 why 改好再提交一次。改不出来就跳过，不要硬凑。'
         : '写完了，在回复最末尾用一行提一句即可。'
     }
+  }
+
+  // 以下工具都要落到某个 Frame
+  const loc = resolveFrame(ctx)
+  if (!loc) throw new Error('画布里还没有 Frame，无法打开预览')
+
+  if (tool === 'canvas_open_url') {
+    const url = String(args.url ?? '')
+    if (!/^https?:\/\//i.test(url)) throw new Error('只接受 http(s) 网址')
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    s.addWebNode(loc.frameId, url)
+    return { opened: url, frameId: loc.frameId }
+  }
+
+  if (tool === 'canvas_open_html' || tool === 'canvas_open_file') {
+    const p = String(args.path ?? '')
+    if (!p) throw new Error('缺少 path')
+    const abs = safePath(p, loc.projectPath, ctx.project)
+    // 校验文件真实存在：否则会开出一个空白预览节点，AI 还以为成功了
+    const probe = await window.api.fs.probePaths([abs], loc.projectPath || ctx.project || '/')
+    if (!probe[0]) throw new Error(`文件不存在：${abs}`)
+    if (probe[0].isDir) throw new Error(`这是目录不是文件：${abs}`)
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    if (tool === 'canvas_open_html' || isWebFile(abs)) {
+      s.addWebNode(loc.frameId, fileUrlOf(abs))
+      return { opened: abs, as: 'browser', frameId: loc.frameId }
+    }
+    // 其它文件：按扩展名给出预览节点（图片/视频走 image，其余走 code）
+    const ext = abs.split('.').pop()?.toLowerCase() ?? ''
+    const media = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'mp4', 'm4v', 'webm', 'mov', 'mkv']
+    const pane = media.includes(ext)
+      ? ({ kind: 'image', filePath: abs } as const)
+      : ({ kind: 'code', filePath: abs } as const)
+    s.addFileNode(loc.frameId, pane, 0, 0)
+    return { opened: abs, as: pane.kind, frameId: loc.frameId }
   }
 
   throw new Error(`未知工具：${tool}`)

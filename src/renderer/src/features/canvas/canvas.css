@@ -2685,7 +2685,8 @@
   opacity: 0.6;
 }
 
-/* 规则状态：失效是静默的，必须显式说 */
+/* Eas-Term 专属提示：知识库通过 MCP 工具生效，没有「装/过期」状态可言，
+   这里恒定是 .ok（以前还有个 .todo 态给"规则没装"用，工具化之后不再有那种状态了） */
 .wk-rules {
   display: flex;
   align-items: center;
@@ -2700,23 +2701,8 @@
   color: #6ee7b7;
   background: rgba(16, 185, 129, 0.1);
 }
-.wk-rules.todo {
-  color: #fcd34d;
-  background: rgba(245, 158, 11, 0.12);
-}
 .wk-rules span {
   flex: 1;
-}
-.wk-rules button {
-  flex: none;
-  border: 1px solid currentColor;
-  background: none;
-  color: inherit;
-  font-size: 10.5px;
-  font-family: inherit;
-  padding: 1px 8px;
-  border-radius: 5px;
-  cursor: pointer;
 }
 
 /* 同 .wikiv-tree：FileTree 内部是 absolute+inset:0，缺定位祖先就会盖住上面的内容 */

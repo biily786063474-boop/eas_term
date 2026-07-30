@@ -40,20 +40,15 @@ import {
   wikiPath,
   wikiStatus
 } from './paths'
-import { initWiki, uniqueName } from './schema'
+import { dirNames, initWiki, uniqueName } from './schema'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotes } from './scan'
-// 规则里嵌着知识库路径和目录名。**改位置必须同步，不能等调用方自觉** ——
-// 界面上那个「换个位置」按钮记得调，但任何别的调用点（MCP、以后新写的流程）
-// 一漏就是 agent 拿着旧路径去读，读不到还不报错。放在这一层，谁调都跑得到。
-import { syncRules } from '../agentRules'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
 
 /**
- * 启动时把已配置的库对齐到当前版本：补上新增的目录、把约定文件升到最新 schema、
- * 重写 agent 规则。
+ * 启动时把已配置的库对齐到当前版本：补上新增的目录、把约定文件升到最新 schema。
  *
  * 为什么要有这一步：initWiki 只在「建库」和「换位置」时跑，于是升级 app 之后
  * 老库里不会出现新加的目录（比如 me/），说明文件也停在旧版本 —— 而用户完全没有
@@ -63,13 +58,16 @@ export { wikiPath, wikiStatus }
  *   · initWiki 是幂等的（已存在的目录和文件一律不动），所以重复跑安全
  *   · **只对「看起来确实是个知识库」的目录动手**（looksEmpty 为 false）。
  *     否则一旦绑错路径或网络卷读不出来，这里就会往一个不相干的目录里撒骨架文件。
+ *
+ * 不再调 syncRules()：知识库已经不往任何全局文件里写东西了（见 agentRules.ts
+ * 顶部注释——那条路本身就是「换个终端也读得到」的洞），wiki_query 每次都当场
+ * 读盘，没有「规则过期需要重新同步」这回事。
  */
 function reconcileOnStartup(): void {
   try {
     const st = wikiStatus()
     if (!st.configured || !st.exists || st.looksEmpty) return
     initWiki(st.path!)
-    syncRules()
   } catch (e) {
     console.error('[wiki] 启动对齐失败（不影响使用）', e)
   }
@@ -349,6 +347,30 @@ export function registerWikiHandlers(): void {
 
   ipcMain.handle('wiki:status', () => wikiStatus())
 
+  /**
+   * 知识库内容离开本机进程边界的**唯一**通道，供 MCP 工具 wiki_query 调用。
+   *
+   * 这个 handler 本身不做任何「是不是 Eas-Term 会话」的判断——它信任调用方，
+   * 因为真正的门禁在更上游：mcp/eas-mcp.mjs 的 tools/list 只在检测到
+   * EAS_TERM_PORT/TOKEN（PTY 创建时才会注入）时才把 wiki_query 列出来。
+   * 能调到这里，就已经证明是合法的 Eas-Term 终端会话。
+   *
+   * 每次都当场读盘，不缓存——换位置、建库、解绑立即生效，没有「规则过期」这回事。
+   */
+  ipcMain.handle('wiki:query', () => {
+    const st = wikiStatus()
+    if (!st.configured || !st.exists || st.looksEmpty) {
+      return { configured: st.configured, exists: st.exists, looksEmpty: st.looksEmpty }
+    }
+    let index = ''
+    try {
+      index = fs.readFileSync(path.join(st.path!, 'index.md'), 'utf8')
+    } catch {
+      /* 没有 index.md 就空着，模型会自己判断"索引里没有" */
+    }
+    return { configured: true, exists: true, looksEmpty: false, path: st.path, index, dirs: dirNames(st.path!) }
+  })
+
   ipcMain.handle('wiki:pickPath', async () => {
     const r = await dialog.showOpenDialog({
       title: '选择知识库位置',
@@ -380,7 +402,6 @@ export function registerWikiHandlers(): void {
     try {
       const r = initWiki(root)
       setWikiPath(root)
-      syncRules() // 建完立刻同步：先装规则后建库的话规则里是空路径，且失效不报错
       return { ok: true, ...r, status: wikiStatus() }
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -390,7 +411,6 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:forget', () => {
     // 只忘掉位置，不删任何文件 —— 用户的笔记不该因为一次点击消失
     setWikiPath(null)
-    syncRules() // 解绑后规则里也不该再留着知识库那一段
     return wikiStatus()
   })
 
@@ -544,7 +564,6 @@ export function registerWikiHandlers(): void {
       return { ok: false, error: `这个路径不存在：${root}` }
     }
     setWikiPath(root)
-    syncRules() // 路径变了，agent 侧的规则跟着重写
     return { ok: true, status: wikiStatus() }
   })
 

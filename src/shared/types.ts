@@ -28,15 +28,18 @@ export interface Footprint {
 }
 
 /** 规则托管状态。codexRegionChars 是刻意暴露出来的——
- *  那一段是 Codex 的常驻上下文，每轮都在花钱，界面上要能看见它有多大。 */
+ *  那一段是 Codex 的常驻上下文，每轮都在花钱，界面上要能看见它有多大。
+ *
+ *  知识库不再在这里出现：以前 claudeWiki/codexHasWiki/stale 三个字段追踪的是
+ *  「知识库路径有没有被烤进某份全局文件」——那条路本身就是问题所在（全局文件
+ *  不管在哪个终端起的会话都读得到，知识库变成了「装到这台机器上」而不是
+ *  「装到这个 app 里」）。现在知识库完全走 MCP 工具 wiki_query，工具本身
+ *  只在 Eas-Term 注入过环境变量的终端里才会出现在 tools/list 里，
+ *  没有「装没装」「过没过期」这回事——每次调用都是当场读盘，没有可能过期的缓存。 */
 export interface RulesStatus {
   claudeCanvas: boolean
-  claudeWiki: boolean
   /** Codex 常驻托管区的字符数 */
   codexRegionChars: number
-  codexHasWiki: boolean
-  /** 规则里嵌的知识库路径和当前实际位置对不上（换过位置 / 先装规则后建库） */
-  stale: boolean
 }
 
 /** 知识库状态。inbox 那两个字段是刻意成对的——
@@ -59,6 +62,23 @@ export interface WikiStatus {
    *    · 指错了目录、或目录读不出来（网络卷没权限、挂载失效）—— 骨架也看不到
    *  以前这两种都显示成「空知识库」，用户会以为文件被删了。真实踩过一次。 */
   looksEmpty: boolean
+}
+
+/**
+ * `wiki_query` MCP 工具的返回形状。这是知识库内容离开本机进程边界的**唯一**通道——
+ * 工具本身只在 Eas-Term 注入过环境变量的终端里才会出现在 tools/list 里，
+ * 所以拿到这个结果就已经证明调用方是合法的 Eas-Term 会话，不需要再额外校验。
+ */
+export interface WikiQueryResult {
+  /** 用户压根没设过位置 —— 这种情况下别的字段都不用看 */
+  configured: boolean
+  exists?: boolean
+  looksEmpty?: boolean
+  path?: string
+  /** index.md 原文（全库摘要），模型自己从这里挑相关页去读 */
+  index?: string
+  /** 各分区在盘上的实际目录名（新库英文、老库可能是中文，不能让模型猜） */
+  dirs?: { me: string; people: string; methods: string; domains: string; projects: string; sources: string; inbox: string }
 }
 
 export interface WikiInboxItem {

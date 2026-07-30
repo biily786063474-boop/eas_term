@@ -8,7 +8,7 @@
 // 「最早一份来自 23 天前」才让人意识到只进不出。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { WikiStatus, RulesStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
+import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { paneForFile, isImagePath, isVideoPath } from './media'
 import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
@@ -19,7 +19,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
   const [hover, setHover] = useState(false)
   const [st, setSt] = useState<WikiStatus | null>(null)
-  const [rules, setRules] = useState<RulesStatus | null>(null)
   const [busy, setBusy] = useState('')
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<string | null>(null)
@@ -38,7 +37,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
 
   const refresh = useCallback(async (): Promise<void> => {
     setSt(await window.api.wiki.status())
-    setRules(await window.api.rules.status())
   }, [])
   useEffect(() => {
     void refresh()
@@ -111,9 +109,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       setBusy('失败：' + (r.error ?? ''))
       return
     }
-    // 建完立刻同步规则 —— 不能等用户再点一次：
-    // 规则里嵌着知识库路径，先装规则后建库的话里面是空的，而且失效不报错
-    await window.api.rules.sync()
     await refresh()
     setBusy('')
     setTreeKey((k) => k + 1)
@@ -283,7 +278,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                     // 换位置只改指向，不搬文件——搬家的决定该由用户在访达里做
                     await window.api.wiki.setPath(p)
                     await window.api.wiki.init(p)
-                    await window.api.rules.sync()
                     await refresh()
                     setTreeKey((k) => k + 1)
                     setSettings(false)
@@ -295,7 +289,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                   className="danger"
                   onClick={async () => {
                     await window.api.wiki.forget()
-                    await window.api.rules.sync()
                     await refresh()
                     setSettings(false)
                   }}
@@ -445,25 +438,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             </div>
           )}
 
-          {/* ── 规则状态：失效是静默的，必须显式说 ── */}
-          {rules && (
-            <div className={`wk-rules${rules.claudeWiki && !rules.stale ? ' ok' : ' todo'}`}>
-              {rules.claudeWiki && !rules.stale ? (
-                <span>规则已就绪 · agent 会主动来查</span>
-              ) : (
-                <>
-                  <span>{rules.stale ? '规则里的位置过期了' : '规则未安装'} · agent 不会主动查</span>
-                  <button
-                    onClick={() =>
-                      void window.api.rules.sync().then((r) => setRules(r.status))
-                    }
-                  >
-                    修复
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+          {/* 知识库通过 MCP 工具 wiki_query 生效，没有「装/过期」这回事——
+              每次调用都当场读盘。这行只是把「专属」这个边界说清楚，不是状态指示灯。 */}
+          <div className="wk-rules ok">
+            <span>只在 Eas-Term 的终端里生效 · 换个终端不会读到</span>
+          </div>
 
           {/* 搜到东西时用结果替换文件树——同时显示两个会让人不知道该看哪 */}
           {q.trim() ? (

@@ -17,9 +17,7 @@ import os from 'os'
 import path from 'path'
 
 import type { RulesStatus, Footprint } from '../shared/types'
-// 只从 wiki/paths 取（它是叶子模块，不反向依赖这里）——
-// 从 './wiki' 取会和下面 wiki/index 调 syncRules 形成循环依赖
-import { dirOf, inboxOf, sourcesOf, wikiPath } from './wiki/paths'
+import { wikiPath } from './wiki/paths'
 import { mcpConfigStatus } from './mcpBridge'
 
 const BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
@@ -47,81 +45,21 @@ function readSource(rel: string): string | null {
 const canvasSkill = (): string | null => readSource(path.join('skills', 'eas-term', 'SKILL.md'))
 
 // ── 知识库能力 ──────────────────────────────────────────────────────
-/** Claude 侧的 skill：description 本身就是触发器，模型判断相关才加载正文 */
-function wikiSkillText(kb: string): string {
-  // 目录名按这个库盘上的实际情况取 —— 老库是中文目录，写死英文会指到不存在的路径
-  const meDir = dirOf(kb, 'me')
-  const peopleDir = dirOf(kb, 'people')
-  return `---
-name: eas-wiki
-description: 用户的个人知识库（一个 markdown 文件夹）。当用户问「怎么做」这类方法问题、
-  提到某个博主/作者/人名、问过去做过的决定或踩过的坑、或者要你产出文案/脚本/设计/剪辑方案时，
-  用它来查。**要产出带他个人风格的东西（简介、简历、自我介绍、选题、对外文案），
-  或者他问「我该怎么做」「我适合什么」这类关于他自己的问题时，先读 ${meDir}/ 那一节。**
-  用户说「整理收件箱」「归档」「给知识库做体检」时也用它。
-  也在用户明说「查知识库」「wiki 里有没有」时使用。
----
-
-# 用户的知识库
-
-位置：\`${kb}\`
-
-它不是搜索引擎，是一个**会自己长大的笔记本**：用户负责搜集素材和提问题，
-你负责整理、归档、交叉引用和记账。
-
-## 先看「关于他自己」
-
-\`${kb}/${meDir}/\` 是**关于用户本人**的那一块：画像、工作习惯、沉淀的方法论、
-反复强调过的取舍标准。它和 \`${kb}/${peopleDir}/\`（他研究的**别人**）是两回事，别混。
-
-它的复用率最高 —— 凡是「产出要像他做的」或者「他在问关于自己的事」，
-读它比读别的都值。反过来，纯技术问题（某个 API 怎么用）不用碰它。
-
-这一块**空的时候不要瞎猜他是谁**。直说还没建，问他要不要先攒起来。
-
-## 查询
-
-1. 先读 \`${kb}/index.md\` —— 全库目录，每页一行摘要。**只读这一个文件**。
-2. 从索引里挑出真正相关的页面（一般 1–3 篇），读它们。
-3. 回答时说明参考了哪几篇，方便用户自己去翻。
-4. **答完调一次 \`wiki_log\`**（action=query，title 写清这次问的是什么）。
-
-第 4 步不能省。它有两个作用：给知识库留一条时间线；以及——
-「放入多少次 vs 真去查了多少次」是判断这东西有没有真被用起来的**唯一**数据来源。
-不记的话查询数永远是 0，用户会看到一个「只进不出」的假象。
-
-**用户明确说了「这个结论存一下」之类的话时**，把答案写成新的一页并更新 index.md。
-探索本身也该参与复利，别让它消散在聊天记录里。**没得到明确同意就别写。**
-
-## 整理收件箱
-
-用户说「整理一下收件箱」时，按顺序来，别跳步：
-
-1. \`wiki_inbox\` 看里面有什么
-2. 视频/音频调 \`wiki_transcript\` 拿逐字稿（本机已经离线转好了，不花 token）
-3. 为每个文件想清楚：归到哪、写成哪篇笔记、为什么
-4. \`wiki_archive_plan\` 一次提交整批 —— **这个调用会阻塞几十秒到几分钟等用户在界面上点确认，是正常的**
-5. 拿到 approved 后 \`wiki_archive_exec\` 搬文件（只搬文件，笔记要你自己写）
-6. 写笔记 → 更新 \`index.md\` → \`wiki_log\`（action=ingest）
-
-**用户没批准的条目一个都不要动。**
-
-## 体检
-
-用户说「做个体检」时：先调 \`wiki_lint\` 拿结构问题（死链、孤儿页、缺 summary/tags、
-索引漏收——这些是免费瞬时算出来的，你不用自己扫全库），再去做需要**读懂内容**才能发现的那半边：
-页面之间的矛盾、被新素材推翻的旧结论、反复被提到却没有独立页面的概念。
-**只出报告，改什么由用户点头。** 完事调 \`wiki_log\`（action=lint）。
-
-## 硬规矩
-
-- 索引里没有相关内容 → **直说没有**。不要用知识库里不存在的内容假装引用。
-- \`${sourcesOf(kb)}/\` 和 \`${inboxOf(kb)}/\` 里的原始文件**只读**：可以移动、可以重命名，
-  绝不修改内容、绝不删除。那是用户的真相来源。
-- 每篇笔记必须有 front-matter 的 \`summary\` 和 \`tags\` —— 索引和检索全靠它们。
-- 笔记之间用 \`[[双链]]\` 互指。人物、方法、概念第一次出现就该有自己的页面。
-`
-}
+// **知识库不再写进这两个全局文件。** 以前这里有一个 wikiSkillText()（Claude 侧的
+// eas-wiki skill）和 codexRegion() 里的一段 wiki 分支，把知识库的绝对路径、
+// 目录结构、me/ 分区的用途，原样写进 ~/.claude/skills/ 和 ~/.codex/AGENTS.md ——
+// 这两个文件不认「这条会话是不是 Eas-Term 起的」，同一台机器上不管从哪个终端起
+// claude/codex 都读得到。用户明确要求知识库是 Eas-Term 专属：换个终端就不该读到。
+//
+// 现在整条能力搬到 MCP 工具 wiki_query（定义在 mcp/eas-mcp.mjs）。触发条件、
+// 查询步骤、me/ 与 people/ 的区别，全部收进那个工具自己的 description ——
+// 而 MCP 工具本身只有在 Eas-Term 往 PTY 里注入过 EAS_TERM_PORT/TOKEN 的终端里，
+// tools/list 才会把它列出来（这条门禁已经在保护画板工具，现在延伸到知识库）。
+// 在别的终端起同一个 claude/codex，这个工具在 tools/list 里根本不存在，
+// 模型无从知道有这么个东西，也就无从知道知识库路径——不是「不建议读」，是「读不到」。
+//
+// 副作用是好的：内容不再有「装的时候固化进文件」这回事，每次调用都当场读盘，
+// 换位置/建库/解绑都立即生效，不需要再回来调 syncRules() 同步。
 
 /**
  * Codex 的常驻区。**只有触发条件和路径，没有正文。**
@@ -129,26 +67,18 @@ description: 用户的个人知识库（一个 markdown 文件夹）。当用户
  * 为什么触发条件不能也挪到磁盘：按需读盘要求模型先意识到「该读」。
  * 详细做法可以晚点读，但「什么时候该动」必须在它眼前——
  * 这条挪走了，agent 就永远想不起来去查知识库。
+ *
+ * 知识库不在这里出现：MCP 工具的 description 本身就会被模型看到（这是 MCP 协议
+ * 自带的机制，不需要另外「提醒」），在这儿再写一遍是同一件事说两遍——
+ * 而且这份文件是**全局常驻**的，写了就等于给知识库开了后门，绕开了 wiki_query 的门禁。
  */
-function codexRegion(mods: { canvas: boolean; wiki: string | null }): string {
+function codexRegion(mods: { canvas: boolean }): string {
   const lines = [BEGIN, '# Eas-Term 扩展能力', '']
   lines.push('你运行在 Eas-Term 里。下面是已启用的能力和各自的**触发条件**，')
   lines.push('详细约定按路径自己去读，不用背下来。', '')
   if (mods.canvas) {
     lines.push('**画板**：产出了给人看的东西（报告 / 预览页 / 图）→ 用画板 MCP 工具摆到用户眼前，')
     lines.push(`别只说「已生成」。详细：\`${path.join(detailDir(), 'canvas.md')}\``, '')
-  }
-  if (mods.wiki) {
-    lines.push('**知识库**：用户问方法类问题、提到人名/博主、问过去的决定或踩过的坑、')
-    lines.push('要你产出文案/脚本/设计方案时 →')
-    lines.push(`先读 \`${mods.wiki}/index.md\`（全库一行摘要目录），挑 1–3 篇相关的看，回答注明出处。`)
-    lines.push(`索引里没有就直说没有，不要编。详细：\`${mods.wiki}/AGENTS.md\``)
-    lines.push(
-      `**关于他本人**：要产出带他个人风格的东西（简介/简历/选题/对外文案），` +
-        `或他问「我该怎么做」这类关于自己的问题 → 先读 \`${mods.wiki}/${dirOf(mods.wiki, 'me')}/\`。` +
-        `那是画像和方法论，和 \`${dirOf(mods.wiki, 'people')}/\`（他研究的别人）不是一回事。`,
-      ''
-    )
   }
   lines.push(END)
   return lines.join('\n')
@@ -182,31 +112,29 @@ function writeFileEnsured(f: string, text: string): void {
   fs.writeFileSync(f, text)
 }
 
-/** 装/更新全部规则。知识库初始化、改位置、app 升级时都该调它——不等用户再点一次。 */
+/** 装/更新全部规则。app 升级、canvas 技能内容变化时调它。
+ *  知识库不再需要——它没有「装」这回事，见上面的大注释。 */
 export function syncRules(): { ok: boolean; codexChars: number } {
-  const kb = wikiPath()
   const canvas = canvasSkill()
 
   // Claude：一模块一目录，天然独立、按需加载、能单独删
   if (canvas) writeFileEnsured(claudeSkill('eas-term'), canvas)
-  if (kb) writeFileEnsured(claudeSkill('eas-wiki'), wikiSkillText(kb))
-  else {
-    try {
-      fs.rmSync(path.dirname(claudeSkill('eas-wiki')), { recursive: true, force: true })
-    } catch {
-      /* 没装过 */
-    }
+  // 清掉旧版本可能装过的 eas-wiki skill（这个函数以前会在 kb 配置时写它）——
+  // 不能留着不管，那是一份指向真实知识库路径的全局文件，正是现在要堵的洞
+  try {
+    fs.rmSync(path.dirname(claudeSkill('eas-wiki')), { recursive: true, force: true })
+  } catch {
+    /* 没装过 */
   }
 
   // Codex：常驻区只放路由；正文落到 ~/.eas/agent/ 供按需读取
   if (canvas) writeFileEnsured(path.join(detailDir(), 'canvas.md'), canvas)
-  const region = canvas || kb ? codexRegion({ canvas: !!canvas, wiki: kb }) : null
+  const region = canvas ? codexRegion({ canvas: true }) : null
   writeCodexRegion(region)
   return { ok: true, codexChars: region ? region.length : 0 }
 }
 
 export function rulesStatus(): RulesStatus {
-  const kb = wikiPath()
   let codexChars = 0
   try {
     const raw = fs.readFileSync(codexAgents(), 'utf8')
@@ -216,32 +144,14 @@ export function rulesStatus(): RulesStatus {
   } catch {
     codexChars = 0
   }
-  const wikiSkill = fs.existsSync(claudeSkill('eas-wiki'))
-  // 装了但知识库路径变了 → 规则里指的是旧地方，等于失效
-  let stale = false
-  if (wikiSkill && kb) {
-    try {
-      stale = !fs.readFileSync(claudeSkill('eas-wiki'), 'utf8').includes(kb)
-    } catch {
-      stale = true
-    }
-  }
   return {
     claudeCanvas: fs.existsSync(claudeSkill('eas-term')),
-    claudeWiki: wikiSkill,
-    codexRegionChars: codexChars,
-    codexHasWiki: codexChars > 0 && !!kb && (() => {
-      try {
-        return fs.readFileSync(codexAgents(), 'utf8').includes(kb)
-      } catch {
-        return false
-      }
-    })(),
-    stale
+    codexRegionChars: codexChars
   }
 }
 
-/** 卸载我们写进两个 CLI 的使用指引（MCP 条目和钩子各有各的开关，这里不碰） */
+/** 卸载我们写进两个 CLI 的使用指引（MCP 条目和钩子各有各的开关，这里不碰）。
+ *  eas-wiki 留在清单里是为了清掉老版本可能装过的文件，即使现在已经不再写它。 */
 export function removeRules(): void {
   for (const n of ['eas-term', 'eas-wiki']) {
     try {
@@ -301,11 +211,10 @@ export function registerRulesHandlers(): void {
       {
         id: 'rules',
         name: '使用指引',
-        desc: '告诉 agent 什么时候该用画板工具、什么时候该查知识库',
-        installed: r.claudeCanvas || r.claudeWiki || r.codexRegionChars > 0,
+        desc: '告诉 agent 什么时候该用画板工具',
+        installed: r.claudeCanvas || r.codexRegionChars > 0,
         files: [
           ...(r.claudeCanvas ? [claudeSkill('eas-term')] : []),
-          ...(r.claudeWiki ? [claudeSkill('eas-wiki')] : []),
           ...(r.codexRegionChars > 0 ? [codexAgents()] : [])
         ],
         note:
@@ -330,7 +239,9 @@ export function registerRulesHandlers(): void {
         desc: '你自己选位置的 markdown 文件夹',
         installed: !!kb,
         files: kb ? [kb] : [],
-        note: kb ? '解除绑定只改指向，不动你的文件' : '',
+        note: kb
+          ? '只在 Eas-Term 的终端里，agent 才能通过 MCP 工具查到它——换成别的终端（哪怕开的是同一台电脑）看不到。解除绑定只改指向，不动你的文件'
+          : '',
         removable: false
       }
     ]

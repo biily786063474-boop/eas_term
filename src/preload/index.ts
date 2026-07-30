@@ -27,6 +27,7 @@ import type {
   HookStatus,
   AgentRole,
   WikiStatus,
+  WikiQueryResult,
   WikiInboxItem,
   Backlink,
   WikiHit,
@@ -217,6 +218,8 @@ const api = {
   wiki: {
     // 个人知识库（用户自选位置的 markdown 文件夹）
     status: (): Promise<WikiStatus> => ipcRenderer.invoke('wiki:status'),
+    // 给 wiki_query 这个 MCP 工具用：知识库内容离开本机进程边界的唯一通道
+    query: (): Promise<WikiQueryResult> => ipcRenderer.invoke('wiki:query'),
     suggestPath: (): Promise<string> => ipcRenderer.invoke('wiki:suggestPath'),
     pickPath: (): Promise<string | null> => ipcRenderer.invoke('wiki:pickPath'),
     pickFiles: (): Promise<string[]> => ipcRenderer.invoke('wiki:pickFiles'),

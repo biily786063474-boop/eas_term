@@ -15,6 +15,27 @@ const CTX = { ptyId: process.env.EAS_PTY_ID, project: process.env.EAS_PROJECT }
 
 const TOOLS = [
   {
+    name: 'wiki_query',
+    description:
+      '查用户的个人知识库(他自建的 markdown 笔记库)。**这个工具只在 Eas-Term 的终端里存在**——' +
+      '你能看到它，本身就说明这条会话是在 Eas-Term 里起的，不用另外确认。' +
+      '触发时机：用户问"怎么做"这类方法问题、提到某个博主/作者/人名、问过去做过的决定或踩过的坑、' +
+      '要你产出带他个人风格的东西(简介/简历/自我介绍/选题/对外文案)、' +
+      '或者他问"我该怎么做""我适合什么"这类关于他自己的问题时，先调这个工具。' +
+      '也在他明说"查知识库""wiki 里有没有""整理收件箱""归档""做个体检"时调用。' +
+      '返回全库索引(index.md 原文，每页一行摘要)和各分区在盘上的实际目录名(dirs)。' +
+      '拿到后：自己从索引挑 1-3 篇相关的用 Read 读那几篇原文，回答时说明参考了哪几篇；' +
+      '答完调一次 wiki_log(action=query)记一笔——这是判断这东西有没有真被用起来的唯一数据来源，不记的话查询数永远是 0。' +
+      'dirs.me 是"关于用户本人"的分区(画像/工作习惯/方法论/决策偏好)，dirs.people 是"他研究的别人"，两者别混——' +
+      '产出要带他个人风格、或他问关于自己的问题时，先看 dirs.me；dirs.me 是空的就直说还没建，别瞎猜他是谁。' +
+      '索引里没有相关内容就直说没有，不要编。' +
+      '整理收件箱走 wiki_inbox→wiki_transcript→想清楚归哪→wiki_archive_plan(等用户确认)→wiki_archive_exec→写笔记→wiki_log(action=ingest)，别跳步。' +
+      '体检先调 wiki_lint 拿结构问题，再补读懂内容才能发现的那半边，只出报告不擅自改，完事 wiki_log(action=lint)。' +
+      '返回里 dirs.sources 和 dirs.inbox 指向的目录里的原始文件只读：可以移动改名，绝不改内容删除。' +
+      '每篇笔记要有 front-matter 的 summary 和 tags，笔记间用 [[双链]] 互指。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'wiki_inbox',
     description:
       '列出用户知识库收件箱里待整理的文件（名字/大小/放进来多久）。要整理收件箱时先调它，别去 shell 里 ls。',
