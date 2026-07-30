@@ -286,16 +286,65 @@ let chunks: Float32Array[] = [] // 当前这一句的音频（自动切句后清
 let committed = ''
 
 // 「停顿 ~2s 自动落字」用的静音检测：能量低于阈值即视为静音，连续静音够久就切句。
-const SILENCE_RMS = 0.012 // 静音能量阈值（经验值：环境底噪之上、正常说话之下）
+// 阈值不用固定值——环境底噪会变（风扇/空调/街上的车），固定阈值要么在吵环境里几乎不触发、
+// 要么在安静环境里被一点电流声骗到。改成跟踪底噪的自适应阈值，阈值 = 底噪 * 倍数。
+//
+// 底噪估计用「滑动窗口取最小值」，而不是「只在判定为静音的帧里更新」——后者试过，有个死结：
+// 如果环境噪音本身就比当前阈值响，第一帧起就会被判成「有人在说话」，底噪永远等不到更新的机会，
+// 自适应等于没生效（写单测时实测复现过）。滑动窗口不需要先判断「是不是在说话」：人说话总会有
+// 换气、断字的间隙，窗口只要够长，窗口内的最小值几乎总能落在真正安静的片刻，说话声的峰值不会
+// 拉高它——这样噪音房间和有人说话两种情况都能正确收敛，不会互相干扰。
+const SILENCE_RMS_DEFAULT = 0.012 // 初始阈值 = 老的固定值，窗口还没积累够数据前先用它，升级后首次体验不变
+const SILENCE_RMS_MIN = 0.006 // 阈值下限：再低普通麦克风的电流声/呼吸声就能触发，等于一直在切句
+const SILENCE_RMS_MAX = 0.05 // 阈值上限：环境再吵也不能把阈值抬到贴近正常说话音量，那样真人声会被当静音吞掉
+const NOISE_FLOOR_MARGIN = 1.6 // 阈值 = 底噪 * 这个倍数——人声通常比底噪响不止一倍
+const NOISE_WINDOW_MS = 1500 // 底噪估计窗口：够短才能在说话刚停下时几秒内跟上，够长才能盖住说话中间的换气间隙
 const SILENCE_MS = 650 // 连续静音多久算「说完一句」（+ 采集/识别耗时 ≈ 用户体感 1s）
 const MIN_SPEECH_MS = 400 // 一句至少要有这么多语音，避免咳嗽/键盘声触发
 let silentMs = 0
 let speechMs = 0
+let noiseFloor = SILENCE_RMS_DEFAULT / NOISE_FLOOR_MARGIN // 当前底噪估计，让首次阈值等于老的固定值
+// 窗口本身：用一条种子记录（level 取默认底噪、ms 取 0）占位，不计入窗口时长预算，
+// 真实帧积累够 NOISE_WINDOW_MS 之后它会被自然挤出去，不需要特殊处理
+let noiseWindow: { level: number; ms: number }[] = [{ level: noiseFloor, ms: 0 }]
+let noiseWindowMs = 0
 
 function rms(f: Float32Array): number {
   let s = 0
   for (let i = 0; i < f.length; i++) s += f[i] * f[i]
   return Math.sqrt(s / Math.max(1, f.length))
+}
+
+// 喂一帧的能量进滑动窗口，返回窗口内的最小值（= 当前底噪估计）
+function trackNoiseFloor(level: number, ms: number): number {
+  noiseWindow.push({ level, ms })
+  noiseWindowMs += ms
+  while (noiseWindowMs > NOISE_WINDOW_MS && noiseWindow.length > 1) {
+    noiseWindowMs -= noiseWindow.shift()!.ms
+  }
+  let min = level
+  for (const w of noiseWindow) if (w.level < min) min = w.level
+  return min
+}
+
+// 当前有效的静音阈值：底噪 * 倍数，夹在 [MIN, MAX] 之间
+function silenceThreshold(): number {
+  return Math.min(SILENCE_RMS_MAX, Math.max(SILENCE_RMS_MIN, noiseFloor * NOISE_FLOOR_MARGIN))
+}
+
+// 相邻两句最终文本可能因为切句抖动在边界处重复——前一句尾巴和这一句开头其实是
+// 同一段连续的话被噪声/阈值误判切开的。只比较「上一句结尾」和「这一句开头」的重合部分：
+// 太短当巧合放过（"的""了"这类高频字很容易巧合撞上），太长就不当边界重叠处理（是真的说了两遍）。
+let lastFinalText = ''
+const OVERLAP_MIN = 3
+const OVERLAP_MAX = 12
+function stripOverlap(prev: string, cur: string): string {
+  if (!prev || !cur) return cur
+  const max = Math.min(prev.length, cur.length, OVERLAP_MAX)
+  for (let len = max; len >= OVERLAP_MIN; len--) {
+    if (prev.slice(-len) === cur.slice(0, len)) return cur.slice(len).trimStart()
+  }
+  return cur
 }
 
 function concatChunks(): Float32Array {
@@ -325,7 +374,11 @@ async function flushSentence(wc: WebContents): Promise<void> {
   if (!wc.isDestroyed()) wc.send('stt:partial', '')
   try {
     const text = (await transcribeAsync(audio)) || streamFallback
-    if (text && !wc.isDestroyed()) wc.send('stt:final', text)
+    if (text) {
+      const deduped = stripOverlap(lastFinalText, text)
+      lastFinalText = text
+      if (deduped && !wc.isDestroyed()) wc.send('stt:final', deduped)
+    }
   } catch (e) {
     console.error('[stt] 自动切句失败', e)
   }
@@ -372,6 +425,10 @@ export function registerSttHandlers(): void {
     committed = ''
     silentMs = 0
     speechMs = 0
+    noiseFloor = SILENCE_RMS_DEFAULT / NOISE_FLOOR_MARGIN
+    noiseWindow = [{ level: noiseFloor, ms: 0 }]
+    noiseWindowMs = 0
+    lastFinalText = ''
     return { ok: true }
   })
 
@@ -384,7 +441,9 @@ export function registerSttHandlers(): void {
       for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768
       const wc = e.sender as WebContents
       const ms = (f32.length / 16000) * 1000
-      const loud = rms(f32) >= SILENCE_RMS
+      const level = rms(f32)
+      noiseFloor = trackNoiseFloor(level, ms)
+      const loud = level >= silenceThreshold()
       // 静音期只在「已经说过话」之后才累积缓存，避免开头的空录音把一句撑长
       if (loud || chunks.length) chunks.push(f32)
       if (loud) {
@@ -433,6 +492,9 @@ export function registerSttHandlers(): void {
     speechMs = 0
     // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字；识别同样走 worker，不卡主进程
     const offlineText = all.length / 16000 > 0.3 ? await transcribeAsync(all) : null
-    return { text: (offlineText || fallback).trim() }
+    const text = (offlineText || fallback).trim()
+    const deduped = text ? stripOverlap(lastFinalText, text) : text
+    lastFinalText = ''
+    return { text: deduped }
   })
 }
