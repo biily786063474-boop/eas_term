@@ -22,8 +22,10 @@
   justify-content: center;
   border-radius: 50%;
   border: 1px solid var(--glass-border-strong);
+  /* 不做毛玻璃：这颗按钮在终端面板**里面**，本来是「模糊里再模糊一层」，
+     纯白付两次钱；而 --glass-3 本身就 82% 不透明，模糊背后那点东西根本看不见。
+     面板现在也不做毛玻璃了（见 workspace.css 的 .pane），它更没有理由做。 */
   background: var(--glass-3);
-  backdrop-filter: var(--blur);
   color: var(--fg-dim);
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);

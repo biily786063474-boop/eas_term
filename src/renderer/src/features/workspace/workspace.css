@@ -339,12 +339,22 @@
 
 /* ========== Blender 式功能面板（面板头部/下拉） ========== */
 /* ---------- Blender 式功能面板：浮动玻璃卡片 ---------- */
+/* 面板故意**不做毛玻璃**。
+   实测（活动监视器「能耗」同源的 top POWER，持续合成压力下）：
+   13 个毛玻璃面 GPU 功耗 15.5，全关掉降到 5.5 —— backdrop-filter 占了约 65%。
+   而面板是这里面最贵的一项：单个 440x380 是最大的面，还有好几个，
+   更要命的是它是**唯一持续重绘的东西**（终端输出），每次重绘都强制它背后那片模糊重算。
+   关掉它单独省 18%。
+   代价接近于零：面板背后是画布的近纯色底，模糊一片纯色得到的还是那片纯色 ——
+   截图对比过，唯一差别是点阵网格会隐约透上来，把底色从 0.62 加厚到 0.86 就补掉了，
+   而底色是免费的。
+   注意：**半径不是旋钮**。测过 28/16/10/6px，GPU 功耗全在 14-16 之间没有区别 ——
+   成本在「有没有这一层」，不在「模糊多少」。想省只能减少有毛玻璃的面的数量。 */
 .pane {
   position: absolute;
   display: flex;
   flex-direction: column;
-  background: var(--glass-2);
-  backdrop-filter: var(--blur);
+  background: var(--pane-solid);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 8px 28px rgba(0, 0, 0, 0.25);

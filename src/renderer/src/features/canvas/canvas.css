@@ -218,6 +218,7 @@
   transform: translateX(calc(100% + 20px));
   opacity: 0;
   pointer-events: none;
+  backdrop-filter: none; /* 同 .wiki-drawer.closed：看不见的东西不该占 GPU */
 }
 .canvas-drawer.open {
   transform: translateX(0);
@@ -2528,6 +2529,11 @@
   transform: translateX(calc(-100% - 20px));
   opacity: 0;
   pointer-events: none;
+  /* 收起时它在画面外、opacity 0，但 backdrop-filter 照样让 GPU 为这 250x606
+     的区域算一遍模糊。改成常驻挂载（为了展开动画）的时候漏了这一句 ——
+     和右侧抽屉两个加起来近 300k 像素的白算，实测这两项 + 嵌套的 voice-btn
+     一共占 GPU 功耗 28%。零视觉代价。 */
+  backdrop-filter: none;
 }
 .wiki-drawer.open {
   transform: translateX(0);
