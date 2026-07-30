@@ -22,6 +22,7 @@ const SCHEMA_MARK = '<!-- eas-term:wiki-schema v3 -->'
  *  绝不写死，否则老库会拿到一份指向不存在目录的说明。 */
 export interface WikiDirNames {
   inbox: string
+  me: string
   people: string
   methods: string
   domains: string
@@ -32,6 +33,7 @@ export interface WikiDirNames {
 export function dirNames(root: string): WikiDirNames {
   return {
     inbox: inboxOf(root),
+    me: dirOf(root, 'me'),
     people: dirOf(root, 'people'),
     methods: dirOf(root, 'methods'),
     domains: dirOf(root, 'domains'),
@@ -51,6 +53,9 @@ export function schemaText(d: WikiDirNames): string {
 ## 目录
 
 - \`${d.inbox}/\` 用户丢进来、还没整理的原始素材
+- \`${d.me}/\` **关于用户本人**：画像、工作习惯、沉淀的方法论、反复强调的取舍标准。
+  产出要署他名字、或者他问「我该怎么做」的时候，先读这里 —— 这是复用率最高的一块。
+  注意和下面 \`${d.people}/\` 的区别：这里是**他自己**，那里是**他研究的别人**，别混。
 - \`${d.people}/\` 博主 / 作者：思维模型、行为习惯、代表作、用户的实测反馈
 - \`${d.methods}/\` 可迁移的做法（跨领域组织，不按学科切）
 - \`${d.domains}/\` 编程 / 设计 / 剪辑 / 文案

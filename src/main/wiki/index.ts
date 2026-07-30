@@ -51,7 +51,33 @@ import { syncRules } from '../agentRules'
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
 
+/**
+ * 启动时把已配置的库对齐到当前版本：补上新增的目录、把约定文件升到最新 schema、
+ * 重写 agent 规则。
+ *
+ * 为什么要有这一步：initWiki 只在「建库」和「换位置」时跑，于是升级 app 之后
+ * 老库里不会出现新加的目录（比如 me/），说明文件也停在旧版本 —— 而用户完全没有
+ * 理由知道自己该去点一下「换个位置」。
+ *
+ * 两条保险：
+ *   · initWiki 是幂等的（已存在的目录和文件一律不动），所以重复跑安全
+ *   · **只对「看起来确实是个知识库」的目录动手**（looksEmpty 为 false）。
+ *     否则一旦绑错路径或网络卷读不出来，这里就会往一个不相干的目录里撒骨架文件。
+ */
+function reconcileOnStartup(): void {
+  try {
+    const st = wikiStatus()
+    if (!st.configured || !st.exists || st.looksEmpty) return
+    initWiki(st.path!)
+    syncRules()
+  } catch (e) {
+    console.error('[wiki] 启动对齐失败（不影响使用）', e)
+  }
+}
+
 export function registerWikiHandlers(): void {
+  reconcileOnStartup()
+
   /**
    * 知识图谱：节点=笔记，边=[[双链]]。
    *

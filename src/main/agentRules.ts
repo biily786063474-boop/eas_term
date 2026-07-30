@@ -19,7 +19,7 @@ import path from 'path'
 import type { RulesStatus, Footprint } from '../shared/types'
 // 只从 wiki/paths 取（它是叶子模块，不反向依赖这里）——
 // 从 './wiki' 取会和下面 wiki/index 调 syncRules 形成循环依赖
-import { inboxOf, sourcesOf, wikiPath } from './wiki/paths'
+import { dirOf, inboxOf, sourcesOf, wikiPath } from './wiki/paths'
 import { mcpConfigStatus } from './mcpBridge'
 
 const BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
@@ -49,11 +49,16 @@ const canvasSkill = (): string | null => readSource(path.join('skills', 'eas-ter
 // ── 知识库能力 ──────────────────────────────────────────────────────
 /** Claude 侧的 skill：description 本身就是触发器，模型判断相关才加载正文 */
 function wikiSkillText(kb: string): string {
+  // 目录名按这个库盘上的实际情况取 —— 老库是中文目录，写死英文会指到不存在的路径
+  const meDir = dirOf(kb, 'me')
+  const peopleDir = dirOf(kb, 'people')
   return `---
 name: eas-wiki
 description: 用户的个人知识库（一个 markdown 文件夹）。当用户问「怎么做」这类方法问题、
   提到某个博主/作者/人名、问过去做过的决定或踩过的坑、或者要你产出文案/脚本/设计/剪辑方案时，
-  用它来查。用户说「整理收件箱」「归档」「给知识库做体检」时也用它。
+  用它来查。**要产出带他个人风格的东西（简介、简历、自我介绍、选题、对外文案），
+  或者他问「我该怎么做」「我适合什么」这类关于他自己的问题时，先读 ${meDir}/ 那一节。**
+  用户说「整理收件箱」「归档」「给知识库做体检」时也用它。
   也在用户明说「查知识库」「wiki 里有没有」时使用。
 ---
 
@@ -63,6 +68,16 @@ description: 用户的个人知识库（一个 markdown 文件夹）。当用户
 
 它不是搜索引擎，是一个**会自己长大的笔记本**：用户负责搜集素材和提问题，
 你负责整理、归档、交叉引用和记账。
+
+## 先看「关于他自己」
+
+\`${kb}/${meDir}/\` 是**关于用户本人**的那一块：画像、工作习惯、沉淀的方法论、
+反复强调过的取舍标准。它和 \`${kb}/${peopleDir}/\`（他研究的**别人**）是两回事，别混。
+
+它的复用率最高 —— 凡是「产出要像他做的」或者「他在问关于自己的事」，
+读它比读别的都值。反过来，纯技术问题（某个 API 怎么用）不用碰它。
+
+这一块**空的时候不要瞎猜他是谁**。直说还没建，问他要不要先攒起来。
 
 ## 查询
 
@@ -127,7 +142,13 @@ function codexRegion(mods: { canvas: boolean; wiki: string | null }): string {
     lines.push('**知识库**：用户问方法类问题、提到人名/博主、问过去的决定或踩过的坑、')
     lines.push('要你产出文案/脚本/设计方案时 →')
     lines.push(`先读 \`${mods.wiki}/index.md\`（全库一行摘要目录），挑 1–3 篇相关的看，回答注明出处。`)
-    lines.push(`索引里没有就直说没有，不要编。详细：\`${mods.wiki}/AGENTS.md\``, '')
+    lines.push(`索引里没有就直说没有，不要编。详细：\`${mods.wiki}/AGENTS.md\``)
+    lines.push(
+      `**关于他本人**：要产出带他个人风格的东西（简介/简历/选题/对外文案），` +
+        `或他问「我该怎么做」这类关于自己的问题 → 先读 \`${mods.wiki}/${dirOf(mods.wiki, 'me')}/\`。` +
+        `那是画像和方法论，和 \`${dirOf(mods.wiki, 'people')}/\`（他研究的别人）不是一回事。`,
+      ''
+    )
   }
   lines.push(END)
   return lines.join('\n')

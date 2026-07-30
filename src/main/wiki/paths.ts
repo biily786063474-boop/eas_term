@@ -12,13 +12,27 @@ import type { WikiStatus } from '../../shared/types'
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
 
 /**
- * 顶层目录。刻意只有七个 —— 原文的建议是「别过度设计」，不够用了再加比一开始铺二十个强。
+ * 顶层目录。数量刻意压着 —— 原文的建议是「别过度设计」，不够用了再加比一开始铺二十个强。
+ *
+ * `me/` 是唯一一个「关于使用者自己」的分区，和 `people/` 必须分开：
+ * people/ 装的是**别人**（博主、作者），是研究对象；me/ 装的是**你自己**
+ * （画像、工作习惯、方法论、决策偏好）。混在一起的话，agent 查「某人的方法」时
+ * 会把你和别人的东西一起端上来。
  *
  * **全英文、无空格。** 这些名字会被拼进 shell 命令、agent 的规则文本、URL 和脚本参数，
  * 每多一个空格就多一处引号漏了就出错的地方 —— 本项目自己就被路径里的一个空格
  * 坑掉过一次 node-pty 编译。中文目录名本身不出错，但英文让 agent 引用时不用纠结引号。
  */
-export const WIKI_DIRS = ['00-inbox', 'people', 'methods', 'domains', 'projects', 'sources', '_templates']
+export const WIKI_DIRS = [
+  '00-inbox',
+  'me',
+  'people',
+  'methods',
+  'domains',
+  'projects',
+  'sources',
+  '_templates'
+]
 
 /** 收件箱里记「这份文件原来在哪」的映射表。点号开头 → 访达里不显示，也不会被数进徽章 */
 export const SOURCES = '.eas-sources.json'
@@ -32,6 +46,7 @@ export const SOURCES = '.eas-sources.json'
  */
 const LEGACY: Record<string, string> = {
   '00-inbox': '00-收件箱',
+  // me 是后加的，没有中文旧名 —— dirOf 查不到别名就直接返回 'me'
   people: '人物',
   methods: '方法',
   domains: '领域',
