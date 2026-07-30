@@ -476,7 +476,10 @@ export function registerWikiHandlers(): void {
     } catch {
       /* 来源表写不进去不影响文件已经放进来这件事 */
     }
-    return { ok: true, done, failed, status: wikiStatus() }
+    // inboxDir 一并返回：调用方要拼刚放进来那些文件的完整路径（比如排队转录）。
+    // 让它自己去拼目录名的话，新库（00-inbox）和老库（00-收件箱）必须各猜一次，
+    // 猜错就是静默失败——这里现成算过了，直接给出去。
+    return { ok: true, done, failed, inboxDir: inboxOf(root), status: wikiStatus() }
   })
 
   ipcMain.handle('wiki:inbox', (): WikiInboxItem[] => {

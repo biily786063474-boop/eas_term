@@ -12,6 +12,7 @@ import fs from 'fs'
 import path from 'path'
 
 import type { AgentStatus, SkillStatus } from '../shared/types'
+import { expectedCodexRegion } from './agentRules'
 
 const CODEX_BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
 const CODEX_END = '<!-- eas-term:end -->'
@@ -82,10 +83,9 @@ const claudeSkillFile = (): string =>
   path.join(app.getPath('home'), '.claude', 'skills', 'eas-term', 'SKILL.md')
 const codexAgentsFile = (): string => path.join(app.getPath('home'), '.codex', 'AGENTS.md')
 
-/** Codex 的 AGENTS.md 里我们那一段（带首尾标记，方便幂等替换和整段移除） */
-function codexBlock(text: string): string {
-  return `${CODEX_BEGIN}\n\n${text}\n\n${CODEX_END}`
-}
+// CODEX_BEGIN/END 这里只用来**定位**盘上那一段，不再用来生成内容 ——
+// 生成是 agentRules.expectedCodexRegion() 的事，两边必须是同一个来源，
+// 否则又会回到「盘上写的和期望的永远不相等」那个坑里。
 
 export function skillStatus(): SkillStatus {
   const src = sourceText()
@@ -107,7 +107,11 @@ export function skillStatus(): SkillStatus {
       const j = raw.indexOf(CODEX_END)
       if (i < 0 || j < 0) return { installed: false, outdated: false }
       const cur = raw.slice(i, j + CODEX_END.length)
-      return { installed: true, outdated: !!src && cur !== codexBlock(src) }
+      // 必须拿 syncRules 真正会写的那段来比。这里原来比的是 codexBlock(src)，
+      // 也就是「完整 SKILL.md 全文」—— 而实际写进去的是一段短路由，两者永不相等，
+      // outdated 恒为真 → 首启弹窗每次启动都弹，点了「安装」也照弹不误。
+      const want = expectedCodexRegion()
+      return { installed: true, outdated: !!want && cur.trim() !== want.trim() }
     } catch {
       return { installed: false, outdated: false }
     }
@@ -126,58 +130,14 @@ export function skillStatus(): SkillStatus {
   }
 }
 
-function installClaude(text: string): void {
-  const f = claudeSkillFile()
-  fs.mkdirSync(path.dirname(f), { recursive: true })
-  fs.writeFileSync(f, text)
-}
-
-/** Codex：按标记替换/追加，用户自己写在 AGENTS.md 里的内容一个字都不动 */
-function installCodex(text: string): void {
-  const f = codexAgentsFile()
-  fs.mkdirSync(path.dirname(f), { recursive: true })
-  const raw = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''
-  const block = codexBlock(text)
-  const i = raw.indexOf(CODEX_BEGIN)
-  const j = raw.indexOf(CODEX_END)
-  let next: string
-  if (i >= 0 && j > i) {
-    next = raw.slice(0, i) + block + raw.slice(j + CODEX_END.length)
-  } else {
-    next = raw.replace(/\n*$/, '') + (raw.trim() ? '\n\n' : '') + block + '\n'
-  }
-  if (raw) {
-    try {
-      fs.copyFileSync(f, f + '.eas-backup')
-    } catch {
-      /* 备份失败不阻断 */
-    }
-  }
-  fs.writeFileSync(f, next)
-}
-
 export function registerSkillHandlers(): void {
   ipcMain.handle('skill:status', () => skillStatus())
 
-  ipcMain.handle('skill:install', (_e, targets: ('claude' | 'codex')[]) => {
-    const text = sourceText()
-    if (!text) return { ok: false, error: '技能包源文件缺失' }
-    const done: string[] = []
-    try {
-      if (targets.includes('claude')) {
-        installClaude(text)
-        done.push('Claude Code')
-      }
-      if (targets.includes('codex')) {
-        installCodex(text)
-        done.push('Codex')
-      }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : String(e) }
-    }
-    console.log('[skill] 已安装技能包：' + done.join(' / '))
-    return { ok: true, done, status: skillStatus() }
-  })
+  // 装指引统一走 rules:sync（agentRules.ts）。这里原来还有一个 skill:install，
+  // 界面上早就没人调它了，但它会把**完整 SKILL.md 全文**灌进 ~/.codex/AGENTS.md ——
+  // 一是那份文件全局常驻，塞全文等于长期占着每次会话的上下文（agentRules 里那段
+  // 大注释专门在避免这件事）；二是它写出来的内容和 syncRules 写的对不上，
+  // 谁要是调了它，「有更新待安装」就会重新变成恒为真。删掉，只留一条路。
 
   // 「永远不要提醒我」：只关掉启动弹窗，标题栏按钮照旧，用户随时能回来装
   ipcMain.handle('skill:mute', (_e, muted: boolean) => {

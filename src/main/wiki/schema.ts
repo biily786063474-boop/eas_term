@@ -11,12 +11,18 @@ import { WIKI_DIRS, dirOf, inboxOf } from './paths'
 // ── 初始化时写进去的内容 ─────────────────────────────────────────
 
 /** 库内 schema。CLAUDE.md 和 AGENTS.md 内容相同 —— 两个 CLI 各自会自动读 cwd 的那一份。 */
-/** 约定文件的版本标记。升级时靠它判断「这份是我们生成的」→ 可以安全覆盖；
- *  没有标记就是用户自己写的，一个字都不碰。 */
-// v3：目录名改成全英文（老库仍用中文，模板按实际目录名生成）。
-// 版本标记一变，已有库的 CLAUDE.md / AGENTS.md 会被重写成与自己目录名相符的那份 ——
-// 这一步不能省：说明里的目录名和盘上不一致，agent 会去写不存在的路径。
-const SCHEMA_MARK = '<!-- eas-term:wiki-schema v3 -->'
+// v4：改成 begin/end 围栏。
+//
+// v3 之前整个文件都是我们的模板，升级时**整份重写**。问题在于：这个文件开头就写着
+// 「这个知识库怎么用」，用户很自然会在里面补自己的规矩（我的笔记风格、这个库的特殊约定…），
+// 而那些内容会在下一次启动时被静默抹掉 —— 我们连他写过东西都不知道。
+//
+// 现在只有围栏**之内**属于我们，升级只换这一段；围栏之外用户写什么都原样留着。
+// 这和 ~/.codex/AGENTS.md 那边的托管区是同一套做法。
+const SCHEMA_BEGIN = '<!-- eas-term:wiki-schema:begin v4 -->'
+const SCHEMA_END = '<!-- eas-term:wiki-schema:end -->'
+/** v3 及更早的整份模板标记。见到它说明是老格式，要迁移（迁移前备份，因为可能夹带着用户的内容）。 */
+const SCHEMA_MARK_LEGACY = 'eas-term:wiki-schema'
 
 /** 这个库盘上实际的目录名。新库全英文，老库回落中文 —— 模板里一律用这里的值，
  *  绝不写死，否则老库会拿到一份指向不存在目录的说明。 */
@@ -43,9 +49,9 @@ export function dirNames(root: string): WikiDirNames {
   }
 }
 
-export function schemaText(d: WikiDirNames): string {
-  return `${SCHEMA_MARK}
-# 这个知识库怎么用
+/** 围栏内的托管正文（不含围栏标记本身）。 */
+function schemaBody(d: WikiDirNames): string {
+  return `# 这个知识库怎么用
 
 你是这个知识库的维护者，不是通用助手。
 用户负责搜集素材、提问题、判断价值；你负责整理、归档、交叉引用和记账。
@@ -132,6 +138,53 @@ updated: 2026-07-29
 ## [2026-07-30] lint   | 发现 3 处矛盾、2 个孤儿页
 \`\`\`
 `
+}
+
+/** 完整的约定文件：托管区 + 一句话告诉用户「围栏外面是你的地盘」。
+ *  那句话很重要 —— 不写的话，用户看到满屏 AI 约定，不会想到自己也能往里加东西。 */
+export function schemaText(d: WikiDirNames): string {
+  return `${SCHEMA_BEGIN}
+${schemaBody(d)}${SCHEMA_END}
+
+<!-- 上面是 Eas-Term 维护的部分，软件升级时会整段替换。
+     这一行以下随你写（本库的特殊约定、你的笔记习惯…），升级不会动。 -->
+`
+}
+
+/** 升级一个已存在的约定文件。返回它到底被怎么处理了，好如实告诉用户。 */
+function upgradeSchemaFile(p: string, d: WikiDirNames): 'updated' | 'migrated' | 'kept' {
+  let cur: string
+  try {
+    cur = fs.readFileSync(p, 'utf8')
+  } catch {
+    return 'kept' // 读不了就当用户的，别动
+  }
+  const b = cur.indexOf(SCHEMA_BEGIN)
+  const e = cur.indexOf(SCHEMA_END)
+
+  // 新格式：只换围栏内那一段，围栏外的内容（用户自己写的）原样保留
+  if (b !== -1 && e !== -1 && e > b) {
+    const next = cur.slice(0, b) + SCHEMA_BEGIN + '\n' + schemaBody(d) + cur.slice(e)
+    if (next === cur) return 'kept'
+    fs.writeFileSync(p, next)
+    return 'updated'
+  }
+
+  // 老格式（v3 及更早）：整份都是我们的模板 —— 但用户很可能已经往里加过东西。
+  // 迁移成新格式之前先备份，那些内容至少还找得回来。
+  if (cur.includes(SCHEMA_MARK_LEGACY)) {
+    try {
+      fs.writeFileSync(p + '.eas-backup', cur)
+    } catch {
+      /* 备份失败就不迁移了 —— 宁可停在旧版约定，也不能不留退路地覆盖 */
+      return 'kept'
+    }
+    fs.writeFileSync(p, schemaText(d))
+    return 'migrated'
+  }
+
+  // 没有任何标记 = 用户自己写的（比如把已有的 Obsidian 库指过来），一个字都不碰
+  return 'kept'
 }
 
 /** 索引的分区标题跟着实际目录名走：标题和目录对不上，agent 更新索引时会往错的分区塞 */
@@ -228,20 +281,17 @@ export function initWiki(root: string): { created: string[]; skipped: string[] }
       created.push(name)
       continue
     }
-    // 约定文件（CLAUDE.md / AGENTS.md）带我们的标记 → 是上一版生成的，升级时覆盖成新规矩；
-    // 没有标记 = 用户自己写的（比如把已有的 Obsidian 库指过来），一个字都不碰。
-    // 不这么做的话，老知识库会永远停在旧约定上——新加的工具它根本不知道
-    const isSchema = name === 'CLAUDE.md' || name === 'AGENTS.md'
-    if (isSchema) {
-      try {
-        const cur = fs.readFileSync(p, 'utf8')
-        if (cur.includes('eas-term:wiki-schema') && cur !== body) {
-          fs.writeFileSync(p, body)
-          created.push(name + '（已更新到新版约定）')
-          continue
-        }
-      } catch {
-        /* 读不了就当用户的，别动 */
+    // 约定文件（CLAUDE.md / AGENTS.md）只升级围栏内那一段，围栏外是用户的地盘。
+    // 不升级的话，老知识库会永远停在旧约定上——新加的工具它根本不知道。
+    if (name === 'CLAUDE.md' || name === 'AGENTS.md') {
+      const r = upgradeSchemaFile(p, d)
+      if (r === 'updated') {
+        created.push(name + '（约定已更新到新版）')
+        continue
+      }
+      if (r === 'migrated') {
+        created.push(name + '（已改成可自定义格式，旧内容备份在 .eas-backup）')
+        continue
       }
     }
     skipped.push(name)

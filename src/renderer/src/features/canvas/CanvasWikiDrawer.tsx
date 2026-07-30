@@ -118,13 +118,13 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   }
 
   /** 视频/音频进收件箱后自动排队转录：本机跑、不花 token、不碰 wiki 正文。
-   *  等用户想整理的时候，最耗时的那一步已经做完了 */
-  const queueMedia = async (names: string[]): Promise<void> => {
-    const st2 = await window.api.wiki.status()
-    if (!st2.path) return
+   *  等用户想整理的时候，最耗时的那一步已经做完了。
+   *  收件箱目录名由主进程给（inboxDir）——这里曾经写死成老库的中文名「00-收件箱」，
+   *  于是新库（00-inbox）上放进去的音视频路径全是错的，转录静默不发生。 */
+  const queueMedia = async (names: string[], root: string, inboxDir: string): Promise<void> => {
     const media = names
       .filter((n) => isVideoPath(n) || /\.(mp3|m4a|wav|aac|flac|ogg|opus)$/i.test(n))
-      .map((n) => ({ name: n, path: `${st2.path}/00-收件箱/${n}` }))
+      .map((n) => ({ name: n, path: `${root}/${inboxDir}/${n}` }))
     if (media.length) enqueueTranscribe(media)
   }
 
@@ -132,7 +132,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
     if (!paths.length) return
     setBusy(`放入 ${paths.length} 个…`)
     const r = await window.api.wiki.addToInbox(paths)
-    void queueMedia(r.done ?? [])
+    if (r.status?.path && r.inboxDir) void queueMedia(r.done ?? [], r.status.path, r.inboxDir)
     await refresh()
     setBusy(r.failed?.length ? `${r.done?.length ?? 0} 个已放入，${r.failed.length} 个失败` : '')
     if (!r.failed?.length) setTimeout(() => setBusy(''), 1800)

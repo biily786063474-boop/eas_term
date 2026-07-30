@@ -13,7 +13,6 @@
 // 现在改成：常驻区只留触发条件和路径，详细正文落到 ~/.eas/agent/ 下按需读。
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 
 import type { RulesStatus, Footprint } from '../shared/types'
@@ -29,8 +28,15 @@ const home = (): string => app.getPath('home')
 const codexAgents = (): string => path.join(home(), '.codex', 'AGENTS.md')
 const claudeSkill = (name: string): string =>
   path.join(home(), '.claude', 'skills', name, 'SKILL.md')
-/** 详细正文的落点：常驻区只写路径指过来 */
-const detailDir = (): string => path.join(os.homedir(), '.eas', 'agent')
+/** 详细正文的落点：常驻区只写路径指过来。
+ *
+ *  **必须和上面的 home() 用同一个来源。** 这里原来是 os.homedir()，而 codexAgents()
+ *  用的是 app.getPath('home') —— 两者平时相同，但 os.homedir() 跟随 $HOME 环境变量、
+ *  app.getPath('home') 不跟随。一旦分叉（隔离测试、换个方式启动），
+ *  就会往**真实**的 ~/.codex/AGENTS.md 里写一行指向**另一个 home** 的路径，
+ *  而且这行是持久化的：等那个目录没了，Codex 每次都读到一个不存在的文件。
+ *  实测踩到过。 */
+const detailDir = (): string => path.join(home(), '.eas', 'agent')
 
 function readSource(rel: string): string | null {
   const base = app.isPackaged ? process.resourcesPath : app.getAppPath()
@@ -82,6 +88,17 @@ function codexRegion(mods: { canvas: boolean }): string {
   }
   lines.push(END)
   return lines.join('\n')
+}
+
+/** 这一版**应该**写进 AGENTS.md 常驻区的内容。
+ *
+ *  导出它是为了让状态判断有个正确的参照物：agentSkill.ts 那边原来拿
+ *  「完整 SKILL.md 全文包在标记里」去比对盘上那段，而 syncRules 实际写的是上面这段
+ *  短路由 —— 两者永不相等，于是「有更新待安装」恒为真，首启弹窗每次启动都弹，
+ *  用户点多少次「安装」都没用。 */
+export function expectedCodexRegion(): string | null {
+  const canvas = canvasSkill()
+  return canvas ? codexRegion({ canvas: true }) : null
 }
 
 /** 只替换我们那一段，用户写在区外的内容一个字不碰 */

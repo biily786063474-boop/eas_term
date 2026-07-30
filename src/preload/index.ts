@@ -184,12 +184,9 @@ const api = {
     removeConfig: (): Promise<void> => ipcRenderer.invoke('mcp:removeConfig')
   },
   skill: {
-    // 配套技能包（告诉 AI 什么时候该用画板工具）：查状态 / 安装 / 关掉启动提醒
+    // 配套技能包（告诉 AI 什么时候该用画板工具）：查状态 / 关掉启动提醒。
+    // 安装走 rules.sync —— 这里原来还有个 install，写法和 rules.sync 不一致，已删
     status: (): Promise<SkillStatus> => ipcRenderer.invoke('skill:status'),
-    install: (
-      targets: ('claude' | 'codex')[]
-    ): Promise<{ ok: boolean; error?: string; done?: string[]; status?: SkillStatus }> =>
-      ipcRenderer.invoke('skill:install', targets),
     mute: (muted: boolean): Promise<SkillStatus> => ipcRenderer.invoke('skill:mute', muted),
     // 一个 CLI 都没装时，按这台机器的实际情况给出该跑哪条安装命令（只给命令，不代执行）
     installPlan: (): Promise<InstallPlan> => ipcRenderer.invoke('agent:installPlan')
@@ -243,6 +240,8 @@ const api = {
       error?: string
       done?: string[]
       failed?: { file: string; error: string }[]
+      /** 收件箱在盘上的实际目录名（新库 00-inbox / 老库 00-收件箱）。拼完整路径用它，别写死 */
+      inboxDir?: string
       status?: WikiStatus
     }> => ipcRenderer.invoke('wiki:addToInbox', files, move),
     backlinks: (target: string): Promise<Backlink[]> => ipcRenderer.invoke('wiki:backlinks', target),
