@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>密钥管理器 · 设计与可行性</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">密钥管理器</span>
+    <a href="#结论">结论</a>
+    <a href="#威胁模型">威胁模型</a>
+    <a href="#密码">六位码</a>
+    <a href="#注入">注入机制</a>
+    <a href="#索要">AI 索要</a>
+    <a href="#配置文件">配置文件难题</a>
+    <a href="#分期">分期</a>
+    <a href="#下一步">下一步</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <span class="eyebrow">设计与可行性 · v1 草案</span>
+  <h1>密钥管理器</h1>
+  <p class="lede">
+    在 Eas-Term 里放一个带锁的密钥柜：AI 能用它们干活，但密钥本身永远不进入对话、
+    不上传给模型厂商。AI 遇到需要新密钥的场景时，直接弹窗让你填。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-07-30</b></span>
+    <span>状态 <b>待决策</b></span>
+    <span>前置依赖 <b>已具备</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">可行，值得做，但安全模型要改一个关键假设</div>
+  <p class="secnote">核心机制这个项目已经有了。真正需要调整的是「防谁」这件事的表述——按原设想的说法实现出来，会给出虚假的安全感。</p>
+
+  <div class="grid g4" style="margin-bottom:24px">
+    <div class="stat"><div class="num n-em">已有</div><div class="lab">PTY 环境注入机制<br>不用发明新东西</div></div>
+    <div class="stat"><div class="num n-ro">做不到</div><div class="lab">「LLM 读不到密钥」<br>见下方反对卡</div></div>
+    <div class="stat"><div class="num n-em">防得住</div><div class="lab">密钥进对话上下文<br>这才是真实收益</div></div>
+    <div class="stat"><div class="num n-am">最难</div><div class="lab">配置文件类工具<br>建议 v1 不做</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁决</div>
+    <p style="margin:0">
+      按 <b>「密钥不进对话」</b> 而不是 <b>「LLM 读不到」</b> 来定位，这个功能立刻从
+      「安全幻觉」变成「实实在在解决问题」。核心机制复用现有的 PTY 注入，
+      六位码改成「人在场证明」而非加密密钥，v1 只支持环境变量场景。
+    </p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">必须先说清的一条</div>
+    <p style="margin:0 0 10px"><b>「LLM 不能直接读密钥管理器」这个目标做不到。</b>只要密钥能在 AI 跑命令的终端里被使用，AI 就能读到它：</p>
+    <ul style="margin:0">
+      <li>注入成环境变量 → <code>echo $OPENAI_API_KEY</code> 一行就出来了</li>
+      <li>只给路径 → AI 有 Read 工具，拿到路径就能读文件内容</li>
+      <li>只给变量名 → <code>env | grep -i key</code> 一样能翻出来</li>
+    </ul>
+    <p style="margin:10px 0 0">
+      这不是实现好坏的问题，是<b>同一个进程里的东西没法对该进程隐藏</b>。
+      任何声称「AI 能用但读不到」的设计，都会在第一次 prompt injection 时破功——
+      而那时用户还以为自己是安全的。
+    </p>
+  </div>
+</section>
+
+<section id="威胁模型">
+  <h2>Threat Model</h2>
+  <div class="sectitle">防谁、不防谁</div>
+  <p class="secnote">把边界写死，才知道这个功能承诺了什么、没承诺什么。文案和 UI 都要照这个口径，不能含糊。</p>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>风险</th><th>现状</th><th>本方案</th><th>判定</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>密钥被上传到模型厂商</b><br><span style="color:#737373">粘进对话框 → 进入 Anthropic/OpenAI 的服务器和日志</span></td>
+          <td>每次都发生</td>
+          <td>永不进入对话</td>
+          <td><span class="b b-em">防住</span></td>
+        </tr>
+        <tr>
+          <td><b>密钥留在本地会话记录</b><br><span style="color:#737373"><code>~/.claude/projects/*.jsonl</code> 里明文躺着</span></td>
+          <td>每次都发生</td>
+          <td>永不进入对话</td>
+          <td><span class="b b-em">防住</span></td>
+        </tr>
+        <tr>
+          <td><b>密钥进 shell history / 明文 .env</b></td>
+          <td>常发生</td>
+          <td>注入到进程 env，不落盘不入 history</td>
+          <td><span class="b b-em">防住</span></td>
+        </tr>
+        <tr>
+          <td><b>密钥散落各处、找不到</b></td>
+          <td>翻遍钥匙串、笔记、旧项目</td>
+          <td>集中管理 + 一键注入</td>
+          <td><span class="b b-em">解决</span></td>
+        </tr>
+        <tr>
+          <td><b>别人趁你离开用你的电脑</b></td>
+          <td>无阻碍</td>
+          <td>六位码 + 会话超时</td>
+          <td><span class="b b-am">缓解</span></td>
+        </tr>
+        <tr>
+          <td><b>AI 主动读取并外泄密钥</b><br><span style="color:#737373">它能 <code>echo</code>、能写脚本发出去</span></td>
+          <td>—</td>
+          <td>无法阻止</td>
+          <td><span class="b b-ro">不防</span></td>
+        </tr>
+        <tr>
+          <td><b>恶意 npm 包偷环境变量</b><br><span style="color:#737373">postinstall 脚本继承了注入的 env</span></td>
+          <td>—</td>
+          <td>无法阻止<br>（按终端授权可缩小范围）</td>
+          <td><span class="b b-ro">不防</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">一句话威胁模型</h4>
+    <p style="margin:0">
+      信任「我主动让它在这台机器上跑命令的那个 AI」，
+      不信任「密钥被上传到第三方并长期留存」。
+    </p>
+    <p style="margin:12px 0 0;color:#a3a3a3;font-size:14px">
+      这个边界是诚实的，也守得住。而且它和你已有的处境一致——你本来就让 AI 读你全部代码了，
+      再纠结它能不能 <code>echo</code> 一个 key 意义不大；但让 key 永久留在别人服务器上，是另一回事。
+    </p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">UI 文案红线</div>
+    <p style="margin:0">
+      界面上<b>不能出现</b>「AI 无法读取」「密钥对 AI 不可见」这类表述。
+      正确说法是<b>「密钥不会出现在对话里，也不会上传」</b>。
+      这一条要写进 UI 评审清单——一句话写歪，整个功能的诚信就没了。
+    </p>
+  </div>
+</section>
+
+<section id="密码">
+  <h2>Passcode</h2>
+  <div class="sectitle">六位码：当「人在场证明」，不当加密密钥</div>
+  <p class="secnote">六位数字只有 100 万种组合，本地离线暴力破解只要几秒。如果加密密钥从它派生，等于没加密。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-ro">错误做法</span></h4>
+      <p style="margin:0;color:#a3a3a3">六位码 → KDF → 加密密钥 → 加密的密钥库文件</p>
+      <p style="margin:10px 0 0;color:#a3a3a3;font-size:14px">
+        库文件一旦被拷走（备份、同步盘、恶意脚本），几秒钟就能爆破出全部密钥。
+        再高成本的 KDF 也只是把「几秒」拖成「几分钟」。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-em">建议做法</span></h4>
+      <p style="margin:0;color:#a3a3a3">真正的保护交给<b>系统钥匙串</b><br>（macOS Keychain / Windows DPAPI）</p>
+      <p style="margin:10px 0 0;color:#a3a3a3;font-size:14px">
+        它有硬件加密和系统级访问控制，密钥库文件被拷走也没用。
+        六位码只负责「证明是人在操作」。
+      </p>
+    </div>
+  </div>
+
+  <h3>六位码真正的职责</h3>
+  <ul class="clean">
+    <li>防「你去倒杯咖啡，AI 自动化地把所有密钥全注入了」</li>
+    <li>防「同事借你电脑用一下」</li>
+    <li>给一次危险操作（注入、导出、删除）一个明确的人工确认点</li>
+  </ul>
+
+  <p>因为不承担加密强度，它可以做得很快——不需要 KDF 拖慢，体验好。配套的：</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>策略</th><th>建议值</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>解锁有效期</td><td>15 分钟无操作自动锁</td><td>够用完一轮活，又不至于忘了锁</td></tr>
+        <tr><td>错误尝试</td><td>5 次后锁 5 分钟，指数退避</td><td>让在线猜测不可行</td></tr>
+        <tr><td>敏感操作</td><td>导出 / 删除 / 批量注入需重新输码</td><td>解锁态不等于可以做任何事</td></tr>
+        <tr><td>忘记密码</td><td>不提供找回，只能清库重建</td><td>有「找回」就有绕过路径</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="注入">
+  <h2>Injection</h2>
+  <div class="sectitle">注入机制：这条路你已经铺好了</div>
+  <p class="secnote">Eas-Term 现在就在做同样的事——<code>pty:create</code> 时往终端注入 MCP 的端口和令牌，那两个值从没出现在任何对话里。</p>
+
+  <h3>现有机制（<code>src/main/mcpBridge.ts:31</code>）</h3>
+<pre><code>export function mcpEnv(ctx: Ctx): Record&lt;string, string&gt; {
+  return {
+    EAS_TERM_PORT: String(port),
+    EAS_TERM_TOKEN: token,     <span class="dim">// ← 令牌从没进过对话，但终端里能用</span>
+    ...
+  }
+}
+
+<span class="dim">// src/main/pty.ts:237</span>
+Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))</code></pre>
+
+  <h3>密钥走同一条路</h3>
+<pre><code><span class="flow">用户</span> 在 GUI 勾选「这个终端需要 OPENAI_API_KEY」
+  <span class="flow">↓</span> 六位码确认
+<span class="flow">主进程</span> 从钥匙串取值
+  <span class="flow">↓</span>
+<span class="flow">pty:create</span> 注入 env  <span class="dim">（和 EAS_TERM_TOKEN 完全一样的路径）</span>
+  <span class="flow">↓</span>
+<span class="flow">AI</span> 在终端里 curl -H "Authorization: Bearer $OPENAI_API_KEY"
+     <span class="hi">它只知道有这个变量名可用，值没在对话里出现过</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">关键设计</div>
+    <p style="margin:0">
+      <b>按终端授权，不是全局注入。</b>
+      「给这个终端一个 GitHub token」和「给那个终端一个数据库密码」互不干扰。
+      这既是最小权限，也限制了恶意依赖包能偷到的范围。
+    </p>
+  </div>
+
+  <h3>需要配套的细节</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>问题</th><th>处理</th></tr></thead>
+      <tbody>
+        <tr><td>已经开着的终端怎么加密钥？</td><td>env 无法追加到已存在的进程。要么开新终端，要么给一条 <code>export</code> 命令由用户自己粘（那样会进 history，需提示）</td></tr>
+        <tr><td>终端节点上要看得出注入了什么</td><td>节点头部显示钥匙徽章 + 数量，hover 列出变量名（<b>只列名字不列值</b>）</td></tr>
+        <tr><td>变量名冲突</td><td>入库时校验；同一终端内不允许重名</td></tr>
+        <tr><td>子进程全继承</td><td>无法避免。文档里明说，并在注入确认弹窗里提示一次</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="索要">
+  <h2>Request Flow</h2>
+  <div class="sectitle">AI 主动索要密钥：这个设计我认为是对的</div>
+  <p class="secnote">比现在的流程（AI 说「你去申请然后贴给我」→ 你贴进对话）安全得多，而且省事。做成一个 MCP 工具。</p>
+
+<pre><code><span class="flow">request_secret</span>(name, purpose, docs_url?)
+
+  <span class="dim">AI 调用 →</span> 弹窗：
+    ┌────────────────────────────────────────┐
+    │ <span class="hi">⚠ AI 请求你提供一个密钥</span>              │
+    │                                        │
+    │ 变量名   OPENAI_API_KEY                │
+    │ AI 的理由 <span class="dim">「需要调用 GPT 做摘要」</span>       │
+    │ 申请地址 platform.openai.com/api-keys  │
+    │                                        │
+    │ [密钥输入框 ●●●●●●●●]                   │
+    │ 作用范围 ○ 仅此终端  ○ 保存备用         │
+    │                       [取消] [保存]     │
+    └────────────────────────────────────────┘
+
+  <span class="dim">返回给 AI 的只有 →</span> { saved: true, name: "OPENAI_API_KEY" }
+                        <span class="hi">值从未经过 AI</span></code></pre>
+
+  <div class="dissent">
+    <div class="vlabel">两个必须防的坑</div>
+    <p style="margin:0 0 10px"><b>1. AI 可能伪造用途骗你填别的东西。</b>
+      比如谎称「需要你的银行验证码来完成部署」。弹窗必须：</p>
+    <ul style="margin:0 0 12px">
+      <li>醒目标注<b>「这是 AI 发起的请求」</b>，视觉上和系统弹窗区分开</li>
+      <li><b>原样显示</b> AI 给的理由，不要帮它润色成看起来更正当的样子</li>
+      <li>对高危名称（含 password / 身份证 / 验证码 等）额外警告</li>
+    </ul>
+    <p style="margin:0"><b>2. 限流。</b>不然一个跑飞的 agent 能连弹几十个窗。建议每分钟最多 1 次、连续取消 2 次后本轮会话禁用该工具。</p>
+  </div>
+</section>
+
+<section id="配置文件">
+  <h2>The Hard Part</h2>
+  <div class="sectitle">配置文件类工具：v1 建议不做</div>
+  <p class="secnote">这是整个方案里最脏的一块。很多工具根本不读环境变量。</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>工具</th><th>读哪</th><th>能用 env 吗</th></tr></thead>
+      <tbody>
+        <tr><td>AWS CLI</td><td><code>~/.aws/credentials</code></td><td><span class="b b-em">能</span> <code>AWS_ACCESS_KEY_ID</code> 等</td></tr>
+        <tr><td>npm publish</td><td><code>~/.npmrc</code></td><td><span class="b b-am">部分</span> <code>NODE_AUTH_TOKEN</code> 需配合配置</td></tr>
+        <tr><td>Docker push</td><td><code>~/.docker/config.json</code></td><td><span class="b b-ro">不能</span> 得先 <code>docker login</code></td></tr>
+        <tr><td>kubectl</td><td><code>~/.kube/config</code></td><td><span class="b b-ro">不能</span></td></tr>
+        <tr><td>SSH / Git</td><td><code>~/.ssh/</code></td><td><span class="b b-ro">不能</span> 但有 ssh-agent</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>三条路，各有代价：</p>
+
+  <div class="grid g3">
+    <div class="card">
+      <h4 style="margin-top:0">A. 写明文配置文件</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">用完即删。<br><b>问题</b>：中途崩溃就留在盘上了；而且窗口期内任何进程都能读。</p>
+      <p style="margin:8px 0 0"><span class="b b-ro">不推荐</span></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">B. 借力原生 agent</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">ssh-agent / git credential helper 这类本来就是干这个的。<br><b>问题</b>：每个工具一套，覆盖面窄。</p>
+      <p style="margin:8px 0 0"><span class="b b-em">推荐</span>（按需逐个加）</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">C. 只给引导</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">GUI 里放一键「打开 docker login」并把密钥填进去，由官方工具自己落盘。<br><b>问题</b>：不算「管理」，只是省了翻找。</p>
+      <p style="margin:8px 0 0"><span class="b b-am">v1 折中</span></p>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">建议</div>
+    <p style="margin:0">
+      v1 <b>只做环境变量</b>，把边界在 UI 上说清楚（「这类工具需要你自己 login 一次」）。
+      不要为了覆盖率去做 A 方案——写明文配置文件会把整套保护的意义抵消掉，
+      而且失败模式（崩溃残留）很难测。
+    </p>
+  </div>
+</section>
+
+<section id="分期">
+  <h2>Roadmap</h2>
+  <div class="sectitle">分期</div>
+  <p class="secnote">每一期都能独立交付价值，不做完也不会留下半截状态。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">前置 · 已具备</div>
+      <div class="tt">PTY 环境注入</div>
+      <div class="td"><code>mcpEnv()</code> + <code>pty:create</code> 已经在跑，不用改动</div>
+    </div>
+    <div class="it">
+      <div class="tm">P1 · 核心闭环</div>
+      <div class="tt">密钥柜 + 六位码 + 按终端注入</div>
+      <div class="td">
+        钥匙串存储 · 列表/增删改 GUI · 解锁与超时 · 开终端时选择注入哪些 ·
+        终端节点上的钥匙徽章。<br>
+        <b>交付即可用</b>：从此不用再把 key 粘进对话。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">P2 · AI 协同</div>
+      <div class="tt">request_secret 工具 + 索要弹窗</div>
+      <div class="td">
+        MCP 工具 · 防伪造弹窗 · 限流 · 「保存备用 / 仅此终端」两种范围。<br>
+        依赖 P1 的存储层。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">P3 · 可信度</div>
+      <div class="tt">审计日志</div>
+      <div class="td">
+        哪个终端、什么时候、注入了哪个密钥（<b>只记名字不记值</b>）。
+        出事能追溯，也是让人敢用的理由。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">P4 · 按需</div>
+      <div class="tt">配置文件类工具</div>
+      <div class="td">
+        逐个接 ssh-agent / git credential helper 这类原生机制。
+        <span style="color:#737373">只在真的被卡住时才做，不预先建设。</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>P1 的验收标准</h3>
+  <ul class="clean">
+    <li>密钥库文件被拷到另一台机器 → 打不开（钥匙串保护生效）</li>
+    <li>翻遍 <code>~/.claude/projects/*.jsonl</code> → 搜不到任何密钥明文</li>
+    <li>注入过密钥的终端里 <code>history</code> → 搜不到密钥</li>
+    <li>锁定状态下调 <code>request_secret</code> → 要求先解锁，不静默失败</li>
+    <li>15 分钟不操作 → 自动锁，已注入的终端不受影响（进程 env 已经在那了）</li>
+  </ul>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">这份文档只到「设计成立」为止。动手前还有两个决定要你拍。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">决定一：存储后端</h4>
+      <p style="margin:0 0 10px;color:#a3a3a3;font-size:14px">
+        <b>纯钥匙串</b>（每条密钥一个 Keychain item）——最安全，但 Windows 侧要另写 DPAPI 实现，跨机器同步不了。
+      </p>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        <b>钥匙串存主密钥 + 自己加密的库文件</b>——一份实现两个平台，将来能加同步，但多一层自己写的密码学（出错风险在这）。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">决定二：入口放哪</h4>
+      <p style="margin:0 0 10px;color:#a3a3a3;font-size:14px">
+        <b>标题栏图标</b>——和「扩展能力」并排，随时可达。
+      </p>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        <b>画布左抽屉</b>——和知识库同一层，但画布模式才有；终端模式下够不着。
+      </p>
+    </div>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">开工 P1，存储用纯钥匙串，入口放标题栏</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+
+  <p style="color:#737373;font-size:13.5px">
+    改哪个词都行——比如「存储用加密库文件」「入口放画布抽屉」「先只做 P1 的存储层，注入下一轮再说」。
+  </p>
+</section>
+
+<footer>
+  Eas-Term · 密钥管理器设计与可行性 · 2026-07-30<br>
+  本文件：<code>docs/密钥管理器-设计与可行性.html</code><br>
+  引用代码：<code>src/main/mcpBridge.ts:31</code>（mcpEnv）· <code>src/main/pty.ts:237</code>（注入点）<br>
+  相关：<code>site/privacy.html</code>（隐私说明，本功能上线后需同步更新）
+</footer>
+
+</main>
+</body>
+</html>
