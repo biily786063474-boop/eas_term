@@ -29,10 +29,13 @@ export interface SecretRequest {
   name: string
   /** 要哪些环境变量 */
   vars: string[]
-  /** AI 说它要来干嘛 —— 原样显示，一个字都不改 */
+  /** AI 说它要来干嘛 —— 原样显示，一个字都不改。
+   *  fix 模式下这里是服务返回的错误原话 */
   purpose: string
   /** 去哪申请（可选，只接受 http/https） */
   docsUrl?: string
+  /** 'fix' = AI 用着报错了，请用户改一个。默认是首次索要 */
+  mode?: 'ask' | 'fix'
 }
 
 export interface SecretRequestResult {
@@ -108,6 +111,7 @@ function SecretRequestModal({
 
   const danger = dangerHits(req)
   const locked = !!st && (!st.configured || st.locked)
+  const fix = req.mode === 'fix'
 
   useEffect(() => {
     if (!locked) firstRef.current?.focus()
@@ -132,12 +136,37 @@ function SecretRequestModal({
       return
     }
     setBusy(true)
-    const r = await window.api.secrets.save({
+    let input = {
       name: req.name,
       note: `AI 索要：${req.purpose}`.slice(0, 200),
       autoInject,
       vars: req.vars.map((varName, i) => ({ varName, value: values[i] }))
-    })
+    } as Parameters<typeof window.api.secrets.save>[0]
+
+    if (fix) {
+      // 修正模式必须**改已有那一条**，不能新建 —— 变量名全局唯一，新建会被直接拒掉。
+      // 同组里没被点名的变量原样留着（不带 value = 主进程沿用旧密文）。
+      const items = await window.api.secrets.list()
+      const owner = items.find((it) => it.vars.some((v) => req.vars.includes(v.varName)))
+      if (!owner) {
+        setBusy(false)
+        setErr('这些变量已经不在密钥柜里了，可能刚被删掉')
+        return
+      }
+      input = {
+        id: owner.id,
+        name: owner.name, // 名字和自动注入开关都不动，这次只换值
+        note: owner.note,
+        vars: owner.vars.map((v) => {
+          const i = req.vars.indexOf(v.varName)
+          return i >= 0
+            ? { varName: v.varName, value: values[i], from: v.varName }
+            : { varName: v.varName, from: v.varName }
+        })
+      }
+    }
+
+    const r = await window.api.secrets.save(input)
     setBusy(false)
     if (!r.ok) {
       setErr(r.error ?? '保存失败')
@@ -152,17 +181,28 @@ function SecretRequestModal({
         {/* 规矩 1：一眼看出这不是系统在问你，是 AI 在问你 */}
         <div className="sreq-flag">
           <KeyIcon size={13} />
-          这是 <b>AI 发起</b>的密钥请求，不是 Eas-Term 在向你索要
+          这是 <b>AI 发起</b>的{fix ? '密钥修正请求' : '密钥请求'}，不是 Eas-Term 在向你索要
         </div>
 
-        <div className="sreq-title">{req.name}</div>
+        <div className="sreq-title">
+          {fix ? `这个密钥好像不对：${req.vars.join('、')}` : req.name}
+        </div>
 
         {/* 规矩 2：AI 的原话原样摆着。React 默认转义，不要改成 innerHTML */}
         <div className="sreq-field">
-          <span className="sreq-label">AI 说它要来做什么</span>
+          <span className="sreq-label">
+            {fix ? '服务返回的报错（AI 转述）' : 'AI 说它要来做什么'}
+          </span>
           <blockquote className="sreq-quote">{req.purpose}</blockquote>
           <span className="sreq-hint">以上是 AI 的原话，未经改写 —— 自己判断合不合理</span>
         </div>
+
+        {fix && (
+          <div className="sreq-hint">
+            填新值会<b>覆盖</b>柜里原来的。不想换就点取消 ——
+            AI 拿不到旧值，也不该向你要来「帮你核对」。
+          </div>
+        )}
 
         <div className="sreq-field">
           <span className="sreq-label">会存成这些环境变量</span>
@@ -244,18 +284,21 @@ function SecretRequestModal({
                 </label>
               ))}
             </div>
-            <label className="sec-check">
-              <input
-                type="checkbox"
-                checked={autoInject}
-                onChange={(e) => setAutoInject(e.target.checked)}
-              />
-              <span>以后新开的终端自动带上这一组</span>
-            </label>
-            {/* 这一句是诚实的关键：别让用户以为填完当前终端就能用 */}
+            {!fix && (
+              <label className="sec-check">
+                <input
+                  type="checkbox"
+                  checked={autoInject}
+                  onChange={(e) => setAutoInject(e.target.checked)}
+                />
+                <span>以后新开的终端自动带上这一组</span>
+              </label>
+            )}
+            {/* 这一句是诚实的关键：别让用户以为填完当前终端就自动能用 */}
             <div className="sreq-hint">
-              存进密钥柜，<b>不会发给 AI</b>。当前这个终端拿不到它 ——
-              进程的环境变量在启动那一刻就定死了，得开个新终端才带得上。
+              {fix ? '新值' : '存进密钥柜，'}
+              <b>不会发给 AI</b>。当前这个终端也读不到 ——
+              进程的环境变量在启动那一刻就定死了；AI 要用会走 <code>eas-secret</code> 包装命令现取。
             </div>
           </>
         )}

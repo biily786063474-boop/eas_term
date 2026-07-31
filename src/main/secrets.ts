@@ -315,6 +315,96 @@ export function secretsEnv(names?: string[]): Record<string, string> {
   return out
 }
 
+/**
+ * 某个终端启动时到底带上了哪些变量。**只存名字，不存值。**
+ *
+ * 有两个用处，都是「让人和 AI 都不用去 echo 才知道」：
+ *   · secret_check 工具告诉 agent「这个变量你这个终端能不能直接用」
+ *   · 终端角标显示这个终端携带了几组密钥
+ * PTY 死了也不删：agent 可能在进程退出后才来问，留着不占什么。
+ */
+const injectedByPty = new Map<string, string[]>()
+
+export function noteInjected(ptyId: string, names: string[]): void {
+  if (names.length) injectedByPty.set(ptyId, names)
+}
+export function injectedInPty(ptyId?: string): string[] {
+  return ptyId ? (injectedByPty.get(ptyId) ?? []) : []
+}
+
+/**
+ * 查这些变量在不在柜里 / 在不在某个终端里。**只回布尔，永不回值。**
+ *
+ * 故意**不要求解锁**：锁着的时候 agent 也该能判断「柜里已经有了，只是要用户解个锁」，
+ * 否则它只能盲目再弹一次 request_secret 去骚扰用户 —— 而变量名本身不是秘密
+ * （AWS_ACCESS_KEY_ID 谁都知道），泄露的信息量远小于反复弹窗的代价。
+ */
+export function secretsHas(
+  names: string[],
+  ptyId?: string
+): { varName: string; inVault: boolean; readable: boolean; inThisTerminal: boolean }[] {
+  const s = readStore()
+  const here = new Set(injectedInPty(ptyId))
+  const byName = new Map<string, StoredVar>()
+  for (const it of s.items) for (const v of it.vars) byName.set(v.varName, v)
+  return names.map((varName) => {
+    const v = byName.get(varName)
+    return {
+      varName,
+      inVault: !!v,
+      readable: v ? open(v.cipher).ok : false,
+      inThisTerminal: here.has(varName)
+    }
+  })
+}
+
+/** 哪一组包含这个变量 —— eas-secret 按组名取值时要用 */
+export function groupOf(varName: string): string | null {
+  const s = readStore()
+  for (const it of s.items) if (it.vars.some((v) => v.varName === varName)) return it.name
+  return null
+}
+
+/**
+ * 给 eas-secret 包装命令用：按组名或变量名取一组值。
+ * **这是明文离开主进程的第二条路**（第一条是 PTY env 注入），所以门开得比 secretsEnv 还紧：
+ * 必须解锁态。调用方是本机的 shim 进程，靠 EAS_TERM_TOKEN 认身份。
+ */
+export function secretsForRun(sel: { group?: string; vars?: string[] }): {
+  ok: boolean
+  env?: Record<string, string>
+  error?: string
+} {
+  if (!app.isReady()) return { ok: false, error: '应用还没就绪' }
+  if (!isUnlocked()) {
+    return { ok: false, error: '密钥柜锁着 —— 让用户点标题栏的钥匙图标输入六位码，然后重试这条命令' }
+  }
+  const s = readStore()
+  const picked = sel.group
+    ? s.items.filter((it) => it.name === sel.group)
+    : s.items.filter((it) => it.vars.some((v) => sel.vars?.includes(v.varName)))
+  if (!picked.length) {
+    return { ok: false, error: sel.group ? `密钥柜里没有「${sel.group}」这一组` : '密钥柜里没有这些变量' }
+  }
+  const env: Record<string, string> = {}
+  for (const it of picked) {
+    for (const v of it.vars) {
+      // 指定了 vars 就只给那几个，指定 group 就整组给
+      if (sel.vars && !sel.vars.includes(v.varName)) continue
+      const r = open(v.cipher)
+      if (!r.ok) return { ok: false, error: `${v.varName} 在这台机器上解不开，需要重新录入` }
+      env[v.varName] = r.value
+    }
+    it.lastUsedAt = Date.now()
+  }
+  try {
+    writeStore(s)
+  } catch {
+    /* 记录失败不该拦住命令执行 */
+  }
+  return { ok: true, env }
+}
+
 // ── IPC ────────────────────────────────────────────────────────────
 
 function status(): SecretsStatus {
@@ -422,6 +512,17 @@ export function registerSecretHandlers(): void {
       return done()
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e))
+    }
+  })
+
+  /** 给 secret_check 用。**不要求解锁**（只回布尔，理由见 secretsHas 的注释） */
+  ipcMain.handle('secrets:has', (_e, names: string[], ptyId?: string) => {
+    const list = Array.isArray(names) ? names.map((n) => String(n)) : []
+    return {
+      vars: secretsHas(list, ptyId),
+      // 告诉 agent 该用哪个组名去 eas-secret run --group
+      groups: [...new Set(list.map((n) => groupOf(n)).filter(Boolean))] as string[],
+      locked: !isUnlocked()
     }
   })
 

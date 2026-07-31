@@ -241,6 +241,74 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return { notified: flagged > 0, message: msg }
   }
 
+  // ── 密钥柜三件套 ──
+  //
+  // **详细规则全在这三个分支的返回值里，不在工具 description 里。**
+  // description 是常驻成本（每个会话的 tools/list 都要发一遍，不管用不用得上密钥），
+  // 返回值只有真的走到密钥场景才付。所以那边只留一句触发条件，
+  // 「怎么做、红线是什么、下一步」这些字全部放在这儿按需给。
+  if (tool === 'secret_check') {
+    const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
+    if (!vars.length) throw new Error('vars 必填：要查哪些环境变量名')
+    const r = await window.api.secrets.has(vars, ctx.ptyId)
+    const ready = r.vars.filter((v) => v.inThisTerminal).map((v) => v.varName)
+    const inVaultOnly = r.vars.filter((v) => v.inVault && !v.inThisTerminal)
+    const missing = r.vars.filter((v) => !v.inVault).map((v) => v.varName)
+    const broken = r.vars.filter((v) => v.inVault && !v.readable).map((v) => v.varName)
+
+    // 指引按情况给，能不给就不给 —— 全都齐了的时候只回一个字段
+    let next: string
+    if (missing.length) {
+      next =
+        `密钥柜里没有 ${missing.join('、')}。用 request_secret 弹 GUI 让用户填 —— ` +
+        '**别让他把密钥贴进对话**（会永久留在会话记录里，也会上行到模型那边），' +
+        '也别自己去翻环境变量或配置文件找。成对的凭证一次把 vars 写全。'
+    } else if (broken.length) {
+      next = `${broken.join('、')} 在这台机器上解不开（密钥库可能是从别的机器同步来的），让用户重新录入。`
+    } else if (inVaultOnly.length) {
+      const g = r.groups[0]
+      next =
+        `柜里有，但**你这个终端启动时没带上它**（进程的环境变量在启动那一刻就定死了）。` +
+        `不用开新终端，用包装命令直接跑：\n` +
+        `  eas-secret run --group ${JSON.stringify(g ?? '组名')} -- <你原本要跑的命令>\n` +
+        `值会直接进那条命令的环境变量，不经过终端输出。` +
+        (r.locked ? '\n另外密钥柜现在锁着，让用户点标题栏的钥匙图标解锁后再跑。' : '')
+    } else {
+      next = '都能直接用，照常跑。'
+    }
+    return {
+      ready: !missing.length && !broken.length,
+      inThisTerminal: ready,
+      needsWrapper: inVaultOnly.map((v) => v.varName),
+      missing,
+      next
+    }
+  }
+
+  if (tool === 'report_secret_invalid') {
+    const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
+    const detail = String(args.detail ?? '').trim()
+    if (!vars.length) throw new Error('vars 必填：哪些变量看起来不对')
+    if (!detail) throw new Error('detail 必填：把服务返回的原话贴上，用户要靠它判断')
+    const r = await askForSecret(
+      {
+        name: `修正：${vars.join('、')}`,
+        vars,
+        purpose: detail,
+        mode: 'fix'
+      },
+      ctx.ptyId
+    )
+    if (!r.saved) return { updated: false, reason: r.reason ?? '用户没有修改' }
+    return {
+      updated: true,
+      vars: r.vars,
+      next:
+        '用户改过了。新值同样不会给你 —— ' +
+        '重跑刚才那条命令验证（当前终端拿的还是旧值，用 eas-secret run --group ... 跑才是新的）。'
+    }
+  }
+
   // ── AI 索要密钥：弹 GUI 让用户自己填，值不经 AI ──
   if (tool === 'request_secret') {
     const name = String(args.name ?? '').trim()
@@ -264,9 +332,16 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       vars: r.vars,
       // 这句必须有：当前终端的 env 在 spawn 那一刻就定死了，改不了。
       // 不说清楚的话 AI 会立刻去读 $VAR，读到空值然后开始瞎猜。
-      hint: r.autoInject
-        ? '已存入密钥柜。**当前这个终端读不到它** —— 进程的环境变量在启动时就固定了。用 canvas_new_terminal 开一个新终端，那里会自动带上。'
-        : '已存入密钥柜，但用户没开自动注入。需要用的话，让他在密钥柜里打开「自动注入」再开新终端。'
+      // 这段指引必须有：当前终端的 env 在 spawn 那刻就定死了，改不了。
+      // 不说清楚的话 AI 会立刻去读 $VAR，读到空值然后开始瞎猜，
+      // 最后多半绕回「你把 key 贴给我吧」—— 那就白做了。
+      next:
+        `已存好。**当前这个终端读不到它**（进程的环境变量在启动那一刻就定死了）。` +
+        `不用开新终端，直接用包装命令跑：\n` +
+        `  eas-secret run --group ${JSON.stringify(name)} -- <你原本要跑的命令>\n` +
+        `值会直接进那条命令的环境变量，不经过终端输出、也不进 shell history。\n` +
+        `别去 echo/cat 这些变量 —— 打印出来它就进对话记录了，这个功能就白做了。` +
+        (r.autoInject ? '' : '\n（用户没开自动注入，所以以后新开的终端也不会自动带上它）')
     }
   }
 

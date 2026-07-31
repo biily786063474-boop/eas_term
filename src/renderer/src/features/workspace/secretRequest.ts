@@ -20,7 +20,15 @@ let pending: {
   ptyId?: string
 } | null = null
 const listeners = new Set<() => void>()
-let lastAskAt = 0
+/**
+ * 「索要」和「报错要改」各算各的间隔。
+ *
+ * 合用一个计时器的话会挡掉最常见的那条路：存完 key（t=0）→ 拿去跑（t=5s）→
+ * 服务说 401 → 报错要改（t=5s）**被自己刚才那次索要挡住**，agent 只能干等一分钟，
+ * 多半就绕回「你把 key 贴给我看看」了 —— 正好是这个功能要消灭的事。
+ * 两者都还是 60 秒窗口（防刷），也都照常计入「连续取消 2 次拉黑」。
+ */
+const lastAskAt = { ask: 0, fix: 0 }
 /** ptyId → 连续取消次数。一个终端 ≈ 一轮 agent 会话 */
 const cancelStreak = new Map<string, number>()
 /** 被这一轮拉黑的终端 */
@@ -67,11 +75,12 @@ export function askForSecret(req: SecretRequest, ptyId?: string): Promise<Secret
     )
   }
   if (pending) throw new Error('已经有一个密钥请求在等用户处理了，等那个结束再说')
-  const wait = MIN_GAP_MS - (Date.now() - lastAskAt)
+  const kind = req.mode === 'fix' ? 'fix' : 'ask'
+  const wait = MIN_GAP_MS - (Date.now() - lastAskAt[kind])
   if (wait > 0) {
     throw new Error(`密钥请求太频繁，${Math.ceil(wait / 1000)} 秒后才能再弹一次`)
   }
-  lastAskAt = Date.now()
+  lastAskAt[kind] = Date.now()
   return new Promise<SecretRequestResult>((resolve) => {
     pending = { req, resolve, ptyId }
     emit()

@@ -9,6 +9,7 @@ import http from 'http'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { secretsForRun } from './secrets'
 
 interface Ctx {
   /** 调用方所在终端的 ptyId：渲染层据此反查「我在哪个 Frame / 哪个节点」
@@ -342,6 +343,17 @@ export function registerMcpBridge(): void {
       // token 校验（health 除外，方便排查）
       if (req.url === '/health') return send(200, { ok: true, port })
       if (req.headers['x-eas-token'] !== token) return send(401, { ok: false, error: 'token 无效' })
+
+      // eas-secret 包装命令取值。**这是明文离开主进程的第二条路**（第一条是 PTY env 注入），
+      // 所以它不走 invokeRenderer —— 值一步都不进渲染层，直接主进程算完回给本机 shim。
+      // 门比注入还紧一档：secretsForRun 要求解锁态。
+      if (req.method === 'POST' && req.url === '/secret-env') {
+        const raw = await readBody(req)
+        const sel = JSON.parse(raw || '{}') as { group?: string; vars?: string[] }
+        const r = secretsForRun(sel)
+        return send(r.ok ? 200 : 400, r)
+      }
+
       if (req.method !== 'POST' || req.url !== '/invoke')
         return send(404, { ok: false, error: '未知路径' })
 

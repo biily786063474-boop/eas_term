@@ -253,36 +253,54 @@ const TOOLS = [
       required: ['text']
     }
   },
+  // ── 密钥柜三件套 ───────────────────────────────────────────────────
+  // **这三个 description 是常驻成本**：每个会话的 tools/list 都要发一遍，
+  // 不管这次用不用得上密钥。所以这里只写「什么时候调」，一个字的「怎么做」都不写 ——
+  // 详细约定（成对凭证要一次写全、存完当前终端读不到、怎么用、红线是什么）
+  // 全部放在**返回值和错误信息**里，只有真的走到密钥场景的会话才付那份 token。
+  // 同一条纪律见 src/main/agentRules.ts 开头：常驻区只放触发条件，正文按需读。
+  {
+    name: 'secret_check',
+    description:
+      '开跑之前查这些环境变量有没有（缺 key 时先问它，别直接向用户要）。只回有/没有，不回值。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        vars: { type: 'array', description: '要查的环境变量名', items: { type: 'string' } }
+      },
+      required: ['vars']
+    }
+  },
   {
     name: 'request_secret',
     description:
-      '需要用户提供 API key / token / 凭证时调它 —— **不要让用户把密钥贴进对话**。' +
-      '它会弹一个 GUI 让用户自己填，值直接进本机密钥柜，你永远看不到那个值（返回里只有变量名）。' +
-      '\n\n什么时候调：你发现某个命令缺凭证跑不了、或者要接一个新服务需要 key。' +
-      '成对的凭证（AWS 的 AK/SK、阿里云的 KeyId/KeySecret、数据库的 user/password）' +
-      '**一次调用把 vars 全写上**，别拆成多次 —— 它们是一个整体。' +
-      '\n\n什么时候别调：用户没让你接新服务时别主动要；密钥柜里可能已经有了 —— ' +
-      '先看看当前终端的环境变量里是不是已经有你要的那个。' +
-      '\n\n**重要**：存完之后当前终端仍然读不到它（进程的环境变量在启动那一刻就定死了）。' +
-      '要用得先 canvas_new_terminal 开一个新终端。' +
-      '\n\n限流：每分钟最多一次；同一个终端里被用户连续拒绝 2 次后本轮就不能再调了。' +
-      'purpose 会原样显示给用户看，实话实说 —— 编理由骗用户填东西是这个工具唯一的红线。',
+      '缺 API key / 凭证时调它，弹 GUI 让用户自己填。**不要让用户把密钥贴进对话。**',
     inputSchema: {
       type: 'object',
       properties: {
         name: { type: 'string', description: '这组凭证叫什么，给人看的（例：AWS 生产账号）' },
         vars: {
           type: 'array',
-          description: '要哪些环境变量名。成对的凭证一次全写上（例：["AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY"]）',
+          description: '要哪些环境变量名。成对的凭证（AK/SK、user/password）一次全写上',
           items: { type: 'string' }
         },
-        purpose: {
-          type: 'string',
-          description: '你要它干什么，一句人话。会原样显示给用户，用户靠这句判断该不该给'
-        },
-        docs_url: { type: 'string', description: '去哪申请这个 key（可选，只接受 http/https）' }
+        purpose: { type: 'string', description: '要来干什么，一句人话。会原样显示给用户' },
+        docs_url: { type: 'string', description: '去哪申请（可选，只接受 http/https）' }
       },
       required: ['name', 'vars', 'purpose']
+    }
+  },
+  {
+    name: 'report_secret_invalid',
+    description:
+      '用了密钥柜里的凭证但服务说它无效（401/403）时调它，让用户去改。**别向用户要明文核对。**',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        vars: { type: 'array', description: '哪些变量看起来不对', items: { type: 'string' } },
+        detail: { type: 'string', description: '服务返回的原话，让用户好判断（别编）' }
+      },
+      required: ['vars', 'detail']
     }
   },
   {

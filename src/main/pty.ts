@@ -6,7 +6,7 @@ import path from 'path'
 import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
-import { secretsEnv } from './secrets'
+import { secretsEnv, noteInjected } from './secrets'
 
 interface Entry {
   pty: pty.IPty
@@ -57,6 +57,57 @@ exec /usr/bin/open "$@"
     return dir
   } catch (e) {
     console.error('[pty] 创建 open shim 失败(终端链接将回落系统浏览器)', e)
+    return null
+  }
+}
+
+/**
+ * `eas-secret` 包装命令。解决的是一个硬约束：
+ * **进程的环境变量在 spawn 那一刻就定死了** —— 用户后来才存进密钥柜的东西，
+ * 已经在跑的这个终端永远读不到。原来只能让 agent 去开个新终端，手上的活就断了。
+ *
+ *   eas-secret run --group "AWS 生产账号" -- aws s3 ls
+ *
+ * 值由 shim 向主进程现取，直接放进子进程的 env。三个关键性质：
+ *   · 明文不经 stdout —— agent 看到的只有被包裹命令自己的输出
+ *   · 明文不进 shell history / ps —— 命令行里只有**组名**，没有值
+ *   · 要解锁态才给（比 PTY 注入还紧一档，见 secretsForRun）
+ *
+ * 它**不**让 agent 更"看不见"密钥（真想看，包一个 `env` 就露了），
+ * 它买的是可用性：不用中断、不用开新终端。这一点别在文案里说反。
+ *
+ * 跟 open shim 一样塞在 PATH 最前。`eas-secret` 是个新名字，
+ * 就算被用户 .zshrc 的 PATH 改动挤到后面也无所谓 —— 不会有第二个同名命令。
+ */
+let secretShimCache: string | null = null
+function ensureSecretShim(): string | null {
+  if (secretShimCache) return secretShimCache
+  try {
+    const dir = path.join(app.getPath('userData'), 'bin')
+    fs.mkdirSync(dir, { recursive: true })
+    const js = app.isPackaged
+      ? path.join(process.resourcesPath, 'mcp', 'eas-secret.mjs')
+      : path.join(app.getAppPath(), 'mcp', 'eas-secret.mjs')
+    if (process.platform === 'win32') {
+      // Windows 侧：.cmd 才会被 PATH 查找命中
+      fs.writeFileSync(
+        path.join(dir, 'eas-secret.cmd'),
+        `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${process.execPath}" "${js}" %*\r\n`
+      )
+    } else {
+      const shim = path.join(dir, 'eas-secret')
+      // 路径每次重写：app 挪过位置（升级、拖进 /Applications）后旧路径就废了
+      fs.writeFileSync(
+        shim,
+        `#!/bin/sh\n# Eas-Term 自动生成，勿手改\nELECTRON_RUN_AS_NODE=1 exec "${process.execPath}" "${js}" "$@"\n`,
+        { mode: 0o755 }
+      )
+      fs.chmodSync(shim, 0o755)
+    }
+    secretShimCache = dir
+    return dir
+  } catch (e) {
+    console.error('[pty] 创建 eas-secret shim 失败(密钥只能靠新终端注入)', e)
     return null
   }
 }
@@ -238,7 +289,17 @@ export function registerPtyHandlers(): void {
         Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))
         // 密钥柜：渲染层只给变量名，值在主进程解密后直接进 env，不回传渲染层。
         // 和上面那行的 EAS_TERM_TOKEN 是同一条路 —— 这样密钥就不会进入和 AI 的对话。
-        Object.assign(env, secretsEnv(opts.secretNames))
+        const secrets = secretsEnv(opts.secretNames)
+        Object.assign(env, secrets)
+        // 记下这个终端带了哪些变量（**只记名字**）：secret_check 要靠它回答
+        // 「你这个终端能不能直接用 $X」，否则 agent 只能去 echo —— 而那正是我们禁止的
+        noteInjected(id, Object.keys(secrets))
+        // 包装命令：进程 env 在 spawn 这一刻就定死了，之后存进柜子的密钥这个终端永远读不到。
+        // eas-secret run --group X -- <命令> 让它能在**当前终端**用上后来才存的密钥：
+        // 值由 shim 向主进程现取、直接进子进程 env，不经 stdout、不进 shell history
+        // （命令行里只有组名）。见 ensureSecretShim 的注释。
+        const secDir = ensureSecretShim()
+        if (secDir) env.PATH = `${secDir}:${env.PATH ?? ''}`
         return env
       })()
     })

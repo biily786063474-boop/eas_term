@@ -326,6 +326,15 @@ const api = {
       ipcRenderer.invoke('secrets:resetCode', code),
     lock: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:lock'),
     list: (): Promise<SecretMeta[]> => ipcRenderer.invoke('secrets:list'),
+    /** 查这些变量在不在（柜里 / 这个终端里）。**只回布尔，不回值**，也不要求解锁 */
+    has: (
+      names: string[],
+      ptyId?: string
+    ): Promise<{
+      vars: { varName: string; inVault: boolean; readable: boolean; inThisTerminal: boolean }[]
+      groups: string[]
+      locked: boolean
+    }> => ipcRenderer.invoke('secrets:has', names, ptyId),
     /** 一条 = 一组变量（AK/SK 这类成对凭证）。某行 value 留空 = 不动那个变量已存的值 */
     save: (input: SecretSaveInput): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:save', input),
