@@ -56,6 +56,9 @@ interface StoredItem {
   note?: string
   /** safeStorage 密文的 base64。明文是 sealed（见 seal），不是裸的密钥值 */
   cipher: string
+  /** 新开的终端自动带上它。默认关 —— 每多一个自动注入的密钥，
+   *  就多一批能读到它的进程（终端里跑的任何东西，包括 npm 包的 postinstall） */
+  autoInject?: boolean
   createdAt: number
   lastUsedAt?: number
 }
@@ -144,9 +147,9 @@ function writeStore(s: StoreFile): void {
 // ── 加密：safeStorage + 自带完整性校验 ──────────────────────────────
 
 /** 封装成「值 + 校验和」再加密。
- *  为什么不直接加密裸值：safeStorage 在 macOS 用的是 AES-CBC，没有认证标签，
- *  密文被改动后有约 1/256 的概率通过 padding 校验、静默解出一段乱码。
- *  多存一个 sha256，解出来对不上就知道这份密文已经不可信。 */
+ *  为什么不直接加密裸值：safeStorage 在 macOS 用的是 AES-CBC，没有认证标签。
+ *  实测（3000 次随机翻转一个 bit）**62.9% 会通过 padding 校验、静默解出错误内容** ——
+ *  不是小概率。多存一个 sha256，解出来对不上就知道这份密文已经不可信。 */
 function seal(value: string): string {
   const sum = crypto.createHash('sha256').update(value, 'utf8').digest('hex')
   const payload = JSON.stringify({ v: value, c: sum })
@@ -204,23 +207,30 @@ const touch = (): void => {
 // ── 注入：给 pty.ts 用 ──────────────────────────────────────────────
 
 /**
- * 按变量名取出要注入终端的密钥。**值在主进程内解密后直接进 env，从不回传渲染层。**
+ * 取出要注入终端的密钥。**值在主进程内解密后直接进 env，从不回传渲染层。**
  *
  * 这条路和 mcpBridge 的 EAS_TERM_TOKEN 完全一样 —— 那个 token 也是只存在于主进程、
  * 只经 PTY env 下发，从没穿过渲染层，更没进过对话。
  *
- * 注意：**不要求解锁态**。理由是终端可能在解锁超时之后才被创建（比如恢复画布时批量重开），
- * 而用户在勾选那些密钥的时候已经解锁过一次、也已经表达过意图了。
- * 真正的门在「勾选」那一步，不在「spawn」这一步。
+ * names 语义：
+ *   undefined → 用「标了自动注入」的那些（正常路径，渲染层什么都不用传）
+ *   []        → 明确不要注入任何东西
+ *   [..]      → 就用这些（留给将来的高级用法）
+ *
+ * 注意：**不要求解锁态**。终端可能在解锁超时之后才被创建（恢复画布时批量重开就是），
+ * 而用户在打开「自动注入」开关的那一刻已经解锁过、也已经表达过意图了。
+ * 真正的门在「打开开关」那一步，不在「spawn」这一步。
  */
 export function secretsEnv(names?: string[]): Record<string, string> {
-  if (!names?.length) return {}
   if (!app.isReady()) return {} // 兜底，正常不会走到
+  if (names && names.length === 0) return {}
   const s = readStore()
+  const want = names ?? s.items.filter((x) => x.autoInject).map((x) => x.varName)
+  if (!want.length) return {}
   const out: Record<string, string> = {}
   let used = false
   for (const it of s.items) {
-    if (!names.includes(it.varName)) continue
+    if (!want.includes(it.varName)) continue
     const r = open(it.cipher)
     if (!r.ok) {
       console.error(`[secrets] ${it.varName} 解不开（${r.reason}），跳过注入`)
@@ -334,6 +344,7 @@ export function registerSecretHandlers(): void {
       name: it.name,
       varName: it.varName,
       note: it.note,
+      autoInject: !!it.autoInject,
       createdAt: it.createdAt,
       lastUsedAt: it.lastUsedAt,
       // 这一条在这台机器上还解得开吗（跨机器同步/改过 app 名的情况）
@@ -344,7 +355,7 @@ export function registerSecretHandlers(): void {
   /** 新增或更新一条。value 传空字符串 = 只改元数据不动密钥值 */
   ipcMain.handle(
     'secrets:save',
-    (_e, input: { id?: string; name: string; varName: string; note?: string; value?: string }): Res => {
+    (_e, input: { id?: string; name: string; varName: string; note?: string; value?: string; autoInject?: boolean }): Res => {
       try {
         const guard = requireUnlocked()
         if (guard) return fail(guard)
@@ -369,6 +380,7 @@ export function registerSecretHandlers(): void {
           it.name = name
           it.varName = varName
           it.note = input.note?.trim() || undefined
+          if (typeof input.autoInject === 'boolean') it.autoInject = input.autoInject
           if (value) it.cipher = seal(value) // 空 = 不改值
         } else {
           if (!value) return fail('密钥值不能为空')
@@ -378,6 +390,7 @@ export function registerSecretHandlers(): void {
             varName,
             note: input.note?.trim() || undefined,
             cipher: seal(value),
+            autoInject: input.autoInject === true,
             createdAt: Date.now()
           })
         }

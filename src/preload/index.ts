@@ -328,6 +328,8 @@ const api = {
       note?: string
       /** 空字符串 = 只改元数据，不动已存的密钥值 */
       value?: string
+      /** 新开的终端自动带上它 */
+      autoInject?: boolean
     }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:save', input),
     remove: (id: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>

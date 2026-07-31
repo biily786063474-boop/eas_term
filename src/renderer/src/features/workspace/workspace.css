@@ -1612,3 +1612,72 @@ body.dragging-row * {
   font-size: 11.5px;
   line-height: 1.5;
 }
+
+/* 「自动注入」开关：列表上直接切，不用进编辑态 —— 这是最常改的一项 */
+.sec-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 10px;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: color 0.14s, border-color 0.14s, background 0.14s;
+}
+.sec-auto-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+.sec-auto.on {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: var(--accent-soft);
+}
+.sec-auto.on .sec-auto-dot {
+  opacity: 1;
+}
+.sec-auto:hover {
+  color: var(--fg);
+}
+.sec-auto.on:hover {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.2);
+}
+
+/* 有几条会进每个新终端。这个数字 = 终端里跑的任何东西能读到几个密钥，
+   值得单独一行而不是藏在列表里数 */
+.sec-auto-sum {
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+.sec-auto-sum b {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sec-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 2px 1px;
+}
+.sec-check input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}

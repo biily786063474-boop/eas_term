@@ -187,6 +187,8 @@ export interface SecretMeta {
   /** 注入终端时用的环境变量名（OPENAI_API_KEY） */
   varName: string
   note?: string
+  /** 新开的终端自动带上它。关着的密钥要用得手动指定 */
+  autoInject: boolean
   createdAt: number
   /** 最后一次被注入进终端的时间，用来看哪些还在用 */
   lastUsedAt?: number

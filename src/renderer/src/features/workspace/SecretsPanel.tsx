@@ -21,8 +21,15 @@ interface Draft {
   varName: string
   note: string
   value: string
+  autoInject: boolean
 }
-const emptyDraft = (): Draft => ({ name: '', varName: '', note: '', value: '' })
+const emptyDraft = (): Draft => ({
+  name: '',
+  varName: '',
+  note: '',
+  value: '',
+  autoInject: true // 新加的多半就是要用的，默认开省一步；不想要的当场关掉就行
+})
 
 export function SecretsPanel(): JSX.Element | null {
   const [open, setOpen] = useState(false)
@@ -71,6 +78,8 @@ export function SecretsPanel(): JSX.Element | null {
 
   if (!st) return null
 
+  const autoCount = items.filter((x) => x.autoInject).length
+
   const submitCode = async (): Promise<void> => {
     setErr('')
     const r = st.configured
@@ -94,7 +103,8 @@ export function SecretsPanel(): JSX.Element | null {
       name: draft.name,
       varName: draft.varName,
       note: draft.note || undefined,
-      value: draft.value
+      value: draft.value,
+      autoInject: draft.autoInject
     })
     if (!r.ok) {
       setErr(r.error ?? '保存失败')
@@ -103,6 +113,24 @@ export function SecretsPanel(): JSX.Element | null {
     setSt(r.status)
     setItems(await window.api.secrets.list())
     setDraft(null)
+  }
+
+  /** 直接在列表上切「自动注入」，不用进编辑态。value 传空 = 不动已存的密钥值 */
+  const toggleAuto = async (it: SecretMeta): Promise<void> => {
+    setErr('')
+    const r = await window.api.secrets.save({
+      id: it.id,
+      name: it.name,
+      varName: it.varName,
+      note: it.note,
+      autoInject: !it.autoInject
+    })
+    if (!r.ok) {
+      setErr(r.error ?? '改不动')
+      return
+    }
+    setSt(r.status)
+    setItems(await window.api.secrets.list())
   }
 
   const removeOne = async (it: SecretMeta): Promise<void> => {
@@ -175,6 +203,14 @@ export function SecretsPanel(): JSX.Element | null {
               —— 用的时候由本机直接注入终端环境变量。
             </p>
 
+            {/* 有多少条会进每一个新终端，得一眼看见：这个数字直接等于
+                「终端里跑的任何东西（含 npm 包的 postinstall）能读到几个密钥」 */}
+            {!st.locked && autoCount > 0 && (
+              <div className="sec-auto-sum">
+                新开的终端会自动带上 <b>{autoCount}</b> 条
+              </div>
+            )}
+
             {!st.available && (
               <div className="sec-warn">
                 这台机器上系统加密不可用，暂时不能安全地存密钥。
@@ -237,6 +273,20 @@ export function SecretsPanel(): JSX.Element | null {
                       <div className="sec-row-main">
                         <div className="sec-row-name">{it.name}</div>
                         <code className="sec-var">{it.varName}</code>
+                        {/* 「自动注入」直接在列表上切 —— 这是最常改的一项，
+                            塞进编辑表单里要多点两下 */}
+                        <button
+                          className={`sec-auto${it.autoInject ? ' on' : ''}`}
+                          data-tip={
+                            it.autoInject
+                              ? '新开的终端会自动带上它 · 点击关闭'
+                              : '目前不会自动注入 · 点击打开'
+                          }
+                          onClick={() => void toggleAuto(it)}
+                        >
+                          <span className="sec-auto-dot" />
+                          {it.autoInject ? '自动注入' : '不注入'}
+                        </button>
                         {it.note && <div className="sec-row-note">{it.note}</div>}
                         {!it.readable && (
                           <div className="sec-row-note bad">这台机器上解不开，需要重新录入</div>
@@ -271,7 +321,8 @@ export function SecretsPanel(): JSX.Element | null {
                               name: it.name,
                               varName: it.varName,
                               note: it.note ?? '',
-                              value: ''
+                              value: '',
+                              autoInject: it.autoInject
                             })
                           }
                         >
@@ -318,6 +369,14 @@ export function SecretsPanel(): JSX.Element | null {
                       value={draft.note}
                       onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                     />
+                    <label className="sec-check">
+                      <input
+                        type="checkbox"
+                        checked={draft.autoInject}
+                        onChange={(e) => setDraft({ ...draft, autoInject: e.target.checked })}
+                      />
+                      <span>新开的终端自动带上它</span>
+                    </label>
                     <div className="sec-form-acts">
                       <button className="sec-mini" onClick={() => setDraft(null)}>
                         取消
