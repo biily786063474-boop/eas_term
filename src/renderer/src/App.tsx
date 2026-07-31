@@ -6,6 +6,7 @@ import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
+import { SecretsPanel } from './features/workspace/SecretsPanel'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
@@ -183,6 +184,8 @@ export function App(): JSX.Element {
           <McpIndicator />
           <DictBubbleToggle />
           <FootprintPanel />
+          {/* 挨着「扩展能力」放：两者是同类，都在讲「这软件在你机器上存了什么」 */}
+          <SecretsPanel />
           <div className="view-seg">
             <button
               className={viewMode === 'split' ? 'on' : ''}

@@ -291,3 +291,20 @@ export const PlugIcon = (p: IconProps): JSX.Element => (
     <path d="M12 17v4" />
   </Svg>
 )
+
+/** 钥匙：密钥柜 */
+export const KeyIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <circle cx="7.5" cy="15.5" r="4.5" />
+    <path d="M10.7 12.3 20 3" />
+    <path d="M17 6l3 3" />
+  </Svg>
+)
+
+/** 挂锁（锁着）：密钥柜锁定态 */
+export const LockIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="4" y="10" width="16" height="11" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+  </Svg>
+)

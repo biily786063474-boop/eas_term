@@ -26,6 +26,8 @@ import type {
   SkillStatus,
   HookStatus,
   AgentRole,
+  SecretMeta,
+  SecretsStatus,
   WikiStatus,
   WikiQueryResult,
   WikiInboxItem,
@@ -307,6 +309,32 @@ const api = {
     // 角色契约落成文件，供 claude --append-system-prompt-file 引用
     contractFile: (roleId: string): Promise<string | null> =>
       ipcRenderer.invoke('roles:contractFile', roleId)
+  },
+  secrets: {
+    // 密钥柜（<userData>/secrets.json，safeStorage 加密）。
+    // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，
+    // 或者由主进程在 pty:create 时直接注入 env（那条路根本不经过这里）。
+    status: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:status'),
+    setup: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:setup', code),
+    unlock: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:unlock', code),
+    lock: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:lock'),
+    list: (): Promise<SecretMeta[]> => ipcRenderer.invoke('secrets:list'),
+    save: (input: {
+      id?: string
+      name: string
+      varName: string
+      note?: string
+      /** 空字符串 = 只改元数据，不动已存的密钥值 */
+      value?: string
+    }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:save', input),
+    remove: (id: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:remove', id),
+    /** 唯一能把值交到渲染层的通道，给「查看 / 复制」用 */
+    reveal: (id: string): Promise<{ ok: boolean; value?: string; error?: string }> =>
+      ipcRenderer.invoke('secrets:reveal', id)
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）

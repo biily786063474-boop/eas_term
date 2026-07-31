@@ -6,6 +6,7 @@ import path from 'path'
 import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
+import { secretsEnv } from './secrets'
 
 interface Entry {
   pty: pty.IPty
@@ -235,6 +236,9 @@ export function registerPtyHandlers(): void {
         // MCP 上下文：跑在这个终端里的 AI 据此知道「我是哪个终端」→ 反查所属 Frame，
         // 于是 open_html 之类的工具不用问就能开在正确的 Frame 里
         Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))
+        // 密钥柜：渲染层只给变量名，值在主进程解密后直接进 env，不回传渲染层。
+        // 和上面那行的 EAS_TERM_TOKEN 是同一条路 —— 这样密钥就不会进入和 AI 的对话。
+        Object.assign(env, secretsEnv(opts.secretNames))
         return env
       })()
     })

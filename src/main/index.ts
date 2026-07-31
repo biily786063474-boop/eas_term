@@ -19,6 +19,7 @@ import { registerDictHandlers } from './dict'
 import { registerRulesHandlers } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
+import { registerSecretHandlers } from './secrets'
 
 // 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
 // 只记录、不退出——白屏根因之一就是这里缺兜底,一个 EPIPE/EIO 就能整死主进程。
@@ -235,6 +236,10 @@ app.whenReady().then(() => {
     }
   }
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
+  // 密钥柜也必须排在 registerPtyHandlers 之前 —— 同理，PTY spawn 时要从它取值注入。
+  // 另外它内部会断言 app.isReady()：safeStorage 在 ready 之前会**静默**用错密钥桶
+  // （不报错，只是换成全局共享的那把），所以这个调用绝不能提到 whenReady 外面。
+  registerSecretHandlers()
   registerSkillHandlers()
   registerAgentInstallHandlers()
   registerHookHandlers(hasCli)

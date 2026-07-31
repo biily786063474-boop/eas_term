@@ -176,6 +176,39 @@ export interface AgentRole {
   builtin?: boolean
 }
 
+// ---------- 密钥柜（存 API key，注入终端，但不进对话） ----------
+
+/** 一条密钥的元数据。**永远不含值** —— 值只能经 secrets:reveal 单独取，
+ *  或者由主进程直接注入 PTY env（那条路根本不经过渲染层）。 */
+export interface SecretMeta {
+  id: string
+  /** 人类可读的名字（「OpenAI 生产环境」） */
+  name: string
+  /** 注入终端时用的环境变量名（OPENAI_API_KEY） */
+  varName: string
+  note?: string
+  createdAt: number
+  /** 最后一次被注入进终端的时间，用来看哪些还在用 */
+  lastUsedAt?: number
+  /** 这条在**这台机器上**还解得开吗。库被从别的机器同步过来、
+   *  或者应用改过 productName（钥匙串桶名会跟着变）时为 false —— UI 得说人话，
+   *  不能只甩一句解密失败 */
+  readable: boolean
+}
+
+export interface SecretsStatus {
+  /** 系统加密可用吗（macOS 看 Keychain、Windows 看 app 是否 ready）。false 时不该让用户存东西 */
+  available: boolean
+  /** 设过六位码没有。没设过 = 还没启用这个功能 */
+  configured: boolean
+  locked: boolean
+  count: number
+  /** 库是别的 app 名 / 别的平台写的 —— 多半整份都解不开 */
+  foreign: boolean
+  /** 连续输错太多，还要等多久才能再试（毫秒）。0 = 现在就能试 */
+  lockedOutMs: number
+}
+
 /** 「提交即复盘」钩子在某个 agent 上的安装状态 */
 export interface HookAgentStatus {
   hasCli: boolean
@@ -244,6 +277,10 @@ export interface PtyCreateOptions {
   cwd?: string
   cols?: number
   rows?: number
+  /** 要注入这个终端的密钥的**变量名**列表。
+   *  只传名字：值由主进程自己解密后拼进 env，从不回传渲染层
+   *  （和 EAS_TERM_TOKEN 走的是同一条路）。 */
+  secretNames?: string[]
 }
 
 export interface TextFileResult {
