@@ -241,7 +241,22 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return { notified: flagged > 0, message: msg }
   }
 
-  // ── 密钥柜三件套 ──
+/**
+ * 这段警告必须跟着每一条「用 eas-secret 跑」的指引走。
+ *
+ * 实测过的坑：当前终端里没有这个变量（这正是要用 eas-secret 的场景），
+ * agent 照抄 `-- curl -H "Bearer $API_KEY"` 时，**外层 shell 会先把 $API_KEY 吃成空**，
+ * 子命令收到的是 `Bearer `，服务返 401，agent 于是严格按指引调 report_secret_invalid，
+ * 用户被要求重填一个完全正确的 key —— 唯一一条会让用户认定「这功能是坏的」的路径。
+ * 值只在子进程里存在，所以引用它的那一层必须是子进程自己的 shell。
+ */
+const SHELL_TRAP =
+  `值只在被包裹的那条命令里存在。**命令里如果要引用 $变量，必须让子进程自己展开**：\n` +
+  `  对的：eas-secret run --vars API_KEY -- sh -c 'curl -H "Authorization: Bearer $API_KEY" ...'\n` +
+  `  错的：eas-secret run --vars API_KEY -- sh -c "curl -H \\"Bearer $API_KEY\\" ..."  ← 双引号会被外层 shell 先吃掉，变成空\n` +
+  `命令自己读环境变量的（aws / gh / docker 这类）直接写就行，不用管这条。`
+
+// ── 密钥柜三件套 ──
   //
   // **详细规则全在这三个分支的返回值里，不在工具 description 里。**
   // description 是常驻成本（每个会话的 tools/list 都要发一遍，不管用不用得上密钥），
@@ -260,9 +275,14 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     let next: string
     if (missing.length) {
       next =
-        `密钥柜里没有 ${missing.join('、')}。用 request_secret 弹 GUI 让用户填 —— ` +
+        `密钥柜里没有 ${missing.join('、')}。\n` +
+        // 存量用户绝大多数把 key export 在 .zshrc 里，那种情况密钥柜是空的但终端里其实有。
+        // 不给这条自查，agent 就会去弹窗要一个用户早就配好的 key。
+        `先确认一下是不是用户自己在 shell 配置里配过（这条不会打印值）：\n` +
+        `  sh -c 'test -n "$${missing[0]}" && echo HAVE || echo NONE'\n` +
+        `真没有的话用 request_secret 弹 GUI 让用户填 —— ` +
         '**别让他把密钥贴进对话**（会永久留在会话记录里，也会上行到模型那边），' +
-        '也别自己去翻环境变量或配置文件找。成对的凭证一次把 vars 写全。'
+        '也别去 cat .env / 翻配置文件找。成对的凭证一次把 vars 写全。'
     } else if (broken.length) {
       next = `${broken.join('、')} 在这台机器上解不开（密钥库可能是从别的机器同步来的），让用户重新录入。`
     } else if (inVaultOnly.length) {
@@ -270,14 +290,18 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       next =
         `柜里有，但**你这个终端启动时没带上它**（进程的环境变量在启动那一刻就定死了）。` +
         `不用开新终端，用包装命令直接跑：\n` +
-        `  eas-secret run --group ${JSON.stringify(g ?? '组名')} -- <你原本要跑的命令>\n` +
-        `值会直接进那条命令的环境变量，不经过终端输出。` +
+        `  eas-secret run --vars ${inVaultOnly.map((v) => v.varName).join(',')} -- <你原本要跑的命令>\n` +
+        SHELL_TRAP +
         (r.locked ? '\n另外密钥柜现在锁着，让用户点标题栏的钥匙图标解锁后再跑。' : '')
     } else {
       next = '都能直接用，照常跑。'
     }
     return {
-      ready: !missing.length && !broken.length,
+      // ready 的含义是「现在就能直接写 $VAR」，所以必须是**全都注入到本终端**。
+      // 原来写成「柜里有就 true」，于是会出现 ready:true 配 inThisTerminal:[] 的自相矛盾，
+      // agent 照着 ready 直接用变量，拿到空值。
+      ready: r.vars.length > 0 && r.vars.every((v) => v.inThisTerminal),
+      inVault: !missing.length && !broken.length,
       inThisTerminal: ready,
       needsWrapper: inVaultOnly.map((v) => v.varName),
       missing,
@@ -300,12 +324,15 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       ctx.ptyId
     )
     if (!r.saved) return { updated: false, reason: r.reason ?? '用户没有修改' }
+    if (r.group) await window.api.secrets.grantToPty(ctx.ptyId, r.group)
     return {
       updated: true,
       vars: r.vars,
       next:
-        '用户改过了。新值同样不会给你 —— ' +
-        '重跑刚才那条命令验证（当前终端拿的还是旧值，用 eas-secret run --group ... 跑才是新的）。'
+        `用户改过了。新值同样不会给你 —— 重跑刚才那条命令验证。\n` +
+        `**当前终端 env 里还是旧值**（进程启动时就定死了），必须走包装命令才拿得到新的：\n` +
+        `  eas-secret run --vars ${vars.join(',')} -- <刚才那条命令>\n` +
+        SHELL_TRAP
     }
   }
 
@@ -327,6 +354,9 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     // askForSecret 抛异常 = 压根没弹（限流/已有一个在等），要让 AI 明确知道而不是干等
     const r = await askForSecret({ name, vars, purpose, docsUrl }, ctx.ptyId)
     if (!r.saved) return { saved: false, reason: r.reason ?? '用户没有提供' }
+    // 用户当场把这组给了这个终端 → 授权它用 eas-secret 取。
+    // 少了这一步最荒唐：刚填的密钥反而是唯一取不到的（新组不在任何终端的默认授权里）
+    await window.api.secrets.grantToPty(ctx.ptyId, name)
     return {
       saved: true,
       vars: r.vars,
@@ -338,9 +368,9 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       next:
         `已存好。**当前这个终端读不到它**（进程的环境变量在启动那一刻就定死了）。` +
         `不用开新终端，直接用包装命令跑：\n` +
-        `  eas-secret run --group ${JSON.stringify(name)} -- <你原本要跑的命令>\n` +
-        `值会直接进那条命令的环境变量，不经过终端输出、也不进 shell history。\n` +
-        `别去 echo/cat 这些变量 —— 打印出来它就进对话记录了，这个功能就白做了。` +
+        `  eas-secret run --vars ${vars.join(',')} -- <你原本要跑的命令>\n` +
+        SHELL_TRAP +
+        `\n别去 echo/cat 这些变量 —— 打印出来它就进对话记录了，这个功能就白做了。` +
         (r.autoInject ? '' : '\n（用户没开自动注入，所以以后新开的终端也不会自动带上它）')
     }
   }

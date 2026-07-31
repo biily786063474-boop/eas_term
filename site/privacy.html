@@ -219,7 +219,43 @@
             <li><code>agent/canvas.md</code> —— 见 1.2</li>
           </ul>
 
-          <h3>1.5 你的项目文件夹里</h3>
+          <h3>1.5 密钥柜（如果你启用了它）</h3>
+          <p>
+            密钥柜是给 API key、访问凭证这类东西准备的。它<strong>不是</strong>普通配置，
+            所以单独说清楚存在哪、怎么保护、以及它做不到什么。
+          </p>
+          <ul>
+            <li>
+              <code>&lt;应用数据目录&gt;/secrets.json</code> —— 密钥<strong>密文</strong>、名字、备注、
+              变量名，以及六位码的 scrypt 哈希。文件权限 0600，目录 0700。
+              <strong>不在 <code>~/.eas/</code> 里</strong>，因为那个目录是 0755（同机其他用户可读）。
+            </li>
+            <li>
+              <strong>加密主密钥在系统钥匙串里</strong>（macOS 的 Keychain 条目
+              <code>Eas-Term Safe Storage</code>；Windows 走 DPAPI，密钥的另一半在同目录的
+              <code>Local State</code>）。所以把 <code>secrets.json</code> 拷到另一台机器<strong>解不开</strong>
+              —— 这一条我们实测验证过。
+            </li>
+          </ul>
+          <div class="pv-flag">
+            <p>
+              <strong>它承诺什么</strong>：密钥不会出现在你和 AI 的对话里，不会写进会话记录
+              （<code>~/.claude/projects/*.jsonl</code>），不会上传给模型厂商，也不会进 shell history。
+              用的时候由本机直接注入终端的环境变量。
+            </p>
+            <p style="margin-bottom: 0">
+              <strong>它不承诺什么</strong>：「AI 读不到」。密钥一旦注入某个终端，
+              在<strong>那个终端里</strong>跑命令的 AI 执行 <code>echo $KEY</code> 就能看见 ——
+              同一个进程里的东西没法对该进程隐藏。我们能做的是不主动交给它、
+              并在给 AI 的规则里明确禁止它去打印；做不到的部分不会假装做到。
+            </p>
+          </div>
+          <p>
+            密钥值只在两个地方离开本机进程：注入终端环境变量，以及你自己点「复制」时进系统剪贴板。
+            这两条都不经过网络。软件里没有任何一处会把密钥值发到互联网上。
+          </p>
+
+          <h3>1.6 你的项目文件夹里</h3>
           <p>软件能改你文件的范围是有明确边界的：<strong>只有你自己在侧栏加过的项目文件夹，和你自己指定的知识库文件夹。</strong>其它任何位置（包括你的 home 目录、系统目录、别的项目的兄弟目录）一律拒绝。</p>
           <p>这个边界是按真实路径判定的（会解析软链接），所以在项目里放一个指向别处的快捷方式也绕不过去。</p>
           <div class="pv-flag" style="margin-bottom: 0">
@@ -359,7 +395,21 @@
           </ul>
           <p>
             所有改写全局配置的操作都会先留一份 <code>.eas-backup</code>，实在不放心可以直接拿它覆盖回去。
-            剩下的就是删掉 <code>~/.eas/</code> 目录和应用本身。
+          </p>
+          <p>
+            剩下的是删掉 <code>~/.eas/</code> 目录和应用本身。
+            <strong>注意：如果你用过密钥柜，删 <code>~/.eas/</code> 删不到它</strong> ——
+            它在应用数据目录里（见 1.5），而且加密主密钥另外存在系统钥匙串。要彻底清干净还得两步：
+          </p>
+          <ul>
+            <li>删掉应用数据目录下的 <code>secrets.json</code>（Windows 上连同 <code>Local State</code>）</li>
+            <li>
+              在钥匙串里删掉 <code>Eas-Term Safe Storage</code> 这一条
+              （macOS 的「钥匙串访问」搜这个名字即可）
+            </li>
+          </ul>
+          <p>
+            顺序无所谓，但两个都删了才算干净 —— 只删其中一个，剩下的那半份是解不开的废数据。
           </p>
 
           <h2>七、关于这份说明</h2>
@@ -367,7 +417,7 @@
             这一页是对着代码逐条核对写出来的，不是模板。如果你发现哪一条和软件的实际行为对不上，
             那是我们的疏漏，请告诉我们 —— 软件是开源的，每一条都可以自己去代码里验证。
           </p>
-          <p class="pv-updated">最后更新：2026 年 7 月 · 对应版本 0.2.8</p>
+          <p class="pv-updated">最后更新：2026 年 7 月 · 对应版本 0.3.0</p>
         </div>
       </section>
     </main>

@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { SecretMeta, SecretsStatus } from '../../../../shared/types'
+import { useStore } from '../../store'
 import { KeyIcon, LockIcon, PencilIcon, TrashIcon, CopyIcon, PlusIcon, CloseIcon } from '../../ui/Icons'
 import './workspace.css'
 
@@ -98,6 +99,15 @@ export function SecretsPanel(): JSX.Element | null {
 
   useEffect(() => {
     void refresh()
+    // 闲置到期自动上锁时主进程会推一下。没有这个订阅的话，标题栏那把钥匙会一直
+    // 显示「已解锁」直到你去点它 —— 而这期间新开的终端其实已经拿不到密钥了。
+    // 一个说谎的安全状态指示比没有指示更糟。
+    return window.api.secrets.onLocked(() => {
+      setSt((s) => (s ? { ...s, locked: true } : s))
+      setItems([])
+      setRevealed(null)
+      setDraft(null)
+    })
   }, [refresh])
 
   // 打开时刷一次：解锁态可能已经因为超时掉了
@@ -199,15 +209,29 @@ export function SecretsPanel(): JSX.Element | null {
     setItems(await window.api.secrets.list())
   }
 
-  const removeOne = async (it: SecretMeta): Promise<void> => {
+  /** 删除要问一次。
+   *  这是全套功能里**唯一会让用户数据永久消失**的路径：没有撤销、没有回收站、
+   *  也没有备份（密钥绑在本机钥匙串上，删了只能回云控制台重新生成）。
+   *  而那个 11px 的垃圾桶就贴在 11px 的铅笔旁边，间距 3px。 */
+  const removeOne = (it: SecretMeta): void => {
     setErr('')
-    const r = await window.api.secrets.remove(it.id)
-    if (!r.ok) {
-      setErr(r.error ?? '删除失败')
-      return
-    }
-    setSt(r.status)
-    setItems(await window.api.secrets.list())
+    useStore.getState().requestConfirm({
+      message:
+        `删除「${it.name}」？这一组 ${it.vars.length} 个变量（${it.vars.map((v) => v.varName).join('、')}）` +
+        '会一起消失。\n\n删除不可撤销，密钥柜也没有备份 —— 要用的话得回原来的服务重新生成一份。',
+      confirmLabel: '删除',
+      onConfirm: () => {
+        void (async () => {
+          const r = await window.api.secrets.remove(it.id)
+          if (!r.ok) {
+            setErr(r.error ?? '删除失败')
+            return
+          }
+          setSt(r.status)
+          setItems(await window.api.secrets.list())
+        })()
+      }
+    })
   }
 
   const reveal = async (it: SecretMeta): Promise<void> => {
@@ -274,8 +298,12 @@ export function SecretsPanel(): JSX.Element | null {
               —— 用的时候由本机直接注入终端环境变量。
             </p>
 
-            {/* 有多少会进每一个新终端，得一眼看见：这个数字直接等于
-                「终端里跑的任何东西（含 npm 包的 postinstall）能读到几个变量」 */}
+            {/* 有多少会进每一个新终端，得一眼看见：这个数字就是
+                「终端里跑的任何东西（含 npm 包的 postinstall）能拿到几个变量」的上界。
+                **这个上界靠 secrets.ts 的 ptyGrants 撑着**：eas-secret 取值时会认终端凭证，
+                只放行「这个终端本来就会注入的组」+「用户当场授权给它的组」。
+                一度不成立过——那会儿 /secret-env 只认全局 token，任何终端都能取整柜，
+                这行字就成了假的。改这块前先确认那道门还在。 */}
             {!st.locked && autoCount > 0 && (
               <div className="sec-auto-sum">
                 新开的终端会自动带上 <b>{autoCount}</b> 条
@@ -487,7 +515,7 @@ export function SecretsPanel(): JSX.Element | null {
                           <button
                             className="sec-mini danger"
                             data-tip="删除"
-                            onClick={() => void removeOne(it)}
+                            onClick={() => removeOne(it)}
                           >
                             <TrashIcon size={11} />
                           </button>

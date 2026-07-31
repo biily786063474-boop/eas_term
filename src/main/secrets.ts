@@ -28,7 +28,7 @@
 //    对策：加密前把 checksum 一起封进明文，解密后校验（见 seal/open）。同样 3000 次实测 0 漏过。
 // 3. **改 productName 会丢光所有密钥**（钥匙串桶名由 app.getName() 决定）。
 //    对策：库里记下当时的 app 名，对不上时明确告知而不是抛一个看不懂的解密错误。
-import { app, ipcMain, safeStorage } from 'electron'
+import { app, ipcMain, safeStorage, BrowserWindow } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -248,9 +248,33 @@ function verifyCode(s: StoreFile, code: string): boolean {
 }
 
 const isUnlocked = (): boolean => Date.now() < unlockedUntil
+
+/**
+ * 闲置到期时主动告诉界面一声。
+ *
+ * 解锁态本来是「懒判断」（每次用的时候比一下时间戳），没人主动通知 ——
+ * 于是标题栏那把钥匙会一直显示「已解锁」直到你去点它，
+ * 而这期间新开的终端其实已经拿不到密钥了。一个说谎的安全状态指示比没有更糟。
+ */
+let lockTimer: NodeJS.Timeout | null = null
+function scheduleLockNotice(): void {
+  if (lockTimer) clearTimeout(lockTimer)
+  const ms = unlockedUntil - Date.now()
+  if (ms <= 0) return
+  lockTimer = setTimeout(() => {
+    lockTimer = null
+    if (isUnlocked()) return // 期间又续期了
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send('secrets:locked')
+    }
+  }, ms + 200)
+}
 /** 每次成功操作都续期：15 分钟指的是「无操作」而不是「解锁后」 */
 const touch = (): void => {
-  if (isUnlocked()) unlockedUntil = Date.now() + IDLE_MS
+  if (isUnlocked()) {
+    unlockedUntil = Date.now() + IDLE_MS
+    scheduleLockNotice()
+  }
 }
 
 // ── 注入：给 pty.ts 用 ──────────────────────────────────────────────
@@ -315,6 +339,11 @@ export function secretsEnv(names?: string[]): Record<string, string> {
   return out
 }
 
+/** 注入进 PTY 的那一刻记一笔审计（只记名字）。pty.ts 拿到 env 之后调 */
+export function auditInjection(ptyId: string, names: string[]): void {
+  if (names.length) audit({ at: Date.now(), ptyId, source: 'pty-env', names })
+}
+
 /**
  * 某个终端启动时到底带上了哪些变量。**只存名字，不存值。**
  *
@@ -330,6 +359,53 @@ export function noteInjected(ptyId: string, names: string[]): void {
 }
 export function injectedInPty(ptyId?: string): string[] {
   return ptyId ? (injectedByPty.get(ptyId) ?? []) : []
+}
+
+// ── 按终端授权 ─────────────────────────────────────────────────────
+//
+// **这一整块是在修一个我们自己造出来的回退。** 加 eas-secret 时，/secret-env 只认全局
+// EAS_TERM_TOKEN，而那个 token 注入到每一个 PTY 的 env、还明文落在
+// userData/mcp-endpoint.json 里。于是一个「一条密钥都没注入」的终端里跑的任何东西
+// （npm 的 postinstall 就够了）POST 一次就能拿走**整柜**明文，包括从没进过任何终端的组。
+//
+// 这推翻了两件本来成立的事：
+//   · 设计文档里「按终端授权，不是全局注入，限制了恶意依赖能偷到的范围」
+//   · 密钥柜面板上那句「新开的终端会自动带上 N 条」所暗示的上界
+//
+// 修法：每个 PTY 启动时单独发一张凭证（EAS_SECRET_TOKEN），主进程记住
+// 这张凭证对应哪个终端、那个终端**被允许取哪几组**。允许的范围刻意设成：
+//   ① 这个终端启动时本来就会注入的组（拿得到不是新增权限，它 env 里已经有了）
+//   ② 本会话里用户通过 request_secret 现场给这个终端的组（eas-secret 的核心用例）
+// 关掉自动注入的组，对没被授权的终端就是取不到 —— 保护回来了。
+const ptyGrants = new Map<string, Set<string>>() // ptyId → 可取的组名
+const secretTokens = new Map<string, string>() // 一次性凭证 → ptyId
+
+export function issueSecretToken(ptyId: string, groups: string[]): string {
+  const tok = crypto.randomBytes(24).toString('hex')
+  secretTokens.set(tok, ptyId)
+  ptyGrants.set(ptyId, new Set(groups))
+  return tok
+}
+
+/** 用户当场把某一组给了这个终端（request_secret 存完就调）→ 它才能用 eas-secret 取 */
+export function grantGroupToPty(ptyId: string | undefined, group: string): void {
+  if (!ptyId) return
+  const s = ptyGrants.get(ptyId) ?? new Set<string>()
+  s.add(group)
+  ptyGrants.set(ptyId, s)
+}
+
+export function forgetPty(ptyId: string): void {
+  ptyGrants.delete(ptyId)
+  injectedByPty.delete(ptyId)
+  for (const [tok, id] of secretTokens) if (id === ptyId) secretTokens.delete(tok)
+}
+
+/** 哪些组会被自动注入 —— 也就是新终端默认被授权的范围 */
+export function autoInjectGroups(): string[] {
+  return readStore()
+    .items.filter((it) => it.autoInject)
+    .map((it) => it.name)
 }
 
 /**
@@ -370,15 +446,30 @@ export function groupOf(varName: string): string | null {
  * **这是明文离开主进程的第二条路**（第一条是 PTY env 注入），所以门开得比 secretsEnv 还紧：
  * 必须解锁态。调用方是本机的 shim 进程，靠 EAS_TERM_TOKEN 认身份。
  */
-export function secretsForRun(sel: { group?: string; vars?: string[] }): {
+export function secretsForRun(
+  sel: { group?: string; vars?: string[] },
+  auth: { secretToken?: string; mcpEnabled: boolean }
+): {
   ok: boolean
   env?: Record<string, string>
   error?: string
 } {
   if (!app.isReady()) return { ok: false, error: '应用还没就绪' }
+  // 标题栏那个「MCP 接入」开关说的是「关掉后所有工具调用立刻被拒」。
+  // 它原来只挡 /invoke，挡不住这条价值最高的路 —— 安全开关撒谎比没有开关更糟。
+  if (!auth.mcpEnabled) {
+    return { ok: false, error: '用户已在 Eas-Term 里关闭 MCP 接入，密钥也一并停发' }
+  }
   if (!isUnlocked()) {
     return { ok: false, error: '密钥柜锁着 —— 让用户点标题栏的钥匙图标输入六位码，然后重试这条命令' }
   }
+  // 认「哪个终端在要」，不是只认「有没有 token」。见 ptyGrants 那段注释。
+  const ptyId = auth.secretToken ? secretTokens.get(auth.secretToken) : undefined
+  if (!ptyId) {
+    return { ok: false, error: '这个终端没有取密钥的凭证 —— 在 Eas-Term 里新开一个终端再试' }
+  }
+  const allowed = ptyGrants.get(ptyId) ?? new Set<string>()
+
   const s = readStore()
   const picked = sel.group
     ? s.items.filter((it) => it.name === sel.group)
@@ -386,7 +477,19 @@ export function secretsForRun(sel: { group?: string; vars?: string[] }): {
   if (!picked.length) {
     return { ok: false, error: sel.group ? `密钥柜里没有「${sel.group}」这一组` : '密钥柜里没有这些变量' }
   }
+  const denied = picked.filter((it) => !allowed.has(it.name)).map((it) => it.name)
+  if (denied.length) {
+    return {
+      ok: false,
+      error:
+        `这个终端没被授权用「${denied.join('、')}」。` +
+        '要么让用户在密钥柜里给它打开「自动注入」然后新开一个终端，' +
+        '要么用 request_secret 让用户当场授权。'
+    }
+  }
+
   const env: Record<string, string> = {}
+  const names: string[] = []
   for (const it of picked) {
     for (const v of it.vars) {
       // 指定了 vars 就只给那几个，指定 group 就整组给
@@ -394,15 +497,39 @@ export function secretsForRun(sel: { group?: string; vars?: string[] }): {
       const r = open(v.cipher)
       if (!r.ok) return { ok: false, error: `${v.varName} 在这台机器上解不开，需要重新录入` }
       env[v.varName] = r.value
+      names.push(v.varName)
     }
     it.lastUsedAt = Date.now()
   }
+  audit({ at: Date.now(), ptyId, source: 'eas-secret', names })
   try {
     writeStore(s)
   } catch {
     /* 记录失败不该拦住命令执行 */
   }
   return { ok: true, env }
+}
+
+// ── 审计 ───────────────────────────────────────────────────────────
+//
+// **只记名字和时间，永远不记值。** 存在的意义是让「谁在什么时候拿走了什么」可查 ——
+// 出事能追溯，也是让人敢用这个功能的理由。放内存不落盘：落盘等于多一份
+// 「这台机器上有哪些密钥」的清单躺在磁盘上，而它的用途只是给用户看最近发生了什么。
+export interface SecretAuditEntry {
+  at: number
+  ptyId?: string
+  source: 'pty-env' | 'eas-secret' | 'reveal'
+  names: string[]
+}
+const auditLog: SecretAuditEntry[] = []
+const AUDIT_MAX = 300
+
+function audit(e: SecretAuditEntry): void {
+  auditLog.push(e)
+  if (auditLog.length > AUDIT_MAX) auditLog.splice(0, auditLog.length - AUDIT_MAX)
+}
+export function secretAudit(): SecretAuditEntry[] {
+  return auditLog.slice().reverse()
 }
 
 // ── IPC ────────────────────────────────────────────────────────────
@@ -451,6 +578,7 @@ export function registerSecretHandlers(): void {
       writeStore(s)
       unlockedUntil = Date.now() + IDLE_MS // 刚设完直接进解锁态，省一次输入
       failCount = 0
+      scheduleLockNotice()
       return done()
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e))
@@ -481,6 +609,7 @@ export function registerSecretHandlers(): void {
       unlockedUntil = Date.now() + IDLE_MS
       failCount = 0
       lockedOutUntil = 0
+      scheduleLockNotice()
       console.log(`[secrets] 六位码已重置，${s.items.length} 条密钥保留`)
       return done()
     } catch (e) {
@@ -509,6 +638,7 @@ export function registerSecretHandlers(): void {
       failCount = 0
       lockedOutUntil = 0
       unlockedUntil = now + IDLE_MS
+      scheduleLockNotice()
       return done()
     } catch (e) {
       return fail(e instanceof Error ? e.message : String(e))
@@ -553,6 +683,17 @@ export function registerSecretHandlers(): void {
    * 每行的 value 留空 + 带 from = 沿用原来那个变量的密文（改名不丢值）；
    * 新增的行必须给 value。
    */
+  /** 用户当场把一组密钥给了某个终端（走 request_secret 时）→ 那个终端才能用 eas-secret 取它。
+   *  没有这一步的话，用户刚填的密钥反而是唯一取不到的（新组默认不在任何终端的授权里）。 */
+  ipcMain.handle('secrets:grantToPty', (_e, ptyId: string | undefined, group: string) => {
+    grantGroupToPty(ptyId, String(group))
+  })
+
+  ipcMain.handle('secrets:audit', (): SecretAuditEntry[] => secretAudit())
+
+  /** 这个终端启动时带了哪些变量 —— 终端角标用。**只有名字** */
+  ipcMain.handle('secrets:injectedIn', (_e, ptyId: string): string[] => injectedInPty(ptyId))
+
   ipcMain.handle('secrets:save', (_e, input: SecretSaveInput): Res => {
     try {
       const guard = requireUnlocked()

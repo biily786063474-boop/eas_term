@@ -83,6 +83,9 @@ export function App(): JSX.Element {
         clearTimeout(timer)
         timer = window.setTimeout(() => flush(false), 500)
       })
+      // 开关是存在 localStorage 里的，主进程重启后默认 true —— 不同步一次的话，
+      // 用户上次关掉的 MCP 在这次启动里对 /secret-env 仍然是「开」
+      window.api.mcp.setEnabled(useStore.getState().mcpEnabled)
       window.addEventListener('blur', onBlur)
       window.addEventListener('beforeunload', onBeforeUnload)
     })()

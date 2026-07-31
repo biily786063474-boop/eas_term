@@ -11,6 +11,12 @@ import path from 'path'
 import crypto from 'crypto'
 import { secretsForRun } from './secrets'
 
+/** 标题栏「MCP 接入」开关在主进程的影子。
+ *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
+ *  /secret-env 走主进程直通、一步都不进渲染层，所以必须在这边也有一份。
+ *  开关文案写的是「关掉后所有工具调用立刻被拒」—— 安全开关撒谎比没有开关更糟。 */
+let mcpEnabled = true
+
 interface Ctx {
   /** 调用方所在终端的 ptyId：渲染层据此反查「我在哪个 Frame / 哪个节点」
    *  （终端是先创建 pty、之后才挂到 Frame 节点上的，spawn 时还不知道 frameId，所以注入 ptyId 更可靠） */
@@ -323,6 +329,10 @@ function setupAgents(): void {
 
 export function registerMcpBridge(): void {
   ipcMain.handle('mcp:removeConfig', () => removeMcpConfig())
+  // 渲染层的开关同步一份过来，好让 /secret-env 也能被它关掉
+  ipcMain.on('mcp:setEnabled', (_e, v: boolean) => {
+    mcpEnabled = v !== false
+  })
 
   ipcMain.on('mcp:result', (_e, r: { id: number; ok: boolean; data?: unknown; error?: string }) => {
     const done = pending.get(r.id)
@@ -346,11 +356,19 @@ export function registerMcpBridge(): void {
 
       // eas-secret 包装命令取值。**这是明文离开主进程的第二条路**（第一条是 PTY env 注入），
       // 所以它不走 invokeRenderer —— 值一步都不进渲染层，直接主进程算完回给本机 shim。
-      // 门比注入还紧一档：secretsForRun 要求解锁态。
+      //
+      // 门比注入还紧两档：
+      //   · 要解锁态
+      //   · 认 x-eas-secret-token（每个 PTY 一张，spawn 时发），据此判断这个终端被授权哪几组。
+      //     **不能只认上面那个全局 token** —— 它每个终端都一样、还明文落在 mcp-endpoint.json 里，
+      //     拿它当门等于没门：一个零密钥终端里的 npm postinstall 就能拿走整柜。
       if (req.method === 'POST' && req.url === '/secret-env') {
         const raw = await readBody(req)
         const sel = JSON.parse(raw || '{}') as { group?: string; vars?: string[] }
-        const r = secretsForRun(sel)
+        const r = secretsForRun(sel, {
+          secretToken: String(req.headers['x-eas-secret-token'] ?? ''),
+          mcpEnabled
+        })
         return send(r.ok ? 200 : 400, r)
       }
 

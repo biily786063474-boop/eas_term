@@ -6,7 +6,14 @@ import path from 'path'
 import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
-import { secretsEnv, noteInjected } from './secrets'
+import {
+  secretsEnv,
+  noteInjected,
+  auditInjection,
+  issueSecretToken,
+  autoInjectGroups,
+  forgetPty
+} from './secrets'
 
 interface Entry {
   pty: pty.IPty
@@ -62,16 +69,33 @@ exec /usr/bin/open "$@"
 }
 
 /**
+ * 往 PATH 前面插一个目录。**必须走这个函数，别手拼。**
+ *
+ * 两个 Windows 专属的坑，硬编码 `${dir}:${env.PATH}` 会同时踩中：
+ *   · 分隔符是 `;` 不是 `:`。用冒号拼出来的 `C:\a\bin:C:\Windows` 根本不是合法 PATH，
+ *     结果不是「找不到我们的命令」，是**把整个终端的 PATH 打废**。
+ *   · 键名是 `Path`（有时是 `PATH`）。Windows 环境变量名不区分大小写，但 JS 对象区分 ——
+ *     直接写 env.PATH 会凭空多出一个键，真正生效的那个 Path 纹丝不动。
+ * open shim 没踩到只是因为它在 win32 上直接 return null，不代表这个写法是对的。
+ */
+function prependPath(env: Record<string, string | undefined>, dir: string): void {
+  const key = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH'
+  env[key] = env[key] ? `${dir}${path.delimiter}${env[key]}` : dir
+}
+
+/**
  * `eas-secret` 包装命令。解决的是一个硬约束：
  * **进程的环境变量在 spawn 那一刻就定死了** —— 用户后来才存进密钥柜的东西，
  * 已经在跑的这个终端永远读不到。原来只能让 agent 去开个新终端，手上的活就断了。
  *
- *   eas-secret run --group "AWS 生产账号" -- aws s3 ls
+ *   eas-secret run --vars OPENAI_API_KEY -- python train.py
  *
- * 值由 shim 向主进程现取，直接放进子进程的 env。三个关键性质：
+ * 值由 shim 向主进程现取，直接放进子进程的 env。几个关键性质：
  *   · 明文不经 stdout —— agent 看到的只有被包裹命令自己的输出
- *   · 明文不进 shell history / ps —— 命令行里只有**组名**，没有值
- *   · 要解锁态才给（比 PTY 注入还紧一档，见 secretsForRun）
+ *   · 明文不进 shell history / ps —— 命令行里只有**变量名**，没有值
+ *   · 要解锁态才给，而且**认终端**：凭 EAS_SECRET_TOKEN 反查这个终端被授权哪几组
+ *     （见 secrets.ts 的 ptyGrants）。不认终端的话，一个零密钥终端里的
+ *     npm postinstall 就能拿走整柜。
  *
  * 它**不**让 agent 更"看不见"密钥（真想看，包一个 `env` 就露了），
  * 它买的是可用性：不用中断、不用开新终端。这一点别在文案里说反。
@@ -89,10 +113,20 @@ function ensureSecretShim(): string | null {
       ? path.join(process.resourcesPath, 'mcp', 'eas-secret.mjs')
       : path.join(app.getAppPath(), 'mcp', 'eas-secret.mjs')
     if (process.platform === 'win32') {
-      // Windows 侧：.cmd 才会被 PATH 查找命中
+      // Windows 侧：.cmd 才会被 PATH 查找命中。
+      // setlocal 是必需的 —— 没有它，ELECTRON_RUN_AS_NODE=1 会**永久留在用户这个 cmd 会话里**，
+      // 之后他手敲的任何 electron 命令都会变成一个裸 node，且毫无线索。
+      // 路径走 %~dp0 之外的绝对路径，所以文件本身不能有 BOM 问题：
+      // 只写 ASCII（路径可能含中文 → 用 chcp 65001 + UTF-8 落盘保证 cmd.exe 读得对）。
       fs.writeFileSync(
         path.join(dir, 'eas-secret.cmd'),
-        `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${process.execPath}" "${js}" %*\r\n`
+        '@echo off\r\n' +
+          'setlocal\r\n' +
+          'chcp 65001 >nul\r\n' +
+          'set "ELECTRON_RUN_AS_NODE=1"\r\n' +
+          `"${process.execPath}" "${js}" %*\r\n` +
+          'endlocal & exit /b %errorlevel%\r\n',
+        'utf8'
       )
     } else {
       const shim = path.join(dir, 'eas-secret')
@@ -294,12 +328,17 @@ export function registerPtyHandlers(): void {
         // 记下这个终端带了哪些变量（**只记名字**）：secret_check 要靠它回答
         // 「你这个终端能不能直接用 $X」，否则 agent 只能去 echo —— 而那正是我们禁止的
         noteInjected(id, Object.keys(secrets))
+        auditInjection(id, Object.keys(secrets))
+        // 这个终端专属的取密钥凭证。**不是全局 EAS_TERM_TOKEN** ——
+        // 那个每个终端都一样、还落在 mcp-endpoint.json 里，拿它当门等于没有门。
+        // 默认授权范围 = 本来就会自动注入的那些组（拿得到不是新增权限，env 里已经有了）。
+        env.EAS_SECRET_TOKEN = issueSecretToken(id, autoInjectGroups())
         // 包装命令：进程 env 在 spawn 这一刻就定死了，之后存进柜子的密钥这个终端永远读不到。
         // eas-secret run --group X -- <命令> 让它能在**当前终端**用上后来才存的密钥：
         // 值由 shim 向主进程现取、直接进子进程 env，不经 stdout、不进 shell history
         // （命令行里只有组名）。见 ensureSecretShim 的注释。
         const secDir = ensureSecretShim()
-        if (secDir) env.PATH = `${secDir}:${env.PATH ?? ''}`
+        if (secDir) prependPath(env, secDir)
         return env
       })()
     })
@@ -331,6 +370,7 @@ export function registerPtyHandlers(): void {
     proc.onExit(({ exitCode }) => {
       flushOut() // 把残留输出先发完再发 exit,避免丢尾巴
       ptys.delete(id)
+      forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
     })
     ptys.set(id, { pty: proc, wcId: wc.id })
@@ -360,6 +400,7 @@ export function registerPtyHandlers(): void {
     const entry = ptys.get(id)
     if (entry) {
       ptys.delete(id)
+      forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       killTree(entry) // 连里面跑的 claude / 构建进程一起收掉，别留孤儿
     }
   })
@@ -456,6 +497,7 @@ export function killPtysForWebContents(wcId: number): void {
   for (const [id, entry] of ptys) {
     if (entry.wcId === wcId) {
       ptys.delete(id)
+      forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       killTree(entry)
     }
   }

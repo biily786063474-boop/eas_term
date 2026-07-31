@@ -16,6 +16,7 @@ import {
   type HoveredPath
 } from './pathLinks'
 import { VoiceButton } from '../voice/VoiceButton'
+import { SecretBadge } from './SecretBadge'
 import './terminal.css'
 
 interface TermMenu {
@@ -517,6 +518,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     <div ref={containerRef} className="terminal-host">
       {/* 画布模式下终端走「字号缩放」，麦克风按钮按同一 scale 缩放，才与终端内容相对静止 */}
       <VoiceButton ptyId={ptyId} scale={canvasScale} />
+      <SecretBadge ptyId={ptyId} scale={canvasScale} />
       {m &&
         createPortal(
           <div

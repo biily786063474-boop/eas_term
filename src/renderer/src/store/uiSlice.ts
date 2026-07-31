@@ -66,6 +66,8 @@ export interface UiSlice {
 }
 
 const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
+/** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
+const MCP_OFF_KEY = 'eas.mcp.off'
 
 let mcpSeq = 1
 let ttRunning = false
@@ -112,7 +114,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   lastActiveTerminal: null,
   attentionPtys: [],
   mcpLog: [],
-  mcpEnabled: true,
+  mcpEnabled: localStorage.getItem(MCP_OFF_KEY) !== '1',
   runningPtys: [],
   agentCli: null,
   roles: [],
@@ -197,7 +199,14 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       }
     }),
 
-  setMcpEnabled: (v) => set({ mcpEnabled: v }),
+  setMcpEnabled: (v) => {
+    // 存盘：这是个**安全开关**，关掉它是明确的意愿表达，不该重启就悄悄恢复成开。
+    // 同步给主进程：/secret-env 走主进程直通，渲染层这份状态它查不到。
+    if (v) localStorage.removeItem(MCP_OFF_KEY)
+    else localStorage.setItem(MCP_OFF_KEY, '1')
+    window.api.mcp.setEnabled(v)
+    set({ mcpEnabled: v })
+  },
   logMcp: (e) =>
     set((s) => ({
       mcpLog: [{ id: mcpSeq++, ...e, at: Date.now() }, ...s.mcpLog].slice(0, 20)

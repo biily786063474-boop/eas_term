@@ -18,6 +18,9 @@ import os from 'os'
 
 const PORT = process.env.EAS_TERM_PORT
 const TOKEN = process.env.EAS_TERM_TOKEN
+// 这个终端专属的取密钥凭证（spawn 时发）。主进程据它判断本终端被授权哪几组 ——
+// 全局的 EAS_TERM_TOKEN 每个终端都一样、还落在 mcp-endpoint.json 里，当门等于没门。
+const SECRET_TOKEN = process.env.EAS_SECRET_TOKEN
 
 const die = (msg, code = 1) => {
   process.stderr.write(`eas-secret: ${msg}\n`)
@@ -59,7 +62,11 @@ let res
 try {
   res = await fetch(`http://127.0.0.1:${PORT}/secret-env`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-eas-token': TOKEN },
+    headers: {
+      'content-type': 'application/json',
+      'x-eas-token': TOKEN,
+      'x-eas-secret-token': SECRET_TOKEN ?? ''
+    },
     body: JSON.stringify({ group, vars })
   })
 } catch (e) {
@@ -69,11 +76,20 @@ const j = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}`
 // 失败信息里绝不会有值，可以原样透出去给用户和 agent 看
 if (!j.ok) die(j.error || '取不到密钥', 2)
 
+// 值只在这里出现一次：直接进子进程的环境。
+// ELECTRON_RUN_AS_NODE 是 shim 用来把 Electron 当 node 跑的，绝不能漏给被包裹的命令 ——
+// 否则用户的命令里再起 electron 就会变成一个裸 node，而且毫无线索。
+const childEnv = { ...process.env, ...j.env }
+delete childEnv.ELECTRON_RUN_AS_NODE
+
+// Windows 上必须走 shell：npm / npx / wrangler / claude 这些全是 .cmd 包装，
+// Node 从 18 起（CVE-2024-27980）拒绝在 shell:false 下执行 .bat/.cmd，直接 spawn 会 ENOENT。
+// 非 Windows 保持 shell:false —— 那边不需要，而且能避免参数被再解析一遍。
+const useShell = process.platform === 'win32'
 const child = spawn(cmd[0], cmd.slice(1), {
-  // 值只在这里出现一次：直接进子进程的环境
-  env: { ...process.env, ...j.env },
+  env: childEnv,
   stdio: 'inherit',
-  shell: false
+  shell: useShell
 })
 child.on('error', (e) => die(`跑不起来 ${cmd[0]}：${e.message}`, 127))
 // 退出码原样透传：调用方（多半是 agent）要靠它判断成没成。

@@ -87,17 +87,33 @@ request_secret({
 `purpose` 一字不改地显示给用户。**编理由骗用户填东西是这里唯一的红线**——
 用户被弹窗骗过一次，这功能就废了。
 
-**③ 用它跑命令** —— `eas-secret run --group "<组名>" -- <你的命令>`
+**③ 用它跑命令** —— `eas-secret run --vars VAR1,VAR2 -- <你的命令>`
 
 ```
-eas-secret run --group "AWS 生产账号" -- aws s3 cp dist/ s3://bucket/ --recursive
+eas-secret run --vars AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY -- aws s3 cp dist/ s3://bucket/ --recursive
 ```
 
 为什么不能直接 `$AWS_ACCESS_KEY_ID`：**进程的环境变量在启动那一刻就定死了**，
 用户刚存的东西，你这个终端读不到。包装命令会现取现用，值直接进子命令的环境，
-不经过终端输出、也不进 shell history（命令行里只有组名）。
+不经过终端输出、也不进 shell history（命令行里只有变量名）。
 
-`secret_check` 说 `inThisTerminal` 里有它，才可以直接用 `$VAR`。
+> ⚠️ **命令里要引用 `$变量` 时，必须让子进程自己展开**——这是最容易踩的坑：
+>
+> ```sh
+> # 对：单引号，$API_KEY 留给子进程的 sh
+> eas-secret run --vars API_KEY -- sh -c 'curl -H "Authorization: Bearer $API_KEY" https://api.x.com'
+>
+> # 错：双引号，外层 shell 先把 $API_KEY 吃成空 → 服务返 401
+> eas-secret run --vars API_KEY -- sh -c "curl -H \"Bearer $API_KEY\" https://api.x.com"
+> ```
+>
+> 踩了这个坑会得到 401，然后你会以为是用户的 key 无效去调 `report_secret_invalid`，
+> 让用户白白重填一个完全正确的密钥。**401 之前先检查自己是不是写成双引号了。**
+>
+> 命令自己读环境变量的（`aws`/`gh`/`docker`/`terraform` 这类）直接写就行，不用管这条。
+
+只有 `secret_check` 返回 `ready: true` 时才可以直接写 `$VAR`。
+`ready:false` 但 `needsWrapper` 里有它 → 走上面的包装命令。
 
 **④ 用了但服务说无效** —— `report_secret_invalid({ vars, detail })`
 

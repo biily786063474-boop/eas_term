@@ -42,8 +42,11 @@ export interface SecretRequestResult {
   saved: boolean
   /** 用户拒绝时的原因，回给 AI 让它别干等 */
   reason?: string
+  /** **只包含真的写成功的变量名。** 别把没写进去的也报上来 */
   vars?: string[]
   autoInject?: boolean
+  /** 存进了哪一组 —— 用来授权这个终端能取它 */
+  group?: string
 }
 
 /** 这些词出现在变量名或组名里就红牌警告。
@@ -144,26 +147,44 @@ function SecretRequestModal({
     } as Parameters<typeof window.api.secrets.save>[0]
 
     if (fix) {
-      // 修正模式必须**改已有那一条**，不能新建 —— 变量名全局唯一，新建会被直接拒掉。
+      // 修正模式必须**改已有那些条**，不能新建 —— 变量名全局唯一，新建会被直接拒掉。
       // 同组里没被点名的变量原样留着（不带 value = 主进程沿用旧密文）。
       const items = await window.api.secrets.list()
-      const owner = items.find((it) => it.vars.some((v) => req.vars.includes(v.varName)))
-      if (!owner) {
+      // 这些变量可能分属**多个组**（agent 一次报两个服务的凭证很常见）。
+      // 原来用 find 只取第一个 owner，第二组的新值连保存调用都没进，
+      // 却照样回报「都更新了」—— 用户以为两把泄露的 key 都轮换了，其实只换了一把。
+      const owners = items.filter((it) => it.vars.some((v) => req.vars.includes(v.varName)))
+      if (!owners.length) {
         setBusy(false)
         setErr('这些变量已经不在密钥柜里了，可能刚被删掉')
         return
       }
-      input = {
-        id: owner.id,
-        name: owner.name, // 名字和自动注入开关都不动，这次只换值
-        note: owner.note,
-        vars: owner.vars.map((v) => {
-          const i = req.vars.indexOf(v.varName)
-          return i >= 0
-            ? { varName: v.varName, value: values[i], from: v.varName }
-            : { varName: v.varName, from: v.varName }
+      const written: string[] = []
+      for (const owner of owners) {
+        const r = await window.api.secrets.save({
+          id: owner.id,
+          name: owner.name, // 名字和自动注入开关都不动，这次只换值
+          note: owner.note,
+          vars: owner.vars.map((v) => {
+            const i = req.vars.indexOf(v.varName)
+            return i >= 0
+              ? { varName: v.varName, value: values[i], from: v.varName }
+              : { varName: v.varName, from: v.varName }
+          })
         })
+        if (!r.ok) {
+          setBusy(false)
+          // 回报只认真写成功的那些，别把没写进去的也说成改好了
+          setErr(`「${owner.name}」保存失败：${r.error ?? '未知原因'}`)
+          if (written.length) onDone({ saved: true, vars: written, group: owners[0].name })
+          return
+        }
+        setSt(r.status)
+        written.push(...owner.vars.filter((v) => req.vars.includes(v.varName)).map((v) => v.varName))
       }
+      setBusy(false)
+      onDone({ saved: true, vars: written, group: owners[0].name })
+      return
     }
 
     const r = await window.api.secrets.save(input)

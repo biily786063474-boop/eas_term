@@ -185,7 +185,9 @@ const api = {
     reply: (r: { id: number; ok: boolean; data?: unknown; error?: string }): void =>
       ipcRenderer.send('mcp:result', r),
     /** 移除写进用户全局配置的 MCP 条目（画板工具随之不可用，属于用户的选择） */
-    removeConfig: (): Promise<void> => ipcRenderer.invoke('mcp:removeConfig')
+    removeConfig: (): Promise<void> => ipcRenderer.invoke('mcp:removeConfig'),
+    /** 把「MCP 接入」开关同步给主进程 —— /secret-env 走主进程直通，查不到渲染层那份状态 */
+    setEnabled: (v: boolean): void => ipcRenderer.send('mcp:setEnabled', v)
   },
   skill: {
     // 配套技能包（告诉 AI 什么时候该用画板工具）：查状态 / 关掉启动提醒。
@@ -340,6 +342,21 @@ const api = {
       ipcRenderer.invoke('secrets:save', input),
     remove: (id: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:remove', id),
+    /** 闲置到期自动上锁时主进程会推一下 —— 不订阅的话标题栏那把钥匙会一直显示「已解锁」 */
+    onLocked: (cb: () => void): (() => void) => {
+      const h = (): void => cb()
+      ipcRenderer.on('secrets:locked', h)
+      return () => ipcRenderer.removeListener('secrets:locked', h)
+    },
+    /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
+    grantToPty: (ptyId: string | undefined, group: string): Promise<void> =>
+      ipcRenderer.invoke('secrets:grantToPty', ptyId, group),
+    /** 这个终端启动时带了哪些变量（终端角标用）。**只有名字** */
+    injectedIn: (ptyId: string): Promise<string[]> =>
+      ipcRenderer.invoke('secrets:injectedIn', ptyId),
+    /** 密钥使用流水。**只有名字和时间，没有值** */
+    audit: (): Promise<{ at: number; ptyId?: string; source: string; names: string[] }[]> =>
+      ipcRenderer.invoke('secrets:audit'),
     /** 唯一能把值交到渲染层的通道，给「查看 / 复制」用。不传 varName = 整组 */
     reveal: (id: string, varName?: string): Promise<SecretReveal> =>
       ipcRenderer.invoke('secrets:reveal', id, varName)
