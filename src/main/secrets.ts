@@ -33,7 +33,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 
-import type { SecretMeta, SecretsStatus } from '../shared/types'
+import type { SecretMeta, SecretReveal, SecretSaveInput, SecretsStatus } from '../shared/types'
 
 // 库文件放 userData 而不是 ~/.eas：
 //  · userData 的父目录天然 0700（~/.eas 实测是 0755，世界可读）
@@ -41,7 +41,8 @@ import type { SecretMeta, SecretsStatus } from '../shared/types'
 //  · 语义上也更对 —— ~/.eas 是「用户可以自己去改」的区（词典、角色），密钥库不是
 const storeFile = (): string => path.join(app.getPath('userData'), 'secrets.json')
 
-const VERSION = 1
+/** v2：一条从「一个变量」改成「一组变量」（AK/SK 这类成对凭证）。读到 v1 会就地升。 */
+const VERSION = 2
 /** 六位码：纯数字六位 */
 const CODE_RE = /^\d{6}$/
 /** 解锁后多久无操作自动上锁 */
@@ -49,15 +50,37 @@ const IDLE_MS = 15 * 60 * 1000
 /** 连续错几次开始退避 */
 const FAIL_THRESHOLD = 5
 
+interface StoredVar {
+  varName: string
+  /** safeStorage 密文的 base64。明文是 sealed（见 seal），不是裸的密钥值 */
+  cipher: string
+}
+
+/** 一条 = 一组凭证，可以有多个变量。
+ *
+ *  为什么不是「一条一个变量」：AK/SK 这类东西是**一个整体** ——
+ *  AWS 要 AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY，数据库要 host/user/password，
+ *  删了一半留着另一半没有意义，「自动注入」也不可能只开一半。
+ *  拆成两条的话，用户得填两次、在列表里还看不出它俩是一对。 */
 interface StoredItem {
   id: string
   name: string
-  varName: string
   note?: string
-  /** safeStorage 密文的 base64。明文是 sealed（见 seal），不是裸的密钥值 */
-  cipher: string
-  /** 新开的终端自动带上它。默认关 —— 每多一个自动注入的密钥，
+  vars: StoredVar[]
+  /** 新开的终端自动带上这一组。默认关 —— 每多一组自动注入的密钥，
    *  就多一批能读到它的进程（终端里跑的任何东西，包括 npm 包的 postinstall） */
+  autoInject?: boolean
+  createdAt: number
+  lastUsedAt?: number
+}
+
+/** v1 的形状：一条只有一个变量。读到这种就地升成 v2（见 migrateItem） */
+interface LegacyItem {
+  id: string
+  name: string
+  varName: string
+  cipher: string
+  note?: string
   autoInject?: boolean
   createdAt: number
   lastUsedAt?: number
@@ -93,7 +116,9 @@ function readStore(): StoreFile {
   try {
     const raw = JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as Partial<StoreFile>
     return {
-      version: typeof raw.version === 'number' ? raw.version : VERSION,
+      // 读进来就已经被 migrateItem 升成当前结构了，所以版本号直接写成当前值。
+      // 保留原值的话会出现「内容是 v2、号还标 v1」的库 —— 将来做 v3 迁移必然误判。
+      version: VERSION,
       app: typeof raw.app === 'string' ? raw.app : app.getName(),
       platform: typeof raw.platform === 'string' ? raw.platform : process.platform,
       lock:
@@ -102,18 +127,42 @@ function readStore(): StoreFile {
           : undefined,
       // 逐条挑，坏的那条丢掉而不是整份打不开（同 roles.ts / canvasSlice 的 sanitize 思路）
       items: Array.isArray(raw.items)
-        ? raw.items.filter(
-            (x): x is StoredItem =>
-              !!x &&
-              typeof x.id === 'string' &&
-              typeof x.name === 'string' &&
-              typeof x.varName === 'string' &&
-              typeof x.cipher === 'string'
-          )
+        ? (raw.items as unknown[]).map(migrateItem).filter((x): x is StoredItem => x !== null)
         : []
     }
   } catch {
     return emptyStore() // 第一次用，或者文件坏了
+  }
+}
+
+/** 逐条规范化 + v1→v2 升级。返回 null = 这条坏了，丢掉它而不是让整份库打不开。 */
+function migrateItem(raw: unknown): StoredItem | null {
+  if (!raw || typeof raw !== 'object') return null
+  const x = raw as Partial<StoredItem> & Partial<LegacyItem>
+  if (typeof x.id !== 'string' || typeof x.name !== 'string') return null
+
+  let vars: StoredVar[]
+  if (Array.isArray(x.vars)) {
+    vars = x.vars.filter(
+      (v): v is StoredVar =>
+        !!v && typeof (v as StoredVar).varName === 'string' && typeof (v as StoredVar).cipher === 'string'
+    )
+  } else if (typeof x.varName === 'string' && typeof x.cipher === 'string') {
+    // v1 的一条 = 一个变量，包成只有一个元素的组
+    vars = [{ varName: x.varName, cipher: x.cipher }]
+  } else {
+    return null
+  }
+  if (!vars.length) return null
+
+  return {
+    id: x.id,
+    name: x.name,
+    note: typeof x.note === 'string' ? x.note : undefined,
+    vars,
+    autoInject: x.autoInject === true,
+    createdAt: typeof x.createdAt === 'number' ? x.createdAt : Date.now(),
+    lastUsedAt: typeof x.lastUsedAt === 'number' ? x.lastUsedAt : undefined
   }
 }
 
@@ -217,28 +266,44 @@ const touch = (): void => {
  *   []        → 明确不要注入任何东西
  *   [..]      → 就用这些（留给将来的高级用法）
  *
- * 注意：**不要求解锁态**。终端可能在解锁超时之后才被创建（恢复画布时批量重开就是），
- * 而用户在打开「自动注入」开关的那一刻已经解锁过、也已经表达过意图了。
- * 真正的门在「打开开关」那一步，不在「spawn」这一步。
+ * **锁定态下一律不注入。** 这一条是验收时改过来的 ——
+ * 原来的写法（"打开开关那一刻已经表达过意图了，spawn 这步不用再问"）在纸面上说得通，
+ * 实测下来是个洞：AI 自己就能开终端（MCP 的 canvas_new_terminal），
+ * 于是锁不锁完全一样，六位码变成纯装饰 —— 人不在电脑前的那段时间恰恰是最该防的。
+ *
+ * 代价是重启后恢复画布批量重开的终端不带密钥（那时必然是锁着的），
+ * 解锁之后得重开才有。这个代价是对的：没证明"人在场"，就不该发密钥。
  */
 export function secretsEnv(names?: string[]): Record<string, string> {
   if (!app.isReady()) return {} // 兜底，正常不会走到
   if (names && names.length === 0) return {}
+  if (!isUnlocked()) {
+    // 别静默 —— "终端里怎么没有 key" 要能在日志里找到答案
+    console.log('[secrets] 密钥柜锁着，这个终端不注入任何密钥')
+    return {}
+  }
   const s = readStore()
-  const want = names ?? s.items.filter((x) => x.autoInject).map((x) => x.varName)
-  if (!want.length) return {}
+  // 指定了名字就按名字挑（可以只要一组里的某几个变量）；没指定就用标了自动注入的整组
+  const pick = (it: StoredItem, v: StoredVar): boolean =>
+    names ? names.includes(v.varName) : !!it.autoInject
   const out: Record<string, string> = {}
   let used = false
   for (const it of s.items) {
-    if (!want.includes(it.varName)) continue
-    const r = open(it.cipher)
-    if (!r.ok) {
-      console.error(`[secrets] ${it.varName} 解不开（${r.reason}），跳过注入`)
-      continue
+    let hit = false
+    for (const v of it.vars) {
+      if (!pick(it, v)) continue
+      const r = open(v.cipher)
+      if (!r.ok) {
+        console.error(`[secrets] ${v.varName} 解不开（${r.reason}），跳过注入`)
+        continue
+      }
+      out[v.varName] = r.value
+      hit = true
     }
-    out[it.varName] = r.value
-    it.lastUsedAt = Date.now()
-    used = true
+    if (hit) {
+      it.lastUsedAt = Date.now()
+      used = true
+    }
   }
   if (used) {
     try {
@@ -302,6 +367,37 @@ export function registerSecretHandlers(): void {
     }
   })
 
+  /**
+   * 忘了六位码 → 换一个，**密钥一条不动**。
+   *
+   * 看着像后门，其实不是：六位码从来就不是加密边界（密钥是钥匙串加密的，
+   * 跟这六位数没关系）。把 secrets.json 里的 lock 段删掉、重启、设个新码，
+   * 所有密钥照样解得开 —— 能编辑那个文件的人本来就能绕过。
+   * 不在 GUI 上铺这条路，挡不住任何真会来的人，只会让忘了码的自己人全盘重录。
+   *
+   * 退避（lockedOutUntil）故意不管这里：那是防在线猜码的，而重置根本不用猜。
+   * 真正的摩擦放在 UI 的二次确认上，文案必须说清「重置后柜子就开了」。
+   */
+  ipcMain.handle('secrets:resetCode', (_e, code: string): Res => {
+    try {
+      if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
+      if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
+      const s = readStore()
+      const salt = crypto.randomBytes(16).toString('hex')
+      s.lock = { salt, hash: hashCode(String(code), salt) }
+      s.app = app.getName()
+      s.platform = process.platform
+      writeStore(s) // items 原样写回去，一条没动
+      unlockedUntil = Date.now() + IDLE_MS
+      failCount = 0
+      lockedOutUntil = 0
+      console.log(`[secrets] 六位码已重置，${s.items.length} 条密钥保留`)
+      return done()
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e))
+    }
+  })
+
   ipcMain.handle('secrets:unlock', (_e, code: string): Res => {
     try {
       const now = Date.now()
@@ -342,68 +438,92 @@ export function registerSecretHandlers(): void {
     return s.items.map((it) => ({
       id: it.id,
       name: it.name,
-      varName: it.varName,
       note: it.note,
+      // 这一条在这台机器上还解得开吗（跨机器同步/改过 app 名的情况）逐个变量算
+      vars: it.vars.map((v) => ({ varName: v.varName, readable: open(v.cipher).ok })),
       autoInject: !!it.autoInject,
       createdAt: it.createdAt,
-      lastUsedAt: it.lastUsedAt,
-      // 这一条在这台机器上还解得开吗（跨机器同步/改过 app 名的情况）
-      readable: open(it.cipher).ok
+      lastUsedAt: it.lastUsedAt
     }))
   })
 
-  /** 新增或更新一条。value 传空字符串 = 只改元数据不动密钥值 */
-  ipcMain.handle(
-    'secrets:save',
-    (_e, input: { id?: string; name: string; varName: string; note?: string; value?: string; autoInject?: boolean }): Res => {
-      try {
-        const guard = requireUnlocked()
-        if (guard) return fail(guard)
-        if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
+  /**
+   * 新增或更新一条（= 一组变量，AK/SK 这类成对凭证放一条里）。
+   * 每行的 value 留空 + 带 from = 沿用原来那个变量的密文（改名不丢值）；
+   * 新增的行必须给 value。
+   */
+  ipcMain.handle('secrets:save', (_e, input: SecretSaveInput): Res => {
+    try {
+      const guard = requireUnlocked()
+      if (guard) return fail(guard)
+      if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
 
-        const name = String(input?.name ?? '').trim()
-        const varName = String(input?.varName ?? '').trim()
-        if (!name) return fail('给它起个名字')
+      const name = String(input?.name ?? '').trim()
+      if (!name) return fail('给它起个名字')
+
+      const rows = Array.isArray(input?.vars) ? input.vars : []
+      if (!rows.length) return fail('至少要有一个变量')
+
+      const s = readStore()
+      const old = input.id ? s.items.find((x) => x.id === input.id) : undefined
+      if (input.id && !old) return fail('这条已经不在了')
+
+      // 别的条目已经占掉的变量名。注入到同一个 env，重名会互相覆盖，所以必须全局唯一
+      const taken = new Map<string, string>()
+      for (const it of s.items) {
+        if (it.id === input.id) continue
+        for (const v of it.vars) taken.set(v.varName, it.name)
+      }
+
+      const next: StoredVar[] = []
+      const seen = new Set<string>()
+      for (const row of rows) {
+        const varName = String(row?.varName ?? '').trim()
         // 环境变量名的合法字符。不挡的话注入时会拼出一个 shell 认不出的 env
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(varName)) {
-          return fail('变量名只能用字母、数字、下划线，且不能以数字开头')
+          return fail(`「${varName || '空'}」不是合法变量名：只能用字母、数字、下划线，且不能以数字开头`)
         }
-        const s = readStore()
-        if (s.items.some((x) => x.varName === varName && x.id !== input.id)) {
-          return fail(`已经有一条在用 ${varName} 了`)
-        }
+        if (seen.has(varName)) return fail(`这一组里 ${varName} 写了两遍`)
+        const owner = taken.get(varName)
+        if (owner) return fail(`${varName} 已经被「${owner}」占用了`)
+        seen.add(varName)
 
-        const value = typeof input.value === 'string' ? input.value : ''
-        if (input.id) {
-          const it = s.items.find((x) => x.id === input.id)
-          if (!it) return fail('这条已经不在了')
-          it.name = name
-          it.varName = varName
-          it.note = input.note?.trim() || undefined
-          if (typeof input.autoInject === 'boolean') it.autoInject = input.autoInject
-          if (value) it.cipher = seal(value) // 空 = 不改值
-        } else {
-          if (!value) return fail('密钥值不能为空')
-          s.items.push({
-            id: crypto.randomUUID(),
-            name,
-            varName,
-            note: input.note?.trim() || undefined,
-            cipher: seal(value),
-            autoInject: input.autoInject === true,
-            createdAt: Date.now()
-          })
+        const value = typeof row.value === 'string' ? row.value : ''
+        if (value) {
+          next.push({ varName, cipher: seal(value) })
+          continue
         }
-        s.app = app.getName()
-        s.platform = process.platform
-        writeStore(s)
-        touch()
-        return done()
-      } catch (e) {
-        return fail(e instanceof Error ? e.message : String(e))
+        // 没给新值 → 沿用旧密文
+        const from = typeof row.from === 'string' ? row.from : varName
+        const prev = old?.vars.find((v) => v.varName === from)
+        if (!prev) return fail(`${varName} 还没有值`)
+        next.push({ varName, cipher: prev.cipher })
       }
+
+      if (old) {
+        old.name = name
+        old.note = input.note?.trim() || undefined
+        old.vars = next
+        if (typeof input.autoInject === 'boolean') old.autoInject = input.autoInject
+      } else {
+        s.items.push({
+          id: crypto.randomUUID(),
+          name,
+          note: input.note?.trim() || undefined,
+          vars: next,
+          autoInject: input.autoInject === true,
+          createdAt: Date.now()
+        })
+      }
+      s.app = app.getName()
+      s.platform = process.platform
+      writeStore(s)
+      touch()
+      return done()
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : String(e))
     }
-  )
+  })
 
   ipcMain.handle('secrets:remove', (_e, id: string): Res => {
     try {
@@ -426,26 +546,31 @@ export function registerSecretHandlers(): void {
    * 单独一条而不是并进 list，是为了让「值离开主进程」这件事在代码里只有一个入口，
    * 将来加审计日志也只用盯这一处。
    */
-  ipcMain.handle(
-    'secrets:reveal',
-    (_e, id: string): { ok: boolean; value?: string; error?: string } => {
-      const guard = requireUnlocked()
-      if (guard) return { ok: false, error: guard }
-      const s = readStore()
-      const it = s.items.find((x) => x.id === id)
-      if (!it) return { ok: false, error: '这条已经不在了' }
-      const r = open(it.cipher)
+  ipcMain.handle('secrets:reveal', (_e, id: string, varName?: string): SecretReveal => {
+    const guard = requireUnlocked()
+    if (guard) return { ok: false, error: guard }
+    const s = readStore()
+    const it = s.items.find((x) => x.id === id)
+    if (!it) return { ok: false, error: '这条已经不在了' }
+    // 不传 varName = 整组都要（"复制成 .env"）；传了就只解那一个
+    const want = varName ? it.vars.filter((v) => v.varName === varName) : it.vars
+    if (!want.length) return { ok: false, error: `这条里没有 ${varName}` }
+
+    const vars: { varName: string; value: string }[] = []
+    for (const v of want) {
+      const r = open(v.cipher)
       if (!r.ok) {
         return {
           ok: false,
           error:
             r.reason === 'undecryptable'
-              ? '这台机器上解不开（密钥库可能是从别的机器同步过来的，或者应用改过名字）'
-              : '这条密文校验不通过，可能已损坏'
+              ? `${v.varName} 在这台机器上解不开（密钥库可能是从别的机器同步过来的，或者应用改过名字）`
+              : `${v.varName} 的密文校验不通过，可能已损坏`
         }
       }
-      touch()
-      return { ok: true, value: r.value }
+      vars.push({ varName: v.varName, value: r.value })
     }
-  )
+    touch()
+    return { ok: true, vars }
+  })
 }

@@ -282,6 +282,33 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
     <li>给一次危险操作（注入、导出、删除）一个明确的人工确认点</li>
   </ul>
 
+  <div class="verdict">
+    <div class="vlabel">忘了六位码怎么办（2026-07-31 定）</div>
+    <p style="margin:0 0 10px">
+      <b>换一个新码，密钥一条不动。</b>UI 上是「忘记六位码了？」→ 警示页 → 设新码。
+    </p>
+    <p style="margin:0 0 10px">
+      看着像后门，其实不是，理由就是上面这一节：<b>六位码从来不是加密边界</b>。
+      密钥是钥匙串加密的，跟这六位数没关系 —— 把 <code>secrets.json</code> 的
+      <code>lock</code> 段删掉、重启、设个新码，所有密钥照样解得开。
+      <b>能编辑那个文件的人本来就能绕过</b>，不在 GUI 上铺这条路挡不住任何真会来的人，
+      只会让忘了码的自己人把几十条云凭证全部重新生成一遍。
+    </p>
+    <p style="margin:0 0 10px">
+      两个刻意的设计：<b>（1）</b>警示文案必须说清「换完柜子就是开的」，
+      绝不写成「找回密钥」—— 它不是找回，是换一把新锁。
+      <b>（2）</b>连续输错的指数退避<b>不管</b>这条路：退避防的是在线猜码，而换锁根本不用猜。
+      真正的摩擦放在那一页警示上。
+    </p>
+    <p style="margin:0;color:#a3a3a3;font-size:14px">
+      被否掉的两个方案：<b>「重置即清空」</b>——安全上更干净，但代价是全丢重录，
+      而它挡住的攻击者本来就有别的路，等于只惩罚自己人；
+      <b>「重置前过 Touch ID」</b>——最正确，但 Electron 没有内建 API，
+      macOS 要靠带 ACL 的钥匙串条目触发系统弹窗、Windows 侧要另接 Windows Hello，
+      对单人项目工程量不成比例。将来真需要再说。
+    </p>
+  </div>
+
   <p>因为不承担加密强度，它可以做得很快——不需要 KDF 拖慢，体验好。配套的：</p>
 
   <div class="tw">
@@ -323,6 +350,23 @@ Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))</code></pre>
   <span class="flow">↓</span>
 <span class="flow">AI</span> 在终端里 curl -H "Authorization: Bearer $OPENAI_API_KEY"
      <span class="hi">它只知道有这个变量名可用，值没在对话里出现过</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">实现时改掉的一处（2026-07-31）</div>
+    <p style="margin:0 0 10px">
+      <b>一条 = 一组变量，不是一条 = 一个变量。</b>
+      最初按「一条一个变量」写完了，试 AK/SK 场景时发现是设计错误：
+      AccessKeyId 和 AccessKeySecret 本来就是一个凭证，拆成两条会出现
+      <b>删了一半</b>、<b>自动注入只开了一半</b>这种半残状态，而这两种状态都只会在
+      终端里报一个看不懂的鉴权错误。受影响的不止 AWS——阿里云、腾讯云、
+      数据库那套 host/user/password、OAuth 的 id/secret，全是成组的。
+    </p>
+    <p style="margin:0 0 10px">
+      改完后一次提交能填多个变量，另配了三家云的预设和「从 .env 整段粘贴」。
+      变量名<b>跨条目也必须唯一</b>——它们最后注入的是同一份 env，重名会互相盖掉，
+      所以保存时挡住并说清是被哪一条占了。老格式（v1）读进来自动包成单元素的组，值不动。
+    </p>
+  </div>
 
   <div class="verdict">
     <div class="vlabel">关键设计</div>

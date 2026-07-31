@@ -178,24 +178,51 @@ export interface AgentRole {
 
 // ---------- 密钥柜（存 API key，注入终端，但不进对话） ----------
 
+/** 组里的一个变量。**永远不含值** */
+export interface SecretVarMeta {
+  /** 注入终端时用的环境变量名（OPENAI_API_KEY）。**跨条目也必须唯一**，
+   *  因为所有变量最后注入的是同一份 env，重名会互相盖掉 */
+  varName: string
+  /** 这个变量在**这台机器上**还解得开吗。库被从别的机器同步过来、
+   *  或者应用改过 productName（钥匙串桶名会跟着变）时为 false —— UI 得说人话，
+   *  不能只甩一句解密失败 */
+  readable: boolean
+}
+
 /** 一条密钥的元数据。**永远不含值** —— 值只能经 secrets:reveal 单独取，
- *  或者由主进程直接注入 PTY env（那条路根本不经过渲染层）。 */
+ *  或者由主进程直接注入 PTY env（那条路根本不经过渲染层）。
+ *
+ *  一条 = 一组变量：AK/SK、数据库那套 host/user/password 本来就是一个整体，
+ *  拆成几条会出现「删了一半」「自动注入只开了一半」这种半残状态。 */
 export interface SecretMeta {
   id: string
-  /** 人类可读的名字（「OpenAI 生产环境」） */
+  /** 人类可读的名字（「阿里云 主账号」） */
   name: string
-  /** 注入终端时用的环境变量名（OPENAI_API_KEY） */
-  varName: string
   note?: string
-  /** 新开的终端自动带上它。关着的密钥要用得手动指定 */
+  /** 这一组里的变量，至少一个 */
+  vars: SecretVarMeta[]
+  /** 新开的终端自动带上**整组**。关着的密钥要用得手动指定 */
   autoInject: boolean
   createdAt: number
   /** 最后一次被注入进终端的时间，用来看哪些还在用 */
   lastUsedAt?: number
-  /** 这条在**这台机器上**还解得开吗。库被从别的机器同步过来、
-   *  或者应用改过 productName（钥匙串桶名会跟着变）时为 false —— UI 得说人话，
-   *  不能只甩一句解密失败 */
-  readable: boolean
+}
+
+/** 存一条时的入参。一行 value 留空 = 沿用 from（默认同名）那个变量的旧密文，
+ *  这样改名不会把值弄丢；新加的行必须给 value。 */
+export interface SecretSaveInput {
+  id?: string
+  name: string
+  note?: string
+  autoInject?: boolean
+  vars: { varName: string; value?: string; from?: string }[]
+}
+
+/** reveal 的返回。不传 varName 时整组都解出来（「复制成 .env」用） */
+export interface SecretReveal {
+  ok: boolean
+  vars?: { varName: string; value: string }[]
+  error?: string
 }
 
 export interface SecretsStatus {

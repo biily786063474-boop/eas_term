@@ -27,6 +27,8 @@ import type {
   HookStatus,
   AgentRole,
   SecretMeta,
+  SecretReveal,
+  SecretSaveInput,
   SecretsStatus,
   WikiStatus,
   WikiQueryResult,
@@ -319,24 +321,19 @@ const api = {
       ipcRenderer.invoke('secrets:setup', code),
     unlock: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:unlock', code),
+    /** 忘了码：换一个新的，密钥一条不动（六位码本来就不是加密边界，详见主进程注释） */
+    resetCode: (code: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:resetCode', code),
     lock: (): Promise<SecretsStatus> => ipcRenderer.invoke('secrets:lock'),
     list: (): Promise<SecretMeta[]> => ipcRenderer.invoke('secrets:list'),
-    save: (input: {
-      id?: string
-      name: string
-      varName: string
-      note?: string
-      /** 空字符串 = 只改元数据，不动已存的密钥值 */
-      value?: string
-      /** 新开的终端自动带上它 */
-      autoInject?: boolean
-    }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+    /** 一条 = 一组变量（AK/SK 这类成对凭证）。某行 value 留空 = 不动那个变量已存的值 */
+    save: (input: SecretSaveInput): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:save', input),
     remove: (id: string): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:remove', id),
-    /** 唯一能把值交到渲染层的通道，给「查看 / 复制」用 */
-    reveal: (id: string): Promise<{ ok: boolean; value?: string; error?: string }> =>
-      ipcRenderer.invoke('secrets:reveal', id)
+    /** 唯一能把值交到渲染层的通道，给「查看 / 复制」用。不传 varName = 整组 */
+    reveal: (id: string, varName?: string): Promise<SecretReveal> =>
+      ipcRenderer.invoke('secrets:reveal', id, varName)
   },
   design: {
     // 设计模块导出产物落盘到 <项目>/demo/（渲染层传导出 Blob 的 ArrayBuffer）
