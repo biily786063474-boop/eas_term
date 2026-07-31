@@ -21,6 +21,16 @@ import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
 
+// 切到后台不降速。Chromium 默认会把「隐藏/最小化/被完全遮挡」的窗口狠狠节流,
+// 实测(最小化 10s,独立探针对比):setInterval 只剩 26%、requestAnimationFrame 只剩 11%、
+// 定时发起的 fetch 只剩 50%(**连接没被切,是发起它的定时器慢了**)。
+// 对普通网页无所谓,对这个应用是硬伤:终端输出靠 rAF 写进 xterm(TerminalView 那段合帧),
+// rAF 一停,agent 在后台跑出来的东西就全堵在缓冲里,要切回来才吐。
+// 这三个开关必须在 app ready 之前加,晚了不生效。窗口那边还要配 backgroundThrottling:false。
+app.commandLine.appendSwitch('disable-background-timer-throttling')
+app.commandLine.appendSwitch('disable-renderer-backgrounding')
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+
 // 主进程兜底:任一未捕获异常/拒绝都不让 Node 默认 process.exit(1) 打掉整个 app(全窗口瞬灭)。
 // 只记录、不退出——白屏根因之一就是这里缺兜底,一个 EPIPE/EIO 就能整死主进程。
 process.on('uncaughtException', (err) => {
@@ -96,6 +106,9 @@ function createWindow(): void {
         }),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
+      // 窗口切到后台/最小化时不降速 —— 见文件顶部那三个 commandLine 开关的说明。
+      // 两处都要:开关管进程级,这个管这个窗口自己。
+      backgroundThrottling: false,
       // 画布「迷你浏览器」节点用 <webview>（唯一能跟随画布 CSS transform 缩放的真 Chromium 内核）
       webviewTag: true,
       // 版本号走 additionalArguments 而不是 IPC：这样 preload 能**同步**拿到，

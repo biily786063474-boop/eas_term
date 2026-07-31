@@ -150,6 +150,8 @@ export function WebView({
       wv.setAttribute('partition', 'persist:browser') // 多浏览器节点共享会话，与主应用隔离
       // 允许 window.open/target=_blank 触达主进程 setWindowOpenHandler（否则被禁、拦不成同 view 导航）
       wv.setAttribute('allowpopups', 'true')
+      // 主窗口切后台时，这里打开的页面也别被冻住（跟主窗口的 backgroundThrottling:false 一致）
+      wv.setAttribute('webpreferences', 'backgroundThrottling=no')
       if (initialUrl) wv.setAttribute('src', initialUrl)
       host.appendChild(wv)
       wvRef.current = wv
