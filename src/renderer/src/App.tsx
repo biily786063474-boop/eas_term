@@ -7,6 +7,7 @@ import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { SecretsPanel } from './features/workspace/SecretsPanel'
+import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
@@ -186,6 +187,8 @@ export function App(): JSX.Element {
           <FootprintPanel />
           {/* 挨着「扩展能力」放：两者是同类，都在讲「这软件在你机器上存了什么」 */}
           <SecretsPanel />
+          {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
+          <SecretRequestHost />
           <div className="view-seg">
             <button
               className={viewMode === 'split' ? 'on' : ''}

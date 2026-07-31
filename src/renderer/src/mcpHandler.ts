@@ -8,6 +8,7 @@ import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
 import type { ArchiveItem } from '../../shared/types'
+import { askForSecret } from './features/workspace/secretRequest'
 
 interface Ctx {
   ptyId?: string
@@ -238,6 +239,35 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       }
     }
     return { notified: flagged > 0, message: msg }
+  }
+
+  // ── AI 索要密钥：弹 GUI 让用户自己填，值不经 AI ──
+  if (tool === 'request_secret') {
+    const name = String(args.name ?? '').trim()
+    const purpose = String(args.purpose ?? '').trim()
+    const rawVars = Array.isArray(args.vars) ? args.vars : []
+    const vars = rawVars.map((v) => String(v ?? '').trim()).filter(Boolean)
+    if (!name) throw new Error('name 必填：这组凭证叫什么（例：AWS 生产账号）')
+    if (!purpose) throw new Error('purpose 必填：说清你要它干什么，用户要靠这句话判断该不该给')
+    if (!vars.length) throw new Error('vars 必填：要哪些环境变量名（AK/SK 这类成对的一次都写上）')
+    // 变量名先在这儿卡一道，别等用户填完值了才报错
+    const bad = vars.find((v) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(v))
+    if (bad) throw new Error(`「${bad}」不是合法环境变量名：只能用字母数字下划线，且不能以数字开头`)
+    // 链接是 AI 给的，只放行 http(s)，免得变成一条任意 URL 的执行通道
+    const docsUrl = /^https?:\/\//i.test(String(args.docs_url ?? '')) ? String(args.docs_url) : undefined
+
+    // askForSecret 抛异常 = 压根没弹（限流/已有一个在等），要让 AI 明确知道而不是干等
+    const r = await askForSecret({ name, vars, purpose, docsUrl }, ctx.ptyId)
+    if (!r.saved) return { saved: false, reason: r.reason ?? '用户没有提供' }
+    return {
+      saved: true,
+      vars: r.vars,
+      // 这句必须有：当前终端的 env 在 spawn 那一刻就定死了，改不了。
+      // 不说清楚的话 AI 会立刻去读 $VAR，读到空值然后开始瞎猜。
+      hint: r.autoInject
+        ? '已存入密钥柜。**当前这个终端读不到它** —— 进程的环境变量在启动时就固定了。用 canvas_new_terminal 开一个新终端，那里会自动带上。'
+        : '已存入密钥柜，但用户没开自动注入。需要用的话，让他在密钥柜里打开「自动注入」再开新终端。'
+    }
   }
 
   // ── 知识库查询：内容离开本机进程边界的唯一通道，见 preload wiki.query 的注释 ──

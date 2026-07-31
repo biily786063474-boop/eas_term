@@ -425,6 +425,25 @@ Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))</code></pre>
     </ul>
     <p style="margin:0"><b>2. 限流。</b>不然一个跑飞的 agent 能连弹几十个窗。建议每分钟最多 1 次、连续取消 2 次后本轮会话禁用该工具。</p>
   </div>
+
+  <div class="verdict">
+    <div class="vlabel">实现时砍掉的一处（2026-07-31）</div>
+    <p style="margin:0 0 10px">
+      <b>「仅此终端」这个作用范围做不到，已删。</b>
+      上面那张图里画了「○ 仅此终端 ○ 保存备用」，实现时才发现前者在架构上不可能：
+      <b>进程的环境变量在 spawn 那一刻就定死了</b>，PTY 已经在跑，没有任何办法从外面塞进去。
+    </p>
+    <p style="margin:0 0 10px">
+      唯一的歪路是往终端里敲一行 <code>export VAR=值</code> ——
+      那会把密钥明文写进 shell history，正好毁掉整个方案的立足点。不做。
+    </p>
+    <p style="margin:0">
+      所以改成：只有「存进密钥柜」一种，<b>并且明确告诉 AI「当前终端读不到，得开新终端」</b>。
+      这句提示是必需品不是客套 —— 不说清楚的话 AI 存完立刻去读 <code>$VAR</code>，
+      读到空值然后开始瞎猜，最后多半会绕回「你把 key 贴给我吧」。
+      用户侧弹窗里也写了同一句话。
+    </p>
+  </div>
 </section>
 
 <section id="配置文件">
@@ -495,12 +514,13 @@ Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))</code></pre>
         <b>交付即可用</b>：从此不用再把 key 粘进对话。
       </div>
     </div>
-    <div class="it">
-      <div class="tm">P2 · AI 协同</div>
+    <div class="it on">
+      <div class="tm">P2 · AI 协同 · 已完成</div>
       <div class="tt">request_secret 工具 + 索要弹窗</div>
       <div class="td">
-        MCP 工具 · 防伪造弹窗 · 限流 · 「保存备用 / 仅此终端」两种范围。<br>
-        依赖 P1 的存储层。
+        MCP 工具 · 防伪造弹窗（橙色「AI 发起」条 + 原话引用 + 高危名称红牌）·
+        限流（每分钟 1 次 / 连拒 2 次拉黑该终端）· 锁定态在弹窗内直接解锁。<br>
+        <b>「仅此终端」这个范围砍掉了</b> —— 见下面那条。
       </div>
     </div>
     <div class="it">

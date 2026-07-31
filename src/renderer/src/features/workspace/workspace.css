@@ -1439,6 +1439,133 @@ body.dragging-row * {
   opacity: 0.4;
   cursor: default;
 }
+/* ── AI 索要密钥的弹窗 ──
+   视觉上刻意和别的弹窗不一样：橙色警示条打头，让人一眼知道
+   「是 AI 在问我」而不是「软件在问我」 */
+.sreq-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+.sreq {
+  width: 460px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  color: var(--fg);
+}
+.sreq-flag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(224, 164, 94, 0.35);
+  background: rgba(224, 164, 94, 0.12);
+  color: #e0a45e;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.sreq-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sreq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sreq-label {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+/* AI 的原话：引用块视觉，明确「这是它说的，不是我说的」 */
+.sreq-quote {
+  margin: 0;
+  padding: 8px 11px;
+  border-left: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 0 6px 6px 0;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.sreq-hint {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+  opacity: 0.85;
+}
+.sreq-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.sreq-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  text-align: left;
+  word-break: break-all;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sreq-danger {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(247, 118, 142, 0.4);
+  background: rgba(247, 118, 142, 0.13);
+  color: #f7768e;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.sreq-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sreq-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sreq-input-row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+}
+.sreq-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sreq-acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
 /* 「忘记六位码了？」：给自己人的备用门，不该跟「解锁」抢注意力 */
 .sec-forgot {
   align-self: center;

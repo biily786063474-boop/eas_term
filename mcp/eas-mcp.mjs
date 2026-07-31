@@ -254,6 +254,38 @@ const TOOLS = [
     }
   },
   {
+    name: 'request_secret',
+    description:
+      '需要用户提供 API key / token / 凭证时调它 —— **不要让用户把密钥贴进对话**。' +
+      '它会弹一个 GUI 让用户自己填，值直接进本机密钥柜，你永远看不到那个值（返回里只有变量名）。' +
+      '\n\n什么时候调：你发现某个命令缺凭证跑不了、或者要接一个新服务需要 key。' +
+      '成对的凭证（AWS 的 AK/SK、阿里云的 KeyId/KeySecret、数据库的 user/password）' +
+      '**一次调用把 vars 全写上**，别拆成多次 —— 它们是一个整体。' +
+      '\n\n什么时候别调：用户没让你接新服务时别主动要；密钥柜里可能已经有了 —— ' +
+      '先看看当前终端的环境变量里是不是已经有你要的那个。' +
+      '\n\n**重要**：存完之后当前终端仍然读不到它（进程的环境变量在启动那一刻就定死了）。' +
+      '要用得先 canvas_new_terminal 开一个新终端。' +
+      '\n\n限流：每分钟最多一次；同一个终端里被用户连续拒绝 2 次后本轮就不能再调了。' +
+      'purpose 会原样显示给用户看，实话实说 —— 编理由骗用户填东西是这个工具唯一的红线。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '这组凭证叫什么，给人看的（例：AWS 生产账号）' },
+        vars: {
+          type: 'array',
+          description: '要哪些环境变量名。成对的凭证一次全写上（例：["AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY"]）',
+          items: { type: 'string' }
+        },
+        purpose: {
+          type: 'string',
+          description: '你要它干什么，一句人话。会原样显示给用户，用户靠这句判断该不该给'
+        },
+        docs_url: { type: 'string', description: '去哪申请这个 key（可选，只接受 http/https）' }
+      },
+      required: ['name', 'vars', 'purpose']
+    }
+  },
+  {
     name: 'dict_pending',
     description:
       '列出「提交即复盘」钩子扫出来、等你补全的术语。' +

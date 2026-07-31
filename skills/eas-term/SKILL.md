@@ -35,6 +35,7 @@ description: >
 | 「这个结论你记一下」 | `canvas_add_note` 贴便签，留在画布上不会随对话滚走 |
 | 「画布有点乱」 | `canvas_tidy_frame` |
 | 「这一步需要你自己跑一下」 | `canvas_new_terminal` 开个空终端给用户 |
+| 「你去申请个 API key 然后贴给我」 | `request_secret` 弹 GUI 让他填，**别让密钥进对话** |
 
 ### 具体场景
 
@@ -57,6 +58,32 @@ description: >
 
 **需要用户做决定 / 有待办**
 → `canvas_add_note` 贴张便签写清楚。对话会滚走，便签留在画布上。
+
+**缺 API key / token 跑不下去**
+→ `request_secret`，**别说「你去申请一个然后贴给我」**。密钥一旦贴进对话，
+就永久留在了会话记录里，也跟着上行到了模型那边 —— 这是这个软件专门要消灭的事。
+
+先看看当前终端的环境变量里是不是已经有了（用户可能早就存过），没有再调：
+
+```
+request_secret({
+  name: "AWS 生产账号",
+  vars: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],   // 成对的一次写全
+  purpose: "需要调用 S3 把构建产物传上去",                  // 会原样显示给用户
+  docs_url: "https://console.aws.amazon.com/iam"
+})
+```
+
+三件必须知道的事：
+
+1. **值永远不会回给你**，返回里只有变量名。别追问用户「填的是什么」。
+2. **存完之后当前终端还是读不到它** —— 进程的环境变量在启动那一刻就定死了。
+   要用就 `canvas_new_terminal` 开个新的，那里才带得上。
+3. `purpose` 会一字不改地显示给用户看。**编理由骗用户填东西是这个工具唯一的红线** ——
+   用户被弹窗骗过一次，这个功能就废了。
+
+限流：每分钟一次；同一个终端被连续拒绝 2 次后本轮就不能再调了。
+被拒绝了就换个思路，别反复试。
 
 ---
 
@@ -112,6 +139,7 @@ description: >
 | `canvas_tidy_frame` | `frame_id?` | 按大小从左上角流式重排 |
 | `canvas_new_terminal` | `frame_id?` | 开个空终端给用户 |
 | `canvas_add_note` | `text`, `color?` | 贴便签到 Frame 右侧 |
+| `request_secret` | `name`, `vars[]`, `purpose`, `docs_url?` | 弹 GUI 要密钥，值不经过你 |
 
 不带 `frame_id` 的一律作用于**你自己所在的 Frame**。
 
