@@ -10,3 +10,8 @@ release/
 # 语音识别模型(sherpa-onnx，~88MB，本地下载/打包时经 extraResources 附带，不入库)
 resources/models/
 smoke-out/
+
+# 仓库根目录不该有构建产物。这里出现过 10 个 —— 是 `asar extract-file` 的参数
+# 被子命令解析成空值、导致解压落到了当前目录。挡一道，免得下次又混进提交。
+/index.js
+/index-*.js

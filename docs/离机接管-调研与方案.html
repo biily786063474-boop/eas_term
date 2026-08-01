@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>离机接管 · 调研与方案 — MacBook 外出时让 Mac mini 接着跑</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+@media(max-width:640px){h1{font-size:29px}}
+</style>
+</head>
+<body>
+
+<nav><div class="navwrap">
+  <span class="navbrand">离机接管 · 调研</span>
+  <a href="#结论">结论</a>
+  <a href="#拆解">问题拆解</a>
+  <a href="#现状">现有资产</a>
+  <a href="#方案">三个方案</a>
+  <a href="#文件">文件回流</a>
+  <a href="#风险">风险</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">调研报告 · 待决策</div>
+  <h1>外出断网时，让 Mac mini 接着把任务跑完</h1>
+  <p class="lede">
+    调研结论先说：你要的东西<b>不需要"接管"机制</b>。真正省事、也最可靠的做法是
+    让长任务<b>一开始就跑在 Mac mini 上</b>，MacBook 只当显示器——断网时任务根本不受影响，
+    因为它从来就不在 MacBook 上跑。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-07-31</b></span>
+    <span>调研对象 <b>MacBook Pro ↔ Mac mini M4</b></span>
+    <span>基础设施 <b>已具备 7 成</b></span>
+    <span>状态 <b>待你选方案</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">最省事的方案，和你设想的不是同一个</div>
+  <p class="secnote">
+    你描述的是「跑到一半 → 转发给 Mac mini → 它接着跑」。这个「接管」动作是整套方案里
+    最难、最容易出错的一环，而它其实<b>可以被绕过</b>。
+  </p>
+
+  <div class="verdict">
+    <div class="vlabel">核心判断</div>
+    <p style="margin:0 0 10px"><b>「中途接管」难，「一直在那边跑」易，两者效果对你是一样的。</b></p>
+    <p style="margin:0">
+      因为你的痛点不是「任务必须在 MacBook 上开始」，而是「我离开时任务不能停」。
+      只要长任务从一开始就在 Mac mini 的 <code>screen</code> 会话里跑，
+      MacBook 断网 / 合盖 / 关机都与它无关——你回来重新 <code>ssh</code> 进去，
+      它要么跑完了，要么还在跑。<b>不需要迁移任何状态。</b>
+    </p>
+  </div>
+
+  <div class="grid g4" style="margin:26px 0">
+    <div class="stat"><div class="num n-em">1</div><div class="lab">推荐方案数<br>（远程常驻）</div></div>
+    <div class="stat"><div class="num n-am">3</div><div class="lab">Mac mini 缺的组件<br>claude / node / tmux</div></div>
+    <div class="stat"><div class="num n-sk">~40</div><div class="lab">Eas-Term 要改的行数<br>（远程终端开关）</div></div>
+    <div class="stat"><div class="num n-ro">2</div><div class="lab">真正的拦路问题<br>见「风险」节</div></div>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">但有一个我没法替你判断的前提</div>
+    <p style="margin:0">
+      <b>Claude Code 订阅账号能不能同时在两台机器上跑 agent</b>，我没有确证。
+      如果 Anthropic 对并发会话有限制，那"MacBook 上跑着 A 任务、Mac mini 上跑着 B 任务"
+      这种用法可能触发限流甚至风控。这条不解决，下面所有方案都建立在沙子上——
+      <b>建议先用一个小任务实测一次</b>。
+    </p>
+  </div>
+</section>
+
+<section id="拆解">
+  <h2>Decomposition</h2>
+  <div class="sectitle">你这一句话里其实是四个独立问题</div>
+  <p class="secnote">把它们拆开，每个的难度和解法都不一样——混在一起谈会得出"这事很复杂"的错误结论。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:16%">子问题</th><th style="width:30%">本质是什么</th><th style="width:38%">解法</th><th>难度</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>① 断网为什么停</b></td>
+        <td>停的不是"任务"，是 <b>AI 推理</b>。<code>npm build</code> 断网照跑，
+            但 agent 要调 API 才能想下一步</td>
+        <td>让需要联网的那一端待在有网的地方（Mac mini 在家，有网）</td>
+        <td><span class="b b-em">已明确</span></td>
+      </tr>
+      <tr>
+        <td><b>② 怎么"转发"</b></td>
+        <td>三种完全不同的架构，工作量差一个数量级。<br>
+            见下一节「三个方案」</td>
+        <td>推荐<b>不做转发</b>，改成一开始就在远端跑</td>
+        <td><span class="b b-am">需你选型</span></td>
+      </tr>
+      <tr>
+        <td><b>③ 文件怎么回来</b></td>
+        <td>本质是<b>双向同步</b>，而双向同步必然要处理冲突</td>
+        <td>用 git 分支，不用 rsync。见「文件回流」节</td>
+        <td><span class="b b-em">有成熟解</span></td>
+      </tr>
+      <tr>
+        <td><b>④ 合盖怎么办</b></td>
+        <td>你说"外出断网"，但外出多半<b>先合盖</b>——
+            合盖后 MacBook 连本地任务都停了，比断网更早发生</td>
+        <td>同 ①：任务不在 MacBook 上就不受影响</td>
+        <td><span class="b b-sk">被 ① 覆盖</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">④ 这条你可能没意识到</div>
+    <p style="margin:0">
+      MacBook 合盖即睡眠，<b>本地 PTY 里跑的一切当场暂停</b>（不是继续跑，是冻住）。
+      所以哪怕你外出时手机开热点保持联网，只要合了盖，任务照样停。
+      这反过来说明：<b>"让任务离开 MacBook"是唯一真正管用的方向</b>，
+      比研究"断网时怎么办"更根本。
+    </p>
+  </div>
+</section>
+
+<section id="现状">
+  <h2>Assets</h2>
+  <div class="sectitle">已经有的，和缺的</div>
+  <p class="secnote">好消息是网络这块最难的部分你早就打通了——外出时能直接 SSH 到家里的 Mac mini。</p>
+
+  <h3>已具备</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">能力</th><th style="width:30%">现状</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>外出时触达家里</b></td><td><span class="b b-em">已打通</span> <code>ssh macmini-ali</code></td>
+          <td>经阿里云 39.105 ProxyJump 到 <code>10.9.0.2</code>，WireGuard 隧道，
+              <b>不依赖本机代理</b>。这是整套方案的地基，而它已经在跑</td></tr>
+      <tr><td><b>Mac mini 算力</b></td><td><span class="b b-em">充足</span> M4 · 10 核 · 16 GB</td>
+          <td>实测负载 <code>1.44</code>（10 核），内存空闲 81%，系统盘剩 92 GB。
+              跑 agent 绰绰有余</td></tr>
+      <tr><td><b>会话保持</b></td><td><span class="b b-am">有 screen，无 tmux</span></td>
+          <td>macOS 自带 <code>screen</code> 够用；<code>tmux</code> 体验更好但要装</td></tr>
+      <tr><td><b>git</b></td><td><span class="b b-em">2.50.1</span></td>
+          <td>文件回流走 git，这个前提满足</td></tr>
+      <tr><td><b>Claude 账号痕迹</b></td><td><span class="b b-sk">曾登录过</span></td>
+          <td><code>~/.claude.json</code> 里有 <code>oauthAccount</code>，48 个 project 条目，
+              最近会话记录停在 <b>7/22</b>——说明这台机器<b>以前跑过</b> Claude Code</td></tr>
+      <tr><td><b>项目镜像机制</b></td><td><span class="b b-am">单向只读</span></td>
+          <td><code>projects-sync.sh</code> 已存在，但设计成<b>单向只读镜像</b>
+              （给其他电脑看），<b>不能直接用于回流</b>——它会覆盖，不会合并</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>缺的</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:20%">组件</th><th style="width:14%">状态</th><th>怎么补</th></tr></thead>
+    <tbody>
+      <tr><td><code>claude</code> CLI</td><td><span class="b b-ro">未安装</span></td>
+          <td>官方脚本 <code>curl -fsSL https://claude.ai/install.sh | bash</code>，
+              装到 <code>~/.local/bin</code>，<b>不需要 brew</b></td></tr>
+      <tr><td><code>node</code></td><td><span class="b b-ro">未安装</span></td>
+          <td>装了 claude 才知道还需不需要——新版 claude 是自带 runtime 的独立二进制。
+              项目本身要跑 <code>npm</code> 的话才必须装</td></tr>
+      <tr><td><code>brew</code></td><td><span class="b b-ro">未安装</span></td>
+          <td>非必需。能不装就不装，装了会引入一堆后台服务</td></tr>
+      <tr><td>项目代码</td><td><span class="b b-am">镜像是空的</span></td>
+          <td>实测 <code>~/Biily/Projects-只读</code> 下 <b>0 个目录</b>——
+              同步脚本近期没跑过，或路径已变。要用得先确认这条链路</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="方案">
+  <h2>Options</h2>
+  <div class="sectitle">三个方案，按工作量从小到大</div>
+  <p class="secnote">它们不是互斥的——B 可以作为 C 的补充，但我建议先只做 C。</p>
+
+  <h3><span class="b b-em">方案 C</span> 远程常驻：任务一开始就在 Mac mini 上跑 <span style="color:#6ee7b7">← 推荐</span></h3>
+
+  <pre><code><span class="dim"># 你在 Eas-Term 里开一个「远程终端」，它实际执行的是：</span>
+ssh macmini -t 'screen -R eas-<span class="hi">&lt;任务名&gt;</span>'
+
+<span class="dim"># 之后一切照常：cd 项目、跑 claude、让它干活</span>
+<span class="dim"># 外出 → 合盖 → 断网 → 完全不影响，因为进程在 Mac mini 上</span>
+<span class="dim"># 回来 → 同一条命令 → screen 自动重连，输出一个字没丢</span></code></pre>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0;color:#6ee7b7">好在哪</h4>
+      <ul class="clean" style="margin:0">
+        <li><b>不需要迁移任何状态</b>——没有"接管"这个动作，也就没有接管失败</li>
+        <li>断网、合盖、关机、换网络，对任务都无影响</li>
+        <li><code>screen</code> 断线自动保留，重连即见完整输出</li>
+        <li>Eas-Term 侧改动极小：<code>PtyCreateOptions</code> 加一个 <code>remote?</code> 字段，
+            <code>pty.spawn</code> 那行把 shell 换成 ssh。<b>约 40 行</b></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0;color:#fda4af">代价</h4>
+      <ul class="clean" style="margin:0">
+        <li>要<b>提前决定</b>哪些任务放远端跑——临时起意的任务享受不到</li>
+        <li>文件改在 Mac mini 上，本地看不到（要 git 拉回来）</li>
+        <li>编辑体验：本地 IDE 改不了远端文件，除非挂 SMB 或用 VS Code Remote</li>
+        <li>Mac mini 上要有一份项目代码，且要保持更新</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3><span class="b b-am">方案 B</span> 中途交接：把会话搬过去</h3>
+  <p>
+    Claude Code 的会话是完整落盘的（<code>~/.claude/projects/&lt;编码路径&gt;/&lt;sessionId&gt;.jsonl</code>），
+    理论上可以：<b>同步项目 + 同步 jsonl → Mac mini 上 <code>claude --resume &lt;id&gt;</code></b>。
+  </p>
+  <p>
+    <b>两台机器的用户名都是 <code>biily</code>、路径结构相同</b>，所以那个"路径编码"的目录名天然一致——
+    这一点意外地有利，省掉了路径重写。
+  </p>
+  <div class="dissent">
+    <div class="vlabel">但我不推荐先做这个</div>
+    <p style="margin:0">
+      交接时机要人判断（"我马上要走了"），交接过程中两边状态可能打架，
+      而且<b>正在执行中的那一步会丢</b>（比如 agent 刚发出一个 30 秒的命令）。
+      它解决的问题，方案 C 用"根本不需要交接"绕开了。
+      <b>建议等 C 跑顺了、确实遇到"临时起意的任务也想搬走"时再做。</b>
+    </p>
+  </div>
+
+  <h3><span class="b b-gy">方案 A</span> 完整远程后端：Eas-Term 变成瘦客户端</h3>
+  <p>
+    PTY 全部远程化，画布、文件树、MCP 都指向 Mac mini。这是"把 Eas-Term 改造成远程开发工具"，
+    工作量以周计，而且会动到已经稳定的 PTY / MCP / 密钥注入三条链路。
+    <b>收益相对 C 只是"不用提前决定"，不值这个价。列在这里是为了说明它被评估过并被否掉。</b>
+  </p>
+</section>
+
+<section id="文件">
+  <h2>Sync-back</h2>
+  <div class="sectitle">改过的文件怎么回到 MacBook</div>
+  <p class="secnote">这一节独立于方案选择——无论 B 还是 C，文件回流都是同一套。</p>
+
+  <div class="verdict">
+    <div class="vlabel">用 git，不要用 rsync</div>
+    <p style="margin:0">
+      你的诉求里有"暂存"和"合并"两个词，那正是 git 的本职。
+      而 <code>rsync</code>（包括现成的 <code>projects-sync.sh</code>）是<b>覆盖</b>语义——
+      它不知道哪边更新，一旦两边都改过，后跑的那次会静默抹掉一边的工作。
+    </p>
+  </div>
+
+  <pre><code><span class="dim"># Mac mini 上，agent 干完活：</span>
+git switch -c <span class="hi">remote/2026-07-31-重构登录</span>
+git add -A && git commit -m "..."
+
+<span class="dim"># MacBook 回来后：</span>
+git fetch macmini                       <span class="dim"># 把 Mac mini 当 git remote</span>
+git log --oneline macmini/<span class="hi">remote/...</span>   <span class="dim"># 先看它干了什么</span>
+git merge macmini/<span class="hi">remote/...</span>          <span class="dim"># 或 cherry-pick 挑着要</span></code></pre>
+
+  <p>
+    <b>不需要 GitHub 中转</b>——git 支持直接把另一台机器当 remote：
+    <code>git remote add macmini biily@10.9.0.2:~/work/&lt;项目&gt;</code>，走的还是那条 WireGuard 隧道。
+  </p>
+
+  <div class="warn">
+    <div class="vlabel">一个必须定的规矩</div>
+    <p style="margin:0">
+      <b>Mac mini 上的产出永远提交到独立分支，永不直接动 main。</b>
+      理由：你回来时可能已经在 MacBook 上改了别的东西，
+      让两边的工作在分支上相遇、由你决定怎么合，比"自动同步"安全一个数量级。
+      分支名带日期和任务，方便一眼认出。
+    </p>
+  </div>
+</section>
+
+<section id="风险">
+  <h2>Risks</h2>
+  <div class="sectitle">两个真正可能让方案失败的问题</div>
+  <p class="secnote">其余都是工程量问题，这两个是"可能根本走不通"的问题。</p>
+
+  <div class="dissent">
+    <div class="vlabel">风险 1 · 账号并发（未确证，需实测）</div>
+    <p style="margin:0 0 10px">
+      Claude Code 订阅账号在两台机器上同时跑 agent，是否被允许？我<b>没有确证</b>，
+      也不打算凭印象给你答案。可能的结果从"完全没事"到"触发风控"都有。
+    </p>
+    <p style="margin:0">
+      <b>验证成本很低</b>：Mac mini 上装好 claude、登录同一账号，
+      两边各跑一个小任务，观察是否有限流或掉登录。这一步应该<b>排在所有开发之前</b>。
+    </p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">风险 2 · 密钥怎么到 Mac mini</div>
+    <p style="margin:0 0 10px">
+      Mac mini 上的 agent 要用 API key（就是今天刚做完的密钥柜里那些）。
+      而密钥柜的加密<b>绑定本机钥匙串</b>——<code>secrets.json</code> 拷过去解不开，
+      这是刻意设计的安全属性，不是缺陷。
+    </p>
+    <p style="margin:0">
+      所以 Mac mini 需要<b>自己存一份</b>。这不算大问题，但要意识到：
+      密钥柜目前<b>没有导出/同步功能</b>，两台机器就是两份独立的柜子，
+      轮换密钥时要改两处。
+    </p>
+  </div>
+
+  <h3>其余已知问题</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">问题</th><th>影响 / 对策</th></tr></thead>
+    <tbody>
+      <tr><td>项目镜像是空的</td>
+          <td>实测 <code>~/Biily/Projects-只读</code> 下 0 个目录。要么脚本近期没跑，
+              要么路径变了。<b>用之前必须先确认这条链路是活的</b></td></tr>
+      <tr><td>Mac mini 是生产机</td>
+          <td>它同时是家庭云存储 + <code>mini.biily.top</code> 后端 + WireGuard 端点。
+              跑 agent 会占 CPU/内存，<b>别让它影响那三个在跑的服务</b>。
+              建议给 agent 任务限个并发</td></tr>
+      <tr><td>外网 SSH 稳定性</td>
+          <td>走 WireGuard 经阿里云中转，家宽上行 60.5 Mbps。
+              <code>screen</code> 能扛断线，但<b>首次连接失败就进不去</b>——
+              外出前最好验一次 <code>ssh macmini-ali</code> 通不通</td></tr>
+      <tr><td>本地代理干扰</td>
+          <td>本机 Clash TUN 全局接管，今天打包时已经因此踩了三个坑。
+              <code>10.9.0.0/24</code> 要确保走 DIRECT，否则外出时 SSH 可能被绕出境</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">建议的推进顺序</div>
+  <p class="secnote">前两步是验证，不写代码。<b>验证不过就不用往下做了</b>——这是这个顺序的全部意义。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第 0 步 · 半小时 · 不写代码</div>
+      <div class="tt">先验账号能不能并发</div>
+      <div class="td">Mac mini 装 claude、登录、两边各跑一个小任务。
+        <b>这一步不过，后面全部作废</b>——所以必须排最前面</div>
+    </div>
+    <div class="it">
+      <div class="tm">第 1 步 · 半小时 · 不写代码</div>
+      <div class="tt">纯手工走一遍完整流程</div>
+      <div class="td">手动 <code>ssh macmini -t 'screen -R test'</code> → 跑个真任务 →
+        断开 → 重连看还在不在 → git 分支拉回来合并。
+        <b>全程不碰 Eas-Term 代码</b>，先确认这套工作流你用着顺不顺</div>
+    </div>
+    <div class="it">
+      <div class="tm">第 2 步 · 约 40 行</div>
+      <div class="tt">Eas-Term 加「远程终端」</div>
+      <div class="td"><code>PtyCreateOptions.remote?</code> + 新建终端时可选目标机。
+        本质是把 <code>pty.spawn(shell)</code> 换成 <code>pty.spawn('ssh', [...])</code>，
+        其余（画布、密钥注入、MCP）全部不动</div>
+    </div>
+    <div class="it">
+      <div class="tm">第 3 步 · 按需</div>
+      <div class="tt">回流自动化</div>
+      <div class="td">一个 <code>fetch + 列出远端分支 + 一键 merge</code> 的入口。
+        手工能忍就先不做</div>
+    </div>
+    <div class="it">
+      <div class="tm">以后 · 可能永远不做</div>
+      <div class="tt">方案 B 的中途交接</div>
+      <div class="td">等真的遇到"临时起意的任务也想搬走"再说</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">我的建议</div>
+    <p style="margin:0">
+      <b>先只做第 0 步和第 1 步。</b>它们加起来一小时，不产生任何需要维护的代码，
+      却能回答"这条路到底通不通"。我怀疑你走完第 1 步之后会发现
+      ——手工的 <code>ssh + screen</code> 已经够用了，第 2 步的价值只是省几次敲命令。
+    </p>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">决策码 · 复制一条粘回对话</div>
+    <div class="dcmd">
+      <span>验账号</span><span class="dim">|</span>
+      <span>走流程</span><span class="dim">|</span>
+      <span>直接改代码</span><span class="dim">|</span>
+      <span>换个思路</span>
+    </div>
+  </div>
+</section>
+
+<hr>
+<footer style="color:#525252;font-size:12.5px;padding-bottom:40px">
+  <p style="margin:0 0 6px">调研依据：<code>~/.claude/servers/INDEX.md</code> ·
+    <code>~/.claude/servers/192.168.31.105-MacMini.md</code> ·
+    Mac mini 实机探测（SSH 只读）· <code>src/main/pty.ts</code> 架构评估</p>
+  <p style="margin:0">本文件：<code>docs/离机接管-调研与方案.html</code>
+    未验证项已在文中标注 <span class="b b-ro">未确证</span>，请勿当结论使用</p>
+</footer>
+
+</main>
+</body>
+</html>
