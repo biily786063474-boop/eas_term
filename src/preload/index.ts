@@ -351,6 +351,9 @@ const api = {
     /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
     grantToPty: (ptyId: string | undefined, group: string): Promise<void> =>
       ipcRenderer.invoke('secrets:grantToPty', ptyId, group),
+    /** 查 shell 配置里有没有同名变量在覆盖注入值（rc 在 PTY 启动后执行，会盖掉我们的） */
+    rcConflicts: (names: string[]): Promise<{ varName: string; file: string }[]> =>
+      ipcRenderer.invoke('secrets:rcConflicts', names),
     /** 这个终端启动时带了哪些变量（终端角标用）。**只有名字** */
     injectedIn: (ptyId: string): Promise<string[]> =>
       ipcRenderer.invoke('secrets:injectedIn', ptyId),

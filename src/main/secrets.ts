@@ -401,6 +401,57 @@ export function forgetPty(ptyId: string): void {
   for (const [tok, id] of secretTokens) if (id === ptyId) secretTokens.delete(tok)
 }
 
+/**
+ * 用户的 shell 配置里有没有也在设这个变量。**只读变量名，不读值。**
+ *
+ * 为什么必须查：注入的顺序是「PTY spawn 时给 env」→「shell 启动后执行 .zshrc」，
+ * 所以 rc 文件里的赋值**会覆盖掉我们注入的值**，而且完全没有迹象 ——
+ * 用户在密钥柜里换了新 key，终端里生效的还是 rc 里的旧值，
+ * 他只会以为「密钥柜没生效」或者「新 key 是坏的」，永远查不到这儿。
+ *
+ * 实测撞到过：~/.zshrc 里一行 `. "$HOME/keys-vault/lovart.env"`，
+ * 柜里存的值和终端里的值完全是两个东西。所以 source 进来的文件也要跟一层。
+ */
+export function shellRcConflicts(names: string[]): { varName: string; file: string }[] {
+  if (!names.length) return []
+  const home = app.getPath('home')
+  const rcs = ['.zshrc', '.zprofile', '.zshenv', '.bash_profile', '.bashrc', '.profile'].map((f) =>
+    path.join(home, f)
+  )
+  const want = new Set(names)
+  const hits: { varName: string; file: string }[] = []
+  const seen = new Set<string>()
+
+  const scan = (file: string, depth: number): void => {
+    if (depth > 2 || seen.has(file)) return
+    seen.add(file)
+    let text: string
+    try {
+      if (fs.statSync(file).size > 512 * 1024) return
+      text = fs.readFileSync(file, 'utf8')
+    } catch {
+      return
+    }
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) continue
+      // 赋值：export FOO=... / FOO=...
+      const m = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=/.exec(line)
+      if (m && want.has(m[1]) && !hits.some((h) => h.varName === m[1] && h.file === file)) {
+        hits.push({ varName: m[1], file: file.replace(home, '~') })
+      }
+      // source 进来的文件也跟一层：密钥往往就藏在这种被 source 的 .env 里
+      const s = /(?:^|&&\s*)(?:source|\.)\s+["']?([^"'\s;]+)/.exec(line)
+      if (s) {
+        const target = s[1].replace(/^\$HOME|^~/, home)
+        if (target.startsWith('/')) scan(target, depth + 1)
+      }
+    }
+  }
+  for (const f of rcs) scan(f, 0)
+  return hits
+}
+
 /** 哪些组会被自动注入 —— 也就是新终端默认被授权的范围 */
 export function autoInjectGroups(): string[] {
   return readStore()
@@ -690,6 +741,11 @@ export function registerSecretHandlers(): void {
   })
 
   ipcMain.handle('secrets:audit', (): SecretAuditEntry[] => secretAudit())
+
+  /** shell 配置里有没有同名变量在覆盖我们注入的值。**只回变量名和文件名** */
+  ipcMain.handle('secrets:rcConflicts', (_e, names: string[]) =>
+    shellRcConflicts(Array.isArray(names) ? names.map(String) : [])
+  )
 
   /** 这个终端启动时带了哪些变量 —— 终端角标用。**只有名字** */
   ipcMain.handle('secrets:injectedIn', (_e, ptyId: string): string[] => injectedInPty(ptyId))

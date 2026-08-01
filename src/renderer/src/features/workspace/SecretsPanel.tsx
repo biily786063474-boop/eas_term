@@ -44,7 +44,44 @@ const emptyDraft = (): Draft => ({
 const PRESETS: { label: string; vars: string[] }[] = [
   { label: '阿里云', vars: ['ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET'] },
   { label: 'AWS', vars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'] },
-  { label: '腾讯云', vars: ['TENCENTCLOUD_SECRET_ID', 'TENCENTCLOUD_SECRET_KEY'] }
+  { label: '腾讯云', vars: ['TENCENTCLOUD_SECRET_ID', 'TENCENTCLOUD_SECRET_KEY'] },
+  { label: 'Lovart', vars: ['LOVART_ACCESS_KEY', 'LOVART_SECRET_KEY'] },
+  { label: '数据库', vars: ['DB_HOST', 'DB_USER', 'DB_PASSWORD'] }
+]
+
+/**
+ * 变量名输入框的补全候选。
+ *
+ * **这一条直接决定这个功能对普通用户成不成立。** 密钥柜注入的是环境变量，
+ * 而各家 CLI/SDK 读的变量名是写死在它们代码里的 —— 用户存成 OPENAI_KEY
+ * 而不是 OPENAI_API_KEY，注入了也一样用不上，而且报错是「没配置 key」，
+ * 完全看不出是名字差了两个字母。让他从列表里选，比让他记住强。
+ *
+ * 收录标准：这个名字是**工具自己会去读的那个**（官方文档写死的），不是我们编的。
+ */
+const KNOWN_VARS = [
+  // AI / 模型
+  'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY', 'GEMINI_API_KEY',
+  'GOOGLE_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY',
+  'DASHSCOPE_API_KEY', 'MOONSHOT_API_KEY', 'SILICONFLOW_API_KEY',
+  'HF_TOKEN', 'REPLICATE_API_TOKEN', 'ELEVENLABS_API_KEY',
+  'LOVART_ACCESS_KEY', 'LOVART_SECRET_KEY',
+  // 云 / 部署
+  'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN', 'AWS_REGION',
+  'ALIBABA_CLOUD_ACCESS_KEY_ID', 'ALIBABA_CLOUD_ACCESS_KEY_SECRET',
+  'TENCENTCLOUD_SECRET_ID', 'TENCENTCLOUD_SECRET_KEY',
+  'OSS_ACCESS_KEY_ID', 'OSS_ACCESS_KEY_SECRET',
+  'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID',
+  'VERCEL_TOKEN', 'NETLIFY_AUTH_TOKEN', 'RAILWAY_TOKEN', 'FLY_API_TOKEN',
+  // 代码托管 / CI
+  'GH_TOKEN', 'GITHUB_TOKEN', 'GITLAB_TOKEN', 'NPM_TOKEN',
+  // 数据库 / 后端
+  'DATABASE_URL', 'DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME',
+  'POSTGRES_PASSWORD', 'REDIS_PASSWORD', 'MONGODB_URI',
+  'SUPABASE_ACCESS_TOKEN', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
+  // 监控 / 支付 / 其它
+  'SENTRY_AUTH_TOKEN', 'SENTRY_DSN', 'STRIPE_SECRET_KEY',
+  'JWT_SECRET', 'SESSION_SECRET', 'ENCRYPTION_KEY'
 ]
 
 /** 显示时只露头尾各 4 位，中间打码。
@@ -85,6 +122,12 @@ export function SecretsPanel(): JSX.Element | null {
   const [paste, setPaste] = useState<string | null>(null)
   // 忘了六位码的两步：先看清后果（confirm），再设新码（set）
   const [forgot, setForgot] = useState<'confirm' | 'set' | null>(null)
+  /** 刚存完一条，给一句「接下来会怎样」—— 不说的话用户会回到旧终端里发现用不了 */
+  const [justSaved, setJustSaved] = useState<{
+    name: string
+    vars: string[]
+    conflicts: { varName: string; file: string }[]
+  } | null>(null)
   const [revealed, setRevealed] = useState<{ id: string; vars: { varName: string; value: string }[] } | null>(
     null
   )
@@ -186,6 +229,13 @@ export function SecretsPanel(): JSX.Element | null {
     }
     setSt(r.status)
     setItems(await window.api.secrets.list())
+    // 存完给一句「接下来会怎样」。不说的话最常见的下一步是：用户回到已经开着的终端里
+    // 让 AI 用这个 key，AI 读到空值，双方都以为密钥柜没生效。
+    const names = draft.vars.map((v) => v.varName)
+    // shell 配置里如果也设了同名变量，它会**覆盖**我们注入的值（rc 在 PTY 起来之后才执行）。
+    // 不当场说，用户就会遇到「明明存了新 key，终端里还是旧的」而完全查不到原因。
+    const conflicts = await window.api.secrets.rcConflicts(names)
+    setJustSaved(draft.id ? null : { name: draft.name, vars: names, conflicts })
     setDraft(null)
     setPaste(null)
   }
@@ -283,6 +333,13 @@ export function SecretsPanel(): JSX.Element | null {
           // portal 到 body：标题栏是 overflow:hidden 会裁掉它，
           // 画布里的 webview 也会盖住标题栏内的绝对定位元素
           <div className="sec-pop" ref={popRef}>
+            {/* 变量名补全候选。放在弹层里而不是表单里：表单会反复挂载卸载，
+                datalist 每次重建没必要，而且 id 要全局唯一 */}
+            <datalist id="eas-known-vars">
+              {KNOWN_VARS.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
             <div className="sec-head">
               <span>密钥柜</span>
               {st.configured && !st.locked && (
@@ -571,7 +628,9 @@ export function SecretsPanel(): JSX.Element | null {
                             <div className="sec-var-row" key={i}>
                               <input
                                 className="sec-input mono"
-                                placeholder="变量名（ACCESS_KEY_ID）"
+                                // 名字打错是这个功能最隐蔽的失败方式，给补全比让他自己记靠谱
+                                list="eas-known-vars"
+                                placeholder="变量名（输入几个字母有提示）"
                                 value={v.varName}
                                 onChange={(e) => patchVar(i, { varName: e.target.value })}
                               />
@@ -661,10 +720,48 @@ export function SecretsPanel(): JSX.Element | null {
                     </div>
                   </div>
                 ) : (
-                  <button className="sec-add" onClick={() => setDraft(emptyDraft())}>
-                    <PlusIcon size={12} />
-                    加一条密钥
-                  </button>
+                  <>
+                    {justSaved && (
+                      <div className={`sec-saved${justSaved.conflicts.length ? ' warn' : ''}`}>
+                        <b>「{justSaved.name}」已存好</b>
+                        <span>
+                          之后<b>新开的终端</b>会自动带上它。
+                          <br />
+                          现在已经开着的终端读不到 —— 进程的环境变量在启动那一刻就定死了。
+                          在那些终端里让 AI 用的话，它会自己走 <code>eas-secret</code> 现取。
+                        </span>
+                        {/* 这条比上面那句要紧：它是一个「看起来一切正常但根本没生效」的坑 */}
+                        {justSaved.conflicts.length > 0 && (
+                          <span className="sec-saved-bad">
+                            <b>但它现在不会生效。</b>你的{' '}
+                            {[...new Set(justSaved.conflicts.map((c) => c.file))].map((f) => (
+                              <code key={f}>{f}</code>
+                            ))}{' '}
+                            里也设了{' '}
+                            {[...new Set(justSaved.conflicts.map((c) => c.varName))].map((v) => (
+                              <code key={v}>{v}</code>
+                            ))}
+                            。shell 配置是在终端起来<b>之后</b>执行的，会把这里存的值盖掉。
+                            <br />
+                            要用密钥柜这份，就把那个文件里对应的行删掉（或注释掉）。
+                          </span>
+                        )}
+                        <button className="sec-mini" onClick={() => setJustSaved(null)}>
+                          知道了
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      className="sec-add"
+                      onClick={() => {
+                        setJustSaved(null)
+                        setDraft(emptyDraft())
+                      }}
+                    >
+                      <PlusIcon size={12} />
+                      加一条密钥
+                    </button>
+                  </>
                 )}
               </>
             )}

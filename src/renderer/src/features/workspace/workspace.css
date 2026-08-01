@@ -1899,3 +1899,41 @@ body.dragging-row * {
   accent-color: var(--accent);
   cursor: pointer;
 }
+
+/* 存完一条之后的「接下来会怎样」。不是恭喜横幅 —— 它要回答的是
+   「我存好了，为什么当前终端里还是用不了」这个必然会撞上的困惑 */
+.sec-saved {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(126, 200, 148, 0.32);
+  background: rgba(126, 200, 148, 0.1);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--fg-dim);
+}
+.sec-saved b {
+  color: var(--fg);
+}
+.sec-saved code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+/* 存好了但被 shell 配置盖住 —— 整块转成警示色，因为这时候「已存好」是个误导 */
+.sec-saved.warn {
+  border-color: rgba(224, 164, 94, 0.4);
+  background: rgba(224, 164, 94, 0.11);
+}
+.sec-saved-bad {
+  color: #e0a45e;
+}
+.sec-saved-bad b {
+  color: #e0a45e;
+}
