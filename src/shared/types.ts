@@ -187,6 +187,14 @@ export interface SecretVarMeta {
    *  或者应用改过 productName（钥匙串桶名会跟着变）时为 false —— UI 得说人话，
    *  不能只甩一句解密失败 */
   readable: boolean
+  /**
+   * 这一项是**文件型**（SSH 私钥 / .p8 / .pem 这类），不是能直接当环境变量用的字符串。
+   *
+   * 用法完全不同：文件型走 `eas-secret run`，会解成一个 0600 的临时文件、
+   * 把**路径**放进 `<变量名>_PATH`、命令结束就删。
+   * 界面必须区分显示 —— 否则用户存了 SSH 私钥会以为能直接 `$SSH_ID_ALIYUN` 用。
+   */
+  file?: { name: string }
 }
 
 /** 一条密钥的元数据。**永远不含值** —— 值只能经 secrets:reveal 单独取，

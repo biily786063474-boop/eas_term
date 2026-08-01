@@ -55,6 +55,21 @@ interface StoredVar {
   varName: string
   /** safeStorage 密文的 base64。明文是 sealed（见 seal），不是裸的密钥值 */
   cipher: string
+  /**
+   * 这一项原本是个**文件**（SSH 私钥、.p8、.pem 这类），不是一段可以直接当环境变量用的字符串。
+   *
+   * 为什么要区分：这些东西的使用方式是**按路径** —— `ssh -i <路径>`、
+   * `notarytool --key <路径>`、`wg-quick` 读 .conf。把内容塞进环境变量它们根本用不上。
+   * 所以文件型的走 `eas-secret run --files`：临时解到 0600 的文件、
+   * 把**路径**放进 `<变量名>_PATH`、命令一结束就删。
+   * 给 AI 的始终是路径，内容一步都不出这台机器的进程。
+   *
+   * 没有这个字段 = 文本型（老数据天然如此），所以不用升存储版本。
+   */
+  file?: {
+    /** 原文件名，解出临时文件时沿用 —— 有些工具会看扩展名（.p8 / .pem） */
+    name: string
+  }
 }
 
 /** 一条 = 一组凭证，可以有多个变量。
@@ -144,10 +159,19 @@ function migrateItem(raw: unknown): StoredItem | null {
 
   let vars: StoredVar[]
   if (Array.isArray(x.vars)) {
-    vars = x.vars.filter(
-      (v): v is StoredVar =>
-        !!v && typeof (v as StoredVar).varName === 'string' && typeof (v as StoredVar).cipher === 'string'
-    )
+    vars = x.vars
+      .filter(
+        (v): v is StoredVar =>
+          !!v &&
+          typeof (v as StoredVar).varName === 'string' &&
+          typeof (v as StoredVar).cipher === 'string'
+      )
+      // file 标记只认结构对的，坏的当文本型（宁可少一个提示，也别让整条打不开）
+      .map((v) => ({
+        varName: v.varName,
+        cipher: v.cipher,
+        ...(v.file && typeof v.file.name === 'string' ? { file: { name: v.file.name } } : {})
+      }))
   } else if (typeof x.varName === 'string' && typeof x.cipher === 'string') {
     // v1 的一条 = 一个变量，包成只有一个元素的组
     vars = [{ varName: x.varName, cipher: x.cipher }]
@@ -317,6 +341,12 @@ export function secretsEnv(names?: string[]): Record<string, string> {
     let hit = false
     for (const v of it.vars) {
       if (!pick(it, v)) continue
+      // **文件型永远不进 env。** 它的用法是 `eas-secret run` 解成临时文件给路径 ——
+      // 把 SSH 私钥的内容塞进环境变量，等于让这个终端里跑的任何东西
+      // （npm 的 postinstall 就够了）直接读走你所有服务器的登录凭证。
+      // 所以「这一组对终端可用」和「内容注入 env」必须是两件事：
+      // autoInject 管前者，这一行管后者。
+      if (v.file) continue
       const r = open(v.cipher)
       if (!r.ok) {
         console.error(`[secrets] ${v.varName} 解不开（${r.reason}），跳过注入`)
@@ -462,6 +492,8 @@ export function shellRcConflicts(names: string[]): { varName: string; file: stri
 // 暂存有 TTL：用户选完文件跑去干别的、再也不回来确认的话，
 // 明文不该无限期躺在主进程内存里。
 let pendingImport: { file: string; vars: { varName: string; value: string }[]; at: number } | null = null
+/** 上传中的密钥文件（整个文件就是密钥，不是 KEY=value）。同样只在主进程里待着 */
+let pendingKeyFile: { file: string; name: string; value: string; at: number } | null = null
 const IMPORT_TTL = 5 * 60 * 1000
 
 function takePendingImport(): typeof pendingImport {
@@ -520,6 +552,8 @@ export function secretsForRun(
 ): {
   ok: boolean
   env?: Record<string, string>
+  /** 文件型密钥：内容在这儿，由 shim 解成临时文件后把**路径**给命令 */
+  files?: { varName: string; name: string; value: string }[]
   error?: string
 } {
   if (!app.isReady()) return { ok: false, error: '应用还没就绪' }
@@ -558,13 +592,19 @@ export function secretsForRun(
 
   const env: Record<string, string> = {}
   const names: string[] = []
+  const files: { varName: string; name: string; value: string }[] = []
   for (const it of picked) {
     for (const v of it.vars) {
       // 指定了 vars 就只给那几个，指定 group 就整组给
       if (sel.vars && !sel.vars.includes(v.varName)) continue
       const r = open(v.cipher)
       if (!r.ok) return { ok: false, error: `${v.varName} 在这台机器上解不开，需要重新录入` }
-      env[v.varName] = r.value
+      if (v.file) {
+        // 文件型：**不把内容放进 env**，交给调用方解成临时文件再给路径
+        files.push({ varName: v.varName, name: v.file.name, value: r.value })
+      } else {
+        env[v.varName] = r.value
+      }
       names.push(v.varName)
     }
     it.lastUsedAt = Date.now()
@@ -575,7 +615,7 @@ export function secretsForRun(
   } catch {
     /* 记录失败不该拦住命令执行 */
   }
-  return { ok: true, env }
+  return { ok: true, env, files }
 }
 
 // ── 审计 ───────────────────────────────────────────────────────────
@@ -739,7 +779,11 @@ export function registerSecretHandlers(): void {
       name: it.name,
       note: it.note,
       // 这一条在这台机器上还解得开吗（跨机器同步/改过 app 名的情况）逐个变量算
-      vars: it.vars.map((v) => ({ varName: v.varName, readable: open(v.cipher).ok })),
+      vars: it.vars.map((v) => ({
+        varName: v.varName,
+        readable: open(v.cipher).ok,
+        ...(v.file ? { file: { name: v.file.name } } : {})
+      })),
       autoInject: !!it.autoInject,
       createdAt: it.createdAt,
       lastUsedAt: it.lastUsedAt
@@ -841,6 +885,104 @@ export function registerSecretHandlers(): void {
         s.platform = process.platform
         writeStore(s)
         pendingImport = null // 存完立刻扔掉明文，别留在内存里
+        touch()
+        return done()
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e))
+      }
+    }
+  )
+
+  /**
+   * 上传一个**密钥文件**（SSH 私钥 / .p8 / .pem 这类）。
+   *
+   * 和 pickEnvFile 的区别：那个是「文件里有 KEY=value，解析出变量」，
+   * 这个是「文件本身就是密钥」—— 整个文件内容加密存起来，用的时候解成临时文件给路径。
+   */
+  ipcMain.handle(
+    'secrets:pickKeyFile',
+    async (
+      _e,
+      testFile?: string
+    ): Promise<{ ok: boolean; file?: string; name?: string; bytes?: number; error?: string }> => {
+      const guard = requireUnlocked()
+      if (guard) return { ok: false, error: guard }
+      let file: string
+      if (testFile && process.env.EAS_E2E === '1') {
+        file = String(testFile)
+      } else {
+        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+        const r = await dialog.showOpenDialog(win, {
+          title: '选一个密钥文件（SSH 私钥 / .p8 / .pem）',
+          properties: ['openFile', 'showHiddenFiles'],
+          filters: [
+            { name: '密钥文件', extensions: ['p8', 'pem', 'key', 'p12', 'cer', 'crt'] },
+            { name: '全部文件', extensions: ['*'] }
+          ]
+        })
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }
+        file = r.filePaths[0]
+      }
+      let text: string
+      try {
+        // 密钥文件都很小（SSH key 几百字节、.p8 257 字节）。
+        // 挡住大文件：这里存的是要整个塞进 secrets.json 的东西，不能让它变成几 MB
+        const size = fs.statSync(file).size
+        if (size > 128 * 1024) return { ok: false, error: '文件超过 128KB，不像是密钥文件' }
+        text = fs.readFileSync(file, 'utf8')
+      } catch {
+        return { ok: false, error: '这个文件读不了（权限或不是文本）' }
+      }
+      if (!text.trim()) return { ok: false, error: '文件是空的' }
+      // 原样存，**不 trim 尾换行** —— 私钥格式要求它在（见 eas-secret.mjs 写文件那段）
+      pendingKeyFile = { file, name: path.basename(file), value: text, at: Date.now() }
+      return { ok: true, file, name: path.basename(file), bytes: text.length }
+    }
+  )
+
+  /** 把上一步选中的密钥文件存进柜子。值从主进程暂存取，不经渲染层 */
+  ipcMain.handle(
+    'secrets:commitKeyFile',
+    (_e, input: { groupName: string; varName: string }): Res => {
+      try {
+        const guard = requireUnlocked()
+        if (guard) return fail(guard)
+        if (pendingKeyFile && Date.now() - pendingKeyFile.at > IMPORT_TTL) pendingKeyFile = null
+        const pend = pendingKeyFile
+        if (!pend) return fail('上传已过期，请重新选文件')
+        const groupName = String(input?.groupName ?? '').trim()
+        const varName = String(input?.varName ?? '').trim()
+        if (!groupName) return fail('给它起个名字')
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(varName)) {
+          return fail('变量名只能用字母、数字、下划线，且不能以数字开头')
+        }
+        const s = readStore()
+        for (const it of s.items) {
+          for (const v of it.vars) {
+            if (v.varName === varName) return fail(`${varName} 已经被「${it.name}」占用了`)
+          }
+        }
+        // 存进已有的同名组，没有就新建一条 —— 用户多半想把几个密钥文件归到一起
+        const existing = s.items.find((x) => x.name === groupName)
+        const entry = { varName, cipher: seal(pend.value), file: { name: pend.name } }
+        if (existing) existing.vars.push(entry)
+        else {
+          s.items.push({
+            id: crypto.randomUUID(),
+            name: groupName,
+            note: `密钥文件，用的时候由 eas-secret 解成临时文件给路径`,
+            vars: [entry],
+            // 默认允许终端取用。**这不等于「注入内容」** —— 文件型在 secretsEnv 里被跳过，
+            // 内容永远不进 env，只能由 eas-secret 解成临时文件给路径。
+            // 设成 false 的话它就不在 ptyGrants 里，eas-secret 也取不到 —— 那就完全没用了。
+            autoInject: true,
+            createdAt: Date.now()
+          })
+        }
+        s.app = app.getName()
+        s.platform = process.platform
+        writeStore(s)
+        pendingKeyFile = null
         touch()
         return done()
       } catch (e) {

@@ -15,6 +15,8 @@
 //   3. **退出码原样透传**。调用方（多半是 agent）要靠退出码判断成没成。
 import { spawn } from 'child_process'
 import os from 'os'
+import fs from 'fs'
+import path from 'path'
 
 const PORT = process.env.EAS_TERM_PORT
 const TOKEN = process.env.EAS_TERM_TOKEN
@@ -32,7 +34,11 @@ const USAGE = `用法：
   eas-secret run --vars VAR1,VAR2 -- <命令> [参数...]
 
 它把密钥柜里的这一组凭证放进子命令的环境变量再执行，
-值不经过终端输出、也不进 shell history（命令行里只有组名）。`
+值不经过终端输出、也不进 shell history（命令行里只有组名）。
+
+文件型密钥（SSH 私钥 / .p8 / .pem）会被解成一个临时文件，
+路径放进 <变量名>_PATH，命令一结束就删掉：
+  eas-secret run --vars SSH_ID_ALIYUN -- sh -c 'ssh -i "$SSH_ID_ALIYUN_PATH" root@host'`
 
 const argv = process.argv.slice(2)
 if (!argv.length || argv[0] === '-h' || argv[0] === '--help') {
@@ -82,6 +88,53 @@ if (!j.ok) die(j.error || '取不到密钥', 2)
 const childEnv = { ...process.env, ...j.env }
 delete childEnv.ELECTRON_RUN_AS_NODE
 
+// ── 文件型密钥：解成临时文件，把**路径**给命令 ──
+//
+// SSH 私钥 / .p8 / .pem 这类东西的用法是按路径（`ssh -i <路径>`、`notarytool --key <路径>`），
+// 内容塞进环境变量根本用不上。所以这里解成一个 0600 的临时文件，
+// 把路径放进 `<变量名>_PATH` —— **AI 拿到的始终是路径，不是内容**。
+//
+// 三条硬性要求：
+//   1. 目录 0700、文件 0600，且**不能放 /tmp**（那是世界可读的）
+//   2. 命令一结束就删，正常退出、异常、被信号打断都要删 —— 否则解出来的私钥
+//      就一直躺在磁盘上，比不加密还糟
+//   3. 内容绝不打印
+const tmpFiles = []
+if (Array.isArray(j.files) && j.files.length) {
+  const dir = fs.mkdtempSync(path.join(os.homedir(), '.eas-key-'))
+  fs.chmodSync(dir, 0o700)
+  for (const f of j.files) {
+    // 文件名只保留安全字符，防止 ../ 之类的东西跑出这个目录
+    const safe = String(f.name || f.varName).replace(/[^A-Za-z0-9._-]/g, '_')
+    const p = path.join(dir, safe)
+    // **尾部换行必须补上。** OpenSSH 私钥和 PEM 都要求以换行结尾，
+    // 少了它 ssh-keygen / ssh -i 直接报 "invalid format"，而且错得毫无线索
+    // （文件看着完全正常）。实测踩到过：存的时候 trim 掉了尾换行，
+    // 解出来的临时文件 ssh 一律不认。
+    const body = f.value.endsWith('\n') ? f.value : f.value + '\n'
+    fs.writeFileSync(p, body, { mode: 0o600 })
+    fs.chmodSync(p, 0o600)
+    childEnv[`${f.varName}_PATH`] = p
+    tmpFiles.push(p)
+  }
+  tmpFiles.dir = dir
+}
+
+let cleaned = false
+const cleanup = () => {
+  if (cleaned) return
+  cleaned = true
+  for (const p of tmpFiles) {
+    try { fs.rmSync(p, { force: true }) } catch { /* 尽力 */ }
+  }
+  if (tmpFiles.dir) {
+    try { fs.rmSync(tmpFiles.dir, { recursive: true, force: true }) } catch { /* 尽力 */ }
+  }
+}
+// 被 Ctrl-C / kill 打断时也要删掉，不然私钥留在盘上
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(130) })
+process.on('exit', cleanup)
+
 // Windows 上必须走 shell：npm / npx / wrangler / claude 这些全是 .cmd 包装，
 // Node 从 18 起（CVE-2024-27980）拒绝在 shell:false 下执行 .bat/.cmd，直接 spawn 会 ENOENT。
 // 非 Windows 保持 shell:false —— 那边不需要，而且能避免参数被再解析一遍。
@@ -91,9 +144,10 @@ const child = spawn(cmd[0], cmd.slice(1), {
   stdio: 'inherit',
   shell: useShell
 })
-child.on('error', (e) => die(`跑不起来 ${cmd[0]}：${e.message}`, 127))
+child.on('error', (e) => { cleanup(); die(`跑不起来 ${cmd[0]}：${e.message}`, 127) })
 // 退出码原样透传：调用方（多半是 agent）要靠它判断成没成。
 // 被信号杀掉的按 shell 惯例转成 128+信号号
 child.on('exit', (code, signal) => {
+  cleanup() // 命令跑完，临时私钥文件立刻消失
   process.exit(signal ? 128 + (os.constants.signals[signal] ?? 0) : (code ?? 0))
 })

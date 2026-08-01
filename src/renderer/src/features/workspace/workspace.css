@@ -1952,3 +1952,5 @@ body.dragging-row * {
 .sec-import-row:hover{background:rgba(255,255,255,.05)}
 .sec-import-row code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
   color:var(--fg);word-break:break-all}
+/* 文件型密钥的标签：和文本型区分开 —— 用法完全不同（给路径 vs 给值） */
+.sec-var.isfile{background:rgba(139,92,246,.14);color:#c4b5fd}

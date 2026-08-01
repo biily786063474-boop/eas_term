@@ -363,6 +363,16 @@ const api = {
       autoInject?: boolean
     }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
       ipcRenderer.invoke('secrets:commitImport', input),
+    /** 上传一个密钥文件（SSH 私钥 / .p8 / .pem）。整个文件就是密钥，用时解成临时文件给路径 */
+    pickKeyFile: (
+      testFile?: string
+    ): Promise<{ ok: boolean; file?: string; name?: string; bytes?: number; error?: string }> =>
+      ipcRenderer.invoke('secrets:pickKeyFile', testFile),
+    commitKeyFile: (input: {
+      groupName: string
+      varName: string
+    }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:commitKeyFile', input),
     /** 查 shell 配置里有没有同名变量在覆盖注入值（rc 在 PTY 启动后执行，会盖掉我们的） */
     rcConflicts: (names: string[]): Promise<{ varName: string; file: string }[]> =>
       ipcRenderer.invoke('secrets:rcConflicts', names),

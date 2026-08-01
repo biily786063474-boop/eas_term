@@ -120,6 +120,14 @@ export function SecretsPanel(): JSX.Element | null {
   const [err, setErr] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [paste, setPaste] = useState<string | null>(null)
+  /** 正在确认的一次密钥文件上传。**这里只有文件名和大小，内容在主进程扣着** */
+  const [keyFile, setKeyFile] = useState<{
+    file: string
+    name: string
+    bytes: number
+    groupName: string
+    varName: string
+  } | null>(null)
   /** 正在确认的一次文件导入。**这里只有变量名，值在主进程扣着** */
   const [importing, setImporting] = useState<{
     file: string
@@ -168,6 +176,7 @@ export function SecretsPanel(): JSX.Element | null {
       setErr('')
       setDraft(null)
       setPaste(null)
+      setKeyFile(null)
       setForgot(null)
       setRevealed(null)
     }
@@ -244,6 +253,43 @@ export function SecretsPanel(): JSX.Element | null {
     const conflicts = await window.api.secrets.rcConflicts([...importing.picked])
     setJustSaved({ name: importing.name, vars: [...importing.picked], conflicts })
     setImporting(null)
+  }
+
+  /**
+   * 上传一个密钥文件（SSH 私钥 / .p8 / .pem）。
+   * 和 startImport 的区别：那个是「文件里有 KEY=value」，这个是「文件本身就是密钥」。
+   * 用的时候由 eas-secret 解成临时文件，把**路径**给命令 —— 内容不进环境变量、不给 AI。
+   */
+  const startKeyFile = async (): Promise<void> => {
+    setErr('')
+    const r = await window.api.secrets.pickKeyFile()
+    if (!r.ok || !r.name) {
+      if (r.error && r.error !== '没选文件') setErr(r.error)
+      return
+    }
+    // 文件名推一个合法变量名：id_ed25519 → SSH_ID_ED25519，AuthKey_X.p8 → AUTHKEY_X
+    const guess = r.name
+      .replace(/\.(p8|pem|key|p12|cer|crt)$/i, '')
+      .replace(/[^A-Za-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toUpperCase()
+    setKeyFile({ file: r.file ?? '', name: r.name, bytes: r.bytes ?? 0, groupName: '密钥文件', varName: guess })
+  }
+
+  const commitKeyFile = async (): Promise<void> => {
+    if (!keyFile) return
+    setErr('')
+    const r = await window.api.secrets.commitKeyFile({
+      groupName: keyFile.groupName,
+      varName: keyFile.varName
+    })
+    if (!r.ok) {
+      setErr(r.error ?? '保存失败')
+      return
+    }
+    setSt(r.status)
+    setItems(await window.api.secrets.list())
+    setKeyFile(null)
   }
 
   const patchVar = (i: number, patch: Partial<DraftVar>): void => {
@@ -531,7 +577,18 @@ export function SecretsPanel(): JSX.Element | null {
                           <div className="sec-row-name">{it.name}</div>
                           <div className="sec-vars">
                             {it.vars.map((v) => (
-                              <code key={v.varName} className={`sec-var${v.readable ? '' : ' bad'}`}>
+                              <code
+                                key={v.varName}
+                                className={`sec-var${v.readable ? '' : ' bad'}${v.file ? ' isfile' : ''}`}
+                                // 文件型和文本型的用法完全不同，不区分的话用户会以为
+                                // 存了 SSH 私钥就能 $SSH_ID_ALIYUN 直接用
+                                data-tip={
+                                  v.file
+                                    ? `密钥文件 ${v.file.name} · 用时解成临时文件，路径在 $${v.varName}_PATH`
+                                    : undefined
+                                }
+                              >
+                                {v.file ? '📄 ' : ''}
                                 {v.varName}
                               </code>
                             ))}
@@ -776,6 +833,42 @@ export function SecretsPanel(): JSX.Element | null {
                       </button>
                     </div>
                   </div>
+                ) : keyFile ? (
+                  // 密钥文件上传确认。**只显示文件名和大小** —— 内容在主进程，这里从没见过
+                  <div className="sec-form">
+                    <div className="sec-import-head">
+                      已选 <code>{keyFile.name}</code>（{keyFile.bytes} 字节）
+                    </div>
+                    <input
+                      className="sec-input"
+                      placeholder="归到哪一组（同名会合并进去）"
+                      value={keyFile.groupName}
+                      onChange={(e) => setKeyFile({ ...keyFile, groupName: e.target.value })}
+                    />
+                    <input
+                      className="sec-input mono"
+                      placeholder="变量名"
+                      value={keyFile.varName}
+                      autoFocus
+                      onChange={(e) => setKeyFile({ ...keyFile, varName: e.target.value })}
+                    />
+                    <div className="sreq-hint">
+                      用的时候由 <code>eas-secret</code> 解成一个临时文件，
+                      路径放进 <code>${keyFile.varName || 'VAR'}_PATH</code>，命令一结束就删。
+                      <br />
+                      <b>给 AI 的是路径，不是内容</b>；文件内容不会进环境变量、也不进对话。
+                    </div>
+                    <div className="sec-form-acts">
+                      <button className="sec-mini" onClick={() => setKeyFile(null)}>取消</button>
+                      <button
+                        className="sec-primary sm"
+                        disabled={!keyFile.varName.trim() || !keyFile.groupName.trim()}
+                        onClick={() => void commitKeyFile()}
+                      >
+                        存进密钥柜
+                      </button>
+                    </div>
+                  </div>
                 ) : importing ? (
                   // 导入确认。**列表里只有变量名** —— 值在主进程扣着，这里从来没见过它们
                   <div className="sec-form">
@@ -876,7 +969,18 @@ export function SecretsPanel(): JSX.Element | null {
                           void startImport()
                         }}
                       >
-                        从 .env 文件导入
+                        从 .env 导入
+                      </button>
+                      {/* 密钥文件（SSH 私钥 / .p8 / .pem）：整个文件就是密钥，
+                          用的时候解成临时文件给路径，不是当环境变量 */}
+                      <button
+                        className="sec-add"
+                        onClick={() => {
+                          setJustSaved(null)
+                          void startKeyFile()
+                        }}
+                      >
+                        上传密钥文件
                       </button>
                     </div>
                   </>
