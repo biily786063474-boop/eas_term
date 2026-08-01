@@ -1937,3 +1937,18 @@ body.dragging-row * {
 .sec-saved-bad b {
   color: #e0a45e;
 }
+
+/* ── 从 .env 文件导入 ── */
+.sec-add-row{display:flex;gap:6px}
+.sec-add-row .sec-add{flex:1;min-width:0}
+.sec-import-head{font-size:11.5px;color:var(--fg-dim);line-height:1.6;margin-bottom:2px}
+.sec-import-head b{color:var(--fg)}
+.sec-import-head code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;
+  padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.07);word-break:break-all}
+.sec-import-list{display:flex;flex-direction:column;gap:2px;max-height:180px;overflow-y:auto;
+  padding:6px;border-radius:7px;background:rgba(255,255,255,.03)}
+.sec-import-row{display:flex;align-items:center;gap:7px;padding:3px 4px;border-radius:5px;
+  cursor:pointer;transition:background .12s}
+.sec-import-row:hover{background:rgba(255,255,255,.05)}
+.sec-import-row code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+  color:var(--fg);word-break:break-all}

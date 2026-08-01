@@ -351,6 +351,18 @@ const api = {
     /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
     grantToPty: (ptyId: string | undefined, group: string): Promise<void> =>
       ipcRenderer.invoke('secrets:grantToPty', ptyId, group),
+    /** 选一个 .env 文件并解析。**只回变量名不回值** —— 值扣在主进程等确认 */
+    pickEnvFile: (
+      testFile?: string
+    ): Promise<{ ok: boolean; file?: string; varNames?: string[]; error?: string }> =>
+      ipcRenderer.invoke('secrets:pickEnvFile', testFile),
+    /** 把上一步选中的变量存成一条。值从主进程暂存取，一步都不进渲染层 */
+    commitImport: (input: {
+      name: string
+      varNames: string[]
+      autoInject?: boolean
+    }): Promise<{ ok: boolean; error?: string; status: SecretsStatus }> =>
+      ipcRenderer.invoke('secrets:commitImport', input),
     /** 查 shell 配置里有没有同名变量在覆盖注入值（rc 在 PTY 启动后执行，会盖掉我们的） */
     rcConflicts: (names: string[]): Promise<{ varName: string; file: string }[]> =>
       ipcRenderer.invoke('secrets:rcConflicts', names),

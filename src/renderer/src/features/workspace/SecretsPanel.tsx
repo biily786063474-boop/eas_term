@@ -120,6 +120,13 @@ export function SecretsPanel(): JSX.Element | null {
   const [err, setErr] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [paste, setPaste] = useState<string | null>(null)
+  /** 正在确认的一次文件导入。**这里只有变量名，值在主进程扣着** */
+  const [importing, setImporting] = useState<{
+    file: string
+    varNames: string[]
+    name: string
+    picked: Set<string>
+  } | null>(null)
   // 忘了六位码的两步：先看清后果（confirm），再设新码（set）
   const [forgot, setForgot] = useState<'confirm' | 'set' | null>(null)
   /** 刚存完一条，给一句「接下来会怎样」—— 不说的话用户会回到旧终端里发现用不了 */
@@ -202,6 +209,41 @@ export function SecretsPanel(): JSX.Element | null {
     setForgot(null)
     setSt(r.status)
     setItems(await window.api.secrets.list())
+  }
+
+  /**
+   * 从 .env 文件导入。**值一步都不进这里** ——
+   * 主进程读文件、解析、把值扣在自己那儿，只把变量名回给我们；
+   * 用户确认后由主进程直接入库。比让他自己开文件复制粘贴还安全一档。
+   */
+  const startImport = async (): Promise<void> => {
+    setErr('')
+    const r = await window.api.secrets.pickEnvFile()
+    if (!r.ok || !r.varNames?.length) {
+      if (r.error && r.error !== '没选文件') setErr(r.error)
+      return
+    }
+    const base = (r.file ?? '').split('/').pop()?.replace(/\.env$/, '') || '导入的密钥'
+    setImporting({ file: r.file ?? '', varNames: r.varNames, name: base, picked: new Set(r.varNames) })
+  }
+
+  const commitImport = async (): Promise<void> => {
+    if (!importing) return
+    setErr('')
+    const r = await window.api.secrets.commitImport({
+      name: importing.name,
+      varNames: [...importing.picked],
+      autoInject: true
+    })
+    if (!r.ok) {
+      setErr(r.error ?? '导入失败')
+      return
+    }
+    setSt(r.status)
+    setItems(await window.api.secrets.list())
+    const conflicts = await window.api.secrets.rcConflicts([...importing.picked])
+    setJustSaved({ name: importing.name, vars: [...importing.picked], conflicts })
+    setImporting(null)
   }
 
   const patchVar = (i: number, patch: Partial<DraftVar>): void => {
@@ -669,6 +711,21 @@ export function SecretsPanel(): JSX.Element | null {
                           <button className="sec-mini" onClick={() => setPaste('')}>
                             从 .env 粘贴
                           </button>
+                          {/* 从文件导入走的是另一条路：值由主进程读、解析、入库，
+                              一步都不进渲染层。所以它和上面那个「粘贴」不是同一个流程，
+                              点了会直接开一条新记录，而不是往当前表单里填 */}
+                          {!draft.id && (
+                            <button
+                              className="sec-mini"
+                              onClick={() => {
+                                setDraft(null)
+                                setPaste(null)
+                                void startImport()
+                              }}
+                            >
+                              选一个 .env 文件
+                            </button>
+                          )}
                           {!draft.id &&
                             PRESETS.map((p) => (
                               <button
@@ -719,6 +776,54 @@ export function SecretsPanel(): JSX.Element | null {
                       </button>
                     </div>
                   </div>
+                ) : importing ? (
+                  // 导入确认。**列表里只有变量名** —— 值在主进程扣着，这里从来没见过它们
+                  <div className="sec-form">
+                    <div className="sec-import-head">
+                      从 <code>{importing.file.replace(/^\/Users\/[^/]+/, '~')}</code> 认出{' '}
+                      <b>{importing.varNames.length}</b> 个变量
+                    </div>
+                    <input
+                      className="sec-input"
+                      placeholder="给这一组起个名字"
+                      value={importing.name}
+                      autoFocus
+                      onChange={(e) => setImporting({ ...importing, name: e.target.value })}
+                    />
+                    <div className="sec-import-list">
+                      {importing.varNames.map((v) => (
+                        <label key={v} className="sec-import-row">
+                          <input
+                            type="checkbox"
+                            checked={importing.picked.has(v)}
+                            onChange={(e) => {
+                              const picked = new Set(importing.picked)
+                              if (e.target.checked) picked.add(v)
+                              else picked.delete(v)
+                              setImporting({ ...importing, picked })
+                            }}
+                          />
+                          <code>{v}</code>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="sreq-hint">
+                      值由本机直接读取入库，<b>不会经过界面，也不会给 AI</b>。
+                      原文件不会被改动或删除。
+                    </div>
+                    <div className="sec-form-acts">
+                      <button className="sec-mini" onClick={() => setImporting(null)}>
+                        取消
+                      </button>
+                      <button
+                        className="sec-primary sm"
+                        disabled={!importing.picked.size || !importing.name.trim()}
+                        onClick={() => void commitImport()}
+                      >
+                        导入 {importing.picked.size} 个
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     {justSaved && (
@@ -751,16 +856,29 @@ export function SecretsPanel(): JSX.Element | null {
                         </button>
                       </div>
                     )}
-                    <button
-                      className="sec-add"
-                      onClick={() => {
-                        setJustSaved(null)
-                        setDraft(emptyDraft())
-                      }}
-                    >
-                      <PlusIcon size={12} />
-                      加一条密钥
-                    </button>
+                    <div className="sec-add-row">
+                      <button
+                        className="sec-add"
+                        onClick={() => {
+                          setJustSaved(null)
+                          setDraft(emptyDraft())
+                        }}
+                      >
+                        <PlusIcon size={12} />
+                        加一条密钥
+                      </button>
+                      {/* 手上已经有 .env 文件的人（多数）走这条更省事：
+                          不用开文件、不用复制，值也不经过界面 */}
+                      <button
+                        className="sec-add"
+                        onClick={() => {
+                          setJustSaved(null)
+                          void startImport()
+                        }}
+                      >
+                        从 .env 文件导入
+                      </button>
+                    </div>
                   </>
                 )}
               </>

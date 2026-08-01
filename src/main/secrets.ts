@@ -28,12 +28,13 @@
 //    对策：加密前把 checksum 一起封进明文，解密后校验（见 seal/open）。同样 3000 次实测 0 漏过。
 // 3. **改 productName 会丢光所有密钥**（钥匙串桶名由 app.getName() 决定）。
 //    对策：库里记下当时的 app 名，对不上时明确告知而不是抛一个看不懂的解密错误。
-import { app, ipcMain, safeStorage, BrowserWindow } from 'electron'
+import { app, ipcMain, safeStorage, BrowserWindow, dialog } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 
 import type { SecretMeta, SecretReveal, SecretSaveInput, SecretsStatus } from '../shared/types'
+import { parseEnvText } from '../shared/envParse'
 
 // 库文件放 userData 而不是 ~/.eas：
 //  · userData 的父目录天然 0700（~/.eas 实测是 0755，世界可读）
@@ -452,6 +453,22 @@ export function shellRcConflicts(names: string[]): { varName: string; file: stri
   return hits
 }
 
+// ── 从 .env 文件导入 ───────────────────────────────────────────────
+//
+// **值一步都不进渲染层。** 主进程读文件、解析、把值扣在这儿，
+// 回给界面的只有变量名；用户确认后由主进程直接入库。
+// 这比让用户自己打开文件复制粘贴还安全 —— 粘贴时值是经过渲染层的。
+//
+// 暂存有 TTL：用户选完文件跑去干别的、再也不回来确认的话，
+// 明文不该无限期躺在主进程内存里。
+let pendingImport: { file: string; vars: { varName: string; value: string }[]; at: number } | null = null
+const IMPORT_TTL = 5 * 60 * 1000
+
+function takePendingImport(): typeof pendingImport {
+  if (pendingImport && Date.now() - pendingImport.at > IMPORT_TTL) pendingImport = null
+  return pendingImport
+}
+
 /** 哪些组会被自动注入 —— 也就是新终端默认被授权的范围 */
 export function autoInjectGroups(): string[] {
   return readStore()
@@ -741,6 +758,96 @@ export function registerSecretHandlers(): void {
   })
 
   ipcMain.handle('secrets:audit', (): SecretAuditEntry[] => secretAudit())
+
+  /**
+   * 选一个 .env 文件并解析。**只回变量名，不回值** —— 值扣在主进程等确认。
+   * 给「金库里那些 .env 搬进柜子」这件事用：用户不用自己开文件复制。
+   */
+  ipcMain.handle(
+    'secrets:pickEnvFile',
+    async (
+      _e,
+      testFile?: string
+    ): Promise<{ ok: boolean; file?: string; varNames?: string[]; error?: string }> => {
+      const guard = requireUnlocked()
+      if (guard) return { ok: false, error: guard }
+      let file: string
+      // 端测专用入口：原生选择框自动化点不了，所以允许直接给路径。
+      // **必须挂 EAS_E2E 门禁** —— 不设限的话就等于给渲染层开了一个
+      // 「读任意路径文件」的口子，绕过 fsGuard 的项目边界。
+      if (testFile && process.env.EAS_E2E === '1') {
+        file = String(testFile)
+      } else {
+        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+        const r = await dialog.showOpenDialog(win, {
+          title: '选一个 .env 文件',
+          properties: ['openFile', 'showHiddenFiles'],
+          filters: [
+            { name: 'env 文件', extensions: ['env', 'txt', 'sh', 'conf'] },
+            { name: '全部文件', extensions: ['*'] }
+          ]
+        })
+        if (r.canceled || !r.filePaths[0]) return { ok: false, error: '没选文件' }
+        file = r.filePaths[0]
+      }
+      let text: string
+      try {
+        // 密钥文件不该有几 MB，挡一下免得有人选了个日志文件把主进程读爆
+        if (fs.statSync(file).size > 1024 * 1024) return { ok: false, error: '文件太大，不像是 .env' }
+        text = fs.readFileSync(file, 'utf8')
+      } catch {
+        return { ok: false, error: '这个文件读不了（权限或编码问题）' }
+      }
+      const vars = parseEnvText(text)
+      if (!vars.length) {
+        return { ok: false, error: '这个文件里没找到 KEY=value 形式的变量' }
+      }
+      pendingImport = { file, vars, at: Date.now() }
+      return { ok: true, file, varNames: vars.map((v) => v.varName) }
+    }
+  )
+
+  /** 把上一步选中的文件里的变量存成一条。值从主进程的暂存里取，不经渲染层 */
+  ipcMain.handle(
+    'secrets:commitImport',
+    (_e, input: { name: string; varNames: string[]; autoInject?: boolean }): Res => {
+      try {
+        const guard = requireUnlocked()
+        if (guard) return fail(guard)
+        const pend = takePendingImport()
+        if (!pend) return fail('导入已过期，请重新选文件')
+        const name = String(input?.name ?? '').trim()
+        if (!name) return fail('给它起个名字')
+        const want = new Set(Array.isArray(input?.varNames) ? input.varNames.map(String) : [])
+        const picked = pend.vars.filter((v) => want.has(v.varName))
+        if (!picked.length) return fail('一个变量都没选')
+
+        const s = readStore()
+        // 变量名全局唯一：跨条目重名会在同一份 env 里互相盖掉
+        for (const it of s.items) {
+          for (const v of it.vars) {
+            if (want.has(v.varName)) return fail(`${v.varName} 已经被「${it.name}」占用了`)
+          }
+        }
+        s.items.push({
+          id: crypto.randomUUID(),
+          name,
+          note: `从 ${pend.file.replace(app.getPath('home'), '~')} 导入`,
+          vars: picked.map((v) => ({ varName: v.varName, cipher: seal(v.value) })),
+          autoInject: input.autoInject === true,
+          createdAt: Date.now()
+        })
+        s.app = app.getName()
+        s.platform = process.platform
+        writeStore(s)
+        pendingImport = null // 存完立刻扔掉明文，别留在内存里
+        touch()
+        return done()
+      } catch (e) {
+        return fail(e instanceof Error ? e.message : String(e))
+      }
+    }
+  )
 
   /** shell 配置里有没有同名变量在覆盖我们注入的值。**只回变量名和文件名** */
   ipcMain.handle('secrets:rcConflicts', (_e, names: string[]) =>
