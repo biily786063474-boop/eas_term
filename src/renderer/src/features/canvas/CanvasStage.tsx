@@ -17,6 +17,7 @@ import { CanvasFilePicker } from './CanvasFilePicker'
 import { paneForFile } from './media'
 import { collectLeaves } from '../../layout'
 import './canvas.css'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 const SCALE_MIN = 0.2
 const SCALE_MAX = 2.2
@@ -172,7 +173,7 @@ export function CanvasStage(): JSX.Element {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return
-      if (useStore.getState().maximizedNode) {
+      if (liveMaximizedNode(useStore.getState())) {
         e.preventDefault()
         useStore.getState().setMaximizedNode(null)
       }

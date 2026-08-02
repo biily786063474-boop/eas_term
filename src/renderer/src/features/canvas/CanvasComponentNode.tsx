@@ -7,6 +7,7 @@ import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
 import { makeSubframeDrop } from './subframeDrop'
 import { MaximizeIcon, RestoreIcon } from '../../ui/Icons'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 export function CanvasComponentNode({
   frame,
@@ -24,7 +25,7 @@ export function CanvasComponentNode({
   const resizeNode = useStore((s) => s.resizeNode)
   const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = maximizedNode?.frameId === frame.id && maximizedNode?.nodeId === node.id

@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 /** 终端名只留前 5 个字。先剥掉开头的盲文 spinner（⠋⠙⠹…）——
  *  agent 干活时会把转圈字符写进标题，不剥的话五个字要被它占掉一个还难看。 */
@@ -28,7 +29,7 @@ export function CanvasRunMonitor(): JSX.Element | null {
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
   const frames = useStore((s) => s.canvas.frames)
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const focusCanvasNode = useStore((s) => s.focusCanvasNode)
   const [collapsed, setCollapsed] = useState(false)
 

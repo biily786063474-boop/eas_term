@@ -8,10 +8,11 @@
 // 非打包运行时额外标 dev：开发实例和正式包同屏时，光看版本号是分不出来的
 // （两者版本号一样），而它们的行为可能差着未提交的一堆改动。
 import { useStore } from '../store'
+import { liveMaximizedNode } from '../store/canvas/selectors'
 
 export function BuildStamp(): JSX.Element | null {
   // 画布模式下最大化某个模块是「沉浸式细看」，那时候连抽屉把手都让位了，水印也别留
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const b = window.api.build
   if (!b?.version || maximizedNode) return null
 

@@ -10,6 +10,7 @@ import { CanvasImageViewer } from './CanvasImageViewer'
 import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 export function CanvasFileNode({
   frameId,
@@ -27,7 +28,7 @@ export function CanvasFileNode({
   const resizeNode = useStore((s) => s.resizeNode)
   const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   const vp = useStore((s) => s.canvas.viewport)
   const frames = useStore((s) => s.canvas.frames)

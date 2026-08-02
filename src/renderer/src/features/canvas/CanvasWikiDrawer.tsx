@@ -12,9 +12,10 @@ import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shar
 import { FileTree } from '../files/FileTree'
 import { paneForFile, isImagePath, isVideoPath } from './media'
 import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 export function CanvasWikiDrawer(): JSX.Element | null {
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const [open, setOpen] = useState(false)
   const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
   const [hover, setHover] = useState(false)

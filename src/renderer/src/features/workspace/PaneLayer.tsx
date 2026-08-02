@@ -10,6 +10,7 @@ import { useMemo, useRef } from 'react'
 import { useStore } from '../../store'
 import { computeLayout, collectLeaves, LeafRect, DividerRect, Rect } from '../../layout'
 import { PaneView, CanvasPlacement } from './PaneView'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 const HIDDEN_RECT: Rect = { x: 0, y: 0, w: 0, h: 0 }
 
@@ -20,7 +21,9 @@ export function PaneLayer(): JSX.Element {
   const viewMode = useStore((s) => s.viewMode)
   const canvas = useStore((s) => s.canvas)
   const setSplitRatio = useStore((s) => s.setSplitRatio)
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  // 走 liveMaximizedNode 而不是直接读 —— 它指向的节点可能已经被关掉了，
+  // 那时候直接读会让下面的 `maximizedNode && !isMax` 把**所有**节点都隐藏掉
+  const maximizedNode = useStore(liveMaximizedNode)
   const committedScale = useStore((s) => s.canvasCommittedScale)
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null

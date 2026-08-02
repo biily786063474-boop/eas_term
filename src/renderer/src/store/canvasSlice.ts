@@ -338,7 +338,14 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
       )
-      return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
+      return {
+        canvas: { ...s.canvas, frames: reflowFrames(frames) },
+        // 删的正好是最大化的那个 → 顺手清掉，别在状态里留一个指向已删节点的引用。
+        // 读取端有 liveMaximizedNode 兜底（悬空也不会出事），但脏状态本身还是要清：
+        // canvas_get_state 会把它当 `maximized` 字段报给 AI，留着就是在骗它。
+        maximizedNode:
+          s.maximizedNode?.nodeId === nodeId ? null : s.maximizedNode
+      }
     }),
 
   addShape: (shape) =>
@@ -397,7 +404,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   removeFreeNode: (nodeId) =>
     set((s) => ({
-      canvas: { ...s.canvas, freeNodes: s.canvas.freeNodes.filter((n) => n.id !== nodeId) }
+      canvas: { ...s.canvas, freeNodes: s.canvas.freeNodes.filter((n) => n.id !== nodeId) },
+      // 同 removeNode：删掉的正是最大化那个就顺手清，别留悬空引用
+      maximizedNode: s.maximizedNode?.nodeId === nodeId ? null : s.maximizedNode
     })),
 
   // 自由节点只会是文件预览（pane），不会有 leafId → 不用像 renameNode 那样同步分屏 tab 标题

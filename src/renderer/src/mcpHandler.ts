@@ -9,6 +9,7 @@ import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
 import type { ArchiveItem } from '../../shared/types'
 import { askForSecret } from './features/workspace/secretRequest'
+import { liveMaximizedNode } from './store/canvas/selectors'
 
 interface Ctx {
   ptyId?: string
@@ -119,7 +120,7 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     const cur = resolveFrame(ctx)
     return {
       viewMode: s.viewMode,
-      maximized: s.maximizedNode?.nodeId ?? null,
+      maximized: liveMaximizedNode(s)?.nodeId ?? null,
       currentFrameId: cur?.frameId ?? null,
       currentNodeId: cur?.nodeId ?? null,
       frames: s.canvas.frames.map((f) => ({

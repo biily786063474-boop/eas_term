@@ -3,6 +3,7 @@
 // 坐标换算：世界 bbox（含 5% 留白）→ fit-contain 进固定尺寸 → 仿射映射。
 import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 const MAP_W = 216
 const MAP_H = 150
@@ -24,7 +25,7 @@ function shortName(name: string): string {
 }
 
 export function CanvasMiniMap(): JSX.Element | null {
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const frames = useStore((s) => s.canvas.frames)
   const freeNodes = useStore((s) => s.canvas.freeNodes)
   const vp = useStore((s) => s.canvas.viewport)

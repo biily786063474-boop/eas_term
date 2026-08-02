@@ -11,6 +11,7 @@ import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
 import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { easfileUrl, isVideoPath } from './media'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 export function CanvasFreeFileNode({
   node,
@@ -26,7 +27,7 @@ export function CanvasFreeFileNode({
   const resizeFreeNode = useStore((s) => s.resizeFreeNode)
   const removeFreeNode = useStore((s) => s.removeFreeNode)
   const renameFreeNode = useStore((s) => s.renameFreeNode)
-  const maximizedNode = useStore((s) => s.maximizedNode)
+  const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = !maximizedNode?.frameId && maximizedNode?.nodeId === node.id
