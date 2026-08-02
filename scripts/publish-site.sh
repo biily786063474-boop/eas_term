@@ -124,11 +124,22 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
   # 顺带也跟网页一样走「传完核对大小」。
   # win 字段只在**包真的在**时才写 —— Windows 包是 CI 产物、得手动拉下来放进目录，
   # 忘了拉还照写的话，下载页上就挂着一个 404 链接。
+  # mac 从 universal 拆成了 arm64 / x64 两个包（下载页让用户按芯片选，体积减半）。
+  # 每个字段都**只在包真的在时才写** —— 同 win 字段的理由：
+  # 写了但文件没传上去，下载页上就挂着一个 404。
   TMP_JSON=$(mktemp)
   {
     echo "{ \"version\": \"$VERSION\","
-    echo "  \"mac\": \"/download/v$VERSION/Eas-Term-$VERSION-universal.dmg\","
-    echo "  \"macZip\": \"/download/v$VERSION/Eas-Term-$VERSION-universal-mac.zip\","
+    for A in arm64 x64; do
+      [ -e "$PKG_DIR/Eas-Term-$VERSION-$A.dmg" ] &&
+        echo "  \"mac_$A\": \"/download/v$VERSION/Eas-Term-$VERSION-$A.dmg\","
+      [ -e "$PKG_DIR/Eas-Term-$VERSION-$A.zip" ] &&
+        echo "  \"macZip_$A\": \"/download/v$VERSION/Eas-Term-$VERSION-$A.zip\","
+    done
+    # 老字段留着：外部如果有脚本按 "mac" 取链接，别一声不响地断掉。
+    # 指向 arm64 —— 现在的 Mac 绝大多数是 Apple Silicon。
+    [ -e "$PKG_DIR/Eas-Term-$VERSION-arm64.dmg" ] &&
+      echo "  \"mac\": \"/download/v$VERSION/Eas-Term-$VERSION-arm64.dmg\","
     if [ -e "$PKG_DIR/Eas-Term-$VERSION-x64-setup.exe" ]; then
       echo "  \"win\": \"/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe\","
     else

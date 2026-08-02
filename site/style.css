@@ -891,3 +891,53 @@ tbody tr:last-child td {
 @media (min-width: 2100px) {
   .shot-hero { margin-left: -110px; margin-right: -110px; }
 }
+
+/* ==========================================================================
+   下载页 · 芯片架构二选一
+   universal 包 199MB，拆成 arm64 / x64 之后每个约一半。代价是用户要选，
+   所以这里的设计目标只有一个：**让人一眼知道自己该点哪个**。
+   ========================================================================== */
+.dl-arch {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.dl-arch .btn {
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+.dl-arch .btn span {
+  font-size: 11.5px;
+  font-weight: 400;
+  opacity: 0.72;
+}
+/* 检测到芯片时给推荐项加一圈光晕。检测不出来就两个都是原样 ——
+   宁可让用户自己选，也不要把 Intel 用户默默推到 arm64 包上 */
+.dl-arch .btn.detected {
+  box-shadow: 0 0 0 2px var(--accent), 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.dl-arch .btn.detected::after {
+  content: "你的 Mac";
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #0d0f16;
+  font-weight: 600;
+}
+.dl-arch .btn {
+  position: relative;
+}
+@media (max-width: 420px) {
+  .dl-arch {
+    flex-direction: column;
+  }
+}

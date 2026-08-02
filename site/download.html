@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>下载 Eas-Term</title>
-    <meta name="description" content="下载 Eas-Term：macOS 11+（universal，已公证）与 Windows 10+（x64）。" />
+    <meta name="description" content="下载 Eas-Term：macOS 11+（Apple 芯片 / Intel 分别提供，已公证）与 Windows 10+（x64）。" />
     <link rel="icon" href="assets/icon.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -47,9 +47,21 @@
                 <path d="M13 4.2c.9-1 1.9-1.2 2.6-1.2.1 1-.3 2-.9 2.7-.6.7-1.5 1.2-2.4 1.1-.1-.9.2-1.8.7-2.6Z" />
               </svg>
               <h3>macOS</h3>
-              <p class="dl-meta">macOS 11+ · universal（Apple Silicon 与 Intel 通用）</p>
-              <!-- v0.2.9 -->
-              <a class="btn btn-primary" href="/download/v0.2.9/Eas-Term-0.2.9-universal.dmg">下载 .dmg</a>
+              <p class="dl-meta">macOS 11+ · 按芯片选一个</p>
+              <!-- v0.3.2 -->
+              <div class="dl-arch">
+                <a class="btn btn-primary" data-arch="arm64" href="/download/v0.3.2/Eas-Term-0.3.2-arm64.dmg">
+                  Apple 芯片
+                  <span>M1 / M2 / M3 / M4</span>
+                </a>
+                <a class="btn btn-ghost" data-arch="x64" href="/download/v0.3.2/Eas-Term-0.3.2-x64.dmg">
+                  Intel 芯片
+                  <span>2020 年前的 Mac</span>
+                </a>
+              </div>
+              <p class="note" id="archHint">
+                不确定是哪个？点屏幕左上角  → <b>关于本机</b>，看「芯片」那一行。
+              </p>
               <p class="note">已公证（notarized），双击直接开，不会被 Gatekeeper 拦。</p>
             </article>
 
@@ -62,8 +74,8 @@
               </svg>
               <h3>Windows</h3>
               <p class="dl-meta">Windows 10+ · x64</p>
-              <!-- v0.2.9 -->
-              <a class="btn btn-primary" href="/download/v0.2.9/Eas-Term-0.2.9-x64-setup.exe">下载安装包</a>
+              <!-- v0.3.2 -->
+              <a class="btn btn-primary" href="/download/v0.3.2/Eas-Term-0.3.2-x64-setup.exe">下载安装包</a>
               <p class="note">NSIS 安装包。<b>未做代码签名</b>，首次运行 Windows 会弹 SmartScreen 提示「已保护你的电脑」——点「更多信息 → 仍要运行」即可。</p>
             </article>
           </div>
@@ -84,26 +96,42 @@
                 <tr>
                   <td>macOS</td>
                   <td>.dmg</td>
-                  <td>universal（arm64 + x64）</td>
+                  <td>arm64（Apple 芯片）</td>
                   <td>macOS 11+</td>
-                  <!-- v0.2.9 -->
-                  <td><a href="/download/v0.2.9/Eas-Term-0.2.9-universal.dmg">下载</a></td>
+                  <!-- v0.3.2 -->
+                  <td><a href="/download/v0.3.2/Eas-Term-0.3.2-arm64.dmg">下载</a></td>
+                </tr>
+                <tr>
+                  <td>macOS</td>
+                  <td>.dmg</td>
+                  <td>x64（Intel 芯片）</td>
+                  <td>macOS 11+</td>
+                  <!-- v0.3.2 -->
+                  <td><a href="/download/v0.3.2/Eas-Term-0.3.2-x64.dmg">下载</a></td>
                 </tr>
                 <tr>
                   <td>macOS</td>
                   <td>.zip</td>
-                  <td>universal（arm64 + x64）</td>
+                  <td>arm64（Apple 芯片）</td>
                   <td>macOS 11+</td>
-                  <!-- v0.2.9 -->
-                  <td><a href="/download/v0.2.9/Eas-Term-0.2.9-universal-mac.zip">下载</a></td>
+                  <!-- v0.3.2 -->
+                  <td><a href="/download/v0.3.2/Eas-Term-0.3.2-arm64.zip">下载</a></td>
+                </tr>
+                <tr>
+                  <td>macOS</td>
+                  <td>.zip</td>
+                  <td>x64（Intel 芯片）</td>
+                  <td>macOS 11+</td>
+                  <!-- v0.3.2 -->
+                  <td><a href="/download/v0.3.2/Eas-Term-0.3.2-x64.zip">下载</a></td>
                 </tr>
                 <tr>
                   <td>Windows</td>
                   <td>.exe（NSIS 安装包）</td>
                   <td>x64</td>
                   <td>Windows 10+</td>
-                  <!-- v0.2.9 -->
-                  <td><a href="/download/v0.2.9/Eas-Term-0.2.9-x64-setup.exe">下载</a></td>
+                  <!-- v0.3.2 -->
+                  <td><a href="/download/v0.3.2/Eas-Term-0.3.2-x64-setup.exe">下载</a></td>
                 </tr>
               </tbody>
             </table>
@@ -142,7 +170,16 @@
             <p>不会。语音识别在本地跑，音频不上传。</p>
 
             <h3>Intel Mac 能用吗？</h3>
-            <p>能。macOS 版是 universal 包，Apple Silicon 与 Intel 通用。</p>
+            <p>
+              能。macOS 版分成两个包，Intel 机器下「Intel 芯片」那个即可。
+              不确定自己是哪种就点屏幕左上角  →「关于本机」，看「芯片」那一行；
+              页面在能认出你的机器时也会直接标出来。
+            </p>
+            <h3>为什么不做成一个通用包？</h3>
+            <p>
+              做过，199 MB。拆成两个之后每个约 110 MB，下载少等一半时间 ——
+              代价是要你选一次，所以我们尽量把这一步做得不用想。
+            </p>
           </div>
         </div>
       </section>
@@ -162,5 +199,64 @@
         <p class="footer-copy">© 2026 Eas-Term</p>
       </div>
     </footer>
+    <script>
+      // 尽力认出访客的 Mac 是哪种芯片，给对应的下载按钮加个「你的 Mac」标记。
+      //
+      // **认不出来就什么都不做** —— 两个按钮保持同等地位。
+      // 猜错的代价是不对称的：把 Intel 用户推到 arm64 包上，他下完双击打不开，
+      // 而且完全不知道为什么。所以只在有确凿证据时才标。
+      //
+      // 为什么不用 userAgent：Apple Silicon 的 Safari/Chrome 出于兼容考虑，
+      // UA 里照样写 "Intel Mac OS X"，拿它判断必错。
+      (function () {
+        var box = document.querySelector('.dl-arch');
+        if (!box || !/Mac/i.test(navigator.platform || '')) return;
+
+        function mark(arch) {
+          var el = box.querySelector('[data-arch="' + arch + '"]');
+          if (!el) return;
+          el.classList.add('detected');
+          // 推荐项换成主色、另一个降为次要，视觉上把人往对的那个引
+          box.querySelectorAll('.btn').forEach(function (b) {
+            b.classList.toggle('btn-primary', b === el);
+            b.classList.toggle('btn-ghost', b !== el);
+          });
+          var hint = document.getElementById('archHint');
+          if (hint) {
+            hint.innerHTML =
+              '已认出你的 Mac 是 <b>' +
+              (arch === 'arm64' ? 'Apple 芯片' : 'Intel 芯片') +
+              '</b>，选上面标记的那个即可。认错了就点另一个。';
+          }
+        }
+
+        // 1) Chromium 的高熵 UA：最可靠，直接给架构
+        if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+          navigator.userAgentData
+            .getHighEntropyValues(['architecture'])
+            .then(function (d) {
+              if (d && d.architecture === 'arm') mark('arm64');
+              else if (d && d.architecture === 'x86') mark('x64');
+              else webgl();
+            })
+            .catch(webgl);
+        } else {
+          webgl();
+        }
+
+        // 2) 回落：WebGL 的 renderer 字符串里 Apple Silicon 会自报 "Apple M1/M2/..."
+        function webgl() {
+          try {
+            var gl = document.createElement('canvas').getContext('webgl');
+            var ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+            var r = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '') : '';
+            if (/Apple\s+M\d/i.test(r)) mark('arm64');
+            else if (/Intel/i.test(r)) mark('x64');
+          } catch (e) {
+            /* 认不出来就保持原样，让用户自己按「关于本机」去选 */
+          }
+        }
+      })();
+    </script>
   </body>
 </html>

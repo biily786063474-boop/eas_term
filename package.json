@@ -36,16 +36,19 @@
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "arm64",
+            "x64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "universal"
+            "arm64",
+            "x64"
           ]
         }
       ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "icon": "build/icon.icns",
       "category": "public.app-category.developer-tools",
       "identity": "Zang Yawen (D4FVS6QJXV)",
