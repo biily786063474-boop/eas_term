@@ -33,14 +33,32 @@
 }
 
 /* ---------- Frame 卡片（项目边界） ---------- */
+/* Frame 的一切用色都走 --frame-rgb 这一个变量，而不是直接引 --accent-rgb：
+ * 颜色状态标签（下面的 .st-*）只需要改这一个值，边框/标题栏/圆点/缩放角/选中高亮
+ * 就整体跟着变。否则打一个标签得追着改七八条规则，漏一条就是「红 Frame 配蓝手柄」。 */
 .cframe {
+  --frame-rgb: var(--accent-rgb);
   position: absolute;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-xl);
-  background: rgba(var(--accent-rgb), 0.045);
-  border: 1.5px solid rgba(var(--accent-rgb), 0.34);
+  background: rgba(var(--frame-rgb), 0.045);
+  border: 1.5px solid rgba(var(--frame-rgb), 0.34);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* 颜色状态标签：蓝=进行中 / 黄=待执行 / 红=已完结（无标签则沿用主题色）。
+ * 蓝特意比主题色 #a2b9e0 更实——不然「标了进行中」和「没标」看起来一个样。 */
+.cframe.st-doing {
+  --frame-rgb: 76, 141, 255;
+}
+
+.cframe.st-todo {
+  --frame-rgb: 232, 179, 57;
+}
+
+.cframe.st-done {
+  --frame-rgb: 229, 86, 95;
 }
 
 .cframe-head {
@@ -51,9 +69,9 @@
   gap: 8px;
   padding: 0 8px 0 12px;
   cursor: move;
-  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+  border-bottom: 1px solid rgba(var(--frame-rgb), 0.2);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.14), rgba(var(--accent-rgb), 0.05));
+  background: linear-gradient(180deg, rgba(var(--frame-rgb), 0.14), rgba(var(--frame-rgb), 0.05));
 }
 
 .cframe.collapsed .cframe-head {
@@ -61,13 +79,22 @@
   border-radius: var(--radius-xl);
 }
 
+/* 色点 = 状态入口（button）。按钮的默认样式全清掉，看起来还是原来那颗圆点 */
 .cframe-dot {
   width: 9px;
   height: 9px;
   flex: none;
+  padding: 0;
+  border: none;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6);
+  background: rgb(var(--frame-rgb));
+  box-shadow: 0 0 8px rgba(var(--frame-rgb), 0.6);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.cframe-dot:hover {
+  transform: scale(1.35);
 }
 
 .cframe-name {
@@ -80,7 +107,7 @@
 .cframe-count {
   flex: 1;
   font-size: 10.5px;
-  color: var(--accent);
+  color: rgb(var(--frame-rgb));
   white-space: nowrap;
 }
 
@@ -134,8 +161,8 @@
   bottom: 4px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid rgba(var(--accent-rgb), 0.6);
-  border-bottom: 2px solid rgba(var(--accent-rgb), 0.6);
+  border-right: 2px solid rgba(var(--frame-rgb), 0.6);
+  border-bottom: 2px solid rgba(var(--frame-rgb), 0.6);
 }
 
 /* ---------- 缩放条 ---------- */
@@ -285,10 +312,11 @@
   user-select: none;
 }
 
-/* 收起态右上角「待处理」气泡 */
+/* 收起态右上角「待处理」气泡。
+   右上角最角落让给了设置按钮（那是常驻锚点，位置不该跳），这里往左让 34px。 */
 .cd-attn-bubble {
   position: absolute;
-  right: 14px;
+  right: 48px;
   top: 14px;
   z-index: 31;
   min-width: 22px;
@@ -958,8 +986,8 @@
 
 /* 拖文件落区高亮 */
 .cframe.drop-target {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.5), 0 18px 60px rgba(0, 0, 0, 0.5);
+  border-color: rgb(var(--frame-rgb));
+  box-shadow: 0 0 0 2px rgba(var(--frame-rgb), 0.5), 0 18px 60px rgba(0, 0, 0, 0.5);
 }
 
 .pane.drop-target {
@@ -1311,6 +1339,93 @@
   background: var(--glass-border);
 }
 
+/* ---------- Frame 状态色板（点标题栏色点弹出） ---------- */
+.cframe-statuspop {
+  position: fixed;
+  z-index: 1000;
+  min-width: 132px;
+  padding: 5px;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.cfs-item {
+  --frame-rgb: var(--accent-rgb);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 9px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 用和 .cframe.st-* 同名的类，色值也同源——色板上看到的那块颜色，
+ * 就是 Frame 打上标签后的那块颜色，不做两套。 */
+.cfs-item.st-doing {
+  --frame-rgb: 76, 141, 255;
+}
+
+.cfs-item.st-todo {
+  --frame-rgb: 232, 179, 57;
+}
+
+.cfs-item.st-done {
+  --frame-rgb: 229, 86, 95;
+}
+
+.cfs-item:hover {
+  background: rgba(var(--frame-rgb), 0.18);
+}
+
+.cfs-swatch {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-radius: 50%;
+  background: rgb(var(--frame-rgb));
+  box-shadow: 0 0 8px rgba(var(--frame-rgb), 0.5);
+}
+
+/* 「无标签」用空心圈——填一块灰色的话，看起来像第四种状态而不是「没有状态」 */
+.cfs-clear .cfs-swatch {
+  background: none;
+  box-shadow: none;
+  border: 1.5px solid var(--fg-dim);
+}
+
+.cfs-label {
+  flex: 1;
+  white-space: nowrap;
+}
+
+/* 当前状态：右侧一个对勾，不靠背景色标记——背景色那格已经被 hover 占了 */
+.cfs-item.on .cfs-label::after {
+  content: '✓';
+  float: right;
+  margin-left: 10px;
+  color: rgb(var(--frame-rgb));
+  font-weight: 700;
+}
+
+.cfs-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cfs-item:disabled:hover {
+  background: none;
+}
+
 /* ---------- 双击 Frame 空白 → 插入文件选择器 ---------- */
 .canvas-picker {
   position: fixed;
@@ -1457,7 +1572,7 @@
 /* Frame 重命名输入 */
 .cframe-rename {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border: 1px solid rgba(var(--frame-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
   font-size: 13px;
@@ -1475,8 +1590,8 @@
 }
 
 .cframe.sel {
-  border-color: rgba(var(--accent-rgb), 0.85);
-  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.6), 0 18px 60px rgba(0, 0, 0, 0.5);
+  border-color: rgba(var(--frame-rgb), 0.85);
+  box-shadow: 0 0 0 1px rgba(var(--frame-rgb), 0.6), 0 18px 60px rgba(0, 0, 0, 0.5);
 }
 
 .cfile-node.sel {
@@ -1486,9 +1601,9 @@
 
 /* 拖模块悬停在子 Frame 上（计时中）→ 虚线高亮提示「松开将移入」 */
 .cframe-drop-pending {
-  outline: 2px dashed rgba(var(--accent-rgb), 0.85);
+  outline: 2px dashed rgba(var(--frame-rgb), 0.85);
   outline-offset: 3px;
-  background: rgba(var(--accent-rgb), 0.08);
+  background: rgba(var(--frame-rgb), 0.08);
 }
 /* 悬停满 1s 判定进入 → 缩放弹一下作反馈 */
 @keyframes cframe-drop-pop {
@@ -1916,6 +2031,19 @@
   stroke: var(--accent);
   stroke-width: 1;
   opacity: 0.85;
+}
+/* 状态色写在 .sub 之后：子 Frame 打了标签时，状态色要盖过「子 Frame 灰」 */
+.cmm-dot.st-doing {
+  fill: rgb(76, 141, 255);
+  opacity: 1;
+}
+.cmm-dot.st-todo {
+  fill: rgb(232, 179, 57);
+  opacity: 1;
+}
+.cmm-dot.st-done {
+  fill: rgb(229, 86, 95);
+  opacity: 1;
 }
 .cmm-name {
   font-size: 7.5px;
@@ -3304,4 +3432,265 @@
 .rm-ghost:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ========== 画布设置：右上角入口 + 灯箱 ========== */
+/* 收拢「偶尔改一次」的东西（主题、提示音）。它们原本一个占着标题栏、
+   一个无处安放——标题栏每加一个图标就挤一分，而这类设置一个月点不了两次。 */
+.cset-btn {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 43;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-2);
+  backdrop-filter: var(--blur);
+  /* 同 .crm 的处理：不显眼靠文字淡，不靠整体 opacity——
+     整体压透明的话画布节点会从背景里透上来，糊成一片 */
+  color: color-mix(in srgb, var(--fg-dim) 62%, transparent);
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, transform 0.2s;
+}
+
+.cset-btn:hover {
+  color: var(--fg);
+  background: var(--glass-3);
+  /* 齿轮 hover 转一点，是这一处允许的小趣味：它一天被点不了几次 */
+  transform: rotate(35deg);
+}
+
+.cset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  animation: cset-fade 0.16s ease-out;
+}
+
+@keyframes cset-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cset-box {
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.55);
+  padding: 18px 20px 20px;
+  animation: cset-pop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes cset-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cset-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cset-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.cset-close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.cset-close:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cset-sec {
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.cset-sec:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.cset-label {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  margin-bottom: 10px;
+}
+
+/* ---- 主题 ---- */
+.cset-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.cset-theme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.cset-theme:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+.cset-theme.on {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--fg);
+}
+
+.cset-swatch {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.cset-themename {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- 提示音 ---- */
+.cset-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.cset-row input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.cset-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cset-rowname {
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.cset-volnum {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+.cset-sub {
+  padding-left: 24px;
+  transition: opacity 0.18s;
+}
+
+.cset-sub.off {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.cset-try {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 2px;
+}
+
+.cset-trybtn {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.cset-trybtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--fg);
+}
+
+.cset-trybtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cset-overlay,
+  .cset-box {
+    animation: none;
+  }
+  .cset-btn:hover {
+    transform: none;
+  }
 }

@@ -464,6 +464,18 @@ export interface SessionExchange {
   images?: SessionImage[]
 }
 
+/** 某个会话的「最后一轮问答」——灵动岛通知卡要的就是这个。
+ *  和 SessionExchange 的区别：那个按 uuid 取指定一轮（对话导航用），
+ *  这个不需要调用方先知道 uuid，直接给最新的一轮。 */
+export interface SessionLast {
+  found: boolean
+  /** 用户这轮问的（已压成一行、截断） */
+  ask: string
+  /** 该轮最终回答（已压平空白、截断） */
+  answer: string
+  at: number
+}
+
 export interface SessionIndex {
   found: boolean // 是否找到该 cwd 的 Claude Code 会话
   sessionId?: string
@@ -524,4 +536,79 @@ export interface InstallPlan {
   hasBrew: boolean
   claude: AgentInstallInfo
   codex: AgentInstallInfo
+}
+
+// ---- 灵动岛（屏幕顶部常驻状态栏）----
+// 主窗口 → 主进程 → 灵动岛窗口，单向推一份完整快照；灵动岛只展示，不持有状态。
+// 快照而非增量：这条链路一帧几百字节，为省这点带宽引入增量同步，
+// 换来的是「灵动岛显示的和主窗口不一致」这类最难查的 bug。
+
+/** 一个正在跑的任务（折叠态计数用它，列表态逐条显示） */
+export interface IslandRunning {
+  /** ptyId —— 也是点击跳转时回传的定位键 */
+  key: string
+  project: string
+  /** 终端名（画布节点自定义名优先） */
+  term: string
+  /** 本轮开始时间戳。灵动岛按它自己走秒，不靠推送刷新——
+   *  否则秒数跳动的频率就等于推送频率，看起来像卡住。 */
+  startedAt: number
+}
+
+/** 一条待用户处理的通知。
+ *  kind:'done' = 答完了（信息，8 秒自动收）；
+ *  kind:'approval' = 停在那儿等你选（常驻到处理，agent 正阻塞着）。 */
+export interface IslandNotice {
+  /** ptyId + 轮次，用于去重与队列定位 */
+  id: string
+  kind: 'done' | 'approval'
+  project: string
+  term: string
+  /** 用户这一轮问的（一行截断） */
+  ask?: string
+  /** 模型的最终回答（CSS 截两行） */
+  answer?: string
+  /** 本轮耗时 ms（这次提问到答完） */
+  roundMs?: number
+  /** 会话累计耗时 ms（这个终端起会话至今） */
+  totalMs?: number
+  model?: string
+  effort?: string
+  /** 这个终端跑的是哪个 CLI。用来解释「为什么没有提问和回答」——
+   *  Codex 不落 transcript，卡片只能给项目名和耗时，得说清楚是拿不到而不是没内容。 */
+  agent?: 'claude' | 'codex'
+  at: number
+
+  // ---- 以下仅 kind:'approval' ----
+  /** 屏幕上问的那句话 */
+  question?: string
+  /** 待执行的命令 / 待改的文件。**不截断显示**——审批的正是这一段，
+   *  截一半可能让 `rm -rf node_modules` 和 `rm -rf ~/Documents` 长得一样。 */
+  body?: string
+  /** 可点的选项。按 index 写回 pty，不按文案猜语义 */
+  options?: { index: number; label: string }[]
+  /** 命中危险模式（rm -rf / sudo / curl|sh …）→ 不给直通按钮，强制跳回终端 */
+  dangerous?: boolean
+  /** 写回之后 spinner 没重新转起来 = 那次点击没生效，卡片降级成「跳回终端」 */
+  stale?: boolean
+}
+
+/** 灵动岛的一帧完整状态 */
+export interface IslandState {
+  running: IslandRunning[]
+  notices: IslandNotice[]
+  /** 刘海尺寸（逻辑像素）。主进程量好后随状态一起下发，渲染层照着在中间留出这么宽的
+   *  透明区，内容分居两侧。w=0 表示这块屏幕没有刘海（外接显示器 / 非 Mac），
+   *  此时不留空隙、窗口也不贴屏幕上沿而是挂在菜单栏下方。 */
+  notch?: { w: number; h: number }
+}
+
+/** 灵动岛回传的动作 */
+export interface IslandAction {
+  type: 'focus' | 'dismiss' | 'approve'
+  /** focus/approve：ptyId；dismiss：notice id */
+  key: string
+  /** approve 专用：用户点的那个选项的**序号**。写回 pty 的就是它，
+   *  不传文案——文案是给人看的，序号才是 CLI 认的。 */
+  choice?: number
 }

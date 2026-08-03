@@ -16,13 +16,19 @@ import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
 import { DictBubbleToggle } from './features/canvas/DictBubbleToggle'
-import { ThemeSelect } from './ui/ThemeSelect'
+import { useIslandFeed } from './features/island/useIslandFeed'
+import { useNoticeSound } from './features/notify/useNoticeSound'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
 import { BuildStamp } from './ui/BuildStamp'
 import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
+  // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
+  // 放在 App 顶层而不是某个视图里——它跟分屏/画布哪个视图开着无关，两种模式都要报。
+  useIslandFeed()
+  // 有任务完成 / 等审批时播提示音。和视图模式无关，分屏画布都响
+  useNoticeSound()
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
@@ -208,7 +214,6 @@ export function App(): JSX.Element {
               画布
             </button>
           </div>
-          <ThemeSelect />
         </div>
       </div>
       <div className="body">

@@ -17,7 +17,29 @@ import {
 } from './pathLinks'
 import { VoiceButton } from '../voice/VoiceButton'
 import { SecretBadge } from './SecretBadge'
+import { TerminalInput } from './TerminalInput'
+import { parseApproval } from './approvalParse'
 import './terminal.css'
+
+/** 读终端底部若干行，**含 scrollback**。
+ *
+ *  一开始只读可见区（想着「框总是画在当前屏上」），实测发现不行：画布里的终端节点
+ *  只有 250px 高、十来行，而一个审批框有十行——框的上半截连同待执行的命令
+ *  早滚进 scrollback 了，读可见区只能看到问句和选项，正文永远是空的。
+ *
+ *  读进历史不会认错框：解析器是从后往前扫的，先遇到的一定是最新那个；
+ *  再加上「序号必须从 1 连续」这道校验，把两个框的选项拼在一起也会被判无效。 */
+const READ_LINES = 48
+
+function readScreen(term: Terminal): string[] {
+  const buf = term.buffer.active
+  const end = Math.min(buf.length, buf.baseY + term.rows)
+  const out: string[] = []
+  for (let y = Math.max(0, end - READ_LINES); y < end; y++) {
+    out.push(buf.getLine(y)?.translateToString(true) ?? '')
+  }
+  return out
+}
 
 interface TermMenu {
   x: number
@@ -43,6 +65,9 @@ const scaledFont = (s: number): number => Math.max(4, BASE_FONT * s)
 
 export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
+  /** xterm 的挂载点。和 host 分开是因为 host 底部还要放输入框——
+   *  xterm 会把自己撑成 height:100%，挂在 host 上会和输入框重叠。 */
+  const screenRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   // 最新缩放比 + 立即 fit 句柄（缩放落定时用；ResizeObserver 另有去抖 fit）
@@ -93,6 +118,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
   useEffect(() => {
     const el = containerRef.current!
+    // 终端屏幕区（不含底部输入框）。fit / 滚动条 / 尺寸观察都以它为准，
+    // 这样输入框长高时终端会跟着缩，不会被顶出可视区。
+    const screen = screenRef.current!
     const term = new Terminal({
       theme: xtermTheme(useStore.getState().theme),
       // 跨平台等宽字体回退：mac 用 SF Mono，Windows 用 Cascadia Code/Consolas
@@ -167,7 +195,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
         }
       })
     )
-    term.open(el)
+    term.open(screen)
 
     // 文件路径链接：识别终端输出里的文件/目录路径，Cmd/Ctrl 点击直达。
     // 相对路径按终端实时工作目录解析（带 1.5s 缓存，避免每次 hover 都查进程 cwd）。
@@ -262,7 +290,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const thumb = document.createElement('div')
     thumb.className = 'term-scrollbar-thumb'
     scrollbar.appendChild(thumb)
-    el.appendChild(scrollbar)
+    screen.appendChild(scrollbar)
 
     // 派发合成滚轮事件到 xterm 屏幕元素：由 xterm 按当前模式自行编码——普通缓冲滚 scrollback，
     // 备用屏+鼠标接管时转成鼠标滚轮上报给应用（如 Claude Code），故对 Claude Code 也有效。
@@ -354,7 +382,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const doFit = (): void => {
       const t = termRef.current
       if (!t) return
-      if (el.offsetWidth === 0 || el.offsetHeight === 0) return
+      if (screen.offsetWidth === 0 || screen.offsetHeight === 0) return
       const size = scaledFont(canvasScaleRef.current)
       if (t.options.fontSize !== size) t.options.fontSize = size
       try {
@@ -416,6 +444,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 标题从 spinner 跃迁到非 spinner、且当前没聚焦在该终端 → 标记「需处理」供抽屉呼吸提示。
     // 纯 shell 的标题是 cwd（无 spinner），永不误报；比"输出静止"精确、不乱闪。
     let prevTitleSpinner = false
+    let disposed = false
     const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
     const titleDisp = term.onTitleChange((title) => {
       store.setTabTitle(tabId, title)
@@ -424,6 +453,29 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       useStore.getState().setPtyRunning(ptyId, spinner)
       if (prevTitleSpinner && !spinner && !el.contains(document.activeElement)) {
         useStore.getState().flagAttention(ptyId)
+        // 停下来的原因可能是「答完了」，也可能是「弹了个框等你选」。
+        // 读一眼屏幕分辨这两种——认出选项的话灵动岛就能直接给按钮。
+        //
+        // 延后一拍再读：标题是 CLI 在**画框之前**设的，此刻屏幕上往往只有半个框。
+        // 150ms 后框已落定，而人还来不及反应，不影响体感。
+        setTimeout(() => {
+          if (disposed) return
+          try {
+            const screen = readScreen(term)
+            const info = parseApproval(screen)
+            useStore.getState().setPtyApproval(ptyId, info)
+            // 认不出、或认出了框却没抓到正文 → 留个样本。审批框总该有正文，
+            // 没有多半是我们的规则没跟上 CLI 的新样式。
+            if (!info || !info.body) {
+              window.api.island.reportParse(
+                info ? '有选项但没抓到正文' : '没认出审批框',
+                screen.filter((l) => l.trim()).slice(-30)
+              )
+            }
+          } catch {
+            // 解析器抛异常绝不能牵连终端本身——大不了这轮没有直通按钮
+          }
+        }, 150)
       }
       prevTitleSpinner = spinner
     })
@@ -457,7 +509,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
     // 尺寸变化(窗口/分屏/画布缩放导致的像素尺寸变)→ 走去抖 fit，不每帧直 fit
     const ro = new ResizeObserver(() => scheduleFit())
-    ro.observe(el)
+    ro.observe(screen)
 
     term.focus()
 
@@ -480,6 +532,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       titleDisp.dispose()
       bellDisp.dispose()
       linkProvider.dispose()
+      disposed = true // 审批解析是延后 150ms 跑的，卸载后别再碰已 dispose 的 term
       term.dispose()
       termRef.current = null
     }
@@ -516,6 +569,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
   return (
     <div ref={containerRef} className="terminal-host">
+      {/* xterm 挂在这层，不是 host——host 底部还有输入框，xterm 会把自己撑满 */}
+      <div ref={screenRef} className="terminal-screen" />
+      <TerminalInput ptyId={ptyId} onFocusTerm={() => termRef.current?.focus()} />
       {/* 画布模式下终端走「字号缩放」，麦克风按钮按同一 scale 缩放，才与终端内容相对静止 */}
       <VoiceButton ptyId={ptyId} scale={canvasScale} />
       <SecretBadge ptyId={ptyId} scale={canvasScale} />

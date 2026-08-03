@@ -11,9 +11,12 @@ import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
+import { CanvasSettings } from './CanvasSettings'
 import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
+import { FrameStatusPicker } from './FrameStatusPicker'
+import { frameStatusLabel } from './frameStatus'
 import { paneForFile } from './media'
 import { collectLeaves } from '../../layout'
 import './canvas.css'
@@ -44,6 +47,8 @@ export function CanvasStage(): JSX.Element {
   const [editingSticky, setEditingSticky] = useState<string | null>(null)
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
+  // 点标题栏色点 → 状态色板（只记 frameId，当前状态每次渲染从 frames 现取，免得色板开着时被改脏）
+  const [statusPop, setStatusPop] = useState<{ x: number; y: number; frameId: string } | null>(null)
   // Frame 内双击 → 「插入文件」选择器（wx/wy 是双击处的世界坐标，插进来的节点就落在那儿）
   const [picker, setPicker] = useState<{
     x: number
@@ -733,7 +738,7 @@ export function CanvasStage(): JSX.Element {
         {frames.map((f) => (
           <div
             key={f.id}
-            className={`cframe${f.parentId ? ' sub' : ''}${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}`}
+            className={`cframe${f.parentId ? ' sub' : ''}${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}${f.status ? ' st-' + f.status : ''}`}
             data-fid={f.id}
             style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
           >
@@ -742,7 +747,17 @@ export function CanvasStage(): JSX.Element {
               onMouseDown={(e) => startFrameDrag(f, e)}
               onDoubleClick={() => setEditingFrame(f.id)}
             >
-              <span className="cframe-dot" />
+              {/* 色点即状态入口：它本来就长在「状态灯」该在的位置，再加一个按钮只会挤标题栏 */}
+              <button
+                className="cframe-dot"
+                data-tip={`状态：${frameStatusLabel(f.status)}（点击更改）`}
+                onMouseDown={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                  setStatusPop({ x: r.left, y: r.bottom + 6, frameId: f.id })
+                }}
+              />
               {editingFrame === f.id ? (
                 <input
                   className="cframe-rename"
@@ -888,6 +903,7 @@ export function CanvasStage(): JSX.Element {
 
       <CanvasMiniMap />
       <CanvasRunMonitor />
+      <CanvasSettings />
 
       <div className="canvas-zoombar">
         <button
@@ -912,6 +928,16 @@ export function CanvasStage(): JSX.Element {
 
       {menu && (
         <CanvasContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+      )}
+
+      {statusPop && (
+        <FrameStatusPicker
+          x={statusPop.x}
+          y={statusPop.y}
+          frameId={statusPop.frameId}
+          current={frames.find((f) => f.id === statusPop.frameId)?.status}
+          onClose={() => setStatusPop(null)}
+        />
       )}
 
       {picker && (

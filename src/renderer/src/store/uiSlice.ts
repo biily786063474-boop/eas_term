@@ -5,6 +5,14 @@ import { ThemeId, loadTheme, applyTheme } from '../themes'
 import type { AgentRole, ArchiveItem } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
+import type { ApprovalInfo } from '../features/terminal/approvalParse'
+
+/** 从字典里去掉一个键，返回新对象（原对象不动）。清 pty 相关的几张表都要用 */
+function dropKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
+  if (!(key in obj)) return obj
+  const { [key]: _drop, ...rest } = obj
+  return rest
+}
 
 export interface UiSlice {
   theme: ThemeId
@@ -24,6 +32,24 @@ export interface UiSlice {
    *  把终端标题设成「<盲文 spinner> 名字」，停下等人时是非 spinner。纯 shell 永不误报。 */
   runningPtys: string[]
   setPtyRunning: (ptyId: string, running: boolean) => void
+  /** 每个终端的耗时账本（灵动岛通知卡显示「跑了多久」）。
+   *  跟 runningPtys 同源——记账的时机就是 spinner 起落的那一刻，
+   *  分到别处去就得再监听一遍同一个信号，两份状态迟早对不上。
+   *  不持久化：重启后终端要重开，旧的耗时没有意义。 */
+  ptyTiming: Record<
+    string,
+    { firstAt: number; roundStart?: number; lastRoundMs?: number; lastDoneAt?: number }
+  >
+  /** 停下来等审批的终端：解析屏幕得到的问句与选项（认不出就是 null = 只通知不直通）。
+   *  和 attentionPtys 同生共死——那个清了，这里也该清，否则灵动岛会拿着
+   *  上一轮的旧选项给用户点。 */
+  ptyApproval: Record<string, ApprovalInfo>
+  setPtyApproval: (ptyId: string, info: ApprovalInfo | null) => void
+  /** 在灵动岛上按下的选项写回 pty 之后，记一下等待复活的时刻。
+   *  1.5 秒内 spinner 没重新转起来 = 写回没生效（多半是解析错了行号），
+   *  灵动岛据此把卡片降级成「跳回终端处理」。 */
+  approvalSentAt: Record<string, number>
+  markApprovalSent: (ptyId: string) => void
   /** MCP 调用流水（AI 通过 MCP 操作画板时留痕）：标题栏指示灯据此亮起 + 展开查看做了什么。
    *  只留最近 20 条，不持久化——它是「刚才 AI 动了什么」的即时可见性，不是审计日志。 */
   mcpLog: { id: number; tool: string; detail: string; ok: boolean; at: number }[]
@@ -116,6 +142,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   mcpLog: [],
   mcpEnabled: localStorage.getItem(MCP_OFF_KEY) !== '1',
   runningPtys: [],
+  ptyTiming: {},
+  ptyApproval: {},
+  approvalSentAt: {},
   agentCli: null,
   roles: [],
   wikiDrawerOpen: false,
@@ -192,10 +221,42 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     set((s) => {
       const has = s.runningPtys.includes(ptyId)
       if (has === running) return s
+      // 顺手记账：起跑记开始时间，停下算出这一轮跑了多久。
+      // firstAt 只在第一次见到这个终端时写，之后不动——它是「会话累计」的起点。
+      const now = Date.now()
+      const prev = s.ptyTiming[ptyId]
+      const entry = running
+        ? {
+            firstAt: prev?.firstAt ?? now,
+            roundStart: now,
+            lastRoundMs: prev?.lastRoundMs,
+            lastDoneAt: prev?.lastDoneAt
+          }
+        : {
+            firstAt: prev?.firstAt ?? now,
+            roundStart: undefined,
+            lastRoundMs: prev?.roundStart ? now - prev.roundStart : prev?.lastRoundMs,
+            // 这一轮结束的时刻。通知的排序要用它——
+            // 之前拿不到 transcript 时间就退化成 Date.now()，每帧重算，
+            // 同一帧内多条通知的时间戳全都相等，排序等于没排。
+            lastDoneAt: now
+          }
+      // 重新跑起来 = 这个终端不再等人了，待处理标记连同审批解析一起清掉。
+      // 不管是你在灵动岛上点的、还是自己回终端按的回车，只要它又动起来，
+      // 那件「等你处理的事」就结束了——留着标记只会让通知栏挂着一条假的。
+      const cleared = running
+        ? {
+            attentionPtys: s.attentionPtys.filter((p) => p !== ptyId),
+            ptyApproval: dropKey(s.ptyApproval, ptyId),
+            approvalSentAt: dropKey(s.approvalSentAt, ptyId)
+          }
+        : null
       return {
         runningPtys: running
           ? [...s.runningPtys, ptyId]
-          : s.runningPtys.filter((p) => p !== ptyId)
+          : s.runningPtys.filter((p) => p !== ptyId),
+        ptyTiming: { ...s.ptyTiming, [ptyId]: entry },
+        ...cleared
       }
     }),
 
@@ -216,11 +277,25 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   flagAttention: (ptyId) =>
     set((s) => (s.attentionPtys.includes(ptyId) ? s : { attentionPtys: [...s.attentionPtys, ptyId] })),
   clearAttention: (ptyId) =>
-    set((s) =>
-      s.attentionPtys.includes(ptyId)
-        ? { attentionPtys: s.attentionPtys.filter((p) => p !== ptyId) }
-        : s
-    ),
+    set((s) => {
+      if (!s.attentionPtys.includes(ptyId)) return s
+      // 连带清掉这一轮的审批解析：提醒消了还留着旧选项，下次灵动岛会把
+      // 上一轮的按钮画出来，点下去写回的是对不上号的序号。
+      return {
+        attentionPtys: s.attentionPtys.filter((p) => p !== ptyId),
+        ptyApproval: dropKey(s.ptyApproval, ptyId),
+        approvalSentAt: dropKey(s.approvalSentAt, ptyId)
+      }
+    }),
+
+  setPtyApproval: (ptyId, info) =>
+    set((s) => {
+      if (!info) return { ptyApproval: dropKey(s.ptyApproval, ptyId) }
+      return { ptyApproval: { ...s.ptyApproval, [ptyId]: info } }
+    }),
+
+  markApprovalSent: (ptyId) =>
+    set((s) => ({ approvalSentAt: { ...s.approvalSentAt, [ptyId]: Date.now() } })),
 
   requestConfirm: (c) => set({ pendingConfirm: c }),
   cancelConfirm: () => set({ pendingConfirm: null }),

@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import type { SessionIndex, SessionTurn, SessionExchange, SessionImage } from '../shared/types'
+import type { SessionIndex, SessionTurn, SessionExchange, SessionImage, SessionLast } from '../shared/types'
 
 // 读 Claude Code 的会话 transcript：~/.claude/projects/<编码后的cwd>/<sessionId>.jsonl
 // 每行一个 JSON（type: user/assistant/…）。抽出用户真实消息 + 对应的 Claude 回答，
@@ -224,4 +224,37 @@ export function registerSessionHandlers(): void {
       }
     }
   )
+
+  // 最后一轮问答（灵动岛通知卡）。
+  //
+  // sessionId 是**必须优先**的：按 cwd 取「最近修改的 jsonl」在同一项目开了多个终端时会串——
+  // 终端 A 答完了，取到的却是刚好后写盘的终端 B 的会话，卡片上就出现张冠李戴的回答。
+  // 每个终端节点自己绑着 session id（NodeAgent.session），传进来就能锁到正确的那份。
+  ipcMain.handle('session:last', (_e, cwd: string, sessionId?: string): SessionLast => {
+    const empty: SessionLast = { found: false, ask: '', answer: '', at: 0 }
+    try {
+      const dir = projectDir(cwd)
+      let file: string | null = null
+      if (sessionId && /^[\w-]+$/.test(sessionId)) {
+        const p = path.join(dir, `${sessionId}.jsonl`)
+        if (fs.existsSync(p)) file = p
+      }
+      if (!file) file = latestJsonl(dir)
+      if (!file) return empty
+      const parsed = parse(file)
+      const last = parsed.turns[parsed.turns.length - 1]
+      if (!last) return empty
+      const ex = parsed.exchanges.get(last.uuid)
+      if (!ex) return empty
+      const flat = (s: string, n: number): string => s.replace(/\s+/g, ' ').trim().slice(0, n)
+      return {
+        found: true,
+        ask: flat(ex.userText, 90) || `〔图片 ×${ex.images?.length ?? 0}〕`,
+        answer: flat(ex.assistantText, 260),
+        at: ex.at
+      }
+    } catch {
+      return empty
+    }
+  })
 }

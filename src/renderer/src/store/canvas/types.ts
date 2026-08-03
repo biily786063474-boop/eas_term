@@ -57,6 +57,12 @@ export interface CanvasNode {
   h: number
 }
 
+/** Frame 的颜色状态标签：蓝=进行中 / 黄=待执行 / 红=已完结。
+ *  未设(undefined)= 无标签，Frame 保持主题色——「没标状态」和「标了某个状态」
+ *  是两件事，不能拿其中一个状态当默认值顶替。
+ *  目前只是纯视觉标记，不驱动任何逻辑；分类/筛选是后续的事。 */
+export type FrameStatus = 'doing' | 'todo' | 'done'
+
 /** Frame：对应一个项目（顶层）或一个文件夹（子 Frame），容纳若干节点。
  *  子 Frame：parentId 指向父 Frame、folderPath 记文件夹路径；坐标同为世界坐标。 */
 export interface CanvasFrame {
@@ -73,6 +79,8 @@ export interface CanvasFrame {
   parentId?: string | null
   /** 子 Frame 对应的文件夹绝对路径 */
   folderPath?: string
+  /** 颜色状态标签；未设 = 无标签 */
+  status?: FrameStatus
 }
 
 /** 图形/便签：世界坐标 */
@@ -144,6 +152,8 @@ export interface CanvasSlice {
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void
   renameFrame: (id: string, name: string) => void
+  /** 打/清颜色状态标签（传 null 清除 = 回到无标签）。只改这一个字段，不碰布局 */
+  setFrameStatus: (id: string, status: FrameStatus | null) => void
   /** 删除 Frame：连同后代子 Frame 一起删，逐个 closeLeaf 杀掉各自成员终端 */
   removeFrame: (id: string) => void
   /** 拖文件夹入某 Frame → 在其内新增一个空的子 Frame（父随之裹住） */

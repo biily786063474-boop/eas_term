@@ -19,6 +19,7 @@ import type {
   CanvasShape,
   CanvasSlice,
   CanvasViewport,
+  FrameStatus,
   NodeAgent,
   ViewMode
 } from './canvas/types'
@@ -51,6 +52,7 @@ export type {
   CanvasShape,
   CanvasSlice,
   CanvasViewport,
+  FrameStatus,
   NodeAgent,
   PersistedCanvas,
   ViewMode
@@ -485,6 +487,18 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   renameFrame: (id, name) =>
     set((s) => ({
       canvas: { ...s.canvas, frames: s.canvas.frames.map((f) => (f.id === id ? { ...f, name } : f)) }
+    })),
+
+  // 清标签写 undefined 而不是留着 null：canvas.json 里 `status: null` 和「没这个键」
+  // 语义一样却要两处判空，落盘时 JSON.stringify 也会把 null 老实写出来。
+  setFrameStatus: (id, status) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === id ? { ...f, status: status ?? undefined } : f
+        )
+      }
     })),
 
   // 删 Frame：连同所有后代子 Frame 一起删，逐个 closeLeaf 杀掉各自的成员终端

@@ -182,7 +182,14 @@ export function CanvasMiniMap(): JSX.Element | null {
             const p = w2m(f.x, f.y)
             return (
               <g key={f.id}>
-                <circle cx={p.x} cy={p.y} r={2} className={`cmm-dot${f.parentId ? ' sub' : ''}`} />
+                {/* 打了状态标签的点跟 Frame 同色：缩略图本来就是「远看全局」，
+                    状态色在这儿比在画布上更值钱 */}
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={2}
+                  className={`cmm-dot${f.parentId ? ' sub' : ''}${f.status ? ' st-' + f.status : ''}`}
+                />
                 <text x={p.x + 4} y={p.y + 3} className={`cmm-name${f.parentId ? ' sub' : ''}`}>
                   {shortName(f.name)}
                 </text>

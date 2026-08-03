@@ -1,0 +1,600 @@
+/* 灵动岛样式。独立一份，不吃主窗口的 base.css ——
+ * 那份带着整套主题变量和终端配色，而这个窗口的配色必须固定：
+ * 它挂在别人的桌面壁纸上，不能跟着应用主题一起变粉变蓝。 */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  /* 窗口尺寸严格跟随内容，多出来的透明区会挡住底下的东西 */
+  width: fit-content;
+  height: fit-content;
+  -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  /* 整块不可选中、不可拖拽：它是个按钮面板，不是文档 */
+  user-select: none;
+  cursor: default;
+}
+
+#root,
+.isl-root {
+  width: fit-content;
+  height: fit-content;
+}
+
+/* ---------- 外壳：三态共用的那一块黑 ---------- */
+/*
+ * **不透明纯黑，中间不留缝。**
+ *
+ * 试过中间留透明缝、指望刘海从缝里透出来——结果缝里露的是壁纸，整条断成两截。
+ * 而且刘海位置根本量不准：截屏分析过屏幕顶部，一行纯黑像素都没有
+ * （系统把那块填成了桌面内容），无从对齐。
+ *
+ * 纯黑整条覆盖就没这个问题：有刘海时两者同色、看不出接缝；没刘海时它就是一条黑条。
+ * 中间那段只是「不放字的区域」，即使被刘海盖住也不丢信息。
+ */
+.isl-shell {
+  background: #000;
+  color: #f5f5f5;
+  overflow: hidden;
+}
+
+/* ---------- 进场 / 退场 ----------
+ * 它是「从屏幕上沿垂下来」的，不是淡入：所以带 Y 位移 + 轻微纵向压缩，
+ * 像一块东西被放下来。收回比出现快（160 vs 220ms）——离开该干脆，出现该稳。
+ *
+ * 曲线用 easeOutExpo 而不是回弹。屏幕顶部是常驻区，一个会「弹一下」的东西
+ * 每次出现都在把视线往上拽；一天出现二十次就知道问题了。 */
+.isl-shell.entering {
+  animation: isl-drop 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.isl-shell.leaving {
+  /* 时长必须和 main/island.ts 的 LEAVE_MS 一致 */
+  animation: isl-lift 160ms cubic-bezier(0.7, 0, 0.84, 0) both;
+}
+
+@keyframes isl-drop {
+  from {
+    transform: translateY(-100%) scaleY(0.72);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes isl-lift {
+  from {
+    transform: translateY(0) scaleY(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%) scaleY(0.72);
+    opacity: 0;
+  }
+}
+
+/* 贴屏幕上沿时只有下面两个角是圆的——上边被屏幕边缘切掉，
+ * 圆角开在那儿只会在顶边露出两个小三角的壁纸 */
+.isl-shell.pinned {
+  /* 圆角 10 而不是 16，是被下面第二条逼出来的折中。 */
+  border-radius: 0 0 10px 10px;
+  /* **不要投影。** 试过 `0 10px 30px rgba(0,0,0,.55)`，30px 的模糊会向外扩散约 15px，
+   * 正好糊在两个下圆角**外侧**那两小块本该全透明的三角上——在纯黑窗口上就显成
+   * 「圆角外挂着两个脏黑角」。
+   * 而且贴顶态本来就不需要投影：它要像屏幕的一部分（刘海的延伸），
+   * 不是一张浮在屏幕上的卡片。
+   *
+   * 去掉投影之后圆角外还剩一点暗：**这一条改不掉，是平台行为**——
+   * 透明窗口盖住的那块桌面，经窗口合成后比直接显示的桌面暗约 17%（实测采样：
+   * 圆角外 rgb(28,69,102) vs 同一片壁纸 rgb(32,83,123)）。圆角开得越大，
+   * 这块「透明但偏暗」的三角越显眼。16px 时肉眼可见，10px 基本看不出，
+   * 6px 全消但圆角太小、没了圆润感。所以取 10。 */
+}
+
+/* 没有刘海的屏幕上它悬在菜单栏下方，四周都是壁纸，这时才需要投影和描边来分离。
+ * 那种形态用户预期就是「一张浮着的卡片」，阴影是对的。 */
+.isl-shell.floating {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+
+/* ---------- 顶行：三态都在，高度固定 ---------- */
+.isl-toprow {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* 左右两侧各自吃掉剩余空间，中间那段就永远居中——
+ * 展开时外壳变宽（内容区 420），顶行被拉伸，靠这个规则刘海位置才不会跑偏 */
+.isl-ear {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 92px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.isl-ear.left {
+  justify-content: flex-start;
+}
+
+.isl-ear.right {
+  justify-content: flex-end;
+}
+
+/* 中间不放任何内容：刘海要是真在这儿，放了也看不见 */
+.isl-gap {
+  flex: none;
+}
+
+/* ---------- 状态标题：三种状态，三种 hover ----------
+ * 反馈方式本身就是信息——不读字也能从「它怎么响应」判断这条要紧不要紧。
+ * 三个都只在 hover 时动，唯一例外是「等待审批」：它确实在等你，允许持续脉冲。 */
+.isl-earlabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e5e5e5;
+  position: relative;
+  display: inline-block;
+}
+
+.isl-earcount {
+  font-size: 11px;
+  color: #8a8a8a;
+}
+
+/* 混合态「2 个在跑 · 1 完成」的分隔点和后半段 */
+.isl-labelsep {
+  margin: 0 5px;
+  color: #4a4a4a;
+}
+
+.isl-labeldone {
+  color: #f0b429;
+  /* hover 扫光会把 .isl-earlabel 整体的 text-fill 设成 transparent（靠渐变背景显字），
+     子元素跟着一起被"洗白"。这里显式钉死颜色，让扫光只扫前半段的"N 个在跑"，
+     后半段的琥珀色保持不变——那是状态色，不该被装饰效果吃掉。 */
+  -webkit-text-fill-color: #f0b429;
+}
+
+/* A. 工作中 —— 扫光。参考动效库 ShinyText 的亮度差 + GlareHover 的 650ms。
+ *    库里那个是无限循环的，放在常驻窗口上是纯噪声，改成只在 hover 时扫一遍。 */
+.isl-toprow.working .isl-earlabel {
+  background: linear-gradient(90deg, #e5e5e5 40%, #ffffff 50%, #e5e5e5 60%);
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.isl-toprow.working:hover .isl-earlabel {
+  -webkit-text-fill-color: transparent;
+  animation: isl-shine 650ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes isl-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -20% 0;
+  }
+}
+
+/* B. 等待审批 —— 左侧竖条推入 + 色温脉冲。竖条用 scaleY 而不是宽度动画，不触发重排。 */
+.isl-toprow.waiting .isl-earlabel {
+  color: #f0b429;
+  padding-left: 0;
+  transition: padding-left 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.isl-toprow.waiting .isl-earlabel::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 12%;
+  height: 76%;
+  width: 2px;
+  background: #f0b429;
+  border-radius: 2px;
+  transform: scaleY(0);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.isl-toprow.waiting:hover .isl-earlabel {
+  padding-left: 8px;
+  animation: isl-urge 900ms ease-in-out infinite;
+}
+
+.isl-toprow.waiting:hover .isl-earlabel::before {
+  transform: scaleY(1);
+}
+
+@keyframes isl-urge {
+  0%,
+  100% {
+    color: #f0b429;
+  }
+  50% {
+    color: #ffd166;
+  }
+}
+
+/* C. 已完成 / 待处理 —— 下划线由左展开 + 提亮。最克制：事已了结，不该再抢注意。 */
+.isl-toprow.idle .isl-earlabel {
+  transition: color 160ms ease;
+}
+
+.isl-toprow.idle .isl-earlabel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 1px;
+  width: 100%;
+  background: #6ee7b7;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.isl-toprow.idle:hover .isl-earlabel {
+  color: #6ee7b7;
+}
+
+.isl-toprow.idle:hover .isl-earlabel::after {
+  transform: scaleX(1);
+}
+
+/* 未读数：琥珀色实心，是整条上唯一的暖色，扫一眼就知道有事等着 */
+.isl-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f0b429;
+  color: #1a1206;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* ---------- 展开内容区：接在顶行下面，同属一块黑 ---------- */
+/* 展开：**容器瞬间到位，只有内容做动画。**
+ *
+ * 不能给外壳做高度过渡——窗口高度是「渲染层 ResizeObserver 量尺寸 → IPC → setBounds」定的，
+ * 高度每变一帧就触发一次上报，260ms 的动画 ≈ 16 次跨进程往返 + 16 次窗口重设，
+ * 窗口会一格一格地跳，比不做动画还难看。
+ * 所以：React 一次渲染出完整内容 → 尺寸只上报一次、窗口一步到位 →
+ * 内容自己淡入上移，这期间尺寸不变，不再触发上报。 */
+.isl-body {
+  width: 420px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  animation: isl-body-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes isl-body-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 审批时整块压一层琥珀边：它和「已完成」性质不同——那个是通报，这个是有人卡着等你 */
+.isl-body.approval {
+  border-top-color: rgba(240, 180, 41, 0.3);
+}
+
+.isl-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+/* L1 项目名：最亮、最重。先认出「是谁」 */
+.isl-proj {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f5f5f5;
+  white-space: nowrap;
+}
+
+/* 终端名比项目名弱一档：它是定语，不是主语 */
+.isl-term {
+  font-size: 12px;
+  font-weight: 400;
+  color: #737373;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.isl-spacer {
+  flex: 1;
+}
+
+/* L2 状态：字号最小但用语义色，靠颜色而不是大小抢注意 */
+.isl-status {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.isl-status.done {
+  color: #6ee7b7;
+}
+
+.isl-status.wait {
+  color: #f0b429;
+}
+
+/* 队列计数兼翻页按钮。做成按钮但保持文字外观——它在标题行里，
+ * 长得像按钮会和右边的状态标签抢视线。 */
+.isl-queue {
+  font-size: 10.5px;
+  color: #525252;
+  font-variant-numeric: tabular-nums;
+  border: none;
+  background: none;
+  font-family: inherit;
+  padding: 2px 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.isl-queue:hover {
+  color: #d4d4d4;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* L3 提问梗概 / 审批问句：单行截断。它只负责让你想起「哦，是那件事」 */
+.isl-ask {
+  font-size: 12.5px;
+  color: #a3a3a3;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+/* L4 最终回答：比提问亮一档——这才是你要读的那句 */
+.isl-answer {
+  font-size: 12.5px;
+  color: #d4d4d4;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 9px;
+}
+
+/* 读不到会话正文时的解释文字。比 L3 更暗——它不是内容，是内容缺席的说明 */
+.isl-nodetail {
+  font-size: 12px;
+  color: #525252;
+  font-style: italic;
+  margin-bottom: 9px;
+}
+
+/* 待执行的命令：等宽字体 + 高亮底，和散文体的问句拉开。
+ * **不截断**，长了就换行——审批的正是这段字，看不全等于没看。 */
+.isl-cmd {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #e5e5e5;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  padding: 6px 9px;
+  margin-bottom: 9px;
+  max-height: 54px;
+  overflow-y: auto;
+  word-break: break-all;
+}
+
+/* 危险命令 / 写回失效的提示条 */
+.isl-warn {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.12);
+  border-radius: 7px;
+  padding: 5px 9px;
+  margin-bottom: 9px;
+}
+
+/* L5 元信息：最暗，余光级别。用 · 分隔而不是加边框，免得又多一层视觉噪声 */
+.isl-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  color: #525252;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 10px;
+}
+
+.isl-metaitem::before {
+  content: '·';
+  margin-right: 8px;
+  color: #3a3a3a;
+}
+
+/* ---------- 操作按钮 ---------- */
+.isl-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.isl-btn {
+  flex: none;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d4d4d4;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.isl-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: #f5f5f5;
+}
+
+.isl-btn.primary {
+  background: rgba(110, 231, 183, 0.15);
+  border-color: rgba(110, 231, 183, 0.32);
+  color: #6ee7b7;
+}
+
+.isl-btn.primary:hover {
+  background: rgba(110, 231, 183, 0.24);
+}
+
+/* 审批选项按钮：文案长短不一（「Yes」和「Yes, and don't ask again for npm
+ * commands in /Users/…」并排），允许收缩并截断，悬停看 title 全文。
+ * 一行放不下就换行，绝不横向溢出。 */
+.isl-btn.opt {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 运行列表 ---------- */
+.isl-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.isl-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.isl-rowtime {
+  font-size: 11px;
+  color: #737373;
+  font-variant-numeric: tabular-nums;
+}
+
+.isl-empty {
+  font-size: 12px;
+  color: #525252;
+  padding: 8px;
+}
+
+/* ---------- 状态点 ---------- */
+.isl-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.isl-dot.live {
+  background: #6ee7b7;
+  box-shadow: 0 0 8px rgba(110, 231, 183, 0.6);
+  animation: isl-breathe 2s ease-in-out infinite;
+}
+
+.isl-dot.done {
+  background: #6ee7b7;
+  box-shadow: 0 0 8px rgba(110, 231, 183, 0.5);
+}
+
+.isl-dot.idle {
+  background: #f0b429;
+  box-shadow: 0 0 8px rgba(240, 180, 41, 0.5);
+}
+
+/* 等待审批：琥珀 + 呼吸。和 live 用同一个动画是有意的——
+ * 「有东西在动」意味着「这事还没完」，而等审批恰恰是最没完的那种。 */
+.isl-dot.wait {
+  background: #f0b429;
+  box-shadow: 0 0 10px rgba(240, 180, 41, 0.75);
+  animation: isl-breathe 1.4s ease-in-out infinite;
+}
+
+@keyframes isl-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- 无障碍 ----------
+ * 系统里开了「减弱动态效果」就全部退化成瞬变。这不是可选项：
+ * 这个窗口会一天弹几十次，对前庭敏感的人来说持续的位移动画是真的难受。 */
+@media (prefers-reduced-motion: reduce) {
+  .isl-shell,
+  .isl-shell.entering,
+  .isl-shell.leaving,
+  .isl-body,
+  .isl-dot,
+  .isl-earlabel,
+  .isl-earlabel::before,
+  .isl-earlabel::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* 审批选项已点、正在等 CLI 接手的提示。点完到 CLI 响应之间有几百毫秒空窗，
+   没有反馈的话用户会以为没点上、再点一次——那一下会被写进 pty 变成多余输入。 */
+.isl-sent {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6ee7b7;
+  background: rgba(110, 231, 183, 0.1);
+  border-radius: 7px;
+  padding: 5px 9px;
+  margin-bottom: 9px;
+}

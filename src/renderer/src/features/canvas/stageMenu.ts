@@ -7,6 +7,7 @@
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
+import { FRAME_STATUS_LIST } from './frameStatus'
 
 export interface StageMenuDeps {
   /** 便签进入编辑态 */
@@ -81,6 +82,20 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     items = [
       { label: '重命名', onClick: () => setEditingFrame(fid) },
       { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
+      { sep: true, label: '', onClick: () => {} },
+      // 和标题栏色点是同一组状态、同一套文案。右键这条是给「已经在右键菜单里」的人用的，
+      // 不指望他为了改状态先关掉菜单再去点那个 9px 的圆点。
+      ...FRAME_STATUS_LIST.map((s) => ({
+        label: s.label,
+        hint: frame?.status === s.key ? '当前' : undefined,
+        onClick: () => st.setFrameStatus(fid, frame?.status === s.key ? null : s.key)
+      })),
+      {
+        label: '无标签',
+        disabled: !frame?.status,
+        onClick: () => st.setFrameStatus(fid, null)
+      },
+      { sep: true, label: '', onClick: () => {} },
       { label: '删除 Frame', danger: true, onClick: () => st.removeFrame(fid) }
     ]
   } else {

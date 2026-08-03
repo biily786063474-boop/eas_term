@@ -20,6 +20,7 @@ import { registerRulesHandlers } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
+import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland } from './island'
 
 // 切到后台不降速。Chromium 默认会把「隐藏/最小化/被完全遮挡」的窗口狠狠节流,
 // 实测(最小化 10s,独立探针对比):setInterval 只剩 26%、requestAnimationFrame 只剩 11%、
@@ -125,7 +126,13 @@ function createWindow(): void {
   // 注意：closed 触发时 win.webContents 已销毁，必须提前取 id
   const wcId = win.webContents.id
   win.webContents.on('did-navigate', () => killPtysForWebContents(wcId))
-  win.on('closed', () => killPtysForWebContents(wcId))
+  win.on('closed', () => {
+    killPtysForWebContents(wcId)
+    // 灵动岛是主窗口状态的投影，主窗口没了就没有可投的东西。
+    // 更要紧的是：留着它，window-all-closed 永远不会触发，app 退不掉，
+    // 屏幕顶上只剩一条连不上任何东西的幽灵胶囊。
+    destroyIsland()
+  })
 
   // 渲染进程崩溃/被杀(OOM 等)→ 自动重载,避免永久白屏(白屏根因之一:崩了没恢复机制)。
   // clean-exit(正常导航/关闭)不处理;节流防崩溃循环。画布存档已持久化,重载能还原布局。
@@ -169,6 +176,15 @@ function createWindow(): void {
       }
     })
   })
+
+  // 灵动岛的出现条件是「主窗口不在前台」。这四个事件覆盖了所有离开/回来的路径：
+  // 切到别的 app（blur/focus）、最小化到 Dock、⌘H 隐藏后再点 Dock 图标（hide/show 走 focus）。
+  win.on('blur', nudgeIsland)
+  win.on('focus', nudgeIsland)
+  win.on('minimize', nudgeIsland)
+  win.on('restore', nudgeIsland)
+  win.on('show', nudgeIsland)
+  win.on('hide', nudgeIsland)
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -270,17 +286,21 @@ app.whenReady().then(() => {
   registerSttHandlers()
   registerDesignHandlers()
   registerBizoneHandlers()
+  registerIslandHandlers()
   buildMenu()
   createWindow()
 
+  // 点 Dock 图标：灵动岛不算「还有窗口开着」——它开着的时候主窗口恰恰是关掉/藏起来的，
+  // 不排除它的话点 Dock 图标什么都不会发生，等于 app 打不开了。
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().filter((w) => !isIslandWindow(w)).length === 0) createWindow()
   })
 })
 
 app.on('window-all-closed', () => {
   app.quit()
 })
+
 
 // 退出时清场：把所有终端连同它们底下跑的进程（claude / 构建 / dev server）一起收掉。
 // 分两拍是为了给 CLI 存会话的机会：先 SIGTERM，300ms 后仍活着的一律 SIGKILL。
@@ -290,6 +310,7 @@ app.on('before-quit', (e) => {
   if (quitting) return
   quitting = true
   e.preventDefault()
+  destroyIsland() // 先收掉灵动岛：它会拦住 window-all-closed，退出流程会卡在这儿
   killAllPtys() // 软的
   setTimeout(() => {
     if (anyPtyAlive()) killAllPtys(true) // 硬的

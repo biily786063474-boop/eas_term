@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 灵动岛不联网、不加载任何外部资源，CSP 比主窗口更紧：连 img 的 data: 都不需要 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws:"
+    />
+    <title>Eas-Term 状态</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/island/main.tsx"></script>
+  </body>
+</html>

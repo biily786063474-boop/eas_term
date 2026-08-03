@@ -22,6 +22,9 @@ import type {
   AiResult,
   SessionIndex,
   SessionExchange,
+  SessionLast,
+  IslandState,
+  IslandAction,
   AgentProbe,
   SkillStatus,
   HookStatus,
@@ -455,7 +458,25 @@ const api = {
   session: {
     index: (cwd: string): Promise<SessionIndex> => ipcRenderer.invoke('session:index', cwd),
     exchange: (cwd: string, uuid: string, sessionId?: string): Promise<SessionExchange> =>
-      ipcRenderer.invoke('session:exchange', cwd, uuid, sessionId)
+      ipcRenderer.invoke('session:exchange', cwd, uuid, sessionId),
+    /** 最后一轮问答（灵动岛通知卡）。传 sessionId 才能锁定终端自己的那份会话 */
+    last: (cwd: string, sessionId?: string): Promise<SessionLast> =>
+      ipcRenderer.invoke('session:last', cwd, sessionId)
+  },
+  /** 灵动岛：主窗口侧只需要「推状态」和「收动作」两件事 */
+  island: {
+    sync: (state: IslandState): void => {
+      ipcRenderer.send('island:sync', state)
+    },
+    /** 审批框没认全时上报当时的屏幕（dev 下打到主进程日志，供改解析规则） */
+    reportParse: (reason: string, sample: string[]): void => {
+      ipcRenderer.send('island:parselog', reason, sample)
+    },
+    onAction: (cb: (a: IslandAction) => void): (() => void) => {
+      const listener = (_e: IpcRendererEvent, a: IslandAction): void => cb(a)
+      ipcRenderer.on('island:action', listener)
+      return () => ipcRenderer.removeListener('island:action', listener)
+    }
   },
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),

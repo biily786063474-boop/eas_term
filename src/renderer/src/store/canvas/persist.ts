@@ -3,7 +3,7 @@
 // 序列化和 sanitize 是同一件事的两面：一个决定「写出去长什么样」，
 // 一个决定「读回来遇到畸形数据怎么办」。分开放的话，改了写入格式却忘了
 // 放宽读取校验，下次启动就是一片白——所以它们必须挨着。
-import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, NodeAgent, ViewMode } from './types'
+import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, ViewMode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
 import { collectLeaves } from '../../layout'
 import { HEAD, NODE_H, NODE_W, PAD } from './layout'
@@ -126,6 +126,10 @@ export function sanitizeNode(raw: unknown): CanvasNode | null {
   return node
 }
 
+/** 合法的状态标签值。存档里出现别的值（手改 / 以后删了某个状态）→ 当无标签处理，
+ *  否则一个 `status: 'archived'` 会挂上一个没有配色规则的 class，Frame 变成裸边框。 */
+export const FRAME_STATUSES = new Set<FrameStatus>(['doing', 'todo', 'done'])
+
 export function sanitizeFrame(raw: unknown): CanvasFrame | null {
   if (!raw || typeof raw !== 'object') return null
   const f = raw as Record<string, unknown>
@@ -143,6 +147,7 @@ export function sanitizeFrame(raw: unknown): CanvasFrame | null {
     w: finiteOr(f.w, NODE_W + PAD * 2),
     h: finiteOr(f.h, NODE_H + HEAD + PAD * 2),
     collapsed: f.collapsed === true,
+    status: FRAME_STATUSES.has(f.status as FrameStatus) ? (f.status as FrameStatus) : undefined,
     nodes
   }
 }
