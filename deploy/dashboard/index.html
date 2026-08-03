@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Eas-Term 数据看板</title>
+<style>
+/* 配色来自 dataviz 的分类主题，已过验证器六项检查
+   （CVD 最差相邻对 ΔE 9.4 deutan / 26.5 normal，对比度均 ≥3:1）。
+   改颜色前请重跑 validate_palette.js，别凭眼睛判断色盲安全。 */
+:root{
+  --bg:#0a0a0a; --card:rgba(23,23,23,.5); --line:#262626; --line-weak:#1f1f1f;
+  --fg:#f5f5f5; --fg2:#a3a3a3; --fg3:#737373; --fg4:#525252;
+  --s1:#3987e5;  /* UV */
+  --s2:#d95926;  /* PV */
+  --s3:#199e70;  /* 下载 */
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+main{max-width:1120px;margin:0 auto;padding:0 24px 90px}
+header{padding:44px 0 26px;border-bottom:1px solid var(--line-weak);margin-bottom:30px;
+  display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em}
+.sub{font-size:12.5px;color:var(--fg4);margin-left:auto;text-align:right;line-height:1.6}
+h2{font-size:12px;letter-spacing:.14em;color:var(--fg3);font-weight:600;text-transform:uppercase;margin:0 0 12px}
+section{margin-bottom:42px}
+
+/* 数字块：单个头条数字不该画成图 */
+.stats{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));margin-bottom:38px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px 19px}
+.stat .n{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums}
+.stat .l{font-size:12.5px;color:var(--fg3);margin-top:3px}
+.stat .d{font-size:11.5px;color:var(--fg4);margin-top:5px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+.chart-head{display:flex;align-items:center;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+.chart-title{font-size:15px;font-weight:600}
+.legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--fg2)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* 图表 */
+.plot{position:relative;width:100%}
+svg{display:block;width:100%;overflow:visible}
+.grid line{stroke:var(--line-weak);stroke-width:1}
+.axis text{fill:var(--fg4);font-size:10.5px}
+.ser{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.dot{stroke:var(--bg);stroke-width:2}
+.hit{fill:transparent;cursor:crosshair}
+.cross{stroke:var(--fg4);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.tip{position:absolute;pointer-events:none;opacity:0;transform:translate(-50%,-120%);
+  background:#111;border:1px solid #333;border-radius:9px;padding:8px 11px;font-size:12px;
+  white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.55);transition:opacity .12s;z-index:5}
+.tip b{font-weight:600}
+.tip .row{display:flex;align-items:center;gap:7px;color:var(--fg2)}
+.tip .row i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.tip .row span{margin-left:auto;color:var(--fg);font-variant-numeric:tabular-nums}
+
+/* 条形（类别对比用单色，不给每类分配不同色——那是给 identity 用的） */
+.bars{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.bar{display:grid;grid-template-columns:minmax(96px,auto) 1fr auto;gap:12px;align-items:center;font-size:13px}
+.bar .k{color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .t{height:9px;background:#1c1c1c;border-radius:999px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:999px;background:var(--s1);transition:width .4s cubic-bezier(.22,1,.36,1)}
+.bar .v{color:var(--fg);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+.bar.dl .t i{background:var(--s3)}
+
+/* 漏斗：阶段递减，标注相邻转化率 */
+.funnel{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.fstep{display:grid;grid-template-columns:minmax(88px,auto) 1fr auto;gap:12px;align-items:center;font-size:13px;padding:6px 0}
+.fstep .t{height:26px;background:#161616;border-radius:7px;overflow:hidden;position:relative}
+.fstep .t i{display:block;height:100%;background:linear-gradient(90deg,var(--s1),#2a6fbe);
+  border-radius:7px;transition:width .5s cubic-bezier(.22,1,.36,1)}
+.fstep .rate{font-size:11px;color:var(--fg4);padding-left:12px}
+.fstep .v{color:var(--fg);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+
+/* 表格 */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:0}
+.tw th:first-child,.tw td:first-child{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+th{text-align:left;padding:10px 14px;background:#141414;color:var(--fg2);font-weight:500;
+  font-size:11.5px;letter-spacing:.05em;border-bottom:1px solid var(--line)}
+td{padding:9px 14px;border-bottom:1px solid var(--line-weak);color:#d4d4d4}
+tr:last-child td{border-bottom:none}
+td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+.g2{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.empty{color:var(--fg4);font-size:13px;padding:14px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.06);border-radius:0 12px 12px 0;
+  padding:14px 18px;margin:18px 0;font-size:13.5px;color:#d4d4d4}
+@media (max-width:640px){main{padding:0 16px 60px}h1{font-size:21px}.sub{margin-left:0;text-align:left}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Eas-Term 数据看板</h1>
+      <div style="font-size:12.5px;color:var(--fg3)">eas.biily.top · 匿名统计，无 Cookie、无跨天标识</div>
+    </div>
+    <div class="sub" id="meta">加载中…</div>
+  </header>
+
+  <div id="nodata" style="display:none">
+    <div class="warn">
+      还没有数据。埋点刚上线时这是正常的——聚合每 10 分钟跑一次，
+      访问一下官网再等一轮就会出数。若长期为空，检查 <code>/www/wwwlogs/eas-events.log</code> 是否在写入。
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>TREND</h2>
+    <div class="card">
+      <div class="chart-head">
+        <span class="chart-title">30 天访问趋势</span>
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>独立访客</span>
+          <span><i style="background:var(--s2)"></i>页面浏览</span>
+        </div>
+      </div>
+      <div class="plot" id="plotVisits"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>DOWNLOADS</h2>
+    <div class="card">
+      <div class="chart-head">
+        <span class="chart-title">30 天下载量</span>
+        <div class="legend"><span><i style="background:var(--s3)"></i>完成下载</span></div>
+      </div>
+      <!-- 下载和访问量级差一个数量级，**不做双轴**——那是最常见的图表错误。
+           拆成两张图，各自的 y 轴从 0 起，读者不会被斜率骗到。 -->
+      <div class="plot" id="plotDl"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>FUNNEL</h2>
+    <div class="card">
+      <div class="chart-head"><span class="chart-title">转化漏斗</span></div>
+      <div class="funnel" id="funnel"></div>
+      <div style="font-size:11.5px;color:var(--fg4);margin-top:10px">
+        每层口径独立：前两层来自埋点的独立访客，「点下载按钮」来自点击事件，
+        「真实下载」来自服务器访问日志（按 IP+文件+小时去重，断点续传不重复计）。
+        所以最后一层可能大于上一层——有人直接访问下载直链，没经过按钮。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>BREAKDOWN</h2>
+    <div class="g2">
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">下载平台</span></div>
+        <div class="bars dl" id="platforms"></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">版本分布</span></div>
+        <div class="bars dl" id="versions"></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">页面</span></div>
+        <div class="tw"><table id="pages"><thead><tr><th>页面</th><th class="num">浏览</th><th class="num">访客</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">来源</span></div>
+        <div class="tw"><table id="refs"><thead><tr><th>来源</th><th class="num">次数</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">设备</span></div>
+        <div class="bars" id="devices"></div>
+      </div>
+      <div class="card">
+        <div class="chart-head"><span class="chart-title">按钮点击</span></div>
+        <div class="tw"><table id="clicks"><thead><tr><th>位置</th><th class="num">次数</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+var S = null;
+var fmt = function (n) { return (n || 0).toLocaleString('zh-CN'); };
+var el = function (id) { return document.getElementById(id); };
+
+function statTile(n, label, desc) {
+  return '<div class="stat"><div class="n">' + fmt(n) + '</div><div class="l">' + label + '</div>' +
+    (desc ? '<div class="d">' + desc + '</div>' : '') + '</div>';
+}
+
+function renderStats(t) {
+  var mins = Math.floor((t.avgStaySec || 0) / 60), secs = (t.avgStaySec || 0) % 60;
+  var stay = mins ? (mins + '分' + secs + '秒') : (secs + '秒');
+  el('stats').innerHTML =
+    statTile(t.todayUv, '今日访客', '页面浏览 ' + fmt(t.todayPv)) +
+    statTile(t.todayDownloads, '今日下载', '累计 ' + fmt(t.downloads)) +
+    statTile(t.uv, '30 天访客', '页面浏览 ' + fmt(t.pv)) +
+    statTile(t.wau, '7 日活跃', '30 日 ' + fmt(t.mau)) +
+    '<div class="stat"><div class="n">' + stay + '</div><div class="l">平均停留</div>' +
+    '<div class="d">会话 ' + fmt(t.sessions) + '</div></div>';
+}
+
+/** 折线图。series = [{key,color,label}]，全部共用一个 y 轴（从 0 起）。 */
+function lineChart(host, rows, series) {
+  var W = 900, H = 210, PL = 42, PR = 12, PT = 12, PB = 26;
+  var max = 0;
+  rows.forEach(function (r) { series.forEach(function (s) { if (r[s.key] > max) max = r[s.key]; }); });
+  // 轴顶取 1/2/5 × 10^n，保证四等分后每一格都是整数——
+  // 直接用 ceil(max*1.15) 会得到 9 这种数，四等分后刻度是 9/6.75/4.5/2.25/0，
+  // 取整后变成 9/7/5/2/0，看着像坏了
+  var top = (function (m) {
+    if (m <= 4) return 4;
+    var pow = Math.pow(10, Math.floor(Math.log(m) / Math.LN10));
+    var n = m / pow;
+    var step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 4 ? 4 : n <= 5 ? 5 : 10;
+    return step * pow;
+  })(max * 1.1);
+  var x = function (i) { return PL + (W - PL - PR) * (rows.length < 2 ? .5 : i / (rows.length - 1)); };
+  var y = function (v) { return PT + (H - PT - PB) * (1 - v / top); };
+
+  var g = '';
+  for (var i = 0; i <= 4; i++) {
+    var vy = PT + (H - PT - PB) * (i / 4);
+    var val = Math.round(top * (1 - i / 4));
+    g += '<line x1="' + PL + '" y1="' + vy + '" x2="' + (W - PR) + '" y2="' + vy + '"/>';
+    g += '<text x="' + (PL - 8) + '" y="' + (vy + 3.5) + '" text-anchor="end" class="ax">' + val + '</text>';
+  }
+  var xl = '';
+  var step = Math.max(1, Math.floor(rows.length / 6));
+  rows.forEach(function (r, i) {
+    if (i % step === 0 || i === rows.length - 1) {
+      xl += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle" class="ax">' + r.d.slice(5) + '</text>';
+    }
+  });
+  var paths = series.map(function (s) {
+    var pts = rows.map(function (r, i) { return x(i) + ',' + y(r[s.key] || 0); }).join(' ');
+    return '<polyline class="ser" points="' + pts + '" stroke="' + s.color + '"/>';
+  }).join('');
+  // 只在最后一个点画标记 + 直接标注：不给每个点都放数字（那是反模式）
+  var ends = series.map(function (s) {
+    var last = rows[rows.length - 1] || {};
+    return '<circle class="dot" cx="' + x(rows.length - 1) + '" cy="' + y(last[s.key] || 0) + '" r="4" fill="' + s.color + '"/>';
+  }).join('');
+
+  host.innerHTML =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="height:210px">' +
+    '<g class="grid">' + g.replace(/<text/g, '<text style="fill:#525252;font-size:10.5px"') + '</g>' +
+    '<g class="axis">' + xl.replace(/class="ax"/g, 'style="fill:#525252;font-size:10.5px"') + '</g>' +
+    paths + ends +
+    '<line class="cross" id="' + host.id + '-cx" y1="' + PT + '" y2="' + (H - PB) + '"/>' +
+    '<rect class="hit" x="' + PL + '" y="' + PT + '" width="' + (W - PL - PR) + '" height="' + (H - PT - PB) + '"/>' +
+    '</svg><div class="tip" id="' + host.id + '-tip"></div>';
+
+  // hover 层：图表默认就该有，不是加分项
+  var svg = host.querySelector('svg'), hit = host.querySelector('.hit');
+  var tip = el(host.id + '-tip'), cx = el(host.id + '-cx');
+  hit.addEventListener('mousemove', function (e) {
+    var box = svg.getBoundingClientRect();
+    var px = (e.clientX - box.left) / box.width * W;
+    var i = Math.round((px - PL) / ((W - PL - PR) / Math.max(1, rows.length - 1)));
+    i = Math.max(0, Math.min(rows.length - 1, i));
+    var r = rows[i];
+    cx.setAttribute('x1', x(i)); cx.setAttribute('x2', x(i)); cx.style.opacity = 1;
+    tip.innerHTML = '<b>' + r.d + '</b>' + series.map(function (s) {
+      return '<div class="row"><i style="background:' + s.color + '"></i>' + s.label +
+        '<span>' + fmt(r[s.key] || 0) + '</span></div>';
+    }).join('');
+    tip.style.left = (x(i) / W * box.width) + 'px';
+    tip.style.top = (y(Math.max.apply(null, series.map(function (s) { return r[s.key] || 0; }))) / H * box.height) + 'px';
+    tip.style.opacity = 1;
+  });
+  hit.addEventListener('mouseleave', function () { tip.style.opacity = 0; cx.style.opacity = 0; });
+}
+
+function bars(host, rows, cls) {
+  if (!rows || !rows.length) { host.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  var max = Math.max.apply(null, rows.map(function (r) { return r.n; })) || 1;
+  host.innerHTML = rows.map(function (r) {
+    return '<div class="bar ' + (cls || '') + '"><span class="k" title="' + r.k + '">' + r.k + '</span>' +
+      '<span class="t"><i style="width:' + (r.n / max * 100) + '%"></i></span>' +
+      '<span class="v">' + fmt(r.n) + '</span></div>';
+  }).join('');
+}
+
+function table(id, rows, cols) {
+  var tb = el(id).querySelector('tbody');
+  if (!rows || !rows.length) {
+    tb.innerHTML = '<tr><td colspan="' + cols.length + '" class="empty">暂无数据</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(function (r) {
+    return '<tr>' + cols.map(function (c, i) {
+      return '<td' + (i ? ' class="num"' : '') + '>' + (i ? fmt(r[c]) : r[c]) + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+}
+
+function renderFunnel(steps) {
+  if (!steps || !steps.length) { el('funnel').innerHTML = '<div class="empty">暂无数据</div>'; return; }
+  var max = Math.max.apply(null, steps.map(function (s) { return s.n; })) || 1;
+  el('funnel').innerHTML = steps.map(function (s, i) {
+    var prev = i ? steps[i - 1].n : 0;
+    var rate = i && prev ? Math.round(s.n / prev * 100) + '%' : '';
+    return '<div class="fstep"><span class="k" style="color:var(--fg2)">' + s.k + '</span>' +
+      '<span class="t"><i style="width:' + (s.n / max * 100) + '%"></i></span>' +
+      '<span class="v">' + fmt(s.n) + '<span class="rate">' + rate + '</span></span></div>';
+  }).join('');
+}
+
+function render(d) {
+  S = d;
+  var t = d.totals || {};
+  renderStats(t);
+  var hasAny = (t.pv || 0) + (t.downloads || 0) > 0;
+  el('nodata').style.display = hasAny ? 'none' : '';
+  el('meta').innerHTML = '更新于 ' + (d.generated || '').replace('T', ' ').slice(0, 19) +
+    '<br>事件 ' + fmt(d.eventCount) + ' 条 · 每 10 分钟聚合';
+  lineChart(el('plotVisits'), d.trend || [], [
+    { key: 'uv', color: '#3987e5', label: '独立访客' },
+    { key: 'pv', color: '#d95926', label: '页面浏览' }
+  ]);
+  lineChart(el('plotDl'), d.trend || [], [{ key: 'dl', color: '#199e70', label: '完成下载' }]);
+  renderFunnel(d.funnel);
+  bars(el('platforms'), d.downloadPlatforms, 'dl');
+  bars(el('versions'), d.downloadVersions, 'dl');
+  bars(el('devices'), d.devices);
+  table('pages', d.pages, ['k', 'pv', 'uv']);
+  table('refs', d.referrers, ['k', 'n']);
+  table('clicks', d.clicks, ['k', 'n']);
+}
+
+function load() {
+  fetch('stats.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(render)
+    .catch(function (e) {
+      el('meta').textContent = '读取 stats.json 失败：' + e.message;
+    });
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

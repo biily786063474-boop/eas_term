@@ -52,28 +52,46 @@ if [ "$SITE_ONLY" = "--site-only" ]; then
   fi
   echo "  ✓ 下载链接指向的版本服务器上都有：$(echo "$WANT" | tr '\n' ' ')"
 else
-  say "▸ 版本号 → v$VERSION"
+  say "▸ 版本号 → v${VERSION}（mac）"
+  # **mac 与 Windows 分开回填。** Windows 包是 CI 产物、要手动拉，常常落后一两个版本；
+  # 原来一把 sed 全刷成 ${VERSION}，Windows 链接就指向了一个根本没传上去的目录 →
+  # 下载页 404。现在只刷 mac 的 dmg/zip，Windows 链接保持原样，
+  # 由下面的校验确认它指向的那一版服务器上真的有。
   CHANGED=0
   for f in site/index.html site/download.html; do
     before=$(shasum "$f" | cut -d' ' -f1)
-    # 两种形态：标记注释 <!-- v0.1.0 --> 和链接里的 /download/v0.1.0/Eas-Term-0.1.0-
     sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
-                  s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-#/download/v$VERSION/Eas-Term-$VERSION-#g" "$f"
+                  s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-(arm64|x64)\.(dmg|zip)#/download/v$VERSION/Eas-Term-$VERSION-\1.\2#g" "$f"
     [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
   done
   [ "$CHANGED" = 1 ] || echo "  已是 v${VERSION}，无需改动"
+  # Windows 链接指向哪一版？确认服务器上真有那个包，否则发上去就是 404
+  WIN_REF=$(grep -ohE '/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*setup\.exe' \
+              site/index.html site/download.html | head -1 || true)
+  if [ -n "$WIN_REF" ]; then
+    WIN_V=$(echo "$WIN_REF" | sed -E 's#^/download/v([0-9.]+)/.*#\1#')
+    WIN_F=$(basename "$WIN_REF")
+    if ssh $HOST "test -s $DL/v$WIN_V/$WIN_F"; then
+      echo "  ✓ Windows 仍指向 v${WIN_V}（服务器上有 ${WIN_F}）"
+    else
+      echo "  ✗ Windows 链接指向 v${WIN_V}/${WIN_F}，但服务器上没有这个包 —— 发上去就是 404"
+      exit 1
+    fi
+  fi
   # 回填完必须没有残留的旧版本号。只查**我们真正改写的那两种写法** ——
   # 别在全文里搜 x.y.z：SVG 的 path 坐标长得一模一样（`3.7 0 1-.5 1.8-.5`），
   # 会把每次发布都拦下来，然后人就学会了无视这个检查。
+  # 排除 setup.exe：Windows 允许落后，上面已单独校验过它指向的包真的存在
   STALE=$(grep -ohE '<!-- v[0-9]+\.[0-9]+\.[0-9]+ -->|/download/v[0-9]+\.[0-9]+\.[0-9]+/[^"]*' \
-            site/index.html site/download.html | grep -v "$VERSION" || true)
+            site/index.html site/download.html | grep -v 'setup\.exe' | grep -v "$VERSION" || true)
   [ -z "$STALE" ] || { echo "  ✗ 还有对不上的版本号，正则没覆盖全："; echo "$STALE" | sort -u; exit 1; }
 fi
 
 # ── 网页 ────────────────────────────────────────────────────────────
 say "▸ 网页 → $WEB"
 ssh $HOST "mkdir -p $WEB/assets"
-for f in index.html download.html privacy.html style.css; do
+# analytics.js 是站内统计脚本，三个页面都引用它 —— 漏传会让页面拿到 404
+for f in index.html download.html privacy.html style.css analytics.js; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
@@ -170,7 +188,14 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
       # 万一补发一个比线上更老的版本（v0.2.2 而线上已有 v0.2.3），
       # sort -V 会把刚传的排在前面 → 上一秒传完、下一秒自己把它删了，
       # 而且 latest.json 已经指过去了，线上直接 404。
-      [ "$old" = "v$VERSION" ] && { echo "  跳过 $old（本次刚发布的）"; continue; }
+      [ "$old" = "v$VERSION" ] && { echo "  跳过 ${old}（本次刚发布的）"; continue; }
+      # **也不能删网页仍在引用的版本。** mac 和 Windows 现在允许不同步：
+      # Windows 包是 CI 产物、常常落后一两版，下载页那条链接还指着它。
+      # 只按 KEEP 数量删，早晚会把它连根删掉，下载页当场 404 —— 而且是静默的，
+      # 只有真去点 Windows 下载的人才会发现。
+      if grep -q "/download/$old/" site/index.html site/download.html 2>/dev/null; then
+        echo "  跳过 ${old}（下载页还指向它）"; continue
+      fi
       echo "  删除 $old"
       ssh $HOST "rm -rf $DL/$old"          # 只删版本子目录，绝不动 $DL 本身
     done
@@ -192,7 +217,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /privacy.html /style.css; do
+for u in / /download.html /privacy.html /style.css /analytics.js; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

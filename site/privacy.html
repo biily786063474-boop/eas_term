@@ -115,6 +115,7 @@
             <li><a href="#wiki">知识库</a></li>
             <li><a href="#voice">语音与转录</a></li>
             <li><a href="#undo">怎么全部撤销</a></li>
+            <li><a href="#site">关于这个网站</a></li>
           </ul>
         </div>
       </section>
@@ -417,9 +418,49 @@
             这一页是对着代码逐条核对写出来的，不是模板。如果你发现哪一条和软件的实际行为对不上，
             那是我们的疏漏，请告诉我们 —— 软件是开源的，每一条都可以自己去代码里验证。
           </p>
-          <p class="pv-updated">最后更新：2026 年 7 月 · 对应版本 0.3.0</p>
+          <h2 id="site">八、关于这个网站（和软件是两回事）</h2>
+          <p>
+            上面六节讲的都是<strong>装在你机器上的那个软件</strong>——它没有账号、没有服务器，
+            <strong>零采集这一条不变</strong>。
+          </p>
+          <p>
+            但你正在看的这个网站（<code>eas.biily.top</code>）会记一份<strong>匿名的访问统计</strong>，
+            用来知道有多少人来过、下载了哪个版本。这一节把它记什么、不记什么写清楚。
+          </p>
+
+          <h3>会记的</h3>
+          <ul>
+            <li><strong>页面路径</strong>与<strong>停留时长</strong> —— 比如「有人在下载页停了 40 秒」</li>
+            <li><strong>来源域名</strong> —— 只取域名，路径和查询参数一律丢掉</li>
+            <li><strong>操作系统大类</strong> —— macOS / Windows / Linux 这种粒度</li>
+            <li><strong>下载按钮的点击</strong>，以及服务器日志里<strong>真实完成的下载</strong>（哪个版本、哪个平台）</li>
+          </ul>
+
+          <h3>不会做的</h3>
+          <ul>
+            <li><strong>不写 Cookie</strong>，也不写 localStorage。会话编号只存在 sessionStorage 里，关掉标签页就没了</li>
+            <li><strong>不生成任何持久或跨天的标识</strong>。独立访客是服务端按「当天的 IP + 浏览器标识」哈希现算的，
+              <strong>隔天同一个人就对不上了</strong>，没法追踪你昨天来没来过</li>
+            <li><strong>不加载任何第三方脚本</strong>，统计代码就是本站的一个几 KB 的文件，没有外部分析服务</li>
+            <li>不采集输入内容、不读剪贴板、不做浏览器指纹（不采集分辨率、字体、canvas 这些）</li>
+            <li>落盘的统计结果里<strong>没有任何 IP 或浏览器标识原文</strong>，只有聚合后的计数</li>
+          </ul>
+
+          <h3>怎么不参与</h3>
+          <p>
+            浏览器里开启「请勿追踪（Do Not Track）」或全局隐私控制（GPC），统计脚本会<strong>整个不工作</strong>——
+            不是少记几项，是一个请求都不发。用广告拦截器屏蔽 <code>/analytics.js</code> 也一样，
+            网站的所有功能都不依赖它。
+          </p>
+          <p>
+            服务器的原始访问日志保留 <strong>90 天</strong>后自动删除。
+          </p>
+
+          <p class="pv-updated">最后更新：2026 年 8 月 · 对应版本 0.4.0</p>
         </div>
       </section>
+
+
     </main>
 
     <footer class="footer">
@@ -436,5 +477,6 @@
         <p class="footer-copy">© 2026 Eas-Term</p>
       </div>
     </footer>
+    <script src="/analytics.js" defer></script>
   </body>
 </html>
