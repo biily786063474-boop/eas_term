@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵动岛状态栏 · 方案评审 — Eas-Term</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">灵动岛状态栏</span>
+  <a href="#结论">结论</a>
+  <a href="#数据">数据盘点</a>
+  <a href="#架构">架构选型</a>
+  <a href="#视觉">三态视觉</a>
+  <a href="#审批">审批直通</a>
+  <a href="#评审">评审团</a>
+  <a href="#风险">风险</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">方案评审 · v1 · 待批准</div>
+  <h1>灵动岛状态栏</h1>
+  <p class="lede">Eas-Term 不在前台时，屏幕顶部常驻一条状态胶囊：折叠时只说「有几个在跑」，
+  agent 要你审批或答完了就展开成卡片，能当场处理，也能一键跳回那个 session。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-02</b></span>
+    <span>基线 <b>v0.3.3</b></span>
+    <span>已定决策 <b>3 条</b></span>
+    <span>待你确认 <b>4 条</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>VERDICT</h2>
+  <div class="sectitle">结论：独立常驻窗口，分三期，第一期两天可用</div>
+  <p class="secnote">地基比预想的厚——「谁在跑」「谁需要处理」「跳回 session」这三件事画布里已经有了，
+  搬到窗外即可。真正要新造的只有三样：常驻窗口、耗时统计、审批解析。</p>
+
+  <div class="verdict">
+    <div class="vlabel">推荐方案</div>
+    <p style="margin:0">主进程新开一个 <b>无边框 always-on-top BrowserWindow</b>（<code>src/main/island.ts</code>），
+    独立 HTML 入口，不复用主窗口渲染树。主进程持一份<b>状态聚合器</b>，渲染层把
+    <code>runningPtys</code> / <code>attentionPtys</code> / 会话元信息推给它，它再广播给灵动岛。
+    点击操作反向走 IPC 回主窗口执行（聚焦 / 写 pty）。</p>
+  </div>
+
+  <div class="grid g4" style="margin-top:26px">
+    <div class="stat"><div class="num n-em">6/9</div><div class="lab">要展示的信息里，已有现成数据源</div></div>
+    <div class="stat"><div class="num n-am">3</div><div class="lab">必须新造：常驻窗口 / 耗时 / 审批解析</div></div>
+    <div class="stat"><div class="num n-sk">3</div><div class="lab">分期，P1 就能日常用起来</div></div>
+    <div class="stat"><div class="num n-ro">1</div><div class="lab">高风险项：审批框解析（已设兜底）</div></div>
+  </div>
+
+  <h3>你已经定下的三条</h3>
+  <div class="tw"><table>
+    <thead><tr><th>决策</th><th>选择</th><th>影响</th></tr></thead>
+    <tbody>
+      <tr><td>出现时机</td><td><b>主窗口不在前台就出现</b></td><td>监听 <code>browser-window-blur</code> / <code>app.on('activate')</code>，不只是最小化</td></tr>
+      <tr><td>审批直通</td><td><b>解析选项 + 认不出就兜底</b></td><td>需读 xterm buffer；解析失败退回「只通知」，绝不瞎猜</td></tr>
+      <tr><td>通知生命周期</td><td><b>按类型区分</b></td><td>审批类常驻到处理；回答结束类 8 秒自动收，折叠条留未读点</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="数据">
+  <h2>DATA SOURCES</h2>
+  <div class="sectitle">数据盘点：哪些现成，哪些要造</div>
+  <p class="secnote">这张表是整个方案的地基。绿色的直接接线就行，黄色的要新写采集逻辑。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>要展示的</th><th>数据源</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>正在工作中</b></td><td><code>runningPtys</code></td><td><span class="b b-em">现成</span></td><td>终端标题的盲文 spinner 判定，画布运行监视窗已在用</td></tr>
+      <tr><td><b>N 个项目在执行</b></td><td><code>runningPtys</code> + <code>tabs.projectId</code></td><td><span class="b b-em">现成</span></td><td>按项目去重计数</td></tr>
+      <tr><td><b>需要处理的通知</b></td><td><code>attentionPtys</code></td><td><span class="b b-em">现成</span></td><td>spinner→非 spinner 未聚焦 / BEL / MCP <code>notify</code> 三个来源</td></tr>
+      <tr><td><b>项目名称</b></td><td><code>projects</code></td><td><span class="b b-em">现成</span></td><td>—</td></tr>
+      <tr><td><b>提问梗概</b></td><td><code>session:index</code> transcript</td><td><span class="b b-am">要改</span></td><td>现在按 cwd 取最近 jsonl，同项目多终端会串——改成按节点绑的 <code>sessionId</code> 精确定位</td></tr>
+      <tr><td><b>最终回答</b></td><td>同上 <code>SessionExchange</code></td><td><span class="b b-am">要改</span></td><td>同上；只取最后一轮，截断到两行</td></tr>
+      <tr><td><b>模型 / effort</b></td><td><code>NodeAgent.model/effort</code></td><td><span class="b b-am">要改</span></td><td>只有在画布上开过 Agent 控制台的终端才有；裸终端显示「—」</td></tr>
+      <tr><td><b>单次会话耗时</b></td><td>—</td><td><span class="b b-ro">新造</span></td><td>在 spinner 起止处打点，存 <code>ptyTiming[ptyId]</code></td></tr>
+      <tr><td><b>审批选项</b></td><td>—</td><td><span class="b b-ro">新造</span></td><td>读 xterm buffer 末尾行，见下节</td></tr>
+      <tr><td><b>跳回 session</b></td><td><code>focusCanvasNode</code> / <code>setActiveTab</code></td><td><span class="b b-em">现成</span></td><td>两种模式的聚焦能力都在，按 <code>viewMode</code> 分流</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">口径提醒</div>
+    <p style="margin:0 0 8px"><b>「单次会话总耗时」我按两个值做</b>：卡片主显<b>本轮耗时</b>（这次提问到答完，
+    对「它想了多久」最有信息量），副显<b>会话累计</b>（这个终端起会话至今）。如果你只要一个，说一声去掉哪个。</p>
+    <p style="margin:0"><b>Codex 会话拿不到 transcript</b>——<code>session.ts</code> 只解析 Claude Code 的 jsonl。
+    Codex 终端的卡片会降级成「项目名 + 状态 + 耗时」，没有提问梗概和回答正文。要补的话是独立一期的活。</p>
+  </div>
+</section>
+
+<section id="架构">
+  <h2>ARCHITECTURE</h2>
+  <div class="sectitle">架构选型：三个方案</div>
+  <p class="secnote">核心矛盾是「状态在渲染进程的 zustand 里，而窗口要在主进程开」。三个方案的差别就在这条线怎么划。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>方案</th><th>做法</th><th>优势</th><th>代价</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>A. 独立窗口</b></td>
+        <td>新建无边框 always-on-top 窗口，独立 HTML 入口，主进程做状态中转</td>
+        <td>形态就是你要的灵动岛；主窗口最小化也活着；不受主窗口渲染树影响</td>
+        <td>要写窗口生命周期 + 一套双向 IPC；多一个渲染进程（约 30–50MB）</td>
+        <td><span class="b b-em">推荐</span></td>
+      </tr>
+      <tr>
+        <td><b>B. 菜单栏 Tray</b></td>
+        <td>系统托盘图标 + 下拉面板</td>
+        <td>最省事，系统原生，零窗口管理</td>
+        <td>不是灵动岛——没有屏幕顶部居中的胶囊形态，弹窗样式受系统菜单限制，审批按钮做不出你要的视觉</td>
+        <td><span class="b b-gy">否决</span></td>
+      </tr>
+      <tr>
+        <td><b>C. 主窗口迷你模式</b></td>
+        <td>把主窗口缩成一条贴顶部，切换尺寸</td>
+        <td>复用现有渲染树，零新窗口，状态天然同步</td>
+        <td>主窗口一旦最小化就没了——而这功能存在的前提正是「你切走了」。自相矛盾</td>
+        <td><span class="b b-gy">否决</span></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>方案 A 的数据流</h3>
+<pre><code><span class="dim">渲染进程（主窗口）                主进程                    渲染进程（灵动岛）</span>
+zustand store
+  runningPtys      ─┐
+  attentionPtys     ├─<span class="flow">►</span> island:push  ─<span class="flow">►</span>  islandState  ─<span class="flow">►</span>  折叠条 / 通知卡
+  会话元信息        ─┘   <span class="dim">(节流 250ms)</span>        <span class="dim">(单一事实源)</span>
+                                    │
+  focusSession    <span class="flow">◄</span>─ island:action <span class="flow">◄</span>──────┴──────────<span class="flow">◄</span>  点击项目标签
+  pty.write       <span class="flow">◄</span>─ island:approve <span class="flow">◄</span>─────────────────<span class="flow">◄</span>  点击审批选项
+
+<span class="hi">关键约束</span>：灵动岛窗口<span class="hi">不碰 zustand</span>，只吃主进程推来的快照。
+它是个纯展示件——状态永远只有一份，在主窗口那边。</code></pre>
+
+  <h3>新增文件</h3>
+  <div class="tw"><table>
+    <thead><tr><th>文件</th><th>职责</th><th>约行数</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/main/island.ts</code></td><td>窗口生命周期、定位（居中贴顶 / 避让刘海）、显隐规则、IPC 中转</td><td>~180</td></tr>
+      <tr><td><code>src/renderer/island/</code></td><td>灵动岛自己的 HTML 入口 + 三态组件 + 独立 CSS</td><td>~400</td></tr>
+      <tr><td><code>src/renderer/src/features/island/useIslandFeed.ts</code></td><td>主窗口侧：聚合 store 状态，节流推给主进程</td><td>~120</td></tr>
+      <tr><td><code>src/renderer/src/features/terminal/approvalParse.ts</code></td><td>从 xterm buffer 认审批框和选项（纯函数，可单测）</td><td>~90</td></tr>
+      <tr><td><code>src/renderer/src/store/timingSlice.ts</code></td><td>每个 pty 的本轮/累计耗时打点</td><td>~60</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="视觉">
+  <h2>VISUAL</h2>
+  <div class="sectitle">三态视觉：渐进式披露</div>
+  <p class="secnote">一句话原则：<b>折叠态只回答「要不要管」，展开态才回答「管什么」</b>。
+  每多一层，多给一层信息，不重复上一层已经说过的。</p>
+
+  <h3>态 1 · 折叠（默认，约 190×30）</h3>
+<pre><code>          ╭────────────────────────────────╮
+          │  <span class="flow">●</span> 工作中              3 个项目 │
+          ╰────────────────────────────────╯
+             <span class="dim">↑ 呼吸绿点        ↑ 右侧计数</span>
+
+有未读通知时，右侧计数换成琥珀色未读点 + 数字：
+          ╭────────────────────────────────╮
+          │  <span class="flow">●</span> 工作中          <span class="hi">●</span> 2   3 个项目 │
+          ╰────────────────────────────────╯</code></pre>
+
+  <h3>态 2 · 通知卡（自动弹，约 420×132）</h3>
+<pre><code>╭──────────────────────────────────────────────────╮
+│ <span class="flow">●</span> 笔纵画板                          <span class="hi">等待审批</span>  │  <span class="dim">L1 项目名 · L2 状态</span>
+│ 把 canvas.json 的写入改成原子替换                │  <span class="dim">L3 提问梗概（单行截断）</span>
+│                                                  │
+│ 要执行：rm -rf node_modules && npm i             │  <span class="dim">L3' 审批正文</span>
+│ ┌──────┐ ┌────────────┐ ┌──────┐                │
+│ │ 允许 │ │ 不再询问   │ │ 拒绝 │                │  <span class="dim">真实选项，来自屏幕解析</span>
+│ └──────┘ └────────────┘ └──────┘                │
+│ 2分14秒 · opus · high                            │  <span class="dim">L5 元信息</span>
+╰──────────────────────────────────────────────────╯
+
+回答结束类（8 秒后自动收）：
+╭──────────────────────────────────────────────────╮
+│ <span class="flow">●</span> 笔纵画板                          <span class="flow">已完成</span>  │
+│ 把 canvas.json 的写入改成原子替换                │
+│ 已改成先写 .tmp 再 rename，并补了掉电测试。      │  <span class="dim">L4 最终回答，最多两行</span>
+│ 2分14秒 · opus · high                            │
+╰──────────────────────────────────────────────────╯</code></pre>
+
+  <h3>态 3 · 项目列表（无通知时点击，约 300×可变）</h3>
+<pre><code>╭────────────────────────────────╮
+│ 正在执行                       │
+│ <span class="flow">●</span> 笔纵画板 · 主终端      2分14秒 │  <span class="dim">点击 → 直达该 session</span>
+│ <span class="flow">●</span> Eas-Term · 构建        0分42秒 │
+│ <span class="flow">●</span> 自媒体流水线 · 选题    5分03秒 │
+╰────────────────────────────────╯</code></pre>
+
+  <h3>层级规格（你要求的亮度/字重/字号拉开）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>层</th><th>内容</th><th>字号</th><th>字重</th><th>颜色</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td><b>L1</b></td><td>项目名</td><td>14px</td><td>600</td><td><code>#f5f5f5</code></td><td>先认出「是谁」</td></tr>
+      <tr><td><b>L2</b></td><td>状态标签</td><td>11px</td><td>500</td><td>语义色（琥珀=审批 / 绿=完成）</td><td>再判断「急不急」</td></tr>
+      <tr><td><b>L3</b></td><td>提问梗概</td><td>12.5px</td><td>400</td><td><code>#a3a3a3</code></td><td>想起「在干什么」</td></tr>
+      <tr><td><b>L4</b></td><td>最终回答</td><td>12.5px</td><td>400</td><td><code>#d4d4d4</code></td><td>比梗概亮——它才是你要读的</td></tr>
+      <tr><td><b>L5</b></td><td>耗时 / 模型 / effort</td><td>10.5px</td><td>400</td><td><code>#525252</code></td><td>余光信息，不抢焦点</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="card">
+    <h4 style="margin-top:0">视觉硬约束</h4>
+    <ul class="clean" style="margin-bottom:0">
+      <li>整块用毛玻璃底 + 1px 边框，圆角 <code>16px</code>（折叠态 <code>999px</code> 全圆）——形态上和系统灵动岛同源</li>
+      <li>折叠↔展开只做<b>高度和透明度</b>过渡（220ms），不做位移弹跳——顶部是常驻区，跳动很烦</li>
+      <li>一张卡片<b>只出现一个语义色</b>；同时来多条通知时按队列一次显示一条，右上角标 <code>1/3</code></li>
+      <li>整个窗口<b>不可拖动、不进 Dock、不抢焦点</b>（<code>focusable:false</code> + 点击时才临时接管）</li>
+    </ul>
+  </div>
+</section>
+
+<section id="审批">
+  <h2>APPROVAL</h2>
+  <div class="sectitle">审批直通：怎么认，怎么兜底</div>
+  <p class="secnote">这是全案唯一的高风险点。核心思路：<b>宁可认不出退回通知，也绝不认错了替你按</b>。</p>
+
+  <h3>识别流程</h3>
+<pre><code>标题 spinner 停下 <span class="flow">──►</span> 读 xterm buffer 末 20 行
+                          │
+                          ├─ 命中「? 问句 + 连续编号选项」<span class="flow">──►</span> <span class="flow">审批类</span>：列出选项，常驻
+                          ├─ 命中裸问句无选项          <span class="flow">──►</span> <span class="hi">输入类</span>：只通知，点击跳转
+                          └─ 都不命中                  <span class="flow">──►</span> <span class="flow">完成类</span>：读 transcript 取回答，8 秒收
+
+<span class="hi">写回</span>：点「允许」= pty.write("1\r")。<span class="dim">按选项的序号写，不按文案猜语义。</span>
+<span class="hi">失效自检</span>：写回后 1.5 秒内 spinner 没重新转起来 → 判定写回没生效，
+        卡片自动切回「点击跳转到终端」，并<span class="dim">在日志里留一条解析失败样本</span>。</code></pre>
+
+  <div class="dissent">
+    <div class="vlabel">保留的分歧</div>
+    <p style="margin:0 0 8px"><b>我对「在灵动岛点允许」这件事本身有保留意见，但按你的决定实现。</b>
+    理由：审批框弹出来是因为 agent 要做<b>有副作用的事</b>（删文件、改配置、发网络请求），
+    而灵动岛卡片受宽度所限，只能显示命令的前一行。「rm -rf node_modules」和
+    「rm -rf ~/Documents」在截断后可能长得一样。</p>
+    <p style="margin:0">→ <b>缓解措施（已计入 P2）</b>：命令正文<b>不截断显示</b>，超长时卡片自动加高到 3 行；
+    识别到 <code>rm -rf</code> / <code>sudo</code> / <code>curl … | sh</code> 这类模式时，<b>禁用直通按钮</b>，
+    强制「跳回终端处理」。要不要这条你在决策码里说。</p>
+  </div>
+</section>
+
+<section id="评审">
+  <h2>REVIEW PANEL</h2>
+  <div class="sectitle">评审团：四个视角</div>
+  <p class="secnote">按你习惯的维度各打一遍，分歧原样保留。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">完成性 <span class="b b-em">8/10</span></h4>
+      <div class="bar"><i style="width:80%;background:#34d399"></i></div>
+      <p style="margin:10px 0 0;font-size:13.5px;color:#a3a3a3">你描述的能力全部可实现。扣分在 Codex 会话的元信息缺失——
+      那不是设计问题，是 Codex 本身没留 transcript，得等它出结构化输出或者自己录屏解析。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">体验 <span class="b b-em">9/10</span></h4>
+      <div class="bar"><i style="width:90%;background:#34d399"></i></div>
+      <p style="margin:10px 0 0;font-size:13.5px;color:#a3a3a3">「不在前台就出现」这条选得对——它让这个模块从「偶尔用上」变成「每天都在」。
+      扣分在多通知队列：三个项目同时答完时，一次只显示一条会有等待感。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">实现成本 <span class="b b-am">中</span></h4>
+      <div class="bar"><i style="width:55%;background:#fbbf24"></i></div>
+      <p style="margin:10px 0 0;font-size:13.5px;color:#a3a3a3">约 850 行新代码 + 5 个新文件。P1（窗口 + 折叠态 + 完成通知 + 跳转）
+      是大头也是最稳的部分；审批解析虽只 90 行，但调试要反复触发真实审批框，耗时不成比例。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">长期风险 <span class="b b-ro">需盯</span></h4>
+      <div class="bar"><i style="width:35%;background:#fb7185"></i></div>
+      <p style="margin:10px 0 0;font-size:13.5px;color:#a3a3a3">审批解析依赖 claude/codex 的 TUI 样式，属于「今天能跑、明年可能悄悄坏」的代码。
+      必须配<b>失效自检</b>（写回没反应就自动降级），否则就是你最烦的那种「测试好使、过段时间又坏」。</p>
+    </div>
+  </div>
+</section>
+
+<section id="风险">
+  <h2>RISKS</h2>
+  <div class="sectitle">风险与对策</div>
+  <p class="secnote">按「会不会咬人」排序，前三条是真会出事的。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>风险</th><th>后果</th><th>对策</th></tr></thead>
+    <tbody>
+      <tr><td><b>审批框解析失效</b><br><span class="b b-ro">高</span></td><td>CLI 升级换了框样式，按钮点了没反应</td><td>写回后 1.5s 自检 spinner；没转起来就降级成「跳回终端」并记日志</td></tr>
+      <tr><td><b>transcript 串会话</b><br><span class="b b-ro">高</span></td><td>同项目开两个终端，卡片显示的是另一个终端的回答</td><td>按节点绑的 <code>sessionId</code> 定位 jsonl，不再用「cwd 下最近修改」</td></tr>
+      <tr><td><b>常驻窗口耗电</b><br><span class="b b-am">中</span></td><td>多一个渲染进程长期挂着</td><td>没有任务在跑时<b>销毁窗口</b>而非隐藏；有任务才创建。空闲态零成本</td></tr>
+      <tr><td><b>刘海机型遮挡</b><br><span class="b b-em">已实测</span></td><td>在有刘海的 Mac 上，居中贴顶会被刘海吃掉中间一截</td><td><b>最终做法与此处原写的不同。</b>原方案「下移到刘海下沿」实测是错的——那样就成了一条悬在菜单栏下面的普通通知条，失掉贴边的形态感。改为：窗口贴屏幕物理上沿（<code>enableLargerThanScreen</code> + <code>roundedCorners:false</code>，否则 macOS 会把它顶回菜单栏下方、并给四角抹圆露出壁纸），画一整块<b>不透明纯黑</b>覆盖刘海区，文字分居两侧不放中间。中间不留透明缝——试过，缝里露的是壁纸，整条断成两截；且截屏分析证实屏幕顶部一行纯黑像素都没有，刘海位置根本无从对齐。</td></tr>
+      <tr><td><b>抢焦点</b><br><span class="b b-am">中</span></td><td>弹卡片时打断你在别的 app 里打字</td><td><code>focusable:false</code> + <code>setVisibleOnAllWorkspaces</code>；只在点击瞬间临时取得焦点</td></tr>
+      <tr><td><b>全屏应用之上</b><br><span class="b b-sk">低</span></td><td>你在全屏的编辑器里，灵动岛看不见</td><td><code>screen-saver</code> 层级 + <code>visibleOnFullScreen</code>；实测确认，做不到就如实说</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="下一步">
+  <h2>NEXT</h2>
+  <div class="sectitle">分期与待确认</div>
+  <p class="secnote">P1 做完就能日常用；P2 才是审批直通；P3 是锦上添花。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">P1 · 约 2 天</div>
+      <div class="tt">窗口 + 折叠态 + 完成通知 + 跳转</div>
+      <div class="td">常驻窗口生命周期、折叠条（工作中 / N 个项目）、完成类通知卡（提问梗概 + 回答 + 耗时 + 模型）、
+      点击直达 session（终端模式跳 tab / 画布模式聚焦节点）、项目列表展开态。<b>这一期结束就能天天用。</b></div>
+    </div>
+    <div class="it">
+      <div class="tm">P2 · 约 1.5 天</div>
+      <div class="tt">审批直通</div>
+      <div class="td">xterm buffer 解析（含单测）、选项按钮、写回 pty、失效自检降级、危险命令禁用直通。</div>
+    </div>
+    <div class="it">
+      <div class="tm">P3 · 约 0.5 天</div>
+      <div class="tt">打磨</div>
+      <div class="td">多通知队列与 <code>1/3</code> 计数、刘海适配实测、全屏层级实测、Codex 降级文案。</div>
+    </div>
+  </div>
+
+  <h3>还要你拍板的四条</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>问题</th><th>我的建议</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>耗时显示几个值？</td><td>本轮耗时为主 + 会话累计为辅（都留）</td></tr>
+      <tr><td><b>2</b></td><td>危险命令（<code>rm -rf</code> / <code>sudo</code>）要不要禁用灵动岛直通？</td><td><b>要</b>——强制跳回终端处理</td></tr>
+      <tr><td><b>3</b></td><td>没有任何任务在跑时，灵动岛完全消失还是留个空壳？</td><td><b>完全消失</b>（连窗口一起销毁，零开销）</td></tr>
+      <tr><td><b>4</b></td><td>先做 P1 就交付，还是 P1+P2 一起做完再验？</td><td><b>P1 先交付</b>——早一天用上，也早暴露真实问题</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话（同意全部建议时）</div>
+    <div class="dcmd">
+      <span id="cmd">/island 同意 1-4 建议，开做 P1</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="font-size:13.5px;color:#737373">要改哪条就直接说，比如「3 留空壳」「先做完 P2 再验」。</p>
+</section>
+
+<footer>
+  Eas-Term · 灵动岛状态栏方案评审 · 2026-08-02<br>
+  代码基线：v0.3.3（<code>6a6762d</code>）· 本页位置：<code>docs/灵动岛状态栏-方案评审.html</code><br>
+  相关：<code>src/renderer/src/features/canvas/CanvasRunMonitor.tsx</code>（折叠态的原型）·
+  <code>src/renderer/src/features/workspace/TerminalAttention.tsx</code>（通知机制）·
+  <code>src/main/session.ts</code>（transcript 解析）
+</footer>
+</main>
+</body>
+</html>

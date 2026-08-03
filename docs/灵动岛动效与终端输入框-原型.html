@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵动岛动效 + 终端输入框 · 可交互原型 — Eas-Term</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+/* ═══════════════ 演示区通用 ═══════════════ */
+.demo{background:#0d0d0f;border:1px solid #262626;border-radius:14px;padding:0;margin:20px 0;overflow:hidden}
+.demo-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #1f1f1f;background:#111}
+.demo-title{font-size:12px;color:#a3a3a3;font-weight:500}
+.demo-hint{font-size:11.5px;color:#525252;margin-left:auto}
+.demo-stage{padding:0;position:relative}
+.demo-ctl{display:flex;gap:8px;padding:12px 16px;border-top:1px solid #1f1f1f;background:#0f0f11;flex-wrap:wrap;align-items:center}
+.btn{height:30px;padding:0 14px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1c;
+  color:#d4d4d4;font-size:12.5px;font-family:inherit;cursor:pointer;transition:background-color .15s,color .15s,border-color .15s}
+.btn:hover{background:#242428;color:#f5f5f5;border-color:#3f3f46}
+.btn.on{background:rgba(110,231,183,.14);border-color:rgba(110,231,183,.35);color:#6ee7b7}
+.ctl-label{font-size:11.5px;color:#525252;margin-right:2px}
+
+/* 模拟屏幕：让灵动岛有个"贴顶"的语境 */
+.screen{height:190px;background:linear-gradient(160deg,#1d4d73 0%,#123048 60%,#0d2233 100%);
+  position:relative;overflow:hidden}
+.screen::before{content:"";position:absolute;inset:0 0 auto 0;height:26px;
+  background:rgba(0,0,0,.18);backdrop-filter:blur(6px)}
+.screen-menu{position:absolute;top:0;left:0;right:0;height:26px;display:flex;align-items:center;
+  gap:16px;padding:0 14px;font-size:11px;color:rgba(255,255,255,.82);z-index:1;pointer-events:none}
+.screen-menu .right{margin-left:auto;display:flex;gap:12px;opacity:.9}
+
+/* ═══════════════ 灵动岛本体（原型） ═══════════════ */
+.isl{position:absolute;left:50%;top:0;transform:translateX(-50%);z-index:5;
+  background:#000;color:#f5f5f5;border-radius:0 0 16px 16px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.55)}
+
+/* —— 出现 / 收回：从刘海"垂下来" —— */
+.isl.enter{animation:isl-drop var(--t-in,220ms) var(--e-in,cubic-bezier(.16,1,.3,1)) both}
+.isl.leave{animation:isl-lift var(--t-out,160ms) var(--e-out,cubic-bezier(.7,0,.84,0)) both}
+@keyframes isl-drop{
+  from{transform:translateX(-50%) translateY(-100%) scaleY(.72);opacity:0}
+  to  {transform:translateX(-50%) translateY(0)      scaleY(1);opacity:1}
+}
+@keyframes isl-lift{
+  from{transform:translateX(-50%) translateY(0)      scaleY(1);opacity:1}
+  to  {transform:translateX(-50%) translateY(-100%) scaleY(.72);opacity:0}
+}
+.isl.hidden{display:none}
+
+.isl-top{display:flex;align-items:center;height:26px;cursor:pointer;user-select:none}
+.isl-ear{display:flex;align-items:center;gap:7px;padding:0 14px;flex:1 1 auto;min-width:92px;white-space:nowrap}
+.isl-ear.r{justify-content:flex-end}
+.isl-gap{flex:none;width:150px}
+.isl-body{border-top:1px solid rgba(255,255,255,.07);padding:12px 14px;width:400px;
+  /* 展开：内容淡入 + 轻微上移，容器高度由 JS 设定（见技术约束一节） */
+  animation:isl-body-in 260ms cubic-bezier(.22,1,.36,1) both}
+@keyframes isl-body-in{
+  from{opacity:0;transform:translateY(-6px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+.isl-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.isl-dot.live{background:#6ee7b7;box-shadow:0 0 8px rgba(110,231,183,.6);animation:brea 2s ease-in-out infinite}
+.isl-dot.wait{background:#f0b429;box-shadow:0 0 10px rgba(240,180,41,.75);animation:brea 1.4s ease-in-out infinite}
+.isl-dot.done{background:#6ee7b7;box-shadow:0 0 8px rgba(110,231,183,.5)}
+@keyframes brea{0%,100%{opacity:1}50%{opacity:.35}}
+.isl-count{font-size:11px;color:#8a8a8a}
+.isl-proj{font-size:14px;font-weight:600}
+.isl-term{font-size:12px;color:#737373}
+.isl-ask{font-size:12.5px;color:#a3a3a3;margin-bottom:6px}
+.isl-ans{font-size:12.5px;color:#d4d4d4;margin-bottom:9px}
+.isl-metaline{font-size:10.5px;color:#525252;margin-bottom:10px}
+
+/* ═══════════════ 标题文字：三种状态的 hover ═══════════════ */
+.lbl{font-size:12px;font-weight:500;position:relative;display:inline-block;cursor:pointer}
+
+/* A. 工作中 —— 扫光。参考 ShinyText（2s 循环）+ GlareHover（-45°）。
+      静止时不动，hover 才扫一遍：常驻窗口上永不停歇的动画是视觉噪声。 */
+.lbl.working{color:#e5e5e5;background:linear-gradient(90deg,#e5e5e5 40%,#ffffff 50%,#e5e5e5 60%);
+  background-size:220% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text}
+.lbl.working:hover{-webkit-text-fill-color:transparent;animation:shine 650ms cubic-bezier(.4,0,.2,1)}
+@keyframes shine{from{background-position:100% 0}to{background-position:-20% 0}}
+
+/* B. 等待审批 —— 急促脉冲 + 左侧竖条推入。它要"催"你，但不能跳动（顶部常驻区） */
+.lbl.waiting{color:#f0b429;padding-left:0;transition:padding-left 180ms cubic-bezier(.22,1,.36,1)}
+.lbl.waiting::before{content:"";position:absolute;left:-2px;top:12%;height:76%;width:2px;
+  background:#f0b429;border-radius:2px;transform:scaleY(0);transform-origin:center;
+  transition:transform 180ms cubic-bezier(.22,1,.36,1)}
+.lbl.waiting:hover{padding-left:8px}
+.lbl.waiting:hover::before{transform:scaleY(1)}
+.lbl.waiting:hover{animation:urge 900ms ease-in-out infinite}
+@keyframes urge{0%,100%{color:#f0b429}50%{color:#ffd166}}
+
+/* C. 已完成 —— 下划线由左展开 + 提亮。最克制：事已了结，不该再抢注意 */
+.lbl.done{color:#a3a3a3;transition:color 160ms ease}
+.lbl.done::after{content:"";position:absolute;left:0;bottom:-2px;height:1px;width:100%;
+  background:#6ee7b7;transform:scaleX(0);transform-origin:left;
+  transition:transform 200ms cubic-bezier(.22,1,.36,1)}
+.lbl.done:hover{color:#6ee7b7}
+.lbl.done:hover::after{transform:scaleX(1)}
+
+.lblrow{display:flex;gap:34px;align-items:center;justify-content:center;padding:26px 16px;
+  background:#000;border-radius:12px;margin:0}
+.lblcell{text-align:center}
+.lblcell .cap{font-size:10.5px;color:#525252;margin-top:10px}
+
+/* ═══════════════ 终端输入框原型 ═══════════════ */
+.term{background:#0b0b0d;border:1px solid #262626;border-radius:12px;overflow:hidden;margin:0}
+.term-head{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#131316;border-bottom:1px solid #1f1f1f}
+.term-head .d{width:7px;height:7px;border-radius:50%;background:#6ee7b7;box-shadow:0 0 8px rgba(110,231,183,.5)}
+.term-head .n{font-size:12px;font-weight:600}
+.term-head .t{font-size:11.5px;color:#737373}
+.term-out{padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  line-height:1.7;color:#c8c8c8;height:118px;overflow-y:auto}
+.term-out .p{color:#6ee7b7}
+.term-out .sent{color:#7dd3fc}
+
+/* 输入框：聚焦时上边框亮起 + 轻微升起，发送时整条闪一下 */
+.tin{border-top:1px solid #1f1f1f;background:#0f0f12;padding:8px 10px;display:flex;gap:8px;align-items:flex-end;
+  transition:background-color 180ms ease,border-top-color 180ms ease}
+.tin:focus-within{background:#141418;border-top-color:rgba(110,231,183,.35)}
+.tin textarea{flex:1;background:none;border:none;outline:none;resize:none;color:#e5e5e5;
+  font-family:inherit;font-size:12.5px;line-height:1.6;max-height:88px;min-height:20px;padding:2px 0}
+.tin textarea::placeholder{color:#4a4a4a}
+.tin .send{height:26px;padding:0 12px;border-radius:7px;border:1px solid #2e2e2e;background:#1a1a1c;
+  color:#8a8a8a;font-size:11.5px;font-family:inherit;cursor:pointer;flex:none;
+  transition:background-color .15s,color .15s,border-color .15s,transform .12s}
+.tin:focus-within .send{color:#6ee7b7;border-color:rgba(110,231,183,.32);background:rgba(110,231,183,.12)}
+.tin .send:active{transform:scale(.94)}
+.tin.flash{animation:tin-flash 340ms ease-out}
+@keyframes tin-flash{0%{background:rgba(110,231,183,.22)}100%{background:#141418}}
+
+.paramtbl td:first-child{white-space:nowrap}
+@media (max-width:640px){
+  h1{font-size:29px}header.hero{padding:48px 0 34px}main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}.card{padding:20px}section{margin-bottom:56px}
+  .isl-body{width:min(340px,80vw)}.isl-gap{width:90px}
+  .lblrow{gap:18px;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">动效原型</span>
+  <a href="#结论">结论</a>
+  <a href="#出现">出现收回</a>
+  <a href="#展开">展开收起</a>
+  <a href="#标题">标题 hover</a>
+  <a href="#输入框">终端输入框</a>
+  <a href="#约束">技术约束</a>
+  <a href="#参数">参数总表</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">可交互原型 · 待选型确认</div>
+  <h1>灵动岛动效 + 终端输入框</h1>
+  <p class="lede">下面每一块都能真的动——鼠标移上去、点按钮，看到的就是实现后的样子。
+  动效参数从 139 个组件的动效库里取的手感，但实现全部是纯 CSS：灵动岛是个常驻小窗口，
+  为几行动效引 framer-motion 或 gsap 不划算。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-03</b></span>
+    <span>基线 <b>v0.4.0</b></span>
+    <span>参考库 <b>ReactBits ×139</b></span>
+    <span>新增依赖 <b>0</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>VERDICT</h2>
+  <div class="sectitle">结论：借参数，不借组件</div>
+  <p class="secnote">动效库里 95/139 个组件要 Tailwind，8 个要 React 19，而灵动岛既没 Tailwind、
+  跑的是 React 18、还是个常年挂在屏幕顶上的小窗口。直接搬组件是给自己找麻烦。</p>
+
+  <div class="verdict">
+    <div class="vlabel">做法</div>
+    <p style="margin:0">从库里取 <b>手感参数</b>（缓动曲线、时长、扫光角度），用<b>纯 CSS</b> 复刻。
+    新增依赖 <b>0</b>，动效全部走 GPU 合成层（<code>transform</code>/<code>opacity</code>），
+    不触发布局重排——这对一个常驻窗口很重要。</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>需求</th><th>参考来源</th><th>借的是什么</th><th>实现</th></tr></thead>
+    <tbody>
+      <tr><td><b>窗口出现 / 收回</b></td><td>—</td><td>系统灵动岛的"垂落"手感</td><td>CSS <code>@keyframes</code> + 位移缩放</td></tr>
+      <tr><td><b>折叠 ↔ 展开</b></td><td>—</td><td>内容淡入上移，容器不弹跳</td><td>CSS，容器高度由主进程控制（见技术约束）</td></tr>
+      <tr><td><b>标题 hover · 工作中</b></td><td><code>ShinyText</code> / <code>GlareHover</code></td><td>扫光：650ms、-45°、亮度差</td><td><code>background-clip:text</code> + 渐变位移</td></tr>
+      <tr><td><b>标题 hover · 等待审批</b></td><td>—</td><td>催促感：脉冲 + 侧条推入</td><td>CSS 动画 + <code>::before</code></td></tr>
+      <tr><td><b>标题 hover · 已完成</b></td><td>—</td><td>克制：下划线展开</td><td><code>::after</code> + <code>scaleX</code></td></tr>
+      <tr><td><b>终端输入框</b></td><td>—</td><td>聚焦提亮、发送闪一下</td><td>CSS <code>:focus-within</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="出现">
+  <h2>DEMO 1</h2>
+  <div class="sectitle">窗口出现 / 收回</div>
+  <p class="secnote">灵动岛是"从屏幕上沿垂下来"的，不是淡入。所以动效带 Y 轴位移 +
+  轻微的纵向压缩（<code>scaleY .72 → 1</code>），像一块东西被放下来。
+  收回比出现快（160 vs 220ms）——离开该干脆，出现该稳。</p>
+
+  <div class="demo">
+    <div class="demo-bar">
+      <span class="demo-title">模拟屏幕顶部</span>
+      <span class="demo-hint">点下面的按钮触发</span>
+    </div>
+    <div class="demo-stage">
+      <div class="screen">
+        <div class="screen-menu"><span>&#63743;</span><span>Eas-Term</span><span>编辑</span><span>视图</span>
+          <span class="right"><span>&#9679;&#9679;&#9679;</span><span>11:14</span></span></div>
+        <div class="isl hidden" id="d1">
+          <div class="isl-top">
+            <div class="isl-ear"><span class="isl-dot live"></span><span class="lbl working">工作中</span></div>
+            <div class="isl-gap"></div>
+            <div class="isl-ear r"><span class="isl-count">3 个项目</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="demo-ctl">
+      <button class="btn" onclick="d1show()">出现</button>
+      <button class="btn" onclick="d1hide()">收回</button>
+      <span class="ctl-label">出现时长</span>
+      <button class="btn" onclick="setT('--t-in','160ms',this)">160</button>
+      <button class="btn on" onclick="setT('--t-in','220ms',this)">220</button>
+      <button class="btn" onclick="setT('--t-in','300ms',this)">300</button>
+      <span class="ctl-label">缓动</span>
+      <button class="btn on" onclick="setE('--e-in','cubic-bezier(.16,1,.3,1)',this)">expo 出</button>
+      <button class="btn" onclick="setE('--e-in','cubic-bezier(.34,1.56,.64,1)',this)">回弹</button>
+      <button class="btn" onclick="setE('--e-in','ease-out',this)">ease-out</button>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">我的建议</div>
+    <p style="margin:0"><b>别用回弹（overshoot）。</b>屏幕顶部是常驻区，一个会"弹一下"的东西
+    每次出现都在把视线往上拽。你可以在上面点「回弹」感受一下——单看很有趣，
+    想象它一天出现二十次就知道问题了。默认给的是 expo 曲线：快速起步、末尾平稳收住。</p>
+  </div>
+</section>
+
+<section id="展开">
+  <h2>DEMO 2</h2>
+  <div class="sectitle">折叠 ↔ 展开</div>
+  <p class="secnote">这是三块里唯一有真实技术阻碍的：窗口高度由主进程按渲染层报告的尺寸设定，
+  CSS 高度动画会让 <code>ResizeObserver</code> 每帧上报一次，变成每帧一次 IPC。
+  下面演示的是<b>已经解决</b>的方案——容器瞬间到位，内容淡入上移。</p>
+
+  <div class="demo">
+    <div class="demo-bar">
+      <span class="demo-title">折叠 ↔ 展开</span>
+      <span class="demo-hint">点灵动岛本体切换</span>
+    </div>
+    <div class="demo-stage">
+      <div class="screen" style="height:250px">
+        <div class="screen-menu"><span>&#63743;</span><span>Eas-Term</span><span>编辑</span>
+          <span class="right"><span>&#9679;&#9679;&#9679;</span><span>11:14</span></span></div>
+        <div class="isl" id="d2">
+          <div class="isl-top" onclick="d2toggle()">
+            <div class="isl-ear"><span class="isl-dot live"></span><span class="lbl working">工作中</span></div>
+            <div class="isl-gap"></div>
+            <div class="isl-ear r"><span class="isl-count">3 个项目</span></div>
+          </div>
+          <div class="isl-body" id="d2body" style="display:none">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+              <span class="isl-dot done"></span>
+              <span class="isl-proj">笔纵画板</span>
+              <span class="isl-term">主终端</span>
+              <span style="flex:1"></span>
+              <span class="lbl done" style="font-size:11px">已完成</span>
+            </div>
+            <div class="isl-ask">把 canvas.json 的写入改成原子替换</div>
+            <div class="isl-ans">已改成先写 .tmp 再 rename，并补了掉电测试。</div>
+            <div class="isl-metaline">2分14秒 · opus · high</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="demo-ctl">
+      <button class="btn" onclick="d2toggle()">切换展开 / 折叠</button>
+      <span class="ctl-label">内容淡入</span>
+      <button class="btn" onclick="setBody('180ms',this)">180</button>
+      <button class="btn on" onclick="setBody('260ms',this)">260</button>
+      <button class="btn" onclick="setBody('360ms',this)">360</button>
+    </div>
+  </div>
+</section>
+
+<section id="标题">
+  <h2>DEMO 3</h2>
+  <div class="sectitle">标题文字：三种状态，三种 hover</div>
+  <p class="secnote"><b>把鼠标移到下面三个词上。</b>三种状态的性质不同，hover 反馈也该不同——
+  这不是为了花哨，是让你在不读字的情况下靠反馈方式就知道"这条要紧不要紧"。</p>
+
+  <div class="demo">
+    <div class="demo-bar">
+      <span class="demo-title">状态标题 hover</span>
+      <span class="demo-hint">↓ 鼠标移上去</span>
+    </div>
+    <div class="demo-stage">
+      <div class="lblrow">
+        <div class="lblcell">
+          <div style="display:flex;align-items:center;gap:7px;justify-content:center">
+            <span class="isl-dot live"></span><span class="lbl working">工作中</span>
+          </div>
+          <div class="cap">扫光 · 650ms</div>
+        </div>
+        <div class="lblcell">
+          <div style="display:flex;align-items:center;gap:7px;justify-content:center">
+            <span class="isl-dot wait"></span><span class="lbl waiting">等待审批</span>
+          </div>
+          <div class="cap">脉冲 + 侧条 · 180ms</div>
+        </div>
+        <div class="lblcell">
+          <div style="display:flex;align-items:center;gap:7px;justify-content:center">
+            <span class="isl-dot done"></span><span class="lbl done">已完成</span>
+          </div>
+          <div class="cap">下划线展开 · 200ms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:20px">
+    <div class="card">
+      <h4 style="margin-top:0">工作中 <span class="b b-em">扫光</span></h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">参考 <code>ShinyText</code> 的亮度差和
+      <code>GlareHover</code> 的 650ms。<b>只在 hover 时扫一遍，静止不动</b>——
+      库里那个是无限循环的，放在常驻窗口上是纯噪声。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">等待审批 <span class="b b-am">催促</span></h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">左侧竖条推入 + 文字色温脉冲。
+      这是唯一带持续动画的状态，因为它确实在等你。竖条用 <code>scaleY</code> 而不是宽度动画，
+      避免触发重排。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">已完成 <span class="b b-sk">克制</span></h4>
+      <p style="margin:0;font-size:13.5px;color:#a3a3a3">下划线由左展开 + 灰转绿。
+      事情已经了结，反馈只需确认"可以点"，不该再争夺注意力。</p>
+    </div>
+  </div>
+</section>
+
+<section id="输入框">
+  <h2>DEMO 4</h2>
+  <div class="sectitle">终端节点底部输入框</div>
+  <p class="secnote"><b>在下面输入框里打字、按 ⌘↵ 发送。</b>它解决的是三件在 xterm 里很别扭的事：
+  中文输入法候选框错位、长提示词没法回头改、粘贴多行会被当成多条命令逐行执行。</p>
+
+  <div class="demo">
+    <div class="demo-bar">
+      <span class="demo-title">终端节点</span>
+      <span class="demo-hint">⌘↵ 或 Ctrl↵ 发送 · ↵ 换行</span>
+    </div>
+    <div class="demo-stage" style="padding:16px">
+      <div class="term">
+        <div class="term-head"><span class="d"></span><span class="n">笔纵画板</span><span class="t">主终端</span></div>
+        <div class="term-out" id="tout"><div><span class="p">$</span> npm run build</div><div>✓ built in 2.31s</div><div><span class="p">$</span> <span style="opacity:.5">…</span></div></div>
+        <div class="tin" id="tin">
+          <textarea id="tta" rows="1" placeholder="写点什么…（⌘↵ 发送，↵ 换行）"></textarea>
+          <button class="send" onclick="sendIt()">⌘↵ 发送</button>
+        </div>
+      </div>
+    </div>
+    <div class="demo-ctl">
+      <span class="ctl-label">试试：粘一段多行文本，看它作为<b style="color:#d4d4d4">一条</b>消息发出去，而不是逐行执行</span>
+    </div>
+  </div>
+
+  <div class="tw"><table class="paramtbl">
+    <thead><tr><th>交互</th><th>行为</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td><b>↵</b></td><td>换行</td><td>写长提示词时回车是换行的直觉；要执行命令还是直接在终端里打更快</td></tr>
+      <tr><td><b>⌘↵ / Ctrl↵</b></td><td>发送（末尾自动补 <code>\r</code>）</td><td>和 Claude Code、各类聊天框一致</td></tr>
+      <tr><td><b>↑</b>（空输入时）</td><td>取回上一条发送的内容</td><td>发错了想改，不用重打</td></tr>
+      <tr><td><b>Esc</b></td><td>清空并把焦点还给终端</td><td>误点进来时一键退出</td></tr>
+      <tr><td><b>自动高度</b></td><td>1 行起，最多 4 行后内部滚动</td><td>不挤占终端可视区</td></tr>
+      <tr><td><b>发送后</b></td><td>清空 + 整条闪一下绿</td><td>确认"发出去了"，不用去终端里找</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dissent">
+    <div class="vlabel">要你定的一件事</div>
+    <p style="margin:0"><b>发送时要不要自动带回车？</b>现在的原型是带的（发出去即执行）。
+    但对 agent 会话来说，有时你想先把长提示词送进去、再自己检查一遍才回车。
+    我倾向<b>带回车</b>（否则这个框只是个"贴板子"，省不了几步），
+    但可以给个 <code>⇧⌘↵ = 只填不发</code> 的次要快捷键兜底。你说了算。</p>
+  </div>
+</section>
+
+<section id="约束">
+  <h2>CONSTRAINT</h2>
+  <div class="sectitle">技术约束：动画和窗口尺寸会打架</div>
+  <p class="secnote">这一节是这份原型里唯一"不做就会出事"的部分。</p>
+
+  <div class="warn">
+    <div class="vlabel">问题</div>
+    <p style="margin:0 0 10px">灵动岛的窗口大小是这么定的：渲染层用 <code>ResizeObserver</code>
+    量自己有多大 → IPC 报给主进程 → <code>win.setBounds()</code>。</p>
+    <p style="margin:0">如果展开动画是<b>容器高度</b>的 CSS 过渡，那么动画的每一帧都会触发一次
+    ResizeObserver → 一次 IPC → 一次 setBounds。260ms 的动画 ≈ <b>16 次跨进程往返 + 16 次窗口重设</b>。
+    结果是窗口边缘一格一格地跳，比不做动画还难看。</p>
+  </div>
+
+<pre><code><span class="dim">// ✗ 会打架：高度自己动 → 每帧都上报</span>
+.isl-shell { transition: height 260ms; }
+
+<span class="flow">// ✓ 采用：容器瞬间到位，内容做动画</span>
+<span class="dim">// 1) 展开时 React 先渲染出完整内容 → ResizeObserver 报一次终值 → 窗口一步到位</span>
+<span class="dim">// 2) 内容自己淡入 + 上移 6px，动画期间尺寸不变，不再触发上报</span>
+.isl-body { animation: isl-body-in 260ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes isl-body-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+<span class="hi">代价</span>：窗口边框是瞬变的，只有内容柔和进入。
+<span class="dim">实际观感很好——因为黑底窗口在黑色刘海旁边，边框变化本来就看不太出来，
+眼睛跟的是内容。上面 DEMO 2 就是这个方案，你可以自己判断。</span></code></pre>
+
+  <h3>出现 / 收回不受这个约束</h3>
+  <p>那一档动的是 <code>transform</code>（位移 + 缩放），<b>不改变布局尺寸</b>，
+  ResizeObserver 不会触发。所以出现/收回可以放心做完整动画——上面 DEMO 1 就是。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>动效</th><th>动的属性</th><th>触发重排？</th><th>会不会打架</th></tr></thead>
+    <tbody>
+      <tr><td>出现 / 收回</td><td><code>transform</code> <code>opacity</code></td><td>否</td><td><span class="b b-em">安全</span></td></tr>
+      <tr><td>内容淡入</td><td><code>transform</code> <code>opacity</code></td><td>否</td><td><span class="b b-em">安全</span></td></tr>
+      <tr><td>标题扫光</td><td><code>background-position</code></td><td>否</td><td><span class="b b-em">安全</span></td></tr>
+      <tr><td>侧条推入</td><td><code>transform:scaleY</code></td><td>否</td><td><span class="b b-em">安全</span></td></tr>
+      <tr><td>等待审批的 <code>padding-left</code></td><td>盒模型</td><td><b>是</b></td><td><span class="b b-am">范围极小，可接受</span></td></tr>
+      <tr><td><s>容器高度过渡</s></td><td>盒模型</td><td><b>是</b></td><td><span class="b b-ro">已否决</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="参数">
+  <h2>PARAMS</h2>
+  <div class="sectitle">参数总表</div>
+  <p class="secnote">上面演示里用的就是这套值。改动效只需要改这张表对应的 CSS 变量。</p>
+
+  <div class="tw"><table class="paramtbl">
+    <thead><tr><th>动效</th><th>时长</th><th>缓动</th><th>取自</th></tr></thead>
+    <tbody>
+      <tr><td>窗口出现</td><td>220ms</td><td><code>cubic-bezier(.16,1,.3,1)</code><br><span style="color:#737373;font-size:12px">easeOutExpo</span></td><td>系统灵动岛手感</td></tr>
+      <tr><td>窗口收回</td><td>160ms</td><td><code>cubic-bezier(.7,0,.84,0)</code><br><span style="color:#737373;font-size:12px">easeInExpo</span></td><td>比出现快 1/4</td></tr>
+      <tr><td>内容淡入（展开）</td><td>260ms</td><td><code>cubic-bezier(.22,1,.36,1)</code></td><td>—</td></tr>
+      <tr><td>标题扫光</td><td>650ms</td><td><code>cubic-bezier(.4,0,.2,1)</code></td><td><code>GlareHover</code> 默认值</td></tr>
+      <tr><td>等待脉冲</td><td>900ms 循环</td><td><code>ease-in-out</code></td><td>—</td></tr>
+      <tr><td>侧条 / 下划线</td><td>180–200ms</td><td><code>cubic-bezier(.22,1,.36,1)</code></td><td>—</td></tr>
+      <tr><td>输入框聚焦</td><td>180ms</td><td><code>ease</code></td><td>—</td></tr>
+      <tr><td>发送闪烁</td><td>340ms</td><td><code>ease-out</code></td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="card">
+    <h4 style="margin-top:0">无障碍：跟随系统的「减弱动态效果」</h4>
+    <p style="margin:0 0 10px;font-size:13.5px;color:#a3a3a3">macOS 辅助功能里开了「减弱动态效果」的话，
+    所有动效应该退化成瞬变。这一条会一起实现：</p>
+<pre style="margin:0"><code>@media (prefers-reduced-motion: reduce) {
+  .isl, .isl-body, .lbl, .lbl::before, .lbl::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}</code></pre>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>NEXT</h2>
+  <div class="sectitle">下一步</div>
+
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>要你定的</th><th>我的建议</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>出现动效用哪条缓动？</td><td><b>expo 出</b>（不要回弹，顶部常驻区不该跳）</td></tr>
+      <tr><td><b>2</b></td><td>三种状态的 hover 效果按现在这套？</td><td>按现在这套；不满意可以只换其中一个</td></tr>
+      <tr><td><b>3</b></td><td>输入框发送时自动带回车？</td><td><b>带</b>，另给 <code>⇧⌘↵</code> 只填不发</td></tr>
+      <tr><td><b>4</b></td><td>展开动效接受"容器瞬变 + 内容淡入"？</td><td>接受（DEMO 2 就是，替代方案要付 16 次/次 IPC 的代价）</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话（同意全部建议时）</div>
+    <div class="dcmd">
+      <span id="cmd">/motion 同意 1-4，开做</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="font-size:13.5px;color:#737373">要改哪条直接说，比如「1 用回弹」「3 不要自动回车」。</p>
+</section>
+
+<footer>
+  Eas-Term · 灵动岛动效 + 终端输入框原型 · 2026-08-03<br>
+  基线 v0.4.0 · 动效参考库：<code>~/Biily/资产收集/交互动效</code>（ReactBits ×139，本次取用 0 个组件、2 个参数）<br>
+  相关：<code>src/renderer/island/island.css</code> · <code>src/renderer/src/features/terminal/TerminalView.tsx</code> ·
+  <code>docs/灵动岛状态栏-方案评审.html</code>
+</footer>
+</main>
+
+<script>
+// —— DEMO 1：出现 / 收回 ——
+const d1 = document.getElementById('d1');
+function d1show(){
+  d1.classList.remove('hidden','leave');
+  void d1.offsetWidth;                 // 强制重排，让动画能重放
+  d1.classList.add('enter');
+}
+function d1hide(){
+  d1.classList.remove('enter');
+  void d1.offsetWidth;
+  d1.classList.add('leave');
+  setTimeout(()=>{ if(d1.classList.contains('leave')) d1.classList.add('hidden'); }, 200);
+}
+function setT(varName, val, btn){
+  d1.style.setProperty(varName, val);
+  [...btn.parentElement.querySelectorAll('.btn')].forEach(b=>{
+    if(b.onclick && b.onclick.toString().includes(varName)) b.classList.remove('on');
+  });
+  btn.classList.add('on');
+  d1show();
+}
+function setE(varName, val, btn){ setT(varName, val, btn); }
+
+// —— DEMO 2：展开 / 折叠 ——
+const d2body = document.getElementById('d2body');
+function d2toggle(){
+  const open = d2body.style.display !== 'none';
+  if(open){ d2body.style.display = 'none'; }
+  else {
+    d2body.style.display = '';
+    d2body.style.animation = 'none';
+    void d2body.offsetWidth;
+    d2body.style.animation = '';
+  }
+}
+function setBody(dur, btn){
+  d2body.style.animationDuration = dur;
+  [...btn.parentElement.querySelectorAll('.btn')].forEach(b=>{
+    if(b.onclick && b.onclick.toString().includes('setBody')) b.classList.remove('on');
+  });
+  btn.classList.add('on');
+  if(d2body.style.display === 'none') d2toggle(); else { d2toggle(); d2toggle(); }
+}
+
+// —— DEMO 4：终端输入框 ——
+const tta = document.getElementById('tta');
+const tin = document.getElementById('tin');
+const tout = document.getElementById('tout');
+let lastSent = '';
+tta.addEventListener('input', ()=>{
+  tta.style.height = 'auto';
+  tta.style.height = Math.min(tta.scrollHeight, 88) + 'px';
+});
+tta.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); sendIt(); }
+  else if(e.key === 'ArrowUp' && !tta.value){ e.preventDefault(); tta.value = lastSent; tta.dispatchEvent(new Event('input')); }
+  else if(e.key === 'Escape'){ tta.value=''; tta.blur(); tta.dispatchEvent(new Event('input')); }
+});
+function sendIt(){
+  const v = tta.value.trim();
+  if(!v) return;
+  lastSent = v;
+  const line = document.createElement('div');
+  line.className = 'sent';
+  line.textContent = '› ' + v.replace(/\n/g, ' ⏎ ');
+  tout.appendChild(line);
+  tout.scrollTop = tout.scrollHeight;
+  tta.value = '';
+  tta.dispatchEvent(new Event('input'));
+  tin.classList.remove('flash');
+  void tin.offsetWidth;
+  tin.classList.add('flash');
+}
+</script>
+</body>
+</html>

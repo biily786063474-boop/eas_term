@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>灵动岛提示音 · 试听原型 — Eas-Term</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;transition:color .15s,background-color .15s}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.warn .vlabel{color:#fcd34d}.dissent .vlabel{color:#fda4af}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;font-size:12px;
+  letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0}
+.dim{color:#525252}.flow{color:#6ee7b7}.hi{color:#fcd34d}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:7px;color:#d4d4d4}li::marker{color:#525252}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,Menlo,monospace;font-size:15px;color:#fcd34d;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;padding:5px 12px;
+  border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9;margin-top:60px}
+
+/* ── 试听卡 ── */
+.sgrid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.scard{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px 22px;
+  transition:border-color .18s}
+.scard:hover{border-color:#3a3a3a}
+.scard h4{margin:0 0 4px;font-size:16px;font-weight:600}
+.scard .tag{font-size:11.5px;color:#737373;margin-bottom:14px}
+.play{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;margin-bottom:9px;
+  border-radius:10px;border:1px solid #2e2e2e;background:#161618;color:#e5e5e5;
+  font-family:inherit;font-size:13.5px;cursor:pointer;text-align:left;
+  transition:background-color .15s,border-color .15s,transform .1s}
+.play:hover{background:#1e1e22;border-color:#3f3f46}
+.play:active{transform:scale(.985)}
+.play .ico{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;flex:none}
+.play.done .ico{background:rgba(110,231,183,.15);color:#6ee7b7}
+.play.appr .ico{background:rgba(240,180,41,.15);color:#f0b429}
+.play .nm{flex:1}
+.play .sp{font-size:11px;color:#525252;font-variant-numeric:tabular-nums}
+.play.ring{animation:ring .5s ease-out}
+@keyframes ring{0%{background:rgba(255,255,255,.12)}100%{background:#161618}}
+.ctlbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 20px;
+  background:#111;border:1px solid #262626;border-radius:12px;margin:18px 0}
+.ctlbar label{font-size:12.5px;color:#a3a3a3;display:flex;align-items:center;gap:8px}
+.ctlbar input[type=range]{width:150px;accent-color:#6ee7b7}
+.ctlbar .val{font-size:12px;color:#737373;font-variant-numeric:tabular-nums;min-width:38px}
+.btn{height:32px;padding:0 15px;border-radius:8px;border:1px solid #2e2e2e;background:#1a1a1c;
+  color:#d4d4d4;font-size:12.5px;font-family:inherit;cursor:pointer;transition:background-color .15s,color .15s}
+.btn:hover{background:#242428;color:#f5f5f5}
+.hint{font-size:12px;color:#525252;margin-top:6px}
+@media (max-width:640px){h1{font-size:29px}header.hero{padding:48px 0 34px}main{padding:0 18px 80px}section{margin-bottom:56px}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">提示音</span>
+  <a href="#方案">方案</a>
+  <a href="#试听">试听</a>
+  <a href="#连发">连发测试</a>
+  <a href="#策略">什么时候响</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">试听原型 · 待选型</div>
+  <h1>灵动岛提示音</h1>
+  <p class="lede">三组音色候选，每组两种类型（任务完成 / 等待审批）。
+  <b>戴上耳机或把音量调到平时的水平再听</b>——提示音的好坏全在细节上，
+  外放小音量听不出泛音和衰减的差别。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-03</b></span>
+    <span>实现 <b>Web Audio 合成</b></span>
+    <span>音频文件 <b>0 个</b></span>
+    <span>包体增加 <b>0 KB</b></span>
+  </div>
+</header>
+
+<section id="方案">
+  <h2>APPROACH</h2>
+  <div class="sectitle">为什么不用音频文件</div>
+  <div class="verdict">
+    <div class="vlabel">做法</div>
+    <p style="margin:0 0 10px"><b>用 Web Audio 现场合成</b>——振荡器叠泛音、指数包络、一点点程序生成的混响。
+    每个音效就是十几行代码，不是资源文件。</p>
+    <ul style="margin:0">
+      <li><b>包体不增加</b>。一个像样的 wav 提示音 30–80KB，三组六个就是小半兆，而灵动岛是个常驻小窗口</li>
+      <li><b>参数可调</b>。嫌高了改一个数字，不用回去重新做音频</li>
+      <li><b>"清脆"正是合成音的强项</b>——纯正弦 + 快速指数衰减，比大多数采样都干净</li>
+      <li>不依赖任何外部素材，也不涉及任何生成模型</li>
+    </ul>
+  </div>
+
+  <h3>让它"高级"的四个细节</h3>
+  <div class="tw"><table>
+    <thead><tr><th>细节</th><th>做法</th><th>不这么做会怎样</th></tr></thead>
+    <tbody>
+      <tr><td><b>纯正弦，不用方波</b></td><td><code>type: 'sine'</code></td><td>方波/锯齿波富含奇次谐波，听感廉价刺耳，像老式电子表</td></tr>
+      <tr><td><b>叠非整数倍泛音</b></td><td>钟用 <code>2.756×</code>、玻璃用 <code>3.0/5.2×</code></td><td>只有基频=电话忙音；整数倍泛音=风琴。金属和玻璃的泛音本来就不是整数倍</td></tr>
+      <tr><td><b>指数衰减，不是线性</b></td><td><code>exponentialRampToValueAtTime</code></td><td>线性衰减尾巴发"木"，不像真实物体的振动</td></tr>
+      <tr><td><b>一点点混响</b></td><td>程序生成 0.9s 衰减噪声做 IR</td><td>干音贴着耳朵响，像手机通知；有空间感才"贵"</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="试听">
+  <h2>LISTEN</h2>
+  <div class="sectitle">三组候选</div>
+  <p class="secnote">每组的两个音效<b>互相有关系但能分辨</b>——同一套音色规则，靠音程和节奏区分类型。
+  这比"两个毫不相干的声音"更像一个产品。</p>
+
+  <div class="ctlbar">
+    <label>音量 <input id="vol" type="range" min="0" max="100" value="28"><span class="val" id="volv">28%</span></label>
+    <label><input id="rev" type="checkbox" checked> 混响</label>
+    <button class="btn" onclick="playAll()">依次播放全部</button>
+    <span class="hint" id="actx">点任意按钮开始（浏览器要求用户手势后才能出声）</span>
+  </div>
+
+  <div class="sgrid">
+    <div class="scard">
+      <h4>A · 玻璃 <span class="b b-sk">明亮</span></h4>
+      <div class="tag">纯正弦 + 3.0/5.2 倍泛音 · 中长衰减 · 空间感强</div>
+      <button class="play done" onclick="play('glassDone',this)">
+        <span class="ico">✓</span><span class="nm">任务完成</span><span class="sp">C6→E6 · 0.5s</span>
+      </button>
+      <button class="play appr" onclick="play('glassAppr',this)">
+        <span class="ico">!</span><span class="nm">等待审批</span><span class="sp">A5→C♯6→E6 · 0.35s</span>
+      </button>
+      <p style="margin:10px 0 0;font-size:12.5px;color:#737373">完成是上行大三度，落定感强；审批是大三和弦琶音，
+      三个音让它更"要人注意"，但和弦本身是协和的，不制造焦虑。</p>
+    </div>
+
+    <div class="scard">
+      <h4>B · 钟 <span class="b b-am">金属</span></h4>
+      <div class="tag">真实钟的泛音比 2.756/5.404 · 长衰减 · 单点</div>
+      <button class="play done" onclick="play('bellDone',this)">
+        <span class="ico">✓</span><span class="nm">任务完成</span><span class="sp">C6 单音 · 0.9s</span>
+      </button>
+      <button class="play appr" onclick="play('bellAppr',this)">
+        <span class="ico">!</span><span class="nm">等待审批</span><span class="sp">F♯5 双击 · 0.6s</span>
+      </button>
+      <p style="margin:10px 0 0;font-size:12.5px;color:#737373">最克制的一组，完成只有一声。
+      审批用 F♯ 双击——F♯ 相对基调有轻微悬而未决感，双击是"敲门"的节奏。</p>
+    </div>
+
+    <div class="scard">
+      <h4>C · 木琴 <span class="b b-em">干净</span></h4>
+      <div class="tag">基频 + 4 倍泛音 · 极短衰减 · 无拖尾</div>
+      <button class="play done" onclick="play('woodDone',this)">
+        <span class="ico">✓</span><span class="nm">任务完成</span><span class="sp">C6→G6 · 0.22s</span>
+      </button>
+      <button class="play appr" onclick="play('woodAppr',this)">
+        <span class="ico">!</span><span class="nm">等待审批</span><span class="sp">G5→G5→C6 · 0.18s</span>
+      </button>
+      <p style="margin:10px 0 0;font-size:12.5px;color:#737373">最短促的一组，响完就没了。
+      适合一天要响很多次的场景——衰减长的声音听多了会累。</p>
+    </div>
+  </div>
+</section>
+
+<section id="连发">
+  <h2>STRESS</h2>
+  <div class="sectitle">连发测试：三个任务陆续完成</div>
+  <p class="secnote"><b>这是最能听出问题的测试。</b>单次听着好听的音效，连响三次可能就烦了——
+  尾音重叠会糊成一片。下面按 1.2 秒间隔连响三次。</p>
+  <div class="ctlbar">
+    <button class="btn" onclick="burst('glassDone')">A 玻璃 ×3</button>
+    <button class="btn" onclick="burst('bellDone')">B 钟 ×3</button>
+    <button class="btn" onclick="burst('woodDone')">C 木琴 ×3</button>
+    <span class="hint">听尾音会不会互相打架</span>
+  </div>
+  <div class="warn">
+    <div class="vlabel">我的判断</div>
+    <p style="margin:0">B 组（钟）单次最好听，但 0.9s 的尾音在连发时会明显重叠。
+    如果你多任务并行是常态，<b>C 组（木琴）更耐听</b>；如果一天就响几次，B 组质感最好。
+    A 组是折中。<b>不管选哪组，我都会加防连发</b>（见下一节）。</p>
+  </div>
+</section>
+
+<section id="策略">
+  <h2>POLICY</h2>
+  <div class="sectitle">什么时候该响</div>
+  <p class="secnote">音效比视觉更容易惹人烦——看得见的东西可以不看，听得见的躲不掉。所以规则要严。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>场景</th><th>建议</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>主窗口<b>不在前台</b>，任务完成</td><td><span class="b b-em">响</span></td><td>这正是提示音存在的意义——你在别处，需要被叫回来</td></tr>
+      <tr><td>主窗口<b>在前台</b>，任务完成</td><td><span class="b b-am">待你定</span></td><td>你就看着屏幕，画布上已有呼吸点和铃铛。再响一声是提醒还是噪声？</td></tr>
+      <tr><td>等待审批</td><td><span class="b b-em">响（不同音色）</span></td><td>agent 卡着不动，比"完成"更需要立刻知道</td></tr>
+      <tr><td>1.5 秒内连续多条</td><td><span class="b b-sk">只响一次</span></td><td>三个任务同时完成不该响三声——防连发是必须的</td></tr>
+      <tr><td>系统「勿扰模式」开着</td><td><span class="b b-gy">静音</span></td><td>可以查到系统勿扰状态，但要额外接口；先不做，用应用内开关代替</td></tr>
+      <tr><td>你自己点开了那条通知</td><td><span class="b b-gy">不响</span></td><td>你已经在看了</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dissent">
+    <div class="vlabel">保留意见</div>
+    <p style="margin:0"><b>提示音必须能一键关掉，而且要好找。</b>
+    我会在灵动岛的展开态放一个小喇叭图标（点一下静音/恢复），状态存 localStorage。
+    不放在设置深处——需要翻三层菜单才能关掉的声音，用户的解决办法通常是把整个应用静音。</p>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>NEXT</h2>
+  <div class="sectitle">要你定的</div>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>问题</th><th>我的建议</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>选哪组音色？</td><td>看你多任务的频率：常并行选 <b>C 木琴</b>，偶尔响选 <b>B 钟</b></td></tr>
+      <tr><td><b>2</b></td><td>主窗口在前台时要不要响？</td><td><b>不响</b>（你已经在看屏幕了，视觉提示够）</td></tr>
+      <tr><td><b>3</b></td><td>音量默认多大？</td><td><b>28%</b>（上面滑块的默认值，比系统提示音略轻）</td></tr>
+      <tr><td><b>4</b></td><td>静音开关放哪？</td><td>灵动岛展开态右上角小喇叭，一键切换</td></tr>
+    </tbody>
+  </table></div>
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话（按建议全选时）</div>
+    <div class="dcmd">
+      <span id="cmd">/sound C 木琴，其余按建议</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="font-size:13.5px;color:#737373">要改就直接说，比如「用 B 钟」「前台也响」「音量 15%」。</p>
+</section>
+
+<footer>
+  Eas-Term · 灵动岛提示音试听原型 · 2026-08-03<br>
+  实现方式：Web Audio API 程序化合成（OscillatorNode + GainNode 指数包络 + 程序生成 IR 混响），无音频资源文件<br>
+  相关：<code>src/renderer/island/Island.tsx</code> · <code>docs/灵动岛动效与终端输入框-原型.html</code>
+</footer>
+</main>
+
+<script>
+let ctx = null, master = null, reverb = null, dry = null, wet = null;
+
+function initAudio(){
+  if (ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = +document.getElementById('vol').value / 100;
+  // 轻微低通：削掉过亮的高频，是"贵"和"尖"的分界线
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 7200; lp.Q.value = 0.7;
+  master.connect(lp); lp.connect(ctx.destination);
+
+  // 程序生成的混响 IR：0.9 秒指数衰减噪声。不需要任何音频文件
+  const len = Math.floor(ctx.sampleRate * 0.9);
+  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++){
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++){
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2);
+    }
+  }
+  reverb = ctx.createConvolver(); reverb.buffer = buf;
+  dry = ctx.createGain(); dry.gain.value = 0.82;
+  wet = ctx.createGain(); wet.gain.value = 0.30;
+  dry.connect(master); reverb.connect(wet); wet.connect(master);
+  document.getElementById('actx').textContent = '音频已就绪';
+}
+
+/** 一个音：基频 + 若干泛音，各自独立包络。partials = [[倍数, 相对音量], …] */
+function tone(freq, {at = 0, dur = 0.4, gain = 0.5, partials = [[1, 1]]} = {}){
+  const t0 = ctx.currentTime + at;
+  const useRev = document.getElementById('rev').checked;
+  partials.forEach(([mult, amp]) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq * mult;
+    // 高次泛音衰减更快，和真实物体一致——这条比泛音比例本身还影响听感
+    const d = dur * (mult > 1 ? 0.62 : 1);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * amp), t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + d);
+    osc.connect(g);
+    g.connect(dry);
+    if (useRev) g.connect(reverb);
+    osc.start(t0); osc.stop(t0 + d + 0.05);
+  });
+}
+
+const GLASS = [[1, 1], [3.0, 0.12], [5.2, 0.05]];
+const BELL  = [[1, 1], [2.756, 0.25], [5.404, 0.08]];
+const WOOD  = [[1, 1], [4.0, 0.15]];
+
+const SOUNDS = {
+  // A 玻璃：上行大三度，落定
+  glassDone(){ tone(1046.5, {dur:.5, gain:.5, partials:GLASS});
+               tone(1318.5, {at:.07, dur:.5, gain:.42, partials:GLASS}); },
+  // A 玻璃：大三和弦琶音，三个音更"叫人"，但协和不焦虑
+  glassAppr(){ tone(880, {dur:.35, gain:.45, partials:GLASS});
+               tone(1108.7, {at:.065, dur:.35, gain:.42, partials:GLASS});
+               tone(1318.5, {at:.13, dur:.4, gain:.4, partials:GLASS}); },
+  // B 钟：单音，长尾
+  bellDone(){ tone(1046.5, {dur:.9, gain:.5, partials:BELL}); },
+  // B 钟：F♯ 双击，"敲门"节奏
+  bellAppr(){ tone(740, {dur:.6, gain:.45, partials:BELL});
+              tone(740, {at:.15, dur:.6, gain:.42, partials:BELL}); },
+  // C 木琴：短促上行五度
+  woodDone(){ tone(1046.5, {dur:.22, gain:.55, partials:WOOD});
+              tone(1568, {at:.055, dur:.22, gain:.45, partials:WOOD}); },
+  // C 木琴：同音两下 + 收尾高音
+  woodAppr(){ tone(784, {dur:.18, gain:.5, partials:WOOD});
+              tone(784, {at:.06, dur:.18, gain:.45, partials:WOOD});
+              tone(1046.5, {at:.12, dur:.2, gain:.45, partials:WOOD}); }
+};
+
+function play(name, btn){
+  initAudio();
+  if (ctx.state === 'suspended') ctx.resume();
+  SOUNDS[name]();
+  if (btn){ btn.classList.remove('ring'); void btn.offsetWidth; btn.classList.add('ring'); }
+}
+
+function burst(name){
+  initAudio();
+  if (ctx.state === 'suspended') ctx.resume();
+  for (let i = 0; i < 3; i++) setTimeout(() => SOUNDS[name](), i * 1200);
+}
+
+function playAll(){
+  initAudio();
+  if (ctx.state === 'suspended') ctx.resume();
+  const order = ['glassDone','glassAppr','bellDone','bellAppr','woodDone','woodAppr'];
+  order.forEach((n, i) => setTimeout(() => SOUNDS[n](), i * 1100));
+}
+
+document.getElementById('vol').addEventListener('input', (e) => {
+  document.getElementById('volv').textContent = e.target.value + '%';
+  if (master) master.gain.value = +e.target.value / 100;
+});
+</script>
+</body>
+</html>
