@@ -21,6 +21,9 @@ DL=/www/wwwroot/eas-dl
 # 唯一的退路是重新打包一个旧版本再发一次 —— 而那时候你多半正手忙脚乱。
 # 多占的 500MB 买的是这个。
 KEEP=2
+# 安装包目录。提到这里是因为上面的 Windows 链接校验就要用它 ——
+# 原来定义在「传安装包」那一段里，校验跑在前面会 unbound variable
+PKG_DIR="$HOME/Eas-Term-release"
 OTHER_SITES=(www.biily.top aurora.biily.top)   # 每次 reload 都要确认没碰坏的
 
 cd "$(dirname "$0")/.."
@@ -71,7 +74,16 @@ else
   if [ -n "$WIN_REF" ]; then
     WIN_V=$(echo "$WIN_REF" | sed -E 's#^/download/v([0-9.]+)/.*#\1#')
     WIN_F=$(basename "$WIN_REF")
-    if ssh $HOST "test -s $DL/v$WIN_V/$WIN_F"; then
+    if [ "$WIN_V" = "$VERSION" ]; then
+      # 指向本次发布的版本 —— 服务器上还没有，校验本地备好了没（下面会一起传上去）
+      if [ -e "$PKG_DIR/$WIN_F" ]; then
+        echo "  ✓ Windows 跟随本次发布 v${VERSION}（本地已备好 ${WIN_F}）"
+      else
+        echo "  ✗ 下载页指向 v${VERSION} 的 Windows 包，但 $PKG_DIR/ 下没有它"
+        echo "    先 gh run download 拉 CI 产物，或把链接改回线上已有的版本。"
+        exit 1
+      fi
+    elif ssh $HOST "test -s $DL/v$WIN_V/$WIN_F"; then
       echo "  ✓ Windows 仍指向 v${WIN_V}（服务器上有 ${WIN_F}）"
     else
       echo "  ✗ Windows 链接指向 v${WIN_V}/${WIN_F}，但服务器上没有这个包 —— 发上去就是 404"
@@ -111,7 +123,6 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
   # （项目在外置卷上，asar 会损坏，所以输出定向到 home，见 README）。
   # 这里以前写的是 Eas-Term-notarized，和构建脚本对不上，每次发版都得先手动把包搬过去，
   # 忘了搬就报「没有 v0.2.x 的包」——而包明明刚打好，人会以为是打包失败。
-  PKG_DIR="$HOME/Eas-Term-release"
   say "▸ 安装包 v$VERSION → $DL/v$VERSION"
   [ -d "$PKG_DIR" ] || { echo "  ✗ 找不到 ${PKG_DIR}，先跑 EAS_NOTARIZE=1 npm run dist"; exit 1; }
 
