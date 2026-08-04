@@ -8,6 +8,7 @@ import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { SecretsPanel } from './features/workspace/SecretsPanel'
 import { SettingsPanel } from './features/workspace/SettingsPanel'
+import { UpdateBadge } from './features/workspace/UpdateBadge'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
@@ -215,6 +216,8 @@ export function App(): JSX.Element {
               画布
             </button>
           </div>
+          {/* 平时不渲染，只有查到新版本才冒出来 */}
+          <UpdateBadge />
           {/* 设置摆在最右：全局的东西，两种视图模式下都在同一个位置 */}
           <SettingsPanel />
         </div>

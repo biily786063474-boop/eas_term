@@ -45,7 +45,8 @@ import type {
   WikiStats,
   RulesStatus,
   Footprint,
-  InstallPlan
+  InstallPlan,
+  UpdateInfo
 } from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -485,6 +486,46 @@ const api = {
     // 剪贴板图片 → <项目>/assets/img/pasted-<时间戳>.png
     saveImage: (projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> =>
       ipcRenderer.invoke('clipboard:saveImage', projectPath)
+  },
+  /** 匿名使用统计：只能报一个白名单里的计数器名字，别的一律被主进程丢掉。
+   *  故意做成「只能加一」——没有传值的余地，就不会有人顺手把内容塞进来 */
+  telemetry: {
+    bump: (key: string): void => ipcRenderer.send('telemetry:event', key),
+    refresh: (): void => ipcRenderer.send('telemetry:refresh')
+  },
+  /** 主进程侧的偏好（检查更新、匿名统计）。这两个开关在窗口出现之前就要生效，
+   *  所以不放渲染层的 localStorage —— 见 main/prefs.ts */
+  prefs: {
+    get: (): Promise<{ autoUpdateCheck: boolean; telemetry: boolean }> =>
+      ipcRenderer.invoke('prefs:get'),
+    set: (
+      key: 'autoUpdateCheck' | 'telemetry',
+      value: boolean
+    ): Promise<{ autoUpdateCheck: boolean; telemetry: boolean }> =>
+      ipcRenderer.invoke('prefs:set', key, value)
+  },
+  update: {
+    /** 主进程已经查到的新版本（窗口重载后用它恢复状态），没有则 null */
+    known: (): Promise<UpdateInfo | null> => ipcRenderer.invoke('update:known'),
+    /** 用户手动点「检查更新」。和自动检查不同，失败会把原因报回来 */
+    check: (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string }> =>
+      ipcRenderer.invoke('update:check'),
+    /** 下载安装包并打开。装还是用户自己点 */
+    download: (): Promise<{ ok: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke('update:download'),
+    /** 开关改了之后让主进程重新安排轮询，不用等重启 */
+    reschedule: (): Promise<boolean> => ipcRenderer.invoke('update:reschedule'),
+    /** info 为 null = 没有（或不再有）新版本，界面上的提示要收回去 */
+    onAvailable: (cb: (info: UpdateInfo | null) => void): (() => void) => {
+      const h = (_e: unknown, info: UpdateInfo | null): void => cb(info)
+      ipcRenderer.on('update:available', h)
+      return () => ipcRenderer.removeListener('update:available', h)
+    },
+    onProgress: (cb: (p: { got: number; total: number }) => void): (() => void) => {
+      const h = (_e: unknown, p: { got: number; total: number }): void => cb(p)
+      ipcRenderer.on('update:progress', h)
+      return () => ipcRenderer.removeListener('update:progress', h)
+    }
   },
   /** 输入框里粘贴 / 拖入的图片。落在系统临时目录，24 小时后由主进程清掉 */
   pasteImage: {

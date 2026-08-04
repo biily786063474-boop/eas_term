@@ -138,6 +138,40 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
     </div>
   </section>
 
+  <!-- 桌面应用：和网站访问是两批人、两套口径，所以整段单列，不与上面的图混排 -->
+  <section>
+    <h2>DESKTOP APP</h2>
+    <div class="card">
+      <div class="chart-head">
+        <span class="chart-title">应用使用情况</span>
+        <div class="legend">
+          <span><i style="background:var(--s1)"></i>活跃</span>
+          <span><i style="background:var(--s3)"></i>使用时长</span>
+        </div>
+      </div>
+      <div id="appEmpty" class="empty" style="display:none">
+        还没有应用埋点数据。只有 0.4.3 及以后的版本才会上报，且用户可以在设置里关掉。
+      </div>
+      <div id="appWrap">
+        <div class="stats" id="appStats" style="margin:6px 0 22px"></div>
+        <!-- 活跃人数与使用时长量纲不同，**不画双轴**，拆成上下两张各自从 0 起 -->
+        <div class="plot" id="plotAppActive"></div>
+        <div style="height:14px"></div>
+        <div class="plot" id="plotAppHours"></div>
+        <div class="g2" style="margin-top:22px">
+          <div>
+            <div class="chart-head"><span class="chart-title">功能使用次数</span></div>
+            <div class="bars" id="appFeatures"></div>
+          </div>
+          <div>
+            <div class="chart-head"><span class="chart-title">版本分布</span></div>
+            <div class="bars dl" id="appVersions"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section>
     <h2>FUNNEL</h2>
     <div class="card">
@@ -331,6 +365,26 @@ function render(d) {
   table('pages', d.pages, ['k', 'pv', 'uv']);
   table('refs', d.referrers, ['k', 'n']);
   table('clicks', d.clicks, ['k', 'n']);
+  renderApp(d.app);
+}
+
+function renderApp(a) {
+  // 埋点刚上线时这里必然是空的。画一堆全 0 的图会让人以为「没人用」，
+  // 其实是「还没有数据」——这两件事必须区分开
+  var has = a && (a.starts > 0 || a.hoursTotal > 0 || (a.trend || []).some(function (r) { return r.active > 0; }));
+  el('appEmpty').style.display = has ? 'none' : '';
+  el('appWrap').style.display = has ? '' : 'none';
+  if (!has) return;
+
+  el('appStats').innerHTML =
+    statTile(a.todayActive, '今日活跃', '按当日 IP+UA 估算') +
+    statTile(a.starts, '启动次数', '近 30 天') +
+    statTile(a.hoursTotal + ' h', '累计使用时长', '今日 ' + a.todayHours + ' h');
+
+  lineChart(el('plotAppActive'), a.trend || [], [{ key: 'active', color: '#3987e5', label: '活跃' }]);
+  lineChart(el('plotAppHours'), a.trend || [], [{ key: 'hours', color: '#199e70', label: '小时' }]);
+  bars(el('appFeatures'), a.features);
+  bars(el('appVersions'), a.versions, 'dl');
 }
 
 function load() {

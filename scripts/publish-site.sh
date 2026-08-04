@@ -32,6 +32,14 @@ SITE_ONLY=${1:-}
 
 say() { printf "\033[1m%s\033[0m\n" "$*"; }
 
+# ── 更新日志必须先写 ────────────────────────────────────────────────
+# 放在最前面是刻意的：写日志是发版里最容易被跳过的一步，而一旦包传上去了，
+# 再回头补日志就变成"改天再说"。让它在什么都还没动的时候就拦下来。
+# --site-only 不发新版本，不强制。
+if [ "$SITE_ONLY" != "--site-only" ]; then
+  node scripts/changelog.mjs check "$VERSION" || exit 1
+fi
+
 # ── 版本号回填 ──────────────────────────────────────────────────────
 # 下载链接的版本号写死在 HTML 里，散在两个文件的 18 处。手改必然漏一两处，
 # 而漏掉的那处会指向一个已经被 KEEP 清理掉的目录 —— 404 且没人发现。
@@ -101,9 +109,12 @@ fi
 
 # ── 网页 ────────────────────────────────────────────────────────────
 say "▸ 网页 → $WEB"
+# 更新日志页由 CHANGELOG.md 生成，每次发布现生成一遍：
+# 手改 site/changelog.html 会在下次发布时被覆盖，要改就改 CHANGELOG.md。
+node scripts/changelog.mjs html
 ssh $HOST "mkdir -p $WEB/assets"
-# analytics.js 是站内统计脚本，三个页面都引用它 —— 漏传会让页面拿到 404
-for f in index.html download.html privacy.html style.css analytics.js; do
+# analytics.js 是站内统计脚本，页面都引用它 —— 漏传会让页面拿到 404
+for f in index.html download.html privacy.html changelog.html style.css analytics.js; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
@@ -174,6 +185,9 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
     else
       echo "  ⚠ 没有 Windows 包，latest.json 不写 win 字段" >&2
     fi
+    # notes：这一版的更新条目，应用内的更新提示直接读它。
+    # 用 changelog.mjs 输出的 JSON 数组，不要在 shell 里手拼 —— 条目里有中文引号和括号。
+    echo "  \"notes\": $(node scripts/changelog.mjs notes "$VERSION"),"
     echo "  \"published\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" }"
   } > "$TMP_JSON"
   node -e "JSON.parse(require('fs').readFileSync('$TMP_JSON','utf8'))" ||
@@ -228,7 +242,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /privacy.html /style.css /analytics.js; do
+for u in / /download.html /privacy.html /changelog.html /style.css /analytics.js; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

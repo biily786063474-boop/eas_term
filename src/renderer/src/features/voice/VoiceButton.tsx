@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MicIcon } from '../../ui/Icons'
 import { VoiceCapture } from './voiceCapture'
 import './voice.css'
+import { track } from '../notify/track'
 
 const TOTAL_MB = 305 // 两个模型合计约 305MB（进度显示参考值）
 
@@ -98,6 +99,7 @@ export function VoiceButton({
   }
 
   const start = async (): Promise<void> => {
+    track('voice')
     setErr(null)
     const r = await window.api.stt.start()
     if (!r.ok) {

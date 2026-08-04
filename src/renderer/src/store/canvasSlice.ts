@@ -43,6 +43,7 @@ import {
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import type { PersistedCanvas } from './canvas/persist'
+import { track } from '../features/notify/track'
 
 // 这些是画布对外的公开接口，调用点一直从 './canvasSlice' 取，拆分后原样转出去
 export type {
@@ -89,6 +90,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   canvasCommittedScale: 1,
 
   setViewMode: (mode) => {
+    track('view')
     set({ viewMode: mode })
     if (mode === 'canvas') {
       // 首次进画布时，把当前项目的终端 seed 成 Frame（若尚未 seed）

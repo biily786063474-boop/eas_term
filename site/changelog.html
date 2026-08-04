@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>更新日志 · Eas-Term</title>
+<meta name="description" content="Eas-Term 每个版本的更新内容。">
+<link rel="stylesheet" href="style.css">
+<style>
+/* 只加更新日志自己的排版，骨架（nav / wrap / footer）全部继承 style.css。
+   类名必须跟 privacy.html 保持一致，另起炉灶会导致页头页脚样式全丢。 */
+.rel { padding: 30px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.rel:last-of-type { border-bottom: none; }
+.rel-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.rel-head h2 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+.rel-head time { font-size: 13px; opacity: .5; font-variant-numeric: tabular-nums; }
+.grp { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase;
+       opacity: .45; font-weight: 600; margin: 18px 0 8px; }
+.rel ul { margin: 0; padding-left: 20px; }
+.rel li { margin: 7px 0; line-height: 1.75; }
+.rel code { font-size: .92em; padding: 1px 5px; border-radius: 4px;
+            background: rgba(255,255,255,.07); }
+.cl-body { padding-bottom: 60px; }
+</style>
+</head>
+<body>
+    <header class="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="index.html">
+          <img src="assets/icon.png" alt="" width="26" height="26" />
+          <span>Eas-Term</span>
+        </a>
+        <nav class="nav-links" aria-label="主导航">
+          <a href="index.html#scenes">核心场景</a>
+          <a href="index.html#features">能力清单</a>
+          <a href="index.html#ai">AI 接入</a>
+          <a class="nav-cta" href="download.html">下载</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <div class="wrap">
+          <p class="eyebrow">更新日志</p>
+          <h1 class="section-title">每个版本改了什么</h1>
+          <p class="lede">
+            只记你能感觉到的变化。想知道当前装的是哪一版，看应用标题栏右侧的设置里。
+          </p>
+        </div>
+      </section>
+
+      <div class="wrap cl-body">
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.3">0.4.3</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>有新版本时标题栏会提示，点开能看到这一版改了什么，一键下载对应你芯片的包并打开</li>
+          <li>官网多了一页<a href="https://eas.biily.top/changelog.html">更新日志</a>，每个版本改了什么都记在那里</li>
+          <li><strong>新增匿名使用统计，默认开启，可以关</strong>：只有使用时长、启动次数、版本与系统大类、各功能的使用次数。 终端内容、命令、文件路径、项目名、与 AI 的对话、密钥，一个字节都不会离开你的电脑， 也不生成任何能跨天认出你的标识。不想要就去设置 → 隐私关掉，关掉后一条请求都不会发。 详情见<a href="https://eas.biily.top/privacy.html#usage">隐私说明第四节</a>——这一条是对此前「不做使用统计」那句话的改动，所以单独写出来。</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>设置里能看到当前版本号，并可手动检查更新</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.2">0.4.2</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li>终端多了一个文字输入框：长提示词先写好再发，中文输入法不再错位，粘贴多行也不会被逐行当成命令执行</li>
+          <li>输入框支持粘贴 / 拖入图片，⌘↵ 时把图片路径连同文字一起发给 agent</li>
+          <li>语音输入的结果现在落进输入框，说错了能改完再发（原先是直接写进终端）</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>设置移到标题栏最右，两种视图下位置一致；主题和提示音都收在里面</li>
+          <li>画布右侧抽屉的项目高亮和文件树，会跟着你正在操作的项目走（选中 Frame 或点进终端节点）</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>语音按钮和输入框在右下角叠成一团</li>
+          <li>你正盯着某个终端、它跑完了却一声不响——现在无论是否聚焦都会提醒</li>
+          <li>主窗口在前台时灵动岛不再完全沉默：有新通知会露面几秒，等待审批的会一直留着</li>
+          <li>贴着窗口右缘的悬浮提示被挤成一列竖排字</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.1">0.4.1</h2>
+          <time datetime="2026-08-03">2026-08-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>灵动岛</strong>：把软件收起来后，屏幕顶部出现一条状态胶囊，显示有几个项目在跑； 任务完成或需要审批时弹出通知，写明项目、耗时、模型和这一轮的问答梗概，点一下直接跳回那个会话</li>
+          <li>需要审批的打断可以在灵动岛上直接处理，不用切回来</li>
+          <li>待处理提示音（木琴音色），任务完成和等待审批是两个不同的音，可在设置里关闭或调音量</li>
+          <li>画布 Frame 支持颜色状态标签：蓝色进行中、黄色待执行、红色已完结</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>Windows 包恢复跟随发布（此前需要手动补传）</li>
+        </ul>
+      </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <img src="assets/icon.png" alt="" width="22" height="22" />
+          <span>Eas-Term</span>
+        </div>
+        <nav class="footer-links" aria-label="页脚导航">
+          <a href="index.html#features">能力清单</a>
+          <a href="download.html">下载</a>
+          <a href="changelog.html">更新日志</a>
+          <a href="privacy.html">隐私与数据</a>
+        </nav>
+        <p class="footer-copy">© 2026 Eas-Term</p>
+      </div>
+    </footer>
+    <script src="analytics.js"></script>
+</body>
+</html>

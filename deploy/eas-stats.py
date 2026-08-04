@@ -129,6 +129,12 @@ def load_events():
                 "d": one("d"),
                 "s": one("s"),
                 "sec": one("sec", "0"),
+                # 下面几个只有桌面应用会带（t=app）：事件种类、版本、系统、架构、功能计数
+                "e": one("e"),
+                "v": one("v"),
+                "os": one("os"),
+                "arch": one("arch"),
+                "f": one("f"),
             }
         )
     return out
@@ -219,6 +225,16 @@ def main():
     stay_n = 0
     all_vids = set()
 
+    # ── 桌面应用（t=app）──
+    # 和网页统计分开算：两者的「访客」不是一回事，混在一起会让两边的数都失真。
+    # 同样没有客户端 ID，日活按当日 IP+UA 哈希估，隔天对不上（见 telemetry.ts 的取舍说明）。
+    app_active = defaultdict(set)
+    app_sec = defaultdict(int)
+    app_starts = 0
+    app_ver = defaultdict(int)
+    app_os = defaultdict(int)
+    app_feat = defaultdict(int)
+
     for e in events:
         d = e["day"]
         if e["t"] == "pv":
@@ -244,6 +260,27 @@ def main():
             if 0 < sec < 3600:
                 stay_total += sec
                 stay_n += 1
+        elif e["t"] == "app":
+            app_active[d].add(e["vid"])
+            if e["e"] == "start":
+                app_starts += 1
+                if e["v"]:
+                    app_ver[e["v"]] += 1
+                if e["os"]:
+                    app_os[e["os"]] += 1
+            try:
+                sec = int(e["sec"] or 0)
+            except ValueError:
+                sec = 0
+            # 上限 24 小时：心跳是 5 分钟一次、退出补一次，正常绝不会超。
+            # 超了多半是机器改过时间或日志错位，计进去会把「总时长」顶到离谱的数
+            if 0 < sec < 86400:
+                app_sec[d] += sec
+            for part in (e["f"] or "").split(","):
+                if ":" in part:
+                    fk, fn = part.split(":", 1)
+                    if fn.isdigit():
+                        app_feat[fk] += int(fn)
 
     for r in downloads:
         dl_by_day[r["day"]] += 1
@@ -270,8 +307,41 @@ def main():
     click_n = sum(v for k, v in clicks.items() if k.startswith("dl-"))
     done_n = len(downloads)
 
+    # 功能计数的中文名。看板上直接显示英文 key 没人看得懂
+    FEAT_NAME = {
+        "term": "新建终端",
+        "canvas": "新建画布节点",
+        "voice": "语音输入",
+        "image": "贴图片",
+        "island": "灵动岛跳转",
+        "approve": "灵动岛审批",
+        "view": "切换视图",
+    }
+
     stats = {
         "generated": now.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
+        # 桌面应用。**没有任何数据时整段是零**，看板据此显示「还没有数据」
+        # 而不是画一堆空图表 —— 埋点刚上线那几天就是这个状态。
+        "app": {
+            "todayActive": len(app_active.get(today, set())),
+            "starts": app_starts,
+            "hoursTotal": round(sum(app_sec.values()) / 3600, 1),
+            "todayHours": round(app_sec.get(today, 0) / 3600, 1),
+            "trend": [
+                {
+                    "d": d,
+                    "active": len(app_active.get(d, set())),
+                    "hours": round(app_sec.get(d, 0) / 3600, 2),
+                }
+                for d in days
+            ],
+            "versions": top(app_ver, 8, "k"),
+            "os": top(app_os, 5, "k"),
+            "features": [
+                {"k": FEAT_NAME.get(k, k), "n": v}
+                for k, v in sorted(app_feat.items(), key=lambda kv: -kv[1])
+            ],
+        },
         "totals": {
             "pv": sum(pv_by_day.values()),
             "uv": visit_uv,

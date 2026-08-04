@@ -16,6 +16,7 @@
 // 而且你粘完图又复制了别的东西，发送时读到的就是错的。
 import { useEffect, useRef, useState } from 'react'
 import { VoiceButton } from '../voice/VoiceButton'
+import { track } from '../notify/track'
 
 /** 输入框最多长到几行，超过就内部滚动。再高会把终端可视区挤没 */
 const MAX_ROWS = 4
@@ -90,6 +91,7 @@ export function TerminalInput({
   const takeFiles = async (files: File[]): Promise<void> => {
     for (const f of files) {
       if (!f.type.startsWith('image/')) continue
+      track('image')
       let url: string
       try {
         url = await thumbnail(f)

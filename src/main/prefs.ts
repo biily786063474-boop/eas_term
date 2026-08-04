@@ -1,0 +1,61 @@
+// 主进程侧的偏好存储（userData/prefs.json）。
+//
+// 为什么不放渲染层的 localStorage：检查更新和使用统计都在**主进程启动时**就要
+// 知道开关状态，而渲染层要等窗口加载完才能告诉主进程——那之前的事件全漏了。
+// 所以这两个开关以主进程为准，渲染层通过 IPC 读写。
+//
+// 主题、提示音那些只影响界面的仍留在渲染层，不用搬过来。
+import { app, ipcMain } from 'electron'
+import fs from 'fs'
+import path from 'path'
+
+export interface Prefs {
+  /** 启动后自动检查有没有新版本 */
+  autoUpdateCheck: boolean
+  /** 匿名使用统计（只有时长和功能计数，见 telemetry.ts 的白名单） */
+  telemetry: boolean
+}
+
+const DEFAULTS: Prefs = {
+  autoUpdateCheck: true,
+  telemetry: true
+}
+
+let cache: Prefs | null = null
+
+const file = (): string => path.join(app.getPath('userData'), 'prefs.json')
+
+export function getPrefs(): Prefs {
+  if (cache) return cache
+  try {
+    const raw = JSON.parse(fs.readFileSync(file(), 'utf8')) as Partial<Prefs>
+    // 逐字段兜底：文件里缺字段、或被人手改成别的类型，都退回默认值而不是让 undefined 到处跑
+    cache = {
+      autoUpdateCheck:
+        typeof raw.autoUpdateCheck === 'boolean' ? raw.autoUpdateCheck : DEFAULTS.autoUpdateCheck,
+      telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry
+    }
+  } catch {
+    cache = { ...DEFAULTS }
+  }
+  return cache
+}
+
+export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]): Prefs {
+  const next = { ...getPrefs(), [key]: value }
+  cache = next
+  try {
+    fs.writeFileSync(file(), JSON.stringify(next, null, 2))
+  } catch {
+    // 写不进去也不该让界面卡住：这一轮的开关在内存里已经生效了
+  }
+  return next
+}
+
+export function registerPrefsHandlers(): void {
+  ipcMain.handle('prefs:get', () => getPrefs())
+  ipcMain.handle('prefs:set', (_e, key: keyof Prefs, value: boolean) => {
+    if (key !== 'autoUpdateCheck' && key !== 'telemetry') return getPrefs()
+    return setPref(key, !!value)
+  })
+}

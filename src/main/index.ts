@@ -5,6 +5,9 @@ import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, a
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
+import { registerPrefsHandlers } from './prefs'
+import { registerUpdaterHandlers, schedule as scheduleUpdateCheck } from './updater'
+import { registerTelemetry } from './telemetry'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
@@ -283,6 +286,12 @@ app.whenReady().then(() => {
   registerPasteImageHandlers()
   // 上次留下的粘贴图，过 24 小时的在这里清掉（见 pasteImages.ts 里为什么不发送后就删）
   sweepPasteImages()
+  registerPrefsHandlers()
+  registerUpdaterHandlers()
+  // 检查更新：启动 12 秒后查第一次，之后每 6 小时。用户关掉开关就完全不发请求
+  scheduleUpdateCheck()
+  // 匿名使用统计（默认开，设置里可关）。采集边界写在 telemetry.ts 顶部，改之前先读
+  registerTelemetry()
   registerGitHandlers()
   registerSessionHandlers()
   registerCanvasHandlers()

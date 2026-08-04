@@ -26,6 +26,34 @@ export function SettingsPanel(): JSX.Element {
   // 只有这个面板和播放器读它，放进全局状态是徒增一份要同步的副本）
   const [soundOn, setSoundOn] = useState(isSoundEnabled)
   const [vol, setVol] = useState(getVolume)
+  // 更新检查与匿名统计这两个开关存在**主进程**（见 main/prefs.ts）：
+  // 它们在窗口出现之前就要生效，放渲染层的 localStorage 来不及
+  const [prefs, setPrefs] = useState({ autoUpdateCheck: true, telemetry: true })
+  const [checking, setChecking] = useState(false)
+  const [checkMsg, setCheckMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    void window.api.prefs.get().then(setPrefs)
+  }, [open])
+
+  const setPref = async (key: 'autoUpdateCheck' | 'telemetry', value: boolean): Promise<void> => {
+    setPrefs(await window.api.prefs.set(key, value))
+    // 关掉自动检查要立刻停掉轮询，不能等下次重启
+    if (key === 'autoUpdateCheck') void window.api.update.reschedule()
+    // 关掉统计要把已经攒着的计数丢掉——那是用户没同意上报的数据
+    if (key === 'telemetry') window.api.telemetry.refresh()
+  }
+
+  const check = async (): Promise<void> => {
+    setChecking(true)
+    setCheckMsg(null)
+    const r = await window.api.update.check()
+    setChecking(false)
+    if (!r.ok) setCheckMsg(`检查失败：${r.error}`)
+    else if (r.info) setCheckMsg(`有新版本 ${r.info.version}，看标题栏上的提示`)
+    else setCheckMsg('已经是最新版本')
+  }
 
   useEffect(() => {
     if (!open) return
@@ -142,6 +170,58 @@ export function SettingsPanel(): JSX.Element {
                       等待审批
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="cset-sec">
+                <div className="cset-label">更新</div>
+                <div className="cset-row">
+                  <span className="cset-rowname">
+                    当前版本 {window.api.build.version}
+                    {window.api.build.packaged ? '' : '（开发构建）'}
+                  </span>
+                  <button className="cset-trybtn" disabled={checking} onClick={() => void check()}>
+                    {checking ? '检查中…' : '检查更新'}
+                  </button>
+                </div>
+                {checkMsg && <div className="cset-sub">{checkMsg}</div>}
+                <label className="cset-row">
+                  <input
+                    type="checkbox"
+                    checked={prefs.autoUpdateCheck}
+                    onChange={(e) => void setPref('autoUpdateCheck', e.target.checked)}
+                  />
+                  <span className="cset-rowname">启动后自动检查新版本</span>
+                </label>
+              </div>
+
+              <div className="cset-sec">
+                <div className="cset-label">隐私</div>
+                <label className="cset-row">
+                  <input
+                    type="checkbox"
+                    checked={prefs.telemetry}
+                    onChange={(e) => void setPref('telemetry', e.target.checked)}
+                  />
+                  <span className="cset-rowname">发送匿名使用统计，帮助改进</span>
+                </label>
+                {/* 把「采了什么、没采什么」直接写在开关下面。
+                    只放一个隐私页链接的话，几乎没人会点过去看 */}
+                <div className="cset-sub">
+                  只有使用时长、启动次数、版本与系统大类、各功能的使用次数。
+                  <br />
+                  终端内容、命令、文件路径、项目名、与 AI 的对话、密钥 —— 一个字节都不会离开这台电脑。
+                  <br />
+                  <a
+                    className="cset-link"
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      void window.api.shell.openExternal('https://eas.biily.top/privacy.html')
+                    }}
+                  >
+                    完整隐私说明
+                  </a>
                 </div>
               </div>
             </div>

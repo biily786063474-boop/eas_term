@@ -24,6 +24,7 @@ import {
   closeTabInState
 } from './shared'
 import type { AppState } from './types'
+import { track } from '../features/notify/track'
 
 export interface TabsSlice {
   tabs: TermTab[]
@@ -128,6 +129,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   activeTabByProject: {},
 
   openTerminal: async (opts) => {
+    track('term')
     const s = get()
     const projectId = opts?.projectId !== undefined ? opts.projectId : s.activeProjectId
     const project = s.projects.find((p) => p.id === projectId) ?? null

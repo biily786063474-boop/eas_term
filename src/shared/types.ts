@@ -593,6 +593,16 @@ export interface IslandNotice {
   stale?: boolean
 }
 
+/** 有新版本可下载。数据来自发布脚本写的 latest.json */
+export interface UpdateInfo {
+  version: string
+  /** 这一版的更新条目（来自 CHANGELOG.md，发布时写进 latest.json） */
+  notes: string[]
+  /** 适配本机平台/架构的下载直链；这个平台没出包时为 null */
+  url: string | null
+  published?: string
+}
+
 /** 灵动岛的一帧完整状态 */
 export interface IslandState {
   running: IslandRunning[]
