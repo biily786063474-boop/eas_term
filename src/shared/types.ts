@@ -607,6 +607,9 @@ export interface UpdateInfo {
 export interface IslandState {
   running: IslandRunning[]
   notices: IslandNotice[]
+  /** 主窗口此刻是不是在前台。
+   *  前台时通知只折叠着提示、不自动展开卡片——你正看着屏幕，弹一张卡挡在最上面是打扰。 */
+  foreground?: boolean
   /** 刘海尺寸（逻辑像素）。主进程量好后随状态一起下发，渲染层照着在中间留出这么宽的
    *  透明区，内容分居两侧。w=0 表示这块屏幕没有刘海（外接显示器 / 非 Mac），
    *  此时不留空隙、窗口也不贴屏幕上沿而是挂在菜单栏下方。 */

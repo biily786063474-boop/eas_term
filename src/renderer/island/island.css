@@ -598,3 +598,26 @@ body {
   padding: 5px 9px;
   margin-bottom: 9px;
 }
+
+/* ── 展开列表里的分组标题与已完成行 ── */
+.isl-grouphd {
+  padding: 8px 12px 4px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.42);
+  font-weight: 600;
+}
+
+/* 已完成的一行比在跑的略亮：它是要你处理的那个，在跑的只是余光信息 */
+.isl-row.done .isl-proj {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.isl-dot.done {
+  background: #f5b944;
+}
+
+/* 等审批的那行给一点存在感——agent 正卡着等人 */
+.isl-row.waiting .isl-term {
+  color: rgba(255, 255, 255, 0.7);
+}

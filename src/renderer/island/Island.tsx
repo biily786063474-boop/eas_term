@@ -64,6 +64,9 @@ export function Island(): JSX.Element | null {
   /** 当前 mode 的镜像。给 effect 读用——把 mode 放进依赖数组会引发下面那个自杀链路。 */
   const modeRef = useRef(mode)
   modeRef.current = mode
+  /** 主窗口在不在前台。同样用 ref：它每帧都可能变，进依赖数组会把弹出判断搅乱 */
+  const fgRef = useRef(false)
+  fgRef.current = !!st.foreground
 
   useEffect(() => {
     const off = window.island.onState(setSt)
@@ -111,6 +114,10 @@ export function Island(): JSX.Element | null {
     // 只挡 notice 态：list 态没有任何「正在读的内容」，开着运行列表等结果的人
     // 恰恰最需要看到通知弹出来。审批类则一律抢过来——agent 卡着等人。
     if (modeRef.current === 'notice' && headKind !== 'approval') return
+    // **主窗口在前台时只折叠着提示，不自动摊开卡片。**
+    // 你正看着屏幕，弹一张卡压在最上面是打扰；折叠条上的未读数已经把事说清了，
+    // 想看点一下就展开。审批例外——agent 卡着等人，那种要主动摊开。
+    if (fgRef.current && headKind !== 'approval') return
     setViewId(headId)
     setMode('notice')
   }, [headId, headKind])
@@ -149,6 +156,12 @@ export function Island(): JSX.Element | null {
     for (const id of [...popped.current]) if (!live.has(id)) popped.current.delete(id)
   }, [st.notices, mode])
 
+  // 展开着就别让主进程把窗口收走 —— 前台的露面窗口期只有 9 秒，
+  // 没这一下的话，正读着的列表会当着你的面消失。
+  useEffect(() => {
+    window.island.hold(mode !== 'collapsed')
+  }, [mode])
+
   // 把自己的实际尺寸报给主进程，由它摆窗口。窗口大小跟着内容走，
   // 就不用在主进程里维护一份「每种形态多大」的魔法数字表。
   useLayoutEffect(() => {
@@ -182,9 +195,13 @@ export function Island(): JSX.Element | null {
       setMode('collapsed')
       return
     }
-    // 有待处理的先给待处理——那是有人在等你，运行列表只是余光信息
-    if (unread > 0) {
-      setViewId(st.notices[0].id) // 手动点开总是从队首看起
+    // 审批在等人 → 直接摊开那张卡（上面有可以直接点的选项按钮）。
+    // 其余情况一律进列表：一眼看清「哪些完成了、哪些还在跑」，
+    // 点某一条再跳到对应终端。原来这里是「有未读就摊开队首那张卡」，
+    // 于是三个任务完成时你只能看到最早的那个，剩下的要一条条翻。
+    const appr = st.notices.find((n) => n.kind === 'approval')
+    if (appr) {
+      setViewId(appr.id)
       setMode('notice')
     } else {
       setMode('list')
@@ -353,18 +370,52 @@ export function Island(): JSX.Element | null {
   }
 
   if (mode === 'list') {
+    // 已完成的排在上面：它们是「要你处理」的，在跑的只是余光信息。
+    // 点任意一条都直接跳到那个终端 —— 完成项跳过去看结果，运行项跳过去盯着。
     return shell(
       <div className="isl-body">
-        {st.running.length === 0 && <div className="isl-empty">没有任务在跑</div>}
-        {st.running.map((r) => (
-          <button key={r.key} className="isl-row" onClick={() => focus(r.key)}>
-            <span className="isl-dot live" />
-            <span className="isl-proj">{r.project}</span>
-            <span className="isl-term">{r.term}</span>
-            <span className="isl-spacer" />
-            <span className="isl-rowtime">{fmtDur(now - r.startedAt)}</span>
-          </button>
-        ))}
+        {st.notices.length === 0 && st.running.length === 0 && (
+          <div className="isl-empty">没有任务在跑</div>
+        )}
+
+        {st.notices.length > 0 && (
+          <>
+            <div className="isl-grouphd">完成了 {st.notices.length} 个</div>
+            {st.notices.map((n) => {
+              const ptyId = n.id.split(':')[0]
+              const appr = n.kind === 'approval'
+              return (
+                <button
+                  key={n.id}
+                  className={`isl-row done${appr ? ' waiting' : ''}`}
+                  onClick={() => focus(ptyId)}
+                >
+                  <span className={`isl-dot ${appr ? 'wait' : 'done'}`} />
+                  <span className="isl-proj">{n.project}</span>
+                  {/* 有这轮问的是什么就显示它，比终端名更能认出是哪件事 */}
+                  <span className="isl-term">{n.ask || n.term}</span>
+                  <span className="isl-spacer" />
+                  <span className="isl-rowtime">{appr ? '等审批' : fmtDur(n.roundMs)}</span>
+                </button>
+              )
+            })}
+          </>
+        )}
+
+        {st.running.length > 0 && (
+          <>
+            {st.notices.length > 0 && <div className="isl-grouphd">还在跑 {st.running.length} 个</div>}
+            {st.running.map((r) => (
+              <button key={r.key} className="isl-row" onClick={() => focus(r.key)}>
+                <span className="isl-dot live" />
+                <span className="isl-proj">{r.project}</span>
+                <span className="isl-term">{r.term}</span>
+                <span className="isl-spacer" />
+                <span className="isl-rowtime">{fmtDur(now - r.startedAt)}</span>
+              </button>
+            ))}
+          </>
+        )}
       </div>
     )
   }

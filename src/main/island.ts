@@ -51,6 +51,7 @@ function pushState(win: BrowserWindow): void {
   if (win.isDestroyed()) return
   win.webContents.send('island:state', {
     ...lastState,
+    foreground: mainInForeground(),
     notch: notchOf(screen.getPrimaryDisplay())
   })
 }
@@ -60,6 +61,9 @@ function pushState(win: BrowserWindow): void {
 const FG_NOTICE_MS = 9200
 /** 前台露面的截止时刻（epoch ms）。0 = 当下没有该露面的理由 */
 let fgUntil = 0
+/** 用户把岛展开着在读 —— 这期间不许收窗口。
+ *  没有这个的话：前台的露面窗口期一到，正读着的列表会当着人的面消失。 */
+let held = false
 /** 已经为哪些通知露过面。不记的话每一帧推送都会重新开窗口期，等于常驻 */
 const fgSeen = new Set<string>()
 /** 窗口期到点后回来重算一次的定时器 */
@@ -96,6 +100,8 @@ function noteFreshNotices(): void {
 function shouldShow(): boolean {
   if (lastState.notices.some((n) => n.kind === 'approval')) return true
   const hasContent = lastState.running.length > 0 || lastState.notices.length > 0
+  // 用户正展开着看：只要还有内容就留着，前台后台一视同仁
+  if (held) return hasContent
   if (!mainInForeground()) return hasContent
   // hasContent 这一条别省：通知被处理掉后 notices 会清空，只看窗口期会留下一个空胶囊挂满 9 秒
   return hasContent && Date.now() < fgUntil
@@ -289,6 +295,7 @@ export function isIslandWindow(win: BrowserWindow): boolean {
 }
 
 export function destroyIsland(): void {
+  held = false
   // 退出路径上不播动画，直接收掉——这时候没人在看，动画只会拖慢退出
   if (leaveTimer) {
     clearTimeout(leaveTimer)
@@ -324,6 +331,17 @@ export function registerIslandHandlers(): void {
   // 灵动岛挂载好了 → 补推一次当前状态（首帧的时序保险，见 preload/island.ts 的 ready）
   ipcMain.on('island:ready', () => {
     if (islandWin && !islandWin.isDestroyed()) pushState(islandWin)
+  })
+
+  // 用户把岛展开着在读 → 别在这期间把窗口收走。
+  // 折叠回去（或跳走）时会再发一次 false，前台的露面计时随即恢复。
+  ipcMain.on('island:hold', (_e, v: boolean) => {
+    const next = !!v
+    if (next === held) return
+    held = next
+    // 松手时重新起算露面窗口期，否则「读完折叠」会立刻消失，显得很突兀
+    if (!held && mainInForeground()) fgUntil = Date.now() + FG_NOTICE_MS
+    reconcile()
   })
 
   // 灵动岛量完自己有多大 → 主进程照着摆。让渲染层说了算，

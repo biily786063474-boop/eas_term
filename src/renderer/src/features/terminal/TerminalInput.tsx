@@ -149,13 +149,43 @@ export function TerminalInput({
     window.setTimeout(() => setFlash(false), 340)
   }
 
-  /** 语音定稿落进框里。连着说几句会一路追加，等你 ⌘↵ 才发出去 */
+  /** 语音定稿落进框里。
+   *
+   *  **落在光标处，不是末尾。** 原先无脑追加到最后，于是「写了一段话 → 回头想在中间补一句 →
+   *  把光标挪过去说话」，结果那句还是接在了末尾，得再剪切粘贴一次。
+   *  连着说几句时光标会跟着往后走，所以多句仍然是顺着排的。
+   *
+   *  没聚焦输入框时（比如刚点完麦克风、焦点还在按钮上）没有可信的光标位置，退回追加到末尾。 */
   const appendVoice = (text: string): void => {
-    setValue((prev) => (prev && !/\s$/.test(prev) ? prev + ' ' : prev) + text)
-    // setValue 是异步的，得等这一帧渲染完再量高度，否则量到的是上一版内容
+    const el = taRef.current
+    const focused = !!el && document.activeElement === el
+    const at = focused ? (el.selectionStart ?? el.value.length) : null
+    const end = focused ? (el.selectionEnd ?? at!) : null
+
+    setValue((prev) => {
+      if (at === null || end === null) {
+        // 末尾追加：和前一句之间补个空格，除非本来就以空白结尾
+        return (prev && !/\s$/.test(prev) ? prev + ' ' : prev) + text
+      }
+      const before = prev.slice(0, at)
+      const after = prev.slice(end)
+      // 插在词中间时两侧各补一个空格，否则会和原有的字黏成一坨
+      const lead = before && !/\s$/.test(before) ? ' ' : ''
+      const tail = after && !/^\s/.test(after) ? ' ' : ''
+      return before + lead + text + tail + after
+    })
+
     requestAnimationFrame(() => {
-      const el = taRef.current
-      if (el) autoGrow(el)
+      const e2 = taRef.current
+      if (!e2) return
+      autoGrow(e2)
+      if (at === null) return
+      // 光标推到刚插入这段之后，接着说下一句才会顺着排
+      const before = e2.value.slice(0, at)
+      const lead = before && !/\s$/.test(before) ? 1 : 0
+      const pos = at + lead + text.length
+      e2.focus()
+      e2.setSelectionRange(pos, pos)
     })
   }
 

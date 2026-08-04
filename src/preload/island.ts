@@ -20,6 +20,10 @@ const islandApi = {
     ipcRenderer.send('island:ready')
   },
   /** 把量到的内容尺寸报给主进程，由它摆窗口 */
+  /** 展开着在读 → 告诉主进程别收窗口（前台的露面窗口期会等你） */
+  hold: (v: boolean): void => {
+    ipcRenderer.send('island:hold', v)
+  },
   reportSize: (w: number, h: number): void => {
     ipcRenderer.send('island:resize', w, h)
   },
