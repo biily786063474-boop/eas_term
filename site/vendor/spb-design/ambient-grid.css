@@ -1,0 +1,34 @@
+/*
+ * ⚠️ 此文件由 SPB 设计系统自动分发，**不要在这里改**。
+ * 改动请到源头：~/Biily/独立站/design-system/ambient-grid.css
+ * 改完跑：node scripts/sync-design-system.mjs
+ *
+ * 同步于 2026-08-04 · 源文件 sha256 aebea4a87d48b32e
+ */
+/**
+ * SPB 设计系统 · 背景氛围层样式
+ *
+ * ⚠️ 接入要求：背景色必须挂在 html 上、body 设 transparent。
+ *    否则 z-index:-1 的画布会被 body 的背景色盖住，什么都看不见。
+ *    反过来，如果给每个子元素设 z-index 来解决，会覆盖掉固定导航的 position:fixed。
+ *
+ *    html { background: var(--spb-void); }
+ *    body { background: transparent; }
+ */
+
+.spb-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* 边缘渐隐，避免点阵在视口边界被硬切出一条直边 */
+  mask-image: radial-gradient(ellipse 130% 100% at 50% 45%, #000 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 130% 100% at 50% 45%, #000 30%, transparent 100%);
+}
+
+.spb-ambient canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}

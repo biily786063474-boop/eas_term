@@ -1,0 +1,57 @@
+/*
+ * ⚠️ 此文件由 SPB 设计系统自动分发，**不要在这里改**。
+ * 改动请到源头：~/Biily/独立站/design-system/scroll-motion.css
+ * 改完跑：node scripts/sync-design-system.mjs
+ *
+ * 同步于 2026-08-04 · 源文件 sha256 5134d5e11f5aebc0
+ */
+/**
+ * SPB 设计系统 · 滚动动效规范
+ * ─────────────────────────────────────────────────────────────
+ * 用 CSS `animation-timeline: view()`：跑在合成线程、零 JS、零依赖，
+ * 比 gsap ScrollTrigger 省得多。不支持的浏览器元素保持终态（正常显示），
+ * 不做降级动画 —— 静态可读永远好过半坏的动效。
+ *
+ * 用法：组件只用 data-sd 属性**标记意图**，不自己写动画。
+ * 全站滚动节奏改一处即可。
+ *
+ *   <h2 data-sd="rise">标题</h2>        进入视口时随滚动进度连续上浮
+ *   <div data-sd="drift">01</div>       反向缓移，轻微视差
+ *   <section data-sd="focus">…</section> 进出视口时亮度呼吸，当前区块自然成焦点
+ * ─────────────────────────────────────────────────────────────
+ */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-sd='rise'] {
+      animation: spb-sd-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 30%;
+    }
+    [data-sd='drift'] {
+      animation: spb-sd-drift linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+    [data-sd='focus'] {
+      animation: spb-sd-focus linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+
+@keyframes spb-sd-rise  { from { transform: translateY(26px) } to { transform: none } }
+@keyframes spb-sd-drift { from { transform: translateY(14px) } to { transform: translateY(-14px) } }
+@keyframes spb-sd-focus { 0% { opacity: .55 } 22%,78% { opacity: 1 } 100% { opacity: .55 } }
+
+/**
+ * 视觉回归测试开关：?static 时所有动效直落终态。
+ * 动效驱动的页面不提供这个开关就没法做截图测试 —— 截到的永远是动画中间态。
+ */
+body[data-static] *,
+body[data-static] *::before,
+body[data-static] *::after {
+  transition: none !important;
+  animation: none !important;
+}

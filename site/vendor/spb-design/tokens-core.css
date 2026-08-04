@@ -1,0 +1,91 @@
+/*
+ * ⚠️ 此文件由 SPB 设计系统自动分发，**不要在这里改**。
+ * 改动请到源头：~/Biily/独立站/design-system/tokens-core.css
+ * 改完跑：node scripts/sync-design-system.mjs
+ *
+ * 同步于 2026-08-04 · 源文件 sha256 c57a8dbd3da6c2c4
+ */
+/**
+ * SPB 设计系统 · 骨架层
+ * ─────────────────────────────────────────────────────────────
+ * 这一层定义**节奏**：字阶、间距、动效曲线与时长、中性色阶。
+ * 五个站共用，保证它们「一看就是一家的」。
+ *
+ * 这一层**不定义**：
+ *   · 品牌强调色（--brand）—— 各站自己的身份
+ *   · 材质（玻璃、圆角、阴影）—— 各站的标志性特征，不统一
+ *
+ * 所有值都能被站点自己的 CSS 覆盖（后加载的 :root 优先）。
+ * 中性色给的是默认值，各站底色不同可以调；但**字阶和动效不建议覆盖**，
+ * 那是「气质相近」的实际来源。
+ * ─────────────────────────────────────────────────────────────
+ */
+
+:root {
+  /* ═══════ 中性色阶（可覆盖）═══════
+     不用纯黑 #000：OLED 上纯黑会让元素边界失去层次 */
+  --spb-void:      #050505;   /* 页面底 */
+  --spb-surface:   #0d0d0d;   /* 抬升面 */
+  --spb-surface-2: #131313;   /* 二级抬升 / hover */
+  --spb-line:      #1f1f1f;   /* 分隔线 */
+  --spb-line-hi:   #2e2e2e;   /* 强分隔 / 边框 */
+
+  --spb-ink:       #ffffff;   /* 主文字 */
+  --spb-ink-2:     #8a8a8a;   /* 次文字 */
+  --spb-ink-3:     #575757;   /* 标注 / 编号 */
+
+  /* ═══════ 品牌强调色 ═══════
+     各站必须自己定义 --brand。这里给的是兜底值（SPB 的信号橙），
+     站点没定义时至少不会渲染出 invalid color。 */
+  --brand: #ff4d00;
+
+  /* ═══════ 字体（统一）═══════
+     自托管 + 构建期子集化。不用 Google Fonts CDN —— 国内会卡。
+     字体文件由分发脚本一并同步到各站的 vendor 目录。 */
+  --spb-sans: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+  --spb-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* 字距必须中西分开：中文用负字距会让汉字笔画粘连 */
+  --spb-track-latin: -.045em;
+  --spb-track-cjk:   0;
+
+  /* ═══════ 字阶（统一，不建议覆盖）═══════ */
+  --spb-type-hero:    clamp(3.2rem, 10.5vw, 10.5rem);
+  --spb-type-chapter: clamp(2.2rem, 6.2vw, 5.2rem);
+  --spb-type-lead:    clamp(1.1rem, 1.9vw, 1.6rem);
+  --spb-type-body:    1.0625rem;
+  --spb-type-meta:    .8125rem;
+
+  /* 中文巨字行高不能照西文定：.92 会让上下行笔画相碰 */
+  --spb-lh-hero: 1.04;
+  --spb-lh-body: 1.65;
+
+  /* ═══════ 间距节奏（统一）═══════
+     分层原则：区块「之间」大留白撑气场，区块「内部」高密度给信息。
+     不要在区块内部留白。 */
+  --spb-space-section: clamp(4.5rem, 9vh, 7.5rem);
+  --spb-gutter:        clamp(1.25rem, 5vw, 5.5rem);
+
+  /* ═══════ 动效（统一，这是气质相近的核心）═══════
+     组件里不要另写时长和曲线，一律引这几个。 */
+  --spb-ease-out:   cubic-bezier(.16, 1, .3, 1);    /* 入场，强减速 */
+  --spb-ease-inout: cubic-bezier(.65, 0, .35, 1);   /* 状态切换 */
+
+  --spb-dur-fast: 180ms;   /* hover、按钮、光标 */
+  --spb-dur-base: 420ms;   /* 元素入场 */
+  --spb-dur-slow: 900ms;   /* 大标题揭示 */
+  --spb-stagger:   60ms;   /* 序列错峰间隔 */
+
+  --spb-hairline: 1px;
+}
+
+/* reduced-motion 是一等公民，不是补丁。
+   注意背景层的降级是「静止但仍绘制」，不是消失 —— 消失会让版面塌一层。 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --spb-dur-fast: 120ms;
+    --spb-dur-base: 120ms;
+    --spb-dur-slow: 120ms;
+    --spb-stagger:    0ms;
+  }
+}

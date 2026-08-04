@@ -140,6 +140,27 @@ for f in site/assets/*; do
   echo "  ✓ assets/$n"
 done
 
+# 第三方设计资源（vendor/，含字体子目录）。
+# **别漏**：四个页面的 <head> 都引用它，漏传的话线上全是 404 —— 而 HTML 本身传成功了，
+# 发布脚本一路绿灯，只有真去打开页面才看得出来。
+if [ -d site/vendor ]; then
+  VFILES=$(find site/vendor -type f | sort)
+  VDIRS=$(find site/vendor -type d | sed 's#^site/#'"$WEB"'/#' | tr '\n' ' ')
+  ssh $HOST "mkdir -p $VDIRS"
+  for f in $VFILES; do
+    scp -q "$f" "$HOST:$WEB/${f#site/}"
+  done
+  # 逐个核对，但远端大小一次取回 —— 35 个文件各开一次 ssh 要一分多钟
+  RSIZES=$(ssh $HOST "cd $WEB && find vendor -type f -exec stat -c '%s %n' {} \;")
+  for f in $VFILES; do
+    rel=${f#site/}
+    L=$(stat -f%z "$f")
+    R=$(echo "$RSIZES" | awk -v n="$rel" '$2==n{print $1}')
+    [ "$L" = "$R" ] || { echo "  ✗ $rel 大小不符（本地 $L / 远端 ${R:-缺失}）"; exit 1; }
+  done
+  echo "  ✓ vendor/（$(echo "$VFILES" | wc -l | tr -d ' ') 个文件，逐个核对通过）"
+fi
+
 # ── 安装包 ──────────────────────────────────────────────────────────
 if [ "$SITE_ONLY" != "--site-only" ]; then
   # 必须和 package.json 的 dist 脚本输出目录一致 —— 它写的是 $HOME/Eas-Term-release
@@ -254,7 +275,7 @@ echo "  reload 后: $AFTER"
 echo "  ✓ 现有生产站点未受影响"
 
 say "▸ 线上自检"
-for u in / /download.html /privacy.html /changelog.html /style.css /analytics.js; do
+for u in / /download.html /privacy.html /changelog.html /style.css /analytics.js /vendor/spb-design/tokens-core.css; do
   printf "  %-16s %s\n" "$u" "$(curl -s -o /dev/null -w '%{http_code}' "https://eas.biily.top$u" --max-time 10)"
 done
 [ "$SITE_ONLY" = "--site-only" ] || printf "  %-16s %s\n" "latest.json" "$(curl -s -o /dev/null -w '%{http_code}' https://eas.biily.top/download/latest.json --max-time 10)"

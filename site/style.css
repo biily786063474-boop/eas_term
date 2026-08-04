@@ -32,9 +32,15 @@
   --radius-md: 10px;
   --radius-sm: 7px;
 
-  /* 字体 */
-  --font: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
-  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  /* 字体 —— 接入 SPB 设计系统的骨架层（Inter + 思源黑体 + JetBrains Mono，自托管子集）。
+     字体家族统一是「五个站看起来是一家」的主要来源；字号不统一（本站 15px），
+     那是各站自己的排版密度。 */
+  --font: var(--spb-sans);
+  --mono: var(--spb-mono);
+
+  /* 品牌强调色 —— 背景动效（ambient-grid.js）会自动读它染点阵。
+     与软件界面的 --accent 同值，官网和应用不脱节。 */
+  --brand: #a2b9e0;
 
   /* 版心 */
   /* 内容宽度随屏幕放宽（分档见文件末尾的 min-width 查询）。
@@ -56,11 +62,18 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
-body {
-  min-height: 100%;
+/* 底色与渐变从 body 挪到 html —— 背景点阵画布用 z-index:-1 垫在内容下，
+   body 只要有底色就会把它整个盖住。挪到 html 上渐变照样在，画布也看得见。
+   （不能改用「给每个子元素设 z-index」来绕开：那会覆盖掉固定导航的 position:fixed） */
+html {
   background-color: var(--bg-solid);
   background-image: linear-gradient(165deg, var(--bg-grad-1), var(--bg-grad-2));
   background-attachment: fixed;
+}
+
+body {
+  min-height: 100%;
+  background: transparent;
   color: var(--fg);
   font-family: var(--font);
   font-size: 15px;
