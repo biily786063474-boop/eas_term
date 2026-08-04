@@ -206,28 +206,81 @@ export function CanvasStage(): JSX.Element {
   // 键盘：Delete 删除选中 / ⌘D 复制选中（画布模式；分屏快捷键已按 viewMode 屏蔽）
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || !sel.size) return
-      // 只认 Delete 删除；Backspace 退回给文字编辑（曾在语音态误删运行中的终端）。
-      // 且终端节点(有 leafId)与 Frame 一律不由键盘删——终端只能点右上角关闭(带运行中确认)，杜绝误删丢会话。
-      if (e.key === 'Delete') {
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      // contentEditable 也要放行：便签正文就是这种，不排除的话在里面按删除键会把节点删掉
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable || !sel.size) return
+      // **Delete 和 Backspace 都认。**
+      //
+      // 原来只认 Delete，理由是「Backspace 留给文字编辑」——但 Mac 键盘上那个写着
+      // delete 的键发的正是 Backspace，Delete 要按 Fn+delete。于是在 Mac 上
+      // 框选一堆模块后按删除键**根本没反应**，而人不会想到去按 Fn。
+      // 文字编辑的场景由上面那行守着（输入框 / textarea / contentEditable 一律放行），
+      // 够了；xterm 的输入代理也是 textarea，同样不会误伤。
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         const st = useStore.getState()
-        const isTerminalNode = (k: string): boolean => {
-          if (k[0] !== 'n') return false
-          const [, fid, nid] = k.split(':')
-          return !!st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)?.leafId
-        }
-        const dels = [...sel].filter((k) => k[0] !== 'f' && !isTerminalNode(k))
-        if (!dels.length) return
-        e.preventDefault()
-        dels.forEach((k) => {
-          if (k[0] === 's') st.removeShape(k.slice(2))
-          else if (k[0] === 'n') {
+        // 终端节点单独收集：它不能只从画布上抹掉，还得把底下的 shell 一起收了，
+        // 否则 pty 变成孤儿——进程还在跑，而画布上已经找不到它了。
+        const terms: { fid: string; nid: string; leafId: string }[] = []
+        const plain: string[] = []
+        for (const k of sel) {
+          if (k[0] === 'f') continue // Frame 仍然不由键盘删：里面可能装着一堆东西
+          if (k[0] === 'n') {
             const [, fid, nid] = k.split(':')
-            st.removeNode(fid, nid)
-          } else if (k[0] === 'p') st.removeFreeNode(k.slice(2))
-        })
-        clearCanvasSel()
+            const leafId = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((n) => n.id === nid)?.leafId
+            if (leafId) {
+              terms.push({ fid, nid, leafId })
+              continue
+            }
+          }
+          plain.push(k)
+        }
+        if (!plain.length && !terms.length) return
+        e.preventDefault()
+
+        const wipe = (): void => {
+          plain.forEach((k) => {
+            if (k[0] === 's') st.removeShape(k.slice(2))
+            else if (k[0] === 'n') {
+              const [, fid, nid] = k.split(':')
+              st.removeNode(fid, nid)
+            } else if (k[0] === 'p') st.removeFreeNode(k.slice(2))
+          })
+          for (const t of terms) {
+            st.removeNode(t.fid, t.nid)
+            const tab = st.tabs.find((tb) => collectLeaves(tb.root).some((l) => l.id === t.leafId))
+            if (tab) st.closeLeaf(tab.id, t.leafId)
+          }
+          clearCanvasSel()
+        }
+
+        // 没有终端就直接删——图片、代码预览这些删错了重新拖一个就是。
+        if (!terms.length) {
+          wipe()
+          return
+        }
+        // 有终端：**只弹一次**汇总确认。逐个确认的话选了五个就要点五次，
+        // 人会开始无脑点确认，那道防线也就废了。
+        void (async () => {
+          const ptyIds = terms
+            .map((t) => {
+              for (const tb of st.tabs) {
+                const leaf = collectLeaves(tb.root).find((l) => l.id === t.leafId)
+                if (leaf?.pane.kind === 'terminal') return leaf.pane.ptyId
+              }
+              return null
+            })
+            .filter((x): x is string => !!x)
+          const busy = ptyIds.length ? await window.api.pty.busyByIds(ptyIds) : []
+          const n = plain.length + terms.length
+          st.requestConfirm({
+            message: busy.length
+              ? `要删除选中的 ${n} 项，其中 ${busy.length} 个终端正在运行命令，删除会终止它们。确定吗？`
+              : `要删除选中的 ${n} 项，含 ${terms.length} 个终端。确定吗？`,
+            confirmLabel: '删除',
+            onConfirm: wipe
+          })
+        })()
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
         e.preventDefault()
         const st = useStore.getState()
