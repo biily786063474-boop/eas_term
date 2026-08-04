@@ -84,6 +84,9 @@ interface NoticeDetail {
 export function useIslandFeed(): void {
   const runningPtys = useStore((s) => s.runningPtys)
   const attentionPtys = useStore((s) => s.attentionPtys)
+  // 点过「知道了」的通知 id。进依赖是必须的：不订阅的话点完要等下一次
+  // 状态变化才把这条从岛上摘掉，而「点了知道了」本身往往就是最后一次变化
+  const silencedNotices = useStore((s) => s.silencedNotices)
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
   const frames = useStore((s) => s.canvas.frames)
@@ -208,7 +211,16 @@ export function useIslandFeed(): void {
         return b.at - a.at
       })
 
-      const state: IslandState = { running, notices }
+      // 点过「知道了」的不再往岛上推。**注意 attention 没动** ——
+      // 软件内部（侧栏红点 / 抽屉呼吸 / 标题栏铃铛）照旧显示待处理，
+      // 只是岛不再为它冒出来。真正消掉要等你去那个终端。
+      const allIds = notices.map((n) => n.id)
+      const shown = notices.filter((n) => !silencedNotices.includes(n.id))
+      // 顺手把已经不存在的静音项摘掉：终端下一轮完成会生成新 id，
+      // 旧 id 留着只是白占地方（而且会随使用无限增长）
+      useStore.getState().pruneSilenced(allIds)
+
+      const state: IslandState = { running, notices: shown }
       window.api.island.sync(state)
     }
 
@@ -231,6 +243,7 @@ export function useIslandFeed(): void {
   }, [
     runningPtys,
     attentionPtys,
+    silencedNotices,
     tabs,
     projects,
     frames,
@@ -246,8 +259,11 @@ export function useIslandFeed(): void {
     return window.api.island.onAction((a: IslandAction) => {
       const st = useStore.getState()
       if (a.type === 'dismiss') {
-        // 「知道了」= 清掉这个终端的待处理标记（和在主窗口里点开它是同一个语义）
-        st.clearAttention(a.key.split(':')[0])
+        // 「知道了」**不等于处理完了**：只让灵动岛别再为这一条冒出来，
+        // 终端的待处理标记留着，等你真去那个终端才消。
+        // （原来这里是 clearAttention，等于点一下就把任务当成看过了，
+        //   于是「我知道有这回事，但还没空处理」这种最常见的状态没法表达。）
+        st.silenceNotice(a.key)
         return
       }
       if (a.type === 'approve') {

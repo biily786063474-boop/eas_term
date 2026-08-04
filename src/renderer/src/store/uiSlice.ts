@@ -28,6 +28,18 @@ export interface UiSlice {
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
+  /** 在灵动岛上点过「知道了」的通知 id。
+   *
+   *  **这不等于处理完了。** 它只让灵动岛别再为这一条冒出来 ——
+   *  终端的待处理标记（侧栏红点、抽屉呼吸、标题栏铃铛）照旧留着，
+   *  真正消掉要等你去那个终端。
+   *
+   *  按 notice id 记而不是 ptyId：id 里带着这一轮的耗时，
+   *  同一个终端下一轮再完成时 id 就变了，于是会重新提醒——不需要手动解除静音。 */
+  silencedNotices: string[]
+  silenceNotice: (id: string) => void
+  /** 把已经不存在的通知 id 从静音表里摘掉，防止它随使用无限增长 */
+  pruneSilenced: (liveIds: string[]) => void
   /** 正在自动跑 agent 任务的终端 ptyId。判据同「任务完成」提醒：Claude Code 干活时
    *  把终端标题设成「<盲文 spinner> 名字」，停下等人时是非 spinner。纯 shell 永不误报。 */
   runningPtys: string[]
@@ -139,6 +151,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   pendingConfirm: null,
   lastActiveTerminal: null,
   attentionPtys: [],
+  silencedNotices: [],
   mcpLog: [],
   mcpEnabled: localStorage.getItem(MCP_OFF_KEY) !== '1',
   runningPtys: [],
@@ -276,6 +289,15 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   flagAttention: (ptyId) =>
     set((s) => (s.attentionPtys.includes(ptyId) ? s : { attentionPtys: [...s.attentionPtys, ptyId] })),
+  silenceNotice: (id) =>
+    set((s) => (s.silencedNotices.includes(id) ? s : { silencedNotices: [...s.silencedNotices, id] })),
+  pruneSilenced: (liveIds) =>
+    set((s) => {
+      const live = new Set(liveIds)
+      const next = s.silencedNotices.filter((id) => live.has(id))
+      // 长度没变就返回原对象：这个函数每帧都会被调，返回新数组会让订阅者白白重渲染
+      return next.length === s.silencedNotices.length ? s : { silencedNotices: next }
+    }),
   clearAttention: (ptyId) =>
     set((s) => {
       if (!s.attentionPtys.includes(ptyId)) return s

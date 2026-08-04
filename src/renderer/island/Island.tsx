@@ -385,18 +385,31 @@ export function Island(): JSX.Element | null {
               const ptyId = n.id.split(':')[0]
               const appr = n.kind === 'approval'
               return (
-                <button
-                  key={n.id}
-                  className={`isl-row done${appr ? ' waiting' : ''}`}
-                  onClick={() => focus(ptyId)}
-                >
-                  <span className={`isl-dot ${appr ? 'wait' : 'done'}`} />
-                  <span className="isl-proj">{n.project}</span>
-                  {/* 有这轮问的是什么就显示它，比终端名更能认出是哪件事 */}
-                  <span className="isl-term">{n.ask || n.term}</span>
-                  <span className="isl-spacer" />
-                  <span className="isl-rowtime">{appr ? '等审批' : fmtDur(n.roundMs)}</span>
-                </button>
+                <div key={n.id} className={`isl-row done${appr ? ' waiting' : ''}`} data-nid={n.id}>
+                  <button className="isl-rowmain" onClick={() => focus(ptyId)}>
+                    <span className={`isl-dot ${appr ? 'wait' : 'done'}`} />
+                    <span className="isl-proj">{n.project}</span>
+                    {/* 有这轮问的是什么就显示它，比终端名更能认出是哪件事 */}
+                    <span className="isl-term">{n.ask || n.term}</span>
+                    <span className="isl-spacer" />
+                    <span className="isl-rowtime">{appr ? '等审批' : fmtDur(n.roundMs)}</span>
+                  </button>
+                  {/* 「知道了」：只让岛别再为这条冒出来，**待处理标记留着**。
+                      审批类不给这个 —— agent 正卡着等人，静音等于把它藏起来。 */}
+                  {!appr && (
+                    <button
+                      className="isl-rowmute"
+                      title="知道了（仍留在待处理里）"
+                      onClick={() => {
+                        window.island.action({ type: 'dismiss', key: n.id })
+                        // 这是最后一条的话就没什么可看的了，收起来
+                        if (st.notices.length <= 1 && st.running.length === 0) setMode('collapsed')
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               )
             })}
           </>
