@@ -69,9 +69,21 @@ else
   # 下载页 404。现在只刷 mac 的 dmg/zip，Windows 链接保持原样，
   # 由下面的校验确认它指向的那一版服务器上真的有。
   CHANGED=0
+  # Windows 包在本地备好了就一并回填，没有就让它停在旧版本。
+  #
+  # **踩过的坑**：这条替换原来根本不存在（只回填 dmg/zip），理由是「Windows 包是 CI 产物、
+  # 允许落后」。结果 v0.4.3 那次 exe 明明已经拉下来、也传上去了，下载页却还挂着 v0.4.1 ——
+  # 新版本的 Windows 包躺在服务器上没人下得到，而所有校验都是绿的。
+  WIN_LOCAL=$(ls "$PKG_DIR"/Eas-Term-"$VERSION"-x64-setup.exe 2>/dev/null | head -1 || true)
+  if [ -n "$WIN_LOCAL" ]; then
+    WIN_SED="s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-x64-setup\.exe#/download/v$VERSION/Eas-Term-$VERSION-x64-setup.exe#g;"
+  else
+    WIN_SED=""
+  fi
   for f in site/index.html site/download.html; do
     before=$(shasum "$f" | cut -d' ' -f1)
     sed -i '' -E "s#(<!-- v)[0-9]+\.[0-9]+\.[0-9]+( -->)#\1$VERSION\2#g; \
+                  ${WIN_SED} \
                   s#/download/v[0-9]+\.[0-9]+\.[0-9]+/Eas-Term-[0-9]+\.[0-9]+\.[0-9]+-(arm64|x64)\.(dmg|zip)#/download/v$VERSION/Eas-Term-$VERSION-\1.\2#g" "$f"
     [ "$before" = "$(shasum "$f" | cut -d' ' -f1)" ] || { echo "  ✓ $f 已更新"; CHANGED=1; }
   done
