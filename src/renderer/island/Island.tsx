@@ -114,10 +114,15 @@ export function Island(): JSX.Element | null {
     // 只挡 notice 态：list 态没有任何「正在读的内容」，开着运行列表等结果的人
     // 恰恰最需要看到通知弹出来。审批类则一律抢过来——agent 卡着等人。
     if (modeRef.current === 'notice' && headKind !== 'approval') return
-    // **主窗口在前台时只折叠着提示，不自动摊开卡片。**
-    // 你正看着屏幕，弹一张卡压在最上面是打扰；折叠条上的未读数已经把事说清了，
-    // 想看点一下就展开。审批例外——agent 卡着等人，那种要主动摊开。
-    if (fgRef.current && headKind !== 'approval') return
+    // **主窗口在前台时一律只折叠着提示，不自动摊开卡片。**
+    //
+    // 卡片有 400+ 像素宽、好几行高，还挂在 screen-saver 层级上 ——
+    // 你正在软件里干活时它会直接压掉屏幕顶部一大块。折叠条只有一条，
+    // 上面写着「任务完成」还是「需要审批」，够你决定要不要现在看了。
+    //
+    // 审批也不例外：agent 卡着等人确实急，但你人就在屏幕前，
+    // 折叠条已经在你视线里了，不需要再糊一张卡上来。
+    if (fgRef.current) return
     setViewId(headId)
     setMode('notice')
   }, [headId, headKind])
@@ -218,7 +223,9 @@ export function Island(): JSX.Element | null {
   const runN = st.running.length
   const doneN = st.notices.filter((n) => n.kind === 'done').length
   const mixed = !waiting && runN > 0 && doneN > 0
-  const label = waiting ? '等待审批' : runN ? '工作中' : '待处理'
+  // 折叠条大多数时候是灵动岛唯一露在外面的部分，尤其前台时它就是全部 ——
+  // 所以这一句必须自己说清是哪种事，不能只写「待处理」让人再点开确认
+  const label = waiting ? '需要审批' : runN ? '工作中' : doneN > 0 ? '任务完成' : '待处理'
 
   /** 顶行：三态都在，位置和高度都不变。
    *  贴顶时中间空出刘海那段不放字——刘海要真在那儿，放了也看不见。 */

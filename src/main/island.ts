@@ -6,7 +6,7 @@
 //
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
-import { app, BrowserWindow, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, screen } from 'electron'
 import path from 'path'
 import type { IslandAction, IslandState } from '../shared/types'
 
@@ -25,6 +25,8 @@ let contentSize = { w: 190, h: 30 }
 let leaveTimer: ReturnType<typeof setTimeout> | null = null
 /** 上一条诊断日志，用于去重（见 reconcile） */
 let lastLogLine = ''
+/** 同理，Dock 菜单内容的去重 */
+let lastDockLine = ''
 /** 屏幕几何只在第一次开窗时打一条 */
 let loggedDisplay = false
 
@@ -306,6 +308,9 @@ export function destroyIsland(): void {
 }
 
 export function registerIslandHandlers(): void {
+  // 启动就摆一个空菜单：在第一帧状态推来之前右键 Dock 也不该是空的
+  updateDockMenu()
+
   // app 级兜底：主窗口自己的 blur/focus 已经接了，但整个 app 失活这条路
   // （比如从没被激活过就被别的应用抢了焦点）走不到窗口事件上。
   app.on('browser-window-blur', nudgeIsland)
@@ -316,6 +321,9 @@ export function registerIslandHandlers(): void {
     lastState = state && Array.isArray(state.running) ? state : EMPTY
     noteFreshNotices()
     reconcile()
+    // 跟着内容走，不跟着焦点走：reconcile 会因为切窗口频繁触发，
+    // 而菜单的内容只和任务状态有关，重建太勤会让右键菜单在打开时闪
+    updateDockMenu()
   })
 
   // 审批框没认全时，把当时的屏幕原样记一条。
@@ -356,21 +364,84 @@ export function registerIslandHandlers(): void {
   // 主进程不自己解释这个动作：ptyId 到底落在哪个 tab、哪个画布节点，只有渲染层知道。
   ipcMain.on('island:action', (_e, action: IslandAction) => {
     if (!app.isPackaged) console.log('[island] action', JSON.stringify(action))
-    const main = BrowserWindow.getAllWindows().find(
-      (w) => !w.isDestroyed() && !isIslandWindow(w)
-    )
-    if (!main) return
-    if (action?.type === 'focus') {
-      // 跳转意味着「我来处理了」→ 主窗口必须回到前台，否则点了没反应。
-      // 顺序有讲究：先把 app 整体激活，再聚焦具体窗口。反过来的话，
-      // win.focus() 在 app 还不是 active application 时只是把它设成 key window，
-      // 用户屏幕上什么都不会发生。
-      if (main.isMinimized()) main.restore()
-      if (!main.isVisible()) main.show()
-      app.focus({ steal: true })
-      main.moveTop()
-      main.focus()
-    }
-    main.webContents.send('island:action', action)
+    dispatchAction(action)
   })
+}
+
+/** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 —— 
+ *  两处各写一遍的话，「跳转前要不要先激活 app」这种细节迟早只在一处是对的。 */
+function dispatchAction(action: IslandAction): void {
+  const main = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w))
+  if (!main) return
+  if (action?.type === 'focus') {
+    // 跳转意味着「我来处理了」→ 主窗口必须回到前台，否则点了没反应。
+    // 顺序有讲究：先把 app 整体激活，再聚焦具体窗口。反过来的话，
+    // win.focus() 在 app 还不是 active application 时只是把它设成 key window，
+    // 用户屏幕上什么都不会发生。
+    if (main.isMinimized()) main.restore()
+    if (!main.isVisible()) main.show()
+    app.focus({ steal: true })
+    main.moveTop()
+    main.focus()
+  }
+  main.webContents.send('island:action', action)
+}
+
+/** 粗粒度时长，只给人扫一眼。主进程这边不引渲染层那份 fmtDur —— 
+ *  为一个函数把渲染层的模块拉进主进程不划算。 */
+function briefDur(ms?: number): string {
+  if (!ms || ms < 0) return ''
+  const sec = Math.round(ms / 1000)
+  if (sec < 60) return `${sec}s`
+  const m = Math.floor(sec / 60)
+  if (m < 60) return `${m}m${String(sec % 60).padStart(2, '0')}s`
+  return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}m`
+}
+
+/** Dock 图标的右键菜单：不进主窗口也能看清「谁完成了、谁还在跑」，点一条直接过去。
+ *
+ *  为什么要有它：灵动岛在主窗口前台时只露面几秒，退场之后想再看一眼就没有入口了 ——
+ *  而点 Dock 图标（macOS 的系统行为）只会把主窗口拽出来，把岛顶掉。
+ *  右键菜单是 macOS 上「不打断当前工作，瞄一眼后台任务」的标准位置。 */
+function updateDockMenu(): void {
+  if (process.platform !== 'darwin' || !app.dock) return
+  const items: Electron.MenuItemConstructorOptions[] = []
+
+  for (const n of lastState.notices) {
+    const ptyId = n.id.split(':')[0]
+    const tag = n.kind === 'approval' ? '等审批' : '已完成'
+    items.push({
+      label: `● ${n.project} · ${tag}${n.kind === 'done' && n.roundMs ? ' · ' + briefDur(n.roundMs) : ''}`,
+      click: () => dispatchAction({ type: 'focus', key: ptyId })
+    })
+  }
+  for (const r of lastState.running) {
+    items.push({
+      label: `○ ${r.project} · 跑了 ${briefDur(Date.now() - r.startedAt)}`,
+      click: () => dispatchAction({ type: 'focus', key: r.key })
+    })
+  }
+  if (!items.length) items.push({ label: '没有任务在跑', enabled: false })
+
+  // 「显示灵动岛」：岛退场之后把它叫回来。没内容时给它禁用掉 ——
+  // 能点但点了什么都不出现，比灰着更让人困惑。
+  items.push({ type: 'separator' })
+  items.push({
+    label: '显示灵动岛',
+    enabled: lastState.notices.length > 0 || lastState.running.length > 0,
+    click: () => {
+      fgUntil = Date.now() + FG_NOTICE_MS
+      reconcile()
+    }
+  })
+
+  app.dock.setMenu(Menu.buildFromTemplate(items))
+  // 菜单本身没法从外面读（AppleScript 要辅助访问权限），出问题时靠这条对
+  if (!app.isPackaged) {
+    const line = items.map((i) => i.label ?? '—').join(' | ')
+    if (line !== lastDockLine) {
+      lastDockLine = line
+      console.log('[island] dock menu:', line)
+    }
+  }
 }
