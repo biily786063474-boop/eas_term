@@ -1,0 +1,350 @@
+/* ==========================================================================
+   Hero 原型演示 —— 用网页模拟 Eas-Term 的界面：左侧终端 + 右侧无限画布。
+   替代原来那张静态截图 shot-hero.png。
+
+   渐进增强：HTML 写死完整结构，没有 JS 时它就是一张能读的界面图
+   （爬虫也读得到文字）。proto.js 只负责「自动导览 + 鼠标接管」。
+
+   配色走站点自己的液态玻璃 token，节奏走 SPB 骨架层的 --spb-* 。
+   ========================================================================== */
+
+.proto {
+  position: relative;
+  margin-top: 46px;
+  /* hero 整体是居中版式，这块是「界面」不是文案，必须显式拨回左对齐 ——
+     否则终端里的命令行会飘到中间，一眼就假 */
+  text-align: left;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-xl);
+  background: var(--glass-2);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 30px 80px rgba(0, 0, 0, .5);
+  overflow: hidden;
+}
+
+/* ── 窗口标题栏 ── */
+.proto-chrome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--glass-border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.proto-dots { display: flex; gap: 6px; }
+.proto-dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--glass-border-strong);
+}
+.proto-title { flex: 1; text-align: center; }
+
+/* ── 主体：左终端 + 右画布 ── */
+.proto-body {
+  display: grid;
+  grid-template-columns: minmax(0, 34fr) minmax(0, 66fr);
+  min-height: 340px;
+}
+
+.proto-pane { position: relative; padding: 14px; }
+.proto-term { border-right: 1px solid var(--glass-border); }
+
+.proto-label {
+  position: absolute; top: 8px; right: 10px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+  color: var(--fg-dim); opacity: .55; text-transform: uppercase;
+}
+
+/* 终端内容 */
+.proto-lines { font-family: var(--mono); font-size: 11.5px; line-height: 1.85; }
+.proto-lines .u { color: var(--accent); }
+.proto-lines .c { color: var(--fg); }
+.proto-lines .d { color: var(--fg-dim); }
+.proto-caret {
+  display: inline-block; width: 7px; height: 14px;
+  background: var(--accent); vertical-align: -2px;
+  animation: proto-blink 1.1s steps(1) infinite;
+}
+@keyframes proto-blink { 0%, 50% { opacity: 1 } 50.01%, 100% { opacity: 0 } }
+
+/* ── 终端打字：hover 时逐字打出 claude ──
+   用 width + steps() 而不是 JS 逐字追加：纯 CSS、可被 reduced-motion 一键关掉 */
+.tw {
+  display: inline-block; overflow: hidden; white-space: nowrap;
+  vertical-align: bottom; width: 6ch;   /* 静态态：命令已经打完 */
+}
+.proto-pane[data-on] .tw { animation: tw-type .85s steps(6) both; }
+@keyframes tw-type { from { width: 0 } to { width: 6ch } }
+
+/* ── 仿 Claude Code 开屏（展开后露出）── */
+.term-splash { font-family: var(--mono); font-size: 10.5px; line-height: 1.75; margin-top: 8px; }
+.term-splash .cc-logo { color: var(--accent); font-size: 15px; line-height: 1.2; }
+.term-splash .cc-hi { color: var(--fg); margin-top: 2px; }
+.term-splash .cc-hi b { color: var(--accent); font-weight: 500; }
+.term-splash .cc-dim { color: var(--fg-dim); opacity: .8; }
+.term-splash .cc-cwd { color: var(--fg-dim); opacity: .6; margin-top: 3px; }
+.term-splash .cc-sep {
+  height: 1px; background: var(--glass-border); margin: 7px 0 5px;
+}
+.term-splash .cc-ph { opacity: .55; }
+/* 开屏整体在展开时淡入，比 max-height 单独出现更像「启动完成」 */
+.proto-pane[data-on] .term-splash { animation: cc-in .5s var(--spb-ease-out) .55s both; }
+@keyframes cc-in { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+
+/* 画布：点阵底纹，呼应全站背景 */
+.proto-canvas {
+  background-image: radial-gradient(circle, var(--glass-border-strong) 1px, transparent 1px);
+  background-size: 18px 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+/* ── 画布上的模块 ── */
+.proto-mod {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-3);
+  padding: 10px 11px;
+  min-height: 92px;
+  /* min-height 可动画，grid 的行列重排不可 —— 所以「展开」走高度而不是改栅格，
+     否则会瞬间跳一下 */
+  transition:
+    min-height   var(--spb-dur-base) var(--spb-ease-out),
+    border-color var(--spb-dur-base) var(--spb-ease-out),
+    box-shadow   var(--spb-dur-base) var(--spb-ease-out),
+    transform    var(--spb-dur-base) var(--spb-ease-out),
+    opacity      var(--spb-dur-base) var(--spb-ease-out);
+}
+
+/* ── 展开：hover / 被导览指到的模块长高，演示动画获得更大空间 ── */
+.proto-mod[data-on] { min-height: 176px; }
+
+/* 展开后才露出的细节。默认零高度并裁掉，展开时长出来 ——
+   用 max-height 而不是 display:none，才有过渡 */
+.proto-mod .more {
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition:
+    max-height var(--spb-dur-base) var(--spb-ease-out),
+    opacity    var(--spb-dur-base) var(--spb-ease-out);
+}
+.proto-mod[data-on] .more { max-height: 96px; opacity: 1; }
+/* .more 是新的布局容器，父级的 grid gap 管不到里面，各自补上 */
+.demo-browser .more { display: grid; gap: 4px; margin-top: 4px; }
+.demo-git .more { display: grid; gap: 6px; margin-top: 6px; }
+.proto-mod-head {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
+  margin-bottom: 8px;
+}
+.proto-mod-head b { color: var(--fg); font-weight: 500; }
+.proto-mod-body { font-size: 10.5px; line-height: 1.7; color: var(--fg-dim); }
+
+/* ==========================================================================
+   模块演示动画
+   每个模块 hover（或被导览指到）时，演示它自己在干什么。
+   全部纯 CSS，零依赖。静止态也是完整可读的界面，动画只是叠加。
+   ========================================================================== */
+
+.demo { --d: 1.6s; }
+
+/* ── 网页预览：地址栏进度条走一遍，页面内容逐块浮现 ── */
+.demo-browser .db-bar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 5px; border-radius: 4px 4px 0 0;
+  background: var(--glass-border);
+  position: relative; overflow: hidden;
+}
+.demo-browser .db-bar i {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--glass-border-strong);
+}
+.demo-browser .db-url {
+  flex: 1; height: 5px; margin-left: 3px; border-radius: 3px;
+  background: var(--glass-border-strong); position: relative; overflow: hidden;
+}
+.demo-browser .db-url::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--accent); transform: scaleX(0); transform-origin: left;
+}
+.demo-browser .db-page {
+  border: 1px solid var(--glass-border); border-top: 0;
+  border-radius: 0 0 4px 4px; padding: 6px 5px;
+  display: grid; gap: 4px;
+}
+.demo-browser .db-block {
+  height: 5px; border-radius: 3px; background: var(--glass-border-strong);
+}
+.demo-browser .db-block.h { height: 8px; width: 55%; background: var(--fg-dim); opacity: .5; }
+.demo-browser .db-block.s { width: 68%; }
+
+.proto-mod[data-on] .demo-browser .db-url::after {
+  animation: db-load var(--d) var(--spb-ease-out) infinite;
+}
+.proto-mod[data-on] .demo-browser .db-block {
+  animation: db-in var(--d) var(--spb-ease-out) infinite;
+}
+.proto-mod[data-on] .demo-browser .db-block:nth-child(2) { animation-delay: .12s; }
+.proto-mod[data-on] .demo-browser .db-block:nth-child(3) { animation-delay: .24s; }
+@keyframes db-load { 0% { transform: scaleX(0) } 45%,100% { transform: scaleX(1) } }
+@keyframes db-in {
+  0%, 35% { opacity: 0; transform: translateY(3px) }
+  55%, 100% { opacity: 1; transform: none }
+}
+
+/* ── 代码：高亮条逐行扫过，光标跟着走 ── */
+.demo-code { font-family: var(--mono); font-size: 9.5px; line-height: 1.9; position: relative; }
+.demo-code .dc-line { position: relative; padding-left: 2px; white-space: nowrap; }
+.demo-code .k { color: var(--accent); }
+.demo-code .s { color: var(--fg); opacity: .75; }
+.demo-code .dc-hl {
+  position: absolute; left: -4px; right: -4px; height: 15px;
+  border-radius: 3px; background: rgba(var(--accent-rgb), .12);
+  top: 0; opacity: 0;
+}
+.proto-mod[data-on] .demo-code .dc-hl {
+  animation: dc-scan calc(var(--d) * 1.4) steps(1) infinite;
+}
+@keyframes dc-scan {
+  0%   { top: 0px;  opacity: 1 }
+  33%  { top: 18px; opacity: 1 }
+  66%  { top: 36px; opacity: 1 }
+  99%  { top: 36px; opacity: 0 }
+  100% { top: 0px;  opacity: 0 }
+}
+
+/* ── 图片：从模糊低清渐变到清晰（替代原 Markdown 模块）── */
+.demo-img .di-frame {
+  height: 56px; border-radius: 5px; overflow: hidden; position: relative;
+  border: 1px solid var(--glass-border);
+  background: linear-gradient(140deg, rgba(var(--accent-rgb), .30), rgba(var(--accent-rgb), .06));
+  transition: height var(--spb-dur-base) var(--spb-ease-out);
+}
+/* 展开时画框长高，聚焦动画才看得清 */
+.proto-mod[data-on] .demo-img .di-frame { height: 116px; }
+.demo-img .di-meta {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 9px; color: var(--fg-dim);
+  margin-top: 5px;
+}
+.demo-img .di-shape { position: absolute; border-radius: 50%; }
+.demo-img .di-shape.a {
+  width: 26px; height: 26px; left: 12px; bottom: -6px;
+  background: rgba(255, 255, 255, .22);
+}
+.demo-img .di-shape.b {
+  width: 16px; height: 16px; right: 16px; top: 10px;
+  background: rgba(255, 255, 255, .32);
+}
+.demo-img .di-frame::after {
+  content: ''; position: absolute; inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(10, 12, 18, .35);
+}
+.proto-mod[data-on] .demo-img .di-frame::after {
+  animation: di-focus calc(var(--d) * 1.3) var(--spb-ease-out) infinite;
+}
+@keyframes di-focus {
+  0%   { backdrop-filter: blur(7px); opacity: 1 }
+  55%  { backdrop-filter: blur(0px); opacity: 0 }
+  90%  { backdrop-filter: blur(0px); opacity: 0 }
+  100% { backdrop-filter: blur(7px); opacity: 1 }
+}
+
+/* ── Git：提交点逐个亮起，最新一条滑入 ── */
+.demo-git { display: grid; gap: 6px; }
+.demo-git .dg-row {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 9.5px; color: var(--fg-dim);
+}
+.demo-git .dot {
+  width: 6px; height: 6px; border-radius: 50%; flex: none;
+  border: 1px solid var(--glass-border-strong); background: transparent;
+}
+.demo-git .dg-txt {
+  height: 4px; border-radius: 2px; background: var(--glass-border-strong); flex: 1;
+}
+.demo-git .dg-txt.s { max-width: 58%; }
+.proto-mod[data-on] .demo-git .dot {
+  animation: dg-fill calc(var(--d) * 1.5) var(--spb-ease-out) infinite;
+}
+.proto-mod[data-on] .demo-git .dg-row:nth-child(2) .dot { animation-delay: .18s; }
+.proto-mod[data-on] .demo-git .dg-row:nth-child(3) .dot { animation-delay: .36s; }
+.proto-mod[data-on] .demo-git .dg-row:nth-child(3) {
+  animation: dg-slide calc(var(--d) * 1.5) var(--spb-ease-out) infinite;
+}
+@keyframes dg-fill {
+  0%, 20%   { background: transparent; border-color: var(--glass-border-strong) }
+  40%, 100% { background: var(--accent); border-color: var(--accent) }
+}
+@keyframes dg-slide {
+  0%, 25% { opacity: 0; transform: translateY(-4px) }
+  45%, 100% { opacity: 1; transform: none }
+}
+
+/* 降级：不播演示动画，静态态本身就是完整可读的界面 */
+@media (prefers-reduced-motion: reduce) {
+  .proto-mod[data-on] .demo-browser .db-url::after,
+  .proto-mod[data-on] .demo-browser .db-block,
+  .proto-mod[data-on] .demo-code .dc-hl,
+  .proto-mod[data-on] .demo-img .di-frame::after,
+  .proto-mod[data-on] .demo-git .dot,
+  .proto-mod[data-on] .demo-git .dg-row { animation: none !important; }
+  .demo-img .di-frame::after { opacity: 0; }
+}
+
+/* 高亮态：被导览指到、或鼠标悬停 */
+.proto-mod[data-on] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 12px 34px rgba(var(--accent-rgb), .18);
+  transform: translateY(-2px);
+}
+/* 有高亮目标时，其余模块退后 —— 引导视线，不靠箭头 */
+.proto[data-guiding] .proto-mod:not([data-on]),
+.proto[data-guiding] .proto-pane:not([data-on]) .proto-lines { opacity: .38; }
+.proto-pane[data-on] { border-color: var(--accent); }
+.proto-pane[data-on]::after {
+  content: ''; position: absolute; inset: 0;
+  box-shadow: inset 0 0 0 1px var(--accent);
+  pointer-events: none;
+}
+
+/* ── 说明条 ── */
+.proto-tip {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--glass-border);
+  background: var(--glass-1);
+  font-size: 12.5px; color: var(--fg-dim);
+  min-height: 44px;
+}
+.proto-tip b { color: var(--fg); font-weight: 500; }
+.proto-tip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex: none;
+}
+.proto-steps { margin-left: auto; display: flex; gap: 5px; }
+.proto-steps i {
+  width: 16px; height: 3px; border-radius: 2px;
+  background: var(--glass-border-strong);
+  transition: background var(--spb-dur-fast) var(--spb-ease-inout);
+}
+.proto-steps i[data-on] { background: var(--accent); }
+
+/* 无 JS 时：不显示导览进度条，说明条给一句静态介绍 */
+.proto:not([data-ready]) .proto-steps { display: none; }
+
+@media (max-width: 760px) {
+  .proto-body { grid-template-columns: 1fr; }
+  .proto-term { border-right: 0; border-bottom: 1px solid var(--glass-border); }
+  .proto-canvas { grid-template-columns: 1fr; }
+}
+
+/* 降级：不做自动导览，全部模块保持清晰 */
+@media (prefers-reduced-motion: reduce) {
+  .proto[data-guiding] .proto-mod:not([data-on]),
+  .proto[data-guiding] .proto-pane:not([data-on]) .proto-lines { opacity: 1; }
+  .proto-caret { animation: none; }
+}

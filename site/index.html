@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="vendor/spb-design/scroll-motion.css" />
     <!-- /spb-design:head -->
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="proto.css" />
   </head>
   <body>
     <!-- spb-design:ambient --><div class="spb-ambient" aria-hidden="true"></div>
@@ -71,10 +72,119 @@
           </div>
           <p class="hero-req">macOS 11+（Apple Silicon 与 Intel 通用）· Windows 10+（x64）</p>
 
-          <figure class="shot shot-hero">
-            <img src="assets/shot-hero.png" alt="Eas-Term 主界面：画布上并排摆着终端、网页预览、Markdown 和代码模块" />
-            <figcaption class="shot-cap">主界面：左侧终端区 + 右侧无限画布</figcaption>
-          </figure>
+          <!-- 原型演示：用网页模拟主界面。没有 JS 时它也是一张能读的界面图，
+               proto.js 只负责「自动导览 + 鼠标接管」。 -->
+          <div class="proto" data-proto aria-label="Eas-Term 主界面演示：左侧终端区 + 右侧无限画布">
+            <div class="proto-chrome">
+              <span class="proto-dots"><i></i><i></i><i></i></span>
+              <span class="proto-title">Eas-Term — eas-demo</span>
+              <span>画布</span>
+            </div>
+
+            <div class="proto-body">
+              <div class="proto-pane proto-term"
+                   data-tip="终端里跑 <b>Claude Code / Codex</b>，模型和思考档位记在节点上，会话与终端绑定、回溯不串台。">
+                <span class="proto-label">Terminal</span>
+                <div class="proto-lines">
+                  <div>
+                    <span class="u">biily@Pro</span> <span class="d">eas-demo %</span>
+                    <span class="c tw">claude</span><span class="proto-caret"></span>
+                  </div>
+
+                  <!-- 展开后：仿 Claude Code 的开屏 -->
+                  <div class="more term-splash">
+                    <div class="cc-logo">✻</div>
+                    <div class="cc-hi">Welcome to <b>Claude Code</b>!</div>
+                    <div class="cc-dim">/help for help, /status for your current setup</div>
+                    <div class="cc-cwd">cwd: ~/eas-demo</div>
+                    <div class="cc-sep"></div>
+                    <div class="cc-dim">› <span class="cc-ph">试着让它把周报写成一个网页…</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="proto-pane proto-canvas">
+                <span class="proto-label">Canvas</span>
+
+                <div class="proto-mod"
+                     data-tip="AI 产出的 HTML <b>直接开成预览节点</b>，用内嵌 Chromium 渲染，CLI 里打开的链接不跳出应用。">
+                  <div class="proto-mod-head"><b>网页预览</b> report.html</div>
+                  <!-- 预览里就是 eas.biily.top 自己：导航 + Hero + 两颗下载按钮。
+                       用 CSS 画而不是 iframe —— iframe 会真的再加载一次本站，重且会递归。 -->
+                  <div class="proto-mod-body demo demo-browser">
+                    <div class="db-bar">
+                      <i></i><i></i><i></i>
+                      <span class="db-url"><em>eas.biily.top</em></span>
+                    </div>
+                    <div class="db-page">
+                      <div class="db-site">
+                        <div class="ds-nav"><span class="ds-brand">Eas-Term</span><span class="ds-links"></span></div>
+                        <div class="more">
+                          <div class="ds-hero">Eas-Term</div>
+                          <div class="ds-tag">左边是终端，右边是一块无限画布</div>
+                          <div class="ds-btns"><span class="ds-btn p"></span><span class="ds-btn"></span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proto-mod"
+                     data-tip="代码、图片、设计稿<b>都是同一块画布上的模块</b>，按项目分组成 Frame。">
+                  <div class="proto-mod-head"><b>代码</b> pipeline.ts</div>
+                  <div class="proto-mod-body demo demo-code">
+                    <span class="dc-hl"></span>
+                    <div class="dc-line"><span class="k">const</span> <span class="s">stage</span> = render(ctx)</div>
+                    <div class="dc-line"><span class="k">await</span> <span class="s">stage</span>.compose()</div>
+                    <div class="dc-line"><span class="k">return</span> <span class="s">report</span></div>
+                    <div class="more">
+                      <div class="dc-line">&nbsp;</div>
+                      <div class="dc-line"><span class="k">export</span> <span class="s">Pipeline</span> {</div>
+                      <div class="dc-line">&nbsp;&nbsp;name: <span class="s">string</span></div>
+                      <div class="dc-line">}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proto-mod"
+                     data-tip="设计稿和图片<b>就摆在画布上</b>，改完的效果和参考图并排看，不用来回切窗口。">
+                  <div class="proto-mod-head"><b>图片</b> cover@2x.png</div>
+                  <!-- 真图：Aurora（数字艺术软件）的效果输出 -->
+                  <div class="proto-mod-body demo demo-img">
+                    <div class="di-frame">
+                      <img src="assets/art-kaleidoscope.webp" alt="" class="di-img on" loading="lazy" />
+                      <img src="assets/art-reaction-diffusion.webp" alt="" class="di-img" loading="lazy" />
+                      <img src="assets/art-voronoi-cells.webp" alt="" class="di-img" loading="lazy" />
+                    </div>
+                    <div class="more">
+                      <div class="di-meta"><span>Aurora 导出</span><span>3 张 · WebP</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proto-mod"
+                     data-tip="<b>Git 记录也在画布上</b>，AI 改了什么、提交了什么，不用切窗口去看。">
+                  <div class="proto-mod-head"><b>Git</b> main</div>
+                  <div class="proto-mod-body demo demo-git">
+                    <div class="dg-row"><i class="dot"></i><b>9be6f15</b><span>feat: 构建报告自动生成</span></div>
+                    <div class="dg-row"><i class="dot"></i><b>a24bb63</b><span>feat: 渲染管线拆成可测量的阶段</span></div>
+                    <div class="dg-row"><i class="dot"></i><b>6bf8843</b><span>chore: 初始化项目骨架</span></div>
+                    <div class="more">
+                      <div class="dg-row"><i class="dot"></i><b>1d70c2e</b><span>fix: 预览节点滚动位置不跟随</span></div>
+                      <div class="dg-row"><i class="dot"></i><b>4a91f08</b><span>refactor: 画布事件收敛到一处</span></div>
+                      <div class="dg-row"><i class="dot"></i><b>c05e3b7</b><span>docs: 补 MCP 工具说明</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="proto-tip">
+              <span class="proto-tip-dot"></span>
+              <span data-proto-tip>左侧终端区 + 右侧无限画布，产出直接摆在眼前，不用来回切窗口。</span>
+              <span class="proto-steps" data-proto-steps></span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -84,6 +194,8 @@
           <p class="eyebrow">核心场景</p>
           <h2 class="section-title">终端和画布在一起，工作流就不用来回跳了</h2>
 
+          <!-- 滚动叠层：各场景逐个吸附到顶部叠成一摞（设计系统 data-sd-stack） -->
+          <div data-sd-stack>
           <div class="scene">
             <div class="scene-text">
               <h3>AI 写完，画布上直接看</h3>
@@ -161,6 +273,7 @@
       </section>
 
       <!-- ============ 能力清单 ============ -->
+          </div>
       <section id="features" class="section">
         <div class="wrap">
           <p class="eyebrow">能力清单</p>
@@ -397,6 +510,7 @@
       </div>
     </footer>
     <script src="/analytics.js" defer></script>
+    <script src="proto.js" defer></script>
     <!-- spb-design:script --><script src="vendor/spb-design/ambient-grid.js" defer></script>
   </body>
 </html>

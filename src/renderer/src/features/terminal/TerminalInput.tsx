@@ -18,6 +18,12 @@ import { useEffect, useRef, useState } from 'react'
 import { VoiceButton } from '../voice/VoiceButton'
 import { track } from '../notify/track'
 
+/** 文本写进 pty 之后隔多久再发回车。
+ *  给 TUI 一点时间把这段文本渲染进它自己的输入框——不隔开的话回车会被当成
+ *  「粘贴还没结束」吞掉，内容就停在 agent 的输入框里发不出去。
+ *  80ms 是「肉眼无感」和「够 TUI 反应」之间的取舍。 */
+const ENTER_DELAY_MS = 80
+
 /** 输入框最多长到几行，超过就内部滚动。再高会把终端可视区挤没 */
 const MAX_ROWS = 4
 const LINE_H = 19
@@ -135,7 +141,21 @@ export function TerminalInput({
     // 带空格的路径要加引号，否则会被读成两个文件。
     const paths = imgs.map((i) => (/\s/.test(i.path) ? `"${i.path}"` : i.path)).join(' ')
     const payload = paths ? (text ? `${paths} ${text}` : paths) : text
-    window.api.pty.write(ptyId, withReturn ? payload + '\r' : payload)
+
+    // 多行要用 bracketed paste 包起来，否则 TUI 会把每个换行都当成「提交」——
+    // 一段三行的提示词会被拆成三条消息发出去。单行不需要，少一层转义少一层出错可能。
+    const body = payload.includes('\n') ? `\x1b[200~${payload}\x1b[201~` : payload
+    window.api.pty.write(ptyId, body)
+
+    if (withReturn) {
+      // **回车必须单独发，而且要隔一小会儿。**
+      //
+      // 原来是 `payload + '\r'` 一次写进去，对 shell 没问题，但 Claude Code / Codex
+      // 这类 TUI 收到一大段文本后要先渲染进它自己的输入框，紧跟着的回车常常被它
+      // 当成「还在粘贴」吞掉 —— 表现就是内容躺在 agent 的输入框里，没发出去，
+      // 你还得自己去按一次回车。粘图时尤其明显：路径长，渲染更慢。
+      window.setTimeout(() => window.api.pty.write(ptyId, '\r'), ENTER_DELAY_MS)
+    }
     // 只松开缩略图，**不删文件**——agent 还没读呢（见 pasteImages.ts 的 24 小时策略）
     setImgs([])
     setValue('')

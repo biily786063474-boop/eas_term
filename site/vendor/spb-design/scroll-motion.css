@@ -3,7 +3,7 @@
  * 改动请到源头：~/Biily/独立站/design-system/scroll-motion.css
  * 改完跑：node scripts/sync-design-system.mjs
  *
- * 同步于 2026-08-04 · 源文件 sha256 5134d5e11f5aebc0
+ * 同步于 2026-08-04 · 源文件 sha256 5ad9181f8a4a705f
  */
 /**
  * SPB 设计系统 · 滚动动效规范
@@ -44,6 +44,55 @@
 @keyframes spb-sd-rise  { from { transform: translateY(26px) } to { transform: none } }
 @keyframes spb-sd-drift { from { transform: translateY(14px) } to { transform: translateY(-14px) } }
 @keyframes spb-sd-focus { 0% { opacity: .55 } 22%,78% { opacity: 1 } 100% { opacity: .55 } }
+
+/**
+ * 滚动叠层 —— 容器的直接子元素逐个吸附到顶部叠成一摞，被压住的向后退。
+ *
+ * 用法：<div data-sd-stack> <各个块…> </div>
+ *
+ * 不用 lenis 之类接管滚动的库：那会和本文件的 animation-timeline 打架，
+ * 也会和吃滚动速度的组件（跑马灯之类）互相抢。position:sticky 不抢控制权。
+ *
+ * 叠层必须有不透明底，否则会看穿到下一张。底色用 --sd-stack-bg，
+ * 各站覆盖成自己的底色即可（留一点透明 + backdrop 模糊，
+ * 背景氛围层仍隐约可见，不至于把它闷死）。
+ */
+[data-sd-stack] { position: relative; }
+
+[data-sd-stack] > * {
+  position: sticky;
+  top: 0;
+  background: var(--sd-stack-bg, rgba(5, 5, 5, .94));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-sd-stack] > * {
+      animation: spb-sd-recede linear both;
+      animation-timeline: view();
+      animation-range: exit 0% exit 100%;
+      transform-origin: center top;
+    }
+  }
+}
+
+@keyframes spb-sd-recede {
+  to { transform: scale(.955); filter: blur(3px) brightness(.62); opacity: .55; }
+}
+
+/* 不支持 scroll-driven 的浏览器：sticky 吸附照样生效，只是没有后退效果。
+   降级后仍是可用的叠层，不是坏掉的布局。 */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sd-stack] > * {
+    position: static;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
 
 /**
  * 视觉回归测试开关：?static 时所有动效直落终态。

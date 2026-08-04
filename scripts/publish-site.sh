@@ -126,7 +126,8 @@ say "▸ 网页 → $WEB"
 node scripts/changelog.mjs html
 ssh $HOST "mkdir -p $WEB/assets"
 # analytics.js 是站内统计脚本，页面都引用它 —— 漏传会让页面拿到 404
-for f in index.html download.html privacy.html changelog.html style.css analytics.js; do
+# proto.css / proto.js 是首屏原型演示，同理：漏传的话 hero 下面那块会塌成裸文字
+for f in index.html download.html privacy.html changelog.html style.css analytics.js proto.css proto.js; do
   scp -q "site/$f" "$HOST:$WEB/$f"
   L=$(stat -f%z "site/$f"); R=$(ssh $HOST "stat -c%s $WEB/$f")
   [ "$L" = "$R" ] || { echo "  ✗ $f 大小不符（本地 $L / 远端 ${R}）"; exit 1; }
