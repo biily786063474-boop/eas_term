@@ -140,7 +140,24 @@ export function CanvasStage(): JSX.Element {
         const r = el.getBoundingClientRect()
         const px = e.clientX - r.left
         const py = e.clientY - r.top
-        const s2 = clamp(cur.scale * (1 - e.deltaY * 0.01), SCALE_MIN, SCALE_MAX)
+        // deltaMode：0=像素（Chromium 常态）、1=行、2=页。不折算的话行/页模式下步长会小得动不了
+        const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1)
+        // **鼠标滚轮和触控板必须分开处理。**
+        //
+        // 原来是 `scale * (1 - dy * 0.01)`，那是照着 macOS 触控板写的 —— 捏合时 dy 是 ±1~10 的
+        // 连续小值，乘出来 0.9~1.1，很顺。但 Windows 的鼠标滚轮**一格就是 100 或 120**：
+        //   dy=100 → 1 - 1.0 = 0     → scale 归零，被 clamp 拉到 SCALE_MIN(20%)
+        //   dy=120 → 1 - 1.2 = -0.2  → 负数，同样掉到 20%
+        // 表现就是「往后拉一下，一步到底 20%」。放大方向同理，一格直接翻倍。
+        //
+        // 判据用「单次跨度是否 ≥40」：触控板再快也是连续小步，滚轮最小的一格也有 100。
+        const byWheel = Math.abs(dy) >= 40
+        const factor = byWheel
+          ? dy > 0
+            ? 1 / 1.12
+            : 1.12 // 滚轮：每格固定 ±12%，与 dy 具体是 100 还是 120 无关
+          : Math.exp(-dy * 0.01) // 触控板：小量下等价于原来的 (1 - dy*0.01)，手感不变，但永远为正
+        const s2 = clamp(cur.scale * factor, SCALE_MIN, SCALE_MAX)
         setViewport({
           scale: s2,
           x: px - (px - cur.x) * (s2 / cur.scale),
