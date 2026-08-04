@@ -68,6 +68,63 @@ exec /usr/bin/open "$@"
   }
 }
 
+/** 让 open shim 真的赢过系统的 /usr/bin/open。
+ *
+ *  **只把目录塞进 PATH 是不够的** —— 这是实测踩出来的：
+ *  终端起的是 login shell（-l），macOS 的 /etc/zprofile 会跑 `path_helper`，
+ *  它按 /etc/paths 重排整个 PATH、把系统目录提到最前，我们注入的目录被推到第 14 位，
+ *  而 /usr/bin 在第 4 位。于是这个 shim **从来没生效过**：终端里的 `open <url>`
+ *  一直在直接拉起 Safari，把整个应用顶掉。
+ *
+ *  解法是接管 zsh 的启动文件链（VS Code 的 shell integration 同款）：
+ *  ZDOTDIR 指到我们的目录，每个文件都先原样转发用户自己那份，
+ *  **最后再前置 PATH** —— 跑在 path_helper 之后，就没人能再把它挤下去。
+ *
+ *  转发必须写全。漏一个，用户放在那个文件里的配置就凭空消失了，
+ *  而这种消失极难联想到是终端这边改的。
+ *
+ *  只对 zsh 做。别的 shell 不读 /etc/zprofile 里那段 path_helper，PATH 顺序本来就是对的。 */
+function ensureZdotdir(shimDir: string): string | null {
+  try {
+    const dir = path.join(app.getPath('userData'), 'zdotdir')
+    fs.mkdirSync(dir, { recursive: true })
+    // shell 单引号转义：路径里真的有空格（~/Library/Application Support/…）
+    const q = (v: string): string => "'" + v.split("'").join("'\\''") + "'"
+
+    const write = (name: string, extra: string): void => {
+      const guard = 'EAS_ZDOT_' + name.replace(/\W/g, '_')
+      fs.writeFileSync(
+        path.join(dir, name),
+        `# Eas-Term 自动生成。先原样转发你自己的配置，再做我们那一点事。
+# 不想要这一层：把 pty.ts 里设 ZDOTDIR 那几行去掉即可，这个目录可以直接删。
+if [ -z "\${${guard}}" ]; then
+  export ${guard}=1
+  _eas_home=\${USER_ZDOTDIR:-$HOME}
+  [ -f "$_eas_home/${name}" ] && . "$_eas_home/${name}"
+  unset _eas_home
+fi
+${extra}`,
+        { mode: 0o644 }
+      )
+    }
+
+    write('.zshenv', '')
+    write('.zprofile', '')
+    // .zshrc 最后跑，且在 path_helper（/etc/zprofile）之后 —— 这一手必须放这儿才站得住
+    write(
+      '.zshrc',
+      `# path_helper 已经在 /etc/zprofile 里重排过 PATH 了，所以前置要放在最后一步。
+export PATH=${q(shimDir)}:"$PATH"
+`
+    )
+    write('.zlogin', '')
+    return dir
+  } catch (e) {
+    console.error('[pty] 准备 ZDOTDIR 失败（open shim 会被系统 open 抢先）', e)
+    return null
+  }
+}
+
 /**
  * 往 PATH 前面插一个目录。**必须走这个函数，别手拼。**
  *
@@ -317,6 +374,16 @@ export function registerPtyHandlers(): void {
         if (shimDir) {
           env.PATH = `${shimDir}:${env.PATH ?? ''}`
           env.BROWSER = path.join(shimDir, 'open') // 照顾按 BROWSER 约定的工具
+          // 上面这行赢不了 login shell 里的 path_helper（详见 ensureZdotdir 顶部说明），
+          // zsh 得再接管一次启动文件链。别的 shell 没这个问题，不动。
+          if (process.platform !== 'win32' && /zsh$/.test(defaultShell())) {
+            const zdot = ensureZdotdir(shimDir)
+            if (zdot) {
+              // 把用户原来的 ZDOTDIR 留给转发脚本，否则 oh-my-zsh 这类会去错地方找配置
+              if (env.ZDOTDIR) env.USER_ZDOTDIR = env.ZDOTDIR
+              env.ZDOTDIR = zdot
+            }
+          }
         }
         // MCP 上下文：跑在这个终端里的 AI 据此知道「我是哪个终端」→ 反查所属 Frame，
         // 于是 open_html 之类的工具不用问就能开在正确的 Frame 里

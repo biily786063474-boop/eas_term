@@ -114,12 +114,24 @@ export function App(): JSX.Element {
       const frame =
         s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
         s.canvas.frames.find((f) => !f.parentId)
-      if (!frame) {
-        void window.api.shell.openExternal(url)
+
+      // **不把人踢去系统浏览器。**
+      //
+      // 原来「画布上没有 Frame」时会 openExternal，于是终端里的 CLI 一调 open，
+      // Safari 就抢到前台 —— 你正打着字，整个应用被顶掉了。而这条路是自动触发的
+      // （agent 跑着跑着自己调 open），不是你点了什么，所以格外突兀。
+      //
+      // 现在一律留在软件内：画布里有 Frame 就放进去，没有就在分屏开个网页面板。
+      // 真想用系统浏览器，内嵌浏览器上有「在系统浏览器打开」。
+      if (s.viewMode === 'canvas' && frame) {
+        s.addWebNode(frame.id, url)
         return
       }
-      if (s.viewMode !== 'canvas') s.setViewMode('canvas')
-      s.addWebNode(frame.id, url)
+      if (s.viewMode === 'canvas') {
+        // 画布模式但一个 Frame 都没有：分屏面板在画布下看不见，得先切回去
+        s.setViewMode('split')
+      }
+      s.openWeb(url)
     })
   }, [])
 

@@ -3,7 +3,7 @@
  * 改动请到源头：~/Biily/独立站/design-system/ambient-grid.js
  * 改完跑：node scripts/sync-design-system.mjs
  *
- * 同步于 2026-08-04 · 源文件 sha256 b69c4a19394a0fc5
+ * 同步于 2026-08-04 · 源文件 sha256 b4c7dcae636b997f
  */
 /**
  * SPB 设计系统 · 背景氛围层（零依赖原生版）
@@ -34,8 +34,10 @@
   var cfg = Object.assign({
     dotSize: 3,
     gap: 24,
-    baseColor: '#232323',
-    activeColor: null,     // null = 读 CSS 变量 --brand
+    // null = 读 CSS 变量。点色也要可配：各站底色深浅不同，
+    // 写死一个值会导致亮底站（如笔纵 #0e0e0c）上点阵几乎看不见。
+    baseColor: null,       // null = 读 --ambient-dot
+    activeColor: null,     // null = 读 --brand
     proximity: 190,        // 染色感应半径
     speedTrigger: 110,     // 触发惯性推开的鼠标速度（px/s）
     shockRadius: 280,      // 点击冲击波半径
@@ -44,10 +46,13 @@
     returnDuration: 1350,  // elastic 回弹时长（ms）
   }, window.SPB_AMBIENT || {});
 
-  // 品牌色从 CSS 变量取 —— 一份 JS，各站自动用各自的色
+  // 颜色全部从 CSS 变量取 —— 一份 JS，各站自动用各自的配色
+  var rootCS = getComputedStyle(document.documentElement);
   if (!cfg.activeColor) {
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim();
-    cfg.activeColor = v || '#ff4d00';
+    cfg.activeColor = rootCS.getPropertyValue('--brand').trim() || '#ff4d00';
+  }
+  if (!cfg.baseColor) {
+    cfg.baseColor = rootCS.getPropertyValue('--ambient-dot').trim() || '#232323';
   }
 
   var canvas = document.createElement('canvas');

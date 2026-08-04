@@ -37,6 +37,9 @@ export interface TabsSlice {
   openDiff: (spec: DiffSpec) => void
   openHistory: (cwd: string) => void
   openChat: (cwd: string) => void
+  /** 在分屏里开一个网页面板。终端里蹦出来的链接走这条路 ——
+   *  画布上没有 Frame 可放时的去处，总比把人踢去系统浏览器强 */
+  openWeb: (url: string) => void
   closeTab: (tabId: string) => void
   closeTabSafely: (tabId: string) => Promise<void>
   setActiveTab: (tabId: string) => void
@@ -197,6 +200,10 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   // 终端头部「对话导航」：Claude Code 对话回看
   openChat: (cwd) => {
     openInPane(set, get, { kind: 'chat', cwd }, 'chat', { title: '对话', cwd })
+  },
+
+  openWeb: (url) => {
+    openInPane(set, get, { kind: 'web', url }, 'web', { title: '预览', cwd: '' })
   },
 
   closeTab: (tabId) => {

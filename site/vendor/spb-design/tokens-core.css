@@ -3,7 +3,7 @@
  * 改动请到源头：~/Biily/独立站/design-system/tokens-core.css
  * 改完跑：node scripts/sync-design-system.mjs
  *
- * 同步于 2026-08-04 · 源文件 sha256 c57a8dbd3da6c2c4
+ * 同步于 2026-08-04 · 源文件 sha256 66dee678b7e6276a
  */
 /**
  * SPB 设计系统 · 骨架层
@@ -38,6 +38,10 @@
      各站必须自己定义 --brand。这里给的是兜底值（SPB 的信号橙），
      站点没定义时至少不会渲染出 invalid color。 */
   --brand: #ff4d00;
+
+  /* 背景点阵的静止色。**底色越亮的站要把它调得越亮**，否则点阵看不见 ——
+     实测笔纵底色 #0e0e0c 配默认 #232323 只有 8% 明度差，肉眼无感。 */
+  --ambient-dot: #232323;
 
   /* ═══════ 字体（统一）═══════
      自托管 + 构建期子集化。不用 Google Fonts CDN —— 国内会卡。
