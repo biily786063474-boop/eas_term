@@ -314,7 +314,15 @@ export function registerIslandHandlers(): void {
   // app 级兜底：主窗口自己的 blur/focus 已经接了，但整个 app 失活这条路
   // （比如从没被激活过就被别的应用抢了焦点）走不到窗口事件上。
   app.on('browser-window-blur', nudgeIsland)
-  app.on('browser-window-focus', nudgeIsland)
+  app.on('browser-window-focus', (_e, win) => {
+    // 点了岛以外的地方 → 让它收回去。
+    // 岛是 focusable:false 的窗口，自己收不到 blur，只能由主进程在别的窗口拿到焦点时告诉它。
+    // 这覆盖了最常见的那次点击：看完岛上的列表，回主窗口干活。
+    if (!isIslandWindow(win) && islandWin && !islandWin.isDestroyed()) {
+      islandWin.webContents.send('island:collapse')
+    }
+    nudgeIsland()
+  })
 
   // 主窗口推状态（已在渲染层节流过）
   ipcMain.on('island:sync', (_e, state: IslandState) => {

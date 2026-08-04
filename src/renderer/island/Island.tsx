@@ -114,15 +114,14 @@ export function Island(): JSX.Element | null {
     // 只挡 notice 态：list 态没有任何「正在读的内容」，开着运行列表等结果的人
     // 恰恰最需要看到通知弹出来。审批类则一律抢过来——agent 卡着等人。
     if (modeRef.current === 'notice' && headKind !== 'approval') return
-    // **主窗口在前台时一律只折叠着提示，不自动摊开卡片。**
+    // **前台时「任务完成」只折叠着播报，「等审批」才自动摊开。**
     //
-    // 卡片有 400+ 像素宽、好几行高，还挂在 screen-saver 层级上 ——
-    // 你正在软件里干活时它会直接压掉屏幕顶部一大块。折叠条只有一条，
-    // 上面写着「任务完成」还是「需要审批」，够你决定要不要现在看了。
-    //
-    // 审批也不例外：agent 卡着等人确实急，但你人就在屏幕前，
-    // 折叠条已经在你视线里了，不需要再糊一张卡上来。
-    if (fgRef.current) return
+    // 分界线是「这条通知要不要你做决定」：
+    //   · 任务完成 —— 只是通报。卡片 400+ 像素宽、好几行高，还挂在 screen-saver 层级，
+    //     你正干着活它就压掉屏幕顶部一大块。折叠条写着「任务完成」够了，想看点开。
+    //   · 等待审批 —— agent 卡在那儿动不了，而且卡片上就有能直接点的选项按钮，
+    //     摊开它等于把「处理掉」这件事送到手边；只折叠的话你还得点开才发现有得选。
+    if (fgRef.current && headKind !== 'approval') return
     setViewId(headId)
     setMode('notice')
   }, [headId, headKind])
@@ -167,6 +166,10 @@ export function Island(): JSX.Element | null {
     window.island.hold(mode !== 'collapsed')
   }, [mode])
 
+  // 点到岛以外的地方就收起来。岛是 focusable:false 的窗口，自己收不到 blur，
+  // 由主进程在别的窗口拿到焦点时通知（见 island.ts 的 browser-window-focus）
+  useEffect(() => window.island.onCollapse(() => setMode('collapsed')), [])
+
   // 把自己的实际尺寸报给主进程，由它摆窗口。窗口大小跟着内容走，
   // 就不用在主进程里维护一份「每种形态多大」的魔法数字表。
   useLayoutEffect(() => {
@@ -200,17 +203,14 @@ export function Island(): JSX.Element | null {
       setMode('collapsed')
       return
     }
-    // 审批在等人 → 直接摊开那张卡（上面有可以直接点的选项按钮）。
-    // 其余情况一律进列表：一眼看清「哪些完成了、哪些还在跑」，
-    // 点某一条再跳到对应终端。原来这里是「有未读就摊开队首那张卡」，
-    // 于是三个任务完成时你只能看到最早的那个，剩下的要一条条翻。
-    const appr = st.notices.find((n) => n.kind === 'approval')
-    if (appr) {
-      setViewId(appr.id)
-      setMode('notice')
-    } else {
-      setMode('list')
-    }
+    // **一律进列表**，审批也不例外。
+    //
+    // 从折叠条点开只做「展开」这一件事：一眼看清哪些完成了、哪些还在跑，
+    // 不改动任何状态（不清待处理、不把通知标成已读）——那些要等你点进某一条。
+    // 原来有审批时会直接摊开那张卡，于是「我只想看看都完成了什么」这个最常见的
+    // 动作，会被一张要你做决定的卡片拦住。审批在列表里标着「等审批」，
+    // 点它照样跳回终端处理。
+    setMode('list')
   }
 
   const waiting = st.notices.some((n) => n.kind === 'approval')

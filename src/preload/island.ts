@@ -28,6 +28,12 @@ const islandApi = {
     ipcRenderer.send('island:resize', w, h)
   },
   /** 主进程要关窗了 → 播退场动画。窗口会在动画时长后被销毁，这里不用自己收尾 */
+  /** 主进程说「用户点到别处去了」→ 收起展开态 */
+  onCollapse: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('island:collapse', listener)
+    return () => ipcRenderer.removeListener('island:collapse', listener)
+  },
   onLeave: (cb: () => void): (() => void) => {
     const listener = (): void => cb()
     ipcRenderer.on('island:leave', listener)
