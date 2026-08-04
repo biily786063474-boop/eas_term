@@ -1954,3 +1954,263 @@ body.dragging-row * {
   color:var(--fg);word-break:break-all}
 /* 文件型密钥的标签：和文本型区分开 —— 用法完全不同（给路径 vs 给值） */
 .sec-var.isfile{background:rgba(139,92,246,.14);color:#c4b5fd}
+
+/* ========== 设置：标题栏最右的入口 + 灯箱 ========== */
+/* 收拢「偶尔改一次」的东西（主题、提示音）。它们原本一个占着标题栏、
+   一个无处安放——标题栏每加一个图标就挤一分，而这类设置一个月点不了两次。 */
+.cset-btn {
+  /* 曾经绝对定位在画布右上角（right/top 14px），正压在右侧抽屉头部的「+」上。
+     搬进标题栏后跟 .skill-btn 一套尺寸，不再和画布上的任何东西抢位置。 */
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-2);
+  backdrop-filter: var(--blur);
+  /* 同 .crm 的处理：不显眼靠文字淡，不靠整体 opacity——
+     整体压透明的话画布节点会从背景里透上来，糊成一片 */
+  color: color-mix(in srgb, var(--fg-dim) 62%, transparent);
+  cursor: pointer;
+  transition: color 0.2s, background-color 0.2s, transform 0.2s;
+}
+
+.cset-btn:hover {
+  color: var(--fg);
+  background: var(--glass-3);
+  /* 齿轮 hover 转一点，是这一处允许的小趣味：它一天被点不了几次 */
+  transform: rotate(35deg);
+}
+
+.cset-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  animation: cset-fade 0.16s ease-out;
+}
+
+@keyframes cset-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cset-box {
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.55);
+  padding: 18px 20px 20px;
+  animation: cset-pop 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes cset-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cset-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cset-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.cset-close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.cset-close:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cset-sec {
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.cset-sec:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.cset-label {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  margin-bottom: 10px;
+}
+
+/* ---- 主题 ---- */
+.cset-themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.cset-theme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.cset-theme:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+.cset-theme.on {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--fg);
+}
+
+.cset-swatch {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.cset-themename {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- 提示音 ---- */
+.cset-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.cset-row input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.cset-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cset-rowname {
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.cset-volnum {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+.cset-sub {
+  padding-left: 24px;
+  transition: opacity 0.18s;
+}
+
+.cset-sub.off {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.cset-try {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 2px;
+}
+
+.cset-trybtn {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.cset-trybtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--fg);
+}
+
+.cset-trybtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cset-overlay,
+  .cset-box {
+    animation: none;
+  }
+  .cset-btn:hover {
+    transform: none;
+  }
+}

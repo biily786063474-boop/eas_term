@@ -4,6 +4,7 @@ import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
+import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
@@ -279,6 +280,9 @@ app.whenReady().then(() => {
   registerPtyHandlers()
   registerProjectHandlers()
   registerFsHandlers()
+  registerPasteImageHandlers()
+  // 上次留下的粘贴图，过 24 小时的在这里清掉（见 pasteImages.ts 里为什么不发送后就删）
+  sweepPasteImages()
   registerGitHandlers()
   registerSessionHandlers()
   registerCanvasHandlers()

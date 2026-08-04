@@ -478,7 +478,12 @@ export function CanvasDrawer(): JSX.Element {
               <ChevronRightIcon size={12} />
             </span>
             <span className="cd-sec-title">文件</span>
+            {/* 把当前项目名摆在标题旁：文件树本身看不出是谁的，多项目时最容易认错 */}
+            {activeProject && <span className="cd-sec-of">{activeProject.name}</span>}
           </div>
+          {filesOpen && !activeProject && (
+            <div className="cd-empty">在画布上点一个 Frame 或终端，这里显示它的文件</div>
+          )}
           {filesOpen && activeProject && (
             <div
               className="cd-files"

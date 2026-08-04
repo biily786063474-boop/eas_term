@@ -66,6 +66,23 @@ let materializing = false
 // 缩放手势结束判定:每次 scale 变都重置,停 160ms 无新缩放 → 把 committedScale 落到当前 scale
 let commitScaleTimer: ReturnType<typeof setTimeout> | null = null
 
+/** 画布上选中了东西 → 顺带把「当前项目」切过去，右侧抽屉的项目高亮和文件树才跟得上你的手。
+ *
+ *  只认「单选一个 Frame」：多选时说不清该跟谁，与其乱跳不如不动。
+ *  子 Frame 自己不带 projectId（那是顶层 Frame 的字段），得沿 parentId 往上找。
+ *  返回空对象表示「这次不改」——展开进 set 的返回值里刚好是无操作。 */
+function followSel(s: AppState, keys: string[]): { activeProjectId?: string } {
+  if (keys.length !== 1 || !keys[0].startsWith('f:')) return {}
+  let f = s.canvas.frames.find((x) => x.id === keys[0].slice(2))
+  // 上限 8 层纯粹是防呆：数据坏掉出现环时不至于把界面卡死
+  for (let i = 0; f && !f.projectId && f.parentId && i < 8; i++) {
+    const pid: string = f.parentId
+    f = s.canvas.frames.find((x) => x.id === pid)
+  }
+  const projectId = f?.projectId
+  return projectId && projectId !== s.activeProjectId ? { activeProjectId: projectId } : {}
+}
+
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
   canvas: initialScene,
@@ -833,18 +850,18 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   maximizedNode: null,
   setMaximizedNode: (v) => set({ maximizedNode: v }),
   canvasSel: [],
-  setCanvasSel: (keys) => set({ canvasSel: keys }),
+  setCanvasSel: (keys) => set((s) => ({ canvasSel: keys, ...followSel(s, keys) })),
   toggleCanvasSel: (key, additive) =>
     set((s) => {
-      if (additive)
-        return {
-          canvasSel: s.canvasSel.includes(key)
-            ? s.canvasSel.filter((k) => k !== key)
-            : [...s.canvasSel, key]
-        }
+      if (additive) {
+        const keys = s.canvasSel.includes(key)
+          ? s.canvasSel.filter((k) => k !== key)
+          : [...s.canvasSel, key]
+        return { canvasSel: keys, ...followSel(s, keys) }
+      }
       // 非累加：已是唯一选中则保持，否则替换为仅此项
       if (s.canvasSel.length === 1 && s.canvasSel[0] === key) return s
-      return { canvasSel: [key] }
+      return { canvasSel: [key], ...followSel(s, [key]) }
     }),
   clearCanvasSel: () => set((s) => (s.canvasSel.length ? { canvasSel: [] } : s))
 })

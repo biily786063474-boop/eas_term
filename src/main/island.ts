@@ -55,10 +55,50 @@ function pushState(win: BrowserWindow): void {
   })
 }
 
-/** 窗口该不该在：不在前台 且 确实有东西可报。两者缺一，窗口就该整个销毁。 */
+/** 前台通知的露面时长。比渲染层的自动收起（AUTO_HIDE_MS = 8s）多留一点，
+ *  让收起动画播完再撤窗口，否则会看到卡片被硬生生抽走。 */
+const FG_NOTICE_MS = 9200
+/** 前台露面的截止时刻（epoch ms）。0 = 当下没有该露面的理由 */
+let fgUntil = 0
+/** 已经为哪些通知露过面。不记的话每一帧推送都会重新开窗口期，等于常驻 */
+const fgSeen = new Set<string>()
+/** 窗口期到点后回来重算一次的定时器 */
+let fgTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 收到新一帧状态时判断：前台是否该为「刚到的通知」露一次面。
+ *
+ *  前台不常驻是刻意的——岛贴在屏幕最上沿，常驻就等于永久盖住菜单栏那一条。
+ *  所以前台只在通知刚到的这几秒冒出来，然后退场。 */
+function noteFreshNotices(): void {
+  const ids = new Set(lastState.notices.map((n) => n.id))
+  // 消失的通知要从记录里摘掉：同一个终端下一轮又完成时得能再触发一次
+  for (const id of [...fgSeen]) if (!ids.has(id)) fgSeen.delete(id)
+
+  const fresh = lastState.notices.filter((n) => !fgSeen.has(n.id))
+  fresh.forEach((n) => fgSeen.add(n.id))
+  if (!fresh.length || !mainInForeground()) return
+
+  fgUntil = Date.now() + FG_NOTICE_MS
+  if (fgTimer) clearTimeout(fgTimer)
+  // 到点自己回来收摊。没有这一下的话，窗口会一直挂到下一次状态推送才被回收，
+  // 而「没有新事发生」恰恰意味着不会再有推送。
+  fgTimer = setTimeout(() => {
+    fgTimer = null
+    reconcile()
+  }, FG_NOTICE_MS + 100)
+}
+
+/** 窗口该不该在。
+ *
+ *  · 有审批在等 → 永远显示。它不会自动消失，前台也一样得看得见。
+ *  · 主窗口不在前台 → 有运行中任务或通知就显示（老行为）。
+ *  · 主窗口在前台 → 只在「刚来了新通知」的窗口期内露面，不常驻。 */
 function shouldShow(): boolean {
-  if (mainInForeground()) return false
-  return lastState.running.length > 0 || lastState.notices.length > 0
+  if (lastState.notices.some((n) => n.kind === 'approval')) return true
+  const hasContent = lastState.running.length > 0 || lastState.notices.length > 0
+  if (!mainInForeground()) return hasContent
+  // hasContent 这一条别省：通知被处理掉后 notices 会清空，只看窗口期会留下一个空胶囊挂满 9 秒
+  return hasContent && Date.now() < fgUntil
 }
 
 /** 刘海几何。Electron 没有 safeAreaInsets，这里靠两个信号推：
@@ -267,6 +307,7 @@ export function registerIslandHandlers(): void {
   // 主窗口推状态（已在渲染层节流过）
   ipcMain.on('island:sync', (_e, state: IslandState) => {
     lastState = state && Array.isArray(state.running) ? state : EMPTY
+    noteFreshNotices()
     reconcile()
   })
 

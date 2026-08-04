@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 // 全局自定义 tooltip：接管所有 [data-tip] 元素的悬浮提示，替代原生 title。
@@ -15,6 +15,7 @@ const DELAY = 360
 export function Tooltip(): JSX.Element | null {
   const [tip, setTip] = useState<TipState | null>(null)
   const timer = useRef<number | null>(null)
+  const boxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const clearTimer = (): void => {
@@ -66,9 +67,27 @@ export function Tooltip(): JSX.Element | null {
     }
   }, [])
 
+  // 贴边收拢：居中锚点会让靠窗口边缘的元素（如标题栏最右的设置）把 tooltip 顶出视口。
+  // 在绘制前量一次、用 margin 推回来——改 left 会触发第二次布局，margin 不会。
+  useLayoutEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    el.style.marginLeft = '0px'
+    const r = el.getBoundingClientRect()
+    const M = 8
+    const dx =
+      r.right > window.innerWidth - M
+        ? window.innerWidth - M - r.right
+        : r.left < M
+          ? M - r.left
+          : 0
+    if (dx) el.style.marginLeft = `${dx}px`
+  }, [tip])
+
   if (!tip) return null
   return createPortal(
     <div
+      ref={boxRef}
       className={`app-tooltip${tip.above ? ' above' : ''}`}
       style={{ left: tip.x, top: tip.y }}
     >

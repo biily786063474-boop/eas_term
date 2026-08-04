@@ -20,9 +20,12 @@
    粘贴多行会被逐行当命令执行。写完 ⌘↵ 一次性送进 pty。 */
 .term-input {
   flex: none;
+  /* 麦克风的 interim 气泡挂在这一层上（它自己退回了文档流，没法当锚点） */
+  position: relative;
+  /* 竖着排：图片缩略图一行在上，输入行在下 */
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 6px 8px 6px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.02);
@@ -261,4 +264,74 @@
   line-height: 1.55;
   color: var(--fg-dim);
   opacity: 0.8;
+}
+
+/* ── 输入行：文本框 + 麦克风 + 发送 ── */
+.term-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* ── 待发送的图片：缩略图排一行，⌘↵ 时把路径连同文字一起发出去 ── */
+.term-input-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 0 2px;
+}
+
+.tii {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  flex: none;
+}
+
+.tii img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* × 只在悬停时露出来：44px 见方的缩略图上常驻一个按钮会把图盖掉大半 */
+.tii-x {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.tii:hover .tii-x {
+  opacity: 1;
+}
+
+/* 拖着图片悬在框上时的落点提示 */
+.term-input.dragover {
+  background: rgba(var(--accent-rgb), 0.1);
+  border-top-color: rgba(var(--accent-rgb), 0.55);
+}
+
+.term-input-err {
+  font-size: 11.5px;
+  color: #f0a0a0;
+  padding: 0 2px;
 }

@@ -1,8 +1,9 @@
-// 画布右上角的设置入口 + 灯箱面板。
+// 标题栏最右的设置入口 + 灯箱面板。
 //
 // 这里收拢那些「偶尔改一次、改完就忘」的东西：主题、提示音。
-// 它们原本散在标题栏（主题）和无处安放（提示音），标题栏那点地方
-// 每加一个图标就挤一分，而这类设置一个月也点不了两次，不该常驻在最贵的位置。
+//
+// 位置换过一次：先放在画布右上角，结果和右侧抽屉头部的「添加项目」按钮
+// 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
@@ -15,8 +16,9 @@ import {
   setSoundEnabled,
   setVolume
 } from '../notify/sound'
+import './workspace.css'
 
-export function CanvasSettings(): JSX.Element {
+export function SettingsPanel(): JSX.Element {
   const [open, setOpen] = useState(false)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)

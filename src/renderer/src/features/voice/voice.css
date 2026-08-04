@@ -77,3 +77,28 @@
   color: #ff9aa4;
   font-size: 12px;
 }
+
+/* ── inline：麦克风嵌在终端输入框里，跟发送按钮并排 ──
+   原先它绝对定位在终端面板右下角，底部加了输入框之后两者正好叠在一起。
+   这里退回文档流，尺寸对齐 .term-input-send（24px），只有提示气泡还浮着。 */
+.voice-ctl.inline {
+  position: static;
+  flex: none;
+  flex-direction: row;
+  gap: 0;
+  pointer-events: auto;
+}
+
+.voice-ctl.inline .voice-btn {
+  width: 24px;
+  height: 24px;
+}
+
+/* 气泡的定位锚点是 .term-input（它设了 position:relative），不是这个 static 容器 */
+.voice-ctl.inline .voice-interim,
+.voice-ctl.inline .voice-err {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  z-index: 8;
+}

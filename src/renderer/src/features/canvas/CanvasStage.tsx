@@ -11,7 +11,6 @@ import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
-import { CanvasSettings } from './CanvasSettings'
 import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
@@ -903,7 +902,6 @@ export function CanvasStage(): JSX.Element {
 
       <CanvasMiniMap />
       <CanvasRunMonitor />
-      <CanvasSettings />
 
       <div className="canvas-zoombar">
         <button

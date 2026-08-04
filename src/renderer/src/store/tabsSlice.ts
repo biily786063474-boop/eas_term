@@ -394,7 +394,14 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         activeTabId: tabId,
         activeTabByProject: tab
           ? { ...s.activeTabByProject, [projectKey(tab.projectId)]: tabId }
-          : s.activeTabByProject
+          : s.activeTabByProject,
+        // 点进画布上某个终端 = 你正在操作那个项目，右侧抽屉的项目高亮和文件树要跟着换。
+        // 没有 projectId 的标签（散终端）保持原样，别把抽屉清空。
+        //
+        // **只在画布模式下跟**：分屏模式的侧栏项目是你自己点选的，
+        // 在 A 的文件树里翻着翻着、顺手点一下 B 的终端就被跳走，那是添乱。
+        activeProjectId:
+          s.viewMode === 'canvas' ? (tab?.projectId ?? s.activeProjectId) : s.activeProjectId
       }
     }),
 

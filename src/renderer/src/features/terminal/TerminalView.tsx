@@ -15,7 +15,6 @@ import {
   dirnameOf,
   type HoveredPath
 } from './pathLinks'
-import { VoiceButton } from '../voice/VoiceButton'
 import { SecretBadge } from './SecretBadge'
 import { TerminalInput } from './TerminalInput'
 import { parseApproval } from './approvalParse'
@@ -441,8 +440,13 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
     // Agent 状态检测靠「终端标题」：Claude Code 工作时把标题设成「<盲文 spinner> 名字」（⠋⠙⠹…，
     // U+2800–U+28FF），一轮跑完 / 出选项 / 需审批（在等你操作）时设成「✳ 名字」（非 spinner）。
-    // 标题从 spinner 跃迁到非 spinner、且当前没聚焦在该终端 → 标记「需处理」供抽屉呼吸提示。
+    // 标题从 spinner 跃迁到非 spinner → 标记「需处理」，供抽屉呼吸提示 / 灵动岛 / 提示音。
     // 纯 shell 的标题是 cwd（无 spinner），永不误报；比"输出静止"精确、不乱闪。
+    //
+    // **这里曾附加「且当前没聚焦在该终端」**，后果是：你正盯着终端 A，A 跑完了，
+    // 于是一声不响、灵动岛上也没有它——恰恰是最该提醒的场景（人可能根本不在电脑前，
+    // 「聚焦」只说明这个面板是活动面板，不代表有人在看）。改成一律标记；
+    // 「已读」交给下面的 keydown/mousedown——你在这个终端里动了手，才算真看见了。
     let prevTitleSpinner = false
     let disposed = false
     const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
@@ -451,7 +455,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       const spinner = isSpinnerTitle(title)
       // 同一个信号也用来做左上角的「谁在自动跑」提示
       useStore.getState().setPtyRunning(ptyId, spinner)
-      if (prevTitleSpinner && !spinner && !el.contains(document.activeElement)) {
+      if (prevTitleSpinner && !spinner) {
         useStore.getState().flagAttention(ptyId)
         // 停下来的原因可能是「答完了」，也可能是「弹了个框等你选」。
         // 读一眼屏幕分辨这两种——认出选项的话灵动岛就能直接给按钮。
@@ -479,10 +483,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       }
       prevTitleSpinner = spinner
     })
-    // 独立响铃 BEL（部分 CLI 会在需确认时响铃）→ 未聚焦也标记（次要兜底；OSC 标题终止符的 BEL 不会触发此事件）
-    const bellDisp = term.onBell(() => {
-      if (!el.contains(document.activeElement)) useStore.getState().flagAttention(ptyId)
-    })
+    // 独立响铃 BEL（部分 CLI 会在需确认时响铃）→ 一律标记，同上（次要兜底；
+    // OSC 标题终止符的 BEL 不会触发此事件）
+    const bellDisp = term.onBell(() => useStore.getState().flagAttention(ptyId))
 
     // 点击/聚焦该终端时标记为活动面板，并记住它是「最近活动终端」
     // （供名词词典等面板把文本插入到这个终端的光标处——那时 activeLeaf 已是词典自己）
@@ -492,6 +495,11 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       useStore.setState({ lastActiveTerminal: { tabId, ptyId } })
     }
     el.addEventListener('focusin', onFocus)
+    // 已聚焦的终端不会再触发 focusin，光靠它「已读」标记会一直亮到你切走再切回来。
+    // 在这个终端里敲键 / 点一下，就当你看见了。
+    const markRead = (): void => useStore.getState().clearAttention(ptyId)
+    el.addEventListener('keydown', markRead)
+    el.addEventListener('mousedown', markRead)
 
     // 右键弹菜单：命中路径时附带「在此打开/cd/复制路径」等项，并始终带上
     // 复制选区 / 粘贴 / 全选 / 清屏 等通用文本操作。
@@ -516,6 +524,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     return () => {
       ro.disconnect()
       el.removeEventListener('focusin', onFocus)
+      el.removeEventListener('keydown', markRead)
+      el.removeEventListener('mousedown', markRead)
       el.removeEventListener('contextmenu', onContextMenu)
       renderDisp.dispose()
       thumb.removeEventListener('mousedown', onThumbDown)
@@ -571,9 +581,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     <div ref={containerRef} className="terminal-host">
       {/* xterm 挂在这层，不是 host——host 底部还有输入框，xterm 会把自己撑满 */}
       <div ref={screenRef} className="terminal-screen" />
+      {/* 麦克风在输入框里面（右侧），不再单独绝对定位——两者曾在右下角叠成一团 */}
       <TerminalInput ptyId={ptyId} onFocusTerm={() => termRef.current?.focus()} />
-      {/* 画布模式下终端走「字号缩放」，麦克风按钮按同一 scale 缩放，才与终端内容相对静止 */}
-      <VoiceButton ptyId={ptyId} scale={canvasScale} />
       <SecretBadge ptyId={ptyId} scale={canvasScale} />
       {m &&
         createPortal(

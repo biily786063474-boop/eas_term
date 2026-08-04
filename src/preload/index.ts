@@ -486,6 +486,25 @@ const api = {
     saveImage: (projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> =>
       ipcRenderer.invoke('clipboard:saveImage', projectPath)
   },
+  /** 输入框里粘贴 / 拖入的图片。落在系统临时目录，24 小时后由主进程清掉 */
+  pasteImage: {
+    save: (
+      bytes: Uint8Array,
+      ext: string
+    ): Promise<{ ok: boolean; error?: string; path?: string }> =>
+      ipcRenderer.invoke('pasteImage:save', bytes, ext),
+    /** 只删得掉我们自己临时目录里的东西；拖进来的外部文件原地不动 */
+    remove: (path: string): Promise<boolean> => ipcRenderer.invoke('pasteImage:remove', path),
+    /** 拖进来的 File → 它在磁盘上的真实路径。
+     *  Electron 32 起 File.path 被移除了，只能走 webUtils，而它只在 preload 里够得着。 */
+    pathFor: (file: File): string => {
+      try {
+        return webUtils.getPathForFile(file)
+      } catch {
+        return ''
+      }
+    }
+  },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
     // 终端里 CLI 调 `open <url>` 被 shim 劫持后，主进程经此通知渲染层在画板浏览器打开

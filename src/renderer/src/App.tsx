@@ -7,6 +7,7 @@ import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { SecretsPanel } from './features/workspace/SecretsPanel'
+import { SettingsPanel } from './features/workspace/SettingsPanel'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
@@ -214,6 +215,8 @@ export function App(): JSX.Element {
               画布
             </button>
           </div>
+          {/* 设置摆在最右：全局的东西，两种视图模式下都在同一个位置 */}
+          <SettingsPanel />
         </div>
       </div>
       <div className="body">
