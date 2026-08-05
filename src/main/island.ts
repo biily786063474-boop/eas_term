@@ -58,10 +58,10 @@ function pushState(win: BrowserWindow): void {
   })
 }
 
-/** 前台通知的露面时长。比渲染层的自动收起（AUTO_HIDE_MS = 8s）多留一点，
- *  让收起动画播完再撤窗口，否则会看到卡片被硬生生抽走。 */
-const FG_NOTICE_MS = 9200
-/** 前台露面的截止时刻（epoch ms）。0 = 当下没有该露面的理由 */
+/** 前台被「手动叫出来」之后留多久。
+ *  只有 Dock 菜单的「显示灵动岛」会用到 —— 前台不再自动弹窗，见 shouldShow。 */
+const FG_NOTICE_MS = 20_000
+/** 手动唤出的截止时刻（epoch ms）。0 = 没人叫过它 */
 let fgUntil = 0
 /** 用户把岛展开着在读 —— 这期间不许收窗口。
  *  没有这个的话：前台的露面窗口期一到，正读着的列表会当着人的面消失。 */
@@ -71,42 +71,42 @@ const fgSeen = new Set<string>()
 /** 窗口期到点后回来重算一次的定时器 */
 let fgTimer: ReturnType<typeof setTimeout> | null = null
 
-/** 收到新一帧状态时判断：前台是否该为「刚到的通知」露一次面。
+/** 记下哪些通知已经见过。
  *
- *  前台不常驻是刻意的——岛贴在屏幕最上沿，常驻就等于永久盖住菜单栏那一条。
- *  所以前台只在通知刚到的这几秒冒出来，然后退场。 */
+ *  留着这张表是为了「同一个终端下一轮再完成时能重新算作新的」，
+ *  它不再驱动任何弹窗行为（见函数体里的说明）。 */
 function noteFreshNotices(): void {
   const ids = new Set(lastState.notices.map((n) => n.id))
   // 消失的通知要从记录里摘掉：同一个终端下一轮又完成时得能再触发一次
   for (const id of [...fgSeen]) if (!ids.has(id)) fgSeen.delete(id)
 
-  const fresh = lastState.notices.filter((n) => !fgSeen.has(n.id))
-  fresh.forEach((n) => fgSeen.add(n.id))
-  if (!fresh.length || !mainInForeground()) return
-
-  fgUntil = Date.now() + FG_NOTICE_MS
-  if (fgTimer) clearTimeout(fgTimer)
-  // 到点自己回来收摊。没有这一下的话，窗口会一直挂到下一次状态推送才被回收，
-  // 而「没有新事发生」恰恰意味着不会再有推送。
-  fgTimer = setTimeout(() => {
-    fgTimer = null
-    reconcile()
-  }, FG_NOTICE_MS + 100)
+  // 只记「见过了」，**不再因为来了新通知就把窗口弹出来**。
+  //
+  // 曾经这里会给前台开一个 9 秒的露面窗口期，结果是：你正在软件里打字，
+  // 一个任务跑完，屏幕顶上突然多出个窗口，macOS 顺手还把 Space 切了。
+  // 前台的通知交给标题栏计数 + 提示音，那两样不抢你的窗口。
+  lastState.notices.filter((n) => !fgSeen.has(n.id)).forEach((n) => fgSeen.add(n.id))
 }
 
 /** 窗口该不该在。
  *
- *  · 有审批在等 → 永远显示。它不会自动消失，前台也一样得看得见。
- *  · 主窗口不在前台 → 有运行中任务或通知就显示（老行为）。
- *  · 主窗口在前台 → 只在「刚来了新通知」的窗口期内露面，不常驻。 */
+ *  **你正在软件里干活时，这个窗口一概不出现** —— 连审批也不例外。
+ *
+ *  它是个 alwaysOnTop('screen-saver') + visibleOnFullScreen 的窗口，
+ *  macOS 为了显示它会把你从当前 Space 拽走（全屏用的时候尤其明显，感觉像被强制切了窗口）。
+ *  而你人就在屏幕前，通知根本不需要靠它送达：标题栏的待处理计数在闪、提示音在响、
+ *  抽屉里那条在呼吸，够了。
+ *
+ *  只有两种情况前台也显示：你自己从 Dock 菜单点了「显示灵动岛」，
+ *  或者你正把它展开着在读（held）—— 两者都是你主动要的，不是它自己蹦出来。 */
 function shouldShow(): boolean {
-  if (lastState.notices.some((n) => n.kind === 'approval')) return true
   const hasContent = lastState.running.length > 0 || lastState.notices.length > 0
-  // 用户正展开着看：只要还有内容就留着，前台后台一视同仁
-  if (held) return hasContent
-  if (!mainInForeground()) return hasContent
-  // hasContent 这一条别省：通知被处理掉后 notices 会清空，只看窗口期会留下一个空胶囊挂满 9 秒
-  return hasContent && Date.now() < fgUntil
+  if (mainInForeground()) {
+    // hasContent 这一条别省：通知被处理光后只看窗口期，会留下一个空胶囊挂着
+    return hasContent && (held || Date.now() < fgUntil)
+  }
+  if (lastState.notices.some((n) => n.kind === 'approval')) return true
+  return hasContent
 }
 
 /** 刘海几何。Electron 没有 safeAreaInsets，这里靠两个信号推：
@@ -439,6 +439,13 @@ function updateDockMenu(): void {
     enabled: lastState.notices.length > 0 || lastState.running.length > 0,
     click: () => {
       fgUntil = Date.now() + FG_NOTICE_MS
+      // 到点自己回来收摊：前台不会再有别的状态推送来触发回收，
+      // 没这一下的话手动叫出来的窗口会一直挂着
+      if (fgTimer) clearTimeout(fgTimer)
+      fgTimer = setTimeout(() => {
+        fgTimer = null
+        reconcile()
+      }, FG_NOTICE_MS + 100)
       reconcile()
     }
   })
