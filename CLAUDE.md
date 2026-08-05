@@ -23,10 +23,43 @@ scripts/publish-site.sh
 > **版本排序必须用 `sort -V`** —— 试过 `sort -t. -k1,1n`，遇到 `v1.0.0` 会把它排到 `v0.x` 前面
 > （"v1" 被按数值解析成 0），于是最新版本被当成最老的删掉。造了 9 个版本目录实测确认过。
 
+## 🎨 营销站接了 SPB 共享设计系统（2026-08-04）
+
+站点骨架（背景点阵动效 / 字体 / 字阶 / 间距节奏 / 滚动叠层）改为**从别的仓库分发过来**，
+本站只保留自己的品牌色与材质（液态玻璃）。
+
+| | |
+|---|---|
+| 源头（**改这里**）| `~/Biily/独立站/design-system/` |
+| 本项目里的落点（**分发产物，别手改**）| `site/vendor/spb-design/`（35 个文件 1.4M）|
+| 更新方式 | `node ~/Biily/独立站/scripts/sync-design-system.mjs --only eas` |
+| 线上 | `/www/wwwroot/eas/vendor/spb-design/` |
+
+**直接编辑 `site/vendor/spb-design/` 没有意义 —— 下次分发会原样覆盖。**
+要改骨架去独立站的 `design-system/` 改，再分发回来。
+
+两条接入约定（改样式时容易踩）：
+
+- 本站 `:root` 定义 `--brand: #a2b9e0`，背景动效读它染色；点阵静止色读 `--ambient-dot`
+- **底色必须挂 `html`、`body` 设 `transparent`** —— 背景画布是 `z-index:-1`，
+  body 有底色会把它整个盖住；而「给每个子元素设 z-index」绕开会覆盖掉固定导航的 `position:fixed`
+
+`scripts/publish-site.sh` 已补上 `vendor/` 的传输与逐文件核对。
+**改传输清单时别把它删了** —— 漏传的症状是 HTML 正常、脚本全绿，
+只有真打开页面才看得出 CSS 和字体全 404。
+字体是**按本站实际用字现场生成的子集**（727 字），不与其他站共用：
+共用会让大部分汉字 fallback 到苹方，而苹方没有 900 字重，页面会一半思源一半苹方。
+
 ## ⚠️ 这台机器上还有别的生产站
 
-`www.biily.top`（动态站，pm2 跑 node）、`aurora.biily.top`、`mini.biily.top`（反代到家里 Mac mini）。
+`www.biily.top`（动态站，pm2 跑 node）、`aurora.biily.top`、`mini.biily.top`（反代到家里 Mac mini），
+以及 **2026-08-04 新来的两个：`spb.biily.top`（独立站集合入口）和 `bzone.biily.top`
+（笔纵官网，从 8.130 迁来，带 pm2 `bizone-cms`:4001 与 `survey`:3721）**。
 改配置**只加独立 `.conf`**，reload 前后各测一次现有站点状态码。磁盘只剩 ~19G，传包前先 `df -h`。
+
+> `publish-site.sh` 里的 `OTHER_SITES` 现在只有 `www.biily.top` 和 `aurora.biily.top`，
+> **新来的 `bzone` / `spb` 不在比对范围里** —— 想让 reload 的安全网覆盖它们，把两个域名加进去。
+> `bzone` 尤其值得加：它背后还挂着两个 pm2 服务。
 
 ## 更多细节
 

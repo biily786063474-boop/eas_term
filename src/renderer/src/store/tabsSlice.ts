@@ -247,11 +247,14 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
 
   // shell 通过 OSC 序列设置的自动标题；用户手动改过名的标签不受影响
   setTabTitle: (tabId, title) =>
-    set((s) => ({
-      tabs: s.tabs.map((t) =>
-        t.id === tabId && title && !t.customTitle ? { ...t, title } : t
-      )
-    })),
+    set((s) => {
+      const tab = s.tabs.find((t) => t.id === tabId)
+      // 标题没变就原样返回，别造新数组。
+      // 终端的 OSC 标题来得很密（shell 每次提示符都发一遍、agent 更是每帧都发），
+      // 不短路的话每一次都会让订阅 tabs 的组件重渲染一轮 —— 而内容根本没动。
+      if (!tab || !title || tab.customTitle || tab.title === title) return s
+      return { tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, title } : t)) }
+    }),
 
   // 用户手动重命名；传空字符串则恢复自动标题。同时同步画布里对应终端节点的名字（双向一致）
   renameTab: (tabId, title) =>

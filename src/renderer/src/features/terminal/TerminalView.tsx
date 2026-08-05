@@ -451,8 +451,19 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     let disposed = false
     const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
     const titleDisp = term.onTitleChange((title) => {
-      store.setTabTitle(tabId, title)
       const spinner = isSpinnerTitle(title)
+      // **把 spinner 那个字剥掉再写进标签。**
+      //
+      // Claude Code 干活时标题是「<盲文 spinner> 名字」，那个字每 ~100ms 换一个
+      // （⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ 循环）。原样写进去的话，标签栏上那行字就一直在跳 ——
+      // 而它正好在标题栏下面，看着就是「顶上一条在闪」。
+      // 更糟的是每跳一次都造一个新的 tabs 数组，订阅它的 App / 侧栏 / 标签栏 /
+      // 待处理徽标全都跟着重渲染一轮，每秒十次。
+      //
+      // 「在跑」这件事由下面的 setPtyRunning 表达（标签上有个常亮的点、
+      // 抽屉有呼吸提示、灵动岛也在报），不需要靠标题闪来传达。
+      const stable = spinner ? title.replace(/^[⠀-⣿]+\s*/u, '') : title
+      if (stable) store.setTabTitle(tabId, stable)
       // 同一个信号也用来做左上角的「谁在自动跑」提示
       useStore.getState().setPtyRunning(ptyId, spinner)
       if (prevTitleSpinner && !spinner) {
