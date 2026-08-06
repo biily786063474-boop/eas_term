@@ -43,6 +43,11 @@ function normalizeUrl(raw: string): string {
   return 'https://www.google.com/search?q=' + encodeURIComponent(u)
 }
 
+/** 离开视口多久就把 webview 拆掉（连同它的 Chromium 进程）。
+ *  两分钟是权衡：平移画布扫过去、切个视图再回来都远不到这个数，
+ *  而真正「摆在画布角落很久不看」的书签节点会被回收掉。 */
+const IDLE_KILL_MS = 120_000
+
 export function WebView({
   url: initialUrl,
   frameId,
@@ -69,6 +74,8 @@ export function WebView({
   const [canFwd, setCanFwd] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [menu, setMenu] = useState<DOMRect | null>(null) // ⋯ 溢出菜单锚点
+  /** 最后停留的地址。离屏回收后重建要用它 —— 用 initialUrl 会把人送回节点刚建时那一页 */
+  const lastUrlRef = useRef(initialUrl ?? '')
 
   // 菜单外部点击 / Esc 关闭
   useEffect(() => {
@@ -106,6 +113,7 @@ export function WebView({
       const url = (e as unknown as { url?: string }).url
       if (url) {
         setAddr(url)
+        lastUrlRef.current = url // 离屏回收后重建要从这儿续上
         // 回写节点 url → 随 canvas.json 持久化，重开还原到上次页面
         if (free && nodeId) useStore.getState().setFreeNodeUrl(nodeId, url)
         else if (frameId && nodeId) useStore.getState().setNodeUrl(frameId, nodeId, url)
@@ -114,7 +122,10 @@ export function WebView({
     }
     const onNavInPage = (e: Event): void => {
       const ev = e as unknown as { url?: string; isMainFrame?: boolean }
-      if (ev.isMainFrame && ev.url) setAddr(ev.url)
+      if (ev.isMainFrame && ev.url) {
+        setAddr(ev.url)
+        lastUrlRef.current = ev.url
+      }
     }
     const onFail = (e: Event): void => {
       const ev = e as unknown as { errorCode?: number; errorDescription?: string; isMainFrame?: boolean }
@@ -152,7 +163,9 @@ export function WebView({
       wv.setAttribute('allowpopups', 'true')
       // 主窗口切后台时，这里打开的页面也别被冻住（跟主窗口的 backgroundThrottling:false 一致）
       wv.setAttribute('webpreferences', 'backgroundThrottling=no')
-      if (initialUrl) wv.setAttribute('src', initialUrl)
+      // 用记下的地址而不是 initialUrl：回收前你可能已经点进了别的页面
+      const start = lastUrlRef.current || initialUrl
+      if (start) wv.setAttribute('src', start)
       host.appendChild(wv)
       wvRef.current = wv
       wv.addEventListener('did-start-loading', onStart)
@@ -165,11 +178,44 @@ export function WebView({
       wv.addEventListener('dom-ready', onDomReady)
     }
 
+    /** 拆掉 webview。回收和组件卸载共用 —— 两处各写一遍，迟早有一处漏拆监听 */
+    const destroy = (): void => {
+      if (!wv) return
+      wv.removeEventListener('did-start-loading', onStart)
+      wv.removeEventListener('did-stop-loading', onStop)
+      wv.removeEventListener('did-navigate', onNav)
+      wv.removeEventListener('did-navigate-in-page', onNavInPage)
+      wv.removeEventListener('did-fail-load', onFail)
+      wv.removeEventListener('page-favicon-updated', onFavicon)
+      wv.removeEventListener('page-title-updated', onTitle)
+      wv.removeEventListener('dom-ready', onDomReady)
+      if (guestId >= 0) focusRegistry.delete(guestId)
+      guestId = -1
+      wv.remove()
+      wv = null
+      wvRef.current = null
+    }
+
+    // 离屏回收：**一直观察，不是首次进视口就撒手**。
+    //
+    // 原来 create() 之后立刻 io.disconnect()，于是一个网页节点只要被看过一次，
+    // 它那个 Chromium 进程就活到关软件为止 —— 画布上摆十来个书签，
+    // 十来个进程一直在后台跑（而且 webpreferences 里还写着 backgroundThrottling=no）。
+    //
+    // 现在离开视口计时，超过 IDLE_KILL_MS 没再看就整个拆掉，进程随之回收；
+    // 重新滚回来再建一个，加载 lastUrlRef 记下的地址。
+    // 代价是回来要重新加载一次（滚动位置、表单内容会丢），所以门槛给到两分钟 ——
+    // 平移画布时扫过去、切个视图看一眼再回来，都远不到这个数。
+    let idleTimer: ReturnType<typeof setTimeout> | undefined
     const io = new IntersectionObserver(
       (ents) => {
-        if (ents.some((e) => e.isIntersecting)) {
+        const visible = ents.some((e) => e.isIntersecting)
+        if (visible) {
+          clearTimeout(idleTimer)
+          idleTimer = undefined
           create()
-          io.disconnect()
+        } else if (wv && idleTimer === undefined) {
+          idleTimer = setTimeout(destroy, IDLE_KILL_MS)
         }
       },
       { threshold: 0.01 }
@@ -178,19 +224,8 @@ export function WebView({
 
     return () => {
       io.disconnect()
-      if (wv) {
-        wv.removeEventListener('did-start-loading', onStart)
-        wv.removeEventListener('did-stop-loading', onStop)
-        wv.removeEventListener('did-navigate', onNav)
-        wv.removeEventListener('did-navigate-in-page', onNavInPage)
-        wv.removeEventListener('did-fail-load', onFail)
-        wv.removeEventListener('page-favicon-updated', onFavicon)
-        wv.removeEventListener('page-title-updated', onTitle)
-        wv.removeEventListener('dom-ready', onDomReady)
-        if (guestId >= 0) focusRegistry.delete(guestId)
-        wv.remove()
-      }
-      wvRef.current = null
+      clearTimeout(idleTimer)
+      destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
