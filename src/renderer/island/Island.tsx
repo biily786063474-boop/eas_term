@@ -364,8 +364,13 @@ export function Island(): JSX.Element | null {
             <button
               className="isl-btn"
               onClick={() => {
+                // 「知道了」= 别再为这条冒出来。**不是「处理完了」** ——
+                // 终端的待处理标记留着，等你真去那个终端才消。
                 window.island.action({ type: 'dismiss', key: n.id })
+                // 还有别的在排队就推到下一条；停在刚静音那条上会让人以为没生效。
+                // （和上面 approve 的收尾保持一致，两处行为不同才是真的费解）
                 if (st.notices.length <= 1) setMode('collapsed')
+                else setViewId(st.notices[(curIdx + 1) % st.notices.length].id)
               }}
             >
               知道了

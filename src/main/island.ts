@@ -193,6 +193,14 @@ function createIsland(): BrowserWindow {
     // 不抢焦点：卡片弹出来时你可能正在别的 app 里打字，绝不能把光标抢走。
     // macOS 上 focusable:false 的窗口照样收得到鼠标点击，只是不接管键盘。
     focusable: false,
+    // **macOS 必须配上 type:'panel'**，光有 focusable:false 不够。
+    // 后者只管「别成为 key window」（不接管键盘），拦不住**点击激活整个 app** ——
+    // 于是你在别的软件里干活、顺手点岛上的「知道了」，Eas-Term 整个跳到前台，
+    // 主窗口糊你一脸。而这条通知你本来就只是想让它别再响，压根没打算切过来。
+    // type:'panel' 让 Electron 建成 NSPanel + NonactivatingPanel 样式掩码，
+    // 点击只送到窗口自己，app 的前后台状态一动不动。
+    // 仅 macOS：Windows 上这个值不认，传了会被忽略，但没必要冒险。
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     alwaysOnTop: true,
     hasShadow: false,
     // 允许窗口越过屏幕可见区。macOS 默认会把窗口「顶」回菜单栏下方
