@@ -2504,10 +2504,18 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* **不许被 flex 压缩**。.re-body 是 flex column + overflow-y:auto，内容超出时
+     本该滚动；默认的 flex-shrink:1 会先去挤各栏，挤出来的内容不会消失、
+     而是原地溢出盖住下一栏 —— 表现成「面板里的字叠成一团」。 */
+  flex: none;
 }
 .re-field.re-grow {
-  flex: 1;
-  min-height: 0;
+  /* 空间富余时吃掉剩余高度，**但不够时也不许被压**。
+     原来写的是 `flex: 1` + `min-height: 0`：前者把 basis 归零、后者解除了自动最小尺寸
+     保护，两条合起来让这一栏成了全场唯一可压缩的那个 —— 面板一矮（窗口 665px 时
+     内容 714px 只装得下 473px），它独自承担全部收缩量被压到 0 高度，
+     而里面 251px 的内容照样渲染，直接压在「禁用的工具」和「禁用的 MCP server」上。 */
+  flex: 1 0 auto;
 }
 .re-label {
   font-size: 11.5px;
