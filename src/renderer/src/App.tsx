@@ -89,6 +89,7 @@ export function App(): JSX.Element {
         // 两份都到齐了才能迁移：它要拿 canvas 的 frame.status 去写 projects
         await useStore.getState().migrateFrameStatus()
         void loadRoles() // 角色表：不阻塞首屏，读到就有
+        void useStore.getState().loadBoardColumns() // 看板列定义，同上
       } catch (e) {
         console.error('[App:startup] 加载项目/画布失败', e)
       }

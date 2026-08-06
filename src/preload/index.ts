@@ -46,7 +46,7 @@ import type {
   RulesStatus,
   Footprint,
   InstallPlan,
-  UpdateInfo, ProjectStatus} from '../shared/types'
+  UpdateInfo, ProjectStatus, BoardColumn} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -120,6 +120,13 @@ const api = {
     /** 打/清状态标签（null = 回到未分类）。看板、画布、分屏三处共用 */
     setStatus: (id: string, status: ProjectStatus | null): Promise<Project[]> =>
       ipcRenderer.invoke('projects:setStatus', id, status)
+  },
+  board: {
+    /** 看板列定义（叫什么、什么颜色、排第几）。全局，和项目分开存 */
+    list: (): Promise<BoardColumn[]> => ipcRenderer.invoke('board:list'),
+    /** 整表落盘：增删改序都走它，「顺序」这种跨条目的改动没法拆成单条 */
+    save: (list: BoardColumn[]): Promise<BoardColumn[]> => ipcRenderer.invoke('board:save', list),
+    newId: (): Promise<string> => ipcRenderer.invoke('board:newId')
   },
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）

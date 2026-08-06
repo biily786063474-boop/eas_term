@@ -15,7 +15,16 @@ import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
 import { FrameStatusPicker } from './FrameStatusPicker'
-import { frameStatusLabel, statusOfFrame } from './frameStatus'
+import { statusLabel, statusColor, statusOfFrame } from './frameStatus'
+
+/** 把列的颜色变成 .cframe 认的 `--frame-rgb`（它的用法是 rgba(var(--frame-rgb), α)，
+ *  所以要的是 "r, g, b" 三个数，不是 #rrggbb）。没颜色就不设，回落主题色。 */
+function frameTint(hex?: string): Record<string, string> {
+  if (!hex) return {}
+  const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim())
+  if (!m) return {}
+  return { '--frame-rgb': `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` }
+}
 import { paneForFile } from './media'
 import { collectLeaves } from '../../layout'
 import './canvas.css'
@@ -807,9 +816,20 @@ export function CanvasStage(): JSX.Element {
         {frames.map((f) => (
           <div
             key={f.id}
-            className={`cframe${f.parentId ? ' sub' : ''}${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}${statusOfFrame(frames, projects, f.id) ? ' st-' + statusOfFrame(frames, projects, f.id) : ''}`}
+            className={`cframe${f.parentId ? ' sub' : ''}${f.collapsed ? ' collapsed' : ''}${sel.has('f:' + f.id) ? ' sel' : ''}`}
             data-fid={f.id}
-            style={{ left: f.x, top: f.y, width: f.w, height: f.collapsed ? HEAD_H : f.h }}
+            style={
+              {
+                left: f.x,
+                top: f.y,
+                width: f.w,
+                height: f.collapsed ? HEAD_H : f.h,
+                // 状态配色**注入变量，不用写死的 st-* 类**：列是用户自己建的，
+                // 新建一列不可能顺手去 canvas.css 里加一条规则。
+                // .cframe 本来就读 --frame-rgb（不设时回落主题色），正好接上
+                ...frameTint(statusColor(statusOfFrame(frames, projects, f.id)))
+              } as React.CSSProperties
+            }
           >
             <div
               className="cframe-head"
@@ -819,7 +839,7 @@ export function CanvasStage(): JSX.Element {
               {/* 色点即状态入口：它本来就长在「状态灯」该在的位置，再加一个按钮只会挤标题栏 */}
               <button
                 className="cframe-dot"
-                data-tip={`状态：${frameStatusLabel(statusOfFrame(frames, projects, f.id))}（点击更改）`}
+                data-tip={`状态：${statusLabel(statusOfFrame(frames, projects, f.id))}（点击更改）`}
                 onMouseDown={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => e.stopPropagation()}
                 onClick={(e) => {

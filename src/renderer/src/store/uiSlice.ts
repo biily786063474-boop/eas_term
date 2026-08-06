@@ -2,7 +2,7 @@
 
 import type { StateCreator } from 'zustand'
 import { ThemeId, loadTheme, applyTheme } from '../themes'
-import type { AgentRole, ArchiveItem } from '../../../shared/types'
+import type { AgentRole, ArchiveItem, BoardColumn} from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
@@ -30,6 +30,21 @@ export interface UiSlice {
    *  不持久化：终端本身重启后要重开，记着一个失效的 leafId 没有意义 */
   boardLeafByProject: Record<string, string>
   setBoardLeaf: (projectId: string, leafId: string) => void
+  /** 看板的列定义。全局，存 board.json —— 项目只记自己在哪一列的 id */
+  boardColumns: BoardColumn[]
+  loadBoardColumns: () => Promise<void>
+  /** 整表落盘。增删改序都走它：每个动作一个方法的话，「顺序」没法原子地表达 */
+  saveBoardColumns: (list: BoardColumn[]) => Promise<void>
+  addBoardColumn: () => Promise<void>
+  renameBoardColumn: (id: string, name: string) => Promise<void>
+  /** 删列。**列上的项目不跟着删** —— 它们回到「未分类」，
+   *  删一个分类顺手删掉里面的项目是没人想要的行为 */
+  removeBoardColumn: (id: string) => Promise<void>
+  /** 看板里点开全屏的那个终端（leafId）。null = 回到卡片总览。
+   *  看板本身**不显示终端** —— 卡片只是摘要，点开才铺满干活。
+   *  小卡片里嵌终端看不清也用不了，还要为它做一整套跟随定位，不划算。 */
+  boardFullscreen: string | null
+  setBoardFullscreen: (leafId: string | null) => void
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
@@ -158,6 +173,35 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   boardLeafByProject: {},
   setBoardLeaf: (projectId, leafId) =>
     set((s) => ({ boardLeafByProject: { ...s.boardLeafByProject, [projectId]: leafId } })),
+  boardColumns: [],
+  loadBoardColumns: async () => set({ boardColumns: await window.api.board.list() }),
+  saveBoardColumns: async (list) => {
+    // 先本地改再落盘：拖拽/改名要立刻见效，等 IPC 往返回来会有一帧的滞后感
+    set({ boardColumns: list })
+    set({ boardColumns: await window.api.board.save(list) })
+  },
+  addBoardColumn: async () => {
+    const id = await window.api.board.newId()
+    const cur = get().boardColumns
+    await get().saveBoardColumns([...cur, { id, name: '新看板' }])
+  },
+  renameBoardColumn: async (id, name) => {
+    const cur = get().boardColumns
+    await get().saveBoardColumns(
+      cur.map((c) => (c.id === id ? { ...c, name: name.trim().slice(0, 24) || c.name } : c))
+    )
+  },
+  removeBoardColumn: async (id) => {
+    // 这一列上的项目挨个清成未分类，否则它们的 status 指向一个不存在的列，
+    // 四列里哪列都不显示 —— 项目就这么「消失」了
+    const s2 = get()
+    for (const p of s2.projects.filter((x) => x.status === id)) {
+      await s2.setProjectStatus(p.id, null)
+    }
+    await get().saveBoardColumns(get().boardColumns.filter((c) => c.id !== id))
+  },
+  boardFullscreen: null,
+  setBoardFullscreen: (leafId) => set({ boardFullscreen: leafId }),
   attentionPtys: [],
   silencedNotices: [],
   mcpLog: [],

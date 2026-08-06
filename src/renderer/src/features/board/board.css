@@ -1,8 +1,8 @@
 /* 看板视图：按项目状态分列，一个项目一张卡片。
  *
- * 卡片里那块 .board-slot 是**空的** —— 真终端由 PaneLayer 量着它的位置浮上来
- * （见 PaneLayer 顶部说明）。所以这里绝不能给 slot 加背景或内容，
- * 它只是一块「占位并被测量」的区域。 */
+ * 卡片上**没有终端**，只有摘要。点开才铺满屏幕干活（.board-fs）。
+ * 全屏那块 .board-slot 是空的 —— 真终端由 PaneLayer 量着它的位置浮上来
+ * （见 PaneLayer 顶部说明），所以绝不能给它加背景或内容。 */
 
 .board {
   position: absolute;
@@ -12,14 +12,17 @@
   padding: 12px;
   overflow-x: auto;
   overflow-y: hidden;
+  /* 横向滑动停在列的边界上，不会停在「半列」的位置 */
+  scroll-snap-type: x proximity;
 }
 
 .board-col {
-  flex: 1 1 0;
-  /* 列不能被内容撑开：卡片里嵌着终端，一列宽了别的列就没地方了。
-     268 是照 1147px 窗口（本项目最常见的尺寸）算的：四列 + 间距 + 内边距刚好不溢出。
-     再宽一点第四列就被切掉半截，看板「一眼看全」的意义就没了 */
-  min-width: 268px;
+  /* **一屏正好四列**，多的往右滑。
+     宽度写死成「四分之一」而不是 flex:1 —— 后者会让第五列一出现，
+     前四列全被压窄，本来看得好好的卡片突然一起变形。
+     30px = 三个 10px 的列间距（.board 的 gap） */
+  flex: 0 0 calc((100% - 30px) / 4);
+  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -82,12 +85,19 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding-bottom: 8px;
+  /* 卡片折叠时用 offsetTop 算位置，需要这一层做定位原点 */
+  position: relative;
+  /* 折叠出来的那一摞要压在后面的卡片之上，靠 z-index —— 得有层叠上下文兜着，
+     不然会跟画布/抽屉那些高层级元素比大小 */
+  isolation: isolate;
+  /* 列到头之后别把滚动传给外层（外层是横向滚整个看板，纵向到底再带着横move很晕） */
+  overscroll-behavior: contain;
 }
 
 .board-empty {
-  padding: 18px 0;
+  padding: 16px 0;
   text-align: center;
   font-size: 11.5px;
   color: var(--fg-dim);
@@ -103,13 +113,39 @@
   border-radius: var(--radius-md);
   background: var(--glass-2);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-highlight), 0 6px 18px rgba(0, 0, 0, 0.32);
+  box-shadow: var(--glass-highlight), 0 4px 14px rgba(0, 0, 0, 0.28);
   overflow: hidden;
-  cursor: grab;
+  cursor: pointer;
+  /* 折叠时靠 transform 钉住 + 缩小（见 useBoardScroll）。
+     origin 必须是 top center，否则缩的时候卡片会往上跑、和上一张脱开 */
+  transform-origin: top center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transition: opacity 0.14s linear, filter 0.12s linear, border-color 0.15s, background 0.15s;
+}
+.board-card:hover {
+  border-color: rgba(var(--accent-rgb), 0.35);
 }
 .board-card.dragging {
   opacity: 0.42;
   cursor: grabbing;
+}
+/* 这个项目里有终端在等你处理：整张卡片描个边，扫一眼列就能找到 */
+.board-card.need {
+  border-color: rgba(224, 180, 94, 0.5);
+}
+/* 折叠成一摞时**必须换成不透明底**。卡片平时是半透明玻璃（--glass-2 只有 0.62），
+   一叠起来下面几张的字全透上来，糊成一团谁也看不清 —— 截图上一眼就是脏的。
+   这里用和面板玻璃同色相的实色，边界仍靠 border 区分。 */
+.board-card[data-fold] {
+  background: #0f1118;
+  backdrop-filter: none;
+}
+/* 收起来的卡片只留头一行。**用 visibility 不用 display** ——
+   display:none 会让卡片高度当场变化，offsetTop 跟着变，滚动位置会跳一下 */
+.board-card[data-fold] .board-terms,
+.board-card[data-fold] .board-cardnone {
+  visibility: hidden;
 }
 
 .board-cardhd {
@@ -117,8 +153,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 9px;
-  border-bottom: 1px solid var(--glass-border);
+  padding: 8px 9px;
 }
 .board-dot {
   flex: none;
@@ -154,89 +189,246 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.board-pick {
+.board-cardn {
   flex: none;
-  max-width: 96px;
-  height: 20px;
-  padding: 0 4px;
-  border-radius: 5px;
-  border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: var(--fg-dim);
-  font-family: inherit;
   font-size: 10.5px;
-  cursor: pointer;
-}
-.board-termn {
-  flex: none;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg-dim);
-  font-size: 10px;
+  opacity: 0.75;
   font-variant-numeric: tabular-nums;
 }
 
-/* **保持空的**：PaneLayer 靠它的 getBoundingClientRect 定位真终端。
-   给它加背景/内边距都会让终端和卡片错位 */
-.board-slot {
-  flex: none;
-  /* 260 是权衡出来的：终端里还挂着 agent 控制条和输入框，再矮下去正文就只剩两三行；
-     再高的话一屏放不下两张卡片，看板「一眼看全」的意义就没了 */
-  height: 260px;
+.board-cardnone {
+  padding: 0 9px 9px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.55;
 }
 
-.board-noterm {
+/* 终端列表：一行一个，行里那句是终端标题（agent 会把当前任务写进去） */
+.board-terms {
+  display: flex;
+  flex-direction: column;
+  padding: 0 5px 5px;
+  gap: 2px;
+}
+.board-term {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  height: 92px;
+  width: 100%;
+  padding: 4px 6px;
   border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.board-term:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}
+.board-termdot {
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  opacity: 0.4;
+}
+.board-term.busy .board-termdot {
+  background: #6fa8ff;
+  opacity: 1;
+}
+.board-term.need .board-termdot {
+  background: #e0b45e;
+  opacity: 1;
+}
+.board-termname {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-term em {
+  flex: none;
+  font-style: normal;
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.board-term.need em {
+  background: rgba(224, 180, 94, 0.2);
+  color: #e0b45e;
+}
+.board-termmore {
+  padding: 2px 6px 0;
+  font-size: 10px;
+  color: var(--fg-dim);
+  opacity: 0.5;
+}
+
+/* ── 点开卡片：铺满干活 ────────────────────────────────── */
+.board-fs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.board-fs-hd {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.22);
+}
+.board-fs-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px 3px 4px;
+  border: 1px solid var(--glass-border);
+  border-radius: 7px;
   background: none;
   color: var(--fg-dim);
   font-family: inherit;
   font-size: 11.5px;
   cursor: pointer;
 }
-.board-noterm:hover {
-  background: rgba(255, 255, 255, 0.05);
+.board-fs-back:hover {
+  background: rgba(255, 255, 255, 0.07);
   color: var(--fg);
 }
-
-.board-cardft {
-  flex: none;
-  display: flex;
-  justify-content: flex-end;
-  padding: 4px 6px;
-  border-top: 1px solid var(--glass-border);
+.board-fs-name {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--fg);
 }
-.board-add {
+.board-fs-pick {
+  max-width: 180px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.board-fs-spacer {
+  flex: 1;
+}
+.board-fs-add,
+.board-fs-x {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.board-fs-add:hover,
+.board-fs-x:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+/* **保持空的**：PaneLayer 靠它的 getBoundingClientRect 定位真终端。
+   加背景/内边距都会让终端和它错位 */
+.board-slot {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 全屏终端：外面已经有顶部条了，终端不用再来一套边框圆角 */
+.pane-layer.board-mode .pane {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+.pane-layer.board-mode .pane-header[hidden] {
+  display: none;
+}
+
+/* ── 列的管理：改名 / 删除 / 新建 ────────────────────── */
+.board-collabel {
+  cursor: default;
+}
+.board-colrename {
+  flex: 1;
+  min-width: 0;
   height: 20px;
+  padding: 0 5px;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+/* 删除按钮平时不出现：列头就这么点地方，常驻一个垃圾桶太吵，
+   而且删列是低频动作，不该和「看一眼有几个项目」抢注意力 */
+.board-coldel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: none;
   border-radius: 5px;
   background: none;
   color: var(--fg-dim);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.14s, background 0.14s, color 0.14s;
 }
-.board-add:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--fg);
+.board-col:hover .board-coldel {
+  opacity: 0.6;
+}
+.board-coldel:hover {
+  opacity: 1;
+  background: rgba(239, 111, 123, 0.16);
+  color: #ef6f7b;
 }
 
-/* 看板模式下的终端层：卡片自己有圆角和边框，终端不用再来一套 */
-.pane-layer.board-mode .pane {
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
+.board-addcol {
+  /* 和列一样的宽度会太浪费 —— 它只是个按钮，给个窄条就够，
+     省下的宽度留给真正的列 */
+  flex: 0 0 92px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-
-/* 头被 hidden 掉了，但 .pane 仍按 flex 排布，补一句让终端顶满 */
-.pane-layer.board-mode .pane-header[hidden] {
-  display: none;
+.board-addcol:hover {
+  background: rgba(var(--accent-rgb), 0.06);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  color: var(--accent);
 }

@@ -4,6 +4,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { statusColor, statusOfFrame } from './frameStatus'
 
 const MAP_W = 216
 const MAP_H = 150
@@ -27,6 +28,8 @@ function shortName(name: string): string {
 export function CanvasMiniMap(): JSX.Element | null {
   const maximizedNode = useStore(liveMaximizedNode)
   const frames = useStore((s) => s.canvas.frames)
+  // 状态在项目上，不在 Frame 上 —— 点的颜色要查项目
+  const projects = useStore((s) => s.projects)
   const freeNodes = useStore((s) => s.canvas.freeNodes)
   const vp = useStore((s) => s.canvas.viewport)
   const setViewport = useStore((s) => s.setViewport)
@@ -188,7 +191,12 @@ export function CanvasMiniMap(): JSX.Element | null {
                   cx={p.x}
                   cy={p.y}
                   r={2}
-                  className={`cmm-dot${f.parentId ? ' sub' : ''}${f.status ? ' st-' + f.status : ''}`}
+                  className={`cmm-dot${f.parentId ? ' sub' : ''}`}
+                  // 颜色跟着项目状态走（f.status 是旧结构，已经迁到项目上了）
+                  {...(() => {
+                    const c = statusColor(statusOfFrame(frames, projects, f.id))
+                    return c ? { fill: c, 'data-tint': '1' } : {}
+                  })()}
                 />
                 <text x={p.x + 4} y={p.y + 3} className={`cmm-name${f.parentId ? ' sub' : ''}`}>
                   {shortName(f.name)}

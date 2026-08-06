@@ -7,7 +7,7 @@
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
-import { FRAME_STATUS_LIST, statusOfFrame } from './frameStatus'
+import { boardColumnsNow, statusOfFrame } from './frameStatus'
 
 export interface StageMenuDeps {
   /** 便签进入编辑态 */
@@ -86,11 +86,11 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
       { sep: true, label: '', onClick: () => {} },
       // 和标题栏色点是同一组状态、同一套文案。右键这条是给「已经在右键菜单里」的人用的，
       // 不指望他为了改状态先关掉菜单再去点那个 9px 的圆点。
-      ...FRAME_STATUS_LIST.map((s) => ({
-        label: s.label,
+      ...boardColumnsNow().map((c) => ({
+        label: c.name,
         // 读的是**项目**状态，不是 frame.status —— 后者是旧结构，启动时已经迁走了
-        hint: cur === s.key ? '当前' : undefined,
-        onClick: () => st.setFrameStatus(fid, cur === s.key ? null : s.key)
+        hint: cur === c.id ? '当前' : undefined,
+        onClick: () => st.setFrameStatus(fid, cur === c.id ? null : c.id)
       })),
       {
         label: '未分类',

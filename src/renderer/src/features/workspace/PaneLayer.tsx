@@ -124,6 +124,11 @@ export function PaneLayer(): JSX.Element {
       document.querySelectorAll<HTMLElement>('.board-slot').forEach((el) => {
         const leafId = el.dataset.leaf
         if (!leafId) return
+        // 折叠成一摞的卡片不给终端：缩过、还盖着别的卡片，浮个终端上去既看不清
+        // 又白烧一份渲染。**但最上面那张要留着**（data-fold="top"）——
+        // 折叠是收纳，顶上放个不能用的空壳等于白占一块屏幕（见 useBoardScroll）
+        const fold = el.closest('.board-card')?.getAttribute('data-fold')
+        if (fold && fold !== 'top') return
         const r = el.getBoundingClientRect()
         if (r.width < 8 || r.height < 8) return
         // 槽位被列滚出可视区时别显示：终端是绝对定位在 pane-layer 上的，

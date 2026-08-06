@@ -3,7 +3,7 @@
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from '../canvas/CanvasContextMenu'
-import { FRAME_STATUS_LIST } from '../canvas/frameStatus'
+import { boardColumnsNow } from '../canvas/frameStatus'
 
 export function projectMenuItems(
   projectId: string,
@@ -22,10 +22,10 @@ export function projectMenuItems(
   return [
     // 状态标签。**分屏模式下打标的入口就是这里** —— 状态是项目的属性，
     // 不需要这个项目在画布上有 Frame。看板按它分列，画布 Frame 按它染色，三处同一份。
-    ...FRAME_STATUS_LIST.map((x) => ({
-      label: x.label,
-      hint: p.status === x.key ? '当前' : undefined,
-      onClick: () => void s.setProjectStatus(projectId, p.status === x.key ? null : x.key)
+    ...boardColumnsNow().map((x) => ({
+      label: x.name,
+      hint: p.status === x.id ? '当前' : undefined,
+      onClick: () => void s.setProjectStatus(projectId, p.status === x.id ? null : x.id)
     })),
     {
       label: '未分类',

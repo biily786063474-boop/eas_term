@@ -3,7 +3,18 @@
  *  **归属在项目，不在画布 Frame。** 早先它是 frame.status，只是个视觉标记；
  *  但分屏里的 tab 和画布的 Frame 是两套结构，没进过画布的项目压根没有 Frame 可打标 ——
  *  状态是项目的属性，不是某个视图里那个框的属性。旧数据启动时迁移过来（见 migrateFrameStatus）。 */
-export type ProjectStatus = 'todo' | 'doing' | 'done'
+/** 项目落在哪一列。值 = BoardColumn.id。
+ *  **不是固定枚举** —— 列是用户自己建的，写死三个值的话新建的列没法用。
+ *  空/未设 = 未分类（那是一列虚拟的，不存在于 board.json 里）。 */
+export type ProjectStatus = string
+
+/** 看板的一列。全局定义，存在 board.json；项目只记自己在哪一列的 id */
+export interface BoardColumn {
+  id: string
+  name: string
+  /** 列头圆点和该列项目在画布上的 Frame 边框色。不设则用主题色 */
+  color?: string
+}
 
 export interface Project {
   id: string
