@@ -206,6 +206,51 @@ export const SparkleIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+/* 两个 CLI 的品牌标识。**是按各自视觉特征手绘的几何近似，不是官方商标文件** ——
+   官方 SVG 有商标约束，而这里只需要「一眼分得出是哪个」。
+   两个都用 fill 而不是 stroke：这个尺寸（13px）下描边图形会糊成一团。 */
+
+/** Claude：Anthropic 那个放射星芒。12 条辐条，长短交替 */
+export const ClaudeIcon = ({ size = 15, ...rest }: IconProps): JSX.Element => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...rest}>
+    {Array.from({ length: 12 }, (_, i) => {
+      const a = (i * Math.PI) / 6
+      // 长短交替：全等长会变成一个圆盘，认不出是星芒
+      const r = i % 2 ? 6.4 : 9.2
+      const w = i % 2 ? 1.15 : 1.4
+      const [cx, cy] = [12 + Math.cos(a) * r * 0.55, 12 + Math.sin(a) * r * 0.55]
+      return (
+        <rect
+          key={i}
+          x={cx - w / 2}
+          y={cy - r / 2}
+          width={w}
+          height={r}
+          rx={w / 2}
+          transform={`rotate(${(i * 30 + 90) % 360} ${cx} ${cy})`}
+        />
+      )
+    })}
+  </svg>
+)
+
+/** Codex：OpenAI 那个六重对称的花结。三个椭圆各转 60°，只描边 */
+export const CodexIcon = ({ size = 15, ...rest }: IconProps): JSX.Element => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    {...rest}
+  >
+    {[0, 60, 120].map((d) => (
+      <ellipse key={d} cx="12" cy="12" rx="4" ry="9.2" transform={`rotate(${d} 12 12)`} />
+    ))}
+  </svg>
+)
+
 export const ClockIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="9" />

@@ -1,6 +1,6 @@
 // 画布终端节点的「Agent 控制台」（画布独有 chrome；分屏模式 PaneView 不渲染这层）。
 // 底层始终是真实 CLI：点启动把参数拼成命令写进终端。
-// 形态：左侧 [Claude | Codex] 段控件选当前 agent → 模型/思考两枚胶囊随之切换选项 → 右侧 ▶ 启动。
+// 形态：左侧星星按钮（显示当前 CLI 的品牌标识，点开换）→ 角色/模型/思考三枚胶囊 → 右侧 ▶ 启动。
 //   · Claude：模型别名 / effort 档位来自 `claude --help` 真实探测（不写死）。
 //   · Codex：模型/档位是主进程给的已知默认（CLI 不暴露，服务端 catalog 才有），可「自定义…」兜底。
 // 点 ▶ 弹「是否回溯上次对话」：是 → 带 -c / resume --last 继续；否 → 全新启动。
@@ -9,8 +9,20 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
-import type { AgentProbe } from '../../../../shared/types'
-import { SparkleIcon, UndoIcon, PlayIcon, CheckIcon, PencilIcon, PlusIcon, GearIcon } from '../../ui/Icons'
+import type { AgentProbe, AgentRole } from '../../../../shared/types'
+import {
+  SparkleIcon,
+  UndoIcon,
+  PlayIcon,
+  CheckIcon,
+  PencilIcon,
+  PlusIcon,
+  GearIcon,
+  ClaudeIcon,
+  CodexIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
+} from '../../ui/Icons'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
 
@@ -29,6 +41,7 @@ const effZh = (e: string): string => EFFORT_ZH[e] ?? e
 const cap = (m: string): string => (m ? m.charAt(0).toUpperCase() + m.slice(1) : m)
 // Claude 别名首字母大写好看（Opus/Sonnet）；Codex 是全名（gpt-5-codex）原样显示
 const modelLabel = (m: string, kind: Kind): string => (kind === 'claude' ? cap(m) : m)
+const kindName = (k: Kind): string => (k === 'claude' ? 'Claude Code' : 'Codex')
 
 /** 拼 Claude Code 启动命令（权限已按需求取消，不再拼 --permission-mode）。
  *
@@ -124,7 +137,7 @@ export async function getProbe(): Promise<AgentProbe> {
   return probeInflight
 }
 
-type Pop = { type: 'model' | 'effort' | 'ask' | 'role'; rect: DOMRect }
+type Pop = { type: 'model' | 'effort' | 'ask' | 'role' | 'kind'; rect: DOMRect }
 
 export function CanvasAgentBar({
   frameId,
@@ -183,6 +196,9 @@ export function CanvasAgentBar({
   const codexReady = !!probe?.codex.installed
   const activeReady = kind === 'claude' ? claudeReady : codexReady
 
+  // 角色钉死 CLI 时星星按钮要锁住 —— 点开了也改不动，不如不给点
+  const pinned = !!role && role.kind !== 'auto'
+
   const models = probe?.[kind].models ?? []
   const efforts = probe?.[kind].efforts ?? []
   // 优先级：节点自己选的 > 角色的默认 > 探测出的默认。
@@ -239,7 +255,7 @@ export function CanvasAgentBar({
     })
   }
 
-  const openPop = (type: 'model' | 'effort' | 'role', el: HTMLElement): void => {
+  const openPop = (type: 'model' | 'effort' | 'role' | 'kind', el: HTMLElement): void => {
     anchorRef.current = el
     setCustomModel(null)
     setPop((cur) => (cur?.type === type ? null : { type, rect: el.getBoundingClientRect() }))
@@ -306,27 +322,21 @@ export function CanvasAgentBar({
           }}
         />
       )}
-      <SparkleIcon size={13} className="ab-brand" />
-
-      {/* [Claude | Codex] 段控件：选当前 agent，胶囊/启动随之切换 */}
-      <div className="ab-seg">
-        <button
-          className={`ab-seg-b${kind === 'claude' ? ' on' : ''}`}
-          onClick={() => setKind('claude')}
-          disabled={!claudeReady}
-          data-tip={!claudeReady ? '未检测到 claude 命令' : ''}
-        >
-          Claude
-        </button>
-        <button
-          className={`ab-seg-b${kind === 'codex' ? ' on' : ''}`}
-          onClick={() => setKind('codex')}
-          disabled={!codexReady}
-          data-tip={!codexReady ? '未检测到 codex（在终端运行 codex login 后可用）' : ''}
-        >
-          Codex
-        </button>
-      </div>
+      {/* 星星按钮：CLI 的切换入口。**当前是谁靠品牌标识认**，不再摆两个文字按钮 ——
+          那对控制条来说太占地方，而这排东西是跟着终端节点走的，节点一窄就先挤没了。
+          角色钉死了 CLI 时这里锁住：kind 由角色决定，能点开却改不动才是真的费解。 */}
+      <button
+        className={`ab-brand${pinned ? ' pinned' : ''}`}
+        onClick={(e) => !pinned && openPop('kind', e.currentTarget)}
+        data-tip={
+          pinned
+            ? `角色「${role!.name}」钉死了 ${kindName(kind)}，要换先换角色`
+            : `${kindName(kind)}，点击切换`
+        }
+      >
+        <SparkleIcon size={9} className="ab-brand-spark" />
+        {kind === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
+      </button>
 
       {/* 角色胶囊：决定模型/档位的默认值和职责契约。空 = 裸终端 */}
       {!!roles.length && (
@@ -335,7 +345,9 @@ export function CanvasAgentBar({
           onClick={(e) => openPop('role', e.currentTarget)}
           data-tip={role ? role.desc : '不套任何规矩'}
         >
-          {role && <span className="ab-role-dot" style={{ background: role.color }} />}
+          {/* 点不再按角色上色 —— 彩色会让人以为颜色本身有含义（哪个色=哪类角色），
+              实际上它只是「有没有挂角色」。挂了就亮，没挂就没有这颗点 */}
+          {role && <span className="ab-role-dot on" />}
           <span className="ab-pill-k">角色</span>
           <b>{role?.name ?? '无'}</b>
         </button>
@@ -370,6 +382,31 @@ export function CanvasAgentBar({
             style={{ left: pop.rect.left, top: pop.rect.bottom + 6 }}
             onMouseDown={(e) => e.stopPropagation()}
           >
+            {pop.type === 'kind' && (
+              <div className="ab-menu ab-kind-menu">
+                {(
+                  [
+                    ['claude', claudeReady, '未检测到 claude 命令'],
+                    ['codex', codexReady, '未检测到 codex（在终端运行 codex login 后可用）']
+                  ] as const
+                ).map(([k, ready, why]) => (
+                  <button
+                    key={k}
+                    className={`ab-menu-item ab-kind-item${k === kind ? ' on' : ''}`}
+                    disabled={!ready}
+                    data-tip={ready ? '' : why}
+                    onClick={() => setKind(k)}
+                  >
+                    <span className="ab-kind-mark">
+                      {k === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
+                    </span>
+                    <span>{kindName(k)}</span>
+                    {k === kind && <CheckIcon size={12} />}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {pop.type === 'ask' && (
               <div className="ab-ask">
                 <div className="ab-ask-t">
@@ -390,71 +427,23 @@ export function CanvasAgentBar({
             )}
 
             {pop.type === 'role' && (
-              <div className="ab-menu ab-role-menu">
-                <button
-                  className={`ab-menu-item${!role ? ' on' : ''}`}
-                  onClick={() => pickRole(null)}
-                >
-                  <span>无角色</span>
-                  {!role && <CheckIcon size={12} />}
-                </button>
-                {(['main', 'output'] as const).map((g) => {
-                  const list = roles.filter((r) => r.group === g)
-                  if (!list.length) return null
-                  return (
-                    <div key={g}>
-                      <div className="ab-menu-group">{g === 'main' ? '主序列' : '产出型'}</div>
-                      {list.map((r) => (
-                        <div key={r.id} className="ab-role-line">
-                          <button
-                            className={`ab-menu-item${r.id === role?.id ? ' on' : ''}`}
-                            onClick={() => pickRole(r.id)}
-                            data-tip={r.desc}
-                          >
-                            <span className="ab-role-dot" style={{ background: r.color }} />
-                            <span>{r.name}</span>
-                            {/* 角色钉死了 CLI 的话标出来，免得用户奇怪段控件为什么动不了 */}
-                            {r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
-                            {r.id === role?.id && <CheckIcon size={12} />}
-                          </button>
-                          <button
-                            className="ab-role-edit"
-                            data-tip="编辑这个角色"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setPop(null)
-                              setEditRole(r.id)
-                            }}
-                          >
-                            <PencilIcon size={11} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })}
-                <button
-                  className="ab-menu-item ab-menu-custom"
-                  onClick={() => {
-                    setPop(null)
-                    setManageRoles(true)
-                  }}
-                >
-                  <GearIcon size={12} />
-                  <span>管理角色…</span>
-                </button>
-                {/* 「新建」固定在最下面 */}
-                <button
-                  className="ab-menu-item ab-menu-custom"
-                  onClick={() => {
-                    setPop(null)
-                    setEditRole('')
-                  }}
-                >
-                  <PlusIcon size={12} />
-                  <span>新建角色…</span>
-                </button>
-              </div>
+              <RoleStepper
+                roles={roles}
+                currentId={agent?.roleId ?? null}
+                onPick={pickRole}
+                onEdit={(id) => {
+                  setPop(null)
+                  setEditRole(id)
+                }}
+                onManage={() => {
+                  setPop(null)
+                  setManageRoles(true)
+                }}
+                onNew={() => {
+                  setPop(null)
+                  setEditRole('')
+                }}
+              />
             )}
 
             {pop.type === 'model' &&
@@ -536,6 +525,118 @@ export function CanvasAgentBar({
           </div>,
           document.body
         )}
+    </div>
+  )
+}
+
+/** 角色选择器 —— Stepper 形态：顶上一排点，中间一页角色，底下左右翻。
+ *
+ *  没有用 React Bits 那个 Stepper 组件：它整套 className 是 Tailwind、动画走 motion/react，
+ *  本项目两样都没有。为一段横向滑动装一个动画库不值当 —— transform + transition 就够，
+ *  而 Tailwind 那边如果照搬会「挂载成功、零报错、完全没样式」。
+ *
+ *  和原版 Stepper 有一处**故意的不同**：指示点可以直接点。原版是「一步步走完」的向导语义，
+ *  这里是选角色 —— 十来个角色让人一个个翻是折磨。点可跳 + 左右翻，两种都留着。 */
+function RoleStepper({
+  roles,
+  currentId,
+  onPick,
+  onEdit,
+  onManage,
+  onNew
+}: {
+  roles: AgentRole[]
+  currentId: string | null
+  onPick: (id: string | null) => void
+  onEdit: (id: string) => void
+  onManage: () => void
+  onNew: () => void
+}): JSX.Element {
+  // 顺序照旧：无角色 → 主序列 → 产出型。换个形态不该把人熟悉的次序也换了
+  const items: (AgentRole | null)[] = [
+    null,
+    ...roles.filter((r) => r.group === 'main'),
+    ...roles.filter((r) => r.group !== 'main')
+  ]
+  // 开局停在当前生效的那个角色上，不是停在第一页 —— 打开就看见「我现在用的是谁」
+  const [step, setStep] = useState(() => {
+    const i = items.findIndex((r) => (r?.id ?? null) === currentId)
+    return i < 0 ? 0 : i
+  })
+  const at = Math.min(step, items.length - 1)
+  const cur = items[at]
+  const live = (cur?.id ?? null) === currentId
+  const go = (d: number): void => setStep((v) => Math.min(items.length - 1, Math.max(0, v + d)))
+
+  return (
+    <div className="ab-stepper">
+      {/* 指示点。全灰，只有正在看的那个是亮的 —— 用颜色区分角色反而让人以为颜色有含义 */}
+      <div className="ab-step-dots">
+        {items.map((r, i) => (
+          <button
+            key={r?.id ?? '_none'}
+            className={`ab-step-dot${i === at ? ' cur' : ''}`}
+            onClick={() => setStep(i)}
+            data-tip={r?.name ?? '无角色'}
+          />
+        ))}
+      </div>
+
+      {/* 内容区：所有页排成一条横轨，靠 translateX 滑。
+          高度由最高的一页撑住（flex 默认 stretch），翻页时不会跳 */}
+      <div className="ab-step-view">
+        <div className="ab-step-track" style={{ transform: `translateX(-${at * 100}%)` }}>
+          {items.map((r) => (
+            <div className="ab-step-page" key={r?.id ?? '_none'} aria-hidden={r !== cur}>
+              <div className="ab-step-grp">
+                {r ? (r.group === 'main' ? '主序列' : '产出型') : '不套任何规矩'}
+              </div>
+              <div className="ab-step-name">
+                {r?.name ?? '无角色'}
+                {/* 角色钉死了 CLI 的话标出来，免得用户奇怪星星按钮为什么点不开 */}
+                {r && r.kind !== 'auto' && <em className="ab-role-kind">{r.kind}</em>}
+                {r && (
+                  <button className="ab-step-edit" data-tip="编辑这个角色" onClick={() => onEdit(r.id)}>
+                    <PencilIcon size={11} />
+                  </button>
+                )}
+              </div>
+              <div className="ab-step-desc">{r?.desc || '裸终端，不追加任何系统提示词'}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 翻页 + 选定 */}
+      <div className="ab-step-foot">
+        <button className="ab-step-nav" disabled={at === 0} onClick={() => go(-1)} data-tip="上一个">
+          <ChevronLeftIcon size={13} />
+        </button>
+        <button
+          className="ab-step-use"
+          disabled={live}
+          onClick={() => onPick(cur?.id ?? null)}
+        >
+          {live ? '正在使用' : <>选用{cur ? `「${cur.name}」` : '无角色'}</>}
+        </button>
+        <button
+          className="ab-step-nav"
+          disabled={at === items.length - 1}
+          onClick={() => go(1)}
+          data-tip="下一个"
+        >
+          <ChevronRightIcon size={13} />
+        </button>
+      </div>
+
+      <div className="ab-step-more">
+        <button onClick={onManage}>
+          <GearIcon size={12} /> 管理角色…
+        </button>
+        <button onClick={onNew}>
+          <PlusIcon size={12} /> 新建…
+        </button>
+      </div>
     </div>
   )
 }

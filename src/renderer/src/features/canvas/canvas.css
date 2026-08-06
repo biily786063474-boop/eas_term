@@ -1710,10 +1710,70 @@
 }
 
 /* ---- 品牌小图标 + [Claude|Codex] 段控件 ---- */
+/* 星星按钮：CLI 的切换入口，同时用品牌标识显示当前是谁 */
 .ab-brand {
   flex: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
   color: var(--accent);
-  opacity: 0.9;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ab-brand:hover {
+  background: rgba(var(--accent-rgb), 0.14);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+/* 角落那颗小星星：提示「这里能点开换」。图标本身已经说明了是谁，
+   星星只负责说明它是个开关，所以做得很小、压在角上 */
+.ab-brand-spark {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  opacity: 0.75;
+}
+/* 角色钉死 CLI：锁住，但不做成 disabled ——
+   还得让人 hover 到 tooltip 才知道为什么点不动 */
+.ab-brand.pinned {
+  cursor: default;
+  opacity: 0.62;
+}
+.ab-brand.pinned:hover {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: var(--glass-border);
+}
+
+/* CLI 选择浮层 */
+.ab-kind-menu {
+  min-width: 150px;
+}
+/* 两个类名都挂在同一个元素上，而 .ab-menu-item（space-between）写在本规则**后面**，
+   同权重后来者赢 —— 于是没有 ✓ 的那行（Codex）文字被推到最右，和上面一行对不齐。
+   叠一个类提权解决，别去动 .ab-menu-item，那是所有菜单共用的。 */
+.ab-menu-item.ab-kind-item {
+  gap: 9px;
+  justify-content: flex-start;
+}
+.ab-kind-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ab-kind-mark {
+  display: inline-flex;
+  color: var(--fg-dim);
+}
+.ab-kind-item.on .ab-kind-mark {
+  color: var(--accent);
+}
+.ab-kind-item > svg:last-child {
+  margin-left: auto;
 }
 .ab-seg {
   flex: none;
@@ -2293,6 +2353,13 @@
   border-radius: 50%;
   flex: none;
   margin-right: 1px;
+  background: var(--fg-dim);
+  opacity: 0.45;
+}
+.ab-role-dot.on {
+  background: var(--accent);
+  opacity: 1;
+  box-shadow: 0 0 5px rgba(var(--accent-rgb), 0.6);
 }
 .ab-role-menu .ab-menu-group {
   padding: 6px 10px 3px;
@@ -3453,4 +3520,183 @@
 .rm-ghost:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ── 角色选择器（Stepper 形态）────────────────────────────────
+   顶上一排点 → 中间一页角色 → 底下左右翻。形态取自 React Bits 的 Stepper，
+   但那个组件是 Tailwind + motion/react，本项目两样都没有，所以只借形态、自己写。 */
+.ab-stepper {
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 指示点：**一律灰色，只有正在看的那颗亮**。
+   原来每个角色带自己的颜色，看着像颜色有分类含义，其实没有 */
+.ab-step-dots {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px 2px 0;
+}
+.ab-step-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  opacity: 0.38;
+  cursor: pointer;
+  transition: opacity 0.18s, background 0.18s, transform 0.18s;
+}
+.ab-step-dot:hover {
+  opacity: 0.7;
+}
+.ab-step-dot.cur {
+  background: var(--accent);
+  opacity: 1;
+  transform: scale(1.28);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.55);
+}
+/* **故意不画点之间的连接线**（原版 Stepper 有）。那条线是「流程走到第几步」的语义，
+   而选角色没有先后顺序 —— 连起来会让人以为得一步步走完。这里就是一排页码点。 */
+.ab-step-dots > .ab-step-dot + .ab-step-dot {
+  margin-left: 12px;
+}
+
+.ab-step-view {
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+.ab-step-track {
+  display: flex;
+  /* 高度由最高的一页撑住（默认 stretch），翻页时不跳 */
+  align-items: stretch;
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ab-step-page {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 2px 1px;
+}
+.ab-step-grp {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+  opacity: 0.6;
+  margin-bottom: 3px;
+}
+.ab-step-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--fg);
+}
+.ab-step-desc {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  /* 描述长短不一，超过两行截断 —— 否则一页比一页高，轨道被最长的那页撑得离谱 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.9em;
+}
+.ab-step-edit {
+  margin-left: auto;
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.ab-step-edit:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+.ab-step-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ab-step-nav {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ab-step-nav:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+.ab-step-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.ab-step-use {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #0b0d12;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ab-step-use:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg-dim);
+  cursor: default;
+}
+
+.ab-step-more {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--glass-border);
+}
+.ab-step-more button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.ab-step-more button:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
 }
