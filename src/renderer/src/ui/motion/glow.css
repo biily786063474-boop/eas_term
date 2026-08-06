@@ -1,0 +1,167 @@
+/* 两个鼠标交互效果。
+ *
+ * 效果原理取自 React Bits 的 BorderGlow / GlareHover（MIT）：
+ *   https://github.com/DavidHDev/react-bits
+ *   上游 commit b9158acb37e7bdfd6c5bc5894da1826fe1d05a6b · 取用于 2026-08-06
+ *   BorderGlow.tsx sha256 149a88f0ea7c4a7b · GlareHover.tsx sha256 07819e64dc38ddc2
+ *
+ * 但**没有直接用它们的组件**（副本已删，要对账拿上面的 sha 去上游取），原因有三：
+ *
+ *   1. 那两个组件的 className 全是 Tailwind（含 `rounded-[inherit]`、`-z-[1]`
+ *      这类任意值语法），而本项目手写 CSS、没装 Tailwind —— 直接用会「挂载成功、
+ *      控制台零报错、完全没有样式」，是最难查的那种坏法
+ *   2. BorderGlow 自带 backgroundColor / borderRadius，包在现有卡片外面会和
+ *      玻璃质感打架，等于把卡片重画一遍
+ *   3. 它每次 mousemove 要跑四个 setState。画布上同屏十几个节点时，
+ *      那是十几棵子树跟着鼠标重渲染 —— 这里改成写 CSS 变量，零 React 重渲染
+ *
+ * 用法：给元素加 class 即可，不用改 JSX 结构。
+ *   .glow-edge   卡片：鼠标靠近哪条边，那条边渗出光晕（需配合 useEdgeGlow）
+ *   .glare       按钮：鼠标移入时一道斜高光扫过，像光划过玻璃（纯 CSS）
+ */
+
+/* ── 边缘光晕：只亮边框，不动卡片本身的底色 ────────────────────
+   实现要点是那两行 mask：用 padding-box 和 border-box 两张遮罩做 xor，
+   把中间掏空，radial-gradient 就只剩下边框那一圈可见。
+   直接给 border-color 上渐变是做不到「跟着鼠标走」的。 */
+/* 只给「本来没有定位」的元素补 relative。
+   **画布节点绝不能进这条** —— .cfile-node 是 position:absolute，
+   被覆盖成 relative 的话整个画布布局当场崩掉。它已经是定位上下文，
+   ::before 直接就以它为基准，不需要这一行。 */
+.glow-edge {
+  position: relative;
+}
+
+/* 效果本体。左边是通用类，右边是项目里实际用上的地方 ——
+   集中在这里列，想撤掉哪处删个选择器就行，不用翻 JSX。 */
+.glow-edge::before,
+.cfile-node::before {
+  content: '';
+  position: absolute;
+  /* inset:0 而不是 -1px：.cfile-node 带 overflow:hidden，
+     外扩一像素会被整圈裁掉，光晕直接看不见 */
+  inset: 0;
+  border-radius: inherit;
+  /* 1.5px 而不是 1px：画布常年挂着 scale()，缩到 0.8 倍时 1px 只剩不到两个物理像素，
+     实测截图里几乎看不出来。这里粗一点，缩放后仍是一条看得清的光边 */
+  padding: 1.5px;
+  /* --gx/--gy 由 useEdgeGlow 写进来，默认放在中心，避免首帧闪到左上角 */
+  background: radial-gradient(
+    var(--glow-size, 200px) circle at var(--gx, 50%) var(--gy, 50%),
+    rgba(var(--accent-rgb), 0.85),
+    rgba(var(--accent-rgb), 0.2) 42%,
+    transparent 72%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glow-edge:hover::before,
+.cfile-node:hover::before {
+  opacity: 1;
+}
+
+/* ── 斜向高光扫过：纯 CSS，一个 class 给任意按钮 ────────────────
+   原组件用 JS 改 backgroundPosition，其实 :hover + transition 就够，
+   少一层 React 组件、少一次 re-render。 */
+/* 项目里的主操作按钮，和通用的 .glare 一起吃这套规则。
+   **挑的是天天点的那几个**：.ab-launch（终端节点上的「启动」）和 .term-input-send
+   （对话框的发送）才是高频入口；.primary-btn 只在空状态露一次面，
+   光挂它等于没挂 —— 实测画布上一个都数不到。 */
+.glare,
+.primary-btn,
+.sec-primary,
+.upd-go,
+.ab-launch,
+.term-input-send,
+.wk-primary {
+  position: relative;
+  /* 高光扫到边界要被裁掉，否则会溢出到相邻元素上 */
+  overflow: hidden;
+}
+
+.glare::after,
+.primary-btn::after,
+.sec-primary::after,
+.upd-go::after,
+.ab-launch::after,
+.term-input-send::after,
+.wk-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    -45deg,
+    transparent 60%,
+    rgba(255, 255, 255, var(--glare-strength, 0.18)) 70%,
+    transparent 100%
+  );
+  background-size: 250% 250%;
+  background-repeat: no-repeat;
+  background-position: -100% -100%;
+  transition: background-position 0.65s ease;
+  pointer-events: none;
+}
+
+.glare:hover::after,
+.primary-btn:hover::after,
+.sec-primary:hover::after,
+.upd-go:hover::after,
+.ab-launch:hover::after,
+.term-input-send:hover::after,
+.wk-primary:hover::after {
+  background-position: 100% 100%;
+}
+
+/* 实心主色按钮：底色本来就亮，白高光要更足才看得见 */
+.primary-btn::after,
+.upd-go::after,
+.ab-launch::after,
+.wk-primary::after {
+  --glare-strength: 0.4;
+}
+
+/* 禁用态不该有任何「可以点」的暗示 */
+.glare:disabled::after,
+.primary-btn:disabled::after,
+.sec-primary:disabled::after,
+.upd-go:disabled::after,
+.ab-launch:disabled::after,
+.term-input-send:disabled::after,
+.wk-primary:disabled::after {
+  display: none;
+}
+
+/* 通用类想要更亮的高光时加 .strong */
+.glare.strong::after {
+  --glare-strength: 0.3;
+}
+
+/* 一动不动地看久了会腻，但这两个效果都只在 hover 时发生 ——
+   系统开了「减弱动态效果」就整个关掉，别跟无障碍设置对着干 */
+@media (prefers-reduced-motion: reduce) {
+  .glow-edge::before,
+  .glare::after {
+    transition: none;
+  }
+  .glare:hover::after,
+  .primary-btn:hover::after,
+  .sec-primary:hover::after,
+  .upd-go:hover::after,
+  .ab-launch:hover::after,
+  .term-input-send:hover::after,
+  .wk-primary:hover::after {
+    background-position: -100% -100%;
+  }
+}

@@ -20,6 +20,8 @@ import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
 import { DictBubbleToggle } from './features/canvas/DictBubbleToggle'
 import { useIslandFeed } from './features/island/useIslandFeed'
 import { useNoticeSound } from './features/notify/useNoticeSound'
+import { useEdgeGlow } from './ui/motion/useEdgeGlow'
+import './ui/motion/glow.css'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
 import { BuildStamp } from './ui/BuildStamp'
@@ -31,6 +33,8 @@ export function App(): JSX.Element {
   useIslandFeed()
   // 有任务完成 / 等审批时播提示音。和视图模式无关，分屏画布都响
   useNoticeSound()
+  // 卡片的边缘光晕跟随鼠标。一个全局监听服务所有卡片，不经过 React（见 useEdgeGlow）
+  useEdgeGlow()
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
