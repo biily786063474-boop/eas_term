@@ -2680,6 +2680,53 @@
 .re-list-sm {
   min-height: 54px;
 }
+/* 工具点选：左边一列组名，右边一排 chip。
+   组名用固定宽度对齐 —— 长短不一会让每行的 chip 起点错开，扫一眼就乱 */
+.re-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+.re-tools-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+.re-tools-g {
+  flex: none;
+  width: 40px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.62;
+}
+/* 手写框的开关。左边是动作，右边一句话说明现在禁了几项 —— 收起状态下也看得见 */
+.re-raw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 3px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.re-raw-toggle em {
+  font-style: normal;
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+.re-raw-toggle:hover {
+  text-decoration: underline;
+}
+
 .re-chips {
   display: flex;
   flex-wrap: wrap;

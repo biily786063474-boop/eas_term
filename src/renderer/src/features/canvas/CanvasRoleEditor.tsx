@@ -15,6 +15,58 @@ import { BUILTIN_HINT } from './roleDefaults'
 
 type Kind = 'claude' | 'codex'
 
+/** Claude Code 的常用工具，按「能做什么」分组 —— **不是全集**。
+ *
+ *  摆出来是为了让人不用背工具名：知道「不许它改文件」比知道「工具叫 Edit」容易得多。
+ *  每条都带一句人话说明，鼠标停上去能看到 —— 不然 NotebookEdit / KillShell 这种
+ *  名字对着看半天也不知道禁了会怎样。
+ *  CLI 版本变了这份清单可能对不上，所以下面的手写框一直留着。 */
+const TOOL_GROUPS: { g: string; items: { n: string; t: string }[] }[] = [
+  {
+    g: '改文件',
+    items: [
+      { n: 'Write', t: '整份写入 / 覆盖文件' },
+      { n: 'Edit', t: '按片段替换文件内容' },
+      { n: 'NotebookEdit', t: '改 Jupyter notebook 的单元格' }
+    ]
+  },
+  {
+    g: '跑命令',
+    items: [
+      { n: 'Bash', t: '执行 shell 命令。禁了它等于把手脚都捆上，多数角色不该禁' },
+      { n: 'BashOutput', t: '读后台命令的输出' },
+      { n: 'KillShell', t: '掐掉正在跑的后台命令' }
+    ]
+  },
+  {
+    g: '读代码',
+    items: [
+      { n: 'Read', t: '读文件内容' },
+      { n: 'Glob', t: '按文件名找文件' },
+      { n: 'Grep', t: '按内容搜代码' }
+    ]
+  },
+  {
+    g: '联网',
+    items: [
+      { n: 'WebFetch', t: '抓取网页内容' },
+      { n: 'WebSearch', t: '联网搜索' }
+    ]
+  },
+  {
+    g: '协作',
+    items: [
+      { n: 'Task', t: '派子 agent 去干活' },
+      { n: 'TodoWrite', t: '维护任务清单' },
+      { n: 'SlashCommand', t: '调用斜杠命令' }
+    ]
+  },
+  {
+    g: 'MCP',
+    items: [{ n: 'mcp__*', t: '通配：一次禁掉所有 MCP 工具' }]
+  }
+]
+
 const EFFORT_ZH: Record<string, string> = {
   minimal: '最小',
   low: '低',
@@ -40,6 +92,8 @@ export function CanvasRoleEditor({
   const [servers, setServers] = useState<string[]>([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  // 手写框默认收着 —— 点选够用了。已经写过自定义规则的角色打开就展开，否则那些规则藏着看不见
+  const [showRaw, setShowRaw] = useState(false)
 
   const original = useMemo(
     () => roles.find((r) => r.id === roleId) ?? null,
@@ -63,6 +117,13 @@ export function CanvasRoleEditor({
         tools: {}
       }
   )
+
+  // 已经写过自定义规则的角色：打开就把手写框展开，否则那几条规则等于藏起来了
+  useEffect(() => {
+    const d = original?.tools?.deny ?? []
+    const k = new Set(TOOL_GROUPS.flatMap((g) => g.items.map((i) => i.n)))
+    if (d.some((x) => !k.has(x))) setShowRaw(true)
+  }, [original])
 
   useEffect(() => {
     let live = true
@@ -90,6 +151,20 @@ export function CanvasRoleEditor({
       ...d,
       tools: { ...(d.tools ?? {}), [field]: text.split('\n').map((x) => x.trim()).filter(Boolean) }
     }))
+  /** 点一下切换某一项。**必须在函数式更新里读当前值** —— 早先是拿渲染时的
+   *  `draft.tools.deny` 快照算好再塞回去，手快连点两个 chip 时，第二次读到的还是旧数组，
+   *  于是第一次的选择被覆盖掉（实测连点 Write / Edit 只剩 Edit）。 */
+  const toggleTool = (field: 'deny' | 'denyServers', name: string): void =>
+    setDraft((d) => {
+      const cur = d.tools?.[field] ?? []
+      return {
+        ...d,
+        tools: {
+          ...(d.tools ?? {}),
+          [field]: cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name]
+        }
+      }
+    })
 
   const commit = async (next: AgentRole[]): Promise<void> => {
     setBusy(true)
@@ -109,6 +184,11 @@ export function CanvasRoleEditor({
   }
 
   const onDelete = (): void => void commit(roles.filter((r) => r.id !== draft.id))
+
+  const deny = draft.tools?.deny ?? []
+  // 清单之外的（通配符、新版 CLI 的工具名）—— 有这些就说明用户手写过，别把手写框藏起来
+  const known = new Set(TOOL_GROUPS.flatMap((g) => g.items.map((i) => i.n)))
+  const extraDeny = deny.filter((x) => !known.has(x))
 
   const kinds: { k: Kind | 'auto'; label: string; note: string }[] = [
     { k: 'auto', label: '跟随', note: '装了哪个用哪个' },
@@ -224,13 +304,47 @@ export function CanvasRoleEditor({
 
           <div className="re-field">
             <span className="re-label">禁用的工具</span>
-            <textarea
-              className="re-list"
-              value={(draft.tools?.deny ?? []).join('\n')}
-              onChange={(e) => setTools('deny', e.target.value)}
-              placeholder={'一行一条，例如\nWrite\nEdit\nmcp__*image*'}
-              spellCheck={false}
-            />
+            {/* 点一下就禁，不用记工具名。红了 = 这个角色用不了它 */}
+            <div className="re-tools">
+              {TOOL_GROUPS.map((grp) => (
+                <div className="re-tools-row" key={grp.g}>
+                  <span className="re-tools-g">{grp.g}</span>
+                  <div className="re-chips">
+                    {grp.items.map((it) => {
+                      const on = deny.includes(it.n)
+                      return (
+                        <button
+                          key={it.n}
+                          className={`re-chip${on ? ' on' : ''}`}
+                          data-tip={`${it.t}${on ? '　·　点一下解禁' : ''}`}
+                          onClick={() => toggleTool('deny', it.n)}
+                        >
+                          {it.n}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 通配符、以及这份清单没覆盖到的工具名，还是得能手写 */}
+            <button className="re-raw-toggle" onClick={() => setShowRaw((v) => !v)}>
+              {showRaw ? '收起' : '手写补充'}
+              <em>
+                {deny.length ? `已禁 ${deny.length} 项` : '未禁任何工具'}
+                {extraDeny.length ? `（含 ${extraDeny.length} 条自定义）` : ''}
+              </em>
+            </button>
+            {showRaw && (
+              <textarea
+                className="re-list"
+                value={deny.join('\n')}
+                onChange={(e) => setTools('deny', e.target.value)}
+                placeholder={'一行一条，例如\nWrite\nmcp__*image*'}
+                spellCheck={false}
+              />
+            )}
             <span className="re-hint">
               <b>只对 Claude 生效</b>。裸工具名（<code>Write</code>）会让该工具从模型上下文里整个消失，
               由 CLI 强制，不靠模型自觉；也支持通配（<code>mcp__*</code> = 所有 MCP 工具）。
@@ -259,10 +373,7 @@ export function CanvasRoleEditor({
                     <button
                       key={n}
                       className={`re-chip${on ? ' on' : ''}`}
-                      onClick={() => {
-                        const cur = draft.tools?.denyServers ?? []
-                        setTools('denyServers', (on ? cur.filter((x) => x !== n) : [...cur, n]).join('\n'))
-                      }}
+                      onClick={() => toggleTool('denyServers', n)}
                     >
                       {n}
                     </button>
