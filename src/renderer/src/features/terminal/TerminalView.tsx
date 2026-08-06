@@ -129,9 +129,19 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       lineHeight: 1.25,
       cursorBlink: true,
       macOptionIsMeta: true,
-      // 每终端固定成本:10 万行缓冲可达数十 MB,多终端长跑内存单调增长压垮 GPU 进程 → 白屏。
-      // 2 万行足够回看,内存降一大截。
-      scrollback: 20000,
+      // **每终端的固定成本，乘以你开了几个终端。** 10 万行时可达数十 MB，
+      // 多终端长跑内存单调增长压垮 GPU 进程 → 白屏；先降到 2 万，2026-08-06 再降到 5 千。
+      //
+      // 实测（20000 行 × 180 字符灌满一个终端）：renderer +75MB。三十个终端全填满就是 2.2GB，
+      // 和长跑实例的实测总量吻合。降到 5000 后单终端约 19MB，三十个约 570MB。
+      //
+      // 反直觉的一点：**代价取决于行有多长**。同样 20000 行，5 字符的短行增量是 0MB ——
+      // xterm 按实际列数分配 TypedArray，而且不进 JS 堆，所以读 performance.memory
+      // 完全看不出来（第一次测就是这么误判的）。
+      //
+      // 5000 行够干什么：审批解析只读底部若干行，绰绰有余；人工回看约 60 屏。
+      // 用户 2026-08-06 确认过这个取舍。
+      scrollback: 5000,
       scrollSensitivity: 2, // 普通缓冲滚轮步长（略调慢翻屏速度）
       allowProposedApi: true,
       allowTransparency: true
