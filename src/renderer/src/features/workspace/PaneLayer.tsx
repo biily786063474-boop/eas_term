@@ -17,6 +17,16 @@ import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 const HIDDEN_RECT: Rect = { x: 0, y: 0, w: 0, h: 0 }
 
+/** 视口裁剪的余量（屏幕像素）。平移一帧最多挪几十像素，600 足够让节点
+ *  在露头之前就准备好；给太大又白白多渲染几个。
+ *
+ *  **这个裁剪省的是内存，不只是绘制。** 同一份画布（30 个终端）实测对照：
+ *    不裁：平移 6 秒 rss 536 → 668 MB，一路爬
+ *    裁了：全程稳定在 378 MB
+ *  终端用的是 CanvasAddon，每个 4 张 canvas；可见的终端在画布平移时每帧
+ *  都要重新分配后备存储、重传纹理，内存就这么累积起来。 */
+const VIEW_MARGIN = 600
+
 export function PaneLayer(): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const tabs = useStore((s) => s.tabs)
@@ -85,9 +95,19 @@ export function PaneLayer(): JSX.Element {
           })
           return
         }
+        // **视口裁剪**：画布世界可以很大（实测 4700x7100），而视口里通常只有几个节点。
+        // 不裁的话 30 个终端全在渲染 —— 实测 120 个 xterm canvas、renderer 413MB、
+        // GPU 130MB，而当时视口里一个节点都没有。
+        // 留一圈余量：平移时节点要提前备好，等露头才开始渲染会看到白块。
+        const left = vp.x + (f.x + n.x) * vp.scale
+        const top = vp.y + (f.y + n.y) * vp.scale
+        const w = n.w * vp.scale
+        const h = n.h * vp.scale
+        if (left + w < -VIEW_MARGIN || left > cw + VIEW_MARGIN) return
+        if (top + h < -VIEW_MARGIN || top > ch + VIEW_MARGIN) return
         m.set(n.leafId, {
-          left: vp.x + (f.x + n.x) * vp.scale,
-          top: vp.y + (f.y + n.y) * vp.scale,
+          left,
+          top,
           w: n.w,
           h: n.h,
           scale: vp.scale,
