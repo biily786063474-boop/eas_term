@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>终端渲染器对比：CanvasAddon vs DOM · Eas-Term</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">Eas-Term · 渲染器评测</span>
+  <a href="#结论">结论</a><a href="#方法">怎么测的</a><a href="#单终端">单终端</a>
+  <a href="#多终端">多终端</a><a href="#画质">画质</a><a href="#风险">没测到的</a><a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">决策支持 · 实测数据</div>
+  <h1>终端渲染器：现在的 CanvasAddon 该不该换成 DOM</h1>
+  <p class="lede">同一台机器、同一份画布、同样的操作，把两种渲染器各跑一遍。结论先说：<b>不建议换</b>——收益只在「三十个终端同屏」这一种场景出现，而且刚做的视口裁剪已经把那个场景的问题解决掉了大半。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-06</b></span>
+    <span>版本 <b>0.4.8 + 未发布改动</b></span>
+    <span>xterm <b>5.5 / addon-canvas 0.7</b></span>
+    <span>Chromium <b>138</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">结论</div>
+  <p class="secnote">两种渲染器在你日常最常用的场景（分屏、一个终端）上<b>没有可测量的差别</b>；差别只在三十个终端同屏时出现，而那个场景的内存问题已经被视口裁剪解决了。</p>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="stat"><div class="num n-gy" style="color:#a3a3a3">±0%</div><div class="lab">单终端吞吐差异<br>1018ms vs 1018ms</div></div>
+    <div class="stat"><div class="num n-em">−10%</div><div class="lab">三十终端同屏内存<br>835MB → 750MB</div></div>
+    <div class="stat"><div class="num n-em">−57%</div><div class="lab">同场景 JS 堆<br>69MB → 30MB</div></div>
+    <div class="stat"><div class="num n-ro">?</div><div class="lab">TUI / CJK 兼容性<br>本轮<b>没测</b></div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">建 议</div>
+    <p style="margin:0 0 10px"><b>保持现状（CanvasAddon），不换。</b></p>
+    <ul style="margin:0">
+      <li>唯一有收益的场景是「三十个终端全在视口内」，那时省 85MB（10%）。但<b>视口裁剪已经让这个场景不再发生</b>——正常使用时视口里只有几个终端，其余全 <code>display:none</code>。</li>
+      <li>换渲染器的风险面很大且本轮<b>没有覆盖</b>：Claude Code 那种全屏 TUI、中文宽字符对齐、选区、连字、光标形状——这些都要真用一段时间才暴露。</li>
+      <li>历史上换过一次渲染器（WebGL → Canvas），起因就是「平时看不出来、快速滚动才花屏」的那类问题。<b>渲染器的坑不会在基准测试里出现。</b></li>
+    </ul>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">什么情况下值得重新考虑</div>
+    <p style="margin:0">如果你之后经常<b>把三十个终端摊开在一屏里长时间盯着</b>（而不是平移浏览），那 85MB 和 39MB JS 堆是实打实的。到那时再换也不迟——这份数据留着就是为了那一天。</p>
+  </div>
+</section>
+
+<section id="方法">
+  <h2>Method</h2>
+  <div class="sectitle">怎么测的</div>
+  <p class="secnote">两次测量之间<b>只改一行代码</b>（加/去 <code>term.loadAddon(new CanvasAddon())</code>），其余完全相同：同一台机器、同一份画布存档、同一套 CDP 脚本、同样的操作序列。</p>
+
+  <pre><code><span class="dim"># 唯一的差异点 —— TerminalView.tsx</span>
+CanvasAddon 组   term.loadAddon(new CanvasAddon())
+DOM 渲染器组     <span class="dim">// 注释掉，xterm 自动回退到内置 DOM renderer</span>
+
+<span class="dim"># 两个场景，各跑一遍</span>
+场景 A  分屏 · 单个终端 848×481
+        <span class="flow">→</span> 敲 seq 1 3000，量输出耗时
+        <span class="flow">→</span> 滚轮 30 次，量耗时
+        <span class="flow">→</span> 截图比画质
+
+场景 B  画布 · fit 全部 · 30 个终端同屏可见
+        <span class="flow">→</span> 持续平移 6 秒，每 1.5 秒采一次 renderer rss
+        <span class="flow">→</span> 量 canvas 张数 / 行 DOM / JS 堆</code></pre>
+
+  <p style="color:#737373;font-size:13.5px">采样用 <code>ps -axo rss</code> 读进程常驻内存，页面内指标走 CDP <code>Runtime.evaluate</code>。每组只跑一轮，<b>没做多次取均值</b>——所以下面 5% 以内的差异不要当真，只看数量级。</p>
+</section>
+
+<section id="单终端">
+  <h2>Scenario A</h2>
+  <div class="sectitle">场景 A · 分屏单终端</div>
+  <p class="secnote">这是你日常最常用的形态。结论是<b>两者没有可测量的差别</b>。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>指标</th><th>CanvasAddon<br><span style="font-weight:400;color:#737373">现状</span></th><th>DOM 渲染器</th><th>差异</th></tr></thead>
+    <tbody>
+      <tr><td><b>输出 3000 行耗时</b></td><td>1018 ms</td><td>1018 ms</td><td><span class="b b-gy">一样</span></td></tr>
+      <tr><td><b>滚轮 30 次耗时</b></td><td>1291 ms</td><td>1299 ms</td><td><span class="b b-gy">+0.6%</span></td></tr>
+      <tr><td>该终端的 canvas 张数</td><td>4</td><td><b>0</b></td><td><span class="b b-sk">结构差异</span></td></tr>
+      <tr><td>页面 DOM 节点总数</td><td>2681</td><td>3653</td><td><span class="b b-am">+972</span></td></tr>
+      <tr><td>JS 堆</td><td>28 MB</td><td>26 MB</td><td><span class="b b-gy">−2MB</span></td></tr>
+      <tr><td>renderer 进程</td><td>232 MB</td><td>247 MB</td><td><span class="b b-am">+15MB</span></td></tr>
+      <tr><td>GPU 进程</td><td>129 MB</td><td>125 MB</td><td><span class="b b-gy">−4MB</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <p>吞吐和滚动<b>完全打平</b>。这有点反直觉——通常认为 canvas 比 DOM 快——原因是这个场景的瓶颈根本不在渲染：3000 行输出的 1 秒里，大部分时间花在 PTY → IPC → <code>term.write()</code> 这条链路上，两种渲染器拿到的都是同样节奏的数据。</p>
+  <p>DOM 渲染器多出来的 972 个节点，是那个可见终端的 26 行 <code>&lt;div&gt;</code> 加上每行内的字符 span。<b>只有可见终端才产生行 DOM</b>，隐藏的 29 个终端一个都不产生——这一点在场景 B 里很关键。</p>
+</section>
+
+<section id="多终端">
+  <h2>Scenario B</h2>
+  <div class="sectitle">场景 B · 三十个终端同屏</div>
+  <p class="secnote">画布 fit 到全部节点可见，然后持续平移 6 秒。这是唯一能看出差别的场景。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>指标</th><th>CanvasAddon</th><th>DOM 渲染器</th><th>差异</th></tr></thead>
+    <tbody>
+      <tr><td>可见的终端面板</td><td>30</td><td>30</td><td><span class="b b-gy">同</span></td></tr>
+      <tr><td><b>canvas 张数</b></td><td>120<br><span style="color:#737373;font-size:12.5px">30 个终端 × 4 层</span></td><td><b>0</b></td><td><span class="b b-em">全免</span></td></tr>
+      <tr><td>行 DOM 元素</td><td>0</td><td>136</td><td><span class="b b-am">+136</span></td></tr>
+      <tr><td>页面 DOM 节点总数</td><td>14720</td><td>15141</td><td><span class="b b-am">+421</span></td></tr>
+      <tr><td><b>JS 堆</b></td><td>69 MB</td><td><b>30 MB</b></td><td><span class="b b-em">−57%</span></td></tr>
+      <tr><td><b>平移中 renderer 峰值</b></td><td><b>835 MB</b></td><td><b>750 MB</b></td><td><span class="b b-em">−85MB</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>内存走势（平移的 6 秒里，每 1.5 秒一采）</h3>
+  <pre><code>CanvasAddon   619 MB <span class="flow">→</span> 827 <span class="flow">→</span> 818 <span class="flow">→</span> <span class="hi">835</span>
+DOM 渲染器    545 MB <span class="flow">→</span> 634 <span class="flow">→</span> 750 <span class="flow">→</span> <span class="hi">750</span>
+
+<span class="dim">两者都在涨 —— 涨的是「可见终端在平移时不断重绘」这件事本身，
+不是某一种渲染器的锅。CanvasAddon 涨得更快更高，因为它每帧
+要重新分配 4 张后备存储并重传纹理。</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">但这个场景已经不会发生了</div>
+    <p style="margin:0 0 10px">同一天做的<b>视口裁剪</b>（<code>6f99a2e</code>）已经让画布只渲染视口内的终端。同一份画布，同样平移 6 秒：</p>
+    <pre style="margin:10px 0 0"><code>裁剪前   536 <span class="flow">→</span> 578 <span class="flow">→</span> 623 <span class="flow">→</span> 668 MB   <span class="dim">一路爬</span>
+裁剪后   <span class="hi">378 MB 全程不动</span></code></pre>
+    <p style="margin:10px 0 0">换句话说：<b>换渲染器能省的 85MB，视口裁剪已经省了 290MB</b>，而且是在不动渲染管线的前提下。</p>
+  </div>
+</section>
+
+<section id="画质">
+  <h2>Visual</h2>
+  <div class="sectitle">画质对比</div>
+  <p class="secnote">同一段输出、同一块区域、放大到 1:1 像素比对。</p>
+
+  <div class="verdict">
+    <div class="vlabel">结 果</div>
+    <p style="margin:0">肉眼<b>看不出差别</b>。整屏像素差异 0.7%，全部来自行基线的亚像素对齐——不是字形质量问题。半透明毛玻璃背景下两者都干净，没有出现历史上 WebGL 那种叠影。</p>
+  </div>
+
+  <p>这一条值得单独说，因为它是<b>当初从 WebGL 换回 Canvas 的唯一理由</b>。<code>docs/终端花屏-渲染优化方案.html</code> 里记着：WebGL 增量重绘配上 <code>allowTransparency: true</code> + 半透明主题背景（<code>rgba(…, 0.45)</code>），快速滚动时用半透明色「擦除」旧像素，误差逐帧累积成叠影。</p>
+  <p>DOM 渲染器<b>在原理上免疫这个问题</b>——它不做像素合成，半透明交给浏览器合成器处理。所以如果哪天真要换，DOM 是比 WebGL 更安全的方向。</p>
+</section>
+
+<section id="风险">
+  <h2>Not Covered</h2>
+  <div class="sectitle">这轮没测到的东西</div>
+  <p class="secnote">下面每一条都可能推翻上面的结论，而基准测试照不到它们。</p>
+
+  <div class="dissent">
+    <div class="vlabel">反对换的主要理由，就在这一节</div>
+    <p style="margin:0">这些全是「平时看不出来、真用起来才炸」的类型——和当年 WebGL 花屏一模一样：慢速输出时每格能被干净重绘一次，误差不累积，所以基准测试永远是绿的。</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>没测的</th><th>为什么要紧</th><th>怎么才能测出来</th></tr></thead>
+    <tbody>
+      <tr><td><b>全屏 TUI</b><br><span style="color:#737373;font-size:12.5px">Claude Code / vim / htop</span></td><td>备用屏 + 鼠标追踪 + 频繁全屏重绘，是最吃渲染器的路径。而这恰恰是这个软件的<b>主要用途</b></td><td>真跑一天 agent 会话</td></tr>
+      <tr><td><b>中文宽字符对齐</b></td><td>DOM 渲染器靠字体度量排版，CJK 半宽/全宽混排容易错位；canvas 是按格子画的，天然对齐</td><td>中文日志、中文 TUI 界面</td></tr>
+      <tr><td><b>选区与复制</b></td><td>两种渲染器的选区实现完全不同（canvas 画矩形 vs DOM 原生选区）</td><td>拖选跨行文本再粘贴</td></tr>
+      <tr><td><b>超长行 / 大量 ANSI 颜色</b></td><td>DOM 渲染器每个样式片段一个 span，颜色密集时节点数会爆</td><td><code>ls --color</code> 大目录、彩色 diff</td></tr>
+      <tr><td>光标形状与闪烁</td><td>细节差异会影响手感</td><td>肉眼</td></tr>
+      <tr><td>长时间运行的内存走势</td><td>本轮只测了 6 秒窗口</td><td>挂一小时再看</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">我的建议是保持现状，但把这份数据留着。如果你想推进，下面是三个不同力度的选项。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>选项</th><th>做什么</th><th>收益</th><th>风险</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="b b-em">推荐</span> <b>什么都不做</b></td>
+        <td>保持 CanvasAddon。视口裁剪已经解决了主要问题</td>
+        <td>已到手 290MB</td>
+        <td>无</td>
+      </tr>
+      <tr>
+        <td><span class="b b-sk">折中</span> <b>离屏卸载渲染器</b></td>
+        <td>终端滚出视口时 <code>canvasAddon.dispose()</code>，回来再 <code>loadAddon</code>。<b>兼得两者</b>——可见的用 canvas，不可见的连 canvas 都不留</td>
+        <td>理论上能把那 120 张 canvas 降到「视口内的几张」</td>
+        <td>没测过。dispose 后 xterm 会退回 DOM renderer，切换瞬间可能闪；频繁进出视口会反复重建字形图集</td>
+      </tr>
+      <tr>
+        <td><span class="b b-ro">激进</span> <b>整体换 DOM</b></td>
+        <td>去掉 <code>loadAddon(new CanvasAddon())</code></td>
+        <td>三十终端同屏时 −85MB / JS 堆 −57%</td>
+        <td>上一节整张表</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">决 策 码 · 复制其中一条粘回对话</div>
+    <div class="dcmd">渲染器保持现状</div>
+    <div class="dcmd">试试离屏卸载渲染器</div>
+    <div class="dcmd">换成 DOM 渲染器</div>
+  </div>
+</section>
+
+<footer>
+  数据采自 2026-08-06 · Eas-Term 0.4.8 + 未发布改动 · macOS 26.5 / Chromium 138<br>
+  相关：<code>src/renderer/src/features/terminal/TerminalView.tsx</code>（渲染器加载处）·
+  <code>src/renderer/src/features/workspace/PaneLayer.tsx</code>（视口裁剪）·
+  <code>docs/终端花屏-渲染优化方案.html</code>（当年从 WebGL 退回 Canvas 的分析）<br>
+  测试脚本留在会话 scratchpad 的 <code>bench.mjs</code> / <code>canvasscene.mjs</code>，两组各只跑一轮，5% 以内的差异不具统计意义。
+</footer>
+</main>
+</body>
+</html>
