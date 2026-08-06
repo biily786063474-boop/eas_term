@@ -1342,7 +1342,10 @@ body.dragging-row * {
   right: 14px;
   top: 46px; /* 46 = titlebar 42 + 4 */
   z-index: 3000;
-  width: 380px; /* 一条 = 一组变量后，变量名动辄 30 字符（ALIBABA_CLOUD_ACCESS_KEY_SECRET） */
+  /* 540 而不是 380：变量名动辄 20~30 字符（ALIBABA_CLOUD_ACCESS_KEY_SECRET），
+     380 的时候减去右侧按钮区，正文只剩 ~230px —— 一行只放得下一个名字，
+     于是内容全堆在左边、右边空一大片。加宽之后才够排成两列。 */
+  width: 540px;
   max-height: calc(100vh - 70px);
   overflow-y: auto;
   padding: 12px;
@@ -1606,8 +1609,8 @@ body.dragging-row * {
 .sec-row {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 9px 10px;
+  gap: 14px;
+  padding: 13px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.02);
@@ -1620,20 +1623,31 @@ body.dragging-row * {
   min-width: 0;
 }
 .sec-row-name {
-  font-size: 12.5px;
-  margin-bottom: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  /* 原来是 3px，标题几乎贴在变量名上。标题是这一条的「名字」，
+     和下面那串变量得有一口气的距离，扫视时才分得开层次 */
+  margin-bottom: 9px;
 }
-/* 一条 = 一组变量，所以是一排标签而不是一个 */
+/* 一条 = 一组变量，所以是一排标签而不是一个。
+   **两列网格而不是 flex-wrap**：变量名长短差得多，wrap 出来参差不齐，
+   而且短名字后面留一截空、长名字独占一行，整体看着就是全挤在左边。
+   定宽两列各自截断，右边界对齐，视觉重心才落回中间。 */
 .sec-vars {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 8px;
 }
 .sec-var {
-  display: inline-block;
+  /* block + 截断：进了网格就不能再靠内容撑宽，否则长名字会把那一列顶开、
+     两列重新变得参差 */
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10.5px;
-  padding: 1px 6px;
+  padding: 3px 7px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.07);
   color: var(--fg-dim);

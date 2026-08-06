@@ -581,11 +581,15 @@ export function SecretsPanel(): JSX.Element | null {
                                 key={v.varName}
                                 className={`sec-var${v.readable ? '' : ' bad'}${v.file ? ' isfile' : ''}`}
                                 // 文件型和文本型的用法完全不同，不区分的话用户会以为
-                                // 存了 SSH 私钥就能 $SSH_ID_ALIYUN 直接用
+                                // 存了 SSH 私钥就能 $SSH_ID_ALIYUN 直接用。
+                                //
+                                // 文本型也要给 tip：排成两列之后每列只有 ~190px，
+                                // ALIBABA_CLOUD_ACCESS_KEY_ID 和 ..._SECRET 会双双截成
+                                // 「ALIBABA_CLOUD_ACCESS_KEY_…」，光看列表分不出谁是谁。
                                 data-tip={
                                   v.file
                                     ? `密钥文件 ${v.file.name} · 用时解成临时文件，路径在 $${v.varName}_PATH`
-                                    : undefined
+                                    : v.varName
                                 }
                               >
                                 {v.file ? '📄 ' : ''}
