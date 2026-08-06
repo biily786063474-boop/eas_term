@@ -25,6 +25,8 @@ interface TermLeaf {
   leaf: LeafNode
   ptyId: string
   title: string
+  /** 关终端要 (tabId, leafId) 两个参数，收集时就带上，别到用的时候再去 tabs 里翻一遍 */
+  tabId: string
 }
 
 export function BoardStage(): JSX.Element {
@@ -42,6 +44,9 @@ export function BoardStage(): JSX.Element {
   const renameBoardColumn = useStore((s) => s.renameBoardColumn)
   const removeBoardColumn = useStore((s) => s.removeBoardColumn)
   const requestConfirm = useStore((s) => s.requestConfirm)
+  // 关终端走和分屏/画布同一条路：杀 PTY + dispose xterm。
+  // 它自己会在终端忙着时先弹确认，这里不用再判一遍
+  const closeLeafSafely = useStore((s) => s.closeLeafSafely)
   /** 正在改名的列 id */
   const [editing, setEditing] = useState<string | null>(null)
 
@@ -70,7 +75,7 @@ export function BoardStage(): JSX.Element {
       for (const leaf of collectLeaves(t.root)) {
         if (leaf.pane.kind !== 'terminal') continue
         const arr = m.get(t.projectId) ?? []
-        arr.push({ leaf, ptyId: leaf.pane.ptyId, title: t.title })
+        arr.push({ leaf, ptyId: leaf.pane.ptyId, title: t.title, tabId: t.id })
         m.set(t.projectId, arr)
       }
     }
@@ -155,6 +160,19 @@ export function BoardStage(): JSX.Element {
             onClick={() => fullOf.project && void openTerminal({ projectId: fullOf.project.id })}
           >
             <PlusIcon size={12} />
+          </button>
+          {/* 关掉当前这个终端（不是关窗口）。关完自动回总览 —— 
+              那个终端已经没了，留在全屏里只会看到一片空白 */}
+          <button
+            className="board-fs-kill"
+            data-tip="关掉这个终端"
+            onClick={() => {
+              const cur = fullOf.term
+              setFull(null)
+              void closeLeafSafely(cur.tabId, cur.leaf.id)
+            }}
+          >
+            <TrashIcon size={12} />
           </button>
           <button className="board-fs-x" data-tip="回看板（Esc）" onClick={() => setFull(null)}>
             <CloseIcon size={13} />
@@ -308,6 +326,22 @@ export function BoardStage(): JSX.Element {
                               <span className="board-termname">{t.title || `终端 ${i + 1}`}</span>
                               {n && <em>等处理</em>}
                               {!n && b && <em>在跑</em>}
+                              {/* 关掉这个终端。**看板原来没有这个入口** ——
+                                  用完的终端得切回分屏或画布才能关，而每个常驻终端
+                                  是一份不小的固定成本（填满 scrollback 约 75MB）。
+                                  span 而不是 button：外面已经是 button 了，套不得 */}
+                              <span
+                                className="board-termx"
+                                role="button"
+                                tabIndex={-1}
+                                data-tip="关掉这个终端"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  void closeLeafSafely(t.tabId, t.leaf.id)
+                                }}
+                              >
+                                <CloseIcon size={10} />
+                              </span>
                             </button>
                           )
                         })}

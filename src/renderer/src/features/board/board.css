@@ -268,6 +268,47 @@
   background: rgba(224, 180, 94, 0.2);
   color: #e0b45e;
 }
+/* 终端行末尾的关闭 ×：平时不出现，hover 到那一行才露。
+   列头的删除按钮同理 —— 低频动作不该跟「这个终端在忙什么」抢注意力 */
+.board-termx {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  color: var(--fg-dim);
+  opacity: 0;
+  transition: opacity 0.14s, background 0.14s, color 0.14s;
+}
+.board-term:hover .board-termx {
+  opacity: 0.55;
+}
+.board-termx:hover {
+  opacity: 1;
+  background: rgba(239, 111, 123, 0.18);
+  color: #ef6f7b;
+}
+
+.board-fs-kill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.board-fs-kill:hover {
+  background: rgba(239, 111, 123, 0.18);
+  color: #ef6f7b;
+}
+
 .board-termmore {
   padding: 2px 6px 0;
   font-size: 10px;

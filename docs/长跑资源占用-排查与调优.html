@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>长跑资源占用：排查与调优 · Eas-Term</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:680px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">Eas-Term · 长跑调优</span>
+  <a href="#结论">结论</a><a href="#现场">你的现场</a><a href="#成本">成本构成</a>
+  <a href="#扫描">代码扫描</a><a href="#已修">已修的</a><a href="#杠杆">还能调的</a><a href="#习惯">使用习惯</a><a href="#下一步">下一步</a>
+</div></nav>
+
+<header class="hero">
+  <div class="eyebrow">资源排查 · 实测 + 全量代码扫描</div>
+  <h1>长时间高强度使用下，内存和 CPU 怎么守住</h1>
+  <p class="lede">先说结论：<b>没有找到经典意义上的内存泄漏</b>。你那个跑了八小时的实例，两次采样间隔四十分钟，主进程 993 → 997MB —— 基本不动。真正的问题是「固定成本 × 规模」：每个终端有一份不小的固定开销，你开了三十个。</p>
+  <div class="meta">
+    <span>日期 <b>2026-08-06</b></span>
+    <span>样本 <b>你的实例（8h23m）+ 隔离实例对照</b></span>
+    <span>方法 <b>CDP 实测 + 全量代码扫描</b></span>
+  </div>
+</header>
+
+<main>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">结论</div>
+  <p class="secnote">三句话：不是泄漏；大头是 scrollback；已经修掉的两处能省一大半。</p>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="stat"><div class="num n-em">+4 MB</div><div class="lab">你的实例 40 分钟内<br>主进程增量（≈ 无泄漏）</div></div>
+    <div class="stat"><div class="num n-ro">75 MB</div><div class="lab">单个终端填满 scrollback<br>的固定成本</div></div>
+    <div class="stat"><div class="num n-em">−290 MB</div><div class="lab">视口裁剪已省<br>668 → 378MB</div></div>
+    <div class="stat"><div class="num n-am">35%</div><div class="lab">你的实例当前 CPU<br>渲染 + GPU 各 35%</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">一句话</div>
+    <p style="margin:0"><b>软件本身没有漏内存，是「每个终端 ~75MB 固定成本」× 三十个终端撑起来的。</b>要守住长跑，三个杠杆：把 scrollback 调小、少开常驻终端、装上今天已经修好的两处（视口裁剪 + 网页节点回收）。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">你现在这个实例是最坏情况</div>
+    <p style="margin:0">它跑的是 0.4.7：<b>没有视口裁剪、没有网页节点回收</b>，三十个终端 + 二十三个网页节点全在渲染，所以渲染进程和 GPU 各烧 35% CPU。今天修的三个提交都在 0.4.8 之后，你一个都没有。</p>
+  </div>
+</section>
+
+<section id="现场">
+  <h2>Field Data</h2>
+  <div class="sectitle">你的实例现场读数</div>
+  <p class="secnote">跑了 8 小时 23 分，三十个终端、二十三个网页节点、十八个 Frame。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>进程</th><th>常驻内存</th><th>CPU</th><th>状态</th><th>判读</th></tr></thead>
+    <tbody>
+      <tr><td><b>主进程</b></td><td>997 MB</td><td>0.3%</td><td>S</td><td>30 个 node-pty + 主进程自身</td></tr>
+      <tr><td><b>渲染进程</b>（主窗口）</td><td>882 MB</td><td><b>35.1%</b></td><td>S</td><td><span class="b b-ro">异常</span> 空闲时不该烧这么多</td></tr>
+      <tr><td><b>GPU 进程</b></td><td>347 MB</td><td><b>36.0%</b></td><td>S</td><td><span class="b b-ro">异常</span> 120 张 canvas 在合成</td></tr>
+      <tr><td>其余 renderer ×6</td><td>103~246 MB</td><td>0~3%</td><td>S</td><td>灵动岛 + 各个 webview</td></tr>
+      <tr><td colspan="5" style="color:#737373">合计约 <b>2.2 GB</b>。所有进程状态都是 <code>S</code>（正常睡眠），<b>没有卡在不可中断 I/O</b> —— 所以不是死锁，是真的在忙。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>为什么说没有泄漏</h3>
+  <pre><code><span class="dim">同一个进程，两次采样间隔约 40 分钟：</span>
+主进程      993 MB  <span class="flow">→</span>  997 MB     <span class="dim">+4MB</span>
+渲染进程    838 MB  <span class="flow">→</span>  882 MB     <span class="dim">+44MB（期间我在操作它）</span>
+
+<span class="dim">经典泄漏的特征是「单调、无上限地涨」。八小时只涨这个量级，
+说明各处的缓冲都有上限，涨到头就稳住了。</span></code></pre>
+</section>
+
+<section id="成本">
+  <h2>Cost</h2>
+  <div class="sectitle">成本构成：钱花在哪</div>
+  <p class="secnote">用隔离实例逐项测出来的。关键发现是 scrollback —— 它的代价<b>取决于行有多长</b>，这一点很反直觉。</p>
+
+  <h3>① scrollback：单终端最大的一笔</h3>
+  <div class="tw"><table>
+    <thead><tr><th>填充内容</th><th>renderer 增量</th><th>JS 堆增量</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>20000 行 × <b>5 字符</b><br><code>seq 1 20000</code></td><td><b>0 MB</b></td><td>0 MB</td><td>xterm 按实际列数存，短行几乎不占</td></tr>
+      <tr><td>20000 行 × <b>180 字符</b><br>接近真实日志 / agent 输出</td><td><b>+75 MB</b></td><td>0 MB</td><td><span class="b b-ro">大头</span> 而且不进 JS 堆（TypedArray 在堆外）</td></tr>
+    </tbody>
+  </table></div>
+  <p>当前配置 <code>scrollback: 20000</code>（<code>TerminalView.tsx:134</code>）。注释里写着这已经是从 10 万降下来的结果。但对<b>三十个终端</b>来说，全填满就是 <b>~2.2GB</b> —— 和你实例的实测总量吻合。</p>
+  <p><b>这笔钱有上限、不会无限涨</b>，所以它不是泄漏；但它是「你开几个终端就乘几倍」的固定成本。</p>
+
+  <h3>② 画布渲染：平移时一路爬</h3>
+  <pre><code><span class="dim">同一份画布（30 个终端），持续平移 6 秒：</span>
+裁剪前   536 <span class="flow">→</span> 578 <span class="flow">→</span> 623 <span class="flow">→</span> <span class="hi">668 MB</span>   <span class="dim">一路爬</span>
+裁剪后   <span class="hi">378 MB</span> 全程不动
+
+<span class="dim">终端用 CanvasAddon，每个 4 张 canvas（30×4=120）。可见的终端在平移时
+每帧重新分配后备存储、重传纹理 —— 内存就这么累积，看着像泄漏。</span></code></pre>
+
+  <h3>③ 网页节点：一个一个 Chromium 进程</h3>
+  <p>你画布上有 <b>23 个网页节点</b>。原来的懒挂载只管首次进入视口，之后<b>永不回收</b> —— 看过一次的节点，它那个 Chromium 进程就活到关软件为止，而且 <code>webpreferences</code> 里还写着 <code>backgroundThrottling=no</code>，离屏也不降速。</p>
+</section>
+
+<section id="扫描">
+  <h2>Code Audit</h2>
+  <div class="sectitle">代码层面全量扫描</div>
+  <p class="secnote">按「起了多少 / 清了多少」逐类核对。<b>结果是干净的</b> —— 这也是判断「不是泄漏」的另一半依据。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>类别</th><th>创建</th><th>清理</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td>主进程 <code>setInterval</code></td><td>7 处</td><td>2 处 clear</td><td><span class="b b-em">正常</span> 未清的三处是全局单例：遥测心跳、更新检查、以及 <code>fs.watch</code> 失效时的降级轮询（正常路径不启用）</td></tr>
+      <tr><td>主进程 <code>setTimeout</code></td><td>16 处</td><td>11 处 clear</td><td><span class="b b-em">正常</span> 未清的是一次性延时</td></tr>
+      <tr><td>渲染层 <code>setInterval</code></td><td><b>1 处</b></td><td>1 处 clear</td><td><span class="b b-em">干净</span> 只有侧栏 git 轮询，配对清理</td></tr>
+      <tr><td>ResizeObserver / MutationObserver / IntersectionObserver</td><td>共 6 个</td><td>9 处 disconnect</td><td><span class="b b-em">干净</span> 清理多于创建（一个 effect 清多个）</td></tr>
+      <tr><td>PTY 输出缓冲</td><td><code>outBuf.push</code></td><td>flush 后 <code>= []</code></td><td><span class="b b-em">有上限</span> 16ms 或 64KB 双阈值，flush 即清空</td></tr>
+      <tr><td>主进程 Map / Set / 数组</td><td>写入 97 次</td><td>清理 62 次</td><td><span class="b b-am">未逐条核对</span> 比例正常，但没有一条条verify</td></tr>
+      <tr><td>每次跑 <code>ps</code> 的调用</td><td colspan="2"><code>shellsWithChildren</code></td><td><span class="b b-em">非轮询</span> 只在关标签和退出前调，不是定时器</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">诚实标注</div>
+    <p style="margin:0">「主进程容器」那一行我<b>只统计了数量比例，没有逐条追踪生命周期</b>。97 次写入里如果有一处只写不删，八小时内也未必看得出来。真要排除得挂 heap snapshot 对比，本轮没做。</p>
+  </div>
+</section>
+
+<section id="已修">
+  <h2>Fixed</h2>
+  <div class="sectitle">今天已经修掉的</div>
+  <p class="secnote">这三个提交都在 0.4.8 <b>之后</b>，你现在跑的版本一个都没有。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>提交</th><th>做了什么</th><th>实测收益</th></tr></thead>
+    <tbody>
+      <tr><td><code>6f99a2e</code><br><span style="color:#737373;font-size:12.5px">视口裁剪</span></td><td>画布上视口外的终端不再渲染（留 600px 余量）</td><td><b>668 → 378 MB</b> 且平移时恒定</td></tr>
+      <tr><td><code>df1213c</code><br><span style="color:#737373;font-size:12.5px">网页节点回收</span></td><td>离屏两分钟就拆掉 webview 和它的 Chromium 进程，回来重建并续上原地址</td><td>每个节点省一个进程<br><span style="color:#737373">（你有 23 个）</span></td></tr>
+      <tr><td><code>a1e492a</code><br><span style="color:#737373;font-size:12.5px">滚轮 / 防程序性滚动</span></td><td>看板不再挂画布的滚轮拦截；关键容器改 <code>overflow: clip</code></td><td>修的是正确性，不是性能</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="杠杆">
+  <h2>Levers</h2>
+  <div class="sectitle">还能调的三个杠杆</div>
+  <p class="secnote">按「收益 ÷ 风险」排序。第一个收益最大且改动只有一个数字。</p>
+
+  <h3>杠杆一 · scrollback 20000 → 5000</h3>
+  <div class="tw"><table>
+    <thead><tr><th>配置</th><th>单终端满载</th><th>30 个终端</th><th>能回看多少</th></tr></thead>
+    <tbody>
+      <tr><td>现在 <code>20000</code></td><td>~75 MB</td><td>~2.2 GB</td><td>2 万行</td></tr>
+      <tr><td><b>建议 <code>5000</code></b></td><td><b>~19 MB</b></td><td><b>~570 MB</b></td><td>5 千行 <span style="color:#737373">（约 60 屏）</span></td></tr>
+      <tr><td>激进 <code>2000</code></td><td>~8 MB</td><td>~230 MB</td><td>2 千行</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">
+    <div class="vlabel">这个改动有代价，要你判断</div>
+    <p style="margin:0">审批解析要读「终端底部若干行，含 scrollback」。5000 行对这个用途绰绰有余。但如果你习惯往回翻很久之前的输出（比如翻半小时前 agent 说了什么），5000 行可能不够 —— <b>这取决于你怎么用，我替你决定不了</b>。</p>
+  </div>
+
+  <h3>杠杆二 · 离屏终端卸载渲染器</h3>
+  <p>终端滚出视口时 <code>canvasAddon.dispose()</code>，回来再 <code>loadAddon</code>。可见的用 canvas、不可见的连 canvas 都不留 —— 能把那 120 张 canvas 压到「视口内的几张」。<span class="b b-am">没测过</span> 切换瞬间可能闪，频繁进出视口会反复重建字形图集。</p>
+
+  <h3>杠杆三 · 网页节点的后台节流</h3>
+  <p><code>WebView.tsx:154</code> 的 <code>backgroundThrottling=no</code> 是为了「主窗口切后台时页面别被冻住」。但对离屏的画布节点来说这是纯浪费。回收机制上线后这条的重要性降低了 —— 两分钟内它照样全速跑。</p>
+</section>
+
+<section id="习惯">
+  <h2>Habits</h2>
+  <div class="sectitle">使用习惯上的四条</div>
+  <p class="secnote">代码改完之后，这几条决定了你能不能真的跑一整天。</p>
+
+  <ul class="clean">
+    <li><b>用完的终端要关</b> —— 每个常驻终端是 ~75MB 的固定成本（满载时）加一个 node-pty 进程。三十个终端里有多少是真在用的？</li>
+    <li><b>别让画布长时间 fit 在「全部可见」</b> —— 视口裁剪按「视口内」算，fit 全部等于把所有终端都算成可见，裁剪就失效了。平时保持在正常缩放，只有找东西时才 fit 一下。</li>
+    <li><b>刷大量输出前想一下</b> —— <code>cat</code> 一个大日志、<code>yes</code>、跑测试刷屏，都会往 scrollback 里灌长行。灌满一个终端就是 75MB，而且不会自己退回去（除非关掉那个终端）。</li>
+    <li><b>装新版之前先退出应用</b> —— 这是我今天踩的坑：热替换正在运行的 bundle 会让窗口一段时间点不动，而且之后是带病运行。已经写进发版流程。</li>
+  </ul>
+
+  <div class="warn">
+    <div class="vlabel">一个观察</div>
+    <p style="margin:0">你实例里那 30 个终端，<b>视口内一个都没有</b>（我采样时画布平移在空白区）。也就是说：那 882MB 渲染进程 + 35% CPU，当时<b>没有渲染任何你正在看的东西</b>。视口裁剪要解决的正是这件事。</p>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">按我的建议排序。第一条是现在就该做的。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>做什么</th><th>为什么现在做</th></tr></thead>
+    <tbody>
+      <tr><td><span class="b b-em">1</span></td><td><b>打 0.4.9 并安装</b>（含今天三个修复）</td><td>你现在跑的 0.4.7 是最坏情况。视口裁剪 −290MB 是已验证的净收益，不需要你做任何取舍</td></tr>
+      <tr><td><span class="b b-am">2</span></td><td><b>scrollback 降到 5000</b></td><td>30 终端下 2.2GB → 570MB。但要你确认「5 千行回看够不够」</td></tr>
+      <tr><td><span class="b b-sk">3</span></td><td>离屏终端卸载渲染器</td><td>能再压掉大部分 canvas，但没测过，建议等 1、2 落地跑一段时间再说</td></tr>
+      <tr><td><span class="b b-gy">4</span></td><td>挂 heap snapshot 做长跑对比</td><td>本轮没做。真想彻底排除「某个 Map 只写不删」，只能靠它</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">决 策 码 · 复制一条粘回对话</div>
+    <div class="dcmd">打 0.4.9 装上</div>
+    <div class="dcmd">scrollback 降到 5000</div>
+    <div class="dcmd">两个都做</div>
+    <div class="dcmd">再测一轮 heap snapshot</div>
+  </div>
+</section>
+
+<footer>
+  数据采自 2026-08-06 · 你的实例（0.4.7，运行 8h23m）+ 隔离对照实例 · macOS 26.5 / Chromium 138<br>
+  相关：<code>TerminalView.tsx:134</code>（scrollback）·<code>PaneLayer.tsx</code>（视口裁剪）·<code>WebView.tsx</code>（节点回收）·<code>pty.ts</code>（输出缓冲）<br>
+  未覆盖：heap snapshot 长跑对比、主进程容器逐条生命周期追踪、真实一整天工作负载下的走势。
+</footer>
+</main>
+</body>
+</html>
