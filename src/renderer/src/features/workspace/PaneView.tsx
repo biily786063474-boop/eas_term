@@ -187,9 +187,18 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   // 画布模式：滚轮落在本模块上时——「选中」才让模块内部（终端/预览）自己滚动，
   // 「未选中」则拦下滚轮平移/缩放画板（与画板空白处一致，鼠标经过模块不再抢走 pan）。
   // 终端浮在 pane-layer、滚轮不经 canvas-viewport，故这里在 pane 上加原生捕获监听（passive:false 方可 preventDefault）。
+  //
+  // **看板模式必须排除掉。** 它跟画布共用 canvasRect 定位（为的是不换父容器、
+  // xterm 不重挂载），于是 isCanvas 也跟着为真，这套拦截就一起挂上了 ——
+  // 后果有两个，都很隐蔽：
+  //   1. 看板里点开的终端翻不动 scrollback（滚轮在 capture 阶段就被 stopPropagation 掉，
+  //      xterm 根本收不到）；
+  //   2. 更糟的是它照旧去 setViewport 平移**画布**的视口 —— 你在看板里滚几下，
+  //      切回画布发现整个画面跑掉了，而看板上什么都没发生，根本联想不到是这里。
+  // 看板没有可平移的画布，这套逻辑在那儿没有任何意义。
   useEffect(() => {
     const el = paneRef.current
-    if (!el || !isCanvas) return
+    if (!el || !isCanvas || canvasRect?.board) return
     const onWheel = (e: WheelEvent): void => {
       if (selKey && useStore.getState().canvasSel.includes(selKey)) return // 选中 → 放行给模块内容
       e.preventDefault()
@@ -212,7 +221,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     }
     el.addEventListener('wheel', onWheel, { capture: true, passive: false })
     return () => el.removeEventListener('wheel', onWheel, { capture: true })
-  }, [isCanvas, selKey, setViewport])
+  }, [isCanvas, canvasRect?.board, selKey, setViewport])
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'

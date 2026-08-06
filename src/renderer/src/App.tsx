@@ -180,17 +180,48 @@ export function App(): JSX.Element {
   // 当前项目是否有标签；没有则显示空状态（其他项目的标签仍挂载但隐藏）
   const hasProjectTabs = tabs.some((t) => t.projectId === activeProjectId)
 
-  // 这些容器设计上永远不该滚——但 overflow:hidden **不阻止程序性滚动**。
-  // 浏览器在退出 HTML5 全屏、focus() 或 scrollIntoView() 时会去滚动祖先滚动容器，
-  // 画布世界比视口大得多（实测可滚 4700x7100），一滚整块 UI 就顶上去、顶部被裁，
-  // 而且 viewport 状态没变，用户平移也拉不回来。一旦被滚就立刻复位。
+  // 兜底：任何「设计上不该滚」的容器被滚了就复位。
+  //
+  // 主力防线是 CSS 的 `overflow: clip`（见 .tab-stack / #root / .canvas-viewport）——
+  // 它不产生滚动端口，程序性滚动根本无从发生。这里是第二道，防的是还没改到 clip、
+  // 或者以后新加的容器。
+  //
+  // 背景：`overflow: hidden` **不阻止程序性滚动**。浏览器在退出 HTML5 全屏、
+  // focus()、scrollIntoView() 时会去滚祖先滚动容器，画布世界比视口大得多
+  // （实测可滚 4700x7100），一滚整块 UI 就顶上去、顶部被裁，而 viewport 状态没变，
+  // 用户平移也拉不回来。
+  //
+  // **判据是结构性的，不再枚举选择器。** 上一版写的是白名单
+  // （.canvas-viewport, .canvas-world, .pane-layer, .app, #root），
+  // 漏掉了夹在中间的 .tab-stack —— 于是同一个毛病复发了一次。
+  // 白名单这种东西，漏一个就复发一次；「overflow 是 hidden 却被滚了」才是问题本身。
   useEffect(() => {
-    const GUARDED = '.canvas-viewport, .canvas-world, .pane-layer, .app, #root'
+    // 判过一次就记住：正常滚动容器（终端、看板列、文件树）每帧都在触发 scroll，
+    // 每次都 getComputedStyle 太浪费
+    const verdict = new WeakMap<HTMLElement, boolean>()
+    const neverScrolls = (el: HTMLElement): boolean => {
+      let v = verdict.get(el)
+      if (v === undefined) {
+        const cs = getComputedStyle(el)
+        v = /hidden|clip/.test(cs.overflowX) && /hidden|clip/.test(cs.overflowY)
+        verdict.set(el, v)
+      }
+      return v
+    }
     const onScroll = (e: Event): void => {
-      const el = e.target
-      if (!(el instanceof HTMLElement) || !el.matches(GUARDED)) return
-      if (el.scrollTop) el.scrollTop = 0
-      if (el.scrollLeft) el.scrollLeft = 0
+      const t = e.target
+      // 文档级滚动的 target 是 **document 而不是元素** —— 上一版的
+      // `instanceof HTMLElement` 判断会把这种情况整个放过
+      if (t === document || t === document.documentElement || t === document.body) {
+        if (window.scrollX || window.scrollY) window.scrollTo(0, 0)
+        return
+      }
+      if (!(t instanceof HTMLElement)) return
+      // 先看便宜的：没被滚就什么都不用做（绝大多数事件走到这里就结束）
+      if (!t.scrollTop && !t.scrollLeft) return
+      if (!neverScrolls(t)) return
+      t.scrollTop = 0
+      t.scrollLeft = 0
     }
     // 捕获阶段：scroll 不冒泡，只有 capture 能听到子元素的
     document.addEventListener('scroll', onScroll, true)

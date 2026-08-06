@@ -88,7 +88,9 @@ html,
 body,
 #root {
   height: 100%;
-  overflow: hidden;
+  /* clip 而非 hidden：hidden 仍是个滚动端口，浏览器为了让焦点元素可见会去滚它，
+     整块 UI 就被顶上去、顶部被裁（见 .tab-stack 的说明）。clip 不产生滚动端口。 */
+  overflow: clip;
 }
 
 body {

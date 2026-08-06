@@ -329,7 +329,11 @@
   flex: 1;
   position: relative;
   min-height: 0;
-  overflow: hidden; /* 画布终端浮层不得溢出到标题栏/窗口外，裁到画布区内 */
+  /* 画布终端浮层不得溢出到标题栏/窗口外，裁到画布区内。
+     **用 clip 不用 hidden**：hidden 照样是个滚动端口，浏览器为了让某个焦点元素可见
+     会去滚它（实测被滚过 1014px，整块 UI 就顶上去了）；clip 根本不产生滚动端口，
+     从源头杜绝。裁剪效果两者一样。 */
+  overflow: clip;
 }
 
 .tab-content {

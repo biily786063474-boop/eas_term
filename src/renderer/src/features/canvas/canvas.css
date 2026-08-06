@@ -10,7 +10,7 @@
 .canvas-viewport {
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow: clip; /* 不用 hidden：它是个滚动端口，会被浏览器程序性滚动（见 .tab-stack）*/
   cursor: default; /* 画板默认箭头，不是手 */
   background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.4px, transparent 1.4px);
 }
