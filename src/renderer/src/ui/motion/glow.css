@@ -18,6 +18,9 @@
  * 用法：给元素加 class 即可，不用改 JSX 结构。
  *   .glow-edge   卡片：鼠标靠近哪条边，那条边渗出光晕（需配合 useEdgeGlow）
  *   .glare       按钮：鼠标移入时一道斜高光扫过，像光划过玻璃（纯 CSS）
+ *
+ * 文件末尾另有一节 CTA 按钮的立体质感（受光渐变 + 按下去的位移），
+ * 作用在同一批选择器上 —— 放一个文件里是为了改的时候不会只改一半。
  */
 
 /* ── 边缘光晕：只亮边框，不动卡片本身的底色 ────────────────────
@@ -163,5 +166,142 @@
   .term-input-send:hover::after,
   .wk-primary:hover::after {
     background-position: -100% -100%;
+  }
+}
+
+/* ── CTA 按钮的立体质感 ──────────────────────────────────────────
+   光从上方来：顶沿受光提亮、底沿背光压暗，再垫一层投影把按钮从背景里托起来。
+   全部用半透明黑白叠加，不写死颜色 —— 主题色从 #a2b9e0 换成别的（暗色主题是
+   #f78bb0）时按钮自动跟着变，不用维护第二套色值。
+
+   两类 CTA 材质不同，不能一套参数糊上去：
+     实心主色（.ab-launch / .wk-primary / .upd-go）  → 做成物理按键，渐变敢给
+     玻璃淡底（.primary-btn / .sec-primary）        → 本来就是通透材质，
+                                                      做成实心塑料就毁了，只给极轻的受光 */
+
+.ab-launch,
+.wk-primary,
+.upd-go,
+.primary-btn,
+.sec-primary {
+  /* 各按钮原本的 transition 五花八门（filter/opacity/background），这里统一列全 ——
+     只写 box-shadow/transform 会把人家原来的过渡覆盖没 */
+  transition:
+    background 0.15s,
+    filter 0.15s,
+    opacity 0.15s,
+    box-shadow 0.18s,
+    transform 0.09s;
+}
+
+/* ── 实心主色：做成能按下去的物理按键 ── */
+/* `:not(:disabled)` 不只是为了排除禁用态，更是**为了抢过原规则的 background 简写**：
+   .primary-btn 那边写的是 `background: var(--accent-soft)`，简写会把 background-image
+   一并重置成 none。同为单类选择器时后加载的赢，实测玻璃这组就这么被清空了 ——
+   加个伪类把权重提上去，谁先加载都不影响。 */
+.ab-launch:not(:disabled),
+.wk-primary:not(:disabled),
+.upd-go:not(:disabled) {
+  /* background-image 叠在各自的 background-color 之上，不动底色本身 */
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.24),
+    rgba(255, 255, 255, 0.04) 46%,
+    rgba(0, 0, 0, 0.12)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.34),
+    0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ab-launch:not(:disabled):hover,
+.wk-primary:not(:disabled):hover,
+.upd-go:not(:disabled):hover {
+  /* 抬高一点点。位移只有 0.5px，够形成「浮起来了」的错觉又不会让排版跳 */
+  transform: translateY(-0.5px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.36),
+    0 5px 14px rgba(0, 0, 0, 0.24);
+}
+
+/* ── 玻璃淡底：保持通透，只描出受光的边 ── */
+.primary-btn:not(:disabled),
+.sec-primary:not(:disabled) {
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0) 55%,
+    rgba(0, 0, 0, 0.06)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.primary-btn:not(:disabled):hover,
+.sec-primary:not(:disabled):hover {
+  transform: translateY(-0.5px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.26);
+}
+
+/* ── 按下去：渐变翻过来 + 沉下去 ──
+   受光面从顶部换到底部，等于光源不变、按钮面朝下倾斜了 —— 这是「凹陷」的视觉依据。
+   光靠 translateY 而不翻渐变，会像整个按钮在往下滑而不是被按进去。 */
+.ab-launch:not(:disabled):active,
+.wk-primary:not(:disabled):active,
+.upd-go:not(:disabled):active,
+.primary-btn:not(:disabled):active,
+.sec-primary:not(:disabled):active {
+  transform: translateY(1px);
+  background-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.16),
+    rgba(255, 255, 255, 0.02) 54%,
+    rgba(255, 255, 255, 0.12)
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 rgba(0, 0, 0, 0);
+}
+
+/* 按不动的按钮不该看起来能按 */
+.ab-launch:disabled,
+.wk-primary:disabled,
+.upd-go:disabled,
+.primary-btn:disabled,
+.sec-primary:disabled {
+  background-image: none;
+  box-shadow: none;
+  transform: none;
+}
+
+/* 「减弱动态效果」下：立体感（渐变/阴影）留着，位移去掉 —— 前者是静态质感，
+   后者才是会让人不适的运动 */
+@media (prefers-reduced-motion: reduce) {
+  .ab-launch,
+  .wk-primary,
+  .upd-go,
+  .primary-btn,
+  .sec-primary {
+    transition: background 0.15s, filter 0.15s, opacity 0.15s;
+  }
+  .ab-launch:not(:disabled):hover,
+  .wk-primary:not(:disabled):hover,
+  .upd-go:not(:disabled):hover,
+  .primary-btn:not(:disabled):hover,
+  .sec-primary:not(:disabled):hover,
+  .ab-launch:not(:disabled):active,
+  .wk-primary:not(:disabled):active,
+  .upd-go:not(:disabled):active,
+  .primary-btn:not(:disabled):active,
+  .sec-primary:not(:disabled):active {
+    transform: none;
   }
 }
