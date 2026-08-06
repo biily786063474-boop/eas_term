@@ -126,8 +126,11 @@ export function sanitizeNode(raw: unknown): CanvasNode | null {
   return node
 }
 
-/** 合法的状态标签值。存档里出现别的值（手改 / 以后删了某个状态）→ 当无标签处理，
- *  否则一个 `status: 'archived'` 会挂上一个没有配色规则的 class，Frame 变成裸边框。 */
+/** 旧存档里 frame.status 的合法值。
+ *
+ *  **这个字段本身已经废弃** —— 状态在 0.4.8 提升到了项目上（project.status）。
+ *  留着只为一件事：启动时把老数据搬过去（见 projectsSlice 的 migrateFrameStatus），
+ *  搬完就清空。所以白名单固定是当年那三个内置值，不跟着用户新建的列走。 */
 export const FRAME_STATUSES = new Set<FrameStatus>(['doing', 'todo', 'done'])
 
 export function sanitizeFrame(raw: unknown): CanvasFrame | null {

@@ -26,16 +26,20 @@ const MIN_SCALE = 0.87
 function foldColumn(list: HTMLElement): void {
   const cards = Array.from(list.querySelectorAll<HTMLElement>('.board-card'))
   const s = list.scrollTop
-  // **先数一遍**有几张越过了列顶。层次必须从「最上面那张」倒着算：
-  // 一摞卡片里最新滚上去的那张在最前面（最清晰、z 最高），底下的越老越淡。
-  // 顺着数的话正好反过来 —— 压在最底下的最清晰，而刚滚上去的直接透明消失。
+  // **先把所有 offsetTop 读完再动手写 style。** 读几何属性会强制浏览器结算布局，
+  // 读一个写一个的话每张卡片都可能触发一次 reflow（layout thrashing），
+  // 一列十几张、每帧一遍，滚起来就是一顿一顿的。
+  // offsetTop 相对 .board-list（它是 position:relative 的容器）
+  const tops = cards.map((c) => c.offsetTop)
+  // 层次必须从「最上面那张」倒着算：一摞里最新滚上去的在最前面（最清晰、z 最高），
+  // 底下的越老越淡。顺着数正好反过来 —— 压在最底下的最清晰，刚滚上去的直接消失。
   let total = 0
-  for (const c of cards) if (c.offsetTop - s < 0) total++
+  for (const t of tops) if (t - s < 0) total++
 
   let idx = 0
-  for (const card of cards) {
-    // offsetTop 是相对 .board-list 的（它是 position:relative 的容器）
-    const vy = card.offsetTop - s
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i]
+    const vy = tops[i] - s
     if (vy >= 0) {
       // 还没到顶：保持原样。**必须显式清掉**，否则从折叠态滚回来时样式留在上面
       if (card.dataset.fold) {

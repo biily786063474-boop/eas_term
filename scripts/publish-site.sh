@@ -24,7 +24,11 @@ KEEP=2
 # 安装包目录。提到这里是因为上面的 Windows 链接校验就要用它 ——
 # 原来定义在「传安装包」那一段里，校验跑在前面会 unbound variable
 PKG_DIR="$HOME/Eas-Term-release"
-OTHER_SITES=(www.biily.top aurora.biily.top)   # 每次 reload 都要确认没碰坏的
+# 每次 reload 前后都要比一遍状态码的站。**这台机器上现在跑着 7 个生产站** ——
+# 名单漏了谁，reload 把谁弄坏了就没人发现。2026-08-05 补上后三个：
+#   bzone 尤其要在名单里，它背后还挂着两个 pm2（bizone-cms:4001 / survey:3721）
+#   spb 目前 HTTP-only（域名还没 DNS 记录），照样要比
+OTHER_SITES=(www.biily.top aurora.biily.top rove.biily.top bzone.biily.top spb.biily.top)
 
 cd "$(dirname "$0")/.."
 VERSION=$(node -p "require('./package.json').version")
