@@ -4,8 +4,13 @@
 // store/types 都只认这些类型。类型和实现混在一个 1186 行的文件里时，
 // 想知道「一个 Frame 到底有哪些字段」得先滚过几百行几何计算。
 import type { LeafNode, PaneState } from '../../layout'
+import type { ProjectStatus } from '../../../../shared/types'
 
-export type ViewMode = 'split' | 'canvas'
+/** 三种视图共享同一批 leaf（终端只有一份，换视图不重挂载）：
+ *   split  分屏 —— 按 tab 树布局
+ *   canvas 画布 —— 按世界坐标 × 视口定位
+ *   board  看板 —— 按项目状态分列，每个项目一张卡片、卡片里嵌一个终端 */
+export type ViewMode = 'split' | 'canvas' | 'board'
 
 export interface CanvasViewport {
   x: number
@@ -61,7 +66,7 @@ export interface CanvasNode {
  *  未设(undefined)= 无标签，Frame 保持主题色——「没标状态」和「标了某个状态」
  *  是两件事，不能拿其中一个状态当默认值顶替。
  *  目前只是纯视觉标记，不驱动任何逻辑；分类/筛选是后续的事。 */
-export type FrameStatus = 'doing' | 'todo' | 'done'
+export type FrameStatus = ProjectStatus
 
 /** Frame：对应一个项目（顶层）或一个文件夹（子 Frame），容纳若干节点。
  *  子 Frame：parentId 指向父 Frame、folderPath 记文件夹路径；坐标同为世界坐标。 */
@@ -152,8 +157,12 @@ export interface CanvasSlice {
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void
   renameFrame: (id: string, name: string) => void
-  /** 打/清颜色状态标签（传 null 清除 = 回到无标签）。只改这一个字段，不碰布局 */
+  /** 打/清状态标签（传 null 清除 = 回到未分类）。
+   *  **实际写的是项目**（见 shared/types 的 ProjectStatus）——画布上的入口手里只有 frameId，
+   *  这里负责翻译成 projectId 再转发给 setProjectStatus。 */
   setFrameStatus: (id: string, status: FrameStatus | null) => void
+  /** 一次性清掉旧结构遗留的 frame.status（迁移到项目之后调）。别在别处用 */
+  clearFrameStatusField: () => void
   /** 删除 Frame：连同后代子 Frame 一起删，逐个 closeLeaf 杀掉各自成员终端 */
   removeFrame: (id: string) => void
   /** 拖文件夹入某 Frame → 在其内新增一个空的子 Frame（父随之裹住） */

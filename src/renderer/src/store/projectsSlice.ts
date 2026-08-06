@@ -1,7 +1,7 @@
 // 项目切片：项目列表的增删与激活（涉及被移除项目名下标签/PTY 的清理）
 
 import type { StateCreator } from 'zustand'
-import type { Project } from '../../../shared/types'
+import type { Project, ProjectStatus } from '../../../shared/types'
 import { collectLeaves } from '../layout'
 import { killPanePty, pickActiveTab, projectKey } from './shared'
 import type { AppState } from './types'
@@ -16,11 +16,43 @@ export interface ProjectsSlice {
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
   setActiveProject: (id: string | null) => void
+  /** 打/清项目状态标签（null = 未分类）。**这是状态的唯一写入口** ——
+   *  看板拖拽、画布 Frame 右键、分屏 tab 右键都走它，各写各的迟早对不上 */
+  setProjectStatus: (id: string, status: ProjectStatus | null) => Promise<void>
+  /** 一次性迁移：旧存档把状态记在 canvas.json 的 frame.status 上。
+   *  搬到项目里，搬完清掉旧字段，免得两处并存以后打架。启动时调一次。 */
+  migrateFrameStatus: () => Promise<void>
 }
 
 export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> = (set, get) => ({
   projects: [],
   activeProjectId: null,
+
+  setProjectStatus: async (id, status) => {
+    // 先本地改再落盘：拖拽时卡片要立刻跟着走，等 IPC 往返回来会有一帧的滞后感
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === id ? { ...p, status: status ?? undefined } : p
+      )
+    }))
+    const projects = await window.api.projects.setStatus(id, status)
+    set({ projects })
+  },
+
+  migrateFrameStatus: async () => {
+    const s = get()
+    const move: [string, ProjectStatus][] = []
+    for (const f of s.canvas.frames) {
+      if (!f.status || !f.projectId) continue
+      const p = s.projects.find((x) => x.id === f.projectId)
+      // 项目自己已经有状态就不覆盖：那是用户在新版里设的，比存档里的旧值新
+      if (!p || p.status) continue
+      move.push([f.projectId, f.status])
+    }
+    for (const [id, st] of move) await get().setProjectStatus(id, st)
+    // 不管有没有搬动，只要还留着旧字段就清掉 —— 留着的话画布看一份、看板看另一份
+    if (s.canvas.frames.some((f) => f.status)) get().clearFrameStatusField()
+  },
 
   loadProjects: async () => {
     const projects = await window.api.projects.list()

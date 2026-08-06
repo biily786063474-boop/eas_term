@@ -1,8 +1,18 @@
+/** 项目状态标签：看板按它分列，画布 Frame 按它染色，分屏右键菜单按它打勾。
+ *
+ *  **归属在项目，不在画布 Frame。** 早先它是 frame.status，只是个视觉标记；
+ *  但分屏里的 tab 和画布的 Frame 是两套结构，没进过画布的项目压根没有 Frame 可打标 ——
+ *  状态是项目的属性，不是某个视图里那个框的属性。旧数据启动时迁移过来（见 migrateFrameStatus）。 */
+export type ProjectStatus = 'todo' | 'doing' | 'done'
+
 export interface Project {
   id: string
   name: string
   path: string
   addedAt: number
+  /** 未设 = 未分类。「没标状态」和「标了某个状态」是两件事，
+   *  不能拿其中一个状态当默认值顶替 */
+  status?: ProjectStatus
 }
 
 export interface DirEntry {

@@ -14,6 +14,7 @@ import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
+import { BoardStage } from './features/board/BoardStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
@@ -25,7 +26,7 @@ import './ui/motion/glow.css'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
 import { BuildStamp } from './ui/BuildStamp'
-import { FolderIcon, TerminalIcon, CanvasIcon } from './ui/Icons'
+import { FolderIcon, TerminalIcon, CanvasIcon, BoardIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
   // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
@@ -85,6 +86,8 @@ export function App(): JSX.Element {
       try {
         await loadProjects()
         await loadCanvas()
+        // 两份都到齐了才能迁移：它要拿 canvas 的 frame.status 去写 projects
+        await useStore.getState().migrateFrameStatus()
         void loadRoles() // 角色表：不阻塞首屏，读到就有
       } catch (e) {
         console.error('[App:startup] 加载项目/画布失败', e)
@@ -195,7 +198,7 @@ export function App(): JSX.Element {
 
   return (
     <div
-      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}`}
+      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${viewMode === 'board' ? ' board-mode' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}`}
     >
       <div className="titlebar">
         {viewMode === 'split' && activeProject ? (
@@ -208,7 +211,9 @@ export function App(): JSX.Element {
           <span className="titlebar-title">Eas-Term</span>
         )}
         <div className="titlebar-actions">
-          {viewMode === 'split' && <TerminalAttention />}
+          {/* 待处理铃铛：画布有自己的运行监视窗，看板没有 —— 这里给它补上，
+              不然看板模式下「哪个终端在等你」只剩卡片上一个小点 */}
+          {viewMode !== 'canvas' && <TerminalAttention />}
           <McpIndicator />
           <DictBubbleToggle />
           <FootprintPanel />
@@ -230,6 +235,13 @@ export function App(): JSX.Element {
             >
               <CanvasIcon size={13} />
               画布
+            </button>
+            <button
+              className={viewMode === 'board' ? 'on' : ''}
+              onClick={() => setViewMode('board')}
+            >
+              <BoardIcon size={13} />
+              看板
             </button>
           </div>
           {/* 平时不渲染，只有查到新版本才冒出来 */}
@@ -265,10 +277,13 @@ export function App(): JSX.Element {
               </div>
             )}
             {viewMode === 'canvas' && <CanvasStage />}
+            {viewMode === 'board' && <BoardStage />}
             <PaneLayer />
-            {viewMode === 'canvas' && <CanvasDrawer />}
-            {viewMode === 'canvas' && <CanvasWikiDrawer />}
-            {viewMode === 'canvas' && <CanvasDictBubble />}
+            {/* 三个抽屉/浮层跟着画布一起给看板 —— 看板也是「在项目里干活」的视图，
+                在这儿想查知识库、看文件信息的需求和画布里没有区别 */}
+            {viewMode !== 'split' && <CanvasDrawer />}
+            {viewMode !== 'split' && <CanvasWikiDrawer />}
+            {viewMode !== 'split' && <CanvasDictBubble />}
           </div>
         </main>
       </div>

@@ -145,6 +145,11 @@ export interface CanvasPlacement {
   name?: string
   /** 最大化沉浸：铺满画布视口、1:1 字号、盖住其它内容 */
   maximized?: boolean
+  /** 看板模式：位置来自卡片里那个空槽位的实测坐标，不是画布世界坐标。
+   *  复用同一套定位是为了**不换父容器** —— 换了 xterm 就重挂载，会话和滚动缓冲全丢。
+   *  但画布特有的交互（拖节点、拉伸、选中）在看板里都不该有：卡片是被拖的那个，
+   *  终端只是嵌在里面的内容。 */
+  board?: boolean
 }
 
 interface Props {
@@ -175,7 +180,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const [editingName, setEditingName] = useState(false)
   const paneRef = useRef<HTMLDivElement>(null)
   // 画布模式下本终端节点的选中 key，供高亮 + 点选
-  const selKey = canvasRect ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
+  const selKey = canvasRect && !canvasRect.board ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
   const selected = useStore((s) => (selKey ? s.canvasSel.includes(selKey) : false))
   const isCanvas = !!canvasRect
 
@@ -264,7 +269,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
 
   // 画布模式下拖动节点头部 → 改节点相对坐标（moveNode）
   const onCanvasHeadDown = (e: React.MouseEvent): void => {
-    if (!canvasRect || e.button !== 0) return
+    if (!canvasRect || canvasRect.board || e.button !== 0) return
     if ((e.target as HTMLElement).closest('button')) return
     e.preventDefault()
     e.stopPropagation()
@@ -290,7 +295,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
 
   // 画布模式下拖右下角 → 调节节点尺寸（终端会经 ResizeObserver 自动 fit 重算行列）
   const onCanvasResize = (e: React.MouseEvent): void => {
-    if (!canvasRect || e.button !== 0) return
+    if (!canvasRect || canvasRect.board || e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
     const { frameId, nodeId, w, h, scale } = canvasRect
@@ -324,8 +329,11 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           : undefined
       }
     >
+      {/* 看板里卡片自己有头（项目名 + 状态点 + 终端下拉），终端再来一个头就是重复，
+          而卡片本来就矮，省下这 28px 全给终端内容 */}
       <div
         className="pane-header"
+        hidden={!!canvasRect?.board}
         style={
           canvasRect
             ? // 画布终端：头部按 committed 缩放（缩放手势中由 pane transform 提供实时增量），按钮仍精准可点

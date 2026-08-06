@@ -5,6 +5,7 @@
 // 两个入口叫两个名字，用户会以为是两个功能），所以文案只留一份。
 // 色值不在这儿——那是 canvas.css 里 .cframe.st-* 的事，改配色不该动 TS。
 import type { FrameStatus } from '../../store'
+import { projectIdOfFrame } from '../../store/canvasSlice'
 
 export interface FrameStatusMeta {
   key: FrameStatus
@@ -20,3 +21,16 @@ export const FRAME_STATUS_LIST: FrameStatusMeta[] = [
 
 export const frameStatusLabel = (s: FrameStatus | undefined): string =>
   FRAME_STATUS_LIST.find((x) => x.key === s)?.label ?? '无标签'
+
+/** 一个 Frame 显示什么状态 —— **查它所属项目**，不是查 Frame 自己。
+ *  状态在 0.4.8 从 frame.status 提升到了 project.status：分屏里的 tab 和画布的 Frame
+ *  是两套结构，没进过画布的项目根本没有 Frame 可打标，所以状态只能归项目。
+ *  子 Frame（文件夹）跟着所属项目走，它没有独立的进度。 */
+export function statusOfFrame(
+  frames: { id: string; projectId: string | null; parentId?: string | null }[],
+  projects: { id: string; status?: FrameStatus }[],
+  frameId: string
+): FrameStatus | undefined {
+  const pid = projectIdOfFrame(frames, frameId)
+  return pid ? projects.find((p) => p.id === pid)?.status : undefined
+}

@@ -1,0 +1,242 @@
+/* 看板视图：按项目状态分列，一个项目一张卡片。
+ *
+ * 卡片里那块 .board-slot 是**空的** —— 真终端由 PaneLayer 量着它的位置浮上来
+ * （见 PaneLayer 顶部说明）。所以这里绝不能给 slot 加背景或内容，
+ * 它只是一块「占位并被测量」的区域。 */
+
+.board {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.board-col {
+  flex: 1 1 0;
+  /* 列不能被内容撑开：卡片里嵌着终端，一列宽了别的列就没地方了。
+     268 是照 1147px 窗口（本项目最常见的尺寸）算的：四列 + 间距 + 内边距刚好不溢出。
+     再宽一点第四列就被切掉半截，看板「一眼看全」的意义就没了 */
+  min-width: 268px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 10px 4px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid var(--glass-border);
+  transition: background 0.15s, border-color 0.15s;
+}
+/* 拖着卡片悬停在这一列上 */
+.board-col.over {
+  background: rgba(var(--accent-rgb), 0.08);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+
+.board-colhd {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px 2px;
+}
+/* 列的状态色点。颜色跟画布 Frame 的 .cframe.st-* 是同一套语义：
+   蓝=进行中 / 黄=待执行 / 红=已完结 —— 同一个状态在两个视图里必须一个颜色 */
+.board-coldot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  opacity: 0.4;
+}
+.board-col.st-todo .board-coldot {
+  background: #e0b45e;
+  opacity: 1;
+}
+.board-col.st-doing .board-coldot {
+  background: #6fa8ff;
+  opacity: 1;
+}
+.board-col.st-done .board-coldot {
+  background: #ef6f7b;
+  opacity: 1;
+}
+.board-collabel {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--fg);
+}
+.board-colcount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.board-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  opacity: 0.45;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.board-card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-md);
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 6px 18px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  cursor: grab;
+}
+.board-card.dragging {
+  opacity: 0.42;
+  cursor: grabbing;
+}
+
+.board-cardhd {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--glass-border);
+}
+.board-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+  opacity: 0.35;
+}
+/* 有任务在跑 */
+.board-dot.busy {
+  background: #6fa8ff;
+  opacity: 1;
+}
+/* 等你处理 —— 比「在跑」更要紧，所以用暖色并且会呼吸 */
+.board-dot.need {
+  background: #e0b45e;
+  opacity: 1;
+  animation: board-breathe 1.6s ease-in-out infinite;
+}
+@keyframes board-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+.board-cardname {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-pick {
+  flex: none;
+  max-width: 96px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 5px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.board-termn {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg-dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* **保持空的**：PaneLayer 靠它的 getBoundingClientRect 定位真终端。
+   给它加背景/内边距都会让终端和卡片错位 */
+.board-slot {
+  flex: none;
+  /* 260 是权衡出来的：终端里还挂着 agent 控制条和输入框，再矮下去正文就只剩两三行；
+     再高的话一屏放不下两张卡片，看板「一眼看全」的意义就没了 */
+  height: 260px;
+}
+
+.board-noterm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 92px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.board-noterm:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+}
+
+.board-cardft {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 6px;
+  border-top: 1px solid var(--glass-border);
+}
+.board-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.board-add:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+}
+
+/* 看板模式下的终端层：卡片自己有圆角和边框，终端不用再来一套 */
+.pane-layer.board-mode .pane {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* 头被 hidden 掉了，但 .pane 仍按 flex 排布，补一句让终端顶满 */
+.pane-layer.board-mode .pane-header[hidden] {
+  display: none;
+}

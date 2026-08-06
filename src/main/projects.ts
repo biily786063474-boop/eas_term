@@ -2,7 +2,7 @@ import { app, dialog, ipcMain, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import type { Project } from '../shared/types'
+import type { Project, ProjectStatus } from '../shared/types'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'projects.json')
 
@@ -49,6 +49,19 @@ export function registerProjectHandlers(): void {
 
   ipcMain.handle('projects:remove', (_e, id: string) => {
     const list = loadProjects().filter((p) => p.id !== id)
+    saveProjects(list)
+    return list
+  })
+
+  /** 打/清项目状态标签（传 null 清除 = 回到未分类）。
+   *  看板拖拽、画布右键、分屏 tab 右键三处共用这一条 —— 各写各的迟早对不上。 */
+  ipcMain.handle('projects:setStatus', (_e, id: string, status: ProjectStatus | null) => {
+    const list = loadProjects()
+    const p = list.find((x) => x.id === id)
+    if (p) {
+      if (status) p.status = status
+      else delete p.status
+    }
     saveProjects(list)
     return list
   })

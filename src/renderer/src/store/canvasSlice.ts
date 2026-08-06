@@ -84,6 +84,21 @@ function followSel(s: AppState, keys: string[]): { activeProjectId?: string } {
   return projectId && projectId !== s.activeProjectId ? { activeProjectId: projectId } : {}
 }
 
+/** Frame → 它所属项目的 id。子 Frame（文件夹）自己可能没有 projectId，沿 parentId 往上找。
+ *  循环引用（理论上不该有，但存档是文件、改坏过一次就够受）用 seen 兜住，不会转不出来。 */
+export function projectIdOfFrame(
+  frames: { id: string; projectId: string | null; parentId?: string | null }[],
+  frameId: string
+): string | null {
+  const seen = new Set<string>()
+  let cur = frames.find((f) => f.id === frameId)
+  while (cur && !cur.projectId && cur.parentId && !seen.has(cur.id)) {
+    seen.add(cur.id)
+    cur = frames.find((f) => f.id === cur!.parentId)
+  }
+  return cur?.projectId ?? null
+}
+
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
   viewMode: 'split',
   canvas: initialScene,
@@ -118,7 +133,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvasCommittedScale: scene.viewport.scale
     }))
     // 恢复上次停留的视图
-    if (scene.viewMode === 'canvas') set({ viewMode: 'canvas' })
+    // 'split' 是默认值，只有非默认的才需要恢复（写成白名单而不是直接赋值：
+    // 存档是文件，被改坏过一次就够受，不能让任意字符串成为 viewMode）
+    if (scene.viewMode === 'canvas' || scene.viewMode === 'board') set({ viewMode: scene.viewMode })
     // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
     // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
     // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。
@@ -508,15 +525,23 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvas: { ...s.canvas, frames: s.canvas.frames.map((f) => (f.id === id ? { ...f, name } : f)) }
     })),
 
-  // 清标签写 undefined 而不是留着 null：canvas.json 里 `status: null` 和「没这个键」
-  // 语义一样却要两处判空，落盘时 JSON.stringify 也会把 null 老实写出来。
-  setFrameStatus: (id, status) =>
+  // **状态已经不存在 Frame 上了** —— 它是项目的属性（见 shared/types 的 ProjectStatus）。
+  // 这个方法保留是因为画布上的入口（标题栏色点、右键菜单）手里只有 frameId；
+  // 它负责把 frameId 翻译成 projectId，真正的写入在 setProjectStatus 那一处。
+  // 子 Frame（文件夹）打标 = 给它所属的整个项目打标：一个项目的文件夹
+  // 不该有自己独立的进度，看板里也没有「文件夹」这种卡片。
+  setFrameStatus: (id, status) => {
+    const s = get()
+    const pid = projectIdOfFrame(s.canvas.frames, id)
+    if (pid) void s.setProjectStatus(pid, status)
+  },
+  // 下面这段留给旧结构：canvas.json 里可能还带着 frame.status，
+  // 迁移完就清空（见 projectsSlice 的 migrateFrameStatus）
+  clearFrameStatusField: () =>
     set((s) => ({
       canvas: {
         ...s.canvas,
-        frames: s.canvas.frames.map((f) =>
-          f.id === id ? { ...f, status: status ?? undefined } : f
-        )
+        frames: s.canvas.frames.map((f) => (f.status ? { ...f, status: undefined } : f))
       }
     })),
 

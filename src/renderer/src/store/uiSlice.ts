@@ -25,6 +25,11 @@ export interface UiSlice {
    *  由 TerminalView 的 focusin 处理器直接 setState 写入。 */
   lastActiveTerminal: { tabId: string; ptyId: string } | null
   /** 需要用户处理的终端 ptyId（终端响铃触发、聚焦后清除）——供抽屉项目呼吸提示 */
+  /** 看板里每个项目当前显示哪个终端（键=projectId，值=leafId）。
+   *  一个项目开了好几个终端时，卡片只放得下一个，用卡片头的下拉换。
+   *  不持久化：终端本身重启后要重开，记着一个失效的 leafId 没有意义 */
+  boardLeafByProject: Record<string, string>
+  setBoardLeaf: (projectId: string, leafId: string) => void
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
@@ -150,6 +155,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   theme: loadTheme(),
   pendingConfirm: null,
   lastActiveTerminal: null,
+  boardLeafByProject: {},
+  setBoardLeaf: (projectId, leafId) =>
+    set((s) => ({ boardLeafByProject: { ...s.boardLeafByProject, [projectId]: leafId } })),
   attentionPtys: [],
   silencedNotices: [],
   mcpLog: [],

@@ -251,6 +251,14 @@ export const CodexIcon = ({ size = 15, ...rest }: IconProps): JSX.Element => (
   </svg>
 )
 
+export const BoardIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="5" height="16" rx="1.5" />
+    <rect x="9.5" y="4" width="5" height="10" rx="1.5" />
+    <rect x="16" y="4" width="5" height="13" rx="1.5" />
+  </Svg>
+)
+
 export const ClockIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="9" />

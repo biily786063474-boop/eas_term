@@ -7,7 +7,7 @@
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
-import { FRAME_STATUS_LIST } from './frameStatus'
+import { FRAME_STATUS_LIST, statusOfFrame } from './frameStatus'
 
 export interface StageMenuDeps {
   /** 便签进入编辑态 */
@@ -79,6 +79,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   } else if (frameEl?.dataset.fid) {
     const fid = frameEl.dataset.fid
     const frame = st.canvas.frames.find((f) => f.id === fid)
+    const cur = statusOfFrame(st.canvas.frames, st.projects, fid)
     items = [
       { label: '重命名', onClick: () => setEditingFrame(fid) },
       { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
@@ -87,12 +88,13 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
       // 不指望他为了改状态先关掉菜单再去点那个 9px 的圆点。
       ...FRAME_STATUS_LIST.map((s) => ({
         label: s.label,
-        hint: frame?.status === s.key ? '当前' : undefined,
-        onClick: () => st.setFrameStatus(fid, frame?.status === s.key ? null : s.key)
+        // 读的是**项目**状态，不是 frame.status —— 后者是旧结构，启动时已经迁走了
+        hint: cur === s.key ? '当前' : undefined,
+        onClick: () => st.setFrameStatus(fid, cur === s.key ? null : s.key)
       })),
       {
-        label: '无标签',
-        disabled: !frame?.status,
+        label: '未分类',
+        disabled: !cur,
         onClick: () => st.setFrameStatus(fid, null)
       },
       { sep: true, label: '', onClick: () => {} },

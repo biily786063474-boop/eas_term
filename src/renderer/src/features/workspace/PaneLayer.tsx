@@ -3,10 +3,13 @@
 //   · split 模式：仅激活 tab 的 leaf 按 computeLayout 显示，其余 display:none（保挂载）。
 //   · canvas 模式：被某 Frame 节点引用的 leaf 按「世界坐标 × 视口」像素定位，浮在装饰层之上；
 //     未引用 / 折叠 Frame 内的 leaf 隐藏。空白处 pointer-events 穿透给底层画布（见 canvas.css）。
+//   · board 模式：卡片里留一个空的 `.board-slot`，这里**实测**它的屏幕坐标把终端浮上去。
+//     为什么不让看板自己渲染终端：那样切一次视图就换一次父容器，xterm 重挂载，
+//     滚动缓冲和正在跑的会话全丢 —— 三种视图共用一个 PaneView 实例正是为了避免这个。
 // 无论怎么切模式，PaneView 的父容器与 key(=leaf.id) 都不变 → React 走 update 而非 remount，
 // xterm 实例与滚动缓冲全程保留。
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { computeLayout, collectLeaves, LeafRect, DividerRect, Rect } from '../../layout'
 import { PaneView, CanvasPlacement } from './PaneView'
@@ -99,6 +102,86 @@ export function PaneLayer(): JSX.Element {
     return m
   }, [viewMode, canvas, titleByLeaf, maximizedNode, committedScale])
 
+  // board 模式：量每张卡片里那个空槽位，把终端浮到它上面。
+  //
+  // 只能实测，不能算：看板是普通 CSS 布局（列宽随窗口、卡片高随内容、列内还能滚），
+  // 想算出坐标就得把这些规则在 TS 里再写一遍，改个 padding 两边就对不上了。
+  const [boardByLeaf, setBoardByLeaf] = useState<Map<string, CanvasPlacement>>(new Map())
+  useLayoutEffect(() => {
+    if (viewMode !== 'board') {
+      setBoardByLeaf((m) => (m.size ? new Map() : m))
+      return
+    }
+    let raf = 0
+    const measure = (): void => {
+      raf = 0
+      const layer = containerRef.current
+      if (!layer) return
+      const base = layer.getBoundingClientRect()
+      const board = document.querySelector('.board')
+      const bb = board?.getBoundingClientRect()
+      const next = new Map<string, CanvasPlacement>()
+      document.querySelectorAll<HTMLElement>('.board-slot').forEach((el) => {
+        const leafId = el.dataset.leaf
+        if (!leafId) return
+        const r = el.getBoundingClientRect()
+        if (r.width < 8 || r.height < 8) return
+        // 槽位被列滚出可视区时别显示：终端是绝对定位在 pane-layer 上的，
+        // 不受列的 overflow 裁剪，不挡的话会飘到列头甚至别的列上面
+        if (bb && (r.bottom < bb.top + 4 || r.top > bb.bottom - 4)) return
+        next.set(leafId, {
+          left: r.left - base.left,
+          top: r.top - base.top,
+          w: r.width,
+          h: r.height,
+          scale: 1,
+          board: true,
+          // 画布字段在看板里没有意义，但类型共用一份；board:true 已经让 PaneView
+          // 绕开所有会用到它们的地方
+          frameId: '',
+          nodeId: '',
+          nodeX: 0,
+          nodeY: 0
+        })
+      })
+      // 位置没变就别 setState —— 滚动时每帧都测，每帧都换 Map 的话整层跟着重渲染
+      setBoardByLeaf((prev) => {
+        if (prev.size === next.size) {
+          let same = true
+          for (const [k, v] of next) {
+            const o = prev.get(k)
+            if (!o || o.left !== v.left || o.top !== v.top || o.w !== v.w || o.h !== v.h) {
+              same = false
+              break
+            }
+          }
+          if (same) return prev
+        }
+        return next
+      })
+    }
+    const schedule = (): void => {
+      if (!raf) raf = requestAnimationFrame(measure)
+    }
+    measure()
+    const ro = new ResizeObserver(schedule)
+    const board = document.querySelector('.board')
+    if (board) ro.observe(board)
+    // 捕获阶段收所有滚动：列各自有滚动条，逐个绑迟早漏掉新加的那一列
+    document.addEventListener('scroll', schedule, true)
+    window.addEventListener('resize', schedule)
+    // 卡片增删、换显示的终端（data-leaf 变了）都要重测
+    const mo = new MutationObserver(schedule)
+    if (board) mo.observe(board, { childList: true, subtree: true, attributes: true })
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      ro.disconnect()
+      mo.disconnect()
+      document.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [viewMode])
+
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
   const allLeaves = useMemo(() => {
     const arr = tabs.flatMap((t) =>
@@ -144,8 +227,25 @@ export function PaneLayer(): JSX.Element {
   }
 
   return (
-    <div ref={containerRef} className={`pane-layer${viewMode === 'canvas' ? ' canvas-mode' : ''}`}>
+    <div
+      ref={containerRef}
+      className={`pane-layer${viewMode === 'canvas' ? ' canvas-mode' : ''}${viewMode === 'board' ? ' board-mode' : ''}`}
+    >
       {allLeaves.map(({ leaf, tabId, activeLeafId }) => {
+        if (viewMode === 'board') {
+          const bp = boardByLeaf.get(leaf.id)
+          return (
+            <PaneView
+              key={leaf.id}
+              tabId={tabId}
+              leaf={leaf}
+              rect={HIDDEN_RECT}
+              canvasRect={bp}
+              isActive={false}
+              hidden={!bp}
+            />
+          )
+        }
         if (viewMode === 'canvas') {
           const cp = canvasByLeaf.get(leaf.id)
           return (

@@ -46,8 +46,7 @@ import type {
   RulesStatus,
   Footprint,
   InstallPlan,
-  UpdateInfo
-} from '../shared/types'
+  UpdateInfo, ProjectStatus} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -117,7 +116,10 @@ const api = {
     remove: (id: string): Promise<Project[]> => ipcRenderer.invoke('projects:remove', id),
     /** 只改侧栏显示名，不动磁盘目录名 */
     rename: (id: string, name: string): Promise<Project[]> =>
-      ipcRenderer.invoke('projects:rename', id, name)
+      ipcRenderer.invoke('projects:rename', id, name),
+    /** 打/清状态标签（null = 回到未分类）。看板、画布、分屏三处共用 */
+    setStatus: (id: string, status: ProjectStatus | null): Promise<Project[]> =>
+      ipcRenderer.invoke('projects:setStatus', id, status)
   },
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）
