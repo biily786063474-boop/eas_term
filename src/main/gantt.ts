@@ -40,6 +40,7 @@ function load(): GanttTask[] {
 
 function save(list: GanttTask[]): void {
   try {
+    fs.mkdirSync(path.dirname(storeFile()), { recursive: true })
     fs.writeFileSync(storeFile(), JSON.stringify(list, null, 2))
   } catch (e) {
     console.error('[gantt] 写盘失败', e)
@@ -63,7 +64,7 @@ export function registerGanttHandlers(): void {
   ipcMain.handle('gantt:push', (_e, t: GanttTask) => {
     if (!valid(t)) return
     const list = prune(load())
-    list.push({ ...t, prompt: clip(t.prompt) })
+    list.push({ ...t, prompt: clip(t.prompt), follow: t.follow?.map(clip) })
     save(list)
   })
 
@@ -80,6 +81,6 @@ export function registerGanttHandlers(): void {
     const hit = list.find((t) => t.id === id)
     if (!hit) return
     hit.follow = [...(hit.follow ?? []), clip(text)]
-    save(list)
+    save(prune(list))
   })
 }
