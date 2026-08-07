@@ -148,9 +148,14 @@ export function TerminalInput({
     const body = payload.includes('\n') ? `\x1b[200~${payload}\x1b[201~` : payload
     window.api.pty.write(ptyId, body)
 
-    // 甘特图采集：记的是 payload（含图片路径）之外的纯文本意图
-    noteSubmitted(ptyId, text)
-    drainFollow(ptyId)
+    // 甘特图采集：记的是 payload（含图片路径）之外的纯文本意图。
+    // 采集是附加功能，绝不能拖累主功能：包一层 try/catch，抛了也不能让下面的回车重发被跳过
+    try {
+      noteSubmitted(ptyId, text)
+      drainFollow(ptyId)
+    } catch (err) {
+      console.error('[gantt] noteSubmitted/drainFollow 失败', err)
+    }
 
     if (withReturn) {
       // **回车必须单独发，而且要隔一小会儿。**

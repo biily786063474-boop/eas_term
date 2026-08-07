@@ -18,7 +18,7 @@ import {
 import { SecretBadge } from './SecretBadge'
 import { TerminalInput } from './TerminalInput'
 import { parseApproval } from './approvalParse'
-import { feedKeystroke, noteRunning, drainFollow } from '../gantt/collector'
+import { feedKeystroke, noteRunning, drainFollow, forgetPty } from '../gantt/collector'
 import { collectLeaves } from '../../layout'
 import './terminal.css'
 
@@ -447,12 +447,20 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
       useStore.getState().setPtyRunning(ptyId, false)
       noteRunning(ptyId, false, { projectId: '', leafId: '' })
+      // ptyId 终身不复用：pty 真正退出时把这个 id 名下的采集态整体清掉，
+      // 否则没等到 spinner 的 pending / 没按回车的半行 keyBuf 会永久留在模块级 Map 里
+      forgetPty(ptyId)
       useStore.getState().closeLeaf(tabId, leafId, { alreadyExited: true, ptyId })
     })
     const dataDisp = term.onData((data) => {
-      // 甘特图采集要在写进 PTY 之前拿到原始按键 —— 这是键盘输入的唯一出口
-      feedKeystroke(ptyId, data)
-      drainFollow(ptyId)
+      // 甘特图采集要在写进 PTY 之前拿到原始按键 —— 这是键盘输入的唯一出口。
+      // 采集是附加功能，绝不能拖累主功能：包一层 try/catch，抛了也不能耽误这次按键写进 pty
+      try {
+        feedKeystroke(ptyId, data)
+        drainFollow(ptyId)
+      } catch (err) {
+        console.error('[gantt] feedKeystroke/drainFollow 失败', err)
+      }
       window.api.pty.write(ptyId, data)
     })
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
