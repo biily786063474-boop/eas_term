@@ -185,10 +185,15 @@ export function BoardStage(): JSX.Element {
   }
 
   return (
-    <div className="board">
+    <>
       {/* 会话进行队列：跟画布共用同一个组件 —— 它只读 store 里「谁在跑」，
-          和画布几何无关。两个视图各写一份的话，「哪些算在跑」的判据迟早分叉 */}
+          和画布几何无关。两个视图各写一份的话，「哪些算在跑」的判据迟早分叉。
+          **必须放在 .board 外面**：它是 position:absolute 的浮标，而 .board 是横向
+          滚动容器 —— 放进去的话 absolute 相对 .board 的 padding box 定位，
+          横向滚看板时它跟着内容一起滑走了。挪出来后相对 .tab-stack 定位，
+          左上角钉死。（画布那边没这问题：画布平移用的是 transform，不是滚动。） */}
       <CanvasRunMonitor />
+      <div className="board">
       {cols.map((col) => {
         const list = byCol(col.key)
         const colId = col.key ?? '_none'
@@ -363,6 +368,7 @@ export function BoardStage(): JSX.Element {
         <PlusIcon size={14} />
         新看板
       </button>
-    </div>
+      </div>
+    </>
   )
 }
