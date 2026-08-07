@@ -200,6 +200,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     const el = paneRef.current
     if (!el || !isCanvas || canvasRect?.board) return
     const onWheel = (e: WheelEvent): void => {
+      // 铺满视口时画布已经被整个盖住，「滚轮平移画布」没有任何意义 —— 直接放行。
+      // 最大化时 store 那边也会顺手选中它，这里是第二道：即使选中状态没同步上，
+      // 滚轮该归内容还是归内容
+      if (canvasRect?.maximized) return
       if (selKey && useStore.getState().canvasSel.includes(selKey)) return // 选中 → 放行给模块内容
       e.preventDefault()
       e.stopPropagation()
@@ -221,7 +225,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
     }
     el.addEventListener('wheel', onWheel, { capture: true, passive: false })
     return () => el.removeEventListener('wheel', onWheel, { capture: true })
-  }, [isCanvas, canvasRect?.board, selKey, setViewport])
+  }, [isCanvas, canvasRect?.board, canvasRect?.maximized, selKey, setViewport])
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'

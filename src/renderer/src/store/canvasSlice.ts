@@ -875,7 +875,18 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     })),
 
   maximizedNode: null,
-  setMaximizedNode: (v) => set({ maximizedNode: v }),
+  setMaximizedNode: (v) =>
+    set(() => {
+      if (!v) return { maximizedNode: null }
+      // **最大化 = 你要专心用这个模块，所以顺手把它选中。**
+      // 画布上「未选中的模块」滚轮是拿去平移画布的（见 PaneView 的 onWheel），
+      // 不选中的话铺满屏幕之后还得再点一下才能滚内容 —— 而那会儿画布已经被
+      // 整个盖住了，平移根本没有意义。
+      // 写在 action 里而不是四个调用点各写一遍：三种节点组件 + PaneView 都会调它。
+      // 节点的 key（n: / p:）不触发 followSel（那个只认 f:），所以直接置换选中集是安全的。
+      const key = v.frameId ? 'n:' + v.frameId + ':' + v.nodeId : 'p:' + v.nodeId
+      return { maximizedNode: v, canvasSel: [key] }
+    }),
   canvasSel: [],
   setCanvasSel: (keys) => set((s) => ({ canvasSel: keys, ...followSel(s, keys) })),
   toggleCanvasSel: (key, additive) =>
