@@ -399,6 +399,10 @@ function dispatchAction(action: IslandAction): void {
     app.focus({ steal: true })
     main.moveTop()
     main.focus()
+    // **窗口 focus 了，网页内容不一定 focus。** 只做 win.focus() 的话，
+    // 键盘焦点可能还留在原处（甚至留在灵动岛那个 panel 上），
+    // 页面里第一次点击就成了「先把焦点收回来」，点什么都像没反应。
+    main.webContents.focus()
   }
   main.webContents.send('island:action', action)
 }

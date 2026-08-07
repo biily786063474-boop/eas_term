@@ -97,6 +97,11 @@ function createWindow(): void {
     minWidth: 860,
     minHeight: 520,
     title: 'Eas-Term',
+    // **非活动窗口的第一次点击直接传给内容。** macOS 默认要「先点一下激活、
+    // 再点一下才算数」—— 从灵动岛跳回来时正好撞上：窗口刚被 focus，
+    // 你伸手去点画布上的模块，那一下被系统吃掉当成激活用了，表现成「模块点不动」。
+    // 对一个工作台来说，看见什么就该能点什么，不该有这道空转。
+    acceptFirstMouse: true,
     // mac：隐藏式标题栏 + vibrancy 透出桌面模糊；Windows/Linux：系统标题栏 + 不透明深色底
     // （vibrancy/hiddenInset/红绿灯定位是 macOS 专属，在其他平台会导致背景异常或缺少窗口按钮）
     ...(isMac
@@ -255,6 +260,9 @@ if (!app.requestSingleInstanceLock()) {
     if (win) {
       if (win.isMinimized()) win.restore()
       win.focus()
+      // 窗口 focus 不等于网页内容 focus —— 不补这句，用户从 Dock/命令行
+      // 唤回来之后第一次点击只是在「把焦点收回页面」，看着像点不动
+      win.webContents.focus()
     }
   })
 }
