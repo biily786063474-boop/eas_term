@@ -85,6 +85,11 @@ function codexRegion(mods: { canvas: boolean }): string {
   if (mods.canvas) {
     lines.push('**画板**：产出了给人看的东西（报告 / 预览页 / 图）→ 用画板 MCP 工具摆到用户眼前，')
     lines.push(`别只说「已生成」。详细：\`${path.join(detailDir(), 'canvas.md')}\``, '')
+    // 生图必须单列一行触发条件。它和上面那条是两件事：上面是「东西做完了怎么摆」，
+    // 这条是「东西怎么做出来」。合并写的话，用户说「画张封面」时模型只会想到摆放，
+    // 想不到自己有生成能力 —— 于是回一句「我不能生图」，或者去调别的图像 API。
+    lines.push('**生图 / 生视频**：用户要图、封面、海报、视频 → 走「笔纵画板」的 MCP')
+    lines.push(`（\`bizone-canvas\`），不要调别的图像 API。详细同上：\`${path.join(detailDir(), 'canvas.md')}\``, '')
   }
   lines.push(END)
   return lines.join('\n')
