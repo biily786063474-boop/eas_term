@@ -186,7 +186,10 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
       : []
     return {
       scene: {
-        viewMode: r.viewMode === 'canvas' || r.viewMode === 'board' ? r.viewMode : 'split',
+        viewMode:
+          r.viewMode === 'canvas' || r.viewMode === 'board' || r.viewMode === 'gantt'
+            ? r.viewMode
+            : 'split',
         viewport: sanitizeViewport(r.viewport),
         frames,
         shapes,

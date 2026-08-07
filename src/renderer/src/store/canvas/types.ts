@@ -10,7 +10,7 @@ import type { ProjectStatus } from '../../../../shared/types'
  *   split  分屏 —— 按 tab 树布局
  *   canvas 画布 —— 按世界坐标 × 视口定位
  *   board  看板 —— 按项目状态分列，每个项目一张卡片、卡片里嵌一个终端 */
-export type ViewMode = 'split' | 'canvas' | 'board'
+export type ViewMode = 'split' | 'canvas' | 'board' | 'gantt'
 
 export interface CanvasViewport {
   x: number

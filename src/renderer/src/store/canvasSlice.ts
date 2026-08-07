@@ -135,7 +135,8 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     // 恢复上次停留的视图
     // 'split' 是默认值，只有非默认的才需要恢复（写成白名单而不是直接赋值：
     // 存档是文件，被改坏过一次就够受，不能让任意字符串成为 viewMode）
-    if (scene.viewMode === 'canvas' || scene.viewMode === 'board') set({ viewMode: scene.viewMode })
+    if (scene.viewMode === 'canvas' || scene.viewMode === 'board' || scene.viewMode === 'gantt')
+      set({ viewMode: scene.viewMode })
     // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
     // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
     // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。

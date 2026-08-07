@@ -259,6 +259,14 @@ export const BoardIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const GanttIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="3" y="5" width="10" height="3" rx="1.5" />
+    <rect x="7" y="10.5" width="12" height="3" rx="1.5" />
+    <rect x="5" y="16" width="8" height="3" rx="1.5" />
+  </Svg>
+)
+
 export const ClockIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="9" />

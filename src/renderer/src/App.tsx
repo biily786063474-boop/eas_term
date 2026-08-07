@@ -11,6 +11,7 @@ import { SettingsPanel } from './features/workspace/SettingsPanel'
 import { UpdateBadge } from './features/workspace/UpdateBadge'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
+import { ModeSwitch } from './features/workspace/ModeSwitch'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
@@ -26,7 +27,7 @@ import './ui/motion/glow.css'
 import { ConfirmDialog } from './ui/ConfirmDialog'
 import { Tooltip } from './ui/Tooltip'
 import { BuildStamp } from './ui/BuildStamp'
-import { FolderIcon, TerminalIcon, CanvasIcon, BoardIcon } from './ui/Icons'
+import { FolderIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
   // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
@@ -253,29 +254,7 @@ export function App(): JSX.Element {
           <SecretsPanel />
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />
-          <div className="view-seg">
-            <button
-              className={viewMode === 'split' ? 'on' : ''}
-              onClick={() => setViewMode('split')}
-            >
-              <TerminalIcon size={13} />
-              终端
-            </button>
-            <button
-              className={viewMode === 'canvas' ? 'on' : ''}
-              onClick={() => setViewMode('canvas')}
-            >
-              <CanvasIcon size={13} />
-              画布
-            </button>
-            <button
-              className={viewMode === 'board' ? 'on' : ''}
-              onClick={() => setViewMode('board')}
-            >
-              <BoardIcon size={13} />
-              看板
-            </button>
-          </div>
+          <ModeSwitch />
           {/* 平时不渲染，只有查到新版本才冒出来 */}
           <UpdateBadge />
           {/* 设置摆在最右：全局的东西，两种视图模式下都在同一个位置 */}
