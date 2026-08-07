@@ -110,6 +110,53 @@ function runnerFor(serverPath: string): { command: string; args: string[]; env?:
   return { command: process.execPath, args: [serverPath], env: { ELECTRON_RUN_AS_NODE: '1' } }
 }
 
+/** 开发时跑的实例**不许改用户的全局 CLI 配置**。
+ *
+ *  否则每次 `npm run dev` 或者拿 out/ 起一个测试实例，都会把 ~/.claude.json 里的
+ *  eas-term 指向开发目录 —— 用户日常在 /Applications 那个版本里用的 MCP
+ *  就被悄悄换成了源码树里的那份。改坏了还很难联想到是「开发时顺手起的实例」干的
+ *  （2026-08-06 实测撞到：验证功能跑了几次 dev，回头发现全局配置被改了）。
+ *
+ *  判据用 app.isPackaged：打包版才写。想在开发时也测这条链路，
+ *  设 EAS_WRITE_GLOBAL_MCP=1 显式打开。 */
+function skipGlobalWrite(): boolean {
+  if (app.isPackaged) return false
+  if (process.env.EAS_WRITE_GLOBAL_MCP === '1') return false
+  console.log('[mcp] 开发实例，跳过写用户全局 CLI 配置（EAS_WRITE_GLOBAL_MCP=1 可强制写）')
+  return true
+}
+
+/** 笔纵画板的 MCP server 路径。**没装就返回 null，一个字都不往用户配置里写。**
+ *
+ *  为什么由我们来写：笔纵那边没有自动配置用户 CLI 的机制，而两个 app 都是同一个人的，
+ *  用户装了画板却要手工去 ~/.claude.json 里加一条才能让 agent 生图 —— 那道门槛
+ *  足以让绝大多数人止步。判据和 bizone.ts 的 check 一致（app bundle 存在）。
+ *
+ *  路径能这么推是因为笔纵**没打 asar**（build.asar 未开），资源直接躺在
+ *  Contents/Resources/app/ 下。哪天它改成 asar，这里要跟着改 —— 所以下面
+ *  existsSync 不通过时是静默返回 null，不会写一条指向空文件的坏配置。
+ *
+ *  ⚠️ 它连的是运行中的画板（HTTP localhost:13140，token 读画板的 userData），
+ *  画板没开着时 MCP 工具会调用失败。这一点没法在配置层解决。 */
+function bizoneServerPath(): string | null {
+  // Windows 上笔纵装在哪还没核实过，先只做 macOS —— 宁可不配，也不写个猜的路径
+  if (process.platform !== 'darwin') return null
+  const p = '/Applications/笔纵画板.app/Contents/Resources/app/electron/mcpServer.js'
+  try {
+    return fs.existsSync(p) ? p : null
+  } catch {
+    return null
+  }
+}
+
+/** 这一轮要写进用户 CLI 的所有 MCP 条目。eas-term 恒有，笔纵按装没装决定。 */
+function mcpEntries(serverPath: string): { name: string; server: string }[] {
+  const list = [{ name: 'eas-term', server: serverPath }]
+  const bz = bizoneServerPath()
+  if (bz) list.push({ name: 'bizone-canvas', server: bz })
+  return list
+}
+
 /** 把 eas-term 写进用户级 Claude 配置（~/.claude.json 的 mcpServers）。
  *
  *  为什么敢写全局：MCP server 在检测不到 Eas-Term 环境（没有 PTY 注入的端口/令牌）时
@@ -121,6 +168,7 @@ function runnerFor(serverPath: string): { command: string; args: string[]; env?:
  *  脚本默认就装在 ~/.local/bin。实测确认会被绕过，所以那条路走不通。 */
 function writeClaudeConfig(serverPath: string): void {
   try {
+    if (skipGlobalWrite()) return
     const home = app.getPath('home')
     const cfgFile = path.join(home, '.claude.json')
     // 没装 Claude Code 就别碰用户的 home——否则从没用过 claude 的人也会凭空
@@ -142,10 +190,15 @@ function writeClaudeConfig(serverPath: string): void {
       }
     }
     const servers = (cfg.mcpServers ?? {}) as Record<string, unknown>
-    const r = runnerFor(serverPath)
-    const desired = { type: 'stdio', command: r.command, args: r.args, ...(r.env ? { env: r.env } : {}) }
-    if (JSON.stringify(servers['eas-term']) === JSON.stringify(desired)) return // 无变化不写盘
-    servers['eas-term'] = desired
+    let dirty = false
+    for (const { name, server } of mcpEntries(serverPath)) {
+      const r = runnerFor(server)
+      const desired = { type: 'stdio', command: r.command, args: r.args, ...(r.env ? { env: r.env } : {}) }
+      if (JSON.stringify(servers[name]) === JSON.stringify(desired)) continue
+      servers[name] = desired
+      dirty = true
+    }
+    if (!dirty) return // 全都没变就不写盘
     cfg.mcpServers = servers
     if (fs.existsSync(cfgFile)) {
       try {
@@ -169,14 +222,21 @@ function writeClaudeConfig(serverPath: string): void {
  *  导致只替换掉半段、把后半截留成一行孤立的 `["..."]`（TOML 里那是个 table header，
  *  等于每次启动往用户配置里塞一行垃圾）。按行扫描没有这个坑。 */
 function writeCodexConfig(serverPath: string): void {
+  for (const { name, server } of mcpEntries(serverPath)) writeCodexSection(name, server)
+}
+
+/** 写 ~/.codex/config.toml 里的一段 [mcp_servers.<name>]。逐段处理而不是一次写完：
+ *  这个文件是按行扫描改的（没有 TOML 库），一段一段来最不容易碰坏别人的内容。 */
+function writeCodexSection(name: string, serverPath: string): void {
   try {
+    if (skipGlobalWrite()) return
     const dir = path.join(app.getPath('home'), '.codex')
     const cfgFile = path.join(dir, 'config.toml')
     if (!fs.existsSync(dir)) return // 没装/没用过 Codex 就别给人家建目录
 
     const r = runnerFor(serverPath)
     const q = (v: string): string => JSON.stringify(v) // TOML 基本字符串的转义规则与 JSON 兼容
-    const HEAD = '[mcp_servers.eas-term]'
+    const HEAD = `[mcp_servers.${name}]`
     const blockLines = [HEAD, `command = ${q(r.command)}`, `args = [${r.args.map(q).join(', ')}]`]
     if (r.env) {
       blockLines.push(
@@ -221,7 +281,7 @@ function writeCodexConfig(serverPath: string): void {
       }
     }
     fs.writeFileSync(cfgFile, next.join('\n'))
-    console.log('[mcp] 已配置 Codex（~/.codex/config.toml）')
+    console.log(`[mcp] 已配置 Codex 的 ${name}（~/.codex/config.toml）`)
   } catch (e) {
     console.error('[mcp] 写 Codex 配置失败(可手动配置)', e)
   }
@@ -233,7 +293,10 @@ function writeCodexConfig(serverPath: string): void {
 
 const claudeCfg = (): string => path.join(app.getPath('home'), '.claude.json')
 const codexCfg = (): string => path.join(app.getPath('home'), '.codex', 'config.toml')
-const CODEX_HEAD = '[mcp_servers.eas-term]'
+/** 我们会写进用户配置的所有 MCP 名字。状态与移除都按这份清单来 ——
+ *  漏一个，用户点「移除」就只清掉一半，剩下的成了删不掉的残留。 */
+const MANAGED = ['eas-term', 'bizone-canvas'] as const
+const codexHead = (name: string): string => `[mcp_servers.${name}]`
 
 export function mcpConfigStatus(): { claude: boolean; codex: boolean; files: string[] } {
   const files: string[] = []
@@ -241,16 +304,15 @@ export function mcpConfigStatus(): { claude: boolean; codex: boolean; files: str
   let codex = false
   try {
     const cfg = JSON.parse(fs.readFileSync(claudeCfg(), 'utf8')) as Record<string, unknown>
-    claude = !!(cfg.mcpServers as Record<string, unknown> | undefined)?.['eas-term']
+    const servers = cfg.mcpServers as Record<string, unknown> | undefined
+    claude = MANAGED.some((n) => !!servers?.[n])
     if (claude) files.push(claudeCfg())
   } catch {
     /* 没装或读不到 */
   }
   try {
-    codex = fs
-      .readFileSync(codexCfg(), 'utf8')
-      .split('\n')
-      .some((l) => l.trim() === CODEX_HEAD)
+    const lines = fs.readFileSync(codexCfg(), 'utf8').split('\n')
+    codex = MANAGED.some((n) => lines.some((l) => l.trim() === codexHead(n)))
     if (codex) files.push(codexCfg())
   } catch {
     /* 没装或读不到 */
@@ -265,8 +327,9 @@ export function removeMcpConfig(): void {
     const f = claudeCfg()
     const cfg = JSON.parse(fs.readFileSync(f, 'utf8')) as Record<string, unknown>
     const servers = cfg.mcpServers as Record<string, unknown> | undefined
-    if (servers && servers['eas-term']) {
-      delete servers['eas-term']
+    const hit = servers ? MANAGED.filter((n) => n in servers) : []
+    if (servers && hit.length) {
+      for (const n of hit) delete servers[n]
       try {
         fs.copyFileSync(f, f + '.eas-backup')
       } catch {
@@ -280,9 +343,13 @@ export function removeMcpConfig(): void {
   // Codex：同写入时的逐行做法，只摘自己那一段（不解析整个 TOML，免得丢注释和格式）
   try {
     const f = codexCfg()
-    const lines = fs.readFileSync(f, 'utf8').split('\n')
-    const at = lines.findIndex((l) => l.trim() === CODEX_HEAD)
-    if (at >= 0) {
+    let lines = fs.readFileSync(f, 'utf8').split('\n')
+    let removed = false
+    // 先在内存里把每一段都摘掉，最后统一落盘一次 —— 逐段写盘的话，
+    // 备份文件会被后一段的写入覆盖成「已经删了一半」的中间态，回滚就不完整了
+    for (const name of MANAGED) {
+      const at = lines.findIndex((l) => l.trim() === codexHead(name))
+      if (at < 0) continue
       let end = at + 1
       while (end < lines.length && !lines[end].trimEnd().startsWith('[')) end++
       // 段尾的空行/注释退回去——注释惯例属于下一个 table，吃掉等于删用户的注释
@@ -291,12 +358,16 @@ export function removeMcpConfig(): void {
         if (prev === '' || prev.startsWith('#')) end--
         else break
       }
+      lines = [...lines.slice(0, at), ...lines.slice(end)]
+      removed = true
+    }
+    if (removed) {
       try {
         fs.copyFileSync(f, f + '.eas-backup')
       } catch {
         /* 备份失败不阻断 */
       }
-      fs.writeFileSync(f, [...lines.slice(0, at), ...lines.slice(end)].join('\n').replace(/\n{3,}/g, '\n\n'))
+      fs.writeFileSync(f, lines.join('\n').replace(/\n{3,}/g, '\n\n'))
     }
   } catch {
     /* 没有就算了 */
