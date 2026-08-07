@@ -18,6 +18,8 @@ import {
 import { SecretBadge } from './SecretBadge'
 import { TerminalInput } from './TerminalInput'
 import { parseApproval } from './approvalParse'
+import { feedKeystroke, noteRunning, drainFollow } from '../gantt/collector'
+import { collectLeaves } from '../../layout'
 import './terminal.css'
 
 /** 读终端底部若干行，**含 scrollback**。
@@ -444,9 +446,15 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
       useStore.getState().setPtyRunning(ptyId, false)
+      noteRunning(ptyId, false, { projectId: '', leafId: '' })
       useStore.getState().closeLeaf(tabId, leafId, { alreadyExited: true, ptyId })
     })
-    const dataDisp = term.onData((data) => window.api.pty.write(ptyId, data))
+    const dataDisp = term.onData((data) => {
+      // 甘特图采集要在写进 PTY 之前拿到原始按键 —— 这是键盘输入的唯一出口
+      feedKeystroke(ptyId, data)
+      drainFollow(ptyId)
+      window.api.pty.write(ptyId, data)
+    })
     const resizeDisp = term.onResize(({ cols, rows }) => window.api.pty.resize(ptyId, cols, rows))
     // Agent 状态检测靠「终端标题」：Claude Code 工作时把标题设成「<盲文 spinner> 名字」（⠋⠙⠹…，
     // U+2800–U+28FF），一轮跑完 / 出选项 / 需审批（在等你操作）时设成「✳ 名字」（非 spinner）。
@@ -475,7 +483,19 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       const stable = spinner ? title.replace(/^[⠀-⣿]+\s*/u, '') : title
       if (stable) store.setTabTitle(tabId, stable)
       // 同一个信号也用来做左上角的「谁在自动跑」提示
-      useStore.getState().setPtyRunning(ptyId, spinner)
+      const st = useStore.getState()
+      st.setPtyRunning(ptyId, spinner)
+      // 找这个 pty 属于哪个项目、哪个 leaf —— 甘特图按项目分行、按 leaf 跳回
+      // （pane.ptyId 只在 kind:'terminal' 分支上存在，PaneState 是判别联合，访问前必须先窄化）
+      const tab = st.tabs.find((t) =>
+        collectLeaves(t.root).some((l) => l.pane.kind === 'terminal' && l.pane.ptyId === ptyId)
+      )
+      const leaf =
+        tab &&
+        collectLeaves(tab.root).find((l) => l.pane.kind === 'terminal' && l.pane.ptyId === ptyId)
+      if (tab?.projectId && leaf) {
+        noteRunning(ptyId, spinner, { projectId: tab.projectId, leafId: leaf.id })
+      }
       if (prevTitleSpinner && !spinner) {
         useStore.getState().flagAttention(ptyId)
         // 停下来的原因可能是「答完了」，也可能是「弹了个框等你选」。

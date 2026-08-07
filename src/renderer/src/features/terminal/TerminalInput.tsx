@@ -17,6 +17,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VoiceButton } from '../voice/VoiceButton'
 import { track } from '../notify/track'
+import { noteSubmitted, drainFollow } from '../gantt/collector'
 
 /** 文本写进 pty 之后隔多久再发回车。
  *  给 TUI 一点时间把这段文本渲染进它自己的输入框——不隔开的话回车会被当成
@@ -146,6 +147,10 @@ export function TerminalInput({
     // 一段三行的提示词会被拆成三条消息发出去。单行不需要，少一层转义少一层出错可能。
     const body = payload.includes('\n') ? `\x1b[200~${payload}\x1b[201~` : payload
     window.api.pty.write(ptyId, body)
+
+    // 甘特图采集：记的是 payload（含图片路径）之外的纯文本意图
+    noteSubmitted(ptyId, text)
+    drainFollow(ptyId)
 
     if (withReturn) {
       // **回车必须单独发，而且要隔一小会儿。**
