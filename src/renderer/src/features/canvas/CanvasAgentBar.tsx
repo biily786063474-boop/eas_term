@@ -23,6 +23,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '../../ui/Icons'
+import { useMenuAnchor } from './CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
 
@@ -255,6 +256,9 @@ export function CanvasAgentBar({
     })
   }
 
+  // 浮层夹回窗口内。复用右键菜单那套（实测尺寸而非估算 —— 菜单项数不定，估出来对不上）
+  const popPos = useMenuAnchor(pop?.rect.left ?? 0, (pop?.rect.bottom ?? 0) + 6, popRef, [pop?.type])
+
   const openPop = (type: 'model' | 'effort' | 'role' | 'kind', el: HTMLElement): void => {
     anchorRef.current = el
     setCustomModel(null)
@@ -379,7 +383,10 @@ export function CanvasAgentBar({
           <div
             ref={popRef}
             className="ab-pop"
-            style={{ left: pop.rect.left, top: pop.rect.bottom + 6 }}
+            // **夹回可视区**：控制条在窗口右侧时，「启动」弹出的回溯确认框
+            // 会整个越出窗口边缘看不见。画布右键菜单一直有这个处理（useMenuAnchor），
+            // 这里漏了。先隐藏再定位是为了不让人看见「先飞出去再跳回来」那一帧。
+            style={{ left: popPos?.x ?? pop.rect.left, top: popPos?.y ?? pop.rect.bottom + 6, visibility: popPos ? 'visible' : 'hidden' }}
             onMouseDown={(e) => e.stopPropagation()}
           >
             {pop.type === 'kind' && (

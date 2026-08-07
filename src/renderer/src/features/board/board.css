@@ -331,6 +331,14 @@
   padding: 6px 10px;
   border-bottom: 1px solid var(--glass-border);
   background: rgba(0, 0, 0, 0.22);
+  /* 空白处能拖窗口 —— 全屏时这条是屏幕上最像「标题栏」的东西，
+     拖不动很反直觉。**按钮和下拉必须显式 no-drag**，否则点不动 */
+  -webkit-app-region: drag;
+}
+.board-fs-hd button,
+.board-fs-hd select,
+.board-fs-hd .board-fs-name {
+  -webkit-app-region: no-drag;
 }
 .board-fs-back {
   display: inline-flex;

@@ -154,6 +154,20 @@ export function PaneLayer(): JSX.Element {
         // 槽位被列滚出可视区时别显示：终端是绝对定位在 pane-layer 上的，
         // 不受列的 overflow 裁剪，不挡的话会飘到列头甚至别的列上面
         if (bb && (r.bottom < bb.top + 4 || r.top > bb.bottom - 4)) return
+        // **frameId/nodeId 要填真的**。agent 控制条（角色/模型/思考档位）是拿这两个
+        // 去 store 里查那个画布节点的配置的 —— 早先这里填空串，于是看板里那条控制条
+        // 读不到任何配置、全部回落默认值，跟画布上同一个终端显示的东西对不上，
+        // 改了也存不回去。找这个 leaf 在画布上对应的节点即可。
+        let fid = ''
+        let nid = ''
+        for (const f of canvas.frames) {
+          const n = f.nodes.find((x) => x.leafId === leafId)
+          if (n) {
+            fid = f.id
+            nid = n.id
+            break
+          }
+        }
         next.set(leafId, {
           left: r.left - base.left,
           top: r.top - base.top,
@@ -161,10 +175,8 @@ export function PaneLayer(): JSX.Element {
           h: r.height,
           scale: 1,
           board: true,
-          // 画布字段在看板里没有意义，但类型共用一份；board:true 已经让 PaneView
-          // 绕开所有会用到它们的地方
-          frameId: '',
-          nodeId: '',
+          frameId: fid,
+          nodeId: nid,
           nodeX: 0,
           nodeY: 0
         })
@@ -205,7 +217,8 @@ export function PaneLayer(): JSX.Element {
       document.removeEventListener('scroll', schedule, true)
       window.removeEventListener('resize', schedule)
     }
-  }, [viewMode])
+    // canvas.frames 变了要重测：节点增删会改上面那段 frameId/nodeId 的查找结果
+  }, [viewMode, canvas.frames])
 
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
   const allLeaves = useMemo(() => {
