@@ -646,3 +646,22 @@ export interface IslandAction {
    *  不传文案——文案是给人看的，序号才是 CLI 认的。 */
   choice?: number
 }
+
+/** 甘特图上的一条任务：一次「你发了什么 → agent 干完」。
+ *  prompt/follow 都是**用户发出去的**文本，agent 的输出不记。 */
+export interface GanttTask {
+  id: string
+  projectId: string
+  ptyId: string
+  /** 点条能跳回那个终端 */
+  leafId: string
+  /** 原文，超过 2000 字截断 */
+  prompt: string
+  /** 这一轮里补发的指令（agent 已经在跑时又发的），各自也截断 2000 字 */
+  follow?: string[]
+  startAt: number
+  /** null = 还在跑 */
+  endAt: number | null
+  /** 上次被强杀导致没能写 endAt，读取时补的标记。不编造结束时间。 */
+  aborted?: true
+}
