@@ -16,6 +16,7 @@ import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { BoardStage } from './features/board/BoardStage'
+import { GanttStage } from './features/gantt/GanttStage'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
@@ -288,6 +289,7 @@ export function App(): JSX.Element {
               </div>
             )}
             {viewMode === 'canvas' && <CanvasStage />}
+            {viewMode === 'gantt' && <GanttStage />}
             {viewMode === 'board' && <BoardStage />}
             <PaneLayer />
             {/* 三个抽屉/浮层跟着画布一起给看板 —— 看板也是「在项目里干活」的视图，

@@ -1,0 +1,205 @@
+/* 甘特图。配色跑过对比度验证，数值别随手改：
+   进行中 = var(--accent) 原色，vs 底 9.76(蓝) / 8.65(粉)
+   已完成 = accent 混 70% 底色，vs 底 5.21(蓝) / 4.69(粉) —— ≥4.5 才放得下条内文字
+   条内标签用 #0b0d13，它和 --pane-solid 同色，所以「填充 vs 底」的对比数
+   就是「文字 vs 填充」的对比数，两者不能分开调。
+   异常中断固定 #ef6f7b 且必须带图标：状态色不跟主题走，也不能只靠颜色表达。 */
+.gantt {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 14px 18px 24px;
+  background: var(--pane-solid);
+}
+
+.gantt-head {
+  margin-bottom: 12px;
+}
+
+.gantt-title {
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.gantt-grid {
+  position: relative;
+}
+
+.gantt-axis {
+  position: relative;
+  height: 20px;
+  margin-left: 132px;
+}
+
+.gantt-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.gantt-tick span {
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gantt-rowname {
+  flex: none;
+  width: 120px;
+  padding-top: 2px;
+  color: var(--fg);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-lanes {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 网格线要克制——它是背景，不是内容 */
+.gantt-vline {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.gantt-lane {
+  position: relative;
+  height: 22px;
+  /* 层与层之间留 2px 表面色，条挨着条时不会糊成一块 */
+  margin-bottom: 2px;
+}
+
+.gantt-lane:last-child {
+  margin-bottom: 0;
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  /* 相邻条之间的 2px 间隙用表面色描边做，比 margin 可靠（条是绝对定位的） */
+  box-shadow: 0 0 0 2px var(--pane-solid);
+}
+
+.gantt-bar.done {
+  background: color-mix(in srgb, var(--accent) 70%, var(--pane-solid));
+}
+
+.gantt-bar.running {
+  background: var(--accent);
+  animation: gantt-breathe 2.4s ease-in-out infinite;
+}
+
+.gantt-bar.aborted {
+  background: #ef6f7b;
+  /* 右端渐隐 = 结束时间未知。不编一个结束时间，编出来的会被当成真的 */
+  mask-image: linear-gradient(90deg, #000 72%, transparent 100%);
+  color: #0b0d13;
+}
+
+@keyframes gantt-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.18);
+  }
+}
+
+/* 条内标签：深墨。窄条放不下就整个藏起来，别让半个字露在外面 */
+.gantt-bar-label {
+  color: #0b0d13;
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0;
+}
+
+.gantt-bar.wide .gantt-bar-label {
+  opacity: 1;
+}
+
+.gantt-abort-ico {
+  flex: none;
+  color: #0b0d13;
+}
+
+.gantt-empty {
+  padding: 40px 0 0 132px;
+  color: var(--fg-dim);
+  font-size: 12.5px;
+}
+
+.gantt-pop {
+  position: fixed;
+  z-index: 3400;
+  max-width: 380px;
+  padding: 9px 11px;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--tooltip-bg);
+  backdrop-filter: var(--blur);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.gantt-pop-time {
+  display: flex;
+  gap: 8px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-pop-dur {
+  color: var(--accent);
+}
+
+.gantt-pop-abort {
+  margin-top: 3px;
+  color: #ef6f7b;
+  font-size: 11px;
+}
+
+.gantt-pop-text {
+  margin-top: 5px;
+  color: var(--fg);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gantt-pop-follow {
+  margin-top: 5px;
+  padding-left: 8px;
+  border-left: 2px solid var(--glass-border-strong);
+  color: var(--fg-dim);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
