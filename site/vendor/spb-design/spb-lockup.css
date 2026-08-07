@@ -1,0 +1,55 @@
+/*
+ * ⚠️ 此文件由 SPB 设计系统自动分发，**不要在这里改**。
+ * 改动请到源头：~/Biily/独立站/design-system/spb-lockup.css
+ * 改完跑：node scripts/sync-design-system.mjs
+ *
+ * 同步于 2026-08-07 · 源文件 sha256 a8f620304ad33112
+ */
+/* SPB 品牌锁定 —— 母品牌在前、产品在后，用竖线表示从属关系。
+   放在各产品站导航的 logo 位置：`SPB. | 笔纵画板`。
+
+   两条视觉纪律：
+   1. **SPB 必须比产品 logo 弱**。这一页的主角是产品，SPB 只是交代出身，
+      所以默认压到 48% 不透明度，hover 才提到满。反过来会喧宾夺主。
+   2. **那个橙点不跟随各站品牌色**。它是 SPB 的识别符，在笔纵的黄、
+      Rove 的蓝、Eas 的浅蓝上都保持信号橙，这样五个站看过来是同一个母品牌。 */
+
+.spb-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  min-width: 0;
+}
+
+.spb-lockup .spb-mark {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 900;
+  /* 用 em 跟随宿主字号：三个站导航的字号并不一致 */
+  font-size: .95em;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: inherit;
+  opacity: .48;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity .18s ease;
+}
+.spb-lockup .spb-mark:hover,
+.spb-lockup .spb-mark:focus-visible { opacity: 1; }
+
+.spb-lockup .spb-mark em { font-style: normal; color: #ff4d00; }
+
+.spb-lockup .spb-sep {
+  color: currentColor;
+  opacity: .22;
+  font-weight: 300;
+  line-height: 1;
+  user-select: none;
+}
+
+/* 窄屏优先保住产品自己的 logo —— 挤在一起两个都读不清 */
+@media (max-width: 560px) {
+  .spb-lockup .spb-mark,
+  .spb-lockup .spb-sep { display: none; }
+}

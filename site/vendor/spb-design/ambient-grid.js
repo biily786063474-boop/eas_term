@@ -3,7 +3,7 @@
  * 改动请到源头：~/Biily/独立站/design-system/ambient-grid.js
  * 改完跑：node scripts/sync-design-system.mjs
  *
- * 同步于 2026-08-04 · 源文件 sha256 b4c7dcae636b997f
+ * 同步于 2026-08-07 · 源文件 sha256 b4c7dcae636b997f
  */
 /**
  * SPB 设计系统 · 背景氛围层（零依赖原生版）
