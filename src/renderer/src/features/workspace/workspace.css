@@ -590,10 +590,10 @@ body.dragging-row * {
 }
 
 /* 四个视图收进一个按钮。原来的三段控件 .view-seg 已经删掉，
-   它的样式若还留着不影响 —— 但别再往里加第四段，标题栏中间放不下。 */
-.mode-switch-wrap {
-  position: relative;
-}
+   它的样式若还留着不影响 —— 但别再往里加第四段，标题栏中间放不下。
+   .mode-switch-wrap 纯结构包装、不需要样式：菜单改成 portal 到 body + fixed
+   现算坐标之后，它不再承担给下拉菜单当定位参照的角色（原来靠 position: relative
+   兜底，现在没有子元素靠它相对定位了），故不建同名 CSS 规则。 */
 
 .mode-switch {
   display: flex;
