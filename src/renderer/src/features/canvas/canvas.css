@@ -160,8 +160,11 @@
   position: absolute;
   right: 16px;
   bottom: 14px;
-  /* 右侧资源抽屉展开时整体左移让位（见 .app.res-open）。跟抽屉同一条弹簧曲线 */
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* 右侧资源抽屉展开时整体左移让位（见 .app.res-open）。跟抽屉同一条弹簧曲线。
+     opacity 单独给一条短曲线：全屏让位时用（见 .on-max），弹簧的 0.5s 用在淡出上太拖沓 */
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.16s ease;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -3062,12 +3065,26 @@
   transform: translateX(-238px);
 }
 
+/* 模块「最大化沉浸」时这两条要退场。
+   注意问题不在 z-index —— 全屏 pane 是 z-index:200，压在它们（20 / auto）之上，
+   点击也确实不会穿透。但 pane 的背景是半透明的玻璃，于是这两条从终端底下**透出来**，
+   正好压在输入框那一行，和「写点什么…」「语音」「发送」挤成一团。
+   所以是隐藏，不是调层级。顺带：画布已经被整个盖住了，缩放画布和画布工具本来就没意义。
+   用 opacity 不用 display:none —— 保留淡出，退出沉浸时不会「啪」地闪回来。 */
+.canvas-zoombar.on-max,
+.ctoolbar-mini.on-max {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* 基本操作：从整个抽屉收成缩放条左边的一条图标栏 */
 .ctoolbar-mini {
   position: absolute;
   right: 178px;
   bottom: 14px;
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.16s ease;
   z-index: 20;
   display: flex;
   align-items: center;

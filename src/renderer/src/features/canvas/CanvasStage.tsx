@@ -49,6 +49,9 @@ export function CanvasStage(): JSX.Element {
   const shapes = useStore((s) => s.canvas.shapes)
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
+  // 有模块在「最大化沉浸」时，右下角那两条要让位（见下面 .on-max 的注释）。
+  // 用 liveMaximizedNode 而不是直接读 store：它指的节点可能已经被关掉了。
+  const maximized = !!useStore(liveMaximizedNode)
   const freeNodes = useStore((s) => s.canvas.freeNodes)
   const [tool, setTool] = useState<'select' | 'rect' | 'arrow' | 'sticky'>('select')
   const [draft, setDraft] = useState<Omit<CanvasShape, 'id'> | null>(null)
@@ -950,7 +953,7 @@ export function CanvasStage(): JSX.Element {
 
       {/* 基本操作收成一条紧凑图标栏（原来占着整个左抽屉，那个位置让给知识库了）。
           删掉的话「在画布上圈一下、写个便签」就无处可做，所以是搬家不是删除。 */}
-      <div className="ctoolbar-mini">
+      <div className={`ctoolbar-mini${maximized ? ' on-max' : ''}`}>
         <button
           className={`ctool${tool === 'select' ? ' on' : ''}`}
           data-tip="选择 / 移动"
@@ -993,7 +996,7 @@ export function CanvasStage(): JSX.Element {
       <CanvasMiniMap />
       <CanvasRunMonitor />
 
-      <div className="canvas-zoombar">
+      <div className={`canvas-zoombar${maximized ? ' on-max' : ''}`}>
         <button
           onClick={() => setScale(useStore.getState().canvas.viewport.scale / 1.15)}
           data-tip="缩小"

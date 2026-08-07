@@ -57,9 +57,9 @@ scripts/publish-site.sh
 （笔纵官网，从 8.130 迁来，带 pm2 `bizone-cms`:4001 与 `survey`:3721）**。
 改配置**只加独立 `.conf`**，reload 前后各测一次现有站点状态码。磁盘只剩 ~19G，传包前先 `df -h`。
 
-> `publish-site.sh` 里的 `OTHER_SITES` 现在只有 `www.biily.top` 和 `aurora.biily.top`，
-> **新来的 `bzone` / `spb` 不在比对范围里** —— 想让 reload 的安全网覆盖它们，把两个域名加进去。
-> `bzone` 尤其值得加：它背后还挂着两个 pm2 服务。
+> `publish-site.sh` 的 `OTHER_SITES` 已经覆盖全部五个：`www` / `aurora` / `rove` / `bzone` / `spb`
+> —— reload 前后各测一次它们的状态码，不一致就中止。`bzone` 背后还挂着两个 pm2 服务，
+> 它在名单里尤其要紧。
 
 ## 更多细节
 
