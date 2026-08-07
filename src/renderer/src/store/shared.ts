@@ -2,6 +2,7 @@
 
 import type { LayoutNode, PaneState } from '../layout'
 import { collectLeaves } from '../layout'
+import { forgetPty } from '../features/gantt/collector'
 
 export interface TermTab {
   id: string
@@ -46,7 +47,23 @@ export function paneKindForFile(filePath: string): 'code' | 'image' {
 }
 
 export function killPanePty(pane: PaneState): void {
-  if (pane.kind === 'terminal') window.api.pty.kill(pane.ptyId)
+  if (pane.kind === 'terminal') {
+    window.api.pty.kill(pane.ptyId)
+    // kill 意图一发出就同步清甘特图采集态（keyBuf/pending/active）。
+    //
+    // 不能只靠 TerminalView 的 pty:onExit 兜底：真实 OS 退出是异步事件（killTree 发信号
+    // → 进程死 → node-pty 的 proc.onExit → 跨进程 send 回渲染进程），而这条「用户主动关」
+    // 的路径会在同一个同步调用里紧接着把 leaf 从布局树摘掉，TerminalView 随之卸载、
+    // 清理时把 pty:exit 的监听也摘了——真正的退出事件到达时已经没人接，onExit 里的
+    // forgetPty 根本不会被调用。这里跟 kill 信号一起同步清，不依赖那趟异步事件。
+    //
+    // 这里只清 Map，不调用 noteRunning(false)：和主进程 pty.ts 里 forgetPty 的三处
+    // 调用（proc.onExit / 收到 pty:kill / killPtysForWebContents）同一个范式——
+    // 单纯的资源清理，不掺 gantt.finish 的业务判断。若这条 pty 当时有条 active 的
+    // 任务记录，它的 endAt 就此不会再写入，交给 Task 1 list() 的 aborted 兜底处理，
+    // 不是这里要解决的问题。
+    forgetPty(pane.ptyId)
+  }
 }
 
 export function terminalPtyIds(root: LayoutNode): string[] {

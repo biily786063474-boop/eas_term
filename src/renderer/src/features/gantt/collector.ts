@@ -51,8 +51,11 @@ export function feedKeystroke(ptyId: string, data: string): void {
         i += csi[0].length
         continue
       }
-      // SS3：ESC O <字符> —— F1–F4、应用光标模式下的方向键
-      const ss3 = /^\x1bO[\s\S]/.exec(rest)
+      // SS3：ESC O <字符> —— F1–F4、应用光标模式下的方向键/Home/End。
+      // 终止字节收紧成 xterm.js 实际会发出的这几个（evaluateKeyboardEvent 里
+      // ESC+"O"+方向键 A-D、Home=H、End=F、F1-F4=P-S，没有别的），不用 [\s\S] 兜底——
+      // 否则「ESC O <空格>」这种真实按键之外的输入会被当成 SS3 把空格一起吞掉
+      const ss3 = /^\x1bO[ABCDFHPQRS]/.exec(rest)
       if (ss3) {
         i += ss3[0].length
         continue
