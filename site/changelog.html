@@ -54,6 +54,16 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.14">0.4.14</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>甘特图上鼠标停上去，详情里混进一大段乱码</strong>（形如 <code>&lt;35;22;13M&lt;35;23;13M…</code>）。那不是乱码，是鼠标在终端里移动时终端上报的坐标 —— 记录你说了什么的那段代码没认出它是控制序列，把它当成你敲的字收了进去。现在改成按标准结构识别<strong>任何</strong>控制序列并整段跳过，不再逐个枚举，以后遇到没见过的序列也不会漏进来</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.13">0.4.13</h2>
           <time datetime="2026-08-07">2026-08-07</time>
         </div>
