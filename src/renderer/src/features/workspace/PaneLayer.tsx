@@ -38,6 +38,9 @@ export function PaneLayer(): JSX.Element {
   // 那时候直接读会让下面的 `maximizedNode && !isMax` 把**所有**节点都隐藏掉
   const maximizedNode = useStore(liveMaximizedNode)
   const committedScale = useStore((s) => s.canvasCommittedScale)
+  // 看板全屏进/出时必须重挂观察器 —— 见下面 measure effect 依赖里的说明。
+  // 这个 leafId 本身在这里用不上，要的是「它变了」这个事实。
+  const boardFull = useStore((s) => s.boardFullscreen)
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
 
@@ -217,8 +220,20 @@ export function PaneLayer(): JSX.Element {
       document.removeEventListener('scroll', schedule, true)
       window.removeEventListener('resize', schedule)
     }
-    // canvas.frames 变了要重测：节点增删会改上面那段 frameId/nodeId 的查找结果
-  }, [viewMode, canvas.frames])
+    // canvas.frames 变了要重测：节点增删会改上面那段 frameId/nodeId 的查找结果。
+    //
+    // **boardFull 必须在依赖里**，否则看板全屏点开一次之后就再也打不开了：
+    // 上面两个观察器绑的是**进入这个 effect 那一刻**的 `.board` 元素，而全屏时
+    // BoardStage 走的是 `if (fullOf) return <div className="board-fs">` —— `.board`
+    // 整棵被卸载，退出全屏时 React 建的是一个**新**元素。依赖不含全屏状态的话
+    // effect 不重跑，观察器就一直盯着那个已经不在文档里的旧节点，schedule 再也不触发，
+    // measure 不跑 → boardByLeaf 空 → `hidden={!bp}` 把终端整个藏起来。
+    // 症状是「看板里点开终端一片空白，连控制条和输入框都没有」，而且是**间歇性**的：
+    // 切到看板后第一次通常正常（卸载那一下恰好还能触发一次），之后全废，
+    // 直到切走再切回看板（viewMode 变化让 effect 重跑）才恢复 ——
+    // 所以现象是「只有几个打不开」，很容易误以为是某几个终端自己的问题。
+    // 实测：加之前点 12 次空 11 次。
+  }, [viewMode, canvas.frames, boardFull])
 
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
   const allLeaves = useMemo(() => {
