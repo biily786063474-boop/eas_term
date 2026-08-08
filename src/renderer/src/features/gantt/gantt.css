@@ -7,18 +7,66 @@
 .gantt {
   position: absolute;
   inset: 0;
-  overflow: auto;
-  padding: 14px 18px 24px;
+  /* 三段纵向布局：头部（不滚）/ 项目列表（滚）/ 导航带（不滚，常驻贴底）。
+     导航带要是跟着项目列表一起滚出视野，项目一多它就形同虚设了。 */
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px 16px;
   background: var(--pane-solid);
 }
 
 .gantt-head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
 .gantt-title {
   color: var(--fg-dim);
   font-size: 12px;
+}
+
+/* 跨度切换：24 小时 / 3 天，视觉上跟别处的 segmented 控件一个语言 */
+.gantt-span-toggle {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.gantt-span-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.gantt-span-toggle button.active {
+  background: var(--accent);
+  color: #0d0f16;
+  box-shadow: var(--glass-highlight);
+}
+
+.gantt-scroll {
+  flex: 1;
+  min-height: 0; /* 让这个 flex 子项能正常出滚动条，而不是把父容器撑破 */
+  overflow-y: auto;
+  /* 横向必须 hidden，不能跟着 overflow:auto 走。原因不是"不需要横向滚动"这么
+     简单——拖取景框预览时 .gantt-axis/.gantt-lanes 会被整体 translateX 挪到很远
+     （导航带 7 天 100px 对应主区可能几百上千 px），这段位移在 overflow:auto 的
+     容器里会被算进"可滚动内容区"，实测触发浏览器自己弹出一条横向滚动条、
+     内容看起来整个消失——拖拽预览期间画面像是"炸了"。改 hidden 后超出的部分
+     单纯被裁掉，取景框预览的物理意义本来就是"这段先不用管，松手会重排成对的"。 */
+  overflow-x: hidden;
 }
 
 .gantt-grid {
@@ -202,4 +250,83 @@
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* ---------- 导航带：7 天全景 + 取景框 ----------
+   高度预算严格对齐 brief 的 36px：轨道 20px + 间距 2px + 日期刻度 14px。
+   不像主区缩进 132px 对齐行名列——导航带不分项目，没有行名列可对齐，
+   让它占满整个宽度，拖拽也更精准。 */
+.gantt-nav {
+  flex: none;
+  margin-top: 12px;
+}
+
+.gantt-nav-track {
+  position: relative;
+  height: 20px;
+  /* 裁掉取景框那个刻意画得超大的 box-shadow（见 .gantt-nav-frame 注释），
+     不然遮罩会溢出到导航带外面 */
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  /* 完全没有任务的时段也要看得出轨道轮廓，不是纯背景一片虚无 */
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+}
+
+/* 密度桶：纯背景装饰，不接鼠标事件——点击要能穿透到 .gantt-nav-track 本身，
+   靠 GanttNavigator 里 `e.target === e.currentTarget` 判断"点在空白处"才成立 */
+.gantt-nav-bucket {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.gantt-nav-bucket.aborted {
+  /* 异常中断：固定色、不受密度不透明度影响——它是要引起注意的东西，
+     被密度公式稀释掉就没意义了 */
+  background: #ef6f7b;
+}
+
+/* 取景框：只用 transform 移动、只用 width 变跨度，绝不碰 left。
+   框外遮罩用「超大 box-shadow」这个技巧实现——好处是遮罩天然跟着 transform
+   一起动，不用另外画两块遮罩层、再单独把它们的位置跟取景框同步。 */
+.gantt-nav-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.gantt-nav-frame.dragging {
+  cursor: grabbing;
+  /* 拖拽时必须关掉过渡，否则每次 mousemove 改 transform 都会被 transition
+     再排一次队，变成追不上手速的橡皮筋，拖不准 */
+  transition: none;
+}
+
+.gantt-nav-ticks {
+  position: relative;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.gantt-nav-tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.gantt-nav-tick span {
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
