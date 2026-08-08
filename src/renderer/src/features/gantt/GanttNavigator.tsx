@@ -195,8 +195,22 @@ export function GanttNavigator({
       // 否则贴住 now 的视图会被一次无意义的点击静默冻结成固定区间（且这里如果
       // 走 onCommit(latest)，latest 在零位移时就是原封不动的 startViewStart，
       // 提交它本身就没有意义，只会把 null 意外坐实成一个具体值）。
-      if (moved) onCommit(latest)
-      else onDragEnd()
+      if (moved) {
+        onCommit(latest)
+        return
+      }
+      // 没过阈值也可能已经真的挪动过 DOM——onMove 里 paintFrame(latest) 不看
+      // moved，每次 mousemove 都会画（哪怕只有 1-2px）。不提交意味着 viewStart
+      // 不变，下一次渲染算出的 transform 字符串跟拖拽前逐字节相同：React 的
+      // style diff 比较的是"上一次渲染值 vs 这一次渲染值"，不是"当前 DOM
+      // 实际值"，判定"没变"就会跳过重新写 DOM，手动写进去的偏移不会被这个
+      // 机制纠正回去（20 秒轮询也救不了——viewStart 为 null 时 frameLeftPx
+      // 公式里的 now 项被减法抵消掉了，是个只取决于 span 的常量，poll 多少次
+      // 值都不变）。这里只在手势结束时补一次性的收回，不在 onMove 里按 moved
+      // 分支改写每帧的画法——那样会让阈值内的每次 mousemove 都重复写入同一个
+      // 值，多了没意义的开销，一次性收尾更省。
+      paintFrame(startViewStart)
+      onDragEnd()
     }
 
     cleanupRef.current = detach
