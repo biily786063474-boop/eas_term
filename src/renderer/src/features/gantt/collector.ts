@@ -16,6 +16,72 @@ const pending = new Map<string, { text: string; at: number }>()
 /** 每个 pty 当前那条还没结束的记录 id */
 const active = new Map<string, string>()
 
+/**
+ * 从 data[i]（必须是 ESC，0x1b）算起，这一段转义序列一共多长，用来整段跳过。
+ *
+ * 设计取舍：term.onData 的语义是「要写给 PTY 的字节」，不等于「用户敲的字符」——
+ * 除了键盘输入，鼠标追踪报告（SGR/X10/urxvt 等格式）、焦点事件报告、终端对 DA/DSR/CPR/
+ * OSC 颜色查询等的自动回复，都会从这里过。这些序列的具体形式五花八门，逐一枚举「认识哪些」
+ * 的做法（比如原来 CSI 正则的参数字符类漏了 `<`，SGR 鼠标序列 `ESC[<35;22;13M` 就被
+ * 漏判成普通文本）注定按下葫芦浮起瓢。所以反过来：不枚举"要跳过什么"，只要是 ESC 开头，
+ * 不管认不认识具体是哪种序列，一律整段跳过；只有明确不是转义序列的可打印字符才有资格
+ * 进入用户输入缓冲。跳过的具体字节数仍然要按 ECMA-48 的转义序列语法算准，算错了一样会
+ * 漏字节或吞错字节，不是「不管」而是「不用管每种序列的语义，但要管它有多长」。
+ *
+ * 四条分支覆盖 ECMA-48 定义的转义序列大类：
+ *   1. 字符串型（OSC ']' / DCS 'P' / SOS 'X' / PM '^' / APC '_'）：BEL 或 ST(ESC \) 收尾，
+ *      长度不固定（比如 OSC 颜色查询的自动回复）。
+ *   2. CSI（'['）：参数字节(0x30-0x3F)* 中间字节(0x20-0x2F)* 结束字节(0x40-0x7E)——ECMA-48 §5.4。
+ *      这一类涵盖方向键/Home/End、焦点报告 ESC[I/ESC[O、DA/DSR/CPR 自动回复，以及 SGR 和
+ *      urxvt 两种鼠标追踪格式（它们的坐标就是普通的数字+分号参数字节，跟其他 CSI 没有区别）。
+ *      唯独 X10 鼠标格式是例外——ESC[M 后固定跟 3 个原始字节（按钮/列/行各自 +32 编码，
+ *      值可以是任何字节，不是参数语法），常规扫描一碰到它们里偶然落在结束字节区间
+ *      （0x40-0x7E）的字节就会提前收尾，把剩下的原始字节露出去被当成文字处理，所以单独摘出来
+ *      长度写死 6。
+ *   3. SS2/SS3（'N'/'O'）：单一字符移位，协议定义上就是「介绍符后面恰好跟 1 个字符」，不需要
+ *      关心那个字符具体是什么——F1-F4、应用光标模式下的方向键/Home/End 都落在这一类
+ *      （xterm.js 实际只发 A-D/F/H/P-S 这几种，但没必要在这里再维护一份等价的枚举，
+ *      协议本身没有把可能的第三字节限定在这个集合里）。
+ *   4. 其余（主要是 Meta/Option 前缀，本仓库开着 macOptionIsMeta）：ESC + 紧跟的 1 个字符，
+ *      跟原来的处理方式一致——这一类没有可靠信源会产生比 2 字节更长的独立转义序列
+ *      （字符集切换这种带中间字节的形式是终端「输出方向」的功能，不会出现在这条「输入方向」
+ *      的 onData 里），保持最简单的假设，不为假想的输入自找过度解析的风险。
+ *
+ * 序列还没收全（比如恰好卡在 onData 的分片边界上）就把手上能读到的全吃掉，宁可丢一小段
+ * 转义残片，也不能放它当正文——跟原来处理「孤立 ESC」的取舍一致，只是把这个取舍从
+ * 「仅覆盖孤立 ESC」推广到「覆盖任何读不全的转义序列」。
+ */
+function escapeLength(data: string, i: number): number {
+  const c1 = data[i + 1]
+  if (c1 === undefined) return 1 // 孤立 ESC，下一字节还没到，先跳它自己
+
+  // 字符串型：OSC(]) DCS(P) SOS(X) PM(^) APC(_)，靠 BEL 或 ST(ESC \) 收尾
+  if (c1 === ']' || c1 === 'P' || c1 === 'X' || c1 === '^' || c1 === '_') {
+    for (let j = i + 2; j < data.length; j++) {
+      if (data[j] === '\x07') return j - i + 1 // BEL
+      if (data[j] === '\x1b' && data[j + 1] === '\\') return j - i + 2 // ST
+    }
+    return data.length - i // 这一片里没等到收尾字节，先把能读到的全吃掉
+  }
+
+  // CSI：见上面分支 2 的注释
+  if (c1 === '[') {
+    if (data[i + 2] === 'M') return Math.min(6, data.length - i) // X10 鼠标：固定 6 字节
+    let j = i + 2
+    while (j < data.length && data[j] >= '0' && data[j] <= '?') j++ // 参数字节
+    while (j < data.length && data[j] >= ' ' && data[j] <= '/') j++ // 中间字节
+    return j < data.length && data[j] >= '@' && data[j] <= '~' ? j - i + 1 : j - i
+  }
+
+  // SS2/SS3：见上面分支 3 的注释
+  if (c1 === 'N' || c1 === 'O') {
+    return data[i + 2] === undefined ? 2 : 3
+  }
+
+  // 其余：见上面分支 4 的注释
+  return 2
+}
+
 /** 输入框提交：整段文本直接就是一条候选 */
 export function noteSubmitted(ptyId: string, text: string): void {
   const t = text.trim()
@@ -35,39 +101,19 @@ export function feedKeystroke(ptyId: string, data: string): void {
   let i = 0
   while (i < data.length) {
     const ch = data[i]
-    // bracketed paste：取中间内容整段入缓冲
+    // bracketed paste：取中间内容整段入缓冲，原样保留——哪怕里面长得像转义序列或控制字符，
+    // 用户是真的粘贴了这些字节，不能再按下面那条「ESC 一律跳过」的规则处理一遍
     if (data.startsWith('\x1b[200~', i)) {
       const end = data.indexOf('\x1b[201~', i)
       buf += end < 0 ? data.slice(i + 6) : data.slice(i + 6, end)
       i = end < 0 ? data.length : end + 6
       continue
     }
-    // 其它转义序列整段跳过，别让残骸进缓冲
+    // 只有明确认得出是「用户敲的可打印字符」才有资格进缓冲——反过来，任何 ESC 开头的东西，
+    // 不管认不认识具体是哪种转义序列，一律整段跳过，不留残骸给下面的分支当成正文吃进去。
+    // 具体跳多少字节见 escapeLength 顶部的注释。
     if (ch === '\x1b') {
-      const rest = data.slice(i)
-      // CSI（方向键、Home/End…）：ESC [ ... 终止字节
-      const csi = /^\x1b\[[0-9;?]*[ -/]*[@-~]/.exec(rest)
-      if (csi) {
-        i += csi[0].length
-        continue
-      }
-      // SS3：ESC O <字符> —— F1–F4、应用光标模式下的方向键/Home/End。
-      // 终止字节收紧成 xterm.js 实际会发出的这几个（evaluateKeyboardEvent 里
-      // ESC+"O"+方向键 A-D、Home=H、End=F、F1-F4=P-S，没有别的），不用 [\s\S] 兜底——
-      // 否则「ESC O <空格>」这种真实按键之外的输入会被当成 SS3 把空格一起吞掉
-      const ss3 = /^\x1bO[ABCDFHPQRS]/.exec(rest)
-      if (ss3) {
-        i += ss3[0].length
-        continue
-      }
-      // Meta 前缀（Option/Alt 组合键，本仓库开着 macOptionIsMeta）：ESC + 紧跟的一个字符，
-      // 两个字节一起跳过 —— 否则那个字符会落进默认分支被当成普通按键
-      if (rest.length > 1) {
-        i += 2
-        continue
-      }
-      // 孤立的 ESC（比如单独按一下 Escape，字节还没到齐）：只跳它自己
-      i += 1
+      i += escapeLength(data, i)
       continue
     }
     if (ch === '\r' || ch === '\n') {
