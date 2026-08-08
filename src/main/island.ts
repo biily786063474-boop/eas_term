@@ -470,12 +470,25 @@ function verifyRealActivation(win: BrowserWindow, attempt = 0): void {
     execFile(
       '/usr/bin/osascript',
       ['-e', 'tell application "System Events" to get name of first application process whose frontmost is true'],
+      // 加超时：execFile 本身是异步的，不会卡住主进程，但一个永不返回的子进程
+      // 会一直占着（比如自动化权限弹窗卡在那儿没人应答）。1.5s 远够正常情况下
+      // 几十毫秒的 osascript 用，又不会让这次核实无限期悬着。
+      { timeout: 1500 },
       (err, stdout) => {
-        if (win.isDestroyed() || err) return // 查不到就算了，诊断本身不能变成新的故障源
-        const front = stdout.trim()
-        if (front === self) return // 真的切过来了，什么都不用做
+        if (win.isDestroyed()) return // 窗口没了，做什么都没意义
+        // 关键：err 不等于「不用管了」。err 可能来自上面的超时，也可能是自动化权限
+        // 被拒绝、System Events 没启动等任何原因——原因不重要，重要的是这种情况下
+        // 我们根本不知道真前台是不是自己，「查不到」和「查到了、确实不是自己」
+        // 对后面该不该走兜底这件事上没有区别，都不能当成「不用管了」。
+        // 核实不了时唯一安全的假设是「没切过来」：走跟下面同一条重试/兜底路径——
+        // 成本只是多做一次基本无害的 hide/show 或 Dock 提示，换来的是不会在真出问题
+        // （比如叠加上 osascript 失败）时又退回「静默失败、没有任何兜底」，
+        // 那正是 verifyRealActivation 存在的意义。
+        const front = err ? null : stdout.trim()
+        if (front === self) return // 核实成功，而且真的是自己：什么都不用做
         if (!app.isPackaged) {
-          console.log(`[island] 真实前台没切过来（仍是 ${front}），第 ${attempt + 1} 次尝试`)
+          const why = err ? `核实失败/超时（${err.killed ? '超时' : err.message}）` : `仍是 ${front}`
+          console.log(`[island] 真实前台没切过来（${why}），第 ${attempt + 1} 次尝试`)
         }
         if (attempt === 0) {
           // hide() 再 show() 走的是和单纯 focus() 不同的内部路径（实测过：单纯重复

@@ -17,6 +17,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 
 import type { GanttTask } from '../../../../shared/types'
+import { attachBlurGuard } from '../../blurGuard'
 
 /** 导航带画完整 7 天——正好是主进程 gantt.ts 的保留期（KEEP_MS），
  *  超出这个范围的数据本来就已经被清掉了，画多了也没有意义。 */
@@ -192,6 +193,7 @@ export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorPro
     // 记录这次拖拽会话里，是否曾经出现过超过阈值的位移——一旦发生过就不会再变回
     // false（哪怕后面鼠标又挪回原位），这样才能正确识别"拖出去又拖回来"也算真拖拽。
     let moved = false
+    let detachBlur = (): void => {}
 
     const paintFrame = (v: number): void => {
       if (!frameRef.current) return
@@ -218,7 +220,7 @@ export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorPro
     const detach = (): void => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', finish)
-      window.removeEventListener('blur', finish)
+      detachBlur()
       if (rafId !== null) cancelAnimationFrame(rafId)
       cleanupRef.current = null
     }
@@ -249,7 +251,9 @@ export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorPro
     cleanupRef.current = detach
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', finish)
-    window.addEventListener('blur', finish) // 拖拽中切走窗口焦点：当场收尾，别留悬空的拖拽状态
+    // 拖拽中真失焦：当场收尾，别留悬空的拖拽状态；hide/show 抖动引起的假 blur
+    // 由 attachBlurGuard 过滤掉（见该文件注释），不会误伤正在进行的拖拽
+    detachBlur = attachBlurGuard(finish)
   }
 
   // 点导航带空白处：直接跳过去，交给 CSS 过渡做平滑滑动（不是瞬移）。

@@ -17,6 +17,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
 import type { GanttTask } from '../../../../shared/types'
+import { attachBlurGuard } from '../../blurGuard'
 import {
   GanttNavigator,
   PANORAMA_MS,
@@ -248,6 +249,7 @@ export function GanttStage(): JSX.Element {
     let moved = false
     let latest = base.t0
     let rafId: number | null = null
+    let detachBlur = (): void => {}
 
     const onMove = (ev: MouseEvent): void => {
       const deltaPx = ev.clientX - startClientX
@@ -268,7 +270,7 @@ export function GanttStage(): JSX.Element {
     const detach = (): void => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', finish)
-      window.removeEventListener('blur', finish)
+      detachBlur()
       if (rafId !== null) cancelAnimationFrame(rafId)
       stageDragCleanupRef.current = null
     }
@@ -289,7 +291,9 @@ export function GanttStage(): JSX.Element {
     stageDragCleanupRef.current = detach
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', finish)
-    window.addEventListener('blur', finish)
+    // 拖拽中真失焦：当场收尾；hide/show 抖动引起的假 blur 由 attachBlurGuard
+    // 过滤掉（见 src/renderer/src/blurGuard.ts 注释），不会误伤正在进行的拖拽
+    detachBlur = attachBlurGuard(finish)
   }
 
   /** 切跨度：右边缘保持不动（用户通常关心的是"往前看多久"）。贴住 now 的情况
