@@ -8,6 +8,7 @@
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
 import { app, BrowserWindow, ipcMain, Menu, screen } from 'electron'
 import path from 'path'
+import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
 
 const EMPTY: IslandState = { running: [], notices: [] }
@@ -384,7 +385,7 @@ export function registerIslandHandlers(): void {
   })
 }
 
-/** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 —— 
+/** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 ——
  *  两处各写一遍的话，「跳转前要不要先激活 app」这种细节迟早只在一处是对的。 */
 function dispatchAction(action: IslandAction): void {
   const main = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w))
@@ -403,8 +404,68 @@ function dispatchAction(action: IslandAction): void {
     // 键盘焦点可能还留在原处（甚至留在灵动岛那个 panel 上），
     // 页面里第一次点击就成了「先把焦点收回来」，点什么都像没反应。
     main.webContents.focus()
+    // 上面这几行只改得动 Electron/Chromium 自己的记账，改不动 macOS 真正认定的
+    // 「当前活跃 app」——见 verifyRealActivation 的注释，这是实测确认过的落差，
+    // 不是猜测。放一个兜底核实，查不到时把 Dock 图标弹起来。
+    if (process.platform === 'darwin') verifyRealActivation(main)
   }
   main.webContents.send('island:action', action)
+}
+
+/** macOS 对「后台进程自己把自己切到前台」有一套不透明的节流，实测（osascript 反复触发
+ *  + 轮询系统真实前台 app 对照）确认过：哪怕完全绕开灵动岛、在主进程里直接连续调
+ *  `app.focus({steal:true})` + `win.focus()`，WindowServer 认定的「真正活跃的 app」
+ *  也经常压根没跟着换——而 Electron 自己的 `isFocused()`、渲染层的 `document.hasFocus()`
+ *  几乎立刻翻真。那一半只是本进程内部的 key-window 记账，不代表 OS 真的信了。
+ *
+ *  表现就是主窗口"看着"聚焦了（甚至可能已经盖在别的窗口上面），实际上鼠标键盘
+ *  还在喂给切走前台的那个 app——点画布、点输入框都像没反应，直到用户自己做一次
+ *  「显示所有窗口」之类的真实交互，把 WindowServer 的账强制对平。这正是 0.4.11 那两处
+ *  改动（acceptFirstMouse / webContents.focus）没能修好的原因：那两处改的都是
+ *  Electron/Chromium 自己的状态，而卡住的是更底层、这两处完全够不到的那一层。
+ *
+ *  Electron 自己的 API 问不出这个偏差（问它，只会用同一套失真的账回答你），
+ *  这里退而求其次问操作系统本身：一次 osascript 大概 30~80ms，只在「灵动岛/Dock 菜单
+ *  跳转」这个低频动作后触发一次，不是常驻轮询，开销可以接受。
+ *
+ *  **这不是一个"能保证修好"的补丁。** 实测过好几种候选（原地重复 focus、中间插延迟、
+ *  `hide()+show()`……），没有一种能把成功率顶到接近 100%——这看起来是 macOS 侧的限制，
+ *  不是这段代码单方面能彻底解决的事。两次尝试都没能确认真的切过来时，退而求其次弹一下
+ *  Dock 图标：用户自己点 Dock 图标这条路走的是系统认可的真实交互，不受这层限制影响，
+ *  实测里是唯一每次都成功的路径。 */
+function verifyRealActivation(win: BrowserWindow, attempt = 0): void {
+  setTimeout(() => {
+    if (win.isDestroyed()) return
+    // 拿自己进程的可执行文件名当基准，不用 app.getName()——那个读的是 package.json 的
+    // name 字段，dev 模式下是 "eas-term"，而 macOS/System Events 认的是运行中的
+    // .app 包名（dev 下是 "Electron"，打包后才是 "Eas-Term"），两者对不上会让这条
+    // 核实在 dev 模式下永远判定「没切过来」，白触发一堆不必要的兜底动作。
+    const self = path.basename(process.execPath)
+    execFile(
+      '/usr/bin/osascript',
+      ['-e', 'tell application "System Events" to get name of first application process whose frontmost is true'],
+      (err, stdout) => {
+        if (win.isDestroyed() || err) return // 查不到就算了，诊断本身不能变成新的故障源
+        const front = stdout.trim()
+        if (front === self) return // 真的切过来了，什么都不用做
+        if (!app.isPackaged) {
+          console.log(`[island] 真实前台没切过来（仍是 ${front}），第 ${attempt + 1} 次尝试`)
+        }
+        if (attempt === 0) {
+          // hide() 再 show() 走的是和单纯 focus() 不同的内部路径（实测过：单纯重复
+          // focus()/加延迟都没用，这个偶尔能成），成本很低，值得当第二次尝试搏一把。
+          win.hide()
+          win.show()
+          win.webContents.focus()
+          verifyRealActivation(win, attempt + 1)
+          return
+        }
+        // 两次都没能把真前台掰过来：弹 Dock 图标兜底。'critical' 会一直弹到用户自己
+        // 点过来（那一下是真实交互，保真切换）或应用真的拿到前台为止，不会无限打扰。
+        app.dock?.bounce('critical')
+      }
+    )
+  }, 200)
 }
 
 /** 粗粒度时长，只给人扫一眼。主进程这边不引渲染层那份 fmtDur —— 

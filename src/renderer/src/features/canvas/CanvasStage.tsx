@@ -398,10 +398,15 @@ export function CanvasStage(): JSX.Element {
       const onUp = (): void => {
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
+        window.removeEventListener('blur', onUp)
         el?.classList.remove('panning')
       }
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
+      // 拖拽中切走窗口焦点（灵动岛跳转、⌘Tab……）→ 当场收尾，别留悬空的拖拽状态。
+      // 不加这个的话 mouseup 永远等不到，onMove 会一直挂在 document 上——
+      // 同一个毛病 Gantt 那边（GanttStage/GanttNavigator）已经踩过一次并修了，见那两处注释。
+      window.addEventListener('blur', onUp)
     },
     [setViewport]
   )
@@ -552,11 +557,14 @@ export function CanvasStage(): JSX.Element {
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onUp)
       setBand(null)
       if (!moved && !shift) clearCanvasSel()
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
+    // 框选中途切走窗口焦点 → 当场收尾（同 beginPan 的注释：不加会留下悬空的 mousemove 监听）
+    window.addEventListener('blur', onUp)
   }
 
   // 空白按下：select 模式框选（空格+拖为平移）；图形工具模式绘制
@@ -586,6 +594,7 @@ export function CanvasStage(): JSX.Element {
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onUp)
       let { x, y, w, h } = d
       if (type === 'rect') {
         if (w < 0) {
@@ -607,6 +616,8 @@ export function CanvasStage(): JSX.Element {
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
+    // 画到一半切走窗口焦点 → 按当前尺寸收尾（等同松开鼠标），不留悬空监听
+    window.addEventListener('blur', onUp)
   }
 
   const startShapeDrag = (sh: CanvasShape, e: React.MouseEvent): void => {
@@ -623,9 +634,11 @@ export function CanvasStage(): JSX.Element {
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onUp)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
+    window.addEventListener('blur', onUp) // 拖拽中切走窗口焦点 → 当场收尾，不留悬空监听
   }
 
   /** 图形的右下角缩放。便签原来只能在新建时拖出大小，之后就定死了 ——
@@ -647,9 +660,11 @@ export function CanvasStage(): JSX.Element {
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onUp)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
+    window.addEventListener('blur', onUp) // 拖拽中切走窗口焦点 → 当场收尾，不留悬空监听
   }
 
   const startFrameDrag = (f: CanvasFrame, e: React.MouseEvent): void => {
@@ -666,9 +681,11 @@ export function CanvasStage(): JSX.Element {
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
+      window.removeEventListener('blur', onUp)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
+    window.addEventListener('blur', onUp) // 拖拽中切走窗口焦点 → 当场收尾，不留悬空监听
   }
 
   const setScale = (s2: number): void => {
