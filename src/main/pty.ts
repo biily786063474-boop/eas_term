@@ -589,3 +589,11 @@ export function anyPtyAlive(): boolean {
   }
   return false
 }
+
+/** 这个 ptyId 是不是本次运行里仍在追踪的终端（供 gantt.ts 判断"进行中"还是
+ *  "上次崩溃遗留"）。只暴露判断结果，不把 `ptys` 整个导出去。
+ *  app 重启后这张 map 从空开始，旧 id 天然查不到——上次崩溃留下的记录因此
+ *  会被正确判成 aborted，这正是想要的语义。 */
+export function isPtyAlive(id: string): boolean {
+  return ptys.has(id)
+}

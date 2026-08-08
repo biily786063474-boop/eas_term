@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 import type { GanttTask } from '../shared/types'
+import { isPtyAlive } from './pty'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'gantt.json')
 const KEEP_MS = 7 * 24 * 60 * 60 * 1000
@@ -55,10 +56,14 @@ function prune(list: GanttTask[]): GanttTask[] {
 
 export function registerGanttHandlers(): void {
   ipcMain.handle('gantt:list', () => {
-    // 没写完的：endAt 还是 null 的都是上次被强杀留下的（正常退出会走 finish）。
-    // 打 aborted 标记、endAt 留 null，让 UI 画成开放条。不编一个结束时间——
+    // endAt 还是 null 分两种情况，不能一概而论：
+    //   · ptyId 还在本次运行的活终端里 → 这次会话正在跑，是"进行中"，不能打 aborted
+    //   · ptyId 已经不在了 → 上次被强杀留下的（正常退出会走 finish），才该打标记
+    // 只对后者打 aborted、endAt 留 null，让 UI 画成开放条。不编一个结束时间——
     // 编出来的数字会被当成真的。
-    return load().map((t) => (t.endAt === null ? { ...t, aborted: true as const } : t))
+    return load().map((t) =>
+      t.endAt === null && !isPtyAlive(t.ptyId) ? { ...t, aborted: true as const } : t
+    )
   })
 
   ipcMain.handle('gantt:push', (_e, t: GanttTask) => {
