@@ -27,6 +27,10 @@ const BUCKET_MS = PANORAMA_MS / BUCKET_COUNT
 /** 哪怕一个桶里只有 1 个任务，也不能被当前时段里最忙的那个桶"稀释"到肉眼看不见——
  *  导航带首先要回答的是「这段时间有没有干过活」，全透明会被读成"没有"。 */
 const MIN_BUCKET_OPACITY = 0.22
+/** 取景框拖拽的最小生效位移（px）。低于这个值算「纯点击」——只是碰了一下、
+ *  没有真的拖动，不该把 viewStart 从"贴住 now"冻结成具体值。触控板点击经常
+ *  带 1-2px 的手抖漂移，阈值要能容忍这个，但 3px 已经足够跟"故意拖一下"分开。 */
+const DRAG_MOVE_THRESHOLD_PX = 3
 
 /** 取景框左边缘允许的范围：不能早于全景起点，也不能让右边缘超出全景终点。
  *  拖拽、点击跳转、切跨度三处收口都要过这一个函数，不然某一处忘了夹会漏出 7 天范围。 */
@@ -40,7 +44,7 @@ export function clampViewStart(
   return Math.min(Math.max(v, panoramaStart), maxStart)
 }
 
-const mmdd = (t: number): string => {
+export const mmdd = (t: number): string => {
   const d = new Date(t)
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
@@ -61,8 +65,13 @@ interface GanttNavigatorProps {
   /** 拖拽中，节流到每帧最多一次：把候选的取景框左边缘告诉主区，
    *  主区据此直接改 transform 做预览（不 setState） */
   onDragPreview: (candidateViewStart: number) => void
-  /** 拖拽松手 / 点导航带空白处跳转：这时才真正提交（setState），带过渡动画 */
+  /** 拖拽松手 / 点导航带空白处跳转，且确实发生了有效位移：这时才真正提交
+   *  （setState viewStart），带过渡动画 */
   onCommit: (viewStart: number) => void
+  /** mousedown 后没有发生有效位移就松手了（纯点击）：只需要把"正在拖拽"这个
+   *  状态收尾（恢复轮询、恢复 transition），不改 viewStart——否则贴住 now 的
+   *  视图会被一次无意义的点击静默冻结成固定区间。 */
+  onDragEnd: () => void
 }
 
 export function GanttNavigator({
@@ -73,7 +82,8 @@ export function GanttNavigator({
   dragging,
   onDragStart,
   onDragPreview,
-  onCommit
+  onCommit,
+  onDragEnd
 }: GanttNavigatorProps): JSX.Element {
   const trackRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -146,6 +156,9 @@ export function GanttNavigator({
 
     let latest = startViewStart
     let rafId: number | null = null
+    // 记录这次拖拽会话里，是否曾经出现过超过阈值的位移——一旦发生过就不会再变回
+    // false（哪怕后面鼠标又挪回原位），这样才能正确识别"拖出去又拖回来"也算真拖拽。
+    let moved = false
 
     const paintFrame = (v: number): void => {
       if (!frameRef.current) return
@@ -155,6 +168,7 @@ export function GanttNavigator({
 
     const onMove = (ev: MouseEvent): void => {
       const deltaPx = ev.clientX - startClientX
+      if (!moved && Math.abs(deltaPx) > DRAG_MOVE_THRESHOLD_PX) moved = true
       const deltaMs = (deltaPx / widthPx) * PANORAMA_MS
       latest = clampViewStart(startViewStart + deltaMs, panoramaStart, panoramaEnd, span)
       // 取景框本身：每次 mousemove 都直接改——「跟手无延迟」的关键，不等 rAF
@@ -177,7 +191,12 @@ export function GanttNavigator({
     }
     const finish = (): void => {
       detach()
-      onCommit(latest)
+      // 零位移（或位移没过阈值）的纯点击：不提交 viewStart，只收尾拖拽状态——
+      // 否则贴住 now 的视图会被一次无意义的点击静默冻结成固定区间（且这里如果
+      // 走 onCommit(latest)，latest 在零位移时就是原封不动的 startViewStart，
+      // 提交它本身就没有意义，只会把 null 意外坐实成一个具体值）。
+      if (moved) onCommit(latest)
+      else onDragEnd()
     }
 
     cleanupRef.current = detach

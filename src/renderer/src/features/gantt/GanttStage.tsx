@@ -11,7 +11,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
 import type { GanttTask } from '../../../../shared/types'
-import { GanttNavigator, PANORAMA_MS, clampViewStart } from './GanttNavigator'
+import { GanttNavigator, PANORAMA_MS, clampViewStart, mmdd } from './GanttNavigator'
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -30,10 +30,6 @@ const two = (n: number): string => String(n).padStart(2, '0')
 const hhmm = (t: number): string => {
   const d = new Date(t)
   return two(d.getHours()) + ':' + two(d.getMinutes())
-}
-const mmdd = (t: number): string => {
-  const d = new Date(t)
-  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 const dur = (ms: number): string => {
   const s = Math.round(ms / 1000)
@@ -172,9 +168,28 @@ export function GanttStage(): JSX.Element {
     for (const el of base.els) el.style.transform = `translateX(${deltaPx}px)`
   }
 
-  const commitView = (finalViewStart: number): void => {
+  /** 拖拽会话收尾的公共部分：清掉预览用的基准、退出"正在拖拽"状态（恢复
+   *  transition、恢复 20 秒轮询），并且清掉预览阶段可能留下的临时 transform。
+   *  commitView 那条路径本可以指望"t0 变了"去触发下面按 [t0] 的 useLayoutEffect
+   *  顺带清掉，但纯点击（位移没过阈值，直接走 endDrag、不改 viewStart）时 t0
+   *  不变，那个 effect 不会重新跑——而只要 mousemove 哪怕只触发过一次，
+   *  previewDrag 就已经在 .gantt-axis/.gantt-lanes 上写过 transform
+   *  （导航带 1px 位移换算到主区是好几 px，不是可以忽略的量），不主动清会在
+   *  主区留下一条松手后再也清不掉的偏移。这里直接清一次，比等 t0 变更稳妥；
+   *  commitView 路径重复清一次是幂等操作，不会有副作用。 */
+  const endDrag = (): void => {
     dragBaseRef.current = null
     setDragging(false)
+    const root = plotRef.current
+    if (root) {
+      root.querySelectorAll<HTMLElement>('.gantt-axis, .gantt-lanes').forEach((el) => {
+        el.style.transform = ''
+      })
+    }
+  }
+
+  const commitView = (finalViewStart: number): void => {
+    endDrag()
     setViewStart(clampViewStart(finalViewStart, panoramaStart, panoramaEnd, span))
   }
 
@@ -296,6 +311,7 @@ export function GanttStage(): JSX.Element {
         onDragStart={beginDrag}
         onDragPreview={previewDrag}
         onCommit={commitView}
+        onDragEnd={endDrag}
       />
       {hover && (
         <div className="gantt-pop" style={{ left: hover.x, top: hover.y + 8 }}>
