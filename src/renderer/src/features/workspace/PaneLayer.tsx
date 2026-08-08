@@ -204,13 +204,25 @@ export function PaneLayer(): JSX.Element {
       if (!raf) raf = requestAnimationFrame(measure)
     }
     measure()
+    // **观察对象是槽位本身，不是「猜出来的容器」。** 之前这里绑的是 `.board`，
+    // 而全屏时 `.board` 整棵被换成 `.board-fs`，`.board` 是 null —— 观察器等于挂空，
+    // 剩下唯一的机会就是上面那次同步 measure()，量准量不准全靠运气（今天靠的运气是
+    // 「.board-fs-slot 没有 CSS 过渡」这个隐性前提，样式一改这条就断）。
+    // 总览态一个 `.board-slot` 都没有、全屏态最多一个（.board-fs-slot），
+    // 不用分总览/全屏两条路径去猜该盯哪个容器——直接把当前真实存在的槽位
+    // 挨个 observe。ResizeObserver 的规范保证：**开始观察的那一刻必然回调一次**
+    // （哪怕尺寸没变），所以哪怕同步 measure() 那次没量对，这里也会再补一次机会；
+    // 之后槽位尺寸真的变了（换终端、header 换行、容器被别的东西挤了）也一样会触发。
     const ro = new ResizeObserver(schedule)
+    document.querySelectorAll<HTMLElement>('.board-slot').forEach((el) => ro.observe(el))
     const board = document.querySelector('.board')
-    if (board) ro.observe(board)
     // 捕获阶段收所有滚动：列各自有滚动条，逐个绑迟早漏掉新加的那一列
     document.addEventListener('scroll', schedule, true)
     window.addEventListener('resize', schedule)
-    // 卡片增删、换显示的终端（data-leaf 变了）都要重测
+    // 卡片增删、换显示的终端（data-leaf 变了）都要重测。这个仍然只在总览态绑
+    // （全屏态就一个空槽位，没有子节点变化可看，`data-leaf` 变化已经在 boardFull
+    // 依赖里处理——见下面大段注释；MutationObserver 不需要，也不该学 ResizeObserver
+    // 那样改成盯槽位本身，槽位是空 div，没有 attributes/children 可供它捕捉）
     const mo = new MutationObserver(schedule)
     if (board) mo.observe(board, { childList: true, subtree: true, attributes: true })
     return () => {
@@ -222,17 +234,24 @@ export function PaneLayer(): JSX.Element {
     }
     // canvas.frames 变了要重测：节点增删会改上面那段 frameId/nodeId 的查找结果。
     //
-    // **boardFull 必须在依赖里**，否则看板全屏点开一次之后就再也打不开了：
-    // 上面两个观察器绑的是**进入这个 effect 那一刻**的 `.board` 元素，而全屏时
-    // BoardStage 走的是 `if (fullOf) return <div className="board-fs">` —— `.board`
-    // 整棵被卸载，退出全屏时 React 建的是一个**新**元素。依赖不含全屏状态的话
-    // effect 不重跑，观察器就一直盯着那个已经不在文档里的旧节点，schedule 再也不触发，
-    // measure 不跑 → boardByLeaf 空 → `hidden={!bp}` 把终端整个藏起来。
-    // 症状是「看板里点开终端一片空白，连控制条和输入框都没有」，而且是**间歇性**的：
-    // 切到看板后第一次通常正常（卸载那一下恰好还能触发一次），之后全废，
-    // 直到切走再切回看板（viewMode 变化让 effect 重跑）才恢复 ——
-    // 所以现象是「只有几个打不开」，很容易误以为是某几个终端自己的问题。
-    // 实测：加之前点 12 次空 11 次。
+    // **boardFull 必须在依赖里**——原因不是「不然全屏进不去」（下面 ResizeObserver
+    // 那道保险已经能兜住尺寸），而是「不然全屏根本不会去量」：`.board-slot` 元素
+    // 是随 `fullOf`（=boardFull 是否非空）切出来的全新 DOM 节点，依赖不含 boardFull
+    // 的话，进/出全屏这两个时间点 effect 都不会重新执行，`document.querySelectorAll(
+    // '.board-slot')` 就不会在“正确的时机”被重新跑一遍去发现这个新节点、重新
+    // observe 它。ResizeObserver 保底的是「量的时机对了、量的准不准」，
+    // boardFull 保底的是「有没有去量」——两者缺一都会导致 `hidden={!bp}` 把
+    // 整个 pane（含 agent 控制条、输入框）藏起来，且现象都是间歇性的、容易
+    // 误以为是某几个终端自己的问题。
+    //
+    // 历史实测：79c81b4 之前（boardFull 不在依赖里）12 次点开 11 次空白；
+    // 加了 boardFull 之后单靠这一条同步 measure() 12/12（本轮沿用同样方法复测，
+    // 另外把 GanttStage.jump() 这条后来才加的入口也纳入，30+ 次同样 0 空白，
+    // 见 task-8-report.md）。这次追加的 ResizeObserver 不是因为找到了新的复现路径，
+    // 是因为「同步 measure() 只有一次机会、量不准没有第二次」本身就是脆弱设计——
+    // 今天不出问题只是因为 .board-fs-slot 恰好没有任何尺寸过渡，样式一改就会
+    // 无声无息地把这条路又走出一遍。加上之后即使 CSS 变了、layout 慢了一拍，
+    // 观察器自己会在下一帧补上正确的尺寸，不再要求「唯一一次同步测量必须蒙对」。
   }, [viewMode, canvas.frames, boardFull])
 
   // 所有 tab 的所有 leaf，按 leafId 稳定排序 → React 子元素顺序稳定，绝不重挂载
