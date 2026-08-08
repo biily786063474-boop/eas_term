@@ -14,7 +14,7 @@
 //
 // 密度桶的计算只依赖全量 tasks + now，跟取景框拖到哪儿完全无关——所以拖拽本身
 // 不会触发这坨重算，真正贵的东西压根不在这条链路上。
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 
 import type { GanttTask } from '../../../../shared/types'
 
@@ -29,8 +29,10 @@ const BUCKET_MS = PANORAMA_MS / BUCKET_COUNT
 const MIN_BUCKET_OPACITY = 0.22
 /** 取景框拖拽的最小生效位移（px）。低于这个值算「纯点击」——只是碰了一下、
  *  没有真的拖动，不该把 viewStart 从"贴住 now"冻结成具体值。触控板点击经常
- *  带 1-2px 的手抖漂移，阈值要能容忍这个，但 3px 已经足够跟"故意拖一下"分开。 */
-const DRAG_MOVE_THRESHOLD_PX = 3
+ *  带 1-2px 的手抖漂移，阈值要能容忍这个，但 3px 已经足够跟"故意拖一下"分开。
+ *  导出给 GanttStage 用——主区空白处拖拽（Task 7 新增）复用同一个阈值，两个
+ *  入口"多大位移才算真拖拽"的判定标准必须一致，不能各写各的数字。 */
+export const DRAG_MOVE_THRESHOLD_PX = 3
 
 /** 取景框左边缘允许的范围：不能早于全景起点，也不能让右边缘超出全景终点。
  *  拖拽、点击跳转、切跨度三处收口都要过这一个函数，不然某一处忘了夹会漏出 7 天范围。 */
@@ -74,17 +76,26 @@ interface GanttNavigatorProps {
   onDragEnd: () => void
 }
 
-export function GanttNavigator({
-  tasks,
-  now,
-  span,
-  viewStart,
-  dragging,
-  onDragStart,
-  onDragPreview,
-  onCommit,
-  onDragEnd
-}: GanttNavigatorProps): JSX.Element {
+/** 主区空白处拖拽（Task 7 新增，见 GanttStage.tsx 的 handleStageMouseDown）需要
+ *  在拖拽过程中把取景框同步挪过去、松手未过阈值时把取景框收回——这两件事都要
+ *  绕开 React state（否则违反"拖拽中不 setState"这条硬要求），所以用命令式 ref
+ *  暴露给 GanttStage，不是再加一堆 props。取景框拖自己（handleFrameMouseDown）
+ *  不用这层——那条路径本来就直接改自己的 DOM，不需要经过 ref 出去一圈再回来。 */
+export interface GanttNavigatorHandle {
+  /** 把取景框直接挪到 candidateViewStart 对应的位置（内部会 clamp），
+   *  给主区拖拽预览用，每帧最多调一次（GanttStage 那边已经 rAF 节流过）。 */
+  previewFrame: (candidateViewStart: number) => void
+  /** 把取景框收回到当前 viewStart 对应的位置——主区拖拽松手但未过阈值
+   *  （纯点击/手抖）时调用，对称于主区自己 endDrag() 里清理
+   *  .gantt-axis/.gantt-lanes 残留 transform 那一步。 */
+  resetFrame: () => void
+}
+
+export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorProps>(
+  function GanttNavigator(
+    { tasks, now, span, viewStart, dragging, onDragStart, onDragPreview, onCommit, onDragEnd },
+    ref
+  ): JSX.Element {
   const trackRef = useRef<HTMLDivElement>(null)
   const frameRef = useRef<HTMLDivElement>(null)
   const [trackWidth, setTrackWidth] = useState(0)
@@ -143,6 +154,28 @@ export function GanttNavigator({
   const clampedStart = clampViewStart(effectiveViewStart, panoramaStart, panoramaEnd, span)
   const frameLeftPx = trackWidth > 0 ? ((clampedStart - panoramaStart) / PANORAMA_MS) * trackWidth : 0
   const frameWidthPct = (span / PANORAMA_MS) * 100
+
+  /** 主区拖拽路径专用：把取景框直接挪到 candidateViewStart 对应位置。故意跟
+   *  handleFrameMouseDown 内部那个同名逻辑（局部 paintFrame，闭包着 mousedown
+   *  那一刻快照的 widthPx/startViewStart）分开写、不揉成一个共用函数——后者是
+   *  已经过三轮真机验证的取景框自身拖拽逻辑，不想为了 DRY 去动它、引入需要重新
+   *  跑一遍那套验证矩阵的风险。这里用的是"当前渲染"的 trackWidth/panoramaStart
+   *  （不是快照），二者在同一次拖拽手势内数值上等价（拖拽期间 20 秒轮询整个
+   *  跳过、now 被冻结），但对"拖拽途中窗口被 resize"这种边缘情况更稳健。 */
+  const paintFrameFromStage = (candidateViewStart: number): void => {
+    if (!frameRef.current || trackWidth <= 0) return
+    const clamped = clampViewStart(candidateViewStart, panoramaStart, panoramaEnd, span)
+    frameRef.current.style.transform = `translateX(${((clamped - panoramaStart) / PANORAMA_MS) * trackWidth}px)`
+  }
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      previewFrame: paintFrameFromStage,
+      resetFrame: () => paintFrameFromStage(clampedStart)
+    }),
+    [trackWidth, panoramaStart, panoramaEnd, span, clampedStart]
+  )
 
   const handleFrameMouseDown = (e: React.MouseEvent): void => {
     if (e.button !== 0) return // 只处理左键拖拽
@@ -272,4 +305,7 @@ export function GanttNavigator({
       </div>
     </div>
   )
-}
+  }
+)
+
+GanttNavigator.displayName = 'GanttNavigator'

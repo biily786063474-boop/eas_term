@@ -7,11 +7,24 @@
 // 7 天全景（对齐主进程 gantt.ts 的保留期），拖取景框选看哪一段。「丝滑」那几条
 // 硬要求（transform 不改 left/width、拖拽中不 setState、取景框跟手无延迟等）
 // 的实现细节写在 GanttNavigator.tsx 顶部，这里只用它暴露的几个回调。
+//
+// 双向绑定（Task 7 新增）：主区空白处（不是条上）也能直接拖着平移，取景框会
+// 实时同步跟着动——两个入口共用同一个 viewStart，beginDrag/previewDrag/endDrag/
+// commitView 这几个函数两边都在用，没有另起一套。取景框侧的同步走命令式 ref
+// （GanttNavigator 暴露的 previewFrame/resetFrame），理由和取景框自己拖自己时
+// 直接改 DOM 是同一个——拖拽中不能 setState。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
 import type { GanttTask } from '../../../../shared/types'
-import { GanttNavigator, PANORAMA_MS, clampViewStart, mmdd } from './GanttNavigator'
+import {
+  GanttNavigator,
+  PANORAMA_MS,
+  DRAG_MOVE_THRESHOLD_PX,
+  clampViewStart,
+  mmdd,
+  type GanttNavigatorHandle
+} from './GanttNavigator'
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -70,6 +83,14 @@ export function GanttStage(): JSX.Element {
   // 直接对着里面匹配到的节点改 transform，不碰 React state——见 previewDrag。
   const plotRef = useRef<HTMLDivElement>(null)
   const dragBaseRef = useRef<{ t0: number; widthPx: number; els: HTMLElement[] } | null>(null)
+  // 导航带的命令式句柄（Task 7 新增）：主区拖拽时用它同步挪取景框、复位取景框，
+  // 全程绕开 React state——细节见 GanttNavigator.tsx 里 GanttNavigatorHandle 的注释。
+  const navRef = useRef<GanttNavigatorHandle>(null)
+  /** 主区拖拽会话的收尾函数，供组件卸载时兜底摘监听器——跟 GanttNavigator 里同名
+   *  机制对称（万一拖拽中途整个视图被切走，不能让 window 上残留的监听器继续摸一个
+   *  已经卸载的组件）。 */
+  const stageDragCleanupRef = useRef<(() => void) | null>(null)
+  useEffect(() => () => stageDragCleanupRef.current?.(), [])
 
   // 进来读一次，之后每 20 秒刷一次（有任务在跑时右端要跟着长）。
   // 拖拽中跳过这次刷新：既不给"拖拽中不 setState"的规则开口子，也避免轮询数据
@@ -193,6 +214,84 @@ export function GanttStage(): JSX.Element {
     setViewStart(clampViewStart(finalViewStart, panoramaStart, panoramaEnd, span))
   }
 
+  /** 主区空白处拖拽平移（Task 7 新增）：跟拖导航带取景框是同一个 viewStart、
+   *  双向绑定的另一个入口，全程复用 beginDrag/previewDrag/endDrag/commitView——
+   *  这几个函数已经把"缓存基准 t0/宽度""按候选 viewStart 换算 transform""收尾复位"
+   *  "提交"这几件事做完了，这里只需要把"鼠标位移"换算成"候选 viewStart"接进去，
+   *  再多一步把结果同步给取景框。
+   *
+   *  方向感照"拖地图"来，不是"拖滚动条"：往右拖 = 内容跟手往右走 = 左边露出更早
+   *  之前卷进来的时间，所以候选 viewStart 要往回退（减号）。这个换算刚好是
+   *  previewDrag 内部换算的逆运算——把这里算出的 latest 喂回 previewDrag，两次
+   *  换算首尾相消，主区在整个拖拽过程中会跟鼠标位移严格 1:1（可以代数验证：
+   *  previewDrag 的 deltaPx = -(candidateViewStart - base.t0)/span*base.widthPx，
+   *  代入这里的 candidateViewStart = base.t0 - (deltaPx/base.widthPx)*span，
+   *  化简后 deltaPx 原样冒出来），不是"大致跟手"，是精确跟手。
+   *
+   *  是否在 .gantt-bar 上按下决定要不要启动这次拖拽：选了"不启动"而不是"启动但
+   *  过阈值才吃掉点击"——完全不用碰 .gantt-bar 自己的 onClick/hover，零风险；
+   *  空白处（坐标轴一整条、行与行之间、没被条盖住的区域、空状态提示）本来就有
+   *  足够大的可拖拽面积，不需要靠"抢"条上的按下事件换更大的命中区。这样"点条
+   *  跳回终端"完全不受影响，因为拖拽逻辑压根不会在条上启动。 */
+  const handleStageMouseDown = (e: React.MouseEvent): void => {
+    if (e.button !== 0) return // 只处理左键拖拽
+    if ((e.target as HTMLElement).closest('.gantt-bar')) return // 落在条上：交给条自己的 onClick
+    e.preventDefault() // 防止拖拽时选中项目名文字
+    beginDrag()
+    const base = dragBaseRef.current
+    if (!base || base.widthPx <= 0) {
+      endDrag() // 量不到宽度（比如这一帧还没铺满）：撤回刚设的 dragging，安全放弃
+      return
+    }
+
+    const startClientX = e.clientX
+    let moved = false
+    let latest = base.t0
+    let rafId: number | null = null
+
+    const onMove = (ev: MouseEvent): void => {
+      const deltaPx = ev.clientX - startClientX
+      if (!moved && Math.abs(deltaPx) > DRAG_MOVE_THRESHOLD_PX) moved = true
+      const deltaMs = -(deltaPx / base.widthPx) * span
+      latest = clampViewStart(base.t0 + deltaMs, panoramaStart, panoramaEnd, span)
+      // 被拖的这一侧（主区自己）跟手无延迟：不等 rAF，每次 mousemove 直接写。
+      previewDrag(latest)
+      // 另一侧（导航带取景框）rAF 节流到每帧最多一次。
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null
+          navRef.current?.previewFrame(latest)
+        })
+      }
+    }
+
+    const detach = (): void => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', finish)
+      window.removeEventListener('blur', finish)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      stageDragCleanupRef.current = null
+    }
+    const finish = (): void => {
+      detach()
+      if (moved) {
+        commitView(latest)
+        return
+      }
+      // 未过阈值：两侧都要显式复位，不能指望"没变就自动纠正"——viewStart 没变时
+      // 两次渲染算出的 transform 字符串逐字节相同，React 的 style diff 判定"没变"
+      // 会跳过重新写 DOM，手动写的偏移不会被这个机制自动清掉（这条坑在取景框
+      // 拖自己那条路径上踩过一次，见 GanttNavigator.tsx 里 finish() 的注释）。
+      endDrag()
+      navRef.current?.resetFrame()
+    }
+
+    stageDragCleanupRef.current = detach
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', finish)
+    window.addEventListener('blur', finish)
+  }
+
   /** 切跨度：右边缘保持不动（用户通常关心的是"往前看多久"）。贴住 now 的情况
    *  天然满足（t1 = now，跟 span 无关）；固定在历史某点时，要把 viewStart
    *  往回退，抵消 span 变化对 t1 的影响。 */
@@ -226,7 +325,10 @@ export function GanttStage(): JSX.Element {
           ))}
         </div>
       </div>
-      <div className="gantt-scroll">
+      <div
+        className={`gantt-scroll${dragging ? ' dragging' : ''}`}
+        onMouseDown={handleStageMouseDown}
+      >
         <div className="gantt-grid" ref={plotRef}>
           <div className="gantt-axis">
             {ticks.map((t) => (
@@ -303,6 +405,7 @@ export function GanttStage(): JSX.Element {
         </div>
       </div>
       <GanttNavigator
+        ref={navRef}
         tasks={tasks}
         now={now}
         span={span}

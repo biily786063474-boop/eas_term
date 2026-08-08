@@ -67,6 +67,23 @@
      内容看起来整个消失——拖拽预览期间画面像是"炸了"。改 hidden 后超出的部分
      单纯被裁掉，取景框预览的物理意义本来就是"这段先不用管，松手会重排成对的"。 */
   overflow-x: hidden;
+  /* 主区空白处可以直接拖着平移（Task 7 新增），跟拖导航带取景框是同一个手势
+     语言——grab/grabbing 明示"这里能拖"。.gantt-bar 自己有 cursor:pointer，
+     子元素的显式声明会盖过这里继承下来的 grab，条上仍然显示"可点击"而不是
+     "可拖拽"，两者不冲突。 */
+  cursor: grab;
+}
+
+.gantt-scroll.dragging {
+  cursor: grabbing;
+}
+
+/* 拖拽中条不接鼠标事件：内容整体被 transform 平移时，条会在静止的光标下面
+   "滑过去"，不关掉 pointer-events 会导致 hover 浮层随内容滑动乱闪一下。
+   拖拽用 window 级别的 mousemove/mouseup 监听收尾，不依赖条自身的鼠标事件，
+   所以关掉它不影响拖拽本身的判定。 */
+.gantt-scroll.dragging .gantt-bar {
+  pointer-events: none;
 }
 
 .gantt-grid {
