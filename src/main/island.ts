@@ -6,7 +6,7 @@
 //
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
-import { app, BrowserWindow, ipcMain, Menu, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
@@ -385,6 +385,19 @@ export function registerIslandHandlers(): void {
   })
 }
 
+/** 自己这个 .app bundle 的路径，缓存一次即可（运行期间不会变）。
+ *  从可执行文件路径往上倒三层：Foo.app/Contents/MacOS/Foo → 去掉 `MacOS/Foo`
+ *  两层文件名、再去掉 `Contents` 这层，剩下的就是 `Foo.app`。dev 模式下算出来的是
+ *  node_modules 里那份 Electron.app，同样成立——这个函数不关心"自己是谁"，
+ *  只关心"当前这个可执行文件属于哪个 .app 包"，两种模式下结构一样。 */
+let cachedSelfBundlePath: string | null = null
+function selfAppBundlePath(): string {
+  if (!cachedSelfBundlePath) {
+    cachedSelfBundlePath = path.dirname(path.dirname(path.dirname(app.getPath('exe'))))
+  }
+  return cachedSelfBundlePath
+}
+
 /** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 ——
  *  两处各写一遍的话，「跳转前要不要先激活 app」这种细节迟早只在一处是对的。 */
 function dispatchAction(action: IslandAction): void {
@@ -397,7 +410,20 @@ function dispatchAction(action: IslandAction): void {
     // 用户屏幕上什么都不会发生。
     if (main.isMinimized()) main.restore()
     if (!main.isVisible()) main.show()
-    app.focus({ steal: true })
+    if (process.platform === 'darwin') {
+      // 不再靠 app.focus({steal:true})——实测（task-10 报告）这条「进程自己请求激活
+      // 自己」的路径在这台机器/这版 macOS 上真实前台切换成功率是 0%（0/10，见报告）。
+      // 改用 shell.openPath() 打开自己的 .app bundle：这条走的是 LaunchServices/
+      // NSWorkspace 的外部激活入口，不算「自己请求激活自己」，实测成功率 90%
+      // （9/10，60~72ms 内完成，见 task-10-report.md）。因为这个 app 已经在跑，
+      // LaunchServices 只会把已有实例带到前台，不会真的起第二个进程——
+      // 即便环境异常真的想起第二个，也会被 requestSingleInstanceLock 挡在最前面。
+      void shell.openPath(selfAppBundlePath())
+    } else {
+      // Windows/Linux 没有这个问题（这次排查明确是 macOS WindowServer 特有的行为），
+      // 维持原逻辑，不在没证据的平台上动它。
+      app.focus({ steal: true })
+    }
     main.moveTop()
     main.focus()
     // **窗口 focus 了，网页内容不一定 focus。** 只做 win.focus() 的话，
