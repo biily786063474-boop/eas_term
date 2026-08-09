@@ -220,6 +220,17 @@
 
 .gantt-pop {
   position: fixed;
+  /* 布局锚点钉死在 (0,0)，可视位置完全交给 GanttStage.tsx 算出的
+     transform: translate()——原因见那边 useLayoutEffect 前的大段注释，这里只
+     记结论：这个元素只有 max-width 没有 min-width，宽度靠 shrink-to-fit 撑开；
+     position:fixed 只给 left 不给 right 时，浏览器算这个宽度会参照"从 left 到
+     视口右边缘还剩多少空间"。如果 left 直接设成"贴着鼠标/条"算出来的值，条在
+     窗口右侧时 left 离右边缘很近，剩余空间被挤没，量出来、画出来的宽度都会被
+     压扁到只剩几个字符一行（用户报过的"文字竖排"）。钉在 left:0/top:0 后，
+     从这往右永远有整个视口宽度可用，压扁不会发生；transform 只影响绘制，不
+     参与宽度的布局计算，摆到哪儿都不会反过来污染尺寸测量。 */
+  left: 0;
+  top: 0;
   z-index: 3400;
   max-width: 380px;
   padding: 9px 11px;

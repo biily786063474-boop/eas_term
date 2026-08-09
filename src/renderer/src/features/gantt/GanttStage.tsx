@@ -39,6 +39,10 @@ const SPAN_OPTIONS = [
 const MIN_BAR_PX = 3
 /** 条内放得下 10 个字大约需要这么宽；不够就把标签移到条右边 */
 const LABEL_INSIDE_MIN_PX = 86
+/** hover 浮层跟条的间距、跟视口边缘的最小间距——数值沿用 useMenuAnchor
+ *  （CanvasContextMenu.tsx）的 8px，两处视觉语言保持一致 */
+const POP_GAP = 8
+const POP_MARGIN = 8
 
 const two = (n: number): string => String(n).padStart(2, '0')
 const hhmm = (t: number): string => {
@@ -70,7 +74,20 @@ export function GanttStage(): JSX.Element {
   const setBoardFullscreen = useStore((s) => s.setBoardFullscreen)
   const [tasks, setTasks] = useState<GanttTask[]>([])
   const [now, setNow] = useState(() => Date.now())
-  const [hover, setHover] = useState<{ t: GanttTask; x: number; y: number } | null>(null)
+  /** top/bottom 是条的 getBoundingClientRect()，不是单个 y——下边缘要判断
+   *  "翻到条上方"，得同时知道条的上下沿，光一个点不够表达翻转。 */
+  const [hover, setHover] = useState<{
+    t: GanttTask
+    x: number
+    top: number
+    bottom: number
+  } | null>(null)
+  // 浮层实测尺寸后夹回可视区、必要时翻到条上方；量出真实位置前用 visibility
+  // 盖住，避免"先在错误位置画一帧再跳过去"。popRef 量尺寸，popPos 是算出来的
+  // 最终位置（null = 还没量完）。这套技巧和 useMenuAnchor 是同一个配方，但没有
+  // 直接调那个 hook——原因见下面 useLayoutEffect 前的注释。
+  const popRef = useRef<HTMLDivElement>(null)
+  const [popPos, setPopPos] = useState<{ x: number; y: number } | null>(null)
 
   /** 取景框左边缘（毫秒时间戳）。null = 贴住右端、跟随 now；一旦拖过就固定成
    *  具体值，不再自动跟随——否则往回看历史时窗口会自己漂走。 */
@@ -168,6 +185,51 @@ export function GanttStage(): JSX.Element {
       el.style.transform = ''
     })
   }, [t0])
+
+  // hover 浮层定位：为什么没有直接复用 useMenuAnchor（CanvasContextMenu.tsx），
+  // 而是照它的做法另写一份——三个原因，前两个是行为不匹配，第三个是会让"表面复用
+  // 成功、实际没修好 bug"：
+  //
+  // 1. useMenuAnchor 的"hidden 直到测量完"要生效，前提是每次打开都全新挂载
+  //    （pos 状态从 null 起步——ModeSwitch.tsx 里 ModeMenu 特意拆成独立子组件，
+  //    就是为了保证这一点，见那个文件里的注释）。这个浮层不满足这个前提：
+  //    GanttStage 在整个甘特图视图的生命周期里只挂载一次，鼠标在相邻两根条
+  //    之间移动时 hover 直接从任务 A 的数据变成任务 B 的数据（不经过 null），
+  //    .gantt-pop 这个 DOM 节点全程不 unmount。如果把 useMenuAnchor 原样挂在
+  //    这一级调用，它内部的 pos 状态会跨多次 hover 一直复用，不是每次都能从
+  //    "位置未知"重新起步。
+  // 2. useMenuAnchor 只夹回单点 (x, y)，没有"翻转"的概念——夹到视口边缘附近
+  //    即可，不关心离锚点多远。下边缘这里要求的是翻到条的上方（贴着条），翻转
+  //    需要同时知道条的 top 和 bottom，单点签名表达不出来。
+  // 3. 最关键的一条：.gantt-pop 只设了 max-width，没有 min-width——宽度是内容
+  //    撑开的（shrink-to-fit）。position:fixed 只给 left、不给 right 时，浏览器
+  //    算 shrink-to-fit 宽度会参照"从 left 到视口右边缘还剩多少空间"；条在窗口
+  //    右侧时鼠标离右边缘很近，这份"剩余空间"被挤到只剩几十像素，此时量出来的
+  //    offsetWidth 就是被压扁之后的假宽度（用户截图里文字竖排、每行 3-5 个字，
+  //    根源就是这个——见下方实测记录）。如果照搬 useMenuAnchor"就地量、算完再
+  //    夹"的顺序，量出来的假宽度会让夹回算法误以为"反正已经很窄，不用怎么挪"，
+  //    浮层还是被压扁在原地。解法是让 .gantt-pop 在布局上永远钉在 left:0/top:0
+  //    （见 gantt.css 里的注释——那里离右边缘最远，shrink-to-fit 不会被挤压，
+  //    量出来的永远是内容真实想要的尺寸），可视位置全部交给 transform:
+  //    translate() 表达——transform 只影响绘制、不参与宽度的布局计算，"量多宽"
+  //    和"摆哪儿"两件事因此互不干扰。
+  useLayoutEffect(() => {
+    if (!hover) {
+      setPopPos(null) // 下次 hover 出现前不留旧坐标，重新从"隐藏"起步
+      return
+    }
+    const el = popRef.current
+    if (!el) return
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    // 优先展开到条下方；下方放不下就翻到条上方，让浮层始终贴着条，而不是飘去
+    // 屏幕上一个"不出界但离条很远"的地方。两边都放不下（极端矮窗口）时兜底夹回
+    // 视口内，不让浮层彻底飞出屏幕。
+    const fitsBelow = hover.bottom + POP_GAP + h <= window.innerHeight - POP_MARGIN
+    const y = fitsBelow ? hover.bottom + POP_GAP : Math.max(POP_MARGIN, hover.top - POP_GAP - h)
+    const x = Math.max(POP_MARGIN, Math.min(hover.x, window.innerWidth - w - POP_MARGIN))
+    setPopPos({ x, y })
+  }, [hover])
 
   const beginDrag = (): void => {
     const root = plotRef.current
@@ -372,13 +434,10 @@ export function GanttStage(): JSX.Element {
                             key={t.id}
                             className={`gantt-bar ${state}${wide ? ' wide' : ''}`}
                             style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
-                            onMouseEnter={(ev) =>
-                              setHover({
-                                t,
-                                x: ev.clientX,
-                                y: ev.currentTarget.getBoundingClientRect().bottom
-                              })
-                            }
+                            onMouseEnter={(ev) => {
+                              const r = ev.currentTarget.getBoundingClientRect()
+                              setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
+                            }}
                             onMouseLeave={() => setHover(null)}
                             onClick={() => jump(t)}
                           >
@@ -421,7 +480,14 @@ export function GanttStage(): JSX.Element {
         onDragEnd={endDrag}
       />
       {hover && (
-        <div className="gantt-pop" style={{ left: hover.x, top: hover.y + 8 }}>
+        <div
+          ref={popRef}
+          className="gantt-pop"
+          style={{
+            transform: popPos ? `translate(${popPos.x}px, ${popPos.y}px)` : undefined,
+            visibility: popPos ? 'visible' : 'hidden'
+          }}
+        >
           <div className="gantt-pop-time">
             {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
             {hover.t.endAt && <span className="gantt-pop-dur">{dur(hover.t.endAt - hover.t.startAt)}</span>}
