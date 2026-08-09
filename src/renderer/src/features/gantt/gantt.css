@@ -182,6 +182,59 @@
   white-space: nowrap;
 }
 
+/* ---------- 按终端分行（Task 18）：项目分组头 + 终端子行 ----------
+   .gantt-group 纯粹是个分组容器，不参与视觉——块级、零 margin/padding，
+   里面的 .gantt-row 该怎么一行行往下排还是怎么排，跟改造前"多个 .gantt-row
+   平铺"在布局上完全等价，只是多了一层 DOM 归属，不会破坏 .gantt-grid 原本
+   靠普通文档流纵向堆叠行的方式。 */
+.gantt-group {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+/* 分组头的可点击标签列：宽度必须仍是 120px（跟 .gantt-rowname 一致），不能
+   为了塞下 chevron+项目名而放宽——.gantt-axis 的 132px 左偏移（120 宽 + 12
+   gap）是缩放预览 translateX/scaleX 数学的隐含前提（见 .gantt-axis 那条
+   注释），这一列宽度对所有行必须整齐划一，任何一行单独跑偏都会让那一行的
+   条跟刻度对不上。省下的空间靠"只放 chevron+名字，去掉常驻的终端数字标"
+   解决——终端数放进 title（原生 tooltip），不占布局宽度。 */
+.gantt-rowname.gantt-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.gantt-rowname.gantt-group-toggle svg {
+  flex: none;
+  color: var(--fg-dim);
+}
+
+.gantt-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* flex 子项默认 min-width:auto，内容量出来多宽父容器就会被撑多宽，
+     省略号永远不会触发——显式清零才能让上面的 overflow:hidden 真正生效 */
+  min-width: 0;
+}
+
+/* 终端子行：缩进 + 弱化，跟分组头的项目名拉开一层视觉层级；不画自己的
+   border-top（默认继承自 .gantt-row），组内几行紧挨着，边界只留给"这一整个
+   项目分组"跟上下文的分隔——由分组头自己的 border-top 承担。 */
+.gantt-row.gantt-subrow {
+  padding: 4px 0;
+  border-top: none;
+}
+
+.gantt-rowname.sub {
+  padding-left: 14px;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
 .gantt-lanes {
   position: relative;
   flex: 1;

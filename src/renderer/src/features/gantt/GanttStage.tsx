@@ -1,7 +1,45 @@
-// 甘特图：横轴时间，一行一个项目，同项目并行的任务在行内上下堆叠。
+// 甘特图：横轴时间，纵轴按项目分组、组内按终端分行（Task 18 改造，见下方
+// 「按终端分行」大注释）。同一个终端在同一时刻本不该有两条任务重叠（采集器
+// 保证），万一历史数据有坏数据导致重叠，仍然在那一行内上下堆叠而不是拿半透明
+// 盖住——叠住的标题读不出来，非 hover 不可，而这张图的价值就在于扫一眼知道
+// 当时在干什么。
 //
-// 为什么并行要堆叠而不是重叠半透明：叠住的标题读不出来，非 hover 不可，
-// 而这张图的价值就在于扫一眼知道当时在干什么。
+// 按终端分行（Task 18 改造）：原来"一行一个项目、同项目任务混在一行里堆叠"上线
+// 一段时间后用户改主意——多个终端的任务堆在同一行，扫一眼分不清哪条是哪个终端
+// 干的，要的是当初设计三选项里的另一个：一个终端一行。改造的核心决策记在这里，
+// 分散在各处的注释只补充各自局部的"为什么"：
+//
+// 1. 分组键必须是 (runId, ptyId) 复合键，不能只用 ptyId——主进程 pty.ts 的
+//    ptyId 是每次启动都从 1 重新自增的小整数，两次运行之间必然会撞号；runId
+//    是主进程随机生成、每次启动必换的，两者一起才能唯一标识"跨越一次运行始终
+//    的那一个终端"。旧数据没有 runId 字段——跟 shared/types.ts GanttTask.runId
+//    注释里同一个道理："旧数据没有这个字段→必然来自更早的运行→天然判定不
+//    一致"，这里分到独立的 'legacy' 桶，不强行兼容（那类数据会在 7 天保留期
+//    内自然老化掉）。见 terminalKey()。
+// 2. 终端叫什么名字：GanttTask 本身没存标题，现从 tabs 里查——复用 BoardStage.tsx
+//    "一个终端一行"卡片已经在用的同一个信源（tab.title，shell OSC 写的、agent
+//    干活时会同步写入当前任务，比让用户另外取名更新鲜）。但直接照搬 BoardStage
+//    的 `t.title || 终端 N` 在这里不够用：新开终端的默认标题就是项目名（见
+//    tabsSlice.ts openTerminal），同一项目下好几个终端如果都还没被 OSC 或用户
+//    改过名，每一行都写一遍项目名——分组头已经写了项目名，子行再写一遍等于
+//    没有区分度。所以这里在"标题存在"之外多加一条："标题得是用户手动改的，
+//    或者内容跟项目名不一样"才采信，否则退回序号。见 terminalLabel()。
+// 3. 已关闭的终端：那段历史真实发生过，仍然占一行——titleByLeaf 在 tabs 里查
+//    不到时直接落到序号兜底，不是把它从图上抹掉。
+// 4. 行数会随终端数翻倍，两条对策：①子行只在"当前时间窗口内有活动"时才出现
+//    （复用 byProject 本来就有的视窗过滤，从"项目级"下沉到"终端级"，逻辑
+//    对称）；②项目只要终端数 >1 就给一个可折叠的分组头，折叠态把该项目全部
+//    终端的任务合并画回一行（数学上等于改造前的样子），展开/折叠都不额外占
+//    行高预算，纯粹是"要不要看到按终端拆开的细节"。终端数=1 的项目完全不
+//    显示分组头/折叠按钮——没有第二个终端可比较，加一层"分组"只会多一行
+//    空对比的标题。
+// 5. 编号("终端 N")的 N 来自 groupsByProject——用**全量**任务(不看当前时间
+//    窗口)按"这个终端最早一条任务的时间"稳定排出来，不会因为拖动/缩放时间轴、
+//    临时看不见某个终端而重新洗牌编号。
+//
+// 导航带（GanttNavigator.tsx）故意不跟着改：它是横跨 7 天保留期的全局密度概览，
+// 计算只依赖 tasks+now，从没按项目/终端分过组，这次改造没有理由让它知道"终端"
+// 这个概念——细节见该文件的密度桶注释。
 //
 // 时间跨度（Task 6 新增）：主区默认看最近 24 小时，可切 3 天；底部导航带画完整
 // 7 天全景（对齐主进程 gantt.ts 的保留期），拖取景框选看哪一段。「丝滑」那几条
@@ -39,7 +77,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { GanttClearRange, GanttTask } from '../../../../shared/types'
 import { attachBlurGuard } from '../../blurGuard'
-import { TrashIcon } from '../../ui/Icons'
+// collectLeaves：只读，取"leafId → 所在标签页标题"这份映射用（见 titleByLeaf）。
+// 不改这个文件——按纪律只碰 features/gantt/ 下的文件，这里纯粹是读别处已有的
+// 布局树遍历工具，跟 BoardStage.tsx 取终端名用的是同一个函数、同一种读法。
+import { collectLeaves } from '../../layout'
+import { ChevronDownIcon, ChevronRightIcon, TrashIcon } from '../../ui/Icons'
 import {
   GanttNavigator,
   PANORAMA_MS,
@@ -226,13 +268,58 @@ function layer(tasks: GanttTask[], now: number): GanttTask[][] {
   return rows
 }
 
+/** 一个终端跨越它整个生命周期的分组键——见文件顶部大注释第 1 条。分号(':')
+ *  不会出现在 ptyId（主进程 nextId 生成的纯数字字符串）里，用它做分隔符不会
+ *  跟真实值混淆。 */
+function terminalKey(t: GanttTask): string {
+  return (t.runId ?? 'legacy') + ':' + t.ptyId
+}
+
+/** 一个终端名下的全部任务（不看当前时间窗口）。leafId 在组内任意一条任务上
+ *  取都一样——同一个 ptyId 从创建到销毁只会绑定同一个 leaf（见 tabsSlice.ts
+ *  openTerminal/splitLeaf/setPaneKind：ptyId 和 leafId 总是一起诞生），
+ *  collector.ts 传给 noteRunning 的 ctx.leafId 对同一个 ptyId 不会变。 */
+interface TermGroup {
+  key: string
+  leafId: string
+  tasks: GanttTask[]
+  /** 组内最早一条任务的 startAt——给同项目下的终端排序编号用，见文件顶部
+   *  大注释第 5 条：算的是全量，不随当前时间窗口变化而重新洗牌。 */
+  firstStart: number
+}
+
+/** 视窗过滤后的终端组：view 是落在当前 [t0,t1] 内、真正要画的那部分任务；
+ *  ordinal 是"终端 N"里的 N，来自 groupsByProject 的全量顺序，不是 view 内的
+ *  顺序（否则同一个终端会因为拖动时间轴、暂时没有任务落入视窗而被重新编号）。 */
+interface VisibleGroup extends TermGroup {
+  view: GanttTask[]
+  ordinal: number
+}
+
 export function GanttStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const setViewMode = useStore((s) => s.setViewMode)
   const setBoardFullscreen = useStore((s) => s.setBoardFullscreen)
   const requestConfirm = useStore((s) => s.requestConfirm)
+  // 取终端名用（titleByLeaf）。跟 BoardStage.tsx 订阅同一个字段——那边已经证明
+  // 了这个订阅的刷新频率可接受（tabsSlice.setTabTitle 标题没变就原样返回，不
+  // 造新数组，OSC 高频刷屏不会导致这里跟着高频重渲染）。
+  const tabs = useStore((s) => s.tabs)
   const [tasks, setTasks] = useState<GanttTask[]>([])
   const [now, setNow] = useState(() => Date.now())
+  /** 哪些项目的"按终端分行"分组被用户折叠了（见文件顶部大注释第 4 条）。
+   *  纯本地 UI 状态，不落盘——跟 hover/dragging 这些其他瞬时状态同等待遇，
+   *  切走视图再切回来会回到"全部展开"（默认态就是这次改造要交付的东西，
+   *  折叠是用户自己按需收起，不该悄悄变成下次打开时的默认）。 */
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const toggleGroup = (projectId: string): void => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) next.delete(projectId)
+      else next.add(projectId)
+      return next
+    })
+  }
   /** top/bottom 是条的 getBoundingClientRect()，不是单个 y——下边缘要判断
    *  "翻到条上方"，得同时知道条的上下沿，光一个点不够表达翻转。 */
   const [hover, setHover] = useState<{
@@ -392,21 +479,82 @@ export function GanttStage(): JSX.Element {
   // 不直接碰 tasks。见 isSaneTask 顶部注释。
   const safeTasks = useMemo(() => tasks.filter(isSaneTask), [tasks])
 
-  const byProject = useMemo(() => {
-    const m = new Map<string, GanttTask[]>()
+  // 全量分组（不看当前时间窗口）：项目 → 按终端(runId+ptyId)分的组，只在
+  // safeTasks 变化时重算，拖动/缩放时间轴不会碰它。用它取"这个终端最早一条
+  // 任务是什么时候"做稳定排序编号，以及任一条任务的 leafId 拿去查终端名——
+  // 两者都不该随当前看的是哪一段时间窗口而改变（见文件顶部大注释第 5 条）。
+  const groupsByProject = useMemo(() => {
+    // 项目 -> (终端键 -> 组) 两层 Map，不拼接分隔符字符串当复合键——终端键
+    // 本身已经带冒号（terminalKey 的 runId:ptyId），项目 id 是随机 uuid，
+    // 两者硬拼在一起还得挑一个保证两边都不会出现的分隔符，不如老实嵌套一层
+    // Map，省掉这道"选分隔符"的麻烦（也是这次顺手修正：早先直接拼接用单个
+    // 空格当分隔符的写法在写入时被观察到会产生非法字节，不值得为了省一层
+    // Map 冒这个险）。
+    const byProjectRaw = new Map<string, Map<string, TermGroup>>()
     for (const t of safeTasks) {
-      if ((t.endAt ?? now) < t0) continue // 整条都在窗口左边，跳过
-      // 整条都在窗口右边也要跳过——8 小时固定窗口时代这条从不会命中（没有任务
-      // 发生在"未来"），但取景框能拖去看任意历史窗口之后，t1 不再等于 now，
-      // 一个项目"更晚"的任务完全可能晚于当前查看的 t1。漏了这一半会让该项目
-      // 在查看历史时多出一整行，行里却没有任何看得见的条——本任务实测触发过。
-      if (t.startAt > t1) continue
-      const arr = m.get(t.projectId) ?? []
-      arr.push(t)
-      m.set(t.projectId, arr)
+      let terms = byProjectRaw.get(t.projectId)
+      if (!terms) {
+        terms = new Map()
+        byProjectRaw.set(t.projectId, terms)
+      }
+      const tk = terminalKey(t)
+      const g = terms.get(tk)
+      if (!g) {
+        terms.set(tk, { key: tk, leafId: t.leafId, tasks: [t], firstStart: t.startAt })
+      } else {
+        if (t.startAt < g.firstStart) g.firstStart = t.startAt
+        g.tasks.push(t)
+      }
+    }
+    const m = new Map<string, TermGroup[]>()
+    for (const [projectId, terms] of byProjectRaw) {
+      m.set(projectId, [...terms.values()].sort((a, b) => a.firstStart - b.firstStart))
     }
     return m
-  }, [safeTasks, t0, t1, now])
+  }, [safeTasks])
+
+  // 视窗过滤：从全量分组里筛出"当前 [t0,t1] 内有任务"的终端组，且只保留组内
+  // 落在窗口内的那部分任务（view）。两条 continue 的口径跟改造前的 byProject
+  // 一模一样，只是从"项目级"下沉到"终端级"——整条都在窗口左边/右边的任务
+  // 不计入这个终端这一刻要不要出现在图上。
+  const byProject = useMemo(() => {
+    const m = new Map<string, VisibleGroup[]>()
+    for (const [projectId, groups] of groupsByProject) {
+      const visible: VisibleGroup[] = []
+      groups.forEach((g, i) => {
+        const view = g.tasks.filter((t) => (t.endAt ?? now) >= t0 && t.startAt <= t1)
+        if (view.length) visible.push({ ...g, view, ordinal: i + 1 })
+      })
+      if (visible.length) m.set(projectId, visible)
+    }
+    return m
+  }, [groupsByProject, t0, t1, now])
+
+  // leafId → 这个终端所在标签页的标题 + 是否用户手动改过名。信源跟
+  // BoardStage.tsx"一个终端一行"卡片用的是同一个（tabs 里的 leaf），复用既有
+  // 约定：标题优先用 tab.title，因为 shell OSC 会在 agent 干活时把当前任务写
+  // 进去，比这里另起一套命名更新鲜。只读 tabs/layout.ts，不改它们。
+  const titleByLeaf = useMemo(() => {
+    const m = new Map<string, { title: string; customTitle?: boolean }>()
+    for (const tab of tabs) {
+      for (const leaf of collectLeaves(tab.root)) {
+        if (leaf.pane.kind === 'terminal') {
+          m.set(leaf.id, { title: tab.title, customTitle: tab.customTitle })
+        }
+      }
+    }
+    return m
+  }, [tabs])
+
+  /** 终端子行的显示名——见文件顶部大注释第 2 条。标题存在、且（用户手动改过名
+   *  或内容不等于项目名）才采信；否则退回"终端 N"（N 见 VisibleGroup.ordinal）。
+   *  终端已关闭（titleByLeaf 查不到）同样落到这条兜底，不显示裸 ptyId。 */
+  const terminalLabel = (g: VisibleGroup, projectName: string): string => {
+    const info = titleByLeaf.get(g.leafId)
+    const title = info?.title?.trim()
+    if (title && (info?.customTitle || title !== projectName)) return title
+    return `终端 ${g.ordinal}`
+  }
 
   // 「清空这段」按的是原始 tasks（不是 safeTasks）——数值离谱到被 isSaneTask
   // 挡掉的记录，理应也能被这个按钮连带清掉，不然它们就成了唯一只能靠「清空
@@ -624,10 +772,17 @@ export function GanttStage(): JSX.Element {
    *  过阈值才吃掉点击"——完全不用碰 .gantt-bar 自己的 onClick/hover，零风险；
    *  空白处（坐标轴一整条、行与行之间、没被条盖住的区域、空状态提示）本来就有
    *  足够大的可拖拽面积，不需要靠"抢"条上的按下事件换更大的命中区。这样"点条
-   *  跳回终端"完全不受影响，因为拖拽逻辑压根不会在条上启动。 */
+   *  跳回终端"完全不受影响，因为拖拽逻辑压根不会在条上启动。
+   *
+   *  .gantt-group-toggle（Task 18 新增：多终端项目的分组折叠按钮）同一个道理
+   *  排除在外——它也有自己的 onClick，不排除的话点一下会先被当成"位移未过
+   *  阈值的拖拽"处理一遍：虽然最终 endDrag() 不会阻止 onClick 照常触发，
+   *  但会在中途多打一轮 beginDrag/dragBaseRef 的读写，没必要让点一个折叠
+   *  按钮牵扯上时间轴拖拽的状态机。 */
   const handleStageMouseDown = (e: React.MouseEvent): void => {
     if (e.button !== 0) return // 只处理左键拖拽
-    if ((e.target as HTMLElement).closest('.gantt-bar')) return // 落在条上：交给条自己的 onClick
+    // 落在条上/分组折叠按钮上：交给它们自己的 onClick，不抢这次按下事件
+    if ((e.target as HTMLElement).closest('.gantt-bar, .gantt-group-toggle')) return
     e.preventDefault() // 防止拖拽时选中项目名文字
     beginDrag()
     const base = dragBaseRef.current
@@ -881,6 +1036,65 @@ export function GanttStage(): JSX.Element {
     return () => el.removeEventListener('wheel', onWheel)
   }, [t0, span, panoramaStart, panoramaEnd, dragging, viewStart])
 
+  /** 一行里"刻度网格 + 分层的条"那一整块。改造前只有一处调用点（每项目一行），
+   *  现在要在三处复用同样的渲染：单终端项目的整行、多终端项目折叠态的合并行、
+   *  展开态每条终端子行——抽出来是因为三份字面复制的 JSX 会让"改一处漏两处"
+   *  从抽象风险变成具体会发生的事。喂给它的任务集合不同，渲染逻辑完全一样，
+   *  逐条任务的定位/配色/hover/点击跳转都不变。 */
+  const renderLanes = (rowTasks: GanttTask[]): JSX.Element => {
+    const layers = layer(rowTasks, now)
+    return (
+      <div className="gantt-lanes">
+        {ticks.map((t) => (
+          <div key={t} className="gantt-vline" style={{ left: pct(t) + '%' }} />
+        ))}
+        {layers.map((ln, li) => (
+          <div className="gantt-lane" key={li}>
+            {ln.map((t) => {
+              const s = Math.max(t.startAt, t0)
+              const e = Math.min(t.endAt ?? now, t1)
+              const left = pct(s)
+              const w = Math.max(pct(e) - left, 0)
+              const state = t.aborted ? 'aborted' : t.endAt === null ? 'running' : 'done'
+              const wide = (w / 100) * 900 > LABEL_INSIDE_MIN_PX
+              const label = t.prompt.slice(0, 10)
+              return (
+                <div
+                  key={t.id}
+                  className={`gantt-bar ${state}${wide ? ' wide' : ''}`}
+                  style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
+                  onMouseEnter={(ev) => {
+                    cancelHide()
+                    const r = ev.currentTarget.getBoundingClientRect()
+                    setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
+                  }}
+                  onMouseLeave={scheduleHide}
+                  onClick={() => jump(t)}
+                >
+                  {state === 'aborted' && (
+                    <svg
+                      className="gantt-abort-ico"
+                      viewBox="0 0 24 24"
+                      width="10"
+                      height="10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.6"
+                    >
+                      <path d="M12 8v5M12 16.5v.5" />
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                  )}
+                  <span className="gantt-bar-label">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="gantt">
       <div className="gantt-head">
@@ -938,60 +1152,56 @@ export function GanttStage(): JSX.Element {
             </div>
           )}
           {rows.map((p) => {
-            const layers = layer(byProject.get(p.id) ?? [], now)
-            return (
-              <div className="gantt-row" key={p.id}>
-                <div className="gantt-rowname" title={p.name}>
-                  {p.name}
+            const groups = byProject.get(p.id) ?? []
+            // 只有一个终端在当前窗口有活动：跟改造前一模一样的单行，不额外
+            // 加分组头——没有第二个终端可比较，标题栏重复写一遍项目名毫无
+            // 信息量，折叠按钮也没有意义（收起唯一的内容等于把整行藏起来，
+            // 不是"精简"）。见文件顶部大注释第 4 条。
+            if (groups.length === 1) {
+              return (
+                <div className="gantt-row" key={p.id}>
+                  <div className="gantt-rowname" title={p.name}>
+                    {p.name}
+                  </div>
+                  {renderLanes(groups[0].view)}
                 </div>
-                <div className="gantt-lanes">
-                  {ticks.map((t) => (
-                    <div key={t} className="gantt-vline" style={{ left: pct(t) + '%' }} />
-                  ))}
-                  {layers.map((ln, li) => (
-                    <div className="gantt-lane" key={li}>
-                      {ln.map((t) => {
-                        const s = Math.max(t.startAt, t0)
-                        const e = Math.min(t.endAt ?? now, t1)
-                        const left = pct(s)
-                        const w = Math.max(pct(e) - left, 0)
-                        const state = t.aborted ? 'aborted' : t.endAt === null ? 'running' : 'done'
-                        const wide = (w / 100) * 900 > LABEL_INSIDE_MIN_PX
-                        const label = t.prompt.slice(0, 10)
-                        return (
-                          <div
-                            key={t.id}
-                            className={`gantt-bar ${state}${wide ? ' wide' : ''}`}
-                            style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
-                            onMouseEnter={(ev) => {
-                              cancelHide()
-                              const r = ev.currentTarget.getBoundingClientRect()
-                              setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
-                            }}
-                            onMouseLeave={scheduleHide}
-                            onClick={() => jump(t)}
-                          >
-                            {state === 'aborted' && (
-                              <svg
-                                className="gantt-abort-ico"
-                                viewBox="0 0 24 24"
-                                width="10"
-                                height="10"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.6"
-                              >
-                                <path d="M12 8v5M12 16.5v.5" />
-                                <circle cx="12" cy="12" r="9" />
-                              </svg>
-                            )}
-                            <span className="gantt-bar-label">{label}</span>
-                          </div>
-                        )
-                      })}
+              )
+            }
+            const isCollapsed = collapsedGroups.has(p.id)
+            return (
+              <div className="gantt-group" key={p.id}>
+                <div className="gantt-row gantt-group-hd">
+                  <div
+                    className="gantt-rowname gantt-group-toggle"
+                    title={`${p.name} · ${groups.length} 个终端 · 点击${isCollapsed ? '展开' : '折叠'}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleGroup(p.id)}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' && e.key !== ' ') return
+                      e.preventDefault()
+                      toggleGroup(p.id)
+                    }}
+                  >
+                    {isCollapsed ? <ChevronRightIcon size={10} /> : <ChevronDownIcon size={10} />}
+                    <span className="gantt-group-name">{p.name}</span>
+                  </div>
+                  {/* 折叠态：把这个项目全部终端的任务合并回一行——数学上等于
+                      改造前"一项目一行"的老样子，折叠只是临时切回旧行为，
+                      不丢信息（条还在，只是不再按终端分开摆）。这一行的
+                      高度跟"只显示标题不显示条"是同一个高度预算，合并画条
+                      纯粹是多出来的免费信息量，不占额外空间。 */}
+                  {isCollapsed && renderLanes(groups.flatMap((g) => g.view))}
+                </div>
+                {!isCollapsed &&
+                  groups.map((g) => (
+                    <div className="gantt-row gantt-subrow" key={g.key}>
+                      <div className="gantt-rowname sub" title={terminalLabel(g, p.name)}>
+                        {terminalLabel(g, p.name)}
+                      </div>
+                      {renderLanes(g.view)}
                     </div>
                   ))}
-                </div>
               </div>
             )
           })}
