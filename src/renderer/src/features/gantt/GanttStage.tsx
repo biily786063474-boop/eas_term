@@ -16,8 +16,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
-import type { GanttTask } from '../../../../shared/types'
+import type { GanttClearRange, GanttTask } from '../../../../shared/types'
 import { attachBlurGuard } from '../../blurGuard'
+import { TrashIcon } from '../../ui/Icons'
 import {
   GanttNavigator,
   PANORAMA_MS,
@@ -61,6 +62,27 @@ const dur = (ms: number): string => {
   return m < 60 ? m + ' 分钟' : (m / 60).toFixed(1) + ' 小时'
 }
 
+/** 容错隔离（2026-08-08 新需求）第二道防线：主进程 gantt.ts 的 valid() 只校验
+ *  字段类型（是不是字符串/数字），不校验数值是否有意义——startAt 是 NaN、
+ *  ±Infinity、或者 endAt 早于 startAt 这类"类型对但数值离谱"的记录能穿透那层
+ *  校验直达这里。分行(layer)、时间换算(pct)、导航带的密度桶全是这些数字的
+ *  纯算术，NaN/Infinity 混进去不会真的抛异常炸整个视图（JS 算术对这些值是
+ *  "安静地"产出更多 NaN/Infinity，React 也不会因为一个无效的 CSS 值
+ *  如"NaN%"而崩溃），但会画出脱离视觉意义的东西（一根不知道飘去哪儿的条、
+ *  导航带被一条脏数据点亮整条 7 天）。逐条挡在这里，比事后再去分析"为什么
+ *  这根条长得这么怪"划算。
+ *
+ *  挡掉的记录不删除——删不删是用户自己的决定（"清空全部/清空这段"），渲染层
+ *  没资格替他做主，这里只是这一次不把它画出来。真正在数据里作恶的记录，
+ *  用户仍然可以通过"清空全部"把它连同其他记录一起清掉（这条兜底路径不依赖
+ *  这里的过滤——见 clearAll，它操作的是未过滤的原始 tasks）。 */
+function isSaneTask(t: GanttTask): boolean {
+  if (!Number.isFinite(t.startAt)) return false
+  if (t.endAt !== null && !Number.isFinite(t.endAt)) return false
+  if (t.endAt !== null && t.endAt < t.startAt) return false
+  return true
+}
+
 /** 同一行内把重叠的任务分到不同层 —— 贪心：能放下就放，放不下开新层 */
 function layer(tasks: GanttTask[], now: number): GanttTask[][] {
   const rows: GanttTask[][] = []
@@ -77,6 +99,7 @@ export function GanttStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const setViewMode = useStore((s) => s.setViewMode)
   const setBoardFullscreen = useStore((s) => s.setBoardFullscreen)
+  const requestConfirm = useStore((s) => s.requestConfirm)
   const [tasks, setTasks] = useState<GanttTask[]>([])
   const [now, setNow] = useState(() => Date.now())
   /** top/bottom 是条的 getBoundingClientRect()，不是单个 y——下边缘要判断
@@ -168,9 +191,20 @@ export function GanttStage(): JSX.Element {
   const t1 = viewStart === null ? now : viewStart + span
   const t0 = t1 - span
 
+  // 挪到这里（原来紧贴 return 之前）：下面 clearRange 的确认文案要用它，
+  // 声明顺序早于第一个使用点，不依赖"函数体延迟执行"这个虽然安全但绕一圈的事实。
+  const rangeLabel =
+    viewStart === null
+      ? `最近 ${span === DAY_MS ? '24 小时' : '3 天'}`
+      : `${mmdd(t0)} ${hhmm(t0)} – ${mmdd(t1)} ${hhmm(t1)}`
+
+  // 渲染安全的子集——geometry（分行/分层/时间映射）和导航带的密度桶都从这里取数，
+  // 不直接碰 tasks。见 isSaneTask 顶部注释。
+  const safeTasks = useMemo(() => tasks.filter(isSaneTask), [tasks])
+
   const byProject = useMemo(() => {
     const m = new Map<string, GanttTask[]>()
-    for (const t of tasks) {
+    for (const t of safeTasks) {
       if ((t.endAt ?? now) < t0) continue // 整条都在窗口左边，跳过
       // 整条都在窗口右边也要跳过——8 小时固定窗口时代这条从不会命中（没有任务
       // 发生在"未来"），但取景框能拖去看任意历史窗口之后，t1 不再等于 now，
@@ -182,7 +216,17 @@ export function GanttStage(): JSX.Element {
       m.set(t.projectId, arr)
     }
     return m
-  }, [tasks, t0, t1, now])
+  }, [safeTasks, t0, t1, now])
+
+  // 「清空这段」按的是原始 tasks（不是 safeTasks）——数值离谱到被 isSaneTask
+  // 挡掉的记录，理应也能被这个按钮连带清掉，不然它们就成了唯一只能靠「清空
+  // 全部」才够得着的孤儿数据。判据跟 byProject 上面两个 continue 条件互为镜像
+  // （那边是"跳过不在窗口内的"，这里是"选中在窗口内的"），须保持口径一致——
+  // 否则会出现"确认框写清空 3 条，实际清掉的条数对不上"这种体验裂缝。
+  const inViewCount = useMemo(
+    () => tasks.filter((t) => (t.endAt ?? now) >= t0 && t.startAt <= t1).length,
+    [tasks, t0, t1, now]
+  )
 
   /** 刻度密度按跨度档位调整：24 小时档每 2 小时一根，3 天档每 6 小时一根，
    *  否则 24 根挤在一起太密。 */
@@ -200,6 +244,53 @@ export function GanttStage(): JSX.Element {
   const jump = (t: GanttTask): void => {
     setViewMode('board')
     setBoardFullscreen(t.leafId)
+  }
+
+  // 用户自行删除错误数据（2026-08-08 新需求）——三个入口共用的收尾：main 进程
+  // 删完直接回传最新列表（已经带好 aborted 标记，见 gantt.ts 的 withAbortedFlag），
+  // 拿到就地 setTasks，不必等 20 秒轮询——"删除要立刻反映在图上"。顺带清掉 hover：
+  // 被删的那条如果正好是当前 hover 的条，浮层还留着旧数据、指向的条却已经从
+  // DOM 里消失了，会变成一个悬空的"幽灵浮层"。
+  const removeTask = (t: GanttTask): void => {
+    requestConfirm({
+      message: `删除这条记录？\n\n${hhmm(t.startAt)} · ${t.prompt.slice(0, 40)}${t.prompt.length > 40 ? '…' : ''}\n\n删除后无法恢复，不影响这个终端本身。`,
+      confirmLabel: '删除',
+      onConfirm: () => {
+        void window.api.gantt.remove(t.id).then((list) => {
+          setTasks(list)
+          setHover(null)
+        })
+      }
+    })
+  }
+
+  const clearRange = (): void => {
+    if (!inViewCount) return
+    const range: GanttClearRange = { from: t0, to: t1 }
+    requestConfirm({
+      message: `清空「${rangeLabel}」内的 ${inViewCount} 条记录？\n\n删除后无法恢复，不影响终端本身。`,
+      confirmLabel: '清空这段',
+      onConfirm: () => {
+        void window.api.gantt.clear(range).then((list) => {
+          setTasks(list)
+          setHover(null)
+        })
+      }
+    })
+  }
+
+  const clearAll = (): void => {
+    if (!tasks.length) return
+    requestConfirm({
+      message: `清空全部 ${tasks.length} 条甘特图记录？\n\n删除后无法恢复，不影响终端本身、不影响项目文件。`,
+      confirmLabel: '清空全部',
+      onConfirm: () => {
+        void window.api.gantt.clear().then((list) => {
+          setTasks(list)
+          setHover(null)
+        })
+      }
+    })
   }
 
   const rows = projects.filter((p) => byProject.has(p.id))
@@ -413,25 +504,42 @@ export function GanttStage(): JSX.Element {
     setSpan(nextSpan)
   }
 
-  const rangeLabel =
-    viewStart === null
-      ? `最近 ${span === DAY_MS ? '24 小时' : '3 天'}`
-      : `${mmdd(t0)} ${hhmm(t0)} – ${mmdd(t1)} ${hhmm(t1)}`
-
   return (
     <div className="gantt">
       <div className="gantt-head">
         <div className="gantt-title">{rangeLabel} · 每根条是一次「你发出去的话 → agent 干完」</div>
-        <div className="gantt-span-toggle">
-          {SPAN_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              className={span === opt.ms ? 'active' : ''}
-              onClick={() => changeSpan(opt.ms)}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="gantt-head-tools">
+          <div className="gantt-span-toggle">
+            {SPAN_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                className={span === opt.ms ? 'active' : ''}
+                onClick={() => changeSpan(opt.ms)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {/* 用户自行删除错误数据（2026-08-08 新需求）：批量清理的两个入口。
+              「清空这段」复用当前已经在看的时间窗——不用另外造一个选日期的
+              UI，用户拖导航带选到想清的那段，点一下就是清那段。 */}
+          <button
+            className="gantt-clean-btn"
+            data-tip={inViewCount ? `清空当前范围内的 ${inViewCount} 条记录` : '当前范围内没有记录'}
+            disabled={!inViewCount}
+            onClick={clearRange}
+          >
+            <TrashIcon size={11} />
+            清空这段
+          </button>
+          <button
+            className="gantt-clean-btn danger"
+            data-tip={tasks.length ? `清空全部 ${tasks.length} 条记录` : '还没有记录'}
+            disabled={!tasks.length}
+            onClick={clearAll}
+          >
+            清空全部
+          </button>
         </div>
       </div>
       <div
@@ -513,7 +621,7 @@ export function GanttStage(): JSX.Element {
       </div>
       <GanttNavigator
         ref={navRef}
-        tasks={tasks}
+        tasks={safeTasks}
         now={now}
         span={span}
         viewStart={viewStart}
@@ -541,17 +649,41 @@ export function GanttStage(): JSX.Element {
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
         >
-          <div className="gantt-pop-time">
-            {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
-            {hover.t.endAt && <span className="gantt-pop-dur">{dur(hover.t.endAt - hover.t.startAt)}</span>}
+          <div className="gantt-pop-hd">
+            <div className="gantt-pop-time">
+              {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
+              {hover.t.endAt && (
+                <span className="gantt-pop-dur">{dur(hover.t.endAt - hover.t.startAt)}</span>
+              )}
+            </div>
+            {/* 用户自行删除错误数据（2026-08-08 新需求）：单条删除入口。
+                stopPropagation 不是必须的（.gantt-pop 自己没有 onClick），
+                留着是防这块以后长出新的点击行为时被这颗按钮误连带触发。 */}
+            <button
+              className="gantt-pop-del"
+              data-tip="删除这条记录"
+              onClick={(e) => {
+                e.stopPropagation()
+                removeTask(hover.t)
+              }}
+            >
+              <TrashIcon size={11} />
+            </button>
           </div>
           {hover.t.aborted && <div className="gantt-pop-abort">上次没有正常结束，结束时间未知</div>}
           <div className="gantt-pop-text">{hover.t.prompt}</div>
-          {hover.t.follow?.map((f, i) => (
-            <div className="gantt-pop-follow" key={i}>
-              追加：{f}
-            </div>
-          ))}
+          {/* follow 是可选字段，主进程 valid() 不校验它的形状——磁盘上被写坏成
+              非数组（比如一个字符串）时，原来的 `?.map` 会在这条记录被 hover 到
+              的那一刻抛 TypeError（字符串没有 .map），把整个甘特图炸崩。
+              Array.isArray 挡形状，String(f) 挡数组里混进非字符串项（比如
+              一个对象——直接当 React 子节点渲染会抛"Objects are not valid as
+              a React child"）。 */}
+          {Array.isArray(hover.t.follow) &&
+            hover.t.follow.map((f, i) => (
+              <div className="gantt-pop-follow" key={i}>
+                追加：{typeof f === 'string' ? f : String(f)}
+              </div>
+            ))}
         </div>
       )}
     </div>

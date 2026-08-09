@@ -46,7 +46,7 @@ import type {
   RulesStatus,
   Footprint,
   InstallPlan,
-  UpdateInfo, ProjectStatus, BoardColumn, GanttTask} from '../shared/types'
+  UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -134,7 +134,13 @@ const api = {
     finish: (id: string, endAt: number): Promise<void> =>
       ipcRenderer.invoke('gantt:finish', id, endAt),
     follow: (id: string, text: string): Promise<void> =>
-      ipcRenderer.invoke('gantt:follow', id, text)
+      ipcRenderer.invoke('gantt:follow', id, text),
+    /** 删单条记录。返回值是删完之后的最新列表（已经打好 aborted 标记），
+     *  渲染层直接拿它 setState，不用等下一轮 20 秒轮询才反映到图上 */
+    remove: (id: string): Promise<GanttTask[]> => ipcRenderer.invoke('gantt:remove', id),
+    /** 批量清理：不传 range = 清空全部；传了就只清这段范围内的。同样直接回最新列表 */
+    clear: (range?: GanttClearRange): Promise<GanttTask[]> =>
+      ipcRenderer.invoke('gantt:clear', range)
   },
   canvas: {
     // 画布场景持久化：整场景存 / 读（结构由渲染层定义，此处按 unknown 透传）

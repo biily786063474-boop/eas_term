@@ -17,6 +17,7 @@ import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
 import { BoardStage } from './features/board/BoardStage'
 import { GanttStage } from './features/gantt/GanttStage'
+import { GanttErrorBoundary } from './features/gantt/GanttErrorBoundary'
 import { CanvasDrawer } from './features/canvas/CanvasDrawer'
 import { CanvasWikiDrawer } from './features/canvas/CanvasWikiDrawer'
 import { CanvasDictBubble } from './features/canvas/CanvasDictBubble'
@@ -289,7 +290,13 @@ export function App(): JSX.Element {
               </div>
             )}
             {viewMode === 'canvas' && <CanvasStage />}
-            {viewMode === 'gantt' && <GanttStage />}
+            {viewMode === 'gantt' && (
+              // 独立边界：甘特图渲染或数据崩溃只掉这一块，不连累根级边界把整个
+              // App（含 PaneLayer 里的终端）一起卸载。见 GanttErrorBoundary.tsx 顶部注释。
+              <GanttErrorBoundary>
+                <GanttStage />
+              </GanttErrorBoundary>
+            )}
             {viewMode === 'board' && <BoardStage />}
             <PaneLayer />
             {/* 三个抽屉/浮层跟着画布一起给看板 —— 看板也是「在项目里干活」的视图，

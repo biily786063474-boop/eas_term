@@ -7,6 +7,12 @@ interface Props {
   children: ReactNode
   /** 边界标识(区分根级 / 画布级,用于日志) */
   label?: string
+  /** 自定义兜底 UI——不传就用下面默认的"重新加载/重置画布"这套(根级用)。
+   *  reset 只清本地 error state 让 children 重新挂载,不做 location.reload():
+   *  是否需要更重的恢复手段(比如先清一遍数据)由调用方自己在 fallback 里决定。
+   *  (甘特图边界用这个:崩溃不该连累整个渲染进程重启,终端还挂在 PaneLayer 上,
+   *  没有理由跟着陪葬。) */
+  fallback?: (error: Error, reset: () => void) => ReactNode
 }
 interface State {
   error: Error | null
@@ -38,6 +44,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private reload = (): void => location.reload()
 
+  private reset = (): void => this.setState({ error: null })
+
   private resetCanvas = async (): Promise<void> => {
     try {
       await window.api.canvas.save(EMPTY_CANVAS)
@@ -50,6 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     const { error } = this.state
     if (!error) return this.props.children
+    if (this.props.fallback) return this.props.fallback(error, this.reset)
     return (
       <div className="err-boundary">
         <div className="err-card">

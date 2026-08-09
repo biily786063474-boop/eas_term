@@ -56,6 +56,52 @@
   box-shadow: var(--glass-highlight);
 }
 
+/* 头部工具区：跨度切换 + 两个清理入口并排右对齐（用户自行删除错误数据，
+   2026-08-08 新需求）。外层再包一层是因为 .gantt-head 本身是
+   space-between——三个东西都要挤在右边，得先合成一组再整体右对齐。 */
+.gantt-head-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gantt-clean-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    opacity 0.12s;
+}
+
+/* 危险色沿用 #ef6f7b——这是 gantt.css 里唯一固定不走 token 的颜色，专门表达
+   "状态不该被主题稀释"（.gantt-bar.aborted 已经在用它）。清空按钮的 hover/
+   danger 态是同一件事的另一处出现：都是"这个操作要小心"，沿用同一个色，
+   不再引入第三种红。 */
+.gantt-clean-btn:hover:not(:disabled) {
+  background: rgba(239, 111, 123, 0.16);
+  color: #ef6f7b;
+}
+
+.gantt-clean-btn.danger {
+  color: rgba(239, 111, 123, 0.85);
+}
+
+.gantt-clean-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .gantt-scroll {
   flex: 1;
   min-height: 0; /* 让这个 flex 子项能正常出滚动条，而不是把父容器撑破 */
@@ -256,12 +302,48 @@
   pointer-events: auto;
 }
 
+/* 浮层头一行：时间信息 + 删除入口分居两端（用户自行删除错误数据，
+   2026-08-08 新需求）。align-items:flex-start 而不是 center——删除按钮是
+   固定 18px 的小方块，跟单行文字纵向居中看着比顶对齐更协调。 */
+.gantt-pop-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .gantt-pop-time {
   display: flex;
   gap: 8px;
   color: var(--fg-dim);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+
+.gantt-pop-del {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: -1px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--fg-dim);
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    opacity 0.12s,
+    background 0.12s,
+    color 0.12s;
+}
+
+.gantt-pop-del:hover {
+  opacity: 1;
+  background: rgba(239, 111, 123, 0.18);
+  color: #ef6f7b;
 }
 
 .gantt-pop-dur {
@@ -371,4 +453,106 @@
   color: var(--fg-dim);
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 崩溃兜底（GanttErrorBoundary.tsx） ----------
+   特意不复用 ui/ErrorBoundary.tsx 默认 fallback 那套 .err-card 样式：那套是
+   position:fixed + inset:0 的整窗覆盖（连标题栏一起盖住），根级"整个 App 挂了"
+   才该这么处理；这里只是甘特图这一块崩了，标题栏的 ModeSwitch 还要能点、
+   还要能切到别的视图，所以外层只能占甘特图自己这块区域（跟 .gantt 一样
+   position:absolute;inset:0，是 .tab-stack 内的局部覆盖，不是整窗覆盖）。
+   配色也跟着甘特图自己的 token 走，不搬 .err-card 那些写死的十六进制——
+   道理和条本身的配色约束一样：写死的颜色换到粉色主题会脱节。 */
+.gantt-crash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--pane-solid);
+}
+
+.gantt-crash-card {
+  max-width: 440px;
+  width: 100%;
+  padding: 22px 22px 18px;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--tooltip-bg);
+  backdrop-filter: var(--blur);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.gantt-crash-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ef6f7b;
+  margin-bottom: 8px;
+}
+
+.gantt-crash-desc {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--fg-dim);
+}
+
+.gantt-crash-msg {
+  margin: 12px 0 14px;
+  padding: 8px 10px;
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.18);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gantt-crash-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.gantt-crash-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border-strong);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.gantt-crash-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.gantt-crash-btn.primary {
+  border: none;
+  background: var(--accent);
+  color: #0d0f16;
+}
+
+.gantt-crash-btn.primary:hover {
+  filter: brightness(1.08);
+}
+
+.gantt-crash-btn.danger {
+  border-color: rgba(239, 111, 123, 0.4);
+  color: #ef6f7b;
+}
+
+.gantt-crash-btn.danger:hover {
+  background: rgba(239, 111, 123, 0.16);
 }

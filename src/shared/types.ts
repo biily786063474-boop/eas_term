@@ -671,3 +671,11 @@ export interface GanttTask {
    *  旧数据没有这个字段 → 必然来自更早的运行 → 天然判定不一致，不用额外兼容逻辑。 */
   runId?: string
 }
+
+/** gantt:clear 的可选范围参数——不传 = 清空全部；传了就只清落在 [from, to] 内的记录。
+ *  判据见 main/gantt.ts 的 overlapsRange：还没结束的任务（endAt===null）按「到现在」
+ *  算它的结束端，跟主区渲染时判断「要不要画进这个窗口」用的是同一套口径。 */
+export interface GanttClearRange {
+  from: number
+  to: number
+}
