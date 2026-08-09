@@ -78,7 +78,57 @@ export function registerCanvasHandlers(): void {
     if (!mime) return new Response('unsupported media type', { status: 415 })
     if (!path.isAbsolute(filePath) || !fs.existsSync(filePath))
       return new Response('not found', { status: 404 })
-    const res = await net.fetch(pathToFileURL(filePath).toString())
-    return new Response(res.body, { status: 200, headers: { 'Content-Type': mime } })
+
+    const size = fs.statSync(filePath).size
+    const fileUrl = pathToFileURL(filePath).toString()
+
+    // <video> 靠「有没有收到 206 + Content-Range」判断这个源能不能寻址：能才会在
+    // seek / 缓冲跳段时改发 Range 请求；判定不能寻址，就退化成「一条连接从头
+    // 读到尾、不可回退」的模式——那种模式下只要连接中途抖一下需要断点续传，
+    // 或者用户拖进度条，播放就直接卡死不动（画面还在但再也不走）。
+    // 之前这里的实现完全没看 request 带没带 Range，一律整份 200 转发，
+    // 相当于永远在告诉 <video>「我不支持范围请求」——即使 net.fetch 对 file://
+    // 其实是认 Range 的（实测 body 会精确按区间切好），只是它自己报出来的
+    // status/头永远是 200、不带 Content-Range/Accept-Ranges。这里把 net.fetch
+    // 已经切好的 body 转发，自己按请求头补上 206 + Content-Range，
+    // 相当于把 net.fetch「切对了但没报对」的部分修正回来。
+    const range = request.headers.get('range')
+    const m = range ? /^bytes=(\d*)-(\d*)$/.exec(range) : null
+
+    if (!m || (!m[1] && !m[2])) {
+      // 没带 Range，或者格式认不出来：整份返回，但要带 Accept-Ranges，
+      // 否则 <video> 会把「这次没问我要区间」误判成「这个源根本不支持区间」，
+      // 之后就再也不会发 Range 请求了。
+      const res = await net.fetch(fileUrl)
+      return new Response(res.body, {
+        status: 200,
+        headers: { 'Content-Type': mime, 'Accept-Ranges': 'bytes', 'Content-Length': String(size) }
+      })
+    }
+
+    let start: number
+    let end: number
+    if (m[1]) {
+      start = parseInt(m[1], 10)
+      end = m[2] ? Math.min(parseInt(m[2], 10), size - 1) : size - 1
+    } else {
+      // 后缀形式 "bytes=-N"：最后 N 字节
+      start = Math.max(0, size - parseInt(m[2], 10))
+      end = size - 1
+    }
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } })
+    }
+
+    const res = await net.fetch(fileUrl, { headers: { Range: range! } })
+    return new Response(res.body, {
+      status: 206,
+      headers: {
+        'Content-Type': mime,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': String(end - start + 1),
+        'Content-Range': `bytes ${start}-${end}/${size}`
+      }
+    })
   })
 }
