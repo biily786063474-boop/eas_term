@@ -54,6 +54,18 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.15">0.4.15</h2>
+          <time datetime="2026-08-08">2026-08-08</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>视频拖进度条会断</strong>。播放器要跳到某个时间点，靠的是只取文件中间那一段的请求，而软件内部那个取本地文件的通道从来只会整份返回、不认这种请求 —— 于是每次跳进度都静默失败。现在正确支持了，跳到哪都能接着播</li>
+          <li><strong>视频点全屏按钮没反应</strong>。是权限那一层把全屏一起拒了，跟画面怎么摆无关。现在能全屏了，退出后视频回到画布原位，跟着画布平移缩放照旧</li>
+          <li><strong>甘特图鼠标停上去，详情框贴到窗口右边会被压扁</strong>（文字挤成每行两三个字的竖排）。现在会自动收回窗口内；靠近底部时翻到上方展开；内容特别长时框内可以滚</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.14">0.4.14</h2>
           <time datetime="2026-08-08">2026-08-08</time>
         </div>
