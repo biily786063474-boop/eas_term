@@ -23,6 +23,17 @@
 // （dragging vs zooming，dragBaseRef vs zoomSessionRef），原因和 GanttNavigator
 // 里"取景框拖自己 vs 主区拖拽同步过来"故意不共用一套的理由一样：手势的触发/收尾
 // 信号本质不同，硬揉成一套反而让"这次该不该清某个 ref"变得含糊。
+//
+// 缩放不该打断"跟随实时"（复审修复）：commitZoom 提交时不能无条件把 viewStart
+// 写成具体数字——那等于缩放一下就把"贴住 now"的直播视图静默冻结成死值，没有
+// 任何提示，用户毫无察觉地不再看到新任务。changeSpan（点预设按钮）从 Task 6
+// 起就用 `if (prev===null) return prev` 保留了这条，缩放这条路径当初漏掉了。
+// 修法见 commitZoom 内部注释，结论：手势开始时若贴着 now（wasLive），且
+// ①结果的右边缘精确贴着 now（缩小方向靠 clampViewStart 天然成立）或
+// ②光标指向的时间点本身离 now 足够近（放大方向没有 clamp 帮忙，只能看光标
+// 本身指向的点够不够"新"，不能看结果的时间差——那个差值是跨度的函数,大跨度
+// 下几像素的锚点误差换算出来能有几十分钟），才保持 null；手动定位过的历史
+// 视图（viewStart 已经是具体值）缩放不会被巧合拉回直播。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
@@ -62,6 +73,50 @@ const MAX_SPAN = 3 * DAY_MS
  *  "扛得住手势里的自然停顿、又不会让提交肉眼可感知地滞后"的经验值——两处场景
  *  不同，没有共用同一个常量的必要，但取值思路是一回事。 */
 const ZOOM_COMMIT_IDLE_MS = 150
+
+/** 缩放提交时判断"结果是否仍贴着 now"要用两条互补的判据（见 commitZoom），
+ *  这个是第一条——clampViewStart 保证 nextT1（=nextT0+nextSpan）永远
+ *  <= panoramaEnd(=now)，"贴着"就是这个不等式几乎取等。这条判据只在"缩小"
+ *  方向真正管用：往外缩且锚点没顶在最右侧时，多出来的部分想往"未来"那边长，
+ *  被 clamp 精确砍在 panoramaEnd（(panoramaEnd-span)+span，同一个值先减后加，
+ *  理论零误差），跟锚点具体在哪儿无关——这里留一点余量纯粹防御 IEEE 双精度在
+ *  极端输入下的舍入，1 秒相对 MIN_SPAN(1 小时) 是 1/3600，不会把"明显没贴住
+ *  now"的情况误判成贴住。 */
+const LIVE_EDGE_EPSILON_MS = 1000
+
+/** 第二条判据——"放大"方向没有 clamp 帮忙，nextT1 离 now 多远纯粹取决于光标
+ *  离右边缘差几像素，换算成毫秒后跟当前跨度成正比：跨度越大，同样几像素的
+ *  偏差换算出的时间差越大。改用"光标指向的时间点（tCursor）离 now 多近"
+ *  （手势最后一次 tick 里算出来的，存在 session.current 里）来判断——只问
+ *  这一个点本身够不够"新"，不看结果的时间差。多近算近，用 nextSpan 的固定
+ *  比例（NEAR_LIVE_FRACTION）而不是一个写死的绝对时长：
+ *
+ *  第一版写死 30 分钟，真机测下来不够用——光标已经贴在"正在跑"那条任务上
+ *  （肉眼看就是贴着最右边）都只有 f≈0.997，(1-f)*24h≈4 分钟，看起来该稳稳
+ *  过关；但换一个跨度更大的场景（比如已经缩小到 3 天档）同样的"贴着某条最近
+ *  任务"的像素级精度，换算出的时间差可以到几个小时，绝对量的窗口没法两头
+ *  兼顾。改成跨度的固定比例（10%——时间轴最右十分之一算"贴近 now"）之后就
+ *  是跟跨度脱钩的相对判据：不管当前放大到多细，"光标落在最近这一段"这件事
+ *  在视觉上永远对应同一块屏幕区域，用户"随手" (casual) 落在那儿的概率是稳定
+ *  的，不会因为跨度不同而忽紧忽松。NEAR_LIVE_MIN_MS 给一个绝对下限——
+ *  MIN_SPAN(1 小时) 的 10% 只有 6 分钟，对最细的档位来说太苛刻，下限保底到
+ *  半小时（这个值本身没有更精确的依据，两害相权：错判成"该冻结却保持了
+ *  live"的代价（多跟随一会儿，用户自己再拖走就是）比反过来（该 live 却
+ *  冻结、且没有任何提示，是这次复审揪出来的那个 Critical）小得多，宁可放
+ *  宽）。
+ *
+ *  这条判据换来一个代价，记在这里省得以后被当成新 bug 重新排查一遍：nearLiveEdge
+ *  命中但 f 没有精确等于 1 时，提交后画面会有一次小幅"回正"——因为 viewStart
+ *  归 null 之后，下一帧渲染用的是 `now - nextSpan`（null 分支的公式），不是
+ *  手势里锚点算出来的 nextT0，两者相差 (1-f)*nextSpan。真机量过：锚点落在
+ *  "12 分钟前"这条任务上（f≈0.9917）、放大到 15.25 小时，这个回正量实测
+ *  7.3px（对着约 950px 宽的时间轴，不到 1%）。跟"停在锚点算出来的 nextT0、
+ *  但不再跟随 now"（这次复审要修的那个问题）比，回正这几像素肉眼很难察觉，
+ *  换来的是缩放完之后画面仍然真的在往前走——这笔账划算，没有再进一步花精力
+ *  消除它（要消除得让 null 分支的公式也认锚点，等于又长出一套新逻辑，
+ *  对几像素的视觉差价不值当）。 */
+const NEAR_LIVE_FRACTION = 0.1
+const NEAR_LIVE_MIN_MS = MIN_SPAN / 2
 
 /** 刻度密度分级候选——单位统一是"整分钟/整小时"，不会出现 10:37 这种断头值。
  *  挑法（见下面 pickTickStepMs）：从最细的候选开始试，选第一个能让"跨度/步长"
@@ -117,6 +172,25 @@ const dur = (ms: number): string => {
   if (s < 60) return s + ' 秒'
   const m = Math.round(s / 60)
   return m < 60 ? m + ' 分钟' : (m / 60).toFixed(1) + ' 小时'
+}
+
+/** 贴住 now（viewStart===null）时 rangeLabel 要把 span 转成人话——Task 17
+ *  连续缩放上线后 span 可以是任意值，不再只有 24h/3d 两个预设，不能再用
+ *  「非此即彼」的三元硬猜（复审揪出的 bug：贴住 now 缩放到比如 18.5 小时，
+ *  旧代码会把 span!==DAY_MS 一律读成"3 天"，标题说瞎话）。
+ *  24h/3d 两个精确值保留原来的措辞——跟预设按钮的文案对得上，按钮高亮和
+ *  标题文案用同一套词，不会出现"24 小时"按钮亮着、标题却说"1 天"这种读着
+ *  别扭的不一致。其余值用"X 小时 Y 分钟"兜底，分钟取整——跟 hhmm() 的精度
+ *  一致，不谎报比这更细的假精度。 */
+const formatSpan = (ms: number): string => {
+  if (ms === DAY_MS) return '24 小时'
+  if (ms === 3 * DAY_MS) return '3 天'
+  const totalMin = Math.round(ms / 60000)
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h === 0) return `${m} 分钟`
+  if (m === 0) return `${h} 小时`
+  return `${h} 小时 ${m} 分钟`
 }
 
 /** 容错隔离（2026-08-08 新需求）第二道防线：主进程 gantt.ts 的 valid() 只校验
@@ -244,8 +318,17 @@ export function GanttStage(): JSX.Element {
       els: HTMLElement[]
       panoramaStart: number
       panoramaEnd: number
+      /** 手势开始那一刻 viewStart 是不是 null（贴住 now、跟随实时）——commitZoom
+       *  要不要把结果写回 null 得看这个，不能凭"这一刻算出来的 t1 恰好等于 now"
+       *  就反推"应该 live"：拖过取景框之后（viewStart 已经是具体值）如果缩放
+       *  凑巧也落在 t1===now，不该被这个巧合拉回 live——用户手动定位的视图，
+       *  缩放不该替他做主"恢复跟随"。见 commitZoom 里 stillLive 的注释。 */
+      wasLive: boolean
     }
-    current: { t0: number; span: number }
+    /** tCursor：最新这一 tick 里光标指向的时间点（= cur.t0 + f*cur.span，onWheel
+     *  里已经算过一次，这里存一份供 commitZoom 判断 nearLiveEdge 用，
+     *  见 NEAR_LIVE_FRACTION 顶上的注释）。 */
+    current: { t0: number; span: number; tCursor: number }
   } | null>(null)
   /** 缩放手势"松手"的静默计时器——见 ZOOM_COMMIT_IDLE_MS 的注释。 */
   const zoomTimerRef = useRef<number | null>(null)
@@ -302,7 +385,7 @@ export function GanttStage(): JSX.Element {
   // 声明顺序早于第一个使用点，不依赖"函数体延迟执行"这个虽然安全但绕一圈的事实。
   const rangeLabel =
     viewStart === null
-      ? `最近 ${span === DAY_MS ? '24 小时' : '3 天'}`
+      ? `最近 ${formatSpan(span)}`
       : `${mmdd(t0)} ${hhmm(t0)} – ${mmdd(t1)} ${hhmm(t1)}`
 
   // 渲染安全的子集——geometry（分行/分层/时间映射）和导航带的密度桶都从这里取数，
@@ -640,10 +723,15 @@ export function GanttStage(): JSX.Element {
 
   /** ⌃+滚轮 / 触控板双指捏合缩放时间跨度。原生 wheel 监听器 + passive:false
    *  的理由见 scrollRef 声明处的注释。挂在 [t0, span, panoramaStart, panoramaEnd,
-   *  dragging] 上——这几个值只在"两次手势之间"的正常渲染里变化（手势进行中我们
-   *  刻意不 setState，见下方 onWheel 内部），所以监听器不会在一次连续手势中途被
-   *  摘掉重挂，只会在手势与手势之间刷新成最新的基准值，跟"每次开始新手势都要
-   *  用最新状态"这个需求正好对上。 */
+   *  dragging, viewStart] 上——这几个值只在"两次手势之间"的正常渲染里变化
+   *  （手势进行中我们刻意不 setState，见下方 onWheel 内部），所以监听器不会在
+   *  一次连续手势中途被摘掉重挂，只会在手势与手势之间刷新成最新的基准值，跟
+   *  "每次开始新手势都要用最新状态"这个需求正好对上。viewStart 单独列进来
+   *  （不是靠 t0 联带触发)：正常情况下 viewStart 变了 t0 几乎总是跟着变，但
+   *  存在一个巧合边界——viewStart 从 null 变成某个具体值、又恰好等于
+   *  "此刻 now 换算出的 t0"，这种情况下 t0 数值不变，只靠 t0 当依赖会让下面
+   *  onWheel 闭包里读到的 viewStart 是过期的 null，新手势的 wasLive 判断可能
+   *  用错快照。直接把 viewStart 摆进依赖数组，不去赌这个巧合不会发生。 */
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -664,7 +752,40 @@ export function GanttStage(): JSX.Element {
       // 必然让 t0 变化（span 变了,t0=t1-span 这个式子里 span 本身就是被减数,
       // 必然跟着动),下面按 [t0] 的 useLayoutEffect 会接管清理,不重复做。
       setSpan(session.current.span)
-      setViewStart(session.current.t0)
+
+      // 复审揪出的 Critical bug：这里原来无条件 setViewStart(具体数字)，等于
+      // 缩放这一下就把"贴住 now、跟随实时"的状态永久冻结成一个死值——用户在
+      // 直播视图上随手滚一下就静默停止跟踪，没有任何提示，唯一恢复方式是切走
+      // 视图再切回来（组件卸载重挂载）。changeSpan（点 24h/3d 预设按钮）从
+      // Task 6 起就明确保留了这一条（`if (prev === null) return prev`），
+      // 缩放这条路径漏掉了同一件事,不是有意为之的设计差异。
+      //
+      // 判据是两条 OR 起来（各自的道理见 LIVE_EDGE_EPSILON_MS / NEAR_LIVE_FRACTION
+      // 顶上的注释，这里只留结论）：
+      //   ① clampBound——结果的右边缘 nextT1 精确贴着 panoramaEnd(=now)。
+      //      这条只在"缩小"方向天然成立（clampViewStart 把想探到"未来"的部分
+      //      砍掉了，跟锚点在哪儿无关），"放大"方向几乎不可能精确命中。
+      //   ② nearLiveEdge——光标指向的时间点（tCursor）离 now 足够近（结果
+      //      跨度 nextSpan 的 10%，至少半个 MIN_SPAN）。这条专门补"放大"方向：
+      //      锚点贴着最右侧缩放时，nextT1 离 now 的差距是跨度的函数（差几像素
+      //      在大跨度下换算成分钟甚至小时级的缺口），用结果的时间差做判据会
+      //      时紧时松，改用"光标本身指向的点够不够新"、且门槛跟着跨度走，
+      //      才能在任意缩放层级下都对应同一块屏幕区域。
+      // 两条都要求 AND 上 wasLive（手势开始时 viewStart 是不是已经是 null）——
+      // 否则会出另一种错：用户已经拖动取景框手动定位到某段历史（viewStart 是
+      // 具体值），这时候如果缩放凑巧也让结果落在 now 附近，不该被这个巧合
+      // "悄悄拉回直播"，那是在替用户做他没做过的决定。wasLive 是手势开始那
+      // 一刻的快照（session.base 里），不是缩放中途会变的东西，用它做门槛正确。
+      //
+      // 都不满足时（比如锚点在时间轴中段，缩放进了一段明确的历史切片）冻结
+      // 才是对的——用户缩放进了一段过去，视图不该在他松手后悄悄自己往前滑走。
+      const { t0: nextT0, span: nextSpan, tCursor } = session.current
+      const nextT1 = nextT0 + nextSpan
+      const clampBound = nextT1 >= session.base.panoramaEnd - LIVE_EDGE_EPSILON_MS
+      const nearLiveWindow = Math.max(NEAR_LIVE_MIN_MS, nextSpan * NEAR_LIVE_FRACTION)
+      const nearLiveEdge = session.base.panoramaEnd - tCursor <= nearLiveWindow
+      const stillLive = session.base.wasLive && (clampBound || nearLiveEdge)
+      setViewStart(stillLive ? null : nextT0)
     }
 
     const onWheel = (e: WheelEvent): void => {
@@ -687,8 +808,19 @@ export function GanttStage(): JSX.Element {
         cancelHide()
         setHover(null)
         session = {
-          base: { t0, span, leftPx: rect.left, widthPx: rect.width, els, panoramaStart, panoramaEnd },
-          current: { t0, span }
+          base: {
+            t0,
+            span,
+            leftPx: rect.left,
+            widthPx: rect.width,
+            els,
+            panoramaStart,
+            panoramaEnd,
+            wasLive: viewStart === null
+          },
+          // tCursor 这里随便填一个合法值就行——本次 tick 走到下面会立刻按
+          // 真实公式重算并覆盖，这个初值不会被读到任何计算里。
+          current: { t0, span, tCursor: t0 }
         }
         zoomSessionRef.current = session
         setZooming(true)
@@ -722,7 +854,9 @@ export function GanttStage(): JSX.Element {
       const rawT0 = tCursor - f * nextSpan
       const nextT0 = clampViewStart(rawT0, base.panoramaStart, base.panoramaEnd, nextSpan)
 
-      session.current = { t0: nextT0, span: nextSpan }
+      // tCursor 也存进去——commitZoom 要用它判断"光标指向的这个时间点离 now
+      // 够不够近"（见 NEAR_LIVE_FRACTION 的注释），不是这里算完就扔。
+      session.current = { t0: nextT0, span: nextSpan, tCursor }
 
       // 内容预览：把 .gantt-axis/.gantt-lanes 当一整块刚性图层做"绕锚点缩放"——
       // 数学上等价于先按锚点位移再整体缩放，具体推导见 GanttStage 顶部这次改动
@@ -745,7 +879,7 @@ export function GanttStage(): JSX.Element {
 
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [t0, span, panoramaStart, panoramaEnd, dragging])
+  }, [t0, span, panoramaStart, panoramaEnd, dragging, viewStart])
 
   return (
     <div className="gantt">
