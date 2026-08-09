@@ -233,13 +233,27 @@
   top: 0;
   z-index: 3400;
   max-width: 380px;
+  /* max-height 是内联样式算的（GanttStage.tsx 的 popup style），要按
+     window.innerHeight 现算留边距，静态 CSS 写不出这个值——这里只管超出之后
+     怎么办：内部滚动，不能把浮层撑到视口外面去（长 prompt 在矮窗口下会碰到，
+     2000 字上限本来就不算病理输入）。滚动条不额外定制样式，跟 .canvas-ctxmenu
+     （同属"夹回可视区的紧凑浮层"）一样吃 base.css 里的全局 ::-webkit-scrollbar，
+     两处视觉语言保持一致，没必要另起一份。border-radius + box-shadow +
+     overflow-y:auto 三者同时挂在一个元素上不会互相打架——.canvas-ctxmenu 已经是
+     这个组合的先例，圆角裁切滚动内容、box-shadow 照常画在外面。 */
+  overflow-y: auto;
+  overscroll-behavior: contain; /* 滚到底/顶别把画面上其它可滚容器带着一起动 */
   padding: 9px 11px;
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-md);
   background: var(--tooltip-bg);
   backdrop-filter: var(--blur);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
+  /* 原来是 none（纯展示、鼠标穿透条下方的内容）。开了内部滚动就必须能接鼠标事件，
+     否则滚动条画出来是摆设——wheel/拖 thumb 都会穿透到浮层背后的元素，白加。
+     改成 auto 之后"鼠标从条移到浮层"这段本来会立刻触发条的 onMouseLeave 而够不着
+     浮层的问题，靠 GanttStage.tsx 里 hideTimerRef 那套宽限期解决，不在这里重复。 */
+  pointer-events: auto;
 }
 
 .gantt-pop-time {

@@ -43,6 +43,11 @@ const LABEL_INSIDE_MIN_PX = 86
  *  （CanvasContextMenu.tsx）的 8px，两处视觉语言保持一致 */
 const POP_GAP = 8
 const POP_MARGIN = 8
+/** 浮层加了内部滚动之后，鼠标要能从条移到浮层上（拖滚动条/滚滚轮），中间隔着
+ *  POP_GAP 那段无接触区——onMouseLeave 不能立刻清空 hover，否则鼠标还没走到
+ *  浮层就已经判定"离开"，浮层先一步消失，永远够不着。给"离开"一段宽限期，
+ *  期内如果重新进入（条或浮层本身）就撤销这次隐藏；宽限期内没人接住才真的清空。 */
+const POP_HIDE_DELAY = 150
 
 const two = (n: number): string => String(n).padStart(2, '0')
 const hhmm = (t: number): string => {
@@ -88,6 +93,31 @@ export function GanttStage(): JSX.Element {
   // 直接调那个 hook——原因见下面 useLayoutEffect 前的注释。
   const popRef = useRef<HTMLDivElement>(null)
   const [popPos, setPopPos] = useState<{ x: number; y: number } | null>(null)
+  // 隐藏浮层走"宽限期定时器"而不是立刻清空——配合浮层新增的 onMouseEnter/
+  // onMouseLeave（见下方 JSX），让鼠标能穿过 POP_GAP 那段间隙真正移到浮层上。
+  // timer 只操心"要不要真的清空 hover"，跟下面算 popPos 的 useLayoutEffect
+  // 完全不碰面：显示仍然是 hover 一变就同步重算位置，没有引入任何延迟，
+  // 延迟只加在"清空"这一侧，Part 1 验证过的"无先飞出去再跳回来"结论不受影响。
+  const hideTimerRef = useRef<number | null>(null)
+  const cancelHide = (): void => {
+    if (hideTimerRef.current !== null) {
+      window.clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+  }
+  const scheduleHide = (): void => {
+    cancelHide()
+    hideTimerRef.current = window.setTimeout(() => {
+      hideTimerRef.current = null
+      setHover(null)
+    }, POP_HIDE_DELAY)
+  }
+  useEffect(() => {
+    // 组件卸载（切走视图）时别让宽限期 timer 之后再摸一个已经不在的 hover
+    return () => {
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current)
+    }
+  }, [])
 
   /** 取景框左边缘（毫秒时间戳）。null = 贴住右端、跟随 now；一旦拖过就固定成
    *  具体值，不再自动跟随——否则往回看历史时窗口会自己漂走。 */
@@ -221,10 +251,18 @@ export function GanttStage(): JSX.Element {
     const el = popRef.current
     if (!el) return
     const w = el.offsetWidth
+    // h 这里已经是封顶后的高度——JSX 里 style.maxHeight 按 window.innerHeight -
+    // 2*POP_MARGIN 算，且在测量前那一帧就生效（不是量完再加），所以 h 永远
+    // <= innerHeight - 2*POP_MARGIN。这一点是下面"两边都放不下"兜底分支不会
+    // 溢出视口的数学保证：翻到上方时 y = max(POP_MARGIN, top-GAP-h)，最坏情况
+    // y = POP_MARGIN，则 y+h <= POP_MARGIN + (innerHeight-2*POP_MARGIN) =
+    // innerHeight-POP_MARGIN，底边恰好卡在边距内，不会二次溢出。
     const h = el.offsetHeight
     // 优先展开到条下方；下方放不下就翻到条上方，让浮层始终贴着条，而不是飘去
-    // 屏幕上一个"不出界但离条很远"的地方。两边都放不下（极端矮窗口）时兜底夹回
-    // 视口内，不让浮层彻底飞出屏幕。
+    // 屏幕上一个"不出界但离条很远"的地方。两边都放不下（内容本身比整个视口
+    // 还高）时兜底夹回视口内——上面的 max-height 已经保证这种情况下 h 有限，
+    // 剩下超出可视高度的部分交给 .gantt-pop 的 overflow-y:auto 内部滚动读完，
+    // 不会出现"夹回去了但内容还是拖出视口"的二次溢出。
     const fitsBelow = hover.bottom + POP_GAP + h <= window.innerHeight - POP_MARGIN
     const y = fitsBelow ? hover.bottom + POP_GAP : Math.max(POP_MARGIN, hover.top - POP_GAP - h)
     const x = Math.max(POP_MARGIN, Math.min(hover.x, window.innerWidth - w - POP_MARGIN))
@@ -232,6 +270,11 @@ export function GanttStage(): JSX.Element {
   }, [hover])
 
   const beginDrag = (): void => {
+    // 拖拽平移开始前把浮层立刻清空，不走宽限期——浮层的 top/bottom 是进入那一刻
+    // 条的位置快照，拖拽期间条会被 transform 整体挪走，浮层如果还在宽限期里挂着，
+    // 会变成一个悬在半空、跟内容脱节的"幽灵浮层"。
+    cancelHide()
+    setHover(null)
     const root = plotRef.current
     if (!root) return
     const axis = root.querySelector<HTMLElement>('.gantt-axis')
@@ -435,10 +478,11 @@ export function GanttStage(): JSX.Element {
                             className={`gantt-bar ${state}${wide ? ' wide' : ''}`}
                             style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
                             onMouseEnter={(ev) => {
+                              cancelHide()
                               const r = ev.currentTarget.getBoundingClientRect()
                               setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
                             }}
-                            onMouseLeave={() => setHover(null)}
+                            onMouseLeave={scheduleHide}
                             onClick={() => jump(t)}
                           >
                             {state === 'aborted' && (
@@ -485,8 +529,17 @@ export function GanttStage(): JSX.Element {
           className="gantt-pop"
           style={{
             transform: popPos ? `translate(${popPos.x}px, ${popPos.y}px)` : undefined,
-            visibility: popPos ? 'visible' : 'hidden'
+            visibility: popPos ? 'visible' : 'hidden',
+            // 内容比整个视口还高的极端情况兜底：这个上限要在测量宽高的这一帧就生效
+            // （不能等 popPos 算完才加），否则下面 useLayoutEffect 量出来的
+            // offsetHeight 还是没封顶的"虚高"，翻转判断会拿着假数据算错方向——
+            // 具体的边界数学见下面 useLayoutEffect 里 `const h = ...` 那段注释。
+            // 按 window.innerHeight 现算，静态 CSS 写不出这个值，所以放在内联样式
+            // 而不是 gantt.css。
+            maxHeight: Math.max(0, window.innerHeight - POP_MARGIN * 2) + 'px'
           }}
+          onMouseEnter={cancelHide}
+          onMouseLeave={scheduleHide}
         >
           <div className="gantt-pop-time">
             {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
