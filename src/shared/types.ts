@@ -679,3 +679,12 @@ export interface GanttClearRange {
   from: number
   to: number
 }
+
+/** 终端输入框右键插入的待办清单里的一条。
+ *  打钩完全是用户自己点——不解析终端输出、不代 agent 判断「做完了没」，
+ *  这里只记录人自己的判断，不关心 agent 实际说了什么。 */
+export interface TodoItem {
+  id: string
+  text: string
+  done: boolean
+}

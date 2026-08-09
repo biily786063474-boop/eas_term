@@ -22,6 +22,10 @@ export interface StageMenuDeps {
 export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuItem[] | null {
   const t = e.target as HTMLElement
   if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer')) return null
+  // 终端输入框有自己的右键菜单（待办清单）。不排除的话，画布模式下在输入框上右键
+  // 会命中下面 `.pane[data-leaf-id]` 那一分支，弹出「关闭终端」——和输入框自己弹出的
+  // 菜单在同一个坐标叠两份出来，用户点到的到底是哪个全看谁的 DOM 更靠后，纯随缘。
+  if (t.closest('.term-input')) return null
   const { setEditingSticky, setEditingFrame, viewportEl } = deps
   const st = useStore.getState()
   const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null

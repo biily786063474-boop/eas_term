@@ -46,7 +46,7 @@ import type {
   RulesStatus,
   Footprint,
   InstallPlan,
-  UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange} from '../shared/types'
+  UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -127,6 +127,17 @@ const api = {
     /** 整表落盘：增删改序都走它，「顺序」这种跨条目的改动没法拆成单条 */
     save: (list: BoardColumn[]): Promise<BoardColumn[]> => ipcRenderer.invoke('board:save', list),
     newId: (): Promise<string> => ipcRenderer.invoke('board:newId')
+  },
+  todos: {
+    // 终端输入框右键插入的待办清单。key 由渲染层决定（画布节点 id 优先，
+    // 见 features/terminal/useTerminalTodos.ts），这里只管按 key 存取。
+    /** null = 这个 key 从没插过清单；[] = 插了但一条没加。两者要分清楚 */
+    get: (key: string): Promise<TodoItem[] | null> => ipcRenderer.invoke('todos:get', key),
+    /** 整份清单落盘：增删改都走它 */
+    save: (key: string, items: TodoItem[]): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('todos:save', key, items),
+    /** 删掉整份清单（不是清空条目） */
+    remove: (key: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('todos:remove', key)
   },
   gantt: {
     list: (): Promise<GanttTask[]> => ipcRenderer.invoke('gantt:list'),

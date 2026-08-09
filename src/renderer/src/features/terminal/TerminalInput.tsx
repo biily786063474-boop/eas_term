@@ -18,6 +18,9 @@ import { useEffect, useRef, useState } from 'react'
 import { VoiceButton } from '../voice/VoiceButton'
 import { track } from '../notify/track'
 import { noteSubmitted, drainFollow } from '../gantt/collector'
+import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { useTerminalTodos } from './useTerminalTodos'
+import { TerminalTodoPanel } from './TerminalTodoPanel'
 
 /** 文本写进 pty 之后隔多久再发回车。
  *  给 TUI 一点时间把这段文本渲染进它自己的输入框——不隔开的话回车会被当成
@@ -60,9 +63,12 @@ interface PastedImg {
 
 export function TerminalInput({
   ptyId,
+  leafId,
   onFocusTerm
 }: {
   ptyId: string
+  /** 待办清单挂靠用——见 useTerminalTodos 顶部注释，为什么不能直接用 ptyId */
+  leafId: string
   /** 把键盘焦点还给终端（Esc 时用） */
   onFocusTerm: () => void
 }): JSX.Element {
@@ -74,6 +80,10 @@ export function TerminalInput({
   const taRef = useRef<HTMLTextAreaElement>(null)
   /** 上一条发出去的内容，空输入时按 ↑ 取回 */
   const lastRef = useRef('')
+
+  // 待办清单：右键菜单插入，勾选状态持久化（见 useTerminalTodos 顶部注释）
+  const todos = useTerminalTodos(leafId)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
 
   /** 关终端时把「还没发出去」的粘贴图删掉。发出去的不能删——agent 还要读。
    *  用 ref 是因为清理函数只在卸载时跑一次，闭包里的 imgs 会是初值。 */
@@ -239,6 +249,7 @@ export function TerminalInput({
         void takeFiles([...e.dataTransfer.files])
       }}
     >
+      <TerminalTodoPanel todos={todos} />
       {err && <div className="term-input-err">{err}</div>}
       {imgs.length > 0 && (
         <div className="term-input-imgs">
@@ -266,6 +277,14 @@ export function TerminalInput({
           value={value}
           placeholder="写点什么…（⌘↵ 发送，可粘贴/拖入图片）"
           spellCheck={false}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            // 画布模式下 .terminal-host / CanvasStage 各自还挂着别的右键菜单监听
+            // （见 TerminalView.tsx、stageMenu.ts 里对 .term-input 的排除注释）。
+            // 这里既然已经自己接管了，就把事件摁住，别让它继续冒泡出去撞见那些菜单
+            e.stopPropagation()
+            setCtxMenu({ x: e.clientX, y: e.clientY })
+          }}
           onPaste={(e) => {
             const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
             if (!files.length) return // 纯文本粘贴走默认行为
@@ -318,6 +337,21 @@ export function TerminalInput({
           ⌘↵
         </button>
       </div>
+      {ctxMenu && (
+        <CanvasContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            {
+              label: todos.exists ? '待办清单' : '插入待办清单',
+              // 已经插过：右键只是把面板展开给你看，不重新建一份、不清空已有条目
+              hint: todos.exists ? `${todos.items.filter((it) => it.done).length}/${todos.items.length}` : undefined,
+              onClick: () => todos.ensure()
+            }
+          ]}
+        />
+      )}
     </div>
   )
 }

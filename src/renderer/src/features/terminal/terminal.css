@@ -335,3 +335,236 @@
   color: #f0a0a0;
   padding: 0 2px;
 }
+
+/* ── 待办清单：输入框右键插入，挂在输入框上方 ──
+   收起时只有一行头（标题+进度+删除），展开才铺开条目——十几个终端同时开着，
+   默认收起省地方；里面还有条目就靠 max-height 自己滚，不撑高整个输入区。 */
+.term-todo {
+  flex: none;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--glass-1);
+  overflow: hidden;
+}
+
+.term-todo-hd {
+  display: flex;
+  align-items: stretch;
+}
+
+.term-todo-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 8px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.term-todo-toggle:hover {
+  color: var(--fg);
+}
+
+.term-todo-title {
+  font-weight: 500;
+}
+
+.term-todo-count {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.term-todo-del {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.12s, background-color 0.12s, color 0.12s;
+}
+
+.term-todo-del:hover {
+  opacity: 1;
+  /* 危险色沿用右键菜单 .cctx-item.danger 的同一个红——这类删除色语义固定，
+     不随主题的蓝/粉强调色变化 */
+  background: rgba(247, 118, 142, 0.16);
+  color: #f7768e;
+}
+
+.term-todo-body {
+  padding: 3px 6px 6px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.term-todo-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 140px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 3px;
+}
+
+.term-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 3px;
+  border-radius: var(--radius-sm);
+}
+
+.term-todo-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.term-todo-check {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 4px;
+  background: none;
+  color: #0d0f16;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+
+.term-todo-check:hover {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+/* 打钩状态：填色 + 打勾图标——**不只靠颜色**，未勾选时框内本来就没有图标，
+   打钩后图标从无到有，色弱也分得出「勾没勾」 */
+.term-todo-item.done .term-todo-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.term-todo-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--fg);
+  cursor: text;
+}
+
+/* 已完成条目第二个信号：划掉 + 变暗，和上面的打勾图标一起，两个独立信号叠加 */
+.term-todo-item.done .term-todo-text {
+  text-decoration: line-through;
+  color: var(--fg-dim);
+  opacity: 0.75;
+}
+
+.term-todo-edit {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  outline: none;
+  color: var(--fg);
+  font-size: 11.5px;
+  font-family: inherit;
+  padding: 1px 4px;
+}
+
+.term-todo-x {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--fg-dim);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s, color 0.12s, background-color 0.12s;
+}
+
+/* 常驻按钮会把 11px 的行挤得很挤，且大多数时候用不上——同 .tii-x 的取舍，只在悬停这一条时露出来 */
+.term-todo-item:hover .term-todo-x {
+  opacity: 0.7;
+}
+
+.term-todo-x:hover {
+  opacity: 1 !important;
+  color: #f7768e;
+  background: rgba(247, 118, 142, 0.14);
+}
+
+.term-todo-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.term-todo-add input {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  outline: none;
+  color: var(--fg);
+  font-size: 11.5px;
+  font-family: inherit;
+}
+
+.term-todo-add input:focus {
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+
+.term-todo-add input::placeholder {
+  color: var(--fg-dim);
+  opacity: 0.55;
+}
+
+.term-todo-addbtn {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background-color 0.12s;
+}
+
+.term-todo-addbtn:not(:disabled):hover {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.term-todo-addbtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

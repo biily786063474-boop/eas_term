@@ -552,7 +552,15 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
     // 右键弹菜单：命中路径时附带「在此打开/cd/复制路径」等项，并始终带上
     // 复制选区 / 粘贴 / 全选 / 清屏 等通用文本操作。
+    //
+    // **输入框（.term-input）里的右键要放过。** 这里的监听是原生 addEventListener
+    // 挂在 .terminal-host 上的——原生监听器在真实 DOM 冒泡阶段会比 React 的合成事件
+    // 委托（挂在更外层的根节点上）先碰到事件。输入框自己也有一个右键菜单（待办清单），
+    // 挂的是 React 的 onContextMenu；这里如果照常 stopPropagation，事件根本到不了
+    // React 的委托点，输入框那个菜单永远弹不出来。原生监听器碰到目标在输入框里 → 直接
+    // 放行，不 preventDefault/不 stopPropagation，让它继续冒泡给输入框自己处理。
     const onContextMenu = (e: MouseEvent): void => {
+      if ((e.target as HTMLElement).closest('.term-input')) return
       e.preventDefault()
       e.stopPropagation()
       setMenu({
@@ -631,7 +639,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       {/* xterm 挂在这层，不是 host——host 底部还有输入框，xterm 会把自己撑满 */}
       <div ref={screenRef} className="terminal-screen" />
       {/* 麦克风在输入框里面（右侧），不再单独绝对定位——两者曾在右下角叠成一团 */}
-      <TerminalInput ptyId={ptyId} onFocusTerm={() => termRef.current?.focus()} />
+      <TerminalInput ptyId={ptyId} leafId={leafId} onFocusTerm={() => termRef.current?.focus()} />
       <SecretBadge ptyId={ptyId} scale={canvasScale} />
       {m &&
         createPortal(
