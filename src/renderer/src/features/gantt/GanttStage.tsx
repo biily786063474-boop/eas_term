@@ -13,6 +13,16 @@
 // commitView 这几个函数两边都在用，没有另起一套。取景框侧的同步走命令式 ref
 // （GanttNavigator 暴露的 previewFrame/resetFrame），理由和取景框自己拖自己时
 // 直接改 DOM 是同一个——拖拽中不能 setState。
+//
+// 连续缩放（Task 17 新增）：⌃+滚轮 / 触控板双指捏合，span 从两档预设变成
+// [MIN_SPAN, MAX_SPAN] 区间内连续可调，以光标为锚（缩放前后光标下的时间点屏幕
+// 位置不变）。手感上是"拖拽"和"缩放"两件事共享同一套硬要求——transform 不碰
+// left/width、连续手势中不 setState、松手/静默后再提交一次——但缩放没有
+// mousedown/mouseup 这种明确的"手势边界"，wheel 事件是连续打进来的一串，只能靠
+// "静默一段时间"倒推"松手了"（ZOOM_COMMIT_IDLE_MS）。两套状态机分开写
+// （dragging vs zooming，dragBaseRef vs zoomSessionRef），原因和 GanttNavigator
+// 里"取景框拖自己 vs 主区拖拽同步过来"故意不共用一套的理由一样：手势的触发/收尾
+// 信号本质不同，硬揉成一套反而让"这次该不该清某个 ref"变得含糊。
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
@@ -30,12 +40,59 @@ import {
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
-/** 主区跨度档位：默认 24 小时，可切 3 天。导航带那 7 天全景不在这个列表里——
- *  全景固定不可切，只有主区看多宽是可切的。 */
+/** 主区跨度预设：24 小时 / 3 天两个快捷跳转按钮。连续缩放（⌃+滚轮/双指捏合）
+ *  上线后这两个按钮不再是"唯二两档"，是这段连续区间里的两个常用书签——点一下
+ *  直接跳过去，不用滚半天。导航带那 7 天全景不在这个列表里——全景固定不可切，
+ *  只有主区看多宽是可切的。 */
 const SPAN_OPTIONS = [
   { key: '24h', label: '24 小时', ms: DAY_MS },
   { key: '3d', label: '3 天', ms: 3 * DAY_MS }
 ] as const
+
+/** 连续缩放的两端硬边界：最细一小时一屏，最粗跟"3 天"预设看齐——用户要求就是
+ *  "最大 3 天，最小一小时"，没有再往外扩到导航带 7 天全景的必要（那本来就是
+ *  全景专用，不是给主区当第三档）。 */
+const MIN_SPAN = 60 * 60 * 1000
+const MAX_SPAN = 3 * DAY_MS
+
+/** wheel 事件不像 mousedown/mouseup 那样有天然的"手势结束"信号——触控板捏合会
+ *  连续打进来一长串事件，只能靠"静默了一段时间"倒推"这次缩放松手了"。每个 tick
+ *  都会重置这个计时器（debounce 而不是节流），静默超过这个时长才真正提交一次
+ *  state。150ms 这个量级跟本文件后面 hover 浮层的 POP_HIDE_DELAY 一样，都是
+ *  "扛得住手势里的自然停顿、又不会让提交肉眼可感知地滞后"的经验值——两处场景
+ *  不同，没有共用同一个常量的必要，但取值思路是一回事。 */
+const ZOOM_COMMIT_IDLE_MS = 150
+
+/** 刻度密度分级候选——单位统一是"整分钟/整小时"，不会出现 10:37 这种断头值。
+ *  挑法（见下面 pickTickStepMs）：从最细的候选开始试，选第一个能让"跨度/步长"
+ *  落在 10 以内的。为什么这样就能同时保住下限（不会挑出个数量只有 2、3 根的
+ *  步长）：相邻候选的比值最大是 2×（10min→15min 是 1.5×，其余都是 2×），而
+ *  目标区间 [4,10] 的比值上限是 10÷4=2.5×——比任何相邻候选的跳档幅度都宽，
+ *  两档候选各自"合适"的跨度区间必然有重叠，不会漏出"两边都不合适"的空当。
+ *  这个证明只在实际会用到的 [MIN_SPAN, MAX_SPAN] 区间内成立；表头 1min/5min
+ *  两档细到当前 1 小时下限用不上，留着是给以后万一调低 MIN_SPAN 兜底，不是
+ *  当前就会命中的分支。 */
+const TICK_STEP_LADDER = [
+  60 * 1000, // 1 分钟
+  5 * 60 * 1000, // 5 分钟
+  10 * 60 * 1000, // 10 分钟
+  15 * 60 * 1000, // 15 分钟
+  30 * 60 * 1000, // 30 分钟
+  60 * 60 * 1000, // 1 小时
+  2 * 60 * 60 * 1000, // 2 小时
+  3 * 60 * 60 * 1000, // 3 小时
+  6 * 60 * 60 * 1000, // 6 小时
+  12 * 60 * 60 * 1000, // 12 小时
+  24 * 60 * 60 * 1000 // 24 小时——MAX_SPAN=3 天时永远轮不到（12 小时档已经够用），
+  // 纯粹是兜底，见上面大注释
+]
+
+function pickTickStepMs(span: number): number {
+  for (const step of TICK_STEP_LADDER) {
+    if (span / step <= 10) return step
+  }
+  return TICK_STEP_LADDER[TICK_STEP_LADDER.length - 1]
+}
 
 const MIN_BAR_PX = 3
 /** 条内放得下 10 个字大约需要这么宽；不够就把标签移到条右边 */
@@ -149,27 +206,77 @@ export function GanttStage(): JSX.Element {
   /** 是否正在拖取景框。只在拖拽"开始/结束"这两个离散时刻才 setState，
    *  拖拽过程中的每一帧绝不经过这里——那是 GanttNavigator 直接改 DOM 的事。 */
   const [dragging, setDragging] = useState(false)
+  /** 是否正在走"⌃+滚轮/双指缩放"这条手势。语义上跟 dragging 是同一类信号
+   *  （"正被 transform 预览接管，此刻的 span/viewStart 还没提交，画面显示的是
+   *  临时态"），但特意用独立的 state，不复用 dragging——拖拽由 mouseup 这个明确
+   *  事件收尾，缩放靠"静默一段时间"倒推"松手了"，两条状态机的驱动方式不同。
+   *  唯一需要"两者其一为真"的地方（GanttNavigator 要不要关掉取景框的 CSS
+   *  过渡）在调用处用 `dragging || zooming` 合流，不需要让 GanttNavigator
+   *  认识第二个概念。 */
+  const [zooming, setZooming] = useState(false)
 
-  // 主区里"跟着时间轴走"的那部分（顶部刻度 + 每行的 lanes）的容器。拖拽预览期间
-  // 直接对着里面匹配到的节点改 transform，不碰 React state——见 previewDrag。
+  // 主区里"跟着时间轴走"的那部分（顶部刻度 + 每行的 lanes）的容器。拖拽/缩放预览
+  // 期间直接对着里面匹配到的节点改 transform，不碰 React state——见 previewDrag
+  // 和下面的缩放 wheel 监听器。
   const plotRef = useRef<HTMLDivElement>(null)
+  /** .gantt-scroll 本身的 ref——⌃+滚轮/双指缩放要用原生 wheel 监听器
+   *  + passive:false 才能拦住浏览器默认的页面缩放（React 合成事件那层 wheel
+   *  默认走 passive，onWheel prop 里调 preventDefault 不生效，CanvasStage.tsx
+   *  的画布缩放已经踩过这个坑，做法照抄）。挂在 .gantt-scroll 而不是更内层的
+   *  plotRef（.gantt-grid），是因为空白处拖拽平移（handleStageMouseDown）也是
+   *  挂在 .gantt-scroll 上——两种手势的命中区域保持一致，行尾之后的空白同样能
+   *  滚轮缩放，不是只有条和刻度能响应。 */
+  const scrollRef = useRef<HTMLDivElement>(null)
   const dragBaseRef = useRef<{ t0: number; widthPx: number; els: HTMLElement[] } | null>(null)
-  // 导航带的命令式句柄（Task 7 新增）：主区拖拽时用它同步挪取景框、复位取景框，
-  // 全程绕开 React state——细节见 GanttNavigator.tsx 里 GanttNavigatorHandle 的注释。
+  /** 一次"⌃+滚轮/双指缩放"手势的运行态。base 是手势开始那一刻的快照——固定不变，
+   *  锚点数学要靠它换算"相对手势起点的屏幕位移"（跟 previewDrag 用 dragBaseRef.t0
+   *  而不是"上一帧"做基准是同一个道理）。current 是每个 wheel tick 累积出来的
+   *  "如果现在提交，会提交成什么"——分开存两份，是因为算这一 tick 该定到哪个新
+   *  时间点，用的是"最新累积结果"（current），但换算成屏幕上的 transform，用的是
+   *  "相对固定起点的偏移"（base）；揉成一份会让连续多次缩放（一次 pinch 里几十个
+   *  tick）的锚点计算错位。 */
+  const zoomSessionRef = useRef<{
+    base: {
+      t0: number
+      span: number
+      leftPx: number
+      widthPx: number
+      els: HTMLElement[]
+      panoramaStart: number
+      panoramaEnd: number
+    }
+    current: { t0: number; span: number }
+  } | null>(null)
+  /** 缩放手势"松手"的静默计时器——见 ZOOM_COMMIT_IDLE_MS 的注释。 */
+  const zoomTimerRef = useRef<number | null>(null)
+  // 导航带的命令式句柄（Task 7 新增）：主区拖拽/缩放时用它同步挪取景框、复位
+  // 取景框，全程绕开 React state——细节见 GanttNavigator.tsx 里
+  // GanttNavigatorHandle 的注释。
   const navRef = useRef<GanttNavigatorHandle>(null)
   /** 主区拖拽会话的收尾函数，供组件卸载时兜底摘监听器——跟 GanttNavigator 里同名
    *  机制对称（万一拖拽中途整个视图被切走，不能让 window 上残留的监听器继续摸一个
    *  已经卸载的组件）。 */
   const stageDragCleanupRef = useRef<(() => void) | null>(null)
   useEffect(() => () => stageDragCleanupRef.current?.(), [])
+  // 缩放静默计时器的兜底同理：万一计时器还没触发就卸载了整个视图，别让它之后
+  // 再摸一个已经不在的组件。
+  useEffect(
+    () => () => {
+      if (zoomTimerRef.current !== null) window.clearTimeout(zoomTimerRef.current)
+    },
+    []
+  )
 
   // 进来读一次，之后每 20 秒刷一次（有任务在跑时右端要跟着长）。
-  // 拖拽中跳过这次刷新：既不给"拖拽中不 setState"的规则开口子，也避免轮询数据
-  // 和拖拽预览的 transform 用的是两套不同基准、同一帧里打架（表现为轻微跳动）。
+  // 拖拽/缩放中跳过这次刷新：既不给"手势进行中不 setState"的规则开口子，也避免
+  // 轮询数据和预览 transform 用的是两套不同基准、同一帧里打架（表现为轻微跳动）。
+  // 缩放同样要挡：它的锚点数学假定 now（进而 panoramaStart/End）在整个手势期间
+  // 不变——手势通常远短于 20 秒，命中窗口很窄，但挡上不费事，比事后排查"缩放中
+  // 突然轻微跳了一下"划算。
   useEffect(() => {
     let alive = true
     const pull = (): void => {
-      if (dragging) return
+      if (dragging || zooming) return
       void window.api.gantt.list().then((l) => {
         if (alive) setTasks(l)
       })
@@ -181,7 +288,7 @@ export function GanttStage(): JSX.Element {
       alive = false
       window.clearInterval(id)
     }
-  }, [dragging])
+  }, [dragging, zooming])
 
   const panoramaEnd = now
   const panoramaStart = now - PANORAMA_MS
@@ -228,9 +335,9 @@ export function GanttStage(): JSX.Element {
     [tasks, t0, t1, now]
   )
 
-  /** 刻度密度按跨度档位调整：24 小时档每 2 小时一根，3 天档每 6 小时一根，
-   *  否则 24 根挤在一起太密。 */
-  const tickStepMs = span === DAY_MS ? 2 * 3600000 : 6 * 3600000
+  /** 刻度密度按当前跨度连续自适应——span 现在可以是任意值（⌃+滚轮/双指缩放），
+   *  不再是只有两档，选步长的算法见 pickTickStepMs 顶部注释。 */
+  const tickStepMs = pickTickStepMs(span)
 
   const ticks = useMemo(() => {
     const out: number[] = []
@@ -361,6 +468,11 @@ export function GanttStage(): JSX.Element {
   }, [hover])
 
   const beginDrag = (): void => {
+    // 万一有一个"⌃+滚轮/双指缩放"手势还没静默提交（罕见——两种手势通常来自不同
+    // 输入设备/手指，理论上才会撞在一起），鼠标拖拽这个更"实打实"的手势（按钮
+    // 真被按下了）应该赢：丢弃那个还没提交的缩放预览，不能让它事后用一份过时的
+    // 快照悄悄覆盖掉拖拽刚提交的结果。
+    cancelZoomSession()
     // 拖拽平移开始前把浮层立刻清空，不走宽限期——浮层的 top/bottom 是进入那一刻
     // 条的位置快照，拖拽期间条会被 transform 整体挪走，浮层如果还在宽限期里挂着，
     // 会变成一个悬在半空、跟内容脱节的"幽灵浮层"。
@@ -496,6 +608,9 @@ export function GanttStage(): JSX.Element {
    *  天然满足（t1 = now，跟 span 无关）；固定在历史某点时，要把 viewStart
    *  往回退，抵消 span 变化对 t1 的影响。 */
   const changeSpan = (nextSpan: number): void => {
+    // 理由同 beginDrag 顶部那句：预设按钮的点击应该以"这一下"为准,不能被一个
+    // 还没静默提交的缩放手势事后覆盖。
+    cancelZoomSession()
     setViewStart((prev) => {
       if (prev === null) return prev
       const oldT1 = prev + span
@@ -503,6 +618,134 @@ export function GanttStage(): JSX.Element {
     })
     setSpan(nextSpan)
   }
+
+  /** 缩放手势要放弃时的公共收尾：清计时器、清运行态、把可能已经画上去的预览
+   *  transform/宽度摆回手势开始前的样子，不提交任何 state。用 previewZoom(base.t0,
+   *  base.span) 而不是 navRef.resetFrame()——后者只复位取景框的 transform，缩放
+   *  预览还额外写过取景框的 width 内联样式，resetFrame 不认得那部分；直接用
+   *  base 的原始快照重画一次，transform 和 width 一次性都归位，不用另外扩一个
+   *  只清 width 的方法。 */
+  const cancelZoomSession = (): void => {
+    if (zoomTimerRef.current !== null) {
+      window.clearTimeout(zoomTimerRef.current)
+      zoomTimerRef.current = null
+    }
+    const session = zoomSessionRef.current
+    if (!session) return
+    zoomSessionRef.current = null
+    for (const el of session.base.els) el.style.transform = ''
+    navRef.current?.previewZoom(session.base.t0, session.base.span)
+    setZooming(false)
+  }
+
+  /** ⌃+滚轮 / 触控板双指捏合缩放时间跨度。原生 wheel 监听器 + passive:false
+   *  的理由见 scrollRef 声明处的注释。挂在 [t0, span, panoramaStart, panoramaEnd,
+   *  dragging] 上——这几个值只在"两次手势之间"的正常渲染里变化（手势进行中我们
+   *  刻意不 setState，见下方 onWheel 内部），所以监听器不会在一次连续手势中途被
+   *  摘掉重挂，只会在手势与手势之间刷新成最新的基准值，跟"每次开始新手势都要
+   *  用最新状态"这个需求正好对上。 */
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    // 手势静默超过 ZOOM_COMMIT_IDLE_MS 才真正提交——定义在 onWheel 闭包内部
+    // （而不是跟 cancelZoomSession 一样挂在组件顶层),是因为它唯一的调用点就是
+    // 下面这个 setTimeout,不需要暴露给组件里其它地方,也就不需要操心"要不要把它
+    // 塞进某个 useEffect 的依赖数组"这类问题——它摸的 zoomSessionRef/zoomTimerRef
+    // 是 ref、setSpan/setViewStart/setZooming 是 setState 函数,两者在 React 里
+    // 都是"跨渲染保持同一个引用"的东西,天然不会有闭包过期的风险。
+    const commitZoom = (): void => {
+      const session = zoomSessionRef.current
+      zoomSessionRef.current = null
+      zoomTimerRef.current = null
+      setZooming(false)
+      if (!session) return
+      // 内容侧（.gantt-axis/.gantt-lanes）的预览 transform 不在这里清——提交
+      // 必然让 t0 变化（span 变了,t0=t1-span 这个式子里 span 本身就是被减数,
+      // 必然跟着动),下面按 [t0] 的 useLayoutEffect 会接管清理,不重复做。
+      setSpan(session.current.span)
+      setViewStart(session.current.t0)
+    }
+
+    const onWheel = (e: WheelEvent): void => {
+      if (!e.ctrlKey) return // 不是缩放（双指滑动/普通滚轮）：交给浏览器原生垂直滚动
+      e.preventDefault() // 挡掉浏览器自己的页面缩放/后退前进手势
+      if (dragging) return // 鼠标拖拽平移进行中：这一格滚轮让路，不跟它抢 transform
+
+      let session = zoomSessionRef.current
+      if (!session) {
+        // 新手势的第一个 tick：量一次基准几何、缓存要一起变换的元素。
+        const axisEl = plotRef.current?.querySelector<HTMLElement>('.gantt-axis')
+        if (!plotRef.current || !axisEl) return
+        const rect = axisEl.getBoundingClientRect()
+        if (rect.width <= 0) return // 量不到宽度（比如这一帧还没铺满）：这次先放弃
+        const els = Array.from(
+          plotRef.current.querySelectorAll<HTMLElement>('.gantt-axis, .gantt-lanes')
+        )
+        // 手势开始前把浮层清空，理由同 beginDrag：条会在静止的光标下面缩放/滑动，
+        // 挂着的浮层会变成一个跟内容脱节的"幽灵浮层"。
+        cancelHide()
+        setHover(null)
+        session = {
+          base: { t0, span, leftPx: rect.left, widthPx: rect.width, els, panoramaStart, panoramaEnd },
+          current: { t0, span }
+        }
+        zoomSessionRef.current = session
+        setZooming(true)
+      }
+
+      const { base } = session
+      const cur = session.current
+
+      // deltaMode：0=像素（Chromium 常态）、1=行、2=页——同 CanvasStage.tsx
+      // 150-172 行那段缩放手柄，不折算的话行/页模式下步长会小得动不了。
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1)
+      // **鼠标滚轮和触控板必须分开处理**——原因和数值全部照抄 CanvasStage.tsx
+      // 那段注释，这里不重复整套推导：Windows 鼠标滚轮一格就是 100~120，按触控板
+      // 那套 `1-dy*0.01` 的连续小量公式会直接把 factor 拉到 0 或负数，表现成
+      // "轻轻一滚，一步到底"。判据是单次跨度 ≥40（触控板再快也是连续小步）。
+      const byWheel = Math.abs(dy) >= 40
+      const factor = byWheel
+        ? dy > 0
+          ? 1 / 1.12 // 滚轮：每格固定 ±12%，跟 dy 具体是 100 还是 120 无关
+          : 1.12
+        : Math.exp(-dy * 0.01) // 触控板：小量下手感连续，且永远为正
+      // factor 是"画面放大倍率"的语言（>1=放大）；span 是"看多久"，跟放大倍率
+      // 成反比——放大即看得更细即 span 变小，所以是除不是乘。
+      const nextSpan = Math.min(MAX_SPAN, Math.max(MIN_SPAN, cur.span / factor))
+
+      // 锚点：光标在（不会变的）基准几何里的相对位置，据此换算出光标当前指向的
+      // 时间点，缩放后要让同一个时间点仍然落在这个相对位置上。夹到 [0,1] 防御
+      // 光标碰巧落在轴外（比如行名列、纵向滚动条）时的越界外推。
+      const f = Math.min(1, Math.max(0, (e.clientX - base.leftPx) / base.widthPx))
+      const tCursor = cur.t0 + f * cur.span
+      const rawT0 = tCursor - f * nextSpan
+      const nextT0 = clampViewStart(rawT0, base.panoramaStart, base.panoramaEnd, nextSpan)
+
+      session.current = { t0: nextT0, span: nextSpan }
+
+      // 内容预览：把 .gantt-axis/.gantt-lanes 当一整块刚性图层做"绕锚点缩放"——
+      // 数学上等价于先按锚点位移再整体缩放，具体推导见 GanttStage 顶部这次改动
+      // 的设计记录（task-17 报告）；这里只留结论：k 是相对手势起点的累计缩放倍率，
+      // txPx 是配套的位移，两者一起用能保证锚点时间在缩放前后屏幕位置不变。
+      const k = base.span / nextSpan
+      const txPx = ((base.t0 - nextT0) / nextSpan) * base.widthPx
+      for (const node of base.els) {
+        node.style.transform = `translateX(${txPx}px) scaleX(${k})`
+      }
+      // 导航带取景框同步：宽度和位置都要跟着连续变，不能等提交才跳一下。
+      navRef.current?.previewZoom(nextT0, nextSpan)
+
+      if (zoomTimerRef.current !== null) window.clearTimeout(zoomTimerRef.current)
+      zoomTimerRef.current = window.setTimeout(() => {
+        zoomTimerRef.current = null
+        commitZoom()
+      }, ZOOM_COMMIT_IDLE_MS)
+    }
+
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [t0, span, panoramaStart, panoramaEnd, dragging])
 
   return (
     <div className="gantt">
@@ -543,7 +786,8 @@ export function GanttStage(): JSX.Element {
         </div>
       </div>
       <div
-        className={`gantt-scroll${dragging ? ' dragging' : ''}`}
+        className={`gantt-scroll${dragging ? ' dragging' : ''}${zooming ? ' zooming' : ''}`}
+        ref={scrollRef}
         onMouseDown={handleStageMouseDown}
       >
         <div className="gantt-grid" ref={plotRef}>
@@ -625,7 +869,7 @@ export function GanttStage(): JSX.Element {
         now={now}
         span={span}
         viewStart={viewStart}
-        dragging={dragging}
+        dragging={dragging || zooming}
         onDragStart={beginDrag}
         onDragPreview={previewDrag}
         onCommit={commitView}

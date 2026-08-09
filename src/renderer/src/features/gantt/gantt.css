@@ -127,8 +127,12 @@
 /* 拖拽中条不接鼠标事件：内容整体被 transform 平移时，条会在静止的光标下面
    "滑过去"，不关掉 pointer-events 会导致 hover 浮层随内容滑动乱闪一下。
    拖拽用 window 级别的 mousemove/mouseup 监听收尾，不依赖条自身的鼠标事件，
-   所以关掉它不影响拖拽本身的判定。 */
-.gantt-scroll.dragging .gantt-bar {
+   所以关掉它不影响拖拽本身的判定。缩放（.zooming，Task 17 新增）是同一个问题的
+   另一种触发方式——条在缩放预览里同样会在静止的光标下面滑动/变形，一并关掉。
+   .zooming 不改 cursor（不是 grab/grabbing 那种"按住可拖"的语义，滚轮/触控板
+   缩放没有对应的手型隐喻，不强行造一个）。 */
+.gantt-scroll.dragging .gantt-bar,
+.gantt-scroll.zooming .gantt-bar {
   pointer-events: none;
 }
 
@@ -140,6 +144,11 @@
   position: relative;
   height: 20px;
   margin-left: 132px;
+  /* 缩放预览（Task 17）用 translateX+scaleX 模拟"绕光标缩放"，数学上要求锚点
+     x=0 就是这个盒子自己的左边缘——默认 50% 50% 会让缩放绕盒子中心发生，跟
+     GanttStage.tsx 里 txPx 的推导对不上。对纯 translateX（拖拽平移那条老路径）
+     完全没有影响：平移是"origin 无关"的变换，这条改动不会动到拖拽的既有行为。 */
+  transform-origin: 0 0;
 }
 
 .gantt-tick {
@@ -177,6 +186,10 @@
   position: relative;
   flex: 1;
   min-width: 0;
+  /* 理由同 .gantt-axis 那条——两者共享同一份 132px 左偏移（.gantt-row 是
+     flex，.gantt-rowname 120px + gap 12px），缩放预览对它们套用同一组
+     translateX/scaleX 数值才会对齐，origin 也必须一致钉在各自的左边缘。 */
+  transform-origin: 0 0;
 }
 
 /* 网格线要克制——它是背景，不是内容 */
@@ -425,6 +438,11 @@
   border-radius: var(--radius-sm);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
   cursor: grab;
+  /* 缩放预览（Task 17）用 scaleX 模拟宽度变化（原因见 GanttNavigator.tsx
+     paintZoomFromStage 的注释——改 width 会在每个 wheel tick 都触发一次
+     layout，实测量出 LayoutCount 每 tick +1）。scaleX 要从盒子自己的左边缘
+     展开、不能从中心，否则连 translateX 一起复合出来的位置会算错。 */
+  transform-origin: 0 0;
   transition:
     transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1),
     width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);

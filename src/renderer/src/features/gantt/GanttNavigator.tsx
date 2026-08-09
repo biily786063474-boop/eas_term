@@ -90,6 +90,11 @@ export interface GanttNavigatorHandle {
    *  （纯点击/手抖）时调用，对称于主区自己 endDrag() 里清理
    *  .gantt-axis/.gantt-lanes 残留 transform 那一步。 */
   resetFrame: () => void
+  /** 缩放预览专用（Task 17 新增）：取景框的宽度也要跟着连续变，不能等提交才跳
+   *  一下——previewFrame 只挪位置不改宽度，不够用。candidateSpan 必须由调用方
+   *  显式传入，不能读 props.span——缩放进行中 props.span 还是手势开始前的旧值，
+   *  要等 GanttStage 那边 setSpan 提交后才会更新。 */
+  previewZoom: (candidateViewStart: number, candidateSpan: number) => void
 }
 
 export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorProps>(
@@ -169,11 +174,38 @@ export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorPro
     frameRef.current.style.transform = `translateX(${((clamped - panoramaStart) / PANORAMA_MS) * trackWidth}px)`
   }
 
+  /** 缩放预览专用（Task 17 新增）：跟 paintFrameFromStage 分开写，不是共用一个
+   *  函数加个可选参数——后者要读 clamp 用的 span 得从 props 拿（手势进行中是旧
+   *  值），这个要用调用方传入的 candidateSpan（手势的最新中间态），两者的"span
+   *  从哪来"根本不是同一件事，硬合并只会让函数签名变得模棱两可。
+   *
+   *  宽度用 scaleX 而不是改 style.width——第一版改的是 width，真机测下来
+   *  LayoutCount 每个 wheel tick 都 +1（65 个 tick 的连续缩放测出 Δ=67，
+   *  跟拖拽基线的 Δ=3 差一个数量级），正踩中"丝滑"那条硬要求点名的坑：
+   *  width 是布局属性，每次改都会让这一个元素重新走一次 layout。改成 transform
+   *  纯合成属性后同一测试 LayoutCount 应该回到跟拖拽同一量级。数学上：
+   *  取景框本来就是 left:0（静态）+ transform:translateX() 定位（见下面
+   *  useImperativeHandle 之前 JSX 那行），这里在同一个 transform 里再叠一个
+   *  scaleX(candidateSpan/span)——分母用 props.span 而不是别的，是因为手势
+   *  进行中它就等于 GanttStage 那边缩放会话的 base.span（没提交，没变过），
+   *  跟主区内容预览用的 base.span 是同一个数。配合 .gantt-nav-frame 的
+   *  transform-origin:0 0（gantt.css），scaleX 从这个盒子自己的左边缘往右
+   *  展开，translateX 再把左边缘摆到 clamp 后的目标位置——两步组合起来，
+   *  效果跟"改 width + 改 left"完全一致，只是不再触发 layout。 */
+  const paintZoomFromStage = (candidateViewStart: number, candidateSpan: number): void => {
+    if (!frameRef.current || trackWidth <= 0) return
+    const clamped = clampViewStart(candidateViewStart, panoramaStart, panoramaEnd, candidateSpan)
+    const leftPx = ((clamped - panoramaStart) / PANORAMA_MS) * trackWidth
+    const k = candidateSpan / span
+    frameRef.current.style.transform = `translateX(${leftPx}px) scaleX(${k})`
+  }
+
   useImperativeHandle(
     ref,
     () => ({
       previewFrame: paintFrameFromStage,
-      resetFrame: () => paintFrameFromStage(clampedStart)
+      resetFrame: () => paintFrameFromStage(clampedStart),
+      previewZoom: paintZoomFromStage
     }),
     [trackWidth, panoramaStart, panoramaEnd, span, clampedStart]
   )
