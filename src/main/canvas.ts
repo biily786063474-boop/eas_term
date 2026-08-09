@@ -98,8 +98,8 @@ export function registerCanvasHandlers(): void {
     if (!m || (!m[1] && !m[2])) {
       // 没带 Range，或者格式认不出来：整份返回，但要带 Accept-Ranges，
       // 否则 <video> 会把「这次没问我要区间」误判成「这个源根本不支持区间」，
-      // 之后就再也不会发 Range 请求了。
-      const res = await net.fetch(fileUrl)
+      // 之后就再也不会发 Range 请求了。signal 透传见下面有 Range 分支的注释。
+      const res = await net.fetch(fileUrl, { signal: request.signal })
       return new Response(res.body, {
         status: 200,
         headers: { 'Content-Type': mime, 'Accept-Ranges': 'bytes', 'Content-Length': String(size) }
@@ -120,7 +120,22 @@ export function registerCanvasHandlers(): void {
       return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } })
     }
 
-    const res = await net.fetch(fileUrl, { headers: { Range: range! } })
+    // start/end 到这里已经被上面的 Math.min/Math.max 夹成「相对 size 必然合法」的值——
+    // 但夹的是数值，转发给 net.fetch 的 Range 头用的还是 range 这个原始字符串。数字位数
+    // 极端多时（约 ≥19 位，超出 Chromium Range 解析器能安全处理的量级）两者就对不上了：
+    // start/end 看着合法，实际转发出去的原始大数会被 Chromium 判定为不可满足而直接
+    // 抛异常，而不是回落成一个普通的失败态 Response。用 try/catch 把这种情况兜成 416——
+    // 语义上也站得住：一个大到解析器都处理不了的 Range，本就该答「无法满足」。没有这层
+    // 兜底时，异常会从 net.fetch 直接冒泡出 protocol.handle，调用方只能看到笼统的
+    // net::ERR_UNEXPECTED，而不是干净的 416。
+    // signal 显式转发：<video> 快速连续拖进度条时会主动 abort 上一个还没回来的 Range
+    // 请求，之前没传 signal，级联取消只靠"直接透传 res.body"隐式生效，不是显式保障。
+    let res: Response
+    try {
+      res = await net.fetch(fileUrl, { headers: { Range: range! }, signal: request.signal })
+    } catch {
+      return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } })
+    }
     return new Response(res.body, {
       status: 206,
       headers: {

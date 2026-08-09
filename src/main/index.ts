@@ -154,10 +154,15 @@ function createWindow(): void {
   // 页面卡死无响应 → 记录(暂不强制处理,交给用户或后续等待 responsive)
   win.on('unresponsive', () => console.error('[window:unresponsive]'))
 
-  // 放行渲染进程的麦克风/媒体请求(语音输入用 getUserMedia)。Electron 默认拦截 getUserMedia,
-  // 不设 handler 则采麦直接失败。web 节点浏览器用 persist:browser 独立 session,不受此影响。
+  // 放行渲染进程的麦克风/媒体请求(语音输入用 getUserMedia)、以及全屏请求(画布视频节点
+  // 原生 <video controls> 的全屏按钮)。Electron 默认拦截 getUserMedia,不设 handler 则采麦
+  // 直接失败;'fullscreen' 同样是这个 handler 管的权限类型之一(见 electron.d.ts
+  // setPermissionRequestHandler 的 permission 联合类型)——当初只想放行 media,
+  // 结果 cb(permission === 'media') 把 fullscreen 一并拒了:按钮点击触发的
+  // requestFullscreen() 请求被拒绝后 Promise 既不 resolve 也不 reject,表现成「点了没反应」,
+  // 且没有任何 console 报错。web 节点浏览器用 persist:browser 独立 session,不受此影响。
   win.webContents.session.setPermissionRequestHandler((_wc, permission, cb) => {
-    cb(permission === 'media')
+    cb(permission === 'media' || permission === 'fullscreen')
   })
 
 
