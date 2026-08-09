@@ -163,23 +163,55 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 行高密度 + 行名对齐（用户回看截图发现的两个问题，Task 18 之后这一轮修）：
+   1. align-items 从 flex-start 改 center——根因排查：.gantt-rowname 和
+      .gantt-lanes 是同一个 .gantt-row 的 flex 子项，行高恒等于两者内容高度
+      的较大值（不存在"行名列和条区域用了不同高度计算"这种独立算式，纯 CSS
+      normal flow）。flex-start 时行名钉在行顶，可一旦这一行的条需要 >1 层
+      （同终端两条任务时间重叠，见 layer()），行高被条撑高，行名却仍然只有
+      一行文字那么高、停在顶部——多出来的下半截行高里第二层条视觉上没有任何
+      文字跟它同高，像一根"无主的条"。改 center 后行名整体在行高范围内垂直
+      居中，不管这一行有 1 层还是 N 层条，行名都镶嵌在条块的正中间，不再需要
+      唯 1 层条这个假设。
+      （这不是"行名列和条区域分别计算高度，算错了"——两列从来只有一份共同的
+      行高，问题出在同一份行高下"矮的那个子项摆在哪儿"，align-items 就是这
+      唯一变量，改这一个值即修完根因，不需要另外补一条"分组头高度算进偏移"
+      的公式。）
+   2. padding 从 7px 0 压到 3px 0——用户原话"条本身是 22px 左右，行高不该比它
+      大太多"，目标"一屏至少 6-8 个项目"。这里只是第一刀：真机实测过，20 个
+      项目、每个 3-4 终端满勤的压力数据下，光压 padding（行高 36→28px 左右）
+      一屏依然只够看 3-4 个项目整行——.gantt-scroll 实际可用高度只有约 500px，
+      而一个 4 终端项目哪怕零内边距、纯靠 22px 的条堆也要 ~110px（分组头另算），
+      6 个这样的项目就要 660px，物理上装不下，不是 padding 能省出来的差距。
+      真正吃掉大头的是条本身的 22px——第二刀在 .gantt-lane/.gantt-bar，把
+      条也压到 18px。两刀一起、20 项目×3-5 终端满勤的压力数据下真机量到：
+      展开态一屏稳定装下 4 个项目整行（第 5 个部分可见）——比这刀之前的 3 个
+      有实打实的提升，但离 6-8 仍有差距，这是"终端数×22px 硬下限 vs ~500px
+      视窗"的物理约束，光靠 CSS 数值挪不平（继续压 lane 高度到 16px 实测
+      对这批数据几乎没有额外收益，14px 才会有效果但会挤到条内 11.5px 字号
+      的标签，不值得为了凑数字牺牲可读性，没有继续往下压）。折叠态
+      （.gantt-group 收起）才是够到 6-8 这个目标区间的路——同样这批压力
+      数据下折叠全部分组后一屏能装 8 个，这也是为什么"折叠状态下更多"是
+      产品设计本身留的路，不是这次实现的妥协。 */
 .gantt-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 7px 0;
+  padding: 3px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .gantt-rowname {
   flex: none;
   width: 120px;
-  padding-top: 2px;
   color: var(--fg);
   font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 原来这里有 padding-top:2px，是 align-items:flex-start 年代手工调出来的
+     "文字顶部对齐条顶部"补偿值——换成 center 之后行名整体垂直居中，不再需要
+     任何手工偏移，这也是"修根因、不叠 margin/padding 硬凑"的直接体现。 */
 }
 
 /* ---------- 按终端分行（Task 18）：项目分组头 + 终端子行 ----------
@@ -225,7 +257,7 @@
    border-top（默认继承自 .gantt-row），组内几行紧挨着，边界只留给"这一整个
    项目分组"跟上下文的分隔——由分组头自己的 border-top 承担。 */
 .gantt-row.gantt-subrow {
-  padding: 4px 0;
+  padding: 2px 0;
   border-top: none;
 }
 
@@ -256,9 +288,17 @@
 
 .gantt-lane {
   position: relative;
-  height: 22px;
-  /* 层与层之间留 2px 表面色，条挨着条时不会糊成一块 */
-  margin-bottom: 2px;
+  /* 22px→18px：见上面 .gantt-row 注释第 2 条——单压 padding 不够，20 项目×
+     3-4 终端的压力数据下真机量过，一屏仍然只够 3-4 个整行项目。这是这一轮
+     密度改造的第二刀，真正把预算让出来的大头。18px 仍留得住内容：条内标签
+     11.5px 字号 + 异常态 10px 图标，在 18px 高、flex 居中的条里不拥挤（见
+     .gantt-bar），条的圆角/描边/hover 判定区都不需要跟着改。 */
+  height: 18px;
+  /* 层与层之间留 1px 表面色，条挨着条时不会糊成一块——原来是 2px，跟这一轮
+     行高压缩（.gantt-row padding 7px→3px）同一个方向，多层条堆叠（同终端
+     任务时间重叠）时也不占额外空间。1px 仍然够用：.gantt-bar 自己还有
+     `box-shadow: 0 0 0 2px var(--pane-solid)` 描边，两层叠加视觉上不会糊。 */
+  margin-bottom: 1px;
 }
 
 .gantt-lane:last-child {
@@ -268,7 +308,7 @@
 .gantt-bar {
   position: absolute;
   top: 0;
-  height: 22px;
+  height: 18px; /* 跟 .gantt-lane 保持一致，理由见那边的注释 */
   display: flex;
   align-items: center;
   gap: 3px;
