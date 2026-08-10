@@ -1434,6 +1434,11 @@ body.dragging-row * {
   font-weight: 600;
   margin-bottom: 6px;
 }
+.sec-head-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .sec-note {
   margin: 0 0 12px;

@@ -182,10 +182,20 @@ export function SecretsPanel(): JSX.Element | null {
     }
   }, [open, refresh])
 
+  // 正在录入一条新密钥（表单开着 / 在粘贴 .env / 在确认密钥文件 / 在确认导入）。
+  // 判断口径只看这四个「新增录入」态，不含解锁码输入框：六位码是背出来的，
+  // 没有「切出去复制」这回事，连它也挡住只会让人平时看看列表都关不掉面板。
+  const editingSecret = !!draft || paste !== null || !!keyFile || !!importing
+
   // 点外面关闭。用 mousedown 且不带 capture，按钮和弹层各排除一次 —— 和
-  // FootprintPanel / McpIndicator 一字不差的同一段，别改成 click
+  // FootprintPanel / McpIndicator 一字不差的同一段，别改成 click。
+  // **这里比那两个多一层 editingSecret 判断，是密钥柜专属的，别抄去那两处**：
+  // 正在填一条新密钥时，用户常要切到浏览器/1Password/别的终端去复制值，
+  // 切回来的第一下点击本身就是一次 mousedown——落在面板外就会被这段当成
+  // 「点外面」当场关掉、填的内容全丢，这是用户报过的真实体验问题。
+  // FootprintPanel / McpIndicator 没有「正在录入敏感值」这种会话状态，不用管这层。
   useEffect(() => {
-    if (!open) return
+    if (!open || editingSecret) return
     const h = (e: MouseEvent): void => {
       const t = e.target as Node
       if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return
@@ -193,6 +203,22 @@ export function SecretsPanel(): JSX.Element | null {
     }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
+  }, [open, editingSecret])
+
+  // Esc 关闭整个面板——和标题栏的关闭按钮同一个目标，都是「明确关闭」。
+  // 正在填的草稿会跟着丢：和表单里「取消」按钮的后果一样，没必要单独二次确认。
+  // 挂在 window 上 + capture，抄 SettingsPanel 同款写法；不用 CanvasContextMenu
+  // 那个 useDismiss，是因为它连 blur/resize 也会触发关闭，这里恰恰不要那两条。
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
   }, [open])
 
   if (!st) return null
@@ -430,11 +456,18 @@ export function SecretsPanel(): JSX.Element | null {
             </datalist>
             <div className="sec-head">
               <span>密钥柜</span>
-              {st.configured && !st.locked && (
-                <button className="sec-mini" onClick={() => void lockNow()}>
-                  立即锁定
+              <div className="sec-head-acts">
+                {st.configured && !st.locked && (
+                  <button className="sec-mini" onClick={() => void lockNow()}>
+                    立即锁定
+                  </button>
+                )}
+                {/* 正在录入时点外面不再关闭面板（见上面 editingSecret），这个按钮
+                    连同 Esc 是那种情况下仅剩的「明确关闭」入口，必须一直可点 */}
+                <button className="sec-mini" data-tip="关闭" onClick={() => setOpen(false)}>
+                  <CloseIcon size={11} />
                 </button>
-              )}
+              </div>
             </div>
 
             {/* 这段是这个功能的诚信所在，改文案前先看文件头的红线 */}
