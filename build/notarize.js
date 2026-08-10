@@ -24,7 +24,43 @@ exports.default = async function notarizeHook(context) {
   const { notarize } = require('@electron/notarize')
   const appName = context.packager.appInfo.productFilename
   const appPath = path.join(context.appOutDir, `${appName}.app`)
-  const keychainProfile = process.env.EAS_NOTARY_PROFILE || 'eas-notary'
+  // 档案名按顺序试：环境变量指定的 → eas-notary → aurora-notary。
+  //
+  // 为什么要有回退：2026-08-09 发 0.4.16 时，钥匙串里的 `eas-notary` 档案没了
+  // （几小时前发 0.4.15 还好好的，中间没人有意动过它），打包在 arm64 公证那步直接中止。
+  // 排查发现钥匙串里只剩另一个项目的 `aurora-notary` —— 而它**是同一套凭证**：
+  // 同一个 Apple ID、同一个 team D4FVS6QJXV，它的提交历史里最近两条就是当天凌晨的
+  // Eas-Term.zip（Accepted）。两个名字指向同一个账号，换个名字接着用即可。
+  //
+  // 所以这里不再写死一个名字 —— 一个名字没了就整条发版路断掉，而重建凭证需要人
+  // 交互式输 App 专用密码，自动化流程干不了。
+  const profileCandidates = [process.env.EAS_NOTARY_PROFILE, 'eas-notary', 'aurora-notary'].filter(
+    Boolean
+  )
+  const { execFileSync } = require('child_process')
+  const usable = profileCandidates.find((p) => {
+    try {
+      // history 是只读查询，能跑通就说明这个档案的凭证还在且有效
+      execFileSync('xcrun', ['notarytool', 'history', '--keychain-profile', p], {
+        stdio: 'ignore',
+        timeout: 60_000
+      })
+      return true
+    } catch {
+      return false
+    }
+  })
+  if (!usable) {
+    throw new Error(
+      `公证凭证都不可用（试过：${profileCandidates.join(' / ')}）。\n` +
+        `重建：xcrun notarytool store-credentials "eas-notary" ` +
+        `--apple-id "<你的 Apple ID>" --team-id "D4FVS6QJXV"`
+    )
+  }
+  if (usable !== profileCandidates[0]) {
+    console.log(`[notarize] 档案「${profileCandidates[0]}」不可用，回退到「${usable}」`)
+  }
+  const keychainProfile = usable
   // 默认**不传** keychain 路径。新版 notarytool 的 store-credentials 把凭证存进
   // data protection keychain，不是文件式的 login.keychain-db——显式传路径反而查不到
   // （实测：`notarytool history --keychain-profile eas-notary` 能用，
