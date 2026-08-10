@@ -8,6 +8,7 @@
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
+import fs from 'fs'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
 
@@ -30,6 +31,9 @@ let lastLogLine = ''
 let lastDockLine = ''
 /** 屏幕几何只在第一次开窗时打一条 */
 let loggedDisplay = false
+/** 崩溃后自动重建的节流时刻。参照 index.ts 里 reloadWindowThrottled 的同款 3s 节流——
+ *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
+let lastCrashRecreateAt = 0
 
 /** 主窗口 = 除灵动岛之外的那个窗口 */
 function mainWindow(): BrowserWindow | null {
@@ -174,6 +178,60 @@ function placeWindow(win: BrowserWindow): void {
   )
 }
 
+// ============================ 可观测性 ============================
+//
+// 背景：用户反馈过"灵动岛用着用着就只剩一行没样式的裸文字，也不知道报的什么错"——
+// 查下来发现这扇窗口的渲染进程出任何事，主进程压根不接：did-fail-load / preload-error /
+// console-message / render-process-gone 一个监听都没挂过，它出事时主进程日志里
+// 不会有一个字。加上它是双击 .app 启动的，stdout 本来就无处可看（见 logIslandFatal）。
+// 下面这一段专门补这个洞。
+
+/** 致命错误落盘的文件名。只记"fatal"这一档（加载失败/崩溃/preload 报错/渲染层 console.error），
+ *  不记 reconcile 那种每 250ms 一条的调试日志——那种密度的东西塞进同一个文件，
+ *  用户想找的那一条会被冲得没法看。 */
+const FATAL_LOG_FILE = 'island-error.log'
+/** 封顶字节数。这台机器上岛可能常年不重建（有终端在跑就走不到 hide→destroy 这条自愈路径，
+ *  见 shouldShow 的注释），日志得防着自己无限长大，而不是指望进程重启来清零。 */
+const FATAL_LOG_CAP = 256_000
+
+/** 灵动岛致命错误：写 console.error（`npm run dev` / 终端里跑 app 能看到）
+ *  + 落盘一份（双击 .app 打开时终端输出根本无处可看，这是用户唯一能事后翻到的地方）。
+ *  同步文件 I/O 是故意的——这条路径只在真出故障时走，不是 reconcile 那种热路径，
+ *  没必要为了这个引入异步队列的复杂度。 */
+function logIslandFatal(line: string): void {
+  console.error('[island]', line)
+  try {
+    const file = path.join(app.getPath('userData'), FATAL_LOG_FILE)
+    let prev = ''
+    try {
+      prev = fs.readFileSync(file, 'utf8')
+    } catch {
+      /* 第一次落盘，文件还不存在 */
+    }
+    const next = prev + `${new Date().toISOString()} ${line}\n`
+    fs.writeFileSync(file, next.length > FATAL_LOG_CAP ? next.slice(-FATAL_LOG_CAP) : next, 'utf8')
+  } catch {
+    // 落盘本身失败（磁盘满/权限问题）不能反过来把灵动岛拖下水——原样吞掉，
+    // 上面那行 console.error 已经尽力了。
+  }
+}
+
+/** 主文档都没能加载上时的兜底页：不引用任何外部 CSS/JS（全部内联），这样它不会重蹈
+ *  "资源加载失败"的覆辙。目的只有一个——把"一行不明所以的裸文字"换成一句人话，
+ *  告诉用户还有得救（右键 Dock 图标能叫回来），而不是留一片空白让人以为它卡死了。 */
+function loadFailureHtml(): string {
+  return (
+    '<!doctype html><html><head><meta charset="utf-8">' +
+    '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">' +
+    '<style>' +
+    'html,body{margin:0;padding:0;background:transparent;overflow:hidden}' +
+    '.b{box-sizing:border-box;width:300px;padding:9px 14px;border-radius:0 0 10px 10px;' +
+    'background:#000;color:#fda4af;font:12px -apple-system,BlinkMacSystemFont,' +
+    "'PingFang SC',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+    '</style></head><body><div class="b">灵动岛加载失败，右键 Dock 图标可重新叫出</div></body></html>'
+  )
+}
+
 function createIsland(): BrowserWindow {
   const win = new BrowserWindow({
     ...contentSize,
@@ -225,6 +283,11 @@ function createIsland(): BrowserWindow {
   win.setAlwaysOnTop(true, 'screen-saver')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
+  // 换过一次兜底页就不再换第二次——见下面 did-fail-load / did-finish-load 里的用法：
+  // 没有这个标记，兜底页自己 did-finish-load 之后会被"根节点没内容"探测再命中一次，
+  // 变成兜底页换兜底页的空转。
+  let usedFallback = false
+
   if (process.env['ELECTRON_RENDERER_URL']) {
     void win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/island.html`)
   } else {
@@ -236,10 +299,102 @@ function createIsland(): BrowserWindow {
     placeWindow(win) // 创建时给的只是尺寸，位置还得摆一次
     win.showInactive() // 显示但不激活 app —— 用 show() 会把焦点从用户正在用的应用抢过来
     pushState(win)
+
+    // "文档本身加载成功，但里面引用的脚本 404" 这种情况，did-finish-load 照样会触发
+    // （HTML 加载没失败，失败的是脚本这个子资源）——did-fail-load / console-message
+    // 两条都不会响（实测确认：见 task-23 报告，Chromium 对 file:// + crossorigin 的
+    // 子资源失败异常安静），岛会变成一具"窗口在、内容永远不来"的空壳。这里退而求其次：
+    // 给渲染层留够启动时间后，直接问一下 DOM 里到底有没有真的长出东西。
+    // usedFallback 挡两件事：兜底页自己没有 #root（探测必然判定"空"）、以及避免重复触发。
+    if (!usedFallback) {
+      setTimeout(() => {
+        if (win.isDestroyed() || usedFallback) return
+        win.webContents
+          .executeJavaScript(
+            '(() => { const r = document.getElementById("root"); return r ? r.children.length : -1 })()'
+          )
+          .then((n: number) => {
+            if (n !== 0 || win.isDestroyed() || usedFallback) return
+            logIslandFatal('渲染层疑似没跑起来（root 挂载 2s 后仍为空，多半是脚本没加载上）')
+            usedFallback = true
+            contentSize = { w: 300, h: 40 }
+            void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(loadFailureHtml()))
+          })
+          .catch(() => {
+            /* 探测本身失败（比如窗口正好在这一刻被销毁）不值得再报一次 */
+          })
+      }, 2000)
+    }
   })
   win.on('closed', () => {
     if (islandWin === win) islandWin = null
   })
+
+  // ---- 这扇窗口出的任何事，不接住就永远无人知晓（见文件顶部"可观测性"说明） ----
+
+  win.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    // -3 = ERR_ABORTED：导航被更晚的一次取代（比如极短时间内又调用了一次 loadFile/loadURL），
+    // 这是正常噪声不是故障——灵动岛重建很频繁，不过滤掉这条每次重建都会误报一次。
+    if (errorCode === -3) return
+    logIslandFatal(
+      `did-fail-load ${isMainFrame ? '[主文档]' : '[子资源]'} code=${errorCode} ${errorDescription} url=${validatedURL}`
+    )
+    // 主文档没加载上：这扇窗口的 did-finish-load 永远不会来，show()/placeWindow()/pushState()
+    // 全部落空——用户会看到的其实是"什么都没有"（透明窗口，比"一行裸文字"更难查）。
+    // 换成内联样式的兜底页，好歹说清楚"坏了、还能怎么办"。子资源（CSS/JS）失败不走这条：
+    // 页面本身还在，只是丑，硬替换成兜底页反而丢了本来能看的内容。
+    if (isMainFrame && !usedFallback) {
+      usedFallback = true
+      // 兜底页是固定尺寸，不是量出来的——先把窗口该多大直接定下来，
+      // 否则 did-finish-load 会照着上一次内容的尺寸摆窗，兜底文字可能被裁掉。
+      contentSize = { w: 300, h: 40 }
+      void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(loadFailureHtml()))
+    }
+  })
+
+  win.webContents.on('preload-error', (_e, preloadPath, error) => {
+    logIslandFatal(`preload-error ${preloadPath} ${error?.message ?? error}`)
+  })
+
+  // 浏览器原生就会把"子资源加载失败"写成一条 console error（比如 CSS/JS 404 时的
+  // net::ERR_FILE_NOT_FOUND）——did-fail-load 管不到子资源，那是 Chromium 的"帧导航失败"
+  // 事件，<link>/<script> 的加载失败根本不算一次导航。这条才是真正能接住 CSS/JS 丢失的地方，
+  // 也是"样式显示不出来"这类报告最可能命中的一条。只转发 warning/error，滤掉 info/debug——
+  // 否则 React 开发模式的调试输出会把这当成刷屏日志源，掩盖真正要紧的那一条。
+  win.webContents.on('console-message', (event) => {
+    if (event.level !== 'error' && event.level !== 'warning') return
+    const at = event.lineNumber ? `:${event.lineNumber}` : ''
+    const line = `console.${event.level} ${event.message} (${event.sourceId}${at})`
+    if (event.level === 'error') logIslandFatal(line)
+    else console.error('[island]', line) // warning 只打日志、不占落盘配额
+  })
+
+  win.webContents.on('render-process-gone', (_e, details) => {
+    if (details.reason === 'clean-exit') {
+      // 正常的 destroy()/close() 收尾也会走这个事件——不是故障。dev 下留个印子方便对账，
+      // 打包版连这个都不打，免得看着像"天天崩溃"。
+      if (!app.isPackaged) console.log('[island] render-process-gone clean-exit（正常销毁）')
+      return
+    }
+    logIslandFatal(`render-process-gone reason=${details.reason} exitCode=${details.exitCode}`)
+    // 崩溃之后 BrowserWindow 对象不会自己变成 isDestroyed()——渲染进程没了，
+    // 原生窗口壳还在，islandWin 还指着它。reconcile 的判定是"有 islandWin 就只推状态、
+    // 不重建"，于是往一个死人耳朵里推消息，窗口就一直卡在崩溃前最后一帧，永远不会自愈。
+    // 用户反馈的"用了一段时间就坏了、后来一直没恢复"，这条很可能是主因之一。
+    if (win.isDestroyed()) return
+    win.destroy()
+    if (islandWin === win) islandWin = null
+    const now = Date.now()
+    if (now - lastCrashRecreateAt < 3000) {
+      logIslandFatal('重建被节流（3s 内已建过一次），暂不重建，等下一次状态推送再说')
+      return
+    }
+    lastCrashRecreateAt = now
+    reconcile() // 该不该重建、建成什么样，交回 reconcile 的既有判断，这里不重复那套逻辑
+  })
+
+  win.on('unresponsive', () => logIslandFatal('unresponsive（页面卡死无响应）'))
+
   return win
 }
 
@@ -335,7 +490,12 @@ export function registerIslandHandlers(): void {
 
   // 主窗口推状态（已在渲染层节流过）
   ipcMain.on('island:sync', (_e, state: IslandState) => {
-    lastState = state && Array.isArray(state.running) ? state : EMPTY
+    // running 和 notices 都要校验：以前只查了 running，notices 若是 undefined/畸形，
+    // 下面 noteFreshNotices 和 reconcile 到处 lastState.notices.map(...)/.filter(...)，
+    // 会在主进程里直接抛 TypeError——这个 ipcMain 处理器一炸，这一帧状态就丢了，
+    // 灵动岛跟着卡在上一帧。防的不是"今天会发生"，是"以后改渲染层时忘了保证这个形状"。
+    lastState =
+      state && Array.isArray(state.running) && Array.isArray(state.notices) ? state : EMPTY
     noteFreshNotices()
     reconcile()
     // 跟着内容走，不跟着焦点走：reconcile 会因为切窗口频繁触发，
@@ -561,6 +721,17 @@ function updateDockMenu(): void {
       reconcile()
     }
   })
+
+  // 只在真出过事时才露出这一项——平时没出过故障的话，菜单里挂一条打不开东西的
+  // "日志"入口比没有还让人费解。这是"用户看不到报错"这件事的最后一道兜底：
+  // 双击 .app 打开时没有终端可看，这条菜单 + 落盘的文件是唯一能事后翻到根因的地方。
+  const fatalLogPath = path.join(app.getPath('userData'), FATAL_LOG_FILE)
+  if (fs.existsSync(fatalLogPath)) {
+    items.push({
+      label: '打开灵动岛错误日志',
+      click: () => shell.showItemInFolder(fatalLogPath)
+    })
+  }
 
   app.dock.setMenu(Menu.buildFromTemplate(items))
   // 菜单本身没法从外面读（AppleScript 要辅助访问权限），出问题时靠这条对
