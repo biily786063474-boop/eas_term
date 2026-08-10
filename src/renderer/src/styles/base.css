@@ -345,10 +345,26 @@ body {
 
 /* ========== 危险操作确认弹窗 ========== */
 /* ---------- 危险操作确认弹窗 ---------- */
+/* 全局唯一实例（ui/ConfirmDialog.tsx），portal 到 document.body，全站每处
+   requestConfirm() 最终都是这一个节点在渲染，理应稳定盖住发起它的那个面板。
+   z-index 原来是 2000，比好几个业务浮层都低——密钥柜面板 .sec-pop(workspace.css,
+   3000)、画布角色编辑/管理弹窗 .re-mask/.rm-mask(canvas.css, 3200/3250)、
+   模式菜单/wiki 抽屉(3300)、甘特图任务悬浮卡 .gantt-pop(gantt.css, 3400)。
+   这些浮层大多也 portal 到 body（原因通常是自己写在标题栏/面板里会被
+   overflow:hidden 裁掉），于是跟这个确认框同处一个层叠上下文，纯按数字比大小。
+   实测复现过两处：密钥柜存了几条密钥后删除确认框被 .sec-pop 整个盖住，
+   甘特图悬浮卡挡住删除确认框的按钮区——点击被面板/卡片吃掉，确认框戳不动
+   （2026-08 定位修复，别再只调用得到的那一个面板，这是全局性的）。
+   3500：比上面所有"常规浮层"都高，同时留在 .sreq-mask(workspace.css, 4000，
+   agent 找用户要密钥的弹窗)之下——那个理应盖住一切，包括这个确认框，不能
+   反过来被这里盖住。设计器子系统（designer/styles.css，9000+）是独立的浮层
+   体系、不走这个全局确认框，不必也不该顶到那个区间。
+   以后新浮层如果又要盖过 3500，先想想是不是该复用这个全局确认框，
+   而不是自己再起一个更大的数字——数字越堆越高解决不了根本问题。 */
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 3500;
   display: flex;
   align-items: center;
   justify-content: center;
