@@ -75,7 +75,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useStore } from '../../store'
+import type { CanvasFrame, TermTab } from '../../store'
 import type { GanttClearRange, GanttTask } from '../../../../shared/types'
+import type { GanttJumpMode } from '../../store/uiSlice'
 import { attachBlurGuard } from '../../blurGuard'
 // collectLeaves：只读，取"leafId → 所在标签页标题"这份映射用（见 titleByLeaf）。
 // 不改这个文件——按纪律只碰 features/gantt/ 下的文件，这里纯粹是读别处已有的
@@ -90,6 +92,7 @@ import {
   mmdd,
   type GanttNavigatorHandle
 } from './GanttNavigator'
+import { GanttJumpMenu } from './GanttJumpMenu'
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -296,10 +299,53 @@ interface VisibleGroup extends TermGroup {
   ordinal: number
 }
 
+/** 跳转模式选择（Task 22 新增）：右键轨道在终端/画布/看板三个模式间选一个跳过去，
+ *  左键点条跳到"上次右键选过的那个模式"（ganttJumpMode，默认看板——跟这个功能
+ *  上线前"左键固定跳看板全屏"的老行为一致）。下面两个函数是三种模式各自的
+ *  "能不能跳"判断，GanttStage 组件里的 jump()（左键）和 GanttJumpMenu（右键）
+ *  两条路径共用同一套判断，不要各自猜一遍口径。 */
+
+/** leafId 对应的终端是否还活着（还在 tabs 树里）。三种跳转模式的可达性判断都从
+ *  这一个函数出发——leaf 整个关了时：看板全屏会被 BoardStage.tsx 的自愈 effect
+ *  悄悄弹回总览、分屏根本找不到对应的 tab、画布节点哪怕留着死引用也不该被当成
+ *  "还在"（终端面板自己的关闭按钮——PaneView.tsx——只 closeLeaf 不联动
+ *  removeNode，画布上会留一个 leafId 指向空处的孤儿节点；只有走"画布删节点"/
+ *  "Frame 整个删掉"这两条路径才会把 leafId 和画布节点一起收掉，见
+ *  canvasSlice.ts 的 removeFrame、CanvasStage.tsx 键盘 Delete 那两处）。
+ *  统一在这一个函数里判"活不活"，不让三个模式各自猜一遍。 */
+function isLeafAlive(tabs: TermTab[], leafId: string): boolean {
+  return tabs.some((t) => collectLeaves(t.root).some((l) => l.id === leafId))
+}
+
+/** leafId → 它在画布上对应的 (frameId, nodeId)，没有就是这个终端不在画布上
+ *  （用户没拖过去、或者拖过去之后又单独删了那个节点）。只查 frames——自由节点
+ *  (freeNodes) 是知识库文件拖拽专用的只读预览，从不带 leafId（见 canvasSlice.ts
+ *  addFreeFileNode 的签名——只收 pane，不收 leafId），终端不可能出现在那里，
+ *  不必多查一遍。 */
+function findCanvasNodeByLeaf(
+  frames: CanvasFrame[],
+  leafId: string
+): { frameId: string; nodeId: string } | null {
+  for (const f of frames) {
+    const n = f.nodes.find((x) => x.leafId === leafId)
+    if (n) return { frameId: f.id, nodeId: n.id }
+  }
+  return null
+}
+
 export function GanttStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const setViewMode = useStore((s) => s.setViewMode)
   const setBoardFullscreen = useStore((s) => s.setBoardFullscreen)
+  // 三种跳转模式各自要用的 store 能力（Task 22 新增）——setActiveLeaf 切到分屏
+  // 并选中对应 leaf；focusCanvasNode 复用画布自己"平移到某节点居中"的实现
+  // （canvasSlice.ts，MCP 的 canvas_focus_node 工具背后也是它），不重新发明
+  // 一套定位数学。canvasFrames 只读，用来判断某个 leafId 有没有对应的画布节点。
+  const setActiveLeaf = useStore((s) => s.setActiveLeaf)
+  const focusCanvasNode = useStore((s) => s.focusCanvasNode)
+  const canvasFrames = useStore((s) => s.canvas.frames)
+  const ganttJumpMode = useStore((s) => s.ganttJumpMode)
+  const setGanttJumpMode = useStore((s) => s.setGanttJumpMode)
   const requestConfirm = useStore((s) => s.requestConfirm)
   // 取终端名用（titleByLeaf）。跟 BoardStage.tsx 订阅同一个字段——那边已经证明
   // 了这个订阅的刷新频率可接受（tabsSlice.setTabTitle 标题没变就原样返回，不
@@ -319,6 +365,20 @@ export function GanttStage(): JSX.Element {
       else next.add(projectId)
       return next
     })
+  }
+  /** 右键菜单（Task 22 新增）：记录当前打开菜单的是哪一条任务——要用它的 leafId
+   *  判断三个模式各自能不能跳、点击后具体跳到哪个终端。null = 没开。
+   *  跟 hover 是两套独立状态：右键打开菜单那一刻会顺手清掉 hover（见下面
+   *  .gantt-bar 的 onContextMenu），两者不会同时非空，但没必要为此揉成一个
+   *  状态，各自管各自的生命周期更简单。 */
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; task: GanttTask } | null>(null)
+  /** 跳转失败时的提示（leaf 已关闭 / 记住的默认模式在这条终端上够不着）。
+   *  写法照抄 FileTree.tsx/SidebarGit.tsx 的 toast：本地状态 + 定时器自动清空，
+   *  guard（`t === msg` 才清）防止旧定时器把后来居上的新提示误清掉。 */
+  const [toast, setToast] = useState<string | null>(null)
+  const showToast = (msg: string): void => {
+    setToast(msg)
+    window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 2600)
   }
   /** top/bottom 是条的 getBoundingClientRect()，不是单个 y——下边缘要判断
    *  "翻到条上方"，得同时知道条的上下沿，光一个点不够表达翻转。 */
@@ -579,9 +639,55 @@ export function GanttStage(): JSX.Element {
 
   const pct = (t: number): number => ((t - t0) / span) * 100
 
-  const jump = (t: GanttTask): void => {
+  /** 三个模式各自的"跳"——只管跳，不管能不能跳（能不能跳是调用方的事：左键走
+   *  jump() 的判断，右键菜单走 GanttJumpMenu 的 alive/hasCanvasNode 两个
+   *  prop，两处场景不同——前者跳不了要提示，后者跳不了要把菜单项灰掉——不能
+   *  共用同一套"跳不跳得动"的分支）。 */
+  const jumpToBoard = (leafId: string): void => {
     setViewMode('board')
-    setBoardFullscreen(t.leafId)
+    setBoardFullscreen(leafId)
+  }
+  const jumpToSplit = (leafId: string): void => {
+    const tab = tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))
+    if (!tab) return // 正常不会走到——调用方已经用 isLeafAlive 判过，这里是防御
+    setViewMode('split')
+    setActiveLeaf(tab.id, leafId)
+  }
+  const jumpToCanvas = (leafId: string): void => {
+    const hit = findCanvasNodeByLeaf(canvasFrames, leafId)
+    if (!hit) return
+    setViewMode('canvas')
+    // CanvasStage 是按 viewMode 条件挂载的（App.tsx），这一刻 .canvas-viewport
+    // 还没出现在 DOM 里——focusCanvasNode 内部量视口尺寸量不到会退到
+    // window.innerWidth/innerHeight 兜底，算出来的居中点不准（标题栏之类的
+    // 边距算在 window 尺寸里，但不属于画布视口）。等一帧再定位，让 React 先把
+    // CanvasStage 提交上树：跟 TerminalTodoPanel.tsx「状态切出新内容后 rAF 里
+    // 再摸 DOM」是同一个套路。这个 rAF 回调只捕获了 focusCanvasNode（store
+    // action，稳定引用）和两个基本类型字符串，GanttStage 这时候八成已经卸载
+    // 也没关系——不依赖它的生命周期，不需要额外的卸载清理。
+    requestAnimationFrame(() => focusCanvasNode(hit.frameId, hit.nodeId))
+  }
+  const JUMP_FNS: Record<GanttJumpMode, (leafId: string) => void> = {
+    board: jumpToBoard,
+    split: jumpToSplit,
+    canvas: jumpToCanvas
+  }
+
+  /** 左键点条：跳到"上次右键选过的那个模式"（ganttJumpMode，默认看板）。
+   *  跳不动时给提示，不静默失败也不硬跳——leaf 整个关了，三个模式都没意义
+   *  （比如硬跳看板的话，会被 BoardStage 的自愈 effect 悄悄弹回总览，用户只会
+   *  觉得"点了跟没点一样"，不知道发生了什么）；记住的默认模式恰好是画布、但这
+   *  条任务的终端没在画布上，同理不能不吭声地啥都不做。 */
+  const jump = (t: GanttTask): void => {
+    if (!isLeafAlive(tabs, t.leafId)) {
+      showToast('这个终端已经关闭，无法跳转')
+      return
+    }
+    if (ganttJumpMode === 'canvas' && !findCanvasNodeByLeaf(canvasFrames, t.leafId)) {
+      showToast('这个终端不在画布上，右键选个别的模式试试')
+      return
+    }
+    JUMP_FNS[ganttJumpMode](t.leafId)
   }
 
   // 用户自行删除错误数据（2026-08-08 新需求）——三个入口共用的收尾：main 进程
@@ -1070,6 +1176,16 @@ export function GanttStage(): JSX.Element {
                   }}
                   onMouseLeave={scheduleHide}
                   onClick={() => jump(t)}
+                  onContextMenu={(ev) => {
+                    ev.preventDefault()
+                    ev.stopPropagation()
+                    // 右键即将开菜单：hover 浮层立刻清掉，不走宽限期——理由同
+                    // beginDrag 顶部那句，菜单和浮层不能同时占着同一块视觉区域
+                    // 打架（右键这条任务时，它自己的 hover 浮层很可能正开着）。
+                    cancelHide()
+                    setHover(null)
+                    setCtxMenu({ x: ev.clientX, y: ev.clientY, task: t })
+                  }}
                 >
                   {state === 'aborted' && (
                     <svg
@@ -1274,6 +1390,27 @@ export function GanttStage(): JSX.Element {
             ))}
         </div>
       )}
+      {ctxMenu && (
+        // key={task.id}：右键 A 的菜单开着时直接右键 B，ctxMenu 会从 {..A} 直接
+        // 变成 {..B}（不经过 null），React 默认只会给同一个组件实例传新
+        // props——但 GanttJumpMenu 的 useMenuAnchor 依赖"每次打开都从 pos=null
+        // 全新起步"才能不闪烁地定位（见该组件顶部注释），key 变了强制卸载重装，
+        // 保证不会沿用上一条任务量出来的旧坐标。
+        <GanttJumpMenu
+          key={ctxMenu.task.id}
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          alive={isLeafAlive(tabs, ctxMenu.task.leafId)}
+          hasCanvasNode={!!findCanvasNodeByLeaf(canvasFrames, ctxMenu.task.leafId)}
+          current={ganttJumpMode}
+          onPick={(mode) => {
+            setGanttJumpMode(mode)
+            JUMP_FNS[mode](ctxMenu.task.leafId)
+          }}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
+      {toast && <div className="gantt-toast">{toast}</div>}
     </div>
   )
 }

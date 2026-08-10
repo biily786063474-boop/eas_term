@@ -14,6 +14,12 @@ function dropKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
   return rest
 }
 
+/** 甘特图轨道右键菜单三选一的目标视图——手动对齐 ViewMode 去掉 'gantt' 自己
+ *  （点条不可能"跳到甘特图"，那就是当前所在的视图）。不用 Exclude<ViewMode,'gantt'>
+ *  派生：两处独立手写更直白，以后要不要跟着 ViewMode 扩是甘特图跳转这边自己
+ *  的决定，不该被 ViewMode 的定义变化顺带牵动。 */
+export type GanttJumpMode = 'split' | 'canvas' | 'board'
+
 export interface UiSlice {
   theme: ThemeId
   setTheme: (theme: ThemeId) => void
@@ -45,6 +51,13 @@ export interface UiSlice {
    *  小卡片里嵌终端看不清也用不了，还要为它做一整套跟随定位，不划算。 */
   boardFullscreen: string | null
   setBoardFullscreen: (leafId: string | null) => void
+  /** 甘特图左键点条要跳到哪个视图——右键菜单（终端/画布/看板）选完记这里，
+   *  下次左键跟着走。纯 UI 偏好，不跟甘特图数据（gantt.json，主进程管）混在
+   *  一起；存 localStorage，参考 dictBubbleHidden 的存法。默认 'board'，
+   *  跟这个功能上线前"左键固定跳看板全屏"的老行为一致——没设置过这项偏好的人
+   *  （含老用户）体验不变。 */
+  ganttJumpMode: GanttJumpMode
+  setGanttJumpMode: (mode: GanttJumpMode) => void
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
@@ -126,6 +139,7 @@ export interface UiSlice {
 const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
+const GANTT_JUMP_MODE_KEY = 'eas.gantt.jumpmode'
 
 let mcpSeq = 1
 let ttRunning = false
@@ -202,6 +216,16 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   },
   boardFullscreen: null,
   setBoardFullscreen: (leafId) => set({ boardFullscreen: leafId }),
+  // 存过的值才信；本地存储被手改/来自更早版本的脏值一律回落默认，不盲目 cast——
+  // 三个候选值之外的任何东西读出来都当成"没设置过"处理。
+  ganttJumpMode: (() => {
+    const v = localStorage.getItem(GANTT_JUMP_MODE_KEY)
+    return v === 'split' || v === 'canvas' || v === 'board' ? v : 'board'
+  })(),
+  setGanttJumpMode: (mode) => {
+    localStorage.setItem(GANTT_JUMP_MODE_KEY, mode)
+    set({ ganttJumpMode: mode })
+  },
   attentionPtys: [],
   silencedNotices: [],
   mcpLog: [],

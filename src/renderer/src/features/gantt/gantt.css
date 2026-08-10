@@ -482,6 +482,114 @@
   word-break: break-word;
 }
 
+/* ---------- 轨道右键菜单（GanttJumpMenu.tsx）：终端/画布/看板三选一 ----------
+   视觉上跟 .gantt-pop 是同一张图里的两块浮层，用它同一组"悬浮面板"token
+   （--tooltip-bg/--glass-border-strong/--blur）——看起来是一家人，不是另起
+   一套语言。z-index 必须压过 .gantt-pop（上面，3400）：右键时 hover 浮层
+   可能还开着（同一条任务先 hover 出浮层、再右键），菜单如果摆在浮层下面会
+   被整个盖住点不到。3450 只需要够到"压过本文件内会实际撞上的那一个"，不需要
+   够到 base.css 里 .confirm-overlay(3500)/.sreq-mask(4000) 那两档全局最高
+   优先级浮层的量级——那两个分别是"危险操作确认"和"agent 找用户要密钥"，语义上
+   都该压过一个普通的右键菜单，没有理由把这个也顶到那个区间（base.css 顶部
+   那段大注释的原话："以后新浮层如果又要盖过 3500，先想想是不是该复用这个
+   全局确认框，而不是自己再起一个更大的数字"——这里没有超过 3500，不涉及）。 */
+.gantt-ctxmenu {
+  position: fixed;
+  min-width: 148px;
+  padding: 5px;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--tooltip-bg);
+  backdrop-filter: var(--blur);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  z-index: 3450;
+}
+
+.gctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 9px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 12.5px;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gctx-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}
+
+/* 当前记住的默认模式——高亮告诉用户"不换的话左键点条会去这里"，配色沿用
+   ModeSwitch.tsx 里 .mode-menu-item.on 同一个语言（同类"当前选中项"场景，
+   没必要另起一套视觉表达）。 */
+.gctx-item.on {
+  color: var(--fg);
+  background: var(--accent-soft);
+}
+
+.gctx-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gctx-item:disabled:hover {
+  background: none;
+  color: var(--fg-dim);
+}
+
+/* 终端整体已关闭：单行说明占位菜单，不是按钮——没有可点的意义，鼠标悬停也
+   不该出现手型光标暗示"这里能点"。 */
+.gctx-item.info {
+  color: var(--fg-dim);
+  cursor: default;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.gctx-label {
+  flex: 1;
+  text-align: left;
+}
+
+.gctx-hint {
+  flex: none;
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+/* 跳转失败提示（leaf 已关闭 / 记住的默认模式在这条终端上够不着）——写法照抄
+   FileTree.tsx/SidebarGit.tsx 的 toast，纯信息性质，不是危险操作，不借用
+   files.css 那个红色 danger 配色（那是"操作失败/有风险"的语义,这里只是
+   "这一下暂时跳不过去",两码事）。定位相对 .gantt（position:absolute;inset:0
+   的定位根），贴头部工具条下方居中——甘特图主体内容都在这条线以下，不会
+   跟 hover 浮层/右键菜单（两者都贴着具体某根条出现）抢位置。 */
+.gantt-toast {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  background: var(--tooltip-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--blur);
+  color: var(--fg);
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
 /* ---------- 导航带：7 天全景 + 取景框 ----------
    高度预算严格对齐 brief 的 36px：轨道 20px + 间距 2px + 日期刻度 14px。
    不像主区缩进 132px 对齐行名列——导航带不分项目，没有行名列可对齐，
