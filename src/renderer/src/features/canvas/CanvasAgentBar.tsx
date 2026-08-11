@@ -27,7 +27,9 @@ import {
   PlanIcon,
   GaugeIcon,
   MoreIcon,
-  CopyIcon
+  CopyIcon,
+  ChipIcon,
+  FileIcon
 } from '../../ui/Icons'
 import { useMenuAnchor } from './CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
@@ -153,7 +155,9 @@ const CMD_ICON: Record<string, (p: { size?: number }) => JSX.Element> = {
   plan: PlanIcon,
   new: PlusIcon,
   copy: CopyIcon,
-  usage: GaugeIcon
+  usage: GaugeIcon,
+  model: ChipIcon,
+  init: FileIcon
 }
 
 type Pop = { type: 'model' | 'effort' | 'ask' | 'role' | 'kind' | 'cmds'; rect: DOMRect }
@@ -360,76 +364,76 @@ export function CanvasAgentBar({
   return (
     <div className="agentbar-stack" onMouseDown={(e) => e.stopPropagation()}>
       <div className="agentbar">
-      {editRole !== null && (
-        <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
-      )}
-      {manageRoles && (
-        <CanvasRoleManager
-          onClose={() => setManageRoles(false)}
-          onEdit={(id) => {
-            // 从管理面板跳去编辑：先收起管理，不然两层弹窗叠在一起
-            setManageRoles(false)
-            setEditRole(id)
-          }}
-        />
-      )}
-      {/* 星星按钮：CLI 的切换入口。**当前是谁靠品牌标识认**，不再摆两个文字按钮 ——
-          那对控制条来说太占地方，而这排东西是跟着终端节点走的，节点一窄就先挤没了。
-          角色钉死了 CLI 时这里锁住：kind 由角色决定，能点开却改不动才是真的费解。 */}
-      <button
-        className={`ab-brand${pinned ? ' pinned' : ''}`}
-        onClick={(e) => !pinned && openPop('kind', e.currentTarget)}
-        data-tip={
-          pinned
-            ? `角色「${role!.name}」钉死了 ${kindName(kind)}，要换先换角色`
-            : `${kindName(kind)}，点击切换`
-        }
-      >
-        <SparkleIcon size={9} className="ab-brand-spark" />
-        {kind === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
-      </button>
-
-      {/* 角色胶囊：决定模型/档位的默认值和职责契约。空 = 裸终端 */}
-      {!!roles.length && (
+        {editRole !== null && (
+          <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
+        )}
+        {manageRoles && (
+          <CanvasRoleManager
+            onClose={() => setManageRoles(false)}
+            onEdit={(id) => {
+              // 从管理面板跳去编辑：先收起管理，不然两层弹窗叠在一起
+              setManageRoles(false)
+              setEditRole(id)
+            }}
+          />
+        )}
+        {/* 星星按钮：CLI 的切换入口。**当前是谁靠品牌标识认**，不再摆两个文字按钮 ——
+            那对控制条来说太占地方，而这排东西是跟着终端节点走的，节点一窄就先挤没了。
+            角色钉死了 CLI 时这里锁住：kind 由角色决定，能点开却改不动才是真的费解。 */}
         <button
-          className={`ab-pill ab-role${role ? ' on' : ''}`}
-          onClick={(e) => openPop('role', e.currentTarget)}
-          data-tip={role ? role.desc : '不套任何规矩'}
+          className={`ab-brand${pinned ? ' pinned' : ''}`}
+          onClick={(e) => !pinned && openPop('kind', e.currentTarget)}
+          data-tip={
+            pinned
+              ? `角色「${role!.name}」钉死了 ${kindName(kind)}，要换先换角色`
+              : `${kindName(kind)}，点击切换`
+          }
         >
-          {/* 点不再按角色上色 —— 彩色会让人以为颜色本身有含义（哪个色=哪类角色），
-              实际上它只是「有没有挂角色」。挂了就亮，没挂就没有这颗点 */}
-          {role && <span className="ab-role-dot on" />}
-          <span className="ab-pill-k">角色</span>
-          <b>{role?.name ?? '无'}</b>
+          <SparkleIcon size={9} className="ab-brand-spark" />
+          {kind === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
         </button>
-      )}
 
-      {/* 模型 / 思考胶囊：选项跟随当前 agent */}
-      <button className="ab-pill" onClick={(e) => openPop('model', e.currentTarget)}>
-        <span className="ab-pill-k">模型</span>
-        <b>{modelLabel(model, kind)}</b>
-      </button>
-      <button className="ab-pill" onClick={(e) => openPop('effort', e.currentTarget)}>
-        <span className="ab-pill-k">思考</span>
-        <b>{effZh(effort)}</b>
-      </button>
+        {/* 角色胶囊：决定模型/档位的默认值和职责契约。空 = 裸终端 */}
+        {!!roles.length && (
+          <button
+            className={`ab-pill ab-role${role ? ' on' : ''}`}
+            onClick={(e) => openPop('role', e.currentTarget)}
+            data-tip={role ? role.desc : '不套任何规矩'}
+          >
+            {/* 点不再按角色上色 —— 彩色会让人以为颜色本身有含义（哪个色=哪类角色），
+                实际上它只是「有没有挂角色」。挂了就亮，没挂就没有这颗点 */}
+            {role && <span className="ab-role-dot on" />}
+            <span className="ab-pill-k">角色</span>
+            <b>{role?.name ?? '无'}</b>
+          </button>
+        )}
 
-      {/* ▶ 启动（弹「是否回溯」） */}
-      <button
-        className="ab-launch"
-        disabled={!activeReady}
-        data-tip={activeReady ? '启动' : `未检测到 ${kind} 命令`}
-        onClick={(e) => activeReady && openAsk(e.currentTarget)}
-      >
-        <PlayIcon size={12} /> 启动
-      </button>
+        {/* 模型 / 思考胶囊：选项跟随当前 agent */}
+        <button className="ab-pill" onClick={(e) => openPop('model', e.currentTarget)}>
+          <span className="ab-pill-k">模型</span>
+          <b>{modelLabel(model, kind)}</b>
+        </button>
+        <button className="ab-pill" onClick={(e) => openPop('effort', e.currentTarget)}>
+          <span className="ab-pill-k">思考</span>
+          <b>{effZh(effort)}</b>
+        </button>
+
+        {/* ▶ 启动（弹「是否回溯」） */}
+        <button
+          className="ab-launch"
+          disabled={!activeReady}
+          data-tip={activeReady ? '启动' : `未检测到 ${kind} 命令`}
+          onClick={(e) => activeReady && openAsk(e.currentTarget)}
+        >
+          <PlayIcon size={12} /> 启动
+        </button>
       </div>
 
       {/* ── 命令条（第二行）──
           一级：一次点击直达；二级收进「更多」。为什么只有这几条、为什么不做命令面板，
           见 docs/斜杠命令按钮化分析.html。
           另起一行是因为第一行在 440px 宽的节点里已经占满（星星+角色+模型+思考+启动 ≈ 354px），
-          六个按钮塞不进去。 */}
+          八个按钮塞不进去。 */}
       {/* 门控两层：CLI 装了（activeReady）+ 这个终端真的跑着 agent（agentHere，见上面注释）。
           没用 `!!agent` 当判据：那个字段只要用户动过控制台（改个模型）就有值，
           可终端里可能压根没起 agent —— 拿它把关会在裸 shell 上亮出一排发不出去的按钮。 */}

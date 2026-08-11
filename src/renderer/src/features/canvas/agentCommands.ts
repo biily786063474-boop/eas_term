@@ -54,6 +54,12 @@ export const PRIMARY_CMDS: AgentCmd[] = [
     cmd: { claude: '/plan', codex: '/plan' }
   },
   {
+    id: 'model',
+    label: '换模型',
+    tip: '会话中途换模型，不用重启终端',
+    cmd: { claude: '/model', codex: '/model' }
+  },
+  {
     id: 'new',
     label: '新开一轮',
     tip: '清空上下文重新开始（旧会话仍在磁盘上，可以恢复）',
@@ -74,6 +80,19 @@ export const PRIMARY_CMDS: AgentCmd[] = [
     label: '用量与花费',
     tip: '看这次会话花了多少、额度还剩多少',
     cmd: { claude: '/usage', codex: '/usage' }
+  },
+  {
+    id: 'init',
+    label: '生成项目说明',
+    tip: '让 agent 通读项目，写一份给它自己看的说明文件',
+    cmd: { claude: '/init', codex: '/init' },
+    // 会往项目里写文件（CLAUDE.md / AGENTS.md），已有内容可能被顶掉 —— 按规矩先问
+    confirm: {
+      message:
+        '会让 agent 通读项目、然后在项目根目录写一份说明文件（Claude 是 CLAUDE.md，Codex 是 AGENTS.md）。' +
+        '如果已经有了，里面的内容可能被覆盖。继续吗？',
+      confirmLabel: '生成'
+    }
   }
 ]
 
@@ -100,10 +119,8 @@ export const SECONDARY_CMDS: AgentCmd[] = [
     }
   },
   { id: 'resume', label: '恢复会话', tip: '打开会话列表挑一条继续（挑选在终端里进行）', cmd: { claude: '/resume', codex: '/resume' } },
-  { id: 'model', label: '换模型', tip: '会话中途换模型（不用重启终端）', cmd: { claude: '/model', codex: '/model' } },
   { id: 'effort', label: '思考档位', tip: '调这次会话的推理强度', cmd: { claude: '/effort', codex: null } },
-  { id: 'skills', label: '重载技能', tip: '刚改完 skill 文件时用，让 agent 重新读一遍', cmd: { claude: '/reload-skills', codex: '/skills' } },
-  { id: 'init', label: '生成项目说明', tip: '在项目里生成给 agent 看的说明文件', cmd: { claude: '/init', codex: '/init' } }
+  { id: 'skills', label: '重载技能', tip: '刚改完 skill 文件时用，让 agent 重新读一遍', cmd: { claude: '/reload-skills', codex: '/skills' } }
 ]
 
 /** 文本和回车之间必须留的间隔。
