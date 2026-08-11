@@ -169,15 +169,41 @@ function bizoneServerPath(): string | null {
   }
 }
 
+interface McpRun {
+  command: string
+  args: string[]
+  env?: Record<string, string>
+}
+
+/** 笔纵那条的运行方式。**按画板官方集成文档来**（taptv 的 docs/MCP_INTEGRATION.md，
+ *  本仓库 docs/笔纵画板-MCP集成.md 有存档）：用画板自带的 Electron 以 node 模式跑。
+ *
+ *  为什么不沿用 runnerFor 那套「优先系统 node」：
+ *   · 分发用户机器上不一定装了 node；Intel Mac 的 Homebrew 也不在 /opt/homebrew
+ *   · 就算装了，版本可能太老 —— 画板的 mcpServer.js 和我们的包装器都是 ESM + 顶层 await
+ *  画板自带的 Electron 内置 node v22，装了画板就一定有，是这条链路上最稳的运行时。
+ *
+ *  代价是这条配置绑死画板的安装位置：把画板改名或移出 /Applications 就会断。
+ *  这一点文档里也写了，接受 —— 那种情况下 bizoneServerPath() 本来也会返回 null。 */
+function bizoneRunner(server: string): McpRun {
+  return {
+    command: '/Applications/笔纵画板.app/Contents/MacOS/笔纵画板',
+    // 中间夹一层我们的包装器：画板没开着时它先把画板拉起来再交棒。
+    // 画板那个 server 自己不会拉（实测：整个文件里没有 spawn / open -a），
+    // 而它的每一个工具都要打到画板本体的 HTTP 接口上。
+    args: [bizoneWrapperPath(), server],
+    env: { ELECTRON_RUN_AS_NODE: '1' }
+  }
+}
+
 /** 这一轮要写进用户 CLI 的所有 MCP 条目。eas-term 恒有，笔纵按装没装决定。
- *  args 是**完整的脚本参数表**而不是单个路径 —— 笔纵那条要多带一层包装器。 */
-function mcpEntries(serverPath: string): { name: string; args: string[] }[] {
-  const list = [{ name: 'eas-term', args: [serverPath] }]
+ *  直接给出完整运行方式 —— 两条的运行时不一样，不能共用一个 runnerFor。 */
+function mcpEntries(serverPath: string): { name: string; run: McpRun }[] {
+  const list: { name: string; run: McpRun }[] = [
+    { name: 'eas-term', run: runnerFor([serverPath]) }
+  ]
   const bz = bizoneServerPath()
-  // 不直接指向画板的 mcpServer.js，而是走我们的包装器：画板没开着时它会先把画板拉起来。
-  // 画板那个 server 自己不会拉（实测：整个文件里没有 spawn / open -a），
-  // 而它的每一个工具都要打到画板本体的 HTTP 接口上。
-  if (bz) list.push({ name: 'bizone-canvas', args: [bizoneWrapperPath(), bz] })
+  if (bz) list.push({ name: 'bizone-canvas', run: bizoneRunner(bz) })
   return list
 }
 
@@ -215,8 +241,7 @@ function writeClaudeConfig(serverPath: string): void {
     }
     const servers = (cfg.mcpServers ?? {}) as Record<string, unknown>
     let dirty = false
-    for (const { name, args } of mcpEntries(serverPath)) {
-      const r = runnerFor(args)
+    for (const { name, run: r } of mcpEntries(serverPath)) {
       const desired = { type: 'stdio', command: r.command, args: r.args, ...(r.env ? { env: r.env } : {}) }
       if (JSON.stringify(servers[name]) === JSON.stringify(desired)) continue
       servers[name] = desired
@@ -246,19 +271,18 @@ function writeClaudeConfig(serverPath: string): void {
  *  导致只替换掉半段、把后半截留成一行孤立的 `["..."]`（TOML 里那是个 table header，
  *  等于每次启动往用户配置里塞一行垃圾）。按行扫描没有这个坑。 */
 function writeCodexConfig(serverPath: string): void {
-  for (const { name, args } of mcpEntries(serverPath)) writeCodexSection(name, args)
+  for (const { name, run } of mcpEntries(serverPath)) writeCodexSection(name, run)
 }
 
 /** 写 ~/.codex/config.toml 里的一段 [mcp_servers.<name>]。逐段处理而不是一次写完：
  *  这个文件是按行扫描改的（没有 TOML 库），一段一段来最不容易碰坏别人的内容。 */
-function writeCodexSection(name: string, scriptArgs: string[]): void {
+function writeCodexSection(name: string, r: McpRun): void {
   try {
     if (skipGlobalWrite()) return
     const dir = path.join(app.getPath('home'), '.codex')
     const cfgFile = path.join(dir, 'config.toml')
     if (!fs.existsSync(dir)) return // 没装/没用过 Codex 就别给人家建目录
 
-    const r = runnerFor(scriptArgs)
     const q = (v: string): string => JSON.stringify(v) // TOML 基本字符串的转义规则与 JSON 兼容
     const HEAD = `[mcp_servers.${name}]`
     const blockLines = [HEAD, `command = ${q(r.command)}`, `args = [${r.args.map(q).join(', ')}]`]

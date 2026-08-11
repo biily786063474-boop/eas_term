@@ -78,8 +78,9 @@ description: >
 
 | 情况 | 怎么办 |
 |---|---|
-| 工具列表里**没有** `bizone-canvas` 的工具 | 用户没装画板。告诉他去 bzone.biily.top，别自己找别的生图路子 |
-| 有工具但调用报连接错误 | **画板没开着**。它的 MCP 连的是运行中的画板（本地 HTTP），让用户先把画板打开 |
+| 工具列表里**没有** `bizone-canvas` 的工具 | 用户没装画板，或画板版本 < 1.21.20（更早的安装包里没带 MCP 依赖，一律连不上）。告诉他去 bzone.biily.top 装 / 更新，别自己找别的生图路子 |
+| 调用报 `-32000 Connection closed` | 同上，多半是画板太旧；也可能是画板被改名或移出了 `/Applications` |
+| 调用报连不上画板 | 画板没在跑。Eas-Term 配的通道会自动在后台把画板拉起来，等几秒重试一次；还不行就让用户手动打开 |
 | 报额度 / 余额相关的错 | 如实转达，让用户去画板里处理。不要试图绕过 |
 
 ### 一次生成的完整顺序
@@ -88,14 +89,37 @@ description: >
 
 ```
 list_projects / open_project   挑一个项目（没有就 create_project）
+list_models                    拿模型 ID。**别自己编 ID**，只能从这里挑
 add_node                       建一个节点，承载这次生成
-list_models                    看有哪些模型，挑一个（图 / 视频 / 音频分类不同）
-generate                       在那个节点上触发，**立即返回，不等结果**
-get_generation_status          轮询，直到完成
+generate                       写入生成参数 —— 注意：默认**不会真的开始**
+   ↓ 必须再走一个出口，二选一（见下）
+get_generation_status          轮询到 done（图片 30~60s，视频更久）
 ```
 
-`generate` 的 `nodeId` 和 `modelId` 是必须的，`prompt` / `ratio` / `quality` / `duration`
-按需给。上游连着的节点会自动作为上下文，不用手动拼进 prompt。
+**`generate` 默认只写参数、节点停在 `idle`，这是画板防止 AI 擅自花用户钱的设计。**
+只调 `generate` 就去轮询的话，节点永远是 `idle` —— 这不是坏了，是少走了一步。
+两个出口：
+
+| 出口 | 怎么调 | 什么时候用 |
+|---|---|---|
+| **让用户确认** | `generate(...)` → `confirm_batch_generate()` | 用户正看着画板。画板会弹窗显示参数和墨水成本，他点了才真扣费 |
+| **无人值守** | `generate(..., autoConfirm: true)` | 确定没人盯着屏幕时。**会真实扣墨水**，且跳过了唯一一道人工成本确认 |
+
+估不出价时画板会拒绝生成（返回 `estimate_failed`）——那是防资损的闸门，不是 bug。
+换个模型，或者退回「让用户确认」那条路。
+
+### 四个会坑人的点
+
+1. **上游连了媒体，prompt 里必须写 `@N` 指名**。≥2 个媒体上游而 prompt 里没有 `@N`
+   会被**硬拦**（多图不指名模型会瞎猜）。`generate` 的回执里有 `media_ref_map`，
+   照它对一遍 `@1` 到底是哪张图。**不要以为「上游连着就会自动当上下文」**。
+2. **`connect_nodes` 的参数名是 `from` / `to`**，不是 `sourceId`/`targetId`。写错会报
+   `Cannot self-connect`（两个 `undefined` 被当成同一个节点）—— 报错方向完全是误导。
+3. **prompt 用中文写**。不是硬拦截，但回执会带 `prompt_lang_warn`；而且用户在画板界面上
+   要看得懂、能直接改。
+4. **要把本地图片喂进去，用 `import_local_file`**（一步直接建成画布节点）。
+   `upload_asset({source:'path'})` 读不了任意路径 —— 画板的文件 IPC 有路径穿越防护，
+   只能读它自己数据目录里的。（`import_local_file` 是 1.21.21 新增）
 
 ### 生成完了做什么
 
@@ -104,9 +128,11 @@ get_generation_status          轮询，直到完成
 
 ### 分寸
 
-- **别替用户决定花钱**。每次 `generate` 都是真实消耗，多轮迭代之前先问一句。
+- **别替用户决定花钱**。`autoConfirm: true` 是直接扣费，用之前先问；多轮迭代同理。
 - 用户只是问「能不能生成 X」时，先回答能不能，**别直接就开始生成**。
 - `list_models` 拿到一次就够，别每次生成前都列一遍。
+- 画板刻意没开放 `run_shell_command` / `get_api_keys` / 联网抓取这些能力，
+  那是有意为之，别去找绕路。
 
 ---
 
