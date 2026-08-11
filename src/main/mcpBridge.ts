@@ -95,19 +95,19 @@ function serverScriptPath(): string {
 /** MCP server 的运行方式：优先用系统 node（纯脚本零依赖，进程轻）；
  *  找不到就用 app 自带的 Electron 以 node 模式跑，保证任何机器上都能启动。
  *  注意主进程在 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin:...），所以是探路径而不是 which。 */
-function runnerFor(serverPath: string): { command: string; args: string[]; env?: Record<string, string> } {
+function runnerFor(scriptArgs: string[]): { command: string; args: string[]; env?: Record<string, string> } {
   const candidates =
     process.platform === 'win32'
       ? []
       : ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/usr/bin/node']
   for (const c of candidates) {
     try {
-      if (fs.existsSync(c)) return { command: c, args: [serverPath] }
+      if (fs.existsSync(c)) return { command: c, args: scriptArgs }
     } catch {
       /* 探测失败就试下一个 */
     }
   }
-  return { command: process.execPath, args: [serverPath], env: { ELECTRON_RUN_AS_NODE: '1' } }
+  return { command: process.execPath, args: scriptArgs, env: { ELECTRON_RUN_AS_NODE: '1' } }
 }
 
 /** 开发时跑的实例**不许改用户的全局 CLI 配置**。
@@ -126,34 +126,58 @@ function skipGlobalWrite(): boolean {
   return true
 }
 
-/** 笔纵画板的 MCP server 路径。**没装就返回 null，一个字都不往用户配置里写。**
+/** 笔纵画板 MCP 启动包装器（mcp/bizone-mcp.mjs）。它负责「调用前确保画板在跑」，
+ *  真正的工具实现仍然是画板包里那个 mcpServer.js。 */
+function bizoneWrapperPath(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'mcp', 'bizone-mcp.mjs')
+    : path.join(app.getAppPath(), 'mcp', 'bizone-mcp.mjs')
+}
+
+/** 笔纵画板的 MCP server 路径。**跑不起来就返回 null，一个字都不往用户配置里写。**
  *
  *  为什么由我们来写：笔纵那边没有自动配置用户 CLI 的机制，而两个 app 都是同一个人的，
  *  用户装了画板却要手工去 ~/.claude.json 里加一条才能让 agent 生图 —— 那道门槛
- *  足以让绝大多数人止步。判据和 bizone.ts 的 check 一致（app bundle 存在）。
+ *  足以让绝大多数人止步。
  *
  *  路径能这么推是因为笔纵**没打 asar**（build.asar 未开），资源直接躺在
  *  Contents/Resources/app/ 下。哪天它改成 asar，这里要跟着改 —— 所以下面
  *  existsSync 不通过时是静默返回 null，不会写一条指向空文件的坏配置。
  *
- *  ⚠️ 它连的是运行中的画板（HTTP localhost:13140，token 读画板的 userData），
- *  画板没开着时 MCP 工具会调用失败。这一点没法在配置层解决。 */
+ *  **光有文件不够，还要它的依赖在。** 2026-08-11 实测：1.21.18 那个包
+ *  Contents/Resources/app/ 底下压根没有 node_modules（package.json 的 dependencies
+ *  也是空的），直接跑那个 mcpServer.js 会 `ERR_MODULE_NOT_FOUND: Cannot find package
+ *  '@modelcontextprotocol/sdk'`。而老代码只查 mcpServer.js 在不在 —— 于是给每个装了
+ *  旧版画板的用户都写了一条**必然失败**的配置，用户看到的只有一句「MCP 连接失败」，
+ *  根本联想不到是画板该更新了。宁可不配：不配至少还能从界面上看出「没接上」。 */
 function bizoneServerPath(): string | null {
   // Windows 上笔纵装在哪还没核实过，先只做 macOS —— 宁可不配，也不写个猜的路径
   if (process.platform !== 'darwin') return null
-  const p = '/Applications/笔纵画板.app/Contents/Resources/app/electron/mcpServer.js'
+  const appRoot = '/Applications/笔纵画板.app/Contents/Resources/app'
+  const p = path.join(appRoot, 'electron', 'mcpServer.js')
   try {
-    return fs.existsSync(p) ? p : null
+    if (!fs.existsSync(p)) return null
+    // 只查这一个包：mcpServer.js 的外部依赖实测就只有它（其余全是 node 内置模块），
+    // 逐个校验整棵依赖树既慢又会随画板版本漂移。
+    if (!fs.existsSync(path.join(appRoot, 'node_modules', '@modelcontextprotocol', 'sdk'))) {
+      console.warn('[mcp] 画板版本太旧（包里没带 MCP 依赖），跳过配置 bizone-canvas')
+      return null
+    }
+    return p
   } catch {
     return null
   }
 }
 
-/** 这一轮要写进用户 CLI 的所有 MCP 条目。eas-term 恒有，笔纵按装没装决定。 */
-function mcpEntries(serverPath: string): { name: string; server: string }[] {
-  const list = [{ name: 'eas-term', server: serverPath }]
+/** 这一轮要写进用户 CLI 的所有 MCP 条目。eas-term 恒有，笔纵按装没装决定。
+ *  args 是**完整的脚本参数表**而不是单个路径 —— 笔纵那条要多带一层包装器。 */
+function mcpEntries(serverPath: string): { name: string; args: string[] }[] {
+  const list = [{ name: 'eas-term', args: [serverPath] }]
   const bz = bizoneServerPath()
-  if (bz) list.push({ name: 'bizone-canvas', server: bz })
+  // 不直接指向画板的 mcpServer.js，而是走我们的包装器：画板没开着时它会先把画板拉起来。
+  // 画板那个 server 自己不会拉（实测：整个文件里没有 spawn / open -a），
+  // 而它的每一个工具都要打到画板本体的 HTTP 接口上。
+  if (bz) list.push({ name: 'bizone-canvas', args: [bizoneWrapperPath(), bz] })
   return list
 }
 
@@ -191,8 +215,8 @@ function writeClaudeConfig(serverPath: string): void {
     }
     const servers = (cfg.mcpServers ?? {}) as Record<string, unknown>
     let dirty = false
-    for (const { name, server } of mcpEntries(serverPath)) {
-      const r = runnerFor(server)
+    for (const { name, args } of mcpEntries(serverPath)) {
+      const r = runnerFor(args)
       const desired = { type: 'stdio', command: r.command, args: r.args, ...(r.env ? { env: r.env } : {}) }
       if (JSON.stringify(servers[name]) === JSON.stringify(desired)) continue
       servers[name] = desired
@@ -222,19 +246,19 @@ function writeClaudeConfig(serverPath: string): void {
  *  导致只替换掉半段、把后半截留成一行孤立的 `["..."]`（TOML 里那是个 table header，
  *  等于每次启动往用户配置里塞一行垃圾）。按行扫描没有这个坑。 */
 function writeCodexConfig(serverPath: string): void {
-  for (const { name, server } of mcpEntries(serverPath)) writeCodexSection(name, server)
+  for (const { name, args } of mcpEntries(serverPath)) writeCodexSection(name, args)
 }
 
 /** 写 ~/.codex/config.toml 里的一段 [mcp_servers.<name>]。逐段处理而不是一次写完：
  *  这个文件是按行扫描改的（没有 TOML 库），一段一段来最不容易碰坏别人的内容。 */
-function writeCodexSection(name: string, serverPath: string): void {
+function writeCodexSection(name: string, scriptArgs: string[]): void {
   try {
     if (skipGlobalWrite()) return
     const dir = path.join(app.getPath('home'), '.codex')
     const cfgFile = path.join(dir, 'config.toml')
     if (!fs.existsSync(dir)) return // 没装/没用过 Codex 就别给人家建目录
 
-    const r = runnerFor(serverPath)
+    const r = runnerFor(scriptArgs)
     const q = (v: string): string => JSON.stringify(v) // TOML 基本字符串的转义规则与 JSON 兼容
     const HEAD = `[mcp_servers.${name}]`
     const blockLines = [HEAD, `command = ${q(r.command)}`, `args = [${r.args.map(q).join(', ')}]`]
