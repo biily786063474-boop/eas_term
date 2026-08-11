@@ -26,6 +26,7 @@ import {
 import { useMenuAnchor } from './CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
+import { stopVoiceOnSend } from '../voice/voiceControl'
 
 type Kind = 'claude' | 'codex'
 
@@ -293,6 +294,9 @@ export function CanvasAgentBar({
       const have = want.length ? await window.api.agent.codexServers() : []
       cmd = buildCodexCmd(model, effort, cont, sessionId, contract, want.filter((n) => have.includes(n)))
     }
+    // 「启动」也是一次发送 —— 麦克风开着的话同样要收掉，
+    // 否则起完 agent 麦还在录，下一句话被接到输入框里
+    void stopVoiceOnSend()
     window.api.pty.write(ptyId, cmd + '\r')
 
     // Codex 没有指定会话 id 的启动参数，只能起完之后按 cwd 去 sessions 目录捞。

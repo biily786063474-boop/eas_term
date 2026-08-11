@@ -16,6 +16,7 @@
 // 而且你粘完图又复制了别的东西，发送时读到的就是错的。
 import { useEffect, useRef, useState } from 'react'
 import { VoiceButton } from '../voice/VoiceButton'
+import { stopVoiceOnSend } from '../voice/voiceControl'
 import { track } from '../notify/track'
 import { noteSubmitted, drainFollow } from '../gantt/collector'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
@@ -147,6 +148,10 @@ export function TerminalInput({
   const send = (withReturn: boolean): void => {
     const text = value.trim()
     if (!text && !imgs.length) return
+    // 一发送就收麦。放在这里而不是各个触发点上：⌘↵ 和发送按钮都收敛到这个函数，
+    // 挂在这儿才是「不管从哪发都会停」。不 await——消息该立刻走，
+    // 收麦是它旁边的事，慢一点不该拖住发送。
+    void stopVoiceOnSend()
     lastRef.current = text
     // 图片路径排在文字前面：agent 先看到「有图」，再读你要它干什么。
     // 带空格的路径要加引号，否则会被读成两个文件。

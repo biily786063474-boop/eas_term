@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MicIcon } from '../../ui/Icons'
 import { VoiceCapture } from './voiceCapture'
+import { setVoiceStopper, clearVoiceStopper } from './voiceControl'
 import './voice.css'
 import { track } from '../notify/track'
 
@@ -57,13 +58,27 @@ export function VoiceButton({
   }, [rec])
 
   // 「发送」→ 自动收麦，避免发出去之后麦克风还在偷偷录着。
-  // inline 时发送键是 ⌘↵：裸回车在输入框里是换行，收麦会让人说到一半被打断。
+  //
+  // inline（嵌在输入框里）时把收麦函数登记出去，由发送方来调 —— 见 voiceControl.ts。
+  // **不能再靠监听 Enter 键**：点发送按钮走的是 mousedown，根本没有 keydown，
+  // 于是消息发出去了麦克风还录着，下一句话被接在后面。用户报的就是这个。
   const stopRef = useRef<(() => Promise<void>) | null>(null)
   useEffect(() => {
-    if (!rec) return
+    if (!rec || !inline) return
+    const fn = (): Promise<void> => stop(false)
+    setVoiceStopper(fn)
+    return () => clearVoiceStopper(fn)
+    // stop 每次渲染都是新的闭包，进依赖会让登记反复重挂；它读的都是 ref/setState，
+    // 拿哪一次的闭包都一样
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rec, inline])
+
+  // 非 inline：这个按钮不属于任何输入框，用户是直接在终端里打字回车的，
+  // 没有 send() 可以挂钩，只能听键盘。inline 时不装这个监听——那条路由上面的登记接管了。
+  useEffect(() => {
+    if (!rec || inline) return
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Enter') return
-      if (inline && !(e.metaKey || e.ctrlKey)) return
       void stopRef.current?.()
     }
     window.addEventListener('keydown', onKey, true)
@@ -126,6 +141,8 @@ export function VoiceButton({
 
   // writeTail=false：因「发送」而收麦时丢弃残句——消息都发出去了，残字再落进去只会污染下一条输入
   const stop = async (writeTail = true): Promise<void> => {
+    // 幂等：发送路径和按钮点击都可能调到它，重复调会把 stt.stop() 发两遍
+    if (!capRef.current && !rec) return
     capRef.current?.stop()
     capRef.current = null
     setRec(false)
