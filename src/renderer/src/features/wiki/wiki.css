@@ -67,6 +67,12 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* **必须有定位上下文**：没选笔记时这里渲染的是 .pane-placeholder，而那个类是
+     `position:absolute; inset:0`。少了这一行，它就往上找到 .pane（整个面板）去贴边，
+     结果把左边的笔记树一起盖住 —— 表现是知识库里一篇笔记都点不开（sel 是组件内 state，
+     每次挂载都是 null，必然触发）。2026-08-10 用 elementFromPoint 实测确认：
+     笔记名所在的点，命中的是 .pane-placeholder。 */
+  position: relative;
 }
 .wikiv-bar {
   display: flex;
