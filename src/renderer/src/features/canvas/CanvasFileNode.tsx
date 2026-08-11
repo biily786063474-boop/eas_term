@@ -8,6 +8,7 @@ import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
 import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
+import { useIdleVideoPause } from './useIdleVideoPause'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
@@ -35,6 +36,8 @@ export function CanvasFileNode({
   const isMax = maximizedNode?.frameId === frameId && maximizedNode?.nodeId === node.id
   // 最大化：把节点撑成「当前屏幕可视区」在世界坐标下对应的矩形（节点坐标相对 Frame）
   const hiddenByMax = !!maximizedNode && !isMax
+  // 视频只在「被选中且没被别人最大化盖住」时才继续播，见 useIdleVideoPause
+  const videoRef = useIdleVideoPause(!!selected && !hiddenByMax)
   const maxStyle = ((): React.CSSProperties | null => {
     if (!isMax) return null
     const frame = frames.find((f) => f.id === frameId)
@@ -218,6 +221,7 @@ export function CanvasFileNode({
         {pane.kind === 'image' &&
           (isVid ? (
             <video
+              ref={videoRef}
               className="cfile-video"
               src={easfileUrl(pane.filePath!)}
               controls

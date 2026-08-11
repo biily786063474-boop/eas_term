@@ -11,6 +11,7 @@ import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
 import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { easfileUrl, isVideoPath } from './media'
+import { useIdleVideoPause } from './useIdleVideoPause'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 
 export function CanvasFreeFileNode({
@@ -32,6 +33,8 @@ export function CanvasFreeFileNode({
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = !maximizedNode?.frameId && maximizedNode?.nodeId === node.id
   const hiddenByMax = !!maximizedNode && !isMax
+  // 同 CanvasFileNode：看别处时暂停，省掉后台白解码
+  const videoRef = useIdleVideoPause(!!selected && !hiddenByMax)
   // 最大化：世界坐标节点没有 Frame 偏移要减，比 CanvasFileNode 简单一档
   const maxStyle = ((): React.CSSProperties | null => {
     if (!isMax) return null
@@ -175,7 +178,14 @@ export function CanvasFreeFileNode({
         {pane.kind === 'code' && <CodeView filePath={pane.filePath} readOnly={node.readOnly} />}
         {pane.kind === 'image' &&
           (isVid ? (
-            <video className="cfile-video" src={easfileUrl(pane.filePath!)} controls loop playsInline />
+            <video
+              ref={videoRef}
+              className="cfile-video"
+              src={easfileUrl(pane.filePath!)}
+              controls
+              loop
+              playsInline
+            />
           ) : (
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
