@@ -3,11 +3,11 @@
 // 只不过这里不用开两个应用）。
 //
 // 和画布左抽屉共用同一套 IPC，但形态不同：这里空间大，直接文件树 + 正文预览左右分。
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WikiStatus, Backlink, LintFinding, WikiStats } from '../../../../shared/types'
 import { WikiGraph } from './WikiGraph'
 import { FileTree } from '../files/FileTree'
-import { renderMarkdown } from '../editor/markdown'
+import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { FolderOpenIcon } from '../../ui/Icons'
 import '../editor/editor.css'
 import './wiki.css'
@@ -49,6 +49,17 @@ export function WikiView(): JSX.Element {
   const [view, setView] = useState<'tree' | 'graph' | 'lint'>('tree')
   const [lint, setLint] = useState<LintFinding[] | null>(null)
   const [stats, setStats] = useState<WikiStats | null>(null)
+  // 代码块复制按钮的委托挂点。两个决定都有原因：
+  //  · 挂 .wikiv-main 而不是里面那个 .md-view —— 后者在「渲染/源码」切换时是条件渲染，
+  //    节点整个消失，绑在它上面的监听跟着丢。
+  //  · 用**回调 ref** 而不是 useRef + useEffect(…, []) —— 知识库状态没读回来之前，
+  //    这个组件会提前 return 一个「读取知识库…」占位符，那一帧 .wikiv-main 压根没挂载，
+  //    首次 effect 只能拿到 null，于是绑定永远不会发生（症状很隐蔽：按钮画得出来，点了没反应）。
+  const unbindCopy = useRef<(() => void) | null>(null)
+  const mainRef = useCallback((node: HTMLDivElement | null) => {
+    unbindCopy.current?.()
+    unbindCopy.current = node ? bindCodeCopy(node) : null
+  }, [])
 
   const refresh = useCallback(async (): Promise<void> => {
     setSt(await window.api.wiki.status())
@@ -172,7 +183,7 @@ export function WikiView(): JSX.Element {
         )}
       </div>
 
-      <div className="wikiv-main">
+      <div className="wikiv-main" ref={mainRef}>
         {view === 'graph' ? (
           <WikiGraph onOpen={(rel) => { setView('tree'); void openNote(st.path + '/' + rel) }} />
         ) : !sel ? (

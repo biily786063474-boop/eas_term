@@ -139,10 +139,67 @@
   background: rgba(255, 255, 255, 0.08);
   color: #e6d5a7;
 }
-.md-view .md-pre {
+/* 代码块的定位外壳：复制按钮和语言角标都挂在这里，而不是挂在 <pre> 上 ——
+   <pre> 是 overflow-x:auto 的滚动容器，绝对定位的子元素会跟着横向滚动跑掉 */
+.md-view .md-codewrap {
   position: relative;
   margin: 0 0 1.2em;
-  padding: 14px 16px;
+}
+.md-view .md-copy {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  /* 「淡」只能做在颜色上，**不能用 opacity** —— 这个按钮悬在可横向滚动的代码上方，
+     一旦代码滚过来就得靠自己的底把它挡住；而 opacity 会把自己的底一起削透
+     （实测：opacity .35 × 底 .94 ≈ .33，代码直接从按钮里穿出来，图标和字糊成一团）。 */
+  color: rgba(150, 154, 168, 0.55);
+  cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background-color 0.14s ease,
+    border-color 0.14s ease;
+}
+.md-view .md-codewrap:hover .md-copy,
+.md-view .md-copy:focus-visible {
+  color: var(--fg-dim);
+}
+.md-view .md-copy:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--glass-border-strong);
+}
+.md-view .md-copy.done {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.4);
+}
+/* 两个图标叠在同一个按钮里，靠 .done 切换显示——换 innerHTML 会丢掉过渡，
+   而且要在字符串模板和 DOM 操作两处各写一遍图标 */
+.md-view .md-copy .md-copy-ok,
+.md-view .md-copy.done .md-copy-i {
+  display: none;
+}
+.md-view .md-copy.done .md-copy-ok {
+  display: block;
+}
+
+.md-view .md-pre {
+  position: relative;
+  margin: 0;
+  /* 顶部留出角标行的高度（按钮 top:6 + 22 高 = 28，再给 4px 呼吸）。
+     **不能靠 padding-right 躲**：这是个 overflow-x:auto 的滚动容器，
+     右内边距挡不住横向滚过来的长代码——只有把首行整体压到角标行下面，
+     才是「不管怎么滚都不会重叠」。代价是每个代码块高 18px，值。 */
+  padding: 32px 16px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   background: rgba(0, 0, 0, 0.3);
@@ -156,15 +213,19 @@
   color: var(--fg);
   font-size: inherit;
 }
-.md-view .md-pre[data-lang]::before {
+/* 语言角标：右移到复制按钮左边（按钮占 right:8px 起的 22px），否则两个叠在一起。
+   和按钮同一行、同一条基线：按钮 top:6 高 22 → 中线 17；角标行高 14 → top:10 */
+.md-view .md-codewrap[data-lang]::before {
   content: attr(data-lang);
   position: absolute;
-  top: 6px;
-  right: 10px;
+  z-index: 1;
+  top: 10px;
+  right: 36px;
+  line-height: 14px;
   font-size: 10px;
   letter-spacing: 0.06em;
-  color: var(--fg-dim);
-  opacity: 0.6;
+  /* 同样不用 opacity，理由见 .md-copy 那段注释 */
+  color: rgba(150, 154, 168, 0.7);
 }
 
 .md-view .md-ul,

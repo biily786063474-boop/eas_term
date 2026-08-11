@@ -57,6 +57,45 @@ function inline(t: string, baseDir: string): string {
   return s.replace(/\u0000(\d+)\u0000/g, (_m, i: string) => `<code>${codes[Number(i)]}</code>`)
 }
 
+// 代码块右上角那个复制图标。**只能拼字符串**：renderMarkdown 的产出是一段交给
+// dangerouslySetInnerHTML 的 HTML 文本，里面没有 React 节点，复用不了 Icons.tsx 的
+// CopyIcon 组件。几何形状直接照搬那两个，描边参数也对齐 Svg 基座（24 viewBox /
+// 1.6 描边 / round 端点 / currentColor），免得这一个图标跟全局图标语言脱节。
+const svg = (body: string, cls: string): string =>
+  `<svg class="${cls}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+  `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
+const COPY_ICON = svg(
+  '<rect x="9" y="9" width="13" height="13" rx="3"/>' +
+    '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  'md-copy-i'
+)
+const DONE_ICON = svg('<polyline points="20 6 9 17 4 12"/>', 'md-copy-ok')
+
+/** 给 renderMarkdown 产出的代码块复制按钮接上点击，返回解绑函数。
+ *
+ *  用事件委托而不是逐个 addEventListener：正文是整块 innerHTML 换掉的，
+ *  切一次文件所有按钮节点就全没了，一个个挂的监听会跟着失效（而且旧节点还留在
+ *  监听表里）。委托在容器上，换多少次内容都不用管。 */
+export function bindCodeCopy(root: HTMLElement | null): () => void {
+  if (!root) return () => {}
+  const onClick = (e: MouseEvent): void => {
+    const btn = (e.target as HTMLElement | null)?.closest?.('.md-copy') as HTMLButtonElement | null
+    if (!btn || !root.contains(btn)) return
+    const code = btn.parentElement?.querySelector('code')
+    if (!code) return
+    // 取 textContent 不取 innerHTML：正文在渲染时被 esc() 转义过（`<` 存成 `&lt;`），
+    // 读 HTML 会把这些实体原样复制出去，粘到终端里就是坏代码。
+    void window.api.clipboard.writeText(code.textContent ?? '')
+    btn.classList.add('done')
+    window.setTimeout(() => {
+      // 这 1.4s 里正文可能已经被换掉了，节点不在文档里就别碰
+      if (btn.isConnected) btn.classList.remove('done')
+    }, 1400)
+  }
+  root.addEventListener('click', onClick)
+  return () => root.removeEventListener('click', onClick)
+}
+
 const RULE = /^\s*([-*_])\s*\1\s*\1[\s\S]*$/
 const LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/
 const isBlank = (l: string): boolean => !l.trim()
@@ -86,8 +125,15 @@ export function renderMarkdown(src: string, filePath: string): string {
       i++
       while (i < lines.length && !lines[i].trim().startsWith(mark)) body.push(lines[i++])
       i++ // 吃掉收尾的围栏
+      // 外面套一层 .md-codewrap 才能放复制按钮。**不能直接塞进 `<pre>`**：
+      // `<pre>` 自己是 `overflow-x:auto` 的滚动容器，绝对定位的子元素属于它的可滚动内容，
+      // 代码一宽、往右滚，按钮就跟着滑出视野。语言角标（data-lang）本来也有这个毛病，
+      // 一并挪到外层顺手修掉。
       out.push(
-        `<pre class="md-pre"${lang ? ` data-lang="${esc(lang)}"` : ''}><code>${esc(body.join('\n'))}</code></pre>`
+        `<div class="md-codewrap"${lang ? ` data-lang="${esc(lang)}"` : ''}>` +
+          `<button class="md-copy" type="button" title="复制代码" aria-label="复制代码">${COPY_ICON}${DONE_ICON}</button>` +
+          `<pre class="md-pre"><code>${esc(body.join('\n'))}</code></pre>` +
+          `</div>`
       )
       continue
     }

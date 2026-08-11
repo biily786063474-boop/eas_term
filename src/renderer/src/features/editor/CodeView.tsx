@@ -5,7 +5,7 @@ import { EditorState, Compartment } from '@codemirror/state'
 import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { renderMarkdown } from './markdown'
+import { renderMarkdown, bindCodeCopy } from './markdown'
 import { CodeIcon, FilesIcon, PencilIcon, CheckIcon } from '../../ui/Icons'
 import './editor.css'
 
@@ -37,7 +37,18 @@ export function CodeView({
    *  目前只有知识库拖出来的自由节点会传 true——内容离开知识库目录，不该在画布上被顺手改掉。 */
   readOnly?: boolean
 }): JSX.Element {
-  const rootRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  // 代码块复制按钮：用回调 ref 挂委托，不用 useEffect(…, [])。
+  // 没选文件时这个组件会提前 return 一个占位符，那一帧 .code-view 没挂载，
+  // 首次 effect 拿到的是 null，之后再打开文件也不会重绑（按钮点了没反应）。
+  const unbindCopy = useRef<(() => void) | null>(null)
+  const attachRoot = useCallback((node: HTMLDivElement | null) => {
+    rootRef.current = node
+    unbindCopy.current?.()
+    // 挂在最外层而不是 .md-view 上：委托只认 .md-copy，挂高一层不会误伤，
+    // 却省掉「排版视图 / 源码视图来回切时 .md-view 反复装卸」这件事。
+    unbindCopy.current = node ? bindCodeCopy(node) : null
+  }, [])
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -199,7 +210,7 @@ export function CodeView({
 
   return (
     <div
-      ref={rootRef}
+      ref={attachRoot}
       className="code-view"
       onContextMenu={(e) => {
         if (!viewRef.current) return
