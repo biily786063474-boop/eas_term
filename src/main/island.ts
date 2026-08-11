@@ -598,6 +598,44 @@ function dispatchAction(action: IslandAction): void {
   main.webContents.send('island:action', action)
 }
 
+/** 问操作系统「此刻真正在前台的 app 是不是我」。`true`/`false` 是答案，`null` 是**问不出来**——
+ *  这三态必须分开，见 verifyRealActivation 里对 null 的处理。
+ *
+ *  **为什么不用 System Events 的 `frontmost` 属性**（这是 0.4.17 之前的写法，也是那一版
+ *  「灵动岛跳回来没输入法、鼠标指针不变」的真凶）：那个属性走的是辅助功能（AX）那一层，
+ *  而 **Eas-Term 在 AX 眼里是隐形的**。2026-08-10 实测，同一台机器同一分钟内：
+ *
+ *    · Eas-Term 真的在前台时 → `get name of first application process whose frontmost is true`
+ *      连报 40/40 次错误 -1719（「无效的索引」＝符合条件的进程一个都没有）；
+ *      全机 139 个进程里 frontmost=true 的个数是 **0**；直接点名问
+ *      `frontmost of every application process whose name contains "Eas"` 得到 false。
+ *    · 同一句话，把 Finder 切到前台后立刻正确答出 `Finder`。
+ *
+ *  也就是说这句查询对本 app 结构性失明，「核实自己是否已在前台」它**永远只会给否定答案**，
+ *  于是每一次灵动岛跳转都必然掉进兜底路径。而当时的兜底动作是 `hide()+show()`，
+ *  实测会把本来好好的前台状态弄坏（见下面的注释）——修复本身成了故障源。
+ *
+ *  NSWorkspace.frontmostApplication 才是这件事的权威来源，不经 AX，实测 6/6 准确，
+ *  一次 50ms（比原来那句 120ms 还快）。**比 pid 不比名字**：dev 下进程名是 Electron、
+ *  打包后是 Eas-Term，比名字得对着模式分支猜，比 pid 没有这个歧义。 */
+function frontmostIsSelf(cb: (isSelf: boolean | null) => void): void {
+  execFile(
+    '/usr/bin/osascript',
+    // -l JavaScript：走 JXA + ObjC 桥直接问 AppKit。AppleScript 那边没有等价的
+    // 「不经 AX 拿前台 app」的说法，所以这里必须换语言，不是风格偏好。
+    [
+      '-l',
+      'JavaScript',
+      '-e',
+      'ObjC.import("AppKit"); String($.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier)'
+    ],
+    // 加超时：execFile 本身是异步的，不会卡住主进程，但一个永不返回的子进程会一直占着。
+    // 1.5s 远够正常情况下 50ms 的 osascript 用，又不会让这次核实无限期悬着。
+    { timeout: 1500 },
+    (err, stdout) => cb(err ? null : stdout.trim() === String(process.pid))
+  )
+}
+
 /** macOS 对「后台进程自己把自己切到前台」有一套不透明的节流，实测（osascript 反复触发
  *  + 轮询系统真实前台 app 对照）确认过：哪怕完全绕开灵动岛、在主进程里直接连续调
  *  `app.focus({steal:true})` + `win.focus()`，WindowServer 认定的「真正活跃的 app」
@@ -606,64 +644,51 @@ function dispatchAction(action: IslandAction): void {
  *
  *  表现就是主窗口"看着"聚焦了（甚至可能已经盖在别的窗口上面），实际上鼠标键盘
  *  还在喂给切走前台的那个 app——点画布、点输入框都像没反应，直到用户自己做一次
- *  「显示所有窗口」之类的真实交互，把 WindowServer 的账强制对平。这正是 0.4.11 那两处
- *  改动（acceptFirstMouse / webContents.focus）没能修好的原因：那两处改的都是
- *  Electron/Chromium 自己的状态，而卡住的是更底层、这两处完全够不到的那一层。
+ *  「显示所有窗口」之类的真实交互，把 WindowServer 的账强制对平。
  *
  *  Electron 自己的 API 问不出这个偏差（问它，只会用同一套失真的账回答你），
- *  这里退而求其次问操作系统本身：一次 osascript 大概 30~80ms，只在「灵动岛/Dock 菜单
- *  跳转」这个低频动作后触发一次，不是常驻轮询，开销可以接受。
+ *  所以这里问操作系统本身。只在「灵动岛/Dock 菜单跳转」这个低频动作后触发一次，
+ *  不是常驻轮询，开销可以接受。
  *
- *  **这不是一个"能保证修好"的补丁。** 实测过好几种候选（原地重复 focus、中间插延迟、
- *  `hide()+show()`……），没有一种能把成功率顶到接近 100%——这看起来是 macOS 侧的限制，
- *  不是这段代码单方面能彻底解决的事。两次尝试都没能确认真的切过来时，退而求其次弹一下
- *  Dock 图标：用户自己点 Dock 图标这条路走的是系统认可的真实交互，不受这层限制影响，
- *  实测里是唯一每次都成功的路径。 */
+ *  **这个函数的两条铁律，都是拿实测换来的（2026-08-10）：**
+ *
+ *  1. **问不出来时什么都不做。** 老版本把「查不到」当成「没切过来」，理由是「兜底动作
+ *     基本无害」。这个前提是错的：兜底动作有害（见 2），而且查不到恰恰是常态（见
+ *     frontmostIsSelf 的注释）。两个错误叠一起 → 每次跳转都执行一次有害动作。
+ *     现在只在**确认**没切过来时才动手。
+ *
+ *  2. **重试不再用 `hide()+show()`，改成再走一次 `shell.openPath`。** 8 轮对照实测：
+ *     窗口本来就好好地在前台时，`hide()+show()` 有 **3/8** 的概率把前台交给一个
+ *     毫不相干的后台 app（跑出来是 Safari），窗口却还亮在屏幕上——那正是
+ *     「看着在前面、其实没有输入法、鼠标指针也不跟着变」的来源：macOS 的输入法
+ *     和 NSCursor 都只服务于真正活跃的那个 app。同样条件下重复 `shell.openPath`
+ *     破坏率 **0/8**，而它把后台窗口唤到前台的成功率是 **6/6**。 */
 function verifyRealActivation(win: BrowserWindow, attempt = 0): void {
   setTimeout(() => {
     if (win.isDestroyed()) return
-    // 拿自己进程的可执行文件名当基准，不用 app.getName()——那个读的是 package.json 的
-    // name 字段，dev 模式下是 "eas-term"，而 macOS/System Events 认的是运行中的
-    // .app 包名（dev 下是 "Electron"，打包后才是 "Eas-Term"），两者对不上会让这条
-    // 核实在 dev 模式下永远判定「没切过来」，白触发一堆不必要的兜底动作。
-    const self = path.basename(process.execPath)
-    execFile(
-      '/usr/bin/osascript',
-      ['-e', 'tell application "System Events" to get name of first application process whose frontmost is true'],
-      // 加超时：execFile 本身是异步的，不会卡住主进程，但一个永不返回的子进程
-      // 会一直占着（比如自动化权限弹窗卡在那儿没人应答）。1.5s 远够正常情况下
-      // 几十毫秒的 osascript 用，又不会让这次核实无限期悬着。
-      { timeout: 1500 },
-      (err, stdout) => {
-        if (win.isDestroyed()) return // 窗口没了，做什么都没意义
-        // 关键：err 不等于「不用管了」。err 可能来自上面的超时，也可能是自动化权限
-        // 被拒绝、System Events 没启动等任何原因——原因不重要，重要的是这种情况下
-        // 我们根本不知道真前台是不是自己，「查不到」和「查到了、确实不是自己」
-        // 对后面该不该走兜底这件事上没有区别，都不能当成「不用管了」。
-        // 核实不了时唯一安全的假设是「没切过来」：走跟下面同一条重试/兜底路径——
-        // 成本只是多做一次基本无害的 hide/show 或 Dock 提示，换来的是不会在真出问题
-        // （比如叠加上 osascript 失败）时又退回「静默失败、没有任何兜底」，
-        // 那正是 verifyRealActivation 存在的意义。
-        const front = err ? null : stdout.trim()
-        if (front === self) return // 核实成功，而且真的是自己：什么都不用做
-        if (!app.isPackaged) {
-          const why = err ? `核实失败/超时（${err.killed ? '超时' : err.message}）` : `仍是 ${front}`
-          console.log(`[island] 真实前台没切过来（${why}），第 ${attempt + 1} 次尝试`)
-        }
-        if (attempt === 0) {
-          // hide() 再 show() 走的是和单纯 focus() 不同的内部路径（实测过：单纯重复
-          // focus()/加延迟都没用，这个偶尔能成），成本很低，值得当第二次尝试搏一把。
-          win.hide()
-          win.show()
-          win.webContents.focus()
-          verifyRealActivation(win, attempt + 1)
-          return
-        }
-        // 两次都没能把真前台掰过来：弹 Dock 图标兜底。'critical' 会一直弹到用户自己
-        // 点过来（那一下是真实交互，保真切换）或应用真的拿到前台为止，不会无限打扰。
-        app.dock?.bounce('critical')
+    frontmostIsSelf((isSelf) => {
+      if (win.isDestroyed()) return // 窗口没了，做什么都没意义
+      if (isSelf === true) return // 确认在前台：收工
+      if (isSelf === null) {
+        // 问不出来。见上面铁律 1——不知道就别动手，动手的期望收益是负的。
+        if (!app.isPackaged) console.log('[island] 前台核实问不出来，按「不动」处理')
+        return
       }
-    )
+      if (!app.isPackaged) console.log(`[island] 确认没切到前台，第 ${attempt + 1} 次尝试`)
+      if (attempt === 0) {
+        // 重试就再走一遍那条已经证明有效的路（见上面铁律 2）。
+        void shell.openPath(selfAppBundlePath())
+        win.moveTop()
+        win.focus()
+        win.webContents.focus()
+        verifyRealActivation(win, attempt + 1)
+        return
+      }
+      // 两次都没能把真前台掰过来：弹 Dock 图标兜底。'critical' 会一直弹到用户自己
+      // 点过来（那一下是真实交互，保真切换）或应用真的拿到前台为止，不会无限打扰。
+      // 注意这条现在只在**确认失败**后才走——老版本因为核实恒为否，每次跳转都弹一次。
+      app.dock?.bounce('critical')
+    })
   }, 200)
 }
 
