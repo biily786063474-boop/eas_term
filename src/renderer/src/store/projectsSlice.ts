@@ -95,6 +95,10 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
       activeTabId = pickActiveTab(remainingTabs, activeTabByProject, activeProjectId)
     }
     set({ projects, tabs: remainingTabs, activeProjectId, activeTabId, activeTabByProject })
+    // 这个项目名下的 leaf 全没了，画布上引用它们的节点成了孤儿（渲染出来是空白占位）。
+    // 注意 Frame 本身留着不删——那是既有行为（项目没了 Frame 还在，见 materializeCanvas
+    // 里「项目已被删除的 Frame：跳过重开终端」那条），这里只清指向死 leaf 的节点。
+    get().pruneOrphanNodes()
   },
 
   renameProject: async (id, name) => {

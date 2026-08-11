@@ -152,7 +152,11 @@ export interface CanvasSlice {
     w: number,
     h: number
   ) => void
+  /** 删画布节点；节点是终端（带 leafId）时连带关掉对应的 leaf，两个视图同时消失 */
   removeNode: (frameId: string, nodeId: string) => void
+  /** 扫掉「leafId 指向一个已经不存在的 leaf」的画布节点。
+   *  幂等、没孤儿时不改状态，可以随便多调。leafId 为空的节点（存档恢复的终端占位）不碰。 */
+  pruneOrphanNodes: () => void
   addShape: (shape: Omit<CanvasShape, 'id'>) => void
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void

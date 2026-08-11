@@ -212,6 +212,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     if (!tab) return
     for (const leaf of collectLeaves(tab.root)) killPanePty(leaf.pane)
     set(closeTabInState(s.tabs, s.activeTabId, s.activeTabByProject, tabId))
+    // 这条一次带走整棵树的 leaf，画布上引用它们的节点全成孤儿——同 closeLeaf 的理由
+    get().pruneOrphanNodes()
   },
 
   // 用户主动关闭标签：若内含运行中的终端，先弹确认
@@ -329,6 +331,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const newRoot = removeLeaf(tab.root, leafId)
     if (newRoot === null) {
       set(closeTabInState(s.tabs, s.activeTabId, s.activeTabByProject, tabId))
+      get().pruneOrphanNodes()
       return
     }
     set((st) => ({
@@ -343,6 +346,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
           : t
       )
     }))
+    // 画布上可能有个节点正引用着这个 leaf——不清掉就成了「空白的占位」：
+    // PaneLayer 找不到 leaf 于是什么都不渲染，框还在那儿占着位置。
+    // 用整体扫描而不是定点删：关整个 tab（上面那条 return）一次会带走多个 leaf，
+    // 定点删还得在那里再写一遍，两处迟早对不上。幂等，没孤儿时空转。
+    get().pruneOrphanNodes()
   },
 
   // 用户主动关闭面板：若是运行中的终端，先弹确认

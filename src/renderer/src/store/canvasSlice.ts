@@ -108,6 +108,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     track('view')
     set({ viewMode: mode })
     if (mode === 'canvas') {
+      // 兜底扫一遍孤儿节点。正常路径（closeLeaf / closeTab / removeProject）都已经就地清了，
+      // 这里是防「以后又新增一条关 leaf 的路却忘了清」——那种漏网的表现是画布上一个
+      // 点不掉的空白框，而用户要到切进画布才看得见，正好在这儿补上。
+      // **必须排在 materializeCanvas 前面**：materialize 只认 leafId 为空的占位节点，
+      // 先清掉带死 leafId 的孤儿，不会互相干扰。
+      get().pruneOrphanNodes()
       // 首次进画布时，把当前项目的终端 seed 成 Frame（若尚未 seed）
       get().seedCanvas()
       // 恢复来的终端占位节点在此重开绑定（幂等，无占位则空转）
@@ -372,7 +378,19 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 
-  removeNode: (frameId, nodeId) =>
+  // 删画布节点。**如果它是个终端节点（带 leafId），连带把那个 leaf 一起关掉。**
+  //
+  // 为什么必须连带：画布和分屏共享同一批 leaf，只删画布这一半，分屏/看板里那个终端
+  // 还活着、shell 还在跑，而画布上已经找不到它了——用户的说法是「画板里删了，
+  // 别的模式没关」。反过来的方向在 tabsSlice.closeLeaf 里补（那边负责扫掉画布上的孤儿）。
+  //
+  // 不再弹额外确认：右键终端节点的「关闭终端」历来就是直接 closeLeaf 不问，
+  // 这里保持同一口径。真要加确认应该两处一起加，别只让其中一条路变得更啰嗦。
+  removeNode: (frameId, nodeId) => {
+    // 先取 leafId 再删——删完就查不到了
+    const leafId = get()
+      .canvas.frames.find((f) => f.id === frameId)
+      ?.nodes.find((n) => n.id === nodeId)?.leafId
     set((s) => {
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId ? { ...f, nodes: f.nodes.filter((n) => n.id !== nodeId) } : f
@@ -382,8 +400,33 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         // 删的正好是最大化的那个 → 顺手清掉，别在状态里留一个指向已删节点的引用。
         // 读取端有 liveMaximizedNode 兜底（悬空也不会出事），但脏状态本身还是要清：
         // canvas_get_state 会把它当 `maximized` 字段报给 AI，留着就是在骗它。
+        maximizedNode: s.maximizedNode?.nodeId === nodeId ? null : s.maximizedNode
+      }
+    })
+    if (!leafId) return
+    const tab = get().tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))
+    // closeLeaf 回头会调 pruneOrphanNodes()，那时这个节点已经删掉了 → 空转，不会来回递归
+    if (tab) get().closeLeaf(tab.id, leafId)
+  },
+
+  pruneOrphanNodes: () =>
+    set((s) => {
+      // 只清「有 leafId、但那个 leaf 已经不在 tabs 树里」的节点。
+      //
+      // **`leafId` 为空的节点绝对不能碰**：那是存档恢复出来的终端占位，
+      // materializeCanvas 还等着给它们重开终端并回填 leafId（见 persist.ts 的说明——
+      // leafId 是会话相关的，落盘时一律剥离）。误删这些等于每次重启丢光画布上的终端。
+      const live = new Set(s.tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id)))
+      const orphan = (n: CanvasNode): boolean => !!n.leafId && !live.has(n.leafId)
+      if (!s.canvas.frames.some((f) => f.nodes.some(orphan))) return {} // 没孤儿就别动，省一次重排和整树重渲染
+      const dropped = new Set(
+        s.canvas.frames.flatMap((f) => f.nodes.filter(orphan).map((n) => n.id))
+      )
+      const frames = s.canvas.frames.map((f) => ({ ...f, nodes: f.nodes.filter((n) => !orphan(n)) }))
+      return {
+        canvas: { ...s.canvas, frames: reflowFrames(frames) },
         maximizedNode:
-          s.maximizedNode?.nodeId === nodeId ? null : s.maximizedNode
+          s.maximizedNode && dropped.has(s.maximizedNode.nodeId) ? null : s.maximizedNode
       }
     }),
 
