@@ -369,3 +369,52 @@ export const LockIcon = (p: IconProps): JSX.Element => (
     <path d="M8 10V7a4 4 0 0 1 8 0v3" />
   </Svg>
 )
+
+// ── Agent 命令条用的几个（沿用上面的 Svg 基座：24 viewBox / 1.6 描边 / round 端点）──
+
+/** 压缩上下文：上下两条边界向中间收 */
+export const CompressIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <polyline points="9 6 12 9 15 6" />
+    <polyline points="9 18 12 15 15 18" />
+  </Svg>
+)
+
+/** 上下文占用：方格 —— Claude 的 /context 画出来就是一张彩色方格图 */
+export const GridIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+    <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
+    <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+    <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+  </Svg>
+)
+
+/** 计划模式：清单 + 勾 */
+export const PlanIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <line x1="10" y1="6" x2="20" y2="6" />
+    <line x1="10" y1="12" x2="20" y2="12" />
+    <line x1="10" y1="18" x2="20" y2="18" />
+    <polyline points="3 6 4.5 7.5 7 5" />
+    <polyline points="3 12 4.5 13.5 7 11" />
+  </Svg>
+)
+
+/** 用量：仪表盘指针 */
+export const GaugeIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M4 18a8 8 0 1 1 16 0" />
+    <line x1="12" y1="18" x2="16" y2="11" />
+  </Svg>
+)
+
+/** 更多（二级命令菜单入口） */
+export const MoreIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <circle cx="5" cy="12" r="1.2" />
+    <circle cx="12" cy="12" r="1.2" />
+    <circle cx="19" cy="12" r="1.2" />
+  </Svg>
+)

@@ -3744,3 +3744,60 @@
   background: rgba(255, 255, 255, 0.07);
   color: var(--fg);
 }
+
+/* ---- Agent 命令条（第二行）----
+   一级命令做成图标按钮组，二级收进「更多」。为什么另起一行而不是并进第一行：
+   440px 的节点里第一行（星星+角色+模型+思考+启动）已经占满约 354px，塞不下六个按钮。
+   完整取舍见 docs/斜杠命令按钮化分析.html */
+.agentbar-stack {
+  /* 边框从 .agentbar 移到这里 —— 两行是一个整体，分隔线该画在整体下面 */
+  border-bottom: 1px solid var(--glass-border);
+}
+.agentbar {
+  border-bottom: none;
+}
+.ab-cmds {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px 5px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.ab-cmd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ab-cmd:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--fg);
+}
+.ab-cmd:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+/* 「更多」跟前面六个拉开一点，读作「这后面是另一类」 */
+.ab-cmd-more {
+  margin-left: 6px;
+}
+.ab-cmd-item {
+  gap: 12px;
+}
+/* 会弹确认的标一下：点之前就知道这条不是顺手一点 */
+.ab-cmd-warn {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  white-space: nowrap;
+}

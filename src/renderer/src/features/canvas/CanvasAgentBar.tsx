@@ -21,12 +21,19 @@ import {
   ClaudeIcon,
   CodexIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  CompressIcon,
+  GridIcon,
+  PlanIcon,
+  GaugeIcon,
+  MoreIcon,
+  CopyIcon
 } from '../../ui/Icons'
 import { useMenuAnchor } from './CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
 import { stopVoiceOnSend } from '../voice/voiceControl'
+import { PRIMARY_CMDS, SECONDARY_CMDS, sendSlash, type AgentCmd } from './agentCommands'
 
 type Kind = 'claude' | 'codex'
 
@@ -139,7 +146,17 @@ export async function getProbe(): Promise<AgentProbe> {
   return probeInflight
 }
 
-type Pop = { type: 'model' | 'effort' | 'ask' | 'role' | 'kind'; rect: DOMRect }
+/** 命令 id → 图标。放模块级：每次渲染重建这张表没有意义 */
+const CMD_ICON: Record<string, (p: { size?: number }) => JSX.Element> = {
+  compact: CompressIcon,
+  context: GridIcon,
+  plan: PlanIcon,
+  new: PlusIcon,
+  copy: CopyIcon,
+  usage: GaugeIcon
+}
+
+type Pop = { type: 'model' | 'effort' | 'ask' | 'role' | 'kind' | 'cmds'; rect: DOMRect }
 
 export function CanvasAgentBar({
   frameId,
@@ -260,7 +277,7 @@ export function CanvasAgentBar({
   // 浮层夹回窗口内。复用右键菜单那套（实测尺寸而非估算 —— 菜单项数不定，估出来对不上）
   const popPos = useMenuAnchor(pop?.rect.left ?? 0, (pop?.rect.bottom ?? 0) + 6, popRef, [pop?.type])
 
-  const openPop = (type: 'model' | 'effort' | 'role' | 'kind', el: HTMLElement): void => {
+  const openPop = (type: 'model' | 'effort' | 'role' | 'kind' | 'cmds', el: HTMLElement): void => {
     anchorRef.current = el
     setCustomModel(null)
     setPop((cur) => (cur?.type === type ? null : { type, rect: el.getBoundingClientRect() }))
@@ -268,6 +285,31 @@ export function CanvasAgentBar({
   const openAsk = (el: HTMLElement): void => {
     anchorRef.current = el
     setPop((cur) => (cur?.type === 'ask' ? null : { type: 'ask', rect: el.getBoundingClientRect() }))
+  }
+
+  // 命令按钮：agent 正在干活时禁用 —— 那会儿往 TUI 里插一条斜杠命令，
+  // 轻则被它当成粘贴吃掉、重则和正在渲染的内容打架。runningPtys 由终端标题的
+  // 盲文 spinner 驱动（TerminalView.tsx 的 setPtyRunning），是现成且准确的「在跑」信号。
+  const cmdBusy = useStore((s) => s.runningPtys.includes(ptyId))
+  // 「这个终端真的跑着 agent 吗」。两个来源取并集，各自补对方的盲区：
+  //  · ptyTiming[ptyId] —— 第一次看到标题 spinner 时写入（TerminalView 的 setPtyRunning
+  //    顺手记的账）。管得住「用户自己在终端里敲 claude 起的」这条
+  //  · agent.session[kind] —— 从控制台「启动」时写入。管得住「刚启动、还没干过活、
+  //    所以还没出现过 spinner」那一小段
+  // 缺了这层门控的后果实测可见：裸 shell 上点按钮，终端回一句
+  // `zsh: no such file or directory: /context` —— 无害，但看着就是坏的。
+  const ranAgent = useStore((s) => !!s.ptyTiming[ptyId])
+  const agentHere = ranAgent || !!agent?.session?.[kind]
+  /** 当前 agent 下真正可用的命令（cmd 为 null = 这个 agent 没有对应命令，直接不出现） */
+  const usable = (list: AgentCmd[]): AgentCmd[] => list.filter((c) => !!c.cmd[kind])
+  const runCmd = (c: AgentCmd): void => {
+    const text = c.cmd[kind]
+    if (!text) return
+    const go = (): void => sendSlash(ptyId, text)
+    // 不可逆 / 花钱的先弹确认；文案在 agentCommands.ts 里，说清「会失去什么」而不是泛泛问一句
+    if (c.confirm)
+      requestConfirm({ message: c.confirm.message, confirmLabel: c.confirm.confirmLabel, onConfirm: go })
+    else go()
   }
 
   /** 这个终端节点自己的会话 id（按 agent 各记一套） */
@@ -316,7 +358,8 @@ export function CanvasAgentBar({
   }
 
   return (
-    <div className="agentbar" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="agentbar-stack" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="agentbar">
       {editRole !== null && (
         <CanvasRoleEditor roleId={editRole} onClose={() => setEditRole(null)} />
       )}
@@ -380,6 +423,44 @@ export function CanvasAgentBar({
       >
         <PlayIcon size={12} /> 启动
       </button>
+      </div>
+
+      {/* ── 命令条（第二行）──
+          一级：一次点击直达；二级收进「更多」。为什么只有这几条、为什么不做命令面板，
+          见 docs/斜杠命令按钮化分析.html。
+          另起一行是因为第一行在 440px 宽的节点里已经占满（星星+角色+模型+思考+启动 ≈ 354px），
+          六个按钮塞不进去。 */}
+      {/* 门控两层：CLI 装了（activeReady）+ 这个终端真的跑着 agent（agentHere，见上面注释）。
+          没用 `!!agent` 当判据：那个字段只要用户动过控制台（改个模型）就有值，
+          可终端里可能压根没起 agent —— 拿它把关会在裸 shell 上亮出一排发不出去的按钮。 */}
+      {activeReady && agentHere && usable(PRIMARY_CMDS).length > 0 && (
+        <div className="ab-cmds">
+          {usable(PRIMARY_CMDS).map((c) => {
+            const Icon = CMD_ICON[c.id] ?? MoreIcon
+            return (
+              <button
+                key={c.id}
+                className="ab-cmd"
+                disabled={cmdBusy}
+                data-tip={cmdBusy ? `${c.label} · agent 正在跑，等它停下来` : `${c.label} · ${c.tip}`}
+                onClick={() => runCmd(c)}
+              >
+                <Icon size={13} />
+              </button>
+            )
+          })}
+          {usable(SECONDARY_CMDS).length > 0 && (
+            <button
+              className="ab-cmd ab-cmd-more"
+              disabled={cmdBusy}
+              data-tip="更多命令"
+              onClick={(e) => openPop('cmds', e.currentTarget)}
+            >
+              <MoreIcon size={13} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 浮层：portal 到 body（.pane overflow:hidden 会裁切；zoom 下 rect 已是屏幕坐标，fixed 精准） */}
       {pop &&
@@ -393,6 +474,25 @@ export function CanvasAgentBar({
             style={{ left: popPos?.x ?? pop.rect.left, top: popPos?.y ?? pop.rect.bottom + 6, visibility: popPos ? 'visible' : 'hidden' }}
             onMouseDown={(e) => e.stopPropagation()}
           >
+            {pop.type === 'cmds' && (
+              <div className="ab-menu ab-cmd-menu">
+                {usable(SECONDARY_CMDS).map((c) => (
+                  <button
+                    key={c.id}
+                    className="ab-menu-item ab-cmd-item"
+                    data-tip={c.tip}
+                    onClick={() => {
+                      setPop(null)
+                      runCmd(c)
+                    }}
+                  >
+                    <span>{c.label}</span>
+                    {/* 会弹确认的标一下，让人点之前就知道这条不是「顺手一点」 */}
+                    {c.confirm && <span className="ab-cmd-warn">需确认</span>}
+                  </button>
+                ))}
+              </div>
+            )}
             {pop.type === 'kind' && (
               <div className="ab-menu ab-kind-menu">
                 {(
