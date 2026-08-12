@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { dirOf, inboxOf } from './paths'
-import { customSchemaBody } from './customSchema'
+import { customSchemaBody, customIndexMd, customReadmeText } from './customSchema'
 import { libraryDirs, readTaxonomy } from './taxonomy'
 
 /** re-export：接口约定里「schema.ts 导出 customSchemaBody」——实现挪去 customSchema.ts
@@ -238,6 +238,18 @@ const indexMd = (d: WikiDirNames): string => `# 索引
 ## ${d.projects}
 `
 
+/** index.md 的分流入口：有 `.eas-wiki.json` 走 customIndexMd，没有就原样调内置 indexMd ——
+ *  内置这条一个字符不改（indexMd 本身的源文本被外部哈希钉住，理由同 schemaTextFor）。
+ *
+ *  这两份 index.md 不像 CLAUDE.md/AGENTS.md 那样有围栏升级机制：initWiki 只在文件
+ *  不存在时才写 index.md，写错了不会在下次启动自愈，所以「第一次就生成对」格外重要——
+ *  这正是这个分流入口存在的原因。 */
+export function indexMdFor(root: string): string {
+  const t = readTaxonomy(root)
+  if (!t) return indexMd(dirNames(root)) // 内置：原样不动
+  return customIndexMd(t.dirs)
+}
+
 const LOG_MD = `# 日志
 
 只追加。每条以 \`## [日期] 动作 | 标题\` 开头，方便 \`grep "^## \\[" log.md | tail -5\`。
@@ -283,6 +295,15 @@ created: ${new Date().toISOString().slice(0, 10)}
 `
 }
 
+/** START-HERE.md 的分流入口，逻辑与 indexMdFor 对称：有配置走 customReadmeText，
+ *  没有就原样调内置 readmeText，内置这条一个字符不改。同样只在文件不存在时写、
+ *  没有升级机制，第一次生成就必须对。 */
+export function readmeTextFor(root: string): string {
+  const t = readTaxonomy(root)
+  if (!t) return readmeText(dirNames(root)) // 内置：原样不动
+  return customReadmeText(t.dirs)
+}
+
 /** 建骨架。已存在的文件一律不覆盖 —— 允许用户把已有的 Obsidian 库直接指过来。 */
 export function initWiki(root: string): { created: string[]; skipped: string[] } {
   const created: string[] = []
@@ -299,16 +320,18 @@ export function initWiki(root: string): { created: string[]; skipped: string[] }
       created.push(dir.name + '/')
     }
   }
-  const d = dirNames(root)
   // START-HERE.md 取代原来的「从这里开始.md」：文件名也不留中文和空格。
   // 老库里已经有中文版时不再建第二份 —— 同一份说明两个文件只会让人不知道该看哪个。
   const readmeName = fs.existsSync(path.join(root, '从这里开始.md')) ? '从这里开始.md' : 'START-HERE.md'
+  // index.md / START-HERE.md 都走 xxxFor(root) 分流：自定义库要拿到自己配置的目录名，
+  // 不然会生成一份写着 people/methods/domains/projects 的索引和写着 sources/ 的说明，
+  // 而这两份又没有围栏升级机制（只在文件不存在时写），首次建错就永久停在错的版本上。
   const files: [string, string][] = [
     ['CLAUDE.md', schemaTextFor(root)],
     ['AGENTS.md', schemaTextFor(root)],
-    ['index.md', indexMd(d)],
+    ['index.md', indexMdFor(root)],
     ['log.md', LOG_MD],
-    [readmeName, readmeText(d)]
+    [readmeName, readmeTextFor(root)]
   ]
   for (const [name, body] of files) {
     const p = path.join(root, name)
