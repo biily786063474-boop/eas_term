@@ -1,6 +1,7 @@
 # 笔纵画板 MCP 接入（Eas-Term 侧）
 
-> **上游权威文档**：`~/Biily/Projects/taptv pad/docs/MCP_INTEGRATION.md`（2026-08-11，对应画板 ≥ 1.21.21）。
+> **上游权威文档**：`~/Biily/Projects/taptv pad/docs/MCP_INTEGRATION.md`
+> （2026-08-11 晚更新到 322 行，对应画板 ≥ 1.21.22）。
 > 这份只记**跟 Eas-Term 相关的部分**和我们这边做了什么，接口细节以上游为准，别在这里复述一遍再各自漂移。
 
 ## 硬事实（会省两小时的那几条）
@@ -8,6 +9,7 @@
 | | |
 |---|---|
 | **画板 < 1.21.20 一律连不上** | `.app` 里没带 `mcpServer` 的运行时依赖，客户端报 `-32000 Connection closed` |
+| **< 1.21.22 改不了提示词** | `update_node({prompt})` 被静默丢弃、`get_node` 也读不到当前提示词。症状是「改提示词总是失败」且毫无线索。**本机现装 1.21.20，这条路是坏的** |
 | **画板 app 必须正在运行** | `mcpServer.js` 只是转发器，真正干活的是画板进程的本地 HTTP API |
 | **不该依赖用户装 node** | 用画板自带的 Electron（`ELECTRON_RUN_AS_NODE=1`），内置 node v22 |
 | **`generate` 默认不会真的开始** | 两阶段设计防误扣费，必须再走一个出口，见下 |
@@ -64,8 +66,17 @@ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:13140/
 本地文件用 `import_local_file`）已经写进 `skills/eas-term/SKILL.md` 的生图段，
 那份会同时下发给 Claude（skill）和 Codex（`~/.eas/agent/canvas.md`）。**改要改那一份，别在这里补。**
 
+## 上游新增的「给 agent 写规则时的决策表」
+
+上游 4.5 节直接列出了「必须写进 agent 规则、不写就会卡」的条目 —— 已照抄要点进
+`skills/eas-term/SKILL.md` 的生图段（「意图 → 该调什么」那张表）。
+上游改了这一节要跟着同步，那是唯一一处上游主动为集成方写的内容。
+
 ## 变更记录
 
+- 2026-08-11 晚 上游更新到 322 行：新增「改已配置节点的提示词」（`update_node({prompt})`，
+  **1.21.22 起才可用**）、坑位从三条扩到五条（+ `content` 不是提示词、部分模型 prompt 有长度上限）、
+  新增 4.5 决策表。要点已同步进 SKILL.md 生图段。
 - 2026-08-11 首次接入上游文档。按文档把运行时从「优先系统 node」改成画板自带 Electron；
   新增依赖自检与启动包装器；重写 SKILL.md 生图段（此前缺 confirm 那一步，
   照着做的 agent 会永远轮询一个停在 idle 的节点）。

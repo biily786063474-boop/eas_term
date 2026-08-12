@@ -108,18 +108,52 @@ get_generation_status          轮询到 done（图片 30~60s，视频更久）
 估不出价时画板会拒绝生成（返回 `estimate_failed`）——那是防资损的闸门，不是 bug。
 换个模型，或者退回「让用户确认」那条路。
 
-### 四个会坑人的点
+### 改已经配好的节点
+
+想换个提示词重出，**不用重走整个流程**：
+
+```
+get_node(nodeId)        先看当前配的是什么：prompt / modelId / genParams
+update_node(nodeId, prompt: '改后的提示词，可以继续用 @1')
+```
+
+`genParams.awaitingConfirm === true` = **已配置但还没触发生成**（节点停在 idle），
+这时候要么 `confirm_batch_generate`，要么 `generate(autoConfirm: true)`。
+
+对同一节点再调一次 `generate` 也行（覆盖旧参数），两种方式都不会重复扣费。
+回执里那句「不要为了重试连续调用」说的是别拿它当重试机制，不是禁止改参数。
+
+### 六个会坑人的点
 
 1. **上游连了媒体，prompt 里必须写 `@N` 指名**。≥2 个媒体上游而 prompt 里没有 `@N`
    会被**硬拦**（多图不指名模型会瞎猜）。`generate` 的回执里有 `media_ref_map`，
    照它对一遍 `@1` 到底是哪张图。**不要以为「上游连着就会自动当上下文」**。
 2. **`connect_nodes` 的参数名是 `from` / `to`**，不是 `sourceId`/`targetId`。写错会报
    `Cannot self-connect`（两个 `undefined` 被当成同一个节点）—— 报错方向完全是误导。
-3. **prompt 用中文写**。不是硬拦截，但回执会带 `prompt_lang_warn`；而且用户在画板界面上
+3. **改提示词用 `prompt` 字段，不是 `content`**。`update_node({content})` 会返回成功，
+   但 `generate` 根本不读它 —— 改了等于没改，而且没有任何报错。
+   ⚠️ **画板 1.21.21 及以前这条路整个不通**：传 `prompt` 会被静默丢弃、`get_node`
+   也读不到当前提示词。症状是「改提示词总是失败」且毫无线索。**1.21.22 起才修好** ——
+   撞上了先让用户更新画板，别在那儿反复试。
+4. **prompt 用中文写**。不是硬拦截，但回执会带 `prompt_lang_warn`；而且用户在画板界面上
    要看得懂、能直接改。
-4. **要把本地图片喂进去，用 `import_local_file`**（一步直接建成画布节点）。
-   `upload_asset({source:'path'})` 读不了任意路径 —— 画板的文件 IPC 有路径穿越防护，
-   只能读它自己数据目录里的。（`import_local_file` 是 1.21.21 新增）
+5. **模型 ID 只能来自 `list_models`，不要凭记忆写。**
+6. **有些模型对 prompt 有长度上限**（例如 MiniMax H3 是 7000 字符）。超了会被提前拦下，
+   并告诉你要删多少字。
+
+### 意图 → 该调什么
+
+上游文档里那张决策表，照抄要点（左边是你想干的事，右边是**常见的错法**）：
+
+| 想干什么 | 调什么 | 别这么干 |
+|---|---|---|
+| 本地图片放进画板 | `import_local_file({filePath, type})` | `upload_asset({source:'path'})` 读不了任意路径 |
+| 让 A 图当 B 的参考 | `connect_nodes({from, to})` + prompt 里写 `@1` | 连了线但 prompt 不写 `@N` |
+| 改已配好的提示词 | `update_node({nodeId, prompt})` | 用 `content` —— 返回 ok 但无效 |
+| 看当前配了什么 | `get_node({nodeId})` | 盲改 |
+| 真的开始生成 | `autoConfirm:true` 或 `confirm_batch_generate()` | 只调 `generate` 然后干等 |
+| 生成失败想重试 | 先 `get_node` 看 prompt，改完再触发 | 对同一节点连着调 `generate` |
+| 想先知道用户够不够钱 | `get_user_billing_tier()` | 直接发起然后吃拒绝 |
 
 ### 生成完了做什么
 
