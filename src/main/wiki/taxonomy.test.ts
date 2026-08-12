@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { validateTaxonomy, readTaxonomy, TAXONOMY_FILE } from './taxonomy.ts'
+import { validateTaxonomy, readTaxonomy, TAXONOMY_FILE, libraryDirs, BUILTIN_DIRS } from './taxonomy.ts'
 
 const GOOD = {
   version: 1,
@@ -79,4 +79,35 @@ test('readTaxonomy：合法文件 → 解析出来', () => {
   const t = readTaxonomy(dir)
   assert.notEqual(t, null)
   assert.equal(t?.dirs[0].name, '00-收件箱')
+})
+
+test('没有配置 → 内置八目录，顺序与名字都不变', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const got = libraryDirs(dir, (k) => k)
+  assert.deepEqual(got.map((d) => d.name), [
+    '00-inbox', 'me', 'people', 'methods', 'domains', 'projects', 'sources', '_templates'
+  ])
+  assert.equal(got.find((d) => d.role === 'inbox')?.name, '00-inbox')
+})
+
+test('没有配置时 resolve 生效（老库中文名回落）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const got = libraryDirs(dir, (k) => (k === '00-inbox' ? '00-收件箱' : k))
+  assert.equal(got[0].name, '00-收件箱')
+  assert.equal(got[0].role, 'inbox')
+})
+
+test('有配置 → 用配置的，resolve 不介入', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), JSON.stringify({
+    version: 1,
+    dirs: [{ name: '收件', purpose: 'x', role: 'inbox' }, { name: '课题', purpose: 'y' }],
+    frontMatter: { required: ['summary'] }
+  }))
+  const got = libraryDirs(dir, () => '不该被调用')
+  assert.deepEqual(got.map((d) => d.name), ['收件', '课题'])
+})
+
+test('内置八目录每个都有非空 purpose', () => {
+  for (const d of BUILTIN_DIRS) assert.ok(d.purpose.trim().length > 0, d.name)
 })

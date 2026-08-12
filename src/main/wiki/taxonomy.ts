@@ -99,3 +99,29 @@ export function readTaxonomy(root: string): Taxonomy | null {
     return null
   }
 }
+
+export type LibraryDir = TaxonomyDir
+
+/** 内置分类。**顺序和名字不许动** —— 老库的说明书按这个顺序生成，
+ *  改了会让所有内置库的 CLAUDE.md 在下次启动时被重写成不同的文字。 */
+export const BUILTIN_DIRS: LibraryDir[] = [
+  { name: '00-inbox', purpose: '用户丢进来、还没整理的原始素材', role: 'inbox' },
+  { name: 'me', purpose: '关于用户自己的：偏好、习惯、决定过的事' },
+  { name: 'people', purpose: '关于别人的：合作方、同事、客户' },
+  { name: 'methods', purpose: '可复用的做法与套路' },
+  { name: 'domains', purpose: '某个领域的知识积累' },
+  { name: 'projects', purpose: '具体项目的进展与结论' },
+  { name: 'sources', purpose: '原始出处：论文、文章、录音的存档', role: 'raw' },
+  { name: '_templates', purpose: '新建笔记的模板', role: 'templates' }
+]
+
+/** 这个库实际长什么样。有 .eas-wiki.json 就按它，没有就是内置八目录。
+ *
+ *  `resolve` 由调用方注入而不是在这里 import dirOf —— 那会把 electron 依赖
+ *  拖进这个文件（paths.ts 引了 electron），测试就加载不了了。
+ *  内置路径需要它做老库中文名回落；自定义路径不需要，名字就是配置里写的。 */
+export function libraryDirs(root: string, resolve: (key: string) => string): LibraryDir[] {
+  const t = readTaxonomy(root)
+  if (t) return t.dirs
+  return BUILTIN_DIRS.map((d) => ({ ...d, name: resolve(d.name) }))
+}
