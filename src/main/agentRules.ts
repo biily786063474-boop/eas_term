@@ -58,6 +58,21 @@ const canvasSkillFiles = (): { name: string; text: string }[] => {
   }
 }
 
+/** 目录里**实际存在**的 .md 文件名——读的是目标目录本身，不是拿源文件名单去
+ *  反查存在。footprint 要报的是「盘上现在真的有什么」，不是「这个版本应该装
+ *  什么」：正常同步之后两者一致，但如果目录里有旧版本遗留的孤儿文件（比如
+ *  以后哪个文件改名或被移除），只有直接读目标目录才照得见、才报得出来。 */
+const existingMdFiles = (dir: string): string[] => {
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+  } catch {
+    return []
+  }
+}
+
 // ── 知识库能力 ──────────────────────────────────────────────────────
 // **知识库不再写进这两个全局文件。** 以前这里有一个 wikiSkillText()（Claude 侧的
 // eas-wiki skill）和 codexRegion() 里的一段 wiki 分支，把知识库的绝对路径、
@@ -193,8 +208,17 @@ export function rulesStatus(): RulesStatus {
   } catch {
     codexChars = 0
   }
+  // 判据和 agentSkill.ts 的 installed() 保持一致：源目录里每个 .md 都要在目标目录
+  // 存在，才算装了。这里原来只查 SKILL.md 在不在，会把「SKILL.md 装了、细节文件
+  // 没跟上」的半装状态误判成「已安装」——而且会和 skillStatus() 的判断对不上：
+  // 一个说装了、一个说没装，标题栏的「有更新待安装」和「扩展能力」面板的
+  // 「已启用」标签就会各说各话，用户看到自相矛盾的两个状态。
+  const claudeCanvasDir = path.dirname(claudeSkill('eas-term'))
+  const srcFiles = canvasSkillFiles()
+  const claudeCanvas =
+    srcFiles.length > 0 && srcFiles.every((f) => fs.existsSync(path.join(claudeCanvasDir, f.name)))
   return {
-    claudeCanvas: fs.existsSync(claudeSkill('eas-term')),
+    claudeCanvas,
     codexRegionChars: codexChars
   }
 }
@@ -235,6 +259,7 @@ export function registerRulesHandlers(): void {
     const mcp = mcpConfigStatus()
     const r = rulesStatus()
     const kb = wikiPath()
+    const claudeCanvasDir = path.dirname(claudeSkill('eas-term'))
     const claudeSettings = path.join(app.getPath('home'), '.claude', 'settings.json')
     const codexHooks = path.join(app.getPath('home'), '.codex', 'hooks.json')
     const hookOn = ((): boolean => {
@@ -262,8 +287,12 @@ export function registerRulesHandlers(): void {
         name: '使用指引',
         desc: '告诉 agent 什么时候该用画板工具',
         installed: r.claudeCanvas || r.codexRegionChars > 0,
+        // 落点不止一个文件——技能拆成渐进式披露之后，Claude 侧和 Codex 侧详细正文
+        // 各自是一个目录，动态列出目录里实际存在的每个 .md，不写死数量或文件名，
+        // 否则「卸载会删哪些」这个隐私承诺就只报得出其中一个文件
         files: [
-          ...(r.claudeCanvas ? [claudeSkill('eas-term')] : []),
+          ...existingMdFiles(claudeCanvasDir).map((f) => path.join(claudeCanvasDir, f)),
+          ...existingMdFiles(detailDir()).map((f) => path.join(detailDir(), f)),
           ...(r.codexRegionChars > 0 ? [codexAgents()] : [])
         ],
         note:
