@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 import type { WikiStatus } from '../../shared/types'
+import { isRawName, libraryDirs, TAXONOMY_FILE } from './taxonomy'
 
 /** 记「库在哪」的配置文件。统计字段（added 等）也放这儿 */
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
@@ -68,12 +69,19 @@ export function dirOf(root: string, key: string): string {
 }
 
 export const INBOX = '00-inbox'
-export const inboxOf = (root: string): string => dirOf(root, INBOX)
+
+/** 这个库的收件箱目录名。自定义库按配置里 role:"inbox" 那个，内置库还是 00-inbox
+ *  （含老库中文名回落）。 */
+export const inboxOf = (root: string): string =>
+  libraryDirs(root, (k) => dirOf(root, k)).find((d) => d.role === 'inbox')?.name ?? dirOf(root, INBOX)
 export const sourcesOf = (root: string): string => dirOf(root, 'sources')
 
-/** 原始素材区（收件箱 + 素材）：不是笔记，不进索引也不算反链。含老库中文名 */
-const RAW_DIRS = new Set(['00-inbox', '00-收件箱', 'sources', '素材'])
-export const isRawDir = (rel: string): boolean => RAW_DIRS.has(rel)
+/** 原始素材区（收件箱 + 素材）：不是笔记，不进索引也不算反链。
+ *  **签名多收一个 root**：自定义库的原始素材区叫什么由配置决定，不看名字。
+ *  唯一调用点是下面的 walkNotes，它本来就有 root。
+ *  判定逻辑在 taxonomy.ts 的 isRawName（那边不引 electron，测试能直接打到实现）——
+ *  这里只做一行转发：把 dirOf 注入当 resolve。 */
+export const isRawDir = (root: string, rel: string): boolean => isRawName(root, rel, (k) => dirOf(root, k))
 
 /** 收件箱里存逐字稿的隐藏目录（点号开头：访达看不见、不进徽章计数） */
 export const TRANSCRIPTS = '.transcripts'
@@ -125,7 +133,7 @@ export function walkNotes(root: string, rel = '', out: string[] = [], budget = {
     if (d.name.startsWith('.')) continue
     const r = rel ? path.join(rel, d.name) : d.name
     if (d.isDirectory()) {
-      if (isRawDir(r)) continue // 原始素材不是笔记，不进索引也不算反链（含老库的中文目录名）
+      if (isRawDir(root, r)) continue // 原始素材不是笔记，不进索引也不算反链（含老库的中文目录名）
       walkNotes(root, r, out, budget)
     } else if (d.isFile() && isMd(d.name)) {
       // CLAUDE.md / AGENTS.md 是给 agent 看的**约定文件**，不是笔记。
@@ -141,6 +149,8 @@ export function walkNotes(root: string, rel = '', out: string[] = [], budget = {
  *  骨架文件或任一顶层目录（含老库中文名）存在，就认。全都看不到才叫「不像」。 */
 function looksLikeWiki(root: string): boolean {
   try {
+    // 有分类配置 = 明确是我们的库，不用再看目录长什么样
+    if (fs.existsSync(path.join(root, TAXONOMY_FILE))) return true
     for (const f of ['index.md', 'CLAUDE.md', 'AGENTS.md', 'log.md']) {
       if (fs.existsSync(path.join(root, f))) return true
     }

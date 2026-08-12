@@ -125,3 +125,23 @@ export function libraryDirs(root: string, resolve: (key: string) => string): Lib
   if (t) return t.dirs
   return BUILTIN_DIRS.map((d) => ({ ...d, name: resolve(d.name) }))
 }
+
+/** 内置库两个原始素材区的老库中文名。与 paths.ts 的 LEGACY 表对应，
+ *  这里单列是因为 taxonomy.ts 不能 import paths.ts（那边引了 electron）。
+ *  只在内置分支生效 —— 自定义库的原始素材区叫什么完全由配置的 role 决定。 */
+const BUILTIN_RAW_ALIASES = ['00-收件箱', '素材']
+
+/** 这个名字算不算「原始素材区」（不是笔记，不进索引也不算反链）。
+ *
+ *  有配置只认配置里的 role；没配置走内置八目录里 role 是 inbox/raw 的那些，
+ *  外加老库中文别名 —— 否则一个中文老库如果同时有 00-收件箱 和 00-inbox 两个目录，
+ *  `resolve`（即 dirOf）会因为 00-inbox 已存在而只回落出 00-inbox 一个名字，
+ *  00-收件箱 就会从「被跳过」变成「被当成笔记扫进图谱」。别名表补的就是这个洞。
+ *
+ *  `resolve` 同 libraryDirs：由调用方注入，避免这个文件 import ./paths。 */
+export function isRawName(root: string, rel: string, resolve: (key: string) => string): boolean {
+  const t = readTaxonomy(root)
+  if (t) return t.dirs.some((d) => d.name === rel && (d.role === 'inbox' || d.role === 'raw'))
+  if (BUILTIN_RAW_ALIASES.includes(rel)) return true
+  return BUILTIN_DIRS.some((d) => (d.role === 'inbox' || d.role === 'raw') && resolve(d.name) === rel)
+}
