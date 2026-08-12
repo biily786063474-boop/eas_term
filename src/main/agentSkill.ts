@@ -5,7 +5,8 @@
 // 技能包就是那份使用指引 —— 什么场景用哪个工具、边界在哪、分寸怎么把握。
 //
 // 两边的装法不同：
-//   · Claude Code → ~/.claude/skills/eas-term/SKILL.md（原生 skill 机制）
+//   · Claude Code → ~/.claude/skills/eas-term/ 整个目录（原生 skill 机制，SKILL.md 是入口，
+//     其余 .md 按渐进式披露按需读，见下面 skillSrcDir/skillFiles）
 //   · Codex       → ~/.codex/AGENTS.md 里插一段（Codex 没有 skill，全局指令走 AGENTS.md）
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
@@ -34,17 +35,23 @@ function writePrefs(p: { muted?: boolean }): void {
   }
 }
 
-/** 技能包源文件（打包后在 Resources/skills） */
-function sourceFile(): string {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, 'skills', 'eas-term', 'SKILL.md')
-    : path.join(app.getAppPath(), 'skills', 'eas-term', 'SKILL.md')
-}
-function sourceText(): string | null {
+/** 技能包源目录（打包后在 Resources/skills）。**是目录不是文件** ——
+ *  技能拆成渐进式披露之后目录里有多个 .md，按单个文件处理会把细节文件全漏掉，
+ *  症状是「触发了但 agent 找不到流程」。 */
+const skillSrcDir = (): string =>
+  app.isPackaged
+    ? path.join(process.resourcesPath, 'skills', 'eas-term')
+    : path.join(app.getAppPath(), 'skills', 'eas-term')
+
+/** 目录里的所有 .md。排序是为了让「装了哪些」这件事可复现，便于比对。 */
+const skillFiles = (dir: string): string[] => {
   try {
-    return fs.readFileSync(sourceFile(), 'utf8')
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
   } catch {
-    return null
+    return []
   }
 }
 
@@ -79,25 +86,41 @@ export function hasCli(bin: string): boolean {
   })
 }
 
-const claudeSkillFile = (): string =>
-  path.join(app.getPath('home'), '.claude', 'skills', 'eas-term', 'SKILL.md')
+const claudeSkillDir = (): string =>
+  path.join(app.getPath('home'), '.claude', 'skills', 'eas-term')
 const codexAgentsFile = (): string => path.join(app.getPath('home'), '.codex', 'AGENTS.md')
 
 // CODEX_BEGIN/END 这里只用来**定位**盘上那一段，不再用来生成内容 ——
 // 生成是 agentRules.expectedCodexRegion() 的事，两边必须是同一个来源，
 // 否则又会回到「盘上写的和期望的永远不相等」那个坑里。
 
+/** Claude 侧「装没装」：源目录里**每一个** .md 都要能在目标目录里找到，少拷一个
+ *  （本机实测过的真实状态：目标目录只有 SKILL.md）都不算装了 —— 旧判据只查
+ *  SKILL.md 在不在，会把这种半装状态误判成「已安装」。 */
+const installed = (): boolean => {
+  const src = skillFiles(skillSrcDir())
+  if (src.length === 0) return false
+  return src.every((f) => fs.existsSync(path.join(claudeSkillDir(), f)))
+}
+
 export function skillStatus(): SkillStatus {
-  const src = sourceText()
+  const srcFiles = skillFiles(skillSrcDir())
   const prefs = readPrefs()
 
   const claudeInstalled = ((): { installed: boolean; outdated: boolean } => {
-    try {
-      const cur = fs.readFileSync(claudeSkillFile(), 'utf8')
-      return { installed: true, outdated: !!src && cur.trim() !== src.trim() }
-    } catch {
-      return { installed: false, outdated: false }
-    }
+    if (!installed()) return { installed: false, outdated: false }
+    const dir = skillSrcDir()
+    const dst = claudeSkillDir()
+    const outdated = srcFiles.some((f) => {
+      try {
+        const cur = fs.readFileSync(path.join(dst, f), 'utf8')
+        const want = fs.readFileSync(path.join(dir, f), 'utf8')
+        return cur.trim() !== want.trim()
+      } catch {
+        return true
+      }
+    })
+    return { installed: true, outdated }
   })()
 
   const codexInstalled = ((): { installed: boolean; outdated: boolean } => {
@@ -124,7 +147,7 @@ export function skillStatus(): SkillStatus {
     claude,
     codex,
     muted: !!prefs.muted,
-    needsAttention: !!src && (pending(claude) || pending(codex)),
+    needsAttention: srcFiles.length > 0 && (pending(claude) || pending(codex)),
     // 一个都没装：以前这种情况什么提示都不给，用户只看到一堆点了没反应的 agent 控件
     noCli: !claude.hasCli && !codex.hasCli
   }

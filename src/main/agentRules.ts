@@ -38,17 +38,25 @@ const claudeSkill = (name: string): string =>
  *  实测踩到过。 */
 const detailDir = (): string => path.join(home(), '.eas', 'agent')
 
-function readSource(rel: string): string | null {
-  const base = app.isPackaged ? process.resourcesPath : app.getAppPath()
-  try {
-    return fs.readFileSync(path.join(base, rel), 'utf8')
-  } catch {
-    return null
-  }
-}
+/** 技能包源码根目录：打包后在 Resources 下，开发时就是 app 自己的目录。 */
+const sourceRoot = (): string => (app.isPackaged ? process.resourcesPath : app.getAppPath())
 
 // ── 画板能力 ────────────────────────────────────────────────────────
-const canvasSkill = (): string | null => readSource(path.join('skills', 'eas-term', 'SKILL.md'))
+/** 技能包目录里的所有文件。原来只读 SKILL.md 一个 —— 拆成渐进式披露之后
+ *  细节文件也要分发，Codex 那边尤其：它没有 skill 机制，
+ *  常驻区只放指针，正文必须真的写到 ~/.eas/agent/ 下才读得到。 */
+const canvasSkillFiles = (): { name: string; text: string }[] => {
+  const dir = path.join(sourceRoot(), 'skills', 'eas-term')
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.md'))
+      .sort()
+      .map((f) => ({ name: f, text: fs.readFileSync(path.join(dir, f), 'utf8') }))
+  } catch {
+    return []
+  }
+}
 
 // ── 知识库能力 ──────────────────────────────────────────────────────
 // **知识库不再写进这两个全局文件。** 以前这里有一个 wikiSkillText()（Claude 侧的
@@ -77,19 +85,33 @@ const canvasSkill = (): string | null => readSource(path.join('skills', 'eas-ter
  * 知识库不在这里出现：MCP 工具的 description 本身就会被模型看到（这是 MCP 协议
  * 自带的机制，不需要另外「提醒」），在这儿再写一遍是同一件事说两遍——
  * 而且这份文件是**全局常驻**的，写了就等于给知识库开了后门，绕开了 wiki_query 的门禁。
+ *
+ * 触发条件按「细节文件是否真的存在」动态生成，不写死条数 —— 技能包从当前 4 个 .md
+ * 到以后加 wiki-architect.md 变 5 个，这里不用跟着改：少一个文件就自动少一条触发条件，
+ * 不会留下指向空气的路径（那是渐进式披露最典型的静默失败：模型照着路径去读，
+ * 读不到，然后凭印象干活）。四条各自独占一段、绝不合并进同一条：生图和摆放合并写的话，
+ * 用户说「画张封面」时模型只会想到摆放、想不到自己有生成能力——于是回一句「我不能生图」，
+ * 或者去调别的图像 API。
  */
-function codexRegion(mods: { canvas: boolean }): string {
+function codexRegion(fileNames: Set<string>): string {
   const lines = [BEGIN, '# Eas-Term 扩展能力', '']
   lines.push('你运行在 Eas-Term 里。下面是已启用的能力和各自的**触发条件**，')
   lines.push('详细约定按路径自己去读，不用背下来。', '')
-  if (mods.canvas) {
+  if (fileNames.has('canvas.md')) {
     lines.push('**画板**：产出了给人看的东西（报告 / 预览页 / 图）→ 用画板 MCP 工具摆到用户眼前，')
     lines.push(`别只说「已生成」。详细：\`${path.join(detailDir(), 'canvas.md')}\``, '')
-    // 生图必须单列一行触发条件。它和上面那条是两件事：上面是「东西做完了怎么摆」，
-    // 这条是「东西怎么做出来」。合并写的话，用户说「画张封面」时模型只会想到摆放，
-    // 想不到自己有生成能力 —— 于是回一句「我不能生图」，或者去调别的图像 API。
+  }
+  if (fileNames.has('generate.md')) {
     lines.push('**生图 / 生视频**：用户要图、封面、海报、视频 → 走「笔纵画板」的 MCP')
-    lines.push(`（\`bizone-canvas\`），不要调别的图像 API。详细同上：\`${path.join(detailDir(), 'canvas.md')}\``, '')
+    lines.push(`（\`bizone-canvas\`），不要调别的图像 API。详细：\`${path.join(detailDir(), 'generate.md')}\``, '')
+  }
+  if (fileNames.has('secrets.md')) {
+    lines.push('**缺密钥**：撞到 401 / 鉴权失败 → 别让用户把 key 贴进对话，')
+    lines.push(`走密钥柜。详细：\`${path.join(detailDir(), 'secrets.md')}\``, '')
+  }
+  if (fileNames.has('wiki-architect.md')) {
+    lines.push('**重新设计知识库**：用户说分类不合适 / 要自定义知识库 →')
+    lines.push(`详细：\`${path.join(detailDir(), 'wiki-architect.md')}\``, '')
   }
   lines.push(END)
   return lines.join('\n')
@@ -102,8 +124,9 @@ function codexRegion(mods: { canvas: boolean }): string {
  *  短路由 —— 两者永不相等，于是「有更新待安装」恒为真，首启弹窗每次启动都弹，
  *  用户点多少次「安装」都没用。 */
 export function expectedCodexRegion(): string | null {
-  const canvas = canvasSkill()
-  return canvas ? codexRegion({ canvas: true }) : null
+  const files = canvasSkillFiles()
+  if (files.length === 0) return null
+  return codexRegion(new Set(files.map((f) => f.name)))
 }
 
 /** 只替换我们那一段，用户写在区外的内容一个字不碰 */
@@ -137,10 +160,16 @@ function writeFileEnsured(f: string, text: string): void {
 /** 装/更新全部规则。app 升级、canvas 技能内容变化时调它。
  *  知识库不再需要——它没有「装」这回事，见上面的大注释。 */
 export function syncRules(): { ok: boolean; codexChars: number } {
-  const canvas = canvasSkill()
+  const files = canvasSkillFiles()
 
   // Claude：一模块一目录，天然独立、按需加载、能单独删
-  if (canvas) writeFileEnsured(claudeSkill('eas-term'), canvas)
+  // Codex：常驻区只放路由；正文落到 ~/.eas/agent/ 供按需读取
+  // 两边装的是同一份内容，一个循环里一起写——不会出现「Claude 装了 3 个、
+  // Codex 只落了 1 个」这种半同步状态
+  for (const f of files) {
+    writeFileEnsured(path.join(home(), '.claude', 'skills', 'eas-term', f.name), f.text)
+    writeFileEnsured(path.join(detailDir(), f.name), f.text)
+  }
   // 清掉旧版本可能装过的 eas-wiki skill（这个函数以前会在 kb 配置时写它）——
   // 不能留着不管，那是一份指向真实知识库路径的全局文件，正是现在要堵的洞
   try {
@@ -149,9 +178,7 @@ export function syncRules(): { ok: boolean; codexChars: number } {
     /* 没装过 */
   }
 
-  // Codex：常驻区只放路由；正文落到 ~/.eas/agent/ 供按需读取
-  if (canvas) writeFileEnsured(path.join(detailDir(), 'canvas.md'), canvas)
-  const region = canvas ? codexRegion({ canvas: true }) : null
+  const region = files.length > 0 ? codexRegion(new Set(files.map((f) => f.name))) : null
   writeCodexRegion(region)
   return { ok: true, codexChars: region ? region.length : 0 }
 }
