@@ -94,7 +94,7 @@ update_node(nodeId, prompt: '改后的提示词，可以继续用 @1')
 ### 生成完了做什么
 
 **把结果摆到用户眼前**，别只回一句「生成好了」—— 用户在 Eas-Term 里，不一定看着画板。
-用前面那些工具（`canvas_open_file` 之类）把产出开成预览节点。
+用 `canvas.md` 里的那些工具（`canvas_open_file` 之类）把产出开成预览节点。
 
 ### 分寸
 
