@@ -41,12 +41,29 @@ import {
   wikiStatus
 } from './paths'
 import { dirNames, initWiki, uniqueName } from './schema'
-import { readTaxonomy, type ArchiveDirResult } from './taxonomy'
+import { readTaxonomy, taxonomyState, type ArchiveDirResult } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotes } from './scan'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
+
+/**
+ * 配置坏了就不该往这个库里写任何东西——建目录、改说明书（initWiki 已经挡了）、
+ * 搬文件（wiki:archive 走 archiveDirOf，已经挡了）、往收件箱塞新文件、存逐字稿，
+ * 都算「写」。没挡的话，`inboxOf`/`libraryDirs` 会静默回落到内置形状，把文件写进
+ * 这个自定义库里一个配置外的目录——和 initWiki 那条 bug 同一个根因，只是从「建骨架」
+ * 换成了「日常写入」。写入类 handler 开头都调它，不在各处各写一遍判断逻辑。
+ *
+ * 只挡「配置坏了」，不挡「没有配置」——后者就是内置库的日常状态，必须照常写。
+ */
+function taxonomyBrokenError(root: string): string | null {
+  const s = taxonomyState(root)
+  return s.kind === 'broken'
+    ? `这个知识库的分类配置读不出来（${s.error}），写入操作先停一下——` +
+      '回落到内置分类会把文件写进这个自定义库里一个配置外的目录。先去把 .eas-wiki.json 改好再试。'
+    : null
+}
 
 /**
  * 启动时把已配置的库对齐到当前版本：补上新增的目录、把约定文件升到最新 schema。
@@ -382,6 +399,23 @@ export function registerWikiHandlers(): void {
     if (!st.configured || !st.exists || st.looksEmpty) {
       return { configured: st.configured, exists: st.exists, looksEmpty: st.looksEmpty }
     }
+    // 配置在但读不出来：不能并进上面那个分支（那三个条件说的是「库不能用」——没配置/
+    // 目录没了/看着不像库），这个状态是「库能用，但分类判断暂时不可信」，语义不同，
+    // 需要单独一个信号。也不能落进下面的正常返回：dirs 会是 dirNames(st.path!) 算出来的
+    // 内置八目录形状，这个自定义库里那些目录名根本不存在，agent 会照着工具描述的
+    // 「先看 dirs.me」写进去，把内置目录造回来——这正是 Critical 2 的伤害从「配置坏掉」
+    // 这条路流回来（Critical 2 原来堵的是「没有 library 字段」，但 broken 时 readTaxonomy
+    // 同样返回 null，library 字段一样会缺席，dirs 一样是内置形状，模型分不出「没配置」
+    // 和「配置坏了」）。这里提前返回，不再往下调 dirNames/readTaxonomy/读 index.md。
+    if (st.taxonomyState === 'broken') {
+      return {
+        configured: true,
+        exists: true,
+        looksEmpty: false,
+        taxonomyBroken: true,
+        taxonomyError: st.taxonomyError
+      }
+    }
     let index = ''
     try {
       index = fs.readFileSync(path.join(st.path!, 'index.md'), 'utf8')
@@ -462,6 +496,8 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:addToInbox', async (_e, files: string[], move = false) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
+    const blocked = taxonomyBrokenError(root)
+    if (blocked) return { ok: false, error: blocked }
     const dir = path.join(root, inboxOf(root))
     try {
       fs.mkdirSync(dir, { recursive: true })
@@ -621,6 +657,8 @@ export function registerWikiHandlers(): void {
   ipcMain.handle('wiki:saveTranscript', (_e, mediaName: string, text: string) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
+    const blocked = taxonomyBrokenError(root)
+    if (blocked) return { ok: false, error: blocked }
     try {
       const inbox = inboxOf(root)
       const dir = path.join(root, inbox, transcriptsOf(path.join(root, inbox)))

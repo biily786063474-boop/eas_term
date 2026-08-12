@@ -117,6 +117,15 @@ export interface WikiQueryResult {
    *  只读不改（同 dirs.sources/dirs.inbox 那条规则，但这里权威）。
    *  没有这个字段 = 内置八目录的库，dirs 照常有效。 */
   library?: { name: string; purpose: string; role?: 'inbox' | 'templates' | 'raw' }[]
+  /** 库根有 `.eas-wiki.json`，但读不出来 / 不是合法 JSON / 校验不过。**这个字段出现时，
+   *  dirs、library、index 都不会出现**——不是「没有配置」，是「有自定义配置但暂时不可信」，
+   *  这两者不能用同一种回落处理：dirs 若照常给出内置八目录形状，模型会把它当真、
+   *  往 dirs.me 这类配置外的目录写，把这个自定义库的目录结构写乱（且不可逆）。
+   *  看到这个字段就什么都别做——不归档、不新建笔记、不管 dirs 长什么样——等用户把
+   *  `.eas-wiki.json` 改好。 */
+  taxonomyBroken?: true
+  /** `taxonomyBroken` 为 true 时人能看懂的原因 */
+  taxonomyError?: string
 }
 
 export interface WikiInboxItem {

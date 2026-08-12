@@ -380,6 +380,19 @@ const SHELL_TRAP =
   if (tool === 'wiki_query') {
     const r = await window.api.wiki.query()
     if (!r.configured) return { configured: false, hint: '用户还没配置知识库，不用做任何事，也别主动建议他去建一个' }
+    // 库有自定义分类配置，但读不出来——不能落进下面「正常返回」那支：这里没有 dirs/
+    // library，是刻意的，别去猜内置分类长什么样、更别照内置形状写笔记或建目录，
+    // 那会把这个自定义库的目录结构写乱，而且不可逆。
+    if (r.taxonomyBroken) {
+      return {
+        configured: true,
+        hint:
+          '这个知识库有自定义分类配置（.eas-wiki.json），但现在读不出来' +
+          (r.taxonomyError ? `（${r.taxonomyError}）` : '') +
+          '。别按内置分类猜——me/people/methods 这些目录在这个库里大概率不存在，写进去会把库的结构写乱且不可逆。' +
+          '这个状态下什么都别做：不要归档、不要新建笔记、不要建目录。用户问起就告诉他去把 .eas-wiki.json 改好，改好后再查一次就恢复了。'
+      }
+    }
     if (!r.exists || r.looksEmpty) {
       return {
         configured: true,
@@ -408,6 +421,19 @@ const SHELL_TRAP =
   if (tool === 'wiki_inbox') {
     const items = await window.api.wiki.inbox()
     const now = Date.now()
+    // 配置坏掉时 window.api.wiki.inbox() 读的是内置回落算出来的目录名，对这个自定义库
+    // 大概率是错的（真实收件箱叫别的名字）——这份列表很可能是空的或不完整，但那不代表
+    // 收件箱真的空/干净。不查一下会让 agent 自信地告诉用户「没什么可整理的」，
+    // 而用户真实的收件箱可能堆着一堆——这正是这个库最核心的功能被"看起来空了"污染。
+    const st = await window.api.wiki.status()
+    if (st.taxonomyState === 'broken') {
+      return {
+        items: items.map((x) => ({ name: x.name, size: x.size, days: Math.floor((now - x.at) / 86400000) })),
+        hint:
+          '这个知识库的分类配置读不出来，上面这份列表按的是猜出来的位置，很可能不是用户真实的收件箱——' +
+          '不要说"收件箱是空的"或据此下结论，先让用户去把 .eas-wiki.json 改好。'
+      }
+    }
     return {
       items: items.map((x) => ({
         name: x.name,

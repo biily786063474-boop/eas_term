@@ -120,3 +120,60 @@ test('rawDirOf：自定义库没有任何 role:"raw" 目录 → 明确失败，�
   assert.equal(r.ok, false)
   if (!r.ok) assert.match(r.error, /role.*raw/, '错误信息要点明缺的是 role:"raw"，用户才知道去补什么')
 })
+
+// ── rawDirOf 配置坏掉时（追加轮，控制方复核指出的第二个流回来的伤害）──
+// 之前的实现里，配置坏了会被 libraryDirs 当成"没配置"回落到内置 sources——
+// 对**这个自定义库**来说 sources 是配置外的目录，等于 Critical 1 从"配置坏掉"这条路
+// 原样重演。这里钉住：broken 态必须明确失败，且错误信息要能和"没有 raw 目录"分开——
+// 前者要去修 JSON 格式，后者要去配置里加一个 role:"raw"，是两件不同的事。
+
+test('rawDirOf：配置是坏 JSON → 明确失败，不回落到内置 sources', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), '{ 这不是 JSON')
+  const r = rawDirOf(dir, (k) => k)
+  assert.equal(r.ok, false)
+  if (!r.ok) {
+    assert.doesNotMatch(r.error, /没有 role/, '不该被误判成"合法配置但没声明 raw"')
+    assert.match(r.error, /读不出来|JSON/, '错误信息要点明是配置本身读不出来，不是缺 role:"raw"')
+  }
+})
+
+test('rawDirOf：配置校验不过（如缺 inbox）→ 明确失败，同样不回落到内置 sources', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(
+    path.join(dir, TAXONOMY_FILE),
+    JSON.stringify({ version: 1, dirs: [{ name: '课题', purpose: 'y' }], frontMatter: { required: ['summary'] } })
+  )
+  const r = rawDirOf(dir, (k) => k)
+  // ok:false 分支的类型上根本没有 name 字段——这正是要钉住的点：校验不过时不能
+  // 悄悄给出一个 { ok:true, name:'sources' } 的内置回落结果。
+  assert.equal(r.ok, false)
+})
+
+test('rawDirOf：配置坏掉 vs 没有 raw 目录，两种失败的错误信息不能一样（用户要做的事不同）', () => {
+  const dir1 = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir1, TAXONOMY_FILE), '不是 JSON 也不是对象')
+  const brokenResult = rawDirOf(dir1, (k) => k)
+
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(
+    path.join(dir2, TAXONOMY_FILE),
+    JSON.stringify({
+      version: 1,
+      dirs: [{ name: '收件', purpose: 'x', role: 'inbox' }],
+      frontMatter: { required: ['summary'] }
+    })
+  )
+  const noRawResult = rawDirOf(dir2, (k) => k)
+
+  assert.equal(brokenResult.ok, false)
+  assert.equal(noRawResult.ok, false)
+  if (!brokenResult.ok && !noRawResult.ok) assert.notEqual(brokenResult.error, noRawResult.error)
+})
+
+test('老库不受影响：没有配置文件时 rawDirOf 完全不变——落点还是 sources（或老库中文名回落）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const r = rawDirOf(dir, (k) => k)
+  assert.equal(r.ok, true)
+  if (r.ok) assert.equal(r.name, 'sources')
+})

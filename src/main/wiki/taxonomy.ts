@@ -190,18 +190,35 @@ export type ArchiveDirResult = { ok: true; name: string } | { ok: false; error: 
  *  目录名；没配置就是内置库的 sources（老库中文名回落交给 resolve 处理，和 libraryDirs/
  *  isRawName 同一套注入方式，避免这个文件 import ./paths）。
  *
- *  **这里必须能失败，这是和 inboxOf/libraryDirs 最大的不同**：收件箱被 validateTaxonomy
- *  强制恰好一个，但 raw 目录在自定义库里是可选的——用户完全可能没有「素材/附件」这类
- *  只存档不写笔记的东西。没有的话不能凭空造一个目录出来接归档的文件：这正是 Critical 1
- *  的病根——旧代码在 wiki:archive 里固定拼 `dirOf(root, 'sources')`，对自定义库不成立，
- *  会在库根凭空建一个配置外的 sources/；这个目录不在 isRawName 的判定范围内，归档进去的
- *  原件会被 walkNotes 当成笔记扫进图谱和体检（缺 summary/tags、孤儿页、索引漏收）。
+ *  **这里必须能失败，是和 inboxOf/libraryDirs 最大的不同**——而且能失败的原因有两种，
+ *  必须分开判断，不能都走 libraryDirs 的回落：
+ *
+ *  1. **配置读不出来（`taxonomyState` 是 broken）**：这时候绝不能落到 libraryDirs 的
+ *     内置回落——那会把归档目标解析成内置的 `sources`，在**这个自定义库**里凭空建出
+ *     一个配置外的 `sources/`。这正是 Critical 1 的病根从「配置坏掉」这条路流回来：
+ *     旧代码在 wiki:archive 里固定拼 `dirOf(root, 'sources')`，新代码如果对 broken
+ *     态也回落等于犯同一个错——`sources/` 不在 isRawName 的判定范围内（它只认配置里
+ *     声明的名字），归档进去的原件会被 walkNotes 当成笔记扫进图谱和体检。
+ *  2. **配置合法但没有任何 role:"raw" 目录**：raw 目录在自定义库里是可选的——用户
+ *     完全可能没有「素材/附件」这类只存档不写笔记的东西。这种情况下也不能凭空造目录，
+ *     但原因和第 1 种不同（配置没问题，只是这个库真的没声明 raw 目录），错误文案要
+ *     分开写清楚——用户看到第 1 种该去修 JSON 格式，看到第 2 种该去配置里加一个
+ *     `role:"raw"`，是两件不同的事，混在一句话里用户不知道该做哪个。
+ *
  *  调用方（index.ts 的 wiki:archive handler）必须检查 ok，false 时直接报错给用户，
  *  不能自己兜底出一个目录名。
  *
  *  paths.ts 的 archiveDirOf 是这个函数的一行转发（注入 dirOf 当 resolve），拆开是因为
  *  paths.ts 引了 electron，node --test 加载不了它——判定逻辑放这里才测得住。 */
 export function rawDirOf(root: string, resolve: (key: string) => string): ArchiveDirResult {
+  const state = taxonomyState(root)
+  if (state.kind === 'broken')
+    return {
+      ok: false,
+      error:
+        `这个知识库的分类配置读不出来（${state.error}），归档先停一下——` +
+        '回落到内置分类会把文件搬进这个自定义库里一个配置外的目录，先去把 .eas-wiki.json 改好再归档。'
+    }
   const raw = libraryDirs(root, resolve).find((d) => d.role === 'raw')
   if (!raw)
     return {

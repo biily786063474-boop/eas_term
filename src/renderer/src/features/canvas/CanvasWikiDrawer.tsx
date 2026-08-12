@@ -133,6 +133,13 @@ export function CanvasWikiDrawer(): JSX.Element | null {
     if (!paths.length) return
     setBusy(`放入 ${paths.length} 个…`)
     const r = await window.api.wiki.addToInbox(paths)
+    // 整个调用被拒绝（没设置知识库位置、或分类配置读不出来）时 done/failed 都是 undefined，
+    // 不判 r.ok 的话下面会静默清空 busy 提示，看起来像"点了但什么都没发生"——
+    // 之前只有"没设置位置"一种会走到这里，这次分类配置读不出来也会走同一条路。
+    if (!r.ok) {
+      setBusy('失败：' + (r.error ?? ''))
+      return
+    }
     if (r.status?.path && r.inboxDir) void queueMedia(r.done ?? [], r.status.path, r.inboxDir)
     await refresh()
     setBusy(r.failed?.length ? `${r.done?.length ?? 0} 个已放入，${r.failed.length} 个失败` : '')
