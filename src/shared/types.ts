@@ -83,6 +83,15 @@ export interface WikiStatus {
    *    · 指错了目录、或目录读不出来（网络卷没权限、挂载失效）—— 骨架也看不到
    *  以前这两种都显示成「空知识库」，用户会以为文件被删了。真实踩过一次。 */
   looksEmpty: boolean
+  /** 库根 `.eas-wiki.json` 的状态：`'none'` 没有这个文件（内置八目录库）；
+   *  `'valid'` 有且合法（自定义库）；`'broken'` 文件在但读不出来 / 不是合法 JSON /
+   *  校验不过。**`'broken'` 时 initWiki 不会往这个库里写任何东西**——不建目录、
+   *  不改 CLAUDE.md/AGENTS.md/index.md/START-HERE.md。原因见 main/wiki/taxonomy.ts
+   *  的 TaxonomyState：回落到内置分类会把这个自定义库的目录和说明书真的改写成
+   *  内置形状，不可逆；宁可停手，等用户把配置改好——界面据此显示提示。 */
+  taxonomyState: 'none' | 'valid' | 'broken'
+  /** `taxonomyState` 为 `'broken'` 时人能看懂的原因，给界面提示用；其余状态下不出现 */
+  taxonomyError?: string
 }
 
 /**

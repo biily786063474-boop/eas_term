@@ -323,6 +323,28 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </div>
       ) : (
         <>
+          {/* 分类配置(.eas-wiki.json)在，但读不出来/不是合法 JSON/校验不过——这种情况下
+              main/wiki/schema.ts 的 initWiki 不会往库里建目录、改说明书（回落成内置分类
+              会把这个自定义库真的改写成内置形状，不可逆），只能停在原地等用户把文件改好。
+              这条提示就是把这件事讲清楚，免得用户以为软件卡住了或者数据丢了。 */}
+          {st.taxonomyState === 'broken' && (
+            <div className="wk-warn wk-taxo-warn">
+              这个库的分类配置读不出来（.eas-wiki.json 格式有问题）。
+              <br />
+              已经暂停按它建目录、改说明书 —— 回落成内置分类会把你自己定的分类覆盖掉，
+              而且改不回来，所以宁可先停在这儿，不碰你现在的库。
+              <br />
+              <b>把这个文件改好，这条提示就会消失；如果这个库的骨架还没建起来过，
+              改完后在下面「位置设置」里把这个位置重新点一遍即可补上。</b>
+              {!!st.taxonomyError && (
+                <>
+                  <br />
+                  <span className="wk-dim wk-tiny">具体原因：{st.taxonomyError}</span>
+                </>
+              )}
+            </div>
+          )}
+
           {settings && (
             <div className="wk-settings">
               <div className="wk-set-k">当前位置</div>

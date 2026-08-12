@@ -84,20 +84,58 @@ export function validateTaxonomy(raw: unknown): Result {
   }
 }
 
-/** 读一个库的分类配置。**读不到、解析不了、校验不过，一律返回 null** ——
- *  调用方据此回落到内置八目录。不抛异常：一份手工改坏的配置不该让库打不开。 */
-export function readTaxonomy(root: string): Taxonomy | null {
+/** 一个库的分类配置到底是什么状态。**三态，不是「有/null」两态**——
+ *  `readTaxonomy` 把「没有配置」和「配置在但读不出来」压成了同一个 null，
+ *  调用方（比如 initWiki）没法区分「这本来就是内置库」和「这本来是自定义库，
+ *  配置刚好被写坏了」。两者该有的处理天差地别：前者照今天的样子回落内置八目录；
+ *  后者**什么都不能做**——回落会把这个自定义库真的改写成内置形状（在库里建出
+ *  me/、people/ 这些配置外的目录，说明书换成内置正文），不可逆。用户改好配置
+ *  本该能救回来，一旦被回落覆盖过，改好配置也救不回来了。 */
+export type TaxonomyState =
+  | { kind: 'none' }
+  | { kind: 'valid'; value: Taxonomy }
+  | { kind: 'broken'; error: string }
+
+/** 三态判定。**没有文件**（真没配过库、或者库目录本身还不存在）→ `'none'`；
+ *  **文件在但读不出来**（权限问题、其实是个目录）、**不是合法 JSON**、或
+ *  **校验不过**——这三种成因对用户来说都是「配置坏了」，统一归为 `'broken'`，
+ *  `error` 给出人能看懂的原因（校验失败复用 validateTaxonomy 的错误文案）。 */
+export function taxonomyState(root: string): TaxonomyState {
+  let raw: string
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(root, TAXONOMY_FILE), 'utf8'))
-    const r = validateTaxonomy(raw)
-    if (!r.ok) {
-      console.warn(`[wiki] ${TAXONOMY_FILE} 校验不过，回落到内置分类：${r.error}`)
-      return null
-    }
-    return r.value
-  } catch {
-    return null
+    raw = fs.readFileSync(path.join(root, TAXONOMY_FILE), 'utf8')
+  } catch (err) {
+    const e = err as (Error & { code?: string }) | null
+    if (e?.code === 'ENOENT') return { kind: 'none' }
+    // 文件在但读不出来（权限、其实是个目录…）——不是「没配过」，是「配坏了」，
+    // 不能当成 'none' 回落，否则会往这个自定义库里撒内置目录。
+    return { kind: 'broken', error: `${TAXONOMY_FILE} 读不出来：${e instanceof Error ? e.message : String(e)}` }
   }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch (err) {
+    return {
+      kind: 'broken',
+      error: `${TAXONOMY_FILE} 不是合法 JSON：${err instanceof Error ? err.message : String(err)}`
+    }
+  }
+  const r = validateTaxonomy(parsed)
+  if (!r.ok) return { kind: 'broken', error: r.error }
+  return { kind: 'valid', value: r.value }
+}
+
+/** 读一个库的分类配置。**签名保持不变**（很多调用点依赖 `Taxonomy | null`，
+ *  这些调用点全都只关心「有没有能用的配置」，不关心三态的区别）——
+ *  没有配置、或配置坏了，一律返回 null，调用方据此回落到内置八目录。
+ *
+ *  **这条回落只对「没有配置」成立**；「配置坏了」不该走同一条回落路径
+ *  （见上面 taxonomyState 的注释），需要区分这两种情况的调用方（目前是
+ *  initWiki）改去直接调 `taxonomyState`，不能再靠这个函数的返回值猜。 */
+export function readTaxonomy(root: string): Taxonomy | null {
+  const s = taxonomyState(root)
+  if (s.kind === 'broken') console.warn(`[wiki] ${TAXONOMY_FILE} 读不出来，回落到内置分类：${s.error}`)
+  return s.kind === 'valid' ? s.value : null
 }
 
 export type LibraryDir = TaxonomyDir

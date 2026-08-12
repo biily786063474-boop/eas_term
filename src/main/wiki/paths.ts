@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 import type { WikiStatus } from '../../shared/types'
-import { isRawName, libraryDirs, rawDirOf, TAXONOMY_FILE, type ArchiveDirResult } from './taxonomy'
+import { isRawName, libraryDirs, rawDirOf, taxonomyState, TAXONOMY_FILE, type ArchiveDirResult } from './taxonomy'
 
 /** 记「库在哪」的配置文件。统计字段（added 等）也放这儿 */
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
@@ -174,7 +174,7 @@ function looksLikeWiki(root: string): boolean {
 export function wikiStatus(): WikiStatus {
   const p = wikiPath()
   if (!p)
-    return { configured: false, path: null, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false }
+    return { configured: false, path: null, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false, taxonomyState: 'none' }
   let exists = false
   try {
     exists = fs.statSync(p).isDirectory()
@@ -182,8 +182,11 @@ export function wikiStatus(): WikiStatus {
     exists = false
   }
   if (!exists)
-    return { configured: true, path: p, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false }
+    return { configured: true, path: p, exists: false, notes: 0, inbox: 0, oldestInboxDays: null, hasGit: false, looksEmpty: false, taxonomyState: 'none' }
 
+  // 每次都当场判定，不缓存——config 被手改（改坏或改回来）之后下一次抽屉刷新
+  // 就该反映最新状态，不需要重启或者显式的「重新检查」动作。
+  const ts = taxonomyState(p)
   const notes = walkNotes(p).length
   // 收件箱压力：不只给数量，还给「最早一份放了多久」——
   // 数字会涨但不扎人，「23 天前」才让人意识到只进不出
@@ -215,6 +218,8 @@ export function wikiStatus(): WikiStatus {
     hasGit: fs.existsSync(path.join(p, '.git')),
     // 骨架一个都看不到 → 这不像一个知识库。要么指错了目录，要么这个目录读不出来
     // （网络卷没权限、挂载失效）。和「刚建好的空库」区分开 —— 后者至少有 index.md。
-    looksEmpty: !looksLikeWiki(p)
+    looksEmpty: !looksLikeWiki(p),
+    taxonomyState: ts.kind,
+    taxonomyError: ts.kind === 'broken' ? ts.error : undefined
   }
 }

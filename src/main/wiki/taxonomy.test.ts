@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { validateTaxonomy, readTaxonomy, TAXONOMY_FILE, libraryDirs, BUILTIN_DIRS } from './taxonomy.ts'
+import { validateTaxonomy, readTaxonomy, taxonomyState, TAXONOMY_FILE, libraryDirs, BUILTIN_DIRS } from './taxonomy.ts'
 
 const GOOD = {
   version: 1,
@@ -131,4 +131,78 @@ test('wiki:query 的 library 字段数据源：有配置 → dirs 逐条给到 n
     { name: '课题', purpose: '一个课题一篇' },
     { name: '_模板', purpose: '新建笔记的模板', role: 'templates' }
   ])
+})
+
+// ── taxonomyState：三态判定（Important 3）──────────────────────────────
+//
+// readTaxonomy 把「没有配置」和「配置在但读不出来」都压成同一个 null，initWiki
+// 靠这个函数才能把两者分开：前者照常回落内置八目录（老库的日常状态，必须不受影响），
+// 后者必须整个停手，不能建目录、不能改说明书——回落会把自定义库真的改写成内置形状，
+// 不可逆。下面钉住三态各自的判据，以及「老库不受影响」这条最重要的边界。
+
+test('taxonomyState：没有配置文件（老库的日常状态）→ none，不是 broken', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const s = taxonomyState(dir)
+  assert.equal(s.kind, 'none')
+})
+
+test('taxonomyState：库目录本身都还不存在 → 同样是 none（建库前第一次调用的样子）', () => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-')), '还没建出来的子目录')
+  const s = taxonomyState(dir)
+  assert.equal(s.kind, 'none')
+})
+
+test('taxonomyState：合法配置 → valid，value 就是校验通过后的那份', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), JSON.stringify(GOOD))
+  const s = taxonomyState(dir)
+  assert.equal(s.kind, 'valid')
+  if (s.kind === 'valid') assert.equal(s.value.dirs[0].name, '00-收件箱')
+})
+
+test('taxonomyState：不是合法 JSON → broken，不是 none（这是本次新增的第三态）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), '{ 这不是 JSON')
+  const s = taxonomyState(dir)
+  assert.equal(s.kind, 'broken')
+  if (s.kind === 'broken') assert.ok(s.error.length > 0, '要给人能看懂的原因，界面靠它提示')
+})
+
+test('taxonomyState：JSON 合法但校验不过（比如缺 inbox）→ broken，error 复用 validateTaxonomy 的原话', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const noInbox = { ...GOOD, dirs: GOOD.dirs.map((d) => ({ ...d, role: d.role === 'inbox' ? undefined : d.role })) }
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), JSON.stringify(noInbox))
+  const s = taxonomyState(dir)
+  assert.equal(s.kind, 'broken')
+  if (s.kind === 'broken') assert.match(s.error, /收件箱/)
+})
+
+test('taxonomyState：文件在但读不出来（权限）→ broken，不是 none——「没配过」和「配坏了」不能混成一种', (t) => {
+  if (typeof process.getuid === 'function' && process.getuid() === 0) {
+    t.skip('root 不受文件权限限制，这条断不出区别')
+    return
+  }
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const file = path.join(dir, TAXONOMY_FILE)
+  fs.writeFileSync(file, JSON.stringify(GOOD))
+  fs.chmodSync(file, 0o000)
+  try {
+    const s = taxonomyState(dir)
+    assert.equal(s.kind, 'broken', '文件明明在，不该被判成「没配过」而悄悄回落')
+  } finally {
+    fs.chmodSync(file, 0o644) // 恢复权限，不影响系统清理临时目录
+  }
+})
+
+test('readTaxonomy：JSON 合法但校验不过 → 同样是 null（三态里 valid 之外都收敛成 null，老调用点不用改）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const noInbox = { ...GOOD, dirs: GOOD.dirs.map((d) => ({ ...d, role: d.role === 'inbox' ? undefined : d.role })) }
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), JSON.stringify(noInbox))
+  assert.equal(readTaxonomy(dir), null)
+})
+
+test('老库不受影响：没有配置文件时，taxonomyState 和 readTaxonomy 的判断完全一致（都是「没有」）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  assert.equal(taxonomyState(dir).kind, 'none')
+  assert.equal(readTaxonomy(dir), null)
 })

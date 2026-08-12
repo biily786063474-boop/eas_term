@@ -2939,6 +2939,11 @@
   font-size: 11px;
   line-height: 1.6;
 }
+/* 分类配置(.eas-wiki.json)读不出来时的提示：主视图里用，不在 .wk-setup 的
+   flex gap 里，需要自己的外边距——写法照 .wk-inbox/.wk-rules 那两个同级块 */
+.wk-warn.wk-taxo-warn {
+  margin: 8px 8px 0;
+}
 
 /* 收件箱：给压力不只给数字 */
 .wk-inbox {

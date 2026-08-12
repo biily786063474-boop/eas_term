@@ -8,7 +8,7 @@ import path from 'path'
 
 import { dirOf, inboxOf } from './paths'
 import { customSchemaBody, customIndexMd, customReadmeText } from './customSchema'
-import { libraryDirs, readTaxonomy } from './taxonomy'
+import { libraryDirs, readTaxonomy, taxonomyState } from './taxonomy'
 
 /** re-export：接口约定里「schema.ts 导出 customSchemaBody」——实现挪去 customSchema.ts
  *  是因为这个文件（schema.ts）import 了 ./paths，paths.ts 又引了 electron，
@@ -304,8 +304,21 @@ export function readmeTextFor(root: string): string {
   return customReadmeText(t.dirs)
 }
 
-/** 建骨架。已存在的文件一律不覆盖 —— 允许用户把已有的 Obsidian 库直接指过来。 */
-export function initWiki(root: string): { created: string[]; skipped: string[] } {
+/** 建骨架。已存在的文件一律不覆盖 —— 允许用户把已有的 Obsidian 库直接指过来。
+ *
+ *  **配置坏了（`taxonomyState` 第三态）时原样返回，不建目录、不改任何说明书**——
+ *  这是本函数的第一道检查，早于任何 `mkdirSync`/`writeFileSync`。理由见
+ *  taxonomy.ts 的 TaxonomyState 注释：回落到内置分类会把这个自定义库的目录和
+ *  说明书真的改写成内置形状，不可逆；宁可什么都不做，等用户把 `.eas-wiki.json`
+ *  改好。`blocked` 字段让调用方（`wiki:init` handler、界面）知道发生了什么——
+ *  界面那边最终读的是 `wikiStatus()` 的 `taxonomyState`/`taxonomyError`
+ *  （每次都当场重新判定，不依赖这次调用的返回值缓存下来的结论）。 */
+export function initWiki(root: string): { created: string[]; skipped: string[]; blocked?: string } {
+  const state = taxonomyState(root)
+  if (state.kind === 'broken') {
+    console.warn(`[wiki] ${root} 的分类配置读不出来，跳过建骨架/改说明书：${state.error}`)
+    return { created: [], skipped: [], blocked: state.error }
+  }
   const created: string[] = []
   const skipped: string[] = []
   fs.mkdirSync(root, { recursive: true })
