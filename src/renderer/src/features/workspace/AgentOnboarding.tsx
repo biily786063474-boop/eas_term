@@ -35,12 +35,17 @@ export function AgentOnboarding(): JSX.Element | null {
 
   // 用户装完之后回到 app：重新探测一次，装上了就自动收起引导。
   // 不轮询——只在窗口重新获得焦点时查，安装期间他会离开窗口去看终端/浏览器登录。
+  //
+  // **不再限定「两个 CLI 都没有」时才听。** 原来那个条件漏掉了最常见的坏法：
+  // 只有其中一个坏了（2026-08-11 实测：claude 的 npm 自更新被 allow-scripts 拦掉、
+  // 原生二进制没就位，而 codex 好好的）。那种情况 noCli 是 false，这个监听根本不挂，
+  // agentCli.claude 就永久停在 false —— 修好了也读不到，只能重启整个软件。
+  // refreshAgentCli 自带 5s 节流，来回切窗口不会打成连发。
   useEffect(() => {
-    if (!noCli || dismissed) return
     const onFocus = (): void => void refreshAgentCli()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [noCli, dismissed, refreshAgentCli])
+  }, [refreshAgentCli])
 
   if (!noCli || dismissed || !plan) return null
 

@@ -11,6 +11,7 @@ import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
 import { WebView } from '../web/WebView'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
+import { AgentCmdBar } from '../canvas/AgentCmdBar'
 import { CanvasAgentBar } from '../canvas/CanvasAgentBar'
 
 // 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
@@ -444,6 +445,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           <CloseIcon />
         </button>
       </div>
+      {/* 分屏的终端也要有命令按钮。画布/看板走上面那条（CanvasAgentBar 的第二行），
+          这里是分屏专属 —— 分屏没有 Agent 控制台，AgentCmdBar 自己按
+          ptyAgent[ptyId]（主进程探出来的真实进程名）决定显不显示，认不出就返回 null。 */}
+      {!canvasRect && pane.kind === 'terminal' && <AgentCmdBar ptyId={pane.ptyId} />}
       {canvasTerm && pane.kind === 'terminal' && agentAvailable && (
         // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
         // 一个 CLI 都没装时整个藏掉：那条控制条上的模型/档位/启动全是死的，摆着只会让人困惑

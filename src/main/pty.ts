@@ -480,6 +480,13 @@ export function registerPtyHandlers(): void {
   })
 
   // 给定一组 pty id，返回其中正在运行命令的那些
+  // 「这个终端里跑的是 claude 还是 codex」。命令按钮据此决定显不显示、发哪一套命令。
+  // 同步的 ps 调用，~10ms；由渲染层在「标题出现 spinner」那一刻问一次，不是轮询。
+  ipcMain.handle('pty:agentOf', (_e, id: string): 'claude' | 'codex' | null => {
+    const entry = ptys.get(id)
+    return entry ? agentOnTty(entry) : null
+  })
+
   ipcMain.handle('pty:busyByIds', async (_e, ids: string[]) => {
     const pairs: { id: string; pid: number }[] = []
     for (const id of ids) {
@@ -517,6 +524,34 @@ function ttyPids(entry: Entry): number[] {
   } catch {
     return [] // 该 tty 上没进程了，ps 会以非 0 退出
   }
+}
+
+/** 这个终端里跑的是哪个 AI CLI。认不出就是 null（纯 shell，或跑的是别的东西）。
+ *
+ *  判据用 **controlling terminal 上的进程名**，不是终端标题、也不是用户敲了什么：
+ *   · 标题是 CLI 自己设的，格式随它的版本变，而且纯 shell 的标题是 cwd —— 靠它是在猜
+ *   · 敲了什么只覆盖「手打」这一条：从控制台「启动」、用 alias、用 npx 起的都漏
+ *  进程名是它真实的样子，怎么起的都认得出。判据和 killTree 共用同一套（ps -t <tty>），
+ *  那套的可靠性已经被「杀进程树」这个更严苛的场景验证过（见 ttyPids 的注释）。
+ *
+ *  只比 basename 且要求完全相等：`/opt/homebrew/bin/node`（我们自己的 MCP server）、
+ *  `bun`、画板 app 都会挂在同一个 tty 上，子串匹配会误判。 */
+function agentOnTty(entry: Entry): 'claude' | 'codex' | null {
+  if (process.platform === 'win32') return null // Windows 没有 controlling terminal 那套
+  const pts = (entry.pty as unknown as { ptsName?: string }).ptsName
+  const name = pts?.replace(/^\/dev\//, '')
+  if (!name) return null
+  try {
+    const out = execFileSync('ps', ['-t', name, '-o', 'comm='], { encoding: 'utf8', timeout: 2500 })
+    for (const line of out.split('\n')) {
+      const base = line.trim().split('/').pop()?.replace(/\.exe$/i, '')
+      if (base === 'claude') return 'claude'
+      if (base === 'codex') return 'codex'
+    }
+  } catch {
+    /* 该 tty 上没进程了，ps 会以非 0 退出 */
+  }
+  return null
 }
 
 function killTree(entry: Entry, signal: NodeJS.Signals = 'SIGTERM'): void {

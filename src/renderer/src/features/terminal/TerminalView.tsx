@@ -440,6 +440,11 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       term.write(chunk)
     }
     const unsubData = window.api.pty.onData(ptyId, (data) => {
+      // 终端有输出 → 低频重探一次。**这条是接住「agent 退出」的唯一信号**：
+      // Claude Code 退出时不还原终端标题，裸 zsh 也不一定设标题，所以「标题变化」
+      // 接不住；而输入框发送走的是 pty.write、根本不经过 term.onData，那条也接不住。
+      // agent 一退，shell 打印提示符必然产生输出 —— 这里才拦得到。
+      probeAgent(10000)
       pendingWrites.push(data)
       if (!writeRaf) writeRaf = requestAnimationFrame(flushWrites)
     })
@@ -453,6 +458,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       useStore.getState().closeLeaf(tabId, leafId, { alreadyExited: true, ptyId })
     })
     const dataDisp = term.onData((data) => {
+      // 真人在终端里敲字（输入框那条走 pty.write，不经过这里）
+      probeAgent(10000)
       // 甘特图采集要在写进 PTY 之前拿到原始按键 —— 这是键盘输入的唯一出口。
       // 采集是附加功能，绝不能拖累主功能：包一层 try/catch，抛了也不能耽误这次按键写进 pty
       try {
@@ -475,9 +482,33 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 「已读」交给下面的 keydown/mousedown——你在这个终端里动了手，才算真看见了。
     let prevTitleSpinner = false
     let disposed = false
+    // 「这个终端里跑的是哪个 AI CLI」——问主进程查 controlling terminal 上的进程名。
+    // 挂在标题变化上而不是轮询：标题一变就说明终端里的东西换了状态，正是该重查的时刻；
+    // 而 spinner 每 ~100ms 换一个字，所以必须节流，否则每秒十次 ps。
+    // 也靠它自愈：用户退出 claude 回到裸 shell，标题变回 cwd → 重查 → 置 null，
+    // 命令按钮跟着消失，不会留着一排发不出去的。
+    // 两档节流：状态刚变的那一刻要快（标题变化 / 窗口回来），日常输出只要最终一致。
+    // 输出那条如果也用 2s，一个刷屏的终端就是每 2 秒一次 ps，多开几个就浪费了。
+    let lastProbe = 0
+    const probeAgent = (minGapMs = 2000): void => {
+      const now = Date.now()
+      if (now - lastProbe < minGapMs) return
+      lastProbe = now
+      void window.api.pty.agentOf(ptyId).then((k) => {
+        if (!disposed) useStore.getState().setPtyAgent(ptyId, k)
+      })
+    }
+    // 开局先查一次：终端可能是从存档恢复的，里面的 agent 早就在跑、标题也不会再变
+    // 包一层箭头函数：setTimeout 会把定时器 id 当第一个实参传进去，
+    // 直接传 probeAgent 的话那个 id 就成了 minGapMs，节流值变成随机数
+    const firstProbe = window.setTimeout(() => probeAgent(0), 1500)
+    // 窗口重新获得焦点：用户可能在别处（比如系统终端）改了这个会话的状态
+    const onWinFocus = (): void => probeAgent()
+    window.addEventListener('focus', onWinFocus)
     const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
     const titleDisp = term.onTitleChange((title) => {
       const spinner = isSpinnerTitle(title)
+      probeAgent()
       // **把 spinner 那个字剥掉再写进标签。**
       //
       // Claude Code 干活时标题是「<盲文 spinner> 名字」，那个字每 ~100ms 换一个
@@ -595,6 +626,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       unsubData()
       unsubExit()
       dataDisp.dispose()
+      window.clearTimeout(firstProbe)
+      window.removeEventListener('focus', onWinFocus)
       resizeDisp.dispose()
       titleDisp.dispose()
       bellDisp.dispose()

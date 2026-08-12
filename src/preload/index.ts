@@ -608,6 +608,8 @@ const api = {
     write: (id: string, data: string): void => {
       ipcRenderer.send('pty:write', id, data)
     },
+    /** 这个终端里跑的是哪个 AI CLI（认不出返回 null）。判据是 controlling terminal 上的进程名 */
+    agentOf: (id: string): Promise<'claude' | 'codex' | null> => ipcRenderer.invoke('pty:agentOf', id),
     resize: (id: string, cols: number, rows: number): void => {
       ipcRenderer.send('pty:resize', id, cols, rows)
     },

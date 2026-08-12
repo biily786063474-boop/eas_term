@@ -7,6 +7,9 @@ import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
 
+/** refreshAgentCli 的节流时间戳。模块级：它是纯副作用节流，不参与渲染 */
+let lastAgentCliAt = 0
+
 /** 从字典里去掉一个键，返回新对象（原对象不动）。清 pty 相关的几张表都要用 */
 function dropKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
   if (!(key in obj)) return obj
@@ -85,6 +88,13 @@ export interface UiSlice {
     string,
     { firstAt: number; roundStart?: number; lastRoundMs?: number; lastDoneAt?: number }
   >
+  /** 每个终端里跑着哪个 AI CLI（认不出 = null，纯 shell 或别的东西）。
+   *  **判据是 controlling terminal 上的进程名**（主进程 pty:agentOf），不是终端标题、
+   *  也不是用户敲了什么 —— 标题格式随 CLI 版本变，敲了什么漏掉从控制台启动/alias/npx 那几条。
+   *  命令按钮据此决定显不显示、发哪一套命令；分屏没有 Agent 控制台，全靠它。
+   *  不持久化：重启后终端要重开，旧值没有意义。 */
+  ptyAgent: Record<string, 'claude' | 'codex' | null>
+  setPtyAgent: (ptyId: string, kind: 'claude' | 'codex' | null) => void
   /** 停下来等审批的终端：解析屏幕得到的问句与选项（认不出就是 null = 只通知不直通）。
    *  和 attentionPtys 同生共死——那个清了，这里也该清，否则灵动岛会拿着
    *  上一轮的旧选项给用户点。 */
@@ -232,6 +242,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   mcpEnabled: localStorage.getItem(MCP_OFF_KEY) !== '1',
   runningPtys: [],
   ptyTiming: {},
+  ptyAgent: {},
   ptyApproval: {},
   approvalSentAt: {},
   agentCli: null,
@@ -297,6 +308,11 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   },
 
   refreshAgentCli: async () => {
+    // 节流：现在每次窗口获得焦点都会调它，来回切窗口时别把 skill.status()
+    // 打成连发。5 秒够挡住手滑级的重复，又不影响「去装完回来」这种真实场景。
+    const now = Date.now()
+    if (now - lastAgentCliAt < 5000) return
+    lastAgentCliAt = now
     try {
       const s = await window.api.skill.status()
       set({ agentCli: { claude: s.claude.hasCli, codex: s.codex.hasCli } })
@@ -305,6 +321,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
       set({ agentCli: { claude: true, codex: true } })
     }
   },
+
+  setPtyAgent: (ptyId, kind) =>
+    set((s) => (s.ptyAgent[ptyId] === kind ? s : { ptyAgent: { ...s.ptyAgent, [ptyId]: kind } })),
 
   setPtyRunning: (ptyId, running) =>
     set((s) => {

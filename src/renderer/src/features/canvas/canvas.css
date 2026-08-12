@@ -3801,3 +3801,9 @@
   color: #fcd34d;
   white-space: nowrap;
 }
+
+/* 分屏里的命令条：直接挂在面板头下面（画布那条挂在 .agentbar-stack 里，边框由它画）。
+   这里要自己画分隔线，否则跟终端内容糊在一起 */
+.pane > .ab-cmds {
+  border-bottom: 1px solid var(--glass-border);
+}
