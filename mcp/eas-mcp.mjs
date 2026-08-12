@@ -23,15 +23,21 @@ const TOOLS = [
       '要你产出带他个人风格的东西(简介/简历/自我介绍/选题/对外文案)、' +
       '或者他问"我该怎么做""我适合什么"这类关于他自己的问题时，先调这个工具。' +
       '也在他明说"查知识库""wiki 里有没有""整理收件箱""归档""做个体检"时调用。' +
-      '返回全库索引(index.md 原文，每页一行摘要)和各分区在盘上的实际目录名(dirs)。' +
+      '返回全库索引(index.md 原文，每页一行摘要)、各分区在盘上的实际目录名(dirs)，' +
+      '以及**可能有的** library 字段。' +
+      '**返回里如果有 library 字段，说明用户自己定义了分类**：按它每一项的 name/purpose 判断东西该往哪放，' +
+      '这种情况下**忽略 dirs**——dirs 固定是内置八目录的形状，自定义库里那些名字对应的目录根本不存在，' +
+      '照着 dirs 写会凭空建出配置外的目录。library 里 role 为 "inbox" 或 "raw" 的目录放的是原件，只读不改。' +
       '拿到后：自己从索引挑 1-3 篇相关的用 Read 读那几篇原文，回答时说明参考了哪几篇；' +
       '答完调一次 wiki_log(action=query)记一笔——这是判断这东西有没有真被用起来的唯一数据来源，不记的话查询数永远是 0。' +
+      '**以下两条只在没有 library 字段时（内置分类的库）适用**：' +
       'dirs.me 是"关于用户本人"的分区(画像/工作习惯/方法论/决策偏好)，dirs.people 是"他研究的别人"，两者别混——' +
       '产出要带他个人风格、或他问关于自己的问题时，先看 dirs.me；dirs.me 是空的就直说还没建，别瞎猜他是谁。' +
       '索引里没有相关内容就直说没有，不要编。' +
       '整理收件箱走 wiki_inbox→wiki_transcript→想清楚归哪→wiki_archive_plan(等用户确认)→wiki_archive_exec→写笔记→wiki_log(action=ingest)，别跳步。' +
       '体检先调 wiki_lint 拿结构问题，再补读懂内容才能发现的那半边，只出报告不擅自改，完事 wiki_log(action=lint)。' +
-      '返回里 dirs.sources 和 dirs.inbox 指向的目录里的原始文件只读：可以移动改名，绝不改内容删除。' +
+      '返回里 dirs.sources 和 dirs.inbox(没有 library 字段时)指向的目录、或 library 里 role 为 ' +
+      '"raw"/"inbox" 的目录(有 library 字段时)，里面的原始文件只读：可以移动改名，绝不改内容删除。' +
       '每篇笔记要有 front-matter 的 summary 和 tags，笔记间用 [[双链]] 互指。',
     inputSchema: { type: 'object', properties: {} }
   },

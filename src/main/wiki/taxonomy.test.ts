@@ -111,3 +111,24 @@ test('有配置 → 用配置的，resolve 不介入', () => {
 test('内置八目录每个都有非空 purpose', () => {
   for (const d of BUILTIN_DIRS) assert.ok(d.purpose.trim().length > 0, d.name)
 })
+
+// Critical 2：wiki:query 返回给 agent 的 library 字段就是 readTaxonomy(root)?.dirs——
+// 老库必须不出现这个字段（首要不变量：老库响应形状不能变），自定义库要给出配置里
+// 逐条的 name/purpose/role，agent 端（MCP 工具描述 + skills）靠它而不是 dirs 判断东西往哪放。
+test('wiki:query 的 library 字段数据源：没有配置 → readTaxonomy 是 null，library 不该出现', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  const t = readTaxonomy(dir)
+  assert.equal(t, null, '老库不能凭空多出 library 字段——调用方是用 `t ? {library: t.dirs} : {}` 这种展开式判断的')
+})
+
+test('wiki:query 的 library 字段数据源：有配置 → dirs 逐条给到 name/purpose/role，形状与 WikiQueryResult.library 一致', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wiki-'))
+  fs.writeFileSync(path.join(dir, TAXONOMY_FILE), JSON.stringify(GOOD))
+  const t = readTaxonomy(dir)
+  assert.notEqual(t, null)
+  assert.deepEqual(t?.dirs, [
+    { name: '00-收件箱', purpose: '还没整理的原始素材', role: 'inbox' },
+    { name: '课题', purpose: '一个课题一篇' },
+    { name: '_模板', purpose: '新建笔记的模板', role: 'templates' }
+  ])
+})

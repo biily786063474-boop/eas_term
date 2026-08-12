@@ -41,6 +41,7 @@ import {
   wikiStatus
 } from './paths'
 import { dirNames, initWiki, uniqueName } from './schema'
+import { readTaxonomy } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotes } from './scan'
 
@@ -373,7 +374,21 @@ export function registerWikiHandlers(): void {
     } catch {
       /* 没有 index.md 就空着，模型会自己判断"索引里没有" */
     }
-    return { configured: true, exists: true, looksEmpty: false, path: st.path, index, dirs: dirNames(st.path!) }
+    // 自定义分类的库额外带上 library 字段：agent 端按它判断东西往哪放，忽略 dirs——
+    // dirs 固定是内置八目录的形状，在自定义库里那七个名字对应的目录根本不存在
+    // （Critical 2：以前只有 dirs，模型被工具描述教得往 dirs.me 写，会把内置目录造回去）。
+    // 老库 readTaxonomy 返回 null，library 字段整个不出现——这是首要不变量的一部分，
+    // 不能让老库的 wiki:query 响应形状发生任何变化。
+    const t = readTaxonomy(st.path!)
+    return {
+      configured: true,
+      exists: true,
+      looksEmpty: false,
+      path: st.path,
+      index,
+      dirs: dirNames(st.path!),
+      ...(t ? { library: t.dirs } : {})
+    }
   })
 
   ipcMain.handle('wiki:pickPath', async () => {

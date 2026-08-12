@@ -393,10 +393,14 @@ const SHELL_TRAP =
     return {
       path: r.path,
       dirs: r.dirs,
+      library: r.library,
       index: r.index,
       hint:
         'index 是全库摘要，挑 1-3 篇相关的用 Read 读那几篇原文，回答注明出处，答完调一次 wiki_log(action=query)。' +
-        '产出要带用户个人风格、或他问关于自己的问题时，先看 dirs.me（和 dirs.people 别混，那是他研究的别人）。'
+        (r.library
+          ? '这个库的分类是用户自定义的（见 library 字段）：按 library 每项的 name/purpose 判断东西该往哪放，' +
+            '忽略 dirs——dirs 是内置分类的形状，在这个库里不存在。library 里 role 为 "inbox"/"raw" 的目录放的是原件，只读不改。'
+          : '产出要带用户个人风格、或他问关于自己的问题时，先看 dirs.me（和 dirs.people 别混，那是他研究的别人）。')
     }
   }
 

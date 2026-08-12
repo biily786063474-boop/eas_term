@@ -98,8 +98,16 @@ export interface WikiQueryResult {
   path?: string
   /** index.md 原文（全库摘要），模型自己从这里挑相关页去读 */
   index?: string
-  /** 各分区在盘上的实际目录名（新库英文、老库可能是中文，不能让模型猜） */
+  /** 各分区在盘上的实际目录名（新库英文、老库可能是中文，不能让模型猜）。
+   *  **只在内置八目录形状的库上准确** —— 见下面 library 字段的说明。 */
   dirs?: { me: string; people: string; methods: string; domains: string; projects: string; sources: string; inbox: string }
+  /** 这个库是用户自定义分类的（库根有 .eas-wiki.json）。**有这个字段时，按它判断东西往哪放，
+   *  忽略 dirs** —— dirs 固定是内置八目录的形状，自定义库里那七个名字对应的目录根本不存在，
+   *  照着 dirs 写会凭空建出配置外的目录（Critical 1 就是这么踩的坑：wiki:archive 曾经
+   *  这样凭空造出一个配置外的 sources/）。role 为 "inbox" 或 "raw" 的目录放的是原件，
+   *  只读不改（同 dirs.sources/dirs.inbox 那条规则，但这里权威）。
+   *  没有这个字段 = 内置八目录的库，dirs 照常有效。 */
+  library?: { name: string; purpose: string; role?: 'inbox' | 'templates' | 'raw' }[]
 }
 
 export interface WikiInboxItem {
