@@ -145,3 +145,32 @@ export function isRawName(root: string, rel: string, resolve: (key: string) => s
   if (BUILTIN_RAW_ALIASES.includes(rel)) return true
   return BUILTIN_DIRS.some((d) => (d.role === 'inbox' || d.role === 'raw') && resolve(d.name) === rel)
 }
+
+export type ArchiveDirResult = { ok: true; name: string } | { ok: false; error: string }
+
+/** 归档（wiki:archive）该把文件搬去哪个目录：自定义库取配置里**第一个** role:"raw" 的
+ *  目录名；没配置就是内置库的 sources（老库中文名回落交给 resolve 处理，和 libraryDirs/
+ *  isRawName 同一套注入方式，避免这个文件 import ./paths）。
+ *
+ *  **这里必须能失败，这是和 inboxOf/libraryDirs 最大的不同**：收件箱被 validateTaxonomy
+ *  强制恰好一个，但 raw 目录在自定义库里是可选的——用户完全可能没有「素材/附件」这类
+ *  只存档不写笔记的东西。没有的话不能凭空造一个目录出来接归档的文件：这正是 Critical 1
+ *  的病根——旧代码在 wiki:archive 里固定拼 `dirOf(root, 'sources')`，对自定义库不成立，
+ *  会在库根凭空建一个配置外的 sources/；这个目录不在 isRawName 的判定范围内，归档进去的
+ *  原件会被 walkNotes 当成笔记扫进图谱和体检（缺 summary/tags、孤儿页、索引漏收）。
+ *  调用方（index.ts 的 wiki:archive handler）必须检查 ok，false 时直接报错给用户，
+ *  不能自己兜底出一个目录名。
+ *
+ *  paths.ts 的 archiveDirOf 是这个函数的一行转发（注入 dirOf 当 resolve），拆开是因为
+ *  paths.ts 引了 electron，node --test 加载不了它——判定逻辑放这里才测得住。 */
+export function rawDirOf(root: string, resolve: (key: string) => string): ArchiveDirResult {
+  const raw = libraryDirs(root, resolve).find((d) => d.role === 'raw')
+  if (!raw)
+    return {
+      ok: false,
+      error:
+        '这个知识库的分类配置里没有 role:"raw" 的目录，归档没有落点——' +
+        '去 .eas-wiki.json 里把某个目录标成 "role": "raw"，或者新建一个。'
+    }
+  return { ok: true, name: raw.name }
+}

@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 
 import type { WikiStatus } from '../../shared/types'
-import { isRawName, libraryDirs, TAXONOMY_FILE } from './taxonomy'
+import { isRawName, libraryDirs, rawDirOf, TAXONOMY_FILE, type ArchiveDirResult } from './taxonomy'
 
 /** 记「库在哪」的配置文件。统计字段（added 等）也放这儿 */
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
@@ -74,7 +74,15 @@ export const INBOX = '00-inbox'
  *  （含老库中文名回落）。 */
 export const inboxOf = (root: string): string =>
   libraryDirs(root, (k) => dirOf(root, k)).find((d) => d.role === 'inbox')?.name ?? dirOf(root, INBOX)
-export const sourcesOf = (root: string): string => dirOf(root, 'sources')
+
+/** 归档（wiki:archive）该把文件搬去哪个目录。一行转发：判定逻辑在 taxonomy.ts 的 rawDirOf
+ *  （那边不引 electron，测试能直接打到实现），这里只负责注入 dirOf 当 resolve——同 isRawDir
+ *  转发 isRawName 的方式。**和 inboxOf 不同，这里可能失败**：收件箱强制恰好一个，raw 目录
+ *  在自定义库里是可选的，没有就不能凭空造一个（见 rawDirOf 的注释，那是 Critical 1 的病根）。
+ *
+ *  这里原来是 `sourcesOf = (root) => dirOf(root, 'sources')`，对自定义库不成立，已删除——
+ *  它唯一的调用点（wiki:archive）现在改走这个函数。 */
+export const archiveDirOf = (root: string): ArchiveDirResult => rawDirOf(root, (k) => dirOf(root, k))
 
 /** 原始素材区（收件箱 + 素材）：不是笔记，不进索引也不算反链。
  *  **签名多收一个 root**：自定义库的原始素材区叫什么由配置决定，不看名字。

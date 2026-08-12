@@ -29,7 +29,7 @@ import {
   INBOX,
   cfgFile,
   inboxOf,
-  sourcesOf,
+  archiveDirOf,
   transcriptsOf,
   SOURCES,
   TRANSCRIPTS,
@@ -304,7 +304,12 @@ export function registerWikiHandlers(): void {
     const ym = new Date().toISOString().slice(0, 7)
     // 目录名按这个库盘上的实际情况取（新库英文、老库中文），不能写死
     const inbox = inboxOf(root)
-    const sources = sourcesOf(root)
+    // 归档落点必须接闸门：自定义库的原始素材区叫什么由配置的 role:"raw" 决定，没有就
+    // 明确报错——不能像以前那样凭空拼一个配置外的目录（那个目录不在 isRawName 的判定
+    // 范围内，归档进去的原件会被当成笔记扫进图谱和体检，是 Critical 1 的病根）。
+    const archiveDir = archiveDirOf(root)
+    if (!archiveDir.ok) return { ok: false, error: archiveDir.error }
+    const sources = archiveDir.name
     const destDir = path.join(root, sources, ym)
     const moved: { from: string; to: string }[] = []
     const failed: { name: string; error: string }[] = []
