@@ -6,7 +6,14 @@
 import fs from 'fs'
 import path from 'path'
 
-import { WIKI_DIRS, dirOf, inboxOf } from './paths'
+import { dirOf, inboxOf } from './paths'
+import { customSchemaBody } from './customSchema'
+import { libraryDirs, readTaxonomy } from './taxonomy'
+
+/** re-export：接口约定里「schema.ts 导出 customSchemaBody」——实现挪去 customSchema.ts
+ *  是因为这个文件（schema.ts）import 了 ./paths，paths.ts 又引了 electron，
+ *  node --test 加载不了；customSchema.ts 不碰 electron，真正的单测打在那边。 */
+export { customSchemaBody }
 
 // ── 初始化时写进去的内容 ─────────────────────────────────────────
 
@@ -152,7 +159,7 @@ ${schemaBody(d)}${SCHEMA_END}
 }
 
 /** 升级一个已存在的约定文件。返回它到底被怎么处理了，好如实告诉用户。 */
-function upgradeSchemaFile(p: string, d: WikiDirNames): 'updated' | 'migrated' | 'kept' {
+function upgradeSchemaFile(p: string, root: string): 'updated' | 'migrated' | 'kept' {
   let cur: string
   try {
     cur = fs.readFileSync(p, 'utf8')
@@ -162,9 +169,12 @@ function upgradeSchemaFile(p: string, d: WikiDirNames): 'updated' | 'migrated' |
   const b = cur.indexOf(SCHEMA_BEGIN)
   const e = cur.indexOf(SCHEMA_END)
 
-  // 新格式：只换围栏内那一段，围栏外的内容（用户自己写的）原样保留
+  // 新格式：只换围栏内那一段，围栏外的内容（用户自己写的）原样保留。
+  // 新文本从 schemaTextFor 取（内置/自定义都走它，各自生成自己的一份），
+  // 但 schemaTextFor 给的是带围栏的完整文档——直接拼进来会把围栏标记和
+  // 「围栏外随你写」的说明重复一份，所以先用 fencedBody 只截出围栏内那一段。
   if (b !== -1 && e !== -1 && e > b) {
-    const next = cur.slice(0, b) + SCHEMA_BEGIN + '\n' + schemaBody(d) + cur.slice(e)
+    const next = cur.slice(0, b) + SCHEMA_BEGIN + '\n' + fencedBody(schemaTextFor(root)) + cur.slice(e)
     if (next === cur) return 'kept'
     fs.writeFileSync(p, next)
     return 'updated'
@@ -179,12 +189,38 @@ function upgradeSchemaFile(p: string, d: WikiDirNames): 'updated' | 'migrated' |
       /* 备份失败就不迁移了 —— 宁可停在旧版约定，也不能不留退路地覆盖 */
       return 'kept'
     }
-    fs.writeFileSync(p, schemaText(d))
+    fs.writeFileSync(p, schemaTextFor(root))
     return 'migrated'
   }
 
   // 没有任何标记 = 用户自己写的（比如把已有的 Obsidian 库指过来），一个字都不碰
   return 'kept'
+}
+
+/** 从 schemaText / schemaTextFor 生成的完整文档里，截出围栏之间那一段（不含两端标记本身）。
+ *  upgradeSchemaFile 只想替换这一段，围栏外是用户的地盘，原样保留。 */
+function fencedBody(text: string): string {
+  const b = text.indexOf(SCHEMA_BEGIN)
+  const e = text.indexOf(SCHEMA_END)
+  if (b === -1 || e === -1 || e <= b) return text // 不会发生，防御性兜底
+  return text.slice(b + SCHEMA_BEGIN.length + 1, e)
+}
+
+/** 库说明书的分流入口：有 `.eas-wiki.json` 走自定义那份，没有就走内置 —— 内置这条
+ *  原样调用 schemaText，一个字符都不改（文件头已经解释过为什么）。initWiki 和
+ *  upgradeSchemaFile 都改从这里取文本，不再各自判断走哪条路。
+ *
+ *  下面这段模板和 schemaText 里的长得几乎一样，是刻意重复、不是漏抽公共函数——
+ *  schemaText 的正文被外部校验钉住了源文本哈希，任何重构都会改到它的字节内容。 */
+export function schemaTextFor(root: string): string {
+  const t = readTaxonomy(root)
+  if (!t) return schemaText(dirNames(root)) // 内置：原样不动
+  return `${SCHEMA_BEGIN}
+${customSchemaBody(t.dirs)}${SCHEMA_END}
+
+<!-- 上面是 Eas-Term 维护的部分，软件升级时会整段替换。
+     这一行以下随你写（本库的特殊约定、你的笔记习惯…），升级不会动。 -->
+`
 }
 
 /** 索引的分区标题跟着实际目录名走：标题和目录对不上，agent 更新索引时会往错的分区塞 */
@@ -253,14 +289,14 @@ export function initWiki(root: string): { created: string[]; skipped: string[] }
   const skipped: string[] = []
   fs.mkdirSync(root, { recursive: true })
   // 用 dirOf 解析：老库里已经有中文目录时，它返回中文名 → 判定为已存在 → 跳过。
-  // 直接按 WIKI_DIRS 建的话，老库会被塞进第二套英文目录，变成 14 个目录两套并存。
-  for (const key of WIKI_DIRS) {
-    const actual = dirOf(root, key)
-    const p = path.join(root, actual)
-    if (fs.existsSync(p)) skipped.push(actual + '/')
+  // 直接按内置列表建的话，老库会被塞进第二套英文目录，变成 14 个目录两套并存。
+  // 自定义库（有 .eas-wiki.json）libraryDirs 直接给配置里的目录名，resolve 不会被调用。
+  for (const dir of libraryDirs(root, (k) => dirOf(root, k))) {
+    const p = path.join(root, dir.name)
+    if (fs.existsSync(p)) skipped.push(dir.name + '/')
     else {
       fs.mkdirSync(p, { recursive: true })
-      created.push(actual + '/')
+      created.push(dir.name + '/')
     }
   }
   const d = dirNames(root)
@@ -268,8 +304,8 @@ export function initWiki(root: string): { created: string[]; skipped: string[] }
   // 老库里已经有中文版时不再建第二份 —— 同一份说明两个文件只会让人不知道该看哪个。
   const readmeName = fs.existsSync(path.join(root, '从这里开始.md')) ? '从这里开始.md' : 'START-HERE.md'
   const files: [string, string][] = [
-    ['CLAUDE.md', schemaText(d)],
-    ['AGENTS.md', schemaText(d)],
+    ['CLAUDE.md', schemaTextFor(root)],
+    ['AGENTS.md', schemaTextFor(root)],
     ['index.md', indexMd(d)],
     ['log.md', LOG_MD],
     [readmeName, readmeText(d)]
@@ -284,7 +320,7 @@ export function initWiki(root: string): { created: string[]; skipped: string[] }
     // 约定文件（CLAUDE.md / AGENTS.md）只升级围栏内那一段，围栏外是用户的地盘。
     // 不升级的话，老知识库会永远停在旧约定上——新加的工具它根本不知道。
     if (name === 'CLAUDE.md' || name === 'AGENTS.md') {
-      const r = upgradeSchemaFile(p, d)
+      const r = upgradeSchemaFile(p, root)
       if (r === 'updated') {
         created.push(name + '（约定已更新到新版）')
         continue
