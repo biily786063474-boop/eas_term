@@ -182,9 +182,9 @@
                 <tr><th>位置</th><th>内容</th></tr>
               </thead>
               <tbody>
-                <tr><td><code>~/.claude/skills/eas-term/SKILL.md</code></td><td>画板操作指引全文</td></tr>
+                <tr><td><code>~/.claude/skills/eas-term/</code>（整个目录）</td><td>指引。一份常驻的入口说明 + 几份按主题拆开的正文（画布操作、生图、密钥、知识库），AI 只在用到时才读对应那份</td></tr>
                 <tr><td><code>~/.codex/AGENTS.md</code></td><td>只写一小段路由（几百字），夹在 <code>eas-term:begin/end</code> 标记之间。标记之外你自己写的内容一个字不动</td></tr>
-                <tr><td><code>~/.eas/agent/canvas.md</code></td><td>指引正文，供 AI 需要时再读，避免长期占用上下文</td></tr>
+                <tr><td><code>~/.eas/agent/</code>（整个目录）</td><td>上面那几份正文的副本。Codex 没有技能机制，只能把正文放在这里、由 <code>AGENTS.md</code> 里的路由按路径指过来</td></tr>
               </tbody>
             </table>
           </div>
