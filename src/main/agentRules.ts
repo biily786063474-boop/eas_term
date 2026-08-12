@@ -107,11 +107,22 @@ const existingMdFiles = (dir: string): string[] => {
  * 读不到，然后凭印象干活）。四条各自独占一段、绝不合并进同一条：生图和摆放合并写的话，
  * 用户说「画张封面」时模型只会想到摆放、想不到自己有生成能力——于是回一句「我不能生图」，
  * 或者去调别的图像 API。
+ *
+ * SKILL.md 那条不是第五个触发条件，措辞刻意分开写：它指向的「边界」「分寸」两节
+ * 不是「场景触发了才读」的东西（不像画板/生图/密钥/知识库各自对应一类具体请求），
+ * 是**任何时候操作画布都作数的规矩**（终端关不了、别刷屏、notify 别滥用）——
+ * 改动前 syncRules 把整份 SKILL.md 灌进 canvas.md，这两节顺带可达；拆分成渐进式
+ * 披露之后 canvas.md 只剩画布子集，这两节在 Codex 侧变得不可达，得单独补一条指针。
  */
 function codexRegion(fileNames: Set<string>): string {
   const lines = [BEGIN, '# Eas-Term 扩展能力', '']
   lines.push('你运行在 Eas-Term 里。下面是已启用的能力和各自的**触发条件**，')
   lines.push('详细约定按路径自己去读，不用背下来。', '')
+  if (fileNames.has('SKILL.md')) {
+    lines.push('**这条不是触发条件，是随时都作数的规矩**：SKILL.md 的「边界」（终端关不了、')
+    lines.push('没有替用户打命令的工具、路径白名单）和「分寸」（别刷屏、notify 别滥用）两节，')
+    lines.push(`操作画布全程都要记着，不是等下面某条触发了才去读。\`${path.join(detailDir(), 'SKILL.md')}\``, '')
+  }
   if (fileNames.has('canvas.md')) {
     lines.push('**画板**：产出了给人看的东西（报告 / 预览页 / 图）→ 用画板 MCP 工具摆到用户眼前，')
     lines.push(`别只说「已生成」。详细：\`${path.join(detailDir(), 'canvas.md')}\``, '')
