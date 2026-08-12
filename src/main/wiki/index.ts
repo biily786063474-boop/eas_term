@@ -41,7 +41,7 @@ import {
   wikiStatus
 } from './paths'
 import { dirNames, initWiki, uniqueName } from './schema'
-import { readTaxonomy } from './taxonomy'
+import { readTaxonomy, type ArchiveDirResult } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotes } from './scan'
 
@@ -349,6 +349,20 @@ export function registerWikiHandlers(): void {
       }
     }
     return { ok: true, moved, failed, status: wikiStatus() }
+  })
+
+  /**
+   * 归档落点的**预检**，不做任何文件搬运。给 `wiki_archive_plan` 用：那一步会阻塞
+   * 用户几十秒到几分钟去逐条过目一份归档计划，而落点是否存在（自定义库需要至少
+   * 一个 role:"raw" 目录，见 archiveDirOf 的注释）跟计划里写了什么完全无关——
+   * 提前查一遍，没有落点就不要再让用户走完整套确认流程，等到 wiki_archive_exec
+   * 才告诉他白点了。判定逻辑就是 wiki:archive 实际执行时用的那个 archiveDirOf，
+   * 这里不重新算一遍，两处永远给同一个答案。
+   */
+  ipcMain.handle('wiki:archiveDirCheck', (): ArchiveDirResult => {
+    const root = wikiPath()
+    if (!root) return { ok: false, error: '还没设置知识库位置' }
+    return archiveDirOf(root)
   })
 
   ipcMain.handle('wiki:status', () => wikiStatus())

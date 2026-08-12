@@ -452,6 +452,11 @@ const SHELL_TRAP =
       }))
       .filter((x) => x.name)
     if (!items.length) throw new Error('计划是空的')
+    // 落点检查提前到这里：自定义库没有 role:"raw" 目录时，以前要等到 wiki_archive_exec
+    // 才会失败——用户已经走完一遍确认流程、点了「同意移动我的文件」才被告知没法归档。
+    // 提前查一遍，没有落点直接报错，不让用户白点这一遍。
+    const dirCheck = await window.api.wiki.archiveDirCheck()
+    if (!dirCheck.ok) throw new Error(dirCheck.error ?? '没有可归档的目录')
     // 阻塞等用户在界面上过目。这是整个第 2 期的安全核心：
     // 失败模式不是「分类不准」，是「我那个文件去哪了」——发生一次就再没人敢往里放东西
     const approved = await s.requestArchivePlan(items)

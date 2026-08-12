@@ -314,6 +314,10 @@ const api = {
       failed?: { name: string; error: string }[]
       status?: WikiStatus
     }> => ipcRenderer.invoke('wiki:archive', items),
+    /** 归档落点的预检，不搬文件。`wiki_archive_plan` 用它在阻塞用户确认之前
+     *  就知道有没有地方能接归档的文件——没有的话直接报错，别让用户白点一遍确认。 */
+    archiveDirCheck: (): Promise<{ ok: boolean; name?: string; error?: string }> =>
+      ipcRenderer.invoke('wiki:archiveDirCheck'),
     /** 逐字稿存 素材/<年月>/逐字稿/ —— 不进 wiki 正文，那是中间产物不是知识 */
     saveTranscript: (
       mediaName: string,
