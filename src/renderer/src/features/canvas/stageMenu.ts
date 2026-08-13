@@ -8,9 +8,8 @@ import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
-import { elementUnderPoint } from './hitTest'
 
-/** 「关闭终端」这一项。两处要用：直接右键终端，以及标记盖住终端时的图形菜单。 */
+/** 「关闭终端」这一项。只有直接右键终端时才给 —— 理由见下面 shapeEl 分支的注释。 */
 function closeTerminalItem(leafId: string): CanvasMenuItem {
   return {
     label: '关闭终端',
@@ -87,18 +86,15 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   } else if (shapeEl?.dataset.sid) {
     const sid = shapeEl.dataset.sid
     const shape = st.canvas.shapes.find((s2) => s2.id === sid)
-    // 标记是 pointer-events:auto 的实心盒子、又盖在终端之上：它罩住的那块区域里，
-    // 右键**全部**归标记。底下要真是个终端，不把「关闭终端」带上的话，
-    // 用户就得先把标记挪开才能右键那个终端——所以两样都给。
-    const leafBelow = (
-      elementUnderPoint(e.clientX, e.clientY)?.closest('.pane[data-leaf-id]') as HTMLElement | null
-    )?.dataset.leafId
+    // 这里**只给标记自己的项**。曾经试过「底下要是终端就把『关闭终端』也带上」，
+    // 理由是标记罩住的那块区域右键全归标记、用户得先挪开标记才够得着那个终端。
+    // 但那样等于「右键 A 却能删掉 B」——菜单里所有 danger 项的动作对象都是你刚右键的那个东西，
+    // 只有它例外；而标记的设计初衷就是盖住底下的东西，用户很可能根本不知道便签下面压着终端。
+    // 何况 closeLeaf 不走 closeLeafSafely 那层「终端还在跑」的确认，秒关且无提示。
+    // 够不着那个终端时，挪开标记或点终端没被盖住的部分即可，代价远小于误触。
     items = [
       ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
-      { label: '删除', danger: true, onClick: () => st.removeShape(sid) },
-      ...(leafBelow
-        ? [{ sep: true, label: '', onClick: (): void => {} }, closeTerminalItem(leafBelow)]
-        : [])
+      { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
     ]
   } else if (frameEl?.dataset.fid) {
     const fid = frameEl.dataset.fid
