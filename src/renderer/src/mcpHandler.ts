@@ -7,7 +7,7 @@ import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
-import type { ArchiveItem } from '../../shared/types'
+import type { ArchiveItem, DirEntry } from '../../shared/types'
 import { askForSecret } from './features/workspace/secretRequest'
 import { liveMaximizedNode } from './store/canvas/selectors'
 
@@ -111,6 +111,67 @@ function describeNode(n: CanvasNode): Record<string, unknown> {
   return { id: n.id, kind, title, x: n.x, y: n.y, w: n.w, h: n.h }
 }
 
+// canvas_snapshot 落地后 CanvasStage 才会挂载 .canvas-viewport（见 App.tsx：只有
+// viewMode==='canvas' 才渲染 <CanvasStage/>）。切视图触发的是一次 React 渲染，
+// 不会在下一行同步生效，轮询到出现为止，比赌固定帧数稳（首次挂载可能比切换慢）。
+async function waitForCanvasViewport(maxMs = 1000): Promise<Element | null> {
+  const first = document.querySelector('.canvas-viewport')
+  if (first) return first
+  const start = Date.now()
+  while (Date.now() - start < maxMs) {
+    await new Promise((r) => requestAnimationFrame(r))
+    const el = document.querySelector('.canvas-viewport')
+    if (el) return el
+  }
+  return null
+}
+
+// stamp = snapshotTarget 写的完整时间戳（YYYYMMDD-HHmmss，见 src/main/snapshotPaths.ts），
+// 转成人读得懂的样子，不要把原始文件名甩给用户
+function humanStamp(stamp: string): string {
+  const m = stamp.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/)
+  return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}` : stamp
+}
+
+// 找一个项目下最新的一张快照。目录按天分层（screenshot/<YYYY-MM-DD>/），文件名自带
+// 完整时间戳 + 当日序号（snapshotTarget 的约定）——从最新日期目录开始找，
+// 撞到第一个有 png 的目录就是最新，不用把所有日期目录都扫一遍。
+// 序号没有补零：字符串直接比较在两位数序号出现时会错（"...-10.png" < "...-9.png"），
+// 必须拆成 stamp + 数字序号分别比。
+async function latestSnapshotIn(projectPath: string): Promise<{ path: string; stamp: string } | null> {
+  const root = projectPath.replace(/\/$/, '') + '/screenshot'
+  let dateDirs: DirEntry[]
+  try {
+    dateDirs = await window.api.fs.readDir(root)
+  } catch {
+    return null // 目录都不存在 = 这个项目还没拍过任何快照
+  }
+  const dates = dateDirs
+    .filter((d) => d.isDir && /^\d{4}-\d{2}-\d{2}$/.test(d.name))
+    .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0))
+  for (const dd of dates) {
+    let files: DirEntry[]
+    try {
+      files = await window.api.fs.readDir(dd.path)
+    } catch {
+      continue
+    }
+    let best: { path: string; stamp: string; n: number } | null = null
+    for (const f of files) {
+      if (f.isDir) continue
+      const m = f.name.match(/^(\d{8}-\d{6})-(\d+)\.png$/i)
+      if (!m) continue
+      const stamp = m[1]
+      const n = parseInt(m[2], 10)
+      if (!best || stamp > best.stamp || (stamp === best.stamp && n > best.n)) {
+        best = { path: f.path, stamp, n }
+      }
+    }
+    if (best) return { path: best.path, stamp: best.stamp }
+  }
+  return null
+}
+
 type Args = Record<string, unknown>
 
 async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
@@ -134,6 +195,85 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       // 不属于任何 Frame 的自由模块（用户从知识库拖出来的只读预览）；node_id 一样能聚焦/最大化/关闭/重命名
       freeNodes: s.canvas.freeNodes.map(describeNode)
     }
+  }
+
+  if (tool === 'canvas_snapshot') {
+    // 和拍照按钮同一套「选中工作区 → 项目」判定（见 CanvasStage.tsx 的 snapProject）——
+    // 故意不用 resolveFrame(ctx)：那算的是「调用方终端挂在哪个 Frame」，是猜；
+    // 这里必须是用户在画板上真选中的，猜错项目会把图写进别人的目录。
+    const fid =
+      s.canvasSel.find((k) => k.startsWith('f:'))?.slice(2) ??
+      s.canvasSel.find((k) => k.startsWith('n:'))?.split(':')[1]
+    const frame = fid ? s.canvas.frames.find((f) => f.id === fid) : undefined
+    const project = frame?.projectId ? s.projects.find((p) => p.id === frame.projectId) : undefined
+    if (!project) {
+      return {
+        taken: false,
+        hint:
+          '用户还没在画板上选中一个工作区，不知道该把快照存进哪个项目。' +
+          '告诉用户先在画板上点一下某个工作区（Frame 标题栏或其中的模块），再重新调用这个工具——不要自己猜一个项目。'
+      }
+    }
+
+    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    const el = await waitForCanvasViewport()
+    if (!el) throw new Error('画板视口还没准备好，请重试一次')
+
+    const root = document.querySelector('.app')
+    useStore.getState().setEditingSticky(null) // 别把正在编辑的便签拍进图里
+    root?.classList.add('snapshotting') // 藏工具条/抽屉/小地图等浮层，和按钮走同一套 CSS（canvas.css）
+    try {
+      // 等两帧让隐藏样式真正生效——只等一帧可能拍到还没藏掉的那一帧（同按钮 takeSnapshot 的注释）
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const rect = el.getBoundingClientRect()
+      const res = await window.api.canvas.snapshot(project.path, {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+      })
+      if (!res.ok || !res.path) throw new Error(res.error ?? '快照失败')
+      useStore.getState().setLastSnapshot({ path: res.path, projectId: project.id, at: Date.now() })
+      // 只在用户明确设过「每次都清」时才清标记——这是他自己的既有选择，agent 拍的这张同样算数；
+      // 没设过、或设的是「每次都留」都不碰标记，agent 这条路不弹「清不清」的确认框（那是按钮专属的 UI）
+      const pref = (await window.api.prefs.get()).clearShapesAfterSnapshot
+      if (pref === 'clear') useStore.getState().clearShapes()
+      return { taken: true, path: res.path, project: project.name }
+    } finally {
+      root?.classList.remove('snapshotting')
+    }
+  }
+
+  if (tool === 'canvas_latest_snapshot') {
+    const rawProject = String(args.project ?? '').trim()
+    let projectPath: string
+    let projectName: string
+    if (rawProject) {
+      // 只认注册过的项目根，不做前缀/模糊匹配——agent 传来的应该是 canvas_get_state
+      // 里 frames[].project 那个原样路径，不该猜它「大概是哪个项目」
+      const norm = rawProject.replace(/\/$/, '')
+      const proj = s.projects.find((p) => p.path.replace(/\/$/, '') === norm)
+      if (!proj) throw new Error(`不是已注册的项目：${rawProject}——先用 canvas_get_state 查实际的项目路径`)
+      projectPath = proj.path
+      projectName = proj.name
+    } else {
+      const loc = resolveFrame(ctx)
+      if (!loc?.projectPath) throw new Error('没有当前活动项目，也没有传 project 参数——先问清楚要看哪个项目')
+      projectPath = loc.projectPath
+      projectName = s.projects.find((p) => p.path === projectPath)?.name ?? projectPath
+    }
+
+    const found = await latestSnapshotIn(projectPath)
+    if (!found) {
+      return {
+        found: false,
+        project: projectName,
+        hint:
+          `「${projectName}」这个项目下还没有任何画板快照。可以建议用户拍一张` +
+          '（画板工具条的相机按钮），或者你自己调 canvas_snapshot（需要用户已经在画板上选中这个工作区）。'
+      }
+    }
+    return { found: true, project: projectName, path: found.path, takenAt: humanStamp(found.stamp) }
   }
 
   if (tool === 'canvas_focus_node' || tool === 'canvas_maximize_node' || tool === 'canvas_close_node' || tool === 'canvas_rename_node') {
@@ -574,8 +714,16 @@ function detailOf(tool: string, args: Args): string {
       : 0
     return `${n} 个词条`
   }
-  const a = args as { path?: string; url?: string; message?: string; text?: string; name?: string; node_id?: string }
-  const v = a.path ?? a.url ?? a.message ?? a.text ?? a.name ?? a.node_id ?? ''
+  const a = args as {
+    path?: string
+    url?: string
+    message?: string
+    text?: string
+    name?: string
+    node_id?: string
+    project?: string
+  }
+  const v = a.path ?? a.url ?? a.message ?? a.text ?? a.name ?? a.node_id ?? a.project ?? ''
   const short = String(v).split('/').pop() ?? ''
   return short.length > 40 ? short.slice(0, 40) + '…' : short
 }
