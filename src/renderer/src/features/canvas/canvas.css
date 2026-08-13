@@ -215,11 +215,14 @@
 /* ---------- 右侧资源抽屉 ---------- */
 .canvas-drawer {
   position: absolute;
-  right: 8px;
+  left: 8px;
   top: 8px;
   bottom: 8px;
   width: 238px;
-  z-index: 30;
+  /* 必须高过左边缘那三个常驻件：缩略图(41,左下)、运行监视窗(42,左上)、工具条(40,左中)。
+     30 的时候会被它们压出三个洞。两个抽屉都用 45 —— 它们在对侧、永不重叠，
+     统一层级省得以后哪边挪位置又要重算一遍 */
+  z-index: 45;
   display: flex;
   flex-direction: column;
   background: var(--glass-1);
@@ -235,7 +238,7 @@
   will-change: transform;
 }
 .canvas-drawer.closed {
-  transform: translateX(calc(100% + 20px));
+  transform: translateX(calc(-100% - 20px));
   opacity: 0;
   pointer-events: none;
   backdrop-filter: none; /* 同 .wiki-drawer.closed：看不见的东西不该占 GPU */
@@ -247,21 +250,21 @@
 /* 右缘悬停感应区：辉光条 + 中部左箭头 */
 .cd-edge {
   position: absolute;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
   width: 150px;
   z-index: 29;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 12px; /* 引导条离画布右边框留白，不贴边 */
-  pointer-events: none; /* 只有可见引导本体接管点击，避免右缘大片隐形区遮挡画布 */
+  justify-content: flex-start;
+  padding-left: 12px; /* 引导条离画布左边框留白，不贴边 */
+  pointer-events: none; /* 只有可见引导本体接管点击，避免左缘大片隐形区遮挡画布 */
 }
 .cd-edge::before {
   content: '';
   position: absolute;
-  right: 0;
+  left: 0;
   top: 8px;
   bottom: 8px;
   width: 3px;
@@ -282,7 +285,7 @@
   gap: 7px;
   color: var(--fg-dim);
   opacity: 0.5;
-  transform: translateX(2px);
+  transform: translateX(-2px);
   transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
 }
 .cd-edge.hot .cd-edge-guide {
@@ -309,7 +312,7 @@
    右上角最角落让给了设置按钮（那是常驻锚点，位置不该跳），这里往左让 34px。 */
 .cd-attn-bubble {
   position: absolute;
-  right: 48px;
+  left: 48px;
   top: 14px;
   z-index: 31;
   min-width: 22px;
@@ -2735,20 +2738,24 @@
 /* ---------- 左侧知识库抽屉（原「基本操作」的位置） ---------- */
 .wk-edge {
   position: absolute;
-  left: 0;
+  right: 0;
   top: 0;
   bottom: 0;
   width: 150px;
   z-index: 29;
   display: flex;
   align-items: center;
-  padding-left: 12px;
+  /* 锚在右边缘时必须显式 flex-end：默认的 flex-start 会把引导条推到
+     这个 150px 感应区的左端，也就是离画布右边缘 150px 的空中。
+     左锚点时不需要这一行，所以换边时最容易漏掉它 */
+  justify-content: flex-end;
+  padding-right: 12px;
   pointer-events: none;
 }
 .wk-edge::before {
   content: '';
   position: absolute;
-  left: 0;
+  right: 0;
   top: 8px;
   bottom: 8px;
   width: 3px;
@@ -2768,7 +2775,7 @@
   gap: 6px;
   color: var(--fg-dim);
   opacity: 0.5;
-  transform: translateX(-2px);
+  transform: translateX(2px);
   transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
 }
 .wk-edge.hot .wk-edge-guide {
@@ -2807,12 +2814,11 @@
 
 .wiki-drawer {
   position: absolute;
-  left: 8px;
+  right: 8px;
   top: 8px;
   bottom: 8px;
   width: 250px;
-  /* 必须高过左上角的运行监视窗(42)和左下角缩略图(41)——它们都占着左边缘，
-     抽屉在 30 的时候会被这两个压出两个洞 */
+  /* 右边缘目前没有别的常驻件，45 是跟资源抽屉保持一致（见那边的注释） */
   z-index: 45;
   display: flex;
   flex-direction: column;
@@ -2830,7 +2836,7 @@
   will-change: transform;
 }
 .wiki-drawer.closed {
-  transform: translateX(calc(-100% - 20px));
+  transform: translateX(calc(100% + 20px));
   opacity: 0;
   pointer-events: none;
   /* 收起时它在画面外、opacity 0，但 backdrop-filter 照样让 GPU 为这 250x606
