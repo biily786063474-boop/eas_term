@@ -33,7 +33,7 @@ test('项目不存在 → 拒绝', () => {
 })
 
 test('名字含斜杠 → 拒绝（借机移动位置是不允许的）', () => {
-  const r = run({ newName: '../evil' })
+  const r = run({ newName: 'foo/bar' })
   assert.strictEqual(r.ok, false)
   assert.match(r.ok ? '' : r.error, /斜杠|名称/)
 })
@@ -43,6 +43,7 @@ test('名字以点开头 → 拒绝（会变成隐藏目录）', () => {
 })
 
 test('名字为空或全空白 → 拒绝', () => {
+  assert.strictEqual(run({ newName: '' }).ok, false)
   assert.strictEqual(run({ newName: '   ' }).ok, false)
 })
 
@@ -71,4 +72,43 @@ test('新路径会撞上另一个已注册项目 → 拒绝', () => {
     newName: 'eas-term'
   })
   assert.strictEqual(r.ok, false)
+})
+
+test('名字含 Windows 禁用字符（冒号、星号等）→ 拒绝', () => {
+  assert.strictEqual(run({ newName: 'foo:bar' }).ok, false)
+  assert.strictEqual(run({ newName: 'foo*bar' }).ok, false)
+  assert.strictEqual(run({ newName: 'foo|bar' }).ok, false)
+  assert.strictEqual(run({ newName: 'foo?bar' }).ok, false)
+  assert.strictEqual(run({ newName: 'foo<bar>' }).ok, false)
+})
+
+test('NFD 规范化的 café 与 NFC 的 café 注册项目冲突 → 拒绝', () => {
+  // 'café' 的 NFC 形式（一个组合字符）vs NFD 形式（一个基字 + 一个组合符）
+  const nfc = 'café' // NFC 形式
+  const nfd = 'café' // NFD 形式（e + 组合符）
+  const r = planRename({
+    projects: [...base, { id: 'c', name: 'test', path: `/Users/me/Projects/${nfc}` }],
+    projectId: 'a',
+    newName: nfd
+  })
+  assert.strictEqual(r.ok, false)
+})
+
+test('大小写不同的项目名冲突（Bar vs bar）→ 拒绝', () => {
+  const r = planRename({
+    projects: [...base, { id: 'c', name: 'Bar', path: '/Users/me/Projects/Bar' }],
+    projectId: 'a',
+    newName: 'bar'
+  })
+  assert.strictEqual(r.ok, false)
+})
+
+test('纯大小写自改（Foo 改成 foo）→ 放行', () => {
+  // 改成恰好是自己，不同大小写 —— macOS 上合法且常见的操作
+  const r = planRename({
+    projects: [{ id: 'a', name: 'FooBar', path: '/Users/me/Projects/FooBar' }],
+    projectId: 'a',
+    newName: 'foobar'
+  })
+  assert.strictEqual(r.ok, true)
 })

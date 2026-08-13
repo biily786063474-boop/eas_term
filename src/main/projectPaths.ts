@@ -25,23 +25,31 @@ export type RenamePlan =
       renameDisplayName: boolean
     }
 
-/** 只允许改最后一段。这三条各自对应一种真实的坏结果：
+/** 只允许改最后一段。这些条件各自对应一种真实的坏结果：
  *  斜杠 → 借机移动到别的目录；点开头 → 变成隐藏目录，人在访达里找不到；
- *  控制字符 → 造出打不开的名字。 */
+ *  控制字符 → 造出打不开的名字；Windows 禁用字符 → Windows 上根本创建不了。 */
 function badName(name: string): string | null {
-  if (!name || !name.trim()) return '名字不能为空'
-  if (name !== name.trim()) return '名字前后不能有空格'
-  if (name.includes('/') || name.includes('\\')) return '名字里不能有斜杠'
+  if (!name || !name.trim()) return '名称不能为空'
+  if (name !== name.trim()) return '名称首尾不能有空格'
+  if (name === '.' || name === '..') return '名称不能是 . 或 ..'
   if (name.startsWith('.')) return '名字不能以点开头（那会变成隐藏文件夹）'
+  if (/[/\\]/.test(name)) return '名称不能包含斜杠'
+  if (/[:*?"<>|]/.test(name)) return '名称不能包含 : * ? " < > |'
   // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x1f\x7f]/.test(name)) return '名字含不可见字符'
-  if (name.length > 255) return '名字太长'
-  if (name === '.' || name === '..') return '这不是一个合法的文件夹名'
+  if (/[\x00-\x1f\x7f]/.test(name)) return '名称含不可见字符'
+  if (name.length > 255) return '名称太长'
   return null
 }
 
 const isInside = (child: string, parent: string): boolean =>
   child === parent || child.startsWith(parent + path.sep)
+
+/** macOS 与 Windows 的默认卷都是大小写不敏感 + Unicode 规范化不敏感的：
+ *  盘上 café(NFC) 和 café(NFD)、Bar 和 bar 是同一个目录。
+ *  裸字符串比较会放行一个必然在 fs.rename 时才失败的操作 ——
+ *  而这个模块存在的意义就是在动盘之前把它拦下来。 */
+const sameOnDisk = (a: string, b: string): boolean =>
+  a.normalize('NFC').toLowerCase() === b.normalize('NFC').toLowerCase()
 
 export function planRename(input: RenameInput): RenamePlan {
   const { projects, projectId, newName, wikiPath } = input
@@ -67,7 +75,7 @@ export function planRename(input: RenameInput): RenamePlan {
     }
   }
 
-  if (projects.some((x) => x.id !== projectId && x.path === newPath)) {
+  if (projects.some((x) => x.id !== projectId && sameOnDisk(x.path, newPath))) {
     return { ok: false, error: '已经有另一个项目用着这个位置' }
   }
 
