@@ -33,6 +33,7 @@ function frameTint(hex?: string): Record<string, string> {
 import { collectLeaves } from '../../layout'
 import './canvas.css'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { shellQuote } from './shellQuote'
 
 const SCALE_MIN = 0.2
 const SCALE_MAX = 2.2
@@ -724,6 +725,28 @@ export function CanvasStage(): JSX.Element {
     detachBlur = attachBlurGuard(onUp)
   }
 
+  // 拖模块落到终端上 → 把它所属项目的根路径写进那个终端。
+  // 拖文件插文件路径这条已经在资源抽屉里了（CanvasDrawer 的 startFileDrag:288-297），
+  // 这里是同一个手势的另一半：拖模块插项目路径。落点判定与写入方式**照抄那边**。
+  const dropModuleOnTerminal = (frameId: string, ev: MouseEvent): boolean => {
+    const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null
+    // 判据是 data-leaf-id 不是 pty id —— PaneLayer 上挂的是前者
+    const termPane = el?.closest('.pane[data-leaf-id]') as HTMLElement | null
+    if (!termPane?.dataset.leafId) return false
+    const leaf = useStore
+      .getState()
+      .tabs.flatMap((t) => collectLeaves(t.root))
+      .find((l) => l.id === termPane.dataset.leafId)
+    if (leaf?.pane.kind !== 'terminal') return false
+    const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
+    const proj = useStore.getState().projects.find((p) => p.id === f?.projectId)
+    if (!proj) return false
+    // 和 startFileDrag 一样：直接写进 PTY，末尾带一个空格。
+    // **不是**「插进输入栏」—— 那条路不存在，现有实现走的就是 pty.write
+    window.api.pty.write(leaf.pane.ptyId, shellQuote(proj.path) + ' ')
+    return true
+  }
+
   const startFrameDrag = (f: CanvasFrame, e: React.MouseEvent): void => {
     if (e.button !== 0) return
     e.stopPropagation()
@@ -736,16 +759,24 @@ export function CanvasStage(): JSX.Element {
     let detachBlur = (): void => {}
     const onMove = (ev: MouseEvent): void =>
       moveFrame(f.id, fx + (ev.clientX - sx) / scale, fy + (ev.clientY - sy) / scale)
-    const onUp = (): void => {
+    // 失焦兜底收尾（cleanup）和真正松手（onUp）分开：blur 时没有落点可言，
+    // 不该去碰 elementFromPoint；只有真的 mouseup 才判定「有没有落在终端上」。
+    const cleanup = (): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       detachBlur()
+    }
+    const onUp = (ev: MouseEvent): void => {
+      cleanup()
+      // 落点不是终端、或这个 Frame 没绑定项目时 dropModuleOnTerminal 直接返回 false，
+      // 不影响上面 onMove 已经做的移动——移动本身不受这里影响，插路径只是附加动作
+      dropModuleOnTerminal(f.id, ev)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
     // 拖拽中真失焦 → 当场收尾，不留悬空监听；hide/show 抖动引起的假 blur 由
     // attachBlurGuard 过滤掉（见该文件注释），不会误伤正在进行的拖拽
-    detachBlur = attachBlurGuard(onUp)
+    detachBlur = attachBlurGuard(cleanup)
   }
 
   const setScale = (s2: number): void => {

@@ -17,10 +17,7 @@ import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from './CanvasContextMenu'
 import { projectMenuItems } from '../workspace/projectMenu'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
-
-function shellQuote(p: string): string {
-  return /[^\w@%+=:,./-]/.test(p) ? `'${p.replace(/'/g, "'\\''")}'` : p
-}
+import { shellQuote } from './shellQuote'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
