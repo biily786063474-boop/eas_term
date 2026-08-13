@@ -5,7 +5,7 @@
 // PaneLayer 之上（PaneLayer 在 App.tsx 里排在 CanvasStage 之后）。
 // 标记的用途正是「指着某个终端说这块」，压在终端底下等于没有。
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useStore } from '../../store'
 import type { CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
@@ -21,7 +21,12 @@ export function CanvasShapeLayer(): JSX.Element | null {
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
   const updateShape = useStore((s) => s.updateShape)
   const sel = useMemo(() => new Set(canvasSel), [canvasSel])
-  const [editingSticky, setEditingSticky] = useState<string | null>(null)
+  // tool / editingSticky 读 store，不是本组件私有 useState——CanvasStage 的工具条
+  // 和 onViewportDown 守卫都要读同一份，两边各起一份的话彼此看不到对方的更新
+  // （修复轮 1 的 Important 1/2，详见 store/canvas/types.ts 里这两个字段上方的注释）。
+  const tool = useStore((s) => s.canvasTool)
+  const editingSticky = useStore((s) => s.editingSticky)
+  const setEditingSticky = useStore((s) => s.setEditingSticky)
   const maximized = !!useStore(liveMaximizedNode)
 
   // 只在画布模式出现；有模块最大化沉浸时也让开（和右下角那两条同一个道理）
@@ -32,12 +37,6 @@ export function CanvasShapeLayer(): JSX.Element | null {
   const selectElement = (key: string, additive: boolean): void => {
     toggleCanvasSel(key, additive)
   }
-
-  // 这一层没有「当前工具」的概念——画新图形的状态机仍在 CanvasStage（工具条也在那边）。
-  // startShapeDrag 是从 CanvasStage 原样搬来的，那里的判断分支还兼着「非 select 工具时
-  // 放行 mousedown 冒泡到画布视口、去开始画新图形」；但标记层和画布视口现在是 App.tsx
-  // 里两棵不相交的 DOM 子树，事件不会跨过去，所以这里恒为 'select'，判断分支原样保留。
-  const tool: 'select' | 'rect' | 'arrow' | 'sticky' = 'select'
 
   const startShapeDrag = (sh: CanvasShape, e: React.MouseEvent): void => {
     if (e.button !== 0 || tool !== 'select') return
@@ -185,7 +184,12 @@ export function CanvasShapeLayer(): JSX.Element | null {
   }
 
   return (
-    <div className="canvas-shape-layer">
+    // .drawing（选着绘图工具时加）：这层的 .cshape 整体让出 pointer-events，
+    // mousedown 才能穿透到底下的 .canvas-viewport 触发 onViewportDown 开始画新图形——
+    // 不然落在一个已有图形上面永远只会选中/拖走那个旧图形，新图形一根画不出来
+    // （修复轮 1 Important 1；.canvas-viewport 自己也用同名 .drawing 类切光标，
+    // 两条规则各管各的选择器，互不影响）。
+    <div className={`canvas-shape-layer${tool !== 'select' ? ' drawing' : ''}`}>
       <div
         className="canvas-shape-world"
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}

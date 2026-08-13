@@ -3867,7 +3867,9 @@
   inset: 0;
   z-index: 60; /* 高过 PaneLayer 和两个抽屉(45)：标记要压在所有东西上面 */
   pointer-events: none;
-  overflow: hidden;
+  overflow: clip; /* 不用 hidden：它是个滚动端口，会被浏览器程序性滚动（见 .tab-stack）。
+    这层里住着便签编辑态的 <textarea autoFocus>，是唯一会触发这条的可聚焦元素——
+    修复轮 1 之前它一直住在受保护的 .canvas-viewport(clip) 里，搬到这层不能漏改。 */
 }
 .canvas-shape-world {
   position: absolute;
@@ -3877,4 +3879,11 @@
 }
 .canvas-shape-layer .cshape {
   pointer-events: auto;
+}
+/* 选着绘图工具（非 select）时，已有图形整体让出 pointer-events：mousedown 要能穿透
+   到底下的 .canvas-viewport 触发 onViewportDown 开始画新图形，而不是把已有图形选中
+   拖走（修复轮 1 Important 1）。.drawing 类名和 .canvas-viewport 那条共用同一个判据
+   （tool !== 'select'），两条规则各自的选择器互不相干，不冲突。 */
+.canvas-shape-layer.drawing .cshape {
+  pointer-events: none;
 }

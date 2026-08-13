@@ -57,9 +57,16 @@ export function CanvasStage(): JSX.Element {
   // 用 liveMaximizedNode 而不是直接读 store：它指的节点可能已经被关掉了。
   const maximized = !!useStore(liveMaximizedNode)
   const freeNodes = useStore((s) => s.canvas.freeNodes)
-  const [tool, setTool] = useState<'select' | 'rect' | 'arrow' | 'sticky'>('select')
+  // tool / editingSticky 提到 store 了（修复轮 1 的 Important 1/2）：CanvasShapeLayer
+  // 要读同一份 tool 才知道选着绘图工具时该不该把 mousedown 让给画布视口穿透过去；
+  // editingSticky 要是两份各起一份，CanvasStage 这边 onViewportDown 的守卫
+  // （下面 588 行附近）永远读不到 CanvasShapeLayer 那边真实的编辑态，形同虚设。
+  // 变量名保持不变，下面几十处用法不用跟着改。
+  const tool = useStore((s) => s.canvasTool)
+  const setTool = useStore((s) => s.setCanvasTool)
   const [draft, setDraft] = useState<Omit<CanvasShape, 'id'> | null>(null)
-  const [editingSticky, setEditingSticky] = useState<string | null>(null)
+  const editingSticky = useStore((s) => s.editingSticky)
+  const setEditingSticky = useStore((s) => s.setEditingSticky)
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
   // 点标题栏色点 → 状态色板（只记 frameId，当前状态每次渲染从 frames 现取，免得色板开着时被改脏）

@@ -210,6 +210,19 @@ export interface CanvasSlice {
   setCanvasSel: (keys: string[]) => void
   toggleCanvasSel: (key: string, additive: boolean) => void
   clearCanvasSel: () => void
+  /** 画布当前选的绘图工具（select=选择/移动，其余是待画的图形类型）。
+   *  CanvasStage（工具条）和 CanvasShapeLayer（标记层）都要读它，且必须是同一份：
+   *  标记层要据此决定选了绘图工具时是否该把 mousedown 让给底下的画布视口穿透过去
+   *  （否则落在已有图形上没法开始画新图形，见 Task 1 修复轮 1 的 Important 1）。不持久化。 */
+  canvasTool: 'select' | 'rect' | 'arrow' | 'sticky'
+  setCanvasTool: (tool: 'select' | 'rect' | 'arrow' | 'sticky') => void
+  /** 正在编辑文字的便签 id（null=没有）。CanvasStage 的空白拖拽守卫
+   *  （落在已有图形上没法开始画新图形以外的那一半：编辑便签时点空白不该触发框选/清选中）
+   *  和 CanvasShapeLayer 的便签编辑态必须共用同一份——各起一份的话 CanvasStage 那份
+   *  永远收不到 CanvasShapeLayer 的更新，读到的恒是初值，守卫形同虚设
+   *  （见 Task 1 修复轮 1 的 Important 2）。不持久化。 */
+  editingSticky: string | null
+  setEditingSticky: (id: string | null) => void
   /** 拖知识库文件到画布任意位置（含 Frame 外）：新增一个自由 + 只读的文件预览节点，落在世界坐标 (x,y) */
   addFreeFileNode: (pane: PaneState, x: number, y: number, opts?: { readOnly?: boolean }) => string
   moveFreeNode: (nodeId: string, x: number, y: number) => void

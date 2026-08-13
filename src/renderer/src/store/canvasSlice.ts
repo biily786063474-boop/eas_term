@@ -945,6 +945,11 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       if (s.canvasSel.length === 1 && s.canvasSel[0] === key) return s
       return { canvasSel: [key], ...followSel(s, [key]) }
     }),
-  clearCanvasSel: () => set((s) => (s.canvasSel.length ? { canvasSel: [] } : s))
+  clearCanvasSel: () => set((s) => (s.canvasSel.length ? { canvasSel: [] } : s)),
+
+  canvasTool: 'select',
+  setCanvasTool: (tool) => set({ canvasTool: tool }),
+  editingSticky: null,
+  setEditingSticky: (id) => set({ editingSticky: id })
 })
 
