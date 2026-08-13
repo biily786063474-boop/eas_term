@@ -49,7 +49,8 @@ export function CanvasStage(): JSX.Element {
   const addTerminalNode = useStore((s) => s.addTerminalNode)
   const addBrowserNode = useStore((s) => s.addBrowserNode)
   const tidyFrame = useStore((s) => s.tidyFrame)
-  const shapes = useStore((s) => s.canvas.shapes)
+  // 注意：这里不再读 canvas.shapes——成品标记的渲染搬去了 CanvasShapeLayer（它自己订阅）。
+  // 留着这个订阅会让 CanvasStage 在每次拖动/编辑标记时跟着空转重渲染一次。
   const addShape = useStore((s) => s.addShape)
   const updateShape = useStore((s) => s.updateShape)
   // 有模块在「最大化沉浸」时，右下角那两条要让位（见下面 .on-max 的注释）。
@@ -744,6 +745,10 @@ export function CanvasStage(): JSX.Element {
     })
   }
 
+  // 这份 renderShape 不是 CanvasShapeLayer.tsx 那份的残留重复——两处都留着是有意的。
+  // 这里只画 draft（正在拖出来的草稿，永远 isDraft=true，走不到选中/拖动/编辑分支）；
+  // 成品标记已经搬去 CanvasShapeLayer，渲染在 PaneLayer 之后才压得住活终端（见该文件顶部注释）。
+  // 下面 return 里只剩 `{draft && renderShape(draft, true)}` 一行调用，别看到两份同名函数就顺手合并掉。
   const renderShape = (sh: Omit<CanvasShape, 'id'> & { id?: string }, isDraft = false): JSX.Element => {
     const id = sh.id ?? '__draft__'
     const left = Math.min(sh.x, sh.x + sh.w)
@@ -851,7 +856,6 @@ export function CanvasStage(): JSX.Element {
         className="canvas-world"
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}
       >
-        {shapes.map((sh) => renderShape(sh))}
         {draft && renderShape(draft, true)}
         {band && (
           <div

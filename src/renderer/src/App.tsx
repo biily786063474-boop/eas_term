@@ -15,6 +15,7 @@ import { ModeSwitch } from './features/workspace/ModeSwitch'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
 import { PaneLayer } from './features/workspace/PaneLayer'
 import { CanvasStage } from './features/canvas/CanvasStage'
+import { CanvasShapeLayer } from './features/canvas/CanvasShapeLayer'
 import { BoardStage } from './features/board/BoardStage'
 import { GanttStage } from './features/gantt/GanttStage'
 import { GanttErrorBoundary } from './features/gantt/GanttErrorBoundary'
@@ -299,6 +300,8 @@ export function App(): JSX.Element {
             )}
             {viewMode === 'board' && <BoardStage />}
             <PaneLayer />
+            {/* 标记层必须在 PaneLayer 之后：它要压在活终端之上（见 CanvasShapeLayer 顶部注释） */}
+            <CanvasShapeLayer />
             {/* 三个抽屉/浮层跟着画布一起给看板 —— 看板也是「在项目里干活」的视图，
                 在这儿想查知识库、看文件信息的需求和画布里没有区别 */}
             {viewMode !== 'split' && <CanvasDrawer />}

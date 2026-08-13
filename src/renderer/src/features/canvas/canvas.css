@@ -3858,3 +3858,23 @@
 .pane > .ab-cmds {
   border-bottom: 1px solid var(--glass-border);
 }
+
+/* 标记层：铺满画布区、盖在活终端之上。
+   pointer-events 的分配是这一层的命门 —— 容器放行、标记接管。
+   容器不放行的话，这一层会把整个画布和所有终端的点击全吃掉。 */
+.canvas-shape-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 60; /* 高过 PaneLayer 和两个抽屉(45)：标记要压在所有东西上面 */
+  pointer-events: none;
+  overflow: hidden;
+}
+.canvas-shape-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.canvas-shape-layer .cshape {
+  pointer-events: auto;
+}
