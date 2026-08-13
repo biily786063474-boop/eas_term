@@ -14,11 +14,16 @@ export interface Prefs {
   autoUpdateCheck: boolean
   /** 匿名使用统计（只有时长和功能计数，见 telemetry.ts 的白名单） */
   telemetry: boolean
+  /** 快照后怎么处理标记。**未设置 = 每次都问** —— 所以是可选字段，不给默认值 */
+  clearShapesAfterSnapshot?: 'keep' | 'clear'
+  /** 插入文件选择器的「最近」是否只看文档文件 */
+  recentDocsOnly: boolean
 }
 
 const DEFAULTS: Prefs = {
   autoUpdateCheck: true,
-  telemetry: true
+  telemetry: true,
+  recentDocsOnly: false
 }
 
 let cache: Prefs | null = null
@@ -33,7 +38,13 @@ export function getPrefs(): Prefs {
     cache = {
       autoUpdateCheck:
         typeof raw.autoUpdateCheck === 'boolean' ? raw.autoUpdateCheck : DEFAULTS.autoUpdateCheck,
-      telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry
+      telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry,
+      clearShapesAfterSnapshot:
+        raw.clearShapesAfterSnapshot === 'keep' || raw.clearShapesAfterSnapshot === 'clear'
+          ? raw.clearShapesAfterSnapshot
+          : undefined,
+      recentDocsOnly:
+        typeof raw.recentDocsOnly === 'boolean' ? raw.recentDocsOnly : DEFAULTS.recentDocsOnly
     }
   } catch {
     cache = { ...DEFAULTS }
@@ -54,8 +65,15 @@ export function setPref<K extends keyof Prefs>(key: K, value: Prefs[K]): Prefs {
 
 export function registerPrefsHandlers(): void {
   ipcMain.handle('prefs:get', () => getPrefs())
-  ipcMain.handle('prefs:set', (_e, key: keyof Prefs, value: boolean) => {
-    if (key !== 'autoUpdateCheck' && key !== 'telemetry') return getPrefs()
-    return setPref(key, !!value)
+  ipcMain.handle('prefs:set', (_e, key: keyof Prefs, value: unknown) => {
+    if (key === 'autoUpdateCheck' || key === 'telemetry' || key === 'recentDocsOnly') {
+      return setPref(key, !!value)
+    }
+    // 这一个的值是字符串或 undefined，不能走上面的 !!value —— 那会把 'keep' 压成 true
+    if (key === 'clearShapesAfterSnapshot') {
+      const v = value === 'keep' || value === 'clear' ? value : undefined
+      return setPref(key, v)
+    }
+    return getPrefs()
   })
 }

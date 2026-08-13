@@ -3950,3 +3950,23 @@
   box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
+
+/* 快照后「清掉标记」确认框里的「保留」按钮——中性色，跟它同排的「清掉」用全局
+   .danger-btn（base.css）：清空标记不可撤销，危险操作理应是那个更显眼的红色。
+   尺寸抄 .danger-btn 的 8px 18px / 13px，两颗按钮挨在一起高度得对得上。 */
+.csnap-keep-btn {
+  padding: 8px 18px;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.csnap-keep-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--fg);
+}

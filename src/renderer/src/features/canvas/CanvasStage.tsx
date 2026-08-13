@@ -3,6 +3,7 @@
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
@@ -92,6 +93,8 @@ export function CanvasStage(): JSX.Element {
   const [snapErr, setSnapErr] = useState<string | null>(null)
   // 拍完之后待确认「要不要清掉标记」——数字是拍照那一刻画布上的标记数，弹窗由 Task 5 接手渲染
   const [pendingClear, setPendingClear] = useState<number | null>(null)
+  // 「记住这次选择」勾选框——每次弹窗重新出现都要从未勾选开始，不能继承上一次
+  const [remember, setRemember] = useState(false)
   // 防连点：主进程虽已有并发互斥，但重复点击仍会排出多张几乎相同的图、
   // 也可能让后一次调用把前一次还没走完的 .snapshotting 提前摘掉——按钮层必须自己挡一道
   const [snapBusy, setSnapBusy] = useState(false)
@@ -815,7 +818,15 @@ export function CanvasStage(): JSX.Element {
         return
       }
       useStore.getState().setLastSnapshot({ path: res.path, projectId: snapProject.id, at: Date.now() })
-      setPendingClear(useStore.getState().canvas.shapes.length)
+      // 已经记住过选择就直接执行、不弹窗；未设置（每次都问）才走下面的确认框
+      const pref = (await window.api.prefs.get()).clearShapesAfterSnapshot
+      const n = useStore.getState().canvas.shapes.length
+      if (pref === 'clear') {
+        useStore.getState().clearShapes()
+        return
+      }
+      if (pref === 'keep') return
+      if (n > 0) setPendingClear(n) // 一个标记都没有就没必要问
     } catch (e) {
       // 正常的业务失败走上面 res.ok 分支；这里接的是 IPC 本身抛出的意外情况，
       // 同样要给用户看得见的提示，不能只 console.error 完事
@@ -825,6 +836,15 @@ export function CanvasStage(): JSX.Element {
       root?.classList.remove('snapshotting')
       setSnapBusy(false)
     }
+  }
+
+  /** 「清掉标记」确认框的两个按钮共用这一个收尾：真正清不清、记不记，都在这一处判断 */
+  const finishClear = (choice: 'keep' | 'clear'): void => {
+    if (choice === 'clear') useStore.getState().clearShapes()
+    // 记住的是他按的那个按钮，不是勾选框自带一个默认动作
+    if (remember) void window.api.prefs.set('clearShapesAfterSnapshot', choice)
+    setPendingClear(null)
+    setRemember(false) // 勾选框每次弹出都从未勾选开始，不继承上次
   }
 
   // 这份 renderShape 不是 CanvasShapeLayer.tsx 那份的残留重复——两处都留着是有意的。
@@ -1122,8 +1142,14 @@ export function CanvasStage(): JSX.Element {
         </button>
         <button
           className="ctool"
-          disabled={!snapProject || snapBusy}
-          data-tip={snapProject ? '快照当前画板' : '请在画板中选择一个工作区'}
+          disabled={!snapProject || snapBusy || pendingClear !== null}
+          data-tip={
+            pendingClear !== null
+              ? '请先处理清空提示'
+              : snapProject
+                ? '快照当前画板'
+                : '请在画板中选择一个工作区'
+          }
           // 这颗按钮必须挡住 mousedown 冒泡：不挡的话会先落到 onViewportDown，
           // tool==='select' 时那边会当成一次空白框选、把 canvasSel 清空——
           // 等 click 真正触发 takeSnapshot 时 snapProject 已经变回 null，
@@ -1141,6 +1167,49 @@ export function CanvasStage(): JSX.Element {
           {snapErr}
         </div>
       )}
+
+      {/* 快照后「要不要清掉标记」确认框。不能用现成的 requestConfirm/ConfirmDialog——
+          那个只有确定/取消两个按钮，装不下「保留 / 清掉 + 记住选择」。
+          沿用它的 .confirm-overlay/.confirm-dialog/.confirm-message/.confirm-actions
+          视觉样式（同一套危险操作确认弹窗体系，z-index 3500，见 base.css），
+          并且同样 portal 到 body——.canvas-viewport 是 overflow: clip 的滚动端口，
+          不 portal 出去会被裁到只剩画板那一块，盖不住左边的终端。 */}
+      {pendingClear !== null &&
+        createPortal(
+          <div
+            className="confirm-overlay"
+            onMouseDown={() => {
+              setPendingClear(null)
+              setRemember(false) // 点背景等于「这次不处理」，不该让下次弹窗继承勾选状态
+            }}
+          >
+            <div className="confirm-dialog" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="confirm-message">
+                已保存快照，标记已经拍进图里了。
+                <br />
+                <br />
+                要不要把画板上的 {pendingClear} 个标记清掉？
+              </div>
+              <label className="cset-row">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                <span className="cset-rowname">记住这次选择，以后不再问</span>
+              </label>
+              <div className="confirm-actions">
+                <button className="csnap-keep-btn" onClick={() => finishClear('keep')}>
+                  保留
+                </button>
+                <button className="danger-btn" onClick={() => finishClear('clear')}>
+                  清掉
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       <CanvasMiniMap />
       <CanvasRunMonitor />

@@ -18,6 +18,10 @@ import {
 } from '../notify/sound'
 import './workspace.css'
 
+/** 跟 window.api.prefs 的返回值保持同一个类型来源（preload/index.ts 的 PrefsSnapshot），
+ *  不在这再手抄一份形状——那样迟早跟主进程的 Prefs 字段脱节 */
+type PrefsState = Awaited<ReturnType<typeof window.api.prefs.get>>
+
 export function SettingsPanel(): JSX.Element {
   const [open, setOpen] = useState(false)
   const theme = useStore((s) => s.theme)
@@ -26,9 +30,13 @@ export function SettingsPanel(): JSX.Element {
   // 只有这个面板和播放器读它，放进全局状态是徒增一份要同步的副本）
   const [soundOn, setSoundOn] = useState(isSoundEnabled)
   const [vol, setVol] = useState(getVolume)
-  // 更新检查与匿名统计这两个开关存在**主进程**（见 main/prefs.ts）：
-  // 它们在窗口出现之前就要生效，放渲染层的 localStorage 来不及
-  const [prefs, setPrefs] = useState({ autoUpdateCheck: true, telemetry: true })
+  // 更新检查、匿名统计、画板行为这几个开关存在**主进程**（见 main/prefs.ts）：
+  // 有的在窗口出现之前就要生效，有的要主进程独立维护状态，放渲染层的 localStorage 来不及
+  const [prefs, setPrefs] = useState<PrefsState>({
+    autoUpdateCheck: true,
+    telemetry: true,
+    recentDocsOnly: false
+  })
   const [checking, setChecking] = useState(false)
   const [checkMsg, setCheckMsg] = useState<string | null>(null)
 
@@ -37,7 +45,10 @@ export function SettingsPanel(): JSX.Element {
     void window.api.prefs.get().then(setPrefs)
   }, [open])
 
-  const setPref = async (key: 'autoUpdateCheck' | 'telemetry', value: boolean): Promise<void> => {
+  const setPref = async (
+    key: 'autoUpdateCheck' | 'telemetry' | 'clearShapesAfterSnapshot' | 'recentDocsOnly',
+    value: boolean | 'keep' | 'clear' | undefined
+  ): Promise<void> => {
     setPrefs(await window.api.prefs.set(key, value))
     // 关掉自动检查要立刻停掉轮询，不能等下次重启
     if (key === 'autoUpdateCheck') void window.api.update.reschedule()
@@ -193,6 +204,26 @@ export function SettingsPanel(): JSX.Element {
                   />
                   <span className="cset-rowname">启动后自动检查新版本</span>
                 </label>
+              </div>
+
+              <div className="cset-sec">
+                <div className="cset-label">画板</div>
+                <div className="cset-row">
+                  <span className="cset-rowname">快照后清空标记</span>
+                  <select
+                    value={prefs.clearShapesAfterSnapshot ?? 'ask'}
+                    onChange={(e) =>
+                      void setPref(
+                        'clearShapesAfterSnapshot',
+                        e.target.value === 'ask' ? undefined : (e.target.value as 'keep' | 'clear')
+                      )
+                    }
+                  >
+                    <option value="ask">每次询问</option>
+                    <option value="keep">总是保留</option>
+                    <option value="clear">总是清空</option>
+                  </select>
+                </div>
               </div>
 
               <div className="cset-sec">

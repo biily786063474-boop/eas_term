@@ -96,6 +96,17 @@ function argOf(name: string): string {
   return process.argv.find((a) => a.startsWith(p))?.slice(p.length) ?? ''
 }
 
+/** 跟 main/prefs.ts 的 Prefs 手动保持同步——那边字段变了这里也要跟着改。
+ *  没有直接 import type { Prefs }：preload 和 main 各自的类型入口，历史上这里
+ *  就是手抄一份最小形状，这次新增字段沿用同一约定，不引入新的跨进程类型耦合。 */
+interface PrefsSnapshot {
+  autoUpdateCheck: boolean
+  telemetry: boolean
+  /** 快照后怎么处理标记。未设置 = 每次都问 */
+  clearShapesAfterSnapshot?: 'keep' | 'clear'
+  recentDocsOnly: boolean
+}
+
 const api = {
   platform: process.platform,
   /** 这个包是哪一版、是不是打包过的。界面底部的水印用它 —— 装了三个版本还开着旧包
@@ -538,15 +549,11 @@ const api = {
     bump: (key: string): void => ipcRenderer.send('telemetry:event', key),
     refresh: (): void => ipcRenderer.send('telemetry:refresh')
   },
-  /** 主进程侧的偏好（检查更新、匿名统计）。这两个开关在窗口出现之前就要生效，
-   *  所以不放渲染层的 localStorage —— 见 main/prefs.ts */
+  /** 主进程侧的偏好（检查更新、匿名统计、画板行为）。这些开关有的在窗口出现之前
+   *  就要生效，有的要主进程独立维护状态，所以不放渲染层的 localStorage —— 见 main/prefs.ts */
   prefs: {
-    get: (): Promise<{ autoUpdateCheck: boolean; telemetry: boolean }> =>
-      ipcRenderer.invoke('prefs:get'),
-    set: (
-      key: 'autoUpdateCheck' | 'telemetry',
-      value: boolean
-    ): Promise<{ autoUpdateCheck: boolean; telemetry: boolean }> =>
+    get: (): Promise<PrefsSnapshot> => ipcRenderer.invoke('prefs:get'),
+    set: <K extends keyof PrefsSnapshot>(key: K, value: PrefsSnapshot[K]): Promise<PrefsSnapshot> =>
       ipcRenderer.invoke('prefs:set', key, value)
   },
   update: {

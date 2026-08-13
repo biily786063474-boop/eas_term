@@ -2240,6 +2240,20 @@ body.dragging-row * {
   cursor: pointer;
 }
 
+/* 三态设置项（画板 · 快照后清空标记）用的原生 select——整个应用没有全局
+   color-scheme:dark，不给它上色的话会是一截刺眼的系统白底下拉框 */
+.cset-row select {
+  margin-left: auto;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .cset-rowname {
   color: var(--fg-dim);
   white-space: nowrap;
