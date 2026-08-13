@@ -14,6 +14,8 @@ import './workspace.css'
 function WorkspacePanel({ project }: { project: Project }): JSX.Element {
   const [tab, setTab] = useState<'files' | 'git'>('files')
   const [filesRefresh, setFilesRefresh] = useState(0)
+  const [createReq, setCreateReq] = useState<{ kind: 'file' | 'dir'; nonce: number } | undefined>()
+  const [newMenu, setNewMenu] = useState<{ x: number; y: number } | null>(null)
 
   return (
     <div className="workspace">
@@ -36,6 +38,18 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         {tab === 'files' && (
           <button
             className="icon-btn"
+            data-tip="新建"
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+              setNewMenu({ x: r.left, y: r.bottom + 4 })
+            }}
+          >
+            <PlusIcon size={13} />
+          </button>
+        )}
+        {tab === 'files' && (
+          <button
+            className="icon-btn"
             data-tip="刷新文件树"
             onClick={() => setFilesRefresh((k) => k + 1)}
           >
@@ -48,12 +62,35 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
         <div className="ws-keep" style={{ display: tab === 'files' ? undefined : 'none' }}>
           {/* editable：项目文件树是唯一开 IDE 式文件操作的地方。
               画布的资源/知识库抽屉不开——那两处的外层已经用 mousedown 做「拖到画布」了 */}
-          <FileTree key={project.id} rootPath={project.path} refreshKey={filesRefresh} editable />
+          <FileTree
+            key={project.id}
+            rootPath={project.path}
+            refreshKey={filesRefresh}
+            editable
+            createRequest={createReq}
+          />
         </div>
         <div className="ws-keep" style={{ display: tab === 'git' ? undefined : 'none' }}>
           <SidebarGit key={project.id} cwd={project.path} active={tab === 'git'} />
         </div>
       </div>
+      {newMenu && (
+        <CanvasContextMenu
+          x={newMenu.x}
+          y={newMenu.y}
+          items={[
+            {
+              label: '新建文件',
+              onClick: () => setCreateReq((p) => ({ kind: 'file', nonce: (p?.nonce ?? 0) + 1 }))
+            },
+            {
+              label: '新建文件夹',
+              onClick: () => setCreateReq((p) => ({ kind: 'dir', nonce: (p?.nonce ?? 0) + 1 }))
+            }
+          ]}
+          onClose={() => setNewMenu(null)}
+        />
+      )}
     </div>
   )
 }

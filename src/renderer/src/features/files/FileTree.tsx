@@ -60,13 +60,17 @@ interface FileClip {
 export function FileTree({
   rootPath,
   refreshKey,
-  editable = false
+  editable = false,
+  createRequest
 }: {
   rootPath: string
   refreshKey: number
   /** 开启 IDE 式文件操作（新建/双击重命名/键盘/拖拽移动）。
    *  默认关：画布抽屉那几处的外层已经占了 mousedown 和双击做别的手势。 */
   editable?: boolean
+  /** 外部（面板头部的 + 按钮）触发在根目录新建。nonce 变一次触发一次；
+   *  用计数器而不是 ref，是因为 refreshKey 已经是这个模式了，不引入第二种机制 */
+  createRequest?: { kind: 'file' | 'dir'; nonce: number }
 }): JSX.Element {
   const [menu, setMenu] = useState<{ x: number; y: number; entry: DirEntry | null } | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -114,6 +118,15 @@ export function FileTree({
     },
     [rootPath, toggleExpand]
   )
+
+  // 外部触发：nonce 变了就在根目录起一次新建。
+  // 依赖里不放 createRequest 整个对象——它每次渲染都是新对象，会无限触发
+  const createNonce = createRequest?.nonce ?? 0
+  const createKind = createRequest?.kind ?? 'file'
+  useEffect(() => {
+    if (!createNonce) return
+    startCreate(createKind, null)
+  }, [createNonce, createKind, startCreate])
 
   const doTrash = useCallback(
     (entry: DirEntry) => {
