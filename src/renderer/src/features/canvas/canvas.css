@@ -3906,6 +3906,12 @@
 .app.snapshotting .canvas-minimap,
 .app.snapshotting .canvas-minimap-mini,
 .app.snapshotting .crm-mini,
+/* 运行监视窗默认是展开态 .crm——collapsed 的初值是 false，只要有 agent 任务在跑
+   （这软件最日常的状态）渲染的就是这个，不是收起态的 .crm-mini。两者是同一个组件的
+   两种形态、共用同一条定位规则（.crm, .crm-mini 那条，本文件上方），漏了这条的话
+   "图里没有运行监视"这条验收只在没有任务在跑、组件整个不渲染时才碰巧成立
+   （复查时读代码 + 真机跑着任务再拍才发现漏的，之前的验证是假阳性）。 */
+.app.snapshotting .crm,
 .app.snapshotting .canvas-toolbar,
 .app.snapshotting .canvas-zoombar,
 .app.snapshotting .ctoolbar-mini,
@@ -3915,7 +3921,11 @@
    还有屏幕底部常驻的版本水印——三个都不是画布内容，实测两张快照图里都真的拍进去了。 */
 .app.snapshotting .cdict-bubble,
 .app.snapshotting .cdict-pop,
-.app.snapshotting .build-stamp {
+.app.snapshotting .build-stamp,
+/* 快照失败提示条防御性收进清单：takeSnapshot 开头已经会在拍照前清掉 snapErr，
+   正常路径走不到"提示还在、又在拍"这个状态；这里加上是双保险——
+   万一以后有别的地方也会 setSnapErr 而忘了清，图里也不会露出上一次的错误文案。 */
+.app.snapshotting .csnap-err {
   visibility: hidden;
 }
 

@@ -600,8 +600,24 @@ export function CanvasStage(): JSX.Element {
   // 空白按下：select 模式框选（空格+拖为平移）；图形工具模式绘制
   const onViewportDown = (e: React.MouseEvent): void => {
     if (e.button !== 0 || editingSticky) return
-    // 在缩略图等浮层控件上按下不启动画布框选/平移
-    if ((e.target as HTMLElement).closest?.('.canvas-minimap')) return
+    // 在缩略图等浮层控件上按下不启动画布框选/平移。.ctoolbar-mini 必须在这——
+    // 它是 .canvas-viewport 的直接子节点，工具按钮 disabled 时浏览器不会调用
+    // 按钮自身的 mousedown 监听（只拦 activation，不拦冒泡），事件会绕过按钮上那句
+    // stopPropagation、径直冒泡到这里，被当成一次空白框选清空 canvasSel。
+    // 但这条只挡得住"按钮还在但 disabled"这一种情况——真机复测发现光这条不够：
+    // .ctoolbar-mini 本身也在 .snapshotting 隐藏清单里，而 takeSnapshot 里
+    // classList.add('snapshotting') 和 setSnapBusy(true) 几乎同一时刻生效，
+    // 等外部这一下点击真落地时，工具条往往已经 visibility:hidden、不参与命中测试了——
+    // 点击直接穿透到画布本身，e.target 压根不在 .ctoolbar-mini 子树里，
+    // closest 这条防线形同虚设。所以下面单独再加 snapBusy 兜底：
+    // 拍照过程中（不管工具条这一刻是可见还是已经被藏起来）画布一律不接受新的
+    // 框选/平移/画图操作，从根上堵住这条路径，不用管点击具体落在哪个元素上。
+    if (
+      snapBusy ||
+      (e.target as HTMLElement).closest?.('.canvas-minimap') ||
+      (e.target as HTMLElement).closest?.('.ctoolbar-mini')
+    )
+      return
     if (tool === 'select') {
       if (spaceHeld.current) startPan(e)
       else startBoxSelect(e)
@@ -777,9 +793,13 @@ export function CanvasStage(): JSX.Element {
     setSnapBusy(true)
     const root = document.querySelector('.app')
     try {
-      // 拍照前先结束绘制态：正在拖的草稿和正在编辑的便签都不该进图
+      // 拍照前先结束绘制态：正在拖的草稿和正在编辑的便签都不该进图。
+      // 上一次失败留下的红字提示也要在这清掉——不清的话："失败→用户没点掉→
+      // 直接重试→这次成功"这条路径会让上一次的错误文案原样出现在这张成功的截图里
+      // （.csnap-err 是 .canvas-viewport 的直接子元素，必在截图范围内）。
       setDraft(null)
       setEditingSticky(null)
+      setSnapErr(null)
       root?.classList.add('snapshotting')
       // 等两帧：加类会触发一次样式重算+绘制，只等一帧的话可能拍到还没藏掉的那一帧
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
