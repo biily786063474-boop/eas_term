@@ -725,3 +725,17 @@ export interface RenameFolderResult {
   /** 成功时给回新的完整列表，渲染层直接换掉，不用再拉一次 */
   projects?: Project[]
 }
+
+/** 快照要截的屏幕区域（CSS 像素，相对窗口左上角） */
+export interface SnapshotRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+export interface SnapshotResult {
+  ok: boolean
+  error?: string
+  /** 成功时的绝对路径 */
+  path?: string
+}

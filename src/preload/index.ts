@@ -47,7 +47,7 @@ import type {
   Footprint,
   InstallPlan,
   UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
-  RenameFolderResult} from '../shared/types'
+  RenameFolderResult, SnapshotRect, SnapshotResult} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -164,7 +164,10 @@ const api = {
     // 同步落盘：退出/刷新前(beforeunload)调,阻塞到写完再放行,防「改完就退」丢失
     saveSync: (scene: unknown): void => {
       ipcRenderer.sendSync('canvas:save-sync', scene)
-    }
+    },
+    /** 截画板区域存进项目。rect 是相对窗口左上角的 CSS 像素 */
+    snapshot: (projectPath: string, rect: SnapshotRect): Promise<SnapshotResult> =>
+      ipcRenderer.invoke('canvas:snapshot', projectPath, rect)
   },
   agent: {
     // 开终端时探测：从 `claude --help` 真实解析 模型别名 / effort 档位（不硬编码）

@@ -9,6 +9,7 @@ import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
 import { registerPrefsHandlers } from './prefs'
+import { registerSnapshotHandlers } from './snapshot'
 import { registerUpdaterHandlers, schedule as scheduleUpdateCheck } from './updater'
 import { registerTelemetry } from './telemetry'
 import { registerGitHandlers } from './git'
@@ -306,6 +307,7 @@ app.whenReady().then(() => {
   // 上次留下的粘贴图，过 24 小时的在这里清掉（见 pasteImages.ts 里为什么不发送后就删）
   sweepPasteImages()
   registerPrefsHandlers()
+  registerSnapshotHandlers()
   registerUpdaterHandlers()
   // 检查更新：启动 12 秒后查第一次，之后每 6 小时。用户关掉开关就完全不发请求
   scheduleUpdateCheck()
