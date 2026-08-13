@@ -24,7 +24,20 @@ export function snapshotTarget(
   const d = p2(now.getDate())
   const stamp = `${y}${mo}${d}-${p2(now.getHours())}${p2(now.getMinutes())}${p2(now.getSeconds())}`
   const dir = path.join(projectPath, 'screenshot', `${y}-${mo}-${d}`)
-  // 只数 .png：目录里可能有别人放的东西，把它们算进序号会让编号跳
-  const n = existing.filter((f) => f.toLowerCase().endsWith('.png')).length + 1
+
+  // 解析已有文件的序号，取最大值 +1。这样即使用户手动删除了某张，序号也不会冲突。
+  // 如果用户自己拖进来的文件名无法解析（如 图1.png），不会让序号计算崩溃，
+  // 也不会被当作"第 0 张"，而是直接忽略 —— 它没有序号，所以不参与序号管理。
+  const pngNumbers = existing
+    .filter((f) => f.toLowerCase().endsWith('.png'))
+    .map((f) => {
+      const match = f.match(/-(\d+)\.png$/i)
+      return match ? parseInt(match[1], 10) : null
+    })
+    .filter((n) => n !== null) as number[]
+
+  const maxN = pngNumbers.length > 0 ? Math.max(...pngNumbers) : 0
+  const n = maxN + 1
+
   return { dir, file: path.join(dir, `${stamp}-${n}.png`) }
 }

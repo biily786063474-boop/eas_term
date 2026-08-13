@@ -36,3 +36,13 @@ test('file 落在 dir 里面', () => {
   const r = snapshotTarget(PROJ, D, [])
   assert.strictEqual(path.dirname(r.file), r.dir)
 })
+
+test('序号有缺口（用户手动删除了第 2 张） → 取最大值 + 1', () => {
+  const r = snapshotTarget(PROJ, D, ['20260813-080000-1.png', '20260813-081000-3.png'])
+  assert.strictEqual(path.basename(r.file), '20260813-090503-4.png')
+})
+
+test('解析不出序号的 .png（如用户自己拖进来的 图1.png）不参与序号计算', () => {
+  const r = snapshotTarget(PROJ, D, ['20260813-080000-1.png', '图1.png', '20260813-081500-2.png'])
+  assert.strictEqual(path.basename(r.file), '20260813-090503-3.png')
+})
