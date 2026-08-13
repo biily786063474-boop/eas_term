@@ -10,7 +10,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
-import { paneForFile, isImagePath, isVideoPath } from './media'
+import { paneForFile, isImagePath, isVideoPath, isHtmlPath } from './media'
+import { HtmlOpenChoice } from './HtmlOpenChoice'
+import type { PaneState } from '../../layout'
 import { ChevronRightIcon, PlusIcon, FolderOpenIcon, SparkleIcon, TerminalIcon, GearIcon } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 
@@ -23,6 +25,13 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [busy, setBusy] = useState('')
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<string | null>(null)
+  /** 拖 .html 进画布时的「渲染还是源码」选择 */
+  const [htmlPick, setHtmlPick] = useState<{
+    x: number
+    y: number
+    path: string
+    place: (pane: PaneState) => void
+  } | null>(null)
   const [links, setLinks] = useState<Backlink[]>([])
   const [treeKey, setTreeKey] = useState(0)
   const [q, setQ] = useState('')
@@ -168,6 +177,21 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   // 知识库文件 → 画布任意位置：统一走自由 + 只读节点（不用 Frame，不判断落点在不在 Frame 上）。
   // 双击/搜索命中点击没有「松手点」，落在当前视口中心；真正拖拽落在松手时的世界坐标。
   const openInCanvas = (path: string, wx: number, wy: number): void => {
+    // .html 两种看法都合理（渲染 / 源码），不替用户定。
+    // 弹窗要屏幕坐标，而这里拿到的是世界坐标 —— 反算回去，
+    // 这样拖拽（松手点）和双击/搜索（视口中心）两条路不用各写一套
+    if (isHtmlPath(path)) {
+      const el = document.querySelector('.canvas-viewport') as HTMLElement | null
+      const r = el?.getBoundingClientRect()
+      const vp = useStore.getState().canvas.viewport
+      setHtmlPick({
+        x: (r?.left ?? 0) + wx * vp.scale + vp.x,
+        y: (r?.top ?? 0) + wy * vp.scale + vp.y,
+        path,
+        place: (pane) => useStore.getState().addFreeFileNode(pane, wx, wy, { readOnly: true })
+      })
+      return
+    }
     useStore.getState().addFreeFileNode(paneForFile(path), wx, wy, { readOnly: true })
   }
   const viewportCenter = (): { wx: number; wy: number } => {
@@ -605,6 +629,15 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </>
       )}
     </aside>
+    {htmlPick && (
+      <HtmlOpenChoice
+        x={htmlPick.x}
+        y={htmlPick.y}
+        fileName={htmlPick.path.split('/').pop() ?? ''}
+        onPick={(as) => htmlPick.place(paneForFile(htmlPick.path, as))}
+        onClose={() => setHtmlPick(null)}
+      />
+    )}
     </>
   )
 }

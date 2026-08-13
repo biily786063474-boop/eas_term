@@ -89,6 +89,25 @@ export const PlusIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+/* 新建文件 / 新建文件夹。用「带加号的文件/文件夹」而不是一个光秃秃的 +，
+   是照 IDE 的惯例：文件树头部两个图标各自说清建的是什么，不用点开菜单再选一次 */
+export const FilePlusIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    <line x1="12" y1="12" x2="12" y2="18" />
+    <line x1="9" y1="15" x2="15" y2="15" />
+  </Svg>
+)
+
+export const FolderPlusIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    <line x1="12" y1="10" x2="12" y2="16" />
+    <line x1="9" y1="13" x2="15" y2="13" />
+  </Svg>
+)
+
 export const CloseIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <line x1="6" y1="6" x2="18" y2="18" />

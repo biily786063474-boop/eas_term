@@ -6,11 +6,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { Project } from '../../../../shared/types'
 import { collectLeaves } from '../../layout'
+import type { PaneState } from '../../layout'
 import { FileTree } from '../files/FileTree'
-import { paneForFile } from './media'
+import { paneForFile, isHtmlPath } from './media'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
-import { PlusIcon, ChevronRightIcon } from '../../ui/Icons'
+import { PlusIcon, ChevronRightIcon, FilePlusIcon, FolderPlusIcon } from '../../ui/Icons'
+import { HtmlOpenChoice } from './HtmlOpenChoice'
 import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from './CanvasContextMenu'
 import { projectMenuItems } from '../workspace/projectMenu'
@@ -32,6 +34,17 @@ export function CanvasDrawer(): JSX.Element {
   const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
   const [projOpen, setProjOpen] = useState(true)
   const [filesOpen, setFilesOpen] = useState(true)
+  /** 头部两个新建按钮 → 文件树。nonce 变一次触发一次；
+   *  用计数器而不是 ref，是和 FileTree 已有的 refreshKey 同一种模式 */
+  const [createReq, setCreateReq] = useState<{ kind: 'file' | 'dir'; nonce: number } | undefined>()
+  /** 拖 .html 进画布时的「渲染还是源码」选择。place 把落点信息包起来，
+   *  等用户选完再真正建节点 —— 那会儿 Frame 可能已经 reflow 过，所以里面要重新取 */
+  const [htmlPick, setHtmlPick] = useState<{
+    x: number
+    y: number
+    path: string
+    place: (pane: PaneState) => void
+  } | null>(null)
   const [compOpen, setCompOpen] = useState(true)
   const [projH, setProjH] = useState(180)
   const [compH, setCompH] = useState(110)
@@ -292,7 +305,18 @@ export function CanvasDrawer(): JSX.Element {
           const vp = useStore.getState().canvas.viewport
           const wx = (ev.clientX - r.left - vp.x) / vp.scale
           const wy = (ev.clientY - r.top - vp.y) / vp.scale
-          addFileNode(frameId, paneForFile(path), wx - frame.x - 90, wy - frame.y - 15)
+          // .html 两种看法都合理（渲染 / 源码），不替用户定 —— 在落点弹一下让他选。
+          // 选完再落节点，所以 frameId 和坐标要先存下来
+          if (isHtmlPath(path)) {
+            setHtmlPick({
+              x: ev.clientX,
+              y: ev.clientY,
+              path,
+              place: (pane) => addFileNode(frameId, pane, wx - frame.x - 90, wy - frame.y - 15)
+            })
+          } else {
+            addFileNode(frameId, paneForFile(path), wx - frame.x - 90, wy - frame.y - 15)
+          }
         }
       }
     }
@@ -478,8 +502,36 @@ export function CanvasDrawer(): JSX.Element {
               <ChevronRightIcon size={12} />
             </span>
             <span className="cd-sec-title">文件</span>
-            {/* 把当前项目名摆在标题旁：文件树本身看不出是谁的，多项目时最容易认错 */}
-            {activeProject && <span className="cd-sec-of">{activeProject.name}</span>}
+            {/* 新建入口按 IDE 惯例摆在这一节的右上角：两个图标各自说清建的是什么，
+                不用先点开一个菜单再选一次。
+                stopPropagation 是必须的 —— 整个 cd-sec-head 挂着「折叠/展开本节」的 onClick，
+                不拦住的话点新建会顺手把这一节收起来，输入框刚出现就没了。 */}
+            {activeProject && (
+              <span className="cd-sec-acts">
+                <button
+                  className="cd-sec-act"
+                  data-tip="新建文件"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFilesOpen(true)
+                    setCreateReq((p) => ({ kind: 'file', nonce: (p?.nonce ?? 0) + 1 }))
+                  }}
+                >
+                  <FilePlusIcon size={13} />
+                </button>
+                <button
+                  className="cd-sec-act"
+                  data-tip="新建文件夹"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFilesOpen(true)
+                    setCreateReq((p) => ({ kind: 'dir', nonce: (p?.nonce ?? 0) + 1 }))
+                  }}
+                >
+                  <FolderPlusIcon size={13} />
+                </button>
+              </span>
+            )}
           </div>
           {filesOpen && !activeProject && (
             <div className="cd-empty">在画布上点一个 Frame 或终端，这里显示它的文件</div>
@@ -500,7 +552,12 @@ export function CanvasDrawer(): JSX.Element {
                 else startFileDrag(path, e)
               }}
             >
-              <FileTree key={activeProject.id} rootPath={activeProject.path} refreshKey={0} />
+              <FileTree
+                key={activeProject.id}
+                rootPath={activeProject.path}
+                refreshKey={0}
+                createRequest={createReq}
+              />
             </div>
           )}
         </section>
@@ -537,6 +594,15 @@ export function CanvasDrawer(): JSX.Element {
         y={projMenu.y}
         items={projectMenuItems(projMenu.id)}
         onClose={() => setProjMenu(null)}
+      />
+    )}
+    {htmlPick && (
+      <HtmlOpenChoice
+        x={htmlPick.x}
+        y={htmlPick.y}
+        fileName={htmlPick.path.split('/').pop() ?? ''}
+        onPick={(as) => htmlPick.place(paneForFile(htmlPick.path, as))}
+        onClose={() => setHtmlPick(null)}
       />
     )}
     </>

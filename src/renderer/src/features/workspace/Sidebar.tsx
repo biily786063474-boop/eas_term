@@ -4,7 +4,7 @@ import { collectLeaves } from '../../layout'
 import type { Project } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { SidebarGit } from '../git/SidebarGit'
-import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon } from '../../ui/Icons'
+import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon, FilePlusIcon, FolderPlusIcon } from '../../ui/Icons'
 import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { projectMenuItems } from './projectMenu'
@@ -15,7 +15,6 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
   const [tab, setTab] = useState<'files' | 'git'>('files')
   const [filesRefresh, setFilesRefresh] = useState(0)
   const [createReq, setCreateReq] = useState<{ kind: 'file' | 'dir'; nonce: number } | undefined>()
-  const [newMenu, setNewMenu] = useState<{ x: number; y: number } | null>(null)
 
   return (
     <div className="workspace">
@@ -35,17 +34,25 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
           <span>版本</span>
         </button>
         <span className="pane-spacer" />
+        {/* 两个图标而不是一个 + 加下拉：照 IDE 惯例，各自说清建的是什么，
+            少一次「点开菜单再选」。和画布抽屉「文件」节头部的那两个是同一套 */}
         {tab === 'files' && (
-          <button
-            className="icon-btn"
-            data-tip="新建"
-            onClick={(e) => {
-              const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-              setNewMenu({ x: r.left, y: r.bottom + 4 })
-            }}
-          >
-            <PlusIcon size={13} />
-          </button>
+          <>
+            <button
+              className="icon-btn"
+              data-tip="新建文件"
+              onClick={() => setCreateReq((p) => ({ kind: 'file', nonce: (p?.nonce ?? 0) + 1 }))}
+            >
+              <FilePlusIcon size={13} />
+            </button>
+            <button
+              className="icon-btn"
+              data-tip="新建文件夹"
+              onClick={() => setCreateReq((p) => ({ kind: 'dir', nonce: (p?.nonce ?? 0) + 1 }))}
+            >
+              <FolderPlusIcon size={13} />
+            </button>
+          </>
         )}
         {tab === 'files' && (
           <button
@@ -74,23 +81,6 @@ function WorkspacePanel({ project }: { project: Project }): JSX.Element {
           <SidebarGit key={project.id} cwd={project.path} active={tab === 'git'} />
         </div>
       </div>
-      {newMenu && (
-        <CanvasContextMenu
-          x={newMenu.x}
-          y={newMenu.y}
-          items={[
-            {
-              label: '新建文件',
-              onClick: () => setCreateReq((p) => ({ kind: 'file', nonce: (p?.nonce ?? 0) + 1 }))
-            },
-            {
-              label: '新建文件夹',
-              onClick: () => setCreateReq((p) => ({ kind: 'dir', nonce: (p?.nonce ?? 0) + 1 }))
-            }
-          ]}
-          onClose={() => setNewMenu(null)}
-        />
-      )}
     </div>
   )
 }

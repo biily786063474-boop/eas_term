@@ -9,11 +9,26 @@ export const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
 const ext = (p: string): string => p.split('.').pop()?.toLowerCase() ?? ''
 export const isImagePath = (p: string): boolean => IMAGE_EXTS.has(ext(p))
 export const isVideoPath = (p: string): boolean => VIDEO_EXTS.has(ext(p))
+/** .html/.htm —— 唯一一种「两种看法都合理」的文件：既能渲染成页面，也能看源码。
+ *  所以用户手动拖/挑它进画布时要问一句，不能替他定。 */
+export const isHtmlPath = (p: string): boolean => {
+  const e = ext(p)
+  return e === 'html' || e === 'htm'
+}
 
-/** 文件路径 → 画布节点的 pane（.html 走内嵌浏览器，图片/视频走媒体节点，其余按代码预览） */
-export function paneForFile(path: string): PaneState {
+/**
+ * 文件路径 → 画布节点的 pane。
+ *
+ * `as` 是给 .html 用的显式选择：`'web'` 渲染成页面、`'code'` 看源码。
+ * 不传的话 .html 仍按渲染走 —— **那是给程序调用方保底的**（MCP 的
+ * `canvas_open_html` / `canvas_open_file` 自己就说清了要哪种），
+ * 用户手动拖进来的那几条路径必须先问，见 HtmlOpenChoice。
+ */
+export function paneForFile(path: string, as?: 'web' | 'code'): PaneState {
   const e = ext(path)
-  if (e === 'html' || e === 'htm') return { kind: 'web', url: fileUrlOf(path) }
+  if (e === 'html' || e === 'htm') {
+    return as === 'code' ? { kind: 'code', filePath: path } : { kind: 'web', url: fileUrlOf(path) }
+  }
   // 图片 / 动图(gif,webp) / 视频 都归 image 型媒体节点，由 CanvasFileNode 按扩展名分流渲染
   if (IMAGE_EXTS.has(e) || VIDEO_EXTS.has(e)) return { kind: 'image', filePath: path }
   return { kind: 'code', filePath: path }

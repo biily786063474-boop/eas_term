@@ -15,6 +15,9 @@ import { CanvasComponentNode } from './CanvasComponentNode'
 import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
+import { paneForFile, isHtmlPath } from './media'
+import { HtmlOpenChoice } from './HtmlOpenChoice'
+import type { PaneState } from '../../layout'
 import { FrameStatusPicker } from './FrameStatusPicker'
 import { statusLabel, statusColor, statusOfFrame } from './frameStatus'
 
@@ -26,7 +29,6 @@ function frameTint(hex?: string): Record<string, string> {
   if (!m) return {}
   return { '--frame-rgb': `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` }
 }
-import { paneForFile } from './media'
 import { collectLeaves } from '../../layout'
 import './canvas.css'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
@@ -70,6 +72,13 @@ export function CanvasStage(): JSX.Element {
     rootName: string
     wx: number
     wy: number
+  } | null>(null)
+  /** 挑到 .html 时的「渲染还是源码」选择。place 把落点包起来，等选完再建节点 */
+  const [htmlPick, setHtmlPick] = useState<{
+    x: number
+    y: number
+    path: string
+    place: (pane: PaneState) => void
   } | null>(null)
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
@@ -1073,16 +1082,28 @@ export function CanvasStage(): JSX.Element {
           rootName={picker.rootName}
           onClose={() => setPicker(null)}
           onPick={(filePath) => {
-            // 重新取 Frame：菜单开着的这会儿它可能已被 reflow 挪过位置
-            const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
-            if (!frame) return
-            addFileNode(
-              picker.frameId,
-              paneForFile(filePath),
-              picker.wx - frame.x - 90,
-              picker.wy - frame.y - 15
-            )
+            const place = (pane: PaneState): void => {
+              // 重新取 Frame：菜单开着的这会儿它可能已被 reflow 挪过位置
+              const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
+              if (!frame) return
+              addFileNode(picker.frameId, pane, picker.wx - frame.x - 90, picker.wy - frame.y - 15)
+            }
+            // .html 两种看法都合理（渲染 / 源码），不替用户定
+            if (isHtmlPath(filePath)) {
+              setHtmlPick({ x: picker.x, y: picker.y, path: filePath, place })
+              return
+            }
+            place(paneForFile(filePath))
           }}
+        />
+      )}
+      {htmlPick && (
+        <HtmlOpenChoice
+          x={htmlPick.x}
+          y={htmlPick.y}
+          fileName={htmlPick.path.split('/').pop() ?? ''}
+          onPick={(as) => htmlPick.place(paneForFile(htmlPick.path, as))}
+          onClose={() => setHtmlPick(null)}
         />
       )}
     </div>
