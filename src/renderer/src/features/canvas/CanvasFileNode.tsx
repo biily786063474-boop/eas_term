@@ -12,6 +12,7 @@ import { useIdleVideoPause } from './useIdleVideoPause'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { dropModuleOnTerminal } from './dropOnTerminal'
 
 export function CanvasFileNode({
   frameId,
@@ -113,11 +114,14 @@ export function CanvasFileNode({
       if (drop.done) return
       moveNode(frameId, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     }
-    const onUp = (): void => {
+    const onUp = (ev: MouseEvent): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       drop.end()
       if (!drop.done) settleNode(frameId, node.id) // 未移入子 Frame → 松手若与他人重叠则挪开
+      // 落到终端 → 插它所属项目的根路径（projectPath 已经在组件顶部按 frameId 解出来了，
+      // 没有项目时是 ''，dropModuleOnTerminal 视同没解出来，什么都不插）
+      dropModuleOnTerminal(ev, projectPath)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

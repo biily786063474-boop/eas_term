@@ -8,6 +8,7 @@ import { getCanvasComponent } from './components/registry'
 import { makeSubframeDrop } from './subframeDrop'
 import { MaximizeIcon, RestoreIcon } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { dropModuleOnTerminal } from './dropOnTerminal'
 
 export function CanvasComponentNode({
   frame,
@@ -67,11 +68,13 @@ export function CanvasComponentNode({
       if (drop.done) return
       moveNode(frame.id, node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     }
-    const onUp = (): void => {
+    const onUp = (ev: MouseEvent): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       drop.end()
       if (!drop.done) settleNode(frame.id, node.id)
+      // 落到终端 → 插它所属项目的根路径（project 已经在组件顶部按 frame.projectId 解出来了）
+      dropModuleOnTerminal(ev, project?.path)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

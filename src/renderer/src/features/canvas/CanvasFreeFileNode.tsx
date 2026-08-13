@@ -13,6 +13,7 @@ import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, Resto
 import { easfileUrl, isVideoPath } from './media'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { dropModuleOnTerminal } from './dropOnTerminal'
 
 export function CanvasFreeFileNode({
   node,
@@ -91,10 +92,21 @@ export function CanvasFreeFileNode({
     const onMove = (ev: MouseEvent): void => {
       moveFreeNode(node.id, x0 + (ev.clientX - sx) / scale, y0 + (ev.clientY - sy) / scale)
     }
-    const onUp = (): void => {
+    const onUp = (ev: MouseEvent): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       settleFreeNode(node.id) // 松手若与别的自由节点重叠则挪开（不避 Frame——自由节点允许压在 Frame 上）
+      // 自由节点不属于任何 Frame，没有 projectId 可查——只能按路径前缀猜它是不是躺在
+      // 某个项目根目录下面（跟 pathLinks.ts 的 relativeToProject 同一个惯用法，那边只认
+      // activeProject 一个，这里要在全部项目里找，所以没直接复用那个函数）。
+      // 猜不出（不在任何项目目录下、或者这节点根本不是文件/没有 absPath）就传 undefined，
+      // dropModuleOnTerminal 会老实地什么都不插，只留移动。
+      const projectPath = absPath
+        ? useStore
+            .getState()
+            .projects.find((p) => absPath === p.path || absPath.startsWith(p.path + '/'))?.path
+        : undefined
+      dropModuleOnTerminal(ev, projectPath)
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

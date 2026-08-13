@@ -15,6 +15,7 @@ import type { DirEntry } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
+import { shellQuote } from '../canvas/shellQuote'
 import './files.css'
 import { FileIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon } from '../../ui/Icons'
 
@@ -23,10 +24,6 @@ const parentDir = (p: string): string => p.slice(0, p.lastIndexOf('/')) || '/'
 /** 通知某目录内容已变化，让对应的 DirChildren 重新加载（保留树展开状态） */
 function emitDirChanged(dirPath: string): void {
   window.dispatchEvent(new CustomEvent('fs-dir-changed', { detail: dirPath }))
-}
-
-function shellQuote(p: string): string {
-  return /[^\w@%+=:,./-]/.test(p) ? `'${p.replace(/'/g, "'\\''")}'` : p
 }
 
 /** 把路径写入当前活动终端（无回车，方便继续拼命令） */
