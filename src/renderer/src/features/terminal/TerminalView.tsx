@@ -439,6 +439,25 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       pendingWrites = []
       term.write(chunk)
     }
+    let disposed = false
+    // 「这个终端里跑的是哪个 AI CLI」——问主进程查 controlling terminal 上的进程名。
+    // 挂在标题变化和输出上，不轮询：状态一变才该重查。spinner 每帧都会触发标题事件，
+    // 所以必须节流。两档：状态刚变那一刻要快（标题变化 / 窗口回来），日常输出只要最终一致。
+    //
+    // **声明必须在所有使用点之前。** 下面 onData 的回调里就要用它，而
+    // `window.api.pty.onData` 订阅时会**同步回放**缓冲里的输出（preload 的
+    // pendingBuffers）——缓冲非空时那个回调在订阅调用中当场执行，此刻若 probeAgent
+    // 还没初始化就会撞 TDZ，异常穿出整个 effect，后面的 onTitleChange / resize / bell
+    // 全都注册不上：终端既没有输出也没有状态。放在这里就没有这个窗口。
+    let lastProbe = 0
+    const probeAgent = (minGapMs = 2000): void => {
+      const now = Date.now()
+      if (now - lastProbe < minGapMs) return
+      lastProbe = now
+      void window.api.pty.agentOf(ptyId).then((k) => {
+        if (!disposed) useStore.getState().setPtyAgent(ptyId, k)
+      })
+    }
     const unsubData = window.api.pty.onData(ptyId, (data) => {
       // 终端有输出 → 低频重探一次。**这条是接住「agent 退出」的唯一信号**：
       // Claude Code 退出时不还原终端标题，裸 zsh 也不一定设标题，所以「标题变化」
@@ -481,23 +500,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 「聚焦」只说明这个面板是活动面板，不代表有人在看）。改成一律标记；
     // 「已读」交给下面的 keydown/mousedown——你在这个终端里动了手，才算真看见了。
     let prevTitleSpinner = false
-    let disposed = false
-    // 「这个终端里跑的是哪个 AI CLI」——问主进程查 controlling terminal 上的进程名。
-    // 挂在标题变化上而不是轮询：标题一变就说明终端里的东西换了状态，正是该重查的时刻；
-    // 而 spinner 每 ~100ms 换一个字，所以必须节流，否则每秒十次 ps。
-    // 也靠它自愈：用户退出 claude 回到裸 shell，标题变回 cwd → 重查 → 置 null，
-    // 命令按钮跟着消失，不会留着一排发不出去的。
-    // 两档节流：状态刚变的那一刻要快（标题变化 / 窗口回来），日常输出只要最终一致。
-    // 输出那条如果也用 2s，一个刷屏的终端就是每 2 秒一次 ps，多开几个就浪费了。
-    let lastProbe = 0
-    const probeAgent = (minGapMs = 2000): void => {
-      const now = Date.now()
-      if (now - lastProbe < minGapMs) return
-      lastProbe = now
-      void window.api.pty.agentOf(ptyId).then((k) => {
-        if (!disposed) useStore.getState().setPtyAgent(ptyId, k)
-      })
-    }
+    // probeAgent / disposed 的声明已经提到 onData 订阅之前了（见那里的注释：
+    // 订阅会同步回放缓冲，声明留在这里会撞 TDZ）。它也靠标题变化自愈：
+    // 用户退出 claude 回到裸 shell，标题变回 cwd → 重查 → 置 null，命令按钮跟着消失。
     // 开局先查一次：终端可能是从存档恢复的，里面的 agent 早就在跑、标题也不会再变
     // 包一层箭头函数：setTimeout 会把定时器 id 当第一个实参传进去，
     // 直接传 probeAgent 的话那个 id 就成了 minGapMs，节流值变成随机数
@@ -505,9 +510,45 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 窗口重新获得焦点：用户可能在别处（比如系统终端）改了这个会话的状态
     const onWinFocus = (): void => probeAgent()
     window.addEventListener('focus', onWinFocus)
-    const isSpinnerTitle = (t: string): boolean => /^[⠀-⣿]/u.test(t.replace(/^\s+/, ''))
+    // 「这个终端在干活吗」的唯一信号：CLI 把一个转圈字符写在标题最前面。
+    //
+    // **认字符集，不认 CLI 版本号。** 同一台机器上不同终端可能装着不同版本的 CLI
+    // （甚至一个跑 claude、一个跑 codex），判版本号必漏；认字符则新老同时成立。
+    //
+    // 2026-08-12 实测 Claude Code 2.1.229 的完整时间线（旧版是盲文，新版换了圆圈）：
+    //   ✳ Claude Code        ← 空闲
+    //   ◐ Claude Code        ← 开始干活
+    //   ◑ Claude Code        ← 约 1 秒一帧地交替（旧版盲文是 ~100ms，快得多）
+    //   ✳ 从1数到30逐行输出   ← 干完，回到 ✳
+    // 干完会**明确**写一条 ✳ 开头的标题，所以「停下来」有显式信号，不需要超时兜底。
+    //
+    // ⚠️ `✳`(U+2733) 是**空闲**态，绝不能算进忙碌集 —— 算进去就永远显示在干活。
+    const SPIN_BUSY = /^[⠀-⣿◐-◓◴-◷]/u // 盲文(旧) · 半黑圆(新) · 象限圆(防御)
+    const SPIN_IDLE = /^[✳✴✶✻✽✹]/u //  ✳ 一族：CLI 空闲时的品牌字符
+    const lead = (t: string): string => t.replace(/^\s+/, '')
+    const isSpinnerTitle = (t: string): boolean => SPIN_BUSY.test(lead(t))
+    // 标签名里这些前缀一律剥掉：忙碌的会闪、空闲的 ✳ 也不是名字的一部分
+    const stripLead = (t: string): string =>
+      lead(t).replace(
+        /^[⠀-⣿◐-◓◴-◷✳✴✶✻✽✹]+\s*/u,
+        ''
+      )
+    // 兜底：CLI 再换一次字符时不至于又静默失效（这次就是这么栽的）。
+    // 判据是「首字符在变、标题其余部分没变」= 那就是个动画。
+    // 排除已知空闲字符，否则「◑ → ✳」这一帧收尾也会被误判成还在跑。
+    let prevTitle = ''
+    const looksAnimating = (t: string): boolean => {
+      const a = lead(t)
+      const b = lead(prevTitle)
+      if (!a || !b || a === b) return false
+      if (SPIN_IDLE.test(a)) return false
+      const [ca, ...ra] = [...a]
+      const [cb, ...rb] = [...b]
+      return ca !== cb && ra.join('') === rb.join('') && ra.join('').trim().length > 0
+    }
     const titleDisp = term.onTitleChange((title) => {
-      const spinner = isSpinnerTitle(title)
+      const spinner = isSpinnerTitle(title) || looksAnimating(title)
+      prevTitle = title
       probeAgent()
       // **把 spinner 那个字剥掉再写进标签。**
       //
@@ -519,7 +560,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       //
       // 「在跑」这件事由下面的 setPtyRunning 表达（标签上有个常亮的点、
       // 抽屉有呼吸提示、灵动岛也在报），不需要靠标题闪来传达。
-      const stable = spinner ? title.replace(/^[⠀-⣿]+\s*/u, '') : title
+      const stable = stripLead(title)
       if (stable) store.setTabTitle(tabId, stable)
       // 同一个信号也用来做左上角的「谁在自动跑」提示
       const st = useStore.getState()
