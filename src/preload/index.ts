@@ -46,7 +46,8 @@ import type {
   RulesStatus,
   Footprint,
   InstallPlan,
-  UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem} from '../shared/types'
+  UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
+  RenameFolderResult} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -117,6 +118,9 @@ const api = {
     /** 只改侧栏显示名，不动磁盘目录名 */
     rename: (id: string, name: string): Promise<Project[]> =>
       ipcRenderer.invoke('projects:rename', id, name),
+    /** 真改盘上的目录名。和上面的 rename（只改显示名）是两件事 */
+    renameFolder: (id: string, newName: string): Promise<RenameFolderResult> =>
+      ipcRenderer.invoke('projects:renameFolder', id, newName),
     /** 打/清状态标签（null = 回到未分类）。看板、画布、分屏三处共用 */
     setStatus: (id: string, status: ProjectStatus | null): Promise<Project[]> =>
       ipcRenderer.invoke('projects:setStatus', id, status)

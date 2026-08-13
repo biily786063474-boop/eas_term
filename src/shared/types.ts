@@ -24,6 +24,10 @@ export interface Project {
   /** 未设 = 未分类。「没标状态」和「标了某个状态」是两件事，
    *  不能拿其中一个状态当默认值顶替 */
   status?: ProjectStatus
+  /** 这个项目曾经在哪些路径上。改名时追加旧路径，只用来找改名前的历史会话
+   *  （Claude Code 按 cwd 编码存 transcript，改名后老会话留在老编码目录里）。
+   *  上限 5 条，超了丢最老的——它不是审计日志。 */
+  pastPaths?: string[]
 }
 
 export interface DirEntry {
@@ -713,4 +717,11 @@ export interface TodoItem {
   id: string
   text: string
   done: boolean
+}
+
+export interface RenameFolderResult {
+  ok: boolean
+  error?: string
+  /** 成功时给回新的完整列表，渲染层直接换掉，不用再拉一次 */
+  projects?: Project[]
 }
