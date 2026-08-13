@@ -15,6 +15,7 @@ export interface ProjectsSlice {
   /** 改项目显示名（不动磁盘目录）。连带同步那些「还没被用户手动改过名」的
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
+  renameProjectFolder: (id: string, newName: string) => Promise<string | null>
   setActiveProject: (id: string | null) => void
   /** 打/清项目状态标签（null = 未分类）。**这是状态的唯一写入口** ——
    *  看板拖拽、画布 Frame 右键、分屏 tab 右键都走它，各写各的迟早对不上 */
@@ -122,6 +123,15 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
       // 标签标题有 customTitle 明确标记「用户改过」，直接照它判断
       tabs: s.tabs.map((t) => (t.projectId === id && !t.customTitle ? { ...t, title: next } : t))
     }))
+  },
+
+  /** 真改盘上的目录名。返回错误文案，成功返回 null。
+   *  不自己弹提示：调用方知道该把错误显示在哪里 */
+  renameProjectFolder: async (id: string, newName: string): Promise<string | null> => {
+    const r = await window.api.projects.renameFolder(id, newName)
+    if (!r.ok) return r.error ?? '改名失败'
+    if (r.projects) set({ projects: r.projects })
+    return null
   },
 
   setActiveProject: (id) => {

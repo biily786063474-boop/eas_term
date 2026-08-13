@@ -2448,3 +2448,17 @@ body.dragging-row * {
 .cset-link:hover {
   border-bottom-color: var(--accent);
 }
+
+/* 改名失败的提示条：点一下消失。用 confirm 弹窗太重（这不是要人决定的事），
+   用 toast 又会飘走（错误文案往往要照着改，得留得住） */
+.ws-inline-error {
+  margin: 6px 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  cursor: pointer;
+}

@@ -68,10 +68,41 @@ export function Sidebar(): JSX.Element {
   const renameProject = useStore((s) => s.renameProject)
   /** 项目行右键菜单的落点 */
   const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
-  /** 正在内联改名的项目 id（双击项目名进入） */
-  const [editingProject, setEditingProject] = useState<string | null>(null)
+  /** 正在内联改名的项目（双击/菜单进入）。mode 区分改的是显示名还是文件夹 */
+  const [editingProject, setEditingProject] = useState<{
+    id: string
+    mode: 'name' | 'folder'
+  } | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const renameProjectFolder = useStore((s) => s.renameProjectFolder)
   const attentionPtys = useStore((s) => s.attentionPtys)
   const tabs = useStore((s) => s.tabs)
+
+  // 真改文件夹：有终端在跑就先把后果说清楚，让人决定
+  const startFolderRename = (projectId: string, newName: string): void => {
+    const s = useStore.getState()
+    const running = s.tabs
+      .filter((t) => t.projectId === projectId)
+      .flatMap((t) => collectLeaves(t.root))
+      .filter((l) => l.pane.kind === 'terminal').length
+    const go = async (): Promise<void> => {
+      const err = await renameProjectFolder(projectId, newName)
+      setRenameError(err)
+    }
+    if (running > 0) {
+      s.requestConfirm({
+        message:
+          `把文件夹改名成「${newName}」？\n\n` +
+          `这个项目下有 ${running} 个终端开着。改名不会杀掉它们（系统认的是目录本身、不是名字），` +
+          `但里面的 agent 记着的路径会对不上，它下次读写那些路径可能会失败。\n\n` +
+          `画板上已经打开的该项目文件节点会显示「文件不存在」，重新打开即可。`,
+        confirmLabel: '改名',
+        onConfirm: () => void go()
+      })
+    } else {
+      void go()
+    }
+  }
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
@@ -101,6 +132,11 @@ export function Sidebar(): JSX.Element {
             <PlusIcon size={13} />
           </button>
         </div>
+        {renameError && (
+          <div className="ws-inline-error" onClick={() => setRenameError(null)}>
+            {renameError}
+          </div>
+        )}
         <div className="project-list">
           {projects.length === 0 && (
             <div className="tree-msg">还没有项目，点击 ＋ 选择或新建一个项目文件夹</div>
@@ -115,7 +151,7 @@ export function Sidebar(): JSX.Element {
               data-tip={p.path}
               onClick={() => setActiveProject(p.id)}
               // 双击 = 重命名（原来是「开新终端」，已移到右键菜单和行尾的终端图标按钮）
-              onDoubleClick={() => setEditingProject(p.id)}
+              onDoubleClick={() => setEditingProject({ id: p.id, mode: 'name' })}
               onContextMenu={(e) => {
                 e.preventDefault()
                 setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
@@ -124,10 +160,13 @@ export function Sidebar(): JSX.Element {
               {attnProjectIds.has(p.id) && (
                 <span className="project-attn-dot" data-tip="该项目有任务完成" />
               )}
-              {editingProject === p.id ? (
+              {editingProject?.id === p.id ? (
                 <input
                   className="project-rename"
-                  defaultValue={p.name}
+                  // 改显示名时预填显示名；改文件夹时预填**目录名**（那才是要改的东西）
+                  defaultValue={
+                    editingProject.mode === 'folder' ? (p.path.split('/').pop() ?? '') : p.name
+                  }
                   autoFocus
                   // SwipeRow 用 pointer 事件做横滑删除，不挡住就会一边打字一边把行滑走
                   onMouseDown={(e) => e.stopPropagation()}
@@ -135,8 +174,16 @@ export function Sidebar(): JSX.Element {
                   onClick={(e) => e.stopPropagation()}
                   onDoubleClick={(e) => e.stopPropagation()}
                   onBlur={(e) => {
-                    void renameProject(p.id, e.target.value)
+                    const mode = editingProject.mode
+                    const val = e.target.value
                     setEditingProject(null)
+                    if (mode === 'name') {
+                      void renameProject(p.id, val)
+                      return
+                    }
+                    const cur = p.path.split('/').pop() ?? ''
+                    if (!val.trim() || val === cur) return
+                    startFolderRename(p.id, val)
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
@@ -181,7 +228,7 @@ export function Sidebar(): JSX.Element {
         <CanvasContextMenu
           x={projMenu.x}
           y={projMenu.y}
-          items={projectMenuItems(projMenu.id, setEditingProject)}
+          items={projectMenuItems(projMenu.id, (id, mode) => setEditingProject({ id, mode }))}
           onClose={() => setProjMenu(null)}
         />
       )}
