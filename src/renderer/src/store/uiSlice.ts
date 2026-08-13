@@ -33,6 +33,10 @@ export interface UiSlice {
   /** 最近聚焦过的终端（供名词词典等非终端面板把文本插入光标处；打开词典后 activeLeaf 是词典自己，故单独记）。
    *  由 TerminalView 的 focusin 处理器直接 setState 写入。 */
   lastActiveTerminal: { tabId: string; ptyId: string } | null
+  /** 最近一次快照。给终端输入框上方的浮层用 —— 只在同项目的终端里显示。
+   *  不持久化：它是「刚拍完这一下」的临时状态，重启后没有意义 */
+  lastSnapshot: { path: string; projectId: string; at: number } | null
+  setLastSnapshot: (v: { path: string; projectId: string; at: number } | null) => void
   /** 需要用户处理的终端 ptyId（终端响铃触发、聚焦后清除）——供抽屉项目呼吸提示 */
   /** 看板里每个项目当前显示哪个终端（键=projectId，值=leafId）。
    *  一个项目开了好几个终端时，卡片只放得下一个，用卡片头的下拉换。
@@ -194,6 +198,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   theme: loadTheme(),
   pendingConfirm: null,
   lastActiveTerminal: null,
+  lastSnapshot: null,
+  setLastSnapshot: (v) => set({ lastSnapshot: v }),
   boardLeafByProject: {},
   setBoardLeaf: (projectId, leafId) =>
     set((s) => ({ boardLeafByProject: { ...s.boardLeafByProject, [projectId]: leafId } })),

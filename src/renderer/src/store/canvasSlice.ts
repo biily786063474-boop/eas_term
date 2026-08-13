@@ -448,6 +448,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       canvas: { ...s.canvas, shapes: s.canvas.shapes.filter((sh) => sh.id !== id) }
     })),
 
+  /** 清空所有标记（快照后用）。一次性，不做撤销 —— 清空是用户在弹窗里按下的，不是副作用 */
+  clearShapes: () => set((s) => ({ canvas: { ...s.canvas, shapes: [] } })),
+
   // ── 自由节点：拖知识库文件到画布任意位置生成，不属于任何 Frame，世界坐标。
   // 是 shapes 的直接类比（同样独立于 Frame、同样世界坐标），不是节点系统的第二套实现——
   // 所以这几个 action 都不用碰 reflowFrames/placeNodeAtPoint 那套 Frame 专用几何逻辑。

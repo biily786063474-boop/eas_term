@@ -3112,7 +3112,8 @@
    相对关系就还在，只需维护一个数字（抽屉 250 宽，让开它就够）。
    逻辑同左边的 .app.res-open 之于缩略图。 */
 .app.wiki-open .canvas-zoombar,
-.app.wiki-open .ctoolbar-mini {
+.app.wiki-open .ctoolbar-mini,
+.app.wiki-open .csnap-err {
   transform: translateX(-250px);
 }
 
@@ -3160,13 +3161,20 @@
   align-items: center;
   justify-content: center;
 }
-.ctoolbar-mini .ctool:hover {
+.ctoolbar-mini .ctool:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: var(--fg);
 }
 .ctoolbar-mini .ctool.on {
   background: rgba(var(--accent-rgb), 0.22);
   color: var(--accent);
+}
+/* 快照按钮没选中工作区时禁用——配色同 .web-nav:disabled（web.css），
+   这颗是 .ctool 家族里第一个会进入 disabled 态的，之前四个（选择/矩形/箭头/便签）
+   永远不带 disabled 属性，所以只加这一条不影响它们。 */
+.ctoolbar-mini .ctool:disabled {
+  opacity: 0.32;
+  cursor: default;
 }
 
 /* 知识库：搜索 / 设置 / 命中列表 */
@@ -3886,4 +3894,49 @@
    （tool !== 'select'），两条规则各自的选择器互不相干，不冲突。 */
 .canvas-shape-layer.drawing .cshape {
   pointer-events: none;
+}
+
+/* 拍快照的那一瞬把所有盖在画布上的浮层藏掉。
+   用 visibility 不用 display:none —— 后者触发重排，抽屉的宽度变化会让画布跟着跳，
+   截出来的构图和用户看到的对不上。也不用 opacity:0：那个仍然参与合成，可能在图里留痕。 */
+.app.snapshotting .canvas-drawer,
+.app.snapshotting .wiki-drawer,
+.app.snapshotting .cd-edge,
+.app.snapshotting .wk-edge,
+.app.snapshotting .canvas-minimap,
+.app.snapshotting .canvas-minimap-mini,
+.app.snapshotting .crm-mini,
+.app.snapshotting .canvas-toolbar,
+.app.snapshotting .canvas-zoombar,
+.app.snapshotting .ctoolbar-mini,
+.app.snapshotting .cd-attn-bubble,
+/* 这三个是真机验证读生成的 PNG 才发现漏的（原清单是计划文档里给的，没覆盖到）：
+   词典气泡默认常驻画布（用户没手动隐藏的话每次都在）、它的展开面板、
+   还有屏幕底部常驻的版本水印——三个都不是画布内容，实测两张快照图里都真的拍进去了。 */
+.app.snapshotting .cdict-bubble,
+.app.snapshotting .cdict-pop,
+.app.snapshotting .build-stamp {
+  visibility: hidden;
+}
+
+/* 快照失败提示：浮在基本操作条上方，点一下消失（配色同 Sidebar 的 .ws-inline-error，
+   这里额外要浮动定位——画布这一层全是绝对定位的悬浮控件，没有能装内联提示的正常文档流）。
+   right 沿用 .ctoolbar-mini 的 178px，跟它对齐；随知识库抽屉展开一起左移，见下面
+   .app.wiki-open 那条——否则抽屉开着时这条提示会被压在抽屉底下，用户看不见。 */
+.csnap-err {
+  position: absolute;
+  right: 178px;
+  bottom: 54px;
+  z-index: 25;
+  max-width: 280px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.14);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
 }

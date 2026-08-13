@@ -160,6 +160,8 @@ export interface CanvasSlice {
   addShape: (shape: Omit<CanvasShape, 'id'>) => void
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void
+  /** 清空所有标记（快照后用）。一次性，不做撤销 —— 清空是用户在弹窗里按下的，不是副作用 */
+  clearShapes: () => void
   renameFrame: (id: string, name: string) => void
   /** 打/清状态标签（传 null 清除 = 回到未分类）。
    *  **实际写的是项目**（见 shared/types 的 ProjectStatus）——画布上的入口手里只有 frameId，

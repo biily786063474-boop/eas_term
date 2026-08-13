@@ -445,3 +445,11 @@ export const ChipIcon = (p: IconProps): JSX.Element => (
     <path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4" />
   </Svg>
 )
+
+/** 相机：画板快照按钮 */
+export const CameraIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
+    <circle cx="12" cy="13" r="3" />
+  </Svg>
+)

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
-import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon } from '../../ui/Icons'
+import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon, CameraIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
@@ -88,6 +88,13 @@ export function CanvasStage(): JSX.Element {
     path: string
     place: (pane: PaneState) => void
   } | null>(null)
+  // 快照失败提示（点一下消失，同 Sidebar 的 ws-inline-error 那种）
+  const [snapErr, setSnapErr] = useState<string | null>(null)
+  // 拍完之后待确认「要不要清掉标记」——数字是拍照那一刻画布上的标记数，弹窗由 Task 5 接手渲染
+  const [pendingClear, setPendingClear] = useState<number | null>(null)
+  // 防连点：主进程虽已有并发互斥，但重复点击仍会排出多张几乎相同的图、
+  // 也可能让后一次调用把前一次还没走完的 .snapshotting 提前摘掉——按钮层必须自己挡一道
+  const [snapBusy, setSnapBusy] = useState(false)
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
   const addFileNode = useStore((s) => s.addFileNode)
@@ -752,6 +759,54 @@ export function CanvasStage(): JSX.Element {
     })
   }
 
+  // 选中的工作区属于哪个项目。没选中 → null → 按钮禁用
+  const snapProject = useMemo(() => {
+    const fid =
+      canvasSel.find((k) => k.startsWith('f:'))?.slice(2) ??
+      canvasSel.find((k) => k.startsWith('n:'))?.split(':')[1]
+    if (!fid) return null
+    const f = frames.find((x) => x.id === fid)
+    if (!f?.projectId) return null
+    return projects.find((p) => p.id === f.projectId) ?? null
+  }, [canvasSel, frames, projects])
+
+  const takeSnapshot = async (): Promise<void> => {
+    if (!snapProject || snapBusy) return
+    const el = viewportRef.current
+    if (!el) return
+    setSnapBusy(true)
+    const root = document.querySelector('.app')
+    try {
+      // 拍照前先结束绘制态：正在拖的草稿和正在编辑的便签都不该进图
+      setDraft(null)
+      setEditingSticky(null)
+      root?.classList.add('snapshotting')
+      // 等两帧：加类会触发一次样式重算+绘制，只等一帧的话可能拍到还没藏掉的那一帧
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const r = el.getBoundingClientRect()
+      const res = await window.api.canvas.snapshot(snapProject.path, {
+        x: r.left,
+        y: r.top,
+        width: r.width,
+        height: r.height
+      })
+      if (!res.ok || !res.path) {
+        setSnapErr(res.error ?? '快照失败')
+        return
+      }
+      useStore.getState().setLastSnapshot({ path: res.path, projectId: snapProject.id, at: Date.now() })
+      setPendingClear(useStore.getState().canvas.shapes.length)
+    } catch (e) {
+      // 正常的业务失败走上面 res.ok 分支；这里接的是 IPC 本身抛出的意外情况，
+      // 同样要给用户看得见的提示，不能只 console.error 完事
+      setSnapErr(e instanceof Error ? e.message : '快照失败')
+    } finally {
+      // 不管成功 / 业务失败 / 异常，浮层都必须摘回来——漏了这一步用户的界面会永久少半个 UI
+      root?.classList.remove('snapshotting')
+      setSnapBusy(false)
+    }
+  }
+
   // 这份 renderShape 不是 CanvasShapeLayer.tsx 那份的残留重复——两处都留着是有意的。
   // 这里只画 draft（正在拖出来的草稿，永远 isDraft=true，走不到选中/拖动/编辑分支）；
   // 成品标记已经搬去 CanvasShapeLayer，渲染在 PaneLayer 之后才压得住活终端（见该文件顶部注释）。
@@ -1045,7 +1100,27 @@ export function CanvasStage(): JSX.Element {
             <path d="M20 15h-5v5" />
           </svg>
         </button>
+        <button
+          className="ctool"
+          disabled={!snapProject || snapBusy}
+          data-tip={snapProject ? '快照当前画板' : '请在画板中选择一个工作区'}
+          // 这颗按钮必须挡住 mousedown 冒泡：不挡的话会先落到 onViewportDown，
+          // tool==='select' 时那边会当成一次空白框选、把 canvasSel 清空——
+          // 等 click 真正触发 takeSnapshot 时 snapProject 已经变回 null，
+          // 按钮形同虚设（真机测试实测到的坑：点了没反应，不报错也不截图）。
+          // 同排其余四个工具按钮没这条是因为它们的行为不依赖 canvasSel，这颗必须有。
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => void takeSnapshot()}
+        >
+          <CameraIcon size={13} />
+        </button>
       </div>
+
+      {snapErr && (
+        <div className="csnap-err" onClick={() => setSnapErr(null)}>
+          {snapErr}
+        </div>
+      )}
 
       <CanvasMiniMap />
       <CanvasRunMonitor />
