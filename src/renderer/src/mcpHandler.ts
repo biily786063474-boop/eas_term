@@ -10,6 +10,7 @@ import type { PaneState } from './layout'
 import type { ArchiveItem, DirEntry } from '../../shared/types'
 import { askForSecret } from './features/workspace/secretRequest'
 import { liveMaximizedNode } from './store/canvas/selectors'
+import { runCanvasSnapshot, snapshotBlockedReason } from './features/canvas/snapshotRun'
 
 interface Ctx {
   ptyId?: string
@@ -226,32 +227,50 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       }
     }
 
+    // 用户那边正开着「拍完要不要清掉标记」的确认框时不能拍：那个弹窗 portal 在
+    // document.body 上、z-index 3500，藏浮层的 16 条规则够不着它（相机按钮有 disabled
+    // 挡这一下，MCP 这条路原来没有对应守卫）。等他处理完再说。
+    const blocked = snapshotBlockedReason()
+    if (blocked) {
+      return {
+        taken: false,
+        hint: blocked + '告诉用户先在画板上把那个确认框处理掉（保留 / 清掉），再重新调用这个工具。'
+      }
+    }
+
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
     const el = await waitForCanvasViewport()
     if (!el) throw new Error('画板视口还没准备好，请重试一次')
 
-    const root = document.querySelector('.app')
-    useStore.getState().setEditingSticky(null) // 别把正在编辑的便签拍进图里
-    root?.classList.add('snapshotting') // 藏工具条/抽屉/小地图等浮层，和按钮走同一套 CSS（canvas.css）
-    try {
-      // 等两帧让隐藏样式真正生效——只等一帧可能拍到还没藏掉的那一帧（同按钮 takeSnapshot 的注释）
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-      const rect = el.getBoundingClientRect()
-      const res = await window.api.canvas.snapshot(project.path, {
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height
-      })
-      if (!res.ok || !res.path) throw new Error(res.error ?? '快照失败')
-      useStore.getState().setLastSnapshot({ path: res.path, projectId: project.id, at: Date.now() })
-      // 只在用户明确设过「每次都清」时才清标记——这是他自己的既有选择，agent 拍的这张同样算数；
-      // 没设过、或设的是「每次都留」都不碰标记，agent 这条路不弹「清不清」的确认框（那是按钮专属的 UI）
-      const pref = (await window.api.prefs.get()).clearShapesAfterSnapshot
-      if (pref === 'clear') useStore.getState().clearShapes()
-      return { taken: true, path: res.path, project: project.name }
-    } finally {
-      root?.classList.remove('snapshotting')
+    // 藏浮层 / 等两帧 / 量 rect / 落盘 与相机按钮共用同一份实现（snapshotRun.ts）：
+    // 那里的 .snapshotting 是引用计数的，两条路同时拍也不会互相把浮层提前放出来。
+    // 正在编辑的便签也在那里收尾（先把文字写回 shape 再卸载，别让这次编辑白打）。
+    const res = await runCanvasSnapshot(el, project.path)
+    if (!res.ok || !res.path) throw new Error(res.error ?? '快照失败')
+    useStore.getState().setLastSnapshot({ path: res.path, projectId: project.id, at: Date.now() })
+    // 只在用户明确设过「每次都清」时才清标记——这是他自己的既有选择，agent 拍的这张同样算数；
+    // 没设过、或设的是「每次都留」都不碰标记，agent 这条路不弹「清不清」的确认框（那是按钮专属的 UI）
+    const pref = (await window.api.prefs.get()).clearShapesAfterSnapshot
+    let shapesCleared = 0
+    if (pref === 'clear') {
+      // 清了几个要如实报出去：clearShapes 明确「不做撤销」，而用户当初勾「记住 + 清掉」
+      // 时的语境是「**我**按快门时」，不是「agent 拍照时」。返回值不提这件事的话，
+      // agent 连告诉用户一句「你的标记被这次拍照清掉了」的依据都没有。
+      shapesCleared = useStore.getState().canvas.shapes.length
+      useStore.getState().clearShapes()
+    }
+    return {
+      taken: true,
+      path: res.path,
+      project: project.name,
+      shapesCleared,
+      ...(shapesCleared > 0
+        ? {
+            hint:
+              `用户设过「拍完清掉标记」，所以这次顺带把画板上的 ${shapesCleared} 个标记清掉了（不可撤销）。` +
+              '在回复里跟用户说一句，别让他以为标记还在。'
+          }
+        : {})
     }
   }
 

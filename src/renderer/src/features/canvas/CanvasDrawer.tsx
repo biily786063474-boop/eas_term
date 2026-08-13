@@ -18,6 +18,7 @@ import { CanvasContextMenu } from './CanvasContextMenu'
 import { projectMenuItems } from '../workspace/projectMenu'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { shellQuote } from './shellQuote'
+import { elementUnderPoint } from './hitTest'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
@@ -197,7 +198,8 @@ export function CanvasDrawer(): JSX.Element {
       document.querySelectorAll('.cframe.drop-target').forEach((el) => el.classList.remove('drop-target'))
     const targetUnder = (ev: MouseEvent): Element | null => {
       if (ghost) ghost.style.display = 'none'
-      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      // 不用 elementFromPoint：标记层盖在终端 / Frame 之上，会把落点全接走（见 hitTest.ts）
+      const under = elementUnderPoint(ev.clientX, ev.clientY)
       if (ghost) ghost.style.display = ''
       return under
     }
@@ -251,7 +253,8 @@ export function CanvasDrawer(): JSX.Element {
         .forEach((el) => el.classList.remove('drop-target'))
     const targetUnder = (ev: MouseEvent): Element | null => {
       if (ghost) ghost.style.display = 'none'
-      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      // 不用 elementFromPoint：标记层盖在终端 / Frame 之上，会把落点全接走（见 hitTest.ts）
+      const under = elementUnderPoint(ev.clientX, ev.clientY)
       if (ghost) ghost.style.display = ''
       return under
     }
@@ -331,7 +334,8 @@ export function CanvasDrawer(): JSX.Element {
       document.querySelectorAll('.cframe.drop-target').forEach((el) => el.classList.remove('drop-target'))
     const targetUnder = (ev: MouseEvent): Element | null => {
       if (ghost) ghost.style.display = 'none'
-      const under = document.elementFromPoint(ev.clientX, ev.clientY)
+      // 不用 elementFromPoint：标记层盖在终端 / Frame 之上，会把落点全接走（见 hitTest.ts）
+      const under = elementUnderPoint(ev.clientX, ev.clientY)
       if (ghost) ghost.style.display = ''
       return under
     }

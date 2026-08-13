@@ -14,7 +14,7 @@
 // 图片：粘贴或拖进来，先在框上方排成缩略图，⌘↵ 时把**文件路径**连同文字一起发出去
 // （agent 认的是本地路径）。为什么不沿用剪贴板那条老路：它只撑得住一张图，
 // 而且你粘完图又复制了别的东西，发送时读到的就是错的。
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import { ImageIcon } from '../../ui/Icons'
@@ -92,12 +92,19 @@ export function TerminalInput({
   // 刚拍的画板快照：浮层只在同项目的终端里出现（见 uiSlice 里 lastSnapshot 的注释）
   const lastSnapshot = useStore((s) => s.lastSnapshot)
   const setLastSnapshot = useStore((s) => s.setLastSnapshot)
-  // 这个终端属于哪个项目。Sidebar 和 projectMenu 里已经是这个查法，沿用同一套
-  const tabs = useStore((s) => s.tabs)
-  const myProjectId = useMemo(() => {
-    const tab = tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))
-    return tab?.projectId ?? null
-  }, [tabs, leafId])
+  // 这个终端属于哪个项目。Sidebar 和 projectMenu 里已经是这个查法，沿用同一套。
+  //
+  // **必须把 projectId 算在 selector 里返回 primitive**，不能写成
+  // `useStore((s) => s.tabs)` 再 useMemo：那是按数组引用比较的响应式订阅，而
+  // PaneLayer 会把所有 tab 的所有 leaf 都挂上（隐藏的也在），N 个终端就有 N 个
+  // TerminalInput 各订阅一次 —— tabs 引用一变（setSplitRatio 拖分隔条时每次
+  // mousemove 都造新数组、setActiveLeaf 同理）就是 N 次重渲染 + N 次全树遍历，O(N²)。
+  // 同一个坑仓库里已经防过两次（tabsSlice.ts:251 setTabTitle 标题没变时短路、
+  // TerminalView.tsx:567 特意用非响应式的 getState），这里不能再开一个口子。
+  // 返回 string|null 之后 zustand 按值比较：项目没变就不重渲染。
+  const myProjectId = useStore(
+    (s) => s.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))?.projectId ?? null
+  )
 
   /** 关终端时把「还没发出去」的粘贴图删掉。发出去的不能删——agent 还要读。
    *  用 ref 是因为清理函数只在卸载时跑一次，闭包里的 imgs 会是初值。 */

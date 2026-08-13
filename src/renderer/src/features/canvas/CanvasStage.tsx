@@ -34,6 +34,7 @@ import { collectLeaves } from '../../layout'
 import './canvas.css'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
+import { runCanvasSnapshot, setClearDialogOpen } from './snapshotRun'
 
 const SCALE_MIN = 0.2
 const SCALE_MAX = 2.2
@@ -804,25 +805,17 @@ export function CanvasStage(): JSX.Element {
     const el = viewportRef.current
     if (!el) return
     setSnapBusy(true)
-    const root = document.querySelector('.app')
     try {
-      // 拍照前先结束绘制态：正在拖的草稿和正在编辑的便签都不该进图。
+      // 拍照前先结束绘制态：正在拖的草稿不该进图（正在编辑的便签由 runCanvasSnapshot
+      // 统一收尾——它要先把文字存回 shape 再卸载，见那边的 commitEditingSticky）。
       // 上一次失败留下的红字提示也要在这清掉——不清的话："失败→用户没点掉→
       // 直接重试→这次成功"这条路径会让上一次的错误文案原样出现在这张成功的截图里
       // （.csnap-err 是 .canvas-viewport 的直接子元素，必在截图范围内）。
       setDraft(null)
-      setEditingSticky(null)
       setSnapErr(null)
-      root?.classList.add('snapshotting')
-      // 等两帧：加类会触发一次样式重算+绘制，只等一帧的话可能拍到还没藏掉的那一帧
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-      const r = el.getBoundingClientRect()
-      const res = await window.api.canvas.snapshot(snapProject.path, {
-        x: r.left,
-        y: r.top,
-        width: r.width,
-        height: r.height
-      })
+      // 藏浮层 / 等两帧 / 量 rect / 落盘 全在 runCanvasSnapshot 里，和 MCP 那条路共用
+      // 同一份实现与同一个 .snapshotting 引用计数（见 snapshotRun.ts 顶部注释）
+      const res = await runCanvasSnapshot(el, snapProject.path)
       if (!res.ok || !res.path) {
         setSnapErr(res.error ?? '快照失败')
         return
@@ -842,11 +835,18 @@ export function CanvasStage(): JSX.Element {
       // 同样要给用户看得见的提示，不能只 console.error 完事
       setSnapErr(e instanceof Error ? e.message : '快照失败')
     } finally {
-      // 不管成功 / 业务失败 / 异常，浮层都必须摘回来——漏了这一步用户的界面会永久少半个 UI
-      root?.classList.remove('snapshotting')
       setSnapBusy(false)
     }
   }
+
+  // 「拍完要不要清掉标记」确认框开着时，agent 那条 MCP 拍照路径也要停手：
+  // 那个弹窗 portal 在 document.body 上、z-index 3500，16 条隐藏规则全是
+  // `.app.snapshotting xxx` 的后代选择器，够不着它，硬拍会把弹窗原样拍进图。
+  // 按钮自己有 disabled 挡着（下面那颗相机），MCP 只能靠这个模块级开关。
+  useEffect(() => {
+    setClearDialogOpen(pendingClear !== null)
+    return () => setClearDialogOpen(false)
+  }, [pendingClear])
 
   /** 「清掉标记」确认框的两个按钮共用这一个收尾：真正清不清、记不记，都在这一处判断 */
   const finishClear = (choice: 'keep' | 'clear'): void => {

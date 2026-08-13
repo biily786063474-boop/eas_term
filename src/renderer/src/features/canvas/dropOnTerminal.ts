@@ -10,6 +10,7 @@
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import { shellQuote } from './shellQuote'
+import { elementUnderPoint } from './hitTest'
 
 /**
  * @param ev mouseup 事件，用它的屏幕坐标判定落点
@@ -18,7 +19,9 @@ import { shellQuote } from './shellQuote'
  * @returns 是否真的插入了（落点是终端 && projectPath 有值）
  */
 export function dropModuleOnTerminal(ev: MouseEvent, projectPath: string | null | undefined): boolean {
-  const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null
+  // elementUnderPoint 而不是 elementFromPoint：标记层盖在终端之上，
+  // 用后者的话「圈起来的那个终端」正好是永远拖不进去的那个（见 hitTest.ts）
+  const el = elementUnderPoint(ev.clientX, ev.clientY) as HTMLElement | null
   // 判据是 data-leaf-id 不是 pty id —— PaneLayer 上挂的是前者
   const termPane = el?.closest('.pane[data-leaf-id]') as HTMLElement | null
   if (!termPane?.dataset.leafId) return false

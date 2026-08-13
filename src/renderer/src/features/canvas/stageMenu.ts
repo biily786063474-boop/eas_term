@@ -8,6 +8,31 @@ import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
+import { elementUnderPoint } from './hitTest'
+
+/** 「关闭终端」这一项。两处要用：直接右键终端，以及标记盖住终端时的图形菜单。 */
+function closeTerminalItem(leafId: string): CanvasMenuItem {
+  return {
+    label: '关闭终端',
+    danger: true,
+    onClick: () => {
+      const st = useStore.getState()
+      let fid = ''
+      let nid = ''
+      for (const f of st.canvas.frames) {
+        const n = f.nodes.find((x) => x.leafId === leafId)
+        if (n) {
+          fid = f.id
+          nid = n.id
+          break
+        }
+      }
+      if (fid && nid) st.removeNode(fid, nid)
+      const tab = st.tabs.find((tb) => collectLeaves(tb.root).some((l) => l.id === leafId))
+      if (tab) st.closeLeaf(tab.id, leafId)
+    }
+  }
+}
 
 export interface StageMenuDeps {
   /** 便签进入编辑态 */
@@ -21,11 +46,18 @@ export interface StageMenuDeps {
 /** 返回 null = 右键落在画布之外，不该弹我们的菜单 */
 export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuItem[] | null {
   const t = e.target as HTMLElement
-  if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer')) return null
+  // 标记层（.canvas-shape-layer）是 .canvas-viewport / .pane-layer 的**兄弟**，
+  // 不在它俩里面。少了第三条的话，右键落在任何一个标记上都会在入口被判成
+  // 「落在画布之外」→ 走 Electron 默认系统菜单，图形分支（编辑 / 删除）整体不可达；
+  // 标记盖住终端时，那块区域连「关闭终端」也一起没了。
+  if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer') && !t.closest('.canvas-shape-layer'))
+    return null
   // 终端输入框有自己的右键菜单（待办清单）。不排除的话，画布模式下在输入框上右键
   // 会命中下面 `.pane[data-leaf-id]` 那一分支，弹出「关闭终端」——和输入框自己弹出的
   // 菜单在同一个坐标叠两份出来，用户点到的到底是哪个全看谁的 DOM 更靠后，纯随缘。
   if (t.closest('.term-input')) return null
+  // 便签编辑态的 <textarea> 同理：那里要的是系统的复制/粘贴菜单，不是「新建便签」
+  if (t.closest('.cshape.editing')) return null
   const { setEditingSticky, setEditingFrame, viewportEl } = deps
   const st = useStore.getState()
   const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
@@ -34,28 +66,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   const frameEl = t.closest('.cframe') as HTMLElement | null
   let items: CanvasMenuItem[]
   if (paneEl?.dataset.leafId) {
-    const leafId = paneEl.dataset.leafId
-    let fid = ''
-    let nid = ''
-    for (const f of st.canvas.frames) {
-      const n = f.nodes.find((x) => x.leafId === leafId)
-      if (n) {
-        fid = f.id
-        nid = n.id
-        break
-      }
-    }
-    items = [
-      {
-        label: '关闭终端',
-        danger: true,
-        onClick: () => {
-          if (fid && nid) st.removeNode(fid, nid)
-          const tab = st.tabs.find((tb) => collectLeaves(tb.root).some((l) => l.id === leafId))
-          if (tab) st.closeLeaf(tab.id, leafId)
-        }
-      }
-    ]
+    items = [closeTerminalItem(paneEl.dataset.leafId)]
   } else if (nodeEl?.dataset.nodeId && nodeEl.dataset.frameId) {
     const fid = nodeEl.dataset.frameId
     const nid = nodeEl.dataset.nodeId
@@ -76,9 +87,18 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   } else if (shapeEl?.dataset.sid) {
     const sid = shapeEl.dataset.sid
     const shape = st.canvas.shapes.find((s2) => s2.id === sid)
+    // 标记是 pointer-events:auto 的实心盒子、又盖在终端之上：它罩住的那块区域里，
+    // 右键**全部**归标记。底下要真是个终端，不把「关闭终端」带上的话，
+    // 用户就得先把标记挪开才能右键那个终端——所以两样都给。
+    const leafBelow = (
+      elementUnderPoint(e.clientX, e.clientY)?.closest('.pane[data-leaf-id]') as HTMLElement | null
+    )?.dataset.leafId
     items = [
       ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
-      { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
+      { label: '删除', danger: true, onClick: () => st.removeShape(sid) },
+      ...(leafBelow
+        ? [{ sep: true, label: '', onClick: (): void => {} }, closeTerminalItem(leafBelow)]
+        : [])
     ]
   } else if (frameEl?.dataset.fid) {
     const fid = frameEl.dataset.fid
