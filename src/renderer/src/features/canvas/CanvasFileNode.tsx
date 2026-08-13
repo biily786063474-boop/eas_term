@@ -7,7 +7,7 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon } from '../../ui/Icons'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
@@ -202,6 +202,13 @@ export function CanvasFileNode({
               onClick={() => void window.api.clipboard.writeText(relPath)}
             >
               <CopyIcon size={11} />
+            </button>
+            <button
+              className="cfile-btn"
+              data-tip="在访达中显示"
+              onClick={() => void window.api.fs.showInFolder(absPath)}
+            >
+              <FolderIcon size={11} />
             </button>
           </>
         )}
