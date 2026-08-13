@@ -5,6 +5,7 @@ import crypto from 'crypto'
 import type { Project, ProjectStatus } from '../shared/types'
 import { planRename } from './projectPaths'
 import { wikiPath } from './wiki/paths'
+import { realResolve } from './fsGuard'
 import type { RenameFolderResult } from '../shared/types'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'projects.json')
@@ -22,27 +23,6 @@ function loadProjects(): Project[] {
 function saveProjects(list: Project[]): void {
   fs.mkdirSync(path.dirname(storeFile()), { recursive: true })
   fs.writeFileSync(storeFile(), JSON.stringify(list, null, 2), 'utf8')
-}
-
-/** symlink 会让字符串前缀比较形同虚设——这是 fsGuard.ts:36-50 的 realResolve 解过的
- *  同一个问题。这里独立实现一份而不是从 fsGuard.ts 导入/导出：那个文件管的是「项目内部」
- *  的写边界，这里管的是项目根本身要不要改名，是两件事，不该互相依赖，也不碰 fsGuard.ts。
- *  目标可能不存在（知识库配置指向的路径已经被删），这时退到「最深的那个真实存在的
- *  祖先」做 realpath，再把剩下的段落拼回去。 */
-function realResolveForRename(target: string): string {
-  const abs = path.resolve(target)
-  let cur = abs
-  const tail: string[] = []
-  for (;;) {
-    try {
-      return tail.length ? path.join(fs.realpathSync(cur), ...tail) : fs.realpathSync(cur)
-    } catch {
-      const parent = path.dirname(cur)
-      if (parent === cur) return abs
-      tail.unshift(path.basename(cur))
-      cur = parent
-    }
-  }
 }
 
 export function registerProjectHandlers(): void {
@@ -125,11 +105,12 @@ export function registerProjectHandlers(): void {
       if (!plan.ok) return { ok: false, error: plan.error }
 
       // planRename 只做字符串前缀比较，解不了 symlink（它刻意不碰文件系统，见
-      // projectPaths.ts 顶部注释）。这里在动盘之前补一道等价解析：两边都落到
-      // realpath 之后再判一次「知识库是不是在这个项目里」，是就拒绝。
+      // projectPaths.ts 顶部注释）。这里在动盘之前补一道等价解析：借 fsGuard.ts 的
+      // realResolve 把两边都落到 realpath 之后再判一次「知识库是不是在这个项目里」，
+      // 是就拒绝。
       if (wp) {
-        const realOld = realResolveForRename(plan.oldPath)
-        const realWiki = realResolveForRename(wp)
+        const realOld = realResolve(plan.oldPath)
+        const realWiki = realResolve(wp)
         if (realWiki === realOld || realWiki.startsWith(realOld + path.sep)) {
           return {
             ok: false,
@@ -139,8 +120,10 @@ export function registerProjectHandlers(): void {
         }
       }
 
-      // 盘上先改。存在性检查放在 rename 之前只是为了给一句人话错误，
-      // 真正的原子性靠 fs.rename 本身（它在同名已存在时会失败）
+      // 盘上先改。这道 existsSync 不是可有可无的人话包装，是真正的保护：
+      // POSIX rename(2) 在目标恰好是个空目录时会静默替换掉它、不报错，
+      // fs.promises.rename 原样透传这个语义——没有这道前置检查，目标正好是个空文件夹
+      // 时会被悄悄顶替，而不是像想象中那样「重名了 rename 自己会失败」。
       if (fs.existsSync(plan.newPath)) {
         return { ok: false, error: '同级已经有一个叫这个名字的文件或文件夹' }
       }
@@ -150,8 +133,13 @@ export function registerProjectHandlers(): void {
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
 
-      // 盘上成功了才动配置
-      const p = list.find((x) => x.id === id)
+      // 盘上成功了才动配置。上面那个 await 期间，别的 projects:* 调用
+      // （remove / setStatus / rename）完全可能已经落过盘——继续用 await 之前读到的
+      // 那份旧 list 整体写回，会把它们的改动一起覆盖掉。这里重新读一遍最新的，
+      // 用 id 重新 find（不复用上面 list 里那个对象引用），「读—改—写」之间
+      // 不再跨任何 await，避免同样的问题在这里重演。
+      const freshList = loadProjects()
+      const p = freshList.find((x) => x.id === id)
       if (p) {
         const past = [plan.oldPath, ...(p.pastPaths ?? [])].filter(
           (v, i, a) => a.indexOf(v) === i // 去重：改回原名再改回去会重复
@@ -160,8 +148,20 @@ export function registerProjectHandlers(): void {
         p.path = plan.newPath
         if (plan.renameDisplayName) p.name = path.basename(plan.newPath)
       }
-      saveProjects(list)
-      return { ok: true, projects: list }
+      try {
+        saveProjects(freshList)
+      } catch (err) {
+        // 盘上已经改名成功，只是这一步没能落盘——全函数里唯一一种「盘/配置不一致」
+        // 的失败，必须走同一个结构化返回把话说清楚，不能变成一个未捕获的 reject
+        // （调用方是按 { ok, error } 的类型签名写 if(!r.ok) 的，reject 永远进不了那条分支，
+        // 表现为一次没人接住的 promise rejection，用户什么提示都看不到）。
+        // 不做自动回滚：把已经改名的目录再改回去，失败时只会制造更糟的中间态。
+        return {
+          ok: false,
+          error: `文件夹已经改名成功，但保存项目列表失败（${err instanceof Error ? err.message : String(err)}）——请检查磁盘空间，必要时重启应用`
+        }
+      }
+      return { ok: true, projects: freshList }
     }
   )
 }

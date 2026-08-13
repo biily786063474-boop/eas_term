@@ -33,7 +33,7 @@ function projectRoots(): string[] {
 /** symlink 会让「字符串前缀比对」形同虚设（项目里放一个指向 / 的软链就绕过了），
  *  所以必须解析到真实路径再比。目标可能还不存在（新建文件/目录的场景），
  *  这时退到「最深的那个真实存在的祖先」做 realpath，再把剩下的段落拼回去。 */
-function realResolve(target: string): string {
+export function realResolve(target: string): string {
   const abs = path.resolve(target) // 顺手把 . 和 .. 规范掉
   let cur = abs
   const tail: string[] = []
