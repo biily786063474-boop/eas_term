@@ -6,6 +6,7 @@ import { DiffView } from '../editor/DiffView'
 import { RefreshIcon, GitBranchIcon } from '../../ui/Icons'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { useStore } from '../../store'
+import { ErrorBoundary } from '../../ui/ErrorBoundary'
 
 const ROW_H = 30 // 提交表行高（固定，保证轨道图与各列对齐）
 const LANE_W = 18 // 主视图轨道列宽
@@ -35,7 +36,7 @@ function segPath(s: GraphSegment, cx: (l: number) => number): string {
   return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`
 }
 
-export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
+function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
   const [log, setLog] = useState<GitCommit[]>([])
   const [branch, setBranch] = useState<string>('')
   const [isRepo, setIsRepo] = useState<boolean>(true)
@@ -111,6 +112,18 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
     window.addEventListener('mouseup', up)
   }
 
+  // 拖分隔条时每次 mousemove 都会重渲染，lane 布局只需随 log 变化重算。
+  //
+  // **这个 useMemo 必须留在「不是 git 仓库」的提前返回之前。**
+  // isRepo 初值是 true → 首帧渲染 14 个 hook；refresh() 异步跑完发现不是 git 目录 →
+  // setIsRepo(false) → 下一帧在提前返回处只渲染 13 个 → React #300
+  // （Rendered fewer hooks than expected）。而这一崩是**渲染阶段**崩：
+  // 版本管理没有自己的错误边界时会一路冒到根级边界，整个 <App/> 连同所有终端一起卸载；
+  // 更糟的是「重新加载」救不回来——版本管理是持久化的画布节点，重载 → 画布还原 →
+  // 节点重新挂载 → 再判非 git → 再崩，唯一出路「重置画布」会清掉用户全部画布布局。
+  // computeGraphRows([]) 对空数组是安全的，放在这里不多花什么。
+  const rows = useMemo(() => computeGraphRows(log), [log])
+
   if (!isRepo) {
     return (
       <div className="pane-placeholder">
@@ -120,8 +133,6 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
     )
   }
 
-  // 拖分隔条时每次 mousemove 都会重渲染，lane 布局只需随 log 变化重算
-  const rows = useMemo(() => computeGraphRows(log), [log])
   const maxLanes = Math.min(rows.reduce((m, r) => Math.max(m, r.laneCount), 1), MAX_LANES)
   const gutterW = maxLanes * LANE_W
   const cx = (l: number): number => Math.min(l, maxLanes - 1) * LANE_W + LANE_W / 2
@@ -247,5 +258,46 @@ export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
         />
       )}
     </div>
+  )
+}
+
+/** 版本管理崩溃时的兜底：只掉这一个模块，终端和画布照常。复用 .pane-placeholder 的排版 */
+function HistoryCrash({ error, reset }: { error: Error; reset: () => void }): JSX.Element {
+  return (
+    <div className="pane-placeholder">
+      <div>版本管理遇到了一个错误</div>
+      <div className="pane-placeholder-hint">
+        不影响终端和画布的其它模块，可以直接删掉这个模块或重试。
+      </div>
+      <div className="pane-placeholder-hint">{error.message || String(error)}</div>
+      <div className="err-btns">
+        <button className="err-btn" onClick={reset}>
+          重试
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 对外只暴露这个包了错误边界的版本。
+ *
+ * 边界包在**外面**是必须的：React 的边界只接住子树的错误，接不住自己的。
+ * 而且必须包在这里、不是包在两个调用点（画布组件 registry.tsx + 分屏 PaneView.tsx）——
+ * 包在调用点的话，以后第三个地方用到 HistoryView 就会漏。
+ *
+ * 为什么值得单独一层：这个模块渲染时崩掉的话，没有局部边界就会一路冒到 main.tsx 的
+ * 根级边界，把整个 <App/>（含所有终端）卸载掉；而它又是**持久化**的画布/分屏节点，
+ * 重载后会重新挂载、再崩一次，用户只能靠「重置画布」逃出来（代价是全部画布布局）。
+ * 同一个道理见 GanttErrorBoundary.tsx 顶部注释。
+ */
+export function HistoryView({ cwd }: { cwd: string }): JSX.Element {
+  return (
+    <ErrorBoundary
+      label="history"
+      fallback={(error, reset) => <HistoryCrash error={error} reset={reset} />}
+    >
+      <HistoryViewInner cwd={cwd} />
+    </ErrorBoundary>
   )
 }
