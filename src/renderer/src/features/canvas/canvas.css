@@ -160,7 +160,7 @@
   position: absolute;
   right: 16px;
   bottom: 14px;
-  /* 右侧资源抽屉展开时整体左移让位（见 .app.res-open）。跟抽屉同一条弹簧曲线。
+  /* 右侧知识库抽屉展开时整体左移让位（见 .app.wiki-open）。跟抽屉同一条弹簧曲线。
      opacity 单独给一条短曲线：全屏让位时用（见 .on-max），弹簧的 0.5s 用在淡出上太拖沓 */
   transition:
     transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -2031,7 +2031,7 @@
   position: absolute;
   left: 14px;
   bottom: 14px;
-  /* 知识库抽屉展开时右移让位（见 .app.wiki-open）。跟着抽屉那条弹簧曲线走，
+  /* 左侧资源抽屉展开时右移让位（见 .app.res-open）。跟着抽屉那条弹簧曲线走，
      不然一个滑一个跳，看着像两个东西 */
   transition: left 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 41;
@@ -3059,21 +3059,24 @@
   border-top: 1px solid var(--glass-border);
 }
 
-/* 知识库抽屉展开 → 左下角缩略图右移到抽屉外侧（8 + 250 + 8）。
+/* 左侧资源抽屉展开 → 左下角缩略图右移到抽屉外侧（8 + 238 + 8）。
    展开态和收起态两个元素都要管——缩略图默认是收起的那个小按钮，
-   只写展开态的话实际用起来根本不动。 */
-.app.wiki-open .canvas-minimap,
-.app.wiki-open .canvas-minimap-mini {
-  left: 266px;
+   只写展开态的话实际用起来根本不动。
+   ⚠️ 触发类和距离是**跟着抽屉在哪一侧走的**，不是跟着抽屉的名字走：
+   2026-08-13 左右抽屉对调时，这两条规则连同下面那条都要改触发类**和数字**
+   （两个抽屉不一样宽：资源 238、知识库 250），只换类不换数字会差 12px。 */
+.app.res-open .canvas-minimap,
+.app.res-open .canvas-minimap-mini {
+  left: 254px;
 }
 
-/* 右侧资源抽屉展开 → 贴着右边的基本操作条 + 缩放条整体左移，避开抽屉。
+/* 右侧知识库抽屉展开 → 贴着右边的基本操作条 + 缩放条整体左移，避开抽屉。
    用 transform 而不是各改各的 right：两条栏是并排的，只要挪同样的距离
-   相对关系就还在，只需维护一个数字（抽屉 238 宽，让开它就够）。
-   逻辑同左边的 .app.wiki-open 之于缩略图。 */
-.app.res-open .canvas-zoombar,
-.app.res-open .ctoolbar-mini {
-  transform: translateX(-238px);
+   相对关系就还在，只需维护一个数字（抽屉 250 宽，让开它就够）。
+   逻辑同左边的 .app.res-open 之于缩略图。 */
+.app.wiki-open .canvas-zoombar,
+.app.wiki-open .ctoolbar-mini {
+  transform: translateX(-250px);
 }
 
 /* 模块「最大化沉浸」时这两条要退场。
