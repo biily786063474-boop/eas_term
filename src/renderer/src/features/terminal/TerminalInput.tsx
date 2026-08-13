@@ -14,7 +14,10 @@
 // 图片：粘贴或拖进来，先在框上方排成缩略图，⌘↵ 时把**文件路径**连同文字一起发出去
 // （agent 认的是本地路径）。为什么不沿用剪贴板那条老路：它只撑得住一张图，
 // 而且你粘完图又复制了别的东西，发送时读到的就是错的。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useStore } from '../../store'
+import { collectLeaves } from '../../layout'
+import { ImageIcon } from '../../ui/Icons'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { track } from '../notify/track'
@@ -86,6 +89,16 @@ export function TerminalInput({
   const todos = useTerminalTodos(leafId)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
 
+  // 刚拍的画板快照：浮层只在同项目的终端里出现（见 uiSlice 里 lastSnapshot 的注释）
+  const lastSnapshot = useStore((s) => s.lastSnapshot)
+  const setLastSnapshot = useStore((s) => s.setLastSnapshot)
+  // 这个终端属于哪个项目。Sidebar 和 projectMenu 里已经是这个查法，沿用同一套
+  const tabs = useStore((s) => s.tabs)
+  const myProjectId = useMemo(() => {
+    const tab = tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))
+    return tab?.projectId ?? null
+  }, [tabs, leafId])
+
   /** 关终端时把「还没发出去」的粘贴图删掉。发出去的不能删——agent 还要读。
    *  用 ref 是因为清理函数只在卸载时跑一次，闭包里的 imgs 会是初值。 */
   const imgsRef = useRef<PastedImg[]>([])
@@ -137,6 +150,22 @@ export function TerminalInput({
   const dropImg = (im: PastedImg): void => {
     if (!im.external) void window.api.pasteImage.remove(im.path)
     setImgs((v) => v.filter((x) => x !== im))
+  }
+
+  const takeSnapshotIn = async (): Promise<void> => {
+    if (!lastSnapshot) return
+    // external:true —— 文件在项目目录里、不归输入框管，松开缩略图时绝不能删它
+    const url = await window.api.fs.readImageFile(lastSnapshot.path)
+    setImgs((prev) => [
+      ...prev,
+      {
+        path: lastSnapshot.path,
+        url: url.ok ? url.dataUrl : '',
+        external: true,
+        name: lastSnapshot.path.split('/').pop() ?? 'snapshot.png'
+      }
+    ])
+    setLastSnapshot(null) // 已经带进去了，不用再浮着
   }
 
   const autoGrow = (el: HTMLTextAreaElement): void => {
@@ -256,6 +285,17 @@ export function TerminalInput({
     >
       <TerminalTodoPanel todos={todos} />
       {err && <div className="term-input-err">{err}</div>}
+      {lastSnapshot && myProjectId && lastSnapshot.projectId === myProjectId && (
+        <div className="term-snap-chip">
+          <button className="term-snap-take" onClick={() => void takeSnapshotIn()}>
+            <ImageIcon size={12} />
+            <span>刚拍的画板快照</span>
+          </button>
+          <button className="term-snap-x" onClick={() => setLastSnapshot(null)}>
+            ×
+          </button>
+        </div>
+      )}
       {imgs.length > 0 && (
         <div className="term-input-imgs">
           {imgs.map((im) => (

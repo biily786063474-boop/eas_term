@@ -336,6 +336,38 @@
   padding: 0 2px;
 }
 
+/* 刚拍的快照浮在输入框上方。压得比缩略图行更淡一点——它是个建议，不是已经带进去的东西 */
+.term-snap-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  font-size: 12px;
+}
+.term-snap-take {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+}
+.term-snap-x {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 /* ── 待办清单：输入框右键插入，挂在输入框上方 ──
    收起时只有一行头（标题+进度+删除），展开才铺开条目——十几个终端同时开着，
    默认收起省地方；里面还有条目就靠 max-height 自己滚，不撑高整个输入区。 */
