@@ -1,7 +1,8 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { candidateDirs } from './sessionPaths'
 import type { SessionIndex, SessionTurn, SessionExchange, SessionImage, SessionLast } from '../shared/types'
 
 // 读 Claude Code 的会话 transcript：~/.claude/projects/<编码后的cwd>/<sessionId>.jsonl
@@ -16,10 +17,52 @@ interface Parsed {
 }
 const cache = new Map<string, Parsed>() // key: jsonl 文件路径
 
-// Claude Code 的目录名把 cwd 里的非字母数字都换成 '-'
-function projectDir(cwd: string): string {
-  const enc = cwd.replace(/[^a-zA-Z0-9]/g, '-')
-  return path.join(os.homedir(), '.claude', 'projects', enc)
+/** 直接读 projects.json 而不是从 projects.ts 导入：那边注册 IPC，import 进来会有副作用。
+ *  和 fsGuard 用的是同一套做法（现读、不缓存），所以改名后立刻生效、不用重启。 */
+function pastPathsOf(cwd: string): string[] {
+  try {
+    const raw = fs.readFileSync(path.join(app.getPath('userData'), 'projects.json'), 'utf8')
+    const list = JSON.parse(raw) as { path?: string; pastPaths?: string[] }[]
+    if (!Array.isArray(list)) return []
+    return list.find((p) => p?.path === cwd)?.pastPaths ?? []
+  } catch {
+    return [] // 读不到就只找当前目录，退化但不出错
+  }
+}
+
+/** 这个 cwd 的 transcript 可能落在哪些目录，当前的排第一。
+ *  项目改过名的话，改名前的会话还在老编码目录里 —— 一起找，不搬别人的目录。 */
+function projectDirs(cwd: string): string[] {
+  const root = path.join(os.homedir(), '.claude', 'projects')
+  return candidateDirs(root, cwd, pastPathsOf(cwd))
+}
+
+/** 在候选目录里定位 transcript：优先按 sessionId 精确命中，否则取所有候选里 mtime 最新的。
+ *  三个 handler 原本各写一遍这套逻辑，收在这里，免得改一处漏两处。 */
+function findJsonl(cwd: string, sessionId?: string): string | null {
+  const dirs = projectDirs(cwd)
+  if (sessionId && /^[\w-]+$/.test(sessionId)) {
+    for (const d of dirs) {
+      const p = path.join(d, `${sessionId}.jsonl`)
+      if (fs.existsSync(p)) return p
+    }
+  }
+  let best: string | null = null
+  let bestM = -1
+  for (const d of dirs) {
+    const f = latestJsonl(d)
+    if (!f) continue
+    try {
+      const m = fs.statSync(f).mtimeMs
+      if (m > bestM) {
+        bestM = m
+        best = f
+      }
+    } catch {
+      // 跳过读不到的
+    }
+  }
+  return best
 }
 
 function latestJsonl(dir: string): string | null {
@@ -195,7 +238,7 @@ function parse(file: string): Parsed {
 export function registerSessionHandlers(): void {
   ipcMain.handle('session:index', (_e, cwd: string): SessionIndex => {
     try {
-      const file = latestJsonl(projectDir(cwd))
+      const file = findJsonl(cwd)
       if (!file) return { found: false, turns: [] }
       const p = parse(file)
       return { found: true, sessionId: p.sessionId, turns: p.turns }
@@ -208,15 +251,7 @@ export function registerSessionHandlers(): void {
     'session:exchange',
     (_e, cwd: string, uuid: string, sessionId?: string): SessionExchange => {
       try {
-        const dir = projectDir(cwd)
-        // 优先按 index 时的 sessionId 定位文件（transcript 以 <sessionId>.jsonl 命名）：
-        // 若期间同项目出现了更新的会话文件，重新取"最新"会查错文件、uuid 落空
-        let file: string | null = null
-        if (sessionId && /^[\w-]+$/.test(sessionId)) {
-          const p = path.join(dir, `${sessionId}.jsonl`)
-          if (fs.existsSync(p)) file = p
-        }
-        if (!file) file = latestJsonl(dir)
+        const file = findJsonl(cwd, sessionId)
         if (!file) return { userText: '', assistantText: '', at: 0 }
         return parse(file).exchanges.get(uuid) ?? { userText: '', assistantText: '', at: 0 }
       } catch {
@@ -233,13 +268,7 @@ export function registerSessionHandlers(): void {
   ipcMain.handle('session:last', (_e, cwd: string, sessionId?: string): SessionLast => {
     const empty: SessionLast = { found: false, ask: '', answer: '', at: 0 }
     try {
-      const dir = projectDir(cwd)
-      let file: string | null = null
-      if (sessionId && /^[\w-]+$/.test(sessionId)) {
-        const p = path.join(dir, `${sessionId}.jsonl`)
-        if (fs.existsSync(p)) file = p
-      }
-      if (!file) file = latestJsonl(dir)
+      const file = findJsonl(cwd, sessionId)
       if (!file) return empty
       const parsed = parse(file)
       const last = parsed.turns[parsed.turns.length - 1]
