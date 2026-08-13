@@ -206,12 +206,23 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       s.canvasSel.find((k) => k.startsWith('n:'))?.split(':')[1]
     const frame = fid ? s.canvas.frames.find((f) => f.id === fid) : undefined
     const project = frame?.projectId ? s.projects.find((p) => p.id === frame.projectId) : undefined
-    if (!project) {
+    // canvasSel 不只被用户点选改动——canvas_maximize_node 最大化某个模块时会顺手把它换成
+    // 那个模块所在的 Frame（这是有意为之，见 canvasSlice.ts setMaximizedNode 的注释：为了让
+    // 滚轮正确路由到内容），还原最大化也不会把它换回来。审查复现过一条真实路径：用户选中 A →
+    // agent 为了给用户看东西调 canvas_maximize_node 打开 B 的某个节点 → 还原 → 此后任何一次
+    // canvas_snapshot 都会静默存进 B——用户从没点过 B。canvasSelFromMaximize 就是防这个的：
+    // 只要 canvasSel 最后一次变化是最大化的副作用（不是 setCanvasSel/toggleCanvasSel/
+    // clearCanvasSel 这类真实选中手势），一律当没有真实选中处理，不能因为"凑巧解得出项目"
+    // 就相信它。
+    if (!project || s.canvasSelFromMaximize) {
       return {
         taken: false,
-        hint:
-          '用户还没在画板上选中一个工作区，不知道该把快照存进哪个项目。' +
-          '告诉用户先在画板上点一下某个工作区（Frame 标题栏或其中的模块），再重新调用这个工具——不要自己猜一个项目。'
+        hint: s.canvasSelFromMaximize
+          ? '当前的画布选中状态是「最大化模块」操作遗留下来的，不代表用户真的点过这个工作区' +
+            '（有可能是你自己或之前调用 canvas_maximize_node 时顺带换掉的）。' +
+            '告诉用户先在画板上点一下某个工作区（Frame 标题栏或其中的模块），再重新调用这个工具——不要自己猜一个项目。'
+          : '用户还没在画板上选中一个工作区，不知道该把快照存进哪个项目。' +
+            '告诉用户先在画板上点一下某个工作区（Frame 标题栏或其中的模块），再重新调用这个工具——不要自己猜一个项目。'
       }
     }
 

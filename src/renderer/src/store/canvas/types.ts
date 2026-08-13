@@ -212,6 +212,19 @@ export interface CanvasSlice {
   setCanvasSel: (keys: string[]) => void
   toggleCanvasSel: (key: string, additive: boolean) => void
   clearCanvasSel: () => void
+  /** `canvasSel` 当前这份内容是不是「最大化」顺手置换进来的（而不是用户真的点选的）。
+   *  只有 setMaximizedNode 的最大化分支会把它设 true；setCanvasSel/toggleCanvasSel/clearCanvasSel
+   *  —— 也就是所有真实鼠标选中手势 —— 都会把它重置回 false。还原最大化时**不**清它：
+   *  还原只清 maximizedNode，canvasSel 本就留着不动（沿用既有行为），这份"是不是最大化遗留"
+   *  的标记也就必须跟着留到下一次真实选中发生为止，否则还原之后 canvasSel 依然是最大化时
+   *  换上去的那个节点，却看不出这一点。
+   *  这不是 UI 要用的字段——画布上该长什么样、highlight 该给谁，都只认 canvasSel 本身，
+   *  这个字段的唯一读者是 mcpHandler 的 canvas_snapshot：它拿 canvasSel 判断"用户选没选中
+   *  工作区"来决定截图存进哪个项目，而 canvasSel 能被 canvas_maximize_node 这个无关的 MCP
+   *  工具悄悄置换掉（见该行为处的注释：最大化要顺手选中，是为了让滚轮正确路由到内容而不是
+   *  画布本身）——canvas_snapshot 必须能分辨"这是用户点的"还是"这是最大化的副作用"，
+   *  否则会把图写进用户从没点过的项目。 */
+  canvasSelFromMaximize: boolean
   /** 画布当前选的绘图工具（select=选择/移动，其余是待画的图形类型）。
    *  CanvasStage（工具条）和 CanvasShapeLayer（标记层）都要读它，且必须是同一份：
    *  标记层要据此决定选了绘图工具时是否该把 mousedown 让给底下的画布视口穿透过去

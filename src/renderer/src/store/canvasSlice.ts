@@ -932,23 +932,34 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       // 写在 action 里而不是四个调用点各写一遍：三种节点组件 + PaneView 都会调它。
       // 节点的 key（n: / p:）不触发 followSel（那个只认 f:），所以直接置换选中集是安全的。
       const key = v.frameId ? 'n:' + v.frameId + ':' + v.nodeId : 'p:' + v.nodeId
-      return { maximizedNode: v, canvasSel: [key] }
+      // canvasSelFromMaximize=true：标记这次的 canvasSel 是最大化的副作用，不是用户真点的
+      // （见 types.ts 里这个字段的注释——mcpHandler 的 canvas_snapshot 靠它避免把截图存错项目）。
+      // 还原（v 为 null 的分支）故意不清它、也不碰 canvasSel：还原历来就只清 maximizedNode，
+      // 这里不改这条既有行为，只是让"是不是最大化遗留"这份标记如实反映现状，直到下一次
+      // 真实选中（setCanvasSel/toggleCanvasSel/clearCanvasSel）发生为止。
+      return { maximizedNode: v, canvasSel: [key], canvasSelFromMaximize: true }
     }),
   canvasSel: [],
-  setCanvasSel: (keys) => set((s) => ({ canvasSel: keys, ...followSel(s, keys) })),
+  canvasSelFromMaximize: false,
+  setCanvasSel: (keys) => set((s) => ({ canvasSel: keys, canvasSelFromMaximize: false, ...followSel(s, keys) })),
   toggleCanvasSel: (key, additive) =>
     set((s) => {
       if (additive) {
         const keys = s.canvasSel.includes(key)
           ? s.canvasSel.filter((k) => k !== key)
           : [...s.canvasSel, key]
-        return { canvasSel: keys, ...followSel(s, keys) }
+        return { canvasSel: keys, canvasSelFromMaximize: false, ...followSel(s, keys) }
       }
-      // 非累加：已是唯一选中则保持，否则替换为仅此项
-      if (s.canvasSel.length === 1 && s.canvasSel[0] === key) return s
-      return { canvasSel: [key], ...followSel(s, [key]) }
+      // 非累加：已是唯一选中则保持 canvasSel 不变（避免无意义重渲染），但如果这个唯一选中
+      // 是最大化遗留下来的，用户现在又真实点了它一次，那份"不是真选的"标记也该跟着清掉——
+      // 否则"点同一个节点两次"这种最普通的操作也会被当成没选中，把新加的守卫伤到自己人。
+      if (s.canvasSel.length === 1 && s.canvasSel[0] === key) {
+        return s.canvasSelFromMaximize ? { canvasSelFromMaximize: false } : s
+      }
+      return { canvasSel: [key], canvasSelFromMaximize: false, ...followSel(s, [key]) }
     }),
-  clearCanvasSel: () => set((s) => (s.canvasSel.length ? { canvasSel: [] } : s)),
+  clearCanvasSel: () =>
+    set((s) => (s.canvasSel.length ? { canvasSel: [], canvasSelFromMaximize: false } : s)),
 
   canvasTool: 'select',
   setCanvasTool: (tool) => set({ canvasTool: tool }),
