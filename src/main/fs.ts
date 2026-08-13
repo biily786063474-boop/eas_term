@@ -105,9 +105,10 @@ export function registerFsHandlers(): void {
 
   // 项目内「最近产生的文件」：递归扫描 + 按创建时间倒序。画布双击插入菜单的「最近」排序用。
   // 跳过依赖/产物目录和隐藏目录——node_modules 一个就能把扫描时间拖到几十秒，且没人想插它。
+  const DOC_EXTS = new Set(['md', 'txt', 'html'])
   ipcMain.handle(
     'fs:recentFiles',
-    async (_e, rootPath: string, limit = 60): Promise<RecentFile[]> => {
+    async (_e, rootPath: string, limit = 60, docsOnly = false): Promise<RecentFile[]> => {
       const out: RecentFile[] = []
       let budget = 20000 // 扫描条目上限：超大仓库别把主进程钉死
       const walk = async (dir: string, depth: number): Promise<void> => {
@@ -127,6 +128,10 @@ export function registerFsHandlers(): void {
             continue
           }
           if (!d.isFile()) continue
+          // 过滤放在**这里**（扫描时），不能放到最后 slice 之后 ——
+          // 这个列表是「按创建时间取前 N」，一次构建就能把名额占满，
+          // 要找的报告排在第 80 位根本进不来。在扫描时滤掉非文档，名额才全给文档。
+          if (docsOnly && !DOC_EXTS.has((d.name.split('.').pop() ?? '').toLowerCase())) continue
           try {
             const st = await fs.promises.stat(full)
             out.push({

@@ -458,8 +458,8 @@ const api = {
   },
   fs: {
     readDir: (dirPath: string): Promise<DirEntry[]> => ipcRenderer.invoke('fs:readDir', dirPath),
-    recentFiles: (rootPath: string, limit?: number): Promise<RecentFile[]> =>
-      ipcRenderer.invoke('fs:recentFiles', rootPath, limit),
+    recentFiles: (rootPath: string, limit?: number, docsOnly?: boolean): Promise<RecentFile[]> =>
+      ipcRenderer.invoke('fs:recentFiles', rootPath, limit, docsOnly),
     // 用户自建词条（~/.eas/dict-user.json）。词典自己的读写在下面的 dict 里，
     // 这个别名保留是因为词典组件一直这么调，改名没有收益
     userTerms: (): Promise<UserTerm[]> => ipcRenderer.invoke('dict:userTerms'),

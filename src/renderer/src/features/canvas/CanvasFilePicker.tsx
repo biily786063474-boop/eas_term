@@ -65,6 +65,11 @@ export function CanvasFilePicker({
   const [entries, setEntries] = useState<DirEntry[]>([])
   const [recent, setRecent] = useState<RecentFile[] | null>(null)
   const [loading, setLoading] = useState(true)
+  // 「只保留文档文件」勾选状态：从 prefs 初始化，变化时写回并触发重拉（见下面的 effect）
+  const [docsOnly, setDocsOnly] = useState(false)
+  useEffect(() => {
+    void window.api.prefs.get().then((p) => setDocsOnly(!!p.recentDocsOnly))
+  }, [])
   const ref = useRef<HTMLDivElement>(null)
   // 尺寸固定（宽 + 定高列表），所以只在挂载时定位一次，切排序/进目录都不会让菜单乱跳
   const pos = useMenuAnchor(x, y, ref)
@@ -85,18 +90,17 @@ export function CanvasFilePicker({
   }, [dir, mode])
 
   useEffect(() => {
-    if (mode !== 'recent' || recent) return
+    if (mode !== 'recent') return
     let alive = true
-    setLoading(true)
+    setRecent(null)
     window.api.fs
-      .recentFiles(root, MAX_RECENT)
+      .recentFiles(root, MAX_RECENT, docsOnly)
       .then((list) => alive && setRecent(list))
       .catch(() => alive && setRecent([]))
-      .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
-  }, [mode, recent, root])
+  }, [mode, root, docsOnly])
 
   // 路径分隔符跟随平台（Windows 是 \），否则「返回上级」在 Windows 上会切出个空串
   const sep = root.includes('\\') ? '\\' : '/'
@@ -129,6 +133,20 @@ export function CanvasFilePicker({
           最近
         </button>
       </div>
+
+      {mode === 'recent' && (
+        <label className="cpk-filter">
+          <input
+            type="checkbox"
+            checked={docsOnly}
+            onChange={(e) => {
+              setDocsOnly(e.target.checked)
+              void window.api.prefs.set('recentDocsOnly', e.target.checked)
+            }}
+          />
+          <span>只保留文档文件（.md / .txt / .html）</span>
+        </label>
+      )}
 
       {mode === 'tree' && (
         <div className="cpk-path" title={dir}>
