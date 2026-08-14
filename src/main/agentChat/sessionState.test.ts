@@ -118,3 +118,21 @@ test('[补充] 直接 send 时，opts 也要如实反映当前会话参数（不
   assert.equal(plan.opts.effort, 'medium')
   assert.equal(plan.opts.resumeId, 'sess-abc')
 })
+
+// ---- 审查回来后补的两条：pending.model 通道此前完全没有测试保护
+// （原测试 6 只 patch 了 effort、只断言 opts.effort；对称的 model 方向没人验证过
+// 「新 patch 值真的生效」，只验证过「未被 patch 的字段不丢」）----
+
+test('[补充/审查后] 待生效的是 model 时，重启要用新 model——镜像测试 6 对 effort 的验证方式，换成 model 通道', () => {
+  const s = applyParamChange(base({ resumeId: 'sess-abc' }), { model: 'opus' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.model, 'opus', '重启要用新 model——pending.model 必须真的生效，不能被忽略')
+  assert.equal(plan.opts.resumeId, 'sess-abc', '重启必须接上原来的上下文')
+})
+
+test('[补充/审查后] 改 effort 同样只记为待生效，不动当前 effort——镜像「改模型只记为待生效」那条，换成 effort 通道', () => {
+  const s = applyParamChange(base(), { effort: 'high' })
+  assert.equal(s.effort, 'medium', '当前会话的 effort 不能当场改——和 model 通道一个道理，同样不能提前生效')
+  assert.equal(s.pending?.effort, 'high')
+})
