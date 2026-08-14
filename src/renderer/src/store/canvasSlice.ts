@@ -21,6 +21,8 @@ import type {
   CanvasViewport,
   FrameStatus,
   NodeAgent,
+  TodoBoard,
+  TodoItem,
   ViewMode
 } from './canvas/types'
 import {
@@ -43,6 +45,12 @@ import {
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import { tidyOrder } from './canvas/tidyOrder'
+import {
+  TODO_BOARD_DEFAULT_H,
+  TODO_BOARD_DEFAULT_W,
+  moveTodoItem,
+  toggleTodoItemDone as applyToggleTodoItemDone
+} from './canvas/todoBoard'
 import type { PersistedCanvas } from './canvas/persist'
 import { track } from '../features/notify/track'
 
@@ -57,6 +65,8 @@ export type {
   FrameStatus,
   NodeAgent,
   PersistedCanvas,
+  TodoBoard,
+  TodoItem,
   ViewMode
 }
 export { serializeCanvas }
@@ -136,7 +146,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
     // committedScale 跟随恢复的 scale,使启动时 pane transform=1(不误缩放)
     set(() => ({
-      canvas: { viewport: scene.viewport, frames: scene.frames, shapes: scene.shapes, freeNodes: scene.freeNodes },
+      canvas: {
+        viewport: scene.viewport,
+        frames: scene.frames,
+        shapes: scene.shapes,
+        freeNodes: scene.freeNodes,
+        todos: scene.todos
+      },
       canvasCommittedScale: scene.viewport.scale
     }))
     // 恢复上次停留的视图
@@ -451,6 +467,92 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   /** 清空所有标记（快照后用）。一次性，不做撤销 —— 清空是用户在弹窗里按下的，不是副作用 */
   clearShapes: () => set((s) => ({ canvas: { ...s.canvas, shapes: [] } })),
+
+  // ── 待办清单：自由存在（不属于任何 Frame），世界坐标，一个模块装多条待办。
+  // 渲染共享 CanvasShapeLayer 的层级，但数据独立于 shapes（见 canvas/types.ts 的 TodoBoard 注释）
+  // ——尤其是 clearShapes 不会碰这里，快照清标记不该连带清掉待办。
+  addTodoBoard: (x, y) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: [
+          ...s.canvas.todos,
+          { id: uid('todo'), x, y, w: TODO_BOARD_DEFAULT_W, h: TODO_BOARD_DEFAULT_H, items: [] }
+        ]
+      }
+    })),
+
+  moveTodoBoard: (id, x, y) =>
+    set((s) => ({
+      canvas: { ...s.canvas, todos: s.canvas.todos.map((b) => (b.id === id ? { ...b, x, y } : b)) }
+    })),
+
+  removeTodoBoard: (id) =>
+    set((s) => ({
+      canvas: { ...s.canvas, todos: s.canvas.todos.filter((b) => b.id !== id) }
+    })),
+
+  renameTodoBoard: (id, title) =>
+    set((s) => ({
+      canvas: { ...s.canvas, todos: s.canvas.todos.map((b) => (b.id === id ? { ...b, title } : b)) }
+    })),
+
+  // 插到最前面而不是追加到末尾：点「+」是「现在马上要写一条」的手势，插在最前不用滚动
+  // 就能看见刚建的空标题卡片，正好也是它立刻进入标题编辑态的地方。
+  addTodoItem: (boardId) => {
+    const id = uid('titem')
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: s.canvas.todos.map((b) =>
+          b.id === boardId ? { ...b, items: [{ id, title: '', done: false }, ...b.items] } : b
+        )
+      }
+    }))
+    return id
+  },
+
+  removeTodoItem: (boardId, itemId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: s.canvas.todos.map((b) =>
+          b.id === boardId ? { ...b, items: b.items.filter((it) => it.id !== itemId) } : b
+        )
+      }
+    })),
+
+  updateTodoItem: (boardId, itemId, patch) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: s.canvas.todos.map((b) =>
+          b.id === boardId
+            ? { ...b, items: b.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)) }
+            : b
+        )
+      }
+    })),
+
+  toggleTodoItemDone: (boardId, itemId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: s.canvas.todos.map((b) =>
+          b.id === boardId ? { ...b, items: applyToggleTodoItemDone(b.items, itemId, Date.now()) } : b
+        )
+      }
+    })),
+
+  reorderTodoItem: (boardId, itemId, toIndex) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        todos: s.canvas.todos.map((b) =>
+          b.id === boardId ? { ...b, items: moveTodoItem(b.items, itemId, toIndex) } : b
+        )
+      }
+    })),
 
   // ── 自由节点：拖知识库文件到画布任意位置生成，不属于任何 Frame，世界坐标。
   // 是 shapes 的直接类比（同样独立于 Frame、同样世界坐标），不是节点系统的第二套实现——

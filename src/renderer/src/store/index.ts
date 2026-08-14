@@ -10,7 +10,17 @@ import type { AppState } from './types'
 
 export type { AppState } from './types'
 export type { TermTab } from './shared'
-export type { ViewMode, CanvasScene, CanvasFrame, CanvasNode, CanvasShape, FrameStatus, NodeAgent } from './canvasSlice'
+export type {
+  ViewMode,
+  CanvasScene,
+  CanvasFrame,
+  CanvasNode,
+  CanvasShape,
+  FrameStatus,
+  NodeAgent,
+  TodoBoard,
+  TodoItem
+} from './canvasSlice'
 export { serializeCanvas } from './canvasSlice'
 export type { PersistedCanvas } from './canvasSlice'
 export { paneKindForFile } from './shared'

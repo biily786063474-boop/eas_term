@@ -1342,6 +1342,409 @@
   cursor: move;
 }
 
+/* ---------- 待办清单模块 ---------- */
+/* 视觉上与矩形/箭头/批注同层（渲染在 CanvasShapeLayer），但不是 CanvasShape 的第四种
+   type——数据独立在 canvas.todos，理由见 store/canvas/types.ts 的 TodoBoard 类型注释。
+   外壳借用 .cfile-node/.cfile-head 的玻璃卡片语言，保持和画布其它浮动模块一个体系。 */
+.ctodo-board {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.ctodo-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 6px 0 11px;
+  cursor: move;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--accent);
+}
+
+.ctodo-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+
+.ctodo-rename {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0 6px;
+  outline: none;
+}
+
+.ctodo-add {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ctodo-add:hover {
+  background: var(--accent);
+  color: #0d0f16;
+  transform: scale(1.1);
+}
+
+.ctodo-body {
+  flex: none;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: default;
+}
+
+.ctodo-empty {
+  padding: 10px 4px 12px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+
+/* 高度由内联 style 按「未完成条数 × 行高」算出——绝对定位的卡片撑不开父容器，
+   得手动给容器一个高度，后面的「已完成」折叠行才不会被卡片盖住。 */
+.ctodo-pending {
+  position: relative;
+}
+
+.ctodo-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    top 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.22s;
+}
+
+/* 已完成区：折叠展开后普通流式排列，不用绝对定位——那一段没有拖拽排序 */
+.ctodo-item.flow {
+  position: static;
+  margin-bottom: 6px;
+}
+
+.ctodo-item.flow:last-child {
+  margin-bottom: 0;
+}
+
+.ctodo-item:hover {
+  transform: scale(1.035);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+
+/* 拖拽抓起态：必须排在 :hover 后面——鼠标本就按在被拖的卡片上，两条规则同时命中，
+   靠源码顺序让这条覆盖掉 :hover 的放大倍率（两者选择器优先级相同）。 */
+.ctodo-item.dragging {
+  cursor: grabbing;
+  transform: scale(1.045);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+.ctodo-item.done {
+  background: rgba(255, 255, 255, 0.015);
+  opacity: 0.72;
+}
+
+.ctodo-check {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(var(--accent-rgb), 0.55);
+  border-radius: 50%;
+  background: none;
+  color: #0d0f16; /* 打勾图标的颜色——只在 .done 状态下渲染，这里先备好和填充色搭配的深色 */
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ctodo-check:hover {
+  border-color: var(--accent);
+  transform: scale(1.12);
+}
+
+.ctodo-item.done .ctodo-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.ctodo-item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctodo-item.done .ctodo-item-title {
+  color: var(--fg-dim);
+  text-decoration: line-through;
+}
+
+.ctodo-item-rename {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-family: inherit;
+  padding: 0 5px;
+  outline: none;
+}
+
+.ctodo-handle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 100%;
+  color: var(--fg-dim);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.ctodo-item:hover .ctodo-handle {
+  opacity: 0.6;
+}
+
+.ctodo-handle:hover {
+  opacity: 1;
+  color: var(--fg);
+}
+
+.ctodo-item.dragging .ctodo-handle {
+  opacity: 1;
+  cursor: grabbing;
+}
+
+.ctodo-item-x {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.ctodo-item:hover .ctodo-item-x {
+  opacity: 0.7;
+}
+
+.ctodo-item-x:hover {
+  opacity: 1;
+  background: rgba(247, 118, 142, 0.2);
+  color: #f7768e;
+}
+
+.ctodo-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 4px 7px;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.ctodo-done-toggle:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ctodo-chevron {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ctodo-chevron.open {
+  transform: rotate(180deg);
+}
+
+.ctodo-done-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 待办详情灯箱 ---------- */
+/* 点非灯箱区域关闭：整个背景就是那个「非灯箱区域」，onMouseDown 挂在这一层。
+   z-index 沿用 base.css 里 .confirm-overlay 那个 3500 档——同一层浮层，不再另起更高的数字
+   （道理见 base.css 里 .confirm-overlay 上方那段注释）。 */
+.ctodo-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 10, 0);
+  backdrop-filter: blur(0px);
+  transition: background 0.2s ease, backdrop-filter 0.2s ease;
+}
+
+.ctodo-lightbox-overlay.open {
+  background: rgba(6, 7, 10, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.ctodo-lightbox {
+  width: min(420px, 86vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transform: scale(0.92) translateY(6px);
+  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ctodo-lightbox-overlay.open .ctodo-lightbox {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.ctodo-lightbox-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px 10px 18px;
+}
+
+.ctodo-lightbox-title {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 2px 0;
+}
+
+.ctodo-lightbox-title::placeholder {
+  color: var(--fg-dim);
+}
+
+.ctodo-lightbox-x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ctodo-lightbox-x:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg);
+}
+
+.ctodo-lightbox-body {
+  min-height: 160px;
+  max-height: 50vh;
+  margin: 0 18px 18px;
+  padding: 10px 12px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--fg);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  outline: none;
+}
+
+.ctodo-lightbox-body:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+.ctodo-lightbox-body::placeholder {
+  color: var(--fg-dim);
+}
+
 /* ---------- 右键菜单 ---------- */
 .canvas-ctxmenu {
   position: fixed;
@@ -3936,14 +4339,18 @@
   top: 0;
   transform-origin: 0 0;
 }
-.canvas-shape-layer .cshape {
+.canvas-shape-layer .cshape,
+.canvas-shape-layer .ctodo-board {
   pointer-events: auto;
 }
 /* 选着绘图工具（非 select）时，已有图形整体让出 pointer-events：mousedown 要能穿透
    到底下的 .canvas-viewport 触发 onViewportDown 开始画新图形，而不是把已有图形选中
    拖走（修复轮 1 Important 1）。.drawing 类名和 .canvas-viewport 那条共用同一个判据
-   （tool !== 'select'），两条规则各自的选择器互不相干，不冲突。 */
-.canvas-shape-layer.drawing .cshape {
+   （tool !== 'select'），两条规则各自的选择器互不相干，不冲突。
+   待办清单模块同一个道理原样照抄——包括 tool==='todo' 本身那一档：
+   点空白处要落新模块时，不能被已有的待办清单模块半路拦掉点击。 */
+.canvas-shape-layer.drawing .cshape,
+.canvas-shape-layer.drawing .ctodo-board {
   pointer-events: none;
 }
 

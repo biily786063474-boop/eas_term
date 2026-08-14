@@ -3,16 +3,18 @@
 // 序列化和 sanitize 是同一件事的两面：一个决定「写出去长什么样」，
 // 一个决定「读回来遇到畸形数据怎么办」。分开放的话，改了写入格式却忘了
 // 放宽读取校验，下次启动就是一片白——所以它们必须挨着。
-import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, ViewMode } from './types'
+import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, TodoBoard, ViewMode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
 import { collectLeaves } from '../../layout'
 import { HEAD, NODE_H, NODE_W, PAD } from './layout'
+import { sanitizeTodoBoard } from './todoBoard'
 
 export const initialScene: CanvasScene = {
   viewport: { x: 0, y: 0, scale: 1 },
   frames: [],
   shapes: [],
-  freeNodes: []
+  freeNodes: [],
+  todos: []
 }
 
 /** 落盘的画布场景（含 viewMode）。终端节点的 leafId 已剥离（会话相关，重开时重绑）。 */
@@ -24,6 +26,7 @@ export interface PersistedCanvas {
   frames: CanvasFrame[]
   shapes: CanvasShape[]
   freeNodes: CanvasNode[]
+  todos: TodoBoard[]
 }
 
 /**
@@ -58,7 +61,9 @@ export function serializeCanvas(
     })),
     shapes: canvas.shapes,
     // 自由节点只会是文件预览（拖知识库文件生成），不会有 leafId，原样落盘即可
-    freeNodes: canvas.freeNodes
+    freeNodes: canvas.freeNodes,
+    // 待办清单不含 leafId / pane，原样落盘即可（同 shapes）
+    todos: canvas.todos
   }
 }
 
@@ -184,6 +189,10 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
     const freeNodes = Array.isArray(r.freeNodes)
       ? r.freeNodes.map(sanitizeNode).filter((n): n is CanvasNode => n !== null)
       : []
+    // 老存档没有 todos 字段（这个模块比 canvas.json 晚出现）→ 安全地当成 []，不是坏档。
+    const todos = Array.isArray(r.todos)
+      ? r.todos.map(sanitizeTodoBoard).filter((b): b is TodoBoard => b !== null)
+      : []
     return {
       scene: {
         viewMode:
@@ -193,13 +202,21 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
         viewport: sanitizeViewport(r.viewport),
         frames,
         shapes,
-        freeNodes
+        freeNodes,
+        todos
       },
       droppedFrames: rawFrames.length - frames.length
     }
   } catch {
     return {
-      scene: { viewMode: 'split', viewport: { x: 0, y: 0, scale: 1 }, frames: [], shapes: [], freeNodes: [] },
+      scene: {
+        viewMode: 'split',
+        viewport: { x: 0, y: 0, scale: 1 },
+        frames: [],
+        shapes: [],
+        freeNodes: [],
+        todos: []
+      },
       droppedFrames: 0
     }
   }

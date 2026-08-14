@@ -11,6 +11,7 @@ import type { CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { useCanvasWheelPassthrough } from './wheelPassthrough'
+import { CanvasTodoBoards } from './CanvasTodoBoard'
 // canvas.css 不在这里 import——它已经被 CanvasStage.tsx 引入一次（App.tsx 顶层无条件
 // import 了 CanvasStage），本文件用到的 .canvas-shape-* 规则也加在同一份 canvas.css 里。
 
@@ -207,6 +208,7 @@ export function CanvasShapeLayer(): JSX.Element | null {
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}
       >
         {shapes.map((sh) => renderShape(sh))}
+        <CanvasTodoBoards />
       </div>
     </div>
   )

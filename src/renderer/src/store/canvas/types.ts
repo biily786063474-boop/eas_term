@@ -100,6 +100,34 @@ export interface CanvasShape {
   color?: string
 }
 
+/** 待办清单里的一条待办 */
+export interface TodoItem {
+  id: string
+  title: string
+  /** 灯箱里写的详细正文 */
+  body?: string
+  done: boolean
+  /** 完成时刻（ms 时间戳）；「已完成」区按它倒序排列，新的排前面。未完成时必为 undefined。 */
+  doneAt?: number
+}
+
+/** 待办清单模块：世界坐标，自由存在（不属于任何 Frame/项目），一个模块装多条待办。
+ *
+ *  **故意不是 CanvasShape 的第四种 type**：`clearShapes()`（快照后清标记）会把 shapes
+ *  整个清空，那是矩形/箭头/批注的既有行为——待办不该被连带清掉，所以另开一个数组、
+ *  和 shapes/freeNodes 平级。渲染上仍然共享 CanvasShapeLayer（矩形/箭头/批注同一个
+ *  z-index 层级），只是**不共享数据结构**。 */
+export interface TodoBoard {
+  id: string
+  x: number
+  y: number
+  w: number
+  /** 落盘 schema 占位（当前渲染走内容自增高度，不读这个字段；为将来手动调高预留位置） */
+  h: number
+  title?: string
+  items: TodoItem[]
+}
+
 export interface CanvasScene {
   viewport: CanvasViewport
   frames: CanvasFrame[]
@@ -108,6 +136,9 @@ export interface CanvasScene {
    *  目前唯一的产生方式是从知识库拖文件出来——先例是 shapes（矩形/箭头/便签）同样用世界坐标、
    *  同样独立于 Frame，自由节点是它的直接类比，不是节点系统的另一套并行实现。 */
   freeNodes: CanvasNode[]
+  /** 待办清单模块：同样世界坐标、独立于 Frame，与 shapes 平级但不共享数组
+   *  （理由见 TodoBoard 类型上方注释）。 */
+  todos: TodoBoard[]
 }
 
 export interface CanvasSlice {
@@ -160,8 +191,25 @@ export interface CanvasSlice {
   addShape: (shape: Omit<CanvasShape, 'id'>) => void
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void
-  /** 清空所有标记（快照后用）。一次性，不做撤销 —— 清空是用户在弹窗里按下的，不是副作用 */
+  /** 清空所有标记（快照后用）。一次性，不做撤销 —— 清空是用户在弹窗里按下的，不是副作用。
+   *  **故意不碰 todos** —— 待办清单不是标记，见 TodoBoard 类型上方注释。 */
   clearShapes: () => void
+  // ── 待办清单：自由存在（不属于任何 Frame），世界坐标，一个模块装多条待办。
+  // 渲染共享 CanvasShapeLayer 的层级，数据是独立数组（见 canvas/types.ts 的 TodoBoard 注释）。
+  /** 新建一个空的待办清单模块，落在世界坐标 (x,y) */
+  addTodoBoard: (x: number, y: number) => void
+  moveTodoBoard: (id: string, x: number, y: number) => void
+  removeTodoBoard: (id: string) => void
+  renameTodoBoard: (id: string, title: string) => void
+  /** 新增一条待办（插到未完成列表最前面，方便点完「+」立刻在可见处输入标题）。返回新 id，
+   *  调用方（CanvasTodoBoard）拿它立刻进入标题编辑态。 */
+  addTodoItem: (boardId: string) => string
+  removeTodoItem: (boardId: string, itemId: string) => void
+  updateTodoItem: (boardId: string, itemId: string, patch: { title?: string; body?: string }) => void
+  /** 打勾/取消勾选：done 翻转，doneAt 跟着盖章/清空（见 todoBoard.ts 的 toggleTodoItemDone） */
+  toggleTodoItemDone: (boardId: string, itemId: string) => void
+  /** 拖拽排序：把 itemId 挪到未完成列表的第 toIndex 位（已完成区不参与，见 moveTodoItem 注释） */
+  reorderTodoItem: (boardId: string, itemId: string, toIndex: number) => void
   renameFrame: (id: string, name: string) => void
   /** 打/清状态标签（传 null 清除 = 回到未分类）。
    *  **实际写的是项目**（见 shared/types 的 ProjectStatus）——画布上的入口手里只有 frameId，
@@ -229,8 +277,8 @@ export interface CanvasSlice {
    *  CanvasStage（工具条）和 CanvasShapeLayer（标记层）都要读它，且必须是同一份：
    *  标记层要据此决定选了绘图工具时是否该把 mousedown 让给底下的画布视口穿透过去
    *  （否则落在已有图形上没法开始画新图形，见 Task 1 修复轮 1 的 Important 1）。不持久化。 */
-  canvasTool: 'select' | 'rect' | 'arrow' | 'sticky'
-  setCanvasTool: (tool: 'select' | 'rect' | 'arrow' | 'sticky') => void
+  canvasTool: 'select' | 'rect' | 'arrow' | 'sticky' | 'todo'
+  setCanvasTool: (tool: 'select' | 'rect' | 'arrow' | 'sticky' | 'todo') => void
   /** 正在编辑文字的便签 id（null=没有）。CanvasStage 的空白拖拽守卫
    *  （落在已有图形上没法开始画新图形以外的那一半：编辑便签时点空白不该触发框选/清选中）
    *  和 CanvasShapeLayer 的便签编辑态必须共用同一份——各起一份的话 CanvasStage 那份

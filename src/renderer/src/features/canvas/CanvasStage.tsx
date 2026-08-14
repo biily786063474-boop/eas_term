@@ -57,6 +57,8 @@ export function CanvasStage(): JSX.Element {
   // 注意：这里不再读 canvas.shapes——成品标记的渲染搬去了 CanvasShapeLayer（它自己订阅）。
   // 留着这个订阅会让 CanvasStage 在每次拖动/编辑标记时跟着空转重渲染一次。
   const addShape = useStore((s) => s.addShape)
+  // 待办清单同理：成品渲染在 CanvasShapeLayer，这里只需要「新建」这一个写操作
+  const addTodoBoard = useStore((s) => s.addTodoBoard)
   const updateShape = useStore((s) => s.updateShape)
   // 有模块在「最大化沉浸」时，右下角那两条要让位（见下面 .on-max 的注释）。
   // 用 liveMaximizedNode 而不是直接读 store：它指的节点可能已经被关掉了。
@@ -650,6 +652,13 @@ export function CanvasStage(): JSX.Element {
       setTool('select')
       return
     }
+    if (tool === 'todo') {
+      // 待办清单不是 CanvasShape（原因见 canvas/types.ts 的 TodoBoard 注释），单独一支落点逻辑，
+      // 单击即建、不用像矩形/箭头那样拖出尺寸——默认宽度够用，高度随内容自增
+      addTodoBoard(wx, wy)
+      setTool('select')
+      return
+    }
     const type = tool
     let d: Omit<CanvasShape, 'id'> = { type, x: wx, y: wy, w: 0, h: 0 }
     setDraft(d)
@@ -1164,6 +1173,16 @@ export function CanvasStage(): JSX.Element {
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M4 4h16v11l-5 5H4z" />
             <path d="M20 15h-5v5" />
+          </svg>
+        </button>
+        <button
+          className={`ctool${tool === 'todo' ? ' on' : ''}`}
+          data-tip="待办清单"
+          onClick={() => setTool('todo')}
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <path d="M8 12.5l2.4 2.4L16 9.5" />
           </svg>
         </button>
         <button

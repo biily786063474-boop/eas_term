@@ -62,6 +62,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
   const nodeEl = t.closest('.cfile-node[data-node-id]') as HTMLElement | null
   const shapeEl = t.closest('.cshape[data-sid]') as HTMLElement | null
+  const boardEl = t.closest('.ctodo-board[data-tid]') as HTMLElement | null
   const frameEl = t.closest('.cframe') as HTMLElement | null
   let items: CanvasMenuItem[]
   if (paneEl?.dataset.leafId) {
@@ -96,6 +97,11 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
       ...(shape?.type === 'sticky' ? [{ label: '编辑', onClick: () => setEditingSticky(sid) }] : []),
       { label: '删除', danger: true, onClick: () => st.removeShape(sid) }
     ]
+  } else if (boardEl?.dataset.tid) {
+    // 待办清单模块自己的右键项。同 shapeEl 分支的取舍：右键落在待办清单上只给它自己的操作，
+    // 不管底下压没压着终端——道理见上面 shapeEl 分支那段注释。
+    const tid = boardEl.dataset.tid
+    items = [{ label: '删除待办清单', danger: true, onClick: () => st.removeTodoBoard(tid) }]
   } else if (frameEl?.dataset.fid) {
     const fid = frameEl.dataset.fid
     const frame = st.canvas.frames.find((f) => f.id === fid)
@@ -129,6 +135,10 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
       {
         label: '新建批注',
         onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
+      },
+      {
+        label: '新建待办清单',
+        onClick: () => st.addTodoBoard(wx, wy)
       }
     ]
   }
