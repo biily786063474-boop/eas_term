@@ -1,8 +1,7 @@
 // 分屏模式的「任务完成」通知（对应画布抽屉的待处理气泡）。
-// CLI 任务完成会 flagAttention(ptyId)（标题 spinner→非 spinner 且未聚焦）。
-// 响铃（onBell）和 MCP notify 也打同一个标记，但它们能在终端**还在跑**的时候打，
-// 而下面按 top !== 'running' 过滤，所以那两种来源要等这个终端真停下来才在这里亮
-// —— 见 mcpHandler.ts 的 notify 分支，那是个已知落差、单独立项跟进。
+// CLI 任务完成会 flagAttention(ptyId)（标题 spinner→非 spinner 且未聚焦）；
+// 响铃（onBell）和 MCP notify 打的是同一个标记，但它们能在终端**还在跑**的时候打
+// —— 那种也要在这儿亮，判据见下面的 row.attn。
 // 这里在标题栏亮一个铃铛 + 计数（有几个项目有待处理任务）；点击「依次」跳到下一个待处理项目
 // 里最该看的那个终端——保可见、只清被点的那一个，统一交给 focusTerminal（见
 // features/status/useStatus.ts）。原来这里在 setActiveProject 之后又手动把整个项目
@@ -14,10 +13,13 @@ import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
 
 export function TerminalAttention(): JSX.Element | null {
   const activeProjectId = useStore((s) => s.activeProjectId)
-  // 只算「需处理」的项目（approval/done）——running 不算，同 CanvasDrawer 的呼吸判据。
+  // 判据是 attn（这个项目有几个终端在等你），**不是 `top !== 'running'`**。
+  // 后者曾经是这里的写法，代价是「agent 还在跑但主动叫了你」整类不亮——
+  // 而 MCP notify 几乎总是在跑着的时候调（agent 调工具那一刻 spinner 正转着）。
+  // 两者的区别与为什么能这么判，见 machine.ts 的 ProjectRow 注释。
   // rows 已经按 approval > done、同档内最近变化在前排好序，「依次」点下去天然是
   // 「最急的、最新的先来」，不用再按 projects 展示顺序自己拼一遍。
-  const rows = useProjectRows().filter((r) => r.top !== 'running')
+  const rows = useProjectRows().filter((r) => r.attn > 0)
 
   if (!rows.length) return null
 

@@ -537,9 +537,10 @@ export function CanvasStage(): JSX.Element {
         icon: row ? <StatusIcon state={row.top} size={13} /> : undefined,
         onClick: () => {
           // 两档，先判上面这档，不是叠加：
-          // 有 approval/done 就聚焦到最紧急的那个终端（这本身会把视图挪过去），
-          // 并按规格 §1.2 清掉它的状态
-          if (row && row.top !== 'running') {
+          // 有终端在等你（attn > 0，含「还在跑但 agent 叫了你一声」）就聚焦到最该看的
+          // 那一个（这本身会把视图挪过去），并按规格 §1.2 清掉它的状态。
+          // 判据用 attn 不用 `top !== 'running'`，理由见 machine.ts 的 ProjectRow。
+          if (row && row.attn > 0) {
             focusTerminal(row.focusPtyId)
             return
           }

@@ -172,8 +172,10 @@ export function Sidebar(): JSX.Element {
                 setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
               }}
             >
-              {/* 需处理（approval/done）才亮红点——running 不算，同 CanvasDrawer 的呼吸判据 */}
-              {rows.some((r) => r.projectId === p.id && r.top !== 'running') && (
+              {/* 有终端在等你才亮红点。判据是 attn 不是 `top !== 'running'`：
+                  后者会把「agent 还在跑但响铃 / 调了 MCP notify」整类漏掉，
+                  而那正是 notify 最常见的调用时机。见 machine.ts 的 ProjectRow */}
+              {rows.some((r) => r.projectId === p.id && r.attn > 0) && (
                 <span className="project-attn-dot" data-tip="该项目有任务完成" />
               )}
               {editingProject?.id === p.id ? (

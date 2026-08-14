@@ -288,7 +288,11 @@ export function BoardStage(): JSX.Element {
                 // 不再自己用 terms 数一遍——两边本就是同一份 tabs 算出来的，没必要算两次。
                 // need/busy 这里只当布尔用（卡片描边、状态点颜色），不显示具体数字。
                 const row = rows.find((r) => r.projectId === p.id)
-                const need = !!row && row.top !== 'running'
+                // need 判 attn（有几个终端在等你），不判 `top !== 'running'`——
+                // 后者会漏掉「还在跑但响铃 / 调了 MCP notify」那类，而卡片**展开后**
+                // 那一行的小圆点是就地读 attentionPtys 的（下面的 n），漏掉的话同一张卡
+                // 会自相矛盾：里面写着「等处理」，卡片头却报「在跑」。
+                const need = !!row && row.attn > 0
                 const busy = row?.top === 'running'
                 return (
                   <div

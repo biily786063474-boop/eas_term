@@ -392,22 +392,18 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
   if (tool === 'notify') {
     const msg = String(args.message ?? '')
     const loc = resolveFrame(ctx)
-    // 复用「任务完成」提醒的那个信号（flagAttention）。
+    // 复用「任务完成」提醒的那个信号（flagAttention）：标题栏铃铛 + Sidebar 项目徽标 +
+    // 画布抽屉呼吸点与右上角气泡 + 看板卡片 + 提示音 + 灵动岛通知卡。
     //
-    // **注意它此刻实际会点亮什么，和这行注释原来写的不一样。** 原文说的是
-    // 「标题栏铃铛 + Sidebar 项目徽标 + 画布抽屉呼吸点」，那是统一状态机之前的行为：
-    // 那时这三处直接读 attentionPtys，打了标就亮。收编到状态机之后它们一律按
-    // `statusOf` 过滤掉 running，而 agent 调 notify 时几乎总是**还在跑**
-    // （调工具的那一刻 spinner 正转着），于是这三处一个都不亮。
-    // 现在真正会响应的是：提示音（useNoticeSound 直接按 attentionPtys 判）、
-    // 以及灵动岛的通知卡（按 machine.attentionKindOf 判，刻意不看 running）。
-    // 等这个终端自己停下来，标记还在，那三处才会跟着亮起来。
-    //
-    // 这个落差是已知的、要单独立项的：「agent 还在跑但主动要你注意」这件事
-    // 目前在状态机里没有表达（三态互斥，running 优先），而 attentionPtys 里
-    // 「spinner 落下时打的标」和「跑着的时候主动打的标」两种来源当前无法区分，
-    // 要分开得先给信号本身加东西。别在没解决那个之前把这几处的过滤条件改回去——
-    // 改回去会让「done 终端又跑起来」的陈旧标记重新误显示。
+    // **这里几乎总是在终端「还在跑」的时候被调到**——agent 调工具那一刻 spinner 正转着。
+    // 那些面判的是 `ProjectRow.attn`（有几个终端 ∈ attentionPtys），不是
+    // `top !== 'running'`；后者曾短暂是判据，结果就是本工具打了标记却一处都不亮。
+    // 为什么可以直接判 attn 而不怕「陈旧标记」误显示：进 runningPtys 的唯一入口是
+    // uiSlice 的 setPtyRunning(ptyId, true)，它在同一次 set 里就把该 pty 从
+    // attentionPtys 摘掉（连 ptyApproval / approvalSentAt 一起），而早退判据
+    // `if (has === running) return s` 排在那段清除之前 —— 清除只发生在
+    // 「非运行 → 运行」那一次跃迁上。所以一个还在 runningPtys 里的 pty 带着 attention，
+    // 只可能是它跑起来**之后**被打上的，也就是本工具或 onBell，不可能是上一轮的残留。
     const leafIds = new Set(
       s.canvas.frames
         .find((f) => f.id === loc?.frameId)

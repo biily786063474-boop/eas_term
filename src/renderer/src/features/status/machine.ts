@@ -40,14 +40,26 @@ export interface Located {
   nodeId?: string
 }
 
-/** 项目那一行显示什么 */
+/** 项目那一行显示什么。
+ *
+ *  **`top`/`count` 与 `attn` 是两件正交的事，别把其中一个当成另一个的简写：**
+ *  前者说「这个项目里的终端此刻在干什么」（三态，running 优先），
+ *  后者说「有几个在等你过去」。两者会不一致，而且那是对的——
+ *  agent 调 MCP `notify` 或响铃的时候它还在跑，`top` 是 `running`，但它确实在叫你。
+ *  收编进状态机时这里一度只有 `top`，于是四个面统一写成 `top !== 'running'`，
+ *  把「还在跑但叫了你」整类过滤掉了（`mcpHandler` 的 notify 因此三处都不亮）。 */
 export interface ProjectRow {
   projectId: string
-  /** 最紧急的那个状态 */
+  /** 最紧急的那个**执行状态** */
   top: TermState
   /** 该项目处于 top 这个状态的终端个数 */
   count: number
-  /** 点这一行要聚焦到哪个终端 */
+  /** 这个项目里有几个终端「在等你」（∈ attentionPtys）——**不管它跑没跑**。
+   *  「要不要显示提醒」一律判这个，不判 top。 */
+  attn: number
+  /** 点这一行要聚焦到哪个终端。
+   *  有人在等你就去他那儿（同 attn 的口径，多个就取最急、同档取最近的）；
+   *  一个都没有才退回「top 这一档里最近变化的那个」。 */
   focusPtyId: string
   /** 最近一次变化的时刻，同档排序用 */
   at: number
@@ -132,28 +144,34 @@ export function locate(ptyId: string, ctx: LocateCtx): Located | null {
 }
 
 /**
- * 按项目聚合：每个项目一行，显示最紧急的那个状态 + 该状态的终端个数，
- * 点击落到最紧急的那个终端。
+ * 按项目聚合：每个项目一行，显示最紧急的那个执行状态 + 该状态的终端个数 +
+ * 有几个在等你，点击落到「该去的那一个」。
  *
  * 查不到所属项目的终端**直接跳过**，不产生行也不抛异常——
  * 终端可能刚被关掉，而状态数组是上一帧的。
  */
 export function byProject(ptyIds: string[], raw: RawSignals, ctx: LocateCtx): ProjectRow[] {
   const acc = new Map<string, ProjectRow>()
+  /** 每个项目「最该去的那个在等你的终端」。单独挑，不跟着 top 走——
+   *  top 是执行状态的档位，而一个 running 的终端完全可以同时在等你。 */
+  const waiting = new Map<string, { ptyId: string; urgency: number; at: number }>()
   for (const ptyId of ptyIds) {
     const st = statusOf(ptyId, raw)
     if (!st) continue
     const loc = locate(ptyId, ctx)
     if (!loc?.projectId) continue
+    const pid = loc.projectId
     const at = raw.ptyTiming[ptyId]?.lastDoneAt ?? raw.ptyTiming[ptyId]?.roundStart ?? 0
-    const cur = acc.get(loc.projectId)
+    const cur = acc.get(pid)
     if (!cur) {
-      acc.set(loc.projectId, { projectId: loc.projectId, top: st, count: 1, focusPtyId: ptyId, at })
-      continue
-    }
-    if (URGENCY[st] < URGENCY[cur.top]) {
-      // 出现了更急的：整行改成它，计数从 1 重新起（count 数的是 top 这一档的个数）
-      acc.set(loc.projectId, { projectId: loc.projectId, top: st, count: 1, focusPtyId: ptyId, at })
+      acc.set(pid, { projectId: pid, top: st, count: 1, attn: 0, focusPtyId: ptyId, at })
+    } else if (URGENCY[st] < URGENCY[cur.top]) {
+      // 出现了更急的：top / count / at 整档换成它（count 数的是 top 这一档的个数）。
+      // **attn 不跟着重置**——它数的是「有几个在等你」，跟 top 落在哪一档无关。
+      cur.top = st
+      cur.count = 1
+      cur.focusPtyId = ptyId
+      cur.at = at
     } else if (st === cur.top) {
       cur.count += 1
       // focusPtyId 跟着 at 走：只有严格更新（更近）时才换，两个都撞在同一时刻（含都是 0）
@@ -163,7 +181,19 @@ export function byProject(ptyIds: string[], raw: RawSignals, ctx: LocateCtx): Pr
         cur.focusPtyId = ptyId
       }
     }
+    if (!attentionKindOf(ptyId, raw)) continue
+    acc.get(pid)!.attn += 1
+    const w = waiting.get(pid)
+    const u = URGENCY[st]
+    // 最急优先，同档取最近的；同档同时刻保留先到的（与上面 focusPtyId 同一条规则）
+    if (!w || u < w.urgency || (u === w.urgency && at > w.at)) {
+      waiting.set(pid, { ptyId, urgency: u, at })
+    }
   }
+  // 有人在等你 → 点这一行就去他那儿。没有等你的（纯 running 的项目）才保留上面那个落点。
+  // 两者在「没有 running 却有人等你」时本来就同一个终端，这一步只在
+  // 「top 是 running、但某个 running 的终端叫了你」时才真正改变落点。
+  for (const [pid, w] of waiting) acc.get(pid)!.focusPtyId = w.ptyId
   return [...acc.values()]
 }
 

@@ -120,6 +120,68 @@ test('清掉一个 done，同项目里另一个 done 不受影响（计数从 2 
   assert.strictEqual(after[0].focusPtyId, 'p2')
 })
 
+// ── attn：与 top 正交的「有几个在等你」 ──
+//
+// 为什么这条能成立、而不会让「陈旧标记」复活：进 runningPtys 的唯一入口是
+// uiSlice 的 setPtyRunning(ptyId, true)，而它在同一次 set 里就把该 pty 从
+// attentionPtys 摘掉、连 ptyApproval / approvalSentAt 一起删。早退判据
+// `if (has === running) return s` 排在那段清除**之前**，所以清除只发生在
+// 「非运行 → 运行」那一次跃迁上，跑动期间反复调不会再清。
+// 于是：**一个 pty 在 runningPtys 里还带着 attention，只可能是它跑起来之后
+// 才被打上的** —— 那正是 onBell / MCP notify 两个源（TerminalView:580 那个源
+// 打标记时必然已经 setPtyRunning(false)，构造不出这个组合）。
+test('还在跑但叫了你：top 仍是 running，但 attn 数到它', () => {
+  const r = raw({ runningPtys: ['p1'], attentionPtys: ['p1'] })
+  const rows = byProject(['p1'], r, ctx)
+  assert.strictEqual(rows[0].top, 'running', '它确实还在跑，执行状态不能撒谎')
+  assert.strictEqual(rows[0].count, 1)
+  assert.strictEqual(rows[0].attn, 1, '「要不要显示提醒」判的是这个')
+  assert.strictEqual(rows[0].focusPtyId, 'p1')
+})
+
+test('纯 running（没人叫你）→ attn 为 0', () => {
+  const rows = byProject(['p1', 'p2'], raw({ runningPtys: ['p1', 'p2'] }), ctx)
+  assert.strictEqual(rows[0].top, 'running')
+  assert.strictEqual(rows[0].attn, 0, '这才是「不该打扰」的那种 running')
+})
+
+test('两个都在跑、只有一个叫了你 → 点这一行落到叫你的那个', () => {
+  // p2 的 at 更近，按旧规则（top 档里最近的那个）会落到 p2；
+  // 但在等你的是 p1，落点必须是 p1——否则点过去看到的是一个没什么要你处理的终端。
+  const r = raw({
+    runningPtys: ['p1', 'p2'],
+    attentionPtys: ['p1'],
+    ptyTiming: { p1: { roundStart: 100 }, p2: { roundStart: 200 } }
+  })
+  const rows = byProject(['p1', 'p2'], r, ctx)
+  assert.strictEqual(rows[0].top, 'running')
+  assert.strictEqual(rows[0].count, 2)
+  assert.strictEqual(rows[0].attn, 1)
+  assert.strictEqual(rows[0].focusPtyId, 'p1')
+})
+
+test('attn 跨档累加：approval 一个 + 还在跑但叫了你一个 → top 是 approval、attn 是 2', () => {
+  // 顺序特意让 running 那个先进来，逼出「出现更急的档位时 attn 不能被重置」这条
+  const r = raw({
+    runningPtys: ['p1'],
+    attentionPtys: ['p1', 'p2'],
+    ptyApproval: { p2: { question: '要删吗' } }
+  })
+  const rows = byProject(['p1', 'p2'], r, ctx)
+  assert.strictEqual(rows[0].top, 'approval')
+  assert.strictEqual(rows[0].count, 1, 'count 只数 top 这一档')
+  assert.strictEqual(rows[0].attn, 2, 'attn 数的是「在等你的」，跨档累加')
+  assert.strictEqual(rows[0].focusPtyId, 'p2', '两个都在等你时先去最急的')
+})
+
+test('attn 与 top 的关系不是「top !== running」的换皮：有 running 也有 done 时两者都对', () => {
+  const r = raw({ runningPtys: ['p3'], attentionPtys: ['p1', 'p2'] })
+  const rows = byProject(['p1', 'p2', 'p3'], r, ctx)
+  assert.strictEqual(rows[0].top, 'done')
+  assert.strictEqual(rows[0].count, 2)
+  assert.strictEqual(rows[0].attn, 2, 'p3 只是在跑、没叫你，不算进 attn')
+})
+
 test('终端查不到所属项目 → 不产生行，且不抛异常', () => {
   const r = raw({ attentionPtys: ['nope'] })
   assert.doesNotThrow(() => byProject(['nope'], r, ctx))
@@ -154,17 +216,17 @@ test('同档两个终端，at 都是 0 时结果确定（修复轮 1）', () => 
 // ── 排序 ──
 test('approval 排在 done 前，done 排在 running 前', () => {
   const rows = [
-    { projectId: 'a', top: 'running' as const, count: 1, focusPtyId: 'x', at: 3 },
-    { projectId: 'b', top: 'done' as const, count: 1, focusPtyId: 'y', at: 2 },
-    { projectId: 'c', top: 'approval' as const, count: 1, focusPtyId: 'z', at: 1 }
+    { projectId: 'a', top: 'running' as const, count: 1, attn: 0, focusPtyId: 'x', at: 3 },
+    { projectId: 'b', top: 'done' as const, count: 1, attn: 1, focusPtyId: 'y', at: 2 },
+    { projectId: 'c', top: 'approval' as const, count: 1, attn: 1, focusPtyId: 'z', at: 1 }
   ]
   assert.deepStrictEqual(sortRows(rows).map((r) => r.projectId), ['c', 'b', 'a'])
 })
 
 test('同档内新的排前面', () => {
   const rows = [
-    { projectId: 'old', top: 'done' as const, count: 1, focusPtyId: 'x', at: 100 },
-    { projectId: 'new', top: 'done' as const, count: 1, focusPtyId: 'y', at: 200 }
+    { projectId: 'old', top: 'done' as const, count: 1, attn: 1, focusPtyId: 'x', at: 100 },
+    { projectId: 'new', top: 'done' as const, count: 1, attn: 1, focusPtyId: 'y', at: 200 }
   ]
   assert.deepStrictEqual(sortRows(rows).map((r) => r.projectId), ['new', 'old'])
 })

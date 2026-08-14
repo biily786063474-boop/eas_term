@@ -159,8 +159,8 @@ export function useIslandFeed(): void {
         //
         // **刻意用 attentionKindOf 而不是 statusOf**：statusOf 里 running 优先，
         // 而「还在跑但 agent 叫了你一声」（onBell / MCP notify）是真实且常见的情形，
-        // 按 statusOf 判会让这类通知整条消失——灵动岛是它目前**唯一**还看得见的地方
-        // （另外五个面都按 top !== 'running' 过滤，见本轮报告里那条待立项的跟进）。
+        // 按 statusOf 判会让这类通知整条消失。别的面判的是 ProjectRow.attn，
+        // 那是同一件事在聚合层的说法——通知卡这里判 kind，等价、且顺带拿到了种类。
         // 这也意味着这样一个 pty 会同时出现在「运行中」和通知卡里：那是对的，
         // 两个区讲的是两件事——一个是它在干活，一个是它有话对你说。
         const kind = attentionKindOf(ptyId, raw)

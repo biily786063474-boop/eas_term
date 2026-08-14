@@ -71,6 +71,8 @@ export function CanvasDrawer(): JSX.Element {
   const pendingCount = pendingRows.length
   /** 队列里有等审批的 → 气泡的文案要说「等你确认」，那和「跑完了」是两件事 */
   const hasApproval = pendingRows.some((r) => r.state === 'approval')
+  /** 一条 done 都没有、全是「还在跑但叫了你」时，说「完成了」就是假话 */
+  const hasDone = pendingRows.some((r) => r.state === 'done')
   // pendingOpen 不能比它要显示的数据活得久：清空最后一条的路径不止「点列表里那一行」
   // （那条走 PendingList 的 onClose）——灵动岛跳转（useIslandFeed.ts 的 focus 动作调
   // focusTerminal，末尾同样落到 clearAttention）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
@@ -88,12 +90,14 @@ export function CanvasDrawer(): JSX.Element {
   const projectFrameSelected = (pid: string): boolean =>
     frames.some((f) => f.projectId === pid && canvasSel.includes('f:' + f.id))
 
-  // 该项目是否有终端「需处理」（响铃未查看）——用于条目呼吸高亮。
-  // 走 rows（上面 useProjectRows() 已按项目聚合好），不再自己扫一遍 tabs/attentionPtys——
-  // top 是 running 说明该项目没有 approval/done、只是在跑，不该呼吸（呼吸只留给「需要你」的状态）。
+  // 该项目是否有终端「在等你」——用于条目呼吸高亮。
+  // 走 rows（上面 useProjectRows() 已按项目聚合好），不再自己扫一遍 tabs/attentionPtys。
+  // 判据是 attn 而不是 `top !== 'running'`：后者会把「还在跑但 agent 叫了你一声」
+  // （onBell / MCP notify）整类判成「只是在跑，不用呼吸」，而那是 notify 的常态。
+  // 反过来，纯 running（没人叫你）attn 为 0，照旧不呼吸。见 machine.ts 的 ProjectRow。
   const projectHasAttention = (pid: string): boolean => {
     const row = rows.find((r) => r.projectId === pid)
-    return !!row && row.top !== 'running'
+    return !!row && row.attn > 0
   }
 
   // 抽屉打开时：在抽屉以外任何地方点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
@@ -172,7 +176,8 @@ export function CanvasDrawer(): JSX.Element {
       if (!start.started) {
         // 点击项目，两档（先判上面这档，不叠加）——和双击弹出的项目列表同一套规则：
         //
-        // ① 该项目有 approval / done 的终端 → 交给 focusTerminal，跳到最紧急的那一个。
+        // ① 该项目有终端在等你（attn > 0，含「还在跑但叫了你」）→ 交给 focusTerminal，
+        //    跳到最该看的那一个（row.focusPtyId 已经按同一口径挑好）。
         //    原来这里是自己那套：setActiveProject 顺手批量清整个项目 + 再手动逐个
         //    clearAttention 一遍 + `if (frame) focusFrame(...)`。两个毛病全占了——
         //    **批量清**（machine.test.ts 专门锁着「清一个不影响同项目另一个」），
@@ -180,7 +185,7 @@ export function CanvasDrawer(): JSX.Element {
         //    整个跳过，画面一动不动，提醒却已经没了）。而这一轮刚把这行的徽标从
         //    「待处理」升级成 icon + 计数：它现在明确告诉你有 3 个，点一下 3 个一起没。
         // ② 没有任何状态 → 维持原来的「激活项目 + 居中到该项目 Frame」。
-        const row = rows.find((r) => r.projectId === project.id && r.top !== 'running')
+        const row = rows.find((r) => r.projectId === project.id && r.attn > 0)
         if (row) {
           focusTerminal(row.focusPtyId)
           return
@@ -461,7 +466,13 @@ export function CanvasDrawer(): JSX.Element {
             <>
               <button
                 className={`cd-attn-bubble${hasApproval ? ' approval' : ''}`}
-                data-tip={hasApproval ? '有任务在等你确认，点击查看' : '有任务完成了，点击查看'}
+                data-tip={
+                  hasApproval
+                    ? '有任务在等你确认，点击查看'
+                    : hasDone
+                      ? '有任务完成了，点击查看'
+                      : '有终端在叫你，点击查看'
+                }
                 onClick={() => setPendingOpen((v) => !v)}
               >
                 {pendingCount}

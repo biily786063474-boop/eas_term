@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useStore } from '../../store'
 import type { AppState } from '../../store'
 import { byProject, locate, sortRows, statusOf, urgencyCmp } from './machine'
-import type { LocateCtx, Located, ProjectRow, RawSignals } from './machine'
+import type { LocateCtx, Located, ProjectRow, RawSignals, TermState } from './machine'
 
 /** 把 store 里那六个字段取成一份快照。
  *
@@ -77,7 +77,7 @@ export function useProjectRows(): ProjectRow[] {
 }
 
 /**
- * 待处理列表要显示的一条。**approval 和 done 都算，approval 排前面。**
+ * 待处理列表要显示的一条。**approval、done、以及「还在跑但叫了你」都算，approval 排前面。**
  *
  * 原来这里只列 done（那时叫 `DoneRow` / `useDoneRows`），右上角气泡数也只数 done。
  * 那是个回归：**画布模式下这个气泡是 approval 唯一的常驻提示**——标题栏铃铛在画布
@@ -90,23 +90,28 @@ export function useProjectRows(): ProjectRow[] {
  * 改名也是这个原因：一个叫 done 的东西里装着 approval，下一个人读到名字就会判断错。
  */
 export interface PendingRow extends Located {
-  /** approval 还是 done：决定用哪个 icon 形态，也决定排在哪一档 */
-  state: 'approval' | 'done'
+  /** 这一条此刻的执行状态：approval / done，或者 **running**——
+   *  「还在跑，但 agent 叫了你一声」（onBell / MCP notify）。
+   *  决定用哪个 icon 形态，也决定排在哪一档（running 排最后）。 */
+  state: TermState
   at: number
 }
 
 function computePendingRows(raw: RawSignals, ctx: LocateCtx): PendingRow[] {
   const out: PendingRow[] = []
+  // 直接遍历 attentionPtys —— 「在等你的」就是这个集合，不再按 statusOf 过滤掉 running。
+  // 画布模式下这个列表是气泡的内容，而气泡是标题栏铃铛的画布版（铃铛在画布模式
+  // 不挂载，见 App.tsx）：铃铛认的是 row.attn，这里也必须认同一件事，
+  // 否则同一条提醒在分屏看得见、切到画布就没了。
   for (const ptyId of raw.attentionPtys) {
     const st = statusOf(ptyId, raw)
-    // running 不进来：那说明 spinner 又转起来了，此刻要你做的事已经不成立
-    if (st !== 'approval' && st !== 'done') continue
+    if (!st) continue // 在 attentionPtys 里就必然有状态，纯防御
     const loc = locate(ptyId, ctx)
     if (!loc) continue
     out.push({ ...loc, state: st, at: raw.ptyTiming[ptyId]?.lastDoneAt ?? 0 })
   }
-  // 顺序直接用 machine.ts 的 URGENCY 口径，不另写一套：approval 全部排在 done 前面，
-  // 同档内最近的在前
+  // 顺序直接用 machine.ts 的 URGENCY 口径，不另写一套：
+  // approval > done > running（还在跑的那种最不急，它自己还在推进），同档内最近的在前
   return out.sort((a, b) => urgencyCmp(a.state, a.at, b.state, b.at))
 }
 
