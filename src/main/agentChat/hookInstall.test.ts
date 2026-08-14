@@ -242,3 +242,82 @@ test('[追加] marker 散落在多个分组里——全部清理干净只留一�
   )
   assert.ok(JSON.stringify(arr).includes('/真实/real.sh'), '不相关的 Bash 分组必须完好保留')
 })
+
+// ============================================================
+// 以下是审查回合 3 补的断言：复审者不读代码，直接构造对抗性输入调真函数，
+// 发现回合 2 的修法（摘除旧痕迹 + `{...group, hooks:[...]}`）会**继承原分组的
+// matcher**——如果那个分组不是 matcher: '*'（比如被摘干净后剩下的分组恰好是
+// 'Write'），新装的 hook 就会静默落在错误的 matcher 下。PreToolUse hook 的本意是
+// 拦下所有工具调用去弹审批卡片，matcher 一旦被收窄，其它工具（Bash/Edit/...）
+// 完全不经过审批、直接放行，没有任何报错、changed:true 也看不出异常——比前几轮
+// 「丢数据」更严重，是「审批被静默绕过」。
+// 对应的修法：摘除旧痕迹（分组身份、matcher、其它条目原样保留）和「新条目放哪」
+// 拆成两个独立步骤，新条目只认 matcher 字面量是 '*' 的分组，与摘除逻辑完全解耦。
+// ============================================================
+
+test('[追加] marker 分散在不同 matcher 的分组里，新 hook 必须落在 matcher: "*"——这轮最要紧的一条', () => {
+  const OLD1 = '/老1/eas-pretooluse.mjs'
+  const OLD2 = '/老2/eas-pretooluse.mjs'
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Write',
+          hooks: [
+            { type: 'command', command: OLD1 },
+            { type: 'command', command: '/keep.sh' }
+          ]
+        },
+        { matcher: '*', hooks: [{ type: 'command', command: OLD2 }] }
+      ]
+    }
+  }
+  const { changed, next } = planHookInstall(existing, CMD)
+  assert.equal(changed, true)
+  const arr = (next.hooks as Record<string, Grp[]>).PreToolUse
+  const starGroups = arr.filter((g) => g.matcher === '*')
+  assert.equal(starGroups.length, 1, '有且只有一个 matcher: "*" 的分组')
+  const starCommands = starGroups[0].hooks.map((h) => h.command)
+  assert.ok(starCommands.includes(CMD), '新 hook 必须落在 "*" 分组里，不能被静默收窄到别的 matcher')
+  assert.ok(
+    !arr.some((g) => g.matcher !== '*' && g.hooks.some((h) => h.command === CMD)),
+    '任何非 "*" 的分组里都不该出现我们的新命令'
+  )
+})
+
+test('[追加] 用户原有分组的 matcher 不被改动——摘除旧痕迹后分组身份保持原样', () => {
+  const OLD1 = '/老1/eas-pretooluse.mjs'
+  const OLD2 = '/老2/eas-pretooluse.mjs'
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Write',
+          hooks: [
+            { type: 'command', command: OLD1 },
+            { type: 'command', command: '/keep.sh' }
+          ]
+        },
+        { matcher: '*', hooks: [{ type: 'command', command: OLD2 }] }
+      ]
+    }
+  }
+  const { next } = planHookInstall(existing, CMD)
+  const arr = (next.hooks as Record<string, Grp[]>).PreToolUse
+  const writeGroup = arr.find((g) => g.matcher === 'Write')
+  assert.ok(writeGroup, 'Write 分组必须还在——不能被当成"marker 分组"整个吞掉或改名')
+  const writeCommands = writeGroup!.hooks.map((h) => h.command)
+  assert.ok(writeCommands.includes('/keep.sh'), 'keep.sh 必须还在')
+  assert.ok(!writeCommands.includes(OLD1), 'OLD1 必须被摘掉')
+  assert.equal(writeCommands.length, 1, 'Write 分组摘完旧痕迹后恰好剩 1 条，不多不少')
+})
+
+test('[追加] 唯一一条 marker 记录如果落在错误的 matcher 下，不能被误判成"已经装好"', () => {
+  const existing = { hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: CMD }] }] } }
+  const { changed, next } = planHookInstall(existing, CMD)
+  assert.equal(changed, true, '命令虽然精确匹配，但 matcher 不是 "*"，必须视为需要修正，不能静默放过')
+  const arr = (next.hooks as Record<string, Grp[]>).PreToolUse
+  const starGroups = arr.filter((g) => g.matcher === '*')
+  assert.equal(starGroups.length, 1)
+  assert.ok(starGroups[0].hooks.map((h) => h.command).includes(CMD))
+})

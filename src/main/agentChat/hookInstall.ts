@@ -6,16 +6,20 @@
 // 识别「我们那条 hook」：命令路径里含 EAS_HOOK_MARKER 这个特征。这样升级换了安装位置
 // （命令的绝对路径变了）时，能认出旧的那条并替换掉，不会两条并存。
 //
-// 三条来自对抗性测试（构造真实用户可能写出的畸形/手改 settings.json）才撞出来的坑，
+// 四条来自对抗性测试（构造真实用户可能写出的畸形/手改 settings.json）才撞出来的坑，
 // 读代码看不出来，写在这里防止将来又被"看起来对"的实现改回去：
 // 1. 分组的 hooks 数组里混进 null／非对象项是合法但损坏的 JSON——任何读 h.command 的地方
 //    都必须先 isPlainObject(h) 守卫，不能假设「判过一次带 marker 就说明整个数组都干净」。
-// 2. 换路径时绝不能把整个分组对象整体换掉——分组的 hooks 数组里可能混着用户自己手加的
-//    条目（尤其是 matcher 恰好也是 '*' 时，用户很自然会往同一个分组里加东西）。必须只在
-//    数组内部摘掉带 marker 的旧条目，其余原样保留，新条目加在同一个位置。
-// 3. marker 可能同时出现在多个分组里（历史损坏、用户误复制粘贴）。必须全局扫描全部分组，
-//    把带 marker 的旧痕迹统统清掉，只在第一次命中的地方补回一条新的，不能只处理
-//    「找到的第一个」就收工。
+// 2. 摘除旧痕迹之后，分组本身（含它的 matcher、以及分组里其它非 marker 条目）必须原样
+//    保留——那是用户的分组，不是我们的，哪怕我们曾经往里面装过东西。
+// 3. marker 可能同时出现在多个分组里（历史损坏、用户误复制）。必须全局扫描全部分组，
+//    把带 marker 的旧痕迹统统清掉。
+// 4. 【最要紧】我们的新条目永远只能落进 matcher: '*' 的分组——绝不能「摘除旧痕迹后，
+//    把新条目放回原来那个分组」，因为那个分组的 matcher 可能不是 '*'（比如用户手改成
+//    了 'Write'）。PreToolUse hook 的本意是拦下所有工具调用去弹审批卡片，一旦 matcher
+//    被静默收窄，其它工具（Bash/Edit/...）就完全不经过审批、直接放行，没有任何报错。
+//    所以「摘除旧痕迹」和「新条目该放哪」必须是两件独立的事，不能因为在同一次遍历里
+//    顺手做就合并成一步。
 
 const EAS_HOOK_MARKER = 'eas-pretooluse'
 
@@ -27,6 +31,11 @@ interface HookEntry {
 interface HookMatcherGroup {
   matcher: string
   hooks: HookEntry[]
+}
+
+interface MarkerHit {
+  command: string
+  matcher: unknown
 }
 
 export interface PlanHookInstallResult {
@@ -41,7 +50,8 @@ export interface PlanHookInstallResult {
  * 纯函数：不读不写任何文件，只接收内存里的对象、返回下一份对象，也不修改传入的 existing。
  *
  * @param existing 现有的 settings.json 内容（已 JSON.parse 过）。可能是坏的（不是对象、
- *   是 null、是数组，或者内部混着 null／非对象项），这些情况一律尽量当空/跳过处理，不抛。
+ *   是 null、是数组，或者内部混着 null／非对象项、matcher 被改动过），这些情况一律
+ *   尽量当空/跳过处理，不抛。
  * @param hookCmd 我们的 hook 脚本命令路径（含 EAS_HOOK_MARKER 特征）。
  */
 export function planHookInstall(existing: unknown, hookCmd: string): PlanHookInstallResult {
@@ -49,52 +59,25 @@ export function planHookInstall(existing: unknown, hookCmd: string): PlanHookIns
   const existingHooks: Record<string, unknown> = isPlainObject(base.hooks) ? base.hooks : {}
   const existingPreToolUse: unknown[] = Array.isArray(existingHooks.PreToolUse) ? existingHooks.PreToolUse : []
 
-  // 全局收集所有「带 marker 特征」的条目——不管它们分散在几个分组里、
-  // 也不管同一分组里还混着什么别的（哪怕是 null）。
-  const markerEntries = existingPreToolUse.flatMap((group) => markerHooksOf(group))
+  // 全局收集所有「带 marker 特征」的条目，连同它们各自所在分组的 matcher。
+  const markerHits: MarkerHit[] = existingPreToolUse.flatMap((group) => markerHitsOf(group))
 
-  // 干净地已经装好：全局只有一条带 marker 的条目，且命令精确等于这次要装的 hookCmd——
-  // 没有旧痕迹要清、也没有别处的重复，原样返回，不做任何拷贝。
-  if (markerEntries.length === 1 && markerEntries[0].command === hookCmd) {
+  // 干净地已经装好：全局只有一条带 marker 的条目、命令精确等于这次要装的 hookCmd、
+  // 且它就在 matcher: '*' 的分组里——三个条件缺一不可。少了最后一条，会把「装在错误
+  // matcher 下」误判成无需改动，静默漏掉审批。
+  if (markerHits.length === 1 && markerHits[0].command === hookCmd && markerHits[0].matcher === '*') {
     return { changed: false, next: base }
   }
 
-  const freshEntry: HookEntry = { type: 'command', command: hookCmd }
-  let inserted = false
-  const rebuilt: unknown[] = []
+  // 第一步：全局摘除所有带 marker 的旧条目。分组本身（含它的 matcher、以及分组里其它
+  // 非 marker 条目，哪怕是用户手加的）原样保留；摘完空了的分组（通常是我们自己以前
+  // 创建的空壳）整个丢弃。这一步完全不关心「新条目该放哪」。
+  const stripped = stripMarkerHooks(existingPreToolUse)
 
-  for (const group of existingPreToolUse) {
-    if (!isPlainObject(group)) {
-      rebuilt.push(group) // 不认识的形状（比如 null），原样保留，不碰
-      continue
-    }
-    const hooksArr = group.hooks
-    if (!Array.isArray(hooksArr)) {
-      rebuilt.push(group) // 没有 hooks 数组，不是我们要处理的分组形状，原样保留
-      continue
-    }
-    const strippedHooks = hooksArr.filter((h) => !isMarkerHook(h))
-    if (strippedHooks.length === hooksArr.length) {
-      rebuilt.push(group) // 这个分组里没有我们的痕迹，原样保留（用户自己的分组，一字不改）
-      continue
-    }
-
-    // 这个分组里摘掉了至少一条我们的旧痕迹——分组内其余条目（哪怕是用户手加进同一个
-    // matcher 分组的脚本）必须留着，不能连带被冲掉。
-    if (!inserted) {
-      rebuilt.push({ ...group, hooks: [...strippedHooks, freshEntry] })
-      inserted = true
-    } else if (strippedHooks.length > 0) {
-      rebuilt.push({ ...group, hooks: strippedHooks }) // 摘完还剩别的（用户的），分组留着
-    }
-    // 摘完什么都不剩：这个分组是我们自己造的空壳，直接丢弃，不放回 rebuilt
-  }
-
-  if (!inserted) {
-    // 全局压根没有任何带 marker 的痕迹：首次安装，追加一个全新分组在最后。
-    const freshGroup: HookMatcherGroup = { matcher: '*', hooks: [freshEntry] }
-    rebuilt.push(freshGroup)
-  }
+  // 第二步：新条目永远落进 matcher: '*' 的分组——这一步之后才决定"放哪"，且只认
+  // matcher 字面量是 '*' 的分组，不认任何摘除旧痕迹时顺手保留下来的其它分组。
+  // 已经存在这样的分组就并进去，没有就新建一个追加在最后。
+  const rebuilt = mergeIntoStarGroup(stripped, { type: 'command', command: hookCmd })
 
   const next: Record<string, unknown> = {
     ...base,
@@ -111,14 +94,61 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 /** 判断某个 hook 条目是不是带 marker 特征——对 null／非对象项一律安全返回 false，不抛。 */
-function isMarkerHook(h: unknown): boolean {
+function isMarkerHook(h: unknown): h is { command: string } {
   return isPlainObject(h) && typeof h.command === 'string' && h.command.includes(EAS_HOOK_MARKER)
 }
 
-/** 某个 PreToolUse 分组里，所有带 marker 特征的 hook 条目（形状不合法时返回空数组，不抛）。 */
-function markerHooksOf(group: unknown): { command: string }[] {
+/** 某个 PreToolUse 分组里，所有带 marker 特征的 hook 条目及其所在分组的 matcher。 */
+function markerHitsOf(group: unknown): MarkerHit[] {
   if (!isPlainObject(group)) return []
   const hooksArr = group.hooks
   if (!Array.isArray(hooksArr)) return []
-  return hooksArr.filter(isMarkerHook) as { command: string }[]
+  const matcher = group.matcher
+  return hooksArr.filter(isMarkerHook).map((h) => ({ command: h.command, matcher }))
+}
+
+/**
+ * 全局摘除所有分组里带 marker 特征的条目。不认识的形状（非对象、没有 hooks 数组）原样
+ * 透传；没有 marker 痕迹的分组原样透传（连引用都不换）；摘完还剩东西的分组保留、且
+ * matcher 原封不动；摘完什么都不剩的分组整个丢弃。
+ */
+function stripMarkerHooks(groups: unknown[]): unknown[] {
+  const result: unknown[] = []
+  for (const group of groups) {
+    if (!isPlainObject(group)) {
+      result.push(group)
+      continue
+    }
+    const hooksArr = group.hooks
+    if (!Array.isArray(hooksArr)) {
+      result.push(group)
+      continue
+    }
+    const remaining = hooksArr.filter((h) => !isMarkerHook(h))
+    if (remaining.length === hooksArr.length) {
+      result.push(group) // 这个分组里没有我们的痕迹，原样保留（不改 matcher，不改内容）
+    } else if (remaining.length > 0) {
+      result.push({ ...group, hooks: remaining }) // 摘掉旧痕迹，matcher 与其它条目原样保留
+    }
+    // remaining.length === 0：这个分组摘完什么都不剩，整个丢弃，不放回 result
+  }
+  return result
+}
+
+/**
+ * 把新条目并入 matcher: '*' 的分组——已经存在（且形状合法）就并进去，否则新建一个
+ * 追加在最后。绝不把新条目放进任何其它 matcher 的分组。
+ */
+function mergeIntoStarGroup(groups: unknown[], freshEntry: HookEntry): unknown[] {
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i]
+    if (!isPlainObject(g) || g.matcher !== '*') continue
+    const hooksArr = g.hooks
+    if (!Array.isArray(hooksArr)) continue // matcher 对但形状坏了，跳过，当作没找到
+    const merged = groups.slice()
+    merged[i] = { ...g, hooks: [...hooksArr, freshEntry] }
+    return merged
+  }
+  const freshGroup: HookMatcherGroup = { matcher: '*', hooks: [freshEntry] }
+  return [...groups, freshGroup]
 }
