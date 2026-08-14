@@ -121,12 +121,16 @@ export interface UiSlice {
    *  一个都没有时 agent 相关控件整体隐藏——摆一堆点了没反应的按钮比没有更糟。 */
   agentCli: { claude: boolean; codex: boolean } | null
   refreshAgentCli: () => Promise<void>
-  /** 左侧知识库抽屉开着没有。提到 store 是因为画布上别的浮层（左下角缩略图）
-   *  要跟着让位——那些组件和抽屉没有父子关系，靠 class 传状态最省事。 */
+  /** **右侧**知识库抽屉开着没有。提到 store 是因为画布上别的浮层
+   *  （右下角的缩放条与工具条、右上角的待处理气泡）要跟着让位——
+   *  那些组件和抽屉没有父子关系，靠 class 传状态最省事（见 canvas.css 的 `.app.wiki-open`）。 */
   wikiDrawerOpen: boolean
   setWikiDrawerOpen: (v: boolean) => void
-  /** 右侧资源抽屉开着没有。同上：右下角的基本操作条和缩放条贴着右边，
-   *  抽屉展开会正好压在它们身上，得跟着往左让。 */
+  /** **左侧**资源抽屉开着没有。同上：左下角的缩略图会被它压住，得跟着往右让。
+   *
+   *  这两条的左右在 2026-08-13 对调过（资源从右挪到左、知识库从左挪到右），
+   *  实际定位以 canvas.css 的 `.canvas-drawer { left: 8px }` /
+   *  `.wiki-drawer { right: 8px }` 为准。 */
   resDrawerOpen: boolean
   setResDrawerOpen: (v: boolean) => void
   /** 词典悬浮球被右键藏起来了。存 localStorage：藏它是个明确的意愿表达，

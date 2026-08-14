@@ -2,7 +2,7 @@
 // 这是终端模式下最自然的用法（也正是 Karpathy 描述的「一侧 agent、一侧 Obsidian」，
 // 只不过这里不用开两个应用）。
 //
-// 和画布左抽屉共用同一套 IPC，但形态不同：这里空间大，直接文件树 + 正文预览左右分。
+// 和画布**右侧**的知识库抽屉共用同一套 IPC，但形态不同：这里空间大，直接文件树 + 正文预览左右分。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WikiStatus, Backlink, LintFinding, WikiStats } from '../../../../shared/types'
 import { WikiGraph } from './WikiGraph'
