@@ -126,7 +126,12 @@ export function byProject(ptyIds: string[], raw: RawSignals, ctx: LocateCtx): Pr
       acc.set(loc.projectId, { projectId: loc.projectId, top: st, count: 1, focusPtyId: ptyId, at })
     } else if (st === cur.top) {
       cur.count += 1
-      if (at > cur.at) cur.at = at
+      // focusPtyId 跟着 at 走：只有严格更新（更近）时才换，两个都撞在同一时刻（含都是 0）
+      // 时保留先到的那个——这样行内的「最近变化」和「点下去去哪」指的是同一个终端。
+      if (at > cur.at) {
+        cur.at = at
+        cur.focusPtyId = ptyId
+      }
     }
   }
   return [...acc.values()]

@@ -92,6 +92,31 @@ test('终端查不到所属项目 → 不产生行，且不抛异常', () => {
   assert.strictEqual(byProject(['nope'], r, ctx).length, 0)
 })
 
+test('同档两个终端，focusPtyId 跟最近的 at 走，且与遍历顺序无关（修复轮 1）', () => {
+  const r = raw({
+    attentionPtys: ['p1', 'p2'],
+    ptyTiming: { p1: { lastDoneAt: 100 }, p2: { lastDoneAt: 200 } }
+  })
+  const forward = byProject(['p1', 'p2'], r, ctx)
+  assert.strictEqual(forward[0].at, 200)
+  assert.strictEqual(forward[0].focusPtyId, 'p2', '这一行的 at 是 200，点下去该去 200 那个终端')
+  // 数组顺序倒过来，结果必须不变——focusPtyId 不能是「遍历顺序里第一个撞进这一档的」
+  const backward = byProject(['p2', 'p1'], r, ctx)
+  assert.strictEqual(backward[0].at, 200)
+  assert.strictEqual(backward[0].focusPtyId, 'p2')
+})
+
+test('同档两个终端，at 都是 0 时结果确定（修复轮 1）', () => {
+  const r = raw({ attentionPtys: ['p1', 'p2'] })
+  const first = byProject(['p1', 'p2'], r, ctx)
+  const second = byProject(['p1', 'p2'], r, ctx)
+  assert.strictEqual(first[0].focusPtyId, second[0].focusPtyId, '同样的输入跑两次必须一样')
+  assert.strictEqual(first[0].focusPtyId, 'p1', '都是 0（不满足严格大于）→ 保留先到的那个')
+  // 「先到」由数组顺序决定，不是恒等于某个 ptyId——倒过来先到的就是 p2
+  const reversed = byProject(['p2', 'p1'], r, ctx)
+  assert.strictEqual(reversed[0].focusPtyId, 'p2')
+})
+
 // ── 排序 ──
 test('approval 排在 done 前，done 排在 running 前', () => {
   const rows = [
