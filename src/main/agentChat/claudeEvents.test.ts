@@ -27,16 +27,37 @@ test('init 事件产出 session.ready，带 sessionId / model / cwd', () => {
 
 test('SessionStart 的 hook 噪音全部被丢掉——12 对 hook 事件里只有 1 对是 PreToolUse', () => {
   const evs = runAll('claude-hook-approved.jsonl')
-  // 审批相关事件最多来自那唯一一对 PreToolUse，绝不能有 11 对噪音漏进来
+  // 12 对 hook 事件（1 对 PreToolUse + 11 对 SessionStart 噪音）全都不该变成中间事件。
+  // 这条测试与下一条合起来锁死：hook 事件这一路整体不产出 approval。
   const approvalish = evs.filter((e) => e.k === 'approval.request' || e.k === 'approval.resolved')
-  assert.ok(approvalish.length <= 2, `审批事件应 ≤2，实际 ${approvalish.length}——噪音漏进来了`)
+  assert.equal(approvalish.length, 0, `hook 事件不该产出 approval，实际 ${approvalish.length} 个`)
 })
 
-test('PreToolUse 的 hook_response 产出 approval.resolved(allow)', () => {
+test('流里的 hook 事件一律不产出 approval 事件——审批由 hook 路单独驱动', () => {
+  // 2026-08-14 实测：流里的 hook_started/hook_response **只有 hook_id**，
+  // 而 hook 脚本那一路的 payload 里是 tool_use_id，两者对不上，缝不了。
+  // 所以审批完全由 hook 路驱动（见 Task 3），这里一个 approval 事件都不该产出。
   const evs = runAll('claude-hook-approved.jsonl')
-  const resolved = evs.filter((e) => e.k === 'approval.resolved')
-  assert.equal(resolved.length, 1)
-  assert.ok(resolved[0].k === 'approval.resolved' && resolved[0].decision === 'allow')
+  const approvalish = evs.filter((e) => e.k === 'approval.request' || e.k === 'approval.resolved')
+  assert.equal(approvalish.length, 0, '翻译器不该产出任何 approval 事件')
+})
+
+test('合成一条「非 PreToolUse 但 output 里有 permissionDecision」的噪音——照样不产出 approval', () => {
+  // 夹具里恰好没有这种行，而它正是最容易漏的那一类：
+  // 别的 hook（PostToolUse/Stop/UserPromptSubmit）的返回里如果碰巧带了这个字段，
+  // 只靠「解析得出 permissionDecision」当判据的实现就会误放行。
+  const t = createClaudeTranslator()
+  const evs = t.push(JSON.stringify({
+    type: 'system',
+    subtype: 'hook_response',
+    hook_event: 'PostToolUse',
+    hook_name: 'PostToolUse:Write',
+    hook_id: 'h1',
+    output: JSON.stringify({
+      hookSpecificOutput: { hookEventName: 'PostToolUse', permissionDecision: 'allow' }
+    })
+  }))
+  assert.equal(evs.filter((e) => e.k === 'approval.resolved').length, 0)
 })
 
 test('thinking_tokens 被节流——28 条原始事件不该产出 28 个 thinking', () => {

@@ -4,11 +4,12 @@
 // 范围说明（读需求前必看）：
 // - text.delta 本轮不实现：三份夹具都是在没带 --include-partial-messages 的情况下跑出来的，
 //   没有 partial 事件可依据。assistant 的 text block 一律只产出 text.done。
-// - approval.request 本翻译器不产出：设计文档（§四 A.3）写明它来自 PreToolUse hook 脚本
-//   那条独立的 HTTP 路径（POST 给 mcpBridge），要与本流里的 hook_started/hook_response
-//   按 tool_use_id 缝合，这是后续「审批事件缝合」任务的职责。这里的 hook_started/
-//   hook_response 只用于识别「这是不是 PreToolUse」，PreToolUse 的 hook_response 转成
-//   approval.resolved；hook_started 本身不携带任何可用于渲染的信息，一律丢弃。
+// - approval.* 本翻译器完全不产出（2026-08-14 Ruling 4）：实测流里的 system:hook_started /
+//   hook_response 只带 hook_id，而 hook 脚本那条独立的 HTTP 路径（POST 给 mcpBridge）payload
+//   里是 tool_use_id——两路没有共同的关联键，缝不起来。审批因此完全由 hook 脚本那一路单独
+//   驱动（approval.request 用 tool_use_id 当 approvalId，见「审批事件缝合」任务）。
+//   流里的 hook_started / hook_response 不管 hook_event 是什么、也不管是不是真的 PreToolUse，
+//   一律当噪音丢弃——和 SessionStart 那批噪音同等对待，不作任何特殊识别。
 
 import path from 'node:path'
 import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
@@ -76,11 +77,10 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
       case 'thinking_tokens':
         return emitThinking(j.estimated_tokens)
       case 'hook_started':
-        // PreToolUse 的 hook_started 也不携带 title/detail/cwd 之类可渲染信息，
-        // approval.request 由 hook 脚本的 HTTP 路径产出（见文件头说明）。这里一律丢弃。
-        return []
       case 'hook_response':
-        return translateHookResponse(j)
+        // 流里的 hook 事件一律不产出中间事件（见文件头 Ruling 4 说明）——不管 hook_event
+        // 是不是 PreToolUse，这里都不做区分，直接当噪音丢弃。
+        return []
       case 'permission_denied':
         return resolveExec(j.tool_use_id, false, j.message)
       default:
@@ -104,35 +104,6 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
     if (now - lastThinkingEmitAt < throttleMs) return []
     lastThinkingEmitAt = now
     return [{ k: 'thinking', tokens: estimatedTokens }]
-  }
-
-  function translateHookResponse(j: Record<string, unknown>): ChatEvent[] {
-    // 先判过滤：用户机器上的 SessionStart 等 hook 噪音必须在这里挡住，
-    // 只认 PreToolUse——其余一律丢弃。
-    if (j.hook_event !== 'PreToolUse') return []
-    const decision = parsePermissionDecision(j.output)
-    if (!decision) return []
-    const hookId = j.hook_id
-    if (typeof hookId !== 'string' || !hookId) return []
-    return [{ k: 'approval.resolved', approvalId: hookId, decision }]
-  }
-
-  function parsePermissionDecision(output: unknown): 'allow' | 'deny' | undefined {
-    if (typeof output !== 'string' || !output.trim()) return undefined
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(output)
-    } catch {
-      return undefined
-    }
-    const hookSpecificOutput = (parsed as Record<string, unknown> | null)?.['hookSpecificOutput'] as
-      | Record<string, unknown>
-      | undefined
-    const decision = hookSpecificOutput?.['permissionDecision']
-    // permissionDecision 的取值实测有 allow / deny / ask 三种；ask 代表「还没决定」，
-    // 不是二元的 resolved，这里不产出事件（既不是 allow 也不是 deny）。
-    if (decision === 'allow' || decision === 'deny') return decision
-    return undefined
   }
 
   // ---- assistant ----
