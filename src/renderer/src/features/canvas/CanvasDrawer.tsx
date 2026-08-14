@@ -72,6 +72,17 @@ export function CanvasDrawer(): JSX.Element {
   const rows = useProjectRows()
   const doneRows = useDoneRows()
   const doneCount = doneRows.length
+  // doneOpen 不能比它要显示的数据活得久：清空最后一条 done 的路径不止「点列表里那一行」
+  // （那条走 DoneList 的 onClose）——灵动岛跳转（useIslandFeed.ts 直接调 clearAttention，
+  // 独立实现，不走 focusTerminal）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
+  // canvasSel 的 effect，选中即 clearAttention）、以及那个 done 终端自己又跑起来（下一轮
+  // statusOf 先判 runningPtys，直接从 computeDoneRows 里被跳过）都会让 doneCount 归零，
+  // 但都不经过 DoneList 的 onClose。CanvasDrawer 在 viewMode 保持 'canvas' 期间不会重新挂载，
+  // doneOpen 这个 useState 不会被重置——不加这个 effect 的话，doneOpen 会停留在 true，
+  // 等下一个终端进入 done、doneCount 重新变正，列表会在用户没点气泡的情况下自己弹出来。
+  useEffect(() => {
+    if (doneCount === 0) setDoneOpen(false)
+  }, [doneCount])
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
   // 该项目的 Frame 是否被选中（画布里点选 Frame → 抽屉对应项高亮）

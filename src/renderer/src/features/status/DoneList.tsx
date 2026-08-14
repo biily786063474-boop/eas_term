@@ -8,17 +8,23 @@ import { focusTerminal, useDoneRows } from './useStatus.ts'
 export function DoneList({ onClose }: { onClose: () => void }): JSX.Element | null {
   const rows = useDoneRows()
   const boxRef = useRef<HTMLDivElement>(null)
+  // onClose 是 CanvasDrawer 每次渲染新建的内联箭头函数，直接放进下面 effect 的依赖数组
+  // 会导致列表开着时全局 mousedown 监听器随 CanvasDrawer 的每次重渲染反复移除/重装
+  // （CanvasDrawer 订阅的 store 切片不少，重渲染并不罕见）。清理函数写对了、不会丢事件，
+  // 纯属可省的开销——用 ref 兜住最新的 onClose，effect 本身只装一次。
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   // 点外面关掉。用 mousedown 而不是 click：click 要等 mouseup，
   // 期间用户可能已经在拖别的东西了
   useEffect(() => {
     const onDown = (e: MouseEvent): void => {
       if (e.target instanceof Node && boxRef.current?.contains(e.target)) return
-      onClose()
+      onCloseRef.current()
     }
     window.addEventListener('mousedown', onDown)
     return () => window.removeEventListener('mousedown', onDown)
-  }, [onClose])
+  }, [])
 
   if (!rows.length) return null
 
