@@ -341,6 +341,11 @@
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(var(--accent-rgb), 0.55);
   animation: cd-bubble-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), cd-bubble-pulse 1.7s ease-in-out infinite;
+  /* 知识库抽屉展开时要左移让位（见下面 .app.wiki-open 那条），跟抽屉同一条弹簧曲线 ——
+     不补这行的话抽屉在滑，气泡是瞬移，两者对不上。
+     和上面的 animation 不冲突：cd-bubble-pulse 只动 box-shadow，
+     cd-bubble-pop 虽然动 transform 但只播 0.3s 一次，播完就交还给普通声明。 */
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes cd-bubble-pop {
   from {
@@ -3124,7 +3129,13 @@
    逻辑同左边的 .app.res-open 之于缩略图。 */
 .app.wiki-open .canvas-zoombar,
 .app.wiki-open .ctoolbar-mini,
-.app.wiki-open .csnap-err {
+.app.wiki-open .csnap-err,
+/* 待处理气泡也得让 —— 它在 right:16px、z-index 31，而知识库抽屉是
+   right:8px / 宽 250px / z-index 45，气泡整个落在抽屉盒子里且层级更低，会被盖住。
+   两个抽屉的开合是互相独立的布尔量（uiSlice.ts:256），「资源抽屉收起 + 知识库展开」
+   是日常可达的组合（一边挂着待处理终端、一边开着知识库找资料）。
+   这跟它先前在**左**边被运行监视盖住是同一类问题，只是换了一侧。 */
+.app.wiki-open .cd-attn-bubble {
   transform: translateX(-250px);
 }
 
