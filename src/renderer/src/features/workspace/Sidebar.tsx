@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import type { Project } from '../../../../shared/types'
@@ -8,6 +8,7 @@ import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIco
 import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { projectMenuItems } from './projectMenu'
+import { useProjectRows } from '../status/useStatus.ts'
 import './workspace.css'
 
 // 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
@@ -102,8 +103,7 @@ export function Sidebar(): JSX.Element {
   } | null>(null)
   const [renameError, setRenameError] = useState<string | null>(null)
   const renameProjectFolder = useStore((s) => s.renameProjectFolder)
-  const attentionPtys = useStore((s) => s.attentionPtys)
-  const tabs = useStore((s) => s.tabs)
+  const rows = useProjectRows()
 
   // 真改文件夹：有终端在跑就先把后果说清楚，让人决定
   const startFolderRename = (projectId: string, newName: string): void => {
@@ -132,23 +132,6 @@ export function Sidebar(): JSX.Element {
   }
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
-
-  // 有「任务完成」提醒的项目 id（终端完成任务后 flagAttention；切到该项目即清除）
-  const attnProjectIds = useMemo(() => {
-    if (!attentionPtys.length) return new Set<string>()
-    const attn = new Set(attentionPtys)
-    const ids = new Set<string>()
-    for (const t of tabs) {
-      if (!t.projectId) continue
-      if (
-        collectLeaves(t.root).some(
-          (l) => l.pane.kind === 'terminal' && attn.has((l.pane as { ptyId: string }).ptyId)
-        )
-      )
-        ids.add(t.projectId)
-    }
-    return ids
-  }, [attentionPtys, tabs])
 
   return (
     <aside className="sidebar">
@@ -184,7 +167,8 @@ export function Sidebar(): JSX.Element {
                 setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
               }}
             >
-              {attnProjectIds.has(p.id) && (
+              {/* 需处理（approval/done）才亮红点——running 不算，同 CanvasDrawer 的呼吸判据 */}
+              {rows.some((r) => r.projectId === p.id && r.top !== 'running') && (
                 <span className="project-attn-dot" data-tip="该项目有任务完成" />
               )}
               {editingProject?.id === p.id ? (

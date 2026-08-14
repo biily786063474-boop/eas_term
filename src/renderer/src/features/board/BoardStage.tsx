@@ -17,6 +17,7 @@ import type { LeafNode } from '../../layout'
 import type { Project, ProjectStatus } from '../../../../shared/types'
 
 import { RunMonitor } from '../status/RunMonitor'
+import { useProjectRows } from '../status/useStatus.ts'
 import { useBoardScroll } from './useBoardScroll'
 import { TerminalIcon, PlusIcon, CloseIcon, ChevronLeftIcon, TrashIcon } from '../../ui/Icons'
 import './board.css'
@@ -33,8 +34,11 @@ export function BoardStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const tabs = useStore((s) => s.tabs)
   const setProjectStatus = useStore((s) => s.setProjectStatus)
+  // 卡片头「等处理/在跑」两个点判的是单个终端，就地读 attentionPtys/runningPtys 是合理的
+  // 局部用途（同 AgentCmdBar）；卡片级别「这个项目要不要点」的聚合改走 rows，见下面 busy/need。
   const attentionPtys = useStore((s) => s.attentionPtys)
   const runningPtys = useStore((s) => s.runningPtys)
+  const rows = useProjectRows()
   const openTerminal = useStore((s) => s.openTerminal)
   const setActiveProject = useStore((s) => s.setActiveProject)
   const full = useStore((s) => s.boardFullscreen)
@@ -272,8 +276,12 @@ export function BoardStage(): JSX.Element {
               )}
               {list.map((p) => {
                 const terms = termsByProject.get(p.id) ?? []
-                const busy = terms.filter((t) => runningPtys.includes(t.ptyId)).length
-                const need = terms.filter((t) => attentionPtys.includes(t.ptyId)).length
+                // 卡片级别的「要不要点」聚合走 rows（useProjectRows() 已按项目算好最急的状态），
+                // 不再自己用 terms 数一遍——两边本就是同一份 tabs 算出来的，没必要算两次。
+                // need/busy 这里只当布尔用（卡片描边、状态点颜色），不显示具体数字。
+                const row = rows.find((r) => r.projectId === p.id)
+                const need = !!row && row.top !== 'running'
+                const busy = row?.top === 'running'
                 return (
                   <div
                     key={p.id}

@@ -66,7 +66,6 @@ export function CanvasDrawer(): JSX.Element {
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
   const tabs = useStore((s) => s.tabs)
-  const attentionPtys = useStore((s) => s.attentionPtys)
   const clearAttention = useStore((s) => s.clearAttention)
   const canvasSel = useStore((s) => s.canvasSel)
   const rows = useProjectRows()
@@ -89,16 +88,13 @@ export function CanvasDrawer(): JSX.Element {
   const projectFrameSelected = (pid: string): boolean =>
     frames.some((f) => f.projectId === pid && canvasSel.includes('f:' + f.id))
 
-  // 该项目是否有终端「需处理」（响铃未查看）——用于条目呼吸高亮
-  const projectHasAttention = (pid: string): boolean =>
-    attentionPtys.length > 0 &&
-    tabs.some(
-      (t) =>
-        t.projectId === pid &&
-        collectLeaves(t.root).some(
-          (l) => l.pane.kind === 'terminal' && attentionPtys.includes(l.pane.ptyId)
-        )
-    )
+  // 该项目是否有终端「需处理」（响铃未查看）——用于条目呼吸高亮。
+  // 走 rows（上面 useProjectRows() 已按项目聚合好），不再自己扫一遍 tabs/attentionPtys——
+  // top 是 running 说明该项目没有 approval/done、只是在跑，不该呼吸（呼吸只留给「需要你」的状态）。
+  const projectHasAttention = (pid: string): boolean => {
+    const row = rows.find((r) => r.projectId === pid)
+    return !!row && row.top !== 'running'
+  }
 
   // 抽屉打开时：在抽屉以外任何地方点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
   useEffect(() => {

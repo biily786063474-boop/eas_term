@@ -118,31 +118,25 @@ export function CanvasStage(): JSX.Element {
   const clearAttention = useStore((s) => s.clearAttention)
   const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const spaceHeld = useRef(false)
-  // 选中终端节点 / 其所在 Frame → 视为已知晓，清除该终端的「需处理」呼吸标记
+  // 单选一个终端节点 → 视为已知晓，清除该终端的「需处理」呼吸标记。
+  //
+  // **只在单选、且选中对象就是节点本身时才清——不再随框选/多选/整帧选中级联。**
+  // 原来 canvasSel 里每个 key 都会触发清除，'f:' 开头（选中整个 Frame）还会连带清掉
+  // Frame 下所有终端。这和 focusTerminal「只清被点的那一个」是同一类不对称：框选
+  // 一片节点多半是要挪一挪/对齐/编组，不代表每个都被看过了；Frame 折叠时里面的
+  // 终端节点根本没渲染，选中一个折叠的 Frame（比如拖它挪位置）就把看不见的终端也
+  // 一并清掉，更站不住脚。只有单选且选的是节点本身，才是无歧义的「我在看这一个」——
+  // 单击一个节点、或 MCP canvas_maximize_node（也是把 canvasSel 置成唯一一个 'n:' key）
+  // 都落在这个形状。这条效果也是 Task 6 doneOpen 泄漏最容易被触发的路径，收紧触发面
+  // 顺带把它的暴露面也收窄了。
   useEffect(() => {
-    if (!canvasSel.length) return
+    if (canvasSel.length !== 1 || canvasSel[0][0] !== 'n') return
     const st = useStore.getState()
-    const leaves = st.tabs.flatMap((t) => collectLeaves(t.root))
-    const ptyOf = (leafId?: string): string | null => {
-      if (!leafId) return null
-      const l = leaves.find((x) => x.id === leafId)
-      return l?.pane.kind === 'terminal' ? l.pane.ptyId : null
-    }
-    canvasSel.forEach((key) => {
-      if (key[0] === 'n') {
-        const [, fid, nid] = key.split(':')
-        const n = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((x) => x.id === nid)
-        const p = ptyOf(n?.leafId)
-        if (p) clearAttention(p)
-      } else if (key[0] === 'f') {
-        st.canvas.frames
-          .find((f) => f.id === key.slice(2))
-          ?.nodes.forEach((n) => {
-            const p = ptyOf(n.leafId)
-            if (p) clearAttention(p)
-          })
-      }
-    })
+    const [, fid, nid] = canvasSel[0].split(':')
+    const n = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((x) => x.id === nid)
+    if (!n?.leafId) return
+    const leaf = st.tabs.flatMap((t) => collectLeaves(t.root)).find((x) => x.id === n.leafId)
+    if (leaf?.pane.kind === 'terminal') clearAttention(leaf.pane.ptyId)
   }, [canvasSel, clearAttention])
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
