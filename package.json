@@ -10,6 +10,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "node --test 'src/**/*.test.ts'",
     "dist": "electron-vite build && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "electron-vite build && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty"
