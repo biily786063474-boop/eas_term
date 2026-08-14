@@ -27,8 +27,7 @@ function ctxOf(s: AppState): LocateCtx {
   return { tabs: s.tabs, frames: s.canvas.frames, projects: s.projects }
 }
 
-/** 把一份「纯基本类型字段的对象」数组压成一个字符串 key——ProjectRow/DoneRow
- *  都是这种形状。
+/** 把一份对象数组压成一个字符串 key——ProjectRow/DoneRow 都适用。
  *
  *  这是绕开下面这个限制的办法：zustand 5 把自定义 equalityFn 那条路
  *  （`useStoreWithEqualityFn`，来自 `zustand/traditional`）单独拆出去了，
@@ -41,21 +40,14 @@ function ctxOf(s: AppState): LocateCtx {
  *  拖分隔条/拖画布节点时引用会变，跟终端状态无关，见 useProjectRows 里的说明），
  *  只是最后不返回数组本身，返回它的「指纹」。
  *
- *  写成通用版本而不是给 ProjectRow/DoneRow 各写一份：那样又是一份要跟着
- *  machine.ts 手动同步的重复定义，加字段时忘了改这里不会报错，只会静静地
- *  漏判「其实变了」。 */
-function rowsKey<T extends object>(rows: readonly T[]): string {
-  return rows
-    .map((r) => {
-      // ProjectRow/DoneRow 是没有索引签名的具名 interface，逐键取值需要按 Record 转——
-      // 这一步只是绕开 TS 的静态检查，不改变运行时行为。
-      const o = r as unknown as Record<string, unknown>
-      return Object.keys(o)
-        .sort()
-        .map((k) => `${k}:${String(o[k])}`)
-        .join(',')
-    })
-    .join('\n')
+ *  直接用 JSON.stringify，不手写拼接：ProjectRow 的字段都是 id/枚举/数字，
+ *  手写怎么拼都没事，但 DoneRow 继承 Located 的 project/term——分别是项目名和
+ *  终端标题（后者来自 shell 标题，是任意文本），手写拼接理论上存在两份不同的
+ *  行序列拼出同一个字符串的碰撞（比如某个值里恰好含分隔符）。JSON.stringify
+ *  对特殊字符做转义，没有这个问题，成本跟手写拼接一个量级，没有理由不用严格
+ *  无碰撞的那个。 */
+function rowsKey<T>(rows: readonly T[]): string {
+  return JSON.stringify(rows)
 }
 
 /** 所有有状态的项目，已排好序（approval > done > running）
@@ -157,7 +149,13 @@ export function focusTerminal(ptyId: string): void {
     // 「该项目上次激活的标签」写回 activeTabId（pickActiveTab，不一定是 loc.tabId）。
     // 顺序对了，setActiveLeaf 才是最后一个写 activeTabId 的，落点精确到 loc.tabId；
     // 顺序反了，刚设对的 activeTabId 会被这行的猜测覆盖掉。
-    st.setActiveProject(loc.projectId, { keepAttention: true })
+    //
+    // **loc.projectId 可能是 null（散终端，没有项目归属）——这时不能调
+    // setActiveProject(null, ...)。** 那样会把用户正看着的项目上下文（侧栏高亮、
+    // 文件树）清空，跟 setActiveLeaf 里 `tab?.projectId ?? s.activeProjectId`
+    // 那种「没有项目就保留原值」的处理方式相悖，也跟 useIslandFeed.ts 灵动岛
+    // 跳转的既有写法（同样是 `if (loc.projectId) st.setActiveProject(...)`）不一致。
+    if (loc.projectId) st.setActiveProject(loc.projectId, { keepAttention: true })
   }
   st.setActiveLeaf(loc.tabId, loc.leafId)
   st.clearAttention(ptyId)
