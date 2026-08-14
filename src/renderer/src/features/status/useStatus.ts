@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { useStore } from '../../store'
 import type { AppState } from '../../store'
-import { byProject, locate, sortRows, statusOf } from './machine'
+import { byProject, locate, sortRows, statusOf, urgencyCmp } from './machine'
 import type { LocateCtx, Located, ProjectRow, RawSignals } from './machine'
 
 /** 把 store 里那六个字段取成一份快照。
@@ -27,7 +27,7 @@ function ctxOf(s: AppState): LocateCtx {
   return { tabs: s.tabs, frames: s.canvas.frames, projects: s.projects }
 }
 
-/** 把一份对象数组压成一个字符串 key——ProjectRow/DoneRow 都适用。
+/** 把一份对象数组压成一个字符串 key——ProjectRow/PendingRow 都适用。
  *
  *  这是绕开下面这个限制的办法：zustand 5 把自定义 equalityFn 那条路
  *  （`useStoreWithEqualityFn`，来自 `zustand/traditional`）单独拆出去了，
@@ -41,7 +41,7 @@ function ctxOf(s: AppState): LocateCtx {
  *  只是最后不返回数组本身，返回它的「指纹」。
  *
  *  直接用 JSON.stringify，不手写拼接：ProjectRow 的字段都是 id/枚举/数字，
- *  手写怎么拼都没事，但 DoneRow 继承 Located 的 project/term——分别是项目名和
+ *  手写怎么拼都没事，但 PendingRow 继承 Located 的 project/term——分别是项目名和
  *  终端标题（后者来自 shell 标题，是任意文本），手写拼接理论上存在两份不同的
  *  行序列拼出同一个字符串的碰撞（比如某个值里恰好含分隔符）。JSON.stringify
  *  对特殊字符做转义，没有这个问题，成本跟手写拼接一个量级，没有理由不用严格
@@ -76,30 +76,48 @@ export function useProjectRows(): ProjectRow[] {
   }, [key])
 }
 
-/** 已完成列表要显示的一条 */
-export interface DoneRow extends Located {
+/**
+ * 待处理列表要显示的一条。**approval 和 done 都算，approval 排前面。**
+ *
+ * 原来这里只列 done（那时叫 `DoneRow` / `useDoneRows`），右上角气泡数也只数 done。
+ * 那是个回归：**画布模式下这个气泡是 approval 唯一的常驻提示**——标题栏铃铛在画布
+ * 模式根本不挂载（App.tsx 的 `viewMode !== 'canvas'`），运行监视只显示 running，
+ * 灵动岛只在应用切到后台时才出现，而气泡只在资源抽屉收起时渲染（收起是干活的常态）。
+ * 换成只数 done 之后，「CLI 停在权限确认框上」响一声提示音，屏幕上却没有任何东西
+ * 告诉你响的是哪里——而 approval 恰恰是规格 §1.1 里唯一「不管就永远卡着」的状态，
+ * 那一条还写着它「在任何排序里都排最前」。
+ *
+ * 改名也是这个原因：一个叫 done 的东西里装着 approval，下一个人读到名字就会判断错。
+ */
+export interface PendingRow extends Located {
+  /** approval 还是 done：决定用哪个 icon 形态，也决定排在哪一档 */
+  state: 'approval' | 'done'
   at: number
 }
 
-function computeDoneRows(raw: RawSignals, ctx: LocateCtx): DoneRow[] {
-  const out: DoneRow[] = []
+function computePendingRows(raw: RawSignals, ctx: LocateCtx): PendingRow[] {
+  const out: PendingRow[] = []
   for (const ptyId of raw.attentionPtys) {
-    if (statusOf(ptyId, raw) !== 'done') continue
+    const st = statusOf(ptyId, raw)
+    // running 不进来：那说明 spinner 又转起来了，此刻要你做的事已经不成立
+    if (st !== 'approval' && st !== 'done') continue
     const loc = locate(ptyId, ctx)
     if (!loc) continue
-    out.push({ ...loc, at: raw.ptyTiming[ptyId]?.lastDoneAt ?? 0 })
+    out.push({ ...loc, state: st, at: raw.ptyTiming[ptyId]?.lastDoneAt ?? 0 })
   }
-  return out.sort((a, b) => b.at - a.at)
+  // 顺序直接用 machine.ts 的 URGENCY 口径，不另写一套：approval 全部排在 done 前面，
+  // 同档内最近的在前
+  return out.sort((a, b) => urgencyCmp(a.state, a.at, b.state, b.at))
 }
 
-/** 只列 done 的终端，新的在前。理由同 useProjectRows：先订阅一份 rowsKey 指纹，
- *  拖拽造成的引用变化产出同一个 key 时不该让这里的消费者跟着重渲染，
+/** 列出所有 approval / done 的终端，approval 在前。理由同 useProjectRows：先订阅一份
+ *  rowsKey 指纹，拖拽造成的引用变化产出同一个 key 时不该让这里的消费者跟着重渲染，
  *  key 真的变了才用 useMemo 重新算出实际数组。 */
-export function useDoneRows(): DoneRow[] {
+export function usePendingRows(): PendingRow[] {
   const raw = useRaw()
-  const key = useStore((s) => rowsKey(computeDoneRows(raw, ctxOf(s))))
+  const key = useStore((s) => rowsKey(computePendingRows(raw, ctxOf(s))))
   return useMemo(
-    () => computeDoneRows(raw, ctxOf(useStore.getState())),
+    () => computePendingRows(raw, ctxOf(useStore.getState())),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [key]
   )
@@ -128,13 +146,13 @@ export function useDoneRows(): DoneRow[] {
  *    的话跳过去的标签压根不会出现，所以要跟着切 activeProject。
  * 跟 useIslandFeed.ts 灵动岛跳转是同一套处理。
  *
- * **跨项目跳转时 setActiveProject 要传 `keepAttention: true`。** 它默认会把
- * 目标项目全部终端的 attentionPtys 一并清掉（语义是「这个项目我来看了」），
- * 但这里的意图是「我要看这一个终端」——规格 §1.2 把清除定义成逐终端的，
- * machine.test.ts 也专门锁着「清一个不影响同项目另一个」这条约定。不传的话，
- * 点某个跨项目的终端会把同项目其它还没看过的 done/approval 一起悄悄清掉，
- * 是 focusTerminal 自己引入的、没人设计过的副作用，不是 setActiveProject
- * 原有行为的自然延伸。
+ * **setActiveProject 不再顺手清提醒。** 它原来默认会把目标项目全部终端的
+ * attentionPtys 一并清掉（语义写的是「这个项目我来看了」），这里靠传
+ * `keepAttention: true` 躲开。后来查实那条默认行为在**四个**调用点上都是错的
+ * （侧栏、看板两处、抽屉项目行——每一处都只把其中一个终端摆到眼前，却清掉全部），
+ * 于是整条删掉了，参数也一并去掉，见 projectsSlice.ts 的说明。
+ * 清除现在只发生在两处，都是逐终端的：这个函数的最后一行，
+ * 以及终端拿到输入焦点时 TerminalView 的 focusin。
  */
 export function focusTerminal(ptyId: string): void {
   const st = useStore.getState()
@@ -155,7 +173,7 @@ export function focusTerminal(ptyId: string): void {
     // 文件树）清空，跟 setActiveLeaf 里 `tab?.projectId ?? s.activeProjectId`
     // 那种「没有项目就保留原值」的处理方式相悖，也跟 useIslandFeed.ts 灵动岛
     // 跳转的既有写法（同样是 `if (loc.projectId) st.setActiveProject(...)`）不一致。
-    if (loc.projectId) st.setActiveProject(loc.projectId, { keepAttention: true })
+    if (loc.projectId) st.setActiveProject(loc.projectId)
   }
   st.setActiveLeaf(loc.tabId, loc.leafId)
   st.clearAttention(ptyId)

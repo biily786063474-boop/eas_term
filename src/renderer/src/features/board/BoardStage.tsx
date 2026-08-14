@@ -41,6 +41,11 @@ export function BoardStage(): JSX.Element {
   const rows = useProjectRows()
   const openTerminal = useStore((s) => s.openTerminal)
   const setActiveProject = useStore((s) => s.setActiveProject)
+  // 看板的「摆到眼前」是 setBoardFullscreen（把某一个终端全屏），既不是画布节点也不是
+  // 分屏标签，走不了 focusTerminal 的那两支。所以这里自己调 clearAttention——
+  // 但**只清真的被全屏出来的那一个**：setActiveProject 原来会顺手把整个项目清光，
+  // 而卡片点进去只会全屏其中一个，其余的提醒就那么没了（见 projectsSlice.ts）。
+  const clearAttention = useStore((s) => s.clearAttention)
   const full = useStore((s) => s.boardFullscreen)
   const setFull = useStore((s) => s.setBoardFullscreen)
   const columns = useStore((s) => s.boardColumns)
@@ -130,8 +135,11 @@ export function BoardStage(): JSX.Element {
   /** 点开某个项目。有终端就全屏第一个，没有就先开一个（开完卡片上会出现它） */
   const openFull = (p: Project, terms: TermLeaf[]): void => {
     setActiveProject(p.id)
-    if (terms.length) setFull(terms[0].leaf.id)
-    else void openTerminal({ projectId: p.id })
+    if (terms.length) {
+      setFull(terms[0].leaf.id)
+      // 只清被全屏出来的这一个。同项目其它终端一个像素都没露面，它们的提醒得留着
+      clearAttention(terms[0].ptyId)
+    } else void openTerminal({ projectId: p.id })
   }
 
   if (fullOf) {
@@ -333,6 +341,11 @@ export function BoardStage(): JSX.Element {
                                 e.stopPropagation()
                                 setActiveProject(p.id)
                                 setFull(t.leaf.id)
+                                // 用户点的就是这一个终端，清它。原来这里指望
+                                // setActiveProject 的批量清代劳，除了「点一个清一片」，
+                                // 还有个更怪的后果：那个函数在项目**已经是当前项目**时
+                                // 直接早退，于是点自己项目卡片里的终端反而一个都不清。
+                                clearAttention(t.ptyId)
                               }}
                             >
                               <span className="board-termdot" />

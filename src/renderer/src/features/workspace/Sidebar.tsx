@@ -159,6 +159,11 @@ export function Sidebar(): JSX.Element {
               onRemove={() => void removeProject(p.id)}
               className={`project-item${p.id === activeProjectId ? ' active' : ''}`}
               data-tip={p.path}
+              // 只切项目，不清提醒。setActiveProject 原来会顺手把该项目**全部**终端的
+              // 提醒清掉，而这一下只会把其中一个标签摆到眼前——别的标签里那个卡在
+              // 权限确认框上的 CLI 就此没了任何指示。真正落地的那个终端由
+              // TerminalView 的 focusin → clearAttention 逐个清（切标签会让它拿到
+              // 输入焦点），够用且精确。详见 projectsSlice.ts 的说明。
               onClick={() => setActiveProject(p.id)}
               // 双击 = 重命名（原来是「开新终端」，已移到右键菜单和行尾的终端图标按钮）
               onDoubleClick={() => setEditingProject({ id: p.id, mode: 'name' })}

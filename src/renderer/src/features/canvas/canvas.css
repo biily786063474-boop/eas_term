@@ -361,6 +361,29 @@
     box-shadow: 0 4px 22px 3px rgba(var(--accent-rgb), 0.75);
   }
 }
+/* 队列里有「等审批」时换一种脉冲：慢一点、外面多一圈扩散的光晕。
+   approval 是唯一「不管就永远卡着」的状态（规格 §1.1），和「跑完了、有空再看」
+   长得一模一样的话，这个气泡就只剩一个数字，看不出该不该马上过去。
+   **和 cd-bubble-pulse 一样只动 box-shadow，绝不动 transform** ——
+   .app.wiki-open 靠 transform 把气泡左移让位，动画一碰 transform 就把那个让位顶掉了。 */
+.cd-attn-bubble.approval {
+  animation:
+    cd-bubble-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    cd-bubble-wait 1.9s ease-in-out infinite;
+}
+@keyframes cd-bubble-wait {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 16px rgba(var(--accent-rgb), 0.5),
+      0 0 0 0 rgba(var(--accent-rgb), 0.45);
+  }
+  50% {
+    box-shadow:
+      0 4px 22px 3px rgba(var(--accent-rgb), 0.8),
+      0 0 0 5px rgba(var(--accent-rgb), 0.14);
+  }
+}
 
 .cd-head {
   height: 38px;
@@ -2237,7 +2260,7 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ========== 画布右上角「运行监视窗」（刻意做得很淡） ========== */
+/* ========== 画布左上角「运行监视窗」（刻意做得很淡） ========== */
 .crm,
 .crm-mini {
   /* 放左上：右侧是「完成 / 待处理」那一侧（标题栏铃铛、抽屉待处理气泡都在右边），

@@ -21,9 +21,9 @@ import { projectMenuItems } from '../workspace/projectMenu'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { shellQuote } from './shellQuote'
 import { elementUnderPoint } from './hitTest'
-import { useProjectRows, useDoneRows } from '../status/useStatus.ts'
+import { useProjectRows, usePendingRows, focusTerminal } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
-import { DoneList } from '../status/DoneList'
+import { PendingList } from '../status/PendingList'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
@@ -51,8 +51,8 @@ export function CanvasDrawer(): JSX.Element {
   const [compOpen, setCompOpen] = useState(true)
   const [projH, setProjH] = useState(180)
   const [compH, setCompH] = useState(110)
-  /** 右上角气泡点开的已完成列表 */
-  const [doneOpen, setDoneOpen] = useState(false)
+  /** 右上角气泡点开的待处理列表（等审批 + 已完成） */
+  const [pendingOpen, setPendingOpen] = useState(false)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
@@ -65,23 +65,23 @@ export function CanvasDrawer(): JSX.Element {
   const addComponentNode = useStore((s) => s.addComponentNode)
   const setViewport = useStore((s) => s.setViewport)
   const frames = useStore((s) => s.canvas.frames)
-  const tabs = useStore((s) => s.tabs)
-  const clearAttention = useStore((s) => s.clearAttention)
   const canvasSel = useStore((s) => s.canvasSel)
   const rows = useProjectRows()
-  const doneRows = useDoneRows()
-  const doneCount = doneRows.length
-  // doneOpen 不能比它要显示的数据活得久：清空最后一条 done 的路径不止「点列表里那一行」
-  // （那条走 DoneList 的 onClose）——灵动岛跳转（useIslandFeed.ts 的 focus 动作调
+  const pendingRows = usePendingRows()
+  const pendingCount = pendingRows.length
+  /** 队列里有等审批的 → 气泡的文案要说「等你确认」，那和「跑完了」是两件事 */
+  const hasApproval = pendingRows.some((r) => r.state === 'approval')
+  // pendingOpen 不能比它要显示的数据活得久：清空最后一条的路径不止「点列表里那一行」
+  // （那条走 PendingList 的 onClose）——灵动岛跳转（useIslandFeed.ts 的 focus 动作调
   // focusTerminal，末尾同样落到 clearAttention）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
-  // canvasSel 的 effect，选中即 clearAttention）、以及那个 done 终端自己又跑起来（下一轮
-  // statusOf 先判 runningPtys，直接从 computeDoneRows 里被跳过）都会让 doneCount 归零，
-  // 但都不经过 DoneList 的 onClose。CanvasDrawer 在 viewMode 保持 'canvas' 期间不会重新挂载，
-  // doneOpen 这个 useState 不会被重置——不加这个 effect 的话，doneOpen 会停留在 true，
-  // 等下一个终端进入 done、doneCount 重新变正，列表会在用户没点气泡的情况下自己弹出来。
+  // canvasSel 的 effect，选中即 clearAttention）、以及那个终端自己又跑起来（下一轮
+  // statusOf 先判 runningPtys，直接从 computePendingRows 里被跳过）都会让 pendingCount 归零，
+  // 但都不经过 PendingList 的 onClose。CanvasDrawer 在 viewMode 保持 'canvas' 期间不会重新挂载，
+  // pendingOpen 这个 useState 不会被重置——不加这个 effect 的话，pendingOpen 会停留在 true，
+  // 等下一个终端进入待处理、pendingCount 重新变正，列表会在用户没点气泡的情况下自己弹出来。
   useEffect(() => {
-    if (doneCount === 0) setDoneOpen(false)
-  }, [doneCount])
+    if (pendingCount === 0) setPendingOpen(false)
+  }, [pendingCount])
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
   // 该项目的 Frame 是否被选中（画布里点选 Frame → 抽屉对应项高亮）
@@ -170,15 +170,22 @@ export function CanvasDrawer(): JSX.Element {
       const vpEl = document.querySelector('.canvas-viewport')
       vpEl?.classList.remove('drop-active')
       if (!start.started) {
-        // 点击项目：激活 + 聚焦该项目 Frame + 消除该项目终端的「需处理」呼吸（点一次即知晓）
+        // 点击项目，两档（先判上面这档，不叠加）——和双击弹出的项目列表同一套规则：
+        //
+        // ① 该项目有 approval / done 的终端 → 交给 focusTerminal，跳到最紧急的那一个。
+        //    原来这里是自己那套：setActiveProject 顺手批量清整个项目 + 再手动逐个
+        //    clearAttention 一遍 + `if (frame) focusFrame(...)`。两个毛病全占了——
+        //    **批量清**（machine.test.ts 专门锁着「清一个不影响同项目另一个」），
+        //    以及**不保证可见就清**（项目还没上画布时 frame 为 undefined，focusFrame
+        //    整个跳过，画面一动不动，提醒却已经没了）。而这一轮刚把这行的徽标从
+        //    「待处理」升级成 icon + 计数：它现在明确告诉你有 3 个，点一下 3 个一起没。
+        // ② 没有任何状态 → 维持原来的「激活项目 + 居中到该项目 Frame」。
+        const row = rows.find((r) => r.projectId === project.id && r.top !== 'running')
+        if (row) {
+          focusTerminal(row.focusPtyId)
+          return
+        }
         setActiveProject(project.id)
-        tabs
-          .filter((t) => t.projectId === project.id)
-          .forEach((t) =>
-            collectLeaves(t.root).forEach((l) => {
-              if (l.pane.kind === 'terminal') clearAttention(l.pane.ptyId)
-            })
-          )
         const frame = useStore.getState().canvas.frames.find((f) => f.projectId === project.id)
         if (frame) focusFrame(frame.id)
         return
@@ -426,7 +433,9 @@ export function CanvasDrawer(): JSX.Element {
   if (maximizedNode) return <></>
   return (
     <>
-      {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡 */}
+      {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡。
+          气泡数是「等审批 + 已完成」之和：画布模式下标题栏铃铛不挂载
+          （App.tsx 的 viewMode !== 'canvas'），这里是 approval 唯一的常驻提示。 */}
       {!open && (
         <>
           <div className={`cd-edge${edgeHover ? ' hot' : ''}`}>
@@ -448,16 +457,16 @@ export function CanvasDrawer(): JSX.Element {
               <span className="cd-edge-label">文件信息</span>
             </span>
           </div>
-          {doneCount > 0 && (
+          {pendingCount > 0 && (
             <>
               <button
-                className="cd-attn-bubble"
-                data-tip="有任务完成了，点击查看"
-                onClick={() => setDoneOpen((v) => !v)}
+                className={`cd-attn-bubble${hasApproval ? ' approval' : ''}`}
+                data-tip={hasApproval ? '有任务在等你确认，点击查看' : '有任务完成了，点击查看'}
+                onClick={() => setPendingOpen((v) => !v)}
               >
-                {doneCount}
+                {pendingCount}
               </button>
-              {doneOpen && <DoneList onClose={() => setDoneOpen(false)} />}
+              {pendingOpen && <PendingList onClose={() => setPendingOpen(false)} />}
             </>
           )}
         </>

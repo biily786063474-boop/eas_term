@@ -16,13 +16,21 @@ export interface ProjectsSlice {
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
   renameProjectFolder: (id: string, newName: string) => Promise<string | null>
-  /** 切到某个项目（侧栏点项目、看板点卡片……）。默认清除该项目全部终端的
-   *  「任务完成」提醒——语义是「这个项目我来看了」。
-   *  `keepAttention: true` 是给 focusTerminal（跳到某一个具体终端）留的例外口子：
-   *  那个动作表达的是「我要看这一个」，不是「这个项目我都看过了」，见
-   *  useStatus.ts 里的说明。除 focusTerminal 外**不要**传这个参数——默认行为
-   *  就是既有约定，两条路不是历史遗留，不能合并掉。 */
-  setActiveProject: (id: string | null, opts?: { keepAttention?: boolean }) => void
+  /** 切到某个项目（侧栏点项目、看板点卡片……）。**只切项目，不碰任何提醒。**
+   *
+   *  它原来还会顺手把该项目**全部**终端的 attentionPtys 清掉，语义写的是
+   *  「这个项目我来看了」。那条默认行为已经删掉，理由有三：
+   *  ① 规格 §1.2 把清除定义成逐终端的「那一个被聚焦到眼前」，machine.test.ts
+   *     专门锁着「清一个不影响同项目另一个」；批量清与它直接冲突。
+   *  ② 它会连 approval 一起清（clearAttention 还连带删掉 ptyApproval / approvalSentAt），
+   *     而切项目时你只会落到其中一个标签——另一个标签里那个卡在权限框上的
+   *     CLI 就此失去全部指示，而 approval 是唯一「不管就永远卡着」的状态。
+   *  ③ 它本来就不自洽：开头 `activeProjectId === id` 就早退，点一个**已经激活**的
+   *     项目一个都不清，同一个手势的效果取决于你上一次点的是谁。
+   *  真正该清的那一个由两条路负责，都是逐终端的：focusTerminal（从状态面点过去，
+   *  见 features/status/useStatus.ts）、以及终端拿到输入焦点时 TerminalView 的
+   *  focusin → clearAttention。切项目后落地的那个终端会经第二条自动清掉。 */
+  setActiveProject: (id: string | null) => void
   /** 打/清项目状态标签（null = 未分类）。**这是状态的唯一写入口** ——
    *  看板拖拽、画布 Frame 右键、分屏 tab 右键都走它，各写各的迟早对不上 */
   setProjectStatus: (id: string, status: ProjectStatus | null) => Promise<void>
@@ -140,25 +148,13 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
     return null
   },
 
-  setActiveProject: (id, opts) => {
+  setActiveProject: (id) => {
     const s = get()
     if (s.activeProjectId === id) return
-    // 切到某项目 → 清除其终端的「任务完成」提醒（满足「点击项目后消除」）。
-    // keepAttention 例外：见上面接口声明处的注释——只有 focusTerminal 传它，
-    // 传了就跳过整个扫描，一个 pty 都不清。
-    const ptys = opts?.keepAttention
-      ? new Set<string>()
-      : new Set(
-          s.tabs
-            .filter((t) => t.projectId === id)
-            .flatMap((t) => collectLeaves(t.root))
-            .filter((l) => l.pane.kind === 'terminal')
-            .map((l) => (l.pane as { ptyId: string }).ptyId)
-        )
+    // 不动 attentionPtys —— 见上面接口声明处那三条理由。
     set({
       activeProjectId: id,
-      activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, id),
-      attentionPtys: ptys.size ? s.attentionPtys.filter((p) => !ptys.has(p)) : s.attentionPtys
+      activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, id)
     })
   }
 })
