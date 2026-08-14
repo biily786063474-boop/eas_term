@@ -39,6 +39,8 @@ export interface CliCapabilities {
   contextUsage: boolean
   /** 空数组 = 这个 CLI 做不了逐次审批，UI 退回显示沙箱级别选择 */
   approval: ('exec' | 'patch' | 'tool')[]
+  /** approval 为空时 UI 退回显示的沙箱级别选项。approval 为空却不给这个字段，UI 会显示一片空白。 */
+  sandboxLevels?: { id: string; label: string }[]
 }
 
 export interface StartOpts {
@@ -46,6 +48,8 @@ export interface StartOpts {
   model?: string
   effort?: string
   resumeId?: string
+  /** 对应 capabilities.sandboxLevels 里某一项的 id（如 Codex 的 workspace-write） */
+  sandbox?: string
 }
 
 export interface CliAdapter {
