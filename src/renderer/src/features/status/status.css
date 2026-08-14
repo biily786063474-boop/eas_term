@@ -1,0 +1,49 @@
+/* ---------- 三个状态 icon ---------- */
+.st-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  line-height: 0;
+}
+
+/* running：三个点轮番上跳。
+   曲线用 cubic-bezier(.34,1.56,.64,1) —— 与画布抽屉的弹簧同一条，
+   超过 1 的那一段就是「轻微回弹」。相位差 120ms 让它读起来是「一个波」而不是三个点各跳各的。 */
+.st-running { gap: 2px; }
+.st-running i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: st-bounce 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+.st-running i:nth-child(2) { animation-delay: 0.12s; }
+.st-running i:nth-child(3) { animation-delay: 0.24s; }
+@keyframes st-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+/* approval：整体缓慢呼吸。三者中唯一「持续动但不前进」的，对应「卡住」这个语义。 */
+.st-approval { animation: st-breathe 1.8s ease-in-out infinite; }
+@keyframes st-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+/* done：入场时对勾描一次，之后静止。
+   58 是这条路径的大致长度，取整即可——只要 ≥ 真实长度，描边动画就完整。 */
+.st-check {
+  stroke-dasharray: 58;
+  stroke-dashoffset: 0;
+  animation: st-draw 0.42s ease-out 1;
+}
+@keyframes st-draw {
+  from { stroke-dashoffset: 58; }
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-running i, .st-approval, .st-check { animation: none; }
+}
