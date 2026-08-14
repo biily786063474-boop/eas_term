@@ -6,8 +6,10 @@ export interface CanvasMenuItem {
   label: string
   danger?: boolean
   kbd?: string
-  /** 右侧灰字补充说明（如「已在画布」） */
+  /** 右侧灰字补充说明（如「当前」） */
   hint?: string
+  /** 右侧的状态 icon。和 hint 二选一——两个都给时 icon 优先。 */
+  icon?: JSX.Element
   /** 分隔线：忽略其余字段 */
   sep?: boolean
   disabled?: boolean
@@ -95,7 +97,7 @@ export function CanvasContextMenu({
           >
             <span className="cctx-label">{it.label}</span>
             {it.kbd && <span className="cctx-kbd">{it.kbd}</span>}
-            {it.hint && <span className="cctx-hint">{it.hint}</span>}
+            {it.icon ?? (it.hint ? <span className="cctx-hint">{it.hint}</span> : null)}
           </button>
         )
       )}

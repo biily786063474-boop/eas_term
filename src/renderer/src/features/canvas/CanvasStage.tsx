@@ -21,6 +21,8 @@ import { HtmlOpenChoice } from './HtmlOpenChoice'
 import type { PaneState } from '../../layout'
 import { FrameStatusPicker } from './FrameStatusPicker'
 import { statusLabel, statusColor, statusOfFrame } from './frameStatus'
+import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
+import { StatusIcon } from '../status/StatusIcon'
 
 /** 把列的颜色变成 .cframe 认的 `--frame-rgb`（它的用法是 rgba(var(--frame-rgb), α)，
  *  所以要的是 "r, g, b" 三个数，不是 #rrggbb）。没颜色就不设，回落主题色。 */
@@ -102,6 +104,9 @@ export function CanvasStage(): JSX.Element {
   const [snapBusy, setSnapBusy] = useState(false)
   const addProject = useStore((s) => s.addProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
+  // 双击空白弹出的项目列表要按状态排序、显示状态 icon——rows 在这里取好，
+  // 供下面 onViewportDblClick（普通函数不是 hook）闭包捕获。
+  const rows = useProjectRows()
   const addFileNode = useStore((s) => s.addFileNode)
   const renameFrame = useStore((s) => s.renameFrame)
   // 选中集合提到 store（含浮层终端节点）：这里派生成 Set 供读取，写用 store action
@@ -522,13 +527,29 @@ export function CanvasStage(): JSX.Element {
       setPicker({ x: e.clientX, y: e.clientY, frameId: fid, root, rootName: frame.name, wx, wy })
       return
     }
-    const items: CanvasMenuItem[] = st.projects.map((p) => {
+    // 有状态的排前面（approval > done > running），其余保持原顺序。
+    // rank 用的是同一份 useProjectRows 结果，不在这里另算一遍。
+    const rank = new Map(rows.map((r, i) => [r.projectId, i]))
+    const ordered = [...st.projects].sort(
+      (a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999)
+    )
+    const items: CanvasMenuItem[] = ordered.map((p) => {
       const exist = st.canvas.frames.find((f) => f.projectId === p.id)
+      const row = rows.find((r) => r.projectId === p.id)
       return {
         label: p.name,
-        hint: exist ? '已在画布' : undefined,
+        // 右侧不再提示"是否在画布上"——那是位置信息不是任务状态（同 CanvasDrawer 那处的理由），
+        // 换成状态 icon，没有状态就不显示任何东西。
+        icon: row ? <StatusIcon state={row.top} size={13} /> : undefined,
         onClick: () => {
-          // 已经在画布上就不重复建，改为把视图挪过去
+          // 两档，先判上面这档，不是叠加：
+          // 有 approval/done 就聚焦到最紧急的那个终端（这本身会把视图挪过去），
+          // 并按规格 §1.2 清掉它的状态
+          if (row && row.top !== 'running') {
+            focusTerminal(row.focusPtyId)
+            return
+          }
+          // 已经在画布上就不重复建，改为把视图挪过去；不在就新建
           if (exist) centerOnFrame(exist)
           else void addProjectFrame(p.id, wx - 60, wy - 17)
         }
