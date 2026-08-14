@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { IslandAction, IslandNotice, IslandRunning, IslandState } from '../../../../shared/types'
-import { locate } from './machine'
+import { attentionKindOf, locate, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
 
@@ -136,8 +136,13 @@ export function useIslandFeed(): void {
       lastPush.current = Date.now()
       const st = useStore.getState()
       const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
+      const raw = { runningPtys, attentionPtys, ptyApproval, ptyTiming }
       const running: IslandRunning[] = []
       for (const ptyId of runningPtys) {
+        // 判据走 statusOf，不再直接把 runningPtys 当结论：这一行今天恒等
+        // （statusOf 第一句就是 running 优先），写成这样是为了「谁在跑」在整个应用里
+        // 只有一个说法——以后 running 的判据一旦变了，这里跟着变，不会掉队。
+        if (statusOf(ptyId, raw) !== 'running') continue
         const loc = locate(ptyId, ctx)
         if (!loc) continue
         running.push({
@@ -150,6 +155,16 @@ export function useIslandFeed(): void {
 
       const notices: IslandNotice[] = []
       for (const ptyId of attentionPtys) {
+        // kind 走 machine.attentionKindOf，不再在这里第二次写 `ap ? 'approval' : 'done'`。
+        //
+        // **刻意用 attentionKindOf 而不是 statusOf**：statusOf 里 running 优先，
+        // 而「还在跑但 agent 叫了你一声」（onBell / MCP notify）是真实且常见的情形，
+        // 按 statusOf 判会让这类通知整条消失——灵动岛是它目前**唯一**还看得见的地方
+        // （另外五个面都按 top !== 'running' 过滤，见本轮报告里那条待立项的跟进）。
+        // 这也意味着这样一个 pty 会同时出现在「运行中」和通知卡里：那是对的，
+        // 两个区讲的是两件事——一个是它在干活，一个是它有话对你说。
+        const kind = attentionKindOf(ptyId, raw)
+        if (!kind) continue
         const loc = locateForIsland(ptyId, ctx)
         if (!loc) continue
         const d = details[ptyId]
@@ -162,7 +177,7 @@ export function useIslandFeed(): void {
         notices.push({
           // id 带上耗时：同一个终端第二次完成时 id 会变，灵动岛据此知道「这是新的一条」
           id: `${ptyId}:${t?.lastRoundMs ?? 0}`,
-          kind: ap ? 'approval' : 'done',
+          kind,
           project: loc.project,
           term: loc.term,
           ask: d?.ask,
@@ -186,10 +201,9 @@ export function useIslandFeed(): void {
 
       // 队列顺序：等审批的排前面——那是 agent 卡在那儿动不了，
       // 而「答完了」只是条通报，晚看一会儿没有代价。同类里新的在前。
-      notices.sort((a, b) => {
-        if (a.kind !== b.kind) return a.kind === 'approval' ? -1 : 1
-        return b.at - a.at
-      })
+      // 这两句话正是 machine.urgencyCmp 的口径，原来这里手写了一遍，是第二份定义；
+      // 现在直接用那一份，抽屉的待处理列表、抽屉项目行排的也是它。
+      notices.sort((a, b) => urgencyCmp(a.kind, a.at, b.kind, b.at))
 
       // 点过「知道了」的不再往岛上推。**注意 attention 没动** ——
       // 软件内部（侧栏红点 / 抽屉呼吸 / 标题栏铃铛）照旧显示待处理，

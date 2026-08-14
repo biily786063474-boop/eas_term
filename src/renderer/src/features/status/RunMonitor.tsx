@@ -1,4 +1,8 @@
-// 画布右上角的「运行监视窗」：列出此刻在无人值守跑 agent 任务的终端。
+// 画布**左上角**的「运行监视窗」：列出此刻在无人值守跑 agent 任务的终端。
+// （实际定位见 canvas.css 的 `.crm { left: 14px; top: 14px }`。左右两侧是分工的：
+//  右侧留给「完成 / 待处理」——标题栏铃铛、抽屉待处理气泡都在那边，
+//  「进行中」挤过去会和它们抢注意力。这条注释本身写反过一次，
+//  而说反左右正是当初「右上角通知不见了」那场事故的起因。）
 //
 // 刻意做得很淡：它是余光里的一条信息（「哦，那两个还在跑」），不是要你处理的通知——
 // 需要处理的事有标题栏铃铛，两者不该抢注意力。鼠标移上去才提亮。
@@ -8,10 +12,12 @@ import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { locate } from './machine'
 
-/** 终端名只留前 5 个字。先剥掉开头的盲文 spinner（⠋⠙⠹…）——
- *  agent 干活时会把转圈字符写进标题，不剥的话五个字要被它占掉一个还难看。 */
+/** 终端名只留前 5 个字。
+ *  **只截断，不剥 spinner**：进来的 l.term 已经被 machine.locate 里的 cleanTitle 洗过一遍，
+ *  这里原来还自带一份更窄的剥离正则（只认盲文，不认 ✳✴✶✻✽✹◐◑◒◓◴◵◶◷*），
+ *  功能上空转，留着只是同一件事的第二份实现——真要改剥离规则的人会改到不生效的那一份。 */
 function shortName(s: string): string {
-  const t = s.replace(/^[⠀-⣿\s]+/u, '').trim()
+  const t = s.trim()
   return t.length > 5 ? t.slice(0, 5) + '…' : t
 }
 

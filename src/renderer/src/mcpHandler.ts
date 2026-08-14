@@ -392,7 +392,22 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
   if (tool === 'notify') {
     const msg = String(args.message ?? '')
     const loc = resolveFrame(ctx)
-    // 复用「任务完成」提醒：标题栏铃铛 + Sidebar 项目徽标 + 画布抽屉呼吸点
+    // 复用「任务完成」提醒的那个信号（flagAttention）。
+    //
+    // **注意它此刻实际会点亮什么，和这行注释原来写的不一样。** 原文说的是
+    // 「标题栏铃铛 + Sidebar 项目徽标 + 画布抽屉呼吸点」，那是统一状态机之前的行为：
+    // 那时这三处直接读 attentionPtys，打了标就亮。收编到状态机之后它们一律按
+    // `statusOf` 过滤掉 running，而 agent 调 notify 时几乎总是**还在跑**
+    // （调工具的那一刻 spinner 正转着），于是这三处一个都不亮。
+    // 现在真正会响应的是：提示音（useNoticeSound 直接按 attentionPtys 判）、
+    // 以及灵动岛的通知卡（按 machine.attentionKindOf 判，刻意不看 running）。
+    // 等这个终端自己停下来，标记还在，那三处才会跟着亮起来。
+    //
+    // 这个落差是已知的、要单独立项的：「agent 还在跑但主动要你注意」这件事
+    // 目前在状态机里没有表达（三态互斥，running 优先），而 attentionPtys 里
+    // 「spinner 落下时打的标」和「跑着的时候主动打的标」两种来源当前无法区分，
+    // 要分开得先给信号本身加东西。别在没解决那个之前把这几处的过滤条件改回去——
+    // 改回去会让「done 终端又跑起来」的陈旧标记重新误显示。
     const leafIds = new Set(
       s.canvas.frames
         .find((f) => f.id === loc?.frameId)

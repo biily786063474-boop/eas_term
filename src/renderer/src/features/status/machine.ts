@@ -57,17 +57,47 @@ export interface ProjectRow {
 const URGENCY: Record<TermState, number> = { approval: 0, done: 1, running: 2 }
 
 /**
- * 这个终端此刻是什么状态。
+ * 排序口径：approval > done > running；同档内按最近变化时间倒序。
+ *
+ * **这是唯一的一处定义。** 项目行（sortRows）、右上角待处理列表、灵动岛的通知队列
+ * 都拿它排——灵动岛原来手写了一份「approval 优先、同类新在前」，那就是 URGENCY 的
+ * 第二份定义，改一处漏一处就会出现「同一批东西在两个面上顺序不同」这种没人会报上来的错。
+ *
+ * 签名写成四个参数而不是收 `{ state, at }` 对象：三个调用方的行类型里这两个字段
+ * 名字各不相同（`ProjectRow.top` / `PendingRow.state` / `IslandNotice.kind`），
+ * 统一形状就得在 comparator 里为每次比较造临时对象。
+ */
+export function urgencyCmp(aState: TermState, aAt: number, bState: TermState, bAt: number): number {
+  return URGENCY[aState] - URGENCY[bState] || bAt - aAt
+}
+
+/**
+ * 这一条待处理是「等你批准」还是「跑完了」。**不判 running。**
  *
  * **`attentionPtys` 是权威**：它回答「有没有待处理」，`ptyApproval` 只回答
  * 「待处理的内容是什么」。所以 ptyApproval 有残留值但 attentionPtys 里没有该 ptyId 时，
- * 状态是 null 而不是 approval——两者的「同生共死」是调用点手动维护的约定，
- * 不是结构保证，残留是可能的。
+ * 返回 null——两者的「同生共死」是调用点手动维护的约定，不是结构保证，残留是可能的。
+ *
+ * 单独导出是给**通知**用的（灵动岛的通知卡）。三态讲的是「这个终端此刻在干什么」，
+ * running 优先；而一条通知讲的是「agent 举手要你看一眼」，两者正交——举手的时候
+ * 它完全可能还在跑：`flagAttention` 的三个源里，`TerminalView` 的 `onBell` 和
+ * `mcpHandler` 的 MCP `notify` 都能在 spinner 还转着的时候触发，后者甚至是常态
+ * （agent 调工具时当然还在跑）。通知卡若改按 statusOf 判，这类整条消失。
+ *
+ * 注意这两条判据只有这一份实现：statusOf 就是「running 优先 + 这个函数」。
+ */
+export function attentionKindOf(ptyId: string, raw: RawSignals): 'approval' | 'done' | null {
+  if (!raw.attentionPtys.includes(ptyId)) return null
+  return raw.ptyApproval[ptyId] ? 'approval' : 'done'
+}
+
+/**
+ * 这个终端此刻是什么状态。三态互斥，running 优先——spinner 又转起来了说明
+ * 上一轮那条待处理已经不成立（残留没人清），以当前信号为准。
  */
 export function statusOf(ptyId: string, raw: RawSignals): TermState | null {
   if (raw.runningPtys.includes(ptyId)) return 'running'
-  if (!raw.attentionPtys.includes(ptyId)) return null
-  return raw.ptyApproval[ptyId] ? 'approval' : 'done'
+  return attentionKindOf(ptyId, raw)
 }
 
 /** 剥掉标题开头的 spinner：agent 干活时会把转圈字符写进标题，
@@ -137,7 +167,7 @@ export function byProject(ptyIds: string[], raw: RawSignals, ctx: LocateCtx): Pr
   return [...acc.values()]
 }
 
-/** approval > done > running；同档内按最近变化时间倒序 */
+/** approval > done > running；同档内按最近变化时间倒序（口径见 urgencyCmp） */
 export function sortRows(rows: ProjectRow[]): ProjectRow[] {
-  return [...rows].sort((a, b) => URGENCY[a.top] - URGENCY[b.top] || b.at - a.at)
+  return [...rows].sort((a, b) => urgencyCmp(a.top, a.at, b.top, b.at))
 }

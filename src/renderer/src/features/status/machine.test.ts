@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { statusOf, locate, byProject, sortRows } from './machine.ts'
+import { statusOf, locate, byProject, sortRows, urgencyCmp, attentionKindOf } from './machine.ts'
 import type { RawSignals } from './machine.ts'
 
 const raw = (o: Partial<RawSignals> = {}): RawSignals => ({
@@ -39,6 +39,40 @@ test('什么都不在 = null', () => {
 test('ptyApproval 有残留但不在 attentionPtys 里 → null 而不是 approval', () => {
   const r = raw({ ptyApproval: { p1: { question: '上一轮的残留' } } })
   assert.strictEqual(statusOf('p1', r), null)
+  assert.strictEqual(attentionKindOf('p1', r), null, '通知那一路也认同一个权威')
+})
+
+// ── 通知：attentionKindOf 不看 running ──
+// 三态讲「终端在干什么」（running 优先），通知讲「agent 举手要你看」，两者正交。
+// flagAttention 的三个源里有两个（TerminalView 的 onBell、mcpHandler 的 MCP notify）
+// 能在 spinner 还转着的时候触发，MCP notify 甚至是常态——agent 调工具时当然还在跑。
+test('还在跑但打了 attention：statusOf 判 running，attentionKindOf 仍给出通知种类', () => {
+  const r = raw({ runningPtys: ['p1'], attentionPtys: ['p1'] })
+  assert.strictEqual(statusOf('p1', r), 'running')
+  assert.strictEqual(attentionKindOf('p1', r), 'done', '灵动岛的通知卡靠这个，不能被 running 吃掉')
+})
+
+test('还在跑且解析到问句 → attentionKindOf 是 approval', () => {
+  const r = raw({
+    runningPtys: ['p1'],
+    attentionPtys: ['p1'],
+    ptyApproval: { p1: { question: '要删吗' } }
+  })
+  assert.strictEqual(statusOf('p1', r), 'running')
+  assert.strictEqual(attentionKindOf('p1', r), 'approval')
+})
+
+test('statusOf 与 attentionKindOf 只有 running 这一处分歧', () => {
+  // 锁「statusOf = running 优先 + attentionKindOf」这条结构关系：
+  // 谁把 approval/done 的判据在 statusOf 里再写一遍，这条就会失败。
+  for (const r of [
+    raw({ attentionPtys: ['p1'] }),
+    raw({ attentionPtys: ['p1'], ptyApproval: { p1: { question: 'q' } } }),
+    raw(),
+    raw({ ptyApproval: { p1: { question: '残留' } } })
+  ]) {
+    assert.strictEqual(statusOf('p1', r), attentionKindOf('p1', r))
+  }
 })
 
 // ── 聚合 ──
@@ -135,6 +169,37 @@ test('同档内新的排前面', () => {
   assert.deepStrictEqual(sortRows(rows).map((r) => r.projectId), ['new', 'old'])
 })
 
+// urgencyCmp 是排序的唯一口径：项目行、右上角待处理列表、灵动岛通知队列共用它。
+// 谁把它复制成第二份，下面这几条不会失败——但那正是要防的事，所以这里锁的是
+// 「这一份的行为」，任何自称等价的第二份都得能过同样的期望。
+test('urgencyCmp：approval 排在 done 前，跨档时不看时间', () => {
+  // done 更新（at 大）也不能排到 approval 前面
+  assert.ok(urgencyCmp('approval', 1, 'done', 999) < 0)
+  assert.ok(urgencyCmp('done', 999, 'approval', 1) > 0)
+})
+
+test('urgencyCmp：done 排在 running 前', () => {
+  assert.ok(urgencyCmp('done', 0, 'running', 999) < 0)
+})
+
+test('urgencyCmp：同档内新的在前，完全相同判为等价（稳定排序保留原序）', () => {
+  assert.ok(urgencyCmp('done', 200, 'done', 100) < 0)
+  assert.strictEqual(urgencyCmp('done', 100, 'done', 100), 0)
+})
+
+test('urgencyCmp 排一列待处理终端：两个 approval 在前且新的更前，done 在后', () => {
+  // 右上角待处理列表就是这个形状（PendingRow: state + at），这里锁的是它的可见顺序：
+  // approval 全部排在 done 前面——规格 §1.1「approval 在任何排序里都排最前」。
+  const list = [
+    { id: 'done-new', state: 'done' as const, at: 500 },
+    { id: 'ap-old', state: 'approval' as const, at: 100 },
+    { id: 'done-old', state: 'done' as const, at: 400 },
+    { id: 'ap-new', state: 'approval' as const, at: 300 }
+  ]
+  const sorted = [...list].sort((a, b) => urgencyCmp(a.state, a.at, b.state, b.at))
+  assert.deepStrictEqual(sorted.map((r) => r.id), ['ap-new', 'ap-old', 'done-new', 'done-old'])
+})
+
 // ── locate ──
 test('locate 解得出 ptyId 落在哪个 tab / 项目', () => {
   const loc = locate('p1', ctx)
@@ -145,6 +210,49 @@ test('locate 解得出 ptyId 落在哪个 tab / 项目', () => {
 
 test('locate 对不存在的 ptyId 返回 null（终端已关）', () => {
   assert.strictEqual(locate('gone', ctx), null)
+})
+
+// 上面那个 ctx 的 frames 恒为 []，locate 解析 frameId/nodeId 的那半段一直零覆盖——
+// 而 focusTerminal 正是靠 `loc.frameId && loc.nodeId` 分两支走的：
+// 有画布节点 → 切画布 + focusCanvasNode；没有 → 切分屏 + setActiveLeaf。
+// 分错支的后果就是本轮最严重那条 Critical（跳转看不见、提醒却已经清了）。
+const ctxOnCanvas = {
+  tabs: [
+    { id: 't1', projectId: 'pr1', title: '标签标题', root: leafTree('l1', 'p1') },
+    { id: 't2', projectId: 'pr1', title: '标签标题', root: leafTree('l2', 'p2') }
+  ],
+  // f1 只收了 l1；l2 是 ⌘T / 侧栏开出来的普通终端，没有画布节点
+  frames: [
+    {
+      id: 'f1',
+      nodes: [
+        { id: 'n-other', leafId: 'l9', name: '别人的节点' },
+        { id: 'n1', leafId: 'l1', name: '⠹ 节点名' }
+      ]
+    }
+  ],
+  projects: [{ id: 'pr1', name: '演示', path: '/tmp/demo' }]
+}
+
+test('终端有画布节点 → locate 解出 frameId / nodeId', () => {
+  const loc = locate('p1', ctxOnCanvas)
+  assert.strictEqual(loc?.frameId, 'f1')
+  assert.strictEqual(loc?.nodeId, 'n1', '要落到 leafId 对得上的那个节点，不是 Frame 里第一个')
+  assert.strictEqual(loc?.leafId, 'l1')
+})
+
+test('有画布节点时终端名取节点名（并剥掉 spinner），而不是标签标题', () => {
+  assert.strictEqual(locate('p1', ctxOnCanvas)?.term, '节点名')
+})
+
+test('同一份 ctx 里没上画布的终端：frameId / nodeId 是 undefined', () => {
+  // focusTerminal 的另一支。openTerminal（⌘T / 侧栏 / 抽屉双击）只建 tab 不建节点，
+  // 所以这才是主流情况，两支都得有用例压着。
+  const loc = locate('p2', ctxOnCanvas)
+  assert.strictEqual(loc?.tabId, 't2')
+  assert.strictEqual(loc?.frameId, undefined)
+  assert.strictEqual(loc?.nodeId, undefined)
+  assert.strictEqual(loc?.term, '标签标题', '没有节点名就退回标签标题')
 })
 
 /** 造一棵只有一个终端叶子的布局树 */
