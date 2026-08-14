@@ -135,6 +135,14 @@ export function useDoneRows(): DoneRow[] {
  *    activeProjectId 严格过滤标签、App.tsx 的 hasProjectTabs 同理，不手动切
  *    的话跳过去的标签压根不会出现，所以要跟着切 activeProject。
  * 跟 useIslandFeed.ts 灵动岛跳转是同一套处理。
+ *
+ * **跨项目跳转时 setActiveProject 要传 `keepAttention: true`。** 它默认会把
+ * 目标项目全部终端的 attentionPtys 一并清掉（语义是「这个项目我来看了」），
+ * 但这里的意图是「我要看这一个终端」——规格 §1.2 把清除定义成逐终端的，
+ * machine.test.ts 也专门锁着「清一个不影响同项目另一个」这条约定。不传的话，
+ * 点某个跨项目的终端会把同项目其它还没看过的 done/approval 一起悄悄清掉，
+ * 是 focusTerminal 自己引入的、没人设计过的副作用，不是 setActiveProject
+ * 原有行为的自然延伸。
  */
 export function focusTerminal(ptyId: string): void {
   const st = useStore.getState()
@@ -149,7 +157,7 @@ export function focusTerminal(ptyId: string): void {
     // 「该项目上次激活的标签」写回 activeTabId（pickActiveTab，不一定是 loc.tabId）。
     // 顺序对了，setActiveLeaf 才是最后一个写 activeTabId 的，落点精确到 loc.tabId；
     // 顺序反了，刚设对的 activeTabId 会被这行的猜测覆盖掉。
-    st.setActiveProject(loc.projectId)
+    st.setActiveProject(loc.projectId, { keepAttention: true })
   }
   st.setActiveLeaf(loc.tabId, loc.leafId)
   st.clearAttention(ptyId)

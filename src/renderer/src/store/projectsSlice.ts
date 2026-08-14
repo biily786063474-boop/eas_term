@@ -16,7 +16,13 @@ export interface ProjectsSlice {
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
   renameProjectFolder: (id: string, newName: string) => Promise<string | null>
-  setActiveProject: (id: string | null) => void
+  /** 切到某个项目（侧栏点项目、看板点卡片……）。默认清除该项目全部终端的
+   *  「任务完成」提醒——语义是「这个项目我来看了」。
+   *  `keepAttention: true` 是给 focusTerminal（跳到某一个具体终端）留的例外口子：
+   *  那个动作表达的是「我要看这一个」，不是「这个项目我都看过了」，见
+   *  useStatus.ts 里的说明。除 focusTerminal 外**不要**传这个参数——默认行为
+   *  就是既有约定，两条路不是历史遗留，不能合并掉。 */
+  setActiveProject: (id: string | null, opts?: { keepAttention?: boolean }) => void
   /** 打/清项目状态标签（null = 未分类）。**这是状态的唯一写入口** ——
    *  看板拖拽、画布 Frame 右键、分屏 tab 右键都走它，各写各的迟早对不上 */
   setProjectStatus: (id: string, status: ProjectStatus | null) => Promise<void>
@@ -134,17 +140,21 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
     return null
   },
 
-  setActiveProject: (id) => {
+  setActiveProject: (id, opts) => {
     const s = get()
     if (s.activeProjectId === id) return
-    // 切到某项目 → 清除其终端的「任务完成」提醒（满足「点击项目后消除」）
-    const ptys = new Set(
-      s.tabs
-        .filter((t) => t.projectId === id)
-        .flatMap((t) => collectLeaves(t.root))
-        .filter((l) => l.pane.kind === 'terminal')
-        .map((l) => (l.pane as { ptyId: string }).ptyId)
-    )
+    // 切到某项目 → 清除其终端的「任务完成」提醒（满足「点击项目后消除」）。
+    // keepAttention 例外：见上面接口声明处的注释——只有 focusTerminal 传它，
+    // 传了就跳过整个扫描，一个 pty 都不清。
+    const ptys = opts?.keepAttention
+      ? new Set<string>()
+      : new Set(
+          s.tabs
+            .filter((t) => t.projectId === id)
+            .flatMap((t) => collectLeaves(t.root))
+            .filter((l) => l.pane.kind === 'terminal')
+            .map((l) => (l.pane as { ptyId: string }).ptyId)
+        )
     set({
       activeProjectId: id,
       activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, id),
