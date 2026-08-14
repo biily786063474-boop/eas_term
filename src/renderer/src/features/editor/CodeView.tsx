@@ -30,12 +30,17 @@ interface CodeMenu {
 
 export function CodeView({
   filePath,
-  readOnly
+  readOnly,
+  saveVia
 }: {
   filePath: string | null
   /** 只读预览：不出「编辑」按钮，从源头掐掉 editing 态（连带 ⌘S 保存也进不去）。
    *  目前只有知识库拖出来的自由节点会传 true——内容离开知识库目录，不该在画布上被顺手改掉。 */
   readOnly?: boolean
+  /** 换一条保存通道。默认走 fs:writeTextFile（过 fsGuard，只认项目根和知识库根），
+   *  skill 面板拖出来的文件在那之外，由调用方传一个有自己边界的写入口进来。
+   *  故意做成参数而不是在这里按路径猜——这个组件不该知道 skill 目录是什么。 */
+  saveVia?: (filePath: string, content: string) => Promise<{ ok: boolean; error?: string }>
 }): JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null)
   // 代码块复制按钮：用回调 ref 挂委托，不用 useEffect(…, [])。
@@ -135,7 +140,7 @@ export function CodeView({
     const v = viewRef.current
     if (!v || !filePath) return
     const content = v.state.doc.toString()
-    const r = await window.api.fs.writeTextFile(filePath, content)
+    const r = saveVia ? await saveVia(filePath, content) : await window.api.fs.writeTextFile(filePath, content)
     if (r.ok) {
       setText(content) // 同步给渲染视图，切回排版时看到的是新内容
       setDirty(false)
@@ -144,7 +149,7 @@ export function CodeView({
     } else {
       setSaveMsg('保存失败：' + (r.error ?? '未知错误'))
     }
-  }, [filePath])
+  }, [filePath, saveVia])
 
   // ⌘S / Ctrl+S 保存（只在编辑态、且焦点在本预览内时接管）
   useEffect(() => {

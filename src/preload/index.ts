@@ -48,7 +48,8 @@ import type {
   InstallPlan,
   UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
   RenameFolderResult, SnapshotRect, SnapshotResult,
-  SkillDirEntry, SkillDirAddResult, SkillListResult} from '../shared/types'
+  SkillDirEntry, SkillDirAddResult, SkillListResult,
+  SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -353,16 +354,37 @@ const api = {
       ipcRenderer.invoke('wiki:log', action, title),
     stats: (): Promise<WikiStats> => ipcRenderer.invoke('wiki:stats')
   },
-  // Skill 管理面板（第一半：读与显示）。命名故意跟上面 `skill`（Eas-Term 自己那个
-  // 「配套技能包」的安装状态）分开——两个是完全不同的概念，撞名字会把人绕晕。
-  // 这里全是只读操作，唯一的写是「自定义目录列表」，不碰任何用户的 skill 文件。
+  // Skill 管理面板。命名故意跟上面 `skill`（Eas-Term 自己那个「配套技能包」的安装状态）
+  // 分开——两个是完全不同的概念，撞名字会把人绕晕。
+  //
+  // 大部分是只读；三个写口子各有各的边界，见 main/skillLibrary/index.ts 文件头：
+  //   copySkill / writeFile —— 真的写用户的 skill 目录，边界是「已登记的 skill 目录
+  //     + 项目的 .claude/skills」，比 fsGuard 更窄，不走也不改 fsGuard
+  //   addDir / removeDir / setDisabled / setCategories —— 只写 app 自己的
+  //     <userData>/skills.json，一个字节都不碰用户的 skill 文件
   skillLibrary: {
     listDirs: (): Promise<SkillDirEntry[]> => ipcRenderer.invoke('skillLibrary:listDirs'),
     pickDir: (): Promise<string | null> => ipcRenderer.invoke('skillLibrary:pickDir'),
     addDir: (path: string, label?: string): Promise<SkillDirAddResult> =>
       ipcRenderer.invoke('skillLibrary:addDir', path, label),
     removeDir: (id: string): Promise<SkillDirEntry[]> => ipcRenderer.invoke('skillLibrary:removeDir', id),
-    list: (dirPath: string): Promise<SkillListResult> => ipcRenderer.invoke('skillLibrary:list', dirPath)
+    list: (dirPath: string): Promise<SkillListResult> => ipcRenderer.invoke('skillLibrary:list', dirPath),
+    /** 把一个 skill 整个目录复制进另一个 skill 目录。重名一律拒绝（不覆盖、不改名） */
+    copySkill: (srcPath: string, destDirPath: string): Promise<SkillCopyResult> =>
+      ipcRenderer.invoke('skillLibrary:copySkill', srcPath, destDirPath),
+    /** 临时禁用 / 恢复。只写清单，不动硬盘上的文件；CLI 那边不受影响 */
+    setDisabled: (skillPath: string, disabled: boolean): Promise<SkillDisableResult> =>
+      ipcRenderer.invoke('skillLibrary:setDisabled', skillPath, disabled),
+    /** 保存一个 skill 里已存在的文件（画布上编辑那条路）。fs.writeTextFile 过 fsGuard，
+     *  够不到全局 skill 目录，所以这条口子单独存在 */
+    writeFile: (filePath: string, content: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('skillLibrary:writeFile', filePath, content),
+    /** 给 agent 的分类口子用：一次看全部目录（含项目 skill） */
+    listAll: (): Promise<SkillLibrarySnapshot> => ipcRenderer.invoke('skillLibrary:listAll'),
+    /** 给 agent 的分类口子用：写回一批分类，任何一条不合格就整批拒绝 */
+    setCategories: (
+      assignments: { skill: string; category: string }[]
+    ): Promise<SkillCategorizeResult> => ipcRenderer.invoke('skillLibrary:setCategories', assignments)
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）

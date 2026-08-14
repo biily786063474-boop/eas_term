@@ -334,6 +334,55 @@ const TOOLS = [
       required: ['vars', 'detail']
     }
   },
+  // ── Skill 分类口子（两件套）─────────────────────────────────────────
+  // 这两个工具与 `.claude/skills/skill-organizer/` 那份 skill、以及
+  // src/main/skillLibrary/ 是**一起维护**的：改这里的名字/参数/语义，
+  // 必须同步改那份 skill 和 src/main/skillLibrary/README.md 里的对照表。
+  // 详细步骤全在那份 skill 里，这里只留触发条件和硬约束（description 是常驻成本）。
+  {
+    name: 'skill_list',
+    description:
+      '列出用户在 Eas-Term 的 skill 面板里能看到的全部 skill（各 CLI 的全局目录 + 各项目的 .claude/skills），' +
+      '带每个 skill 的绝对路径、简介、当前分类、是否被临时禁用。' +
+      '用户说「整理一下 skill 分类」「我的 skill 太乱了」「给 skill 分个类」时先调它拿全量，再调 skill_categorize 写回。' +
+      '只读，不改任何东西。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'skill_categorize',
+    description:
+      '把一批 skill 归到分类里，结果显示在 Eas-Term 的 skill 面板上（每个分类一个可折叠的头）。' +
+      '**分类只写 Eas-Term 自己的配置，不碰用户的 skill 文件，也不影响 CLI 怎么加载它们。**' +
+      '硬规矩：分类是**扁平一层**、不能嵌套；一个 skill 只能属于一个分类；' +
+      'skill 必须用 skill_list 返回的 path 原样引用——**报了一个不存在的 skill，整批都会被拒绝**（不是丢掉那一条）。' +
+      '这批没提到的 skill 保持原样，所以可以分几次提交；重新分类同一个 skill 直接再提交一次即可。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        assignments: {
+          type: 'array',
+          description: '一次提交整批，别一条一条调',
+          items: {
+            type: 'object',
+            properties: {
+              skill: {
+                type: 'string',
+                description: 'skill 目录的绝对路径，原样抄 skill_list 返回的 path，不要自己拼'
+              },
+              category: {
+                type: 'string',
+                description:
+                  '分类名：非空、不超过 40 个字、不能含换行。用中文短词（如「设计」「影像」「知识库」）。' +
+                  '不能叫「未分类」——那是没分类时的默认显示，不是一个可以主动分进去的类'
+              }
+            },
+            required: ['skill', 'category']
+          }
+        }
+      },
+      required: ['assignments']
+    }
+  },
   {
     name: 'dict_pending',
     description:

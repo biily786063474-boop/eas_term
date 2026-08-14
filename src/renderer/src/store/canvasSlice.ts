@@ -566,7 +566,10 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
-        freeNodes: [...s.canvas.freeNodes, { id, pane, x: pos.x, y: pos.y, w, h, readOnly: opts?.readOnly }]
+        freeNodes: [
+          ...s.canvas.freeNodes,
+          { id, pane, x: pos.x, y: pos.y, w, h, readOnly: opts?.readOnly, writeVia: opts?.writeVia }
+        ]
       }
     }))
     return id

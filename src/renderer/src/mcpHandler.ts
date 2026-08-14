@@ -681,6 +681,45 @@ const SHELL_TRAP =
     return { moved: r.moved, failed: r.failed }
   }
 
+  // ── Skill 分类口子 ──────────────────────────────────────────────────
+  // 与 mcp/eas-mcp.mjs 的两条工具定义、`.claude/skills/skill-organizer/` 那份 skill
+  // 三者一起维护（对照表见 src/main/skillLibrary/README.md）。
+  // 真正的校验和落盘在主进程（main/skillLibrary/index.ts + category.ts），
+  // 这里只做转发和「把结果讲成 agent 能照着改的话」。
+  if (tool === 'skill_list') {
+    const snap = await window.api.skillLibrary.listAll()
+    const unreadable = snap.dirs.filter((d) => !d.ok)
+    return {
+      skills: snap.skills,
+      total: snap.skills.length,
+      // 目录读不出来是正常状态（`~/.codex/skills` 这类可能压根不存在），
+      // 但要报出来——不然 agent 会以为「这台机器上就这些 skill」，
+      // 而用户看到的面板里还有一整个目录
+      unreadableDirs: unreadable.map((d) => ({ path: d.path, why: d.error })),
+      hint:
+        snap.skills.length === 0
+          ? '一个 skill 都没扫到。别自己去 shell 里找，直接告诉用户面板里是空的。'
+          : '分类是扁平一层、一个 skill 只属于一个分类。想好了一次性调 skill_categorize 提交，' +
+            'skill 字段原样抄上面的 path。category 为 null 的是还没分过类的。'
+    }
+  }
+
+  if (tool === 'skill_categorize') {
+    const raw = (args as { assignments?: unknown }).assignments
+    const r = await window.api.skillLibrary.setCategories(
+      Array.isArray(raw) ? (raw as { skill: string; category: string }[]) : []
+    )
+    // 整批被拒时把原因原样抛回去（工具级错误，agent 看得到并能自己改）——
+    // 这正是「不静默丢弃」那条要求的落点：它必须知道是哪几条不认识
+    if (!r.ok) throw new Error(r.error ?? '分类没有写成功')
+    // 面板正开着的话让它重拉一次，不然用户得手动切个目录才看得到分类变化
+    window.dispatchEvent(new CustomEvent('skills-changed'))
+    return {
+      applied: r.applied ?? 0,
+      hint: '已经写进去了，用户的 skill 面板上就能看到这些分类（可折叠）。skill 文件本身没被动过。'
+    }
+  }
+
   if (tool === 'dict_pending') {
     const items = await window.api.dict.pending()
     return {

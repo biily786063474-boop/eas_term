@@ -56,6 +56,12 @@ export interface CanvasNode {
    *  CodeView 读到这个标记就不出「编辑」按钮。跟「是不是自由节点」故意分开存：
    *  这标的是「这份内容不让改」，不是「这节点没有 Frame」，两件事碰巧目前总是同时发生。 */
   readOnly?: boolean
+  /** 可写节点的保存通道。'skill' = 走 skillLibrary:writeFile —— 从 skill 面板拖出来的
+   *  文件在 `~/.claude/skills` 这类位置，fs:writeTextFile 过 fsGuard（只认项目根和
+   *  知识库根）够不到，保存会失败。存成节点上的一个字符串标记而不是一个函数，
+   *  是因为 freeNodes 要持久化，函数存不进去、重开就没了。
+   *  未设 = 走 fs:writeTextFile（项目文件的既有路径）。 */
+  writeVia?: 'skill'
   x: number
   y: number
   w: number
@@ -287,7 +293,12 @@ export interface CanvasSlice {
   editingSticky: string | null
   setEditingSticky: (id: string | null) => void
   /** 拖知识库文件到画布任意位置（含 Frame 外）：新增一个自由 + 只读的文件预览节点，落在世界坐标 (x,y) */
-  addFreeFileNode: (pane: PaneState, x: number, y: number, opts?: { readOnly?: boolean }) => string
+  addFreeFileNode: (
+    pane: PaneState,
+    x: number,
+    y: number,
+    opts?: { readOnly?: boolean; writeVia?: 'skill' }
+  ) => string
   moveFreeNode: (nodeId: string, x: number, y: number) => void
   resizeFreeNode: (nodeId: string, w: number, h: number) => void
   removeFreeNode: (nodeId: string) => void

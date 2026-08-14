@@ -12,9 +12,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
-import { paneForFile, isImagePath, isVideoPath, isHtmlPath } from './media'
-import { HtmlOpenChoice } from './HtmlOpenChoice'
-import type { PaneState } from '../../layout'
+import { isImagePath, isVideoPath } from './media'
+import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import {
   ChevronRightIcon,
   ChevronDownIcon,
@@ -48,13 +47,10 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [busy, setBusy] = useState('')
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<string | null>(null)
-  /** 拖 .html 进画布时的「渲染还是源码」选择 */
-  const [htmlPick, setHtmlPick] = useState<{
-    x: number
-    y: number
-    path: string
-    place: (pane: PaneState) => void
-  } | null>(null)
+  // 知识库文件 → 画布：自由 + **只读**节点。这条路的实现在 useOpenInCanvas 里，
+  // 和 skill 面板共用一份（两边只差「落地的节点可不可写」这一个参数）。
+  // 只读这条不能动：内容离开知识库目录后不该在画布上被顺手改掉。
+  const { openInCanvas, startFileDrag, htmlChoice } = useOpenInCanvas({ readOnly: true })
   const [links, setLinks] = useState<Backlink[]>([])
   const [treeKey, setTreeKey] = useState(0)
   const [q, setQ] = useState('')
@@ -195,76 +191,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const selectNote = async (p: string): Promise<void> => {
     setSel(p)
     setLinks(await window.api.wiki.backlinks(p))
-  }
-
-  // 知识库文件 → 画布任意位置：统一走自由 + 只读节点（不用 Frame，不判断落点在不在 Frame 上）。
-  // 双击/搜索命中点击没有「松手点」，落在当前视口中心；真正拖拽落在松手时的世界坐标。
-  const openInCanvas = (path: string, wx: number, wy: number): void => {
-    // .html 两种看法都合理（渲染 / 源码），不替用户定。
-    // 弹窗要屏幕坐标，而这里拿到的是世界坐标 —— 反算回去，
-    // 这样拖拽（松手点）和双击/搜索（视口中心）两条路不用各写一套
-    if (isHtmlPath(path)) {
-      const el = document.querySelector('.canvas-viewport') as HTMLElement | null
-      const r = el?.getBoundingClientRect()
-      const vp = useStore.getState().canvas.viewport
-      setHtmlPick({
-        x: (r?.left ?? 0) + wx * vp.scale + vp.x,
-        y: (r?.top ?? 0) + wy * vp.scale + vp.y,
-        path,
-        place: (pane) => useStore.getState().addFreeFileNode(pane, wx, wy, { readOnly: true })
-      })
-      return
-    }
-    useStore.getState().addFreeFileNode(paneForFile(path), wx, wy, { readOnly: true })
-  }
-  const viewportCenter = (): { wx: number; wy: number } => {
-    const el = document.querySelector('.canvas-viewport') as HTMLElement | null
-    const vp = useStore.getState().canvas.viewport
-    const cw = el?.clientWidth ?? window.innerWidth
-    const ch = el?.clientHeight ?? window.innerHeight
-    return { wx: (cw / 2 - vp.x) / vp.scale, wy: (ch / 2 - vp.y) / vp.scale }
-  }
-
-  // 拖文件树条目到画布任意位置（含 Frame 外）。5px 阈值内当普通点击处理（选中看反链），
-  // 阈值外才是真拖拽——和 CanvasDrawer 里项目文件树的拖拽手感保持一致。
-  const startWikiFileDrag = (path: string, e: React.MouseEvent): void => {
-    if (e.button !== 0) return
-    e.preventDefault()
-    const start = { x: e.clientX, y: e.clientY, started: false }
-    let ghost: HTMLDivElement | null = null
-    const name = path.split('/').pop() ?? path
-    const onMove = (ev: MouseEvent): void => {
-      if (!start.started) {
-        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return
-        start.started = true
-        ghost = document.createElement('div')
-        ghost.className = 'canvas-drag-ghost'
-        ghost.textContent = name
-        document.body.appendChild(ghost)
-      }
-      if (ghost) {
-        ghost.style.left = ev.clientX + 12 + 'px'
-        ghost.style.top = ev.clientY + 10 + 'px'
-      }
-    }
-    const onUp = (ev: MouseEvent): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-      ghost?.remove()
-      if (!start.started) {
-        void selectNote(path) // 没挪动 = 普通点击
-        return
-      }
-      const vpEl = document.querySelector('.canvas-viewport')
-      if (!vpEl) return
-      const r = vpEl.getBoundingClientRect()
-      const vp = useStore.getState().canvas.viewport
-      const wx = (ev.clientX - r.left - vp.x) / vp.scale
-      const wy = (ev.clientY - r.top - vp.y) / vp.scale
-      openInCanvas(path, wx - 90, wy - 15) // 偏移让节点头部大致居中在松手点（对齐 CanvasDrawer 的既有手感）
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
   }
 
   if (maximizedNode) return null
@@ -633,7 +559,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                   const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                   const p = item?.dataset.path
                   if (!p || item?.dataset.dir) return
-                  startWikiFileDrag(p, e)
+                  startFileDrag(p, e, () => void selectNote(p)) // 没挪动 = 普通点击，选中看反链
                 }}
                 onDoubleClick={(e) => {
                   // 双击笔记 → 开到画布上看（自由 + 只读节点，落在当前视口中心）
@@ -672,15 +598,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </>
       )}
     </aside>
-    {htmlPick && (
-      <HtmlOpenChoice
-        x={htmlPick.x}
-        y={htmlPick.y}
-        fileName={htmlPick.path.split('/').pop() ?? ''}
-        onPick={(as) => htmlPick.place(paneForFile(htmlPick.path, as))}
-        onClose={() => setHtmlPick(null)}
-      />
-    )}
+    {htmlChoice}
     </>
   )
 }

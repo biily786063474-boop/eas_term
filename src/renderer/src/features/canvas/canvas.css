@@ -4526,6 +4526,66 @@
 .skl-adderr {
   margin: 8px 8px 0;
 }
+/* 一次性提示（复制成功 / 重名被拒 / 目录添加失败…）。bad 那档用警告色，
+   因为「重名了所以没复制」必须一眼看出是失败，不然人会以为复制过去了 */
+.skl-notice {
+  margin: 8px 8px 0;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.skl-notice.bad {
+  color: var(--warn, #e0a45e);
+  border-color: rgba(224, 164, 94, 0.4);
+  background: rgba(224, 164, 94, 0.08);
+}
+/* 应用内剪贴板的常驻条：复制完切目录要过几秒，一次性 toast 那时候早没了，
+   人会忘记自己复制过什么。这条一直挂着，直到粘贴或手动清掉 */
+.skl-clip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 8px 0;
+  padding: 5px 6px 5px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+}
+.skl-clip b {
+  color: var(--fg);
+  font-weight: 600;
+}
+.skl-clip-x {
+  margin-left: auto;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.skl-clip-x:hover {
+  color: var(--fg);
+}
+/* 「禁用只在本软件里生效」——用户已知情并接受这个代价，但必须写在脸上，
+   不能做成要点开才看得到的东西（design 文档 §六 第 1 条的配套要求） */
+.skl-note {
+  margin: 8px 8px 0;
+  padding: 5px 8px;
+  border-left: 2px solid rgba(255, 255, 255, 0.18);
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--fg-dim);
+  opacity: 0.85;
+}
 
 .skl-list {
   flex: 1;
@@ -4577,6 +4637,25 @@
 }
 .skl-item {
   padding: 0 6px;
+}
+/* 被临时禁用的 skill：置灰 + 划掉名字，但**仍然显示** ——
+   隐藏了就没法右键恢复它了 */
+.skl-item.off .skl-item-name {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.skl-item.off .skl-item-desc {
+  opacity: 0.4;
+}
+.skl-off-tag {
+  flex: none;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 9px;
+  color: var(--fg-dim);
+  white-space: nowrap;
 }
 .skl-item-head {
   width: 100%;

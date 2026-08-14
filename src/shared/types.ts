@@ -740,10 +740,11 @@ export interface SnapshotResult {
   path?: string
 }
 
-// ── Skill 管理面板（第一半：读与显示）──────────────────────────────
+// ── Skill 管理面板 ────────────────────────────────────────────────
 // 完整背景见 docs/superpowers/specs/2026-08-14-skill管理面板-design.md。
-// 这一半只读：列目录、解析 SKILL.md、按分类分组显示。复制/禁用/拖拽编辑/
-// 给 agent 开的分类写入口是另一半任务，届时会在这里追加类型，不改这些已有字段。
+// 第一半（读与显示）：列目录、解析 SKILL.md、按分类分组。
+// 第二半（写与联动）：复制/粘贴 skill、临时禁用、文件树拖到画布编辑、
+// 给 agent 开的分类 MCP 口子——第二半只往下面追加字段/类型，没改第一半已有的形状。
 
 /** 一个 skill：对应 `<dir>/<name>/SKILL.md` 所在的子目录。
  *  `path` 是这个 skill 的唯一 id——分类口子（第二半）引用 skill 就靠它，
@@ -773,6 +774,10 @@ export interface SkillListResult {
   error?: string
   skills: SkillInfo[]
   categories: SkillCategoryGroup[]
+  /** 这个目录里被临时禁用的 skill（绝对路径）。**禁用只写这份清单，不动硬盘上的文件**
+   *  （design 文档 §六 第 1 条）——所以它跟 skills 是两份独立数据：被禁用的 skill 照样
+   *  出现在 skills 里（面板置灰显示，隐藏了就没法恢复），这里只是标出哪些被划掉了。 */
+  disabled: string[]
 }
 
 /** CLI 按钮里可选的一个 skill 目录。内置几个默认（这台机器实测过的真实分布），
@@ -791,4 +796,49 @@ export interface SkillDirAddResult {
   ok: boolean
   error?: string
   dirs: SkillDirEntry[]
+}
+
+/** 复制一个 skill 到另一个 skill 目录的结果。
+ *  `duplicate` 单独标出来是因为**重名要拒绝并明确告诉用户**（design 文档 §六 第 4 条）：
+ *  面板要能把这一种失败讲成「那边已经有一个同名的了」，而不是笼统的「复制失败」。 */
+export interface SkillCopyResult {
+  ok: boolean
+  error?: string
+  duplicate?: boolean
+  /** 成功时给出落点绝对路径，面板据此提示「复制到哪儿了」 */
+  dest?: string
+}
+
+/** 禁用/恢复一个 skill 的结果。disabled 是**改完之后**的整份清单，
+ *  面板直接拿它刷新，不用再查一次。 */
+export interface SkillDisableResult {
+  ok: boolean
+  error?: string
+  disabled: string[]
+}
+
+/** 给 agent 的分类口子（MCP）看到的全景：所有已登记目录 + 项目 skill 目录里的全部 skill。
+ *  面板一次只看一个目录，agent 要整理分类必须看全量，所以是另一条读取路径。 */
+export interface SkillLibrarySnapshot {
+  dirs: { id: string; label: string; path: string; builtin: boolean; ok: boolean; error?: string }[]
+  skills: {
+    /** 绝对路径 = 唯一 id，分类/禁用清单引用 skill 都用它 */
+    path: string
+    name: string
+    description: string
+    /** 它所在的那个 skill 目录（绝对路径） */
+    dir: string
+    /** 当前分类；没分过类时是 null（不是「未分类」那个显示用的名字） */
+    category: string | null
+    disabled: boolean
+  }[]
+}
+
+/** 批量写分类的结果。**引用了不存在的 skill 要拒绝整批**（design 文档 §四），
+ *  所以失败时 error 里会点名是哪几条不认识——agent 只有拿到名字才改得动。 */
+export interface SkillCategorizeResult {
+  ok: boolean
+  error?: string
+  /** 成功时：这一批实际写进配置的条数 */
+  applied?: number
 }
