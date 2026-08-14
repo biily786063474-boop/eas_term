@@ -12,9 +12,15 @@
 //   这与 claudeEvents.ts 把 tool_use 的 `input` 整体塞进 `detail` 是同一处理方式——
 //   那是「这次调用的内容」，不是「协议本身的私有概念」。
 //
-// item.started 的过滤规则（`command_execution` / `file_change` 才算「命令/补丁类」）是按
-// brief 的字面表述（"命令/补丁类"）加本任务夹具（只验证了 file_change）推出来的，
-// `command_execution` 没有夹具可核对字段名是否准确，见任务报告「顾虑」一节。
+// item.started 的过滤规则（`command_execution` / `file_change` 才算「命令/补丁类」）两者均已
+// 用真实夹具核对过字段名（`codex-exec-write.jsonl` 验证 file_change，`codex-exec-fail.jsonl`
+// 验证 command_execution）。
+//
+// **教训（2026-08-14 实测纠正）**：command_execution 失败时**没有 `error` 字段**——失败靠
+// `status:"failed"` + `exit_code:1` 表达，`aggregated_output` 里才是真实的命令输出。最初按
+// 「有没有 error 字段」判 `ok` 是错的：真实失败会被判成 `ok:true`，直接违反「执行结果一律
+// 以事件为准」。现在 `ok` 一律看 `status`（`=== 'failed'` 才是 false），`output` 优先取
+// `aggregated_output`（+ `exit_code` 辅助信息），`error` 字段只作兜底，不再是主判据。
 
 import path from 'node:path'
 import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
@@ -96,7 +102,9 @@ function translateItemCompleted(j: Record<string, unknown>): ChatEvent[] {
 
   const id = item.id
   if (typeof id !== 'string' || !id) return []
-  const ok = item.error === undefined || item.error === null
+  // 判据是 status，不是 error 字段——见文件头「教训」。command_execution 失败时
+  // status:"failed" 且没有 error 字段，按 error 判会把失败误判成 ok:true。
+  const ok = item.status !== 'failed'
   return [{ k: 'exec.done', execId: id, ok, output: outputTextOf(item) }]
 }
 
@@ -132,12 +140,18 @@ function safeStringify(v: unknown): string {
   }
 }
 
+/** 优先用真实命令输出（aggregated_output），exit_code 作为辅助信息附在后面；两者都没有才退回整条 item 的 JSON。 */
 function outputTextOf(item: Record<string, unknown>): string {
+  if (typeof item.aggregated_output === 'string') {
+    return typeof item.exit_code === 'number'
+      ? `${item.aggregated_output}\n(exit code ${item.exit_code})`
+      : item.aggregated_output
+  }
   if (typeof item.error === 'string' && item.error) return item.error
   return safeStringify(item)
 }
 
-/** label 是给三行小字用的一句人话；完整信息另外放 detail。目前只有 file_change 有夹具可核对字段名。 */
+/** label 是给三行小字用的一句人话；完整信息另外放 detail。file_change / command_execution 均有夹具核对过字段名。 */
 function labelFor(item: Record<string, unknown>): string {
   if (item.type === 'file_change') {
     const changes = Array.isArray(item.changes) ? item.changes : []
@@ -149,7 +163,14 @@ function labelFor(item: Record<string, unknown>): string {
     }
     return '修改文件'
   }
+  if (item.type === 'command_execution') {
+    return `运行 ${commandPreview(item.command)}`
+  }
   return typeof item.type === 'string' ? item.type : ''
+}
+
+function commandPreview(command: unknown): string {
+  return typeof command === 'string' ? command.slice(0, 60) : ''
 }
 
 function kindVerb(kind: unknown): string {
