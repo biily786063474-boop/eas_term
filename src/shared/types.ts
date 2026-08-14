@@ -739,3 +739,56 @@ export interface SnapshotResult {
   /** 成功时的绝对路径 */
   path?: string
 }
+
+// ── Skill 管理面板（第一半：读与显示）──────────────────────────────
+// 完整背景见 docs/superpowers/specs/2026-08-14-skill管理面板-design.md。
+// 这一半只读：列目录、解析 SKILL.md、按分类分组显示。复制/禁用/拖拽编辑/
+// 给 agent 开的分类写入口是另一半任务，届时会在这里追加类型，不改这些已有字段。
+
+/** 一个 skill：对应 `<dir>/<name>/SKILL.md` 所在的子目录。
+ *  `path` 是这个 skill 的唯一 id——分类口子（第二半）引用 skill 就靠它，
+ *  不用另起一个 id 字段：目录路径本身已经是稳定、唯一的。 */
+export interface SkillInfo {
+  path: string
+  name: string
+  description: string
+  /** SKILL.md 存在但 frontmatter 解析不出 name 时的降级标记——
+   *  这时 name 回落成目录名、description 可能是空串，面板要能分辨「读到了」和「猜的」 */
+  fallback?: boolean
+}
+
+/** 一个分类（扁平一层，不嵌套）：一个可折叠的头 + 属于它的 skill 列表。
+ *  没有分类数据时，所有 skill 落进 name === '未分类' 的这一组。 */
+export interface SkillCategoryGroup {
+  name: string
+  skillPaths: string[]
+}
+
+/** 列出某个目录下所有 skill 的结果。ok:false 时 skills/categories 恒为空数组，
+ *  error 给出人能看懂的原因（目录不存在/无权限/不是文件夹）——
+ *  面板据此渲染空态，不能让一个读不出来的目录把整个面板打崩。 */
+export interface SkillListResult {
+  dirPath: string
+  ok: boolean
+  error?: string
+  skills: SkillInfo[]
+  categories: SkillCategoryGroup[]
+}
+
+/** CLI 按钮里可选的一个 skill 目录。内置几个默认（这台机器实测过的真实分布），
+ *  用户可以再加自定义目录——「用户把 skill 搬出默认路径做渐进式披露」是刻意的
+ *  组织方式，不是异常状态，面板必须照顾到。 */
+export interface SkillDirEntry {
+  id: string
+  label: string
+  path: string
+  builtin: boolean
+}
+
+/** 添加自定义目录的结果。失败时（路径不存在/不是文件夹/已经在列表里）dirs 给回
+ *  当前列表不变，面板可以直接拿它刷新，不用再单独查一次 listDirs。 */
+export interface SkillDirAddResult {
+  ok: boolean
+  error?: string
+  dirs: SkillDirEntry[]
+}

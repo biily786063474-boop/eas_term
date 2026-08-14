@@ -47,7 +47,8 @@ import type {
   Footprint,
   InstallPlan,
   UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
-  RenameFolderResult, SnapshotRect, SnapshotResult} from '../shared/types'
+  RenameFolderResult, SnapshotRect, SnapshotResult,
+  SkillDirEntry, SkillDirAddResult, SkillListResult} from '../shared/types'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -351,6 +352,17 @@ const api = {
     log: (action: 'ingest' | 'query' | 'lint', title: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('wiki:log', action, title),
     stats: (): Promise<WikiStats> => ipcRenderer.invoke('wiki:stats')
+  },
+  // Skill 管理面板（第一半：读与显示）。命名故意跟上面 `skill`（Eas-Term 自己那个
+  // 「配套技能包」的安装状态）分开——两个是完全不同的概念，撞名字会把人绕晕。
+  // 这里全是只读操作，唯一的写是「自定义目录列表」，不碰任何用户的 skill 文件。
+  skillLibrary: {
+    listDirs: (): Promise<SkillDirEntry[]> => ipcRenderer.invoke('skillLibrary:listDirs'),
+    pickDir: (): Promise<string | null> => ipcRenderer.invoke('skillLibrary:pickDir'),
+    addDir: (path: string, label?: string): Promise<SkillDirAddResult> =>
+      ipcRenderer.invoke('skillLibrary:addDir', path, label),
+    removeDir: (id: string): Promise<SkillDirEntry[]> => ipcRenderer.invoke('skillLibrary:removeDir', id),
+    list: (dirPath: string): Promise<SkillListResult> => ipcRenderer.invoke('skillLibrary:list', dirPath)
   },
   rules: {
     // 规则托管：查状态 / 重新同步（知识库初始化、改位置、升级后都该同步一次）

@@ -58,7 +58,8 @@ export function FileTree({
   rootPath,
   refreshKey,
   editable = false,
-  createRequest
+  createRequest,
+  viewOnly = false
 }: {
   rootPath: string
   refreshKey: number
@@ -68,6 +69,12 @@ export function FileTree({
   /** 外部（面板头部的 + 按钮）触发在根目录新建。nonce 变一次触发一次；
    *  用计数器而不是 ref，是因为 refreshKey 已经是这个模式了，不引入第二种机制 */
   createRequest?: { kind: 'file' | 'dir'; nonce: number }
+  /** 连右键菜单里恒在的「重命名」「删除」也去掉（那两项不受 editable 控制，平时
+   *  哪怕 editable=false 也会出现，只是点了会失败——因为 fs:rename/fs:trash 走
+   *  main/fsGuard.ts 的 guardPath，只认项目根和知识库根）。给指向那两类根目录
+   *  之外的只读场景用（比如 skill 面板的文件树指向 `~/.claude/skills` 之类的位置），
+   *  这里加纯粹是不让用户看到一个点了必错的菜单项，guardPath 本身仍然是真正拦写的那道闸。 */
+  viewOnly?: boolean
 }): JSX.Element {
   const [menu, setMenu] = useState<{ x: number; y: number; entry: DirEntry | null } | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -199,7 +206,7 @@ export function FileTree({
       onClick: () => void window.api.fs.showInFolder(entry?.path ?? rootPath)
     })
 
-    if (entry) {
+    if (entry && !viewOnly) {
       items.push({ label: '', sep: true, onClick: () => {} })
       items.push({
         label: '重命名',
@@ -247,6 +254,7 @@ export function FileTree({
   }, [
     menu,
     editable,
+    viewOnly,
     clip,
     rootPath,
     activeProjectId,

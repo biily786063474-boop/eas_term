@@ -4428,3 +4428,211 @@
   background: rgba(255, 255, 255, 0.09);
   color: var(--fg);
 }
+
+/* ---------- Skill 管理面板（这一半：读与显示）---------- */
+/* 知识库抽屉左上角名称：从静态 <span> 换成下拉触发器，视觉上尽量贴近原来的 .wk-title，
+   点击态只加一个 chevron，别让人觉得整个头部风格变了。 */
+.wk-title-dd {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  letter-spacing: 0.04em;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.wk-title-dd:hover {
+  color: var(--fg);
+}
+/* 通用的可旋转 chevron：分类头 / skill 行 / 两个下拉触发器共用，跟文件树的
+   .tree-arrow.open 同一个手法（transform: rotate），手感统一 */
+.skl-chevron {
+  flex: none;
+  width: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-dim);
+  opacity: 0.75;
+  transition: transform 0.12s;
+}
+.skl-chevron.open {
+  transform: rotate(90deg);
+}
+.wk-title-dd .skl-chevron.open {
+  transform: rotate(180deg); /* 下拉箭头开合是上下翻，不是文件树那种左右展开 */
+}
+
+.skl-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.skl-toolbar {
+  flex: none;
+  padding: 8px 8px 0;
+}
+/* CLI/目录切换按钮：没选中项目 Frame 时用它选全局目录 */
+.skl-cli-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.skl-cli-btn:hover {
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.skl-cli-btn span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+/* 选中了项目 Frame：目录固定成该项目的 `.claude/skills`，不给切换，只给一行说明 */
+.skl-scope {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-dim);
+  font-size: 11.5px;
+}
+.skl-scope span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skl-adderr {
+  margin: 8px 8px 0;
+}
+
+.skl-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin-top: 6px;
+  padding-bottom: 6px;
+}
+.skl-cat {
+  border-bottom: 1px solid var(--glass-border);
+}
+.skl-cat:last-child {
+  border-bottom: none;
+}
+.skl-cat-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.skl-cat-head:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.skl-cat-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-dim);
+  letter-spacing: 0.03em;
+}
+.skl-cat-count {
+  flex: none;
+  font-size: 10px;
+  color: var(--fg-dim);
+  opacity: 0.6;
+}
+.skl-cat-body {
+  padding-bottom: 2px;
+}
+.skl-item {
+  padding: 0 6px;
+}
+.skl-item-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.skl-item-head:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.skl-item-name {
+  font-size: 12px;
+  color: var(--fg);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skl-item-desc {
+  margin: -2px 0 4px 27px;
+  padding-right: 6px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  opacity: 0.75;
+  /* 折叠块标量已经在主进程被拍平成一行长文本，这里再夹两行——
+     完整内容用不着在 250px 宽的抽屉里硬撑，够辨认是哪个 skill 就行 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* FileTree 的 .filetree-body 是 `position: absolute; inset: 0`（files.css）——
+   它要求最近的定位祖先有**确定的高度**才能正确铺满，否则会一路网上找到 .wiki-drawer
+   （它是 position:absolute）去继承尺寸，整棵树飞到抽屉左边缘之外，还顺带把
+   下面的行吃掉点击（真机验证时靠 Input.dispatchMouseEvent 真实点击抓到的坑：
+   el.click() 不做命中测试，测不出这种「渲染在别处、挡住了别的元素」的问题）。
+   用固定 height（不是 max-height——那样 .filetree-body 脱离文档流后，父容器高度会
+   直接塌成 0）+ position: relative，抄 .wk-tree 撑起 FileTree 的同一个做法。 */
+.skl-item-tree {
+  position: relative;
+  margin: 0 0 6px 16px;
+  border-left: 1px solid var(--glass-border);
+  height: 220px;
+  overflow: hidden;
+}
+.skl-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  opacity: 0.7;
+  word-break: break-all;
+}
