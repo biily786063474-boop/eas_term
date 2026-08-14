@@ -19,8 +19,9 @@ import { projectMenuItems } from '../workspace/projectMenu'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { shellQuote } from './shellQuote'
 import { elementUnderPoint } from './hitTest'
-import { useProjectRows } from '../status/useStatus.ts'
+import { useProjectRows, useDoneRows } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
+import { DoneList } from '../status/DoneList'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
@@ -48,6 +49,8 @@ export function CanvasDrawer(): JSX.Element {
   const [compOpen, setCompOpen] = useState(true)
   const [projH, setProjH] = useState(180)
   const [compH, setCompH] = useState(110)
+  /** 右上角气泡点开的已完成列表 */
+  const [doneOpen, setDoneOpen] = useState(false)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
@@ -65,6 +68,8 @@ export function CanvasDrawer(): JSX.Element {
   const clearAttention = useStore((s) => s.clearAttention)
   const canvasSel = useStore((s) => s.canvasSel)
   const rows = useProjectRows()
+  const doneRows = useDoneRows()
+  const doneCount = doneRows.length
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
   // 该项目的 Frame 是否被选中（画布里点选 Frame → 抽屉对应项高亮）
@@ -81,9 +86,6 @@ export function CanvasDrawer(): JSX.Element {
           (l) => l.pane.kind === 'terminal' && attentionPtys.includes(l.pane.ptyId)
         )
     )
-
-  // 待处理项目数（收起时右上角气泡显示）
-  const attentionCount = projects.filter((p) => projectHasAttention(p.id)).length
 
   // 抽屉打开时：在抽屉以外任何地方点击 → 收起（延后一拍挂载，避开"开抽屉那一下"）
   useEffect(() => {
@@ -437,14 +439,17 @@ export function CanvasDrawer(): JSX.Element {
               <span className="cd-edge-label">文件信息</span>
             </span>
           </div>
-          {attentionCount > 0 && (
-            <button
-              className="cd-attn-bubble"
-              data-tip="有待处理内容，点击展开"
-              onClick={() => setOpen(true)}
-            >
-              {attentionCount}
-            </button>
+          {doneCount > 0 && (
+            <>
+              <button
+                className="cd-attn-bubble"
+                data-tip="有任务完成了，点击查看"
+                onClick={() => setDoneOpen((v) => !v)}
+              >
+                {doneCount}
+              </button>
+              {doneOpen && <DoneList onClose={() => setDoneOpen(false)} />}
+            </>
           )}
         </>
       )}
