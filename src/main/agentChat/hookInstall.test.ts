@@ -142,3 +142,103 @@ test('[补充] 损坏输入被当空配置后，产出内容与真的传 {} 完�
     assert.deepEqual(fromBad, fromEmpty, `坏输入 ${JSON.stringify(bad)} 的产出必须等同于空配置`)
   }
 })
+
+// ============================================================
+// 以下是审查回合 2 补的断言：审查者没有读代码，而是用「真实用户可能手改/写坏出来的
+// settings.json 形状」直接调用实现，撞出 2 个 Important + 1 个 Minor，逐条复现属实：
+// 1. 分组的 hooks 数组里混进 null 会直接抛异常（第二处 .some() 没有像 isOurGroup 内部
+//    那样先判 isPlainObject(h)）
+// 2. 换路径时整体替换分组对象，会连带吞掉用户手加进同一个分组的条目（矩阵：用户很自然会
+//    往 matcher: '*' 的分组里加东西，因为它本来就匹配所有工具）
+// 3. marker 散落在多个分组时，findIndex 只处理第一个，其余的清不掉
+// 对应的修法都已经改成「全局扫描 + 分组内部摘除」而不是「找到第一个就整体替换」。
+// ============================================================
+
+test('[追加] 分组的 hooks 数组里混进 null 不抛，且能正确识别已装好/需要换路径两种情况', () => {
+  const withNullAfterOurs = {
+    hooks: { PreToolUse: [{ matcher: '*', hooks: [null, { type: 'command', command: CMD }] }] }
+  }
+  assert.doesNotThrow(() => planHookInstall(withNullAfterOurs, CMD))
+  const r1 = planHookInstall(withNullAfterOurs, CMD)
+  assert.equal(r1.changed, false, 'null 混在旁边不该干扰"已经装好"的判断')
+
+  const OLD = '/老/eas-pretooluse.mjs'
+  const withNullAfterOld = {
+    hooks: { PreToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: OLD }, null] }] }
+  }
+  assert.doesNotThrow(() => planHookInstall(withNullAfterOld, CMD))
+  const r2 = planHookInstall(withNullAfterOld, CMD)
+  assert.equal(r2.changed, true)
+  assert.ok(JSON.stringify(r2.next).includes(CMD))
+  assert.ok(!JSON.stringify(r2.next).includes(OLD), '旧命令必须被摘掉，null 不应该挡住这一步')
+})
+
+test('[追加] 换路径时，同一分组里用户手加的条目必须还在——这是这轮最要紧的一条', () => {
+  const OLD = '/老路径/eas-pretooluse.mjs'
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: '*',
+          hooks: [
+            { type: 'command', command: OLD },
+            { type: 'command', command: '/用户/hand-added.sh' }
+          ]
+        }
+      ]
+    }
+  }
+  const { changed, next } = planHookInstall(existing, CMD)
+  assert.equal(changed, true)
+  const arr = (next.hooks as Record<string, Grp[]>).PreToolUse
+  assert.equal(arr.length, 1, '不该为了装新的另开一个分组，还是原来那一个')
+  const commands = arr[0].hooks.map((h) => h.command)
+  assert.ok(commands.includes('/用户/hand-added.sh'), '用户手加的那条必须还在')
+  assert.ok(commands.includes(CMD), '我们的新命令也要在')
+  assert.ok(!commands.includes(OLD), '旧命令必须被摘掉')
+  assert.equal(commands.length, 2, '不多不少，恰好两条——没有重复也没有丢失')
+})
+
+test('[追加] 上一条修复后收敛：再调用一次 changed 为 false，手加的条目依然还在', () => {
+  const OLD = '/老路径/eas-pretooluse.mjs'
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: '*',
+          hooks: [
+            { type: 'command', command: OLD },
+            { type: 'command', command: '/用户/hand-added.sh' }
+          ]
+        }
+      ]
+    }
+  }
+  const once = planHookInstall(existing, CMD).next
+  const twice = planHookInstall(once, CMD)
+  assert.equal(twice.changed, false)
+  assert.ok(JSON.stringify(twice.next).includes('/用户/hand-added.sh'), '收敛之后手加的条目依然还在')
+})
+
+test('[追加] marker 散落在多个分组里——全部清理干净只留一条，不相关的分组不受影响', () => {
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        { matcher: '*', hooks: [{ type: 'command', command: '/老A/eas-pretooluse.mjs' }] },
+        { matcher: 'Bash', hooks: [{ type: 'command', command: '/真实/real.sh' }] },
+        { matcher: '*', hooks: [{ type: 'command', command: '/老B/eas-pretooluse.mjs' }] }
+      ]
+    }
+  }
+  const { changed, next } = planHookInstall(existing, CMD)
+  assert.equal(changed, true)
+  const arr = (next.hooks as Record<string, Grp[]>).PreToolUse
+  const markerGroups = arr.filter((g) => JSON.stringify(g).includes('eas-pretooluse'))
+  assert.equal(markerGroups.length, 1, '清理后全局只能剩一个带 marker 的分组')
+  assert.equal(
+    markerGroups[0].hooks.filter((h) => h.command.includes('eas-pretooluse')).length,
+    1,
+    '那一个分组内部也只能有一条带 marker 的记录'
+  )
+  assert.ok(JSON.stringify(arr).includes('/真实/real.sh'), '不相关的 Bash 分组必须完好保留')
+})
