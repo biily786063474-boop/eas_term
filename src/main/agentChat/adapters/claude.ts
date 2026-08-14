@@ -55,7 +55,7 @@ export const claudeAdapter: CliAdapter = {
 
   detect: detectByWhich('claude'),
 
-  buildArgs(opts: StartOpts): { bin: string; args: string[] } {
+  buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
     const args = [
       '-p',
       '--input-format',
@@ -70,6 +70,8 @@ export const claudeAdapter: CliAdapter = {
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
     if (opts.resumeId) args.push('--resume', opts.resumeId)
-    return { bin: 'claude', args }
+    // stdin 是送消息的活跃通道：--input-format stream-json 靠它逐行写用户消息，
+    // 必须保持打开——绝不能是 'ignore'。
+    return { bin: 'claude', args, stdin: 'pipe' }
   }
 }

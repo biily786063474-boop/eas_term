@@ -57,6 +57,12 @@ export interface CliAdapter {
   displayName: string
   capabilities: CliCapabilities
   detect(): Promise<boolean>
-  /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn */
-  buildArgs(opts: StartOpts): { bin: string; args: string[] }
+  /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn。
+   *  stdin 必填（不给可选，是怕下一个 CLI 接入时又忘记声明）——每个 CLI 怎么用 stdin
+   *  是它自己的怪癖，adapter 知道，下游不该替它记：
+   *  'pipe'   = stdin 是活跃通道，spawn 后要保持打开、持续往里写（Claude 用它送
+   *             --input-format stream-json 的逐行消息）；
+   *  'ignore' = 必须让 stdin 直接关闭/接 /dev/null，不能留给下游"不管"。
+   *             实测 Codex `exec` 不给会卡死在 `Reading additional input from stdin...`。 */
+  buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' }
 }

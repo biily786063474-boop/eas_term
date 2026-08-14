@@ -10,11 +10,9 @@
 // 参数依据：docs/cli-headless-接口实测.md 「二、Codex」，2026-08-14 实测。
 // - 不给 --sandbox 时 Codex 默认 read-only，写文件会被静默拒绝——所以 buildArgs
 //   永远带上 --sandbox，缺省用 workspace-write。
-// - 实测不给 `< /dev/null` 会卡在 `Reading additional input from stdin...`。
-//   这件事在这个 adapter 的接口里放不下：CliAdapter.buildArgs 只返回
-//   `{ bin, args }`，没有 stdio 配置的位置——留给后续把这个 adapter 接到真实
-//   spawn 的那一层去处理（把 Codex 子进程的 stdin 设成 'ignore' 或接 /dev/null），
-//   这里只是留一条注释别让人忘掉。
+// - 实测不给 `< /dev/null` 会卡在 `Reading additional input from stdin...`——这条事实现在
+//   由 buildArgs 返回值里的 stdin 字段表达（见 shared/agentChat.ts 上 CliAdapter 的注释），
+//   下面直接返回 'ignore'，不再靠下游记住这个怪癖。
 //
 // app-server 接上时：加一个新 adapter 分支（或给这个文件加 experimental 开关），
 // 把 approval 改回非空——UI 一行都不用改。
@@ -58,12 +56,14 @@ export const codexAdapter: CliAdapter = {
 
   detect: detectByWhich('codex'),
 
-  buildArgs(opts: StartOpts): { bin: string; args: string[] } {
+  buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`
     const args: string[] = opts.resumeId ? ['exec', 'resume', opts.resumeId] : ['exec']
     args.push('--json', '--sandbox', opts.sandbox ?? DEFAULT_SANDBOX)
     if (opts.model) args.push('-m', opts.model)
     if (opts.effort) args.push('-c', `model_reasoning_effort=${opts.effort}`)
-    return { bin: 'codex', args }
+    // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
+    // "Reading additional input from stdin..."（实测），必须是 'ignore'。
+    return { bin: 'codex', args, stdin: 'ignore' }
   }
 }

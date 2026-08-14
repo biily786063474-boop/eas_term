@@ -233,3 +233,16 @@ test('[补充] Codex 传了 resumeId 用 exec resume <id>，不传就是普通 e
 test('[补充] Codex 的 buildArgs 返回 bin: "codex"', () => {
   assert.equal(getAdapter('codex')!.buildArgs({ cwd: '/x' }).bin, 'codex')
 })
+
+// ============================================================
+// 以下是协调者追加裁定的字段（顾虑 1 修复）：buildArgs 的返回值加 stdin: 'pipe' | 'ignore'。
+// 不能只断言字段存在——上一轮的教训就是"存在但值不对"测不出来，这里直接锁精确值。
+// ============================================================
+
+test('[追加] Claude 的 stdin 精确是 pipe——stream-json 靠它送用户消息，不能是 ignore', () => {
+  assert.equal(getAdapter('claude')!.buildArgs({ cwd: '/x' }).stdin, 'pipe')
+})
+
+test('[追加] Codex 的 stdin 精确是 ignore——不关掉会卡在 Reading additional input from stdin...', () => {
+  assert.equal(getAdapter('codex')!.buildArgs({ cwd: '/x' }).stdin, 'ignore')
+})
