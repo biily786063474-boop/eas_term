@@ -16,7 +16,7 @@ import { collectLeaves } from '../../layout'
 import type { LeafNode } from '../../layout'
 import type { Project, ProjectStatus } from '../../../../shared/types'
 
-import { CanvasRunMonitor } from '../canvas/CanvasRunMonitor'
+import { RunMonitor } from '../status/RunMonitor'
 import { useBoardScroll } from './useBoardScroll'
 import { TerminalIcon, PlusIcon, CloseIcon, ChevronLeftIcon, TrashIcon } from '../../ui/Icons'
 import './board.css'
@@ -192,7 +192,7 @@ export function BoardStage(): JSX.Element {
           滚动容器 —— 放进去的话 absolute 相对 .board 的 padding box 定位，
           横向滚看板时它跟着内容一起滑走了。挪出来后相对 .tab-stack 定位，
           左上角钉死。（画布那边没这问题：画布平移用的是 transform，不是滚动。） */}
-      <CanvasRunMonitor />
+      <RunMonitor />
       <div className="board">
       {cols.map((col) => {
         const list = byCol(col.key)

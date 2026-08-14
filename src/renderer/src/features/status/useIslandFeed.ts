@@ -6,8 +6,10 @@
 // 那等于把状态复制一份，两边迟早不一致。主进程只做转发。
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import { collectLeaves } from '../../layout'
 import type { IslandAction, IslandNotice, IslandRunning, IslandState } from '../../../../shared/types'
+import { locate } from './machine'
+import type { Located, LocateCtx } from './machine'
+import { focusTerminal } from './useStatus'
 
 /** 推送节流：终端标题一秒能变好几次，不节流就是一秒几十帧 IPC */
 const PUSH_MS = 250
@@ -16,18 +18,10 @@ const PUSH_MS = 250
  *  给到 1.5s 既不会误判慢的情况，也不会让用户对着一个死按钮发呆太久。 */
 const STALE_MS = 1500
 
-/** 一个终端在整个应用里的落点。灵动岛的每条信息都要先解出它。 */
-interface Located {
-  ptyId: string
-  tabId: string
-  leafId: string
-  project: string
-  projectId: string | null
-  /** 终端显示名：画布节点自定义名 > tab 标题 */
-  term: string
+/** 灵动岛还要几个 machine.Located 不管的字段（模型、耗时档、会话 id、跑的哪个 CLI）——
+ *  那些只有灵动岛的卡片用，放进状态机会让它认识一堆与「状态」无关的东西。 */
+interface IslandExtra {
   cwd?: string
-  frameId?: string
-  nodeId?: string
   model?: string
   effort?: string
   /** 该终端绑定的 CLI 会话 id —— 取 transcript 必须用它，否则同项目多终端会串 */
@@ -36,42 +30,24 @@ interface Located {
   agent: 'claude' | 'codex'
 }
 
-/** 剥掉标题开头的盲文 spinner：agent 干活时会把转圈字符写进标题，
- *  带着它显示会让名字每 100ms 抖一下。 */
-function cleanTitle(s: string): string {
-  return s.replace(/^[⠀-⣿\s✳*]+/u, '').trim()
-}
-
-/** 从当前 store 解出某个 pty 的落点；找不到（终端已关）返回 null */
-function locate(ptyId: string): Located | null {
+/** 从当前 store 解出某个 pty 的落点 + 灵动岛专用字段；找不到（终端已关）返回 null */
+function locateForIsland(ptyId: string, ctx: LocateCtx): (Located & IslandExtra) | null {
+  const base = locate(ptyId, ctx)
+  if (!base) return null
   const st = useStore.getState()
-  for (const t of st.tabs) {
-    for (const leaf of collectLeaves(t.root)) {
-      if (leaf.pane.kind !== 'terminal') continue
-      if ((leaf.pane as { ptyId: string }).ptyId !== ptyId) continue
-      const frame = st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leaf.id))
-      const node = frame?.nodes.find((n) => n.leafId === leaf.id)
-      const agent = node?.agent
-      const kind = agent?.kind ?? 'claude'
-      const project = st.projects.find((p) => p.id === t.projectId)
-      return {
-        ptyId,
-        tabId: t.id,
-        leafId: leaf.id,
-        project: project?.name ?? '未归属',
-        projectId: t.projectId ?? null,
-        term: cleanTitle(node?.name || t.title || '') || '终端',
-        cwd: project?.path,
-        frameId: frame?.id,
-        nodeId: node?.id,
-        model: agent?.model?.[kind],
-        effort: agent?.effort?.[kind],
-        sessionId: agent?.session?.[kind],
-        agent: kind
-      }
-    }
+  const frame = st.canvas.frames.find((f) => f.id === base.frameId)
+  const node = frame?.nodes.find((n) => n.id === base.nodeId)
+  const agent = node?.agent
+  const kind = agent?.kind ?? 'claude'
+  const project = st.projects.find((p) => p.id === base.projectId)
+  return {
+    ...base,
+    cwd: project?.path,
+    model: agent?.model?.[kind],
+    effort: agent?.effort?.[kind],
+    sessionId: agent?.session?.[kind],
+    agent: kind
   }
-  return null
 }
 
 /** 一条通知的会话正文（异步从 transcript 取来，缓存住） */
@@ -108,10 +84,12 @@ export function useIslandFeed(): void {
 
   // 新出现的「需处理」终端 → 去把它这一轮的问答捞出来
   useEffect(() => {
+    const st = useStore.getState()
+    const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
     for (const ptyId of attentionPtys) {
       if (fetched.current.has(ptyId)) continue
       fetched.current.add(ptyId)
-      const loc = locate(ptyId)
+      const loc = locateForIsland(ptyId, ctx)
       if (!loc?.cwd) continue
       void window.api.session
         .last(loc.cwd, loc.sessionId)
@@ -156,9 +134,11 @@ export function useIslandFeed(): void {
   useEffect(() => {
     const push = (): void => {
       lastPush.current = Date.now()
+      const st = useStore.getState()
+      const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
       const running: IslandRunning[] = []
       for (const ptyId of runningPtys) {
-        const loc = locate(ptyId)
+        const loc = locate(ptyId, ctx)
         if (!loc) continue
         running.push({
           key: ptyId,
@@ -170,7 +150,7 @@ export function useIslandFeed(): void {
 
       const notices: IslandNotice[] = []
       for (const ptyId of attentionPtys) {
-        const loc = locate(ptyId)
+        const loc = locateForIsland(ptyId, ctx)
         if (!loc) continue
         const d = details[ptyId]
         const t = ptyTiming[ptyId]
@@ -275,23 +255,21 @@ export function useIslandFeed(): void {
         // 只接受确实出现在屏幕上的序号。少了这一句，一个越界的 choice
         // 就会被原样敲进 CLI，等于替用户瞎按。
         if (typeof a.choice !== 'number' || !ap.options.some((o) => o.index === a.choice)) return
-        if (!locate(a.key)) return // 终端已经关了
+        const ctx: LocateCtx = { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects }
+        if (!locate(a.key, ctx)) return // 终端已经关了
         window.api.pty.write(a.key, `${a.choice}\r`)
         st.markApprovalSent(a.key)
         return
       }
       if (a.type !== 'focus') return
-      const loc = locate(a.key)
-      if (!loc) return
-      // 到达即视为已知晓——和 TerminalAttention 里点铃铛跳转的行为保持一致
-      st.clearAttention(a.key)
-      if (st.viewMode === 'canvas' && loc.frameId && loc.nodeId) {
-        st.focusCanvasNode(loc.frameId, loc.nodeId)
-      } else {
-        // 分屏模式：切到该项目 + 激活那个 tab。终端自身的聚焦交给 tab 切换后的既有逻辑
-        if (loc.projectId) st.setActiveProject(loc.projectId)
-        st.setActiveTab(loc.tabId)
-      }
+      // 原来这里独立实现了一遍「跳过去 + 清状态」：判断条件是
+      // `viewMode === 'canvas' && loc.frameId && loc.nodeId`，把「我在哪个模式」和
+      // 「这个终端有没有画布节点」混成了一个条件，还在最上面就先 clearAttention。
+      // 画布模式下点一个没有画布节点的终端（⌘T/侧栏/抽屉双击开的都是这种，主流情况）
+      // 会落进 else 分支，但那一支不切 viewMode，Sidebar/TabBar 依旧不挂载——
+      // 提醒已经消了，画面却毫无变化。focusTerminal（见 useStatus.ts）把这两个判断
+      // 分开了，且先保证目标可见再清，两套实现的分歧点正是这里，改用它而不是自己再写一遍。
+      focusTerminal(a.key)
     })
   }, [])
 }

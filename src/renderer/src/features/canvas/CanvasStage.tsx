@@ -11,7 +11,6 @@ import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon, Camer
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
-import { CanvasRunMonitor } from './CanvasRunMonitor'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { stageMenuItems } from './stageMenu'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
@@ -23,6 +22,7 @@ import { FrameStatusPicker } from './FrameStatusPicker'
 import { statusLabel, statusColor, statusOfFrame } from './frameStatus'
 import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
+import { RunMonitor } from '../status/RunMonitor'
 
 /** 把列的颜色变成 .cframe 认的 `--frame-rgb`（它的用法是 rgba(var(--frame-rgb), α)，
  *  所以要的是 "r, g, b" 三个数，不是 #rrggbb）。没颜色就不设，回落主题色。 */
@@ -1243,7 +1243,7 @@ export function CanvasStage(): JSX.Element {
         )}
 
       <CanvasMiniMap />
-      <CanvasRunMonitor />
+      <RunMonitor />
 
       <div className={`canvas-zoombar${maximized ? ' on-max' : ''}`}>
         <button

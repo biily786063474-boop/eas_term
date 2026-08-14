@@ -5,8 +5,8 @@
 // 没有任务时整个组件不渲染，一个像素都不占。
 import { useMemo, useState } from 'react'
 import { useStore } from '../../store'
-import { collectLeaves } from '../../layout'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { locate } from './machine'
 
 /** 终端名只留前 5 个字。先剥掉开头的盲文 spinner（⠋⠙⠹…）——
  *  agent 干活时会把转圈字符写进标题，不剥的话五个字要被它占掉一个还难看。 */
@@ -24,7 +24,7 @@ interface Row {
   term: string
 }
 
-export function CanvasRunMonitor(): JSX.Element | null {
+export function RunMonitor(): JSX.Element | null {
   const runningPtys = useStore((s) => s.runningPtys)
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
@@ -35,27 +35,18 @@ export function CanvasRunMonitor(): JSX.Element | null {
 
   const rows = useMemo<Row[]>(() => {
     if (!runningPtys.length) return []
-    const running = new Set(runningPtys)
-    const out: Row[] = []
-    for (const t of tabs) {
-      for (const leaf of collectLeaves(t.root)) {
-        if (leaf.pane.kind !== 'terminal') continue
-        const ptyId = leaf.pane.ptyId
-        if (!running.has(ptyId)) continue
-        // 终端名优先取画布节点的自定义名（用户自己起的），否则用标签名
-        const frame = frames.find((f) => f.nodes.some((n) => n.leafId === leaf.id))
-        const node = frame?.nodes.find((n) => n.leafId === leaf.id)
-        out.push({
-          ptyId,
-          leafId: leaf.id,
-          frameId: frame?.id,
-          nodeId: node?.id,
-          project: projects.find((p) => p.id === t.projectId)?.name ?? '未归属',
-          term: shortName(node?.name || t.title || '终端')
-        })
-      }
-    }
-    return out
+    const ctx = { tabs, frames, projects }
+    return runningPtys
+      .map((ptyId) => locate(ptyId, ctx))
+      .filter((l): l is NonNullable<typeof l> => !!l)
+      .map((l) => ({
+        ptyId: l.ptyId,
+        leafId: l.leafId,
+        frameId: l.frameId,
+        nodeId: l.nodeId,
+        project: l.project,
+        term: shortName(l.term)
+      }))
   }, [runningPtys, tabs, projects, frames])
 
   if (!rows.length) return null

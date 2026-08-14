@@ -73,8 +73,8 @@ export function CanvasDrawer(): JSX.Element {
   const doneRows = useDoneRows()
   const doneCount = doneRows.length
   // doneOpen 不能比它要显示的数据活得久：清空最后一条 done 的路径不止「点列表里那一行」
-  // （那条走 DoneList 的 onClose）——灵动岛跳转（useIslandFeed.ts 直接调 clearAttention，
-  // 独立实现，不走 focusTerminal）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
+  // （那条走 DoneList 的 onClose）——灵动岛跳转（useIslandFeed.ts 的 focus 动作调
+  // focusTerminal，末尾同样落到 clearAttention）、在画布上直接点选那个终端节点（CanvasStage.tsx 监听
   // canvasSel 的 effect，选中即 clearAttention）、以及那个 done 终端自己又跑起来（下一轮
   // statusOf 先判 runningPtys，直接从 computeDoneRows 里被跳过）都会让 doneCount 归零，
   // 但都不经过 DoneList 的 onClose。CanvasDrawer 在 viewMode 保持 'canvas' 期间不会重新挂载，
