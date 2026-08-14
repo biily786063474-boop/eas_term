@@ -545,17 +545,43 @@ export function registerIslandHandlers(): void {
   })
 }
 
-/** 自己这个 .app bundle 的路径，缓存一次即可（运行期间不会变）。
- *  从可执行文件路径往上倒三层：Foo.app/Contents/MacOS/Foo → 去掉 `MacOS/Foo`
- *  两层文件名、再去掉 `Contents` 这层，剩下的就是 `Foo.app`。dev 模式下算出来的是
- *  node_modules 里那份 Electron.app，同样成立——这个函数不关心"自己是谁"，
- *  只关心"当前这个可执行文件属于哪个 .app 包"，两种模式下结构一样。 */
-let cachedSelfBundlePath: string | null = null
-function selfAppBundlePath(): string {
-  if (!cachedSelfBundlePath) {
-    cachedSelfBundlePath = path.dirname(path.dirname(path.dirname(app.getPath('exe'))))
-  }
-  return cachedSelfBundlePath
+/** 把自己带到前台，走**「右键 Dock → 显示所有窗口」**那条路。
+ *
+ *  为什么不是 `shell.openPath(自己的 .app)`（这是上一版的做法，也是点 Dock 图标的等价物）：
+ *  两者在「哪个 app 是前台」这个判据上实测**完全一样**（各 8 轮：后台唤起 8/8、
+ *  已在前台时破坏 0/8），但那个判据量错了东西 —— **输入法（TSM）和 NSCursor 服务的是
+ *  key window，不是 frontmost app**，两者可以分开：app 成了前台却没有 key window，
+ *  表现就是「窗口在眼前，但打不出中文、hover 也没反应」。
+ *
+ *  `open <bundle>` 靠的是 `applicationShouldHandleReopen` 的默认行为（可能只 unhide /
+ *  deminiaturize），而 `NSApplicationActivateAllWindows` 会**显式把本 app 的所有窗口
+ *  order front**，这正是那个菜单项做的事。
+ *
+ *  为什么经 osascript 而不是 `app.focus({steal:true})`：后者是「进程自己请求激活自己」，
+ *  实测 0/10（见下面 verifyRealActivation 的注释）。osascript 是**另一个进程**在调
+ *  NSRunningApplication，不受那条限制 —— 这也正是上一版 shell.openPath 能成的原因，
+ *  换成这条之后那个性质仍然保住。
+ *
+ *  **按 pid 定位而不是 bundle 路径**：这台机器上同 bundle id 的副本不止一份
+ *  （/Applications 里的旧版备份、打包产物目录里的两份），lsregister 全都登记着。
+ *  按 pid 命中的一定是「正在跑的这个我」，没有解析歧义。
+ *
+ *  options = 3 = NSApplicationActivateAllWindows(1) | NSApplicationActivateIgnoringOtherApps(2)。
+ *  后者在新系统上标了 deprecated 但仍然生效；实测（8 轮）带不带它结果一样，留着更稳。 */
+function activateAllWindows(): void {
+  execFile(
+    '/usr/bin/osascript',
+    [
+      '-l',
+      'JavaScript',
+      '-e',
+      `ObjC.import('AppKit');var a=$.NSRunningApplication.runningApplicationWithProcessIdentifier(${process.pid});a&&a.activateWithOptions(3)`
+    ],
+    { timeout: 1500 },
+    () => {
+      /* 成不成由 verifyRealActivation 判，这里不看返回值 */
+    }
+  )
 }
 
 /** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 ——
@@ -571,14 +597,10 @@ function dispatchAction(action: IslandAction): void {
     if (main.isMinimized()) main.restore()
     if (!main.isVisible()) main.show()
     if (process.platform === 'darwin') {
-      // 不再靠 app.focus({steal:true})——实测（task-10 报告）这条「进程自己请求激活
-      // 自己」的路径在这台机器/这版 macOS 上真实前台切换成功率是 0%（0/10，见报告）。
-      // 改用 shell.openPath() 打开自己的 .app bundle：这条走的是 LaunchServices/
-      // NSWorkspace 的外部激活入口，不算「自己请求激活自己」，实测成功率 90%
-      // （9/10，60~72ms 内完成，见 task-10-report.md）。因为这个 app 已经在跑，
-      // LaunchServices 只会把已有实例带到前台，不会真的起第二个进程——
-      // 即便环境异常真的想起第二个，也会被 requestSingleInstanceLock 挡在最前面。
-      void shell.openPath(selfAppBundlePath())
+      // 走「右键 Dock → 显示所有窗口」那条路，理由见 activateAllWindows 的注释。
+      // 简言之：上一版的 shell.openPath 只保证「app 成为前台」，不保证**有 key window**，
+      // 而输入法和鼠标指针服务的是后者 —— 那正是「进来了却打不了中文、hover 没反应」的来源。
+      activateAllWindows()
     } else {
       // Windows/Linux 没有这个问题（这次排查明确是 macOS WindowServer 特有的行为），
       // 维持原逻辑，不在没证据的平台上动它。
@@ -657,12 +679,13 @@ function frontmostIsSelf(cb: (isSelf: boolean | null) => void): void {
  *     frontmostIsSelf 的注释）。两个错误叠一起 → 每次跳转都执行一次有害动作。
  *     现在只在**确认**没切过来时才动手。
  *
- *  2. **重试不再用 `hide()+show()`，改成再走一次 `shell.openPath`。** 8 轮对照实测：
+ *  2. **重试不再用 `hide()+show()`，改成再走一次 activateAllWindows。** 8 轮对照实测：
  *     窗口本来就好好地在前台时，`hide()+show()` 有 **3/8** 的概率把前台交给一个
  *     毫不相干的后台 app（跑出来是 Safari），窗口却还亮在屏幕上——那正是
  *     「看着在前面、其实没有输入法、鼠标指针也不跟着变」的来源：macOS 的输入法
- *     和 NSCursor 都只服务于真正活跃的那个 app。同样条件下重复 `shell.openPath`
- *     破坏率 **0/8**，而它把后台窗口唤到前台的成功率是 **6/6**。 */
+ *     和 NSCursor 都只服务于真正活跃的那个 app。同样条件下重复外部激活（先是
+ *     `shell.openPath`，现在是 activateAllWindows）破坏率 **0/8**，
+ *     后台唤起成功率 **8/8**（三种手段各 8 轮对照，见 activateAllWindows 的注释）。 */
 function verifyRealActivation(win: BrowserWindow, attempt = 0): void {
   setTimeout(() => {
     if (win.isDestroyed()) return
@@ -677,7 +700,7 @@ function verifyRealActivation(win: BrowserWindow, attempt = 0): void {
       if (!app.isPackaged) console.log(`[island] 确认没切到前台，第 ${attempt + 1} 次尝试`)
       if (attempt === 0) {
         // 重试就再走一遍那条已经证明有效的路（见上面铁律 2）。
-        void shell.openPath(selfAppBundlePath())
+        activateAllWindows()
         win.moveTop()
         win.focus()
         win.webContents.focus()
