@@ -10,6 +10,7 @@ import { ImageView } from '../image/ImageView'
 import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
 import { WebView } from '../web/WebView'
+import { useCanvasWheelPassthrough } from '../canvas/wheelPassthrough'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
 import { AgentCmdBar } from '../canvas/AgentCmdBar'
 import { CanvasAgentBar } from '../canvas/CanvasAgentBar'
@@ -177,7 +178,6 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const tabCwd = useStore((s) => s.tabs.find((t) => t.id === tabId)?.cwd ?? '')
   const renameNode = useStore((s) => s.renameNode)
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
-  const setViewport = useStore((s) => s.setViewport)
   const [editingName, setEditingName] = useState(false)
   const paneRef = useRef<HTMLDivElement>(null)
   // 画布模式下本终端节点的选中 key，供高亮 + 点选
@@ -197,36 +197,18 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   //   2. 更糟的是它照旧去 setViewport 平移**画布**的视口 —— 你在看板里滚几下，
   //      切回画布发现整个画面跑掉了，而看板上什么都没发生，根本联想不到是这里。
   // 看板没有可平移的画布，这套逻辑在那儿没有任何意义。
-  useEffect(() => {
-    const el = paneRef.current
-    if (!el || !isCanvas || canvasRect?.board) return
-    const onWheel = (e: WheelEvent): void => {
-      // 铺满视口时画布已经被整个盖住，「滚轮平移画布」没有任何意义 —— 直接放行。
-      // 最大化时 store 那边也会顺手选中它，这里是第二道：即使选中状态没同步上，
-      // 滚轮该归内容还是归内容
-      if (canvasRect?.maximized) return
-      if (selKey && useStore.getState().canvasSel.includes(selKey)) return // 选中 → 放行给模块内容
-      e.preventDefault()
-      e.stopPropagation()
-      const cur = useStore.getState().canvas.viewport
-      if (e.ctrlKey) {
-        const vp = document.querySelector('.canvas-viewport')?.getBoundingClientRect()
-        if (!vp) return
-        const px = e.clientX - vp.left
-        const py = e.clientY - vp.top
-        const s2 = Math.min(2.2, Math.max(0.2, cur.scale * (1 - e.deltaY * 0.01)))
-        setViewport({
-          scale: s2,
-          x: px - (px - cur.x) * (s2 / cur.scale),
-          y: py - (py - cur.y) * (s2 / cur.scale)
-        })
-      } else {
-        setViewport({ x: cur.x - e.deltaX, y: cur.y - e.deltaY })
-      }
-    }
-    el.addEventListener('wheel', onWheel, { capture: true, passive: false })
-    return () => el.removeEventListener('wheel', onWheel, { capture: true })
-  }, [isCanvas, canvasRect?.board, canvasRect?.maximized, selKey, setViewport])
+  // 驱动画布那段（平移 / ctrl 缩放）已提到 canvas/wheelPassthrough.ts —— 标记层要用同一套，
+  // 各写一份的话以后改缩放手感会漏改一处，而症状只是「有的地方手感不一样」，很难查。
+  useCanvasWheelPassthrough(
+    paneRef,
+    isCanvas && !canvasRect?.board,
+    // 铺满视口时画布已经被整个盖住，「滚轮平移画布」没有任何意义 —— 直接放行。
+    // 最大化时 store 那边也会顺手选中它，这里是第二道：即使选中状态没同步上，
+    // 滚轮该归内容还是归内容
+    () =>
+      !!canvasRect?.maximized ||
+      (!!selKey && useStore.getState().canvasSel.includes(selKey)) // 选中 → 放行给模块内容
+  )
 
   const pane = leaf.pane
   const hasFile = pane.kind === 'code' || pane.kind === 'image'

@@ -127,7 +127,7 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     const wy = r ? (e.clientY - r.top - cur.y) / cur.scale : 0
     items = [
       {
-        label: '新建便签',
+        label: '新建批注',
         onClick: () => st.addShape({ type: 'sticky', x: wx, y: wy, w: 190, h: 96, text: '双击编辑…' })
       }
     ]

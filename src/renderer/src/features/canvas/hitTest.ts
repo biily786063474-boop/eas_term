@@ -1,6 +1,6 @@
 // 拖放落点判定：绕开标记层。
 //
-// 标记（矩形/箭头/便签）现在渲染在 PaneLayer **之上**（.canvas-shape-layer，z-index 60），
+// 标记（矩形/箭头/批注）现在渲染在 PaneLayer **之上**（.canvas-shape-layer，z-index 15），
 // 而 .cshape 是 pointer-events:auto、矩形还带一层实底背景 —— **整个矩形盒子都参与命中测试**。
 // 于是 document.elementFromPoint 在标记盖住的地方一律返回 .cshape，
 // 后面那句 closest('.pane[data-leaf-id]') / closest('.cframe') 必然是 null，

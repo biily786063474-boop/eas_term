@@ -5,11 +5,12 @@
 // PaneLayer 之上（PaneLayer 在 App.tsx 里排在 CanvasStage 之后）。
 // 标记的用途正是「指着某个终端说这块」，压在终端底下等于没有。
 
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useStore } from '../../store'
 import type { CanvasShape } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { useCanvasWheelPassthrough } from './wheelPassthrough'
 // canvas.css 不在这里 import——它已经被 CanvasStage.tsx 引入一次（App.tsx 顶层无条件
 // import 了 CanvasStage），本文件用到的 .canvas-shape-* 规则也加在同一份 canvas.css 里。
 
@@ -28,6 +29,17 @@ export function CanvasShapeLayer(): JSX.Element | null {
   const editingSticky = useStore((s) => s.editingSticky)
   const setEditingSticky = useStore((s) => s.setEditingSticky)
   const maximized = !!useStore(liveMaximizedNode)
+  const layerRef = useRef<HTMLDivElement>(null)
+
+  // 滚轮：和画布模块同一条约定 —— 未选中的标记不该截断画板的平移/缩放。
+  // 标记层是 .canvas-viewport 的兄弟节点，滚轮落在标记上传不过去，
+  // 不接这一手的话「鼠标一挪到矩形上画布就滚不动了」。
+  // 选中的才放行给内容（便签的长文本要能滚）。
+  useCanvasWheelPassthrough(layerRef, viewMode === 'canvas' && !maximized, (e) => {
+    const el = (e.target as HTMLElement | null)?.closest?.('.cshape') as HTMLElement | null
+    const sid = el?.dataset.sid
+    return !!sid && useStore.getState().canvasSel.includes('s:' + sid)
+  })
 
   // 只在画布模式出现；有模块最大化沉浸时也让开（和右下角那两条同一个道理）
   if (viewMode !== 'canvas' || maximized) return null
@@ -189,7 +201,7 @@ export function CanvasShapeLayer(): JSX.Element | null {
     // 不然落在一个已有图形上面永远只会选中/拖走那个旧图形，新图形一根画不出来
     // （修复轮 1 Important 1；.canvas-viewport 自己也用同名 .drawing 类切光标，
     // 两条规则各管各的选择器，互不影响）。
-    <div className={`canvas-shape-layer${tool !== 'select' ? ' drawing' : ''}`}>
+    <div ref={layerRef} className={`canvas-shape-layer${tool !== 'select' ? ' drawing' : ''}`}>
       <div
         className="canvas-shape-world"
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}

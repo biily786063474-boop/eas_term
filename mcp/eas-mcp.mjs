@@ -253,11 +253,11 @@ const TOOLS = [
   {
     name: 'canvas_add_note',
     description:
-      '在 Frame 旁边贴一张便签（写结论/待办/提醒，留在画板上不会随对话滚走）。',
+      '在 Frame 旁边贴一张批注（写结论/待办/提醒，留在画板上不会随对话滚走）。',
     inputSchema: {
       type: 'object',
       properties: {
-        text: { type: 'string', description: '便签内容' },
+        text: { type: 'string', description: '批注内容' },
         frame_id: { type: 'string', description: '不传则贴在当前终端所在的 Frame 右侧' },
         color: { type: 'string', description: '可选颜色（CSS 色值）' }
       },
