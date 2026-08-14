@@ -2,17 +2,12 @@
 //
 // 为什么是主进程截而不是渲染层用 canvas 画：画布上跑着活终端（xterm 渲染到 canvas）
 // 和内嵌网页（webview），渲染层没法把它们画进一张图 —— 只有 capturePage 拿得到合成后的结果。
-import { BrowserWindow, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import fs from 'fs'
 import { snapshotTarget } from './snapshotPaths'
-import { isIslandWindow } from './island'
+import { mainWindow } from './island'
 import { guardDir } from './fsGuard'
 import type { SnapshotRect, SnapshotResult } from '../shared/types'
-
-/** 主窗口（排除灵动岛那个）。和 island.ts:40 同一个判据 */
-function mainWindow(): BrowserWindow | null {
-  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w)) ?? null
-}
 
 // 并发互斥：IPC 可以被连续触发（防连点是渲染层的事，这一层管不着、也不该指望它）。
 // snapshotTarget 是纯函数，序号对不对完全取决于调用方喂给它的 existing 是不是当下最新的

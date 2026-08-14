@@ -32,6 +32,7 @@ import { app, ipcMain, safeStorage, BrowserWindow, dialog } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import { isIslandWindow, mainWindow } from './island'
 
 import type { SecretMeta, SecretReveal, SecretSaveInput, SecretsStatus } from '../shared/types'
 import { parseEnvText } from '../shared/envParse'
@@ -666,6 +667,26 @@ function requireUnlocked(): string | null {
   return null
 }
 
+/**
+ * 给 `dialog.showOpenDialog` 挂父窗口（选 .env / 密钥文件用）。
+ *
+ * 不能直接 `getFocusedWindow() ?? getAllWindows()[0]`——灵动岛也是一扇 BrowserWindow，
+ * 一旦它存在（几乎总是，见 island.ts 里 mainWindow 的注释），「数组第一个」就是在赌
+ * 创建顺序，选中它当父窗口会让系统的选择框贴在那个 30px 高、focusable:false 的
+ * 胶囊窗口上，等于看不见。
+ *
+ * 灵动岛 focusable:false、macOS 上还是 NonactivatingPanel，结构上不会成为 key window，
+ * `getFocusedWindow()` 理论上选不中它；但这里仍显式排除一次——不去赌这个假设在
+ * 这个 app 也发的 Windows 版本、未来的 Electron 版本上都成立，排除的代价接近零，
+ * 赌错的代价是对话框糊在一扇看不见的窗口上。优先用聚焦窗口（弹在用户正看的那扇上，
+ * 体验更好），没有聚焦窗口、或聚焦的恰好是灵动岛时，退到主窗口。
+ */
+function dialogParentWindow(): BrowserWindow {
+  const focused = BrowserWindow.getFocusedWindow()
+  if (focused && !isIslandWindow(focused)) return focused
+  return mainWindow() ?? BrowserWindow.getAllWindows()[0]
+}
+
 export function registerSecretHandlers(): void {
   // 见文件头第 1 条坑：这个模块任何时候都不能在 ready 之前碰 safeStorage
   assertReady()
@@ -822,7 +843,7 @@ export function registerSecretHandlers(): void {
       if (testFile && process.env.EAS_E2E === '1') {
         file = String(testFile)
       } else {
-        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+        const win = dialogParentWindow()
         const r = await dialog.showOpenDialog(win, {
           title: '选一个 .env 文件',
           properties: ['openFile', 'showHiddenFiles'],
@@ -911,7 +932,7 @@ export function registerSecretHandlers(): void {
       if (testFile && process.env.EAS_E2E === '1') {
         file = String(testFile)
       } else {
-        const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+        const win = dialogParentWindow()
         const r = await dialog.showOpenDialog(win, {
           title: '选一个密钥文件（SSH 私钥 / .p8 / .pem）',
           properties: ['openFile', 'showHiddenFiles'],

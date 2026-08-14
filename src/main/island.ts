@@ -35,8 +35,21 @@ let loggedDisplay = false
  *  没有它，一旦渲染进程反复崩（比如某种系统性故障），会变成"建→崩→建→崩"的死循环。 */
 let lastCrashRecreateAt = 0
 
-/** 主窗口 = 除灵动岛之外的那个窗口 */
-function mainWindow(): BrowserWindow | null {
+/**
+ * 主窗口（排除灵动岛）——全仓库找「主窗口」都应该走这一个函数。
+ *
+ * 这个 app 同时挂着两扇 `BrowserWindow`：主窗口（整个应用界面）和灵动岛
+ * （屏幕顶部常驻状态胶囊，独立 HTML 入口 + 独立精简 preload，见文件顶部说明）。
+ * 灵动岛的建出条件是「有终端在跑 或 有待处理通知」（见下面 shouldShow）——
+ * 也就是说用户日常使用中它几乎总是存在，`getAllWindows()` 几乎总是回两个。
+ *
+ * 数组里谁排第几只取决于创建顺序，不代表语义。任何不排除灵动岛的
+ * `getAllWindows().find(...)` / `getAllWindows()[0]`，在灵动岛不存在时侥幸能跑对，
+ * 一旦它建出来就是在赌数组顺序——而灵动岛的 preload 是独立的精简版，
+ * 认错窗口的调用方（比如 mcpBridge 把 IPC 发过去）只会一直等到超时，
+ * 且这个故障几乎只在「有终端在跑」时才触发，偏偏那正是它最该好用的时候。
+ */
+export function mainWindow(): BrowserWindow | null {
   return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w)) ?? null
 }
 
@@ -587,7 +600,7 @@ function activateAllWindows(): void {
 /** 把一个动作送到主窗口执行。灵动岛和 Dock 菜单共用这一条路 ——
  *  两处各写一遍的话，「跳转前要不要先激活 app」这种细节迟早只在一处是对的。 */
 function dispatchAction(action: IslandAction): void {
-  const main = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && !isIslandWindow(w))
+  const main = mainWindow()
   if (!main) return
   if (action?.type === 'focus') {
     // 跳转意味着「我来处理了」→ 主窗口必须回到前台，否则点了没反应。

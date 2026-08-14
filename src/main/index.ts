@@ -28,7 +28,7 @@ import { registerRulesHandlers } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
-import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland } from './island'
+import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
 
 // 切到后台不降速。Chromium 默认会把「隐藏/最小化/被完全遮挡」的窗口狠狠节流,
 // 实测(最小化 10s,独立探针对比):setInterval 只剩 26%、requestAnimationFrame 只剩 11%、
@@ -264,7 +264,9 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
+    // 不能随便挑一扇——灵动岛也是一个 BrowserWindow，但它 focusable:false，
+    // 挑到它的话 restore()/focus() 全部落空，用户会觉得「叫了半天，应用没反应」。
+    const win = mainWindow()
     if (win) {
       if (win.isMinimized()) win.restore()
       win.focus()

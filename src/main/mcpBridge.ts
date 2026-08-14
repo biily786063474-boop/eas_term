@@ -4,12 +4,13 @@
 //
 // 安全三道锁：① 只监听 127.0.0.1；② 随机 token，只经 PTY env 注入给本 app 自己起的终端；
 // ③ 路径白名单（open_file/open_html 只允许项目目录内），防止把 ~/.ssh 之类渲染出来。
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import http from 'http'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import { secretsForRun } from './secrets'
+import { mainWindow } from './island'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -48,7 +49,10 @@ export function mcpEnv(ctx: Ctx): Record<string, string> {
 
 // 把一次工具调用转给渲染进程执行（store action 都在那边），等它回结果
 function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
-  const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed())
+  // 必须是主窗口，不能随便挑一扇。灵动岛也是一个 BrowserWindow，但它是独立的精简
+  // preload，没有注册 mcp:invoke 的监听——挑到它，这次调用只会一直等到下面的超时。
+  // 灵动岛的建出条件是「有终端在跑」，也就是本函数最常被调用的时候恰恰最容易挑错。
+  const win = mainWindow()
   if (!win) return Promise.resolve({ ok: false, error: '窗口未就绪' })
   const id = seq++
   // 大多数工具是纯 store 操作，15 秒绰绰有余。
