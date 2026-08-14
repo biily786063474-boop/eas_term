@@ -7,7 +7,7 @@
 // - approval.* 本翻译器完全不产出（2026-08-14 Ruling 4）：实测流里的 system:hook_started /
 //   hook_response 只带 hook_id，而 hook 脚本那条独立的 HTTP 路径（POST 给 mcpBridge）payload
 //   里是 tool_use_id——两路没有共同的关联键，缝不起来。审批因此完全由 hook 脚本那一路单独
-//   驱动（approval.request 用 tool_use_id 当 approvalId，见「审批事件缝合」任务）。
+//   驱动（approval.request 用 tool_use_id 当 approvalId，见 approvalRegistry.ts）。
 //   流里的 hook_started / hook_response 不管 hook_event 是什么、也不管是不是真的 PreToolUse，
 //   一律当噪音丢弃——和 SessionStart 那批噪音同等对待，不作任何特殊识别。
 
