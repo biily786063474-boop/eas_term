@@ -48,3 +48,17 @@
 @media (prefers-reduced-motion: reduce) {
   .st-running i, .st-approval, .st-check { animation: none; }
 }
+
+/* 抽屉项目行右侧的状态徽章：只有 icon 和计数，没有文字 */
+.cd-proj-badge.st {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  padding: 0;
+}
+.cd-proj-badge.st b {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.75;
+}

@@ -19,6 +19,8 @@ import { projectMenuItems } from '../workspace/projectMenu'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { shellQuote } from './shellQuote'
 import { elementUnderPoint } from './hitTest'
+import { useProjectRows } from '../status/useStatus.ts'
+import { StatusIcon } from '../status/StatusIcon'
 
 export function CanvasDrawer(): JSX.Element {
   // 有节点最大化时让位：那是沉浸式阅读/工作，把手压在内容上很碍事
@@ -62,6 +64,7 @@ export function CanvasDrawer(): JSX.Element {
   const attentionPtys = useStore((s) => s.attentionPtys)
   const clearAttention = useStore((s) => s.clearAttention)
   const canvasSel = useStore((s) => s.canvasSel)
+  const rows = useProjectRows()
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
 
   // 该项目的 Frame 是否被选中（画布里点选 Frame → 抽屉对应项高亮）
@@ -467,7 +470,6 @@ export function CanvasDrawer(): JSX.Element {
           {projOpen && (
             <div className="cd-sec-body">
               {projects.map((p) => {
-                const onCanvas = frames.some((f) => f.projectId === p.id)
                 return (
                   // pointer={false}：这里左键拖拽是「拖到画布建 Frame」，方向也往左，
                   // 两个手势抢同一个输入必然打架。这行只留触控板横滑 + 右键
@@ -485,11 +487,16 @@ export function CanvasDrawer(): JSX.Element {
                   >
                     <span className="cd-proj-dot" />
                     <span className="cd-proj-name">{p.name}</span>
-                    {projectHasAttention(p.id) ? (
-                      <span className="cd-proj-badge attn">待处理</span>
-                    ) : onCanvas ? (
-                      <span className="cd-proj-badge">画布中</span>
-                    ) : null}
+                    {(() => {
+                      const row = rows.find((r) => r.projectId === p.id)
+                      if (!row) return null
+                      return (
+                        <span className="cd-proj-badge st">
+                          <StatusIcon state={row.top} size={13} />
+                          {row.count > 1 && <b>{row.count}</b>}
+                        </span>
+                      )
+                    })()}
                   </SwipeRow>
                 )
               })}

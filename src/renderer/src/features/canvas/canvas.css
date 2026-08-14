@@ -587,17 +587,6 @@
   opacity: 0.8;
 }
 
-/* 呼吸「需处理」徽标：药丸底 + accent，比「画布中」更醒目 */
-.cd-proj-badge.attn {
-  flex: none;
-  opacity: 1;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(var(--accent-rgb), 0.22);
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.6);
-}
-
 .cd-files {
   flex: 1;
   min-height: 0;
