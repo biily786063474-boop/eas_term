@@ -42,6 +42,7 @@ import {
   pushDownOverlaps
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
+import { tidyOrder } from './canvas/tidyOrder'
 import type { PersistedCanvas } from './canvas/persist'
 import { track } from '../features/notify/track'
 
@@ -824,8 +825,10 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         .filter((c) => c.parentId === frameId)
         .reduce((m, c) => Math.max(m, c.y - frame.y + (c.collapsed ? HEAD : c.h)), 0)
       const startY = childBottom ? childBottom + GAP : HEAD + PAD
-      // 保持用户原有布局意图：按阅读顺序（先上后左）决定排列先后
-      const order = [...frame.nodes].sort((a, b) => a.y - b.y || a.x - b.x)
+      // 终端优先排到第一行左上，其余模块跟在后面；同档内保持阅读顺序。
+      // 规则本身连同「怎么认出终端」都在 canvas/tidyOrder.ts，那边有 9 个测试锁着 ——
+      // 写错了不会崩、只会表现成「整理完终端不在第一行」，是要靠测试才抓得住的那类。
+      const order = tidyOrder(frame.nodes)
       // 行宽：至少放得下最宽的模块，默认沿用 Frame 当前内容宽度
       const maxW = Math.max(frame.w - PAD * 2, ...order.map((n) => n.w))
       let x = PAD
