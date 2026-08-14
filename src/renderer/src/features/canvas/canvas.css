@@ -4715,3 +4715,77 @@
   opacity: 0.7;
   word-break: break-all;
 }
+
+/* ── 减弱动效（prefers-reduced-motion）───────────────────────────────────
+   系统开了「减弱动态效果」时，画布上的动效停掉。这份文件里的动效之前一条保护
+   都没有（workspace / terminal / status / glow 四份都有，唯独这份漏了）。
+
+   **停什么、不停什么，按「是不是运动」分，不是按「是不是过渡」分。**
+   规范针对的是位移 / 缩放 / 旋转带来的前庭不适，opacity 与颜色的淡入恰恰是它
+   推荐的替代方案 —— 所以这里不碰那些，canvas.css 里大量 opacity/color 过渡原样留着。
+
+   ④ 那一组尤其要小心：抽屉、工具条、灯箱的**展开位置本身就是 transform**
+   （`.wiki-drawer.open { transform: translateX(0) }`），给它们设 `transform: none`
+   会让抽屉永远打不开 —— 停的必须是「滑入过程」（transition），不是终点。
+   同理箭头的 rotate 是**方向信息**不是装饰，终态也得留着。
+
+   用 `none` 而不是把时长压到 0.01ms：已核查过全仓库没有任何逻辑挂在
+   transitionend / animationend 上（2026-08-14）。**将来若有代码要依赖过渡完成事件，
+   这里得改回极短时长，否则那些事件不会触发。** */
+@media (prefers-reduced-motion: reduce) {
+  /* ① 无限循环的呼吸 / 脉冲 —— 必须彻底停，这是这个设置最主要针对的东西 */
+  .cd-attn-bubble,
+  .cd-attn-bubble.approval,
+  .cd-proj.breathing,
+  .cd-proj.breathing .cd-proj-dot,
+  .crm-dot,
+  /* ② 一次性入场动画 —— 直接到终态，不演过程 */
+  .cframe-drop-pop,
+  .ab-pop {
+    animation: none;
+  }
+
+  /* ③ 纯装饰性的 hover / 拖拽缩放。只去掉放大这一下，
+     元素本身的 hover 反馈（背景、边框、颜色）照旧 —— 不然就没有反馈了 */
+  .cframe-dot:hover,
+  .ctodo-add:hover,
+  .ctodo-item:hover,
+  .ctodo-item.dragging,
+  .ctodo-check:hover {
+    transform: none;
+  }
+
+  /* ④ 位置/方向由 transform 表达的那些：**终态留着**，只停滑入过程 */
+  .canvas-drawer,
+  .wiki-drawer,
+  .canvas-toolbar,
+  .ctodo-lightbox,
+  .ctodo-lightbox-overlay,
+  .cd-chev,
+  .ctodo-chevron,
+  .skl-chevron,
+  .cd-attn-bubble {
+    transition: none;
+  }
+
+  /* ⑤ 待办卡片这三个把运动（top / transform）和颜色写在同一条 transition 里，
+     整条禁掉会连 hover 的背景反馈一起没了。重写成只留非运动的那几项：
+     拖拽排序的位移瞬间到位，颜色/边框/阴影照旧淡入（规范推荐的替代方案）。
+     **改上面那三条 transition 时这里要跟着改** —— 属性列表是手抄过来的。 */
+  .ctodo-item {
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      box-shadow 0.22s;
+  }
+  .ctodo-add {
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+  .ctodo-check {
+    transition:
+      background 0.18s,
+      border-color 0.18s;
+  }
+}

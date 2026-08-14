@@ -610,14 +610,26 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
 
     // 点击/聚焦该终端时标记为活动面板，并记住它是「最近活动终端」
     // （供名词词典等面板把文本插入到这个终端的光标处——那时 activeLeaf 已是词典自己）
+    //
+    // **这里曾经还有一句 clearAttention(ptyId)，它是「切画布视图偶发让待处理状态
+    // 消失」的真凶**（2026-08-14 用埋点抓到完整触发链）：
+    //   切回分屏 → PaneLayer 把该 leaf 的 isActive 从 false 翻成 true
+    //   → 下面那个 `if (isActive) termRef.current?.focus()` 的 effect 跑
+    //   → xterm 程序性聚焦 → 派发 focusin → 这里把标记吃掉。
+    // 用户全程没有任何指向那个终端的动作，只是切了个视图，agent 在等他这件事
+    // 就永远消失了。`event.isTrusted` 区分不了（实测程序性 focus 也是 true），
+    // 所以判据不能落在 focus 上。
+    //
+    // 「看见了」现在**只由真实键鼠动作定义**（下面的 keydown / mousedown）——
+    // 这也正是那两行原本的注释所说的意思。代价是切标签路过一个有标记的终端时
+    // 标记不再自动消，得点一下或敲个键；这个方向是安全的：多亮一会儿只是碍眼，
+    // 误清掉的是「agent 卡在那儿等你」，用户可能永远不会再知道。
     const onFocus = (): void => {
       useStore.getState().setActiveLeaf(tabId, leafId)
-      useStore.getState().clearAttention(ptyId)
       useStore.setState({ lastActiveTerminal: { tabId, ptyId } })
     }
     el.addEventListener('focusin', onFocus)
-    // 已聚焦的终端不会再触发 focusin，光靠它「已读」标记会一直亮到你切走再切回来。
-    // 在这个终端里敲键 / 点一下，就当你看见了。
+    // 在这个终端里敲键 / 点一下，就当你看见了。**这是唯一的已读判据**（见上）。
     const markRead = (): void => useStore.getState().clearAttention(ptyId)
     el.addEventListener('keydown', markRead)
     el.addEventListener('mousedown', markRead)
