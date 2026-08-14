@@ -507,6 +507,11 @@ export function registerMcpBridge(): void {
       // 渲染层日后通过 /agent-approval/resolve 把人工决定写回来，把上面的等待唤醒。
       // 挂起/超时/归一化的实际逻辑都在 approvalRoute.ts 里（可单测的纯部分已单测），
       // 这里只做「读 body → 调用 → 回 HTTP」的胶水，与 /secret-env 那段是同一个套路。
+      //
+      // 完整 payload（不只是 approvalId）原样传给 waitForApproval——它需要 tool_name/
+      // tool_input/cwd 这些字段，通过 approvalRoute.ts 的 onApprovalRequest() 广播给
+      // 订阅者（Task 8 的 session.ts），拼成审批卡片要显示的内容。这里不解构、不裁剪，
+      // 只做 approvalIdOf 这一次早退校验（校验用的是同一份 payload，不影响后面的转发）。
       if (req.method === 'POST' && req.url === '/agent-approval/request') {
         const raw = await readBody(req)
         let payload: unknown
@@ -515,11 +520,11 @@ export function registerMcpBridge(): void {
         } catch {
           return send(400, { decision: 'deny', reason: 'hook 请求体解析失败' })
         }
-        const approvalId = approvalIdOf(payload)
         // 拿不到 approvalId 就没法登记等待者，直接兜底 deny——不能悬在这里不回应，
-        // 那会让 Claude Code 的 hook 进程无限期卡住。
-        if (!approvalId) return send(400, { decision: 'deny', reason: '请求缺少 tool_use_id' })
-        const decision = await waitForApproval(approvalId)
+        // 那会让 Claude Code 的 hook 进程无限期卡住。（waitForApproval 内部也会做这个
+        // 检查，这里提前做只是为了能回一个 400 而不是 200，属于 HTTP 层的状态码判断。）
+        if (!approvalIdOf(payload)) return send(400, { decision: 'deny', reason: '请求缺少 tool_use_id' })
+        const decision = await waitForApproval(payload)
         return send(200, decision)
       }
 

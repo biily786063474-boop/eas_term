@@ -6,6 +6,7 @@ import {
   approvalIdOf,
   waitForApproval,
   resolveApproval,
+  onApprovalRequest,
   APPROVAL_TIMEOUT_MS
 } from './approvalRoute.ts'
 
@@ -62,17 +63,23 @@ test('approvalIdOf 对缺字段/畸形输入兜底返回空串，不抛', () => 
 })
 
 test('waitForApproval 挂起直到 resolveApproval 命中，拿到对应的 decision/reason', async () => {
-  const pending = waitForApproval('appr-1')
+  const pending = waitForApproval({ tool_use_id: 'appr-1' })
   assert.equal(resolveApproval('appr-1', 'allow', '用户点了允许'), true)
   const r = await pending
   assert.deepEqual(r, { decision: 'allow', reason: '用户点了允许' })
 })
 
 test('waitForApproval 超时后兜底 deny——不用等真实的 5 分钟，注入短超时验证', async () => {
-  const r = await waitForApproval('appr-timeout', 20)
+  const r = await waitForApproval({ tool_use_id: 'appr-timeout' }, 20)
   assert.equal(r.decision, 'deny')
   assert.equal(typeof r.reason, 'string')
   assert.ok(r.reason.length > 0, '超时也要给出人能看懂的理由，不是空字符串')
+})
+
+test('waitForApproval 对缺 tool_use_id 的 payload 立即兜底 deny，不登记不挂起', async () => {
+  const r = await waitForApproval({ tool_name: 'Bash' })
+  assert.equal(r.decision, 'deny')
+  assert.ok(r.reason.length > 0)
 })
 
 test('resolveApproval 命中不存在的 approvalId 返回 false，不抛', () => {
@@ -81,21 +88,101 @@ test('resolveApproval 命中不存在的 approvalId 返回 false，不抛', () =
 })
 
 test('resolveApproval 对同一个 approvalId 第二次调用返回 false（已被消费，不会重复 settle）', async () => {
-  const pending = waitForApproval('appr-2')
+  const pending = waitForApproval({ tool_use_id: 'appr-2' })
   assert.equal(resolveApproval('appr-2', 'allow', ''), true)
   assert.equal(resolveApproval('appr-2', 'allow', ''), false, '第二次不该再命中')
   await pending
 })
 
 test('resolveApproval 对非法 decision 兜底成 deny，不直接透传渲染层传来的原始值', () => {
-  const pending = waitForApproval('appr-3')
+  const pending = waitForApproval({ tool_use_id: 'appr-3' })
   resolveApproval('appr-3', '乱七八糟', '')
   return pending.then((r) => assert.equal(r.decision, 'deny'))
 })
 
 test('resolveApproval 的 reason 非字符串时兜底成空串，不把非法类型带进响应体', async () => {
-  const pending = waitForApproval('appr-4')
+  const pending = waitForApproval({ tool_use_id: 'appr-4' })
   resolveApproval('appr-4', 'allow', 12345)
   const r = await pending
   assert.equal(r.reason, '')
+})
+
+// ---- payload 留存与订阅（审查发现的 Important 修复：payload 曾被丢弃，只留 approvalId） ----
+
+// 下面这组测试统一给 waitForApproval 传短超时（而不是用默认的 5 分钟）：不是为了测超时
+// 本身，是防御性写法——如果广播逻辑真的坏了（listener 没收到/收到了不该收到的），
+// 前面的 assert 会先抛，抛的话下面「用 resolveApproval 收尾」那行就不会执行，
+// pending 这个 promise 会用默认超时一直挂着。真的挂过一次：写这组测试时一度让
+// npm test 卡住超过 120 秒才发现——用短超时兜底之后，任何断言失败都会在几秒内
+// 让整条测试链路 fail fast，而不是把 CI 拖到 5 分钟开外。
+
+test('waitForApproval 把完整 payload（不只是 approvalId）广播给订阅者', async () => {
+  const seen: unknown[] = []
+  const unsubscribe = onApprovalRequest((p) => seen.push(p))
+  const payload = {
+    session_id: 's1',
+    cwd: '/work/proj',
+    tool_name: 'Bash',
+    tool_input: { command: 'echo hi' },
+    tool_use_id: 'appr-payload-1'
+  }
+  const pending = waitForApproval(payload, 5_000)
+  unsubscribe()
+  assert.equal(seen.length, 1)
+  // 精确 deepEqual，不是只查某个字段——tool_name/tool_input/cwd 都必须原样在场，
+  // 这几个正是审批卡片要显示的内容，之前的实现里全被丢了
+  assert.deepEqual(seen[0], payload)
+  resolveApproval('appr-payload-1', 'allow', '')
+  await pending
+})
+
+test('onApprovalRequest 返回的取消订阅函数生效后不再收到通知', async () => {
+  const seen: unknown[] = []
+  const unsubscribe = onApprovalRequest((p) => seen.push(p))
+  unsubscribe()
+  const pending = waitForApproval({ tool_use_id: 'appr-payload-2' }, 5_000)
+  assert.equal(seen.length, 0, '取消订阅之后不该再收到')
+  resolveApproval('appr-payload-2', 'allow', '')
+  await pending
+})
+
+test('多个订阅者都能收到同一次请求的 payload', async () => {
+  const a: unknown[] = []
+  const b: unknown[] = []
+  const unsubA = onApprovalRequest((p) => a.push(p))
+  const unsubB = onApprovalRequest((p) => b.push(p))
+  const pending = waitForApproval({ tool_use_id: 'appr-payload-3' }, 5_000)
+  unsubA()
+  unsubB()
+  assert.equal(a.length, 1)
+  assert.equal(b.length, 1)
+  resolveApproval('appr-payload-3', 'allow', '')
+  await pending
+})
+
+test('订阅者在收到通知时同步调用 resolveApproval 也能命中（通知发生在登记之后）', async () => {
+  // 这条锁住实现顺序：waiters.set(...) 必须先于通知订阅者，否则订阅者同步 resolve 时
+  // 表里还没有这个 approvalId，会被误判成"没有这个请求"（resolveApproval 返回 false，
+  // 决定永远等不到人工响应，只能靠超时兜底——不是错误行为，但白白等了 5 分钟）。
+  let sawHitInsideListener = false
+  const unsubscribe = onApprovalRequest((p) => {
+    const id = (p as { tool_use_id: string }).tool_use_id
+    sawHitInsideListener = resolveApproval(id, 'allow', '订阅者同步命中')
+  })
+  // 短超时兜底：正常实现下这个 promise 应该被监听器同步 resolve，几乎立即 settle；
+  // 传短超时只是防止"顺序错了导致监听器落空"这类回归把测试拖到真实的 5 分钟默认值
+  // 才失败——测试要快速给出明确的红，不该在 CI 里挂 5 分钟。
+  const r = await waitForApproval({ tool_use_id: 'appr-payload-4' }, 5_000)
+  unsubscribe()
+  assert.equal(sawHitInsideListener, true)
+  assert.deepEqual(r, { decision: 'allow', reason: '订阅者同步命中' })
+})
+
+test('approvalId 缺失时不广播给订阅者——没法登记，广播了也没人能 resolve', async () => {
+  const seen: unknown[] = []
+  const unsubscribe = onApprovalRequest((p) => seen.push(p))
+  const r = await waitForApproval({})
+  unsubscribe()
+  assert.equal(seen.length, 0)
+  assert.equal(r.decision, 'deny')
 })
