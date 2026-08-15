@@ -32,6 +32,12 @@ export interface SessionRecord {
   /** 待生效的模型/effort——中途改的不动当前值，下次发送时才生效（决定 3） */
   pending?: { model?: string; effort?: string }
   resumeId?: string
+  /** 用户在 B 的询问卡片上明确选了"这次不装"审批 hook。跟 sandbox 同一个理由必须
+   *  存在 SessionRecord 上，不能只是 start() 那一次性的参数：这是"这个会话"要不要
+   *  保护的持续状态，不是"这一次 restart"的一次性开关——Codex 的每条消息都会触发
+   *  restart，如果 effectiveOpts 不把它带上，每次 restart 都会静默变回"要装"，
+   *  用户明确拒绝过的选择形同虚设（原样照抄 sandbox 字段头顶那段注释的论证）。 */
+  skipApprovalHook?: boolean
 }
 
 /** 一个活会话是否已经空闲超过阈值、该回收了。
@@ -90,6 +96,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     model: s.pending?.model ?? s.model,
     effort: s.pending?.effort ?? s.effort,
     resumeId: s.resumeId,
-    sandbox: s.sandbox
+    sandbox: s.sandbox,
+    skipApprovalHook: s.skipApprovalHook
   }
 }

@@ -139,11 +139,12 @@ export function AgentChatView({
     // （shared/agentChat.ts 提醒过这两个概念不等价，渲染层现在没有更细的信号；等出现
     // "approval 非空但走别的审批机制"的 CLI 时这里要跟着重新设计）。
     //
-    // **做不到"用户拒绝就不装、但会话照常起"**：session.ts 的 restartAndDeliver 在
-    // agentChat:start 这次 IPC 调用里**同步**装完 hook（早于 Promise resolve），没有任何
-    // StartOpts 字段能关掉它——要支持"不装也能起"，得在 A 那边（src/main/）加一个新参数，
-    // 这明确不在本任务范围内。所以这里选了更保守的一侧：用户拒绝 = 不发这次 start()，
-    // 而不是假装拒绝生效、实际仍把 hook 写盘。
+    // 用户选"不装"不再等于"不能用这个 CLI"（那是修复前的做法，跟内核 Ruling 14
+    // "告知而非阻断"矛盾——那条裁定的原意就是"不装 hook 也能用，只是要让用户看见
+    // 没保护"）。协调方补了 StartOpts.skipApprovalHook 这个开关（session.ts 的
+    // restartAndDeliver 收到它就跳过装 hook，改发一条 notice），这里改成把用户的
+    // 选择原样透传给 start()，会话照常起。
+    let skipApprovalHook = false
     if (selected.capabilities.approval.length > 0) {
       let status: AgentApprovalHookStatus
       try {
@@ -163,13 +164,9 @@ export function AgentChatView({
         })
         setHookAsk(null)
         if (!aliveRef.current) return
-        if (!proceed) {
-          setStarting(false)
-          setStartError(
-            '已取消——未同意开启审批保护，暂时无法用这个 CLI 启动会话。可以重新点击发送再次确认，或换一个不需要审批钩子的 CLI。'
-          )
-          return
-        }
+        // proceed=false（点了「这次不装，直接开始」）→ 会话仍然要起，只是带上这个标记，
+        // 让 restartAndDeliver 跳过装 hook 并改推一条"这次没有保护"的 notice。
+        skipApprovalHook = !proceed
       }
     }
 
@@ -178,7 +175,7 @@ export function AgentChatView({
       // message 必填直接带上，不留到之后再 send()——Codex 的 exec 要靠它作为启动时的
       // 位置参数，没法「先开会话、再补第一条」；Claude 那边 start() 内部也已经把它
       // 当第一条写进 stdin 了，这里不需要（也不能）再调一次 send() 重复投递同一条消息。
-      result = await window.api.agentChat.start({ cli: selected.id, cwd, message })
+      result = await window.api.agentChat.start({ cli: selected.id, cwd, message, skipApprovalHook })
     } catch (e) {
       if (aliveRef.current) {
         setStarting(false)
@@ -306,16 +303,18 @@ export function AgentChatView({
             <div className="ac-approval-title">开启审批保护？</div>
             {/* 拼成一个模板字符串表达式，不写成跨行的 JSX 原始文本——JSX 会把文本节点里
                 跨行的空白折叠成一个空格，中文没有词间空格，跨行处会被硬生生插进一个空格
-                （实测会把「修改文件」拆成「修改 文件」），拼字符串就没有这个问题。 */}
+                （实测会把「修改文件」拆成「修改 文件」），拼字符串就没有这个问题。
+                两个按钮都要能让人做决定，不是「同意/取消」二选一——不装同样能正常开始
+                对话，只是没有逐次审批，文案要把两条路的后果都讲清楚（协调方原话）。 */}
             <div className="ac-hook-ask-body">
-              {`「${hookAsk.cliName}」会在这个项目里安装一个审批钩子——之后每次要执行命令或修改文件，都会先弹卡片等你点"允许"才继续。只影响这一个项目（写在 ${hookAsk.configPath}），随时可以在工具栏里一键卸载。`}
+              {`「${hookAsk.cliName}」支持在这个项目里装一个审批钩子——装上之后，它每次要执行命令或修改文件前都会先弹卡片，等你点"允许"才会继续；只影响这一个项目（写在 ${hookAsk.configPath}），随时可以在工具栏一键卸载。不装的话对话照常开始，但工具调用会按默认权限直接执行、不会等你确认，界面会用一条提醒告诉你这次没有保护。`}
             </div>
             <div className="ac-approval-actions">
               <button type="button" className="ac-approval-btn deny" onClick={() => hookAsk.resolve(false)}>
-                暂不开启
+                这次不装，直接开始
               </button>
               <button type="button" className="ac-approval-btn allow" onClick={() => hookAsk.resolve(true)}>
-                开启保护
+                装上（推荐）
               </button>
             </div>
           </div>

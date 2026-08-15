@@ -50,6 +50,12 @@ export interface StartOpts {
   resumeId?: string
   /** 对应 capabilities.sandboxLevels 里某一项的 id（如 Codex 的 workspace-write） */
   sandbox?: string
+  /** 跳过安装审批 hook。用户在 B 的询问卡片上明确选了"这次不装"时用——那样的会话
+   *  没有审批保护，session.ts 的 restartAndDeliver 会推一条 { k:'error', fatal:false }
+   *  notice 让他知道（Ruling 14"告知而非阻断"同一条路径，不新造机制）。
+   *  未给这个字段（undefined）时按 false 处理——没声明就是"照常装"，不能让老代码
+   *  路径因为多了这个字段而意外改变行为。 */
+  skipApprovalHook?: boolean
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts

@@ -311,13 +311,25 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // 不该被这个判据误当成"要装 Claude 的 hook"）。装不上不阻断会话启动，但必须让用户
   // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
   if (adapter.approvalHook === 'claude-pretooluse') {
-    const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
-    if (!hook.ok) {
+    if (opts.skipApprovalHook) {
+      // 用户在 B 的询问卡片上明确选了"这次不装"（Ruling 15 划给 B 的那条），不是
+      // 装不上——但对他来说结果是一样的："这次会话没有审批保护"，所以复用装不上时
+      // 的同一条事件路径通知他，不新造机制（Ruling 14"告知而非阻断"同样适用：
+      // 哪怕是他自己选的，也不能因此就默不作声，notice 该出现的地方还是要出现）。
       handleEvent(live, {
         k: 'error',
         fatal: false,
-        message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+        message: '本次会话未开启审批保护（你选择了这次不安装）：工具调用将按默认权限直接执行，不会等待你的确认。随时可以在工具栏重新开启。'
       })
+    } else {
+      const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
+      if (!hook.ok) {
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+        })
+      }
     }
   }
 
@@ -473,7 +485,10 @@ export function registerAgentChatHandlers(): void {
       model: typeof p.model === 'string' ? p.model : undefined,
       effort: typeof p.effort === 'string' ? p.effort : undefined,
       sandbox: typeof p.sandbox === 'string' ? p.sandbox : undefined,
-      resumeId: typeof p.resumeId === 'string' ? p.resumeId : undefined
+      resumeId: typeof p.resumeId === 'string' ? p.resumeId : undefined,
+      // === true 而不是 Boolean(p.skipApprovalHook)：params 来自 unknown，任何非严格
+      // 布尔值（字符串 'true'、1……）一律当没给，照旧装 hook，不猜用户意图。
+      skipApprovalHook: p.skipApprovalHook === true
     }
     const live: Live = {
       rec,
