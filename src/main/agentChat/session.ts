@@ -79,7 +79,23 @@ function hookScriptPath(): string {
  *  很贫瘠（常只有 /usr/bin:/bin），bare 'node' 未必解析得到。这里只需要单个可执行文件
  *  路径去拼 shell 命令字符串，不需要 runnerFor 完整的 spawn 语义（它返回给 MCP server
  *  配置用的 {command,args,env} argv 数组形式），所以本地建一份短的，不改 mcpBridge.ts
- *  的导出面。找不到候选路径就退回裸 'node'，寄望调用环境自己能解析。 */
+ *  的导出面。
+ *
+ *  **兜底不能是裸 'node'**（审查发现的 Important）：PreToolUse hook 只有 exit code 2
+ *  才会阻塞工具调用，其它任何"跑不起来"——包括 command not found——都是 non-blocking，
+ *  工具照常执行、不等审批。也就是说 hook 起不来 = 审批静默失效（fail open），
+ *  而且没有任何用户可见的信号。win32 分支的候选列表故意留空（Windows 上系统 node
+ *  的常见安装位置不像 mac 那样有一两个固定路径可猜），这意味着**所有 Windows 用户**
+ *  过去都会落到这个兜底——弱兜底 = 事实上的默认失效。
+ *
+ *  照抄 runnerFor() 真正管用的那条兜底：退回本 app 自带的 Electron 二进制
+ *  （`process.execPath`）。它在任何装了这个 app 的机器上都保证存在，不依赖用户机器
+ *  装没装 node、装在哪。配合 restartAndDeliver 里 spawn Claude 时注入的
+ *  `ELECTRON_RUN_AS_NODE=1`——这个环境变量会经 Claude Code 的进程环境一路继承给它
+ *  自己再起的 hook 子进程，让 Electron 以纯 node 模式跑。选环境变量而不是在这条
+ *  shell 命令字符串里写 `VAR=val cmd` 前缀，是因为那种写法只有 POSIX shell 认，
+ *  Windows 的 cmd.exe/PowerShell 不认——环境变量继承不依赖 shell 语法，是唯一一条
+ *  跨平台都成立的路。 */
 function nodeBinForHook(): string {
   const candidates =
     process.platform === 'win32' ? [] : ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/usr/bin/node']
@@ -90,7 +106,7 @@ function nodeBinForHook(): string {
       /* 试下一个 */
     }
   }
-  return 'node'
+  return process.execPath
 }
 
 /** hook 脚本本身没有可执行位（打包资源目录里的普通静态文件，见 resources/agent-hooks/
@@ -108,17 +124,24 @@ function hookCommand(): string {
  *
  *  这是用户自己的文件（spec §九 第 2 条 + hookInstall.ts 文件头）：
  *  - 读不出来（不存在/损坏）当空对象处理——planHookInstall 自己能吞坏形状，不在这里判断
- *  - 写之前必须过 fsGuard 的 guardPath 边界；cwd 不在任何已注册项目/知识库内时跳过不写，
- *    只打日志，不阻塞会话本身——没装上 hook 顶多是这个会话的审批走不了，
- *    不该连话都不让说
+ *  - 写之前必须过 fsGuard 的 guardPath 边界；cwd 不在任何已注册项目/知识库内时跳过不写
  *  - changed:false 时不写——那个函数是幂等的，每次启动都写没有意义，还会在用户
- *    手改过的文件上留下不必要的 diff（brief 原话："那个函数是幂等的，每次启动重复写没意义"） */
-function installApprovalHook(cwd: string): void {
+ *    手改过的文件上留下不必要的 diff（brief 原话："那个函数是幂等的，每次启动重复写没意义"）
+ *
+ *  **返回值不是可有可无的诊断信息，调用方必须处理失败**（审查发现的 Important）：
+ *  PreToolUse hook 装不上 ≠ 温和降级。Claude Code 的 hook 机制只有 exit code 2 才会
+ *  阻塞工具调用，其它任何"跑不起来"都是 non-blocking——装不上 hook 就等于这个会话
+ *  完全没有审批保护、工具照常执行，而且**没有任何用户可见的信号**（claudeEvents.ts
+ *  把流里的 hook 事件全当噪音丢了，这条路唯一的痕迹曾经只有主进程的 console.error，
+ *  用户看不到）。裁定：不能因为装不上就拒绝启动会话（用户在未注册目录里临时用是合理
+ *  需求），但必须让用户看见"这次没有保护"——调用方要把这里的失败转成一条
+ *  {k:'error', fatal:false} 事件推给渲染层。 */
+function installApprovalHook(cwd: string): { ok: boolean; reason?: string } {
   const target = path.join(cwd, '.claude', 'settings.json')
   const g = guardPath(target)
   if (!g.ok) {
     console.error('[agentChat] 跳过 hook 安装（不在允许写入的目录内）：', g.error)
-    return
+    return { ok: false, reason: g.error }
   }
   let existing: unknown = {}
   try {
@@ -127,14 +150,17 @@ function installApprovalHook(cwd: string): void {
     existing = {} // 不存在 / 不是合法 JSON，都当空处理
   }
   const plan = planHookInstall(existing, hookCommand())
-  if (!plan.changed) return
+  if (!plan.changed) return { ok: true }
   try {
     fs.mkdirSync(path.dirname(g.path), { recursive: true })
     const tmp = g.path + '.eas-tmp'
     fs.writeFileSync(tmp, JSON.stringify(plan.next, null, 2), 'utf8')
     fs.renameSync(tmp, g.path)
+    return { ok: true }
   } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
     console.error('[agentChat] hook 写入失败', e)
+    return { ok: false, reason }
   }
 }
 
@@ -217,8 +243,16 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   }
 
   // 只有声明了逐次审批能力的 adapter 才需要装 PreToolUse hook——见 installApprovalHook 文件头。
+  // 装不上不阻断会话启动，但必须让用户看见"这次没有保护"——fail open 不能是静默的。
   if (adapter.capabilities.approval.length > 0) {
-    installApprovalHook(live.rec.cwd)
+    const hook = installApprovalHook(live.rec.cwd)
+    if (!hook.ok) {
+      handleEvent(live, {
+        k: 'error',
+        fatal: false,
+        message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+      })
+    }
   }
 
   const built = adapter.buildArgs(opts)
@@ -230,7 +264,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   try {
     proc = spawn(built.bin, args, {
       cwd: opts.cwd,
-      env: { ...process.env, ...mcpEnv({ project: opts.cwd }) },
+      env: {
+        ...process.env,
+        ...mcpEnv({ project: opts.cwd }),
+        // hook 脚本万一要靠 nodeBinForHook() 的兜底（本 app 自带的 Electron 二进制）跑，
+        // 得靠这个环境变量让它以纯 node 模式运行——它会经这个进程的 env 一路继承给
+        // Claude Code 自己再起的 hook 子进程。对不认识这个变量的进程（Codex、正常路径
+        // 找到系统 node 的 Claude）完全无害，所以不按 CLI 或是否命中兜底分支来选择性注入。
+        ELECTRON_RUN_AS_NODE: '1'
+      },
       stdio: [built.stdin, 'pipe', 'pipe']
     })
   } catch (e) {
