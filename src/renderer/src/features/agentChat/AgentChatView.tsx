@@ -10,10 +10,16 @@
 // **不允许按 CLI 名字分支**：CLI 选项、它的能力声明，全部来自 listClis() 原样透传的
 // CliInfo，选项按钮只认 id/displayName，不认「是不是 claude」。
 import { useEffect, useRef, useState } from 'react'
-import type { AgentChatStartResult, ChatEvent, CliInfo } from '../../../../shared/agentChat.ts'
+import type {
+  AgentApprovalHookStatus,
+  AgentChatStartResult,
+  ChatEvent,
+  CliInfo
+} from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
+import { ChatToolbar } from './ChatToolbar'
 import { SparkleIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './agentChat.css'
@@ -76,6 +82,11 @@ export function AgentChatView({
   const [view, setView] = useState<ChatView | null>(null)
   // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
+  // 后续消息（send()）失败时的原因——展示交给 ChatToolbar，这里只持有（它拿着 sessionId）。
+  const [sendError, setSendError] = useState<string | null>(null)
+  // 审批 hook 首次安装前的询问卡片（Task 7 / Ruling 15）。resolve 由用户点击卡片按钮触发，
+  // 见 handleSend 里 `new Promise<boolean>` 那段——卡片本身只是这个 Promise 的 UI 外壳。
+  const [hookAsk, setHookAsk] = useState<{ cliName: string; resolve: (v: boolean) => void } | null>(null)
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
@@ -117,6 +128,44 @@ export function AgentChatView({
     if (!message || !selected || starting || sessionId) return
     setStarting(true)
     setStartError(null)
+
+    // Task 7 Step 1（Ruling 15）：第一次要在这个项目里装审批 hook 前，先问用户。
+    // 判据是 capabilities.approval 非空——这是能力位，不是按 CLI 名字分支：目前唯二两个
+    // adapter 里，声明用 claude-pretooluse hook 的那个恰好也是 approval 非空的那个
+    // （shared/agentChat.ts 提醒过这两个概念不等价，渲染层现在没有更细的信号；等出现
+    // "approval 非空但走别的审批机制"的 CLI 时这里要跟着重新设计）。
+    //
+    // **做不到"用户拒绝就不装、但会话照常起"**：session.ts 的 restartAndDeliver 在
+    // agentChat:start 这次 IPC 调用里**同步**装完 hook（早于 Promise resolve），没有任何
+    // StartOpts 字段能关掉它——要支持"不装也能起"，得在 A 那边（src/main/）加一个新参数，
+    // 这明确不在本任务范围内。所以这里选了更保守的一侧：用户拒绝 = 不发这次 start()，
+    // 而不是假装拒绝生效、实际仍把 hook 写盘。
+    if (selected.capabilities.approval.length > 0) {
+      let status: AgentApprovalHookStatus
+      try {
+        status = await window.api.agentChat.hookStatus(cwd)
+      } catch {
+        // 查询本身失败：判不出状态时不卡用户，直接放行——跟内核 Ruling 14 同一个哲学
+        // （告知而非阻断）；真正没装成功的话，start() 之后也会有一条 notice 兜底。
+        status = { installed: true, outdated: false, configPath: '' }
+      }
+      if (!aliveRef.current) return
+      if (!status.installed) {
+        const proceed = await new Promise<boolean>((resolve) => {
+          setHookAsk({ cliName: selected.displayName, resolve })
+        })
+        setHookAsk(null)
+        if (!aliveRef.current) return
+        if (!proceed) {
+          setStarting(false)
+          setStartError(
+            '已取消——未同意开启审批保护，暂时无法用这个 CLI 启动会话。可以重新点击发送再次确认，或换一个不需要审批钩子的 CLI。'
+          )
+          return
+        }
+      }
+    }
+
     let result: AgentChatStartResult
     try {
       // message 必填直接带上，不留到之后再 send()——Codex 的 exec 要靠它作为启动时的
@@ -170,9 +219,34 @@ export function AgentChatView({
       void window.api.agentChat.resolveApproval(sessionId, approvalId, decision)
     }
     const displayView = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages)
+    // 后续消息：首条已经在 start() 里投递过了（见文件头 handleSend 的注释），这里走
+    // send(sessionId, text)。beforeTurnCount 的算法跟首条消息完全一致——reducerRef 的
+    // turns 只增不减，所以在这里现读它的长度、跟 mergeUserMessages 的插入位置对齐，
+    // 不会因为这是「第 N 条」而需要不同的公式（上一轮审查点名过这条不变量，见任务交底）。
+    const handleFollowupSend = (message: string): void => {
+      const trimmed = message.trim()
+      if (!trimmed) return
+      setSendError(null)
+      const beforeTurnCount = reducerRef.current.view().turns.length
+      setSentMessages((prev) => [...prev, { text: trimmed, beforeTurnCount }])
+      void window.api.agentChat.send(sessionId, trimmed).then((r) => {
+        if (!r.ok && aliveRef.current) setSendError(r.error)
+      })
+    }
     return (
       <div className="agent-chat-view">
         <MessageList view={displayView} onApprovalDecide={handleApprovalDecide} />
+        {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
+            handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
+        <ChatToolbar
+          caps={selected!.capabilities}
+          view={displayView}
+          cwd={cwd}
+          sessionId={sessionId}
+          onSend={handleFollowupSend}
+          onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
+          sendError={sendError}
+        />
       </div>
     )
   }
@@ -216,6 +290,29 @@ export function AgentChatView({
             </button>
           ))}
         </div>
+        {/* 审批 hook 首次安装前的询问（Task 7 / Ruling 15）——复用 ApprovalCard 那一套
+            视觉语言（.ac-approval*），这也是一次「要不要授权」的决定，没必要另起一套样式。
+            不用全局 ConfirmDialog：那个组件的确认按钮固定是 .danger-btn（红色，为「压缩
+            上下文」这类破坏性操作设计），套在「开启保护」这个正向操作上会传错信号。 */}
+        {hookAsk && (
+          <div className="ac-approval ac-hook-ask">
+            <div className="ac-approval-title">开启审批保护？</div>
+            {/* 拼成一个模板字符串表达式，不写成跨行的 JSX 原始文本——JSX 会把文本节点里
+                跨行的空白折叠成一个空格，中文没有词间空格，跨行处会被硬生生插进一个空格
+                （实测会把「修改文件」拆成「修改 文件」），拼字符串就没有这个问题。 */}
+            <div className="ac-hook-ask-body">
+              {`「${hookAsk.cliName}」会在这个项目里安装一个审批钩子——之后每次要执行命令或修改文件，都会先弹卡片等你点"允许"才继续。只影响这一个项目（写在 ${cwd}/.claude/settings.json），随时可以在工具栏里一键卸载。`}
+            </div>
+            <div className="ac-approval-actions">
+              <button type="button" className="ac-approval-btn deny" onClick={() => hookAsk.resolve(false)}>
+                暂不开启
+              </button>
+              <button type="button" className="ac-approval-btn allow" onClick={() => hookAsk.resolve(true)}>
+                开启保护
+              </button>
+            </div>
+          </div>
+        )}
         <button
           type="button"
           className="ac-send"

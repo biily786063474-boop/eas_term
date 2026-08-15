@@ -425,3 +425,192 @@
   border-color: rgba(var(--accent-rgb), 0.85);
   background: rgba(var(--accent-rgb), 0.24);
 }
+
+/* ---------- 空态：审批 hook 首次安装前的询问卡片（Task 7）---------- */
+/* 复用 .ac-approval 的卡片外壳（背景/边框/圆角），这里只补它没有的两处：
+   居中定宽（空态其它元素都是 min(480px,100%)）、说明段落的字号/行高。 */
+.ac-hook-ask {
+  width: min(480px, 100%);
+}
+.ac-hook-ask-body {
+  color: var(--fg-dim);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* ---------- 对话态：底部工具栏（Task 6）---------- */
+.ac-toolbar {
+  flex-shrink: 0;
+  position: relative; /* 语音按钮 interim/err 气泡的定位锚点（voice.css .voice-ctl.inline） */
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 14px 11px;
+  border-top: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* notices：硬验收项，view.notices 里的每一条都要能被看见（task-6-brief.md Step 2）。
+   fatal:false 的典型内容是"审批保护没开成"，用跟 .ac-approval 同一色系的琥珀色——
+   这不是错误，是告知；fatal 的才用 .ac-error 那套红色。 */
+.ac-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ac-notice {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #f0d9ad;
+  background: rgba(224, 175, 104, 0.1);
+  border: 1px solid rgba(224, 175, 104, 0.3);
+}
+.ac-notice-fatal {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* 次级信息行：用量 / 审批 hook 状态 / 压缩 / 沙箱只读展示。始终可见、弱视觉层级
+   （task-6-brief.md「用量...次级视觉层级」——次级指小字弱层级，不是点了才看到，
+   跟 MessageList 执行区那一套语言一致，见 agentChat.css 文件头规则①）。 */
+.ac-toolbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-height: 15px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.ac-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ac-hook-on {
+  color: #6ee7b7; /* 跟 .ac-exec-row.ac-exec-ok 的柔和绿同一支色 */
+}
+.ac-hook-off {
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+.ac-meta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+  padding: 2px 7px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.ac-meta-btn:hover:not(:disabled) {
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+.ac-meta-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ac-sandbox-note {
+  cursor: default;
+  border-bottom: 1px dotted var(--glass-border-strong);
+}
+
+/* composer 行：语音 + 输入框 + 模型/effort 选择 + 发送——常驻四件（task-6-brief.md）。 */
+.ac-toolbar-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.ac-composer {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 6px 10px;
+  resize: none;
+  outline: none;
+}
+.ac-composer:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+.ac-composer::placeholder {
+  color: var(--fg-dim);
+}
+
+.ac-param-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.ac-param-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-dim);
+}
+.ac-param-label {
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.ac-param-select {
+  max-width: 108px;
+  padding: 5px 6px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.ac-param-select:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+/* 下拉的 option 列表：借 --tooltip-bg（本来就是为"悬浮在任何背景之上都要读得清"这种
+   场景准备的近乎不透明近黑色），避免系统默认的白底菜单突兀地跳出来 */
+.ac-param-select option {
+  background: var(--tooltip-bg);
+  color: var(--fg);
+}
+.ac-param-hint {
+  font-size: 9.5px;
+  color: var(--fg-dim);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.ac-toolbar-send {
+  flex: none;
+  height: 30px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ac-toolbar-send:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.8);
+}
+.ac-toolbar-send:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
