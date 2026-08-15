@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgentChatStartResult, ChatEvent, CliInfo } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
+import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { SparkleIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
@@ -160,12 +161,18 @@ export function AgentChatView({
     setText('')
   }
 
-  // 对话态：MessageList 渲染真正的消息流（Task 4）。审批卡片是 Task 5 的事。
+  // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
   if (sessionId) {
+    // resolveApproval 需要 sessionId——ApprovalCard/MessageList 都不持有它（各自的
+    // 声明式 props 只有 pending/onDecide、view/onApprovalDecide），IPC 调用统一收在
+    // 这个组件里，跟 start()/onEvent 用同一个「谁持有 sessionId 谁管 IPC」的分工。
+    const handleApprovalDecide = (approvalId: string, decision: ApprovalDecision): void => {
+      void window.api.agentChat.resolveApproval(sessionId, approvalId, decision)
+    }
     const displayView = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages)
     return (
       <div className="agent-chat-view">
-        <MessageList view={displayView} />
+        <MessageList view={displayView} onApprovalDecide={handleApprovalDecide} />
       </div>
     )
   }
