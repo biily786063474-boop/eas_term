@@ -115,3 +115,20 @@ test('坏行不抛异常，产出空数组', () => {
   assert.deepEqual(t.push(''), [])
   assert.deepEqual(t.push('{"type":"没见过的类型"}'), [])
 })
+
+test('[2026-08-14 全分支评审] 空字符串的 text block 不产出 text.done——空气泡是噪音，与 codexEvents.ts 的处理对齐（修复前 Claude 只要求是字符串，空串也会产出）', () => {
+  const t = createClaudeTranslator()
+  const evs = t.push(
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '' }] } })
+  )
+  assert.deepEqual(evs, [])
+})
+
+test('[2026-08-14 全分支评审] 非空字符串的 text block 仍然正常产出 text.done——上一条修复没有连带把正常路径也堵死', () => {
+  const t = createClaudeTranslator()
+  const evs = t.push(
+    JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: '你好' }] } })
+  )
+  assert.equal(evs.length, 1)
+  assert.ok(evs[0].k === 'text.done' && evs[0].text === '你好')
+})

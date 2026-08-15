@@ -115,7 +115,11 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
     for (const block of content) {
       if (!block || typeof block !== 'object') continue
       const b = block as Record<string, unknown>
-      if (b.type === 'text' && typeof b.text === 'string') {
+      // 空串不产出 text.done——空气泡是噪音，不是信息。这里与 codexEvents.ts 的
+      // translateItemCompleted 对齐（它本来就要求 item.text.length > 0）——修复前两个
+      // 翻译器对空文本的处理不一致：Codex 要求非空才产出，Claude 只要求是字符串
+      // （2026-08-14 全分支评审「6 条小的」第 5 条）。
+      if (b.type === 'text' && typeof b.text === 'string' && b.text.length > 0) {
         out.push({ k: 'text.done', text: b.text })
       } else if (b.type === 'tool_use' && typeof b.id === 'string') {
         out.push({

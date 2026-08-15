@@ -79,10 +79,16 @@ test('命令失败时 exec.done.ok 必须是 false——判据是 status 不是 
   assert.ok(done.some((e) => e.k === 'exec.done' && e.ok === false), '失败必须判成 ok:false')
 })
 
-test('exec.done.output 带上真实的命令输出', () => {
+test('exec.done.output 精确等于 aggregated_output + exit_code，不是退回整条 item 的 JSON dump（2026-08-14 全分支评审：原断言只用 .includes 间接命中，把 outputTextOf 换成无条件 JSON dump 时这条测试照样绿）', () => {
   const evs = runAll('codex-exec-fail.jsonl')
   const done = evs.find((e) => e.k === 'exec.done' && e.ok === false)
-  assert.ok(done && done.k === 'exec.done' && done.output.includes('No such file'))
+  assert.ok(done && done.k === 'exec.done')
+  assert.equal(
+    (done as { output: string }).output,
+    'ls: /这个目录一定不存在xyz123: No such file or directory\n\n(exit code 1)'
+  )
+  // 双保险：确认不是退回到整条 item 的 JSON dump——那样的话 output 里会带上 "status" 这个键名
+  assert.ok(!(done as { output: string }).output.includes('"status"'))
 })
 
 test('item.started 只产出 exec.start，不产出 exec.done', () => {

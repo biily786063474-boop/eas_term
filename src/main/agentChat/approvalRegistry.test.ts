@@ -20,6 +20,30 @@ test('hook payload 产出 approval.request，approvalId 就是 tool_use_id', () 
   assert.ok(req.title.includes('a.txt'), 'title 要让人看懂动的是哪个文件')
 })
 
+test('[2026-08-14 全分支评审] title 精确带"修改"前缀，不只是包含文件名——原断言用 .includes 测不出前缀被删掉', () => {
+  const r = createApprovalRegistry()
+  const req = r.fromHook(payload).find((e) => e.k === 'approval.request')
+  assert.ok(req && req.k === 'approval.request')
+  assert.equal(req.title, '修改 a.txt')
+})
+
+test('[2026-08-14 全分支评审] detail 是这次调用真实的 tool_input JSON，不是占位符（原测试对 detail 零覆盖，硬编码成固定字符串也能 7/7 全绿）', () => {
+  const r = createApprovalRegistry()
+  const req = r.fromHook(payload).find((e) => e.k === 'approval.request')
+  assert.ok(req && req.k === 'approval.request')
+  assert.equal(req.detail, JSON.stringify(payload.tool_input))
+  assert.deepEqual(JSON.parse(req.detail), { file_path: '/WORK/proj/a.txt', content: 'hi' })
+})
+
+test('[2026-08-14 全分支评审] detail 随 tool_input 变化——不同调用产出不同 detail，不是恒定值', () => {
+  const r = createApprovalRegistry()
+  const bash = r
+    .fromHook({ ...payload, tool_use_id: 't-detail', tool_name: 'Bash', tool_input: { command: 'npm test' } })
+    .find((e) => e.k === 'approval.request')
+  assert.ok(bash && bash.k === 'approval.request')
+  assert.equal(bash.detail, JSON.stringify({ command: 'npm test' }))
+})
+
 test('Bash 归 exec，Write/Edit 归 patch，其余归 tool', () => {
   const r = createApprovalRegistry()
   const bash = r
@@ -32,6 +56,15 @@ test('Bash 归 exec，Write/Edit 归 patch，其余归 tool', () => {
     .fromHook({ ...payload, tool_use_id: 't3', tool_name: 'WebFetch', tool_input: {} })
     .find((e) => e.k === 'approval.request')
   assert.ok(other && other.k === 'approval.request' && other.kind === 'tool')
+})
+
+test('[2026-08-14 全分支评审] title 精确带"运行"前缀，不只是包含命令文本', () => {
+  const r = createApprovalRegistry()
+  const bash = r
+    .fromHook({ ...payload, tool_use_id: 't2b', tool_name: 'Bash', tool_input: { command: 'npm test' } })
+    .find((e) => e.k === 'approval.request')
+  assert.ok(bash && bash.k === 'approval.request')
+  assert.equal(bash.title, '运行 npm test')
 })
 
 test('resolve 产出 approval.resolved 并从待处理表移除', () => {
