@@ -86,7 +86,11 @@ export function AgentChatView({
   const [sendError, setSendError] = useState<string | null>(null)
   // 审批 hook 首次安装前的询问卡片（Task 7 / Ruling 15）。resolve 由用户点击卡片按钮触发，
   // 见 handleSend 里 `new Promise<boolean>` 那段——卡片本身只是这个 Promise 的 UI 外壳。
-  const [hookAsk, setHookAsk] = useState<{ cliName: string; resolve: (v: boolean) => void } | null>(null)
+  const [hookAsk, setHookAsk] = useState<{
+    cliName: string
+    configPath: string
+    resolve: (v: boolean) => void
+  } | null>(null)
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
@@ -152,7 +156,10 @@ export function AgentChatView({
       if (!aliveRef.current) return
       if (!status.installed) {
         const proceed = await new Promise<boolean>((resolve) => {
-          setHookAsk({ cliName: selected.displayName, resolve })
+          // configPath 优先用后端算出来的那份（hookConfigPath(cwd)，session.ts）——
+          // 那是真正会被写入的路径；查询失败的兜底对象里它是空串，这时候才退回
+          // 自己拼一份好看的路径，纯粹是不想在卡片上开天窗。
+          setHookAsk({ cliName: selected.displayName, configPath: status.configPath || `${cwd}/.claude/settings.json`, resolve })
         })
         setHookAsk(null)
         if (!aliveRef.current) return
@@ -301,7 +308,7 @@ export function AgentChatView({
                 跨行的空白折叠成一个空格，中文没有词间空格，跨行处会被硬生生插进一个空格
                 （实测会把「修改文件」拆成「修改 文件」），拼字符串就没有这个问题。 */}
             <div className="ac-hook-ask-body">
-              {`「${hookAsk.cliName}」会在这个项目里安装一个审批钩子——之后每次要执行命令或修改文件，都会先弹卡片等你点"允许"才继续。只影响这一个项目（写在 ${cwd}/.claude/settings.json），随时可以在工具栏里一键卸载。`}
+              {`「${hookAsk.cliName}」会在这个项目里安装一个审批钩子——之后每次要执行命令或修改文件，都会先弹卡片等你点"允许"才继续。只影响这一个项目（写在 ${hookAsk.configPath}），随时可以在工具栏里一键卸载。`}
             </div>
             <div className="ac-approval-actions">
               <button type="button" className="ac-approval-btn deny" onClick={() => hookAsk.resolve(false)}>
