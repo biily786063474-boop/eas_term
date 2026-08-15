@@ -7,8 +7,21 @@
 // 开在主区域——code 面板带 diff 参数时渲染 DiffView，否则渲染普通只读 CodeView。
 // 'history'(SourceTree 式 Git 历史) 和 'chat'(Claude Code 对话导航) 都是大视图，
 // 分别从侧栏「版本」和终端头部按钮打开，不出现在面板下拉框里。
+// 'agent'(通用 AI CLI 对话，见 features/agentChat/) 同属这一类——它唯一的创建入口是
+// 子项目 C 的画布默认节点（新建项目时落一个空态），同样不出现在面板下拉框里；
+// 但仍要在 store/tabsSlice.ts 的 setPaneKind 分支里补全，否则这个联合类型一扩员，
+// 那个函数的穷尽匹配就编译不过。
 // 'dict'(专业名词词典) 从面板下拉框打开：查词条 → 点击把实现逻辑插入活动终端光标处。
-export type PaneKind = 'terminal' | 'code' | 'image' | 'history' | 'chat' | 'dict' | 'web' | 'wiki'
+export type PaneKind =
+  | 'terminal'
+  | 'code'
+  | 'image'
+  | 'history'
+  | 'chat'
+  | 'agent'
+  | 'dict'
+  | 'web'
+  | 'wiki'
 
 /** Git diff 在主区域的展示参数（由侧栏「版本」标签点击文件时下发） */
 export interface DiffSpec {
@@ -23,6 +36,7 @@ export type PaneState =
   | { kind: 'image'; filePath: string | null }
   | { kind: 'history'; cwd: string }
   | { kind: 'chat'; cwd: string }
+  | { kind: 'agent'; cwd: string; sessionId?: string }
   | { kind: 'dict' }
   | { kind: 'wiki' }
   | { kind: 'web'; url: string | null; title?: string }

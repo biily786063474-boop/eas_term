@@ -390,6 +390,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       pane = { kind: 'history', cwd: tab.cwd }
     } else if (kind === 'chat') {
       pane = { kind: 'chat', cwd: tab.cwd }
+    } else if (kind === 'agent') {
+      // 不出现在面板下拉框里（唯一入口是子项目 C 的画布默认节点），但 PaneKind 一扩员，
+      // 下面兜底的 else 分支（`{ kind, filePath: null }`）就会尝试拿它去凑 code/image 的
+      // 形状——编译不过。照 history/chat 的样子单独分支，只是为了让这个联合类型保持穷尽。
+      pane = { kind: 'agent', cwd: tab.cwd }
     } else if (kind === 'dict') {
       pane = { kind: 'dict' }
     } else if (kind === 'wiki') {
