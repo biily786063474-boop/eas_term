@@ -1,21 +1,54 @@
-// 通用 AI CLI 对话节点：空态起会话 + 对话态占位。
+// 通用 AI CLI 对话节点：空态起会话 + 对话态。
 //
 // 空态与对话态是**同一个组件的两个阶段**，不是两个组件——sessionId 一拿到就切阶段，
 // 组件本身不重新挂载，事件订阅不会因为切阶段被打断（本文件正文见 task-3-brief.md）。
 //
 // 空态只做三件事：选 CLI（数据来自 Task 0 的 listClis，只有 detect() 探测到的才显示）、
-// 输入首条消息、起会话。真正的对话流渲染是 Task 4 的事，这里只留一个占位——但订阅
-// 已经真的接上了：事件从 start() 一返回就被喂进归约器，Task 4 直接读 view 状态即可，
-// 不用重新接线。
+// 输入首条消息、起会话。对话态渲染交给 Task 4 的 MessageList——事件从 start() 一返回
+// 就被喂进归约器，这里只管把 view 状态传下去。
 //
 // **不允许按 CLI 名字分支**：CLI 选项、它的能力声明，全部来自 listClis() 原样透传的
 // CliInfo，选项按钮只认 id/displayName，不认「是不是 claude」。
 import { useEffect, useRef, useState } from 'react'
 import type { AgentChatStartResult, ChatEvent, CliInfo } from '../../../../shared/agentChat.ts'
-import { createChatReducer, type ChatView } from './reduce.ts'
+import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
+import { MessageList } from './MessageList'
 import { SparkleIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './agentChat.css'
+
+/** 归约器（reduce.ts）**从不产出 `Turn.role: 'user'`**——内核的事件流里没有「用户消息」
+ *  事件，CLI 不回显用户输入。用户自己发出去的文本在渲染层是同步已知的（按下发送那一刻
+ *  就知道），这里单独维护一份、渲染前合并进归约器的 turns，否则界面上只有 AI 在自言自语。
+ *
+ *  beforeTurnCount 记录「这条消息发出那一刻，归约器已经产出了几个 assistant 轮次」——
+ *  合并时用它决定这条用户消息该插在哪两个 assistant 轮次之间。turns 只增不减、不重排
+ *  （reduce.ts 的 text.done/exec.start 只 push，不 splice），所以这个计数在整段会话里
+ *  稳定：一条用户消息永远紧挨着插在它触发的那个 assistant 轮次之前，无论后面又新增了
+ *  多少轮次都不会被顶到别的位置。 */
+interface SentMessage {
+  text: string
+  beforeTurnCount: number
+}
+
+function mergeUserMessages(view: ChatView, sent: SentMessage[]): ChatView {
+  if (sent.length === 0) return view
+  const merged: Turn[] = []
+  let sentIdx = 0
+  for (let i = 0; i <= view.turns.length; i++) {
+    while (sentIdx < sent.length && sent[sentIdx].beforeTurnCount === i) {
+      merged.push({ role: 'user', text: sent[sentIdx].text, execs: [] })
+      sentIdx += 1
+    }
+    if (i < view.turns.length) merged.push(view.turns[i])
+  }
+  return { ...view, turns: merged }
+}
+
+// 会话刚起、任何事件都还没到达时 view 是 null（onEvent 至少要等第一个事件才会 setView）。
+// 这段真空期用户已经能看到自己刚发的那条消息，不能因为 view 还是 null 就整屏空白——
+// busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
+const EMPTY_VIEW: ChatView = { turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
 
 export function AgentChatView({
   cwd,
@@ -40,6 +73,8 @@ export function AgentChatView({
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [view, setView] = useState<ChatView | null>(null)
+  // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
+  const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
@@ -116,23 +151,21 @@ export function AgentChatView({
       reducerRef.current.push(e)
       if (aliveRef.current) setView(reducerRef.current.view())
     })
+    // beforeTurnCount 取当前归约器已有的轮次数——此刻订阅刚接上、一个事件都还没喂进去，
+    // 必然是 0，但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个
+    // assistant 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
+    setSentMessages((prev) => [...prev, { text: message, beforeTurnCount: reducerRef.current.view().turns.length }])
     setSessionId(result.sessionId)
     setStarting(false)
     setText('')
   }
 
-  // 对话态：占位。真正的消息流渲染是 Task 4 的事——这里只证明订阅确实接上了
-  // （轮次数 / 忙碌态会跟着事件实时变化）。
+  // 对话态：MessageList 渲染真正的消息流（Task 4）。审批卡片是 Task 5 的事。
   if (sessionId) {
+    const displayView = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages)
     return (
       <div className="agent-chat-view">
-        <div className="ac-placeholder">
-          <SparkleIcon size={16} />
-          <span>
-            会话已开始 · {selected?.displayName ?? ''} · {view?.turns.length ?? 0} 条消息
-            {view?.busy ? ' · 处理中…' : ''}
-          </span>
-        </div>
+        <MessageList view={displayView} />
       </div>
     )
   }
