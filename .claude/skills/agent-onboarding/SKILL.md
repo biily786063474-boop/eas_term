@@ -3,7 +3,7 @@ name: agent-onboarding
 description: >
   给 Eas-Term 接入一个**新的 AI CLI**（Gemini CLI / Cursor Agent / OpenCode /
   任何读 CLAUDE.md · AGENTS.md · soul.md 之类"人格文件"的 agent）时，照着这份做前置工作 ——
-  盘清五个注入面、每个面写什么、按什么纪律写，让新 agent 和 Claude Code / Codex
+  盘清六个注入面、每个面写什么、按什么纪律写，让新 agent 和 Claude Code / Codex
   一样开箱即用，而不是又长出一套并行的、迟早对不上的逻辑。
   Triggers: 接入新 agent, 集成新 agent, 支持 Gemini, 支持 Cursor, 加一个 CLI,
   新 agent 前置, agent 注入面, 改 CLAUDE.md, 改 AGENTS.md, soul.md, 托管区,
@@ -12,16 +12,18 @@ description: >
 
 # 接一个新 agent 进 Eas-Term
 
-Eas-Term 对一个 AI CLI 做的事，本质是**五件独立的注入**。接新 agent 不是"再抄一遍 Codex 那套"，
-而是**逐个面回答两个问题**：这个 agent 有没有对应机制？没有的话降级到哪？
+Eas-Term 对一个 AI CLI 做的事，本质是**六件独立的注入**（前五件是把 Eas-Term 的能力**告诉**
+agent，第六件反过来，是 Eas-Term **直接驱动** agent 跑会话，方向相反）。接新 agent 不是
+"再抄一遍 Codex 那套"，而是**逐个面回答两个问题**：这个 agent 有没有对应机制？没有的话降级到哪？
 
-先跑 `.claude/skills/agent-onboarding/scripts/audit.sh` —— 它把五个面在**这台机器上的当前实况**
+先跑 `.claude/skills/agent-onboarding/scripts/audit.sh` —— 它把面 1–5 在**这台机器上的当前实况**
 打出来（哪些文件真的被写了、托管区多大、盘上那份和代码期望的一致吗）。
-不要凭代码推断现状，那个表和现实脱节过。
+不要凭代码推断现状，那个表和现实脱节过。面 6 不写用户的全局配置、没有"盘上状态"可查，
+验证方式是真起一轮会话，见 `scripts/verify-agent-chat.mjs`。
 
 ---
 
-## 五个注入面
+## 六个注入面
 
 | # | 面 | 干什么 | Claude Code 落点 | Codex 落点 | 代码 |
 |---|---|---|---|---|---|
@@ -30,6 +32,7 @@ Eas-Term 对一个 AI CLI 做的事，本质是**五件独立的注入**。接�
 | 3 | **MCP 工具** | 把画布 / 知识库 / 密钥柜的能力开放出去 | `~/.claude.json` 的 `mcpServers` | `~/.codex/config.toml` 的 `[mcp_servers.*]` | `src/main/mcpBridge.ts` |
 | 4 | **提交钩子** | git commit 后扫新增代码行，沉淀专业名词 | `~/.claude/settings.json` 的 `hooks.PostToolUse` | `~/.codex/hooks.json` | `src/main/agentHook.ts` |
 | 5 | **库内说明书** | 让 agent 知道这个知识库**怎么分类、东西往哪放** | `<知识库>/CLAUDE.md` | `<知识库>/AGENTS.md` | `src/main/wiki/schema.ts` |
+| 6 | **会话驱动**（入方向）| 让 Eas-Term 能直接驱动这个 CLI 跑对话（不经终端）| `claude -p --output-format stream-json`（完整 flag 见下）+ 项目级 PreToolUse hook 审批 | `codex exec --json`（`app-server` 原生带审批但标 experimental，推迟）| `src/main/agentChat/adapters/` |
 
 另有两个**只读**面，接新 agent 时要跟着扩但没有注入风险：
 `agent.ts`（探测 CLI 是否装了；GUI 启动的 Electron PATH 常缺 homebrew，那里补了常见安装目录）、
@@ -122,7 +125,36 @@ Codex 没有 skill 机制，细节文件落 `~/.eas/agent/`，常驻区写**绝�
 > 会让 `index.md` 和 `START-HERE.md` 描述不存在的目录，而它们**只在文件缺失时写**，
 > 一旦写错永久不自愈。这个坑 2026-08-12 刚踩过一次，见纪律 12。
 
-### 还有一条不在这五个面里、但会绕过它们的路
+### 面 6：会话驱动是反方向的注入
+
+前五个面都是把 Eas-Term 的能力**告诉** agent；这一面反过来，是 Eas-Term **直接驱动**这个 CLI
+自己跑对话，不经终端。落点是 `src/main/agentChat/adapters/` 下的 adapter 文件，
+完整实测记录见 `docs/cli-headless-接口实测.md`。
+
+**Claude Code**：
+
+```
+claude -p --input-format stream-json --output-format stream-json --verbose \
+       --strict-mcp-config --include-hook-events --include-partial-messages
+```
+
+审批走**项目级** `.claude/settings.json` 里的 PreToolUse hook —— hook 是外部进程、能阻塞，
+实测能阻塞 70 秒不被切断（`src/main/agentChat/approvalRoute.ts`）。
+
+**Codex**：`codex exec --json`。`app-server` 协议原生带审批，但标着 experimental，推迟到之后
+单独做 —— `exec` 模式做不了逐次审批，`capabilities.approval` 因此是空数组，UI 自动退回显示
+`sandboxLevels`，不用为 Codex 写任何分支。
+
+**三条坑，这一轮实测踩到的，不写下次还会再踩一遍：**
+
+1. **绝不能传 `--bare`** —— 会跳过认证，直接返回 `Not logged in`
+2. **`--permission-mode manual` 不是「等审批」是「直接拒绝」** —— 用它做审批卡片会让用户永远等不到
+3. **PreToolUse hook 是 fail open**：只有 exit code 2 才阻塞工具调用，其它任何「跑不起来」
+   （含 `command not found`）都放行、不等审批。所以 hook 的 node 解释器必须用**保证存在**的
+   兜底（`process.execPath` + `ELECTRON_RUN_AS_NODE=1`），不能祈祷 PATH 里有 node
+   （见 `src/main/agentChat/hookInstall.ts` 的 `nodeBinForHook()`）
+
+### 还有一条不在这六个面里、但会绕过它们的路
 
 **MCP 工具的返回值本身就是一个注入面。** `wiki_query` 每次都会把
 「这个库有哪些目录」交给模型，工具 description 还写着「`dirs.me` 是用户画像分区」——
@@ -147,9 +179,14 @@ Codex 没有 skill 机制，细节文件落 `~/.eas/agent/`，常驻区写**绝�
 5. **面 2 细节文件**：有原生 skill 机制就拷整个目录；没有就落 `~/.eas/agent/` + 常驻区写绝对路径
 6. **面 4 钩子**：有钩子机制才做，没有就跳过并在文档里写明跳过了
 7. **面 5 库内说明书**：`initWiki` 的 `files` 数组加它的文件名，复用 `schemaTextFor(root)`
-8. **卸载路径**：`removeRules()` / `removeMcpConfig()` / 钩子卸载都要覆盖到它
-9. **状态显示**：`skillStatus()` / `rulesStatus()` / `mcpConfigStatus()` 加它一列
-10. **实测**：真起一个这个 CLI 的会话，**只给它常驻那一份**，逐条念触发词看它会不会主动去读细节文件。
+8. **面 6 会话驱动**（要支持被 Eas-Term 直接驱动跑会话才做）：`src/main/agentChat/adapters/`
+   加一个 adapter 文件、在 `index.ts` 的数组里注册。**UI 不需要改** —— 控件由 adapter 的
+   `capabilities` 声明驱动（有没有 `models` / `effortLevels` / `compact`、`approval` 是不是
+   空数组、`sandboxLevels` 有哪些）。**如果你发现自己要去改 UI，说明能力声明没设计对，
+   回头改声明而不是改 UI。**
+9. **卸载路径**：`removeRules()` / `removeMcpConfig()` / 钩子卸载都要覆盖到它
+10. **状态显示**：`skillStatus()` / `rulesStatus()` / `mcpConfigStatus()` 加它一列
+11. **实测**：真起一个这个 CLI 的会话，**只给它常驻那一份**，逐条念触发词看它会不会主动去读细节文件。
     这一步不能省 —— 触发条件写得含糊时，测试全绿而模型就是不去读
 
 ---
