@@ -201,8 +201,28 @@ claude -p --input-format stream-json --output-format stream-json --verbose
 
 ## 五、子项目 B：对话界面
 
+> **本节已按子项目 A 的实际落地校正（2026-08-15）。** A 实施过程中有几条前提变了，
+> 下面标了「⚠️ 校正」的地方与最初设想不同，**以这里为准**。
+
 新增节点类型 `{ kind: 'agent'; cwd: string; sessionId?: string }`（`src/renderer/src/layout.ts`）。
 空态与对话态是**同一个节点的两个阶段**，不是两个组件。
+
+### B.0 A 实际提供的接口（B 只能用这些）
+
+`window.api.agentChat`：
+
+| 方法 | 用途 |
+|---|---|
+| `start(params)` | 起会话，返回 `{ok, sessionId}`。**内部已在 resolve 时开始缓冲事件**，不会丢首事件 |
+| `onEvent(sessionId, cb)` | 订阅 `ChatEvent`，订阅时先回放缓冲再转实时 |
+| `send(sessionId, message)` | 发一条消息 |
+| `setParams(sessionId, {model?, effort?})` | 改模型/effort，**下一条消息才生效**（决定 3） |
+| `resolveApproval(approvalId, decision)` | 回传审批决定 |
+| `stop(sessionId)` | 结束会话 |
+| `hookStatus(cwd)` / `hookUninstall(cwd)` | 审批 hook 的状态与卸载（B.4 要用） |
+
+CLI 列表与能力从 adapter 注册表读：`capabilities.models / effortLevels / compact /
+contextUsage / approval / sandboxLevels`。**UI 只读 capabilities，不允许出现按 CLI 名字的分支。**
 
 ### B.1 空态
 
@@ -211,24 +231,53 @@ claude -p --input-format stream-json --output-format stream-json --verbose
 
 ### B.2 对话态
 
-- 对话区只渲染两种东西：用户消息、模型文字（`text.delta` / `text.done`）
+- 对话区只渲染两种东西：用户消息、模型文字（`text.done`）
+- **⚠️ 校正：没有打字机效果。** 最初设想里模型文字靠 `text.delta` 逐字流入，实测证明
+  Claude 的增量在 `stream_event` 类型里（`event.delta.text_delta.text`），而当前翻译器不处理它、
+  `--include-partial-messages` 也已摘掉（开着会白花钱：每 token 一行 JSON 被解析后丢弃）。
+  **`text.delta` 目前零生产者。** UI 按「整段到达」设计，不要等一个永远不来的事件；
+  想要打字机效果，得先在 A 那层实现 `stream_event` 的解析（路径已记录在
+  `docs/cli-headless-接口实测.md`），那是独立的一件事
 - **执行区**挂在每段模型文字下方：默认三行、随 `exec.start` / `exec.done` 滚动刷新、
   弱视觉层级小字；点击展开完整执行历史（`detail` 与 `output`）
 - **例外一**：`approval.request` 到达 → 该条升为高层级卡片，展示 `title` / `detail` / `cwd`
   与「允许 / 拒绝」；`approval.resolved` 后塌回小字（§二 ①）
 - **例外二**：`exec.done` 且 `ok === false` → 该条常驻可见，不随滚动移出（§二 ②）
+- **⚠️ 新增：`{ k:'error', fatal:false }` 必须显示出来，不能只写 console。**
+  这条事件目前唯一的用途，就是在审批 hook 装不上时告诉用户「**本次会话的工具调用不会弹审批卡片，
+  将按默认权限直接执行**」。执行期裁定（Ruling 14）选择了「告知而非阻断」，而那条裁定的
+  全部说服力都压在「用户会看见」上 —— **界面不显示，它就是一句空话**。这是 B 的硬验收项
 
 ### B.3 底部工具栏
 
 **常驻**：语音输入按钮（复用 `features/voice/VoiceButton`，并遵守既有的
 `stopVoiceOnSend` 约定）、模型选择、effort 选择、发送 CTA。
-**次级**：上下文占用细条（`Usage.contextRatio`，过半才显现）、一键压缩。
-点细条展开看具体 token 数与花费。
 
 模型与 effort 的选项来自 `capabilities`；改动后按决定 3 标注「下条起生效」。
 一键压缩：`capabilities.compact === 'slash'` 时作为一条用户消息发送 `/compact`。
 
----
+**⚠️ 校正：上下文占用只显示累计 token 数，不显示百分比。**
+最初设想是一根「过半才显现」的占用细条，需要 `Usage.contextRatio` 作分母。
+实测确认 `turn.done` 的 usage 里**没有上下文窗口上限**，算法未定，A 层**一律不填这个字段**
+（spec §九 第 4 条：宁可少显示，也不要显示一个看起来精确、实则猜的比例）。
+所以：显示 `inputTokens` / `outputTokens` / `cachedInputTokens` 与 `costUsd`（有则显示），
+**不要编造百分比**。等窗口上限的取法确定后再加细条。
+
+**⚠️ 新增：`capabilities.approval` 为空时，工具栏要显示沙箱级别选择**（读 `sandboxLevels`）。
+这是 Codex 这一期的形态（走 `exec --json`，只有三档沙箱、没有逐次审批）。
+**这不是为 Codex 写的特例分支** —— UI 判的是「`approval` 空不空」，不是「是不是 Codex」。
+
+### B.4 审批 hook 的知情与卸载（⚠️ 新增，Ruling 15 划给 B）
+
+审批功能要往**用户项目**的 `.claude/settings.json` 写一个 `matcher:'*'` 的 PreToolUse hook。
+仓库对这类侵入早有规矩（见 `src/main/agentHook.ts` 开头）：**必须显式问、必须能一键卸、
+写之前必须备份**。A 已经做完后两件（写前备份 + `hookStatus`/`hookUninstall` 两个 IPC），
+**「显式问」这一件是 B 的**：
+
+- 第一次要在某个项目里装这个 hook 时，**先问用户**，讲清楚它做什么、影响范围是这个项目
+- 某处（设置面板或 agent 节点的菜单）能看到当前项目装没装，并能一键卸载
+
+不做这一条，等于我们在用户项目里留了个他不知道、也关不掉的阻塞式 hook。
 
 ## 六、子项目 C：启动逻辑
 
