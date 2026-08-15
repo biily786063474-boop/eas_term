@@ -107,7 +107,13 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       }
       case 'turn.done': {
         usage = e.usage
-        costUsd = e.costUsd
+        // 省略时沿用上一次的值，不覆写成 undefined。依据不是随手选的体验偏好，是这个
+        // 字段的来源语义：claudeEvents.ts 里 costUsd 取自 Claude 的 total_cost_usd——
+        // 名字就是 total，是累计花费，不是本轮花费，因此不会倒退。这一轮的事件里没带
+        // 这个字段，只说明适配器这次没报出来，不代表花费清零；把它覆写成 undefined 会
+        // 让界面上的花费从有变没有，看起来像统计坏了或者归零，那是在显示假信息——跟
+        // 「宁可少显示，也不要显示一个错的数字」是同一条原则。
+        costUsd = e.costUsd ?? costUsd
         sawExecStartSinceTurnDone = false
         break
       }

@@ -243,6 +243,31 @@ test('[补充] turn.done 的 usage 三个字段原样带出，不是只有 outpu
   assert.equal(v.usage?.cachedInputTokens, 5)
 })
 
+test('[补充] 第二次 turn.done 没带 costUsd 时，沿用上一次的值，不覆写成 undefined', () => {
+  // 语义依据：claudeEvents.ts 里 costUsd 取自 Claude 的 total_cost_usd——名字就是
+  // total，是累计花费，不会倒退。这一轮没报出这个字段不代表花费清零，覆写成
+  // undefined 会让界面上的花费从有变没有，看起来像统计坏了，那是在显示假信息。
+  // 审查用「覆写成 undefined」的语义跑过一遍这组测试：36 条全绿——因为此前两条
+  // 涉及 costUsd 的用例都只有一次 turn.done、且都用同一个值 0.01，从没测过「第二次
+  // 不带」这个场景，唯一断言 costUsd===undefined 的用例是初始态，根本没经过
+  // turn.done 分支。这条就是补那个真空档的。
+  const r = createChatReducer()
+  r.push(ready)
+  r.push({ k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 }, costUsd: 0.24 })
+  r.push({ k: 'turn.done', usage: { inputTokens: 2, outputTokens: 2 } })
+  assert.equal(r.view().costUsd, 0.24, '第二轮没带 costUsd，视图应保留第一轮已知的累计花费')
+})
+
+test('[补充] 第二次 turn.done 带了新的 costUsd 时要更新成新值，不是「锁死第一次收到的值」', () => {
+  // 只测「省略时沿用」还不够——一个把 costUsd 焊死成第一次收到的值、之后永远
+  // 忽略新值的实现，也能让上一条测试通过。这里反过来锁住「有新值就要用新值」。
+  const r = createChatReducer()
+  r.push(ready)
+  r.push({ k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 }, costUsd: 0.24 })
+  r.push({ k: 'turn.done', usage: { inputTokens: 2, outputTokens: 2 }, costUsd: 0.31 })
+  assert.equal(r.view().costUsd, 0.31, '带了新值就该用新值，累计花费涨了要反映出来')
+})
+
 test('[补充] exec 已经全部 done，但 turn.done 还没来 → 仍然 busy（Step 3 busy 定义的第二支，题面用例零覆盖）', () => {
   const v = run([
     ready,
