@@ -54,7 +54,8 @@ import type {
   ChatEvent,
   AgentChatStartParams,
   AgentChatStartResult,
-  AgentChatSendResult
+  AgentChatSendResult,
+  AgentApprovalHookStatus
 } from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -758,6 +759,15 @@ const api = {
       sessionId: string,
       patch: { model?: string; effort?: string }
     ): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('agentChat:setParams', sessionId, patch),
+    /** 「AI 会话审批」PreToolUse hook 在某个项目里的安装状态——对齐 window.api.hook.status
+     *  的形状（2026-08-14 全分支评审 C1 ③）。按 cwd 查，不是全局一份。 */
+    hookStatus: (cwd: string): Promise<AgentApprovalHookStatus> =>
+      ipcRenderer.invoke('agentChat:hookStatus', cwd),
+    /** 一键卸掉某个项目里装的这条 hook——对齐 window.api.hook.uninstall 的形状。
+     *  这条 hook 比"提交即复盘"那条更侵入（PreToolUse 会阻塞，PostToolUse 不会），
+     *  至少要能对齐"一键卸干净"这条底线。 */
+    hookUninstall: (cwd: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('agentChat:hookUninstall', cwd),
     resolveApproval: (
       sessionId: string,
       approvalId: string,

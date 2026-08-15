@@ -135,6 +135,64 @@ function stripMarkerHooks(groups: unknown[]): unknown[] {
   return result
 }
 
+// ── 卸载与状态查询（2026-08-14 全分支评审 C1 ③）：与 planHookInstall 共用同一套
+// 「全局扫描 marker」逻辑（markerHitsOf / stripMarkerHooks），只是不再往里面装新条目。
+// 都是纯函数，落盘/读盘是 session.ts 的事。 ──────────────────────────────────────
+
+export interface HookInstallStatus {
+  /** 当前已经装好、且落在正确的 matcher:'*' 分组下、命令路径也对得上 */
+  installed: boolean
+  /** 装了，但命令路径对不上（换过安装位置）或落在了错误的 matcher 分组——需要重装 */
+  outdated: boolean
+}
+
+/** 只读查询版的 planHookInstall：算出"当前是否已经装好"，不产出下一份配置、不落盘。
+ *  供 agentChat:hookStatus 用——用户想知道"这个项目现在有没有审批保护"，不需要真的
+ *  跑一遍安装。判据与 planHookInstall 的"干净地已经装好"分支完全一致：全局只有一条带
+ *  marker 的条目、命令精确匹配、且落在 matcher:'*' 分组下，三条缺一都算 outdated。 */
+export function hookInstallStatusOf(existing: unknown, hookCmd: string): HookInstallStatus {
+  const base: Record<string, unknown> = isPlainObject(existing) ? existing : {}
+  const existingHooks: Record<string, unknown> = isPlainObject(base.hooks) ? base.hooks : {}
+  const existingPreToolUse: unknown[] = Array.isArray(existingHooks.PreToolUse) ? existingHooks.PreToolUse : []
+  const markerHits: MarkerHit[] = existingPreToolUse.flatMap((group) => markerHitsOf(group))
+  if (markerHits.length === 0) return { installed: false, outdated: false }
+  const clean = markerHits.length === 1 && markerHits[0].command === hookCmd && markerHits[0].matcher === '*'
+  return { installed: true, outdated: !clean }
+}
+
+export interface PlanHookUninstallResult {
+  /** 这次规划是否改变了配置（没有任何我们的痕迹时为 false，不用写盘）。 */
+  changed: boolean
+  /** 落盘应该写入的下一份配置。未改变时就是 existing 规范化后的原样内容。 */
+  next: Record<string, unknown>
+}
+
+/**
+ * 算出"卸载我们的 PreToolUse hook"之后 settings.json 应该长什么样。纯函数，不落盘。
+ * 只摘带 marker 的条目，用户自己的 hook／分组身份／其它字段一个不动——和 agentHook.ts
+ * 的 uninstall() 同一个纪律。摘完某个分组空了就整个丢弃；hooks.PreToolUse 摘空了就删掉
+ * 这个键，PreToolUse 之外的其它 hook 类型（PostToolUse 等）原样保留，不留空数组当空壳。
+ */
+export function planHookUninstall(existing: unknown): PlanHookUninstallResult {
+  const base: Record<string, unknown> = isPlainObject(existing) ? existing : {}
+  const existingHooks: Record<string, unknown> = isPlainObject(base.hooks) ? base.hooks : {}
+  const existingPreToolUse: unknown[] = Array.isArray(existingHooks.PreToolUse) ? existingHooks.PreToolUse : []
+
+  const markerHits: MarkerHit[] = existingPreToolUse.flatMap((group) => markerHitsOf(group))
+  if (markerHits.length === 0) return { changed: false, next: base }
+
+  const stripped = stripMarkerHooks(existingPreToolUse)
+  const nextHooks: Record<string, unknown> = { ...existingHooks }
+  if (stripped.length > 0) nextHooks.PreToolUse = stripped
+  else delete nextHooks.PreToolUse
+
+  const next: Record<string, unknown> = { ...base }
+  if (Object.keys(nextHooks).length > 0) next.hooks = nextHooks
+  else delete next.hooks
+
+  return { changed: true, next }
+}
+
 /**
  * 把新条目并入 matcher: '*' 的分组——已经存在（且形状合法）就并进去，否则新建一个
  * 追加在最后。绝不把新条目放进任何其它 matcher 的分组。

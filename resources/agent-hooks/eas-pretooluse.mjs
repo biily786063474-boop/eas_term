@@ -7,8 +7,19 @@
 // APPROVAL_TIMEOUT_MS）。
 // 端口与令牌由 Eas-Term 起会话时经 env 注入，与既有 MCP 那条通道同源。
 //
-// **兜底一律是拒绝**：拿不到端口、请求失败、超时，全都 deny。
-// 前端崩了或用户没看见时默默放行一次写文件/跑命令，是这里最不能犯的错。
+// **兜底一律是拒绝**——但那只对"确认是我们管的会话"之后才成立。见下面 EAS_AGENT_CHAT_SESSION
+// 那道最先要过的门：拿不到端口、请求失败、超时，全都 deny；但压根不是 agent-chat 会话时，
+// 是**无声放行**（无输出，交还给 Claude Code 正常的权限流程），不是 deny。
+//
+// ⚠️ 2026-08-14 全分支评审 C1（Critical，必读）：这份 hook 装的是 matcher:'*'，对项目里
+// **所有** Claude Code 进程生效，不只 agent-chat 起的那个——用户在 Eas-Term 终端里自己敲的
+// `claude`（pty.ts 同样注入 EAS_TERM_PORT/TOKEN，同源于 mcpBridge.ts 的 mcpEnv()）、甚至
+// app 外面跑的 `claude`，都会经这同一条 hook。老实现只认端口/令牌，等于把用户自己在这个
+// 项目里的日常 Claude Code 会话永久废掉（没有端口/令牌时秒拒；有的话——比如 Eas-Term
+// 终端里的 claude——hook POST 进去找不到对应会话，没人 resolve，卡满 5 分钟再 deny）。
+// 修法：只有 session.ts 的 restartAndDeliver 起的会话才会注入 EAS_AGENT_CHAT_SESSION，
+// 这是**唯一**用来判断"这次工具调用是不是 agent-chat 会话"的信号——不能用 EAS_TERM_PORT/
+// TOKEN/PROJECT 代替，PTY 终端也注入那几个，拿它们当标记等于没有隔离。
 //
 // ⚠️ hookResponseBody 的响应体形状与 src/main/agentChat/approvalRoute.ts 里同名的函数
 // 必须保持逐字一致——这是独立进程，import 不到那份 TS 代码，只能各写一份。
@@ -38,8 +49,21 @@ function deny(why) {
 }
 
 async function main() {
+  // 先把 stdin 读完，不管接下来要不要用它——Claude Code 那边在等这个管道写完/关闭，
+  // 提前退出不读，大 payload（比如写一个大文件）的场景可能撞上 EPIPE。这一步的开销
+  // 与之前完全一样，只是决定"要不要用它"的判断往后挪了一步。
   let raw = ''
   for await (const chunk of process.stdin) raw += chunk
+
+  // 最先要过的门：这次工具调用是不是 agent-chat 会话起的。不是的话——用户在 Eas-Term
+  // 终端里自己敲的 claude，或者 app 外面跑的 claude，都不会有这个变量——这个 hook 对它
+  // 没有意见。按 Claude Code 的 hook 约定：**无输出 = 本 hook 无意见**，交还给正常的
+  // 权限流程，不阻塞也不拒绝（见文件头 C1）。
+  const sessionId = process.env.EAS_AGENT_CHAT_SESSION
+  if (!sessionId) {
+    process.exitCode = 0
+    return
+  }
 
   const port = process.env.EAS_TERM_PORT
   const token = process.env.EAS_TERM_TOKEN
@@ -51,6 +75,10 @@ async function main() {
   } catch {
     return deny('Eas-Term 没能确认这次操作（hook 输入解析失败）')
   }
+  // 附上我们自己的会话标记，让主进程能直接按 id 点名找到会话，不必再靠 Claude 原生
+  // session_id 反查 resumeId（那条路径在 session.ready 事件把 resumeId 落进
+  // SessionRecord 之前会找不到会话，见 approvalRegistry.ts 的 HookPayload.eas_session_id）。
+  payload.eas_session_id = sessionId
 
   try {
     const res = await fetch(`http://127.0.0.1:${port}/agent-approval/request`, {

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { planHookInstall } from './hookInstall.ts'
+import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 
 const CMD = '/Applications/Eas-Term.app/Contents/Resources/agent-hooks/eas-pretooluse.mjs'
 
@@ -320,4 +320,122 @@ test('[追加] 唯一一条 marker 记录如果落在错误的 matcher 下，不
   const starGroups = arr.filter((g) => g.matcher === '*')
   assert.equal(starGroups.length, 1)
   assert.ok(starGroups[0].hooks.map((h) => h.command).includes(CMD))
+})
+
+// ============================================================
+// 以下是 2026-08-14 全分支评审 C1 ③ 补的两组：卸载入口 + 状态查询，对齐既有
+// hook:uninstall / hook:status 的形状。与 planHookInstall 共用同一套 marker 扫描逻辑，
+// 所以测试矩阵刻意镜像上面已经跑通的对抗性场景（null 混入、marker 散落多分组、
+// 装在错误 matcher 下），不是另起一套。
+// ============================================================
+
+test('[hookInstallStatusOf] 空配置 → 没装', () => {
+  const s = hookInstallStatusOf({}, CMD)
+  assert.deepEqual(s, { installed: false, outdated: false })
+})
+
+test('[hookInstallStatusOf] 刚装好的配置 → installed 且不 outdated', () => {
+  const installed = planHookInstall({}, CMD).next
+  assert.deepEqual(hookInstallStatusOf(installed, CMD), { installed: true, outdated: false })
+})
+
+test('[hookInstallStatusOf] 命令路径对不上（换过安装位置）→ installed 但 outdated', () => {
+  const installed = planHookInstall({}, '/老路径/eas-pretooluse.mjs').next
+  assert.deepEqual(hookInstallStatusOf(installed, CMD), { installed: true, outdated: true })
+})
+
+test('[hookInstallStatusOf] 唯一一条记录落在错误 matcher 下 → installed 但 outdated（镜像 planHookInstall 同名场景）', () => {
+  const existing = { hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: CMD }] }] } }
+  assert.deepEqual(hookInstallStatusOf(existing, CMD), { installed: true, outdated: true })
+})
+
+test('[hookInstallStatusOf] 损坏输入不抛，等同空配置', () => {
+  for (const bad of ['这不是对象', null, [1, 2, 3]]) {
+    assert.doesNotThrow(() => hookInstallStatusOf(bad, CMD))
+    assert.deepEqual(hookInstallStatusOf(bad, CMD), { installed: false, outdated: false })
+  }
+})
+
+test('[hookInstallStatusOf] 分组 hooks 数组里混进 null 不抛', () => {
+  const existing = { hooks: { PreToolUse: [{ matcher: '*', hooks: [null, { type: 'command', command: CMD }] }] } }
+  assert.doesNotThrow(() => hookInstallStatusOf(existing, CMD))
+  assert.deepEqual(hookInstallStatusOf(existing, CMD), { installed: true, outdated: false })
+})
+
+test('[planHookUninstall] 空配置 → 无需改动', () => {
+  const { changed, next } = planHookUninstall({})
+  assert.equal(changed, false)
+  assert.deepEqual(next, {})
+})
+
+test('[planHookUninstall] 装过之后卸载 → PreToolUse 键被整个删掉，不留空数组当空壳', () => {
+  const installed = planHookInstall({}, CMD).next
+  const { changed, next } = planHookUninstall(installed)
+  assert.equal(changed, true)
+  assert.equal((next.hooks as Record<string, unknown> | undefined)?.PreToolUse, undefined)
+})
+
+test('[planHookUninstall] hooks 对象里只有 PreToolUse 时，卸载后连 hooks 这个键也删掉', () => {
+  const installed = planHookInstall({}, CMD).next
+  const { next } = planHookUninstall(installed)
+  assert.equal('hooks' in next, false, '不该留一个空的 hooks:{} 当空壳')
+})
+
+test('[planHookUninstall] 用户自己的其它 hook 与顶层字段原样保留', () => {
+  const existing = {
+    model: 'opus',
+    hooks: {
+      PreToolUse: [
+        { matcher: 'Bash', hooks: [{ type: 'command', command: '/用户/自己的.sh' }] },
+        { matcher: '*', hooks: [{ type: 'command', command: CMD }] }
+      ],
+      PostToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: '/用户/post.sh' }] }]
+    }
+  }
+  const { changed, next } = planHookUninstall(existing)
+  assert.equal(changed, true)
+  const hooks = next.hooks as Record<string, unknown>
+  assert.equal(next.model, 'opus')
+  assert.deepEqual(hooks.PostToolUse, existing.hooks.PostToolUse)
+  const preToolUse = hooks.PreToolUse as { matcher: string; hooks: { command: string }[] }[]
+  assert.equal(preToolUse.length, 1, '我们的那个分组摘空了要整个丢弃，用户的 Bash 分组还在')
+  assert.equal(preToolUse[0].matcher, 'Bash')
+  assert.ok(preToolUse[0].hooks.map((h) => h.command).includes('/用户/自己的.sh'))
+})
+
+test('[planHookUninstall] marker 散落在多个分组里——全部清理干净，不相关分组不受影响', () => {
+  const existing = {
+    hooks: {
+      PreToolUse: [
+        { matcher: '*', hooks: [{ type: 'command', command: '/老A/eas-pretooluse.mjs' }] },
+        { matcher: 'Bash', hooks: [{ type: 'command', command: '/真实/real.sh' }] },
+        { matcher: '*', hooks: [{ type: 'command', command: '/老B/eas-pretooluse.mjs' }] }
+      ]
+    }
+  }
+  const { next } = planHookUninstall(existing)
+  const arr = (next.hooks as Record<string, unknown[]>).PreToolUse
+  assert.ok(!JSON.stringify(arr).includes('eas-pretooluse'), '所有带 marker 的痕迹都要清掉')
+  assert.ok(JSON.stringify(arr).includes('/真实/real.sh'), '不相关的 Bash 分组必须完好保留')
+})
+
+test('[planHookUninstall] 再卸载一次 → changed 为 false（幂等）', () => {
+  const installed = planHookInstall({}, CMD).next
+  const once = planHookUninstall(installed).next
+  const twice = planHookUninstall(once)
+  assert.equal(twice.changed, false)
+})
+
+test('[planHookUninstall] 损坏输入不抛，等同空配置', () => {
+  for (const bad of ['这不是对象', null, [1, 2, 3]]) {
+    assert.doesNotThrow(() => planHookUninstall(bad))
+    assert.deepEqual(planHookUninstall(bad), { changed: false, next: {} })
+  }
+})
+
+test('[planHookUninstall] 不修改传入的 existing 对象（纯函数契约，不改入参）', () => {
+  const existing = planHookInstall({}, CMD).next
+  const before = JSON.parse(JSON.stringify(existing))
+  planHookUninstall(existing)
+  assert.deepEqual(existing, before, 'existing 在调用前后必须逐字节相同')
 })

@@ -19,6 +19,12 @@ export interface HookPayload {
   tool_name: string
   tool_input: unknown
   tool_use_id: string
+  /** Eas-Term 自己的会话标记（=spawn 时注入的 EAS_AGENT_CHAT_SESSION），由 hook 脚本
+   *  附加在 Claude 原生 payload 之外，不是 Claude 协议的一部分。session.ts 用它直接点名
+   *  找到会话，不必再靠 session_id 反查 resumeId（2026-08-14 全分支评审 C1 ①：那条路径
+   *  在 session.ready 事件把 resumeId 落进 SessionRecord 之前会找不到会话）。
+   *  本文件的 fromHook() 不使用这个字段——它只关心 tool_use_id/tool_name/tool_input/cwd。 */
+  eas_session_id?: string
 }
 
 interface PendingApproval {

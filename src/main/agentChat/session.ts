@@ -1,8 +1,10 @@
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
-// 「什么时候该回收」「该直接发还是重启 resume」「审批两路怎么缝」
+// 「什么时候该回收」「该直接发还是重启 resume」「hook 请求怎么转成审批事件」
 // 全部由 sessionState.ts 与 approvalRegistry.ts / approvalRoute.ts 的纯函数回答——
 // 那些才测得了。**任何 if 判断如果需要写测试，就说明它放错地方了，应该挪回纯函数那边。**
 // 本文件不写单测（2026-08-14 Ruling 3：胶水层的接线错误交给 Task 9 的真实端到端验证兜底）。
+// （「审批两路怎么缝」是 Ruling 4 之前的措辞——实测流里的 hook 事件没有可用的关联键，
+// 审批完全由 hook 脚本单独驱动，压根不存在"两路"要缝，这里的说法已经改过来。）
 //
 // 消息怎么送到 CLI 手上，两边完全不同、且都不是「分支出来的」，而是由 adapter 声明的
 // `stdin` 字段决定（唯一允许按 CLI 分支的地方是选 translator，见下）：
@@ -22,11 +24,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
 import { getAdapter } from './adapters/index.ts'
-import { createClaudeTranslator } from './claudeEvents.ts'
-import { createCodexTranslator } from './codexEvents.ts'
 import { createApprovalRegistry } from './approvalRegistry.ts'
-import { onApprovalRequest, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
-import { planHookInstall } from './hookInstall.ts'
+import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
+import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
@@ -35,7 +35,8 @@ import type {
   StartOpts,
   AgentChatStartParams,
   AgentChatStartResult,
-  AgentChatSendResult
+  AgentChatSendResult,
+  AgentApprovalHookStatus
 } from '../../shared/agentChat.ts'
 
 interface Live {
@@ -112,15 +113,55 @@ function nodeBinForHook(): string {
 /** hook 脚本本身没有可执行位（打包资源目录里的普通静态文件，见 resources/agent-hooks/
  *  的 git 记录），且开发路径可能含空格（本仓库就是一例：".../vibe coding/terminal"）——
  *  所以不依赖 shebang + chmod +x，显式用 node 解释器跑，并给两段路径都加引号，
- *  避免在空格处被 shell 切成多个 token。 */
-function hookCommand(): string {
+ *  避免在空格处被 shell 切成多个 token。nodeBin 由调用方传入（restartAndDeliver 里的
+ *  hookNodeBin，或 approvalHookStatus 里现算的一份）——不在这里重复调 nodeBinForHook()
+ *  （2026-08-14 全分支评审 I3：算一次、按需复用）。 */
+function hookCommand(nodeBin: string): string {
   const quote = (s: string): string => `"${s}"`
-  return `${quote(nodeBinForHook())} ${quote(hookScriptPath())}`
+  return `${quote(nodeBin)} ${quote(hookScriptPath())}`
 }
 
-/** 往 <cwd>/.claude/settings.json 装 PreToolUse hook。只有声明了逐次审批能力的 adapter
- *  才需要——目前只有 Claude，靠 `capabilities.approval.length > 0` 判断，不硬编码 cli id
- *  （跟这个仓库别处「能力声明驱动行为」的做法一致，调用点见 restartAndDeliver）。
+function hookConfigPath(cwd: string): string {
+  return path.join(cwd, '.claude', 'settings.json')
+}
+
+function readHookConfig(file: string): unknown {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'))
+  } catch {
+    return {} // 不存在 / 不是合法 JSON，都当空处理
+  }
+}
+
+/** 写用户项目文件前先备份（2026-08-14 全分支评审 C1 ②：照抄 agentHook.ts 的 writeJson()
+ *  做法）。tmp+rename 只保证不会写出半截文件，不保证内容本身没问题——万一
+ *  planHookInstall/planHookUninstall 算出的下一份配置有错，用户还能从 .eas-backup 手动
+ *  找回原文件。备份失败不阻断写入（和 agentHook.ts 的容错策略一致），但也别声张。 */
+function writeHookConfig(target: string, data: unknown): { ok: boolean; reason?: string } {
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    if (fs.existsSync(target)) {
+      try {
+        fs.copyFileSync(target, target + '.eas-backup')
+      } catch {
+        /* 备份失败不阻断，但也别声张 */
+      }
+    }
+    const tmp = target + '.eas-tmp'
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, target)
+    return { ok: true }
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
+    console.error('[agentChat] hook 写入失败', e)
+    return { ok: false, reason }
+  }
+}
+
+/** 往 <cwd>/.claude/settings.json 装 PreToolUse hook。只有 adapter 自己声明
+ *  `approvalHook === 'claude-pretooluse'` 才需要——目前只有 Claude；这是"用哪种审批机制"
+ *  的声明，与 capabilities.approval("能不能弹审批卡片")是两件事，调用点（restartAndDeliver）
+ *  不再用 `capabilities.approval.length > 0` 当开关（2026-08-14 全分支评审 I6 第 2 点）。
  *
  *  这是用户自己的文件（spec §九 第 2 条 + hookInstall.ts 文件头）：
  *  - 读不出来（不存在/损坏）当空对象处理——planHookInstall 自己能吞坏形状，不在这里判断
@@ -136,32 +177,42 @@ function hookCommand(): string {
  *  用户看不到）。裁定：不能因为装不上就拒绝启动会话（用户在未注册目录里临时用是合理
  *  需求），但必须让用户看见"这次没有保护"——调用方要把这里的失败转成一条
  *  {k:'error', fatal:false} 事件推给渲染层。 */
-function installApprovalHook(cwd: string): { ok: boolean; reason?: string } {
-  const target = path.join(cwd, '.claude', 'settings.json')
+function installApprovalHook(cwd: string, nodeBin: string): { ok: boolean; reason?: string } {
+  const target = hookConfigPath(cwd)
   const g = guardPath(target)
   if (!g.ok) {
     console.error('[agentChat] 跳过 hook 安装（不在允许写入的目录内）：', g.error)
     return { ok: false, reason: g.error }
   }
-  let existing: unknown = {}
-  try {
-    existing = JSON.parse(fs.readFileSync(g.path, 'utf8'))
-  } catch {
-    existing = {} // 不存在 / 不是合法 JSON，都当空处理
-  }
-  const plan = planHookInstall(existing, hookCommand())
+  const plan = planHookInstall(readHookConfig(g.path), hookCommand(nodeBin))
   if (!plan.changed) return { ok: true }
-  try {
-    fs.mkdirSync(path.dirname(g.path), { recursive: true })
-    const tmp = g.path + '.eas-tmp'
-    fs.writeFileSync(tmp, JSON.stringify(plan.next, null, 2), 'utf8')
-    fs.renameSync(tmp, g.path)
-    return { ok: true }
-  } catch (e) {
-    const reason = e instanceof Error ? e.message : String(e)
-    console.error('[agentChat] hook 写入失败', e)
-    return { ok: false, reason }
-  }
+  return writeHookConfig(g.path, plan.next)
+}
+
+/** 卸载：只摘我们那条 marker 痕迹，用户自己的配置一个字不动（2026-08-14 全分支评审
+ *  C1 ③：对齐 agentHook.ts 既有的 hook:uninstall 形状——这条 hook 比"提交即复盘"那条
+ *  更侵入（PreToolUse 会阻塞，PostToolUse 不会），至少要能一键卸干净）。 */
+function uninstallApprovalHook(cwd: string): { ok: boolean; reason?: string } {
+  const target = hookConfigPath(cwd)
+  const g = guardPath(target)
+  if (!g.ok) return { ok: false, reason: g.error }
+  const plan = planHookUninstall(readHookConfig(g.path))
+  if (!plan.changed) return { ok: true }
+  return writeHookConfig(g.path, plan.next)
+}
+
+/** 查询某个项目现在有没有装这个 hook（供渲染层展示，对齐既有 hook:status 的形状——
+ *  2026-08-14 全分支评审 C1 ③）。guardPath 不通过（cwd 不在任何已注册项目/知识库内）时
+ *  如实报「没装」——install 本来也走同一道 guard，装不上去，报「没装」不算撒谎。
+ *  这是一次用户触发的偶发查询，不在 restartAndDeliver 的热路径上，所以现算一次
+ *  nodeBinForHook() 就够，不必额外传参复用（I3 的"只算一次"针对的是每次消息都会走的
+ *  那条路径）。 */
+function approvalHookStatus(cwd: string): AgentApprovalHookStatus {
+  const configPath = hookConfigPath(cwd)
+  const g = guardPath(configPath)
+  if (!g.ok) return { installed: false, outdated: false, configPath }
+  const status = hookInstallStatusOf(readHookConfig(g.path), hookCommand(nodeBinForHook()))
+  return { ...status, configPath }
 }
 
 // ── 事件推送 + 会话状态的机械式更新（不是判定，只是照实记录已经发生的事） ──────────────
@@ -172,19 +223,20 @@ function emitEvent(live: Live, e: ChatEvent): void {
 
 /** translator 产出的事件里，session.ready 携带了 CLI 原生的会话/线程 id——
  *  记下来才能在下次 restart 时 --resume 接上（决定 4）。其余事件原样转发，
- *  这不是"判定"，只是把已经发生的事实记进 SessionRecord。 */
+ *  这不是"判定"，只是把已经发生的事实记进 SessionRecord。
+ *
+ *  Codex 的 thread.started 没有 model/cwd，codexEvents.ts 特意留空串，注释写着"等
+ *  session.ts 用启动参数补齐"——这里补上，不能让这句承诺落空（2026-08-14 全分支评审
+ *  I4）。补的是 live.rec 在 restartAndDeliver 里已经写好的、这次真正用来启动这个进程的
+ *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
+ *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
+    emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })
+    return
   }
   emitEvent(live, e)
-}
-
-function findLiveByResumeId(nativeSessionId: string): Live | undefined {
-  for (const live of sessions.values()) {
-    if (live.rec.resumeId === nativeSessionId) return live
-  }
-  return undefined
 }
 
 /** Claude 走 stdin 送消息用的行格式（spec §A.3 实测确认）。这是 Claude 专有的 wire
@@ -242,10 +294,22 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
     return
   }
 
-  // 只有声明了逐次审批能力的 adapter 才需要装 PreToolUse hook——见 installApprovalHook 文件头。
-  // 装不上不阻断会话启动，但必须让用户看见"这次没有保护"——fail open 不能是静默的。
-  if (adapter.capabilities.approval.length > 0) {
-    const hook = installApprovalHook(live.rec.cwd)
+  // hook 脚本万一要靠兜底（本 app 自带的 Electron 二进制）跑，才需要 ELECTRON_RUN_AS_NODE。
+  // 算一次，装 hook 用的 hookCommand() 和下面 spawn 的 env 共用同一个值——不重复探测
+  // fs.existsSync，也不会出现"装 hook 时判定用了兜底、spawn 时却没注入"这种不一致
+  // （2026-08-14 全分支评审 I3：这里原来无条件注入，会经 CLI 进程一路"传染"给 agent 在
+  // 这个会话里跑的每一条 Bash——包括这个仓库自己的 `npm run dev`，会被静默拉成纯 Node
+  // 模式，永远不开窗口。照抄 mcpBridge.ts 的 runnerFor()：只在真的命中兜底分支时才注入）。
+  const hookNodeBin = nodeBinForHook()
+
+  // 要不要装 PreToolUse hook，由 adapter 自己声明用哪种审批机制决定——不是拿
+  // capabilities.approval.length>0 当"装 Claude 的 hook"的开关（2026-08-14 全分支评审
+  // I6 第 2 点：那把"能不能逐次审批"和"用不用 Claude 的 hook 机制"混成了一个布尔。
+  // 以后 Codex app-server 落地会声明 approval:['exec']，但它的审批握手走自己的协议，
+  // 不该被这个判据误当成"要装 Claude 的 hook"）。装不上不阻断会话启动，但必须让用户
+  // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
+  if (adapter.approvalHook === 'claude-pretooluse') {
+    const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
     if (!hook.ok) {
       handleEvent(live, {
         k: 'error',
@@ -267,11 +331,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
       env: {
         ...process.env,
         ...mcpEnv({ project: opts.cwd }),
-        // hook 脚本万一要靠 nodeBinForHook() 的兜底（本 app 自带的 Electron 二进制）跑，
-        // 得靠这个环境变量让它以纯 node 模式运行——它会经这个进程的 env 一路继承给
-        // Claude Code 自己再起的 hook 子进程。对不认识这个变量的进程（Codex、正常路径
-        // 找到系统 node 的 Claude）完全无害，所以不按 CLI 或是否命中兜底分支来选择性注入。
-        ELECTRON_RUN_AS_NODE: '1'
+        // 这个会话专属的标记——resources/agent-hooks/eas-pretooluse.mjs 靠它判断"这次工具
+        // 调用是不是 agent-chat 起的这个会话"，不是用户在 Eas-Term 终端里自己敲的 claude、
+        // 也不是 app 外面跑的 claude（两者都会继承上面 mcpEnv() 注入的 EAS_TERM_PORT/
+        // TOKEN，但不会有这个变量——不能拿那两个当标记，PTY 也注入同样的值，复用就等于
+        // 没隔离）。同时也是审批路由"点名"找会话的依据，见下面 onApprovalRequest
+        // （2026-08-14 全分支评审 C1 ①）。
+        EAS_AGENT_CHAT_SESSION: live.rec.id,
+        // 只有真的命中兜底分支才注入——见上面 hookNodeBin 的注释（I3）。
+        ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {})
       },
       stdio: [built.stdin, 'pipe', 'pipe']
     })
@@ -341,14 +409,32 @@ export function killAllAgentChatSessions(hard = false): void {
 export function registerAgentChatHandlers(): void {
   setInterval(reapIdleSessions, 60_000)
 
-  // 全局唯一订阅：hook 脚本送来的每一条待审批请求都会广播到这里，按 tool_use_id 对应的
-  // 原生会话 id 找到我们自己的会话记录（resumeId），转成 approval.request 推给对应的
-  // webContents。找不到匹配会话就丢弃——不是我们管的会话（比如同一台机器上给别的
-  // 项目开的 hook），hook 那边自己的 5 分钟超时会兜底 deny，不会静默放行。
+  // 全局唯一订阅：hook 脚本送来的每一条待审批请求都会广播到这里。按 hook 脚本附带的
+  // eas_session_id（= EAS_AGENT_CHAT_SESSION，spawn 时注入，见 restartAndDeliver）直接
+  // 点名找到我们自己的会话——不再靠 Claude 原生 session_id 反查 resumeId
+  // （2026-08-14 全分支评审 C1 ①：那条路径在 session.ready 事件把 resumeId 落进
+  // SessionRecord 之前会找不到会话，存在一个时间窗口；点名法从第一次工具调用起就成立）。
+  // 找不到匹配会话就丢弃——理论上不该发生（hook 脚本读不到 EAS_AGENT_CHAT_SESSION 时
+  // 会直接无声退出，根本不会发起这个请求），hook 那边自己的 5 分钟超时会兜底 deny，
+  // 不会静默放行。
   onApprovalRequest((payload) => {
-    const live = findLiveByResumeId(payload.session_id)
+    const live = sessions.get(payload.eas_session_id ?? '')
     if (!live) return
     for (const e of live.approvals.fromHook(payload)) emitEvent(live, e)
+  })
+
+  // 全局唯一订阅：某个审批被真正敲定时（渲染层点了允许/拒绝，或者等到超时兜底 deny）
+  // 广播到这里——approval.resolved 事件只能由这里驱动，不能由 IPC 返回路径自己造
+  // （2026-08-14 全分支评审 I1：修复前 agentChat:resolveApproval 直接拿渲染层"想要"的
+  // decision 发事件，但如果 resolveApprovalGlobal 因为超时已经先一步返回 false——hook
+  // 脚本其实已经拿到 deny 退出——事件流会断言"已批准"，事实却是"已拒绝"，正面违反
+  // "执行结果只信事件"）。approvalId（tool_use_id）在同一时刻只可能是某一个会话的
+  // registry 认识，其余会话的 resolve() 对不认识的 id 是安全的空操作，所以不用先定位
+  // 是哪个会话，逐个试一遍即可——会话数量通常只有几个，成本可忽略。
+  onApprovalSettled((approvalId, decision) => {
+    for (const live of sessions.values()) {
+      for (const e of live.approvals.resolve(approvalId, decision)) emitEvent(live, e)
+    }
   })
 
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
@@ -374,8 +460,11 @@ export function registerAgentChatHandlers(): void {
     const live: Live = {
       rec,
       wc: e.sender,
-      // 唯一允许按 CLI 分支的地方（选 translator），见文件头与 task-8-brief 的明确许可。
-      translator: adapter.id === 'codex' ? createCodexTranslator() : createClaudeTranslator(),
+      // translator 由 adapter 自己声明创建（2026-08-14 全分支评审 I6 第 1 点：Ruling 10
+      // 给 stdin 立的原则逐字适用于这里——adapter 知道自己怎么工作，不靠下游按 id 分支去
+      // 记每个 CLI 的怪癖。改之前这里写的是 `adapter.id === 'codex' ? ... : ...`，加第三个
+      // CLI 会静默拿到 Claude 的翻译器，产出垃圾或什么都不产出，没有任何报错）。
+      translator: adapter.createTranslator(),
       approvals: createApprovalRegistry(),
       stdoutBuf: ''
     }
@@ -404,22 +493,35 @@ export function registerAgentChatHandlers(): void {
     return { ok: true }
   })
 
-  // 审批决定回传：sessionId 只用来找到我们自己这边要推的 approval.resolved 事件；
-  // 真正解开 hook 脚本阻塞的是下面这个全局 resolveApprovalGlobal（按 approvalId 单独一张表，
-  // 见 approvalRoute.ts）。两者独立处理——找不到本地会话不代表不该去解锁 hook，
-  // 反过来也一样，谁失败都不该连累另一个。
+  // 审批决定回传：只负责把渲染层的决定写回 hook 那一路（resolveApprovalGlobal，按
+  // approvalId 单独一张表，见 approvalRoute.ts）。**不在这里发 approval.resolved 事件**
+  // ——事件由上面的 onApprovalSettled 统一驱动（2026-08-14 全分支评审 I1）：这里的
+  // decision 只是渲染层"想要"的结果，resolveApprovalGlobal 完全有可能因为这个 approvalId
+  // 已经超时而返回 false（hook 脚本其实已经拿到 deny 退出）——修复前的实现会无视这个
+  // false、照样把渲染层想要的 decision 当真相发出去，事件流断言"已批准"，事实却是
+  // "已拒绝"。sessionId 不再需要，保留参数位只是不改 IPC 调用签名（renderer 侧不用跟着改）。
   ipcMain.handle(
     'agentChat:resolveApproval',
-    (_e, sessionId: unknown, approvalId: unknown, decision: unknown): { ok: boolean } => {
+    (_e, _sessionId: unknown, approvalId: unknown, decision: unknown): { ok: boolean } => {
       const d: 'allow' | 'deny' = decision === 'allow' ? 'allow' : 'deny'
       const aid = typeof approvalId === 'string' ? approvalId : ''
-      const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
-      if (live) {
-        for (const e of live.approvals.resolve(aid, d)) emitEvent(live, e)
-      }
       return { ok: resolveApprovalGlobal(aid, d, '') }
     }
   )
+
+  // 「AI 会话审批」hook 的状态展示与一键卸载——对齐既有 hook:status / hook:uninstall
+  // 的形状（2026-08-14 全分支评审 C1 ③）。按 cwd 查/卸，不是全局唯一一份：这条 hook
+  // 是按项目装进 <cwd>/.claude/settings.json 的。
+  ipcMain.handle('agentChat:hookStatus', (_e, cwd: unknown): AgentApprovalHookStatus => {
+    if (typeof cwd !== 'string' || !cwd) return { installed: false, outdated: false, configPath: '' }
+    return approvalHookStatus(cwd)
+  })
+
+  ipcMain.handle('agentChat:hookUninstall', (_e, cwd: unknown): { ok: boolean; error?: string } => {
+    if (typeof cwd !== 'string' || !cwd) return { ok: false, error: 'cwd 必填' }
+    const r = uninstallApprovalHook(cwd)
+    return r.ok ? { ok: true } : { ok: false, error: r.reason }
+  })
 
   ipcMain.on('agentChat:stop', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
