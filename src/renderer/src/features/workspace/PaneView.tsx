@@ -467,7 +467,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} cwd={tabCwd} />}
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
-        {pane.kind === 'agent' && <AgentChatView cwd={pane.cwd} />}
+        {pane.kind === 'agent' && (
+          <AgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
+        )}
         {pane.kind === 'wiki' && (
           <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>
             <WikiView />

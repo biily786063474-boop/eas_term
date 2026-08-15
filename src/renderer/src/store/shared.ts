@@ -63,6 +63,18 @@ export function killPanePty(pane: PaneState): void {
     // 任务记录，它的 endAt 就此不会再写入，交给 Task 1 list() 的 aborted 兜底处理，
     // 不是这里要解决的问题。
     forgetPty(pane.ptyId)
+  } else if (pane.kind === 'agent' && pane.sessionId) {
+    // 对称处理（2026-08-15 审查 Important）：节点被永久关闭时必须把底层 CLI 进程
+    // 一起停掉，理由与上面 terminal 分支同源——同步做，不能指望组件卸载时的异步
+    // 清理兜底。AgentChatView.tsx 卸载时只取消事件订阅，不调 agentChat.stop()
+    // （卸载 ≠ 用户关闭节点：切走面板不该杀掉正在跑的会话，只有节点被真正移除
+    // 才该杀）；真正「关闭节点时把进程杀掉」这件事完全靠这里、靠 PaneState.sessionId
+    // 驱动。不这样做的后果：底层 CLI 进程会在主进程那边无人看管地继续跑到 15 分钟
+    // 空闲回收阈值，期间可能仍在执行工具调用，真实消耗 API token，且与 spec §A.5
+    // 「节点关闭：杀进程」直接矛盾。
+    // sessionId 为空（会话还没建立成功，或者这个节点从没起过会话）时天然没有
+    // 东西可停，不是遗漏。
+    window.api.agentChat.stop(pane.sessionId)
   }
 }
 

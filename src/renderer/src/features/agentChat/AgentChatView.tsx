@@ -14,9 +14,23 @@ import { useEffect, useRef, useState } from 'react'
 import type { AgentChatStartResult, ChatEvent, CliInfo } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView } from './reduce.ts'
 import { SparkleIcon } from '../../ui/Icons'
+import { useStore } from '../../store'
 import './agentChat.css'
 
-export function AgentChatView({ cwd }: { cwd: string }): JSX.Element {
+export function AgentChatView({
+  cwd,
+  tabId,
+  leafId
+}: {
+  cwd: string
+  tabId: string
+  leafId: string
+}): JSX.Element {
+  // 会话建立后把 sessionId 写回这个 leaf 的 PaneState——killPanePty（store/shared.ts）
+  // 关闭节点时只认 store 里的这份，组件本地的 useState 它够不着（2026-08-15 审查
+  // Important：不写回的话，关掉一个正在跑的 agent 节点不会停底层 CLI 进程，会话会在
+  // 主进程那边无人看管地空转到 15 分钟空闲回收阈值，期间可能仍在花 token）。
+  const setAgentSessionId = useStore((s) => s.setAgentSessionId)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
@@ -80,12 +94,22 @@ export function AgentChatView({ cwd }: { cwd: string }): JSX.Element {
       }
       return
     }
-    if (!aliveRef.current) return // 面板已经被切走/关掉，会话留给主进程自己管
     if (!result.ok) {
-      setStarting(false)
-      setStartError(result.error)
+      if (aliveRef.current) {
+        setStarting(false)
+        setStartError(result.error)
+      }
       return
     }
+    // 会话已经真实建立（进程已经在跑，可能已经在花 token）。不管组件此刻是否还挂载，
+    // 立刻把 sessionId 写回 store——这是 killPanePty 关闭节点时唯一找得到它的地方。
+    // 必须放在 aliveRef 判断**之前**：如果等组件还活着才写，「start() 的 await 还没
+    // 回来、面板就被切走/关掉」这种时序下 sessionId 会连本地变量都不落地，从诞生起
+    // 就不可追踪，变成一个没人管的常驻会话（2026-08-15 审查 Important 点名的场景）。
+    setAgentSessionId(tabId, leafId, result.sessionId)
+    // 面板已经被切走/关掉：不再订阅事件、不再 setState，但会话已经能从 store 里
+    // 追踪到了，killPanePty 收得到——上面那句写回不受这里提前 return 的影响。
+    if (!aliveRef.current) return
     // 尽快订阅，别拖到下一次交互。start() 在 preload 里已经从 invoke resolve 那一刻起
     // 开始缓冲事件，这里订阅时会先回放缓冲区再转实时，所以不会丢首事件。
     unsubRef.current = window.api.agentChat.onEvent(result.sessionId, (e: ChatEvent) => {
