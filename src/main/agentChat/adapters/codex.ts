@@ -17,17 +17,9 @@
 // app-server 接上时：加一个新 adapter 分支（或给这个文件加 experimental 开关），
 // 把 approval 改回非空——UI 一行都不用改。
 
-import { execFile } from 'node:child_process'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
-
-const WHICH_BIN = process.platform === 'win32' ? 'where' : 'which'
-
-function detectByWhich(bin: string): () => Promise<boolean> {
-  return () =>
-    new Promise((resolve) => {
-      execFile(WHICH_BIN, [bin], (err) => resolve(!err))
-    })
-}
+import { detectByWhich } from './detect.ts'
+import { createCodexTranslator } from '../codexEvents.ts'
 
 const DEFAULT_SANDBOX = 'workspace-write'
 
@@ -54,7 +46,16 @@ export const codexAdapter: CliAdapter = {
     ]
   },
 
+  // 没有 approvalHook 字段：exec 模式做不了逐次审批，不装任何 hook（见文件头）。
+  // app-server 落地时它会声明 capabilities.approval:['exec']，但那不该被自动当成
+  // "要装 Claude 的 hook 文件"——app-server 原生带审批协议，大概率完全不需要装
+  // 任何 hook 文件；即便真的需要，那也会是一种全新的 approvalHook 取值，不是复用
+  // 'claude-pretooluse'（2026-08-14 全分支评审 I6 第 2 点：capabilities.approval
+  // 与 approvalHook 是两件不同的事，混成一个布尔正是 C1 那个 Critical 的根）。
+
   detect: detectByWhich('codex'),
+
+  createTranslator: createCodexTranslator,
 
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`

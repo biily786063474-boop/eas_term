@@ -34,8 +34,7 @@ test('Claude 启动参数含实测确认过的那几个必需项', () => {
     '--input-format', 'stream-json',
     '--verbose',
     '--strict-mcp-config',
-    '--include-hook-events',
-    '--include-partial-messages'
+    '--include-hook-events'
   ]) {
     assert.ok(args.includes(need), `启动参数缺 ${need}`)
   }
@@ -245,4 +244,63 @@ test('[追加] Claude 的 stdin 精确是 pipe——stream-json 靠它送用户�
 
 test('[追加] Codex 的 stdin 精确是 ignore——不关掉会卡在 Reading additional input from stdin...', () => {
   assert.equal(getAdapter('codex')!.buildArgs({ cwd: '/x' }).stdin, 'ignore')
+})
+
+// ============================================================
+// 以下是 2026-08-14 全分支评审的两条修复：
+// I5——Claude 不该再带 --include-partial-messages（flag 开着但 claudeEvents.ts 的
+//   default 分支把 stream_event 全丢了，纯成本零收益，先摘掉）。
+// I6——translator 与「装哪种审批机制」都要由 adapter 自己声明，不能靠 session.ts
+//   按 CLI id 分支或拿 capabilities.approval.length>0 当开关（那样加第三个 CLI 会
+//   静默拿到 Claude 的翻译器 / 被错误装上 Claude 的 hook）。
+// ============================================================
+
+test('[I5] Claude 不带 --include-partial-messages——带了也没人消费，纯成本零收益', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x' })
+  assert.ok(!args.includes('--include-partial-messages'))
+})
+
+test('[I6] 每个 adapter 都声明了 createTranslator，调用后返回的对象有 push 方法', () => {
+  for (const a of listAdapters()) {
+    assert.equal(typeof a.createTranslator, 'function', `${a.id} 缺 createTranslator`)
+    const t = a.createTranslator()
+    assert.equal(typeof t.push, 'function', `${a.id} 的 createTranslator() 返回值缺 push`)
+  }
+})
+
+test('[I6] Claude 的 createTranslator 产出真的是 Claude 翻译器——喂一行 Claude 的 init 事件能产出 session.ready', () => {
+  const t = getAdapter('claude')!.createTranslator()
+  const evs = t.push(JSON.stringify({ type: 'system', subtype: 'init', session_id: 's1', model: 'opus', cwd: '/x' }))
+  assert.ok(evs.some((e) => e.k === 'session.ready'), 'Claude 的翻译器应该认得 system:init')
+})
+
+test('[I6] Codex 的 createTranslator 产出真的是 Codex 翻译器——喂一行 Codex 的 thread.started 事件能产出 session.ready', () => {
+  const t = getAdapter('codex')!.createTranslator()
+  const evs = t.push(JSON.stringify({ type: 'thread.started', thread_id: 't1' }))
+  assert.ok(evs.some((e) => e.k === 'session.ready'), 'Codex 的翻译器应该认得 thread.started')
+})
+
+test('[I6] 两个 adapter 的 createTranslator 互不认识对方的原生事件——不是共用同一个翻译器', () => {
+  // Claude 的翻译器喂 Codex 的事件、反过来也一样，都不该产出 session.ready。
+  // 这条锁住"没有静默拿到另一个 CLI 的翻译器"，比单独验证各自认得自己的事件更严格。
+  const claudeT = getAdapter('claude')!.createTranslator()
+  const codexEvs = claudeT.push(JSON.stringify({ type: 'thread.started', thread_id: 't1' }))
+  assert.equal(codexEvs.length, 0, 'Claude 的翻译器不该认得 Codex 的 thread.started')
+
+  const codexT = getAdapter('codex')!.createTranslator()
+  const claudeEvs = codexT.push(
+    JSON.stringify({ type: 'system', subtype: 'init', session_id: 's1', model: 'opus', cwd: '/x' })
+  )
+  assert.equal(claudeEvs.length, 0, 'Codex 的翻译器不该认得 Claude 的 system:init')
+})
+
+test('[I6] createTranslator 每次调用返回独立实例，不共享内部状态（节流/去重这类状态不能跨会话串）', () => {
+  const a = getAdapter('claude')!.createTranslator()
+  const b = getAdapter('claude')!.createTranslator()
+  assert.notStrictEqual(a, b)
+})
+
+test('[I6] Claude 声明 approvalHook 为 "claude-pretooluse"；Codex 不声明（undefined）', () => {
+  assert.equal(getAdapter('claude')!.approvalHook, 'claude-pretooluse')
+  assert.equal(getAdapter('codex')!.approvalHook, undefined)
 })

@@ -7,6 +7,7 @@ import {
   waitForApproval,
   resolveApproval,
   onApprovalRequest,
+  onApprovalSettled,
   APPROVAL_TIMEOUT_MS
 } from './approvalRoute.ts'
 
@@ -185,4 +186,83 @@ test('approvalId 缺失时不广播给订阅者——没法登记，广播了也
   unsubscribe()
   assert.equal(seen.length, 0)
   assert.equal(r.decision, 'deny')
+})
+
+// ---- onApprovalSettled（2026-08-14 全分支评审 I1 修复：超时后事件流会说谎）----
+//
+// 修复前：session.ts 的 IPC 处理直接拿渲染层"想要"的 decision 发 approval.resolved
+// 事件，不管 resolveApproval() 实际返回 true 还是 false。下面这组测试直接锁住
+// "敲定结果只能来自这里广播的真相"这条约束，且覆盖两条敲定路径（显式 resolve / 超时）。
+
+test('resolveApproval 命中时，onApprovalSettled 收到同一个 approvalId 与实际敲定的 decision', async () => {
+  const seen: { approvalId: string; decision: string }[] = []
+  const unsubscribe = onApprovalSettled((approvalId, decision) => seen.push({ approvalId, decision }))
+  const pending = waitForApproval({ tool_use_id: 'settled-1' }, 5_000)
+  resolveApproval('settled-1', 'allow', '')
+  await pending
+  unsubscribe()
+  assert.equal(seen.length, 1)
+  assert.deepEqual(seen[0], { approvalId: 'settled-1', decision: 'allow' })
+})
+
+test('resolveApproval 传入非法 decision 时，onApprovalSettled 收到的是归一化后的 deny，不是原始垃圾值', async () => {
+  const seen: string[] = []
+  const unsubscribe = onApprovalSettled((_id, decision) => seen.push(decision))
+  const pending = waitForApproval({ tool_use_id: 'settled-2' }, 5_000)
+  resolveApproval('settled-2', '乱七八糟', '')
+  await pending
+  unsubscribe()
+  assert.deepEqual(seen, ['deny'])
+})
+
+test('超时也会广播 onApprovalSettled，decision 固定是 deny——这是本条修复要补的那一半', async () => {
+  const seen: { approvalId: string; decision: string }[] = []
+  const unsubscribe = onApprovalSettled((approvalId, decision) => seen.push({ approvalId, decision }))
+  await waitForApproval({ tool_use_id: 'settled-timeout' }, 20)
+  unsubscribe()
+  assert.equal(seen.length, 1)
+  assert.deepEqual(seen[0], { approvalId: 'settled-timeout', decision: 'deny' })
+})
+
+test('核心回归场景：超时之后才迟到的 resolveApproval——不广播第二次，且返回 false（这正是 I1 描述的"事后才点允许"）', async () => {
+  const seen: { approvalId: string; decision: string }[] = []
+  const unsubscribe = onApprovalSettled((approvalId, decision) => seen.push({ approvalId, decision }))
+  await waitForApproval({ tool_use_id: 'settled-late' }, 20) // 先超时敲定为 deny
+  const late = resolveApproval('settled-late', 'allow', '用户事后才点的允许')
+  unsubscribe()
+  assert.equal(late, false, '迟到的决定必须被拒绝写入——waiter 早没了')
+  assert.equal(seen.length, 1, '只应该广播一次（超时那次），迟到的 resolve 不该再广播一次')
+  assert.deepEqual(seen[0], { approvalId: 'settled-late', decision: 'deny' }, '唯一一次广播的必须是真相：deny')
+})
+
+test('resolveApproval 命中不存在的 approvalId 不广播', () => {
+  const seen: unknown[] = []
+  const unsubscribe = onApprovalSettled((id, d) => seen.push({ id, d }))
+  resolveApproval('压根没有这个id', 'allow', '')
+  unsubscribe()
+  assert.equal(seen.length, 0)
+})
+
+test('onApprovalSettled 返回的取消订阅函数生效后不再收到通知', async () => {
+  const seen: unknown[] = []
+  const unsubscribe = onApprovalSettled((id, d) => seen.push({ id, d }))
+  unsubscribe()
+  const pending = waitForApproval({ tool_use_id: 'settled-unsub' }, 5_000)
+  resolveApproval('settled-unsub', 'allow', '')
+  await pending
+  assert.equal(seen.length, 0, '取消订阅之后不该再收到')
+})
+
+test('多个订阅者都能收到同一次敲定的广播', async () => {
+  const a: unknown[] = []
+  const b: unknown[] = []
+  const unsubA = onApprovalSettled((id, d) => a.push({ id, d }))
+  const unsubB = onApprovalSettled((id, d) => b.push({ id, d }))
+  const pending = waitForApproval({ tool_use_id: 'settled-multi' }, 5_000)
+  resolveApproval('settled-multi', 'deny', '')
+  await pending
+  unsubA()
+  unsubB()
+  assert.equal(a.length, 1)
+  assert.equal(b.length, 1)
 })

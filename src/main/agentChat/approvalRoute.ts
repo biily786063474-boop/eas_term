@@ -103,6 +103,29 @@ export function onApprovalRequest(cb: ApprovalRequestListener): () => void {
   return () => listeners.delete(cb)
 }
 
+type ApprovalSettledListener = (approvalId: string, decision: ApprovalDecision) => void
+const settledListeners = new Set<ApprovalSettledListener>()
+
+/** 订阅"某个审批已经敲定"——不管敲定的原因是渲染层调用 resolveApproval()，还是等待
+ *  超时触发的兜底 deny，都会广播到这里（2026-08-14 全分支评审 I1）。
+ *
+ *  存在的理由：修复前，session.ts 的 IPC 处理直接拿渲染层"想要"的 decision 发
+ *  approval.resolved 事件，但 resolveApproval() 完全可能因为这个 approvalId 已经超时
+ *  而返回 false——hook 脚本那边其实已经拿到 deny 退出。旧实现无视这个 false，照样把
+ *  渲染层想要的 decision 当真相发出去：事件流断言"已批准"，事实却是"已拒绝"，正面
+ *  违反本项目"执行结果只信事件"这条硬约束。现在 approval.resolved 事件只能由这里
+ *  广播的、真正敲定的结果驱动。
+ *
+ *  返回一个取消订阅函数，与 onApprovalRequest 同一个形状。 */
+export function onApprovalSettled(cb: ApprovalSettledListener): () => void {
+  settledListeners.add(cb)
+  return () => settledListeners.delete(cb)
+}
+
+function notifySettled(approvalId: string, decision: ApprovalDecision): void {
+  for (const cb of settledListeners) cb(approvalId, decision)
+}
+
 /** 挂起等待一个决定：登记等待者（含完整 payload）、起一个超时定时器、广播给订阅者，
  *  返回的 Promise 会在「被 resolveApproval() 命中」或「超时」之一发生时 settle。
  *  **超时兜底固定是 deny。** payload 里取不到合法 tool_use_id 时立即兜底 deny、
@@ -121,6 +144,9 @@ export function waitForApproval(
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       waiters.delete(approvalId)
+      // 超时也要广播——不广播的话 session.ts 那边的 per-session pending 条目会永远留着，
+      // 用户事后才点的「允许/拒绝」会被误当成真实决定重新发一次事件（I1）。
+      notifySettled(approvalId, 'deny')
       resolve({ decision: 'deny', reason: '等待超时，Eas-Term 没能在限定时间内收到人工决定' })
     }, timeoutMs)
     waiters.set(approvalId, {
@@ -144,6 +170,10 @@ export function resolveApproval(approvalId: unknown, decision: unknown, reason: 
   const w = typeof approvalId === 'string' && approvalId ? waiters.get(approvalId) : undefined
   if (!w) return false
   waiters.delete(approvalId as string)
-  w.resolve({ decision: normalizeDecision(decision), reason: typeof reason === 'string' ? reason : '' })
+  const d = normalizeDecision(decision)
+  // 广播真正敲定的结果——session.ts 的 approval.resolved 事件从这里驱动，不再由 IPC
+  // 返回路径自己拿"渲染层想要的值"去造事件（I1）。
+  notifySettled(approvalId as string, d)
+  w.resolve({ decision: d, reason: typeof reason === 'string' ? reason : '' })
   return true
 }

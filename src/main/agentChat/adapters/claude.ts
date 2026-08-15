@@ -14,20 +14,9 @@
 // --input-format stream-json 打开的 stdin 逐行写入（多轮会话靠同一个进程持续吃这些行），
 // 不经过 buildArgs：StartOpts 里没有 prompt 字段，写 stdin 是上层（会话胶水层）的职责。
 
-import { execFile } from 'node:child_process'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
-
-/** 用 `which`（Windows 上是 `where`）判断 PATH 里有没有这个可执行文件。
- *  没选择跑 `claude --version`：那样会真的启动一次 CLI 进程，有版本检查/网络请求等
- *  副作用的风险，`which` 只查 PATH，快且没有副作用。 */
-const WHICH_BIN = process.platform === 'win32' ? 'where' : 'which'
-
-function detectByWhich(bin: string): () => Promise<boolean> {
-  return () =>
-    new Promise((resolve) => {
-      execFile(WHICH_BIN, [bin], (err) => resolve(!err))
-    })
-}
+import { detectByWhich } from './detect.ts'
+import { createClaudeTranslator } from '../claudeEvents.ts'
 
 export const claudeAdapter: CliAdapter = {
   id: 'claude',
@@ -53,7 +42,14 @@ export const claudeAdapter: CliAdapter = {
     approval: ['exec', 'patch', 'tool']
   },
 
+  // 逐次审批走 Claude Code 的 PreToolUse hook 机制——这是"用哪种审批机制"的声明，与
+  // 上面 capabilities.approval("能不能弹审批卡片")是两件事（2026-08-14 全分支评审
+  // I6 第 2 点，详见 shared/agentChat.ts 的 CliAdapter.approvalHook 注释）。
+  approvalHook: 'claude-pretooluse',
+
   detect: detectByWhich('claude'),
+
+  createTranslator: createClaudeTranslator,
 
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
     const args = [
@@ -64,8 +60,13 @@ export const claudeAdapter: CliAdapter = {
       'stream-json',
       '--verbose',
       '--strict-mcp-config',
-      '--include-hook-events',
-      '--include-partial-messages'
+      '--include-hook-events'
+      // 不带 --include-partial-messages（2026-08-14 全分支评审 I5）：带了它，stdout 会
+      // 多出一路 stream_event 增量分块，而 claudeEvents.ts 的 default 分支把这类事件全部
+      // 静默丢弃——flag 开着但没有任何消费者，纯成本零收益（每个 token 一行 JSON，被切行/
+      // JSON.parse/丢弃）。真要做流式输出（text.delta）再把这个 flag 加回来：解析路径
+      // （stream_event.event.delta.text_delta.text）已经在 Task 9 报告里记录过，
+      // claudeEvents.ts 文件头也留了「本轮不实现」的说明。
     ]
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
