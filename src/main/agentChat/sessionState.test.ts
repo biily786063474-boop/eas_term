@@ -136,3 +136,27 @@ test('[补充/审查后] 改 effort 同样只记为待生效，不动当前 effo
   assert.equal(s.effort, 'medium', '当前会话的 effort 不能当场改——和 model 通道一个道理，同样不能提前生效')
   assert.equal(s.pending?.effort, 'high')
 })
+
+// ---- Task 8 补：sandbox 字段（sessionState.ts 原来没有，session.ts 接入时发现的缺口——
+// Codex 的 exec 每条消息都会触发 restart，effectiveOpts 若不带上 sandbox，
+// 每次 restart 都会静默退回 buildArgs 的默认值，用户选的 read-only 形同虚设） ----
+
+test('[Task 8 补] restart 时 opts 带上 sandbox——Codex 的每条消息都会走 restart，丢了这个字段等于沙箱选择形同虚设', () => {
+  const s = base({ cli: 'codex', sandbox: 'read-only', alive: false, resumeId: 'thread-1' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.sandbox, 'read-only')
+})
+
+test('[Task 8 补] 直接 send 时 opts 也如实带上 sandbox（不是占位空值）', () => {
+  const s = base({ sandbox: 'workspace-write' })
+  const plan = planSend(s, 1_000_100)
+  assert.equal(plan.action, 'send')
+  assert.equal(plan.opts.sandbox, 'workspace-write')
+})
+
+test('[Task 8 补] 没设过 sandbox 的会话（比如 Claude）——opts.sandbox 是 undefined，不是编造的默认值', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.opts.sandbox, undefined)
+})

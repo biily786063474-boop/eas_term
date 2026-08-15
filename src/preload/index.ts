@@ -50,6 +50,12 @@ import type {
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult} from '../shared/types'
+import type {
+  ChatEvent,
+  AgentChatStartParams,
+  AgentChatStartResult,
+  AgentChatSendResult
+} from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -689,6 +695,34 @@ const api = {
         stopBuffering(id) // 进程自己退了，缓冲区留着也没人取了
         cb(exitCode)
       }
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+  },
+  // 通用 AI CLI 对话前端的会话内核（src/main/agentChat/session.ts）。
+  // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
+  // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
+  agentChat: {
+    start: (params: AgentChatStartParams): Promise<AgentChatStartResult> =>
+      ipcRenderer.invoke('agentChat:start', params),
+    send: (sessionId: string, message: string): Promise<AgentChatSendResult> =>
+      ipcRenderer.invoke('agentChat:send', sessionId, message),
+    /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
+    setParams: (
+      sessionId: string,
+      patch: { model?: string; effort?: string }
+    ): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('agentChat:setParams', sessionId, patch),
+    resolveApproval: (
+      sessionId: string,
+      approvalId: string,
+      decision: 'allow' | 'deny'
+    ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),
+    stop: (sessionId: string): void => {
+      ipcRenderer.send('agentChat:stop', sessionId)
+    },
+    onEvent: (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
+      const channel = `agentChat:event:${sessionId}`
+      const listener = (_e: IpcRendererEvent, ev: ChatEvent): void => cb(ev)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }

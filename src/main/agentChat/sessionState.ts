@@ -22,6 +22,13 @@ export interface SessionRecord {
   lastActiveAt: number
   model?: string
   effort?: string
+  /** Codex 的沙箱级别（read-only / workspace-write / danger-full-access，对应
+   *  capabilities.sandboxLevels）。只在 start 时定一次，这里不用 pending 机制——
+   *  目前没有「运行中途改沙箱」的入口。但 Codex 的 exec 每条消息都会触发 restart
+   *  （见 session.ts），若 effectiveOpts 不把它带上，每次 restart 都会静默退回
+   *  buildArgs 里的默认值（workspace-write），用户选的 read-only 形同虚设——
+   *  这不是一个可以晚点再补的边角情形，是 Codex 场景下几乎每条消息都会踩到的路径。 */
+  sandbox?: string
   /** 待生效的模型/effort——中途改的不动当前值，下次发送时才生效（决定 3） */
   pending?: { model?: string; effort?: string }
   resumeId?: string
@@ -82,6 +89,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     cwd: s.cwd,
     model: s.pending?.model ?? s.model,
     effort: s.pending?.effort ?? s.effort,
-    resumeId: s.resumeId
+    resumeId: s.resumeId,
+    sandbox: s.sandbox
   }
 }

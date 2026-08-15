@@ -66,3 +66,18 @@ export interface CliAdapter {
    *             实测 Codex `exec` 不给会卡死在 `Reading additional input from stdin...`。 */
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' }
 }
+
+// ── session.ts 的 IPC 面用到的形状（Task 8）。放共享文件是因为 preload 和主进程
+//    两边都要用同一份，和 StartOpts/ChatEvent 一样的理由。 ──────────────────────
+
+/** agentChat:start 的入参：StartOpts 的字段（cwd/model/effort/resumeId/sandbox）
+ *  再加上要跑哪个 CLI 和第一条消息。message 必填——Codex 的 exec 需要它作为启动时的
+ *  位置参数，没法留到"启动后再补"（不像 Claude 能后写 stdin）。 */
+export interface AgentChatStartParams extends StartOpts {
+  cli: string
+  message: string
+}
+
+export type AgentChatStartResult = { ok: true; sessionId: string } | { ok: false; error: string }
+
+export type AgentChatSendResult = { ok: true } | { ok: false; error: string }
