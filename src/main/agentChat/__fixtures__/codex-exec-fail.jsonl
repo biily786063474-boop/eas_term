@@ -1,0 +1,7 @@
+{"type":"thread.started","thread_id":"01a001b6-de2d-7b51-87aa-8f2eed59483c"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"我会直接执行你给的 `ls` 命令，并把返回结果原样告诉你。"}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"/bin/zsh -lc 'ls /这个目录一定不存在xyz123'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"/bin/zsh -lc 'ls /这个目录一定不存在xyz123'","aggregated_output":"ls: /这个目录一定不存在xyz123: No such file or directory\n","exit_code":1,"status":"failed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"`ls: /这个目录一定不存在xyz123: No such file or directory`"}}
+{"type":"turn.completed","usage":{"input_tokens":24142,"cached_input_tokens":16128,"cache_write_input_tokens":0,"output_tokens":285,"reasoning_output_tokens":139}}

@@ -114,6 +114,10 @@
       {
         "from": "hooks",
         "to": "hooks"
+      },
+      {
+        "from": "resources/agent-hooks",
+        "to": "agent-hooks"
       }
     ],
     "afterSign": "build/notarize.js"

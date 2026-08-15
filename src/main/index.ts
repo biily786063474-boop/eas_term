@@ -30,6 +30,7 @@ import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
 import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
+import { registerAgentChatHandlers, killAllAgentChatSessions } from './agentChat/session.ts'
 
 // 切到后台不降速。Chromium 默认会把「隐藏/最小化/被完全遮挡」的窗口狠狠节流,
 // 实测(最小化 10s,独立探针对比):setInterval 只剩 26%、requestAnimationFrame 只剩 11%、
@@ -325,6 +326,7 @@ app.whenReady().then(() => {
   registerDesignHandlers()
   registerBizoneHandlers()
   registerIslandHandlers()
+  registerAgentChatHandlers()
   buildMenu()
   createWindow()
 
@@ -343,6 +345,9 @@ app.on('window-all-closed', () => {
 // 退出时清场：把所有终端连同它们底下跑的进程（claude / 构建 / dev server）一起收掉。
 // 分两拍是为了给 CLI 存会话的机会：先 SIGTERM，300ms 后仍活着的一律 SIGKILL。
 // 不这么做的话，app 退了那些进程还在，变成占着 CPU 和端口的孤儿。
+// agent-chat 会话（session.ts 直接 spawn 的 claude/codex 进程，不经过 PTY）跟着同一个
+// 两拍节奏一起收——同样是"进程管理"的题中之义，漏了这条，agent-chat 相关的 CLI 进程
+// 会在 app 退出后变成孤儿。
 let quitting = false
 app.on('before-quit', (e) => {
   if (quitting) return
@@ -350,12 +355,15 @@ app.on('before-quit', (e) => {
   e.preventDefault()
   destroyIsland() // 先收掉灵动岛：它会拦住 window-all-closed，退出流程会卡在这儿
   killAllPtys() // 软的
+  killAllAgentChatSessions() // 软的
   setTimeout(() => {
     if (anyPtyAlive()) killAllPtys(true) // 硬的
+    killAllAgentChatSessions(true) // 硬的
     app.quit()
   }, 300)
 })
 
 app.on('will-quit', () => {
   killAllPtys(true) // 兜底：任何路径走到这里都确保清干净
+  killAllAgentChatSessions(true)
 })

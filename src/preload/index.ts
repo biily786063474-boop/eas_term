@@ -50,6 +50,13 @@ import type {
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult} from '../shared/types'
+import type {
+  ChatEvent,
+  AgentChatStartParams,
+  AgentChatStartResult,
+  AgentChatSendResult,
+  AgentApprovalHookStatus
+} from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
 // 这里先缓冲，等 onData 注册时一次性回放，避免丢失。
@@ -90,6 +97,46 @@ function stopBuffering(id: string): void {
   if (!pending) return
   ipcRenderer.removeListener(`pty:data:${id}`, pending.listener)
   pendingBuffers.delete(id)
+}
+
+// agentChat 版本的同一个坑（审查发现的第二个 Important）：agentChat:start 的 Promise
+// resolve 之后，渲染层业务代码才拿得到 sessionId 去调 onEvent 订阅——这中间隔着一次
+// 应用层代码执行（不像上面 pty 那样，缓冲直接在 preload 内部、await 后立刻开始）。
+// 如果 spawn 同步抛错、或异步的 proc.on('error')（ENOENT 等）在订阅完成前先触发，
+// 主进程那边 `wc.send(...)` 推的事件会发到一个还没有监听者的 channel——Electron 的
+// send/on 不缓冲，直接丢弃。用户会看到「会话建立成功但从此毫无反应」，没有任何错误提示。
+// 修法跟 pty 一样：在 preload 自己的 start() 包装函数里，invoke 一 resolve 就立刻开始
+// 缓冲（不等业务代码调 onEvent），onEvent 注册时先回放缓冲区再切到实时监听。
+// 只影响全新会话的第一次 spawn——onEvent 注册过一次之后的 restart 不会再丢
+// （sessionId 不变，缓冲早就切换成实时监听器了）。
+// 按事件条数而不是字节数设上限：ChatEvent 是结构化对象不是原始字节流，正常情况下这个
+// 窗口只有毫秒级（下一个宏任务/微任务就会调 onEvent），远不会碰到这个上限；
+// 留着只是防"调用方一直不订阅"这种极端情况把内存吃穿，跟 pty 的字节上限同一个用途。
+const AGENT_CHAT_PENDING_MAX_EVENTS = 1000
+
+const agentChatPendingBuffers = new Map<
+  string,
+  { events: ChatEvent[]; listener: (e: IpcRendererEvent, ev: ChatEvent) => void }
+>()
+
+function startAgentChatBuffering(sessionId: string): void {
+  const buf = {
+    events: [] as ChatEvent[],
+    listener: (_e: IpcRendererEvent, ev: ChatEvent): void => {
+      buf.events.push(ev)
+      if (buf.events.length > AGENT_CHAT_PENDING_MAX_EVENTS) buf.events.shift()
+    }
+  }
+  ipcRenderer.on(`agentChat:event:${sessionId}`, buf.listener)
+  agentChatPendingBuffers.set(sessionId, buf)
+}
+
+/** 会话被主动关闭时收摊——缓冲区留着也没人取了，跟 pty 的 stopBuffering 同一处理 */
+function stopAgentChatBuffering(sessionId: string): void {
+  const pending = agentChatPendingBuffers.get(sessionId)
+  if (!pending) return
+  ipcRenderer.removeListener(`agentChat:event:${sessionId}`, pending.listener)
+  agentChatPendingBuffers.delete(sessionId)
 }
 
 /** 从 additionalArguments 里取主进程塞进来的构建信息（同步，界面首帧就能用） */
@@ -689,6 +736,58 @@ const api = {
         stopBuffering(id) // 进程自己退了，缓冲区留着也没人取了
         cb(exitCode)
       }
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+  },
+  // 通用 AI CLI 对话前端的会话内核（src/main/agentChat/session.ts）。
+  // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
+  // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
+  agentChat: {
+    // start 必须是 async、且必须在 invoke resolve 后立刻开始缓冲事件（不能等调用方
+    // 拿到 sessionId 后自己再调 onEvent）——见上面 AGENT_CHAT_PENDING_MAX_EVENTS
+    // 那段注释，这是照抄 pty.create 的 startBuffering 堵住同一类事件丢失窗口。
+    start: async (params: AgentChatStartParams): Promise<AgentChatStartResult> => {
+      const result: AgentChatStartResult = await ipcRenderer.invoke('agentChat:start', params)
+      if (result.ok) startAgentChatBuffering(result.sessionId)
+      return result
+    },
+    send: (sessionId: string, message: string): Promise<AgentChatSendResult> =>
+      ipcRenderer.invoke('agentChat:send', sessionId, message),
+    /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
+    setParams: (
+      sessionId: string,
+      patch: { model?: string; effort?: string }
+    ): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('agentChat:setParams', sessionId, patch),
+    /** 「AI 会话审批」PreToolUse hook 在某个项目里的安装状态——对齐 window.api.hook.status
+     *  的形状（2026-08-14 全分支评审 C1 ③）。按 cwd 查，不是全局一份。 */
+    hookStatus: (cwd: string): Promise<AgentApprovalHookStatus> =>
+      ipcRenderer.invoke('agentChat:hookStatus', cwd),
+    /** 一键卸掉某个项目里装的这条 hook——对齐 window.api.hook.uninstall 的形状。
+     *  这条 hook 比"提交即复盘"那条更侵入（PreToolUse 会阻塞，PostToolUse 不会），
+     *  至少要能对齐"一键卸干净"这条底线。 */
+    hookUninstall: (cwd: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('agentChat:hookUninstall', cwd),
+    resolveApproval: (
+      sessionId: string,
+      approvalId: string,
+      decision: 'allow' | 'deny'
+    ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),
+    stop: (sessionId: string): void => {
+      stopAgentChatBuffering(sessionId) // 会话主动关闭，缓冲区留着也没人取了
+      ipcRenderer.send('agentChat:stop', sessionId)
+    },
+    onEvent: (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
+      const channel = `agentChat:event:${sessionId}`
+      // 先把 start() 之后、这次订阅之前攒下的事件回放掉，再切到实时监听——
+      // 和 pty.onData 的做法逐字一致。
+      const pending = agentChatPendingBuffers.get(sessionId)
+      if (pending) {
+        ipcRenderer.removeListener(channel, pending.listener)
+        agentChatPendingBuffers.delete(sessionId)
+        for (const ev of pending.events) cb(ev)
+      }
+      const listener = (_e: IpcRendererEvent, ev: ChatEvent): void => cb(ev)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }

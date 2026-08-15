@@ -68,6 +68,24 @@ hook 配置写在**项目级** `.claude/settings.json`（不必动用户全局�
 ]}}
 ```
 
+
+### hook payload 的完整结构（2026-08-14 实测抓取）
+
+```
+session_id, transcript_path, cwd, prompt_id, permission_mode,
+hook_event_name, tool_name, tool_input, tool_use_id
+```
+
+**关键：hook 路有 `tool_use_id`，而流里的 `hook_started`/`hook_response` 只有 `hook_id`。
+两路没有共同的关联键**，所以审批不能靠"两路缝合"实现 —— 必须由 hook 路单独驱动，
+流里的 hook 事件只当噪音丢弃。（写设计时曾假设可以按 tool_use_id 缝合，实测证伪。）
+
+### hook 能阻塞多久（2026-08-14 实测）
+
+不设 `timeout` 字段时，**hook 睡满 70 秒未被切断**，正常返回决定、工具照常执行（总耗时 86s）。
+所以「PreToolUse hook 有 60 秒默认上限」这个说法在 2.1.232 上**不成立**——
+做审批卡片时用户有充足时间思考。已验证到 70 秒，更长未验。
+
 ### ⚠️ 三个坑（都实测踩过）
 
 1. **工具被拒后模型会撒谎说「已创建完成」**。实测 `manual` 模式下 Write 被拒，

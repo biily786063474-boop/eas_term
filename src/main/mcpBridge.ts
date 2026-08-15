@@ -4,6 +4,11 @@
 //
 // 安全三道锁：① 只监听 127.0.0.1；② 随机 token，只经 PTY env 注入给本 app 自己起的终端；
 // ③ 路径白名单（open_file/open_html 只允许项目目录内），防止把 ~/.ssh 之类渲染出来。
+//
+// 同一个 server 上还挂着「会话内核」的审批闭环（/agent-approval/request、
+// /agent-approval/resolve，见文件下方与 agentChat/approvalRoute.ts）：hook 脚本
+// （resources/agent-hooks/eas-pretooluse.mjs，独立 Node 进程）POST request 后阻塞等决定，
+// 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
 import { app, ipcMain } from 'electron'
 import http from 'http'
 import fs from 'fs'
@@ -11,6 +16,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { secretsForRun } from './secrets'
 import { mainWindow } from './island'
+import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -493,6 +499,47 @@ export function registerMcpBridge(): void {
           mcpEnabled
         })
         return send(r.ok ? 200 : 400, r)
+      }
+
+      // 审批闭环的两个端点（会话内核 Task 7）：hook 脚本（外部 Node 进程，见
+      // resources/agent-hooks/eas-pretooluse.mjs）POST /agent-approval/request 后**阻塞**
+      // 等这里的响应——Claude Code 会等 hook 进程退出才继续，这正是审批卡片成立的前提。
+      // 渲染层日后通过 /agent-approval/resolve 把人工决定写回来，把上面的等待唤醒。
+      // 挂起/超时/归一化的实际逻辑都在 approvalRoute.ts 里（可单测的纯部分已单测），
+      // 这里只做「读 body → 调用 → 回 HTTP」的胶水，与 /secret-env 那段是同一个套路。
+      //
+      // 完整 payload（不只是 approvalId）原样传给 waitForApproval——它需要 tool_name/
+      // tool_input/cwd 这些字段，通过 approvalRoute.ts 的 onApprovalRequest() 广播给
+      // 订阅者（Task 8 的 session.ts），拼成审批卡片要显示的内容。这里不解构、不裁剪，
+      // 只做 approvalIdOf 这一次早退校验（校验用的是同一份 payload，不影响后面的转发）。
+      if (req.method === 'POST' && req.url === '/agent-approval/request') {
+        const raw = await readBody(req)
+        let payload: unknown
+        try {
+          payload = JSON.parse(raw || '{}')
+        } catch {
+          return send(400, { decision: 'deny', reason: 'hook 请求体解析失败' })
+        }
+        // 拿不到 approvalId 就没法登记等待者，直接兜底 deny——不能悬在这里不回应，
+        // 那会让 Claude Code 的 hook 进程无限期卡住。（waitForApproval 内部也会做这个
+        // 检查，这里提前做只是为了能回一个 400 而不是 200，属于 HTTP 层的状态码判断。）
+        if (!approvalIdOf(payload)) return send(400, { decision: 'deny', reason: '请求缺少 tool_use_id' })
+        const decision = await waitForApproval(payload)
+        return send(200, decision)
+      }
+
+      if (req.method === 'POST' && req.url === '/agent-approval/resolve') {
+        const raw = await readBody(req)
+        let body: { approvalId?: unknown; decision?: unknown; reason?: unknown }
+        try {
+          body = JSON.parse(raw || '{}') as typeof body
+        } catch {
+          return send(400, { ok: false, error: '请求体解析失败' })
+        }
+        // 命中已登记的等待者才 true；已经超时/已经回过一次/根本没这个请求都返回 false，
+        // 不抛——resolveApproval 内部已经把 decision 兜底成 allow/deny，不会把非法值放行。
+        const ok = resolveApproval(body.approvalId, body.decision, body.reason)
+        return send(ok ? 200 : 404, { ok })
       }
 
       if (req.method !== 'POST' || req.url !== '/invoke')
