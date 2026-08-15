@@ -116,3 +116,20 @@ export interface AgentApprovalHookStatus {
   /** 写到哪个文件了——界面要如实告诉用户我们动了他哪份配置 */
   configPath: string
 }
+
+// ── B 的 Task 0：渲染层查询「有哪些 CLI 可用、各自会什么」的形状（agentChat:listClis）。
+//    CliAdapter 本身只活在主进程（listAdapters()/getAdapter() 在 adapters/index.ts），
+//    渲染层够不着——detect/buildArgs/createTranslator 这些函数字段也没法结构化克隆过 IPC。
+//    这里补一份能安全跨 IPC 传的精简形状，只留 UI 真正要用的四个字段。 ─────────────────
+
+/** agentChat:listClis 的返回元素：一个 CLI 的身份 + 可用性 + 能力声明。
+ *  capabilities 原样来自对应 CliAdapter.capabilities——UI 靠它决定渲染哪些控件
+ *  （有没有模型选择、有没有 effort、要不要显示沙箱级别），是"加第三个 CLI 时 UI 一行
+ *  不改"这条机制的输入。 */
+export interface CliInfo {
+  id: string
+  displayName: string
+  /** 探测结果缺失时为 false——宁可少显示一个选项，也不要让用户选一个装不上的 CLI 然后报错 */
+  available: boolean
+  capabilities: CliCapabilities
+}

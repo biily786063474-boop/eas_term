@@ -55,7 +55,8 @@ import type {
   AgentChatStartParams,
   AgentChatStartResult,
   AgentChatSendResult,
-  AgentApprovalHookStatus
+  AgentApprovalHookStatus,
+  CliInfo
 } from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -744,6 +745,11 @@ const api = {
   // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
   // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
   agentChat: {
+    /** 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器（空态）和工具栏（模型/effort/
+     *  沙箱选项）唯一的数据源，靠每项的 capabilities 决定渲染哪些控件。这是加第三个
+     *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，
+     *  listAdapters()/getAdapter() 此前只活在主进程，渲染层够不着）。 */
+    listClis: (): Promise<CliInfo[]> => ipcRenderer.invoke('agentChat:listClis'),
     // start 必须是 async、且必须在 invoke resolve 后立刻开始缓冲事件（不能等调用方
     // 拿到 sessionId 后自己再调 onEvent）——见上面 AGENT_CHAT_PENDING_MAX_EVENTS
     // 那段注释，这是照抄 pty.create 的 startBuffering 堵住同一类事件丢失窗口。

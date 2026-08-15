@@ -23,11 +23,12 @@ import { spawn, type ChildProcess } from 'child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
-import { getAdapter } from './adapters/index.ts'
+import { getAdapter, listAdapters } from './adapters/index.ts'
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
+import { buildCliList } from './cliList.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import type {
@@ -36,7 +37,8 @@ import type {
   AgentChatStartParams,
   AgentChatStartResult,
   AgentChatSendResult,
-  AgentApprovalHookStatus
+  AgentApprovalHookStatus,
+  CliInfo
 } from '../../shared/agentChat.ts'
 
 interface Live {
@@ -435,6 +437,22 @@ export function registerAgentChatHandlers(): void {
     for (const live of sessions.values()) {
       for (const e of live.approvals.resolve(approvalId, decision)) emitEvent(live, e)
     }
+  })
+
+  // 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器和工具栏（模型/effort/沙箱选项）
+  // 唯一的数据源（Task 0 简报：A 暴露的 8 个 IPC 里没有一个能力查询接口，listAdapters()/
+  // getAdapter() 此前只活在主进程）。探测（adapter.detect()）是这一层唯一的 IO，纯合成
+  // 逻辑在 buildCliList——可测的就是那一层，这里只做薄薄一层调用。单个 adapter 的探测
+  // 失败不该拖垮整个列表，所以逐个 catch 成 false，而不是让 Promise.all 整体 reject。
+  ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
+    const adapters = listAdapters()
+    const availability: Record<string, boolean> = {}
+    await Promise.all(
+      adapters.map(async (a) => {
+        availability[a.id] = await a.detect().catch(() => false)
+      })
+    )
+    return buildCliList(adapters, availability)
   })
 
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
