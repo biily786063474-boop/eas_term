@@ -69,6 +69,26 @@
 
 ## 四、子项目 A：会话内核
 
+> **⚠️ 本节是实施前的设计，已于 2026-08-15 完成实施，其中几条被实测推翻了。**
+> **读代码与下面这两份，不要照本节的技术细节做判断：**
+> - 实际接口行为：`docs/cli-headless-接口实测.md`（真跑出来的）
+> - 实施期的 15 条裁定与理由：`docs/superpowers/rulings/2026-08-14-会话内核-裁定.md`
+>
+> 已知被推翻的四处：
+> 1. **A.3 说「`--include-partial-messages` 必须有」** —— 实测它的增量在 `stream_event` 类型里，
+>    当前翻译器不处理，开着纯浪费，**已摘掉**（Ruling 1 与 Task 9 探针）
+> 2. **A.3 说审批「两路按 `tool_use_id` 缝合」** —— 实测流里的 hook 事件**只有 `hook_id`**，
+>    两路无共同关联键，**缝不了**。审批完全由 hook 路单独驱动（Ruling 4）
+> 3. **A.4 说 Codex 走 `app-server`** —— 该协议是 Codex 桌面应用的整个后端（93 个类型、
+>    5 种决定集互不相同的审批、v1/v2 并存），成本远超收益。**这一期走 `exec --json`**
+>    并报 `approval: []`（Ruling 5；详细评估见 `docs/codex-app-server-协议探针.md`）
+> 4. **A.2 的 `CliAdapter` 接口已扩展**：加了 `buildArgs` 返回的 `stdin`、`createTranslator()`、
+>    `approvalHook?`、`capabilities.sandboxLevels`（Ruling 9 / 10 / 最终评审 I6）
+>
+> 另有一条设计当初完全没考虑到、由最终评审发现：往用户项目装阻塞式 hook 必须
+> **显式问 + 能卸载 + 写前备份**（仓库既有规矩），后两件 A 已补，「显式问」见 §五 B.4（Ruling 15）。
+
+
 ### A.1 中间事件模型
 
 放 `src/shared/agentChat.ts`（主进程与渲染层共用）。**这套事件里不允许出现任何
