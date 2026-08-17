@@ -30,7 +30,11 @@ import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
 import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
-import { registerAgentChatHandlers, killAllAgentChatSessions } from './agentChat/session.ts'
+import {
+  registerAgentChatHandlers,
+  killAllAgentChatSessions,
+  killAgentChatSessionsForWebContents
+} from './agentChat/session.ts'
 
 // 切到后台不降速。Chromium 默认会把「隐藏/最小化/被完全遮挡」的窗口狠狠节流,
 // 实测(最小化 10s,独立探针对比):setInterval 只剩 26%、requestAnimationFrame 只剩 11%、
@@ -140,9 +144,19 @@ function createWindow(): void {
   // 页面刷新/导航时回收该窗口名下所有 PTY，避免泄漏。
   // 注意：closed 触发时 win.webContents 已销毁，必须提前取 id
   const wcId = win.webContents.id
-  win.webContents.on('did-navigate', () => killPtysForWebContents(wcId))
+  // agent 会话跟 PTY 挂在同样这两个钩子上（2026-08-17 全分支最终评审 I6）：
+  // 页面被换掉之后，新页面对旧 sessionId 一无所知，旧的 claude/codex 子进程会无人看管
+  // 地继续跑（emitEvent 因 wc.isDestroyed() 静默丢弃，再没有代码会调 stop），而 15 分钟
+  // 空闲回收对"还在吐 stdout 的长任务"根本不触发——那是真在花 token。
+  // 这个 app 自带崩溃自愈（下面的 render-process-gone → reloadWindowThrottled），
+  // 所以"窗口还在、页面被换掉"不是罕见路径。
+  win.webContents.on('did-navigate', () => {
+    killPtysForWebContents(wcId)
+    killAgentChatSessionsForWebContents(wcId)
+  })
   win.on('closed', () => {
     killPtysForWebContents(wcId)
+    killAgentChatSessionsForWebContents(wcId)
     // 灵动岛是主窗口状态的投影，主窗口没了就没有可投的东西。
     // 更要紧的是：留着它，window-all-closed 永远不会触发，app 退不掉，
     // 屏幕顶上只剩一条连不上任何东西的幽灵胶囊。

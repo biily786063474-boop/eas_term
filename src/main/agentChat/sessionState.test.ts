@@ -160,3 +160,35 @@ test('[Task 8 补] 没设过 sandbox 的会话（比如 Claude）——opts.sand
   const plan = planSend(s, 2_000_000)
   assert.equal(plan.opts.sandbox, undefined)
 })
+
+// ---- 补：skipApprovalHook 字段（用户在 B 的询问卡片上选"这次不装"）——跟 sandbox
+// 同一个理由必须原样镜像那三条测试：Codex 式的"每条消息都 restart"场景下，这个字段
+// 若不随 SessionRecord 一起被 effectiveOpts 带上，用户拒绝过一次之后，下一条消息触发
+// 的 restart 会悄悄把 hook 又装回去——那就是"假装拒绝生效"，回到本轮要修的那个问题。----
+
+test('[补] 用户选了"不装"→ restart 时 opts.skipApprovalHook 必须原样带上', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', skipApprovalHook: true })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.skipApprovalHook, true)
+})
+
+test('[补] 直接 send（不重启）时 opts 也如实带上 skipApprovalHook，不是重启专属字段', () => {
+  const s = base({ skipApprovalHook: true })
+  const plan = planSend(s, 1_000_100)
+  assert.equal(plan.action, 'send')
+  assert.equal(plan.opts.skipApprovalHook, true)
+})
+
+test('[补] 没设过 skipApprovalHook 的会话（默认路径，比如已经同意装的）——opts.skipApprovalHook 是 undefined，不是编造成 false', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.opts.skipApprovalHook, undefined)
+})
+
+test('[补] 改 model/effort 触发的 restart（决定 3 那条路径）同样要带上 skipApprovalHook——拒绝过一次之后，中途换模型不能让 hook 又悄悄装回去', () => {
+  const s = applyParamChange(base({ resumeId: 'sess-abc', skipApprovalHook: true }), { model: 'opus' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.skipApprovalHook, true, '不能因为这次 restart 是"改模型"触发的，就把用户拒绝过的选择弄丢')
+})

@@ -50,6 +50,12 @@ export interface StartOpts {
   resumeId?: string
   /** 对应 capabilities.sandboxLevels 里某一项的 id（如 Codex 的 workspace-write） */
   sandbox?: string
+  /** 跳过安装审批 hook。用户在 B 的询问卡片上明确选了"这次不装"时用——那样的会话
+   *  没有审批保护，session.ts 的 restartAndDeliver 会推一条 { k:'error', fatal:false }
+   *  notice 让他知道（Ruling 14"告知而非阻断"同一条路径，不新造机制）。
+   *  未给这个字段（undefined）时按 false 处理——没声明就是"照常装"，不能让老代码
+   *  路径因为多了这个字段而意外改变行为。 */
+  skipApprovalHook?: boolean
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts
@@ -101,6 +107,27 @@ export interface AgentChatStartParams extends StartOpts {
   message: string
 }
 
+/** 事件推送用的**单一常驻频道**（不是 `agentChat:event:<sessionId>` 那种按会话动态命名的）。
+ *  2026-08-17 全分支最终评审 C1：动态频道要求「先拿到 sessionId、再挂监听」，而主进程的
+ *  `agentChat:start` handler 在 `return` 之前就已经同步推完了首批事件（deliverMessage →
+ *  restartAndDeliver → handleEvent）——事件先到、频道上一个监听器都没有，Electron 的
+ *  send/on 不缓冲，直接丢弃。评审用隔离 Electron 探针实测过这个窗口：同步推的组
+ *  30 条只捕获到 1 条。丢掉的正好是「本次会话没有审批保护」那条硬验收 notice。
+ *
+ *  改成常驻单频道之后，preload 在**模块加载期**（远早于任何 invoke）就把唯一的监听器挂上，
+ *  按 payload 里的 sessionId 路由：有订阅者就直接投递，没有就先缓冲、等 onEvent 来取。
+ *  「订阅之前的事件」结构上不可能丢，不再依赖任何时序假设。
+ *
+ *  **别把它改回按 sessionId 命名的动态频道**——那等于把正确性重新建立在
+ *  「用户手速不够快」「spawn 一定比 IPC reply 慢」这类没有保证的假设上。 */
+export const AGENT_CHAT_EVENT_CHANNEL = 'agentChat:event'
+
+/** 常驻频道上的信封：事件本体 + 它属于哪个会话（动态频道时代这个信息由频道名承载）。 */
+export interface AgentChatEventEnvelope {
+  sessionId: string
+  event: ChatEvent
+}
+
 export type AgentChatStartResult = { ok: true; sessionId: string } | { ok: false; error: string }
 
 export type AgentChatSendResult = { ok: true } | { ok: false; error: string }
@@ -115,4 +142,37 @@ export interface AgentApprovalHookStatus {
   outdated: boolean
   /** 写到哪个文件了——界面要如实告诉用户我们动了他哪份配置 */
   configPath: string
+}
+
+// ── B 的 Task 0：渲染层查询「有哪些 CLI 可用、各自会什么」的形状（agentChat:listClis）。
+//    CliAdapter 本身只活在主进程（listAdapters()/getAdapter() 在 adapters/index.ts），
+//    渲染层够不着——detect/buildArgs/createTranslator 这些函数字段也没法结构化克隆过 IPC。
+//    这里补一份能安全跨 IPC 传的精简形状，只留 UI 真正要用的四个字段。 ─────────────────
+
+/** agentChat:listClis 的返回元素：一个 CLI 的身份 + 可用性 + 能力声明。
+ *  capabilities 原样来自对应 CliAdapter.capabilities——UI 靠它决定渲染哪些控件
+ *  （有没有模型选择、有没有 effort、要不要显示沙箱级别），是"加第三个 CLI 时 UI 一行
+ *  不改"这条机制的输入。 */
+export interface CliInfo {
+  id: string
+  displayName: string
+  /** 探测结果缺失时为 false——宁可少显示一个选项，也不要让用户选一个装不上的 CLI 然后报错 */
+  available: boolean
+  capabilities: CliCapabilities
+  /** 原样透传 CliAdapter.approvalHook——**UI 判断"审批那一块该不该出现"唯一正确的依据**
+   *  （2026-08-17 全分支最终评审 I2/I3）。
+   *
+   *  在这个字段存在之前，渲染层只能拿 `capabilities.approval.length > 0` 当替身，
+   *  而主进程真正的判据是 `adapter.approvalHook === 'claude-pretooluse'`。今天两个
+   *  adapter 恰好在这两个判据上重合，所以看不出来；第三个 CLI 一接进来就分叉：
+   *  - I3：UI 弹「要不要装审批钩子」的卡片 → 用户点「不装」→ 主进程那个分支从不进入
+   *    → 既不装、也不推 notice，用户以为自己拒绝了什么，实际什么都没发生；
+   *  - I2：工具栏那个「审批保护 已开启/未开启」chip 与「卸载」按钮本来无条件渲染，
+   *    在 Codex 节点上显示的是 **Claude** 的 hook 状态（Codex 走 exec --json、approval
+   *    是空数组、根本没有逐次审批，权限由沙箱决定——工具栏另一侧同时还在显示沙箱级别，
+   *    两条信息互相矛盾），点那个「卸载」删掉的也是 Claude 的 hook。
+   *
+   *  **这是能力声明，不是 CLI 名字**——UI 判 `approvalHook === 'claude-pretooluse'`
+   *  不违反"UI 不许按 CLI 名字分支"这条硬约束，判 `id === 'claude'` 才违反。 */
+  approvalHook?: CliAdapter['approvalHook']
 }

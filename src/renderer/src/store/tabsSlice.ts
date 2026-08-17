@@ -54,6 +54,10 @@ export interface TabsSlice {
   ) => void
   closeLeafSafely: (tabId: string, leafId: string) => Promise<void>
   setPaneKind: (tabId: string, leafId: string, kind: PaneKind) => Promise<void>
+  /** agent 会话真正建立后，把 sessionId 写回这个 leaf 的 PaneState——killPanePty
+   *  （shared.ts）关闭节点时只认这里存的值，组件本地的 useState 它够不着。
+   *  找不到这个 leaf（面板已经被整个关掉）就安静地不做事，不抛错。 */
+  setAgentSessionId: (tabId: string, leafId: string, sessionId: string) => void
   setActiveLeaf: (tabId: string, leafId: string) => void
   setSplitRatio: (tabId: string, splitId: string, ratio: number) => void
 }
@@ -390,6 +394,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       pane = { kind: 'history', cwd: tab.cwd }
     } else if (kind === 'chat') {
       pane = { kind: 'chat', cwd: tab.cwd }
+    } else if (kind === 'agent') {
+      // 不出现在面板下拉框里（唯一入口是子项目 C 的画布默认节点），但 PaneKind 一扩员，
+      // 下面兜底的 else 分支（`{ kind, filePath: null }`）就会尝试拿它去凑 code/image 的
+      // 形状——编译不过。照 history/chat 的样子单独分支，只是为了让这个联合类型保持穷尽。
+      pane = { kind: 'agent', cwd: tab.cwd }
     } else if (kind === 'dict') {
       pane = { kind: 'dict' }
     } else if (kind === 'wiki') {
@@ -403,6 +412,28 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       tabs: st.tabs.map((t) =>
         t.id === tabId ? { ...t, root: updatePane(t.root, leafId, pane) } : t
       )
+    }))
+  },
+
+  // agent 会话建立成功后调用（AgentChatView），把 sessionId 落进 store 而不是只留在
+  // 组件的 useState 里——2026-08-15 审查 Important：killPanePty 关闭节点时只能读到
+  // 这里存的 PaneState.sessionId，组件本地状态它完全够不着，不写回的话「关掉正在跑
+  // 的 agent 节点」不会停底层 CLI 进程，会在主进程那边空转到 15 分钟空闲回收阈值——
+  // 期间可能仍在执行工具调用，真实消耗 API token。
+  // 独立于组件生命周期：调用方即使已经卸载也该在拿到 sessionId 的第一时间调这个
+  // （不要等 setState 生效），否则「start() 的 await 还没回来、面板就被关掉」这种
+  // 时序下 sessionId 从诞生起就不可追踪。找不到这个 leaf（面板已经整个被关掉/tab
+  // 已经整个消失）时安静地原样返回，不抛错——那种情况下会话确实已不可追踪，是
+  // 已知的窄窗口边界，见 task-3-report.md。
+  setAgentSessionId: (tabId, leafId, sessionId) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        const pane: PaneState = { ...leaf.pane, sessionId }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
     }))
   },
 

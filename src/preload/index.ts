@@ -50,12 +50,15 @@ import type {
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult} from '../shared/types'
+import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
   AgentChatStartParams,
   AgentChatStartResult,
   AgentChatSendResult,
-  AgentApprovalHookStatus
+  AgentApprovalHookStatus,
+  AgentChatEventEnvelope,
+  CliInfo
 } from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -99,44 +102,84 @@ function stopBuffering(id: string): void {
   pendingBuffers.delete(id)
 }
 
-// agentChat 版本的同一个坑（审查发现的第二个 Important）：agentChat:start 的 Promise
-// resolve 之后，渲染层业务代码才拿得到 sessionId 去调 onEvent 订阅——这中间隔着一次
-// 应用层代码执行（不像上面 pty 那样，缓冲直接在 preload 内部、await 后立刻开始）。
-// 如果 spawn 同步抛错、或异步的 proc.on('error')（ENOENT 等）在订阅完成前先触发，
-// 主进程那边 `wc.send(...)` 推的事件会发到一个还没有监听者的 channel——Electron 的
-// send/on 不缓冲，直接丢弃。用户会看到「会话建立成功但从此毫无反应」，没有任何错误提示。
-// 修法跟 pty 一样：在 preload 自己的 start() 包装函数里，invoke 一 resolve 就立刻开始
-// 缓冲（不等业务代码调 onEvent），onEvent 注册时先回放缓冲区再切到实时监听。
-// 只影响全新会话的第一次 spawn——onEvent 注册过一次之后的 restart 不会再丢
-// （sessionId 不变，缓冲早就切换成实时监听器了）。
-// 按事件条数而不是字节数设上限：ChatEvent 是结构化对象不是原始字节流，正常情况下这个
-// 窗口只有毫秒级（下一个宏任务/微任务就会调 onEvent），远不会碰到这个上限；
-// 留着只是防"调用方一直不订阅"这种极端情况把内存吃穿，跟 pty 的字节上限同一个用途。
+// ── agentChat 的事件通道：单一常驻频道 + 模块加载期就挂好的永久监听器 ──────────────
+//
+// 上面 pty 那套「invoke 一 resolve 就开始缓冲」的范式**不能照搬到这里**，2026-08-17
+// 全分支最终评审 C1 实测（隔离 Electron 探针，30 次采样）证实了这一点：
+//   - `pty:create` 的主进程 handler 里**没有**同步 `wc.send`，第一批数据要等 pty 真的
+//     吐字节，那时 await 早就回来了——范式成立的前提是这个，不是「await 之后就安全」。
+//   - `agentChat:start` 的 handler 在 `return` **之前**就同步走完 deliverMessage →
+//     restartAndDeliver → handleEvent → wc.send。事件先于 invoke 的 reply 到达渲染进程，
+//     此刻按 sessionId 命名的动态频道上一个监听器都没有 → Electron 直接丢弃。
+//     探针数字：同步推的一组 30 条只捕获到 1 条；把 send 推迟到 handler 返回之后的
+//     对照组 30/30。丢掉的正好是「你选了这次不装，本次会话没有审批保护」那条硬验收
+//     notice——用户以为自己受保护，其实没有。
+//
+// 所以这里不再有「什么时候开始缓冲」这个问题：频道是固定的 AGENT_CHAT_EVENT_CHANNEL，
+// 监听器在**模块加载期**（preload 执行的第一时间，远早于任何 invoke）就挂上，按 payload
+// 里的 sessionId 路由——有订阅者直接投递，没有就先缓冲，等 onEvent 来取。
+// 「订阅之前的事件」结构上不可能丢，不依赖任何时序假设。
+//
+// 按事件条数而不是字节数设上限：ChatEvent 是结构化对象不是原始字节流。正常情况下
+// 缓冲窗口只有毫秒级（start() 返回后的同一个 tick 里就会调 onEvent），远碰不到这个
+// 上限；留着只是防"调用方一直不订阅"这种极端情况把内存吃穿，跟 pty 的字节上限同一用途。
 const AGENT_CHAT_PENDING_MAX_EVENTS = 1000
 
-const agentChatPendingBuffers = new Map<
-  string,
-  { events: ChatEvent[]; listener: (e: IpcRendererEvent, ev: ChatEvent) => void }
->()
+/** sessionId → 已注册的订阅回调。用 Set 而不是单个回调：动态频道时代 `ipcRenderer.on`
+ *  允许同一个会话挂多个监听器，换成 Map<string, cb> 会让"第二个订阅者静默顶掉第一个"
+ *  变成一个没有任何信号的新行为差异。 */
+const agentChatListeners = new Map<string, Set<(e: ChatEvent) => void>>()
+/** sessionId → 还没人订阅时先攒下的事件。第一个订阅者取走后即删除。 */
+const agentChatPendingEvents = new Map<string, ChatEvent[]>()
 
-function startAgentChatBuffering(sessionId: string): void {
-  const buf = {
-    events: [] as ChatEvent[],
-    listener: (_e: IpcRendererEvent, ev: ChatEvent): void => {
-      buf.events.push(ev)
-      if (buf.events.length > AGENT_CHAT_PENDING_MAX_EVENTS) buf.events.shift()
-    }
+/** 已经调用过 stop() 的会话 id——只增不删。2026-08-17 全分支最终评审 Minor-1 实测：
+ *  `agentChat:stop` 在主进程只是 `sessions.delete(id)` + `proc.kill()`，管道里已经在飞
+ *  的 stdout 仍会被 `wireProc` 的 `data` 回调继续翻译、`emitEvent` 只判 `wc.isDestroyed()`
+ *  不判会话还在不在表里——于是 stop() 之后仍可能有尾随事件送到这个常驻监听器。这些
+ *  sessionId 在下面的监听器里如果按老规矩"没有订阅者就缓冲"，会在 agentChatPendingEvents
+ *  里建一条**永远没人来取**的条目（实测：`stop` 后 pending 从 1 涨到 2 且不再清，
+ *  其中 `exec.done.output` 是未截断的全量工具输出）——这个 app 是长跑工具，用户全天
+ *  开着，关一个 agent 节点漏一点、渲染进程活多久就攒多久。
+ *
+ *  这个集合本身只增不删，是刻意的取舍：每项只有一个 sessionId 字符串（sessionId 由
+ *  session.ts 用 `ac-${nextId++}` 递增生成，进程内不会重复，见 src/main/agentChat/
+ *  session.ts），代价是几十字节；换来的是防住一整条 ChatEvent（可能带着未截断的工具
+ *  输出）永久滞留在 agentChatPendingEvents 里。用一个有界的小代价换一个无界的大代价——
+ *  跟本仓库「长跑资源」那份立档同一个判断依据："不是泄漏是固定成本×规模"，这里的规模是
+ *  "这个渲染进程活着的这段时间里，用户关过多少个 agent 会话"，比 PTY scrollback 那个
+ *  量级小得多，不值得为了摊平这几十字节再引入一个定时器去清它、平添一个新的时序假设。
+ *
+ *  **绝不能反过来做成白名单**（只有 start() resolve 之后才允许缓冲）——那样会把 C1
+ *  刚修好的窗口重新打开：最早那批事件正是在 start() 的 promise resolve 之前就同步
+ *  到达的，此时还不知道 sessionId 是"活的"，白名单里不会有它。 */
+const stoppedAgentChatSessionIds = new Set<string>()
+
+ipcRenderer.on(AGENT_CHAT_EVENT_CHANNEL, (_e: IpcRendererEvent, envelope: AgentChatEventEnvelope) => {
+  if (!envelope || typeof envelope.sessionId !== 'string') return
+  const subs = agentChatListeners.get(envelope.sessionId)
+  if (subs && subs.size > 0) {
+    for (const cb of subs) cb(envelope.event)
+    return
   }
-  ipcRenderer.on(`agentChat:event:${sessionId}`, buf.listener)
-  agentChatPendingBuffers.set(sessionId, buf)
-}
+  // 会话已经 stop() 过：不会再有人订阅，尾随事件直接丢弃，不再建缓冲条目
+  // （见上面 stoppedAgentChatSessionIds 的注释）。
+  if (stoppedAgentChatSessionIds.has(envelope.sessionId)) return
+  let buf = agentChatPendingEvents.get(envelope.sessionId)
+  if (!buf) {
+    buf = []
+    agentChatPendingEvents.set(envelope.sessionId, buf)
+  }
+  buf.push(envelope.event)
+  if (buf.length > AGENT_CHAT_PENDING_MAX_EVENTS) buf.shift()
+})
 
-/** 会话被主动关闭时收摊——缓冲区留着也没人取了，跟 pty 的 stopBuffering 同一处理 */
+/** 会话被主动关闭时收摊——订阅表与缓冲区都留着也没人取了，跟 pty 的 stopBuffering 同一处理。
+ *  额外记一笔"这个会话已经死了"（见 stoppedAgentChatSessionIds），挡住关闭之后的尾随事件
+ *  重新建一条没人取的缓冲。 */
 function stopAgentChatBuffering(sessionId: string): void {
-  const pending = agentChatPendingBuffers.get(sessionId)
-  if (!pending) return
-  ipcRenderer.removeListener(`agentChat:event:${sessionId}`, pending.listener)
-  agentChatPendingBuffers.delete(sessionId)
+  agentChatListeners.delete(sessionId)
+  agentChatPendingEvents.delete(sessionId)
+  stoppedAgentChatSessionIds.add(sessionId)
 }
 
 /** 从 additionalArguments 里取主进程塞进来的构建信息（同步，界面首帧就能用） */
@@ -744,14 +787,18 @@ const api = {
   // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
   // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
   agentChat: {
-    // start 必须是 async、且必须在 invoke resolve 后立刻开始缓冲事件（不能等调用方
-    // 拿到 sessionId 后自己再调 onEvent）——见上面 AGENT_CHAT_PENDING_MAX_EVENTS
-    // 那段注释，这是照抄 pty.create 的 startBuffering 堵住同一类事件丢失窗口。
-    start: async (params: AgentChatStartParams): Promise<AgentChatStartResult> => {
-      const result: AgentChatStartResult = await ipcRenderer.invoke('agentChat:start', params)
-      if (result.ok) startAgentChatBuffering(result.sessionId)
-      return result
-    },
+    /** 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器（空态）和工具栏（模型/effort/
+     *  沙箱选项）唯一的数据源，靠每项的 capabilities 决定渲染哪些控件。这是加第三个
+     *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，
+     *  listAdapters()/getAdapter() 此前只活在主进程，渲染层够不着）。 */
+    listClis: (): Promise<CliInfo[]> => ipcRenderer.invoke('agentChat:listClis'),
+    // start 只是一次普通 invoke——**这里不需要、也不该再有"开始缓冲"这一步**。
+    // 缓冲由模块加载期就挂好的常驻监听器负责（见上面 AGENT_CHAT_EVENT_CHANNEL 那段）：
+    // 主进程在 handler 返回前同步推的那些事件，到达时监听器早就在了，会按 sessionId
+    // 攒进待取缓冲区，等 onEvent 来领。修复前这里是 `await invoke` 之后才挂监听，
+    // 那批事件必然落在窗口外被丢弃（评审探针：30 条只到 1 条）。
+    start: (params: AgentChatStartParams): Promise<AgentChatStartResult> =>
+      ipcRenderer.invoke('agentChat:start', params),
     send: (sessionId: string, message: string): Promise<AgentChatSendResult> =>
       ipcRenderer.invoke('agentChat:send', sessionId, message),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
@@ -778,18 +825,25 @@ const api = {
       ipcRenderer.send('agentChat:stop', sessionId)
     },
     onEvent: (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
-      const channel = `agentChat:event:${sessionId}`
-      // 先把 start() 之后、这次订阅之前攒下的事件回放掉，再切到实时监听——
-      // 和 pty.onData 的做法逐字一致。
-      const pending = agentChatPendingBuffers.get(sessionId)
-      if (pending) {
-        ipcRenderer.removeListener(channel, pending.listener)
-        agentChatPendingBuffers.delete(sessionId)
-        for (const ev of pending.events) cb(ev)
+      // 先登记订阅、再回放缓冲——两步之间不可能插进新事件（IPC 事件是宏任务，
+      // 这里是同步代码），顺序颠倒反而会让回放期间到达的事件被当成"没人订阅"再攒一遍。
+      let subs = agentChatListeners.get(sessionId)
+      if (!subs) {
+        subs = new Set()
+        agentChatListeners.set(sessionId, subs)
       }
-      const listener = (_e: IpcRendererEvent, ev: ChatEvent): void => cb(ev)
-      ipcRenderer.on(channel, listener)
-      return () => ipcRenderer.removeListener(channel, listener)
+      subs.add(cb)
+      const pending = agentChatPendingEvents.get(sessionId)
+      if (pending) {
+        agentChatPendingEvents.delete(sessionId)
+        for (const ev of pending) cb(ev)
+      }
+      return () => {
+        const cur = agentChatListeners.get(sessionId)
+        if (!cur) return
+        cur.delete(cb)
+        if (cur.size === 0) agentChatListeners.delete(sessionId)
+      }
     }
   }
 }

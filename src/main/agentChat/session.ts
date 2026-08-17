@@ -23,20 +23,24 @@ import { spawn, type ChildProcess } from 'child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
-import { getAdapter } from './adapters/index.ts'
+import { getAdapter, listAdapters } from './adapters/index.ts'
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
+import { buildCliList } from './cliList.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
+import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
 import type {
   ChatEvent,
   StartOpts,
   AgentChatStartParams,
   AgentChatStartResult,
   AgentChatSendResult,
-  AgentApprovalHookStatus
+  AgentApprovalHookStatus,
+  AgentChatEventEnvelope,
+  CliInfo
 } from '../../shared/agentChat.ts'
 
 interface Live {
@@ -48,6 +52,11 @@ interface Live {
   /** 这个会话的事件只推给创建它的那个 webContents——不是全窗口广播。
    *  和 pty.ts 的 `wc.send(pty:data:${id}, ...)` 同一个道理。 */
   wc: WebContents
+  /** 创建它的 webContents 的数字 id，创建时就取好。**不要在清理时现读 live.wc.id**：
+   *  `win.on('closed')` 触发时 webContents 已经销毁，读它的属性会抛
+   *  （index.ts 里那句 `const wcId = win.webContents.id` 提前取值就是为了这个）。
+   *  pty.ts 的 entry.wcId 是同样的做法。 */
+  wcId: number
 }
 
 const sessions = new Map<string, Live>()
@@ -217,8 +226,15 @@ function approvalHookStatus(cwd: string): AgentApprovalHookStatus {
 
 // ── 事件推送 + 会话状态的机械式更新（不是判定，只是照实记录已经发生的事） ──────────────
 
+/** 推给创建这个会话的那个 webContents。频道是**常驻单频道**、sessionId 走 payload——
+ *  不是 `agentChat:event:<id>` 那种动态频道（2026-08-17 全分支最终评审 C1：本 handler
+ *  在 `return` 之前就同步推完首批事件，动态频道那时还没有任何监听器，事件被静默丢弃；
+ *  实测 30 条只到 1 条）。详见 shared/agentChat.ts 的 AGENT_CHAT_EVENT_CHANNEL 注释。 */
 function emitEvent(live: Live, e: ChatEvent): void {
-  if (!live.wc.isDestroyed()) live.wc.send(`agentChat:event:${live.rec.id}`, e)
+  if (!live.wc.isDestroyed()) {
+    const envelope: AgentChatEventEnvelope = { sessionId: live.rec.id, event: e }
+    live.wc.send(AGENT_CHAT_EVENT_CHANNEL, envelope)
+  }
 }
 
 /** translator 产出的事件里，session.ready 携带了 CLI 原生的会话/线程 id——
@@ -309,13 +325,33 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // 不该被这个判据误当成"要装 Claude 的 hook"）。装不上不阻断会话启动，但必须让用户
   // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
   if (adapter.approvalHook === 'claude-pretooluse') {
-    const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
-    if (!hook.ok) {
+    if (opts.skipApprovalHook) {
+      // 用户明确表达过"这个会话不要这条 hook"，不是装不上——但对他来说结果是一样的：
+      // "这次会话没有审批保护"，所以复用装不上时的同一条事件路径通知他，不新造机制
+      // （Ruling 14"告知而非阻断"同样适用：哪怕是他自己选的，也不能因此就默不作声，
+      // notice 该出现的地方还是要出现）。
+      //
+      // 措辞要同时对得上两条来路，别再写死"你选择了这次不安装"：
+      //   ① 起会话时在询问卡片上点了「这次不装，直接开始」（Ruling 15 划给 B 的那条）；
+      //   ② 会话中途点了工具栏的「卸载」——2026-08-17 最终评审 I1 之后，卸载会把该 cwd
+      //      下的活会话一并置为 skipApprovalHook，于是也会走到这里。
+      // 末句也不再承诺"随时可以在工具栏重新开启"：工具栏在未安装状态下并没有开启入口，
+      // 那是一句用户照做不了的话（这条 hook 的安装入口目前只有节点第一条消息的询问卡片）。
       handleEvent(live, {
         k: 'error',
         fatal: false,
-        message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+        message:
+          '本次会话未开启审批保护（你选择了不安装，或中途卸载过）：工具调用将按默认权限直接执行，不会等待你的确认。要重新开启，新建一个 agent 节点、在询问卡片上选「装上」。'
       })
+    } else {
+      const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
+      if (!hook.ok) {
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+        })
+      }
     }
   }
 
@@ -406,6 +442,33 @@ export function killAllAgentChatSessions(hard = false): void {
   }
 }
 
+/** 页面被换掉（重载/导航）或窗口关闭时，回收这个 webContents 名下的全部会话——
+ *  对称于 pty.ts 的 killPtysForWebContents（2026-08-17 全分支最终评审 I6：
+ *  index.ts 上只有 PTY 的这两个钩子，agentChat 一个都没有）。
+ *
+ *  为什么非有不可：这个 app 自带崩溃自愈（render-process-gone → reloadWindowThrottled）。
+ *  重载后的新页面对旧 sessionId 一无所知（agent 节点本来也不跨重载持久化），旧的
+ *  claude/codex 子进程就此无人看管地继续跑；emitEvent 因为 wc.isDestroyed() 静默丢弃，
+ *  再没有任何代码会调 stop。兜底只有 15 分钟空闲回收，而 lastActiveAt **每收到一块
+ *  stdout 就续期**——一个还在跑的长任务可以远超 15 分钟不被回收，真花 token。
+ *
+ *  软杀之后补一拍硬杀：这条路径上没有人再盯着这些进程了（不像 app 退出时 index.ts
+ *  会走完两拍），赖着不退的进程就是永久孤儿。 */
+export function killAgentChatSessionsForWebContents(wcId: number): void {
+  for (const [id, live] of sessions) {
+    if (live.wcId !== wcId) continue
+    sessions.delete(id)
+    const proc = live.proc
+    live.proc = undefined
+    if (!proc) continue
+    proc.kill('SIGTERM')
+    setTimeout(() => {
+      // killed 已经为真说明信号送达过；仍在跑的（exitCode/signalCode 都是 null）再补一刀
+      if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL')
+    }, 300).unref?.()
+  }
+}
+
 export function registerAgentChatHandlers(): void {
   setInterval(reapIdleSessions, 60_000)
 
@@ -437,6 +500,22 @@ export function registerAgentChatHandlers(): void {
     }
   })
 
+  // 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器和工具栏（模型/effort/沙箱选项）
+  // 唯一的数据源（Task 0 简报：A 暴露的 8 个 IPC 里没有一个能力查询接口，listAdapters()/
+  // getAdapter() 此前只活在主进程）。探测（adapter.detect()）是这一层唯一的 IO，纯合成
+  // 逻辑在 buildCliList——可测的就是那一层，这里只做薄薄一层调用。单个 adapter 的探测
+  // 失败不该拖垮整个列表，所以逐个 catch 成 false，而不是让 Promise.all 整体 reject。
+  ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
+    const adapters = listAdapters()
+    const availability: Record<string, boolean> = {}
+    await Promise.all(
+      adapters.map(async (a) => {
+        availability[a.id] = await a.detect().catch(() => false)
+      })
+    )
+    return buildCliList(adapters, availability)
+  })
+
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
     const p = params as Partial<AgentChatStartParams> | null
     if (!p || typeof p.cli !== 'string' || typeof p.cwd !== 'string' || typeof p.message !== 'string' || !p.message) {
@@ -455,11 +534,15 @@ export function registerAgentChatHandlers(): void {
       model: typeof p.model === 'string' ? p.model : undefined,
       effort: typeof p.effort === 'string' ? p.effort : undefined,
       sandbox: typeof p.sandbox === 'string' ? p.sandbox : undefined,
-      resumeId: typeof p.resumeId === 'string' ? p.resumeId : undefined
+      resumeId: typeof p.resumeId === 'string' ? p.resumeId : undefined,
+      // === true 而不是 Boolean(p.skipApprovalHook)：params 来自 unknown，任何非严格
+      // 布尔值（字符串 'true'、1……）一律当没给，照旧装 hook，不猜用户意图。
+      skipApprovalHook: p.skipApprovalHook === true
     }
     const live: Live = {
       rec,
       wc: e.sender,
+      wcId: e.sender.id,
       // translator 由 adapter 自己声明创建（2026-08-14 全分支评审 I6 第 1 点：Ruling 10
       // 给 stdin 立的原则逐字适用于这里——adapter 知道自己怎么工作，不靠下游按 id 分支去
       // 记每个 CLI 的怪癖。改之前这里写的是 `adapter.id === 'codex' ? ... : ...`，加第三个
@@ -520,7 +603,28 @@ export function registerAgentChatHandlers(): void {
   ipcMain.handle('agentChat:hookUninstall', (_e, cwd: unknown): { ok: boolean; error?: string } => {
     if (typeof cwd !== 'string' || !cwd) return { ok: false, error: 'cwd 必填' }
     const r = uninstallApprovalHook(cwd)
-    return r.ok ? { ok: true } : { ok: false, error: r.reason }
+    if (!r.ok) return { ok: false, error: r.reason }
+    // 卸载成功之后，把这个项目下所有活会话标成「这次不装」——否则下一次 restart
+    // （空闲回收后再发消息、或改 model/effort；Codex 更是每条消息都 restart）会读到
+    // skipApprovalHook=false，无条件把 hook 重新写回用户自己的仓库，没有询问、没有提示
+    // （2026-08-17 全分支最终评审 I1，用户原话会是"我明明卸载了，它自己回来了"）。
+    // spec §B.4「第一次要在某个项目里装这个 hook 时先问用户」——手动卸载之后再装，
+    // 实质就是又一次"要装"，而 handleSend 里的询问只在节点的第一条消息触发一次。
+    //
+    // 范围是「同一个 cwd 下的所有活会话」而不是「发起这次调用的那个会话」：hook 是按
+    // 项目装在 <cwd>/.claude/settings.json 的一份文件，同项目里任何一个会话 restart
+    // 都会把它装回来，只标记调用者等于没修。
+    // 走 path.resolve 再比，避免尾斜杠/相对写法这类无关差异造成漏标。
+    // 就地改 live.rec，不要 sessions.set(id, {...live}) 换一个新的 Live 对象——
+    // wireProc 里那些 stdout/exit 回调闭包捕获的是**原来那个** Live 引用，换对象会让
+    // 进程侧继续写老对象、查询侧读新对象，两份状态从此分叉（全文件都是就地改 live.rec
+    // 的写法，这里保持一致）。
+    const target = path.resolve(cwd)
+    for (const live of sessions.values()) {
+      if (path.resolve(live.rec.cwd) !== target) continue
+      live.rec = { ...live.rec, skipApprovalHook: true }
+    }
+    return { ok: true }
   })
 
   ipcMain.on('agentChat:stop', (_e, sessionId: unknown) => {

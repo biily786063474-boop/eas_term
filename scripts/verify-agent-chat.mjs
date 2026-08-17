@@ -640,6 +640,17 @@ async function runDriver() {
     sessionMod.registerAgentChatHandlers()
     dlog('registerAgentChatHandlers() 完成')
 
+    // 2026-08-17 全分支最终评审后的收尾修复：事件通道从按会话动态命名
+    // （`agentChat:event:<sessionId>`）改成了常驻单频道 + 信封（见 src/shared/agentChat.ts
+    // 的 AGENT_CHAT_EVENT_CHANNEL / AgentChatEventEnvelope）。这里从源头 import 那个常量，
+    // 不在本脚本里重复写一份字面量——上一次改造就是各处各写各的，改的时候漏了这一处，
+    // 这条脚本悄悄失效了好几天没人发现（events 恒为空，四条断言全 false，卡满 150s）。
+    const agentChatShared = await import(
+      pathToFileURL(path.join(PROJECT_ROOT, 'src/shared/agentChat.ts')).href
+    )
+    const AGENT_CHAT_EVENT_CHANNEL = agentChatShared.AGENT_CHAT_EVENT_CHANNEL
+    dlog('AGENT_CHAT_EVENT_CHANNEL =', AGENT_CHAT_EVENT_CHANNEL)
+
     // 隐藏窗口充当"前端"：不加载真正的 preload，直接开 nodeIntegration 让页面自己
     // require('electron') 调 ipcRenderer——省掉 contextBridge 那层，行为上等价
     // （已用独立探针验证过这个组合能正确跑通 invoke 往返 + e.sender 有效）。
@@ -655,7 +666,15 @@ async function runDriver() {
     // 独立脚本验过那个问题本身，这里不重复验，只是不想让本脚本自己的订阅时机成为
     // 新的丢事件来源，干扰对 session.ts 本身的判断）。
     win.webContents.send = (channel, ...args) => {
-      if (channel.startsWith('agentChat:event:')) events.push(args[0])
+      // 常驻频道上推的是信封 { sessionId, event }，不是裸的 ChatEvent——这里只解包
+      // event 本体塞进 events 数组，下面所有断言（e.k / e.approvalId / e.usage）才对
+      // 得上。本脚本全程只起一个会话（见下面唯一一次 agentChat:start 调用），不需要
+      // 也没法按 sessionId 过滤：最早那几条事件在 start() resolve、拿到 sessionId 之前
+      // 就已经同步到达了——这正是 C1 那个 Critical 要验的窗口本身。
+      if (channel === AGENT_CHAT_EVENT_CHANNEL) {
+        const envelope = args[0]
+        if (envelope && envelope.event) events.push(envelope.event)
+      }
       return origSend(channel, ...args)
     }
     await win.loadURL('about:blank')

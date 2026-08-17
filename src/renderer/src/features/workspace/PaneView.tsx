@@ -9,6 +9,7 @@ import { DiffView } from '../editor/DiffView'
 import { ImageView } from '../image/ImageView'
 import { HistoryView } from '../git/HistoryView'
 import { ChatNavView } from '../chat/ChatNavView'
+import { AgentChatView } from '../agentChat/AgentChatView'
 import { WebView } from '../web/WebView'
 import { useCanvasWheelPassthrough } from '../canvas/wheelPassthrough'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
@@ -35,12 +36,14 @@ import {
   SplitVIcon,
   CheckIcon,
   GlobeIcon,
-  FilesIcon
+  FilesIcon,
+  SparkleIcon
 } from '../../ui/Icons'
 
 const PANE_GAP = 3
 
-// 下拉框可切换到的面板类型（不含 history —— 它只从侧栏「版本」打开）
+// 下拉框可切换到的面板类型（不含 history/agent —— 前者只从侧栏「版本」打开，
+// 后者唯一的创建入口是子项目 C 的画布默认节点，见 layout.ts 的 PaneKind 注释）
 const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }[] = [
   { kind: 'terminal', label: '终端', Icon: TerminalIcon },
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
@@ -50,13 +53,14 @@ const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }
   { kind: 'wiki', label: '知识库', Icon: FilesIcon }
 ]
 
-// 显示当前类型用（含 history，供头部展示）
+// 显示当前类型用（含 history/agent，供头部展示）
 const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }> = {
   terminal: { label: '终端', Icon: TerminalIcon },
   code: { label: '代码预览', Icon: CodeIcon },
   image: { label: '图片预览', Icon: ImageIcon },
   history: { label: '历史', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
+  agent: { label: 'AI 对话', Icon: SparkleIcon },
   dict: { label: '名词词典', Icon: DictIcon },
   web: { label: '网页', Icon: GlobeIcon },
   wiki: { label: '知识库', Icon: FilesIcon }
@@ -463,6 +467,9 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'image' && <ImageView filePath={pane.filePath} cwd={tabCwd} />}
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
+        {pane.kind === 'agent' && (
+          <AgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
+        )}
         {pane.kind === 'wiki' && (
           <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>
             <WikiView />
