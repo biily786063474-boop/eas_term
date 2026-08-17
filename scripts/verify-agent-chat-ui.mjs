@@ -1175,7 +1175,7 @@ async function main() {
     // 直接起会话"这条路径也没跑过。这里用第二个独立节点（同一组件实例的内部 state
     // 不会因为改 store 数据就重置，不能复用 Node A）重跑一遍，选第二个 CLI 芯片
     // （本机是 Codex，capabilities.approval 为空）。
-    const extra = { p21: { status: 'not-run', detail: '' } }
+    const extra = { p21: { status: 'not-run', detail: '' }, i2: { status: 'not-run', detail: '' } }
     try {
       const IDS_B = { tabId: 't8-tab-b', leafId: 't8-leaf-b', frameId: 't8-frame-b', nodeId: 't8-node-b' }
       const injectB = await cdp.eval(`(function(){
@@ -1258,6 +1258,39 @@ async function main() {
         detail: `CLI=${selectedB}；hookAsk 出现=${hookAskAppearedB}（预期 false）；对话态=${conversationUpB}；沙箱提示="${sandboxCheck?.text}" 可见=${sandboxCheck?.visible}`
       }
       log(`  ${ok ? '✓' : '✗'} [P2-1] approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${extra.p21.detail}`)
+
+      // ── I2（2026-08-17 最终评审）：审批 hook 的 chip 与卸载按钮只该出现在声明了
+      // approvalHook 的 CLI 上。这一条正好能在这里差分验证：此刻画布上同时活着
+      // Node A（Claude，approvalHook='claude-pretooluse'）与 Node B（Codex，没有），
+      // 两个 pane 各自带 data-leaf-id，可以精确定位到各自的工具栏，不会互相串。
+      // 修复前 chip 是无条件渲染的，Codex 节点上会显示「审批保护 已开启/未开启」——
+      // 那读的是 Claude 的 <cwd>/.claude/settings.json，是错的信息，而工具栏另一侧
+      // 同时还在显示沙箱级别，两条信息互相矛盾。
+      const chipScan = await cdp.eval(`(function(){
+        const scan = (leafId) => {
+          const pane = document.querySelector('[data-leaf-id="' + leafId + '"]')
+          if (!pane) return null
+          const tb = pane.querySelector('.ac-toolbar')
+          if (!tb) return null
+          const items = Array.from(tb.querySelectorAll('.ac-toolbar-meta .ac-meta-item'))
+          return {
+            hasChip: items.some(el => (el.textContent || '').includes('审批保护')),
+            hasUninstallBtn: Array.from(tb.querySelectorAll('.ac-meta-btn')).some(b => (b.textContent || '').includes('卸载')),
+            meta: items.map(el => (el.textContent || '').trim()).join(' ｜ ')
+          }
+        }
+        return JSON.stringify({
+          claudeNode: scan(${JSON.stringify(IDS.leafId)}),
+          codexNode: scan(${JSON.stringify(IDS_B.leafId)})
+        })
+      })()`)
+      const cs = chipScan ? JSON.parse(chipScan) : null
+      const i2ok = !!cs && cs.claudeNode?.hasChip === true && cs.codexNode?.hasChip === false
+      extra.i2 = {
+        status: i2ok ? 'PASS' : 'FAIL',
+        detail: `Claude 节点 chip=${cs?.claudeNode?.hasChip}（预期 true，meta="${cs?.claudeNode?.meta}"）；Codex 节点 chip=${cs?.codexNode?.hasChip} 卸载按钮=${cs?.codexNode?.hasUninstallBtn}（都预期 false，meta="${cs?.codexNode?.meta}"）`
+      }
+      log(`  ${i2ok ? '✓' : '✗'} [I2] 审批 hook 的 chip/卸载按钮只出现在声明了 approvalHook 的 CLI 上 —— ${extra.i2.detail}`)
     } catch (e) {
       extra.p21 = { status: 'FAIL', detail: '异常：' + e.message }
       log(`  ✗ [P2-1] 异常：${e.message}`)
@@ -1328,14 +1361,21 @@ main()
     // 编号已经固定），但评审要求补做、也计入"是否全绿"——不达标同样让脚本以非零
     // exit code 收尾，不能只印在日志里就当没发生。
     const p21 = results.__extra?.p21
-    if (p21) {
+    const i2 = results.__extra?.i2
+    if (p21 || i2) {
       log('')
-      log('=== 附加检查（P2-1，评审加做，不占用 1-11 编号）===')
-      log(`  [${p21.status.padEnd(7)}] approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${p21.detail}`)
-      if (p21.status !== 'PASS') allPass = false
+      log('=== 附加检查（评审加做，不占用 1-11 编号）===')
+      if (p21) {
+        log(`  [${p21.status.padEnd(7)}] P2-1：approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${p21.detail}`)
+        if (p21.status !== 'PASS') allPass = false
+      }
+      if (i2) {
+        log(`  [${i2.status.padEnd(7)}] I2：审批 hook 的 chip/卸载按钮只出现在声明了 approvalHook 的 CLI 上 —— ${i2.detail}`)
+        if (i2.status !== 'PASS') allPass = false
+      }
     }
     log('')
-    log(allPass ? '✓ 十一条 + P2-1 全部通过' : '✗ 存在未通过的检查——如实报告，见上面逐条详情')
+    log(allPass ? "✓ 十一条 + P2-1 + I2 全部通过" : '✗ 存在未通过的检查——如实报告，见上面逐条详情')
     process.exitCode = allPass ? 0 : 1
   })
   .catch((e) => {
