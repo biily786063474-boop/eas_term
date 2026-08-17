@@ -321,14 +321,22 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
   if (adapter.approvalHook === 'claude-pretooluse') {
     if (opts.skipApprovalHook) {
-      // 用户在 B 的询问卡片上明确选了"这次不装"（Ruling 15 划给 B 的那条），不是
-      // 装不上——但对他来说结果是一样的："这次会话没有审批保护"，所以复用装不上时
-      // 的同一条事件路径通知他，不新造机制（Ruling 14"告知而非阻断"同样适用：
-      // 哪怕是他自己选的，也不能因此就默不作声，notice 该出现的地方还是要出现）。
+      // 用户明确表达过"这个会话不要这条 hook"，不是装不上——但对他来说结果是一样的：
+      // "这次会话没有审批保护"，所以复用装不上时的同一条事件路径通知他，不新造机制
+      // （Ruling 14"告知而非阻断"同样适用：哪怕是他自己选的，也不能因此就默不作声，
+      // notice 该出现的地方还是要出现）。
+      //
+      // 措辞要同时对得上两条来路，别再写死"你选择了这次不安装"：
+      //   ① 起会话时在询问卡片上点了「这次不装，直接开始」（Ruling 15 划给 B 的那条）；
+      //   ② 会话中途点了工具栏的「卸载」——2026-08-17 最终评审 I1 之后，卸载会把该 cwd
+      //      下的活会话一并置为 skipApprovalHook，于是也会走到这里。
+      // 末句也不再承诺"随时可以在工具栏重新开启"：工具栏在未安装状态下并没有开启入口，
+      // 那是一句用户照做不了的话（这条 hook 的安装入口目前只有节点第一条消息的询问卡片）。
       handleEvent(live, {
         k: 'error',
         fatal: false,
-        message: '本次会话未开启审批保护（你选择了这次不安装）：工具调用将按默认权限直接执行，不会等待你的确认。随时可以在工具栏重新开启。'
+        message:
+          '本次会话未开启审批保护（你选择了不安装，或中途卸载过）：工具调用将按默认权限直接执行，不会等待你的确认。要重新开启，新建一个 agent 节点、在询问卡片上选「装上」。'
       })
     } else {
       const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
@@ -562,7 +570,28 @@ export function registerAgentChatHandlers(): void {
   ipcMain.handle('agentChat:hookUninstall', (_e, cwd: unknown): { ok: boolean; error?: string } => {
     if (typeof cwd !== 'string' || !cwd) return { ok: false, error: 'cwd 必填' }
     const r = uninstallApprovalHook(cwd)
-    return r.ok ? { ok: true } : { ok: false, error: r.reason }
+    if (!r.ok) return { ok: false, error: r.reason }
+    // 卸载成功之后，把这个项目下所有活会话标成「这次不装」——否则下一次 restart
+    // （空闲回收后再发消息、或改 model/effort；Codex 更是每条消息都 restart）会读到
+    // skipApprovalHook=false，无条件把 hook 重新写回用户自己的仓库，没有询问、没有提示
+    // （2026-08-17 全分支最终评审 I1，用户原话会是"我明明卸载了，它自己回来了"）。
+    // spec §B.4「第一次要在某个项目里装这个 hook 时先问用户」——手动卸载之后再装，
+    // 实质就是又一次"要装"，而 handleSend 里的询问只在节点的第一条消息触发一次。
+    //
+    // 范围是「同一个 cwd 下的所有活会话」而不是「发起这次调用的那个会话」：hook 是按
+    // 项目装在 <cwd>/.claude/settings.json 的一份文件，同项目里任何一个会话 restart
+    // 都会把它装回来，只标记调用者等于没修。
+    // 走 path.resolve 再比，避免尾斜杠/相对写法这类无关差异造成漏标。
+    // 就地改 live.rec，不要 sessions.set(id, {...live}) 换一个新的 Live 对象——
+    // wireProc 里那些 stdout/exit 回调闭包捕获的是**原来那个** Live 引用，换对象会让
+    // 进程侧继续写老对象、查询侧读新对象，两份状态从此分叉（全文件都是就地改 live.rec
+    // 的写法，这里保持一致）。
+    const target = path.resolve(cwd)
+    for (const live of sessions.values()) {
+      if (path.resolve(live.rec.cwd) !== target) continue
+      live.rec = { ...live.rec, skipApprovalHook: true }
+    }
+    return { ok: true }
   })
 
   ipcMain.on('agentChat:stop', (_e, sessionId: unknown) => {
