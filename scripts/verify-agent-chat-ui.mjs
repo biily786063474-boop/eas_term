@@ -231,34 +231,38 @@ const testResolveApprovalCalls: { sessionId: string; approvalId: string; decisio
 
 const api = {\n  platform: process.platform,`
 
-const PRELOAD_START_ANCHOR = `    start: async (params: AgentChatStartParams): Promise<AgentChatStartResult> => {
-      const result: AgentChatStartResult = await ipcRenderer.invoke('agentChat:start', params)
-      if (result.ok) startAgentChatBuffering(result.sessionId)
-      return result
-    },`
+// 2026-08-17 最终评审 C1 之后，preload 的 start/onEvent 换成了「常驻单频道 + 模块加载期
+// 挂监听」的形状，下面两组锚点跟着原样更新（锚点必须逐字等于当前源码，否则 applyPatch
+// 会抛错中止——这是设计如此：源码变了就必须回来看一眼补丁是否仍然成立，不能默默跑）。
+const PRELOAD_START_ANCHOR = `    start: (params: AgentChatStartParams): Promise<AgentChatStartResult> =>
+      ipcRenderer.invoke('agentChat:start', params),`
 const PRELOAD_START_PATCHED = `    start: AGENT_CHAT_TEST_MODE
       ? async (_params: AgentChatStartParams): Promise<AgentChatStartResult> => {
           return { ok: true, sessionId: 'e2e-fake-session' }
         }
-      : async (params: AgentChatStartParams): Promise<AgentChatStartResult> => {
-          const result: AgentChatStartResult = await ipcRenderer.invoke('agentChat:start', params)
-          if (result.ok) startAgentChatBuffering(result.sessionId)
-          return result
-        },`
+      : (params: AgentChatStartParams): Promise<AgentChatStartResult> =>
+          ipcRenderer.invoke('agentChat:start', params),`
 
 const PRELOAD_ONEVENT_ANCHOR = `    onEvent: (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
-      const channel = \`agentChat:event:\${sessionId}\`
-      // 先把 start() 之后、这次订阅之前攒下的事件回放掉，再切到实时监听——
-      // 和 pty.onData 的做法逐字一致。
-      const pending = agentChatPendingBuffers.get(sessionId)
-      if (pending) {
-        ipcRenderer.removeListener(channel, pending.listener)
-        agentChatPendingBuffers.delete(sessionId)
-        for (const ev of pending.events) cb(ev)
+      // 先登记订阅、再回放缓冲——两步之间不可能插进新事件（IPC 事件是宏任务，
+      // 这里是同步代码），顺序颠倒反而会让回放期间到达的事件被当成"没人订阅"再攒一遍。
+      let subs = agentChatListeners.get(sessionId)
+      if (!subs) {
+        subs = new Set()
+        agentChatListeners.set(sessionId, subs)
       }
-      const listener = (_e: IpcRendererEvent, ev: ChatEvent): void => cb(ev)
-      ipcRenderer.on(channel, listener)
-      return () => ipcRenderer.removeListener(channel, listener)
+      subs.add(cb)
+      const pending = agentChatPendingEvents.get(sessionId)
+      if (pending) {
+        agentChatPendingEvents.delete(sessionId)
+        for (const ev of pending) cb(ev)
+      }
+      return () => {
+        const cur = agentChatListeners.get(sessionId)
+        if (!cur) return
+        cur.delete(cb)
+        if (cur.size === 0) agentChatListeners.delete(sessionId)
+      }
     }`
 const PRELOAD_ONEVENT_PATCHED = `    onEvent: AGENT_CHAT_TEST_MODE
       ? (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
@@ -268,18 +272,23 @@ const PRELOAD_ONEVENT_PATCHED = `    onEvent: AGENT_CHAT_TEST_MODE
           }
         }
       : (sessionId: string, cb: (e: ChatEvent) => void): (() => void) => {
-          const channel = \`agentChat:event:\${sessionId}\`
-          // 先把 start() 之后、这次订阅之前攒下的事件回放掉，再切到实时监听——
-          // 和 pty.onData 的做法逐字一致。
-          const pending = agentChatPendingBuffers.get(sessionId)
-          if (pending) {
-            ipcRenderer.removeListener(channel, pending.listener)
-            agentChatPendingBuffers.delete(sessionId)
-            for (const ev of pending.events) cb(ev)
+          let subs = agentChatListeners.get(sessionId)
+          if (!subs) {
+            subs = new Set()
+            agentChatListeners.set(sessionId, subs)
           }
-          const listener = (_e: IpcRendererEvent, ev: ChatEvent): void => cb(ev)
-          ipcRenderer.on(channel, listener)
-          return () => ipcRenderer.removeListener(channel, listener)
+          subs.add(cb)
+          const pending = agentChatPendingEvents.get(sessionId)
+          if (pending) {
+            agentChatPendingEvents.delete(sessionId)
+            for (const ev of pending) cb(ev)
+          }
+          return () => {
+            const cur = agentChatListeners.get(sessionId)
+            if (!cur) return
+            cur.delete(cb)
+            if (cur.size === 0) agentChatListeners.delete(sessionId)
+          }
         }`
 
 // P1-2（评审实测假绿）：断言 7 原来只看 .ac-approval 从 DOM 消失，而那个隐藏完全由

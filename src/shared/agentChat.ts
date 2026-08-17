@@ -107,6 +107,27 @@ export interface AgentChatStartParams extends StartOpts {
   message: string
 }
 
+/** 事件推送用的**单一常驻频道**（不是 `agentChat:event:<sessionId>` 那种按会话动态命名的）。
+ *  2026-08-17 全分支最终评审 C1：动态频道要求「先拿到 sessionId、再挂监听」，而主进程的
+ *  `agentChat:start` handler 在 `return` 之前就已经同步推完了首批事件（deliverMessage →
+ *  restartAndDeliver → handleEvent）——事件先到、频道上一个监听器都没有，Electron 的
+ *  send/on 不缓冲，直接丢弃。评审用隔离 Electron 探针实测过这个窗口：同步推的组
+ *  30 条只捕获到 1 条。丢掉的正好是「本次会话没有审批保护」那条硬验收 notice。
+ *
+ *  改成常驻单频道之后，preload 在**模块加载期**（远早于任何 invoke）就把唯一的监听器挂上，
+ *  按 payload 里的 sessionId 路由：有订阅者就直接投递，没有就先缓冲、等 onEvent 来取。
+ *  「订阅之前的事件」结构上不可能丢，不再依赖任何时序假设。
+ *
+ *  **别把它改回按 sessionId 命名的动态频道**——那等于把正确性重新建立在
+ *  「用户手速不够快」「spawn 一定比 IPC reply 慢」这类没有保证的假设上。 */
+export const AGENT_CHAT_EVENT_CHANNEL = 'agentChat:event'
+
+/** 常驻频道上的信封：事件本体 + 它属于哪个会话（动态频道时代这个信息由频道名承载）。 */
+export interface AgentChatEventEnvelope {
+  sessionId: string
+  event: ChatEvent
+}
+
 export type AgentChatStartResult = { ok: true; sessionId: string } | { ok: false; error: string }
 
 export type AgentChatSendResult = { ok: true } | { ok: false; error: string }

@@ -31,6 +31,7 @@ import { shouldReap, planSend, applyParamChange, type SessionRecord } from './se
 import { buildCliList } from './cliList.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
+import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -38,6 +39,7 @@ import type {
   AgentChatStartResult,
   AgentChatSendResult,
   AgentApprovalHookStatus,
+  AgentChatEventEnvelope,
   CliInfo
 } from '../../shared/agentChat.ts'
 
@@ -219,8 +221,15 @@ function approvalHookStatus(cwd: string): AgentApprovalHookStatus {
 
 // ── 事件推送 + 会话状态的机械式更新（不是判定，只是照实记录已经发生的事） ──────────────
 
+/** 推给创建这个会话的那个 webContents。频道是**常驻单频道**、sessionId 走 payload——
+ *  不是 `agentChat:event:<id>` 那种动态频道（2026-08-17 全分支最终评审 C1：本 handler
+ *  在 `return` 之前就同步推完首批事件，动态频道那时还没有任何监听器，事件被静默丢弃；
+ *  实测 30 条只到 1 条）。详见 shared/agentChat.ts 的 AGENT_CHAT_EVENT_CHANNEL 注释。 */
 function emitEvent(live: Live, e: ChatEvent): void {
-  if (!live.wc.isDestroyed()) live.wc.send(`agentChat:event:${live.rec.id}`, e)
+  if (!live.wc.isDestroyed()) {
+    const envelope: AgentChatEventEnvelope = { sessionId: live.rec.id, event: e }
+    live.wc.send(AGENT_CHAT_EVENT_CHANNEL, envelope)
+  }
 }
 
 /** translator 产出的事件里，session.ready 携带了 CLI 原生的会话/线程 id——

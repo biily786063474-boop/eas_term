@@ -199,8 +199,11 @@ export function AgentChatView({
     // 面板已经被切走/关掉：不再订阅事件、不再 setState，但会话已经能从 store 里
     // 追踪到了，killPanePty 收得到——上面那句写回不受这里提前 return 的影响。
     if (!aliveRef.current) return
-    // 尽快订阅，别拖到下一次交互。start() 在 preload 里已经从 invoke resolve 那一刻起
-    // 开始缓冲事件，这里订阅时会先回放缓冲区再转实时，所以不会丢首事件。
+    // 尽快订阅，别拖到下一次交互。首事件不会丢，但**理由已经变了**（2026-08-17 最终
+    // 评审 C1）：不再是"start() 一 resolve 就开始缓冲"——那条时序假设是错的，主进程在
+    // handler 返回前就同步推完了首批事件。现在 preload 从模块加载期就挂着一个常驻监听器
+    // 按 sessionId 缓冲，这里订阅时把攒下的先回放再转实时（见 preload/index.ts 的
+    // AGENT_CHAT_EVENT_CHANNEL 一节）。
     unsubRef.current = window.api.agentChat.onEvent(result.sessionId, (e: ChatEvent) => {
       reducerRef.current.push(e)
       if (aliveRef.current) setView(reducerRef.current.view())
