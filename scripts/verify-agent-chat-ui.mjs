@@ -597,6 +597,15 @@ async function main() {
     // "用户消息出现在第 1 个轮次"，而屏幕上那句话根本不存在。断言 8 早就做对了（尺寸 +
     // display + visibility + opacity 四件套），这里注入一个全局小函数复用同一套判据，
     // 不用在每个断言里重复写一遍。
+    //
+    // ⚠ 这个判据有已知盲区，**别把它当"最扎实的可见性模板"复制到别处**
+    // （2026-08-17 全分支最终评审 M2，判定：本轮不改判据，但必须把话写在这里）：
+    // getBoundingClientRect() 不受祖先裁剪影响，所以下面两种"其实看不见"它都会判成可见——
+    //   ① 被某个祖先的 overflow:hidden 裁掉；
+    //   ② 滚出了所在滚动容器的可视区（比如 .ac-messages 里滚上去的内容，
+    //      或者本轮新加了 max-height+overflow 的 .ac-notices）。
+    // 真要覆盖这两种，用 IntersectionObserver，或者复用本脚本已有的 elementFromPoint
+    // 命中测试（断言 9/10 用的就是那个，它天然能戳穿被遮挡/被裁剪）。
     await cdp.eval(`(function(){
       window.__t8Visible = function(el){
         if (!el) return false

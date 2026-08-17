@@ -66,8 +66,12 @@ export function toolbarModel(caps: CliCapabilities, approvalHook?: CliInfo['appr
 
 /** 拼成人话，例：`输入 12 · 输出 345 · 缓存 6789 · $0.0421`。
  *  u 为 null 时返回空串；cachedInputTokens / costUsd 缺失（undefined）时各自的分段
- *  整段省略——但 costUsd 显式为 0 时仍然显示 $0，因为那是「已知花费为零」，跟「这个
- *  CLI 根本不报花费」不是一回事。 */
+ *  整段省略——但 costUsd 显式为 0 时仍然显示（`$0.0000`），因为那是「已知花费为零」，
+ *  跟「这个 CLI 根本不报花费」不是一回事。
+ *
+ *  花费固定 4 位小数（2026-08-17 全分支最终评审 M1）：直接 `${costUsd}` 会把浮点尾数
+ *  原样印到**常驻可见**的用量行上——Claude 的 costUsd 取自 total_cost_usd，是累计值，
+ *  多轮相加之后必然出现 `$0.030700000000000002` 这种东西。 */
 export function formatUsage(u: Usage | null, costUsd?: number): string {
   if (!u) return ''
   const parts: string[] = [`输入 ${u.inputTokens}`, `输出 ${u.outputTokens}`]
@@ -75,7 +79,7 @@ export function formatUsage(u: Usage | null, costUsd?: number): string {
     parts.push(`缓存 ${u.cachedInputTokens}`)
   }
   if (costUsd !== undefined) {
-    parts.push(`$${costUsd}`)
+    parts.push(`$${costUsd.toFixed(4)}`)
   }
   return parts.join(' · ')
 }

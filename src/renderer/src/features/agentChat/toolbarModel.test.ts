@@ -162,8 +162,13 @@ test('[补充] formatUsage 完整字符串精确匹配 Step 3 给的示例格式
   // 题面只用 .includes('345') 验证，一个把字段顺序打乱、或用错分隔符的实现也能通过；
   // 这里锁死完整字符串，同时把 inputTokens(12) / cachedInputTokens(6789) 也纳入断言
   // ——题面从未检查过这两个数字真的出现在输出里。
-  const s = formatUsage({ inputTokens: 12, outputTokens: 345, cachedInputTokens: 6789 }, 0.0421)
-  assert.equal(s, '输入 12 · 输出 345 · 缓存 6789 · $0.0421')
+  //
+  // **例值从 0.0421 换成 1.2345**（2026-08-17 全分支最终评审 M1 点名的撞车）：
+  // 原来这条锁 '$0.0421'、下面那条只用 includes('$0')，一个把花费硬编码成 '$0.0421'
+  // 的实现能让两条同时绿——'$0.0421'.includes('$0') 为真，两道防线一起失效。
+  // 换成不含 '$0' 前缀的值之后，硬编码任何一边都会打破另一边。
+  const s = formatUsage({ inputTokens: 12, outputTokens: 345, cachedInputTokens: 6789 }, 1.2345)
+  assert.equal(s, '输入 12 · 输出 345 · 缓存 6789 · $1.2345')
 })
 
 test('[补充] 没有 cachedInputTokens 时该分段整段省略，字符串精确匹配（不是显示 0 或 undefined）', () => {
@@ -171,12 +176,25 @@ test('[补充] 没有 cachedInputTokens 时该分段整段省略，字符串精�
   assert.equal(s, '输入 1 · 输出 2')
 })
 
-test('[补充] costUsd 显式为 0（不是 undefined）时应显示 $0——0 是真实数据，不是缺失', () => {
+test('[补充] costUsd 显式为 0（不是 undefined）时应显示，0 是真实数据，不是缺失', () => {
   // 与题面「没有花费字段时不显示 $0」互补：那条测的是「缺失」，这条测的是「明确为零」。
   // 如果实现把判据写成 `if (costUsd)`（真值判断）而不是 `costUsd !== undefined`，
   // 两条测试会互相矛盾——只有把「未定义」和「数值零」分开判断的实现能同时满足。
+  // 判据从 includes('$0') 收紧成完整字符串（M1 撞车的另一半：子串匹配太松，
+  // 上面那条锁的例值只要以 $0 开头就能同时蒙混过关）。
   const s = formatUsage({ inputTokens: 1, outputTokens: 2 }, 0)
-  assert.ok(s.includes('$0'), 'costUsd 明确为 0 时属于真实信息，应当显示')
+  assert.equal(s, '输入 1 · 输出 2 · $0.0000')
+})
+
+test('[M1] 累计花费的浮点尾数不许原样印到常驻可见的用量行上', () => {
+  // Claude 的 costUsd 取自 total_cost_usd（累计值），多轮相加必然出这种数。
+  // 修复前直接 `${costUsd}`，界面上就是 $0.030700000000000002。
+  const s = formatUsage({ inputTokens: 1, outputTokens: 2 }, 0.030700000000000002)
+  assert.equal(s, '输入 1 · 输出 2 · $0.0307')
+})
+
+test('[M1] 花费固定 4 位小数——不会因为数值"正好很短"就变成另一种格式', () => {
+  assert.equal(formatUsage({ inputTokens: 1, outputTokens: 2 }, 0.5), '输入 1 · 输出 2 · $0.5000')
 })
 
 test('[补充] inputTokens/outputTokens 为 0 时仍然显示 0，这两个必有字段不能被当成「缺失」省略', () => {
