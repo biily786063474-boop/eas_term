@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createChatReducer, visibleExecs } from './reduce.ts'
+import { createChatReducer, visibleExecs, MAX_NOTICES } from './reduce.ts'
 import type { ChatEvent } from '../../../../shared/agentChat.ts'
 
 /** 把一串事件喂进去，返回最终视图 */
@@ -380,4 +380,64 @@ test('[补充] text.delta 不会把文字追加到已经 text.done 完成的轮�
   ])
   assert.equal(v.turns.length, 1)
   assert.equal(v.turns[0].text, '完整的话')
+})
+
+// ============================================================
+// 2026-08-17 全分支最终评审 I5：notices 只增不减、无上限、无关闭，而它挂在
+// flex-shrink:0 的工具栏里——涨多少，对话区就被挤掉多少。去重与上限在这一层，
+// max-height/overflow 与关闭按钮在 UI 层。硬约束「{k:'error',fatal:false} 必须显示」
+// 要求的是"显示"，不是"永久占据版面且不可关闭"。
+// ============================================================
+
+test('[I5] 内容完全相同的 notice 合并成一条并计数，不是堆成两条（Claude 每次 restart 都会重推同一条）', () => {
+  const same: ChatEvent = { k: 'error', message: '本次会话未开启审批保护', fatal: false }
+  const v = run([ready, same, same, same])
+  assert.equal(v.notices.length, 1, '同一条重复三次仍然只占一行')
+  assert.equal(v.notices[0].count, 3, '但要如实告诉用户它发生过三次')
+  assert.equal(v.notices[0].text, '本次会话未开启审批保护')
+})
+
+test('[I5] 去重不是丢弃——那条 notice 依然在视图里，硬约束「fatal:false 必须显示」不受影响', () => {
+  const v = run([
+    ready,
+    { k: 'error', message: '重复的', fatal: false },
+    { k: 'error', message: '重复的', fatal: false }
+  ])
+  assert.equal(v.notices.length, 1)
+  assert.equal(v.notices[0].fatal, false)
+})
+
+test('[I5] 文本相同但 fatal 不同的两条不合并——一条是告知、一条是故障，合并会抹掉严重性差别', () => {
+  const v = run([
+    ready,
+    { k: 'error', message: '同样的话', fatal: false },
+    { k: 'error', message: '同样的话', fatal: true }
+  ])
+  assert.equal(v.notices.length, 2)
+  assert.deepEqual(v.notices.map((n) => n.fatal), [false, true])
+})
+
+test('[I5] 重复命中的那条位置不动，不会被挪到列表末尾（跳位置会让人以为来了条新的）', () => {
+  const v = run([
+    ready,
+    { k: 'error', message: 'A', fatal: false },
+    { k: 'error', message: 'B', fatal: false },
+    { k: 'error', message: 'A', fatal: false }
+  ])
+  assert.deepEqual(v.notices.map((n) => n.text), ['A', 'B'])
+  assert.deepEqual(v.notices.map((n) => n.count), [2, 1])
+})
+
+test('[I5] 互不相同的 notice 超过上限时丢最旧的，数组不会无限长', () => {
+  const events: ChatEvent[] = [ready]
+  for (let i = 0; i < MAX_NOTICES + 3; i++) events.push({ k: 'error', message: `第 ${i} 条`, fatal: false })
+  const v = run(events)
+  assert.equal(v.notices.length, MAX_NOTICES)
+  assert.equal(v.notices[0].text, '第 3 条', '丢的是最旧的三条')
+  assert.equal(v.notices[MAX_NOTICES - 1].text, `第 ${MAX_NOTICES + 2} 条`, '最新的一条必须留着')
+})
+
+test('[I5] 首次出现的 notice count 就是 1，不是 0 或 undefined（UI 靠 count>已关闭时的 count 判断该不该显示）', () => {
+  const v = run([ready, { k: 'error', message: '只发生过一次', fatal: false }])
+  assert.equal(v.notices[0].count, 1)
 })

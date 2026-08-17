@@ -38,7 +38,21 @@ export interface Notice {
   id: string
   text: string
   fatal: boolean
+  /** 这条 notice 一模一样地发生过几次。**去重不是丢弃**：Claude 每次 restart 都会重推
+   *  同一条（拒绝装 hook / hook 装不上），Codex 每条消息一个新进程、退出码非零就再推一条
+   *  同样的 fatal——修复前这些会一条条堆进工具栏，而工具栏是 flex-shrink:0、对话区是
+   *  flex:1;min-height:0，notices 涨多少对话区就被挤掉多少（2026-08-17 全分支最终评审
+   *  I5：在画布上一个 300px 高的节点里，七八条就基本看不见对话了）。
+   *  合并成一条 + 计数，既守住"{k:'error',fatal:false} 必须显示"这条硬约束，
+   *  又不让重复内容占版面。 */
+  count: number
 }
+
+/** notices 数组的条数上限。**版面不被挤掉这件事已经由 CSS 负责**（.ac-notices 有
+ *  max-height + overflow-y:auto），这个上限纯粹是内存与列表长度的兜底：去重之后
+ *  真正"互不相同"的 notice 极难攒到这个数（两个高频重复源都会被折叠成一条）。
+ *  满了丢最旧的一条。 */
+export const MAX_NOTICES = 8
 
 export interface ChatView {
   turns: Turn[]
@@ -118,9 +132,19 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         break
       }
       case 'error': {
-        // 任何情况都不丢弃：不分 fatal，一律追加进 notices。
+        // 任何情况都不丢弃：不分 fatal，一律进 notices。
+        // 内容完全相同（文本 + fatal 都一样）的，合并到已有那条上计数——**不是丢弃**，
+        // 那条 notice 仍然在界面上显示着，只是不再重复占版面（评审 I5，见 Notice.count）。
+        // 位置保持不动（不把命中的那条挪到末尾）：一条已经在屏幕上的提醒因为"又发生了
+        // 一次"而跳到别处，只会让人以为来了条新的。
+        const same = notices.find((n) => n.text === e.message && n.fatal === e.fatal)
+        if (same) {
+          same.count += 1
+          break
+        }
         noticeSeq += 1
-        notices.push({ id: `notice-${noticeSeq}`, text: e.message, fatal: e.fatal })
+        notices.push({ id: `notice-${noticeSeq}`, text: e.message, fatal: e.fatal, count: 1 })
+        if (notices.length > MAX_NOTICES) notices.shift()
         break
       }
       // session.ready / thinking / text.delta，以及任何未来新增但这一层还没接的

@@ -1083,12 +1083,17 @@ async function main() {
     // ── 断言 8：{k:'error',fatal:false} 的 notice 在界面上可见（硬验收项）──────────
     const NOTICE_TEXT = '审批保护未开启：hook 安装失败（task-8 e2e 模拟）'
     await push({ k: 'error', message: NOTICE_TEXT, fatal: false })
+    // 2026-08-17 最终评审 I5 之后 notice 的 DOM 变了（正文进 .ac-notice-text，旁边多了
+    // 一个只含 SVG 的关闭按钮）。判据**收紧**而不是放宽：原来比的是整行的 textContent，
+    // 现在精确比正文那个元素的 textContent（正文之外多了任何字都会让它不等），
+    // 可见性四件套仍然判在整行 .ac-notice 上。
     const noticeCheck = await waitFor(
       async () => {
         const j = await cdp.eval(`(function(){
-          const nodes = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice'))
-          const n = nodes.find(el => el.textContent === ${JSON.stringify(NOTICE_TEXT)})
-          if (!n) return null
+          const texts = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice .ac-notice-text'))
+          const t = texts.find(el => el.textContent === ${JSON.stringify(NOTICE_TEXT)})
+          if (!t) return null
+          const n = t.closest('.ac-notice')
           const r = n.getBoundingClientRect()
           const cs = getComputedStyle(n)
           return JSON.stringify({
@@ -1096,7 +1101,8 @@ async function main() {
             visibleSize: r.width > 0 && r.height > 0,
             display: cs.display,
             visibility: cs.visibility,
-            opacity: cs.opacity
+            opacity: cs.opacity,
+            hasCloseBtn: !!n.querySelector('.ac-notice-close')
           })
         })()`)
         return j ? JSON.parse(j) : null
@@ -1115,6 +1121,42 @@ async function main() {
     await sleep(200)
     const fatalClassSeen = await cdp.eval(`!!document.querySelector('.ac-toolbar .ac-notices .ac-notice-fatal')`)
     log(`  · fatal:true 的 notice 带上了 .ac-notice-fatal：${fatalClassSeen}`)
+
+    // ── 附加检查（2026-08-17 最终评审 I5）：去重计数 + 真实鼠标点关闭 ────────────────
+    // 这两条不占用 1-11 的编号（那十一条已经固定），但都是这轮新加的行为，
+    // 不真机点一次就等于没验——本仓库踩过"渲染完美、真实鼠标全部穿透"的坑。
+    await push({ k: 'error', message: NOTICE_TEXT, fatal: false }) // 同一条再来一次
+    await sleep(200)
+    const dedup = await cdp.eval(`(function(){
+      const texts = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice .ac-notice-text'))
+      const t = texts.find(el => (el.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
+      if (!t) return null
+      return JSON.stringify({
+        rows: document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice').length,
+        sameTextRows: texts.filter(el => (el.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)})).length,
+        countBadge: t.querySelector('.ac-notice-count')?.textContent || null
+      })
+    })()`)
+    log(`  · I5 去重：同一条 notice 推第二次后 —— ${dedup}（预期 sameTextRows=1、countBadge=×2）`)
+
+    const noticesBoxOverflow = await cdp.eval(`(function(){
+      const box = document.querySelector('.ac-toolbar .ac-notices')
+      if (!box) return null
+      const cs = getComputedStyle(box)
+      return JSON.stringify({ maxHeight: cs.maxHeight, overflowY: cs.overflowY })
+    })()`)
+    log(`  · I5 版面闸：.ac-notices 的 ${noticesBoxOverflow}（预期 max-height 非 none、overflow-y 可滚）`)
+
+    await cdp.clickElement(
+      `Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice')).find(n => (n.querySelector('.ac-notice-text')?.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))?.querySelector('.ac-notice-close')`,
+      'notice 的关闭按钮（真实坐标点击）'
+    )
+    await sleep(250)
+    const closedGone = await cdp.eval(`(function(){
+      const texts = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice .ac-notice-text'))
+      return !texts.some(el => (el.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
+    })()`)
+    log(`  · I5 可关闭：真实鼠标点关闭后这条 notice 消失 —— ${closedGone}（其余 notice 不受影响）`)
 
     // ── P2-1（评审加做）：approval 为空的 CLI 路径此前零真机覆盖 ─────────────────
     // 前面全程只测了第一个 CLI 芯片（本机是 Claude Code，capabilities.approval 非空），

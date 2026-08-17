@@ -8,6 +8,12 @@
 // 那是"审批 hook 装不上时告知而非阻断"这条裁定唯一的说服力所在（见 reduce.ts 文件头、
 // task-6-brief.md Step 2）。
 //
+// 这条硬约束要求的是「显示」，**不是「永久占据版面且不可关闭」**（2026-08-17 全分支
+// 最终评审 I5）。所以现在：内容相同的合并成一条 + 计数（归约器负责）、数组有上限、
+// 容器有 max-height + overflow（CSS 负责）、每条可以关掉（本文件负责）。
+// 关闭记的是"关闭那一刻它发生过几次"——同一条之后又发生一次就会重新出现，
+// 不会因为关过一次就把一次**新的**"这次会话没有审批保护"永久静音掉。
+//
 // 模型/effort/沙箱的可选项全部来自 toolbarModel(caps)——不判断是哪个 CLI（spec §B.3）。
 // **沙箱只做只读展示**：agentChat:setParams 的 patch 类型只收 { model?, effort? }
 // （preload/index.ts 与 session.ts 的 IPC handler 都明确只读这两个字段），没有能中途
@@ -20,7 +26,7 @@ import { toolbarModel, formatUsage } from './toolbarModel.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CompressIcon, GaugeIcon, LockIcon, TrashIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, GaugeIcon, LockIcon, TrashIcon } from '../../ui/Icons'
 
 const MAX_ROWS = 4
 const LINE_H = 19
@@ -84,6 +90,8 @@ export function ChatToolbar({
   const [effortSel, setEffortSel] = useState('')
   const [hook, setHook] = useState<AgentApprovalHookStatus | null>(null)
   const [hookBusy, setHookBusy] = useState(false)
+  /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
+  const [dismissed, setDismissed] = useState<Record<string, number>>({})
   const taRef = useRef<HTMLTextAreaElement>(null)
   const requestConfirm = useStore((s) => s.requestConfirm)
   const aliveRef = useRef(true)
@@ -107,7 +115,10 @@ export function ChatToolbar({
 
   // notice 一来（典型就是"hook 装不上"那条)多半意味着 hook 状态刚变过,顺手刷新一次,
   // 不用等用户自己点开工具栏才发现状态是旧的。只按数量变化触发,不需要整个 view 做依赖。
-  const noticeCount = view.notices.length
+  // 计的是「含重复在内的累计条数」而不是 notices.length——归约器现在把内容相同的 notice
+  // 合并成一条并累加 count（评审 I5），只看 length 的话"同一条又发生了一次"（典型就是
+  // restart 后 hook 又没装上）就再也触发不了这次刷新了。
+  const noticeCount = view.notices.reduce((sum, n) => sum + n.count, 0)
   useEffect(() => {
     if (noticeCount > 0) void refreshHook()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,16 +169,40 @@ export function ChatToolbar({
 
   const usageText = model.showUsage ? formatUsage(view.usage, view.costUsd) : ''
 
+  // 关掉过的 notice 记的是「关闭那一刻它已经发生过几次」，不是一个"关过就永远别再出现"
+  // 的开关（评审 I5 要求可关闭，但硬约束要求 {k:'error',fatal:false} 必须显示）：
+  // 同一条 notice 之后**又发生了一次**（count 涨了）就重新出现——那是新信息，
+  // 不是刚才那条的残留。归约器把重复内容合并成一条，所以这里靠 count 而不是靠新 id。
+  const visibleNotices = view.notices.filter((n) => n.count > (dismissed[n.id] ?? 0))
+
   return (
     <div className="ac-toolbar">
-      {(view.notices.length > 0 || sendError) && (
+      {(visibleNotices.length > 0 || sendError) && (
         <div className="ac-notices">
-          {view.notices.map((n) => (
+          {visibleNotices.map((n) => (
             <div key={n.id} className={`ac-notice${n.fatal ? ' ac-notice-fatal' : ''}`}>
-              {n.text}
+              <span className="ac-notice-text">
+                {n.text}
+                {n.count > 1 && <span className="ac-notice-count">×{n.count}</span>}
+              </span>
+              <button
+                type="button"
+                className="ac-notice-close"
+                aria-label="关闭这条提醒"
+                title="关闭这条提醒"
+                onClick={() => setDismissed((prev) => ({ ...prev, [n.id]: n.count }))}
+              >
+                <CloseIcon size={10} />
+              </button>
             </div>
           ))}
-          {sendError && <div className="ac-notice ac-notice-fatal">{sendError}</div>}
+          {/* sendError 不给关闭按钮：它不是累积的 notice，是"上一次发送"的即时状态，
+              下一次发送时 AgentChatView 会自己清掉（setSendError(null)）。 */}
+          {sendError && (
+            <div className="ac-notice ac-notice-fatal">
+              <span className="ac-notice-text">{sendError}</span>
+            </div>
+          )}
         </div>
       )}
 

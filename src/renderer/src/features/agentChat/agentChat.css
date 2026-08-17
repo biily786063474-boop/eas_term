@@ -457,8 +457,22 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+  /* 上限 + 滚动，是「对话区不会被 notices 挤没」这条的**真正保证**（2026-08-17 全分支
+     最终评审 I5）：.ac-toolbar 是 flex-shrink:0、.ac-messages 是 flex:1;min-height:0，
+     所以 notices 长多高，对话区就被挤掉多高。在画布上一个 300px 的 agent 节点里，
+     攒到七八条对话区就基本看不见了，十几条之后连输入框都被顶出视野。
+     96px ≈ 两条半，超出的自己滚，永远不再吃对话区的高度。
+     去重与条数上限在归约器那边（reduce.ts 的 Notice.count / MAX_NOTICES），
+     这里是最后一道、也是唯一一道跟真实版面有关的闸。 */
+  max-height: 96px;
+  overflow-y: auto;
+  /* 滚动容器要能收缩，否则 flex 列里它会按内容撑开、max-height 形同虚设 */
+  flex-shrink: 0;
 }
 .ac-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-size: 11.5px;
@@ -466,6 +480,38 @@
   color: #f0d9ad;
   background: rgba(224, 175, 104, 0.1);
   border: 1px solid rgba(224, 175, 104, 0.3);
+}
+.ac-notice-text {
+  flex: 1;
+  min-width: 0; /* 不给的话长文本会把关闭按钮挤出边界 */
+}
+/* 同一条 notice 重复发生的次数（Claude 每次 restart 重推、Codex 每条消息一个新进程）。
+   跟正文同色但更淡：它是次要信息，不该抢正文的注意力。 */
+.ac-notice-count {
+  margin-left: 6px;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+.ac-notice-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.ac-notice-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
 }
 .ac-notice-fatal {
   color: #fda4af;
