@@ -2,6 +2,7 @@
 // 点击地图任意处 → 画布平移过去（保持缩放）；拖视口框 → 连续平移。
 // 坐标换算：世界 bbox（含 5% 留白）→ fit-contain 进固定尺寸 → 仿射映射。
 import { useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { statusColor, statusOfFrame } from './frameStatus'
@@ -36,6 +37,10 @@ export function CanvasMiniMap(): JSX.Element | null {
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{ offX: number; offY: number } | null>(null)
   const [collapsed, setCollapsed] = useState(true) // 默认收起：只在左下角留一个小图标，不占画布
+  // hover 到某个点：点轻微放大 + 跟随鼠标的气泡显示全称（地图上的标签是截断过的短名，
+  // 中文只剩 2 个字，光看标签分不出「笔纵画板」和「笔纵后台」）。
+  // 判定不挂在可见的点上——它 r=2，鼠标几乎压不中；单独放一个大一圈的透明命中圈接管。
+  const [hot, setHot] = useState<{ id: string; name: string; x: number; y: number } | null>(null)
 
   const fh = (f: { collapsed: boolean; h: number }): number => (f.collapsed ? HEAD_H : f.h)
 
@@ -191,7 +196,7 @@ export function CanvasMiniMap(): JSX.Element | null {
                   cx={p.x}
                   cy={p.y}
                   r={2}
-                  className={`cmm-dot${f.parentId ? ' sub' : ''}`}
+                  className={`cmm-dot${f.parentId ? ' sub' : ''}${hot?.id === f.id ? ' hot' : ''}`}
                   // 颜色跟着项目状态走（f.status 是旧结构，已经迁到项目上了）
                   {...(() => {
                     const c = statusColor(statusOfFrame(frames, projects, f.id))
@@ -201,6 +206,24 @@ export function CanvasMiniMap(): JSX.Element | null {
                 <text x={p.x + 4} y={p.y + 3} className={`cmm-name${f.parentId ? ' sub' : ''}`}>
                   {shortName(f.name)}
                 </text>
+                {/* 透明命中圈：判定范围比可见的点大一圈。放在点和文字之后 ——
+                    SVG 后画的在上层，它才接管得到 hover。onMouseDown 不拦，
+                    照旧冒泡到 <svg> 走「点地图任意处 → 平移过去」。 */}
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={7}
+                  className="cmm-hit"
+                  onMouseEnter={(e) =>
+                    setHot({ id: f.id, name: f.name, x: e.clientX, y: e.clientY })
+                  }
+                  onMouseMove={(e) =>
+                    setHot((h) => (h?.id === f.id ? { ...h, x: e.clientX, y: e.clientY } : h))
+                  }
+                  // 只清掉自己那条：命中圈会互相重叠，离开 A 时可能已经进了 B，
+                  // 无条件 setHot(null) 会把 B 刚设好的状态抹掉（气泡闪一下就没）
+                  onMouseLeave={() => setHot((h) => (h?.id === f.id ? null : h))}
+                />
               </g>
             )
           })}
@@ -225,6 +248,15 @@ export function CanvasMiniMap(): JSX.Element | null {
           )}
         </svg>
       )}
+      {/* 气泡走 portal 到 body：跟右键菜单同一套做法。缩略图自己带 transition/z-index，
+          浮层留在里面迟早会被裁或被压。偏移 +12/+14 是为了不压在光标底下。 */}
+      {hot &&
+        createPortal(
+          <div className="app-tooltip cmm-tip" style={{ left: hot.x + 12, top: hot.y + 14 }}>
+            {hot.name}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

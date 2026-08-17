@@ -2567,6 +2567,11 @@
 .cmm-dot {
   fill: var(--accent);
   opacity: 0.95;
+  /* **transform-box 不能省**：SVG 的 transform-origin 默认相对整个 viewBox 原点，
+     不加这两行的话 scale 会把点甩到地图左上角外面去，不是原地放大 */
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.12s ease-out;
 }
 .cmm-dot.sub {
   fill: var(--fg-dim);
@@ -2582,6 +2587,27 @@
    子 Frame 打了标签时，状态色要盖过「子 Frame 灰」 */
 .cmm-dot[data-tint] {
   opacity: 1;
+}
+/* 悬浮命中：轻微放大 + 提到全不透明。写在 .sub / [data-tint] 之后，
+   否则子 Frame 和打了标签的点的 opacity 会把这里盖掉 */
+.cmm-dot.hot {
+  transform: scale(1.75);
+  opacity: 1;
+}
+/* 判定范围：比可见的点（r=2）大一圈的透明圈。
+   fill 用 transparent 而不是 none —— none 在 visiblePainted 下收不到指针事件，
+   显式写 pointer-events 是为了不依赖这条差异 */
+.cmm-hit {
+  fill: transparent;
+  pointer-events: all;
+}
+/* 跟随鼠标的全称气泡：视觉沿用全局 tooltip（.app-tooltip），不另起一套。
+   只改两处 —— 取消它的水平居中（这里锚点是光标不是元素），文字左对齐。
+   没走 [data-tip] 是因为那套锚定元素包围盒、还带 360ms 延迟，
+   而地图上的点又小又密，扫过去要立刻认出是哪个项目。 */
+.cmm-tip {
+  transform: none;
+  text-align: left;
 }
 .cmm-name {
   font-size: 7.5px;
@@ -4751,7 +4777,10 @@
   .ctodo-add:hover,
   .ctodo-item:hover,
   .ctodo-item.dragging,
-  .ctodo-check:hover {
+  .ctodo-check:hover,
+  /* 缩略图的点：放大只是「我命中了这个」的装饰性回执，去掉它仍有两层反馈 ——
+     点提到全不透明，以及跟随鼠标的全称气泡（后者才是这个交互真正的目的） */
+  .cmm-dot.hot {
     transform: none;
   }
 
