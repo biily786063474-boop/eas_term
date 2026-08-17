@@ -14,7 +14,7 @@
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CliCapabilities, AgentApprovalHookStatus } from '../../../../shared/agentChat.ts'
+import type { CliCapabilities, CliInfo, AgentApprovalHookStatus } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel, formatUsage } from './toolbarModel.ts'
 import { VoiceButton } from '../voice/VoiceButton'
@@ -32,6 +32,7 @@ function autoGrow(el: HTMLTextAreaElement): void {
 
 export function ChatToolbar({
   caps,
+  approvalHook,
   view,
   cwd,
   sessionId,
@@ -40,6 +41,13 @@ export function ChatToolbar({
   sendError
 }: {
   caps: CliCapabilities
+  /** 这个 CLI 的逐次审批用哪种机制（原样来自 CliInfo.approvalHook）。**决定了工具栏
+   *  那个「审批保护」chip 与「卸载」按钮出不出现**——它们读写的是
+   *  <cwd>/.claude/settings.json 里 Claude 的 PreToolUse hook，对不走这套机制的 CLI
+   *  显示它就是错的信息（2026-08-17 全分支最终评审 I2：在 Codex 节点上 chip 会显示
+   *  「已开启」，而 Codex 根本没有逐次审批、权限由沙箱决定，工具栏另一侧同时还在显示
+   *  沙箱级别，两条信息互相矛盾；那个「卸载」点下去删的还是 Claude 的 hook）。 */
+  approvalHook?: CliInfo['approvalHook']
   view: ChatView
   /** 装/查/卸审批 hook 都是按项目走的,不是按会话——同一个项目下别的 agent 节点/
    *  别的会话装过的痕迹,这里也要如实显示（见 shared/agentChat.ts 的 AgentApprovalHookStatus
@@ -55,7 +63,7 @@ export function ChatToolbar({
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
   sendError?: string | null
 }): JSX.Element {
-  const model = toolbarModel(caps)
+  const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
   // 本地"当前选中"只是给下拉一个初始展示值——它不保证等于会话此刻真正在用的模型/effort
   // （start() 目前不传 model/effort,adapter 用自己的默认值;这里选中第一项只是合理的起点）。
@@ -71,10 +79,15 @@ export function ChatToolbar({
     aliveRef.current = false
   }, [])
 
+  // 不走这套 hook 机制的 CLI 连查都不该查——那次 hookStatus() 查的是 Claude 的
+  // <cwd>/.claude/settings.json，对它来说是一次毫无意义的文件读，读回来还会被拿去
+  // 渲染一个跟它无关的开关（评审 I2）。
+  const showApprovalHook = model.showApprovalHook
   const refreshHook = useCallback(async (): Promise<void> => {
+    if (!showApprovalHook) return
     const s = await window.api.agentChat.hookStatus(cwd)
     if (aliveRef.current) setHook(s)
-  }, [cwd])
+  }, [cwd, showApprovalHook])
 
   useEffect(() => {
     void refreshHook()
@@ -139,21 +152,26 @@ export function ChatToolbar({
           </span>
         )}
 
-        <span className="ac-meta-item">
-          <LockIcon size={11} className={hook?.installed ? 'ac-hook-on' : 'ac-hook-off'} />
-          审批保护 {hook ? (hook.installed ? '已开启' : '未开启') : '查询中…'}
-          {hook?.installed && (
-            <button
-              type="button"
-              className="ac-meta-btn"
-              disabled={hookBusy}
-              onClick={() => void handleUninstall()}
-            >
-              <TrashIcon size={10} />
-              {hookBusy ? '卸载中…' : '卸载'}
-            </button>
-          )}
-        </span>
+        {/* 只有声明「逐次审批靠那份 PreToolUse hook 文件」的 CLI 才渲染这一块——判据是
+            能力声明（model.showApprovalHook ← CliInfo.approvalHook），不是 CLI 名字，
+            也不是 capabilities.approval 非空那个碰巧重合的替身（评审 I2/I3）。 */}
+        {model.showApprovalHook && (
+          <span className="ac-meta-item">
+            <LockIcon size={11} className={hook?.installed ? 'ac-hook-on' : 'ac-hook-off'} />
+            审批保护 {hook ? (hook.installed ? '已开启' : '未开启') : '查询中…'}
+            {hook?.installed && (
+              <button
+                type="button"
+                className="ac-meta-btn"
+                disabled={hookBusy}
+                onClick={() => void handleUninstall()}
+              >
+                <TrashIcon size={10} />
+                {hookBusy ? '卸载中…' : '卸载'}
+              </button>
+            )}
+          </span>
+        )}
 
         {model.showCompact && (
           <button

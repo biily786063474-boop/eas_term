@@ -3,7 +3,12 @@ import assert from 'node:assert/strict'
 import { buildCliList } from './cliList.ts'
 import type { CliAdapter } from '../../shared/agentChat.ts'
 
-const fake = (id: string, displayName: string, over: Partial<CliAdapter['capabilities']> = {}) =>
+const fake = (
+  id: string,
+  displayName: string,
+  over: Partial<CliAdapter['capabilities']> = {},
+  approvalHook?: CliAdapter['approvalHook']
+) =>
   ({
     id,
     displayName,
@@ -14,7 +19,8 @@ const fake = (id: string, displayName: string, over: Partial<CliAdapter['capabil
       contextUsage: true,
       approval: ['exec' as const],
       ...over
-    }
+    },
+    ...(approvalHook ? { approvalHook } : {})
   }) as unknown as CliAdapter
 
 // ============================================================
@@ -107,4 +113,29 @@ test('[补充] 三个 adapter 时，id 与 available 逐一对应，不会整体
 
 test('[补充] 空 adapters 但 availability 里有多余的 key，不影响结果仍是空数组（不会凭空造出条目）', () => {
   assert.deepEqual(buildCliList([], { claude: true, codex: true }), [])
+})
+
+// ============================================================
+// 2026-08-17 全分支最终评审 I2/I3：approvalHook 必须跨 IPC 带给渲染层——它是 UI 判断
+// 「审批那一块该不该出现」唯一正确的依据，跟 capabilities.approval 不是一回事。
+// ============================================================
+
+test('[I2/I3] adapter 声明的 approvalHook 原样带出——渲染层的询问卡片/chip/卸载按钮全靠它', () => {
+  const list = buildCliList([fake('claude', 'Claude Code', {}, 'claude-pretooluse')], { claude: true })
+  assert.equal(list[0].approvalHook, 'claude-pretooluse')
+})
+
+test('[I2/I3] 没声明 approvalHook 的 adapter 带出 undefined，不是编造一个值', () => {
+  const list = buildCliList([fake('codex', 'Codex', { approval: [] })], { codex: true })
+  assert.equal(list[0].approvalHook, undefined)
+})
+
+test('[I2/I3] approvalHook 与 capabilities.approval 各走各的——approval 非空不代表用那份 hook 文件', () => {
+  // 这正是 I3 说的"第三个 CLI 一接进来就分叉"的形状：有细粒度审批能力（approval 非空），
+  // 但审批握手走自己的协议、不装 Claude 那份 PreToolUse hook。渲染层若继续拿
+  // approval.length>0 当替身，就会对它弹一张"要不要装审批钩子"的卡片，而主进程
+  // 那个分支对它从不进入——用户以为自己拒绝了什么，实际什么都没发生。
+  const list = buildCliList([fake('futurecli', 'Future CLI', { approval: ['exec'] })], { futurecli: true })
+  assert.deepEqual(list[0].capabilities.approval, ['exec'])
+  assert.equal(list[0].approvalHook, undefined, 'approval 非空不能被推断成"要装 hook"')
 })

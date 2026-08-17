@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { toolbarModel, formatUsage } from './toolbarModel.ts'
+import { toolbarModel, formatUsage, usesApprovalHookFile } from './toolbarModel.ts'
 import type { CliCapabilities } from '../../../../shared/agentChat.ts'
 
 const claudeLike: CliCapabilities = {
@@ -182,6 +182,41 @@ test('[补充] costUsd 显式为 0（不是 undefined）时应显示 $0——0 �
 test('[补充] inputTokens/outputTokens 为 0 时仍然显示 0，这两个必有字段不能被当成「缺失」省略', () => {
   const s = formatUsage({ inputTokens: 0, outputTokens: 0 })
   assert.equal(s, '输入 0 · 输出 0')
+})
+
+// ============================================================
+// 2026-08-17 全分支最终评审 I2/I3：工具栏那个「审批保护 已开启/未开启」chip 与它旁边的
+// 「卸载」按钮，判据必须是 CLI 自己声明的审批机制（approvalHook），不是 approval 非空
+// 那个碰巧重合的替身，更不是 CLI 名字。
+// ============================================================
+
+test('[I2] 声明 claude-pretooluse 的 CLI 才显示审批 hook chip', () => {
+  assert.equal(toolbarModel(claudeLike, 'claude-pretooluse').showApprovalHook, true)
+})
+
+test('[I2] 没声明审批机制的 CLI 不显示 chip——那个 chip 读的是 Claude 的 settings.json，对它是错的信息', () => {
+  // Codex 走 exec --json、approval 是空数组、根本没有逐次审批，权限完全由沙箱决定。
+  // chip 在它身上显示「已开启」时，工具栏另一侧同时还在显示沙箱级别，两条信息互相矛盾；
+  // 那个「卸载」点下去删的还是 Claude 的 hook。
+  assert.equal(toolbarModel(codexLike, undefined).showApprovalHook, false)
+})
+
+test('[I3] approval 非空但不走这套 hook 机制的 CLI（第三个 CLI 的形状）同样不显示 chip', () => {
+  // 判据如果还是 approval.length>0，这条会错判成 true——这正是 I3 描述的分叉点。
+  const thirdCli: CliCapabilities = { models: [], contextUsage: true, approval: ['exec'], compact: 'native' }
+  assert.equal(toolbarModel(thirdCli, undefined).showApprovalHook, false)
+  assert.equal(thirdCli.approval.length > 0, true, '数据本身确实是 approval 非空——判据变了，不是数据变了')
+})
+
+test('[I2] 不传 approvalHook 时按"没声明"处理（宁可不显示，也不要显示一个与这个 CLI 无关的开关）', () => {
+  assert.equal(toolbarModel(claudeLike).showApprovalHook, false)
+})
+
+test('[I2/I3] usesApprovalHookFile 是三处判据共用的唯一函数，只认 claude-pretooluse 这一个取值', () => {
+  assert.equal(usesApprovalHookFile('claude-pretooluse'), true)
+  assert.equal(usesApprovalHookFile(undefined), false)
+  // 将来出现别的审批机制取值时，默认不该被当成"要装 Claude 那份 hook"
+  assert.equal(usesApprovalHookFile('codex-app-server' as never), false)
 })
 
 test('[补充] 两份能力声明互不干扰——claudeLike 和 codexLike 交替调用不会互相污染结果', () => {

@@ -17,6 +17,7 @@ import type {
   CliInfo
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
+import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
@@ -134,10 +135,13 @@ export function AgentChatView({
     setStartError(null)
 
     // Task 7 Step 1（Ruling 15）：第一次要在这个项目里装审批 hook 前，先问用户。
-    // 判据是 capabilities.approval 非空——这是能力位，不是按 CLI 名字分支：目前唯二两个
-    // adapter 里，声明用 claude-pretooluse hook 的那个恰好也是 approval 非空的那个
-    // （shared/agentChat.ts 提醒过这两个概念不等价，渲染层现在没有更细的信号；等出现
-    // "approval 非空但走别的审批机制"的 CLI 时这里要跟着重新设计）。
+    // 判据是 CLI 自己声明的审批机制（usesApprovalHookFile ← CliInfo.approvalHook），
+    // 跟主进程 restartAndDeliver 里 `adapter.approvalHook === 'claude-pretooluse'`
+    // 是同一件事——2026-08-17 全分支最终评审 I3 之前这里用的是 capabilities.approval
+    // 非空当替身，今天两个 adapter 恰好重合所以看不出来，但第三个 CLI 一接进来就分叉：
+    // 那时 UI 会弹卡片问「要不要装审批钩子」→ 用户点「不装」→ 主进程那个分支对它
+    // 从不进入 → 既不装、也不推 notice，用户以为自己拒绝了什么，实际什么都没发生。
+    // （这不是按 CLI 名字分支：判的是机制声明，不是身份。）
     //
     // 用户选"不装"不再等于"不能用这个 CLI"（那是修复前的做法，跟内核 Ruling 14
     // "告知而非阻断"矛盾——那条裁定的原意就是"不装 hook 也能用，只是要让用户看见
@@ -145,7 +149,7 @@ export function AgentChatView({
     // restartAndDeliver 收到它就跳过装 hook，改发一条 notice），这里改成把用户的
     // 选择原样透传给 start()，会话照常起。
     let skipApprovalHook = false
-    if (selected.capabilities.approval.length > 0) {
+    if (usesApprovalHookFile(selected.approvalHook)) {
       let status: AgentApprovalHookStatus
       try {
         status = await window.api.agentChat.hookStatus(cwd)
@@ -247,6 +251,7 @@ export function AgentChatView({
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar
           caps={selected!.capabilities}
+          approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
           sessionId={sessionId}

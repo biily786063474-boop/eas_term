@@ -159,4 +159,20 @@ export interface CliInfo {
   /** 探测结果缺失时为 false——宁可少显示一个选项，也不要让用户选一个装不上的 CLI 然后报错 */
   available: boolean
   capabilities: CliCapabilities
+  /** 原样透传 CliAdapter.approvalHook——**UI 判断"审批那一块该不该出现"唯一正确的依据**
+   *  （2026-08-17 全分支最终评审 I2/I3）。
+   *
+   *  在这个字段存在之前，渲染层只能拿 `capabilities.approval.length > 0` 当替身，
+   *  而主进程真正的判据是 `adapter.approvalHook === 'claude-pretooluse'`。今天两个
+   *  adapter 恰好在这两个判据上重合，所以看不出来；第三个 CLI 一接进来就分叉：
+   *  - I3：UI 弹「要不要装审批钩子」的卡片 → 用户点「不装」→ 主进程那个分支从不进入
+   *    → 既不装、也不推 notice，用户以为自己拒绝了什么，实际什么都没发生；
+   *  - I2：工具栏那个「审批保护 已开启/未开启」chip 与「卸载」按钮本来无条件渲染，
+   *    在 Codex 节点上显示的是 **Claude** 的 hook 状态（Codex 走 exec --json、approval
+   *    是空数组、根本没有逐次审批，权限由沙箱决定——工具栏另一侧同时还在显示沙箱级别，
+   *    两条信息互相矛盾），点那个「卸载」删掉的也是 Claude 的 hook。
+   *
+   *  **这是能力声明，不是 CLI 名字**——UI 判 `approvalHook === 'claude-pretooluse'`
+   *  不违反"UI 不许按 CLI 名字分支"这条硬约束，判 `id === 'claude'` 才违反。 */
+  approvalHook?: CliAdapter['approvalHook']
 }

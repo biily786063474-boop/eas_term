@@ -13,7 +13,7 @@
 //    不是「它是不是 Codex」。approval 为空却没给 sandboxLevels 时 showSandbox 必须是
 //    false——宁可不显示，也不要显示一个空的选择器。
 
-import type { CliCapabilities, Usage } from '../../../../shared/agentChat.ts'
+import type { CliCapabilities, CliInfo, Usage } from '../../../../shared/agentChat.ts'
 
 export interface ToolbarModel {
   showModel: boolean
@@ -24,9 +24,28 @@ export interface ToolbarModel {
   showSandbox: boolean
   sandboxLevels: { id: string; label: string }[]
   showUsage: boolean
+  /** 「审批保护 已开启/未开启」chip 与它旁边的「卸载」按钮该不该出现。 */
+  showApprovalHook: boolean
 }
 
-export function toolbarModel(caps: CliCapabilities): ToolbarModel {
+/** 这个 CLI 的逐次审批是不是靠「往 <cwd>/.claude/settings.json 装 PreToolUse hook」
+ *  实现的。**渲染层所有跟那份 hook 文件有关的 UI 都必须问这个函数**：
+ *  起会话前的询问卡片、工具栏的状态 chip、一键卸载按钮——三处判据必须是同一个，
+ *  也必须和主进程的 `adapter.approvalHook === 'claude-pretooluse'` 是同一件事
+ *  （2026-08-17 全分支最终评审 I2/I3：此前渲染层用 `approval.length > 0` 当替身，
+ *  今天两个 adapter 恰好重合所以看不出来，第三个 CLI 一接进来就分叉）。
+ *
+ *  参数取的是能力声明字段，不是 CLI id——"UI 不许按 CLI 名字分支"这条硬约束
+ *  要求的正是这个：判机制，不判身份。 */
+export function usesApprovalHookFile(approvalHook: CliInfo['approvalHook']): boolean {
+  return approvalHook === 'claude-pretooluse'
+}
+
+/** approvalHook 与 caps 分两个参数、且是可选的：既有调用点/测试只关心能力映射时可以
+ *  照旧只传 caps（那时 showApprovalHook 为 false——"没告诉我们用哪种审批机制"当作
+ *  "不用那份 hook 文件"处理，跟 showCompact 对 undefined 的态度一致：宁可不显示，
+ *  也不要显示一个跟这个 CLI 毫无关系的开关）。 */
+export function toolbarModel(caps: CliCapabilities, approvalHook?: CliInfo['approvalHook']): ToolbarModel {
   const models = caps.models ?? []
   const effortLevels = caps.effortLevels ?? []
   const sandboxLevels = caps.sandboxLevels ?? []
@@ -40,7 +59,8 @@ export function toolbarModel(caps: CliCapabilities): ToolbarModel {
     showCompact: caps.compact !== false && caps.compact !== undefined,
     showSandbox: caps.approval.length === 0 && sandboxLevels.length > 0,
     sandboxLevels,
-    showUsage: caps.contextUsage
+    showUsage: caps.contextUsage,
+    showApprovalHook: usesApprovalHookFile(approvalHook)
   }
 }
 
