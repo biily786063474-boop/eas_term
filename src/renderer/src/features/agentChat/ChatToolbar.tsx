@@ -57,7 +57,9 @@ export function ChatToolbar({
    *  window.api.pty.write(ptyId, ...)——这里始终提供了 onText,那条兜底路径永远不会被真正
    *  调用。传会话 id 只是给它一个稳定、每个会话独立的占位值,不是真的 pty id。 */
   sessionId: string
-  onSend: (text: string) => void
+  /** 返回「这条真的送出去了吗」。false = 没送成，工具栏会把文字放回输入框（评审 I4）。
+   *  返回 void 也允许（比如将来某个调用方不关心结果），那时按"不知道"处理、不回填。 */
+  onSend: (text: string) => Promise<boolean> | void
   onSetParams: (patch: { model?: string; effort?: string }) => void
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
@@ -129,7 +131,22 @@ export function ChatToolbar({
       taRef.current.style.height = 'auto'
       taRef.current.focus()
     }
-    onSend(t)
+    // 发送失败要把用户打的字放回输入框（2026-08-17 全分支最终评审 I4）。
+    // 对 Codex 这是**常态路径而非边缘**：它的 stdin 是 'ignore'，上一轮还在跑时
+    // deliverMessage 直接返回「当前会话正在处理上一条消息，请稍候再发送」。修复前
+    // 用户看到的是：自己那句话已经出现在对话流里（看起来发出去了）、输入框空了、
+    // 底下一行小字——想重发只能重新打一遍，长消息就是白打。
+    void Promise.resolve(onSend(t)).then((ok) => {
+      if (ok !== false || !aliveRef.current) return
+      // 这几十毫秒里用户可能已经开始打下一句：那就把失败的这条接在前面，
+      // 绝不覆盖他新打的内容——"不丢用户打的字"是这条修复的全部意义。
+      setText((cur) => (cur ? `${t}\n${cur}` : t))
+      requestAnimationFrame(() => {
+        if (!taRef.current) return
+        autoGrow(taRef.current)
+        taRef.current.focus()
+      })
+    })
   }
 
   const appendVoice = (t: string): void => {

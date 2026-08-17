@@ -234,15 +234,30 @@ export function AgentChatView({
     // send(sessionId, text)。beforeTurnCount 的算法跟首条消息完全一致——reducerRef 的
     // turns 只增不减，所以在这里现读它的长度、跟 mergeUserMessages 的插入位置对齐，
     // 不会因为这是「第 N 条」而需要不同的公式（上一轮审查点名过这条不变量，见任务交底）。
-    const handleFollowupSend = (message: string): void => {
+    // 返回「这条真的送出去了吗」——工具栏据此决定要不要把文字放回输入框（评审 I4）。
+    const handleFollowupSend = async (message: string): Promise<boolean> => {
       const trimmed = message.trim()
-      if (!trimmed) return
+      if (!trimmed) return false
       setSendError(null)
       const beforeTurnCount = reducerRef.current.view().turns.length
-      setSentMessages((prev) => [...prev, { text: trimmed, beforeTurnCount }])
-      void window.api.agentChat.send(sessionId, trimmed).then((r) => {
-        if (!r.ok && aliveRef.current) setSendError(r.error)
-      })
+      // 乐观插入：先让这条消息出现在对话流里，界面才跟得上手速。但它是**乐观**的，
+      // 失败时必须撤回——留着就是在骗人（那句话从来没有离开过这台机器）。
+      // 按对象引用撤回，不按下标：撤回时数组里可能已经又多了别的消息。
+      const entry: SentMessage = { text: trimmed, beforeTurnCount }
+      setSentMessages((prev) => [...prev, entry])
+      const r = await window.api.agentChat
+        .send(sessionId, trimmed)
+        .catch((e): { ok: false; error: string } => ({
+          // IPC 本身 reject（会话不存在之外的意外）以前是一条 unhandled rejection，
+          // 界面上什么都不会发生、消息却已经显示在对话流里——跟 I4 是同一个失败面，
+          // 顺手在这条路径上接住。
+          ok: false,
+          error: e instanceof Error ? e.message : String(e)
+        }))
+      if (r.ok) return true
+      setSentMessages((prev) => prev.filter((m) => m !== entry))
+      if (aliveRef.current) setSendError(r.error)
+      return false
     }
     return (
       <div className="agent-chat-view">
