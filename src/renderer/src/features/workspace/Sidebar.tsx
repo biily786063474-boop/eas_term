@@ -164,7 +164,12 @@ export function Sidebar(): JSX.Element {
               // 权限确认框上的 CLI 就此没了任何指示。真正落地的那个终端由
               // TerminalView 的 focusin → clearAttention 逐个清（切标签会让它拿到
               // 输入焦点），够用且精确。详见 projectsSlice.ts 的说明。
-              onClick={() => setActiveProject(p.id)}
+              onClick={() => {
+                // 记一次「用户主动切到了这个项目」，供画布双击菜单的「最近使用」排序用。
+                // 不埋进 setActiveProject：它在 loadProjects 之后会被自动调一次（取 projects[0]）
+                useStore.getState().touchProject(p.id)
+                setActiveProject(p.id)
+              }}
               // 双击 = 重命名（原来是「开新终端」，已移到右键菜单和行尾的终端图标按钮）
               onDoubleClick={() => setEditingProject({ id: p.id, mode: 'name' })}
               onContextMenu={(e) => {
@@ -217,6 +222,7 @@ export function Sidebar(): JSX.Element {
                   data-tip="在此项目打开新终端"
                   onClick={(e) => {
                     e.stopPropagation()
+                    useStore.getState().touchProject(p.id)
                     void openTerminal({ projectId: p.id })
                   }}
                 >

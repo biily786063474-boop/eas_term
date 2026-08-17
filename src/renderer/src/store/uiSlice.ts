@@ -23,6 +23,9 @@ function dropKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
  *  的决定，不该被 ViewMode 的定义变化顺带牵动。 */
 export type GanttJumpMode = 'split' | 'canvas' | 'board'
 
+/** 双击画布空白弹出的项目列表的排序方式 */
+export type ProjectMenuSort = 'default' | 'recent'
+
 export interface UiSlice {
   theme: ThemeId
   setTheme: (theme: ThemeId) => void
@@ -65,6 +68,23 @@ export interface UiSlice {
    *  （含老用户）体验不变。 */
   ganttJumpMode: GanttJumpMode
   setGanttJumpMode: (mode: GanttJumpMode) => void
+  /** 双击画布空白弹出的项目列表按什么排。'default' = 添加顺序，
+   *  'recent' = 最近点过的排前面。两种都**保留「有状态的排最前」**，
+   *  差别只在没有状态的那一批 —— approval 是唯一「不管就永远卡着」的状态，
+   *  规格里写着它在任何排序里都排最前，不能因为半天没碰这个项目就把它沉下去。
+   *  纯 UI 偏好，存 localStorage，参考 ganttJumpMode 的存法。 */
+  projectMenuSort: ProjectMenuSort
+  setProjectMenuSort: (mode: ProjectMenuSort) => void
+  /** 最近点过的项目 id，最近的在最前。**不进 projects.json** ——
+   *  它是「我最近在弄哪个」这种本机偏好，不是项目自身的属性，
+   *  为它扩一条主进程 IPC 不划算。用有序数组而不是时间戳：
+   *  天然有序、不用比较、也不会因为改系统时间而错乱。 */
+  projectMru: string[]
+  /** 记一次「用户主动打开/聚焦了这个项目」。
+   *  **只在 UI 的点击处调，不要埋进 store action** ——
+   *  `setActiveProject` 在 loadProjects 之后会被自动调一次（取 projects[0]），
+   *  埋在那里会把「启动」记成「你点过」，第一次打开菜单顺序就是错的。 */
+  touchProject: (id: string) => void
   attentionPtys: string[]
   flagAttention: (ptyId: string) => void
   clearAttention: (ptyId: string) => void
@@ -158,6 +178,11 @@ const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
 const GANTT_JUMP_MODE_KEY = 'eas.gantt.jumpmode'
+const PROJECT_MENU_SORT_KEY = 'eas.projectmenu.sort'
+const PROJECT_MRU_KEY = 'eas.projectmenu.mru'
+/** MRU 只用来排一个菜单，留最近 60 个足够；不设上限的话它会跟着用了几年的
+ *  项目数一起长，而且早就删掉的项目 id 会永远赖在 localStorage 里 */
+const MRU_MAX = 60
 
 let mcpSeq = 1
 let ttRunning = false
@@ -245,6 +270,31 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setGanttJumpMode: (mode) => {
     localStorage.setItem(GANTT_JUMP_MODE_KEY, mode)
     set({ ganttJumpMode: mode })
+  },
+  // 同 ganttJumpMode：存过的值才信，之外的一律回落 'default'
+  projectMenuSort: localStorage.getItem(PROJECT_MENU_SORT_KEY) === 'recent' ? 'recent' : 'default',
+  setProjectMenuSort: (mode) => {
+    localStorage.setItem(PROJECT_MENU_SORT_KEY, mode)
+    set({ projectMenuSort: mode })
+  },
+  projectMru: (() => {
+    // 手改过的 localStorage / 更早版本的脏值都可能不是字符串数组，
+    // 解析失败或形状不对一律当「没有记录」，不让它把菜单排崩
+    try {
+      const v = JSON.parse(localStorage.getItem(PROJECT_MRU_KEY) ?? '[]')
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+    } catch {
+      return []
+    }
+  })(),
+  touchProject: (id) => {
+    set((s) => {
+      // 已经在最前就什么都不做 —— 连点同一个项目不该每次都写一遍 localStorage
+      if (s.projectMru[0] === id) return {}
+      const next = [id, ...s.projectMru.filter((x) => x !== id)].slice(0, MRU_MAX)
+      localStorage.setItem(PROJECT_MRU_KEY, JSON.stringify(next))
+      return { projectMru: next }
+    })
   },
   attentionPtys: [],
   silencedNotices: [],

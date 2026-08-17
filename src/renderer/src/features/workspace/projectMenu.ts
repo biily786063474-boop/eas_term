@@ -38,7 +38,12 @@ export function projectMenuItems(
     {
       label: '在此项目打开新终端',
       // 双击项目行原来是这个动作，现在双击让位给重命名了，这里是它的主入口
-      onClick: () => void s.openTerminal({ projectId })
+      onClick: () => {
+        // 供画布双击菜单的「最近使用」排序用。埋在这里而不是 openTerminal 里：
+        // 那个 action 也会被 canvasSlice / App 启动流程程序性调用
+        useStore.getState().touchProject(projectId)
+        void s.openTerminal({ projectId })
+      }
     },
     ...(onStartRename
       ? [

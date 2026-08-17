@@ -135,6 +135,8 @@ export function BoardStage(): JSX.Element {
   /** 点开某个项目。有终端就全屏第一个，没有就先开一个（开完卡片上会出现它） */
   const openFull = (p: Project, terms: TermLeaf[]): void => {
     setActiveProject(p.id)
+    // 供画布双击菜单的「最近使用」排序用（点看板卡片也是「打开这个项目」）
+    useStore.getState().touchProject(p.id)
     if (terms.length) {
       setFull(terms[0].leaf.id)
       // 只清被全屏出来的这一个。同项目其它终端一个像素都没露面，它们的提醒得留着

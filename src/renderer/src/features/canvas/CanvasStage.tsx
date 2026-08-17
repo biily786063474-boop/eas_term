@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
+import type { ProjectMenuSort } from '../../store/uiSlice'
 import { attachBlurGuard } from '../../blurGuard'
 import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon, CameraIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
@@ -523,38 +524,80 @@ export function CanvasStage(): JSX.Element {
       setPicker({ x: e.clientX, y: e.clientY, frameId: fid, root, rootName: frame.name, wx, wy })
       return
     }
-    // 有状态的排前面（approval > done > running），其余保持原顺序。
+    // 排序两档，用户在菜单顶部自己切（projectMenuSort，存 localStorage）：
+    //   default —— st.projects 的原顺序（添加顺序）
+    //   recent  —— 最近点过的排前面（projectMru）
+    //
+    // **两档都先按状态分层，这一层不受排序方式影响。** approval 是唯一
+    // 「不管就永远卡着」的状态，useStatus.ts 引的规格 §1.1 写着它在任何排序里都排最前 ——
+    // 不能因为半天没碰这个项目，就把一个卡在权限确认框上的终端沉到底下。
+    // 「最近使用」优先的是**顺序**，不是**紧急度**。
     // rank 用的是同一份 useProjectRows 结果，不在这里另算一遍。
     const rank = new Map(rows.map((r, i) => [r.projectId, i]))
-    const ordered = [...st.projects].sort(
-      (a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999)
-    )
-    const items: CanvasMenuItem[] = ordered.map((p) => {
-      const exist = st.canvas.frames.find((f) => f.projectId === p.id)
-      const row = rows.find((r) => r.projectId === p.id)
-      return {
-        label: p.name,
-        // 右侧不再提示"是否在画布上"——那是位置信息不是任务状态（同 CanvasDrawer 那处的理由），
-        // 换成状态 icon，没有状态就不显示任何东西。
-        icon: row ? <StatusIcon state={row.top} size={13} /> : undefined,
-        onClick: () => {
-          // 两档，先判上面这档，不是叠加：
-          // 有终端在等你（attn > 0，含「还在跑但 agent 叫了你一声」）就聚焦到最该看的
-          // 那一个（这本身会把视图挪过去），并按规格 §1.2 清掉它的状态。
-          // 判据用 attn 不用 `top !== 'running'`，理由见 machine.ts 的 ProjectRow。
-          if (row && row.attn > 0) {
-            focusTerminal(row.focusPtyId)
-            return
+    const mru = new Map(st.projectMru.map((id, i) => [id, i]))
+    const mx = e.clientX
+    const my = e.clientY
+    const buildItems = (mode: ProjectMenuSort): CanvasMenuItem[] => {
+      const ordered = [...st.projects].sort((a, b) => {
+        const ra = rank.get(a.id) ?? 999
+        const rb = rank.get(b.id) ?? 999
+        if (ra !== rb) return ra - rb
+        if (mode !== 'recent') return 0 // Array.sort 是稳定的，返回 0 即保持原顺序
+        // 从没点过的排在点过的后面。**用 MAX_SAFE_INTEGER 而不是 Infinity** ——
+        // 两个都没点过时 Infinity - Infinity 得到 NaN，sort 拿到 NaN 行为未定义
+        const ma = mru.get(a.id) ?? Number.MAX_SAFE_INTEGER
+        const mb = mru.get(b.id) ?? Number.MAX_SAFE_INTEGER
+        return ma - mb
+      })
+      const list: CanvasMenuItem[] = ordered.map((p) => {
+        const exist = st.canvas.frames.find((f) => f.projectId === p.id)
+        const row = rows.find((r) => r.projectId === p.id)
+        return {
+          label: p.name,
+          // 右侧不再提示"是否在画布上"——那是位置信息不是任务状态（同 CanvasDrawer 那处的理由），
+          // 换成状态 icon，没有状态就不显示任何东西。
+          icon: row ? <StatusIcon state={row.top} size={13} /> : undefined,
+          onClick: () => {
+            // 用户主动打开/聚焦了这个项目 —— recent 档就是按这个排的
+            st.touchProject(p.id)
+            // 两档，先判上面这档，不是叠加：
+            // 有终端在等你（attn > 0，含「还在跑但 agent 叫了你一声」）就聚焦到最该看的
+            // 那一个（这本身会把视图挪过去），并按规格 §1.2 清掉它的状态。
+            // 判据用 attn 不用 `top !== 'running'`，理由见 machine.ts 的 ProjectRow。
+            if (row && row.attn > 0) {
+              focusTerminal(row.focusPtyId)
+              return
+            }
+            // 已经在画布上就不重复建，改为把视图挪过去；不在就新建
+            if (exist) centerOnFrame(exist)
+            else void addProjectFrame(p.id, wx - 60, wy - 17)
           }
-          // 已经在画布上就不重复建，改为把视图挪过去；不在就新建
-          if (exist) centerOnFrame(exist)
-          else void addProjectFrame(p.id, wx - 60, wy - 17)
         }
+      })
+      if (list.length) {
+        // 切换项放最上面：它是「这张菜单怎么排」的开关，不是项目动作。
+        // 混在项目行之间点错的代价是白跳一个项目。
+        list.unshift(
+          {
+            label: mode === 'recent' ? '排序：最近使用' : '排序：默认',
+            hint: '点击切换',
+            onClick: () => {
+              const next: ProjectMenuSort = mode === 'recent' ? 'default' : 'recent'
+              st.setProjectMenuSort(next)
+              // CanvasContextMenu 在 onClick 之后一定会 onClose()，同一批 setState
+              // 里重开会被它盖掉 —— 排到下一个宏任务再开，用户才当场看得到新顺序，
+              // 而不是得再双击一遍
+              setTimeout(() => setMenu({ x: mx, y: my, items: buildItems(next) }), 0)
+            }
+          },
+          { label: '', sep: true, onClick: () => {} }
+        )
+        list.push({ label: '', sep: true, onClick: () => {} })
       }
-    })
-    if (items.length) items.push({ label: '', sep: true, onClick: () => {} })
-    items.push({ label: '添加项目文件夹…', onClick: () => void addProjectAt(wx, wy) })
-    setMenu({ x: e.clientX, y: e.clientY, items })
+      list.push({ label: '添加项目文件夹…', onClick: () => void addProjectAt(wx, wy) })
+      return list
+    }
+    setMenu({ x: mx, y: my, items: buildItems(st.projectMenuSort) })
   }
 
   const rectsIntersect = (

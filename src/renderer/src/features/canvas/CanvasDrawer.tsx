@@ -185,6 +185,9 @@ export function CanvasDrawer(): JSX.Element {
         //    整个跳过，画面一动不动，提醒却已经没了）。而这一轮刚把这行的徽标从
         //    「待处理」升级成 icon + 计数：它现在明确告诉你有 3 个，点一下 3 个一起没。
         // ② 没有任何状态 → 维持原来的「激活项目 + 居中到该项目 Frame」。
+        // 记一次「用户主动打开了这个项目」，供双击菜单的「最近使用」排序用。
+        // 埋在这里而不是 setActiveProject 里：后者在 loadProjects 之后会被自动调一次
+        useStore.getState().touchProject(project.id)
         const row = rows.find((r) => r.projectId === project.id && r.attn > 0)
         if (row) {
           focusTerminal(row.focusPtyId)
@@ -513,7 +516,10 @@ export function CanvasDrawer(): JSX.Element {
                     className={`cd-proj${p.id === activeProjectId ? ' active' : ''}${projectHasAttention(p.id) ? ' breathing' : ''}${projectFrameSelected(p.id) ? ' framesel' : ''}`}
                     data-tip={p.path}
                     onMouseDown={(e) => startProjectDrag(p, e)}
-                    onDoubleClick={() => void openTerminal({ projectId: p.id })}
+                    onDoubleClick={() => {
+                      useStore.getState().touchProject(p.id)
+                      void openTerminal({ projectId: p.id })
+                    }}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       setProjMenu({ x: e.clientX, y: e.clientY, id: p.id })
