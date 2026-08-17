@@ -22,13 +22,50 @@
 //      不 spawn 任何 CLI），并额外暴露 window.__agentChatTestPush(sessionId, event)
 //      把造好的 ChatEvent 直接喂给已订阅的回调——链路是「真实 handleSend() → 假
 //      start() 秒回 sessionId → 真实 onEvent 订阅 → 假 push() → 真实归约器 → 真实
-//      渲染」，只有 IPC 传输这一环是假的，被测的组件代码一行没动。
-//      其余 IPC（listClis / hookStatus / hookUninstall / resolveApproval / setParams /
-//      stop）**保持真实**——listClis 是真探测（本机装了 claude 与 codex，无成本），
-//      hookStatus 是只读文件检查，resolveApproval 由 ApprovalCard 的乐观隐藏保证
-//      UI 不依赖它成功。
-// 跑完（无论成功失败）finally 块都会把这两个文件还原成原样并重新 build，
-// 不会把测试专用代码留在仓库里。
+//      渲染」，只有 IPC 传输这一环是假的，被测的组件代码一行没动。resolveApproval
+//      也在测试模式下包了一层：记下调用参数后**仍然真调用**真实 IPC（不是假掉），
+//      这样既能验证决定真的从渲染层发了出去，又不牺牲"保持真实 IPC"这条边界。
+//      其余 IPC（listClis / hookStatus / hookUninstall / setParams / stop）**保持
+//      真实**——listClis 是真探测（本机装了 claude 与 codex，无成本），hookStatus
+//      是只读文件检查。
+// 跑完（无论成功失败、甚至被 Ctrl-C/SIGTERM/未捕获异常中断）都会把这两个文件还原成
+// 原样并重新 build，不会把测试专用代码留在仓库里——见下面「补丁安全网」一节。
+//
+// ── 补丁安全网（2026-08-17 独立评审 CHANGES_REQUESTED 后加固，P0-1/P0-2）───────────
+// 评审实测复现过一条确定性泄漏：`patched` 标志设在 patchSources() *之后*才置真，
+// 一旦 preload 的补丁锚点失效（比如有人改了 onEvent 附近的一行注释），main.tsx
+// 已经落盘的补丁就会被 finally 的 `if (patched)` 短路掉，永久留在"生产环境暴露
+// window.__store"的状态，且 git status 只会在这一种失败模式下露出线索。
+// 修法：**去掉 patched/builtOnce 这两个条件标志，finally 无条件调用
+// restoreSources(ORIGINALS) + 无条件重新 build**——两个文件原本就没改时，写回同样的
+// 内容、重建同样的产物都是无害的 no-op，不需要用标志去"聪明地"跳过。
+// 第二条复现：脚本没有注册任何信号 handler，Ctrl-C（SIGINT）或终端被关掉时 Node
+// 直接终止、finally 完全不会跑，两个源文件 **连同已经构建进 out/ 的假 transport 产物**
+// 一起留在补丁态（out/ 是 gitignored 的，git status 连痕迹都不会露）。修法：在模块
+// 顶层注册 SIGINT/SIGTERM/uncaughtException/unhandledRejection，同步把 ORIGINALS
+// 写回去再退出（同步 fs 写在信号处理里是安全的）——这条路径不重新 build（构建要
+// spawn 子进程、没必要在紧急退出路径上再等它），只在退出信息里明确提示"out/ 可能
+// 残留测试构建，请手动 npm run build"。
+//
+// ── 试过、行不通的更干净方案（P0-3）─────────────────────────────────────────────
+// 评审建议先试 `electron-vite build --mode development`：如果这样就能让
+// import.meta.env.DEV 为真，main.tsx 就完全不用碰（out/ 本来就 gitignored）。
+// **实测不成立**：`npx electron-vite build --mode development`（以及额外显式设
+// `NODE_ENV=development` 两种都试了）产出的 out/renderer 里通过 grep 找不到任何
+// "__store" 字符串——`if (import.meta.env.DEV) {...}` 整段被当成永假分支死代码消除掉
+// 了，跟不传 --mode 的默认生产构建结果一模一样。也就是说 electron-vite 的 build
+// 命令不管 --mode/NODE_ENV 传什么，都会让 DEV 解析成 false（这台机器上翻过它的
+// dist chunk 没找到显式的硬编码证据，但两次独立实测结果一致，足以下结论"这条路
+// 走不通"，不用再深挖 electron-vite 内部实现）。评审给的第二条退路"整个放进
+// git worktree 一次性副本"也没有采用——协调方明确裁定"P0-1/P0-2 修完风险已可控，
+// 结构性重做超出一个验证脚本该占的份额"，所以最终方案是：继续碰 main.tsx 这一行，
+// 但把还原做成不管哪条退出路径都生效的安全网。
+//
+// ── 这个脚本只能在开发机手跑，不适合进 CI（P2-5）───────────────────────────────
+// 断言 1 的 CLI 选项数量依赖本机真的装了 claude/codex（listClis 是真探测，不是假的）。
+// 换一台没装这两个 CLI 的机器，脚本会在断言 1 就 fail 并中止——失败得很响亮、不是
+// 假绿，但意味着这不是一个能塞进无人值守流水线的门禁，只能在确认装好 CLI 的开发机
+// 上手动跑。
 //
 // 用法：node scripts/verify-agent-chat-ui.mjs
 
@@ -60,6 +97,90 @@ function envFor(extra = {}) {
 function log(...args) {
   console.log('[t8]', ...args)
 }
+
+// ════════════════════════════ 补丁安全网（P0-1/P0-2）════════════════════════════
+//
+// ORIGINALS：[file, 原始内容] 的数组，main() 一开始（还没做任何改动之前）就读进来、
+// 赋给这个模块级变量。之后不管走哪条退出路径（正常 finally / SIGINT / SIGTERM /
+// 未捕获异常），都从这里拿"真相"写回去——不依赖任何"是否已经改过"的旗标判断，
+// 写回同样的内容是无害的 no-op，这样就不存在"标志没来得及置真、该还原的没还原"
+// 这一整类 bug（评审在 P0-1 实测复现过一次）。
+let ORIGINALS = null
+// 已经 spawn 出来的隔离 Electron 实例——紧急退出时要尽力杀掉它，不留孤儿窗口。
+// 只会在本脚本自己 spawn 的这一个 PID（的进程组）上调用 kill，不影响用户正在用的 Eas-Term。
+let CHILD_PROC = null
+let emergencyHandled = false
+
+/** 自查时额外发现的一个坑（不在评审的 P0-1/P0-2 清单里，但同属"杀不干净留孤儿"这一类，
+ *  顺手一起修）：`node_modules/.bin/electron` 不是真正的 Electron 二进制，是一层 Node
+ *  包装脚本（cli.js）——它自己 spawn 真正的 Electron.app 作为子进程，`proc.pid` 拿到的
+ *  只是这层包装脚本的 PID。包装脚本对 SIGTERM/SIGINT 有转发逻辑（收到就转发给真正的
+ *  Electron.app），但**SIGKILL 没法被任何进程捕获转发**——直接杀包装脚本时，真正的
+ *  Electron.app（连同它的 GPU/renderer/utility 子进程）会瞬间变成孤儿，杀不掉。
+ *  实测复现：紧急信号 handler 直接对 CHILD_PROC 发 SIGKILL 后，`ps` 里能看到一整棵
+ *  Electron 进程树还活着、重新挂到了 PID 1 下面。
+ *  修法：spawn 隔离实例时带 `detached: true`，让包装脚本自己成为一个新进程组的组长
+ *  （不带这个选项它会留在编排者自己的进程组里，那时候 `process.kill(-pid)` 会连编排者
+ *  自己一起杀掉，非常危险）；包装脚本 spawn 真正 Electron.app 时没有单独开新组，所以
+ *  真正的 Electron.app 和它的所有子进程都会继承这个新组。kill 的时候用负 PID
+ *  （`process.kill(-pid, signal)`）一次性带走整棵树，不依赖包装脚本的 JS 转发逻辑，
+ *  SIGKILL 也能正确送达每一个进程。 */
+function killIsolatedInstance(childProc, signal) {
+  if (!childProc || !childProc.pid) return
+  try {
+    process.kill(-childProc.pid, signal) // 负号：发给整个进程组，不只是包装脚本自己
+  } catch {
+    try {
+      childProc.kill(signal) // 进程组 kill 失败（比如根本没进程组）时退回单 PID
+    } catch {
+      /* 已经不在了 */
+    }
+  }
+}
+
+function emergencyRestore(reason) {
+  if (emergencyHandled) return
+  emergencyHandled = true
+  console.error('')
+  console.error(`[t8] ⚠ 收到 ${reason}，脚本没能走完正常流程，执行紧急清理…`)
+  if (ORIGINALS) {
+    try {
+      for (const [file, content] of ORIGINALS) fs.writeFileSync(file, content)
+      console.error('[t8] ✓ 已同步还原两个临时补丁文件（main.tsx / preload/index.ts）')
+    } catch (e) {
+      console.error(`[t8] ✗ 还原源文件失败，请手动检查 git status：${e.message}`)
+    }
+  }
+  // 紧急路径故意不重新 build（build 要 spawn 子进程、没必要在退出路径上再等它）——
+  // 源码已经还原，但 out/ 目录（gitignored，git status 看不见）可能还残留着带假
+  // transport 的测试构建产物，必须在这里把这句话喊出来，不能指望用户自己想到。
+  console.error('[t8] ⚠ out/ 目录可能残留测试构建产物（含假 agentChat transport），请手动执行一次 npm run build 再继续。')
+  if (CHILD_PROC && CHILD_PROC.pid) {
+    // 用进程组 kill（见 killIsolatedInstance 注释）——直接 SIGKILL 包装脚本会让真正的
+    // Electron.app 变孤儿，这里要连整棵树一起带走，紧急路径不需要走 SIGTERM 优雅退出那一步。
+    killIsolatedInstance(CHILD_PROC, 'SIGKILL')
+    console.error(`[t8] ✓ 已尝试杀掉隔离 Electron 实例整棵进程树（组长 PID ${CHILD_PROC.pid}）`)
+  }
+}
+
+process.on('SIGINT', () => {
+  emergencyRestore('SIGINT（Ctrl-C）')
+  process.exit(130)
+})
+process.on('SIGTERM', () => {
+  emergencyRestore('SIGTERM')
+  process.exit(143)
+})
+process.on('uncaughtException', (e) => {
+  console.error('[t8] ✗ 未捕获异常：', e?.stack || e)
+  emergencyRestore('uncaughtException')
+  process.exit(1)
+})
+process.on('unhandledRejection', (e) => {
+  console.error('[t8] ✗ 未处理的 Promise rejection：', e)
+  emergencyRestore('unhandledRejection')
+  process.exit(1)
+})
 
 async function freePort() {
   return await new Promise((resolve, reject) => {
@@ -344,21 +465,19 @@ async function main() {
   log('=== Task 8：agent 对话 UI 真机验证 ===')
   log('项目根：', PROJECT_ROOT)
 
-  const originals = [MAIN_TSX, PRELOAD_TS].map((f) => [f, fs.readFileSync(f, 'utf8')])
+  // 先读原始内容、立刻挂到模块级 ORIGINALS——从这一刻起，不管接下来在哪一步失败、
+  // 还是收到 Ctrl-C/SIGTERM，都有"真相"可以还原（P0-1/P0-2 的安全网见文件顶部注释）。
+  ORIGINALS = [MAIN_TSX, PRELOAD_TS].map((f) => [f, fs.readFileSync(f, 'utf8')])
 
   let proc = null
   let ws = null
   let cdp = null
   let userDataDir = null
   let projectDir = null
-  let patched = false
-  let builtOnce = false
 
   try {
     patchSources()
-    patched = true
     runBuild('构建测试版（含临时补丁）')
-    builtOnce = true
 
     userDataDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-t8-userdata-')))
     projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'eas-t8-project-')))
@@ -387,9 +506,14 @@ async function main() {
       {
         cwd: PROJECT_ROOT,
         env: envFor({ EAS_AGENT_CHAT_TEST: '1' }),
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        // detached:true 让 node_modules/.bin/electron 这层包装脚本自成一个新进程组
+        // （见 killIsolatedInstance 注释）——不加这个选项它会留在编排者自己的进程组里，
+        // 之后 process.kill(-pid) 会连编排者自己一起杀掉。
+        detached: true
       }
     )
+    CHILD_PROC = proc // 让紧急信号 handler 也够得到，能在异常退出时尽力杀掉它
     let stderr = ''
     proc.stderr.on('data', (d) => {
       stderr += d.toString()
@@ -853,29 +977,24 @@ async function main() {
       }
     }
     if (proc && proc.pid) {
-      log(`▸ 关闭隔离实例（PID ${proc.pid}，只杀这一个，不影响用户正在用的 Eas-Term）`)
-      try {
-        proc.kill('SIGTERM')
-      } catch {
-        /* 已经不在了 */
-      }
+      log(`▸ 关闭隔离实例（组长 PID ${proc.pid}，只杀这一棵自己起的进程树，不影响用户正在用的 Eas-Term）`)
+      // node_modules/.bin/electron 是包装脚本，proc.pid 只是它自己的 PID，真正的
+      // Electron.app 是它的子进程——用进程组 kill 才能连子进程一起带走，见
+      // killIsolatedInstance 的注释（自查时发现：单杀 proc.pid 在 SIGKILL 那一步会
+      // 让真正的 Electron.app 变孤儿，SIGTERM 那一步因为包装脚本有转发逻辑侥幸不会）。
+      killIsolatedInstance(proc, 'SIGTERM')
       await sleep(800)
-      try {
-        proc.kill('SIGKILL')
-      } catch {
-        /* 已经不在了 */
-      }
+      killIsolatedInstance(proc, 'SIGKILL')
     }
-    if (patched) {
-      log('▸ 还原临时补丁的两个源文件…')
-      restoreSources(originals)
-      if (builtOnce) {
-        try {
-          runBuild('还原后重新构建，确保仓库产物与源码一致')
-        } catch (e) {
-          console.error('⚠ 还原后重新构建失败，请手动检查 npm run build：', e.message)
-        }
-      }
+    // P0-1：无条件还原 + 无条件重新构建，不靠任何"是否已经改过/是否已经构建过"的
+    // 标志去判断要不要做——ORIGINALS 在 main() 一开始就读好了，写回同样的内容、
+    // 重建同样的产物，在"其实什么都没改"的情况下都只是无害的 no-op。
+    log('▸ 还原临时补丁的两个源文件…')
+    restoreSources(ORIGINALS)
+    try {
+      runBuild('还原后重新构建，确保仓库产物与源码一致')
+    } catch (e) {
+      console.error('⚠ 还原后重新构建失败，请手动检查 npm run build：', e.message)
     }
     for (const d of [userDataDir, projectDir]) {
       if (d) {
