@@ -5,9 +5,13 @@
 // 放宽读取校验，下次启动就是一片白——所以它们必须挨着。
 import type { CanvasFrame, CanvasNode, CanvasScene, CanvasShape, CanvasViewport, FrameStatus, NodeAgent, TodoBoard, ViewMode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
-import { collectLeaves } from '../../layout'
-import { HEAD, NODE_H, NODE_W, PAD } from './layout'
-import { sanitizeTodoBoard } from './todoBoard'
+// 值 import 一律带 .ts 扩展名：`npm test` 是 `node --test` 直接加载 .ts，
+// 不带扩展名它解析不到（表现是整个测试文件 ERR_MODULE_NOT_FOUND、一条都跑不起来，
+// 而汇总行只会说 fail 1，很容易被当成某条断言挂了）。
+// `import type` 不受影响 —— 那行在运行时会被整个擦掉。
+import { HEAD, NODE_H, NODE_W, PAD } from './layout.ts'
+import { sanitizeTodoBoard } from './todoBoard.ts'
+import { DEFAULT_VIEW_MODE, restoreViewMode } from './viewModeRestore.ts'
 
 export const initialScene: CanvasScene = {
   viewport: { x: 0, y: 0, scale: 1 },
@@ -22,6 +26,18 @@ export interface PersistedCanvas {
   /** schema 版本；读时按版本迁移（当前恢复路径统一走 sanitizeCanvas 兜底，不强依赖） */
   version?: number
   viewMode: ViewMode
+  /** 用户是否**亲手**选过视图。
+   *
+   *  存在的唯一理由：默认视图从「分屏」改成了「画布」，而
+   *  **「亲手选了分屏」和「从没动过默认值」在存档里长得一模一样**（都是 `viewMode:'split'`）。
+   *  没有这个字段就只能二选一：要么尊重所有 split（新默认对老用户完全不生效），
+   *  要么一并推进画布（把明确选了分屏的人也掀了）。
+   *
+   *  老存档没有这个字段，按 viewMode 的值倒推：
+   *  · 不是 split（canvas/board/gantt）→ 当时明确切过（默认是 split，不切不会变成别的）→ 尊重
+   *  · 是 split 或缺失 → 无从追溯，按「没选过」用新默认；**用户切回分屏后这个字段就写上了**，
+   *    最多被打扰一次。 */
+  viewModePicked?: boolean
   viewport: CanvasViewport
   frames: CanvasFrame[]
   shapes: CanvasShape[]
@@ -39,11 +55,13 @@ export interface PersistedCanvas {
 export function serializeCanvas(
   canvas: CanvasScene,
   viewMode: ViewMode,
-  leafPaneOf: (leafId: string) => PaneState | undefined
+  leafPaneOf: (leafId: string) => PaneState | undefined,
+  viewModePicked = false
 ): PersistedCanvas {
   return {
     version: CANVAS_VERSION,
     viewMode,
+    viewModePicked,
     viewport: canvas.viewport,
     frames: canvas.frames.map((f) => ({
       ...f,
@@ -53,6 +71,15 @@ export function serializeCanvas(
           const pane = leafPaneOf(n.leafId)
           if (pane && (pane.kind === 'code' || pane.kind === 'image' || pane.kind === 'web')) {
             copy.pane = pane // 非终端 leaf → 存成文件节点
+          } else if (pane?.kind === 'agent') {
+            // **agent 节点必须落盘**，否则重开后它既没有 leafId 也没有 pane/component，
+            // materializeCanvas 那条「三者皆无 = 终端占位」的判据会把它当终端重开一个 shell
+            // —— 用户看到的是「我的对话节点变成了终端」。
+            //
+            // **但 sessionId 不能存**：CLI 子进程随应用退出就没了，存下来只会让重开后的
+            // 界面以为有个活会话，send/stop 都打到一个不存在的 id 上。
+            // 重开后是一个干净的空态，用户重新发第一条消息即可。
+            copy.pane = { kind: 'agent', cwd: pane.cwd }
           }
         }
         delete copy.leafId
@@ -193,12 +220,12 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
     const todos = Array.isArray(r.todos)
       ? r.todos.map(sanitizeTodoBoard).filter((b): b is TodoBoard => b !== null)
       : []
+    // 规则抽在 viewModeRestore.ts（那边不引 store/shared 那条链，能单测）
+    const vm = restoreViewMode(r)
     return {
       scene: {
-        viewMode:
-          r.viewMode === 'canvas' || r.viewMode === 'board' || r.viewMode === 'gantt'
-            ? r.viewMode
-            : 'split',
+        viewMode: vm.viewMode,
+        viewModePicked: vm.viewModePicked,
         viewport: sanitizeViewport(r.viewport),
         frames,
         shapes,
@@ -210,7 +237,11 @@ export function sanitizeCanvas(raw: unknown): { scene: PersistedCanvas; droppedF
   } catch {
     return {
       scene: {
-        viewMode: 'split',
+        // 走到这里 = 没有可用存档（全新用户，或存档坏到读不出来）。
+        // **全新用户正是新默认要服务的人**；picked 留 false，
+        // 他之后亲手切到别的视图才会写上。
+        viewMode: DEFAULT_VIEW_MODE,
+        viewModePicked: false,
         viewport: { x: 0, y: 0, scale: 1 },
         frames: [],
         shapes: [],

@@ -33,6 +33,10 @@ export interface TabsSlice {
   activeTabByProject: Record<string, string | null>
 
   openTerminal: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
+  /** 开一个 AI 对话面板（空态，用户选完 CLI 发第一条消息才真正起会话）。
+   *  与 openTerminal 同构，差别只在建的 pane 是 agent —— **不 spawn pty**，
+   *  所以不能拿 openTerminal + setPaneKind 凑：那样会先起一个 shell 再丢掉。 */
+  openAgentPane: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
   openHistory: (cwd: string) => void
@@ -146,6 +150,30 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const tab: TermTab = {
       id: uid('tab'),
       title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : '终端'),
+      projectId: project?.id ?? null,
+      cwd,
+      root: leaf,
+      activeLeafId: leaf.id
+    }
+    set((st) => ({
+      tabs: [...st.tabs, tab],
+      activeTabId: tab.id,
+      activeTabByProject: { ...st.activeTabByProject, [projectKey(tab.projectId)]: tab.id }
+    }))
+  },
+
+  // 与 openTerminal 同构（标题/cwd/activeTabByProject 的处理逐条对齐），
+  // 唯一的差别是不 spawn pty —— agent 面板在用户发第一条消息之前不占任何进程。
+  openAgentPane: async (opts) => {
+    track('agent')
+    const s = get()
+    const projectId = opts?.projectId !== undefined ? opts.projectId : s.activeProjectId
+    const project = s.projects.find((p) => p.id === projectId) ?? null
+    const cwd = opts?.cwd ?? project?.path ?? ''
+    const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane: { kind: 'agent', cwd } }
+    const tab: TermTab = {
+      id: uid('tab'),
+      title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : 'AI 对话'),
       projectId: project?.id ?? null,
       cwd,
       root: leaf,

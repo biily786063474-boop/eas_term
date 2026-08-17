@@ -5,7 +5,15 @@
 //   2. **能报什么一目了然** —— 想加新事件必须先来这里加名字，
 //      顺手在业务代码里 bump 一个带项目名的 key 这条路是走不通的
 //      （主进程还有一道白名单，见 main/telemetry.ts）
-export type TrackKey = 'term' | 'canvas' | 'voice' | 'image' | 'island' | 'approve' | 'view'
+export type TrackKey =
+  | 'term'
+  | 'canvas'
+  | 'voice'
+  | 'image'
+  | 'island'
+  | 'approve'
+  | 'view'
+  | 'agent'
 
 export function track(key: TrackKey): void {
   try {

@@ -111,13 +111,18 @@ export function projectIdOfFrame(
 }
 
 export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (set, get) => ({
-  viewMode: 'split',
+  // 新默认是画布。**全新用户走的就是这个初值** —— loadCanvas 里 `raw == null` 时
+  // 直接 return，根本不进 sanitizeCanvas，所以那边的兜底对没有存档的人不生效。
+  viewMode: 'canvas',
+  viewModePicked: false,
   canvas: initialScene,
   canvasCommittedScale: 1,
 
   setViewMode: (mode) => {
     track('view')
-    set({ viewMode: mode })
+    // 亲手切过就记上：之后无论切到哪（包括切回分屏）都以用户的选择为准，
+    // 不再套用新默认。这是「亲手选了分屏」与「从没动过」的唯一分水岭。
+    set({ viewMode: mode, viewModePicked: true })
     if (mode === 'canvas') {
       // 兜底扫一遍孤儿节点。正常路径（closeLeaf / closeTab / removeProject）都已经就地清了，
       // 这里是防「以后又新增一条关 leaf 的路却忘了清」——那种漏网的表现是画布上一个
@@ -155,11 +160,11 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       },
       canvasCommittedScale: scene.viewport.scale
     }))
-    // 恢复上次停留的视图
-    // 'split' 是默认值，只有非默认的才需要恢复（写成白名单而不是直接赋值：
-    // 存档是文件，被改坏过一次就够受，不能让任意字符串成为 viewMode）
-    if (scene.viewMode === 'canvas' || scene.viewMode === 'board' || scene.viewMode === 'gantt')
-      set({ viewMode: scene.viewMode })
+    // 恢复视图。**这里以前是「只 set 非 split」** —— 默认值还是 split 时那样写没问题，
+    // 但现在默认是 canvas，再那样写会把「亲手选了分屏」的人也留在 canvas 初值上。
+    // 白名单校验已经在 sanitizeCanvas 里做完（三个分支给出的都是合法值），
+    // 这里直接采信它算出来的结果。
+    set({ viewMode: scene.viewMode, viewModePicked: scene.viewModePicked === true })
     // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
     // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
     // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。
@@ -177,14 +182,21 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
           if (f.projectId && !get().projects.some((p) => p.id === f.projectId)) continue
           for (const n of f.nodes) {
             try {
-              if (n.leafId || n.pane || n.component) continue // 已绑定 / 文件 / 组件 → 跳过
-              // 终端占位 → 重开一个终端绑定到该节点（全新 shell）
+              if (n.leafId || n.component) continue // 已绑定 / 组件 → 跳过
+              // **agent 节点也要重建 leaf**，不能跟文件节点一样「有 pane 就跳过」：
+              // 带 pane 无 leafId 的节点走的是「画布自带的文件预览节点」那条渲染路
+              //（CanvasFileNode，只认 code/image/web），agent 落在那儿会渲染成一个空白框。
+              // 它得像终端一样有真的 leaf —— 只是建的时候不 spawn pty。
+              // 放在 `n.pane` 判断之前，否则永远进不来。
+              const isAgent = n.pane?.kind === 'agent'
+              if (n.pane && !isAgent) continue // 文件/图片/网页 → 画布自带节点，不需要 leaf
               const before = new Set(
                 get()
                   .tabs.filter((t) => t.projectId === f.projectId)
                   .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
               )
-              await get().openTerminal({ projectId: f.projectId })
+              if (isAgent) await get().openAgentPane({ projectId: f.projectId })
+              else await get().openTerminal({ projectId: f.projectId })
               const newLeaf = get()
                 .tabs.filter((t) => t.projectId === f.projectId)
                 .flatMap((t) => collectLeaves(t.root))
@@ -255,12 +267,16 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   addProjectFrame: async (projectId, x, y) => {
     if (get().canvas.frames.some((f) => f.projectId === projectId)) return
-    // 项目还没终端 → 先开一个，Frame 里才有内容
+    // 项目在画布上从零开始 → 先开一个面板，Frame 里才有内容。
+    // **开的是 AI 对话而不是终端** —— 规格 §六：这个前端是新建 Frame 的新默认
+    //（终端保留，只是不再是唯一入口，面板类型下拉里随时能换回去）。
+    // 只影响「这个项目一个 leaf 都还没有」这条路；已经开着终端的项目拖进画布，
+    // 照旧把现有终端铺进 Frame，不动用户正在干的活。
     let leaves = get()
       .tabs.filter((t) => t.projectId === projectId)
       .flatMap((t) => collectLeaves(t.root))
     if (!leaves.length) {
-      await get().openTerminal({ projectId })
+      await get().openAgentPane({ projectId })
       leaves = get()
         .tabs.filter((t) => t.projectId === projectId)
         .flatMap((t) => collectLeaves(t.root))

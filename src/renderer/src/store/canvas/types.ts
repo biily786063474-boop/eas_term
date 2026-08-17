@@ -150,6 +150,10 @@ export interface CanvasScene {
 export interface CanvasSlice {
   /** 全局视图：分屏 / 画布。titlebar 分段控件切换，不属于任何 tab */
   viewMode: ViewMode
+  /** 用户是否亲手选过视图。默认视图改成画布之后，它是「亲手选了分屏」和
+   *  「从没动过默认值」的唯一区分依据 —— 两者的 viewMode 都是 'split'。
+   *  随 canvas.json 一起落盘，详见 persist.ts 里 PersistedCanvas.viewModePicked。 */
+  viewModePicked: boolean
   canvas: CanvasScene
   setViewMode: (mode: ViewMode) => void
   /** app 启动时从磁盘恢复画布场景（frames/shapes/viewport/viewMode）。

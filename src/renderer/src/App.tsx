@@ -72,7 +72,7 @@ export function App(): JSX.Element {
         }
         return undefined
       }
-      return serializeCanvas(st.canvas, st.viewMode, leafPaneOf)
+      return serializeCanvas(st.canvas, st.viewMode, leafPaneOf, st.viewModePicked)
     }
     const flush = (sync = false): void => {
       if (!dirty) return

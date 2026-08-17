@@ -42,10 +42,11 @@ import {
 
 const PANE_GAP = 3
 
-// 下拉框可切换到的面板类型（不含 history/agent —— 前者只从侧栏「版本」打开，
-// 后者唯一的创建入口是子项目 C 的画布默认节点，见 layout.ts 的 PaneKind 注释）
+// 下拉框可切换到的面板类型（不含 history —— 它只从侧栏「版本」打开）
 const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }[] = [
   { kind: 'terminal', label: '终端', Icon: TerminalIcon },
+  // AI 对话排在终端后面：它是新建 Frame 时的默认节点，但已有节点要换成它得能选得到
+  { kind: 'agent', label: 'AI 对话', Icon: SparkleIcon },
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
   { kind: 'web', label: '网页', Icon: GlobeIcon },

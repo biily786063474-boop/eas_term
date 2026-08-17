@@ -36,7 +36,8 @@ const EVENTS = [
   'image', // 往输入框贴/拖了图片
   'island', // 从灵动岛跳回会话
   'approve', // 在灵动岛处理了审批
-  'view' // 切换终端/画布视图
+  'view', // 切换终端/画布视图
+  'agent' // 新建 AI 对话面板
 ] as const
 type EventKey = (typeof EVENTS)[number]
 

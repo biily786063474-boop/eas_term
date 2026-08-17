@@ -1032,6 +1032,15 @@ export function CanvasStage(): JSX.Element {
         backgroundPosition: `${vp.x}px ${vp.y}px`
       }}
     >
+      {/* 空画布引导。挂在 viewport 而不是 canvas-world 里 —— 后者跟着缩放平移，
+          提示会飘走还会被缩小；这条是「这里该怎么开始」，得一直在视野中央。
+          pointer-events:none 是硬要求：它正上方就是双击热区，挡住等于把入口堵死。 */}
+      {/* 判据只看 frames + freeNodes：shapes（便签/箭头）搬去 CanvasShapeLayer 自己订阅了，
+          本组件刻意不订阅它（见上面第 58 行），不为一句引导把那次重渲染优化撤回来。
+          画了便签但还没有项目的画布上仍然显示这句 —— 那时它说的也是实话。 */}
+      {!frames.length && !freeNodes.length && (
+        <div className="canvas-empty-hint">双击开始你第一个项目吧</div>
+      )}
       <div
         className="canvas-world"
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}

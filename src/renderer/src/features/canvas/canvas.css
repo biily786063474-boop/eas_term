@@ -32,6 +32,24 @@
   will-change: transform;
 }
 
+/* 空画布引导。**pointer-events:none 是功能性的不是优化** —— 它正压在双击热区上，
+   能接事件就等于把唯一的入口堵死了。也因此它不挂在 .canvas-world 里：
+   那层跟着缩放平移，这句话会飘出视野、还会被缩小。 */
+.canvas-empty-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-dim);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
 /* ---------- Frame 卡片（项目边界） ---------- */
 /* Frame 的一切用色都走 --frame-rgb 这一个变量，而不是直接引 --accent-rgb：
  * 颜色状态标签（下面的 .st-*）只需要改这一个值，边框/标题栏/圆点/缩放角/选中高亮
