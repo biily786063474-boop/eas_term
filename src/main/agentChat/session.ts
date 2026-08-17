@@ -52,6 +52,11 @@ interface Live {
   /** 这个会话的事件只推给创建它的那个 webContents——不是全窗口广播。
    *  和 pty.ts 的 `wc.send(pty:data:${id}, ...)` 同一个道理。 */
   wc: WebContents
+  /** 创建它的 webContents 的数字 id，创建时就取好。**不要在清理时现读 live.wc.id**：
+   *  `win.on('closed')` 触发时 webContents 已经销毁，读它的属性会抛
+   *  （index.ts 里那句 `const wcId = win.webContents.id` 提前取值就是为了这个）。
+   *  pty.ts 的 entry.wcId 是同样的做法。 */
+  wcId: number
 }
 
 const sessions = new Map<string, Live>()
@@ -437,6 +442,33 @@ export function killAllAgentChatSessions(hard = false): void {
   }
 }
 
+/** 页面被换掉（重载/导航）或窗口关闭时，回收这个 webContents 名下的全部会话——
+ *  对称于 pty.ts 的 killPtysForWebContents（2026-08-17 全分支最终评审 I6：
+ *  index.ts 上只有 PTY 的这两个钩子，agentChat 一个都没有）。
+ *
+ *  为什么非有不可：这个 app 自带崩溃自愈（render-process-gone → reloadWindowThrottled）。
+ *  重载后的新页面对旧 sessionId 一无所知（agent 节点本来也不跨重载持久化），旧的
+ *  claude/codex 子进程就此无人看管地继续跑；emitEvent 因为 wc.isDestroyed() 静默丢弃，
+ *  再没有任何代码会调 stop。兜底只有 15 分钟空闲回收，而 lastActiveAt **每收到一块
+ *  stdout 就续期**——一个还在跑的长任务可以远超 15 分钟不被回收，真花 token。
+ *
+ *  软杀之后补一拍硬杀：这条路径上没有人再盯着这些进程了（不像 app 退出时 index.ts
+ *  会走完两拍），赖着不退的进程就是永久孤儿。 */
+export function killAgentChatSessionsForWebContents(wcId: number): void {
+  for (const [id, live] of sessions) {
+    if (live.wcId !== wcId) continue
+    sessions.delete(id)
+    const proc = live.proc
+    live.proc = undefined
+    if (!proc) continue
+    proc.kill('SIGTERM')
+    setTimeout(() => {
+      // killed 已经为真说明信号送达过；仍在跑的（exitCode/signalCode 都是 null）再补一刀
+      if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL')
+    }, 300).unref?.()
+  }
+}
+
 export function registerAgentChatHandlers(): void {
   setInterval(reapIdleSessions, 60_000)
 
@@ -510,6 +542,7 @@ export function registerAgentChatHandlers(): void {
     const live: Live = {
       rec,
       wc: e.sender,
+      wcId: e.sender.id,
       // translator 由 adapter 自己声明创建（2026-08-14 全分支评审 I6 第 1 点：Ruling 10
       // 给 stdin 立的原则逐字适用于这里——adapter 知道自己怎么工作，不靠下游按 id 分支去
       // 记每个 CLI 的怪癖。改之前这里写的是 `adapter.id === 'codex' ? ... : ...`，加第三个
