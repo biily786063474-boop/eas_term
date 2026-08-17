@@ -132,6 +132,28 @@ const agentChatListeners = new Map<string, Set<(e: ChatEvent) => void>>()
 /** sessionId → 还没人订阅时先攒下的事件。第一个订阅者取走后即删除。 */
 const agentChatPendingEvents = new Map<string, ChatEvent[]>()
 
+/** 已经调用过 stop() 的会话 id——只增不删。2026-08-17 全分支最终评审 Minor-1 实测：
+ *  `agentChat:stop` 在主进程只是 `sessions.delete(id)` + `proc.kill()`，管道里已经在飞
+ *  的 stdout 仍会被 `wireProc` 的 `data` 回调继续翻译、`emitEvent` 只判 `wc.isDestroyed()`
+ *  不判会话还在不在表里——于是 stop() 之后仍可能有尾随事件送到这个常驻监听器。这些
+ *  sessionId 在下面的监听器里如果按老规矩"没有订阅者就缓冲"，会在 agentChatPendingEvents
+ *  里建一条**永远没人来取**的条目（实测：`stop` 后 pending 从 1 涨到 2 且不再清，
+ *  其中 `exec.done.output` 是未截断的全量工具输出）——这个 app 是长跑工具，用户全天
+ *  开着，关一个 agent 节点漏一点、渲染进程活多久就攒多久。
+ *
+ *  这个集合本身只增不删，是刻意的取舍：每项只有一个 sessionId 字符串（sessionId 由
+ *  session.ts 用 `ac-${nextId++}` 递增生成，进程内不会重复，见 src/main/agentChat/
+ *  session.ts），代价是几十字节；换来的是防住一整条 ChatEvent（可能带着未截断的工具
+ *  输出）永久滞留在 agentChatPendingEvents 里。用一个有界的小代价换一个无界的大代价——
+ *  跟本仓库「长跑资源」那份立档同一个判断依据："不是泄漏是固定成本×规模"，这里的规模是
+ *  "这个渲染进程活着的这段时间里，用户关过多少个 agent 会话"，比 PTY scrollback 那个
+ *  量级小得多，不值得为了摊平这几十字节再引入一个定时器去清它、平添一个新的时序假设。
+ *
+ *  **绝不能反过来做成白名单**（只有 start() resolve 之后才允许缓冲）——那样会把 C1
+ *  刚修好的窗口重新打开：最早那批事件正是在 start() 的 promise resolve 之前就同步
+ *  到达的，此时还不知道 sessionId 是"活的"，白名单里不会有它。 */
+const stoppedAgentChatSessionIds = new Set<string>()
+
 ipcRenderer.on(AGENT_CHAT_EVENT_CHANNEL, (_e: IpcRendererEvent, envelope: AgentChatEventEnvelope) => {
   if (!envelope || typeof envelope.sessionId !== 'string') return
   const subs = agentChatListeners.get(envelope.sessionId)
@@ -139,6 +161,9 @@ ipcRenderer.on(AGENT_CHAT_EVENT_CHANNEL, (_e: IpcRendererEvent, envelope: AgentC
     for (const cb of subs) cb(envelope.event)
     return
   }
+  // 会话已经 stop() 过：不会再有人订阅，尾随事件直接丢弃，不再建缓冲条目
+  // （见上面 stoppedAgentChatSessionIds 的注释）。
+  if (stoppedAgentChatSessionIds.has(envelope.sessionId)) return
   let buf = agentChatPendingEvents.get(envelope.sessionId)
   if (!buf) {
     buf = []
@@ -148,10 +173,13 @@ ipcRenderer.on(AGENT_CHAT_EVENT_CHANNEL, (_e: IpcRendererEvent, envelope: AgentC
   if (buf.length > AGENT_CHAT_PENDING_MAX_EVENTS) buf.shift()
 })
 
-/** 会话被主动关闭时收摊——订阅表与缓冲区都留着也没人取了，跟 pty 的 stopBuffering 同一处理 */
+/** 会话被主动关闭时收摊——订阅表与缓冲区都留着也没人取了，跟 pty 的 stopBuffering 同一处理。
+ *  额外记一笔"这个会话已经死了"（见 stoppedAgentChatSessionIds），挡住关闭之后的尾随事件
+ *  重新建一条没人取的缓冲。 */
 function stopAgentChatBuffering(sessionId: string): void {
   agentChatListeners.delete(sessionId)
   agentChatPendingEvents.delete(sessionId)
+  stoppedAgentChatSessionIds.add(sessionId)
 }
 
 /** 从 additionalArguments 里取主进程塞进来的构建信息（同步，界面首帧就能用） */
