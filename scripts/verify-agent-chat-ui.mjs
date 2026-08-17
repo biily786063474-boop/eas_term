@@ -1131,12 +1131,25 @@ async function main() {
     const fatalClassSeen = await cdp.eval(`!!document.querySelector('.ac-toolbar .ac-notices .ac-notice-fatal')`)
     log(`  · fatal:true 的 notice 带上了 .ac-notice-fatal：${fatalClassSeen}`)
 
-    // ── 附加检查（2026-08-17 最终评审 I5）：去重计数 + 真实鼠标点关闭 ────────────────
-    // 这两条不占用 1-11 的编号（那十一条已经固定），但都是这轮新加的行为，
+    // ── 附加检查（2026-08-17 最终评审 I5，收尾复审后改为真正计入 allPass）────────────
+    // 这三条不占用 1-11 的编号（那十一条已经固定），但都是这轮新加的行为，
     // 不真机点一次就等于没验——本仓库踩过"渲染完美、真实鼠标全部穿透"的坑。
+    // 上一版这里只有 log()，红了脚本照样绿；`closedGone` 还用 `!texts.some(...)`——
+    // `.ac-notices` 整个没渲染出来时它天然为真，是本仓库反复栽过的"空数组/否定断言
+    // 被当通过"那个坑的又一例。现在改成真正的判据，写进 extra、参与 allPass；
+    // `closedGone` 也补上"关闭前正向锚点存在"与"关闭后其余 notice 不受影响"两端，
+    // 不再是单纯的否定检查。
+    const extra = {
+      i5Dedup: { status: 'not-run', detail: '' },
+      i5Overflow: { status: 'not-run', detail: '' },
+      i5Close: { status: 'not-run', detail: '' },
+      p21: { status: 'not-run', detail: '' },
+      i2: { status: 'not-run', detail: '' }
+    }
+
     await push({ k: 'error', message: NOTICE_TEXT, fatal: false }) // 同一条再来一次
     await sleep(200)
-    const dedup = await cdp.eval(`(function(){
+    const dedupRaw = await cdp.eval(`(function(){
       const texts = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice .ac-notice-text'))
       const t = texts.find(el => (el.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
       if (!t) return null
@@ -1146,26 +1159,85 @@ async function main() {
         countBadge: t.querySelector('.ac-notice-count')?.textContent || null
       })
     })()`)
-    log(`  · I5 去重：同一条 notice 推第二次后 —— ${dedup}（预期 sameTextRows=1、countBadge=×2）`)
+    const dedup = dedupRaw ? JSON.parse(dedupRaw) : null
+    const dedupOk = !!dedup && dedup.sameTextRows === 1 && dedup.countBadge === '×2'
+    extra.i5Dedup = {
+      status: dedupOk ? 'PASS' : 'FAIL',
+      detail: `同一条 notice 推第二次后 —— ${JSON.stringify(dedup)}（预期 sameTextRows=1、countBadge="×2"）`
+    }
+    log(`  ${dedupOk ? '✓' : '✗'} [I5-去重] ${extra.i5Dedup.detail}`)
 
-    const noticesBoxOverflow = await cdp.eval(`(function(){
+    const overflowRaw = await cdp.eval(`(function(){
       const box = document.querySelector('.ac-toolbar .ac-notices')
       if (!box) return null
       const cs = getComputedStyle(box)
       return JSON.stringify({ maxHeight: cs.maxHeight, overflowY: cs.overflowY })
     })()`)
-    log(`  · I5 版面闸：.ac-notices 的 ${noticesBoxOverflow}（预期 max-height 非 none、overflow-y 可滚）`)
+    const overflow = overflowRaw ? JSON.parse(overflowRaw) : null
+    const overflowOk =
+      !!overflow && overflow.maxHeight !== 'none' && (overflow.overflowY === 'auto' || overflow.overflowY === 'scroll')
+    extra.i5Overflow = {
+      status: overflowOk ? 'PASS' : 'FAIL',
+      detail: `.ac-notices 的 ${JSON.stringify(overflow)}（预期 max-height 非 none、overflow-y 为 auto/scroll）`
+    }
+    log(`  ${overflowOk ? '✓' : '✗'} [I5-版面闸] ${extra.i5Overflow.detail}`)
 
-    await cdp.clickElement(
-      `Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice')).find(n => (n.querySelector('.ac-notice-text')?.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))?.querySelector('.ac-notice-close')`,
-      'notice 的关闭按钮（真实坐标点击）'
-    )
-    await sleep(250)
-    const closedGone = await cdp.eval(`(function(){
-      const texts = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice .ac-notice-text'))
-      return !texts.some(el => (el.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
+    // 关闭前先立正向锚点：目标 notice 真的渲染出来了、且此刻还有另一条（fatal:true）
+    // notice 同时可见——这样"关闭后消失"才是有意义的断言，不会被"整个 .ac-notices
+    // 都没渲染出来"蒙混过关。
+    const beforeCloseRaw = await cdp.eval(`(function(){
+      const genuinelyVisible = (el) => {
+        const r = el.getBoundingClientRect()
+        const cs = getComputedStyle(el)
+        return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0
+      }
+      const rows = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice'))
+      const target = rows.find(n => (n.querySelector('.ac-notice-text')?.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
+      const other = rows.find(n => n.classList.contains('ac-notice-fatal'))
+      return JSON.stringify({
+        rows: rows.length,
+        targetVisible: !!target && genuinelyVisible(target),
+        otherVisible: !!other && genuinelyVisible(other)
+      })
     })()`)
-    log(`  · I5 可关闭：真实鼠标点关闭后这条 notice 消失 —— ${closedGone}（其余 notice 不受影响）`)
+    const beforeClose = beforeCloseRaw ? JSON.parse(beforeCloseRaw) : null
+    const anchorOk = !!beforeClose && beforeClose.targetVisible === true && beforeClose.otherVisible === true
+    if (!anchorOk) {
+      // 正向锚点都立不住，后面点了按钮说"消失了"没有意义——直接判 FAIL，不再硬点。
+      extra.i5Close = {
+        status: 'FAIL',
+        detail: `点关闭前的正向锚点没立住：${JSON.stringify(beforeClose)}（预期 targetVisible=true 且 otherVisible=true）`
+      }
+      log(`  ✗ [I5-可关闭] ${extra.i5Close.detail}`)
+    } else {
+      await cdp.clickElement(
+        `Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice')).find(n => (n.querySelector('.ac-notice-text')?.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))?.querySelector('.ac-notice-close')`,
+        'notice 的关闭按钮（真实坐标点击）'
+      )
+      await sleep(250)
+      const afterCloseRaw = await cdp.eval(`(function(){
+        const genuinelyVisible = (el) => {
+          const r = el.getBoundingClientRect()
+          const cs = getComputedStyle(el)
+          return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0
+        }
+        const rows = Array.from(document.querySelectorAll('.ac-toolbar .ac-notices .ac-notice'))
+        const targetGone = !rows.some(n => (n.querySelector('.ac-notice-text')?.textContent || '').startsWith(${JSON.stringify(NOTICE_TEXT)}))
+        const other = rows.find(n => n.classList.contains('ac-notice-fatal'))
+        return JSON.stringify({
+          rows: rows.length,
+          targetGone,
+          otherStillVisible: !!other && genuinelyVisible(other)
+        })
+      })()`)
+      const afterClose = afterCloseRaw ? JSON.parse(afterCloseRaw) : null
+      const closedGoneOk = !!afterClose && afterClose.targetGone === true && afterClose.otherStillVisible === true
+      extra.i5Close = {
+        status: closedGoneOk ? 'PASS' : 'FAIL',
+        detail: `真实鼠标点关闭后 —— ${JSON.stringify(afterClose)}（预期 targetGone=true 且 otherStillVisible=true，即其余 notice 不受影响）`
+      }
+      log(`  ${closedGoneOk ? '✓' : '✗'} [I5-可关闭] ${extra.i5Close.detail}`)
+    }
 
     // ── P2-1（评审加做）：approval 为空的 CLI 路径此前零真机覆盖 ─────────────────
     // 前面全程只测了第一个 CLI 芯片（本机是 Claude Code，capabilities.approval 非空），
@@ -1175,7 +1247,7 @@ async function main() {
     // 直接起会话"这条路径也没跑过。这里用第二个独立节点（同一组件实例的内部 state
     // 不会因为改 store 数据就重置，不能复用 Node A）重跑一遍，选第二个 CLI 芯片
     // （本机是 Codex，capabilities.approval 为空）。
-    const extra = { p21: { status: 'not-run', detail: '' }, i2: { status: 'not-run', detail: '' } }
+    // extra 已在上面 I5 附加检查那段声明（含 p21/i2 的 not-run 占位），这里不再重复声明。
     try {
       const IDS_B = { tabId: 't8-tab-b', leafId: 't8-leaf-b', frameId: 't8-frame-b', nodeId: 't8-node-b' }
       const injectB = await cdp.eval(`(function(){
@@ -1357,14 +1429,31 @@ main()
       if (r.status !== 'PASS') allPass = false
       log(`  [${r.status.padEnd(7)}] 断言${id}：${ASSERTION_NAMES[id]}`)
     }
-    // P2-1：不在原计划的十一条编号里（那十一条是计划 8 条 + Ruling 2 追加 3 条，
+    // P2-1/I2：不在原计划的十一条编号里（那十一条是计划 8 条 + Ruling 2 追加 3 条，
     // 编号已经固定），但评审要求补做、也计入"是否全绿"——不达标同样让脚本以非零
     // exit code 收尾，不能只印在日志里就当没发生。
+    // I5 的三条（去重/版面闸/可关闭）同理：2026-08-17 收尾复审发现它们上一版只有
+    // log()、不进 allPass，红了也是绿——这里补上，规则跟 P2-1/I2 完全一致。
+    const i5Dedup = results.__extra?.i5Dedup
+    const i5Overflow = results.__extra?.i5Overflow
+    const i5Close = results.__extra?.i5Close
     const p21 = results.__extra?.p21
     const i2 = results.__extra?.i2
-    if (p21 || i2) {
+    if (i5Dedup || i5Overflow || i5Close || p21 || i2) {
       log('')
       log('=== 附加检查（评审加做，不占用 1-11 编号）===')
+      if (i5Dedup) {
+        log(`  [${i5Dedup.status.padEnd(7)}] I5-去重：同一条 notice 合并计数、不重复渲染行 —— ${i5Dedup.detail}`)
+        if (i5Dedup.status !== 'PASS') allPass = false
+      }
+      if (i5Overflow) {
+        log(`  [${i5Overflow.status.padEnd(7)}] I5-版面闸：.ac-notices 的 max-height + overflow-y —— ${i5Overflow.detail}`)
+        if (i5Overflow.status !== 'PASS') allPass = false
+      }
+      if (i5Close) {
+        log(`  [${i5Close.status.padEnd(7)}] I5-可关闭：真实鼠标点关闭后消失、其余 notice 不受影响 —— ${i5Close.detail}`)
+        if (i5Close.status !== 'PASS') allPass = false
+      }
       if (p21) {
         log(`  [${p21.status.padEnd(7)}] P2-1：approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${p21.detail}`)
         if (p21.status !== 'PASS') allPass = false
@@ -1375,7 +1464,7 @@ main()
       }
     }
     log('')
-    log(allPass ? "✓ 十一条 + P2-1 + I2 全部通过" : '✗ 存在未通过的检查——如实报告，见上面逐条详情')
+    log(allPass ? "✓ 十一条 + I5 附加检查 + P2-1 + I2 全部通过" : '✗ 存在未通过的检查——如实报告，见上面逐条详情')
     process.exitCode = allPass ? 0 : 1
   })
   .catch((e) => {
