@@ -65,11 +65,21 @@ export function ChatToolbar({
 }): JSX.Element {
   const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
-  // 本地"当前选中"只是给下拉一个初始展示值——它不保证等于会话此刻真正在用的模型/effort
-  // （start() 目前不传 model/effort,adapter 用自己的默认值;这里选中第一项只是合理的起点）。
-  // 一旦用户真的改过一次,onSetParams 生效后这个本地值就和"下一条消息会用的值"对齐了。
-  const [modelSel, setModelSel] = useState(() => model.models[0]?.id ?? '')
-  const [effortSel, setEffortSel] = useState(() => model.effortLevels[0]?.id ?? '')
+  // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
+  // 默认值"（2026-08-17 全分支最终评审 I7）。
+  //
+  // 修复前这里是 `model.models[0]?.id`，两处同时出错：
+  //   ① 显示的是假值。AgentChatView 调 start() 时**根本不传 model/effort**，CLI 用的是
+  //      自己的默认；而工具栏写着 Claude 的 models[0]=「Fable」、effortLevels[0]=「低」，
+  //      旁边还标着「下条起生效」——等于对着一个错的"当前值"声称它是当前值。
+  //   ② 那个值还点不动。它在下拉里已经是选中态，onChange 不触发，想真用 Fable 得先切走
+  //      再切回来。
+  // 没有改成"start() 时把这两个值一起传下去"（评审给的另一条）：那会把 models[0] 变成
+  // 事实上的强制默认，静默覆盖用户在 CLI 自己的配置/GUI 菜单里设好的模型——为修一个
+  // 显示问题去改所有人的实际行为，方向反了。占位项这条则让控件如实说话：没选就是
+  // "跟随 CLI 默认"，选了才有覆盖，而且每一个真实选项都点得动。
+  const [modelSel, setModelSel] = useState('')
+  const [effortSel, setEffortSel] = useState('')
   const [hook, setHook] = useState<AgentApprovalHookStatus | null>(null)
   const [hookBusy, setHookBusy] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -222,6 +232,12 @@ export function ChatToolbar({
           }}
         />
 
+        {/* 「（默认）」占位项（value=''）是初始选中值，含义是"不覆盖，跟随 CLI 自己的
+            默认"——不是随手加的一项，见上面 modelSel 的注释（评审 I7）。选回它时传空串，
+            两个 adapter 的 buildArgs 都是 `if (opts.model)`，空串会让那个 flag 整个不出现，
+            于是真的退回 CLI 默认，不是发一个空的 --model 过去。
+            「下条起生效」只在真的选了东西时才显示：没选的时候没有任何待生效的改动，
+            那句话贴在那儿是无意义的（也是修复前"对着错的当前值声称它是当前值"的一部分）。 */}
         {model.showModel && (
           <div className="ac-param-group">
             <div className="ac-param-control">
@@ -234,6 +250,7 @@ export function ChatToolbar({
                   onSetParams({ model: e.target.value })
                 }}
               >
+                <option value="">（默认）</option>
                 {model.models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -241,7 +258,7 @@ export function ChatToolbar({
                 ))}
               </select>
             </div>
-            <span className="ac-param-hint">下条起生效</span>
+            {modelSel !== '' && <span className="ac-param-hint">下条起生效</span>}
           </div>
         )}
 
@@ -257,6 +274,7 @@ export function ChatToolbar({
                   onSetParams({ effort: e.target.value })
                 }}
               >
+                <option value="">（默认）</option>
                 {model.effortLevels.map((lv) => (
                   <option key={lv.id} value={lv.id}>
                     {lv.label}
@@ -264,7 +282,7 @@ export function ChatToolbar({
                 ))}
               </select>
             </div>
-            <span className="ac-param-hint">下条起生效</span>
+            {effortSel !== '' && <span className="ac-param-hint">下条起生效</span>}
           </div>
         )}
 
