@@ -1107,6 +1107,103 @@ async function main() {
     const fatalClassSeen = await cdp.eval(`!!document.querySelector('.ac-toolbar .ac-notices .ac-notice-fatal')`)
     log(`  · fatal:true 的 notice 带上了 .ac-notice-fatal：${fatalClassSeen}`)
 
+    // ── P2-1（评审加做）：approval 为空的 CLI 路径此前零真机覆盖 ─────────────────
+    // 前面全程只测了第一个 CLI 芯片（本机是 Claude Code，capabilities.approval 非空），
+    // 于是 toolbarModel 的 `showSandbox = caps.approval.length===0 && sandboxLevels.length>0`
+    // 这一支——本项目全局硬约束之一（approval 为空时必须显示 sandboxLevels）——在真实
+    // 浏览器里从没渲染过；同理 hookAsk 询问卡片只在 approval 非空时才问，"不问 hook、
+    // 直接起会话"这条路径也没跑过。这里用第二个独立节点（同一组件实例的内部 state
+    // 不会因为改 store 数据就重置，不能复用 Node A）重跑一遍，选第二个 CLI 芯片
+    // （本机是 Codex，capabilities.approval 为空）。
+    const extra = { p21: { status: 'not-run', detail: '' } }
+    try {
+      const IDS_B = { tabId: 't8-tab-b', leafId: 't8-leaf-b', frameId: 't8-frame-b', nodeId: 't8-node-b' }
+      const injectB = await cdp.eval(`(function(){
+        const s = window.__store.getState()
+        window.__store.setState({
+          tabs: [...s.tabs, {
+            id: ${JSON.stringify(IDS_B.tabId)}, title: 'agent-e2e-b', projectId: null,
+            cwd: ${JSON.stringify(projectDir)},
+            root: { type: 'leaf', id: ${JSON.stringify(IDS_B.leafId)}, pane: { kind: 'agent', cwd: ${JSON.stringify(projectDir)} } },
+            activeLeafId: ${JSON.stringify(IDS_B.leafId)}
+          }],
+          canvas: {
+            ...s.canvas,
+            frames: [...s.canvas.frames, {
+              id: ${JSON.stringify(IDS_B.frameId)}, projectId: null, name: 'agent-e2e-frame-b',
+              x: 1200, y: 0, w: 900, h: 700, collapsed: false,
+              nodes: [{ id: ${JSON.stringify(IDS_B.nodeId)}, leafId: ${JSON.stringify(IDS_B.leafId)}, x: 20, y: 50, w: 820, h: 600 }]
+            }]
+          }
+        })
+        window.__store.getState().setMaximizedNode({ frameId: ${JSON.stringify(IDS_B.frameId)}, nodeId: ${JSON.stringify(IDS_B.nodeId)} })
+        return true
+      })()`)
+      if (!injectB) throw new Error('Node B 注入失败')
+      await sleep(400)
+
+      const emptyStateB = await waitFor(
+        async () => {
+          const j = await cdp.eval(`(function(){
+            const root = document.querySelector('.agent-chat-view .ac-empty')
+            if (!root) return null
+            const chips = root.querySelectorAll('.ac-clis .ac-cli-chip')
+            return JSON.stringify({ count: chips.length, labels: Array.from(chips).map(c => c.textContent) })
+          })()`)
+          if (!j) return null
+          const p = JSON.parse(j)
+          return p.count >= 2 ? p : null
+        },
+        { timeout: 8000, desc: 'Node B 空态且至少 2 个 CLI 选项' }
+      )
+      log(`  · Node B CLI 选项：${emptyStateB.labels.join(' / ')}`)
+
+      await cdp.clickElement(
+        `document.querySelectorAll('.ac-clis .ac-cli-chip')[1]`,
+        'Node B 第二个 CLI 选择芯片（预期 approval 为空，如 Codex）'
+      )
+      const selectedB = await cdp.eval(`document.querySelector('.ac-cli-chip.selected')?.textContent || null`)
+      log(`  · Node B 已选中：${selectedB}`)
+
+      await cdp.clickElement(`document.querySelector('textarea.ac-input')`, 'Node B 空态输入框')
+      await cdp.send('Input.insertText', { text: 'ping（P2-1 验证脚本发送）' })
+      await sleep(100)
+      await cdp.clickElement(`document.querySelector('button.ac-send')`, 'Node B「发送」按钮')
+
+      // approval 为空的 CLI 不该走 hookStatus() 查询那个分支——立刻查一次，
+      // 不该看到 hook 询问卡片（不是等它超时不出现，是确认这条分支真的没走到）。
+      await sleep(400)
+      const hookAskAppearedB = await cdp.eval(`!!document.querySelector('.ac-hook-ask')`)
+
+      const conversationUpB = await waitFor(
+        async () => await cdp.eval(`!!document.querySelector('.agent-chat-view .ac-messages')`),
+        { timeout: 8000, desc: 'Node B 切到对话态' }
+      )
+
+      const sandboxCheck = await waitFor(
+        async () => {
+          const j = await cdp.eval(`(function(){
+            const el = document.querySelector('.ac-toolbar .ac-sandbox-note')
+            if (!el) return null
+            return JSON.stringify({ text: el.textContent, visible: window.__t8Visible(el) })
+          })()`)
+          return j ? JSON.parse(j) : null
+        },
+        { timeout: 5000, desc: 'Node B 工具栏应显示 .ac-sandbox-note' }
+      ).catch((e) => ({ text: null, visible: false, error: e.message }))
+
+      const ok = conversationUpB && !hookAskAppearedB && sandboxCheck?.visible && !!sandboxCheck.text
+      extra.p21 = {
+        status: ok ? 'PASS' : 'FAIL',
+        detail: `CLI=${selectedB}；hookAsk 出现=${hookAskAppearedB}（预期 false）；对话态=${conversationUpB}；沙箱提示="${sandboxCheck?.text}" 可见=${sandboxCheck?.visible}`
+      }
+      log(`  ${ok ? '✓' : '✗'} [P2-1] approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${extra.p21.detail}`)
+    } catch (e) {
+      extra.p21 = { status: 'FAIL', detail: '异常：' + e.message }
+      log(`  ✗ [P2-1] 异常：${e.message}`)
+    }
+    results.__extra = extra
+
     // ── 渲染层报错检查（不是 11 条之一，但值得报告）──────────────────────────────
     if (cdp.consoleErrors.length > 0) {
       log(`  ⚠ 渲染层控制台出现 ${cdp.consoleErrors.length} 条 error/异常（详见报告）：`)
@@ -1167,8 +1264,18 @@ main()
       if (r.status !== 'PASS') allPass = false
       log(`  [${r.status.padEnd(7)}] 断言${id}：${ASSERTION_NAMES[id]}`)
     }
+    // P2-1：不在原计划的十一条编号里（那十一条是计划 8 条 + Ruling 2 追加 3 条，
+    // 编号已经固定），但评审要求补做、也计入"是否全绿"——不达标同样让脚本以非零
+    // exit code 收尾，不能只印在日志里就当没发生。
+    const p21 = results.__extra?.p21
+    if (p21) {
+      log('')
+      log('=== 附加检查（P2-1，评审加做，不占用 1-11 编号）===')
+      log(`  [${p21.status.padEnd(7)}] approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${p21.detail}`)
+      if (p21.status !== 'PASS') allPass = false
+    }
     log('')
-    log(allPass ? '✓ 十一条全部通过' : '✗ 存在未通过的断言——如实报告，见上面逐条详情')
+    log(allPass ? '✓ 十一条 + P2-1 全部通过' : '✗ 存在未通过的检查——如实报告，见上面逐条详情')
     process.exitCode = allPass ? 0 : 1
   })
   .catch((e) => {
