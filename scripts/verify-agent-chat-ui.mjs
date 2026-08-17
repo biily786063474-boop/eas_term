@@ -221,11 +221,13 @@ const MAIN_TSX_PATCHED = `if (true /* TEMP task-8 e2e，见 scripts/verify-agent
 
 const PRELOAD_CONST_ANCHOR = `const api = {\n  platform: process.platform,`
 const PRELOAD_CONST_PATCHED = `// TEMP(task-8 e2e，见 scripts/verify-agent-chat-ui.mjs)：只在显式传 EAS_AGENT_CHAT_TEST=1
-// 时启用，正常开发/生产构建不受影响。只替换 agentChat.start/onEvent 两个方法（避免真的
-// spawn CLI 花 token），其余 agentChat IPC（listClis/hookStatus/...）保持真实调用。
-// 验证脚本负责在跑完后把这处改动还原、重新构建，不是永久生产逻辑。
+// 时启用，正常开发/生产构建不受影响。只替换 agentChat.start/onEvent 对渲染层暴露的行为
+// （避免真的 spawn CLI 花 token），resolveApproval 保留真实 IPC 调用、只是顺手记一份
+// 调用参数（不牺牲"保持真实 IPC"这条边界），其余 agentChat IPC（listClis/hookStatus/...）
+// 保持真实调用。验证脚本负责在跑完后把这处改动还原、重新构建，不是永久生产逻辑。
 const AGENT_CHAT_TEST_MODE = process.env.EAS_AGENT_CHAT_TEST === '1'
 const fakeAgentChatListeners = new Map<string, (e: ChatEvent) => void>()
+const testResolveApprovalCalls: { sessionId: string; approvalId: string; decision: string }[] = []
 
 const api = {\n  platform: process.platform,`
 
@@ -280,15 +282,43 @@ const PRELOAD_ONEVENT_PATCHED = `    onEvent: AGENT_CHAT_TEST_MODE
           return () => ipcRenderer.removeListener(channel, listener)
         }`
 
+// P1-2（评审实测假绿）：断言 7 原来只看 .ac-approval 从 DOM 消失，而那个隐藏完全由
+// ApprovalCard 的本地 state 决定——删掉真正的 onDecide(decision) 调用，断言照样绿，
+// 也分不出点的是「允许」还是「拒绝」。这里让 resolveApproval 在测试模式下记一份调用
+// 参数快照，但仍然真调用 ipcRenderer.invoke（不是假掉整条链路），验证脚本据此确认
+// 「决定真的从渲染层发出去了、且是正确的那个 decision」。
+const PRELOAD_RESOLVEAPPROVAL_ANCHOR = `    resolveApproval: (
+      sessionId: string,
+      approvalId: string,
+      decision: 'allow' | 'deny'
+    ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),`
+const PRELOAD_RESOLVEAPPROVAL_PATCHED = `    resolveApproval: AGENT_CHAT_TEST_MODE
+      ? (sessionId: string, approvalId: string, decision: 'allow' | 'deny'): Promise<{ ok: boolean }> => {
+          testResolveApprovalCalls.push({ sessionId, approvalId, decision })
+          return ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision)
+        }
+      : (
+          sessionId: string,
+          approvalId: string,
+          decision: 'allow' | 'deny'
+        ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),`
+
 const PRELOAD_EXPOSE_ANCHOR = `contextBridge.exposeInMainWorld('api', api)`
 const PRELOAD_EXPOSE_PATCHED = `contextBridge.exposeInMainWorld('api', api)
 
-// TEMP(task-8 e2e)：测试模式下额外暴露一个把假 ChatEvent 直接推给已注册监听器的入口，
-// 验证脚本用它模拟内核事件流。见上面 AGENT_CHAT_TEST_MODE 的说明，验完自动还原。
+// TEMP(task-8 e2e)：测试模式下额外暴露两个自省入口——
+//   __agentChatTestPush(sessionId, event)：把假 ChatEvent 直接推给已注册监听器；
+//   __agentChatTestGetResolveApprovalCalls()：读出 resolveApproval 被调用过的参数快照
+//     （用函数而不是直接暴露数组本身——跨 contextBridge 的对象引用是否总能反映后续
+//     push 的新元素没有文档承诺的保证，函数调用每次都会拿到当下最新的真实数据）。
+// 见上面 AGENT_CHAT_TEST_MODE 的说明，验完自动还原。
 if (AGENT_CHAT_TEST_MODE) {
   contextBridge.exposeInMainWorld('__agentChatTestPush', (sessionId: string, e: ChatEvent) => {
     fakeAgentChatListeners.get(sessionId)?.(e)
   })
+  contextBridge.exposeInMainWorld('__agentChatTestGetResolveApprovalCalls', () =>
+    testResolveApprovalCalls.map((c) => ({ ...c }))
+  )
 }`
 
 function applyPatch(file, replacements, label) {
@@ -312,9 +342,10 @@ function patchSources() {
       [PRELOAD_CONST_ANCHOR, PRELOAD_CONST_PATCHED],
       [PRELOAD_START_ANCHOR, PRELOAD_START_PATCHED],
       [PRELOAD_ONEVENT_ANCHOR, PRELOAD_ONEVENT_PATCHED],
+      [PRELOAD_RESOLVEAPPROVAL_ANCHOR, PRELOAD_RESOLVEAPPROVAL_PATCHED],
       [PRELOAD_EXPOSE_ANCHOR, PRELOAD_EXPOSE_PATCHED]
     ],
-    'preload/index.ts（测试模式 start/onEvent + __agentChatTestPush）'
+    'preload/index.ts（测试模式 start/onEvent + resolveApproval 记录 + __agentChatTestPush/GetResolveApprovalCalls）'
   )
 }
 
@@ -551,6 +582,22 @@ async function main() {
     await cdp.send('Runtime.enable')
     await cdp.send('Input.setIgnoreInputEvents', { ignore: false })
 
+    // P1-1/P2-2（评审实测假绿）：断言 11/1/4 原来只判 DOM 是否存在、textContent 是否
+    // 匹配——这些都不受 display:none/visibility:hidden/opacity:0/尺寸为 0 影响。评审
+    // 实测过：给 .ac-turn-user 加 display:none !important 后断言 11 照常绿，日志还写
+    // "用户消息出现在第 1 个轮次"，而屏幕上那句话根本不存在。断言 8 早就做对了（尺寸 +
+    // display + visibility + opacity 四件套），这里注入一个全局小函数复用同一套判据，
+    // 不用在每个断言里重复写一遍。
+    await cdp.eval(`(function(){
+      window.__t8Visible = function(el){
+        if (!el) return false
+        const r = el.getBoundingClientRect()
+        const cs = getComputedStyle(el)
+        return r.width > 0 && r.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0
+      }
+      return true
+    })()`)
+
     // 给首帧渲染 + loadProjects()/loadCanvas() 初始异步加载留时间，再动手注入，
     // 避免跟它们的 setState 时序赛跑（loadCanvas 对一个全新 userData 是空场景，
     // 不会覆盖我们稍后的注入，但先等它跑完更干净）。
@@ -611,9 +658,13 @@ async function main() {
         const j = await cdp.eval(`(function(){
           const root = document.querySelector('.agent-chat-view .ac-empty')
           if (!root) return null
+          const logo = root.querySelector('.ac-logo svg')
+          const input = root.querySelector('textarea.ac-input')
           return JSON.stringify({
-            hasLogo: !!root.querySelector('.ac-logo svg'),
-            hasInput: !!root.querySelector('textarea.ac-input'),
+            hasLogo: !!logo,
+            logoVisible: window.__t8Visible(logo),
+            hasInput: !!input,
+            inputVisible: window.__t8Visible(input),
             cliCount: root.querySelectorAll('.ac-clis .ac-cli-chip').length,
             hint: root.querySelector('.ac-clis-hint')?.textContent || null
           })
@@ -624,13 +675,13 @@ async function main() {
       },
       { timeout: 8000, desc: '空态渲染（logo/输入框/CLI 选择器）' }
     )
-    if (emptyState.hasLogo && emptyState.hasInput && emptyState.cliCount > 0) {
-      pass(1, `logo=${emptyState.hasLogo} input=${emptyState.hasInput} CLI 选项=${emptyState.cliCount} 个`)
-    } else {
-      fail(
+    if (emptyState.hasLogo && emptyState.logoVisible && emptyState.hasInput && emptyState.inputVisible && emptyState.cliCount > 0) {
+      pass(
         1,
-        `logo=${emptyState.hasLogo} input=${emptyState.hasInput} cliCount=${emptyState.cliCount} hint=${emptyState.hint}`
+        `logo=存在且可见 input=存在且可见 CLI 选项=${emptyState.cliCount} 个（可见性判据：尺寸+display+visibility+opacity 四件套，非仅 DOM 存在性）`
       )
+    } else {
+      fail(1, `详情=${JSON.stringify(emptyState)}`)
       throw new Error('空态没有完整渲染，后续步骤依赖它，中止')
     }
 
@@ -717,26 +768,30 @@ async function main() {
     const TURN_A_FIND = `Array.from(document.querySelectorAll('.ac-turn-assistant')).find(t => (t.querySelector('.ac-turn-text')?.textContent || '').includes('第一步'))`
 
     // ── 断言 5：折叠状态下失败项仍然可见 ─────────────────────────────────────
+    // P2-3（评审：契约比 < 5 更精确）：visibleExecs 的契约是「最近三条 ∪ 全部失败项」，
+    // Turn A 5 个 exec、失败项在 index 0（不在"最近三条"=index 2/3/4 内），正确答案
+    // 精确等于 4（3 条最近 + 1 条失败，不重叠）。原来写 < 5 的话，窗口退化成"最近两条"
+    // （可见 e1+e4+e5=3 行）这种更严重的 bug 也会被判定通过，跟断言 4 用 Turn B 精确
+    // 锁死"3"这个数字的严格程度不一致，这里补齐。
     const turnAState = await cdp.eval(`(function(){
       const t = ${TURN_A_FIND}
       if (!t) return null
       const rows = Array.from(t.querySelectorAll('.ac-exec-row'))
+      const failedEl = rows.find(r => r.classList.contains('ac-exec-failed'))
       return JSON.stringify({
         visibleCount: rows.length,
         totalLabel: t.querySelector('.ac-execs-toggle')?.textContent || null,
-        hasFailedVisible: rows.some(r => r.classList.contains('ac-exec-failed')),
-        failedIsE1: (function(){
-          const failed = rows.find(r => r.classList.contains('ac-exec-failed'))
-          return !!failed && (failed.querySelector('.ac-exec-label')?.textContent || '').includes('e2e-locked-file')
-        })()
+        hasFailedVisible: !!failedEl,
+        failedVisibleGenuinely: window.__t8Visible(failedEl),
+        failedIsE1: !!failedEl && (failedEl.querySelector('.ac-exec-label')?.textContent || '').includes('e2e-locked-file')
       })
     })()`)
     if (!turnAState) throw new Error('找不到 Turn A（text 含"第一步"的 assistant 轮次）')
     const ta = JSON.parse(turnAState)
-    if (ta.hasFailedVisible && ta.failedIsE1 && ta.visibleCount < 5) {
+    if (ta.hasFailedVisible && ta.failedVisibleGenuinely && ta.failedIsE1 && ta.visibleCount === 4) {
       pass(
         5,
-        `折叠时可见 ${ta.visibleCount}/5 行（含失败项 e1，它不在"最近三条"窗口内也依然可见）；折叠按钮文案「${ta.totalLabel}」`
+        `折叠时精确可见 4/5 行（3 条最近 + 1 条失败项 e1，它不在"最近三条"窗口内也依然真实可见）；折叠按钮文案「${ta.totalLabel}」`
       )
     } else {
       fail(5, `折叠态：${turnAState}`)
@@ -803,18 +858,22 @@ async function main() {
     const TURN_B_FIND = `Array.from(document.querySelectorAll('.ac-turn-assistant')).find(t => (t.querySelector('.ac-turn-text')?.textContent || '').includes('第二步'))`
 
     // ── 断言 4：模型文字显示、执行区默认三行、点击展开显示全部 ───────────────────
+    // P2-2（跟 P1-1 同族）：text.includes(...) 只测 textContent，不受 display:none 之类
+    // 影响——这里补上 __t8Visible 判据，"显示"这个词要落到"真的看得见"，不是"DOM 里有"。
     const turnBCollapsed = await cdp.eval(`(function(){
       const t = ${TURN_B_FIND}
       if (!t) return null
+      const textEl = t.querySelector('.ac-turn-text')
       return JSON.stringify({
-        text: t.querySelector('.ac-turn-text')?.textContent || null,
+        text: textEl?.textContent || null,
+        textVisible: window.__t8Visible(textEl),
         visibleCount: t.querySelectorAll('.ac-exec-row').length,
         toggleLabel: t.querySelector('.ac-execs-toggle')?.textContent || null
       })
     })()`)
     if (!turnBCollapsed) throw new Error('找不到 Turn B（text 含"第二步"的 assistant 轮次）')
     const tb = JSON.parse(turnBCollapsed)
-    const modelTextShown = !!tb.text && tb.text.includes('第二步')
+    const modelTextShown = !!tb.text && tb.text.includes('第二步') && tb.textVisible
     const defaultThreeLines = tb.visibleCount === 3
 
     if (modelTextShown && defaultThreeLines) {
@@ -834,28 +893,40 @@ async function main() {
     }
 
     // ── 断言 11：用户自己发的消息出现在界面上，且顺序正确 ────────────────────────
+    // P1-1（评审实测假绿，这条是本轮最重的一条）：原判据只有 class 顺序 + textContent
+    // 精确匹配——textContent 不受 display/visibility/opacity/尺寸影响。评审实测：给
+    // .ac-turn-user 加 display:none !important 后断言 11 照常绿，日志还写"用户消息
+    // 出现在第 1 个轮次"，而屏幕上那句话根本不存在。Ruling 2 原话是"用户自己的消息
+    // **可见**且顺序正确"，可见这一半原来零覆盖——本仓库"渲染完美但真实鼠标全部穿透"
+    // 那次事故的同族问题：DOM 对了不等于用户看得见。断言 8 一开始就做对了（尺寸 +
+    // display + visibility + opacity 四件套），这里把同一套判据用 __t8Visible 接过来。
     const turnOrder = await cdp.eval(`JSON.stringify(
-      Array.from(document.querySelectorAll('.ac-messages > .ac-turn')).map(t => ({
-        role: t.classList.contains('ac-turn-user') ? 'user' : (t.classList.contains('ac-turn-assistant') ? 'assistant' : 'other'),
-        text: t.querySelector('.ac-turn-text')?.textContent || ''
-      }))
+      Array.from(document.querySelectorAll('.ac-messages > .ac-turn')).map(t => {
+        const textEl = t.querySelector('.ac-turn-text')
+        return {
+          role: t.classList.contains('ac-turn-user') ? 'user' : (t.classList.contains('ac-turn-assistant') ? 'assistant' : 'other'),
+          text: textEl?.textContent || '',
+          visible: window.__t8Visible(textEl)
+        }
+      })
     )`)
     const turns = JSON.parse(turnOrder)
     const userIdx = turns.findIndex((t) => t.role === 'user' && t.text === TEST_MESSAGE)
     const firstAssistantIdx = turns.findIndex((t) => t.role === 'assistant')
-    if (userIdx !== -1 && firstAssistantIdx !== -1 && userIdx < firstAssistantIdx) {
+    const userVisible = userIdx !== -1 && turns[userIdx].visible
+    if (userIdx !== -1 && userVisible && firstAssistantIdx !== -1 && userIdx < firstAssistantIdx) {
       pass(
         11,
-        `用户消息出现在第 ${userIdx + 1} 个轮次（原文完整匹配），首个 assistant 轮次在第 ${firstAssistantIdx + 1} 个——顺序正确；完整轮次序列：${turns.map((t) => t.role).join(' → ')}`
+        `用户消息出现在第 ${userIdx + 1} 个轮次（原文完整匹配，且真实可见——尺寸/display/visibility/opacity 四件套），首个 assistant 轮次在第 ${firstAssistantIdx + 1} 个——顺序正确；完整轮次序列：${turns.map((t) => t.role).join(' → ')}`
       )
     } else {
       fail(
         11,
-        `userIdx=${userIdx} firstAssistantIdx=${firstAssistantIdx}；轮次序列：${JSON.stringify(turns.map((t) => ({ role: t.role, text: t.text.slice(0, 30) })))}`
+        `userIdx=${userIdx} userVisible=${userVisible} firstAssistantIdx=${firstAssistantIdx}；轮次序列：${JSON.stringify(turns.map((t) => ({ role: t.role, text: t.text.slice(0, 30), visible: t.visible })))}`
       )
     }
 
-    // ── 断言 6 + 9：approval.request 到达，卡片高层级出现，elementFromPoint 命中卡片本身 ──
+    // ── 断言 6：approval.request 到达，卡片带结构且真实可见 ─────────────────────
     await push({
       k: 'approval.request',
       approvalId: 'appr-1',
@@ -868,44 +939,95 @@ async function main() {
       async () => await cdp.eval(`!!document.querySelector('.ac-messages .ac-approval')`),
       { timeout: 5000, desc: 'approval.request 后审批卡片出现' }
     )
-    const cardCheck = await cdp.eval(`(function(){
+    const cardStructure = await cdp.eval(`(function(){
       const card = document.querySelector('.ac-messages .ac-approval')
       if (!card) return null
-      card.scrollIntoView({ block: 'center' })
-      const r = card.getBoundingClientRect()
-      const cx = r.left + r.width/2
-      const cy = r.top + r.height/2
-      const hit = document.elementFromPoint(cx, cy)
-      const zIndex = getComputedStyle(card.closest('.pane') || card).zIndex
       return JSON.stringify({
         title: card.querySelector('.ac-approval-title')?.textContent || null,
         hasAllowBtn: !!card.querySelector('.ac-approval-btn.allow'),
         hasDenyBtn: !!card.querySelector('.ac-approval-btn.deny'),
-        hitIsCard: !!hit && (hit === card || !!hit.closest('.ac-approval')),
-        hitTag: hit ? hit.tagName + '.' + (hit.className || '') : null,
-        paneZIndex: zIndex
+        cardVisible: window.__t8Visible(card)
       })
     })()`)
-    if (approvalUp && cardCheck) {
-      const cc = JSON.parse(cardCheck)
-      if (cc.hasAllowBtn && cc.hasDenyBtn) {
-        pass(6, `卡片出现，title="${cc.title}"，含允许/拒绝按钮；所在节点 z-index=${cc.paneZIndex}（最大化沉浸层）`)
+    if (approvalUp && cardStructure) {
+      const cs6 = JSON.parse(cardStructure)
+      if (cs6.hasAllowBtn && cs6.hasDenyBtn && cs6.cardVisible) {
+        pass(6, `卡片出现，title="${cs6.title}"，含允许/拒绝按钮，且真实可见（尺寸/display/visibility/opacity 四件套）`)
       } else {
-        fail(6, `卡片结构不完整：${cardCheck}`)
-      }
-      if (cc.hitIsCard) {
-        pass(9, `elementFromPoint(卡片中心) 命中 ${cc.hitTag}，closest('.ac-approval') 命中卡片本身，未被底下内容穿透`)
-      } else {
-        fail(9, `elementFromPoint 命中的是 ${cc.hitTag}，不是审批卡片——真实鼠标会点穿`)
+        fail(6, `卡片结构或可见性不完整：${cardStructure}`)
       }
     } else {
       fail(6, '审批卡片没有出现')
-      fail(9, '审批卡片没有出现，无法测 elementFromPoint')
     }
 
-    // ── 断言 7：点「允许」后卡片消失（乐观隐藏，不等 IPC 回包）──────────────────
-    if (results[6].status === 'PASS') {
-      await cdp.clickElement(`document.querySelector('.ac-messages .ac-approval .ac-approval-btn.allow')`, '审批卡片「允许」按钮')
+    // ── 断言 9：elementFromPoint 命中卡片本身——最大化 + 普通画布节点两种形态都测 ──
+    // P1-3（评审：原来的场景是唯一不可能失败的那个）：.ac-approval 本身没有 z-index/
+    // position 声明，就是文档流里一个普通块；最大化沉浸态又恰好排除了唯一可能盖住它
+    // 的东西（RunMonitor/BuildStamp 主动让位，报告原话"没有别的东西盖在上面干扰点击"）
+    // ——单测最大化态等于没测到任何真实层级规则。这里先在最大化态测一次，再退出沉浸态、
+    // 在用户真正会遇到的形态（画布上未最大化的节点，可能被 frame 头/其它浮层压住）
+    // 里把同一个断言重新跑一遍，两边都命中才算过。
+    let hit9a = false
+    let hit9aDetail = '最大化态：审批卡片没有出现，未测'
+    if (approvalUp) {
+      const j = await cdp.eval(`(function(){
+        const card = document.querySelector('.ac-messages .ac-approval')
+        if (!card) return null
+        card.scrollIntoView({ block: 'center' })
+        const r = card.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) return JSON.stringify({ hitIsCard: false, hitTag: '(rect 尺寸为 0)' })
+        const hit = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2)
+        return JSON.stringify({ hitIsCard: !!hit && (hit === card || !!hit.closest('.ac-approval')), hitTag: hit ? hit.tagName + '.' + (hit.className || '') : null })
+      })()`)
+      if (j) {
+        const p = JSON.parse(j)
+        hit9a = p.hitIsCard
+        hit9aDetail = `最大化态命中 ${p.hitTag}`
+      }
+    }
+
+    await cdp.eval(`(function(){ window.__store.getState().setMaximizedNode(null); return true })()`)
+    await sleep(500)
+    const cardStillThere = await waitFor(
+      async () => await cdp.eval(`!!document.querySelector('.ac-messages .ac-approval')`),
+      { timeout: 5000, desc: '退出最大化后审批卡片应仍在（还没点允许/拒绝）' }
+    ).catch(() => false)
+    let hit9b = false
+    let hit9bDetail = '非最大化态：退出最大化后审批卡片找不到了（可能被裁剪/隐藏——这本身就是需要关注的信号）'
+    if (cardStillThere) {
+      const j2 = await cdp.eval(`(function(){
+        const card = document.querySelector('.ac-messages .ac-approval')
+        if (!card) return null
+        card.scrollIntoView({ block: 'center' })
+        const r = card.getBoundingClientRect()
+        if (r.width <= 0 || r.height <= 0) return JSON.stringify({ hitIsCard: false, hitTag: '(rect 尺寸为 0)' })
+        const hit = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2)
+        return JSON.stringify({ hitIsCard: !!hit && (hit === card || !!hit.closest('.ac-approval')), hitTag: hit ? hit.tagName + '.' + (hit.className || '') : null })
+      })()`)
+      if (j2) {
+        const p2 = JSON.parse(j2)
+        hit9b = p2.hitIsCard
+        hit9bDetail = `非最大化态命中 ${p2.hitTag}`
+      }
+    }
+
+    if (hit9a && hit9b) {
+      pass(9, `${hit9aDetail}；${hit9bDetail}——最大化与普通画布节点两种形态下都命中卡片本身，未被穿透`)
+    } else {
+      fail(9, `${hit9aDetail}；${hit9bDetail}`)
+    }
+
+    // ── 断言 7：点「允许」后卡片消失，且决定真的发出去了（非最大化态，真实坐标）──
+    // P1-2（评审实测假绿）：原判据只看 .ac-approval 从 DOM 消失，而那个隐藏完全由
+    // ApprovalCard 的本地 state（decided）决定——评审删掉真正的 onDecide(decision) 调用，
+    // 断言照样绿；也分不出点的是「允许」还是「拒绝」（点 deny 同样让卡片消失、同样绿）。
+    // resolveApproval 在测试模式下仍然真调用 IPC，只是顺手记一份参数快照（见 preload
+    // 补丁），这里读回来确认「决定真的从渲染层发出去了，且是正确的那个 decision」。
+    if (cardStillThere) {
+      await cdp.clickElement(
+        `document.querySelector('.ac-messages .ac-approval .ac-approval-btn.allow')`,
+        '审批卡片「允许」按钮（非最大化态）'
+      )
       const cardGone = await waitFor(
         async () => {
           const still = await cdp.eval(`!!document.querySelector('.ac-messages .ac-approval')`)
@@ -913,13 +1035,40 @@ async function main() {
         },
         { timeout: 3000, desc: '点击「允许」后卡片应消失' }
       ).catch(() => false)
-      if (cardGone) {
-        pass(7, '点击「允许」后 .ac-approval 立即从 DOM 消失（乐观隐藏，未等待 resolveApproval 的 IPC 回包）')
+      const callsJson = await cdp.eval(
+        `JSON.stringify(window.__agentChatTestGetResolveApprovalCalls ? window.__agentChatTestGetResolveApprovalCalls() : null)`
+      )
+      const calls = callsJson ? JSON.parse(callsJson) : null
+      const gotExpectedCall =
+        Array.isArray(calls) && calls.some((c) => c.sessionId === SESSION_ID && c.approvalId === 'appr-1' && c.decision === 'allow')
+      if (cardGone && gotExpectedCall) {
+        pass(
+          7,
+          `点击「允许」后 .ac-approval 立即消失（乐观隐藏）；且 resolveApproval 确实被真实调用，记录到 (${SESSION_ID}, appr-1, allow)——决定真的离开了渲染层，不是只有本地 state 变了`
+        )
       } else {
-        fail(7, '点击「允许」3s 后卡片仍在 DOM 里')
+        fail(7, `cardGone=${cardGone} gotExpectedCall=${gotExpectedCall} 实际记录的调用=${callsJson}`)
       }
     } else {
-      skip(7, '断言 6 未过，没有卡片可点')
+      skip(7, '退出最大化后审批卡片找不到了，没有可点的卡片')
+    }
+
+    // 附加验证（不是硬性 11 条之一，但直接回应 P1-2 提到的"分不出 allow 和 deny"）：
+    // 再来一张卡片，这次点拒绝，确认记录到的 decision 真的是 'deny' 不是 'allow'。
+    await push({ k: 'approval.request', approvalId: 'appr-2', kind: 'patch', title: '修改文件：danger.txt', detail: '{}', cwd: projectDir })
+    const card2Up = await waitFor(async () => await cdp.eval(`!!document.querySelector('.ac-messages .ac-approval')`), {
+      timeout: 5000,
+      desc: '第二张审批卡片应出现'
+    }).catch(() => false)
+    if (card2Up) {
+      await cdp.clickElement(`document.querySelector('.ac-messages .ac-approval .ac-approval-btn.deny')`, '第二张审批卡片「拒绝」按钮')
+      await sleep(300)
+      const calls2Json = await cdp.eval(`JSON.stringify(window.__agentChatTestGetResolveApprovalCalls())`)
+      const calls2 = JSON.parse(calls2Json)
+      const gotDeny = calls2.some((c) => c.approvalId === 'appr-2' && c.decision === 'deny')
+      log(`  · 附加验证：点「拒绝」记录到的决定是否为 deny —— ${gotDeny}（P1-2 原话"分不出 allow 和 deny"，这里证实能分）`)
+    } else {
+      log('  · 附加验证：第二张审批卡片没有出现，跳过 allow/deny 区分验证')
     }
 
     // ── 断言 8：{k:'error',fatal:false} 的 notice 在界面上可见（硬验收项）──────────
