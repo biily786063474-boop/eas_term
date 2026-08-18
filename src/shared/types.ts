@@ -65,6 +65,10 @@ export interface RulesStatus {
   claudeCanvas: boolean
   /** Codex 常驻托管区的字符数 */
   codexRegionChars: number
+  /** DeepSeek Harness 的 skill 目录装了没有（`<DSH_HOME>/skills/eas-term/`）*/
+  dshCanvas: boolean
+  /** dsh 常驻托管区（`<DSH_HOME>/AGENTS.md`）的字符数 */
+  dshRegionChars: number
 }
 
 /** 知识库状态。inbox 那两个字段是刻意成对的——

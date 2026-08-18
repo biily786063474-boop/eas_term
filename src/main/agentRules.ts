@@ -26,6 +26,19 @@ const LEGACY_BEGINS = [BEGIN]
 
 const home = (): string => app.getPath('home')
 const codexAgents = (): string => path.join(home(), '.codex', 'AGENTS.md')
+/** DeepSeek Harness 的用户级指令文件。落点由 `@deepseek-ai/dsh-agent-instructions`
+ *  定死：它先读 `$DSH_HOME/AGENTS.md`，再逐层读项目里的 AGENTS.md/CLAUDE.md。
+ *  `$DSH_HOME` 默认 `~/.dsh`（`@deepseek-ai/dsh-home-paths`）。
+ *
+ *  **跟着 DSH_HOME 环境变量走。** 这一条和 home() 的规矩不冲突：那条说的是
+ *  「同一模块里 home 只能有一个来源」，而 DSH_HOME 是 dsh 自己认的变量，
+ *  用户改了它，dsh 就去那儿读，我们必须跟着，否则写进一个它根本不看的文件。 */
+const dshHome = (): string => process.env.DSH_HOME || path.join(home(), '.dsh')
+const dshAgents = (): string => path.join(dshHome(), 'AGENTS.md')
+/** dsh 的用户级 skill 根：`<dshHome>/skills`（rank 400，见
+ *  `@deepseek-ai/dsh-skill-filesystem` 的 Discovery 表）。它解析的就是 `SKILL.md`，
+ *  和 Claude 的格式一样 —— 所以面 2 是整目录照拷，不需要另写一份。 */
+const dshSkill = (name: string): string => path.join(dshHome(), 'skills', name)
 const claudeSkill = (name: string): string =>
   path.join(home(), '.claude', 'skills', name, 'SKILL.md')
 /** 详细正文的落点：常驻区只写路径指过来。
@@ -157,7 +170,17 @@ export function expectedCodexRegion(): string | null {
 
 /** 只替换我们那一段，用户写在区外的内容一个字不碰 */
 function writeCodexRegion(text: string | null): void {
-  const f = codexAgents()
+  writeManagedRegion(codexAgents(), text)
+}
+
+/** dsh 用同一套：它也是「读一个 AGENTS.md」的机制，托管区形状没有理由分叉。 */
+function writeDshRegion(text: string | null): void {
+  writeManagedRegion(dshAgents(), text)
+}
+
+/** 往某个 AGENTS.md 里写/清我们那一段。**只动标记之间的内容**，
+ *  用户写在区外的一个字不碰（纪律 6）；写之前先备份成 `.eas-backup`（纪律 5）。 */
+function writeManagedRegion(f: string, text: string | null): void {
   fs.mkdirSync(path.dirname(f), { recursive: true })
   const raw = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''
   if (raw) {
@@ -195,6 +218,10 @@ export function syncRules(): { ok: boolean; codexChars: number } {
   for (const f of files) {
     writeFileEnsured(path.join(home(), '.claude', 'skills', 'eas-term', f.name), f.text)
     writeFileEnsured(path.join(detailDir(), f.name), f.text)
+    // DeepSeek Harness 有原生 skill 机制，且解析的就是 SKILL.md ——
+    // 整目录照拷，与 Claude 同形。**它不需要 ~/.eas/agent/ 那条按需路径**：
+    // 那条是给没有 skill 机制的 Codex 用的（常驻区写绝对路径指过去）。
+    writeFileEnsured(path.join(dshSkill('eas-term'), f.name), f.text)
   }
   // 清掉旧版本可能装过的 eas-wiki skill（这个函数以前会在 kb 配置时写它）——
   // 不能留着不管，那是一份指向真实知识库路径的全局文件，正是现在要堵的洞
@@ -206,19 +233,28 @@ export function syncRules(): { ok: boolean; codexChars: number } {
 
   const region = files.length > 0 ? codexRegion(new Set(files.map((f) => f.name))) : null
   writeCodexRegion(region)
+  // dsh 的常驻区用**同一段文本**：它和 Codex 一样是「读一个 AGENTS.md」的机制，
+  // 形状没有任何理由分叉。唯一的差别是 dsh 有 skill 机制，所以段里指向细节文件的
+  // 那几条路径对它是多余的 —— 但留着无害（那些文件确实存在、内容一致），
+  // 而为它单独生成一份就等于同一个事实写两处，违反纪律 8。
+  writeDshRegion(region)
   return { ok: true, codexChars: region ? region.length : 0 }
 }
 
-export function rulesStatus(): RulesStatus {
-  let codexChars = 0
+/** 某个 AGENTS.md 里我们那段有多长（没装就是 0）。两个 CLI 共用，不写两遍。 */
+function regionChars(f: string): number {
   try {
-    const raw = fs.readFileSync(codexAgents(), 'utf8')
+    const raw = fs.readFileSync(f, 'utf8')
     const i = raw.indexOf(BEGIN)
     const j = raw.indexOf(END)
-    codexChars = i >= 0 && j > i ? j + END.length - i : 0
+    return i >= 0 && j > i ? j + END.length - i : 0
   } catch {
-    codexChars = 0
+    return 0
   }
+}
+
+export function rulesStatus(): RulesStatus {
+  const codexChars = regionChars(codexAgents())
   // 判据和 agentSkill.ts 的 installed() 保持一致：源目录里每个 .md 都要在目标目录
   // 存在，才算装了。这里原来只查 SKILL.md 在不在，会把「SKILL.md 装了、细节文件
   // 没跟上」的半装状态误判成「已安装」——而且会和 skillStatus() 的判断对不上：
@@ -228,9 +264,15 @@ export function rulesStatus(): RulesStatus {
   const srcFiles = canvasSkillFiles()
   const claudeCanvas =
     srcFiles.length > 0 && srcFiles.every((f) => fs.existsSync(path.join(claudeCanvasDir, f.name)))
+  // 判据与 claudeCanvas 同款：源目录里每个 .md 都到位才算装了，
+  // 半装状态不能报成「已安装」
+  const dshDir = dshSkill('eas-term')
+  const dshCanvas = srcFiles.length > 0 && srcFiles.every((f) => fs.existsSync(path.join(dshDir, f.name)))
   return {
     claudeCanvas,
-    codexRegionChars: codexChars
+    codexRegionChars: codexChars,
+    dshCanvas,
+    dshRegionChars: regionChars(dshAgents())
   }
 }
 
@@ -245,6 +287,13 @@ export function removeRules(): void {
     }
   }
   writeCodexRegion(null)
+  // dsh：常驻区清掉、skill 目录删掉。**漏一样就是删不掉的残留**（同 MANAGED 那条教训）
+  writeDshRegion(null)
+  try {
+    fs.rmSync(dshSkill('eas-term'), { recursive: true, force: true })
+  } catch {
+    /* 没装过 */
+  }
   try {
     fs.rmSync(detailDir(), { recursive: true, force: true })
   } catch {

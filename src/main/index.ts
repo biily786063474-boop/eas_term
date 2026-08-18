@@ -16,6 +16,7 @@ import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
+import { checkContracts } from './cliContractRun'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
@@ -343,6 +344,29 @@ app.whenReady().then(() => {
   registerAgentChatHandlers()
   buildMenu()
   createWindow()
+
+  // CLI 契约自检：**延迟到窗口起来之后再跑**，它要 spawn 三次 --help，
+  // 放进启动路径会白白拖慢冷启动，而它的结论晚几秒到没有任何损失。
+  //
+  // 「少人为监管」的落点就是这里：不要求用户定期做任何事，自检自己跑，
+  // 而且**只有「上次好好的、这次不对了」才出声**（shouldWarn 的判据）——
+  // 一直坏着的每次启动都弹，用户很快学会无视，那比不做还糟。
+  setTimeout(() => {
+    void checkContracts()
+      .then((rs) => {
+        for (const r of rs) {
+          if (r.verdict.k === 'drift') {
+            const tag = r.warn ? '⚠ 接口漂移' : '· 仍不匹配'
+            console.warn(`[cliContract] ${tag} ${r.id}@${r.verdict.version}：缺 ${r.verdict.missing.join('、')}`)
+          }
+          // 写进去 ≠ 生效：落点没了说明这个 CLI 的目录约定变了，我们写的东西没人读
+          for (const p of r.paths) {
+            if (!p.exists) console.warn(`[cliContract] ${r.id} 的${p.what}落点不存在：${p.path}`)
+          }
+        }
+      })
+      .catch((e) => console.error('[cliContract] 自检本身失败（不影响任何功能）', e))
+  }, 8000)
 
   // 点 Dock 图标：灵动岛不算「还有窗口开着」——它开着的时候主窗口恰恰是关掉/藏起来的，
   // 不排除它的话点 Dock 图标什么都不会发生，等于 app 打不开了。
