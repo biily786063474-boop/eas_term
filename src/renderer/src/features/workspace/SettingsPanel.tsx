@@ -48,6 +48,36 @@ export function SettingsPanel(): JSX.Element {
   const [hookBusy, setHookBusy] = useState(false)
   const [hookMsg, setHookMsg] = useState<string | null>(null)
 
+  // statusline 转发器（真实额度 + 与 /context 一致的上下文占用）
+  const [slOn, setSlOn] = useState(false)
+  const [slWrapped, setSlWrapped] = useState(false)
+  const [slBusy, setSlBusy] = useState(false)
+  const [slMsg, setSlMsg] = useState<string | null>(null)
+  useEffect(() => {
+    void window.api.statusline.status().then((r) => {
+      setSlOn(r.installed)
+      setSlWrapped(!!r.wrapped)
+    })
+  }, [])
+  const toggleStatusline = async (on: boolean): Promise<void> => {
+    setSlBusy(true)
+    setSlMsg(null)
+    try {
+      const r = on ? await window.api.statusline.install() : await window.api.statusline.uninstall()
+      if (!r.ok) {
+        setSlMsg('操作失败，配置没有被改动')
+        return
+      }
+      const st = await window.api.statusline.status()
+      setSlOn(st.installed)
+      setSlWrapped(!!st.wrapped)
+      // 状态栏是 Claude Code 每次刷新时才跑的，改完要等它下一次刷新才生效
+      setSlMsg(r.changed ? '已生效（正在跑的 CLI 会话要下一次刷新状态栏才读到）' : r.reason)
+    } finally {
+      setSlBusy(false)
+    }
+  }
+
   const toggleApprovalHook = async (on: boolean): Promise<void> => {
     setHookMsg(null)
     // 开：只改意愿。新会话起来时会把「先问再做」附进系统提示，不写任何文件
@@ -185,6 +215,30 @@ export function SettingsPanel(): JSX.Element {
                       : '关着时模型按 CLI 自己的默认权限直接执行，不会先征求同意。'}
                 </div>
                 {hookMsg && <div className="cset-sub">{hookMsg}</div>}
+
+                {/* 真实额度与准确的上下文占用只在 statusline 那条通道里
+                    （2026-08-18 实测：headless 事件流里五小时额度没有百分比，
+                    上下文口径也和 /context 不同）。这个开关把一个转发脚本
+                    **包在**用户原有 statusline 外面 —— 不替换、可一键还原。 */}
+                <label className="cset-row">
+                  <input
+                    type="checkbox"
+                    checked={slOn}
+                    disabled={slBusy}
+                    onChange={(e) => void toggleStatusline(e.target.checked)}
+                  />
+                  <span className="cset-rowname">读取订阅额度与上下文占用</span>
+                </label>
+                <div className="cset-sub">
+                  {slBusy
+                    ? '处理中…'
+                    : slOn
+                      ? `已接入。工具栏的仪表盘会显示五小时/本周两条额度进度条，上下文占用与 CLI 里 /context 一致。${
+                          slWrapped ? '你原有的状态栏被包在里面、照常工作，关掉即原样还原。' : ''
+                        }`
+                      : '关着时额度拿不到百分比（CLI 的事件流里五小时那条只有倒计时），上下文占用是估算值、比 /context 偏小。打开会修改 ~/.claude/settings.json 的 statusLine（写前自动备份，且只包一层、不替换你原有的配置）。'}
+                </div>
+                {slMsg && <div className="cset-sub">{slMsg}</div>}
               </div>
 
               <div className="cset-sec">

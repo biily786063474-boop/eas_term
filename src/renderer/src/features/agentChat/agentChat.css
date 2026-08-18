@@ -1283,3 +1283,26 @@
     transition: none;
   }
 }
+
+/* 正文里认出来的网址与本地路径。
+   **平时只有很淡的下划线**：对话正文是拿来读的，一片蓝色链接会把注意力全带走。
+   按住 ⌘/Ctrl 时整段变成可点的样子（光标 + 颜色），这时才提示「现在点会跳走」。 */
+.ac-link {
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.28);
+  cursor: text; /* 不按修饰键时就是普通文字，光标也该是文字光标 */
+}
+.ac-link-path {
+  /* 路径用等宽，和代码里的路径看起来是同一种东西 */
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.94em;
+}
+/* 按住修饰键时才显出「可点」。用 :has 让整个正文区域同时切换，
+   避免鼠标划过哪个才亮哪个 —— 那样要一个个试才知道哪些能点。 */
+.ac-md:has(.ac-link) .ac-link:hover {
+  border-bottom-color: rgba(var(--accent-rgb), 0.6);
+}
+.ac-mod-down .ac-link {
+  cursor: pointer;
+  color: var(--accent);
+  border-bottom-color: rgba(var(--accent-rgb), 0.55);
+}

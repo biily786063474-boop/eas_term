@@ -22,6 +22,7 @@ import { ApprovalCard, prettyJson, type ApprovalDecision } from './ApprovalCard'
 import { ChevronDownIcon } from '../../ui/Icons'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
+import { useLinkify } from './useLinkify.ts'
 import '../editor/editor.css'
 
 export function MessageList({
@@ -130,6 +131,10 @@ function MessageTurn({
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  // 正文里的网址/本地路径 → Ctrl+点击可跳。**依赖 turn.text**：流式输出时正文每帧
+  // 都在变，不跟着重做的话只有第一帧那部分是可点的
+  const mdRef = useRef<HTMLDivElement>(null)
+  useLinkify(mdRef, turn.text)
   const visible = turn.role === 'assistant' ? visibleExecs(turn.execs, expanded) : []
   const hasHidden = !expanded && visible.length < turn.execs.length
 
@@ -161,6 +166,7 @@ function MessageTurn({
       {turn.text &&
         (turn.role === 'assistant' ? (
           <div
+            ref={mdRef}
             // **md-view 这个类不能少** —— editor.css 里所有 markdown 样式都写成
             // `.md-view .md-h1` 这种带容器前缀的形式，少了它渲染器生成的类一条都匹配不上，
             // 出来的是浏览器默认样式的裸 HTML（标题巨大、间距全乱）。
