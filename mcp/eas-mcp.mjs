@@ -293,13 +293,17 @@ const TOOLS = [
   {
     name: 'secret_check',
     description:
-      '开跑之前查这些环境变量有没有（缺 key 时先问它，别直接向用户要）。只回有/没有，不回值。',
+      '开跑之前查这些环境变量有没有（缺 key 时先问它，别直接向用户要）。只回有/没有，不回值。' +
+      '**不确定该用哪个变量名就先不带参数调一次**，会列出柜里存了什么（名字/备注/变量名，不含值）。',
     inputSchema: {
       type: 'object',
       properties: {
-        vars: { type: 'array', description: '要查的环境变量名', items: { type: 'string' } }
-      },
-      required: ['vars']
+        vars: {
+          type: 'array',
+          description: '要查的环境变量名。留空 = 列出柜里有什么',
+          items: { type: 'string' }
+        }
+      }
     }
   },
   {

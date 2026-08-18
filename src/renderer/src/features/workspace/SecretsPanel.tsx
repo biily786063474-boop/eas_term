@@ -841,9 +841,12 @@ export function SecretsPanel(): JSX.Element | null {
                       </>
                     )}
 
+                    {/* 备注是**写给 AI 看的**：agent 不带参数调 secret_check 时会拿到
+                        组名 + 备注 + 变量名（不含值），靠它判断这次该用哪一条。
+                        不写明的话用户不会知道这行字会上行到模型那边。 */}
                     <input
                       className="sec-input"
-                      placeholder="备注（可空）"
+                      placeholder="备注：什么场景用这条（AI 会读，别写值）"
                       value={draft.note}
                       onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                     />

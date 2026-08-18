@@ -446,7 +446,56 @@ const SHELL_TRAP =
   // 「怎么做、红线是什么、下一步」这些字全部放在这儿按需给。
   if (tool === 'secret_check') {
     const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
-    if (!vars.length) throw new Error('vars 必填：要查哪些环境变量名')
+
+    // ── 不带参数 = 列出柜里有什么 ────────────────────────────────────────
+    //
+    // 为什么要有这条：带 vars 的那半是**按变量名查**，agent 得先猜一个名字。
+    // 用户存的是 MY_ALIYUN_AK，agent 猜 ALIYUN_ACCESS_KEY_ID —— 查不到，
+    // 于是走 missing 分支去弹窗要，而用户明明刚存过。用户的原话是
+    // 「存入的时候 LLM 读不到」，根子就在这儿：**agent 从来没机会知道柜里叫什么。**
+    //
+    // 列出来的是元数据：组名、备注、变量名。**永远不含值**（secrets:list 这条 IPC
+    // 本身就拿不到值，值只走 secrets:reveal 和主进程直接注入 PTY 两条路）。
+    // 备注是用户写给 agent 看的「什么场景用哪条」，所以面板里那个输入框
+    // 也照实写明了它会给 AI 看。
+    if (!vars.length) {
+      const st = await window.api.secrets.status()
+      if (!st.configured) {
+        return { locked: false, entries: [], next: '用户还没启用密钥柜。需要凭证就用 request_secret 弹 GUI 让他填。' }
+      }
+      if (st.locked) {
+        // **这条必须说死。** 锁着时 secrets:list 返回空数组，跟「柜里真没有」
+        // 长得一模一样 —— agent 一旦当成后者，就会去弹窗要一个已经存着的密钥，
+        // 那正是这个功能最让人恼火的失败方式。
+        return {
+          locked: true,
+          entries: [],
+          next:
+            '密钥柜锁着，现在看不到里面存了什么。让用户点标题栏的钥匙图标解锁。\n' +
+            '**不要因为这里是空的就断定柜里没有**，更不要去 request_secret 弹窗要 —— ' +
+            '他很可能早就存好了。'
+        }
+      }
+      const list = await window.api.secrets.list()
+      const entries = list.map((it) => ({
+        name: it.name,
+        note: it.note,
+        vars: it.vars.map((v) => v.varName),
+        // 文件型（SSH 私钥 / .p8）用法完全不同，不标出来 agent 会当成普通变量去 $ 引用
+        files: it.vars.filter((v) => v.file).map((v) => v.varName),
+        readable: it.vars.every((v) => v.readable),
+        autoInject: it.autoInject
+      }))
+      return {
+        locked: false,
+        entries,
+        next: entries.length
+          ? '按备注挑出对得上你这次场景的那条，再 secret_check({vars:[...]}) 确认这个终端能不能直接用。' +
+            '**柜里确实没有对得上的，才用 request_secret。**'
+          : '柜子是空的。需要凭证就用 request_secret 弹 GUI 让用户填，别让他把密钥贴进对话。'
+      }
+    }
+
     const r = await window.api.secrets.has(vars, ctx.ptyId)
     const ready = r.vars.filter((v) => v.inThisTerminal).map((v) => v.varName)
     const inVaultOnly = r.vars.filter((v) => v.inVault && !v.inThisTerminal)

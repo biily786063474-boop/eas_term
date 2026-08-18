@@ -49,7 +49,7 @@
 | `canvas_tidy_frame` | `frame_id?` | 按大小从左上角流式重排 |
 | `canvas_new_terminal` | `frame_id?` | 开个空终端给用户 |
 | `canvas_add_note` | `text`, `color?` | 贴便签到 Frame 右侧 |
-| `secret_check` | `vars[]` | 查密钥在不在，只回布尔 |
+| `secret_check` | `vars[]`（可空）| 查密钥在不在，只回布尔；**留空 = 列出柜里有什么**（名字/备注/变量名，不含值）|
 | `request_secret` | `name`, `vars[]`, `purpose`, `docs_url?` | 弹 GUI 要密钥，值不经过你 |
 | `report_secret_invalid` | `vars[]`, `detail` | 密钥无效，弹窗让用户改 |
 
