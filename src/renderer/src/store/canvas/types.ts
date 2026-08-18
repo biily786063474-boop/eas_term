@@ -5,7 +5,7 @@
 // 想知道「一个 Frame 到底有哪些字段」得先滚过几百行几何计算。
 import type { LeafNode, PaneState } from '../../layout'
 import type { UndoState } from './undo'
-import type { ProjectStatus } from '../../../../shared/types'
+import type { ProjectStatus, AgentKind } from '../../../../shared/types'
 
 /** 三种视图共享同一批 leaf（终端只有一份，换视图不重挂载）：
  *   split  分屏 —— 按 tab 树布局
@@ -23,16 +23,16 @@ export interface CanvasViewport {
  *  未设(undefined)= 纯终端；设了则显示控制条，点启动把参数拼成 CLI 命令写进终端。 */
 export interface NodeAgent {
   /** 当前选中的 agent（段控件切换；决定胶囊选项、启动命令） */
-  kind: 'claude' | 'codex'
+  kind: AgentKind
   /** 模型：按 agent 各记一套（Claude→opus/sonnet…，Codex→gpt-5-codex/gpt-5…），切 agent 互不覆盖。键=kind */
-  model?: Partial<Record<'claude' | 'codex', string>>
+  model?: Partial<Record<AgentKind, string>>
   /** 思考档位：同样按 agent 各记一套。值来自探测（Claude 真实 / Codex 已知默认），放宽为 string 随 CLI 演进 */
-  effort?: Partial<Record<'claude' | 'codex', string>>
+  effort?: Partial<Record<AgentKind, string>>
   /** 这个终端节点**自己的**会话 id（按 agent 各记一套）。
    *  没有它的话，「回溯」只能用 `claude -c` / `codex resume --last`，语义是
    *  「继续这个目录里最近的会话」——同一项目开几个终端就会互相抢，
    *  终端 A 续到终端 B 的对话。绑定之后每个终端只回自己的那条线。 */
-  session?: Partial<Record<'claude' | 'codex', string>>
+  session?: Partial<Record<AgentKind, string>>
   /** 这个终端绑的角色 id（~/.eas/roles.json 里的一条）。
    *  只影响**启动命令**怎么拼——模型/档位默认值 + 职责契约。
    *  注意 --resume 不重放 system prompt：会话一旦起来，角色就定死了，

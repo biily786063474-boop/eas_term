@@ -19,7 +19,7 @@ import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
-import type { HookStatus, HookAgentStatus } from '../shared/types'
+import type { HookStatus, HookAgentStatus, AgentKind } from '../shared/types'
 
 /** 认领标记：靠它找到「哪一条是我们装的」，做到幂等替换和干净卸载 */
 const TAG = 'eas-term:knowledge-hook'
@@ -209,7 +209,7 @@ export function hookStatus(hasClaude: boolean, hasCodex: boolean): HookStatus {
 export function registerHookHandlers(hasCli: (bin: string) => boolean): void {
   ipcMain.handle('hook:status', () => hookStatus(hasCli('claude'), hasCli('codex')))
 
-  ipcMain.handle('hook:install', (_e, targets: ('claude' | 'codex')[]) => {
+  ipcMain.handle('hook:install', (_e, targets: (AgentKind)[]) => {
     const cmd = buildCommand()
     if (!cmd) return { ok: false, error: '找不到 node 或钩子脚本，无法安装' }
     const done: string[] = []
@@ -230,7 +230,7 @@ export function registerHookHandlers(hasCli: (bin: string) => boolean): void {
     return { ok: true, done, status: hookStatus(hasCli('claude'), hasCli('codex')) }
   })
 
-  ipcMain.handle('hook:uninstall', (_e, targets: ('claude' | 'codex')[]) => {
+  ipcMain.handle('hook:uninstall', (_e, targets: (AgentKind)[]) => {
     try {
       if (targets.includes('claude')) uninstall(claudeSettings())
       if (targets.includes('codex')) uninstall(codexHooks())

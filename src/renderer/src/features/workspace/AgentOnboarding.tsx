@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
-import type { InstallPlan, AgentInstallInfo } from '../../../../shared/types'
+import type { InstallPlan, AgentInstallInfo, AgentKind } from '../../../../shared/types'
 import { SparkleIcon, TerminalIcon } from '../../ui/Icons'
 
 const DISMISS_KEY = 'eas.onboarding.dismissed'
@@ -20,7 +20,7 @@ export function AgentOnboarding(): JSX.Element | null {
   const prefillTerminal = useStore((s) => s.prefillTerminal)
   const [plan, setPlan] = useState<InstallPlan | null>(null)
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === '1')
-  const [picked, setPicked] = useState<'claude' | 'codex' | null>(null)
+  const [picked, setPicked] = useState<AgentKind | null>(null)
 
   const noCli = !!agentCli && !agentCli.claude && !agentCli.codex
 
@@ -60,7 +60,7 @@ export function AgentOnboarding(): JSX.Element | null {
     void prefillTerminal(cmd)
   }
 
-  const card = (key: 'claude' | 'codex', info: AgentInstallInfo): JSX.Element => {
+  const card = (key: AgentKind, info: AgentInstallInfo): JSX.Element => {
     const best = info.options[0]
     const open = picked === key
     return (

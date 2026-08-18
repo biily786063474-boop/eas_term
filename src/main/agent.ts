@@ -46,6 +46,26 @@ async function probeClaude(): Promise<AgentProbe['claude']> {
 const CODEX_MODELS = ['gpt-5-codex', 'gpt-5']
 const CODEX_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh']
 
+/**
+ * DeepSeek Harness。**模型和 effort 都给空数组**，不是漏了：
+ *
+ * 它的模型由 profile 的插件树决定（`dsh-agent-default-model` 的 config.model，
+ * 默认 deepseek-v4-flash），命令行没有 `--model` 这类开关 —— 换模型要改
+ * cordis.patch.yml。effort 档位它压根没有这个概念。
+ * 空数组会让模型/强度选择器自动隐藏（UI 由能力声明驱动，不需要为它写分支）。
+ *
+ * 探测用 `--help` 而不是 `--version`：0.1.0-rc 阶段 `--version` 在某些安装方式下
+ * 会先触发一次 profile 初始化，慢且有副作用；`--help` 是纯解析、秒回。
+ */
+async function probeDsh(): Promise<AgentProbe['dsh']> {
+  try {
+    await pExecFile('dsh', ['--help'], { timeout: 8000, env: PROBE_ENV })
+    return { installed: true, models: [], efforts: [] }
+  } catch {
+    return { installed: false, models: [], efforts: [] }
+  }
+}
+
 async function probeCodex(): Promise<AgentProbe['codex']> {
   try {
     await pExecFile('codex', ['--version'], { timeout: 5000, env: PROBE_ENV })
@@ -88,8 +108,8 @@ export function registerAgentHandlers(): void {
   ipcMain.handle('agent:codexServers', () => codexServers())
 
   ipcMain.handle('agent:probe', async (): Promise<AgentProbe> => {
-    const [claude, codex] = await Promise.all([probeClaude(), probeCodex()])
-    return { claude, codex }
+    const [claude, codex, dsh] = await Promise.all([probeClaude(), probeCodex(), probeDsh()])
+    return { claude, codex, dsh }
   })
 
 /** Codex 没有 --session-id 这类参数指定会话标识，只能起完之后去 sessions 目录捞。

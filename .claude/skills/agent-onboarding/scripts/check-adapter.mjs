@@ -69,12 +69,22 @@ const scan = (p) => {
   if (n) hits.set(p, n)
 }
 scan('src')
-const total = [...hits.values()].reduce((a, b) => a + b, 0)
-console.log(`  ${total ? Y('!') : G('✓')} 共 ${total} 处 / ${hits.size} 个文件`)
+// **区分「漏了」和「刻意收窄」**：文件里出现过 AgentKind 就说明作者知道有这个别名，
+// 那处字面量是刻意的（定义处，或者「这个面只对其中几个 CLI 成立」——
+// 比如提交钩子那个面，dsh 没有钩子机制，跟着 AgentKind 走会多出一个永远装不上的行）。
+// 不区分的话，做完了也永远显示一串黄色警告，下次看到会以为没做完。
+const known = [], missed = []
 for (const [f, n] of [...hits].sort((a, b) => b[1] - a[1])) {
-  const key = f.includes('pty.ts') ? '  ← agentOnTty 按进程名认 agent，不扩它新 CLI 会一路静默' : ''
-  console.log(D(`     ${String(n).padStart(2)} × ${f}${key}`))
+  ;(read(f).includes('AgentKind') ? known : missed).push([f, n])
 }
+const totalMissed = missed.reduce((a, [, n]) => a + n, 0)
+console.log(`  ${totalMissed ? Y('!') : G('✓')} 待处理 ${totalMissed} 处 / 已知 ${known.length} 处`)
+for (const [f, n] of missed) {
+  const key = f.includes('pty.ts') ? '  ← agentOnTty 按进程名认 agent，不扩它新 CLI 会一路静默' : ''
+  console.log(Y(`     ${String(n).padStart(2)} × ${f}${key}  ← 这个文件不知道 AgentKind，多半是漏了`))
+}
+for (const [f, n] of known) console.log(D(`     ${String(n).padStart(2)} × ${f}  （刻意：定义处或该面只对部分 CLI 成立）`))
+warn += totalMissed
 
 console.log(`\n${warn ? Y(`⚠ ${warn} 处要看一眼`) : G('✓ 面 6 静态检查通过')}`)
 console.log(D('真起一轮会话的验收清单在 SKILL.md「验收」一节，那部分只能手动过。\n'))

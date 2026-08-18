@@ -10,6 +10,7 @@
 // （resources/agent-hooks/eas-pretooluse.mjs，独立 Node 进程）POST request 后阻塞等决定，
 // 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
 import { app, ipcMain } from 'electron'
+import { dshRegion, applyDshPatch, DSH_BEGIN, type DshMcpEntry } from './dshPatch'
 import http from 'http'
 import fs from 'fs'
 import path from 'path'
@@ -280,6 +281,64 @@ function writeClaudeConfig(serverPath: string): void {
  *  这里刻意不用正则：`[^[]*` 那种写法会被 `args = [...]` 里的方括号截断，
  *  导致只替换掉半段、把后半截留成一行孤立的 `["..."]`（TOML 里那是个 table header，
  *  等于每次启动往用户配置里塞一行垃圾）。按行扫描没有这个坑。 */
+/** DeepSeek Harness 的 profile 根。跟随 `$DSH_HOME`（dsh 自己认这个变量，
+ *  用户改了它 dsh 就去那儿读，我们不跟着就会写进一个它不看的地方）。 */
+const dshProfilesDir = (): string => path.join(process.env.DSH_HOME || path.join(app.getPath('home'), '.dsh'), 'profiles')
+
+/** 每个 profile 都有自己的 patch 层，**写到所有已存在的 profile 上**。
+ *
+ *  为什么不只写一个：dsh 的 profile 是并列的（web / headless / tui…），
+ *  用户在终端里用哪个我们不知道，只写其中一个的结果是「有时候有工具、有时候没有」——
+ *  比完全没有更难查。**但绝不主动创建 profile**：那是 `dsh plugin` 的职责，
+ *  凭空造一个目录会让 dsh 以为有个它没初始化过的 profile。 */
+function dshProfiles(): string[] {
+  try {
+    return fs
+      .readdirSync(dshProfilesDir(), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name !== 'node_modules')
+      .map((d) => path.join(dshProfilesDir(), d.name))
+      .filter((d) => fs.existsSync(path.join(d, 'cordis.patch.yml')))
+  } catch {
+    return []
+  }
+}
+
+/** 把我们那段 MCP 配置写进每个 profile 的 cordis.patch.yml（围栏内替换，围栏外不碰）。 */
+function writeDshConfig(serverPath: string): void {
+  try {
+    if (skipGlobalWrite()) return
+    const profiles = dshProfiles()
+    if (profiles.length === 0) return // 没装/没用过 dsh，别给人家建目录
+
+    const entries: DshMcpEntry[] = mcpEntries(serverPath).map(({ name, run }) => ({
+      serverName: name,
+      command: run.command,
+      args: run.args,
+      // **只传变量名。** 值由 dsh 自己在运行时从 env 取 —— 而 dsh 是被 Eas-Term 的
+      // pty 起的，那份 env 里才有 token。别的终端起 dsh 取到空，工具连不上，
+      // 门禁因此照旧成立（面 3 的第 ② 道锁）。
+      passEnv: Object.keys(run.env ?? {}).concat(['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT'])
+        .filter((v, i, a) => a.indexOf(v) === i)
+    }))
+    const region = dshRegion(entries)
+    for (const dir of profiles) {
+      const f = path.join(dir, 'cordis.patch.yml')
+      const raw = fs.readFileSync(f, 'utf8')
+      const next = applyDshPatch(raw, region)
+      if (next === raw) continue // 无变化不写盘
+      try {
+        fs.copyFileSync(f, f + '.eas-backup')
+      } catch {
+        /* 备份失败不阻断 */
+      }
+      fs.writeFileSync(f, next)
+      console.log(`[mcp] 已配置 dsh 的 MCP（${f}）`)
+    }
+  } catch (e) {
+    console.error('[mcp] 写 dsh 配置失败', e)
+  }
+}
+
 function writeCodexConfig(serverPath: string): void {
   for (const { name, run } of mcpEntries(serverPath)) writeCodexSection(name, run)
 }
@@ -356,7 +415,7 @@ const codexCfg = (): string => path.join(app.getPath('home'), '.codex', 'config.
 const MANAGED = ['eas-term', 'bizone-canvas'] as const
 const codexHead = (name: string): string => `[mcp_servers.${name}]`
 
-export function mcpConfigStatus(): { claude: boolean; codex: boolean; files: string[] } {
+export function mcpConfigStatus(): { claude: boolean; codex: boolean; dsh: boolean; files: string[] } {
   const files: string[] = []
   let claude = false
   let codex = false
@@ -375,7 +434,20 @@ export function mcpConfigStatus(): { claude: boolean; codex: boolean; files: str
   } catch {
     /* 没装或读不到 */
   }
-  return { claude, codex, files }
+  // dsh：任一 profile 的 patch 层里有我们的围栏就算装了
+  let dsh = false
+  for (const dir of dshProfiles()) {
+    const f = path.join(dir, 'cordis.patch.yml')
+    try {
+      if (fs.readFileSync(f, 'utf8').includes(DSH_BEGIN)) {
+        dsh = true
+        files.push(f)
+      }
+    } catch {
+      /* 读不到就当没装 */
+    }
+  }
+  return { claude, codex, dsh, files }
 }
 
 /** 移除我们写进去的那条 MCP 条目。用户自己的配置一个字不动。 */
@@ -430,6 +502,27 @@ export function removeMcpConfig(): void {
   } catch {
     /* 没有就算了 */
   }
+
+  // dsh：每个 profile 的 patch 层各摘一次围栏段。**围栏外一个字不碰**，
+  // 全空之后把 `[]` 还回去（空文件不是合法的 patch 层）
+  for (const dir of dshProfiles()) {
+    const f = path.join(dir, 'cordis.patch.yml')
+    try {
+      const raw = fs.readFileSync(f, 'utf8')
+      if (!raw.includes(DSH_BEGIN)) continue
+      const next = applyDshPatch(raw, '')
+      if (next === raw) continue
+      try {
+        fs.copyFileSync(f, f + '.eas-backup')
+      } catch {
+        /* 备份失败不阻断 */
+      }
+      fs.writeFileSync(f, next)
+      console.log(`[mcp] 已移除 dsh 的 MCP 配置（${f}）`)
+    } catch (e) {
+      console.error('[mcp] 移除 dsh 配置失败', e)
+    }
+  }
 }
 
 /** 清掉上一版留下的 claude / codex 包装脚本（PATH shim 方案已废弃，见 writeClaudeConfig 注释）。
@@ -454,6 +547,7 @@ function setupAgents(): void {
   removeLegacyAgentShims()
   writeClaudeConfig(serverPath)
   writeCodexConfig(serverPath)
+  writeDshConfig(serverPath)
 }
 
 export function registerMcpBridge(): void {

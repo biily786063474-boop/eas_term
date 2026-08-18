@@ -49,7 +49,7 @@ import type {
   UpdateInfo, ProjectStatus, BoardColumn, GanttTask, GanttClearRange, TodoItem,
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
-  SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult} from '../shared/types'
+  SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind } from '../shared/types'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -349,11 +349,11 @@ const api = {
     // 「提交即复盘」钩子：查状态 / 装 / 卸。这是侵入性最高的一项，必须能一键卸干净
     status: (): Promise<HookStatus> => ipcRenderer.invoke('hook:status'),
     install: (
-      targets: ('claude' | 'codex')[]
+      targets: (AgentKind)[]
     ): Promise<{ ok: boolean; error?: string; done?: string[]; status?: HookStatus }> =>
       ipcRenderer.invoke('hook:install', targets),
     uninstall: (
-      targets: ('claude' | 'codex')[]
+      targets: (AgentKind)[]
     ): Promise<{ ok: boolean; error?: string; status?: HookStatus }> =>
       ipcRenderer.invoke('hook:uninstall', targets)
   },
@@ -751,7 +751,7 @@ const api = {
       ipcRenderer.send('pty:write', id, data)
     },
     /** 这个终端里跑的是哪个 AI CLI（认不出返回 null）。判据是 controlling terminal 上的进程名 */
-    agentOf: (id: string): Promise<'claude' | 'codex' | null> => ipcRenderer.invoke('pty:agentOf', id),
+    agentOf: (id: string): Promise<AgentKind | null> => ipcRenderer.invoke('pty:agentOf', id),
     resize: (id: string, cols: number, rows: number): void => {
       ipcRenderer.send('pty:resize', id, cols, rows)
     },

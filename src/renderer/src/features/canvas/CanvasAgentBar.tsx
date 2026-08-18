@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
-import type { AgentProbe, AgentRole } from '../../../../shared/types'
+import type { AgentProbe, AgentRole, AgentKind } from '../../../../shared/types'
 import {
   SparkleIcon,
   UndoIcon,
@@ -29,6 +29,10 @@ import { CanvasRoleManager } from './CanvasRoleManager'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { AgentCmdBar } from './AgentCmdBar'
 
+// **刻意不用 AgentKind。** 这条命令条是「用启动参数把模型/强度传给 CLI」，
+// 只对命令行支持这两样的 CLI 成立。dsh 的模型在 profile 的插件树里配
+// （cordis.patch.yml 的 dsh-agent-default-model），命令行没有 --model；
+// effort 它压根没这个概念 —— 探测因此给空数组，UI 自动隐藏这些控件。
 type Kind = 'claude' | 'codex'
 
 // effort 档位「本地化显示」——档位 key 本身来自 probe（真实/默认），这里只把已知 key 映射成中文，未知则原样显示
@@ -204,7 +208,10 @@ export function CanvasAgentBar({
   const roles = useStore((s) => s.roles)
   const role = roles.find((r) => r.id === agent?.roleId) ?? null
   // 角色可以钉死用哪个 CLI；kind='auto' 时听节点自己的选择
-  const kind: Kind = role && role.kind !== 'auto' ? role.kind : (agent?.kind ?? 'claude')
+  // 角色/节点上存的是完整的 AgentKind（含 dsh），而这条命令条只处理命令行支持
+  // 模型与强度的那两个 —— 落到别的 CLI 上就退回 claude，**不假装能给它下发参数**
+  const rawKind = role && role.kind !== 'auto' ? role.kind : (agent?.kind ?? 'claude')
+  const kind: Kind = rawKind === 'codex' ? 'codex' : 'claude'
   const claudeReady = !probe || probe.claude.installed
   const codexReady = !!probe?.codex.installed
   const activeReady = kind === 'claude' ? claudeReady : codexReady

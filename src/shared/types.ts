@@ -6,6 +6,17 @@
 /** 项目落在哪一列。值 = BoardColumn.id。
  *  **不是固定枚举** —— 列是用户自己建的，写死三个值的话新建的列没法用。
  *  空/未设 = 未分类（那是一列虚拟的，不存在于 board.json 里）。 */
+/**
+ * Eas-Term 适配的 AI CLI。**加新 CLI 只改这一行。**
+ *
+ * 这个联合原来是字面量散落在 29 处 / 14 个文件里（agent 探测、安装建议、hook、
+ * 角色的 model/effort 键、pty 的进程名识别、画布节点持久化、五个渲染层组件…）。
+ * 那种形态下加一个 CLI 要手工找齐全部出现点，**漏一处不报错** ——
+ * 比如漏了 pty.ts 的 agentOnTty，新 CLI 在终端里跑起来通知系统认不出它，
+ * 功能"能用"但一路静默。收成别名之后，漏的地方编译器会直接指出来。
+ */
+export type AgentKind = 'claude' | 'codex' | 'dsh' | 'dsh'
+
 export type ProjectStatus = string
 
 /** 看板的一列。全局定义，存在 board.json；项目只记自己在哪一列的 id */
@@ -215,10 +226,10 @@ export interface AgentRole {
   group: 'main' | 'output'
   color: string
   /** 用哪个 CLI。auto = 装了哪个用哪个，两个都装则用上次用的 */
-  kind: 'claude' | 'codex' | 'auto'
+  kind: AgentKind | 'auto'
   /** 模型 / 思考档位按 kind 各存一套，切 agent 互不覆盖（沿用 NodeAgent 的结构） */
-  model?: Partial<Record<'claude' | 'codex', string>>
-  effort?: Partial<Record<'claude' | 'codex', string>>
+  model?: Partial<Record<AgentKind, string>>
+  effort?: Partial<Record<AgentKind, string>>
   /** 职责契约：产出什么、落在哪、什么算做完。启动时拼进命令 */
   contract: string
   /** 工具边界。两边能力不对等，如实分开：
@@ -540,10 +551,9 @@ export interface SessionIndex {
 // Agent CLI 探测结果：开终端时探测。
 // - claude：从 `claude --help` 真实解析模型别名 + effort 档位（随 CLI 升级自动跟随，不写死）。
 // - codex：`--help` 不暴露模型/档位（服务端 catalog 驱动），故 models/efforts 是主进程给的已知默认。
-export interface AgentProbe {
-  claude: { installed: boolean; models: string[]; efforts: string[] }
-  codex: { installed: boolean; models: string[]; efforts: string[] }
-}
+/** 每个 CLI 探测到的实况。**用 Record<AgentKind,…> 而不是写死几个键** ——
+ *  加 CLI 时编译器会直接指出所有没跟上的消费点（这正是 AgentKind 存在的理由）。 */
+export type AgentProbe = Record<AgentKind, { installed: boolean; models: string[]; efforts: string[] }>
 
 /** 某个 AI CLI 的技能包状态 */
 export interface AgentStatus {
@@ -589,8 +599,11 @@ export interface InstallPlan {
   platform: string
   hasNode: boolean
   hasBrew: boolean
+  /** 按 CLI 给的安装建议。**用 Record<AgentKind,…>**：加 CLI 时漏填这里，
+   *  界面上那个 CLI 就永远显示不出安装入口，而这种漏不报错。 */
   claude: AgentInstallInfo
   codex: AgentInstallInfo
+  dsh: AgentInstallInfo
 }
 
 // ---- 灵动岛（屏幕顶部常驻状态栏）----
@@ -631,7 +644,7 @@ export interface IslandNotice {
   effort?: string
   /** 这个终端跑的是哪个 CLI。用来解释「为什么没有提问和回答」——
    *  Codex 不落 transcript，卡片只能给项目名和耗时，得说清楚是拿不到而不是没内容。 */
-  agent?: 'claude' | 'codex'
+  agent?: AgentKind
   at: number
 
   // ---- 以下仅 kind:'approval' ----

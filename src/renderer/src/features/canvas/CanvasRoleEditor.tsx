@@ -8,12 +8,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
-import type { AgentRole, AgentProbe } from '../../../../shared/types'
+import type { AgentRole, AgentProbe, AgentKind } from '../../../../shared/types'
 import { getProbe } from './CanvasAgentBar'
 import { CloseIcon, TrashIcon, UndoIcon } from '../../ui/Icons'
 import { BUILTIN_HINT } from './roleDefaults'
 
-type Kind = 'claude' | 'codex'
+type Kind = AgentKind
 
 /** Claude Code 的常用工具，按「能做什么」分组 —— **不是全集**。
  *

@@ -2,7 +2,7 @@
 
 import type { StateCreator } from 'zustand'
 import { ThemeId, loadTheme, applyTheme } from '../themes'
-import type { AgentRole, ArchiveItem, BoardColumn} from '../../../shared/types'
+import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
 import type { ApprovalInfo } from '../features/terminal/approvalParse'
@@ -139,8 +139,8 @@ export interface UiSlice {
    *  也不是用户敲了什么 —— 标题格式随 CLI 版本变，敲了什么漏掉从控制台启动/alias/npx 那几条。
    *  命令按钮据此决定显不显示、发哪一套命令；分屏没有 Agent 控制台，全靠它。
    *  不持久化：重启后终端要重开，旧值没有意义。 */
-  ptyAgent: Record<string, 'claude' | 'codex' | null>
-  setPtyAgent: (ptyId: string, kind: 'claude' | 'codex' | null) => void
+  ptyAgent: Record<string, AgentKind | null>
+  setPtyAgent: (ptyId: string, kind: AgentKind | null) => void
   /** 停下来等审批的终端：解析屏幕得到的问句与选项（认不出就是 null = 只通知不直通）。
    *  和 attentionPtys 同生共死——那个清了，这里也该清，否则灵动岛会拿着
    *  上一轮的旧选项给用户点。 */

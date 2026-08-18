@@ -6,7 +6,7 @@
 // 那等于把状态复制一份，两边迟早不一致。主进程只做转发。
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { IslandAction, IslandNotice, IslandRunning, IslandState } from '../../../../shared/types'
+import type { IslandAction, IslandNotice, IslandRunning, IslandState, AgentKind } from '../../../../shared/types'
 import { attentionKindOf, locate, statusOf, urgencyCmp } from './machine'
 import type { Located, LocateCtx } from './machine'
 import { focusTerminal } from './useStatus'
@@ -27,7 +27,7 @@ interface IslandExtra {
   /** 该终端绑定的 CLI 会话 id —— 取 transcript 必须用它，否则同项目多终端会串 */
   sessionId?: string
   /** 跑的是哪个 CLI（没配 Agent 控制台的裸终端按 claude 算，只影响文案） */
-  agent: 'claude' | 'codex'
+  agent: AgentKind
 }
 
 /** 从当前 store 解出某个 pty 的落点 + 灵动岛专用字段；找不到（终端已关）返回 null */

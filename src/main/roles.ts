@@ -15,7 +15,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import type { AgentRole } from '../shared/types'
+import type { AgentRole, AgentKind } from '../shared/types'
 
 const file = (): string => path.join(os.homedir(), '.eas', 'roles.json')
 
@@ -196,9 +196,9 @@ export const BUILTIN_ROLES: AgentRole[] = [
 function str(v: unknown, dflt = ''): string {
   return typeof v === 'string' ? v : dflt
 }
-function strMap(v: unknown): Partial<Record<'claude' | 'codex', string>> {
+function strMap(v: unknown): Partial<Record<AgentKind, string>> {
   const o = (v ?? {}) as Record<string, unknown>
-  const out: Partial<Record<'claude' | 'codex', string>> = {}
+  const out: Partial<Record<AgentKind, string>> = {}
   if (typeof o.claude === 'string') out.claude = o.claude
   if (typeof o.codex === 'string') out.codex = o.codex
   return out

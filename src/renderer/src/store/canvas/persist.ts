@@ -12,6 +12,7 @@ import type { LeafNode, PaneState } from '../../layout'
 import { HEAD, NODE_H, NODE_W, PAD } from './layout.ts'
 import { sanitizeTodoBoard } from './todoBoard.ts'
 import { DEFAULT_VIEW_MODE, restoreViewMode } from './viewModeRestore.ts'
+import type { AgentKind } from '../../../../shared/types'
 
 export const initialScene: CanvasScene = {
   viewport: { x: 0, y: 0, scale: 1 },
@@ -128,12 +129,12 @@ export function sanitizeViewport(raw: unknown): CanvasViewport {
 export function migrateAgent(raw: unknown): NodeAgent | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const a = raw as Record<string, unknown>
-  const kind: 'claude' | 'codex' = a.kind === 'codex' ? 'codex' : 'claude'
-  const toRec = (v: unknown): Partial<Record<'claude' | 'codex', string>> | undefined =>
+  const kind: AgentKind = a.kind === 'codex' ? 'codex' : 'claude'
+  const toRec = (v: unknown): Partial<Record<AgentKind, string>> | undefined =>
     typeof v === 'string'
       ? { [kind]: v }
       : v && typeof v === 'object'
-        ? (v as Partial<Record<'claude' | 'codex', string>>)
+        ? (v as Partial<Record<AgentKind, string>>)
         : undefined
   return {
     kind,

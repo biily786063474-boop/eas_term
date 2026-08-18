@@ -17,7 +17,7 @@ import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
-import type { InstallPlan, InstallOption } from '../shared/types'
+import type { InstallPlan, InstallOption, AgentKind } from '../shared/types'
 
 /** 某个可执行文件在不在。和 agentSkill 里的 hasCli 同源：GUI 启动时 PATH 很贫瘠，探常见位置 + PATH。 */
 function hasBin(bin: string): boolean {
@@ -56,7 +56,7 @@ function hasBin(bin: string): boolean {
  *   · 有 brew / winget 的话给出来作为备选，用户后续升级更顺手
  *   · npm 放最后，且只在真有 node 时才给（没 node 却让人跑 npm 是最糟的体验）
  */
-function optionsFor(kind: 'claude' | 'codex'): InstallOption[] {
+function optionsFor(kind: AgentKind): InstallOption[] {
   const win = process.platform === 'win32'
   const mac = process.platform === 'darwin'
   const out: InstallOption[] = []
@@ -83,6 +83,14 @@ function optionsFor(kind: 'claude' | 'codex'): InstallOption[] {
     // 注意包名必须带 @openai/ —— 裸 `codex` 是 2012 年的无关包，装错是最常见的翻车点
     if (hasBin('npm')) out.push({ via: 'npm', cmd: 'npm install -g @openai/codex' })
   }
+
+  if (kind === 'dsh') {
+    // DeepSeek Harness 现在只有 npm 一条路（0.1.0-rc 阶段没有 brew cask / 安装脚本）。
+    // **包名带 scope**：`@deepseek-ai/dsh`，二进制叫 dsh。
+    if (hasBin('npm')) out.push({ via: 'npm', cmd: 'npm install -g @deepseek-ai/dsh' })
+    // 不装也能试：npx 直接跑，profile 会在首次使用时自动初始化
+    out.push({ via: 'npx（不安装，试用）', cmd: 'npx @deepseek-ai/dsh --profile headless "你好"' })
+  }
   return out
 }
 
@@ -92,7 +100,15 @@ export function installPlan(): InstallPlan {
     hasNode: hasBin('node'),
     hasBrew: hasBin('brew'),
     claude: { name: 'Claude Code', vendor: 'Anthropic', options: optionsFor('claude'), loginHint: 'claude' },
-    codex: { name: 'Codex', vendor: 'OpenAI', options: optionsFor('codex'), loginHint: 'codex login' }
+    codex: { name: 'Codex', vendor: 'OpenAI', options: optionsFor('codex'), loginHint: 'codex login' },
+    dsh: {
+      name: 'DeepSeek Harness',
+      vendor: 'DeepSeek',
+      options: optionsFor('dsh'),
+      // 认证方式官方文档没写（0.1.0-rc 阶段）。**不编一条命令给用户** ——
+      // 猜错了他会照着敲、失败、然后怀疑整个功能。等文档补上再填。
+      loginHint: 'dsh'
+    }
   }
 }
 

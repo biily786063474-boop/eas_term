@@ -4,7 +4,7 @@ import os from 'os'
 import fs from 'fs'
 import path from 'path'
 import { execFile, execFileSync } from 'child_process'
-import type { PtyCreateOptions } from '../shared/types'
+import type { PtyCreateOptions, AgentKind } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
 import {
   secretsEnv,
@@ -482,7 +482,7 @@ export function registerPtyHandlers(): void {
   // 给定一组 pty id，返回其中正在运行命令的那些
   // 「这个终端里跑的是 claude 还是 codex」。命令按钮据此决定显不显示、发哪一套命令。
   // 同步的 ps 调用，~10ms；由渲染层在「标题出现 spinner」那一刻问一次，不是轮询。
-  ipcMain.handle('pty:agentOf', (_e, id: string): 'claude' | 'codex' | null => {
+  ipcMain.handle('pty:agentOf', (_e, id: string): AgentKind | null => {
     const entry = ptys.get(id)
     return entry ? agentOnTty(entry) : null
   })
@@ -536,7 +536,7 @@ function ttyPids(entry: Entry): number[] {
  *
  *  只比 basename 且要求完全相等：`/opt/homebrew/bin/node`（我们自己的 MCP server）、
  *  `bun`、画板 app 都会挂在同一个 tty 上，子串匹配会误判。 */
-function agentOnTty(entry: Entry): 'claude' | 'codex' | null {
+function agentOnTty(entry: Entry): AgentKind | null {
   if (process.platform === 'win32') return null // Windows 没有 controlling terminal 那套
   const pts = (entry.pty as unknown as { ptsName?: string }).ptsName
   const name = pts?.replace(/^\/dev\//, '')
@@ -547,6 +547,9 @@ function agentOnTty(entry: Entry): 'claude' | 'codex' | null {
       const base = line.trim().split('/').pop()?.replace(/\.exe$/i, '')
       if (base === 'claude') return 'claude'
       if (base === 'codex') return 'codex'
+      // **这一行漏了会一路静默**：dsh 在终端里跑起来，通知系统 / 灵动岛 /
+      // 状态机全都认不出它 —— 功能"能用"但什么提示都没有，最难查的那种。
+      if (base === 'dsh') return 'dsh'
     }
   } catch {
     /* 该 tty 上没进程了，ps 会以非 0 退出 */

@@ -11,9 +11,12 @@
 // 老用户当初是按「纯脚本，不花 token」装的钩子，拿那次同意去顶这次的消费不成立，
 // 所以第 2 项对所有人都默认关，必须单独点一次。
 import { useCallback, useEffect, useState } from 'react'
-import type { DictSinkStatus, HookStatus } from '../../../../shared/types'
+import type { DictSinkStatus, HookStatus, AgentKind } from '../../../../shared/types'
 import { CheckIcon, SparkleIcon } from '../../ui/Icons'
 
+// **刻意不用 AgentKind。** 这是面 4（提交钩子）的类型，而钩子这个面只对
+// 「有钩子机制的 CLI」成立 —— dsh 没有，手册的规矩是没有就跳过这个面，
+// 不是发明一个。跟着 AgentKind 走的话，这里会多出一个永远装不上的行。
 type Target = 'claude' | 'codex'
 const DISMISS_KEY = 'eas.dicthook.dismissed'
 
