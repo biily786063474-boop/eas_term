@@ -3,12 +3,21 @@
 import type { PaneState } from '../../layout'
 import { fileUrlOf } from '../../store/shared'
 
-export const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'])
-export const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
+// 扩展名判定搬去了 mediaExts.ts（零 import，能单测）——这里原样 re-export，
+// 现有 import 一个都不用改。
+export {
+  IMAGE_EXTS,
+  VIDEO_EXTS,
+  AUDIO_EXTS,
+  isImagePath,
+  isVideoPath,
+  isAudioPath,
+  isMediaPath
+} from './mediaExts'
+import { IMAGE_EXTS, VIDEO_EXTS } from './mediaExts'
 
 const ext = (p: string): string => p.split('.').pop()?.toLowerCase() ?? ''
-export const isImagePath = (p: string): boolean => IMAGE_EXTS.has(ext(p))
-export const isVideoPath = (p: string): boolean => VIDEO_EXTS.has(ext(p))
+
 /** .html/.htm —— 唯一一种「两种看法都合理」的文件：既能渲染成页面，也能看源码。
  *  所以用户手动拖/挑它进画布时要问一句，不能替他定。 */
 export const isHtmlPath = (p: string): boolean => {

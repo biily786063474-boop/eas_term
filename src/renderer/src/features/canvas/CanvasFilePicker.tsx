@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { DirEntry, RecentFile } from '../../../../shared/types'
 import { useMenuAnchor, useDismiss } from './CanvasContextMenu'
-import { isImagePath, isVideoPath } from './media'
+import { isImagePath, isVideoPath, isMediaPath } from './media'
 import {
   ChevronLeftIcon,
   ClockIcon,
@@ -66,9 +66,19 @@ export function CanvasFilePicker({
   const [recent, setRecent] = useState<RecentFile[] | null>(null)
   const [loading, setLoading] = useState(true)
   // 「只保留文档文件」勾选状态：从 prefs 初始化，变化时写回并触发重拉（见下面的 effect）
-  const [docsOnly, setDocsOnly] = useState(false)
+  // 过滤三选一。**「文档」走主进程**（recentFiles 的第三个参数，它要扫全项目并限量 60，
+  // 在那边筛才不会「筛完只剩三条」）；**「多媒体」走客户端**（两种模式共用一份判定，
+  // 而且主进程那条 IPC 只认 docsOnly 一个布尔，扩它得改签名和 prefs 类型）。
+  // 代价写在这儿：「最近」+「多媒体」时，60 条里没有媒体文件就会是空列表 ——
+  // 那时切到「文件夹」模式按目录找。
+  const [filter, setFilter] = useState<'all' | 'docs' | 'media'>('all')
+  const docsOnly = filter === 'docs'
   useEffect(() => {
-    void window.api.prefs.get().then((p) => setDocsOnly(!!p.recentDocsOnly))
+    // 记着的「只看文档」偏好恢复回来；没设过就是「全部」。
+    // 「多媒体」不持久化 —— 它是「这一次我要找图」的临时意图，不是长期偏好
+    void window.api.prefs.get().then((p) => {
+      if (p.recentDocsOnly) setFilter('docs')
+    })
   }, [])
   const ref = useRef<HTMLDivElement>(null)
   // 尺寸固定（宽 + 定高列表），所以只在挂载时定位一次，切排序/进目录都不会让菜单乱跳
@@ -134,19 +144,36 @@ export function CanvasFilePicker({
         </button>
       </div>
 
-      {mode === 'recent' && (
-        <label className="cpk-filter">
-          <input
-            type="checkbox"
-            checked={docsOnly}
-            onChange={(e) => {
-              setDocsOnly(e.target.checked)
-              void window.api.prefs.set('recentDocsOnly', e.target.checked)
+      {/* 过滤三选一。原来这里是「只保留文档」一个复选框、而且只在「最近」模式出现——
+          插图片进画布是这个选择器最常见的用途之一，却只能靠肉眼在一堆代码文件里找。 */}
+      <div className="cpk-filters">
+        {(
+          [
+            { id: 'all', label: '全部' },
+            { id: 'docs', label: '文档' },
+            { id: 'media', label: '多媒体' }
+          ] as const
+        ).map((f) => (
+          <button
+            key={f.id}
+            className={filter === f.id ? 'on' : ''}
+            data-tip={
+              f.id === 'docs'
+                ? '.md / .txt / .html'
+                : f.id === 'media'
+                  ? '图片 / 视频 / 音频'
+                  : undefined
+            }
+            onClick={() => {
+              setFilter(f.id)
+              // 「文档」那档由主进程筛（见 filter 的说明），要同步过去
+              void window.api.prefs.set('recentDocsOnly', f.id === 'docs')
             }}
-          />
-          <span>只保留文档文件（.md / .txt / .html）</span>
-        </label>
-      )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       {mode === 'tree' && (
         <div className="cpk-path" title={dir}>
@@ -165,7 +192,9 @@ export function CanvasFilePicker({
                 <span className="cpk-name">返回上级</span>
               </button>
             )}
-            {entries.map((e) =>
+            {entries
+              .filter((e) => e.isDir || filter !== 'media' || isMediaPath(e.path))
+              .map((e) =>
               e.isDir ? (
                 <button
                   key={e.path}
@@ -188,12 +217,19 @@ export function CanvasFilePicker({
               )
             )}
             {!entries.length && dir === root && <div className="cpk-empty">这个文件夹是空的</div>}
+            {!!entries.length &&
+              filter === 'media' &&
+              !entries.some((e) => !e.isDir && isMediaPath(e.path)) && (
+                <div className="cpk-empty">这个文件夹里没有图片 / 视频 / 音频</div>
+              )}
           </>
         )}
 
         {!loading && mode === 'recent' && (
           <>
-            {(recent ?? []).map((f) => (
+            {(recent ?? [])
+              .filter((f) => filter !== 'media' || isMediaPath(f.path))
+              .map((f) => (
               <button key={f.path} className="cpk-row" onClick={() => pick(f.path)} title={f.rel}>
                 <FileGlyph path={f.path} />
                 <span className="cpk-name">
