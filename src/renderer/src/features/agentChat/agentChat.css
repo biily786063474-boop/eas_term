@@ -69,6 +69,71 @@
   text-align: center;
 }
 
+/* 没装 / 仅终端可用的 CLI：仍然显示，但一眼看得出不能直接选。
+   **不用 disabled** —— disabled 的按钮点不动，而这里点一下正是要给安装入口。 */
+.ac-cli-chip.off {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.ac-cli-chip.off:hover {
+  opacity: 0.8;
+}
+/* 「未安装」「仅终端」那个小尾巴 */
+.ac-cli-tag {
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+/* 点了不能直接用的 CLI 之后的说明条 */
+.ac-cli-note {
+  position: relative;
+  margin-top: 10px;
+  padding: 9px 26px 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(224, 164, 94, 0.32);
+  background: rgba(224, 164, 94, 0.08);
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  line-height: 1.7;
+  max-width: min(520px, 100%);
+  text-align: left;
+}
+.ac-cli-note code {
+  font-size: 11px;
+  color: var(--fg);
+}
+/* 安装命令做成按钮：点它 = 填进终端（不代跑） */
+.ac-cli-cmd {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 9px;
+  width: 100%;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  cursor: pointer;
+}
+.ac-cli-cmd:hover {
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.ac-cli-note-x {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
 .ac-cli-chip {
   padding: 6px 13px;
   border-radius: 999px;

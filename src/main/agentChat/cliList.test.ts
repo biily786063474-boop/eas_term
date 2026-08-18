@@ -139,3 +139,60 @@ test('[I2/I3] approvalHook 与 capabilities.approval 各走各的——approval 
   assert.deepEqual(list[0].capabilities.approval, ['exec'])
   assert.equal(list[0].approvalHook, undefined, 'approval 非空不能被推断成"要装 hook"')
 })
+
+// ── 「没装的也要显示」这一组（2026-08-18 用户提的：第一次打开软件时一个 CLI 都没装，
+//     那时候最需要看见有哪些可选。原来渲染层把没装的过滤掉了，只剩一句干巴巴的提示）──
+
+test('没装的 CLI 照样在列表里，用 available 标出来而不是删掉', () => {
+  const out = buildCliList([fake('claude', 'Claude Code'), fake('codex', 'Codex')], { claude: false, codex: false })
+  assert.equal(out.length, 2, '一个都没装时列表不能是空的')
+  assert.deepEqual(out.map((c) => c.available), [false, false])
+})
+
+test('没装的带上安装命令，已装的不带 —— 免得界面上「已经装了还劝你装」', () => {
+  const out = buildCliList(
+    [fake('claude', 'Claude Code'), fake('codex', 'Codex')],
+    { claude: true, codex: false },
+    { claude: 'brew install claude', codex: 'npm i -g @openai/codex' }
+  )
+  assert.equal(out[0].installCmd, undefined, '已装的不该给安装命令')
+  assert.equal(out[1].installCmd, 'npm i -g @openai/codex')
+})
+
+// available=false 是「装上就能用」，chatSupported=false 是「装了也不能用在这儿」。
+// 混成一个布尔的话，用户会照着提示去装一个装了也选不了的东西。
+test('仅终端可用的 CLI：chatSupported=false，但仍然出现在列表里', () => {
+  const out = buildCliList([fake('claude', 'Claude Code')], { claude: true, dsh: true }, {}, [
+    { id: 'dsh', displayName: 'DeepSeek Harness', scopeNote: '只能在终端里用', installCmd: 'npm i -g @deepseek-ai/dsh' }
+  ])
+  assert.equal(out.length, 2)
+  const dsh = out[1]
+  assert.equal(dsh.available, true, '装了就是装了')
+  assert.equal(dsh.chatSupported, false, '但不能用于会话')
+  assert.equal(dsh.scopeNote, '只能在终端里用')
+  assert.equal(dsh.installCmd, undefined, '已装的不给安装命令')
+})
+
+test('有 adapter 的排在前面，仅终端的排后面', () => {
+  const out = buildCliList([fake('claude', 'Claude Code')], {}, {}, [
+    { id: 'dsh', displayName: 'DeepSeek Harness', scopeNote: 'x', installCmd: 'y' }
+  ])
+  assert.deepEqual(out.map((c) => c.id), ['claude', 'dsh'])
+})
+
+// 不能用于会话 → 不该为它渲染任何模型/强度/审批控件
+test('仅终端的 CLI 能力一律为空', () => {
+  const out = buildCliList([], {}, {}, [{ id: 'dsh', displayName: 'D', scopeNote: 'x', installCmd: 'y' }])
+  const c = out[0].capabilities
+  assert.deepEqual(c.models, [])
+  assert.deepEqual(c.effortLevels, [])
+  assert.deepEqual(c.approval, [])
+  assert.equal(c.compact, false)
+  assert.equal(c.contextUsage, false)
+  assert.equal(out[0].approvalHook, undefined)
+})
+
+test('有 adapter 的 chatSupported 恒为 true', () => {
+  const out = buildCliList([fake('claude', 'Claude Code')], { claude: false })
+  assert.equal(out[0].chatSupported, true, '没装不代表不支持 —— 那是 available 管的事')
+})

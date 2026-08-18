@@ -211,8 +211,24 @@ export interface AgentApprovalHookStatus {
 export interface CliInfo {
   id: string
   displayName: string
-  /** 探测结果缺失时为 false——宁可少显示一个选项，也不要让用户选一个装不上的 CLI 然后报错 */
+  /** 这台机器上装了没有。**false 不等于「不显示」** —— 用户第一次打开软件时
+   *  本来就一个都没装，那时候更需要看见「有哪些可选」。渲染层按它决定
+   *  「正常可点」还是「置灰 + 一键安装」，不是拿它做过滤。 */
   available: boolean
+  /**
+   * 能不能被 Eas-Term 直接驱动跑会话（面 6）。
+   *
+   * **和 available 是两件事**：available=false 是「装上就能用」，
+   * chatSupported=false 是「装了也不能用在这儿」。DeepSeek Harness 属于后者 ——
+   * 它的 headless 模式只打印最终消息，没有流式、没有工具事件，写不出 adapter，
+   * 但在终端里能用上 Eas-Term 的全部 MCP 能力。
+   * 两者混成一个布尔的话，用户会照着提示去装一个装了也选不了的东西。
+   */
+  chatSupported: boolean
+  /** 没装时给的一句安装命令（预填进终端，**不代跑**）。已装的为 undefined。 */
+  installCmd?: string
+  /** chatSupported=false 时，一句话说明它能用在哪 */
+  scopeNote?: string
   capabilities: CliCapabilities
   /** 原样透传 CliAdapter.approvalHook——**UI 判断"审批那一块该不该出现"唯一正确的依据**
    *  （2026-08-17 全分支最终评审 I2/I3）。

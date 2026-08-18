@@ -6,7 +6,7 @@ import type { CliInfo } from '../../../../shared/agentChat.ts'
 const cli = (id: string): CliInfo => ({
   id,
   displayName: id,
-  available: true,
+  available: true, chatSupported: true,
   capabilities: { contextUsage: true, approval: [] }
 })
 const base = { clis: null as CliInfo[] | null, selected: null as CliInfo | null, starting: false, startError: null as string | null }

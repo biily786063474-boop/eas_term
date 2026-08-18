@@ -35,7 +35,9 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
-import { buildCliList } from './cliList.ts'
+import { buildCliList, type TerminalOnlyCli } from './cliList.ts'
+import { detectByWhich } from './adapters/detect.ts'
+import { installPlan } from '../agentInstall.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
@@ -554,13 +556,33 @@ export function registerAgentChatHandlers(): void {
   // 失败不该拖垮整个列表，所以逐个 catch 成 false，而不是让 Promise.all 整体 reject。
   ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
     const adapters = listAdapters()
+    // 仅终端可用的 CLI 也要探测 —— 它同样要显示「装了没有」
+    const terminalOnly: TerminalOnlyCli[] = [
+      {
+        id: 'dsh',
+        displayName: 'DeepSeek Harness',
+        scopeNote: '只能在终端里用（画板工具 / skill / 密钥柜都生效）',
+        installCmd: 'npm install -g @deepseek-ai/dsh'
+      }
+    ]
     const availability: Record<string, boolean> = {}
-    await Promise.all(
-      adapters.map(async (a) => {
+    await Promise.all([
+      ...adapters.map(async (a) => {
         availability[a.id] = await a.detect().catch(() => false)
+      }),
+      ...terminalOnly.map(async (t) => {
+        availability[t.id] = await detectByWhich(t.id)().catch(() => false)
       })
-    )
-    return buildCliList(adapters, availability)
+    ])
+    // 安装命令从 agentInstall 的方案里取第一条（那边已经按平台挑过最合适的），
+    // **不在这里另写一份** —— 同一个事实写两处，迟早一处过期
+    const plan = installPlan()
+    const installCmds: Record<string, string> = {}
+    for (const k of ['claude', 'codex'] as const) {
+      const c = plan[k]?.options?.[0]?.cmd
+      if (c) installCmds[k] = c
+    }
+    return buildCliList(adapters, availability, installCmds, terminalOnly)
   })
 
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {

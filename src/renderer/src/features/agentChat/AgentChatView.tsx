@@ -89,6 +89,18 @@ export function AgentChatView({
   })
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
+  /** 点了一个不能直接用的 CLI（没装 / 仅终端）时，下面显示的说明 */
+  const [cliNote, setCliNote] = useState<CliInfo | null>(null)
+  const prefillTerminal = useStore((s) => s.prefillTerminal)
+
+  /** 把安装命令填进终端。**不代跑** —— 静默装全局 CLI + 改 PATH 是恶意软件的
+   *  行为特征，会被 Gatekeeper / Defender 盯上（agentInstall.ts 的既有纪律）。
+   *  填进去之后用户看得见、能改、自己按回车。 */
+  const installCli = async (c: CliInfo): Promise<void> => {
+    if (!c.installCmd) return
+    setCliNote(null)
+    await prefillTerminal(c.installCmd)
+  }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
   const [text, setText] = useState('')
@@ -136,10 +148,14 @@ export function AgentChatView({
       .listClis()
       .then((list) => {
         if (cancelled) return
-        const available = list.filter((c) => c.available === true)
-        setClis(available)
-        // 默认选中第一个可用的——没有默认值的话每次都要多点一下才能发消息
-        setSelected((cur) => cur ?? available[0] ?? null)
+        // **全部显示，不过滤。** 原来这里 filter 掉没装的，于是用户第一次打开软件
+        // （一个 CLI 都没装）看到的是一句干巴巴的「没有探测到可用的 CLI」，
+        // 连有哪些可选都不知道。现在没装的也列出来、标出来、点一下能装。
+        setClis(list)
+        // 默认只选**现在就能用**的：装了 + 支持会话。没有就不预选，
+        // 让用户自己点（点到没装的会给安装入口）
+        const usable = list.filter((c) => c.available && c.chatSupported)
+        setSelected((cur) => cur ?? usable[0] ?? null)
       })
       .catch(() => {
         if (!cancelled) setClis([])
@@ -385,21 +401,59 @@ export function AgentChatView({
         )}
         <div className="ac-clis">
           {phase.k === 'detecting' && <span className="ac-clis-hint">正在检测可用的 CLI…</span>}
-          {phase.k === 'none' && (
-            <span className="ac-clis-hint">没有探测到可用的 CLI —— 请先安装 Claude Code 或 Codex</span>
-          )}
-          {clis?.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`ac-cli-chip${c.id === selected?.id ? ' selected' : ''}`}
-              onClick={() => setSelected(c)}
-              disabled={phase.k === 'starting'}
-            >
-              {c.displayName}
-            </button>
-          ))}
+          {phase.k === 'none' && <span className="ac-clis-hint">没有可用的 CLI</span>}
+          {/* **三种状态分开渲染，不是「能用/不能用」两分。**
+              · 装了且支持会话 → 正常可点
+              · 没装          → 置灰 +「未安装」，点一下把安装命令预填进终端
+              · 装了但仅终端可用（dsh）→ 置灰 +「仅终端」，点一下说明怎么用
+              为什么没装的也要显示：用户第一次打开软件时一个都没装，那时候**最**需要
+              知道有哪些可选。原来这里把没装的过滤掉了，他只看到一句提示。 */}
+          {clis?.map((c) => {
+            const usable = c.available && c.chatSupported
+            const tag = !c.available ? '未安装' : !c.chatSupported ? '仅终端' : null
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={`ac-cli-chip${c.id === selected?.id ? ' selected' : ''}${usable ? '' : ' off'}`}
+                onClick={() => (usable ? setSelected(c) : setCliNote(c))}
+                disabled={phase.k === 'starting'}
+                data-tip={usable ? undefined : c.scopeNote ?? (c.installCmd ? '点击安装' : undefined)}
+              >
+                {c.displayName}
+                {tag && <span className="ac-cli-tag">{tag}</span>}
+              </button>
+            )
+          })}
         </div>
+        {cliNote && (
+          <div className="ac-cli-note">
+            {!cliNote.available ? (
+              <>
+                <b>{cliNote.displayName}</b> 还没装。
+                {cliNote.installCmd ? (
+                  <>
+                    {' '}
+                    点下面这行会把命令填进终端 —— <b>不会替你执行</b>，你自己按回车。
+                    <button className="ac-cli-cmd" onClick={() => void installCli(cliNote)}>
+                      <code>{cliNote.installCmd}</code>
+                    </button>
+                  </>
+                ) : (
+                  ' 请到它的官网安装。'
+                )}
+              </>
+            ) : (
+              <>
+                <b>{cliNote.displayName}</b> 已安装，但{cliNote.scopeNote ?? '不能用于 AI 对话'}。
+                在终端里直接敲 <code>{cliNote.id}</code> 就能用。
+              </>
+            )}
+            <button className="ac-cli-note-x" onClick={() => setCliNote(null)}>
+              ×
+            </button>
+          </div>
+        )}
         {phase.k === 'failed' && <div className="ac-error">{phase.error}</div>}
       </div>
     </div>
