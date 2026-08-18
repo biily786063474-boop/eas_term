@@ -22,7 +22,7 @@ import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
-import { SendIcon, SparkleIcon } from '../../ui/Icons'
+import { SendIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
@@ -342,9 +342,9 @@ export function AgentChatView({
   return (
     <div className="agent-chat-view">
       <div className="ac-empty">
-        <div className="ac-logo">
-          <SparkleIcon size={30} />
-        </div>
+        {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
+            一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
+        <div className="ac-slogan">伟大的产品始于一句“你好”</div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         <div className="ac-input-wrap">

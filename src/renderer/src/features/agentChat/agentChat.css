@@ -19,10 +19,16 @@
   overflow: auto;
 }
 
-.ac-logo {
-  display: flex;
-  color: var(--accent);
-  opacity: 0.9;
+/* 空态的一句话。它是氛围，不是操作指引 —— 所以比正文淡、比正文大一点，
+   不跟下面输入框里的 placeholder 抢注意力。 */
+.ac-slogan {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+  letter-spacing: 0.03em;
+  text-align: center;
+  max-width: min(480px, 100%);
+  user-select: none;
 }
 
 .ac-input {
