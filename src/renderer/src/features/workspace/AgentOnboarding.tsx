@@ -8,6 +8,10 @@
 // 回车由用户自己按。理由见 src/main/agentInstall.ts 顶部。
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+
+/** 展示顺序。**不用 Object.keys(plan)** —— 那样顺序跟着对象字面量走，
+ *  将来重排 installPlan 的字段会静默改变界面顺序。这里显式定死。 */
+const AGENT_KINDS: AgentKind[] = ['claude', 'codex', 'dsh']
 import { useStore } from '../../store'
 import type { InstallPlan, AgentInstallInfo, AgentKind } from '../../../../shared/types'
 import { SparkleIcon, TerminalIcon } from '../../ui/Icons'
@@ -67,6 +71,9 @@ export function AgentOnboarding(): JSX.Element | null {
       <div className={`onb-card${open ? ' open' : ''}`} key={key}>
         <div className="onb-card-name">{info.name}</div>
         <div className="onb-card-vendor">{info.vendor}</div>
+        {/* 能力范围来自数据（AgentInstallInfo.scope），不在这里按 CLI 名字判断。
+            没有 note 的就是全都支持，不用占版面解释。 */}
+        {!!info.scope.note && <div className="onb-card-scope">{info.scope.note}</div>}
         {!open ? (
           <button className="onb-btn" disabled={!best} onClick={() => setPicked(key)}>
             {best ? '安装' : '暂无可用方式'}
@@ -102,8 +109,9 @@ export function AgentOnboarding(): JSX.Element | null {
         </p>
 
         <div className="onb-cards">
-          {card('claude', plan.claude)}
-          {card('codex', plan.codex)}
+          {/* 遍历 AgentKind，不写死几行 —— 上一次加 dsh 就是数据加了、这里忘了改，
+              安装引导里它整个是隐形的。加第四个 CLI 时这里不用再动。 */}
+          {AGENT_KINDS.map((k) => card(k, plan[k]))}
         </div>
 
         <div className="onb-how">

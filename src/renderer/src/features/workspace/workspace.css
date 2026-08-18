@@ -1052,6 +1052,18 @@ body.dragging-row * {
   opacity: 0.7;
   margin-bottom: 10px;
 }
+/* 能力范围：只有「不是全都支持」的 CLI 才有这行（dsh 只能用在终端里）。
+   写在按钮上方 —— 装之前就该看见，装完再发现选不了它是最糟的顺序。 */
+.onb-card-scope {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--warn, #e0a45e);
+  background: rgba(224, 164, 94, 0.1);
+  border: 1px solid rgba(224, 164, 94, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 5px 7px;
+  margin-bottom: 10px;
+}
 .onb-btn {
   margin-top: auto;
   padding: 6px 0;
