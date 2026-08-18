@@ -10,6 +10,7 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 
+import { PROBE_ENV } from './probeEnv'
 import {
   verdictOf,
   shouldWarn,
@@ -21,12 +22,7 @@ import {
 
 const pExecFile = promisify(execFile)
 
-// 和 agent.ts 同款：GUI 启动的 Electron 其 PATH 常缺 homebrew，
-// 不补的话装了的 CLI 会被判成没装
-const PROBE_ENV = {
-  ...process.env,
-  PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH ?? ''}`
-}
+
 
 const home = (): string => app.getPath('home')
 const dshHome = (): string => process.env.DSH_HOME || path.join(home(), '.dsh')

@@ -6,14 +6,12 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import type { AgentProbe } from '../shared/types'
 
+import { PROBE_ENV } from './probeEnv'
+
 const pExecFile = promisify(execFile)
 
-// GUI 启动的 Electron 其 PATH 常缺 homebrew（/opt/homebrew/bin），直接 execFile 会误判 CLI 未装。
-// 这里补上常见安装目录，让 `claude`/`codex` 能被找到（终端里能跑是因为 pty 走登录 shell）。
-const PROBE_ENV = {
-  ...process.env,
-  PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH ?? ''}`
-}
+// 探测环境统一在 probeEnv.ts —— 它原来只在这个文件里，
+// 结果 adapters/detect.ts 漏了同一个补丁，从 Dock 启动就报「没有探测到可用的 CLI」
 
 // 解析 `claude --help`：真实拉取当前 CLI 支持的「模型别名」与「effort 档位」，不在前端写死——
 // claude 升级新增档位/别名时，开终端 probe 自动跟随。--help 是纯文本、无副作用、秒回，
