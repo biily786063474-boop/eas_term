@@ -10,11 +10,12 @@ import { pathDToPenNodes } from './pathToPen'
 import Toolbar from './Toolbar'
 import PropertiesPanel from './PropertiesPanel'
 import LayersPanel from './LayersPanel'
-// [Eas-Term 移植] 砍掉「组件库」—— ComponentLibrary 已桩为空组件,面板 tab 也去掉,不再引用
 import ExportDialog from './ExportDialog'
 import ContextMenu from './ContextMenu'
 import { useUnifiedDesignStore } from './store'
-// [Eas-Term 移植] 砍掉「保存为组件」—— 原依赖 taptv 专有 utils/designComponentStorage(外部,不带过来)
+// [Eas-Term 移植] 砍掉「组件库 / 存为组件」—— 依赖 taptv 专有的 utils/designComponentStorage
+// （760 行，双模式存储，还牵一个 fileStorage）。本项目的文件写入要过 fsGuard，
+// 不是拷过来就能用，单独评估。其余设计功能（钢笔 / 布尔运算 / 文字轮廓化 / SVG 导入）已全部恢复。
 import { CANVAS_PRESETS } from './constants'
 import {
   unite, intersect, subtract, exclude,
@@ -224,10 +225,10 @@ const TYPE_LABELS = { rect: '矩形', ellipse: '椭圆', line: '线条', pen: '�
 export default function DesignerView({ nodeId, savedState, mediaInputs = [], onExport, onClose, onSaveState, topbarCenter }) {
   const [showExport, setShowExport] = useState(false)
   const [showLayers, setShowLayers] = useState(true)
-  const [leftTab, setLeftTab] = useState('layers') // 'layers' | 'components'
-  const [saveCompName, setSaveCompName] = useState('')
-  const [saveCompTags, setSaveCompTags] = useState('')
-  const [showSaveComp, setShowSaveComp] = useState(false)
+  // [Eas-Term 移植] 组件库砍掉后只剩「图层」一个 tab，leftTab 留着是为了保住那颗按钮的
+  // 选中样式（uc__left-tab--on）——只有一个 tab 时它恒为 on，改成写死反而要动样式。
+  // saveCompName / saveCompTags / showSaveComp 三个状态随「存为组件」一起删了。
+  const [leftTab, setLeftTab] = useState('layers')
   const [showCanvasPicker, setShowCanvasPicker] = useState(false)
   const [showAdjust, setShowAdjust] = useState(false)
   const [adjustPos, setAdjustPos] = useState(null) // { x, y } or null = default position
@@ -1063,9 +1064,8 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
         {/* Left: Layers panel */}
         {showLayers && (
           <div className="uc__sidebar-left">
-            {/* [Eas-Term 移植] 砍掉「组件库」tab —— 只保留图层面板 */}
             <div className="uc__left-tabs">
-              <button className={`uc__left-tab uc__left-tab--on`}>图层</button>
+              <button className={`uc__left-tab${leftTab === 'layers' ? ' uc__left-tab--on' : ''}`} onClick={() => setLeftTab('layers')}>图层</button>
             </div>
             <LayersPanel />
             {/* Upstream media thumbnails */}
@@ -1130,8 +1130,8 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' }}
           onDrop={async (e) => {
             e.preventDefault()
-            // [Eas-Term 移植] 砍掉「组件库拖放」—— 原动态 import('../../../utils/designComponentStorage')
-            // 依赖 taptv 专有存储(不带过来)。组件库已砍,此拖放路径不再存在。
+            // [Eas-Term 移植] 砍掉「组件库拖放」（原动态 import designComponentStorage）
+
             // Image URL drop (media thumbnails)
             const url = e.dataTransfer.getData('text/plain')
             if (!url) return
@@ -1259,7 +1259,36 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
                     </svg>
                     蒙版
                   </button>
-                  {/* [Eas-Term 移植] 砍掉「存为组件」+「布尔运算(并/交/差/异或)」按钮组 */}
+                  <div className="uc__sel-bar__divider" />
+                  {/* Pathfinder boolean ops — Phase 1 MVP. Two-circle SVG glyphs identify each op. */}
+                  {/* Unite: two overlapping circles fully filled as one shape */}
+                  <button className="uc__sel-bar__btn" onClick={() => applyBoolean('unite')} data-tip="并集 Unite (Ctrl+E)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="9" cy="12" r="6"/>
+                      <circle cx="15" cy="12" r="6"/>
+                    </svg>
+                  </button>
+                  {/* Intersect: two circle outlines, only overlap filled */}
+                  <button className="uc__sel-bar__btn" onClick={() => applyBoolean('intersect')} data-tip="交集 Intersect">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="9" cy="12" r="6"/>
+                      <circle cx="15" cy="12" r="6"/>
+                      <path d="M12 6.7 a6 6 0 0 0 0 10.6 a6 6 0 0 0 0 -10.6 z" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
+                  {/* Subtract: left circle filled, right circle dashed outline (front cuts out) */}
+                  <button className="uc__sel-bar__btn" onClick={() => applyBoolean('subtract')} data-tip="差集 Minus Front (底 - 上)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M9 6 a6 6 0 1 0 0 12 a6 6 0 0 0 5.2 -3 a6 6 0 0 1 0 -6 a6 6 0 0 0 -5.2 -3 z" fill="currentColor" fillRule="evenodd"/>
+                      <circle cx="15" cy="12" r="6" strokeDasharray="2.5 2"/>
+                    </svg>
+                  </button>
+                  {/* Exclude: two circles filled but overlap is hollow (XOR via evenodd) */}
+                  <button className="uc__sel-bar__btn" onClick={() => applyBoolean('exclude')} data-tip="异或 Exclude(去除重叠)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M9 6 a6 6 0 1 0 0 12 a6 6 0 1 0 0 -12 z M15 6 a6 6 0 1 1 0 12 a6 6 0 1 1 0 -12 z" fillRule="evenodd"/>
+                    </svg>
+                  </button>
                   <div className="uc__sel-bar__divider" />
                   {/* Alignment */}
                   <button className="uc__sel-bar__btn" onClick={() => { pushUndo(); alignObjects('left') }} data-tip="左对齐 (Alt+A)">
@@ -1316,8 +1345,6 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
                     </button>
                   )}
 
-                  {/* [Eas-Term 移植] 砍掉「存为组件」按钮 */}
-
                   {/* Release mask */}
                   {selectedObj.type === 'mask' && (
                     <button className="uc__sel-bar__btn" onClick={handleUngroup} data-tip="释放蒙版">
@@ -1328,7 +1355,30 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
                     </button>
                   )}
 
-                  {/* [Eas-Term 移植] 砍掉「编辑锚点(钢笔)」+「文字轮廓化」按钮 */}
+                  {/* Edit anchors */}
+                  {(selectedObj.type === 'rect' || selectedObj.type === 'ellipse' || selectedObj.type === 'line') && (
+                    <button className="uc__sel-bar__btn" onClick={enterEditMode} data-tip="编辑锚点">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="4" r="2"/><circle cx="4" cy="20" r="2"/><circle cx="20" cy="20" r="2"/>
+                        <path d="M12 6v6"/><path d="M6 20l6-8 6 8"/>
+                      </svg>
+                      编辑
+                    </button>
+                  )}
+
+                  {/* Text outline */}
+                  {selectedObj.type === 'text' && (
+                    <button className="uc__sel-bar__btn" data-tip="文字轮廓化"
+                      onClick={() => {
+                        pushUndo()
+                        outlineText(selectedObj.id)
+                      }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 7V5h16v2"/><path d="M9 19h6"/><path d="M12 5v14"/>
+                      </svg>
+                      轮廓化
+                    </button>
+                  )}
 
                   {/* Image adjustments */}
                   {selectedObj.type === 'image' && (
@@ -1547,7 +1597,7 @@ export default function DesignerView({ nodeId, savedState, mediaInputs = [], onE
         <ExportDialog canvasRef={canvasRef} onExport={handleExport} onClose={() => setShowExport(false)} />
       )}
 
-      {/* [Eas-Term 移植] 砍掉「存为组件」对话框(原依赖 saveComponent / designComponentStorage) */}
+      {/* [Eas-Term 移植] 砍掉「存为组件」对话框 */}
 
       {/* Canvas size picker portal */}
       {/* Media hover preview */}

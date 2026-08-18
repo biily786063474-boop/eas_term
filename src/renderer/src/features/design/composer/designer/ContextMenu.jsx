@@ -90,7 +90,11 @@ export default function ContextMenu({
     isMask && { label: '释放蒙版', onClick: onReleaseMask },
     (isMulti || isGroup || isMask) && SEP,
 
-    // [Eas-Term 移植] 砍掉「文字轮廓化」「转为可编辑路径(钢笔)」右键菜单项
+    isText && { label: '文字轮廓化', onClick: onOutlineText, accent: true },
+    isText && SEP,
+
+    isConvertiblePath && { label: '转为可编辑路径', onClick: onConvertPathToPen, accent: true },
+    isConvertiblePath && SEP,
 
     isSingle && { label: '置顶', kbd: '⌘]', onClick: onBringToFront },
     isSingle && { label: '上移一层', kbd: '⌘⇧]', onClick: onBringForward },

@@ -11,8 +11,6 @@ import {
   Star as KonvaStar, RegularPolygon,
 } from 'react-konva'
 import Konva from 'konva'
-// [Eas-Term 移植] 桩掉 taptv 触屏手势 hook —— 改为本地 no-op 桩(见 ./useKonvaTouchGestures.js)
-import { useKonvaTouchGestures } from './useKonvaTouchGestures'
 import { useUnifiedDesignStore } from './store'
 import { SNAP_DIST, ACCENT, ACCENT_LIGHT, ROTATION_COLOR, DARK_BG, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH, TEXT_FONT_SIZE, TEXT_LINE_HEIGHT, TEXT_LETTER_SPACING } from './constants'
 import { HalftoneFilter, PosterizeFilter, ThresholdFilter, EmbossFilter, DuotoneFilter, SolarizeFilter } from './filters'
@@ -477,7 +475,7 @@ function renderShape(obj, commonProps, shapeRefs, renderCtx, parentId = null) {
           }
           childProps.onTap = childProps.onClick
           childProps.onDragStart = (e) => {
-            if (e.evt?.button != null && e.evt.button !== 0) { e.target.stopDrag(); return }
+            if (e.evt?.button !== 0) { e.target.stopDrag(); return }
             e.cancelBubble = true
             if (!renderCtx?.selectedIds?.includes(child.id)) {
               renderCtx?.handleChildClick?.(e, obj.id, child.id)
@@ -504,7 +502,7 @@ function renderShape(obj, commonProps, shapeRefs, renderCtx, parentId = null) {
       // Closed group: respond as integral. Click selects, dblclick enters this level
       // and snaps the selection bbox to the deepest element clicked.
       const onGroupDblClick = (e) => {
-        if (e.evt?.button != null && e.evt.button !== 0) return
+        if (e.evt?.button !== 0) return
         e.cancelBubble = true
         renderCtx?.enterGroup?.(obj.id)
         // Walk e.target to find the deepest data-id under the click
@@ -611,7 +609,7 @@ function renderShape(obj, commonProps, shapeRefs, renderCtx, parentId = null) {
         }
         childProps.onTap = childProps.onClick
         childProps.onDragStart = (e) => {
-          if (e.evt?.button != null && e.evt.button !== 0) { e.target.stopDrag(); return }
+          if (e.evt?.button !== 0) { e.target.stopDrag(); return }
           e.cancelBubble = true
           if (!renderCtx?.selectedIds?.includes(child.id)) {
             renderCtx?.handleChildClick?.(e, obj.id, child.id)
@@ -641,7 +639,7 @@ function renderShape(obj, commonProps, shapeRefs, renderCtx, parentId = null) {
           draggable={!isMaskEntered}
           onClick={commonProps.onClick} onTap={commonProps.onTap}
           onDragStart={(e) => {
-            if ((e.evt?.button != null && e.evt.button !== 0) || isMaskEntered) { e.target.stopDrag(); return }
+            if (e.evt?.button !== 0 || isMaskEntered) { e.target.stopDrag(); return }
             const cur = useUnifiedDesignStore.getState().selectedIds
             if (!cur.includes(obj.id)) renderCtx?.setSelectedIds([obj.id])
           }}
@@ -808,14 +806,6 @@ const KonvaCanvas = forwardRef(function KonvaCanvas({ editingId, onExitEdit, onE
   const gridColumns = useUnifiedDesignStore(s => s.gridColumns)
   const gridMargin = useUnifiedDesignStore(s => s.gridMargin)
   const gridGutter = useUnifiedDesignStore(s => s.gridGutter)
-
-  // iPad 触屏:双指捏合缩放 + 双指平移(单指仍交给 Konva 选择/拖对象)
-  useKonvaTouchGestures(
-    stageRef,
-    () => ({ scale: zoom, pos: stagePos }),
-    ({ scale, pos }) => { useUnifiedDesignStore.getState().setZoom(scale); setStagePos(pos) },
-    { min: 0.1, max: 8 },
-  )
   const gridRows = useUnifiedDesignStore(s => s.gridRows)
   const gridRowHeight = useUnifiedDesignStore(s => s.gridRowHeight)
   const gridRowGutter = useUnifiedDesignStore(s => s.gridRowGutter)
@@ -2302,7 +2292,7 @@ const KonvaCanvas = forwardRef(function KonvaCanvas({ editingId, onExitEdit, onE
         onClick: (e) => handleShapeClick(e, obj.id),
         onTap: (e) => handleShapeClick(e, obj.id),
         onDragStart: (e) => {
-          if (e.evt?.button != null && e.evt.button !== 0) { e.target.stopDrag(); return }
+          if (e.evt?.button !== 0) { e.target.stopDrag(); return }
           e.target._dragOrigin = { x: obj.x || 0, y: obj.y || 0 }
           // Alt+drag: create copy at origin immediately (visible while dragging)
           if (e.evt?.altKey) {
@@ -2425,11 +2415,7 @@ const KonvaCanvas = forwardRef(function KonvaCanvas({ editingId, onExitEdit, onE
       onMouseDown={handleStageMouseDown} onMouseMove={handleStageMouseMove}
       onMouseUp={handleStageMouseUp} onDblClick={handleStageDblClick}
       onTouchStart={handleStageMouseDown} onTouchMove={handleStageMouseMove}
-      onTouchEnd={handleStageMouseUp}
-      /* touchAction none:iOS WKWebView 缺它时单指 touchmove 被浏览器原生
-         滚动手势抢走(touchcancel 打断 Konva 拖拽)→ iPad 图形拖不动。
-         Konva 官方移动端要求;鼠标行为零影响。 */
-      style={{ cursor, touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}>
+      onTouchEnd={handleStageMouseUp} style={{ cursor }}>
       <Layer>
         <Rect key="__pb__" name="__export_hide" x={-5000} y={-5000} width={10000 + canvasWidth} height={10000 + canvasHeight}
           fill="#1a1a1a" listening={false} />

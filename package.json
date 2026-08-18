@@ -10,7 +10,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "test": "node --test 'src/**/*.test.ts'",
+    "test": "node --test 'src/**/*.test.ts' 'src/**/*.test.mjs'",
     "dist": "electron-vite build && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "electron-vite build && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty"
@@ -125,6 +125,9 @@
   "dependencies": {
     "@codemirror/merge": "^6.12.2",
     "konva": "^9.3.22",
+    "svgpath": "^2.6.0",
+    "polygon-clipping": "^0.15.7",
+    "imagetracerjs": "^1.2.6",
     "mp4-muxer": "^5.2.2",
     "node-pty": "^1.0.0",
     "react-konva": "^18.2.16",

@@ -4,34 +4,6 @@
    Tools float at bottom center of canvas
    ═══════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════════════════════
-   [Eas-Term 移植] 设计令牌桥接(port shim)
-   taptv 的 designer 依赖下面 16 个 CSS 变量,Eas-Term 的 styles/base.css 尚未定义。
-   这里给出对齐 Eas-Term 暗色玻璃主题的默认值(优先用 base.css 已有 token 兜底),
-   保证 designer 挂载即渲染正确(否则文字/背景/描边会透明不可见)。
-   定义在 :root 是纯增量(这些变量名 Eas-Term 目前未使用),且覆盖到 portal 到
-   document.body 的浮层(画布尺寸下拉 / 素材预览 / 混合模式下拉)。
-   集成时若要统一主题,可把本块搬到 base.css 或直接在 base.css 覆盖同名变量。
-   ═══════════════════════════════════════════════════════════════════ */
-:root {
-  --bg-app:     #0a0b10;                                        /* designer 全屏根背景 */
-  --bg-1:       #14161d;                                        /* 面板背景 */
-  --bg-2:       #0e1016;                                        /* 输入框 / 更暗背景 */
-  --bg-subtle:  #181a22;                                        /* 次级背景 */
-  --bg-hover:   rgba(255, 255, 255, 0.06);                      /* hover 态 */
-  --border:     var(--glass-border, rgba(255, 255, 255, 0.09));
-  --border-2:   var(--glass-border-strong, rgba(255, 255, 255, 0.14));
-  --text-1:     var(--fg, #e2e4ea);                             /* 主文字 */
-  --text-2:     var(--fg-dim, #969aa8);                         /* 次文字 */
-  --text-3:     #6b6f7d;                                        /* 三级文字 */
-  --text-4:     #4a4d58;                                        /* 四级文字 / 占位 */
-  --accent-fg:  #0a0b10;                                        /* accent 上的前景(accent 偏亮,用深色) */
-  --danger:     #e5484d;                                        /* 删除 / 危险 */
-  --dur-fast:   0.12s;                                          /* 快速过渡 */
-  --glass-bg:   var(--glass-1, rgba(15, 17, 23, 0.5));          /* 顶栏玻璃 */
-  --glass-blur: var(--blur, blur(28px) saturate(160%));        /* 玻璃模糊 */
-}
-
 /* ── Root ── */
 .uc {
   position: fixed;

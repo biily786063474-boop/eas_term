@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG, DEFAULT_FILL, DEFAULT_WIDTH, DEFAULT_HEIGHT, UNDO_MAX, GRID_SIZE, GRID_COLUMNS, GRID_MARGIN, GRID_GUTTER, GRID_ROWS, GRID_ROW_GUTTER, COLOR_GRID_COLORS } from './constants'
 import { textObjectToPaths } from './textOutline'
-// [Eas-Term 移植] 迁移文件带到 composer/_shared/ ,相对路径由 ../../ 改为 ../
+// [Eas-Term 移植] 迁移文件带到 composer/_shared/ ，相对路径由 ../../ 改为 ../
 import { migrateState, SCHEMA_VERSIONS } from '../_shared/composerStateMigration'
 
 const STATE_VERSION = SCHEMA_VERSIONS.design

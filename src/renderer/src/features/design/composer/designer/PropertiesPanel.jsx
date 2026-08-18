@@ -660,7 +660,23 @@ export default function PropertiesPanel() {
             <DragNumInput className="uc__pr-num uc__pr-num--w" value={obj.letterSpacing ?? 0} min={-10} max={50} step={0.5} onChange={v => apply({ letterSpacing: v })} />
             <span className="uc__pr-unit">px</span>
           </PropRow>
-          {/* [Eas-Term 移植] 砍掉「文字轮廓化」操作按钮(text → SVG path) */}
+          <PropRow label="操作">
+            <button
+              className="uc__pr-action-btn"
+              data-tip="将每个字符按当前字体转为独立矢量形状,自动成组"
+              onClick={() => {
+                pushUndo()
+                const gid = outlineText(obj.id)
+                if (!gid) console.warn('[textOutline] no paths produced for', obj.text)
+              }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 7V5h16v2" />
+                <path d="M9 19h6" />
+                <path d="M12 5v14" />
+              </svg>
+              <span>文字轮廓化</span>
+            </button>
+          </PropRow>
         </div>
       )}
 
