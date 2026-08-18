@@ -1,7 +1,7 @@
 // 设计模块（Step 3）：画布节点入口卡片，点「打开设计」全屏挂 UnifiedComposer（移植自 taptv）。
 // 设计模式（Konva 画形状/文本/图片+图层）↔ 动效模式（关键帧/预设动效）双模式;
 // 导出：设计→PNG/JPG,动效→WebM/MP4,统一落到 <项目>/demo/。UnifiedComposer 是 fixed 全屏覆盖层 → portal 到 body。
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { DesignIcon } from '../../ui/Icons'
@@ -32,6 +32,18 @@ export function DesignNode({
   savedState: SavedBlob | null
 }): JSX.Element {
   const [editing, setEditing] = useState(false)
+
+  // 全屏期间告诉画布让路。画布那几个 window 级键盘监听收不到「我被盖住了」这件事，
+  // 不说一声的话，在设计模块里按 Delete 会删掉画布上的节点、按空格会切成画布平移、
+  // 按 Esc 两边一起响应（设计模块自己也认 Esc）。判据放在 store 里的理由见 uiSlice。
+  // cleanup 里无条件清掉 —— 组件被卸载（Frame 删了、切了视图）时 editing 还是 true，
+  // 只在 setEditing(false) 那条路上清的话，标志会永远挂着，画布从此收不到键盘。
+  const setFullscreenOverlay = useStore((s) => s.setFullscreenOverlay)
+  useEffect(() => {
+    if (!editing) return
+    setFullscreenOverlay('design')
+    return () => setFullscreenOverlay(null)
+  }, [editing, setFullscreenOverlay])
   const [blob, setBlob] = useState<SavedBlob | null>(() => toUnified(savedState))
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const setNodeComponentProps = useStore((s) => s.setNodeComponentProps)

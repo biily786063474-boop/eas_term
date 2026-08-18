@@ -31,6 +31,22 @@ export interface UiSlice {
   setTheme: (theme: ThemeId) => void
   /** 危险操作确认弹窗（终端运行中关闭/退出时触发） */
   pendingConfirm: PendingConfirm | null
+
+  /**
+   * 当前占据全屏的覆盖层是谁（没有就是 null）。值是模块名，只为排查时看得懂。
+   *
+   * 存在的理由：设计模块打开后是一个 portal 到 body 的 fixed 全屏层，画布在它下面
+   * **看不见也够不着**，但画布那几个 window 级键盘监听照样在收键 —— 于是在设计模块里
+   * 按 Delete 会删掉画布上的节点、按空格会切成画布平移手势、按 Esc 会两边一起响应。
+   * 用户的说法是「设计模块全屏的时候画板上的操作不要劫持设计模块内的操作」。
+   *
+   * **用状态而不是判 DOM 祖先**：覆盖层 portal 到了 body，`closest('.design-node')`
+   * 根本够不着它；改判它自己的根 class 又得逐个视图去认（.ua / .uc__… 各不相同，
+   * 而且那是移植过来的 jsx，以后同步上游会变）。状态与 DOM 结构无关，也让下一个
+   * 全屏模块直接复用这条守卫。
+   */
+  fullscreenOverlay: string | null
+  setFullscreenOverlay: (who: string | null) => void
   requestConfirm: (c: PendingConfirm) => void
   cancelConfirm: () => void
   /** 最近聚焦过的终端（供名词词典等非终端面板把文本插入光标处；打开词典后 activeLeaf 是词典自己，故单独记）。
@@ -233,6 +249,7 @@ async function runTranscribeQueue(
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   theme: loadTheme(),
   pendingConfirm: null,
+  fullscreenOverlay: null,
   lastActiveTerminal: null,
   lastSnapshot: null,
   setLastSnapshot: (v) => set({ lastSnapshot: v }),
@@ -487,6 +504,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
   markApprovalSent: (ptyId) =>
     set((s) => ({ approvalSentAt: { ...s.approvalSentAt, [ptyId]: Date.now() } })),
+
+  setFullscreenOverlay: (who) => set({ fullscreenOverlay: who }),
 
   requestConfirm: (c) => set({ pendingConfirm: c }),
   cancelConfirm: () => set({ pendingConfirm: null }),

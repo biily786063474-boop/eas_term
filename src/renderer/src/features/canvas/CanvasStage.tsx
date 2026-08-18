@@ -44,6 +44,25 @@ const SCALE_MAX = 2.2
 const HEAD_H = 34
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
 
+/**
+ * 有全屏覆盖层盖着时，画布的全局键盘监听一律让路。
+ *
+ * 画布有四条 window 级 keydown（Esc 还原最大化、Delete/⌘D、撤销、空格平移手势）。
+ * 设计模块打开后是 portal 到 body 的 fixed 全屏层，画布在它下面看不见也够不着，
+ * 但这四条照样在收键 —— 于是在设计模块里按 Delete 删掉的是画布上的节点，
+ * 按空格切成了画布平移，按 Esc 两边一起响应。
+ *
+ * 判据不用 DOM 祖先：覆盖层 portal 出去了，closest() 够不着；判它自己的根 class
+ * 又得逐个视图去认（.ua / .uc__… 各不相同，还是移植来的 jsx，同步上游会变）。
+ * 状态与 DOM 结构无关，下一个全屏模块也能直接复用。
+ *
+ * 鼠标那几条不用管：contextmenu 和 mousedown 本来就有 `.canvas-viewport` /
+ * `.pane-layer` 的范围守卫，wheel 直接挂在 viewport 元素上，都进不到覆盖层里。
+ */
+function overlayHasKeyboard(): boolean {
+  return useStore.getState().fullscreenOverlay !== null
+}
+
 export function CanvasStage(): JSX.Element {
   const viewportRef = useRef<HTMLDivElement>(null)
   const frames = useStore((s) => s.canvas.frames)
@@ -242,6 +261,7 @@ export function CanvasStage(): JSX.Element {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return
+      if (overlayHasKeyboard()) return // 设计模块自己也认 Esc，别两边一起响应
       if (liveMaximizedNode(useStore.getState())) {
         e.preventDefault()
         useStore.getState().setMaximizedNode(null)
@@ -254,6 +274,10 @@ export function CanvasStage(): JSX.Element {
   // 键盘：Delete 删除选中 / ⌘D 复制选中（画布模式；分屏快捷键已按 viewMode 屏蔽）
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      // 全屏覆盖层在的时候一律让路。**这条最要紧**：设计模块里按 Delete 想删的是
+      // 它自己的图层，不该把画布上选中的节点删掉 —— 而且画布还是被盖住的，
+      // 人根本看不见自己删了什么。
+      if (overlayHasKeyboard()) return
       const el = e.target as HTMLElement | null
       const tag = el?.tagName
       // contentEditable 也要放行：便签正文就是这种，不排除的话在里面按删除键会把节点删掉
@@ -417,7 +441,9 @@ export function CanvasStage(): JSX.Element {
       const el = e.target as HTMLElement | null
       const tag = el?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
-      if (el?.closest?.('.design-node')) return
+      // 设计模块有自己的 undo。它 portal 到了 body，closest('.design-node') 够不着，
+      // 得靠状态判断（uiSlice.fullscreenOverlay）。
+      if (overlayHasKeyboard()) return
       e.preventDefault()
       const st = useStore.getState()
       // 栈空时什么都不发生 —— 这是撤销的通行行为，不值得为它引一套提示 UI
@@ -432,6 +458,7 @@ export function CanvasStage(): JSX.Element {
   useEffect(() => {
     const down = (e: KeyboardEvent): void => {
       const tag = (e.target as HTMLElement)?.tagName
+      if (overlayHasKeyboard()) return
       if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
         spaceHeld.current = true
         viewportRef.current?.classList.add('space-pan')
