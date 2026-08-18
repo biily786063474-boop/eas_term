@@ -693,8 +693,13 @@
   color: var(--fg-dim);
 }
 
-/* 用量：框内顶部一行小字，默认收起（点控件行那个表盘展开） */
+/* 仪表盘：框内顶部一行，默认收起（点控件行那个表盘展开）。
+   用量数字与额度 chip 同住一行 —— 同一类信息，同一个开关。 */
 .ac-gauge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
   font-size: 11px;
   color: var(--fg-dim);
   opacity: 0.85;
@@ -1165,4 +1170,36 @@
 .ac-quota.hot {
   color: #fda4af;
   border-color: rgba(244, 63, 94, 0.4);
+}
+
+/* 额度进度条。只在 CLI 真给了 utilization 时才渲染（五小时那条不带）。
+   跟上下文占用那条同粗同色系 —— 都是「还剩多少」，视觉语言不该有两套。 */
+.ac-quota {
+  gap: 5px;
+}
+.ac-quota-track {
+  position: relative;
+  width: 34px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.ac-quota-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: currentColor; /* 跟着 chip 的严重度变色，不另设一套 */
+  opacity: 0.75;
+  transition: width 0.3s ease;
+}
+.ac-quota-num {
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-quota-fill {
+    transition: none;
+  }
 }

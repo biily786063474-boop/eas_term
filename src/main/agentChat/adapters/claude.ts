@@ -14,7 +14,7 @@
 // --input-format stream-json 打开的 stdin 逐行写入（多轮会话靠同一个进程持续吃这些行），
 // 不经过 buildArgs：StartOpts 里没有 prompt 字段，写 stdin 是上层（会话胶水层）的职责。
 
-import { OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
 import { detectByWhich } from './detect.ts'
 import { createClaudeTranslator } from '../claudeEvents.ts'
@@ -79,7 +79,11 @@ export const claudeAdapter: CliAdapter = {
       // 只在 spawn 时传一次（还能吃到 prompt 缓存）。规范文本本身是共享的，
       // 见 shared/agentChat.ts 的 OUTPUT_STYLE_PROMPT。
       '--append-system-prompt',
-      OUTPUT_STYLE_PROMPT
+      // 开了审批保护时，把「先问再做」一并附上（伪无头：不装 hook、不阻塞，
+      // 让模型自己先说打算。取舍见 ASK_FIRST_PROMPT 的说明）。
+      // 拼成一条而不是传两次 --append-system-prompt：那个 flag 传两次的行为
+      // 没实测过，拼字符串是确定的。
+      opts.askFirst ? `${OUTPUT_STYLE_PROMPT}\n\n${ASK_FIRST_PROMPT}` : OUTPUT_STYLE_PROMPT
     ]
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)

@@ -176,7 +176,12 @@ export function AgentChatView({
     // 改成：默认不装，想要的人去右上角设置里开。对话框里不再出现任何相关 UI。
     // 内核那侧一个字没动 —— hook 的隔离标记、写前备份、一键卸载全都还在，
     // 只是入口从对话框搬进了设置面板（关掉开关会把已装的一并卸掉）。
-    const skipApprovalHook = !useStore.getState().agentApprovalHook
+    // 审批保护现在走**伪无头**那条路：不装 hook、不阻塞任何工具调用，
+    // 而是把「先问再做」附进系统提示，让模型自己在动手前说明并等回复
+    //（取舍见 shared/agentChat.ts 的 ASK_FIRST_PROMPT：软约定 vs 硬拦截）。
+    // 所以 skipApprovalHook 恒为真 —— 那条 hook 路径整个不走了。
+    const askFirst = useStore.getState().agentApprovalHook
+    const skipApprovalHook = true
 
     let result: AgentChatStartResult
     try {
@@ -192,13 +197,14 @@ export function AgentChatView({
         cwd,
         message,
         skipApprovalHook,
+        askFirst,
         ...(savedResumeId ? { resumeId: savedResumeId } : {})
       })
       if (!result.ok && savedResumeId) {
         // 带着旧会话 id 起不来 → 多半是那个会话在 CLI 那边已经没了。
         // 清掉它重来一次，代价只是这次接不上上下文，总好过节点永久报废。
         setAgentResumeId(tabId, leafId, '')
-        result = await window.api.agentChat.start({ cli: selected.id, cwd, message, skipApprovalHook })
+        result = await window.api.agentChat.start({ cli: selected.id, cwd, message, skipApprovalHook, askFirst })
       }
     } catch (e) {
       if (aliveRef.current) {

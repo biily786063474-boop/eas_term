@@ -51,3 +51,9 @@ test('quotaText 把窗口、状态、倒计时拼成一句人话', () => {
   // 没有 resetsAt 时不硬凑倒计时
   assert.equal(quotaText({ window: 'five_hour', status: 'allowed' }, now), '五小时额度')
 })
+
+test('**allowed_warning 判为「该注意」** —— 实测七天窗口 79% 时就是这个状态', () => {
+  // 精确等于 'allowed' 那一支不会误吞它（那样会把一次真实的告警当成正常）
+  assert.equal(severityOf('allowed_warning'), 1)
+  assert.equal(severityOf('allowed'), 0)
+})

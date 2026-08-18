@@ -595,7 +595,7 @@ test('quota 事件按窗口去重，同一个窗口只留最新（五小时和�
   ])
   assert.equal(v.quotas.length, 2, '同一个窗口不该堆成两条')
   assert.deepEqual(v.quotas.find((q) => q.window === 'five_hour'), {
-    window: 'five_hour', status: 'rejected', resetsAt: 300
+    window: 'five_hour', status: 'rejected', resetsAt: 300, utilization: undefined
   })
   assert.equal(v.quotas.find((q) => q.window === 'weekly')?.status, 'allowed')
 })

@@ -198,7 +198,7 @@ test('rate_limit_event 翻成 quota，窗口/状态/重置时刻原样带出', (
     }) + '\n'
   )
   assert.deepEqual(out, [
-    { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 1786996800 }
+    { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 1786996800, utilization: undefined }
   ])
 })
 
@@ -235,3 +235,37 @@ test('resetsAt 不是数字时不带出来（不许让界面拿一个坏值去�
   )
   assert.ok(out[0].k === 'quota' && out[0].resetsAt === undefined)
 })
+
+test('**七天窗口带 utilization，五小时不带** —— 按需出现，不能假设都在', () => {
+  const t = createClaudeTranslator()
+  const week = t.push(
+    JSON.stringify({
+      type: 'rate_limit_event',
+      rate_limit_info: {
+        status: 'allowed_warning', resetsAt: 1786852800, rateLimitType: 'seven_day',
+        utilization: 0.79, surpassedThreshold: 0.75
+      }
+    }) + '\n'
+  )
+  assert.ok(week[0].k === 'quota' && week[0].utilization === 0.79)
+  const five = t.push(
+    JSON.stringify({
+      type: 'rate_limit_event',
+      rate_limit_info: { status: 'allowed', resetsAt: 1786996800, rateLimitType: 'five_hour' }
+    }) + '\n'
+  )
+  assert.ok(five[0].k === 'quota' && five[0].utilization === undefined, '没带就是没带，不许倒推')
+})
+
+test('utilization 是坏值时夹回合法区间或丢弃（别让进度条冲出容器）', () => {
+  const t = createClaudeTranslator()
+  const mk = (u: unknown): unknown => {
+    const o = t.push(JSON.stringify({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'w', utilization: u } }) + '\n')[0]
+    return o.k === 'quota' ? o.utilization : 'NOT_QUOTA'
+  }
+  assert.equal(mk(1.7), 1)
+  assert.equal(mk(-0.2), 0)
+  assert.equal(mk(NaN), undefined)
+  assert.equal(mk('0.5'), undefined)
+})
+

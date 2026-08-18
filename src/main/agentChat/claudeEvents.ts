@@ -75,9 +75,12 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
   // ---- rate_limit_event：订阅额度窗口 ----
   //
   // 实测 payload（2026-08-17）：
-  //   { type:'rate_limit_event', rate_limit_info:{ status:'allowed',
-  //     resetsAt:1786996800, rateLimitType:'five_hour', overageStatus:'rejected',
-  //     overageDisabledReason:'out_of_credits', isUsingOverage:false } }
+  //   五小时（无用量）：{ status:'allowed', resetsAt:1786996800,
+  //                        rateLimitType:'five_hour', overageStatus:'rejected', … }
+  //   七天（有用量）：  { status:'allowed_warning', resetsAt:1786852800,
+  //                        rateLimitType:'seven_day', utilization:0.79,
+  //                        surpassedThreshold:0.75 }
+  // **字段按需出现，不能假设都在。**
   //
   // **原样透传 window / status，不做枚举映射**：这是要显示给用户看的信息，
   // 枚举漏了一种新窗口类型就会被静默丢掉，而那正是用户最想知道的那次。
@@ -93,7 +96,12 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
         k: 'quota',
         window,
         status,
-        resetsAt: typeof r.resetsAt === 'number' ? r.resetsAt : undefined
+        resetsAt: typeof r.resetsAt === 'number' ? r.resetsAt : undefined,
+        // 0~1 的已用比例。夹到合法区间：坏值让进度条冲出容器比不显示更糟
+        utilization:
+          typeof r.utilization === 'number' && Number.isFinite(r.utilization)
+            ? Math.min(1, Math.max(0, r.utilization))
+            : undefined
       }
     ]
   }

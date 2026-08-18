@@ -39,7 +39,10 @@ export function SettingsPanel(): JSX.Element {
   })
   const [checking, setChecking] = useState(false)
   const [checkMsg, setCheckMsg] = useState<string | null>(null)
-  // 审批保护：开关本身是渲染层偏好，但关掉时要顺带把已经写进各项目的钩子卸干净
+  // 「先问再做」开关。**现在走的是伪无头那条路**（系统提示，见 ASK_FIRST_PROMPT），
+  // 不再往用户项目里装 PreToolUse hook。
+  // 关掉时那段卸载逻辑**保留着**：更早的版本真的装过 hook，那些文件还在用户仓库里，
+  // 这是唯一能清掉它们的入口。装过才有得卸，没装过就是一句「没有项目装过」。
   const approvalHook = useStore((s) => s.agentApprovalHook)
   const setApprovalHook = useStore((s) => s.setAgentApprovalHook)
   const [hookBusy, setHookBusy] = useState(false)
@@ -47,14 +50,14 @@ export function SettingsPanel(): JSX.Element {
 
   const toggleApprovalHook = async (on: boolean): Promise<void> => {
     setHookMsg(null)
-    // 开：只改意愿，钩子等下次起会话时按项目装（那时才知道是哪个 cwd）
+    // 开：只改意愿。新会话起来时会把「先问再做」附进系统提示，不写任何文件
     if (on) {
       setApprovalHook(true)
       return
     }
-    // 关：把已注册项目里装过的一并卸掉。
-    // **不能只改开关就完事** —— 那些钩子已经写进用户的仓库了，留着的话
-    // 关了开关它照样每次拦截，而界面上再没有任何地方能卸它（对话框里的入口已经撤了）。
+    // 关：顺带清掉**旧版本**装进各项目的 PreToolUse hook。
+    // 现在这条路不装 hook 了，但那些文件还躺在用户仓库里，留着照样每次拦截，
+    // 而界面上再没有别的地方能卸它 —— 这是唯一的清理入口。
     setApprovalHook(false)
     const projects = useStore.getState().projects
     if (!projects.length) return
@@ -171,15 +174,15 @@ export function SettingsPanel(): JSX.Element {
                     onChange={(e) => void toggleApprovalHook(e.target.checked)}
                   />
                   <span className="cset-rowname">
-                    审批保护：每次执行命令或改文件前先问一句
+                    先问再做：动手前先说明意图，等你回复
                   </span>
                 </label>
                 <div className="cset-sub">
                   {hookBusy
                     ? '处理中…'
                     : approvalHook
-                      ? '新开的对话会在对应项目里装一个 PreToolUse 钩子（写 .claude/settings.json，原文件先备份）。关掉这个开关会把已经装过的一起卸干净。'
-                      : '关着时工具调用按 CLI 自己的默认权限执行，不会逐次征求同意。'}
+                      ? '通过系统提示让模型在改文件/执行命令前先说明打算、等你回一句。不打断进程、不写任何配置文件，只读操作照常直接做。这是软约定——靠模型遵守，不是强制拦截。'
+                      : '关着时模型按 CLI 自己的默认权限直接执行，不会先征求同意。'}
                 </div>
                 {hookMsg && <div className="cset-sub">{hookMsg}</div>}
               </div>

@@ -38,6 +38,9 @@ export interface SessionRecord {
    *  restart，如果 effectiveOpts 不把它带上，每次 restart 都会静默变回"要装"，
    *  用户明确拒绝过的选择形同虚设（原样照抄 sandbox 字段头顶那段注释的论证）。 */
   skipApprovalHook?: boolean
+  /** 「先问再做」模式。跟 sandbox / skipApprovalHook 一样要带过 restart ——
+   *  不带的话空闲回收后重开，模型就不再先问了，而界面上开关还开着 */
+  askFirst?: boolean
 }
 
 /** 一个活会话是否已经空闲超过阈值、该回收了。
@@ -97,6 +100,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     effort: s.pending?.effort ?? s.effort,
     resumeId: s.resumeId,
     sandbox: s.sandbox,
-    skipApprovalHook: s.skipApprovalHook
+    skipApprovalHook: s.skipApprovalHook,
+    askFirst: s.askFirst
   }
 }

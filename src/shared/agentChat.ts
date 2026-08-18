@@ -50,10 +50,12 @@ export type ChatEvent =
    *      overageStatus:'rejected', overageDisabledReason:'out_of_credits',
    *      isUsingOverage:false }
    *
-   *  **注意它给了什么、没给什么**：给了窗口类型和重置时刻，
-   *  **没有给「已经用了百分之多少」**。所以这里也只带得出这些 ——
-   *  界面上宁可显示「五小时窗口 · 2 小时后重置」，也不要编一个进度百分比。
-   *  哪天样本里出现了用量字段，再扩这个事件。 */
+   *  **字段是按需出现的，不能假设都在**。实测两种形态：
+   *    five_hour: { status:'allowed', resetsAt, rateLimitType }            ← 没有用量
+   *    seven_day: { status:'allowed_warning', resetsAt, rateLimitType,
+   *                 utilization:0.79, surpassedThreshold:0.75 }            ← 有用量
+   *  所以 utilization 是可选的：有就显示进度，没有就只显示窗口和重置时间，
+   *  **绝不拿别的字段倒推一个百分比**。 */
   | {
       k: 'quota'
       /** 哪个窗口。CLI 报什么就是什么（five_hour / weekly / …），不做枚举——
@@ -63,6 +65,10 @@ export type ChatEvent =
       status: string
       /** 这个窗口什么时候重置（Unix 秒）。拿不到就是 undefined */
       resetsAt?: number
+      /** 已用比例 0~1。**不是每条都有** —— 实测五小时那条没带，
+       *  七天那条带了（`utilization: 0.79`，同时 status 是 allowed_warning）。
+       *  拿不到就是 undefined，界面据此决定显不显示进度，绝不拿别的字段推算。 */
+      utilization?: number
     }
   | { k: 'error'; message: string; fatal: boolean }
 
@@ -90,6 +96,10 @@ export interface StartOpts {
    *  未给这个字段（undefined）时按 false 处理——没声明就是"照常装"，不能让老代码
    *  路径因为多了这个字段而意外改变行为。 */
   skipApprovalHook?: boolean
+  /** 「先问再做」模式（伪无头审批）。开了就把 ASK_FIRST_PROMPT 附进系统提示，
+   *  让模型在动手前先说明并等回复 —— 不装 hook、不阻塞进程。
+   *  与 skipApprovalHook 是两条独立的路：那条管硬拦截，这条管软约定。 */
+  askFirst?: boolean
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts
@@ -242,4 +252,25 @@ export const OUTPUT_STYLE_PROMPT = [
   '- 标题最多用到三级（###），几句话能说完的回答直接写，不要套标题。',
   '- 不要使用水平分隔线（---）。',
   '- 文件名、路径、命令、标识符用行内代码标记。'
+].join('\n')
+
+/** 「先问再做」的系统提示 —— 设置里打开审批保护时附加上去。
+ *
+ *  **这是伪无头模式**：不装任何 hook、不阻塞任何工具调用，靠的是让模型自己
+ *  在动手前把打算说出来、等你回一句。从 CLI 的角度它仍然是完全无头的
+ *  （没有交互式权限提示、没有卡住的进程），从你的角度就是一次正常对话。
+ *
+ *  **和 PreToolUse hook 的取舍，写清楚免得以后有人当成等价替换**：
+ *    hook  = 硬拦截。进程真的停在那里等你点，模型绕不过去；代价是要往用户项目里
+ *            写 .claude/settings.json，而且每次工具调用都打断一次。
+ *    这条  = 软约定。零侵入、体验就是对话；但它是**模型自愿遵守的**，
+ *            没有任何机制保证它一定先问。
+ *  所以设置里那句话必须如实说明这一点，不能让人以为开了就万无一失。 */
+export const ASK_FIRST_PROMPT = [
+  '在执行下列操作之前，先用一两句话说明你打算做什么，然后停下等我回复，不要直接动手：',
+  '- 运行会改动文件或系统状态的命令',
+  '- 创建、修改、删除文件',
+  '- 任何不可逆或影响范围超出当前项目的操作',
+  '只读的操作（查看文件、搜索、列目录）不用问，直接做。',
+  '我回复「可以」「继续」或给出具体指示后，再执行。'
 ].join('\n')

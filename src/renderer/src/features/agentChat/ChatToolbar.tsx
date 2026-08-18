@@ -230,7 +230,40 @@ export function ChatToolbar({
           void pics.takeFiles([...e.dataTransfer.files])
         }}
       >
-        {showGauge && !!usageText && <div className="ac-gauge-row">{usageText}</div>}
+        {/* 仪表盘：用量数字 + 订阅额度，**同一个开关管**，默认收起。
+            它们是同一类东西（想知道的时候才看的数字），分成两个开关只是多一次点击。 */}
+        {showGauge && (!!usageText || view.quotas.length > 0) && (
+          <div className="ac-gauge-row">
+            {!!usageText && <span>{usageText}</span>}
+            {view.quotas.map((q) => {
+              const sev = severityOf(q.status)
+              const left = untilReset(q.resetsAt, Date.now())
+              return (
+                <span
+                  key={q.window}
+                  className={`ac-quota${sev === 2 ? ' hot' : sev === 1 ? ' warm' : ''}`}
+                  data-tip={quotaText(q, Date.now())}
+                >
+                  {windowLabel(q.window)}
+                  {/* 进度只在 CLI 真给了 utilization 时才画。实测五小时那条没带、
+                      七天那条带了 —— 没有就只显示窗口和倒计时，不倒推一个百分比。 */}
+                  {typeof q.utilization === 'number' && (
+                    <>
+                      <span className="ac-quota-track">
+                        <span
+                          className="ac-quota-fill"
+                          style={{ width: `${Math.round(q.utilization * 100)}%` }}
+                        />
+                      </span>
+                      <span className="ac-quota-num">{Math.round(q.utilization * 100)}%</span>
+                    </>
+                  )}
+                  {left ? ` ${left}` : ''}
+                </span>
+              )
+            })}
+          </div>
+        )}
         {pics.err && <div className="ac-inline-err">{pics.err}</div>}
 
         {/* 图片区：快照占位块和已带上的图排在同一行，都是「这条消息要带的东西」 */}
@@ -308,26 +341,6 @@ export function ChatToolbar({
               <span className="ac-ctx-num">{ctxPct}%</span>
             </div>
           )}
-
-          {/* 订阅额度。**没有百分比是因为 CLI 那条事件里就没有这个字段** ——
-              rate_limit_event 给的是窗口类型、状态、重置时刻（实测样本见 shared 里
-              quota 事件的说明）。宁可显示「五小时 · 2小时14分后重置」，
-              也不要编一个看起来精确的进度条。
-              每个窗口一个 chip（五小时和周各一条），只在 CLI 报过之后才出现。 */}
-          {view.quotas.map((q) => {
-            const sev = severityOf(q.status)
-            const left = untilReset(q.resetsAt, Date.now())
-            return (
-              <span
-                key={q.window}
-                className={`ac-quota${sev === 2 ? ' hot' : sev === 1 ? ' warm' : ''}`}
-                data-tip={quotaText(q, Date.now())}
-              >
-                {windowLabel(q.window)}
-                {left ? ` ${left}` : ''}
-              </span>
-            )
-          })}
 
           {model.showModel && (
             <div
@@ -420,11 +433,11 @@ export function ChatToolbar({
             </button>
           )}
 
-          {!!usageText && (
+          {(!!usageText || view.quotas.length > 0) && (
             <button
               type="button"
               className={`ac-bar-btn${showGauge ? ' on' : ''}`}
-              data-tip={showGauge ? '收起用量' : '展开用量（输入/输出/缓存/花费）'}
+              data-tip={showGauge ? '收起仪表盘' : '展开仪表盘（用量与订阅额度）'}
               onClick={() => {
                 const next = !showGauge
                 setShowGauge(next)

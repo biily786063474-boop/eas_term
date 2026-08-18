@@ -68,6 +68,9 @@ export interface Quota {
   window: string
   status: string
   resetsAt?: number
+  /** 已用比例 0~1。**不是每个窗口都有**（实测五小时没带、七天带了），
+   *  拿不到就别显示进度——同 contextRatio 那条原则 */
+  utilization?: number
 }
 
 export interface ChatView {
@@ -135,7 +138,12 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     // 额度：同一个窗口只留最新一条（就地更新，不堆历史——界面只关心"现在怎么样"）
     if (e.k === 'quota') {
       const i = quotas.findIndex((q) => q.window === e.window)
-      const next = { window: e.window, status: e.status, resetsAt: e.resetsAt }
+      const next = {
+        window: e.window,
+        status: e.status,
+        resetsAt: e.resetsAt,
+        utilization: e.utilization
+      }
       if (i >= 0) quotas[i] = next
       else quotas.push(next)
     }

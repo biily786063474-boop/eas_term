@@ -549,7 +549,9 @@ export function registerAgentChatHandlers(): void {
       resumeId: typeof p.resumeId === 'string' ? p.resumeId : undefined,
       // === true 而不是 Boolean(p.skipApprovalHook)：params 来自 unknown，任何非严格
       // 布尔值（字符串 'true'、1……）一律当没给，照旧装 hook，不猜用户意图。
-      skipApprovalHook: p.skipApprovalHook === true
+      skipApprovalHook: p.skipApprovalHook === true,
+      // 伪无头审批：不装 hook、不阻塞，靠系统提示让模型先问（见 ASK_FIRST_PROMPT）
+      askFirst: p.askFirst === true
     }
     const live: Live = {
       rec,

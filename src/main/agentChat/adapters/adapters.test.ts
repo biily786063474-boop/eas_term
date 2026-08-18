@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
-import { OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -372,4 +372,33 @@ test('effort 取值与 `claude --help` 声明的一字不差（low, medium, high
   // 表现是命令静默无效，界面上却显示已经切过去了。
   const ids = (getAdapter('claude')!.capabilities.effortLevels ?? []).map((e) => e.id)
   assert.deepEqual(ids, ['low', 'medium', 'high', 'xhigh', 'max'])
+})
+
+// ── 伪无头审批（2026-08-17）────────────────────────────────
+// 不装 hook、不阻塞进程，靠系统提示让模型先说打算。取舍见 ASK_FIRST_PROMPT。
+
+test('askFirst 关着时系统提示只有输出格式约定', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x' })
+  const i = args.indexOf('--append-system-prompt')
+  assert.equal(args[i + 1], OUTPUT_STYLE_PROMPT, '没开就不该塞进「先问再做」')
+})
+
+test('askFirst 开着时把「先问再做」拼进同一条系统提示', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x', askFirst: true })
+  const i = args.indexOf('--append-system-prompt')
+  const v = args[i + 1]
+  assert.ok(v.includes(OUTPUT_STYLE_PROMPT), '输出格式约定不能被挤掉')
+  assert.ok(v.includes(ASK_FIRST_PROMPT), '缺了「先问再做」')
+  // 拼一条而不是传两次 --append-system-prompt：那个 flag 传两次的行为没实测过
+  assert.equal(args.filter((a) => a === '--append-system-prompt').length, 1)
+})
+
+test('「先问再做」明确豁免只读操作——不然查个文件都要问一遍，没法用', () => {
+  assert.ok(ASK_FIRST_PROMPT.includes('只读'))
+})
+
+test('askFirst 不改动任何与 hook 相关的启动参数（两条路互不相干）', () => {
+  const a = getAdapter('claude')!.buildArgs({ cwd: '/x', askFirst: true }).args
+  const b = getAdapter('claude')!.buildArgs({ cwd: '/x' }).args
+  assert.equal(a.length, b.length, '只该换掉系统提示的内容，不该多出参数')
 })
