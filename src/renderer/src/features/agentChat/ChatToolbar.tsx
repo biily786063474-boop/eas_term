@@ -29,6 +29,7 @@ import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
 import { ChipIcon, CloseIcon, CompressIcon, GaugeIcon, ImageIcon, SendIcon } from '../../ui/Icons'
 import { usePastedImages } from '../terminal/usePastedImages'
+import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 
 const MAX_ROWS = 4
 const LINE_H = 19
@@ -304,16 +305,19 @@ export function ChatToolbar({
           className="ac-composer"
           rows={1}
           value={text}
-          placeholder="继续和它说…（Enter 发送，Shift+Enter 换行，可粘贴/拖入图片）"
+          placeholder={`继续和它说…（${SEND_HINT}，可粘贴/拖入图片）`}
           onChange={(e) => {
             setText(e.target.value)
             autoGrow(e.target)
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              submit()
-            }
+            // isComposing 只在原生事件上（见 sendKey.ts）—— 中文输入法选候选词时
+            // 按回车是「确认」不是「发送」，取错字段就会把没打完的句子发出去
+            const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
+              isComposing: e.nativeEvent.isComposing }
+            if (!isSendKey(k)) return
+            if (shouldPreventDefault(k)) e.preventDefault()
+            submit()
           }}
           onPaste={(e) => {
             const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
@@ -463,7 +467,7 @@ export function ChatToolbar({
           <button
             type="button"
             className="ac-bar-send"
-            data-tip="发送（Enter）"
+            data-tip={`发送（${SEND_HINT.split('，')[0]}）`}
             onClick={submit}
             disabled={!text.trim() && !pics.imgs.length}
           >

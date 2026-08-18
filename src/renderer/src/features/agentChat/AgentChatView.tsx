@@ -26,6 +26,7 @@ import { SendIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
+import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 
 /** 归约器（reduce.ts）**从不产出 `Turn.role: 'user'`**——内核的事件流里没有「用户消息」
  *  事件，CLI 不回显用户输入。用户自己发出去的文本在渲染层是同步已知的（按下发送那一刻
@@ -369,12 +370,15 @@ export function AgentChatView({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                void handleSend()
-              }
+              // isComposing 只在**原生事件**上，React 的合成事件没有这个字段 ——
+              // 取错了等于没做输入法保护（判据见 sendKey.ts）
+              const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
+                isComposing: e.nativeEvent.isComposing }
+              if (!isSendKey(k)) return
+              if (shouldPreventDefault(k)) e.preventDefault()
+              void handleSend()
             }}
-            placeholder="跟 AI 说点什么…（Enter 发送，Shift+Enter 换行）"
+            placeholder={`跟 AI 说点什么…（${SEND_HINT}）`}
             rows={3}
             autoFocus
             disabled={phase.k === 'starting'}
