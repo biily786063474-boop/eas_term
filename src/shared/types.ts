@@ -593,6 +593,22 @@ export interface AgentInstallInfo {
   options: InstallOption[]
   /** 装完之后用来登录 / 启动的命令 */
   loginHint: string
+  /**
+   * 装了之后能用在哪。**由数据声明，不在 UI 里按 CLI 名字判断** ——
+   * 否则加一个 CLI 就要去界面里补一条 if，而那种补丁必然漏。
+   *
+   * 存在的理由：dsh 在终端里能用（MCP 工具、skill、AGENTS.md 指引全生效），
+   * 但**不能用于 AI 对话面板** —— 它的 headless 模式只打印最终消息，没有流式和
+   * 工具事件，写不出 adapter。用户装完发现对话框里选不了它，会以为装坏了。
+   */
+  scope: {
+    /** 能被 Eas-Term 直接驱动跑对话（面 6：agentChat 的 adapter） */
+    chat: boolean
+    /** 能在终端里用上 Eas-Term 的能力（面 1/2/3：指引 + skill + MCP） */
+    terminal: boolean
+    /** 一句话说明，写给用户看的。空 = 全都支持，不用额外解释 */
+    note?: string
+  }
 }
 
 export interface InstallPlan {

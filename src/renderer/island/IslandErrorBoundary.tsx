@@ -9,6 +9,8 @@
 // 如果连它自己都要依赖外部样式表才能显示，样式表恰好也出问题的那种复合故障就会两手空空。
 import { Component, ReactNode, createRef } from 'react'
 
+import { briefError } from './islandBrief'
+
 interface Props {
   children: ReactNode
 }
@@ -18,13 +20,23 @@ interface State {
 
 const FALLBACK_STYLE: React.CSSProperties = {
   boxSizing: 'border-box',
-  padding: '9px 14px',
+  padding: '8px 14px',
   borderRadius: '0 0 10px 10px',
   background: '#000',
   color: '#fda4af',
   font: '12px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif',
   whiteSpace: 'nowrap'
 }
+/** 错误摘要那行：比主文案暗一档、小一号，长了截断。 */
+const DETAIL_STYLE: React.CSSProperties = {
+  marginTop: 3,
+  color: '#9ca3af',
+  fontSize: 10.5,
+  maxWidth: 420,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis'
+}
+
 
 export class IslandErrorBoundary extends Component<Props, State> {
   state: State = { error: null }
@@ -62,8 +74,13 @@ export class IslandErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (!this.state.error) return this.props.children
     return (
+      // **必须把错误本身显示出来。** 原来只有一句「出错了」—— 用户看到的和
+      // 什么都没看到一样（他的原话是「我又报错了，我看不到错误」）。
+      // 岛的致命错误会落 <userData>/island-error.log，但那要人知道去哪找；
+      // 摘要摆在眼前，至少能直接告诉别人「它说的是 TypeError xxx」。
       <div ref={this.ref} style={FALLBACK_STYLE}>
-        灵动岛出错了，右键 Dock 图标可重新打开
+        <div>灵动岛出错了，右键 Dock 图标可重新打开</div>
+        <div style={DETAIL_STYLE}>{briefError(this.state.error)}</div>
       </div>
     )
   }
