@@ -53,6 +53,7 @@ import {
 } from './canvas/todoBoard'
 import type { PersistedCanvas } from './canvas/persist'
 import { track } from '../features/notify/track'
+import { soleFrameIdOfSel } from './canvas/selKey'
 
 // 这些是画布对外的公开接口，调用点一直从 './canvasSlice' 取，拆分后原样转出去
 export type {
@@ -84,8 +85,11 @@ let commitScaleTimer: ReturnType<typeof setTimeout> | null = null
  *  子 Frame 自己不带 projectId（那是顶层 Frame 的字段），得沿 parentId 往上找。
  *  返回空对象表示「这次不改」——展开进 set 的返回值里刚好是无操作。 */
 function followSel(s: AppState, keys: string[]): { activeProjectId?: string } {
-  if (keys.length !== 1 || !keys[0].startsWith('f:')) return {}
-  let f = s.canvas.frames.find((x) => x.id === keys[0].slice(2))
+  // 「选中的东西在哪个 Frame 里」——选中 Frame 本身、或选中它里面的节点，都算。
+  // 判据在 store/canvas/selKey.ts，skill 面板用的是同一份。
+  const fid = soleFrameIdOfSel(keys)
+  if (!fid) return {}
+  let f = s.canvas.frames.find((x) => x.id === fid)
   // 上限 8 层纯粹是防呆：数据坏掉出现环时不至于把界面卡死
   for (let i = 0; f && !f.projectId && f.parentId && i < 8; i++) {
     const pid: string = f.parentId

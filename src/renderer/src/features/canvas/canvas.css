@@ -4577,22 +4577,64 @@
   white-space: nowrap;
   text-align: left;
 }
-/* 选中了项目 Frame：目录固定成该项目的 `.claude/skills`，不给切换，只给一行说明 */
-.skl-scope {
+/* ── 来源分段的段头 ────────────────────────────────────────────────────
+   选中项目 Frame 时，项目级与全局的 skill 上下并存（skillSections.ts）。
+   段头只在两段同时存在时出现——只有一段的话，工具栏那个目录按钮已经说明了来源。 */
+.skl-sec {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.skl-sec-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--glass-border);
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: none;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--fg-dim);
-  font-size: 11.5px;
+  background: transparent;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
 }
-.skl-scope span {
+.skl-sec-head:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+/* 来源标注。项目级用强调色，全局用中性灰——一眼分得清哪些是这个项目自己的 */
+.skl-sec-tag {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+.skl-sec-tag.project {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+  border-color: rgba(var(--accent-rgb), 0.32);
+}
+.skl-sec-tag.global {
+  color: var(--fg-dim);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--glass-border);
+}
+.skl-sec-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.skl-sec-count {
+  flex: none;
+  color: var(--fg-dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 .skl-adderr {
   margin: 8px 8px 0;
@@ -4861,5 +4903,112 @@
     transition:
       background 0.18s,
       border-color 0.18s;
+  }
+}
+
+/* ---------- 知识资产抽屉：模式切换胶囊 ----------
+   住在 .wk-shell 里、抽屉本体左侧。**因为在壳里，所以它就是抽屉的一部分**：
+   开合跟着壳走（不用自己的 transform）、outside-click 判壳时自然包含它
+   （不用豁免名单）、抽屉的 overflow:hidden 只裁抽屉自己的内容，裁不到它。
+
+   前两版分别栽在这两点上：放抽屉里被裁掉、放外面点了就触发收起。 */
+.wk-seg {
+  position: absolute;
+  left: -32px; /* 抽屉左边缘再往外：胶囊宽 24 + 悬浮的 8 */
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* **收起时不显示。** 壳的位移已经把它带出画面，这里再淡出一层：
+     一是动画过程中不会有个小东西从边上飘过，二是万一以后有人调宽度、
+     位移量算漏了，它也不会突然露在画布上（那正是上一版把展开触发条压住的原因）。 */
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+.wk-shell.open .wk-seg {
+  opacity: 1;
+}
+
+.wk-seg-btn {
+  /* 竖排中文。vertical-rl + upright 才是中文竖排的正解 */
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.12em;
+  /* 等高：三个字四个字一样高。整体比第一版小一圈（34×78 → 24×52） */
+  height: 52px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* 胶囊：两端全圆 */
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-3);
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  /* 悬浮：投影把它从画布上托起来 */
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.3);
+  transition:
+    color 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+.wk-seg-btn:hover:not(.on) {
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+.wk-seg-btn.on {
+  color: var(--fg);
+  background: var(--accent-soft);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 收起态由 transform 表达，终态要留着，只停过渡 */
+  .wk-seg,
+  .wk-seg-btn {
+    transition: none;
+  }
+}
+
+
+/* 「插入文件」选择器的过滤三选一。原来是一个只在「最近」模式出现的复选框，
+   现在两种模式都在——插图片进画布是这个选择器最常见的用途之一，
+   却只能靠肉眼在一堆代码文件里找。 */
+.cpk-filters {
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 6px;
+}
+.cpk-filters button {
+  flex: 1;
+  padding: 3px 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.cpk-filters button:hover {
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+.cpk-filters button.on {
+  color: var(--fg);
+  background: var(--accent-soft);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cpk-filters button {
+    transition: none;
   }
 }

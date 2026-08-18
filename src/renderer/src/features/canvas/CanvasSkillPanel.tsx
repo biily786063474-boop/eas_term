@@ -1,19 +1,28 @@
-// Skill 管理面板。挂在 CanvasWikiDrawer 里：抽屉左上角名称切到「Skill」时，整个内容换成
-// 这个组件（知识库那套 UI 完全不显示，是下拉切换、不是上下分区，见 design 文档 §六 第 5 条）。
+// Skill 管理面板。挂在 CanvasWikiDrawer 里：抽屉左上角的胶囊切到「技能库」时，整个内容换成
+// 这个组件（知识库那套 UI 完全不显示，是整换、不是上下分区，见 design 文档 §六 第 5 条）。
 //
 // 完整背景见 docs/superpowers/specs/2026-08-14-skill管理面板-design.md。
 // 这个文件负责四件事里的三件（第四件是 MCP 分类口子，在 mcpHandler.ts）：
 //   1. 右键复制 skill → 切到别的目录 → 空白处右键粘贴（真的复制文件，重名拒绝）
 //   2. 右键临时禁用 / 恢复（只写清单，不动文件；面板上置灰并说明只在本软件生效）
 //   3. 文件树条目拖到画布上，落成**可编辑**节点（复用 useOpenInCanvas，和知识库同一条路）
+//
+// ── 来源分段（项目级 + 全局并存）─────────────────────────────────────────
+// 早先选中项目 Frame 时，面板把目录**整个换成**该项目的 `.claude/skills`，
+// 全局那几个目录连同下拉按钮一起消失。但在项目里干活时用得最多的恰恰是全局 skill
+// （项目级通常只有寥寥几个，全局上百个），把常用的那批藏起来是反的。
+// 现在两段并存：**项目段在上、全局段在下，各自带来源标注**。
+// 分段规则本身是纯函数，在 skillSections.ts，可单测。
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useStore } from '../../store'
 import { projectIdOfFrame } from '../../store/canvasSlice'
+import { soleFrameIdOfSel } from '../../store/canvas/selKey'
 import type { SkillDirEntry, SkillInfo, SkillListResult } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
+import { planSkillSections, type SkillSection } from './skillSections'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
-import { ChevronRightIcon, CheckIcon, PlusIcon, FolderIcon, CopyIcon } from '../../ui/Icons'
+import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon } from '../../ui/Icons'
 
 /** 项目 Frame 的「项目 skill」目录：约定死的相对路径，不需要用户选。
  *  用模板字符串拼、不引 Node 的 path 模块——渲染层历来这么拼路径
@@ -33,12 +42,13 @@ export function CanvasSkillPanel(): JSX.Element {
   const frames = useStore((s) => s.canvas.frames)
   const projects = useStore((s) => s.projects)
 
-  // 只认「单选一个 Frame」，和 canvasSlice.ts 的 followSel 同一个判据——画布上选中
-  // 一个 Frame 时「切到该项目」这件事，用户在别处（抽屉项目高亮）已经见过一次，
-  // 这里用同一条规则，不会出现「这里判定选中了，那里没高亮」的两套标准。
+  // 判据是「选中的东西在哪个 Frame 里」，不是「选中的是不是 Frame 本身」——
+  // 点中项目 Frame 里的一个终端/文件节点同样算在这个项目里（用户明确要的语义）。
+  // 映射规则在 store/canvas/selKey.ts，canvasSlice.ts 的 followSel 用的是同一份，
+  // 不会出现「这里判定选中了，抽屉里那个项目却没高亮」的两套标准。
   const selectedProjectId = useMemo(() => {
-    if (canvasSel.length !== 1 || !canvasSel[0].startsWith('f:')) return null
-    return projectIdOfFrame(frames, canvasSel[0].slice(2))
+    const fid = soleFrameIdOfSel(canvasSel)
+    return fid ? projectIdOfFrame(frames, fid) : null
   }, [canvasSel, frames])
   const selectedProject = useMemo(
     () => (selectedProjectId ? (projects.find((p) => p.id === selectedProjectId) ?? null) : null),
@@ -50,13 +60,18 @@ export function CanvasSkillPanel(): JSX.Element {
   const [dirMenuAt, setDirMenuAt] = useState<{ x: number; y: number } | null>(null)
   const [notice, setNotice] = useState<{ text: string; bad: boolean } | null>(null)
 
-  const [result, setResult] = useState<SkillListResult | null>(null)
+  /** 每段一份结果，按段的 path 索引。段是并列的，一段读失败不该影响另一段。 */
+  const [results, setResults] = useState<Record<string, SkillListResult>>({})
   const [loading, setLoading] = useState(true)
   const [reloadKey, setReloadKey] = useState(0)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+  const [collapsedSecs, setCollapsedSecs] = useState<Set<string>>(new Set())
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
-  /** 右键菜单：skill 为 null 表示点在面板空白处（那时只出「粘贴」） */
-  const [menu, setMenu] = useState<{ x: number; y: number; skill: SkillInfo | null } | null>(null)
+  /** 右键菜单：skill 为 null 表示点在空白处（那时只出「粘贴」）。
+   *  destPath 是「粘到哪」——点在哪一段的地盘上就粘到哪一段，见 menuItems。 */
+  const [menu, setMenu] = useState<{ x: number; y: number; skill: SkillInfo | null; destPath: string | null } | null>(
+    null
+  )
   const [clip, setClip] = useState<SkillClip | null>(null)
 
   // skill 文件 → 画布：可编辑节点（跟知识库那条只读的路共用同一份实现，只差这两个参数）。
@@ -82,32 +97,47 @@ export function CanvasSkillPanel(): JSX.Element {
     }
   }, [])
 
-  const activeDir: { label: string; path: string } | null = selectedProject
-    ? { label: `项目 · ${selectedProject.name}`, path: projectSkillDir(selectedProject.path) }
-    : (dirs.find((d) => d.id === dirId) ?? null)
+  const globalDir = useMemo(() => dirs.find((d) => d.id === dirId) ?? null, [dirs, dirId])
+
+  const sections: SkillSection[] = useMemo(
+    () =>
+      planSkillSections({
+        projectName: selectedProject?.name,
+        projectPath: selectedProject ? projectSkillDir(selectedProject.path) : null,
+        globalLabel: globalDir?.label,
+        globalPath: globalDir?.path
+      }),
+    [selectedProject, globalDir]
+  )
+
+  /** 拉取的依赖只看路径集合——sections 是每次渲染新算的数组，直接进依赖会无限重拉。 */
+  const sectionKey = sections.map((s) => s.path).join('\n')
 
   useEffect(() => {
     setExpandedSkill(null)
     setCollapsedCats(new Set())
-    if (!activeDir) {
-      setResult(null)
+    const paths = sectionKey ? sectionKey.split('\n') : []
+    if (paths.length === 0) {
+      setResults({})
       setLoading(false)
       return
     }
     let alive = true
     setLoading(true)
-    void window.api.skillLibrary.list(activeDir.path).then((r) => {
+    void Promise.all(paths.map((p) => window.api.skillLibrary.list(p))).then((list) => {
       if (!alive) return
-      setResult(r)
+      const next: Record<string, SkillListResult> = {}
+      paths.forEach((p, i) => {
+        next[p] = list[i]
+      })
+      setResults(next)
       setLoading(false)
     })
     return () => {
       alive = false
     }
-    // activeDir 是每次渲染新算出来的对象，只用它的 path 判断要不要重新拉取；
     // reloadKey 是复制/禁用之后的手动重拉
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDir?.path, reloadKey])
+  }, [sectionKey, reloadKey])
 
   // agent 通过 MCP 改了分类 → 面板重拉一次。不这么做的话用户得手动切个目录才看得到变化，
   // 而「让 agent 整理分类」这件事的整个价值就在于他抬头就能看见结果。
@@ -117,11 +147,22 @@ export function CanvasSkillPanel(): JSX.Element {
     return () => window.removeEventListener('skills-changed', h)
   }, [])
 
-  const toggleCat = (name: string): void => {
+  /** 分类折叠 key 带段前缀：两段可能有同名分类（「未分类」几乎必然同时存在），
+   *  不加前缀的话折叠上面那段会把下面同名的一起折了。 */
+  const toggleCat = (key: string): void => {
     setCollapsedCats((prev) => {
       const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const toggleSec = (key: string): void => {
+    setCollapsedSecs((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
@@ -155,10 +196,11 @@ export function CanvasSkillPanel(): JSX.Element {
 
   // ── 粘贴：真的复制文件 ─────────────────────────────────────────────────
   // 重名一律拒绝、不覆盖不改名（design 文档 §六 第 4 条）。主进程那边还有一层边界校验
-  // （目标必须是已登记的 skill 目录），这里不重复判断，只负责把结果讲给人听。
-  const pasteHere = async (): Promise<void> => {
-    if (!clip || !activeDir) return
-    const r = await window.api.skillLibrary.copySkill(clip.path, activeDir.path)
+  // （目标必须是已登记的 skill 目录或某个项目的 .claude/skills），这里不重复判断，
+  // 只负责把结果讲给人听。
+  const pasteInto = async (destPath: string): Promise<void> => {
+    if (!clip) return
+    const r = await window.api.skillLibrary.copySkill(clip.path, destPath)
     if (!r.ok) {
       say(r.error ?? '复制失败', true)
       return
@@ -176,9 +218,23 @@ export function CanvasSkillPanel(): JSX.Element {
     setReloadKey((k) => k + 1)
   }
 
-  const disabledSet = useMemo(() => new Set(result?.disabled ?? []), [result])
+  /** 禁用清单跨段合并：一个 skill 在哪一段被禁用，判据都是它自己的绝对路径。 */
+  const disabledSet = useMemo(() => {
+    const s = new Set<string>()
+    for (const r of Object.values(results)) for (const p of r.disabled) s.add(p)
+    return s
+  }, [results])
 
-  const activeDirEntry = selectedProject ? null : dirs.find((d) => d.id === dirId)
+  const disabledCount = useMemo(
+    () => Object.values(results).reduce((n, r) => n + r.disabled.length, 0),
+    [results]
+  )
+  const totalSkills = useMemo(
+    () => Object.values(results).reduce((n, r) => n + r.skills.length, 0),
+    [results]
+  )
+
+  const activeDirEntry = globalDir
   const dirMenuItems: CanvasMenuItem[] = [
     ...dirs.map((d) => ({
       label: d.label,
@@ -200,8 +256,10 @@ export function CanvasSkillPanel(): JSX.Element {
       : [])
   ]
 
-  /** 右键菜单的内容。点在 skill 上多两项（复制 / 禁用），空白处只有粘贴。 */
-  const menuItems = (skill: SkillInfo | null): CanvasMenuItem[] => {
+  /** 右键菜单的内容。点在 skill 上多几项（复制 / 禁用 / 在访达中显示），空白处只有粘贴。
+   *  粘贴的落点是 destPath：点在哪一段的地盘上就粘到哪一段——两段并存之后，
+   *  「粘到当前目录」已经不是一个明确的说法了。 */
+  const menuItems = (skill: SkillInfo | null, destPath: string | null): CanvasMenuItem[] => {
     const items: CanvasMenuItem[] = []
     if (skill) {
       const off = disabledSet.has(skill.path)
@@ -210,7 +268,7 @@ export function CanvasSkillPanel(): JSX.Element {
         icon: <CopyIcon size={12} />,
         onClick: () => {
           setClip({ path: skill.path, name: skill.name })
-          say(`已复制「${skill.name}」，切到别的目录后在空白处右键粘贴`)
+          say(`已复制「${skill.name}」，在目标那段的空白处右键粘贴`)
         }
       })
       items.push({
@@ -225,53 +283,155 @@ export function CanvasSkillPanel(): JSX.Element {
       })
       items.push({ label: '', sep: true, onClick: () => {} })
     }
+    const destSec = sections.find((s) => s.path === destPath)
     items.push(
       clip
         ? {
             label: `粘贴 skill「${clip.name}」`,
-            hint: '复制到这个目录',
-            disabled: !activeDir,
-            onClick: () => void pasteHere()
+            hint: destSec ? `复制到${destSec.tag} · ${destSec.label}` : '先在某一段里右键',
+            disabled: !destPath,
+            onClick: () => void (destPath && pasteInto(destPath))
           }
         : { label: '粘贴 skill', hint: '还没复制任何 skill', disabled: true, onClick: () => {} }
     )
     return items
   }
 
+  /** 一段的正文：分类分组 + skill 列表。段头由外层画，这里只管内容。 */
+  const renderSectionBody = (sec: SkillSection): JSX.Element => {
+    const result = results[sec.path]
+    if (!result) return <div className="wk-dim wk-tiny wk-pad">加载中…</div>
+    if (!result.ok) {
+      return (
+        <div className="wk-warn">
+          {result.error}
+          <br />
+          <span className="wk-dim wk-tiny">{sec.path}</span>
+        </div>
+      )
+    }
+    if (result.skills.length === 0) {
+      return (
+        <div className="wk-dim wk-tiny wk-pad">
+          {sec.scope === 'project' ? '这个项目还没有项目 skill' : '这个目录下没有找到 skill'}
+          <br />
+          没有子目录带 SKILL.md
+          <br />
+          <span className="skl-path">{sec.path}</span>
+        </div>
+      )
+    }
+    return (
+      <div className="skl-list">
+        {result.categories.map((cat) => {
+          const catKey = `${sec.key}\n${cat.name}`
+          const collapsed = collapsedCats.has(catKey)
+          return (
+            <div className="skl-cat" key={catKey}>
+              <button className="skl-cat-head" onClick={() => toggleCat(catKey)}>
+                <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
+                  <ChevronRightIcon size={10} />
+                </span>
+                <span className="skl-cat-name">{cat.name}</span>
+                <span className="skl-cat-count">{cat.skillPaths.length}</span>
+              </button>
+              {!collapsed && (
+                <div className="skl-cat-body">
+                  {cat.skillPaths.map((p) => {
+                    const sk = result.skills.find((s) => s.path === p)
+                    if (!sk) return null
+                    const expanded = expandedSkill === sk.path
+                    const off = disabledSet.has(sk.path)
+                    return (
+                      <div
+                        className={`skl-item${off ? ' off' : ''}`}
+                        key={sk.path}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation() // 别让外面那层再开一个只有「粘贴」的菜单
+                          setMenu({ x: e.clientX, y: e.clientY, skill: sk, destPath: sec.path })
+                        }}
+                      >
+                        <button
+                          className="skl-item-head"
+                          onClick={() => setExpandedSkill(expanded ? null : sk.path)}
+                        >
+                          <span className={`skl-chevron${expanded ? ' open' : ''}`}>
+                            <ChevronRightIcon size={10} />
+                          </span>
+                          <span className="skl-item-name">{sk.name}</span>
+                          {off && <span className="skl-off-tag">已禁用</span>}
+                        </button>
+                        {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
+                        {expanded && (
+                          <div
+                            className="skl-item-tree"
+                            onMouseDown={(e) => {
+                              // 拖文件到画布上编辑。目录行不给拖（拖一个目录进画布没有意义）。
+                              // 内联输入框让给它自己——viewOnly 的树上不该出现，防御一下。
+                              if ((e.target as HTMLElement).closest('input')) return
+                              const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
+                              const fp = item?.dataset.path
+                              if (!fp || item?.dataset.dir) return
+                              startFileDrag(fp, e)
+                            }}
+                            onDoubleClick={(e) => {
+                              const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
+                              const fp = item?.dataset.path
+                              if (!fp || item?.dataset.dir) return
+                              const { wx, wy } = viewportCenter()
+                              openInCanvas(fp, wx - 90, wy - 15)
+                            }}
+                          >
+                            <FileTree key={sk.path} rootPath={sk.path} refreshKey={0} viewOnly />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div
       className="skl-panel"
       onContextMenu={(e) => {
-        // 面板空白处右键 → 只出「粘贴」。落在 skill 行上的右键由那一行自己 stopPropagation 掉了。
+        // 面板真空白处右键（不在任何段里）→ 只出「粘贴」，落点用第一段。
+        // 第一段在有项目时就是项目段，正好是「把全局 skill 复制进这个项目」这个
+        // 最常见用法的目标（design 文档 §五）。
         e.preventDefault()
-        setMenu({ x: e.clientX, y: e.clientY, skill: null })
+        setMenu({ x: e.clientX, y: e.clientY, skill: null, destPath: sections[0]?.path ?? null })
       }}
     >
       <div className="skl-toolbar">
-        {selectedProject ? (
-          <div className="skl-scope" data-tip={activeDir?.path}>
-            <FolderIcon size={12} />
-            <span>{activeDir?.label}</span>
-          </div>
-        ) : (
-          <button className="skl-cli-btn" onClick={openDirMenu} data-tip={activeDir?.path}>
-            <span>{activeDir?.label ?? '选择目录'}</span>
-            <span className={`skl-chevron${dirMenuAt ? ' open' : ''}`}>
-              <ChevronRightIcon size={10} />
-            </span>
-          </button>
-        )}
+        <button className="skl-cli-btn" onClick={openDirMenu} data-tip={globalDir?.path}>
+          <span>{globalDir?.label ?? '选择目录'}</span>
+          <span className={`skl-chevron${dirMenuAt ? ' open' : ''}`}>
+            <ChevronRightIcon size={10} />
+          </span>
+        </button>
       </div>
-      {dirMenuAt && !selectedProject && (
+      {dirMenuAt && (
         <CanvasContextMenu x={dirMenuAt.x} y={dirMenuAt.y} items={dirMenuItems} onClose={() => setDirMenuAt(null)} />
       )}
       {menu && (
-        <CanvasContextMenu x={menu.x} y={menu.y} items={menuItems(menu.skill)} onClose={() => setMenu(null)} />
+        <CanvasContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={menuItems(menu.skill, menu.destPath)}
+          onClose={() => setMenu(null)}
+        />
       )}
       {notice && <div className={`skl-notice${notice.bad ? ' bad' : ''}`}>{notice.text}</div>}
       {!!clip && (
         <div className="skl-clip">
-          剪贴板：<b>{clip.name}</b> · 在空白处右键粘贴
+          剪贴板：<b>{clip.name}</b> · 在目标那段的空白处右键粘贴
           <button className="skl-clip-x" data-tip="清掉" onClick={() => setClip(null)}>
             ×
           </button>
@@ -280,116 +440,54 @@ export function CanvasSkillPanel(): JSX.Element {
 
       {loading && <div className="wk-dim wk-tiny wk-pad">加载中…</div>}
 
-      {!loading && result && !result.ok && (
-        <div className="wk-warn">
-          {result.error}
-          {!!activeDir?.path && (
-            <>
-              <br />
-              <span className="wk-dim wk-tiny">{activeDir.path}</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {!loading && result?.ok && result.skills.length === 0 && (
-        <div className="wk-dim wk-tiny wk-pad">
-          {selectedProject ? '这个项目还没有项目 skill' : '这个目录下没有找到 skill'}
-          <br />
-          没有子目录带 SKILL.md
-          {!!activeDir?.path && (
-            <>
-              <br />
-              <span className="skl-path">{activeDir.path}</span>
-            </>
-          )}
-        </div>
-      )}
-
       {/* 禁用的代价必须摆在明面上：CLI 自己仍然会加载它，这个开关只改本软件的视图。
           用户已经知情并接受（design 文档 §六 第 1 条），但不写出来的话，
           下一次他会以为点了禁用 Claude Code 那边就不加载了。
           只在真有被禁用的 skill 时出现——没禁过任何东西的人不需要看这句话。 */}
-      {!loading && result?.ok && result.disabled.length > 0 && (
+      {!loading && disabledCount > 0 && (
         <div className="skl-note">
-          划掉的 {result.disabled.length} 个只在这个软件里禁用了 —— CLI 自己仍然会加载它们
+          划掉的 {disabledCount} 个只在这个软件里禁用了 —— CLI 自己仍然会加载它们
           （禁用不动硬盘上的文件）
         </div>
       )}
 
-      {!loading && result?.ok && result.skills.length > 0 && (
-        <div className="skl-list">
-          {result.categories.map((cat) => {
-            const collapsed = collapsedCats.has(cat.name)
-            return (
-              <div className="skl-cat" key={cat.name}>
-                <button className="skl-cat-head" onClick={() => toggleCat(cat.name)}>
+      {!loading &&
+        sections.map((sec) => {
+          const collapsed = collapsedSecs.has(sec.key)
+          const r = results[sec.path]
+          return (
+            <div
+              className={`skl-sec skl-sec-${sec.scope}`}
+              key={sec.key}
+              onContextMenu={(e) => {
+                // 段内空白处右键 → 粘到这一段。落在 skill 行上的由那一行自己 stopPropagation 掉了。
+                e.preventDefault()
+                e.stopPropagation()
+                setMenu({ x: e.clientX, y: e.clientY, skill: null, destPath: sec.path })
+              }}
+            >
+              {/* 单段时不画段头：工具栏那个按钮已经写着目录名了，再来一行是重复。
+                  两段并存才需要标注谁是谁——那正是用户要的「标注清楚」。 */}
+              {sections.length > 1 && (
+                <button className="skl-sec-head" onClick={() => toggleSec(sec.key)} data-tip={sec.path}>
                   <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
                     <ChevronRightIcon size={10} />
                   </span>
-                  <span className="skl-cat-name">{cat.name}</span>
-                  <span className="skl-cat-count">{cat.skillPaths.length}</span>
+                  <span className={`skl-sec-tag ${sec.scope}`}>{sec.tag}</span>
+                  <span className="skl-sec-name">{sec.label}</span>
+                  {!!r?.ok && <span className="skl-sec-count">{r.skills.length}</span>}
                 </button>
-                {!collapsed && (
-                  <div className="skl-cat-body">
-                    {cat.skillPaths.map((p) => {
-                      const sk = result.skills.find((s) => s.path === p)
-                      if (!sk) return null
-                      const expanded = expandedSkill === sk.path
-                      const off = disabledSet.has(sk.path)
-                      return (
-                        <div
-                          className={`skl-item${off ? ' off' : ''}`}
-                          key={sk.path}
-                          onContextMenu={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation() // 别让面板那层再开一个只有「粘贴」的菜单
-                            setMenu({ x: e.clientX, y: e.clientY, skill: sk })
-                          }}
-                        >
-                          <button
-                            className="skl-item-head"
-                            onClick={() => setExpandedSkill(expanded ? null : sk.path)}
-                          >
-                            <span className={`skl-chevron${expanded ? ' open' : ''}`}>
-                              <ChevronRightIcon size={10} />
-                            </span>
-                            <span className="skl-item-name">{sk.name}</span>
-                            {off && <span className="skl-off-tag">已禁用</span>}
-                          </button>
-                          {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
-                          {expanded && (
-                            <div
-                              className="skl-item-tree"
-                              onMouseDown={(e) => {
-                                // 拖文件到画布上编辑。目录行不给拖（拖一个目录进画布没有意义）。
-                                // 内联输入框让给它自己——viewOnly 的树上不该出现，防御一下。
-                                if ((e.target as HTMLElement).closest('input')) return
-                                const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
-                                const fp = item?.dataset.path
-                                if (!fp || item?.dataset.dir) return
-                                startFileDrag(fp, e)
-                              }}
-                              onDoubleClick={(e) => {
-                                const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
-                                const fp = item?.dataset.path
-                                if (!fp || item?.dataset.dir) return
-                                const { wx, wy } = viewportCenter()
-                                openInCanvas(fp, wx - 90, wy - 15)
-                              }}
-                            >
-                              <FileTree key={sk.path} rootPath={sk.path} refreshKey={0} viewOnly />
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+              )}
+              {!collapsed && renderSectionBody(sec)}
+            </div>
+          )
+        })}
+
+      {!loading && sections.length === 0 && (
+        <div className="wk-dim wk-tiny wk-pad">还没有任何 skill 目录，点上面的按钮添加一个</div>
+      )}
+      {!loading && sections.length > 0 && totalSkills === 0 && sections.length > 1 && (
+        <div className="wk-dim wk-tiny wk-pad">这两处都还没有 skill</div>
       )}
       {htmlChoice}
     </div>
