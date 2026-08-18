@@ -17,6 +17,7 @@ import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
 import { checkContracts } from './cliContractRun'
+import { registerStatuslineHandlers } from './statuslineRuntime'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
@@ -337,6 +338,7 @@ app.whenReady().then(() => {
   registerSessionHandlers()
   registerCanvasHandlers()
   registerAgentHandlers()
+  registerStatuslineHandlers()
   registerSttHandlers()
   registerDesignHandlers()
   registerBizoneHandlers()

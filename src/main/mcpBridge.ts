@@ -9,7 +9,7 @@
 // /agent-approval/resolve，见文件下方与 agentChat/approvalRoute.ts）：hook 脚本
 // （resources/agent-hooks/eas-pretooluse.mjs，独立 Node 进程）POST request 后阻塞等决定，
 // 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, BrowserWindow } from 'electron'
 import { dshRegion, applyDshPatch, DSH_BEGIN, type DshMcpEntry } from './dshPatch'
 import http from 'http'
 import fs from 'fs'
@@ -593,6 +593,25 @@ export function registerMcpBridge(): void {
           mcpEnabled
         })
         return send(r.ok ? 200 : 400, r)
+      }
+
+      // statusline 回传：真实的订阅额度百分比与「和 /context 一致」的上下文占用，
+      // **只在 statusline 的 stdin 里**（2026-08-18 实测：headless 事件流里没有
+      // rate_limits / context_window）。转发脚本见 resources/agent-hooks/eas-statusline.mjs。
+      //
+      // 收到就原样广播给渲染层 —— 这里不做任何解释或换算，那是渲染层的事。
+      // 额度是**账号级**的，不属于某个会话，所以走全窗口广播而不是按 sessionId 定向。
+      if (req.method === 'POST' && req.url === '/statusline') {
+        const raw = await readBody(req)
+        try {
+          const j = JSON.parse(raw || '{}') as unknown
+          for (const w of BrowserWindow.getAllWindows()) {
+            if (!w.isDestroyed()) w.webContents.send('statusline:data', j)
+          }
+        } catch {
+          /* 坏 JSON 忽略 —— 状态栏每次刷新都发，偶发一次坏包不值得报错 */
+        }
+        return send(200, { ok: true })
       }
 
       // 审批闭环的两个端点（会话内核 Task 7）：hook 脚本（外部 Node 进程，见

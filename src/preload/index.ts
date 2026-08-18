@@ -498,6 +498,20 @@ const api = {
     contractFile: (roleId: string): Promise<string | null> =>
       ipcRenderer.invoke('roles:contractFile', roleId)
   },
+  statusline: {
+    status: (): Promise<{ installed: boolean; wrapped: string | null }> =>
+      ipcRenderer.invoke('statusline:status'),
+    install: (): Promise<{ ok: boolean; changed: boolean; reason: string }> =>
+      ipcRenderer.invoke('statusline:install'),
+    uninstall: (): Promise<{ ok: boolean; changed: boolean; reason: string }> =>
+      ipcRenderer.invoke('statusline:uninstall'),
+    /** 真实额度与上下文占用（由 statusline 转发脚本回传，见 resources/agent-hooks/eas-statusline.mjs）*/
+    onData: (h: (d: unknown) => void): (() => void) => {
+      const fn = (_e: unknown, d: unknown): void => h(d)
+      ipcRenderer.on('statusline:data', fn)
+      return () => ipcRenderer.removeListener('statusline:data', fn)
+    }
+  },
   secrets: {
     // 密钥柜（<userData>/secrets.json，safeStorage 加密）。
     // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，

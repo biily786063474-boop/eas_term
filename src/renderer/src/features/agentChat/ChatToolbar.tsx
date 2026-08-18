@@ -24,6 +24,7 @@ import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel, formatUsage } from './toolbarModel.ts'
 import { quotaText, severityOf, windowLabel, untilReset } from './quotaLabel.ts'
+import { quotaBars, contextPercent, barSeverity, type StatuslineData } from './quotaBars.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
@@ -165,11 +166,15 @@ export function ChatToolbar({
   }
 
   const usageText = model.showUsage ? formatUsage(view.usage, view.costUsd) : ''
-  // 整数百分比：小数位在这个尺寸下读不出来，还会让数字宽度跳来跳去
-  const ctxPct =
-    model.showUsage && typeof view.usage?.contextRatio === 'number'
-      ? Math.round(view.usage.contextRatio * 100)
-      : null
+
+  // statusline 回传的真实数据（额度两个窗口的百分比 + 与 /context 一致的上下文）。
+  // 它是**账号级**的、由 Claude Code 每次刷新状态栏时推来，不属于某个会话，
+  // 所以放在组件里订阅一份就够。拿不到（没装转发器 / 在别处起的 claude）时为 null，
+  // 下面各处自动回退到事件流那份近似值。
+  const [sl, setSl] = useState<StatuslineData | null>(null)
+  useEffect(() => window.api.statusline.onData((d) => setSl(d as StatuslineData)), [])
+  const bars = quotaBars(sl)
+  const ctx = contextPercent(sl, view.usage?.contextRatio)
 
   // 关掉过的 notice 记的是「关闭那一刻它已经发生过几次」，不是一个"关过就永远别再出现"
   // 的开关（评审 I5 要求可关闭，但硬约束要求 {k:'error',fatal:false} 必须显示）：
@@ -233,33 +238,27 @@ export function ChatToolbar({
       >
         {/* 仪表盘：用量数字 + 订阅额度，**同一个开关管**，默认收起。
             它们是同一类东西（想知道的时候才看的数字），分成两个开关只是多一次点击。 */}
-        {showGauge && (!!usageText || view.quotas.length > 0) && (
+        {showGauge && (!!usageText || bars.length > 0) && (
           <div className="ac-gauge-row">
             {!!usageText && <span>{usageText}</span>}
-            {view.quotas.map((q) => {
-              const sev = severityOf(q.status)
-              const left = untilReset(q.resetsAt, Date.now())
+            {/* 两个额度进度条（五小时 / 本周）。数据来自 statusline 通道 ——
+                headless 事件流里五小时那条**没有百分比**，只有 statusline 的 stdin
+                两个都给（2026-08-18 实测确认）。拿不到就不画，不倒推。 */}
+            {bars.map((b) => {
+              const sev = barSeverity(b.percent)
               return (
                 <span
-                  key={q.window}
+                  key={b.key}
                   className={`ac-quota${sev === 2 ? ' hot' : sev === 1 ? ' warm' : ''}`}
-                  data-tip={quotaText(q, Date.now())}
+                  data-tip={`${b.label}额度已用 ${b.percent}%${
+                    b.resetsAt ? ` · ${untilReset(b.resetsAt, Date.now())}后重置` : ''
+                  }`}
                 >
-                  {windowLabel(q.window)}
-                  {/* 进度只在 CLI 真给了 utilization 时才画。实测五小时那条没带、
-                      七天那条带了 —— 没有就只显示窗口和倒计时，不倒推一个百分比。 */}
-                  {typeof q.utilization === 'number' && (
-                    <>
-                      <span className="ac-quota-track">
-                        <span
-                          className="ac-quota-fill"
-                          style={{ width: `${Math.round(q.utilization * 100)}%` }}
-                        />
-                      </span>
-                      <span className="ac-quota-num">{Math.round(q.utilization * 100)}%</span>
-                    </>
-                  )}
-                  {left ? ` ${left}` : ''}
+                  {b.label}
+                  <span className="ac-quota-track">
+                    <span className="ac-quota-fill" style={{ width: `${b.percent}%` }} />
+                  </span>
+                  <span className="ac-quota-num">{b.percent}%</span>
                 </span>
               )
             })}
@@ -334,15 +333,22 @@ export function ChatToolbar({
               它回答的是「还能聊多久」——那是随时想瞥一眼的东西，不是要主动去查的统计。
               分母来自 result 事件的 modelUsage[<model>].contextWindow（claudeEvents.ts
               的 contextRatioOf），拿不到就整个不渲染，绝不显示一个猜出来的比例。 */}
-          {ctxPct !== null && (
+          {ctx !== null && (
             <div
-              className={`ac-ctx${ctxPct >= 85 ? ' hot' : ctxPct >= 65 ? ' warm' : ''}`}
-              data-tip={`上下文已用 ${ctxPct}%${model.showCompact ? '（可以点「压缩」腾地方）' : ''}`}
+              className={`ac-ctx${ctx.percent >= 85 ? ' hot' : ctx.percent >= 65 ? ' warm' : ''}`}
+              data-tip={
+                `上下文已用 ${ctx.percent}%` +
+                // 标出来是近似值，不让它冒充精确值 —— 用户报的「不准」正是这个口径差
+                (ctx.exact ? '（与 CLI 的 /context 一致）' : '（估算：CLI 没给原生百分比，口径可能偏小）') +
+                (model.showCompact ? '，可以点「压缩」腾地方' : '')
+              }
             >
               <span className="ac-ctx-track">
-                <span className="ac-ctx-fill" style={{ width: `${ctxPct}%` }} />
+                <span className="ac-ctx-fill" style={{ width: `${ctx.percent}%` }} />
               </span>
-              <span className="ac-ctx-num">{ctxPct}%</span>
+              <span className="ac-ctx-num">
+                {ctx.percent}%{ctx.exact ? '' : '~'}
+              </span>
             </div>
           )}
 
@@ -437,7 +443,7 @@ export function ChatToolbar({
             </button>
           )}
 
-          {(!!usageText || view.quotas.length > 0) && (
+          {(!!usageText || bars.length > 0) && (
             <button
               type="button"
               className={`ac-bar-btn${showGauge ? ' on' : ''}`}
