@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
+import { OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -255,9 +256,36 @@ test('[追加] Codex 的 stdin 精确是 ignore——不关掉会卡在 Reading 
 //   静默拿到 Claude 的翻译器 / 被错误装上 Claude 的 hook）。
 // ============================================================
 
-test('[I5] Claude 不带 --include-partial-messages——带了也没人消费，纯成本零收益', () => {
+// 2026-08-17：这条原来锁的是「**不**带 --include-partial-messages」，理由是当时没有
+// 消费者（评审 I5：flag 开着、事件全被 default 分支静默丢弃 = 纯成本零收益）。
+// 现在消费者写好了（claudeEvents 的 translateStreamEvent → reduce 的 streamingTurn），
+// 决定反过来。**但那条理由本身没变**：flag 与消费者必须成对存在。
+// 所以这条测试改成同时锁两头 —— 带着 flag，且翻译器真的认得它吐出来的东西。
+test('Claude 带 --include-partial-messages，且翻译器真的消费它（flag 与消费者必须成对）', () => {
   const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x' })
-  assert.ok(!args.includes('--include-partial-messages'))
+  assert.ok(args.includes('--include-partial-messages'), '流式输出要靠这个 flag')
+  const t = getAdapter('claude')!.createTranslator()
+  const out = t.push(
+    JSON.stringify({
+      type: 'stream_event',
+      event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '你' } },
+      session_id: 's1'
+    }) + '\n'
+  )
+  assert.deepEqual(out, [{ k: 'text.delta', text: '你' }], 'flag 开着却没人消费 = 纯成本零收益')
+})
+
+test('stream_event 里非 text_delta 的那些不产出事件（分块骨架和思考过程都不是回答正文）', () => {
+  const t = getAdapter('claude')!.createTranslator()
+  for (const ev of [
+    { type: 'message_start', message: { id: 'm1' } },
+    { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+    { type: 'content_block_stop', index: 0 },
+    { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: '嗯' } }
+  ]) {
+    const out = t.push(JSON.stringify({ type: 'stream_event', event: ev, session_id: 's1' }) + '\n')
+    assert.deepEqual(out, [], `${ev.type} 不该产出事件`)
+  }
 })
 
 test('[I6] 每个 adapter 都声明了 createTranslator，调用后返回的对象有 push 方法', () => {
@@ -303,4 +331,45 @@ test('[I6] createTranslator 每次调用返回独立实例，不共享内部状�
 test('[I6] Claude 声明 approvalHook 为 "claude-pretooluse"；Codex 不声明（undefined）', () => {
   assert.equal(getAdapter('claude')!.approvalHook, 'claude-pretooluse')
   assert.equal(getAdapter('codex')!.approvalHook, undefined)
+})
+
+// ── 输出格式约定（2026-08-17）────────────────────────────────────
+// 终端里跑 Claude Code 看不到 emoji，走 headless 这条路却会冒出来。
+// 与其在渲染层事后替换（改模型说的话，而且 ✅/❌ 有时在表达成败），不如让它别输出。
+
+test('Claude 把输出格式约定作为系统提示传下去（不是塞进用户消息）', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x' })
+  const i = args.indexOf('--append-system-prompt')
+  assert.ok(i >= 0, '要用系统提示注入，别在用户消息后面加后缀')
+  assert.equal(args[i + 1], OUTPUT_STYLE_PROMPT, '传下去的必须是那份共享规范本身')
+})
+
+test('输出格式约定里明确写着不要 emoji（这是它存在的首要理由）', () => {
+  assert.ok(OUTPUT_STYLE_PROMPT.includes('emoji'))
+})
+
+test('Codex 不注入格式约定——它的 exec 没有系统提示开关，硬塞只能污染用户消息', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/x' })
+  assert.ok(!args.includes('--append-system-prompt'))
+  assert.ok(!args.some((a) => a.includes('emoji')), '不能把规范混进 Codex 的位置参数里')
+})
+
+// ── 会话内改参数的能力声明（2026-08-17）────────────────────────
+// 用户要求：改模型/effort 要和 CLI 本身一致，用 /model、/effort 命令改。
+// 实测确认 headless 下这两条命令真的生效（发完 CLI 会重推 init，model 是新值）。
+
+test('Claude 声明 paramChange:"slash"——会话内改模型不必重启进程', () => {
+  assert.equal(getAdapter('claude')!.paramChange, 'slash')
+})
+
+test('Codex 不声明 paramChange——exec 是一次性的，没有会话内命令', () => {
+  assert.equal(getAdapter('codex')!.paramChange, undefined)
+})
+
+test('effort 取值与 `claude --help` 声明的一字不差（low, medium, high, xhigh, max）', () => {
+  // help 原文：--effort <level>  Effort level for the current session (low, medium, high, xhigh, max)
+  // 这条锁的是「别自己发明一套」——列表跟 CLI 对不上时，用户选了个 CLI 不认的值，
+  // 表现是命令静默无效，界面上却显示已经切过去了。
+  const ids = (getAdapter('claude')!.capabilities.effortLevels ?? []).map((e) => e.id)
+  assert.deepEqual(ids, ['low', 'medium', 'high', 'xhigh', 'max'])
 })

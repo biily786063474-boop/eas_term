@@ -337,12 +337,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
       //      下的活会话一并置为 skipApprovalHook，于是也会走到这里。
       // 末句也不再承诺"随时可以在工具栏重新开启"：工具栏在未安装状态下并没有开启入口，
       // 那是一句用户照做不了的话（这条 hook 的安装入口目前只有节点第一条消息的询问卡片）。
-      handleEvent(live, {
-        k: 'error',
-        fatal: false,
-        message:
-          '本次会话未开启审批保护（你选择了不安装，或中途卸载过）：工具调用将按默认权限直接执行，不会等待你的确认。要重新开启，新建一个 agent 节点、在询问卡片上选「装上」。'
-      })
+      // **不推 notice。** 2026-08-17：审批保护改成设置里的一个开关、默认关闭，
+      // 于是 skipApprovalHook 从「用户明确拒绝过」变成了「这个功能本来就没开」——
+      // 那是默认状态，不是需要每次会话都通报一次的事件。原来这里会推一条
+      // 「本次会话未开启审批保护」，默认关之后每起一次会话就冒一条，正是用户
+      // 要求「不要出现在对话框中」的那类噪音。开关本身在设置面板里写明了含义。
+      //
+      // **下面那条 notice 保留**，两者语义完全不同：这里是"没开这个功能"，
+      // 下面是"你开了、但没装上"——后者是"你以为受保护、其实没有"，
+      // 必须让人看见（Ruling 14「告知而非阻断」针对的正是那种情况）。
     } else {
       const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
       if (!hook.ok) {
@@ -416,8 +419,17 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
     }
     writeStdin(live, message)
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
+    // 消息已经进了 CLI 的 stdin —— 这一轮开始了。**CLI 自己不报这件事**（它只在
+    // 说话时才出声），而「发出去了、还没回音」实测有 4 秒多，界面正是在那段时间
+    // 最需要表态。不推这个事件的话，渲染层只能自己记一个标志，于是同一件事记在
+    // 两个地方，必然漏掉某条路径（见 shared/agentChat.ts 里 turn.start 的说明）。
+    handleEvent(live, { k: 'turn.start' })
     return { ok: true }
   }
+  // restart 这条路同样是「消息已经在投递路上」。放在 restartAndDeliver 之前推：
+  // 那里面要 spawn 进程、装 hook，耗时更长，界面更不该在这段时间里显示成空闲。
+  // spawn 失败会推 { k:'error', fatal:true }，归约器收到它会结束这一轮。
+  handleEvent(live, { k: 'turn.start' })
   restartAndDeliver(live, plan.opts, message) // 失败会经 error ChatEvent 异步通知，这里不等
   return { ok: true }
 }
@@ -572,6 +584,29 @@ export function registerAgentChatHandlers(): void {
     const clean: { model?: string; effort?: string } = {}
     if (typeof p.model === 'string') clean.model = p.model
     if (typeof p.effort === 'string') clean.effort = p.effort
+
+    // 会话内命令那条路：CLI 声明了 paramChange:'slash' 且进程还活着时，直接往 stdin
+    // 写 /model、/effort —— **不重启进程、不丢上下文**（重启要冷启动数秒，还得靠
+    // resume 把上下文接回来）。2026-08-17 实测确认 headless 下同样生效。
+    //
+    // **两件事都要做，缺一不可**：
+    //   ① 发命令 —— 让它在当前这个进程里立刻换过去；
+    //   ② 更新 rec.model/effort（当前值，不是 pending）—— 会话空闲回收后 restart
+    //      要靠它带上 --model/--effort，否则悄悄退回旧模型，而界面上还显示着新的。
+    //
+    // 判据是能力声明不是 CLI 名字。进程不在（已被空闲回收）时退回老路：记 pending，
+    // 下次 restart 带启动参数——两条路殊途同归。
+    const adapter = getAdapter(live.rec.cli)
+    if (adapter?.paramChange === 'slash' && live.proc?.stdin) {
+      if (clean.model) writeStdin(live, `/model ${clean.model}`)
+      if (clean.effort) writeStdin(live, `/effort ${clean.effort}`)
+      live.rec = {
+        ...live.rec,
+        model: clean.model ?? live.rec.model,
+        effort: clean.effort ?? live.rec.effort
+      }
+      return { ok: true }
+    }
     live.rec = applyParamChange(live.rec, clean)
     return { ok: true }
   })

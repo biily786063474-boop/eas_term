@@ -63,9 +63,37 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
         return translateUser(j)
       case 'result':
         return translateResult(j)
+      case 'stream_event':
+        return translateStreamEvent(j)
       default:
         return []
     }
+  }
+
+  // ---- stream_event（--include-partial-messages 才有）----
+  //
+  // 增量文字。**只认 content_block_delta 里的 text_delta**，别的一律不产出：
+  // message_start / content_block_start / content_block_stop / message_delta 这些
+  // 是分块的骨架，没有可显示的内容；thinking_delta 是思考过程，不属于回答正文。
+  //
+  // 实测形状（2026-08-15 Task 9 探针，真跑出来的）：
+  //   {"type":"stream_event","event":{"type":"content_block_delta","index":0,
+  //     "delta":{"type":"text_delta","text":"你"}},"session_id":"…","uuid":"…"}
+  //
+  // **同一段文字最后还会以 assistant 事件再来一次完整版**（text.done）。两者都产出，
+  // 由归约器负责「delta 攒出来的那段被随后的 done 覆盖而不是追加」——翻译器不做这个
+  // 判断，它只做翻译（见文件头）。
+  function translateStreamEvent(j: Record<string, unknown>): ChatEvent[] {
+    const ev = j.event
+    if (!ev || typeof ev !== 'object') return []
+    const e = ev as Record<string, unknown>
+    if (e.type !== 'content_block_delta') return []
+    const d = e.delta
+    if (!d || typeof d !== 'object') return []
+    const delta = d as Record<string, unknown>
+    if (delta.type !== 'text_delta') return []
+    if (typeof delta.text !== 'string' || delta.text.length === 0) return []
+    return [{ k: 'text.delta', text: delta.text }]
   }
 
   // ---- system:* ----
@@ -158,11 +186,48 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
     const usage: Usage = {
       inputTokens: numberOr(u.input_tokens, 0),
       outputTokens: numberOr(u.output_tokens, 0),
-      cachedInputTokens: typeof u.cache_read_input_tokens === 'number' ? u.cache_read_input_tokens : undefined
-      // contextRatio 不填：result 事件没有上下文窗口上限，算法未定（spec §九 第 4 条），不许猜
+      cachedInputTokens: typeof u.cache_read_input_tokens === 'number' ? u.cache_read_input_tokens : undefined,
+      contextRatio: contextRatioOf(j, u)
     }
     const costUsd = typeof j.total_cost_usd === 'number' ? j.total_cost_usd : undefined
     return [{ k: 'turn.done', usage, costUsd }]
+  }
+
+  /** 上下文占用比例。
+   *
+   *  spec §九 第 4 条当初写着「result 事件里有 usage，但**没有上下文窗口上限**，
+   *  而占用比例需要分母……在拿到确定算法之前，UI 上不能显示一个编造的百分比」。
+   *  **那条判断不成立**（2026-08-17 实测，也可能是字段后来才加的）：分母就在同一个
+   *  result 事件里 —— `modelUsage[<model>].contextWindow`。实测样本：
+   *    "modelUsage": { "claude-opus-5": { "contextWindow": 1000000,
+   *                    "cacheReadInputTokens": 16011, "cacheCreationInputTokens": 30812, … } }
+   *
+   *  分子取「这一轮送进模型的全部输入」= input + cache_read + cache_creation。
+   *  三者都实实在在占着上下文窗口，缓存只是让它们便宜，不是让它们不占地方。
+   *
+   *  **拿不到分母就返回 undefined，绝不用一个猜的窗口大小顶上** —— 那正是原来那条
+   *  约束要防的事：一个看起来精确、实则编造的百分比比不显示更糟。 */
+  function contextRatioOf(
+    j: Record<string, unknown>,
+    u: Record<string, unknown>
+  ): number | undefined {
+    const mu = j.modelUsage
+    if (!mu || typeof mu !== 'object') return undefined
+    // 一轮里理论上只有一个模型，但按最大的窗口取——多模型混用时用小的会算出虚高的占用
+    let win = 0
+    for (const v of Object.values(mu as Record<string, unknown>)) {
+      if (!v || typeof v !== 'object') continue
+      const w = (v as Record<string, unknown>).contextWindow
+      if (typeof w === 'number' && w > win) win = w
+    }
+    if (win <= 0) return undefined
+    const used =
+      numberOr(u.input_tokens, 0) +
+      numberOr(u.cache_read_input_tokens, 0) +
+      numberOr(u.cache_creation_input_tokens, 0)
+    if (used <= 0) return undefined
+    // 夹到 [0,1]：模型换过、窗口变小的边缘情况下别让进度条冲出容器
+    return Math.min(1, used / win)
   }
 
   // ---- 共享小工具（闭包内，因为要访问 resolvedExecIds） ----

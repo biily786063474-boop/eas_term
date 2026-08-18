@@ -7,14 +7,27 @@ export interface Usage {
   inputTokens: number
   outputTokens: number
   cachedInputTokens?: number
-  /** 上下文占用比例 0~1。**算法未定**（result 事件里没有窗口上限，见 spec §九 第 4 条）——
-   *  拿到确定算法之前 adapter 一律不填这个字段，UI 只显示累计 token 数。
-   *  宁可少显示，也不要显示一个看起来精确、实则猜的比例。 */
+  /** 上下文占用比例 0~1。
+   *  spec §九 第 4 条原来写着「result 事件里没有窗口上限、算法未定，一律不填」——
+   *  **那个前提 2026-08-17 被实测推翻**：分母就在同一个 result 事件里
+   *  （`modelUsage[<model>].contextWindow`）。分子取 input + cache_read + cache_creation。
+   *  **但原则一个字没改**：拿不到分母时仍然不填，绝不显示一个看起来精确、实则猜的比例。 */
   contextRatio?: number
 }
 
 export type ChatEvent =
   | { k: 'session.ready'; sessionId: string; model: string; cwd: string }
+  /** 一轮开始了：消息已经投递给 CLI，接下来会有回答。
+   *
+   *  **这个事件不是翻译器产出的，是会话层（session.ts 的 deliverMessage）推的** ——
+   *  CLI 自己不报「我收到消息了」，它只在说话时才出声。而「已经发出去、还没回音」
+   *  这段（实测有 4 秒多）恰恰是界面最需要表态的时候。
+   *
+   *  没有它的时候，渲染层只能自己记一个 awaiting 标志，于是「正在忙」这件事同时
+   *  记在两个地方，必然有一处覆盖不到的缝：起初是 session.ready 到首字之间界面静止，
+   *  补上 turnActive 之后又漏了第二条消息（普通 send 不产生 session.ready，
+   *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
+  | { k: 'turn.start' }
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
@@ -94,6 +107,17 @@ export interface CliAdapter {
    *  走自己的协议，不该被这个字段之外的任何判断误当成"要装 Claude 的 hook"）。
    *  没有这个字段 = 不装任何 hook。 */
   approvalHook?: 'claude-pretooluse'
+  /** 会话跑起来之后怎么改模型 / effort。
+   *
+   *  `'slash'` = 这个 CLI 认 `/model x`、`/effort x` 这类会话内命令，往 stdin 一写
+   *  就换，**不用重启进程、不丢上下文**。2026-08-17 实测确认 Claude 在 headless
+   *  （`-p --input-format stream-json`）下同样吃这套：发 `/model haiku` 之后 CLI 会
+   *  重推一个 init 事件、里面的 model 就是新值，下一条消息真的用新模型跑。
+   *
+   *  不声明 = 只能重启带启动参数（Codex 的 `exec` 是一次性的，压根没有会话内命令）。
+   *
+   *  **这是能力声明，不是 CLI 名字**——调用点判的是这个字段，不是 `id === 'claude'`。 */
+  paramChange?: 'slash'
 }
 
 // ── session.ts 的 IPC 面用到的形状（Task 8）。放共享文件是因为 preload 和主进程
@@ -176,3 +200,25 @@ export interface CliInfo {
    *  不违反"UI 不许按 CLI 名字分支"这条硬约束，判 `id === 'claude'` 才违反。 */
   approvalHook?: CliAdapter['approvalHook']
 }
+
+/** 附加给 CLI 的输出格式约定。
+ *
+ *  **为什么需要**：终端里跑 Claude Code 是看不到 emoji 的（它默认系统提示里有
+ *  「除非用户要求否则不用 emoji」），但走 headless 这条路时那条约束没起作用，
+ *  回答里会冒出 ✅📁 这类符号。与其在渲染层事后替换（那是在改模型说的话，
+ *  而且 ✅/❌ 有时是在表达成败，一刀切会丢信息），不如让它一开始就别输出 ——
+ *  跟用户在终端里的体验对齐。
+ *
+ *  顺带把层级也规范了：对话气泡宽度有限，模型爱用的一级标题 + 分隔线那一套
+ *  是写文档的排版，铺在聊天里就是「被切碎」的观感。
+ *
+ *  **只有声明了 systemPromptFlag 的 CLI 用得上**（目前只有 Claude 的
+ *  `--append-system-prompt`）。Codex 的 `exec` 没有等价开关，它只有位置参数 PROMPT
+ *  —— 硬要注入就得污染用户消息本身，不做，见 codex.ts。 */
+export const OUTPUT_STYLE_PROMPT = [
+  '你的回答会显示在一个图形界面的对话气泡里（不是终端），按下面的约定输出：',
+  '- 不要使用 emoji。需要表示成败或状态时用文字。',
+  '- 标题最多用到三级（###），几句话能说完的回答直接写，不要套标题。',
+  '- 不要使用水平分隔线（---）。',
+  '- 文件名、路径、命令、标识符用行内代码标记。'
+].join('\n')

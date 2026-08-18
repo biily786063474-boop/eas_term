@@ -103,10 +103,61 @@ test('result 事件产出 turn.done，带 usage 与花费', () => {
   assert.ok(done[0].k === 'turn.done' && typeof done[0].costUsd === 'number')
 })
 
-test('contextRatio 一律不填——算法还没定，不许猜', () => {
+// 这条原来是「contextRatio 一律不填——算法还没定，不许猜」（spec §九 第 4 条：
+// 「result 事件里有 usage，但没有上下文窗口上限」）。**那个前提 2026-08-17 被实测推翻**：
+// 分母就在同一个 result 事件里 —— modelUsage[<model>].contextWindow（夹具里是 200000）。
+// 于是改成填。**但原约束的核心一条不动**：拿不到分母时绝不用猜的窗口顶上，见下一条。
+test('contextRatio 按 modelUsage.contextWindow 算出来（夹具窗口 200000）', () => {
   const evs = runAll('claude-hook-approved.jsonl')
   const done = evs.find((e) => e.k === 'turn.done')
-  assert.ok(done && done.k === 'turn.done' && done.usage.contextRatio === undefined)
+  assert.ok(done && done.k === 'turn.done')
+  const r = done.usage.contextRatio
+  assert.equal(typeof r, 'number')
+  assert.ok(r! > 0 && r! <= 1, `比例要落在 (0,1]，拿到 ${r}`)
+  // 别只验「是个数」：分子必须是 input + cache_read + cache_creation 三项之和，
+  // 只取 input_tokens 的话会算出一个接近 0 的假占用（缓存命中时 input 往往只有个位数）
+  const line = fixture('claude-hook-approved.jsonl')
+    .map((l) => JSON.parse(l) as Record<string, any>)
+    .find((j) => j.type === 'result')!
+  const u = line.usage as Record<string, number | undefined>
+  const win = (Object.values(line.modelUsage as Record<string, { contextWindow: number }>)[0]).contextWindow
+  const expect =
+    ((u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)) / win
+  assert.ok(Math.abs(r! - expect) < 1e-9, `期望 ${expect}，拿到 ${r}`)
+})
+
+test('**拿不到分母就不填** —— 绝不用一个猜的窗口大小顶上（原约束的核心）', () => {
+  const t = createClaudeTranslator()
+  // 有 usage、没有 modelUsage：这是原来那条约束设想的情况
+  const out = t.push(
+    JSON.stringify({
+      type: 'result',
+      subtype: 'success',
+      usage: { input_tokens: 10, cache_read_input_tokens: 5000, output_tokens: 3 },
+      total_cost_usd: 0.01,
+      session_id: 's1'
+    }) + '\n'
+  )
+  const done = out.find((e) => e.k === 'turn.done')
+  assert.ok(done && done.k === 'turn.done')
+  assert.equal(done.usage.contextRatio, undefined, '没有 contextWindow 时宁可不显示，也不许猜一个')
+})
+
+test('contextWindow 是 0 / 不是数字时也当作拿不到分母', () => {
+  const t = createClaudeTranslator()
+  for (const win of [0, -1, 'big', null]) {
+    const out = t.push(
+      JSON.stringify({
+        type: 'result',
+        usage: { input_tokens: 10, cache_read_input_tokens: 5000 },
+        modelUsage: { m: { contextWindow: win } },
+        session_id: 's1'
+      }) + '\n'
+    )
+    const done = out.find((e) => e.k === 'turn.done')
+    assert.ok(done && done.k === 'turn.done')
+    assert.equal(done.usage.contextRatio, undefined, `contextWindow=${win} 不该算出比例`)
+  }
 })
 
 test('坏行不抛异常，产出空数组', () => {
