@@ -33,6 +33,9 @@ const SCAN_LINES = 40
 
 /** 框线与列表指示符：box-drawing (U+2500–U+257F) + 常见箭头 */
 const CHROME = /[─-╿•❯▶►>»]/g
+/** 框的竖边。**只认竖线**（不含 ─ 那类横线）：横线是框的上下沿，
+ *  框内每一行两侧都有竖线，这才是「这行在框里」的标志。 */
+const BOX_EDGE = /[│┃║|]/
 
 /**
  * 认危险命令。命中就禁掉灵动岛上的直通按钮——
@@ -94,8 +97,15 @@ export function parseApproval(lines: string[]): ApprovalInfo | null {
   // 框被挤出扫描范围——表现为「同一个框，有时认得出有时认不出」，
   // 取决于当时屏幕上有多少历史输出。实测踩到过。
   const trimmed = lines.map(strip)
-  while (trimmed.length && !trimmed[trimmed.length - 1]) trimmed.pop()
+  // 「这一行在不在框里」—— strip 会把框线抹掉，抹之前先把这一位记下来。
+  // 正文回看要靠它区分框内框外，见下面 bodyLines 那段。
+  const boxed = lines.map((l) => BOX_EDGE.test(l))
+  while (trimmed.length && !trimmed[trimmed.length - 1]) {
+    trimmed.pop()
+    boxed.pop()
+  }
   const tail = trimmed.slice(-SCAN_LINES)
+  const tailBoxed = boxed.slice(-SCAN_LINES)
 
   // 从后往前收集连续的编号选项。中间允许夹空行（框里选项之间常有空隙），
   // 但一旦遇到有内容且不是选项的行就停——那是选项区的上边界。
@@ -140,12 +150,24 @@ export function parseApproval(lines: string[]): ApprovalInfo | null {
   }
   if (!question) return null
 
-  // 问句上方的连续非空行作为正文（待执行的命令 / 待改的文件），最多 3 行
+  // 问句上方的连续非空行作为正文（待执行的命令 / 待改的文件），最多 3 行。
+  //
+  // **必须和问句同框。** 原来这里遇到空行是 `continue`（还没收到正文就跳过空行
+  // 继续往上找），于是问句上方紧邻空行时，会越过空行抓到**上一段完全无关的屏幕内容**。
+  // 用户看到的就是这个：灵动岛上显示着一段 minified JS
+  // （`e.context = 2; return "keyword"; } else if`）—— 那是他终端里恰好在框上方的源码。
+  //
+  // 判据用「这一行有没有框的竖边」而不是「有没有空行」：真实审批框里正文和问句之间
+  // 允许有空行（框内的留白），但框外的内容不会有竖边。框本身没有边框时（有些 CLI
+  // 就是纯文本），退回「遇到空行就停」——**宁可少显示一行，也不能显示错的东西**。
+  const inBox = tailBoxed[qAt] === true
   const bodyLines: string[] = []
   for (let k = qAt - 1; k >= 0 && bodyLines.length < 3; k--) {
+    if (inBox && !tailBoxed[k]) break // 出框了，上面的不属于这个框
     if (!tail[k]) {
-      if (bodyLines.length) break // 空行 = 正文段落结束
-      continue
+      if (bodyLines.length) break // 正文段落结束
+      if (!inBox) break // 无边框的框：紧邻空行就停，不越过它去抓上一段
+      continue // 框内留白，继续往上
     }
     bodyLines.unshift(tail[k])
   }
