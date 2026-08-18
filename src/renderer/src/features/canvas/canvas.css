@@ -3344,13 +3344,13 @@
 }
 
 .wiki-drawer {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  bottom: 8px;
+  /* **定位与开合交给外壳 .wk-shell 了**：模式胶囊挂在抽屉左侧，必须和抽屉一起动、
+     一起被判定为"抽屉的一部分"。两个元素各自 transform 的话迟早不同步。
+     这里只保留自己的外观和 overflow:hidden（那条是给圆角裁内容用的，
+     只裁抽屉自己的内容，裁不到壳里的胶囊）。 */
+  position: relative;
   width: 250px;
-  /* 右边缘目前没有别的常驻件，45 是跟资源抽屉保持一致（见那边的注释） */
-  z-index: 45;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--glass-1);
@@ -3359,12 +3359,34 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
   overflow: hidden;
-  /* 和左侧资源抽屉同一条弹簧曲线（末端回弹的 back），只是方向取反。
-     两侧抽屉手感不一致的话，会让人觉得是两个不同年代拼起来的软件 */
-  transition:
-    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.28s ease;
+}
+
+/* 抽屉外壳：模式胶囊 + 抽屉本体。**开合动画挂在这一层** ——
+   胶囊是抽屉的一部分，得跟它一起进出，而不是各算一份位移。
+   和左侧资源抽屉同一条弹簧曲线（末端回弹的 back），只是方向取反：
+   两侧抽屉手感不一致的话，会让人觉得是两个不同年代拼起来的软件。 */
+.wk-shell {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  bottom: 8px;
+  /* 右边缘目前没有别的常驻件，45 是跟资源抽屉保持一致（见那边的注释） */
+  z-index: 45;
+  /* 收起时整个壳移出画面右侧。**位移量必须把胶囊突出的那截算进去**：
+     抽屉宽 250 + 余量 20 + 胶囊探出的 32 = 302。
+     只算 270 的话胶囊还露在画面里（实测左边缘停在 1115，窗口宽 1147），
+     而且正好压住右边缘那条展开触发条 —— 点「展开」会点到胶囊上，抽屉再也打不开。 */
+  transform: translateX(302px);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
+  /* 收起时整个壳不接事件：位移之外再加一道保险，免得将来有人调宽度又把它送回画面里 */
+  pointer-events: none;
+}
+.wk-shell.open {
+  pointer-events: auto;
+}
+.wk-shell.open {
+  transform: translateX(0);
 }
 .wiki-drawer.closed {
   transform: translateX(calc(100% + 20px));
@@ -3375,9 +3397,6 @@
      和右侧抽屉两个加起来近 300k 像素的白算，实测这两项 + 嵌套的 voice-btn
      一共占 GPU 功耗 28%。零视觉代价。 */
   backdrop-filter: none;
-}
-.wiki-drawer.open {
-  transform: translateX(0);
 }
 .wiki-drawer.dropping {
   border-color: rgba(var(--accent-rgb), 0.8);

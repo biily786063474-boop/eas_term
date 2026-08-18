@@ -16,8 +16,6 @@ import { isImagePath, isVideoPath } from './media'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import {
   ChevronRightIcon,
-  ChevronDownIcon,
-  CheckIcon,
   PlusIcon,
   FolderOpenIcon,
   SparkleIcon,
@@ -25,12 +23,18 @@ import {
   GearIcon
 } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
-import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { CanvasSkillPanel } from './CanvasSkillPanel'
 
 /** 抽屉左上角名称下拉切换的两档：知识库 / Skill。整个内容换掉，不是上下分区
  *  （抽屉只有 250px 宽，两块并存太挤——design 文档 §六 第 5 条）。 */
 type DrawerMode = 'wiki' | 'skill'
+
+/** 两个书签。**全中文**——「Skill」在一堆中文界面里是唯一的英文词，
+ *  而它指的东西（可复用的做事套路）本来就有中文说法。 */
+const MODES: { id: DrawerMode; label: string; tip: string }[] = [
+  { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' },
+  { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' }
+]
 
 export function CanvasWikiDrawer(): JSX.Element | null {
   const maximizedNode = useStore(liveMaximizedNode)
@@ -38,11 +42,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
   const [hover, setHover] = useState(false)
   const [mode, setMode] = useState<DrawerMode>('wiki')
-  const [modeMenuAt, setModeMenuAt] = useState<{ x: number; y: number } | null>(null)
-  const modeMenuItems: CanvasMenuItem[] = [
-    { label: '知识库', icon: mode === 'wiki' ? <CheckIcon size={12} /> : undefined, onClick: () => setMode('wiki') },
-    { label: 'Skill', icon: mode === 'skill' ? <CheckIcon size={12} /> : undefined, onClick: () => setMode('skill') }
-  ]
+
   const [st, setSt] = useState<WikiStatus | null>(null)
   const [busy, setBusy] = useState('')
   const [dropping, setDropping] = useState(false)
@@ -89,7 +89,10 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       // 右键菜单/确认弹窗 portal 到 body，DOM 上不在抽屉里但逻辑上属于它。
       // 不放过的话：右键笔记点「重命名」，抽屉当场收起，输入框跟着滑出屏幕
       if (t.closest?.('.canvas-ctxmenu') || t.closest?.('.context-menu') || t.closest?.('.confirm-overlay')) return
-      if (!t.closest?.('.wiki-drawer')) setOpen(false)
+      // 判的是**外壳**不是抽屉本体：模式胶囊挂在抽屉左侧、DOM 上是它的兄弟，
+      // 但逻辑上就是抽屉的一部分。把边界画在 .wk-shell 上，胶囊自然在里面 ——
+      // 比给它单开一条豁免干净（那种名单迟早会漏下一个新控件）。
+      if (!t.closest?.('.wk-shell')) setOpen(false)
     }
     const t = window.setTimeout(() => document.addEventListener('mousedown', onDown, true), 0)
     return () => {
@@ -222,6 +225,29 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           </span>
         </div>
       )}
+      <div className={`wk-shell${open ? ' open' : ''}`}>
+        {/* 模式切换：竖排胶囊，挂在抽屉左侧。
+            经过记在这儿免得再绕：
+              一版 标题上的下拉 —— 切换是这里最高频的动作，藏在下拉里每次要两步。
+              二版 左侧外挂的书签 —— 被抽屉自己的 overflow:hidden 整个裁掉；而且即使
+                   显示出来，点它会命中「点击外部 → 收起抽屉」，表现成"点了不切换"。
+              三版 外面套一层 .wk-shell，胶囊和抽屉都住在里面 —— 于是它**真的是抽屉的
+                   一部分**：开合跟着壳一起动（不用两套 transform）、outside-click 判壳
+                   就自然包含它（不用豁免名单）、overflow:hidden 留在抽屉本体上只裁自己的
+                   内容，裁不到壳里的胶囊。位置问题和点击问题一次解决。 */}
+        <div className="wk-seg">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
+              onClick={() => setMode(m.id)}
+              data-tip={m.tip}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
     <aside
       className={`wiki-drawer${open ? ' open' : ' closed'}${dropping ? ' dropping' : ''}`}
       onDragOver={(e) => {
@@ -233,18 +259,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       onDrop={onDrop}
     >
       <div className="wk-head">
-        <button
-          className="wk-title wk-title-dd"
-          onClick={(e) => {
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-            setModeMenuAt({ x: r.left, y: r.bottom + 4 })
-          }}
-        >
-          <span>{mode === 'wiki' ? '知识库' : 'Skill'}</span>
-          <span className={`skl-chevron${modeMenuAt ? ' open' : ''}`}>
-            <ChevronDownIcon size={11} />
-          </span>
-        </button>
+        <span className="wk-title">知识资产</span>
         {mode === 'wiki' && !!st?.exists && (
           <>
             <button className="wk-icon" data-tip="在访达里打开" onClick={() => void window.api.wiki.reveal()}>
@@ -267,9 +282,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           </>
         )}
       </div>
-      {modeMenuAt && (
-        <CanvasContextMenu x={modeMenuAt.x} y={modeMenuAt.y} items={modeMenuItems} onClose={() => setModeMenuAt(null)} />
-      )}
 
       {mode === 'skill' ? (
         <CanvasSkillPanel />
@@ -598,6 +610,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </>
       )}
     </aside>
+      </div>
     {htmlChoice}
     </>
   )
