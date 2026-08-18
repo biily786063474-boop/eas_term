@@ -27,10 +27,14 @@ import '../editor/editor.css'
 
 export function MessageList({
   view,
-  onApprovalDecide
+  onApprovalDecide,
+  leafId
 }: {
   view: ChatView
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
+  /** 这个对话节点自己的 leafId —— 正文里点开网址时用它找「同一个 Frame」，
+   *  好把网页开在旁边而不是系统浏览器里 */
+  leafId?: string
 }): JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null)
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
@@ -82,6 +86,7 @@ export function MessageList({
           turn={turn}
           approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
           onApprovalDecide={onApprovalDecide}
+          leafId={leafId}
         />
       ))}
       {view.pending && !pendingOnLastTurn && (
@@ -124,17 +129,19 @@ export function MessageList({
 function MessageTurn({
   turn,
   approval,
-  onApprovalDecide
+  onApprovalDecide,
+  leafId
 }: {
   turn: Turn
   approval: ChatView['pending']
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
+  leafId?: string
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   // 正文里的网址/本地路径 → Ctrl+点击可跳。**依赖 turn.text**：流式输出时正文每帧
   // 都在变，不跟着重做的话只有第一帧那部分是可点的
   const mdRef = useRef<HTMLDivElement>(null)
-  useLinkify(mdRef, turn.text)
+  useLinkify(mdRef, turn.text, leafId)
   const visible = turn.role === 'assistant' ? visibleExecs(turn.execs, expanded) : []
   const hasHidden = !expanded && visible.length < turn.execs.length
 

@@ -335,7 +335,7 @@ export function AgentChatView({
     }
     return (
       <div className="agent-chat-view">
-        <MessageList view={displayView} onApprovalDecide={handleApprovalDecide} />
+        <MessageList view={displayView} onApprovalDecide={handleApprovalDecide}  leafId={leafId}/>
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar

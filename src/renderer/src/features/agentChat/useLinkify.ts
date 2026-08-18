@@ -12,6 +12,35 @@
 import { useEffect } from 'react'
 
 import { splitByLinks, isFollowClick, type LinkHit } from './linkify.ts'
+import { useStore } from '../../store'
+import { collectLeaves } from '../../layout'
+
+/**
+ * 打开一个网址。**优先落在同一个 Frame 的内嵌浏览器里**，实在没有画布 Frame 才
+ * 回退系统浏览器 —— 画布上本来就有网页预览节点，把人赶去外部浏览器等于让他离开工作台。
+ *
+ * 查找逻辑与 TerminalView 里「终端点链接」那段**逐条对齐**（先按 leafId 找自己所在的
+ * Frame，退而求其次找同项目的顶层 Frame，再退到任意顶层 Frame）。两处行为必须一致：
+ * 同一个用户在终端里点和在对话里点，落点不该不一样。
+ */
+function openUrl(url: string, leafId?: string): void {
+  const st = useStore.getState()
+  let frame = leafId ? st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId)) : undefined
+  if (!frame) {
+    const projectId = leafId
+      ? st.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))?.projectId
+      : st.activeProjectId
+    frame =
+      st.canvas.frames.find((f) => !f.parentId && f.projectId === projectId) ??
+      st.canvas.frames.find((f) => !f.parentId)
+  }
+  if (!frame) {
+    void window.api.shell.openExternal(url)
+    return
+  }
+  if (st.viewMode !== 'canvas') st.setViewMode('canvas')
+  st.addWebNode(frame.id, url)
+}
 
 /** 不进去找链接的容器：代码块里的路径由「复制」按钮负责，行内代码同理。 */
 const SKIP = new Set(['A', 'CODE', 'PRE', 'SCRIPT', 'STYLE', 'TEXTAREA'])
@@ -59,7 +88,7 @@ function decorate(root: HTMLElement): void {
  * @param ref 容器（消息正文那个 div）
  * @param dep 内容变化的依据 —— 流式输出时正文每帧都在变，必须跟着重做
  */
-export function useLinkify(ref: React.RefObject<HTMLElement>, dep: unknown): void {
+export function useLinkify(ref: React.RefObject<HTMLElement>, dep: unknown, leafId?: string): void {
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -101,14 +130,14 @@ export function useLinkify(ref: React.RefObject<HTMLElement>, dep: unknown): voi
       const kind = t.dataset.kind
       const target = t.dataset.target
       if (!target) return
-      if (kind === 'url') void window.api.shell.openExternal(target)
+      if (kind === 'url') openUrl(target, leafId)
       // 本地路径：在访达里显示。**不直接开文件** —— 我们不知道它该用什么打开，
       // 而访达里定位到它，用户接下来想怎么处理都行
       else void window.api.fs.showInFolder(target)
     }
     el.addEventListener('click', onClick)
     return () => el.removeEventListener('click', onClick)
-  }, [ref])
+  }, [ref, leafId])
 }
 
 export type { LinkHit }
