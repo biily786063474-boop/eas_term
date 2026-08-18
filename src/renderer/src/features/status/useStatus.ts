@@ -2,6 +2,7 @@
 // 谁都不许自己去 store 里捞那六个字段——那样又会长出第二套推导。
 import { useMemo } from 'react'
 import { useStore } from '../../store'
+import { planFocus, type FocusMode } from './focusPlan'
 import type { AppState } from '../../store'
 import { byProject, locate, sortRows, statusOf, urgencyCmp } from './machine'
 import type { LocateCtx, Located, ProjectRow, RawSignals, TermState } from './machine'
@@ -163,11 +164,14 @@ export function focusTerminal(ptyId: string): void {
   const st = useStore.getState()
   const loc = locate(ptyId, { tabs: st.tabs, frames: st.canvas.frames, projects: st.projects })
   if (!loc) return
-  if (loc.frameId && loc.nodeId) {
-    if (st.viewMode !== 'canvas') st.setViewMode('canvas')
-    st.focusCanvasNode(loc.frameId, loc.nodeId)
+  // **模式隔离**：能在当前模式里看见这个终端，就别把用户拽走。
+  // 判据在 focusPlan.ts（纯函数、可单测）——原来判的是「终端在画布上有节点」，
+  // 而画布和分屏共享同一批 leaf，于是在分屏里用得好好的也会被切到画布。
+  const plan = planFocus(st.viewMode as FocusMode, !!(loc.frameId && loc.nodeId))
+  if (plan.switchTo) st.setViewMode(plan.switchTo)
+  if (plan.target === 'canvas') {
+    st.focusCanvasNode(loc.frameId!, loc.nodeId!)
   } else {
-    if (st.viewMode !== 'split') st.setViewMode('split')
     // 必须排在下面 setActiveLeaf 之前：setActiveProject 自己也会顺手挑一个
     // 「该项目上次激活的标签」写回 activeTabId（pickActiveTab，不一定是 loc.tabId）。
     // 顺序对了，setActiveLeaf 才是最后一个写 activeTabId 的，落点精确到 loc.tabId；
