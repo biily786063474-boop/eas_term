@@ -1925,6 +1925,11 @@
   z-index: 1000;
   width: 286px;
   padding: 5px;
+  /* 窗口很矮时也不许捅出去。useMenuAnchor 只能**挪位置**，挪不动一个比窗口还高的浮层，
+     所以高度这一头要自己封住：整体限高 + 列表可收缩（.cpk-list 的 min-height: 0）。 */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 16px);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
@@ -2010,6 +2015,9 @@
 
 .cpk-list {
   max-height: 312px;
+  /* flex 子项的 min-height 默认是 auto，不写这条它就不肯缩到内容高度以下，
+     外层的 max-height 会被内容顶破 */
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

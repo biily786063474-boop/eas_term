@@ -19,6 +19,12 @@ export interface CanvasMenuItem {
 /**
  * 把浮层夹回可视区：靠窗口右/下缘弹出时不被裁掉。
  * 实测尺寸而非估算——菜单项数不定，估出来的高度对不上。
+ *
+ * **尺寸要持续跟，不能只量一次。** 浮层的内容常常是异步来的：文件选择器要等 IPC
+ * 读完目录才知道自己多高，只在挂载时量一次的话，量到的是「空列表」那一瞬的小尺寸，
+ * 等文件填进来面板长高，位置却还停在按小尺寸算的地方，底部就捅出窗口了
+ * （Frame 内双击出的插入文件选择器实测如此）。所以挂一个 ResizeObserver，
+ * 尺寸一变就重新夹一次。改的是 left/top，不影响自身尺寸，不会自激。
  */
 export function useMenuAnchor(
   x: number,
@@ -29,12 +35,19 @@ export function useMenuAnchor(
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   useLayoutEffect(() => {
     const el = ref.current
-    const w = el?.offsetWidth ?? 190
-    const h = el?.offsetHeight ?? 200
-    setPos({
-      x: Math.max(8, Math.min(x, window.innerWidth - w - 8)),
-      y: Math.max(8, Math.min(y, window.innerHeight - h - 8))
-    })
+    const place = (): void => {
+      const w = el?.offsetWidth ?? 190
+      const h = el?.offsetHeight ?? 200
+      setPos({
+        x: Math.max(8, Math.min(x, window.innerWidth - w - 8)),
+        y: Math.max(8, Math.min(y, window.innerHeight - h - 8))
+      })
+    }
+    place()
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(place)
+    ro.observe(el)
+    return () => ro.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [x, y, ...deps])
   return pos
