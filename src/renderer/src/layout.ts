@@ -36,7 +36,13 @@ export type PaneState =
   | { kind: 'image'; filePath: string | null }
   | { kind: 'history'; cwd: string }
   | { kind: 'chat'; cwd: string }
-  | { kind: 'agent'; cwd: string; sessionId?: string }
+  /** AI 对话面板。
+   *  · sessionId 是 **Eas-Term 内部**的会话号（ac-N），指向主进程里那个活着的 session。
+   *    进程一退就无效，**不落盘**。
+   *  · resumeId 是 **CLI 自己**的会话 id（Claude 的 session_id / Codex 的 thread id），
+   *    两个 adapter 都能拿它续上下文（`--resume` / `exec resume`）。它本来就是为跨重启
+   *    设计的，**要落盘** —— 不存的话重开这个节点，模型就完全不记得之前聊过什么。 */
+  | { kind: 'agent'; cwd: string; sessionId?: string; resumeId?: string }
   | { kind: 'dict' }
   | { kind: 'wiki' }
   | { kind: 'web'; url: string | null; title?: string }

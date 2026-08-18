@@ -23,6 +23,7 @@ import { stopVoiceOnSend } from '../voice/voiceControl'
 import { track } from '../notify/track'
 import { noteSubmitted, drainFollow } from '../gantt/collector'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { usePastedImages } from './usePastedImages'
 import { useTerminalTodos } from './useTerminalTodos'
 import { TerminalTodoPanel } from './TerminalTodoPanel'
 
@@ -37,34 +38,6 @@ const MAX_ROWS = 4
 const LINE_H = 19
 
 /** 缩略图边长。只是给人扫一眼确认「贴对了图没有」，不需要原图那么大 */
-const THUMB_PX = 96
-
-/** 缩成小图再转 data URL。
- *
- *  **不能用 URL.createObjectURL**：这个页面是 file:// 加载的，blob URL 的 origin 是 null，
- *  <img> 加载它会静默失败（complete=true 但 naturalWidth=0，看着就是一块空白）。
- *  顺带缩到 96px，原图直接转 base64 的话一张几 MB 的截图会在内存里躺一份两倍大的副本。 */
-async function thumbnail(f: File): Promise<string> {
-  const bmp = await createImageBitmap(f)
-  const s = Math.min(1, THUMB_PX / Math.max(bmp.width, bmp.height))
-  const c = document.createElement('canvas')
-  c.width = Math.max(1, Math.round(bmp.width * s))
-  c.height = Math.max(1, Math.round(bmp.height * s))
-  c.getContext('2d')?.drawImage(bmp, 0, 0, c.width, c.height)
-  bmp.close()
-  return c.toDataURL('image/png')
-}
-
-interface PastedImg {
-  /** 磁盘上的绝对路径——发出去的就是它 */
-  path: string
-  /** 缩略图（data URL） */
-  url: string
-  /** true = 用户从访达拖进来的，原地引用，删缩略图时不许动人家的文件 */
-  external: boolean
-  name: string
-}
-
 export function TerminalInput({
   ptyId,
   leafId,
@@ -78,9 +51,7 @@ export function TerminalInput({
 }): JSX.Element {
   const [value, setValue] = useState('')
   const [flash, setFlash] = useState(false)
-  const [imgs, setImgs] = useState<PastedImg[]>([])
   const [dragOver, setDragOver] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   /** 上一条发出去的内容，空输入时按 ↑ 取回 */
   const lastRef = useRef('')
@@ -102,78 +73,14 @@ export function TerminalInput({
   // 同一个坑仓库里已经防过两次（tabsSlice.ts:251 setTabTitle 标题没变时短路、
   // TerminalView.tsx:567 特意用非响应式的 getState），这里不能再开一个口子。
   // 返回 string|null 之后 zustand 按值比较：项目没变就不重渲染。
+  // 粘贴/拖入图片、把画布快照带进来——这套逻辑与 AI 对话框**共用同一份**
+  // （usePastedImages）。两边各写一份迟早分叉，而每条规则背后都有踩过的坑。
+  const pics = usePastedImages()
+  const { imgs, takeFiles, dropImg, takeSnapshotIn, err } = pics
+
   const myProjectId = useStore(
     (s) => s.tabs.find((t) => collectLeaves(t.root).some((l) => l.id === leafId))?.projectId ?? null
   )
-
-  /** 关终端时把「还没发出去」的粘贴图删掉。发出去的不能删——agent 还要读。
-   *  用 ref 是因为清理函数只在卸载时跑一次，闭包里的 imgs 会是初值。 */
-  const imgsRef = useRef<PastedImg[]>([])
-  imgsRef.current = imgs
-  useEffect(
-    () => () => {
-      for (const im of imgsRef.current) {
-        if (!im.external) void window.api.pasteImage.remove(im.path)
-      }
-    },
-    []
-  )
-
-  const flashErr = (m: string): void => {
-    setErr(m)
-    window.setTimeout(() => setErr(null), 3200)
-  }
-
-  /** 收下一批图片。拖进来的本来就在磁盘上，直接引用不再复制一份；
-   *  剪贴板里的是裸位图，没有路径，只能先落盘。 */
-  const takeFiles = async (files: File[]): Promise<void> => {
-    for (const f of files) {
-      if (!f.type.startsWith('image/')) continue
-      track('image')
-      let url: string
-      try {
-        url = await thumbnail(f)
-      } catch {
-        flashErr(`「${f.name || '这张图'}」读不出来`)
-        continue
-      }
-      const disk = window.api.pasteImage.pathFor(f)
-      if (disk) {
-        setImgs((v) => [...v, { path: disk, url, external: true, name: f.name }])
-        continue
-      }
-      const bytes = new Uint8Array(await f.arrayBuffer())
-      const ext = (f.type.split('/')[1] || 'png').toLowerCase()
-      const r = await window.api.pasteImage.save(bytes, ext)
-      if (r.ok && r.path) {
-        setImgs((v) => [...v, { path: r.path!, url, external: false, name: f.name || '粘贴的图片' }])
-      } else {
-        flashErr(r.error ?? '这张图存不下来')
-      }
-    }
-  }
-
-  /** 从框里叉掉一张。我们自己存的当场删，别人的文件只松手不动它 */
-  const dropImg = (im: PastedImg): void => {
-    if (!im.external) void window.api.pasteImage.remove(im.path)
-    setImgs((v) => v.filter((x) => x !== im))
-  }
-
-  const takeSnapshotIn = async (): Promise<void> => {
-    if (!lastSnapshot) return
-    // external:true —— 文件在项目目录里、不归输入框管，松开缩略图时绝不能删它
-    const url = await window.api.fs.readImageFile(lastSnapshot.path)
-    setImgs((prev) => [
-      ...prev,
-      {
-        path: lastSnapshot.path,
-        url: url.ok ? url.dataUrl : '',
-        external: true,
-        name: lastSnapshot.path.split('/').pop() ?? 'snapshot.png'
-      }
-    ])
-    setLastSnapshot(null) // 已经带进去了，不用再浮着
-  }
 
   const autoGrow = (el: HTMLTextAreaElement): void => {
     el.style.height = 'auto'
@@ -191,7 +98,7 @@ export function TerminalInput({
     lastRef.current = text
     // 图片路径排在文字前面：agent 先看到「有图」，再读你要它干什么。
     // 带空格的路径要加引号，否则会被读成两个文件。
-    const paths = imgs.map((i) => (/\s/.test(i.path) ? `"${i.path}"` : i.path)).join(' ')
+    const paths = pics.pathPrefix()
     const payload = paths ? (text ? `${paths} ${text}` : paths) : text
 
     // 多行要用 bracketed paste 包起来，否则 TUI 会把每个换行都当成「提交」——
@@ -218,7 +125,7 @@ export function TerminalInput({
       window.setTimeout(() => window.api.pty.write(ptyId, '\r'), ENTER_DELAY_MS)
     }
     // 只松开缩略图，**不删文件**——agent 还没读呢（见 pasteImages.ts 的 24 小时策略）
-    setImgs([])
+    pics.clearImgs()
     setValue('')
     const el = taRef.current
     if (el) {

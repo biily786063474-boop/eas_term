@@ -19,17 +19,20 @@
 // （preload/index.ts 与 session.ts 的 IPC handler 都明确只读这两个字段），没有能中途
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CliCapabilities, CliInfo, AgentApprovalHookStatus } from '../../../../shared/agentChat.ts'
+import { useEffect, useRef, useState } from 'react'
+import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel, formatUsage } from './toolbarModel.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, GaugeIcon, LockIcon, TrashIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, GaugeIcon, ImageIcon, SendIcon } from '../../ui/Icons'
+import { usePastedImages } from '../terminal/usePastedImages'
 
 const MAX_ROWS = 4
 const LINE_H = 19
+/** 用量仪表盘的展开状态。**默认收起** —— 想知道的时候才看，常驻会把要用的控件挤走 */
+const GAUGE_KEY = 'eas.agentchat.gauge'
 
 function autoGrow(el: HTMLTextAreaElement): void {
   el.style.height = 'auto'
@@ -65,7 +68,12 @@ export function ChatToolbar({
   sessionId: string
   /** 返回「这条真的送出去了吗」。false = 没送成，工具栏会把文字放回输入框（评审 I4）。
    *  返回 void 也允许（比如将来某个调用方不关心结果），那时按"不知道"处理、不回填。 */
-  onSend: (text: string) => Promise<boolean> | void
+  /** 第一个参数是**真正发给 CLI 的内容**（图片路径拼在文字前面）。
+   *  第二个是给界面用的：纯文字 + 缩略图，让对话流显示图本身而不是一串路径。 */
+  onSend: (
+    text: string,
+    meta?: { text: string; images: { path: string; url: string }[] }
+  ) => Promise<boolean> | void
   onSetParams: (patch: { model?: string; effort?: string }) => void
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
@@ -88,8 +96,14 @@ export function ChatToolbar({
   // "跟随 CLI 默认"，选了才有覆盖，而且每一个真实选项都点得动。
   const [modelSel, setModelSel] = useState('')
   const [effortSel, setEffortSel] = useState('')
-  const [hook, setHook] = useState<AgentApprovalHookStatus | null>(null)
-  const [hookBusy, setHookBusy] = useState(false)
+  const [showGauge, setShowGauge] = useState(() => localStorage.getItem(GAUGE_KEY) === '1')
+  // 粘贴/拖入图片、带入画布快照——**与终端输入框共用同一份实现**（用户要求两边一致）。
+  // 复用连同那几条踩过坑的规则一起继承：拖进来的原地引用不复制、剪贴板位图先落盘、
+  // 缩略图不能用 blob URL（file:// 页面下 origin 是 null，<img> 会静默失败）。
+  const pics = usePastedImages()
+  const [dragOver, setDragOver] = useState(false)
+  const lastSnapshot = useStore((s) => s.lastSnapshot)
+  const setLastSnapshot = useStore((s) => s.setLastSnapshot)
   /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
   const [dismissed, setDismissed] = useState<Record<string, number>>({})
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -99,41 +113,22 @@ export function ChatToolbar({
     aliveRef.current = false
   }, [])
 
-  // 不走这套 hook 机制的 CLI 连查都不该查——那次 hookStatus() 查的是 Claude 的
-  // <cwd>/.claude/settings.json，对它来说是一次毫无意义的文件读，读回来还会被拿去
-  // 渲染一个跟它无关的开关（评审 I2）。
-  const showApprovalHook = model.showApprovalHook
-  const refreshHook = useCallback(async (): Promise<void> => {
-    if (!showApprovalHook) return
-    const s = await window.api.agentChat.hookStatus(cwd)
-    if (aliveRef.current) setHook(s)
-  }, [cwd, showApprovalHook])
-
-  useEffect(() => {
-    void refreshHook()
-  }, [refreshHook])
-
-  // notice 一来（典型就是"hook 装不上"那条)多半意味着 hook 状态刚变过,顺手刷新一次,
-  // 不用等用户自己点开工具栏才发现状态是旧的。只按数量变化触发,不需要整个 view 做依赖。
-  // 计的是「含重复在内的累计条数」而不是 notices.length——归约器现在把内容相同的 notice
-  // 合并成一条并累加 count（评审 I5），只看 length 的话"同一条又发生了一次"（典型就是
-  // restart 后 hook 又没装上）就再也触发不了这次刷新了。
-  const noticeCount = view.notices.reduce((sum, n) => sum + n.count, 0)
-  useEffect(() => {
-    if (noticeCount > 0) void refreshHook()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noticeCount])
-
-  const handleUninstall = async (): Promise<void> => {
-    setHookBusy(true)
-    await window.api.agentChat.hookUninstall(cwd)
-    await refreshHook()
-    if (aliveRef.current) setHookBusy(false)
-  }
+  // 审批保护的开关、状态与卸载入口 2026-08-17 全部搬到了右上角设置面板。
+  // 工具栏这里原来有一个「审批保护 已开启/未开启」chip 加一个「卸载」按钮 ——
+  // 它们占着每天都要看的那一行，说的却是一件装完就基本不动的事。
+  // 内核那侧一个字没动（隔离标记 / 写前备份 / 一键卸载都还在），只是入口换了地方。
 
   const submit = (): void => {
     const t = text.trim()
-    if (!t) return
+    // 只有图没有字也该能发（同终端输入框：图本身就是内容）
+    if (!t && !pics.imgs.length) return
+    // 图片路径排在文字前面，跟终端那边同一套拼法（agent 先看到「有图」再读要求）
+    const paths = pics.pathPrefix()
+    const payload = paths ? (t ? `${paths} ${t}` : paths) : t
+    // 界面要显示的是图本身和你打的字，不是拼好的那串路径 —— 缩略图这会儿还在内存里，
+    // 跟着消息带过去就行，不用等下再去磁盘重读一遍。
+    const shots = pics.imgs.map((i) => ({ path: i.path, url: i.url }))
+    pics.clearImgs()
     // 任何"把用户的话发出去"的路径都该停一次麦——照抄 voiceControl.ts 的约定
     // （TerminalInput.tsx 的 send() 是唯一先例：不 await,消息该立刻走,收麦是它旁边的事）。
     void stopVoiceOnSend()
@@ -147,7 +142,7 @@ export function ChatToolbar({
     // deliverMessage 直接返回「当前会话正在处理上一条消息，请稍候再发送」。修复前
     // 用户看到的是：自己那句话已经出现在对话流里（看起来发出去了）、输入框空了、
     // 底下一行小字——想重发只能重新打一遍，长消息就是白打。
-    void Promise.resolve(onSend(t)).then((ok) => {
+    void Promise.resolve(onSend(payload, { text: t, images: shots })).then((ok) => {
       if (ok !== false || !aliveRef.current) return
       // 这几十毫秒里用户可能已经开始打下一句：那就把失败的这条接在前面，
       // 绝不覆盖他新打的内容——"不丢用户打的字"是这条修复的全部意义。
@@ -168,6 +163,11 @@ export function ChatToolbar({
   }
 
   const usageText = model.showUsage ? formatUsage(view.usage, view.costUsd) : ''
+  // 整数百分比：小数位在这个尺寸下读不出来，还会让数字宽度跳来跳去
+  const ctxPct =
+    model.showUsage && typeof view.usage?.contextRatio === 'number'
+      ? Math.round(view.usage.contextRatio * 100)
+      : null
 
   // 关掉过的 notice 记的是「关闭那一刻它已经发生过几次」，不是一个"关过就永远别再出现"
   // 的开关（评审 I5 要求可关闭，但硬约束要求 {k:'error',fatal:false} 必须显示）：
@@ -206,72 +206,71 @@ export function ChatToolbar({
         </div>
       )}
 
-      <div className="ac-toolbar-meta">
-        {!!usageText && (
-          <span className="ac-meta-item">
-            <GaugeIcon size={11} />
-            {usageText}
-          </span>
-        )}
+      {/* **输入区是一个容器，不是几条横带。**
+          之前图片缩略图、快照提示、控制行、输入行各占一条，加上 notices 能叠到五层，
+          界面被切成一片一片（用户原话「把图切的很碎」）。现在图片、文字、控件全部
+          收进同一个圆角框内部分层，外面只剩 notices。
+          拖放挂在容器上：整个框都是落点，不用瞄准某一行。 */}
+      <div
+        className={`ac-composer-box${dragOver ? ' dragover' : ''}`}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={(e) => {
+          // 进入子元素也会触发 dragleave，用坐标判断是不是真的离开了这个框
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false)
+        }}
+        onDrop={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return
+          e.preventDefault()
+          setDragOver(false)
+          void pics.takeFiles([...e.dataTransfer.files])
+        }}
+      >
+        {showGauge && !!usageText && <div className="ac-gauge-row">{usageText}</div>}
+        {pics.err && <div className="ac-inline-err">{pics.err}</div>}
 
-        {/* 只有声明「逐次审批靠那份 PreToolUse hook 文件」的 CLI 才渲染这一块——判据是
-            能力声明（model.showApprovalHook ← CliInfo.approvalHook），不是 CLI 名字，
-            也不是 capabilities.approval 非空那个碰巧重合的替身（评审 I2/I3）。 */}
-        {model.showApprovalHook && (
-          <span className="ac-meta-item">
-            <LockIcon size={11} className={hook?.installed ? 'ac-hook-on' : 'ac-hook-off'} />
-            审批保护 {hook ? (hook.installed ? '已开启' : '未开启') : '查询中…'}
-            {hook?.installed && (
+        {/* 图片区：快照占位块和已带上的图排在同一行，都是「这条消息要带的东西」 */}
+        {(pics.imgs.length > 0 || lastSnapshot) && (
+          <div className="ac-attach-row">
+            {lastSnapshot && (
               <button
                 type="button"
-                className="ac-meta-btn"
-                disabled={hookBusy}
-                onClick={() => void handleUninstall()}
+                className="ac-attach-snap"
+                data-tip="把刚拍的画板快照带上"
+                onClick={() => void pics.takeSnapshotIn()}
               >
-                <TrashIcon size={10} />
-                {hookBusy ? '卸载中…' : '卸载'}
+                <ImageIcon size={13} />
+                <span>刚拍的快照</span>
               </button>
             )}
-          </span>
+            {pics.imgs.map((im) => (
+              <div className="ac-attach" key={im.path} data-tip={im.path}>
+                <img src={im.url} alt={im.name} />
+                <button
+                  type="button"
+                  className="ac-attach-x"
+                  aria-label="移除这张图"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    pics.dropImg(im)
+                  }}
+                >
+                  <CloseIcon size={9} />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
 
-        {model.showCompact && (
-          <button
-            type="button"
-            className="ac-meta-btn"
-            onClick={() => {
-              void stopVoiceOnSend()
-              requestConfirm({
-                message:
-                  '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
-                confirmLabel: '压缩',
-                onConfirm: () => onSend('/compact')
-              })
-            }}
-          >
-            <CompressIcon size={11} />
-            压缩上下文
-          </button>
-        )}
-
-        {model.showSandbox && model.sandboxLevels.length > 0 && (
-          <span
-            className="ac-meta-item ac-sandbox-note"
-            data-tip="沙箱级别在启动会话时就定下了，当前版本暂不支持中途切换"
-          >
-            沙箱：{model.sandboxLevels.map((s) => s.label).join(' / ')}
-          </span>
-        )}
-      </div>
-
-      <div className="ac-toolbar-row">
-        <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
         <textarea
           ref={taRef}
           className="ac-composer"
           rows={1}
           value={text}
-          placeholder="继续和它说…（Enter 发送，Shift+Enter 换行）"
+          placeholder="继续和它说…（Enter 发送，Shift+Enter 换行，可粘贴/拖入图片）"
           onChange={(e) => {
             setText(e.target.value)
             autoGrow(e.target)
@@ -282,17 +281,49 @@ export function ChatToolbar({
               submit()
             }
           }}
+          onPaste={(e) => {
+            const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
+            if (!files.length) return // 纯文本粘贴走默认行为
+            e.preventDefault()
+            void pics.takeFiles(files)
+          }}
         />
 
-        {/* 「（默认）」占位项（value=''）是初始选中值，含义是"不覆盖，跟随 CLI 自己的
-            默认"——不是随手加的一项，见上面 modelSel 的注释（评审 I7）。选回它时传空串，
-            两个 adapter 的 buildArgs 都是 `if (opts.model)`，空串会让那个 flag 整个不出现，
-            于是真的退回 CLI 默认，不是发一个空的 --model 过去。
-            「下条起生效」只在真的选了东西时才显示：没选的时候没有任何待生效的改动，
-            那句话贴在那儿是无意义的（也是修复前"对着错的当前值声称它是当前值"的一部分）。 */}
-        {model.showModel && (
-          <div className="ac-param-group">
-            <div className="ac-param-control">
+        {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
+            跟输入框是一体的，不该是上面另起的一条带子。 */}
+        <div className="ac-composer-bar">
+          {/* 上下文占用：**常驻**，不跟着用量数字一起收起来。
+              它回答的是「还能聊多久」——那是随时想瞥一眼的东西，不是要主动去查的统计。
+              分母来自 result 事件的 modelUsage[<model>].contextWindow（claudeEvents.ts
+              的 contextRatioOf），拿不到就整个不渲染，绝不显示一个猜出来的比例。 */}
+          {ctxPct !== null && (
+            <div
+              className={`ac-ctx${ctxPct >= 85 ? ' hot' : ctxPct >= 65 ? ' warm' : ''}`}
+              data-tip={`上下文已用 ${ctxPct}%${model.showCompact ? '（可以点「压缩」腾地方）' : ''}`}
+            >
+              <span className="ac-ctx-track">
+                <span className="ac-ctx-fill" style={{ width: `${ctxPct}%` }} />
+              </span>
+              <span className="ac-ctx-num">{ctxPct}%</span>
+            </div>
+          )}
+
+          {model.showModel && (
+            <div
+              className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}
+              // 提示里报的是 **CLI 自己说它在用什么**（view.model ← session.ready），
+              // 不是我们记的选择。改模型走 /model 命令，实测那条命令本身那一轮仍用旧模型、
+              // 下一条才切过去——所以「下条起生效」这句依然准确，只是现在能对照真值了。
+              data-tip={
+                view.model
+                  ? modelSel !== ''
+                    ? `当前实际在用 ${view.model}，下条消息起换成所选`
+                    : `当前实际在用 ${view.model}`
+                  : modelSel !== ''
+                    ? '下条消息起生效'
+                    : undefined
+              }
+            >
               <ChipIcon size={11} />
               <select
                 className="ac-param-select"
@@ -302,7 +333,7 @@ export function ChatToolbar({
                   onSetParams({ model: e.target.value })
                 }}
               >
-                <option value="">（默认）</option>
+                <option value="">模型：默认</option>
                 {model.models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -310,37 +341,101 @@ export function ChatToolbar({
                 ))}
               </select>
             </div>
-            {modelSel !== '' && <span className="ac-param-hint">下条起生效</span>}
-          </div>
-        )}
+          )}
 
-        {model.showEffort && (
-          <div className="ac-param-group">
-            <div className="ac-param-control">
-              <span className="ac-param-label">强度</span>
-              <select
-                className="ac-param-select"
-                value={effortSel}
+          {/* 强度用滑块而不是下拉：这几档是**有序的**（低→最高），滑块能一眼看出
+              「现在在哪一档、还能往上多少」，下拉只能看到一个孤立的值。
+              第 0 格是「默认」（不覆盖 CLI 自己的设置），所以格数是档位数 + 1。
+              档位数按 capabilities 来，不写死 —— Codex 只有三档。 */}
+          {model.showEffort && (
+            <div
+              className={`ac-effort${effortSel !== '' ? ' pending' : ''}`}
+              data-tip={
+                effortSel === ''
+                  ? '思考强度：跟随 CLI 默认。拖动可指定'
+                  : `思考强度：${model.effortLevels.find((l) => l.id === effortSel)?.label ?? effortSel}（下条消息起生效）`
+              }
+            >
+              <input
+                className="ac-effort-range"
+                type="range"
+                min={0}
+                max={model.effortLevels.length}
+                step={1}
+                value={effortSel === '' ? 0 : model.effortLevels.findIndex((l) => l.id === effortSel) + 1}
+                aria-label="思考强度"
                 onChange={(e) => {
-                  setEffortSel(e.target.value)
-                  onSetParams({ effort: e.target.value })
+                  const i = Number(e.target.value)
+                  const id = i === 0 ? '' : (model.effortLevels[i - 1]?.id ?? '')
+                  setEffortSel(id)
+                  onSetParams({ effort: id })
                 }}
-              >
-                <option value="">（默认）</option>
-                {model.effortLevels.map((lv) => (
-                  <option key={lv.id} value={lv.id}>
-                    {lv.label}
-                  </option>
-                ))}
-              </select>
+              />
+              <span className="ac-effort-label">
+                {effortSel === ''
+                  ? '默认'
+                  : (model.effortLevels.find((l) => l.id === effortSel)?.label ?? effortSel)}
+              </span>
             </div>
-            {effortSel !== '' && <span className="ac-param-hint">下条起生效</span>}
-          </div>
-        )}
+          )}
 
-        <button type="button" className="ac-toolbar-send" onClick={submit} disabled={!text.trim()}>
-          发送
-        </button>
+          {model.showCompact && (
+            <button
+              type="button"
+              className="ac-bar-btn"
+              data-tip="把之前的对话换成一份摘要"
+              onClick={() => {
+                void stopVoiceOnSend()
+                requestConfirm({
+                  message:
+                    '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
+                  confirmLabel: '压缩',
+                  onConfirm: () => onSend('/compact')
+                })
+              }}
+            >
+              <CompressIcon size={11} />
+              压缩
+            </button>
+          )}
+
+          {!!usageText && (
+            <button
+              type="button"
+              className={`ac-bar-btn${showGauge ? ' on' : ''}`}
+              data-tip={showGauge ? '收起用量' : '展开用量（输入/输出/缓存/花费）'}
+              onClick={() => {
+                const next = !showGauge
+                setShowGauge(next)
+                if (next) localStorage.setItem(GAUGE_KEY, '1')
+                else localStorage.removeItem(GAUGE_KEY)
+              }}
+            >
+              <GaugeIcon size={11} />
+            </button>
+          )}
+
+          {model.showSandbox && model.sandboxLevels.length > 0 && (
+            <span
+              className="ac-bar-note"
+              data-tip="沙箱级别在启动会话时就定下了，当前版本暂不支持中途切换"
+            >
+              沙箱：{model.sandboxLevels.map((s) => s.label).join(' / ')}
+            </span>
+          )}
+
+          <span className="ac-bar-spacer" />
+          <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
+          <button
+            type="button"
+            className="ac-bar-send"
+            data-tip="发送（Enter）"
+            onClick={submit}
+            disabled={!text.trim() && !pics.imgs.length}
+          >
+            <SendIcon size={15} />
+          </button>
+        </div>
       </div>
     </div>
   )

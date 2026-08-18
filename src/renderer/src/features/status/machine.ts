@@ -118,13 +118,30 @@ export function cleanTitle(s: string): string {
   return s.replace(/^[⠀-⣿◐-◓◴-◷\s✳✴✶✻✽✹*]+/u, '').trim()
 }
 
-/** 从快照解出某个 pty 的落点；找不到（终端已关）返回 null */
+/** 从快照解出某个任务的落点；找不到（面板已关）返回 null。
+ *
+ *  **参数名叫 ptyId 是历史包袱，它现在是「任务 id」**：终端是 pty id，
+ *  AI 对话节点是它的会话 id（PaneState.sessionId）。两种 id 不会撞——
+ *  一个来自 node-pty，一个是 `ac-N`。
+ *
+ *  接 AI 对话进来只需要动这一处 + 写信号那一处：`focusTerminal` / 灵动岛 /
+ *  运行监视 / 待处理列表 / 提示音全都只认 locate 的结果，不碰 pty API。
+ *  在这之前它们对 AI 对话节点是结构性失明的——`kind !== 'terminal'` 直接 continue，
+ *  于是用了新前端反而收不到任何完成通知。 */
 export function locate(ptyId: string, ctx: LocateCtx): Located | null {
   for (const t of ctx.tabs) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const leaf of collectLeaves(t.root as any)) {
-      if (leaf.pane.kind !== 'terminal') continue
-      if ((leaf.pane as { ptyId: string }).ptyId !== ptyId) continue
+      const k = leaf.pane.kind
+      if (k !== 'terminal' && k !== 'agent') continue
+      const id =
+        k === 'terminal'
+          ? (leaf.pane as { ptyId: string }).ptyId
+          : (leaf.pane as { sessionId?: string }).sessionId
+      // **空值必须先挡掉**：还没起会话的 AI 对话节点 sessionId 是 undefined，
+      // 而 `undefined !== undefined` 为假 —— 不挡的话，任何传了空 id 的调用
+      // 都会匹配到第一个这样的节点，把通知落到一个根本没在跑的面板上。
+      if (!id || id !== ptyId) continue
       const frame = ctx.frames.find((f) => f.nodes.some((n) => n.leafId === leaf.id))
       const node = frame?.nodes.find((n) => n.leafId === leaf.id)
       const project = ctx.projects.find((p) => p.id === t.projectId)
@@ -134,7 +151,8 @@ export function locate(ptyId: string, ctx: LocateCtx): Located | null {
         leafId: leaf.id,
         projectId: t.projectId ?? null,
         project: project?.name ?? '未归属',
-        term: cleanTitle(node?.name || t.title || '') || '终端',
+        // 兜底名按类型分：AI 对话节点显示成「终端」会让通知栏和灵动岛指错东西
+        term: cleanTitle(node?.name || t.title || '') || (k === 'agent' ? 'AI 对话' : '终端'),
         frameId: frame?.id,
         nodeId: node?.id
       }

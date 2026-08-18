@@ -76,10 +76,12 @@ export function serializeCanvas(
             // materializeCanvas 那条「三者皆无 = 终端占位」的判据会把它当终端重开一个 shell
             // —— 用户看到的是「我的对话节点变成了终端」。
             //
-            // **但 sessionId 不能存**：CLI 子进程随应用退出就没了，存下来只会让重开后的
-            // 界面以为有个活会话，send/stop 都打到一个不存在的 id 上。
-            // 重开后是一个干净的空态，用户重新发第一条消息即可。
-            copy.pane = { kind: 'agent', cwd: pane.cwd }
+            // 两个 id 待遇相反，别混：
+            // · sessionId（ac-N，Eas-Term 内部的会话号）**不存** —— 主进程一退就无效，
+            //   存下来只会让重开后的界面以为有个活会话，send/stop 都打到不存在的 id 上。
+            // · resumeId（CLI 自己的会话 id）**要存** —— 它就是为跨重启续上下文设计的，
+            //   不存的话重开这个节点，模型完全不记得之前聊过什么。
+            copy.pane = { kind: 'agent', cwd: pane.cwd, resumeId: pane.resumeId }
           }
         }
         delete copy.leafId

@@ -62,6 +62,10 @@ export interface TabsSlice {
    *  （shared.ts）关闭节点时只认这里存的值，组件本地的 useState 它够不着。
    *  找不到这个 leaf（面板已经被整个关掉）就安静地不做事，不抛错。 */
   setAgentSessionId: (tabId: string, leafId: string, sessionId: string) => void
+  /** 把 CLI 自己的会话 id 写回这个 leaf 的 PaneState。**与 sessionId 是两回事**：
+   *  这个会随 canvas.json 落盘，下次打开这个节点靠它续上上次的上下文
+   *  （Claude `--resume` / Codex `exec resume`）。 */
+  setAgentResumeId: (tabId: string, leafId: string, resumeId: string) => void
   setActiveLeaf: (tabId: string, leafId: string) => void
   setSplitRatio: (tabId: string, splitId: string, ratio: number) => void
 }
@@ -460,6 +464,21 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         const pane: PaneState = { ...leaf.pane, sessionId }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  // 与 setAgentSessionId 同构，但存的是**另一个 id**：CLI 自己的会话 id。
+  // 它会随 canvas.json 落盘，是「关掉再打开还接得上上次的上下文」的全部依据。
+  setAgentResumeId: (tabId, leafId, resumeId) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        if (leaf.pane.resumeId === resumeId) return t // 同一个值不必制造新对象
+        const pane: PaneState = { ...leaf.pane, resumeId }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))

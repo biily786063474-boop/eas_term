@@ -20,6 +20,9 @@ import type { ChatView, ExecItem, Turn } from './reduce.ts'
 import { visibleExecs } from './reduce.ts'
 import { ApprovalCard, prettyJson, type ApprovalDecision } from './ApprovalCard'
 import { ChevronDownIcon } from '../../ui/Icons'
+import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
+import '../editor/editor.css'
 
 export function MessageList({
   view,
@@ -39,6 +42,23 @@ export function MessageList({
     el.scrollTop = el.scrollHeight
   }, [view])
 
+  // 代码块的复制按钮：渲染器生成 .md-copy，行为要单独绑一次（同 WikiView / CodeView）
+  useEffect(() => bindCodeCopy(scrollRef.current), [])
+
+  // 选中文字后右键 → 复制。沿用画布那套 CanvasContextMenu（终端输入框也是它），
+  // 不另起一套菜单。**没选中就不接管**：那时候右键该交给底下的画布菜单
+  // （新建节点之类），凭空弹一个只有「复制」且点了没用的菜单更糟。
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; text: string } | null>(null)
+  const onContextMenu = (e: React.MouseEvent): void => {
+    const sel = window.getSelection()?.toString() ?? ''
+    if (!sel.trim()) return
+    e.preventDefault()
+    // 画布/终端各自还挂着别的右键监听，这里既然接管了就摁住别往外冒
+    // （同 TerminalInput 的处理）
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, text: sel })
+  }
+
   function handleScroll(): void {
     const el = scrollRef.current
     if (!el) return
@@ -54,7 +74,7 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <div className="ac-messages" ref={scrollRef} onScroll={handleScroll}>
+    <div className="ac-messages" ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
       {view.turns.map((turn, i) => (
         <MessageTurn
           key={i}
@@ -71,11 +91,30 @@ export function MessageList({
       )}
       {/* busy 但没有正在跑的 exec 的空档期（比如刚跑完一个工具、还没轮到下一段文字）——
           这条信息 Task 3 占位阶段就已经在显示了，这里只是把它挪进真实 UI，不是新概念。 */}
+      {/* 忙不忙**只有一个真相**：归约器从事件流推出来的 view.busy
+          （turn.start 起、turn.done 止）。渲染层曾经自己另记一个 awaiting，
+          于是同一件事记在两处，必然漏掉某条路径——先是漏了「首字之前」，
+          补上之后又漏了「第二条消息」。见 reduce.ts 里 turnActive 的说明。 */}
       {view.busy && (
         <div className="ac-busy-hint">
           <span className="ac-dot" aria-hidden="true" />
-          处理中…
+          <span className="ac-dot" aria-hidden="true" />
+          <span className="ac-dot" aria-hidden="true" />
+          正在处理…
         </div>
+      )}
+      {ctxMenu && (
+        <CanvasContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          onClose={() => setCtxMenu(null)}
+          items={[
+            {
+              label: '复制',
+              onClick: () => void navigator.clipboard.writeText(ctxMenu.text)
+            }
+          ]}
+        />
       )}
     </div>
   )
@@ -96,7 +135,42 @@ function MessageTurn({
 
   return (
     <div className={`ac-turn ac-turn-${turn.role}`}>
-      {turn.text && <div className="ac-turn-text">{turn.text}</div>}
+      {/* 模型的回答按 Markdown 渲染 —— 它本来就是拿 Markdown 写的（标题、列表、代码块、
+          粗体），当纯文本铺开就丢掉了全部层级，长回答会糊成一片。
+          复用仓库里那个零依赖渲染器（WikiView / CodeView 同一个）：它**先把所有文本
+          转义、再拼自己生成的标签**，所以模型输出里的原始 HTML 一律当纯文本显示 ——
+          渲染别人生成的内容，这个性质比功能覆盖更要紧。
+          第二个参数是「相对图片路径的基准目录」，对话没有对应的文件，给空串。
+          用户自己发的消息保持纯文本：那是他刚敲进输入框的原话，照他写的样子显示才对。 */}
+      {/* 用户带的图：显示图本身，不是那串路径。
+          发给 CLI 的始终是磁盘路径（agent 认那个），这里只是让你看见自己发了什么。
+          点一下用系统默认程序打开原图——缩略图只有 96px，看细节得开原件。 */}
+      {turn.role === 'user' && turn.images && turn.images.length > 0 && (
+        <div className="ac-turn-imgs">
+          {turn.images.map((im) => (
+            <img
+              key={im.path}
+              src={im.url}
+              alt={im.path.split('/').pop() ?? ''}
+              data-tip={im.path}
+              onClick={() => void window.api.fs.showInFolder(im.path)}
+            />
+          ))}
+        </div>
+      )}
+      {turn.text &&
+        (turn.role === 'assistant' ? (
+          <div
+            // **md-view 这个类不能少** —— editor.css 里所有 markdown 样式都写成
+            // `.md-view .md-h1` 这种带容器前缀的形式，少了它渲染器生成的类一条都匹配不上，
+            // 出来的是浏览器默认样式的裸 HTML（标题巨大、间距全乱）。
+            // ac-md 只做对话场景的收紧覆盖，见 agentChat.css。
+            className="ac-turn-text ac-md md-view"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.text, '') }}
+          />
+        ) : (
+          <div className="ac-turn-text">{turn.text}</div>
+        ))}
       {approval && (
         <ApprovalCard pending={approval} onDecide={(d) => onApprovalDecide(approval!.approvalId, d)} />
       )}

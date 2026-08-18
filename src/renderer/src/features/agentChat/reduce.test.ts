@@ -350,11 +350,46 @@ test('[补充] 空数组不抛，折叠和展开都返回空数组', () => {
   assert.deepEqual(visibleExecs([], true), [])
 })
 
-test('[补充] session.ready 本身不产生任何轮次，初始态是空闲的', () => {
+test('[补充] session.ready 本身不产生任何轮次，也不自己置忙（忙不忙看 turn.start）', () => {
+  // 这条断言 2026-08-17 改过两次，记下来免得再绕回去：
+  //   原始：busy=false，理由「session.ready 不产生轮次，所以空闲」
+  //   一改：busy=true，理由「start() 带着消息一起发，ready 到达时已经在处理了」
+  //   二改（现在）：回到 false —— **结论没变，是判据换了地方**。
+  // 「在忙」现在由会话层投递消息时推的 turn.start 表达，session.ready 只说明
+  // 进程起来了。一改那版拿 ready 当起点是个近似，而且漏掉了普通 send
+  //（不产生 session.ready），第二条消息之后就永远不置忙了。
   const v = run([ready])
   assert.deepEqual(v.turns, [])
   assert.equal(v.pending, null)
   assert.equal(v.busy, false)
+})
+
+test('**turn.start 之后 busy 为真**（断档的根因：投递到首字之间实测有 4 秒多）', () => {
+  assert.equal(run([{ k: 'turn.start' }]).busy, true)
+  // 真实序列里 turn.start 先于 session.ready（投递时推，spawn 之后 CLI 才吐 init）
+  assert.equal(run([{ k: 'turn.start' }, ready]).busy, true)
+})
+
+test('**第二条消息也要置忙** —— 普通 send 不产生 session.ready，这是上一版漏掉的洞', () => {
+  const v = run([
+    { k: 'turn.start' },
+    ready,
+    { k: 'text.done', text: '第一轮' },
+    { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } },
+    // 第二条消息：只有 turn.start，没有新的 session.ready
+    { k: 'turn.start' }
+  ])
+  assert.equal(v.busy, true, '拿 session.ready 当起点的话这里会是 false')
+})
+
+test('致命 error 结束这一轮——不然 turn.done 永远不来，界面一直转', () => {
+  const v = run([{ k: 'turn.start' }, { k: 'error', message: '进程启动失败', fatal: true }])
+  assert.equal(v.busy, false)
+})
+
+test('非致命 error 不结束这一轮（那只是条提醒，会话还在跑）', () => {
+  const v = run([{ k: 'turn.start' }, { k: 'error', message: '没有审批保护', fatal: false }])
+  assert.equal(v.busy, true)
 })
 
 test('[补充] 完全没推过事件时的初始视图：不是 usage:{} 或 busy:true 这类看似合理实则错的默认值', () => {
@@ -372,14 +407,72 @@ test('[补充] thinking 事件（真实存在的 ChatEvent 变体，但 Step 3 �
   assert.deepEqual(v.turns, [])
 })
 
-test('[补充] text.delta 不会把文字追加到已经 text.done 完成的轮次上（没有打字机态，不只是不崩）', () => {
+// ── 流式（2026-08-17：text.delta 有生产者了）────────────────────────
+// 原来这里锁的是「没有打字机态」。那条决定已经被推翻（用户看着静默的等待期
+// 不知道软件在不在干活），但它保护的那个不变量**依然有效**并且更要紧了：
+// delta 绝不能追加到一个已经 done 完成的轮次上。
+
+test('text.delta 不追加到已经 text.done 完成的轮次上——那是下一段话，要开新轮次', () => {
   const v = run([
     ready,
     { k: 'text.done', text: '完整的话' },
-    { k: 'text.delta', text: '追加？' } as ChatEvent
+    { k: 'text.delta', text: '下一段' } as ChatEvent
+  ])
+  assert.equal(v.turns.length, 2, 'done 之后的 delta 属于新一段，不能续在旧轮次后面')
+  assert.equal(v.turns[0].text, '完整的话', '已完成的轮次一个字都不该被改动')
+  assert.equal(v.turns[1].text, '下一段')
+})
+
+test('text.delta 逐字攒进同一个轮次', () => {
+  const v = run([
+    ready,
+    { k: 'text.delta', text: '你' } as ChatEvent,
+    { k: 'text.delta', text: '好' } as ChatEvent,
+    { k: 'text.delta', text: '在的。' } as ChatEvent
+  ])
+  assert.equal(v.turns.length, 1, '一段流式文字只能有一个轮次，不是每个 token 一个')
+  assert.equal(v.turns[0].text, '你好在的。')
+})
+
+test('**紧跟其后的 text.done 覆盖 delta 攒的那段，不是再加一条**', () => {
+  // 这是整个流式实现里最容易错的一条：同一段话 CLI 会给两遍
+  //（先 delta 逐字、最后 assistant 事件给完整版）。处理错了，用户看到同一段话出现两次。
+  const v = run([
+    ready,
+    { k: 'text.delta', text: '你' } as ChatEvent,
+    { k: 'text.delta', text: '好' } as ChatEvent,
+    { k: 'text.done', text: '你好在的。' }
+  ])
+  assert.equal(v.turns.length, 1, '同一段话不能显示两次')
+  assert.equal(v.turns[0].text, '你好在的。', 'done 是权威版本，delta 可能不全')
+})
+
+test('流式途中挂上的 exec 不会被随后的 text.done 抹掉', () => {
+  // done 覆盖的是 text，execs 得留着——工具调用可能在文字中间就挂到这个轮次上了
+  const v = run([
+    ready,
+    { k: 'text.delta', text: '我看看' } as ChatEvent,
+    { k: 'exec.start', execId: 'e1', label: '读取', detail: 'a.ts' },
+    { k: 'text.done', text: '我看看 a.ts' }
   ])
   assert.equal(v.turns.length, 1)
-  assert.equal(v.turns[0].text, '完整的话')
+  assert.equal(v.turns[0].text, '我看看 a.ts')
+  assert.equal(v.turns[0].execs.length, 1, 'exec 被 done 抹掉了')
+  assert.equal(v.turns[0].execs[0].execId, 'e1')
+})
+
+test('turn.done 之后的 text.done 不去覆盖上一轮的最后一个轮次', () => {
+  // 不清 streamingTurn 的话，下一轮的第一句会把上一轮的回答改掉——
+  // 表现成「新回答把旧回答吃了」，而且旧内容再也回不来
+  const v = run([
+    ready,
+    { k: 'text.delta', text: '第一轮' } as ChatEvent,
+    { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } },
+    { k: 'text.done', text: '第二轮' }
+  ])
+  assert.equal(v.turns.length, 2)
+  assert.equal(v.turns[0].text, '第一轮')
+  assert.equal(v.turns[1].text, '第二轮')
 })
 
 // ============================================================
@@ -440,4 +533,56 @@ test('[I5] 互不相同的 notice 超过上限时丢最旧的，数组不会无�
 test('[I5] 首次出现的 notice count 就是 1，不是 0 或 undefined（UI 靠 count>已关闭时的 count 判断该不该显示）', () => {
   const v = run([ready, { k: 'error', message: '只发生过一次', fatal: false }])
   assert.equal(v.notices[0].count, 1)
+})
+
+// ── 断档：会话就绪到第一个字之间界面不能静止 ──────────────────────
+// 2026-08-17 探针实测（真跑 Claude）：
+//   3ms START_RESOLVED → 2523ms session.ready → 6814ms 第一个 text.delta
+// 中间 4.3 秒里 busy 原来是 false（没有 running exec、也没收到过 exec.start），
+// 界面上的「处理中…」消失、然后彻底静止 —— 用户报的就是这一段。
+
+// （「session.ready 之后 busy 为真」这条不在这里重复断言——上面那条
+//   「[补充] session.ready 本身不产生任何轮次（但那时已经在忙了）」已经锁住了。）
+
+test('turn.done 之后 busy 归假——不能一直转下去', () => {
+  const v = run([ready, { k: 'text.done', text: '答完了' }, { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } }])
+  assert.equal(v.busy, false)
+})
+
+test('一轮结束后新一轮的 turn.start 重新置忙', () => {
+  const v = run([
+    { k: 'turn.start' },
+    { k: 'text.done', text: '第一轮' },
+    { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } },
+    { k: 'turn.start' }
+  ])
+  assert.equal(v.busy, true)
+})
+
+test('流式途中 busy 保持为真（文字在出，轮次还没结束）', () => {
+  const v = run([{ k: 'turn.start' }, ready, { k: 'text.delta', text: '正在' } as ChatEvent])
+  assert.equal(v.busy, true)
+})
+
+// ── CLI 报告的当前模型（2026-08-17）──────────────────────────
+// 「模型要和 CLI 一致」的落点：不自己记选择，听 session.ready 报的。
+// 实测：发 /model haiku 之后 CLI 会重推一次 init，model 是新值。
+
+test('model 取自 session.ready，不是我们自己记的选择', () => {
+  assert.equal(run([]).model, null, '没有事件时不许猜一个模型名')
+  assert.equal(run([ready]).model, 'sonnet')
+})
+
+test('**重推的 session.ready 会更新 model**（/model 切换后 CLI 就是这么通知的）', () => {
+  const v = run([
+    ready,
+    { k: 'text.done', text: '好' },
+    { k: 'session.ready', sessionId: 's1', model: 'claude-haiku-4-5-20251001', cwd: '/WORK/proj' }
+  ])
+  assert.equal(v.model, 'claude-haiku-4-5-20251001')
+})
+
+test('session.ready 的 model 为空串时不覆盖已有值（宁可显示旧的也不显示空白）', () => {
+  const v = run([ready, { k: 'session.ready', sessionId: 's1', model: '', cwd: '/x' }])
+  assert.equal(v.model, 'sonnet')
 })

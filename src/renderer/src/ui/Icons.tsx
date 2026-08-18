@@ -320,6 +320,15 @@ export const MicIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+/** 发送。用向上箭头而不是纸飞机——对话输入框里这是现在的通用语言，
+ *  而且在 15px 这个尺寸上箭头比纸飞机清楚得多。 */
+export const SendIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <line x1="12" y1="19" x2="12" y2="5" />
+    <polyline points="5 12 12 5 19 12" />
+  </Svg>
+)
+
 export const BellIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />

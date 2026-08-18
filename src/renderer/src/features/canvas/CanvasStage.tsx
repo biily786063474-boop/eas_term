@@ -139,7 +139,11 @@ export function CanvasStage(): JSX.Element {
     const n = st.canvas.frames.find((f) => f.id === fid)?.nodes.find((x) => x.id === nid)
     if (!n?.leafId) return
     const leaf = st.tabs.flatMap((t) => collectLeaves(t.root)).find((x) => x.id === n.leafId)
+    // 终端认 ptyId，AI 对话节点认它的会话 id —— 两者在通知系统里都是「任务 id」
+    //（见 machine.ts 的 locate）。不认 agent 的话，点开一个跑完的对话节点，
+    // 呼吸标记会一直亮着，因为它没有终端那条 focusin → clearAttention 的路。
     if (leaf?.pane.kind === 'terminal') clearAttention(leaf.pane.ptyId)
+    else if (leaf?.pane.kind === 'agent' && leaf.pane.sessionId) clearAttention(leaf.pane.sessionId)
   }, [canvasSel, clearAttention])
 
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）

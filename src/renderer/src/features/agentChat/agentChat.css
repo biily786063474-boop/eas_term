@@ -90,6 +90,55 @@
   opacity: 0.6;
 }
 
+/* 输入框 + 右下角发送图标。按钮压在 textarea 上，所以 textarea 右侧留出空间，
+   否则长文本会跑到按钮底下。 */
+.ac-input-wrap {
+  position: relative;
+  width: min(480px, 100%);
+  display: flex;
+}
+.ac-input-wrap .ac-input {
+  width: 100%;
+  padding-right: 44px;
+}
+.ac-input-send {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: var(--accent-soft);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.12s ease, opacity 0.12s ease;
+}
+.ac-input-send:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.85);
+}
+.ac-input-send:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.ac-input-send .ac-dot {
+  background: var(--accent);
+  opacity: 1;
+  animation: ac-pulse 1.1s ease-in-out infinite;
+}
+
+/* 之前聊过：说清楚接得上什么、接不上什么 */
+.ac-resume-hint {
+  width: min(480px, 100%);
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  opacity: 0.8;
+}
+
 .ac-send {
   padding: 8px 22px;
   border-radius: var(--radius-md);
@@ -309,6 +358,17 @@
   opacity: 1;
   animation: ac-pulse 1.1s ease-in-out infinite;
 }
+/* 三个点依次亮：等待期是这个界面唯一「什么都没发生」的时段，一个点在原地闪
+   看不出是活的还是卡住了，错开相位才读得出「它在动」。 */
+.ac-busy-hint .ac-dot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.ac-busy-hint .ac-dot:nth-child(3) {
+  animation-delay: 0.36s;
+}
+.ac-busy-hint .ac-dot + .ac-dot {
+  margin-left: -3px; /* gap 是 7px，三个点之间收紧一些，看着是一组不是三件 */
+}
 
 /* ---------- 审批卡片：唯一的高视觉层级例外（Task 5，spec §B.2 例外一） ---------- */
 .ac-approval {
@@ -437,6 +497,37 @@
   font-size: 12.5px;
   line-height: 1.6;
 }
+/* 渐进式披露：第一屏只有一句话，代价与撤销方式收进这里。
+   该说的一条没删（这是安全告知），只是不再一上来就糊用户一脸。 */
+.ac-hook-ask-more {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.ac-hook-ask-more > summary {
+  cursor: pointer;
+  opacity: 0.75;
+  list-style: none;
+  user-select: none;
+}
+.ac-hook-ask-more > summary::-webkit-details-marker {
+  display: none;
+}
+.ac-hook-ask-more > summary::before {
+  content: '▸ ';
+}
+.ac-hook-ask-more[open] > summary::before {
+  content: '▾ ';
+}
+.ac-hook-ask-more > summary:hover {
+  opacity: 1;
+}
+.ac-hook-ask-detail {
+  margin-top: 6px;
+  padding-left: 2px;
+  line-height: 1.7;
+  opacity: 0.8;
+  white-space: pre-line; /* 文案里用 \n 分条，不写成三个 <div> */
+}
 
 /* ---------- 对话态：底部工具栏（Task 6）---------- */
 .ac-toolbar {
@@ -522,15 +613,6 @@
 /* 次级信息行：用量 / 审批 hook 状态 / 压缩 / 沙箱只读展示。始终可见、弱视觉层级
    （task-6-brief.md「用量...次级视觉层级」——次级指小字弱层级，不是点了才看到，
    跟 MessageList 执行区那一套语言一致，见 agentChat.css 文件头规则①）。 */
-.ac-toolbar-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  min-height: 15px;
-  font-size: 11px;
-  color: var(--fg-dim);
-}
 .ac-meta-item {
   display: inline-flex;
   align-items: center;
@@ -570,93 +652,484 @@
   border-bottom: 1px dotted var(--glass-border-strong);
 }
 
-/* composer 行：语音 + 输入框 + 模型/effort 选择 + 发送——常驻四件（task-6-brief.md）。 */
-.ac-toolbar-row {
+/* ---------- 输入区：一个容器，内部分层 ----------
+   之前是「图片行 + 快照行 + 控制行 + 输入行」四条横带各占一层，加上 notices
+   能叠到五层，界面被切得很碎。现在全部收进这一个圆角框：
+   用量/错误 → 图片 → 输入 → 控件，外面只留 notices。 */
+.ac-composer-box {
   display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  transition: border-color 0.12s ease;
+}
+/* 焦点落在框内任何地方都算「这个框激活了」——边框在容器上，textarea 自己没有边框了 */
+.ac-composer-box:focus-within {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+.ac-composer-box.dragover {
+  border-color: rgba(var(--accent-rgb), 0.85);
+  border-style: dashed;
 }
 
+/* textarea 交出边框和背景 —— 那些现在归外层容器 */
 .ac-composer {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  padding: 0;
   color: var(--fg);
   font-family: inherit;
   font-size: 13px;
   line-height: 1.55;
-  padding: 6px 10px;
   resize: none;
   outline: none;
-}
-.ac-composer:focus {
-  border-color: rgba(var(--accent-rgb), 0.6);
 }
 .ac-composer::placeholder {
   color: var(--fg-dim);
 }
 
-.ac-param-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+/* 用量：框内顶部一行小字，默认收起（点控件行那个表盘展开） */
+.ac-gauge-row {
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.85;
 }
+.ac-inline-err {
+  font-size: 11.5px;
+  color: #fda4af;
+}
+
+/* 附件区：快照占位块与已带上的图排同一行 */
+.ac-attach-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ac-attach-snap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--glass-border-strong);
+  background: none;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.ac-attach-snap:hover {
+  color: var(--fg);
+  border-color: rgba(var(--accent-rgb), 0.7);
+}
+.ac-attach {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.ac-attach img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ac-attach-x {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.ac-attach:hover .ac-attach-x {
+  opacity: 1;
+}
+
+/* 控件行：框内底部。模型/强度/压缩/用量在左，语音和发送靠右 */
+.ac-composer-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ac-bar-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+.ac-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.ac-bar-btn:hover:not(:disabled) {
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+.ac-bar-btn.on {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--fg);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+.ac-bar-note {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  cursor: default;
+  border-bottom: 1px dotted var(--glass-border-strong);
+}
+.ac-bar-send {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: var(--accent-soft);
+  color: var(--fg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.12s ease, opacity 0.12s ease;
+}
+.ac-bar-send:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.85);
+}
+.ac-bar-send:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* 参数下拉：现在住在控件行里 */
 .ac-param-control {
   display: flex;
   align-items: center;
   gap: 4px;
   color: var(--fg-dim);
 }
-.ac-param-label {
-  font-size: 10.5px;
-  white-space: nowrap;
-}
 .ac-param-select {
-  max-width: 108px;
-  padding: 5px 6px;
+  max-width: 116px;
+  padding: 3px 6px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--fg);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--fg-dim);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 10.5px;
   cursor: pointer;
   outline: none;
 }
-.ac-param-select:focus {
-  border-color: rgba(var(--accent-rgb), 0.6);
-}
-/* 下拉的 option 列表：借 --tooltip-bg（本来就是为"悬浮在任何背景之上都要读得清"这种
-   场景准备的近乎不透明近黑色），避免系统默认的白底菜单突兀地跳出来 */
-.ac-param-select option {
-  background: var(--tooltip-bg);
+.ac-param-select:hover {
+  border-color: var(--glass-border-strong);
   color: var(--fg);
 }
-.ac-param-hint {
-  font-size: 9.5px;
-  color: var(--fg-dim);
-  opacity: 0.75;
-  white-space: nowrap;
+/* 选了非默认值时给个待生效的高亮（配 data-tip 说明），不再占一行小字 */
+.ac-param-control.pending .ac-param-select {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  color: var(--fg);
 }
 
-.ac-toolbar-send {
-  flex: none;
-  height: 30px;
-  padding: 0 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(var(--accent-rgb), 0.5);
-  background: var(--accent-soft);
+/* ---------- 模型回答的 Markdown ----------
+   容器带 **md-view**（editor.css 那整套样式的前缀，少了它全部落空）+ ac-md（本文件的收紧）。
+   editor.css 是给文档视图设计的：h1 23px 还带下边框，段落下边距 1em —— 那是「读一篇文档」
+   的尺度。对话气泡里一段回答常有三四个小标题，照文档尺度渲染就会：标题大得像分章、
+   条目之间空出一大片，一屏装不下几句话，正是「层级不规整」的由来。
+
+   这里按对话尺度重排一遍。优先级要压过 `.md-view .md-*`（0-2-0），所以统一写成
+   `.ac-md.md-view .md-*`（0-3-0）—— 只写 `.ac-md .md-h1` 是压不过的。 */
+/* **先把 .md-view 的容器属性全部推翻。**
+   那个类是为「铺满整个面板的文档视图」写的：height:100% + overflow:auto 撑满容器、
+   background 叠一层黑压住底下的画布、padding 22/26/60 给长文阅读留白。
+   套到一条对话气泡上，结果是每条回复外面罩一个直角黑框、底部空 60px，
+   而且 height/overflow 会跟消息列表自己的滚动打架。
+   黑底本身留着 —— 模型回复有个底、用户消息是 accent 气泡，两边对称；
+   但要按气泡的尺度来：圆角、收紧内边距、高度交给内容。 */
+.ac-md.md-view {
+  height: auto;
+  overflow: visible;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.ac-md.md-view > :first-child {
+  margin-top: 0;
+}
+.ac-md.md-view > :last-child {
+  margin-bottom: 0;
+}
+
+/* 标题：四级压进 15.5 → 13.5px，级差 0.5~1px 靠字重和留白拉开而不是靠字号。
+   **h1/h2 的下边框去掉** —— 那是文档里分章用的，聊天里每隔几行来一条横线像被切碎了。 */
+.ac-md.md-view .md-h {
+  margin: 13px 0 5px;
+  line-height: 1.4;
+  font-weight: 650;
+}
+.ac-md.md-view .md-h1 {
+  font-size: 15.5px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.ac-md.md-view .md-h2 {
+  font-size: 14.5px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.ac-md.md-view .md-h3 {
+  font-size: 13.5px;
+}
+.ac-md.md-view .md-h4,
+.ac-md.md-view .md-h5,
+.ac-md.md-view .md-h6 {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* 段落与列表：文档里段落下边距 1em（≈13px），聊天里太散 */
+.ac-md.md-view .md-p {
+  margin: 0 0 7px;
+}
+.ac-md.md-view .md-ul,
+.ac-md.md-view .md-ol {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+.ac-md.md-view li {
+  margin: 1px 0;
+}
+.ac-md.md-view li > .md-p {
+  margin: 0;
+}
+.ac-md.md-view .md-quote {
+  margin: 7px 0;
+  padding: 2px 0 2px 10px;
+}
+
+/* 代码块：文档里 padding-top 32px 是为了给右上角复制按钮让位（见 editor.css 的说明），
+   聊天里代码块又多又短，那个留白占比过大。压到 24px —— 仍然够按钮那一行不重叠。 */
+.ac-md.md-view .md-pre {
+  margin: 7px 0;
+  padding: 24px 12px 10px;
+  font-size: 11.5px;
+}
+.ac-md.md-view code {
+  font-size: 11.5px;
+}
+
+/* 宽内容各自横向滚动，不许把对话区撑宽 */
+.ac-md.md-view .md-pre,
+.ac-md.md-view .md-tw,
+.ac-md.md-view table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ---------- 对话内容可以选中、可以复制 ----------
+   base.css 给 body 设了 `user-select: none`（桌面应用的常规做法，免得拖拽时
+   满屏划蓝）。代价是对话内容也跟着选不中 —— 而这是个聊天界面，
+   复制模型给的命令、路径、代码是最基本的动作。
+   这里把内容区显式放开。**只放内容，不放控件** —— 按钮和标签选中了没有意义，
+   反而会在拖拽节点时划出一片蓝。
+   画布上拖动 agent 节点靠的是节点头部（.cfile-head 的 onMouseDown），
+   不经过这里，所以放开不影响拖拽。 */
+.ac-turn-text,
+.ac-md,
+.ac-md *,
+.ac-exec-pre,
+.ac-notice-text,
+.ac-gauge-row {
+  user-select: text;
+  cursor: auto;
+}
+/* 代码块里选中时给个明确的高亮，暗背景上默认选区色偏灰、看不出选没选中 */
+.ac-md ::selection,
+.ac-turn-text ::selection,
+.ac-exec-pre ::selection {
+  background: rgba(var(--accent-rgb), 0.35);
   color: var(--fg);
-  font-size: 12.5px;
+}
+
+/* 拖图进来时给个落点提示。缩略图行、快照 chip、错误条都直接复用 terminal.css 里
+   term-input-imgs / term-snap-* / term-input-err 那几套 —— 两个输入框要长得一样，
+   样式也不该有两份（同 usePastedImages：实现共用一份） */
+.ac-toolbar.dragover {
+  outline: 1px dashed rgba(var(--accent-rgb), 0.6);
+  outline-offset: -3px;
+  border-radius: var(--radius-sm);
+}
+
+/* 用户消息带的图：跟消息气泡一样右靠，缩略图排一行。
+   发给 CLI 的是路径，这里显示的是图本身 —— 一串 /Users/… 看不出你发了什么。 */
+.ac-turn-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 82%;
+  align-self: flex-end;
+}
+.ac-turn-imgs img {
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
   cursor: pointer;
+  transition: border-color 0.12s ease;
 }
-.ac-toolbar-send:hover:not(:disabled) {
-  border-color: rgba(var(--accent-rgb), 0.8);
+.ac-turn-imgs img:hover {
+  border-color: rgba(var(--accent-rgb), 0.7);
 }
-.ac-toolbar-send:disabled {
+
+/* 上下文占用进度：控件行里常驻的一小条。
+   跟旁边的 chip 同一套语言（圆角、弱色、10.5px），不是一个抢眼的仪表。
+   颜色只在真的该管的时候才变——65% 起转暖、85% 起转红，平时就是中性色，
+   免得一个每时每刻都在的东西天天喊「注意我」。 */
+.ac-ctx {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 10.5px;
   cursor: default;
-  opacity: 0.5;
+  flex-shrink: 0;
+}
+.ac-ctx-track {
+  position: relative;
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.ac-ctx-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.ac-ctx-num {
+  font-variant-numeric: tabular-nums; /* 数字等宽，涨到 100% 时布局不跳 */
+}
+.ac-ctx.warm {
+  color: #f0d9ad;
+  border-color: rgba(224, 175, 104, 0.4);
+}
+.ac-ctx.warm .ac-ctx-fill {
+  background: #e0af68;
+}
+.ac-ctx.hot {
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+.ac-ctx.hot .ac-ctx-fill {
+  background: #fb7185;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-ctx-fill {
+    transition: none;
+  }
+}
+
+/* 画布上的面板右下角有个 16×16 的缩放手柄（.pane-rz，PaneView 里 canvasRect 非空
+   才渲染 —— 也就是只有画布模式有）。输入区改成铺满宽度的一体化容器之后，
+   容器右下角正好压到它身上：两条斜线跟容器圆角叠在一起，手柄也不好点。
+   给工具栏底部让出手柄的高度。
+   用 :has() 精确限定在画布模式 —— 分屏里没有这个手柄，不该白白多一截空白。 */
+.pane:has(.pane-rz) .ac-toolbar {
+  padding-bottom: 20px;
+}
+
+/* 思考强度滑块。原生 range 在暗色下几乎不可见（默认是亮灰轨道 + 系统色滑块），
+   整条重画：轨道压到 3px 跟上下文进度条同粗，滑块 10px 的圆点。
+   Chromium 的 range 伪元素必须分开写 —— 合并成一条选择器的话整条规则会被丢掉。 */
+.ac-effort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  cursor: default;
+  flex-shrink: 0;
+}
+.ac-effort.pending {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  color: var(--fg);
+}
+.ac-effort-label {
+  min-width: 20px; /* 「默认」两字与「低」一字宽度不同，定宽免得滑动时整行跳 */
+  text-align: right;
+}
+.ac-effort-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 54px;
+  height: 12px; /* 给滑块留出可抓的高度，轨道本身用伪元素画细 */
+  background: none;
+  cursor: pointer;
+  outline: none;
+}
+.ac-effort-range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.ac-effort-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -3.5px; /* (3 - 10) / 2，把圆点压回轨道中线 */
+  border-radius: 50%;
+  background: var(--fg-dim);
+  transition: background 0.12s ease;
+}
+.ac-effort-range:hover::-webkit-slider-thumb,
+.ac-effort.pending .ac-effort-range::-webkit-slider-thumb {
+  background: var(--accent);
+}
+.ac-effort-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.28);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-effort-range::-webkit-slider-thumb {
+    transition: none;
+  }
 }

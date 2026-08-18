@@ -79,6 +79,12 @@ export interface UiSlice {
    *  它是「我最近在弄哪个」这种本机偏好，不是项目自身的属性，
    *  为它扩一条主进程 IPC 不划算。用有序数组而不是时间戳：
    *  天然有序、不用比较、也不会因为改系统时间而错乱。 */
+  /** 新的 AI 对话会话要不要装审批保护（逐次审批那套 PreToolUse hook）。
+   *  **默认关**：装它要往用户项目里写 `.claude/settings.json`，而且每次工具调用都要
+   *  停下来等确认——对日常使用是很重的打断。想要的人在设置里开，不再在对话框里问。
+   *  关掉这个开关时会顺带把所有已注册项目里装过的审批 hook 一起卸掉（见 SettingsPanel）。 */
+  agentApprovalHook: boolean
+  setAgentApprovalHook: (on: boolean) => void
   projectMru: string[]
   /** 记一次「用户主动打开/聚焦了这个项目」。
    *  **只在 UI 的点击处调，不要埋进 store action** ——
@@ -178,6 +184,7 @@ const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
 const GANTT_JUMP_MODE_KEY = 'eas.gantt.jumpmode'
+const AGENT_APPROVAL_HOOK_KEY = 'eas.agentchat.approvalhook'
 const PROJECT_MENU_SORT_KEY = 'eas.projectmenu.sort'
 const PROJECT_MRU_KEY = 'eas.projectmenu.mru'
 /** MRU 只用来排一个菜单，留最近 60 个足够；不设上限的话它会跟着用了几年的
@@ -276,6 +283,13 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setProjectMenuSort: (mode) => {
     localStorage.setItem(PROJECT_MENU_SORT_KEY, mode)
     set({ projectMenuSort: mode })
+  },
+  // 存「开」而不是存「关」：默认值是关，只有被明确打开才需要记住
+  agentApprovalHook: localStorage.getItem(AGENT_APPROVAL_HOOK_KEY) === '1',
+  setAgentApprovalHook: (on) => {
+    if (on) localStorage.setItem(AGENT_APPROVAL_HOOK_KEY, '1')
+    else localStorage.removeItem(AGENT_APPROVAL_HOOK_KEY)
+    set({ agentApprovalHook: on })
   },
   projectMru: (() => {
     // 手改过的 localStorage / 更早版本的脏值都可能不是字符串数组，

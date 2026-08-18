@@ -39,6 +39,38 @@ export function SettingsPanel(): JSX.Element {
   })
   const [checking, setChecking] = useState(false)
   const [checkMsg, setCheckMsg] = useState<string | null>(null)
+  // 审批保护：开关本身是渲染层偏好，但关掉时要顺带把已经写进各项目的钩子卸干净
+  const approvalHook = useStore((s) => s.agentApprovalHook)
+  const setApprovalHook = useStore((s) => s.setAgentApprovalHook)
+  const [hookBusy, setHookBusy] = useState(false)
+  const [hookMsg, setHookMsg] = useState<string | null>(null)
+
+  const toggleApprovalHook = async (on: boolean): Promise<void> => {
+    setHookMsg(null)
+    // 开：只改意愿，钩子等下次起会话时按项目装（那时才知道是哪个 cwd）
+    if (on) {
+      setApprovalHook(true)
+      return
+    }
+    // 关：把已注册项目里装过的一并卸掉。
+    // **不能只改开关就完事** —— 那些钩子已经写进用户的仓库了，留着的话
+    // 关了开关它照样每次拦截，而界面上再没有任何地方能卸它（对话框里的入口已经撤了）。
+    setApprovalHook(false)
+    const projects = useStore.getState().projects
+    if (!projects.length) return
+    setHookBusy(true)
+    let n = 0
+    for (const p of projects) {
+      try {
+        const r = await window.api.agentChat.hookUninstall(p.path)
+        if (r?.ok) n += 1
+      } catch {
+        // 单个项目卸不掉不该中断整轮（可能是目录已经不在了）
+      }
+    }
+    setHookBusy(false)
+    setHookMsg(n > 0 ? `已从 ${n} 个项目卸掉审批钩子` : '没有项目装过审批钩子')
+  }
 
   useEffect(() => {
     if (!open) return
@@ -127,6 +159,29 @@ export function SettingsPanel(): JSX.Element {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="cset-sec">
+                <div className="cset-label">AI 对话</div>
+                <label className="cset-row">
+                  <input
+                    type="checkbox"
+                    checked={approvalHook}
+                    disabled={hookBusy}
+                    onChange={(e) => void toggleApprovalHook(e.target.checked)}
+                  />
+                  <span className="cset-rowname">
+                    审批保护：每次执行命令或改文件前先问一句
+                  </span>
+                </label>
+                <div className="cset-sub">
+                  {hookBusy
+                    ? '处理中…'
+                    : approvalHook
+                      ? '新开的对话会在对应项目里装一个 PreToolUse 钩子（写 .claude/settings.json，原文件先备份）。关掉这个开关会把已经装过的一起卸干净。'
+                      : '关着时工具调用按 CLI 自己的默认权限执行，不会逐次征求同意。'}
+                </div>
+                {hookMsg && <div className="cset-sub">{hookMsg}</div>}
               </div>
 
               <div className="cset-sec">

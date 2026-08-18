@@ -321,3 +321,74 @@ test('同一份 ctx 里没上画布的终端：frameId / nodeId 是 undefined', 
 function leafTree(leafId: string, ptyId: string): { type: 'leaf'; id: string; pane: { kind: 'terminal'; ptyId: string } } {
   return { type: 'leaf', id: leafId, pane: { kind: 'terminal', ptyId } }
 }
+
+// ── AI 对话节点接入通知系统（2026-08-17）──────────────────────
+// 在这之前 locate 里一句 `if (leaf.pane.kind !== 'terminal') continue` 让整套
+// 运行监视 / 待处理列表 / 灵动岛 / 提示音 对 AI 对话节点结构性失明 ——
+// 用了新前端反而收不到任何完成通知。
+
+test('locate 认得 AI 对话节点（按它的会话 id）', () => {
+  const ctx = {
+    tabs: [
+      {
+        id: 't1',
+        projectId: 'p1',
+        title: '笔纵画板',
+        root: { type: 'leaf', id: 'l1', pane: { kind: 'agent', cwd: '/w', sessionId: 'ac-1' } }
+      }
+    ],
+    frames: [],
+    projects: [{ id: 'p1', name: '笔纵画板' }]
+  }
+  const loc = locate('ac-1', ctx as never)
+  assert.ok(loc, 'AI 对话节点必须能被定位到，否则通知系统看不见它')
+  assert.equal(loc!.leafId, 'l1')
+  assert.equal(loc!.projectId, 'p1')
+})
+
+test('还没起会话的 AI 对话节点（sessionId 未定）不会被误配', () => {
+  const ctx = {
+    tabs: [
+      { id: 't1', projectId: 'p1', title: 'x', root: { type: 'leaf', id: 'l1', pane: { kind: 'agent', cwd: '/w' } } }
+    ],
+    frames: [],
+    projects: [{ id: 'p1', name: 'x' }]
+  }
+  // 传 undefined 进去不该匹配上这个 pane（两个 undefined 相等会误配）
+  assert.equal(locate(undefined as never, ctx as never), null)
+})
+
+test('终端与 AI 对话共存时各自定位到自己那个 leaf', () => {
+  const ctx = {
+    tabs: [
+      {
+        id: 't1',
+        projectId: 'p1',
+        title: 'x',
+        root: {
+          type: 'split',
+          id: 's',
+          dir: 'row',
+          ratio: 0.5,
+          children: [
+            { type: 'leaf', id: 'lt', pane: { kind: 'terminal', ptyId: 'pty-9' } },
+            { type: 'leaf', id: 'la', pane: { kind: 'agent', cwd: '/w', sessionId: 'ac-9' } }
+          ]
+        }
+      }
+    ],
+    frames: [],
+    projects: [{ id: 'p1', name: 'x' }]
+  }
+  assert.equal(locate('pty-9', ctx as never)?.leafId, 'lt')
+  assert.equal(locate('ac-9', ctx as never)?.leafId, 'la')
+})
+
+test('AI 对话节点没有名字时兜底成「AI 对话」，不是「终端」', () => {
+  const ctx = {
+    tabs: [{ id: 't1', projectId: 'p1', title: '', root: { type: 'leaf', id: 'l1', pane: { kind: 'agent', cwd: '/w', sessionId: 'ac-1' } } }],
+    frames: [],
+    projects: [{ id: 'p1', name: 'x' }]
+  }
+  assert.equal(locate('ac-1', ctx as never)?.term, 'AI 对话')
+})

@@ -8,7 +8,10 @@
 //    Write 被拒之后仍说「已创建完成」，失败被埋掉，用户看到的就是一句谎话加一片安静。
 // ② error 事件一条都不能丢，全部进 notices（不分 fatal）——这是「hook 装不上时告知
 //    而非阻断」这条裁定的全部说服力所在，归约器丢了它，界面就没得显示。
-// ③ 没有打字机效果——text.delta 目前零生产者，收到即忽略：不追加、不建轮次、不占位。
+// ③ text.delta 现在**有**生产者了（claudeEvents 的 stream_event 分支，2026-08-17）。
+//    它跟 text.done 讲的是同一段话：delta 一个字一个字来，done 最后给完整版。
+//    所以 done 必须**覆盖** delta 攒出来的那个轮次，不能再 push 一个——否则同一段话
+//    在界面上出现两次。这是这个文件里最容易改错的一条。
 
 import type { ChatEvent, Usage } from '../../../../shared/agentChat.ts'
 
@@ -24,6 +27,10 @@ export interface Turn {
   role: 'user' | 'assistant'
   text: string
   execs: ExecItem[]
+  /** 这条消息带的图。**只有用户轮次会有** —— 归约器从不产出它（它连 user 轮次都不产出，
+   *  见文件头），是渲染层合并用户消息时带进来的。
+   *  发给 CLI 的始终是磁盘路径（agent 认那个），这里存的是缩略图，只为界面预览。 */
+  images?: { path: string; url: string }[]
 }
 
 export interface ApprovalPending {
@@ -55,6 +62,10 @@ export interface Notice {
 export const MAX_NOTICES = 8
 
 export interface ChatView {
+  /** CLI **自己报告**的当前模型（session.ready 带的那个）。
+   *  发 /model 切换之后 CLI 会重推一次 init，这个值跟着变 —— 所以界面显示的是
+   *  「它实际在用什么」，不是「我们以为选了什么」。拿不到就是 null（别猜）。 */
+  model: string | null
   turns: Turn[]
   pending: ApprovalPending | null
   notices: Notice[]
@@ -75,6 +86,22 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   // 说话或再发起下一个 exec——这段真空期界面也该显示忙碌，不能因为暂时没有 running
   // 项就提前收起 spinner。
   let sawExecStartSinceTurnDone = false
+  /** 「这一轮开始了、还没结束」。**turn.start 起，turn.done 止。**
+   *
+   *  它补的是 busy 原来漏掉的那一段。实测（2026-08-17 探针，真跑 Claude）：
+   *    3ms 消息投递 → 2523ms session.ready → **6814ms 第一个 text.delta**
+   *  中间 4 秒多既没有 running 的 exec、也没收到过 exec.start，busy 两支判据都不成立，
+   *  界面上的「处理中…」消失后彻底静止 —— 用户报的断档就是这一段。
+   *
+   *  **起点一度是 session.ready，那是错的**：那个事件只在起会话/restart 时才有，
+   *  普通 send 不产生它 —— 于是第二条消息之后 turnActive 永远为假，同一个洞换个
+   *  地方复现。现在由会话层在投递消息时推的 turn.start 驱动，每一轮都精确。 */
+  let turnActive = false
+  let model: string | null = null
+  /** 正在流式接收的那个轮次。**同一段文字会来两遍** —— 先是若干 text.delta 增量，
+   *  最后 assistant 事件再给一份完整的 text.done。留着这个引用，done 到达时才知道
+   *  该「覆盖刚才攒的那个轮次」而不是「再 push 一个新轮次」（否则同一段话显示两次）。 */
+  let streamingTurn: Turn | null = null
 
   /** exec.start 要挂到的轮次：有就用当前最后一个（本归约器只产出 assistant 轮次，
    *  所以「最后一个」必然是 assistant，不需要额外查 role）；没有就先造一个空文本的。 */
@@ -87,9 +114,33 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   }
 
   function push(e: ChatEvent): void {
+    // 一轮开始。放在 switch 之前而不是加一个 case：它只是给 turnActive 打个标，
+    // 不产生任何视图内容，走 default 忽略仍然是对的。
+    if (e.k === 'turn.start') turnActive = true
+    // CLI 报的当前模型。/model 切换后它会重推 init，这里跟着更新 —— 不自己记选择。
+    if (e.k === 'session.ready' && e.model) model = e.model
     switch (e.k) {
+      case 'text.delta': {
+        // 流式增量：攒进当前正在流的轮次，没有就开一个。
+        // 空串在翻译器那层就被挡掉了，这里到达的一定有内容。
+        if (!streamingTurn) {
+          streamingTurn = { role: 'assistant', text: '', execs: [] }
+          turns.push(streamingTurn)
+        }
+        streamingTurn.text += e.text
+        break
+      }
       case 'text.done': {
-        turns.push({ role: 'assistant', text: e.text, execs: [] })
+        // **同一段文字 delta 已经攒过一遍**（带 --include-partial-messages 时），
+        // 这里要覆盖那个轮次，不能再 push —— 否则用户看到同一段话出现两次。
+        // 覆盖而不是「保留 delta 攒的」：done 是权威版本，delta 可能因为丢包/截断不全。
+        // execs 留着：工具调用可能在文字中间挂到了这个轮次上。
+        if (streamingTurn) {
+          streamingTurn.text = e.text
+          streamingTurn = null
+        } else {
+          turns.push({ role: 'assistant', text: e.text, execs: [] })
+        }
         break
       }
       case 'exec.start': {
@@ -129,6 +180,11 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 「宁可少显示，也不要显示一个错的数字」是同一条原则。
         costUsd = e.costUsd ?? costUsd
         sawExecStartSinceTurnDone = false
+        turnActive = false
+        // 一轮结束，流式那段已经落定。不清的话，下一轮第一个 text.done 会去覆盖
+        // 上一轮的最后一个轮次（那时 delta 还没来得及开新的），表现成「新回答
+        // 把旧回答改掉了」。
+        streamingTurn = null
         break
       }
       case 'error': {
@@ -145,11 +201,15 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         noticeSeq += 1
         notices.push({ id: `notice-${noticeSeq}`, text: e.message, fatal: e.fatal, count: 1 })
         if (notices.length > MAX_NOTICES) notices.shift()
+        // 致命错误 = 这一轮走不下去了（典型：spawn 失败）。不在这里收的话，
+        // turn.done 永远不会来，界面会一直转下去。非致命的不动——那只是条提醒，
+        // 会话还在正常跑。
+        if (e.fatal) turnActive = false
         break
       }
-      // session.ready / thinking / text.delta，以及任何未来新增但这一层还没接的
-      // 事件类型：当前视图模型没有对应字段，忽略即可——但绝不能抛。text.delta
-      // 尤其不能在这里做「追加到草稿文字」之类的事，那就是在造打字机效果。
+      // session.ready / thinking / turn.start，以及任何未来新增但这一层还没接的事件类型：
+      // 当前视图模型没有对应字段，忽略即可——但绝不能抛。
+      //（text.delta 已经在上面接了，不再走这条路。）
       default:
         break
     }
@@ -158,12 +218,15 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   function view(): ChatView {
     const anyRunning = turns.some((t) => t.execs.some((x) => x.state === 'running'))
     return {
+      model,
       turns,
       pending,
       notices,
       usage,
       costUsd,
-      busy: anyRunning || sawExecStartSinceTurnDone
+      // turnActive 补的是「会话就绪了但第一个字还没来」那一段（实测有 4 秒多，
+      // 见它的定义处）——原来那两支都覆盖不到，界面在那段时间是彻底静止的。
+      busy: anyRunning || sawExecStartSinceTurnDone || turnActive
     }
   }
 
