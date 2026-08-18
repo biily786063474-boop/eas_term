@@ -38,6 +38,7 @@ import { shouldReap, planSend, applyParamChange, type SessionRecord } from './se
 import { buildCliList } from './cliList.ts'
 import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
+import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -390,7 +391,15 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
     proc = spawn(built.bin, args, {
       cwd: opts.cwd,
       env: {
-        ...process.env,
+        // **PROBE_ENV 而不是 process.env。** 从 Dock 启动的 Electron，PATH 是
+        // launchd 给的精简版、不含 /opt/homebrew/bin —— `spawn('claude')` 直接
+        // ENOENT。用户报的原话就是「spawn claude ENOENT」。
+        //
+        // 这是同一个 PATH 事实的第三处消费点：agent.ts 探模型档位、
+        // adapters/detect.ts 判装没装、这里真的把进程拉起来。前两处今天刚统一到
+        // probeEnv.ts，**这处漏了** —— 表现最阴险：探测说「装着」，UI 让你选，
+        // 一点就 ENOENT。
+        ...PROBE_ENV,
         ...mcpEnv({ project: opts.cwd }),
         // 这个会话专属的标记——resources/agent-hooks/eas-pretooluse.mjs 靠它判断"这次工具
         // 调用是不是 agent-chat 起的这个会话"，不是用户在 Eas-Term 终端里自己敲的 claude、
