@@ -850,6 +850,44 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     }))
   },
 
+  // 与 addTerminalNode 同构，只把「开哪种 leaf」换掉。**刻意不复用它加参数** ——
+  // 那会让一个函数同时负责两种 pane，而两者往后会各自长出自己的选项
+  // （终端有角色/命令预填，agent 有 CLI 与审批模式）。
+  //
+  // 走 openAgentPane 那条路：它和 openTerminal 逐条对齐，唯一差别是**不 spawn pty**
+  // —— agent 面板在用户发第一条消息之前不占任何进程。
+  addAgentNode: async (frameId) => {
+    const frame = get().canvas.frames.find((f) => f.id === frameId)
+    if (!frame) return
+    const before = new Set(
+      get()
+        .tabs.filter((t) => t.projectId === frame.projectId)
+        .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+    )
+    await get().openAgentPane({ projectId: frame.projectId })
+    const newLeaf = get()
+      .tabs.filter((t) => t.projectId === frame.projectId)
+      .flatMap((t) => collectLeaves(t.root))
+      .find((l) => !before.has(l.id))
+    if (!newLeaf) return
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: reflowSeparate(
+          s.canvas.frames.map((f) =>
+            f.id === frameId
+              ? placeNodeInFrame(
+                  f,
+                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  s.canvas.frames
+                )
+              : f
+          )
+        )
+      }
+    }))
+  },
+
   prefillTerminal: async (cmd) => {
     const s = get()
     const before = new Set(s.tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id)))

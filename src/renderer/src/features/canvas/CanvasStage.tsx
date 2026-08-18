@@ -8,7 +8,16 @@ import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
 import type { ProjectMenuSort } from '../../store/uiSlice'
 import { attachBlurGuard } from '../../blurGuard'
-import { PlusIcon, MinusIcon, TerminalIcon, CopyIcon, GlobeIcon, TidyIcon, CameraIcon } from '../../ui/Icons'
+import {
+  PlusIcon,
+  MinusIcon,
+  TerminalIcon,
+  CopyIcon,
+  GlobeIcon,
+  TidyIcon,
+  CameraIcon,
+  SparkleIcon
+} from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
@@ -72,6 +81,7 @@ export function CanvasStage(): JSX.Element {
   const toggleCollapse = useStore((s) => s.toggleCollapse)
   const projects = useStore((s) => s.projects)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
+  const addAgentNode = useStore((s) => s.addAgentNode)
   const addBrowserNode = useStore((s) => s.addBrowserNode)
   const tidyFrame = useStore((s) => s.tidyFrame)
   // 注意：这里不再读 canvas.shapes——成品标记的渲染搬去了 CanvasShapeLayer（它自己订阅）。
@@ -1170,6 +1180,15 @@ export function CanvasStage(): JSX.Element {
                 onClick={() => tidyFrame(f.id)}
               >
                 <TidyIcon size={13} />
+              </button>
+              {/* 排在终端前面：新建 Frame 默认落的就是 AI 对话节点，它是更常走的那条路 */}
+              <button
+                className="cframe-btn"
+                data-tip="新建 AI 对话"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => void addAgentNode(f.id)}
+              >
+                <SparkleIcon size={13} />
               </button>
               <button
                 className="cframe-btn"
