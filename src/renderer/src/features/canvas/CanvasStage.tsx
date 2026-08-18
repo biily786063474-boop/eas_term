@@ -401,6 +401,33 @@ export function CanvasStage(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey, { capture: true })
   }, [sel])
 
+  // ── 撤销 / 重做：Cmd+Z / Cmd+Shift+Z ──────────────────────────────────
+  //
+  // **挂在冒泡阶段（不是 capture），这是刻意的。** 设计模块自己有一套 undo，
+  // 它用 capture + stopPropagation 拦 Cmd+Z（DesignerView.jsx / AnimateView.jsx）——
+  // 事件在 window 的 capture 阶段就被它截停，根本冒泡不回来，画布这层天然抢不到。
+  // 下面那条 .design-node 守卫是第二道：万一哪天设计模块改了监听写法，
+  // 也不至于变成「在设计模块里按撤销，画布上的节点被撤没了」。
+  //
+  // 输入框 / textarea / contentEditable 一律放行 —— xterm 的输入代理也是 textarea，
+  // 所以在终端里按 Cmd+Z 走的还是终端自己那套，不会被画布截走。
+  useEffect(() => {
+    const onUndoKey = (e: KeyboardEvent): void => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
+      if (el?.closest?.('.design-node')) return
+      e.preventDefault()
+      const st = useStore.getState()
+      // 栈空时什么都不发生 —— 这是撤销的通行行为，不值得为它引一套提示 UI
+      if (e.shiftKey) st.redoCanvas()
+      else st.undoCanvas()
+    }
+    window.addEventListener('keydown', onUndoKey)
+    return () => window.removeEventListener('keydown', onUndoKey)
+  }, [])
+
   // 空格键临时切换为平移手势（空白拖拽默认是框选）+ 抓手光标（.space-pan）
   useEffect(() => {
     const down = (e: KeyboardEvent): void => {

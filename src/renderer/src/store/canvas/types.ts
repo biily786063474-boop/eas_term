@@ -4,6 +4,7 @@
 // store/types 都只认这些类型。类型和实现混在一个 1186 行的文件里时，
 // 想知道「一个 Frame 到底有哪些字段」得先滚过几百行几何计算。
 import type { LeafNode, PaneState } from '../../layout'
+import type { UndoState } from './undo'
 import type { ProjectStatus } from '../../../../shared/types'
 
 /** 三种视图共享同一批 leaf（终端只有一份，换视图不重挂载）：
@@ -198,6 +199,16 @@ export interface CanvasSlice {
   /** 扫掉「leafId 指向一个已经不存在的 leaf」的画布节点。
    *  幂等、没孤儿时不改状态，可以随便多调。leafId 为空的节点（存档恢复的终端占位）不碰。 */
   pruneOrphanNodes: () => void
+
+  // ── 撤销 ──────────────────────────────────────────────────────────────
+  /** 撤销栈（内存，不跨重启）。栈内容与结构见 store/canvas/undo.ts */
+  canvasUndo: UndoState
+  /** 记录开关。**loadCanvas + materializeCanvas 跑完之前必须是 false** ——
+   *  否则加载存档本身会被记成一步，用户按一次撤销就把画布退回加载前的空场景。 */
+  undoReady: boolean
+  /** 撤销一步。返回是否真的撤了（栈空时 false，调用方据此提示）。 */
+  undoCanvas: () => boolean
+  redoCanvas: () => boolean
   addShape: (shape: Omit<CanvasShape, 'id'>) => void
   updateShape: (id: string, patch: Partial<CanvasShape>) => void
   removeShape: (id: string) => void

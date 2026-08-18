@@ -54,6 +54,8 @@ import {
 import type { PersistedCanvas } from './canvas/persist'
 import { track } from '../features/notify/track'
 import { soleFrameIdOfSel } from './canvas/selKey'
+import { emptyUndo, pushUndo, stepUndo, stepRedo, snapshotOf, parseSnapshot } from './canvas/undo'
+import type { UndoState } from './canvas/undo'
 
 // 这些是画布对外的公开接口，调用点一直从 './canvasSlice' 取，拆分后原样转出去
 export type {
@@ -142,37 +144,46 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   },
 
   loadCanvas: async () => {
-    let raw: unknown = null
+    // **撤销记录要等这整套流程跑完再开。** 加载存档、materializeCanvas 重建 leaf
+    // 都会改 canvas，但那些不是用户的操作 —— 记进去的话，用户按一次撤销就把画布
+    // 退回加载前的空场景（最坏的一种「撤销」）。三条出口（读盘失败 / 没有存档 /
+    // 正常走完）都得开，所以包一层 finally，不在每条 return 前各写一遍。
     try {
-      raw = await window.api.canvas.load()
-    } catch (e) {
-      console.error('[loadCanvas] 读盘失败,保持空场景', e)
-      return
+      let raw: unknown = null
+      try {
+        raw = await window.api.canvas.load()
+      } catch (e) {
+        console.error('[loadCanvas] 读盘失败,保持空场景', e)
+        return
+      }
+      if (raw == null) return
+      // 坏档防御:逐项规范化,坏 frame/node 丢弃而非让渲染崩成永久白屏
+      const { scene, droppedFrames } = sanitizeCanvas(raw)
+      if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
+      // committedScale 跟随恢复的 scale,使启动时 pane transform=1(不误缩放)
+      set(() => ({
+        canvas: {
+          viewport: scene.viewport,
+          frames: scene.frames,
+          shapes: scene.shapes,
+          freeNodes: scene.freeNodes,
+          todos: scene.todos
+        },
+        canvasCommittedScale: scene.viewport.scale
+      }))
+      // 恢复视图。**这里以前是「只 set 非 split」** —— 默认值还是 split 时那样写没问题，
+      // 但现在默认是 canvas，再那样写会把「亲手选了分屏」的人也留在 canvas 初值上。
+      // 白名单校验已经在 sanitizeCanvas 里做完（三个分支给出的都是合法值），
+      // 这里直接采信它算出来的结果。
+      set({ viewMode: scene.viewMode, viewModePicked: scene.viewModePicked === true })
+      // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
+      // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
+      // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。
+      await get().materializeCanvas()
+  
+    } finally {
+      set({ undoReady: true })
     }
-    if (raw == null) return
-    // 坏档防御:逐项规范化,坏 frame/node 丢弃而非让渲染崩成永久白屏
-    const { scene, droppedFrames } = sanitizeCanvas(raw)
-    if (droppedFrames > 0) console.warn(`[loadCanvas] 丢弃了 ${droppedFrames} 个损坏的 frame`)
-    // committedScale 跟随恢复的 scale,使启动时 pane transform=1(不误缩放)
-    set(() => ({
-      canvas: {
-        viewport: scene.viewport,
-        frames: scene.frames,
-        shapes: scene.shapes,
-        freeNodes: scene.freeNodes,
-        todos: scene.todos
-      },
-      canvasCommittedScale: scene.viewport.scale
-    }))
-    // 恢复视图。**这里以前是「只 set 非 split」** —— 默认值还是 split 时那样写没问题，
-    // 但现在默认是 canvas，再那样写会把「亲手选了分屏」的人也留在 canvas 初值上。
-    // 白名单校验已经在 sanitizeCanvas 里做完（三个分支给出的都是合法值），
-    // 这里直接采信它算出来的结果。
-    set({ viewMode: scene.viewMode, viewModePicked: scene.viewModePicked === true })
-    // 启动即静默对齐两个视图：不管现在停在分屏还是画布，都把画布里的终端占位重开成真终端。
-    // 分屏与画布共享同一批 leaf，所以画布有几个终端，分屏一开始就有几个——不必等用户切到画布
-    // 才「把画布的终端拉到分屏」。await 只等重开完成，不阻塞 UI 渲染。
-    await get().materializeCanvas()
   },
 
   materializeCanvas: async () => {
@@ -445,6 +456,16 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     // closeLeaf 回头会调 pruneOrphanNodes()，那时这个节点已经删掉了 → 空转，不会来回递归
     if (tab) get().closeLeaf(tab.id, leafId)
   },
+
+  // ── 撤销 ────────────────────────────────────────────────────────────────
+  // 栈机制在 store/canvas/undo.ts（纯函数、可单测）；这里只负责「什么时候记」
+  // 和「怎么把一份快照放回画布」。记录的触发在 store/index.ts 的 subscribe ——
+  // 53 个改 canvas 的 action 一个都不用改，也就一个都漏不掉。
+  canvasUndo: emptyUndo(),
+  undoReady: false,
+
+  undoCanvas: () => applyUndoStep(set, get, stepUndo),
+  redoCanvas: () => applyUndoStep(set, get, stepRedo),
 
   pruneOrphanNodes: () =>
     set((s) => {
@@ -1095,3 +1116,41 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   setEditingSticky: (id) => set({ editingSticky: id })
 })
 
+/**
+ * 撤销/重做共用的一步。两者差别只在从哪个方向取快照，其余（应用、清孤儿、
+ * 保住视口）完全一样，所以传一个 step 函数进来，不写两遍。
+ *
+ * **应用快照后必须跑一次 pruneOrphanNodes。** 快照里可能有终端节点，而它的
+ * leaf 早在删除时就被 closeLeaf 杀掉了（canvasSlice 的 removeNode / removeFrame）——
+ * shell 没了、历史输出也没了，放回来只是个指向死 leaf 的空壳。prune 会把它们清掉，
+ * 于是「终端不进撤销栈」这条（用户定的）就落到实处：撤销一个含终端的 Frame 时，
+ * 文件节点、便签、布局都回来，终端不假装回来。
+ *
+ * 视口不动：快照本来就不含 viewport（见 undo.ts）。撤销改的是内容，不是你在看哪儿。
+ */
+function applyUndoStep(
+  set: (partial: Partial<AppState>) => void,
+  get: () => AppState,
+  step: (st: UndoState, current: string) => { next: UndoState; snapshot: string } | null
+): boolean {
+  const st = get()
+  const r = step(st.canvasUndo, snapshotOf(st.canvas))
+  if (!r) return false
+  const parsed = parseSnapshot(r.snapshot)
+  if (!parsed) return false // 快照坏了：什么都不做，也不消耗这一步
+  set({
+    canvas: {
+      ...st.canvas, // viewport 原样留着
+      frames: parsed.frames as CanvasScene['frames'],
+      shapes: parsed.shapes as CanvasScene['shapes'],
+      freeNodes: parsed.freeNodes as CanvasScene['freeNodes'],
+      todos: parsed.todos as CanvasScene['todos']
+    },
+    canvasUndo: r.next,
+    // 指向已删节点的引用要清掉，理由同 removeNode 里那段：
+    // canvas_get_state 会把它当 maximized 报给 AI，留着就是在骗它
+    maximizedNode: null
+  })
+  get().pruneOrphanNodes()
+  return true
+}
