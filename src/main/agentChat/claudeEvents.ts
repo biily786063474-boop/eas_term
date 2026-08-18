@@ -65,9 +65,37 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
         return translateResult(j)
       case 'stream_event':
         return translateStreamEvent(j)
+      case 'rate_limit_event':
+        return translateRateLimit(j)
       default:
         return []
     }
+  }
+
+  // ---- rate_limit_event：订阅额度窗口 ----
+  //
+  // 实测 payload（2026-08-17）：
+  //   { type:'rate_limit_event', rate_limit_info:{ status:'allowed',
+  //     resetsAt:1786996800, rateLimitType:'five_hour', overageStatus:'rejected',
+  //     overageDisabledReason:'out_of_credits', isUsingOverage:false } }
+  //
+  // **原样透传 window / status，不做枚举映射**：这是要显示给用户看的信息，
+  // 枚举漏了一种新窗口类型就会被静默丢掉，而那正是用户最想知道的那次。
+  function translateRateLimit(j: Record<string, unknown>): ChatEvent[] {
+    const info = j.rate_limit_info
+    if (!info || typeof info !== 'object') return []
+    const r = info as Record<string, unknown>
+    const window = typeof r.rateLimitType === 'string' ? r.rateLimitType : ''
+    const status = typeof r.status === 'string' ? r.status : ''
+    if (!window && !status) return [] // 两个都没有的话这条事件没有任何可显示的内容
+    return [
+      {
+        k: 'quota',
+        window,
+        status,
+        resetsAt: typeof r.resetsAt === 'number' ? r.resetsAt : undefined
+      }
+    ]
   }
 
   // ---- stream_event（--include-partial-messages 才有）----

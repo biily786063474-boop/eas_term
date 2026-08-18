@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel, formatUsage } from './toolbarModel.ts'
+import { quotaText, severityOf, windowLabel, untilReset } from './quotaLabel.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
@@ -307,6 +308,26 @@ export function ChatToolbar({
               <span className="ac-ctx-num">{ctxPct}%</span>
             </div>
           )}
+
+          {/* 订阅额度。**没有百分比是因为 CLI 那条事件里就没有这个字段** ——
+              rate_limit_event 给的是窗口类型、状态、重置时刻（实测样本见 shared 里
+              quota 事件的说明）。宁可显示「五小时 · 2小时14分后重置」，
+              也不要编一个看起来精确的进度条。
+              每个窗口一个 chip（五小时和周各一条），只在 CLI 报过之后才出现。 */}
+          {view.quotas.map((q) => {
+            const sev = severityOf(q.status)
+            const left = untilReset(q.resetsAt, Date.now())
+            return (
+              <span
+                key={q.window}
+                className={`ac-quota${sev === 2 ? ' hot' : sev === 1 ? ' warm' : ''}`}
+                data-tip={quotaText(q, Date.now())}
+              >
+                {windowLabel(q.window)}
+                {left ? ` ${left}` : ''}
+              </span>
+            )
+          })}
 
           {model.showModel && (
             <div

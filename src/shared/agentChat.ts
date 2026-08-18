@@ -43,6 +43,27 @@ export type ChatEvent =
     }
   | { k: 'approval.resolved'; approvalId: string; decision: 'allow' | 'deny' }
   | { k: 'turn.done'; usage: Usage; costUsd?: number }
+  /** 订阅额度窗口的状态。**这是 CLI 主动报的，不是我们算的。**
+   *
+   *  实测的 payload（2026-08-17，Claude 的 rate_limit_event）：
+   *    { status:'allowed', resetsAt:1786996800, rateLimitType:'five_hour',
+   *      overageStatus:'rejected', overageDisabledReason:'out_of_credits',
+   *      isUsingOverage:false }
+   *
+   *  **注意它给了什么、没给什么**：给了窗口类型和重置时刻，
+   *  **没有给「已经用了百分之多少」**。所以这里也只带得出这些 ——
+   *  界面上宁可显示「五小时窗口 · 2 小时后重置」，也不要编一个进度百分比。
+   *  哪天样本里出现了用量字段，再扩这个事件。 */
+  | {
+      k: 'quota'
+      /** 哪个窗口。CLI 报什么就是什么（five_hour / weekly / …），不做枚举——
+       *  枚举漏了一种新窗口就会被静默丢掉，而这是要显示给用户看的信息。 */
+      window: string
+      /** 还能用 / 已经超了 / 正在用超额度。同样原样透传 */
+      status: string
+      /** 这个窗口什么时候重置（Unix 秒）。拿不到就是 undefined */
+      resetsAt?: number
+    }
   | { k: 'error'; message: string; fatal: boolean }
 
 export interface CliCapabilities {

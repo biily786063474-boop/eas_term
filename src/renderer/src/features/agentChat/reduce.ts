@@ -61,11 +61,23 @@ export interface Notice {
  *  满了丢最旧的一条。 */
 export const MAX_NOTICES = 8
 
+/** 订阅额度窗口的现状。**没有「用了百分之多少」** —— CLI 那条事件里就没有这个字段
+ *  （实测样本见 shared/agentChat.ts 的 quota 事件说明）。所以界面只报窗口和重置时间，
+ *  不编进度百分比。 */
+export interface Quota {
+  window: string
+  status: string
+  resetsAt?: number
+}
+
 export interface ChatView {
   /** CLI **自己报告**的当前模型（session.ready 带的那个）。
    *  发 /model 切换之后 CLI 会重推一次 init，这个值跟着变 —— 所以界面显示的是
    *  「它实际在用什么」，不是「我们以为选了什么」。拿不到就是 null（别猜）。 */
   model: string | null
+  /** 各个额度窗口的最新状态，按 window 去重（五小时和周是两条，各自更新）。
+   *  空数组 = 这个 CLI 没报过额度（Codex 就不报） */
+  quotas: Quota[]
   turns: Turn[]
   pending: ApprovalPending | null
   notices: Notice[]
@@ -98,6 +110,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
    *  地方复现。现在由会话层在投递消息时推的 turn.start 驱动，每一轮都精确。 */
   let turnActive = false
   let model: string | null = null
+  const quotas: Quota[] = []
   /** 正在流式接收的那个轮次。**同一段文字会来两遍** —— 先是若干 text.delta 增量，
    *  最后 assistant 事件再给一份完整的 text.done。留着这个引用，done 到达时才知道
    *  该「覆盖刚才攒的那个轮次」而不是「再 push 一个新轮次」（否则同一段话显示两次）。 */
@@ -119,6 +132,13 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     if (e.k === 'turn.start') turnActive = true
     // CLI 报的当前模型。/model 切换后它会重推 init，这里跟着更新 —— 不自己记选择。
     if (e.k === 'session.ready' && e.model) model = e.model
+    // 额度：同一个窗口只留最新一条（就地更新，不堆历史——界面只关心"现在怎么样"）
+    if (e.k === 'quota') {
+      const i = quotas.findIndex((q) => q.window === e.window)
+      const next = { window: e.window, status: e.status, resetsAt: e.resetsAt }
+      if (i >= 0) quotas[i] = next
+      else quotas.push(next)
+    }
     switch (e.k) {
       case 'text.delta': {
         // 流式增量：攒进当前正在流的轮次，没有就开一个。
@@ -219,6 +239,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     const anyRunning = turns.some((t) => t.execs.some((x) => x.state === 'running'))
     return {
       model,
+      quotas,
       turns,
       pending,
       notices,

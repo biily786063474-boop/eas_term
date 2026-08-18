@@ -60,7 +60,7 @@ function mergeUserMessages(view: ChatView, sent: SentMessage[]): ChatView {
 // 会话刚起、任何事件都还没到达时 view 是 null（onEvent 至少要等第一个事件才会 setView）。
 // 这段真空期用户已经能看到自己刚发的那条消息，不能因为 view 还是 null 就整屏空白——
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
-const EMPTY_VIEW: ChatView = { model: null, turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
+const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
 
 
 export function AgentChatView({

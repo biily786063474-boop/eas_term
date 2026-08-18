@@ -183,3 +183,55 @@ test('[2026-08-14 全分支评审] 非空字符串的 text block 仍然正常产
   assert.equal(evs.length, 1)
   assert.ok(evs[0].k === 'text.done' && evs[0].text === '你好')
 })
+
+// ── 订阅额度（2026-08-17）────────────────────────────────────
+// 实测 payload：{ type:'rate_limit_event', rate_limit_info:{ status:'allowed',
+//   resetsAt:1786996800, rateLimitType:'five_hour', overageStatus:'rejected', ... } }
+
+test('rate_limit_event 翻成 quota，窗口/状态/重置时刻原样带出', () => {
+  const t = createClaudeTranslator()
+  const out = t.push(
+    JSON.stringify({
+      type: 'rate_limit_event',
+      rate_limit_info: { status: 'allowed', resetsAt: 1786996800, rateLimitType: 'five_hour' },
+      session_id: 's1'
+    }) + '\n'
+  )
+  assert.deepEqual(out, [
+    { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 1786996800 }
+  ])
+})
+
+test('**窗口类型不做枚举映射** —— 漏掉一种新窗口会被静默丢掉，而那正是用户最想知道的那次', () => {
+  const t = createClaudeTranslator()
+  const out = t.push(
+    JSON.stringify({
+      type: 'rate_limit_event',
+      rate_limit_info: { status: 'rejected', rateLimitType: 'some_future_window' }
+    }) + '\n'
+  )
+  assert.equal(out.length, 1)
+  assert.ok(out[0].k === 'quota' && out[0].window === 'some_future_window')
+})
+
+test('rate_limit_info 缺失/畸形不抛，也不产出空事件', () => {
+  const t = createClaudeTranslator()
+  assert.deepEqual(t.push(JSON.stringify({ type: 'rate_limit_event' }) + '\n'), [])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'rate_limit_event', rate_limit_info: 'x' }) + '\n'), [])
+  // 窗口和状态都没有 = 这条事件没有任何可显示的内容
+  assert.deepEqual(
+    t.push(JSON.stringify({ type: 'rate_limit_event', rate_limit_info: { resetsAt: 1 } }) + '\n'),
+    []
+  )
+})
+
+test('resetsAt 不是数字时不带出来（不许让界面拿一个坏值去算倒计时）', () => {
+  const t = createClaudeTranslator()
+  const out = t.push(
+    JSON.stringify({
+      type: 'rate_limit_event',
+      rate_limit_info: { status: 'allowed', rateLimitType: 'weekly', resetsAt: 'soon' }
+    }) + '\n'
+  )
+  assert.ok(out[0].k === 'quota' && out[0].resetsAt === undefined)
+})

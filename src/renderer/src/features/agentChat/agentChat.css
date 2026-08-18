@@ -1133,3 +1133,36 @@
     transition: none;
   }
 }
+
+/* Frame 里的 AI 对话节点不画自己的边框。
+   实测（画布上量的）：.cframe 边框 1.5px、.pane 边框 1px，两者右/底各留 19px 间隙 ——
+   两条平行的线夹着一条缝。终端节点也是这个结构，只是它满屏文字盖住了；
+   AI 对话的空态是大片留白，这两条线就特别扎眼（用户截图指的就是这里）。
+   Frame 已经提供了边界，面板内部又有消息区和输入框各自的边框，外框这一条是多余的。
+   **只去边框不去背景**：那层半透明底色压着画布点阵，去掉字会糊。 */
+.pane:has(.agent-chat-view) {
+  border-color: transparent;
+}
+
+/* 订阅额度 chip。跟上下文占用、压缩那几个同一套语言（圆角、10.5px、弱色）。
+   平时是中性色 —— 一个常驻的东西天天喊「注意我」等于没喊。 */
+.ac-quota {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  cursor: default;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ac-quota.warm {
+  color: #f0d9ad;
+  border-color: rgba(224, 175, 104, 0.4);
+}
+.ac-quota.hot {
+  color: #fda4af;
+  border-color: rgba(244, 63, 94, 0.4);
+}

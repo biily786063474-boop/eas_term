@@ -586,3 +586,20 @@ test('session.ready 的 model 为空串时不覆盖已有值（宁可显示旧�
   const v = run([ready, { k: 'session.ready', sessionId: 's1', model: '', cwd: '/x' }])
   assert.equal(v.model, 'sonnet')
 })
+
+test('quota 事件按窗口去重，同一个窗口只留最新（五小时和周各一条）', () => {
+  const v = run([
+    { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 100 },
+    { k: 'quota', window: 'weekly', status: 'allowed', resetsAt: 200 },
+    { k: 'quota', window: 'five_hour', status: 'rejected', resetsAt: 300 }
+  ])
+  assert.equal(v.quotas.length, 2, '同一个窗口不该堆成两条')
+  assert.deepEqual(v.quotas.find((q) => q.window === 'five_hour'), {
+    window: 'five_hour', status: 'rejected', resetsAt: 300
+  })
+  assert.equal(v.quotas.find((q) => q.window === 'weekly')?.status, 'allowed')
+})
+
+test('没收到过 quota 时是空数组（Codex 不报额度，界面就不该显示那个 chip）', () => {
+  assert.deepEqual(run([ready]).quotas, [])
+})
