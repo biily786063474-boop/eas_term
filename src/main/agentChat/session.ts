@@ -24,6 +24,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
 import { getAdapter, listAdapters } from './adapters/index.ts'
+import {
+  NO_SILENCE,
+  silenceAfterSlash,
+  endSilence,
+  shouldSilence,
+  type SilenceState
+} from './slashSilence'
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
@@ -57,6 +64,8 @@ interface Live {
    *  （index.ts 里那句 `const wcId = win.webContents.id` 提前取值就是为了这个）。
    *  pty.ts 的 entry.wcId 是同样的做法。 */
   wcId: number
+  /** 切模型/切强度的 slash 回执静默期。状态机在 slashSilence.ts（纯函数，可单测）。 */
+  silence: SilenceState
 }
 
 const sessions = new Map<string, Live>()
@@ -237,6 +246,18 @@ function emitEvent(live: Live, e: ChatEvent): void {
   }
 }
 
+/**
+ * 切模型 / 切强度走的是给 CLI 发 `/model`、`/effort` slash command，CLI 会用一条
+ * 普通的助手消息回执（「Set effort level to high (this session only): …」），
+ * 一条条铺在对话区里。用户拨一次强度滑块就多出五六条，把真正的对话顶没了。
+ * 静默执行 —— 判据、解除路径和为什么不按文案匹配，全在 slashSilence.ts 里写着。
+ */
+function isSilenced(live: Live, e: ChatEvent): boolean {
+  const { silenced, next } = shouldSilence(live.silence, e.k, Date.now())
+  live.silence = next
+  return silenced
+}
+
 /** translator 产出的事件里，session.ready 携带了 CLI 原生的会话/线程 id——
  *  记下来才能在下次 restart 时 --resume 接上（决定 4）。其余事件原样转发，
  *  这不是"判定"，只是把已经发生的事实记进 SessionRecord。
@@ -247,6 +268,7 @@ function emitEvent(live: Live, e: ChatEvent): void {
  *  参数，不是编造值。`||` 只在 e.model/e.cwd 是空串时才回退，Claude 的 init 事件本来就
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
+  if (isSilenced(live, e)) return
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
     emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })
@@ -412,6 +434,10 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
  *  这不是业务判定，是"我有没有能力执行这个动作"的机械检查，答不了就如实报错，
  *  不能假装写成功了却悄悄把消息丢了。 */
 function deliverMessage(live: Live, message: string): AgentChatSendResult {
+  // **用户开口，静默期立刻结束。** slash 回执的静默是按 turn 计数的，万一某条
+  // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
+  // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
+  live.silence = endSilence()
   const plan = planSend(live.rec, Date.now())
   if (plan.action === 'send') {
     if (!live.proc?.stdin) {
@@ -557,6 +583,7 @@ export function registerAgentChatHandlers(): void {
       rec,
       wc: e.sender,
       wcId: e.sender.id,
+      silence: NO_SILENCE,
       // translator 由 adapter 自己声明创建（2026-08-14 全分支评审 I6 第 1 点：Ruling 10
       // 给 stdin 立的原则逐字适用于这里——adapter 知道自己怎么工作，不靠下游按 id 分支去
       // 记每个 CLI 的怪癖。改之前这里写的是 `adapter.id === 'codex' ? ... : ...`，加第三个
@@ -600,8 +627,17 @@ export function registerAgentChatHandlers(): void {
     // 下次 restart 带启动参数——两条路殊途同归。
     const adapter = getAdapter(live.rec.cli)
     if (adapter?.paramChange === 'slash' && live.proc?.stdin) {
-      if (clean.model) writeStdin(live, `/model ${clean.model}`)
-      if (clean.effort) writeStdin(live, `/effort ${clean.effort}`)
+      // 每条 slash 会引出一个带回执的 turn，逐个吞掉（理由见 isSilenced）
+      let sent = 0
+      if (clean.model) {
+        writeStdin(live, `/model ${clean.model}`)
+        sent++
+      }
+      if (clean.effort) {
+        writeStdin(live, `/effort ${clean.effort}`)
+        sent++
+      }
+      live.silence = silenceAfterSlash(live.silence, sent, Date.now())
       live.rec = {
         ...live.rec,
         model: clean.model ?? live.rec.model,
