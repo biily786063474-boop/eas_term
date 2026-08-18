@@ -19,7 +19,9 @@ agent，第六件反过来，是 Eas-Term **直接驱动** agent 跑会话，方
 先跑 `.claude/skills/agent-onboarding/scripts/audit.sh` —— 它把面 1–5 在**这台机器上的当前实况**
 打出来（哪些文件真的被写了、托管区多大、盘上那份和代码期望的一致吗）。
 不要凭代码推断现状，那个表和现实脱节过。面 6 不写用户的全局配置、没有"盘上状态"可查，
-验证方式是真起一轮会话，见 `scripts/verify-agent-chat.mjs`。
+它分两半验：**静态那半**跑 `scripts/check-adapter.mjs`（不起进程、不花额度、秒回，
+抓「加了 adapter 却忘了扩别处」这类静默漏）；**真起一轮会话那半没法自动化**
+（要花用户的额度，还要人眼看流式和时序），清单在下面「验收」一节，手动过。
 
 ---
 
@@ -100,6 +102,15 @@ Codex 没有 skill 机制，细节文件落 `~/.eas/agent/`，常驻区写**绝�
 不是「不建议用」，是「看不见」。新 agent 如果不走 PTY（比如是个 GUI app），
 这条门禁不成立，**必须先设计替代门禁再接，不要先接了再想**。
 
+**写配置的两种格式各有各的脆弱处**（`mcpBridge.ts`）：Claude 是 `~/.claude.json` 的
+`mcpServers`（整份 JSON 读改写，用户手写的其他字段必须原样保留）；Codex 是
+`~/.codex/config.toml` 的 `[mcp_servers.<name>]`，**逐段处理而不是整份重写** ——
+TOML 没有安全的通用解析/回写路径，整份重写会毁掉用户自己写的配置。
+接新 agent 前先问清它读什么格式，别默认能套用这两套之一。
+
+要写进哪些名字看 `MANAGED`（现在是 `eas-term` + `bizone-canvas`）。
+**漏一个，用户点「移除」就只清掉一半，剩下的成了删不掉的残留。**
+
 ### 面 4：钩子是侵入性最高的一项
 
 技能包只是让模型多读一份说明；钩子是**在用户每次跑命令时插入我们的代码，在他所有项目里，永久**。
@@ -145,6 +156,37 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
 单独做 —— `exec` 模式做不了逐次审批，`capabilities.approval` 因此是空数组，UI 自动退回显示
 `sandboxLevels`，不用为 Codex 写任何分支。
 
+**接新 CLI 时，`CliAdapter` 这七个字段每一个都要回答**（定义在 `src/shared/agentChat.ts`）。
+它们都是**能力声明**，不是 CLI 名字 —— 下游一律判字段，永远不写 `if (id === 'xxx')`：
+
+| 字段 | 要回答什么 | 漏了会怎样 |
+|---|---|---|
+| `capabilities` | 支持哪些模型 / effort 档 / 审批粒度 / 沙箱档 | UI 拿它决定显示什么控件；空数组会自动降级，不用写分支 |
+| `buildArgs().stdin` | `'pipe'`（持续写）还是 `'ignore'`（必须关掉）| 刻意不给可选：Codex `exec` 不关 stdin 会**卡死**在 `Reading additional input from stdin...` |
+| `createTranslator()` | 自己的 wire format 怎么翻成 `ChatEvent` | 每次调用返回**新实例** —— 节流/去重状态是每个会话各自的，共享会串台 |
+| `approvalHook` | 要不要装 Claude 风格的 PreToolUse hook 文件 | **与 `capabilities.approval` 是两件事**：前者说"有审批能力"，后者说"实现方式是装这个 hook"。混成一个布尔正是 C1 那个 Critical 的根 |
+| `paramChange` | 会话跑起来后怎么改模型 / effort | `'slash'` = 认 `/model x`、`/effort x`，往 stdin 一写就换，**不重启、不丢上下文**；不声明 = 只能重启带启动参数 |
+
+**`ChatEvent` 里有三个事件不是翻译器产出的**，接新 CLI 时别去自己的 wire format 里找它们：
+
+- `turn.start` —— **会话层推的**。CLI 只在开口说话时才出声，而「发出去了、还没回音」实测有
+  4 秒多，界面正是那段时间最需要表态。渲染层自己记标志的话，同一件事记在两个地方，必漏。
+- `quota` —— 订阅额度（周额度 / 五小时额度）。原样透传 window/status，**不做枚举映射**：
+  映射表会在服务端加档位时静默失配。
+- `Usage.contextRatio` —— 上下文占用。分母必须来自同一个 result 事件里的
+  `modelUsage[<model>].contextWindow`，**拿不到分母就返回 undefined，绝不用猜的窗口大小顶上**。
+
+**审批有两条路，别默认走 hook 那条：**
+
+- **硬拦截**（`approvalHook: 'claude-pretooluse'`）：外部进程能阻塞，实测能挡 70 秒。
+  代价是要装文件进用户的项目目录。
+- **伪无头**（`StartOpts.askFirst` + `ASK_FIRST_PROMPT`）：不装任何东西，靠系统提示让模型
+  **在动手前先问**。这是软约定不是硬拦截 —— 模型不听就穿透了，但它对用户零侵入，
+  是现在的默认。新 CLI 没有 hook 机制时直接用这条降级，不用为它写分支。
+
+另外 `OUTPUT_STYLE_PROMPT`（不用 emoji / 标题最多三级 / 不用分隔线）是**追加到系统提示**的，
+跟 CLI 无关，新 adapter 只要走 `buildArgs` 的公共路径就自动带上。
+
 **三条坑，这一轮实测踩到的，不写下次还会再踩一遍：**
 
 1. **绝不能传 `--bare`** —— 会跳过认证，直接返回 `Not logged in`
@@ -165,6 +207,15 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
 库内说明书是一条，MCP 工具的返回值与 description 是另一条，两条说的必须是同一件事。
 接新 agent 时别只盯着文件落点，也要扫一遍 MCP 工具返回了什么。
 
+**同一个坑的第二例（2026-08-17）**：密钥柜的 `secret_check` 原来 `vars` 必填，
+agent 只能**猜一个变量名**去查。用户存的是 `MY_ALIYUN_AK`，agent 猜
+`ALIYUN_ACCESS_KEY_ID` —— 查不到，于是弹窗要一个他刚存过的密钥。
+根子不在存储，在于**这条通道从来没告诉过 agent 柜里叫什么**。
+现在 `vars` 留空 = 列出组名 / 备注 / 变量名（永远不含值）。
+
+由此多出一条接入检查项：**每个 MCP 工具都要能回答「agent 怎么知道该拿什么参数调我」**。
+要求 agent 凭空猜一个标识符的工具，实际成功率接近零。
+
 ---
 
 ## 接新 agent 的步骤
@@ -184,9 +235,20 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
    `capabilities` 声明驱动（有没有 `models` / `effortLevels` / `compact`、`approval` 是不是
    空数组、`sandboxLevels` 有哪些）。**如果你发现自己要去改 UI，说明能力声明没设计对，
    回头改声明而不是改 UI。**
-9. **卸载路径**：`removeRules()` / `removeMcpConfig()` / 钩子卸载都要覆盖到它
-10. **状态显示**：`skillStatus()` / `rulesStatus()` / `mcpConfigStatus()` 加它一列
-11. **实测**：真起一个这个 CLI 的会话，**只给它常驻那一份**，逐条念触发词看它会不会主动去读细节文件。
+9. **把 `'claude' | 'codex'` 这个联合类型扩开**。**这是最容易漏的一步，而且漏了不报错。**
+   实测散落 **29 处 / 14 个文件**（`grep -rn "'claude' | 'codex'" src`）：
+   `shared/types.ts`（角色的 model/effort 按 CLI 键控）、`store/uiSlice.ts`（`ptyAgent`）、
+   `store/canvas/types.ts` 与 `persist.ts`（节点上存的 agent 选择要能持久化新值）、
+   `preload/index.ts`、`main/pty.ts`、`main/roles.ts`、`main/agentHook.ts`、
+   `main/agentInstall.ts`，以及五个渲染层组件。
+
+   其中 **`pty.ts` 的 `agentOnTty()` 单独拎出来说**：它按**终端里跑的进程名**认这是哪个
+   agent（`base === 'codex'` 这种）。不扩它的话，新 CLI 在终端里跑起来，
+   通知系统 / 灵动岛 / 状态机全都认不出它 —— 功能"能用"但一路静默，最难查。
+
+10. **卸载路径**：`removeRules()` / `removeMcpConfig()` / 钩子卸载都要覆盖到它
+11. **状态显示**：`skillStatus()` / `rulesStatus()` / `mcpConfigStatus()` 加它一列
+12. **实测**：真起一个这个 CLI 的会话，**只给它常驻那一份**，逐条念触发词看它会不会主动去读细节文件。
     这一步不能省 —— 触发条件写得含糊时，测试全绿而模型就是不去读
 
 ---
@@ -236,3 +298,16 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
 - 在**别的**终端（不是 Eas-Term 起的）起同一个 CLI → 这些工具在 `tools/list` 里**不存在**
 - 卸载后：托管区没了、MCP 条目没了、钩子没了，用户自己写在区外的内容**一个字没少**
 - 面 1 的常驻区字符数：打出来看一眼，超过 1500 字符就是又把正文塞进去了
+
+**面 6（会话驱动）要单独验，前面那些都验不到它** —— 它不写用户的全局配置、盘上没有状态可查，
+静态那半先跑 `scripts/check-adapter.mjs`；剩下这些只能真起一轮会话，人眼看：
+
+- 发一条消息 → **界面立刻有反应**（`turn.start`），不是等 CLI 开口才动。
+  实测「发出去了、还没回音」有 4 秒多，那段时间界面必须表态
+- 回复是**流式**进来的，不是憋完一次性出现
+- 切模型 / 切强度 → 真的换了（`paramChange: 'slash'` 的 CLI 看 CLI 重推的 init 事件），
+  而且**回执不出现在对话区**（那是 CLI 的确认消息，对人零信息量，session 层静默掉了）
+- 关掉这个 CLI 的会话 → 进程真的退出，没有留下孤儿
+
+**别用「测试全绿」代替这一步。** 面 1 的触发条件写得含糊时，代码全对、模型就是不去读细节文件——
+那种失败只有真起一轮会话、逐条念触发词才看得见。

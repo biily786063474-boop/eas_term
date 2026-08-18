@@ -108,5 +108,10 @@ for b in claude codex gemini cursor-agent opencode; do
   p=$(command -v "$b" 2>/dev/null) && ok "$b  →  $p" || no "$b 未装"
 done
 echo
+# 这个脚本只覆盖面 1-5（它们都往用户的全局配置里写东西，盘上查得到状态）。
+# 面 6「会话驱动」不写任何全局文件，没有盘上状态，得单独跑。
+echo "面 6（会话驱动）不在本脚本范围内 —— 它不写全局配置、盘上没状态可查："
+echo "  node .claude/skills/agent-onboarding/scripts/check-adapter.mjs"
+echo
 echo "接新 agent 前，把上面每一面都对着 SKILL.md 的「步骤」过一遍。"
 echo
