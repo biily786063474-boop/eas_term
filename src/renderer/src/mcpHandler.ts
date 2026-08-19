@@ -7,6 +7,7 @@ import { teamModeOf } from './features/canvas/teamMode'
 import { checkBatch } from './features/team/batchSpec'
 import { askForBatch } from './features/team/batchRequest'
 import { isSettled } from './features/team/agentAge'
+import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
@@ -788,14 +789,10 @@ const SHELL_TRAP =
         const leafId = await useStore.getState().addAgentNode(where.frameId, {
           owner: 'team',
           role: a.role,
-          // 首条消息里带上角色和产出约定 —— 派活不只是给一句任务，
-          // 还要告诉它「你是谁、东西写到哪」，否则几个 agent 会各写各的地方
-          initialMessage:
-            `你是这次协作里的 \`${a.role}\`。\n\n` +
-            `**这一批的目标**：${spec.goal}\n` +
-            `**你负责**：${a.task}\n\n` +
-            `产出写到 \`.plans/${a.role}/\` 下（findings.md 放结论、progress.md 记过程）。` +
-            `别去动别人的目录。干完在最后一条消息里用一句话说清你的结论。`
+          // 首条消息是**唯一一次**能给它交代工作约定的机会 —— 跨进程之后没有
+          // SendMessage 能补充。内容与理由见 features/team/brief.ts（有单测盯着
+          // 那几处必须和代码保持一致的约定）。
+          initialMessage: briefFor({ role: a.role, goal: spec.goal, task: a.task })
         })
         if (!leafId) throw new Error(`起 ${a.role} 时没能建出节点`)
         spawned.push({ role: a.role, leafId })
