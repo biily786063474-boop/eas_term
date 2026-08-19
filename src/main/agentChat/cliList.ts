@@ -18,7 +18,7 @@ import type { CliAdapter, CliInfo } from '../../shared/agentChat.ts'
 /** 有 adapter 之外、但**值得让用户看见**的 CLI。
  *
  *  为什么要有这个清单：用户第一次打开软件时，会话面板该告诉他「这个软件支持哪些 CLI」，
- *  而不是只列出恰好已经装了的。dsh 更特殊 —— 它装了也不能用于会话（headless 只打印
+ *  而不是只列出恰好已经装了的。这一类更特殊 —— 装了也不能用于会话（headless 只打印
  *  最终消息，写不出 adapter），但在终端里能用上全部 MCP 能力。把它藏起来，用户
  *  永远不知道有这条路；不加标注地列出来，用户会装完发现选不了。所以要**显示 + 标注**。 */
 export interface TerminalOnlyCli {

@@ -557,14 +557,10 @@ export function registerAgentChatHandlers(): void {
   ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
     const adapters = listAdapters()
     // 仅终端可用的 CLI 也要探测 —— 它同样要显示「装了没有」
-    const terminalOnly: TerminalOnlyCli[] = [
-      {
-        id: 'dsh',
-        displayName: 'DeepSeek Harness',
-        scopeNote: '只能在终端里用（画板工具 / skill / 密钥柜都生效）',
-        installCmd: 'npm install -g @deepseek-ai/dsh'
-      }
-    ]
+    // 目前一个都没有。DeepSeek Harness 曾经在这里（headless 只打印最终消息、
+    // 没有流式和工具事件，写不出 adapter），0.4.31 整个移除。**机制留着** ——
+    // 下一个「装了也只能在终端里用」的 CLI 直接往这个数组里加一条就行。
+    const terminalOnly: TerminalOnlyCli[] = []
     const availability: Record<string, boolean> = {}
     await Promise.all([
       ...adapters.map(async (a) => {

@@ -27,7 +27,7 @@ import { registerRoleHandlers } from './roles'
 import { registerWikiHandlers } from './wiki'
 import { registerSkillLibraryHandlers } from './skillLibrary'
 import { registerDictHandlers } from './dict'
-import { registerRulesHandlers } from './agentRules'
+import { registerRulesHandlers, purgeLegacyDsh } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
@@ -306,6 +306,9 @@ app.whenReady().then(() => {
     }
   }
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
+  // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
+  // MCP 那一半在 mcpBridge 的 setupAgents 里。装过的人升级即清，不必去点卸载。
+  purgeLegacyDsh()
   // 密钥柜也必须排在 registerPtyHandlers 之前 —— 同理，PTY spawn 时要从它取值注入。
   // 另外它内部会断言 app.isReady()：safeStorage 在 ready 之前会**静默**用错密钥桶
   // （不报错，只是换成全局共享的那把），所以这个调用绝不能提到 whenReady 外面。

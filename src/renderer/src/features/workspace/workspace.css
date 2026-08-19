@@ -1052,7 +1052,7 @@ body.dragging-row * {
   opacity: 0.7;
   margin-bottom: 10px;
 }
-/* 能力范围：只有「不是全都支持」的 CLI 才有这行（dsh 只能用在终端里）。
+/* 能力范围：只有「不是全都支持」的 CLI 才有这行（比如只能用在终端里的）。
    写在按钮上方 —— 装之前就该看见，装完再发现选不了它是最糟的顺序。 */
 .onb-card-scope {
   font-size: 10.5px;

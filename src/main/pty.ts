@@ -547,9 +547,8 @@ function agentOnTty(entry: Entry): AgentKind | null {
       const base = line.trim().split('/').pop()?.replace(/\.exe$/i, '')
       if (base === 'claude') return 'claude'
       if (base === 'codex') return 'codex'
-      // **这一行漏了会一路静默**：dsh 在终端里跑起来，通知系统 / 灵动岛 /
-      // 状态机全都认不出它 —— 功能"能用"但什么提示都没有，最难查的那种。
-      if (base === 'dsh') return 'dsh'
+      // 加新 CLI 时**这里漏一行会一路静默**：进程在终端里跑起来，通知系统 /
+      // 灵动岛 / 状态机全都认不出它 —— 功能"能用"但什么提示都没有，最难查的那种。
     }
   } catch {
     /* 该 tty 上没进程了，ps 会以非 0 退出 */

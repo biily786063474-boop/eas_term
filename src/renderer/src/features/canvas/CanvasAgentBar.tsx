@@ -30,8 +30,8 @@ import { stopVoiceOnSend } from '../voice/voiceControl'
 import { AgentCmdBar } from './AgentCmdBar'
 
 // **刻意不用 AgentKind。** 这条命令条是「用启动参数把模型/强度传给 CLI」，
-// 只对命令行支持这两样的 CLI 成立。dsh 的模型在 profile 的插件树里配
-// （cordis.patch.yml 的 dsh-agent-default-model），命令行没有 --model；
+// 只对命令行支持这两样的 CLI 成立。有的 CLI 把模型配在自己的配置树里、
+// 命令行没有 --model，那种就不该出现在这条命令条上；
 // effort 它压根没这个概念 —— 探测因此给空数组，UI 自动隐藏这些控件。
 type Kind = 'claude' | 'codex'
 
@@ -208,7 +208,7 @@ export function CanvasAgentBar({
   const roles = useStore((s) => s.roles)
   const role = roles.find((r) => r.id === agent?.roleId) ?? null
   // 角色可以钉死用哪个 CLI；kind='auto' 时听节点自己的选择
-  // 角色/节点上存的是完整的 AgentKind（含 dsh），而这条命令条只处理命令行支持
+  // 角色/节点上存的是完整的 AgentKind，而这条命令条只处理命令行支持
   // 模型与强度的那两个 —— 落到别的 CLI 上就退回 claude，**不假装能给它下发参数**
   const rawKind = role && role.kind !== 'auto' ? role.kind : (agent?.kind ?? 'claude')
   const kind: Kind = rawKind === 'codex' ? 'codex' : 'claude'

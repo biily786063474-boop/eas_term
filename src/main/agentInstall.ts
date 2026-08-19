@@ -84,13 +84,6 @@ function optionsFor(kind: AgentKind): InstallOption[] {
     if (hasBin('npm')) out.push({ via: 'npm', cmd: 'npm install -g @openai/codex' })
   }
 
-  if (kind === 'dsh') {
-    // DeepSeek Harness 现在只有 npm 一条路（0.1.0-rc 阶段没有 brew cask / 安装脚本）。
-    // **包名带 scope**：`@deepseek-ai/dsh`，二进制叫 dsh。
-    if (hasBin('npm')) out.push({ via: 'npm', cmd: 'npm install -g @deepseek-ai/dsh' })
-    // 不装也能试：npx 直接跑，profile 会在首次使用时自动初始化
-    out.push({ via: 'npx（不安装，试用）', cmd: 'npx @deepseek-ai/dsh --profile headless "你好"' })
-  }
   return out
 }
 
@@ -112,21 +105,6 @@ export function installPlan(): InstallPlan {
       options: optionsFor('codex'),
       loginHint: 'codex login',
       scope: { chat: true, terminal: true }
-    },
-    dsh: {
-      name: 'DeepSeek Harness',
-      vendor: 'DeepSeek',
-      options: optionsFor('dsh'),
-      // 认证方式官方文档没写（0.1.0-rc 阶段）。**不编一条命令给用户** ——
-      // 猜错了他会照着敲、失败、然后怀疑整个功能。等文档补上再填。
-      loginHint: 'dsh',
-      // 面 6 做不了：headless 模式只打印最终消息，没有流式、没有工具事件，
-      // 写不出 adapter。装完在对话面板里选不到它是**预期**，得在卡上说清楚。
-      scope: {
-        chat: false,
-        terminal: true,
-        note: '只能在终端里用（画板工具、skill、密钥柜都生效）；AI 对话面板暂不支持它'
-      }
     }
   }
 }

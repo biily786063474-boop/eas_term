@@ -15,7 +15,7 @@ import type { DictSinkStatus, HookStatus, AgentKind } from '../../../../shared/t
 import { CheckIcon, SparkleIcon } from '../../ui/Icons'
 
 // **刻意不用 AgentKind。** 这是面 4（提交钩子）的类型，而钩子这个面只对
-// 「有钩子机制的 CLI」成立 —— dsh 没有，手册的规矩是没有就跳过这个面，
+// 「有钩子机制的 CLI」成立 —— 没有钩子机制的 CLI，手册的规矩是跳过这个面，
 // 不是发明一个。跟着 AgentKind 走的话，这里会多出一个永远装不上的行。
 type Target = 'claude' | 'codex'
 const DISMISS_KEY = 'eas.dicthook.dismissed'

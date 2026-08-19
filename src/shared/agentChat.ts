@@ -219,9 +219,8 @@ export interface CliInfo {
    * 能不能被 Eas-Term 直接驱动跑会话（面 6）。
    *
    * **和 available 是两件事**：available=false 是「装上就能用」，
-   * chatSupported=false 是「装了也不能用在这儿」。DeepSeek Harness 属于后者 ——
-   * 它的 headless 模式只打印最终消息，没有流式、没有工具事件，写不出 adapter，
-   * 但在终端里能用上 Eas-Term 的全部 MCP 能力。
+   * chatSupported=false 是「装了也不能用在这儿」：headless 只打印最终消息、
+   * 没有流式和工具事件的 CLI 写不出 adapter，但在终端里仍能用上全部 MCP 能力。
    * 两者混成一个布尔的话，用户会照着提示去装一个装了也选不了的东西。
    */
   chatSupported: boolean

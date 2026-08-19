@@ -162,27 +162,27 @@ test('没装的带上安装命令，已装的不带 —— 免得界面上「已
 // available=false 是「装上就能用」，chatSupported=false 是「装了也不能用在这儿」。
 // 混成一个布尔的话，用户会照着提示去装一个装了也选不了的东西。
 test('仅终端可用的 CLI：chatSupported=false，但仍然出现在列表里', () => {
-  const out = buildCliList([fake('claude', 'Claude Code')], { claude: true, dsh: true }, {}, [
-    { id: 'dsh', displayName: 'DeepSeek Harness', scopeNote: '只能在终端里用', installCmd: 'npm i -g @deepseek-ai/dsh' }
+  const out = buildCliList([fake('claude', 'Claude Code')], { claude: true, 'term-only-cli': true }, {}, [
+    { id: 'term-only-cli', displayName: '某个仅终端 CLI', scopeNote: '只能在终端里用', installCmd: 'npm i -g x' }
   ])
   assert.equal(out.length, 2)
-  const dsh = out[1]
-  assert.equal(dsh.available, true, '装了就是装了')
-  assert.equal(dsh.chatSupported, false, '但不能用于会话')
-  assert.equal(dsh.scopeNote, '只能在终端里用')
-  assert.equal(dsh.installCmd, undefined, '已装的不给安装命令')
+  const t = out[1]
+  assert.equal(t.available, true, '装了就是装了')
+  assert.equal(t.chatSupported, false, '但不能用于会话')
+  assert.equal(t.scopeNote, '只能在终端里用')
+  assert.equal(t.installCmd, undefined, '已装的不给安装命令')
 })
 
 test('有 adapter 的排在前面，仅终端的排后面', () => {
   const out = buildCliList([fake('claude', 'Claude Code')], {}, {}, [
-    { id: 'dsh', displayName: 'DeepSeek Harness', scopeNote: 'x', installCmd: 'y' }
+    { id: 'term-only-cli', displayName: '某个仅终端 CLI', scopeNote: 'x', installCmd: 'y' }
   ])
-  assert.deepEqual(out.map((c) => c.id), ['claude', 'dsh'])
+  assert.deepEqual(out.map((c) => c.id), ['claude', 'term-only-cli'])
 })
 
 // 不能用于会话 → 不该为它渲染任何模型/强度/审批控件
 test('仅终端的 CLI 能力一律为空', () => {
-  const out = buildCliList([], {}, {}, [{ id: 'dsh', displayName: 'D', scopeNote: 'x', installCmd: 'y' }])
+  const out = buildCliList([], {}, {}, [{ id: 'term-only-cli', displayName: 'D', scopeNote: 'x', installCmd: 'y' }])
   const c = out[0].capabilities
   assert.deepEqual(c.models, [])
   assert.deepEqual(c.effortLevels, [])

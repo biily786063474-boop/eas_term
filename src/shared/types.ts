@@ -15,7 +15,7 @@
  * 比如漏了 pty.ts 的 agentOnTty，新 CLI 在终端里跑起来通知系统认不出它，
  * 功能"能用"但一路静默。收成别名之后，漏的地方编译器会直接指出来。
  */
-export type AgentKind = 'claude' | 'codex' | 'dsh' | 'dsh'
+export type AgentKind = 'claude' | 'codex'
 
 export type ProjectStatus = string
 
@@ -76,10 +76,6 @@ export interface RulesStatus {
   claudeCanvas: boolean
   /** Codex 常驻托管区的字符数 */
   codexRegionChars: number
-  /** DeepSeek Harness 的 skill 目录装了没有（`<DSH_HOME>/skills/eas-term/`）*/
-  dshCanvas: boolean
-  /** dsh 常驻托管区（`<DSH_HOME>/AGENTS.md`）的字符数 */
-  dshRegionChars: number
 }
 
 /** 知识库状态。inbox 那两个字段是刻意成对的——
@@ -597,9 +593,9 @@ export interface AgentInstallInfo {
    * 装了之后能用在哪。**由数据声明，不在 UI 里按 CLI 名字判断** ——
    * 否则加一个 CLI 就要去界面里补一条 if，而那种补丁必然漏。
    *
-   * 存在的理由：dsh 在终端里能用（MCP 工具、skill、AGENTS.md 指引全生效），
-   * 但**不能用于 AI 对话面板** —— 它的 headless 模式只打印最终消息，没有流式和
-   * 工具事件，写不出 adapter。用户装完发现对话框里选不了它，会以为装坏了。
+   * 存在的理由：有的 CLI 在终端里能用（MCP 工具、skill、AGENTS.md 指引全生效），
+   * 却**不能用于 AI 对话面板** —— headless 模式只打印最终消息、没有流式和工具事件
+   * 的那种，写不出 adapter。用户装完发现对话框里选不了它，会以为装坏了。
    */
   scope: {
     /** 能被 Eas-Term 直接驱动跑对话（面 6：agentChat 的 adapter） */
@@ -619,7 +615,6 @@ export interface InstallPlan {
    *  界面上那个 CLI 就永远显示不出安装入口，而这种漏不报错。 */
   claude: AgentInstallInfo
   codex: AgentInstallInfo
-  dsh: AgentInstallInfo
 }
 
 // ---- 灵动岛（屏幕顶部常驻状态栏）----

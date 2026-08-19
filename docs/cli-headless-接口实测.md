@@ -166,62 +166,19 @@ codex app-server generate-ts                        # 直接生成 TypeScript �
 
 ---
 
-## 四、DeepSeek Harness（`dsh`）—— 2026-08-18 实测
+## 四、DeepSeek Harness（`dsh`）—— 2026-08-18 接入，2026-08-18 移除
 
-包 `@deepseek-ai/dsh@0.1.0-rc.7`（8/17 发布），仓库 8/13 建，MIT。
-**全部结论来自真跑 `--help` 和 `--dump-default-config`**，不是读文档推的。
+**结论：接不了会话，已整个移除。** 这一节只留结论，实测细节随代码一起删了。
 
-### 会话驱动（面 6）：现在做不了
+`@deepseek-ai/dsh@0.1.0-rc.7` 的 headless 模式（`dsh --profile headless "…"`）
+**只打印最终消息**：没有流式输出、没有工具事件、没有 JSON 格式选项
+（`--profile headless --help` 里除了 `-h` 什么都没有）。会话模块要的三样
+（谁在说话 / 调了什么工具 / 要不要审批）它一样都给不出来，adapter 无从写起。
 
-```
-dsh --profile headless "run the tests"    answer one task, print the result, and exit
-```
+曾经的折中是「终端里全能力可用、会话面板标注仅终端」，0.4.27–0.4.30 是这么做的。
+0.4.31 整个移除 —— 一个在会话里选不了的 CLI，留在列表里只是让人困惑。
+代码里只剩两处历史残留清理（`legacyDshCleanup.ts` 和 `agentRules.ts` 的
+`purgeLegacyDsh`），装过的人升级后自动清掉 `~/.dsh` 里我们写进去的东西。
 
-`--profile headless --help` 的全部选项只有 `-h`。**没有 JSON / stream-json 输出、
-没有流式、每次是一个全新持久化会话**。translator 没有东西可翻，
-「回复流式进来」这条验收直接过不了。等它出结构化输出再说。
-
-`tui` profile 有 `--resume`，但要 `dsh plugin` 手动创建，不自动初始化。
-
-### MCP（面 3）：支持，配置是 YAML
-
-`@deepseek-ai/dsh-mcp-client@0.0.1-rc.1`，**不在默认 profile 里，要单独装**。
-落点 `<DSH_HOME>/profiles/<profile>/cordis.patch.yml`（用户层；同目录的
-`cordis.yml` 自己写着「Edit cordis.patch.yml, not this file」）。
-
-一个 MCP server 一个插件实例，工具名 `mcp__<serverName>__<rawName>`，与 Claude/Codex 同形。
-`env` 支持 `!!js process.env.X` 表达式 —— **PTY token 门禁因此照旧成立**。
-
-**坑**：patch 文件初始内容是 `[]`（flow 空数组）。直接追加块序列条目会让同一文档里
-既有 flow 空数组又有块序列，YAML 解析失败。装的时候要去掉它，全卸载后要还回去。
-
-### skill（面 2）：原生支持，格式与 Claude 相同
-
-`@deepseek-ai/dsh-skill-filesystem` 解析 `SKILL.md`，五个发现根按 rank：
-
-| rank | 路径 |
-|---|---|
-| 100 | `<projectRoot>/.dsh/skills` |
-| 200 | `<projectRoot>/.agents/skills` |
-| 300 | `Config.customSkillDirs` |
-| 400 | `<DSH_HOME>/skills` ← 我们用这个 |
-| 500 | `<agentsHome>/skills`（默认 `~/.agents`，跨 agent 共享约定）|
-
-### 常驻指引（面 1）：`$DSH_HOME/AGENTS.md`
-
-`@deepseek-ai/dsh-agent-instructions` 先读 `$DSH_HOME/AGENTS.md`，
-再从项目根逐层往下读每个目录的 AGENTS.md / CLAUDE.md（同目录内容相同的会去重）。
-**面 5（知识库里的 AGENTS.md）因此自动兼容，不用改任何东西。**
-
-### 没有的东西
-
-- **hook**：整个配置树里没有钩子机制 → 面 4 跳过（手册允许）
-- **命令行改模型/effort**：模型在 `dsh-agent-default-model` 插件的 config 里，
-  effort 这个概念它没有 → 探测给空数组，UI 自动隐藏那些控件
-- **公开的斜杠命令语法**：配置树里有 `dsh-command-compact` 等插件说明机制存在，
-  但 rc 阶段没有文档。**没猜** —— 猜一条命令发进终端的代价是用户会话被打乱
-
-### 沙箱与审批（配置树里读到的）
-
-沙箱三档 `read-only` / `workspace-write` / `danger-full-access`，审批 `ask` / `never` ——
-和 Codex 的概念对得上，将来面 6 能做时可以直接映射到 `capabilities.sandboxLevels`。
+**要重新接的前提**：DeepSeek 官方给出流式或结构化输出。到那时按
+`.claude/skills/agent-onboarding` 的手册走一遍即可，adapter 契约那套是现成的。

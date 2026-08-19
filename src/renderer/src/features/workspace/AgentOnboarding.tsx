@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom'
 
 /** 展示顺序。**不用 Object.keys(plan)** —— 那样顺序跟着对象字面量走，
  *  将来重排 installPlan 的字段会静默改变界面顺序。这里显式定死。 */
-const AGENT_KINDS: AgentKind[] = ['claude', 'codex', 'dsh']
+const AGENT_KINDS: AgentKind[] = ['claude', 'codex']
 import { useStore } from '../../store'
 import type { InstallPlan, AgentInstallInfo, AgentKind } from '../../../../shared/types'
 import { SparkleIcon, TerminalIcon } from '../../ui/Icons'
@@ -109,8 +109,8 @@ export function AgentOnboarding(): JSX.Element | null {
         </p>
 
         <div className="onb-cards">
-          {/* 遍历 AgentKind，不写死几行 —— 上一次加 dsh 就是数据加了、这里忘了改，
-              安装引导里它整个是隐形的。加第四个 CLI 时这里不用再动。 */}
+          {/* 遍历 AgentKind，不写死几行 —— 有过一次数据加了、这里忘了改的教训，
+              结果那个 CLI 在安装引导里整个是隐形的。加下一个 CLI 时这里不用再动。 */}
           {AGENT_KINDS.map((k) => card(k, plan[k]))}
         </div>
 

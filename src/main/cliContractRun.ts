@@ -25,10 +25,9 @@ const pExecFile = promisify(execFile)
 
 
 const home = (): string => app.getPath('home')
-const dshHome = (): string => process.env.DSH_HOME || path.join(home(), '.dsh')
 
 /**
- * 三个 CLI 的契约。
+ * 两个 CLI 的契约。
  *
  * **只写「功能真的依赖它」的那几样。** 多写一条就多一个假警报来源，
  * 而假警报会让人学会无视整个机制 —— 那比不做还糟。
@@ -57,20 +56,6 @@ export function contracts(): CliContract[] {
       help: [{ name: 'exec 子命令', pattern: /\bexec\b/ }],
       configFile: path.join(home(), '.codex', 'config.toml'),
       ruleFile: path.join(home(), '.codex', 'AGENTS.md')
-    },
-    {
-      id: 'dsh',
-      bin: 'dsh',
-      // DeepSeek Harness：profile 机制是它的地基，--profile 没了整套适配都要重写
-      help: [
-        { name: '--profile', pattern: /--profile/ },
-        { name: 'plugin 子命令', pattern: /\bplugin\b/ }
-      ],
-      // 注意：MCP 配置在 <profile>/cordis.patch.yml，profile 名是变量，
-      // 所以这里钉的是 profiles 根 —— 它不在了说明 dsh 的目录约定整个变了
-      configFile: path.join(dshHome(), 'profiles'),
-      ruleFile: path.join(dshHome(), 'AGENTS.md'),
-      skillDir: path.join(dshHome(), 'skills', 'eas-term')
     }
   ]
 }
