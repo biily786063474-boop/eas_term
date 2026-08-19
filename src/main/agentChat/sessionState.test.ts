@@ -14,6 +14,7 @@ const base = (over: Partial<SessionRecord> = {}): SessionRecord => ({
   cwd: '/WORK/proj',
   alive: true,
   lastActiveAt: 1_000_000,
+  startedAt: 1_000_000,
   model: 'sonnet',
   effort: 'medium',
   ...over

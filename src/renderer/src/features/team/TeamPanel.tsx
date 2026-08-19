@@ -9,10 +9,9 @@
 //     变成没有任何 UI 能管的后台进程（15 分钟空闲回收对活跃会话无效，
 //     见 main/agentChat/session.ts 里那段注释）
 //   · 派活（team_spawn）要在这里显示批次与用量
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
-import { collectLeaves } from '../../layout'
-import { healthOf, fmtAge, type AgentHealth } from './agentAge'
+import { healthOf, fmtAge, labelOf, ageBasis } from './agentAge'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './team.css'
@@ -21,36 +20,22 @@ import './team.css'
  *  而为它新开一条事件通道会让主进程多一份订阅者管理。 */
 const POLL_MS = 2000
 
-const LABEL: Record<AgentHealth, string> = {
-  running: '在跑',
-  stalled: '可能卡住',
-  idle: '空闲',
-  dead: '已停'
-}
-
 export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   const [rows, setRows] = useState<SessionBrief[] | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const requestConfirm = useStore((s) => s.requestConfirm)
 
-  /** sessionId → 这个会话在画布上的身份（角色名 / 是不是团队派生）。
-   *
-   *  主进程那份 SessionBrief **故意不带角色** —— 角色是画布这一侧的概念
-   *  （谁开的、叫什么），主进程只管进程。在这里合并，两边各管各的。 */
+  // 身份（角色名 / 是不是团队派生）**直接从 SessionBrief 读，不再从画布节点上算**。
   //
-  //  订阅 tabs 本身、在 useMemo 里算 —— selector 里现造对象的话每次都是新引用，
-  //  这个 store 又没有自定义比较器，面板会跟着无谓地重渲染。
-  const tabs = useStore((s) => s.tabs)
-  const identity = useMemo(() => {
-    const m: Record<string, { role?: string; team: boolean }> = {}
-    for (const t of tabs) {
-      for (const l of collectLeaves(t.root)) {
-        if (l.pane.kind !== 'agent' || !l.pane.sessionId) continue
-        m[l.pane.sessionId] = { role: l.pane.role, team: l.pane.owner === 'team' }
-      }
-    }
-    return m
-  }, [tabs])
+  // 这里原本遍历 tabs 的布局树、按 sessionId 建一张 identity 表，注释还写着「角色是
+  // 画布这一侧的概念，主进程只管进程」。**那条判断被「关节点不杀进程」推翻了**：
+  // 节点关掉之后 pane 就没了，而进程还在跑，于是这张表当场失明 ——
+  // 角色名退回 CLI 名、`teamRows` 漏掉它导致「全部叫停」停不干净、team_status 完全
+  // 看不见它。2026-08-19 真机复现过（关掉 css-dup-auditor 的节点，进程 69707 仍在
+  // 写 .plans/，面板上只剩一个没名字的 claude，叫停计数从 2 掉到 1）。
+  //
+  // **别改回从 tabs 算。** 身份是会话的属性，存在主进程的 SessionRecord 上，
+  // 和进程同生共死；视图可以随时消失，那是它的本分。
 
   /** 停掉一个会话。**这是终止不是暂停** —— agentChat:stop 在主进程是
    *  `sessions.delete(id)` + `proc.kill()`，会话记录整个删掉，resumeId 也没了，
@@ -109,8 +94,12 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     return ma - mb || a.id.localeCompare(b.id)
   })
 
-  // 团队派生的那些 —— 「全部叫停」只停它们，不碰你自己开的会话
-  const teamRows = sorted.filter((r) => identity[r.id]?.team && r.alive)
+  // 团队派生的那些 —— 「全部叫停」只停它们，不碰你自己开的会话。
+  // 判据来自 SessionBrief 而不是画布节点：**这一行正是那个 bug 的现场** ——
+  // 原本读的是从 tabs 算出来的 identity，关掉某个 agent 的节点之后它就不再被算作
+  // 团队成员，「全部叫停」把它漏在后台继续烧 token，而计数从 2 掉到 1，
+  // 看起来完全正常。
+  const teamRows = sorted.filter((r) => r.owner === 'team' && r.alive)
 
   return (
     <div className="tp">
@@ -122,24 +111,26 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
       </div>
       <div className="tp-list">
         {sorted.map((r) => {
-          // busy 这一期拿不到（它在各个 AgentChatView 的组件状态里，没有汇总通道）——
-          // 传 undefined 让 healthOf 退回「多久没动」那条判据。第二期派活时
-          // 会话状态会进 team.json，那时才有准确的 busy。
-          const h = healthOf(r.alive, r.lastActiveAt, now)
+          // busy 由主进程从 turn.start/turn.done 记着（SessionRecord.busy）。
+          // **有它才分得清「干完了」和「卡住了」** —— headless 流式模式跑完一轮
+          // 不退出，只看静默时长的话两者一模一样。
+          const h = healthOf(r.alive, r.lastActiveAt, now, r.busy)
           const mine = r.cwd === cwd
-          const who = identity[r.id]
           return (
             <div className={`tp-row h-${h}`} key={r.id}>
               <span className="tp-dot" />
               {/* 有角色就显示角色 —— 那才是「谁在干什么」。没有（你自己开的会话）
                   才退回显示 CLI 名，那时 CLI 是唯一能区分它们的东西。 */}
-              <span className="tp-cli">{who?.role ?? r.cli}</span>
+              <span className="tp-cli">{r.role ?? r.cli}</span>
               <span className="tp-cwd" title={r.cwd}>
-                {who?.role ? r.cli : mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
+                {r.role ? r.cli : mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
               </span>
               <span className="tp-spacer" />
-              <span className="tp-state">{LABEL[h]}</span>
-              <span className="tp-age">{fmtAge(now - r.lastActiveAt)}</span>
+              <span className="tp-state">{labelOf(h, r.owner === 'team')}</span>
+              {/* 两种语义按状态切，判据在 agentAge.ts 的 ageBasis（有单测盯着） */}
+              <span className="tp-age" title={h === 'running' ? '已经跑了多久' : '多久没有动静了'}>
+                {fmtAge(now - ageBasis(h, r.startedAt, r.lastActiveAt))}
+              </span>
               {/* 平时不显示，hover 这一行才出现 —— 一排常驻的 × 太容易误点，
                   而这颗按钮按下去是不可逆的 */}
               <button

@@ -273,6 +273,11 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (isSilenced(live, e)) return
+  // busy 的唯一来源。**放在 isSilenced 之后是有意的** —— 静默期吞掉的那些
+  // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
+  // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。
+  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true }
+  else if (e.k === 'turn.done') live.rec = { ...live.rec, busy: false }
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
     emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })
@@ -308,12 +313,14 @@ function wireProc(live: Live, proc: ChildProcess): void {
     console.error(`[agentChat:${live.rec.id}] stderr`, chunk)
   })
   proc.on('error', (err) => {
-    live.rec = { ...live.rec, alive: false }
+    live.rec = { ...live.rec, alive: false, busy: false }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
   })
   proc.on('exit', (code) => {
     live.proc = undefined
-    live.rec = { ...live.rec, alive: false }
+    // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
+    // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
+    live.rec = { ...live.rec, alive: false, busy: false }
     // code === 0 或 null（被我们自己 kill）都不算错——Codex 的 exec 正常跑完一轮后
     // 本来就会退出，那是预期行为，不是故障。
     if (code !== 0 && code !== null) {
@@ -494,7 +501,18 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
   for (const live of sessions.values()) {
     if (live.wcId !== wcId) continue
     const r = live.rec
-    out.push({ id: r.id, cli: r.cli, cwd: r.cwd, alive: r.alive, lastActiveAt: r.lastActiveAt, model: r.model })
+    out.push({
+      id: r.id,
+      cli: r.cli,
+      cwd: r.cwd,
+      alive: r.alive,
+      lastActiveAt: r.lastActiveAt,
+      startedAt: r.startedAt,
+      model: r.model,
+      owner: r.owner,
+      role: r.role,
+      busy: r.busy
+    })
   }
   return out
 }
@@ -618,6 +636,11 @@ export function registerAgentChatHandlers(): void {
       cwd: p.cwd,
       alive: false,
       lastActiveAt: Date.now(),
+      startedAt: Date.now(),
+      // 身份只认严格字面量：params 来自 unknown，别的值一律当没给。
+      // 猜错的代价是把用户自己开的会话误判成团队成员，「全部叫停」会连它一起杀。
+      owner: p.owner === 'team' ? 'team' : undefined,
+      role: typeof p.role === 'string' && p.role ? p.role : undefined,
       model: typeof p.model === 'string' ? p.model : undefined,
       effort: typeof p.effort === 'string' ? p.effort : undefined,
       sandbox: typeof p.sandbox === 'string' ? p.sandbox : undefined,

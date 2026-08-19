@@ -6,11 +6,13 @@ import { useStore } from './store'
 import { teamModeOf } from './features/canvas/teamMode'
 import { checkBatch } from './features/team/batchSpec'
 import { askForBatch } from './features/team/batchRequest'
+import { isSettled } from './features/team/agentAge'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
 import type { PaneState } from './layout'
 import type { ArchiveItem, DirEntry } from '../../shared/types'
+import type { SessionBrief } from '../../shared/agentChat'
 import { askForSecret } from './features/workspace/secretRequest'
 import { liveMaximizedNode } from './store/canvas/selectors'
 import { runCanvasSnapshot, snapshotBlockedReason } from './features/canvas/snapshotRun'
@@ -22,24 +24,23 @@ interface Ctx {
 
 /** 这次 MCP 调用是不是团队派生的 agent 发起的。
  *
- *  判据走 pane.owner，跟 killPanePty 那条（store/closePolicy.ts）是同一个标记 ——
- *  「谁开的」这件事在整个应用里只有一个说法。
+ *  **判据取自主进程的会话表，不是画布节点。** 原先这里遍历 tabs 找 owner:'team' 的
+ *  agent pane —— 节点一关就认不出来了，而进程还在跑：那时团队 agent 调 notify 会被
+ *  当成用户自己的会话放行，调 team_spawn 也不再被硬约束拦住。身份存在 SessionRecord
+ *  上（见 shared/agentChat.ts 的 SessionBrief.owner），和进程同生共死。
  *
- *  agentChat 会话没有 ptyId（mcpEnv 只在有 ptyId 时注入 EAS_PTY_ID），
- *  所以只能靠 cwd 反查：同一个 cwd 下如果有 owner:'team' 的 agent pane，
- *  就当这次调用来自团队。**会误伤一种情形**：同一个项目里你自己也开着一个 AI 对话，
- *  而团队正在跑 —— 那时你那个会话调 notify 也会被拦。
- *  接受这个误伤：代价是少一次提示音，反过来放行的代价是提示区被淹。
- *  等 MCP 侧能带上 sessionId 再收窄（那要改 mcpEnv 和会话启动参数，是另一件事）。 */
-function isTeamOwnedCaller(ctx: Ctx, s: ReturnType<typeof useStore.getState>): boolean {
+ *  agentChat 会话没有 ptyId（mcpEnv 只在有 ptyId 时注入 EAS_PTY_ID），所以仍然只能靠
+ *  cwd 匹配。**会误伤一种情形**：同一个项目里你自己也开着一个 AI 对话，而团队正在跑。
+ *  接受它 —— 那种时候你那个会话本来也派不了活（同 Frame 一批的闸门会先拒），
+ *  净损失是零。等 MCP 侧能带上 sessionId 再收窄（要改 mcpEnv 和会话启动参数）。
+ *
+ *  只认 alive 的会话：一批跑完之后这个判定要能自己解除，否则这个项目从此没人能派活。 */
+async function isTeamOwnedCaller(ctx: Ctx): Promise<boolean> {
   if (ctx.ptyId) return false // 有 ptyId = 来自终端，那是用户自己的终端
   const cwd = ctx.project
   if (!cwd) return false
-  return s.tabs.some((t) =>
-    collectLeaves(t.root).some(
-      (l) => l.pane.kind === 'agent' && l.pane.owner === 'team' && l.pane.cwd === cwd
-    )
-  )
+  const sessions = await window.api.agentChat.listSessions().catch(() => [])
+  return sessions.some((x) => x.owner === 'team' && x.alive && x.cwd === cwd)
 }
 
 // ptyId → 它所属的画布 Frame / 节点；找不到就回落到「当前项目的顶层 Frame」
@@ -197,6 +198,13 @@ async function latestSnapshotIn(projectPath: string): Promise<{ path: string; st
   }
   return null
 }
+
+/** team_status 的等待模式挂多久。**必须比主进程那层短** ——
+ *  链路是 shim（15 分钟）> 主进程 mcpBridge（10 分钟）> 这里。
+ *  排在最里面的那层要先醒，否则外层先超时，返回的就是一条没有信息的报错，
+ *  而不是「等了 8 分钟，它们还在跑」。 */
+const TEAM_WAIT_MS = 8 * 60 * 1000
+const TEAM_POLL_MS = 2000
 
 type Args = Record<string, unknown>
 
@@ -431,7 +439,7 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     // 注意 agentChat 会话**天生没有 EAS_PTY_ID**（mcpEnv 只在有 ptyId 时注入），
     // 所以下面那段 `ctx.ptyId ? … : leafIds.has(l.id)` 对它走的是 else 分支 ——
     // 一调就把整个 Frame 里所有终端都点亮，比一个还糟。
-    if (isTeamOwnedCaller(ctx, s)) {
+    if (await isTeamOwnedCaller(ctx)) {
       return {
         notified: false,
         message: msg,
@@ -619,40 +627,61 @@ const SHELL_TRAP =
   // ── AI 索要密钥：弹 GUI 让用户自己填，值不经 AI ──
   if (tool === 'team_status') {
     const where = resolveFrame(ctx)
-    const sessions = await window.api.agentChat.listSessions().catch(() => [])
-    const live = new Map(sessions.map((x) => [x.id, x]))
-    const now = Date.now()
 
-    const agents: {
-      role: string
-      alive: boolean
-      idleSeconds: number
-      hint: string
-    }[] = []
-    for (const t of useStore.getState().tabs) {
-      for (const l of collectLeaves(t.root)) {
-        const pane = l.pane
-        if (pane.kind !== 'agent' || pane.owner !== 'team' || !pane.sessionId) continue
-        if (where && pane.cwd !== where.projectPath) continue
-        const sess = live.get(pane.sessionId)
-        const idleMs = sess ? now - sess.lastActiveAt : 0
-        const idleSeconds = Math.round(idleMs / 1000)
-        agents.push({
-          role: pane.role ?? '(没记角色名)',
-          alive: !!sess?.alive,
-          idleSeconds,
-          // 判据跟面板同源（features/team/agentAge.ts 的 STALL_MS = 4 分钟），
-          // 但这里给的是**给 agent 读的话**，不是给人看的标签
-          hint: !sess
-            ? '会话已经不在了 —— 可能被用户停掉，或者 app 重启过'
-            : !sess.alive
-              ? '进程已退出。它写下的东西还在 .plans/ 里'
-              : idleMs > 4 * 60 * 1000
-                ? '超过 4 分钟没动静了，可能卡住或在等审批 —— 别替它做，告诉用户去面板上看一眼'
-                : '在跑'
-        })
+    /** 这个项目里团队派生的会话。**从主进程的会话表取，不从画布节点取。**
+     *  节点会被关掉而进程还在跑（owner:'team' 正是这么设计的），从节点取会让这个工具
+     *  在那一刻失明 —— 主 agent 看不见它，会以为它已经结束了。2026-08-19 真机复现过。 */
+    const roster = async (): Promise<SessionBrief[]> => {
+      const all = await window.api.agentChat.listSessions().catch(() => [])
+      return all.filter((x) => x.owner === 'team' && (!where || x.cwd === where.projectPath))
+    }
+
+    /** 交活了没有。判据抽在 features/team/agentAge.ts，与团队面板同源、有单测盯着 ——
+     *  面板说「已交活」而这里说「还在跑」是最难查的那种不一致。 */
+    const settled = (x: SessionBrief): boolean => isSettled(x.alive, x.busy)
+
+    let rows = await roster()
+
+    // ── 等待模式 ──────────────────────────────────────────────────────
+    // 派完活之后主 agent 面临的真问题：**没有任何完成信号会回到它手里。**
+    // 不让轮询（那是白烧钱），又没有推送 —— 结果就是干完了没人知道。
+    // 2026-08-19 实测过一次：agent 07:38 写完 findings，主 agent 直到 07:51
+    // 被用户提醒才去查，中间 13 分钟完全空转。
+    //
+    // 所以给一条阻塞的路：调一次，挂到有人交活为止。**这不是轮询** ——
+    // 一次调用一次返回，代价是主 agent 在这期间干不了别的，所以只在手上没别的事时用。
+    //
+    // 已经有人交活就立刻返回，不等 —— 有活可收的时候还挂着是纯粹的浪费。
+    if (args.wait === true && rows.length > 0 && !rows.some(settled)) {
+      const deadline = Date.now() + TEAM_WAIT_MS
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, TEAM_POLL_MS))
+        rows = await roster()
+        if (rows.length === 0 || rows.some(settled)) break
       }
     }
+
+    const now = Date.now()
+    const agents = rows.map((x) => {
+      const idleMs = now - x.lastActiveAt
+      return {
+        role: x.role ?? '(没记角色名)',
+        alive: x.alive,
+        done: settled(x),
+        idleSeconds: Math.round(idleMs / 1000),
+        ranSeconds: Math.round((now - x.startedAt) / 1000),
+        // 判据跟面板同源（features/team/agentAge.ts 的 STALL_MS），
+        // 但这里给的是**给 agent 读的话**，不是给人看的标签
+        hint: !x.alive
+          ? '进程已退出。它写下的东西还在 .plans/ 里'
+          : x.busy === false
+            ? '**这一轮跑完了** —— findings 应该已经落盘，可以去读了'
+            : idleMs > 4 * 60 * 1000
+              ? '超过 4 分钟没动静、而且这一轮还没跑完 —— 可能卡住或在等审批。' +
+                '别替它做，告诉用户去团队面板上看一眼'
+              : '在跑'
+      }
+    })
 
     if (agents.length === 0) {
       return {
@@ -660,20 +689,40 @@ const SHELL_TRAP =
         next: '这个项目里没有团队派生的 agent。要么还没派活，要么都已经被停掉了。'
       }
     }
-    const running = agents.filter((a) => a.alive).length
+    const done = agents.filter((a) => a.done)
+    const busy = agents.filter((a) => !a.done)
     return {
       agents,
       next:
-        running > 0
-          ? `${running} 个还在跑。**别轮询这个工具**，去做别的；它们写完会落在 .plans/<role>/findings.md。`
-          : '都不在跑了。可以读各自的 .plans/<role>/findings.md 收活了 —— ' +
-            '**结论不一致时要显式呈现分歧**，不要替用户抹平。'
+        done.length > 0
+          ? `${done.length} 个交活了（${done.map((a) => a.role).join('、')}）—— ` +
+            '去读它们的 .plans/<role>/findings.md 收活。' +
+            '**结论不一致时要显式呈现分歧**，不要替用户抹平。' +
+            (busy.length > 0 ? `另外 ${busy.length} 个还在跑。` : '')
+          : `${busy.length} 个都还在跑。**不要反复调这个工具轮询** —— 先去做别的；` +
+            '手上确实没别的事了，就带 wait:true 再调一次，它会挂到有人交活为止。'
     }
   }
 
   if (tool === 'team_spawn') {
     const where = resolveFrame(ctx)
     if (!where) throw new Error('找不到你所在的 Frame，没法派活')
+
+    // ⓪ **团队成员不是编排者。** 硬拦，不靠 prompt 约束 —— 写在场景包里让它「别再派活」
+    //   是软的，模型会忘，而这件事的失败模式是指数级的：每人再派 3 个，两层就是 9 个
+    //   独立进程同时烧钱。**下面那道限流闸拦不住它** —— 那是按「这个 Frame 还有没有活的
+    //   team 会话」现算的，一批快跑完时最后一个成员派新的一批，正好穿过去。
+    //
+    //   同源的教训在 CCteam 那套里也有（no-subagents 契约）：每个 worker 自己 spawn 的
+    //   reviewer 都在重复 controller 已经派过的评审，白烧一整个席位。我们这边更贵 ——
+    //   跨进程，每个都是完整上下文。
+    if (await isTeamOwnedCaller(ctx)) {
+      throw new Error(
+        '你是团队里的一个 agent —— **不能再派活**，组队只有主 agent 能做。\n' +
+          '需要的东西超出你这份任务时，把它写进自己的 findings.md，注明「这块需要谁来补」，' +
+          '主 agent 收活时会看到并决定要不要再派一批。'
+      )
+    }
 
     const st = useStore.getState()
     // ① 总闸。**事实查询，不依赖任何模型判断** —— 关着就是关着

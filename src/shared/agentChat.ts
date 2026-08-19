@@ -160,6 +160,12 @@ export interface CliAdapter {
 export interface AgentChatStartParams extends StartOpts {
   cli: string
   message: string
+  /** 团队派生的会话在这里自报身份。**不放进 StartOpts** —— StartOpts 是「这个进程
+   *  怎么起」（cwd/model/sandbox…，effectiveOpts 会拿它重算 buildArgs），而身份不影响
+   *  进程怎么跑，它只是记在会话上的元数据。混进去会让 restart 路径去关心一件与它无关
+   *  的事。 */
+  owner?: 'team'
+  role?: string
 }
 
 /** 事件推送用的**单一常驻频道**（不是 `agentChat:event:<sessionId>` 那种按会话动态命名的）。
@@ -301,7 +307,17 @@ export interface SessionBrief {
   cwd: string
   /** 进程还在不在。false = 被空闲回收或已退出，**但会话记录还在**（下次发消息能续上） */
   alive: boolean
-  /** 最后一次有动静的时刻。面板拿它算「多久没动了」——卡住检测的唯一信号来源 */
+  /** 最后一次有动静的时刻。面板拿它算「多久没动了」——**空闲/卡住**的信号来源。
+   *  注意它不能用来算「跑了多久」：每块 stdout 都会续期，对活跃会话恒趋近 0。 */
   lastActiveAt: number
+  /** 会话建立的时刻。「在跑」的行显示已运行时长用它，见 SessionRecord.startedAt */
+  startedAt: number
   model?: string
+  /** 会话的身份，由主进程持有 —— **不要改回从画布节点上取**。
+   *  节点可以被关掉而进程还在跑（owner:'team' 的会话就是这么设计的），
+   *  从节点取身份会让面板在那一刻失明。见 SessionRecord.owner 那段。 */
+  owner?: 'team'
+  role?: string
+  /** 这一轮还没跑完。区分「干完了」和「卡住了」的唯一信号，见 SessionRecord.busy */
+  busy?: boolean
 }

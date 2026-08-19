@@ -97,6 +97,14 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' && leaf.pane.owner === 'team'
   })
+  /** 派活时定下的角色名。跟 isTeamOwned 一起交给主进程存着 —— **不能只留在 pane 上**，
+   *  节点关掉 pane 就没了，而进程还在跑，面板会认不出它是谁（见 SessionRecord.owner）。 */
+  const teamRole = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.role : undefined
+  })
   /** 派活塞进来的首条任务。**同样从 store 现读** —— 理由同 savedResumeId。 */
   const initialMessage = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -265,19 +273,30 @@ export function AgentChatView({
       // 带上它，模型就接得住上次聊到哪；没有就是全新会话。
       // **失败要能退回全新会话** —— 见下面 catch 里那段：一个失效的 resumeId
       //（会话被 CLI 清理掉、换了机器…）不能让这个节点从此起不来。
+      // 身份跟着会话走，不跟着节点走。两处 start 都要带 —— 漏掉哪条路径，
+      // 走那条路起来的团队 agent 就成了面板认不出的匿名会话。
+      const identity = isTeamOwned ? { owner: 'team' as const, role: teamRole } : {}
       result = await window.api.agentChat.start({
         cli: selected.id,
         cwd,
         message,
         skipApprovalHook,
         askFirst,
+        ...identity,
         ...(savedResumeId ? { resumeId: savedResumeId } : {})
       })
       if (!result.ok && savedResumeId) {
         // 带着旧会话 id 起不来 → 多半是那个会话在 CLI 那边已经没了。
         // 清掉它重来一次，代价只是这次接不上上下文，总好过节点永久报废。
         setAgentResumeId(tabId, leafId, '')
-        result = await window.api.agentChat.start({ cli: selected.id, cwd, message, skipApprovalHook, askFirst })
+        result = await window.api.agentChat.start({
+          cli: selected.id,
+          cwd,
+          message,
+          skipApprovalHook,
+          askFirst,
+          ...identity
+        })
       }
     } catch (e) {
       if (aliveRef.current) {

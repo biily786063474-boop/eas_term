@@ -293,13 +293,23 @@ const TOOLS = [
   {
     name: 'team_status',
     description:
-      '看你派出去的那批 agent 现在什么状况：谁在跑、谁停了、谁多久没动静了。\n' +
-      '**派完活不要反复轮询它** —— 它们写完会把结论落在 .plans/<role>/findings.md，' +
-      '你该做的是先去做别的，或者告诉用户「派下去了」。' +
-      '真正要用它的时候是：用户问起进度、或者你准备收活了想确认都干完没有。\n' +
-      '注意它只报**进程层面**的状态（活着 / 多久没动），不报「任务完成了没」——' +
-      '那个只有读 findings.md 才知道。',
-    inputSchema: { type: 'object', properties: {} }
+      '看你派出去的那批 agent 现在什么状况：谁在跑、谁交活了、谁多久没动静了。\n' +
+      '**不要反复调它轮询**（那是白烧 token）。派完活先去做别的；' +
+      '手上确实没别的事了，就带 `wait:true` 调一次 —— 它会一直挂着，' +
+      '直到有 agent 交活才返回，最多挂 8 分钟。一次调用一次返回，这不是轮询。\n' +
+      '它报得出「这一轮跑完了没」（agent 的 turn 结束就算），' +
+      '但**报不出「做得对不对、做完没有」** —— 那个只有读 .plans/<role>/findings.md 才知道。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        wait: {
+          type: 'boolean',
+          description:
+            '挂起等待，直到有 agent 交活（最多 8 分钟）。只在你手上没有别的事可做时用；' +
+            '已经有人交活了会立刻返回，不会白等。'
+        }
+      }
+    }
   },
   {
     name: 'canvas_new_terminal',
@@ -504,14 +514,18 @@ const TOOLS = [
   }
 ]
 
-/** 要等人在界面上点确认的工具，这条链路会挂很久 —— 名单与主进程
- *  `mcpBridge.ts` 的 `WAITS_FOR_HUMAN` 必须一致，加工具时两处一起改。 */
-const WAITS_FOR_HUMAN = new Set(['wiki_archive_plan', 'team_spawn'])
+/** 会阻塞着等的工具，这条链路会挂很久 —— 名单与主进程 `mcpBridge.ts` 的 `LONG_WAITS`
+ *  必须一致，加工具时两处一起改。
+ *
+ *  等的不一定是人：`wiki_archive_plan` / `team_spawn` 等用户点确认，
+ *  而 `team_status` 的等待模式是挂着等某个子 agent 交活（渲染层 8 分钟）。
+ *  判据是「会不会阻塞着等」，不是「等的是谁」。 */
+const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status'])
 
 /** 普通工具 30 秒足够（主进程那侧 15 秒就会先返回错误）；
- *  等人的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，
+ *  长等待的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，
  *  这样超时永远由主进程判，用户能收到那句写清楚的话，而不是一个连接层的报错。 */
-const CALL_TIMEOUT_MS = (tool) => (WAITS_FOR_HUMAN.has(tool) ? 15 * 60 * 1000 : 30_000)
+const CALL_TIMEOUT_MS = (tool) => (LONG_WAITS.has(tool) ? 15 * 60 * 1000 : 30_000)
 
 /**
  * 用 node:http 而不是 fetch。

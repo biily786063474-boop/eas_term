@@ -82,8 +82,11 @@ function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeRe
   // 三处任何一个数字动了，都要回来核对这个不等式。
   // （2026-08-19：shim 那层没设超时，吃 undici 默认值，成了实际最短的一道闸，
   //   于是「清单能等 10 分钟」是假的。由一个 cross-checker agent 实测抓到。）
-  const WAITS_FOR_HUMAN = new Set(['wiki_archive_plan', 'team_spawn'])
-  const ms = WAITS_FOR_HUMAN.has(tool) ? 10 * 60 * 1000 : 15000
+  // 名字从 WAITS_FOR_HUMAN 改成 LONG_WAITS：team_status 的等待模式**不是等人**，
+  // 是挂着等某个子 agent 交活（渲染层 8 分钟）。判据统一成「这个工具会不会阻塞着等」，
+  // 不管等的是人还是别的进程 —— 按「等人」命名会让下一个加长等待工具的人以为不适用。
+  const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status'])
+  const ms = LONG_WAITS.has(tool) ? 10 * 60 * 1000 : 15000
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       if (pending.delete(id))

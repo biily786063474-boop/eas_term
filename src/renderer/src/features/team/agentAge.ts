@@ -31,6 +31,45 @@ export function healthOf(
   return now - lastActiveAt > STALL_MS ? 'stalled' : 'running'
 }
 
+/** 面板上那个状态标签。**同一个 idle，对两种会话意思不一样。**
+ *
+ *  你自己开的对话闲着 = 「空闲」，只是你没在跟它说话。
+ *  团队 agent 闲着 = **它这一轮干完了**，findings 已经落盘，可以去收活了 ——
+ *  这是面板上最该被一眼看见的信号，说成「空闲」会让人以为它在偷懒。 */
+export function labelOf(h: AgentHealth, team: boolean): string {
+  if (h === 'idle' && team) return '已交活'
+  return LABEL[h]
+}
+
+const LABEL: Record<AgentHealth, string> = {
+  running: '在跑',
+  stalled: '可能卡住',
+  idle: '空闲',
+  dead: '已停'
+}
+
+/** 交活了没有 —— 「这一轮跑完了」，不是「任务做对了」。
+ *
+ *  `busy === undefined` **不算**：那是「还没跑过任何一轮」，会话刚建起来的样子。
+ *  把它当成交活，team_status 的等待模式会在第一次检查就立刻返回，等于没等。
+ *  进程没了也算一种结束 —— 它不会再产出什么了，该去读它落下的东西。 */
+export function isSettled(alive: boolean, busy: boolean | undefined): boolean {
+  if (!alive) return true
+  return busy === false
+}
+
+/** 时长那一列该从哪一刻算起。**两种语义，按状态切。**
+ *
+ *  在跑 → 从 startedAt 算，答的是「跑了多久」。
+ *  其余 → 从 lastActiveAt 算，答的是「多久没动静」。
+ *
+ *  给在跑的行显示「多久没动」是没有信息量的：lastActiveAt 每收到一块 stdout 就续期，
+ *  那个数字恒趋近 0，显示成「在跑 0s」还会被读成「跑了 0 秒」（2026-08-19 用户
+ *  截图指出）。反过来，卡住/已停的行，静默多久正是要判断的东西。 */
+export function ageBasis(h: AgentHealth, startedAt: number, lastActiveAt: number): number {
+  return h === 'running' ? startedAt : lastActiveAt
+}
+
 /** 「4m12s」这种。面板上一列，越短越好读 */
 export function fmtAge(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return '—'

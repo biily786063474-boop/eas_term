@@ -1,0 +1,206 @@
+共 68 组同上下文重复选择器（已排除 @keyframes 步进关键字误报）
+
+[同文件] .ac-md.md-view .md-pre
+        features/agentChat/agentChat.css:1014 , features/agentChat/agentChat.css:1024
+        重叠属性: （无，属性互补）
+[同文件] .ac-quota
+        features/agentChat/agentChat.css:1234 , features/agentChat/agentChat.css:1257
+        重叠属性: （无，属性互补）
+[同文件] .ac-turn-text
+        features/agentChat/agentChat.css:256 , features/agentChat/agentChat.css:1039
+        重叠属性: （无，属性互补）
+[同文件] .ac-exec-pre
+        features/agentChat/agentChat.css:370 , features/agentChat/agentChat.css:1039
+        重叠属性: （无，属性互补）
+[同文件] .ac-notice-text
+        features/agentChat/agentChat.css:641 , features/agentChat/agentChat.css:1039
+        重叠属性: （无，属性互补）
+[同文件] .ac-gauge-row
+        features/agentChat/agentChat.css:769 , features/agentChat/agentChat.css:1039
+        重叠属性: （无，属性互补）
+[同文件] .ac-bar-send
+        features/agentChat/agentChat.css:882 , features/agentChat/agentChat.css:1392
+        重叠属性: ['align-items', 'background', 'border', 'border-radius', 'color', 'cursor', 'display', 'height', 'justify-content', 'transition', 'width']
+[同文件] .ac-bar-send:hover:not(:disabled)
+        features/agentChat/agentChat.css:896 , features/agentChat/agentChat.css:1406
+        重叠属性: （无，属性互补）
+[同文件] .ac-bar-send:disabled
+        features/agentChat/agentChat.css:899 , features/agentChat/agentChat.css:1410
+        重叠属性: ['cursor']
+[同文件] .board-collabel
+        features/board/board.css:69 , features/board/board.css:418
+        重叠属性: （无，属性互补）
+[同文件] .agentbar
+        features/canvas/canvas.css:2193 , features/canvas/canvas.css:4334
+        重叠属性: ['border-bottom']
+[跨文件] .ab-launch
+        features/canvas/canvas.css:2303 , ui/motion/glow.css:84 , ui/motion/glow.css:182
+        重叠属性: ['transition']
+[跨文件] .ab-launch:disabled
+        features/canvas/canvas.css:2324 , ui/motion/glow.css:275
+        重叠属性: （无，属性互补）
+[同文件] .ab-ask-yes
+        features/canvas/canvas.css:2409 , features/canvas/canvas.css:2423
+        重叠属性: （无，属性互补）
+[同文件] .ab-ask-no
+        features/canvas/canvas.css:2409 , features/canvas/canvas.css:2431
+        重叠属性: （无，属性互补）
+[同文件] .crm
+        features/canvas/canvas.css:2719 , features/canvas/canvas.css:2751
+        重叠属性: （无，属性互补）
+[同文件] .crm-mini
+        features/canvas/canvas.css:2719 , features/canvas/canvas.css:2739 , features/canvas/canvas.css:2826
+        重叠属性: ['border-radius', 'color', 'transition']
+[同文件] .crm-title
+        features/canvas/canvas.css:2739 , features/canvas/canvas.css:2761
+        重叠属性: （无，属性互补）
+[同文件] .crm-row
+        features/canvas/canvas.css:2739 , features/canvas/canvas.css:2789
+        重叠属性: ['color']
+[同文件] .re-contract
+        features/canvas/canvas.css:3034 , features/canvas/canvas.css:3050
+        重叠属性: （无，属性互补）
+[同文件] .re-tools
+        features/canvas/canvas.css:3115 , features/canvas/canvas.css:3194
+        重叠属性: ['display', 'gap']
+[同文件] .re-ghost
+        features/canvas/canvas.css:3138 , features/canvas/canvas.css:3149
+        重叠属性: （无，属性互补）
+[同文件] .re-primary
+        features/canvas/canvas.css:3138 , features/canvas/canvas.css:3162
+        重叠属性: （无，属性互补）
+[同文件] .wk-shell.open
+        features/canvas/canvas.css:3385 , features/canvas/canvas.css:3388
+        重叠属性: （无，属性互补）
+[跨文件] .wk-primary
+        features/canvas/canvas.css:3474 , ui/motion/glow.css:84 , ui/motion/glow.css:182
+        重叠属性: （无，属性互补）
+[跨文件] .wk-primary:disabled
+        features/canvas/canvas.css:3486 , ui/motion/glow.css:275
+        重叠属性: （无，属性互补）
+[同文件] .rm-ghost
+        features/canvas/canvas.css:4115 , features/canvas/canvas.css:4127
+        重叠属性: （无，属性互补）
+[同文件] .rm-primary
+        features/canvas/canvas.css:4115 , features/canvas/canvas.css:4135
+        重叠属性: （无，属性互补）
+[同文件] .cd-collapse
+        features/canvas/canvas.css:423 , features/canvas/canvas.css:435
+        重叠属性: （无，属性互补）
+[同文件] .cd-add
+        features/canvas/canvas.css:423 , features/canvas/canvas.css:567
+        重叠属性: （无，属性互补）
+[同文件] .skl-sec-head
+        features/canvas/canvas.css:4600 , features/canvas/canvas.css:4603
+        重叠属性: （无，属性互补）
+[同文件] .cd-attn-bubble   @ @media (prefers-reduced-motion: reduce)
+        features/canvas/canvas.css:4887 , features/canvas/canvas.css:4912
+        重叠属性: （无，属性互补）
+[同文件] .flb-head
+        features/canvas/canvas.css:5094 , features/canvas/canvas.css:5157
+        重叠属性: （无，属性互补）
+[跨文件] :root
+        features/design/composer/animate/styles.css:17 , styles/base.css:2
+        重叠属性: （无，属性互补）
+[同文件] .ua__tl-bar
+        features/design/composer/animate/styles.css:600 , features/design/composer/animate/styles.css:721
+        重叠属性: ['cursor']
+[同文件] .dhb-text code
+        features/dict/dict.css:339 , features/dict/dict.css:343
+        重叠属性: （无，属性互补）
+[同文件] .dhb-badge
+        features/dict/dict.css:339 , features/dict/dict.css:350
+        重叠属性: （无，属性互补）
+[同文件] .dhb-ghost
+        features/dict/dict.css:377 , features/dict/dict.css:387
+        重叠属性: （无，属性互补）
+[同文件] .dhb-primary
+        features/dict/dict.css:377 , features/dict/dict.css:397
+        重叠属性: （无，属性互补）
+[同文件] .dhb-mini
+        features/dict/dict.css:377 , features/dict/dict.css:387
+        重叠属性: （无，属性互补）
+[同文件] .code-view
+        features/editor/editor.css:3 , features/editor/editor.css:52
+        重叠属性: （无，属性互补）
+[同文件] .diff-view-host
+        features/git/git.css:395 , features/git/git.css:410
+        重叠属性: （无，属性互补）
+[同文件] .st-pend-proj
+        features/status/status.css:109 , features/status/status.css:116
+        重叠属性: （无，属性互补）
+[同文件] .st-pend-term
+        features/status/status.css:109 , features/status/status.css:117
+        重叠属性: （无，属性互补）
+[同文件] .tbm-ghost
+        features/team/team.css:242 , features/team/team.css:251
+        重叠属性: （无，属性互补）
+[同文件] .tbm-primary
+        features/team/team.css:242 , features/team/team.css:260
+        重叠属性: （无，属性互补）
+[同文件] .tp-foot
+        features/team/team.css:90 , features/team/team.css:277
+        重叠属性: （无，属性互补）
+[同文件] .terminal-host
+        features/terminal/terminal.css:2 , features/terminal/terminal.css:198
+        重叠属性: （无，属性互补）
+[跨文件] .term-input-send
+        features/terminal/terminal.css:60 , ui/motion/glow.css:84
+        重叠属性: （无，属性互补）
+[同文件] .wikiv-raw
+        features/wiki/wiki.css:104 , features/wiki/wiki.css:111
+        重叠属性: （无，属性互补）
+[同文件] .ap-ghost
+        features/wiki/wiki.css:333 , features/wiki/wiki.css:341
+        重叠属性: （无，属性互补）
+[同文件] .ap-primary
+        features/wiki/wiki.css:333 , features/wiki/wiki.css:349
+        重叠属性: （无，属性互补）
+[同文件] .wikiv-lint-ok
+        features/wiki/wiki.css:390 , features/wiki/wiki.css:396
+        重叠属性: ['color']
+[跨文件] .sec-primary
+        features/workspace/workspace.css:1512 , ui/motion/glow.css:84 , ui/motion/glow.css:182
+        重叠属性: ['transition']
+[跨文件] .sec-primary:disabled
+        features/workspace/workspace.css:1527 , ui/motion/glow.css:275
+        重叠属性: （无，属性互补）
+[跨文件] .upd-go
+        features/workspace/workspace.css:2419 , ui/motion/glow.css:84 , ui/motion/glow.css:182
+        重叠属性: （无，属性互补）
+[跨文件] .upd-go:disabled
+        features/workspace/workspace.css:2432 , ui/motion/glow.css:275
+        重叠属性: （无，属性互补）
+[同文件] .tab.active .tab-close
+        features/workspace/workspace.css:252 , features/workspace/workspace.css:297
+        重叠属性: （无，属性互补）
+[同文件] .project-item
+        features/workspace/workspace.css:62 , features/workspace/workspace.css:111
+        重叠属性: （无，属性互补）
+[同文件] .skill-remind
+        features/workspace/workspace.css:869 , features/workspace/workspace.css:889
+        重叠属性: （无，属性互补）
+[同文件] .skill-ghost
+        features/workspace/workspace.css:951 , features/workspace/workspace.css:959
+        重叠属性: （无，属性互补）
+[同文件] .skill-primary
+        features/workspace/workspace.css:951 , features/workspace/workspace.css:968
+        重叠属性: （无，属性互补）
+[跨文件] .primary-btn
+        styles/base.css:328 , ui/motion/glow.css:84 , ui/motion/glow.css:182
+        重叠属性: ['transition']
+[同文件] body
+        styles/base.css:87 , styles/base.css:96
+        重叠属性: （无，属性互补）
+[同文件] .primary-btn::after
+        ui/motion/glow.css:96 , ui/motion/glow.css:131
+        重叠属性: （无，属性互补）
+[同文件] .upd-go::after
+        ui/motion/glow.css:96 , ui/motion/glow.css:131
+        重叠属性: （无，属性互补）
+[同文件] .ab-launch::after
+        ui/motion/glow.css:96 , ui/motion/glow.css:131
+        重叠属性: （无，属性互补）
+[同文件] .wk-primary::after
+        ui/motion/glow.css:96 , ui/motion/glow.css:131
+        重叠属性: （无，属性互补）
