@@ -2,7 +2,54 @@
 
 ---
 
-## 第 2 批（本批）
+## 第 3 批（本批）
+
+目标：摸清 `src/main/wiki/` 的目录约定、`wiki_query` 数据形状、哪些操作真写盘。
+这批和前两批完全无关（前两批是多 agent 编排 / 确认清单超时），
+所以把第 1+2 批的结论整体归档到 `archive/round1-2-findings.md`，`findings.md` 只留本批。
+
+### 做了什么
+
+1. `find src/main/wiki` + `wc -l` 摸清规模：10 个文件 2249 行，其中 `index.ts` 718 行最大。
+2. **全部读完，一行没跳**（分 4 次并行读）：
+   `paths.ts`(225) `taxonomy.ts`(231) `customSchema.ts`(114) `scan.ts`(63) `git.ts`(56)
+   `schema.ts`(382) `index.ts`(718)。这个模块的注释密度极高，
+   很多"为什么这么写"的判据只存在于注释里（比如收件箱不能 gitignore 的那个洞），读代码不读注释会漏掉一半结论。
+3. 追到模块外确认第二问 —— 光看 IPC handler 会得出错误的形状：
+   `mcp/eas-mcp.mjs`（工具描述）→ `src/renderer/src/mcpHandler.ts:733`（**重新包了一层，字段被改过**）
+   → `src/shared/types.ts`（`WikiStatus` 定义）。agent 收到的和 IPC 返回的不是同一个对象。
+4. `grep -rn dirNames src/` 确认调用点：4 处，其中 `schema.ts` 的 3 处全在 `if (!t)` 内置分支里，
+   **唯一会在自定义库下被调用的就是 `wiki:query` 的 `dirs` 字段** —— 这一步是坑判断成立的关键。
+5. `grep '^test' src/main/wiki/*.test.ts` 看现有 43 条用例覆盖了什么，
+   确认没有一条打到 `dirNames`（它引 electron，`node --test` 加载不了）。
+6. `node --test 'src/main/wiki/*.test.ts'` → **43 pass / 0 fail**，基线是绿的。
+
+### 判断过程
+
+三问里前两问是纯事实，读完就有答案。第三问"最容易踩坑的一处"筛了 6 个候选：
+
+| 候选 | 为什么没选 |
+|---|---|
+| `wiki:log` 不受 broken 闸门保护 | log.md 在库根、与分类无关，影响小 |
+| `reconcileOnStartup` 启动即写盘 | 真实且容易被忽略，但已有 `looksEmpty` + 幂等两道保险，写进表里加粗即可 |
+| `walkNotes` 的 20000 budget 静默截断 | 真坑，但触发门槛高（两万条目），且不在本批三问范围 → 降级到"顺带记下" |
+| `isRawName` 只匹配顶层 | 与"禁止斜杠"校验配套，当前自洽 → 同上 |
+| "有 library 就忽略 dirs"靠提示词 | 方向对，但说法太笼统，不够具体 |
+| **自定义库 `dirs` 的 1 真 7 假** | **选它** |
+
+选最后一个的三条理由：
+① 具体到字段（`dirs.inbox` 真 / 另外七个假），不是泛泛的"靠提示词不可靠"；
+② 有作用机制 —— 模型抽样核对 `dirs.inbox` 会发现它真的存在，这个"验证通过"反而推它去信任整个 `dirs`；
+③ **测不到** —— 全模块最讲究的"纯 node 可测"分层恰好在这个字段上失效，
+   意味着它不会被任何回归测试拦住，只会在真实的自定义库上出事。
+
+### 没做的
+
+- 没改任何代码。findings 里给的最小修法只是建议，没动 `index.ts`。
+- 没跑真实的自定义库端到端验证（要起 Electron，且会往盘上建库）—— 结论是读代码 + 调用点追踪得出的，
+  `dirs` 那条的证据链是：`dirNames` 的实现 + `dirOf` 不读 `.eas-wiki.json` + `grep` 确认唯一调用点。
+
+## 第 2 批
 
 目标：验证确认清单能停住等人点；被要求「这一批点算了」。
 

@@ -1,149 +1,114 @@
-# researcher · 结论（累积：第 1 批 + 第 2 批）
+# researcher · 结论（第 3 批）
 
----
+> 第 1、2 批（多 agent 编排 / 确认清单超时）的结论已归档到
+> `.plans/researcher/archive/round1-2-findings.md`，本文件只讲这一批。
 
-# 第 2 批（本批）
-
-**批次目标**：验证确认清单能停住等人点 —— 这一批请点「算了」。
+**批次目标**：摸清 `src/main/wiki/` 的目录约定、`wiki_query` 的数据形状、哪些操作真的写盘。
+**读了**：`paths.ts` / `taxonomy.ts` / `customSchema.ts` / `schema.ts` / `scan.ts` / `git.ts` / `index.ts`
+（共 2249 行，全部读完），外加消费侧 `mcp/eas-mcp.mjs`、`src/renderer/src/mcpHandler.ts`、
+`src/shared/types.ts`。基线：`node --test src/main/wiki/*.test.ts` → 43 pass / 0 fail。
 
 ## 一句话结论
 
-清单确实能停住等人点，**但它停得太住了** ——
-渲染层那道「9 分钟自动放弃」的保险丝是**哑的**，超时分支永远执行不到；
-后果是 05:20 那次修复想避免的 `running` 脏标记**照样会发生**。
-另外，「这一批点算了」**第二次没达成**：我又被起来了，走的还是同意路径。
+目录结构是**两条互不相通的路**（有没有 `.eas-wiki.json` 决定），`wiki_query` 的返回形状
+也跟着分叉；而**最容易踩的坑是分叉分得不干净** —— 自定义库的 `dirs` 字段里
+`inbox` 是真的、另外七个是内置名（盘上不存在），一个"半真"的对象比全假的更骗人。
 
-## R-1【真 bug · 新发现】9 分钟超时分支是死代码
+## 一、目录结构怎么决定的
 
-`batchRequest.ts:111-118`：
+判据只有一个：库根目录有没有 `.eas-wiki.json`（`taxonomy.ts:TAXONOMY_FILE`）。
+入口是 `taxonomyState(root)` 的**三态**，`libraryDirs()` / `readTaxonomy()` 只是它的下游。
 
-```ts
-return new Promise<BatchDecision>((resolve) => {        // ← resolve = R0
-  const timer = setTimeout(() => {
-    if (pending?.resolve !== resolve) return            // ← 恒为 true，永远 return
-    pending = null; emit()
-    resolve({ go: false, reason: '清单一直没人处理（等了 9 分钟）' })
-  }, WAIT_MS)
-  pending = {
-    req,
-    resolve: (d) => { clearTimeout(timer); resolve(d) } // ← W0，包装 R0 的新函数
-  }
-})
-```
+| 状态 | 触发条件 | 目录从哪来 | 说明书正文 | 写入是否放行 |
+|---|---|---|---|---|
+| `none` | 文件不存在（ENOENT）| `BUILTIN_DIRS` 内置八目录，经 `dirOf()` 做中文老库回落 | `schema.ts:schemaBody`（八个具名字段，**字节级不可变**）| 放行 |
+| `valid` | 存在 + 合法 JSON + 过 `validateTaxonomy` | 配置里的 `dirs[]`，名字原样，`resolve` 不介入 | `customSchema.ts:customSchemaBody`（按配置逐条列）| 放行 |
+| `broken` | 读不出来 / 不是 JSON / 校验不过 | **不给** —— 拒绝回落到内置 | 不写 | **闸门拦住** |
 
-守卫比较的是 `pending.resolve`（包装器 `W0`）和 Promise 的原始 `resolve`（`R0`）。
-**这两个永远不是同一个函数引用**，所以 `!==` 恒为真，超时回调一进来就 `return`。
-9 分钟到点后什么都不做：Promise 继续挂着，弹窗继续留在屏幕上。
+内置八目录（顺序与名字被注释标为"不许动"，改了会让所有老库的 CLAUDE.md 被重写）：
+`00-inbox`(inbox) · `me` · `people` · `methods` · `domains` · `projects` · `sources`(raw) · `_templates`(templates)。
+老库中文名回落表在 `paths.ts:LEGACY`，判据是**盘上有哪个用哪个**，不自动搬迁。
 
-### 实证（不是代码审读，是跑出来的）
+`validateTaxonomy` 的硬约束（拒绝比放行安全）：`dirs` 非空；每项要有 `name` + 非空 `purpose`；
+name 不能含斜杠 / 不能点开头 / 不能撞 `.eas-wiki.json` / 不能重名；
+**`role:"inbox"` 必须恰好一个**；`role:"templates"` 最多一个；`frontMatter.required` 非空。
+`role:"raw"` 是**可选**的 —— 这一条不对称是 `archiveDirOf` 唯一会失败的原因。
 
-探针留在 `.plans/researcher/timeout-probe.test.ts`，用 `t.mock.timers` 推进 9 分钟：
+三个角色的实际作用：`inbox` → 徽章计数、`.eas-sources.json` 落点、`walkNotes` 跳过；
+`raw` → `walkNotes` 跳过 + 归档落点（取**第一个**）；`templates` → 只从 index.md 分区里排除。
 
-```
-$ npx tsx --test .plans/researcher/timeout-probe.test.ts
-✖ 9 分钟没人点 → askForBatch 应当自己 resolve 成 go:false
-    AssertionError: 超时分支没有执行：Promise 仍然挂着，弹窗不会自己消失
-✖ 超时之后用户才点「开工」→ running 不该被脏标记
-    AssertionError: running 被脏标记了 —— 这个 Frame 之后永远派不了活
-    actual: true, expected: false
-ℹ pass 0 / fail 2
-```
+## 二、`wiki_query` 返回的数据形状
 
-**两条断言写的都是「正确行为」，所以失败 = bug 存在。**修好后它们应转绿，
-可以直接搬进 `batchRequest.test.ts` 当回归守卫。
+一次调用穿过三层，每层都会改形状 —— **agent 最终看到的不是 IPC 那份**：
 
-反证（把守卫换成比较 `req` 之后，副本立刻通过，确认根因就是这一行）：
+`ipcMain.handle('wiki:query')`（`index.ts:392`）→ `mcpHandler.ts:733` 重包 → MCP `wiki_query`。
 
-```
-$ npx tsx --test /tmp/br-probe.test.ts     # /tmp/br-fixed.ts 里 :112 改成 if (!pending || pending.req !== req) return
-✔ 反证：守卫改成比较 req 之后，超时分支就执行了
-ℹ pass 1 / fail 0
-```
+| 库的状态 | IPC 层返回 | agent 实际收到 |
+|---|---|---|
+| 没配置 | `{configured:false, exists, looksEmpty}` | `{configured:false, hint:'…也别主动建议他去建一个'}` |
+| 目录没了 / `looksEmpty` | 同上三个字段 | `{configured:true, exists, looksEmpty, hint:…}` |
+| `taxonomyBroken` | `{configured, exists, looksEmpty:false, taxonomyBroken:true, taxonomyError}`<br>**提前 return，不带 dirs / library / index** | `{configured:true, hint:'什么都别做…去把 .eas-wiki.json 改好'}` |
+| 内置库（`none`）| `{path, index, dirs}` —— **无 `library` 字段**（老库响应形状的不变量）| 同字段 + `hint`（教它看 `dirs.me`）|
+| 自定义库（`valid`）| `{path, index, dirs, library: t.dirs}` | 同字段 + `hint`（教它**忽略 dirs**、按 `library` 走）|
 
-### 为什么这条要紧：它让 05:20 那次修复没生效
+- `index` = `index.md` 原文全文，读不到就空字符串（不报错）。
+- `dirs` = `WikiDirNames`，八个固定键：`inbox/me/people/methods/domains/projects/sources/templates`。
+- `library` = `TaxonomyDir[]`，逐条 `{name, purpose, role?}`。**它的存在与否就是"是不是自定义库"的信号。**
+- 每次调用都当场读盘，不缓存（换位置/建库/解绑立即生效）。
 
-`batchRequest.ts:85-93` 的注释把危害写得很清楚，原话是：
+## 三、哪些操作真的改硬盘
 
-> 主进程 invokeRenderer 超时后只清它自己那份 pending，渲染层这边的弹窗还挂着。
-> 用户过一会儿点了「开工」→ running.add 执行 → 这个 Frame 被标记成「有批次在跑」，
-> 可实际一个 agent 都没起，之后再派活永远被「已经有一批在跑」挡住，除非重启 app。
+| IPC / 入口 | 改什么 | 位置 | broken 闸门 |
+|---|---|---|---|
+| **`reconcileOnStartup`（无 IPC，注册时自动跑）** | 调 `initWiki` 建目录 + 升级 CLAUDE/AGENTS 围栏 | 库内 | initWiki 自挡 |
+| `wiki:init` | `mkdir` 全部分类目录；写 `CLAUDE.md`/`AGENTS.md`/`index.md`/`log.md`/`START-HERE.md`（已存在不覆盖）；老格式迁移前写 `.eas-backup` | 库内 + `wiki.json` | 自挡（原样返回 `blocked`）|
+| `wiki:archive` | `mkdir <raw>/<YYYY-MM>`，`renameSync` **移动**原件 + 逐字稿 | 库内 | `archiveDirOf` 挡 |
+| `wiki:addToInbox` | `copyFile`（默认）或 `rename`（move=true）进收件箱；写 `.eas-sources.json`；`wiki.json` 的 `added` 计数 +N | 库内 + `wiki.json` | 有 |
+| `wiki:saveTranscript` | `mkdir .transcripts` + 写 `<媒体名>.txt` | 库内 | 有 |
+| `wiki:log` | `appendFileSync` 追加一行到 `log.md` | 库内 | **无**（log.md 与分类无关，可接受）|
+| `wiki:gitInit` | `git init` + 写 `.gitignore`（首次）+ commit | 库内 `.git` | 无 |
+| `wiki:snapshot` / `wiki:commit` | `git add -A` + commit（无改动则不产生空提交）| 只动 `.git` | 无 |
+| **`wiki:rollback`** | 先 commit 保留现场，再 `git reset --hard <sha>` —— **会真删/真改工作区文件**，本模块破坏力最大的一个 | 库内 | 无 |
+| `wiki:setPath` / `wiki:forget` | 只改 `userData/wiki.json` 的 `path`（保留 `added`）| **库外** | — |
+| 只读：`graph`/`lint`/`stats`/`status`/`query`/`inbox`/`search`/`backlinks`/`transcript`/`archiveDirCheck`/`history` | 不写 | — | — |
+| 副作用非写盘：`pickPath`/`pickFiles`（对话框）、`reveal`（`shell.openPath`）| 不写 | — | — |
 
-`WAIT_MS = 9min < 主进程 10min`（`mcpBridge.ts:73`，`WAITS_FOR_HUMAN` 集合里有 `team_spawn`）
-这个**数值上的**不变量我核了，是成立的。但它不起作用 —— 因为渲染层压根不会超时。
-时间线仍然是：
+三条贯穿的安全约定：**只移动不删除**（重名走 `uniqueName` 加后缀）；
+**归档落点写死在 raw 目录下**，`it.rename` 只取 `basename`，不接受任何路径成分；
+**收件箱绝不 gitignore**（注释里记着：那会让回滚把已归档文件从素材区删掉、而收件箱里早没了 → 文件彻底消失）。
 
-1. 清单弹出，用户离开电脑
-2. 第 10 分钟：主进程超时，给 AI 回「用户一直没有处理那张派活清单」→ AI 转单会话
-3. 弹窗**还在屏幕上**（渲染层从没超时）
-4. 用户回来，看见清单，点「开工」→ `running.add(frameId)`
-5. 一个 agent 都没起（AI 早走了），但这个 Frame 已被标记「有批次在跑」
-6. 之后所有 `team_spawn` 被挡，且**没有任何清除入口**（见 F-2）→ 只能重启 app
+## ⚠️ 最容易踩的一处：自定义库的 `dirs` 是"半真"的
 
-第 4 步这个「过期弹窗还能点」本身也该修：超时后该把清单撤掉，或者标成失效。
-
-### 修的方向
-
-守卫的本意是「pending 已被别人换掉就别动」，那就该比较**能唯一标识这次调用的东西**：
+`wiki:query` 对自定义库**照样返回 `dirs: dirNames(st.path!)`**（`index.ts:437`）。
+而 `dirNames()`（`schema.ts:46`）内部：
 
 ```ts
-const self = { req, resolve: (d) => { clearTimeout(timer); resolve(d) } }
-const timer = setTimeout(() => {
-  if (pending !== self) return          // 比对象引用，不是比 resolve
-  ...
-}, WAIT_MS)
-pending = self
+inbox: inboxOf(root),        // ← 走 libraryDirs，自定义库返回配置里的 inbox 名：真的
+me: dirOf(root, 'me'),       // ← dirOf 只查 LEGACY 表和盘上存在性，
+people: dirOf(root, 'people'),//   完全不看 .eas-wiki.json → 一律返回内置英文名：假的
+… sources / templates 同理
 ```
 
-（`let done = false` 的写法也行。别再拿 `pending.resolve` 跟 `resolve` 比。）
+于是一个自定义库拿到的 `dirs` 是 **1 个字段正确 + 7 个字段指向盘上不存在的目录**。
 
-## R-2【回归确认】cross-checker 的 F-2 在改动后的代码上依然存在
+**为什么这比全错更危险**：现在靠三道纯提示词防线堵它 —— MCP 工具描述说"有 library 就忽略 dirs"、
+`mcpHandler` 的 hint 再说一遍、库内 CLAUDE.md 第三遍。三道全是**说给模型听的**，没有一道是代码约束。
+而模型去核对时会发现 `dirs.inbox` 确实存在于盘上 —— 这个"抽样验证通过"恰好会把它推向信任整个 `dirs`，
+接着按 `dirs.me` 写笔记，在自定义库里凭空建出配置外的 `me/`。这正是仓库注释里 Critical 2 的
+伤害形态，代码只堵住了 `broken` 那条路（提前 return），**`valid` 这条路是敞开的**。
 
-这不是我的发现，是 cross-checker 第 1 批报的（`running` 成功路径永不归还）。
-我的增量只有一条：**代码在那之后动过（`batchRequest.ts` 05:20 改），F-2 没被修。**
-它报的行号 `mcpHandler.ts:639` 现在是 `:685`，`finishBatch` 仍然只有那一个 catch 里的调用点；
-`TeamPanel.tsx` 的 import 列表里仍然没有 `batchRequest`（第 12-17 行，我逐行看过）。
+**并且这一处测不到**：`dirNames` 在 `schema.ts`，`schema.ts` → `paths.ts` → `electron`，
+`node --test` 在模块解析阶段就失败。43 个现有用例里没有一条覆盖它 ——
+`taxonomy.test.ts` 只验了 `library` 字段的数据源，`paths.test.ts` 只验 `rawDirOf`/`isRawName`。
+整个模块最讲究的"纯 node 可测"分层，恰好在这个字段上失效了。
 
-R-1 和 F-2 是**叠加**的：R-1 制造脏标记，F-2 保证这个脏标记永远清不掉。
+**最小修法**（供后续批次参考，本批未改代码）：`wiki:query` 里改成
+`...(t ? { library: t.dirs } : { dirs: dirNames(st.path!) })` —— 自定义库干脆不给 `dirs`，
+把"忽略它"从提示词降级成物理事实。风险：`dirs` 对内置库的形状必须一字不动（老库不变量）。
 
-## R-3 本批次「点算了」再次未达成 —— 但这次有个跨批次旁证
+## 顺带记下的两处（不在本批三问范围，未深挖）
 
-判据还是第 1 批那条：**取消路径的成功标志是「什么都没发生」。**
-我这个会话存在 → `decision.go === true` → 点的是「开工」。第二次了。
-
-不过这次多出一个第 1 批拿不到的事实：**上一批（05:18）已经在同一个项目成功派过一次活。**
-按 F-2，那次之后 `running` 里就该留着这个 frameId，这一批的清单**根本弹不出来**才对
-（`askForBatch` 会抛「这个项目已经有一批 agent 在跑了」）。可它弹出来了。
-所以两者必居其一：
-
-- 中间重载过渲染进程 / 重启过 app（模块级 `running` 被清空），或
-- 这一批派在了**另一个 Frame** 上
-
-无论哪个，都反过来印证 F-2 的严重性：**同一个 Frame 想派第二次活，得先重启。**
-这条是运行时旁证，比静态审读硬一档。lead 若知道中间是否重启过，可以直接闭合。
-
-## 给 lead 的建议（按优先级）
-
-1. **先修 R-1**（一行守卫），它是「修了但没生效」，风险最高 —— 注释已经把危害写全了，
-   容易让人以为这条路已经堵上。
-2. **再定 F-2 的语义**（cross-checker 给了两个选项，取舍归你）。
-3. 顺手加「超时后撤掉/失效化弹窗」，堵住「过期清单还能点」。
-4. `.plans/researcher/timeout-probe.test.ts` 两条断言修完就转绿，建议搬进
-   `batchRequest.test.ts` 常驻 —— 现有 7 条测试全在状态机层，**没有一条覆盖超时**。
-
----
-
-# 第 1 批（存档）
-
-**任务**：验证「确认清单点『算了』→ 取消路径不起任何进程」。
-
-**结论**：代码层面取消路径是干净的（硬 `return`，起进程的代码在其之后），
-但这一批没有验证到它 —— 我被真的起来了，说明走的是「同意」路径。
-
-- `mcpHandler.ts` 的 `if (!decision.go)` 到 `return` 之间没有任何副作用：
-  不 `openAgentPane`、不 `running.add`、也不需要 `finishBatch`。静态看，点「算了」一个进程都不会起。
-- `TeamBatchModal.tsx:74` 的「算了」→ `resolveBatchRequest({ go: false })`，
-  与 `tbm-primary` 的 `{ go: true }` 是两个独立按钮，没有共用路径。
-- `batchRequest.test.ts` 7/7 通过（本批重跑仍 7/7），但七条全在状态机层，
-  **没有一条断言「取消后没有 openAgentPane 调用」**。
-- 提醒：`CANCEL_LIMIT = 2`，连续取消两次就拉黑这个 Frame，
-  而 `banned` 的唯一清除入口 `__resetBatchState()` 只被测试引用 —— 拿「点算了」做验证有额度代价。
+- `walkNotes` 的 `budget = { n: 20000 }` 是**递归共享**的计数器，超了直接静默返回。
+  库超过两万个条目后，笔记数、图谱、体检、搜索会一起变得不完整且不报警。
+- `isRawName` 只匹配顶层目录名（`rel` 在顶层等于目录名）。这与"目录名禁止含斜杠"的校验是配套的，
+  当前自洽；但若哪天放开嵌套分类，raw 判定会静默失效。
