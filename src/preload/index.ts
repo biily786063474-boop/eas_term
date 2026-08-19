@@ -471,6 +471,15 @@ const api = {
       ipcRenderer.invoke('skillLibrary:writeFile', filePath, content),
     /** 给 agent 的分类口子用：一次看全部目录（含项目 skill） */
     listAll: (): Promise<SkillLibrarySnapshot> => ipcRenderer.invoke('skillLibrary:listAll'),
+    // 面板里手动管分类。跟 setCategories（AI 那条）分开：手动的会**锁住**那个 skill，
+    // AI 之后不许再改它。分类只是本软件视图里的标记，不动硬盘上的 skill 文件。
+    addCategoryName: (name: string): Promise<SkillCategorizeResult> =>
+      ipcRenderer.invoke('skillLibrary:addCategoryName', name),
+    removeCategoryName: (name: string): Promise<SkillCategorizeResult> =>
+      ipcRenderer.invoke('skillLibrary:removeCategoryName', name),
+    /** category 传 null = 拿回未分类并解锁（交还给 AI 管） */
+    assignCategory: (skillPath: string, category: string | null): Promise<SkillCategorizeResult> =>
+      ipcRenderer.invoke('skillLibrary:assignCategory', skillPath, category),
     /** 给 agent 的分类口子用：写回一批分类，任何一条不合格就整批拒绝 */
     setCategories: (
       assignments: { skill: string; category: string }[]

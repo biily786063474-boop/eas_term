@@ -6,7 +6,10 @@ import {
   validateCategoryBatch,
   UNCATEGORIZED,
   CATEGORY_NAME_MAX,
-  CATEGORY_BATCH_MAX
+  CATEGORY_BATCH_MAX,
+  sanitizeLocks,
+  dropLocked,
+  sanitizeCategoryNames
 } from './category.ts'
 import type { SkillInfo } from '../../shared/types.ts'
 
@@ -192,4 +195,38 @@ test('validateCategoryBatch：路径首尾空格会被修剪后再比对', () =>
   const r = validateCategoryBatch([{ skill: '  /s/a  ', category: '  设计  ' }], VALID)
   assert.equal(r.ok, true)
   if (r.ok) assert.deepStrictEqual(r.assignment, { '/s/a': '设计' })
+})
+
+// ── 手动分类锁 + 空分类（2026-08-18 加，面板可以自己建分类、拖 skill 进去）──
+
+test('sanitizeLocks：丢掉不是字符串的、指向已删 skill 的、重复的', () => {
+  const valid = new Set(['/a', '/b'])
+  assert.deepEqual(sanitizeLocks(['/a', '/b', '/a', '/没了', 42, null], valid), ['/a', '/b'])
+  assert.deepEqual(sanitizeLocks('不是数组', valid), [])
+})
+
+test('dropLocked：锁住的不让 AI 改，并把跳过的报出来', () => {
+  const r = dropLocked({ '/a': 'AI 分的', '/b': 'AI 分的' }, ['/a'])
+  assert.deepEqual(r.kept, { '/b': 'AI 分的' })
+  assert.deepEqual(r.skipped, ['/a'])
+})
+
+test('dropLocked：没有锁时原样放行', () => {
+  const r = dropLocked({ '/a': 'x' }, [])
+  assert.deepEqual(r.kept, { '/a': 'x' })
+  assert.deepEqual(r.skipped, [])
+})
+
+test('sanitizeCategoryNames：去空白、去重、挡超长，「未分类」不许自建', () => {
+  assert.deepEqual(
+    sanitizeCategoryNames(['  写作  ', '写作', '', 'x'.repeat(41), UNCATEGORIZED, 7, '设计']),
+    ['写作', '设计']
+  )
+})
+
+test('groupByCategory：空分类也要出现，且排在未分类前面', () => {
+  const skills = [{ path: '/a', name: 'a', description: '' }] as never
+  const gs = groupByCategory(skills, {}, ['空的一类'])
+  assert.deepEqual(gs.map((g) => g.name), ['空的一类', UNCATEGORIZED])
+  assert.deepEqual(gs[0].skillPaths, [], '新建的分类里还没有东西')
 })

@@ -869,4 +869,7 @@ export interface SkillCategorizeResult {
   error?: string
   /** 成功时：这一批实际写进配置的条数 */
   applied?: number
+  /** 因为用户手动定过分类而被跳过的 skill 路径。**必须报给 agent** ——
+   *  静默跳过的话它以为整理完了，用户看到的分类却没变，两边都不知道发生了什么。 */
+  skippedLocked?: string[]
 }

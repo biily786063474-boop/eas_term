@@ -58,8 +58,18 @@ export function sanitizeCategoryAssignment(raw: unknown, validSkillPaths: Readon
  * 已命名分类之间按名称排序，保证同一份数据每次分组结果的组顺序都一样（不依赖
  * Map 的插入序，插入序取决于 skills 数组顺序，容易在不同调用间意外变化）。
  */
-export function groupByCategory(skills: readonly SkillInfo[], assignment: CategoryAssignment): SkillCategoryGroup[] {
+export function groupByCategory(
+  skills: readonly SkillInfo[],
+  assignment: CategoryAssignment,
+  /** 用户自建的分类名。**空分类也要出现** —— 新建一个分类后它得先显示出来、
+   *  能当拖拽的落点，用户才有地方把 skill 拖进去。不传就只按成员分组（老行为）。 */
+  extraNames: readonly string[] = []
+): SkillCategoryGroup[] {
   const buckets = new Map<string, string[]>()
+  for (const n of extraNames) {
+    const t = n.trim()
+    if (t && t !== UNCATEGORIZED) buckets.set(t, [])
+  }
   for (const sk of skills) {
     const cat = assignment[sk.path]?.trim() || UNCATEGORIZED
     const list = buckets.get(cat)
@@ -158,4 +168,51 @@ export function validateCategoryBatch(raw: unknown, validSkillPaths: ReadonlySet
     return { ok: false, error: `同一个 skill 在这批里被分到了两个不同的分类（一个 skill 只能属于一个分类）：${conflict.join('、')}` }
   }
   return { ok: true, assignment }
+}
+
+/** 用户在面板里手动拖过的 skill —— **AI 不许覆盖它们**（用户 2026-08-18 拍板）。
+ *  存的是 skill 绝对路径。手动分类和 AI 分类共用 `categories` 那一份数据，
+ *  这里只多记一句「这条是人定的」。
+ *
+ *  为什么不给分类名加前缀之类的标记：那会污染分类名本身（显示、去重、改名全要
+ *  绕开那个前缀），而「谁定的」是这条记录的元信息，不是分类名的一部分。 */
+export function sanitizeLocks(raw: unknown, validSkillPaths: ReadonlySet<string>): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const v of raw) {
+    // 同读取端的降级策略：单条脏数据丢掉，不作废整份（skill 后来被删了就属于这种）
+    if (typeof v === 'string' && validSkillPaths.has(v) && !out.includes(v)) out.push(v)
+  }
+  return out
+}
+
+/** 从一批 AI 提交的分类里，剔掉被用户手动锁住的那些。
+ *  返回**过滤后的批次**和被跳过的路径 —— 跳过的要告诉 agent，否则它以为自己
+ *  整理完了，而用户看到的分类没变，双方都不知道发生了什么。 */
+export function dropLocked(
+  assignment: CategoryAssignment,
+  locks: readonly string[]
+): { kept: CategoryAssignment; skipped: string[] } {
+  const lockSet = new Set(locks)
+  const kept: CategoryAssignment = {}
+  const skipped: string[] = []
+  for (const [p, name] of Object.entries(assignment)) {
+    if (lockSet.has(p)) skipped.push(p)
+    else kept[p] = name
+  }
+  return { kept, skipped }
+}
+
+/** 用户自建的分类名清单（含还没有任何 skill 的空分类）。
+ *  没有它的话，「新建分类」建完就消失了 —— groupByCategory 只认有成员的分类。 */
+export function sanitizeCategoryNames(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  const out: string[] = []
+  for (const v of raw) {
+    if (typeof v !== 'string') continue
+    const n = v.trim()
+    if (!n || n.length > CATEGORY_NAME_MAX || n === UNCATEGORIZED) continue
+    if (!out.includes(n)) out.push(n)
+  }
+  return out
 }

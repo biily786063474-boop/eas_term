@@ -38,7 +38,16 @@ import type {
 import { realResolve } from '../fsGuard'
 import { resolveBuiltinDirs, mergeDirs, planAddDir, planRemoveDir } from './dirs'
 import { scanSkillDir } from './scan'
-import { groupByCategory, sanitizeCategoryAssignment, validateCategoryBatch } from './category'
+import {
+  groupByCategory,
+  sanitizeCategoryAssignment,
+  validateCategoryBatch,
+  sanitizeLocks,
+  sanitizeCategoryNames,
+  dropLocked,
+  CATEGORY_NAME_MAX,
+  UNCATEGORIZED
+} from './category'
 import { sanitizeDisabled, applyDisabled } from './disabled'
 import { copySkillDir, planCopySkill, planWriteSkillFile } from './write'
 
@@ -49,6 +58,11 @@ interface StoredConfig {
   customDirs?: SkillDirEntry[]
   categories?: Record<string, string>
   disabled?: string[]
+  /** 用户在面板里手动拖过的 skill —— AI 的 skill_categorize 不许覆盖这些。
+   *  跟 categories 分开存：那份是「分到哪」，这份是「谁定的」。 */
+  categoryLocks?: string[]
+  /** 用户自建的分类名（含还没有成员的空分类）。没有它，新建的分类建完就没了。 */
+  categoryNames?: string[]
 }
 
 /** 项目根列表：跟 fsGuard 一样直接读 projects.json，不从 projects.ts 导入——
@@ -123,7 +137,12 @@ function listSkillsIn(dirPath: unknown): SkillListResult {
   const cfg = loadConfig()
   const present = new Set(scan.skills.map((s) => s.path))
   const categoryMap = sanitizeCategoryAssignment(cfg.categories, present)
-  const categories: SkillCategoryGroup[] = groupByCategory(scan.skills, categoryMap)
+  // 自建分类名一起传进去 —— 空分类也要显示出来，否则新建完没有落点可拖
+  const categories: SkillCategoryGroup[] = groupByCategory(
+    scan.skills,
+    categoryMap,
+    sanitizeCategoryNames(cfg.categoryNames)
+  )
   // 只回这个目录里的那部分——面板一次只显示一个目录，把整份清单发过去没意义
   const disabled = sanitizeDisabled(cfg.disabled).filter((p) => present.has(p))
 
@@ -289,6 +308,74 @@ export function registerSkillLibraryHandlers(): void {
   // **引用了不存在的 skill 就拒绝整批**（design 文档 §四，硬要求）。
   // 校验逻辑在 category.ts 的 validateCategoryBatch，有单测。
   // 分类只写 app 自己的配置，**不写进用户的 skill 目录**。
+  /** 面板里手动建一个分类（可以是空的，先建好再往里拖）。 */
+  ipcMain.handle('skillLibrary:addCategoryName', (_e, name: unknown): SkillCategorizeResult => {
+    if (typeof name !== 'string') return { ok: false, error: '分类名必须是字符串' }
+    const n = name.trim()
+    if (!n) return { ok: false, error: '分类名不能为空' }
+    if (n.length > CATEGORY_NAME_MAX) return { ok: false, error: `分类名不能超过 ${CATEGORY_NAME_MAX} 个字` }
+    if (n === UNCATEGORIZED) return { ok: false, error: `「${UNCATEGORIZED}」是保留名字，换一个` }
+    const cur = sanitizeCategoryNames(loadConfig().categoryNames)
+    if (cur.includes(n)) return { ok: false, error: '已经有同名分类了' }
+    saveConfig({ categoryNames: [...cur, n] })
+    return { ok: true, applied: 1 }
+  })
+
+  /** 删一个分类。**里面的 skill 不删**，只是回到未分类 —— 分类是视图上的标记，
+   *  删标记不该牵连被标记的东西。同时把它们的手动锁一并解掉。 */
+  ipcMain.handle('skillLibrary:removeCategoryName', (_e, name: unknown): SkillCategorizeResult => {
+    if (typeof name !== 'string' || !name.trim()) return { ok: false, error: '分类名必须是非空字符串' }
+    const n = name.trim()
+    const cfg = loadConfig()
+    const names = sanitizeCategoryNames(cfg.categoryNames).filter((x) => x !== n)
+    const cats = { ...(cfg.categories ?? {}) }
+    const locks = new Set(Array.isArray(cfg.categoryLocks) ? cfg.categoryLocks : [])
+    let freed = 0
+    for (const [p2, c] of Object.entries(cats)) {
+      if (c !== n) continue
+      delete cats[p2]
+      locks.delete(p2)
+      freed++
+    }
+    saveConfig({ categoryNames: names, categories: cats, categoryLocks: [...locks] })
+    return { ok: true, applied: freed }
+  })
+
+  /** 面板里手动把一个 skill 归到某个分类（拖拽落点）。
+   *  `category` 传 null / 空串 = 拿回未分类，同时**解锁**（用户把它交还给 AI 管）。 */
+  ipcMain.handle(
+    'skillLibrary:assignCategory',
+    (_e, skillPath: unknown, category: unknown): SkillCategorizeResult => {
+      if (typeof skillPath !== 'string' || !skillPath) return { ok: false, error: 'skill 路径必须是非空字符串' }
+      const cfg = loadConfig()
+      const cats = { ...(cfg.categories ?? {}) }
+      const locks = new Set(Array.isArray(cfg.categoryLocks) ? cfg.categoryLocks : [])
+      const raw = typeof category === 'string' ? category.trim() : ''
+
+      if (!raw || raw === UNCATEGORIZED) {
+        // 拖回未分类 = 清掉分类 + 解锁。解锁是有意的：用户把这个 skill 交还给 AI 管，
+        // 不解的话它会永远停在未分类、AI 也不敢碰。
+        delete cats[skillPath]
+        locks.delete(skillPath)
+        saveConfig({ categories: cats, categoryLocks: [...locks] })
+        return { ok: true, applied: 1 }
+      }
+      if (raw.length > CATEGORY_NAME_MAX) return { ok: false, error: `分类名不能超过 ${CATEGORY_NAME_MAX} 个字` }
+
+      cats[skillPath] = raw
+      locks.add(skillPath) // 人定的，AI 不许改
+      // 拖进一个还没登记过的分类名（比如 AI 建的分类）时顺手登记，
+      // 免得把最后一个成员拖走之后这个分类凭空消失
+      const names = sanitizeCategoryNames(cfg.categoryNames)
+      saveConfig({
+        categories: cats,
+        categoryLocks: [...locks],
+        categoryNames: names.includes(raw) ? names : [...names, raw]
+      })
+      return { ok: true, applied: 1 }
+    }
+  )
+
   ipcMain.handle('skillLibrary:setCategories', (_e, raw: unknown): SkillCategorizeResult => {
     const valid = new Set<string>()
     const projectSkillDirs = projectRoots().map((root) => path.join(root, '.claude', 'skills'))
@@ -299,10 +386,16 @@ export function registerSkillLibraryHandlers(): void {
     const v = validateCategoryBatch(raw, valid)
     if (!v.ok) return { ok: false, error: v.error }
 
+    // 用户手动拖过的不许 AI 覆盖（2026-08-18 拍板）。跳过的要**报回去** ——
+    // 静默跳过的话 agent 以为整理完了，用户看到的分类却没变，两边都不知道发生了什么。
+    const cfg = loadConfig()
+    const locks = sanitizeLocks(cfg.categoryLocks, valid)
+    const { kept, skipped } = dropLocked(v.assignment, locks)
+
     // patch 语义：这批没提到的 skill 保持原样。agent 通常只整理一部分，
     // 整份覆盖会让它每次都得把全部分类重发一遍，漏一个就等于把那个 skill 的分类抹了。
-    const cur = sanitizeCategoryAssignment(loadConfig().categories, valid)
-    saveConfig({ categories: { ...cur, ...v.assignment } })
-    return { ok: true, applied: Object.keys(v.assignment).length }
+    const cur = sanitizeCategoryAssignment(cfg.categories, valid)
+    saveConfig({ categories: { ...cur, ...kept } })
+    return { ok: true, applied: Object.keys(kept).length, skippedLocked: skipped }
   })
 }

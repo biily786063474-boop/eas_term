@@ -18,6 +18,9 @@ Skill 管理面板的主进程侧。设计文档：`docs/superpowers/specs/2026-
 典型的会脱节的改动：改了分类名长度上限（`CATEGORY_NAME_MAX`）、改了「整批拒绝」的规则、
 加了一个新字段、把 `assignments` 改名。这几种改动**必须**同步更新那份 skill 的「硬规矩」一节。
 
+2026-08-18 加的一条属于这类：`skill_categorize` 现在会**跳过用户手动定过的 skill**，
+跳过的路径在返回值的 `skippedLocked` 里。agent 那份 skill 已同步。
+
 ## 数据落在哪
 
 `<userData>/skills.json` 一份文件，三个字段：
@@ -25,7 +28,9 @@ Skill 管理面板的主进程侧。设计文档：`docs/superpowers/specs/2026-
 | 字段 | 是什么 | 谁写 |
 |---|---|---|
 | `customDirs` | 用户自己加的 skill 目录 | 面板的「添加自定义目录…」 |
-| `categories` | `Record<skill 绝对路径, 分类名>`，**扁平一层、单分类** | `skill_categorize`（MCP） |
+| `categories` | `Record<skill 绝对路径, 分类名>`，**扁平一层、单分类** | `skill_categorize`（MCP）+ 面板拖拽 |
+| `categoryLocks` | 用户在面板里手动定过分类的 skill 路径。**`skill_categorize` 会跳过它们** | 面板拖拽 |
+| `categoryNames` | 用户自建的分类名（含空分类）。没有它，新建的分类建完就消失 | 面板「新建分类」 |
 | `disabled` | 被临时禁用的 skill 绝对路径数组 | 面板右键「禁用」 |
 
 `saveConfig` 是 **patch 语义**（只覆盖传入的字段）。三个字段共用一份文件，
