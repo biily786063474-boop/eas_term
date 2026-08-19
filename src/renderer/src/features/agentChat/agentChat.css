@@ -722,12 +722,14 @@
    之前是「图片行 + 快照行 + 控制行 + 输入行」四条横带各占一层，加上 notices
    能叠到五层，界面被切得很碎。现在全部收进这一个圆角框：
    用量/错误 → 图片 → 输入 → 控件，外面只留 notices。 */
+/* 跟空态那个输入框（.ac-input-wrap）长一样 —— 参考图里首页和聊天中是同一个框，
+   进了对话之后换一套圆角和留白，会让人觉得是两个不同的东西。 */
 .ac-composer-box {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
+  padding: 10px 12px 8px;
+  border-radius: 18px;
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.05);
   transition: border-color 0.12s ease;
@@ -745,6 +747,9 @@
 .ac-composer {
   width: 100%;
   min-width: 0;
+  /* rows=1 + autoGrow：空框时高度就是一行，长 placeholder 会被截得只剩尾巴
+     （真机截图里只看得到「片）」两个字）。给个两行的下限，autoGrow 只管往上长。 */
+  min-height: 38px;
   border: none;
   background: none;
   padding: 0;
@@ -1378,4 +1383,68 @@
 .ac-input-bar .voice-ctl.inline .voice-btn {
   width: 28px;
   height: 28px;
+}
+
+
+/* 聊天态的发送键：跟空态那颗同款圆形。busy 时换成转圈（**不是停止按钮** ——
+   我们只有 `agentChat:stop`，那是杀掉整个会话，不是中断这一轮，
+   摆一颗名不副实的停止键比没有更糟）。 */
+.ac-bar-send {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.9);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.ac-bar-send:hover:not(:disabled) {
+  background: rgb(var(--accent-rgb));
+  transform: scale(1.06);
+}
+.ac-bar-send:disabled {
+  background: rgba(var(--accent-rgb), 0.28);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: default;
+  transform: none;
+}
+.ac-bar-send.busy {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg-dim);
+  cursor: default;
+}
+.ac-bar-send.busy .ac-spin {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(var(--accent-rgb), 0.95);
+  border-radius: 50%;
+  animation: ac-spin 0.8s linear infinite;
+}
+@keyframes ac-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 输入框**下方**那行统计。参考图里它是一条很淡的细字带 ——
+   **只放我们真有准确来源的数**：轮数/步数、缓存命中、输入输出 token、花费。
+   耗时、首 token、tok/s 事件流里根本没有，不现算、不估、不显示（用户 2026-08-19
+   定的原则：没有准确来源就不编）。 */
+.ac-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 14px 0;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  user-select: text;
+}
+.ac-stats-sep {
+  opacity: 0.35;
 }

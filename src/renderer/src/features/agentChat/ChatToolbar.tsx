@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel } from './toolbarModel.ts'
+import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
@@ -174,6 +175,16 @@ export function ChatToolbar({
   // 的开关（评审 I5 要求可关闭，但硬约束要求 {k:'error',fatal:false} 必须显示）：
   // 同一条 notice 之后**又发生了一次**（count 涨了）就重新出现——那是新信息，
   // 不是刚才那条的残留。归约器把重复内容合并成一条，所以这里靠 count 而不是靠新 id。
+  // 统计行的数据。步数 = 所有轮次里的执行项总数（一次工具调用算一步）。
+  const stats = statsSegments({
+    turns: view.turns.filter((t) => t.role === 'assistant').length,
+    steps: view.turns.reduce((n, t) => n + t.execs.length, 0),
+    inputTokens: view.usage?.inputTokens,
+    outputTokens: view.usage?.outputTokens,
+    cachedInputTokens: view.usage?.cachedInputTokens,
+    costUsd: view.costUsd
+  })
+
   const visibleNotices = view.notices.filter((n) => n.count > (dismissed[n.id] ?? 0))
 
   return (
@@ -270,7 +281,7 @@ export function ChatToolbar({
           className="ac-composer"
           rows={1}
           value={text}
-          placeholder={`继续和它说…（${SEND_HINT}，可粘贴/拖入图片）`}
+          placeholder="继续和它说…（可粘贴或拖入图片）"
           onChange={(e) => {
             setText(e.target.value)
             autoGrow(e.target)
@@ -400,15 +411,29 @@ export function ChatToolbar({
           <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
           <button
             type="button"
-            className="ac-bar-send"
-            data-tip={`发送（${SEND_HINT.split('，')[0]}）`}
+            className={`ac-bar-send${view.busy ? ' busy' : ''}`}
+            data-tip={view.busy ? '正在跑…' : `发送（${SEND_HINT.split('，')[0]}）`}
             onClick={submit}
-            disabled={!text.trim() && !pics.imgs.length}
+            // 跑着的时候不禁用输入：可以先写下一条。只是这颗键在跑完前不接受点击
+            disabled={view.busy || (!text.trim() && !pics.imgs.length)}
           >
-            <SendIcon size={15} />
+            {view.busy ? <span className="ac-spin" aria-hidden="true" /> : <SendIcon size={15} />}
           </button>
         </div>
       </div>
+
+      {/* 输入框下方那行统计。**只放有准确来源的数** —— 组装逻辑和「哪些不编」的
+          理由都在 chatStats.ts。一段都凑不出来时整行不渲染，不留一条空带子。 */}
+      {stats.length > 0 && (
+        <div className="ac-stats">
+          {stats.map((seg, i) => (
+            <span key={seg}>
+              {i > 0 && <span className="ac-stats-sep">| </span>}
+              {seg}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
