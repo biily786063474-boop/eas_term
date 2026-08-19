@@ -82,6 +82,17 @@ export function isBatchRunning(frameId: string): boolean {
  * **抛异常 = 根本没弹**，这时要让 AI 收到明确的错误而不是干等 ——
  * 每条错误都写清「为什么不行、现在该做什么」，否则它会重试到你厌烦。
  */
+/** 自己也要超时，且**必须比主进程那侧短**。
+ *
+ *  两侧各等各的：主进程 invokeRenderer 超时后只清它自己那份 pending，
+ *  渲染层这边的弹窗还挂着。用户过一会儿点了「开工」→ running.add 执行 →
+ *  这个 Frame 被标记成「有批次在跑」，可实际一个 agent 都没起，
+ *  之后再派活永远被「已经有一批在跑」挡住，除非重启 app。
+ *  （2026-08-19 端到端第一次验证时踩到，那次主进程侧只给了 15 秒。）
+ *
+ *  比主进程短，保证「先由这边判超时」——那样至少 running 不会被脏标记。 */
+const WAIT_MS = 9 * 60 * 1000
+
 export function askForBatch(req: BatchRequest): Promise<BatchDecision> {
   if (banned.has(req.frameId)) {
     throw new Error(
@@ -97,7 +108,24 @@ export function askForBatch(req: BatchRequest): Promise<BatchDecision> {
   }
   if (pending) throw new Error('已经有一张批次清单在等用户确认了，等那个有结果再说')
   return new Promise<BatchDecision>((resolve) => {
-    pending = { req, resolve }
+    const timer = setTimeout(() => {
+      if (pending?.resolve !== resolve) return // 已经被用户处理掉了
+      pending = null
+      emit()
+      // 当成没同意：**不 running.add**，也不计入「连续取消」——
+      // 他只是没在电脑前，不是拒绝了你
+      resolve({ go: false, reason: '清单一直没人处理（等了 9 分钟）' })
+    }, WAIT_MS)
+    // 浏览器里没有 unref，可选链跳过；node --test 下不 unref 的话这条 9 分钟的
+    // 定时器会让测试进程挂到超时才退出（同 main/agentChat/session.ts 的写法）
+    ;(timer as unknown as { unref?: () => void }).unref?.()
+    pending = {
+      req,
+      resolve: (d) => {
+        clearTimeout(timer)
+        resolve(d)
+      }
+    }
     emit()
   })
 }

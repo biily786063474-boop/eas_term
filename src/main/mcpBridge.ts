@@ -63,9 +63,14 @@ function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeRe
   if (!win) return Promise.resolve({ ok: false, error: '窗口未就绪' })
   const id = seq++
   // 大多数工具是纯 store 操作，15 秒绰绰有余。
-  // 但归档计划要**等人在界面上点确认**，几十秒到几分钟都正常——
-  // 用 15 秒卡它等于这个功能永远超时。
-  const ms = tool === 'wiki_archive_plan' ? 10 * 60 * 1000 : 15000
+  // 但**要等人在界面上点确认**的那几个，几十秒到几分钟都正常 ——
+  // 用 15 秒卡它们等于这个功能永远超时。
+  //
+  // 加一个就要往这个清单里补一条。2026-08-19 team_spawn 就是漏了这条：
+  // 端到端第一次验证时清单确实弹出来了，MCP 那侧却在 15 秒后先超时返回，
+  // 用户点什么都没意义了。判据是「这个工具会不会阻塞等人点」，不是它有多重要。
+  const WAITS_FOR_HUMAN = new Set(['wiki_archive_plan', 'team_spawn'])
+  const ms = WAITS_FOR_HUMAN.has(tool) ? 10 * 60 * 1000 : 15000
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       if (pending.delete(id))
@@ -74,7 +79,9 @@ function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeRe
           error:
             tool === 'wiki_archive_plan'
               ? '用户一直没有确认这份归档计划（已等 10 分钟）。先别动文件，等他回来再说。'
-              : '渲染层超时未响应'
+              : tool === 'team_spawn'
+                ? '用户一直没有处理那张派活清单（已等 10 分钟）。当成他没同意，按单会话继续做。'
+                : '渲染层超时未响应'
         })
     }, ms)
     pending.set(id, (r) => {
