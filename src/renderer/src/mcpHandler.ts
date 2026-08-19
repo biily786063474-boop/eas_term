@@ -20,6 +20,28 @@ interface Ctx {
   project?: string
 }
 
+/** 这次 MCP 调用是不是团队派生的 agent 发起的。
+ *
+ *  判据走 pane.owner，跟 killPanePty 那条（store/closePolicy.ts）是同一个标记 ——
+ *  「谁开的」这件事在整个应用里只有一个说法。
+ *
+ *  agentChat 会话没有 ptyId（mcpEnv 只在有 ptyId 时注入 EAS_PTY_ID），
+ *  所以只能靠 cwd 反查：同一个 cwd 下如果有 owner:'team' 的 agent pane，
+ *  就当这次调用来自团队。**会误伤一种情形**：同一个项目里你自己也开着一个 AI 对话，
+ *  而团队正在跑 —— 那时你那个会话调 notify 也会被拦。
+ *  接受这个误伤：代价是少一次提示音，反过来放行的代价是提示区被淹。
+ *  等 MCP 侧能带上 sessionId 再收窄（那要改 mcpEnv 和会话启动参数，是另一件事）。 */
+function isTeamOwnedCaller(ctx: Ctx, s: ReturnType<typeof useStore.getState>): boolean {
+  if (ctx.ptyId) return false // 有 ptyId = 来自终端，那是用户自己的终端
+  const cwd = ctx.project
+  if (!cwd) return false
+  return s.tabs.some((t) =>
+    collectLeaves(t.root).some(
+      (l) => l.pane.kind === 'agent' && l.pane.owner === 'team' && l.pane.cwd === cwd
+    )
+  )
+}
+
 // ptyId → 它所属的画布 Frame / 节点；找不到就回落到「当前项目的顶层 Frame」
 function resolveFrame(ctx: Ctx): { frameId: string; nodeId?: string; projectPath: string } | null {
   const s = useStore.getState()
@@ -395,6 +417,30 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
   if (tool === 'notify') {
     const msg = String(args.message ?? '')
     const loc = resolveFrame(ctx)
+
+    // **团队派生的 agent 不许发系统通知。**（用户 2026-08-19 拍板）
+    //
+    // 那套信号（铃铛 / 项目徽标 / 抽屉呼吸点 / 提示音 / 灵动岛通知卡）是给
+    // **「你自己在跟进的那件事」**用的。团队内部谁干完了一段，属于团队内部的进度，
+    // 只该在团队面板那一行上体现 —— 五个 agent 各干完一段各响一次，那块地方就废了，
+    // 而且每一次都在打断你。
+    //
+    // 判据：这个会话是不是 owner:'team'。**不能靠 prompt 约束**（写在场景包里
+    // 让它「别调 notify」是软的，它会忘），要在这里硬拦。
+    //
+    // 注意 agentChat 会话**天生没有 EAS_PTY_ID**（mcpEnv 只在有 ptyId 时注入），
+    // 所以下面那段 `ctx.ptyId ? … : leafIds.has(l.id)` 对它走的是 else 分支 ——
+    // 一调就把整个 Frame 里所有终端都点亮，比一个还糟。
+    if (isTeamOwnedCaller(ctx, s)) {
+      return {
+        notified: false,
+        message: msg,
+        next:
+          '你是团队里的一个 agent，系统通知留给主 agent 发 —— 五个人各响一次会把用户的提示区淹掉。' +
+          '干完了就把结论写进你的 findings.md，用户在团队面板上看得到你这一行的状态。'
+      }
+    }
+
     // 复用「任务完成」提醒的那个信号（flagAttention）：标题栏铃铛 + Sidebar 项目徽标 +
     // 画布抽屉呼吸点与右上角气泡 + 看板卡片 + 提示音 + 灵动岛通知卡。
     //

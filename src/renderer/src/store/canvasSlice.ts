@@ -735,6 +735,19 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   toggleTeamMode: (id, on) => {
     const target = teamModeTargetId(get().canvas.frames, id)
     if (!target) return
+    // 打开开关 = 「我要用多 agent」= 他现在就需要那块面板 —— 直接开出来，
+    // 别让他再去扩展能力里拖一个。**只在还没有的时候建**（重复开关不会堆一堆）。
+    //
+    // 方案 v2 里原本定的是「开了不自动出面板，否则每个开着的项目都挂一块空面板」——
+    // 那个担心不成立：开关默认是关的，主动打开就是主动要它。
+    //
+    // 关掉开关时**不删面板**：它列的是所有会话（不只团队的），仍然有用；
+    // 而且删掉会丢掉用户对它位置和大小的调整。不想要就自己关那个节点。
+    if (on) {
+      const f = get().canvas.frames.find((fr) => fr.id === target)
+      const has = f?.nodes.some((n) => n.component?.type === 'team')
+      if (f && !has) get().addComponentNode(target, 'team', 16, 16, 420, 300)
+    }
     set((s) => ({
       canvas: {
         ...s.canvas,
