@@ -31,21 +31,43 @@
   user-select: none;
 }
 
-.ac-input {
-  width: min(480px, 100%);
+/* 输入框现在是「一个框，里面上半是文本域、下半是工具条」——照 DeepSeek 那套布局。
+   边框画在**外层容器**上，文本域自己不再有边框，否则会看到框中框。 */
+.ac-input-wrap {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-md);
+  border-radius: 18px;
+  transition: border-color 0.15s ease;
+}
+.ac-input-wrap:focus-within {
+  border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+.ac-input {
+  width: 100%;
+  background: transparent;
+  border: none;
   color: var(--fg);
   font-family: inherit;
   font-size: 13px;
   line-height: 1.6;
-  padding: 10px 12px;
-  resize: vertical;
+  padding: 14px 16px 6px;
+  resize: none;
   outline: none;
 }
-.ac-input:focus {
-  border-color: rgba(var(--accent-rgb), 0.6);
+
+/* 框内底边那条。左边留白（以后放附件按钮），右边是麦克风 + 发送 */
+.ac-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 8px 12px;
+}
+.ac-input-bar-spacer {
+  flex: 1;
 }
 .ac-input::placeholder {
   color: var(--fg-dim);
@@ -163,38 +185,11 @@
 
 /* 输入框 + 右下角发送图标。按钮压在 textarea 上，所以 textarea 右侧留出空间，
    否则长文本会跑到按钮底下。 */
-.ac-input-wrap {
-  position: relative;
-  width: min(480px, 100%);
-  display: flex;
-}
-.ac-input-wrap .ac-input {
-  width: 100%;
-  padding-right: 44px;
-}
-.ac-input-send {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--accent-rgb), 0.5);
-  background: var(--accent-soft);
-  color: var(--fg);
-  cursor: pointer;
-  transition: border-color 0.12s ease, opacity 0.12s ease;
-}
-.ac-input-send:hover:not(:disabled) {
-  border-color: rgba(var(--accent-rgb), 0.85);
-}
-.ac-input-send:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
+/* 【2026-08-19 删】这里原来把发送键 `position:absolute` 钉在输入框右下角，
+   textarea 还为它留了 44px 的 padding-right。改成框内工具条之后那颗按钮进了
+   文档流，旧规则却还在，于是它和麦克风**叠在同一个位置**（实测两者相差 2px），
+   加上 opacity .4，看起来就是「发送按钮不见了」。整块删掉，只留下面文档流那版。
+   —— 又一次「补丁摞补丁」：新样式写在文件末尾，旧的没删，后者反而生效。 */
 .ac-input-send .ac-dot {
   background: var(--accent);
   opacity: 1;
@@ -1305,4 +1300,82 @@
   cursor: pointer;
   color: var(--accent);
   border-bottom-color: rgba(var(--accent-rgb), 0.55);
+}
+
+
+/* ── 输入框上方的上下文行（在哪跑 / 用哪个 CLI）──
+   跟输入框同宽、左对齐 —— 它标的是「这次对话的前提」，和框里那条
+   「这条消息怎么发」分开。照 DeepSeek Harness 的布局（2026-08-19）。 */
+.ac-ctxbar {
+  width: min(560px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 4px;
+}
+.ac-ctxbar-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 12px;
+  max-width: 46%;
+}
+.ac-ctxbar-item.as-btn {
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ac-ctxbar-item.as-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg);
+}
+.ac-ctxbar-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ac-ctxbar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 圆形发送键。截图里它是右下角一个实心圆 —— 暗色下用强调色，
+   禁用时不整个变透明（那样看着像坏了），只降饱和 */
+.ac-input-send {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.9);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.ac-input-send:hover:not(:disabled) {
+  background: rgb(var(--accent-rgb));
+  transform: scale(1.06);
+}
+.ac-input-send:disabled {
+  /* 空框时仍然要看得见 —— 原来用 rgba(255,255,255,.1)，在暗底上几乎消失，
+     真机截图里那颗按钮整个不见了。照参考 UI：空框时是一颗淡的强调色圆。 */
+  background: rgba(var(--accent-rgb), 0.28);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: default;
+  transform: none;
+}
+
+/* 麦克风跟发送同高，否则两颗圆一大一小，右下角看着是歪的。
+   只在对话输入框里改，终端那边的 inline 尺寸不动。 */
+.ac-input-bar .voice-ctl.inline .voice-btn {
+  width: 28px;
+  height: 28px;
 }

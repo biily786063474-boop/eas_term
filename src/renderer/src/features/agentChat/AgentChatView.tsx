@@ -22,7 +22,9 @@ import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
-import { SendIcon } from '../../ui/Icons'
+import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Icons'
+import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
+import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
@@ -104,6 +106,24 @@ export function AgentChatView({
   }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
+
+  // CLI 选择改成下拉（原来是一排芯片）。**三种状态仍然都列出来** —— 没装的、
+  // 仅终端可用的都要能看见，那是用户第一次打开软件时唯一的「有哪些可选」的信息源。
+  const [cliMenuAt, setCliMenuAt] = useState<{ x: number; y: number } | null>(null)
+  const openCliMenu = (e: React.MouseEvent): void => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setCliMenuAt({ x: r.left, y: r.bottom + 4 })
+  }
+  const cliMenuItems: CanvasMenuItem[] = (clis ?? []).map((c) => {
+    const usable = c.available && c.chatSupported
+    const tag = !c.available ? '未安装' : !c.chatSupported ? '仅终端' : null
+    return {
+      label: c.displayName,
+      hint: tag ?? (c.id === selected?.id ? '当前' : undefined),
+      // 不用 disabled：点不动的话就没法给出安装入口了（同芯片那版的理由）
+      onClick: () => (usable ? setSelected(c) : setCliNote(c))
+    }
+  })
   const [text, setText] = useState('')
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
@@ -362,6 +382,29 @@ export function AgentChatView({
         {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
             一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
         <div className="ac-slogan">伟大的产品始于一句“你好”</div>
+
+        {/* 输入框**上方**的一行上下文：在哪个目录跑、用哪个 CLI。
+            照 DeepSeek Harness 那套布局来（用户 2026-08-19 指定）——「这次对话的前提」
+            排在输入框上面，「这条消息怎么发」排在输入框里面，两类东西不再混在一起。 */}
+        <div className="ac-ctxbar">
+          <span className="ac-ctxbar-item" data-tip={cwd}>
+            <FolderIcon size={12} />
+            <span className="ac-ctxbar-name">{cwd.split('/').filter(Boolean).pop() ?? cwd}</span>
+          </span>
+          <button
+            type="button"
+            className="ac-ctxbar-item as-btn"
+            onClick={(e) => openCliMenu(e)}
+            disabled={phase.k === 'starting' || !clis?.length}
+            data-tip="换一个 CLI"
+          >
+            <SparkleIcon size={12} />
+            <span className="ac-ctxbar-name">
+              {selected?.displayName ?? (phase.k === 'detecting' ? '检测中…' : '选一个 CLI')}
+            </span>
+            <ChevronDownIcon size={10} />
+          </button>
+        </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         <div className="ac-input-wrap">
@@ -383,19 +426,26 @@ export function AgentChatView({
             autoFocus
             disabled={phase.k === 'starting'}
           />
-          <button
-            type="button"
-            className="ac-input-send"
-            data-tip={phase.k === 'starting' ? '正在启动会话…' : '发送（Enter）'}
-            onClick={() => void handleSend()}
-            disabled={!text.trim() || phase.k !== 'ready'}
-          >
-            {phase.k === 'starting' ? (
-              <span className="ac-dot" aria-hidden="true" />
-            ) : (
-              <SendIcon size={15} />
-            )}
-          </button>
+          {/* 输入框**内部底边**的一条：这次消息怎么发。照 DeepSeek 那套布局，
+              「前提」（目录 / CLI）在框上方，「这条怎么发」在框里面。
+              麦克风保留（用户 2026-08-19 特别交代），跟发送并排在右下角。 */}
+          <div className="ac-input-bar">
+            <span className="ac-input-bar-spacer" />
+            <VoiceButton ptyId={`agent-empty-${leafId}`} inline onText={(t) => setText((v) => (v ? v + t : t))} />
+            <button
+              type="button"
+              className="ac-input-send"
+              data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
+              onClick={() => void handleSend()}
+              disabled={!text.trim() || phase.k !== 'ready'}
+            >
+              {phase.k === 'starting' ? (
+                <span className="ac-dot" aria-hidden="true" />
+              ) : (
+                <SendIcon size={15} />
+              )}
+            </button>
+          </div>
         </div>
         {/* 有 resumeId = 这个节点之前聊过。说清楚「接得上什么、接不上什么」——
             上下文在 CLI 那边留着（发第一条就续上），但上面的对话记录没有保存，
@@ -403,33 +453,19 @@ export function AgentChatView({
         {savedResumeId && (
           <div className="ac-resume-hint">接着上次的上下文继续（上面的对话记录不保留）</div>
         )}
-        <div className="ac-clis">
-          {phase.k === 'detecting' && <span className="ac-clis-hint">正在检测可用的 CLI…</span>}
-          {phase.k === 'none' && <span className="ac-clis-hint">没有可用的 CLI</span>}
-          {/* **三种状态分开渲染，不是「能用/不能用」两分。**
-              · 装了且支持会话 → 正常可点
-              · 没装          → 置灰 +「未安装」，点一下把安装命令预填进终端
-              · 装了但仅终端可用 → 置灰 +「仅终端」，点一下说明怎么用
-              为什么没装的也要显示：用户第一次打开软件时一个都没装，那时候**最**需要
-              知道有哪些可选。原来这里把没装的过滤掉了，他只看到一句提示。 */}
-          {clis?.map((c) => {
-            const usable = c.available && c.chatSupported
-            const tag = !c.available ? '未安装' : !c.chatSupported ? '仅终端' : null
-            return (
-              <button
-                key={c.id}
-                type="button"
-                className={`ac-cli-chip${c.id === selected?.id ? ' selected' : ''}${usable ? '' : ' off'}`}
-                onClick={() => (usable ? setSelected(c) : setCliNote(c))}
-                disabled={phase.k === 'starting'}
-                data-tip={usable ? undefined : c.scopeNote ?? (c.installCmd ? '点击安装' : undefined)}
-              >
-                {c.displayName}
-                {tag && <span className="ac-cli-tag">{tag}</span>}
-              </button>
-            )
-          })}
-        </div>
+        {(phase.k === 'detecting' || phase.k === 'none') && (
+          <div className="ac-clis-hint">
+            {phase.k === 'detecting' ? '正在检测可用的 CLI…' : '没有可用的 CLI'}
+          </div>
+        )}
+        {cliMenuAt && (
+          <CanvasContextMenu
+            x={cliMenuAt.x}
+            y={cliMenuAt.y}
+            items={cliMenuItems}
+            onClose={() => setCliMenuAt(null)}
+          />
+        )}
         {cliNote && (
           <div className="ac-cli-note">
             {!cliNote.available ? (
