@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { statusOf, locate, byProject, sortRows, urgencyCmp, attentionKindOf } from './machine.ts'
+import { statusOf, locate, byProject, sortRows, urgencyCmp, attentionKindOf, cleanTitle } from './machine.ts'
 import type { RawSignals } from './machine.ts'
 
 const raw = (o: Partial<RawSignals> = {}): RawSignals => ({
@@ -391,4 +391,32 @@ test('AI 对话节点没有名字时兜底成「AI 对话」，不是「终端�
     projects: [{ id: 'p1', name: 'x' }]
   }
   assert.equal(locate('ac-1', ctx as never)?.term, 'AI 对话')
+})
+
+// ── 标题清洗 ──────────────────────────────────────────────────────────
+// 终端标题来自 OSC 转义序列，**程序输出什么它就是什么**。真机截到过一个进程
+// 把一整行源码写进标题，灵动岛就把那行代码铺满了屏幕顶部（2026-08-19）。
+// 链路上原先一处长度限制都没有。
+
+test('超长标题截断，不让它铺满灵动岛', () => {
+  const src = 'yacas = { name: "yacas", startState: function () { return { prev: null } }, token: fn }'
+  const out = cleanTitle(src)
+  assert.ok(out.length <= 40, `实际 ${out.length} 字`)
+  assert.ok(out.endsWith('…'), '截断了要有省略号，不能看着像完整的名字')
+  assert.ok(out.startsWith('yacas = {'), '开头要保留，那是唯一能认出它是什么的部分')
+})
+
+test('控制字符换成空格而不是删掉 —— 删掉会把两个词粘在一起', () => {
+  assert.equal(cleanTitle('build\tdone'), 'build done')
+  assert.equal(cleanTitle('a\nb'), 'a b')
+})
+
+test('spinner 前缀照旧剥掉（原有行为不能退化）', () => {
+  assert.equal(cleanTitle('⠋ 正在编译'), '正在编译')
+  assert.equal(cleanTitle('✳ 开发参数化数字艺术创作软件'), '开发参数化数字艺术创作软件')
+})
+
+test('正常长度的标题一个字不动', () => {
+  assert.equal(cleanTitle('终端'), '终端')
+  assert.equal(cleanTitle('◑ 查找DMG文件位置'), '查找DMG文件位置')
 })

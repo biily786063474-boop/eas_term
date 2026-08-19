@@ -527,12 +527,20 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     const SPIN_IDLE = /^[✳✴✶✻✽✹]/u //  ✳ 一族：CLI 空闲时的品牌字符
     const lead = (t: string): string => t.replace(/^\s+/, '')
     const isSpinnerTitle = (t: string): boolean => SPIN_BUSY.test(lead(t))
-    // 标签名里这些前缀一律剥掉：忙碌的会闪、空闲的 ✳ 也不是名字的一部分
+    // 标签名里这些前缀一律剥掉：忙碌的会闪、空闲的 ✳ 也不是名字的一部分。
+    //
+    // **顺带在源头就把长度和控制字符拦掉。** 标题来自 OSC 转义序列，
+    // 程序输出什么它就是什么 —— 真机截到过一个进程把一整行源码写进标题
+    // （`yacas = { name: "yacas", startState:` …），于是标签栏和灵动岛
+    // 都被那行代码铺满。显示端 cleanTitle 也有一道，两边都拦：
+    // 这一道防的是「脏东西进 store」，那一道防的是「已经在 store 里的脏数据」。
     const stripLead = (t: string): string =>
-      lead(t).replace(
-        /^[⠀-⣿◐-◓◴-◷✳✴✶✻✽✹]+\s*/u,
-        ''
-      )
+      lead(t)
+        .replace(/^[⠀-⣿◐-◓◴-◷✳✴✶✻✽✹]+\s*/u, '')
+        .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80)
     // 兜底：CLI 再换一次字符时不至于又静默失效（这次就是这么栽的）。
     // 判据是「首字符在变、标题其余部分没变」= 那就是个动画。
     // 排除已知空闲字符，否则「◑ → ✳」这一帧收尾也会被误判成还在跑。

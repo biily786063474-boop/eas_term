@@ -112,10 +112,27 @@ export function statusOf(ptyId: string, raw: RawSignals): TermState | null {
   return attentionKindOf(ptyId, raw)
 }
 
-/** 剥掉标题开头的 spinner：agent 干活时会把转圈字符写进标题，
- *  带着它显示会让名字每 100ms 抖一下。 */
+/** 标题在灵动岛/待处理列表里只有一行的位置。超过就截断。
+ *
+ *  **不是排版洁癖**：终端标题来自 OSC 转义序列，程序输出什么它就是什么 ——
+ *  某个进程把一整行源码写进标题，灵动岛就会把那行源码原样铺满屏幕顶部
+ *  （2026-08-19 真机截到：`yacas = { name: "yacas", startState:` …）。
+ *  链路上原先一处长度限制都没有。 */
+const TITLE_MAX = 40
+
+/** 剥掉标题开头的 spinner + 压掉换行 + 截断。
+ *
+ *  · spinner：agent 干活时会把转圈字符写进标题，带着它显示会让名字每 100ms 抖一下
+ *  · 换行/制表：标题里混进它们会把那一行撑开或撕成两截
+ *  · 超长：见 TITLE_MAX */
 export function cleanTitle(s: string): string {
-  return s.replace(/^[⠀-⣿◐-◓◴-◷\s✳✴✶✻✽✹*]+/u, '').trim()
+  const t = s
+    .replace(/^[⠀-⣿◐-◓◴-◷\s✳✴✶✻✽✹*]+/u, '')
+    // 控制字符一律换成空格再压成单空格 —— 直接删掉会把两个词粘在一起
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return t.length > TITLE_MAX ? t.slice(0, TITLE_MAX - 1) + '…' : t
 }
 
 /** 从快照解出某个任务的落点；找不到（面板已关）返回 null。
