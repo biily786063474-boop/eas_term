@@ -42,7 +42,25 @@ export type PaneState =
    *  · resumeId 是 **CLI 自己**的会话 id（Claude 的 session_id / Codex 的 thread id），
    *    两个 adapter 都能拿它续上下文（`--resume` / `exec resume`）。它本来就是为跨重启
    *    设计的，**要落盘** —— 不存的话重开这个节点，模型就完全不记得之前聊过什么。 */
-  | { kind: 'agent'; cwd: string; sessionId?: string; resumeId?: string }
+  | {
+      kind: 'agent'
+      cwd: string
+      sessionId?: string
+      resumeId?: string
+      /**
+       * 这个会话是谁开的。缺省 = 用户自己开的。
+       *
+       * **它只影响一件事：关掉节点要不要连进程一起杀。**
+       *   · 用户自己开的 → 关节点就是「我不要它了」，杀（既有行为，见 killPanePty）
+       *   · 团队派生的   → 关节点只是「这块屏幕我不看了」，进程继续跑，
+       *     由团队面板负责停它
+       *
+       * 不区分的话，你想看一眼某个 agent 然后关掉窗口，就把它干掉了。
+       * 反过来，标了 team 却没有面板能停它，就是制造孤儿 —— 所以这个字段
+       * 必须和团队面板的「停」按钮一起上线，不能单独放开。
+       */
+      owner?: 'team'
+    }
   | { kind: 'dict' }
   | { kind: 'wiki' }
   | { kind: 'web'; url: string | null; title?: string }

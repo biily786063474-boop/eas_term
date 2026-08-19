@@ -1,6 +1,7 @@
 // store 各切片共用的类型与纯工具函数（不含状态）
 
 import type { LayoutNode, PaneState } from '../layout'
+import { shouldStopSessionOnClose } from './closePolicy'
 import { collectLeaves } from '../layout'
 import { forgetPty } from '../features/gantt/collector'
 
@@ -74,6 +75,16 @@ export function killPanePty(pane: PaneState): void {
     // 「节点关闭：杀进程」直接矛盾。
     // sessionId 为空（会话还没建立成功，或者这个节点从没起过会话）时天然没有
     // 东西可停，不是遗漏。
+    //
+    // **例外：团队派生的会话不在这里杀。** 对那些会话，关掉节点的意思是
+    // 「这块屏幕我不看了」，不是「我不要它了」—— 它还在替你干活，由团队面板
+    // 负责停。上面那段论证（不杀就无人看管地烧 token）对它不成立，因为面板
+    // 里每一行都能停，而且卡住/崩溃都有检测。
+    //
+    // 这个例外必须和团队面板的「停」按钮同时存在：只标记不给出口，
+    // 就是制造一个没有任何 UI 能管的后台进程（15 分钟空闲回收对活跃会话无效，
+    // 见 main/agentChat/session.ts 里 killAgentChatSessionsForWebContents 上方那段）。
+    if (!shouldStopSessionOnClose(pane)) return
     window.api.agentChat.stop(pane.sessionId)
   }
 }

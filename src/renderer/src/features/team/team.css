@@ -113,3 +113,31 @@
   max-width: 220px;
   line-height: 1.6;
 }
+
+/* 每行的「停」。平时不显示 —— 一排常驻的 × 太容易误点，而它按下去不可逆。 */
+.tp-stop {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.tp-row:hover .tp-stop {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+.tp-stop:hover {
+  opacity: 1;
+  background: rgba(255, 120, 120, 0.16);
+  color: #ff9b9b;
+}

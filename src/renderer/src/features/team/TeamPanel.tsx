@@ -12,7 +12,8 @@
 import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
 import { healthOf, fmtAge, type AgentHealth } from './agentAge'
-import { ChipIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon } from '../../ui/Icons'
+import { useStore } from '../../store'
 import './team.css'
 
 /** 轮询间隔。**不做实时推送** —— 面板是「瞥一眼」的东西，2 秒足够，
@@ -29,6 +30,25 @@ const LABEL: Record<AgentHealth, string> = {
 export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   const [rows, setRows] = useState<SessionBrief[] | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const requestConfirm = useStore((s) => s.requestConfirm)
+
+  /** 停掉一个会话。**这是终止不是暂停** —— agentChat:stop 在主进程是
+   *  `sessions.delete(id)` + `proc.kill()`，会话记录整个删掉，resumeId 也没了，
+   *  下次发消息会新开一个会话、接不上上下文。跟 15 分钟空闲回收（保留 rec、
+   *  下次发送时接上）完全是两回事，所以要确认，文案也得把后果说清。 */
+  const stop = (r: SessionBrief): void => {
+    const go = (): void => {
+      window.api.agentChat.stop(r.id)
+      // 立刻从本地列表摘掉，不等下一次轮询 —— 2 秒的延迟会让人以为没点动
+      setRows((list) => (list ? list.filter((x) => x.id !== r.id) : list))
+    }
+    if (!r.alive) return go() // 进程已经没了，这只是清理，不用问
+    requestConfirm({
+      message: `停掉这个 ${r.cli} 会话？进程会被终止，**上下文接不回来了** —— 下次在那个对话框里发消息是从头开始。`,
+      confirmLabel: '停掉',
+      onConfirm: go
+    })
+  }
 
   useEffect(() => {
     let alive = true
@@ -94,12 +114,21 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               <span className="tp-spacer" />
               <span className="tp-state">{LABEL[h]}</span>
               <span className="tp-age">{fmtAge(now - r.lastActiveAt)}</span>
+              {/* 平时不显示，hover 这一行才出现 —— 一排常驻的 × 太容易误点，
+                  而这颗按钮按下去是不可逆的 */}
+              <button
+                className="tp-stop"
+                data-tip={r.alive ? '停掉这个会话（上下文接不回来）' : '清掉这条记录'}
+                onClick={() => stop(r)}
+              >
+                <CloseIcon size={10} />
+              </button>
             </div>
           )
         })}
       </div>
       <div className="tp-foot">
-        只读视图 · 派活与叫停在下一期
+        鼠标移到一行上可以停掉它 · 派活在下一期
       </div>
     </div>
   )
