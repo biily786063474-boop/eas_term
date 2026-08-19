@@ -179,13 +179,20 @@
      玻璃淡底（.primary-btn / .sec-primary）        → 本来就是通透材质，
                                                       做成实心塑料就毁了，只给极轻的受光 */
 
-.ab-launch,
-.wk-primary,
-.upd-go,
-.primary-btn,
-.sec-primary {
+.ab-launch:not(:disabled),
+.wk-primary:not(:disabled),
+.upd-go:not(:disabled),
+.primary-btn:not(:disabled),
+.sec-primary:not(:disabled) {
   /* 各按钮原本的 transition 五花八门（filter/opacity/background），这里统一列全 ——
-     只写 box-shadow/transform 会把人家原来的过渡覆盖没 */
+     只写 box-shadow/transform 会把人家原来的过渡覆盖没。
+
+     **`:not(:disabled)` 在这里和下面那组是同一个用途：抢权重。** 单类选择器时
+     「后加载的赢」，而 `base.css` 恰恰是最后注入的（main.tsx 里 `import { App }`
+     排在 `import './styles/base.css'` 之前，App 那棵依赖树含本文件，先求值）——
+     它的 `.primary-btn { transition: background 0.15s }` 会把这整份列表顶掉，
+     于是 hover 的 translateY 与 box-shadow 变成瞬跳。五个按钮里只有 `.primary-btn`
+     坏，因为只有它在 base.css 里另写了一份 transition。2026-08-19 交叉验证确认。 */
   transition:
     background 0.15s,
     filter 0.15s,

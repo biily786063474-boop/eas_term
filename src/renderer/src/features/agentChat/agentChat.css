@@ -879,27 +879,13 @@
   cursor: default;
   border-bottom: 1px dotted var(--glass-border-strong);
 }
-.ac-bar-send {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--accent-rgb), 0.5);
-  background: var(--accent-soft);
-  color: var(--fg);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.12s ease, opacity 0.12s ease;
-}
-.ac-bar-send:hover:not(:disabled) {
-  border-color: rgba(var(--accent-rgb), 0.85);
-}
-.ac-bar-send:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
+/* `.ac-bar-send` 的样式在本文件下方「聊天态的发送键」那一段，只此一处。
+   这里原本还有一份早期定义（整块 12 个属性 + hover + disabled），2026-08-19 删掉了：
+   它的每一条都被下面那份覆盖，**唯独 `:disabled` 的 `opacity: 0.4` 逃了出来** ——
+   下面那份没有重新声明 opacity，于是它叠在 `background: rgba(accent, 0.28)` 上，
+   实际不透明度只剩 0.28×0.4≈0.11，禁用时那颗按钮几乎看不见。
+   跟 `.ac-input-send` 修过的那个 bug（「在暗底上几乎消失、真机截图里整个不见了」）
+   是同一个，只是发生在另一颗按钮上。**别再在别处重开一份同名定义。** */
 
 /* 参数下拉：现在住在控件行里 */
 .ac-param-control {

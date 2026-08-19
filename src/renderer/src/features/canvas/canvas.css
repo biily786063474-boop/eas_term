@@ -2795,7 +2795,10 @@
   border: none;
   border-radius: var(--radius-sm);
   background: none;
-  color: inherit;
+  /* 这里原本是 `color: inherit`（按钮重置顺手带的）。它与上面
+     `.crm-title, .crm-row, .crm-mini` 那条淡化色同为单类选择器、又在后面，
+     于是把 62% 淡化打掉了 —— 三个元素里只有 .crm-row 比设计值更实。
+     不写 color，父级的淡化色自然继承下来，这正是那条规则想要的。 */
   font-size: 11px;
   text-align: left;
   cursor: pointer;
@@ -3112,11 +3115,12 @@
   flex: 1;
   min-width: 0;
 }
-.re-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
+/* `.re-tools` 的样式在下方「工具点选」那一段，只此一处。
+   这里原本有一份早期定义（`flex-wrap: wrap` + `gap: 5px`），2026-08-19 删掉：
+   下面那份改成了 `flex-direction: column` 却没有重新声明 `flex-wrap`，
+   于是 `wrap` 残留在一个纵向容器上 —— 换行方向变成跨轴分列。
+   眼下不炸只是因为这个容器没有确定高度；哪天祖先加了 height/max-height，
+   工具 chip 会毫无征兆地裂成两列。 */
 .re-err {
   margin: 0 18px;
   padding: 8px 10px;
