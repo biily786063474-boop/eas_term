@@ -654,11 +654,10 @@ const SHELL_TRAP =
     const spawned: { role: string; leafId: string }[] = []
     try {
       for (const a of spec.agents) {
-        const before = new Set(
-          useStore.getState().tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
-        )
-        await useStore.getState().openAgentPane({
-          projectId: st.canvas.frames.find((f) => f.id === where.frameId)?.projectId ?? null,
+        // **走 addAgentNode 而不是 openAgentPane** —— 后者只建 leaf，
+        // 不会把节点挂到画布 Frame 上。第一次端到端验证时就踩到：会话确实起来了，
+        // 但画布上一个新节点都没有，用户在画布模式下什么都看不到。
+        const leafId = await useStore.getState().addAgentNode(where.frameId, {
           owner: 'team',
           // 首条消息里带上角色和产出约定 —— 派活不只是给一句任务，
           // 还要告诉它「你是谁、东西写到哪」，否则几个 agent 会各写各的地方
@@ -669,12 +668,8 @@ const SHELL_TRAP =
             `产出写到 \`.plans/${a.role}/\` 下（findings.md 放结论、progress.md 记过程）。` +
             `别去动别人的目录。干完在最后一条消息里用一句话说清你的结论。`
         })
-        const leaf = useStore
-          .getState()
-          .tabs.flatMap((t) => collectLeaves(t.root))
-          .find((l) => !before.has(l.id))
-        if (!leaf) throw new Error(`起 ${a.role} 时没能建出节点`)
-        spawned.push({ role: a.role, leafId: leaf.id })
+        if (!leafId) throw new Error(`起 ${a.role} 时没能建出节点`)
+        spawned.push({ role: a.role, leafId })
       }
     } catch (e) {
       // 起到一半失败：把这一批已经起的收掉，别留半个团队

@@ -261,7 +261,14 @@ export interface CanvasSlice {
   addTerminalNode: (frameId: string, roleId?: string) => Promise<void>
   /** 往 Frame 里放一个 AI 对话节点。与 addTerminalNode 同构，但**不 spawn pty** ——
    *  agent 面板在用户发第一条消息之前不占任何进程。 */
-  addAgentNode: (frameId: string) => Promise<void>
+  /** 建一个 AI 对话节点并**挂到画布 Frame 上**。返回新 leaf 的 id。
+   *  opts 透传给 openAgentPane（owner / initialMessage，派活用）。
+   *  **派活必须走这里**，不要直接调 openAgentPane —— 那样只建出 leaf，
+   *  画布上没有节点，用户在画布模式下什么都看不到（2026-08-19 端到端验证踩到）。 */
+  addAgentNode: (
+    frameId: string,
+    opts?: { owner?: 'team'; initialMessage?: string }
+  ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */
   prefillTerminal: (cmd: string) => Promise<void>

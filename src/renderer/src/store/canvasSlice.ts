@@ -887,20 +887,20 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   //
   // 走 openAgentPane 那条路：它和 openTerminal 逐条对齐，唯一差别是**不 spawn pty**
   // —— agent 面板在用户发第一条消息之前不占任何进程。
-  addAgentNode: async (frameId) => {
+  addAgentNode: async (frameId, opts) => {
     const frame = get().canvas.frames.find((f) => f.id === frameId)
-    if (!frame) return
+    if (!frame) return undefined
     const before = new Set(
       get()
         .tabs.filter((t) => t.projectId === frame.projectId)
         .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
     )
-    await get().openAgentPane({ projectId: frame.projectId })
+    await get().openAgentPane({ projectId: frame.projectId, ...opts })
     const newLeaf = get()
       .tabs.filter((t) => t.projectId === frame.projectId)
       .flatMap((t) => collectLeaves(t.root))
       .find((l) => !before.has(l.id))
-    if (!newLeaf) return
+    if (!newLeaf) return undefined
     set((s) => ({
       canvas: {
         ...s.canvas,
@@ -917,6 +917,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     }))
+    return newLeaf.id
   },
 
   prefillTerminal: async (cmd) => {

@@ -90,6 +90,13 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.resumeId : undefined
   })
+  /** 这个节点是不是团队派生的。决定它进不进状态系统（灵动岛 / 铃铛 / 提示音）。 */
+  const isTeamOwned = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return false
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' && leaf.pane.owner === 'team'
+  })
   /** 派活塞进来的首条任务。**同样从 store 现读** —— 理由同 savedResumeId。 */
   const initialMessage = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -319,12 +326,23 @@ export function AgentChatView({
       // **这两个 action 的参数名叫 ptyId 是历史包袱**，它们要的其实是「任务 id」；
       // 这里传会话 id，machine.locate 已经认得（见那边的说明）。
       const st = useStore.getState()
-      st.setPtyRunning(sid, v.busy)
-      // 一轮跑完就标记「有结果等你看」。**不判有没有聚焦**——跟终端那边一致
-      //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
-      // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
-      // 直接点画布上的节点会走 CanvasStage 那个单选 effect。
-      if (e.k === 'turn.done') st.flagAttention(sid)
+      // **团队派生的 agent 不进状态系统。**（用户 2026-08-19 拍板，真机截图确认）
+      //
+      // 上面那段说明对**用户自己开的**会话完全成立 —— 那是他在跟进的一件事，
+      // 该进灵动岛、该在跑完时叫他一声。但团队里的 agent 不是：五个一起跑，
+      // 灵动岛就变成「任务进行中 5」，全是他没在跟的东西；五个陆续跑完，
+      // 他被叫五次。团队内部的进度只该在团队面板那一行上体现。
+      //
+      // 判据同 killPanePty / notify 那两处：pane.owner === 'team'，
+      // 「谁开的」在整个应用里只有一个说法。
+      if (!isTeamOwned) {
+        st.setPtyRunning(sid, v.busy)
+        // 一轮跑完就标记「有结果等你看」。**不判有没有聚焦**——跟终端那边一致
+        //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
+        // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
+        // 直接点画布上的节点会走 CanvasStage 那个单选 effect。
+        if (e.k === 'turn.done') st.flagAttention(sid)
+      }
     })
     // beforeTurnCount 取当前归约器已有的轮次数——此刻订阅刚接上、一个事件都还没喂进去，
     // 必然是 0，但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个
