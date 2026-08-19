@@ -10,6 +10,18 @@
 //   · 同一个 Frame 里连续取消 2 次 → 这个 Frame 本轮不再接受派活（重启 app 才恢复）
 //
 // 没有「最小间隔」那条：派活本来就低频，而上面第二条已经挡住了连开。
+//
+// ── 「有没有一批在跑」为什么不由本模块维护 ────────────────────────────
+// 第一版在这里存了一个 `running: Set<frameId>`，`askForBatch` 成功时 add、
+// 由 `finishBatch()` 来 delete。结果是 **finishBatch 只在「起到一半失败」的
+// catch 里被调过**，成功路径一次都没调 —— 派一批就永久锁死一个 Frame，
+// 而错误信息里指的补救动作（去面板停会话）跟这个 Set 根本没接线，
+// 停多少次都没用，唯一出路是重启 app。（2026-08-19 真实触发，
+// 由一个 cross-checker agent 抓到。）
+//
+// 教训不是「记得调 finishBatch」，是**别自己维护一份会和现实脱节的状态**。
+// 现在由调用方现算传进来：「这个 Frame 上还有没有 owner:'team' 且进程还活着
+// 的会话」。那份判断读的是真实的会话表，不可能忘记清。
 import type { BatchSpec } from './batchSpec'
 
 const CANCEL_LIMIT = 2
@@ -29,8 +41,6 @@ export type BatchDecision =
   | { go: false; reason?: string }
 
 let pending: { req: BatchRequest; resolve: (d: BatchDecision) => void } | null = null
-/** frameId → 这个 Frame 上正在跑的批次（还没收尾）。**一个 Frame 同时只允许一批** */
-const running = new Set<string>()
 /** frameId → 连续取消次数 */
 const cancelStreak = new Map<string, number>()
 /** 被这一轮拉黑的 Frame */
@@ -55,7 +65,6 @@ export function resolveBatchRequest(d: BatchDecision): void {
   pending = null
   if (d.go) {
     cancelStreak.delete(p.req.frameId)
-    running.add(p.req.frameId)
   } else {
     const n = (cancelStreak.get(p.req.frameId) ?? 0) + 1
     cancelStreak.set(p.req.frameId, n)
@@ -64,16 +73,6 @@ export function resolveBatchRequest(d: BatchDecision): void {
   }
   emit()
   p.resolve(d)
-}
-
-/** 这一批跑完了 / 被全部叫停 —— 放开这个 Frame，允许开下一批 */
-export function finishBatch(frameId: string): void {
-  running.delete(frameId)
-  emit()
-}
-
-export function isBatchRunning(frameId: string): boolean {
-  return running.has(frameId)
 }
 
 /**
@@ -93,14 +92,18 @@ export function isBatchRunning(frameId: string): boolean {
  *  比主进程短，保证「先由这边判超时」——那样至少 running 不会被脏标记。 */
 const WAIT_MS = 9 * 60 * 1000
 
-export function askForBatch(req: BatchRequest): Promise<BatchDecision> {
+/**
+ * @param alreadyRunning 这个 Frame 上是不是已经有一批在跑。**由调用方现算传入** ——
+ *   见下面 askForBatch 文档里那段说明。
+ */
+export function askForBatch(req: BatchRequest, alreadyRunning: boolean): Promise<BatchDecision> {
   if (banned.has(req.frameId)) {
     throw new Error(
       `这个项目的派活请求已被用户连续拒绝 ${CANCEL_LIMIT} 次，本轮不再弹。` +
         '按单会话继续做这件事，不要再试组队。'
     )
   }
-  if (running.has(req.frameId)) {
+  if (alreadyRunning) {
     throw new Error(
       '这个项目已经有一批 agent 在跑了。等它收尾，或者让用户在团队面板里停掉 —— ' +
         '同一个项目不允许两批并行（那样谁也说不清一共烧了多少）。'
@@ -108,24 +111,33 @@ export function askForBatch(req: BatchRequest): Promise<BatchDecision> {
   }
   if (pending) throw new Error('已经有一张批次清单在等用户确认了，等那个有结果再说')
   return new Promise<BatchDecision>((resolve) => {
-    const timer = setTimeout(() => {
-      if (pending?.resolve !== resolve) return // 已经被用户处理掉了
-      pending = null
-      emit()
-      // 当成没同意：**不 running.add**，也不计入「连续取消」——
-      // 他只是没在电脑前，不是拒绝了你
-      resolve({ go: false, reason: '清单一直没人处理（等了 9 分钟）' })
-    }, WAIT_MS)
-    // 浏览器里没有 unref，可选链跳过；node --test 下不 unref 的话这条 9 分钟的
-    // 定时器会让测试进程挂到超时才退出（同 main/agentChat/session.ts 的写法）
-    ;(timer as unknown as { unref?: () => void }).unref?.()
-    pending = {
+    // 守卫必须比**一个稳定的身份**，不能比 resolve。
+    //
+    // 第一版写的是 `if (pending?.resolve !== resolve) return` —— 那是死代码：
+    // pending.resolve 存的是下面那个**包装闭包**，而 resolve 是 Promise 的原始
+    // resolve，两者永远不是同一个引用，于是超时回调每次都直接 return，
+    // 不清 pending、不 emit、不 resolve。整条 9 分钟超时一次都不会生效。
+    // （2026-08-19 由一个 cross-checker agent 用 mock.timers 推过 9 分钟实测抓到，
+    //   而当时 7 条单测全在状态机层、没有一条碰超时，所以它带着「全过」进了仓库。）
+    let timer: ReturnType<typeof setTimeout>
+    const mine: NonNullable<typeof pending> = {
       req,
       resolve: (d) => {
         clearTimeout(timer)
         resolve(d)
       }
     }
+    timer = setTimeout(() => {
+      if (pending !== mine) return // 已经被用户处理掉了，或者换了一张新清单
+      pending = null
+      emit()
+      // 当成没同意，但**不计入「连续取消」** —— 他只是没在电脑前，不是拒绝了你
+      resolve({ go: false, reason: '清单一直没人处理（等了 9 分钟）' })
+    }, WAIT_MS)
+    // 浏览器里没有 unref，可选链跳过；node --test 下不 unref 的话这条 9 分钟的
+    // 定时器会让测试进程挂到超时才退出（同 main/agentChat/session.ts 的写法）
+    ;(timer as unknown as { unref?: () => void }).unref?.()
+    pending = mine
     emit()
   })
 }
@@ -133,7 +145,6 @@ export function askForBatch(req: BatchRequest): Promise<BatchDecision> {
 /** 仅供测试重置模块级状态 */
 export function __resetBatchState(): void {
   pending = null
-  running.clear()
   cancelStreak.clear()
   banned.clear()
 }

@@ -5,7 +5,7 @@
 import { useStore } from './store'
 import { teamModeOf } from './features/canvas/teamMode'
 import { checkBatch } from './features/team/batchSpec'
-import { askForBatch, finishBatch } from './features/team/batchRequest'
+import { askForBatch } from './features/team/batchRequest'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
@@ -641,8 +641,33 @@ const SHELL_TRAP =
     const spec = checked.spec
 
     // ③ 弹清单等用户点头。抛异常 = 根本没弹（限流/已有一批在跑），
-    //    错误信息里写清该怎么办，AI 才不会干等或反复重试
-    const decision = await askForBatch({ spec, frameId: where.frameId, cwd: where.projectPath })
+    //    错误信息里写清该怎么办，AI 才不会干等或反复重试。
+    //
+    // 「已经有一批在跑」**现算**：读真实的会话表，看这个项目里还有没有
+    // owner:'team' 且进程还活着的 agent。不自己存一份状态 —— 存过一版，
+    // 结果 finishBatch 只在失败路径被调，派一批就永久锁死一个 Frame
+    // （batchRequest.ts 文件头有完整的教训）。
+    const live = new Set(
+      (await window.api.agentChat.listSessions().catch(() => []))
+        .filter((x) => x.alive)
+        .map((x) => x.id)
+    )
+    const alreadyRunning = useStore
+      .getState()
+      .tabs.some((t) =>
+        collectLeaves(t.root).some(
+          (l) =>
+            l.pane.kind === 'agent' &&
+            l.pane.owner === 'team' &&
+            l.pane.cwd === where.projectPath &&
+            !!l.pane.sessionId &&
+            live.has(l.pane.sessionId)
+        )
+      )
+    const decision = await askForBatch(
+      { spec, frameId: where.frameId, cwd: where.projectPath },
+      alreadyRunning
+    )
     if (!decision.go) {
       return {
         spawned: [],
@@ -678,7 +703,7 @@ const SHELL_TRAP =
         const t = useStore.getState().tabs.find((tab) => collectLeaves(tab.root).some((l) => l.id === sp.leafId))
         if (t) await useStore.getState().closeLeafSafely(t.id, sp.leafId)
       }
-      finishBatch(where.frameId)
+      // 不用再「解锁」——「有没有一批在跑」是现算的，节点收掉了它自然就为 false
       throw new Error(`起到第 ${spawned.length + 1} 个时失败了，已经把这一批全收掉：${(e as Error).message}`)
     }
 
