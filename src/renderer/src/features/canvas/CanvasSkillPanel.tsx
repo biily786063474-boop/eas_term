@@ -380,6 +380,9 @@ export function CanvasSkillPanel(): JSX.Element {
                               // 第三个参数是「没拖动，只是点了一下」的回调（5px 阈值内）
                               startFileDrag(fp, e, () => setLightbox(fp))
                             }}
+                            // 单击那条通常已经把灯箱开起来了，第二击会落在灯箱外的遮罩上，
+                            // 于是这个 handler 多数时候走不到。留着是为了兜住「灯箱还没挂载完
+                            // 第二击就到了」的时序 —— 两条路结果一致，都是开灯箱。
                             onDoubleClick={(e) => {
                               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                               const fp = item?.dataset.path

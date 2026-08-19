@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { WikiStatus, Backlink, WikiHit, WikiCommit } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
+import { FileLightbox } from './FileLightbox'
 import { isImagePath, isVideoPath } from './media'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import {
@@ -46,6 +47,10 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [st, setSt] = useState<WikiStatus | null>(null)
   const [busy, setBusy] = useState('')
   const [dropping, setDropping] = useState(false)
+  // 点开一篇笔记先进灯箱看（看完即走）。**灯箱里可以改** —— fsGuard 认知识库根，
+  // 而且人就在原地看这个文件。拖到画布上那份仍是只读（内容离开知识库目录后
+  // 不该被顺手改掉，既有决定不变），两件事别混。
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const [sel, setSel] = useState<string | null>(null)
   // 知识库文件 → 画布：自由 + **只读**节点。这条路的实现在 useOpenInCanvas 里，
   // 和 skill 面板共用一份（两边只差「落地的节点可不可写」这一个参数）。
@@ -548,8 +553,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                         onClick={() => {
                           const abs = st.path + '/' + h.file
                           void selectNote(abs)
-                          const { wx, wy } = viewportCenter()
-                          openInCanvas(abs, wx - 90, wy - 15)
+                          setLightbox(abs)
                         }}
                       >
                         <b>{h.title}</b>
@@ -574,12 +578,11 @@ export function CanvasWikiDrawer(): JSX.Element | null {
                   startFileDrag(p, e, () => void selectNote(p)) // 没挪动 = 普通点击，选中看反链
                 }}
                 onDoubleClick={(e) => {
-                  // 双击笔记 → 开到画布上看（自由 + 只读节点，落在当前视口中心）
+                  // 双击笔记 → 灯箱。落画布是拖拽和灯箱里那个按钮的事，见 FileLightbox 文件头。
                   const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                   const p = item?.dataset.path
                   if (!p || item?.dataset.dir) return
-                  const { wx, wy } = viewportCenter()
-                  openInCanvas(p, wx - 90, wy - 15)
+                  setLightbox(p)
                 }}
               >
                 <FileTree key={`${st.path}-${treeKey}`} rootPath={st.path!} refreshKey={treeKey} />
@@ -612,6 +615,16 @@ export function CanvasWikiDrawer(): JSX.Element | null {
     </aside>
       </div>
     {htmlChoice}
+    {!!lightbox && (
+      <FileLightbox
+        filePath={lightbox}
+        onClose={() => setLightbox(null)}
+        onSendToCanvas={(fp) => {
+          const { wx, wy } = viewportCenter()
+          openInCanvas(fp, wx - 90, wy - 15)
+        }}
+      />
+    )}
     </>
   )
 }
