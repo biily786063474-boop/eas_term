@@ -674,8 +674,12 @@ const SHELL_TRAP =
         role: x.role ?? '(没记角色名)',
         alive: x.alive,
         done: settled(x),
+        // 「多久没动静」——对已经收尾的会话，这是「多久之前完成的」，仍然有用
         idleSeconds: Math.round(idleMs / 1000),
-        ranSeconds: Math.round((now - x.startedAt) / 1000),
+        // 「跑了多久」。**停下来之后是定值**：拿 now 减的话，一个早就完成的 agent
+        // 会显示一个一直在涨的数，读起来像它还在干活（面板那侧同一个坑，
+        // 判据见 features/team/agentAge.ts 的 ageMsOf）
+        ranSeconds: Math.round(((settled(x) ? x.lastActiveAt : now) - x.startedAt) / 1000),
         // 判据跟面板同源（features/team/agentAge.ts 的 STALL_MS），
         // 但这里给的是**给 agent 读的话**，不是给人看的标签
         hint: !x.alive

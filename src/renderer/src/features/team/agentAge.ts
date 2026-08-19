@@ -63,16 +63,32 @@ export function isSettled(alive: boolean, busy: boolean | undefined): boolean {
   return busy === false
 }
 
-/** 时长那一列该从哪一刻算起。**两种语义，按状态切。**
+/** 时长那一列显示多长。**三种语义，按状态切 —— 而且停下来的那两种是定值。**
  *
- *  在跑 → 从 startedAt 算，答的是「跑了多久」。
- *  其余 → 从 lastActiveAt 算，答的是「多久没动静」。
+ *  | 状态 | 显示 | 会不会涨 |
+ *  |---|---|---|
+ *  | 在跑 | `now - startedAt`，跑了多久 | 涨（它确实在跑） |
+ *  | 可能卡住 | `now - lastActiveAt`，静默多久 | 涨（越久越该去看） |
+ *  | 这轮完了 / 已停 | `lastActiveAt - startedAt`，这一轮总共跑了多久 | **不涨** |
  *
- *  给在跑的行显示「多久没动」是没有信息量的：lastActiveAt 每收到一块 stdout 就续期，
- *  那个数字恒趋近 0，显示成「在跑 0s」还会被读成「跑了 0 秒」（2026-08-19 用户
- *  截图指出）。反过来，卡住/已停的行，静默多久正是要判断的东西。 */
-export function ageBasis(h: AgentHealth, startedAt: number, lastActiveAt: number): number {
-  return h === 'running' ? startedAt : lastActiveAt
+ *  两处教训都是实测换来的：
+ *
+ *  ① 给在跑的行显示「多久没动」没有信息量 —— lastActiveAt 每收到一块 stdout 就续期，
+ *     那个数字恒趋近 0，显示成「在跑 0s」还会被读成「跑了 0 秒」。
+ *  ② **停下来的行不能显示一个还在涨的数。** 一个已经完成的 agent，
+ *     「多久没动静」每 2 秒涨一次，看起来像它在越来越卡；而那段时间是我们没去管它，
+ *     不是它出了什么事。对停下来的会话，有意义的是它这一轮花了多久 —— 那是定值。
+ */
+export function ageMsOf(
+  h: AgentHealth,
+  startedAt: number,
+  lastActiveAt: number,
+  now: number
+): number {
+  if (h === 'running') return now - startedAt
+  if (h === 'stalled') return now - lastActiveAt
+  // idle / dead：这一轮已经收尾了，lastActiveAt 就是它最后一次出声的时刻
+  return lastActiveAt - startedAt
 }
 
 /** 「4m12s」这种。面板上一列，越短越好读 */

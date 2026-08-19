@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { healthOf, fmtAge, labelOf, isSettled, ageBasis, STALL_MS } from './agentAge.ts'
+import { healthOf, fmtAge, labelOf, isSettled, ageMsOf, STALL_MS } from './agentAge.ts'
 
 const NOW = 1_700_000_000_000
 
@@ -70,14 +70,24 @@ test('除 idle 外，是不是团队成员不影响标签', () => {
 
 // ── 时长那一列该从哪一刻算起 ────────────────────────────────────────
 
-test('在跑 → 从 startedAt 算（答「跑了多久」）', () => {
+test('在跑 → 跑了多久（用 startedAt，不是 lastActiveAt）', () => {
   // 用 lastActiveAt 的话这里恒趋近 0：每块 stdout 都会续期，
   // 面板会显示「在跑 0s」，被读成「跑了 0 秒」
-  assert.equal(ageBasis('running', 1000, 9000), 1000)
+  assert.equal(ageMsOf('running', 1000, 9000, 10_000), 9000)
 })
 
-test('不在跑 → 从 lastActiveAt 算（答「多久没动静」）', () => {
-  for (const h of ['stalled', 'idle', 'dead'] as const) {
-    assert.equal(ageBasis(h, 1000, 9000), 9000, `${h} 该看静默时长`)
+test('可能卡住 → 静默多久（这个数该涨，越久越该去看）', () => {
+  assert.equal(ageMsOf('stalled', 1000, 9000, 10_000), 1000)
+  assert.equal(ageMsOf('stalled', 1000, 9000, 20_000), 11_000, '卡着就该继续涨')
+})
+
+test('停下来的行是定值 —— now 走了也不变', () => {
+  // 这条是用户实测指出来的：一个已经完成的 agent，时间还在一秒秒涨，
+  // 看起来像它越来越卡；而那段时间是我们没去管它，不是它出了事
+  for (const h of ['idle', 'dead'] as const) {
+    const early = ageMsOf(h, 1000, 9000, 10_000)
+    const later = ageMsOf(h, 1000, 9000, 999_999)
+    assert.equal(early, 8000, `${h} 应该报「这一轮跑了 8 秒」`)
+    assert.equal(later, early, `${h} 停下来之后这个数不该再变`)
   }
 })

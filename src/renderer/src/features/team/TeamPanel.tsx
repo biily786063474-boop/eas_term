@@ -11,7 +11,7 @@
 //   · 派活（team_spawn）要在这里显示批次与用量
 import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
-import { healthOf, fmtAge, labelOf, ageBasis } from './agentAge'
+import { healthOf, fmtAge, labelOf, ageMsOf } from './agentAge'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './team.css'
@@ -127,9 +127,13 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               </span>
               <span className="tp-spacer" />
               <span className="tp-state">{labelOf(h, r.owner === 'team')}</span>
-              {/* 两种语义按状态切，判据在 agentAge.ts 的 ageBasis（有单测盯着） */}
-              <span className="tp-age" title={h === 'running' ? '已经跑了多久' : '多久没有动静了'}>
-                {fmtAge(now - ageBasis(h, r.startedAt, r.lastActiveAt))}
+              {/* 三种语义按状态切，判据在 agentAge.ts 的 ageMsOf（有单测盯着）。
+                  停下来的行是定值 —— 它不该显示一个还在涨的数字。 */}
+              <span
+                className="tp-age"
+                title={h === 'running' ? '已经跑了多久' : h === 'stalled' ? '多久没有动静了' : '这一轮跑了多久'}
+              >
+                {fmtAge(ageMsOf(h, r.startedAt, r.lastActiveAt, now))}
               </span>
               {/* 平时不显示，hover 这一行才出现 —— 一排常驻的 × 太容易误点，
                   而这颗按钮按下去是不可逆的 */}
