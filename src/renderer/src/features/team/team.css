@@ -271,3 +271,29 @@
   opacity: 0.7;
   line-height: 1.6;
 }
+
+/* 全批叫停。放在底部一行的右侧 —— 它是「收手」的入口，不该跟每行那个
+   小 × 混在一起，也不该显眼到让人误以为是主操作。 */
+.tp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tp-stopall {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 120, 120, 0.3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #ff9b9b;
+  font-family: inherit;
+  font-size: 10.5px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.tp-stopall:hover {
+  opacity: 1;
+  background: rgba(255, 120, 120, 0.12);
+}

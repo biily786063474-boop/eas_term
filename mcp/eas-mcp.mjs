@@ -291,6 +291,17 @@ const TOOLS = [
     }
   },
   {
+    name: 'team_status',
+    description:
+      '看你派出去的那批 agent 现在什么状况：谁在跑、谁停了、谁多久没动静了。\n' +
+      '**派完活不要反复轮询它** —— 它们写完会把结论落在 .plans/<role>/findings.md，' +
+      '你该做的是先去做别的，或者告诉用户「派下去了」。' +
+      '真正要用它的时候是：用户问起进度、或者你准备收活了想确认都干完没有。\n' +
+      '注意它只报**进程层面**的状态（活着 / 多久没动），不报「任务完成了没」——' +
+      '那个只有读 findings.md 才知道。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'canvas_new_terminal',
     description:
       '在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。',

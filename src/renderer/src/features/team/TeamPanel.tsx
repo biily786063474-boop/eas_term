@@ -109,6 +109,9 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     return ma - mb || a.id.localeCompare(b.id)
   })
 
+  // 团队派生的那些 —— 「全部叫停」只停它们，不碰你自己开的会话
+  const teamRows = sorted.filter((r) => identity[r.id]?.team && r.alive)
+
   return (
     <div className="tp">
       <div className="tp-head">
@@ -151,7 +154,31 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
         })}
       </div>
       <div className="tp-foot">
-        鼠标移到一行上可以停掉它 · 派活在下一期
+        {teamRows.length > 0 ? (
+          <>
+            <span>鼠标移到一行上可以停掉它</span>
+            {/* **任何时候都必须一键能停** —— 方案里定的底线。
+                这是这套系统能不能让人放心用的分界：派下去之后你要有一个
+                随时能收手的地方，而不是只能一个个点。 */}
+            <button
+              className="tp-stopall"
+              onClick={() =>
+                requestConfirm({
+                  message: `停掉这一批全部 ${teamRows.length} 个 agent？进程会被终止，它们已经写进 .plans/ 的东西还在。`,
+                  confirmLabel: '全部停掉',
+                  onConfirm: () => {
+                    for (const r of teamRows) window.api.agentChat.stop(r.id)
+                    setRows((list) => (list ? list.filter((x) => !teamRows.some((t) => t.id === x.id)) : list))
+                  }
+                })
+              }
+            >
+              全部叫停（{teamRows.length}）
+            </button>
+          </>
+        ) : (
+          <span>鼠标移到一行上可以停掉它</span>
+        )}
       </div>
     </div>
   )

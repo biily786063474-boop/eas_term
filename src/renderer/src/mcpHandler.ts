@@ -617,6 +617,60 @@ const SHELL_TRAP =
   }
 
   // ── AI 索要密钥：弹 GUI 让用户自己填，值不经 AI ──
+  if (tool === 'team_status') {
+    const where = resolveFrame(ctx)
+    const sessions = await window.api.agentChat.listSessions().catch(() => [])
+    const live = new Map(sessions.map((x) => [x.id, x]))
+    const now = Date.now()
+
+    const agents: {
+      role: string
+      alive: boolean
+      idleSeconds: number
+      hint: string
+    }[] = []
+    for (const t of useStore.getState().tabs) {
+      for (const l of collectLeaves(t.root)) {
+        const pane = l.pane
+        if (pane.kind !== 'agent' || pane.owner !== 'team' || !pane.sessionId) continue
+        if (where && pane.cwd !== where.projectPath) continue
+        const sess = live.get(pane.sessionId)
+        const idleMs = sess ? now - sess.lastActiveAt : 0
+        const idleSeconds = Math.round(idleMs / 1000)
+        agents.push({
+          role: pane.role ?? '(没记角色名)',
+          alive: !!sess?.alive,
+          idleSeconds,
+          // 判据跟面板同源（features/team/agentAge.ts 的 STALL_MS = 4 分钟），
+          // 但这里给的是**给 agent 读的话**，不是给人看的标签
+          hint: !sess
+            ? '会话已经不在了 —— 可能被用户停掉，或者 app 重启过'
+            : !sess.alive
+              ? '进程已退出。它写下的东西还在 .plans/ 里'
+              : idleMs > 4 * 60 * 1000
+                ? '超过 4 分钟没动静了，可能卡住或在等审批 —— 别替它做，告诉用户去面板上看一眼'
+                : '在跑'
+        })
+      }
+    }
+
+    if (agents.length === 0) {
+      return {
+        agents: [],
+        next: '这个项目里没有团队派生的 agent。要么还没派活，要么都已经被停掉了。'
+      }
+    }
+    const running = agents.filter((a) => a.alive).length
+    return {
+      agents,
+      next:
+        running > 0
+          ? `${running} 个还在跑。**别轮询这个工具**，去做别的；它们写完会落在 .plans/<role>/findings.md。`
+          : '都不在跑了。可以读各自的 .plans/<role>/findings.md 收活了 —— ' +
+            '**结论不一致时要显式呈现分歧**，不要替用户抹平。'
+    }
+  }
+
   if (tool === 'team_spawn') {
     const where = resolveFrame(ctx)
     if (!where) throw new Error('找不到你所在的 Frame，没法派活')
