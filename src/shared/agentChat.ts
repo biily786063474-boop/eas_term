@@ -289,3 +289,19 @@ export const ASK_FIRST_PROMPT = [
   '只读的操作（查看文件、搜索、列目录）不用问，直接做。',
   '我回复「可以」「继续」或给出具体指示后，再执行。'
 ].join('\n')
+
+/** 一个会话在「团队面板」上的一行。**只读快照**，不含任何能改状态的东西。
+ *
+ *  为什么不复用 SessionRecord：那是主进程的内部记录，带着 pending / skipApprovalHook
+ *  这些只有 session.ts 关心的字段；面板要的是「谁、在哪、活着吗、多久没动了」。
+ *  两者一起演进会让主进程的内部结构泄漏到渲染层。 */
+export interface SessionBrief {
+  id: string
+  cli: string
+  cwd: string
+  /** 进程还在不在。false = 被空闲回收或已退出，**但会话记录还在**（下次发消息能续上） */
+  alive: boolean
+  /** 最后一次有动静的时刻。面板拿它算「多久没动了」——卡住检测的唯一信号来源 */
+  lastActiveAt: number
+  model?: string
+}

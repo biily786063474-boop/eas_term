@@ -6,7 +6,8 @@
 import type { JSX } from 'react'
 import { HistoryView } from '../../git/HistoryView'
 import { DesignNode, type SavedBlob } from '../../design/DesignNode'
-import { GitBranchIcon, DesignIcon } from '../../../ui/Icons'
+import { GitBranchIcon, DesignIcon, ChipIcon } from '../../../ui/Icons'
+import { TeamPanel } from '../../team/TeamPanel'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
 export interface CanvasComponentCtx {
@@ -71,7 +72,19 @@ const designComponent: CanvasComponentDef = {
   )
 }
 
-export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent, designComponent]
+/** 团队面板：这个页面名下所有 AI 会话的统一状态视图。
+ *  第一期只读 —— 多 agent 的第一步不是「能派活」，是「看得见」。 */
+const teamComponent: CanvasComponentDef = {
+  id: 'team',
+  name: '团队面板',
+  Icon: ChipIcon,
+  description: '所有 AI 会话的状态一览',
+  defaultSize: { w: 420, h: 300 },
+  needsProject: true,
+  render: (ctx) => <TeamPanel cwd={ctx.cwd} />
+}
+
+export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent, designComponent, teamComponent]
 
 export const getCanvasComponent = (id: string): CanvasComponentDef | undefined =>
   CANVAS_COMPONENTS.find((c) => c.id === id)

@@ -58,7 +58,8 @@ import type {
   AgentChatSendResult,
   AgentApprovalHookStatus,
   AgentChatEventEnvelope,
-  CliInfo
+  CliInfo,
+  SessionBrief
 } from '../shared/agentChat.ts'
 
 // PTY 创建后到 xterm 挂载订阅前，shell 的首批输出（提示符等）会经 IPC 到达，
@@ -815,6 +816,8 @@ const api = {
      *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，
      *  listAdapters()/getAdapter() 此前只活在主进程，渲染层够不着）。 */
     listClis: (): Promise<CliInfo[]> => ipcRenderer.invoke('agentChat:listClis'),
+    /** 当前这个页面名下所有会话的只读快照（团队面板用）。多窗口时不会串台。 */
+    listSessions: (): Promise<SessionBrief[]> => ipcRenderer.invoke('agentChat:listSessions'),
     // start 只是一次普通 invoke——**这里不需要、也不该再有"开始缓冲"这一步**。
     // 缓冲由模块加载期就挂好的常驻监听器负责（见上面 AGENT_CHAT_EVENT_CHANNEL 那段）：
     // 主进程在 handler 返回前同步推的那些事件，到达时监听器早就在了，会按 sessionId

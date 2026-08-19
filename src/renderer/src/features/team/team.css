@@ -1,0 +1,115 @@
+/* 团队面板（画布组件）。暗色玻璃，跟画布上其他节点同一套语言。 */
+.tp {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: 12px;
+}
+.tp-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--fg-dim);
+}
+.tp-spacer {
+  flex: 1;
+}
+.tp-dim {
+  color: var(--fg-dim);
+  opacity: 0.7;
+}
+.tp-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0;
+}
+.tp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--fg);
+}
+.tp-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+/* 状态点：颜色是这一行唯一的语义信号，别再用文字颜色重复表达 */
+.tp-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fg-dim);
+}
+.h-running .tp-dot {
+  background: #6ee7b7;
+}
+.h-stalled .tp-dot {
+  background: #fcd34d;
+}
+.h-idle .tp-dot {
+  background: #7dd3fc;
+}
+.h-dead .tp-dot {
+  background: #525252;
+}
+.tp-cli {
+  flex: none;
+  font-weight: 600;
+}
+.tp-cwd {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+.tp-state {
+  flex: none;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.h-stalled .tp-state {
+  color: #fcd34d;
+}
+.tp-age {
+  flex: none;
+  min-width: 52px;
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.8;
+}
+.tp-foot {
+  flex: none;
+  padding: 6px 12px;
+  border-top: 1px solid var(--glass-border);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.6;
+}
+.tp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.tp-empty-hint {
+  font-size: 11px;
+  opacity: 0.7;
+  max-width: 220px;
+  line-height: 1.6;
+}

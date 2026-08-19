@@ -50,7 +50,8 @@ import type {
   AgentChatSendResult,
   AgentApprovalHookStatus,
   AgentChatEventEnvelope,
-  CliInfo
+  CliInfo,
+  SessionBrief
 } from '../../shared/agentChat.ts'
 
 interface Live {
@@ -483,6 +484,21 @@ function reapIdleSessions(): void {
   }
 }
 
+/** 当前所有会话的只读快照，给团队面板用。
+ *
+ *  **按 webContents 过滤**：只报这个页面自己创建的会话，跟事件推送
+ *  （`live.wc.send`）保持同一个可见范围。不过滤的话，多窗口时 A 窗口的面板
+ *  会列出 B 窗口的 agent，而它既点不进去也停不掉。 */
+export function listSessionBriefs(wcId: number): SessionBrief[] {
+  const out: SessionBrief[] = []
+  for (const live of sessions.values()) {
+    if (live.wcId !== wcId) continue
+    const r = live.rec
+    out.push({ id: r.id, cli: r.cli, cwd: r.cwd, alive: r.alive, lastActiveAt: r.lastActiveAt, model: r.model })
+  }
+  return out
+}
+
 /** app 退出时收掉全部会话进程，避免留下孤儿（和 pty.ts 的 killAllPtys 同一个道理）。
  *  hard=true 用 SIGKILL，配合 index.ts 里"先软杀、300ms 后硬杀"的两拍节奏。 */
 export function killAllAgentChatSessions(hard = false): void {
@@ -554,6 +570,12 @@ export function registerAgentChatHandlers(): void {
   // getAdapter() 此前只活在主进程）。探测（adapter.detect()）是这一层唯一的 IO，纯合成
   // 逻辑在 buildCliList——可测的就是那一层，这里只做薄薄一层调用。单个 adapter 的探测
   // 失败不该拖垮整个列表，所以逐个 catch 成 false，而不是让 Promise.all 整体 reject。
+  // 团队面板的数据源。**只读** —— 拿不到任何能改状态的东西，
+  // 面板要停某个会话仍然走既有的 agentChat:stop。
+  ipcMain.handle('agentChat:listSessions', (e): SessionBrief[] =>
+    listSessionBriefs(e.sender.id)
+  )
+
   ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
     const adapters = listAdapters()
     // 仅终端可用的 CLI 也要探测 —— 它同样要显示「装了没有」
