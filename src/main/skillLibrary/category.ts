@@ -20,8 +20,10 @@
 
 import type { SkillCategoryGroup, SkillInfo } from '../../shared/types'
 
-export { UNCATEGORIZED } from '../../shared/types'
-import { UNCATEGORIZED } from '../../shared/types'
+// **带扩展名**：这个文件要能被 `node --test` 直接跑（值 import 少了 .ts 解析不到，
+// 见 tidyOrder.ts 立的规矩）。类型 import 无所谓，值 import 必须带。
+export { UNCATEGORIZED } from '../../shared/types.ts'
+import { UNCATEGORIZED } from '../../shared/types.ts'
 
 /** 分类名的长度上限（design 文档 §四：「分类名是字符串、非空、有长度上限」）。
  *  写入端（第二半 MCP 工具）校验用同一个常量，这里额外拿它做读取时的防御性过滤——
