@@ -41,6 +41,8 @@ export interface TabsSlice {
     cwd?: string
     /** 'team' = 团队派生：关节点只收视图、不杀进程（见 store/closePolicy.ts） */
     owner?: 'team'
+    /** 团队角色名，面板按它列「谁在干什么」 */
+    role?: string
     /** 挂载后自动发出去的首条消息（派活） */
     initialMessage?: string
   }) => Promise<void>
@@ -187,7 +189,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const leaf: LeafNode = {
       type: 'leaf',
       id: uid('leaf'),
-      pane: { kind: 'agent', cwd, owner: opts?.owner, initialMessage: opts?.initialMessage }
+      pane: { kind: 'agent', cwd, owner: opts?.owner, role: opts?.role, initialMessage: opts?.initialMessage }
     }
     const tab: TermTab = {
       id: uid('tab'),

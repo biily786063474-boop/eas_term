@@ -9,8 +9,9 @@
 //     变成没有任何 UI 能管的后台进程（15 分钟空闲回收对活跃会话无效，
 //     见 main/agentChat/session.ts 里那段注释）
 //   · 派活（team_spawn）要在这里显示批次与用量
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
+import { collectLeaves } from '../../layout'
 import { healthOf, fmtAge, type AgentHealth } from './agentAge'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
@@ -31,6 +32,25 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   const [rows, setRows] = useState<SessionBrief[] | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const requestConfirm = useStore((s) => s.requestConfirm)
+
+  /** sessionId → 这个会话在画布上的身份（角色名 / 是不是团队派生）。
+   *
+   *  主进程那份 SessionBrief **故意不带角色** —— 角色是画布这一侧的概念
+   *  （谁开的、叫什么），主进程只管进程。在这里合并，两边各管各的。 */
+  //
+  //  订阅 tabs 本身、在 useMemo 里算 —— selector 里现造对象的话每次都是新引用，
+  //  这个 store 又没有自定义比较器，面板会跟着无谓地重渲染。
+  const tabs = useStore((s) => s.tabs)
+  const identity = useMemo(() => {
+    const m: Record<string, { role?: string; team: boolean }> = {}
+    for (const t of tabs) {
+      for (const l of collectLeaves(t.root)) {
+        if (l.pane.kind !== 'agent' || !l.pane.sessionId) continue
+        m[l.pane.sessionId] = { role: l.pane.role, team: l.pane.owner === 'team' }
+      }
+    }
+    return m
+  }, [tabs])
 
   /** 停掉一个会话。**这是终止不是暂停** —— agentChat:stop 在主进程是
    *  `sessions.delete(id)` + `proc.kill()`，会话记录整个删掉，resumeId 也没了，
@@ -104,12 +124,15 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
           // 会话状态会进 team.json，那时才有准确的 busy。
           const h = healthOf(r.alive, r.lastActiveAt, now)
           const mine = r.cwd === cwd
+          const who = identity[r.id]
           return (
             <div className={`tp-row h-${h}`} key={r.id}>
               <span className="tp-dot" />
-              <span className="tp-cli">{r.cli}</span>
+              {/* 有角色就显示角色 —— 那才是「谁在干什么」。没有（你自己开的会话）
+                  才退回显示 CLI 名，那时 CLI 是唯一能区分它们的东西。 */}
+              <span className="tp-cli">{who?.role ?? r.cli}</span>
               <span className="tp-cwd" title={r.cwd}>
-                {mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
+                {who?.role ? r.cli : mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
               </span>
               <span className="tp-spacer" />
               <span className="tp-state">{LABEL[h]}</span>

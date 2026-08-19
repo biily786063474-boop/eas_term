@@ -659,6 +659,7 @@ const SHELL_TRAP =
         // 但画布上一个新节点都没有，用户在画布模式下什么都看不到。
         const leafId = await useStore.getState().addAgentNode(where.frameId, {
           owner: 'team',
+          role: a.role,
           // 首条消息里带上角色和产出约定 —— 派活不只是给一句任务，
           // 还要告诉它「你是谁、东西写到哪」，否则几个 agent 会各写各的地方
           initialMessage:

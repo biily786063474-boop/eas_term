@@ -267,7 +267,7 @@ export interface CanvasSlice {
    *  画布上没有节点，用户在画布模式下什么都看不到（2026-08-19 端到端验证踩到）。 */
   addAgentNode: (
     frameId: string,
-    opts?: { owner?: 'team'; initialMessage?: string }
+    opts?: { owner?: 'team'; role?: string; initialMessage?: string }
   ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */
