@@ -35,7 +35,12 @@ interface Ctx {
  *  接受它 —— 那种时候你那个会话本来也派不了活（同 Frame 一批的闸门会先拒），
  *  净损失是零。等 MCP 侧能带上 sessionId 再收窄（要改 mcpEnv 和会话启动参数）。
  *
- *  只认 alive 的会话：一批跑完之后这个判定要能自己解除，否则这个项目从此没人能派活。 */
+ *  只认 alive 的会话：一批跑完之后这个判定要能自己解除，否则这个项目从此没人能派活。
+ *
+ *  **注意它只对 Codex 起的会话有意义。** Claude 那侧带 --strict-mcp-config 却没有
+ *  --mcp-config，一个 MCP 工具都加载不了，压根走不到这个函数（见 adapters/claude.ts
+ *  那段注释）。所以 notify 拦截和派活硬约束都只在 Codex 会话上真正生效 —— 
+ *  这不是理由删掉它们，是理由别拿「Claude 那边没触发」当成它们没用。 */
 async function isTeamOwnedCaller(ctx: Ctx): Promise<boolean> {
   if (ctx.ptyId) return false // 有 ptyId = 来自终端，那是用户自己的终端
   const cwd = ctx.project
@@ -676,7 +681,8 @@ const SHELL_TRAP =
         hint: !x.alive
           ? '进程已退出。它写下的东西还在 .plans/ 里'
           : x.busy === false
-            ? '**这一轮跑完了** —— findings 应该已经落盘，可以去读了'
+            ? '**这一轮跑完了，但不等于任务做完了** —— 去读它的 findings.md 确认：' +
+              '真做完了，还是只说了一半就停下等下一条输入（实测两者在这个信号上一模一样）'
             : idleMs > 4 * 60 * 1000
               ? '超过 4 分钟没动静、而且这一轮还没跑完 —— 可能卡住或在等审批。' +
                 '别替它做，告诉用户去团队面板上看一眼'
@@ -696,8 +702,9 @@ const SHELL_TRAP =
       agents,
       next:
         done.length > 0
-          ? `${done.length} 个交活了（${done.map((a) => a.role).join('、')}）—— ` +
-            '去读它们的 .plans/<role>/findings.md 收活。' +
+          ? `${done.length} 个这一轮跑完了（${done.map((a) => a.role).join('、')}）—— ` +
+            '去读它们的 .plans/<role>/findings.md。**先确认它真做完了** —— ' +
+            'turn 结束也可能是「干了一半先说到这」，实测出现过。' +
             '**结论不一致时要显式呈现分歧**，不要替用户抹平。' +
             (busy.length > 0 ? `另外 ${busy.length} 个还在跑。` : '')
           : `${busy.length} 个都还在跑。**不要反复调这个工具轮询** —— 先去做别的；` +
@@ -717,6 +724,16 @@ const SHELL_TRAP =
     //   同源的教训在 CCteam 那套里也有（no-subagents 契约）：每个 worker 自己 spawn 的
     //   reviewer 都在重复 controller 已经派过的评审，白烧一整个席位。我们这边更贵 ——
     //   跨进程，每个都是完整上下文。
+    //
+    //   **这道闸实际拦得到谁**（2026-08-19 派 agent 实测）：
+    //   · Codex 起的团队 agent —— 拦得到。它读全局 config.toml，工具面上有 team_spawn
+    //   · Claude 起的团队 agent —— **走不到这里**。claude.ts 带了 --strict-mcp-config
+    //     却没有 --mcp-config，它连一个 MCP 工具都没有，调用在 harness 层就成了
+    //     `No such tool available`
+    //
+    //   对 Claude 那侧这是更硬的保护（工具不存在没法绕），但**代价是没有可审计性** ——
+    //   越权尝试只在那个 agent 自己的 transcript 里留一行，team 侧什么记录都没有。
+    //   别因为「Claude 那边用不着」就删掉这道闸：Codex 那侧真的靠它。
     if (await isTeamOwnedCaller(ctx)) {
       throw new Error(
         '你是团队里的一个 agent —— **不能再派活**，组队只有主 agent 能做。\n' +

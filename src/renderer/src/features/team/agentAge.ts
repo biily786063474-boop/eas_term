@@ -34,10 +34,15 @@ export function healthOf(
 /** 面板上那个状态标签。**同一个 idle，对两种会话意思不一样。**
  *
  *  你自己开的对话闲着 = 「空闲」，只是你没在跟它说话。
- *  团队 agent 闲着 = **它这一轮干完了**，findings 已经落盘，可以去收活了 ——
- *  这是面板上最该被一眼看见的信号，说成「空闲」会让人以为它在偷懒。 */
+ *  团队 agent 闲着 = 它这一轮说完了、停下来等下一条输入。
+ *
+ *  **文案是「这轮完了」而不是「已交活」，这个区别是实测换来的。** busy 只反映
+ *  turn 结束，而 turn 结束有两种：真干完了，和「干了一半、这一轮先说到这」——
+ *  两者在这个信号上完全一样。2026-08-19 那次 dup-verifier 就报着 idle，
+ *  findings.md 的最后一行却写着「结论逐条填充中」。
+ *  写成「已交活」等于替它下了一个我们查不到的结论，人看一眼标签就不去读文件了。 */
 export function labelOf(h: AgentHealth, team: boolean): string {
-  if (h === 'idle' && team) return '已交活'
+  if (h === 'idle' && team) return '这轮完了'
   return LABEL[h]
 }
 

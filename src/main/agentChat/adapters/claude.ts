@@ -63,6 +63,19 @@ export const claudeAdapter: CliAdapter = {
       '--output-format',
       'stream-json',
       '--verbose',
+      // **没有配套的 --mcp-config，所以这一条等于「一个 MCP server 都不加载」**
+      // （`claude --help`：Only use MCP servers from --mcp-config, ignoring all other
+      // MCP configurations）。后果不小，2026-08-19 派 agent 实测才发现：
+      //
+      //   · Claude 起的 agentChat 会话**没有任何 eas-term 工具** ——
+      //     canvas_* / notify / wiki_* / secret_* 一个都调不到，ToolSearch 也搜不出来
+      //   · **而 Codex 那侧没有这个参数**，它照常读全局 ~/.codex/config.toml，
+      //     eas-term 在里面 → 同样是「团队成员」，Codex 起的那个能力面大得多
+      //
+      // 这个不对称是现在的事实，不是设计：派活时用 prefer 挑到哪个 CLI，
+      // agent 能干什么就不一样。要动它之前先想清楚 —— 加 --mcp-config 等于给所有
+      // AI 对话节点打开整个工具面（能改画布、能发通知、能碰密钥柜），那是另一个决定。
+      // adapters.test.ts 有一条测试盯着这里。
       '--strict-mcp-config',
       '--include-hook-events',
       // 流式输出（2026-08-17 加回来）。它让 stdout 多出一路 stream_event 增量分块，

@@ -41,6 +41,21 @@ test('Claude 启动参数含实测确认过的那几个必需项', () => {
   }
 })
 
+test('Claude 带 --strict-mcp-config 但不带 --mcp-config —— 等于零 MCP 工具', () => {
+  // 这条锁的不是参数本身，是它的**后果**：两个 flag 合起来意味着 Claude 起的
+  // agentChat 会话一个 eas-term 工具都调不到（canvas_* / notify / wiki_* / secret_*）。
+  // 2026-08-19 派 agent 实测才发现 —— 它调 team_spawn 拿到的是 harness 层的
+  // `No such tool available`，请求根本没到 team 层。
+  //
+  // 加 --mcp-config 会让这条变红，那是有意的：那个改动等于给所有 AI 对话节点打开
+  // 整个工具面（能改画布、能发通知、能碰密钥柜），必须是一个想清楚的决定，
+  // 不能顺手加上。**Codex 那侧没有这个参数**，它照常读全局配置 —— 同样是团队成员，
+  // 两边能力面差得很远，那个不对称也从这条测试的注释里能查到。
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/WORK/proj' })
+  assert.ok(args.includes('--strict-mcp-config'), '少了它会退回读全局 MCP 配置')
+  assert.ok(!args.includes('--mcp-config'), '加了它就等于给所有 AI 对话打开 eas-term 全部工具面')
+})
+
 test('Claude 绝不能带 --bare 或 --permission-mode manual', () => {
   // 两条都是实测踩过的：--bare 会跳过认证返回 Not logged in；
   // manual 是直接拒绝而非等待审批，会让审批卡片永远等不到人。

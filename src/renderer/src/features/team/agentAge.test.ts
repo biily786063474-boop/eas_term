@@ -53,9 +53,13 @@ test('进程没了一律算结束，不管 busy 停在哪个值', () => {
 
 // ── 状态标签：同一个 idle，两种会话两种意思 ──────────────────────────
 
-test('团队 agent 的 idle 是「已交活」，不是「空闲」', () => {
-  assert.equal(labelOf('idle', true), '已交活')
+test('团队 agent 的 idle 说「这轮完了」，不承诺「干完了」', () => {
+  // busy 只反映 turn 结束，而 turn 结束有两种：真干完了，和「干了一半先说到这」。
+  // 实测踩过：dup-verifier 报着 idle，findings 最后一行写着「结论逐条填充中」。
+  // 标签替它下结论的话，人看一眼就不去读文件了
+  assert.equal(labelOf('idle', true), '这轮完了')
   assert.equal(labelOf('idle', false), '空闲')
+  assert.ok(!labelOf('idle', true).includes('交活'), '别承诺任务完成')
 })
 
 test('除 idle 外，是不是团队成员不影响标签', () => {
