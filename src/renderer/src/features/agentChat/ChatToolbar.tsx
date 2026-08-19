@@ -22,20 +22,17 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
-import { toolbarModel, formatUsage } from './toolbarModel.ts'
-import { quotaText, severityOf, windowLabel, untilReset } from './quotaLabel.ts'
-import { quotaBars, contextPercent, barSeverity, type StatuslineData } from './quotaBars.ts'
+import { toolbarModel } from './toolbarModel.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, GaugeIcon, ImageIcon, SendIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, ImageIcon, SendIcon } from '../../ui/Icons'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 
 const MAX_ROWS = 4
 const LINE_H = 19
 /** 用量仪表盘的展开状态。**默认收起** —— 想知道的时候才看，常驻会把要用的控件挤走 */
-const GAUGE_KEY = 'eas.agentchat.gauge'
 
 function autoGrow(el: HTMLTextAreaElement): void {
   el.style.height = 'auto'
@@ -99,7 +96,6 @@ export function ChatToolbar({
   // "跟随 CLI 默认"，选了才有覆盖，而且每一个真实选项都点得动。
   const [modelSel, setModelSel] = useState('')
   const [effortSel, setEffortSel] = useState('')
-  const [showGauge, setShowGauge] = useState(() => localStorage.getItem(GAUGE_KEY) === '1')
   // 粘贴/拖入图片、带入画布快照——**与终端输入框共用同一份实现**（用户要求两边一致）。
   // 复用连同那几条踩过坑的规则一起继承：拖进来的原地引用不复制、剪贴板位图先落盘、
   // 缩略图不能用 blob URL（file:// 页面下 origin 是 null，<img> 会静默失败）。
@@ -165,16 +161,14 @@ export function ChatToolbar({
     })
   }
 
-  const usageText = model.showUsage ? formatUsage(view.usage, view.costUsd) : ''
-
-  // statusline 回传的真实数据（额度两个窗口的百分比 + 与 /context 一致的上下文）。
-  // 它是**账号级**的、由 Claude Code 每次刷新状态栏时推来，不属于某个会话，
-  // 所以放在组件里订阅一份就够。拿不到（没装转发器 / 在别处起的 claude）时为 null，
-  // 下面各处自动回退到事件流那份近似值。
-  const [sl, setSl] = useState<StatuslineData | null>(null)
-  useEffect(() => window.api.statusline.onData((d) => setSl(d as StatuslineData)), [])
-  const bars = quotaBars(sl)
-  const ctx = contextPercent(sl, view.usage?.contextRatio)
+  // 【2026-08-18 摘掉】仪表盘（用量数字 + 两个额度条）与上下文占用条。
+  // 摘的原因是上下文百分比不准：statusline 那份是**账号级**的，它报的是那个
+  // Claude Code 进程当前的上下文，而这里一个 Frame 可能开着好几个会话，
+  // 对不上号；回退用的事件流估算口径又偏小。与其显示一个错的数字，不如不显示。
+  //
+  // **底层管道原样留着**，没删：主进程的 statusline 通道、resources/agent-hooks/
+  // eas-statusline.mjs、quotaBars.ts / quotaLabel.ts / toolbarModel 的 formatUsage。
+  // 要装回来就在这里重新订阅 window.api.statusline.onData，把下面两处 JSX 恢复。
 
   // 关掉过的 notice 记的是「关闭那一刻它已经发生过几次」，不是一个"关过就永远别再出现"
   // 的开关（评审 I5 要求可关闭，但硬约束要求 {k:'error',fatal:false} 必须显示）：
@@ -236,34 +230,6 @@ export function ChatToolbar({
           void pics.takeFiles([...e.dataTransfer.files])
         }}
       >
-        {/* 仪表盘：用量数字 + 订阅额度，**同一个开关管**，默认收起。
-            它们是同一类东西（想知道的时候才看的数字），分成两个开关只是多一次点击。 */}
-        {showGauge && (!!usageText || bars.length > 0) && (
-          <div className="ac-gauge-row">
-            {!!usageText && <span>{usageText}</span>}
-            {/* 两个额度进度条（五小时 / 本周）。数据来自 statusline 通道 ——
-                headless 事件流里五小时那条**没有百分比**，只有 statusline 的 stdin
-                两个都给（2026-08-18 实测确认）。拿不到就不画，不倒推。 */}
-            {bars.map((b) => {
-              const sev = barSeverity(b.percent)
-              return (
-                <span
-                  key={b.key}
-                  className={`ac-quota${sev === 2 ? ' hot' : sev === 1 ? ' warm' : ''}`}
-                  data-tip={`${b.label}额度已用 ${b.percent}%${
-                    b.resetsAt ? ` · ${untilReset(b.resetsAt, Date.now())}后重置` : ''
-                  }`}
-                >
-                  {b.label}
-                  <span className="ac-quota-track">
-                    <span className="ac-quota-fill" style={{ width: `${b.percent}%` }} />
-                  </span>
-                  <span className="ac-quota-num">{b.percent}%</span>
-                </span>
-              )
-            })}
-          </div>
-        )}
         {pics.err && <div className="ac-inline-err">{pics.err}</div>}
 
         {/* 图片区：快照占位块和已带上的图排在同一行，都是「这条消息要带的东西」 */}
@@ -329,29 +295,6 @@ export function ChatToolbar({
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">
-          {/* 上下文占用：**常驻**，不跟着用量数字一起收起来。
-              它回答的是「还能聊多久」——那是随时想瞥一眼的东西，不是要主动去查的统计。
-              分母来自 result 事件的 modelUsage[<model>].contextWindow（claudeEvents.ts
-              的 contextRatioOf），拿不到就整个不渲染，绝不显示一个猜出来的比例。 */}
-          {ctx !== null && (
-            <div
-              className={`ac-ctx${ctx.percent >= 85 ? ' hot' : ctx.percent >= 65 ? ' warm' : ''}`}
-              data-tip={
-                `上下文已用 ${ctx.percent}%` +
-                // 标出来是近似值，不让它冒充精确值 —— 用户报的「不准」正是这个口径差
-                (ctx.exact ? '（与 CLI 的 /context 一致）' : '（估算：CLI 没给原生百分比，口径可能偏小）') +
-                (model.showCompact ? '，可以点「压缩」腾地方' : '')
-              }
-            >
-              <span className="ac-ctx-track">
-                <span className="ac-ctx-fill" style={{ width: `${ctx.percent}%` }} />
-              </span>
-              <span className="ac-ctx-num">
-                {ctx.percent}%{ctx.exact ? '' : '~'}
-              </span>
-            </div>
-          )}
-
           {model.showModel && (
             <div
               className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}
@@ -443,21 +386,6 @@ export function ChatToolbar({
             </button>
           )}
 
-          {(!!usageText || bars.length > 0) && (
-            <button
-              type="button"
-              className={`ac-bar-btn${showGauge ? ' on' : ''}`}
-              data-tip={showGauge ? '收起仪表盘' : '展开仪表盘（用量与订阅额度）'}
-              onClick={() => {
-                const next = !showGauge
-                setShowGauge(next)
-                if (next) localStorage.setItem(GAUGE_KEY, '1')
-                else localStorage.removeItem(GAUGE_KEY)
-              }}
-            >
-              <GaugeIcon size={11} />
-            </button>
-          )}
 
           {model.showSandbox && model.sandboxLevels.length > 0 && (
             <span
