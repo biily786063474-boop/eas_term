@@ -10,6 +10,7 @@ import { SecretsPanel } from './features/workspace/SecretsPanel'
 import { SettingsPanel } from './features/workspace/SettingsPanel'
 import { UpdateBadge } from './features/workspace/UpdateBadge'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
+import { TeamBatchHost } from './features/team/TeamBatchModal'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ModeSwitch } from './features/workspace/ModeSwitch'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
@@ -257,6 +258,7 @@ export function App(): JSX.Element {
           <SecretsPanel />
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />
+      <TeamBatchHost />
           <ModeSwitch />
           {/* 平时不渲染，只有查到新版本才冒出来 */}
           <UpdateBadge />

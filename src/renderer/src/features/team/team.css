@@ -141,3 +141,133 @@
   background: rgba(255, 120, 120, 0.16);
   color: #ff9b9b;
 }
+
+/* ── 派活确认清单 ──
+   视觉沿用 SecretRequestModal（.sreq）那一套：同样是「AI 发起、要你点头」的东西，
+   长得一样能让人一眼认出这是哪一类请求。 */
+.tbm-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+.tbm {
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  color: var(--fg);
+}
+/* 一眼看出这不是系统在问你，是 AI 在问你（同 .sreq-flag 的用意） */
+.tbm-flag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fcd34d;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.tbm-goal {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.tbm-cwd {
+  margin-top: -6px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.tbm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.tbm-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+}
+.tbm-role {
+  flex: none;
+  min-width: 92px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.tbm-task {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-dim);
+  line-height: 1.6;
+}
+.tbm-est {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.tbm-est-num {
+  color: #fcd34d;
+}
+.tbm-est-hint {
+  font-size: 10.5px;
+  opacity: 0.7;
+}
+.tbm-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.tbm-ghost,
+.tbm-primary {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.tbm-ghost {
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+}
+.tbm-ghost:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+.tbm-primary {
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.85);
+  color: #fff;
+}
+.tbm-primary:hover {
+  background: rgb(var(--accent-rgb));
+}
+.tbm-foot {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  line-height: 1.6;
+}

@@ -3,6 +3,9 @@
 // 上下文自动解析：调用方终端的 ptyId（PTY env 注入）→ 反查它挂在哪个 Frame / 哪个节点，
 // 所以 AI 调 canvas_open_html 时不用指定 frame，产出直接开在「它自己所在的那个 Frame」里。
 import { useStore } from './store'
+import { teamModeOf } from './features/canvas/teamMode'
+import { checkBatch } from './features/team/batchSpec'
+import { askForBatch, finishBatch } from './features/team/batchRequest'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
 import type { CanvasFrame, CanvasNode } from './store/canvasSlice'
@@ -568,6 +571,85 @@ const SHELL_TRAP =
   }
 
   // ── AI 索要密钥：弹 GUI 让用户自己填，值不经 AI ──
+  if (tool === 'team_spawn') {
+    const where = resolveFrame(ctx)
+    if (!where) throw new Error('找不到你所在的 Frame，没法派活')
+
+    const st = useStore.getState()
+    // ① 总闸。**事实查询，不依赖任何模型判断** —— 关着就是关着
+    if (!teamModeOf(st.canvas.frames, where.frameId)) {
+      throw new Error(
+        '这个项目的多 agent 开关是关的 —— 用户不想用多 agent。\n' +
+          '**不要重试，也不要提议组队**，按单会话正常把这件事做完就好。\n' +
+          '（他想用的话会自己去 Frame 标题栏点开那个开关。）'
+      )
+    }
+
+    // ② 批次校验。一条不合格整批拒绝，别让用户看到一张荒唐的清单
+    const checked = checkBatch({
+      goal: args.goal,
+      agents: args.agents,
+      estimateTokens: args.estimate_tokens
+    })
+    if (!checked.ok) throw new Error(checked.error)
+    const spec = checked.spec
+
+    // ③ 弹清单等用户点头。抛异常 = 根本没弹（限流/已有一批在跑），
+    //    错误信息里写清该怎么办，AI 才不会干等或反复重试
+    const decision = await askForBatch({ spec, frameId: where.frameId, cwd: where.projectPath })
+    if (!decision.go) {
+      return {
+        spawned: [],
+        next: `用户没有同意组队${decision.reason ? `（${decision.reason}）` : ''}。按单会话继续做这件事，不要再问一次。`
+      }
+    }
+
+    // ④ 真的起。**逐个起，一个失败就把已起的收掉** —— 半个团队比没有团队更糟（方案 E-03）
+    const spawned: { role: string; leafId: string }[] = []
+    try {
+      for (const a of spec.agents) {
+        const before = new Set(
+          useStore.getState().tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+        )
+        await useStore.getState().openAgentPane({
+          projectId: st.canvas.frames.find((f) => f.id === where.frameId)?.projectId ?? null,
+          owner: 'team',
+          // 首条消息里带上角色和产出约定 —— 派活不只是给一句任务，
+          // 还要告诉它「你是谁、东西写到哪」，否则几个 agent 会各写各的地方
+          initialMessage:
+            `你是这次协作里的 \`${a.role}\`。\n\n` +
+            `**这一批的目标**：${spec.goal}\n` +
+            `**你负责**：${a.task}\n\n` +
+            `产出写到 \`.plans/${a.role}/\` 下（findings.md 放结论、progress.md 记过程）。` +
+            `别去动别人的目录。干完在最后一条消息里用一句话说清你的结论。`
+        })
+        const leaf = useStore
+          .getState()
+          .tabs.flatMap((t) => collectLeaves(t.root))
+          .find((l) => !before.has(l.id))
+        if (!leaf) throw new Error(`起 ${a.role} 时没能建出节点`)
+        spawned.push({ role: a.role, leafId: leaf.id })
+      }
+    } catch (e) {
+      // 起到一半失败：把这一批已经起的收掉，别留半个团队
+      for (const sp of spawned) {
+        const t = useStore.getState().tabs.find((tab) => collectLeaves(tab.root).some((l) => l.id === sp.leafId))
+        if (t) await useStore.getState().closeLeafSafely(t.id, sp.leafId)
+      }
+      finishBatch(where.frameId)
+      throw new Error(`起到第 ${spawned.length + 1} 个时失败了，已经把这一批全收掉：${(e as Error).message}`)
+    }
+
+    return {
+      spawned,
+      next:
+        `已经起了 ${spawned.length} 个 agent，各自在跑。\n` +
+        `**不要替它们干活，也不要一直轮询**：它们写完会把结论落在 .plans/<role>/findings.md，` +
+        `你现在可以先做别的，或者告诉用户「派下去了，进度看团队面板」。\n` +
+        `要收活时读那几个 findings.md；某个 agent 卡住或跑偏，用户会在面板里看到并处理。`
+    }
+  }
+
   if (tool === 'request_secret') {
     const name = String(args.name ?? '').trim()
     const purpose = String(args.purpose ?? '').trim()

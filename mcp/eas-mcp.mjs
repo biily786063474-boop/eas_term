@@ -242,6 +242,54 @@ const TOOLS = [
     }
   },
   {
+    name: 'team_spawn',
+    description:
+      '把一件事拆给多个 agent 并行做。**只在这个项目的多 agent 开关打开时可用** —— ' +
+      '关着就说明用户不想用多 agent，这时不要调它、也不要提议组队，按单会话正常做事。\n' +
+      '调用后会给用户弹一张清单（谁、干什么、预估烧多少），**他点开工才真的起进程**。' +
+      '返回里会说清起了哪几个、各自的 node_id。\n' +
+      '每个 agent 是一个独立的 CLI 进程，有自己完整的上下文 —— ' +
+      '所以适合「几块互不依赖、各自都要读不少东西」的活（并行调研、多角度审查）。' +
+      '一件线性的小事不要用它：起进程的开销和确认打扰都不划算。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        goal: {
+          type: 'string',
+          description: '这一批要达成什么，一句话。**用户靠这句话决定要不要开工**，写清楚点'
+        },
+        agents: {
+          type: 'array',
+          description: '最多 6 个。role 用 kebab-case（它同时是 .plans/ 下的目录名），不许重名',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', description: 'kebab-case，如 researcher / api-reviewer' },
+              task: { type: 'string', description: '派给它的任务，一句话说清干什么（会作为首条消息投递过去）' },
+              needs: {
+                type: 'array',
+                items: { type: 'string' },
+                description: "需要的 CLI 能力，如 ['stream','usage']。**不要绑 CLI 名字**"
+              },
+              prefer: {
+                type: 'array',
+                items: { type: 'string' },
+                description: "有得选时的偏好 CLI，软的，如 ['claude','codex']"
+              }
+            },
+            required: ['role', 'task']
+          }
+        },
+        estimate_tokens: {
+          type: 'number',
+          description: '你对这一批总用量的估计。估不准不要紧，用户看得见真实累计；不确定就别填'
+        },
+        frame_id: { type: 'string', description: '不传则用当前终端所在的 Frame' }
+      },
+      required: ['goal', 'agents']
+    }
+  },
+  {
     name: 'canvas_new_terminal',
     description:
       '在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。',

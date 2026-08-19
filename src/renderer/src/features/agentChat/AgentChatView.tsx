@@ -90,6 +90,14 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.resumeId : undefined
   })
+  /** 派活塞进来的首条任务。**同样从 store 现读** —— 理由同 savedResumeId。 */
+  const initialMessage = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.initialMessage : undefined
+  })
+  const clearInitialMessage = useStore((s) => s.clearAgentInitialMessage)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   /** 点了一个不能直接用的 CLI（没装 / 仅终端）时，下面显示的说明 */
@@ -186,8 +194,29 @@ export function AgentChatView({
     }
   }, [])
 
-  const handleSend = async (): Promise<void> => {
-    const message = text.trim()
+  // 派活：pane 里带了首条任务就自动发出去。
+  //
+  // **等 selected 就绪才发** —— CLI 探测是异步的，早发一步 handleSend 会因为
+  // 没有 selected 直接 return，那条任务就永远发不出去了（表现是「派了活但那个
+  // agent 一直空着」，最难查的一种）。
+  //
+  // 用 ref 保证**只发一次**：清 store 是异步的，两次渲染之间它可能还没落地；
+  // 而且首发失败（CLI 起不来）时也不该重试 —— 那会变成一个不断重开进程的循环。
+  // 失败的结果照常显示在这个节点里，你看到了自己决定要不要重来。
+  const firedRef = useRef(false)
+  useEffect(() => {
+    if (firedRef.current || !initialMessage || !selected || sessionId || starting) return
+    firedRef.current = true
+    clearInitialMessage(tabId, leafId)
+    setText(initialMessage) // 让它显示在输入框里，看得出这条是派给它的
+    void handleSend(initialMessage)
+    // handleSend 不进依赖：它每次渲染都是新函数，进依赖会变成死循环
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMessage, selected, sessionId, starting, clearInitialMessage, tabId, leafId])
+
+  /** override：派活时直接把任务传进来 —— 不走 state，因为同一帧里 setText 还没生效 */
+  const handleSend = async (override?: string): Promise<void> => {
+    const message = (override ?? text).trim()
     if (!message || !selected || starting || sessionId) return
     setStarting(true)
     setStartError(null)

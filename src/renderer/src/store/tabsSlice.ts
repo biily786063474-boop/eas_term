@@ -36,7 +36,14 @@ export interface TabsSlice {
   /** 开一个 AI 对话面板（空态，用户选完 CLI 发第一条消息才真正起会话）。
    *  与 openTerminal 同构，差别只在建的 pane 是 agent —— **不 spawn pty**，
    *  所以不能拿 openTerminal + setPaneKind 凑：那样会先起一个 shell 再丢掉。 */
-  openAgentPane: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
+  openAgentPane: (opts?: {
+    projectId?: string | null
+    cwd?: string
+    /** 'team' = 团队派生：关节点只收视图、不杀进程（见 store/closePolicy.ts） */
+    owner?: 'team'
+    /** 挂载后自动发出去的首条消息（派活） */
+    initialMessage?: string
+  }) => Promise<void>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
   openHistory: (cwd: string) => void
@@ -66,6 +73,9 @@ export interface TabsSlice {
    *  这个会随 canvas.json 落盘，下次打开这个节点靠它续上上次的上下文
    *  （Claude `--resume` / Codex `exec resume`）。 */
   setAgentResumeId: (tabId: string, leafId: string, resumeId: string) => void
+  /** 派活的首条消息发出去之后清掉它。**必须清** —— 不清的话组件重新挂载
+   *  （切视图、面板重排）会把同一条任务再发一遍，等于白烧一次。 */
+  clearAgentInitialMessage: (tabId: string, leafId: string) => void
   setActiveLeaf: (tabId: string, leafId: string) => void
   setSplitRatio: (tabId: string, splitId: string, ratio: number) => void
 }
@@ -174,7 +184,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const projectId = opts?.projectId !== undefined ? opts.projectId : s.activeProjectId
     const project = s.projects.find((p) => p.id === projectId) ?? null
     const cwd = opts?.cwd ?? project?.path ?? ''
-    const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane: { kind: 'agent', cwd } }
+    const leaf: LeafNode = {
+      type: 'leaf',
+      id: uid('leaf'),
+      pane: { kind: 'agent', cwd, owner: opts?.owner, initialMessage: opts?.initialMessage }
+    }
     const tab: TermTab = {
       id: uid('tab'),
       title: project?.name ?? (cwd ? cwd.split('/').pop() || cwd : 'AI 对话'),
@@ -464,6 +478,18 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         const pane: PaneState = { ...leaf.pane, sessionId }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  clearAgentInitialMessage: (tabId, leafId) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent' || !leaf.pane.initialMessage) return t
+        const pane: PaneState = { ...leaf.pane, initialMessage: undefined }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))

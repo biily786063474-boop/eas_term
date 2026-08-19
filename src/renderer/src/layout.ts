@@ -60,6 +60,16 @@ export type PaneState =
        * 必须和团队面板的「停」按钮一起上线，不能单独放开。
        */
       owner?: 'team'
+      /**
+       * 挂载后自动发出去的首条消息（派活用）。
+       *
+       * 为什么走 pane 而不是从外面直接调 agentChat.start：**会话的驱动者只能有一个**。
+       * AgentChatView 自己管着 phase / sessionId / 事件订阅，外部另起一个会话它不知道，
+       * 界面会停在空态而底下已经在烧 token。这里只是「预填一条消息并自动按下发送」。
+       *
+       * **发出去之后必须清掉**（clearInitialMessage），否则组件重新挂载会再发一遍。
+       */
+      initialMessage?: string
     }
   | { kind: 'dict' }
   | { kind: 'wiki' }

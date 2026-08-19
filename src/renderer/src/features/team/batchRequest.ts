@@ -24,7 +24,9 @@ export interface BatchRequest {
 
 export type BatchDecision =
   | { go: true }
-  | { go: false; reason: string }
+  /** reason 可选：用户点「算了」时通常什么都不说，硬要一个理由等于逼 UI 编一个。
+   *  有理由就带上（比如「这个项目已经有一批在跑」），AI 能据此调整。 */
+  | { go: false; reason?: string }
 
 let pending: { req: BatchRequest; resolve: (d: BatchDecision) => void } | null = null
 /** frameId → 这个 Frame 上正在跑的批次（还没收尾）。**一个 Frame 同时只允许一批** */
