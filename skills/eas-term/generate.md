@@ -24,25 +24,55 @@
 生成是**在画板的某个节点上触发**的，不是凭空出图 —— 所以要先有项目和节点：
 
 ```
-list_projects / open_project   挑一个项目（没有就 create_project）
+get_workspace_overview         看有哪些项目、里面有什么节点（没有项目就 create_project）
 list_models                    拿模型 ID。**别自己编 ID**，只能从这里挑
 add_node                       建一个节点，承载这次生成
-generate                       写入生成参数 —— 注意：默认**不会真的开始**
-   ↓ 必须再走一个出口，二选一（见下）
+generate                       写入参数 + **返回这次的报价**，不扣费
+   ↓ 把价格报给用户，等他点头
+generate_now                   真正开始，这一步才扣费
 get_generation_status          轮询到 done（图片 30~60s，视频更久）
 ```
 
-**`generate` 默认只写参数、节点停在 `idle`，这是画板防止 AI 擅自花用户钱的设计。**
-只调 `generate` 就去轮询的话，节点永远是 `idle` —— 这不是坏了，是少走了一步。
-两个出口：
+**第一步别用 `open_project` 挨个切着看** —— 它会改变用户当前正在看的画布。
+`get_workspace_overview` 是只读的，一次给全项目和节点，任何时候都能调。
+
+### 报价 → 确认 → 生成（默认走这条）
+
+`generate` 默认只写参数、节点停在 `idle`，这是画板防止 AI 擅自花用户钱的设计。
+**但它会把价格一起返回**，所以报价和确认都在你这边完成，不用把用户赶回画板：
+
+```
+① generate(nodeId, modelId, prompt)  → 返回 estimate.credits，不扣费
+② 你说：模型 X / 提示词大意 / 预计 686 墨水
+③ 用户说「确认」
+④ generate_now(nodeId)               → 开始，扣费
+```
+
+`estimate.credits` 用的是**和真实扣费同一个估价函数**，报多少扣多少（上游实测 686 → 686）。
+多个节点就逐个 `generate_now`。
+
+> **报价要画板 ≥ 1.21.26。** 更旧的版本 `generate` 返回里没有 `estimate` 这个字段 ——
+> 那时别干等，退回下面「用户要在画板里核对」那条路，并提一句更新画板能在这里直接看到价格。
+
+**`estimate` 有三种结果，含义完全不同 —— 中间那种最容易误判：**
+
+| 返回 | 意思 | 你该怎么做 |
+|---|---|---|
+| `estimate.credits` 是数字 | 能报价 | 报给用户，等确认后 `generate_now` |
+| `credits: null` + 带 `note` | **按用量计费，仍然可以生成** | 照实说「这个模型按实际用量计费，事先报不了价」，**别去换模型** |
+| `estimate_error` 有值 | 真估不出来，`generate_now` 会拒绝 | 看它说的原因。**若是套餐过期 / 没墨水了，引导用户续费充值 —— 换模型没有用** |
+
+> 中间那条是上游专门写出来的教训：早期版本把「配额耗尽」也归进这一类，
+> 结果 agent 一路换模型换到底，其实是钱没了。现在真失败一定带 `estimate_error`。
+
+另外两条路，各有明确的适用场景：
 
 | 出口 | 怎么调 | 什么时候用 |
 |---|---|---|
-| **让用户确认** | `generate(...)` → `confirm_batch_generate()` | 用户正看着画板。画板会弹窗显示参数和墨水成本，他点了才真扣费 |
-| **无人值守** | `generate(..., autoConfirm: true)` | 确定没人盯着屏幕时。**会真实扣墨水**，且跳过了唯一一道人工成本确认 |
+| **用户要在画板里核对** | `generate(...)` → `confirm_batch_generate()` | 他正看着画板、想在那边确认参数。**没人看着画板时别用** —— 没人去点，任务就卡死 |
+| **无人值守** | `generate(..., autoConfirm: true)` | 确定没人在场。⚠️ **会真实扣费，且用户从头到尾看不到价格** |
 
-估不出价时画板会拒绝生成（返回 `estimate_failed`）——那是防资损的闸门，不是 bug。
-换个模型，或者退回「让用户确认」那条路。
+有人在场就走上面的报价路径，让他先看到数字。
 
 ### 改已经配好的节点
 
@@ -83,11 +113,16 @@ update_node(nodeId, prompt: '改后的提示词，可以继续用 @1')
 
 | 想干什么 | 调什么 | 别这么干 |
 |---|---|---|
+| **先摸清画板里有什么** | `get_workspace_overview()` —— 只读，一次拿全 | `open_project` 挨个切 —— **会改变用户正在看的画布** |
 | 本地图片放进画板 | `import_local_file({filePath, type})` | `upload_asset({source:'path'})` 读不了任意路径 |
 | 让 A 图当 B 的参考 | `connect_nodes({from, to})` + prompt 里写 `@1` | 连了线但 prompt 不写 `@N` |
 | 改已配好的提示词 | `update_node({nodeId, prompt})` | 用 `content` —— 返回 ok 但无效 |
 | 看当前配了什么 | `get_node({nodeId})` | 盲改 |
-| 真的开始生成 | `autoConfirm:true` 或 `confirm_batch_generate()` | 只调 `generate` 然后干等 |
+| **报价给用户** | `generate(...)` 读返回的 `estimate.credits` | 自己按模型猜价，或让用户去画板看 |
+| **真的开始生成（默认）** | 报价 → 用户点头 → `generate_now({nodeId})` | 只调 `generate` 然后干等 —— 节点永远 `idle` |
+| 真的开始生成（无人值守） | `generate({..., autoConfirm:true})` | 有人在场时用它 —— 用户看不到价格 |
+| 真的开始生成（用户要在画板核对） | `generate(...)` → `confirm_batch_generate()` | 没人看着画板时用它 —— 没人去点，任务卡死 |
+| **被拒说估不出价** | 看 `estimate_error`：套餐过期/没墨水就引导续费 | **换模型重试 —— 换哪个都一样** |
 | 生成失败想重试 | 先 `get_node` 看 prompt，改完再触发 | 对同一节点连着调 `generate` |
 | 想先知道用户够不够钱 | `get_user_billing_tier()` | 直接发起然后吃拒绝 |
 
@@ -98,7 +133,9 @@ update_node(nodeId, prompt: '改后的提示词，可以继续用 @1')
 
 ### 分寸
 
-- **别替用户决定花钱**。`autoConfirm: true` 是直接扣费，用之前先问；多轮迭代同理。
+- **别替用户决定花钱。** 现在有报价路径了 —— `generate` 拿到 `estimate.credits`，
+  **把数字告诉他、等他点头再 `generate_now`**。`autoConfirm: true` 跳过的正是这一步，
+  只在确定没人在场时用。多轮迭代同理，每一轮都是一次扣费。
 - 用户只是问「能不能生成 X」时，先回答能不能，**别直接就开始生成**。
 - `list_models` 拿到一次就够，别每次生成前都列一遍。
 - 画板刻意没开放 `run_shell_command` / `get_api_keys` / 联网抓取这些能力，
