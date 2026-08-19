@@ -4734,10 +4734,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 700;
   color: var(--fg-dim);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 .skl-cat-count {
   flex: none;
@@ -4748,8 +4750,27 @@
 .skl-cat-body {
   padding-bottom: 2px;
 }
+/* 每个 skill 是一张卡片。hover 时轻微放大 —— 幅度刻意压到 1.015：
+   抽屉只有 250 宽，再大一点相邻卡片就会互相蹭到。
+   **展开态不放大**（:has(.skl-item-tree)）：里面挂着 220px 的文件树，
+   一放大整棵树跟着抖，读路径的时候很难受。 */
 .skl-item {
-  padding: 0 6px;
+  margin: 0 8px 5px;
+  padding: 2px 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: var(--glass-1);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+.skl-item:hover {
+  border-color: var(--glass-border-strong);
+  background: var(--glass-2);
+}
+.skl-item:hover:not(:has(.skl-item-tree)) {
+  /* 放大后要压住相邻卡片，否则会被下一张的边框切一道 */
+  position: relative;
+  z-index: 1;
+  transform: scale(1.015);
 }
 /* 被临时禁用的 skill：置灰 + 划掉名字，但**仍然显示** ——
    隐藏了就没法右键恢复它了 */
@@ -4783,8 +4804,9 @@
   font-family: inherit;
   text-align: left;
 }
+/* 底色变化交给外层卡片了，这里再叠一层会显得脏 */
 .skl-item-head:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
 .skl-item-name {
   font-size: 12px;
@@ -4795,8 +4817,8 @@
   white-space: nowrap;
 }
 .skl-item-desc {
-  margin: -2px 0 4px 27px;
-  padding-right: 6px;
+  margin: -2px 0 5px 25px;
+  padding-right: 8px;
   font-size: 10.5px;
   line-height: 1.5;
   color: var(--fg-dim);
@@ -4817,7 +4839,7 @@
    直接塌成 0）+ position: relative，抄 .wk-tree 撑起 FileTree 的同一个做法。 */
 .skl-item-tree {
   position: relative;
-  margin: 0 0 6px 16px;
+  margin: 0 6px 6px 14px;
   border-left: 1px solid var(--glass-border);
   height: 220px;
   overflow: hidden;
