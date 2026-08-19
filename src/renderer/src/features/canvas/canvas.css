@@ -5012,3 +5012,107 @@
     transition: none;
   }
 }
+
+/* ---------- 文件灯箱（抽屉里点开文件的默认看法） ----------
+   遮罩/面板/进退场都沿用上面 .ctodo-lightbox 那一套，只有尺寸不同：
+   那个装一条待办，这个要装一整篇 markdown。z-index 同为 3500 档。 */
+.flb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 10, 0);
+  backdrop-filter: blur(0px);
+  transition: background 0.2s ease, backdrop-filter 0.2s ease;
+}
+
+.flb-overlay.open {
+  background: rgba(6, 7, 10, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.flb {
+  width: min(880px, 90vw);
+  height: min(720px, 84vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.92) translateY(6px);
+  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.flb-overlay.open .flb {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.flb-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 10px 18px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.flb-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flb-dirty {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(224, 168, 96, 0.16);
+  color: #e0a860;
+  font-size: 10px;
+}
+
+.flb-x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.flb-x:hover {
+  background: var(--glass-2);
+  color: var(--fg);
+}
+
+/* CodeView 自己不设高度，靠容器撑。不给 min-height:0 的话
+   flex 子项会被内容顶开，长文档直接把灯箱撑破而不是内部滚动。 */
+.flb-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.flb-body .code-view {
+  flex: 1;
+  min-height: 0;
+}

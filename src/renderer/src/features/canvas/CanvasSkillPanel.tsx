@@ -22,6 +22,7 @@ import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
+import { FileLightbox } from './FileLightbox'
 import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon } from '../../ui/Icons'
 
 /** 项目 Frame 的「项目 skill」目录：约定死的相对路径，不需要用户选。
@@ -55,6 +56,9 @@ export function CanvasSkillPanel(): JSX.Element {
     [selectedProjectId, projects]
   )
 
+  // 点开一个文件先进灯箱看（看完即走），不再默认往画布上落节点 —— 落画布是
+  // 灯箱里那个按钮和拖拽的事，见 FileLightbox 文件头。
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const [dirs, setDirs] = useState<SkillDirEntry[]>([])
   const [dirId, setDirId] = useState<string | null>(null)
   const [dirMenuAt, setDirMenuAt] = useState<{ x: number; y: number } | null>(null)
@@ -373,14 +377,14 @@ export function CanvasSkillPanel(): JSX.Element {
                               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                               const fp = item?.dataset.path
                               if (!fp || item?.dataset.dir) return
-                              startFileDrag(fp, e)
+                              // 第三个参数是「没拖动，只是点了一下」的回调（5px 阈值内）
+                              startFileDrag(fp, e, () => setLightbox(fp))
                             }}
                             onDoubleClick={(e) => {
                               const item = (e.target as HTMLElement).closest('.tree-item') as HTMLElement | null
                               const fp = item?.dataset.path
                               if (!fp || item?.dataset.dir) return
-                              const { wx, wy } = viewportCenter()
-                              openInCanvas(fp, wx - 90, wy - 15)
+                              setLightbox(fp)
                             }}
                           >
                             <FileTree key={sk.path} rootPath={sk.path} refreshKey={0} viewOnly />
@@ -490,6 +494,17 @@ export function CanvasSkillPanel(): JSX.Element {
         <div className="wk-dim wk-tiny wk-pad">这两处都还没有 skill</div>
       )}
       {htmlChoice}
+      {!!lightbox && (
+        <FileLightbox
+          filePath={lightbox}
+          onClose={() => setLightbox(null)}
+          saveVia={window.api.skillLibrary.writeFile}
+          onSendToCanvas={(fp) => {
+            const { wx, wy } = viewportCenter()
+            openInCanvas(fp, wx - 90, wy - 15)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -31,7 +31,8 @@ interface CodeMenu {
 export function CodeView({
   filePath,
   readOnly,
-  saveVia
+  saveVia,
+  onDirtyChange
 }: {
   filePath: string | null
   /** 只读预览：不出「编辑」按钮，从源头掐掉 editing 态（连带 ⌘S 保存也进不去）。
@@ -41,6 +42,9 @@ export function CodeView({
    *  skill 面板拖出来的文件在那之外，由调用方传一个有自己边界的写入口进来。
    *  故意做成参数而不是在这里按路径猜——这个组件不该知道 skill 目录是什么。 */
   saveVia?: (filePath: string, content: string) => Promise<{ ok: boolean; error?: string }>
+  /** 有未保存改动时通知外层。灯箱靠它拦住「改了没保存就被点掉」——
+   *  dirty 是这里的内部状态，不冒出去的话外面只能猜。 */
+  onDirtyChange?: (dirty: boolean) => void
 }): JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null)
   // 代码块复制按钮：用回调 ref 挂委托，不用 useEffect(…, [])。
@@ -150,6 +154,13 @@ export function CodeView({
       setSaveMsg('保存失败：' + (r.error ?? '未知错误'))
     }
   }, [filePath, saveVia])
+
+  // 把 dirty 冒给外层（灯箱用它拦关闭）。卸载时归零 —— 否则关掉预览后
+  // 外层会一直记着「有未保存改动」，下次开别的文件被莫名其妙拦一道。
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
   // ⌘S / Ctrl+S 保存（只在编辑态、且焦点在本预览内时接管）
   useEffect(() => {
