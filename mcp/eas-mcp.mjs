@@ -8,6 +8,7 @@
 // 传输：MCP stdio = 一行一条 JSON-RPC 消息（换行分隔），响应写 stdout。
 
 import readline from 'readline'
+import http from 'node:http'
 
 const PORT = process.env.EAS_TERM_PORT
 const TOKEN = process.env.EAS_TERM_TOKEN
@@ -492,16 +493,71 @@ const TOOLS = [
   }
 ]
 
+/** 要等人在界面上点确认的工具，这条链路会挂很久 —— 名单与主进程
+ *  `mcpBridge.ts` 的 `WAITS_FOR_HUMAN` 必须一致，加工具时两处一起改。 */
+const WAITS_FOR_HUMAN = new Set(['wiki_archive_plan', 'team_spawn'])
+
+/** 普通工具 30 秒足够（主进程那侧 15 秒就会先返回错误）；
+ *  等人的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，
+ *  这样超时永远由主进程判，用户能收到那句写清楚的话，而不是一个连接层的报错。 */
+const CALL_TIMEOUT_MS = (tool) => (WAITS_FOR_HUMAN.has(tool) ? 15 * 60 * 1000 : 30_000)
+
+/**
+ * 用 node:http 而不是 fetch。
+ *
+ * **不是风格问题，是 fetch 在这里做不到。** Node 的 fetch 走 undici，它的
+ * `headersTimeout` 默认 300 秒、且是**独立的内部闸** —— 实测：给
+ * `AbortSignal.timeout(15 分钟)` 也没用，301 秒照样抛
+ * `UND_ERR_HEADERS_TIMEOUT`。要调它得拿到 undici 的 Agent，而这个 shim 是
+ * 零外部依赖的 .mjs，装不了 undici。
+ *
+ * 后果不是「慢一点」：team_spawn 那张清单名义上能等 10 分钟，实际 5 分钟就
+ * 从最外层断掉，用户点了也没意义 —— 而他看到的会是一个连接错误，
+ * 不是主进程那句「用户一直没有处理那张派活清单」。
+ * （2026-08-19 由一个 cross-checker agent 抓到，我照它给的方向验了一遍才确认。）
+ */
+function postInvoke(body, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port: PORT,
+        path: '/invoke',
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(body),
+          'x-eas-token': TOKEN
+        },
+        // 这一条才是真正管用的那个闸
+        timeout: timeoutMs
+      },
+      (res) => {
+        let raw = ''
+        res.setEncoding('utf8')
+        res.on('data', (c) => (raw += c))
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(raw))
+          } catch {
+            resolve({ ok: false, error: `HTTP ${res.statusCode}` })
+          }
+        })
+      }
+    )
+    req.on('timeout', () => {
+      req.destroy(new Error(`等 Eas-Term 响应超时（${Math.round(timeoutMs / 1000)}s）`))
+    })
+    req.on('error', reject)
+    req.end(body)
+  })
+}
+
 async function callApp(tool, args) {
   if (!PORT || !TOKEN) {
     throw new Error('未检测到 Eas-Term 环境（EAS_TERM_PORT/TOKEN 缺失）——请在 Eas-Term 的终端里运行')
   }
-  const res = await fetch(`http://127.0.0.1:${PORT}/invoke`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-eas-token': TOKEN },
-    body: JSON.stringify({ tool, args, ctx: CTX })
-  })
-  const j = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }))
+  const j = await postInvoke(JSON.stringify({ tool, args, ctx: CTX }), CALL_TIMEOUT_MS(tool))
   if (!j.ok) throw new Error(j.error || '调用失败')
   return j.data
 }

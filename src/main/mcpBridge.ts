@@ -69,6 +69,19 @@ function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeRe
   // 加一个就要往这个清单里补一条。2026-08-19 team_spawn 就是漏了这条：
   // 端到端第一次验证时清单确实弹出来了，MCP 那侧却在 15 秒后先超时返回，
   // 用户点什么都没意义了。判据是「这个工具会不会阻塞等人点」，不是它有多重要。
+  //
+  // ── 这条链路一共有**三层**超时，不是两层 ──────────────────────────
+  // 这段注释原来只提渲染层和主进程，漏了最外面那层，而它恰恰是最短的：
+  //
+  //   ① MCP shim（mcp/eas-mcp.mjs 的 fetch）  ← 最外，也最容易被忘
+  //   ② 主进程（这里）
+  //   ③ 渲染层（features/team/batchRequest.ts 的 WAIT_MS）
+  //
+  // **正确的关系是 ①  >  ②  >  ③** —— 让最靠里的那层先判超时，
+  // 用户才能收到一句写清楚的话，而不是一个 fetch 报错。
+  // 三处任何一个数字动了，都要回来核对这个不等式。
+  // （2026-08-19：shim 那层没设超时，吃 undici 默认值，成了实际最短的一道闸，
+  //   于是「清单能等 10 分钟」是假的。由一个 cross-checker agent 实测抓到。）
   const WAITS_FOR_HUMAN = new Set(['wiki_archive_plan', 'team_spawn'])
   const ms = WAITS_FOR_HUMAN.has(tool) ? 10 * 60 * 1000 : 15000
   return new Promise((resolve) => {
