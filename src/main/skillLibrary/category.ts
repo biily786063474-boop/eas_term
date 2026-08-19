@@ -20,7 +20,8 @@
 
 import type { SkillCategoryGroup, SkillInfo } from '../../shared/types'
 
-export const UNCATEGORIZED = '未分类'
+export { UNCATEGORIZED } from '../../shared/types'
+import { UNCATEGORIZED } from '../../shared/types'
 
 /** 分类名的长度上限（design 文档 §四：「分类名是字符串、非空、有长度上限」）。
  *  写入端（第二半 MCP 工具）校验用同一个常量，这里额外拿它做读取时的防御性过滤——

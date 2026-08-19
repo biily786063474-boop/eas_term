@@ -4549,6 +4549,9 @@
 }
 .skl-toolbar {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 8px 0;
 }
 /* CLI/目录切换按钮：没选中项目 Frame 时用它选全局目录 */
@@ -5159,4 +5162,88 @@
 .flb-body .code-view {
   flex: 1;
   min-height: 0;
+}
+
+
+/* ── 手动分类：新建入口 + 拖拽落点 ── */
+.skl-newcat-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.skl-newcat-btn:hover {
+  background: var(--glass-2);
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+.skl-newcat {
+  padding: 6px 8px 0;
+}
+.skl-newcat-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+/* 分类头那一行：标题按钮 + 删除。删除平时不显示，hover 到分类块才出来 —— 
+   常驻一个 × 在每个分类头上，视觉噪音太大，而且容易误点。 */
+.skl-cat-head-row {
+  display: flex;
+  align-items: center;
+}
+.skl-cat-head-row .skl-cat-head {
+  flex: 1;
+  min-width: 0;
+}
+.skl-cat-x {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.skl-cat:hover .skl-cat-x {
+  opacity: 0.6;
+}
+.skl-cat-x:hover {
+  opacity: 1;
+  background: rgba(255, 120, 120, 0.16);
+  color: #ff9b9b;
+}
+
+/* 拖到这个分类上：整块高亮，不只是标题那一行 —— 落点有多大要一眼看得出来 */
+.skl-cat.dropping {
+  background: rgba(var(--accent-rgb), 0.1);
+  outline: 1px dashed rgba(var(--accent-rgb), 0.6);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 拖起来的那张卡：让它看着「被拿起来了」 */
+.skl-item-head[draggable='true']:active {
+  cursor: grabbing;
 }

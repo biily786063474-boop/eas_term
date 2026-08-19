@@ -14,6 +14,7 @@
 // 现在两段并存：**项目段在上、全局段在下，各自带来源标注**。
 // 分段规则本身是纯函数，在 skillSections.ts，可单测。
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { UNCATEGORIZED } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { projectIdOfFrame } from '../../store/canvasSlice'
 import { soleFrameIdOfSel } from '../../store/canvas/selKey'
@@ -23,7 +24,7 @@ import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import { FileLightbox } from './FileLightbox'
-import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon } from '../../ui/Icons'
+import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon, CloseIcon } from '../../ui/Icons'
 
 /** 项目 Frame 的「项目 skill」目录：约定死的相对路径，不需要用户选。
  *  用模板字符串拼、不引 Node 的 path 模块——渲染层历来这么拼路径
@@ -58,6 +59,16 @@ export function CanvasSkillPanel(): JSX.Element {
 
   // 点开一个文件先进灯箱看（看完即走），不再默认往画布上落节点 —— 落画布是
   // 灯箱里那个按钮和拖拽的事，见 FileLightbox 文件头。
+  // 手动分类：拖一个 skill 卡片到某个分类头上。分类是**纯视图标记**，
+  // 不动硬盘上的 skill 文件、不影响任何 CLI 怎么加载它们（数据层见
+  // main/skillLibrary/README.md 那张表）。拖过的会被「锁住」，AI 的
+  // skill_categorize 之后不许再改它。
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [dropCat, setDropCat] = useState<string | null>(null)
+  /** 正在建新分类（工具栏那个 +）。分类是全局的，不属于某一段。 */
+  const [newCat, setNewCat] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [dirs, setDirs] = useState<SkillDirEntry[]>([])
   const [dirId, setDirId] = useState<string | null>(null)
@@ -87,6 +98,41 @@ export function CanvasSkillPanel(): JSX.Element {
     setNotice({ text, bad })
     window.setTimeout(() => setNotice((n) => (n?.text === text ? null : n)), 3600)
   }, [])
+
+  /** 把一个 skill 归到某个分类。`cat` 传 null = 拿回未分类，同时解锁（交还给 AI 管）。 */
+  const assign = useCallback(
+    async (skillPath: string, cat: string | null): Promise<void> => {
+      const r = await window.api.skillLibrary.assignCategory(skillPath, cat)
+      if (!r.ok) return say(r.error ?? '归类失败', true)
+      setReloadKey((k) => k + 1)
+      say(cat ? `已归到「${cat}」` : '已拿回未分类')
+    },
+    [say]
+  )
+
+  const addCategory = useCallback(
+    async (name: string): Promise<void> => {
+      const n = name.trim()
+      if (!n) return
+      const r = await window.api.skillLibrary.addCategoryName(n)
+      if (!r.ok) return say(r.error ?? '建不了这个分类', true)
+      setReloadKey((k) => k + 1)
+      say(`已建分类「${n}」，把 skill 拖进去`)
+    },
+    [say]
+  )
+
+  const removeCategory = useCallback(
+    async (name: string): Promise<void> => {
+      // 删分类**不删里面的 skill**，它们回到未分类。分类是视图上的标记，
+      // 删标记不该牵连被标记的东西 —— 所以这里不弹确认，代价很小且可逆。
+      const r = await window.api.skillLibrary.removeCategoryName(name)
+      if (!r.ok) return say(r.error ?? '删不掉', true)
+      setReloadKey((k) => k + 1)
+      say(r.applied ? `已删「${name}」，${r.applied} 个 skill 回到未分类` : `已删「${name}」`)
+    },
+    [say]
+  )
 
   // 目录集合不写死：内置几个默认 + 用户自己加的自定义目录，见 main/skillLibrary/dirs.ts
   useEffect(() => {
@@ -331,14 +377,51 @@ export function CanvasSkillPanel(): JSX.Element {
           const catKey = `${sec.key}\n${cat.name}`
           const collapsed = collapsedCats.has(catKey)
           return (
-            <div className="skl-cat" key={catKey}>
-              <button className="skl-cat-head" onClick={() => toggleCat(catKey)}>
-                <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
-                  <ChevronRightIcon size={10} />
-                </span>
-                <span className="skl-cat-name">{cat.name}</span>
-                <span className="skl-cat-count">{cat.skillPaths.length}</span>
-              </button>
+            <div
+              className={`skl-cat${dropCat === catKey ? ' dropping' : ''}`}
+              key={catKey}
+              // 整个分类块都是落点（不只是标题那一行）—— 拖到一半松手落在下面的
+              // 卡片上是很自然的动作，只认标题会让人以为「拖不进去」。
+              onDragOver={(e) => {
+                if (!dragging) return
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                setDropCat(catKey)
+              }}
+              onDragLeave={(e) => {
+                // 只有真的离开这一块才清高亮：在内部子元素之间移动也会触发 dragleave
+                if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+                setDropCat((c) => (c === catKey ? null : c))
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDropCat(null)
+                const path = dragging
+                setDragging(null)
+                if (!path) return
+                // 拖回「未分类」= 清掉分类并解锁，不是归到一个叫「未分类」的分类
+                void assign(path, cat.name === UNCATEGORIZED ? null : cat.name)
+              }}
+            >
+              <div className="skl-cat-head-row">
+                <button className="skl-cat-head" onClick={() => toggleCat(catKey)}>
+                  <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
+                    <ChevronRightIcon size={10} />
+                  </span>
+                  <span className="skl-cat-name">{cat.name}</span>
+                  <span className="skl-cat-count">{cat.skillPaths.length}</span>
+                </button>
+                {/* 「未分类」是兜底的桶，不是用户建的分类，删不得 */}
+                {cat.name !== UNCATEGORIZED && (
+                  <button
+                    className="skl-cat-x"
+                    data-tip="删掉这个分类（里面的 skill 回到未分类，不会被删）"
+                    onClick={() => void removeCategory(cat.name)}
+                  >
+                    <CloseIcon size={10} />
+                  </button>
+                )}
+              </div>
               {!collapsed && (
                 <div className="skl-cat-body">
                   {cat.skillPaths.map((p) => {
@@ -358,6 +441,18 @@ export function CanvasSkillPanel(): JSX.Element {
                       >
                         <button
                           className="skl-item-head"
+                          // 拖头部而不是整张卡：展开后卡里挂着文件树，那棵树自己
+                          // 也要拖（拖文件到画布），两套拖拽不能抢同一块区域。
+                          draggable
+                          onDragStart={(e) => {
+                            setDragging(sk.path)
+                            e.dataTransfer.effectAllowed = 'move'
+                            e.dataTransfer.setData('text/plain', sk.path)
+                          }}
+                          onDragEnd={() => {
+                            setDragging(null)
+                            setDropCat(null)
+                          }}
                           onClick={() => setExpandedSkill(expanded ? null : sk.path)}
                         >
                           <span className={`skl-chevron${expanded ? ' open' : ''}`}>
@@ -423,7 +518,39 @@ export function CanvasSkillPanel(): JSX.Element {
             <ChevronRightIcon size={10} />
           </span>
         </button>
+        {/* 分类是**全局的**（不属于某个目录/某一段），所以入口在工具栏而不是段头 ——
+            段头只在项目段和全局段并存时才出现，放那儿单段时就没有入口了。 */}
+        <button
+          className="skl-newcat-btn"
+          data-tip="新建一个分类，然后把 skill 拖进去"
+          onClick={() => {
+            setNewCat(true)
+            setNewCatName('')
+          }}
+        >
+          <PlusIcon size={12} />
+        </button>
       </div>
+      {newCat && (
+        <div className="skl-newcat">
+          <input
+            className="skl-newcat-input"
+            autoFocus
+            value={newCatName}
+            placeholder="分类名，回车建好"
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => {
+              // 输入法拼字途中的回车是「选词」，不是「提交」——不挡的话建出一个半截名字
+              if (e.nativeEvent.isComposing) return
+              if (e.key === 'Enter') {
+                void addCategory(newCatName)
+                setNewCat(false)
+              } else if (e.key === 'Escape') setNewCat(false)
+            }}
+            onBlur={() => setNewCat(false)}
+          />
+        </div>
+      )}
       {dirMenuAt && (
         <CanvasContextMenu x={dirMenuAt.x} y={dirMenuAt.y} items={dirMenuItems} onClose={() => setDirMenuAt(null)} />
       )}

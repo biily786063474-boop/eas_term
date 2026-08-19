@@ -864,6 +864,11 @@ export interface SkillLibrarySnapshot {
 
 /** 批量写分类的结果。**引用了不存在的 skill 要拒绝整批**（design 文档 §四），
  *  所以失败时 error 里会点名是哪几条不认识——agent 只有拿到名字才改得动。 */
+/** 没有被归类的 skill 落在这个桶里。**它不是用户建的分类**：删不得、也不能拿它
+ *  当自建分类的名字。主进程和渲染层都要判断它（一个用来分组、一个用来决定
+ *  「拖到这里 = 清掉分类」），所以放在 shared，不许两边各写一份字面量。 */
+export const UNCATEGORIZED = '未分类'
+
 export interface SkillCategorizeResult {
   ok: boolean
   error?: string
