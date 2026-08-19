@@ -3,6 +3,7 @@
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { teamModeOf } from './teamMode'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
@@ -16,8 +17,7 @@ import {
   GlobeIcon,
   TidyIcon,
   CameraIcon,
-  SparkleIcon
-} from '../../ui/Icons'
+  SparkleIcon, ChipIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
@@ -141,6 +141,7 @@ export function CanvasStage(): JSX.Element {
   const rows = useProjectRows()
   const addFileNode = useStore((s) => s.addFileNode)
   const renameFrame = useStore((s) => s.renameFrame)
+  const toggleTeamMode = useStore((s) => s.toggleTeamMode)
   // 选中集合提到 store（含浮层终端节点）：这里派生成 Set 供读取，写用 store action
   const canvasSel = useStore((s) => s.canvasSel)
   const setCanvasSel = useStore((s) => s.setCanvasSel)
@@ -1154,6 +1155,25 @@ export function CanvasStage(): JSX.Element {
                   setStatusPop({ x: r.left, y: r.bottom + 6, frameId: f.id })
                 }}
               />
+              {/* 多 agent 总闸。放在名字前面 —— 它是这个项目的一个持久属性，
+                  跟色点（状态）同类，不是标题栏右边那排「做一件事」的按钮。
+                  **只有顶层项目 Frame 出这个开关**：子 Frame 是文件夹分组，
+                  跟着父的走（判定见 teamMode.ts）。 */}
+              {!f.parentId && !!f.projectId && (
+                <button
+                  className={`cframe-team${teamModeOf(frames, f.id) ? ' on' : ''}`}
+                  data-tip={
+                    teamModeOf(frames, f.id)
+                      ? '多 agent：开。这个项目允许组团队（点击关闭）'
+                      : '多 agent：关。开了之后才能把任务拆给多个 agent 并行做'
+                  }
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onClick={() => toggleTeamMode(f.id, !teamModeOf(frames, f.id))}
+                >
+                  <ChipIcon size={11} />
+                </button>
+              )}
               {editingFrame === f.id ? (
                 <input
                   className="cframe-rename"

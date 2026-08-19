@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>多 Agent 跨进程编排 · 方案 · 2026-08-19</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}.ro{color:#fda4af}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">多 Agent 跨进程编排</span>
+    <a href="#结论">结论</a>
+    <a href="#三层">三层架构</a>
+    <a href="#容器">团队容器</a>
+    <a href="#错误">错误矩阵</a>
+    <a href="#挽回">挽回机制</a>
+    <a href="#闸门">开关与闸门</a>
+    <a href="#扩展">扩展</a>
+    <a href="#cli">CLI 兼容</a>
+    <a href="#分期">分期</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <span class="eyebrow">架构方案 · v0.4.30 · 待评审</span>
+  <h1>Agent 不该是终端，<br>也不该没有身体</h1>
+  <p class="lede">
+    跨进程多 Agent 编排的完整设计。三条主干：<b>会话活在主进程</b>（所以 agent 跑着也不占你画布）、
+    <b>要不要用多 agent 是项目的属性</b>（Frame 头上一个开关，关着就永远不提）、
+    <b>运行时不认识任何角色</b>（角色表是可换的场景包，加新场景不改一行代码）。
+    重点在错误矩阵与挽回机制：14 种失败，逐条给出检测信号与兜底。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-08-19</b></span>
+    <span>版本 <b>v2</b>（三轮讨论后重写闸门与分层）</span>
+    <span>新增 MCP 工具 <b>4 个</b></span>
+    <span>可复用现有能力 <b>7 处</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">可行。真正要新写的东西比想象中少</div>
+
+  <div class="verdict">
+    <div class="vlabel">关键技术事实（已核实）</div>
+    <p style="margin:0 0 10px">
+      <code>agentChat:start</code> 起的 CLI 进程活在<b>主进程</b>的 <code>sessions</code> Map 里，
+      渲染层只是按 <code>sessionId</code> 订阅事件流。
+    </p>
+    <p style="margin:0">
+      也就是说 <b>agent 会话不需要画布节点就能跑</b>。你要的「不侵占工作空间」不是靠隐藏节点实现的，
+      而是这些 agent <b>本来就不必有节点</b> —— 节点只是你想看它时才挂上去的一块屏幕。
+    </p>
+  </div>
+
+  <div class="grid g3">
+    <div class="stat">
+      <div class="num n-em">7</div>
+      <div class="lab">可直接复用的现有能力<br><span style="color:#525252">会话 API / 画布组件注册表 / notify / 灵动岛 / 审批 hook / 知识库 / 快照</span></div>
+    </div>
+    <div class="stat">
+      <div class="num n-am">4</div>
+      <div class="lab">要新增的 MCP 工具<br><span style="color:#525252">spawn / status / send / dissolve<br>外加 Frame 上一个 teamMode 布尔字段</span></div>
+    </div>
+    <div class="stat">
+      <div class="num n-ro">14</div>
+      <div class="lab">必须处理的失败场景<br><span style="color:#525252">其中 3 个是跨进程独有</span></div>
+    </div>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">先说最大的风险，不放在最后</div>
+    <p style="margin:0 0 10px">
+      <b>并发写同一个仓库。</b> CCteam 在同进程里靠「任务划分」避免冲突 —— 那是君子协定，
+      靠 prompt 约束。跨进程是<b>真并发</b>：backend-dev 和 reviewer 同时改一个文件，
+      后写的直接盖掉前面的，git 也帮不了你（都在同一个工作区）。
+    </p>
+    <p style="margin:0">
+      这不是加个锁能解决的工程细节，它决定了架构：<b>写码 agent 必须各自跑在 git worktree 里</b>。
+      详见错误矩阵 E-07。不做这一层，这套系统跑三天就会毁掉一次你的工作区。
+    </p>
+  </div>
+</section>
+
+<section id="三层">
+  <h2>Architecture</h2>
+  <div class="sectitle">进程 / 状态 / 视图，三层分开</div>
+  <p class="secnote">
+    这三层现在是纠缠的（关掉节点 = 杀掉会话）。做多 agent 必须先把它们拆开，
+    否则「不显示节点」等于「杀掉 agent」。
+  </p>
+
+  <pre><code><span class="dim">┌─ 视图层（可有可无，随时开关）────────────────────────┐</span>
+<span class="dim">│</span>  团队面板（画布组件）        agent 详情（临时 agentChat 节点）
+<span class="dim">│</span>    谁在干什么 / 进度 / 卡住      ↑ 点某个 agent 才挂上，看完就关
+<span class="dim">└──────────────────┬───────────────────────────────────┘</span>
+                   <span class="flow">│ 只订阅，不持有</span>
+<span class="dim">┌─ 状态层（磁盘，唯一真相）─────────────────────────────┐</span>
+<span class="dim">│</span>  .plans/&lt;项目&gt;/team.json     ← 团队花名册 + 每个 agent 的状态机
+<span class="dim">│</span>  .plans/&lt;项目&gt;/&lt;role&gt;/       ← 各 agent 自己的 task_plan/findings/progress
+<span class="dim">│</span>  <span class="hi">主 agent 的上下文压缩了也不影响这一层</span>
+<span class="dim">└──────────────────┬───────────────────────────────────┘</span>
+                   <span class="flow">│ 主进程读写</span>
+<span class="dim">┌─ 进程层（主进程 sessions Map）────────────────────────┐</span>
+<span class="dim">│</span>  claude ×2   codex ×1   ...   <span class="dim">← 各自独立的 CLI 子进程</span>
+<span class="dim">│</span>  <span class="hi">节点关掉 ≠ 进程杀掉</span>（这是要改的第一件事）
+<span class="dim">└───────────────────────────────────────────────────────┘</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">这里有一处必须改的既有行为</div>
+    <p style="margin:0">
+      现在关掉一个 agent 节点会 <code>killPanePty</code> 掉底层会话（见 <code>store/shared.ts</code>，
+      当初这么做是为了防止「关了节点但 CLI 还在后台烧 token」）。
+      多 agent 场景下这条规则要<b>按来源区分</b>：用户手动开的会话照旧（关 = 杀），
+      团队派生的会话关节点只是<b>收起视图</b>，杀不杀由团队面板决定。
+      不区分的话，你想看一眼某个 agent 然后关掉窗口，就把它干掉了。
+    </p>
+  </div>
+
+  <h3>要新增的 4 个 MCP 工具</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>工具</th><th>做什么</th><th>底层</th></tr></thead>
+    <tbody>
+      <tr><td><code>team_spawn</code></td><td>按角色清单批量起会话并投递首条任务</td><td><code>agentChat:start</code>（已支持带首条消息）</td></tr>
+      <tr><td><code>team_status</code></td><td>查花名册 + 每个 agent 的状态 / 最后活动时间 / 累计用量</td><td>读 <code>team.json</code> + <code>sessions</code> Map</td></tr>
+      <tr><td><code>team_send</code></td><td>给某个 agent 追加指令（纠偏、补充、叫停）</td><td><code>agentChat:send</code></td></tr>
+      <tr><td><code>team_dissolve</code></td><td>解散：停会话、收视图、归档 <code>.plans/</code></td><td><code>agentChat:stop</code> + 文件操作</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="color:#737373;font-size:13.5px">
+    注意<b>没有</b> <code>team_read_findings</code> 这类工具 —— 主 agent 读子 agent 的产出直接用
+    <code>Read</code> 就行，那些就是普通文件。<b>能用文件系统解决的不要做成工具</b>，
+    每多一个工具就多一份常驻 schema 成本。
+  </p>
+</section>
+
+<section id="容器">
+  <h2>Container</h2>
+  <div class="sectitle">团队面板：一个画布组件，不是一堆终端</div>
+  <p class="secnote">
+    你的判断是对的 —— 往画布上撒 5 个终端节点是设计事故。现有的画布组件注册表
+    （<code>CANVAS_COMPONENTS</code>，已有 git / design 两个）正好是这个容器的落点，
+    注释里写着「新增一个画布组件 = 写一个 def 并 push，无需改动其它文件」。
+  </p>
+
+  <h3>面板长什么样</h3>
+  <pre><code>┌─ 团队 · 重构导出流程 ──────────────── <span class="dim">3 跑 / 1 完 / 1 卡</span> ─ ⊟ ─┐
+│                                                                │
+│  <span class="flow">●</span> researcher    调研三种导出格式        <span class="dim">4m12s · 12K tok</span>  <span class="dim">〉</span>│
+│  <span class="flow">●</span> backend-dev   实现 PDF 导出           <span class="dim">2m03s · 31K tok</span>  <span class="dim">〉</span>│
+│  <span class="hi">◐</span> frontend-dev  <span class="hi">等审批：写 src/export/</span>      <span class="hi">已等 6m</span>       <span class="dim">〉</span>│
+│  <span class="dim">○</span> reviewer      <span class="dim">等 backend-dev 交付</span>                          │
+│  <span class="flow">✓</span> custodian     <span class="dim">已更新 docs/index.md</span>        <span class="dim">48s · 3K tok</span>   <span class="dim">〉</span>│
+│                                                                │
+│  <span class="dim">──────────────────────────────────────────────────────</span>  │
+│  <span class="dim">本批累计</span> <span class="hi">$0.83</span> <span class="dim">·</span> 46K tok <span class="dim">·</span> 起于 14:22        <span class="dim">[全部叫停]</span>  │
+└────────────────────────────────────────────────────────────────┘</code></pre>
+
+  <div class="grid g2">
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0">一行一个 agent，行内说清三件事</h4>
+      <ul class="clean" style="margin:0">
+        <li><b>在干什么</b> —— 当前任务标题，不是滚动的日志</li>
+        <li><b>健康度</b> —— 跑 / 卡 / 等审批 / 等依赖 / 完 / 崩</li>
+        <li><b>烧了多少</b> —— 时长 + token，这是你唯一需要盯的数字</li>
+      </ul>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0">点 <code>〉</code> 才展开完整会话</h4>
+      <p style="margin:0">
+        临时挂一个 agentChat 节点在面板旁边，你可以看完整对话、<b>插一句话纠偏</b>、
+        或者接管。关掉这个节点只是收起视图，<b>agent 继续跑</b>。
+      </p>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">面板不是入场券</div>
+    <p style="margin:0">
+      v1 让面板同时承担「你得先放它才能组队」和「显示团队状态」两个职责，这是错的。
+      入场券归 <b>Frame 上那个开关</b>（见下一节），面板<b>只显示状态</b>，
+      而且是开工之后自动出现的<b>结果</b>。收起面板不等于解散 —— 那是开关的事。
+    </p>
+  </div>
+
+  <h3>它放在哪</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>方案</th><th>取舍</th><th>选</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>放当前项目 Frame 内，作为一个普通节点</td>
+        <td>跟着项目走、位置由你定；但确实占了一块画布</td>
+        <td><span class="b b-em">选这个</span></td>
+      </tr>
+      <tr>
+        <td>专属的团队 Frame（子 Frame）</td>
+        <td>更隔离，但多一层容器；Frame 本身是「项目分组」语义，团队不是项目</td>
+        <td><span class="b b-gy">不选</span></td>
+      </tr>
+      <tr>
+        <td>浮层 / 抽屉（像知识库那样贴边）</td>
+        <td>完全不占画布，但跟画布的空间语义脱节，且抽屉已经有两档了</td>
+        <td><span class="b b-am">备选</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="color:#a3a3a3;font-size:14px">
+    选第一个的理由：<b>它是一个工件，不是一个模式</b>。团队面板应该能被你拖到顺手的位置、
+    折叠、跟项目一起存档。做成浮层就变成了「一个模式」，用完得记得关。
+    而且画布组件天生支持折叠成一行 —— 不看的时候它就是一条状态栏。
+  </p>
+</section>
+
+<section id="错误">
+  <h2>Failure Matrix</h2>
+  <div class="sectitle">14 种失败，逐条给检测信号</div>
+  <p class="secnote">
+    没有检测信号的失败等于不存在。每一条都要回答：<b>系统怎么知道它发生了</b>。
+    标 <span class="b b-ro">跨进程独有</span> 的三条是这个架构新引入的，同进程方案不会遇到。
+  </p>
+
+  <h3>启动期</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>失败</th><th>检测信号</th><th>兜底</th></tr></thead>
+    <tbody>
+      <tr><td>E-01</td><td>CLI 没装 / cwd 不存在</td><td><code>agentChat:start</code> 直接返回 error</td><td>整批不启动，把缺什么一次说清，别起一半</td></tr>
+      <tr><td>E-02</td><td>额度已耗尽</td><td>首条消息回 rate limit 错误</td><td>整批中止 + 记录已烧掉的；<b>不要重试</b></td></tr>
+      <tr><td>E-03</td><td>批量起 5 个，第 3 个失败</td><td>逐个 start 的返回值</td><td><b>全成或全不成</b>：失败就把已起的停掉。半个团队比没有团队更糟</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>运行期</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>失败</th><th>检测信号</th><th>兜底</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>E-04</td><td>进程崩溃（OOM / 被杀）</td>
+        <td>子进程 exit 事件（已有）</td>
+        <td>面板标红「崩了」+ 保留它已写的 <code>progress.md</code>；<b>不自动重启</b>（可能就是它把自己撑爆的）</td>
+      </tr>
+      <tr>
+        <td>E-05</td><td>卡住：长时间无输出</td>
+        <td><b>心跳</b>：距上一个事件超过 N 分钟</td>
+        <td>面板标黄 + 通知你。<b>不自动杀</b> —— 它可能在跑一个长命令</td>
+      </tr>
+      <tr>
+        <td>E-06</td><td>等审批没人点</td>
+        <td>审批 hook 已经能感知（灵动岛在用）</td>
+        <td>这是<b>最容易静默卡死</b>的一种：面板明确显示「等审批 已等 6m」并 <code>notify</code></td>
+      </tr>
+      <tr style="background:rgba(244,63,94,.04)">
+        <td>E-07</td><td><b>并发写同一个文件</b> <span class="b b-ro">跨进程独有</span></td>
+        <td>无信号 —— <b>这是最危险的地方</b>，它静默发生</td>
+        <td><b>git worktree 隔离</b>，见下方专段</td>
+      </tr>
+      <tr>
+        <td>E-08</td><td>死循环：反复做同一件事</td>
+        <td>3-Strike（CCteam 的机制）：同一错误 3 次</td>
+        <td>agent 自己上报主 agent；靠 prompt 约束，<b>不可靠但聊胜于无</b></td>
+      </tr>
+      <tr>
+        <td>E-09</td><td>跑偏：做了没派的活</td>
+        <td>难以自动检测</td>
+        <td>靠你点进去看。<b>这正是画布方案值钱的地方</b> —— 同进程你看不到</td>
+      </tr>
+      <tr>
+        <td>E-10</td><td>烧得比预估多得多</td>
+        <td>累计 token（面板实时显示）</td>
+        <td>超过本批预估 2 倍时<b>暂停全批</b>并问你</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>主控端与收尾</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>失败</th><th>检测信号</th><th>兜底</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>E-11</td><td>主 agent 上下文压缩，忘了自己在带团队</td>
+        <td>—</td>
+        <td><b>状态在磁盘不在上下文</b>（<code>team.json</code>）。压缩后读一次就全回来了 —— 这是三层架构最直接的收益</td>
+      </tr>
+      <tr>
+        <td>E-12</td><td>app 重启 / 崩溃</td>
+        <td>启动时扫 <code>.plans/*/team.json</code></td>
+        <td>CLI 子进程<b>随 app 一起死</b>。恢复的是「团队还有哪些活没干完」，不是进程。面板显示「上次这批没跑完」并给重启入口</td>
+      </tr>
+      <tr>
+        <td>E-13</td><td>agent 说完成了但没写 findings</td>
+        <td>收活时检查文件是否存在/非空</td>
+        <td>打回重做一次（带上「你没写 findings」）；第二次还没有就标记未完成，交给你</td>
+      </tr>
+      <tr>
+        <td>E-14</td><td>两个 agent 的结论互相矛盾</td>
+        <td>无法自动检测</td>
+        <td>主 agent 汇总时<b>显式呈现分歧</b>，不要替你抹平。这条抄 CCteam 的 reviewer 纪律</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">E-07 专段：为什么必须上 worktree</div>
+    <p style="margin:0 0 10px">
+      两个写码 agent 并行改同一个仓库时：A 读了 <code>foo.ts</code>，B 也读了，
+      A 写回，B 写回 —— <b>A 的改动消失，而且没有任何人会发现</b>。
+      不是 git 冲突（那还好，至少会报错），是<b>静默覆盖</b>。
+    </p>
+    <p style="margin:0 0 10px">
+      同进程方案不遇到这个问题，因为子 agent 的 Write 是排队执行的。跨进程是真并发。
+    </p>
+    <pre style="margin:0"><code><span class="flow">解法</span>  每个<span class="hi">写码</span> agent 起一个 git worktree：
+      .worktrees/team-&lt;批次&gt;-&lt;role&gt;/   ← 它的 cwd 指这里
+
+<span class="flow">收活</span>  agent 完成 → 主 agent 逐个 review → 合并回主分支
+      冲突在<span class="hi">合并时</span>暴露（有信号！），而不是静默覆盖
+
+<span class="dim">只读角色</span>（researcher / reviewer）不需要 worktree，直接用主工作区
+<span class="dim">代价</span>    每个 worktree 一份磁盘；node_modules 可以软链</code></pre>
+  </div>
+</section>
+
+<section id="挽回">
+  <h2>Recovery</h2>
+  <div class="sectitle">五种挽回手段，覆盖上面 14 条</div>
+
+  <div class="grid g2">
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-em">1</span> 接管</h4>
+      <p style="margin:0">点开 agent 会话，自己接着跟它说。<b>这是最强的一招</b>，因为它不需要任何自动化正确 —— 你看到了、你插手了。同进程方案给不了这个。</p>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-em">2</span> 重派</h4>
+      <p style="margin:0">停掉这个 agent，带着「上次为什么失败」重开一个。<code>team.json</code> 记着它的任务定义，重派是一条命令。</p>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-am">3</span> 全批叫停</h4>
+      <p style="margin:0">面板右下角常驻按钮。<b>任何时候都必须一键能停</b> —— 这是这套系统能不能让人放心用的底线。</p>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-am">4</span> 丢弃 worktree</h4>
+      <p style="margin:0">某个 agent 改坏了，它的 worktree 整个删掉即可，主工作区一个字没动。这是 worktree 隔离的附带红利。</p>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-sk">5</span> 从磁盘重建</h4>
+      <p style="margin:0">app 重启、主 agent 压缩、你关了又开 —— 全部靠读 <code>team.json</code> 恢复。<b>唯一真相在磁盘</b>。</p>
+    </div>
+    <div class="card" style="margin:0">
+      <h4 style="margin-top:0"><span class="b b-gy">0</span> 什么都不做</h4>
+      <p style="margin:0">E-05（卡住）、E-04（崩溃）都<b>不自动重试</b>。自动重试是最容易把小问题变成烧钱事故的机制。报出来，等你决定。</p>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">一条贯穿性的纪律</div>
+    <p style="margin:0">
+      <b>系统不替你做任何「可能花钱」的自动决定。</b> 检测到异常 → 标出来 + 通知；
+      重启、重派、继续，一律等你点。这跟你在密钥柜、审批 hook 上的既有立场是一致的 ——
+      那两处都是「AI 不能替用户做不可逆的事」。
+    </p>
+  </div>
+</section>
+
+<section id="闸门">
+  <h2>Gate</h2>
+  <div class="sectitle">开关在 Frame 上，闸门在批次上</div>
+  <p class="secnote">
+    <b>「要不要用多 agent」是项目的属性，不是每次任务的属性。</b>
+    这是 v2 相对 v1 最大的改动 —— v1 试图靠「面板必须先放」和「description 措辞」来防误触发，
+    前者是每次都要做的仪式，后者靠语义判断（今天的实测数据表明它不可靠）。
+  </p>
+
+  <h3>Frame 头上一个开关</h3>
+  <pre><code>┌─ <span class="flow">⚙</span> 数字艺术软件 ─────────────────── ⊞ ✦ &gt;_ ⊕ ⧉ ─ ┐
+   <span class="hi">↑</span>
+   <span class="hi">多 agent 开关。开着 = 这个项目允许组队；关着 = 主 agent 连提都不会提</span>
+
+<span class="dim">技术落点：CanvasFrame 加一个 teamMode?: boolean
+          （它已经有 status?: FrameStatus，头部本来就在挂状态指示）
+          team_spawn 执行时读这个字段 —— 事实查询，不依赖任何模型判断</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">为什么这比 v1 的两个方案都好</div>
+    <div class="tw" style="margin:10px 0 0">
+    <table>
+      <thead><tr><th>方案</th><th>问题</th></tr></thead>
+      <tbody>
+        <tr><td>v1-A：面板必须先放</td><td>每次要做一个仪式性动作；而且让面板同时承担「入场券」和「状态显示」两个职责</td></tr>
+        <tr><td>v1-B：description 反着写</td><td>语义触发不可靠 —— 今天实测 24 条查询，原版 description 该触发的只中了一半多</td></tr>
+        <tr><td><b>v2：Frame 开关</b></td><td><b>一次设置长期有效，一个布尔字段，看得见</b></td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin:12px 0 0">
+      还多了一层 v1 没有的收益：<b>按项目隔离</b>。大项目常开、随手改脚本的小项目常关，
+      两边互不干扰，不用每次交代。
+    </p>
+  </div>
+
+  <h3>两道闸门的分工</h3>
+  <pre><code><span class="flow">开关</span>（Frame 级 · 长期 · 你手动拨）     <span class="dim">"这个项目<b>能不能</b>用多 agent"</span>
+   ↓ 开着才往下走
+<span class="flow">批次确认</span>（每批一次 · 弹一次）        <span class="dim">"这一批 4 个 agent、$1.2，<b>值不值</b>"</span>
+   ↓ 你点开工
+   团队面板自动出现 + agent 开跑 <span class="dim">（面板是<b>结果</b>，不是前提）</span></code></pre>
+
+  <p style="color:#a3a3a3;font-size:14px">
+    关着的时候主 agent <b>连提议都不会有</b> —— 这是你要的「不被打扰」。
+    开着的时候它可以自由提议（那是零成本的文字），但起进程前那张清单必须你点。
+  </p>
+
+  <h4>批次清单长这样</h4>
+  <pre><code>     ┌──────────────────────────────────────────────┐
+     │  本批 4 个 agent，预估 40–70K tok（约 $1.2）  │
+     │                                              │
+     │  researcher    调研导出格式        haiku      │
+     │  backend-dev   实现 PDF 导出       opus       │
+     │  frontend-dev  接导出按钮          sonnet     │
+     │  reviewer      审这两处改动        sonnet     │
+     │                                              │
+     │        [ 开工 ]   [ 改一改 ]   [ 算了 ]       │
+     └──────────────────────────────────────────────┘
+
+<span class="dim">点开工之后这一批跑到底，中途不再打断。只有这几种情况才回来找你：</span>
+     <span class="ro">·</span> 某个 agent 崩了 / 卡住 / 等审批
+     <span class="ro">·</span> 累计用量超预估 2 倍
+     <span class="ro">·</span> 这批干完了，要开下一批
+     <span class="ro">·</span> 有 agent 要动 worktree 以外的东西</code></pre>
+
+  <p style="color:#a3a3a3;font-size:14px">
+    <b>预估怎么来？</b> 第一版就用「角色 × 历史均值」的粗估，面板上实时显示真实累计 ——
+    <b>估不准不要紧，看得见就行</b>。这跟上下文百分比那次的教训是同一条：
+    与其显示一个精心计算但错的数字，不如显示一个粗糙但真实的。
+  </p>
+
+  <h3>开关的四条细则</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>问题</th><th>定法</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td>子 Frame 有没有自己的开关</td><td><b>没有，继承顶层</b></td><td>子 Frame 是文件夹分组，不该各有一套团队设置</td></tr>
+      <tr><td>默认值</td><td><b>关</b></td><td>跟密钥柜、审批 hook 一贯立场一致：花钱的能力默认不开</td></tr>
+      <tr><td>开了要不要立刻出面板</td><td><b>不出</b></td><td>否则每个开着的项目都挂一块空面板，又变成噪音</td></tr>
+      <tr><td>有 agent 在跑时能不能关</td><td><b>不能，提示先叫停</b></td><td>直接关会留下<b>跨进程的孤儿</b>，app 都不一定知道它们还在</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="扩展">
+  <h2>Extensibility</h2>
+  <div class="sectitle">运行时不认识任何角色</div>
+  <p class="secnote">
+    v1 有个真缺陷：那张角色表（researcher / backend-dev / reviewer / custodian）整个是编程专用的。
+    照那样做出来，以后想给自媒体场景组团队，就得把编排逻辑重写一遍。
+  </p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>归谁</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>运行时</b><br><span style="color:#737373">不变</span></td>
+        <td>Eas-Term 代码</td>
+        <td>Frame 开关、批次确认、spawn / 状态 / 叫停、状态落盘与恢复、14 条错误检测、团队面板、接管入口</td>
+      </tr>
+      <tr>
+        <td><b>场景包</b><br><span style="color:#737373">可换</span></td>
+        <td>一份 skill</td>
+        <td>有哪些角色、各用什么模型和 CLI、产出落到什么目录结构、<b>要不要隔离</b>、怎么算干完了、需求怎么拆</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><b>分开之后，运行时一个字都不知道什么叫 backend-dev。</b> 拿两个场景对比就很清楚：</p>
+
+  <pre><code><span class="flow">编程团队</span>                          <span class="flow">自媒体团队</span>
+─────────────────────────        ─────────────────────────
+researcher   调研                 选题手    找选题
+backend-dev  写代码 <span class="hi">← worktree</span>    写稿      写正文
+reviewer     审查                 配图      <span class="dim">交给笔纵画板执行</span>
+custodian    维护文档             复盘      发布后回看数据
+
+隔离：git worktree（必须）        隔离：<span class="dim">none</span>（各写各的文件）
+收活：测试过 + review 过          收活：稿子成型 + 图齐了
+产出：.plans/&lt;role&gt;/              产出：那个项目自己的目录结构
+
+<span class="dim">共享的是右边这一整套 ↓</span>
+<span class="flow">批次确认 · 状态面板 · 卡住检测 · 一键叫停 · 崩了怎么办 · 接管</span></code></pre>
+
+  <h3>场景包用 skill 承载，不新造机制</h3>
+  <pre><code>~/.claude/skills/<span class="hi">team-coding</span>/SKILL.md      <span class="dim">← 编程场景的角色表 + 拆解方法</span>
+~/.claude/skills/<span class="hi">team-media</span>/SKILL.md       <span class="dim">← 自媒体场景（以后写）</span>
+&lt;项目&gt;/.claude/skills/<span class="hi">team-xxx</span>/           <span class="dim">← 某个项目专用的团队形态</span></code></pre>
+
+  <p style="color:#a3a3a3;font-size:14px">
+    你已经有整套 skill 基础设施：面板、分类、项目级/全局、分发同步。而 CCteam 本身就是一个 skill。
+    <b>想要新场景就写一个新 skill，不用改 Eas-Term 一行代码</b>。
+    「自定义角色」的字段格式直接抄 CCteam 的那张表（名称 / subagent_type / model / 核心职责 / 文档结构）。
+  </p>
+
+  <div class="warn">
+    <div class="vlabel">现在不该设计的两件事</div>
+    <p style="margin:0 0 10px">
+      <b>① agent 的载体不一定是 CLI 会话。</b> 自媒体场景里「配图」那个角色，实际动作是把提示词
+      交给笔纵画板 —— 可能根本不需要起一个 CLI。但现在猜它长什么样是浪费：
+      <b>先把 CLI 会话这一种做扎实</b>，接口上留个 <code>kind</code> 字段就够了。
+    </p>
+    <p style="margin:0">
+      <b>② 隔离策略先只做两种</b>：<code>worktree</code>（编程）和 <code>none</code>（其余）。
+      以后真遇到需要第三种（比如生图要串行避免额度打架）再加。
+      CCteam 的假设审计原则在这里适用 —— <i>尽可能保持简单，只在需要时增加复杂性</i>。
+    </p>
+  </div>
+</section>
+
+<section id="cli">
+  <h2>CLI Compatibility</h2>
+  <div class="sectitle">哪些 CLI 能当 agent 载体</div>
+  <p class="secnote">
+    <b>多 agent 对 CLI 的要求比单会话更严。</b> 单会话下事件流不完整只是体验差；
+    多 agent 下这些事件<b>是编排的输入</b> —— 主 agent 靠它们判断谁在动、谁卡了、烧了多少。
+  </p>
+
+  <h3>准入判据</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>能力</th><th>主 agent 拿它做什么</th><th>没有会怎样</th><th></th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>流式事件</b></td><td>知道它还活着</td>
+        <td>E-05 卡住检测失效 —— agent 死了你也不知道</td>
+        <td><span class="b b-ro">必需</span></td>
+      </tr>
+      <tr>
+        <td><b>工具事件</b></td><td>知道它在干什么</td>
+        <td>面板只能显示「跑着」，跑偏了看不出来</td>
+        <td><span class="b b-ro">必需</span></td>
+      </tr>
+      <tr>
+        <td><b>usage 上报</b></td><td>算账</td>
+        <td><b>闸门形同虚设</b> —— 预估和真实对不上，超支告警发不出来</td>
+        <td><span class="b b-ro">必需</span></td>
+      </tr>
+      <tr>
+        <td><b>审批事件</b></td><td>知道它卡在等确认</td>
+        <td>E-06 变成静默卡死，最难查的那种</td>
+        <td><span class="b b-am">强烈建议</span></td>
+      </tr>
+      <tr>
+        <td><b>resume</b></td><td>崩溃后续上</td>
+        <td>只能重头再来（多花一遍钱，不是不能用）</td>
+        <td><span class="b b-gy">可选</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">删 DeepSeek Harness 的理由在这里更强</div>
+    <p style="margin:0">
+      今天移除 dsh 写的判词是：「headless 只打印最终消息，没有流式、没有工具事件，写不出 adapter」。
+      这样的 CLI 在单会话里是「体验不好」，<b>在团队里是黑盒</b> ——
+      主 agent 拿不到任何进度信号，既不知道它活着没，也不知道它烧了多少。
+      <b>准入判据不是把 chatSupported 抄一遍，是在它之上再加一档。</b>
+    </p>
+  </div>
+
+  <h3>混编的价值：各自独立的额度池</h3>
+  <p>
+    这一条比「不同模型强项不同」实在得多：<b>5 个 agent 并行烧的是同一个池子，单 CLI 很快撞墙。</b>
+    Claude 五小时额度打满了，Codex 那边照跑 —— 在多 agent 场景下这不是锦上添花，
+    而是决定这套系统<b>能不能连续工作</b>。
+  </p>
+  <p style="color:#a3a3a3;font-size:14px">
+    其次才是成本分层（调研用便宜的、写码用贵的）和模型强项。
+  </p>
+
+  <h3>场景包怎么表达：声明能力，不绑名字</h3>
+  <pre><code><span class="ro">❌</span> researcher: { cli: 'codex' }          <span class="dim">← 硬绑。Codex 没装就整批起不来</span>
+
+<span class="flow">✅</span> researcher: {
+     needs:  ['stream', 'usage'],          <span class="dim">← 我需要什么能力</span>
+     prefer: ['codex', 'claude']           <span class="dim">← 有得选时的偏好，不是硬性</span>
+   }</code></pre>
+  <p>
+    运行时按可用 CLI 匹配，匹配不上就在<b>批次清单里明说</b>：
+    「researcher 需要 usage 上报，当前可用的 CLI 都不满足」—— 而不是默默降级或直接失败。
+  </p>
+  <p style="color:#a3a3a3;font-size:14px">
+    这跟 <code>cliList.ts</code> 里已经立过的规矩是一套路子：
+    <i>「由数据声明，不在 UI 里按 CLI 名字判断，否则加一个 CLI 就要去界面里补一条 if，
+    而那种补丁必然漏」</i>。现有的 <code>CliCapabilities</code> 已经有
+    <code>contextUsage</code> / <code>approval</code> 两项可以直接对上，
+    只差补「流式」「工具事件」两个声明位。
+  </p>
+
+  <h3>新 CLI（Kimi Code 之类）怎么接</h3>
+  <p>
+    流程不变 —— 走 <code>.claude/skills/agent-onboarding</code> 那份手册，
+    只是准入判据多了上面那几条。<b>拿到手先跑一遍它的 <code>--help</code> 和一次真实会话</b>，
+    看事件流里有没有那四样，结论写进 <code>docs/cli-headless-接口实测.md</code>
+    （量 DSH 就是这么量的，那份文档里留着完整的判据和结论）。
+  </p>
+
+  <div class="verdict">
+    <div class="vlabel">一个现成的东西在这里价值翻倍</div>
+    <p style="margin:0">
+      <code>cliContract</code> 契约自检（指纹漂移检测）。单 CLI 时它防的是
+      「某天升级后接口悄悄变了」；<b>多 agent 时一个 CLI 的接口漂移会影响整个团队的编排</b> ——
+      比如 usage 字段改名，闸门立刻失灵而没有任何报错。
+      团队模式下这套检查应该<b>在开工前跑一次</b>，而不只是启动时。
+    </p>
+  </div>
+</section>
+
+<section id="分期">
+  <h2>Phases</h2>
+  <div class="sectitle">三期，每期都能单独停下来用</div>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一期 · 骨架</div>
+      <div class="tt">Frame 开关 + 进程与视图解绑 + team.json + 团队面板（只读）</div>
+      <div class="td">
+        先做四件事：Frame 头上那个开关（<b>它是所有后续能力的总闸，第一个做</b>）、
+        「关节点不杀进程」、状态落盘、只读面板。
+        <b>此时还不能派活</b> —— 但你可以手动开几个 AI 对话，让它们出现在面板里，验证状态机对不对。
+        这一期做完就有独立价值：<b>多个会话的统一状态视图</b>，你现在开三个 AI 对话就已经需要它了。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第二期 · 派活</div>
+      <div class="tt">team_spawn / team_status / 批次确认 / 全批叫停 / 第一个场景包</div>
+      <div class="td">
+        能拆解、能派、能停、能看。第一个场景包（<code>team-research</code>）<b>只放只读角色</b>
+        （researcher / reviewer），不碰写码 —— 避开 E-07，先把编排逻辑跑顺。
+        <b>场景包从第一天就是 skill</b>，不要先写死在代码里想着以后再抽。
+        角色用 <code>needs</code>/<code>prefer</code> 声明能力，不绑 CLI 名字（见上一节）。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第三期 · 写码</div>
+      <div class="tt">worktree 隔离 + 收活合并 + 错误矩阵完整实现</div>
+      <div class="td">
+        最难的一期，E-07 全在这里。<b>不做完这一期就不要让 agent 写代码</b> ——
+        第二期只读角色的价值已经足够独立成立（并行调研、多角度审查）。
+      </div>
+    </div>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">我建议你先只做到第二期</div>
+    <p style="margin:0">
+      「并行调研 + 多角度审查」这个能力本身就很值 —— 它不改任何代码，因此几乎没有破坏性风险，
+      而且正好是 AI 现在最擅长的部分。<b>让 agent 并行写代码是另一个量级的问题</b>，
+      worktree 只解决了文件冲突，还有语义冲突（两个人实现了不兼容的接口）、
+      合并顺序、review 谁先谁后。做完第二期真用一阵子，再决定要不要上第三期。
+    </p>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">做第一期</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="color:#525252;font-size:13px;margin:0">
+    也可以说「一二期一起做」「先把 team.json 的结构定下来」「E-07 那段我不同意，聊聊」。
+  </p>
+</section>
+
+<footer>
+  技术核实：<code>src/main/agentChat/session.ts</code>（会话在主进程）·
+  <code>src/renderer/src/features/canvas/components/registry.tsx</code>（画布组件注册表）·
+  <code>src/renderer/src/store/shared.ts</code>（killPanePty 现有行为）<br>
+  参考：CCteam-creator-cn v1.4.3 的角色定义与 3-Strike 协议<br>
+  v2 改动（三轮讨论后）：闸门从「面板必须先放」改为 <b>Frame 开关</b>；
+  角色表从运行时摘出做成<b>场景包 skill</b>；面板从入场券改为<b>开工的结果</b><br>
+  本文件：<code>docs/多agent跨进程编排-方案-2026-08-19.html</code>
+</footer>
+
+</main>
+</body>
+</html>

@@ -8,6 +8,7 @@
 //   canvas/persist.ts  落盘格式与坏存档防御
 
 import type { StateCreator } from 'zustand'
+import { teamModeTargetId } from '../features/canvas/teamMode'
 import { collectLeaves, LeafNode, PaneState } from '../layout'
 import { uid } from './shared'
 import type { AppState } from './types'
@@ -729,6 +730,23 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const pid = projectIdOfFrame(s.canvas.frames, id)
     if (pid) void s.setProjectStatus(pid, status)
   },
+  // 多 agent 总闸。**写到顶层 Frame 上** —— 子 Frame 是文件夹分组，不该各有一套团队设置
+  // （同 setFrameStatus 把 frameId 翻译成 projectId 的道理）。判定统一走 teamModeOf()。
+  toggleTeamMode: (id, on) => {
+    const target = teamModeTargetId(get().canvas.frames, id)
+    if (!target) return
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          // 关的时候把字段删掉而不是存 false：canvas.json 里少一个恒假的键，
+          // 也让「没设过」和「明确关掉」在存档里长得一样（语义上本来就一样）
+          f.id === target ? (on ? { ...f, teamMode: true } : { ...f, teamMode: undefined }) : f
+        )
+      }
+    }))
+  },
+
   // 下面这段留给旧结构：canvas.json 里可能还带着 frame.status，
   // 迁移完就清空（见 projectsSlice 的 migrateFrameStatus）
   clearFrameStatusField: () =>

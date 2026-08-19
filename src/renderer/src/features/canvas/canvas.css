@@ -5247,3 +5247,43 @@
 .skl-item-head[draggable='true']:active {
   cursor: grabbing;
 }
+
+/* 多 agent 总闸（Frame 标题栏，名字前面）。
+   **关着时不显示，鼠标移到标题栏才出现**；开着时常亮并用强调色。
+   一开始写的是常驻 opacity:.35，真机看下来是「若隐若现反而脏」——
+   标题栏右边已经有六个常显按钮，左边再挂一个半透明图标，两头都是图标。
+   要么不出现，要么明确出现，不要中间态。开着时该显眼：那意味着
+   「这个项目现在允许起多个 agent 花钱」。 */
+.cframe-team {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-dim);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.cframe-head:hover .cframe-team:not(.on) {
+  opacity: 0.7;
+  pointer-events: auto;
+}
+.cframe-team:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+.cframe-team.on {
+  opacity: 1;
+  pointer-events: auto;
+  color: rgb(var(--accent-rgb));
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.cframe-team.on:hover {
+  background: rgba(var(--accent-rgb), 0.22);
+}

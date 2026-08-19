@@ -93,6 +93,17 @@ export interface CanvasFrame {
   folderPath?: string
   /** 颜色状态标签；未设 = 无标签 */
   status?: FrameStatus
+  /**
+   * 多 agent 总闸。**只有顶层项目 Frame 有，子 Frame 继承父的**（子 Frame 是文件夹分组，
+   * 不该各有一套团队设置）。
+   *
+   * 它是「要不要用多 agent」这个决定的<b>唯一</b>载体：开着才允许组队，关着时主 agent
+   * 连提议都不会有。做成 Frame 上的持久状态而不是每次判断，是因为这件事是**项目的属性**
+   * ——大项目常开、随手改脚本的小项目常关，两边互不干扰。
+   *
+   * 判定走 teamModeOf()，不要直接读这个字段（子 Frame 要回溯父 Frame）。
+   */
+  teamMode?: boolean
 }
 
 /** 图形/便签：世界坐标 */
@@ -236,6 +247,8 @@ export interface CanvasSlice {
    *  **实际写的是项目**（见 shared/types 的 ProjectStatus）——画布上的入口手里只有 frameId，
    *  这里负责翻译成 projectId 再转发给 setProjectStatus。 */
   setFrameStatus: (id: string, status: FrameStatus | null) => void
+  /** 多 agent 总闸。传子 Frame 的 id 也行 —— 内部会翻译成顶层那个。 */
+  toggleTeamMode: (id: string, on: boolean) => void
   /** 一次性清掉旧结构遗留的 frame.status（迁移到项目之后调）。别在别处用 */
   clearFrameStatusField: () => void
   /** 删除 Frame：连同后代子 Frame 一起删，逐个 closeLeaf 杀掉各自成员终端 */
