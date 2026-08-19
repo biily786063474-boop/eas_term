@@ -7,7 +7,7 @@
 // 覆盖：标题 / 围栏代码 / 引用 / 有序无序列表(含嵌套、任务列表) / 表格 / 分隔线 /
 //       行内的 代码·粗体·斜体·删除线·链接·图片。够读技术文档，不追求 CommonMark 全兼容。
 import { easfileUrl, isImagePath } from '../canvas/media'
-import { stripFrontmatter } from './frontmatter'
+import { splitFrontmatter } from './frontmatter'
 
 function esc(s: string): string {
   return s
@@ -103,7 +103,7 @@ const isBlank = (l: string): boolean => !l.trim()
 
 export function renderMarkdown(src: string, filePath: string): string {
   const baseDir = filePath.slice(0, filePath.lastIndexOf('/'))
-  const lines = stripFrontmatter(src).replace(/\r\n?/g, '\n').split('\n')
+  const lines = (splitFrontmatter(src)?.body ?? src).replace(/\r\n?/g, '\n').split('\n')
   const out: string[] = []
   let i = 0
 

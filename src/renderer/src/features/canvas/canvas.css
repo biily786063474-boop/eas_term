@@ -5138,12 +5138,22 @@
 }
 
 /* CodeView 自己不设高度，靠容器撑。不给 min-height:0 的话
-   flex 子项会被内容顶开，长文档直接把灯箱撑破而不是内部滚动。 */
+   flex 子项会被内容顶开，长文档直接把灯箱撑破而不是内部滚动。
+   **position:relative 是必需的**：CodeMirror 内部是 `absolute; inset:0`，
+   没有定位祖先时它会一路向上找到 position:fixed 的遮罩，于是**铺满整个屏幕**、
+   盖住标题栏 —— 表现是右上角两颗按钮点不动（命中测试打到 .cm-line）。
+   跟 canvas.css 里 .skl-item-tree 那条是同一个坑。 */
 .flb-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+/* 双保险：即使内容层再出意外，标题栏也压在它上面 */
+.flb-head {
+  position: relative;
+  z-index: 1;
 }
 
 .flb-body .code-view {

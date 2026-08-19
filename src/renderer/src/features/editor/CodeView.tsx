@@ -6,6 +6,7 @@ import { LanguageDescription } from '@codemirror/language'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { renderMarkdown, bindCodeCopy } from './markdown'
+import { splitFrontmatter } from './frontmatter'
 import { CodeIcon, FilesIcon, PencilIcon, CheckIcon } from '../../ui/Icons'
 import './editor.css'
 
@@ -236,10 +237,30 @@ export function CodeView({
     >
       {status && <div className="pane-status">{status}</div>}
       {rendered ? (
-        <div
-          className="md-view"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(text ?? '', filePath) }}
-        />
+        <div className="md-scroll">
+          {/* frontmatter 单独一张卡片，不混在正文里。**不是藏起来** ——
+              对 SKILL.md 来说 name/description 恰恰是最要紧的内容（description
+              决定这个 skill 什么时候被触发），塞进「源代码」视图等于藏了。
+              这里只是把它和正文分开摆。 */}
+          {(() => {
+            const fm = splitFrontmatter(text ?? '')
+            if (!fm || fm.fields.length === 0) return null
+            return (
+              <div className="md-fm">
+                {fm.fields.map((f) => (
+                  <div className="md-fm-row" key={f.key}>
+                    <span className="md-fm-key">{f.key}</span>
+                    <span className="md-fm-val">{f.value}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+          <div
+            className="md-view"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(text ?? '', filePath) }}
+          />
+        </div>
       ) : (
         <div ref={hostRef} className="code-view-host" />
       )}
