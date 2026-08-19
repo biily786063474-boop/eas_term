@@ -4580,10 +4580,22 @@
 /* ── 来源分段的段头 ────────────────────────────────────────────────────
    选中项目 Frame 时，项目级与全局的 skill 上下并存（skillSections.ts）。
    段头只在两段同时存在时出现——只有一段的话，工具栏那个目录按钮已经说明了来源。 */
+/* 折叠的段只占段头那点高度；展开的段之间**平分**剩下的空间。
+   原来两个都是 `flex: 0 1 auto`，于是 skill 多的那段按内容把空间抢光，
+   另一段被压到十几像素 —— 项目目录不存在时那条错误提示 122px 高，
+   却只分到 19px 的可视区，得在里面滚动才读得完（实测）。 */
 .skl-sec {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: none;
+}
+.skl-sec:has(.skl-list) {
+  flex: 1 1 0;
+}
+/* 段头不参与压缩：它被挤扁的话，标签和计数会糊在一起 */
+.skl-sec-head {
+  flex: none;
 }
 .skl-sec-head {
   display: flex;

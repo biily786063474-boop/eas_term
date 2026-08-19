@@ -326,7 +326,7 @@ export function CanvasSkillPanel(): JSX.Element {
       )
     }
     return (
-      <div className="skl-list">
+      <>
         {result.categories.map((cat) => {
           const catKey = `${sec.key}\n${cat.name}`
           const collapsed = collapsedCats.has(catKey)
@@ -401,7 +401,7 @@ export function CanvasSkillPanel(): JSX.Element {
             </div>
           )
         })}
-      </div>
+      </>
     )
   }
 
@@ -485,7 +485,12 @@ export function CanvasSkillPanel(): JSX.Element {
                   {!!r?.ok && <span className="skl-sec-count">{r.skills.length}</span>}
                 </button>
               )}
-              {!collapsed && renderSectionBody(sec)}
+              {/* 滚动容器包住**全部四种状态**（加载中 / 错误 / 空态 / 列表）。
+                  原来只有列表那一支自己开 .skl-list，另外三支裸着 —— 而 .skl-sec 是
+                  可压缩的 flex 子项且 overflow:visible，段被挤扁时那三支的内容
+                  既不裁剪也不滚动，直接画到下一段的段头上（项目目录不存在时那段
+                  长路径最明显，实测溢出 101px、和下一个段头重叠 89px）。 */}
+              {!collapsed && <div className="skl-list">{renderSectionBody(sec)}</div>}
             </div>
           )
         })}
