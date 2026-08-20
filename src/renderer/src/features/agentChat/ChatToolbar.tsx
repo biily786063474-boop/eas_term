@@ -104,6 +104,12 @@ export function ChatToolbar({
   const [dragOver, setDragOver] = useState(false)
   const lastSnapshot = useStore((s) => s.lastSnapshot)
   const setLastSnapshot = useStore((s) => s.setLastSnapshot)
+  /** 这个对话框属于哪个项目。**快照浮层必须按项目过滤** ——
+   *  lastSnapshot 是全局单例（AI 在任何一个项目里拍一张，它就有值），
+   *  不过滤的话你在 A 项目的对话框里会看到 B 项目刚拍的快照挂着不走。
+   *  终端那侧（TerminalInput.tsx:202）一直是过滤的，这里漏了。 */
+  const myProjectId = useStore((s) => s.projects.find((p) => p.path === cwd)?.id ?? null)
+  const snapHere = lastSnapshot && myProjectId && lastSnapshot.projectId === myProjectId
   /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
   const [dismissed, setDismissed] = useState<Record<string, number>>({})
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -244,18 +250,30 @@ export function ChatToolbar({
         {pics.err && <div className="ac-inline-err">{pics.err}</div>}
 
         {/* 图片区：快照占位块和已带上的图排在同一行，都是「这条消息要带的东西」 */}
-        {(pics.imgs.length > 0 || lastSnapshot) && (
+        {(pics.imgs.length > 0 || snapHere) && (
           <div className="ac-attach-row">
-            {lastSnapshot && (
-              <button
-                type="button"
-                className="ac-attach-snap"
-                data-tip="把刚拍的画板快照带上"
-                onClick={() => void pics.takeSnapshotIn()}
-              >
-                <ImageIcon size={13} />
-                <span>刚拍的快照</span>
-              </button>
+            {snapHere && (
+              <span className="ac-attach-snap-wrap">
+                <button
+                  type="button"
+                  className="ac-attach-snap"
+                  data-tip="把刚拍的画板快照带上"
+                  onClick={() => void pics.takeSnapshotIn()}
+                >
+                  <ImageIcon size={13} />
+                  <span>刚拍的快照</span>
+                </button>
+                {/* **不想带它就得能划掉。** 没有这颗 X 时它只有一个出口：点进去带走。
+                    于是不需要它的人只能看着它一直挂在输入框上（终端那侧一直有，这里漏了）。 */}
+                <button
+                  type="button"
+                  className="ac-attach-snap-x"
+                  aria-label="不带这张快照"
+                  onClick={() => setLastSnapshot(null)}
+                >
+                  <CloseIcon size={9} />
+                </button>
+              </span>
             )}
             {pics.imgs.map((im) => (
               <div className="ac-attach" key={im.path} data-tip={im.path}>

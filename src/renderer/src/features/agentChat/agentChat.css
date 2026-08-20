@@ -867,11 +867,41 @@
   background: rgba(0, 0, 0, 0.62);
   color: #fff;
   cursor: pointer;
-  opacity: 0;
+  /* 默认就看得见（原来是 0，只有 hover 才出现——用户找不到它）。
+     不用 1 是因为一排缩略图上顶着一排实心 X 太吵 */
+  opacity: 0.6;
   transition: opacity 0.12s ease;
 }
 .ac-attach:hover .ac-attach-x {
   opacity: 1;
+}
+/* 快照 chip 的划掉键，跟图片那颗同款 */
+.ac-attach-snap-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.ac-attach-snap-x {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 50%;
+  background: var(--pane-solid);
+  color: var(--fg-dim);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.12s, color 0.12s;
+}
+.ac-attach-snap-wrap:hover .ac-attach-snap-x,
+.ac-attach-snap-x:hover {
+  opacity: 1;
+  color: var(--fg);
 }
 
 /* 控件行：框内底部。模型/强度/压缩/用量在左，语音和发送靠右 */
