@@ -116,14 +116,14 @@
 }
 /* accent state — 强调(导出按钮 / 定界框开关高亮),用 accent token 跟随主题 */
 .ua__btn--accent {
-  color: var(--accent-fg);
+  color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent-dark), var(--accent));
   border-color: transparent;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .ua__btn--accent:hover:not(:disabled) {
   filter: brightness(1.08);
-  color: var(--accent-fg);
+  color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent-dark), var(--accent));
   box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 50%, transparent);
 }

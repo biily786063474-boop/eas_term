@@ -71,7 +71,7 @@ export default class UCErrorBoundary extends React.Component {
             onClick={this.closeAndReset}
             style={{
               padding: '8px 16px', borderRadius: 6, border: 0,
-              background: 'var(--accent)', color: 'var(--accent-fg, #fff)', cursor: 'pointer',
+              background: 'var(--accent)', color: 'var(--on-accent)', cursor: 'pointer',
             }}
           >关闭返回画板</button>
         </div>

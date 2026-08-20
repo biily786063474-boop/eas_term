@@ -267,7 +267,7 @@
 }
 
 .git-ref.head {
-  color: #0d0f16;
+  color: var(--on-accent);
   background: var(--accent);
 }
 

@@ -73,7 +73,7 @@
 .uc__mode-seg-btn:hover { color: var(--text-1); }
 .uc__mode-seg-btn.is-active {
   background: var(--accent);
-  color: var(--accent-fg, #fff);
+  color: var(--on-accent);
 }
 
 /* ── Animate mode placeholder(Phase 2 接通底部时间轴前用)── */
@@ -118,7 +118,7 @@
 .uc__topbar-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-1); }
 .uc__topbar-btn:disabled { opacity: 0.3; cursor: default; }
 .uc__topbar-btn--sm { padding: 4px 8px; font-size: 14px; font-weight: 600; }
-.uc__topbar-btn--primary { background: var(--accent); color: var(--accent-fg, #fff); }
+.uc__topbar-btn--primary { background: var(--accent); color: var(--on-accent); }
 .uc__topbar-btn--primary:hover { opacity: 0.85; }
 .uc__topbar-btn--active { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .uc__grid-sliders { display: flex; align-items: center; gap: 4px; }
@@ -153,7 +153,7 @@
   cursor: pointer; font-family: inherit; transition: all 0.1s;
 }
 .uc__guide-chip:hover { background: var(--bg-hover); }
-.uc__guide-chip--on { background: var(--accent); color: var(--accent-fg, #fff); border-color: var(--accent); }
+.uc__guide-chip--on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .uc__guide-colors {
   display: flex; gap: 8px; align-items: center; padding-top: 4px;
 }
@@ -647,7 +647,7 @@
 }
 .uc__pr-seg-btn:last-child { border-right: none; }
 .uc__pr-seg-btn:hover { background: var(--bg-hover); color: var(--text-1); }
-.uc__pr-seg-btn--on { background: var(--accent); color: var(--accent-fg, #fff); }
+.uc__pr-seg-btn--on { background: var(--accent); color: var(--on-accent); }
 
 /* ── Font picker ── */
 .uc__pr-font-btn {
@@ -905,7 +905,7 @@
 .uc-export__footer { padding: 0 16px 16px; }
 .uc-export__btn {
   width: 100%; padding: 8px 16px; border-radius: var(--radius-sm);
-  border: none; background: var(--accent); color: var(--accent-fg, #fff);
+  border: none; background: var(--accent); color: var(--on-accent);
   font-size: 13px; font-weight: 510; font-family: inherit;
   cursor: pointer; transition: opacity 0.15s;
 }

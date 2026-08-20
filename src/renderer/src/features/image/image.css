@@ -44,7 +44,7 @@
 
 .segmented button.active {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
   box-shadow: var(--glass-highlight);
 }
 

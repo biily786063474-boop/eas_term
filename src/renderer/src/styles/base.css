@@ -250,7 +250,7 @@ body {
 .context-menu button:hover,
 .glass-menu-item:hover {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
 }
 
 .context-menu button:disabled {
@@ -265,7 +265,7 @@ body {
 
 .glass-menu-item.selected {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
 }
 
 .glass-menu-check {

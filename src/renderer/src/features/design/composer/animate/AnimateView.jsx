@@ -1404,7 +1404,7 @@ export default function AnimateView({ nodeId, savedState, designInputs = [], med
                 padding: '4px 12px', borderRadius: 12,
                 background: 'color-mix(in srgb, var(--accent, #a78bfa) 18%, var(--glass-bg, rgba(20,20,30,0.7)))',
                 border: '1px solid color-mix(in srgb, var(--accent, #a78bfa) 40%, transparent)',
-                color: 'var(--accent-fg, #fff)', fontSize: 12, zIndex: 6, pointerEvents: 'none',
+                color: 'var(--on-accent)', fontSize: 12, zIndex: 6, pointerEvents: 'none',
                 whiteSpace: 'nowrap', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis',
               }} data-tip={`已钻入:${trail}。Esc 退出。`}>
                 ⌬ 编辑 {trail}

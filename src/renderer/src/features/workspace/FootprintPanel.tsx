@@ -153,8 +153,15 @@ export function FootprintPanel(): JSX.Element | null {
                   className="fp-row-h"
                   role="button"
                   tabIndex={0}
+                  aria-expanded={expanded.has(it.id)}
                   onClick={() => toggle(it.id)}
                   onKeyDown={(e) => {
+                    // **只认落在这一行本身的按键。** 不加这道守卫，焦点在行内按钮上
+                    // 按 Enter 会冒泡到这里、被下面的 preventDefault 掐掉 ——
+                    // 而 Enter 激活 <button> 正是 keydown 的默认行为，于是纯键盘用户
+                    // 一颗按钮都点不动，按下去只会把卡片展开/收起。
+                    // onClick 那侧的 stopPropagation 管不到键盘这条路，两边要各加各的。
+                    if (e.target !== e.currentTarget) return
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
                       toggle(it.id)

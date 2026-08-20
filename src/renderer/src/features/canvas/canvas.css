@@ -1262,7 +1262,7 @@
 
 .ctool.on {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
 }
 
 .ctool-sep {
@@ -1434,7 +1434,7 @@
 
 .ctodo-add:hover {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
   transform: scale(1.1);
 }
 
@@ -1523,7 +1523,7 @@
   border: 1.5px solid rgba(var(--accent-rgb), 0.55);
   border-radius: 50%;
   background: none;
-  color: #0d0f16; /* 打勾图标的颜色——只在 .done 状态下渲染，这里先备好和填充色搭配的深色 */
+  color: var(--on-accent); /* 打勾图标的颜色——只在 .done 状态下渲染，这里先备好和填充色搭配的深色 */
   cursor: pointer;
   padding: 0;
   transition:
@@ -1798,7 +1798,7 @@
 
 .cctx-item:hover {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
 }
 
 .cctx-item.danger {
@@ -2040,7 +2040,7 @@
 
 .cpk-row:hover {
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
 }
 
 .cpk-row.faint {
@@ -3166,7 +3166,7 @@
 .re-primary {
   border: none;
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
   font-weight: 600;
 }
 .re-primary:disabled,
@@ -3481,7 +3481,7 @@
   border: none;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
@@ -4139,7 +4139,7 @@
 .rm-primary {
   border: none;
   background: var(--accent);
-  color: #0d0f16;
+  color: var(--on-accent);
   font-weight: 600;
 }
 .rm-primary:disabled,
