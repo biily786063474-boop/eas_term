@@ -1,0 +1,20 @@
+{
+  "v": 1,
+  "batches": [
+    {
+      "id": "b-1787218752671",
+      "at": 1787218752691,
+      "goal": "摸清两件事：① 用户数据（画布/聊天记录/知识库/密钥）还有哪些没兜住的丢失场景 ② 这两天新写的代码里还有哪些「返回成功但其实没生效」的静默失败",
+      "agents": [
+        {
+          "role": "data-safety",
+          "task": "调研这个项目里用户数据的丢失场景。背景：2026-08-20 刚出过事故 —— ErrorBoundary 上的「重置画布并重载」把 20 个 Frame 的布局一下抹成 3 个，当时没有任何备份（现已补上）。请系统地找出**其它同类风险**：扫 src/main/ 下所有会覆盖/删除用户数据的路径（canvas.json、agent-history/、wiki、secrets、projects.json、.plans/、worktree），逐条判断：① 什么情况会触发 ② 有没有备份或确认 ③ 丢了能不能恢复。按「丢了多难受 × 多容易触发」排序，给出具体文件:行号。只读不改代码。"
+        },
+        {
+          "role": "silent-fail",
+          "task": "找出最近两天新写的代码里「返回成功但其实没生效」的地方。先跑 `git log --oneline -25` 看范围，重点看：src/shared/team*.ts、src/main/teamWorktreeOps.ts、src/main/agentHistory.ts、src/main/canvas.ts、src/renderer/src/mcpHandler.ts 里的 team_* 工具。判据：哪些地方 catch 了异常却没留痕、哪些返回 ok:true 但语义上没完成、哪些判定依赖了一个可能不成立的前提。每条给出具体的失败场景（什么输入/状态 → 什么后果），别列风格问题。只读不改代码。"
+        }
+      ]
+    }
+  ]
+}
