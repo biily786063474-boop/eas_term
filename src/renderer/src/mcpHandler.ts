@@ -10,7 +10,7 @@ import { isSettled } from './features/team/agentAge'
 import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { fmtCost, fmtTokens } from '../../shared/teamCost'
 import { addBatch, parseRoster, recentSummary } from '../../shared/teamRoster'
-import { isolationOf, worktreePath, worktreeBranch, worktreeHint } from '../../shared/teamWorktree'
+import { isolationOf, worktreePath, worktreeBranch, worktreeHint, belongsToProject } from '../../shared/teamWorktree'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -655,7 +655,7 @@ const SHELL_TRAP =
      *  在那一刻失明 —— 主 agent 看不见它，会以为它已经结束了。2026-08-19 真机复现过。 */
     const roster = async (): Promise<SessionBrief[]> => {
       const all = await window.api.agentChat.listSessions().catch(() => [])
-      return all.filter((x) => x.owner === 'team' && (!where || x.cwd === where.projectPath))
+      return all.filter((x) => x.owner === 'team' && (!where || belongsToProject(x.cwd, where.projectPath)))
     }
 
     /** 交活了没有。判据抽在 features/team/agentAge.ts，与团队面板同源、有单测盯着 ——
@@ -783,7 +783,7 @@ const SHELL_TRAP =
 
     const all = await window.api.agentChat.listSessions().catch(() => [])
     const mine = all.filter(
-      (x) => x.owner === 'team' && (!where || x.cwd === where.projectPath)
+      (x) => x.owner === 'team' && (!where || belongsToProject(x.cwd, where.projectPath))
     )
     const hit = mine.find((x) => x.role === role)
     if (!hit) {
@@ -831,7 +831,7 @@ const SHELL_TRAP =
     }
     const where = resolveFrame(ctx)
     const all = await window.api.agentChat.listSessions().catch(() => [])
-    const mine = all.filter((x) => x.owner === 'team' && (!where || x.cwd === where.projectPath))
+    const mine = all.filter((x) => x.owner === 'team' && (!where || belongsToProject(x.cwd, where.projectPath)))
     if (!mine.length) {
       return { dissolved: 0, next: '这个项目里没有团队派生的 agent，不用解散。' }
     }

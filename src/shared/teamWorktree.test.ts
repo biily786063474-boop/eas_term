@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { worktreePath, worktreeBranch, shortBatch, isolationOf, worktreeHint, WORKTREE_DIR } from './teamWorktree.ts'
+import { worktreePath, worktreeBranch, shortBatch, isolationOf, worktreeHint, belongsToProject, WORKTREE_DIR } from './teamWorktree.ts'
 
 test('默认不隔离 —— 隔离有代价，不说就是不写码', () => {
   assert.equal(isolationOf(undefined), 'none')
@@ -45,4 +45,23 @@ test('收活提示必须说清「改动不在主工作区」', () => {
   assert.match(h, /不在主工作区/)
   assert.match(h, /git diff|git -C/, '要给出看 diff 的命令')
   assert.match(h, /语义冲突|合并前/, '要提醒 worktree 挡不住语义冲突')
+})
+
+// ── 隔离的 agent 也得算「这个项目的」 ─────────────────────────────
+
+test('工作树里的会话属于这个项目', () => {
+  // 不认的话 team_status / team_send / team_dissolve 全看不见它，
+  // 那就是一个没人管得着、还在烧钱的进程
+  const proj = '/W/proj'
+  assert.equal(belongsToProject(proj, proj), true)
+  assert.equal(belongsToProject(`${proj}/${WORKTREE_DIR}/958035-dev`, proj), true)
+})
+
+test('别的项目、以及项目内的普通子目录都不算', () => {
+  const proj = '/W/proj'
+  assert.equal(belongsToProject('/W/other', proj), false)
+  assert.equal(belongsToProject(`${proj}/src`, proj), false, '用户另开的对话不属于这一批')
+  assert.equal(belongsToProject(`${proj}-2/${WORKTREE_DIR}/x`, proj), false, '前缀相同的另一个项目')
+  assert.equal(belongsToProject('', proj), false)
+  assert.equal(belongsToProject(proj, ''), false)
 })

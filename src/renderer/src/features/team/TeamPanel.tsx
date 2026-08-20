@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
 import { healthOf, fmtAge, labelOf, ageMsOf } from './agentAge'
 import { fmtCost, fmtTokens } from '../../../../shared/teamCost'
+import { belongsToProject } from '../../../../shared/teamWorktree'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './team.css'
@@ -93,12 +94,14 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   // 原来是「本项目排前面、别处的排后面但照样列出来」。实际用起来是干扰：
   // 你在 A 项目的画布上看团队面板，列出来的却混着 B、C 项目里开着的 AI 对话 ——
   // 它们既不是这一批派出去的，你在这里也不该管它们（每个 Frame 有自己的面板）。
-  const mine = rows.filter((r) => r.cwd === cwd)
+  // **隔离的 agent cwd 在 .worktrees/ 下**，用 `=== cwd` 会把它们滤掉 ——
+  // 那就成了面板管不着、却还在烧钱的进程（纪律第 4 条要防的正是这个）
+  const mine = rows.filter((r) => belongsToProject(r.cwd, cwd))
   const sorted = [...mine].sort((a, b) => a.id.localeCompare(b.id))
   // 但**不能装作它们不存在** —— 别处还有 agent 在烧 token 这件事得让人知道，
   // 否则就成了「没有任何 UI 能管的后台进程」（方案里那条纪律）。
   // 只报个数、不列细节：去那个项目的面板上才管得了它。
-  const elsewhere = rows.filter((r) => r.cwd !== cwd && r.alive).length
+  const elsewhere = rows.filter((r) => !belongsToProject(r.cwd, cwd) && r.alive).length
 
   /** 这一批烧了多少。**跨会话要相加** —— 每个 agent 是独立进程、各报各的累计，
    *  `costUsd` 在单个会话内是累计值，但几个会话之间仍然是独立的几笔钱。

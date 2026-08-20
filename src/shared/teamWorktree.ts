@@ -61,3 +61,20 @@ export function worktreeHint(role: string, relPath: string, branch: string): str
     `不兼容的接口这类语义冲突，它挡不住。`
   )
 }
+
+/**
+ * 这个会话算不算「这个项目的」。
+ *
+ * **隔离的 agent cwd 在 `<项目>/.worktrees/…` 下，不等于项目根** —— 用
+ * `cwd === projectPath` 去过滤会把它们全滤掉。2026-08-20 真机撞到：派了
+ * reader（只读）和 writer（worktree）两个，`team_status` 只报得出 reader，
+ * writer 的工作树建好了、文件也写了，却在面板和所有 team_* 工具里凭空消失 ——
+ * **等于一个没人管得着、还在烧钱的进程**，正是纪律第 4 条要防的那种。
+ */
+export function belongsToProject(sessionCwd: string, projectPath: string): boolean {
+  if (!sessionCwd || !projectPath) return false
+  if (sessionCwd === projectPath) return true
+  // 只认我们自己建的那层，不是「凡是子目录都算」——
+  // 用户在项目里另开一个 AI 对话、cwd 指向某个子目录，那不属于这一批
+  return sessionCwd.startsWith(`${projectPath}/${WORKTREE_DIR}/`)
+}
