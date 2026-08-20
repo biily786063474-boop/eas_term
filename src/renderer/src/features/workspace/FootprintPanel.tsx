@@ -25,6 +25,17 @@ export function FootprintPanel(): JSX.Element | null {
   const [skill, setSkill] = useState<SkillStatus | null>(null)
   const [prompt, setPrompt] = useState(false)
   const [busy, setBusy] = useState('')
+  /** 哪几张卡片展开了。**默认全收起** —— 这个面板一共四条，每条都把「写了哪些文件」
+   *  和整段说明铺开的话，一屏塞满，人反而找不到自己要看的那一条。
+   *  默认层只留「这是什么 + 开没开 + 能怎么操作」，位置和解释点开才看。 */
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+  const toggle = (id: string): void =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   const btnRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
 
@@ -131,8 +142,26 @@ export function FootprintPanel(): JSX.Element | null {
             </div>
 
             {items.map((it) => (
-              <div key={it.id} className={`fp-row${it.installed ? ' on' : ''}`}>
-                <div className="fp-row-h">
+              <div
+                key={it.id}
+                className={`fp-row${it.installed ? ' on' : ''}${expanded.has(it.id) ? ' open' : ''}`}
+              >
+                {/* 头部整块可点展开。按钮在它里面，靠 stopPropagation 各管各的 ——
+                    做成独立的展开箭头也行，但那样点击目标只有 11px 宽，
+                    而这个面板本来就是「想看细节才打开」的地方，整行可点更顺手 */}
+                <div
+                  className="fp-row-h"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => toggle(it.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggle(it.id)
+                    }
+                  }}
+                >
+                  <span className="fp-chev" aria-hidden />
                   <span className="fp-name">{it.name}</span>
                   <span className={`fp-tag ${it.installed ? 'ok' : 'off'}`}>
                     {it.installed ? <CheckIcon size={10} /> : null}
@@ -142,12 +171,13 @@ export function FootprintPanel(): JSX.Element | null {
                     <button
                       className="fp-mini"
                       disabled={!!busy}
-                      onClick={() =>
+                      onClick={(e) => {
+                        e.stopPropagation()
                         void act(
                           it.installed ? window.api.rules.remove : window.api.rules.sync,
                           it.installed ? '卸载中…' : '安装中…'
                         )
-                      }
+                      }}
                     >
                       {it.installed ? '卸载' : '安装'}
                     </button>
@@ -156,7 +186,10 @@ export function FootprintPanel(): JSX.Element | null {
                     <button
                       className="fp-act"
                       disabled={!!busy}
-                      onClick={() => void act(window.api.mcp.installConfig, '安装中…')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void act(window.api.mcp.installConfig, '安装中…')
+                      }}
                     >
                       安装
                     </button>
@@ -165,7 +198,10 @@ export function FootprintPanel(): JSX.Element | null {
                     <button
                       className="fp-mini"
                       disabled={!!busy}
-                      onClick={() => void act(window.api.mcp.removeConfig, '移除中…')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void act(window.api.mcp.removeConfig, '移除中…')
+                      }}
                     >
                       移除
                     </button>
@@ -174,7 +210,8 @@ export function FootprintPanel(): JSX.Element | null {
                     <button
                       className="fp-mini"
                       disabled={!!busy}
-                      onClick={() =>
+                      onClick={(e) => {
+                        e.stopPropagation()
                         void act(
                           () =>
                             it.installed
@@ -182,28 +219,40 @@ export function FootprintPanel(): JSX.Element | null {
                               : window.api.hook.install(['claude', 'codex']),
                           it.installed ? '关闭中…' : '开启中…'
                         )
-                      }
+                      }}
                     >
                       {it.installed ? '关闭' : '开启'}
                     </button>
                   )}
                   {it.id === 'wiki' && it.installed && (
-                    <button className="fp-mini" onClick={() => void window.api.wiki.reveal()}>
+                    <button
+                      className="fp-mini"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void window.api.wiki.reveal()
+                      }}
+                    >
                       <FolderOpenIcon size={11} />
                     </button>
                   )}
                 </div>
+                {/* desc 是「这一条是什么」，留在默认层 —— 收起来的话卡片就只剩一个名字，
+                    人得逐个点开才知道哪条是哪条，那不是渐进式披露，是把信息藏起来 */}
                 <div className="fp-desc">{it.desc}</div>
-                {!!it.files.length && (
-                  <div className="fp-files">
-                    {it.files.map((f) => (
-                      <code key={f} title={f}>
-                        {short(f)}
-                      </code>
-                    ))}
+                {expanded.has(it.id) && (
+                  <div className="fp-more">
+                    {!!it.files.length && (
+                      <div className="fp-files">
+                        {it.files.map((f) => (
+                          <code key={f} title={f}>
+                            {short(f)}
+                          </code>
+                        ))}
+                      </div>
+                    )}
+                    {!!it.note && <div className="fp-note">{it.note}</div>}
                   </div>
                 )}
-                {!!it.note && <div className="fp-note">{it.note}</div>}
               </div>
             ))}
 

@@ -1205,18 +1205,60 @@ body.dragging-row * {
 }
 .fp-row {
   padding: 9px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  margin-bottom: 4px;
+  /* 比原来的 sm(7px) 大一档：这几条本来就是「卡片」，7px 在 380px 宽的面板里
+     几乎看不出圆角，未启用的那些又是透明边框，读起来像一段段散文而不是四张卡 */
+  border-radius: var(--radius-md);
+  /* 边框不再透明 —— 卡片边界要在收起状态下也成立，否则点哪儿能展开全靠猜 */
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 5px;
+  transition: background 0.15s, border-color 0.15s;
 }
 .fp-row.on {
-  background: rgba(255, 255, 255, 0.035);
-  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--glass-border-strong);
+}
+/* hover 反馈：整行可点，得让人看出来。只动背景与边框，不动位移 ——
+   这是个信息面板不是按钮列表，抬起来反而毛躁 */
+.fp-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--glass-border-strong);
+}
+.fp-row.open {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: var(--glass-border-strong);
 }
 .fp-row-h {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  /* 整行可点 + 里面还有按钮，双击选中文字会很碍事 */
+  user-select: none;
+}
+.fp-row-h:focus-visible {
+  outline: 1px solid rgba(var(--accent-rgb), 0.6);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+/* 展开指示：CSS 画的小三角，收起指右、展开指下。
+   不用图标组件是因为它只有 7px，图标那一层的 stroke 在这个尺寸下反而糊 */
+.fp-chev {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  opacity: 0.4;
+  transition: transform 0.18s ease, opacity 0.15s;
+}
+.fp-row:hover .fp-chev {
+  opacity: 0.75;
+}
+.fp-row.open .fp-chev {
+  transform: rotate(90deg);
+  opacity: 0.75;
 }
 .fp-name {
   flex: 1;
@@ -1282,12 +1324,21 @@ body.dragging-row * {
   background: rgba(255, 255, 255, 0.06);
   color: var(--fg-dim);
 }
+/* 展开层：位置与解释。给一条淡分隔线，让它读起来是「这张卡的细节」
+   而不是又一段并列的正文 */
+.fp-more {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--glass-border);
+}
 .fp-note {
   margin-top: 5px;
   font-size: 10.5px;
   line-height: 1.6;
   color: #fcd34d;
   opacity: 0.9;
+  /* note 里有 \n（MCP 那条分三行讲），不设这个会被压成一整段 */
+  white-space: pre-line;
 }
 .fp-foot {
   margin-top: 8px;
