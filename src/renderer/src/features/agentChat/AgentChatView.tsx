@@ -27,6 +27,7 @@ import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Ico
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { useSlashPicker, SlashList } from './SlashPicker'
 import { belongsToProject } from '../../../../shared/teamWorktree'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
@@ -197,6 +198,8 @@ export function AgentChatView({
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
+  /** 空态那个输入框 —— 选完斜杠候选要把焦点还回去 */
+  const emptyTaRef = useRef<HTMLTextAreaElement>(null)
   // 防止「起会话」这次 await 还没回来、面板已经被切走/关掉——回来后不再 setState，
   // 也不再订阅一个已经没人看的会话（会话本身照样在主进程活着，不受这里影响）
   const aliveRef = useRef(true)
@@ -535,6 +538,12 @@ export function AgentChatView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, sessionId])
 
+  // 空态输入框的斜杠候选。**跟对话态那个共用同一套**（SlashPicker.tsx），
+  // 「哪些命令能用」只有一个说法。
+  const emptySlash = useSlashPicker(text, setText, () =>
+    requestAnimationFrame(() => emptyTaRef.current?.focus())
+  )
+
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
   //
   // 它们原本写在 `if (sessionId) { … return }` 之后 —— 于是空态跑 N 个 hook、
@@ -766,11 +775,15 @@ export function AgentChatView({
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         <div className="ac-input-wrap">
+          {emptySlash.open && <SlashList {...emptySlash} />}
           <textarea
+            ref={emptyTaRef}
             className="ac-input"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
+              // 候选开着时先归它管 —— 上下键/Tab/Esc 在这一刻的意思跟平时不一样
+              if (emptySlash.handleKey(e)) return
               // isComposing 只在**原生事件**上，React 的合成事件没有这个字段 ——
               // 取错了等于没做输入法保护（判据见 sendKey.ts）
               const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,

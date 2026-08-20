@@ -71,6 +71,9 @@
   width: min(560px, 100%);
   display: flex;
   flex-direction: column;
+  /* 斜杠候选浮在它上方（.ac-slash 用 bottom:100%），这里是那个定位上下文。
+     空态和对话态两个输入框各自是自己那份候选的锚点。 */
+  position: relative;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--glass-border);
   border-radius: 18px;
