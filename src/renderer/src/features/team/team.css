@@ -308,3 +308,10 @@
   opacity: 0.65;
   white-space: nowrap;
 }
+
+/* 本批累计用量。放在底栏左侧，跟「全部叫停」分列两端 ——
+   一个是「花了多少」，一个是「要不要停」，正好是同一个决定的两半。 */
+.tp-cost {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-dim);
+}

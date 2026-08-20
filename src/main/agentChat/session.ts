@@ -35,6 +35,7 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
+import { tally, ZERO_TALLY } from '../../shared/teamCost'
 import { buildCliList, type TerminalOnlyCli } from './cliList.ts'
 import { detectByWhich } from './adapters/detect.ts'
 import { installPlan } from '../agentInstall.ts'
@@ -277,7 +278,15 @@ function handleEvent(live: Live, e: ChatEvent): void {
   // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
   // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。
   if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true }
-  else if (e.k === 'turn.done') live.rec = { ...live.rec, busy: false }
+  else if (e.k === 'turn.done') {
+    // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
+    // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
+    live.rec = {
+      ...live.rec,
+      busy: false,
+      tally: tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd)
+    }
+  }
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
     emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })
@@ -511,7 +520,8 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
       model: r.model,
       owner: r.owner,
       role: r.role,
-      busy: r.busy
+      busy: r.busy,
+      tally: r.tally
     })
   }
   return out

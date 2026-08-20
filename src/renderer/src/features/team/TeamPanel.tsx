@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
 import { healthOf, fmtAge, labelOf, ageMsOf } from './agentAge'
+import { fmtCost, fmtTokens } from '../../../../shared/teamCost'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import './team.css'
@@ -99,6 +100,23 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   // 只报个数、不列细节：去那个项目的面板上才管得了它。
   const elsewhere = rows.filter((r) => r.cwd !== cwd && r.alive).length
 
+  /** 这一批烧了多少。**跨会话要相加** —— 每个 agent 是独立进程、各报各的累计，
+   *  `costUsd` 在单个会话内是累计值，但几个会话之间仍然是独立的几笔钱。
+   *  只算团队派生的：你自己开的对话不属于「这一批」。 */
+  const batch = sorted
+    .filter((r) => r.owner === 'team')
+    .reduce(
+      (a, r) => ({
+        tokensIn: a.tokensIn + (r.tally?.tokensIn ?? 0),
+        tokensOut: a.tokensOut + (r.tally?.tokensOut ?? 0),
+        // 有一个报得出就显示。**不能因为某个 CLI 不报价就把整批的金额抹掉**
+        costUsd:
+          r.tally?.costUsd === undefined ? a.costUsd : (a.costUsd ?? 0) + r.tally.costUsd
+      }),
+      { tokensIn: 0, tokensOut: 0, costUsd: undefined as number | undefined }
+    )
+  const batchTok = batch.tokensIn + batch.tokensOut
+
   // 团队派生的那些 —— 「全部叫停」只停它们，不碰你自己开的会话。
   // 判据来自 SessionBrief 而不是画布节点：**这一行正是那个 bug 的现场** ——
   // 原本读的是从 tabs 算出来的 identity，关掉某个 agent 的节点之后它就不再被算作
@@ -156,7 +174,16 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
       <div className="tp-foot">
         {teamRows.length > 0 ? (
           <>
-            <span>鼠标移到一行上可以停掉它</span>
+            {/* 「这一批烧了多少」——方案里说它是**唯一需要盯的数字**。
+                时长回答不了「值不值」，token 和钱才能。 */}
+            {batchTok > 0 ? (
+              <span className="tp-cost" data-tip="这一批 agent 的累计用量（你自己开的对话不算在内）">
+                本批 {fmtCost(batch.costUsd) && `${fmtCost(batch.costUsd)} · `}
+                {fmtTokens(batchTok)} tok
+              </span>
+            ) : (
+              <span>鼠标移到一行上可以停掉它</span>
+            )}
             {/* **任何时候都必须一键能停** —— 方案里定的底线。
                 这是这套系统能不能让人放心用的分界：派下去之后你要有一个
                 随时能收手的地方，而不是只能一个个点。 */}

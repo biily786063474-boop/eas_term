@@ -7,6 +7,8 @@
 // 决定 4：常驻进程 + 15 分钟空闲回收。回收只杀进程、保留会话 id，
 //   下次发送时用 resume 无感接上。
 
+import type { CostTally } from '../../shared/teamCost'
+
 import type { StartOpts } from '../../shared/agentChat.ts'
 
 /** 空闲多久回收进程。取 15 分钟的理由见 spec §A.5：
@@ -62,6 +64,9 @@ export interface SessionRecord {
    *  2026-08-19 实测：invariant-auditor 写完 findings 之后静默 13 分钟，面板报「可能
    *  卡住」，实际早干完了。undefined = 还没跑过任何一轮。 */
   busy?: boolean
+  /** 这个会话烧了多少。**token 累加、花费取最新** —— 两个字段语义相反，
+   *  实测与理由见 shared/teamCost.ts 文件头那张表。 */
+  tally?: CostTally
 }
 
 /** 一个活会话是否已经空闲超过阈值、该回收了。

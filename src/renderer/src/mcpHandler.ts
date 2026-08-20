@@ -8,6 +8,7 @@ import { checkBatch } from './features/team/batchSpec'
 import { askForBatch } from './features/team/batchRequest'
 import { isSettled } from './features/team/agentAge'
 import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
+import { fmtCost, fmtTokens } from '../../shared/teamCost'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -686,6 +687,10 @@ const SHELL_TRAP =
         alive: x.alive,
         done: settled(x),
         // 「多久没动静」——对已经收尾的会话，这是「多久之前完成的」，仍然有用
+        // 烧了多少。**主 agent 看得到这个数，才可能在派活时收敛规模** ——
+        // 它是唯一能回答「这一批值不值」的信息，时长回答不了
+        tokens: (x.tally?.tokensIn ?? 0) + (x.tally?.tokensOut ?? 0),
+        costUsd: x.tally?.costUsd,
         idleSeconds: Math.round(idleMs / 1000),
         // 「跑了多久」。**停下来之后是定值**：拿 now 减的话，一个早就完成的 agent
         // 会显示一个一直在涨的数，读起来像它还在干活（面板那侧同一个坑，
@@ -717,17 +722,27 @@ const SHELL_TRAP =
     }
     const done = agents.filter((a) => a.done)
     const busy = agents.filter((a) => !a.done)
+    const totTok = agents.reduce((n, a) => n + a.tokens, 0)
+    const totCost = agents.reduce<number | undefined>(
+      (n, a) => (a.costUsd === undefined ? n : (n ?? 0) + a.costUsd),
+      undefined
+    )
+    const spent =
+      totTok > 0
+        ? `本批已烧 ${fmtTokens(totTok)} tok${totCost === undefined ? '' : ` · ${fmtCost(totCost)}`}。`
+        : ''
     return {
       agents,
       next:
-        done.length > 0
+        spent +
+        (done.length > 0
           ? `${done.length} 个这一轮跑完了（${done.map((a) => a.role).join('、')}）—— ` +
             '去读它们的 .plans/<role>/findings.md。**先确认它真做完了** —— ' +
             'turn 结束也可能是「干了一半先说到这」，实测出现过。' +
             '**结论不一致时要显式呈现分歧**，不要替用户抹平。' +
             (busy.length > 0 ? `另外 ${busy.length} 个还在跑。` : '')
           : `${busy.length} 个都还在跑。**不要反复调这个工具轮询** —— 先去做别的；` +
-            '手上确实没别的事了，就带 wait:true 再调一次，它会挂到有人交活为止。'
+            '手上确实没别的事了，就带 wait:true 再调一次，它会挂到有人交活为止。')
     }
   }
 

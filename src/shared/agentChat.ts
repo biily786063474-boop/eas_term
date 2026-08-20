@@ -301,6 +301,8 @@ export const ASK_FIRST_PROMPT = [
  *  为什么不复用 SessionRecord：那是主进程的内部记录，带着 pending / skipApprovalHook
  *  这些只有 session.ts 关心的字段；面板要的是「谁、在哪、活着吗、多久没动了」。
  *  两者一起演进会让主进程的内部结构泄漏到渲染层。 */
+import type { CostTally } from './teamCost'
+
 export interface SessionBrief {
   id: string
   cli: string
@@ -320,4 +322,7 @@ export interface SessionBrief {
   role?: string
   /** 这一轮还没跑完。区分「干完了」和「卡住了」的唯一信号，见 SessionRecord.busy */
   busy?: boolean
+  /** 烧了多少。**token 是累加值、costUsd 是会话累计** —— 两者语义相反，
+   *  别自己再加一次（实测见 shared/teamCost.ts） */
+  tally?: CostTally
 }
