@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+// 起一个**隔离的**开发实例并挂上 CDP，用来做真机功能验证 —— 不打包、不升版本号。
+//
+// 为什么需要它：UI 与 IPC 这一层，单测证明不了。而 `npm run dist` 要几分钟、还得升一个
+// 版本号，改一行验一次的成本高到让人干脆不验 —— 2026-08-19 那天就这么滚出了九个版本。
+//
+// **绝不能用 `npm run dev` 代替**：electron-vite 的 CLI 自己解析参数，`--user-data-dir`
+// 传不进去（会报 Unknown option），而 dev 模式的 userData 走 `app.getName()` 读的是
+// package.json 的 productName —— 跟正式版**是同一个目录**，密钥柜就在那儿。
+// 所以这里跑的是构建产物 + 显式隔离目录。
+//
+//   node scripts/verify-app.mjs            # 起实例，留着给你连（Ctrl-C 结束）
+//   node scripts/verify-app.mjs --seed     # 顺带把真实环境的「安全部分」复制进去
+//   node scripts/verify-app.mjs --port 9444
+//
+// 连上之后跑 JS：见文件末尾的 evalInApp 用法。
+
+import { spawn } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
+const includes = (f) => process.argv.includes(f)
+const PORT = includes('--port') ? Number(process.argv[process.argv.indexOf('--port') + 1]) : 9333
+
+/** 从真实 userData 复制进隔离目录的白名单。
+ *
+ *  **secrets.json 和 mcp-endpoint.json 绝不在列** —— 一个是密钥柜，一个是本地服务的
+ *  访问令牌。验证环境不需要它们，复制进去只是在多一个地方留副本。
+ *  用白名单不用黑名单：以后 userData 里多出什么文件，默认是不复制，
+ *  而不是「忘了加进黑名单就泄漏」。 */
+const SEED_WHITELIST = [
+  'projects.json',   // 项目列表 —— 没有它画布是空的，验不了任何跟 Frame 有关的东西
+  'canvas.json',     // 画布布局：Frame、节点、teamMode 开关
+  'prefs.json',
+  'skill-prefs.json',
+  'gantt.json',
+  'board.json',
+  'wiki.json'
+]
+
+const realUserData = path.join(os.homedir(), 'Library', 'Application Support', 'Eas-Term')
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-verify-'))
+
+if (includes('--seed')) {
+  let n = 0
+  for (const f of SEED_WHITELIST) {
+    try {
+      fs.copyFileSync(path.join(realUserData, f), path.join(dir, f))
+      n++
+    } catch { /* 没有就跳过 */ }
+  }
+  console.log(`已从真实环境复制 ${n} 个文件（白名单，不含 secrets.json / mcp-endpoint.json）`)
+} else {
+  // 至少给一个项目，否则连画布都进不去
+  fs.writeFileSync(
+    path.join(dir, 'projects.json'),
+    JSON.stringify([{ id: 'p-verify', name: path.basename(process.cwd()), path: process.cwd(), addedAt: 1 }])
+  )
+}
+
+console.log(`隔离数据目录: ${dir}`)
+const child = spawn(
+  path.join(process.cwd(), 'node_modules', '.bin', 'electron'),
+  ['.', `--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`],
+  { stdio: 'inherit' }
+)
+
+const cleanup = () => {
+  try { child.kill() } catch {}
+  try { fs.rmSync(dir, { recursive: true, force: true }) } catch {}
+}
+process.on('SIGINT', () => { cleanup(); process.exit(0) })
+child.on('exit', (code) => { cleanup(); process.exit(code ?? 0) })
+
+// 等窗口起来再报地址，省得人对着一个还没监听的端口试
+setTimeout(async () => {
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/json/list`)
+    const pages = await r.json()
+    const main = pages.find((p) => p.type === 'page' && p.url.includes('out/renderer') && !p.url.includes('island'))
+    console.log(main ? `\n✅ CDP 就绪: http://127.0.0.1:${PORT}  （主窗口已找到）\n` : `\n⚠️ 端口通了但没找到主窗口，现有 target：${pages.map((p) => p.type).join(', ')}\n`)
+  } catch {
+    console.log(`\n⚠️ ${PORT} 还没通，窗口可能还在起\n`)
+  }
+}, 5000)
