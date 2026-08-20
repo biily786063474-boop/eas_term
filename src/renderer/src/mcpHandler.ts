@@ -70,7 +70,22 @@ function resolveFrame(ctx: Ctx): { frameId: string; nodeId?: string; projectPath
       }
     }
   }
+  // **调用方说了自己在哪个项目，就信它。**
+  //
+  // ctx.project 来自 mcpEnv 注入的 EAS_PROJECT（我们自己写进去的，可信）。
+  // 此前这里直接跳到 activeProjectId，把它当成最后一个兜底字符串用 ——
+  // 后果是：一个没有 ptyId 的调用方（agentChat 会话走的就是这条路）问 team_status，
+  // 拿到的是**用户当时正看着的那个 Frame** 的项目，而不是它自己所在的项目。
+  // 于是去读了别人家的 .plans/team.json，报「没有派活记录」，而记录就在自己项目里躺着。
+  // 2026-08-19 在隔离环境里跑功能验证时抓到：ctx.project 是 terminal，
+  // 它却定位到了「命运呐」。
+  const byCtx = ctx.project
+    ? s.canvas.frames.find(
+        (f) => !f.parentId && s.projects.find((p) => p.id === f.projectId)?.path === ctx.project
+      )
+    : undefined
   const fallback =
+    byCtx ??
     s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
     s.canvas.frames.find((f) => !f.parentId)
   if (!fallback) return null

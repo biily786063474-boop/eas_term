@@ -75,7 +75,7 @@ export function recentSummary(r: Roster, now: number): string {
   const when = mins < 60 ? `${mins} 分钟前` : mins < 1440 ? `${Math.round(mins / 60)} 小时前` : `${Math.round(mins / 1440)} 天前`
   const who = b.agents.map((a) => a.role).join('、')
   return (
-    `这个项目 ${when} 派过一批：「${b.goal}」——${who}。` +
+    `这个项目 ${when}派过一批：「${b.goal}」——${who}。` +
     `进程已经不在了，**产出在 .plans/<role>/findings.md**，要收活就去读那些文件。` +
     (r.batches.length > 1 ? `（更早还有 ${r.batches.length - 1} 批，记录在 .plans/team.json）` : '')
   )
