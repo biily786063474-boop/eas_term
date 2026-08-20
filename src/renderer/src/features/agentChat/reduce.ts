@@ -209,6 +209,19 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         costUsd = e.costUsd ?? costUsd
         sawExecStartSinceTurnDone = false
         turnActive = false
+        // **一轮结束了，就不该还有命令标着「在跑」** —— 收尾掉它们。
+        //
+        // 正常路径上 exec.done 先到，这一句是空转。它是为**中断**准备的：
+        // 用户点「停」时进程可能正卡在一条命令上，那条 exec.done 永远不会来了。
+        // 不收的话 anyRunning 一直为真 → busy 一直为真 →
+        // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」
+        //（用户 2026-08-20 反馈的正是这两条）。
+        //
+        // 跟 history.ts 的 settleOnLoad 同一个道理：那边收的是「上次退出时卡在
+        // 半路的记录」，这边收的是「这一轮被掐断时卡在半路的命令」。
+        for (const t of turns) {
+          for (const x of t.execs) if (x.state === 'running') x.state = 'failed'
+        }
         // 一轮结束，流式那段已经落定。不清的话，下一轮第一个 text.done 会去覆盖
         // 上一轮的最后一个轮次（那时 delta 还没来得及开新的），表现成「新回答
         // 把旧回答改掉了」。

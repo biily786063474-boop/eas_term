@@ -603,3 +603,42 @@ test('quota 事件按窗口去重，同一个窗口只留最新（五小时和�
 test('没收到过 quota 时是空数组（Codex 不报额度，界面就不该显示那个 chip）', () => {
   assert.deepEqual(run([ready]).quotas, [])
 })
+
+// —— 中断：点「停」之后界面要真的停下来（2026-08-20 用户反馈）——
+
+test('turn.done 会收尾仍在跑的命令 —— 否则 busy 永远为真', () => {
+  // 用户点「停」时进程正卡在一条 Bash 上，那条 exec.done 永远不会来了。
+  // 不收的话 anyRunning 一直为真 → 界面上「正在处理」不消失、
+  // 发送键一直停在「停下这一轮」。
+  const v = run([
+    ready,
+    { k: 'turn.start' },
+    { k: 'exec.start', execId: 'e1', label: '运行 sleep 999', detail: 'sleep 999' },
+    { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } }
+  ])
+  assert.equal(v.busy, false, '一轮结束了就不该还忙着')
+  const running = v.turns.flatMap((t) => t.execs).filter((x) => x.state === 'running')
+  assert.equal(running.length, 0, '不该还有 running 的命令')
+})
+
+test('正常路径不受影响：exec.done 先到，状态是 ok 不是 failed', () => {
+  const v = run([
+    ready,
+    { k: 'turn.start' },
+    { k: 'exec.start', execId: 'e1', label: '运行 ls', detail: 'ls' },
+    { k: 'exec.done', execId: 'e1', ok: true, output: 'a.ts' },
+    { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } }
+  ])
+  const e1 = v.turns.flatMap((t) => t.execs).find((x) => x.execId === 'e1')
+  assert.equal(e1?.state, 'ok', '正常跑完的不该被改成 failed')
+  assert.equal(v.busy, false)
+})
+
+test('非致命提醒不会结束这一轮 —— 那只是条提示，会话还在跑', () => {
+  const v = run([
+    ready,
+    { k: 'turn.start' },
+    { k: 'error', fatal: false, message: '某个提醒' }
+  ])
+  assert.equal(v.busy, true, 'fatal:false 不该把正在跑的一轮判成结束')
+})

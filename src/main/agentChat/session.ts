@@ -370,7 +370,13 @@ function wireProc(live: Live, proc: ChildProcess): void {
     }
     // code === 0 或 null（被我们自己 kill）都不算错——Codex 的 exec 正常跑完一轮后
     // 本来就会退出，那是预期行为，不是故障。
-    if (code !== 0 && code !== null) {
+    //
+    // **`selfKilled` 也不算错。** kill() 送的是 SIGTERM，进程自己处理掉的话退出码
+    // 是 143（128+15）—— 非 0 非 null，正好落进下面这条。于是用户点一下「停」，
+    // 除了那句温和的「已停下这一轮」，还会收到一条红色的
+    // 「CLI 进程退出（code 143）」。用户 2026-08-20 的原话：「有点多余，有点吓人」。
+    // 他自己按的停，那不是故障。空闲回收和 restart 同理。
+    if (!selfKilled && code !== 0 && code !== null) {
       handleEvent(live, { k: 'error', message: `CLI 进程退出（code ${code}）`, fatal: true })
     }
   })
@@ -971,6 +977,17 @@ export function registerAgentChatHandlers(): void {
     live.killing = true
     live.proc.kill()
     live.proc = undefined
+    // **必须推 turn.done，光推一条提醒是不够的。**
+    //
+    // 渲染层的 busy 有三支判据（reduce.ts）：turnActive、
+    // sawExecStartSinceTurnDone、以及「execs 里还有没有 running 的」。
+    // 能一次放倒三支的只有 turn.done —— `error` 就算 fatal 也只放倒 turnActive。
+    // 原来这里只推了一条 fatal:false 的提醒，三支一支都没复位：
+    // 界面上「正在处理」不消失、发送键一直停在「停下这一轮」。
+    //
+    // usage 给零：这不是一轮真的跑完，没有新用量要记。costUsd 留空 ——
+    // teamCost.tally 里 `costUsd ?? prev.costUsd` 会保持原值，不会把花费清成 0。
+    handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
     handleEvent(live, {
       k: 'error',
