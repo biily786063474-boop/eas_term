@@ -540,6 +540,15 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   return { ok: true }
 }
 
+/** 清掉 CLI 探测缓存的钩子。真正的实现在 registerAgentChatHandlers 里赋值 ——
+ *  缓存本身是那个闭包的局部变量，不该提到模块级让别人随手改。 */
+let invalidateCliCache: () => void = () => {}
+
+/** 装完 / 卸完 CLI 之后调它，下一次 listClis 会重新探测（不用等 60 秒 TTL）。 */
+export function refreshCliCache(): void {
+  invalidateCliCache()
+}
+
 // ── 自动恢复：被网络抖断的团队 agent 自己接着干 ───────────────────────────────
 //
 // 用户的要求：「我希望子 agent 不打扰用户，可以通过中断了的机制让主 agent
@@ -725,7 +734,44 @@ export function registerAgentChatHandlers(): void {
     listSessionBriefs(e.sender.id)
   )
 
+  // **探测结果要缓存，而且并发要合流。**
+  //
+  // detect 是 `execFile('which', [bin])` —— 每次都 spawn 一个子进程。
+  // 而每个 AI 对话节点挂载时都会调一次 listClis：画布上放 6 个节点，
+  // 开机那一瞬间就是十几个子进程同时起来，用户的原话是「瞬间占用大量系统资源，
+  // 有可能造成系统卡顿」（2026-08-20 实测确认：干净启动 30 秒后 agentChat 会话数
+  // 和 CLI 子进程数都是 0，也就是说卡顿不来自会话本身，就来自这里）。
+  //
+  // 两件事一起做才有用：
+  // · **缓存**（60 秒）—— 挡住后续的重复探测
+  // · **in-flight 合流** —— 挡住「六个节点同时挂载、缓存还没建立」那一下，
+  //   只有它能把开机瞬间的十几个进程压成一次
+  //
+  // 60 秒不是随便取的：装完 CLI 的人会去点「安装」按钮那条路（agentInstall 会
+  // 主动清缓存），这里的 TTL 只是兜底给「在别处装完、回来等一会儿」的情况。
+  let cliCache: { at: number; data: CliInfo[] } | null = null
+  let cliInflight: Promise<CliInfo[]> | null = null
+  const CLI_CACHE_MS = 60_000
+  /** 装了/卸了 CLI 之后调它，下一次 listClis 会重新探测 */
+  invalidateCliCache = (): void => {
+    cliCache = null
+  }
+
   ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
+    if (cliCache && Date.now() - cliCache.at < CLI_CACHE_MS) return cliCache.data
+    if (cliInflight) return cliInflight
+    cliInflight = probeClis()
+      .then((r) => {
+        cliCache = { at: Date.now(), data: r }
+        return r
+      })
+      .finally(() => {
+        cliInflight = null
+      })
+    return cliInflight
+  })
+
+  async function probeClis(): Promise<CliInfo[]> {
     const adapters = listAdapters()
     // 仅终端可用的 CLI 也要探测 —— 它同样要显示「装了没有」
     // 目前一个都没有。DeepSeek Harness 曾经在这里（headless 只打印最终消息、
@@ -750,7 +796,7 @@ export function registerAgentChatHandlers(): void {
       if (c) installCmds[k] = c
     }
     return buildCliList(adapters, availability, installCmds, terminalOnly)
-  })
+  }
 
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
     const p = params as Partial<AgentChatStartParams> | null
