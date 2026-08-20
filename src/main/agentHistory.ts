@@ -171,15 +171,19 @@ export function registerAgentHistory(): void {
     }
   )
 
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown): void => {
+  // 返回**真的写成了没有**。调用方里至少有一条路（adoptOrphan）要靠它决定
+  // 敢不敢删掉旧的那一份 —— 先删后存、而存又失败了的话，那段对话就永久没了。
+  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown): boolean => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
-    if (!f || !Array.isArray(turns)) return
+    if (!f || !Array.isArray(turns)) return false
     try {
       fs.mkdirSync(dir(), { recursive: true })
       // 空记录就删文件，别留一堆 {"turns":[]}
       if (turns.length === 0) {
         fs.rmSync(f, { force: true })
-        return
+        // **返回 false**：删掉不等于「保存好了」。调用方拿它当「可以删旧的了」
+        // 会正好在这条路径上丢数据（.plans/silent-fail S-12 记的那颗雷）。
+        return false
       }
       fs.writeFileSync(
         f,
@@ -195,8 +199,10 @@ export function registerAgentHistory(): void {
         { mode: 0o600 }
       )
       prune()
+      return true
     } catch (e) {
       console.error('[agentHistory] 写入失败', e)
+      return false
     }
   })
 

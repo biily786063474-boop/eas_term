@@ -552,14 +552,31 @@ export function AgentChatView({
   }, [cwd, sessionId, restored.turns.length])
 
   /** 把一份孤儿记录接管到当前这个节点：内容搬过来，resumeId 也接过来
-   *  （模型那边才接得上），旧的那份随即删掉，避免同一段对话留两份。 */
+   *  （模型那边才接得上），旧的那份再删掉，避免同一段对话留两份。
+   *
+   *  **顺序必须是先存后删。** 以前是读进内存 state 就立刻删磁盘上那份，而新的一份
+   *  要等「有 view.turns」才写盘 —— 用户不发消息就永远没有 view。于是点了
+   *  「接上上次」之后关掉节点 / 退出应用，那段对话既不在旧 leafId 文件里、
+   *  也没进新 leafId，**不可恢复**（.plans/data-safety H1）。
+   *  这条路径本来就是为「误关了要能捞回来」造的，结果它自己会把记录弄丢。 */
   const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
     const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
     if (!got) return
-    setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId })
+    const turns = settleOnLoad(got.turns as Turn[])
+    setRestored({ turns, resumeId: got.resumeId })
     if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId)
-    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
     setOrphans([])
+    // 立刻把它写到新 leafId 名下 —— 不等 view，那要等用户发消息才有。
+    const saved = await window.api.agentChat
+      .saveHistory(leafId, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd)
+      .catch(() => false)
+    if (!saved) {
+      // **存不成就不删。** 界面上内容已经接过来了，旧文件留着无非是多一份，
+      // 而删掉是不可逆的。turns 为空时 save 也返回 false（那时本来也没什么可搬）。
+      console.error('[agentChat] 接管的记录没能写到新节点名下，旧的那份保留不删')
+      return
+    }
+    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
   }
 
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
