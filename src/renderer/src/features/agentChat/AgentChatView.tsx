@@ -821,10 +821,14 @@ export function AgentChatView({
             </button>
           </div>
         </div>
-        {/* 有 resumeId = 这个节点之前聊过。说清楚「接得上什么、接不上什么」——
-            上下文在 CLI 那边留着（发第一条就续上），但上面的对话记录没有保存，
-            界面从空的开始。不说的话用户会以为记录丢了。 */}
-        {savedResumeId && (
+        {/* 有 resumeId = 这个节点之前聊过，上下文在 CLI 那边留着，发第一条就续上。
+            不说的话用户会以为记录丢了。
+            **但上面已经摆着历史时不要说这句** —— 它的原文是「上面的对话记录不保留」，
+            那是聊天记录还不会落盘那会儿写的。现在记录会读回来显示在上面，
+            这句就成了自相矛盾：中间写着「上次聊到这里 —— 发一条消息接着聊」，
+            底下却说记录不保留（用户 2026-08-20 截图指出）。
+            那种情况上面那条 ac-restored-hint 已经把事情说清楚了。 */}
+        {savedResumeId && !restored.turns.length && (
           <div className="ac-resume-hint">接着上次的上下文继续（上面的对话记录不保留）</div>
         )}
         {(phase.k === 'detecting' || phase.k === 'none') && (

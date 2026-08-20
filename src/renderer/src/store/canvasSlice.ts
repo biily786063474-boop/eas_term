@@ -204,14 +204,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
               //（CanvasFileNode，只认 code/image/web），agent 落在那儿会渲染成一个空白框。
               // 它得像终端一样有真的 leaf —— 只是建的时候不 spawn pty。
               // 放在 `n.pane` 判断之前，否则永远进不来。
-              const isAgent = n.pane?.kind === 'agent'
+              const agentPane = n.pane?.kind === 'agent' ? n.pane : undefined
+              const isAgent = !!agentPane
               if (n.pane && !isAgent) continue // 文件/图片/网页 → 画布自带节点，不需要 leaf
               const before = new Set(
                 get()
                   .tabs.filter((t) => t.projectId === f.projectId)
                   .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
               )
-              if (isAgent) await get().openAgentPane({ projectId: f.projectId })
+              if (isAgent)
+                // **cwd 和 resumeId 都要带上。**
+                // 以前这里只传 projectId：cwd 靠项目路径兜底（节点指向子目录或
+                // worktree 时就错了），而 resumeId 直接丢掉 —— 落盘时特意存它
+                // （persist 里那句「它就是为跨重启续上下文设计的」），恢复时却不用，
+                // 于是重启后每个 AI 节点都是「界面摆着历史、模型一个字都不记得」。
+                // 2026-08-20 实测：恢复出来的 agent leaf resumeId 全是 null。
+                await get().openAgentPane({
+                  projectId: f.projectId,
+                  // 收窄一次再取字段：PaneState 是联合类型，terminal 分支没有这两个
+                  ...(agentPane?.cwd ? { cwd: agentPane.cwd } : {}),
+                  ...(agentPane?.resumeId ? { resumeId: agentPane.resumeId } : {})
+                })
               else await get().openTerminal({ projectId: f.projectId })
               const newLeaf = get()
                 .tabs.filter((t) => t.projectId === f.projectId)
@@ -226,7 +239,22 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                       ? {
                           ...fr,
                           nodes: fr.nodes.map((nn) =>
-                            nn.id === n.id ? { ...nn, leafId: newLeaf.id } : nn
+                            nn.id === n.id
+                              ? // **leafId 回填的同时要把 pane 清掉。**
+                                //
+                                // `pane` 在存档里的作用只有一个：告诉恢复流程「这个节点
+                                // 是 agent 不是终端」。leaf 一建出来它的使命就完了，
+                                // 留着会让这个节点同时满足两条渲染路径 ——
+                                // CanvasStage 按 `n.pane` 画一个文件节点的壳，
+                                // PaneLayer 按 `n.leafId` 再浮一层内容，
+                                // 于是节点头部有两套按钮、边框错开 4~5px 露出两条线
+                                //（用户 2026-08-20 截图：「新建的 AI 对话是正常的，
+                                // 关机再打开之后的窗口就不正常」——差别正在这里）。
+                                //
+                                // 不影响下次存档：落盘时 persist 会按 leafPaneOf 现查
+                                // 当前 leaf 的 pane 重新写进去，不依赖这里留着的这份。
+                                { ...nn, leafId: newLeaf.id, pane: undefined }
+                              : nn
                           )
                         }
                       : fr

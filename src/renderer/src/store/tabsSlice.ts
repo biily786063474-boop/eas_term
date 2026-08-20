@@ -52,6 +52,9 @@ export interface TabsSlice {
      *  团队 agent 一次派好几个，每个都抢一次焦点的话，用户在分屏模式下
      *  会被连着切走好几次视图，而这些会话本来就不该占据他的注意力。 */
     background?: boolean
+    /** 跨重启接回上下文用的 CLI 会话 id。**画布恢复时必须带上** ——
+     *  它是 canvas.json 里唯一为「续上次对话」存的东西，不传等于白存。 */
+    resumeId?: string
   }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
@@ -205,7 +208,10 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         // **接管一个已经在跑的会话**（从团队面板点进来时用）。
         // 有它的话 AgentChatView 挂载时直接订阅这个 id，而不是等用户发第一条消息 ——
         // 「关了节点、进程还在跑」的那些 agent，唯一的回去入口就是这条。
-        sessionId: opts?.sessionId
+        sessionId: opts?.sessionId,
+        // 画布恢复时带回来的 CLI 会话 id —— 有它，重启后发的第一条消息
+        // 会带 --resume 接回原来的上下文，而不是开一个什么都不记得的新会话
+        resumeId: opts?.resumeId
       }
     }
     const tab: TermTab = {

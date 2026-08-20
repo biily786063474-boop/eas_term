@@ -1250,7 +1250,13 @@ export function CanvasStage(): JSX.Element {
             {!f.collapsed && f.nodes.length === 0 && <div className="cframe-empty">空 Frame</div>}
             {!f.collapsed &&
               f.nodes
-                .filter((n) => n.pane || n.component)
+                // **有 leafId 就不画壳。** 那说明这个节点的内容已经由 PaneLayer
+                // 接管（它按 leafId 把真实内容浮在画布上），这里再画一个文件节点的壳
+                // 就是第二层：两套头部按钮叠着、边框错开几个像素露出两条线。
+                // 正常的文件/图片/网页节点没有 leafId（materializeCanvas 里
+                // 「文件/图片/网页 → 画布自带节点，不需要 leaf」那条直接 continue），
+                // 组件节点同理，所以这条过滤不会误伤它们。
+                .filter((n) => (n.pane || n.component) && !n.leafId)
                 .map((n) =>
                   n.component ? (
                     <CanvasComponentNode
