@@ -221,19 +221,61 @@ export function AgentChatView({
     []
   )
 
-  // 聊天记录落盘。节流 1 秒：流式输出时 view 每个 token 都在变，不节流会把磁盘写爆。
+  // 聊天记录落盘。**真节流**：距上次落盘满 1 秒就立刻写，不满就补一个定时器。
+  //
+  // 以前这里写的是 `setTimeout(save, 1000)` + cleanup 里 clearTimeout —— 注释说「节流」，
+  // 实现是**防抖**，而两者的差别恰好落在这个功能要防的那个场景上：
+  //   · view 每个 token 变一次 → cleanup 每次都把上一个定时器取消掉
+  //   · 于是只要 token 间隔小于 1 秒，那次写盘**永远排不到执行**
+  //   · agent 连续输出 5 分钟 = 这 5 分钟一次都没落盘，中途崩了整轮全丢
+  //   · 更确定的一条：**卸载时 cleanup 会取消还没到期的那次** ——
+  //     用户在最后一段输出后 1 秒内关掉节点或切走视图，那段对话从没写进磁盘，
+  //     而界面上明明显示过（.plans/silent-fail S-13）
+  //
   // **依赖里放 view 而不是 displayView** —— 后者只在 sessionId 有值的分支里算得出来，
   // 而 hook 不能放在条件分支里。
+  const lastSaveRef = useRef(0)
+  /** 最新一份待落盘的数据。卸载时的兜底写用它 —— 那一刻 view 已经取不到了。 */
+  const pendingSaveRef = useRef<Parameters<typeof window.api.agentChat.saveHistory> | null>(null)
   useEffect(() => {
     const turns = view?.turns
     if (!turns?.length) return
-    const t = window.setTimeout(() => {
-      void window.api.agentChat
-        .saveHistory(leafId, trimForSave([...restored.turns, ...turns]), savedResumeId || null, cwd)
-        .catch(() => undefined)
-    }, 1000)
+    const args = [
+      leafId,
+      trimForSave([...restored.turns, ...turns]),
+      savedResumeId || null,
+      cwd
+    ] as Parameters<typeof window.api.agentChat.saveHistory>
+    pendingSaveRef.current = args
+    const save = (): void => {
+      lastSaveRef.current = Date.now()
+      pendingSaveRef.current = null
+      void window.api.agentChat.saveHistory(...args).catch((e) => {
+        // 以前这里是 `.catch(() => undefined)`，写盘失败在渲染层完全无痕
+        console.error('[agentChat] 聊天记录落盘失败', e)
+      })
+    }
+    const since = Date.now() - lastSaveRef.current
+    if (since >= 1000) {
+      save()
+      return
+    }
+    const t = window.setTimeout(save, 1000 - since)
     return () => window.clearTimeout(t)
   }, [view, restored, leafId, savedResumeId, cwd])
+
+  // 卸载兜底：把还没落盘的那一份写掉。
+  // **必须单独一个 effect**（依赖 []）—— 挂在上面那个 effect 的 cleanup 里没用，
+  // 它每次 view 变化都会跑一遍，分不清「又来了一个 token」和「组件真的没了」。
+  useEffect(() => {
+    return () => {
+      const args = pendingSaveRef.current
+      if (!args) return
+      void window.api.agentChat.saveHistory(...args).catch((e) => {
+        console.error('[agentChat] 卸载时补写聊天记录失败', e)
+      })
+    }
+  }, [])
 
   // 空态：拉一次可用 CLI 列表——只渲染 detect() 探测通过的那些，没装的不出现，
   // 免得用户选了一个点了就报错的选项。
