@@ -27,6 +27,8 @@ import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 let mcpEnabled = true
 
 interface Ctx {
+  /** 这个会话是团队派生的，值是它的角色名。**只有成员有**，主 agent 一律没有 */
+  teamRole?: string
   /** 调用方所在终端的 ptyId：渲染层据此反查「我在哪个 Frame / 哪个节点」
    *  （终端是先创建 pty、之后才挂到 Frame 节点上的，spawn 时还不知道 frameId，所以注入 ptyId 更可靠） */
   ptyId?: string
@@ -52,6 +54,12 @@ export function mcpEnv(ctx: Ctx): Record<string, string> {
   }
   if (ctx.ptyId) env.EAS_PTY_ID = ctx.ptyId
   if (ctx.project) env.EAS_PROJECT = ctx.project
+  // **团队派生的会话自报身份。** 在此之前只能靠「这个 cwd 下有没有活的 team 会话」
+  // 反推，那是个会误伤的猜测：主 agent 自己开在同一个项目里时也会被当成成员。
+  // 对 team_spawn 那道拦截无所谓（一批在跑时限流闸本来就会拒），
+  // 但 team_send 恰恰要在「有 agent 在跑」时用 —— 猜错就是 100% 挡住合法调用。
+  // 2026-08-19 隔离环境实测撞到：主 agent 调 team_send 被当成成员拒了。
+  if (ctx.teamRole) env.EAS_TEAM_ROLE = ctx.teamRole
   return env
 }
 

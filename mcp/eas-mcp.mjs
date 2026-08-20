@@ -12,7 +12,13 @@ import http from 'node:http'
 
 const PORT = process.env.EAS_TERM_PORT
 const TOKEN = process.env.EAS_TERM_TOKEN
-const CTX = { ptyId: process.env.EAS_PTY_ID, project: process.env.EAS_PROJECT }
+// EAS_TEAM_ROLE 只有团队派生的会话才有 —— 它让「调用方是不是成员」成为**事实**
+// 而不是靠 cwd 反推的猜测（那个猜测会把同项目里的主 agent 也算成成员）
+const CTX = {
+  ptyId: process.env.EAS_PTY_ID,
+  project: process.env.EAS_PROJECT,
+  teamRole: process.env.EAS_TEAM_ROLE
+}
 
 const TOOLS = [
   {

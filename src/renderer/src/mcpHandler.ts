@@ -22,34 +22,31 @@ import { liveMaximizedNode } from './store/canvas/selectors'
 import { runCanvasSnapshot, snapshotBlockedReason } from './features/canvas/snapshotRun'
 
 interface Ctx {
+  /** 团队派生的会话自报的角色名。有值 = 调用方确实是成员（不是猜的） */
+  teamRole?: string
   ptyId?: string
   project?: string
 }
 
-/** 这次 MCP 调用是不是团队派生的 agent 发起的。
+/**
+ * 这次 MCP 调用是不是团队派生的 agent 发起的。
  *
- *  **判据取自主进程的会话表，不是画布节点。** 原先这里遍历 tabs 找 owner:'team' 的
- *  agent pane —— 节点一关就认不出来了，而进程还在跑：那时团队 agent 调 notify 会被
- *  当成用户自己的会话放行，调 team_spawn 也不再被硬约束拦住。身份存在 SessionRecord
- *  上（见 shared/agentChat.ts 的 SessionBrief.owner），和进程同生共死。
+ * **判据是事实，不是猜测**：`EAS_TEAM_ROLE` 由 `mcpEnv` 在起会话时注入，
+ * 只有 `owner:'team'` 的会话才有（见 main/agentChat/session.ts 那行）。
  *
- *  agentChat 会话没有 ptyId（mcpEnv 只在有 ptyId 时注入 EAS_PTY_ID），所以仍然只能靠
- *  cwd 匹配。**会误伤一种情形**：同一个项目里你自己也开着一个 AI 对话，而团队正在跑。
- *  接受它 —— 那种时候你那个会话本来也派不了活（同 Frame 一批的闸门会先拒），
- *  净损失是零。等 MCP 侧能带上 sessionId 再收窄（要改 mcpEnv 和会话启动参数）。
+ * 此前这里是靠「这个 cwd 下有没有活的 team 会话」反推的，注释里也承认会误伤 ——
+ * 当时的论证是「误伤无害：那种时候主 agent 本来也派不了活（限流闸会先拒）」。
+ * **那个论证只对 team_spawn 成立。** 2026-08-19 隔离环境实测撞到：
+ * `team_send` 恰恰要在「有 agent 在跑」时用，而那正是误伤必然发生的时刻 ——
+ * 主 agent 想给成员追加一条指令，被自己的拦截挡了回来，返回
+ * 「你是团队里的一个 agent —— 不能给别人追加指令」。100% 挡住合法调用。
  *
- *  只认 alive 的会话：一批跑完之后这个判定要能自己解除，否则这个项目从此没人能派活。
- *
- *  **注意它只对 Codex 起的会话有意义。** Claude 那侧带 --strict-mcp-config 却没有
- *  --mcp-config，一个 MCP 工具都加载不了，压根走不到这个函数（见 adapters/claude.ts
- *  那段注释）。所以 notify 拦截和派活硬约束都只在 Codex 会话上真正生效 —— 
- *  这不是理由删掉它们，是理由别拿「Claude 那边没触发」当成它们没用。 */
-async function isTeamOwnedCaller(ctx: Ctx): Promise<boolean> {
-  if (ctx.ptyId) return false // 有 ptyId = 来自终端，那是用户自己的终端
-  const cwd = ctx.project
-  if (!cwd) return false
-  const sessions = await window.api.agentChat.listSessions().catch(() => [])
-  return sessions.some((x) => x.owner === 'team' && x.alive && x.cwd === cwd)
+ * 换成注入之后那条猜测就不需要了：注入是进程级的，app 重启会杀掉所有会话，
+ * 所以升级之后活着的会话必然都带着这个变量。漏放的唯一情形是老 shim +
+ * 新 app，那时 team_spawn 还有限流闸兜着，而 team_send 顶多被多用一次。
+ */
+function isTeamOwnedCaller(ctx: Ctx): boolean {
+  return !!ctx.teamRole
 }
 
 // ptyId → 它所属的画布 Frame / 节点；找不到就回落到「当前项目的顶层 Frame」
@@ -463,7 +460,7 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     // 注意 agentChat 会话**天生没有 EAS_PTY_ID**（mcpEnv 只在有 ptyId 时注入），
     // 所以下面那段 `ctx.ptyId ? … : leafIds.has(l.id)` 对它走的是 else 分支 ——
     // 一调就把整个 Frame 里所有终端都点亮，比一个还糟。
-    if (await isTeamOwnedCaller(ctx)) {
+    if (isTeamOwnedCaller(ctx)) {
       return {
         notified: false,
         message: msg,
@@ -770,7 +767,7 @@ const SHELL_TRAP =
   if (tool === 'team_send') {
     // 同 team_spawn：成员不能给成员派指令，编排只有主 agent 能做。
     // 判据与理由见那边的 ⓪（Codex 侧靠这道拦，Claude 侧根本没有这个工具）。
-    if (await isTeamOwnedCaller(ctx)) {
+    if (isTeamOwnedCaller(ctx)) {
       throw new Error(
         '你是团队里的一个 agent —— **不能给别人追加指令**，编排只有主 agent 能做。\n' +
           '需要别人补什么，写进自己的 findings.md 说明，主 agent 收活时会看到。'
@@ -820,7 +817,7 @@ const SHELL_TRAP =
   }
 
   if (tool === 'team_dissolve') {
-    if (await isTeamOwnedCaller(ctx)) {
+    if (isTeamOwnedCaller(ctx)) {
       throw new Error('你是团队里的一个 agent —— 解散只有主 agent 能做。')
     }
     const where = resolveFrame(ctx)
@@ -884,7 +881,7 @@ const SHELL_TRAP =
     //   对 Claude 那侧这是更硬的保护（工具不存在没法绕），但**代价是没有可审计性** ——
     //   越权尝试只在那个 agent 自己的 transcript 里留一行，team 侧什么记录都没有。
     //   别因为「Claude 那边用不着」就删掉这道闸：Codex 那侧真的靠它。
-    if (await isTeamOwnedCaller(ctx)) {
+    if (isTeamOwnedCaller(ctx)) {
       throw new Error(
         '你是团队里的一个 agent —— **不能再派活**，组队只有主 agent 能做。\n' +
           '需要的东西超出你这份任务时，把它写进自己的 findings.md，注明「这块需要谁来补」，' +

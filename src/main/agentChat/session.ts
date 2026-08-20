@@ -419,7 +419,9 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
         // probeEnv.ts，**这处漏了** —— 表现最阴险：探测说「装着」，UI 让你选，
         // 一点就 ENOENT。
         ...PROBE_ENV,
-        ...mcpEnv({ project: opts.cwd }),
+        // 团队派生的会话把角色名带进环境，让 MCP 那侧能**准确**判出「调用方是成员」，
+        // 不用再靠 cwd 反推（那个猜测会误伤主 agent，见 mcpBridge 的 mcpEnv 注释）
+        ...mcpEnv({ project: opts.cwd, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }),
         // 这个会话专属的标记——resources/agent-hooks/eas-pretooluse.mjs 靠它判断"这次工具
         // 调用是不是 agent-chat 起的这个会话"，不是用户在 Eas-Term 终端里自己敲的 claude、
         // 也不是 app 外面跑的 claude（两者都会继承上面 mcpEnv() 注入的 EAS_TERM_PORT/
