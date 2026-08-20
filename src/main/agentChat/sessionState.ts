@@ -68,9 +68,26 @@ export interface SessionRecord {
  *  已经死了的会话不算——回收动作（杀进程）针对的是「还占着资源但没人理」的进程，
  *  死会话没有进程可杀，重复判 true 没有意义，也会误导调用方再杀一次不存在的进程。
  *  用严格大于：「超过」15 分钟才回收，刚好卡在 15 分钟整不算。 */
+/** 团队 agent 交活之后的回收阈值。**比普通会话短得多，这是有意的。**
+ *
+ *  那 15 分钟是给普通 AI 对话留的：你可能只是走开一会儿，回来接着聊，
+ *  杀掉就丢了上下文。团队 agent 不是这个场景 —— 它这一轮的产出**已经落盘**在
+ *  `.plans/<role>/`，进程留着不再产生任何价值，而一个 CLI 进程还挂着 API 连接。
+ *  派 5 个就是 5 份闲置。
+ *
+ *  为什么不设得更短（比如 30 秒）：agent 停下来之后，人还需要一点时间决定
+ *  「它是干完了还是卡在半路」——后者要用 `team_send` 推它继续，进程没了就推不动了。
+ *  三分钟够看一眼 findings.md。 */
+export const TEAM_IDLE_TIMEOUT_MS = 3 * 60 * 1000
+
 export function shouldReap(s: SessionRecord, now: number): boolean {
   if (!s.alive) return false
-  return now - s.lastActiveAt > IDLE_TIMEOUT_MS
+  // 团队派生 **且这一轮已经跑完** 才走短阈值。
+  // busy === true（还在跑）不能回收 —— lastActiveAt 虽然一直在续期，但万一它真的
+  // 卡住不出声，15 分钟的窗口是留给人去面板上看一眼的，不该被这条抢先杀掉。
+  // busy === undefined（一轮都没跑过）同理不算：那种会话刚建起来。
+  const limit = s.owner === 'team' && s.busy === false ? TEAM_IDLE_TIMEOUT_MS : IDLE_TIMEOUT_MS
+  return now - s.lastActiveAt > limit
 }
 
 /** 下一条消息该怎么发的判定，顺序固定：

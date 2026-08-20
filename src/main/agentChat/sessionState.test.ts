@@ -193,3 +193,30 @@ test('[补] 改 model/effort 触发的 restart（决定 3 那条路径）同样�
   assert.equal(plan.action, 'restart')
   assert.equal(plan.opts.skipApprovalHook, true, '不能因为这次 restart 是"改模型"触发的，就把用户拒绝过的选择弄丢')
 })
+
+// ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
+
+test('团队 agent 交活后 3 分钟就回收，不用等 15 分钟', () => {
+  const s = base({ owner: 'team', busy: false, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, 3 * 60 * 1000 + 1), true, '过了 3 分钟该回收')
+  assert.equal(shouldReap(s, 3 * 60 * 1000), false, '刚好卡在阈值上不算（严格大于）')
+})
+
+test('团队 agent 还在跑就不能提前回收', () => {
+  // lastActiveAt 一直在续期，正常不会触发；但万一它真卡住不出声，
+  // 那 15 分钟的窗口是留给人去面板上看一眼的，不该被短阈值抢先杀掉
+  const busy = base({ owner: 'team', busy: true, lastActiveAt: 0 })
+  assert.equal(shouldReap(busy, 4 * 60 * 1000), false)
+  assert.equal(shouldReap(busy, 15 * 60 * 1000 + 1), true, '超过 15 分钟仍然回收')
+})
+
+test('团队 agent 一轮都没跑过（busy 未定）不走短阈值', () => {
+  const fresh = base({ owner: 'team', lastActiveAt: 0 })
+  assert.equal(shouldReap(fresh, 4 * 60 * 1000), false, '会话刚建起来，可能正等第一条消息')
+})
+
+test('你自己开的对话不受影响，仍然是 15 分钟', () => {
+  const mine = base({ busy: false, lastActiveAt: 0 })
+  assert.equal(shouldReap(mine, 4 * 60 * 1000), false, '走开一会儿不该被杀')
+  assert.equal(shouldReap(mine, 15 * 60 * 1000 + 1), true)
+})

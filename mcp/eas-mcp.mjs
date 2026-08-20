@@ -312,6 +312,25 @@ const TOOLS = [
     }
   },
   {
+    name: 'team_send',
+    description:
+      '给某个已经派出去的 agent **追加一条指令** —— 它跑偏了要纠回来、或者它停在半路要推它继续。\n' +
+      '**它当前这一轮还没跑完的话，要等这轮结束才会读到**（CLI 从 stdin 收，自己排队），' +
+      '所以送完别重复发。\n' +
+      '注意会话交活后闲置 3 分钟就会被回收，**回收之后就送不进去了**，那时只能重新派一批。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: {
+          type: 'string',
+          description: '派活时定的角色名（team_status 里能看到）'
+        },
+        message: { type: 'string', description: '要追加的指令，一句话说清让它接下来做什么' }
+      },
+      required: ['role', 'message']
+    }
+  },
+  {
     name: 'canvas_new_terminal',
     description:
       '在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。',

@@ -716,6 +716,58 @@ const SHELL_TRAP =
     }
   }
 
+  if (tool === 'team_send') {
+    // 同 team_spawn：成员不能给成员派指令，编排只有主 agent 能做。
+    // 判据与理由见那边的 ⓪（Codex 侧靠这道拦，Claude 侧根本没有这个工具）。
+    if (await isTeamOwnedCaller(ctx)) {
+      throw new Error(
+        '你是团队里的一个 agent —— **不能给别人追加指令**，编排只有主 agent 能做。\n' +
+          '需要别人补什么，写进自己的 findings.md 说明，主 agent 收活时会看到。'
+      )
+    }
+
+    const where = resolveFrame(ctx)
+    const role = typeof args.role === 'string' ? args.role.trim() : ''
+    const message = typeof args.message === 'string' ? args.message.trim() : ''
+    if (!role) throw new Error('要指名给谁：role 是派活时定的那个角色名（team_status 里能看到）')
+    if (!message) throw new Error('message 不能为空')
+
+    const all = await window.api.agentChat.listSessions().catch(() => [])
+    const mine = all.filter(
+      (x) => x.owner === 'team' && (!where || x.cwd === where.projectPath)
+    )
+    const hit = mine.find((x) => x.role === role)
+    if (!hit) {
+      const names = mine.map((x) => x.role ?? '(没记角色名)')
+      throw new Error(
+        `这个项目里没有叫 \`${role}\` 的 agent。` +
+          (names.length ? `现在有：${names.join('、')}` : '一个都没有 —— 可能都已经被停掉或回收了。') +
+          '\n**注意会话被回收之后就送不进去了**（交活后闲置 3 分钟自动回收），' +
+          '那时只能重新派一批。'
+      )
+    }
+    if (!hit.alive) {
+      throw new Error(
+        `\`${role}\` 的进程已经不在了（被停掉或空闲回收）。它写下的东西还在 .plans/${role}/，` +
+          '要继续这块工作得重新派一个。'
+      )
+    }
+
+    const r = await window.api.agentChat.send(hit.id, message)
+    if (!r.ok) throw new Error(`没送进去：${r.error}`)
+
+    // busy 是投递前那一刻的状态。**这条提示不能省** —— CLI 从 stdin 收到消息后
+    // 要等当前这一轮跑完才处理，主 agent 若不知道，会以为没生效而重复发。
+    return {
+      sent: true,
+      role,
+      next: hit.busy
+        ? '送进去了，但它**当前这一轮还没跑完**，要等这轮结束才会读到你这条。别重复发。'
+        : '送进去了，它这一轮已经跑完、正等着输入，应该很快开始。' +
+          '**别接着轮询 team_status** —— 手上没别的事就带 wait:true 调一次。'
+    }
+  }
+
   if (tool === 'team_spawn') {
     const where = resolveFrame(ctx)
     if (!where) throw new Error('找不到你所在的 Frame，没法派活')
