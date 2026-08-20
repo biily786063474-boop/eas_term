@@ -47,20 +47,29 @@ function prune(): void {
 }
 
 export function registerAgentHistory(): void {
-  ipcMain.handle('agentHistory:load', (_e, leafId: unknown): unknown[] => {
-    const f = typeof leafId === 'string' ? fileOf(leafId) : null
-    if (!f) return []
-    try {
-      const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { turns?: unknown }
-      return Array.isArray(raw.turns) ? raw.turns : []
-    } catch {
-      // 文件不存在 / 坏了 —— 一律当成「没有历史」。
-      // **绝不能因为这个抛错**：那会让对话框整个起不来，而它只是个锦上添花的功能。
-      return []
+  ipcMain.handle(
+    'agentHistory:load',
+    (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null } => {
+      const empty = { turns: [], resumeId: null }
+      const f = typeof leafId === 'string' ? fileOf(leafId) : null
+      if (!f) return empty
+      try {
+        const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { turns?: unknown; resumeId?: unknown }
+        return {
+          turns: Array.isArray(raw.turns) ? raw.turns : [],
+          // 写这份记录时 CLI 那边的会话 id。**读回来必须跟当前 pane.resumeId 比一次** ——
+          // 对不上就说明模型接不回这段上下文了，界面得说清楚，见 AgentChatView。
+          resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null
+        }
+      } catch {
+        // 文件不存在 / 坏了 —— 一律当成「没有历史」。
+        // **绝不能因为这个抛错**：那会让对话框整个起不来，而它只是个锦上添花的功能。
+        return empty
+      }
     }
-  })
+  )
 
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown): void => {
+  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown): void => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return
     try {
@@ -70,7 +79,16 @@ export function registerAgentHistory(): void {
         fs.rmSync(f, { force: true })
         return
       }
-      fs.writeFileSync(f, JSON.stringify({ v: 1, savedAt: Date.now(), turns }), { mode: 0o600 })
+      fs.writeFileSync(
+        f,
+        JSON.stringify({
+          v: 1,
+          savedAt: Date.now(),
+          resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
+          turns
+        }),
+        { mode: 0o600 }
+      )
       prune()
     } catch (e) {
       console.error('[agentHistory] 写入失败', e)

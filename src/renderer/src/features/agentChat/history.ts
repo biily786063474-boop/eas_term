@@ -45,6 +45,28 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
   }))
 }
 
+/**
+ * 这份历史，模型还接得回吗。
+ *
+ * 记录绑在**画布节点**上，模型的记忆绑在 **CLI 的会话 id**（resumeId）上 ——
+ * 两者会分家：CLI 那边清理了旧会话、用户换了个 CLI（Claude 的 id Codex 不认）、
+ * 或者上次 resume 失败被那条 fallback 清掉过。
+ *
+ * 那时界面上摆着满屏历史、模型却完全不记得，**人看着历史会以为它记得** ——
+ * 比空白更糟，空白至少是诚实的。所以要能判出来并在界面上说明。
+ *
+ * **宁可漏报也不误报**：历史里没记 resumeId（旧版本写的、或者存得太早、
+ * session.ready 还没到）一律当成「接得上」。误报会让人不信任正常的恢复，
+ * 而漏报最多是没提示——那正是这个功能上线前的状态。
+ */
+export function contextLostOf(
+  historyResumeId: string | null,
+  paneResumeId: string | null | undefined
+): boolean {
+  if (!historyResumeId) return false
+  return historyResumeId !== (paneResumeId || null)
+}
+
 /** 读回来的历史里，`state: 'running'` 是**上次退出时卡在半路的那一条**。
  *  原样渲染的话界面上会有一个永远转不完的圈 —— 进程早就没了，不会再有事件来收尾。 */
 export function settleOnLoad(turns: readonly Turn[]): Turn[] {

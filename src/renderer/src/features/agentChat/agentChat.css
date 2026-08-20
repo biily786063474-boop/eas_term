@@ -35,6 +35,13 @@
 }
 /* 分界线：让人一眼看出「上面是上次的、下面开始是这次的」。
    不写这句的话，恢复出来的对话和新回复混在一起，分不清哪条是刚才说的 */
+/* 接不回上下文时用警示色。**不做成红色**：这不是错误，是一个需要知道的事实，
+   红色会让人以为出了故障、想去修它 */
+.ac-restored-hint.lost {
+  color: #fcd34d;
+  opacity: 0.95;
+  border-top-style: solid;
+}
 .ac-restored-hint {
   flex: none;
   text-align: center;

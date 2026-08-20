@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { trimForSave, settleOnLoad, MAX_TURNS, MAX_EXEC_OUTPUT } from './history.ts'
+import { trimForSave, settleOnLoad, contextLostOf, MAX_TURNS, MAX_EXEC_OUTPUT } from './history.ts'
 import type { Turn } from './reduce.ts'
 
 const turn = (text: string, over: Partial<Turn> = {}): Turn => ({
@@ -54,4 +54,23 @@ test('读回来时把卡在 running 的命令落到 failed', () => {
 test('空数组安全', () => {
   assert.deepEqual(trimForSave([]), [])
   assert.deepEqual(settleOnLoad([]), [])
+})
+
+// ── 这份历史模型还接不接得回 ─────────────────────────────────────
+
+test('resumeId 对得上 → 接得回', () => {
+  assert.equal(contextLostOf('sess-1', 'sess-1'), false)
+})
+
+test('resumeId 对不上 / pane 上被清空 → 接不回', () => {
+  assert.equal(contextLostOf('sess-1', 'sess-2'), true, '换过 CLI 或另起了会话')
+  assert.equal(contextLostOf('sess-1', ''), true, 'resume 失败被 fallback 清掉过')
+  assert.equal(contextLostOf('sess-1', undefined), true, 'pane 上压根没有')
+})
+
+test('历史里没记 resumeId → 一律当接得上（宁可漏报不误报）', () => {
+  // 旧版本写的记录、或者存得太早（session.ready 还没到）都会是 null。
+  // 误报会让人不信任正常的恢复；漏报最多是没提示，那正是上线前的状态
+  assert.equal(contextLostOf(null, 'sess-1'), false)
+  assert.equal(contextLostOf(null, undefined), false)
 })

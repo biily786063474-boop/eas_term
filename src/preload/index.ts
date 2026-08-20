@@ -831,10 +831,10 @@ const api = {
       ipcRenderer.invoke('agentChat:send', sessionId, message),
     /** 聊天记录按画布节点存取。**leafId 不是 sessionId** —— 后者每次 start 都变，
      *  前者随 canvas.json 落盘、跨重启稳定，对应用户心里的「这个对话框」。 */
-    loadHistory: (leafId: string): Promise<unknown[]> =>
+    loadHistory: (leafId: string): Promise<{ turns: unknown[]; resumeId: string | null }> =>
       ipcRenderer.invoke('agentHistory:load', leafId),
-    saveHistory: (leafId: string, turns: unknown[]): Promise<void> =>
-      ipcRenderer.invoke('agentHistory:save', leafId, turns),
+    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null): Promise<void> =>
+      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId),
     forgetHistory: (leafId: string): Promise<void> =>
       ipcRenderer.invoke('agentHistory:forget', leafId),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */

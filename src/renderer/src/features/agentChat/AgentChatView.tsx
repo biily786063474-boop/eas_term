@@ -17,7 +17,7 @@ import type {
   CliInfo
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
-import { trimForSave, settleOnLoad } from './history.ts'
+import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
@@ -95,8 +95,8 @@ export function AgentChatView({
     let alive = true
     void window.api.agentChat
       .loadHistory(leafId)
-      .then((t) => {
-        if (alive) setRestored(settleOnLoad(t as Turn[]))
+      .then((h) => {
+        if (alive) setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId })
       })
       // 读不到就当没有历史。**不能让它挡住对话框起来** —— 这只是个锦上添花的功能
       .catch(() => undefined)
@@ -172,7 +172,10 @@ export function AgentChatView({
    *  **`resumeId` 让模型记得，这个让你看得见** —— 两者缺一不可：只有 resumeId 时，
    *  重启后界面是空的、一发消息模型却接着上次说，人会以为它在乱答。
    *  存取见 main/agentHistory.ts，裁剪与「卡在 running 的命令落到 failed」见 ./history.ts。 */
-  const [restored, setRestored] = useState<Turn[]>([])
+  const [restored, setRestored] = useState<{ turns: Turn[]; resumeId: string | null }>({
+    turns: [],
+    resumeId: null
+  })
   // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
   // 后续消息（send()）失败时的原因——展示交给 ChatToolbar，这里只持有（它拿着 sessionId）。
@@ -213,11 +216,11 @@ export function AgentChatView({
     if (!turns?.length) return
     const t = window.setTimeout(() => {
       void window.api.agentChat
-        .saveHistory(leafId, trimForSave([...restored, ...turns]))
+        .saveHistory(leafId, trimForSave([...restored.turns, ...turns]), savedResumeId || null)
         .catch(() => undefined)
     }, 1000)
     return () => window.clearTimeout(t)
-  }, [view, restored, leafId])
+  }, [view, restored, leafId, savedResumeId])
 
   // 空态：拉一次可用 CLI 列表——只渲染 detect() 探测通过的那些，没装的不出现，
   // 免得用户选了一个点了就报错的选项。
@@ -420,7 +423,7 @@ export function AgentChatView({
     // 重放旧消息，所以这次会话的 view 里只有新轮次 —— 不拼的话，界面上看起来像
     // 从头开始，而模型的回答却带着上文，非常割裂。
     const displayView =
-      restored.length > 0 ? { ...live, turns: [...restored, ...live.turns] } : live
+      restored.turns.length > 0 ? { ...live, turns: [...restored.turns, ...live.turns] } : live
     // 后续消息：首条已经在 start() 里投递过了（见文件头 handleSend 的注释），这里走
     // send(sessionId, text)。beforeTurnCount 的算法跟首条消息完全一致——reducerRef 的
     // turns 只增不减，所以在这里现读它的长度、跟 mergeUserMessages 的插入位置对齐，
@@ -481,6 +484,9 @@ export function AgentChatView({
   // 空态：居中 logo + 多行输入框 + CLI 选择器。
   // 「现在处于哪一步」收敛在 startupPhaseOf 里（纯函数、可测），不再靠四个散落的
   // 变量在 JSX 里现场拼判断——那样能拼出「又在起又已失败」这类不可能状态。
+  // 这份历史是在哪个 CLI 会话下写的，跟当前 pane 上的对不对得上。
+  // 对不上 = 模型接不回它，界面必须说明（理由见下面那段注释）。
+  const contextLost = restored.turns.length > 0 && contextLostOf(restored.resumeId, savedResumeId)
   const phase = startupPhaseOf({ clis, selected, starting, startError })
   return (
     <div className="agent-chat-view">
@@ -488,14 +494,27 @@ export function AgentChatView({
         {/* 有上次的聊天记录就直接摆出来，没有才显示 slogan。
             这一步是「看得见」那一半 —— 另一半（模型记得）靠 pane.resumeId，
             用户发出下一条消息时 start() 会带上它。 */}
-        {restored.length > 0 ? (
+        {restored.turns.length > 0 ? (
           <div className="ac-restored">
             <MessageList
-              view={{ ...EMPTY_VIEW, turns: restored, busy: false }}
+              view={{ ...EMPTY_VIEW, turns: restored.turns, busy: false }}
               onApprovalDecide={() => undefined}
               leafId={leafId}
             />
-            <div className="ac-restored-hint">上次聊到这里 —— 发一条消息接着聊</div>
+            {/* **接不接得回上下文，必须说清楚。**
+                记录绑在画布节点上，而模型的记忆绑在 CLI 的会话 id（resumeId）上 ——
+                两者会分家：CLI 那边清理了旧会话、你换了个 CLI、或者上次 resume 失败被
+                清掉过（见 handleSend 里那段 fallback）。
+                那时界面上摆着满屏历史、模型却完全不记得，人看着历史会以为它记得 ——
+                比空白更糟，空白至少是诚实的。 */}
+            {contextLost ? (
+              <div className="ac-restored-hint lost">
+                以上是上次的记录，<b>模型接不回这段上下文了</b>
+                （会话在 CLI 那边已失效，或者换过 CLI）。下一条消息是从头开始的。
+              </div>
+            ) : (
+              <div className="ac-restored-hint">上次聊到这里 —— 发一条消息接着聊</div>
+            )}
           </div>
         ) : (
           <>
