@@ -561,7 +561,8 @@ export function mcpOptedOut(): boolean {
  *
  *  为什么要单独一份，而不是让它读 `~/.claude.json`：Claude 侧带着 `--strict-mcp-config`
  *  （「只用 --mcp-config 给的，忽略其它一切 MCP 配置」）。给它这一份 = 工具面**恰好**是
- *  eas-term + bizone-canvas，不会把用户全局装的其它 MCP server 一并塞进来。
+ *  只有 eas-term（**不含 bizone-canvas**，理由见下面那段：它每会话拉一个 Electron），
+ *  不会把用户全局装的其它 MCP server 一并塞进来。
  *  去掉 --strict-mcp-config 也能连上，但那样工具面就是用户全局的全集，不可控。
  *
  *  在这之前 agentChat 里的 Claude 是**零 MCP 工具**（有 --strict-mcp-config 却没有
@@ -577,6 +578,21 @@ export function agentMcpConfigPath(): string | null {
     if (!shouldAutoInstall(readOptOut())) return null
     const servers: Record<string, unknown> = {}
     for (const { name, run: r } of mcpEntries(serverPath)) {
+      // **只给 eas-term，不给 bizone-canvas。**
+      //
+      // stdio 型 MCP server 是**每个客户端一个进程**，而 bizone-canvas 的
+      // command 就是笔纵画板那个 app 本身 —— 每起一个 AI 对话会话，
+      // 后台就多一个完整的 Electron 实例（2026-08-20 实测：起一个会话，
+      // 笔纵画板进程 1 → 2，同时多一个 eas-mcp 的 node）。开几个对话
+      // 就是几个 Electron，用户的原话是「现在这个版本的软件非常卡顿」。
+      //
+      // 终端里跑的 claude 不受影响 —— 那条路读的是 ~/.claude.json，
+      // 画板工具照常可用，生图路径没有变窄。这里限制的只有
+      // 「AI 对话节点里那个进程」的工具面。
+      //
+      // 要把它加回来的话，得先把 MCP server 改成共享的（HTTP/SSE 那种，
+      // 一个 server 服务所有会话），而不是在这里放行。
+      if (name !== 'eas-term') continue
       servers[name] = {
         type: 'stdio',
         command: r.command,

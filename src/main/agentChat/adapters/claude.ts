@@ -79,7 +79,7 @@ export const claudeAdapter: CliAdapter = {
       // **配套的 --mcp-config 在下面按需追加。**
       // 单独留着这一条（没有 --mcp-config）就等于「一个 MCP server 都不加载」
       // —— 那是 2026-08-20 之前的状态，用户反馈「MCP服务好像也没有连接」，属实。
-      // 现在两条一起用：工具面**恰好**是 eas-term + bizone-canvas，
+      // 现在两条一起用：工具面**恰好**是我们给的那一份（目前只有 eas-term），
       // 不把用户全局装的其它 MCP server 带进来（那才是 strict 的价值）。
       '--strict-mcp-config',
       '--include-hook-events',

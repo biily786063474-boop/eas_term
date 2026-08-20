@@ -96,7 +96,7 @@ export interface StartOpts {
    *  未给这个字段（undefined）时按 false 处理——没声明就是"照常装"，不能让老代码
    *  路径因为多了这个字段而意外改变行为。 */
   skipApprovalHook?: boolean
-  /** 给 CLI 用的 MCP 配置文件路径（只含 eas-term 与 bizone-canvas，**不含用户全局的其它
+  /** 给 CLI 用的 MCP 配置文件路径（目前只含 eas-term，**不含用户全局的其它
    *  server**）。Claude 侧带着 `--strict-mcp-config`，没有它就等于一个 MCP 工具都没有 ——
    *  用户 2026-08-20 的原话：「MCP服务在AI对话窗口进行的时候好像也没有连接」。
    *
