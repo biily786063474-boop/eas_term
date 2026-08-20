@@ -50,6 +50,22 @@ if (includes('--seed')) {
       n++
     } catch { /* 没有就跳过 */ }
   }
+  // 聊天记录目录：**跨重启恢复那条路必须靠它才验得了**（「上次聊到这里」、
+  // contextLost 的判断、resumeId 对不对得上，全在这些文件里）。
+  // 单独处理是因为它是目录不是文件；同样走白名单精神 —— 只复制这一个已知目录。
+  // 实例用完即删（cleanup 里 rmSync），不会留副本。
+  try {
+    const src = path.join(realUserData, 'agent-history')
+    const dst = path.join(dir, 'agent-history')
+    fs.mkdirSync(dst, { recursive: true })
+    let m = 0
+    for (const f of fs.readdirSync(src)) {
+      if (!f.endsWith('.json')) continue
+      fs.copyFileSync(path.join(src, f), path.join(dst, f))
+      m++
+    }
+    if (m) console.log(`已复制 ${m} 份聊天记录（agent-history）`)
+  } catch { /* 没有就跳过 */ }
   console.log(`已从真实环境复制 ${n} 个文件（白名单，不含 secrets.json / mcp-endpoint.json）`)
 } else {
   // 至少给一个项目，否则连画布都进不去

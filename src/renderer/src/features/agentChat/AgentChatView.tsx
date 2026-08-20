@@ -99,6 +99,27 @@ export function AgentChatView({
   const setAgentResumeId = useStore((s) => s.setAgentResumeId)
   // 上次关掉这个节点时留下的 CLI 会话 id（随 canvas.json 落盘）。有它就说明这个节点
   // 之前聊过，起会话时带上 → 模型接得住上次的上下文。**从 store 现读**而不是存进
+  /** 这个 leaf 在画布上对应的节点 id，**它才是跨重启稳定的那个**。
+   *
+   *  聊天记录原本按 leafId 存，而 `uid()` 是 `前缀-序号-随机`、persist 落盘时
+   *  又 `delete copy.leafId` —— **leafId 每次重启都是新的**，于是重开软件后
+   *  每个节点都读不到自己的历史（2026-08-20 实测：6 个恢复出来的 agent 节点
+   *  一个都读不到，而磁盘上躺着 7 份记录）。agentHistory.ts 里那句
+   *  「leafId 随 canvas.json 落盘、跨重启稳定」是错的。
+   *
+   *  画布节点 id（`cnode-…`）随 canvas.json 一起落盘，重启后原样回来，
+   *  正是用户要的「一个模块和一个画布 ID 绑定，进去直接加载之前的对话」。
+   *
+   *  分屏模式下这个 leaf 可能没有画布节点 —— 那时退回 leafId：
+   *  分屏布局本来就不跨重启保留，稳不稳定无所谓。 */
+  const histKey = useStore((s) => {
+    for (const f of s.canvas.frames) {
+      const n = f.nodes.find((x) => x.leafId === leafId)
+      if (n) return n.id
+    }
+    return leafId
+  })
+
   // 本地 state：它由 session.ready 事件写回 store，两处各存一份必然会不同步。
   const savedResumeId = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -109,7 +130,7 @@ export function AgentChatView({
   useEffect(() => {
     let alive = true
     void window.api.agentChat
-      .loadHistory(leafId)
+      .loadHistory(histKey)
       .then((h) => {
         if (alive) setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId })
       })
@@ -118,7 +139,9 @@ export function AgentChatView({
     return () => {
       alive = false
     }
-  }, [leafId])
+    // **依赖是 histKey 不是 leafId** —— 画布节点挂上/摘掉时 histKey 会变
+    // （摘掉时退回 leafId），那时要按新的 key 重读一次
+  }, [histKey])
 
   /** 这个节点是不是团队派生的。决定它进不进状态系统（灵动岛 / 铃铛 / 提示音）。 */
   const isTeamOwned = useStore((s) => {
@@ -245,7 +268,7 @@ export function AgentChatView({
     const turns = view?.turns
     if (!turns?.length) return
     const args = [
-      leafId,
+      histKey,
       trimForSave([...restored.turns, ...turns]),
       savedResumeId || null,
       cwd
@@ -266,7 +289,7 @@ export function AgentChatView({
     }
     const t = window.setTimeout(save, 1000 - since)
     return () => window.clearTimeout(t)
-  }, [view, restored, leafId, savedResumeId, cwd])
+  }, [view, restored, histKey, savedResumeId, cwd])
 
   // 卸载兜底：把还没落盘的那一份写掉。
   // **必须单独一个 effect**（依赖 []）—— 挂在上面那个 effect 的 cleanup 里没用，
@@ -605,7 +628,7 @@ export function AgentChatView({
     setOrphans([])
     // 立刻把它写到新 leafId 名下 —— 不等 view，那要等用户发消息才有。
     const saved = await window.api.agentChat
-      .saveHistory(leafId, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd)
+      .saveHistory(histKey, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd)
       .catch(() => false)
     if (!saved) {
       // **存不成就不删。** 界面上内容已经接过来了，旧文件留着无非是多一份，
