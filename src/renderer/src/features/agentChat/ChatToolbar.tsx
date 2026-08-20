@@ -131,7 +131,9 @@ export function ChatToolbar({
     text,
     setText,
     () => requestAnimationFrame(() => taRef.current?.focus()),
-    cwd
+    cwd,
+    // 浮层贴着输入框弹（它渲染在 body 上，需要一个锚点）
+    taRef
   )
 
   const submit = (): void => {

@@ -1564,23 +1564,25 @@
 }
 
 
-/* ── 斜杠命令候选 ──────────────────────────────────────────────────
-   浮在输入框**上方**：输入框本来就在底部，往下弹会顶出可视区。
-   底色必须是实心的（--pane-solid）—— 半透明的话下面的对话文字会透上来，
-   候选项根本读不清。 */
+/* ── 斜杠命令 / @ 文件候选 ──────────────────────────────────────────
+   **渲染到 body 上、fixed 定位**（见 SlashPicker 的 portal）。
+   原本是 absolute 在输入框容器里，于是超出 pane 就被裁掉 ——
+   画布上节点不高时，列表顶部直接被节点头部切掉一半
+   （用户 2026-08-20 截图：「@和/的窗口应该在 top bar 上面」）。
+
+   底色用 --popover-solid（**真正不透明**）。--pane-solid / --glass-3 名字听着实心，
+   其实是 0.86 / 0.82，下面的对话文字会透上来，候选项根本读不清。 */
 .ac-slash {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(100% + 6px);
-  max-height: 244px;
+  position: fixed;
   overflow-y: auto;
   padding: 4px;
-  background: var(--pane-solid);
+  background: var(--popover-solid);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
-  z-index: 30;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  /* 盖住画布上的一切：节点头部、工具条、缩放条。它是个短暂的弹出层，
+     被任何东西压住都会让人以为「点不中」 */
+  z-index: 9999;
 }
 .ac-slash-row {
   display: flex;

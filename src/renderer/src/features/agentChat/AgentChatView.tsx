@@ -567,7 +567,8 @@ export function AgentChatView({
     text,
     setText,
     () => requestAnimationFrame(() => emptyTaRef.current?.focus()),
-    cwd
+    cwd,
+    emptyTaRef
   )
 
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
