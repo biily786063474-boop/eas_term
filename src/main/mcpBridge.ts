@@ -557,6 +557,43 @@ export function mcpOptedOut(): boolean {
   return !shouldAutoInstall(readOptOut())
 }
 
+/** 给 **AI 对话节点**里跑的 CLI 用的 MCP 配置文件路径。用户关过 MCP 接入时返回 null。
+ *
+ *  为什么要单独一份，而不是让它读 `~/.claude.json`：Claude 侧带着 `--strict-mcp-config`
+ *  （「只用 --mcp-config 给的，忽略其它一切 MCP 配置」）。给它这一份 = 工具面**恰好**是
+ *  eas-term + bizone-canvas，不会把用户全局装的其它 MCP server 一并塞进来。
+ *  去掉 --strict-mcp-config 也能连上，但那样工具面就是用户全局的全集，不可控。
+ *
+ *  在这之前 agentChat 里的 Claude 是**零 MCP 工具**（有 --strict-mcp-config 却没有
+ *  --mcp-config），canvas_* / notify / wiki_* 一个都调不到；而 Codex 那侧读全局 toml，
+ *  能力面大得多。同一个软件里选哪个 CLI 决定了 AI 能干什么 —— 那不是设计，是遗留。
+ *
+ *  **尊重 opt-out**：用户在「扩展能力」里关掉 MCP 接入之后，这里同样返回 null。
+ *  只关一半（终端里没有、AI 对话里还有）比不关更让人困惑。 */
+export function agentMcpConfigPath(): string | null {
+  try {
+    const serverPath = serverScriptPath()
+    if (!fs.existsSync(serverPath)) return null
+    if (!shouldAutoInstall(readOptOut())) return null
+    const servers: Record<string, unknown> = {}
+    for (const { name, run: r } of mcpEntries(serverPath)) {
+      servers[name] = {
+        type: 'stdio',
+        command: r.command,
+        args: r.args,
+        ...(r.env ? { env: r.env } : {})
+      }
+    }
+    const p = path.join(app.getPath('userData'), 'agent-mcp.json')
+    fs.writeFileSync(p, JSON.stringify({ mcpServers: servers }, null, 2))
+    return p
+  } catch (e) {
+    // 写不出来就退回「没有 MCP」——那是这个功能上线前的状态，不会更糟
+    console.error('[mcp] 生成 AI 对话用的 MCP 配置失败', e)
+    return null
+  }
+}
+
 /**
  * @param force 用户刚在界面上点了「安装」—— 这时无视 opt-out 标记（他正在收回那个决定）
  */

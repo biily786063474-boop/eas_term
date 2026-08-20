@@ -96,6 +96,13 @@ export interface StartOpts {
    *  未给这个字段（undefined）时按 false 处理——没声明就是"照常装"，不能让老代码
    *  路径因为多了这个字段而意外改变行为。 */
   skipApprovalHook?: boolean
+  /** 给 CLI 用的 MCP 配置文件路径（只含 eas-term 与 bizone-canvas，**不含用户全局的其它
+   *  server**）。Claude 侧带着 `--strict-mcp-config`，没有它就等于一个 MCP 工具都没有 ——
+   *  用户 2026-08-20 的原话：「MCP服务在AI对话窗口进行的时候好像也没有连接」。
+   *
+   *  **由上层（session.ts）注入而不是 adapter 自己去算**：adapter 有独立单测，
+   *  跑在纯 node 环境里，import 主进程那套会把 electron 一起拉进去。 */
+  mcpConfigPath?: string
   /** 「先问再做」模式（伪无头审批）。开了就把 ASK_FIRST_PROMPT 附进系统提示，
    *  让模型在动手前先说明并等回复 —— 不装 hook、不阻塞进程。
    *  与 skipApprovalHook 是两条独立的路：那条管硬拦截，这条管软约定。 */

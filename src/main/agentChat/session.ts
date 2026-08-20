@@ -43,6 +43,7 @@ import { guardPath } from '../fsGuard.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
+import { agentMcpConfigPath } from '../mcpBridge.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -410,7 +411,10 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
     }
   }
 
-  const built = adapter.buildArgs(opts)
+  // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
+  // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
+  // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
+  const built = adapter.buildArgs({ ...opts, mcpConfigPath: agentMcpConfigPath() ?? undefined })
   // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
   // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
   const args = built.stdin === 'ignore' ? [...built.args, message] : built.args

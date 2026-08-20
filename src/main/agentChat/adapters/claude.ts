@@ -76,6 +76,11 @@ export const claudeAdapter: CliAdapter = {
       // agent 能干什么就不一样。要动它之前先想清楚 —— 加 --mcp-config 等于给所有
       // AI 对话节点打开整个工具面（能改画布、能发通知、能碰密钥柜），那是另一个决定。
       // adapters.test.ts 有一条测试盯着这里。
+      // **配套的 --mcp-config 在下面按需追加。**
+      // 单独留着这一条（没有 --mcp-config）就等于「一个 MCP server 都不加载」
+      // —— 那是 2026-08-20 之前的状态，用户反馈「MCP服务好像也没有连接」，属实。
+      // 现在两条一起用：工具面**恰好**是 eas-term + bizone-canvas，
+      // 不把用户全局装的其它 MCP server 带进来（那才是 strict 的价值）。
       '--strict-mcp-config',
       '--include-hook-events',
       // 流式输出（2026-08-17 加回来）。它让 stdout 多出一路 stream_event 增量分块，
@@ -98,6 +103,9 @@ export const claudeAdapter: CliAdapter = {
       // 没实测过，拼字符串是确定的。
       opts.askFirst ? `${OUTPUT_STYLE_PROMPT}\n\n${ASK_FIRST_PROMPT}` : OUTPUT_STYLE_PROMPT
     ]
+    // 只含自家两个 server 的那份配置（生成与 opt-out 判定在 main/mcpBridge.ts）。
+    // 拿不到就退回原状：有 --strict-mcp-config 而无 --mcp-config = 零 MCP 工具。
+    if (opts.mcpConfigPath) args.push('--mcp-config', opts.mcpConfigPath)
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
     if (opts.resumeId) args.push('--resume', opts.resumeId)

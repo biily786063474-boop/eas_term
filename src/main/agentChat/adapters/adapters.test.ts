@@ -41,19 +41,45 @@ test('Claude 启动参数含实测确认过的那几个必需项', () => {
   }
 })
 
-test('Claude 带 --strict-mcp-config 但不带 --mcp-config —— 等于零 MCP 工具', () => {
-  // 这条锁的不是参数本身，是它的**后果**：两个 flag 合起来意味着 Claude 起的
-  // agentChat 会话一个 eas-term 工具都调不到（canvas_* / notify / wiki_* / secret_*）。
-  // 2026-08-19 派 agent 实测才发现 —— 它调 team_spawn 拿到的是 harness 层的
-  // `No such tool available`，请求根本没到 team 层。
-  //
-  // 加 --mcp-config 会让这条变红，那是有意的：那个改动等于给所有 AI 对话节点打开
-  // 整个工具面（能改画布、能发通知、能碰密钥柜），必须是一个想清楚的决定，
-  // 不能顺手加上。**Codex 那侧没有这个参数**，它照常读全局配置 —— 同样是团队成员，
-  // 两边能力面差得很远，那个不对称也从这条测试的注释里能查到。
+test('没给 mcpConfigPath 时仍是零 MCP 工具（opt-out 的人走这条路）', () => {
+  // 用户在「扩展能力」里关掉 MCP 接入 → agentMcpConfigPath() 返回 null →
+  // 这里拿不到路径。那时 --strict-mcp-config 单独存在，语义是
+  // 「只用 --mcp-config 给的，忽略其它一切」= 一个 server 都不加载。
+  // **关了就该两边都关**，只关终端那半、AI 对话里还有，比不关更让人困惑。
   const { args } = getAdapter('claude')!.buildArgs({ cwd: '/WORK/proj' })
   assert.ok(args.includes('--strict-mcp-config'), '少了它会退回读全局 MCP 配置')
-  assert.ok(!args.includes('--mcp-config'), '加了它就等于给所有 AI 对话打开 eas-term 全部工具面')
+  assert.ok(!args.includes('--mcp-config'), '没给路径就不该凭空冒出这个参数')
+})
+
+test('给了 mcpConfigPath 就带上 --mcp-config，且 strict 必须还在', () => {
+  // 这条曾经反着写：「加 --mcp-config 会让这条变红，那是有意的」。
+  // 2026-08-20 用户明确要求接上（原话「MCP服务在AI对话窗口进行的时候好像也没有连接」），
+  // 决定做了，测试跟着翻面。
+  //
+  // **strict 必须保留**：它现在的作用不再是「屏蔽一切」，而是把工具面**限定成**
+  // 我们给的那一份（eas-term + bizone-canvas），不把用户全局装的其它 MCP server
+  // 带进 AI 对话。去掉它也能连上，但工具面就成了用户全局的全集，不可控。
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/WORK/proj',
+    mcpConfigPath: '/WORK/userData/agent-mcp.json'
+  })
+  assert.ok(args.includes('--mcp-config'), '给了路径却没传进去')
+  assert.equal(args[args.indexOf('--mcp-config') + 1], '/WORK/userData/agent-mcp.json')
+  assert.ok(args.includes('--strict-mcp-config'), '**不能因为加了 --mcp-config 就把 strict 拿掉**')
+})
+
+test('团队 agent 现在能拿到 team_spawn 工具了 —— 那道硬闸成了唯一防线', () => {
+  // 在这之前，「团队成员不能再派活」在 Claude 侧靠的是**它压根没有这个工具**
+  // （harness 层直接报 No such tool available）。接上 MCP 之后那层被动保护没了，
+  // mcpHandler 里 isTeamOwnedCaller 的硬闸变成唯一防线。
+  //
+  // 这里锁的是「参数确实会让工具面打开」这个前提 —— 硬闸本身的测试在 mcpHandler 那侧。
+  // 好的一面：越权尝试从此**可审计**，以前它只在对方自己的 transcript 里留一行。
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/WORK/proj',
+    mcpConfigPath: '/WORK/x.json'
+  })
+  assert.ok(args.includes('--mcp-config'), '工具面打开的前提')
 })
 
 test('Claude 绝不能带 --bare 或 --permission-mode manual', () => {
