@@ -260,7 +260,7 @@
 .tbm-primary {
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   background: rgba(var(--accent-rgb), 0.85);
-  color: #fff;
+  color: var(--on-accent);
 }
 .tbm-primary:hover {
   background: rgb(var(--accent-rgb));

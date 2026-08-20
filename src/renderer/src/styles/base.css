@@ -18,6 +18,13 @@
   --accent: #a2b9e0;
   --accent-rgb: 162, 185, 224;
   --accent-soft: rgba(var(--accent-rgb), 0.16);
+  /* 强调色**实心底**上的前景色。
+     两个主题的 accent 都是浅色（上面那条注释写着亮度是刻意对齐的：HSL≈76%），
+     白字压在上面只有约 2:1 对比度，远不到 WCAG AA 的 4.5:1；换成这个近黑是 9.5:1。
+     `.cd-attn-bubble` 早就写死了同一个值 —— 做法本来就在，只是没抽出来，
+     于是后加的 CTA 一个个又写回了 #fff。**实心 accent 底上一律用它。**
+     注意淡底不算：`--accent-soft`(0.16) 这类在暗色背景上混出来是深色，那里该用白字。 */
+  --on-accent: #0b0d12;
   --folder-icon: #a8bee4;
   --bg-grad-1: rgba(7, 8, 13, 0.72);
   --bg-grad-2: rgba(3, 4, 6, 0.85);

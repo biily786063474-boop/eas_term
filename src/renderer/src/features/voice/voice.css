@@ -36,7 +36,7 @@
   transform: translateY(-1px);
 }
 .voice-btn.rec {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: transparent;
   box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5);
