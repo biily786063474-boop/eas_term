@@ -7,6 +7,7 @@ import { teamModeOf } from './features/canvas/teamMode'
 import { checkBatch } from './features/team/batchSpec'
 import { askForBatch } from './features/team/batchRequest'
 import { isSettled } from './features/team/agentAge'
+import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -667,6 +668,16 @@ const SHELL_TRAP =
       }
     }
 
+    // **顺便看一眼产出在不在**（错误矩阵 E-13）。只在有人交活时查 —— 还在跑的
+    // 那些本来就该没有 findings，查了只会得到一堆 missing 的噪音。
+    const settledRoles = rows.filter(settled).map((x) => x.role).filter((r): r is string => !!r)
+    const sizes: Record<string, number | null> =
+      where && settledRoles.length
+        ? await window.api.agentChat
+            .teamFindings(where.projectPath, settledRoles)
+            .catch(() => ({}) as Record<string, number | null>)
+        : {}
+
     const now = Date.now()
     const agents = rows.map((x) => {
       const idleMs = now - x.lastActiveAt
@@ -682,11 +693,15 @@ const SHELL_TRAP =
         ranSeconds: Math.round(((settled(x) ? x.lastActiveAt : now) - x.startedAt) / 1000),
         // 判据跟面板同源（features/team/agentAge.ts 的 STALL_MS），
         // 但这里给的是**给 agent 读的话**，不是给人看的标签
+        // 交了活的，把「产出在不在」一并报出来 —— 光说「去读 findings 确认」不够，
+        // 主 agent 大概率不会真去读；而它没写这件事我们查得到
+        delivered: settled(x) && x.role ? deliveredOf(sizes[x.role] ?? null) : undefined,
         hint: !x.alive
           ? '进程已退出。它写下的东西还在 .plans/ 里'
           : x.busy === false
-            ? '**这一轮跑完了，但不等于任务做完了** —— 去读它的 findings.md 确认：' +
-              '真做完了，还是只说了一半就停下等下一条输入（实测两者在这个信号上一模一样）'
+            ? (x.role && deliveredHint(deliveredOf(sizes[x.role] ?? null), x.role)) ||
+              '**这一轮跑完了，但不等于任务做完了** —— 去读它的 findings.md 确认：' +
+                '真做完了，还是只说了一半就停下等下一条输入（实测两者在这个信号上一模一样）'
             : idleMs > 4 * 60 * 1000
               ? '超过 4 分钟没动静、而且这一轮还没跑完 —— 可能卡住或在等审批。' +
                 '别替它做，告诉用户去团队面板上看一眼'
@@ -765,6 +780,49 @@ const SHELL_TRAP =
         ? '送进去了，但它**当前这一轮还没跑完**，要等这轮结束才会读到你这条。别重复发。'
         : '送进去了，它这一轮已经跑完、正等着输入，应该很快开始。' +
           '**别接着轮询 team_status** —— 手上没别的事就带 wait:true 调一次。'
+    }
+  }
+
+  if (tool === 'team_dissolve') {
+    if (await isTeamOwnedCaller(ctx)) {
+      throw new Error('你是团队里的一个 agent —— 解散只有主 agent 能做。')
+    }
+    const where = resolveFrame(ctx)
+    const all = await window.api.agentChat.listSessions().catch(() => [])
+    const mine = all.filter((x) => x.owner === 'team' && (!where || x.cwd === where.projectPath))
+    if (!mine.length) {
+      return { dissolved: 0, next: '这个项目里没有团队派生的 agent，不用解散。' }
+    }
+
+    // **先查产出再停进程。** 反过来的话，停掉之后再报「谁没交活」，
+    // 那条信息就只能用来后悔了 —— 而这正是解散前最该看的一眼。
+    const roles = mine.map((x) => x.role).filter((r): r is string => !!r)
+    const sizes: Record<string, number | null> =
+      where && roles.length
+        ? await window.api.agentChat
+            .teamFindings(where.projectPath, roles)
+            .catch(() => ({}) as Record<string, number | null>)
+        : {}
+    const report = mine.map((x) => ({
+      role: x.role ?? '(没记角色名)',
+      alive: x.alive,
+      delivered: x.role ? deliveredOf(sizes[x.role] ?? null) : ('missing' as const),
+      bytes: x.role ? (sizes[x.role] ?? null) : null
+    }))
+
+    for (const x of mine) window.api.agentChat.stop(x.id)
+
+    const bad = report.filter((r) => r.delivered !== 'ok')
+    return {
+      dissolved: mine.length,
+      agents: report,
+      next:
+        (bad.length
+          ? `⚠️ ${bad.length} 个**没有留下像样的产出**（${bad.map((b) => b.role).join('、')}）——` +
+            '解散前最后确认一次：它们是真没做成，还是做完了没写盘。这一步跳过去就再也查不了了。\n'
+          : '') +
+        `已停掉 ${mine.length} 个 agent。产出都在 .plans/<role>/ 下，进程停了文件不受影响。\n` +
+        '**收活时结论不一致要显式呈现分歧**，不要替用户抹平。'
     }
   }
 

@@ -331,6 +331,15 @@ const TOOLS = [
     }
   },
   {
+    name: 'team_dissolve',
+    description:
+      '这一批活收尾了：**停掉全部团队 agent**，并在停之前报一次每个人的产出状况。\n' +
+      '它会告诉你谁**根本没写 findings.md**、谁只写了个标题 —— ' +
+      '那正是解散前最该看的一眼，停完就再也查不了了。\n' +
+      '产出文件不会被删，都在 .plans/<role>/ 下。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'canvas_new_terminal',
     description:
       '在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。',

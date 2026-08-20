@@ -842,6 +842,10 @@ const api = {
       ipcRenderer.invoke('agentHistory:list', cwd),
     forgetHistory: (leafId: string): Promise<void> =>
       ipcRenderer.invoke('agentHistory:forget', leafId),
+    /** 一批 agent 的产出状态：role → findings.md 的字节数（null = 文件不存在）。
+     *  给 team_status / team_dissolve 判「说完成了但没写」用（错误矩阵 E-13） */
+    teamFindings: (projectPath: string, roles: string[]): Promise<Record<string, number | null>> =>
+      ipcRenderer.invoke('team:findings', projectPath, roles),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
     setParams: (
       sessionId: string,

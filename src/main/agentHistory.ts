@@ -46,6 +46,32 @@ function prune(): void {
   }
 }
 
+/** 一批 agent 的产出状态：每个 role 的 `.plans/<role>/findings.md` 在不在、多大。
+ *
+ *  放在这个文件里是因为它跟聊天记录一样，是「主进程代渲染层看一眼磁盘」——
+ *  渲染层没有 fs，而 `fs:readTextFile` 会把整份文件读出来，这里只要 size。
+ *
+ *  **不做路径拼接以外的任何解释**：role 是 kebab-case（batchSpec 校验过），
+ *  projectPath 来自 Frame 的项目配置，两者都不是用户现填的。 */
+export function registerTeamFindings(): void {
+  ipcMain.handle(
+    'team:findings',
+    (_e, projectPath: unknown, roles: unknown): Record<string, number | null> => {
+      const out: Record<string, number | null> = {}
+      if (typeof projectPath !== 'string' || !Array.isArray(roles)) return out
+      for (const r of roles) {
+        if (typeof r !== 'string' || !/^[a-z0-9-]+$/.test(r)) continue
+        try {
+          out[r] = fs.statSync(path.join(projectPath, '.plans', r, 'findings.md')).size
+        } catch {
+          out[r] = null // 文件不存在 —— 跟 0 字节是两回事，见 teamFindings.ts
+        }
+      }
+      return out
+    }
+  )
+}
+
 export function registerAgentHistory(): void {
   ipcMain.handle(
     'agentHistory:load',
