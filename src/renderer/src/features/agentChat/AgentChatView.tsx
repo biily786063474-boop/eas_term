@@ -17,6 +17,7 @@ import type {
   CliInfo
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
+import { trimForSave, settleOnLoad } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
@@ -90,6 +91,20 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.resumeId : undefined
   })
+  useEffect(() => {
+    let alive = true
+    void window.api.agentChat
+      .loadHistory(leafId)
+      .then((t) => {
+        if (alive) setRestored(settleOnLoad(t as Turn[]))
+      })
+      // 读不到就当没有历史。**不能让它挡住对话框起来** —— 这只是个锦上添花的功能
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [leafId])
+
   /** 这个节点是不是团队派生的。决定它进不进状态系统（灵动岛 / 铃铛 / 提示音）。 */
   const isTeamOwned = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -152,6 +167,12 @@ export function AgentChatView({
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [view, setView] = useState<ChatView | null>(null)
+  /** 上次退出时留在这个节点里的聊天记录。
+   *
+   *  **`resumeId` 让模型记得，这个让你看得见** —— 两者缺一不可：只有 resumeId 时，
+   *  重启后界面是空的、一发消息模型却接着上次说，人会以为它在乱答。
+   *  存取见 main/agentHistory.ts，裁剪与「卡在 running 的命令落到 failed」见 ./history.ts。 */
+  const [restored, setRestored] = useState<Turn[]>([])
   // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
   // 后续消息（send()）失败时的原因——展示交给 ChatToolbar，这里只持有（它拿着 sessionId）。
@@ -183,6 +204,20 @@ export function AgentChatView({
     },
     []
   )
+
+  // 聊天记录落盘。节流 1 秒：流式输出时 view 每个 token 都在变，不节流会把磁盘写爆。
+  // **依赖里放 view 而不是 displayView** —— 后者只在 sessionId 有值的分支里算得出来，
+  // 而 hook 不能放在条件分支里。
+  useEffect(() => {
+    const turns = view?.turns
+    if (!turns?.length) return
+    const t = window.setTimeout(() => {
+      void window.api.agentChat
+        .saveHistory(leafId, trimForSave([...restored, ...turns]))
+        .catch(() => undefined)
+    }, 1000)
+    return () => window.clearTimeout(t)
+  }, [view, restored, leafId])
 
   // 空态：拉一次可用 CLI 列表——只渲染 detect() 探测通过的那些，没装的不出现，
   // 免得用户选了一个点了就报错的选项。
@@ -380,7 +415,12 @@ export function AgentChatView({
     const handleApprovalDecide = (approvalId: string, decision: ApprovalDecision): void => {
       void window.api.agentChat.resolveApproval(sessionId, approvalId, decision)
     }
-    const displayView = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages)
+    const live = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages)
+    // 历史接在这次会话的轮次**前面**。CLI 那边靠 resumeId 接上了上下文，但它不会
+    // 重放旧消息，所以这次会话的 view 里只有新轮次 —— 不拼的话，界面上看起来像
+    // 从头开始，而模型的回答却带着上文，非常割裂。
+    const displayView =
+      restored.length > 0 ? { ...live, turns: [...restored, ...live.turns] } : live
     // 后续消息：首条已经在 start() 里投递过了（见文件头 handleSend 的注释），这里走
     // send(sessionId, text)。beforeTurnCount 的算法跟首条消息完全一致——reducerRef 的
     // turns 只增不减，所以在这里现读它的长度、跟 mergeUserMessages 的插入位置对齐，
@@ -445,9 +485,25 @@ export function AgentChatView({
   return (
     <div className="agent-chat-view">
       <div className="ac-empty">
-        {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
-            一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
-        <div className="ac-slogan">伟大的产品始于一句“你好”</div>
+        {/* 有上次的聊天记录就直接摆出来，没有才显示 slogan。
+            这一步是「看得见」那一半 —— 另一半（模型记得）靠 pane.resumeId，
+            用户发出下一条消息时 start() 会带上它。 */}
+        {restored.length > 0 ? (
+          <div className="ac-restored">
+            <MessageList
+              view={{ ...EMPTY_VIEW, turns: restored, busy: false }}
+              onApprovalDecide={() => undefined}
+              leafId={leafId}
+            />
+            <div className="ac-restored-hint">上次聊到这里 —— 发一条消息接着聊</div>
+          </div>
+        ) : (
+          <>
+            {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
+                一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
+            <div className="ac-slogan">伟大的产品始于一句“你好”</div>
+          </>
+        )}
 
         {/* 输入框**上方**的一行上下文：在哪个目录跑、用哪个 CLI。
             照 DeepSeek Harness 那套布局来（用户 2026-08-19 指定）——「这次对话的前提」

@@ -18,6 +18,33 @@
   padding: 24px;
   overflow: auto;
 }
+/* 恢复出上次聊天时，这一屏就不是「空态」了 —— 内容从上往下排，
+   居中会让长对话上半截被顶出可视区。`:has()` 在 Electron 的 Chromium 上没问题。 */
+.ac-empty:has(.ac-restored) {
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0;
+}
+.ac-restored {
+  flex: 1;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+/* 分界线：让人一眼看出「上面是上次的、下面开始是这次的」。
+   不写这句的话，恢复出来的对话和新回复混在一起，分不清哪条是刚才说的 */
+.ac-restored-hint {
+  flex: none;
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  padding: 6px 0 4px;
+  border-top: 1px dashed var(--glass-border);
+  margin: 4px 14px 0;
+}
 
 /* 空态的一句话。它是氛围，不是操作指引 —— 所以比正文淡、比正文大一点，
    不跟下面输入框里的 placeholder 抢注意力。 */

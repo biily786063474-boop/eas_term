@@ -21,6 +21,7 @@ import { registerStatuslineHandlers } from './statuslineRuntime'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
+import { registerAgentHistory } from './agentHistory'
 import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
 import { registerRoleHandlers } from './roles'
@@ -347,6 +348,7 @@ app.whenReady().then(() => {
   registerBizoneHandlers()
   registerIslandHandlers()
   registerAgentChatHandlers()
+  registerAgentHistory()
   buildMenu()
   createWindow()
 

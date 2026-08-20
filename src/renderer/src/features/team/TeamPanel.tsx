@@ -72,7 +72,7 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   }, [])
 
   if (rows === null) return <div className="tp-empty">读取中…</div>
-  if (rows.length === 0) {
+  if (rows.filter((r) => r.cwd === cwd).length === 0) {
     return (
       <div className="tp-empty">
         还没有会话在跑
@@ -87,12 +87,17 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     )
   }
 
-  // 本项目的排在前面 —— 面板挂在某个项目下，那个项目的 agent 最相关
-  const sorted = [...rows].sort((a, b) => {
-    const ma = a.cwd === cwd ? 0 : 1
-    const mb = b.cwd === cwd ? 0 : 1
-    return ma - mb || a.id.localeCompare(b.id)
-  })
+  // **只列这个 Frame 自己的会话。**
+  //
+  // 原来是「本项目排前面、别处的排后面但照样列出来」。实际用起来是干扰：
+  // 你在 A 项目的画布上看团队面板，列出来的却混着 B、C 项目里开着的 AI 对话 ——
+  // 它们既不是这一批派出去的，你在这里也不该管它们（每个 Frame 有自己的面板）。
+  const mine = rows.filter((r) => r.cwd === cwd)
+  const sorted = [...mine].sort((a, b) => a.id.localeCompare(b.id))
+  // 但**不能装作它们不存在** —— 别处还有 agent 在烧 token 这件事得让人知道，
+  // 否则就成了「没有任何 UI 能管的后台进程」（方案里那条纪律）。
+  // 只报个数、不列细节：去那个项目的面板上才管得了它。
+  const elsewhere = rows.filter((r) => r.cwd !== cwd && r.alive).length
 
   // 团队派生的那些 —— 「全部叫停」只停它们，不碰你自己开的会话。
   // 判据来自 SessionBrief 而不是画布节点：**这一行正是那个 bug 的现场** ——
@@ -105,9 +110,9 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
     <div className="tp">
       <div className="tp-head">
         <ChipIcon size={11} />
-        <span>{rows.length} 个会话</span>
+        <span>{sorted.length} 个会话</span>
         <span className="tp-spacer" />
-        <span className="tp-dim">{rows.filter((r) => r.alive).length} 个进程还在</span>
+        <span className="tp-dim">{sorted.filter((r) => r.alive).length} 个进程还在</span>
       </div>
       <div className="tp-list">
         {sorted.map((r) => {
@@ -173,6 +178,11 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
           </>
         ) : (
           <span>鼠标移到一行上可以停掉它</span>
+        )}
+        {elsewhere > 0 && (
+          <span className="tp-elsewhere" title="在它们各自项目的团队面板里可以停">
+            另有 {elsewhere} 个在其他项目
+          </span>
         )}
       </div>
     </div>

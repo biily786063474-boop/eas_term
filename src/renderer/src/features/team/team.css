@@ -297,3 +297,14 @@
   opacity: 1;
   background: rgba(255, 120, 120, 0.12);
 }
+
+/* 别的项目里还开着 agent 的提示。只报个数不列细节 ——
+   列出来就回到了「面板混着别人家的会话」那个问题，
+   但完全不提又等于制造没人管的后台进程。 */
+.tp-elsewhere {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--fg-dim);
+  opacity: 0.65;
+  white-space: nowrap;
+}

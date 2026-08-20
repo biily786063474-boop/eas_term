@@ -380,6 +380,10 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       if (target.pane.kind !== 'terminal' || target.pane.ptyId !== opts.ptyId) return
     }
     if (!opts?.alreadyExited) killPanePty(target.pane)
+    // 节点被永久关闭 → 它的聊天记录也没有任何入口能看到了，一起清掉。
+    // **只在这条「真的移除节点」的路径上清** —— 关标签页/切项目那几条不清，
+    // 那些场景下节点还会回来（布局是持久化的）。
+    if (target.pane.kind === 'agent') void window.api.agentChat.forgetHistory(leafId)
     const newRoot = removeLeaf(tab.root, leafId)
     if (newRoot === null) {
       set(closeTabInState(s.tabs, s.activeTabId, s.activeTabByProject, tabId))
@@ -434,6 +438,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const isDiffPane = target.pane.kind === 'code' && !!target.pane.diff
     if (target.pane.kind === kind && !(kind === 'code' && isDiffPane)) return
     killPanePty(target.pane)
+    // 面板换成别的类型 = 这个对话框没了，同上
+    if (target.pane.kind === 'agent') void window.api.agentChat.forgetHistory(leafId)
     let pane: PaneState
     if (kind === 'terminal') {
       const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
