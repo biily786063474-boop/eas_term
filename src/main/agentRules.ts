@@ -212,6 +212,41 @@ function writeFileEnsured(f: string, text: string): void {
   fs.writeFileSync(f, text)
 }
 
+/**
+ * 写一个「分发产物」文件：内容由 app 带来，用户和 agent 都不该改。写完设成只读。
+ *
+ * **为什么要拦**：这几份 md 决定了 agent 在这个软件里怎么干活（生图走哪条路、
+ * 什么不许做、密钥怎么拿）。被改坏的后果是软件行为异常，而且极难查 ——
+ * 表现是「agent 忽然不听话了」，没人会想到去看一个全局目录里的 md。
+ * agent 自己「顺手优化一下说明」这种事尤其容易发生。
+ *
+ * **只读挡不住铁了心要改的人**（chmod 回去就行），它挡的是两件更常见的事：
+ * 顺手写入会拿到 EACCES —— 那是个明确的「这里不该动」的信号；以及误操作。
+ * 真被改了还有第二道：启动时 refreshInstalledRules 比对内容，不一致就重写回去。
+ *
+ * **写之前必须先解除只读** —— 上一次写完是 444，不解除的话这次直接 EACCES，
+ * 于是升级再也推不下去。这条是这个函数唯一容易写错的地方。
+ *
+ * 只用于我们**独占的目录**（~/.claude/skills/eas-term/、~/.eas/agent/）。
+ * `~/.codex/AGENTS.md` 不能这么干：那是用户自己的文件，我们只占其中一个区域，
+ * 设成只读会挡住他改自己的内容。
+ */
+function writeDistributed(f: string, text: string): void {
+  fs.mkdirSync(path.dirname(f), { recursive: true })
+  try {
+    fs.chmodSync(f, 0o644) // 解除上一次设的只读；文件还不存在时会抛，忽略即可
+  } catch {
+    /* 首次写入 */
+  }
+  fs.writeFileSync(f, text)
+  try {
+    fs.chmodSync(f, 0o444)
+  } catch (e) {
+    // 设不上不致命：内容校验那道还在。但要留痕，否则「护栏没生效」会完全无声
+    console.error('[rules] 设只读失败', f, e)
+  }
+}
+
 /** 装/更新全部规则。app 升级、canvas 技能内容变化时调它。
  *  知识库不再需要——它没有「装」这回事，见上面的大注释。 */
 /** 目标目录里现在有哪些 .md 及其内容。**目录不存在返回 null**（＝没装）——
@@ -252,7 +287,7 @@ export function refreshInstalledRules(): { updated: string[] } {
     for (const name of plan) {
       const f = files.find((x) => x.name === name)
       if (!f) continue
-      writeFileEnsured(path.join(dir, name), f.text)
+      writeDistributed(path.join(dir, name), f.text)
       updated.push(path.join(dir, name))
     }
   }
@@ -276,8 +311,8 @@ export function syncRules(): { ok: boolean; codexChars: number } {
   // 两边装的是同一份内容，一个循环里一起写——不会出现「Claude 装了 3 个、
   // Codex 只落了 1 个」这种半同步状态
   for (const f of files) {
-    writeFileEnsured(path.join(home(), '.claude', 'skills', 'eas-term', f.name), f.text)
-    writeFileEnsured(path.join(detailDir(), f.name), f.text)
+    writeDistributed(path.join(home(), '.claude', 'skills', 'eas-term', f.name), f.text)
+    writeDistributed(path.join(detailDir(), f.name), f.text)
   }
   // 清掉旧版本可能装过的 eas-wiki skill（这个函数以前会在 kb 配置时写它）——
   // 不能留着不管，那是一份指向真实知识库路径的全局文件，正是现在要堵的洞
