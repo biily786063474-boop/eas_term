@@ -6,8 +6,12 @@
 // 这里存的是**归约之后的 ChatView.turns**，两个 CLI 走同一条路，
 // 也不会被上游改内部格式弄坏。
 //
-// 按 **leafId**（画布节点 id）存，不是 sessionId：sessionId 每次 start 都会变
-// （`ac-${nextId++}`），而 leafId 随 canvas.json 落盘、跨重启稳定，
+// 按 **画布节点 id**（`cnode-…`）存，不是 sessionId 也不是 leafId：
+// · sessionId 每次 start 都会变（`ac-${nextId++}`）
+// · **leafId 也会变** —— `uid()` 带随机段，而 persist 落盘时 `delete copy.leafId`。
+//   这里原本写着「leafId 随 canvas.json 落盘、跨重启稳定」，那句是错的，
+//   后果是重启后每个节点都读不到自己的历史（2026-08-20 实测）。
+// 画布节点 id 随 canvas.json 一起落盘，重启后原样回来，
 // 正好对应用户心里的「这个对话框」。
 //
 // 裁剪在渲染层做（features/agentChat/history.ts），这里只负责存取与容量。
