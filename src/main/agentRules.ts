@@ -326,7 +326,12 @@ export function registerRulesHandlers(): void {
         desc: '让 agent 能操作画板（开预览、整理、通知）。不配这个，画板工具完全不可用',
         installed: mcp.claude || mcp.codex,
         files: mcp.files,
-        note: '装了 CLI 就会自动配上——这是画板功能的前提。端口和令牌不写进配置，只走终端环境变量',
+        note:
+          '装了 CLI 就会自动配上——这是画板功能的前提。端口和令牌不写进配置，只走终端环境变量。\n' +
+          // 两条都是 2026-08-19 用户实际踩到才补的：他点了移除，既不知道画板的
+          // bizone-canvas 被一起删了（生图路径当场断掉），也不知道还能不能加回来。
+          '移除会**连笔纵画板的 bizone-canvas 一起删掉**（两条都是我们写进去的），生图会因此不可用。\n' +
+          '移除之后不会在下次启动时自动装回来——想恢复就点这里的「安装」。',
         removable: true
       },
       {

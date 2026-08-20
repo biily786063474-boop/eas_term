@@ -152,6 +152,15 @@ export function FootprintPanel(): JSX.Element | null {
                       {it.installed ? '卸载' : '安装'}
                     </button>
                   )}
+                  {it.id === 'mcp' && !it.installed && (
+                    <button
+                      className="fp-act"
+                      disabled={!!busy}
+                      onClick={() => void act(window.api.mcp.installConfig, '安装中…')}
+                    >
+                      安装
+                    </button>
+                  )}
                   {it.id === 'mcp' && it.installed && (
                     <button
                       className="fp-mini"

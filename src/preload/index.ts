@@ -335,6 +335,8 @@ const api = {
       ipcRenderer.send('mcp:result', r),
     /** 移除写进用户全局配置的 MCP 条目（画板工具随之不可用，属于用户的选择） */
     removeConfig: (): Promise<void> => ipcRenderer.invoke('mcp:removeConfig'),
+    /** 收回「我不要 MCP」这个决定并立刻写回配置。移除是持久的，所以要有回头路 */
+    installConfig: (): Promise<void> => ipcRenderer.invoke('mcp:installConfig'),
     /** 把「MCP 接入」开关同步给主进程 —— /secret-env 走主进程直通，查不到渲染层那份状态 */
     setEnabled: (v: boolean): void => ipcRenderer.send('mcp:setEnabled', v)
   },

@@ -18,6 +18,7 @@ import crypto from 'crypto'
 import { secretsForRun } from './secrets'
 import { mainWindow } from './island'
 import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
+import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -501,6 +502,9 @@ export function removeMcpConfig(): void {
   }
 
   purgeLegacyDshMcp()
+  // 记下这个决定，让它活过重启 —— 否则下次启动 setupAgents 又把配置写回去，
+  // 用户会觉得「我明明关了，它自己又装上了」。
+  writeOptOut(true)
 }
 
 /** 清掉上一版留下的 claude / codex 包装脚本（PATH shim 方案已废弃，见 writeClaudeConfig 注释）。
@@ -519,9 +523,44 @@ function removeLegacyAgentShims(): void {
   }
 }
 
-function setupAgents(): void {
+/** 用户「我不要 MCP 接入」这个决定存在哪。**必须落盘** —— 它要活过重启，
+ *  否则界面上那颗「移除」只管当次，下次启动 setupAgents 又写回去了。 */
+const optOutFile = (): string => path.join(app.getPath('userData'), 'mcp-optout.json')
+
+function readOptOut(): string | null {
+  try {
+    return fs.readFileSync(optOutFile(), 'utf8')
+  } catch {
+    return null // 文件不存在 = 从没拒绝过，这是绝大多数用户的情况
+  }
+}
+
+function writeOptOut(optedOut: boolean): void {
+  try {
+    fs.writeFileSync(optOutFile(), optOutPayload(optedOut, Date.now()), { mode: 0o600 })
+  } catch (e) {
+    // 写不进去只影响「这个决定能不能活过重启」，不该让移除/安装本身失败
+    console.error('[mcp] 记录 opt-out 状态失败', e)
+  }
+}
+
+/** 用户有没有明确关掉过。给 footprint 面板判断该显示「安装」还是「移除」。 */
+export function mcpOptedOut(): boolean {
+  return !shouldAutoInstall(readOptOut())
+}
+
+/**
+ * @param force 用户刚在界面上点了「安装」—— 这时无视 opt-out 标记（他正在收回那个决定）
+ */
+function setupAgents(force = false): void {
   const serverPath = serverScriptPath()
   if (!fs.existsSync(serverPath)) return
+  // **用户明确关过就不自动装回来。** 判定在 mcpOptOut.ts，那里写了为什么任何异常
+  // 都倒向「装」：不装的后果是画板工具整个不可用，误装只是让他再点一次移除。
+  if (!force && !shouldAutoInstall(readOptOut())) {
+    console.log('[mcp] 用户关过 MCP 接入，跳过自动配置（在「扩展能力」面板里可以重新安装）')
+    return
+  }
   removeLegacyAgentShims()
   writeClaudeConfig(serverPath)
   writeCodexConfig(serverPath)
@@ -532,8 +571,16 @@ function setupAgents(): void {
   purgeLegacyDshMcp()
 }
 
+/** 界面上点「安装」：收回之前的拒绝，并立刻把配置写回去 ——
+ *  不能只清标记等下次启动，那样用户点完什么都没发生。 */
+export function installMcpConfig(): void {
+  writeOptOut(false)
+  setupAgents(true)
+}
+
 export function registerMcpBridge(): void {
   ipcMain.handle('mcp:removeConfig', () => removeMcpConfig())
+  ipcMain.handle('mcp:installConfig', () => installMcpConfig())
   // 渲染层的开关同步一份过来，好让 /secret-env 也能被它关掉
   ipcMain.on('mcp:setEnabled', (_e, v: boolean) => {
     mcpEnabled = v !== false
