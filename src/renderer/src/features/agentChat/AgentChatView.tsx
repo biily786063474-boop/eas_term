@@ -27,6 +27,7 @@ import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Ico
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { belongsToProject } from '../../../../shared/teamWorktree'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
@@ -365,7 +366,31 @@ export function AgentChatView({
         //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
         // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
         // 直接点画布上的节点会走 CanvasStage 那个单选 effect。
-        if (e.k === 'turn.done') st.flagAttention(sid)
+        //
+        // **但「它刚派完活」不算完成。** 主 agent 调完 team_spawn 那一轮就结束了，
+        // 真正的活才刚开始跑 —— 这时候报「工作完成」、把灵动岛的进行中清掉，
+        // 人会以为可以去看结果了（用户 2026-08-20 反馈）。
+        // 判据问主进程的会话表，那是事实；查不到就按老路走，不因为一次 IPC 失败
+        // 把「跑完了」这个提示整个吞掉。
+        if (e.k === 'turn.done') {
+          void window.api.agentChat
+            .listSessions()
+            .then((list) => {
+              const teamAlive = list.some(
+                (x) => x.owner === 'team' && x.alive && belongsToProject(x.cwd, cwd)
+              )
+              if (!aliveRef.current) return
+              if (teamAlive) {
+                // 派出去的还在跑：这个会话在等它们，灵动岛该继续显示「进行中」
+                useStore.getState().setPtyRunning(sid, true)
+                return
+              }
+              useStore.getState().flagAttention(sid)
+            })
+            .catch(() => {
+              if (aliveRef.current) useStore.getState().flagAttention(sid)
+            })
+        }
       }
     })
   }

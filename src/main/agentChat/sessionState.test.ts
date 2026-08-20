@@ -2,6 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   IDLE_TIMEOUT_MS,
+  TEAM_IDLE_TIMEOUT_MS,
+  BUSY_IDLE_TIMEOUT_MS,
   shouldReap,
   planSend,
   applyParamChange,
@@ -203,11 +205,18 @@ test('团队 agent 交活后 3 分钟就回收，不用等 15 分钟', () => {
 })
 
 test('团队 agent 还在跑就不能提前回收', () => {
-  // lastActiveAt 一直在续期，正常不会触发；但万一它真卡住不出声，
-  // 那 15 分钟的窗口是留给人去面板上看一眼的，不该被短阈值抢先杀掉
+  // 这条原来断言的是「超过 15 分钟仍然回收」，理由写着「万一它真卡住不出声，
+  // 15 分钟的窗口是留给人去面板上看一眼的」。
+  //
+  // **2026-08-20 改成 4 小时**：同一个论证反过来也成立 —— 一个正常跑长任务的
+  // agent（自己在等子 agent，或者在跑一条长命令）stdout 同样是静默的，
+  // 15 分钟会把它杀在半路，**整趟工作不可逆地没了**。
+  // 卡住的那种留着只是占资源，而且面板上写着「可能卡住」、随手就能停。
+  // 两边的代价不对等，所以判据偏向不杀。
   const busy = base({ owner: 'team', busy: true, lastActiveAt: 0 })
   assert.equal(shouldReap(busy, 4 * 60 * 1000), false)
-  assert.equal(shouldReap(busy, 15 * 60 * 1000 + 1), true, '超过 15 分钟仍然回收')
+  assert.equal(shouldReap(busy, IDLE_TIMEOUT_MS + 1), false, '15 分钟不再回收正在跑的')
+  assert.equal(shouldReap(busy, BUSY_IDLE_TIMEOUT_MS + 1), true, '4 小时仍然兜底')
 })
 
 test('团队 agent 一轮都没跑过（busy 未定）不走短阈值', () => {
@@ -219,4 +228,35 @@ test('你自己开的对话不受影响，仍然是 15 分钟', () => {
   const mine = base({ busy: false, lastActiveAt: 0 })
   assert.equal(shouldReap(mine, 4 * 60 * 1000), false, '走开一会儿不该被杀')
   assert.equal(shouldReap(mine, 15 * 60 * 1000 + 1), true)
+})
+
+
+// —— 回收阈值三档（2026-08-20：ultracode 派子 agent 时被当成空闲杀掉）——
+
+test('这一轮还在跑 → 走 4 小时，15 分钟不动它', () => {
+  // 主 agent 派了子 agent、自己在等的那段时间 stdout 完全静默，
+  // 按 15 分钟算会把一个正常干活的会话杀在半路
+  const s = base({ busy: true, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1000), false)
+  assert.equal(shouldReap(s, BUSY_IDLE_TIMEOUT_MS + 1000), true)
+})
+
+test('团队 agent 跑完这轮 → 3 分钟', () => {
+  const s = base({ owner: 'team', busy: false, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, TEAM_IDLE_TIMEOUT_MS + 1000), true)
+})
+
+test('团队 agent 还在跑 → 同样吃 4 小时那档，不被短阈值抢先杀掉', () => {
+  const s = base({ owner: 'team', busy: true, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, TEAM_IDLE_TIMEOUT_MS + 1000), false)
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1000), false)
+})
+
+test('一轮都没跑过的新会话 → 15 分钟', () => {
+  const s = base({ busy: undefined, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1000), true)
+})
+
+test('进程已经没了就不用回收', () => {
+  assert.equal(shouldReap(base({ alive: false, busy: true, lastActiveAt: 0 }), 1e12), false)
 })

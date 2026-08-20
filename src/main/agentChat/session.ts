@@ -508,8 +508,27 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
 
 function reapIdleSessions(): void {
   const now = Date.now()
+  // 「这个 cwd 底下还有活着的团队 agent 吗」——**派活的那一方不能在子 agent
+  //  还在跑的时候被回收掉**。主 agent 调完 team_spawn 那一轮就结束了（busy 落回
+  //  false），自己一句话都不再输出，15 分钟后正好撞上回收；等子 agent 干完，
+  //  已经没有人接得住它们的产出了（用户 2026-08-20 反馈）。
+  //
+  //  判据用会话表而不是猜：owner==='team' 且 alive，是主进程手里的事实。
+  //  worktree 隔离的 agent cwd 在 `<项目>/.worktrees/...` 底下，所以按前缀算。
+  const teamAliveUnder = (cwd: string): boolean => {
+    if (!cwd) return false
+    for (const other of sessions.values()) {
+      if (other.rec.owner !== 'team' || !other.rec.alive) continue
+      const c = other.rec.cwd
+      if (c === cwd || c.startsWith(`${cwd}/`) || c.startsWith(`${cwd}\\`)) return true
+    }
+    return false
+  }
   for (const live of sessions.values()) {
     if (!shouldReap(live.rec, now)) continue
+    // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，
+    // 不然一批 agent 会互相把对方续命。
+    if (live.rec.owner !== 'team' && teamAliveUnder(live.rec.cwd)) continue
     live.proc?.kill()
     live.proc = undefined
     live.rec = { ...live.rec, alive: false } // resumeId 保留，下次发送时接上

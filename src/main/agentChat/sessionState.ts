@@ -98,13 +98,38 @@ export interface SessionRecord {
  *  三分钟够看一眼 findings.md。 */
 export const TEAM_IDLE_TIMEOUT_MS = 3 * 60 * 1000
 
+/** **这一轮还在跑**时的回收阈值。
+ *
+ *  为什么需要它：`lastActiveAt` 每收到一块 stdout 才续期，而「主 agent 派了子 agent、
+ *  自己在等」这段时间是**完全静默**的 —— claude 用 ultracode / Task 派活时正是如此。
+ *  按 15 分钟算，一个正常干活的会话会在等子 agent 的途中被 kill，整趟工作丢掉
+ *  （用户 2026-08-20 反馈）。「人走开了」和「它在等子 agent」在 lastActiveAt 上
+ *  一模一样，唯一分得开的信号是 busy。
+ *
+ *  为什么不干脆「busy 时永不回收」：busy 靠 turn.start / turn.done 维护，
+ *  万一 done 丢了，那个进程就再也回收不掉。给一个长阈值兜住两头 ——
+ *  长任务够用，真卡死的最终也会被清掉。
+ *
+ *  取 4 小时：比任何一趟合理的 agent 任务都长，又不至于让一个卡死的会话过夜。 */
+export const BUSY_IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000
+
 export function shouldReap(s: SessionRecord, now: number): boolean {
   if (!s.alive) return false
-  // 团队派生 **且这一轮已经跑完** 才走短阈值。
-  // busy === true（还在跑）不能回收 —— lastActiveAt 虽然一直在续期，但万一它真的
-  // 卡住不出声，15 分钟的窗口是留给人去面板上看一眼的，不该被这条抢先杀掉。
-  // busy === undefined（一轮都没跑过）同理不算：那种会话刚建起来。
-  const limit = s.owner === 'team' && s.busy === false ? TEAM_IDLE_TIMEOUT_MS : IDLE_TIMEOUT_MS
+  // 三档，按「杀错了有多疼」排：
+  //
+  // ① 团队派生 **且这一轮已经跑完** → 3 分钟。停下来的 agent 留着只是占资源。
+  // ② **这一轮还在跑** → 4 小时。它可能正在等自己派出去的子 agent（ultracode /
+  //    Task），那段时间 stdout 完全静默，按 15 分钟算会把一个正常干活的会话
+  //    杀在半路 —— **整趟工作不可逆地没了**，而它明明在干活。
+  //    这一条以前不存在：老代码只是让 busy 的会话走「长」阈值（15 分钟），
+  //    而上面那段注释写的却是「不能回收」，读起来像是已经保护住了。
+  // ③ 其余（包括 busy === undefined，一轮都没跑过的新会话）→ 15 分钟。
+  const limit =
+    s.owner === 'team' && s.busy === false
+      ? TEAM_IDLE_TIMEOUT_MS
+      : s.busy === true
+        ? BUSY_IDLE_TIMEOUT_MS
+        : IDLE_TIMEOUT_MS
   return now - s.lastActiveAt > limit
 }
 
