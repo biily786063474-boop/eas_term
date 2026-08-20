@@ -21,6 +21,19 @@ export interface SessionRecord {
   cli: string
   cwd: string
   alive: boolean
+  /** **进程是怎么没的。** `undefined` = 还活着（或从没起来过）。
+   *
+   *  只有 `alive` 的话，「跑完一轮优雅退出」和「网络一抖被打断」在面板上长得一模一样 ——
+   *  用户 2026-08-20 反馈的正是后者被显示成了前者：活没干完，标签却写着这轮完了。
+   *
+   *  判据两条，命中任意一条就算中断：
+   *  ① **退出时 `busy` 还是 true** —— 话说到一半进程没了，比退出码更硬的证据，
+   *     而且不依赖任何错误文案解析（那种写法换个 CLI 版本或语言就失效）
+   *  ② 退出码非 0 且非 null（null = 我们自己 kill 的，那是预期内的）
+   *
+   *  **它决定会话面板敢不敢自动收起** —— 收起一个「其实没干完」的会话，
+   *  等于把没做完的活从用户眼前藏起来，比不收更糟。 */
+  ended?: 'ok' | 'interrupted'
   lastActiveAt: number
   model?: string
   effort?: string

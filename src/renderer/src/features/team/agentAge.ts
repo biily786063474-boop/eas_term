@@ -10,7 +10,7 @@
  *  **它只用来标黄提醒，不用来自动杀** —— 判错的代价必须只是一次多余的提示。 */
 export const STALL_MS = 4 * 60 * 1000
 
-export type AgentHealth = 'running' | 'stalled' | 'idle' | 'dead'
+export type AgentHealth = 'running' | 'stalled' | 'idle' | 'dead' | 'interrupted'
 
 /**
  * @param alive        进程还在不在（主进程 SessionRecord.alive）
@@ -21,11 +21,16 @@ export function healthOf(
   alive: boolean,
   lastActiveAt: number,
   now: number,
-  busy?: boolean
+  busy?: boolean,
+  ended?: 'ok' | 'interrupted'
 ): AgentHealth {
   // 进程没了就是没了，不管多久之前的事 —— 这条要排在最前面，
   // 否则一个刚被空闲回收的会话会因为 lastActiveAt 很新而报成 running
-  if (!alive) return 'dead'
+  //
+  // **但「怎么没的」要分开报。** 网络一抖、话说到一半被打断的会话，
+  // 跟跑完一轮优雅退出的，在 alive 上完全一样 —— 混在一起报，
+  // 用户看到的就是「活没干完却写着这轮完了」（2026-08-20 反馈）。
+  if (!alive) return ended === 'interrupted' ? 'interrupted' : 'dead'
   if (busy === false) return 'idle'
   // busy 未知时按「有多久没动」判：这是跨进程唯一拿得到的信号
   return now - lastActiveAt > STALL_MS ? 'stalled' : 'running'
@@ -50,7 +55,10 @@ const LABEL: Record<AgentHealth, string> = {
   running: '在跑',
   stalled: '可能卡住',
   idle: '空闲',
-  dead: '已停'
+  dead: '已停',
+  // **不叫「已停」** —— 那会让人以为是自己停的或者正常收的工。
+  // 中断意味着「这活没干完，产出多半是残的」，措辞必须让人想去看一眼。
+  interrupted: '中断了'
 }
 
 /** 交活了没有 —— 「这一轮跑完了」，不是「任务做对了」。
@@ -61,6 +69,24 @@ const LABEL: Record<AgentHealth, string> = {
 export function isSettled(alive: boolean, busy: boolean | undefined): boolean {
   if (!alive) return true
   return busy === false
+}
+
+/** **敢不敢把这个会话的窗口自动收起来。**
+ *
+ *  收起一个中断的会话 = 把没干完的活从用户眼前藏起来，比不收更糟 ——
+ *  所以这里比 isSettled 严：中断的一律留着，让人看见「中断了」这三个字。
+ *
+ *  `delivered` 来自 teamFindings.deliveredOf（findings.md 写了没）。
+ *  拿不到时（非团队会话、或者读文件失败）按 undefined 处理，只看结束方式。 */
+export function canAutoTuck(
+  alive: boolean,
+  ended: 'ok' | 'interrupted' | undefined,
+  delivered?: 'missing' | 'thin' | 'ok'
+): boolean {
+  if (alive) return false
+  if (ended !== 'ok') return false
+  // 交活判定拿得到就用：正常退出但一个字都没写，同样值得留在眼前
+  return delivered === undefined || delivered === 'ok'
 }
 
 /** 时长那一列显示多长。**三种语义，按状态切 —— 而且停下来的那两种是定值。**

@@ -322,14 +322,24 @@ function wireProc(live: Live, proc: ChildProcess): void {
     console.error(`[agentChat:${live.rec.id}] stderr`, chunk)
   })
   proc.on('error', (err) => {
-    live.rec = { ...live.rec, alive: false, busy: false }
+    // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
+    live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
   })
   proc.on('exit', (code) => {
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
     // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
-    live.rec = { ...live.rec, alive: false, busy: false }
+    // **「话说到一半没的」才是中断的硬证据。** 退出码不够用：网络抖动时 CLI 有可能
+    // 打印一段错误后仍以 0 退出，那种情况只有 busy 认得出来。反过来，Codex 的 exec
+    // 跑完一轮正常退出时 busy 已经落回 false，不会被误判成中断。
+    const interrupted = live.rec.busy === true || (code !== 0 && code !== null)
+    live.rec = {
+      ...live.rec,
+      alive: false,
+      busy: false,
+      ended: interrupted ? 'interrupted' : 'ok'
+    }
     // code === 0 或 null（被我们自己 kill）都不算错——Codex 的 exec 正常跑完一轮后
     // 本来就会退出，那是预期行为，不是故障。
     if (code !== 0 && code !== null) {
@@ -523,6 +533,7 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
       owner: r.owner,
       role: r.role,
       busy: r.busy,
+      ended: r.ended,
       tally: r.tally
     })
   }

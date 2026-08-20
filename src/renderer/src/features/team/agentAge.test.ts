@@ -1,6 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { healthOf, fmtAge, labelOf, isSettled, ageMsOf, STALL_MS } from './agentAge.ts'
+import {
+  healthOf,
+  fmtAge,
+  labelOf,
+  isSettled,
+  ageMsOf,
+  canAutoTuck,
+  STALL_MS
+} from './agentAge.ts'
 
 const NOW = 1_700_000_000_000
 
@@ -90,4 +98,57 @@ test('停下来的行是定值 —— now 走了也不变', () => {
     assert.equal(early, 8000, `${h} 应该报「这一轮跑了 8 秒」`)
     assert.equal(later, early, `${h} 停下来之后这个数不该再变`)
   }
+})
+
+
+// —— 中断判定（2026-08-20：网络一抖被打断的 agent 被显示成「这轮完了」）——
+
+test('中断的会话不报 dead，报 interrupted', () => {
+  assert.equal(healthOf(false, NOW - 100, NOW, false, 'interrupted'), 'interrupted')
+})
+
+test('正常退出的仍然是 dead —— 不要把所有死掉的都说成中断', () => {
+  assert.equal(healthOf(false, NOW - 100, NOW, false, 'ok'), 'dead')
+})
+
+test('拿不到 ended 时按 dead —— 老会话没有这个字段，不能凭空报中断', () => {
+  assert.equal(healthOf(false, NOW - 100, NOW, false, undefined), 'dead')
+})
+
+test('中断的文案是「中断了」，不是「已停」', () => {
+  assert.equal(labelOf('interrupted', true), '中断了')
+  assert.equal(labelOf('interrupted', false), '中断了')
+})
+
+test('活着的会话不受 ended 影响', () => {
+  assert.equal(healthOf(true, NOW - 100, NOW, true, 'interrupted'), 'running')
+})
+
+// —— 自动收起的闸门 ——
+
+test('中断的绝不自动收起 —— 收了等于把没干完的活藏起来', () => {
+  assert.equal(canAutoTuck(false, 'interrupted'), false)
+  assert.equal(canAutoTuck(false, 'interrupted', 'ok'), false)
+})
+
+test('还活着的不收', () => {
+  assert.equal(canAutoTuck(true, undefined), false)
+  assert.equal(canAutoTuck(true, 'ok'), false)
+})
+
+test('正常退出且交了活 → 可以收', () => {
+  assert.equal(canAutoTuck(false, 'ok', 'ok'), true)
+})
+
+test('正常退出但一个字都没写 → 不收，留着让人看见', () => {
+  assert.equal(canAutoTuck(false, 'ok', 'missing'), false)
+  assert.equal(canAutoTuck(false, 'ok', 'thin'), false)
+})
+
+test('拿不到交活判定时，只看结束方式（非团队会话没有 findings）', () => {
+  assert.equal(canAutoTuck(false, 'ok', undefined), true)
+})
+
+test('ended 缺失（老会话）不收 —— 判不出来就别动它', () => {
+  assert.equal(canAutoTuck(false, undefined), false)
 })

@@ -322,6 +322,10 @@ export interface SessionBrief {
   role?: string
   /** 这一轮还没跑完。区分「干完了」和「卡住了」的唯一信号，见 SessionRecord.busy */
   busy?: boolean
+  /** 进程是**怎么**没的：`'ok'` 跑完退出 / `'interrupted'` 中途断了。
+   *  `undefined` = 还活着。判据见 SessionRecord.ended —— 面板靠它把
+   *  「这轮完了」和「中断了」分开，自动收起也只敢收前者。 */
+  ended?: 'ok' | 'interrupted'
   /** 烧了多少。**token 是累加值、costUsd 是会话累计** —— 两者语义相反，
    *  别自己再加一次（实测见 shared/teamCost.ts） */
   tally?: CostTally
