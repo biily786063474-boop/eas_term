@@ -53,6 +53,35 @@ function prune(): void {
  *
  *  **不做路径拼接以外的任何解释**：role 是 kebab-case（batchSpec 校验过），
  *  projectPath 来自 Frame 的项目配置，两者都不是用户现填的。 */
+/** 团队花名册的落点。**在项目目录里，跟 .plans/<role>/ 的产出放一起** ——
+ *  它属于这个项目的工作记录，跟着项目走（换机器、开另一个副本都还在），
+ *  不该藏进 userData。 */
+const rosterFile = (projectPath: string): string =>
+  path.join(projectPath, '.plans', 'team.json')
+
+export function registerTeamRoster(): void {
+  ipcMain.handle('team:roster', (_e, projectPath: unknown): string | null => {
+    if (typeof projectPath !== 'string' || !projectPath) return null
+    try {
+      return fs.readFileSync(rosterFile(projectPath), 'utf8')
+    } catch {
+      return null // 没派过活 / 读不到 —— 解析那侧会退化成空花名册
+    }
+  })
+
+  ipcMain.handle('team:rosterSave', (_e, projectPath: unknown, json: unknown): void => {
+    if (typeof projectPath !== 'string' || !projectPath || typeof json !== 'string') return
+    try {
+      const f = rosterFile(projectPath)
+      fs.mkdirSync(path.dirname(f), { recursive: true })
+      fs.writeFileSync(f, json)
+    } catch (e) {
+      // 记不下来不该让派活失败 —— 这是记录不是前提
+      console.error('[team] 花名册写入失败', e)
+    }
+  })
+}
+
 export function registerTeamFindings(): void {
   ipcMain.handle(
     'team:findings',

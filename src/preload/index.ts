@@ -846,6 +846,12 @@ const api = {
      *  给 team_status / team_dissolve 判「说完成了但没写」用（错误矩阵 E-13） */
     teamFindings: (projectPath: string, roles: string[]): Promise<Record<string, number | null>> =>
       ipcRenderer.invoke('team:findings', projectPath, roles),
+    /** 团队花名册（`<项目>/.plans/team.json` 的原文，没有就是 null）。
+     *  解析与裁剪在 shared/teamRoster.ts —— 这里只管读写字节 */
+    teamRoster: (projectPath: string): Promise<string | null> =>
+      ipcRenderer.invoke('team:roster', projectPath),
+    teamRosterSave: (projectPath: string, json: string): Promise<void> =>
+      ipcRenderer.invoke('team:rosterSave', projectPath, json),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
     setParams: (
       sessionId: string,

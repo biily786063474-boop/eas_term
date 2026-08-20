@@ -9,6 +9,7 @@ import { askForBatch } from './features/team/batchRequest'
 import { isSettled } from './features/team/agentAge'
 import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { fmtCost, fmtTokens } from '../../shared/teamCost'
+import { addBatch, parseRoster, recentSummary } from '../../shared/teamRoster'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -715,9 +716,14 @@ const SHELL_TRAP =
     })
 
     if (agents.length === 0) {
+      // **进程都没了不等于没派过活。** 主 agent 的上下文可能被压缩过（E-11），
+      // app 也可能重启过（E-12）—— 那时它对「刚才让谁去做什么」完全没有记忆，
+      // 而产出就躺在 .plans/ 下没人去收。花名册是这两种情况唯一还在的线索。
+      const raw = where ? await window.api.agentChat.teamRoster(where.projectPath).catch(() => null) : null
+      const recent = recentSummary(parseRoster(raw), Date.now())
       return {
         agents: [],
-        next: '这个项目里没有团队派生的 agent。要么还没派活，要么都已经被停掉了。'
+        next: recent || '这个项目里没有团队派生的 agent，也没有派活记录。'
       }
     }
     const done = agents.filter((a) => a.done)
@@ -942,6 +948,24 @@ const SHELL_TRAP =
         })
         if (!leafId) throw new Error(`起 ${a.role} 时没能建出节点`)
         spawned.push({ role: a.role, leafId })
+      }
+      // 记进花名册。**在「全起来了」之后写** —— 半个团队不该留下记录，
+      // 否则重启后主 agent 会以为有一批在跑，而它们早就被 catch 收掉了。
+      // 写失败不影响这次派活（它是记录不是前提，见 teamRoster.ts）
+      if (where) {
+        void (async (): Promise<void> => {
+          const raw = await window.api.agentChat.teamRoster(where.projectPath).catch(() => null)
+          const next = addBatch(parseRoster(raw), {
+            id: `b-${Date.now()}`,
+            at: Date.now(),
+            goal: spec.goal,
+            // task 原文留着 —— 方案里「重派是一条命令」靠的就是它
+            agents: spec.agents.map((a) => ({ role: a.role, task: a.task }))
+          })
+          await window.api.agentChat
+            .teamRosterSave(where.projectPath, JSON.stringify(next, null, 2))
+            .catch(() => undefined)
+        })()
       }
     } catch (e) {
       // 起到一半失败：把这一批已经起的收掉，别留半个团队
