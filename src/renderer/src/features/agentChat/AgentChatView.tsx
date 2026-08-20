@@ -423,6 +423,58 @@ export function AgentChatView({
     setText('')
   }
 
+  // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
+  //
+  // 它们原本写在 `if (sessionId) { … return }` 之后 —— 于是空态跑 N 个 hook、
+  // 聊天态只跑 N-2 个，而 React 靠调用顺序认 hook：数量一变就是
+  // `Minified React error #300`（Should have a queue），整个界面被 ErrorBoundary 兜住变成
+  // 「界面遇到了一个错误」。**触发点正是「发送第一条消息」** —— sessionId 从 null 变成有值
+  // 的那一帧。2026-08-20 用户实拍到。
+  //
+  // 这个文件里已经有一处为同样的理由留的注释（存聊天记录那个 useEffect 说明为什么
+  // 依赖里放 view 而不是 displayView），却还是在这儿犯了 —— 所以把警告写在这里，
+  // 挨着最容易再犯的位置。
+  /** 这个项目里「记录还在、但对应节点已经关掉了」的那些对话。
+   *
+   *  关节点不再删记录，于是它们成了孤儿 —— 新开的对话框是新 leafId，对不上。
+   *  没有这个入口的话，留着跟删了没区别。 */
+  const [orphans, setOrphans] = useState<
+    { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]
+  >([])
+  useEffect(() => {
+    // 只有自己是空的时候才需要这个入口；已经有内容就别拿别的对话去打扰
+    if (sessionId || restored.turns.length > 0) return setOrphans([])
+    let alive = true
+    void window.api.agentChat
+      .listHistory(cwd)
+      .then((list) => {
+        if (!alive) return
+        // 「节点已经没了」现读一次布局算 —— 不订阅 tabs：这个判断只在打开空态那一刻
+        // 需要，订阅了会让整个对话框跟着画布的任何变动重渲染
+        const live = new Set(
+          useStore
+            .getState()
+            .tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+        )
+        setOrphans(list.filter((h) => !live.has(h.leafId)))
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [cwd, sessionId, restored.turns.length])
+
+  /** 把一份孤儿记录接管到当前这个节点：内容搬过来，resumeId 也接过来
+   *  （模型那边才接得上），旧的那份随即删掉，避免同一段对话留两份。 */
+  const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
+    const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
+    if (!got) return
+    setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId })
+    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId)
+    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
+    setOrphans([])
+  }
+
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
   if (sessionId) {
     // resolveApproval 需要 sessionId——ApprovalCard/MessageList 都不持有它（各自的
@@ -501,46 +553,6 @@ export function AgentChatView({
   // 对不上 = 模型接不回它，界面必须说明（理由见下面那段注释）。
   const contextLost = restored.turns.length > 0 && contextLostOf(restored.resumeId, savedResumeId)
 
-  /** 这个项目里「记录还在、但对应节点已经关掉了」的那些对话。
-   *
-   *  关节点不再删记录，于是它们成了孤儿 —— 新开的对话框是新 leafId，对不上。
-   *  没有这个入口的话，留着跟删了没区别。 */
-  const [orphans, setOrphans] = useState<
-    { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]
-  >([])
-  useEffect(() => {
-    // 只有自己是空的时候才需要这个入口；已经有内容就别拿别的对话去打扰
-    if (sessionId || restored.turns.length > 0) return setOrphans([])
-    let alive = true
-    void window.api.agentChat
-      .listHistory(cwd)
-      .then((list) => {
-        if (!alive) return
-        // 「节点已经没了」现读一次布局算 —— 不订阅 tabs：这个判断只在打开空态那一刻
-        // 需要，订阅了会让整个对话框跟着画布的任何变动重渲染
-        const live = new Set(
-          useStore
-            .getState()
-            .tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
-        )
-        setOrphans(list.filter((h) => !live.has(h.leafId)))
-      })
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [cwd, sessionId, restored.turns.length])
-
-  /** 把一份孤儿记录接管到当前这个节点：内容搬过来，resumeId 也接过来
-   *  （模型那边才接得上），旧的那份随即删掉，避免同一段对话留两份。 */
-  const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
-    const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
-    if (!got) return
-    setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId })
-    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId)
-    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
-    setOrphans([])
-  }
   const phase = startupPhaseOf({ clis, selected, starting, startError })
   return (
     <div className="agent-chat-view">

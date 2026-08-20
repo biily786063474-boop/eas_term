@@ -65,7 +65,10 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="err-card">
           <div className="err-title">界面遇到了一个错误</div>
           <div className="err-desc">
-            渲染时发生未处理异常,已被拦截,避免整个窗口变空白。可以重新加载;如果反复在启动时出错,多半是画布存档损坏,点「重置画布并重载」清空后重开(不影响项目文件)。
+            渲染时发生未处理异常,已被拦截,避免整个窗口变空白。**先试「重新加载」** ——
+            大多数情况这样就好了。只有反复在启动时出错、多半是画布存档损坏时,才用
+            「重置画布并重载」:它会清空画布(项目文件不受影响),清空前会把当前布局
+            备份到 canvas.json.bak-* ,想找回来能从那里恢复。
           </div>
           <pre className="err-msg">{error.message || String(error)}</pre>
           <div className="err-btns">

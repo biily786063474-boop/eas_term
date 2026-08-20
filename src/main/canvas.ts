@@ -1,3 +1,4 @@
+import { shouldBackup, backupName, prunable } from '../shared/canvasBackup'
 import { app, ipcMain, net, protocol } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -47,9 +48,43 @@ export function registerCanvasHandlers(): void {
     }
   })
 
+  /** 盘上那份有几个 Frame。读不到 / 坏了一律当 0 —— 那时也没什么可备份的。 */
+  const framesOnDisk = (): number => {
+    try {
+      const j = JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as { frames?: unknown[] }
+      return Array.isArray(j.frames) ? j.frames.length : 0
+    } catch {
+      return 0
+    }
+  }
+
   const writeScene = (scene: unknown): void => {
     try {
       fs.mkdirSync(path.dirname(storeFile()), { recursive: true })
+
+      // **覆盖前，如果这次写入让画布大幅缩水，先留一份。**
+      //
+      // 2026-08-20：一个 React 报错弹出 ErrorBoundary，上面摆着「重置画布并重载」——
+      // 人在界面崩了的时候最容易点它，而它就是 save(EMPTY_CANVAS)：
+      // 25KB 的布局（20 个 Frame）当场变成 2KB（3 个），**没有备份、不可逆**。
+      // 用户丢了所有工作区的节点摆放，projects.json 还在但布局全没了。
+      //
+      // 判据是「内容缩水」而不是「是不是手动重置」—— 那能一并挡住别的意外清空路径，
+      // 不用一条条堵。判定与为什么宁可多备份，见 shared/canvasBackup.ts。
+      const next = (scene as { frames?: unknown[] })?.frames
+      if (shouldBackup(framesOnDisk(), Array.isArray(next) ? next.length : 0)) {
+        try {
+          fs.copyFileSync(storeFile(), backupName(storeFile(), Date.now()))
+          const dir = path.dirname(storeFile())
+          const base = path.basename(storeFile())
+          for (const f of prunable(fs.readdirSync(dir).filter((n) => n.startsWith(base))))
+            fs.rmSync(path.join(dir, f), { force: true })
+        } catch (e) {
+          // 备份失败不能挡住写入本身 —— 但要留痕，否则「以为有备份其实没有」
+          console.error('[canvas] 备份失败', e)
+        }
+      }
+
       fs.writeFileSync(storeFile(), JSON.stringify(scene, null, 2), 'utf8')
     } catch {
       // 写盘失败（磁盘满 / 权限）不阻塞 UI，静默跳过
