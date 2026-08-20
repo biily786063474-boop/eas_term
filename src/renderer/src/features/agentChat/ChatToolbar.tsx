@@ -20,6 +20,13 @@
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
 import { useEffect, useRef, useState } from 'react'
+import {
+  BUILTIN_SLASH,
+  matchSlash,
+  skillsToCmds,
+  slashQuery,
+  type SlashCmd
+} from '../../../../shared/slashCommands'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel } from './toolbarModel.ts'
@@ -123,6 +130,50 @@ export function ChatToolbar({
   // 工具栏这里原来有一个「审批保护 已开启/未开启」chip 加一个「卸载」按钮 ——
   // 它们占着每天都要看的那一行，说的却是一件装完就基本不动的事。
   // 内核那侧一个字没动（隔离标记 / 写前备份 / 一键卸载都还在），只是入口换了地方。
+
+  // ── 斜杠命令候选 ───────────────────────────────────────────────
+  // 终端里 CLI 自己有 TUI 补全，打 `/` 就出候选；**这个输入框是我们自己的**，
+  // 不做就什么都不会出现（用户 2026-08-20：「不支持显示所有的slash命令」）。
+  // 候选表只收实测能用的，理由见 shared/slashCommands.ts。
+  const [skillCmds, setSkillCmds] = useState<SlashCmd[]>([])
+  const [slashIdx, setSlashIdx] = useState(0)
+  const [slashOff, setSlashOff] = useState(false)
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const dirs = await window.api.skillLibrary.listDirs().catch(() => [])
+      const acc: SlashCmd[] = []
+      for (const d of dirs) {
+        const r = await window.api.skillLibrary.list(d.path).catch(() => null)
+        if (!r?.ok) continue
+        acc.push(...skillsToCmds(r.skills, r.disabled))
+      }
+      if (alive) setSkillCmds(acc)
+    })()
+    return () => {
+      alive = false
+    }
+  }, [])
+  const slashQ = slashQuery(text)
+  const slashHits = slashQ === null ? [] : matchSlash(slashQ, [...BUILTIN_SLASH, ...skillCmds])
+  const slashOpen = !slashOff && slashQ !== null && slashHits.length > 0
+  // 换了 query 就把选中项挪回第一条 —— 停在上一次的下标上，看起来像随机选中
+  useEffect(() => {
+    setSlashIdx(0)
+  }, [slashQ])
+  // 打字就取消「按过 Esc」这个状态，否则关掉一次之后这个会话里再也弹不出来
+  useEffect(() => {
+    setSlashOff(false)
+  }, [text])
+  const pickSlash = (i: number): void => {
+    const c = slashHits[i]
+    if (!c) return
+    // 补到输入框而不是直接发送：**有的命令要带参数**（/model opus），
+    // 而且直接发出去意味着一次误选就消耗一轮对话。补完末尾留个空格，
+    // slashQuery 随即返回 null，候选自然收起。
+    setText(`/${c.name} `)
+    requestAnimationFrame(() => taRef.current?.focus())
+  }
 
   const submit = (): void => {
     const t = text.trim()
@@ -294,6 +345,33 @@ export function ChatToolbar({
           </div>
         )}
 
+        {slashOpen && (
+          <div className="ac-slash" role="listbox" aria-label="斜杠命令">
+            {slashHits.slice(0, 8).map((c, i) => (
+              <div
+                key={`${c.from}:${c.name}`}
+                className={`ac-slash-row${i === slashIdx ? ' on' : ''}`}
+                role="option"
+                aria-selected={i === slashIdx}
+                // 用 mousedown 不用 click：click 之前 textarea 已经失焦，
+                // 候选会先被别的逻辑收起来，那一下就点空了
+                onMouseDown={(ev) => {
+                  ev.preventDefault()
+                  pickSlash(i)
+                }}
+                onMouseEnter={() => setSlashIdx(i)}
+              >
+                <span className="ac-slash-name">/{c.name}</span>
+                <span className="ac-slash-desc">{c.desc}</span>
+                {c.from === 'skill' && <span className="ac-slash-tag">skill</span>}
+              </div>
+            ))}
+            {slashHits.length > 8 && (
+              <div className="ac-slash-more">还有 {slashHits.length - 8} 个，接着打字缩小范围</div>
+            )}
+          </div>
+        )}
+
         <textarea
           ref={taRef}
           className="ac-composer"
@@ -305,6 +383,31 @@ export function ChatToolbar({
             autoGrow(e.target)
           }}
           onKeyDown={(e) => {
+            // 候选开着时先归它管 —— 这几个键在这一刻的意思跟平时不一样。
+            // **isComposing 要一并判**：中文输入法选词时按上下键是在翻候选词，
+            // 抢过来会把人正在选的字弄乱。
+            if (slashOpen && !e.nativeEvent.isComposing) {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setSlashIdx((i) => (i + 1) % slashHits.length)
+                return
+              }
+              if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setSlashIdx((i) => (i - 1 + slashHits.length) % slashHits.length)
+                return
+              }
+              if (e.key === 'Tab' || e.key === 'Enter') {
+                e.preventDefault()
+                pickSlash(slashIdx)
+                return
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setSlashOff(true)
+                return
+              }
+            }
             // isComposing 只在原生事件上（见 sendKey.ts）—— 中文输入法选候选词时
             // 按回车是「确认」不是「发送」，取错字段就会把没打完的句子发出去
             const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
