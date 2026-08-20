@@ -77,15 +77,35 @@ function resolveFrame(ctx: Ctx): { frameId: string; nodeId?: string; projectPath
   // 于是去读了别人家的 .plans/team.json，报「没有派活记录」，而记录就在自己项目里躺着。
   // 2026-08-19 在隔离环境里跑功能验证时抓到：ctx.project 是 terminal，
   // 它却定位到了「命运呐」。
+  //
+  // **相等判断不够 —— 隔离 agent 的 EAS_PROJECT 是它那棵工作树的路径**
+  // （`<项目>/.worktrees/<批次>-<role>`，见 team_spawn 里 agentCwd = r.absPath；
+  // session.ts 拿 opts.cwd 去 mcpEnv，注进去的就是它）。
+  // 那个路径不等于任何已注册项目的 path，于是 byCtx 必然 undefined，
+  // 静默回落到「用户当时正看着的那个 Frame」——
+  // 2026-08-19 的 ae03989 修的正是这个失明，当天晚些的 42d4b80（worktree）
+  // 又把它的前提打掉了：**两个 commit 单独看都对，合起来错**（.plans/silent-fail S-01）。
+  //
+  // 后果不止是「读错 .plans」：safePath 的 allow 列表是 [ctxProject, projectPath]，
+  // 认错项目 = 把一个跟它毫无关系的项目目录整个加进这个 agent 的可读写白名单。
+  // 所以这里用 belongsToProject（工作树也算这个项目），不是字符串相等。
   const byCtx = ctx.project
-    ? s.canvas.frames.find(
-        (f) => !f.parentId && s.projects.find((p) => p.id === f.projectId)?.path === ctx.project
-      )
+    ? s.canvas.frames.find((f) => {
+        if (f.parentId) return false
+        const path = s.projects.find((p) => p.id === f.projectId)?.path
+        return !!path && belongsToProject(ctx.project as string, path)
+      })
     : undefined
+  // **认不出来时不要回落到「用户正看着的」那个项目。** 调用方明确说了自己在哪
+  // （ctx.project 是我们自己注入的，可信），认不出来说明那个项目没有 Frame ——
+  // 那就该说找不到，而不是拿另一个项目顶上：顶上的后果是往别人的画布上加节点、
+  // 读别人的 .plans、把别人的目录加进白名单。
   const fallback =
     byCtx ??
-    s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
-    s.canvas.frames.find((f) => !f.parentId)
+    (ctx.project
+      ? undefined
+      : s.canvas.frames.find((f) => !f.parentId && f.projectId === s.activeProjectId) ??
+        s.canvas.frames.find((f) => !f.parentId))
   if (!fallback) return null
   const proj = s.projects.find((p) => p.id === fallback.projectId)
   return { frameId: fallback.id, projectPath: proj?.path ?? ctx.project ?? '' }

@@ -76,5 +76,12 @@ export function belongsToProject(sessionCwd: string, projectPath: string): boole
   if (sessionCwd === projectPath) return true
   // 只认我们自己建的那层，不是「凡是子目录都算」——
   // 用户在项目里另开一个 AI 对话、cwd 指向某个子目录，那不属于这一批
-  return sessionCwd.startsWith(`${projectPath}/${WORKTREE_DIR}/`)
+  //
+  // **两种分隔符都认**：Windows 上 git 报的工作树路径带反斜杠，
+  // 只判 `/` 的话这个函数在那边等于恒假 —— 而它现在管着「隔离 agent 算不算这个项目」，
+  // 恒假意味着所有 team_* 工具和面板都看不见隔离 agent（.plans/silent-fail S-14）。
+  const head = `${projectPath}/${WORKTREE_DIR}/`
+  if (sessionCwd.startsWith(head)) return true
+  const win = `${projectPath}\\${WORKTREE_DIR}\\`
+  return sessionCwd.startsWith(win)
 }

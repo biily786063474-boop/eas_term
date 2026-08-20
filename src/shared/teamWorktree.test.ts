@@ -65,3 +65,10 @@ test('别的项目、以及项目内的普通子目录都不算', () => {
   assert.equal(belongsToProject('', proj), false)
   assert.equal(belongsToProject(proj, ''), false)
 })
+
+test('Windows 的反斜杠路径也算这个项目（S-14）', () => {
+  // git 在 Windows 上报的工作树路径是反斜杠。只判 `/` 的话这里恒假，
+  // 于是所有 team_* 工具和面板在 Windows 上都看不见隔离 agent。
+  assert.equal(belongsToProject('C:\\proj\\.worktrees\\b1-writer', 'C:\\proj'), true)
+  assert.equal(belongsToProject('C:\\other\\.worktrees\\b1-writer', 'C:\\proj'), false)
+})
