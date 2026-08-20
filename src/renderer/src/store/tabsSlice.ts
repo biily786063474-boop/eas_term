@@ -45,7 +45,14 @@ export interface TabsSlice {
     role?: string
     /** 挂载后自动发出去的首条消息（派活） */
     initialMessage?: string
-  }) => Promise<void>
+  
+    /** 接管一个已经在跑的会话（团队面板点进来） */
+    sessionId?: string
+    /** 起在后台：**不把新 tab 设为当前 tab。**
+     *  团队 agent 一次派好几个，每个都抢一次焦点的话，用户在分屏模式下
+     *  会被连着切走好几次视图，而这些会话本来就不该占据他的注意力。 */
+    background?: boolean
+  }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
   openHistory: (cwd: string) => void
@@ -189,7 +196,17 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const leaf: LeafNode = {
       type: 'leaf',
       id: uid('leaf'),
-      pane: { kind: 'agent', cwd, owner: opts?.owner, role: opts?.role, initialMessage: opts?.initialMessage }
+      pane: {
+        kind: 'agent',
+        cwd,
+        owner: opts?.owner,
+        role: opts?.role,
+        initialMessage: opts?.initialMessage,
+        // **接管一个已经在跑的会话**（从团队面板点进来时用）。
+        // 有它的话 AgentChatView 挂载时直接订阅这个 id，而不是等用户发第一条消息 ——
+        // 「关了节点、进程还在跑」的那些 agent，唯一的回去入口就是这条。
+        sessionId: opts?.sessionId
+      }
     }
     const tab: TermTab = {
       id: uid('tab'),
@@ -201,9 +218,14 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     }
     set((st) => ({
       tabs: [...st.tabs, tab],
-      activeTabId: tab.id,
-      activeTabByProject: { ...st.activeTabByProject, [projectKey(tab.projectId)]: tab.id }
+      // 后台起的不抢当前 tab。**leaf 照样挂载**（PaneLayer 渲染所有 tab 的所有 leaf，
+      // 看不见的只是 display:none），所以会话照常起来、进程照常跑。
+      activeTabId: opts?.background ? st.activeTabId : tab.id,
+      activeTabByProject: opts?.background
+        ? st.activeTabByProject
+        : { ...st.activeTabByProject, [projectKey(tab.projectId)]: tab.id }
     }))
+    return leaf.id
   },
 
   // 文件树点击：图片进图片面板，其余进代码面板

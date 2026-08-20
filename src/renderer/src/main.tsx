@@ -16,8 +16,11 @@ registerMcpHandler()
 window.addEventListener('error', (e) => console.error('[window:error]', e.error ?? e.message))
 window.addEventListener('unhandledrejection', (e) => console.error('[window:unhandledrejection]', e.reason))
 
-if (import.meta.env.DEV) {
-  // 开发调试入口：可在 DevTools 控制台直接操作全局状态
+// 开发调试入口：可在 DevTools 控制台直接操作全局状态。
+// **验证实例也要有** —— scripts/verify-app.mjs 跑的是构建产物（DEV 为 false），
+// 没有这个入口就只能查 DOM 反推状态，「leaf 挂没挂在 Frame 上」这类判断绕得很远。
+// 它由 preload 读 EAS_VERIFY 决定，正式打包不带那个环境变量，用户版本照旧没有。
+if (import.meta.env.DEV || (window as unknown as { __easVerify?: boolean }).__easVerify) {
   ;(window as unknown as Record<string, unknown>).__store = useStore
 }
 

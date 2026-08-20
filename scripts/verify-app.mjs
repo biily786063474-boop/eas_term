@@ -63,7 +63,11 @@ console.log(`隔离数据目录: ${dir}`)
 const child = spawn(
   path.join(process.cwd(), 'node_modules', '.bin', 'electron'),
   ['.', `--remote-debugging-port=${PORT}`, `--user-data-dir=${dir}`],
-  { stdio: 'inherit' }
+  // EAS_VERIFY 让渲染层把 store 挂到 window.__store 上（正式构建默认不挂）。
+  // **只在这个隔离实例里有** —— electron-builder 打的包不会带这个环境变量，
+  // 用户拿到的版本照旧没有任何全局状态入口。
+  // 没有它就只能靠查 DOM 反推状态，「节点挂没挂在 Frame 上」这类判断绕得很远。
+  { stdio: 'inherit', env: { ...process.env, EAS_VERIFY: '1' } }
 )
 
 const cleanup = () => {

@@ -915,3 +915,6 @@ const api = {
 export type Api = typeof api
 
 contextBridge.exposeInMainWorld('api', api)
+// 只在 scripts/verify-app.mjs 起的隔离实例里为真（它显式传 EAS_VERIFY=1）。
+// 渲染层拿它决定要不要挂 window.__store —— 见 renderer/src/main.tsx。
+contextBridge.exposeInMainWorld('__easVerify', process.env.EAS_VERIFY === '1')

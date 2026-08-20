@@ -11,6 +11,7 @@ import { SettingsPanel } from './features/workspace/SettingsPanel'
 import { UpdateBadge } from './features/workspace/UpdateBadge'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { TeamBatchHost } from './features/team/TeamBatchModal'
+import { TeamAutoTuckHost } from './features/team/AutoTuck'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ModeSwitch } from './features/workspace/ModeSwitch'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
@@ -259,6 +260,10 @@ export function App(): JSX.Element {
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />
       <TeamBatchHost />
+          {/* 不渲染任何东西，只负责把干完活的 agent 会话窗口收起来。
+              常驻是必需的：写在团队面板里的话，面板关着就不工作，
+              而没在看面板的时候恰恰最需要它 */}
+          <TeamAutoTuckHost />
           <ModeSwitch />
           {/* 平时不渲染，只有查到新版本才冒出来 */}
           <UpdateBadge />

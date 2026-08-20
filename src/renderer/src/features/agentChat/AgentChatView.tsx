@@ -281,6 +281,53 @@ export function AgentChatView({
   }, [initialMessage, selected, sessionId, starting, clearInitialMessage, tabId, leafId])
 
   /** override：派活时直接把任务传进来 —— 不走 state，因为同一帧里 setText 还没生效 */
+  /** 把这个视图接到一个会话的事件流上。
+   *
+   *  **两条路共用**：自己 start 起来的（handleSend），和接管一个已经在跑的
+   *  （团队面板点进来 —— 那个 agent 的画布节点可能早被关掉了，进程却还在跑）。
+   *
+   *  preload 从模块加载期就按 sessionId 缓冲事件，这里订阅时会先回放攒下的再转实时，
+   *  所以接管一个跑到一半的会话不会只看到「从现在开始」的半截输出。 */
+  const attachTo = (sid: string): void => {
+    unsubRef.current?.()
+    unsubRef.current = window.api.agentChat.onEvent(sid, (e: ChatEvent) => {
+      reducerRef.current.push(e)
+      if (!aliveRef.current) return
+      // session.ready 带的是 **CLI 自己的**会话 id（session.ts 拿它填 SessionRecord.resumeId）。
+      // 写回 PaneState → 随 canvas.json 落盘 → 下次打开这个节点接得上上下文。
+      // 每轮都会来一次，setAgentResumeId 里对相同值直接返回原对象，不会白白制造新状态。
+      if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId)
+      const v = reducerRef.current.view()
+      setView(v)
+      // ── 接进全局的通知系统 ──────────────────────────────────────
+      // 运行监视 / 待处理列表 / 灵动岛 / 提示音 / 侧栏与抽屉的项目状态点，
+      // 全都读 runningPtys + attentionPtys 这两份信号（machine.ts 的 statusOf）。
+      // 终端那边由 TerminalView 按标题 spinner 的起落写入；AI 对话这边就是
+      // turn.start / turn.done —— 语义完全对得上，不需要新造一套通知机制。
+      //
+      // **这两个 action 的参数名叫 ptyId 是历史包袱**，它们要的其实是「任务 id」；
+      // 这里传会话 id，machine.locate 已经认得（见那边的说明）。
+      const st = useStore.getState()
+      // **团队派生的 agent 不进状态系统。**（用户 2026-08-19 拍板，真机截图确认）
+      //
+      // 上面那段说明对**用户自己开的**会话完全成立 —— 那是他在跟进的一件事，
+      // 该进灵动岛、该在跑完时叫他一声。但团队里的 agent 不是：五个一起跑，
+      // 灵动岛就变成「任务进行中 5」，全是他没在跟的东西；五个陆续跑完，
+      // 他被叫五次。团队内部的进度只该在团队面板那一行上体现。
+      //
+      // 判据同 killPanePty / notify 那两处：pane.owner === 'team'，
+      // 「谁开的」在整个应用里只有一个说法。
+      if (!isTeamOwned) {
+        st.setPtyRunning(sid, v.busy)
+        // 一轮跑完就标记「有结果等你看」。**不判有没有聚焦**——跟终端那边一致
+        //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
+        // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
+        // 直接点画布上的节点会走 CanvasStage 那个单选 effect。
+        if (e.k === 'turn.done') st.flagAttention(sid)
+      }
+    })
+  }
+
   const handleSend = async (override?: string): Promise<void> => {
     const message = (override ?? text).trim()
     if (!message || !selected || starting || sessionId) return
@@ -378,42 +425,7 @@ export function AgentChatView({
     // 按 sessionId 缓冲，这里订阅时把攒下的先回放再转实时（见 preload/index.ts 的
     // AGENT_CHAT_EVENT_CHANNEL 一节）。
     const sid = result.sessionId
-    unsubRef.current = window.api.agentChat.onEvent(sid, (e: ChatEvent) => {
-      reducerRef.current.push(e)
-      if (!aliveRef.current) return
-      // session.ready 带的是 **CLI 自己的**会话 id（session.ts 拿它填 SessionRecord.resumeId）。
-      // 写回 PaneState → 随 canvas.json 落盘 → 下次打开这个节点接得上上下文。
-      // 每轮都会来一次，setAgentResumeId 里对相同值直接返回原对象，不会白白制造新状态。
-      if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId)
-      const v = reducerRef.current.view()
-      setView(v)
-      // ── 接进全局的通知系统 ──────────────────────────────────────
-      // 运行监视 / 待处理列表 / 灵动岛 / 提示音 / 侧栏与抽屉的项目状态点，
-      // 全都读 runningPtys + attentionPtys 这两份信号（machine.ts 的 statusOf）。
-      // 终端那边由 TerminalView 按标题 spinner 的起落写入；AI 对话这边就是
-      // turn.start / turn.done —— 语义完全对得上，不需要新造一套通知机制。
-      //
-      // **这两个 action 的参数名叫 ptyId 是历史包袱**，它们要的其实是「任务 id」；
-      // 这里传会话 id，machine.locate 已经认得（见那边的说明）。
-      const st = useStore.getState()
-      // **团队派生的 agent 不进状态系统。**（用户 2026-08-19 拍板，真机截图确认）
-      //
-      // 上面那段说明对**用户自己开的**会话完全成立 —— 那是他在跟进的一件事，
-      // 该进灵动岛、该在跑完时叫他一声。但团队里的 agent 不是：五个一起跑，
-      // 灵动岛就变成「任务进行中 5」，全是他没在跟的东西；五个陆续跑完，
-      // 他被叫五次。团队内部的进度只该在团队面板那一行上体现。
-      //
-      // 判据同 killPanePty / notify 那两处：pane.owner === 'team'，
-      // 「谁开的」在整个应用里只有一个说法。
-      if (!isTeamOwned) {
-        st.setPtyRunning(sid, v.busy)
-        // 一轮跑完就标记「有结果等你看」。**不判有没有聚焦**——跟终端那边一致
-        //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
-        // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
-        // 直接点画布上的节点会走 CanvasStage 那个单选 effect。
-        if (e.k === 'turn.done') st.flagAttention(sid)
-      }
-    })
+    attachTo(sid)
     // beforeTurnCount 取当前归约器已有的轮次数——此刻订阅刚接上、一个事件都还没喂进去，
     // 必然是 0，但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个
     // assistant 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
@@ -422,6 +434,39 @@ export function AgentChatView({
     setStarting(false)
     setText('')
   }
+
+  // **接管一个已经在跑的会话。**
+  //
+  // pane 上一挂载就带着 sessionId，只有一种来源：这个 leaf 是为了「去看一个
+  // 已经存在的会话」而建的（团队面板点进来 —— 那些 agent 默认不挂画布节点，
+  // 或者用户早就把节点关掉了，而进程还在跑）。这种情况下不该等用户发消息才连上，
+  // 挂载即订阅。
+  //
+  // 顺带修好另一件事：自己起的会话在切视图 / 重新挂载后，本地 sessionId 是空的，
+  // 而 pane 上那份还在 —— 以前那时界面是空白的，现在同样从这条路接回去。
+  //
+  // 这个 hook 待在上面那道「必须在条件 return 上游」的线**之内**（紧挨着它写），
+  // 别把它挪到 `if (sessionId)` 之后 —— 那正是 React #300 的成因。
+  const adoptedRef = useRef(false)
+  useEffect(() => {
+    // **必须等 selected 就绪**（跟上面 initialMessage 那个 effect 同一个理由）。
+    // 聊天界面那段有一条不变量：「sessionId 有值 → selected 必然非空」，
+    // 它原本靠「只有 handleSend 能设 sessionId，而 handleSend 顶上有 !selected 的门槛」
+    // 成立。接管这条路绕开了 handleSend，抢在 CLI 探测完成前设 sessionId 的话，
+    // ChatToolbar 那句 `selected!.capabilities` 当场读 null ——
+    // 2026-08-20 真机验证抓到，整个界面被 ErrorBoundary 兜成错误页。
+    if (adoptedRef.current || !selected || sessionId) return
+    const st = useStore.getState()
+    const tab = st.tabs.find((t) => t.id === tabId)
+    const leaf = tab ? collectLeaves(tab.root).find((l) => l.id === leafId) : undefined
+    const sid = leaf?.pane.kind === 'agent' ? leaf.pane.sessionId : undefined
+    if (!sid) return
+    adoptedRef.current = true
+    setSessionId(sid)
+    attachTo(sid)
+    // 解绑不在这里做 —— 卸载时统一走上面那个 unsubRef 的清理
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, sessionId])
 
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
   //

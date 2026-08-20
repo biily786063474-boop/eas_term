@@ -1008,10 +1008,19 @@ const SHELL_TRAP =
           tree = { relPath, branch, mainRoot: where.projectPath }
           trees.push({ role: a.role, relPath, branch })
         }
-        // **走 addAgentNode 而不是 openAgentPane** —— 后者只建 leaf，
-        // 不会把节点挂到画布 Frame 上。第一次端到端验证时就踩到：会话确实起来了，
-        // 但画布上一个新节点都没有，用户在画布模式下什么都看不到。
-        const leafId = await useStore.getState().addAgentNode(where.frameId, {
+        // **故意不挂画布节点**（2026-08-20 改）。用户原话：「默认是不出可以看到进程的
+        // 会话框的，用户点击团队节点中的相关子进程才会显示对应的子进程」。
+        //
+        // 这里曾经写着相反的注释 —— 「走 addAgentNode 而不是 openAgentPane，
+        // 后者只建 leaf，不会把节点挂到画布 Frame 上」，那是把当时的 bug 描述成了规则。
+        // **现在那个「bug」正是想要的行为**：一次派 5 个 agent 就在画布上糊 5 个
+        // 会话框，没人看得过来，反而把用户自己的节点挤没了。
+        //
+        // 关键前提（PaneLayer.tsx 头注释）：**所有 tab 的所有 leaf 都渲染在同一个容器里**，
+        // 没被 Frame 引用的只是 display:none —— 会话照样挂载、进程照样跑、
+        // 输出照样收。要看它时从团队面板点一下，revealAgentSession 把它挂回画布。
+        const leafId = await useStore.getState().openAgentPane({
+          background: true,
           owner: 'team',
           role: a.role,
           // 隔离的 agent 的 cwd 指向它自己那棵工作树，不是项目根
@@ -1021,7 +1030,7 @@ const SHELL_TRAP =
           // 那几处必须和代码保持一致的约定）。
           initialMessage: briefFor({ role: a.role, goal: spec.goal, task: a.task, worktree: tree })
         })
-        if (!leafId) throw new Error(`起 ${a.role} 时没能建出节点`)
+        if (!leafId) throw new Error(`起 ${a.role} 时没能建出会话`)
         spawned.push({ role: a.role, leafId })
       }
       // 记进花名册。**在「全起来了」之后写** —— 半个团队不该留下记录，

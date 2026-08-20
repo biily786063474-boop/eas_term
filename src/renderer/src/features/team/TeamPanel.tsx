@@ -25,6 +25,10 @@ const POLL_MS = 2000
 export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   const [rows, setRows] = useState<SessionBrief[] | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  /** 点了某一行却开不出窗口（leaf 已经没了）。存 id 是为了只提示那一行，
+   *  **不要在这里做 setTimeout 自动清** —— 组件会随面板开合卸载，
+   *  定时器清理没写对就是一个每次开面板都新建的泄漏。下次点击自然覆盖它。 */
+  const [noWindow, setNoWindow] = useState<string | null>(null)
   const requestConfirm = useStore((s) => s.requestConfirm)
 
   // 身份（角色名 / 是不是团队派生）**直接从 SessionBrief 读，不再从画布节点上算**。
@@ -38,6 +42,23 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
   //
   // **别改回从 tabs 算。** 身份是会话的属性，存在主进程的 SessionRecord 上，
   // 和进程同生共死；视图可以随时消失，那是它的本分。
+
+  /** 把一个会话的窗口打开。**leaf 一直都在**（画布节点只是可见性），
+   *  所以这里不需要「接管一个跑到一半的会话」那套东西 —— 挂回去就是了，
+   *  聊天记录、resumeId、正在流的输出全都接着。
+   *
+   *  返回 false 只有一种情况：leaf 真的没了（会话被 stop 掉、或者上次退出时没存住）。
+   *  那时候没有窗口可开，告诉用户去读产出文件，别让这一下点击毫无反应。 */
+  const reveal = (r: SessionBrief): void => {
+    // 带上 cwd/role/owner：这个会话的画布节点可能早被关掉了（关节点不杀进程），
+    // 那时要靠这些信息重建一个窗口去接管它。
+    void useStore
+      .getState()
+      .revealAgentSession(r.id, { cwd: r.cwd, role: r.role, owner: r.owner })
+      .then((ok) => {
+        if (!ok) setNoWindow(r.id)
+      })
+  }
 
   /** 停掉一个会话。**这是终止不是暂停** —— agentChat:stop 在主进程是
    *  `sessions.delete(id)` + `proc.kill()`，会话记录整个删掉，resumeId 也没了，
@@ -140,10 +161,27 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
           // busy 由主进程从 turn.start/turn.done 记着（SessionRecord.busy）。
           // **有它才分得清「干完了」和「卡住了」** —— headless 流式模式跑完一轮
           // 不退出，只看静默时长的话两者一模一样。
-          const h = healthOf(r.alive, r.lastActiveAt, now, r.busy)
+          const h = healthOf(r.alive, r.lastActiveAt, now, r.busy, r.ended)
           const mine = r.cwd === cwd
           return (
-            <div className={`tp-row h-${h}`} key={r.id}>
+            <div
+              className={`tp-row h-${h}`}
+              key={r.id}
+              // **点一行 = 把那个会话的窗口打开。** 团队 agent 默认不挂画布节点，
+              // 这是唯一「进去看看它在干什么」的入口 —— 没有它，
+              // 「关了节点进程还在跑」就成了「有个在烧钱的进程但任何 UI 都看不见」。
+              role="button"
+              tabIndex={0}
+              title="打开这个会话的窗口"
+              onClick={() => reveal(r)}
+              onKeyDown={(e) => {
+                // 键盘也要能进 —— 只做 onClick 的话，这一行对键盘用户根本不存在
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  reveal(r)
+                }
+              }}
+            >
               <span className="tp-dot" />
               {/* 有角色就显示角色 —— 那才是「谁在干什么」。没有（你自己开的会话）
                   才退回显示 CLI 名，那时 CLI 是唯一能区分它们的东西。 */}
@@ -152,7 +190,9 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
                 {r.role ? r.cli : mine ? '本项目' : (r.cwd.split('/').filter(Boolean).pop() ?? r.cwd)}
               </span>
               <span className="tp-spacer" />
-              <span className="tp-state">{labelOf(h, r.owner === 'team')}</span>
+              <span className="tp-state">
+                {noWindow === r.id ? '窗口没了，去读产出' : labelOf(h, r.owner === 'team')}
+              </span>
               {/* 三种语义按状态切，判据在 agentAge.ts 的 ageMsOf（有单测盯着）。
                   停下来的行是定值 —— 它不该显示一个还在涨的数字。 */}
               <span
@@ -166,7 +206,13 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               <button
                 className="tp-stop"
                 data-tip={r.alive ? '停掉这个会话（上下文接不回来）' : '清掉这条记录'}
-                onClick={() => stop(r)}
+                // **两个 stop 都要**：整行现在也可点，冒泡上去会顺手把窗口打开，
+                // 而这颗按钮是不可逆的 —— 点「停」的人绝不想同时把它打开
+                onClick={(e) => {
+                  e.stopPropagation()
+                  stop(r)
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 <CloseIcon size={10} />
               </button>

@@ -887,6 +887,125 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   //
   // 走 openAgentPane 那条路：它和 openTerminal 逐条对齐，唯一差别是**不 spawn pty**
   // —— agent 面板在用户发第一条消息之前不占任何进程。
+  revealAgentSession: async (sessionId, fallback) => {
+    const st = get()
+    // ① 这个会话挂在哪个 leaf 上。**leaf 才是会话本体** —— 画布节点只是它的可见性，
+    //    摘掉节点会话照样活着（removeNode 一行都没碰 leaf），所以这里总是找得到。
+    let leafId: string | undefined
+    let projectId: string | null | undefined
+    for (const t of st.tabs) {
+      const hit = collectLeaves(t.root).find(
+        (l) => l.pane.kind === 'agent' && l.pane.sessionId === sessionId
+      )
+      if (hit) {
+        leafId = hit.id
+        projectId = t.projectId
+        break
+      }
+    }
+    // ①-b leaf 没了 —— 用户手动关过这个节点（关节点不杀进程，会话还在主进程那边跑）。
+    //     这不是边角情形：那正是「有个在烧钱的进程但任何 UI 都看不见它」的场景，
+    //     也是用户 2026-08-20 反馈的原始处境。用 sessionId 重建一个 leaf 接管它 ——
+    //     AgentChatView 挂载时看到 pane.sessionId 就直接订阅，preload 那边攒着的
+    //     事件会先回放一遍，不会只看到半截。
+    if (!leafId) {
+      if (!fallback) return false
+      const proj = st.projects.find(
+        (p) => p.path && (fallback.cwd === p.path || fallback.cwd.startsWith(`${p.path}/`))
+      )
+      const created = await get().openAgentPane({
+        projectId: proj?.id ?? null,
+        cwd: fallback.cwd,
+        role: fallback.role,
+        owner: fallback.owner,
+        sessionId,
+        // 这是用户主动点开的，就该切过去给他看
+        background: false
+      })
+      if (!created) return false
+      leafId = created
+      projectId = proj?.id ?? null
+    }
+
+    // ② 已经在画布上了 → 只要把视野挪过去，别重复挂一个
+    for (const f of st.canvas.frames) {
+      const n = f.nodes.find((x) => x.leafId === leafId)
+      if (n) {
+        st.focusCanvasNode(f.id, n.id)
+        return true
+      }
+    }
+
+    // ③ 不在画布上（默认就是这个状态）→ 挂进它所属项目的 Frame。
+    //    优先当前正看着的那个，否则退回这个项目的第一个 Frame。
+    //    Frame 没有「当前」这个概念（CanvasScene 里没有 activeFrameId），
+    //    取这个项目的第一个即可 —— 团队 agent 都是在项目的 Frame 里派出去的。
+    const frame = st.canvas.frames.find((f) => f.projectId === projectId)
+    if (!frame) return false
+    const nodeId = uid('cnode')
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: reflowSeparate(
+          s.canvas.frames.map((f) =>
+            f.id === frame.id
+              ? placeNodeInFrame(
+                  f,
+                  { id: nodeId, leafId: leafId as string, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  s.canvas.frames
+                )
+              : f
+          )
+        )
+      }
+    }))
+    get().focusCanvasNode(frame.id, nodeId)
+    return true
+  },
+
+  hideAgentSession: (sessionId) => {
+    const st = get()
+    let leafId: string | undefined
+    for (const t of st.tabs) {
+      const hit = collectLeaves(t.root).find(
+        (l) => l.pane.kind === 'agent' && l.pane.sessionId === sessionId
+      )
+      if (hit) {
+        leafId = hit.id
+        break
+      }
+    }
+    if (!leafId) return false
+    for (const f of st.canvas.frames) {
+      const n = f.nodes.find((x) => x.leafId === leafId)
+      if (n) {
+        // **不能走 removeNode** —— 它的尾巴上有一句 `closeLeaf(tab.id, leafId)`，
+        // 那是「关掉这个节点」的完整语义，连 leaf 一起关掉。
+        // 2026-08-20 真机验证抓到：收起之后 leaf 没了，于是再也点不开
+        // （leafSurvivedHide=false、reRevealed=false）。
+        //
+        // 这里要的是**只摘可见性**：leaf、聊天记录、resumeId 全留着，
+        // 点面板还能原样打开。真要结束会话走的是面板上那颗「停」。
+        const nodeId = n.id
+        const frameId = f.id
+        set((st) => ({
+          canvas: {
+            ...st.canvas,
+            frames: reflowFrames(
+              st.canvas.frames.map((fr) =>
+                fr.id === frameId ? { ...fr, nodes: fr.nodes.filter((x) => x.id !== nodeId) } : fr
+              )
+            )
+          },
+          // 收起的正好是最大化的那个 → 一并清掉，别留一个指向已摘节点的引用
+          maximizedNode: st.maximizedNode?.nodeId === nodeId ? null : st.maximizedNode
+        }))
+        return true
+      }
+    }
+    return false
+  },
+
   addAgentNode: async (frameId, opts) => {
     const frame = get().canvas.frames.find((f) => f.id === frameId)
     if (!frame) return undefined

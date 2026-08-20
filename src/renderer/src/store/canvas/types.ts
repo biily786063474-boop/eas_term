@@ -207,6 +207,19 @@ export interface CanvasSlice {
   ) => void
   /** 删画布节点；节点是终端（带 leafId）时连带关掉对应的 leaf，两个视图同时消失 */
   removeNode: (frameId: string, nodeId: string) => void
+  /** 把一个还在跑的 agent 会话**显示回画布**。已经在画布上就只聚焦。
+   *  返回 false = 这个会话的 leaf 找不到了（会话真的没了）。
+   *
+   *  团队 agent 默认不挂画布节点（画布上一排会话框没人看得过来），
+   *  这是用户从团队面板点进去时唯一的入口。 */
+  revealAgentSession: (
+    sessionId: string,
+    /** leaf 已经不在了时的重建信息（团队面板从 SessionBrief 里取）。
+     *  不给的话，找不到 leaf 就直接返回 false。 */
+    fallback?: { cwd: string; role?: string; owner?: 'team' }
+  ) => Promise<boolean>
+  /** 反过来：把会话的窗口收起来，**会话继续跑**。只摘画布节点，不碰 leaf。 */
+  hideAgentSession: (sessionId: string) => boolean
   /** 扫掉「leafId 指向一个已经不存在的 leaf」的画布节点。
    *  幂等、没孤儿时不改状态，可以随便多调。leafId 为空的节点（存档恢复的终端占位）不碰。 */
   pruneOrphanNodes: () => void
@@ -267,7 +280,7 @@ export interface CanvasSlice {
    *  画布上没有节点，用户在画布模式下什么都看不到（2026-08-19 端到端验证踩到）。 */
   addAgentNode: (
     frameId: string,
-    opts?: { owner?: 'team'; role?: string; initialMessage?: string ; cwd?: string}
+    opts?: { owner?: 'team'; role?: string; initialMessage?: string ; cwd?: string; sessionId?: string}
   ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */

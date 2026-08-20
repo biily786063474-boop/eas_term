@@ -34,9 +34,17 @@
   gap: 8px;
   padding: 6px 12px;
   color: var(--fg);
+  /* 整行可点 = 打开这个会话的窗口。没有手型的话「这儿能点」毫无提示，
+     用户 2026-08-20 的原话就是「无法通过点击打开查看它正在运行的进程」。 */
+  cursor: pointer;
 }
 .tp-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  /* 比原来的 0.03 重一档 —— 现在这是个可点目标，反馈要够明确 */
+  background: rgba(255, 255, 255, 0.06);
+}
+.tp-row:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 /* 状态点：颜色是这一行唯一的语义信号，别再用文字颜色重复表达 */
 .tp-dot {
@@ -57,6 +65,14 @@
 }
 .h-dead .tp-dot {
   background: #525252;
+}
+/* 中断 ≠ 已停。这一条是**唯一一个要求人去做点什么**的状态（活没干完），
+   所以给它整行最亮的颜色，而不是跟 dead 一样的灰。 */
+.h-interrupted .tp-dot {
+  background: #fb923c;
+}
+.h-interrupted .tp-state {
+  color: #fb923c;
 }
 .tp-cli {
   flex: none;
