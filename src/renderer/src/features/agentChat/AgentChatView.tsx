@@ -64,6 +64,19 @@ function mergeUserMessages(view: ChatView, sent: SentMessage[]): ChatView {
 // 会话刚起、任何事件都还没到达时 view 是 null（onEvent 至少要等第一个事件才会 setView）。
 // 这段真空期用户已经能看到自己刚发的那条消息，不能因为 view 还是 null 就整屏空白——
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
+/** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
+ *  人要判断的是「这是不是我刚才那个」。 */
+function fmtWhen(ts: number): string {
+  const d = Math.max(0, Date.now() - ts)
+  const m = Math.floor(d / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return `${m} 分钟前`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} 小时前`
+  const dt = new Date(ts)
+  return `${dt.getMonth() + 1}月${dt.getDate()}日`
+}
+
 const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
 
 
@@ -216,11 +229,11 @@ export function AgentChatView({
     if (!turns?.length) return
     const t = window.setTimeout(() => {
       void window.api.agentChat
-        .saveHistory(leafId, trimForSave([...restored.turns, ...turns]), savedResumeId || null)
+        .saveHistory(leafId, trimForSave([...restored.turns, ...turns]), savedResumeId || null, cwd)
         .catch(() => undefined)
     }, 1000)
     return () => window.clearTimeout(t)
-  }, [view, restored, leafId, savedResumeId])
+  }, [view, restored, leafId, savedResumeId, cwd])
 
   // 空态：拉一次可用 CLI 列表——只渲染 detect() 探测通过的那些，没装的不出现，
   // 免得用户选了一个点了就报错的选项。
@@ -487,6 +500,47 @@ export function AgentChatView({
   // 这份历史是在哪个 CLI 会话下写的，跟当前 pane 上的对不对得上。
   // 对不上 = 模型接不回它，界面必须说明（理由见下面那段注释）。
   const contextLost = restored.turns.length > 0 && contextLostOf(restored.resumeId, savedResumeId)
+
+  /** 这个项目里「记录还在、但对应节点已经关掉了」的那些对话。
+   *
+   *  关节点不再删记录，于是它们成了孤儿 —— 新开的对话框是新 leafId，对不上。
+   *  没有这个入口的话，留着跟删了没区别。 */
+  const [orphans, setOrphans] = useState<
+    { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]
+  >([])
+  useEffect(() => {
+    // 只有自己是空的时候才需要这个入口；已经有内容就别拿别的对话去打扰
+    if (sessionId || restored.turns.length > 0) return setOrphans([])
+    let alive = true
+    void window.api.agentChat
+      .listHistory(cwd)
+      .then((list) => {
+        if (!alive) return
+        // 「节点已经没了」现读一次布局算 —— 不订阅 tabs：这个判断只在打开空态那一刻
+        // 需要，订阅了会让整个对话框跟着画布的任何变动重渲染
+        const live = new Set(
+          useStore
+            .getState()
+            .tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
+        )
+        setOrphans(list.filter((h) => !live.has(h.leafId)))
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [cwd, sessionId, restored.turns.length])
+
+  /** 把一份孤儿记录接管到当前这个节点：内容搬过来，resumeId 也接过来
+   *  （模型那边才接得上），旧的那份随即删掉，避免同一段对话留两份。 */
+  const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
+    const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
+    if (!got) return
+    setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId })
+    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId)
+    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
+    setOrphans([])
+  }
   const phase = startupPhaseOf({ clis, selected, starting, startError })
   return (
     <div className="agent-chat-view">
@@ -521,6 +575,28 @@ export function AgentChatView({
             {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
                 一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
             <div className="ac-slogan">伟大的产品始于一句“你好”</div>
+            {/* 这个项目里还留着、但节点已经关掉的对话。**不自动带进来** ——
+                那是别的对话框的内容，替用户决定接上哪一段是越权；给入口、他自己挑。
+                只列最近 3 条，再多就成了历史管理界面，不是这里该干的事。 */}
+            {orphans.length > 0 && (
+              <div className="ac-orphans">
+                <div className="ac-orphans-t">这个项目里还有关掉的对话</div>
+                {orphans.slice(0, 3).map((h) => (
+                  <button
+                    key={h.leafId}
+                    type="button"
+                    className="ac-orphan"
+                    onClick={() => void adoptOrphan(h)}
+                    title={h.preview}
+                  >
+                    <span className="ac-orphan-p">{h.preview || '（没有文字内容）'}</span>
+                    <span className="ac-orphan-m">
+                      {h.turns} 轮 · {fmtWhen(h.savedAt)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </>
         )}
 

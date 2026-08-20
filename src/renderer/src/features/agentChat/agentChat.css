@@ -1498,3 +1498,53 @@
 .ac-stats-sep {
   opacity: 0.35;
 }
+
+/* 空态里那组「这个项目还有关掉的对话」。
+   放在 slogan 下面、输入框上面 —— 它是一条可选的岔路，不是主路：
+   主路仍然是「说第一句话」，所以视觉分量压到最低。 */
+.ac-orphans {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(420px, 100%);
+}
+.ac-orphans-t {
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.7;
+  padding-left: 2px;
+}
+.ac-orphan {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ac-orphan:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+/* 预览挤掉时长，而不是反过来 —— 「这是不是我刚才那个」主要靠内容认 */
+.ac-orphan-p {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-orphan-m {
+  flex: none;
+  font-size: 10px;
+  opacity: 0.6;
+}

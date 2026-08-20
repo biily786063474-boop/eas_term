@@ -69,7 +69,54 @@ export function registerAgentHistory(): void {
     }
   )
 
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown): void => {
+  /**
+   * 这个项目下**已经没有对应节点**的历史记录，最近的排前面。
+   *
+   * 关节点不再删记录（用户 2026-08-19 要求：误关了要能捞回来），于是需要一条
+   * 「上次那个对话去哪了」的路：新开的对话框是新的 leafId，跟旧记录对不上，
+   * 没有这个列表就等于记录留着也找不回来 —— 那跟删了没区别。
+   *
+   * **只报元信息，不带 turns** —— 空态只需要显示「什么时候的、聊了几轮、开头是什么」，
+   * 把几十份记录的正文全读进渲染层是纯浪费。
+   */
+  ipcMain.handle(
+    'agentHistory:list',
+    (_e, cwd: unknown): { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[] => {
+      if (typeof cwd !== 'string' || !cwd) return []
+      let names: string[]
+      try {
+        names = fs.readdirSync(dir()).filter((f) => f.endsWith('.json'))
+      } catch {
+        return []
+      }
+      const out: { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[] = []
+      for (const n of names) {
+        try {
+          const raw = JSON.parse(fs.readFileSync(path.join(dir(), n), 'utf8')) as {
+            cwd?: unknown
+            resumeId?: unknown
+            savedAt?: unknown
+            turns?: { role?: string; text?: string }[]
+          }
+          if (raw.cwd !== cwd || !Array.isArray(raw.turns) || !raw.turns.length) continue
+          // 预览取第一条用户消息 —— 「上次聊的是什么」比「最后说到哪」更好认
+          const first = raw.turns.find((t) => t?.role === 'user') ?? raw.turns[0]
+          out.push({
+            leafId: n.replace(/\.json$/, ''),
+            resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null,
+            savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : 0,
+            turns: raw.turns.length,
+            preview: (first?.text ?? '').slice(0, 60)
+          })
+        } catch {
+          /* 坏文件跳过，不能让一份坏记录挡住整个列表 */
+        }
+      }
+      return out.sort((a, b) => b.savedAt - a.savedAt)
+    }
+  )
+
+  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown): void => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return
     try {
@@ -85,6 +132,9 @@ export function registerAgentHistory(): void {
           v: 1,
           savedAt: Date.now(),
           resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
+          // 项目路径：`agentHistory:list` 靠它把记录归到项目下。
+          // 没有它就只能把所有项目的历史混在一起给用户挑，那不可用
+          cwd: typeof cwd === 'string' ? cwd : null,
           turns
         }),
         { mode: 0o600 }

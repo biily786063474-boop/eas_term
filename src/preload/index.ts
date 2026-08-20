@@ -833,8 +833,13 @@ const api = {
      *  前者随 canvas.json 落盘、跨重启稳定，对应用户心里的「这个对话框」。 */
     loadHistory: (leafId: string): Promise<{ turns: unknown[]; resumeId: string | null }> =>
       ipcRenderer.invoke('agentHistory:load', leafId),
-    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null): Promise<void> =>
-      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId),
+    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null, cwd: string): Promise<void> =>
+      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId, cwd),
+    /** 这个项目下的历史记录清单（只有元信息）。用来在空态给出「接上上次的对话」入口 */
+    listHistory: (
+      cwd: string
+    ): Promise<{ leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]> =>
+      ipcRenderer.invoke('agentHistory:list', cwd),
     forgetHistory: (leafId: string): Promise<void> =>
       ipcRenderer.invoke('agentHistory:forget', leafId),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */

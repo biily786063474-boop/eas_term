@@ -380,10 +380,11 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       if (target.pane.kind !== 'terminal' || target.pane.ptyId !== opts.ptyId) return
     }
     if (!opts?.alreadyExited) killPanePty(target.pane)
-    // 节点被永久关闭 → 它的聊天记录也没有任何入口能看到了，一起清掉。
-    // **只在这条「真的移除节点」的路径上清** —— 关标签页/切项目那几条不清，
-    // 那些场景下节点还会回来（布局是持久化的）。
-    if (target.pane.kind === 'agent') void window.api.agentChat.forgetHistory(leafId)
+    // **关节点不删聊天记录**（用户 2026-08-19 要求：误关了要能捞回来）。
+    // 代价是记录会成为孤儿——新开的对话框是新 leafId，对不上旧记录。
+    // 所以配套做了 `agentHistory:list`：空态会按项目列出这些孤儿，给一个
+    // 「接上上次的对话」入口。没有那条路的话，留着跟删了没区别。
+    // 兜底是 200 份的 LRU 上限，不会无限积。
     const newRoot = removeLeaf(tab.root, leafId)
     if (newRoot === null) {
       set(closeTabInState(s.tabs, s.activeTabId, s.activeTabByProject, tabId))
@@ -438,8 +439,6 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const isDiffPane = target.pane.kind === 'code' && !!target.pane.diff
     if (target.pane.kind === kind && !(kind === 'code' && isDiffPane)) return
     killPanePty(target.pane)
-    // 面板换成别的类型 = 这个对话框没了，同上
-    if (target.pane.kind === 'agent') void window.api.agentChat.forgetHistory(leafId)
     let pane: PaneState
     if (kind === 'terminal') {
       const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
