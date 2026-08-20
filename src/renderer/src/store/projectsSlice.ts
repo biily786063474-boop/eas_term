@@ -11,7 +11,11 @@ export interface ProjectsSlice {
   activeProjectId: string | null
   loadProjects: () => Promise<void>
   addProject: () => Promise<void>
+  /** 直接移除，不问。**UI 入口不要用它** —— 走 requestRemoveProject（带确认）。
+   *  留着是给确认框的 onConfirm 和测试用的。 */
   removeProject: (id: string) => Promise<void>
+  /** 带二次确认的移除。文案会说清「会终止几个正在跑的终端」和「什么找不回来」 */
+  requestRemoveProject: (id: string) => Promise<void>
   /** 改项目显示名（不动磁盘目录）。连带同步那些「还没被用户手动改过名」的
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
@@ -90,6 +94,39 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
     } else {
       set({ projects })
     }
+  },
+
+  /** 带确认的移除项目。**三个 UI 入口都该走它，不要直接调 removeProject。**
+   *
+   *  项目内标准不一致是这条的由来：画布上删**一个**节点都要二次确认、还会把
+   *  「会终止 N 个正在运行的终端」写进文案（CanvasStage 里那段），而删项目
+   *  一次确认都没有 —— 它的后果更大：该项目全部终端被 kill、全部 tab 没了、
+   *  画布上那些节点的摆放也没了，而且 **Frame 本身留着，frames.length 不变，
+   *  画布备份的判据（只数 Frame 个数）刚好挡不住这一种**（.plans/data-safety H0）。
+   *
+   *  项目文件不受影响（那部分可逆），不可逆的是布局、tab 结构和正在跑的进程。 */
+  requestRemoveProject: async (id) => {
+    const s = get()
+    const tabs = s.tabs.filter((t) => t.projectId === id)
+    const name = s.projects.find((p) => p.id === id)?.name ?? '这个项目'
+    const ptyIds = tabs
+      .flatMap((t) => collectLeaves(t.root))
+      .map((l) => (l.pane.kind === 'terminal' ? l.pane.ptyId : null))
+      .filter((x): x is string => !!x)
+    // 「正在跑命令的有几个」——照 CanvasStage 那段的口径，先问一次再写进文案
+    const busy = ptyIds.length ? await window.api.pty.busyByIds(ptyIds).catch(() => []) : []
+    const parts = [`要把「${name}」从列表里移除吗？`]
+    if (busy.length) parts.push(`其中 ${busy.length} 个终端正在运行命令，移除会终止它们。`)
+    else if (ptyIds.length) parts.push(`会关掉 ${ptyIds.length} 个终端。`)
+    if (tabs.length) parts.push(`${tabs.length} 个标签页的分屏结构和画布上的节点摆放会一起消失，这部分找不回来。`)
+    parts.push('项目文件本身不受影响，重新添加文件夹就能回来。')
+    get().requestConfirm({
+      message: parts.join(''),
+      confirmLabel: '移除',
+      onConfirm: () => {
+        void get().removeProject(id)
+      }
+    })
   },
 
   removeProject: async (id) => {

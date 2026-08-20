@@ -69,7 +69,8 @@ export function projectMenuItems(
       danger: true,
       // 说清楚不动文件：「移除」两个字本身没法让人放心，看到这行才敢点
       hint: ptys ? `会关掉 ${ptys} 个终端` : '不删除文件',
-      onClick: () => void s.removeProject(projectId)
+      // 带确认 —— 后果见 requestRemoveProject 的说明
+      onClick: () => void s.requestRemoveProject(projectId)
     }
   ]
 }

@@ -91,7 +91,9 @@ export function Sidebar(): JSX.Element {
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
   const addProject = useStore((s) => s.addProject)
-  const removeProject = useStore((s) => s.removeProject)
+  // 走带确认的那条 —— 这个 × 就挨着「打开终端」，一次误点会杀掉这个项目下
+  // 所有正在跑的终端，并且画布上的节点摆放找不回来（.plans/data-safety H0）
+  const removeProject = useStore((s) => s.requestRemoveProject)
   const openTerminal = useStore((s) => s.openTerminal)
   const renameProject = useStore((s) => s.renameProject)
   /** 项目行右键菜单的落点 */
