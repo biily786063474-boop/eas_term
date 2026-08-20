@@ -329,6 +329,14 @@ export const SendIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+/** 实心方块 —— 「停下正在跑的这一轮」。用填充而不是描边：
+ *  它和旁边的发送箭头是同一个位置上的两种状态，必须一眼分得出来。 */
+export const StopIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
 export const BellIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />

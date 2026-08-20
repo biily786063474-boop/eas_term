@@ -1621,3 +1621,16 @@
   color: var(--fg-dim);
   font-size: 11px;
 }
+
+
+/* 跑着的时候那颗键是「停」。**给它一个明确不同于发送的样子** ——
+   同一个位置上的两种动作，长得像就会误点：一个是「再说一句」，
+   另一个是「把正在跑的这轮掐掉」。 */
+.ac-bar-send.stop {
+  background: rgba(251, 146, 60, 0.16);
+  border-color: rgba(251, 146, 60, 0.45);
+  color: #fb923c;
+}
+.ac-bar-send.stop:hover {
+  background: rgba(251, 146, 60, 0.26);
+}

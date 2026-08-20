@@ -885,6 +885,11 @@ const api = {
       approvalId: string,
       decision: 'allow' | 'deny'
     ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),
+    /** 打断这一轮，**会话留着**。跟 stop 不是一回事：那个是终止整个会话。
+     *  这里**不清缓冲区** —— 会话还活着，下一条消息会带着 resumeId 接回去。 */
+    interrupt: (sessionId: string): void => {
+      ipcRenderer.send('agentChat:interrupt', sessionId)
+    },
     stop: (sessionId: string): void => {
       stopAgentChatBuffering(sessionId) // 会话主动关闭，缓冲区留着也没人取了
       ipcRenderer.send('agentChat:stop', sessionId)

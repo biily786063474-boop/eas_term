@@ -903,6 +903,36 @@ export function registerAgentChatHandlers(): void {
     return { ok: true }
   })
 
+  /** **打断这一轮，但把会话留着。**
+   *
+   *  终端里按 ESC 就能停下正在跑的回答，AI 对话窗口以前只能干等 ——
+   *  一次答偏了得等它说完，长任务里尤其难受（.plans/cli-gap 里排第一的缺口）。
+   *
+   *  做法是 kill 当前进程但**不删会话记录**：resumeId 还在，用户下一条消息
+   *  会走 planSend 的 restart 分支带 `--resume` 接回上下文。这不是新机制，
+   *  是既有的 restart 路径少发一条消息而已。
+   *
+   *  两个必须设对的标记：
+   *  · `killing = true` —— 是我们动的手，别让它被记成「被打断」
+   *  · `ended = 'ok'` —— **否则自动恢复会把用户刚停下的东西又拉起来**
+   *
+   *  代价：正在流的那一轮，CLI 那边可能没写进会话文件，恢复后模型不记得它。
+   *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
+  ipcMain.on('agentChat:interrupt', (_e, sessionId: unknown) => {
+    const id = typeof sessionId === 'string' ? sessionId : ''
+    const live = sessions.get(id)
+    if (!live?.proc) return
+    live.killing = true
+    live.proc.kill()
+    live.proc = undefined
+    live.rec = { ...live.rec, alive: false, busy: false, ended: 'ok' }
+    handleEvent(live, {
+      k: 'error',
+      fatal: false,
+      message: '已停下这一轮。上下文还在，接着说就行。'
+    })
+  })
+
   ipcMain.on('agentChat:stop', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)

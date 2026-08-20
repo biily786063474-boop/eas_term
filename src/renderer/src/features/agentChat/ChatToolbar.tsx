@@ -28,7 +28,7 @@ import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, ImageIcon, SendIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, ImageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 
@@ -440,13 +440,20 @@ export function ChatToolbar({
           <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
           <button
             type="button"
-            className={`ac-bar-send${view.busy ? ' busy' : ''}`}
-            data-tip={view.busy ? '正在跑…' : `发送（${SEND_HINT.split('，')[0]}）`}
-            onClick={submit}
-            // 跑着的时候不禁用输入：可以先写下一条。只是这颗键在跑完前不接受点击
-            disabled={view.busy || (!text.trim() && !pics.imgs.length)}
+            className={`ac-bar-send${view.busy ? ' stop' : ''}`}
+            data-tip={
+              view.busy ? '停下这一轮（上下文留着，接着说就行）' : `发送（${SEND_HINT.split('，')[0]}）`
+            }
+            // **跑着的时候这颗键是「停」，不是禁用的 spinner。**
+            // 终端里按 ESC 就能停下正在跑的回答，这个窗口以前只能干等 ——
+            // 一次答偏了得等它说完（.plans/cli-gap 里排第一的缺口）。
+            // 停 ≠ 结束会话：kill 掉当前进程但会话记录留着，
+            // 下一条消息会带 --resume 接回上下文。
+            onClick={view.busy ? () => window.api.agentChat.interrupt(sessionId) : submit}
+            // 跑着的时候不禁用输入：可以先写下一条
+            disabled={view.busy ? false : !text.trim() && !pics.imgs.length}
           >
-            {view.busy ? <span className="ac-spin" aria-hidden="true" /> : <SendIcon size={15} />}
+            {view.busy ? <StopIcon size={13} /> : <SendIcon size={15} />}
           </button>
         </div>
       </div>
