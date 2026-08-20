@@ -58,7 +58,9 @@ export function registerCanvasHandlers(): void {
     }
   }
 
-  const writeScene = (scene: unknown): void => {
+  /** 写画布存档。**返回真的写成没有** —— 调用方（尤其退出前那条同步路径）
+   *  要靠它判断能不能放行。以前它无条件当成功，见下面 save-sync 那段。 */
+  const writeScene = (scene: unknown): boolean => {
     try {
       fs.mkdirSync(path.dirname(storeFile()), { recursive: true })
 
@@ -86,15 +88,30 @@ export function registerCanvasHandlers(): void {
       }
 
       fs.writeFileSync(storeFile(), JSON.stringify(scene, null, 2), 'utf8')
-    } catch {
-      // 写盘失败（磁盘满 / 权限）不阻塞 UI，静默跳过
+      return true
+    } catch (e) {
+      // **一定要留痕。** 上面那个「备份失败」的 catch 都写了 console.error，
+      // 而这处更要紧的反而完全静默 —— 磁盘满 / 权限被改 / 文件被占用（Windows）时，
+      // 用户什么都看不到，一整场画布改动就这么没了。
+      console.error('[canvas] 写盘失败', storeFile(), e)
+      // 换个文件名再试一次：原文件被占用或权限单独出问题时，这一份能救回来。
+      // 起个显眼的名字，出事后人能找得到（跟 .bak-* 一样在同一个目录）。
+      try {
+        fs.writeFileSync(`${storeFile()}.emergency`, JSON.stringify(scene, null, 2), 'utf8')
+        console.error('[canvas] 原文件写不进去，这次的画布已存到 canvas.json.emergency')
+      } catch {
+        /* 兜底的兜底也失败：确实写不了盘，返回 false 让调用方知道 */
+      }
+      return false
     }
   }
   ipcMain.handle('canvas:save', (_e, scene: unknown) => writeScene(scene))
   // 同步落盘：退出/刷新前(beforeunload)用它,阻塞到写完再放行,杜绝「改完就退,防抖没落盘」丢失。
   ipcMain.on('canvas:save-sync', (e, scene: unknown) => {
-    writeScene(scene)
-    e.returnValue = true
+    // **返回真实结果。** 以前这里无条件 `true`，于是「阻塞到写完再放行」
+    // 只做到了「阻塞」：写盘失败时渲染层照样收到 true、判定已落盘、放行退出，
+    // 这一整场改动无提示无日志地消失（.plans/silent-fail S-08）。
+    e.returnValue = writeScene(scene)
   })
 
   // easfile://media/<base64url(绝对路径)> → 流式返回媒体文件，带正确 Content-Type。

@@ -81,8 +81,18 @@ export function App(): JSX.Element {
       dirty = false
       clearTimeout(timer)
       const scene = buildScene()
-      if (sync) window.api.canvas.saveSync(scene)
-      else void window.api.canvas.save(scene)
+      if (sync) {
+        // **看返回值。** 这条路是退出/刷新前最后一次机会，写失败就意味着
+        // 这一整场画布改动没了。以前 saveSync 无条件回 true，失败时
+        // 无提示、无日志（.plans/silent-fail S-08）。beforeunload 里弹不了窗，
+        // 但至少要在控制台留下痕迹 —— 主进程那边还会把这次的场景
+        // 另存成 canvas.json.emergency。
+        if (!window.api.canvas.saveSync(scene)) {
+          console.error('[canvas] 退出前保存失败：这次的改动可能没落盘，找 canvas.json.emergency')
+        }
+        // dirty 已经在上面清掉了，这里不回滚 —— 重新标脏也没有下一次机会跑，
+        // 退出流程不会因为它再触发一遍。
+      } else void window.api.canvas.save(scene)
     }
     const onBlur = (): void => flush(false) // 失焦：还有时间，异步落盘
     const onBeforeUnload = (): void => flush(true) // 退出/刷新：同步落盘，阻塞到写完

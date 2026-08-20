@@ -266,8 +266,9 @@ const api = {
     load: (): Promise<unknown> => ipcRenderer.invoke('canvas:load'),
     save: (scene: unknown): Promise<void> => ipcRenderer.invoke('canvas:save', scene),
     // 同步落盘：退出/刷新前(beforeunload)调,阻塞到写完再放行,防「改完就退」丢失
-    saveSync: (scene: unknown): void => {
-      ipcRenderer.sendSync('canvas:save-sync', scene)
+    saveSync: (scene: unknown): boolean => {
+      // 返回「真的写成了没有」—— 退出前那条路径靠它判断要不要留痕告警
+      return ipcRenderer.sendSync('canvas:save-sync', scene) === true
     },
     /** 截画板区域存进项目。rect 是相对窗口左上角的 CSS 像素 */
     snapshot: (projectPath: string, rect: SnapshotRect): Promise<SnapshotResult> =>
