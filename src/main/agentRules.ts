@@ -18,6 +18,7 @@ import path from 'path'
 import type { RulesStatus, Footprint } from '../shared/types'
 import { wikiPath } from './wiki/paths'
 import { mcpConfigStatus } from './mcpBridge'
+import { planRefresh } from './rulesRefresh'
 
 const BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
 const END = '<!-- eas-term:end -->'
@@ -213,6 +214,60 @@ function writeFileEnsured(f: string, text: string): void {
 
 /** 装/更新全部规则。app 升级、canvas 技能内容变化时调它。
  *  知识库不再需要——它没有「装」这回事，见上面的大注释。 */
+/** 目标目录里现在有哪些 .md 及其内容。**目录不存在返回 null**（＝没装）——
+ *  这个区别是 planRefresh 的判据，不能用空对象混过去。 */
+function onDiskMd(dir: string): Record<string, string> | null {
+  let names: string[]
+  try {
+    names = fs.readdirSync(dir).filter((f) => f.endsWith('.md'))
+  } catch {
+    return null // 目录不存在 = 没装
+  }
+  const out: Record<string, string> = {}
+  for (const n of names) {
+    try {
+      out[n] = fs.readFileSync(path.join(dir, n), 'utf8')
+    } catch {
+      /* 读不到就当没有，下面会重写它 */
+    }
+  }
+  return out
+}
+
+/**
+ * 启动时把**已经装了的**规则更新到当前版本。
+ *
+ * app 里带的 skills/ 会随版本更新，但分发到用户机器上那份不会 —— `syncRules()` 只由
+ * 「扩展能力」面板的按钮触发。于是升级完 agent 读到的还是上一版规则，而且毫无提示。
+ *
+ * **只更新、不安装**（判据见 rulesRefresh.ts）。卸载过的人不该在下次启动被装回来。
+ */
+export function refreshInstalledRules(): { updated: string[] } {
+  const files = canvasSkillFiles()
+  if (!files.length) return { updated: [] }
+  const updated: string[] = []
+
+  for (const dir of [path.join(home(), '.claude', 'skills', 'eas-term'), detailDir()]) {
+    const plan = planRefresh(files, onDiskMd(dir))
+    for (const name of plan) {
+      const f = files.find((x) => x.name === name)
+      if (!f) continue
+      writeFileEnsured(path.join(dir, name), f.text)
+      updated.push(path.join(dir, name))
+    }
+  }
+
+  // Codex 常驻区：只在**已经有区域**时重写。没有 = 没装，同上不主动写。
+  // 它的内容随文件清单变（codexRegion 拿的是名字集合），新增模块时这里也要跟上。
+  if (rulesStatus().codexRegionChars > 0) {
+    const region = codexRegion(new Set(files.map((f) => f.name)))
+    writeCodexRegion(region)
+  }
+
+  if (updated.length) console.log(`[rules] 已把 ${updated.length} 个规则文件更新到当前版本`)
+  return { updated }
+}
+
 export function syncRules(): { ok: boolean; codexChars: number } {
   const files = canvasSkillFiles()
 

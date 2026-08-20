@@ -28,7 +28,7 @@ import { registerRoleHandlers } from './roles'
 import { registerWikiHandlers } from './wiki'
 import { registerSkillLibraryHandlers } from './skillLibrary'
 import { registerDictHandlers } from './dict'
-import { registerRulesHandlers, purgeLegacyDsh } from './agentRules'
+import { registerRulesHandlers, purgeLegacyDsh, refreshInstalledRules } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
@@ -322,6 +322,11 @@ app.whenReady().then(() => {
   registerSkillLibraryHandlers()
   registerDictHandlers()
   registerRulesHandlers()
+  // 规则文件随 app 版本更新，但分发到用户机器上那份不会自己跟上 —— syncRules 只由
+  // 「扩展能力」面板的按钮触发。于是升级完 agent 读到的还是上一版规则，且毫无提示
+  // （2026-08-19 撞过：generate.md 补了三条关键缺口，分发出去的仍是没有它们的旧版）。
+  // **只更新已经装了的，不主动安装** —— 卸载过的人不该被装回来（同 MCP 的 opt-out）。
+  refreshInstalledRules()
   registerPtyHandlers()
   registerProjectHandlers()
   registerBoardHandlers()
