@@ -34,7 +34,7 @@ import {
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
-import { shouldReap, planSend, applyParamChange, type SessionRecord } from './sessionState.ts'
+import { shouldReap, planSend, applyParamChange, type SessionRecord , planRecovery} from './sessionState.ts'
 import { tally, ZERO_TALLY } from '../../shared/teamCost'
 import { buildCliList, type TerminalOnlyCli } from './cliList.ts'
 import { detectByWhich } from './adapters/detect.ts'
@@ -59,6 +59,15 @@ import type {
 interface Live {
   rec: SessionRecord
   proc?: ChildProcess
+  /** **这次进程消失是我们自己动的手。**
+   *
+   *  区分它是因为退出码分不清：`kill()` 送信号时 `on('exit')` 拿到的 code 是 null，
+   *  而外部把进程杀掉（系统压力、崩溃、网络层把它带走）拿到的**也是 null**。
+   *  老判据把 null 一律当成「我们 kill 的」，于是真正被打断的会话被记成正常结束，
+   *  自动恢复永远不会触发。
+   *
+   *  三处主动 kill（restart / 空闲回收 / 用户点停）都要在 kill 之前把它立起来。 */
+  killing?: boolean
   translator: { push(line: string): ChatEvent[] }
   approvals: ReturnType<typeof createApprovalRegistry>
   stdoutBuf: string
@@ -285,7 +294,12 @@ function handleEvent(live: Live, e: ChatEvent): void {
     live.rec = {
       ...live.rec,
       busy: false,
-      tally: tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd)
+      tally: tally(live.rec.tally ?? ZERO_TALLY, e.usage, e.costUsd),
+      // 跑完一轮 = 上次那场中断真的翻篇了。**账要清** ——
+      // 不清的话，一个断过一次、恢复后又跑了几小时的 agent，
+      // 下次再断就直接吃到「试到头了」。
+      retries: 0,
+      ended: undefined
     }
   }
   if (e.k === 'session.ready') {
@@ -310,6 +324,10 @@ function writeStdin(live: Live, message: string): void {
 }
 
 function wireProc(live: Live, proc: ChildProcess): void {
+  // 新进程接上了 —— 上一轮的「是我们杀的」到此为止。
+  // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
+  // 也不会连累下一个进程的判定。
+  live.killing = false
   proc.stdout?.setEncoding('utf8')
   proc.stdout?.on('data', (chunk: string) => {
     // 收到输出＝还活着，不是空闲——15 分钟空闲回收判的是「没交互」，一轮长任务
@@ -327,14 +345,23 @@ function wireProc(live: Live, proc: ChildProcess): void {
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
   })
-  proc.on('exit', (code) => {
+  proc.on('exit', (code, signal) => {
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
     // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
-    // **「话说到一半没的」才是中断的硬证据。** 退出码不够用：网络抖动时 CLI 有可能
-    // 打印一段错误后仍以 0 退出，那种情况只有 busy 认得出来。反过来，Codex 的 exec
-    // 跑完一轮正常退出时 busy 已经落回 false，不会被误判成中断。
-    const interrupted = live.rec.busy === true || (code !== 0 && code !== null)
+    // 中断的三条证据，命中任意一条就算 —— 但**前提是这一下不是我们自己动的手**。
+    //
+    // ① `killing` 为真 → 我们主动 kill（重启 / 空闲回收 / 用户点停），一律不算中断。
+    //    没有这个标记的话，`kill()` 和「进程被外部杀掉」在 exit 回调里长得一模一样
+    //    （code 都是 null），自动恢复要么永不触发、要么在用户点了「停」之后
+    //    还自己爬起来。
+    // ② **被信号带走**（signal 非空且不是我们杀的）→ 一定是异常，进程没机会收尾。
+    // ③ 退出时 `busy` 还是 true → 话说到一半没的；或者退出码非 0。
+    //    Codex 的 exec 跑完一轮正常退出时 busy 已经落回 false、code 是 0，不会误判。
+    const selfKilled = live.killing === true
+    live.killing = false
+    const interrupted =
+      !selfKilled && (!!signal || live.rec.busy === true || (code !== 0 && code !== null))
     live.rec = {
       ...live.rec,
       alive: false,
@@ -354,7 +381,16 @@ function wireProc(live: Live, proc: ChildProcess): void {
  *  stdout 都灌进同一个 translator。kill 是幂等的（已经死的进程再 kill 一次没有副作用），
  *  无脑调即可。 */
 function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
-  live.proc?.kill()
+  // **只有真的有进程要杀时才立这个标记。**
+  // 写成无条件 `live.killing = true` 会留下一个永久为真的标记：
+  // proc 已经是 undefined（会话刚建、或已被空闲回收）时 kill() 根本不发生，
+  // 也就没有 exit 事件来清它 —— 于是**之后那个进程无论怎么没的，都会被当成
+  // 「我们自己杀的」**，自动恢复永远不触发。2026-08-20 端到端验证时抓到：
+  // kill -9 掉 agent 的进程，面板照样记成 ended:'ok'。
+  if (live.proc) {
+    live.killing = true
+    live.proc.kill()
+  }
   live.proc = undefined
 
   const adapter = getAdapter(live.rec.cli)
@@ -504,6 +540,46 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   return { ok: true }
 }
 
+// ── 自动恢复：被网络抖断的团队 agent 自己接着干 ───────────────────────────────
+//
+// 用户的要求：「我希望子 agent 不打扰用户，可以通过中断了的机制让主 agent
+// 重新唤醒他继续任务」。判据、退避和上限都在 sessionState.planRecovery 里
+// （纯函数、有单测），这里只负责按它说的做。
+
+/** 唤醒它时说的话。**要点是让它知道「不是你干完了」** —— 带着 resumeId 重启的会话
+ *  记得之前的对话，但它并不知道刚才发生过一次中断，很容易以为自己已经收尾了。 */
+function resumeBrief(role?: string): string {
+  const where = role ? `.plans/${role}/findings.md` : '你的 findings.md'
+  return [
+    '（系统自动恢复）你和模型的连接刚才被中断了 —— **不是你把活干完了**。',
+    '',
+    `带着原来的上下文接着做：先看一眼 ${where} 已经写到哪，从那里往下继续。`,
+    '已经做完的部分不要重做；如果上一轮的结论只写了一半，先把它补完整。',
+    '这次中断本身不用汇报，也不用问我要不要继续 —— 直接干。'
+  ].join('\n')
+}
+
+/** 扫一遍看有没有该唤醒的。**独立的短周期定时器** —— 空闲回收是 60 秒一轮，
+ *  而最短退避只有 20 秒，挂在那上面等于把第一次重试拖到一分钟后。 */
+function recoverInterrupted(): void {
+  const now = Date.now()
+  for (const live of sessions.values()) {
+    const plan = planRecovery(live.rec, now)
+    if (!plan || plan.act === 'give-up') continue
+    if (plan.act === 'wait') {
+      // **第一次算出的时刻要记下来**，否则每扫一次就按「现在 + 退避」重算一遍，
+      // 那个时刻永远往后跑，重试永远不会发生。
+      if (live.rec.retryAt === undefined) live.rec = { ...live.rec, retryAt: plan.at }
+      continue
+    }
+    live.rec = { ...live.rec, retries: plan.attempt, retryAt: undefined }
+    // planSend 在 alive === false 时给的就是 restart 那套 opts（带 resumeId）
+    const { opts } = planSend(live.rec, now)
+    console.log(`[agentChat] 自动恢复 ${live.rec.role ?? live.rec.id}（第 ${plan.attempt} 次）`)
+    restartAndDeliver(live, opts, resumeBrief(live.rec.role))
+  }
+}
+
 // ── 定时回收：判据来自 shouldReap，这里只负责杀进程与标记 ─────────────────────────
 
 function reapIdleSessions(): void {
@@ -529,6 +605,7 @@ function reapIdleSessions(): void {
     // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，
     // 不然一批 agent 会互相把对方续命。
     if (live.rec.owner !== 'team' && teamAliveUnder(live.rec.cwd)) continue
+    live.killing = true // 空闲回收是预期内的，别让它触发自动恢复
     live.proc?.kill()
     live.proc = undefined
     live.rec = { ...live.rec, alive: false } // resumeId 保留，下次发送时接上
@@ -557,6 +634,12 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
       role: r.role,
       busy: r.busy,
       ended: r.ended,
+      // 「还会不会自己爬起来」由主进程算，渲染层不复制退避规则
+      recovering: (() => {
+        const p = planRecovery(r, Date.now())
+        return !!p && p.act !== 'give-up'
+      })(),
+      retries: r.retries,
       tally: r.tally
     })
   }
@@ -600,6 +683,8 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
 
 export function registerAgentChatHandlers(): void {
   setInterval(reapIdleSessions, 60_000)
+  // 恢复要跟得上退避节奏（最短 20 秒），不能挂在上面那个 60 秒的轮子上
+  setInterval(recoverInterrupted, 10_000)
 
   // 全局唯一订阅：hook 脚本送来的每一条待审批请求都会广播到这里。按 hook 脚本附带的
   // eas_session_id（= EAS_AGENT_CHAT_SESSION，spawn 时注入，见 restartAndDeliver）直接
@@ -823,6 +908,7 @@ export function registerAgentChatHandlers(): void {
     const live = sessions.get(id)
     if (!live) return
     sessions.delete(id)
+    live.killing = true // 用户点了「停」——他要它停，不许自己爬起来
     live.proc?.kill()
   })
 }

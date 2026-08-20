@@ -68,6 +68,16 @@
 }
 /* 中断 ≠ 已停。这一条是**唯一一个要求人去做点什么**的状态（活没干完），
    所以给它整行最亮的颜色，而不是跟 dead 一样的灰。 */
+/* 重连中：它在自己往回爬，人不用管 —— 给个「还在动」的颜色，
+   别用中断那个刺眼的橙 */
+.h-recovering .tp-dot {
+  background: #7dd3fc;
+  animation: tp-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 .h-interrupted .tp-dot {
   background: #fb923c;
 }

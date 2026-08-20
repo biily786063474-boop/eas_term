@@ -10,7 +10,7 @@
  *  **它只用来标黄提醒，不用来自动杀** —— 判错的代价必须只是一次多余的提示。 */
 export const STALL_MS = 4 * 60 * 1000
 
-export type AgentHealth = 'running' | 'stalled' | 'idle' | 'dead' | 'interrupted'
+export type AgentHealth = 'running' | 'stalled' | 'idle' | 'dead' | 'interrupted' | 'recovering'
 
 /**
  * @param alive        进程还在不在（主进程 SessionRecord.alive）
@@ -22,7 +22,10 @@ export function healthOf(
   lastActiveAt: number,
   now: number,
   busy?: boolean,
-  ended?: 'ok' | 'interrupted'
+  ended?: 'ok' | 'interrupted',
+  /** 主进程算好的「它自己正在往回爬」。**不要在这里重算退避规则** ——
+   *  那份判据在 main/agentChat/sessionState.planRecovery，抄一份必然会分叉。 */
+  recovering?: boolean
 ): AgentHealth {
   // 进程没了就是没了，不管多久之前的事 —— 这条要排在最前面，
   // 否则一个刚被空闲回收的会话会因为 lastActiveAt 很新而报成 running
@@ -30,7 +33,12 @@ export function healthOf(
   // **但「怎么没的」要分开报。** 网络一抖、话说到一半被打断的会话，
   // 跟跑完一轮优雅退出的，在 alive 上完全一样 —— 混在一起报，
   // 用户看到的就是「活没干完却写着这轮完了」（2026-08-20 反馈）。
-  if (!alive) return ended === 'interrupted' ? 'interrupted' : 'dead'
+  if (!alive) {
+    if (ended !== 'interrupted') return 'dead'
+    // 断了但还会自己爬起来 —— 这时候**不该让人去操作它**。用户的原话：
+    // 「我希望子 agent 不打扰用户」。写成「中断了」会招来一次没必要的干预。
+    return recovering ? 'recovering' : 'interrupted'
+  }
   if (busy === false) return 'idle'
   // busy 未知时按「有多久没动」判：这是跨进程唯一拿得到的信号
   return now - lastActiveAt > STALL_MS ? 'stalled' : 'running'
@@ -56,9 +64,19 @@ const LABEL: Record<AgentHealth, string> = {
   stalled: '可能卡住',
   idle: '空闲',
   dead: '已停',
+  // 它在自己重连，人什么都不用做。**跟「中断了」分开** ——
+  // 后者才是「试到头了，该你看一眼」。
+  recovering: '重连中',
   // **不叫「已停」** —— 那会让人以为是自己停的或者正常收的工。
   // 中断意味着「这活没干完，产出多半是残的」，措辞必须让人想去看一眼。
   interrupted: '中断了'
+}
+
+/** 面板上那一行的状态文字。重连中要带上第几次 —— 没有次数的话，
+ *  连着几分钟都写「重连中」，看起来像卡住了。 */
+export function stateTextOf(h: AgentHealth, team: boolean, retries?: number): string {
+  if (h === 'recovering' && retries) return `重连中 第 ${retries} 次`
+  return labelOf(h, team)
 }
 
 /** 交活了没有 —— 「这一轮跑完了」，不是「任务做对了」。

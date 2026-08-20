@@ -34,6 +34,11 @@ export interface SessionRecord {
    *  **它决定会话面板敢不敢自动收起** —— 收起一个「其实没干完」的会话，
    *  等于把没做完的活从用户眼前藏起来，比不收更糟。 */
   ended?: 'ok' | 'interrupted'
+  /** 自动恢复已经试了几次。**只对团队 agent 用**（用户自己的对话由他自己决定要不要接着聊）。
+   *  重启成功后清零 —— 下一次中断是新的一轮，不该背着上次的账。 */
+  retries?: number
+  /** 下一次自动恢复的时刻（ms epoch）。undefined = 没有在等待重试。 */
+  retryAt?: number
   lastActiveAt: number
   model?: string
   effort?: string
@@ -131,6 +136,46 @@ export function shouldReap(s: SessionRecord, now: number): boolean {
         ? BUSY_IDLE_TIMEOUT_MS
         : IDLE_TIMEOUT_MS
   return now - s.lastActiveAt > limit
+}
+
+/** 自动恢复的退避节奏。
+ *
+ *  为什么要退避而不是立刻重试：网络抖动的恢复时机没法预判，断着的时候连撞几次，
+ *  **每一次都是一个完整上下文的钱**。20 秒 → 1 分钟 → 3 分钟，覆盖了绝大多数
+ *  「一下子就好了」和「过一会儿才好」，加起来 4 分多钟；再不行就是真出事了，
+ *  那时候该让人看见，而不是继续默默烧。 */
+export const RECOVERY_DELAYS_MS = [20_000, 60_000, 180_000]
+
+export type RecoveryPlan =
+  /** 还没到点，等到 `at` 再来 */
+  | { act: 'wait'; at: number }
+  /** 现在就重启并续上 */
+  | { act: 'go'; attempt: number }
+  /** 试到头了，交给人 */
+  | { act: 'give-up' }
+
+/** 这个会话要不要自动恢复、什么时候。返回 null = 不归自动恢复管。
+ *
+ *  用户的要求原话：「我希望子 agent 不打扰用户，可以通过中断了的机制让主 agent
+ *  重新唤醒他继续任务」。所以判据卡得很紧，只处理**确实是被打断的团队 agent**：
+ *
+ *  · `owner !== 'team'` → 不管。用户自己开的对话，要不要接着聊是他的事，
+ *    替他重启一个进程既花钱又唐突。
+ *  · `ended !== 'interrupted'` → 不管。正常跑完退出的不需要「恢复」。
+ *  · 还活着 → 不管。
+ *  · **没有 resumeId → 不管**。这是最要紧的一条：没有它，重启起来的是一个
+ *    什么都不记得的新会话，它既不知道任务是什么、也不知道做到哪了，
+ *    只会从头再来一遍 —— 那不是恢复，那是又花一份钱做重复的事。 */
+export function planRecovery(s: SessionRecord, now: number): RecoveryPlan | null {
+  if (s.owner !== 'team') return null
+  if (s.alive) return null
+  if (s.ended !== 'interrupted') return null
+  if (!s.resumeId) return null
+  const tried = s.retries ?? 0
+  if (tried >= RECOVERY_DELAYS_MS.length) return { act: 'give-up' }
+  const at = s.retryAt ?? now + RECOVERY_DELAYS_MS[tried]
+  if (now < at) return { act: 'wait', at }
+  return { act: 'go', attempt: tried + 1 }
 }
 
 /** 下一条消息该怎么发的判定，顺序固定：

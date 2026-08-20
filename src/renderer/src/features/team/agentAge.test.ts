@@ -7,6 +7,7 @@ import {
   isSettled,
   ageMsOf,
   canAutoTuck,
+  stateTextOf,
   STALL_MS
 } from './agentAge.ts'
 
@@ -151,4 +152,27 @@ test('拿不到交活判定时，只看结束方式（非团队会话没有 find
 
 test('ended 缺失（老会话）不收 —— 判不出来就别动它', () => {
   assert.equal(canAutoTuck(false, undefined), false)
+})
+
+
+// —— 自己重连（用户：子 agent 不该打扰人）——
+
+test('断了但还会自己爬起来 → recovering，不是「中断了」', () => {
+  assert.equal(healthOf(false, NOW - 100, NOW, false, 'interrupted', true), 'recovering')
+})
+
+test('试到头了才写「中断了」—— 那时候才该人看一眼', () => {
+  assert.equal(healthOf(false, NOW - 100, NOW, false, 'interrupted', false), 'interrupted')
+  assert.equal(healthOf(false, NOW - 100, NOW, false, 'interrupted'), 'interrupted')
+})
+
+test('重连中带上第几次 —— 不带的话连着几分钟都写「重连中」，像卡住了', () => {
+  assert.equal(stateTextOf('recovering', true, 2), '重连中 第 2 次')
+  assert.equal(stateTextOf('recovering', true), '重连中')
+  assert.equal(stateTextOf('idle', true), '这轮完了')
+})
+
+test('重连中的绝不自动收起窗口', () => {
+  // ended 仍是 interrupted，canAutoTuck 那条闸挡着
+  assert.equal(canAutoTuck(false, 'interrupted'), false)
 })

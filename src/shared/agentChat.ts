@@ -333,6 +333,12 @@ export interface SessionBrief {
    *  `undefined` = 还活着。判据见 SessionRecord.ended —— 面板靠它把
    *  「这轮完了」和「中断了」分开，自动收起也只敢收前者。 */
   ended?: 'ok' | 'interrupted'
+  /** **它自己正在往回爬**：被打断了，而且还没试到头，稍后会自动重启并接上上下文。
+   *  规则（退避、上限、要不要管）全在主进程的 planRecovery 里算 ——
+   *  渲染层只需要知道「还有没有下文」，不该复制一份判据。 */
+  recovering?: boolean
+  /** 已经自动恢复了几次。面板用它把「第几次」显示出来，让人知道这不是卡着不动。 */
+  retries?: number
   /** 烧了多少。**token 是累加值、costUsd 是会话累计** —— 两者语义相反，
    *  别自己再加一次（实测见 shared/teamCost.ts） */
   tally?: CostTally

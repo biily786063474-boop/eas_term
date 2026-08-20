@@ -5,6 +5,8 @@ import {
   TEAM_IDLE_TIMEOUT_MS,
   BUSY_IDLE_TIMEOUT_MS,
   shouldReap,
+  planRecovery,
+  RECOVERY_DELAYS_MS,
   planSend,
   applyParamChange,
   type SessionRecord
@@ -259,4 +261,49 @@ test('一轮都没跑过的新会话 → 15 分钟', () => {
 
 test('进程已经没了就不用回收', () => {
   assert.equal(shouldReap(base({ alive: false, busy: true, lastActiveAt: 0 }), 1e12), false)
+})
+
+
+// —— 自动恢复（网络抖断的子 agent 自己接着干，不打扰用户）——
+
+const NOW2 = 1_700_000_000_000
+const broken = (over: Partial<SessionRecord> = {}): SessionRecord =>
+  base({ owner: 'team', alive: false, ended: 'interrupted', resumeId: 'r1', ...over })
+
+test('被打断的团队 agent：先等一段退避，到点才重启', () => {
+  const s = broken()
+  const p1 = planRecovery(s, NOW2)
+  assert.deepEqual(p1, { act: 'wait', at: NOW2 + RECOVERY_DELAYS_MS[0] })
+  // 到点了
+  const armed = { ...s, retryAt: NOW2 }
+  assert.deepEqual(planRecovery(armed, NOW2), { act: 'go', attempt: 1 })
+})
+
+test('退避一次比一次长 —— 断着网连撞几次，每次都是一整个上下文的钱', () => {
+  for (let i = 0; i < RECOVERY_DELAYS_MS.length; i++) {
+    const p = planRecovery(broken({ retries: i }), NOW2)
+    assert.deepEqual(p, { act: 'wait', at: NOW2 + RECOVERY_DELAYS_MS[i] })
+  }
+  assert.ok(RECOVERY_DELAYS_MS[1] > RECOVERY_DELAYS_MS[0])
+  assert.ok(RECOVERY_DELAYS_MS[2] > RECOVERY_DELAYS_MS[1])
+})
+
+test('试到头就交给人，不无限重试', () => {
+  assert.deepEqual(planRecovery(broken({ retries: RECOVERY_DELAYS_MS.length }), NOW2), { act: 'give-up' })
+})
+
+test('**没有 resumeId 不恢复** —— 那样重启的是个什么都不记得的新会话，等于重花一份钱做一遍', () => {
+  assert.equal(planRecovery(broken({ resumeId: undefined }), NOW2), null)
+})
+
+test('用户自己的对话不自动重启 —— 要不要接着聊是他的事', () => {
+  assert.equal(planRecovery(broken({ owner: undefined }), NOW2), null)
+})
+
+test('正常跑完退出的不需要恢复', () => {
+  assert.equal(planRecovery(broken({ ended: 'ok' }), NOW2), null)
+})
+
+test('还活着的不碰', () => {
+  assert.equal(planRecovery(broken({ alive: true }), NOW2), null)
 })

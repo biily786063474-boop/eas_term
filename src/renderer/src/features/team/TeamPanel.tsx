@@ -11,7 +11,7 @@
 //   · 派活（team_spawn）要在这里显示批次与用量
 import { useEffect, useState } from 'react'
 import type { SessionBrief } from '../../../../shared/agentChat'
-import { healthOf, fmtAge, labelOf, ageMsOf } from './agentAge'
+import { healthOf, fmtAge, stateTextOf, ageMsOf } from './agentAge'
 import { fmtCost, fmtTokens } from '../../../../shared/teamCost'
 import { belongsToProject } from '../../../../shared/teamWorktree'
 import { ChipIcon, CloseIcon } from '../../ui/Icons'
@@ -161,7 +161,7 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
           // busy 由主进程从 turn.start/turn.done 记着（SessionRecord.busy）。
           // **有它才分得清「干完了」和「卡住了」** —— headless 流式模式跑完一轮
           // 不退出，只看静默时长的话两者一模一样。
-          const h = healthOf(r.alive, r.lastActiveAt, now, r.busy, r.ended)
+          const h = healthOf(r.alive, r.lastActiveAt, now, r.busy, r.ended, r.recovering)
           const mine = r.cwd === cwd
           return (
             <div
@@ -191,7 +191,7 @@ export function TeamPanel({ cwd }: { cwd: string }): JSX.Element {
               </span>
               <span className="tp-spacer" />
               <span className="tp-state">
-                {noWindow === r.id ? '窗口没了，去读产出' : labelOf(h, r.owner === 'team')}
+                {noWindow === r.id ? '窗口没了，去读产出' : stateTextOf(h, r.owner === 'team', r.retries)}
               </span>
               {/* 三种语义按状态切，判据在 agentAge.ts 的 ageMsOf（有单测盯着）。
                   停下来的行是定值 —— 它不该显示一个还在涨的数字。 */}
