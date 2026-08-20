@@ -1,6 +1,14 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { slashQuery, matchSlash, skillsToCmds, BUILTIN_SLASH } from './slashCommands.ts'
+import {
+  slashQuery,
+  matchSlash,
+  skillsToCmds,
+  atQuery,
+  applyAtPick,
+  filesToCmds,
+  BUILTIN_SLASH
+} from './slashCommands.ts'
 
 test('只认开头的斜杠 —— 句子中间的是路径不是命令', () => {
   assert.equal(slashQuery('/co'), 'co')
@@ -70,4 +78,28 @@ test('描述太长要截断，没描述给一句大白话', () => {
   const long = skillsToCmds([{ path: '/s/x', description: 'x'.repeat(80) }])[0]
   assert.ok(long.desc.length <= 47 && long.desc.endsWith('…'))
   assert.equal(skillsToCmds([{ path: '/s/y' }])[0].desc, '你装的 skill')
+})
+
+// —— @ 文件引用 ——
+
+test('只认末尾正在打的 @，句子中间打完的不再弹', () => {
+  assert.equal(atQuery('看下 @src'), 'src')
+  assert.equal(atQuery('@'), '')
+  assert.equal(atQuery('看下 @src/a.ts 里的问题'), null)
+})
+
+test('邮箱里的 @ 不算引用', () => {
+  assert.equal(atQuery('发给 a@b.com'), null)
+})
+
+test('补全只替换末尾那段，前面写的字一个不动', () => {
+  assert.equal(applyAtPick('看下 @sr', 'src/main/x.ts'), '看下 @src/main/x.ts ')
+  assert.equal(applyAtPick('@', 'a.ts'), '@a.ts ')
+})
+
+test('文件候选拿相对路径当名字（那才是要插进去的东西）', () => {
+  const got = filesToCmds([{ rel: 'src/a.ts', name: 'a.ts' }, { rel: 'src/a.ts', name: 'a.ts' }])
+  assert.deepEqual(got.map((x) => x.name), ['src/a.ts'])
+  assert.equal(got[0].desc, 'a.ts')
+  assert.equal(got[0].from, 'file')
 })

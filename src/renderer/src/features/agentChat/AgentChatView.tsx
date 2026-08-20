@@ -540,8 +540,11 @@ export function AgentChatView({
 
   // 空态输入框的斜杠候选。**跟对话态那个共用同一套**（SlashPicker.tsx），
   // 「哪些命令能用」只有一个说法。
-  const emptySlash = useSlashPicker(text, setText, () =>
-    requestAnimationFrame(() => emptyTaRef.current?.focus())
+  const emptySlash = useSlashPicker(
+    text,
+    setText,
+    () => requestAnimationFrame(() => emptyTaRef.current?.focus()),
+    cwd
   )
 
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**

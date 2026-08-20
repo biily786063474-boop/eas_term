@@ -14,7 +14,7 @@ export interface SlashCmd {
   name: string
   /** 一句话说清点下去会发生什么。**写「会得到什么」，不是复述命令名** */
   desc: string
-  from: 'builtin' | 'skill'
+  from: 'builtin' | 'skill' | 'file'
 }
 
 /** 内置命令：每一条都在 2026-08-20 的 headless 实测里确认过有响应。
@@ -93,6 +93,48 @@ export function skillsToCmds(
       desc: desc ? (desc.length > 46 ? `${desc.slice(0, 46)}…` : desc) : '你装的 skill',
       from: 'skill'
     })
+  }
+  return out
+}
+
+
+// ── @ 文件引用 ────────────────────────────────────────────────────────
+//
+// 终端里打 `@` 能补全项目文件，这个输入框以前没有。跟斜杠候选是同一套 UI，
+// 只换数据源：**最近改过的文件**（fs:recentFiles）。
+// 不做全量索引 —— 想引用的多半就是刚动过的那几个，而全量索引在大仓库上
+// 既慢又会把真正相关的那几个淹掉。
+
+/** 光标（这里简化成「文本末尾」）前面正在打的 `@xxx`；不是的话返回 null。
+ *
+ *  **只认末尾**：句子中间已经打完的 `@src/a.ts` 不该再弹候选，
+ *  那会在用户继续写下去的时候一直挡着。
+ *  **前面必须是行首或空白**：`a@b.com` 里的 @ 是邮箱不是引用。 */
+export function atQuery(text: string): string | null {
+  const m = /(?:^|\s)@([^\s]*)$/.exec(text)
+  return m ? m[1] : null
+}
+
+/** 把选中的文件补进去：只替换末尾那段 `@xxx`，前面写的字一个不动。 */
+export function applyAtPick(text: string, rel: string): string {
+  return text.replace(/(?:^|\s)@([^\s]*)$/, (whole) => {
+    const lead = whole.startsWith('@') ? '' : whole[0]
+    return `${lead}@${rel} `
+  })
+}
+
+/** 最近文件 → 候选。`name` 存相对路径（那是要插进去的东西），
+ *  `desc` 存文件名，让人在一堆长路径里一眼找到目标。 */
+export function filesToCmds(
+  files: readonly { rel: string; name: string }[]
+): SlashCmd[] {
+  const seen = new Set<string>()
+  const out: SlashCmd[] = []
+  for (const f of files) {
+    const rel = (f.rel ?? '').trim()
+    if (!rel || seen.has(rel)) continue
+    seen.add(rel)
+    out.push({ name: rel, desc: f.name ?? '', from: 'file' })
   }
   return out
 }

@@ -127,8 +127,11 @@ export function ChatToolbar({
 
   // 斜杠候选：状态与键盘逻辑都在 useSlashPicker 里（跟空态那个输入框共用一套，
   // 免得「哪些命令能用」有两个说法 —— 那件事是靠实测维护的）
-  const slash = useSlashPicker(text, setText, () =>
-    requestAnimationFrame(() => taRef.current?.focus())
+  const slash = useSlashPicker(
+    text,
+    setText,
+    () => requestAnimationFrame(() => taRef.current?.focus()),
+    cwd
   )
 
   const submit = (): void => {

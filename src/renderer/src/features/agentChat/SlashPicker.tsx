@@ -9,6 +9,9 @@ import {
   matchSlash,
   skillsToCmds,
   slashQuery,
+  atQuery,
+  applyAtPick,
+  filesToCmds,
   type SlashCmd
 } from '../../../../shared/slashCommands'
 
@@ -46,7 +49,9 @@ export interface SlashPickerState {
 export function useSlashPicker(
   text: string,
   setText: (v: string) => void,
-  onPicked?: () => void
+  onPicked?: () => void,
+  /** 项目根路径。给了才有 `@` 文件引用 —— 没有它不知道去哪找文件。 */
+  cwd?: string
 ): SlashPickerState {
   const [skills, setSkills] = useState<SlashCmd[]>([])
   const [idx, setIdx] = useState(0)
@@ -62,14 +67,39 @@ export function useSlashPicker(
     }
   }, [])
 
+  // `@` 文件引用：数据源是**最近改过的文件**，不是全量索引 ——
+  // 想引用的多半就是刚动过的那几个，全量索引在大仓库上既慢又会把它们淹掉。
+  const [files, setFiles] = useState<SlashCmd[]>([])
+  const aq = atQuery(text)
+  useEffect(() => {
+    // 只在真的打了 `@` 之后才去读盘，别在每个节点挂载时都扫一遍
+    if (aq === null || files.length) return
+    let alive = true
+    void window.api.fs
+      .recentFiles(cwd ?? '', 60, false)
+      .then((list) => {
+        if (alive) setFiles(filesToCmds(list))
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [aq, cwd, files.length])
+
   const q = slashQuery(text)
-  const hits = q === null ? [] : matchSlash(q, [...BUILTIN_SLASH, ...skills])
-  const open = !off && q !== null && hits.length > 0
+  // 两者不会同时命中：slash 只认开头且不含空格，@ 只认末尾那一段
+  const hits =
+    q !== null
+      ? matchSlash(q, [...BUILTIN_SLASH, ...skills])
+      : aq !== null
+        ? matchSlash(aq, files)
+        : []
+  const open = !off && (q !== null || aq !== null) && hits.length > 0
 
   // 换了 query 就回到第一条 —— 停在上一次的下标上，看起来像随机选中
   useEffect(() => {
     setIdx(0)
-  }, [q])
+  }, [q, aq])
   // 打字就取消「按过 Esc」，否则关掉一次之后这个节点里再也弹不出来
   useEffect(() => {
     setOff(false)
@@ -78,6 +108,12 @@ export function useSlashPicker(
   const pick = (i: number): void => {
     const c = hits[i]
     if (!c) return
+    if (c.from === 'file') {
+      // 只替换末尾那段 `@xxx`，前面写的字一个不动
+      setText(applyAtPick(text, c.name))
+      onPicked?.()
+      return
+    }
     // 补到输入框而**不直接发送**：有的命令要带参数（/model opus），
     // 而且直接发出去意味着一次误选就消耗一轮对话。
     // 末尾留空格 → slashQuery 随即返回 null → 候选自然收起。
@@ -133,7 +169,10 @@ export function SlashList({ hits, idx, setIdx, pick }: SlashPickerState): JSX.El
           }}
           onMouseEnter={() => setIdx(i)}
         >
-          <span className="ac-slash-name">/{c.name}</span>
+          <span className="ac-slash-name">
+            {c.from === 'file' ? '@' : '/'}
+            {c.name}
+          </span>
           <span className="ac-slash-desc">{c.desc}</span>
           {c.from === 'skill' && <span className="ac-slash-tag">skill</span>}
         </div>
