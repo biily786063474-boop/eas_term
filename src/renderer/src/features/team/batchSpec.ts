@@ -25,6 +25,14 @@ export interface AgentSpec {
   needs?: string[]
   /** 有得选时的偏好，软的 */
   prefer?: string[]
+  /** 隔离方式。**只有写码的角色才该要 `worktree`**。
+   *
+   *  并发写同一个仓库是**静默覆盖**（A 读、B 读、A 写、B 写，A 的改动消失且没人报错，
+   *  不是 git 冲突那种至少会吵一声的情况）——方案 E-07，这是第三期唯一的硬障碍。
+   *  worktree 让每人一棵独立工作树，改坏了整个删掉，主工作区一个字没动。
+   *
+   *  **默认 none**：隔离要一份磁盘、一条分支、收活时还要合，只读角色白拿这些代价。 */
+  isolation?: 'worktree' | 'none'
 }
 
 export interface BatchSpec {
@@ -79,7 +87,11 @@ export function checkBatch(raw: unknown): BatchCheck {
 
     const needs = Array.isArray(a.needs) ? a.needs.map((x) => String(x)).filter(Boolean) : undefined
     const prefer = Array.isArray(a.prefer) ? a.prefer.map((x) => String(x)).filter(Boolean) : undefined
-    agents.push({ role, task, needs, prefer })
+    // 隔离只认严格的 'worktree'，其余（含没写、写错、大小写不同）一律 none。
+    // **不猜**：猜错的方向是给只读角色白建一棵工作树，或者更糟 ——
+    // 把写码 agent 当成只读放进主工作区，那就是 E-07 那个静默覆盖
+    const isolation = a.isolation === 'worktree' ? ('worktree' as const) : undefined
+    agents.push({ role, task, needs, prefer, ...(isolation ? { isolation } : {}) })
   }
 
   const est = typeof b.estimateTokens === 'number' && b.estimateTokens > 0 ? b.estimateTokens : undefined

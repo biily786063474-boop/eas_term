@@ -10,6 +10,7 @@ import { isSettled } from './features/team/agentAge'
 import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { fmtCost, fmtTokens } from '../../shared/teamCost'
 import { addBatch, parseRoster, recentSummary } from '../../shared/teamRoster'
+import { isolationOf, worktreePath, worktreeBranch, worktreeHint } from '../../shared/teamWorktree'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -816,6 +817,14 @@ const SHELL_TRAP =
     }
   }
 
+  /** 从花名册里找这个会话属于哪一批。**worktree 的路径要靠批次 id 才能算出来** ——
+   *  会话本身不带批次信息（SessionBrief 上只有 role），所以回花名册里查最近一条含它的。 */
+  const batchIdOfFactory = (rosterRaw: string | null) => {
+    const r = parseRoster(rosterRaw)
+    return (x: { role?: string }): string =>
+      r.batches.find((b) => b.agents.some((a) => a.role === x.role))?.id ?? ''
+  }
+
   if (tool === 'team_dissolve') {
     if (isTeamOwnedCaller(ctx)) {
       throw new Error('你是团队里的一个 agent —— 解散只有主 agent 能做。')
@@ -836,11 +845,30 @@ const SHELL_TRAP =
             .teamFindings(where.projectPath, roles)
             .catch(() => ({}) as Record<string, number | null>)
         : {}
+    const batchIdOf = batchIdOfFactory(
+      where ? await window.api.agentChat.teamRoster(where.projectPath).catch(() => null) : null
+    )
+    // 隔离的那些，工作树里改了多少东西。**跑完了 ≠ 改了东西**：
+    // 一个 agent 可能查了一圈得出「不用改」，那也是有效结论，但主 agent 得知道差别
+    const trees = await Promise.all(
+      mine.map(async (x) => {
+        if (!x.role || !where) return null
+        const rel = worktreePath(batchIdOf(x), x.role)
+        if (!rel) return null
+        const st = await window.api.agentChat.worktreeStat(where.projectPath, rel).catch(() => null)
+        return st?.exists ? { role: x.role, rel, changed: st.changed } : null
+      })
+    )
+    const treeMap = new Map(trees.filter(Boolean).map((t) => [t!.role, t!]))
+
     const report = mine.map((x) => ({
       role: x.role ?? '(没记角色名)',
       alive: x.alive,
       delivered: x.role ? deliveredOf(sizes[x.role] ?? null) : ('missing' as const),
-      bytes: x.role ? (sizes[x.role] ?? null) : null
+      bytes: x.role ? (sizes[x.role] ?? null) : null,
+      ...(x.role && treeMap.has(x.role)
+        ? { worktree: treeMap.get(x.role)!.rel, changedFiles: treeMap.get(x.role)!.changed }
+        : {})
     }))
 
     for (const x of mine) window.api.agentChat.stop(x.id)
@@ -850,6 +878,19 @@ const SHELL_TRAP =
       dissolved: mine.length,
       agents: report,
       next:
+        // **工作树一律不删。** `git worktree remove --force` 会连未提交的改动一起抹掉，
+        // 而 agent 干完活多半没提交 —— 那就是把这一批的成果直接扔了。
+        // 只报告、指路，删不删是人看过 diff 之后的决定。
+        (treeMap.size
+          ? [...treeMap.values()]
+              .map((t) =>
+                t.changed > 0
+                  ? `\`${t.role}\` 在 \`${t.rel}/\` 改了 ${t.changed} 个文件（**没有自动合，也没删那棵树**）——` +
+                    `\`git -C ${t.rel} diff\` 看它改了什么。`
+                  : `\`${t.role}\` 的工作树 \`${t.rel}/\` 里没有任何改动。`
+              )
+              .join('\n') + '\n'
+          : '') +
         (bad.length
           ? `⚠️ ${bad.length} 个**没有留下像样的产出**（${bad.map((b) => b.role).join('、')}）——` +
             '解散前最后确认一次：它们是真没做成，还是做完了没写盘。这一步跳过去就再也查不了了。\n'
@@ -944,19 +985,41 @@ const SHELL_TRAP =
     }
 
     // ④ 真的起。**逐个起，一个失败就把已起的收掉** —— 半个团队比没有团队更糟（方案 E-03）
+    // 批次 id 要在这里就定下来：worktree 的路径和分支名都从它派生，
+    // 而那两样在起进程之前就得算出来
+    const batchId = `b-${Date.now()}`
     const spawned: { role: string; leafId: string }[] = []
+    /** 这一批建出来的工作树。**失败时要连它们一起收拾** ——
+     *  只收 agent 不收工作树的话，下次派同名角色会撞上「目录已存在」，
+     *  而用户完全不知道那堆目录是哪来的 */
+    const trees: { role: string; relPath: string; branch: string }[] = []
     try {
       for (const a of spec.agents) {
+        // 写码的角色各给一棵工作树（E-07：并发写同一个仓库是静默覆盖）
+        let agentCwd = where.projectPath
+        let tree: { relPath: string; branch: string; mainRoot: string } | undefined
+        if (isolationOf(a.isolation) === 'worktree') {
+          const relPath = worktreePath(batchId, a.role)
+          const branch = worktreeBranch(batchId, a.role)
+          if (!relPath || !branch) throw new Error(`${a.role} 的角色名没法拿来做工作树路径`)
+          const r = await window.api.agentChat.worktreeAdd(where.projectPath, relPath, branch)
+          if (!r.ok || !r.absPath) throw new Error(`给 ${a.role} 建工作树失败：${r.error ?? '未知原因'}`)
+          agentCwd = r.absPath
+          tree = { relPath, branch, mainRoot: where.projectPath }
+          trees.push({ role: a.role, relPath, branch })
+        }
         // **走 addAgentNode 而不是 openAgentPane** —— 后者只建 leaf，
         // 不会把节点挂到画布 Frame 上。第一次端到端验证时就踩到：会话确实起来了，
         // 但画布上一个新节点都没有，用户在画布模式下什么都看不到。
         const leafId = await useStore.getState().addAgentNode(where.frameId, {
           owner: 'team',
           role: a.role,
+          // 隔离的 agent 的 cwd 指向它自己那棵工作树，不是项目根
+          cwd: agentCwd,
           // 首条消息是**唯一一次**能给它交代工作约定的机会 —— 跨进程之后没有
           // SendMessage 能补充。内容与理由见 features/team/brief.ts（有单测盯着
           // 那几处必须和代码保持一致的约定）。
-          initialMessage: briefFor({ role: a.role, goal: spec.goal, task: a.task })
+          initialMessage: briefFor({ role: a.role, goal: spec.goal, task: a.task, worktree: tree })
         })
         if (!leafId) throw new Error(`起 ${a.role} 时没能建出节点`)
         spawned.push({ role: a.role, leafId })
@@ -968,11 +1031,17 @@ const SHELL_TRAP =
         void (async (): Promise<void> => {
           const raw = await window.api.agentChat.teamRoster(where.projectPath).catch(() => null)
           const next = addBatch(parseRoster(raw), {
-            id: `b-${Date.now()}`,
+            id: batchId,
             at: Date.now(),
             goal: spec.goal,
             // task 原文留着 —— 方案里「重派是一条命令」靠的就是它
-            agents: spec.agents.map((a) => ({ role: a.role, task: a.task }))
+            agents: spec.agents.map((a) => ({
+              role: a.role,
+              task: a.task,
+              ...(isolationOf(a.isolation) === 'worktree'
+                ? { worktree: worktreePath(batchId, a.role) ?? undefined }
+                : {})
+            }))
           })
           await window.api.agentChat
             .teamRosterSave(where.projectPath, JSON.stringify(next, null, 2))
@@ -980,7 +1049,14 @@ const SHELL_TRAP =
         })()
       }
     } catch (e) {
-      // 起到一半失败：把这一批已经起的收掉，别留半个团队
+      // 起到一半失败：把这一批已经起的收掉，别留半个团队。
+      // **工作树也要收** —— 留着的话下次派同名角色会撞上「目录已存在」，
+      // 而用户完全不知道那堆目录是哪来的
+      for (const t of trees) {
+        // 这里带 force：起到一半失败时那棵树是刚建的、一个改动都没有，
+        // 而留着会让下次派同名角色撞上「目录已存在」
+        void window.api.agentChat.worktreeRemove(where.projectPath, t.relPath, t.branch, true).catch(() => undefined)
+      }
       for (const sp of spawned) {
         const t = useStore.getState().tabs.find((tab) => collectLeaves(tab.root).some((l) => l.id === sp.leafId))
         if (t) await useStore.getState().closeLeafSafely(t.id, sp.leafId)

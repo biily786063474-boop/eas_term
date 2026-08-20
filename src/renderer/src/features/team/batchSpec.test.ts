@@ -62,3 +62,24 @@ test('agents 不是数组 / 空数组都拒', () => {
   assert.equal(checkBatch({ goal: 'g', agents: 'x' }).ok, false)
   assert.equal(checkBatch(null).ok, false)
 })
+
+// ── 隔离方式 ─────────────────────────────────────────────────────
+
+test('只认严格的 worktree，其余一律不隔离', () => {
+  const mk = (iso: unknown) =>
+    checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't', isolation: iso }] })
+  const got = (iso: unknown) => {
+    const r = mk(iso)
+    return r.ok ? r.spec.agents[0].isolation : 'REJECTED'
+  }
+  assert.equal(got('worktree'), 'worktree')
+  for (const bad of [undefined, 'none', 'Worktree', 'WORKTREE', 'git', 1, true, null]) {
+    assert.equal(got(bad), undefined, `${JSON.stringify(bad)} 不该被当成隔离`)
+  }
+})
+
+test('不隔离时字段干脆不出现，而不是塞一个 undefined', () => {
+  const r = checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't' }] })
+  assert.ok(r.ok)
+  assert.equal('isolation' in r.spec.agents[0], false)
+})

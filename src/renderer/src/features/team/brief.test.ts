@@ -54,3 +54,37 @@ test('结论三要素齐全（判据 / 证据 / 边界）', () => {
     assert.ok(s.includes(`**${k}**`), `缺了「${k}」`)
   }
 })
+
+test('隔离的 agent 要被告知自己在工作树里', () => {
+  // 它的 cwd 已经被指过去了，但它不知道 —— 不说的话它可能去切分支、
+  // 或者以为自己在改主工作区而不敢动手
+  const s = briefFor({ ...base, worktree: { relPath: '.worktrees/958035-dev', branch: 'eas-team/958035-dev', mainRoot: '/W/proj' } })
+  assert.ok(s.includes('.worktrees/958035-dev'))
+  assert.ok(s.includes('eas-team/958035-dev'))
+  assert.match(s, /别切分支/)
+  assert.match(s, /静默覆盖/, '要说清为什么要隔离，否则它不知道这条约束的分量')
+  assert.match(s, /改完不用合/, '合不合是主 agent 的决定')
+})
+
+test('不隔离的 agent 简报里不该出现工作树那一段', () => {
+  const s = briefFor(base)
+  assert.ok(!s.includes('工作树'))
+  assert.ok(!s.includes('别切分支'))
+})
+
+test('隔离的 agent 产出要写回主工作区（绝对路径）', () => {
+  // 它的 cwd 在工作树里，写 .plans/ 就落在工作树里 —— 而那棵树会被删，
+  // 主 agent 也去主工作区收活，两头都对不上（真机验证撞到过）
+  const s = briefFor({
+    ...base,
+    worktree: { relPath: '.worktrees/958035-dev', branch: 'eas-team/958035-dev', mainRoot: '/W/proj' }
+  })
+  assert.ok(s.includes('/W/proj/.plans/api-reviewer/'), '产出路径要是主工作区的绝对路径')
+  assert.match(s, /不是当前目录下的/, '要明说别写成相对路径')
+})
+
+test('不隔离时产出仍是相对路径', () => {
+  const s = briefFor(base)
+  assert.ok(s.includes('.plans/api-reviewer/'))
+  assert.ok(!s.includes('/W/proj'))
+})

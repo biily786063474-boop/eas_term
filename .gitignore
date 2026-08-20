@@ -22,3 +22,8 @@ screenshot/
 # agent 审查的中间产物（可由 .plans/css-dup-auditor/parse_css.py 重新生成）
 .plans/*/entries.json
 .plans/*/dups.json
+
+# 写码 agent 的隔离工作树（team_spawn 的 isolation: 'worktree'）。
+# 不忽略的话，一派活用户的 git status 就多出一个 ?? .worktrees/ ——
+# 而那里面是几棵完整的工作树，噪音极大。改动本身在各自的 eas-team/* 分支上，不会丢。
+.worktrees/

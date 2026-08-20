@@ -282,6 +282,15 @@ const TOOLS = [
                 type: 'array',
                 items: { type: 'string' },
                 description: "有得选时的偏好 CLI，软的，如 ['claude','codex']"
+              },
+              isolation: {
+                type: 'string',
+                enum: ['worktree', 'none'],
+                description:
+                  '**要写代码的角色填 `worktree`**，会给它单开一棵 git 工作树，' +
+                  'cwd 直接指过去。不隔离的话几个人同时改一个仓库是**静默覆盖**：' +
+                  '他读了你也读了，他写回去你也写回去，他那份就没了，而且谁都收不到报错。' +
+                  '只读角色（调研、审查）不用填 —— 白建一棵树只是浪费磁盘和一条分支。'
               }
             },
             required: ['role', 'task']

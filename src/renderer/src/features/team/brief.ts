@@ -16,6 +16,13 @@
 
 export interface BriefInput {
   role: string
+  /** 这个 agent 跑在一棵独立工作树里（写码角色才有）。
+   *  **必须在简报里说**：它的 cwd 已经被指到那儿了，但它并不知道自己在隔离环境里，
+   *  也就不知道「我的改动碰不到主工作区」「别去切分支」。
+   *
+   *  `mainRoot` 是主工作区的绝对路径 —— **产出要写回那里**，
+   *  理由见下面产出那一段的注释。 */
+  worktree?: { relPath: string; branch: string; mainRoot: string }
   /** 这一批要达成什么 —— 让 agent 知道自己这块在整体里的位置 */
   goal: string
   /** 派给它的具体任务 */
@@ -30,13 +37,42 @@ export interface BriefInput {
  * 注意力窗口」是同一个现象的两面：首条消息里，开头和结尾都是强位置，中间最弱。
  * 所以任务在开头，最硬的两条约束在结尾。
  */
-export function briefFor({ role, goal, task }: BriefInput): string {
-  const dir = `.plans/${role}/`
+export function briefFor({ role, goal, task, worktree }: BriefInput): string {
+  // **产出永远落在主工作区，改动才留在工作树。**
+  //
+  // 隔离的 agent cwd 在工作树里，它写 `.plans/` 就写进了工作树 —— 而那棵树是会被删的
+  // （改动本身在分支上还在，findings 就跟着没了），主 agent 去主工作区收活也找不到。
+  // 2026-08-19 真机验证撞到：wt-probe 的 findings 落在 `.worktrees/…/.plans/` 里，
+  // `teamFindings` 查主工作区，E-13 的产出检查对隔离角色整个失效。
+  //
+  // 所以隔离时给绝对路径。产出（给人和主 agent 读的结论）和改动（代码）分离，
+  // 各自去它该去的地方。
+  const dir = worktree ? `${worktree.mainRoot}/.plans/${role}/` : `.plans/${role}/`
+  const wt = worktree
+    ? [
+        '',
+        '## 你在一棵独立的工作树里',
+        '',
+        `当前目录是 \`${worktree.relPath}\`，分支 \`${worktree.branch}\` —— 这棵树给你一个人用。`,
+        '',
+        '- **放心改。** 你的改动碰不到主工作区，也不会跟同批其他人打架 ——',
+        '  几个人同时写一个仓库是**静默覆盖**：他读了、你也读了，他写回去、你也写回去，',
+        '  他那份就没了，而且谁都收不到报错',
+        '- **别切分支、别 rebase、别去动别人的工作树。** 你只管在这棵树上把活干完',
+        '- **改完不用合。** 主 agent 会看 diff 再决定。你要做的是把改动留在这个分支上，',
+        `  并在 findings.md 里说清**改了哪些文件、为什么** —— 那是他判断能不能合的依据`,
+        `- **产出写到 \`${worktree.mainRoot}/.plans/${role}/\`（绝对路径，主工作区）**，`,
+        '  不是当前目录下的 .plans/。这棵树可能被删掉，写在里面的结论会跟着没；',
+        '  而主 agent 是去主工作区收活的'
+      ]
+    : []
   return [
     `你是这次协作里的 \`${role}\`。`,
     ``,
     `**这一批的目标**：${goal}`,
     `**你负责**：${task}`,
+    ``,
+    ...wt,
     ``,
     `## 产出`,
     ``,

@@ -22,6 +22,7 @@ import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
+import { registerTeamWorktree } from './teamWorktreeOps'
 import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
 import { registerRoleHandlers } from './roles'
@@ -356,6 +357,7 @@ app.whenReady().then(() => {
   registerAgentHistory()
   registerTeamFindings()
   registerTeamRoster()
+  registerTeamWorktree()
   buildMenu()
   createWindow()
 

@@ -852,6 +852,19 @@ const api = {
       ipcRenderer.invoke('team:roster', projectPath),
     teamRosterSave: (projectPath: string, json: string): Promise<void> =>
       ipcRenderer.invoke('team:rosterSave', projectPath, json),
+    /** 写码 agent 的隔离工作树。判定与命名在 shared/teamWorktree.ts */
+    worktreeAdd: (
+      projectPath: string, relPath: string, branch: string
+    ): Promise<{ ok: boolean; absPath?: string; branch?: string; error?: string }> =>
+      ipcRenderer.invoke('team:worktreeAdd', projectPath, relPath, branch),
+    /** 删一棵工作树。**有未提交改动会被拒绝** —— agent 干完多半没 commit，
+     *  硬删就是把它这一趟的成果扔了。确定不要才传 force。 */
+    worktreeRemove: (
+      projectPath: string, relPath: string, branch: string, force?: boolean
+    ): Promise<{ ok: boolean; error?: string; changed?: number }> =>
+      ipcRenderer.invoke('team:worktreeRemove', projectPath, relPath, branch, force === true),
+    worktreeStat: (projectPath: string, relPath: string): Promise<{ exists: boolean; changed: number }> =>
+      ipcRenderer.invoke('team:worktreeStat', projectPath, relPath),
     /** 中途改模型/effort：不打断当前任务，下一条消息才生效（决定 3） */
     setParams: (
       sessionId: string,
