@@ -289,7 +289,15 @@ function handleEvent(live: Live, e: ChatEvent): void {
   // busy 的唯一来源。**放在 isSilenced 之后是有意的** —— 静默期吞掉的那些
   // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
   // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。
-  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true }
+  // **后台任务的标记在这里立、在这里清。**
+  //
+  // 立：exec.start 的 label 就是工具名（toLabel 对这几个是原样返回的），
+  //     Workflow / Task / Agent 都是「派出去、自己在后台跑」的东西。
+  // 清：下一轮 turn.start —— 它又开始说话了，说明后台那件事回来了。
+  if (e.k === 'exec.start' && BG_TOOLS.has(e.label.trim())) {
+    live.rec = { ...live.rec, bgTask: true }
+  }
+  if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true, bgTask: false }
   else if (e.k === 'turn.done') {
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
@@ -372,7 +380,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
     logSession(
       `进程结束 ${live.rec.role ?? live.rec.id}` +
         `（code=${String(code)} signal=${String(signal)}` +
-        ` busy=${String(live.rec.busy)}` +
+        ` busy=${String(live.rec.busy)} 后台任务=${live.rec.bgTask ? '有' : '无'}` +
         ` 静默=${Math.round((Date.now() - live.rec.lastActiveAt) / 1000)}s` +
         ` 我们杀的=${selfKilled ? '是' : '否'}）`
     )
@@ -662,6 +670,10 @@ function hasDelivered(rec: SessionRecord): boolean {
   }
 }
 
+/** 「派出去在后台跑」的工具。判据是工具名本身 —— claudeEvents 的 toLabel
+ *  对这几个不做加工，原样透出来。 */
+const BG_TOOLS = new Set(['Workflow', 'Task', 'Agent'])
+
 function reapIdleSessions(): void {
   const now = Date.now()
   // 「这个 cwd 底下还有活着的团队 agent 吗」——**派活的那一方不能在子 agent
@@ -722,6 +734,7 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
       role: r.role,
       busy: r.busy,
       ended: r.ended,
+      bgTask: r.bgTask,
       // 「还会不会自己爬起来」由主进程算，渲染层不复制退避规则
       recovering: (() => {
         const p = planRecovery(r, Date.now())

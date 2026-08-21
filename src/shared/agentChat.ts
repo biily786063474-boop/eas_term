@@ -339,6 +339,9 @@ export interface SessionBrief {
   recovering?: boolean
   /** 已经自动恢复了几次。面板用它把「第几次」显示出来，让人知道这不是卡着不动。 */
   retries?: number
+  /** 这一轮里派过后台任务（Workflow / Task / Agent），还没等到它回来。
+   *  见 SessionRecord.bgTask —— 空闲回收靠它把「在等 workflow」和「人走开了」分开。 */
+  bgTask?: boolean
   /** 烧了多少。**token 是累加值、costUsd 是会话累计** —— 两者语义相反，
    *  别自己再加一次（实测见 shared/teamCost.ts） */
   tally?: CostTally

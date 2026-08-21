@@ -324,3 +324,20 @@ test('正常跑完退出的不需要恢复', () => {
 test('还活着的不碰', () => {
   assert.equal(planRecovery(broken({ alive: true }), NOW2), null)
 })
+
+// —— 后台任务（ultracode / workflow）——
+
+test('派了后台任务、这一轮已结束 → 走 4 小时那档，不按空闲算', () => {
+  // 2026-08-20 开发版实测：起一个最小 ultracode，主 agent 调完 workflow
+  // 那一轮当场结束（busy=false），然后一路静默（T+120s 已经静默 100s）。
+  // 按 15 分钟的老阈值 900 秒必死，而它明明在等后台的 agent 干活 ——
+  // 用户报的「三次派发，三次死在同一处」就是这么来的。
+  const s = base({ busy: false, bgTask: true, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1), false, '2 小时也不该杀正在等后台任务的')
+  assert.equal(shouldReap(s, BUSY_IDLE_TIMEOUT_MS + 1), true, '4 小时仍有兜底')
+})
+
+test('没派后台任务的普通空闲照旧', () => {
+  const s = base({ busy: false, bgTask: false, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1), true)
+})

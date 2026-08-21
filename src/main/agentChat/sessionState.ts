@@ -46,6 +46,24 @@ export interface SessionRecord {
   retries?: number
   /** 下一次自动恢复的时刻（ms epoch）。undefined = 没有在等待重试。 */
   retryAt?: number
+  /** **这一轮里派过后台任务**（Workflow / Task / Agent 这类工具）。
+   *
+   *  为什么需要它：ultracode 派出去的 workflow 是**后台跑**的 ——
+   *  主 agent 调完立刻拿到一个 task id、**那一轮当场就结束了**（busy 落回 false），
+   *  然后一路静默等通知。它看起来跟「人走开了」一模一样，但它在干活。
+   *
+   *  2026-08-20 开发版实测（起一个最小 ultracode）：
+   *    T+012s busy=false 静默 1s
+   *    T+060s busy=false 静默 39s
+   *    T+120s busy=false 静默 100s   ← 一路涨
+   *  按 15 分钟的老阈值，900 秒必死，而且每次都死在派完活的同一处 ——
+   *  正是用户报的「三次派发，三次死在同一处，从来没跑到写文件那一步」。
+   *
+   *  对照组：Task 工具是**同步**的（实测 `Agent=ok`，那一轮不结束），
+   *  busy 一直是 true，走 4 小时那档，本来就碰不到。
+   *
+   *  下一轮 turn.start 时清掉 —— 那说明后台任务回来了、它又开始说话了。 */
+  bgTask?: boolean
   lastActiveAt: number
   model?: string
   effort?: string
@@ -155,8 +173,10 @@ export function shouldReap(
     //    没交活的掉到下面那档去，给人（或主 agent 用 team_send）推它一把的时间。
     s.owner === 'team' && s.busy === false && delivered === true
       ? TEAM_IDLE_TIMEOUT_MS
-      : // ② 这一轮还在跑 → 4 小时（可能在等自己派的子 agent，stdout 是静默的）
-        s.busy === true
+      : // ② 这一轮还在跑，**或者派了后台任务正在等它回来** → 4 小时。
+        //    后者是 ultracode 那条路：workflow 在后台跑，主 agent 那一轮已经结束，
+        //    静默得跟「人走开了」一模一样 —— bgTask 是唯一分得开的信号。
+        s.busy === true || s.bgTask === true
         ? BUSY_IDLE_TIMEOUT_MS
         : // ③ 其余：普通对话闲着、以及**没交活就停下的团队 agent**
           IDLE_TIMEOUT_MS
