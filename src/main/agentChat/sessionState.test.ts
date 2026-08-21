@@ -24,8 +24,10 @@ const base = (over: Partial<SessionRecord> = {}): SessionRecord => ({
   ...over
 })
 
-test('空闲回收阈值是 15 分钟', () => {
-  assert.equal(IDLE_TIMEOUT_MS, 15 * 60 * 1000)
+test('空闲回收阈值是 2 小时', () => {
+  // 2026-08-20 从 15 分钟调上来（用户要求）。开着对话离开一会儿是常态，
+  // 回来发现进程没了、下一条消息要等冷启动，省的那点内存不值这个打断。
+  assert.equal(IDLE_TIMEOUT_MS, 2 * 60 * 60 * 1000)
 })
 
 test('刚活动过的会话不回收', () => {
@@ -200,10 +202,22 @@ test('[补] 改 model/effort 触发的 restart（决定 3 那条路径）同样�
 
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
 
-test('团队 agent 交活后 3 分钟就回收，不用等 15 分钟', () => {
+test('团队 agent **交活之后** 3 分钟就回收', () => {
+  // 第三个参数 = 交活了。没交活的走另一条（见下一条测试）
   const s = base({ owner: 'team', busy: false, lastActiveAt: 0 })
-  assert.equal(shouldReap(s, 3 * 60 * 1000 + 1), true, '过了 3 分钟该回收')
-  assert.equal(shouldReap(s, 3 * 60 * 1000), false, '刚好卡在阈值上不算（严格大于）')
+  assert.equal(shouldReap(s, 3 * 60 * 1000 + 1, true), true, '过了 3 分钟该回收')
+  assert.equal(shouldReap(s, 3 * 60 * 1000, true), false, '刚好卡在阈值上不算（严格大于）')
+})
+
+test('**没交活就停下的团队 agent 不走 3 分钟那档**', () => {
+  // 用户 2026-08-20：「三次派发，三次死在同一处：agent 还在跑，承载它的会话进程
+  // 就没了……它从来没跑到写文件那一步」。成因就是这里：agent 说完第一轮
+  // （「我先看看代码结构」）busy 就落回 false，而判据只看 busy 不看有没有产出，
+  // 3 分钟后进程被杀，再也没人能 team_send 推它继续。
+  const s = base({ owner: 'team', busy: false, lastActiveAt: 0 })
+  assert.equal(shouldReap(s, 3 * 60 * 1000 + 1, false), false, '没交活不该 3 分钟就杀')
+  assert.equal(shouldReap(s, 10 * 60 * 1000, false), false, '十分钟也不该')
+  assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1, false), true, '最终仍有兜底')
 })
 
 test('团队 agent 还在跑就不能提前回收', () => {
@@ -226,10 +240,13 @@ test('团队 agent 一轮都没跑过（busy 未定）不走短阈值', () => {
   assert.equal(shouldReap(fresh, 4 * 60 * 1000), false, '会话刚建起来，可能正等第一条消息')
 })
 
-test('你自己开的对话不受影响，仍然是 15 分钟', () => {
+test('你自己开的对话不走团队那条短阈值，吃 2 小时那档', () => {
+  // 团队 agent 交完活 3 分钟就回收，普通对话不该跟着走那条。
+  // 2026-08-20 起这一档从 15 分钟提到 2 小时（用户要求）。
   const mine = base({ busy: false, lastActiveAt: 0 })
   assert.equal(shouldReap(mine, 4 * 60 * 1000), false, '走开一会儿不该被杀')
-  assert.equal(shouldReap(mine, 15 * 60 * 1000 + 1), true)
+  assert.equal(shouldReap(mine, 15 * 60 * 1000 + 1), false, '开个会回来会话还在')
+  assert.equal(shouldReap(mine, IDLE_TIMEOUT_MS + 1), true)
 })
 
 
@@ -243,9 +260,9 @@ test('这一轮还在跑 → 走 4 小时，15 分钟不动它', () => {
   assert.equal(shouldReap(s, BUSY_IDLE_TIMEOUT_MS + 1000), true)
 })
 
-test('团队 agent 跑完这轮 → 3 分钟', () => {
+test('团队 agent 跑完这轮**且交了活** → 3 分钟', () => {
   const s = base({ owner: 'team', busy: false, lastActiveAt: 0 })
-  assert.equal(shouldReap(s, TEAM_IDLE_TIMEOUT_MS + 1000), true)
+  assert.equal(shouldReap(s, TEAM_IDLE_TIMEOUT_MS + 1000, true), true)
 })
 
 test('团队 agent 还在跑 → 同样吃 4 小时那档，不被短阈值抢先杀掉', () => {

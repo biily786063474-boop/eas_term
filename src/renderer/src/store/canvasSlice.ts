@@ -1218,6 +1218,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     }),
 
   // 重命名画布节点 → 同步分屏那边的标签名（两个模式的终端名双向一致）
+  startNewChat: (frameId, nodeId) => {
+    const exists = get()
+      .canvas.frames.find((f) => f.id === frameId)
+      ?.nodes.some((n) => n.id === nodeId)
+    if (!exists) return undefined
+    // 用 uid 拿一个不会撞的新 key。**带随机段无所谓** —— 它跟着节点落盘，
+    // 不像 leafId 那样每次重启重新生成（那正是聊天记录以前读不回来的原因）
+    const next = uid('chat')
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id === frameId
+            ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, chatId: next } : n)) }
+            : f
+        )
+      }
+    }))
+    return next
+  },
+
   renameNode: (frameId, nodeId, name) =>
     set((s) => {
       const trimmed = name.trim()

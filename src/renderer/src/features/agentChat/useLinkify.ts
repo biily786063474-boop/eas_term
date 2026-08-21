@@ -56,6 +56,27 @@ function decorate(root: HTMLElement): void {
       return n.nodeValue && n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
     }
   })
+  // **markdown 写出来的链接（`[文字](url)`）也要接管。**
+  //
+  // 它们渲染成真的 <a href>，而 SKIP 里有 'A' —— 识别阶段跳过它，
+  // 点击处理又只认 `.ac-link`，于是两边都不管：看着是链接、⌘/Ctrl 点了没反应
+  // （用户 2026-08-20 反馈）。裸 URL 反而能点，因为那条走的是文本节点这条路。
+  //
+  // 标成 .ac-link 之后三件事一起对上：⌘ 按下时跟着一起亮、点击走同一个处理器、
+  // 以及**最要紧的** —— 下面那个 onClick 会拦住它的默认跳转
+  // （<a href> 的裸点击在 Electron 里会把整个窗口导航走）。
+  for (const a of Array.from(root.querySelectorAll('a[href]'))) {
+    const el = a as HTMLElement
+    if (el.classList.contains('ac-link')) continue
+    const href = el.getAttribute('href') ?? ''
+    // 只接管真的能打开的东西；锚点跳转（#xxx）留给它自己
+    if (!href || href.startsWith('#')) continue
+    el.classList.add('ac-link', 'ac-link-url')
+    el.dataset.kind = 'url'
+    el.dataset.target = href
+    el.title = '⌘/Ctrl+点击 在浏览器打开'
+  }
+
   const targets: Text[] = []
   for (let n = walker.nextNode(); n; n = walker.nextNode()) targets.push(n as Text)
 
@@ -123,6 +144,10 @@ export function useLinkify(ref: React.RefObject<HTMLElement>, dep: unknown, leaf
     const onClick = (e: MouseEvent): void => {
       const t = (e.target as HTMLElement)?.closest?.('.ac-link') as HTMLElement | null
       if (!t) return
+      // **真 <a> 的默认跳转无论如何都要拦住。**放它过去的话，Electron 会拿
+      // 整个渲染进程去导航那个网址 —— 工作台直接变成一个网页，回不来。
+      // 放在 isFollowClick 之前：裸点击（用户在划词选择）同样不能让它跑掉。
+      if (t.tagName === 'A') e.preventDefault()
       // 裸点击留给选中文字 —— 只有 Ctrl/Cmd 才跳转
       if (!isFollowClick(e)) return
       e.preventDefault()

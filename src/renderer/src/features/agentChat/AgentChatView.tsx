@@ -115,9 +115,21 @@ export function AgentChatView({
   const histKey = useStore((s) => {
     for (const f of s.canvas.frames) {
       const n = f.nodes.find((x) => x.leafId === leafId)
-      if (n) return n.id
+      // **chatId 优先**：点过「新对话」的节点挂着新的一段，没点过的就是节点自己
+      if (n) return n.chatId ?? n.id
     }
     return leafId
+  })
+
+  /** 这个 leaf 对应的画布节点，拼成 `frameId|nodeId`。
+   *  **返回字符串不返回对象** —— zustand 按 Object.is 比较，
+   *  每次给个新对象就是每次都重渲染。 */
+  const nodeRef = useStore((s) => {
+    for (const f of s.canvas.frames) {
+      const n = f.nodes.find((x) => x.leafId === leafId)
+      if (n) return `${f.id}|${n.id}`
+    }
+    return ''
   })
 
   // 本地 state：它由 session.ready 事件写回 store，两处各存一份必然会不同步。
@@ -421,6 +433,36 @@ export function AgentChatView({
     })
   }
 
+  /** 换一段新对话：结束当前会话，给节点写一个新 chatId，界面回到空态。
+   *
+   *  **旧那段不删** —— 它按旧 key 躺在磁盘上，之后还能从空态的
+   *  「接上上次的对话」认回来。这里换的只是「这个窗口现在挂哪一段」。
+   *
+   *  为什么连会话一起停：用户要的是「重启一个任务」。留着旧进程的话，
+   *  新对话的第一条消息会带着旧 resumeId 续上去，那就不是新的了。 */
+  const handleNewChat = (): void => {
+    if (!nodeRef) return
+    const [fid, nid] = nodeRef.split('|')
+    if (!fid || !nid) return
+    if (sessionId) window.api.agentChat.stop(sessionId)
+    unsubRef.current?.()
+    unsubRef.current = null
+    setAgentSessionId(tabId, leafId, '')
+    setAgentResumeId(tabId, leafId, '')
+    useStore.getState().startNewChat(fid, nid)
+    // 本地状态全部回到「这个节点刚建出来」的样子。
+    // **reducer 也要换新的** —— 不换的话上一段的轮次还留在里面，
+    // 新会话第一个事件会接在旧对话后面。
+    reducerRef.current = createChatReducer()
+    adoptedRef.current = false
+    setSessionId(null)
+    setView(null)
+    setRestored({ turns: [], resumeId: null })
+    setSentMessages([])
+    setSendError(null)
+    setText('')
+  }
+
   const handleSend = async (override?: string): Promise<void> => {
     const message = (override ?? text).trim()
     if (!message || !selected || starting || sessionId) return
@@ -702,6 +744,7 @@ export function AgentChatView({
           approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
+          onNewChat={handleNewChat}
           sessionId={sessionId}
           onSend={handleFollowupSend}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}

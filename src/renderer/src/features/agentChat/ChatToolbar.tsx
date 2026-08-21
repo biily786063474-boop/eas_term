@@ -49,6 +49,7 @@ export function ChatToolbar({
   sessionId,
   onSend,
   onSetParams,
+  onNewChat,
   sendError
 }: {
   caps: CliCapabilities
@@ -77,6 +78,8 @@ export function ChatToolbar({
     meta?: { text: string; images: { path: string; url: string }[] }
   ) => Promise<boolean> | void
   onSetParams: (patch: { model?: string; effort?: string }) => void
+  /** 「新对话」：结束当前这段，给这个窗口挂一段新的。旧记录不删。 */
+  onNewChat?: () => void
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
   sendError?: string | null
@@ -409,6 +412,26 @@ export function ChatToolbar({
                   : (model.effortLevels.find((l) => l.id === effortSel)?.label ?? effortSel)}
               </span>
             </div>
+          )}
+
+          {onNewChat && (
+            <button
+              type="button"
+              className="ac-bar-btn"
+              data-tip="结束这一段，开一段新的（旧记录还在，能从空态找回来）"
+              onClick={() => {
+                void stopVoiceOnSend()
+                // 会结束当前会话，上下文接不回来了 —— 照「压缩」那条的规矩弹确认
+                requestConfirm({
+                  message:
+                    '开一段新对话会结束当前会话，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？',
+                  confirmLabel: '开新对话',
+                  onConfirm: onNewChat
+                })
+              }}
+            >
+              新对话
+            </button>
           )}
 
           {model.showCompact && (

@@ -51,6 +51,15 @@ export interface CanvasNode {
   component?: { type: string; props?: Record<string, unknown> }
   /** 自定义名称（可重命名）；未设则用默认标题 */
   name?: string
+  /** **这个 AI 对话节点当前挂着哪一段对话。**
+   *
+   *  聊天记录按它存（AgentChatView 的 histKey）。不设 = 用节点 id 本身，
+   *  也就是「这个节点开天辟地那一段」—— 老节点没有这个字段，行为不变。
+   *
+   *  点「新对话」时换一个新值：旧那段记录**原样留在磁盘上**（按旧 key 存着，
+   *  之后还能从空态的「接上上次的对话」里认回来），新的从零开始。
+   *  跟节点一起落盘，所以跨重启稳定 —— 这是「一个窗口绑一段对话」的根据。 */
+  chatId?: string
   /** 终端节点的 Agent 控制台配置（画布独有；持久化，重开保留选择） */
   agent?: NodeAgent
   /** 只读预览：目前只有从知识库拖出来的自由节点会设——内容离开知识库目录后不该被改，
@@ -297,6 +306,10 @@ export interface CanvasSlice {
   focusCanvasNode: (frameId: string, nodeId: string) => void
   /** 一键整理 Frame 内模块：按各自大小从左上角起流式重排，行内对齐、消除重叠与空隙 */
   tidyFrame: (frameId: string) => void
+  /** 给这个 AI 对话节点换一段新对话：写一个新的 chatId 进去。
+   *  **只换 key，不删任何东西** —— 旧记录还躺在磁盘上。
+   *  返回新 chatId；节点不存在时返回 undefined。 */
+  startNewChat: (frameId: string, nodeId: string) => string | undefined
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */

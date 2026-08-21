@@ -11,10 +11,17 @@ import type { CostTally } from '../../shared/teamCost'
 
 import type { StartOpts } from '../../shared/agentChat.ts'
 
-/** 空闲多久回收进程。取 15 分钟的理由见 spec §A.5：
- *  resume 一次的代价就是一次冷启动（实测数秒），而人离开十几分钟多半不会马上回来。
+/** 空闲多久回收进程。**2026-08-20 从 15 分钟改成 2 小时**（用户要求）。
+ *
+ *  原来取 15 分钟的理由（spec §A.5）是「resume 一次就是一次冷启动，实测数秒，
+ *  而人离开十几分钟多半不会马上回来」。实际用下来那个假设不成立：
+ *  开着对话去开个会、吃个饭是常态，回来发现进程没了，下一条消息要等冷启动 +
+ *  重放上下文。省下的那点内存换不来这个打断。
+ *
+ *  上下文不会因此丢（resumeId 一直留着），改的只是「多久之后要多花一次冷启动」。
+ *
  *  **这是一处定义，别在别的文件里再写一个。** */
-export const IDLE_TIMEOUT_MS = 15 * 60 * 1000
+export const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000
 
 export interface SessionRecord {
   id: string
@@ -118,7 +125,21 @@ export const TEAM_IDLE_TIMEOUT_MS = 3 * 60 * 1000
  *  取 4 小时：比任何一趟合理的 agent 任务都长，又不至于让一个卡死的会话过夜。 */
 export const BUSY_IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000
 
-export function shouldReap(s: SessionRecord, now: number): boolean {
+export function shouldReap(
+  s: SessionRecord,
+  now: number,
+  /** 这个团队 agent **交活了没有**（`.plans/<role>/findings.md` 写出来了没）。
+   *
+   *  **只有交了活才走 3 分钟那档。** 那一档的理由是「产出已经落盘，进程留着
+   *  不再产生价值」—— 前提是它真的落盘了。而判据原本只看 `busy === false`，
+   *  那只表示「这一轮说完了」，不表示干完了（面板文案当初从「已交活」改成
+   *  「这轮完了」就是为这个，**但这里的判据当时没跟着改**）。
+   *
+   *  后果是实打实的：agent 说完第一轮（「我先看看代码结构」）→ busy 落回 false
+   *  → 3 分钟后进程被杀 → 它永远走不到写文件那一步。用户 2026-08-20 反馈
+   *  「三次派发，三次死在同一处：agent 还在跑，承载它的会话进程就没了」。 */
+  delivered?: boolean
+): boolean {
   if (!s.alive) return false
   // 三档，按「杀错了有多疼」排：
   //
@@ -130,11 +151,15 @@ export function shouldReap(s: SessionRecord, now: number): boolean {
   //    而上面那段注释写的却是「不能回收」，读起来像是已经保护住了。
   // ③ 其余（包括 busy === undefined，一轮都没跑过的新会话）→ 15 分钟。
   const limit =
-    s.owner === 'team' && s.busy === false
+    // ① 团队 agent **说完了这一轮、而且真的交了活** → 3 分钟。
+    //    没交活的掉到下面那档去，给人（或主 agent 用 team_send）推它一把的时间。
+    s.owner === 'team' && s.busy === false && delivered === true
       ? TEAM_IDLE_TIMEOUT_MS
-      : s.busy === true
+      : // ② 这一轮还在跑 → 4 小时（可能在等自己派的子 agent，stdout 是静默的）
+        s.busy === true
         ? BUSY_IDLE_TIMEOUT_MS
-        : IDLE_TIMEOUT_MS
+        : // ③ 其余：普通对话闲着、以及**没交活就停下的团队 agent**
+          IDLE_TIMEOUT_MS
   return now - s.lastActiveAt > limit
 }
 

@@ -40,6 +40,8 @@ import { buildCliList, type TerminalOnlyCli } from './cliList.ts'
 import { detectByWhich } from './adapters/detect.ts'
 import { installPlan } from '../agentInstall.ts'
 import { guardPath } from '../fsGuard.ts'
+import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
+import { THIN_BYTES } from '../../shared/teamFindings.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
@@ -360,6 +362,20 @@ function wireProc(live: Live, proc: ChildProcess): void {
     //    Codex 的 exec 跑完一轮正常退出时 busy 已经落回 false、code 是 0，不会误判。
     const selfKilled = live.killing === true
     live.killing = false
+    // **进程怎么没的，一律留痕。**
+    //
+    // 2026-08-20 用户报「三次派发，三次死在同一处：agent 还在跑，承载它的
+    // 会话进程就没了」——那是 claude **自己进程内**的 Task 子 agent，
+    // 不是我们的 team agent。查的时候发现这条路径一句日志都没有：
+    // 退出码、信号、当时是不是 busy、静默了多久，全都无从得知。
+    // 没有这些，任何结论都只能靠猜。
+    logSession(
+      `进程结束 ${live.rec.role ?? live.rec.id}` +
+        `（code=${String(code)} signal=${String(signal)}` +
+        ` busy=${String(live.rec.busy)}` +
+        ` 静默=${Math.round((Date.now() - live.rec.lastActiveAt) / 1000)}s` +
+        ` 我们杀的=${selfKilled ? '是' : '否'}）`
+    )
     const interrupted =
       !selfKilled && (!!signal || live.rec.busy === true || (code !== 0 && code !== null))
     live.rec = {
@@ -507,6 +523,12 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
     lastActiveAt: Date.now()
   }
 
+  // 生命周期的另一端。**有生才看得懂死** —— 只记结束的话，
+  // 日志里全是「进程结束」，看不出它活了多久、这是第几次起
+  logSession(
+    `进程启动 ${live.rec.role ?? live.rec.id}（cli=${live.rec.cli}` +
+      `${live.rec.resumeId ? ' resume' : ''}${live.rec.owner === 'team' ? ' team' : ''}）`
+  )
   wireProc(live, proc)
 
   // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
@@ -590,12 +612,55 @@ function recoverInterrupted(): void {
     live.rec = { ...live.rec, retries: plan.attempt, retryAt: undefined }
     // planSend 在 alive === false 时给的就是 restart 那套 opts（带 resumeId）
     const { opts } = planSend(live.rec, now)
-    console.log(`[agentChat] 自动恢复 ${live.rec.role ?? live.rec.id}（第 ${plan.attempt} 次）`)
+    logSession(`自动恢复 ${live.rec.role ?? live.rec.id}（第 ${plan.attempt} 次）`)
     restartAndDeliver(live, opts, resumeBrief(live.rec.role))
   }
 }
 
 // ── 定时回收：判据来自 shouldReap，这里只负责杀进程与标记 ─────────────────────────
+
+/** 会话生命周期日志 —— **写文件，不只是 console.log**。
+ *
+ *  打包版里 console 是看不见的（除非从终端起 app），而「进程怎么没的」这类问题
+ *  恰恰只在用户的正式环境里发生。2026-08-20 用户报「三次派发，三次死在同一处」，
+ *  查的时候手里一条证据都没有 —— 那次之后加的这个。
+ *
+ *  只记生命周期事件（起、结束、回收、恢复），不记对话内容：
+ *  一是隐私，二是量 —— 对话内容会让这个文件几分钟就涨到不可读。
+ *  超过 1MB 从头写：这是给「刚才发生了什么」用的，不是审计日志。 */
+function logSession(msg: string): void {
+  try {
+    const f = path.join(app.getPath('userData'), 'agent-sessions.log')
+    let flag: 'a' | 'w' = 'a'
+    try {
+      if (fs.statSync(f).size > 1_000_000) flag = 'w'
+    } catch {
+      /* 文件还不存在，追加即可 */
+    }
+    fs.writeFileSync(f, `${new Date().toISOString()} ${msg}\n`, { flag })
+  } catch {
+    /* 日志写不出来绝不能影响会话本身 */
+  }
+  console.log(`[agentChat] ${msg}`)
+}
+
+/** 这个团队 agent **交活了没有** —— 读 `.plans/<role>/findings.md` 的大小。
+ *
+ *  隔离的 agent cwd 指向 `<项目>/.worktrees/…`，而 findings 落在**项目根**的
+ *  `.plans/` 下，所以要先还原回项目根。
+ *
+ *  小于 THIN_BYTES（120 字节）算没交 —— 那种只写了个标题的，跟没写一样
+ *  （判据与 shared/teamFindings.ts 的 deliveredOf 对齐，是同一条线）。 */
+function hasDelivered(rec: SessionRecord): boolean {
+  if (rec.owner !== 'team' || !rec.role) return false
+  try {
+    const i = rec.cwd.indexOf(`/${WORKTREE_DIR}/`)
+    const root = i >= 0 ? rec.cwd.slice(0, i) : rec.cwd
+    return fs.statSync(path.join(root, '.plans', rec.role, 'findings.md')).size >= THIN_BYTES
+  } catch {
+    return false // 文件不存在 = 没交活
+  }
+}
 
 function reapIdleSessions(): void {
   const now = Date.now()
@@ -616,10 +681,18 @@ function reapIdleSessions(): void {
     return false
   }
   for (const live of sessions.values()) {
-    if (!shouldReap(live.rec, now)) continue
+    const delivered = hasDelivered(live.rec)
+    if (!shouldReap(live.rec, now, delivered)) continue
     // 自己就是团队成员的照常回收 —— 这条保护是给**派活的人**的，
     // 不然一批 agent 会互相把对方续命。
     if (live.rec.owner !== 'team' && teamAliveUnder(live.rec.cwd)) continue
+    // **回收要留痕。** 这条路径原本一句日志都没有 —— 用户 2026-08-20 报
+    // 「三次派发，三次死在同一处」时，主进程日志里完全查不到进程是怎么没的。
+    const idleSec = Math.round((now - live.rec.lastActiveAt) / 1000)
+    logSession(
+      `空闲回收 ${live.rec.role ?? live.rec.id}` +
+        `（${idleSec}s 没动静，busy=${String(live.rec.busy)}，交活=${delivered ? '是' : '否'}）`
+    )
     live.killing = true // 空闲回收是预期内的，别让它触发自动恢复
     live.proc?.kill()
     live.proc = undefined
