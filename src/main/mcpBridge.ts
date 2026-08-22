@@ -698,10 +698,13 @@ export function registerMcpBridge(): void {
           const j = JSON.parse(raw || '{}') as unknown
           for (const w of BrowserWindow.getAllWindows()) {
             if (!w.isDestroyed()) w.webContents.send('statusline:data', j)
-          // 同一份数据也喂给额度存储 —— 它要落盘 + 给右上角那个常驻 bar 用。
-          // **不改上面那条广播**：对话工具栏那套还照旧走 statusline:data
-          ingestStatusline(j)
           }
+          // 同一份数据也喂给额度存储 —— 它要落盘 + 给右上角那个常驻 bar 用。
+          // **不改上面那条广播**：对话工具栏那套还照旧走 statusline:data。
+          // 放在循环**外**：ingest 跟窗口数量无关，一次回传只该记一次。
+          // （原来写在循环体内：多开一个窗口就重复落盘一次，而一个窗口都没有时
+          //   连一次都不记 —— 后者正是启动早期最容易丢数据的时刻。）
+          ingestStatusline(j)
         } catch {
           /* 坏 JSON 忽略 —— 状态栏每次刷新都发，偶发一次坏包不值得报错 */
         }

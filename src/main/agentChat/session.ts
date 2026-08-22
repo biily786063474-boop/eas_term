@@ -24,6 +24,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
 import { getAdapter, listAdapters } from './adapters/index.ts'
+import { ingestChatQuota } from '../quotaStore'
 import {
   NO_SILENCE,
   silenceAfterSlash,
@@ -312,6 +313,10 @@ function handleEvent(live: Live, e: ChatEvent): void {
       ended: undefined
     }
   }
+  // 额度：**这是只用 AI 对话的用户唯一的额度来源**。headless 没有状态栏，
+  // statusline 那条路对他们整个不存在（2026-08-22 实测 `claude -p` 不触发）。
+  // 事件本身照旧往下发（对话工具栏在用），这里只是顺手抄一份进额度存储。
+  if (e.k === 'quota') ingestChatQuota(e)
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
     emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })

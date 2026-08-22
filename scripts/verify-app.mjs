@@ -36,7 +36,8 @@ const SEED_WHITELIST = [
   'skill-prefs.json',
   'gantt.json',
   'board.json',
-  'wiki.json'
+  'wiki.json',
+  'quota.json'    // 额度条：没有它 QuotaBar 直接 return null（没数据不占位），验不了 hover
 ]
 
 const realUserData = path.join(os.homedir(), 'Library', 'Application Support', 'Eas-Term')
