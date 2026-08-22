@@ -211,6 +211,62 @@ const FATAL_LOG_CAP = 256_000
  *  + 落盘一份（双击 .app 打开时终端输出根本无处可看，这是用户唯一能事后翻到的地方）。
  *  同步文件 I/O 是故意的——这条路径只在真出故障时走，不是 reconcile 那种热路径，
  *  没必要为了这个引入异步队列的复杂度。 */
+/** 同一条错误连着刷屏时，只记一次 + 计数。
+ *
+ *  2026-08-21 排查时踩到：日志里同一个 SyntaxError 重复了十几遍，
+ *  把真正有用的上下文挤出了封顶窗口，而它们本来就是同一次故障的回声。 */
+let lastFatalKey = ''
+let lastFatalCount = 0
+
+/** 出故障那一刻，把「现场」一起记下来。
+ *
+ *  **只记一行错误是没法排查的**（2026-08-21 的教训）：用户拿来一条
+ *  `Unexpected token '}' (island-xxx.js:1)`，而我把本地产物、asar 里的副本
+ *  逐一检查过去，字节一致、语法全通过 —— 因为日志没说它当时**加载的是哪个文件、
+ *  在不在、多大、哪个版本**。缺这些，剩下的只有猜。
+ *
+ *  收集本身要绝对安全：任何一步失败都跳过那一项，绝不能因为「记日志」
+ *  把灵动岛再拖垮一次。 */
+function islandScene(): string {
+  const parts: string[] = []
+  try {
+    parts.push(`v${app.getVersion()}`)
+  } catch {
+    /* 拿不到版本就算了 */
+  }
+  try {
+    parts.push(`electron=${process.versions.electron}`)
+  } catch {
+    /* 同上 */
+  }
+  try {
+    // 它加载的是哪份产物、在不在、多大 —— 「脚本没加载上」这类故障全靠这三样定位
+    // 跟 createIsland 里的加载路径**保持同一个来源**：dev 走 ELECTRON_RENDERER_URL，
+    // 打包后是 __dirname/../renderer/island.html
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    if (devUrl) {
+      parts.push(`url=${devUrl}/island.html (dev)`)
+    } else {
+      const f = path.join(__dirname, '../renderer/island.html')
+      const dir = path.dirname(f)
+      const st = fs.statSync(f)
+      parts.push(`html=${f} ${st.size}B`)
+      // 同目录下的 assets：名字 + 大小。产物被截断时这里一眼看得出来
+      const assets = path.join(dir, 'assets')
+      const names = fs
+        .readdirSync(assets)
+        .filter((n) => n.startsWith('island') || n.startsWith('index'))
+        .slice(0, 6)
+      for (const n of names) {
+        parts.push(`${n}=${fs.statSync(path.join(assets, n)).size}B`)
+      }
+    }
+  } catch (e) {
+    parts.push(`scene读取失败=${e instanceof Error ? e.message : String(e)}`)
+  }
+  return parts.join(' ')
+}
+
 function logIslandFatal(line: string): void {
   console.error('[island]', line)
   try {
@@ -221,7 +277,20 @@ function logIslandFatal(line: string): void {
     } catch {
       /* 第一次落盘，文件还不存在 */
     }
-    const next = prev + `${new Date().toISOString()} ${line}\n`
+    // 去重：同一条连着来只记一次，之后只更新计数（重写最后一行）
+    const key = line.slice(0, 200)
+    if (key === lastFatalKey) {
+      lastFatalCount += 1
+      const idx = prev.lastIndexOf('\n', prev.length - 2)
+      const head = idx >= 0 ? prev.slice(0, idx + 1) : ''
+      const next = `${head}${new Date().toISOString()} [×${lastFatalCount}] ${line}\n`
+      fs.writeFileSync(file, next.length > FATAL_LOG_CAP ? next.slice(-FATAL_LOG_CAP) : next, 'utf8')
+      return
+    }
+    lastFatalKey = key
+    lastFatalCount = 1
+    // 换了一条新错误 —— 这时才值得把现场重新记一遍
+    const next = prev + `${new Date().toISOString()} ${line}\n  ↳ 现场: ${islandScene()}\n`
     fs.writeFileSync(file, next.length > FATAL_LOG_CAP ? next.slice(-FATAL_LOG_CAP) : next, 'utf8')
   } catch {
     // 落盘本身失败（磁盘满/权限问题）不能反过来把灵动岛拖下水——原样吞掉，
@@ -328,7 +397,30 @@ function createIsland(): BrowserWindow {
           )
           .then((n: number) => {
             if (n !== 0 || win.isDestroyed() || usedFallback) return
-            logIslandFatal('渲染层疑似没跑起来（root 挂载 2s 后仍为空，多半是脚本没加载上）')
+            // **光说「没起来」是排查不动的**（2026-08-21 的教训）。
+            // Chromium 对 file:// + crossorigin 的子资源失败异常安静，
+            // 所以到这一步我们手上什么都没有 —— 只能主动去页面里问：
+            // 那些 script/link 标签指向哪、浏览器认为它们加载成功了吗。
+            win.webContents
+              .executeJavaScript(
+                `(() => {
+                  const out = []
+                  for (const el of document.querySelectorAll('script[src], link[href]')) {
+                    const u = el.src || el.href || ''
+                    out.push((el.tagName === 'SCRIPT' ? 'script' : el.rel || 'link') + '=' + u.split('/').pop())
+                  }
+                  return out.join(' ') + ' | readyState=' + document.readyState
+                })()`
+              )
+              .then((tags: string) => {
+                logIslandFatal(
+                  '渲染层疑似没跑起来（root 挂载 2s 后仍为空，多半是脚本没加载上）\n' +
+                    `  ↳ 页面引用: ${tags}`
+                )
+              })
+              .catch(() => {
+                logIslandFatal('渲染层疑似没跑起来（root 挂载 2s 后仍为空，且连页面都问不动了）')
+              })
             usedFallback = true
             contentSize = { w: 300, h: 40 }
             void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(loadFailureHtml()))
