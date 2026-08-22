@@ -18,6 +18,7 @@ import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
 import { checkContracts } from './cliContractRun'
 import { registerStatuslineHandlers } from './statuslineRuntime'
+import { registerQuotaHandlers } from './quotaStore'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
@@ -349,6 +350,7 @@ app.whenReady().then(() => {
   registerCanvasHandlers()
   registerAgentHandlers()
   registerStatuslineHandlers()
+  registerQuotaHandlers()
   registerSttHandlers()
   registerDesignHandlers()
   registerBizoneHandlers()

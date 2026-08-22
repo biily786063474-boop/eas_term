@@ -19,6 +19,7 @@ import { secretsForRun } from './secrets'
 import { mainWindow } from './island'
 import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
 import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
+import { ingestStatusline } from './quotaStore'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -697,6 +698,9 @@ export function registerMcpBridge(): void {
           const j = JSON.parse(raw || '{}') as unknown
           for (const w of BrowserWindow.getAllWindows()) {
             if (!w.isDestroyed()) w.webContents.send('statusline:data', j)
+          // 同一份数据也喂给额度存储 —— 它要落盘 + 给右上角那个常驻 bar 用。
+          // **不改上面那条广播**：对话工具栏那套还照旧走 statusline:data
+          ingestStatusline(j)
           }
         } catch {
           /* 坏 JSON 忽略 —— 状态栏每次刷新都发，偶发一次坏包不值得报错 */

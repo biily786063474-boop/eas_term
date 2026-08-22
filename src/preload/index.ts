@@ -525,6 +525,16 @@ const api = {
       return () => ipcRenderer.removeListener('statusline:data', fn)
     }
   },
+  /** 额度用量（Claude 走 statusline，Codex 读它自己的会话日志）。
+   *  主进程采集 + 落盘，这里只订阅与读取快照。数据模型见 shared/quota.ts。 */
+  quota: {
+    get: (): Promise<unknown> => ipcRenderer.invoke('quota:get'),
+    onData: (h: (d: unknown) => void): (() => void) => {
+      const fn = (_e: unknown, d: unknown): void => h(d)
+      ipcRenderer.on('quota:data', fn)
+      return () => ipcRenderer.removeListener('quota:data', fn)
+    }
+  },
   secrets: {
     // 密钥柜（<userData>/secrets.json，safeStorage 加密）。
     // **注意 list 永远不含值** —— 值只能经 reveal 单独取一次，

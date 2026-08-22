@@ -1,0 +1,56 @@
+/* 画布右上角的额度条。**简约是硬要求**（用户 2026-08-21）：
+   它常驻在视野边缘，任何多余的装饰每天都要被看几百遍。
+   所以只有数字、一个分隔竖线、一点点留白 —— 没有图标、没有边框、没有背景块。 */
+.qb {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  /* 底色要能压住画布点阵，但不能像个按钮 —— 这条不可点 */
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--fg-dim);
+  /* 它是参考信息，不接受点击 —— 让画布的拖拽/框选从它身上穿过去 */
+  pointer-events: none;
+  user-select: none;
+}
+/* 但 hover 提示要能出来，所以数字本身恢复命中 */
+.qb-pct {
+  pointer-events: auto;
+  cursor: help;
+}
+
+.qb-cli {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.qb-name {
+  opacity: 0.62;
+}
+.qb-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  opacity: 0.85;
+}
+/* 用得多了才变色。**只有一档**，不做三档渐变 ——
+   边缘视野里的颜色变化是打扰，只在真该注意时才用 */
+.qb-pct.hot {
+  color: #fb923c;
+  opacity: 1;
+}
+.qb-sep {
+  opacity: 0.28;
+}
+
+/* 开关按下去的样子 —— 借用 dictback-btn 的底子，只加一个「亮着」的状态 */
+.dictback-btn.on {
+  color: var(--accent);
+}

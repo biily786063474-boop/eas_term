@@ -4,6 +4,7 @@ import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
+import { QuotaBar, QuotaBarToggle } from './features/quota/QuotaBar'
 import { McpIndicator } from './features/workspace/McpIndicator'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { SecretsPanel } from './features/workspace/SecretsPanel'
@@ -262,6 +263,7 @@ export function App(): JSX.Element {
           {/* 待处理铃铛：画布有自己的运行监视窗，看板没有 —— 这里给它补上，
               不然看板模式下「哪个终端在等你」只剩卡片上一个小点 */}
           {viewMode !== 'canvas' && <TerminalAttention />}
+          <QuotaBarToggle />
           <McpIndicator />
           <DictBubbleToggle />
           <FootprintPanel />
@@ -308,6 +310,7 @@ export function App(): JSX.Element {
               </div>
             )}
             {viewMode === 'canvas' && <CanvasStage />}
+            <QuotaBar />
             {viewMode === 'gantt' && (
               // 独立边界：甘特图渲染或数据崩溃只掉这一块，不连累根级边界把整个
               // App（含 PaneLayer 里的终端）一起卸载。见 GanttErrorBoundary.tsx 顶部注释。
