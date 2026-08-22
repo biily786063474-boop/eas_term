@@ -281,7 +281,13 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 18px 22px;
+  /* **padding-top 必须是 0**：Chrome 把 sticky 的 top:0 停在 content box 顶部，
+     容器只要有 padding-top，吸顶的提问就会被顶下来那么多，跟标题栏之间露出一条缝。
+     顶部留白改由第一个子元素承担，视觉一样，但吸顶时能真正贴住。 */
+  padding: 0 18px 22px;
+}
+.ac-messages > *:first-child {
+  margin-top: 16px;
 }
 
 .ac-turn {
@@ -306,6 +312,22 @@
 
    视觉刻意做弱：它是**路标不是内容**。抢眼的话，一屏里每隔几段
    就横着一条高对比色块，真正要读的回答反而被切碎了。 */
+/* 吸顶探针：高度 0，靠它判断这条提问是不是已经粘在顶上了（见 MessageList.tsx）。
+   **必须待在 .ac-turn-user 外面** —— 放进去会跟着一起粘住、永远可见，探测就废了。
+   负 margin 抵消 .ac-messages 那 14px 的 flex gap，所以它在视觉上完全不存在。 */
+.ac-stick-sentinel {
+  /* **必须有 1px 高，不能是 0**：容器去掉 padding-top 之后，提问停在原位时
+     哨兵正好落在滚动容器的上边界上，而零高度元素在边界上会被判成「不相交」——
+     于是在原位也会误判成吸顶、把话收成一行。1px + 多减 1px 的负 margin，
+     视觉上依旧不存在。 */
+  height: 1px;
+  /* .ac-messages 是 flex column，flex item 默认 shrink:1 会把这 1px 直接压成 0，
+     于是又退回「零高度落在边界上」那种误判。flex:none 才留得住。 */
+  flex: none;
+  margin-bottom: -15px;
+  pointer-events: none;
+}
+
 .ac-turn-user {
   position: sticky;
   top: 0;
@@ -328,10 +350,45 @@
   color: var(--fg-dim);
   font-size: 13px;
   line-height: 1.5;
-  /* 提问可能很长，吸顶时只留两行，别把回答挤没了 */
-  max-height: 3em;
+  /* **在原位就完整摊开**。这里原来恒定 max-height:3em，于是滚动位置正好、
+     那条提问就在眼前时，照样被切成两行——还常常把第二行从中间劈开，
+     露出半截字。截断只该发生在吸顶之后，见下面的 .ac-stuck。 */
+  overflow-wrap: anywhere;
+}
+
+/* 吸顶态：从「一段话」收成「一条路标」。
+   路标只需要够认出是哪个问题，所以**一行**就够；两行截断反而会把第二行
+   劈成半截字。点它滚回原位看全文。 */
+.ac-turn-user.ac-stuck .ac-turn-text {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+  /* **实心底**。半透明 + blur 挡不住从背后滚过去的正文——两层字叠在一起
+     谁都读不了，这正是「干扰阅读」的来源。--popover-solid 是主题里唯一
+     完全不透明的那档，菜单和下拉也用它。 */
+  background: var(--popover-solid);
+  backdrop-filter: none;
+  /* 紧贴顶栏、通栏铺开：抵消 .ac-messages 的左右内边距，
+     让这条路标像标题栏的一部分，而不是浮在内容里的一块板子 */
+  margin: 0 -18px;
+  padding: 6px 18px;
+  /* 上面 .ac-turn-user .ac-turn-text 那条把宽度锁在 max-width:100%（= 内容区宽），
+     负 margin 想往外顶 36px 会被它卡住，结果比内容区还窄。通栏必须解开这把锁。 */
+  max-width: none;
+  border-radius: 0;
+  border-left: none;
+  box-shadow: 0 1px 0 var(--glass-border);
+}
+.ac-turn-user.ac-stuck .ac-turn-text:hover {
+  color: var(--fg);
+}
+
+/* 吸顶时把图片收起来：多条提问都粘在 top:0 上，靠「同高 + 不透明」让后来的
+   完整盖住先前的，看起来才是「滚到哪一段就只显示哪一段」。带图的那条一旦更高，
+   就会从下面露出半截上一条的边。 */
+.ac-turn-user.ac-stuck .ac-turn-imgs {
+  display: none;
 }
 
 .ac-turn-assistant .ac-turn-text {

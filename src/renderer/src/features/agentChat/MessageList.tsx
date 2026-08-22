@@ -143,10 +143,36 @@ function MessageTurn({
   const mdRef = useRef<HTMLDivElement>(null)
   useLinkify(mdRef, turn.text, leafId)
   const visible = turn.role === 'assistant' ? visibleExecs(turn.execs, expanded) : []
+  // 提问吸顶的两种形态：**在原位**时把话完整摊开（那是用户刚敲的原话，
+  // 凭什么只给看两行）；**滚过去之后**收成一行路标，点它能滚回来。
+  //
+  // 为什么要哨兵：CSS 没有 `:stuck` 伪类，而 IntersectionObserver 直接观察
+  // sticky 元素**测不出来** —— 它粘住时相对 root 静止、交叉比例不再变化，
+  // 回调根本不触发。所以放一个高度为 0 的探针在它**外面**（放里面会跟着一起
+  // 粘住、永远可见），探针滚出容器顶部的那一刻，就是这条开始吸顶的那一刻。
+  const isUser = turn.role === 'user'
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [stuck, setStuck] = useState(false)
+  useEffect(() => {
+    const s = sentinelRef.current
+    if (!isUser || !s) return
+    const root = s.closest('.ac-messages')
+    if (!root) return
+    // rootMargin 把顶边上放 1px：滚动位置是小数、边界判定会抖，
+    // 差一个像素就在「原位」和「吸顶」之间来回跳，看着像闪烁
+    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), {
+      root,
+      rootMargin: '1px 0px 0px 0px'
+    })
+    io.observe(s)
+    return () => io.disconnect()
+  }, [isUser])
   const hasHidden = !expanded && visible.length < turn.execs.length
 
   return (
-    <div className={`ac-turn ac-turn-${turn.role}`}>
+    <>
+      {isUser && <div ref={sentinelRef} className="ac-stick-sentinel" aria-hidden="true" />}
+      <div className={`ac-turn ac-turn-${turn.role}${stuck ? ' ac-stuck' : ''}`}>
       {/* 模型的回答按 Markdown 渲染 —— 它本来就是拿 Markdown 写的（标题、列表、代码块、
           粗体），当纯文本铺开就丢掉了全部层级，长回答会糊成一片。
           复用仓库里那个零依赖渲染器（WikiView / CodeView 同一个）：它**先把所有文本
@@ -182,7 +208,23 @@ function MessageTurn({
             dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.text, '') }}
           />
         ) : (
-          <div className="ac-turn-text">{turn.text}</div>
+          <div
+            className="ac-turn-text"
+            // 只有吸顶那一行才可点：在原位时它就在眼前，点了等于原地不动
+            {...(stuck
+              ? {
+                  role: 'button' as const,
+                  tabIndex: 0,
+                  'data-tip': '回到这条提问',
+                  // 滚回**哨兵**而不是这一行本身 —— 这一行正粘在顶上，
+                  // scrollIntoView 到它等于原地不动
+                  onClick: (): void =>
+                    sentinelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              : {})}
+          >
+            {turn.text}
+          </div>
         ))}
       {approval && (
         <ApprovalCard pending={approval} onDecide={(d) => onApprovalDecide(approval!.approvalId, d)} />
@@ -201,8 +243,9 @@ function MessageTurn({
             {expanded ? '收起' : hasHidden ? `展开全部 ${turn.execs.length} 项` : '展开详情'}
           </button>
         </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   )
 }
 
