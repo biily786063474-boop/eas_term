@@ -11,6 +11,7 @@ import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { fmtCost, fmtTokens } from '../../shared/teamCost'
 import { addBatch, parseRoster, recentSummary } from '../../shared/teamRoster'
 import { isolationOf, worktreePath, worktreeBranch, worktreeHint, belongsToProject } from '../../shared/teamWorktree'
+import { todosOfFrame } from '../../shared/todoOwner'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
 import { fileUrlOf, isWebFile } from './store/shared'
@@ -449,6 +450,32 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     while (s.canvas.shapes.some((sh) => Math.abs(sh.x - nx) < 8 && Math.abs(sh.y - ny) < 8)) ny += 110
     s.addShape({ type: 'sticky', x: nx, y: ny, w: 190, h: 96, text, color: String(args.color ?? '') || undefined })
     return { noted: text, at: { x: nx, y: ny } }
+  }
+
+  if (tool === 'todo_list') {
+    // **只读。** 用户 2026-08-21 拍板：agent 能看不能改。
+    // 理由跟今天修的那个 bug 同源 —— 「busy=false」被当成「交活了」，
+    // 结果 agent 说完第一轮就被判定完成。它对「做完」的判断和用户的验收标准
+    // 经常对不上，而待办清单是用户自己的东西，被乱勾一遍很难发现。
+    const where = resolveFrame(ctx)
+    if (!where) return { boards: [], note: '找不到你所在的 Frame，读不到待办' }
+    const boards = todosOfFrame(where.frameId, s.canvas.todos ?? [], s.canvas.frames).map((b) => ({
+      title: b.title || '待办',
+      items: b.items.map((it) => ({
+        title: it.title,
+        body: it.body || undefined,
+        done: it.done
+      }))
+    }))
+    const open = boards.reduce((n, b) => n + b.items.filter((i) => !i.done).length, 0)
+    return {
+      boards,
+      open,
+      note:
+        boards.length === 0
+          ? '这个 Frame 里没有待办清单（清单按位置归属，摆在哪个 Frame 里就属于哪个）'
+          : '只读：做完哪条就在回答里说清楚，由用户自己勾。'
+    }
   }
 
   if (tool === 'canvas_list_frames') {

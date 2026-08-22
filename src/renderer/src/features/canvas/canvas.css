@@ -5291,3 +5291,16 @@
 .cframe-team.on:hover {
   background: rgba(var(--accent-rgb), 0.22);
 }
+
+/* 待办详情里的语音按钮：贴在文本框右下角，不占独立一行 —— 
+   灯箱本来就小，多一行按钮会把写字的地方挤掉。 */
+.ctodo-lightbox-voice {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -34px;
+  margin-right: 8px;
+  pointer-events: none;
+}
+.ctodo-lightbox-voice > * {
+  pointer-events: auto;
+}

@@ -184,6 +184,18 @@ const TOOLS = [
     }
   },
   {
+    name: 'todo_list',
+    description:
+      '读用户画板上、**你所在这个 Frame 里**的待办清单（含它的子 Frame）。' +
+      '归属按位置算：清单摆在哪个 Frame 里就属于哪个 —— 别的 Frame 的清单你看不到，那是有意的。' +
+      '**只读。** 你不能勾掉、改写或新增任何一条 —— 那是用户自己的任务清单，' +
+      '「你以为做完了」和「他验收标准里的做完了」经常不是一回事。' +
+      '做完某条之后就在回答里说清楚做了哪条，由他自己去勾。' +
+      '什么时候用：他让你「看看还有什么没做」「按待办清单往下做」，' +
+      '或者你想确认这次的活对应清单上哪一条。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'canvas_list_frames',
     description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。',
     inputSchema: { type: 'object', properties: {} }

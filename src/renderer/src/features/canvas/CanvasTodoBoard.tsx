@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { TodoBoard, TodoItem } from '../../store'
 import { attachBlurGuard } from '../../blurGuard'
+import { VoiceButton } from '../voice/VoiceButton'
 import { arrayMove, dropIndexForOffset, groupTodoItems } from '../../store/canvas/todoBoard'
 import { PlusIcon, CheckIcon, ChevronDownIcon, CloseIcon } from '../../ui/Icons'
 
@@ -329,6 +330,8 @@ function TodoLightbox({
   item: TodoItem
   onClose: () => void
 }): JSX.Element {
+  /** 详情框是非受控的（defaultValue + onBlur），语音要往里追加就得拿到它 */
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
   const updateTodoItem = useStore((s) => s.updateTodoItem)
   const [open, setOpen] = useState(false)
   const closingRef = useRef(false)
@@ -365,12 +368,29 @@ function TodoLightbox({
           </button>
         </div>
         <textarea
+          ref={bodyRef}
           className="ctodo-lightbox-body"
           defaultValue={item.body ?? ''}
-          placeholder="写点详细信息…"
+          placeholder="写点详细信息…（也可以按住麦克风说）"
           autoFocus
           onBlur={(e) => updateTodoItem(boardId, item.id, { body: e.target.value })}
         />
+        {/* 语音写详情。**说完立刻存盘，不等 blur** —— 上面那个 textarea 是非受控的，
+            语音是直接往 DOM 里追加，React 不知道值变了；只靠 onBlur 的话，
+            说完直接关掉灯箱就丢了。 */}
+        <div className="ctodo-lightbox-voice">
+          <VoiceButton
+            ptyId={`todo-${item.id}`}
+            inline
+            onText={(t) => {
+              const el = bodyRef.current
+              if (!el) return
+              el.value = el.value ? `${el.value}${/\s$/.test(el.value) ? '' : ' '}${t}` : t
+              updateTodoItem(boardId, item.id, { body: el.value })
+              el.focus()
+            }}
+          />
+        </div>
       </div>
     </div>,
     document.body
