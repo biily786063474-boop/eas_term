@@ -300,13 +300,38 @@
 
 /* 用户消息：右靠、气泡底——跟模型文字（左靠、无气泡）拉开区分，两者都是「正常字号/
    对比度」的主体内容（规则①），气泡只是用来分角色，不是弱化谁 */
+/* 用户的提问**吸在顶上**（照 Claude Code CLI 那个做法）。
+   长回答滚起来之后，顶上始终留着「这是在回答哪个问题」——
+   否则滚到一半就忘了上文在答什么。
+
+   视觉刻意做弱：它是**路标不是内容**。抢眼的话，一屏里每隔几段
+   就横着一条高对比色块，真正要读的回答反而被切碎了。 */
+.ac-turn-user {
+  position: sticky;
+  top: 0;
+  /* 压住下面滚过去的正文，但别压住审批卡片那类要交互的浮层 */
+  z-index: 3;
+}
 .ac-turn-user .ac-turn-text {
-  align-self: flex-end;
-  max-width: 82%;
-  background: var(--accent-soft);
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
+  /* 通栏，不再是右对齐的气泡 —— 吸顶的东西必须占满宽度，
+     否则滚动时右边露出半截正文，读起来是乱的 */
+  align-self: stretch;
+  max-width: 100%;
+  background: rgba(255, 255, 255, 0.045);
+  /* 底下的正文会从它身后滚过去。**必须挡住** —— 半透明色块叠着文字
+     比不吸顶更难读，所以补一层模糊 */
+  backdrop-filter: blur(10px);
+  border: none;
+  border-left: 2px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: 0 6px 6px 0;
+  padding: 7px 12px;
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
+  /* 提问可能很长，吸顶时只留两行，别把回答挤没了 */
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ac-turn-assistant .ac-turn-text {
