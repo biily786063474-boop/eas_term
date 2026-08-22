@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
+import { QuotaBar } from '../quota/QuotaBar'
 import { PlusIcon, CloseIcon } from '../../ui/Icons'
 
 function TabRenameInput({
@@ -103,6 +104,9 @@ export function TabBar(): JSX.Element {
       >
         <PlusIcon size={14} />
       </button>
+      {/* 额度条的分屏形态。放这儿是因为标签栏右端本来就空着 ——
+          分屏的内容区是满屏的终端，悬浮在右上角会挡住第一行。 */}
+      <QuotaBar variant="inline" />
     </div>
   )
 }

@@ -2,10 +2,6 @@
    它常驻在视野边缘，任何多余的装饰每天都要被看几百遍。
    所以只有数字、一个分隔竖线、一点点留白 —— 没有图标、没有边框、没有背景块。 */
 .qb {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  z-index: 20;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -20,6 +16,26 @@
   /* 它是参考信息，不接受点击 —— 让画布的拖拽/框选从它身上穿过去 */
   pointer-events: none;
   user-select: none;
+}
+
+/* 画布模式：右上角悬浮 */
+.qb-float {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  z-index: 20;
+}
+
+/* 分屏模式：嵌在标签栏右端。**不要背景块** ——
+   标签栏本来就有自己的底色，再叠一层 pill 会显得像个按钮，
+   而它不可点。留白靠 margin，靠得住又不喧宾夺主。 */
+.qb-inline {
+  flex: none;
+  margin-left: auto;
+  margin-right: 10px;
+  background: none;
+  backdrop-filter: none;
+  padding: 0;
 }
 /* 但 hover 提示要能出来，所以数字本身恢复命中 */
 .qb-pct {

@@ -60,7 +60,13 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
   )
 }
 
-export function QuotaBar(): JSX.Element | null {
+/** 两种形态：
+ *  · `float` —— 画布模式，右上角悬浮
+ *  · `inline` —— 分屏模式，嵌在标签栏右端
+ *
+ *  分屏不能照搬悬浮：那儿是终端的内容区，一条 pill 压在上面会挡住第一行。
+ *  标签栏右端本来就是空的，嵌进去既看得见又不占任何人的地方。 */
+export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' } = {}): JSX.Element | null {
   const [on, setOn] = useState(readQuotaBarOn)
   const [q, setQ] = useState<QuotaSnapshot>({})
   const viewMode = useStore((s) => s.viewMode)
@@ -85,10 +91,13 @@ export function QuotaBar(): JSX.Element | null {
   }, [])
 
   if (!on) return null
-  // 只在画布模式出现：它是画布右上角的悬浮件，分屏/看板另有自己的布局
-  if (viewMode !== 'canvas') return null
-  // 让位：抽屉开着、或者有等你处理的提醒
-  if (wikiOpen || resOpen || hasAttention || maximized) return null
+  // 各就各位：悬浮那份只在画布出现，内联那份只在分屏出现
+  if (variant === 'float' && viewMode !== 'canvas') return null
+  if (variant === 'inline' && viewMode !== 'split') return null
+  // 让位：抽屉开着、有等你处理的提醒、或者有模块最大化。
+  // **只对悬浮那份生效** —— 内联的嵌在标签栏里，本来就不压着任何人，
+  // 让它跟着消失只会让人以为数据没了。
+  if (variant === 'float' && (wikiOpen || resOpen || hasAttention || maximized)) return null
 
   // **按数据判，不能按元素判。** `<CliPart/>` 即使内部 return null，
   // 元素本身永远是 truthy —— 拿它做条件的话，只有一边有数据时
@@ -99,7 +108,7 @@ export function QuotaBar(): JSX.Element | null {
   if (!hasCodex && !hasClaude) return null // 两边都还没数据 —— 整条不出现
 
   return (
-    <div className="qb" role="status" aria-label="额度用量">
+    <div className={`qb qb-${variant}`} role="status" aria-label="额度用量">
       {hasCodex && <CliPart name="Codex" q={q.codex} />}
       {hasCodex && hasClaude && <span className="qb-sep">|</span>}
       {hasClaude && <CliPart name="Claude Code" q={q.claude} />}
