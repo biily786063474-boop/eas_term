@@ -67,6 +67,10 @@ export function QuotaBar(): JSX.Element | null {
   const wikiOpen = useStore((s) => s.wikiDrawerOpen)
   const resOpen = useStore((s) => s.resDrawerOpen)
   const hasAttention = useStore((s) => s.attentionPtys.length > 0)
+  // 有模块最大化时也让位：最大化的节点铺满整个视口，这条正好悬在它的
+  // 标题栏上，把关闭/还原那些按钮挡住（用户 2026-08-21 截图）。
+  // 跟抽屉、提醒同一条道理 —— 用户正在专注的东西优先，额度是随时能看的参考。
+  const maximized = useStore((s) => !!s.maximizedNode)
 
   // 开关变化：同一个窗口里 icon 点了要立刻反应，所以走自定义事件而不是轮询
   useEffect(() => {
@@ -84,7 +88,7 @@ export function QuotaBar(): JSX.Element | null {
   // 只在画布模式出现：它是画布右上角的悬浮件，分屏/看板另有自己的布局
   if (viewMode !== 'canvas') return null
   // 让位：抽屉开着、或者有等你处理的提醒
-  if (wikiOpen || resOpen || hasAttention) return null
+  if (wikiOpen || resOpen || hasAttention || maximized) return null
 
   // **按数据判，不能按元素判。** `<CliPart/>` 即使内部 return null，
   // 元素本身永远是 truthy —— 拿它做条件的话，只有一边有数据时
