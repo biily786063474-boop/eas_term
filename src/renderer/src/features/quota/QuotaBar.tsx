@@ -16,7 +16,8 @@ import {
   isWindowExpired,
   type QuotaSnapshot,
   type CliQuota,
-  type QuotaWindow
+  type QuotaWindow,
+  isHot
 } from '../../../../shared/quota'
 import './quotaBar.css'
 
@@ -66,7 +67,9 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
       {cells.map((w, i) => (
         <span
           key={i}
-          className={`qb-pct${w.percent >= 80 ? ' hot' : ''}`}
+          // **判定不写在这里** —— 走 shared 的 isHot()：有服务端 severity 就信它，
+          // 没有才回退到写死的 80%（三条通道里只有直连接口那条带判定）。
+          className={`qb-pct${isHot(w) ? ' hot' : ''}`}
           // hover 才说明这个数字是哪个窗口的 —— 平时保持简约，
           // 一个百分比后面挂一串「5 小时」会把这条撑得很啰嗦。
           //

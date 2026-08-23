@@ -9,12 +9,14 @@ import { app, ipcMain, BrowserWindow } from 'electron'
 import {
   codexQuotaFromLine,
   claudeQuotaFromStatusline,
+  claudeQuotaFromUsageApi,
   claudeQuotaWindowFromEvent,
   shouldReplaceWindow,
   type QuotaSnapshot,
   type CliQuota,
   type QuotaWindow
 } from '../shared/quota.ts'
+import { fetchUsage } from './quotaApi'
 
 /** 落盘位置。**要落盘**（用户 2026-08-21 拍板）：两边都是「跑过一轮才有数」，
  *  不落的话每天第一次打开软件那个常驻 bar 都是空的，等于没有。 */
@@ -141,6 +143,69 @@ export function ingestChatQuota(e: {
   }
 }
 
+/** 两次真实 HTTP 之间的最小间隔。**不是为了省钱**（这条不花推理 token），
+ *  是为了不让一串快问快答把同一个接口连打十几次。 */
+const API_MIN_GAP_MS = 10_000
+
+/** turn.done 之后等多久再打接口。**必须有这个延迟**：额度是服务端结算的，
+ *  紧贴着 turn.done 打过去，拿到的可能还是这一轮计入之前的数。
+ *  顺带把「连着好几轮飞快跑完」合并成一次请求。 */
+const API_DEBOUNCE_MS = 2000
+
+let apiTimer: NodeJS.Timeout | null = null
+let apiLastAt = 0
+let apiInFlight = false
+
+/** 真的去打一次接口，并把结果并进快照。**任何失败都安静吞掉** ——
+ *  事件流那条路还在兜着，为一个百分比惊动用户不值当。 */
+async function refreshFromApi(): Promise<void> {
+  if (apiInFlight) return
+  apiInFlight = true
+  try {
+    const now = Date.now()
+    const got = await fetchUsage(now)
+    if (!got) return
+    // **先认账号再写数**：换过账号的话，落盘里那份是别人的额度，
+    // 不能让它跟新账号的数据混在同一份快照里（见 QuotaSnapshot.claudeAccountUuid）
+    if (got.accountUuid && snapshot.claudeAccountUuid && got.accountUuid !== snapshot.claudeAccountUuid) {
+      snapshot = { ...snapshot, claude: undefined, claudeAccountUuid: got.accountUuid }
+    } else if (got.accountUuid && !snapshot.claudeAccountUuid) {
+      snapshot = { ...snapshot, claudeAccountUuid: got.accountUuid }
+    }
+    apiLastAt = Date.now()
+    const q = claudeQuotaFromUsageApi(got.data, apiLastAt)
+    if (!q) return
+    // 走 putWindow 而不是整体替换 —— 理由见 putWindow 的注释（2026-08-22 的旧事故）。
+    // 这条通道两个窗口总是齐的，但收口是纪律，不因为「这次齐」就绕过去。
+    let changed = false
+    if (q.primary) changed = putWindow('primary', q.primary) || changed
+    if (q.secondary) changed = putWindow('secondary', q.secondary) || changed
+    if (changed) {
+      save()
+      broadcast()
+    }
+  } finally {
+    apiInFlight = false
+  }
+}
+
+/** 排一次额度刷新。**AI 对话每轮跑完都会叫它**，所以必须是幂等且便宜的。
+ *
+ *  为什么挂在对话上而不是做个刷新按钮（用户 2026-08-23 拍板）：额度只在用了之后才变，
+ *  「刚跑完一轮」正是它变化的时刻，也正是用户会去瞟一眼的时刻。按钮是让人去做
+ *  机器该做的事。
+ *
+ *  **两层节流**：先 debounce 合并连发，再确保两次真实请求至少隔 API_MIN_GAP_MS。 */
+export function scheduleApiRefresh(): void {
+  if (apiTimer) clearTimeout(apiTimer)
+  const since = Date.now() - apiLastAt
+  const wait = Math.max(API_DEBOUNCE_MS, API_MIN_GAP_MS - since)
+  apiTimer = setTimeout(() => {
+    apiTimer = null
+    void refreshFromApi()
+  }, wait)
+}
+
 /** Codex 侧：读它自己最新那份会话日志。
  *
  *  headless 流里没有额度（2026-08-21 实测），只能来这儿捞。
@@ -193,6 +258,9 @@ const CODEX_POLL_MS = 30_000
 export function registerQuotaHandlers(): void {
   load()
   ipcMain.handle('quota:get', (): QuotaSnapshot => snapshot)
+  // 开软件先拉一次：落盘那份可能是昨天的，甚至可能是**上一个账号的**
+  // （见 QuotaSnapshot.claudeAccountUuid）。这一次请求同时兼任账号校验。
+  void refreshFromApi()
   const tick = (): void => merge('codex', readCodexQuota())
   tick()
   // 轮询留着当兜底：fs.watch 在某些文件系统上会漏事件，

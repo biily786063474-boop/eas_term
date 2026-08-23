@@ -24,7 +24,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
 import { getAdapter, listAdapters } from './adapters/index.ts'
-import { ingestChatQuota } from '../quotaStore'
+import { ingestChatQuota, scheduleApiRefresh } from '../quotaStore'
 import {
   NO_SILENCE,
   silenceAfterSlash,
@@ -300,6 +300,11 @@ function handleEvent(live: Live, e: ChatEvent): void {
   }
   if (e.k === 'turn.start') live.rec = { ...live.rec, busy: true, bgTask: false }
   else if (e.k === 'turn.done') {
+    // 跑完一轮 = 额度刚变过，也正是用户会去瞟一眼额度条的时刻 ——
+    // 顺手排一次直连刷新（`/api/oauth/usage`，**不花推理 token**，内部有节流）。
+    // 这是「只用 AI 对话、从不开终端」的人拿到**准确**额度的唯一途径：
+    // statusline 那条路只存在于交互式 TUI，事件流那条五小时窗口根本不带用量。
+    scheduleApiRefresh()
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
     live.rec = {

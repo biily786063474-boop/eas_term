@@ -29,11 +29,26 @@ export interface QuotaWindow {
    *  一部分窗口（statusline 的 five_hour 可能整个缺席，事件流的 five_hour 不带用量）。
    *  只刷新了一格却把整段推到「刚刚」，旁边那个几小时前的数字就会显示成「刚刚采到」。 */
   at: number
-  /** 这一格是哪条通道给的。冲突时靠它决定谁说了算：
-   *  `statusline` 两个窗口都精确；`event` 只在跨阈值时报、且五小时不带用量；
+  /** 这一格是哪条通道给的。冲突时靠它决定谁说了算（见 SRC_RANK）：
+   *  `api` 直连 `/api/oauth/usage`，两个窗口永远都在、服务端原始口径，最权威；
+   *  `statusline` 同样精确，但 payload 是条件展开的（某个窗口可能整个缺席）；
+   *  `event` 只在跨阈值时报、且五小时不带用量；
    *  `log` 是 Codex 读自己的会话日志。 */
-  src: 'statusline' | 'event' | 'log'
+  src: 'api' | 'statusline' | 'event' | 'log'
+  /** 服务端对这一格的告警判定原文（`limits[].severity`）。**只有 `api` 这条通道带**。
+   *
+   *  **存原文不存布尔**：目前只实测见过 `"normal"` 一个值（2026-08-23，当时额度
+   *  4%/3%，触发不了任何告警），完整取值未知 —— 去 CLI 二进制里挖到的
+   *  `severity:"warning"` 全是**配置校验**子系统的，跟额度无关。存成布尔就把
+   *  「到底是哪一档」这个信息在入口处丢掉了，将来想分级得重新采数据。
+   *  怎么解释它见 isHot()，那是唯一一处。 */
+  severity?: string
 }
+
+/** 来源的权威度，数字大的说了算。**新增来源必须在这里排位** ——
+ *  漏排会 `?? 0` 落到最低阶，表现成「新通道的数据永远盖不掉旧值」，
+ *  而且不报错，只是安静地不更新。 */
+const SRC_RANK: Record<QuotaWindow['src'], number> = { api: 3, statusline: 2, event: 1, log: 1 }
 
 /** 一条新数据该不该盖掉这一格已有的值。
  *
@@ -41,17 +56,44 @@ export interface QuotaWindow {
  *  会差 1（statusline 的 79 对事件流 0.796×100 四舍五入的 80）。谁后到谁说了算的话，
  *  这一格会在 79/80 之间无限横跳 —— 80 正好是告警阈值，颜色也跟着红/不红地闪。
  *
- *  规则：**statusline 是精确来源，无条件覆盖**；事件流是补充，只在这一格还没有
- *  statusline 值、或那个值已经旧到没有参考意义时才写。 */
+ *  规则：**更权威的来源无条件覆盖**；低阶来源只在已有值旧到没有参考意义时才顶上；
+ *  同级则新的赢。2026-08-23 从「statusline 特判」改成按 SRC_RANK 比较，
+ *  因为接进来的 `api` 比 statusline 还权威，再往下特判会越写越绕。 */
 export function shouldReplaceWindow(
   prev: QuotaWindow | undefined,
   next: QuotaWindow,
   staleMs: number
 ): boolean {
   if (!prev) return true
-  if (next.src === 'statusline') return true
-  if (prev.src === 'statusline' && next.at - prev.at < staleMs) return false
+  const pr = SRC_RANK[prev.src] ?? 0
+  const nr = SRC_RANK[next.src] ?? 0
+  if (nr > pr) return true
+  if (nr < pr) return next.at - prev.at >= staleMs
   return next.at >= prev.at
+}
+
+/** 没有服务端判定时，多少算「该紧张了」。
+ *
+ *  **这个数是我们自己拍的，服务端从没说过 80 是个坎** —— 它只是个不至于太早
+ *  也不至于太晚的经验值。凡是 `severity` 拿得到的地方都不该走到这里。 */
+export const HOT_FALLBACK_PERCENT = 80
+
+/** 这一格要不要标红。**全项目唯一的告警判定处。**
+ *
+ *  优先信服务端：`severity` 不是 `normal` 就告警。为什么这么写而不是枚举出
+ *  `warning` / `critical` 各自怎么办 —— 见 QuotaWindow.severity 的注释，
+ *  完整取值我们没有实测依据。**「不是正常就告警」对任何没见过的新档位都成立**，
+ *  而照着猜出来的枚举写分支，撞上没列到的值会静默地不告警。
+ *
+ *  拿不到 severity（statusline / 事件流 / Codex 日志）才回退到百分比阈值。
+ *  这也是为什么阈值不能直接删掉：三条通道里只有一条带判定。
+ *
+ *  顺带治了旧的 79/80 横跳：那个 bug 的根子是「80 这个坎正好压在两条来源的
+ *  舍入误差缝里」（statusline 报 79、事件流 0.796×100 进位成 80，颜色跟着闪）。
+ *  severity 不是从百分比推的，没有这条缝。 */
+export function isHot(w: QuotaWindow): boolean {
+  if (typeof w.severity === 'string') return w.severity !== 'normal'
+  return w.percent >= HOT_FALLBACK_PERCENT
 }
 
 /** 这一格是不是已经过了重置时刻 —— 过了就该作废，不能继续显示。
@@ -78,6 +120,15 @@ export interface CliQuota {
 export interface QuotaSnapshot {
   claude?: CliQuota
   codex?: CliQuota
+  /** 落盘的这份 Claude 额度属于哪个账号（`~/.claude.json` 的 oauthAccount.accountUuid）。
+   *
+   *  **不是可有可无的元数据**：2026-08-23 实测过一次真事故 —— `/login` 换账号后
+   *  `cachedUsageUtilization` 连同我们自己的落盘快照都还是上一个账号的
+   *  （里面 seven_day 94%，接口实际 3%）。那已经不是「显示个旧数字」，
+   *  是**显示别人的额度**。对不上就把 claude 那半整个丢掉，宁可空着。
+   *
+   *  只对 Claude 侧有意义；Codex 那半读的是本机会话日志，不存在这个问题。 */
+  claudeAccountUuid?: string
 }
 
 /** 百分比归一到 0–100 的整数。
@@ -168,6 +219,84 @@ export function claudeQuotaFromStatusline(data: unknown, now: number): CliQuota 
   }
   const primary = win(rl.five_hour, 300)
   const secondary = win(rl.seven_day, 10080)
+  if (!primary && !secondary) return null
+  return { primary, secondary, updatedAt: now }
+}
+
+/** ISO 8601 → Unix 秒。**只有 `/api/oauth/usage` 这条通道需要它** ——
+ *  statusline 和事件流给的本来就是 Unix 秒。
+ *
+ *  认不出来返回 undefined，**绝不返回 NaN**：NaN 会一路漂到倒计时和
+ *  isWindowExpired 里，表现成「重置时刻空白 + 这一格永远不过期」，
+ *  比干脆没有值更难查。 */
+export function isoToUnixSeconds(v: unknown): number | undefined {
+  if (typeof v !== 'string') return undefined
+  const ms = Date.parse(v)
+  if (!Number.isFinite(ms)) return undefined
+  return Math.floor(ms / 1000)
+}
+
+/** 直连 `/api/oauth/usage` 拿回来的那份 JSON → Claude 额度。拿不到就返回 null。
+ *
+ *  **这条通道绕开 CLI 直接问服务端**（2026-08-23 打通，HTTP 200 实测）。
+ *  为什么值得多一条路：百分比本来就是服务端下发的，CLI 只是转述，而它唯一会
+ *  转述出来的出口是 statusline —— 那是交互式 TUI 才有的东西。AI 对话走
+ *  `claude -p`，没有状态栏，过去只能吃事件流那条残缺通道（五小时那格连
+ *  utilization 字段都没有）。这条对谁都一样管用，且**不花任何推理 token**。
+ *
+ *  三个和别处不同、写错就是 bug 的地方：
+ *
+ *  · **`resets_at` 是 ISO 字符串**（`"2026-08-23T16:39:59.856192+00:00"`），
+ *    不是 statusline / 事件流那种 Unix 秒。忘了换算就是 NaN，见 isoToUnixSeconds。
+ *  · **`utilization` 是 0–100 的浮点**（实测 `4.0` 就是 4%），
+ *    不是事件流那种 0–1。当成 0–1 去乘 100 会得到一个差 100 倍的数字。
+ *  · **响应里有一大批 null 的代号窗口** —— 实测见到 `tangelo`、`nimbus_quill`、
+ *    `iguana_necktie`、`omelette_promotional`、`cinder_cove`、`amber_ladder`、
+ *    `seven_day_opus`、`seven_day_sonnet`、`seven_day_cowork` 等，是未启用的实验额度，
+ *    **会随账号和计划变**。所以**只认 five_hour / seven_day 两个键，其余一律不碰**：
+ *    遍历所有键去猜哪个是「周额度」，迟早撞上一个我们没见过的新代号。 */
+export function claudeQuotaFromUsageApi(data: unknown, now: number): CliQuota | null {
+  const rec = (v: unknown): Record<string, unknown> | undefined =>
+    v && typeof v === 'object' ? (v as Record<string, unknown>) : undefined
+  const d = rec(data)
+  if (!d) return null
+  // 窗口长度是**我们**知道的（five_hour / seven_day 就是名字本身的意思），
+  // 响应里不带 window_minutes —— 和 statusline 那条一样，别去取
+  // 服务端对每个窗口的告警判定藏在**另一个数组**里，得按 kind 认回去。
+  //
+  // **必须按 `kind` 而不是 `group`**：实测响应里 `weekly_all` 和 `weekly_scoped`
+  // 的 group 都是 `"weekly"`，按 group 认会让「按模型分的那条周额度」
+  // 覆盖掉真正的周额度判定。
+  //
+  // kind ↔ 窗口的对应关系是**对着实测数据核过的**，不是猜的：
+  //   session    percent 4 / resets 2026-08-23T16:39:59.856192Z  ← 与 five_hour 逐字段一致
+  //   weekly_all percent 3 / resets 2026-08-30T03:59:59.856221Z  ← 与 seven_day 逐字段一致
+  const limits = Array.isArray(d.limits) ? d.limits : []
+  const severityOfKind = (kind: string): string | undefined => {
+    for (const item of limits) {
+      const r = rec(item)
+      if (r?.kind === kind && typeof r.severity === 'string') return r.severity
+    }
+    return undefined // 没有就没有 —— isHot() 会回退到百分比阈值
+  }
+  const win = (v: unknown, minutes: number, kind: string): QuotaWindow | undefined => {
+    const w = rec(v)
+    if (!w) return undefined
+    const percent = clampPercent(w.utilization)
+    if (percent === undefined) return undefined
+    const resetsAt = isoToUnixSeconds(w.resets_at)
+    const severity = severityOfKind(kind)
+    return {
+      percent,
+      windowMinutes: minutes,
+      ...(resetsAt !== undefined ? { resetsAt } : {}),
+      ...(severity !== undefined ? { severity } : {}),
+      at: now,
+      src: 'api'
+    }
+  }
+  const primary = win(d.five_hour, 300, 'session')
+  const secondary = win(d.seven_day, 10080, 'weekly_all')
   if (!primary && !secondary) return null
   return { primary, secondary, updatedAt: now }
 }

@@ -9,6 +9,10 @@ import {
   claudeQuotaWindowFromEvent,
   shouldReplaceWindow,
   isWindowExpired,
+  claudeQuotaFromUsageApi,
+  isoToUnixSeconds,
+  isHot,
+  HOT_FALLBACK_PERCENT,
   type QuotaWindow
 } from './quota.ts'
 
@@ -198,4 +202,186 @@ test('过了重置时刻的那一格要作废', () => {
   assert.equal(isWindowExpired(W(91, 'event', 0, Math.floor(now / 1000) + 60), now), false)
   assert.equal(isWindowExpired(W(91, 'event', 0), now), false, '不带 resetsAt 的无从判断，不能瞎作废')
   assert.equal(isWindowExpired(undefined, now), false)
+})
+
+// ── 直连 /api/oauth/usage ──────────────────────────────────────────────────
+// **真实响应**（2026-08-23 实测 HTTP 200，删掉了与额度无关的 spend/limits 细节，
+// 但**原样保留那批 null 的代号窗口** —— 它们正是这条通道最容易踩的坑）。
+const API_REAL = {
+  five_hour: {
+    utilization: 4.0,
+    resets_at: '2026-08-23T16:39:59.856192+00:00',
+    limit_dollars: null,
+    used_dollars: null,
+    remaining_dollars: null
+  },
+  seven_day: {
+    utilization: 3.0,
+    resets_at: '2026-08-30T03:59:59.856221+00:00',
+    limit_dollars: null,
+    used_dollars: null,
+    remaining_dollars: null
+  },
+  seven_day_oauth_apps: null,
+  seven_day_opus: null,
+  seven_day_sonnet: null,
+  seven_day_cowork: null,
+  seven_day_omelette: null,
+  tangelo: null,
+  iguana_necktie: null,
+  omelette_promotional: null,
+  nimbus_quill: { utilization: 0.0, resets_at: null, limit_dollars: null },
+  cinder_cove: null,
+  amber_ladder: null,
+  // **原样保留 weekly_scoped**：它和 weekly_all 的 group 都是 "weekly"，
+  // 按 group 认会串台，这条就是防串台的哨兵
+  limits: [
+    {
+      kind: 'session',
+      group: 'session',
+      percent: 4,
+      severity: 'normal',
+      resets_at: '2026-08-23T16:39:59.856192+00:00',
+      scope: null,
+      is_active: true
+    },
+    {
+      kind: 'weekly_all',
+      group: 'weekly',
+      percent: 3,
+      severity: 'normal',
+      resets_at: '2026-08-30T03:59:59.856221+00:00',
+      scope: null,
+      is_active: false
+    },
+    {
+      kind: 'weekly_scoped',
+      group: 'weekly',
+      percent: 0,
+      severity: 'normal',
+      resets_at: null,
+      scope: { model: { id: null, display_name: 'Fable' }, surface: null },
+      is_active: false
+    }
+  ]
+}
+
+test('从 /api/oauth/usage 抽出两个窗口，ISO 时间换算成 Unix 秒', () => {
+  const q = claudeQuotaFromUsageApi(API_REAL, NOW)
+  assert.ok(q)
+  assert.equal(q.primary?.percent, 4)
+  assert.equal(q.secondary?.percent, 3)
+  assert.equal(q.primary?.windowMinutes, 300)
+  assert.equal(q.secondary?.windowMinutes, 10080)
+  assert.equal(q.primary?.src, 'api')
+  // **resets_at 是 ISO 字符串**，不换算就是 NaN
+  assert.equal(q.primary?.resetsAt, Math.floor(Date.parse('2026-08-23T16:39:59.856192+00:00') / 1000))
+  assert.equal(typeof q.secondary?.resetsAt, 'number')
+})
+
+test('utilization 是 0–100 而不是 0–1：4.0 就是 4%，不是 400%', () => {
+  const q = claudeQuotaFromUsageApi(API_REAL, NOW)
+  assert.equal(q?.primary?.percent, 4, '当成 0–1 去乘 100 会得到 400 再被钳到 100')
+})
+
+test('那批 null 的代号窗口一个都不许影响结果', () => {
+  const q = claudeQuotaFromUsageApi(API_REAL, NOW)
+  // nimbus_quill 有值且 utilization=0，但它不是 five_hour/seven_day，不该被当成任何一格
+  assert.equal(q?.primary?.percent, 4)
+  assert.equal(q?.secondary?.percent, 3)
+})
+
+test('只有代号窗口、两个正经窗口都缺席时返回 null', () => {
+  assert.equal(claudeQuotaFromUsageApi({ tangelo: null, nimbus_quill: { utilization: 5 } }, NOW), null)
+  assert.equal(claudeQuotaFromUsageApi({}, NOW), null)
+  assert.equal(claudeQuotaFromUsageApi(null, NOW), null)
+})
+
+test('isoToUnixSeconds 认不出就给 undefined，绝不给 NaN', () => {
+  // NaN 会一路漂到倒计时和 isWindowExpired，表现成「空白 + 永不过期」
+  assert.equal(isoToUnixSeconds('不是时间'), undefined)
+  assert.equal(isoToUnixSeconds(null), undefined)
+  assert.equal(isoToUnixSeconds(1787503200), undefined, '已经是 Unix 秒的数字不归它管')
+  assert.equal(isoToUnixSeconds('2026-08-23T16:39:59.856192+00:00'), 1787503199)
+})
+
+// ── 来源优先级：api > statusline > event/log ───────────────────────────────
+const mk = (src: QuotaWindow['src'], percent: number, at: number): QuotaWindow => ({
+  percent,
+  at,
+  src
+})
+
+test('api 无条件盖掉 statusline —— 它两个窗口永远都在，且是服务端原始口径', () => {
+  assert.equal(shouldReplaceWindow(mk('statusline', 79, NOW), mk('api', 4, NOW), 600_000), true)
+})
+
+test('statusline 不许盖掉「还新鲜的」api 值', () => {
+  // 否则每轮对话刚从接口拿到的准确值，会被几秒后回传的 statusline 顶掉，两者来回横跳
+  assert.equal(shouldReplaceWindow(mk('api', 4, NOW), mk('statusline', 79, NOW + 1000), 600_000), false)
+})
+
+test('api 值旧到没有参考意义之后，statusline 可以顶上', () => {
+  // 只用终端不开 AI 对话的人：接口那条路不会再被触发，不能让旧值永远焊死在那儿
+  assert.equal(
+    shouldReplaceWindow(mk('api', 4, NOW), mk('statusline', 79, NOW + 600_001), 600_000),
+    true
+  )
+})
+
+test('事件流依旧盖不掉新鲜的 statusline（旧行为不能被这次改动破坏）', () => {
+  assert.equal(shouldReplaceWindow(mk('statusline', 79, NOW), mk('event', 80, NOW + 1000), 600_000), false)
+})
+
+test('同级来源新的赢，旧的不许倒着盖回去', () => {
+  assert.equal(shouldReplaceWindow(mk('api', 4, NOW + 1000), mk('api', 9, NOW), 600_000), false)
+  assert.equal(shouldReplaceWindow(mk('api', 4, NOW), mk('api', 9, NOW + 1000), 600_000), true)
+})
+
+// ── 告警判定：服务端 severity 优先，拿不到才回退百分比 ─────────────────────
+test('从 limits[] 按 kind 认回两个窗口的 severity', () => {
+  const q = claudeQuotaFromUsageApi(API_REAL, NOW)
+  assert.equal(q?.primary?.severity, 'normal', 'session ↔ five_hour')
+  assert.equal(q?.secondary?.severity, 'normal', 'weekly_all ↔ seven_day')
+})
+
+test('必须按 kind 认而不是 group —— weekly_scoped 不许冒充周额度', () => {
+  // 把 weekly_all 那条的 severity 改掉，weekly_scoped 保持 normal。
+  // 按 group 认的话两条都是 "weekly"，会取到错的那条
+  const data = {
+    ...API_REAL,
+    limits: API_REAL.limits.map((l) =>
+      l.kind === 'weekly_all' ? { ...l, severity: 'warning' } : l
+    )
+  }
+  const q = claudeQuotaFromUsageApi(data, NOW)
+  assert.equal(q?.secondary?.severity, 'warning', '取串了就会是 normal')
+})
+
+test('没有 limits[] 时不编造 severity —— 让 isHot 回退到阈值', () => {
+  const { limits: _drop, ...noLimits } = API_REAL
+  const q = claudeQuotaFromUsageApi(noLimits, NOW)
+  assert.equal(q?.primary?.severity, undefined)
+  assert.ok(q?.primary?.percent === 4, '没有 limits 不影响百分比本身')
+})
+
+test('isHot：服务端说 normal 就不告警，哪怕百分比很高', () => {
+  // 这正是接 severity 的意义 —— 80 那个坎是我们自己拍的，服务端没说过
+  assert.equal(isHot({ percent: 95, at: NOW, src: 'api', severity: 'normal' }), false)
+})
+
+test('isHot：不是 normal 就告警，哪怕百分比很低', () => {
+  assert.equal(isHot({ percent: 1, at: NOW, src: 'api', severity: 'warning' }), true)
+})
+
+test('isHot：没见过的新档位也算告警 —— 这就是不枚举的理由', () => {
+  // 枚举 warning/critical 的写法撞上没列到的值会「静默不告警」
+  assert.equal(isHot({ percent: 1, at: NOW, src: 'api', severity: 'apocalyptic' }), true)
+})
+
+test('isHot：拿不到 severity 的通道回退到百分比阈值', () => {
+  assert.equal(isHot({ percent: HOT_FALLBACK_PERCENT - 1, at: NOW, src: 'statusline' }), false)
+  assert.equal(isHot({ percent: HOT_FALLBACK_PERCENT, at: NOW, src: 'statusline' }), true)
+  assert.equal(isHot({ percent: 100, at: NOW, src: 'event' }), true)
+  assert.equal(isHot({ percent: 3, at: NOW, src: 'log' }), false)
 })
