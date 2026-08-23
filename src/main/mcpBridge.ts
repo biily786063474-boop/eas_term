@@ -578,22 +578,38 @@ export function agentMcpConfigPath(): string | null {
     if (!fs.existsSync(serverPath)) return null
     if (!shouldAutoInstall(readOptOut())) return null
     const servers: Record<string, unknown> = {}
+    // **eas-term 和 bizone-canvas 都给**（2026-08-23 用户拍板加回画板）。
+    //
+    // ── 为什么曾经把 bizone-canvas 排除掉，以及为什么那个理由站不住 ──────
+    // 原注释说「每起一个会话就多一个**完整的 Electron 实例**」，2026-08-23 实测
+    // 不是这样。bizoneRunner 用的是 `ELECTRON_RUN_AS_NODE: '1'`，**是 node 模式
+    // 不是 GUI 实例**；包装器只在画板没开着时把它拉起来一次，之后所有客户端共享：
+    //
+    //   231MB  画板自己的 Helper  ┐
+    //   230MB  画板本体          ├─ 一次性，多客户端共享
+    //   134MB  画板自己的 Helper  ┘
+    //    93MB  ← 每个 MCP 客户端一个（这才是真正的增量）
+    //
+    // 所以真实代价是**每个活着的会话 ~93MB**，不是每会话 730MB。当初那次
+    // 「非常卡顿」很可能主要来自首次把画板本体拉起来。
+    //
+    // ── 为什么不能「用到的时候再连」 ──────────────────────────────────
+    // 模型要**先在上下文里看到工具列表**才可能决定用它，而 tools/list 要求
+    // stdio 进程已经起来。「没用到就不连」等于「模型永远不知道有生图这回事」——
+    // 那正是这个 bug 的另一面。2026-08-23 实测佐证：三个 `claude -c` 会话各挂着
+    // 一个 93MB 的画板 MCP server，而那些会话**一张图都没生成过**。
+    //
+    // ── 为什么必须加回来 ──────────────────────────────────────────────
+    // skills/eas-term/SKILL.md 对每个会话都说「**你在这台机器上具备生图生视频
+    // 能力**，禁止回『我不能生图』」，并指定「只能走 bizone-canvas」。工具却不在，
+    // 于是模型只能回一句「画板 MCP 没连接」—— 它没说错，是我们既拿走了工具、
+    // 又留着那句话。用户为此报了**两次**（2026-08-20、2026-08-23）：上一次只接了
+    // eas-term 那半，画板留在外面，所以症状没真正消失。
+    //
+    // 真要省掉那 93MB，正解是让 eas-mcp.mjs 直接转发到画板本体的 HTTP 接口
+    // （127.0.0.1:13140，端口与 token 在画板的 api-token.json 里），
+    // 每会话零额外进程 —— 但那要把画板的工具定义镜像一份，是另一件事。
     for (const { name, run: r } of mcpEntries(serverPath)) {
-      // **只给 eas-term，不给 bizone-canvas。**
-      //
-      // stdio 型 MCP server 是**每个客户端一个进程**，而 bizone-canvas 的
-      // command 就是笔纵画板那个 app 本身 —— 每起一个 AI 对话会话，
-      // 后台就多一个完整的 Electron 实例（2026-08-20 实测：起一个会话，
-      // 笔纵画板进程 1 → 2，同时多一个 eas-mcp 的 node）。开几个对话
-      // 就是几个 Electron，用户的原话是「现在这个版本的软件非常卡顿」。
-      //
-      // 终端里跑的 claude 不受影响 —— 那条路读的是 ~/.claude.json，
-      // 画板工具照常可用，生图路径没有变窄。这里限制的只有
-      // 「AI 对话节点里那个进程」的工具面。
-      //
-      // 要把它加回来的话，得先把 MCP server 改成共享的（HTTP/SSE 那种，
-      // 一个 server 服务所有会话），而不是在这里放行。
-      if (name !== 'eas-term') continue
       servers[name] = {
         type: 'stdio',
         command: r.command,

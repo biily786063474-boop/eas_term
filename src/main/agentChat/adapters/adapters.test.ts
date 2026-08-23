@@ -57,9 +57,12 @@ test('给了 mcpConfigPath 就带上 --mcp-config，且 strict 必须还在', ()
   // 决定做了，测试跟着翻面。
   //
   // **strict 必须保留**：它现在的作用不再是「屏蔽一切」，而是把工具面**限定成**
-  // 我们给的那一份（目前只有 eas-term —— bizone-canvas 每会话会拉起一个完整的
-  // Electron 实例，见 mcpBridge.agentMcpConfigPath），不把用户全局装的其它 MCP server
-  // 带进 AI 对话。去掉它也能连上，但工具面就成了用户全局的全集，不可控。
+  // 我们给的那一份（eas-term + bizone-canvas，见 mcpBridge.agentMcpConfigPath），
+  // 不把用户全局装的其它 MCP server 带进 AI 对话。
+  // 去掉它也能连上，但工具面就成了用户全局的全集，不可控。
+  //
+  // 2026-08-23：画板从这份名单里加回来了（此前被排除，导致 skill 声称能生图、
+  // 工具却不存在，模型只能回「画板 MCP 没连接」——用户为此报了两次）。
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/WORK/proj',
     mcpConfigPath: '/WORK/userData/agent-mcp.json'
