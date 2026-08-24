@@ -160,19 +160,77 @@ function MessageTurn({
     if (!root) return
     // rootMargin 把顶边上放 1px：滚动位置是小数、边界判定会抖，
     // 差一个像素就在「原位」和「吸顶」之间来回跳，看着像闪烁
-    const io = new IntersectionObserver(([e]) => setStuck(!e.isIntersecting), {
-      root,
-      rootMargin: '1px 0px 0px 0px'
-    })
+    // 判据只有一处，IO 和滚动兜底都用它。
+    //
+    // **不能只看「不相交」** —— IntersectionObserver 对「滚出顶部」和「还在下方
+    // 没滚到」报的是同一件事（都不相交）。只判 !isIntersecting 的话，一屏之外
+    // **下方**那些还没读到的提问会被一起判成吸顶：提前收成一行、图片提前隐藏，
+    // 滚到它跟前时再弹回原样——那一下又是一次高度突变。
+    // 2026-08-23 实测：滚动位置 0% 时，5 条提问里有 4 条被误判成吸顶。
+    const compute = (): void => {
+      const r = s.getBoundingClientRect()
+      setStuck(r.bottom <= root.getBoundingClientRect().top + 1)
+    }
+    const io = new IntersectionObserver(compute, { root, rootMargin: '1px 0px 0px 0px' })
     io.observe(s)
-    return () => io.disconnect()
+
+    // **IO 单独用不够**：它只在相交状态**发生变化**时回调，而
+    // `el.scrollTop = el.scrollHeight`（上面那个自动滚到底）是一步到位的跳跃——
+    // 哨兵从「下方不相交」直接变成「上方不相交」，布尔值没变，回调根本不触发，
+    // 状态就此停在错的那一档。实测：跳着设 scrollTop 时，滚到底也只有第一条亮。
+    // 用 debounce 而不是每帧重算：跳跃后内容已经静止，晚 120ms 校正看不出来，
+    // 而每帧给每条提问读一次 rect 会在长对话里拖慢滚动。
+    let t: number | undefined
+    const onScroll = (): void => {
+      window.clearTimeout(t)
+      t = window.setTimeout(compute, 120)
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    compute()
+    return () => {
+      io.disconnect()
+      root.removeEventListener('scroll', onScroll)
+      window.clearTimeout(t)
+    }
   }, [isUser])
   const hasHidden = !expanded && visible.length < turn.execs.length
 
   return (
     <>
       {isUser && <div ref={sentinelRef} className="ac-stick-sentinel" aria-hidden="true" />}
-      <div className={`ac-turn ac-turn-${turn.role}${stuck ? ' ac-stuck' : ''}`}>
+      {/* 吸顶路标：**零高度 sticky 壳 + 绝对定位的条**，完全不占流。
+          
+          为什么不能像原来那样「让提问本身 sticky、吸顶时把图片收起来」——
+          2026-08-23 在真实样式表上量到的自激振荡：图片一 display:none，
+          这条提问的流内高度掉 104px，滚动容器随之变矮，浏览器的滚动锚定
+          把 scrollTop 补偿回去，哨兵又回到视野内 → 判定翻回「在原位」→
+          图片重现 → 再翻。实测是个稳定极限环：
+            top=456 stuck=true  H=2549
+            top=560 stuck=false H=2653   ← 无限来回
+          一次匀速滚过全程，带图的提问翻转 7 次、不带图的 1 次。
+          **状态的后果抵消了状态的成因**，这类环只能靠「让后果不影响成因」来断。
+          
+          只加 `overflow-anchor: none` 也能不闪（实测翻转降到 1 次），但那只是
+          切断反馈路径 —— 高度突变还在，滚动中容器仍出现 6 种高度，表现为内容跳。
+          路标改成不占流之后，全程只有 1 种高度（实测），两个毛病一起没。 */}
+      {isUser && (
+        <div className={`ac-signpost-wrap${stuck ? ' on' : ''}`} aria-hidden={!stuck}>
+          <div
+            className="ac-signpost"
+            role="button"
+            tabIndex={stuck ? 0 : -1}
+            data-tip="回到这条提问"
+            // 滚回**哨兵**而不是路标本身 —— 路标是固定在顶上的覆盖层，
+            // scrollIntoView 到它等于原地不动
+            onClick={(): void =>
+              sentinelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          >
+            {turn.text}
+          </div>
+        </div>
+      )}
+      <div className={`ac-turn ac-turn-${turn.role}`}>
       {/* 模型的回答按 Markdown 渲染 —— 它本来就是拿 Markdown 写的（标题、列表、代码块、
           粗体），当纯文本铺开就丢掉了全部层级，长回答会糊成一片。
           复用仓库里那个零依赖渲染器（WikiView / CodeView 同一个）：它**先把所有文本
@@ -208,23 +266,10 @@ function MessageTurn({
             dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.text, '') }}
           />
         ) : (
-          <div
-            className="ac-turn-text"
-            // 只有吸顶那一行才可点：在原位时它就在眼前，点了等于原地不动
-            {...(stuck
-              ? {
-                  role: 'button' as const,
-                  tabIndex: 0,
-                  'data-tip': '回到这条提问',
-                  // 滚回**哨兵**而不是这一行本身 —— 这一行正粘在顶上，
-                  // scrollIntoView 到它等于原地不动
-                  onClick: (): void =>
-                    sentinelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
-              : {})}
-          >
-            {turn.text}
-          </div>
+          // 提问正文**永远是摊开的原位形态**，不再随吸顶变形 ——
+          // 「收成一行」那件事交给上面那个不占流的路标做。
+          // 这是高度恒定的前提：这个盒子一旦会变形，振荡就回来了。
+          <div className="ac-turn-text">{turn.text}</div>
         ))}
       {approval && (
         <ApprovalCard pending={approval} onDecide={(d) => onApprovalDecide(approval!.approvalId, d)} />

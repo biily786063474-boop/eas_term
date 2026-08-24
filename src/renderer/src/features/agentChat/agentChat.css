@@ -328,21 +328,18 @@
   pointer-events: none;
 }
 
-.ac-turn-user {
-  position: sticky;
-  top: 0;
-  /* 压住下面滚过去的正文，但别压住审批卡片那类要交互的浮层 */
-  z-index: 3;
-}
+/* 提问本身**不再 sticky** —— 它保持原位、高度恒定。吸顶那件事交给
+   下面的 .ac-signpost-wrap（零高度覆盖层）。理由见 MessageList.tsx 里
+   那段自激振荡的实测记录：sticky 元素只要会变形，就会自己把自己翻回去。 */
 .ac-turn-user .ac-turn-text {
-  /* 通栏，不再是右对齐的气泡 —— 吸顶的东西必须占满宽度，
-     否则滚动时右边露出半截正文，读起来是乱的 */
+  /* 通栏，不再是右对齐的气泡 —— 和上方那条路标同宽，
+     滚动时才不会看出「换了个东西」 */
   align-self: stretch;
   max-width: 100%;
   background: rgba(255, 255, 255, 0.045);
-  /* 底下的正文会从它身后滚过去。**必须挡住** —— 半透明色块叠着文字
-     比不吸顶更难读，所以补一层模糊 */
-  backdrop-filter: blur(10px);
+  /* 这里原来还有一层 backdrop-filter: blur(10px)，理由是「正文会从它身后滚过去，
+     必须挡住」。**提问不再 sticky 之后那条理由就不成立了** —— 它老老实实待在原位，
+     身后不会有东西滚过。挡住正文现在是路标（.ac-signpost）的职责，靠实心底。 */
   border: none;
   border-left: 2px solid rgba(var(--accent-rgb), 0.4);
   border-radius: 0 6px 6px 0;
@@ -350,45 +347,58 @@
   color: var(--fg-dim);
   font-size: 13px;
   line-height: 1.5;
-  /* **在原位就完整摊开**。这里原来恒定 max-height:3em，于是滚动位置正好、
-     那条提问就在眼前时，照样被切成两行——还常常把第二行从中间劈开，
-     露出半截字。截断只该发生在吸顶之后，见下面的 .ac-stuck。 */
+  /* **永远完整摊开，不截断**。这里原来恒定 max-height:3em，于是滚动位置正好、
+     那条提问就在眼前时，照样被切成两行——还常常把第二行从中间劈开露出半截字。
+     收成一行是路标（.ac-signpost）的事，这个盒子**不许随状态变形**：
+     它一变形，滚动容器高度就变，自激振荡就回来了。 */
   overflow-wrap: anywhere;
 }
 
-/* 吸顶态：从「一段话」收成「一条路标」。
+/* 吸顶路标：从「一段话」收成「一条路标」。
    路标只需要够认出是哪个问题，所以**一行**就够；两行截断反而会把第二行
-   劈成半截字。点它滚回原位看全文。 */
-.ac-turn-user.ac-stuck .ac-turn-text {
+   劈成半截字。点它滚回原位看全文。
+
+   **零高度的壳 + 绝对定位的条**：壳不占任何流内空间，所以它出现/消失
+   都不会改变滚动容器的高度 —— 这是不闪的唯一前提。 */
+.ac-signpost-wrap {
+  position: sticky;
+  top: 0;
+  height: 0;
+  /* 压住下面滚过去的正文，但别压住审批卡片那类要交互的浮层 */
+  z-index: 3;
+  /* 抵消 .ac-messages 那 14px 的 flex gap —— 零高度元素照样吃 gap，
+     不抵消的话每条提问上方都会多出 14px 空隙 */
+  margin-bottom: -14px;
+}
+.ac-signpost {
+  position: absolute;
+  top: 0;
+  /* 通栏铺开：抵消 .ac-messages 的左右内边距，让路标像标题栏的一部分，
+     而不是浮在内容里的一块板子 */
+  left: -18px;
+  right: -18px;
+  padding: 6px 18px;
+  /* **实心底**。半透明 + blur 挡不住从背后滚过去的正文——两层字叠在一起
+     谁都读不了。--popover-solid 是主题里唯一完全不透明的那档，
+     菜单和下拉也用它。多条路标同时粘在 top:0 时，也靠它让后来的完整盖住先前的。 */
+  background: var(--popover-solid);
+  box-shadow: 0 1px 0 var(--glass-border);
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  /* **实心底**。半透明 + blur 挡不住从背后滚过去的正文——两层字叠在一起
-     谁都读不了，这正是「干扰阅读」的来源。--popover-solid 是主题里唯一
-     完全不透明的那档，菜单和下拉也用它。 */
-  background: var(--popover-solid);
-  backdrop-filter: none;
-  /* 紧贴顶栏、通栏铺开：抵消 .ac-messages 的左右内边距，
-     让这条路标像标题栏的一部分，而不是浮在内容里的一块板子 */
-  margin: 0 -18px;
-  padding: 6px 18px;
-  /* 上面 .ac-turn-user .ac-turn-text 那条把宽度锁在 max-width:100%（= 内容区宽），
-     负 margin 想往外顶 36px 会被它卡住，结果比内容区还窄。通栏必须解开这把锁。 */
-  max-width: none;
-  border-radius: 0;
-  border-left: none;
-  box-shadow: 0 1px 0 var(--glass-border);
-}
-.ac-turn-user.ac-stuck .ac-turn-text:hover {
-  color: var(--fg);
-}
-
-/* 吸顶时把图片收起来：多条提问都粘在 top:0 上，靠「同高 + 不透明」让后来的
-   完整盖住先前的，看起来才是「滚到哪一段就只显示哪一段」。带图的那条一旦更高，
-   就会从下面露出半截上一条的边。 */
-.ac-turn-user.ac-stuck .ac-turn-imgs {
+  /* 默认不显示：只有哨兵滚出容器顶部（= 这条真的吸顶了）才亮出来。
+     用 display 而不是 visibility —— 藏着的时候不能挡住底下的点击。 */
   display: none;
+}
+.ac-signpost-wrap.on .ac-signpost {
+  display: block;
+}
+.ac-signpost:hover {
+  color: var(--fg);
 }
 
 .ac-turn-assistant .ac-turn-text {
