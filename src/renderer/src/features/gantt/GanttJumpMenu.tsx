@@ -25,7 +25,7 @@ import { useMenuAnchor, useDismiss } from '../canvas/CanvasContextMenu'
 import type { GanttJumpMode } from '../../store/uiSlice'
 
 const MODES: { key: GanttJumpMode; label: string; Icon: typeof BoardIcon }[] = [
-  { key: 'split', label: '终端', Icon: TerminalIcon },
+  { key: 'split', label: '分屏', Icon: TerminalIcon },
   { key: 'canvas', label: '画布', Icon: CanvasIcon },
   { key: 'board', label: '看板', Icon: BoardIcon }
 ]

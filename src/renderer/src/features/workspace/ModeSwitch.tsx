@@ -14,7 +14,7 @@ import { TerminalIcon, CanvasIcon, BoardIcon, GanttIcon } from '../../ui/Icons'
 import { useMenuAnchor } from '../canvas/CanvasContextMenu'
 
 const MODES: { key: ViewMode; label: string; Icon: typeof BoardIcon }[] = [
-  { key: 'split', label: '终端', Icon: TerminalIcon },
+  { key: 'split', label: '分屏', Icon: TerminalIcon },
   { key: 'canvas', label: '画布', Icon: CanvasIcon },
   { key: 'board', label: '看板', Icon: BoardIcon },
   { key: 'gantt', label: '甘特图', Icon: GanttIcon }
