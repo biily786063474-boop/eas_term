@@ -727,6 +727,13 @@ function reapIdleSessions(): void {
  *  **按 webContents 过滤**：只报这个页面自己创建的会话，跟事件推送
  *  （`live.wc.send`）保持同一个可见范围。不过滤的话，多窗口时 A 窗口的面板
  *  会列出 B 窗口的 agent，而它既点不进去也停不掉。 */
+/** 这个 AI 对话会话还活着吗。**给甘特图判「上次没写完就没了」用**
+ *  —— 和 pty.ts 的 isPtyAlive 一个角色，只是换一张表。
+ *  查不到就是不在了：sessions 在进程内是唯一真相，会话结束时会被 delete。 */
+export function isAgentSessionAlive(id: string): boolean {
+  return sessions.has(id)
+}
+
 export function listSessionBriefs(wcId: number): SessionBrief[] {
   const out: SessionBrief[] = []
   for (const live of sessions.values()) {

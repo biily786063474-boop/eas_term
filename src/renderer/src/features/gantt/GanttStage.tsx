@@ -271,11 +271,15 @@ function layer(tasks: GanttTask[], now: number): GanttTask[][] {
   return rows
 }
 
-/** 一个终端跨越它整个生命周期的分组键——见文件顶部大注释第 1 条。分号(':')
- *  不会出现在 ptyId（主进程 nextId 生成的纯数字字符串）里，用它做分隔符不会
- *  跟真实值混淆。 */
+/** 一个会话跨越它整个生命周期的分组键——见文件顶部大注释第 1 条。分号(':')
+ *  不会出现在 ptyId 里（终端是主进程 nextId 生成的纯数字串，AI 对话是 `ac-N`），
+ *  用它做分隔符不会跟真实值混淆。
+ *
+ *  **kind 必须进键**：终端的 ptyId 是 `3` 这样的小整数，理论上不会跟 `ac-3` 撞，
+ *  但两套 id 空间各自独立生成、谁也不认识谁，靠"看起来不会撞"来保证唯一性
+ *  迟早出事——把种类写进键，撞车这件事从结构上就不可能。 */
 function terminalKey(t: GanttTask): string {
-  return (t.runId ?? 'legacy') + ':' + t.ptyId
+  return (t.runId ?? 'legacy') + ':' + (t.kind ?? 'terminal') + ':' + t.ptyId
 }
 
 /** 一个终端名下的全部任务（不看当前时间窗口）。leafId 在组内任意一条任务上
@@ -598,7 +602,9 @@ export function GanttStage(): JSX.Element {
     const m = new Map<string, { title: string; customTitle?: boolean }>()
     for (const tab of tabs) {
       for (const leaf of collectLeaves(tab.root)) {
-        if (leaf.pane.kind === 'terminal') {
+        // AI 对话节点也收进来 —— 它和终端共用 tab.title 这个信源，
+        // 不收的话每条 AI 对话都落到下面的兜底名上
+        if (leaf.pane.kind === 'terminal' || leaf.pane.kind === 'agent') {
           m.set(leaf.id, { title: tab.title, customTitle: tab.customTitle })
         }
       }
@@ -613,7 +619,10 @@ export function GanttStage(): JSX.Element {
     const info = titleByLeaf.get(g.leafId)
     const title = info?.title?.trim()
     if (title && (info?.customTitle || title !== projectName)) return title
-    return `终端 ${g.ordinal}`
+    // 兜底名要说清是哪种会话。**不能一律叫「终端 N」** —— AI 对话那几行
+    // 挂着终端的名字，等于告诉用户这些活是他在终端里敲的。
+    // 序号各自独立（ordinal 来自同项目下的分组顺序），所以两种可以同号，不冲突。
+    return `${g.tasks[0]?.kind === 'agent' ? 'AI 对话' : '终端'} ${g.ordinal}`
   }
 
   // 「清空这段」按的是原始 tasks（不是 safeTasks）——数值离谱到被 isSaneTask

@@ -9,6 +9,7 @@ import path from 'path'
 
 import type { GanttClearRange, GanttTask } from '../shared/types'
 import { isPtyAlive } from './pty'
+import { isAgentSessionAlive } from './agentChat/session'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'gantt.json')
 const KEEP_MS = 7 * 24 * 60 * 60 * 1000
@@ -30,6 +31,9 @@ function valid(t: unknown): t is GanttTask {
     typeof o.id === 'string' &&
     typeof o.projectId === 'string' &&
     typeof o.ptyId === 'string' &&
+    // kind 可缺省（老记录），但给了就必须是认得的那两个之一 —— 认不出的值
+    // 会让 withAbortedFlag 走错分支，宁可整条丢
+    (o.kind === undefined || o.kind === 'terminal' || o.kind === 'agent') &&
     typeof o.leafId === 'string' &&
     typeof o.prompt === 'string' &&
     typeof o.startAt === 'number' &&
@@ -83,8 +87,13 @@ function prune(list: GanttTask[]): GanttTask[] {
 // 删一条不相关的记录会顺带让另一条正在跑的任务的 aborted 判定结果不一致
 // （比如三处判断逻辑以后改岔了），表现为「删完之后有条任务颜色跳了一下」。
 function withAbortedFlag(list: GanttTask[]): GanttTask[] {
+  // 「还活着吗」按会话种类查各自那张表 —— AI 对话的 sessionId（`ac-N`）拿去问
+  // isPtyAlive 永远是 false，那会把每一条正在跑的 AI 对话都误标成 aborted。
+  // 缺省（老记录没有 kind）一律当终端。
+  const alive = (t: GanttTask): boolean =>
+    t.kind === 'agent' ? isAgentSessionAlive(t.ptyId) : isPtyAlive(t.ptyId)
   return list.map((t) =>
-    t.endAt === null && (t.runId !== RUN_ID || !isPtyAlive(t.ptyId))
+    t.endAt === null && (t.runId !== RUN_ID || !alive(t))
       ? { ...t, aborted: true as const }
       : t
   )

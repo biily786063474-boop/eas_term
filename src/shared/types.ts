@@ -710,8 +710,17 @@ export interface IslandAction {
 export interface GanttTask {
   id: string
   projectId: string
+  /** 这条记录来自哪种会话。**缺省 = terminal** —— 0.4.62 之前落盘的记录都没有
+   *  这个字段，读的时候一律当终端，不要写迁移。 */
+  kind?: 'terminal' | 'agent'
+  /** 会话标识：终端是 pty 的 id，AI 对话是 agentChat 的 sessionId（`ac-N`）。
+   *
+   *  **字段名叫 ptyId 是历史包袱**，它要的其实是「任务归属于哪个会话」。
+   *  这跟 uiSlice 的 setPtyRunning / flagAttention 是同一个包袱、同一个处理方式
+   *  （见 AgentChatView 里那段说明：那两个 action 也是拿会话 id 当 ptyId 传）。
+   *  改名要动已落盘的数据，收益不抵风险；靠上面的 kind 区分即可。 */
   ptyId: string
-  /** 点条能跳回那个终端 */
+  /** 点条能跳回那个终端 / AI 对话节点 */
   leafId: string
   /** 原文，超过 2000 字截断 */
   prompt: string

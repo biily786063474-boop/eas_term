@@ -1,5 +1,10 @@
 // 甘特图的采集：把「用户发出去的文本」和「agent 跑起来/停下」两件事对上。
 //
+// **两条来源共用这一套**：终端（TerminalView/TerminalInput）和 AI 对话
+// （AgentChatView）。两边的信号形状一样——「提交了一段文本」+「跑起来/停下」，
+// 所以不为 AI 对话另造一套，只在 noteRunning 里按 ctx.kind 分了一处：
+// 过期判定（PENDING_TTL_MS）只对终端成立，理由写在那里。
+//
 // 为什么放渲染层而不是主进程的 pty:write（那才是输入的唯一汇合点）：
 // 「agent 在不在跑」是 TerminalView 靠 spinner 判定的，主进程拿不到这个信号，
 // 跨进程同步只会多一层竞态。而两条输入路径在渲染层同样齐全 ——
@@ -143,17 +148,24 @@ export function feedKeystroke(ptyId: string, data: string): void {
 export function noteRunning(
   ptyId: string,
   running: boolean,
-  ctx: { projectId: string; leafId: string }
+  ctx: { projectId: string; leafId: string; kind?: 'terminal' | 'agent' }
 ): void {
   if (running) {
     const p = pending.get(ptyId)
     pending.delete(ptyId)
-    // 没有候选，或候选早就过期了（说明这次跑起来跟用户刚才敲的没关系）→ 不记
-    if (!p || Date.now() - p.at > PENDING_TTL_MS) return
-    if (!ctx.projectId) return // 不属于任何项目的终端不进甘特图
+    // 没有候选 → 不记。
+    //
+    // **过期判定只对终端成立。** 终端那边「用户敲了字」和「agent 跑起来了」是两条
+    // 独立信号，靠时间接近来配对，所以要设 TTL 防止把不相干的两件事凑成一条。
+    // AI 对话不是猜的：这一轮 turn 就是那条消息触发的，因果确定。而且首条消息要等
+    // CLI 冷启（实测几秒起步），套 3 秒 TTL 会把每个会话的第一条都丢掉。
+    const isAgent = ctx.kind === 'agent'
+    if (!p || (!isAgent && Date.now() - p.at > PENDING_TTL_MS)) return
+    if (!ctx.projectId) return // 不属于任何项目的终端 / 对话不进甘特图
     const task: GanttTask = {
       id: 'gt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
       projectId: ctx.projectId,
+      ...(isAgent ? { kind: 'agent' as const } : {}),
       ptyId,
       leafId: ctx.leafId,
       prompt: p.text,

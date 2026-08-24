@@ -65,6 +65,11 @@ export function killPanePty(pane: PaneState): void {
     // 不是这里要解决的问题。
     forgetPty(pane.ptyId)
   } else if (pane.kind === 'agent' && pane.sessionId) {
+    // 甘特采集器的内存态跟着清 —— 和上面 terminal 分支同一个理由和同一个范式：
+    // 单纯资源清理，不掺 gantt.finish 的业务判断（没写完的 endAt 交给 list() 的
+    // aborted 兜底）。**放在下面那个团队会话的早退之前**：团队会话虽然不进甘特图，
+    // 但 handleSend 会给它挂过候选文本，不清就一直留在 Map 里。
+    forgetPty(pane.sessionId)
     // 对称处理（2026-08-15 审查 Important）：节点被永久关闭时必须把底层 CLI 进程
     // 一起停掉，理由与上面 terminal 分支同源——同步做，不能指望组件卸载时的异步
     // 清理兜底。AgentChatView.tsx 卸载时只取消事件订阅，不调 agentChat.stop()

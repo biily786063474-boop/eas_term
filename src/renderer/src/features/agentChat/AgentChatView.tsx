@@ -29,6 +29,7 @@ import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import { belongsToProject } from '../../../../shared/teamWorktree'
+import { noteSubmitted, noteRunning, drainFollow, forgetPty } from '../gantt/collector'
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
@@ -400,6 +401,18 @@ export function AgentChatView({
       // 「谁开的」在整个应用里只有一个说法。
       if (!isTeamOwned) {
         st.setPtyRunning(sid, v.busy)
+        // 甘特图采集。**挂在这里而不是另找信号** —— 上面那段说明已经论证过
+        // 「turn.start / turn.done 就是 AI 对话版的 spinner 起落」，甘特图要的
+        // 正是同一件事，没有理由再造一套判定。
+        //
+        // 跟着 isTeamOwned 一起排除团队派生的会话：那些不是用户自己在跟的事
+        // （判据同上，用户 2026-08-19 拍板），画进图里只会让「我今天干了什么」
+        // 变成一堆自己没参与的条。
+        noteRunning(sid, v.busy, {
+          projectId: st.tabs.find((t) => t.id === tabId)?.projectId ?? '',
+          leafId,
+          kind: 'agent'
+        })
         // 一轮跑完就标记「有结果等你看」。**不判有没有聚焦**——跟终端那边一致
         //（TerminalView 在 spinner 落下时也是无条件 flagAttention），
         // 清除交给「用户真的去看了」那条路：点灵动岛/待处理列表会走 focusTerminal，
@@ -561,6 +574,12 @@ export function AgentChatView({
     // AGENT_CHAT_EVENT_CHANNEL 一节）。
     const sid = result.sessionId
     attachTo(sid)
+    // 甘特图：先挂上候选文本，等 turn.start 把它转成一条记录（见 collector.ts）。
+    // **必须在 attachTo 之后** —— attachTo 会回放已缓冲的事件，turn.start 可能
+    // 立刻就到；先订阅后挂候选的话，那一帧 pending 还是空的，首条就丢了。
+    // 顺序反过来更安全：候选挂着但 turn.start 迟迟不来，最坏也只是这条不记，
+    // 不会串到下一条上（同一个 sid 的候选被下一次 noteRunning 取走即清）。
+    if (!isTeamOwned) noteSubmitted(sid, message)
     // beforeTurnCount 取当前归约器已有的轮次数——此刻订阅刚接上、一个事件都还没喂进去，
     // 必然是 0，但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个
     // assistant 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
@@ -729,7 +748,23 @@ export function AgentChatView({
           ok: false,
           error: e instanceof Error ? e.message : String(e)
         }))
-      if (r.ok) return true
+      if (r.ok) {
+        // 甘特图。**只在真的送出去之后记** —— 失败那条已经从对话流里撤回了，
+        // 记进图里等于留下一条从未发生过的任务。
+        //
+        // 记的是 entry.text（你打的字），不是 trimmed（拼了图片路径给 CLI 的那串）：
+        // 图上要看的是"我当时问了什么"，不是那串本机路径。
+        //
+        // 两种情形分开：
+        //   · 上一轮还在跑 → 这是补发，附到当前那条记录的 follow 上，不另开一根条
+        //     （它没有自己的起止，硬拆只会让图上多出零长度的条——同 collector 的取舍）
+        //   · 已经跑完了 → 挂成候选，等下一次 turn.start 转成新记录
+        if (!isTeamOwned) {
+          noteSubmitted(sessionId, entry.text)
+          if (reducerRef.current.view().busy) drainFollow(sessionId)
+        }
+        return true
+      }
       setSentMessages((prev) => prev.filter((m) => m !== entry))
       if (aliveRef.current) setSendError(r.error)
       return false
