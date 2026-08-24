@@ -160,6 +160,24 @@ export function App(): JSX.Element {
     })
   }, [])
 
+  // MCP 开关：启动时把渲染层这份状态推给主进程对齐。
+  //
+  // **不推的话两侧会一直对不上**：渲染层这份从 localStorage 恢复（关过就一直是关的，
+  // 那是刻意的——见 uiSlice.setMcpEnabled 的注释），而主进程那份是硬编码
+  // `let mcpEnabled = true`，且只在用户**手动拨动开关**时才收到同步。于是
+  // 「上次关了 MCP → 这次重开软件」= 渲染层照旧拒绝所有工具调用，主进程却以为开着。
+  //
+  // 方向还是危险的那一侧：主进程那份正是 `/secret-env`（密钥注入）的闸门，
+  // setMcpEnabled 的注释明写了同步给主进程就是为了让它也能被关掉，
+  // 而这条路在启动时是断的——界面显示「已关闭」，密钥注入却仍被放行。
+  //
+  // 主进程的默认值保持 true 不动：它是「还没收到同步时」的取值，而终端由渲染层创建，
+  // 渲染层挂载之前不可能有人来调 /secret-env，这个窗口期是空的。改成 false 反而会
+  // 让启动早期的密钥注入偶发失败。
+  useEffect(() => {
+    window.api.mcp.setEnabled(useStore.getState().mcpEnabled)
+  }, [])
+
   // 全局快捷键：mac 用 ⌘、Windows/Linux 用 Ctrl。T 新终端、W 关面板、D 右分屏、⇧D 下分屏、1-9 切标签
   useEffect(() => {
     const isMac = window.api.platform === 'darwin'
