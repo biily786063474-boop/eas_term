@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>动效短片 · 核对清单</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+</style></head><body>
+<nav><div class="navwrap"><span class="navbrand">EAS-TERM · 词典短片</span>
+<a href="#metric">判据</a><a href="#named">你点名的 17 个</a><a href="#all">全部 145 条</a><a href="#how">怎么用</a></div></nav>
+<main>
+<header class="hero">
+  <span class="eyebrow">核对清单 · 2026-08-25</span>
+  <h1>哪些短片还不动<br>以及为什么</h1>
+  <p class="lede">你报了 10 项「没有动画」，对应 <b>17 个组件</b>。逐个在浏览器里实测过
+    静置 / 重挂载 / 悬停 / 滚动四种情况，不是照文档推断。
+    下面每条都写了<b>根因</b>和<b>下一步</b>，你核对时直接按行号说要改哪个就行。</p>
+  <div class="meta">
+    <span>很可能不动 <b>53</b> 条</span>
+    <span>偏弱 <b>14</b> 条</span>
+    <span>正常 <b>78</b> 条</span>
+  </div>
+</header>
+
+<section id="metric">
+  <h2>判据</h2>
+  <div class="sectitle">「最长连续动」才对得上肉眼，平均和峰值都会骗人</div>
+  <div class="grid g3">
+    <div class="stat"><div class="num n-ro">平均差分</div><div class="lab">对一次性效果有偏 —— 逐字浮现只占前 1 秒、后面静止，均值自然低。用它筛会把好片当坏片</div></div>
+    <div class="stat"><div class="num n-am">峰值差分</div><div class="lab">只说明「曾经动过一下」。StackTransition 峰值 20，但那是一次场景硬切，连续动只有 0.08s</div></div>
+    <div class="stat"><div class="num n-em">最长连续动</div><div class="lab">一段不间断的动作有多长。低于 0.5s 基本就是「闪一下」，hover 上去撞到的多半是静止画面</div></div>
+  </div>
+  <p style="margin-top:16px">阈值取该片<b>峰值差分的 8%</b>（下限 0.08）—— 模拟指针一直在走，
+    不能按「画面完全相同」判死；不同片子亮度差很多，绝对阈值也不稳。</p>
+</section>
+
+<section id="named">
+  <h2>你点名的</h2>
+  <div class="sectitle">17 个组件 · 逐条根因与下一步</div>
+  <p class="secnote">「四种交互」列依次是 <b>静置 · 重挂载 · 悬停 · 滚动</b>，
+    ✓ 表示那种情况下组件在浏览器里确实动了（截图比字节，不是看代码猜的）。</p>
+  <div class="tw"><table>
+    <thead><tr><th>词条 / 组件</th><th>状态</th><th>连续动</th><th>占舞台</th><th>四种交互</th><th>根因（实测）</th><th>下一步</th></tr></thead>
+    <tbody><tr id="row-ScrollReveal">
+  <td><b>滚动显现</b><br><span class="dim" style="font-size:11.5px">ScrollReveal</span></td>
+  <td><span class="b b-ro">触发不上</span></td>
+  <td style="white-space:nowrap">0.20s<br><span class="dim" style="font-size:11px">占 5%</span></td>
+  <td style="white-space:nowrap">17%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">同 ScrollFloat，同一套 ScrollTrigger 机制。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">同 ScrollFloat</td>
+</tr>
+<tr id="row-ScrollFloat">
+  <td><b>滚动浮现</b><br><span class="dim" style="font-size:11.5px">ScrollFloat</span></td>
+  <td><span class="b b-ro">触发不上</span></td>
+  <td style="white-space:nowrap">0.24s<br><span class="dim" style="font-size:11px">占 5%</span></td>
+  <td style="white-space:nowrap">53%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">GSAP ScrollTrigger 驱动，默认触发点 center bottom。选型台里元素一挂载就在视口中间，触发点早过了；页面本身也不是可滚动容器，滚轮事件没用。已试过把 scrollStart 改成 top bottom，四种交互仍全部无反应。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">要么给选型台做一个真正可滚的包装容器，要么给它传 scrollContainerRef</td>
+</tr>
+<tr id="row-Carousel">
+  <td><b>轮播</b><br><span class="dim" style="font-size:11.5px">Carousel</span></td>
+  <td><span class="b b-ro">触发不上</span></td>
+  <td style="white-space:nowrap">0.44s<br><span class="dim" style="font-size:11px">占 58%</span></td>
+  <td style="white-space:nowrap">78%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">需要点箭头或拖拽换页，但四种通用交互都不触发。参数面板里一个可改的输入都没有（0 个文本框），重挂载机制也失效。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">给它配 autoplay 预览参数，或在录制器里识别箭头按钮</td>
+</tr>
+<tr id="row-CardSwap">
+  <td><b>卡片堆叠</b><br><span class="dim" style="font-size:11.5px">CardSwap</span></td>
+  <td><span class="b b-ro">触发不上</span></td>
+  <td style="white-space:nowrap">0.44s<br><span class="dim" style="font-size:11px">占 42%</span></td>
+  <td style="white-space:nowrap">31%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">delay 默认 4000ms（已调到 1200ms），但浏览器里静置仍不换牌 —— 说明不只是间隔问题。参数面板同样没有可改输入，重挂载失效。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">查它的 useEffect 依赖，可能需要 pauseOnHover=false 之外的条件</td>
+</tr>
+<tr id="row-Stack">
+  <td><b>卡片堆</b><br><span class="dim" style="font-size:11.5px">Stack</span></td>
+  <td><span class="b b-am">取景溢出</span></td>
+  <td style="white-space:nowrap">0.36s<br><span class="dim" style="font-size:11px">占 34%</span></td>
+  <td style="white-space:nowrap">106%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">内容占舞台 106%，卡片有一部分在画面外。浏览器里静置不动，但成片有 34% 时间在动（自动轮换），说明录制时是活的。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">把取景放宽或缩小卡片尺寸</td>
+</tr>
+<tr id="row-ScrollStack">
+  <td><b>滚动堆叠</b><br><span class="dim" style="font-size:11.5px">ScrollStack</span></td>
+  <td><span class="b b-am">取景溢出</span></td>
+  <td style="white-space:nowrap">2.16s<br><span class="dim" style="font-size:11px">占 79%</span></td>
+  <td style="white-space:nowrap">148%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">内容占舞台 148%。滚动能触发，成片连续动 2.16s，是这批里最好的之一。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">裁到内容范围</td>
+</tr>
+<tr id="row-RotatingText">
+  <td><b>文字轮播</b><br><span class="dim" style="font-size:11.5px">RotatingText</span></td>
+  <td><span class="b b-am">取景太空</span></td>
+  <td style="white-space:nowrap">0.40s<br><span class="dim" style="font-size:11px">占 26%</span></td>
+  <td style="white-space:nowrap">1%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">内容只占舞台 1.1%，成片里四周全是黑边。已调大字号 + 缩短轮换间隔到 1.2s，连续动 0.28s → 0.40s，仍偏弱。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">继续调大字号，或让取景更紧地裁到文字</td>
+</tr>
+<tr id="row-SnapSections">
+  <td><b>滚动吸附</b><br><span class="dim" style="font-size:11.5px">SnapSections</span></td>
+  <td><span class="b b-am">内容太小</span></td>
+  <td style="white-space:nowrap">1.84s<br><span class="dim" style="font-size:11px">占 67%</span></td>
+  <td style="white-space:nowrap">9%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">内容只占舞台 8.8%。滚动能触发（✓），成片连续动 1.84s 其实不差。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">主要是取景问题，裁紧即可</td>
+</tr>
+<tr id="row-StackTransition">
+  <td><b>卡片堆叠</b><br><span class="dim" style="font-size:11.5px">StackTransition</span></td>
+  <td><span class="b b-ro">本质是硬切</span></td>
+  <td style="white-space:nowrap">0.08s<br><span class="dim" style="font-size:11px">占 18%</span></td>
+  <td style="white-space:nowrap">427%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">内容占舞台 427%，严重溢出。而且它是「一屏换一屏」的场景切换，不是连续动画 —— 峰值 20 但连续动只有 0.08s，那是一次跳变。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">缩小内容或改用滚动驱动，让切换过程连续</td>
+</tr>
+<tr id="row-Counter">
+  <td><b>数字滚动</b><br><span class="dim" style="font-size:11.5px">Counter</span></td>
+  <td><span class="b b-am">只在值变化时动</span></td>
+  <td style="white-space:nowrap">0.28s<br><span class="dim" style="font-size:11px">占 5%</span></td>
+  <td style="white-space:nowrap">176%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">数字翻滚只在 value 变化时触发，静态值永远不动。靠录制器的重挂载重放；改进 replay 后连续动 0.04s → 0.28s。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">让预览参数在录制中途改变 value</td>
+</tr>
+<tr id="row-FadeContent">
+  <td><b>淡入</b><br><span class="dim" style="font-size:11.5px">FadeContent</span></td>
+  <td><span class="b b-am">一次性效果</span></td>
+  <td style="white-space:nowrap">0.96s<br><span class="dim" style="font-size:11px">占 19%</span></td>
+  <td style="white-space:nowrap">19%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">重挂载和悬停都能触发（✓），但淡入只有约 1 秒，剩下 8 秒静止。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">缩短成片总长，或让它循环淡入淡出</td>
+</tr>
+<tr id="row-GlassIcons">
+  <td><b>图标组</b><br><span class="dim" style="font-size:11.5px">GlassIcons</span></td>
+  <td><span class="b b-am">要瞄准图标</span></td>
+  <td style="white-space:nowrap">0.84s<br><span class="dim" style="font-size:11px">占 36%</span></td>
+  <td style="white-space:nowrap">23%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">悬停要落在具体某个图标上才翻转。改成瞄准控件后连续动 0.32s → 0.84s。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">再延长悬停停留时间，或逐个图标扫过去</td>
+</tr>
+<tr id="row-CountUp">
+  <td><b>数字滚动</b><br><span class="dim" style="font-size:11.5px">CountUp</span></td>
+  <td><span class="b b-em">已修好</span></td>
+  <td style="white-space:nowrap">5.64s<br><span class="dim" style="font-size:11px">占 90%</span></td>
+  <td style="white-space:nowrap">5%</td>
+  <td style="white-space:nowrap"><span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">改进 replay + 调大字号后，连续动 1.56s → 5.64s，有动占比 90%。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">不用改</td>
+</tr>
+<tr id="row-StarBorder">
+  <td><b>边框动画</b><br><span class="dim" style="font-size:11.5px">StarBorder</span></td>
+  <td><span class="b b-em">已修好但差分测不出</span></td>
+  <td style="white-space:nowrap">0.04s<br><span class="dim" style="font-size:11px">占 2%</span></td>
+  <td style="white-space:nowrap">11%</td>
+  <td style="white-space:nowrap"><span class="b b-em">✓</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">根因是 animate-star-movement-top/bottom 这两个类的 @keyframes 根本没定义（源码里只写在注释的 tailwind.config 中），实测 animation-name 计算值就是 none。已补进选型台 CSS，现在浏览器里静置有动（✓）。但元素是 opacity-70 的低对比色块，帧间差分算不出来。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">肉眼确认一下就好，指标对它无效</td>
+</tr>
+<tr id="row-SpotlightCard">
+  <td><b>卡片</b><br><span class="dim" style="font-size:11.5px">SpotlightCard</span></td>
+  <td><span class="b b-em">已可用</span></td>
+  <td style="white-space:nowrap">0.68s<br><span class="dim" style="font-size:11px">占 42%</span></td>
+  <td style="white-space:nowrap">50%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-gy">·</span> <span class="b b-em">✓</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">悬停能触发（✓），光斑跟随。连续动 0.68s 偏短是因为光斑移动幅度小。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">延长悬停路径</td>
+</tr>
+<tr id="row-Lanyard">
+  <td><b>挂绳</b><br><span class="dim" style="font-size:11.5px">Lanyard</span></td>
+  <td><span class="b b-em">已可用</span></td>
+  <td style="white-space:nowrap">1.44s<br><span class="dim" style="font-size:11px">占 39%</span></td>
+  <td style="white-space:nowrap">0%</td>
+  <td style="white-space:nowrap"><span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span></td>
+  <td style="font-size:12.5px">R3F 场景，四种交互全部有反应，成片连续动 1.44s。占舞台测出 0% 是因为它是 WebGL canvas，我的 DOM 测量看不到。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">不用改，或只微调时长</td>
+</tr>
+<tr id="row-BounceCards">
+  <td><b>卡片堆叠</b><br><span class="dim" style="font-size:11.5px">BounceCards</span></td>
+  <td><span class="b b-em">已可用</span></td>
+  <td style="white-space:nowrap">1.96s<br><span class="dim" style="font-size:11px">占 53%</span></td>
+  <td style="white-space:nowrap">56%</td>
+  <td style="white-space:nowrap"><span class="b b-gy">·</span> <span class="b b-em">✓</span> <span class="b b-em">✓</span> <span class="b b-gy">·</span></td>
+  <td style="font-size:12.5px">重挂载和悬停都能触发，连续动 1.96s。</td>
+  <td style="font-size:12.5px;color:#a3a3a3">不用改</td>
+</tr></tbody>
+  </table></div>
+</section>
+
+<section id="all">
+  <h2>全表</h2>
+  <div class="sectitle">145 条按「最长连续动」排序</div>
+  <p class="secnote">你核对时如果发现别的也不动，在这张表里找到它、把名字告诉我就行。
+    <b>「偏弱」不一定是坏的</b> —— 环境类背景（丝绸、粒子、光柱）本来就是持续而微弱地动，
+    差分算不出长的连续段。</p>
+  <div class="tw"><table id="all">
+    <thead><tr><th>词条</th><th>组件</th><th>最长连续动</th><th>有动占比</th><th>开头静</th><th>全长</th><th>判定</th></tr></thead>
+    <tbody><tr><td>抖动</td><td class="dim">Dither</td><td>0.00s</td><td>0%</td><td>0.00s</td><td>3.36s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>毛玻璃</td><td class="dim">GlassSurface</td><td>0.04s</td><td>2%</td><td>0.04s</td><td>4.68s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>液态金属</td><td class="dim">ReflectiveCard</td><td>0.04s</td><td>2%</td><td>0.04s</td><td>4.64s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>边框动画</td><td class="dim">StarBorder</td><td>0.04s</td><td>2%</td><td>0.04s</td><td>4.68s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>玻璃</td><td class="dim">FluidGlass</td><td>0.08s</td><td>3%</td><td>0.28s</td><td>3.64s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>光束</td><td class="dim">LightRays</td><td>0.08s</td><td>2%</td><td>0.28s</td><td>4.16s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>卡片堆叠</td><td class="dim">StackTransition</td><td>0.08s</td><td>18%</td><td>0.28s</td><td>3.68s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>打字机</td><td class="dim">TextType</td><td>0.08s</td><td>22%</td><td>0.48s</td><td>7.52s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>网格</td><td class="dim">BreathingGrid</td><td>0.12s</td><td>15%</td><td>0.28s</td><td>6.40s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>放射</td><td class="dim">PrismaticBurst</td><td>0.12s</td><td>65%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>滚动切换</td><td class="dim">ScrollScenes</td><td>0.12s</td><td>14%</td><td>0.32s</td><td>4.68s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>液态金属</td><td class="dim">LiquidChrome</td><td>0.16s</td><td>34%</td><td>0.24s</td><td>3.28s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>名片</td><td class="dim">ProfileCard</td><td>0.16s</td><td>5%</td><td>0.32s</td><td>6.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>图片拖尾</td><td class="dim">ImageTrail</td><td>0.20s</td><td>14%</td><td>0.32s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>滚动显现</td><td class="dim">ScrollReveal</td><td>0.20s</td><td>5%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>光束</td><td class="dim">SideRays</td><td>0.20s</td><td>53%</td><td>0.04s</td><td>7.72s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>丝绸</td><td class="dim">Silk</td><td>0.20s</td><td>57%</td><td>0.12s</td><td>6.44s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>图片流</td><td class="dim">FlyingPosters</td><td>0.24s</td><td>27%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>像素</td><td class="dim">PixelBlast</td><td>0.24s</td><td>32%</td><td>0.08s</td><td>7.76s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>滚动浮现</td><td class="dim">ScrollFloat</td><td>0.24s</td><td>5%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>数字滚动</td><td class="dim">Counter</td><td>0.28s</td><td>5%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>故障文字</td><td class="dim">GlitchText</td><td>0.28s</td><td>30%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>光柱</td><td class="dim">LightPillar</td><td>0.28s</td><td>61%</td><td>0.12s</td><td>8.40s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>粒子</td><td class="dim">Particles</td><td>0.28s</td><td>56%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>可变字体</td><td class="dim">TextPressure</td><td>0.32s</td><td>34%</td><td>0.24s</td><td>7.24s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>ASCII</td><td class="dim">ASCIIText</td><td>0.36s</td><td>29%</td><td>0.04s</td><td>6.40s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>网格背景</td><td class="dim">CursorGrid</td><td>0.36s</td><td>44%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>光线</td><td class="dim">FloatingLines</td><td>0.36s</td><td>76%</td><td>0.04s</td><td>5.52s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>球体菜单</td><td class="dim">InfiniteMenu</td><td>0.36s</td><td>39%</td><td>0.28s</td><td>1.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>代码雨</td><td class="dim">LetterGlitch</td><td>0.36s</td><td>65%</td><td>0.12s</td><td>4.24s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>流体</td><td class="dim">SplashCursor</td><td>0.36s</td><td>62%</td><td>0.60s</td><td>5.72s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>卡片堆</td><td class="dim">Stack</td><td>0.36s</td><td>34%</td><td>0.28s</td><td>5.72s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>步骤条</td><td class="dim">Stepper</td><td>0.36s</td><td>33%</td><td>0.04s</td><td>5.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>输入框</td><td class="dim">CurvedInput</td><td>0.40s</td><td>38%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>解密文字</td><td class="dim">DecryptedText</td><td>0.40s</td><td>53%</td><td>0.04s</td><td>7.88s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>扫光</td><td class="dim">GlareHover</td><td>0.40s</td><td>6%</td><td>0.56s</td><td>7.24s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>文字轮播</td><td class="dim">RotatingText</td><td>0.40s</td><td>26%</td><td>0.04s</td><td>4.64s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>列表动画</td><td class="dim">AnimatedList</td><td>0.44s</td><td>27%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>漩涡</td><td class="dim">Balatro</td><td>0.44s</td><td>76%</td><td>0.08s</td><td>4.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>导航</td><td class="dim">BubbleMenu</td><td>0.44s</td><td>66%</td><td>0.04s</td><td>3.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>轮播</td><td class="dim">Carousel</td><td>0.44s</td><td>58%</td><td>0.04s</td><td>5.36s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>卡片堆叠</td><td class="dim">CardSwap</td><td>0.44s</td><td>42%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>点击特效</td><td class="dim">ClickSpark</td><td>0.44s</td><td>63%</td><td>0.16s</td><td>6.20s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>图片墙</td><td class="dim">DomeGallery</td><td>0.44s</td><td>42%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>烟雾拖尾</td><td class="dim">GhostCursor</td><td>0.44s</td><td>77%</td><td>0.56s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>渐进模糊</td><td class="dim">GradualBlur</td><td>0.44s</td><td>26%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>宫格</td><td class="dim">MagicBento</td><td>0.44s</td><td>46%</td><td>0.20s</td><td>8.96s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>滚轮选择</td><td class="dim">OptionWheel</td><td>0.44s</td><td>67%</td><td>0.04s</td><td>3.80s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>导航</td><td class="dim">CardNav</td><td>0.48s</td><td>70%</td><td>0.04s</td><td>3.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>流体扭曲</td><td class="dim">FluidWarp</td><td>0.48s</td><td>47%</td><td>0.04s</td><td>5.60s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>导航</td><td class="dim">GooeyNav</td><td>0.48s</td><td>73%</td><td>0.04s</td><td>3.84s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>导航栏</td><td class="dim">PillNav</td><td>0.48s</td><td>64%</td><td>0.04s</td><td>5.36s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>鼠标乱码</td><td class="dim">ScrambledText</td><td>0.48s</td><td>24%</td><td>0.32s</td><td>3.60s</td><td><span class="b b-ro">很可能不动</span></td></tr>
+<tr><td>渐变</td><td class="dim">Grainient</td><td>0.52s</td><td>56%</td><td>0.08s</td><td>8.20s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>3D模型</td><td class="dim">ModelViewer</td><td>0.52s</td><td>79%</td><td>0.08s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>磁场</td><td class="dim">MagnetLines</td><td>0.56s</td><td>32%</td><td>0.04s</td><td>5.84s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>按钮</td><td class="dim">SpecularButton</td><td>0.56s</td><td>46%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>激光</td><td class="dim">LaserFlow</td><td>0.60s</td><td>59%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>滑块</td><td class="dim">ElasticSlider</td><td>0.64s</td><td>33%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>卡片</td><td class="dim">SpotlightCard</td><td>0.68s</td><td>42%</td><td>0.04s</td><td>6.04s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>图片扭曲</td><td class="dim">GridDistortion</td><td>0.76s</td><td>32%</td><td>0.20s</td><td>4.80s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>渐变文字</td><td class="dim">GradientText</td><td>0.84s</td><td>66%</td><td>0.04s</td><td>7.32s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>图标组</td><td class="dim">GlassIcons</td><td>0.84s</td><td>36%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>菜单</td><td class="dim">FlowingMenu</td><td>0.88s</td><td>28%</td><td>0.60s</td><td>5.00s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>菜单</td><td class="dim">StaggeredMenu</td><td>0.88s</td><td>50%</td><td>0.28s</td><td>4.72s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>聚焦</td><td class="dim">TrueFocus</td><td>0.88s</td><td>60%</td><td>0.04s</td><td>2.72s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>淡入</td><td class="dim">FadeContent</td><td>0.96s</td><td>19%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-am">偏弱</span></td></tr>
+<tr><td>瀑布流</td><td class="dim">Masonry</td><td>1.04s</td><td>13%</td><td>0.24s</td><td>8.60s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>贴纸</td><td class="dim">StickerPeel</td><td>1.04s</td><td>29%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>暗色背景</td><td class="dim">DarkVeil</td><td>1.08s</td><td>62%</td><td>0.04s</td><td>6.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>文件夹</td><td class="dim">Folder</td><td>1.08s</td><td>69%</td><td>0.28s</td><td>5.04s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>融球</td><td class="dim">MetaBalls</td><td>1.12s</td><td>53%</td><td>0.04s</td><td>6.24s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光球</td><td class="dim">Orb</td><td>1.12s</td><td>37%</td><td>0.36s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>图片画廊</td><td class="dim">CircularGallery</td><td>1.16s</td><td>61%</td><td>0.52s</td><td>8.92s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光晕</td><td class="dim">ShapeBlur</td><td>1.16s</td><td>52%</td><td>0.04s</td><td>6.28s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>极光</td><td class="dim">SoftAurora</td><td>1.16s</td><td>48%</td><td>0.28s</td><td>5.24s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>像素</td><td class="dim">PixelCard</td><td>1.20s</td><td>81%</td><td>0.04s</td><td>5.36s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>立方体</td><td class="dim">Cubes</td><td>1.24s</td><td>66%</td><td>0.24s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>彩虹</td><td class="dim">ColorBends</td><td>1.36s</td><td>91%</td><td>0.04s</td><td>4.60s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>3D轮播</td><td class="dim">RingCarousel</td><td>1.36s</td><td>83%</td><td>0.28s</td><td>3.08s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光束</td><td class="dim">Beams</td><td>1.40s</td><td>75%</td><td>0.16s</td><td>5.64s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>网格</td><td class="dim">ChromaGrid</td><td>1.40s</td><td>69%</td><td>0.72s</td><td>8.60s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>入场动画</td><td class="dim">AnimatedContent</td><td>1.44s</td><td>54%</td><td>0.04s</td><td>3.64s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>挂绳</td><td class="dim">Lanyard</td><td>1.44s</td><td>39%</td><td>0.16s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>粒子</td><td class="dim">Antigravity</td><td>1.52s</td><td>78%</td><td>0.04s</td><td>8.04s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>图片切换</td><td class="dim">PixelTransition</td><td>1.52s</td><td>35%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>流光</td><td class="dim">ShinyText</td><td>1.52s</td><td>52%</td><td>0.04s</td><td>7.36s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光标跟随</td><td class="dim">TextCursor</td><td>1.52s</td><td>59%</td><td>0.04s</td><td>7.28s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>鼠标拖尾</td><td class="dim">PixelTrail</td><td>1.60s</td><td>45%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>程序坞</td><td class="dim">Dock</td><td>1.80s</td><td>47%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>滚动吸附</td><td class="dim">SnapSections</td><td>1.84s</td><td>67%</td><td>0.28s</td><td>3.36s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>文字掉落</td><td class="dim">FallingText</td><td>1.92s</td><td>45%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>渐变</td><td class="dim">Iridescence</td><td>1.92s</td><td>77%</td><td>0.04s</td><td>4.80s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>逐字浮现</td><td class="dim">SplitText</td><td>1.92s</td><td>28%</td><td>0.16s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>卡片堆叠</td><td class="dim">BounceCards</td><td>1.96s</td><td>53%</td><td>0.40s</td><td>5.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>流体</td><td class="dim">LiquidEther</td><td>2.00s</td><td>46%</td><td>0.28s</td><td>8.28s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>网格背景</td><td class="dim">RippleGrid</td><td>2.00s</td><td>95%</td><td>0.04s</td><td>4.80s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>鼠标跟随</td><td class="dim">BlobCursor</td><td>2.12s</td><td>62%</td><td>0.16s</td><td>4.04s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>滚动堆叠</td><td class="dim">ScrollStack</td><td>2.16s</td><td>79%</td><td>0.80s</td><td>5.08s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>文字浮现</td><td class="dim">BlurText</td><td>2.20s</td><td>30%</td><td>0.16s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>边框发光</td><td class="dim">BorderGlow</td><td>2.20s</td><td>71%</td><td>0.04s</td><td>7.40s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>逐字</td><td class="dim">StaggerReveal</td><td>2.20s</td><td>31%</td><td>0.08s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>十字准星</td><td class="dim">Crosshair</td><td>2.24s</td><td>83%</td><td>0.04s</td><td>4.16s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>乱码</td><td class="dim">Shuffle</td><td>2.28s</td><td>58%</td><td>0.32s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>毛刺文字</td><td class="dim">FuzzyText</td><td>2.32s</td><td>92%</td><td>0.04s</td><td>7.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>网格</td><td class="dim">GridScan</td><td>2.44s</td><td>78%</td><td>0.32s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>3D倾斜</td><td class="dim">TiltedCard</td><td>2.44s</td><td>48%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>网格</td><td class="dim">GridMotion</td><td>2.48s</td><td>70%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>侧边栏</td><td class="dim">LineSidebar</td><td>2.48s</td><td>74%</td><td>0.04s</td><td>6.20s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>鼠标拖尾</td><td class="dim">Ribbons</td><td>2.68s</td><td>62%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>弧形跑马灯</td><td class="dim">CurvedLoop</td><td>2.88s</td><td>97%</td><td>0.04s</td><td>5.76s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>噪点</td><td class="dim">Noise</td><td>2.96s</td><td>99%</td><td>0.04s</td><td>3.04s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>点阵</td><td class="dim">DotField</td><td>3.04s</td><td>66%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光带</td><td class="dim">Strands</td><td>3.04s</td><td>92%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>高速</td><td class="dim">Hyperspeed</td><td>3.28s</td><td>98%</td><td>0.04s</td><td>3.36s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>雪</td><td class="dim">PixelSnow</td><td>3.28s</td><td>94%</td><td>0.04s</td><td>5.72s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>自定义光标</td><td class="dim">TargetCursor</td><td>3.72s</td><td>89%</td><td>0.20s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>终端</td><td class="dim">FaultyTerminal</td><td>3.88s</td><td>98%</td><td>0.04s</td><td>3.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>流星雨</td><td class="dim">Lightfall</td><td>3.88s</td><td>98%</td><td>0.04s</td><td>3.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>星空</td><td class="dim">Galaxy</td><td>3.92s</td><td>98%</td><td>0.04s</td><td>4.00s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>波浪</td><td class="dim">Waves</td><td>3.96s</td><td>91%</td><td>0.16s</td><td>4.88s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>线条背景</td><td class="dim">Threads</td><td>4.40s</td><td>97%</td><td>0.04s</td><td>7.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>圆形文字</td><td class="dim">CircularText</td><td>4.52s</td><td>98%</td><td>0.04s</td><td>4.60s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>轨道</td><td class="dim">OrbitImages</td><td>4.52s</td><td>98%</td><td>0.04s</td><td>4.60s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>图片扭曲</td><td class="dim">DecayCard</td><td>4.56s</td><td>72%</td><td>0.04s</td><td>7.20s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>跑马灯</td><td class="dim">LogoLoop</td><td>4.60s</td><td>95%</td><td>0.04s</td><td>8.48s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>点阵</td><td class="dim">DotGrid</td><td>4.68s</td><td>70%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>线条</td><td class="dim">LineWaves</td><td>4.72s</td><td>98%</td><td>0.04s</td><td>4.80s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>雷达</td><td class="dim">Radar</td><td>4.72s</td><td>99%</td><td>0.04s</td><td>4.80s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>跑马灯</td><td class="dim">ScrollVelocity</td><td>4.76s</td><td>98%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>眼睛</td><td class="dim">EvilEye</td><td>4.80s</td><td>99%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>磁流体</td><td class="dim">Ferrofluid</td><td>4.80s</td><td>98%</td><td>0.04s</td><td>4.88s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>百叶窗</td><td class="dim">GradientBlinds</td><td>4.80s</td><td>99%</td><td>0.04s</td><td>4.84s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>网格</td><td class="dim">ShapeGrid</td><td>4.80s</td><td>98%</td><td>0.04s</td><td>4.88s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>磁吸</td><td class="dim">Magnet</td><td>4.88s</td><td>68%</td><td>0.04s</td><td>7.24s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>液态金属</td><td class="dim">MetallicPaint</td><td>5.24s</td><td>98%</td><td>0.04s</td><td>5.32s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>数字滚动</td><td class="dim">CountUp</td><td>5.64s</td><td>90%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>极光</td><td class="dim">Aurora</td><td>6.32s</td><td>98%</td><td>0.04s</td><td>6.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>闪电</td><td class="dim">Lightning</td><td>6.36s</td><td>99%</td><td>0.04s</td><td>6.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>发光边框</td><td class="dim">ElectricBorder</td><td>6.40s</td><td>99%</td><td>0.04s</td><td>6.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>霓虹</td><td class="dim">PlasmaWave</td><td>6.40s</td><td>99%</td><td>0.04s</td><td>6.44s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>烟雾</td><td class="dim">Plasma</td><td>7.52s</td><td>100%</td><td>0.04s</td><td>7.56s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光束</td><td class="dim">Prism</td><td>8.40s</td><td>99%</td><td>0.04s</td><td>8.48s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>小球</td><td class="dim">Ballpit</td><td>8.96s</td><td>100%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr>
+<tr><td>光弧</td><td class="dim">MagicRings</td><td>8.96s</td><td>100%</td><td>0.04s</td><td>8.96s</td><td><span class="b b-em">正常</span></td></tr></tbody>
+  </table></div>
+</section>
+
+<section id="how">
+  <h2>怎么用</h2>
+  <div class="sectitle">你核对，我改</div>
+  <div class="verdict">
+    <div class="vlabel">你要做的</div>
+    <p style="margin:0">在开发版里 hover 这些词条，看到哪个不对，<b>把词条中文名告诉我</b>就行。
+      不用描述怎么不对 —— 上面这张表里已经记着我这边测出来的状态，能对上号。</p>
+  </div>
+  <div class="warn">
+    <div class="vlabel">我这边的工具</div>
+    <p style="margin:0 0 8px">重录：<code>node scripts/dict-clips/record.mjs &lt;组件名&gt; &lt;输出目录&gt;</code>
+      （要先在 <code>~/Biily/资产收集/交互动效</code> 跑起选型台）</p>
+    <p style="margin:0">量指标：<code>scripts/dict-clips/audit-one.sh</code>，
+      更多坑记在 <code>scripts/dict-clips/README.md</code></p>
+  </div>
+  <h3>已经查清但没修好的三类</h3>
+  <ul class="clean">
+    <li><b>ScrollTrigger 类</b>（滚动浮现 / 滚动显现）—— 选型台的舞台不是可滚动容器，
+      GSAP 的触发点在挂载时就已经过了。要修得给选型台做一个真正可滚的包装。</li>
+    <li><b>参数面板没有任何输入的</b>（轮播 / 卡片堆叠 / 卡片堆）—— 选型台的重挂载靠
+      「改一个参数」触发，这些组件全是开关和下拉，我已经把 replay 扩展成
+      「任何控件都能触发」，但它们的自动轮换在浏览器里静置时也不走，还得再查。</li>
+    <li><b>内容尺寸和舞台严重不匹配</b>（文字轮播 1.1%、卡片堆叠转场 427%）——
+      前者成片全是黑边，后者内容被裁掉大半。要逐个调预览参数里的尺寸。</li>
+  </ul>
+</section>
+</main></body></html>

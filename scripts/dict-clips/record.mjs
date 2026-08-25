@@ -247,14 +247,32 @@ const mv = async (x, y) => { await page.evaluate(([a, b]) => window.__mv(a, b), 
  *  否则 React 感知不到（改了也白改）。 */
 const replay = async () => {
   const ok = await page.evaluate(() => {
-    const inp = [...document.querySelectorAll('.pg-prop-row input[type="text"]')][0]
-    if (!inp) return false
-    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-    const orig = inp.value
-    set.call(inp, orig + ' ')            // 加个空格：内容几乎不变，但签名变了
-    inp.dispatchEvent(new Event('input', { bubbles: true }))
-    setTimeout(() => { set.call(inp, orig); inp.dispatchEvent(new Event('input', { bubbles: true })) }, 60)
-    return true
+    // **不能只找文本框。** Carousel / CardSwap / Stack 的参数面板里一个 input[type=text]
+    // 都没有（全是开关和下拉），于是 replay() 直接返回 false —— 入场那一节什么都没做，
+    // 录到的是静止终态。选型台的重挂载只看 propsSignature 变没变，改哪个参数都行。
+    const nudge = (el) => {
+      const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype
+      if (el.type === 'checkbox') {
+        el.click(); setTimeout(() => el.click(), 60); return true
+      }
+      const set = Object.getOwnPropertyDescriptor(proto, 'value').set
+      const orig = el.value
+      const tweak = el.type === 'number' || el.type === 'range'
+        ? String(+orig + (+el.step || 1)) : orig + ' '
+      set.call(el, tweak); el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+      setTimeout(() => {
+        set.call(el, orig)
+        el.dispatchEvent(new Event('input', { bubbles: true }))
+        el.dispatchEvent(new Event('change', { bubbles: true }))
+      }, 60)
+      return true
+    }
+    const rows = document.querySelectorAll('.pg-prop-row')
+    for (const sel of ['input[type="text"]', 'input[type="number"]', 'input[type="range"]', 'select', 'input[type="checkbox"]']) {
+      for (const r of rows) { const el = r.querySelector(sel); if (el) return nudge(el) }
+    }
+    return false
   })
   if (!ok) return false
   await page.waitForTimeout(520)         // 等 remountTick 那 350ms 的防抖走完
@@ -264,14 +282,27 @@ const replay = async () => {
 /** 只触发不等待 —— 把那 520ms 的防抖等待藏进白闪期间，
  *  这样白闪一散，画面就已经是动画中段，开头不会有一段静止。 */
 const replayNoWait = () => page.evaluate(() => {
-  const inp = [...document.querySelectorAll('.pg-prop-row input[type="text"]')][0]
-  if (!inp) return false
-  const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-  const orig = inp.value
-  set.call(inp, orig + ' ')
-  inp.dispatchEvent(new Event('input', { bubbles: true }))
-  setTimeout(() => { set.call(inp, orig); inp.dispatchEvent(new Event('input', { bubbles: true })) }, 60)
-  return true
+  // 和 replay() 同一套「碰一下参数触发重挂载」，只是不等那 520ms 的防抖 ——
+  // 把等待藏进开录前，画面一开始就是动画中段而不是静止。
+  const nudge = (el) => {
+    const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype
+    if (el.type === 'checkbox') { el.click(); setTimeout(() => el.click(), 60); return true }
+    const set = Object.getOwnPropertyDescriptor(proto, 'value').set
+    const orig = el.value
+    const tweak = el.type === 'number' || el.type === 'range' ? String(+orig + (+el.step || 1)) : orig + ' '
+    set.call(el, tweak)
+    el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }))
+    setTimeout(() => {
+      set.call(el, orig)
+      el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }))
+    }, 60)
+    return true
+  }
+  const rows = document.querySelectorAll('.pg-prop-row')
+  for (const sel of ['input[type="text"]', 'input[type="number"]', 'input[type="range"]', 'select', 'input[type="checkbox"]']) {
+    for (const r of rows) { const el = r.querySelector(sel); if (el) return nudge(el) }
+  }
+  return false
 })
 const badge = (t) => page.evaluate((s) => window.__badge(s), t)
 const curPos = () => page.evaluate(() => {
