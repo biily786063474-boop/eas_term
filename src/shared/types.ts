@@ -707,6 +707,37 @@ export interface IslandAction {
 
 /** 甘特图上的一条任务：一次「你发了什么 → agent 干完」。
  *  prompt/follow 都是**用户发出去的**文本，agent 的输出不记。 */
+/** 一个**已安装**的 CLI 插件。由 main/plugins.ts 扫盘得出，只读、不落盘。
+ *
+ *  两个生态的插件形状不同，这里归一化成一份（差异见 main/plugins.ts 的文件头）：
+ *  Codex 的元数据在 `.codex-plugin/plugin.json` 的 `interface` 块里（很全），
+ *  Claude 的只有 name/description（很薄），缺的字段一律留空由 UI 兜底。 */
+export interface PluginInfo {
+  /** `<cli>:<name>`，唯一。用于 UI key 和「这次会话带哪个插件」的引用 */
+  id: string
+  /** 属于哪个 CLI —— **决定用哪个 adapter 起会话**，不能猜 */
+  cli: 'claude' | 'codex'
+  /** 插件自己的名字（codex plugin remove / claude plugin disable 用的那个） */
+  name: string
+  /** 界面上显示的名字。Codex 取 interface.displayName，Claude 只能退回 name */
+  displayName: string
+  description?: string
+  /** Codex 有分类（Productivity / Developer Tools …），Claude 没有 */
+  category?: string
+  /** Codex 的 interface.brandColor，形如 `#5E6AD2`。UI 拿它给条目染色 */
+  brandColor?: string
+  /** 图标的**绝对路径**（已由主进程把相对路径解开）。渲染层不能直接 file://，
+   *  要走已注册的自定义协议 —— 同 bizone.ts 的 registerBizoneScheme */
+  iconPath?: string
+  /** Codex 的 interface.defaultPrompt[0]。选中插件时预填进对话框的首条消息 */
+  defaultPrompt?: string
+  /** 这个插件带的 MCP server 配置（原样，未做变量替换）。
+   *  **只有本地型插件才有**；连接器型（只有远程 app id）为 undefined。 */
+  mcpServers?: Record<string, unknown>
+  /** 插件目录的绝对路径。`${CLAUDE_PLUGIN_ROOT}` 这类变量靠它替换 */
+  root: string
+}
+
 export interface GanttTask {
   id: string
   projectId: string

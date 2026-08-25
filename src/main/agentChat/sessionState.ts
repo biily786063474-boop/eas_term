@@ -96,6 +96,11 @@ export interface SessionRecord {
    *  同时成立」这条纪律被绕过去的路径。**身份是会话的属性，不是视图的属性。** */
   owner?: 'team'
   role?: string
+
+  /** 这次会话带的插件（PluginInfo.id）。**必须记在会话上、不能从画布节点取** ——
+   *  restart 会重算 buildArgs 并重新生成 MCP 配置，那时若拿不到这个值，
+   *  重启后的会话就悄悄丢掉了插件的工具（同 owner 那条的理由）。 */
+  pluginId?: string
   /** 会话建立的时刻。面板给「在跑」的行显示已运行时长要用它。
    *  **不能拿 lastActiveAt 顶替** —— 那个每收到一块 stdout 就续期，对活跃会话永远趋近
    *  0，显示出来是「在跑 0s」，读起来像根本没在跑。 */

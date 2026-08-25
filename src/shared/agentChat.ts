@@ -173,6 +173,14 @@ export interface AgentChatStartParams extends StartOpts {
    *  的事。 */
   owner?: 'team'
   role?: string
+  /** 这次会话要带的插件（PluginInfo.id，如 `claude:figma`）。
+   *
+   *  **一次只带一个**（用户 2026-08-24 定死）：已装插件可以有几十上百个，
+   *  全带进工具面会把系统提示词撑爆 —— 画板那 52 个工具已经让单轮输入涨了约 39k token。
+   *
+   *  和 owner/role 一样**不放进 StartOpts**：它不影响「这个进程怎么起」，
+   *  只影响主进程为它生成哪一份 MCP 配置。 */
+  pluginId?: string
 }
 
 /** 事件推送用的**单一常驻频道**（不是 `agentChat:event:<sessionId>` 那种按会话动态命名的）。
@@ -326,6 +334,10 @@ export interface SessionBrief {
    *  节点可以被关掉而进程还在跑（owner:'team' 的会话就是这么设计的），
    *  从节点取身份会让面板在那一刻失明。见 SessionRecord.owner 那段。 */
   owner?: 'team'
+  /** 这次会话带的插件（PluginInfo.id）。**必须记在会话上、不能从节点取** ——
+   *  restart 会重算 buildArgs 并重新生成 MCP 配置，那时若拿不到这个值，
+   *  重启后的会话就悄悄丢掉了插件的工具（同 owner 那条的理由）。 */
+  pluginId?: string
   role?: string
   /** 这一轮还没跑完。区分「干完了」和「卡住了」的唯一信号，见 SessionRecord.busy */
   busy?: boolean

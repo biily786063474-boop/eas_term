@@ -74,6 +74,18 @@ export type PaneState =
        * **发出去之后必须清掉**（clearInitialMessage），否则组件重新挂载会再发一遍。
        */
       initialMessage?: string
+      /**
+       * 用哪个 CLI 起这个会话。缺省 = 让 AgentChatView 自己挑第一个可用的（既有行为）。
+       *
+       * **为插件而加**：插件属于哪个 CLI 是确定的（GitHub 是 Codex 的、
+       * claude-mem 是 Claude 的），从「插件」选项卡开出来的会话必须用对家伙，
+       * 否则那个插件的工具在会话里根本不存在 —— 又是一次「说你能做、工具却不在」。
+       * 形状照抄 initialMessage：写进 pane、由组件读取，不从外面直接驱动会话。
+       */
+      cli?: 'claude' | 'codex'
+      /** 这次会话带哪个插件（PluginInfo.id）。**一次只带一个**（用户 2026-08-24 定死）——
+       *  180 个插件全带会把系统提示词撑爆。主进程据此决定往 agent-mcp.json 里合并谁。 */
+      pluginId?: string
     }
   | { kind: 'dict' }
   | { kind: 'wiki' }

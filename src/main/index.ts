@@ -22,6 +22,7 @@ import { registerQuotaHandlers } from './quotaStore'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
+import { registerPluginHandlers } from './plugins'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
 import { registerSkillHandlers, hasCli } from './agentSkill'
@@ -309,6 +310,7 @@ app.whenReady().then(() => {
     }
   }
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
+  registerPluginHandlers()
   // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
   // MCP 那一半在 mcpBridge 的 setupAgents 里。装过的人升级即清，不必去点卸载。
   purgeLegacyDsh()

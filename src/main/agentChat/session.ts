@@ -490,7 +490,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
   // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
   // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
-  const built = adapter.buildArgs({ ...opts, mcpConfigPath: agentMcpConfigPath() ?? undefined })
+  const built = adapter.buildArgs({ ...opts, mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined })
   // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
   // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
   const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
@@ -749,6 +749,7 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
       model: r.model,
       owner: r.owner,
       role: r.role,
+      pluginId: r.pluginId,
       busy: r.busy,
       ended: r.ended,
       bgTask: r.bgTask,
@@ -927,6 +928,8 @@ export function registerAgentChatHandlers(): void {
       // 猜错的代价是把用户自己开的会话误判成团队成员，「全部叫停」会连它一起杀。
       owner: p.owner === 'team' ? 'team' : undefined,
       role: typeof p.role === 'string' && p.role ? p.role : undefined,
+      // 同上，params 来自 unknown，非字符串一律当没给
+      pluginId: typeof p.pluginId === 'string' && p.pluginId ? p.pluginId : undefined,
       model: typeof p.model === 'string' ? p.model : undefined,
       effort: typeof p.effort === 'string' ? p.effort : undefined,
       sandbox: typeof p.sandbox === 'string' ? p.sandbox : undefined,

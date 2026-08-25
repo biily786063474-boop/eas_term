@@ -178,6 +178,21 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.initialMessage : undefined
   })
+  /** 这个节点指定了用哪个 CLI 吗（从「插件」选项卡开出来的会指定）。
+   *  缺省 undefined = 沿用既有行为，自己挑第一个可用的。 */
+  const pinnedCli = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.cli : undefined
+  })
+  /** 这次会话要带的插件（一次只带一个）。透传给主进程决定工具面。 */
+  const pluginId = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.pluginId : undefined
+  })
   const clearInitialMessage = useStore((s) => s.clearAgentInitialMessage)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
@@ -332,7 +347,12 @@ export function AgentChatView({
         // 默认只选**现在就能用**的：装了 + 支持会话。没有就不预选，
         // 让用户自己点（点到没装的会给安装入口）
         const usable = list.filter((c) => c.available && c.chatSupported)
-        setSelected((cur) => cur ?? usable[0] ?? null)
+        // **pane 指定了就用它。** 插件属于哪个 CLI 是确定的（GitHub 是 Codex 的、
+        // claude-mem 是 Claude 的），挑错家伙 = 那个插件的工具在会话里根本不存在。
+        // 指定的那个没装 / 不支持会话时退回既有逻辑，不是硬失败——
+        // 用户至少还能看到界面并自己换一个。
+        const pinned = pinnedCli ? usable.find((c) => c.id === pinnedCli) : undefined
+        setSelected((cur) => cur ?? pinned ?? usable[0] ?? null)
       })
       .catch(() => {
         if (!cancelled) setClis([])
@@ -529,6 +549,9 @@ export function AgentChatView({
         skipApprovalHook,
         askFirst,
         ...identity,
+        // 这次会话带哪个插件。**两处 start 都要带** —— 漏掉哪条路径，
+        // 走那条路开出来的会话就没有插件的工具（同 identity 那条注释的理由）。
+        ...(pluginId ? { pluginId } : {}),
         ...(savedResumeId ? { resumeId: savedResumeId } : {})
       })
       if (!result.ok && savedResumeId) {

@@ -1,4 +1,8 @@
-// 在 Frame 空白处双击 → 弹出「插入文件」选择器。
+// 在 Frame 空白处双击 → 弹出「插入」选择器。
+//
+// 三个选项卡：文件夹 / 最近 / **插件**。前两个插的是文件，第三个插的是
+// 「一个绑定了某插件的 AI 对话节点」——插件本身没有界面可渲染（两个生态的插件
+// 都不含 UI 代码，2026-08-24 实测），能插进画布的只有「带着它的工具的会话」。
 //
 // 两种排序（用户可切）：
 //   · 文件夹 —— 和访达/资源管理器一致的顺序（目录在前、名称升序），可逐级进入子目录
@@ -7,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { DirEntry, RecentFile } from '../../../../shared/types'
+import type { DirEntry, PluginInfo, RecentFile } from '../../../../shared/types'
 import { useMenuAnchor, useDismiss } from './CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
 import {
@@ -17,7 +21,8 @@ import {
   FileIcon,
   FolderIcon,
   GlobeIcon,
-  ImageIcon
+  ImageIcon,
+  PlugIcon
 } from '../../ui/Icons'
 
 const MAX_RECENT = 60
@@ -50,6 +55,7 @@ export function CanvasFilePicker({
   root,
   rootName,
   onPick,
+  onPickPlugin,
   onClose
 }: {
   x: number
@@ -58,9 +64,14 @@ export function CanvasFilePicker({
   root: string
   rootName: string
   onPick: (filePath: string) => void
+  /** 选了一个插件：调用方据此在这个 Frame 里开一个绑定该插件的 AI 对话节点 */
+  onPickPlugin: (p: PluginInfo) => void
   onClose: () => void
 }): JSX.Element {
-  const [mode, setMode] = useState<'tree' | 'recent'>('tree')
+  const [mode, setMode] = useState<'tree' | 'recent' | 'plugin'>('tree')
+  // 已装插件。**切到这个 tab 才拉** —— 扫两个 CLI 的缓存目录是同步 IO，
+  // 没人看的时候没必要每次开选择器都跑一遍。
+  const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
   const [dir, setDir] = useState(root)
   const [entries, setEntries] = useState<DirEntry[]>([])
   const [recent, setRecent] = useState<RecentFile[] | null>(null)
@@ -112,6 +123,20 @@ export function CanvasFilePicker({
     }
   }, [mode, root, docsOnly])
 
+  useEffect(() => {
+    if (mode !== 'plugin') return
+    let alive = true
+    setPlugins(null)
+    window.api.plugins
+      .list()
+      .then((list) => alive && setPlugins(list))
+      // 扫不到就是一个都没装 —— 空态那句话会给出路，不当错误处理
+      .catch(() => alive && setPlugins([]))
+    return () => {
+      alive = false
+    }
+  }, [mode])
+
   // 路径分隔符跟随平台（Windows 是 \），否则「返回上级」在 Windows 上会切出个空串
   const sep = root.includes('\\') ? '\\' : '/'
   const rel = dir === root ? '' : dir.slice(root.length + 1)
@@ -130,7 +155,7 @@ export function CanvasFilePicker({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="cpk-head">
-        <span className="cpk-title">插入文件</span>
+        <span className="cpk-title">插入</span>
         <span className="cpk-scope">{rootName}</span>
       </div>
       <div className="cpk-tabs">
@@ -142,10 +167,16 @@ export function CanvasFilePicker({
           <ClockIcon size={12} />
           最近
         </button>
+        <button className={mode === 'plugin' ? 'on' : ''} onClick={() => setMode('plugin')}>
+          <PlugIcon size={12} />
+          插件
+        </button>
       </div>
 
       {/* 过滤三选一。原来这里是「只保留文档」一个复选框、而且只在「最近」模式出现——
-          插图片进画布是这个选择器最常见的用途之一，却只能靠肉眼在一堆代码文件里找。 */}
+          插图片进画布是这个选择器最常见的用途之一，却只能靠肉眼在一堆代码文件里找。
+          **插件 tab 不出现这条** —— 「文档/多媒体」对插件没有意义，留着只是噪声。 */}
+      {mode !== 'plugin' && (
       <div className="cpk-filters">
         {(
           [
@@ -174,6 +205,7 @@ export function CanvasFilePicker({
           </button>
         ))}
       </div>
+      )}
 
       {mode === 'tree' && (
         <div className="cpk-path" title={dir}>
@@ -240,6 +272,38 @@ export function CanvasFilePicker({
               </button>
             ))}
             {recent && !recent.length && <div className="cpk-empty">没扫到文件</div>}
+          </>
+        )}
+
+        {mode === 'plugin' && (
+          <>
+            {plugins === null && <div className="cpk-empty">读取中…</div>}
+            {plugins?.map((p) => (
+              <button
+                key={p.id}
+                className="cpk-row"
+                onClick={() => {
+                  onPickPlugin(p)
+                  onClose()
+                }}
+              >
+                {/* 有品牌色就用它画一个小圆点 —— Codex 插件都带 brandColor，
+                    Claude 插件一律没有，那时退回中性色，不为了好看去猜一个。 */}
+                <span
+                  className="cpk-plug-dot"
+                  style={{ background: p.brandColor ?? '#525252' }}
+                  aria-hidden="true"
+                />
+                <span className="cpk-name">{p.displayName}</span>
+                <span className="cpk-time">{p.category ?? p.cli}</span>
+              </button>
+            ))}
+            {plugins && !plugins.length && (
+              <div className="cpk-empty">
+                还没装任何插件 —— 在终端里跑 <code>codex plugin add …</code> 或{' '}
+                <code>claude plugin install …</code> 装一个
+              </div>
+            )}
           </>
         )}
       </div>

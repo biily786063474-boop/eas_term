@@ -1456,6 +1456,30 @@ export function CanvasStage(): JSX.Element {
           root={picker.root}
           rootName={picker.rootName}
           onClose={() => setPicker(null)}
+          onPickPlugin={(plug) => {
+            // 插件插进画布 = 开一个**绑定了它**的 AI 对话节点。
+            // 插件本身没有界面可渲染（两个生态的插件都不含 UI 代码，2026-08-24 实测），
+            // 能落在画布上的只有「带着它的工具的那个会话」。
+            //
+            // 三样都要带齐，少一样就是「说你能做、工具却不在」：
+            //   cli        —— 插件属于谁就用谁起会话，不能让它挑默认的那个
+            //   pluginId   —— 主进程据此决定往 agent-mcp.json 里合并谁（一次只带一个）
+            //   initialMessage —— 插件自带的 defaultPrompt，Claude 插件没有就不填
+            const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
+            if (!frame) return
+            addFileNode(
+              picker.frameId,
+              {
+                kind: 'agent',
+                cwd: picker.root,
+                cli: plug.cli,
+                pluginId: plug.id,
+                ...(plug.defaultPrompt ? { initialMessage: plug.defaultPrompt } : {})
+              },
+              picker.wx - frame.x - 90,
+              picker.wy - frame.y - 15
+            )
+          }}
           onPick={(filePath) => {
             const place = (pane: PaneState): void => {
               // 重新取 Frame：菜单开着的这会儿它可能已被 reflow 挪过位置

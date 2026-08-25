@@ -143,6 +143,11 @@ function codexRegion(fileNames: Set<string>): string {
     lines.push('**缺密钥**：撞到 401 / 鉴权失败 → 别让用户把 key 贴进对话，')
     lines.push(`走密钥柜。详细：\`${path.join(detailDir(), 'secrets.md')}\``, '')
   }
+  if (fileNames.has('plugins.md')) {
+    lines.push('**插件**：用户提到某个外部服务（Linear / Slack / Figma / GitHub / 剪辑…）')
+    lines.push('而你没有对应工具 → **先查插件装没装**，别直接回「我做不到」；')
+    lines.push(`**安装命令只给不跑**。详细：\`${path.join(detailDir(), 'plugins.md')}\``, '')
+  }
   if (fileNames.has('wiki-architect.md')) {
     lines.push('**重新设计知识库**：用户说分类不合适 / 要自定义知识库 →')
     lines.push(`详细：\`${path.join(detailDir(), 'wiki-architect.md')}\``, '')

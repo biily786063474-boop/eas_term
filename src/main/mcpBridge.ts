@@ -10,6 +10,7 @@
 // （resources/agent-hooks/eas-pretooluse.mjs，独立 Node 进程）POST request 后阻塞等决定，
 // 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
 import { app, ipcMain, BrowserWindow } from 'electron'
+import { findPlugin } from './plugins'
 import { stripDshRegion, DSH_BEGIN } from './legacyDshCleanup'
 import http from 'http'
 import fs from 'fs'
@@ -572,7 +573,28 @@ export function mcpOptedOut(): boolean {
  *
  *  **尊重 opt-out**：用户在「扩展能力」里关掉 MCP 接入之后，这里同样返回 null。
  *  只关一半（终端里没有、AI 对话里还有）比不关更让人困惑。 */
-export function agentMcpConfigPath(): string | null {
+/** 把插件 MCP 配置里的路径变量换成真实目录。
+ *
+ *  Claude 插件的 `.mcp.json` 里写的是 `${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs`
+ *  这种形式（实测 claude-mem 就是）。**不替换的话 CLI 起不来那个 server**，
+ *  而失败是安静的：工具列表少几个，没有任何报错。
+ *
+ *  深拷贝加替换，不改原对象 —— plugins.ts 每次都当场扫盘返回新对象，
+ *  但别指望调用方也这么想。 */
+function substPluginVars(v: unknown, root: string): unknown {
+  if (typeof v === 'string') {
+    return v.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, root).replace(/\$\{CODEX_PLUGIN_ROOT\}/g, root)
+  }
+  if (Array.isArray(v)) return v.map((x) => substPluginVars(x, root))
+  if (v && typeof v === 'object') {
+    const o: Record<string, unknown> = {}
+    for (const [k, vv] of Object.entries(v as Record<string, unknown>)) o[k] = substPluginVars(vv, root)
+    return o
+  }
+  return v
+}
+
+export function agentMcpConfigPath(pluginId?: string): string | null {
   try {
     const serverPath = serverScriptPath()
     if (!fs.existsSync(serverPath)) return null
@@ -617,6 +639,28 @@ export function agentMcpConfigPath(): string | null {
         ...(r.env ? { env: r.env } : {})
       }
     }
+    // ── 用户点选的那一个插件 ────────────────────────────────────────────
+    // **只合并这一个，不是「装了的全带上」**（用户 2026-08-24 定死）：
+    // 已装插件可以有几十个，全进工具面会把系统提示词撑爆。
+    //
+    // 只有**本地型**插件走这条路。连接器型（清单里只有远程 app id、没有
+    // mcpServers，如已装的 GitHub）本地没有任何东西可合并 —— 而它在 Codex 那边
+    // **本来就能用**：codex exec 不带任何 MCP 限制，读的是用户全局 toml
+    // （2026-08-24 实测拿到 mcp__codex_apps__github._get_profile）。
+    // 所以这段实际只在救 Claude 那半：它带着 --strict-mcp-config，
+    // 不显式合并的话，claude-mem / figma 这类插件的 MCP 在 AI 对话里根本不存在。
+    if (pluginId) {
+      const plug = findPlugin(pluginId)
+      if (plug?.mcpServers) {
+        for (const [name, cfg] of Object.entries(plug.mcpServers)) {
+          // 插件自己的 server 名可能跟我们的撞（都叫 "figma" 之类）。
+          // 加前缀而不是覆盖 —— 覆盖会把 eas-term 顶掉，画布能力当场消失。
+          const key = name in servers ? `plugin-${plug.name}-${name}` : name
+          servers[key] = substPluginVars(cfg, plug.root)
+        }
+      }
+    }
+
     const p = path.join(app.getPath('userData'), 'agent-mcp.json')
     fs.writeFileSync(p, JSON.stringify({ mcpServers: servers }, null, 2))
     return p
