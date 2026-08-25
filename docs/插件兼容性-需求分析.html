@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>插件兼容性 · 需求分析</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">Eas-Term · 插件兼容性</span>
+    <a href="#结论">结论</a>
+    <a href="#现状">现状</a>
+    <a href="#生态">生态解剖</a>
+    <a href="#方案">三层方案</a>
+    <a href="#冲突">已知冲突</a>
+    <a href="#手册">LLM 手册</a>
+    <a href="#风险">风险</a>
+    <a href="#下一步">下一步</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <span class="eyebrow">需求分析 · L1+L2 已实施</span>
+  <h1>把第三方 CLI 插件接进画布</h1>
+  <p class="lede">
+    结论先说：<b>字面上的「插件作为一个模块/分屏渲染出来」做不到</b> —— 实测两个生态的插件里
+    一行 UI 代码都没有。但你要的效果（装了插件就能在画布上用起来）能满足，
+    路径和你想的不一样。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-08-24</b></span>
+    <span>实测对象 <b>Codex 2 / Claude Code 2.1.241</b></span>
+    <span>结论 <b>L1+L2 已做完并真机验证</b></span>
+    <span>订正 <b>4 处推断被实测推翻</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">核心裁决</div>
+  <p class="secnote">四个数字先把盘子说清楚，然后是裁决和它的依据。</p>
+
+  <div class="grid g4">
+    <div class="stat"><div class="num n-sk">180</div><div class="lab">Codex 市场里现成的插件数<br><span style="color:#525252">openai-curated，本机已能列出</span></div></div>
+    <div class="stat"><div class="num n-ro">0</div><div class="lab">其中含可渲染 UI 的插件数<br><span style="color:#525252">两个生态都是 0</span></div></div>
+    <div class="stat"><div class="num n-em">2→3</div><div class="lab">Frame 双击菜单的选项卡数<br><span style="color:#525252">加一个「插件」是小改动</span></div></div>
+    <div class="stat"><div class="num n-am">3 / 6</div><div class="lab">需要改的 LLM 注入面<br><span style="color:#525252">六个面里动三个</span></div></div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">2026-08-24 订正 · 实施后回填</div>
+    <p style="margin-bottom:10px">本文最初是动手前写的分析，实施过程中<b>四处推断被实测推翻</b>，已就地改正。原文保留结构，改动点都标了「订正」：</p>
+    <ol style="margin-bottom:0">
+      <li><b>L2 的范围小一半</b> —— Codex 那边不需要做任何事</li>
+      <li><b>OAuth 不用我们管</b> —— Codex 在安装时就处理了</li>
+      <li><b>插件有两种形状</b> —— 连接器型本地什么都没有</li>
+      <li><b>ChatCut 那类插件的界面有解</b> —— 走已有的网页节点</li>
+    </ol>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁决</div>
+    <p style="margin-bottom:10px"><b>需求要拆成两半看，一半不成立、一半成立。</b></p>
+    <ul style="margin-bottom:0">
+      <li><b class="b b-ro">不成立</b> 「插件作为独立模块或分屏被插入」—— Codex 与 Claude Code 的插件
+        <b>都不包含任何界面代码</b>。它们贡献的是提示词（skills）、工具（MCP server）、行为（hooks）。
+        没有可渲染的东西，所谓「插入一个模块」无从谈起。</li>
+      <li><b class="b b-em">成立</b> 「装了插件后能在 Frame 双击菜单里选到、并在画布上用起来」——
+        这条完全可行，而且 <b>Codex 插件自带完整的展示元数据</b>（显示名 / 图标 / 品牌色 / 分类 / 默认提示词），
+        我们不需要为每个插件写适配。</li>
+    </ul>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">必须先纠正的一个预期</div>
+    <p style="margin-bottom:0">
+      如果你期待的是「点一下 Linear 插件，画布上出现一个 Linear 的看板界面」——
+      <b>那需要我们自己定义一套 Eas-Term 插件协议</b>（见 L3），而不是兼容 Codex 插件。
+      Codex 插件里的 <code>.app.json</code> 只有一个远程 app id（<code>asdk_app_69a0…</code>），
+      指向 ChatGPT 那边托管的界面，我们这边渲染不了。
+    </p>
+  </div>
+</section>
+
+<section id="现状">
+  <h2>Current State</h2>
+  <div class="sectitle">现状盘点：目标 UI 和现有扩展点在哪</div>
+  <p class="secnote">先确认「Frame 里双击弹出的菜单」到底是哪个组件 —— 这决定了改动落点。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>东西</th><th>在哪</th><th>现在什么形状</th><th>能不能直接用</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Frame 内双击菜单</b></td>
+        <td><code>CanvasFilePicker.tsx</code><br><span class="dim">由 CanvasStage 双击 <code>.cframe</code> 触发</span></td>
+        <td>已有选项卡结构 <code>.cpk-tabs</code>，<br>两个 tab：文件夹 / 最近<br><code>mode: 'tree' | 'recent'</code></td>
+        <td><b class="b b-em">能</b> 加第三个 tab 是纯增量</td>
+      </tr>
+      <tr>
+        <td><b>画布组件协议</b></td>
+        <td><code>canvas/components/registry.tsx</code><br><span class="dim">规范见 docs/画布组件协议.html</span></td>
+        <td>已有 3 个组件（版本管理 / 设计模块 / 团队面板）<br><b>编译期注册</b>：TS 数组打进 bundle</td>
+        <td><b class="b b-am">要桥接</b> 插件是运行时发现的</td>
+      </tr>
+      <tr>
+        <td><b>面板种类</b></td>
+        <td><code>PaneView.tsx</code> 的<br><code>KIND_OPTIONS</code> / <code>KIND_LABEL</code></td>
+        <td><code>PaneKind</code> 硬编码联合类型<br>9 种：terminal / agent / code / image / web / dict / wiki / history / chat</td>
+        <td><b class="b b-ro">要动类型</b> 插件种类是动态的</td>
+      </tr>
+      <tr>
+        <td><b>AI 对话会话</b></td>
+        <td><code>agentChat/adapters/</code></td>
+        <td>已支持 claude / codex 两个 CLI，<br>参数由 adapter 拼</td>
+        <td><b class="b b-em">能</b> L1 全靠它</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">一个已经存在、但方向不同的扩展点</div>
+    <p style="margin-bottom:0">
+      画布已经有一套<b>组件协议</b>（写一个 <code>CanvasComponentDef</code> push 进数组即可，
+      无需改其它文件）。但它解决的是「<b>我们自己</b>写的模块怎么上画布」，
+      而插件是「<b>别人</b>写的东西怎么上画布」。前者编译期已知、后者运行时才发现，
+      两套不能直接合并 —— 但 L3 如果要做，应该<b>沿用它的协议形状</b>，而不是另起一套。
+    </p>
+  </div>
+</section>
+
+<section id="生态">
+  <h2>Ecosystem</h2>
+  <div class="sectitle">生态解剖：插件里到底装了什么</div>
+  <p class="secnote">这一节是整份分析的地基。结论全部来自本机实测，不是文档推断。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>维度</th><th>Codex 插件</th><th>Claude Code 插件</th></tr></thead>
+    <tbody>
+      <tr><td><b>市场</b></td><td><code>codex plugin marketplace</code><br>本机已配 <code>openai-curated</code>，可列 180 个</td><td><code>claude plugin</code> + marketplace<br>本机已装 10 个</td></tr>
+      <tr><td><b>安装位置</b></td><td><code>~/.codex/plugins/</code><br><span class="dim">市场快照在 ~/.codex/.tmp/plugins/</span></td><td><code>~/.claude/plugins/cache/&lt;市场&gt;/&lt;名&gt;/&lt;版本&gt;/</code></td></tr>
+      <tr><td><b>清单</b></td><td><code>.codex-plugin/plugin.json</code></td><td><code>.claude-plugin/plugin.json</code></td></tr>
+      <tr><td><b>贡献：提示词</b></td><td><code>skills/</code></td><td><code>skills/</code>、<code>commands/</code>、<code>agents/</code></td></tr>
+      <tr><td><b>贡献：工具</b></td><td><code>.mcp.json</code></td><td><code>mcp</code> 配置</td></tr>
+      <tr><td><b>贡献：行为</b></td><td>—</td><td><code>hooks/</code></td></tr>
+      <tr><td><b>贡献：界面</b></td><td><code>.app.json</code> → <b>只有一个远程 app id</b></td><td><b>无</b></td></tr>
+      <tr><td><b>展示元数据</b></td><td><b class="b b-em">丰富</b> <code>interface</code> 块</td><td><b class="b b-gy">仅基础</b> name/description/author</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Codex 插件的 <code>interface</code> 块 —— 这是好消息</h3>
+  <p>以 <code>linear</code> 为例，清单里现成就有渲染一个条目所需的全部字段：</p>
+<pre><code>"interface": {
+  "displayName":      "Linear",
+  "shortDescription": "Find and reference issues and projects.",
+  "category":         "Productivity",
+  "brandColor":       "#5E6AD2",        <span class="dim">← 条目主色，不用我们挑</span>
+  "composerIcon":     "./assets/linear-icon.svg",
+  "logo":             "./assets/app-icon.png",
+  "defaultPrompt":    ["Triage or update relevant issues for this task…"],   <span class="hi">← L1 的关键</span>
+  "capabilities":     []
+}</code></pre>
+
+  <p>而它的工具面是一个<b>远程 HTTP MCP + OAuth</b>：</p>
+<pre><code>"mcpServers": {
+  "linear": {
+    "type": "http",
+    "url":  "https://mcp.linear.app/mcp",
+    "oauth_resource": "https://mcp.linear.app/mcp"    <span class="hi">← 认证由谁走？见风险</span>
+  }
+}</code></pre>
+
+  <div class="dissent">
+    <div class="vlabel">关键否定发现</div>
+    <p style="margin-bottom:0">
+      <b>两个生态的插件都不含 UI 代码，一行都没有。</b>
+      Codex 的 <code>.app.json</code> 是 <code>{"apps":{"linear":{"id":"asdk_app_…"}}}</code> ——
+      一个指向远端的标识符，不是可执行的界面。
+      所以任何形如「把 codex 插件渲染成画布模块」的方案，本质上都是
+      <b>我们自己写那个界面</b>，插件只提供数据源。这一点必须在动手前对齐，
+      否则会做到一半才发现要给每个插件手写适配。
+    </p>
+  </div>
+</section>
+
+<section id="方案">
+  <h2>Options</h2>
+  <div class="sectitle">三层方案</div>
+  <p class="secnote">按「能不能今天做」排序。L1 与 L2 是一对，单做 L1 会得到一个空壳。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="min-width:52px">层</th><th>做成什么</th><th>改哪里</th><th>成本</th><th>可行性</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b class="b b-em">L1</b></td>
+        <td><b>插件 = 会话预设</b><br>「插件」选项卡列出已装插件，点一个 →
+          在 Frame 里开一个 AI 对话节点，预置该插件的 <code>defaultPrompt</code>，
+          用对应 CLI 起会话</td>
+        <td>新增：读插件清单的主进程模块<br>改：<code>CanvasFilePicker</code> 加 tab<br><b>不新增任何渲染层组件</b></td>
+        <td><b class="b b-em">小</b></td>
+        <td>今天就能做</td>
+      </tr>
+      <tr>
+        <td><b class="b b-am">L2</b></td>
+        <td><b>插件 = 工具面扩展</b><br>被选中插件的 MCP server 进入我们为 AI 对话生成的
+          <code>agent-mcp.json</code>，会话里真的能调它的工具</td>
+        <td><code>mcpBridge.agentMcpConfigPath()</code><br>+ OAuth 流程的归属决策</td>
+        <td><b class="b b-am">中</b></td>
+        <td>与 L1 必须配套<br><span class="dim">见「已知冲突」</span></td>
+      </tr>
+      <tr>
+        <td><b class="b b-ro">L3</b></td>
+        <td><b>插件自带界面</b><br>真正意义上的「作为一个模块插入」</td>
+        <td>需要<b>我们自己定义</b>一套 Eas-Term 插件协议：<br>manifest + HTML/iframe 入口 + 权限模型<br>+ 沙箱（第三方代码进渲染层）</td>
+        <td><b class="b b-ro">大</b></td>
+        <td>现有生态零支持<br>等于自建生态<br><span class="b b-em" style="margin-top:6px;display:inline-block">订正 ④</span> 但 ChatCut 那类<b>自带 Web 界面</b>的插件已有解：<br>它的工具会给出网址，用现成的 <code>canvas_open_url</code><br>开成画布网页节点即可，<b>零新代码</b></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <h3>L1 的交互长什么样</h3>
+<pre><code>Frame 内双击
+      <span class="flow">↓</span>
+┌─ 插入 ────────────────────────────┐
+│  [文件夹] [最近] <span class="hi">[插件]</span>              │   <span class="dim">← 第三个 tab</span>
+│ ─────────────────────────────────│
+│  <span class="dim">◆</span> Linear      Productivity        │   <span class="dim">图标/名称/分类全来自 interface</span>
+│  <span class="dim">◆</span> Slack       Communication       │
+│  <span class="dim">◆</span> Figma       Design              │
+│ ─────────────────────────────────│
+│  <span class="dim">未安装的插件不在这里 —— 装插件走 CLI</span>  │
+└──────────────────────────────────┘
+      <span class="flow">↓ 点 Linear</span>
+在这个 Frame 里新建一个 <b>AI 对话</b>节点
+  · CLI = codex（插件属于谁就用谁）
+  · 首条消息预填 defaultPrompt
+  · 该插件的 MCP server 已在工具面里（<span class="hi">L2 保证</span>）</code></pre>
+
+  <div class="warn">
+    <div class="vlabel">为什么 L1 单做会是空壳</div>
+    <p style="margin-bottom:0">
+      L1 只负责「开一个会话并预填提示词」。如果 L2 没做，那个会话里
+      <b>根本没有 Linear 的工具</b> —— 模型会照着提示词去找工具、找不到，
+      然后回一句「我没有访问 Linear 的能力」。
+      这和我们 <b>2026-08-23 刚修完的画板 MCP 那个 bug 是同一个形状</b>：
+      规则说你能做，工具却不在。不要再犯第二次。
+    </p>
+  </div>
+</section>
+
+<section id="冲突">
+  <h2>Conflict</h2>
+  <div class="sectitle">与刚落地改动的已知冲突</div>
+  <p class="secnote">L2 会直接撞上两天前刚定的两个决策，必须一起想清楚。</p>
+
+  <div class="warn">
+    <div class="vlabel">订正 ①②③</div>
+    <p style="margin-bottom:8px"><b>下面这节说的问题只对 Claude Code 成立。</b> 2026-08-24 实测：</p>
+    <ul style="margin-bottom:0">
+      <li><code>codex exec</code> <b>不带任何 MCP 限制</b>（adapter 只传 <code>--json --sandbox -m -c</code>），
+        读的是用户全局 toml —— 插件在 AI 对话里<b>本来就能用</b>。
+        实测在会话里拿到 <code>mcp__codex_apps__github._get_profile</code>。</li>
+      <li>OAuth 由 Codex 在<b>安装时</b>处理（市场条目里 <code>policy.authentication: "ON_INSTALL"</code>），
+        不需要我们弹窗 —— 原文那条风险取消。</li>
+      <li>插件有<b>两种形状</b>：<b>连接器型</b>（如已装的 GitHub，清单里只有远程 app id，
+        本地既无 <code>.mcp.json</code> 也无 <code>skills/</code>）与<b>本地型</b>（如 linear、claude-mem）。
+        只有本地型有东西可合并。</li>
+    </ul>
+  </div>
+
+  <h3>冲突一：<code>--strict-mcp-config</code> 会挡住插件的 MCP<span class="b b-am" style="margin-left:8px">仅 Claude</span></h3>
+  <p>
+    AI 对话那条路<b>无条件</b>带 <code>--strict-mcp-config</code>（<code>adapters/claude.ts</code>），
+    语义是「只用 <code>--mcp-config</code> 给的，忽略其它一切」。
+    而我们生成的 <code>agent-mcp.json</code> 现在只放 <code>eas-term</code> 和 <code>bizone-canvas</code> 两个。
+  </p>
+  <p><b>结果</b>：用户在 Codex 里装的插件，其 MCP server 在 AI 对话会话里<b>不存在</b>。</p>
+  <p><b>三个选项</b>：</p>
+  <div class="tw"><table>
+    <thead><tr><th>做法</th><th>代价</th></tr></thead>
+    <tbody>
+      <tr><td>把选中插件的 MCP 合并进 <code>agent-mcp.json</code></td><td><b class="b b-em">推荐</b> 工具面仍然可控，只多了用户明确点选的那个</td></tr>
+      <tr><td>去掉 <code>--strict-mcp-config</code></td><td><b class="b b-ro">不建议</b> 工具面变成用户全局的全集，不可控 —— 这正是当初加它的原因</td></tr>
+      <tr><td>只在终端里用插件，AI 对话不管</td><td><b class="b b-am">保守</b> 但那样「双击菜单里的插件选项卡」就没有意义了</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>冲突二：每个插件 MCP = 每会话一份连接</h3>
+  <p>
+    2026-08-23 实测：每个 AI 对话会话已经挂着 <code>eas-term</code>（19MB）+
+    <code>bizone-canvas</code>（31MB）两个 MCP 进程。插件的 MCP 多为
+    <b>远程 HTTP</b>（如 <code>https://mcp.linear.app/mcp</code>），
+    不额外起本地进程，<b>这一点比想象中好</b> —— 但每会话仍是一条独立的
+    HTTP + OAuth 连接。
+  </p>
+  <div class="warn">
+    <div class="vlabel">要定的规矩</div>
+    <p style="margin-bottom:0">
+      <b>不要「装了就全带上」。</b> 180 个插件如果都进工具面，
+      系统提示词会被工具定义撑爆（画板 52 个工具已经让单轮输入涨了约 39k token）。
+      规矩应该是：<b>只带用户在这次会话里明确点选的那一个</b>。
+    </p>
+  </div>
+</section>
+
+<section id="手册">
+  <h2>LLM Manual</h2>
+  <div class="sectitle">给 LLM 的操作手册要改哪几面</div>
+  <p class="secnote">项目已有成熟的「六个注入面」规范（<code>.claude/skills/agent-onboarding/SKILL.md</code>）。插件这件事落在其中三面。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="min-width:40px">面</th><th>名称</th><th>这次要不要动</th><th>写什么</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>常驻规则（托管区）</td><td><b class="b b-em">要</b></td>
+        <td>加一条<b>触发条件</b>：用户提到某个集成（Linear / Slack / Figma / Notion…）时，
+          <b>先查该插件装没装</b>，别直接说「我做不到」。<br>
+          <span class="dim">按面 1 的纪律：只写触发条件 + 去哪读，正文一个字不放。</span></td></tr>
+      <tr><td><b>2</b></td><td>技能包正文（按需读）</td><td><b class="b b-em">要</b></td>
+        <td>怎么列已装插件、怎么在 Frame 里开一个带插件的会话、
+          两阶段确认的话术、装插件的命令<b>只给不跑</b>。</td></tr>
+      <tr><td><b>3</b></td><td>MCP 工具</td><td><b class="b b-am">看 L2 怎么定</b></td>
+        <td>如果采纳「只带点选的那一个」，这里要写清<b>合并规则</b>与<b>何时重启会话</b>
+          （MCP 配置是会话启动时定的，中途改不了）。</td></tr>
+      <tr><td><b>4</b></td><td>提交钩子</td><td><b class="b b-gy">不动</b></td><td>与插件无关</td></tr>
+      <tr><td><b>5</b></td><td>库内说明书</td><td><b class="b b-gy">不动</b></td><td>与插件无关</td></tr>
+      <tr><td><b>6</b></td><td>会话驱动（入方向）</td><td><b class="b b-am">可能要</b></td>
+        <td>若插件属于 Codex，L1 点选后必须用 <b>codex</b> 起会话而不是 claude ——
+          adapter 选择要跟着插件归属走。</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="verdict">
+    <div class="vlabel">一条必须写进手册的纪律</div>
+    <p style="margin-bottom:0">
+      <b>LLM 不许代跑 <code>codex plugin add</code> / <code>claude plugin install</code>。</b>
+      理由与 <code>agentInstall.ts</code> 里的既有纪律同源：
+      「静默装全局 CLI + 改 PATH 是恶意软件的行为特征」。
+      正确做法是<b>把命令预填进终端交给用户按回车</b>，和现在装 CLI 的做法保持一致。
+    </p>
+  </div>
+</section>
+
+<section id="风险">
+  <h2>Risks</h2>
+  <div class="sectitle">风险与未决问题</div>
+  <p class="secnote">前三条会影响方案形状，必须动手前定；后两条是实现期再处理。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="b b-em">已答</span> chatcut 是什么</h4>
+      <p style="margin-bottom:0">用户 2026-08-24 确认：<b>是 Codex 插件</b>，并且<b>自带一个 Web 剪辑界面</b>
+      （素材库 / 时间轴 / 预览，跑在浏览器里）。本机仍搜不到它（不在
+      <code>openai-curated</code> 的 180 个快照里），所以未能实测其清单。<br>
+      <b>形状已明确</b>：插件给工具，界面是独立 Web 应用 —— 正好对应 L3 那行的订正，
+      用 <code>canvas_open_url</code> 开成画布节点即可，不需要自建插件协议。</p>
+    </div>
+    <div class="card">
+      <h4><span class="b b-em">已消</span> OAuth 谁来走</h4>
+      <p style="margin-bottom:0"><b>不用我们管。</b> 市场条目里写着
+      <code>policy.authentication: "ON_INSTALL"</code>（180 个里 177 个如此）——
+      授权在<b>安装那一刻</b>由 Codex 自己走完，会话里不会再撞到登录。
+      剩下 3 个是 <code>ON_USE</code>。</p>
+    </div>
+    <div class="card">
+      <h4><span class="b b-am">要定</span> 工具面爆炸</h4>
+      <p style="margin-bottom:0">180 个插件全带 = 系统提示词失控。
+      建议硬规矩：<b>一次会话只带一个点选的插件</b>。
+      需要多个时，让用户明确加，并显示当前会话带了哪些。</p>
+    </div>
+    <div class="card">
+      <h4><span class="b b-sk">实现期</span> 插件清单怎么读</h4>
+      <p style="margin-bottom:0">两条路：跑 <code>codex plugin list</code> 解析输出（脆，格式会变），
+      或直接读 <code>~/.codex/plugins/</code> 与 <code>~/.claude/plugins/cache/</code> 的清单文件（稳）。
+      <b>建议读文件</b>，与项目现有做法（读 <code>~/.claude.json</code> 而非跑命令）一致。</p>
+    </div>
+    <div class="card">
+      <h4><span class="b b-sk">实现期</span> 图标要落地化</h4>
+      <p style="margin-bottom:0"><code>composerIcon</code> 是插件目录里的 SVG 相对路径。
+      渲染层读本地文件要走已有的协议注册（同 <code>bizone.ts</code> 的
+      <code>registerBizoneScheme</code>），不能直接 <code>file://</code>。</p>
+    </div>
+    <div class="card">
+      <h4><span class="b b-sk">实现期</span> 一个还没装插件的机器</h4>
+      <p style="margin-bottom:0">本机 <code>~/.codex/config.toml</code> 里<b>没有插件段</b>，
+      即一个都没装。「插件」选项卡的空状态要给出路：
+      告诉用户怎么装，而不是显示一个空列表。</p>
+    </div>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">分析到此为止，没有动任何代码。要往下走需要你先定三件事。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">需要你回答</div>
+      <div class="tt">① chatcut 是什么</div>
+      <div class="td">它是 Codex 插件，还是一个独立程序？本机查不到。这个答案决定它走不走插件这条路。</div>
+    </div>
+    <div class="it on">
+      <div class="tm">需要你拍板</div>
+      <div class="tt">② 做到哪一层</div>
+      <div class="td">L1+L2（推荐，插件能在会话里真的用起来）／ 只做 L1（先看形状）／ 连 L3 一起规划（自建插件生态，另开方案）。</div>
+    </div>
+    <div class="it on">
+      <div class="tm">需要你拍板</div>
+      <div class="tt">③ 工具面规矩</div>
+      <div class="td">「一次会话只带一个点选的插件」这条要不要定死。不定的话工具面迟早失控。</div>
+    </div>
+    <div class="it">
+      <div class="tm">定完之后</div>
+      <div class="tt">④ 出实现方案</div>
+      <div class="td">含数据结构、改动清单、LLM 手册的具体措辞、验收方式。那时才动代码。</div>
+    </div>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话（按需改）</div>
+    <div class="dcmd">
+      <span id="cmd">chatcut 是 X；做 L1+L2；工具面按「一次一个」定死</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Eas-Term · 插件兼容性需求分析 · 2026-08-24<br>
+    实测环境：Codex 2（marketplace <code>openai-curated</code>，180 个插件）／ Claude Code 2.1.241（已装 10 个插件）<br>
+    相关文件：<code>src/renderer/src/features/canvas/CanvasFilePicker.tsx</code>（目标 UI）·
+    <code>src/renderer/src/features/canvas/components/registry.tsx</code>（现有组件协议）·
+    <code>src/main/mcpBridge.ts</code>（工具面）·
+    <code>.claude/skills/agent-onboarding/SKILL.md</code>（六个注入面）<br>
+    本文档只做分析，未修改任何代码。
+  </p>
+</footer>
+
+</main>
+</body>
+</html>
