@@ -68,6 +68,19 @@ if (TR.has('scroll') || NEEDS_SCROLL) SECTIONS.push('scroll')
 if (!SECTIONS.length) SECTIONS.push('ambient')   // 只有 ambient：静静录一段
 // 光标类的悬停要长一点：1.7 秒看不出「跟随」的手感，指针刚划两下就没了
 const SEC_MS = { mount: 2200, hover: sem.surface === 'cursor' ? 2600 : 1700, click: 3200, drag: 3000, scroll: 2100, ambient: 3000 }
+// **小节最多 3 节。** 成片有 9 秒硬顶，而固定顺序是 mount→hover→click→drag→scroll ——
+// 排在最后的那节会被 ffmpeg 直接截掉。实测 StackTransition 全长 8.96s 里
+// 前 7.6s 是死的：入场+悬停+点击全没内容，真正的效果在最后 1.4s 还被切了一半。
+// 用户看到的就是「hover 上去半天不动」。
+//
+// 砍谁：先砍 hover（有 drag/click 时它信息量最低），再砍 mount。
+// **不砍 drag/scroll/click** —— 那才是这些组件的核心动作。
+while (SECTIONS.length > 3) {
+  const drop = SECTIONS.includes('hover') && SECTIONS.some((x) => x === 'drag' || x === 'click')
+    ? 'hover'
+    : (SECTIONS.includes('mount') ? 'mount' : SECTIONS[0])
+  SECTIONS.splice(SECTIONS.indexOf(drop), 1)
+}
 // 成片有 9 秒硬顶（缩略图没人看更久）。小节多的时候按比例压时长，
 // 否则最后一节直接被 ffmpeg 截掉 —— 「文字掉落」四节 14.1s，滚动那节等于白录。
 const RAW_TOTAL = SECTIONS.reduce((a, s) => a + SEC_MS[s], 0)
@@ -440,10 +453,29 @@ const ch = Math.max(2, Math.min(VH - cy, Math.round(box.height)))
 const CROP = `crop=${cw}:${ch}:${cx}:${cy}`
 // **不要吞 ffmpeg 的错误。** stdio:'ignore' 那一版，Carousel 挂了只看到
 // 「status: 234」，什么线索都没有 —— 静默失败最耗时间。
+let SS = 0                                     // 开头要切掉多少秒（先编一遍量出来再定）
 const enc = (crf, w) => execFileSync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listFile,
+  // **-ss 放在 -i 之后**：放前面是关键帧粗定位，会切偏
+  ...(SS > 0 ? ['-ss', SS.toFixed(2)] : []),
   '-t', '9',                                   // 总时长硬封顶：缩略图没人看超过 9 秒
   '-vf', `${CROP},scale=${w}:-2:flags=lanczos,fps=25`,
   '-an', '-c:v', 'libvpx-vp9', '-crf', String(crf), '-b:v', '0', '-row-mt', '1', out], { stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' })
+/** 量「开头有多久是死的」。**这一步必须有** ——
+ *  固定顺序是 mount→hover→click→drag→scroll，而对某个组件来说前面几节可能完全没内容
+ *  （StackTransition 全长 8.96s 里前 7.6s 一动不动，效果只在最后 1.4s）。
+ *  用户 hover 上去看半天没动静，报的是「动画都不动」，其实是开头太长。
+ *  模拟指针一直在走，所以不能按「画面完全相同」判，得按差分相对峰值的比例。 */
+const leadIn = (file) => {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-f', 'lavfi',
+    `movie=${file},tblend=all_mode=difference,signalstats`,
+    '-show_entries', 'frame_tags=lavfi.signalstats.YAVG', '-of', 'csv=p=0'], { encoding: 'utf8' })
+  const v = (r.stdout || '').split('\n').map(Number).filter((x) => !isNaN(x) && x !== 0)
+  if (v.length < 10) return 0
+  const th = Math.max(0.05, Math.max(...v) * 0.12)
+  const i = v.findIndex((x) => x > th)
+  return i < 0 ? 0 : i / 25
+}
+
 try { enc(32, 660) } catch (e) {
   console.error('  ✗ ffmpeg 失败：' + String(e.stderr || e.message).split('\n').filter((l) => /error|Invalid|crop/i.test(l)).slice(-3).join(' | '))
   console.error(`  CROP=${CROP}  帧数=${frames.length}`)
@@ -451,6 +483,18 @@ try { enc(32, 660) } catch (e) {
 }
 // **超预算就降**：少数 WebGL 粒子/噪声类熵极高，一个能顶几十个普通的
 // （实测前 20 大吃掉总体积 67%）。分两档降，不是一刀切压所有人的画质。
+// 开头死超过 0.8s 就重切。**从帧列表重编，不是拿成片再压一遍** —— 二次压缩会掉画质。
+//
+// **要迭代，不能只切一次。** 帧列表的时间轴不等于真实时间：稀疏帧被 0.12s 的
+// 间隔上限拉长了，按第一次量出的秒数去 -ss，实际切掉的内容比预期少
+// （StackTransition 量出 0.8s、切完还剩 6.9s 是死的）。切完再量，不够再切。
+for (let pass = 0; pass < 3; pass++) {
+  const lead = leadIn(out)
+  if (lead <= 0.8) break
+  SS += lead - 0.3
+  console.log(`  开头 ${lead.toFixed(1)}s 没内容 → 累计切掉 ${SS.toFixed(1)}s`)
+  enc(32, 660)
+}
 let kb = fs.statSync(out).size / 1024
 if (kb > 250) { enc(38, 660); kb = fs.statSync(out).size / 1024 }
 if (kb > 400) { enc(40, 520); kb = fs.statSync(out).size / 1024 }

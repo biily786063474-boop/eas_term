@@ -118,6 +118,10 @@ export function DictView(): JSX.Element {
   }, [query, cat, onlyUser, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
+  //
+  // **只在 hover 变化时测一次是不够的。** 动效词条的短片是 <video>，元数据异步到达，
+  // 到了之后 height:auto 会把浮层撑高一截；那时候位置还是按「视频没加载」的旧高度算的，
+  // 于是浮层下缘探出软件边缘。所以要盯着尺寸变化随时重贴，窗口缩放同理。
   useLayoutEffect(() => {
     if (!hover) {
       setPopPos((p) => (p.ready ? { ...p, ready: false } : p))
@@ -125,18 +129,30 @@ export function DictView(): JSX.Element {
     }
     const pop = popRef.current
     if (!pop) return
-    const { width: pw, height: ph } = pop.getBoundingClientRect()
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const a = hover.anchor
-    // 水平：优先放右侧；右侧放不下翻到左侧；最后 clamp 保证整体在视口内
-    let x = a.right + GAP
-    if (x + pw > vw - MARGIN) x = a.left - GAP - pw
-    x = Math.max(MARGIN, Math.min(x, vw - pw - MARGIN))
-    // 垂直：顶部对齐胶囊，再 clamp（底部超出则整体上移贴下边缘）
-    let y = a.top
-    y = Math.max(MARGIN, Math.min(y, vh - ph - MARGIN))
-    setPopPos({ left: x, top: y, ready: true })
+    const place = (): void => {
+      const { width: pw, height: ph } = pop.getBoundingClientRect()
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const a = hover.anchor
+      // 水平：优先放右侧；右侧放不下翻到左侧；最后 clamp 保证整体在视口内
+      let x = a.right + GAP
+      if (x + pw > vw - MARGIN) x = a.left - GAP - pw
+      x = Math.max(MARGIN, Math.min(x, vw - pw - MARGIN))
+      // 垂直：顶部对齐胶囊，再 clamp（底部超出则整体上移贴下边缘）
+      let y = a.top
+      y = Math.max(MARGIN, Math.min(y, vh - ph - MARGIN))
+      setPopPos((p) =>
+        p.ready && p.left === x && p.top === y ? p : { left: x, top: y, ready: true }
+      )
+    }
+    place()
+    const ro = new ResizeObserver(place)
+    ro.observe(pop)
+    window.addEventListener('resize', place)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', place)
+    }
   }, [hover])
 
   const insert = (term: DictTerm): void => {
