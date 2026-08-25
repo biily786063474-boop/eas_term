@@ -120,6 +120,10 @@
       {
         "from": "resources/agent-hooks",
         "to": "agent-hooks"
+      },
+      {
+        "from": "resources/dict-clips",
+        "to": "dict-clips"
       }
     ],
     "afterSign": "build/notarize.js"

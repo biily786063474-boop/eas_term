@@ -256,10 +256,16 @@
   padding: 8px;
 }
 
-.dict-pop-svg svg {
+.dict-pop-svg svg,
+.dict-pop-svg video {
   display: block;
   width: 100%;
   height: auto;
+}
+/* 短片是 660 宽的实录，浮层 320 —— 让它按容器缩，别撑破 */
+.dict-pop-svg video {
+  border-radius: calc(var(--radius-md) - 2px);
+  background: #000;
 }
 
 .dict-pop-logic {

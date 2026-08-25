@@ -23,6 +23,7 @@ import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
+import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
 import { registerSkillHandlers, hasCli } from './agentSkill'
@@ -102,6 +103,8 @@ function reloadWindowThrottled(win: BrowserWindow): void {
 }
 
 registerBizoneScheme()
+// 词典动效短片的私有协议。**和 bizone 一样必须在 ready 之前注册**
+registerDictClipScheme()
 registerMediaScheme()
 
 function createWindow(): void {
@@ -325,6 +328,7 @@ app.whenReady().then(() => {
   registerWikiHandlers()
   registerSkillLibraryHandlers()
   registerDictHandlers()
+  registerDictClipHandlers()
   registerRulesHandlers()
   // 规则文件随 app 版本更新，但分发到用户机器上那份不会自己跟上 —— syncRules 只由
   // 「扩展能力」面板的按钮触发。于是升级完 agent 读到的还是上一版规则，且毫无提示

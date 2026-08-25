@@ -19,6 +19,12 @@ interface DictTerm {
   keywords: string[]
   logic: string
   svg: string
+  /** 动效词条独有：演示短片文件名（走 dict-clip:// 协议读，见 main/dictClips.ts）。
+   *  有它就播短片，没有才回退到 svg 示意图。 */
+  clip?: string
+  /** 动效词条独有：可直接插进命令行交给 agent 的完整提示词。
+   *  比 logic 详细得多（外观 / 动感 / 触发 / 实现 / 关键参数 / 坑），中位 214 字。 */
+  prompt?: string
   /** 以下只有自建词条有：第一次遇到的日期 / 在哪个项目里遇到的 */
   firstSeen?: string
   project?: string
@@ -151,9 +157,11 @@ export function DictView(): JSX.Element {
       noticeTimer.current = setTimeout(() => setNotice(''), 2600)
       return
     }
+    // 优先插 prompt（动效词条才有）：它是给 agent 照着实现用的完整描述，
+    // 含关键参数和踩坑经验，比 logic 那句概述有用得多。
     // 自建词条的 logic 是空的（脚本不花 token 生成解释）→ 退回插入英文名，
     // 至少能拿去问 agent；插一个空字符串会闪「已插入」但什么也没发生
-    const text = term.logic || term.en
+    const text = term.prompt || term.logic || term.en
     // 不带 \n = 插入到光标，不执行（logic 均为单行文本，已确认无换行）
     window.api.pty.write(t.ptyId, text)
     setFlashId(term.id)
@@ -256,10 +264,28 @@ export function DictView(): JSX.Element {
             </div>
             {/* 内联 SVG 走 dangerouslySetInnerHTML，不受 CSP img-src 限制。
                 自建词条的 SVG 是模型写的，写盘前已在主进程清洗过（见 main/dict.ts）。
-                真没有图的老条目别渲染一个空盒子撑出留白 */}
-            {!!hover.term.svg && (
-              <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
-            )}
+                真没有图的老条目别渲染一个空盒子撑出留白。
+                **判据要连 clip 一起判** —— 动效词条只有短片、没有 svg，
+                只判 svg 的话它们永远不显示。 */}
+            {(!!hover.term.clip || !!hover.term.svg) &&
+              (hover.term.clip ? (
+                // **短片优先。** 动效词条要回答「它长什么样、怎么动」，手绘 SVG 只能示意；
+                // 这些是真组件跑出来的实录，还带模拟指针按触发方式分节演一遍。
+                // key 挂 id：换词条时强制换掉 video 元素，否则 React 复用同一个节点、
+                // src 变了却还在放上一条的画面。
+                <div className="dict-pop-svg">
+                  <video
+                    key={hover.term.id}
+                    src={`dict-clip://c/${hover.term.clip}`}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                </div>
+              ) : (
+                <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
+              ))}
             {hover.term.logic ? (
               <div className="dict-pop-logic">{hover.term.logic}</div>
             ) : (
