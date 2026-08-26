@@ -168,11 +168,51 @@ await page.waitForTimeout(900)
 // 选型台给某些组件配了引导文字（ClickSpark 的「在这块区域里点一下」那种）。
 // 那是**选型台的教学文案**，不是组件效果的一部分，录进去等于把脚手架当成品拍了。
 // 只藏文字块，不藏 canvas —— 效果本身要留着。
-await page.addStyleTag({ content: '.pg-demo-slab{opacity:0!important}' }).catch(() => {})
+const slabStyle = await page.addStyleTag({ content: '.pg-demo-slab{opacity:0!important}' }).catch(() => null)
+// **藏完要回头看一眼舞台是不是空了。**
+// 对 ClickSpark 那类，demo-slab 是选型台的教学文案，藏掉是对的；
+// 但对「作用于内容」的滤镜类组件（FluidWarp 把文字搅出水波、GradualBlur 把内容虚化），
+// 那块 slab **就是被作用的载体** —— 藏了它效果没有作用对象，录出来一片全黑。
+// FluidWarp 实测就是这么变成「9KB 纯黑 + 一个鼠标指针」的，还因此被判成死组件。
+if (slabStyle) {
+  const blank = await page.evaluate(() => {
+    const st = document.querySelector('.pg-stage-inner') || document.querySelector('.pg-stage')
+    if (!st) return false
+    const sb = st.getBoundingClientRect()
+    // 舞台里还有没有「看得见的实体」：canvas / img / video，或有文字且不在 slab 里
+    const solid = [...st.querySelectorAll('canvas,img,video,svg')].some((e) => {
+      const r = e.getBoundingClientRect()
+      return r.width > 40 && r.height > 40 && !e.closest('.pg-demo-slab')
+    })
+    if (solid) return false
+    const text = [...st.querySelectorAll('*')].some((e) => {
+      if (e.closest('.pg-demo-slab') || e.children.length) return false
+      const t = (e.textContent || '').trim()
+      if (!t) return false
+      const r = e.getBoundingClientRect()
+      return r.width > 20 && r.height > 8 && r.x >= sb.x - 4 && r.y >= sb.y - 4
+    })
+    return !text
+  })
+  if (blank) {
+    // **用 addStyleTag 返回的 handle 精确删，别按内容去找 style 标签** ——
+    // 选型台自己的样式表里同样含 'pg-demo-slab'，按内容匹配会把它一起删掉，
+    // 整个页面布局随之崩塌：实测舞台从 (470,370) 跑到 (8,512)，
+    // crop 跟着取到画面外，成片一片黑，还看不出是自己搞坏的。
+    await slabStyle.evaluate((el) => el.remove())
+    // 让它重新显示会改变舞台的尺寸和位置，**必须等重排完再往下量 STAGE** ——
+    // 不等的话量到的是旧值，crop 会取到舞台外面，成片一片黑。
+    await page.waitForTimeout(500)
+    console.error('  · 藏掉 demo-slab 后舞台是空的 → 留着它（这个组件的效果作用在那块内容上）')
+  }
+}
 
 let box = await page.locator('.pg-stage-inner').first().boundingBox()
 if (!box) { console.error('量不到舞台'); process.exit(1) }
 const STAGE = { ...box }
+// 量错舞台位置会让 crop 取到画面外、成片全黑，而且看不出是哪一步坏的 ——
+// 排查时用 REC_DEBUG=1 把它打出来（2026-08-26 就是靠这个抓到 style 被误删那次）
+if (process.env.REC_DEBUG) console.error('  [debug] STAGE =', JSON.stringify(STAGE))
 
 /** 探出「效果到底挂在哪个元素上」。
  *
@@ -637,12 +677,21 @@ try { enc(40, 660) } catch (e) {
 // **要迭代，不能只切一次。** 帧列表的时间轴不等于真实时间：稀疏帧被 0.12s 的
 // 间隔上限拉长了，按第一次量出的秒数去 -ss，实际切掉的内容比预期少
 // （StackTransition 量出 0.8s、切完还剩 6.9s 是死的）。切完再量，不够再切。
-for (let pass = 0; pass < 3; pass++) {
+// **开头静止上限 0.5s**（2026-08-26 用户定的）。原来是 0.8s，实测仍有片子
+// hover 上去要等半秒多才动，那半秒里用户已经在怀疑「是不是坏的」。
+// 保留 0.2s 而不是切到 0：完全不留会让效果在第一帧就开演，看着像跳帧。
+// 迭代次数从 3 提到 5 —— 阈值收紧后一次切不干净的情况变多
+// （帧列表的时间轴不等于真实时间，见上面那段注释）。
+for (let pass = 0; pass < 5; pass++) {
   const lead = leadIn(out)
-  if (lead <= 0.8) break
-  SS += lead - 0.3
+  if (lead <= 0.5) break
+  SS += lead - 0.2
   console.log(`  开头 ${lead.toFixed(1)}s 没内容 → 累计切掉 ${SS.toFixed(1)}s`)
   enc(40, 660)
+}
+{
+  const lead = leadIn(out)
+  if (lead > 0.5) console.error(`  ⚠ 切了 5 轮，开头仍有 ${lead.toFixed(1)}s 没内容 —— 多半是这个组件真的起步慢`)
 }
 let kb = fs.statSync(out).size / 1024
 if (kb > 250) { enc(46, 660); kb = fs.statSync(out).size / 1024 }

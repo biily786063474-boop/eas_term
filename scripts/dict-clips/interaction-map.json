@@ -740,16 +740,20 @@
   }
  },
  "FluidWarp": {
-  "live": [],
-  "peak": 0,
+  "live": [
+   "hover",
+   "scroll"
+  ],
+  "peak": 6.55,
   "raw": {
    "ambient": 0,
-   "hover": 0,
-   "move": 0,
+   "hover": 6.3,
+   "move": 6.3,
    "click": 0,
    "drag": 0,
-   "scroll": 0
-  }
+   "scroll": 6.55
+  },
+  "_note": "流体扭曲。之前测出六项全 0 是探测器的问题：鼠标用 steps 一次性移到目标，而流体要连续多次移动才搅得动。慢速划过实测 6.297，停手 1.2s 后仍有 6.074（余韵）。"
  },
  "FlyingPosters": {
   "live": [
@@ -1792,16 +1796,19 @@
   }
  },
  "ScrollStack": {
-  "live": [],
-  "peak": 0,
+  "live": [
+   "scroll"
+  ],
+  "peak": 9.19,
   "raw": {
    "ambient": 0,
    "hover": 0,
    "move": 0,
    "click": 0,
    "drag": 0,
-   "scroll": -1
-  }
+   "scroll": 9.19
+  },
+  "_note": "滚轮驱动的堆叠。之前判死是因为探测器把「舞台内部滚动容器」当假阳性排除了——而那个内部滚动正是它实现堆叠的方式。用可逆性判据复核：滚回原位后残留 9.407，是真效果。"
  },
  "ScrollVelocity": {
   "live": [
