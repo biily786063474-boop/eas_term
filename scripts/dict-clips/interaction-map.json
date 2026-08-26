@@ -1,0 +1,2255 @@
+{
+ "_说明": [
+  "每个组件在选型台里**实测**有效的交互种类，用来剔除录制时的空节次。",
+  "生成方式：Playwright 逐个组件、在真实可交互控件上派发 hover/move/click/drag/wheel，",
+  "用 ffmpeg 量舞台前后画面的差分（均值 + 最大像素差/40），高于 0.6 才算这种交互真的有反应。",
+  "",
+  "**mount 不在这里** —— 入场动画只在挂载那一刻播一次，探测时早已播完，测不到。",
+  "mount 的取舍仍由 record.mjs 按 triggers/摘要推导，录制时 REPLAY_FIRST 会重放。",
+  "**drag 也不以此为准** —— 拖拽动作本身含鼠标移动，会顺带触发 hover 类效果；",
+  "真正可拖拽的组件在 record.mjs 的 DRAG_LIST 里人工确认，那份清单优先。",
+  "",
+  "排掉的四类假阳性（每一类都真实误判过）：",
+  "  · 文本被拖选中的蓝色高亮（8 个入场型组件因此被测出「只有拖拽有效」）",
+  "  · 页面自身滚动、以及舞台自身滚动（CardSwap/Stepper 就是这么显得「响应滚轮」的）",
+  "  · 只在舞台正中操作（Dock 图标在底部、菜单钮在角落，5 个好组件差点被判死）",
+  "  · 单点采样漏掉瞬时效果（ClickSpark 火花 0.6s 就散完）",
+  "重新生成：见 scripts/dict-clips/README.md"
+ ],
+ "ASCIIText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 8.637,
+  "raw": {
+   "ambient": 7.904,
+   "hover": 8.637,
+   "move": 7.893,
+   "click": 8.278,
+   "drag": 8.128,
+   "scroll": 7.627
+  }
+ },
+ "AnimatedContent": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "AnimatedList": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 9.57,
+  "raw": {
+   "ambient": 0,
+   "hover": 1.172,
+   "move": 1.968,
+   "click": 1.968,
+   "drag": 0,
+   "scroll": 9.57
+  }
+ },
+ "Antigravity": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 1.443,
+  "raw": {
+   "ambient": 1.369,
+   "hover": 1.353,
+   "move": 1.443,
+   "click": 1.414,
+   "drag": 1.417,
+   "scroll": 1.403
+  }
+ },
+ "Aurora": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 19.445,
+  "raw": {
+   "ambient": 11.417,
+   "hover": 9.575,
+   "move": 12.913,
+   "click": 10.795,
+   "drag": 19.445,
+   "scroll": 15.253
+  }
+ },
+ "Balatro": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 18.83,
+  "raw": {
+   "ambient": 17.137,
+   "hover": 18.83,
+   "move": 15.316,
+   "click": 14.716,
+   "drag": 15.054,
+   "scroll": 16.778
+  }
+ },
+ "Ballpit": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 72.268,
+  "raw": {
+   "ambient": 72.268,
+   "hover": 71.911,
+   "move": 37.605,
+   "click": 31.358,
+   "drag": 24.267,
+   "scroll": 16.589
+  }
+ },
+ "Beams": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 17.839,
+  "raw": {
+   "ambient": 17.126,
+   "hover": 17.839,
+   "move": 10.003,
+   "click": 9.264,
+   "drag": 10.376,
+   "scroll": 12.818
+  }
+ },
+ "BlobCursor": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.521,
+  "raw": {
+   "ambient": 0,
+   "hover": 5.563,
+   "move": 7.106,
+   "click": 7.106,
+   "drag": 7.521,
+   "scroll": 7.521
+  }
+ },
+ "BlurText": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "BorderGlow": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.039,
+  "raw": {
+   "ambient": 6.039,
+   "hover": 5.802,
+   "move": 4.618,
+   "click": 4.618,
+   "drag": 5.62,
+   "scroll": 5.62
+  }
+ },
+ "BounceCards": {
+  "live": [
+   "hover"
+  ],
+  "peak": 59.729,
+  "raw": {
+   "ambient": 0,
+   "hover": 59.729,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "BreathingGrid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 1.271,
+  "raw": {
+   "ambient": 0.991,
+   "hover": 1.271,
+   "move": 0.898,
+   "click": 1.152,
+   "drag": 0.805,
+   "scroll": 1.245
+  }
+ },
+ "BubbleMenu": {
+  "live": [
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 90.298,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 90.298,
+   "drag": 15.054,
+   "scroll": 15.054
+  }
+ },
+ "CardNav": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 97.773,
+  "raw": {
+   "ambient": 0,
+   "hover": 27.231,
+   "move": 1.396,
+   "click": 97.773,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "CardSwap": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": -1
+  }
+ },
+ "Carousel": {
+  "live": [
+   "drag",
+   "scroll"
+  ],
+  "peak": 8.441,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 8.441,
+   "scroll": 3.111
+  }
+ },
+ "ChromaGrid": {
+  "live": [
+   "hover",
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 31.974,
+  "raw": {
+   "ambient": 0,
+   "hover": 6.924,
+   "move": 7.257,
+   "click": 7.257,
+   "drag": 14.002,
+   "scroll": 31.974
+  }
+ },
+ "CircularGallery": {
+  "live": [
+   "hover",
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 44.635,
+  "raw": {
+   "ambient": 5.293,
+   "hover": 5.275,
+   "move": 4.88,
+   "click": 5.218,
+   "drag": 44.635,
+   "scroll": 17.85
+  }
+ },
+ "CircularText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 9.345,
+  "raw": {
+   "ambient": 8.724,
+   "hover": 8.251,
+   "move": 8.858,
+   "click": 8.869,
+   "drag": 8.866,
+   "scroll": 9.345
+  }
+ },
+ "ClickSpark": {
+  "live": [
+   "click",
+   "scroll"
+  ],
+  "peak": 5.21,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 5.21,
+   "drag": 0,
+   "scroll": 1.303
+  }
+ },
+ "ColorBends": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 28.435,
+  "raw": {
+   "ambient": 27.35,
+   "hover": 27.286,
+   "move": 23.41,
+   "click": 28.435,
+   "drag": 28.316,
+   "scroll": 15.199
+  }
+ },
+ "CountUp": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 8.934,
+  "raw": {
+   "ambient": 8.91,
+   "hover": 8.934,
+   "move": 8.442,
+   "click": 7.865,
+   "drag": 7.694,
+   "scroll": 0
+  }
+ },
+ "Counter": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "Crosshair": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.988,
+  "raw": {
+   "ambient": 0.173,
+   "hover": 6.938,
+   "move": 6.985,
+   "click": 6.988,
+   "drag": 5.877,
+   "scroll": 5.877
+  }
+ },
+ "Cubes": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 36.698,
+  "raw": {
+   "ambient": 9.23,
+   "hover": 8.58,
+   "move": 8.096,
+   "click": 30.944,
+   "drag": 8.959,
+   "scroll": 36.698
+  }
+ },
+ "CursorGrid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 3.9,
+  "raw": {
+   "ambient": 0.959,
+   "hover": 1.981,
+   "move": 1.635,
+   "click": 3.9,
+   "drag": 3.043,
+   "scroll": 1.851
+  }
+ },
+ "CurvedInput": {
+  "live": [
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 4.931,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 4.931,
+   "drag": 4.716,
+   "scroll": 4.716
+  }
+ },
+ "CurvedLoop": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.5,
+  "raw": {
+   "ambient": 10.284,
+   "hover": 10.373,
+   "move": 8.121,
+   "click": 6.913,
+   "drag": 9.943,
+   "scroll": 10.5
+  }
+ },
+ "DarkVeil": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.763,
+  "raw": {
+   "ambient": 7.415,
+   "hover": 7.763,
+   "move": 6.053,
+   "click": 5.283,
+   "drag": 2.893,
+   "scroll": 5.394
+  }
+ },
+ "DecayCard": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.483,
+  "raw": {
+   "ambient": 1.765,
+   "hover": 6.483,
+   "move": 5.324,
+   "click": 5.24,
+   "drag": 5.295,
+   "scroll": 5.296
+  }
+ },
+ "DecryptedText": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "Dither": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.909,
+  "raw": {
+   "ambient": 0,
+   "hover": 7.593,
+   "move": 7.909,
+   "click": 7.909,
+   "drag": 7.634,
+   "scroll": 7.634
+  }
+ },
+ "Dock": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 7.651,
+  "raw": {
+   "ambient": 0,
+   "hover": 7.651,
+   "move": 7.499,
+   "click": 7.5,
+   "drag": 1.395,
+   "scroll": 0
+  }
+ },
+ "DomeGallery": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 54.235,
+  "raw": {
+   "ambient": 0,
+   "hover": 54.235,
+   "move": 0,
+   "click": 54.235,
+   "drag": 34.751,
+   "scroll": 26.163
+  }
+ },
+ "DotField": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.329,
+  "raw": {
+   "ambient": 3.558,
+   "hover": 5.329,
+   "move": 5.108,
+   "click": 5.103,
+   "drag": 4.985,
+   "scroll": 5.109
+  }
+ },
+ "DotGrid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 3.369,
+  "raw": {
+   "ambient": 0.535,
+   "hover": 2.283,
+   "move": 2.078,
+   "click": 3.369,
+   "drag": 2.16,
+   "scroll": 3.253
+  }
+ },
+ "ElasticSlider": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.088,
+  "raw": {
+   "ambient": 0,
+   "hover": 5.936,
+   "move": 5.936,
+   "click": 5.951,
+   "drag": 6.088,
+   "scroll": 6.017
+  }
+ },
+ "ElectricBorder": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 1.464,
+  "raw": {
+   "ambient": 1.431,
+   "hover": 1.423,
+   "move": 1.427,
+   "click": 1.412,
+   "drag": 1.374,
+   "scroll": 1.464
+  }
+ },
+ "EvilEye": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 24.04,
+  "raw": {
+   "ambient": 22.757,
+   "hover": 23.864,
+   "move": 23.725,
+   "click": 23.991,
+   "drag": 24.04,
+   "scroll": 23.039
+  }
+ },
+ "FadeContent": {
+  "live": [
+   "click"
+  ],
+  "peak": 8.78,
+  "raw": {
+   "ambient": 0.477,
+   "hover": 0.477,
+   "move": 0.355,
+   "click": 8.78,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "FallingText": {
+  "live": [
+   "hover"
+  ],
+  "peak": 5.286,
+  "raw": {
+   "ambient": 5.286,
+   "hover": 5.286,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "FaultyTerminal": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 29.695,
+  "raw": {
+   "ambient": 22.506,
+   "hover": 29.695,
+   "move": 21.676,
+   "click": 21.363,
+   "drag": 28.684,
+   "scroll": 23.254
+  }
+ },
+ "Ferrofluid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 16.371,
+  "raw": {
+   "ambient": 16.371,
+   "hover": 14.813,
+   "move": 10.265,
+   "click": 10.883,
+   "drag": 10.024,
+   "scroll": 10.741
+  }
+ },
+ "FloatingLines": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 26.197,
+  "raw": {
+   "ambient": 23.196,
+   "hover": 20.502,
+   "move": 21.658,
+   "click": 18.288,
+   "drag": 26.197,
+   "scroll": 20.399
+  }
+ },
+ "FlowingMenu": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 84.158,
+  "raw": {
+   "ambient": 15.8,
+   "hover": 84.158,
+   "move": 11.023,
+   "click": 10.809,
+   "drag": 10.634,
+   "scroll": 10.9
+  }
+ },
+ "FluidGlass": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 39.471,
+  "raw": {
+   "ambient": 0,
+   "hover": 38.966,
+   "move": 7.466,
+   "click": 7.468,
+   "drag": 8.436,
+   "scroll": 39.471
+  }
+ },
+ "FluidWarp": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "FlyingPosters": {
+  "live": [
+   "scroll"
+  ],
+  "peak": 19.811,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 19.811
+  }
+ },
+ "Folder": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 16.788,
+  "raw": {
+   "ambient": 5.295,
+   "hover": 5.585,
+   "move": 5.585,
+   "click": 16.788,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "FuzzyText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 18.339,
+  "raw": {
+   "ambient": 11.226,
+   "hover": 17.868,
+   "move": 15.518,
+   "click": 17.414,
+   "drag": 18.339,
+   "scroll": 18.109
+  }
+ },
+ "Galaxy": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 13.347,
+  "raw": {
+   "ambient": 12.796,
+   "hover": 11.82,
+   "move": 9.661,
+   "click": 12.822,
+   "drag": 9.607,
+   "scroll": 13.347
+  }
+ },
+ "GhostCursor": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 21.458,
+  "raw": {
+   "ambient": 1.13,
+   "hover": 7.904,
+   "move": 16.016,
+   "click": 21.458,
+   "drag": 12.545,
+   "scroll": 10.781
+  }
+ },
+ "GlareHover": {
+  "live": [
+   "hover"
+  ],
+  "peak": 9.262,
+  "raw": {
+   "ambient": 0,
+   "hover": 9.262,
+   "move": 0,
+   "click": 0,
+   "drag": 1.559,
+   "scroll": 0
+  }
+ },
+ "GlassIcons": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 6.185,
+  "raw": {
+   "ambient": 0,
+   "hover": 6.185,
+   "move": 6.185,
+   "click": 6.185,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "GlassSurface": {
+  "live": [
+   "drag"
+  ],
+  "peak": 1.037,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 1.037,
+   "scroll": 0
+  }
+ },
+ "GlitchText": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "GooeyNav": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 15.239,
+  "raw": {
+   "ambient": 0,
+   "hover": 11.959,
+   "move": 0,
+   "click": 15.239,
+   "drag": 1.723,
+   "scroll": 10.159
+  }
+ },
+ "GradientBlinds": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 35.016,
+  "raw": {
+   "ambient": 3.48,
+   "hover": 35.016,
+   "move": 23.5,
+   "click": 23.566,
+   "drag": 22.69,
+   "scroll": 22.637
+  }
+ },
+ "GradientText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.788,
+  "raw": {
+   "ambient": 3.252,
+   "hover": 1.97,
+   "move": 3.649,
+   "click": 3.768,
+   "drag": 5.026,
+   "scroll": 5.788
+  }
+ },
+ "GradualBlur": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "Grainient": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 29.961,
+  "raw": {
+   "ambient": 20.012,
+   "hover": 29.961,
+   "move": 5.661,
+   "click": 4.75,
+   "drag": 5.283,
+   "scroll": 6.139
+  }
+ },
+ "GridDistortion": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.852,
+  "raw": {
+   "ambient": 0,
+   "hover": 4.439,
+   "move": 3.545,
+   "click": 2.023,
+   "drag": 4.268,
+   "scroll": 7.852
+  }
+ },
+ "GridMotion": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 8.211,
+  "raw": {
+   "ambient": 6.272,
+   "hover": 8.211,
+   "move": 7.798,
+   "click": 7.808,
+   "drag": 7.924,
+   "scroll": 7.854
+  }
+ },
+ "GridScan": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 31.6,
+  "raw": {
+   "ambient": 28.313,
+   "hover": 30.424,
+   "move": 25.062,
+   "click": 31.6,
+   "drag": 18.923,
+   "scroll": 30.757
+  }
+ },
+ "Hyperspeed": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 20.57,
+  "raw": {
+   "ambient": 19.497,
+   "hover": 17.409,
+   "move": 20.57,
+   "click": 18.053,
+   "drag": 17.595,
+   "scroll": 17.425
+  }
+ },
+ "ImageTrail": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 24.671,
+  "raw": {
+   "ambient": 0,
+   "hover": 24.671,
+   "move": 19.316,
+   "click": 21.146,
+   "drag": 15.975,
+   "scroll": 12.829
+  }
+ },
+ "InfiniteMenu": {
+  "live": [
+   "drag",
+   "scroll"
+  ],
+  "peak": 46.709,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 46.709,
+   "scroll": 7.544
+  }
+ },
+ "Iridescence": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 11.671,
+  "raw": {
+   "ambient": 9.699,
+   "hover": 11.671,
+   "move": 10.164,
+   "click": 7.593,
+   "drag": 5.521,
+   "scroll": 7.846
+  }
+ },
+ "Lanyard": {
+  "live": [
+   "hover",
+   "drag",
+   "scroll"
+  ],
+  "peak": 21.902,
+  "raw": {
+   "ambient": 9.211,
+   "hover": 2.48,
+   "move": 0,
+   "click": 0,
+   "drag": 21.902,
+   "scroll": 19.384
+  }
+ },
+ "LaserFlow": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 3.568,
+  "raw": {
+   "ambient": 3.049,
+   "hover": 3.05,
+   "move": 3.568,
+   "click": 3.174,
+   "drag": 3.451,
+   "scroll": 2.946
+  }
+ },
+ "LetterGlitch": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 20.624,
+  "raw": {
+   "ambient": 18.821,
+   "hover": 20.624,
+   "move": 16.22,
+   "click": 15.929,
+   "drag": 15.996,
+   "scroll": 16.526
+  }
+ },
+ "LightPillar": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.512,
+  "raw": {
+   "ambient": 4.73,
+   "hover": 4.638,
+   "move": 4.316,
+   "click": 4.543,
+   "drag": 4.817,
+   "scroll": 5.512
+  }
+ },
+ "LightRays": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.858,
+  "raw": {
+   "ambient": 5.562,
+   "hover": 5.446,
+   "move": 1.798,
+   "click": 4.446,
+   "drag": 4.46,
+   "scroll": 5.858
+  }
+ },
+ "Lightfall": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 24.152,
+  "raw": {
+   "ambient": 13.839,
+   "hover": 24.152,
+   "move": 16.325,
+   "click": 17.073,
+   "drag": 17.784,
+   "scroll": 15.072
+  }
+ },
+ "Lightning": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 17.512,
+  "raw": {
+   "ambient": 8.309,
+   "hover": 7.79,
+   "move": 16.245,
+   "click": 12.105,
+   "drag": 13.786,
+   "scroll": 17.512
+  }
+ },
+ "LineSidebar": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.102,
+  "raw": {
+   "ambient": 0,
+   "hover": 5.019,
+   "move": 5.102,
+   "click": 5.085,
+   "drag": 4.924,
+   "scroll": 4.996
+  }
+ },
+ "LineWaves": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 61.509,
+  "raw": {
+   "ambient": 45.615,
+   "hover": 61.509,
+   "move": 54.226,
+   "click": 52.694,
+   "drag": 54.525,
+   "scroll": 46.962
+  }
+ },
+ "LiquidChrome": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 68.596,
+  "raw": {
+   "ambient": 68.596,
+   "hover": 66.757,
+   "move": 63.426,
+   "click": 63.406,
+   "drag": 62.582,
+   "scroll": 67.78
+  }
+ },
+ "LiquidEther": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 17.955,
+  "raw": {
+   "ambient": 3.141,
+   "hover": 17.955,
+   "move": 6.44,
+   "click": 3.495,
+   "drag": 2.847,
+   "scroll": 3.283
+  }
+ },
+ "LogoLoop": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 22.942,
+  "raw": {
+   "ambient": 22.942,
+   "hover": 18.758,
+   "move": 22.566,
+   "click": 11.376,
+   "drag": 5.843,
+   "scroll": 5.777
+  }
+ },
+ "MagicBento": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.667,
+  "raw": {
+   "ambient": 0,
+   "hover": 2.549,
+   "move": 6.491,
+   "click": 6.491,
+   "drag": 6.667,
+   "scroll": 6.667
+  }
+ },
+ "MagicRings": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 8.35,
+  "raw": {
+   "ambient": 7.446,
+   "hover": 5.558,
+   "move": 7.566,
+   "click": 8.205,
+   "drag": 8.35,
+   "scroll": 7.383
+  }
+ },
+ "Magnet": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.484,
+  "raw": {
+   "ambient": 0,
+   "hover": 7.219,
+   "move": 10.484,
+   "click": 10.484,
+   "drag": 9.505,
+   "scroll": 9.494
+  }
+ },
+ "MagnetLines": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 12.026,
+  "raw": {
+   "ambient": 0,
+   "hover": 12.026,
+   "move": 11.499,
+   "click": 11.499,
+   "drag": 11.966,
+   "scroll": 11.966
+  }
+ },
+ "Masonry": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.779,
+  "raw": {
+   "ambient": 0,
+   "hover": 4.483,
+   "move": 5.426,
+   "click": 5.426,
+   "drag": 5.779,
+   "scroll": 4.101
+  }
+ },
+ "MetaBalls": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 19.226,
+  "raw": {
+   "ambient": 14.886,
+   "hover": 18.517,
+   "move": 16.592,
+   "click": 16.944,
+   "drag": 19.226,
+   "scroll": 17.365
+  }
+ },
+ "MetallicPaint": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 28.059,
+  "raw": {
+   "ambient": 25.036,
+   "hover": 26.251,
+   "move": 27.684,
+   "click": 27.759,
+   "drag": 27.848,
+   "scroll": 28.059
+  }
+ },
+ "ModelViewer": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.753,
+  "raw": {
+   "ambient": 6.214,
+   "hover": 10.377,
+   "move": 10.741,
+   "click": 10.753,
+   "drag": 6.273,
+   "scroll": 6.164
+  }
+ },
+ "Noise": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 4.558,
+  "raw": {
+   "ambient": 4.558,
+   "hover": 4.549,
+   "move": 4.555,
+   "click": 4.554,
+   "drag": 4.551,
+   "scroll": 4.551
+  }
+ },
+ "OptionWheel": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 9.126,
+  "raw": {
+   "ambient": 0,
+   "hover": 7.936,
+   "move": 0,
+   "click": 9.095,
+   "drag": 0,
+   "scroll": 9.126
+  }
+ },
+ "Orb": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 16.501,
+  "raw": {
+   "ambient": 9.198,
+   "hover": 16.233,
+   "move": 16.501,
+   "click": 16.341,
+   "drag": 15.374,
+   "scroll": 15.953
+  }
+ },
+ "OrbitImages": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 23.746,
+  "raw": {
+   "ambient": 23.743,
+   "hover": 23.746,
+   "move": 22.492,
+   "click": 22.62,
+   "drag": 22.087,
+   "scroll": 22.57
+  }
+ },
+ "Particles": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 3.463,
+  "raw": {
+   "ambient": 3.463,
+   "hover": 2.689,
+   "move": 2.911,
+   "click": 2.716,
+   "drag": 2.731,
+   "scroll": 2.845
+  }
+ },
+ "PillNav": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 7.986,
+  "raw": {
+   "ambient": 0,
+   "hover": 7.986,
+   "move": 7.986,
+   "click": 7.986,
+   "drag": 3.051,
+   "scroll": 0
+  }
+ },
+ "PixelBlast": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 6.551,
+  "raw": {
+   "ambient": 4.918,
+   "hover": 5.942,
+   "move": 4.82,
+   "click": 5.454,
+   "drag": 6.551,
+   "scroll": 5.17
+  }
+ },
+ "PixelCard": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 8.115,
+  "raw": {
+   "ambient": 0,
+   "hover": 8.115,
+   "move": 5.753,
+   "click": 5.728,
+   "drag": 5.798,
+   "scroll": 5.663
+  }
+ },
+ "PixelSnow": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.683,
+  "raw": {
+   "ambient": 6.991,
+   "hover": 6.787,
+   "move": 7.154,
+   "click": 7.683,
+   "drag": 6.977,
+   "scroll": 7.049
+  }
+ },
+ "PixelTrail": {
+  "live": [
+   "hover"
+  ],
+  "peak": 1.245,
+  "raw": {
+   "ambient": 0,
+   "hover": 1.245,
+   "move": 0.609,
+   "click": 0,
+   "drag": 0.535,
+   "scroll": 0
+  }
+ },
+ "PixelTransition": {
+  "live": [
+   "hover"
+  ],
+  "peak": 12.771,
+  "raw": {
+   "ambient": 0,
+   "hover": 9.812,
+   "move": 0,
+   "click": 0,
+   "drag": 12.771,
+   "scroll": 0
+  }
+ },
+ "Plasma": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 24.275,
+  "raw": {
+   "ambient": 21.809,
+   "hover": 24.275,
+   "move": 14.984,
+   "click": 8.953,
+   "drag": 9.498,
+   "scroll": 12.443
+  }
+ },
+ "PlasmaWave": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 21.751,
+  "raw": {
+   "ambient": 18.281,
+   "hover": 21.751,
+   "move": 15.151,
+   "click": 15.9,
+   "drag": 15.377,
+   "scroll": 14.189
+  }
+ },
+ "Prism": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 27.99,
+  "raw": {
+   "ambient": 24.656,
+   "hover": 21.901,
+   "move": 27.34,
+   "click": 27.99,
+   "drag": 20.414,
+   "scroll": 27.166
+  }
+ },
+ "PrismaticBurst": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 22.372,
+  "raw": {
+   "ambient": 16.23,
+   "hover": 16.453,
+   "move": 19.93,
+   "click": 22.372,
+   "drag": 18.504,
+   "scroll": 18.499
+  }
+ },
+ "ProfileCard": {
+  "live": [
+   "hover",
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 42.327,
+  "raw": {
+   "ambient": 0.614,
+   "hover": 1.76,
+   "move": 7.16,
+   "click": 7.16,
+   "drag": 42.327,
+   "scroll": 8.588
+  }
+ },
+ "Radar": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.754,
+  "raw": {
+   "ambient": 10.011,
+   "hover": 10.754,
+   "move": 9.298,
+   "click": 8.869,
+   "drag": 9.389,
+   "scroll": 8.968
+  }
+ },
+ "ReflectiveCard": {
+  "live": [
+   "drag",
+   "scroll"
+  ],
+  "peak": 2.562,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 1.806,
+   "scroll": 2.562
+  }
+ },
+ "Ribbons": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 2.61,
+  "raw": {
+   "ambient": 2.31,
+   "hover": 2.61,
+   "move": 1.842,
+   "click": 1.825,
+   "drag": 1.93,
+   "scroll": 1.934
+  }
+ },
+ "RingCarousel": {
+  "live": [
+   "hover",
+   "scroll"
+  ],
+  "peak": 19.947,
+  "raw": {
+   "ambient": 6.409,
+   "hover": 0,
+   "move": 7.713,
+   "click": 0,
+   "drag": 0.573,
+   "scroll": 19.947
+  }
+ },
+ "RippleGrid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.039,
+  "raw": {
+   "ambient": 4.473,
+   "hover": 4.598,
+   "move": 4.999,
+   "click": 4.946,
+   "drag": 3.985,
+   "scroll": 5.039
+  }
+ },
+ "RotatingText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.267,
+  "raw": {
+   "ambient": 6.212,
+   "hover": 6.879,
+   "move": 7.267,
+   "click": 2.985,
+   "drag": 6.086,
+   "scroll": 7.093
+  }
+ },
+ "ScrambledText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.511,
+  "raw": {
+   "ambient": 0,
+   "hover": 10.387,
+   "move": 10.511,
+   "click": 9.828,
+   "drag": 10.315,
+   "scroll": 9.833
+  }
+ },
+ "ScrollFloat": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "ScrollReveal": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "ScrollScenes": {
+  "live": [
+   "drag",
+   "scroll"
+  ],
+  "peak": 21.572,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 2.104,
+   "scroll": 21.572
+  }
+ },
+ "ScrollStack": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": -1
+  }
+ },
+ "ScrollVelocity": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 44.517,
+  "raw": {
+   "ambient": 42.798,
+   "hover": 42.327,
+   "move": 40.514,
+   "click": 43.406,
+   "drag": 43.498,
+   "scroll": 44.517
+  }
+ },
+ "ShapeBlur": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 11.117,
+  "raw": {
+   "ambient": 0,
+   "hover": 11.117,
+   "move": 8.159,
+   "click": 8.355,
+   "drag": 8.38,
+   "scroll": 8.498
+  }
+ },
+ "ShapeGrid": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 3.466,
+  "raw": {
+   "ambient": 3.029,
+   "hover": 3.121,
+   "move": 3.152,
+   "click": 3.424,
+   "drag": 3.466,
+   "scroll": 3.398
+  }
+ },
+ "ShinyText": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 2.562,
+  "raw": {
+   "ambient": 1.86,
+   "hover": 1.716,
+   "move": 1.922,
+   "click": 1.806,
+   "drag": 2.562,
+   "scroll": 1.833
+  }
+ },
+ "Shuffle": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.72,
+  "raw": {
+   "ambient": 7.72,
+   "hover": 6.737,
+   "move": 7.713,
+   "click": 7.309,
+   "drag": 6.699,
+   "scroll": 6.953
+  }
+ },
+ "SideRays": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 8.47,
+  "raw": {
+   "ambient": 7.564,
+   "hover": 8.47,
+   "move": 4.634,
+   "click": 6.838,
+   "drag": 3.144,
+   "scroll": 5.355
+  }
+ },
+ "Silk": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 19.995,
+  "raw": {
+   "ambient": 18.692,
+   "hover": 19.995,
+   "move": 14.148,
+   "click": 14.818,
+   "drag": 15.284,
+   "scroll": 15.392
+  }
+ },
+ "SnapSections": {
+  "live": [
+   "hover",
+   "scroll"
+  ],
+  "peak": 17.669,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 2.004,
+   "click": 0,
+   "drag": 1.774,
+   "scroll": 17.669
+  }
+ },
+ "SoftAurora": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 24.494,
+  "raw": {
+   "ambient": 21.013,
+   "hover": 24.494,
+   "move": 16.223,
+   "click": 17.558,
+   "drag": 18.56,
+   "scroll": 17.017
+  }
+ },
+ "SpecularButton": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.299,
+  "raw": {
+   "ambient": 3.111,
+   "hover": 3.647,
+   "move": 3.602,
+   "click": 3.606,
+   "drag": 5.299,
+   "scroll": 3.687
+  }
+ },
+ "SplashCursor": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 2.153,
+  "raw": {
+   "ambient": 0,
+   "hover": 2.153,
+   "move": 2.019,
+   "click": 2.132,
+   "drag": 1.226,
+   "scroll": 0.182
+  }
+ },
+ "SplitText": {
+  "live": [],
+  "peak": 0.027,
+  "raw": {
+   "ambient": 0.027,
+   "hover": 0.027,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "SpotlightCard": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.66,
+  "raw": {
+   "ambient": 0,
+   "hover": 5.66,
+   "move": 3.625,
+   "click": 3.625,
+   "drag": 5.66,
+   "scroll": 5.66
+  }
+ },
+ "Stack": {
+  "live": [
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 23.527,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 18.409,
+   "drag": 23.527,
+   "scroll": 7.051
+  }
+ },
+ "StackTransition": {
+  "live": [
+   "hover",
+   "scroll"
+  ],
+  "peak": 22.641,
+  "raw": {
+   "ambient": 14.752,
+   "hover": 16.788,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 22.641
+  }
+ },
+ "StaggerReveal": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": 0
+  }
+ },
+ "StaggeredMenu": {
+  "live": [
+   "hover",
+   "click"
+  ],
+  "peak": 111.489,
+  "raw": {
+   "ambient": 0,
+   "hover": 108.667,
+   "move": 0,
+   "click": 111.489,
+   "drag": 6.662,
+   "scroll": 0
+  }
+ },
+ "StarBorder": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 2.887,
+  "raw": {
+   "ambient": 2.887,
+   "hover": 1.83,
+   "move": 2.167,
+   "click": 2.059,
+   "drag": 2.578,
+   "scroll": 1.805
+  }
+ },
+ "Stepper": {
+  "live": [],
+  "peak": 0,
+  "raw": {
+   "ambient": 0,
+   "hover": 0,
+   "move": 0,
+   "click": 0,
+   "drag": 0,
+   "scroll": -1
+  }
+ },
+ "StickerPeel": {
+  "live": [
+   "hover",
+   "click",
+   "drag",
+   "scroll"
+  ],
+  "peak": 18.56,
+  "raw": {
+   "ambient": 0,
+   "hover": 10.685,
+   "move": 1.84,
+   "click": 1.84,
+   "drag": 18.56,
+   "scroll": 11.376
+  }
+ },
+ "Strands": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 12.611,
+  "raw": {
+   "ambient": 8.36,
+   "hover": 11.491,
+   "move": 12.611,
+   "click": 10.372,
+   "drag": 8.707,
+   "scroll": 8.054
+  }
+ },
+ "TargetCursor": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 5.524,
+  "raw": {
+   "ambient": 5.495,
+   "hover": 5.407,
+   "move": 5.521,
+   "click": 5.524,
+   "drag": 5.488,
+   "scroll": 5.524
+  }
+ },
+ "TextCursor": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 4.154,
+  "raw": {
+   "ambient": 0,
+   "hover": 4.154,
+   "move": 2.734,
+   "click": 1.113,
+   "drag": 3.068,
+   "scroll": 1.159
+  }
+ },
+ "TextPressure": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.686,
+  "raw": {
+   "ambient": 1.235,
+   "hover": 7.686,
+   "move": 4.057,
+   "click": 4.057,
+   "drag": 5.027,
+   "scroll": 5.72
+  }
+ },
+ "TextType": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 9.262,
+  "raw": {
+   "ambient": 9.262,
+   "hover": 8.656,
+   "move": 4.667,
+   "click": 6.62,
+   "drag": 6.429,
+   "scroll": 4.957
+  }
+ },
+ "Threads": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.728,
+  "raw": {
+   "ambient": 9.445,
+   "hover": 10.728,
+   "move": 9.874,
+   "click": 9.759,
+   "drag": 10.044,
+   "scroll": 10.298
+  }
+ },
+ "TiltedCard": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 10.965,
+  "raw": {
+   "ambient": 1.723,
+   "hover": 10.965,
+   "move": 8.55,
+   "click": 8.47,
+   "drag": 5.109,
+   "scroll": 4.67
+  }
+ },
+ "TrueFocus": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 7.09,
+  "raw": {
+   "ambient": 7.051,
+   "hover": 0,
+   "move": 6.76,
+   "click": 7.048,
+   "drag": 7.09,
+   "scroll": 7.048
+  }
+ },
+ "Waves": {
+  "live": [
+   "hover",
+   "click",
+   "scroll"
+  ],
+  "peak": 42.14,
+  "raw": {
+   "ambient": 40.282,
+   "hover": 42.14,
+   "move": 40.773,
+   "click": 40.768,
+   "drag": 41.061,
+   "scroll": 40.981
+  }
+ }
+}

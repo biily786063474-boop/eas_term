@@ -97,6 +97,29 @@ const DRAG_LIST = new Set([
 if (DRAG_LIST.has(NAME)) SECTIONS.push('drag')
 if (TR.has('scroll') || NEEDS_SCROLL) SECTIONS.push('scroll')
 if (!SECTIONS.length) SECTIONS.push('ambient')   // 只有 ambient：静静录一段
+
+// ── 用实测数据剔除空节次（2026-08-26）──────────────────────────────────
+// 上面这套推导来自 semantic.json 的 triggers 和摘要关键词，**两者都不可靠**：
+// FlyingPosters 标着 hover，实测 hover 完全无反应（0.000），只有滚轮有（19.8）——
+// 于是成片里 hover 那一整节是死的，用户报「FlyingPosters 没有效果」就是这么来的。
+//
+// interaction-map.json 是逐个组件在选型台里实测出来的响应表。这里只做减法：
+// 推导说要演、而实测证明没反应的，删掉。**不做加法** —— 实测没覆盖的场景
+// （比如需要特定前置状态才触发的）不该由这里凭空补。
+//
+// mount 和 drag 不参与过滤，理由见 interaction-map.json 的 _说明。
+const IMAP = (() => {
+  try { return JSON.parse(fs.readFileSync(new URL('./interaction-map.json', import.meta.url), 'utf8')) } catch { return null }
+})()
+if (IMAP && IMAP[NAME]) {
+  const live = new Set(IMAP[NAME].live || [])
+  const dropped = SECTIONS.filter((x) => !live.has(x) && x !== 'mount' && x !== 'ambient' && !(x === 'drag' && DRAG_LIST.has(NAME)))
+  if (dropped.length) {
+    for (const d of dropped) SECTIONS.splice(SECTIONS.indexOf(d), 1)
+    console.error(`  · 按实测剔除空节次：${dropped.join('/')}（该组件实测只对 ${[...live].join('/') || '入场'} 有反应）`)
+  }
+  if (!SECTIONS.length) SECTIONS.push('ambient')
+}
 // 光标类的悬停要长一点：1.7 秒看不出「跟随」的手感，指针刚划两下就没了
 const SEC_MS = { mount: 2200, hover: sem.surface === 'cursor' ? 2600 : 1700, click: 3200, drag: 3000, scroll: 2100, ambient: 3000 }
 // **小节最多 3 节。** 成片有 9 秒硬顶，而固定顺序是 mount→hover→click→drag→scroll ——
