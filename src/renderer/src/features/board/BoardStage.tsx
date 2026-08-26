@@ -16,7 +16,6 @@ import { collectLeaves } from '../../layout'
 import type { LeafNode } from '../../layout'
 import type { Project, ProjectStatus } from '../../../../shared/types'
 
-import { RunMonitor } from '../status/RunMonitor'
 import { useProjectRows } from '../status/useStatus.ts'
 import { useBoardScroll } from './useBoardScroll'
 import { TerminalIcon, PlusIcon, CloseIcon, ChevronLeftIcon, TrashIcon } from '../../ui/Icons'
@@ -200,13 +199,18 @@ export function BoardStage(): JSX.Element {
 
   return (
     <>
-      {/* 会话进行队列：跟画布共用同一个组件 —— 它只读 store 里「谁在跑」，
-          和画布几何无关。两个视图各写一份的话，「哪些算在跑」的判据迟早分叉。
-          **必须放在 .board 外面**：它是 position:absolute 的浮标，而 .board 是横向
-          滚动容器 —— 放进去的话 absolute 相对 .board 的 padding box 定位，
-          横向滚看板时它跟着内容一起滑走了。挪出来后相对 .tab-stack 定位，
-          左上角钉死。（画布那边没这问题：画布平移用的是 transform，不是滚动。） */}
-      <RunMonitor />
+      {/* 这里曾经挂着 RunMonitor（会话进行队列）。**2026-08-26 撤掉**：
+          它是 left:14px/top:14px 的绝对定位浮标，而看板的列标题就贴着容器顶边排，
+          于是「3 个在跑」那个圆点正好压在第一列的标题上，把「待执行」遮掉半个字。
+          画布那边保留 —— 画布内容可以平移，挡住了挪开就行；看板的列是固定网格，挪不开。
+
+          撤掉不丢信息：看板模式下标题栏的待处理铃铛是挂载的
+          （App.tsx 的 `viewMode !== 'canvas'`），「哪个终端在等你」在那儿看得到，
+          卡片上也各自有小圆点。
+
+          真要在这儿加回浮标的话，记住当初为什么它在 .board **外面**：
+          .board 是横向滚动容器，absolute 放进去会相对它的 padding box 定位，
+          横向滚看板时浮标跟着内容一起滑走。挪出来才是相对 .tab-stack 钉死。 */}
       <div className="board">
       {cols.map((col) => {
         const list = byCol(col.key)

@@ -57,6 +57,8 @@ export function CanvasDrawer(): JSX.Element {
   const activeProjectId = useStore((s) => s.activeProjectId)
   const setActiveProject = useStore((s) => s.setActiveProject)
   const openTerminal = useStore((s) => s.openTerminal)
+  // 右上角待处理气泡只在画布模式出现，见下面 cd-attn-bubble 处的理由
+  const viewMode = useStore((s) => s.viewMode)
   const addProject = useStore((s) => s.addProject)
   const removeProject = useStore((s) => s.removeProject)
   const addProjectFrame = useStore((s) => s.addProjectFrame)
@@ -443,7 +445,12 @@ export function CanvasDrawer(): JSX.Element {
     <>
       {/* 收起态：右缘悬停感应区（辉光 + 中部左箭头）+ 右上角待处理气泡。
           气泡数是「等审批 + 已完成」之和：画布模式下标题栏铃铛不挂载
-          （App.tsx 的 viewMode !== 'canvas'），这里是 approval 唯一的常驻提示。 */}
+          （App.tsx 的 viewMode !== 'canvas'），这里是 approval 唯一的常驻提示。
+
+          **反过来，看板 / 甘特图模式下铃铛是挂载的，气泡就成了同一件事的第二个提示** ——
+          而这两个视图的内容是贴着窗口顶边排的（看板的列标题、甘特的时间轴刻度），
+          绝对定位在 right:16px/top:14px 的气泡正好压在上面，把标题遮掉一截。
+          画布不同：它的内容能平移，被挡住挪开就是了，所以那边保留。 */}
       {!open && (
         <>
           <div className={`cd-edge${edgeHover ? ' hot' : ''}`}>
@@ -465,7 +472,7 @@ export function CanvasDrawer(): JSX.Element {
               <span className="cd-edge-label">文件信息</span>
             </span>
           </div>
-          {pendingCount > 0 && (
+          {pendingCount > 0 && viewMode === 'canvas' && (
             <>
               <button
                 className={`cd-attn-bubble${hasApproval ? ' approval' : ''}`}
