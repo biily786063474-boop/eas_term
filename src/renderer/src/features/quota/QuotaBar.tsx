@@ -9,7 +9,7 @@
 
 import { useEffect, useReducer, useState } from 'react'
 import { useStore } from '../../store'
-import { windowLabel, agoLabel, isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
+import { windowLabel, agoLabel, untilReset, isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
 import './quotaBar.css'
 
 /** 开关记在 localStorage：它是「这台机器上我想不想看见它」这种个人偏好，
@@ -74,8 +74,13 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
           // 新鲜度用**这一格自己**的 at，不是 CLI 级的 updatedAt：两条来源各自只报得出
           // 一部分窗口，用共用时间戳的话，一条七天事件会让旁边那个几小时前的五小时
           // 数字也显示成「刚刚采到」
+          // 重置写**还有多久**，不写绝对时刻（2026-08-26 用户要求）：
+          // 「8月28日 09:00 重置」要求人先想今天几号、再算差几天，而这一栏的用途
+          // 恰恰是「我还能用多久」。相对量直接回答那个问题。
+          // untilReset 已过重置时刻会返回 null —— 那种情况一个字都不显示，
+          // 别写「0 小时后刷新」（时钟偏差和过期事件都会走到这里）。
           data-tip={`${name} · ${windowLabel(w.windowMinutes)}限额 · 已用 ${w.percent}%${
-            w.resetsAt ? ` · ${new Date(w.resetsAt * 1000).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 重置` : ''
+            untilReset(w.resetsAt, now) ? ` · ${untilReset(w.resetsAt, now)}后刷新` : ''
           } · ${agoLabel(w.at, now)}采到`}
         >
           {w.percent}%

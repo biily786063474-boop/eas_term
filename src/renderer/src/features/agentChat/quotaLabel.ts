@@ -18,21 +18,11 @@ export function windowLabel(w: string): string {
   return w
 }
 
-/** 距离重置还有多久。**不显示秒**：这是个瞥一眼的信息，秒级精度只会让数字乱跳。
- *  已经过了重置时刻（时钟偏差或事件过期）返回 null，让调用方别显示倒计时。 */
-export function untilReset(resetsAt: number | undefined, now: number): string | null {
-  if (typeof resetsAt !== 'number' || !Number.isFinite(resetsAt)) return null
-  const ms = resetsAt * 1000 - now
-  if (ms <= 0) return null
-  const min = Math.floor(ms / 60000)
-  if (min < 1) return '不到 1 分钟'
-  if (min < 60) return `${min} 分钟`
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  if (h < 24) return m ? `${h} 小时 ${m} 分钟` : `${h} 小时`
-  const d = Math.floor(h / 24)
-  return `${d} 天 ${h % 24} 小时`
-}
+/** 距离重置还有多久 —— **本体在 shared/quota.ts**（和 agoLabel 放一起）。
+ *  额度条（features/quota/QuotaBar）也要用它，从这儿 re-export 是为了让
+ *  原有的 import 和单测都不用改。 */
+import { untilReset } from '../../../../shared/quota.ts'
+export { untilReset }
 
 /** 状态严重度：0 正常 / 1 该注意 / 2 已经用不了。
  *  **认不出的状态按 0 处理**——不认识的字符串不该被当成告警，

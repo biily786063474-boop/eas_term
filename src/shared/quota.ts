@@ -355,6 +355,27 @@ export function agoLabel(updatedAt: number, now: number): string {
   return `${Math.round(h / 24)} 天前`
 }
 
+/** 距离重置还有多久。**不显示秒**：这是个瞥一眼的信息，秒级精度只会让数字乱跳。
+ *  已经过了重置时刻（时钟偏差或事件过期）返回 null，让调用方别显示倒计时。
+ *
+ *  **2026-08-26 从 features/agentChat/quotaLabel.ts 挪到这里**：额度条的 hover
+ *  也要显示「还有多久刷新」，而它在 features/quota/ 下。与其跨 feature 引用、
+ *  或者各写一份迟早对不上，不如放在 agoLabel 旁边 —— 两个都是「时间差 → 人话」。
+ *  agentChat 那边改成从这里 re-export，它的单测不用动。 */
+export function untilReset(resetsAt: number | undefined, now: number): string | null {
+  if (typeof resetsAt !== 'number' || !Number.isFinite(resetsAt)) return null
+  const ms = resetsAt * 1000 - now
+  if (ms <= 0) return null
+  const min = Math.floor(ms / 60000)
+  if (min < 1) return '不到 1 分钟'
+  if (min < 60) return `${min} 分钟`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h < 24) return m ? `${h} 小时 ${m} 分钟` : `${h} 小时`
+  const d = Math.floor(h / 24)
+  return `${d} 天 ${h % 24} 小时`
+}
+
 /** 窗口长度 → 给人看的说法。hover 时用。 */
 export function windowLabel(minutes?: number): string {
   if (!minutes) return '当前窗口'
