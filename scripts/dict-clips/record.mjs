@@ -70,9 +70,31 @@ const NEEDS_HOVER = /鼠标划过|光标|指针|跟随鼠标|随鼠标|鼠标靠
 const NEEDS_SCROLL = /滚轮|滚动带|随滚动|滚到|滚动时/.test(SUMM)
 if (TR.has('hover') || NEEDS_HOVER || sem.surface === 'cursor') SECTIONS.push('hover')
 if (TR.has('click')) SECTIONS.push('click')
-// 拖拽：语义摘要里提到拖/甩/按住的，核心动作就是拖，不演等于没演
-const DRAGGY = /拖拽|拖动|拖着|拖到|拖出|滑动|甩|按住/.test((sem.summary || '') + (sem.motion || ''))
-if (DRAGGY) SECTIONS.push('drag')
+// 拖拽：**用显式清单，不用正则**（2026-08-26）。
+//
+// 原来按 /拖拽|拖动|拖着|拖到|拖出|滑动|甩|按住/ 去匹配摘要，两头都错：
+//   多判 —— 中文里这些词同样用来**描述效果**，不是用户操作。
+//     「快划会拖出一道烟带」(GhostCursor)、「定时把最前一张甩下去」(CardSwap，自动播放)、
+//     「高光沿边框滑动」(SpecularButton)、「内容区横向滑动切换」(Stepper)
+//     —— 全被判成 drag，于是录制器去按住拖一个根本不能拖的东西，那一节完全是死的。
+//   漏判 —— 收紧正则想解决多判，又把真该拖的滤掉了：ElasticSlider（拖滑杆到头才有
+//     橡皮筋）、InfiniteMenu（像转地球一样拖着滚）、Lanyard（拖拽甩动）。
+//
+// 「效果在动」和「用户在拖」在中文摘要里用词高度重叠，正则分不开。清单只有十来条，
+// 直接写死比继续调正则可靠 —— 新增组件时在这里加一行，不加就是不演拖拽（安全的默认）。
+const DRAG_LIST = new Set([
+  'StickerPeel',      // 拖着挪位置
+  'Carousel',         // 可拖拽切换
+  'DomeGallery',      // 拖拽转动穹顶
+  'ModelViewer',      // 拖拽 360° 转模型
+  'Stack',            // 拖拽或点击把最上面一张甩走
+  'ElasticSlider',    // 拖滑杆，拖到头轨道才像橡皮筋被拉长
+  'InfiniteMenu',     // 拖着滚球面
+  'Lanyard',          // 拖拽甩动证件卡，松手带物理惯性
+  'CircularGallery',  // 滚轮或拖拽让圆弧转动
+  'FallingText'       // 词块砸落后可用鼠标拖拽推开
+])
+if (DRAG_LIST.has(NAME)) SECTIONS.push('drag')
 if (TR.has('scroll') || NEEDS_SCROLL) SECTIONS.push('scroll')
 if (!SECTIONS.length) SECTIONS.push('ambient')   // 只有 ambient：静静录一段
 // 光标类的悬停要长一点：1.7 秒看不出「跟随」的手感，指针刚划两下就没了
@@ -110,7 +132,12 @@ const ctx = await browser.newContext({
   // 不再用 recordVideo —— 见文件头
 })
 const page = await ctx.newPage()
-await page.goto('http://localhost:5199', { waitUntil: 'networkidle' })
+// 端口可用 PG_PORT 覆盖。**默认 5199 是约定，不是 vite 自己会选的值** ——
+// 选型台的 vite.config 没写 port，直接 `npm run dev` 会从 5173 往上找空位
+// （2026-08-26 实测起在了 5180），录制器连 5199 就直接连不上。
+// 起服务时请用 `npx vite --port 5199 --strictPort`。
+const PG_PORT = process.env.PG_PORT || '5199'
+await page.goto(`http://localhost:${PG_PORT}`, { waitUntil: 'networkidle' })
 await page.locator(`.pg-item[data-name="${NAME}"]`).first().click({ timeout: 20000 })
 await page.waitForFunction((n) => document.querySelector('.pg-stage-name')?.textContent?.trim() === n, NAME, { timeout: 25000 })
 await page.waitForTimeout(900)
@@ -436,7 +463,25 @@ for (const sec of SECTIONS) {
         if (!inside(r)) return false
         if (e.closest('.pg-demo-slab')) return false
         return getComputedStyle(e).cursor === 'pointer' || /^(BUTTON|A)$/.test(e.tagName) || e.getAttribute('role') === 'button'
-      }).slice(0, 4).map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)] })
+      }).map((e) => {
+        const r = e.getBoundingClientRect()
+        // 完整落在舞台里的优先。只求交集的话会选到卡在边缘的控件 ——
+        // Stepper 的「Complete」按钮有 27% 在舞台下边缘外，点它等于点在裁切线上。
+        const full = r.x >= sb.x && r.y >= sb.y && r.x + r.width <= sb.x + sb.width && r.y + r.height <= sb.y + sb.height
+        return { c: [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)], full }
+      })
+      // **按坐标去重。** 原来直接 slice(0,4) 取 DOM 顺序的前四个，而可点控件通常是
+      // 三四层嵌套（外层容器、flex 包装、内部圆点各自都是 cursor:pointer），
+      // 中心点完全重合 —— Stepper 实测四个落点里有三个是同一个圆点，
+      // 真正能推进步骤的那个按钮排在第四，等于一整节只点了两个不同的地方。
+      // 8px 网格量化：嵌套元素的中心会差一两个像素，精确比对去不掉重。
+      .reduce((acc, it) => {
+        const k = Math.round(it.c[0] / 8) + ',' + Math.round(it.c[1] / 8)
+        if (!acc.seen.has(k)) { acc.seen.add(k); acc.out.push(it) }
+        return acc
+      }, { seen: new Set(), out: [] }).out
+      .sort((a, b) => (b.full ? 1 : 0) - (a.full ? 1 : 0))
+      .slice(0, 4).map((it) => it.c)
     }, { x: STAGE.x, y: STAGE.y, width: STAGE.width, height: STAGE.height })
     // **真实控件 + 散点混着来。** 只点控件的话，按钮按下后状态就定了，
     // 剩下大半段画面是静的（实测 CurvedInput/Dock 都因此比乱点还差）；
