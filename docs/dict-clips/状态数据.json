@@ -245,10 +245,10 @@
   "codec": "av1"
  },
  "Counter": {
-  "act": 7.1,
-  "run": 0.28,
+  "act": 29.0,
+  "run": 0.68,
   "dur": 8.96,
-  "peak": 1.09,
+  "peak": 35.302,
   "lead": 0.04,
   "zh": "数字滚动",
   "id": "fx-Counter",

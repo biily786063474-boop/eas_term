@@ -41,6 +41,15 @@ const sem = (() => {
 if (!sem) { console.error('语义索引里没有', NAME); process.exit(1) }
 
 const TR = new Set(sem.triggers || [])
+/** 选型台 preview-overrides.json 里可选的录制指令：
+ *  `recordSweep: { prop: 'value', values: [1234, 8642, 357], gap: 1400 }`
+ *  录制时按序写进那个参数的输入框。给「只在参数变化时才动」的组件用（数字翻滚）。 */
+const SWEEP = (() => {
+  try {
+    const ov = JSON.parse(fs.readFileSync(`${LIB}/playground/preview-overrides.json`, 'utf8'))
+    return (ov[NAME] || {}).recordSweep || null
+  } catch { return null }
+})()
 // 小节清单。**顺序固定**：先出现、再悬停、再点击、最后滚动 —— 和用户真实探索一个页面的顺序一致
 const SECTIONS = []
 // mount 触发的固然要演入场；**collection / element 类即使没标 mount 也要演** ——
@@ -356,10 +365,43 @@ await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 92, everyNthFr
 for (const sec of SECTIONS) {
   if (sec === 'mount') {
     await badge('出现')
+    // 试过「隔 1.5s 重放一次填满整节」，**实测五个样本全部变差** ——
+    // 重挂载期间画面是空的，反而把有动占比拉低（BlurText 31%→11%）。
+    // 一次性效果要靠 recordSweep 改驱动它的那个参数，不是靠反复重挂载。
     // 原来这里是找「重放/重置」按钮点一下 —— 页面上唯一匹配的是参数面板的
     // 「重置为默认值」，参数本来就是默认值时点它签名不变、根本不会重挂载。
     if (!REPLAY_FIRST) { if (!(await replay())) console.error('  ⚠ 找不到可改的参数，入场动画没能重放') }
-    await page.waitForTimeout(SEC_MS.mount)
+    // **驱动效果的那个参数会变的，就让它变。** 数字翻滚只由 value 变化触发，
+    // 静态值永远不动；反复重挂载又会让画面空掉。选型台的
+    // preview-overrides.json 里可以给 recordSweep: {prop, values}，
+    // 录制时按序写进那个参数的输入框，效果就一轮一轮地演。
+    if (SWEEP) {
+      // 参数面板里数值型参数**不是 input，是自定义的 .scrubber 拖动条**（没有 input/select），
+      // 只能真拖。所以 recordSweep 用 fractions（轨道比例）而不是绝对值。
+      const track = await page.evaluate((name) => {
+        const row = [...document.querySelectorAll('.pg-prop-row')]
+          .find((r) => (r.textContent || '').trim().startsWith(name))
+        if (!row) return null
+        const t = row.querySelector('.scrubber-track') || row.querySelector('.scrubber')
+        if (!t) return { input: !!row.querySelector('input,select') }
+        const b = t.getBoundingClientRect()
+        return { x: b.x, y: b.y + b.height / 2, w: b.width }
+      }, SWEEP.prop)
+      if (!track) console.error(`  ⚠ recordSweep 找不到参数行「${SWEEP.prop}」`)
+      else if (!track.w) console.error(`  ⚠ 参数行「${SWEEP.prop}」不是 scrubber，暂不支持`)
+      else {
+        await page.waitForTimeout(500)
+        for (const f of SWEEP.fractions ?? [0.15, 0.7, 0.35, 0.9, 0.5]) {
+          await page.mouse.move(track.x + track.w * f, track.y)
+          await page.mouse.down()
+          await page.mouse.move(track.x + track.w * f, track.y)
+          await page.mouse.up()
+          await page.waitForTimeout(SWEEP.gap ?? 1300)
+        }
+      }
+    } else {
+      await page.waitForTimeout(SEC_MS.mount)
+    }
   } else if (sec === 'hover') {
     await badge('悬停')
     // **扫过元素的边和内部，不是斜穿一刀。** BorderGlow 是「靠近哪条边哪条亮」、
