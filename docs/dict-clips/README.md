@@ -45,7 +45,29 @@
 | 组件 | 根因 |
 |---|---|
 | `Dither` 抖动 | 组件自己的 EffectComposer 后处理链，浏览器里就是冻的。已记进素材库 known-issues |
-| `PixelTrail` 鼠标拖尾 | 着色器里 `trail = texture2D(mouseTrail,…).r` 恒为 1，整块画布被涂成一个颜色 —— 所以看着「拖尾和背景融合」。drei 的 `useTrailTexture` 初始把画布填黑，`.r` 本该是 0。有头/无头、加不加黑底都一样。词典里另一条「鼠标拖尾」（`Ribbons`）是好的 |
+| `PixelTrail` 鼠标拖尾 | 组件坏了，**已改成手画 SMIL**，见下 |
+
+## 组件坏了怎么办：换成手画图
+
+`PixelTrail`（鼠标拖尾）的着色器里 `trail = texture2D(mouseTrail,…).r` **恒为 1**，
+整块画布被涂成一个颜色 —— 所以用户看到的是「拖尾和背景融合」。
+
+排除法做到底了，三条路都试过：
+
+| 试过 | 结果 |
+|---|---|
+| 换背景（给画布父层加深色底，确认 `bg=rgb(7,8,12)` 已生效） | ✗ 画布仍是实心 |
+| 换拖尾颜色（`color` 改成青绿） | ✗ **整块**跟着变色，因为底色就是 `pixelColor` |
+| **全程不碰鼠标截图** | **画布已经是实心** —— 从一开始就没有「拖尾/非拖尾」之分 |
+
+所以既不是背景问题也不是颜色问题：drei 的 `useTrailTexture` 没把纹理绑进 uniform，
+采样恒返回白色。
+
+改用**手画 SMIL** 替代（`scripts/dict-svg/batch-i.mjs`），
+用 `scripts/dict-svg/swap-to-svg.mjs` 把词条从 `clip` 换成 `svg`。
+**DictView 里 clip 优先于 svg，所以必须把 clip 删掉**，只加 svg 不生效。
+
+要退回短片：`git revert` 那个提交即可，webm 还在 git 历史里。
 | `GlassSurface` 毛玻璃 / `ReflectiveCard` 液态金属 | 源码里**没有任何动画驱动点**，`continuous:false` —— 静止才是对的 |
 | `ScrollFloat` / `ScrollReveal` | GSAP ScrollTrigger，选型台舞台不是可滚动容器，触发点在挂载时就过了 |
 

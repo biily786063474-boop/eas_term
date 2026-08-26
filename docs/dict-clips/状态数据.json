@@ -1019,16 +1019,6 @@
   "id": "fx-PixelSnow",
   "codec": "av1"
  },
- "PixelTrail": {
-  "act": 45.1,
-  "run": 1.6,
-  "dur": 8.96,
-  "peak": 0.579,
-  "lead": 0.04,
-  "zh": "鼠标拖尾",
-  "id": "fx-PixelTrail",
-  "codec": "av1"
- },
  "PixelTransition": {
   "act": 35.3,
   "run": 1.52,
