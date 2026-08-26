@@ -136,8 +136,9 @@ function codexRegion(fileNames: Set<string>): string {
     lines.push(`别只说「已生成」。详细：\`${path.join(detailDir(), 'canvas.md')}\``, '')
   }
   if (fileNames.has('generate.md')) {
-    lines.push('**生图 / 生视频**：用户要图、封面、海报、视频 → 走「笔纵画板」的 MCP')
-    lines.push(`（\`bizone-canvas\`），不要调别的图像 API。详细：\`${path.join(detailDir(), 'generate.md')}\``, '')
+    lines.push('**生图 / 生视频**：用户要图、封面、海报、视频 → 默认走「笔纵画板」的 MCP')
+    lines.push('（`bizone-canvas`），不要调别的图像 API。**但用户点名了别的生成 skill 就用那个**，')
+    lines.push(`别拽回画板。详细：\`${path.join(detailDir(), 'generate.md')}\``, '')
   }
   if (fileNames.has('secrets.md')) {
     lines.push('**缺密钥**：撞到 401 / 鉴权失败 → 别让用户把 key 贴进对话，')
