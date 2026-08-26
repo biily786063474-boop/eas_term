@@ -638,7 +638,16 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     }
     el.addEventListener('focusin', onFocus)
     // 在这个终端里敲键 / 点一下，就当你看见了。**这是唯一的已读判据**（见上）。
-    const markRead = (): void => useStore.getState().clearAttention(ptyId)
+    //
+    // 词典插入的目标切回终端**也归这里管，理由完全一样**：composerAppend
+    // （最后碰过的 AI 对话输入框）如果在上面那个 focusin 里清，切个标签页就没了 ——
+    // PaneLayer 会给切过去的终端来一次程序性聚焦，而 isTrusted 区分不了。
+    // 实测过：在对话框打完字、切到词典所在的标签页，登记就被那次程序性聚焦清掉，
+    // 再点词典条目内容进了终端。判据必须和「已读」同一个：真实键鼠动作。
+    const markRead = (): void => {
+      useStore.getState().clearAttention(ptyId)
+      if (useStore.getState().composerAppend) useStore.setState({ composerAppend: null })
+    }
     el.addEventListener('keydown', markRead)
     el.addEventListener('mousedown', markRead)
 

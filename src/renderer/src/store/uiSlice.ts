@@ -52,6 +52,20 @@ export interface UiSlice {
   /** 最近聚焦过的终端（供名词词典等非终端面板把文本插入光标处；打开词典后 activeLeaf 是词典自己，故单独记）。
    *  由 TerminalView 的 focusin 处理器直接 setState 写入。 */
   lastActiveTerminal: { tabId: string; ptyId: string } | null
+  /** 最近聚焦过的 **AI 对话输入框**的「把文本追加进去」回调（2026-08-26）。
+   *
+   *  **存回调不存 id**：对话有两个输入框 —— 空态那个在 AgentChatView、对话态那个在
+   *  ChatToolbar（见 SlashPicker.tsx 开头那句），两者的 text 各自是组件内 state，
+   *  连标识都不一样（一个只有 leafId、一个只有 sessionId）。存 id 的话这边还得再按
+   *  id 分发一次，等于把同一件事写两遍；存回调则谁聚焦谁注册自己的 setText。
+   *
+   *  **和 lastActiveTerminal 互斥**：聚焦终端时由 TerminalView 一并置 null。
+   *  没有这条互斥的话，「先点对话、再点终端、然后点词典」会插回对话里 ——
+   *  用户看着终端却什么都没出现。null = 当前该插终端。
+   *
+   *  不持久化（函数本来也存不下），uiSlice 只手动存特定字段，不走 persist。 */
+  composerAppend: ((text: string) => void) | null
+  setComposerAppend: (fn: ((text: string) => void) | null) => void
   /** 最近一次快照。给终端输入框上方的浮层用 —— 只在同项目的终端里显示。
    *  不持久化：它是「刚拍完这一下」的临时状态，重启后没有意义 */
   lastSnapshot: { path: string; projectId: string; at: number } | null
@@ -261,6 +275,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   pendingConfirm: null,
   fullscreenOverlay: null,
   lastActiveTerminal: null,
+  composerAppend: null,
+  // set 的对象形式：函数是**值**不是 updater（updater 是 set(fn) 那种写法）
+  setComposerAppend: (fn) => set({ composerAppend: fn }),
   lastSnapshot: null,
   setLastSnapshot: (v) => set({ lastSnapshot: v }),
   boardLeafByProject: {},

@@ -194,6 +194,26 @@ export function DictView(): JSX.Element {
 
   const insert = (term: DictTerm): void => {
     const s = useStore.getState()
+    // 优先插 prompt（动效词条才有）：它是给 agent 照着实现用的完整描述，
+    // 含关键参数和踩坑经验，比 logic 那句概述有用得多。
+    // 自建词条的 logic 是空的（脚本不花 token 生成解释）→ 退回插入英文名，
+    // 至少能拿去问 agent；插一个空字符串会闪「已插入」但什么也没发生
+    const text = term.prompt || term.logic || term.en
+
+    // **AI 对话的输入框优先**（2026-08-26 用户要求：不止终端）。
+    // composerAppend 由两个对话输入框在 onFocus 时登记，聚焦终端时被 TerminalView
+    // 置 null —— 所以「它非空」正好等于「最后碰的是对话框」。
+    // 这里不做存活校验：回调直接指向那个组件的 setText，组件没了回调也就不再被登记；
+    // 而终端那边必须校验，因为 ptyId 死后 write 是**静默 no-op**，会假装成功。
+    const append = s.composerAppend
+    if (append) {
+      append(text)
+      setFlashId(term.id)
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      flashTimer.current = setTimeout(() => setFlashId(null), 1100)
+      return
+    }
+
     const t = s.lastActiveTerminal
     // 记录的终端可能已被关闭（pty 死后 write 是静默 no-op，会假成功）：
     // 校验该 ptyId 仍存在于某个面板里，不在则提示而不是闪"已插入"
@@ -205,16 +225,11 @@ export function DictView(): JSX.Element {
         )
       )
     if (!t || !alive) {
-      setNotice('没有可插入的终端——先点一下某个终端面板')
+      setNotice('没有可插入的地方——先点一下某个终端或 AI 对话的输入框')
       if (noticeTimer.current) clearTimeout(noticeTimer.current)
       noticeTimer.current = setTimeout(() => setNotice(''), 2600)
       return
     }
-    // 优先插 prompt（动效词条才有）：它是给 agent 照着实现用的完整描述，
-    // 含关键参数和踩坑经验，比 logic 那句概述有用得多。
-    // 自建词条的 logic 是空的（脚本不花 token 生成解释）→ 退回插入英文名，
-    // 至少能拿去问 agent；插一个空字符串会闪「已插入」但什么也没发生
-    const text = term.prompt || term.logic || term.en
     // 不带 \n = 插入到光标，不执行（logic 均为单行文本，已确认无换行）
     window.api.pty.write(t.ptyId, text)
     setFlashId(term.id)
@@ -282,7 +297,7 @@ export function DictView(): JSX.Element {
             // 移开该胶囊就收起预览（不等移出整个列表——停在空白处不该残留浮层）
             onMouseLeave={() => setHover(null)}
             onClick={() => insert(term)}
-            data-tip="点击把实现逻辑插入到活动终端光标处"
+            data-tip="点击插入到最后聚焦的终端或 AI 对话输入框"
           >
             <span className={`dict-dot cat-${term.category}`} />
             <span className="dict-pill-zh">{term.zh}</span>

@@ -316,6 +316,12 @@ export function ChatToolbar({
           className="ac-composer"
           rows={1}
           value={text}
+          // 对话态的登记口。**空态那个在 AgentChatView，两个都要登记** ——
+          // 只改一个的话，对话一旦开始，词典就又插回终端去了（SlashPicker 开头
+          // 那句「两个输入框共用」说的就是这两个）。
+          // 直接复用 appendVoice：它已经处理了空格分隔与 autoGrow，
+          // 词典插入和语音插入本来就是同一件事。
+          onFocus={() => useStore.getState().setComposerAppend(appendVoice)}
           placeholder="继续和它说…（可粘贴或拖入图片）"
           onChange={(e) => {
             setText(e.target.value)

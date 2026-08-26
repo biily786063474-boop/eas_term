@@ -909,6 +909,14 @@ export function AgentChatView({
             className="ac-input"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            // 聚焦时把「往这儿追加」登记到 store，名词词典点条目就插进这里而不是终端。
+            // 在 onFocus 里注册而不是 mount 时：拿到的一定是当前这次渲染的 setText，
+            // 也天然表达了「最后聚焦的是我」。
+            onFocus={() =>
+              useStore.getState().setComposerAppend((t) =>
+                setText((v) => (v && !/\s$/.test(v) ? v + ' ' : v) + t)
+              )
+            }
             onKeyDown={(e) => {
               // 候选开着时先归它管 —— 上下键/Tab/Esc 在这一刻的意思跟平时不一样
               if (emptySlash.handleKey(e)) return
