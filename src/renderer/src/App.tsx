@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore, serializeCanvas } from './store'
 import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
@@ -130,6 +130,11 @@ export function App(): JSX.Element {
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
   }, [loadProjects, loadCanvas])
+
+  // 全屏时 macOS 把红绿灯收起来了，而标题栏左边一直给它们留着 90px ——
+  // 那块就成了一条谁也用不上的死白。拿到状态后挂个类，CSS 把留白收掉。
+  const [fullscreen, setFullscreen] = useState(false)
+  useEffect(() => window.api.win.onFullscreen(setFullscreen), [])
 
   // 终端里的 CLI 调 `open <url>`（AI 工具弹网页等）被 open shim 劫持 → 这里在画板内嵌浏览器打开，
   // 而不是弹系统 Safari。没有任何画布 Frame 时才回落系统浏览器。
@@ -265,7 +270,7 @@ export function App(): JSX.Element {
 
   return (
     <div
-      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${viewMode === 'board' ? ' board-mode' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}`}
+      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${viewMode === 'board' ? ' board-mode' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}${fullscreen ? ' fs' : ''}`}
     >
       <div className="titlebar">
         {viewMode === 'split' && activeProject ? (

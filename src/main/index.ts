@@ -229,6 +229,17 @@ function createWindow(): void {
   win.on('show', nudgeIsland)
   win.on('hide', nudgeIsland)
 
+  // 全屏时 macOS 把红绿灯收起来了，而标题栏左边一直给它们留着 90px ——
+  // 那块就成了一条谁也用不上的死白，顶栏也「不通天」。渲染层得知道自己在不在全屏
+  // 才能把那块收掉，所以这里把状态推过去。
+  // did-finish-load 也推一次：重载后渲染层是新的，光靠 enter/leave 事件它拿不到当前值。
+  const pushFullscreen = (): void => {
+    if (!win.isDestroyed()) win.webContents.send('win:fullscreen', win.isFullScreen())
+  }
+  win.on('enter-full-screen', pushFullscreen)
+  win.on('leave-full-screen', pushFullscreen)
+  win.webContents.on('did-finish-load', pushFullscreen)
+
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

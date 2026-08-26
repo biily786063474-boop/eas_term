@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { SecretMeta, SecretsStatus } from '../../../../shared/types'
 import { useStore } from '../../store'
-import { KeyIcon, LockIcon, PencilIcon, TrashIcon, CopyIcon, PlusIcon, CloseIcon } from '../../ui/Icons'
+import { PencilIcon, TrashIcon, CopyIcon, PlusIcon, CloseIcon } from '../../ui/Icons'
 import './workspace.css'
 
 /** 表单里的一行。from = 这行原来叫什么（编辑态才有），
@@ -429,7 +429,7 @@ export function SecretsPanel(): JSX.Element | null {
     <>
       <button
         ref={btnRef}
-        className={`sec-btn${st.configured && !st.locked ? ' unlocked' : ''}`}
+        className={`tb-item${st.configured && !st.locked ? ' unlocked' : ''}`}
         data-tip={
           !st.configured
             ? '密钥柜 · 还没启用'
@@ -439,7 +439,7 @@ export function SecretsPanel(): JSX.Element | null {
         }
         onClick={() => setOpen((v) => !v)}
       >
-        {st.configured && st.locked ? <LockIcon size={13} /> : <KeyIcon size={13} />}
+        密钥
       </button>
 
       {open &&

@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Footprint, SkillStatus } from '../../../../shared/types'
-import { SparkleIcon, CheckIcon, FolderOpenIcon } from '../../ui/Icons'
+import { CheckIcon, FolderOpenIcon } from '../../ui/Icons'
 
 /** 绝对路径缩成 ~/… ，全路径太长而且含用户名 */
 function short(p: string): string {
@@ -83,15 +83,14 @@ export function FootprintPanel(): JSX.Element | null {
     <>
       <button
         ref={btnRef}
-        className={`skill-btn${pending ? ' has-todo' : ''}`}
+        className={`tb-item${pending ? ' has-todo' : ''}`}
         data-tip="扩展能力：这个软件在你机器上写过什么，都在这里"
         onClick={() => {
           setOpen((v) => !v)
           void refresh()
         }}
       >
-        <SparkleIcon size={13} />
-        <span>扩展能力</span>
+        扩展能力
         {!!pending && <span className="skill-dot" />}
       </button>
 

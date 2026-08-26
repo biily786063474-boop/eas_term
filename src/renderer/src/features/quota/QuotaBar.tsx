@@ -9,16 +9,7 @@
 
 import { useEffect, useReducer, useState } from 'react'
 import { useStore } from '../../store'
-import { GaugeIcon } from '../../ui/Icons'
-import {
-  windowLabel,
-  agoLabel,
-  isWindowExpired,
-  type QuotaSnapshot,
-  type CliQuota,
-  type QuotaWindow,
-  isHot
-} from '../../../../shared/quota'
+import { windowLabel, agoLabel, isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
 import './quotaBar.css'
 
 /** 开关记在 localStorage：它是「这台机器上我想不想看见它」这种个人偏好，
@@ -169,12 +160,12 @@ export function QuotaBarToggle(): JSX.Element {
   }, [])
   return (
     <button
-      className={`dictback-btn${on ? ' on' : ''}`}
+      className={`tb-item${on ? ' on' : ''}`}
       data-tip={on ? '收起额度条' : '在画布右上角常驻显示额度'}
       aria-pressed={on}
       onClick={() => setQuotaBarOn(!on)}
     >
-      <GaugeIcon size={13} />
+      额度
     </button>
   )
 }

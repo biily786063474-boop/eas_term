@@ -40,7 +40,7 @@
   --radius-md: 10px;
   --radius-sm: 7px;
 
-  --titlebar-h: 42px;
+  --titlebar-h: 34px;
 }
 
 /* ---------- 黑粉主题：纯黑背景 + 粉色系高亮 ---------- */
@@ -131,8 +131,15 @@ body {
   align-items: center;
   justify-content: center;
   -webkit-app-region: drag;
+  /* 左边 90px 是给 macOS 红绿灯让的位 */
   padding: 0 90px;
   overflow: hidden;
+}
+
+/* 全屏时 macOS 把红绿灯收起来了，那 90px 就是一条谁也用不上的死白，
+ * 顶栏看着「不通天」。全屏类由主进程推的状态挂上（见 main/index.ts 的 pushFullscreen）。 */
+.app.fs .titlebar {
+  padding-left: 14px;
 }
 
 /* 画布模式：标题栏比画布底色更深 + 分隔线/投影，拉开与画布的层次 */
@@ -150,8 +157,88 @@ body {
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   -webkit-app-region: no-drag;
+}
+
+/* ---------- 顶栏按钮：统一成「文字 + | 分隔」 ----------
+ *
+ * 原来每个按钮各写各的：有的是 26×26 的纯图标（词典/密钥/设置），有的是带图标的
+ * 文字胶囊（扩展能力 86×26），还有自己一套的模式切换。挤在一条 42px 的栏里，
+ * 大小、内边距、圆角、hover 反馈全不一样，看着像七拼八凑。
+ *
+ * 现在统一：**只有文字，靠竖线分隔**。图标只保留承载状态的那种（MCP 的计数、
+ * 待处理铃铛的数字），其余一律去掉 —— 顶栏是导航不是工具箱，一排小图标谁也认不出来。 */
+.titlebar-actions .tb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--fg-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.12s, background-color 0.12s;
+}
+
+.titlebar-actions .tb-item:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.titlebar-actions .tb-item.on,
+.titlebar-actions .tb-item[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+/* 分隔线。两个坑：
+ *
+ * ① **选择器要落在直接子元素上，不能写 .tb-item + .tb-item** ——
+ *    模式切换外面包了一层 .mode-switch-wrap（下拉菜单要靠它定位），
+ *    按 .tb-item 相邻算的话分隔线会在那里断掉。
+ * ② **不能用 box-shadow: inset** —— 按钮有 6px 圆角，inset 阴影会跟着圆角弯，
+ *    画出来是一个个括号而不是竖线。用绝对定位的伪元素，不受圆角影响。 */
+.titlebar-actions > * + * {
+  position: relative;
+  margin-left: 1px;
+}
+
+.titlebar-actions > * + *::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.13);
+  pointer-events: none;
+}
+
+/* 包了一层的（模式切换）自己不该有内边距，否则分隔线离按钮太远 */
+.titlebar-actions > .mode-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 状态徽标：MCP 的调用计数、铃铛的待处理数。跟着文字走，不额外占位。 */
+.titlebar-actions .tb-badge {
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .theme-swatch {

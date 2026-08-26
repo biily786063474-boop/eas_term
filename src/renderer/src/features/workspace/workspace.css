@@ -137,32 +137,6 @@
   }
 }
 
-/* 标题栏「任务完成」通知（分屏模式）：铃铛 + 已完成项目数，点击依次跳过去 */
-.term-attn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--accent-rgb), 0.5);
-  background: rgba(var(--accent-rgb), 0.14);
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  animation: attn-pulse 1.7s ease-out infinite;
-  transition: background 0.14s;
-}
-.term-attn:hover {
-  background: rgba(var(--accent-rgb), 0.24);
-}
-.term-attn-count {
-  min-width: 14px;
-  text-align: center;
-  line-height: 1;
-}
-
 .project-actions {
   display: none;
   gap: 2px;
@@ -589,25 +563,6 @@ body.dragging-row * {
   flex: none;
 }
 
-/* 四个视图收进一个按钮。原来的三段控件 .view-seg 已经删掉，
-   它的样式若还留着不影响 —— 但别再往里加第四段，标题栏中间放不下。
-   .mode-switch-wrap 纯结构包装、不需要样式：菜单改成 portal 到 body + fixed
-   现算坐标之后，它不再承担给下拉菜单当定位参照的角色（原来靠 position: relative
-   兜底，现在没有子元素靠它相对定位了），故不建同名 CSS 规则。 */
-
-.mode-switch {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  background: var(--glass-3);
-  color: var(--fg);
-  font-size: 12.5px;
-  cursor: pointer;
-}
 
 .mode-switch:hover,
 .mode-switch.on {
@@ -653,33 +608,12 @@ body.dragging-row * {
   color: var(--fg);
   background: var(--accent-soft);
 }
-
-/* ========== MCP 指示灯（标题栏：AI 通过 MCP 动画板时亮起） ========== */
-.mcp-ind {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--fg-dim);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  transition: background 0.14s, color 0.14s, border-color 0.14s;
-}
-.mcp-ind:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg);
-}
-.mcp-ind.flash {
+.titlebar-actions .tb-item.mcp-ind.flash {
   color: var(--accent);
   border-color: rgba(var(--accent-rgb), 0.6);
   background: rgba(var(--accent-rgb), 0.16);
 }
-.mcp-ind.off {
+.titlebar-actions .tb-item.mcp-ind.off {
   opacity: 0.5;
   text-decoration: line-through;
 }
@@ -770,31 +704,6 @@ body.dragging-row * {
 .mcp-clear:hover {
   background: rgba(255, 255, 255, 0.07);
   color: var(--fg);
-}
-
-/* ========== 扩展能力（技能包安装：标题栏按钮 + 面板 + 启动提示） ========== */
-.skill-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--fg-dim);
-  cursor: pointer;
-  font-size: 11.5px;
-  font-weight: 600;
-  transition: background 0.14s, color 0.14s, border-color 0.14s;
-}
-.skill-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg);
-}
-.skill-btn.has-todo {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.45);
 }
 .skill-dot {
   width: 5px;
@@ -1446,52 +1355,6 @@ body.dragging-row * {
   overscroll-behavior-x: contain;
 }
 
-/* 标题栏：把词典悬浮球放回来（只在藏起来之后出现） */
-.dictback-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--fg-dim);
-  cursor: pointer;
-  transition: background 0.14s, color 0.14s, border-color 0.14s;
-}
-.dictback-btn:hover {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.5);
-  background: var(--accent-soft);
-}
-
-/* ========== 密钥柜 ========== */
-/* 标题栏的钥匙钮。形制照 .dictback-btn（全项目唯一的纯图标圆钮），
-   位置在「扩展能力」之后 —— 两者是同类：都在讲「这软件在你机器上存了什么」 */
-.sec-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--fg-dim);
-  cursor: pointer;
-  transition: background 0.14s, color 0.14s, border-color 0.14s;
-}
-.sec-btn:hover {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.5);
-  background: var(--accent-soft);
-}
-/* 解锁态给一点存在感：柜子开着的时候应该看得出来 */
-.sec-btn.unlocked {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.45);
-}
 
 /* 弹层：同 .fp-pop 的玻璃配方，窄一号 */
 .sec-pop {
@@ -2131,35 +1994,6 @@ body.dragging-row * {
 /* 文件型密钥的标签：和文本型区分开 —— 用法完全不同（给路径 vs 给值） */
 .sec-var.isfile{background:rgba(139,92,246,.14);color:#c4b5fd}
 
-/* ========== 设置：标题栏最右的入口 + 灯箱 ========== */
-/* 收拢「偶尔改一次」的东西（主题、提示音）。它们原本一个占着标题栏、
-   一个无处安放——标题栏每加一个图标就挤一分，而这类设置一个月点不了两次。 */
-.cset-btn {
-  /* 曾经绝对定位在画布右上角（right/top 14px），正压在右侧抽屉头部的「+」上。
-     搬进标题栏后跟 .skill-btn 一套尺寸，不再和画布上的任何东西抢位置。 */
-  flex: none;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
-  background: var(--glass-2);
-  backdrop-filter: var(--blur);
-  /* 同 .crm 的处理：不显眼靠文字淡，不靠整体 opacity——
-     整体压透明的话画布节点会从背景里透上来，糊成一片 */
-  color: color-mix(in srgb, var(--fg-dim) 62%, transparent);
-  cursor: pointer;
-  transition: color 0.2s, background-color 0.2s, transform 0.2s;
-}
-
-.cset-btn:hover {
-  color: var(--fg);
-  background: var(--glass-3);
-  /* 齿轮 hover 转一点，是这一处允许的小趣味：它一天被点不了几次 */
-  transform: rotate(35deg);
-}
 
 .cset-overlay {
   position: fixed;
@@ -2399,9 +2233,6 @@ body.dragging-row * {
   .cset-overlay,
   .cset-box {
     animation: none;
-  }
-  .cset-btn:hover {
-    transform: none;
   }
 }
 

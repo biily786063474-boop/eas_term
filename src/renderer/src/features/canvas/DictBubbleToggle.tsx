@@ -4,7 +4,6 @@
 // 用户看着会以为词典还有别的入口，其实球就在画布上戳着。
 // 藏了才出现，它就只有一个意思——你刚才藏的东西在这儿。
 import { useStore } from '../../store'
-import { DictIcon } from '../../ui/Icons'
 
 export function DictBubbleToggle(): JSX.Element | null {
   const hidden = useStore((s) => s.dictBubbleHidden)
@@ -16,11 +15,11 @@ export function DictBubbleToggle(): JSX.Element | null {
 
   return (
     <button
-      className="dictback-btn"
+      className="tb-item"
       data-tip="把名词词典悬浮球放回画布"
       onClick={() => setHidden(false)}
     >
-      <DictIcon size={13} />
+      词典
     </button>
   )
 }

@@ -761,6 +761,15 @@ const api = {
       }
     }
   },
+  win: {
+    /** 全屏状态。全屏时 macOS 藏掉红绿灯，标题栏左边给它们留的位置得收掉，
+     *  否则顶栏「不通天」、左边一条死白。主进程在 enter/leave 和 did-finish-load 都会推。 */
+    onFullscreen: (cb: (on: boolean) => void): (() => void) => {
+      const h = (_e: unknown, on: boolean): void => cb(on)
+      ipcRenderer.on('win:fullscreen', h)
+      return () => ipcRenderer.removeListener('win:fullscreen', h)
+    }
+  },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
     // 终端里 CLI 调 `open <url>` 被 shim 劫持后，主进程经此通知渲染层在画板浏览器打开

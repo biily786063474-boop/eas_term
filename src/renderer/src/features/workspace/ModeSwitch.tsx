@@ -98,7 +98,7 @@ export function ModeSwitch(): JSX.Element {
     <div className="mode-switch-wrap">
       <button
         ref={btnRef}
-        className={`mode-switch${open ? ' on' : ''}`}
+        className={`tb-item mode-switch${open ? ' on' : ''}`}
         onClick={() => {
           // .titlebar 是 overflow:hidden，挂在它下面的绝对定位下拉会被裁掉——
           // 点上去只会点穿到裁剪区域后面的终端（同一个坑 McpIndicator 已经踩过，
@@ -110,7 +110,6 @@ export function ModeSwitch(): JSX.Element {
         }}
         data-tip="模式切换"
       >
-        <cur.Icon size={13} />
         {cur.label}
         <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4">
           <path d="M6 9l6 6 6-6" />
