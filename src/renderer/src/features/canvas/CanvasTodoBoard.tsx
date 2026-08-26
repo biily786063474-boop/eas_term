@@ -367,29 +367,34 @@ function TodoLightbox({
             <CloseIcon size={13} />
           </button>
         </div>
-        <textarea
-          ref={bodyRef}
-          className="ctodo-lightbox-body"
-          defaultValue={item.body ?? ''}
-          placeholder="写点详细信息…（也可以按住麦克风说）"
-          autoFocus
-          onBlur={(e) => updateTodoItem(boardId, item.id, { body: e.target.value })}
-        />
-        {/* 语音写详情。**说完立刻存盘，不等 blur** —— 上面那个 textarea 是非受控的，
-            语音是直接往 DOM 里追加，React 不知道值变了；只靠 onBlur 的话，
-            说完直接关掉灯箱就丢了。 */}
-        <div className="ctodo-lightbox-voice">
-          <VoiceButton
-            ptyId={`todo-${item.id}`}
-            inline
-            onText={(t) => {
-              const el = bodyRef.current
-              if (!el) return
-              el.value = el.value ? `${el.value}${/\s$/.test(el.value) ? '' : ' '}${t}` : t
-              updateTodoItem(boardId, item.id, { body: el.value })
-              el.focus()
-            }}
+        {/* 文本框和语音钮包一层：语音钮要**绝对定位在文本框右下角内侧**。
+            原来靠 margin-top:-34px 硬拽，实测落在框外（右 -10px、下 -8px），
+            还把灯箱底部的留白吃掉了 —— 文本框底到灯箱底只剩 9px，头重脚轻。 */}
+        <div className="ctodo-lightbox-field">
+          <textarea
+            ref={bodyRef}
+            className="ctodo-lightbox-body"
+            defaultValue={item.body ?? ''}
+            placeholder="写点详细信息…（也可以按住麦克风说）"
+            autoFocus
+            onBlur={(e) => updateTodoItem(boardId, item.id, { body: e.target.value })}
           />
+          {/* 语音写详情。**说完立刻存盘，不等 blur** —— 上面那个 textarea 是非受控的，
+              语音是直接往 DOM 里追加，React 不知道值变了；只靠 onBlur 的话，
+              说完直接关掉灯箱就丢了。 */}
+          <div className="ctodo-lightbox-voice">
+            <VoiceButton
+              ptyId={`todo-${item.id}`}
+              inline
+              onText={(t) => {
+                const el = bodyRef.current
+                if (!el) return
+                el.value = el.value ? `${el.value}${/\s$/.test(el.value) ? '' : ' '}${t}` : t
+                updateTodoItem(boardId, item.id, { body: el.value })
+                el.focus()
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>,

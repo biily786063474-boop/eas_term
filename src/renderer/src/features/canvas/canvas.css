@@ -1739,11 +1739,20 @@
   color: var(--fg);
 }
 
+.ctodo-lightbox-field {
+  position: relative;
+  /* 底部比顶部（头部内边距 16px）多给一点：原来只剩 9px，整个灯箱头重脚轻 */
+  margin: 0 18px 20px;
+}
+
 .ctodo-lightbox-body {
+  display: block;
+  width: 100%;
   min-height: 160px;
   max-height: 50vh;
-  margin: 0 18px 18px;
-  padding: 10px 12px;
+  margin: 0;
+  /* 右下角给语音钮腾位，否则打字会写到按钮底下 */
+  padding: 10px 12px 36px;
   resize: vertical;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--glass-border);
@@ -5292,15 +5301,17 @@
   background: rgba(var(--accent-rgb), 0.22);
 }
 
-/* 待办详情里的语音按钮：贴在文本框右下角，不占独立一行 —— 
-   灯箱本来就小，多一行按钮会把写字的地方挤掉。 */
+/* 待办详情里的语音按钮：**绝对定位在文本框右下角内侧**，不占独立一行 ——
+   灯箱本来就小，多一行按钮会把写字的地方挤掉。
+
+   原来用 margin-top:-34px 把它往上拽，实测落在框外（右 -10px、下 -8px），
+   而且负边距把灯箱底部的留白也吃掉了 —— 文本框底到灯箱底只剩 9px。
+   绝对定位相对 .ctodo-lightbox-field，文本框 resize 时按钮会跟着走。 */
 .ctodo-lightbox-voice {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -34px;
-  margin-right: 8px;
-  pointer-events: none;
-}
-.ctodo-lightbox-voice > * {
-  pointer-events: auto;
+  position: absolute;
+  /* **右边要给 resize 抓手让开。** 文本框是 resize:vertical，浏览器会在右下角
+     画一个约 15px 的抓手；按钮贴到 right:9 的话两者重叠，
+     拖按钮右缘会变成拉伸文本框而不是点按钮。 */
+  right: 24px;
+  bottom: 9px;
 }
