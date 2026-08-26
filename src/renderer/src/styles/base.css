@@ -224,6 +224,44 @@ body {
 .titlebar-actions > .mode-switch-wrap {
   display: inline-flex;
   align-items: center;
+  /* CTA 左右各留口气，跟旁边的纯文字按钮拉开 */
+  margin: 0 6px;
+}
+
+/* ---------- 模式切换：唯一的 CTA ----------
+ *
+ * 顶栏其余按钮都是「文字 + 竖线」的低调形制，因为它们是偶尔用一次的开关。
+ * 模式切换不一样 —— 分屏 / 画布 / 看板是这个软件的主干线，一天要按很多次，
+ * 混在一排同样的文字里会找不到。所以给它、也只给它一个实心底 + accent 描边。
+ *
+ * **不给它分隔线**：CTA 自带边界，再画一条竖线只会让它看着像被夹住。 */
+.titlebar-actions > .mode-switch-wrap::before,
+.titlebar-actions > .mode-switch-wrap + *::before {
+  display: none;
+}
+
+.titlebar-actions .tb-item.mode-switch {
+  height: 24px;
+  padding: 0 9px 0 11px;
+  gap: 4px;
+  border: 1px solid rgba(var(--accent-rgb), 0.42);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--glass-highlight);
+}
+
+.titlebar-actions .tb-item.mode-switch:hover,
+.titlebar-actions .tb-item.mode-switch.on {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--fg);
+}
+
+/* 下拉箭头比文字淡一档：它是提示不是内容 */
+.titlebar-actions .tb-item.mode-switch svg {
+  opacity: 0.7;
 }
 
 /* 状态徽标：MCP 的调用计数、铃铛的待处理数。跟着文字走，不额外占位。 */
