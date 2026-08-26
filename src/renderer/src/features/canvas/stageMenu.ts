@@ -5,6 +5,7 @@
 // 留在 937 行的组件里时，这 70 行夹在一堆手势 effect 中间，
 // 想加一个菜单项得先分清哪些变量是闭包捕获的、哪些是当场读的。
 import { useStore } from '../../store'
+import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
@@ -51,14 +52,44 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   // 标记盖住终端时，那块区域连「关闭终端」也一起没了。
   if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer') && !t.closest('.canvas-shape-layer'))
     return null
-  // 终端输入框有自己的右键菜单（待办清单）。不排除的话，画布模式下在输入框上右键
-  // 会命中下面 `.pane[data-leaf-id]` 那一分支，弹出「关闭终端」——和输入框自己弹出的
-  // 菜单在同一个坐标叠两份出来，用户点到的到底是哪个全看谁的 DOM 更靠后，纯随缘。
+  // ── 层级归属：内层在用的时候，画布层不许抢 ────────────────────────────────
+  //
+  // 下面三条是同一个原则的三种情形 —— **谁在最上面、谁正在被使用，事件就归谁**。
+  // 原来只零敲碎打挡了 .term-input 和 .cshape.editing，于是「展开的面板」「输入框」
+  // 「最大化的模块」里右键，照样跨层级命中画布的菜单。
+
+  // ① 任何表单控件里都让给系统菜单。用户在输入框里右键要的是复制/粘贴/拼写，
+  //    不是「新建便签」。终端输入框（.term-input）和便签编辑态只是这条的两个特例，
+  //    按标签判才不会每冒出一个新输入框就漏一次。
+  if (t.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return null
   if (t.closest('.term-input')) return null
-  // 便签编辑态的 <textarea> 同理：那里要的是系统的复制/粘贴菜单，不是「新建便签」
   if (t.closest('.cshape.editing')) return null
+
+  // ② 浮层里不归画布管。灯箱/设置这些是 portal 到 body 的，前面那条
+  //    closest('.canvas-viewport') 已经挡住；但抽屉和技能面板是渲染在画布内的，
+  //    它们盖在画布上、自己就是一层，右键穿透到底下弹「关闭终端」是错的。
+  if (t.closest('.canvas-drawer, .wiki-drawer, .cskill-panel, .canvas-ctxmenu, .cset-box, .ctodo-lightbox'))
+    return null
+
   const { setEditingSticky, setEditingFrame, viewportEl } = deps
   const st = useStore.getState()
+
+  // ③ **模块最大化时，它的内容区里不归画布管。**
+  //
+  //    最大化后模块铺满整个屏幕，画布根本看不见了；这时候在内容区里右键却弹出
+  //    画布层的「复制 / 删除节点」，等于对着一块看不见的东西操作 —— 用户明确报过。
+  //    内容区（.cfile-body / .pane-body）是模块自己的地盘：网页节点要浏览器菜单、
+  //    对话要复制、预览要它自己的操作。
+  //
+  //    **只挡内容区，不挡整个节点**：头部那条 chrome（标题栏、关闭钮、缩放角）
+  //    仍然是画布的东西，在那儿右键要「删除节点」是对的，最大化时也一样。
+  //
+  //    没最大化时不挡：那时候画布就在眼前，在模块上右键要节点操作不会让人意外。
+  //
+  //    用 liveMaximizedNode 而不是直接读 maximizedNode：它指的节点可能已经被关掉了
+  //    （理由见 store/canvas/selectors.ts）。
+  const max = liveMaximizedNode(st)
+  if (max && t.closest('.cfile-body, .pane-body')) return null
   const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
   const nodeEl = t.closest('.cfile-node[data-node-id]') as HTMLElement | null
   const shapeEl = t.closest('.cshape[data-sid]') as HTMLElement | null
