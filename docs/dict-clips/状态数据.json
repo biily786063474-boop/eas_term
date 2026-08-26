@@ -1,99 +1,109 @@
 {
  "AnimatedContent": {
-  "act": 53.8,
-  "run": 1.44,
+  "act": 52.7,
+  "run": 1.4,
   "dur": 3.64,
-  "peak": 1.257,
+  "peak": 1.216,
   "lead": 0.04,
   "zh": "入场动画",
-  "id": "fx-AnimatedContent"
+  "id": "fx-AnimatedContent",
+  "codec": "av1"
  },
  "ASCIIText": {
-  "act": 29.4,
+  "act": 30.6,
   "run": 0.36,
   "dur": 6.4,
-  "peak": 3.34,
+  "peak": 3.356,
   "lead": 0.04,
   "zh": "ASCII",
-  "id": "fx-ASCIIText"
+  "id": "fx-ASCIIText",
+  "codec": "av1"
  },
  "AnimatedList": {
   "act": 27.2,
   "run": 0.44,
   "dur": 8.96,
-  "peak": 4.304,
+  "peak": 4.313,
   "lead": 0.04,
   "zh": "列表动画",
-  "id": "fx-AnimatedList"
+  "id": "fx-AnimatedList",
+  "codec": "av1"
  },
  "Balatro": {
-  "act": 76.0,
+  "act": 68.6,
   "run": 0.44,
   "dur": 4.84,
-  "peak": 5.464,
+  "peak": 5.035,
   "lead": 0.08,
   "zh": "漩涡",
-  "id": "fx-Balatro"
+  "id": "fx-Balatro",
+  "codec": "av1"
  },
  "Aurora": {
-  "act": 98.1,
-  "run": 6.32,
+  "act": 95.7,
+  "run": 2.16,
   "dur": 6.44,
-  "peak": 0.501,
+  "peak": 0.725,
   "lead": 0.04,
   "zh": "极光",
-  "id": "fx-Aurora"
+  "id": "fx-Aurora",
+  "codec": "av1"
  },
  "Antigravity": {
-  "act": 78.1,
-  "run": 1.52,
+  "act": 56.2,
+  "run": 0.56,
   "dur": 8.04,
-  "peak": 0.424,
+  "peak": 0.403,
   "lead": 0.04,
   "zh": "粒子",
-  "id": "fx-Antigravity"
+  "id": "fx-Antigravity",
+  "codec": "av1"
  },
  "BlobCursor": {
-  "act": 62.4,
+  "act": 63.4,
   "run": 2.12,
   "dur": 4.04,
-  "peak": 2.922,
+  "peak": 2.926,
   "lead": 0.16,
   "zh": "鼠标跟随",
-  "id": "fx-BlobCursor"
+  "id": "fx-BlobCursor",
+  "codec": "av1"
  },
  "BlurText": {
-  "act": 29.9,
-  "run": 2.2,
+  "act": 31.2,
+  "run": 2.16,
   "dur": 8.96,
-  "peak": 1.598,
+  "peak": 1.731,
   "lead": 0.16,
   "zh": "文字浮现",
-  "id": "fx-BlurText"
+  "id": "fx-BlurText",
+  "codec": "av1"
  },
  "Beams": {
-  "act": 75.2,
-  "run": 1.4,
+  "act": 76.6,
+  "run": 1.64,
   "dur": 5.64,
-  "peak": 0.825,
+  "peak": 1.099,
   "lead": 0.16,
   "zh": "光束",
-  "id": "fx-Beams"
+  "id": "fx-Beams",
+  "codec": "av1"
  },
  "Ballpit": {
   "act": 100.0,
   "run": 8.96,
   "dur": 8.96,
-  "peak": 15.21,
+  "peak": 14.943,
   "lead": 0.04,
   "zh": "小球",
-  "id": "fx-Ballpit"
+  "id": "fx-Ballpit",
+  "codec": "av1"
  },
  "BounceCards": {
   "act": 52.9,
   "run": 1.96,
   "dur": 5.44,
-  "peak": 20.345,
+  "peak": 20.29,
   "lead": 0.4,
   "zh": "卡片堆叠",
   "id": "fx-BounceCards",
@@ -101,49 +111,54 @@
   "idle": false,
   "remount": true,
   "hover": true,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "CardNav": {
   "act": 69.8,
   "run": 0.48,
   "dur": 3.84,
-  "peak": 0.51,
+  "peak": 0.514,
   "lead": 0.04,
   "zh": "导航",
-  "id": "fx-CardNav"
+  "id": "fx-CardNav",
+  "codec": "av1"
  },
  "BubbleMenu": {
-  "act": 65.6,
-  "run": 0.44,
+  "act": 66.7,
+  "run": 0.48,
   "dur": 3.84,
-  "peak": 0.372,
+  "peak": 0.377,
   "lead": 0.04,
   "zh": "导航",
-  "id": "fx-BubbleMenu"
+  "id": "fx-BubbleMenu",
+  "codec": "av1"
  },
  "BreathingGrid": {
-  "act": 15.0,
+  "act": 10.0,
   "run": 0.12,
   "dur": 6.4,
-  "peak": 0.497,
+  "peak": 0.579,
   "lead": 0.28,
   "zh": "网格",
-  "id": "fx-BreathingGrid"
+  "id": "fx-BreathingGrid",
+  "codec": "av1"
  },
  "BorderGlow": {
-  "act": 70.8,
-  "run": 2.2,
+  "act": 64.3,
+  "run": 2.4,
   "dur": 7.4,
-  "peak": 0.714,
+  "peak": 0.838,
   "lead": 0.04,
   "zh": "边框发光",
-  "id": "fx-BorderGlow"
+  "id": "fx-BorderGlow",
+  "codec": "av1"
  },
  "Carousel": {
-  "act": 58.2,
-  "run": 0.44,
+  "act": 57.5,
+  "run": 0.4,
   "dur": 5.36,
-  "peak": 0.369,
+  "peak": 0.426,
   "lead": 0.04,
   "zh": "轮播",
   "id": "fx-Carousel",
@@ -151,13 +166,14 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "CardSwap": {
-  "act": 41.5,
+  "act": 42.4,
   "run": 0.44,
   "dur": 8.96,
-  "peak": 1.024,
+  "peak": 1.023,
   "lead": 0.04,
   "zh": "卡片堆叠",
   "id": "fx-CardSwap",
@@ -165,67 +181,74 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "CircularText": {
   "act": 98.3,
   "run": 4.52,
   "dur": 4.6,
-  "peak": 2.671,
+  "peak": 2.677,
   "lead": 0.04,
   "zh": "圆形文字",
-  "id": "fx-CircularText"
+  "id": "fx-CircularText",
+  "codec": "av1"
  },
  "ClickSpark": {
   "act": 62.6,
   "run": 0.44,
   "dur": 6.2,
-  "peak": 1.612,
+  "peak": 1.624,
   "lead": 0.16,
   "zh": "点击特效",
-  "id": "fx-ClickSpark"
+  "id": "fx-ClickSpark",
+  "codec": "av1"
  },
  "ColorBends": {
-  "act": 91.3,
-  "run": 1.36,
+  "act": 60.0,
+  "run": 1.08,
   "dur": 4.6,
-  "peak": 3.856,
+  "peak": 3.753,
   "lead": 0.04,
   "zh": "彩虹",
-  "id": "fx-ColorBends"
+  "id": "fx-ColorBends",
+  "codec": "av1"
  },
  "CircularGallery": {
-  "act": 61.4,
+  "act": 61.9,
   "run": 1.16,
   "dur": 8.92,
-  "peak": 55.249,
+  "peak": 55.172,
   "lead": 0.52,
   "zh": "图片画廊",
-  "id": "fx-CircularGallery"
+  "id": "fx-CircularGallery",
+  "codec": "av1"
  },
  "ChromaGrid": {
-  "act": 68.8,
+  "act": 68.4,
   "run": 1.4,
   "dur": 8.6,
-  "peak": 1.974,
+  "peak": 1.978,
   "lead": 0.72,
   "zh": "网格",
-  "id": "fx-ChromaGrid"
+  "id": "fx-ChromaGrid",
+  "codec": "av1"
  },
  "Crosshair": {
   "act": 82.7,
   "run": 2.24,
   "dur": 4.16,
-  "peak": 2.568,
+  "peak": 2.678,
   "lead": 0.04,
   "zh": "十字准星",
-  "id": "fx-Crosshair"
+  "id": "fx-Crosshair",
+  "codec": "av1"
  },
  "Counter": {
-  "act": 5.4,
+  "act": 7.1,
   "run": 0.28,
   "dur": 8.96,
-  "peak": 1.089,
+  "peak": 1.09,
   "lead": 0.04,
   "zh": "数字滚动",
   "id": "fx-Counter",
@@ -233,13 +256,14 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "CountUp": {
   "act": 90.2,
   "run": 5.64,
   "dur": 8.96,
-  "peak": 26.067,
+  "peak": 26.044,
   "lead": 0.04,
   "zh": "数字滚动",
   "id": "fx-CountUp",
@@ -247,166 +271,184 @@
   "idle": true,
   "remount": true,
   "hover": true,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "Cubes": {
-  "act": 65.6,
-  "run": 1.24,
+  "act": 64.7,
+  "run": 1.76,
   "dur": 8.96,
-  "peak": 10.347,
+  "peak": 10.258,
   "lead": 0.24,
   "zh": "立方体",
-  "id": "fx-Cubes"
+  "id": "fx-Cubes",
+  "codec": "av1"
  },
  "CurvedLoop": {
   "act": 97.2,
   "run": 2.88,
   "dur": 5.76,
-  "peak": 6.75,
+  "peak": 6.693,
   "lead": 0.04,
   "zh": "弧形跑马灯",
-  "id": "fx-CurvedLoop"
+  "id": "fx-CurvedLoop",
+  "codec": "av1"
  },
  "DarkVeil": {
-  "act": 61.5,
-  "run": 1.08,
+  "act": 40.4,
+  "run": 0.28,
   "dur": 6.44,
-  "peak": 0.424,
+  "peak": 0.457,
   "lead": 0.04,
   "zh": "暗色背景",
-  "id": "fx-DarkVeil"
+  "id": "fx-DarkVeil",
+  "codec": "av1"
  },
  "CursorGrid": {
-  "act": 44.2,
+  "act": 39.7,
   "run": 0.36,
   "dur": 8.96,
-  "peak": 0.534,
+  "peak": 0.701,
   "lead": 0.04,
   "zh": "网格背景",
-  "id": "fx-CursorGrid"
+  "id": "fx-CursorGrid",
+  "codec": "av1"
  },
  "CurvedInput": {
-  "act": 37.5,
-  "run": 0.4,
+  "act": 37.9,
+  "run": 0.36,
   "dur": 8.96,
-  "peak": 2.602,
+  "peak": 2.564,
   "lead": 0.04,
   "zh": "输入框",
-  "id": "fx-CurvedInput"
+  "id": "fx-CurvedInput",
+  "codec": "av1"
  },
  "Dither": {
-  "act": 0.0,
-  "run": 0.0,
+  "act": 1.2,
+  "run": 0.04,
   "dur": 3.36,
-  "peak": 0.001,
+  "peak": 0.881,
   "lead": 0.0,
   "zh": "抖动",
-  "id": "fx-Dither"
+  "id": "fx-Dither",
+  "codec": "av1"
  },
  "DecryptedText": {
-  "act": 52.8,
+  "act": 53.8,
   "run": 0.4,
   "dur": 7.88,
-  "peak": 1.721,
+  "peak": 1.711,
   "lead": 0.04,
   "zh": "解密文字",
-  "id": "fx-DecryptedText"
+  "id": "fx-DecryptedText",
+  "codec": "av1"
  },
  "DecayCard": {
-  "act": 71.7,
-  "run": 4.56,
+  "act": 65.6,
+  "run": 2.6,
   "dur": 7.2,
-  "peak": 2.116,
+  "peak": 2.039,
   "lead": 0.04,
   "zh": "图片扭曲",
-  "id": "fx-DecayCard"
+  "id": "fx-DecayCard",
+  "codec": "av1"
  },
  "Dock": {
-  "act": 46.9,
+  "act": 46.0,
   "run": 1.8,
   "dur": 8.96,
-  "peak": 4.053,
+  "peak": 4.03,
   "lead": 0.04,
   "zh": "程序坞",
-  "id": "fx-Dock"
+  "id": "fx-Dock",
+  "codec": "av1"
  },
  "DotField": {
-  "act": 66.1,
-  "run": 3.04,
+  "act": 64.5,
+  "run": 3.0,
   "dur": 4.84,
-  "peak": 2.309,
+  "peak": 2.29,
   "lead": 0.04,
   "zh": "点阵",
-  "id": "fx-DotField"
+  "id": "fx-DotField",
+  "codec": "av1"
  },
  "ElasticSlider": {
-  "act": 33.0,
-  "run": 0.64,
+  "act": 32.6,
+  "run": 0.52,
   "dur": 8.96,
-  "peak": 5.206,
+  "peak": 5.195,
   "lead": 0.04,
   "zh": "滑块",
-  "id": "fx-ElasticSlider"
+  "id": "fx-ElasticSlider",
+  "codec": "av1"
  },
  "EvilEye": {
-  "act": 99.2,
-  "run": 4.8,
+  "act": 98.3,
+  "run": 4.76,
   "dur": 4.84,
-  "peak": 5.588,
+  "peak": 6.058,
   "lead": 0.04,
   "zh": "眼睛",
-  "id": "fx-EvilEye"
+  "id": "fx-EvilEye",
+  "codec": "av1"
  },
  "DotGrid": {
-  "act": 70.1,
+  "act": 69.2,
   "run": 4.68,
   "dur": 8.96,
-  "peak": 1.616,
+  "peak": 1.582,
   "lead": 0.04,
   "zh": "点阵",
-  "id": "fx-DotGrid"
+  "id": "fx-DotGrid",
+  "codec": "av1"
  },
  "DomeGallery": {
-  "act": 42.0,
+  "act": 42.4,
   "run": 0.44,
   "dur": 8.96,
-  "peak": 62.745,
+  "peak": 62.713,
   "lead": 0.04,
   "zh": "图片墙",
-  "id": "fx-DomeGallery"
+  "id": "fx-DomeGallery",
+  "codec": "av1"
  },
  "ElectricBorder": {
-  "act": 99.4,
-  "run": 6.4,
+  "act": 97.5,
+  "run": 3.92,
   "dur": 6.44,
-  "peak": 0.355,
+  "peak": 0.409,
   "lead": 0.04,
   "zh": "发光边框",
-  "id": "fx-ElectricBorder"
+  "id": "fx-ElectricBorder",
+  "codec": "av1"
  },
  "FaultyTerminal": {
   "act": 98.0,
   "run": 3.88,
   "dur": 3.96,
-  "peak": 10.022,
+  "peak": 9.734,
   "lead": 0.04,
   "zh": "终端",
-  "id": "fx-FaultyTerminal"
+  "id": "fx-FaultyTerminal",
+  "codec": "av1"
  },
  "FallingText": {
-  "act": 45.1,
+  "act": 42.0,
   "run": 1.92,
   "dur": 8.96,
-  "peak": 3.517,
+  "peak": 3.506,
   "lead": 0.04,
   "zh": "文字掉落",
-  "id": "fx-FallingText"
+  "id": "fx-FallingText",
+  "codec": "av1"
  },
  "FadeContent": {
-  "act": 18.8,
-  "run": 0.96,
+  "act": 24.1,
+  "run": 0.32,
   "dur": 8.96,
-  "peak": 2.079,
+  "peak": 1.978,
   "lead": 0.04,
   "zh": "淡入",
   "id": "fx-FadeContent",
@@ -414,157 +456,174 @@
   "idle": false,
   "remount": true,
   "hover": true,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "Ferrofluid": {
   "act": 98.4,
   "run": 4.8,
   "dur": 4.88,
-  "peak": 2.037,
+  "peak": 1.944,
   "lead": 0.04,
   "zh": "磁流体",
-  "id": "fx-Ferrofluid"
+  "id": "fx-Ferrofluid",
+  "codec": "av1"
  },
  "FlowingMenu": {
   "act": 28.0,
   "run": 0.88,
   "dur": 5.0,
-  "peak": 29.41,
+  "peak": 29.406,
   "lead": 0.6,
   "zh": "菜单",
-  "id": "fx-FlowingMenu"
+  "id": "fx-FlowingMenu",
+  "codec": "av1"
  },
  "FluidGlass": {
   "act": 3.3,
   "run": 0.08,
   "dur": 3.64,
-  "peak": 30.215,
+  "peak": 30.263,
   "lead": 0.28,
   "zh": "玻璃",
-  "id": "fx-FluidGlass"
+  "id": "fx-FluidGlass",
+  "codec": "av1"
  },
  "FluidWarp": {
   "act": 47.1,
   "run": 0.48,
   "dur": 5.6,
-  "peak": 0.237,
+  "peak": 0.238,
   "lead": 0.04,
   "zh": "流体扭曲",
-  "id": "fx-FluidWarp"
+  "id": "fx-FluidWarp",
+  "codec": "av1"
  },
  "FloatingLines": {
-  "act": 76.1,
-  "run": 0.36,
+  "act": 73.9,
+  "run": 0.24,
   "dur": 5.52,
-  "peak": 1.819,
+  "peak": 1.804,
   "lead": 0.04,
   "zh": "光线",
-  "id": "fx-FloatingLines"
+  "id": "fx-FloatingLines",
+  "codec": "av1"
  },
  "Folder": {
   "act": 69.0,
   "run": 1.08,
   "dur": 5.04,
-  "peak": 2.921,
+  "peak": 2.917,
   "lead": 0.28,
   "zh": "文件夹",
-  "id": "fx-Folder"
+  "id": "fx-Folder",
+  "codec": "av1"
  },
  "FlyingPosters": {
   "act": 27.2,
   "run": 0.24,
   "dur": 8.96,
-  "peak": 0.494,
+  "peak": 0.493,
   "lead": 0.04,
   "zh": "图片流",
-  "id": "fx-FlyingPosters"
+  "id": "fx-FlyingPosters",
+  "codec": "av1"
  },
  "Galaxy": {
-  "act": 98.0,
+  "act": 99.0,
   "run": 3.92,
   "dur": 4.0,
-  "peak": 3.46,
+  "peak": 3.206,
   "lead": 0.04,
   "zh": "星空",
-  "id": "fx-Galaxy"
+  "id": "fx-Galaxy",
+  "codec": "av1"
  },
  "FuzzyText": {
-  "act": 91.5,
+  "act": 91.0,
   "run": 2.32,
   "dur": 7.96,
-  "peak": 12.704,
+  "peak": 12.449,
   "lead": 0.04,
   "zh": "毛刺文字",
-  "id": "fx-FuzzyText"
+  "id": "fx-FuzzyText",
+  "codec": "av1"
  },
  "GhostCursor": {
-  "act": 76.8,
+  "act": 74.6,
   "run": 0.44,
   "dur": 8.96,
-  "peak": 3.893,
+  "peak": 3.938,
   "lead": 0.56,
   "zh": "烟雾拖尾",
-  "id": "fx-GhostCursor"
+  "id": "fx-GhostCursor",
+  "codec": "av1"
  },
  "GlassSurface": {
   "act": 1.7,
   "run": 0.04,
   "dur": 4.68,
-  "peak": 0.326,
+  "peak": 0.322,
   "lead": 0.04,
   "zh": "毛玻璃",
-  "id": "fx-GlassSurface"
+  "id": "fx-GlassSurface",
+  "codec": "av1"
  },
  "GooeyNav": {
   "act": 72.9,
   "run": 0.48,
   "dur": 3.84,
-  "peak": 1.209,
+  "peak": 1.204,
   "lead": 0.04,
   "zh": "导航",
-  "id": "fx-GooeyNav"
+  "id": "fx-GooeyNav",
+  "codec": "av1"
  },
  "GlareHover": {
   "act": 5.5,
   "run": 0.4,
   "dur": 7.24,
-  "peak": 6.31,
+  "peak": 6.356,
   "lead": 0.56,
   "zh": "扫光",
-  "id": "fx-GlareHover"
+  "id": "fx-GlareHover",
+  "codec": "av1"
  },
  "GlitchText": {
-  "act": 30.4,
+  "act": 31.7,
   "run": 0.28,
   "dur": 8.96,
-  "peak": 0.876,
+  "peak": 1.222,
   "lead": 0.04,
   "zh": "故障文字",
-  "id": "fx-GlitchText"
+  "id": "fx-GlitchText",
+  "codec": "av1"
  },
  "GradientBlinds": {
-  "act": 99.2,
-  "run": 4.8,
+  "act": 45.5,
+  "run": 2.04,
   "dur": 4.84,
-  "peak": 10.393,
+  "peak": 10.401,
   "lead": 0.04,
   "zh": "百叶窗",
-  "id": "fx-GradientBlinds"
+  "id": "fx-GradientBlinds",
+  "codec": "av1"
  },
  "GradientText": {
-  "act": 65.6,
-  "run": 0.84,
+  "act": 53.0,
+  "run": 0.48,
   "dur": 7.32,
-  "peak": 1.929,
+  "peak": 2.521,
   "lead": 0.04,
   "zh": "渐变文字",
-  "id": "fx-GradientText"
+  "id": "fx-GradientText",
+  "codec": "av1"
  },
  "GlassIcons": {
-  "act": 36.2,
-  "run": 0.84,
+  "act": 35.3,
+  "run": 0.8,
   "dur": 8.96,
-  "peak": 5.773,
+  "peak": 5.786,
   "lead": 0.04,
   "zh": "图标组",
   "id": "fx-GlassIcons",
@@ -572,103 +631,114 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "GradualBlur": {
   "act": 25.9,
   "run": 0.44,
   "dur": 8.96,
-  "peak": 0.657,
+  "peak": 0.641,
   "lead": 0.04,
   "zh": "渐进模糊",
-  "id": "fx-GradualBlur"
+  "id": "fx-GradualBlur",
+  "codec": "av1"
  },
  "Grainient": {
-  "act": 55.6,
-  "run": 0.52,
+  "act": 43.4,
+  "run": 0.28,
   "dur": 8.2,
-  "peak": 2.151,
+  "peak": 2.696,
   "lead": 0.08,
   "zh": "渐变",
-  "id": "fx-Grainient"
+  "id": "fx-Grainient",
+  "codec": "av1"
  },
  "GridDistortion": {
   "act": 32.5,
   "run": 0.76,
   "dur": 4.8,
-  "peak": 2.863,
+  "peak": 2.851,
   "lead": 0.2,
   "zh": "图片扭曲",
-  "id": "fx-GridDistortion"
+  "id": "fx-GridDistortion",
+  "codec": "av1"
  },
  "Hyperspeed": {
   "act": 97.6,
   "run": 3.28,
   "dur": 3.36,
-  "peak": 7.629,
+  "peak": 7.483,
   "lead": 0.04,
   "zh": "高速",
-  "id": "fx-Hyperspeed"
+  "id": "fx-Hyperspeed",
+  "codec": "av1"
  },
  "InfiniteMenu": {
   "act": 39.1,
   "run": 0.36,
   "dur": 1.84,
-  "peak": 29.427,
+  "peak": 29.462,
   "lead": 0.28,
   "zh": "球体菜单",
-  "id": "fx-InfiniteMenu"
+  "id": "fx-InfiniteMenu",
+  "codec": "av1"
  },
  "GridScan": {
-  "act": 78.1,
-  "run": 2.44,
+  "act": 75.9,
+  "run": 2.36,
   "dur": 8.96,
-  "peak": 7.929,
+  "peak": 7.441,
   "lead": 0.32,
   "zh": "网格",
-  "id": "fx-GridScan"
+  "id": "fx-GridScan",
+  "codec": "av1"
  },
  "Iridescence": {
-  "act": 76.7,
+  "act": 67.5,
   "run": 1.92,
   "dur": 4.8,
-  "peak": 5.301,
+  "peak": 5.146,
   "lead": 0.04,
   "zh": "渐变",
-  "id": "fx-Iridescence"
+  "id": "fx-Iridescence",
+  "codec": "av1"
  },
  "GridMotion": {
-  "act": 70.1,
+  "act": 69.6,
   "run": 2.48,
   "dur": 8.96,
-  "peak": 1.392,
+  "peak": 1.413,
   "lead": 0.04,
   "zh": "网格",
-  "id": "fx-GridMotion"
+  "id": "fx-GridMotion",
+  "codec": "av1"
  },
  "ImageTrail": {
   "act": 13.8,
   "run": 0.2,
   "dur": 8.96,
-  "peak": 45.491,
+  "peak": 45.498,
   "lead": 0.32,
   "zh": "图片拖尾",
-  "id": "fx-ImageTrail"
+  "id": "fx-ImageTrail",
+  "codec": "av1"
  },
  "LetterGlitch": {
-  "act": 65.1,
-  "run": 0.36,
+  "act": 60.4,
+  "run": 0.16,
   "dur": 4.24,
-  "peak": 1.899,
+  "peak": 3.636,
   "lead": 0.12,
   "zh": "代码雨",
-  "id": "fx-LetterGlitch"
+  "id": "fx-LetterGlitch",
+  "codec": "av1"
  },
  "Lanyard": {
-  "act": 38.8,
-  "run": 1.44,
+  "act": 42.4,
+  "run": 1.52,
   "dur": 8.96,
-  "peak": 13.676,
+  "peak": 13.949,
   "lead": 0.16,
   "zh": "挂绳",
   "id": "fx-Lanyard",
@@ -676,364 +746,404 @@
   "idle": true,
   "remount": true,
   "hover": true,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "LaserFlow": {
-  "act": 59.4,
-  "run": 0.6,
+  "act": 47.8,
+  "run": 0.4,
   "dur": 8.96,
-  "peak": 0.65,
+  "peak": 0.625,
   "lead": 0.04,
   "zh": "激光",
-  "id": "fx-LaserFlow"
+  "id": "fx-LaserFlow",
+  "codec": "av1"
  },
  "LightRays": {
   "act": 1.9,
   "run": 0.08,
   "dur": 4.16,
-  "peak": 10.464,
+  "peak": 10.296,
   "lead": 0.28,
   "zh": "光束",
-  "id": "fx-LightRays"
+  "id": "fx-LightRays",
+  "codec": "av1"
  },
  "Lightfall": {
   "act": 98.0,
   "run": 3.88,
   "dur": 3.96,
-  "peak": 2.261,
+  "peak": 3.703,
   "lead": 0.04,
   "zh": "流星雨",
-  "id": "fx-Lightfall"
+  "id": "fx-Lightfall",
+  "codec": "av1"
  },
  "LightPillar": {
-  "act": 61.4,
+  "act": 49.5,
   "run": 0.28,
   "dur": 8.4,
-  "peak": 0.861,
+  "peak": 0.988,
   "lead": 0.12,
   "zh": "光柱",
-  "id": "fx-LightPillar"
+  "id": "fx-LightPillar",
+  "codec": "av1"
  },
  "Lightning": {
   "act": 98.8,
   "run": 6.36,
   "dur": 6.44,
-  "peak": 7.345,
+  "peak": 7.258,
   "lead": 0.04,
   "zh": "闪电",
-  "id": "fx-Lightning"
+  "id": "fx-Lightning",
+  "codec": "av1"
  },
  "LiquidChrome": {
   "act": 34.1,
   "run": 0.16,
   "dur": 3.28,
-  "peak": 33.352,
+  "peak": 33.197,
   "lead": 0.24,
   "zh": "液态金属",
-  "id": "fx-LiquidChrome"
+  "id": "fx-LiquidChrome",
+  "codec": "av1"
  },
  "LineWaves": {
   "act": 98.3,
   "run": 4.72,
   "dur": 4.8,
-  "peak": 17.217,
+  "peak": 16.948,
   "lead": 0.04,
   "zh": "线条",
-  "id": "fx-LineWaves"
+  "id": "fx-LineWaves",
+  "codec": "av1"
  },
  "LineSidebar": {
-  "act": 74.2,
+  "act": 75.5,
   "run": 2.48,
   "dur": 6.2,
-  "peak": 1.037,
+  "peak": 0.994,
   "lead": 0.04,
   "zh": "侧边栏",
-  "id": "fx-LineSidebar"
+  "id": "fx-LineSidebar",
+  "codec": "av1"
  },
  "LiquidEther": {
   "act": 46.4,
-  "run": 2.0,
+  "run": 2.16,
   "dur": 8.28,
-  "peak": 5.865,
+  "peak": 5.863,
   "lead": 0.28,
   "zh": "流体",
-  "id": "fx-LiquidEther"
+  "id": "fx-LiquidEther",
+  "codec": "av1"
  },
  "LogoLoop": {
   "act": 94.8,
   "run": 4.6,
   "dur": 8.48,
-  "peak": 3.736,
+  "peak": 3.747,
   "lead": 0.04,
   "zh": "跑马灯",
-  "id": "fx-LogoLoop"
+  "id": "fx-LogoLoop",
+  "codec": "av1"
  },
  "MagnetLines": {
-  "act": 32.2,
-  "run": 0.56,
+  "act": 30.8,
+  "run": 0.28,
   "dur": 5.84,
-  "peak": 3.903,
+  "peak": 3.803,
   "lead": 0.04,
   "zh": "磁场",
-  "id": "fx-MagnetLines"
+  "id": "fx-MagnetLines",
+  "codec": "av1"
  },
  "MagicRings": {
-  "act": 100.0,
-  "run": 8.96,
+  "act": 89.7,
+  "run": 2.04,
   "dur": 8.96,
-  "peak": 2.057,
+  "peak": 1.898,
   "lead": 0.04,
   "zh": "光弧",
-  "id": "fx-MagicRings"
+  "id": "fx-MagicRings",
+  "codec": "av1"
  },
  "Magnet": {
   "act": 68.0,
   "run": 4.88,
   "dur": 7.24,
-  "peak": 6.442,
+  "peak": 6.364,
   "lead": 0.04,
   "zh": "磁吸",
-  "id": "fx-Magnet"
+  "id": "fx-Magnet",
+  "codec": "av1"
  },
  "MagicBento": {
-  "act": 45.5,
-  "run": 0.44,
+  "act": 44.6,
+  "run": 0.52,
   "dur": 8.96,
-  "peak": 1.791,
+  "peak": 1.816,
   "lead": 0.2,
   "zh": "宫格",
-  "id": "fx-MagicBento"
+  "id": "fx-MagicBento",
+  "codec": "av1"
  },
  "MetaBalls": {
-  "act": 53.2,
+  "act": 50.6,
   "run": 1.12,
   "dur": 6.24,
   "peak": 3.828,
   "lead": 0.04,
   "zh": "融球",
-  "id": "fx-MetaBalls"
+  "id": "fx-MetaBalls",
+  "codec": "av1"
  },
  "Noise": {
-  "act": 98.7,
-  "run": 2.96,
+  "act": 89.5,
+  "run": 1.48,
   "dur": 3.04,
-  "peak": 2.812,
+  "peak": 0.49,
   "lead": 0.04,
   "zh": "噪点",
-  "id": "fx-Noise"
+  "id": "fx-Noise",
+  "codec": "av1"
  },
  "MetallicPaint": {
   "act": 98.5,
   "run": 5.24,
   "dur": 5.32,
-  "peak": 1.515,
+  "peak": 1.438,
   "lead": 0.04,
   "zh": "液态金属",
-  "id": "fx-MetallicPaint"
+  "id": "fx-MetallicPaint",
+  "codec": "av1"
  },
  "Masonry": {
   "act": 12.6,
   "run": 1.04,
   "dur": 8.6,
-  "peak": 13.051,
+  "peak": 13.084,
   "lead": 0.24,
   "zh": "瀑布流",
-  "id": "fx-Masonry"
+  "id": "fx-Masonry",
+  "codec": "av1"
  },
  "OptionWheel": {
   "act": 67.4,
   "run": 0.44,
   "dur": 3.8,
-  "peak": 0.404,
+  "peak": 0.403,
   "lead": 0.04,
   "zh": "滚轮选择",
-  "id": "fx-OptionWheel"
+  "id": "fx-OptionWheel",
+  "codec": "av1"
  },
  "ModelViewer": {
-  "act": 79.0,
-  "run": 0.52,
+  "act": 76.3,
+  "run": 0.48,
   "dur": 8.96,
-  "peak": 1.832,
+  "peak": 1.87,
   "lead": 0.08,
   "zh": "3D模型",
-  "id": "fx-ModelViewer"
+  "id": "fx-ModelViewer",
+  "codec": "av1"
  },
  "Orb": {
-  "act": 37.2,
+  "act": 36.4,
   "run": 1.12,
   "dur": 4.84,
-  "peak": 5.096,
+  "peak": 5.085,
   "lead": 0.36,
   "zh": "光球",
-  "id": "fx-Orb"
+  "id": "fx-Orb",
+  "codec": "av1"
  },
  "OrbitImages": {
   "act": 98.3,
   "run": 4.52,
   "dur": 4.6,
-  "peak": 1.213,
+  "peak": 1.225,
   "lead": 0.04,
   "zh": "轨道",
-  "id": "fx-OrbitImages"
+  "id": "fx-OrbitImages",
+  "codec": "av1"
  },
  "PillNav": {
   "act": 64.2,
   "run": 0.48,
   "dur": 5.36,
-  "peak": 0.882,
+  "peak": 0.92,
   "lead": 0.04,
   "zh": "导航栏",
-  "id": "fx-PillNav"
+  "id": "fx-PillNav",
+  "codec": "av1"
  },
  "Particles": {
-  "act": 56.2,
-  "run": 0.28,
+  "act": 36.4,
+  "run": 0.36,
   "dur": 4.84,
-  "peak": 0.426,
+  "peak": 0.396,
   "lead": 0.04,
   "zh": "粒子",
-  "id": "fx-Particles"
+  "id": "fx-Particles",
+  "codec": "av1"
  },
  "PixelBlast": {
-  "act": 32.5,
+  "act": 34.5,
   "run": 0.24,
   "dur": 7.76,
-  "peak": 1.034,
+  "peak": 0.933,
   "lead": 0.08,
   "zh": "像素",
-  "id": "fx-PixelBlast"
+  "id": "fx-PixelBlast",
+  "codec": "av1"
  },
  "PixelCard": {
-  "act": 80.6,
-  "run": 1.2,
+  "act": 73.1,
+  "run": 0.88,
   "dur": 5.36,
-  "peak": 2.442,
+  "peak": 2.37,
   "lead": 0.04,
   "zh": "像素",
-  "id": "fx-PixelCard"
+  "id": "fx-PixelCard",
+  "codec": "av1"
  },
  "PixelSnow": {
   "act": 94.4,
   "run": 3.28,
   "dur": 5.72,
-  "peak": 1.795,
+  "peak": 1.85,
   "lead": 0.04,
   "zh": "雪",
-  "id": "fx-PixelSnow"
+  "id": "fx-PixelSnow",
+  "codec": "av1"
  },
  "PixelTrail": {
   "act": 45.1,
   "run": 1.6,
   "dur": 8.96,
-  "peak": 0.573,
+  "peak": 0.579,
   "lead": 0.04,
   "zh": "鼠标拖尾",
-  "id": "fx-PixelTrail"
+  "id": "fx-PixelTrail",
+  "codec": "av1"
  },
  "PixelTransition": {
   "act": 35.3,
   "run": 1.52,
   "dur": 8.96,
-  "peak": 2.453,
+  "peak": 2.465,
   "lead": 0.04,
   "zh": "图片切换",
-  "id": "fx-PixelTransition"
+  "id": "fx-PixelTransition",
+  "codec": "av1"
  },
  "PlasmaWave": {
-  "act": 99.4,
-  "run": 6.4,
+  "act": 98.8,
+  "run": 6.36,
   "dur": 6.44,
-  "peak": 0.552,
+  "peak": 0.645,
   "lead": 0.04,
   "zh": "霓虹",
-  "id": "fx-PlasmaWave"
+  "id": "fx-PlasmaWave",
+  "codec": "av1"
  },
  "Plasma": {
-  "act": 99.5,
-  "run": 7.52,
+  "act": 98.9,
+  "run": 7.48,
   "dur": 7.56,
-  "peak": 0.92,
+  "peak": 0.889,
   "lead": 0.04,
   "zh": "烟雾",
-  "id": "fx-Plasma"
+  "id": "fx-Plasma",
+  "codec": "av1"
  },
  "Prism": {
   "act": 99.1,
   "run": 8.4,
   "dur": 8.48,
-  "peak": 2.2,
+  "peak": 2.353,
   "lead": 0.04,
   "zh": "光束",
-  "id": "fx-Prism"
+  "id": "fx-Prism",
+  "codec": "av1"
  },
  "Radar": {
-  "act": 99.2,
+  "act": 98.3,
   "run": 4.72,
   "dur": 4.8,
-  "peak": 2.305,
+  "peak": 2.24,
   "lead": 0.04,
   "zh": "雷达",
-  "id": "fx-Radar"
+  "id": "fx-Radar",
+  "codec": "av1"
  },
  "ReflectiveCard": {
-  "act": 1.7,
+  "act": 3.4,
   "run": 0.04,
   "dur": 4.64,
-  "peak": 0.232,
+  "peak": 0.336,
   "lead": 0.04,
   "zh": "液态金属",
-  "id": "fx-ReflectiveCard"
+  "id": "fx-ReflectiveCard",
+  "codec": "av1"
  },
  "ProfileCard": {
   "act": 4.6,
   "run": 0.16,
   "dur": 6.96,
-  "peak": 26.157,
+  "peak": 26.135,
   "lead": 0.32,
   "zh": "名片",
-  "id": "fx-ProfileCard"
+  "id": "fx-ProfileCard",
+  "codec": "av1"
  },
  "PrismaticBurst": {
   "act": 64.7,
   "run": 0.12,
   "dur": 8.96,
-  "peak": 13.196,
+  "peak": 13.3,
   "lead": 0.04,
   "zh": "放射",
-  "id": "fx-PrismaticBurst"
+  "id": "fx-PrismaticBurst",
+  "codec": "av1"
  },
  "Ribbons": {
-  "act": 62.5,
+  "act": 62.9,
   "run": 2.68,
   "dur": 8.96,
-  "peak": 1.184,
+  "peak": 1.163,
   "lead": 0.04,
   "zh": "鼠标拖尾",
-  "id": "fx-Ribbons"
+  "id": "fx-Ribbons",
+  "codec": "av1"
  },
  "ScrambledText": {
   "act": 24.4,
   "run": 0.48,
   "dur": 3.6,
-  "peak": 5.484,
+  "peak": 5.459,
   "lead": 0.32,
   "zh": "鼠标乱码",
-  "id": "fx-ScrambledText"
+  "id": "fx-ScrambledText",
+  "codec": "av1"
  },
  "RingCarousel": {
   "act": 83.1,
   "run": 1.36,
   "dur": 3.08,
-  "peak": 39.547,
+  "peak": 39.526,
   "lead": 0.28,
   "zh": "3D轮播",
-  "id": "fx-RingCarousel"
+  "id": "fx-RingCarousel",
+  "codec": "av1"
  },
  "RotatingText": {
   "act": 25.9,
   "run": 0.4,
   "dur": 4.64,
-  "peak": 23.388,
+  "peak": 23.285,
   "lead": 0.04,
   "zh": "文字轮播",
   "id": "fx-RotatingText",
@@ -1041,22 +1151,24 @@
   "idle": false,
   "remount": false,
   "hover": true,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "RippleGrid": {
-  "act": 95.0,
-  "run": 2.0,
+  "act": 89.2,
+  "run": 1.76,
   "dur": 4.8,
-  "peak": 0.922,
+  "peak": 0.839,
   "lead": 0.04,
   "zh": "网格背景",
-  "id": "fx-RippleGrid"
+  "id": "fx-RippleGrid",
+  "codec": "av1"
  },
  "ScrollFloat": {
-  "act": 4.9,
+  "act": 6.7,
   "run": 0.24,
   "dur": 8.96,
-  "peak": 0.752,
+  "peak": 0.759,
   "lead": 0.04,
   "zh": "滚动浮现",
   "id": "fx-ScrollFloat",
@@ -1064,13 +1176,14 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "ScrollReveal": {
-  "act": 4.9,
+  "act": 6.7,
   "run": 0.2,
   "dur": 8.96,
-  "peak": 0.752,
+  "peak": 0.759,
   "lead": 0.04,
   "zh": "滚动显现",
   "id": "fx-ScrollReveal",
@@ -1078,31 +1191,34 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "ScrollVelocity": {
   "act": 98.3,
   "run": 4.76,
   "dur": 4.84,
-  "peak": 10.979,
+  "peak": 10.978,
   "lead": 0.04,
   "zh": "跑马灯",
-  "id": "fx-ScrollVelocity"
+  "id": "fx-ScrollVelocity",
+  "codec": "av1"
  },
  "ScrollScenes": {
   "act": 13.7,
   "run": 0.12,
   "dur": 4.68,
-  "peak": 36.885,
+  "peak": 36.91,
   "lead": 0.32,
   "zh": "滚动切换",
-  "id": "fx-ScrollScenes"
+  "id": "fx-ScrollScenes",
+  "codec": "av1"
  },
  "ScrollStack": {
   "act": 78.7,
   "run": 2.16,
   "dur": 5.08,
-  "peak": 4.502,
+  "peak": 4.507,
   "lead": 0.8,
   "zh": "滚动堆叠",
   "id": "fx-ScrollStack",
@@ -1110,40 +1226,44 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "ShinyText": {
-  "act": 52.2,
-  "run": 1.52,
+  "act": 42.9,
+  "run": 0.6,
   "dur": 7.36,
-  "peak": 2.21,
+  "peak": 2.207,
   "lead": 0.04,
   "zh": "流光",
-  "id": "fx-ShinyText"
+  "id": "fx-ShinyText",
+  "codec": "av1"
  },
  "ShapeGrid": {
   "act": 98.4,
   "run": 4.8,
   "dur": 4.88,
-  "peak": 2.737,
+  "peak": 2.541,
   "lead": 0.04,
   "zh": "网格",
-  "id": "fx-ShapeGrid"
+  "id": "fx-ShapeGrid",
+  "codec": "av1"
  },
  "ShapeBlur": {
   "act": 52.2,
   "run": 1.16,
   "dur": 6.28,
-  "peak": 1.868,
+  "peak": 1.837,
   "lead": 0.04,
   "zh": "光晕",
-  "id": "fx-ShapeBlur"
+  "id": "fx-ShapeBlur",
+  "codec": "av1"
  },
  "SnapSections": {
   "act": 66.7,
   "run": 1.84,
   "dur": 3.36,
-  "peak": 16.569,
+  "peak": 16.551,
   "lead": 0.28,
   "zh": "滚动吸附",
   "id": "fx-SnapSections",
@@ -1151,76 +1271,84 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "Shuffle": {
   "act": 57.6,
   "run": 2.28,
   "dur": 8.96,
-  "peak": 2.021,
+  "peak": 2.016,
   "lead": 0.32,
   "zh": "乱码",
-  "id": "fx-Shuffle"
+  "id": "fx-Shuffle",
+  "codec": "av1"
  },
  "SoftAurora": {
-  "act": 48.1,
+  "act": 47.3,
   "run": 1.16,
   "dur": 5.24,
-  "peak": 2.833,
+  "peak": 2.804,
   "lead": 0.28,
   "zh": "极光",
-  "id": "fx-SoftAurora"
+  "id": "fx-SoftAurora",
+  "codec": "av1"
  },
  "SideRays": {
-  "act": 52.8,
+  "act": 30.6,
   "run": 0.2,
   "dur": 7.72,
-  "peak": 0.393,
+  "peak": 0.625,
   "lead": 0.04,
   "zh": "光束",
-  "id": "fx-SideRays"
+  "id": "fx-SideRays",
+  "codec": "av1"
  },
  "Silk": {
-  "act": 57.1,
-  "run": 0.2,
+  "act": 55.3,
+  "run": 0.24,
   "dur": 6.44,
-  "peak": 2.471,
+  "peak": 2.915,
   "lead": 0.12,
   "zh": "丝绸",
-  "id": "fx-Silk"
+  "id": "fx-Silk",
+  "codec": "av1"
  },
  "SpecularButton": {
-  "act": 46.0,
-  "run": 0.56,
+  "act": 45.1,
+  "run": 0.48,
   "dur": 8.96,
-  "peak": 2.303,
+  "peak": 2.288,
   "lead": 0.04,
   "zh": "按钮",
-  "id": "fx-SpecularButton"
+  "id": "fx-SpecularButton",
+  "codec": "av1"
  },
  "SplashCursor": {
-  "act": 61.5,
-  "run": 0.36,
+  "act": 59.4,
+  "run": 0.24,
   "dur": 5.72,
-  "peak": 1.497,
+  "peak": 1.476,
   "lead": 0.6,
   "zh": "流体",
-  "id": "fx-SplashCursor"
+  "id": "fx-SplashCursor",
+  "codec": "av1"
  },
  "SplitText": {
-  "act": 28.1,
+  "act": 28.6,
   "run": 1.92,
   "dur": 8.96,
-  "peak": 1.796,
+  "peak": 1.799,
   "lead": 0.16,
   "zh": "逐字浮现",
-  "id": "fx-SplitText"
+  "id": "fx-SplitText",
+  "codec": "av1"
  },
  "StackTransition": {
   "act": 18.5,
   "run": 0.08,
   "dur": 3.68,
-  "peak": 20.463,
+  "peak": 20.475,
   "lead": 0.28,
   "zh": "卡片堆叠",
   "id": "fx-StackTransition",
@@ -1228,13 +1356,14 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "Stack": {
   "act": 34.3,
   "run": 0.36,
   "dur": 5.72,
-  "peak": 22.381,
+  "peak": 22.331,
   "lead": 0.28,
   "zh": "卡片堆",
   "id": "fx-Stack",
@@ -1242,22 +1371,24 @@
   "idle": false,
   "remount": false,
   "hover": false,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "StaggerReveal": {
-  "act": 30.8,
+  "act": 31.7,
   "run": 2.2,
   "dur": 8.96,
-  "peak": 2.022,
+  "peak": 1.996,
   "lead": 0.08,
   "zh": "逐字",
-  "id": "fx-StaggerReveal"
+  "id": "fx-StaggerReveal",
+  "codec": "av1"
  },
  "StarBorder": {
-  "act": 1.7,
-  "run": 0.04,
-  "dur": 4.68,
-  "peak": 2.23,
+  "act": 36.7,
+  "run": 0.88,
+  "dur": 4.8,
+  "peak": 2.368,
   "lead": 0.04,
   "zh": "边框动画",
   "id": "fx-StarBorder",
@@ -1265,22 +1396,24 @@
   "idle": true,
   "remount": false,
   "hover": true,
-  "scroll": true
+  "scroll": true,
+  "codec": "av1"
  },
  "StaggeredMenu": {
   "act": 50.0,
   "run": 0.88,
   "dur": 4.72,
-  "peak": 31.414,
+  "peak": 31.435,
   "lead": 0.28,
   "zh": "菜单",
-  "id": "fx-StaggeredMenu"
+  "id": "fx-StaggeredMenu",
+  "codec": "av1"
  },
  "SpotlightCard": {
-  "act": 41.7,
-  "run": 0.68,
+  "act": 41.1,
+  "run": 0.64,
   "dur": 6.04,
-  "peak": 2.487,
+  "peak": 2.469,
   "lead": 0.04,
   "zh": "卡片",
   "id": "fx-SpotlightCard",
@@ -1288,105 +1421,117 @@
   "idle": false,
   "remount": false,
   "hover": true,
-  "scroll": false
+  "scroll": false,
+  "codec": "av1"
  },
  "Stepper": {
   "act": 32.9,
   "run": 0.36,
   "dur": 5.96,
-  "peak": 36.526,
+  "peak": 36.506,
   "lead": 0.04,
   "zh": "步骤条",
-  "id": "fx-Stepper"
+  "id": "fx-Stepper",
+  "codec": "av1"
  },
  "Strands": {
-  "act": 91.7,
-  "run": 3.04,
+  "act": 85.1,
+  "run": 2.92,
   "dur": 4.84,
-  "peak": 0.361,
+  "peak": 0.406,
   "lead": 0.04,
   "zh": "光带",
-  "id": "fx-Strands"
+  "id": "fx-Strands",
+  "codec": "av1"
  },
  "TextType": {
   "act": 22.3,
   "run": 0.08,
   "dur": 7.52,
-  "peak": 4.224,
+  "peak": 4.235,
   "lead": 0.48,
   "zh": "打字机",
-  "id": "fx-TextType"
+  "id": "fx-TextType",
+  "codec": "av1"
  },
  "TextCursor": {
-  "act": 59.3,
-  "run": 1.52,
+  "act": 56.6,
+  "run": 1.4,
   "dur": 7.28,
-  "peak": 0.528,
+  "peak": 0.537,
   "lead": 0.04,
   "zh": "光标跟随",
-  "id": "fx-TextCursor"
+  "id": "fx-TextCursor",
+  "codec": "av1"
  },
  "TargetCursor": {
-  "act": 88.8,
-  "run": 3.72,
+  "act": 86.2,
+  "run": 1.64,
   "dur": 8.96,
-  "peak": 0.577,
+  "peak": 0.575,
   "lead": 0.2,
   "zh": "自定义光标",
-  "id": "fx-TargetCursor"
+  "id": "fx-TargetCursor",
+  "codec": "av1"
  },
  "StickerPeel": {
   "act": 28.6,
   "run": 1.04,
   "dur": 8.96,
-  "peak": 6.124,
+  "peak": 6.107,
   "lead": 0.04,
   "zh": "贴纸",
-  "id": "fx-StickerPeel"
+  "id": "fx-StickerPeel",
+  "codec": "av1"
  },
  "Threads": {
-  "act": 97.4,
-  "run": 4.4,
+  "act": 96.9,
+  "run": 3.64,
   "dur": 7.84,
-  "peak": 3.015,
+  "peak": 2.97,
   "lead": 0.04,
   "zh": "线条背景",
-  "id": "fx-Threads"
+  "id": "fx-Threads",
+  "codec": "av1"
  },
  "TrueFocus": {
   "act": 60.3,
   "run": 0.88,
   "dur": 2.72,
-  "peak": 0.964,
+  "peak": 0.918,
   "lead": 0.04,
   "zh": "聚焦",
-  "id": "fx-TrueFocus"
+  "id": "fx-TrueFocus",
+  "codec": "av1"
  },
  "Waves": {
-  "act": 91.0,
-  "run": 3.96,
+  "act": 87.7,
+  "run": 3.88,
   "dur": 4.88,
-  "peak": 19.59,
+  "peak": 20.529,
   "lead": 0.16,
   "zh": "波浪",
-  "id": "fx-Waves"
+  "id": "fx-Waves",
+  "codec": "av1"
  },
  "TextPressure": {
   "act": 33.7,
   "run": 0.32,
   "dur": 7.24,
-  "peak": 1.883,
+  "peak": 1.88,
   "lead": 0.24,
   "zh": "可变字体",
-  "id": "fx-TextPressure"
+  "id": "fx-TextPressure",
+  "codec": "av1"
  },
  "TiltedCard": {
-  "act": 47.8,
-  "run": 2.44,
+  "act": 45.1,
+  "run": 1.64,
   "dur": 8.96,
-  "peak": 3.438,
+  "peak": 3.393,
   "lead": 0.04,
   "zh": "3D倾斜",
-  "id": "fx-TiltedCard"
+  "id": "fx-TiltedCard",
+  "codec": "av1"
  }
 }

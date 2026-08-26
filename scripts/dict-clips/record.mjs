@@ -490,7 +490,15 @@ const enc = (crf, w) => execFileSync('ffmpeg', ['-y', '-f', 'concat', '-safe', '
   ...(SS > 0 ? ['-ss', SS.toFixed(2)] : []),
   '-t', '9',                                   // 总时长硬封顶：缩略图没人看超过 9 秒
   '-vf', `${CROP},scale=${w}:-2:flags=lanczos,fps=25`,
-  '-an', '-c:v', 'libvpx-vp9', '-crf', String(crf), '-b:v', '0', '-row-mt', '1', out], { stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' })
+  // **必须是 AV1，不能用 VP9。**
+  // 这台机器（Electron/Chromium）的 VP9 硬件解码路径是坏的：高度 ≥ 约 360 的片子
+  // 一律 MEDIA_ERR_DECODE，低于阈值的反而正常 —— 因为 Chromium 对小视频走软解、
+  // 大视频才走硬解。实测 145 个里 41 个中招，症状就是用户说的
+  // 「有时候 hover 能看到动画，有时候就没了」。
+  // 已验证：--disable-accelerated-video-decode 后 VP9 全部正常，但那是全局开关，
+  // 会让画布里网页节点播视频也走软解，代价太大。AV1 走 dav1d 软解、不碰硬解路径，
+  // 而且同画质下更小（全量实测 15.3MB → 12.0MB）。
+  '-an', '-c:v', 'libsvtav1', '-crf', String(crf), '-preset', '6', '-g', '50', out], { stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' })
 /** 量「开头有多久是死的」。**这一步必须有** ——
  *  固定顺序是 mount→hover→click→drag→scroll，而对某个组件来说前面几节可能完全没内容
  *  （StackTransition 全长 8.96s 里前 7.6s 一动不动，效果只在最后 1.4s）。
@@ -507,7 +515,7 @@ const leadIn = (file) => {
   return i < 0 ? 0 : i / 25
 }
 
-try { enc(32, 660) } catch (e) {
+try { enc(40, 660) } catch (e) {
   console.error('  ✗ ffmpeg 失败：' + String(e.stderr || e.message).split('\n').filter((l) => /error|Invalid|crop/i.test(l)).slice(-3).join(' | '))
   console.error(`  CROP=${CROP}  帧数=${frames.length}`)
   process.exit(1)
@@ -524,11 +532,11 @@ for (let pass = 0; pass < 3; pass++) {
   if (lead <= 0.8) break
   SS += lead - 0.3
   console.log(`  开头 ${lead.toFixed(1)}s 没内容 → 累计切掉 ${SS.toFixed(1)}s`)
-  enc(32, 660)
+  enc(40, 660)
 }
 let kb = fs.statSync(out).size / 1024
-if (kb > 250) { enc(38, 660); kb = fs.statSync(out).size / 1024 }
-if (kb > 400) { enc(40, 520); kb = fs.statSync(out).size / 1024 }
+if (kb > 250) { enc(46, 660); kb = fs.statSync(out).size / 1024 }
+if (kb > 400) { enc(52, 520); kb = fs.statSync(out).size / 1024 }
 fs.rmSync(FR, { recursive: true, force: true })
 const span = (frames[frames.length - 1].t - frames[0].t).toFixed(1)
 const tg = TARGET ? `${TARGET.why} ${Math.round(TARGET.width)}×${Math.round(TARGET.height)}` : '整个舞台'

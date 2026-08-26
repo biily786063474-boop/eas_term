@@ -55,6 +55,43 @@ interface HoverState {
   anchor: DOMRect // 触发胶囊的位置，浮层据此定位
 }
 
+/** 动效词条的演示短片。
+ *
+ *  **不能只靠 `autoPlay`。** 用户实测「有时候 hover 能看到动画，有时候就没了」——
+ *  在词条之间快速划过时，上一个 <video> 还没 play() 完就被卸载，
+ *  Promise 以 AbortError 拒绝；新建的那个 autoPlay 也可能因为媒体还没就绪而错过时机，
+ *  结果停在第一帧不动。表现就是「时灵时不灵」，而且看着像短片本身是静止的。
+ *
+ *  所以显式补三处：数据到位时播、被暂停了就接着播、真播不了才算了。 */
+function ClipVideo({ src }: { src: string }): JSX.Element {
+  const ref = useRef<HTMLVideoElement>(null)
+  const kick = useCallback(() => {
+    const v = ref.current
+    // play() 返回的 Promise 在元素被卸载时会 reject，吞掉即可 —— 那不是错误
+    if (v && v.paused) void v.play().catch(() => {})
+  }, [])
+  useEffect(() => {
+    kick()
+    // 有些情况下 loadeddata 早于 effect，补一次延迟重试兜底
+    const t = setTimeout(kick, 120)
+    return () => clearTimeout(t)
+  }, [kick, src])
+  return (
+    <video
+      ref={ref}
+      src={src}
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="auto"
+      onLoadedData={kick}
+      onCanPlay={kick}
+      onPause={kick}
+    />
+  )
+}
+
 export function DictView(): JSX.Element {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
@@ -290,14 +327,7 @@ export function DictView(): JSX.Element {
                 // key 挂 id：换词条时强制换掉 video 元素，否则 React 复用同一个节点、
                 // src 变了却还在放上一条的画面。
                 <div className="dict-pop-svg">
-                  <video
-                    key={hover.term.id}
-                    src={`dict-clip://c/${hover.term.clip}`}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  />
+                  <ClipVideo key={hover.term.id} src={`dict-clip://c/${hover.term.clip}`} />
                 </div>
               ) : (
                 <div className="dict-pop-svg" dangerouslySetInnerHTML={{ __html: hover.term.svg }} />
