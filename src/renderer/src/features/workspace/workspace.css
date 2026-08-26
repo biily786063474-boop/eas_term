@@ -22,6 +22,64 @@
   overflow: hidden;
 }
 
+/* ---------- 收起态：一条 38px 的窄边 ----------
+ *
+ * **不做成彻底消失。** 没有入口的隐藏等于藏起来，下次想调出来只能靠记快捷键。
+ * 窄边上有展开钮和当前项目的首字 —— 收着的时候也知道自己在哪个项目里。
+ * 整条都可点，不用非得瞄准那个小箭头。 */
+.sidebar.collapsed {
+  width: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  cursor: e-resize;
+  transition: width 0.16s ease;
+}
+
+.sidebar.collapsed:hover {
+  border-color: var(--glass-border-strong);
+  background: var(--glass-2);
+}
+
+.sidebar-rail-btn {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-dim);
+  cursor: e-resize;
+}
+
+.sidebar.collapsed:hover .sidebar-rail-btn {
+  color: var(--fg);
+}
+
+/* 当前项目首字。竖着的窄边里放不下全名，首字足够认人 —— 悬停有完整名字。 */
+.sidebar-rail-proj {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+}
+
+/* 头部右侧的按钮组：原来只有「添加项目」一个，现在多了收起钮 */
+.sidebar-header-acts {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .sidebar-section {
   display: flex;
   flex-direction: column;

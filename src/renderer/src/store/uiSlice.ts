@@ -175,6 +175,15 @@ export interface UiSlice {
    *  `.wiki-drawer { right: 8px }` 为准。 */
   resDrawerOpen: boolean
   setResDrawerOpen: (v: boolean) => void
+  /** 分屏模式左侧「项目 + 文件树」收起来了没有。
+   *
+   *  存 localStorage：收起侧栏是为了把宽度让给终端，属于明确的工作方式偏好，
+   *  重启又弹回来等于没听见（同 dictBubbleHidden 的理由）。
+   *
+   *  **收起后留一条 38px 的窄边，不是彻底消失** —— 没有入口的隐藏等于藏起来，
+   *  下次想调出来只能靠记快捷键。窄边上有展开钮和当前项目的首字。 */
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (v: boolean) => void
   /** 词典悬浮球被右键藏起来了。存 localStorage：藏它是个明确的意愿表达，
    *  重启就冒出来等于没听见。藏起来后标题栏会出现一个恢复按钮。 */
   dictBubbleHidden: boolean
@@ -196,6 +205,7 @@ export interface UiSlice {
   resetRoles: () => Promise<void>
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'eas.sidebar.collapsed'
 const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
@@ -342,6 +352,12 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setWikiDrawerOpen: (v) => set({ wikiDrawerOpen: v }),
   resDrawerOpen: false,
   setResDrawerOpen: (v) => set({ resDrawerOpen: v }),
+  sidebarCollapsed: localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1',
+  setSidebarCollapsed: (v) => {
+    if (v) localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '1')
+    else localStorage.removeItem(SIDEBAR_COLLAPSED_KEY)
+    set({ sidebarCollapsed: v })
+  },
   dictBubbleHidden: localStorage.getItem(DICT_HIDDEN_KEY) === '1',
   setDictBubbleHidden: (v) => {
     if (v) localStorage.setItem(DICT_HIDDEN_KEY, '1')

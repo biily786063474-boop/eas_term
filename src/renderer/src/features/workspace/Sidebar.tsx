@@ -4,7 +4,7 @@ import { collectLeaves } from '../../layout'
 import type { Project } from '../../../../shared/types'
 import { FileTree } from '../files/FileTree'
 import { SidebarGit } from '../git/SidebarGit'
-import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon, FilePlusIcon, FolderPlusIcon } from '../../ui/Icons'
+import { PlusIcon, CloseIcon, TerminalIcon, RefreshIcon, GitBranchIcon, FilesIcon, FilePlusIcon, FolderPlusIcon, ChevronLeftIcon, ChevronRightIcon } from '../../ui/Icons'
 import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { projectMenuItems } from './projectMenu'
@@ -134,15 +134,48 @@ export function Sidebar(): JSX.Element {
   }
 
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null
+  const collapsed = useStore((s) => s.sidebarCollapsed)
+  const setCollapsed = useStore((s) => s.setSidebarCollapsed)
+
+  // 收起后**留一条窄边**，不彻底消失：没有入口的隐藏等于藏起来，
+  // 下次想调出来只能靠记快捷键。窄边上放展开钮 + 当前项目首字，
+  // 这样收着的时候也知道自己在哪个项目里。
+  if (collapsed) {
+    return (
+      <aside
+        className="sidebar collapsed"
+        onClick={() => setCollapsed(false)}
+        data-tip="展开项目与文件"
+      >
+        <button className="sidebar-rail-btn" aria-label="展开项目与文件">
+          <ChevronRightIcon size={13} />
+        </button>
+        {activeProject && (
+          <div className="sidebar-rail-proj" title={activeProject.name}>
+            {[...activeProject.name][0] ?? '·'}
+          </div>
+        )}
+      </aside>
+    )
+  }
 
   return (
     <aside className="sidebar">
       <div className="sidebar-section projects-section">
         <div className="sidebar-header">
           <span>项目</span>
-          <button className="icon-btn" data-tip="添加项目文件夹" onClick={() => void addProject()}>
-            <PlusIcon size={13} />
-          </button>
+          <div className="sidebar-header-acts">
+            <button className="icon-btn" data-tip="添加项目文件夹" onClick={() => void addProject()}>
+              <PlusIcon size={13} />
+            </button>
+            <button
+              className="icon-btn"
+              data-tip="收起，把宽度让给终端"
+              onClick={() => setCollapsed(true)}
+            >
+              <ChevronLeftIcon size={13} />
+            </button>
+          </div>
         </div>
         {renameError && (
           <div className="ws-inline-error" onClick={() => setRenameError(null)}>
