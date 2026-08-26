@@ -22,8 +22,23 @@ import './workspace.css'
  *  不在这再手抄一份形状——那样迟早跟主进程的 Prefs 字段脱节 */
 type PrefsState = Awaited<ReturnType<typeof window.api.prefs.get>>
 
+/** 设置的六个分区。原来全堆在一个滚动框里，翻到「隐私」要滚过主题、AI、提示音、
+ *  更新、画板 —— 找一个开关比想起它叫什么还费劲。改成左侧标签页。 */
+const TABS = [
+  { key: 'theme', label: '主题' },
+  { key: 'ai', label: 'AI 对话' },
+  { key: 'sound', label: '提示音' },
+  { key: 'update', label: '更新' },
+  { key: 'board', label: '画板' },
+  { key: 'privacy', label: '隐私' }
+] as const
+type TabKey = (typeof TABS)[number]['key']
+
 export function SettingsPanel(): JSX.Element {
   const [open, setOpen] = useState(false)
+  // 每次打开都回到「主题」。设置不是工作面板，记住上次停在哪反而让人找不着北 ——
+  // 打开发现停在「隐私」，会以为自己点错了地方。
+  const [tab, setTab] = useState<TabKey>('theme')
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   // 音效设置存在 localStorage（不进 store：它不影响任何渲染逻辑，
@@ -149,7 +164,10 @@ export function SettingsPanel(): JSX.Element {
         className="tb-item"
         data-tip="设置"
         onMouseDown={(e) => e.stopPropagation()}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setTab('theme')
+          setOpen(true)
+        }}
       >
         设置
       </button>
@@ -165,8 +183,21 @@ export function SettingsPanel(): JSX.Element {
                 </button>
               </div>
 
+              <div className="cset-body">
+                <nav className="cset-tabs">
+                  {TABS.map((t) => (
+                    <button
+                      key={t.key}
+                      className={`cset-tab${tab === t.key ? ' on' : ''}`}
+                      onClick={() => setTab(t.key)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </nav>
+                <div className="cset-pane">
+              {tab === 'theme' && (
               <div className="cset-sec">
-                <div className="cset-label">主题</div>
                 <div className="cset-themes">
                   {THEMES.map((t) => (
                     <button
@@ -181,9 +212,10 @@ export function SettingsPanel(): JSX.Element {
                   ))}
                 </div>
               </div>
+              )}
 
+              {tab === 'ai' && (
               <div className="cset-sec">
-                <div className="cset-label">AI 对话</div>
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -228,9 +260,10 @@ export function SettingsPanel(): JSX.Element {
                 </div>
                 {slMsg && <div className="cset-sub">{slMsg}</div>}
               </div>
+              )}
 
+              {tab === 'sound' && (
               <div className="cset-sec">
-                <div className="cset-label">提示音</div>
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -283,9 +316,10 @@ export function SettingsPanel(): JSX.Element {
                   </div>
                 </div>
               </div>
+              )}
 
+              {tab === 'update' && (
               <div className="cset-sec">
-                <div className="cset-label">更新</div>
                 <div className="cset-row">
                   <span className="cset-rowname">
                     当前版本 {window.api.build.version}
@@ -305,9 +339,10 @@ export function SettingsPanel(): JSX.Element {
                   <span className="cset-rowname">启动后自动检查新版本</span>
                 </label>
               </div>
+              )}
 
+              {tab === 'board' && (
               <div className="cset-sec">
-                <div className="cset-label">画板</div>
                 <div className="cset-row">
                   <span className="cset-rowname">快照后清空标记</span>
                   <select
@@ -325,9 +360,10 @@ export function SettingsPanel(): JSX.Element {
                   </select>
                 </div>
               </div>
+              )}
 
+              {tab === 'privacy' && (
               <div className="cset-sec">
-                <div className="cset-label">隐私</div>
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -353,6 +389,9 @@ export function SettingsPanel(): JSX.Element {
                   >
                     完整隐私说明
                   </a>
+                </div>
+              </div>
+              )}
                 </div>
               </div>
             </div>
