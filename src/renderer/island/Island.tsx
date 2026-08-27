@@ -23,7 +23,11 @@ declare global {
       reportSize: (w: number, h: number) => void
       onLeave: (cb: () => void) => () => void
       onEnter: (cb: () => void) => () => void
-      action: (a: { type: 'focus' | 'dismiss' | 'approve'; key: string; choice?: number }) => void
+      action: (a: {
+        type: 'focus' | 'dismiss' | 'approve' | 'mini' | 'unmini'
+        key: string
+        choice?: number
+      }) => void
     }
   }
 }
@@ -183,7 +187,9 @@ export function Island(): JSX.Element | null {
     const ro = new ResizeObserver(report)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [mode, st.notices.length, st.running.length])
+    // st.mini 必须在依赖里：切形态时整棵子树换掉，rootRef 指向的是新节点，
+    // 不重新 observe 的话 ResizeObserver 还盯着已经卸载的那个
+  }, [mode, st.mini, st.notices.length, st.running.length])
 
   const unread = st.notices.length
   const projectCount = new Set(st.running.map((r) => r.project)).size
@@ -256,8 +262,40 @@ export function Island(): JSX.Element | null {
     </div>
   )
 
+  // ── 收成一颗点（用户右键收起）────────────────────────────────────────
+  // 常驻的一条黑块会压住顶部内容。收起后只留摄像头左边一颗呼吸的圆点，
+  // **它仍然在跑**：颜色跟着状态走（等审批=琥珀、在跑=绿、闲=灰），
+  // 有事的时候呼吸得更明显，点一下就展开回去。
+  if (st.mini) {
+    const miniCls = waiting ? 'waiting' : st.running.length ? 'working' : 'idle'
+    const n = st.running.length + st.notices.length
+    return (
+      <div className="isl-root mini" ref={rootRef}>
+        <button
+          className={`isl-mini ${miniCls}`}
+          data-tip="点开灵动岛"
+          title={n ? `${n} 项进行中 · 点开` : '点开灵动岛'}
+          onClick={() => window.island.action({ type: 'unmini', key: '' })}
+        >
+          <span className="isl-mini-core" />
+          {n > 0 && <span className="isl-mini-n">{n > 9 ? '9+' : n}</span>}
+        </button>
+      </div>
+    )
+  }
+
   const shell = (children?: JSX.Element | null): JSX.Element => (
-    <div className="isl-root" ref={rootRef}>
+    <div
+      className="isl-root"
+      ref={rootRef}
+      // 右键收成一颗点。**用 contextmenu 而不是加个关闭按钮**：
+      // 顶行那条本来就窄，再塞一个 × 会把「有几个在跑」挤没；
+      // 而收起是低频动作，藏在右键里正好。
+      onContextMenu={(e) => {
+        e.preventDefault()
+        window.island.action({ type: 'mini', key: '' })
+      }}
+    >
       <div className={`isl-shell ${pinned ? 'pinned' : 'floating'} ${leaving ? 'leaving' : 'entering'}`}>
         {topRow}
         {children}

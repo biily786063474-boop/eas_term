@@ -667,3 +667,79 @@ body {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.85);
 }
+
+/* ── 收起态：摄像头左边一颗呼吸的圆点 ──────────────────────────────
+   常驻那条黑块会压住顶部内容，右键收起后只剩这颗点。
+   它**不是"关掉了"**——通知照收、颜色跟着状态走，所以要一直呼吸着表示还活着。
+   位置由主进程算（placeWindow 按 islandMini 挪到刘海左侧），这里只管长相。 */
+.isl-root.mini {
+  /* 窗口尺寸是渲染层量出来报给主进程的，所以这里的盒子就是窗口大小。
+     留 4px 余量给外发光，不留的话光晕会被窗口边缘裁掉。 */
+  padding: 4px;
+  background: transparent;
+}
+
+.isl-mini {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.isl-mini-core {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: isl-breathe 2.6s ease-in-out infinite;
+}
+
+/* 状态配色和折叠条那套保持一致，换个形态不该换一套语义 */
+.isl-mini.idle { color: #8a8f99; }
+.isl-mini.working { color: #4ade80; }
+.isl-mini.waiting { color: #fbbf24; }
+/* 有事的时候呼吸快一点、亮一点 —— 一颗点能表达的只有节奏和颜色 */
+.isl-mini.working .isl-mini-core { animation-duration: 1.6s; }
+.isl-mini.waiting .isl-mini-core {
+  animation-duration: 1.1s;
+  box-shadow: 0 0 6px currentColor;
+}
+
+@keyframes isl-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(0.86); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* 待处理条数：贴在右上角，超过 9 显示 9+ */
+.isl-mini-n {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  min-width: 11px;
+  height: 11px;
+  padding: 0 2px;
+  border-radius: 6px;
+  background: currentColor;
+  color: #0a0a0a;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+}
+
+.isl-mini:hover { background: rgba(0, 0, 0, 0.88); }
+.isl-mini:hover .isl-mini-core { animation-play-state: paused; opacity: 1; transform: scale(1); }
+
+/* 系统开了「减弱动态效果」就别呼吸了 —— 顶部常驻的东西一直动是最招人烦的那类 */
+@media (prefers-reduced-motion: reduce) {
+  .isl-mini-core { animation: none; opacity: 0.9; }
+}

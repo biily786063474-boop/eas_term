@@ -11,6 +11,7 @@ import path from 'path'
 import fs from 'fs'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
+import { getPrefs, setPref } from './prefs'
 
 const EMPTY: IslandState = { running: [], notices: [] }
 
@@ -72,7 +73,8 @@ function pushState(win: BrowserWindow): void {
   win.webContents.send('island:state', {
     ...lastState,
     foreground: mainInForeground(),
-    notch: notchOf(screen.getPrimaryDisplay())
+    notch: notchOf(screen.getPrimaryDisplay()),
+    mini: getPrefs().islandMini
   })
 }
 
@@ -179,10 +181,17 @@ function placeWindow(win: BrowserWindow): void {
   }
   const w = Math.round(contentSize.w)
   const h = Math.round(contentSize.h)
+  // 收成圆点时挪到**刘海左边**，不再居中 —— 居中的话那颗点正好被刘海盖住。
+  // 没刘海的屏幕（外接显示器）没有可让的位置，就贴屏幕中线偏左一点，
+  // 视觉上仍是「在摄像头那一侧」。
+  const mid = bounds.x + bounds.width / 2
+  const x = getPrefs().islandMini
+    ? Math.round(mid - (notch.w > 0 ? notch.w / 2 : 60) - w - 8)
+    : Math.round(bounds.x + (bounds.width - w) / 2)
   win.setBounds(
     {
-      // 按屏幕中线居中，不是按 workArea——刘海是相对物理屏幕居中的
-      x: Math.round(bounds.x + (bounds.width - w) / 2),
+      // 展开时按屏幕中线居中，不是按 workArea——刘海是相对物理屏幕居中的
+      x,
       y: notch.w > 0 ? bounds.y : workArea.y + 4,
       width: w,
       height: h
@@ -637,7 +646,10 @@ export function registerIslandHandlers(): void {
   // 灵动岛量完自己有多大 → 主进程照着摆。让渲染层说了算，
   // 这样调 UI 尺寸不用回来改主进程的魔法数字。
   ipcMain.on('island:resize', (_e, w: number, h: number) => {
-    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 40 || h < 16) return
+    // 下限 40 会把**收起态那颗圆点**（26×26）整条上报丢掉 —— 窗口停在展开时的
+    // 三百多宽，里面只画了颗小点，剩下的透明区照样挡住底下的内容，等于没收起。
+    // 降到 18：比圆点小、又足够挡住「渲染层还没布局好时报 0」那种异常值。
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 18 || h < 16) return
     contentSize = { w: Math.min(760, w), h: Math.min(420, h) }
     if (islandWin && !islandWin.isDestroyed()) placeWindow(islandWin)
   })
@@ -646,6 +658,18 @@ export function registerIslandHandlers(): void {
   // 主进程不自己解释这个动作：ptyId 到底落在哪个 tab、哪个画布节点，只有渲染层知道。
   ipcMain.on('island:action', (_e, action: IslandAction) => {
     if (!app.isPackaged) console.log('[island] action', JSON.stringify(action))
+    // mini/unmini 是**岛自己的形态**，跟哪个终端无关，不转给主窗口。
+    // 落 prefs 再推一次状态：渲染层据此换形态、placeWindow 据此换位置。
+    if (action.type === 'mini' || action.type === 'unmini') {
+      setPref('islandMini', action.type === 'mini')
+      if (islandWin && !islandWin.isDestroyed()) {
+        pushState(islandWin)
+        // **位置要等渲染层把新尺寸报回来再摆。** 这里先摆一次是为了让
+        // 「点圆点展开」立刻往中间走，不然会看到它在原地长大再平移过去。
+        placeWindow(islandWin)
+      }
+      return
+    }
     dispatchAction(action)
   })
 }

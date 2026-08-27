@@ -18,12 +18,18 @@ export interface Prefs {
   clearShapesAfterSnapshot?: 'keep' | 'clear'
   /** 插入文件选择器的「最近」是否只看文档文件 */
   recentDocsOnly: boolean
+  /** 灵动岛被收成「摄像头左边一颗呼吸的圆点」。
+   *  放主进程而不是渲染层：岛的窗口位置在主进程算，**开窗那一刻就得知道**
+   *  该摆在屏幕中线还是刘海左侧 —— 等渲染层加载完再告诉主进程，
+   *  中间那一帧会先在中间闪一下整条岛再跳过去。 */
+  islandMini: boolean
 }
 
 const DEFAULTS: Prefs = {
   autoUpdateCheck: true,
   telemetry: true,
-  recentDocsOnly: false
+  recentDocsOnly: false,
+  islandMini: false
 }
 
 let cache: Prefs | null = null
@@ -39,6 +45,7 @@ export function getPrefs(): Prefs {
       autoUpdateCheck:
         typeof raw.autoUpdateCheck === 'boolean' ? raw.autoUpdateCheck : DEFAULTS.autoUpdateCheck,
       telemetry: typeof raw.telemetry === 'boolean' ? raw.telemetry : DEFAULTS.telemetry,
+      islandMini: typeof raw.islandMini === 'boolean' ? raw.islandMini : DEFAULTS.islandMini,
       clearShapesAfterSnapshot:
         raw.clearShapesAfterSnapshot === 'keep' || raw.clearShapesAfterSnapshot === 'clear'
           ? raw.clearShapesAfterSnapshot

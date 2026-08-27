@@ -693,11 +693,16 @@ export interface IslandState {
    *  透明区，内容分居两侧。w=0 表示这块屏幕没有刘海（外接显示器 / 非 Mac），
    *  此时不留空隙、窗口也不贴屏幕上沿而是挂在菜单栏下方。 */
   notch?: { w: number; h: number }
+  /** 用户把岛收成了「摄像头左边一颗呼吸的圆点」。
+   *  常驻的一条黑块会挡住顶部内容，右键收起后只留这颗点，点它再展开。
+   *  收起态**仍然在跑**（通知照收、圆点会随状态变色），只是不占地方。 */
+  mini?: boolean
 }
 
 /** 灵动岛回传的动作 */
 export interface IslandAction {
-  type: 'focus' | 'dismiss' | 'approve'
+  /** mini/unmini 只切形态，不带 key —— 它们不针对某个终端 */
+  type: 'focus' | 'dismiss' | 'approve' | 'mini' | 'unmini'
   /** focus/approve：ptyId；dismiss：notice id */
   key: string
   /** approve 专用：用户点的那个选项的**序号**。写回 pty 的就是它，
