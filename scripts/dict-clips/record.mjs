@@ -260,9 +260,10 @@ const TARGET = await page.evaluate(() => {
   const groupOf = (e) => {
     if (!e) return null
     const sb2 = sb   // 舞台矩形，下面求交要用
-    const cls = (e.className || '').toString().trim()
+    // 同上：SVG 的 className 不是字符串，用 getAttribute
+    const cls = ((e.getAttribute && e.getAttribute('class')) || '').trim()
     if (!cls) return null
-    const kin = [...stage.querySelectorAll('*')].filter((x) => (x.className || '').toString().trim() === cls && ok(x))
+    const kin = [...stage.querySelectorAll('*')].filter((x) => ((x.getAttribute && x.getAttribute('class')) || '').trim() === cls && ok(x))
     // **门槛定在 8 个，不是 4 个。** 拉远取景是有代价的：内容在成片里占比变小。
     // 实测（改判据前后各录一遍）只有成员多到「一个看不出是什么」的才划算 ——
     //   受益：DomeGallery 69 个（0.46→6.76）、OptionWheel 11 个（0.16→2.49）
@@ -309,8 +310,26 @@ const TARGET = await page.evaluate(() => {
       //   受益：GooeyNav 352×38（9.3:1，0.46→1.70）、PillNav 289×42（6.9:1，0.30→1.37）
       //   受损：GlassIcons 329×280（1.2:1，0.63→0.19）、StaggeredMenu 364×280（1.3:1，5.57→3.72）
       //   LineSidebar 148×516 是竖的（0.29:1），退到容器会裁出 660×1696 —— 浮层里高得没法看
-      if (par.children.length >= 3 && A(par) > A(e) * 2.5 && A(par) < area * 0.85 &&
-          pr.width / Math.max(1, pr.height) > 3) return par
+      // 横条（导航条）和竖条（侧边栏）都算「条状」，都值得退到整条看；
+      // 方形的不退 —— 那种拉远纯粹是把内容变小（GlassIcons 1.2:1 实测 0.63→0.19）。
+      const ar = pr.width / Math.max(1, pr.height)
+      // **容器里得真有「一群同类」，不能只是「≥3 个孩子」。**
+      // GooeyNav 的 UL 装着 4 个 className 一样的 LI —— 目标只是其中一个，
+      // 不看整条就不知道药丸滑到了哪一项；而 CurvedInput 的外框虽然也有三个孩子
+      // （图标 / 输入框 / 按钮），彼此并不同类，目标本身就是效果所在，
+      // 拉远只是把它变小（实测 0.53→0.14）。
+      // **必须用 getAttribute('class')，不能用 .className。**
+      // SVG 元素的 className 是 SVGAnimatedString 对象，toString() 全是
+      // `[object SVGAnimatedString]` —— CurvedInput 的目标在 <svg> 里，
+      // 8 个孩子于是全被算成「同类」，这条判据形同虚设（实测 0.53→0.14 还照样退容器）。
+      const kinds = {}
+      for (const c of par.children) {
+        const k = (c.getAttribute && c.getAttribute('class')) || ''
+        if (k.trim()) kinds[k.trim()] = (kinds[k.trim()] || 0) + 1
+      }
+      const sameKin = Math.max(0, ...Object.values(kinds))
+      if (sameKin >= 3 && A(par) > A(e) * 2.5 && A(par) < area * 0.85 &&
+          (ar > 3 || ar < 0.4)) return par
       cur = par
     }
     return null
@@ -408,7 +427,10 @@ if (EXPANDED) {
   // 导航条那种 352×38 的目标纵向只留得到 20px，成片里它上下贴着边，
   // 看不出这是浮在页面上的一条导航（GooeyNav 实测裁出 660×70，
   // 而这轮之前是 660×118）。横向不动 —— 那个方向本来就够宽。
-  const ky = TARGET.width / TARGET.height > 4 ? Math.max(k, 1.1) : k
+  const arT = TARGET.width / TARGET.height
+  // 扁的多留纵向余量（见上）；**竖的反过来要少留** —— 侧边栏 148×516 按 0.55 留白
+  // 会变成 311×1084，成片被拉成 660×2300 那种细长条。
+  const ky = arT > 4 ? Math.max(k, 1.1) : (arT < 0.6 ? Math.min(k, 0.14) : k)
   const py = TARGET.height * ky
   // **必须和舞台求交，而且交集为空要退回舞台。**
   // 轮播卡片这类会滑到舞台外面去，直接算 min/max 会得出负宽度，
@@ -822,7 +844,11 @@ const enc = (crf, w) => execFileSync('ffmpeg', ['-y', '-f', 'concat', '-safe', '
   // **-ss 放在 -i 之后**：放前面是关键帧粗定位，会切偏
   ...(SS > 0 ? ['-ss', SS.toFixed(2)] : []),
   '-t', '9',                                   // 总时长硬封顶：缩略图没人看超过 9 秒
-  '-vf', `${CROP},scale=${w}:-2:flags=lanczos,fps=25`,
+  // **竖的内容按高度缩，不按宽度。** scale=660:-2 对竖内容意味着高度失控 ——
+  // LineSidebar 的侧边栏裁出来是 311×671，按宽度缩成 660×1424，
+  // 在词典 320 宽的浮层里高达 690px，得滚动才看得完。
+  // 按高度缩到 420（和主进程那边 contentSize 的高度上限一致），宽度自适应。
+  '-vf', `${CROP},scale=${ch > cw * 1.2 ? `-2:${Math.min(420, Math.round(w * ch / cw))}` : `${w}:-2`}:flags=lanczos,fps=25`,
   // **必须是 AV1，不能用 VP9。**
   // 这台机器（Electron/Chromium）的 VP9 硬件解码路径是坏的：高度 ≥ 约 360 的片子
   // 一律 MEDIA_ERR_DECODE，低于阈值的反而正常 —— 因为 Chromium 对小视频走软解、
