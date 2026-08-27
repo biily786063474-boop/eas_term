@@ -200,13 +200,31 @@ export function AgentChatView({
   const [cliNote, setCliNote] = useState<CliInfo | null>(null)
   const prefillTerminal = useStore((s) => s.prefillTerminal)
 
-  /** 把安装命令填进终端。**不代跑** —— 静默装全局 CLI + 改 PATH 是恶意软件的
-   *  行为特征，会被 Gatekeeper / Defender 盯上（agentInstall.ts 的既有纪律）。
-   *  填进去之后用户看得见、能改、自己按回车。 */
-  const installCli = async (c: CliInfo): Promise<void> => {
+  /** 点未安装的 CLI → 弹确认框问装不装，点了「安装」就**开个终端把它跑起来**。
+   *
+   *  和原来的区别只在「谁按回车」：以前填进终端等用户自己敲，现在弹窗里点过就替他敲。
+   *  **弹窗里必须原样列出要执行的命令** —— 用户得看得见自己在同意什么。
+   *
+   *  为什么仍然送进终端、而不是后台静默执行（agentInstall.ts 开头那三条，
+   *  后两条和「是否静默」无关，所以保留）：
+   *    · 装完还要 `claude login` 用自己的账号，那步永远绕不过去，藏后台没有意义
+   *    · 公司网络 / 代理 / 权限失败时，报错摆在终端里用户能自己查，
+   *      比一句「安装失败」有用得多
+   *  第一条（静默装全局 CLI 是恶意软件行为特征）在这里不成立：这是用户在界面上
+   *  主动点确认触发的，不是 agent 背着他装。 */
+  const requestConfirm = useStore((s) => s.requestConfirm)
+  const installCli = (c: CliInfo): void => {
     if (!c.installCmd) return
     setCliNote(null)
-    await prefillTerminal(c.installCmd)
+    requestConfirm({
+      message: `${c.displayName} 还没装。要现在装吗？\n\n会开一个终端执行：\n${c.installCmd}\n\n装完通常还要用你自己的账号登录一次，那一步在同一个终端里接着做。`,
+      confirmLabel: '安装',
+      cancelLabel: '只把命令填进终端',
+      onConfirm: () => void prefillTerminal(c.installCmd as string, { run: true }),
+      // 「取消」不是「什么都不做」：把命令填进去让他自己看着办，
+      // 这正是这个功能改之前的行为，保留成一条退路
+      onCancel: () => void prefillTerminal(c.installCmd as string)
+    })
   }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
@@ -225,7 +243,10 @@ export function AgentChatView({
       label: c.displayName,
       hint: tag ?? (c.id === selected?.id ? '当前' : undefined),
       // 不用 disabled：点不动的话就没法给出安装入口了（同芯片那版的理由）
-      onClick: () => (usable ? setSelected(c) : setCliNote(c))
+      // 未安装且有安装命令的**直接弹确认框**，不再先给一张提示卡让用户再点一次；
+      // 没有安装命令的（要去官网装）仍然给提示卡说明。
+      onClick: () =>
+        usable ? setSelected(c) : !c.available && c.installCmd ? installCli(c) : setCliNote(c)
     }
   })
   const [text, setText] = useState('')
@@ -985,8 +1006,8 @@ export function AgentChatView({
                 {cliNote.installCmd ? (
                   <>
                     {' '}
-                    点下面这行会把命令填进终端 —— <b>不会替你执行</b>，你自己按回车。
-                    <button className="ac-cli-cmd" onClick={() => void installCli(cliNote)}>
+                    点下面这行会问你要不要现在装。
+                    <button className="ac-cli-cmd" onClick={() => installCli(cliNote)}>
                       <code>{cliNote.installCmd}</code>
                     </button>
                   </>

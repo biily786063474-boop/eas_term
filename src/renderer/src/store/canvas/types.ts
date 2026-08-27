@@ -293,7 +293,10 @@ export interface CanvasSlice {
   ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */
-  prefillTerminal: (cmd: string) => Promise<void>
+  /** 把命令送进一个新终端。
+   *  `run: true` 时**连回车一起送**（用户在弹窗里点过「安装」才允许），
+   *  默认只填不跑 —— 见 agentInstall.ts 开头那三条纪律。 */
+  prefillTerminal: (cmd: string, opts?: { run?: boolean }) => Promise<void>
   /** 在 Frame 里新开一个迷你浏览器节点（web pane，空地址，自动堆叠） */
   addBrowserNode: (frameId: string) => void
   /** 在 Frame 里新开一个带地址的浏览器节点并聚焦（终端/外部链接「跳出的网页」默认走画板浏览器） */

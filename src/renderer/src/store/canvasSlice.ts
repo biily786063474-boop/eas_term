@@ -1067,7 +1067,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     return newLeaf.id
   },
 
-  prefillTerminal: async (cmd) => {
+  prefillTerminal: async (cmd, opts) => {
     const s = get()
     const before = new Set(s.tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id)))
     // 画布模式且有顶层 Frame → 开成画布上的终端节点（用户正看着那儿）；否则退回普通新终端
@@ -1081,7 +1081,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const ptyId = leaf.pane.ptyId
     // 新开的终端要先把 shell 的启动输出（提示符、rc 脚本回显）吐完，
     // 太早写进去会被冲掉，用户看到的是一行残缺命令
-    setTimeout(() => window.api.pty.write(ptyId, cmd), 700)
+    // run=true 时把回车一起送出去。**这条路只有「用户在确认弹窗里点过安装」才走得到** ——
+    // 命令本身来自 agentInstall 的固定方案（我们自己按平台挑的），不是外部输入。
+    // 仍然送进**终端**而不是后台执行：装完还要 `claude login`（那步绕不过去）、
+    // 公司网络/代理失败时报错摆在眼前比一句「安装失败」有用，
+    // 这两条是 agentInstall.ts 开头写的理由，和「是否静默」无关，所以保留。
+    setTimeout(() => window.api.pty.write(ptyId, opts?.run ? cmd + '\r' : cmd), 700)
     // 顺手把画布挪到这个新终端上，不然它可能落在视口外
     if (frame) {
       const node = get().canvas.frames.find((f) => f.id === frame.id)?.nodes.find((n) => n.leafId === leaf.id)

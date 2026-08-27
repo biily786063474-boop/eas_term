@@ -526,6 +526,9 @@ body {
   font-size: 13.5px;
   line-height: 1.65;
   color: var(--fg);
+  /* 消息里可以带换行 —— 安装确认要把「会执行哪条命令」单独占一行摆出来，
+     不加这条的话 \n 会被折叠成空格，命令和说明挤成一坨看不清自己在同意什么 */
+  white-space: pre-line;
 }
 
 .confirm-actions {
