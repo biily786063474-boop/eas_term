@@ -22,6 +22,15 @@ body {
   cursor: default;
 }
 
+/* 强调色。**灵动岛是独立窗口、只 import 自己这份 css**，主窗口 base.css 里的
+   变量在这儿一个都没有 —— 上面 hover 高亮那几条最早写成 rgba(var(--accent-rgb),…)，
+   变量解析不到，整条 box-shadow 直接失效（computed 值是 none），
+   而界面上看不出任何报错，只是「hover 没反应」。
+   值和主窗口 base.css 的 --accent-rgb 保持一致，改那边时记得同步。 */
+:root {
+  --accent-rgb: 162, 185, 224;
+}
+
 #root,
 .isl-root {
   width: fit-content;
@@ -85,8 +94,13 @@ body {
 /* 贴屏幕上沿时只有下面两个角是圆的——上边被屏幕边缘切掉，
  * 圆角开在那儿只会在顶边露出两个小三角的壁纸 */
 .isl-shell.pinned {
-  /* 圆角 10 而不是 16，是被下面第二条逼出来的折中。 */
-  border-radius: 0 0 10px 10px;
+  /* 圆角 20（2026-08-27 用户要求，从 10 翻倍）。
+   *
+   * **代价是已知的**：下面第三条记着「圆角越大，圆角外那块透明但偏暗的三角越显眼」，
+   * 当时实测 16px 肉眼可见、10px 基本看不出，才取了 10。翻到 20 会让那两个小三角
+   * 比 16px 时更明显 —— 这是平台的窗口合成行为，CSS 改不掉。
+   * 用户看过效果后仍然要更圆，那就以他看到的为准；真觉得碍眼就把这里调回 10~12。 */
+  border-radius: 0 0 20px 20px;
   /* **不要投影。** 试过 `0 10px 30px rgba(0,0,0,.55)`，30px 的模糊会向外扩散约 15px，
    * 正好糊在两个下圆角**外侧**那两小块本该全透明的三角上——在纯黑窗口上就显成
    * 「圆角外挂着两个脏黑角」。
@@ -103,11 +117,65 @@ body {
 /* 没有刘海的屏幕上它悬在菜单栏下方，四周都是壁纸，这时才需要投影和描边来分离。
  * 那种形态用户预期就是「一张浮着的卡片」，阴影是对的。 */
 .isl-shell.floating {
-  border-radius: 16px;
+  /* 32（从 16 翻倍）。这一态四周有投影和描边，圆角外的偏暗被投影盖住，
+     不受贴顶态那条限制。 */
+  border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
+
+/* ── hover 边缘高亮（2026-08-27 用户要求，和画布模块同款）──────────────
+   画布上的节点用的是「边框染成强调色 + 外发光一圈」：
+     .cfile-node.sel { border-color: rgba(var(--accent-rgb),.8);
+                       box-shadow: 0 0 0 1px rgba(var(--accent-rgb),.55), ... }
+   这里照搬同一套语言，让灵动岛和画板是同一个交互词汇，不是各长各的。
+
+   **两种形态分开写**，因为它们的边界条件不同：
+   · floating 本来就有 1px 描边和投影 → 直接把描边染色、投影里叠一圈强调色光
+   · pinned 没有描边也不能有投影（投影的模糊会糊在下圆角外侧那两块透明三角上，
+     见上面那段），所以只能用 inset 阴影在**内侧**画那道光边 ——
+     往外画多少都会落到透明区里，反而把「圆角外偏暗」那个问题放大。 */
+.isl-shell {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.isl-shell.floating:hover {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+/* 贴顶态：光边画在内侧。下面两个角跟着圆角走，上边不画 —— 那条边贴着屏幕边缘，
+   画了也看不见，还会在顶部露出一道亮线。 */
+.isl-shell.pinned:hover {
+  box-shadow:
+    inset 0 -1px 0 0 rgba(var(--accent-rgb), 0.45),
+    inset 1px 0 0 0 rgba(var(--accent-rgb), 0.3),
+    inset -1px 0 0 0 rgba(var(--accent-rgb), 0.3);
+}
+
+/* 收起态那颗圆点也跟上，不然只有它没有反馈 */
+.isl-mini {
+  transition:
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.isl-mini:hover {
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.5);
+}
+
+/* 系统开了「减弱动态效果」就不做过渡，直接到位 —— 顶部常驻的东西尤其忌讳一直在动 */
+@media (prefers-reduced-motion: reduce) {
+  .isl-shell,
+  .isl-mini {
+    transition: none;
+  }
+}
 
 /* ---------- 顶行：三态都在，高度固定 ---------- */
 .isl-toprow {
