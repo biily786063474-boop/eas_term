@@ -161,8 +161,22 @@ export function WebView({
       wv.setAttribute('partition', 'persist:browser') // 多浏览器节点共享会话，与主应用隔离
       // 允许 window.open/target=_blank 触达主进程 setWindowOpenHandler（否则被禁、拦不成同 view 导航）
       wv.setAttribute('allowpopups', 'true')
-      // 主窗口切后台时，这里打开的页面也别被冻住（跟主窗口的 backgroundThrottling:false 一致）
-      wv.setAttribute('webpreferences', 'backgroundThrottling=no')
+      // **这里不关后台节流**（2026-08-27 改，性能评估 B 项）。
+      //
+      // 原来设了 `backgroundThrottling=no`，是 a63d27b 修「切后台终端输出堵住」时
+      // 顺手加的（那条 commit 写着「画布 webview 同理」）。但理由并不同理：
+      // 终端需要它是因为输出靠 rAF 合帧写进 xterm，rAF 一停 agent 的输出就堵在缓冲里；
+      // **网页节点没有这个需求** —— 它就是个浏览器，被冻住就冻住，切回来自己会跑。
+      //
+      // 代价是实打实的：整个 app 切到后台时，画布上每个网页节点都在全速跑自己的
+      // JS 和动画（这台机器上实测挂着 10 个）。这和离屏回收是两个维度 ——
+      // 那个管「节点滚出视口 120 秒」，这个管「整个窗口不在前台」，
+      // 你把软件切走的时候，所有网页节点都还醒着。
+      //
+      // 去掉之后走 Chromium 默认：**前台可见时不节流**（只有隐藏/被完全遮挡才降速），
+      // 所以正常使用没有任何变化，省的是切走之后那段时间。
+      // 真有页面必须后台持续刷新（监控看板那类），再单独给它开口子，
+      // 而不是让所有网页节点一起陪着醒。
       // 用记下的地址而不是 initialUrl：回收前你可能已经点进了别的页面
       const start = lastUrlRef.current || initialUrl
       if (start) wv.setAttribute('src', start)
