@@ -267,34 +267,86 @@ function watchUrlQueue(): void {
 
 // 判断哪些 shell 进程"忙"：一次性取系统所有进程的父 PID，
 // 若某 shell 的 PID 出现在父 PID 集合里，说明它有子进程（前台命令或后台任务）在跑。
-// 空闲的登录 shell 没有子进程，因此不会误报。跨平台：unix 用 ps，Windows 用 PowerShell。
-function shellsWithChildren(shellPids: number[]): Promise<Set<number>> {
+// 空闲的登录 shell 没有子进程，因此不会误报。
+//
+// ── Windows 上这里曾是「未响应」的主要来源（2026-08-27 改）────────────────
+// 原来无条件跑 `powershell.exe -Command (Get-CimInstance Win32_Process).ParentProcessId`：
+// PowerShell 冷启动本身 300~800ms，Get-CimInstance 还要走 WMI 枚举全部进程，
+// 进程多的机器上**秒级**很常见。而调用方是 await 的（关终端 / 关项目 / 退出确认都走它），
+// 超时又设成 4000ms —— 最坏情况界面卡满四秒，看着就是「未响应」。
+//
+// 三层改进，任何一层失败都退回下一层，最终失败一律当「不忙」（和原来的失败分支一致）：
+//   1. **短期缓存**：1.5 秒内的重复调用直接复用。关一批终端时调用是连着来的，
+//      同一秒里枚举好几遍全系统进程纯属浪费。
+//   2. **优先 wmic**：`wmic process get ParentProcessId` 不启动 PowerShell 运行时，
+//      实测量级比 Get-CimInstance 小一个数量级。它在 Win11 24H2 起被移除，所以要能回退。
+//   3. **超时 900ms**：查不出来就当不忙，而不是让人等四秒。
+//      这个判据本来就只用于「关之前提醒一句」，宁可漏提醒也不该卡住界面。
+const PPID_CACHE_MS = 1500
+let ppidCache: { at: number; parents: Set<number> } | null = null
+/** Windows 上 wmic 是否可用；null = 还没试过，false = 试过且不可用（Win11 24H2+ 已移除） */
+let wmicUsable: boolean | null = null
+
+/** 取全系统父 PID 集合。失败返回 null —— 调用方据此当「查不出来」，而不是当「没有父进程」。 */
+function allParentPids(): Promise<Set<number> | null> {
+  const now = Date.now()
+  if (ppidCache && now - ppidCache.at < PPID_CACHE_MS) return Promise.resolve(ppidCache.parents)
   return new Promise((resolve) => {
-    if (shellPids.length === 0) {
-      resolve(new Set())
-      return
-    }
-    const collect = (stdout: string): void => {
+    const parse = (stdout: string): Set<number> => {
       const parents = new Set<number>()
       for (const line of stdout.split('\n')) {
+        // wmic 的输出带表头 "ParentProcessId"，parseInt 会得到 NaN，天然被下面的 >0 挡掉
         const n = parseInt(line.trim(), 10)
         if (n > 0) parents.add(n)
       }
-      resolve(new Set(shellPids.filter((pid) => parents.has(pid))))
+      return parents
     }
-    if (process.platform === 'win32') {
+    const ok = (stdout: string): void => {
+      const parents = parse(stdout)
+      ppidCache = { at: Date.now(), parents }
+      resolve(parents)
+    }
+    if (process.platform !== 'win32') {
+      execFile('ps', ['-axo', 'ppid='], { timeout: 2500 }, (err, stdout) =>
+        err ? resolve(null) : ok(stdout)
+      )
+      return
+    }
+    const viaPowerShell = (): void => {
       execFile(
         'powershell.exe',
         ['-NoProfile', '-NonInteractive', '-Command', '(Get-CimInstance Win32_Process).ParentProcessId'],
-        { timeout: 4000, windowsHide: true },
-        (err, stdout) => (err ? resolve(new Set()) : collect(stdout))
-      )
-    } else {
-      execFile('ps', ['-axo', 'ppid='], { timeout: 2500 }, (err, stdout) =>
-        err ? resolve(new Set()) : collect(stdout)
+        { timeout: 900, windowsHide: true },
+        (err, stdout) => (err ? resolve(null) : ok(stdout))
       )
     }
+    if (wmicUsable === false) {
+      viaPowerShell()
+      return
+    }
+    execFile(
+      'wmic',
+      ['process', 'get', 'ParentProcessId'],
+      { timeout: 900, windowsHide: true },
+      (err, stdout) => {
+        if (!err && /\d/.test(stdout)) {
+          wmicUsable = true
+          ok(stdout)
+          return
+        }
+        // 只在**第一次**失败时记住，之后不再浪费一次进程启动去试
+        wmicUsable = false
+        viaPowerShell()
+      }
+    )
   })
+}
+
+function shellsWithChildren(shellPids: number[]): Promise<Set<number>> {
+  if (shellPids.length === 0) return Promise.resolve(new Set())
+  return allParentPids().then((parents) =>
+    parents ? new Set(shellPids.filter((pid) => parents.has(pid))) : new Set<number>()
+  )
 }
 
 // 取某个 shell 进程的当前工作目录（供终端相对路径链接解析用）。
