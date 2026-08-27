@@ -253,14 +253,98 @@ const TARGET = await page.evaluate(() => {
   const cvs    = biggest(all.filter((e) => e.tagName === 'CANVAS'))
   const block  = biggest(all.filter((e) => A(e) < area * 0.92))
 
+  // **目标是「一群同类里的一个」时，取景要覆盖整群。**
+  // DomeGallery 的图片墙有 12 张同类卡片，瞄准其中一张、裁到它，
+  // 成片里只看得见一张卡的局部 —— 看不出这是个穹顶图片墙。
+  // 同类判据用 className：同一个组件生成的成员类名一致。
+  const groupOf = (e) => {
+    if (!e) return null
+    const sb2 = sb   // 舞台矩形，下面求交要用
+    const cls = (e.className || '').toString().trim()
+    if (!cls) return null
+    const kin = [...stage.querySelectorAll('*')].filter((x) => (x.className || '').toString().trim() === cls && ok(x))
+    // **门槛定在 8 个，不是 4 个。** 拉远取景是有代价的：内容在成片里占比变小。
+    // 实测（改判据前后各录一遍）只有成员多到「一个看不出是什么」的才划算 ——
+    //   受益：DomeGallery 69 个（0.46→6.76）、OptionWheel 11 个（0.16→2.49）
+    //   受损：Carousel 5 个（0.46→0.24）、AnimatedList 6 个、ChromaGrid 4 个、FlowingMenu 4 个
+    // 四五个成员时单看一个已经能说明问题，拉远纯粹是把它变小。
+    if (kin.length < 8) return null
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9
+    for (const k of kin) { const r = k.getBoundingClientRect()
+      x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom) }
+    // **必须和舞台求交。** 轮播这类成员会滑到舞台外面去 —— Carousel 的整群包围盒
+    // 是 1404×229，比舞台还宽，面积占到舞台的 69%，于是撞上后面「目标接近舞台就不裁」
+    // 那条分支，取景被迫拉成整个舞台，卡片只占中间一小块（动量从 0.46 掉到 0.05）。
+    x0 = Math.max(x0, sb2.x); y0 = Math.max(y0, sb2.y)
+    x1 = Math.min(x1, sb2.x + sb2.width); y1 = Math.min(y1, sb2.y + sb2.height)
+    if (x1 - x0 < 60 || y1 - y0 < 40) return null
+    return { x: x0, y: y0, width: x1 - x0, height: y1 - y0, n: kin.length }
+  }
   const big = (e) => e && A(e) >= area * 0.03
-  if (big(grabby)) return box(grabby, 'grab/draggable')
-  if (big(clicky)) return box(clicky, 'pointer/控件')
+  const withGroup = (e, why) => {
+    const g = groupOf(e)
+    // 整群比单个大出一截才值得换 —— 否则等于白白把画面拉远
+    if (g && g.width * g.height > A(e) * 2.2) return { ...g, cur: getComputedStyle(e).cursor, drag: !!e.draggable, why: `${why}·整群${g.n}个` }
+    return box(e, why)
+  }
+  if (big(grabby)) return withGroup(grabby, 'grab/draggable')
+  if (big(clicky)) return withGroup(clicky, 'pointer/控件')
   if (cvs) return box(cvs, 'canvas')                 // 控件太碎时画布才是真正的舞台
   if (grabby) return box(grabby, 'grab(小)')
   if (clicky) return box(clicky, 'pointer(小)')
   return block ? box(block, '最大实体块') : null
 })
+
+// ── 点击会展开的组件：取景按**展开后**的尺寸来（2026-08-26）──────────────
+// 取景一直是按「当前这一刻的目标」算的，而 BubbleMenu 收起时只是一枚 898×56 的
+// 胶囊、点开后铺满 898×518（面积 9.3 倍），CardNav 也有 4.3 倍。
+// 按收起状态取景，点开的那一瞬间内容全跑到画面外 —— 用户看到的是「点了一下，
+// 然后什么都没有」。
+//
+// 做法：录制**开始前**先预演一次点击，量出展开后的内容边界，再重新选中组件复位。
+// 多花一次交互的时间，换的是这类组件能看到全貌。
+let EXPANDED = null
+if (SECTIONS.includes('click')) {
+  const bboxOf = () => page.evaluate((sb) => {
+    const st = document.querySelector('.pg-stage-inner') || document.querySelector('.pg-stage')
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0
+    for (const e of st.querySelectorAll('*')) {
+      const r = e.getBoundingClientRect(), cs = getComputedStyle(e)
+      if (r.width < 6 || r.height < 6) continue
+      if (cs.visibility === 'hidden' || +cs.opacity === 0) continue
+      if (e.closest('.pg-demo-slab')) continue
+      if (r.right < sb.x || r.left > sb.x + sb.width || r.bottom < sb.y || r.top > sb.y + sb.height) continue
+      x0 = Math.min(x0, Math.max(r.left, sb.x)); y0 = Math.min(y0, Math.max(r.top, sb.y))
+      x1 = Math.max(x1, Math.min(r.right, sb.x + sb.width)); y1 = Math.max(y1, Math.min(r.bottom, sb.y + sb.height)); n++
+    }
+    return n ? { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } : null
+  }, { x: STAGE.x, y: STAGE.y, width: STAGE.width, height: STAGE.height })
+  const before = await bboxOf()
+  const pt = await page.evaluate((sb) => {
+    const st = document.querySelector('.pg-stage-inner') || document.querySelector('.pg-stage')
+    const e = [...st.querySelectorAll('*')].find((e) => {
+      const r = e.getBoundingClientRect()
+      return r.width >= 14 && r.height >= 14 && !e.closest('.pg-demo-slab') &&
+        (getComputedStyle(e).cursor === 'pointer' || /^(BUTTON|A)$/.test(e.tagName) || e.getAttribute('role') === 'button') &&
+        r.x >= sb.x - 2 && r.y >= sb.y - 2 && r.right <= sb.x + sb.width + 2 && r.bottom <= sb.y + sb.height + 2
+    })
+    if (!e) return null
+    const r = e.getBoundingClientRect(); return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]
+  }, { x: STAGE.x, y: STAGE.y, width: STAGE.width, height: STAGE.height })
+  if (pt && before) {
+    await page.mouse.click(pt[0], pt[1])
+    await page.waitForTimeout(1000)
+    const after = await bboxOf()
+    if (after && after.width * after.height > before.width * before.height * 1.6) {
+      EXPANDED = after
+      console.error(`  · 点开后展开 ${(after.width*after.height/(before.width*before.height)).toFixed(1)}× → 取景按展开后算`)
+    }
+    // **复位**：重新选中一次组件，让它卸载重挂。不复位的话下面正式录制时
+    // 组件已经是展开态，「点开」那一下就没得演了。
+    await page.locator(`.pg-item[data-name="${NAME}"]`).first().click({ timeout: 15000 }).catch(() => {})
+    await page.waitForTimeout(900)
+  }
+}
 
 // 落点基准：有目标就用目标，没有才退回舞台。**这是本轮修的核心。**
 //
@@ -280,7 +364,14 @@ const AIM = (TARGET && inStage(TARGET))
 // 取景：目标远小于舞台时裁到目标（留 22% 余量），否则 660px 成片里效果只占中间一小撮。
 // rec5 只对「唯一小节是 click」的裁到舞台中间 58%，那是拍脑袋的固定比例，
 // 目标偏在一角（CardSwap 在右下、Dock 在底部）就直接裁没了。
-if (TARGET && inStage(TARGET) && TARGET.width * TARGET.height < STAGE.width * STAGE.height * 0.5) {
+// 展开后的边界优先：它才是这个组件真正要占的地方
+if (EXPANDED) {
+  const pad = 10
+  const x0 = Math.max(STAGE.x, EXPANDED.x - pad), y0 = Math.max(STAGE.y, EXPANDED.y - pad)
+  const x1 = Math.min(STAGE.x + STAGE.width, EXPANDED.x + EXPANDED.width + pad)
+  const y1 = Math.min(STAGE.y + STAGE.height, EXPANDED.y + EXPANDED.height + pad)
+  if (x1 - x0 >= 80 && y1 - y0 >= 60) box = { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
+} else if (TARGET && inStage(TARGET) && TARGET.width * TARGET.height < STAGE.width * STAGE.height * 0.5) {
   // 目标越小留白越多：不然 660px 成片里目标顶满画面，角标直接压在控件上
   const k = TARGET.width * TARGET.height < STAGE.width * STAGE.height * 0.12 ? 0.55 : 0.24
   const px = TARGET.width * k, py = TARGET.height * k
@@ -490,7 +581,11 @@ for (const sec of SECTIONS) {
         }
       }
     } else {
-      await page.waitForTimeout(SEC_MS.mount)
+      // REPLAY_FIRST 时入场已经在开录前 520ms 重放过，短入场（BubbleMenu 就是弹个胶囊）
+      // 到这儿早演完了，等满 SEC_MS.mount 后半段全是静止。
+      // 后面还有别的小节时更没必要占满 —— 把时间让给真正有内容的那节。
+      const short = REPLAY_FIRST && SECTIONS.length > 1
+      await page.waitForTimeout(short ? Math.min(SEC_MS.mount, 1000) : SEC_MS.mount)
     }
   } else if (sec === 'hover') {
     await badge('悬停')
@@ -531,8 +626,28 @@ for (const sec of SECTIONS) {
         // 完整落在舞台里的优先。只求交集的话会选到卡在边缘的控件 ——
         // Stepper 的「Complete」按钮有 27% 在舞台下边缘外，点它等于点在裁切线上。
         const full = r.x >= sb.x && r.y >= sb.y && r.x + r.width <= sb.x + sb.width && r.y + r.height <= sb.y + sb.height
-        return { c: [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)], full }
-      })
+        // **中心点未必真的命中这个元素。** getBoundingClientRect 给的是 3D 变换后的
+        // **轴对齐包围盒**，而元素本身是倾斜的 —— DomeGallery 的图片贴在球面上，
+        // 包围盒中心落在元素外，elementFromPoint 命中的是舞台背景，
+        // 于是四个落点全点空（实测覆盖率 0%，最佳位置能产生 55 的变化）。
+        // 命中不了就在元素范围内找一个真命中的点。
+        const ok = (x, y) => { const h = document.elementFromPoint(x, y); return !!h && (h === e || e.contains(h)) }
+        let c = [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]
+        if (!ok(c[0], c[1])) {
+          let found = null
+          for (const fy of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+            for (const fx of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+              const x = Math.round(r.x + r.width * fx), y = Math.round(r.y + r.height * fy)
+              if (x < sb.x || y < sb.y || x > sb.x + sb.width || y > sb.y + sb.height) continue
+              if (ok(x, y)) { found = [x, y]; break }
+            }
+            if (found) break
+          }
+          if (!found) return null          // 整个元素都点不到，丢掉
+          c = found
+        }
+        return { c, full }
+      }).filter(Boolean)
       // **按坐标去重。** 原来直接 slice(0,4) 取 DOM 顺序的前四个，而可点控件通常是
       // 三四层嵌套（外层容器、flex 包装、内部圆点各自都是 cursor:pointer），
       // 中心点完全重合 —— Stepper 实测四个落点里有三个是同一个圆点，
@@ -584,8 +699,11 @@ for (const sec of SECTIONS) {
     // 滚动触发的多半是「进入视口才播」，而在选型台里它一直在视口内、开录时早播完了。
     // 先重放一次让效果真的演出来，再演滚动手势。
     await badge('出现')
-    if (!REPLAY_FIRST) await replay()
-    await page.waitForTimeout(1500)
+    // **这 1.5s 是给「刚重放完、等它演出来」用的，没重放就不该等。**
+    // REPLAY_FIRST 为真时重放已经在录制开始前做过了，这里再干等就是纯静止 ——
+    // ScrollStack 实测开头 0.6s 不动切五轮都切不掉，根子就在这句。
+    if (!REPLAY_FIRST) { await replay(); await page.waitForTimeout(1500) }
+    else await page.waitForTimeout(260)
     await badge('滚动')
     await glide(await curPos(), P(.5, .5), 10)
     await page.evaluate(() => window.__wheel(true))
@@ -626,6 +744,36 @@ const listFile = OUTDIR + '/list.txt'
 fs.writeFileSync(listFile, lines.join('\n'))
 
 const out = `${OUTDIR}/${NAME}.webm`
+
+// ── 画面太扁就补高度（2026-08-26）─────────────────────────────────────
+// 取景是「裁到目标 + 按目标尺寸的比例留白」，目标本身很扁时留白也跟着很扁：
+// ScrollStack 的目标是 738×85，留白只有 20px，裁出 900×126 —— 宽高比 7:1。
+// 词典浮层只有 320 宽，这片子在那儿显示成 320×45，滚动堆叠的层次根本看不出来。
+//
+// 上限取 3.5:1：比它更扁的在浮层里就只剩一条缝了。补高度**以目标为中心对称展开**，
+// 并夹在舞台内 —— 贴边的目标（Dock 在底部）会自动往有空间的一侧让。
+// 纯文字类（GradientText 一行字）也会被补高，那是可接受的：文字居中、留白对称，
+// 比压成一条缝好读。
+// **只给需要垂直空间的小节补高。** 补高会让内容在成片里占比变小 ——
+// 一行文字的组件（GradientText / ShinyText / BlurText）补完动量掉一半，
+// 在 320 宽的浮层里字反而更小，是纯粹变差。
+// 而 scroll / drag 这类，动作本身就在纵向展开（ScrollStack 的堆叠、拖拽的行程），
+// 压成一条缝就什么都看不出来 —— 那才是补高要救的。
+const NEEDS_TALL = SECTIONS.includes('scroll') || SECTIONS.includes('drag')
+const MAX_AR = 3.5
+if (NEEDS_TALL && box.width / box.height > MAX_AR) {
+  const want = box.width / MAX_AR
+  const mid = box.y + box.height / 2
+  let y0 = mid - want / 2, y1 = mid + want / 2
+  if (y0 < STAGE.y) { y1 += STAGE.y - y0; y0 = STAGE.y }
+  if (y1 > STAGE.y + STAGE.height) { y0 -= y1 - (STAGE.y + STAGE.height); y1 = STAGE.y + STAGE.height }
+  y0 = Math.max(STAGE.y, y0); y1 = Math.min(STAGE.y + STAGE.height, y1)
+  if (y1 - y0 > box.height + 2) {
+    console.error(`  · 画面太扁（${(box.width/box.height).toFixed(1)}:1）→ 高度 ${Math.round(box.height)} 补到 ${Math.round(y1 - y0)}`)
+    box = { ...box, y: y0, height: y1 - y0 }
+  }
+}
+
 // 最后再夹一次：crop 的四个数必须落在画面里且为正，否则 ffmpeg 直接 -22
 const cx = Math.max(0, Math.min(VW - 2, Math.round(box.x)))
 const cy = Math.max(0, Math.min(VH - 2, Math.round(box.y)))
