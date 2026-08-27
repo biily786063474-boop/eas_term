@@ -290,8 +290,37 @@ const TARGET = await page.evaluate(() => {
   if (big(grabby)) return withGroup(grabby, 'grab/draggable')
   if (big(clicky)) return withGroup(clicky, 'pointer/控件')
   if (cvs) return box(cvs, 'canvas')                 // 控件太碎时画布才是真正的舞台
-  if (grabby) return box(grabby, 'grab(小)')
-  if (clicky) return box(clicky, 'pointer(小)')
+  // **兜底到小控件时，取景要退到装着它的那一层。**
+  // 所有导航组件都走这条：能抓的最大元素是**单个导航项**（GooeyNav 的 A 是 56×38、
+  // PillNav 68×36），裁到它就只剩一个按钮放大糊在画面里 —— 导航条长什么样、
+  // 药丸滑到哪一项，全看不见。而导航条本体就在父链上一两层
+  // （GooeyNav 的 UL 352×38、PillNav 的 UL 289×42，各装 4 个同类项）。
+  //
+  // 判据：往上最多找 4 层，父元素要装着 ≥3 个孩子、面积比当前目标大出一截、
+  // 又不能大到接近整个舞台（那等于没裁）。
+  const containerOf = (e) => {
+    let cur = e
+    for (let i = 0; i < 4 && cur && cur !== stage; i++) {
+      const par = cur.parentElement
+      if (!par || par === stage) break
+      const pr = par.getBoundingClientRect()
+      // **只退到「横向条状」的容器。** 拉远取景是有代价的，实测只有导航条那种
+      // 宽高比大的划算 —— 一条导航裁到单个按钮就什么都看不出来，而拉到整条正好：
+      //   受益：GooeyNav 352×38（9.3:1，0.46→1.70）、PillNav 289×42（6.9:1，0.30→1.37）
+      //   受损：GlassIcons 329×280（1.2:1，0.63→0.19）、StaggeredMenu 364×280（1.3:1，5.57→3.72）
+      //   LineSidebar 148×516 是竖的（0.29:1），退到容器会裁出 660×1696 —— 浮层里高得没法看
+      if (par.children.length >= 3 && A(par) > A(e) * 2.5 && A(par) < area * 0.85 &&
+          pr.width / Math.max(1, pr.height) > 3) return par
+      cur = par
+    }
+    return null
+  }
+  const withContainer = (e, why) => {
+    const c = containerOf(e)
+    return c ? box(c, `${why}→容器`) : box(e, why)
+  }
+  if (grabby) return withContainer(grabby, 'grab(小)')
+  if (clicky) return withContainer(clicky, 'pointer(小)')
   return block ? box(block, '最大实体块') : null
 })
 
@@ -374,7 +403,13 @@ if (EXPANDED) {
 } else if (TARGET && inStage(TARGET) && TARGET.width * TARGET.height < STAGE.width * STAGE.height * 0.5) {
   // 目标越小留白越多：不然 660px 成片里目标顶满画面，角标直接压在控件上
   const k = TARGET.width * TARGET.height < STAGE.width * STAGE.height * 0.12 ? 0.55 : 0.24
-  const px = TARGET.width * k, py = TARGET.height * k
+  const px = TARGET.width * k
+  // **很扁的目标，纵向要多留一点。** 留白按目标自身尺寸的比例算，
+  // 导航条那种 352×38 的目标纵向只留得到 20px，成片里它上下贴着边，
+  // 看不出这是浮在页面上的一条导航（GooeyNav 实测裁出 660×70，
+  // 而这轮之前是 660×118）。横向不动 —— 那个方向本来就够宽。
+  const ky = TARGET.width / TARGET.height > 4 ? Math.max(k, 1.1) : k
+  const py = TARGET.height * ky
   // **必须和舞台求交，而且交集为空要退回舞台。**
   // 轮播卡片这类会滑到舞台外面去，直接算 min/max 会得出负宽度，
   // ffmpeg 报 -22 就挂了（Carousel 实测 crop=-174:480:...）。
