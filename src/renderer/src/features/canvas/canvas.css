@@ -2265,6 +2265,28 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 未安装的 CLI **不再 disabled**（要能选中才走得到安装那一步），
+   改成整行压暗 + 一枚「未安装」小标记来表达状态。 */
+.ab-kind-item.off .ab-kind-mark,
+.ab-kind-item.off > span:nth-child(2) {
+  opacity: 0.55;
+}
+.ab-kind-no {
+  margin-left: auto;
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  /* 琥珀色**写死在这里**，不引 --warning —— 那个变量只由
+     features/design/composer/animate/styles.css 定义，本模块加载时不保证在。
+     var() 解析失败会把整条属性判废（灵动岛的 --accent-rgb 就这么栽过），
+     到时候标记会变成透明底看不见。 */
+  color: #f5a623;
+  background: rgba(245, 166, 35, 0.16);
+}
+
 .ab-kind-mark {
   display: inline-flex;
   color: var(--fg-dim);
@@ -2273,6 +2295,20 @@
   color: var(--accent);
 }
 .ab-kind-item > svg:last-child {
+  margin-left: auto;
+}
+/* ✓ 的固定槽：宽度写死，有没有勾都占位，两行才对得齐。
+   没有「未安装」标记的那一行由它自己把内容推到右边（第 3 个孩子）；
+   有标记时标记吃 auto，槽只留一点间距。 */
+.ab-kind-ck {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+}
+.ab-kind-item > .ab-kind-ck:nth-child(3) {
   margin-left: auto;
 }
 .ab-seg {
@@ -2333,6 +2369,16 @@
 .ab-launch:disabled {
   opacity: 0.42;
   cursor: not-allowed;
+}
+/* 「安装」形态：同一颗按钮、同样的分量（它就是此刻该点的那个），
+   只换底色以示这不是「启动」。**只改 background-color 不改 background 简写** ——
+   glow.css 给实心 CTA 叠的那层受光 background-image 要保住。 */
+.ab-launch.ab-install {
+  background-color: #f5a623; /* 同上：不引 --warning，见上面那条注释 */
+  color: #241a05;
+}
+.ab-launch.ab-install svg {
+  color: #241a05;
 }
 .ab-launch svg {
   color: var(--on-accent);

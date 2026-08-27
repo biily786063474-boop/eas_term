@@ -436,10 +436,14 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           这里是分屏专属 —— 分屏没有 Agent 控制台，AgentCmdBar 自己按
           ptyAgent[ptyId]（主进程探出来的真实进程名）决定显不显示，认不出就返回 null。 */}
       {!canvasRect && pane.kind === 'terminal' && <AgentCmdBar ptyId={pane.ptyId} />}
-      {canvasTerm && pane.kind === 'terminal' && agentAvailable && (
+      {canvasTerm && pane.kind === 'terminal' && (
         // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
-        // 一个 CLI 都没装时整个藏掉：那条控制条上的模型/档位/启动全是死的，摆着只会让人困惑
-        // （引导弹窗会告诉用户为什么没有、怎么装）
+        //
+        // **一个 CLI 都没装时也照常显示**（2026-08-27 用户要求）。原来是整条藏掉，
+        // 理由是「模型/档位/启动全是死的，摆着让人困惑」—— 但藏掉的代价更大：
+        // 新用户第一次打开软件时**什么都看不到**，也就不知道这里本来能选 CLI、
+        // 更不知道该装什么。现在改成照常显示，启动按钮在没装时变成「安装」，
+        // 点它直接装 —— 把「困惑」换成了「一条能往下走的路」。
         <div className="agentbar-wrap" style={{ zoom: effScale }}>
           <CanvasAgentBar
             frameId={canvasRect!.frameId}

@@ -219,6 +219,34 @@ export function CanvasAgentBar({
   // 角色钉死 CLI 时星星按钮要锁住 —— 点开了也改不动，不如不给点
   const pinned = !!role && role.kind !== 'auto'
 
+  /** 装当前选中的这个 CLI。弹确认框（**把要执行的命令原样列出来**），
+   *  点了「安装」就开个终端把它跑起来。
+   *
+   *  和 AgentChatView 里那条同源：命令取自 agentInstall 的 installPlan()，
+   *  是我们自己按平台挑的固定方案，不拼接任何外部输入。
+   *  仍然送进**终端**而不是后台执行 —— 装完还要 `claude login` 用自己的账号，
+   *  失败时报错摆在眼前也比一句「安装失败」有用。 */
+  const installCli = async (): Promise<void> => {
+    const plan = await window.api.skill.installPlan().catch(() => null)
+    const cmd = plan?.[kind]?.options?.[0]?.cmd
+    const st = useStore.getState()
+    if (!cmd) {
+      st.requestConfirm({
+        message: `没找到 ${kindName(kind)} 在这台机器上的安装方式。\n请到它的官网安装后再回来。`,
+        confirmLabel: '知道了',
+        onConfirm: () => {}
+      })
+      return
+    }
+    st.requestConfirm({
+      message: `${kindName(kind)} 还没装。要现在装吗？\n\n会开一个终端执行：\n${cmd}\n\n装完通常还要用你自己的账号登录一次，那一步在同一个终端里接着做。`,
+      confirmLabel: '安装',
+      cancelLabel: '只把命令填进终端',
+      onConfirm: () => void st.prefillTerminal(cmd, { run: true }),
+      onCancel: () => void st.prefillTerminal(cmd)
+    })
+  }
+
   const models = probe?.[kind].models ?? []
   const efforts = probe?.[kind].efforts ?? []
   // 优先级：节点自己选的 > 角色的默认 > 探测出的默认。
@@ -236,7 +264,10 @@ export function CanvasAgentBar({
   const setEffort = (e: string): void => mutate({ effort: { ...rec(agent?.effort), [kind]: e } })
   const setKind = (k: Kind): void => {
     if (k === kind) return
-    if (k === 'codex' && !codexReady) return // 未装 codex 不允许切过去
+    // 这里原来有一道 `if (k === 'codex' && !codexReady) return`。
+    // **删掉了**（2026-08-27）：菜单项已经放开可点，这道早退会让点击静默失灵 ——
+    // 比原来的置灰更糟，看着能点、点了没反应。没装的后果由启动按钮承担：
+    // 它此时是「安装」。
     setPop(null)
     mutate({ kind: k })
   }
@@ -390,15 +421,22 @@ export function CanvasAgentBar({
           <b>{effZh(effort)}</b>
         </button>
 
-        {/* ▶ 启动（弹「是否回溯」） */}
-        <button
-          className="ab-launch"
-          disabled={!activeReady}
-          data-tip={activeReady ? '启动' : `未检测到 ${kind} 命令`}
-          onClick={(e) => activeReady && openAsk(e.currentTarget)}
-        >
-          <PlayIcon size={12} /> 启动
-        </button>
+        {/* ▶ 启动；**没装的时候这颗按钮变成「安装」**（2026-08-27 用户要求）。
+            原来是置灰 + 一句「未检测到 xx 命令」—— 那是个死胡同：
+            它告诉你不能用，却没告诉你怎么办。现在点它就问装不装，同意就开终端装上。 */}
+        {activeReady ? (
+          <button className="ab-launch" data-tip="启动" onClick={(e) => openAsk(e.currentTarget)}>
+            <PlayIcon size={12} /> 启动
+          </button>
+        ) : (
+          <button
+            className="ab-launch ab-install"
+            data-tip={`${kindName(kind)} 还没装，点击安装`}
+            onClick={() => void installCli()}
+          >
+            <PlusIcon size={12} /> 安装
+          </button>
+        )}
       </div>
 
       <AgentCmdBar ptyId={ptyId} />
@@ -425,8 +463,11 @@ export function CanvasAgentBar({
                 ).map(([k, ready, why]) => (
                   <button
                     key={k}
-                    className={`ab-menu-item ab-kind-item${k === kind ? ' on' : ''}`}
-                    disabled={!ready}
+                    // **没装也让选**（2026-08-27 用户要求）：原来这里 disabled，
+                    // 结果是想装 codex 的人连"选中它"这一步都做不到 —— 而安装入口
+                    // 恰恰在选中之后的那颗按钮上。现在选了就显示"未安装"，
+                    // 旁边的启动按钮同步变成「安装」。
+                    className={`ab-menu-item ab-kind-item${k === kind ? ' on' : ''}${ready ? '' : ' off'}`}
                     data-tip={ready ? '' : why}
                     onClick={() => setKind(k)}
                   >
@@ -434,7 +475,10 @@ export function CanvasAgentBar({
                       {k === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
                     </span>
                     <span>{kindName(k)}</span>
-                    {k === kind && <CheckIcon size={12} />}
+                    {!ready && <span className="ab-kind-no">未安装</span>}
+                    {/* ✓ 占一个**固定宽度的槽**，选没选中都在 —— 否则两行的
+                        「未安装」标记会因为有没有 ✓ 而左右错开一截 */}
+                    <span className="ab-kind-ck">{k === kind && <CheckIcon size={12} />}</span>
                   </button>
                 ))}
               </div>
