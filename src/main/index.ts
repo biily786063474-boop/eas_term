@@ -37,6 +37,7 @@ import { registerAgentInstallHandlers } from './agentInstall'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
 import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
+import { installIpcProfiler, flushIpcProfile } from './ipcProfiler.ts'
 import {
   registerAgentChatHandlers,
   killAllAgentChatSessions,
@@ -346,6 +347,10 @@ app.whenReady().then(() => {
   // （2026-08-19 撞过：generate.md 补了三条关键缺口，分发出去的仍是没有它们的旧版）。
   // **只更新已经装了的，不主动安装** —— 卸载过的人不该被装回来（同 MCP 的 opt-out）。
   refreshInstalledRules()
+  // **必须在所有 registerXxxHandlers() 之前** —— 它替换的是 ipcMain.handle/on 本身，
+  // 晚一步的话先注册的那些就不会被计时到。开销是一次 Date.now()，慢调用才写文件。
+  installIpcProfiler()
+
   registerPtyHandlers()
   registerProjectHandlers()
   registerBoardHandlers()
@@ -437,6 +442,8 @@ app.on('before-quit', (e) => {
 })
 
 app.on('will-quit', () => {
+  // 把 IPC 耗时的累计统计落一份 —— 单看慢调用会漏掉「每次 30ms 但被调一千次」那种
+  flushIpcProfile()
   killAllPtys(true) // 兜底：任何路径走到这里都确保清干净
   killAllAgentChatSessions(true)
 })
