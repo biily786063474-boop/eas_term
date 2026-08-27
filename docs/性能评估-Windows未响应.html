@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term 性能评估</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;margin-left:6px}
+.p-hi{background:rgba(244,63,94,.16);color:#fda4af}
+.p-md{background:rgba(245,158,11,.16);color:#fcd34d}
+.p-lo{background:rgba(16,185,129,.14);color:#6ee7b7}
+.opt{border:1px solid #262626;border-radius:14px;padding:22px 24px;margin-bottom:16px;background:rgba(23,23,23,.4)}
+.opt h4{margin:0 0 4px;font-size:16px}
+.opt .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#737373;margin:10px 0 14px;
+  font-family:ui-monospace,Menlo,monospace}
+.opt .meta b{color:#d4d4d4;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin-top:12px}
+.kv dt{color:#737373;white-space:nowrap}
+.kv dd{margin:0;color:#d4d4d4}
+.unknown{border-left:2px solid #7dd3fc;background:rgba(14,165,233,.05);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.unknown .vlabel{color:#7dd3fc}
+</style></head><body><nav><div class="navwrap"><span class="navbrand">Eas-Term · 性能评估</span>
+<a href="#data">实测数据</a><a href="#win">Windows 未响应</a><a href="#opts">可做的优化</a>
+<a href="#risk">代价与风险</a><a href="#plan">建议顺序</a></div></nav>
+<main>
+<header class="hero"><span class="eyebrow">2026-08-27 · 基于长跑实例实测</span>
+<h1>性能评估：Windows 未响应能不能治</h1>
+<p class="lede">你报 Windows 上出现未响应。我在一个已经跑了 <b>2 天 5 小时</b>的 macOS 实例上采了真实数据，
+再对照代码找 Windows 特有的开销。结论先说：<b>CPU 不是瓶颈，内存和主线程阻塞才是</b>；
+有四项优化值得做，其中两项几乎无代价。</p>
+<div class="meta"><span>采样实例存活 <b>2 天 5 小时</b></span><span>画布 <b>38 个节点</b></span>
+<span>渲染进程 <b>7 个</b></span><span>系统负载 <b>4.34 / 15 核</b></span></div></header>
+
+<section id="data"><h2>实测</h2><div class="sectitle">先纠正一个我自己差点搞错的数</div>
+<div class="dissent"><div class="vlabel">ps 的 %CPU 是累计平均，不是瞬时值</div>
+第一次采样看到主进程 <b>62.7%</b>、Renderer 44.4%，差点当成「CPU 烧满」写进报告。
+但 macOS 上 <code>ps</code> 的 %CPU 是<b>进程整个生命周期的平均</b>——这进程跑了 2 天 5 小时。
+用 <code>sample</code> 抓调用栈印证：热点全是 <code>mach_msg</code> / <code>kevent</code> / <code>uv__io_poll</code>，
+<b>此刻是空闲等待</b>。改用 <code>top</code> 取瞬时值才是下面这组真数据。</div>
+<div class="tw"><table><thead><tr><th>进程</th><th>瞬时 CPU</th><th>内存</th><th>说明</th></tr></thead><tbody>
+<tr><td>GPU Helper</td><td>19.3%</td><td>915 MB</td><td>画布在渲染，38 个节点</td></tr>
+<tr><td><b>Renderer（主窗口）</b></td><td>15.9%</td><td><b>1227 MB</b></td><td><b>最大的一块</b></td></tr>
+<tr><td>主进程</td><td>5.9%</td><td>903 MB</td><td>IPC 转发 + PTY</td></tr>
+<tr><td colspan="4" style="color:#737373">另有 6 个小 Renderer（webview / Helper），21~136 MB 不等</td></tr>
+</tbody></table></div>
+<p><b>合计约 3 GB</b>，系统负载 4.34 / 15 核 —— CPU 有余量，<b>内存才是压力所在</b>。
+画布上挂着 38 个节点：12 个 AI 对话、10 个网页、7 个代码预览、2 个图片。</p>
+<div class="verdict"><div class="vlabel">已经在起作用的三项优化（别误拆）</div>
+· <b>视口裁剪</b>（PaneLayer，余量 600px）—— 代码里记着实测对照：30 个终端平移 6 秒，
+不裁 536→668 MB 一路爬，裁了全程稳定 378 MB<br>
+· <b>网页节点懒挂载 + 120 秒离屏回收</b>（WebView.tsx）—— 离屏的书签节点不建 Chromium 进程<br>
+· <b>scrollback 已从 20000 降到 5000</b>（我的记忆里还写着 20000，是过期的）</div>
+</section>
+
+<section id="win"><h2>Windows</h2><div class="sectitle">四个 Windows 特有的开销</div>
+<p class="secnote"><b>我没有 Windows 机器，下面是代码分析 + 平台已知行为，不是实测。</b>
+标注了每条的确信度。</p>
+
+<div class="opt"><h4>① 每次关终端都起一个 PowerShell 枚举全系统进程 <span class="pill p-hi">最可疑</span></h4>
+<div class="meta"><span>确信度 <b>高</b></span><span>位置 <b>pty.ts shellsWithChildren</b></span></div>
+<p>判断「有没有命令在跑」时，Unix 走 <code>ps -axo ppid=</code>（毫秒级），
+Windows 走 <code>powershell.exe -Command (Get-CimInstance Win32_Process).ParentProcessId</code>。</p>
+<p>PowerShell 冷启动本身就要 <b>300~800ms</b>，<code>Get-CimInstance Win32_Process</code> 还要走 WMI
+枚举全部进程——进程多的机器上<b>秒级</b>很常见。这个调用发生在关终端、关项目、退出确认时，
+<b>而且是 await 的</b>，那几秒里界面就是「未响应」。</p>
+<dl class="kv"><dt>触发时机</dt><dd>关终端 / 关项目 / 退出前确认（<code>pty:busyByIds</code>、<code>anyPtyBusy</code>）</dd>
+<dt>已有超时</dt><dd>4000ms —— 也就是说最坏情况会卡满 4 秒才放弃</dd></dl></div>
+
+<div class="opt"><h4>② 后台节流三个开关全关了 <span class="pill p-md">代价明确</span></h4>
+<div class="meta"><span>确信度 <b>高</b></span><span>位置 <b>index.ts 启动</b></span></div>
+<p><code>disable-background-timer-throttling</code>、<code>disable-renderer-backgrounding</code>、
+<code>disable-backgrounding-occluded-windows</code> 三个全开着。</p>
+<p><b>理由是充分的</b>，代码里有实测：最小化 10 秒后 setInterval 只剩 26%、rAF 只剩 11%，
+而终端输出靠 rAF 写进 xterm——一节流，agent 在后台跑出来的东西全堵在缓冲里。</p>
+<p><b>但代价是</b>：这三个开关是<b>全局的</b>，画布上那 10 个 webview 也一起不被节流，
+即使完全离屏、完全看不见，也在全速跑自己的 JS 和动画。Windows 上多窗口调度本就更吃紧。</p></div>
+
+<div class="opt"><h4>③ 主进程 IPC 里的同步文件 I/O <span class="pill p-md">中等</span></h4>
+<div class="meta"><span>确信度 <b>中</b></span><span>规模 <b>293 处 readFileSync 类调用</b></span></div>
+<p>其中约 20 个直接躺在 <code>ipcMain.handle</code> 里——<b>每次调用都阻塞主进程事件循环</b>，
+那期间所有窗口的 IPC 全部排队。<code>agentHistory:list</code> 要 readdir + 逐个读文件，
+历史多了单次就可能几十毫秒。</p>
+<p>Windows 的文件 I/O 比 macOS 慢（尤其有杀毒软件实时扫描时），同一段代码的阻塞时间会显著更长。</p></div>
+
+<div class="opt"><h4>④ 每个终端 4 张 canvas，Windows 上 GPU 合成路径不同 <span class="pill p-lo">较低</span></h4>
+<div class="meta"><span>确信度 <b>低</b></span><span>位置 <b>TerminalView CanvasAddon</b></span></div>
+<p>终端用 CanvasAddon（曾用 WebglAddon，因半透明背景叠影改回）。视口裁剪已经挡住了大部分开销，
+但 Windows 的 GPU 合成与 macOS 差异较大，这条需要在 Windows 上实测才能定性。</p></div>
+</section>
+
+<section id="opts"><h2>优化</h2><div class="sectitle">四项，按性价比排序</div>
+
+<div class="opt"><h4>A. 换掉 Windows 的进程枚举方式 <span class="pill p-lo">几乎无代价</span></h4>
+<dl class="kv">
+<dt>怎么做</dt><dd>用 <code>wmic process get ParentProcessId</code>，或直接 <code>tasklist /fo csv</code>；
+更彻底的是用 Node 原生方式（<code>process.kill(pid, 0)</code> 探活 + 维护自己的子进程表），完全不起外部进程</dd>
+<dt>收益</dt><dd>关终端从「可能卡 1~4 秒」变成毫秒级</dd>
+<dt>代价</dt><dd>需要在 Windows 上验证命令输出格式；<code>wmic</code> 在新版 Windows 上已弃用，要做回退</dd>
+<dt>影响功能</dt><dd><b>无</b>——只换实现，判据不变</dd>
+<dt>风险</dt><dd>低。有超时兜底，失败时退回「当作不忙」，和现在行为一致</dd></dl></div>
+
+<div class="opt"><h4>B. 给离屏 webview 单独恢复节流 <span class="pill p-md">要小心</span></h4>
+<dl class="kv">
+<dt>怎么做</dt><dd>三个全局开关保持关闭（终端需要），但对画布上的 <code>&lt;webview&gt;</code> 单独设
+<code>backgroundThrottling: true</code>，或在离屏时主动 <code>setBackgroundThrottling</code></dd>
+<dt>收益</dt><dd>10 个网页节点离屏时不再全速跑，CPU 和电池都受益</dd>
+<dt>代价</dt><dd>离屏网页里的计时器/动画会变慢——<b>但它们本来就有 120 秒离屏回收</b>，
+被回收的更彻底，所以这条影响的只是「离屏 0~120 秒」这个窗口</dd>
+<dt>影响功能</dt><dd><b>可能有</b>：如果有人用网页节点挂着一个需要持续刷新的页面（如监控看板），
+离屏时会变慢。需要你确认有没有这种用法</dd>
+<dt>风险</dt><dd>中。要实测确认不会影响终端——它们不是 webview，理论上不受影响</dd></dl></div>
+
+<div class="opt"><h4>C. 把热路径上的同步 I/O 改异步 <span class="pill p-lo">无代价但工作量大</span></h4>
+<dl class="kv">
+<dt>怎么做</dt><dd>先量：给几个高频 handler 加耗时埋点，跑一天看 p95。只改真正慢的那几个，
+不做无差别重写</dd>
+<dt>收益</dt><dd>主进程不再被单次文件读写卡住；Windows 上收益比 macOS 明显（文件 I/O 更慢 + 杀毒扫描）</dd>
+<dt>代价</dt><dd>纯工作量。约 20 个 handler，逐个改 + 逐个验</dd>
+<dt>影响功能</dt><dd><b>无</b>——但改的过程中容易引入竞态（原来同步保证的顺序没了），
+每个都要想清楚「并发调用会怎样」</dd>
+<dt>风险</dt><dd>中。同步改异步是经典的引 bug 途径，必须一个一个来、每个都有测试</dd></dl></div>
+
+<div class="opt"><h4>D. 限制画布上同时活跃的重节点数 <span class="pill p-hi">改行为</span></h4>
+<dl class="kv">
+<dt>怎么做</dt><dd>超过 N 个 AI 对话 / 网页节点时，把最久没看的挂起（保留截图占位，点了再恢复）</dd>
+<dt>收益</dt><dd>内存上限可控。当前 38 个节点 3 GB，这是唯一能压住总量的办法</dd>
+<dt>代价</dt><dd><b>改变用户可感知的行为</b>：切回去时要等它恢复</dd>
+<dt>影响功能</dt><dd><b>有</b>。AI 对话挂起后会话状态怎么办？12 个 agent 会话如果被挂起，
+正在跑的任务会不会断？这条不搞清楚不能做</dd>
+<dt>风险</dt><dd>高。建议放到最后，且先做 A/B/C 看够不够</dd></dl></div>
+</section>
+
+<section id="risk"><h2>结论</h2><div class="sectitle">是否可接受</div>
+<div class="verdict"><div class="vlabel">建议做：A + B</div>
+<b>A（换进程枚举）几乎零代价、零功能影响</b>，而且直指「未响应」这个症状——
+关终端时卡 1~4 秒正是最像「未响应」的表现。<br>
+<b>B（离屏 webview 节流）</b>代价明确且有限（只影响离屏 0~120 秒的网页节点），
+收益是 10 个 webview 不再空转。</div>
+<div class="warn"><div class="vlabel">谨慎：C</div>
+收益真实但工作量大，且同步改异步容易引入竞态。建议<b>先加耗时埋点量一天</b>，
+只改真正慢的那几个，而不是无差别重写 293 处。</div>
+<div class="dissent"><div class="vlabel">先别做：D</div>
+它是唯一能压住内存总量的办法，但会改变你能感知的行为，
+而且「AI 对话挂起后正在跑的任务怎么办」这个问题不解决就不能动。</div>
+<div class="unknown"><div class="vlabel">我不知道的部分，得你补</div>
+· <b>未响应发生在什么时候？</b>关终端时？切视图时？还是一直卡？——A 直接对应「关终端时卡」，
+如果是别的场景，优先级要重排<br>
+· <b>那台 Windows 的配置</b>（内存多大、有没有杀毒软件实时扫描）——8 GB 的机器跑 3 GB 的 app 会换页，
+那是另一类问题<br>
+· <b>画布上开了多少节点</b>——如果也是三四十个，D 的优先级要提前<br>
+· 我<b>没有 Windows 机器</b>，上面四条 Windows 特有开销都是代码分析 + 平台已知行为推出来的，
+没有一条在 Windows 上实测过</div>
+</section>
+
+<section id="plan"><h2>下一步</h2><div class="sectitle">如果要动手</div>
+<div class="card"><h4>第一步：先量，别先改</h4>
+<p>在 Windows 版里加一个轻量耗时埋点（IPC handler 的 p95、PowerShell 调用的实际耗时），
+跑一天把数据带回来。<b>现在这份报告里的 Windows 部分全是推断</b>，
+埋点能把它变成事实——省得改完发现根因是别的。</p></div>
+<div class="card"><h4>第二步：A 单独发一版</h4>
+<p>它零功能影响、改动集中在一个函数，适合单独验证。如果未响应就此消失，后面几项都可以缓。</p></div>
+<div class="card"><h4>第三步：按埋点数据决定 B / C</h4></div>
+</section>
+</main></body></html>
