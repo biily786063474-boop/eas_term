@@ -18,15 +18,22 @@ import type { Project, ProjectStatus } from '../../../../shared/types'
 
 import { useProjectRows } from '../status/useStatus.ts'
 import { useBoardScroll } from './useBoardScroll'
-import { TerminalIcon, PlusIcon, CloseIcon, ChevronLeftIcon, TrashIcon } from '../../ui/Icons'
+import { TerminalIcon, SparkleIcon, PlusIcon, CloseIcon, ChevronLeftIcon, TrashIcon } from '../../ui/Icons'
 import './board.css'
 
 interface TermLeaf {
   leaf: LeafNode
+  /** **任务 id，不只是 pty id**：终端是 pty id，AI 对话是它的会话 id（sessionId）。
+   *  两种不会撞（一个来自 node-pty，一个是 `ac-N`），而 attentionPtys / runningPtys
+   *  本来就按这个 id 记账 —— 看板接 AI 对话进来不需要新的状态源，
+   *  只是原来 `kind !== 'terminal'` 一句 continue 把它整类挡在门外了。
+   *  判据同 status/machine.ts 的 locate()。 */
   ptyId: string
   title: string
   /** 关终端要 (tabId, leafId) 两个参数，收集时就带上，别到用的时候再去 tabs 里翻一遍 */
   tabId: string
+  /** 卡片上要分得出这一行是终端还是 AI 对话（图标 + 空态文案都不一样） */
+  kind: 'terminal' | 'agent'
 }
 
 export function BoardStage(): JSX.Element {
@@ -81,9 +88,15 @@ export function BoardStage(): JSX.Element {
     for (const t of tabs) {
       if (!t.projectId) continue
       for (const leaf of collectLeaves(t.root)) {
-        if (leaf.pane.kind !== 'terminal') continue
+        const k = leaf.pane.kind
+        if (k !== 'terminal' && k !== 'agent') continue
+        // AI 对话还没起会话时 sessionId 是 undefined —— 那种没有状态可显示，跳过。
+        // 不挡的话它会拿着 undefined 去 includes()，匹配不到任何东西，
+        // 白占一行还永远是「静默」。
+        const id = k === 'terminal' ? leaf.pane.ptyId : leaf.pane.sessionId
+        if (!id) continue
         const arr = m.get(t.projectId) ?? []
-        arr.push({ leaf, ptyId: leaf.pane.ptyId, title: t.title, tabId: t.id })
+        arr.push({ leaf, ptyId: id, title: t.title, tabId: t.id, kind: k })
         m.set(t.projectId, arr)
       }
     }
@@ -161,7 +174,7 @@ export function BoardStage(): JSX.Element {
             >
               {fullOf.list.map((t, i) => (
                 <option key={t.leaf.id} value={t.leaf.id}>
-                  {t.title || `终端 ${i + 1}`}
+                  {t.title || (t.kind === 'agent' ? `AI 对话 ${i + 1}` : `终端 ${i + 1}`)}
                 </option>
               ))}
             </select>
@@ -178,7 +191,7 @@ export function BoardStage(): JSX.Element {
               那个终端已经没了，留在全屏里只会看到一片空白 */}
           <button
             className="board-fs-kill"
-            data-tip="关掉这个终端"
+            data-tip={fullOf.term.kind === 'agent' ? '关掉这个 AI 对话' : '关掉这个终端'}
             onClick={() => {
               const cur = fullOf.term
               setFull(null)
@@ -300,6 +313,8 @@ export function BoardStage(): JSX.Element {
                 // 会自相矛盾：里面写着「等处理」，卡片头却报「在跑」。
                 const need = !!row && row.attn > 0
                 const busy = row?.top === 'running'
+                const termN = terms.filter((t) => t.kind === 'terminal').length
+                const agentN = terms.length - termN
                 return (
                   <div
                     key={p.id}
@@ -322,19 +337,30 @@ export function BoardStage(): JSX.Element {
                           因为卡片头就这么宽，两个点并排反而看不出哪个是哪个 */}
                       <span
                         className={`board-dot${need ? ' need' : busy ? ' busy' : ''}`}
-                        data-tip={need ? '有终端在等你处理' : busy ? '有任务在跑' : ''}
+                        data-tip={need ? '有终端或 AI 对话在等你处理' : busy ? '有任务在跑' : ''}
                       />
                       <span className="board-cardname" data-tip={p.path}>
                         {p.name}
                       </span>
-                      <span className="board-cardn" data-tip={`${terms.length} 个终端`}>
-                        <TerminalIcon size={11} />
-                        {terms.length}
-                      </span>
+                      {/* 终端和 AI 对话**分开计数**：合成一个数字看不出「这个项目
+                          是开着终端还是在跟 AI 聊」，而那正是一眼扫看板时想知道的。
+                          某一类为 0 就不显示那一格，别用「0」占位。 */}
+                      {termN > 0 && (
+                        <span className="board-cardn" data-tip={`${termN} 个终端`}>
+                          <TerminalIcon size={11} />
+                          {termN}
+                        </span>
+                      )}
+                      {agentN > 0 && (
+                        <span className="board-cardn agent" data-tip={`${agentN} 个 AI 对话`}>
+                          <SparkleIcon size={11} />
+                          {agentN}
+                        </span>
+                      )}
                     </div>
 
                     {terms.length === 0 ? (
-                      <div className="board-cardnone">还没有终端 · 点一下开一个</div>
+                      <div className="board-cardnone">还没有终端或 AI 对话 · 点一下开一个</div>
                     ) : (
                       <div className="board-terms">
                         {/* 一个终端一行。那行字是终端标题 —— agent 干活时会把当前任务
@@ -359,7 +385,14 @@ export function BoardStage(): JSX.Element {
                               }}
                             >
                               <span className="board-termdot" />
-                              <span className="board-termname">{t.title || `终端 ${i + 1}`}</span>
+                              {/* 一行里必须看得出是终端还是 AI 对话 —— 两者的标题
+                                  都是「当前在忙什么」，光看文字分不出来 */}
+                              <span className="board-termkind" data-kind={t.kind} aria-hidden>
+                                {t.kind === 'agent' ? <SparkleIcon size={10} /> : <TerminalIcon size={10} />}
+                              </span>
+                              <span className="board-termname">
+                                {t.title || (t.kind === 'agent' ? `AI 对话 ${i + 1}` : `终端 ${i + 1}`)}
+                              </span>
                               {n && <em>等处理</em>}
                               {!n && b && <em>在跑</em>}
                               {/* 关掉这个终端。**看板原来没有这个入口** ——
@@ -370,7 +403,7 @@ export function BoardStage(): JSX.Element {
                                 className="board-termx"
                                 role="button"
                                 tabIndex={-1}
-                                data-tip="关掉这个终端"
+                                data-tip={t.kind === 'agent' ? '关掉这个 AI 对话' : '关掉这个终端'}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   void closeLeafSafely(t.tabId, t.leaf.id)

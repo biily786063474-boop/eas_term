@@ -249,6 +249,24 @@
   background: #e0b45e;
   opacity: 1;
 }
+/* 行首那枚小图标：分得出这一行是终端还是 AI 对话。
+   两者的标题都是「当前在忙什么」，光看文字分不出来。 */
+.board-termkind {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--fg-dim);
+  opacity: 0.75;
+}
+.board-term.need .board-termkind,
+.board-term.busy .board-termkind {
+  opacity: 1;
+}
+/* AI 对话的计数用强调色区分，和终端那格并排时一眼分得开 */
+.board-cardn.agent {
+  color: var(--accent);
+}
+
 .board-termname {
   flex: 1;
   min-width: 0;
