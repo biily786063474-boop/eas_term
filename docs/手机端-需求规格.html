@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term 手机端 · 需求规格</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;margin-left:6px}
+.p-hi{background:rgba(244,63,94,.16);color:#fda4af}
+.p-md{background:rgba(245,158,11,.16);color:#fcd34d}
+.p-lo{background:rgba(16,185,129,.14);color:#6ee7b7}
+.opt{border:1px solid #262626;border-radius:14px;padding:22px 24px;margin-bottom:16px;background:rgba(23,23,23,.4)}
+.opt h4{margin:0 0 4px;font-size:16px}
+.opt .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#737373;margin:10px 0 14px;
+  font-family:ui-monospace,Menlo,monospace}
+.opt .meta b{color:#d4d4d4;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin-top:12px}
+.kv dt{color:#737373;white-space:nowrap}
+.kv dd{margin:0;color:#d4d4d4}
+.unknown{border-left:2px solid #7dd3fc;background:rgba(14,165,233,.05);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.unknown .vlabel{color:#7dd3fc}
+.ring{background:#0d0d0d;border:1px solid #262626;border-radius:16px;padding:26px 20px;margin:26px 0}
+.phone{border:1px solid #2e2e2e;border-radius:20px;padding:14px 12px 16px;background:#0f0f0f}
+.phone .bar{height:4px;width:38px;background:#333;border-radius:2px;margin:0 auto 12px}
+.phone h5{font-size:13px;margin:0 0 4px;color:#f5f5f5;font-weight:600}
+.phone .sub{font-size:11px;color:#525252;margin-bottom:10px}
+.phone .li{font-size:11.5px;color:#a3a3a3;padding:7px 9px;border:1px solid #232323;border-radius:8px;margin-bottom:6px;
+  display:flex;justify-content:space-between;gap:8px;align-items:center}
+.phone .li b{color:#e5e5e5;font-weight:500}
+.phone .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.no{border-left:2px solid #525252;background:rgba(255,255,255,.02);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.no .vlabel{color:#a3a3a3}
+</style></head><body><nav><div class="navwrap"><span class="navbrand">Eas-Term · 手机端规格</span>
+<a href="#flow">流程图</a><a href="#scope">范围</a><a href="#found">关键发现</a><a href="#wl">功能白名单</a>
+<a href="#net">跨网方案</a><a href="#sec">安全</a><a href="#ui">手机页面</a><a href="#plan">分期</a></div></nav>
+
+<header class="hero"><span class="eyebrow">2026-08-28 · 需求规格 v1（待你确认后才动手）</span>
+<h1>手机远程看 / 管<br>Eas-Term 的画布</h1>
+<p class="lede">结论：<b>能做，而且最难的那一段——跨网络打通——基础设施已经在跑了。</b>
+你这台笔记本此刻就是 <code>39.105.40.173</code> 那台 WireGuard Hub 的 peer（<code>utun0 = 10.9.0.4</code>，实测在线），
+而 <code>mini.biily.top</code> 已经在用「nginx 反代穿隧道回家里」这条路一个多月。
+手机端照搬这条路，<b>不需要新写中继服务、不需要端口转发、不需要动路由器</b>。</p>
+<p class="lede" style="color:#fcd34d">真正要你决定的不是技术路线，是<b>安全上的一个取舍</b>——
+白名单只有 4 个动作，但其中「发消息」是发给一个能执行任意命令的 agent。
+这一条见下面「安全」那节，我把话说直白了。</p>
+<div class="meta"><span>白名单 <b>4 个动作</b></span><span>手机端形态 <b>PWA 起步</b></span>
+<span>跨网 <b>复用现有 WireGuard</b></span><span>新增服务器代码 <b>0 行</b></span></div></header>
+
+<main>
+
+<section id="flow"><h2>一张图</h2><div class="sectitle">整条链路是个闭环</div>
+<p class="secnote">从你在手机上点一下，到手机上看到结果，一共八段。
+<b>手机全程只是一块屏幕加一个输入框</b>——它不执行任何东西，
+所有判断和执行都在桌面端（图里 5、6、7 三段）。</p>
+<div class="ring">
+<svg viewBox="0 0 800 800" width="100%" style="max-width:660px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="手机远程控制 Eas-Term 的闭环流程">
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#525252"/></marker></defs>
+<circle cx="400" cy="400" r="268" fill="none" stroke="#1f1f1f" stroke-width="1"/>
+<path d="M486.7 146.4 A 268 268 0 0 1 518.0 159.4" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M640.6 282.0 A 268 268 0 0 1 653.6 313.3" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M653.6 486.7 A 268 268 0 0 1 640.6 518.0" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M518.0 640.6 A 268 268 0 0 1 486.7 653.6" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M313.3 653.6 A 268 268 0 0 1 282.0 640.6" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M159.4 518.0 A 268 268 0 0 1 146.4 486.7" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M146.4 313.3 A 268 268 0 0 1 159.4 282.0" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M282.0 159.4 A 268 268 0 0 1 313.3 146.4" fill="none" stroke="#3a3a3a" stroke-width="1.6" marker-end="url(#ah)"/>
+<circle cx="400.0" cy="132.0" r="62" fill="#141414" stroke="#7dd3fc" stroke-width="1.6"/>
+<text x="400.0" y="102.0" text-anchor="middle" font-size="10.5" fill="#7dd3fc" font-weight="700">1</text>
+<text x="400.0" y="120.0" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">手机选项目</text>
+<text x="400.0" y="138.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">从已打开的</text>
+<text x="400.0" y="152.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">项目里挑一个</text>
+<circle cx="589.5" cy="210.5" r="62" fill="#141414" stroke="#7dd3fc" stroke-width="1.6"/>
+<text x="589.5" y="180.5" text-anchor="middle" font-size="10.5" fill="#7dd3fc" font-weight="700">2</text>
+<text x="589.5" y="198.5" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">发出指令</text>
+<text x="589.5" y="216.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">只发文本，</text>
+<text x="589.5" y="230.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">不带任何命令</text>
+<circle cx="668.0" cy="400.0" r="62" fill="#141414" stroke="#c4b5fd" stroke-width="1.6"/>
+<text x="668.0" y="370.0" text-anchor="middle" font-size="10.5" fill="#c4b5fd" font-weight="700">3</text>
+<text x="668.0" y="388.0" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">中转</text>
+<text x="668.0" y="406.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">39.105 · nginx</text>
+<text x="668.0" y="420.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">只转发不落地</text>
+<circle cx="589.5" cy="589.5" r="62" fill="#141414" stroke="#c4b5fd" stroke-width="1.6"/>
+<text x="589.5" y="559.5" text-anchor="middle" font-size="10.5" fill="#c4b5fd" font-weight="700">4</text>
+<text x="589.5" y="577.5" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">隧道</text>
+<text x="589.5" y="595.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">WireGuard</text>
+<text x="589.5" y="609.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">10.9.0.1→.4</text>
+<circle cx="400.0" cy="668.0" r="62" fill="#141414" stroke="#fcd34d" stroke-width="1.6"/>
+<text x="400.0" y="638.0" text-anchor="middle" font-size="10.5" fill="#fcd34d" font-weight="700">5</text>
+<text x="400.0" y="656.0" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">白名单校验</text>
+<text x="400.0" y="674.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">4 个动作之外</text>
+<text x="400.0" y="688.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">一律拒绝</text>
+<circle cx="210.5" cy="589.5" r="62" fill="#141414" stroke="#34d399" stroke-width="1.6"/>
+<text x="210.5" y="559.5" text-anchor="middle" font-size="10.5" fill="#34d399" font-weight="700">6</text>
+<text x="210.5" y="577.5" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">落到会话</text>
+<text x="210.5" y="595.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">注入 agentChat</text>
+<text x="210.5" y="609.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">或终端 pty</text>
+<circle cx="132.0" cy="400.0" r="62" fill="#141414" stroke="#34d399" stroke-width="1.6"/>
+<text x="132.0" y="370.0" text-anchor="middle" font-size="10.5" fill="#34d399" font-weight="700">7</text>
+<text x="132.0" y="388.0" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">agent 干活</text>
+<text x="132.0" y="406.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">工具调用仍走</text>
+<text x="132.0" y="420.0" text-anchor="middle" font-size="10.5" fill="#8a8a8a">审批闭环</text>
+<circle cx="210.5" cy="210.5" r="62" fill="#141414" stroke="#7dd3fc" stroke-width="1.6"/>
+<text x="210.5" y="180.5" text-anchor="middle" font-size="10.5" fill="#7dd3fc" font-weight="700">8</text>
+<text x="210.5" y="198.5" text-anchor="middle" font-size="13.5" fill="#f5f5f5" font-weight="600">回传</text>
+<text x="210.5" y="216.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">回复 / 文件列表</text>
+<text x="210.5" y="230.5" text-anchor="middle" font-size="10.5" fill="#8a8a8a">原路返回手机</text>
+<text x="400" y="370" text-anchor="middle" font-size="11" fill="#525252" letter-spacing="3">CLOSED LOOP</text>
+<text x="400" y="402" text-anchor="middle" font-size="21" fill="#f5f5f5" font-weight="600">手机 ⇄ Eas-Term</text>
+<text x="400" y="430" text-anchor="middle" font-size="12.5" fill="#a3a3a3">白名单只有 4 个动作</text>
+<text x="400" y="452" text-anchor="middle" font-size="12.5" fill="#a3a3a3">桌面端才是执行方</text>
+</svg>
+</div>
+<div class="grid g3">
+<div class="card"><h4><span class="b b-sk">1 · 2 · 8</span> 手机端</h4>
+<p style="margin:0;font-size:13.5px">只做三件事：显示、输入、点击。<b>不存业务数据、不缓存文件、不持有任何密钥以外的东西。</b>
+断线就是空白页，不假装还有数据。</p></div>
+<div class="card"><h4><span class="b b-vi">3 · 4</span> 通道</h4>
+<p style="margin:0;font-size:13.5px">nginx（39.105）+ WireGuard 隧道。<b>中间不解析、不落地、不留内容</b>，
+只是把 HTTPS 请求原样递到 <code>10.9.0.4</code>。</p></div>
+<div class="card"><h4><span class="b b-em">5 · 6 · 7</span> 桌面端</h4>
+<p style="margin:0;font-size:13.5px">白名单在这里强制。手机是不可信客户端，
+<b>它说什么都不算数，桌面端自己判一遍</b>。执行完把结果回传。</p></div>
+</div>
+</section>
+
+<section id="scope"><h2>范围</h2><div class="sectitle">做什么，明确不做什么</div>
+<div class="grid g2">
+<div class="card"><h4>做</h4>
+<ul class="clean" style="margin:0">
+<li>看画布上<b>已打开</b>的项目列表，切进某一个</li>
+<li>看该项目里<b>正在跑</b>的终端和 AI 对话</li>
+<li>给某个终端 / 对话<b>发文本</b>，收它的回复</li>
+<li>列出该项目 Frame 里的<b>文档和图片</b>节点，只列名字</li>
+<li>点开某个文档 / 图片<b>看内容</b></li>
+</ul></div>
+<div class="card"><h4>不做（这一版）</h4>
+<ul class="clean" style="margin:0">
+<li><b>不开新终端、不新建项目、不删任何东西</b></li>
+<li><b>不改文件</b>——文档只读，没有编辑框</li>
+<li>不跑命令、不给 shell、不传文件上去</li>
+<li>不做画布的图形视图（手机上拖节点没有意义）</li>
+<li>不做离线缓存（见安全那节：内容不该留在手机上）</li>
+</ul></div>
+</div>
+<div class="no"><div class="vlabel">一条边界说明</div>
+<p style="margin:0">「已打开的项目」= 画布上<b>存在顶层 Frame</b> 的项目，不是 <code>projects.json</code> 里的全部项目。
+这跟你在画布上看到的完全一致——没在画布上摆出来的项目，手机上也看不到。</p></div>
+</section>
+
+<section id="found"><h2>关键发现</h2><div class="sectitle">跨网这一段，你已经建好了</div>
+<p class="secnote">本来这是整件事里最重的一块（NAT 穿透、要不要写中继、手机在 4G 下怎么找到家里的机器）。
+查了一遍你的服务器档案 + 实测本机，发现路已经通了。</p>
+
+<div class="tw"><table><thead><tr><th>事实</th><th>来源</th><th>意味着</th></tr></thead><tbody>
+<tr><td><code>39.105.40.173</code> 是 <b>WireGuard 中转 Hub</b>，<code>wg0 = 10.9.0.1/24</code>，UDP 51820</td>
+<td>服务器档案（2026-07-28 建）</td><td>已有中转点，不用新买机器</td></tr>
+<tr><td>本机是 peer <code>laptop210 = 10.9.0.4</code>，<b>此刻在线</b></td>
+<td>本机 <code>ifconfig</code> 实测：<code>utun0 inet 10.9.0.4</code></td><td>39.105 现在就能直接够到这台笔记本</td></tr>
+<tr><td><code>mini.biily.top</code> 已在用「nginx 反代 → <code>10.9.0.2:8080</code> 穿隧道回家」</td>
+<td>服务器档案</td><td><b>同一套模式已被验证一个多月</b>，连排障套路都是现成的</td></tr>
+<tr><td>Hub <b>故意不做 NAT</b>（无 MASQUERADE），只做内网互通</td>
+<td>服务器档案</td><td>隧道不会变成公网出口，攻击面比想象的小</td></tr>
+<tr><td><code>eas.biily.top</code> 已在 39.105 上，证书 certbot 自动续</td>
+<td>项目 CLAUDE.md</td><td>加子域名只是多一个 <code>.conf</code>，HTTPS 白拿</td></tr>
+</tbody></table></div>
+
+<div class="verdict"><div class="vlabel">因此</div>
+<p style="margin:0">跨网这一段的工作量从「写一个中继服务 + 配 pm2 + 处理断线重连」
+降到「<b>Eas-Term 起一个只绑 <code>10.9.0.4</code> 的 HTTP 服务，39.105 上加一个 nginx <code>.conf</code></b>」。
+服务器侧新增代码 <b>0 行</b>，只加一个配置文件。</p></div>
+</section>
+
+<section id="wl"><h2>功能白名单</h2><div class="sectitle">四个动作，逐条定死</div>
+<p class="secnote">白名单是<b>桌面端的一张表</b>，不在这张表上的请求直接 400，不进任何业务逻辑。
+手机端 UI 上没有的功能，协议层面也必须没有——只靠界面藏起来不算白名单。</p>
+
+<div class="opt"><h4><span class="b b-sk">动作 1</span> 列项目 · 切项目</h4>
+<div class="meta"><span>方向 <b>手机 → 桌面 → 手机</b></span><span>写操作 <b>无</b></span></div>
+<dl class="kv">
+<dt>数据来源</dt><dd><code>canvas.frames</code> 里 <code>parentId</code> 为空的顶层 Frame，取 <code>projectId</code> + <code>name</code> + <code>status</code></dd>
+<dt>返回什么</dt><dd>项目名、状态标签（进行中/待执行/已完结）、在跑的终端数、在跑的对话数</dd>
+<dt>「在跑」怎么判</dt><dd>复用看板已经在用的那套（<code>ptyRunning</code> / attention），不另造一套判据</dd>
+<dt>失败态</dt><dd>桌面端没开 → 手机显示「Eas-Term 没有运行」，不是转圈</dd>
+</dl></div>
+
+<div class="opt"><h4><span class="b b-em">动作 2</span> 收发信息<span class="pill p-hi">风险最高的一条</span></h4>
+<div class="meta"><span>方向 <b>双向</b></span><span>写操作 <b>有（往会话里注入文本）</b></span></div>
+<dl class="kv">
+<dt>发</dt><dd>只发<b>一段纯文本</b>，落到指定的 <code>agent</code> 会话（<code>agentChat:send</code>）或终端（<code>pty:write</code>）</dd>
+<dt>收</dt><dd>该会话的回复流。AI 对话走归约后的 turns；终端<b>只回「在跑 / 停了」和标题</b>，不回屏幕内容（见下）</dd>
+<dt>硬限制</dt><dd>只能发给<b>已经存在且在跑</b>的会话，不能创建；单条长度上限；速率限制</dd>
+<dt>为什么终端不回屏幕内容</dt><dd>终端输出无界（一次 build 几万行），且里面可能有密钥、路径、别人的数据。
+往公网通道上推终端屏幕，是把「本地才看得到的东西」变成「网络上传输的东西」——<b>这一条我建议永远不做</b></dd>
+</dl></div>
+
+<div class="opt"><h4><span class="b b-am">动作 3</span> 列 Frame 里的文档 / 图片（只列名字）</h4>
+<div class="meta"><span>方向 <b>手机 → 桌面 → 手机</b></span><span>写操作 <b>无</b></span></div>
+<dl class="kv">
+<dt>筛选规则</dt><dd>遍历该项目的顶层 Frame <b>及其子 Frame</b> 的 <code>nodes[]</code>，
+取 <code>pane.kind === 'code'</code>（文档）和 <code>'image'</code>（图片）且 <code>filePath</code> 非空的</dd>
+<dt>明确排除</dt><dd><code>canvas.freeNodes</code>（画布上散落、不属于任何 Frame 的节点）——
+你的原话是「仅显示已经放在 frame 中的文件」，这条就是它的实现</dd>
+<dt>返回什么</dt><dd><b>只有名字</b>（<code>node.name</code> 或文件名）+ 类型 + 节点 id。
+<b>不返回绝对路径</b>——路径本身就是信息（暴露目录结构），手机端不需要它也能工作</dd>
+<dt>排序</dt><dd>按 Frame 分组，组内按节点在画布上的位置（先上后下、先左后右），跟你眼睛扫画布的顺序一致</dd>
+</dl></div>
+
+<div class="opt"><h4><span class="b b-am">动作 4</span> 打开某一个，看内容</h4>
+<div class="meta"><span>方向 <b>手机 → 桌面 → 手机</b></span><span>写操作 <b>无（只读）</b></span></div>
+<dl class="kv">
+<dt>请求参数</dt><dd><b>只有节点 id</b>，不接受路径。桌面端自己从节点查出 <code>filePath</code></dd>
+<dt>双重路径校验</dt><dd>① 这个 id 必须是上一步列表里真实存在的 Frame 内节点；
+② 解析出的路径必须过 <code>fsGuard</code> 的既有边界（项目根 + 知识库根）。<b>两条都过才读</b></dd>
+<dt>文档</dt><dd>纯文本返回，大小上限（建议 512KB，超了截断并说明）</dd>
+<dt>图片</dt><dd>服务端压成适合手机屏的尺寸再传，<b>不传原图</b>——原图可能几十 MB，
+而且缩图天然去掉了大部分 EXIF</dd>
+<dt>不做</dt><dd>不下载到手机、不分享、不另存。看完就没了</dd>
+</dl></div>
+</section>
+
+<section id="net"><h2>跨网方案</h2><div class="sectitle">两条路，我建议先走已经通的那条</div>
+
+<div class="opt"><h4>方案 A · 复用现有 WireGuard<span class="pill p-lo">推荐先做</span></h4>
+<div class="meta"><span>服务器新代码 <b>0 行</b></span><span>只加 <b>1 个 nginx .conf</b></span><span>已验证 <b>mini.biily.top 同款</b></span></div>
+<pre><code>手机(4G/任意 Wi-Fi)
+   │  HTTPS  eas-m.biily.top
+   ▼
+39.105.40.173  nginx（宝塔管，加一个独立 .conf）
+   │  proxy_pass http://10.9.0.4:PORT
+   ▼  WireGuard wg0（已在跑，UDP 51820）
+本机 utun0 = 10.9.0.4
+   │
+   ▼  Eas-Term 只监听 10.9.0.4:PORT（<span class="hi">不是 0.0.0.0</span>）</code></pre>
+<p style="margin:0"><b>为什么必须绑 <code>10.9.0.4</code> 而不是 <code>0.0.0.0</code>：</b>
+绑 <code>0.0.0.0</code> 等于同时把这个口开在咖啡厅的 Wi-Fi 上，同网段任何人都能敲。
+绑隧道地址，则<b>只有隧道里的机器（也就是 39.105）够得到</b>，这一层是免费的网络级隔离。</p>
+<div class="kv">
+<dt>代价</dt><dd>笔记本必须连着 WireGuard。现在是连着的，但睡眠 / 换到封 UDP 的网络会断</dd>
+<dt>断了什么表现</dt><dd>手机上 502。跟 <code>mini.biily.top</code> 断隧道时一模一样，排障顺序照抄档案里那三步</dd>
+</div></div>
+
+<div class="opt"><h4>方案 B · 出站 WebSocket 中继<span class="pill p-md">先别做</span></h4>
+<div class="meta"><span>服务器新代码 <b>一个 pm2 服务</b></span><span>不依赖 VPN</span></div>
+<p style="margin:0 0 10px">Eas-Term 主动向 39.105 发起 WSS 长连接，中继把手机和桌面配对。
+好处是<b>笔记本换任何网络都能用</b>（只要出得去 HTTPS），不需要 WireGuard 一直挂着。</p>
+<p style="margin:0"><b>但现在不该做它。</b>A 已经通了，B 是为了解决「A 的隧道不够稳」这个<b>还没被证实的问题</b>。
+先用 A 跑两周，真的在外面撞到隧道断，再上 B 也不迟——那时候还知道具体是哪种网络断的，
+比现在凭空设计强。</p></div>
+</section>
+
+<section id="sec"><h2>安全</h2><div class="sectitle">这一节最重要，请完整读完</div>
+
+<div class="dissent"><div class="vlabel">必须先说清楚的一件事</div>
+<p style="margin:0 0 10px"><b>白名单限的是接口面，不是爆炸半径。</b></p>
+<p style="margin:0 0 10px">四个动作里，「发消息」是发给一个正在跑的 Claude Code / Codex。
+那个 agent 能读写你的项目文件、能跑命令、能联网。也就是说：
+<b>拿到手机端凭证的人，等于拿到了一个能对你这台电脑下达自然语言指令的入口。</b></p>
+<p style="margin:0">协议上只有 4 个动词，这是真的；但说「只能收发信息所以很安全」是不对的。
+下面每一条防护都是围绕这个事实设计的，不是为了凑数。</p></div>
+
+<h3>七道锁</h3>
+<div class="tw"><table><thead><tr><th>#</th><th>锁</th><th>挡住什么</th></tr></thead><tbody>
+<tr><td><b>1</b></td><td><b>网络级</b>：只绑 <code>10.9.0.4</code>，不绑 <code>0.0.0.0</code></td>
+<td>同一个 Wi-Fi 下的其他人。除了隧道对端，物理上没人够得到这个口</td></tr>
+<tr><td><b>2</b></td><td><b>配对</b>：桌面端显示二维码，手机扫一次绑定，一次性有效</td>
+<td>没配过对的设备。凭证不靠你手动抄，也就不会被抄错或截图外传</td></tr>
+<tr><td><b>3</b></td><td><b>每设备独立 token</b>，桌面端列出「哪台手机、什么时候配的、最后一次访问」，随时可吊销</td>
+<td>手机丢了。点一下就断，不用换整套凭证</td></tr>
+<tr><td><b>4</b></td><td><b>白名单在桌面端强制</b>，不在手机端</td>
+<td>改造过的客户端。手机端是不可信输入，它发什么都要在桌面端重新判一遍</td></tr>
+<tr><td><b>5</b></td><td><b>路径双重校验</b>：id 必须来自 Frame 内节点 + 必须过 <code>fsGuard</code></td>
+<td>把 <code>~/.ssh/id_rsa</code> 读出来。就算构造出合法 id，也过不了第二道</td></tr>
+<tr><td><b>6</b></td><td><b>密钥永不出机器</b>：<code>secrets.json</code>、MCP token、keychain 一律不进这条通道</td>
+<td>通道被打穿时的次生灾害。通道里根本没有它们</td></tr>
+<tr><td><b>7</b></td><td><b>桌面端可见</b>：手机发的每一条，在桌面上都留痕（谁、什么时候、发了什么）</td>
+<td>悄悄的滥用。你回到电脑前能看见发生过什么</td></tr>
+</tbody></table></div>
+
+<div class="warn"><div class="vlabel">一个必须你来定的取舍：审批闭环怎么办</div>
+<p style="margin:0 0 10px">Eas-Term 有一套 PreToolUse 审批钩子——agent 要跑命令时会停下来等你点「允许」。
+人在外面时，这道锁就变成了一个死结：</p>
+<ul style="margin:0 0 10px">
+<li><b>手机不能审批</b> → 你发一句话过去，agent 卡在第一个工具调用上，等到你回家。远程控制基本没用</li>
+<li><b>手机能审批</b> → 这道锁就没了。拿到手机凭证的人可以一路点「允许」</li>
+</ul>
+<p style="margin:0"><b>我倾向第三条路：手机能审批，但只对「读」类工具自动放行，「写 / 执行」类仍然必须回电脑点。</b>
+这样在外面能让 agent 查资料、读代码、给方案，但改不了东西。
+不过这条要按工具分类做一张表，是这个功能里最细致的一块——<b>也可以第一版先做「手机完全不能审批」，
+用起来再说</b>。你选。</p></div>
+
+<div class="no"><div class="vlabel">还有两条我建议直接写死，不给开关</div>
+<p style="margin:0 0 8px"><b>① 终端屏幕内容永不上网。</b>见白名单动作 2 的说明。</p>
+<p style="margin:0"><b>② 手机端不做离线缓存。</b>断线就是空白。缓存意味着你的项目内容躺在手机的存储里，
+而手机比电脑容易丢得多。</p></div>
+</section>
+
+<section id="ui"><h2>手机页面</h2><div class="sectitle">四屏，就是普通手机 app 的样子</div>
+<p class="secnote">形态建议 <b>PWA</b>（网页做的、能装到主屏、有图标、全屏运行）。
+理由：不用过应用商店审核、iOS 和安卓一套代码、改一版刷新就生效。
+真觉得不够原生，第二期再包成原生壳——那时候界面已经定稿了，包壳是机械活。</p>
+
+<div class="grid g4">
+<div class="phone"><div class="bar"></div>
+<h5>① 项目</h5><div class="sub">打开就是这一屏</div>
+<div class="li"><b>terminal</b><span class="dot" style="background:#34d399"></span></div>
+<div class="li"><b>口播相机</b><span class="dot" style="background:#fcd34d"></span></div>
+<div class="li"><b>美颜</b><span class="dot" style="background:#525252"></span></div>
+<div class="li"><b>手势鼠标</b><span class="dot" style="background:#34d399"></span></div>
+<div class="sub" style="margin:10px 0 0">绿=有在跑的　黄=等你处理</div>
+</div>
+
+<div class="phone"><div class="bar"></div>
+<h5>② 会话</h5><div class="sub">进到某个项目</div>
+<div class="li"><b>终端 · 改甘特图</b><span class="dot" style="background:#34d399"></span></div>
+<div class="li"><b>AI 对话 · 方案</b><span class="dot" style="background:#fcd34d"></span></div>
+<div class="li"><b>终端 2</b><span class="dot" style="background:#525252"></span></div>
+<div class="sub" style="margin:10px 0 0">底部两个页签：会话 / 文件</div>
+</div>
+
+<div class="phone"><div class="bar"></div>
+<h5>③ 对话</h5><div class="sub">收发信息</div>
+<div class="li" style="border-color:#2b3a4a"><b>我：</b>先把测试跑一遍</div>
+<div class="li" style="border-color:#243a2e">922 个全过，没有失败</div>
+<div class="sub" style="margin:10px 0 4px">底部固定一个输入框</div>
+<div class="li" style="justify-content:flex-start;color:#525252">说点什么…</div>
+</div>
+
+<div class="phone"><div class="bar"></div>
+<h5>④ 文件</h5><div class="sub">Frame 里的文档和图片</div>
+<div class="li"><b>需求规格.md</b><span style="color:#525252;font-size:10px">文档</span></div>
+<div class="li"><b>甘特图截图.png</b><span style="color:#525252;font-size:10px">图片</span></div>
+<div class="li"><b>CHANGELOG.md</b><span style="color:#525252;font-size:10px">文档</span></div>
+<div class="sub" style="margin:10px 0 0">只有名字，点开才读内容</div>
+</div>
+</div>
+</section>
+
+<section id="plan"><h2>分期</h2><div class="sectitle">怎么排</div>
+
+<div class="opt"><h4>第一期 · 只读<span class="pill p-lo">先证明链路通</span></h4>
+<div class="meta"><span>白名单 <b>动作 1 / 3 / 4</b></span><span>不含发消息</span></div>
+<p style="margin:0">看项目、看会话状态、看文件列表、看文件内容。<b>一个写操作都没有。</b>
+这一期跑通，就等于验证了「隧道 + nginx + 配对 + 白名单 + 路径校验」整条链路，
+而且万一哪里漏了，最坏后果是<b>信息泄漏而不是被人操控电脑</b>——先趟这条风险低的。</p></div>
+
+<div class="opt"><h4>第二期 · 加发消息<span class="pill p-md">风险台阶在这里</span></h4>
+<div class="meta"><span>白名单 <b>+ 动作 2</b></span><span>审批策略 <b>按你上面的选择</b></span></div>
+<p style="margin:0">这一期才让手机真的能"控制"。上线前把桌面端的留痕面板一起做好——
+没有留痕就上写操作，出问题时你没有任何依据。</p></div>
+
+<div class="opt"><h4>第三期 · 视情况<span class="pill p-md">不承诺</span></h4>
+<p style="margin:0">原生壳、离线草稿、推送通知（agent 等你审批时手机响一下）、方案 B 中继。
+<b>都等前两期用过之后再说</b>——现在列出来只是说明它们没被忘掉，不是排期。</p></div>
+
+<hr>
+<h3>要你拍板的三件事</h3>
+<ol>
+<li><b>审批策略</b>：手机完全不能审批 / 只能批"读"类 / 全都能批（见安全那节，我倾向中间那个，但第一版做第一个也行）</li>
+<li><b>先做哪一期</b>：按上面分期走（推荐），还是直接连发消息一起做</li>
+<li><b>域名</b>：用 <code>eas-m.biily.top</code> 这种新子域，还是挂在 <code>eas.biily.top</code> 下的一个路径</li>
+</ol>
+<div class="unknown"><div class="vlabel">另外，一处档案与现实对不上，先报给你</div>
+<p style="margin:0">你的全局 CLAUDE.md 里写「本机(<code>192.168.31.210</code>)是密钥金库主机」，
+但本机此刻 <code>en0</code> 是 <code>192.168.31.126</code>（WireGuard 身份 <code>laptop210 = 10.9.0.4</code> 仍然对得上）。
+大概率只是路由器重新分配了 DHCP。<b>没动你的文件</b>，你确认后我再改。</p></div>
+</section>
+
+<footer>Eas-Term 手机端 · 需求规格 v1 · 2026-08-28<br>
+依据：本机 <code>ifconfig</code> 实测（<code>utun0 = 10.9.0.4</code> 在线）、<code>~/.claude/servers/</code> 档案、
+项目源码 <code>src/renderer/src/store/canvas/types.ts</code>（Frame/Node 结构）、
+<code>src/main/mcpBridge.ts</code>（既有安全三锁）、<code>src/main/fsGuard.ts</code>（路径边界）<br>
+<b>这是规格不是实现</b>——一行代码都还没写，等你确认。</footer>
+</main></body></html>
