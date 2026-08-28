@@ -144,7 +144,12 @@ function renderPair (msg) {
   w.appendChild(el('p', null, '在电脑上打开 Eas-Term → 设置 → 手机端，把那六位码输进来。码 60 秒后失效。'))
   var inp = el('input'); inp.placeholder = '六位配对码'; inp.autocapitalize = 'characters'
   inp.autocomplete = 'off'; inp.maxLength = 6
-  var btn = el('button', 'big', '连接'); btn.disabled = true
+  // 扫码进来的地址带着 ?c=ABC123 —— 直接填上，用户不用手打。
+  // **仍然只是填，不自动提交**：提交之后要在电脑上点允许，
+  // 让用户看清自己要连的是哪台再按，比一进来就开始轮询更清楚。
+  var fromQr = (location.search.match(/[?&]c=([A-Z0-9]{4,8})/i) || [])[1]
+  if (fromQr) inp.value = fromQr.toUpperCase()
+  var btn = el('button', 'big', '连接'); btn.disabled = inp.value.length !== 6
   var err = el('div', 'err', msg || '')
   inp.addEventListener('input', function () {
     inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
