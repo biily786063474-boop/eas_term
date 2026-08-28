@@ -80,15 +80,22 @@ export function MessageList({
 
   return (
     <div className="ac-messages" ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
-      {view.turns.map((turn, i) => (
-        <MessageTurn
-          key={i}
-          turn={turn}
-          approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
-          onApprovalDecide={onApprovalDecide}
-          leafId={leafId}
-        />
-      ))}
+      {view.turns.map((turn, i) =>
+        // 压缩标记不是一条消息，走另一条渲染路径。**在这里分流而不是在
+        // MessageTurn 里提前返回**：那个组件顶上有一串 hook，条件返回会违反
+        // hook 规则（返回的分支少调几个 hook，React 直接报错）。
+        turn.compact ? (
+          <CompactDivider key={i} c={turn.compact} />
+        ) : (
+          <MessageTurn
+            key={i}
+            turn={turn}
+            approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
+            onApprovalDecide={onApprovalDecide}
+            leafId={leafId}
+          />
+        )
+      )}
       {view.pending && !pendingOnLastTurn && (
         <ApprovalCard
           pending={view.pending}
@@ -122,6 +129,32 @@ export function MessageList({
           ]}
         />
       )}
+    </div>
+  )
+}
+
+/** 「上下文在这里被压缩了」的那道线。
+ *
+ *  **它的用途是止损，不是报喜**：这条线以上的内容 agent 已经不记得了，
+ *  用户必须一眼看见，否则会拿着满屏历史继续追问「你刚才不是说过吗」。
+ *  所以文案写的是「不再记得」而不是「已优化」。
+ *
+ *  token 数拿得到就写出来（「从 100 万压到 3.7 万」比「已压缩」有信息量得多），
+ *  拿不到就不写 —— 不编。 */
+function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element {
+  const k = (n: number): string =>
+    n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + ' 万' : String(n)
+  const nums = c.preTokens > 0 && c.postTokens > 0 ? `${k(c.preTokens)} → ${k(c.postTokens)} token` : ''
+  return (
+    <div className="ac-compact" role="separator">
+      <span className="ac-compact-line" />
+      <span className="ac-compact-txt">
+        {c.trigger === 'auto' ? '上下文满了，自动压缩过' : '这里压缩过上下文'}
+        {c.droppedTurns > 0 && ` · 收起 ${c.droppedTurns} 轮`}
+        {nums && ` · ${nums}`}
+        <em>以上内容 agent 不再记得细节</em>
+      </span>
+      <span className="ac-compact-line" />
     </div>
   )
 }

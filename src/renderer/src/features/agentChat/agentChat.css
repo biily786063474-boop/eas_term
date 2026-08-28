@@ -1728,3 +1728,42 @@
 .ac-bar-send.stop:hover {
   background: rgba(251, 146, 60, 0.26);
 }
+
+/* ---------- 压缩分隔线（2026-08-28）----------
+   CLI 把上下文压缩之后，界面上那一刀以上的内容 agent 已经不记得了。
+   这道线的用途是**止损**：不画的话用户会拿着满屏历史继续追问
+   「你刚才不是说过吗」，而 agent 完全不知道他在说什么。
+   所以做得低调但不能省 —— 它是一条事实，不是装饰。 */
+.ac-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 2px 12px;
+  user-select: none;
+}
+
+.ac-compact-line {
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border-strong);
+}
+
+.ac-compact-txt {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  text-align: center;
+}
+
+/* 「不再记得细节」那句要比上面那行更弱一档：它是解释，不是标题。
+   但**不能删** —— 只写「已压缩」的话，用户不会知道这对他意味着什么。 */
+.ac-compact-txt em {
+  font-style: normal;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--fg-dim) 72%, transparent);
+}

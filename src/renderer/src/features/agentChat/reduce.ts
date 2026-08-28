@@ -27,6 +27,22 @@ export interface Turn {
   role: 'user' | 'assistant'
   text: string
   execs: ExecItem[]
+  /**
+   * **这条不是对话，是一条分隔标记**：「上下文在这里被压缩了」。
+   *
+   * 没有做成第三种 role，是因为 role 那个联合类型被界面各处的
+   * `role === 'user'` / `=== 'assistant'` 分支读着，加一个成员会让每处都多出
+   * 一条「两边都不是」的死分支，而它们的默认行为是渲染成一个空气泡。
+   * 用一个可选字段 + 渲染时提前返回，改动面小得多，语义也更直白：
+   * **它不是谁说的话，它是时间轴上的一道线。**
+   */
+  compact?: {
+    trigger: 'auto' | 'manual'
+    preTokens: number
+    postTokens: number
+    /** 这一刀砍掉了界面上多少轮 */
+    droppedTurns: number
+  }
   /** 这条消息带的图。**只有用户轮次会有** —— 归约器从不产出它（它连 user 轮次都不产出，
    *  见文件头），是渲染层合并用户消息时带进来的。
    *  发给 CLI 的始终是磁盘路径（agent 认那个），这里存的是缩略图，只为界面预览。 */
@@ -60,6 +76,26 @@ export interface Notice {
  *  真正"互不相同"的 notice 极难攒到这个数（两个高频重复源都会被折叠成一条）。
  *  满了丢最旧的一条。 */
 export const MAX_NOTICES = 8
+
+/**
+ * 内存里最多留多少轮。**这道闸之前是敞开的** —— 落盘那侧早就有 MAX_TURNS=40
+ * （history.ts），但内存里一条都不丢，一个跑了一天的对话节点会把整场对话
+ * 连同每一条命令的完整输出全揣在内存里。
+ *
+ * 取 60 而不是 40：**显示的必须不少于存下来的**，否则「重开之后反而看到更多」
+ * 会显得像个 bug。留 20 轮余量，重开前后看到的内容是连续的。
+ */
+export const MAX_LIVE_TURNS = 60
+
+/**
+ * 内存里单条命令输出留多少字符。落盘那侧是 1200（只为回看「跑过什么、成没成」），
+ * 内存这侧宽松得多 —— 界面上那个展开框是真要给人读的。
+ *
+ * 但不能无上限：一次 `npm test` 或一次 build 的输出几十万字，**事件源头一处都没截**
+ * （claudeEvents 那两个 slice 截的是命令的**标签**，不是输出）。
+ * 20000 字约等于 300 行，超出这个量的日志没人会在气泡里读完，该去终端重跑。
+ */
+export const MAX_LIVE_OUTPUT = 20_000
 
 /** 订阅额度窗口的现状。**没有「用了百分之多少」** —— CLI 那条事件里就没有这个字段
  *  （实测样本见 shared/agentChat.ts 的 quota 事件说明）。所以界面只报窗口和重置时间，
@@ -129,7 +165,36 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     return created
   }
 
+  /**
+   * 内存裁剪。**只从头上砍，末尾一律不动。**
+   *
+   * 为什么这样就够：`streamingTurn` 和还在 running 的 exec **只可能落在最新那一轮**
+   * —— 流式轮次每轮结束时清空，running 的 exec 也在 turn.done 那里被收成 failed
+   * （见那个 case 里为「中断」写的那段）。而从头上砍、保留末尾 MAX_LIVE_TURNS 轮，
+   * 最新那一轮永远在保留区里。
+   *
+   * 下面那两个判断因此是**冗余的防护**，不是当前会触发的分支：留着是因为
+   * `exec.done` 按 execId 在全部 turns 里找，哪天有人把裁剪改激进了（比如按字节砍、
+   * 或者从中间砍），被砍掉的轮次会让结果落不回去，界面上留一个永远转不完的圈 ——
+   * 那种 bug 极难查。**代价是两次数组扫描，值。**
+   */
+  function trimTurns(): void {
+    if (turns.length <= MAX_LIVE_TURNS) return
+    let drop = turns.length - MAX_LIVE_TURNS
+    let i = 0
+    while (i < drop) {
+      const t = turns[i]
+      if (t === streamingTurn || t.execs.some((x) => x.state === 'running')) break
+      i++
+    }
+    if (i > 0) turns.splice(0, i)
+  }
+
   function push(e: ChatEvent): void {
+    // **每轮结束时收一次内存。** 挂在 turn.done 而不是每次 push：
+    // 那一刻既没有流式轮次、running exec 也多半收完了，砍得最干净；
+    // 而且一轮里可能有几十个 text.delta，每个都跑一遍裁剪纯属浪费。
+    if (e.k === 'turn.done') trimTurns()
     // 一轮开始。放在 switch 之前而不是加一个 case：它只是给 turnActive 打个标，
     // 不产生任何视图内容，走 default 忽略仍然是对的。
     if (e.k === 'turn.start') turnActive = true
@@ -186,7 +251,43 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         }
         if (!item) break
         item.state = e.ok ? 'ok' : 'failed'
-        item.output = e.output
+        // **进内存就截。** 源头一处都没截（见 MAX_LIVE_OUTPUT 的说明），
+        // 不在这里挡的话一次 build 的日志会整份留在内存里直到关掉这个节点。
+        item.output =
+          e.output.length > MAX_LIVE_OUTPUT
+            ? e.output.slice(0, MAX_LIVE_OUTPUT) +
+              `\n…（已截断，原长 ${e.output.length} 字符；完整输出请到终端重跑）`
+            : e.output
+        break
+      }
+      case 'compacted': {
+        // **CLI 把上下文压缩了 —— 界面这边也得跟着丢。**
+        // 不丢的话：模型只剩一份摘要，界面却摆着满屏历史，人看着会以为它记得。
+        // 这正是 contextLostOf 注释里判过「比空白更糟」的那种状态。
+        //
+        // **只保留最后一轮，其余全丢。**
+        //
+        // 这里原本写了一个「往回走找第一个不忙的轮次」的循环，被变异测试打回：
+        // 本归约器里**只有最后一轮可能是忙的**（streamingTurn 每轮清空，running 的
+        // exec 在 turn.done 那里收掉），所以那个循环在最后一轮忙时会**多留一轮**
+        // —— 而那一轮早已被 CLI 压缩掉、模型根本不记得，留在界面上正是这次要治的病。
+        //
+        // 为什么最后一轮必须留：压缩可能发生在一轮进行到一半时，
+        // 砍掉它会让**正在流式输出的回答凭空消失**。
+        const dropped = Math.max(0, turns.length - 1)
+        if (dropped > 0) turns.splice(0, dropped)
+        // 分隔标记插在最前面 —— 它标的是「这条线以上的内容 agent 已经不记得了」
+        turns.unshift({
+          role: 'assistant',
+          text: '',
+          execs: [],
+          compact: {
+            trigger: e.trigger,
+            preTokens: e.preTokens,
+            postTokens: e.postTokens,
+            droppedTurns: dropped
+          }
+        })
         break
       }
       case 'approval.request': {

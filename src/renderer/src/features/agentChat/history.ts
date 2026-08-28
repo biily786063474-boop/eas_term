@@ -41,7 +41,11 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
           })
     })),
     // url 是运行时产物，不落盘；path 留着，恢复时重新生成预览
-    ...(t.images?.length ? { images: t.images.map((i) => ({ path: i.path, url: '' })) } : {})
+    ...(t.images?.length ? { images: t.images.map((i) => ({ path: i.path, url: '' })) } : {}),
+    // **压缩标记必须留着。** 它不是内容是结构——丢了的话重开之后，
+    // 那道「以上内容 agent 已经不记得了」的线就没了，
+    // 又回到「界面摆着历史、模型不记得」那个状态（见 contextLostOf 的注释）
+    ...(t.compact ? { compact: t.compact } : {})
   }))
 }
 

@@ -147,9 +147,39 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
         return []
       case 'permission_denied':
         return resolveExec(j.tool_use_id, false, j.message)
+      case 'compact_boundary':
+        return translateCompact(j)
       default:
         return []
     }
+  }
+
+  /**
+   * 上下文被压缩了。**这个事件之前落在 default 里被静默丢掉**，
+   * 于是界面上的历史和模型的记忆一路分家（详见 shared/agentChat.ts 的 compacted）。
+   *
+   * 实测样本（本机 transcript，2026-08-28）：
+   *   { type:'system', subtype:'compact_boundary', content:'Conversation compacted',
+   *     compactMetadata: { trigger:'auto', preTokens:1003232, postTokens:37406,
+   *                        cumulativeDroppedTokens:965826, durationMs:185507 } }
+   *
+   * **拿不到 compactMetadata 也照样产出事件**：那两个 token 数只用来把提示写准
+   * （「从 100 万压到 3.7 万」），而「该不该丢历史」不取决于它们。
+   * 字段缺了就当 0，界面少显示一句话；漏掉整个事件的代价大得多。
+   */
+  function translateCompact(j: Record<string, unknown>): ChatEvent[] {
+    const m = (j.compactMetadata ?? {}) as Record<string, unknown>
+    const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+    return [
+      {
+        k: 'compacted',
+        // 只认 'manual'，其余（含缺失）一律当 auto —— 自动压缩是常态（实测 68 次里 62 次），
+        // 认错方向的话提示会把「它自己压的」说成「你压的」
+        trigger: m.trigger === 'manual' ? 'manual' : 'auto',
+        preTokens: num(m.preTokens),
+        postTokens: num(m.postTokens)
+      }
+    ]
   }
 
   function translateInit(j: Record<string, unknown>): ChatEvent[] {
