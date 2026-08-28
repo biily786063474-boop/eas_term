@@ -366,21 +366,60 @@ td .dim{color:#525252}
 手机以后只认这一张。中间任何人想插一脚都会被手机当场拒掉——
 连隧道服务端自己也不行。</p></div>
 
-<h3>隧道服务端谁来跑</h3>
-<div class="tw"><table><thead><tr><th>选择</th><th>用户要做什么</th><th>你要承担什么</th><th>建议</th></tr></thead><tbody>
-<tr><td><b>你跑一个公共的</b><br><span class="dim">tunnel.eas.biily.top</span></td>
-<td><b>什么都不用做</b>，装完就能用</td><td>带宽、运维、可用性<br><span class="dim">但读不到内容</span></td>
-<td><span class="b b-em">默认</span></td></tr>
-<tr><td><b>用户填自己的</b><br><span class="dim">设置里改一行地址</span></td>
-<td>自己搭一个（代码开源）</td><td><b>什么都不承担</b></td>
-<td><span class="b b-sk">留口子</span></td></tr>
-<tr><td><b>用户自带 VPN</b><br><span class="dim">Tailscale / WireGuard</span></td>
-<td>装个 VPN，两头都进同一个虚拟局域网</td><td><b>什么都不承担</b><br><span class="dim">这时走的是上面「直连」那条</span></td>
-<td><span class="b b-gy">高级</span></td></tr>
+<h3>隧道有两头 —— 这一节最容易想岔</h3>
+<p class="secnote">「走隧道」听起来像是「用户自己建一条就行，你什么都不用管」。
+<b>不完全是。</b>隧道有两头，两头的归属完全不同：</p>
+
+<div class="grid g2">
+<div class="card"><h4><span class="b b-em">客户端</span> 在 app 里，随包发出去</h4>
+<p style="margin:0;font-size:13.5px">用户装完 Eas-Term 就有了，<b>什么都不用配</b>。
+它负责主动往外连——这就是不用开端口、不用动路由器的原因。</p></div>
+<div class="card"><h4><span class="b b-am">服务端</span> 必须在公网上，得有人跑</h4>
+<p style="margin:0;font-size:13.5px">隧道要「打洞」，就必须有一个双方都够得到的公网地址。
+<b>这一头不会凭空出现</b>——不是你跑，就是用户自己有。</p></div>
+</div>
+
+<h3>于是三种情况，用户的负担和你的负担正好相反</h3>
+<div class="tw"><table><thead><tr><th>情况</th><th>用户要做什么</th><th>你要承担什么</th><th>覆盖多少人</th></tr></thead><tbody>
+<tr><td><b>① 你跑一个公共隧道</b><br><span class="dim">tunnel.eas.biily.top</span></td>
+<td><b>什么都不用做</b><br>装完扫码就能用</td>
+<td>带宽、可用性、被滥用时的处理<br><span class="dim">但读不到内容</span></td>
+<td><span class="b b-em">全部</span></td></tr>
+<tr><td><b>② 用户自带现成 VPN</b><br><span class="dim">Tailscale / WireGuard 等</span></td>
+<td>手机和电脑装同一个 VPN、<b>登同一个账号</b><br><span class="dim">大约 3 分钟，不用买服务器</span></td>
+<td><b>零</b><br><span class="dim">这时走的是「局域网直连」那条，你的代码一行都不用改</span></td>
+<td><span class="b b-am">愿意折腾的</span></td></tr>
+<tr><td><b>③ 用户自建隧道服务端</b></td>
+<td>有一台自己的服务器，跑你开源的那个服务端</td>
+<td><b>零</b></td>
+<td><span class="b b-gy">极少数</span></td></tr>
 </tbody></table></div>
-<p class="secnote" style="margin-top:14px"><b>你自己这台属于第三类，第一天就能用</b> ——
-<code>utun0 = 10.9.0.4</code> 已经在 <code>39.105</code> 那台 Hub 上了。
-也就是说<b>隧道服务端还没写，你就能先把整个功能跑起来验证</b>。</p>
+
+<div class="verdict"><div class="vlabel">所以你那句话的准确版本是</div>
+<p style="margin:0 0 8px"><b>「用户只用建立自己的隧道」在情况 ② 和 ③ 下成立，在 ① 下不成立。</b></p>
+<p style="margin:0">而 ② 才是最接近你设想的那个：<b>用户在手机和电脑上装同一个 VPN、登同一个账号，
+两台设备就进了同一个虚拟局域网</b>——这时手机看你的电脑，跟在家连同一个 Wi-Fi 没有区别，
+走的是「局域网直连」那条路，<b>压根不需要你提供任何服务</b>。
+你自己这台就是这种情况（<code>utun0 = 10.9.0.4</code>）。</p></div>
+
+<h3>关于「同账号」：要说清楚是谁的账号</h3>
+<div class="grid g2">
+<div class="card"><h4><span class="b b-em">VPN 的账号</span> —— 对，就是这么用的</h4>
+<p style="margin:0;font-size:13.5px">手机和电脑登同一个 Tailscale（或别的）账号 → 同一个虚拟局域网 → 直接互相看得见。
+<b>这正是上面的情况 ②</b>，也是你说的「设置好了就能远程操控」。</p></div>
+<div class="card"><h4><span class="b b-ro">Eas-Term 的账号</span> —— 没有，也建议别加</h4>
+<p style="margin:0 0 8px;font-size:13.5px">这个 app <b>现在没有任何账号体系</b>（额度那套读的是 Claude/Codex 自己的登录，不是你的）。</p>
+<p style="margin:0;font-size:13.5px">为手机端加一套账号意味着：注册、登录、找回密码、
+<b>以及一份存在你服务器上的用户身份数据</b>。而它换来的东西，<b>扫码配对已经给了</b>——
+两台设备靠光学交换密钥直接互认，比账号更简单也更私密。<b>纯负债，不建议。</b></p></div>
+</div>
+
+<div class="warn"><div class="vlabel">我的建议：第一版不出服务端</div>
+<p style="margin:0 0 8px">发布时只做 <b>局域网直连 + 情况 ②（自带 VPN）</b>，
+文档里写清楚「要在外面用，装个 Tailscale，三分钟」。<b>你一分钱带宽都不花，一台服务器都不用管。</b></p>
+<p style="margin:0">然后看真实反馈：<b>有多少人是真的需要在外面操控，又有多少人卡在装 VPN 这一步。</b>
+数字出来了再决定要不要做情况 ①。
+<b>不要在验证需求之前就承诺跑基础设施</b>——那是一旦开始就很难停的承诺（用户已经在用了）。</p></div>
 
 <div class="no"><div class="vlabel">明确不做的两条</div>
 <p style="margin:0 0 6px"><b>不做端口转发引导。</b>让普通用户去路由器上开端口，
@@ -635,11 +674,14 @@ AI 对话节点走 <code>agentChat:send</code>。<b>只能发给已存在且在�
 <b>没有留痕就上写操作，出问题时用户没有任何依据</b>。
 这一期仍然可以只支持局域网，先不碰隧道服务端。</p></div>
 
-<div class="opt"><h4>第三期 · 隧道服务端（跨网）<span class="pill p-md">你开始承担带宽</span></h4>
+<div class="opt"><h4>第三期 · 自己出隧道服务端<span class="pill p-md">看数据再定，不是必做</span></h4>
 <div class="meta"><span>新增 <b>一个隧道服务</b></span><span>TLS <b>绝不在这里终止</b></span></div>
 <p style="margin:0 0 10px"><b>这一期比 v1 的中继方案轻得多</b>：不用设计端到端加密协议（TLS 本来就是端到端的），
 隧道服务端只做一件事——把出站连上来的电脑和请求进来的手机接成一条字节管道。</p>
-<p style="margin:0">上线前想清楚三件：带宽成本怎么兜、滥用怎么限、隧道挂了用户看到什么。
+<p style="margin:0 0 8px"><b>这一期不一定要做。</b>前两期发出去之后，如果大部分想在外面用的人
+都能接受装个 Tailscale，那这一期可以永远不做——你零成本。
+只有当「卡在装 VPN 这一步」的人多到成为主要流失点，才值得自己出服务端。</p>
+<p style="margin:0">真要做，上线前想清楚三件：带宽成本怎么兜、滥用怎么限、隧道挂了用户看到什么。
 <b>你自己那台不用等这一期</b>——现成的 WireGuard 就能先跑。</p></div>
 
 <div class="opt"><h4>第四期 · 视情况<span class="pill p-md">不承诺</span></h4>
@@ -650,6 +692,8 @@ AI 对话节点走 <code>agentChat:send</code>。<b>只能发给已存在且在�
 <h3>要你拍板的四件事</h3>
 <ol>
 <li><b>先做哪一期</b>：按上面走（第一期局域网只读，推荐），还是别的组合</li>
+<li><b>第一版要不要自己出隧道服务端</b>：我建议<b>不出</b>——先只发「局域网直连 + 自带 VPN」，
+看真实需求再定（见通道那节最后一段）</li>
 <li><b>审批策略</b>：手机不能批 / 只能批"读"类 / 全都能批（我倾向中间那个）</li>
 <li><b>Codex 的对话解析要不要补</b>：不补的话，终端里跑 Codex 时手机只能发不能收（见动作 2 那张表）</li>
 <li><b>手机端形态</b>：PWA（推荐，不过商店、一套代码）还是直接上原生</li>
