@@ -1728,3 +1728,78 @@
 .ac-bar-send.stop:hover {
   background: rgba(251, 146, 60, 0.26);
 }
+
+/* ---------- 选项卡（2026-08-28）----------
+   agent 在正文里问「你选哪个」时，把那几行变成可点的。
+   **挂在正文下面，不替换正文** —— 识别是启发式的（options.ts 顶部有量化数据），
+   认错了的代价必须只是「多几个能无视的按钮」。 */
+.ac-opts {
+  margin: 8px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ac-opts-hd {
+  font-size: 11px;
+  color: var(--fg-dim);
+  padding-left: 2px;
+}
+
+.ac-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-2);
+  box-shadow: var(--glass-highlight);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ac-opt:hover {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  background: var(--accent-soft);
+}
+
+/* 序号跟 agent 原文里的编号对得上 —— 用户可能说「第 2 个」，
+   两边编号不一致会直接造成误解 */
+.ac-opt-n {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 5px;
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ac-opt-b {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ac-opt-l {
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.ac-opt-d {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  line-height: 1.55;
+}

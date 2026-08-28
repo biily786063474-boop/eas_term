@@ -15,7 +15,8 @@
 //
 // 审批卡片（Task 5）挂在这里：view.pending 非空时插在「当前最后一个轮次」的执行区
 // 上方——它是唯一不弱化的例外（ApprovalCard.tsx 头部注释），别的都遵守规则①。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
+import { optionsOf } from './options'
 import type { ChatView, ExecItem, Turn } from './reduce.ts'
 import { visibleExecs } from './reduce.ts'
 import { ApprovalCard, prettyJson, type ApprovalDecision } from './ApprovalCard'
@@ -28,10 +29,14 @@ import '../editor/editor.css'
 export function MessageList({
   view,
   onApprovalDecide,
-  leafId
+  leafId,
+  onPickOption
 }: {
   view: ChatView
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
+  /** 点了某个选项。**填进输入框，不自动发送** —— 选完常常还要补一句
+   *  「但是 xxx」；而且不自动发意味着误点零代价，这是敢用启发式识别的前提之一 */
+  onPickOption?: (text: string) => void
   /** 这个对话节点自己的 leafId —— 正文里点开网址时用它找「同一个 Frame」，
    *  好把网页开在旁边而不是系统浏览器里 */
   leafId?: string
@@ -87,6 +92,7 @@ export function MessageList({
           approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
           onApprovalDecide={onApprovalDecide}
           leafId={leafId}
+          onPickOption={onPickOption}
         />
       ))}
       {view.pending && !pendingOnLastTurn && (
@@ -130,12 +136,14 @@ function MessageTurn({
   turn,
   approval,
   onApprovalDecide,
-  leafId
+  leafId,
+  onPickOption
 }: {
   turn: Turn
   approval: ChatView['pending']
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
   leafId?: string
+  onPickOption?: (text: string) => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   // 正文里的网址/本地路径 → Ctrl+点击可跳。**依赖 turn.text**：流式输出时正文每帧
@@ -143,6 +151,12 @@ function MessageTurn({
   const mdRef = useRef<HTMLDivElement>(null)
   useLinkify(mdRef, turn.text, leafId)
   const visible = turn.role === 'assistant' ? visibleExecs(turn.execs, expanded) : []
+  // 认不认得出「它在问你选哪个」。**流式输出时正文每帧都在变**，所以要跟着 text 走；
+  // 但识别只在 assistant 轮次上做，用户自己发的话不解析
+  const opts = useMemo(
+    () => (turn.role === 'assistant' ? optionsOf(turn.text) : null),
+    [turn.role, turn.text]
+  )
   // 提问吸顶的两种形态：**在原位**时把话完整摊开（那是用户刚敲的原话，
   // 凭什么只给看两行）；**滚过去之后**收成一行路标，点它能滚回来。
   //
@@ -273,6 +287,29 @@ function MessageTurn({
         ))}
       {approval && (
         <ApprovalCard pending={approval} onDecide={(d) => onApprovalDecide(approval!.approvalId, d)} />
+      )}
+      {/* 选项卡：**挂在正文下面，不替换也不折叠任何内容**。
+          识别是启发式的（两个 CLI 都只把选项写进正文，没有结构化工具可用，
+          见 options.ts 顶部那段），所以误判必须无害 ——
+          认错了就是多几个能无视的按钮，认漏了跟现在一样。 */}
+      {turn.role === 'assistant' && onPickOption && opts && (
+        <div className="ac-opts">
+          <div className="ac-opts-hd">{opts.lead}</div>
+          {opts.options.map((o, i) => (
+            <button
+              key={i}
+              className="ac-opt"
+              onClick={() => onPickOption(o.label)}
+              title="填进输入框（不会直接发出去）"
+            >
+              <span className="ac-opt-n">{i + 1}</span>
+              <span className="ac-opt-b">
+                <span className="ac-opt-l">{o.label}</span>
+                {o.detail && <span className="ac-opt-d">{o.detail}</span>}
+              </span>
+            </button>
+          ))}
+        </div>
       )}
       {turn.role === 'assistant' && turn.execs.length > 0 && (
         <div className="ac-execs">
