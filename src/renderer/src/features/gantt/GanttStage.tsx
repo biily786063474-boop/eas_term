@@ -77,7 +77,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CanvasFrame, TermTab } from '../../store'
 import type { GanttClearRange, GanttTask } from '../../../../shared/types'
-import type { GanttJumpMode } from '../../store/uiSlice'
+import type { GanttJumpMode, GanttViewMode } from '../../store/uiSlice'
 import { attachBlurGuard } from '../../blurGuard'
 // collectLeaves：只读，取"leafId → 所在标签页标题"这份映射用（见 titleByLeaf）。
 // 不改这个文件——按纪律只碰 features/gantt/ 下的文件，这里纯粹是读别处已有的
@@ -93,6 +93,8 @@ import {
   type GanttNavigatorHandle
 } from './GanttNavigator'
 import { GanttJumpMenu } from './GanttJumpMenu'
+import type { Phase } from './phases'
+import { fmtDur, groupPhases } from './phases'
 import './gantt.css'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -103,6 +105,13 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const SPAN_OPTIONS = [
   { key: '24h', label: '24 小时', ms: DAY_MS },
   { key: '3d', label: '3 天', ms: 3 * DAY_MS }
+]
+
+/** 主区的三种看法（2026-08-27 新增）。「会话」是一直以来的样子，放第一个也是默认。 */
+const VIEW_OPTIONS: { key: GanttViewMode; label: string; tip: string }[] = [
+  { key: 'session', label: '会话', tip: '一根条 = 一次「你发出去的话 → agent 干完」' },
+  { key: 'project', label: '项目', tip: '一个项目一行，一根条 = 一个工作阶段' },
+  { key: 'milestone', label: '里程碑', tip: '每次发送 / 每次返回各插一枚菱形' }
 ] as const
 
 /** 连续缩放的两端硬边界：最细一小时一屏，最粗跟"3 天"预设看齐——用户要求就是
@@ -350,6 +359,10 @@ export function GanttStage(): JSX.Element {
   const canvasFrames = useStore((s) => s.canvas.frames)
   const ganttJumpMode = useStore((s) => s.ganttJumpMode)
   const setGanttJumpMode = useStore((s) => s.setGanttJumpMode)
+  // 主区画什么：会话 / 项目 / 里程碑（2026-08-27 新增）。存 localStorage，
+  // 默认 'session' —— 老用户切过去看不出区别。
+  const ganttViewMode = useStore((s) => s.ganttViewMode)
+  const setGanttViewMode = useStore((s) => s.setGanttViewMode)
   const requestConfirm = useStore((s) => s.requestConfirm)
   // 取终端名用（titleByLeaf）。跟 BoardStage.tsx 订阅同一个字段——那边已经证明
   // 了这个订阅的刷新频率可接受（tabsSlice.setTabTitle 标题没变就原样返回，不
@@ -386,8 +399,12 @@ export function GanttStage(): JSX.Element {
   }
   /** top/bottom 是条的 getBoundingClientRect()，不是单个 y——下边缘要判断
    *  "翻到条上方"，得同时知道条的上下沿，光一个点不够表达翻转。 */
+  // t / ph 二选一（不会同时有）：t = 悬在一条记录上，ph = 悬在一个阶段条上。
+  // 没做成判别联合是因为定位字段(x/top/bottom)三处共用，联合会让每个读取点
+  // 都要先窄化一次，读起来比 `hover.t &&` 更啰嗦。
   const [hover, setHover] = useState<{
-    t: GanttTask
+    t?: GanttTask
+    ph?: Phase
     x: number
     top: number
     bottom: number
@@ -746,7 +763,25 @@ export function GanttStage(): JSX.Element {
     })
   }
 
-  const rows = projects.filter((p) => byProject.has(p.id))
+  /** 全量阶段（不看时间窗口）——理由同 groupsByProject：切段的结果不该随
+   *  「你现在看的是哪一段时间」而变。窗口只决定画不画，不决定怎么分段。
+   *  拿 safeTasks 而不是 tasks：数值离谱的记录会把段的起止拉到荒谬的位置。 */
+  const phasesByProject = useMemo(() => groupPhases(safeTasks, now), [safeTasks, now])
+
+  /** 视窗过滤后的阶段。口径跟 byProject 的两条 continue 完全一致
+   *  （整段在窗口左边/右边的不画），保持一致是为了让三种模式下
+   *  「这个项目这一刻出不出现在图上」的答案相同。 */
+  const visiblePhases = useMemo(() => {
+    const m = new Map<string, Phase[]>()
+    for (const [projectId, list] of phasesByProject) {
+      const view = list.filter((ph) => ph.endAt >= t0 && ph.startAt <= t1)
+      if (view.length) m.set(projectId, view)
+    }
+    return m
+  }, [phasesByProject, t0, t1])
+
+  const phaseMode = ganttViewMode !== 'session'
+  const rows = projects.filter((p) => (phaseMode ? visiblePhases : byProject).has(p.id))
 
   // 提交视图后（拖拽松手 / 点导航带跳转 / 切跨度），把预览阶段留下的临时 transform
   // 清掉。用 layout 版本的 effect：赶在浏览器绘制前，跟"React 已经按新 t0 重排好
@@ -897,7 +932,11 @@ export function GanttStage(): JSX.Element {
   const handleStageMouseDown = (e: React.MouseEvent): void => {
     if (e.button !== 0) return // 只处理左键拖拽
     // 落在条上/分组折叠按钮上：交给它们自己的 onClick，不抢这次按下事件
-    if ((e.target as HTMLElement).closest('.gantt-bar, .gantt-group-toggle')) return
+    // .gantt-dia（里程碑菱形）也挂着 onClick 跳转，跟 .gantt-bar 同一个道理：
+    // 在它上面按下不启动拖拽，否则拖一点点就把这次点击吃掉了。
+    // .gantt-band 不在列 —— 它只有 hover 没有点击，压在整段上面，
+    // 把它排除掉会让里程碑模式几乎没地方能起拖。
+    if ((e.target as HTMLElement).closest('.gantt-bar, .gantt-group-toggle, .gantt-dia')) return
     e.preventDefault() // 防止拖拽时选中项目名文字
     beginDrag()
     const base = dragBaseRef.current
@@ -1220,11 +1259,146 @@ export function GanttStage(): JSX.Element {
     )
   }
 
+  /** 阶段条（项目模式）。一根条 = 一个工作阶段，标签写「N 条 · 时长」。
+   *  不复用 renderLanes：那个按 GanttTask 定位、配色按 running/aborted 分，
+   *  阶段的三种状态（在跑 / 有强杀 / 正常）跟它对不上，硬塞进去要在里面
+   *  拉两条并行分支，不如各画各的。 */
+  const renderPhaseLanes = (phases: Phase[]): JSX.Element => (
+    <div className="gantt-lanes">
+      {ticks.map((t) => (
+        <div key={t} className="gantt-vline" style={{ left: pct(t) + '%' }} />
+      ))}
+      <div className="gantt-lane">
+        {phases.map((ph) => {
+          const s0 = Math.max(ph.startAt, t0)
+          const e0 = Math.min(ph.endAt, t1)
+          const left = pct(s0)
+          const w = Math.max(pct(e0) - left, 0)
+          const state = ph.running ? 'running' : ph.hasAborted ? 'aborted' : 'done'
+          const wide = (w / 100) * 900 > LABEL_INSIDE_MIN_PX
+          return (
+            <div
+              key={ph.id}
+              className={`gantt-bar phase ${state}${wide ? ' wide' : ''}`}
+              style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
+              onMouseEnter={(ev) => {
+                cancelHide()
+                const r = ev.currentTarget.getBoundingClientRect()
+                setHover({ ph, x: ev.clientX, top: r.top, bottom: r.bottom })
+              }}
+              onMouseLeave={scheduleHide}
+              // 一个阶段对应十几条记录，跳哪一条？**跳段内最后一条** ——
+              // 最接近「从上次停下的地方接着干」。
+              onClick={() => jump(ph.tasks[ph.tasks.length - 1])}
+            >
+              <span className="gantt-bar-label">
+                {ph.tasks.length} 条 · {fmtDur(ph.endAt - ph.startAt)}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  /** 里程碑（里程碑模式）：阶段画成淡带，每条记录在它的**开始**和**结束**
+   *  各插一枚菱形 —— 蓝＝你发的，绿＝回完。
+   *
+   *  **只画时间点，不画回复内容。** 回复文本甘特图从来没存过：终端那半
+   *  压根没有（输出只在 xterm 的 scrollback 里，从不落盘），AI 对话那半
+   *  虽然 agent-history/ 里有 turns，但 Turn 结构没有时间戳（见
+   *  features/agentChat/reduce.ts），对不到具体是哪一条的回复。
+   *  硬对只能靠数序号，而两边的条数会因为各自的裁剪/TTL 而对不齐。 */
+  const renderMilestoneLanes = (phases: Phase[]): JSX.Element => (
+    <div className="gantt-lanes">
+      {ticks.map((t) => (
+        <div key={t} className="gantt-vline" style={{ left: pct(t) + '%' }} />
+      ))}
+      <div className="gantt-lane">
+        {phases.map((ph) => {
+          const left = pct(Math.max(ph.startAt, t0))
+          const w = Math.max(pct(Math.min(ph.endAt, t1)) - left, 0)
+          return (
+            <div
+              key={ph.id}
+              className="gantt-band"
+              style={{ left: left + '%', width: `max(${MIN_BAR_PX}px, ${w}%)` }}
+              onMouseEnter={(ev) => {
+                cancelHide()
+                const r = ev.currentTarget.getBoundingClientRect()
+                setHover({ ph, x: ev.clientX, top: r.top, bottom: r.bottom })
+              }}
+              onMouseLeave={scheduleHide}
+            />
+          )
+        })}
+        {phases.flatMap((ph) =>
+          ph.tasks.flatMap((t) => {
+            const marks: JSX.Element[] = []
+            const put = (at: number, kind: 'ask' | 'reply'): void => {
+              if (at < t0 || at > t1) return
+              marks.push(
+                <div
+                  key={t.id + kind}
+                  className={`gantt-dia ${kind}`}
+                  style={{ left: pct(at) + '%' }}
+                  onMouseEnter={(ev) => {
+                    cancelHide()
+                    const r = ev.currentTarget.getBoundingClientRect()
+                    setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
+                  }}
+                  onMouseLeave={scheduleHide}
+                  onClick={() => jump(t)}
+                />
+              )
+            }
+            put(t.startAt, 'ask')
+            // 没正常结束的不插「回完」那一枚 —— 它还没回完，或者结束时间不可知。
+            // 插一枚在 now 上等于宣称「刚回完」，那是编的。
+            if (t.endAt !== null) put(t.endAt, 'reply')
+            return marks
+          })
+        )}
+      </div>
+    </div>
+  )
+
+  /** 一行画什么，三种模式在这里分岔。项目模式和里程碑模式都是「一个项目一行」，
+   *  不再有终端子行和折叠头 —— 阶段本来就是把终端和 AI 对话合流之后的结果，
+   *  再按终端拆开等于把刚合起来的又拆散。 */
+  const renderPhaseRow = (projectId: string): JSX.Element => {
+    const phases = visiblePhases.get(projectId) ?? []
+    return ganttViewMode === 'milestone'
+      ? renderMilestoneLanes(phases)
+      : renderPhaseLanes(phases)
+  }
+
   return (
     <div className="gantt">
       <div className="gantt-head">
-        <div className="gantt-title">{rangeLabel} · 每根条是一次「你发出去的话 → agent 干完」</div>
+        <div className="gantt-title">
+          {rangeLabel} ·{' '}
+          {ganttViewMode === 'session'
+            ? '每根条是一次「你发出去的话 → agent 干完」'
+            : ganttViewMode === 'project'
+              ? '每根条是一个工作阶段（静默满 30 分钟就算一段结束）'
+              : '菱形：蓝＝你发的，绿＝回完；淡带是一个工作阶段'}
+        </div>
         <div className="gantt-head-tools">
+          {/* 主区画什么。跟跨度切换用同一套 .gantt-span-toggle 外观 ——
+              它们都是「同一张图的不同看法」，长得一样才不会被当成两类东西。 */}
+          <div className="gantt-span-toggle">
+            {VIEW_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                className={ganttViewMode === opt.key ? 'active' : ''}
+                data-tip={opt.tip}
+                onClick={() => setGanttViewMode(opt.key)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <div className="gantt-span-toggle">
             {SPAN_OPTIONS.map((opt) => (
               <button
@@ -1277,6 +1451,18 @@ export function GanttStage(): JSX.Element {
             </div>
           )}
           {rows.map((p) => {
+            // 阶段模式：一个项目就一行，直接返回，不进下面那套「按终端分行 +
+            // 折叠头」的逻辑（那是会话模式独有的）
+            if (phaseMode) {
+              return (
+                <div className="gantt-row" key={p.id}>
+                  <div className="gantt-rowname" title={p.name}>
+                    {p.name}
+                  </div>
+                  {renderPhaseRow(p.id)}
+                </div>
+              )
+            }
             const groups = byProject.get(p.id) ?? []
             // 只有一个终端在当前窗口有活动：跟改造前一模一样的单行，不额外
             // 加分组头——没有第二个终端可比较，标题栏重复写一遍项目名毫无
@@ -1362,6 +1548,8 @@ export function GanttStage(): JSX.Element {
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
         >
+          {hover.t && (
+          <>
           <div className="gantt-pop-hd">
             <div className="gantt-pop-time">
               {hhmm(hover.t.startAt)} → {hover.t.endAt ? hhmm(hover.t.endAt) : '进行中'}
@@ -1377,7 +1565,9 @@ export function GanttStage(): JSX.Element {
               data-tip="删除这条记录"
               onClick={(e) => {
                 e.stopPropagation()
-                removeTask(hover.t)
+                // 回调里再判一次：hover.t 现在是可选字段（阶段浮层不带它），
+                // 外层的 `hover.t &&` narrow 不进这个闭包
+                if (hover.t) removeTask(hover.t)
               }}
             >
               <TrashIcon size={11} />
@@ -1397,6 +1587,48 @@ export function GanttStage(): JSX.Element {
                 追加：{typeof f === 'string' ? f : String(f)}
               </div>
             ))}
+          </>
+          )}
+          {/* 阶段浮层：没有「删除这条」按钮 —— 一个阶段是十几条记录的聚合，
+              一颗按钮删掉一片，误触代价太大。要删就切回会话模式逐条删。 */}
+          {hover.ph && (
+            <>
+              <div className="gantt-pop-hd">
+                <div className="gantt-pop-time">
+                  {hhmm(hover.ph.startAt)} → {hover.ph.running ? '进行中' : hhmm(hover.ph.endAt)}
+                  <span className="gantt-pop-dur">
+                    {fmtDur(hover.ph.endAt - hover.ph.startAt)}
+                  </span>
+                </div>
+              </div>
+              {hover.ph.hasAborted && (
+                <div className="gantt-pop-abort">
+                  段内有被强杀的记录，结束时间是下限、不是真值
+                </div>
+              )}
+              <div className="gantt-pop-sum">
+                {(() => {
+                  const ts = hover.ph.tasks
+                  const a = ts.filter((t) => t.kind === 'agent').length
+                  const parts: string[] = []
+                  if (ts.length - a) parts.push(`终端 ${ts.length - a} 条`)
+                  if (a) parts.push(`AI 对话 ${a} 条`)
+                  return parts.join(' · ')
+                })()}
+              </div>
+              {/* 段内头三条，让人认出这段在干什么。全列会把浮层撑到一屏高 —— 
+                  .gantt-pop 有 maxHeight 兜底，但要滚动才看得完等于没用。 */}
+              {hover.ph.tasks.slice(0, 3).map((t) => (
+                <div className="gantt-pop-item" key={t.id}>
+                  <span className="gantt-pop-item-t">{hhmm(t.startAt)}</span>
+                  {t.prompt.slice(0, 40)}
+                </div>
+              ))}
+              {hover.ph.tasks.length > 3 && (
+                <div className="gantt-pop-more">还有 {hover.ph.tasks.length - 3} 条</div>
+              )}
+            </>
+          )}
         </div>
       )}
       {ctxMenu && (

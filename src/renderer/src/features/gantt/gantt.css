@@ -775,3 +775,105 @@
 .gantt-crash-btn.danger:hover {
   background: rgba(239, 111, 123, 0.16);
 }
+
+/* ---------- 阶段条与里程碑（2026-08-27 新增：项目 / 里程碑两种模式） ----------
+
+   阶段条复用 .gantt-bar 的定位与形状，只换配色 —— 它们在图上是同一类东西
+   （占据一段时间的一根条），长得不一样只会让人以为是两回事。
+   .phase 提权靠双类名，不用 !important。 */
+
+.gantt-bar.phase.done {
+  /* 比会话条更实一档：一根阶段条代表十几条记录，视觉重量该重一点 */
+  background: color-mix(in srgb, var(--accent) 88%, var(--pane-solid));
+}
+
+.gantt-bar.phase.aborted {
+  /* 段内有被强杀的记录 → 结束时间是下限。仍然用右端渐隐表达「到这儿为止是猜的」，
+     但底色不换成红 —— 段里绝大多数记录是正常的，整段染红会夸大问题。 */
+  background: color-mix(in srgb, var(--accent) 88%, var(--pane-solid));
+  mask-image: linear-gradient(90deg, #000 88%, transparent 100%);
+  color: inherit;
+}
+
+/* 里程碑模式的阶段淡带：只是背景，不抢菱形的注意力 */
+.gantt-band {
+  position: absolute;
+  top: 0;
+  height: 18px;
+  border-radius: 4px;
+  /* 16% 在暗底上几乎看不见（实测截图里只有没被菱形盖住的那几段才勉强分辨），
+     提到 26% + 更实的描边。它是背景不是主角，但看不见的背景等于没有。 */
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, transparent);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* 菱形：一个正方形转 45°。**用 margin-left 抵掉一半宽度**，让它的中心落在
+   时刻上而不是左边缘 —— 差半个身位在 24 小时跨度下就是十几分钟。 */
+/* **蓝的排上面一行、绿的排下面一行。** 起初两种共用一行，24 小时跨度下
+   151 个菱形挤成一条连续的色带，什么都读不出来（实测截图确认）。分成上下两排
+   之后：①同一对「你发的 → 回完」不会互相压住；②每一排的密度减半；
+   ③一眼就能读出「上排蓝＝提问节奏，下排绿＝返回节奏」。
+   尺寸也从 10px 收到 8px —— 行高只有 18px，两排各 8px 正好。 */
+.gantt-dia {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.gantt-dia.ask {
+  top: 1px;
+}
+
+.gantt-dia.reply {
+  top: 9px;
+}
+
+.gantt-dia:hover {
+  transform: rotate(45deg) scale(1.5);
+  z-index: 3;
+}
+
+/* 蓝＝你发的，绿＝回完。两种一定要能一眼分开，否则这个模式没有意义 */
+.gantt-dia.ask {
+  background: #7dd3fc;
+  box-shadow: 0 0 0 1.5px var(--pane-solid);
+}
+
+.gantt-dia.reply {
+  background: #34d399;
+  box-shadow: 0 0 0 1.5px var(--pane-solid);
+}
+
+/* 阶段浮层里的摘要行与前三条 */
+.gantt-pop-sum {
+  margin-top: 4px;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+}
+
+.gantt-pop-item {
+  margin-top: 5px;
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.gantt-pop-item-t {
+  margin-right: 7px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-pop-more {
+  margin-top: 6px;
+  color: var(--fg-dim);
+  font-size: 11.5px;
+}

@@ -22,6 +22,11 @@ function dropKey<T>(obj: Record<string, T>, key: string): Record<string, T> {
  *  派生：两处独立手写更直白，以后要不要跟着 ViewMode 扩是甘特图跳转这边自己
  *  的决定，不该被 ViewMode 的定义变化顺带牵动。 */
 export type GanttJumpMode = 'split' | 'canvas' | 'board'
+/** 甘特图主区画什么（2026-08-27 新增）：
+ *  · 'session'   一根条 = 一次「你发出去的话 → agent 干完」（一直以来的样子，默认）
+ *  · 'project'   一个项目一行，一根条 = 一个工作阶段（30 分钟静默切段）
+ *  · 'milestone' 阶段画成淡带，每次发送/每次返回各插一枚菱形 */
+export type GanttViewMode = 'session' | 'project' | 'milestone'
 
 /** 双击画布空白弹出的项目列表的排序方式 */
 export type ProjectMenuSort = 'default' | 'recent'
@@ -98,6 +103,10 @@ export interface UiSlice {
    *  （含老用户）体验不变。 */
   ganttJumpMode: GanttJumpMode
   setGanttJumpMode: (mode: GanttJumpMode) => void
+  /** 甘特图主区的画法。纯 UI 偏好，存 localStorage，同 ganttJumpMode 的存法。
+   *  默认 'session' —— 跟这个功能上线前一模一样，老用户切过去打开看不出区别。 */
+  ganttViewMode: GanttViewMode
+  setGanttViewMode: (mode: GanttViewMode) => void
   /** 双击画布空白弹出的项目列表按什么排。'default' = 添加顺序，
    *  'recent' = 最近点过的排前面。两种都**保留「有状态的排最前」**，
    *  差别只在没有状态的那一批 —— approval 是唯一「不管就永远卡着」的状态，
@@ -224,6 +233,7 @@ const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
 const GANTT_JUMP_MODE_KEY = 'eas.gantt.jumpmode'
+const GANTT_VIEW_MODE_KEY = 'eas.gantt.viewmode'
 const AGENT_APPROVAL_HOOK_KEY = 'eas.agentchat.approvalhook'
 const PROJECT_MENU_SORT_KEY = 'eas.projectmenu.sort'
 const PROJECT_MRU_KEY = 'eas.projectmenu.mru'
@@ -321,6 +331,15 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setGanttJumpMode: (mode) => {
     localStorage.setItem(GANTT_JUMP_MODE_KEY, mode)
     set({ ganttJumpMode: mode })
+  },
+  // 同 ganttJumpMode：存过的值才信，之外的一律回落 'session'
+  ganttViewMode: (() => {
+    const v = localStorage.getItem(GANTT_VIEW_MODE_KEY)
+    return v === 'project' || v === 'milestone' ? v : 'session'
+  })(),
+  setGanttViewMode: (mode) => {
+    localStorage.setItem(GANTT_VIEW_MODE_KEY, mode)
+    set({ ganttViewMode: mode })
   },
   // 同 ganttJumpMode：存过的值才信，之外的一律回落 'default'
   projectMenuSort: localStorage.getItem(PROJECT_MENU_SORT_KEY) === 'recent' ? 'recent' : 'default',

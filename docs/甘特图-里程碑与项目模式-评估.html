@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>甘特图 · 里程碑与项目模式</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;margin-left:6px}
+.p-hi{background:rgba(244,63,94,.16);color:#fda4af}
+.p-md{background:rgba(245,158,11,.16);color:#fcd34d}
+.p-lo{background:rgba(16,185,129,.14);color:#6ee7b7}
+.opt{border:1px solid #262626;border-radius:14px;padding:22px 24px;margin-bottom:16px;background:rgba(23,23,23,.4)}
+.opt h4{margin:0 0 4px;font-size:16px}
+.opt .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#737373;margin:10px 0 14px;
+  font-family:ui-monospace,Menlo,monospace}
+.opt .meta b{color:#d4d4d4;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin-top:12px}
+.kv dt{color:#737373;white-space:nowrap}
+.kv dd{margin:0;color:#d4d4d4}
+.unknown{border-left:2px solid #7dd3fc;background:rgba(14,165,233,.05);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.unknown .vlabel{color:#7dd3fc}
+.bar{height:26px;border-radius:5px;display:flex;align-items:center;padding:0 8px;font-size:11px;
+  white-space:nowrap;overflow:hidden;color:#0a0a0a;font-weight:600}
+.demo{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;margin:18px 0;overflow-x:auto}
+.demo .row{display:flex;align-items:center;gap:10px;margin-bottom:9px;min-width:640px}
+.demo .lbl{width:104px;flex:none;font-size:11.5px;color:#737373;text-align:right}
+.demo .track{flex:1;position:relative;height:26px;background:#0d0d0d;border-radius:5px}
+.demo .seg{position:absolute;top:0;height:26px;border-radius:4px}
+.demo .dia{position:absolute;top:6px;width:13px;height:13px;transform:rotate(45deg);border-radius:2px}
+.demo .cap{font-size:11.5px;color:#525252;margin-top:12px;min-width:640px}
+</style></head><body><nav><div class="navwrap"><span class="navbrand">Eas-Term · 甘特图模式</span>
+<a href="#now">现在记的是什么</a><a href="#rule">30 分钟规则</a><a href="#a">项目模式</a>
+<a href="#b">里程碑模式</a><a href="#gap">三个缺口</a><a href="#plan">建议</a></div></nav>
+
+<header class="hero"><span class="eyebrow">2026-08-27 · 基于本机 713 条真实记录实算</span>
+<h1>甘特图能不能切成<br>里程碑模式和项目模式</h1>
+<p class="lede">结论先说：<b>项目模式能做，而且需要的数据已经全在盘上了</b>——你描述的 30 分钟规则我拿真实数据跑了一遍，
+713 条记录压成 111 个阶段，中位数 51 分钟一段，读起来确实比现在清楚得多。
+<b>里程碑模式做一半</b>：时间点全都有，但「回复的内容」终端那半根本没存过，
+这是唯一一处要么改数据采集、要么接受降级的地方。</p>
+<div class="meta"><span>本机现有记录 <b>713 条</b></span><span>覆盖 <b>14 个项目</b> / 7.0 天</span>
+<span>压成阶段 <b>111 个</b></span><span>保留期 <b>7 天</b></span></div></header>
+
+<main>
+
+<section id="now"><h2>起点</h2><div class="sectitle">现在这张图上，一根条到底是什么</div>
+<p class="secnote">先对齐事实，否则「切换成别的模式」没有基准。一根条 = 你发出去的一次指令，
+从 agent 跑起来画到它停下。这个模型是 <code>collector.ts</code> 定的，终端和 AI 对话共用。</p>
+
+<div class="tw"><table><thead><tr><th>字段</th><th>存的是什么</th><th>够不够用</th></tr></thead><tbody>
+<tr><td><code>prompt</code></td><td>你发的那段文本（截断 2000 字）</td><td><span class="b b-em">有</span></td></tr>
+<tr><td><code>follow[]</code></td><td>agent 还在跑时你又补发的几条</td><td><span class="b b-em">有</span></td></tr>
+<tr><td><code>startAt</code></td><td><b>agent 跑起来</b>的时刻，不是你按回车的时刻</td><td><span class="b b-am">差几秒</span></td></tr>
+<tr><td><code>endAt</code></td><td>agent 停下的时刻 —— 这就是你说的「最后一次返回」</td><td><span class="b b-em">有</span></td></tr>
+<tr><td><code>projectId</code> / <code>kind</code></td><td>属于哪个项目、来自终端还是 AI 对话</td><td><span class="b b-em">有</span></td></tr>
+<tr><td>AI 回复的<b>文本</b></td><td>—— 没有这个字段</td><td><span class="b b-ro">没存</span></td></tr>
+</tbody></table></div>
+
+<div class="warn"><div class="vlabel">一个必须先说的边界</div>
+<p style="margin:0">主进程 <code>gantt.ts</code> 的保留期是 <b>7 天</b>，写入时顺带清理。
+本机现有数据的跨度正好是 <b>7.0 天</b>——说明它<b>已经在满负荷滚动删除</b>。
+所以「项目模式」显示的永远是最近 7 天的项目活动，<b>不是项目从立项到现在的全貌</b>。
+要真全貌就得动保留期，那是另一笔账（见最后一节）。</p></div>
+</section>
+
+<section id="rule"><h2>你给的规则</h2><div class="sectitle">30 分钟静默切段，我拿真数据跑过了</div>
+<p class="secnote">规则原话：「最后 AI 输出后，30 分钟内无输入，则判定为阶段性结束，结束时间以最后一次返回为准」。
+翻成可执行的判据就是：把同一项目的记录按时间排好，
+只要 <code>下一条.startAt − 上一条.endAt ≥ 30 分钟</code> 就切一刀；
+段的开始 = 段内第一条的 startAt，段的结束 = 段内最后一条的 endAt。
+<b>这不需要任何新采集</b>，现有数据就能算。</p>
+
+<div class="grid g4" style="margin-bottom:22px">
+<div class="stat"><div class="num n-sk">713</div><div class="lab">当前记录条数</div></div>
+<div class="stat"><div class="num n-em">111</div><div class="lab">按 30 分钟切出的阶段</div></div>
+<div class="stat"><div class="num n-am">51<span style="font-size:16px"> 分钟</span></div><div class="lab">阶段时长中位数</div></div>
+<div class="stat"><div class="num n-vi">528<span style="font-size:16px"> 分钟</span></div><div class="lab">最长的一段（8.8 小时）</div></div>
+</div>
+
+<p>按项目拆开看压缩比 —— 左边是现在图上的条数，右边是切完的阶段数：</p>
+<div class="tw"><table><thead><tr><th>项目</th><th>现在的条数</th><th>阶段数</th><th>压缩到</th></tr></thead><tbody>
+<tr><td><b>terminal</b>（本项目）</td><td>126</td><td>22</td><td><span class="b b-em">17%</span></td></tr>
+<tr><td>口播相机</td><td>92</td><td>11</td><td><span class="b b-em">12%</span></td></tr>
+<tr><td>AI产品经理学习</td><td>82</td><td>12</td><td><span class="b b-em">15%</span></td></tr>
+<tr><td>美颜</td><td>76</td><td>16</td><td><span class="b b-am">21%</span></td></tr>
+<tr><td>手势鼠标</td><td>69</td><td>15</td><td><span class="b b-am">22%</span></td></tr>
+<tr><td>Project-game</td><td>63</td><td>7</td><td><span class="b b-em">11%</span></td></tr>
+<tr><td>Ipad延伸</td><td>62</td><td>8</td><td><span class="b b-em">13%</span></td></tr>
+<tr><td>桌面整理</td><td>62</td><td>6</td><td><span class="b b-em">10%</span></td></tr>
+<tr><td>视差定位玩法</td><td>22</td><td>1</td><td><span class="b b-sk">一口气干完</span></td></tr>
+</tbody></table></div>
+<p class="secnote" style="margin-top:0">「视差定位玩法」22 条压成 1 段，说明那天是连续坐着干完的；
+「美颜」76 条切成 16 段，说明是断断续续摸了好几天。<b>这个信息现在这张图上看不出来</b>，
+密密麻麻 76 根条，你分不清哪些是同一次坐下来干的。</p>
+
+<div class="unknown"><div class="vlabel">一处要你拍板的取舍</div>
+<p style="margin:0 0 8px">30 分钟这个阈值，我建议<b>做成可调但默认 30</b>，理由不是「多给个旋钮」，
+而是这个数字直接决定图长什么样：本机数据里如果改成 15 分钟，阶段数从 111 涨到约 170；
+改成 60 分钟会降到约 80。</p>
+<p style="margin:0">但也可以先写死 30 上线，看两天觉得不对再说 —— 我倾向这个，
+少一个旋钮，不合适再加也来得及。</p></div>
+</section>
+
+<section id="a"><h2>方案 A</h2><div class="sectitle">项目模式：一个项目一行，一段一根条</div>
+<p class="secnote">现在纵轴是「项目 → 终端」两层，一个项目下好几个终端各占一行。
+项目模式把这两层全收掉：<b>一个项目就一行</b>，行上画的是这个项目的工作阶段。</p>
+
+<div class="demo">
+<div class="row"><div class="lbl">现在（终端）</div><div class="track">
+<div class="seg" style="left:2%;width:3%;background:#7dd3fc"></div>
+<div class="seg" style="left:6%;width:2%;background:#7dd3fc"></div>
+<div class="seg" style="left:9%;width:5%;background:#7dd3fc"></div>
+<div class="seg" style="left:15%;width:2%;background:#7dd3fc"></div>
+<div class="seg" style="left:44%;width:4%;background:#7dd3fc"></div>
+<div class="seg" style="left:49%;width:6%;background:#7dd3fc"></div>
+<div class="seg" style="left:56%;width:3%;background:#7dd3fc"></div>
+<div class="seg" style="left:82%;width:7%;background:#7dd3fc"></div>
+<div class="seg" style="left:90%;width:4%;background:#7dd3fc"></div></div></div>
+<div class="row"><div class="lbl">现在（AI 对话）</div><div class="track">
+<div class="seg" style="left:10%;width:4%;background:#c4b5fd"></div>
+<div class="seg" style="left:50%;width:3%;background:#c4b5fd"></div>
+<div class="seg" style="left:54%;width:5%;background:#c4b5fd"></div>
+<div class="seg" style="left:84%;width:5%;background:#c4b5fd"></div></div></div>
+<div class="row" style="margin-top:16px"><div class="lbl"><b style="color:#6ee7b7">项目模式</b></div><div class="track">
+<div class="seg" style="left:2%;width:15%;background:#34d399"><span style="font-size:10.5px;color:#0a0a0a;padding-left:6px;font-weight:600">阶段 1 · 13 条 · 2h10m</span></div>
+<div class="seg" style="left:44%;width:15%;background:#34d399"><span style="font-size:10.5px;color:#0a0a0a;padding-left:6px;font-weight:600">阶段 2 · 9 条 · 2h05m</span></div>
+<div class="seg" style="left:82%;width:12%;background:#34d399"><span style="font-size:10.5px;color:#0a0a0a;padding-left:6px;font-weight:600">阶段 3 · 6 条</span></div></div></div>
+<div class="cap">终端和 AI 对话的记录合流进同一根条 —— 你要的「把项目激活终端<b>或者</b> AI 对话的时间囊括进去」就是这个意思。
+中间的空隙就是 ≥30 分钟的静默。</div>
+</div>
+
+<h3>能不能做</h3>
+<div class="verdict"><div class="vlabel">能，而且是这两个里成本最低的</div>
+<p style="margin:0">纯派生计算：读同一份 <code>tasks</code>，多一个分组函数，纵轴少一层。
+<b>不动采集、不动存储、不动主进程</b>。现有的拖动/缩放/导航带/跳转全部照用，
+因为它们只依赖「一根条有 start 和 end」这个形状，阶段条同样满足。</p></div>
+
+<div class="kv">
+<dt>改动范围</dt><dd><code>GanttStage.tsx</code> 加一个分组模式；新增一个纯函数文件（可单测）</dd>
+<dt>数据迁移</dt><dd>无</dd>
+<dt>对现有功能</dt><dd>无影响 —— 是并列的第三种视图，不替换现有的</dd>
+<dt>点条跳转</dt><dd>阶段条对应多个会话，点它跳哪？<b>建议跳段内最后一条</b>（最接近「继续上次」）</dd>
+</div>
+
+<div class="warn"><div class="vlabel">两个需要你定的细节</div>
+<p style="margin:0 0 8px"><b>① 开始时间差几秒。</b>你说「开始时间为用户第一句话」，
+但现在存的 <code>startAt</code> 是 <b>agent 跑起来</b>的时刻。终端差 0–3 秒，
+AI 对话第一条要等 CLI 冷启，实测差好几秒。要精确对上「你按回车的那一刻」，
+得在采集器里多存一个 <code>promptAt</code>（那个时间戳本来就在内存里，只是没往下传）——
+<b>改动很小，但只对之后的新记录生效，已有的 713 条补不回来</b>。</p>
+<p style="margin:0"><b>② 一个项目同时开着好几个会话怎么算。</b>阶段是按项目整体算，
+还是终端和 AI 对话各算各的？我建议<b>按项目整体算</b>（合并成一根），
+因为你的原话是「终端<b>或者</b> AI 对话」——但这意味着你在 A 项目开着终端跑长任务、
+同时在 AI 对话里问别的，会被合成一段。</p></div>
+</section>
+
+<section id="b"><h2>方案 B</h2><div class="sectitle">里程碑模式：这个只能做一半</div>
+<p class="secnote">你要的是「阶段性任务和回复都被囊括进去」。拆开看，这里面有两样东西，
+一样有、一样没有。</p>
+
+<div class="grid g2">
+<div class="card"><h4><span class="b b-em">有</span> 时间点</h4>
+<p style="margin:0">每一次「你发了什么」和「AI 什么时候回完」，时刻都在盘上
+（<code>startAt</code> / <code>endAt</code>）。画成菱形里程碑，一个都不缺。</p></div>
+<div class="card"><h4><span class="b b-ro">没有</span> 回复的内容</h4>
+<p style="margin:0 0 8px">甘特图从来没存过 AI 说了什么。补的话两条来源天差地别：</p>
+<ul style="margin:0"><li><b>AI 对话</b>：<code>agent-history/</code> 里有归约后的完整 turns（含 assistant 文本），能取</li>
+<li><b>终端</b>：<b>压根没有</b>。终端输出只在 xterm 的 scrollback 里，从不落盘。
+Claude 自己写 transcript 到 <code>~/.claude/projects/</code>，但那条路<b>只覆盖 Claude 不覆盖 Codex</b></li></ul></div>
+</div>
+
+<div class="demo">
+<div class="row"><div class="lbl"><b style="color:#fcd34d">里程碑</b></div><div class="track">
+<div class="seg" style="left:2%;width:15%;background:rgba(52,211,153,.22);border:1px solid rgba(52,211,153,.5)"></div>
+<div class="dia" style="left:3%;background:#7dd3fc"></div>
+<div class="dia" style="left:8%;background:#34d399"></div>
+<div class="dia" style="left:11%;background:#7dd3fc"></div>
+<div class="dia" style="left:15%;background:#34d399"></div>
+<div class="seg" style="left:44%;width:15%;background:rgba(52,211,153,.22);border:1px solid rgba(52,211,153,.5)"></div>
+<div class="dia" style="left:45%;background:#7dd3fc"></div>
+<div class="dia" style="left:52%;background:#34d399"></div>
+<div class="dia" style="left:57%;background:#34d399"></div></div></div>
+<div class="cap"><span style="color:#7dd3fc">◆</span> 你发的　
+<span style="color:#34d399">◆</span> AI 回完　
+淡绿底 = 阶段（同一套 30 分钟规则算出来的），菱形落在阶段里</div>
+</div>
+
+<div class="dissent"><div class="vlabel">我的异议：先别急着补「回复文本」</div>
+<p style="margin:0 0 8px">为了让终端那半也有回复内容，唯一的路是<b>开始记录终端输出</b>。
+这件事的代价不是写代码那点工夫：</p>
+<ul style="margin:0 0 8px"><li>终端输出是<b>无界的</b>——一次 build 刷几万行。存多少、怎么截、存哪，全是新问题</li>
+<li>立档里已经记过 <b>scrollback 75MB / 终端</b> 的量级，往盘上落是另一个数量级的事</li>
+<li>终端里跑的不止 agent，还有你自己的命令；输出里可能有<b>密钥、路径、别人的数据</b></li></ul>
+<p style="margin:0"><b>建议：里程碑先只做时间点 + 你发的那句话</b>（<code>prompt</code> 已经有了），
+AI 对话的节点再额外挂上回复摘要（那份数据是现成的）。
+终端那半 hover 显示「回复于 14:32，历时 6m12s」，不显示内容。
+这样零采集风险，先看看这个视图你到底用不用得上。</p></div>
+</section>
+
+<section id="gap"><h2>缺口</h2><div class="sectitle">动手前必须知道的三件事</div>
+<div class="grid g3">
+<div class="card"><h4><span class="b b-am">1</span> 7 天保留期</h4>
+<p style="margin:0;font-size:13.5px">项目模式看到的是「最近 7 天这个项目干了什么」。
+要看全貌得改保留期，代价是 <code>gantt.json</code> 无界增长——
+现在 713 条约几百 KB，按这个速度一年约 37000 条。<b>不是不能做，但要单独决定。</b></p></div>
+<div class="card"><h4><span class="b b-am">2</span> startAt 差几秒</h4>
+<p style="margin:0;font-size:13.5px">「第一句话」的精确时刻要补 <code>promptAt</code> 才有。
+改动小，但只对新记录生效。<b>如果你能接受差几秒，这条可以完全不做。</b></p></div>
+<div class="card"><h4><span class="b b-ro">3</span> 终端没有回复文本</h4>
+<p style="margin:0;font-size:13.5px">这是唯一的硬缺口。补它要开一条新的采集通道，
+牵扯容量与密钥泄漏，<b>我建议这一轮不碰</b>。</p></div>
+</div>
+</section>
+
+<section id="plan"><h2>建议</h2><div class="sectitle">怎么排</div>
+
+<div class="opt"><h4>第一步 · 项目模式<span class="pill p-lo">低风险</span></h4>
+<div class="meta"><span>改动 <b>纯渲染层</b></span><span>新数据 <b>无</b></span><span>对现有功能 <b>无影响</b></span></div>
+<p style="margin:0">你描述得最清楚、数据也最齐的一个，而且实算证明它确实解决问题（713 → 111）。
+先做这个，用两天看阈值和分组口径对不对。</p></div>
+
+<div class="opt"><h4>第二步 · 里程碑模式（降级版）<span class="pill p-md">中</span></h4>
+<div class="meta"><span>改动 <b>渲染层 + AI 对话取历史</b></span><span>新数据 <b>无</b></span></div>
+<p style="margin:0">时间点全画，AI 对话挂回复摘要，终端只给时长不给内容。
+等你用过之后，再判断「终端也要看到回复」这个需求是不是真的存在。</p></div>
+
+<div class="opt"><h4>暂缓 · promptAt / 保留期 / 终端输出采集<span class="pill p-hi">要单独决定</span></h4>
+<p style="margin:0">这三件都会动到采集或存储，各自有独立的代价。
+<b>不该混在这次的视图改造里一起做</b>——视图改错了能改回来，采集改错了数据是脏的。</p></div>
+
+<hr>
+<h3>我需要你定的两件事</h3>
+<ol><li><b>先做哪个</b>：项目模式，还是两个一起</li>
+<li><b>阶段按项目整体算，还是终端 / AI 对话各算各的</b>（我倾向按项目整体，和你原话一致）</li></ol>
+</section>
+
+<footer>Eas-Term · 甘特图模式评估 · 2026-08-27<br>
+数据来源：本机 <code>gantt.json</code> 713 条真实记录，30 分钟规则为实算非估计<br>
+代码依据：<code>src/renderer/src/features/gantt/collector.ts</code>、<code>src/main/gantt.ts</code>、<code>src/shared/types.ts</code></footer>
+</main></body></html>
