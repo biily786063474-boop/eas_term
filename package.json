@@ -124,6 +124,10 @@
       {
         "from": "resources/dict-clips",
         "to": "dict-clips"
+      },
+      {
+        "from": "resources/phone",
+        "to": "phone"
       }
     ],
     "afterSign": "build/notarize.js"

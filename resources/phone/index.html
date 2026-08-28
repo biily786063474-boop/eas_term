@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#06070b">
+<!-- 纯内联、零外部依赖，所以能收得很紧：只允许连自己（/api），图片只有 data: URL。
+     `unsafe-inline` 是内联样式和脚本必需的；页面里所有内容都走 textContent 塞，
+     从不把服务端返回的字符串当 HTML 解析 —— 这是这条豁免能成立的前提。 -->
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Eas-Term</title>
+<style>
+/* 直接用桌面端 base.css 的那套 token，不另起一套 —— 手机端要跟 app 是同一个东西 */
+:root{
+  --accent:#a2b9e0; --accent-rgb:162,185,224;
+  --fg:#e2e4ea; --fg-dim:#969aa8; --fg-mute:#6d7280;
+  --glass-1:rgba(15,17,23,.5); --glass-2:rgba(11,13,19,.62); --glass-3:rgba(25,28,38,.82);
+  --gb:rgba(255,255,255,.09); --gbs:rgba(255,255,255,.14);
+  --hl:inset 0 1px 0 rgba(255,255,255,.07);
+  --r-xl:18px; --r-lg:14px; --r-md:10px; --r-sm:7px;
+  --ok:#7ee0b8; --warn:#f5a623; --idle:#3a3f4c; --danger:#f78b96;
+  --safe-t:env(safe-area-inset-top); --safe-b:env(safe-area-inset-bottom);
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:linear-gradient(165deg,rgba(7,8,13,.72),rgba(3,4,6,.85)),#06070b;
+  color:var(--fg);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;
+  display:flex;flex-direction:column;overscroll-behavior:none}
+#hd{flex:none;padding:calc(var(--safe-t) + 14px) 16px 10px}
+#h1{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:0}
+#h2{font-size:12px;color:var(--fg-dim);margin-top:3px}
+#back{display:none;font-size:13px;color:var(--accent);margin-bottom:8px;cursor:pointer}
+#back.on{display:block}
+#conn{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--fg-dim);
+  padding:5px 11px;border-radius:var(--r-xl);background:var(--glass-2);border:1px solid var(--gb);
+  margin:8px 16px 0}
+#body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 16px}
+#nav{flex:none;display:flex;border-top:1px solid var(--gb);background:var(--glass-1);
+  backdrop-filter:blur(14px);padding-bottom:var(--safe-b)}
+#nav button{flex:1;background:none;border:0;color:var(--fg-dim);font-family:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:10px;padding:9px 0 8px;cursor:pointer;min-height:52px}
+#nav button.on{color:var(--accent)}
+#nav svg{display:block}
+.card{background:var(--glass-2);border:1px solid var(--gb);box-shadow:var(--hl);
+  border-radius:var(--r-lg);padding:12px 13px;margin-bottom:9px;cursor:pointer;
+  transition:background .15s;min-height:44px}
+.card:active{background:var(--glass-3)}
+.card.flat{cursor:default}
+.row{display:flex;align-items:center;gap:9px}
+.nm{font-size:14px;font-weight:550;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:11.5px;color:var(--fg-dim);margin-top:3px}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(126,224,184,.14)}
+.dot.wait{background:var(--warn);box-shadow:0 0 0 3px rgba(245,166,35,.14)}
+.dot.off{background:var(--idle)}
+.chip{font-size:10px;padding:2px 7px;border-radius:var(--r-sm);flex:none;font-weight:600;
+  background:rgba(var(--accent-rgb),.16);color:var(--accent)}
+.chip.g{background:rgba(255,255,255,.05);color:var(--fg-dim);font-weight:500}
+.grp{font-size:11px;color:var(--fg-mute);padding:8px 3px 6px;letter-spacing:.03em}
+.empty{text-align:center;color:var(--fg-dim);font-size:13px;padding:56px 24px;line-height:1.8}
+.empty b{display:block;color:var(--fg);font-size:15px;margin-bottom:6px;font-weight:600}
+pre{margin:0;padding:14px;background:var(--glass-2);border:1px solid var(--gb);
+  border-radius:var(--r-lg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+img.doc{width:100%;border-radius:var(--r-lg);border:1px solid var(--gb);display:block}
+.warnbar{font-size:11.5px;color:var(--warn);background:rgba(245,166,35,.1);
+  border:1px solid rgba(245,166,35,.22);border-radius:var(--r-md);padding:8px 11px;margin-bottom:10px}
+input,button.big{width:100%;font-family:inherit;font-size:15px;padding:13px 14px;
+  border-radius:var(--r-lg);border:1px solid var(--gb);background:var(--glass-3);color:var(--fg)}
+button.big{background:var(--accent);color:#0b0d13;font-weight:650;border:0;margin-top:10px;cursor:pointer}
+button.big:disabled{opacity:.45}
+.pair{padding:26px 6px}
+.pair h3{font-size:19px;margin:0 0 6px;font-weight:650}
+.pair p{font-size:13px;color:var(--fg-dim);margin:0 0 18px;line-height:1.7}
+.err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:18px}
+</style></head><body>
+
+<div id="hd"><div id="back">‹ 返回</div><h1 id="h1">项目</h1><div id="h2"></div></div>
+<div id="conn" hidden><span class="dot on"></span><span id="connt">局域网直连</span></div>
+<div id="body"></div>
+<nav id="nav" hidden></nav>
+
+<script>
+// **整段包在 IIFE 里，一个全局都不留。**
+// 不只是洁癖：真机验证时撞到了 —— 这个页面被 Electron 主窗口打开时，
+// 那个窗口的 preload 已经把 `window.api` 挂上了，顶层 `function api()`
+// 当场 SyntaxError，整个脚本一行都没执行（页面只剩静态骨架）。
+// 手机浏览器里不会有 preload，但「不往全局撒东西」本来就该是默认。
+;(function () {
+'use strict'
+// 手机端。**不引任何框架** —— 四个视图、五个接口，原生 DOM 写得完；
+// 引 React 反而要处理构建产物怎么随包发出去。
+// **不缓存任何内容**（规格红线）：每次进视图都重新拉，断线就是空白。
+
+var TK = 'eas.phone.token'
+var token = null
+try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */ }
+var view = 'projects', proj = null, projName = ''
+
+var $ = function (id) { return document.getElementById(id) }
+var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }
+
+// ── 网络 ────────────────────────────────────────────────────
+function call (action, args) {
+  return fetch('/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ action: action, args: args || {} })
+  }).then(function (r) {
+    // **401 一律当「要重新配对」** —— 服务端故意不区分「token 错」和「被吊销」，
+    // 因为用户的动作是同一个：重新扫码
+    if (r.status === 401) { forgetToken(); throw new Error('unauthorized') }
+    return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j })
+  })
+}
+function forgetToken () { token = null; try { localStorage.removeItem(TK) } catch (e) {} render() }
+
+// ── 图标 ────────────────────────────────────────────────────
+var ICON = {
+  projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  sessions: 'M21 12a8 8 0 0 1-8 8H4l2.3-2.3A8 8 0 1 1 21 12z',
+  files: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5'
+}
+function svg (d) {
+  var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('width', '17'); s.setAttribute('height', '17')
+  s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor')
+  s.setAttribute('stroke-width', '1.7'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round')
+  var p = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  p.setAttribute('d', d); s.appendChild(p); return s
+}
+
+// ── 配对 ────────────────────────────────────────────────────
+function renderPair (msg) {
+  $('nav').hidden = true; $('conn').hidden = true; $('back').className = ''
+  $('h1').textContent = '连接你的电脑'; $('h2').textContent = ''
+  var b = $('body'); b.innerHTML = ''
+  var w = el('div', 'pair')
+  w.appendChild(el('h3', null, '输入电脑上的配对码'))
+  w.appendChild(el('p', null, '在电脑上打开 Eas-Term → 设置 → 手机端，把那六位码输进来。码 60 秒后失效。'))
+  var inp = el('input'); inp.placeholder = '六位配对码'; inp.autocapitalize = 'characters'
+  inp.autocomplete = 'off'; inp.maxLength = 6
+  var btn = el('button', 'big', '连接'); btn.disabled = true
+  var err = el('div', 'err', msg || '')
+  inp.addEventListener('input', function () {
+    inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    btn.disabled = inp.value.length !== 6
+  })
+  btn.addEventListener('click', function () {
+    btn.disabled = true; btn.textContent = '等电脑上点允许…'; err.textContent = ''
+    fetch('/pair', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: inp.value, name: deviceName() })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j } }) })
+      .then(function (r) {
+        if (!r.ok) throw new Error(PAIR_ERR[r.j.error] || r.j.error)
+        poll(0)
+      })
+      .catch(function (e) { btn.disabled = false; btn.textContent = '连接'; err.textContent = e.message })
+    // 轮询等电脑上点「允许」。**扫到码不等于配上** —— 那道人工确认是整套配对的重点
+    function poll (n) {
+      if (n > 120) { btn.disabled = false; btn.textContent = '连接'; err.textContent = '等太久了，请重试'; return }
+      fetch('/pair/wait').then(function (r) { return r.json() }).then(function (j) {
+        if (j.token) {
+          token = j.token
+          try { localStorage.setItem(TK, token) } catch (e) {}
+          view = 'projects'; render(); return
+        }
+        setTimeout(function () { poll(n + 1) }, 1000)
+      }).catch(function () { setTimeout(function () { poll(n + 1) }, 1500) })
+    }
+  })
+  w.appendChild(inp); w.appendChild(btn); w.appendChild(err)
+  b.appendChild(w)
+  setTimeout(function () { inp.focus() }, 120)
+}
+var PAIR_ERR = {
+  'no-pending': '电脑上还没打开配对 —— 去设置 → 手机端点一下',
+  'bad-code': '码不对，再看一眼电脑上那六位',
+  'expired': '这张码过期了，在电脑上换一张'
+}
+function deviceName () {
+  var ua = navigator.userAgent
+  if (/iPhone/.test(ua)) return 'iPhone'
+  if (/iPad/.test(ua)) return 'iPad'
+  if (/Android/.test(ua)) return 'Android 手机'
+  return '手机'
+}
+
+// ── 四个视图 ────────────────────────────────────────────────
+function shell (title, sub, backTo) {
+  $('h1').textContent = title
+  $('h2').textContent = sub || ''
+  $('back').className = backTo ? 'on' : ''
+  $('back').onclick = backTo ? function () { view = backTo; render() } : null
+  $('conn').hidden = false
+  var n = $('nav'); n.hidden = false; n.innerHTML = ''
+  ;[['projects', '项目'], ['sessions', '会话'], ['files', '文件']].forEach(function (t) {
+    var b = el('button', view === t[0] ? 'on' : '')
+    b.appendChild(svg(ICON[t[0]])); b.appendChild(el('span', null, t[1]))
+    b.onclick = function () {
+      // 会话和文件都要先选项目 —— 没选就退回项目列表，不给一个空页
+      if (t[0] !== 'projects' && !proj) { view = 'projects' } else { view = t[0] }
+      render()
+    }
+    n.appendChild(b)
+  })
+  var b = $('body'); b.innerHTML = ''; return b
+}
+
+function loading (b) { b.appendChild(el('div', 'empty', '正在读…')) }
+function fail (b, e) {
+  var d = el('div', 'empty')
+  d.appendChild(el('b', null, e === 'unauthorized' ? '授权失效了' : '连不上你的电脑'))
+  d.appendChild(document.createTextNode(
+    e === 'unauthorized' ? '请重新配对' : '确认电脑开着 Eas-Term，而且手机和它在同一个 Wi-Fi'))
+  b.appendChild(d)
+}
+
+function renderProjects () {
+  var b = shell('项目', '', null); loading(b)
+  call('projects').then(function (r) {
+    b.innerHTML = ''
+    var d = r.data || []
+    $('h2').textContent = d.length + ' 个在画布上'
+    if (!d.length) { b.appendChild(el('div', 'empty', '画布上还没有项目')); return }
+    d.forEach(function (p) {
+      var c = el('div', 'card')
+      var row = el('div', 'row')
+      row.appendChild(el('span', 'dot ' + (p.waiting ? 'wait' : p.running ? 'on' : 'off')))
+      row.appendChild(el('span', 'nm', p.name))
+      if (p.waiting) row.appendChild(el('span', 'chip', '等你'))
+      else if (p.running) row.appendChild(el('span', 'chip', p.running + ' 在跑'))
+      c.appendChild(row)
+      c.appendChild(el('div', 'sub', p.sessions ? p.sessions + ' 个会话' : '没有会话'))
+      c.onclick = function () { proj = p.id; projName = p.name; view = 'sessions'; render() }
+      b.appendChild(c)
+    })
+  }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+function renderSessions () {
+  var b = shell(projName, '', 'projects'); loading(b)
+  call('sessions', { projectId: proj }).then(function (r) {
+    b.innerHTML = ''
+    var d = r.data || []
+    var run = d.filter(function (s) { return s.running }).length
+    $('h2').textContent = d.length + ' 个会话 · ' + run + ' 个在跑'
+    // 第一步是只读：会话只显示状态，点不进对话。**不做成假的可点** ——
+    // 点了没反应比灰着更让人困惑
+    b.appendChild(el('div', 'warnbar', '这一版只能看状态。和进程对话是下一步的功能。'))
+    if (!d.length) { b.appendChild(el('div', 'empty', '这个项目还没有会话')); return }
+    d.forEach(function (s) {
+      var c = el('div', 'card flat')
+      var row = el('div', 'row')
+      row.appendChild(el('span', 'dot ' + (s.waiting ? 'wait' : s.running ? 'on' : 'off')))
+      row.appendChild(el('span', 'nm', s.title))
+      row.appendChild(el('span', 'chip g', s.kind === 'agent' ? '对话' : '终端'))
+      c.appendChild(row)
+      c.appendChild(el('div', 'sub', s.waiting ? '等你处理' : s.running ? '在跑' : '空闲'))
+      b.appendChild(c)
+    })
+  }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+function renderFiles () {
+  var b = shell(projName, '', 'projects'); loading(b)
+  call('files', { projectId: proj }).then(function (r) {
+    b.innerHTML = ''
+    var d = r.data || []
+    $('h2').textContent = 'Frame 里的 ' + d.length + ' 个'
+    if (!d.length) {
+      var e = el('div', 'empty')
+      e.appendChild(el('b', null, '这个项目的 Frame 里没有文件'))
+      e.appendChild(document.createTextNode('把文档或图片拖进 Frame 才会出现在这里'))
+      b.appendChild(e); return
+    }
+    var last = null
+    d.forEach(function (f) {
+      if (f.group !== last) { b.appendChild(el('div', 'grp', f.group)); last = f.group }
+      var c = el('div', 'card')
+      var row = el('div', 'row')
+      row.appendChild(el('span', 'nm', f.name))
+      row.appendChild(el('span', 'chip g', f.kind === 'image' ? '图片' : '文档'))
+      c.appendChild(row)
+      c.onclick = function () { openFile(f) }
+      b.appendChild(c)
+    })
+  }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+function openFile (f) {
+  var b = shell(f.name, projName, 'files')
+  $('nav').hidden = true
+  loading(b)
+  call('file', { projectId: proj, nodeId: f.id }).then(function (r) {
+    b.innerHTML = ''
+    if (r.truncated) b.appendChild(el('div', 'warnbar', '文件太大，只显示了前 512KB'))
+    if (r.kind === 'image') {
+      var img = el('img', 'doc'); img.src = r.dataUrl; b.appendChild(img)
+    } else {
+      b.appendChild(el('pre', null, r.text || ''))
+    }
+  }).catch(function (e) {
+    b.innerHTML = ''
+    var d = el('div', 'empty')
+    d.appendChild(el('b', null, e.message === 'not-in-frame' ? '这个内容不在画布上了' : '打不开'))
+    d.appendChild(document.createTextNode(
+      e.message === 'out-of-bounds' ? '它在项目目录之外，出于安全不能读' : ''))
+    b.appendChild(d)
+  })
+}
+
+function render () {
+  if (!token) { renderPair(); return }
+  if (view === 'sessions' && proj) renderSessions()
+  else if (view === 'files' && proj) renderFiles()
+  else { view = 'projects'; renderProjects() }
+}
+
+// 连接状态那枚胶囊。第一步只有局域网，**如实写「明文」** ——
+// 不能让人以为已经加密了（TLS 是第三步隧道的事）
+$('connt').textContent = '局域网直连 · 明文'
+render()
+})()
+</script>
+</body></html>

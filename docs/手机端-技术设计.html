@@ -144,22 +144,24 @@ td .dim{color:#525252}
 HTTP、落盘、IPC 这些搬运工作单独放，它们错了看得见，前两者错了看不见。</p>
 
 <div class="tw"><table><thead><tr><th>文件</th><th>职责</th><th>能不能单测</th><th>状态</th></tr></thead><tbody>
+<tr><td><code class="file">main/phone/lan.ts</code></td><td>挑哪个网卡地址给手机。<b>纯函数</b>——朴素写法会挑中 VPN 隧道</td>
+<td>能（9 测）</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">main/phone/pairing.ts</code></td><td>配对状态机 + 设备表 + 白名单判定。<b>纯逻辑</b></td>
 <td>能（18 测）</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">renderer/features/phone/collect.ts</code></td><td>从画布状态挑出手机要的三样。<b>纯函数</b></td>
 <td>能（17 测）</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">main/phone/store.ts</code></td><td><code>phone.json</code> 读写，权限 600</td>
-<td>不必（只有 IO）</td><td class="todo">待做</td></tr>
+<td>不必（只有 IO）</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">main/phone/server.ts</code></td><td>HTTP 服务：绑局域网地址、鉴权、白名单闸、静态页</td>
-<td>不必</td><td class="todo">待做</td></tr>
-<tr><td><code class="file">main/phone/index.ts</code></td><td>生命周期 + 6 个 IPC 的注册</td>
-<td>不必</td><td class="todo">待做</td></tr>
+<td>不必</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">main/phone/index.ts</code></td><td>生命周期 + 8 个 IPC 的注册</td>
+<td>不必</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">renderer/features/phone/provider.ts</code></td><td>接主进程的问询，从 store 取数、调 collect</td>
-<td>不必（collect 已测）</td><td class="todo">待做</td></tr>
+<td>不必（collect 已测）</td><td class="done">已完成</td></tr>
 <tr><td><code class="file">renderer/features/phone/PhonePanel.tsx</code></td><td>设置里那一页：开关、二维码、设备表</td>
 <td>不必（走真机验证）</td><td class="todo">待做</td></tr>
 <tr><td><code class="file">resources/phone/index.html</code></td><td>手机页面本体。<b>单文件、纯内联、零外部依赖</b></td>
-<td>不必（走真机验证）</td><td class="todo">待做</td></tr>
+<td>不必（走真机验证）</td><td class="done">已完成</td></tr>
 </tbody></table></div>
 
 <h3>为什么 server 在主进程而不是渲染层</h3>
@@ -318,22 +320,25 @@ HTTP、落盘、IPC 这些搬运工作单独放，它们错了看得见，前两
 <p style="margin:0"><code class="file">pairing.ts</code>(18 测) + <code class="file">collect.ts</code>(17 测)，
 关键断言都做过变异测试。</p></div>
 
-<div class="step"><h4>② 落盘 + 服务器骨架</h4>
+<div class="step ok"><h4>② 落盘 + 服务器骨架</h4>
 <p style="margin:0"><code class="file">store.ts</code> + <code class="file">server.ts</code> 起到能回 <code>/health</code>。
 <b>验证</b>：开关关着时 <code>lsof</code> 看不到端口；打开后能 curl 通；绑的是局域网地址不是 <code>0.0.0.0</code>。</p></div>
 
-<div class="step"><h4>③ IPC + provider，打通取数</h4>
+<div class="step ok"><h4>③ IPC + provider，打通取数</h4>
 <p style="margin:0">四个动作真的能从画布取到数据。<b>验证</b>：CDP 起实例 + curl 打 <code>/api</code>，
 比对返回值和画布上实际有什么。</p></div>
 
-<div class="step"><h4>④ 桌面端面板</h4>
-<p style="margin:0">开关、二维码、确认弹窗、设备表。<b>验证</b>：CDP 真实鼠标走一遍完整配对。</p></div>
+<div class="step"><h4>④ 桌面端面板 <span class="b b-am">还没做</span></h4>
+<p style="margin:0 0 8px">开关、二维码、确认弹窗、设备表。<b>目前只有 IPC，没有界面</b> ——
+所有验证都是直接调 IPC 走的（<code>phone.enable / newCode / approve</code>）。</p>
+<p style="margin:0">先做后面两步是有意的：面板是给这套能力配的壳，
+<b>能力不成立的话壳白做</b>。现在能力已经端到端跑通，面板可以照着实际形状做了。</p></div>
 
-<div class="step"><h4>⑤ 手机页面</h4>
+<div class="step ok"><h4>⑤ 手机页面</h4>
 <p style="margin:0">四个视图。<b>验证</b>：CDP 里按手机视口尺寸打开页面截图；
 最后拿真手机连一次（这一步只有你能做）。</p></div>
 
-<div class="step"><h4>⑥ 回归风险测试</h4>
+<div class="step ok"><h4>⑥ 回归风险测试</h4>
 <p style="margin:0">见下一节。<b>你要求的那一步，不省。</b></p></div>
 </section>
 
