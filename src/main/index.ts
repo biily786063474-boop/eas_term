@@ -4,6 +4,7 @@ import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
 import { registerBoardHandlers } from './board'
 import { registerGanttHandlers } from './gantt'
+import { registerPhoneHandlers } from './phone'
 import { registerTodoHandlers } from './todos'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
@@ -355,6 +356,8 @@ app.whenReady().then(() => {
   registerProjectHandlers()
   registerBoardHandlers()
   registerGanttHandlers()
+  // 手机端：**默认关**，enabled=false 时连端口都不开（见 phone/index.ts 文件头）
+  registerPhoneHandlers()
   registerTodoHandlers()
   registerFsHandlers()
   registerPasteImageHandlers()

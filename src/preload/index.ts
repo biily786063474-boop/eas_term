@@ -52,6 +52,7 @@ import type {
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
   PluginInfo
 } from '../shared/types'
+import type { PhoneStatus } from '../shared/types'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -248,6 +249,38 @@ const api = {
       ipcRenderer.invoke('todos:save', key, items),
     /** 删掉整份清单（不是清空条目） */
     remove: (key: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('todos:remove', key)
+  },
+  /** 手机端（feat/phone-remote）。**默认关**——不打开开关时主进程连端口都不开。
+   *  这里只暴露「开关 / 配对 / 设备表」和「主进程问数据」两组，
+   *  不暴露任何能直接读文件的方法：读文件走 HTTP 那条路，要过两道校验。 */
+  phone: {
+    status: (): Promise<PhoneStatus> => ipcRenderer.invoke('phone:status'),
+    enable: (on: boolean): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('phone:enable', on),
+    newCode: (): Promise<{ ok: boolean; code?: string; error?: string }> =>
+      ipcRenderer.invoke('phone:newCode'),
+    approve: (): Promise<{ ok: boolean; name?: string; error?: string }> =>
+      ipcRenderer.invoke('phone:approve'),
+    rejectPair: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('phone:rejectPair'),
+    revoke: (deviceId: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('phone:revoke', deviceId),
+    restart: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('phone:restart'),
+    /** 状态变了主进程会推一次（开关、配对、设备增删都会触发） */
+    onStatus: (cb: (s: PhoneStatus) => void): (() => void) => {
+      const h = (_e: unknown, s: PhoneStatus): void => cb(s)
+      ipcRenderer.on('phone:status', h)
+      return () => ipcRenderer.off('phone:status', h)
+    },
+    /** 主进程问数据（手机来请求时）。渲染层用 collect.ts 算好，reply 回去 */
+    onQuery: (
+      cb: (q: { id: number; action: string; args: Record<string, unknown> }) => void
+    ): (() => void) => {
+      const h = (_e: unknown, q: { id: number; action: string; args: Record<string, unknown> }): void =>
+        cb(q)
+      ipcRenderer.on('phone:query', h)
+      return () => ipcRenderer.off('phone:query', h)
+    },
+    reply: (id: number, data: unknown): void => ipcRenderer.send('phone:query:reply', id, data)
   },
   gantt: {
     list: (): Promise<GanttTask[]> => ipcRenderer.invoke('gantt:list'),

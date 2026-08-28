@@ -923,3 +923,20 @@ export interface SkillCategorizeResult {
    *  静默跳过的话它以为整理完了，用户看到的分类却没变，两边都不知道发生了什么。 */
   skippedLocked?: string[]
 }
+
+// ---------- 手机端（feat/phone-remote） ----------
+
+/** 桌面端界面要看到的那一份手机端状态。
+ *  **tokenHash 不在里面** —— 它是凭据表，渲染层没有任何理由拿到它。 */
+export interface PhoneStatus {
+  enabled: boolean
+  running: boolean
+  /** 局域网地址，形如 http://192.168.1.20:53412；没起服务时为 null */
+  url: string | null
+  /** 当前配对码；null = 没在配对 */
+  code: string | null
+  codeAt: number | null
+  /** 有手机扫了码、正在等你点确认时它自报的名字（**不可信**，已过滤控制字符） */
+  claimingName: string | null
+  devices: { id: string; name: string; pairedAt: number; lastSeenAt: number }[]
+}
