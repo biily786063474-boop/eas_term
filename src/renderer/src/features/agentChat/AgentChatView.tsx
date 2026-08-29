@@ -250,6 +250,16 @@ export function AgentChatView({
     }
   })
   const [text, setText] = useState('')
+
+  /** 点了 agent 给的某个选项。
+   *
+   *  **填进输入框，不自动发送。** 两个理由：
+   *  ① 选完常常还要补一句「但是 xxx / 顺便 yyy」，直接发出去就没机会了；
+   *  ② 识别选项是启发式的（见 options.ts），不自动发意味着**误点零代价** ——
+   *     这是敢在正文里认选项的前提之一。
+   *  输入框里已经有字就追加而不是覆盖，别把人正在打的话吃掉。 */
+  const pickOption = (t: string): void =>
+    setText((v) => (v.trim() ? v.replace(/\s*$/, '') + '\n' : '') + t)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -815,7 +825,12 @@ export function AgentChatView({
     }
     return (
       <div className="agent-chat-view">
-        <MessageList view={displayView} onApprovalDecide={handleApprovalDecide}  leafId={leafId}/>
+        <MessageList
+          view={displayView}
+          onApprovalDecide={handleApprovalDecide}
+          leafId={leafId}
+          onPickOption={pickOption}
+        />
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar
@@ -850,6 +865,7 @@ export function AgentChatView({
         {restored.turns.length > 0 ? (
           <div className="ac-restored">
             <MessageList
+              onPickOption={pickOption}
               view={{ ...EMPTY_VIEW, turns: restored.turns, busy: false }}
               onApprovalDecide={() => undefined}
               leafId={leafId}
