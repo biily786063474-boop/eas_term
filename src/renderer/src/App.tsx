@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+
+import { bindPhoneProvider } from './features/phone/provider'
 import { useStore, serializeCanvas } from './store'
 import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
@@ -135,6 +137,13 @@ export function App(): JSX.Element {
   // 那块就成了一条谁也用不上的死白。拿到状态后挂个类，CSS 把留白收掉。
   const [fullscreen, setFullscreen] = useState(false)
   useEffect(() => window.api.win.onFullscreen(setFullscreen), [])
+
+  // 手机端的取数监听。**挂在这里而不是 PhonePanel 里** —— 面板只有打开设置那一页
+  // 才挂载，而手机随时可能来请求；挂在面板上会变成「设置页没打开就取不到数据」。
+  // 功能没开时主进程根本不会推 phone:query，所以这个监听是零成本的。
+  useEffect(() => {
+    bindPhoneProvider()
+  }, [])
 
   // 终端里的 CLI 调 `open <url>`（AI 工具弹网页等）被 open shim 劫持 → 这里在画板内嵌浏览器打开，
   // 而不是弹系统 Safari。没有任何画布 Frame 时才回落系统浏览器。

@@ -6,6 +6,7 @@
 // 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { PhonePanel } from '../phone/PhonePanel'
 import { useStore } from '../../store'
 import { THEMES } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
@@ -30,6 +31,7 @@ const TABS = [
   { key: 'sound', label: '提示音' },
   { key: 'update', label: '更新' },
   { key: 'board', label: '画板' },
+  { key: 'phone', label: '手机端' },
   { key: 'privacy', label: '隐私' }
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -361,6 +363,9 @@ export function SettingsPanel(): JSX.Element {
                 </div>
               </div>
               )}
+
+              {tab === 'phone' && <PhonePanel />}
+
 
               {tab === 'privacy' && (
               <div className="cset-sec">

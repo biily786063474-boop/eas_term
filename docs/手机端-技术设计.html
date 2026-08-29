@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>手机端 · 技术设计</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;margin-left:6px}
+.p-hi{background:rgba(244,63,94,.16);color:#fda4af}
+.p-md{background:rgba(245,158,11,.16);color:#fcd34d}
+.p-lo{background:rgba(16,185,129,.14);color:#6ee7b7}
+.opt{border:1px solid #262626;border-radius:14px;padding:22px 24px;margin-bottom:16px;background:rgba(23,23,23,.4)}
+.opt h4{margin:0 0 4px;font-size:16px}
+.opt .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#737373;margin:10px 0 14px;
+  font-family:ui-monospace,Menlo,monospace}
+.opt .meta b{color:#d4d4d4;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin-top:12px}
+.kv dt{color:#737373;white-space:nowrap}
+.kv dd{margin:0;color:#d4d4d4}
+.unknown{border-left:2px solid #7dd3fc;background:rgba(14,165,233,.05);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.unknown .vlabel{color:#7dd3fc}
+.file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  background:#141414;border:1px solid #262626;border-radius:7px;padding:2px 8px;color:#e5e5e5;white-space:nowrap}
+.done{color:#6ee7b7}.todo{color:#525252}
+.step{border-left:2px solid #262626;padding-left:22px;margin:18px 0 18px 4px;position:relative}
+.step::before{content:"";position:absolute;left:-5px;top:6px;width:8px;height:8px;border-radius:50%;
+  background:#404040;border:2px solid #0a0a0a}
+.step.ok::before{background:#34d399}
+.step h4{margin:0 0 6px}
+</style></head><body><nav><div class="navwrap"><span class="navbrand">Eas-Term · 手机端技术设计</span>
+<a href="#map">模块地图</a><a href="#proto">协议</a><a href="#flow">数据流</a><a href="#locks">安全落点</a>
+<a href="#ui">桌面端 UI</a><a href="#page">手机页面</a><a href="#steps">实施顺序</a><a href="#verify">验证</a></div></nav>
+
+<header class="hero"><span class="eyebrow">2026-08-28 · 技术设计 · 配套《手机端-需求规格》</span>
+<h1>手机端第一步<br>怎么实现</h1>
+<p class="lede">需求规格回答「做什么」，这份回答「怎么做」。范围只到<b>第一步：局域网 + 只读</b>——
+不含隧道服务端、不含发消息。<b>每一节都要能直接对着写代码，写不下去的地方就是设计没想清楚。</b></p>
+<p class="lede">分支 <code class="file">feat/phone-remote</code>，不在 main 上改。</p>
+<div class="meta"><span>新增文件 <b>7 个</b></span><span>改动现有文件 <b>3 处</b></span>
+<span>新增 IPC <b>6 个</b></span><span>对现有功能影响 <b>零（默认关）</b></span></div></header>
+
+<main>
+
+<section id="map"><h2>模块地图</h2><div class="sectitle">谁管什么，边界在哪</div>
+<p class="secnote">分层的唯一标准：<b>有业务判断的都要能单测。</b>
+所以「挑什么给手机看」和「谁能进来」各自成模块、不碰 IO；
+HTTP、落盘、IPC 这些搬运工作单独放，它们错了看得见，前两者错了看不见。</p>
+
+<div class="tw"><table><thead><tr><th>文件</th><th>职责</th><th>能不能单测</th><th>状态</th></tr></thead><tbody>
+<tr><td><code class="file">main/phone/lan.ts</code></td><td>挑哪个网卡地址给手机。<b>纯函数</b>——朴素写法会挑中 VPN 隧道</td>
+<td>能（9 测）</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">main/phone/pairing.ts</code></td><td>配对状态机 + 设备表 + 白名单判定。<b>纯逻辑</b></td>
+<td>能（18 测）</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">renderer/features/phone/collect.ts</code></td><td>从画布状态挑出手机要的三样。<b>纯函数</b></td>
+<td>能（17 测）</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">main/phone/store.ts</code></td><td><code>phone.json</code> 读写，权限 600</td>
+<td>不必（只有 IO）</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">main/phone/server.ts</code></td><td>HTTP 服务：绑局域网地址、鉴权、白名单闸、静态页</td>
+<td>不必</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">main/phone/index.ts</code></td><td>生命周期 + 8 个 IPC 的注册</td>
+<td>不必</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">renderer/features/phone/provider.ts</code></td><td>接主进程的问询，从 store 取数、调 collect</td>
+<td>不必（collect 已测）</td><td class="done">已完成</td></tr>
+<tr><td><code class="file">renderer/features/phone/PhonePanel.tsx</code></td><td>设置里那一页：开关、二维码、设备表</td>
+<td>不必（走真机验证）</td><td class="todo">待做</td></tr>
+<tr><td><code class="file">resources/phone/index.html</code></td><td>手机页面本体。<b>单文件、纯内联、零外部依赖</b></td>
+<td>不必（走真机验证）</td><td class="done">已完成</td></tr>
+</tbody></table></div>
+
+<h3>为什么 server 在主进程而不是渲染层</h3>
+<div class="grid g2">
+<div class="card"><h4>主进程</h4>
+<ul class="clean" style="margin:0">
+<li><b>渲染层关了它还在</b>——手机不该因为你切了个视图就连不上</li>
+<li>能拿到网卡地址（要绑局域网 IP，不能绑 <code>0.0.0.0</code>）</li>
+<li>读文件要过 <code>fsGuard</code>，那本来就在主进程</li>
+<li>跟 <code>mcpBridge</code> 同构，那条路已经验证过</li>
+</ul></div>
+<div class="card"><h4>数据却在渲染层</h4>
+<p style="margin:0 0 8px">画布状态（frames / nodes / runningPtys）都在 zustand store 里，主进程没有。</p>
+<p style="margin:0">所以照抄 <code class="file">mcpBridge.ts</code> 的 <code>invokeRenderer</code>：
+主进程收到请求 → IPC 问主窗口 → 渲染层用 <code>collect.ts</code> 算好回给它。
+<b>不为此把画布状态搬进主进程</b>——那是两份真相，迟早不一致。</p></div>
+</div>
+</section>
+
+<section id="proto"><h2>协议</h2><div class="sectitle">五个端点，一个鉴权头</div>
+
+<div class="tw"><table><thead><tr><th>方法 · 路径</th><th>要 token 吗</th><th>干什么</th></tr></thead><tbody>
+<tr><td><code>GET /</code></td><td><span class="b b-gy">不要</span></td>
+<td>手机页面本体（静态 HTML）。<b>不要 token 才拿得到</b>——不然手机第一次打开是白屏</td></tr>
+<tr><td><code>POST /pair</code></td><td><span class="b b-gy">不要</span></td>
+<td>手机报上配对码 + 设备名，换一个「等确认」。<b>不发凭证</b></td></tr>
+<tr><td><code>GET /pair/wait</code></td><td><span class="b b-gy">不要</span></td>
+<td>手机轮询「电脑上点了没」。点了才返回 token，<b>明文只在这一次出现</b></td></tr>
+<tr><td><code>POST /api</code></td><td><span class="b b-em">要</span></td>
+<td>四个动作全走这一个口，body 里带 <code>action</code>。<b>白名单在这里判</b></td></tr>
+<tr><td><code>GET /health</code></td><td><span class="b b-gy">不要</span></td>
+<td>只回 <code>{ok:true}</code>。给手机判「电脑开着但没配对」用</td></tr>
+</tbody></table></div>
+
+<h3>为什么四个动作挤在一个 <code>POST /api</code></h3>
+<div class="card"><p style="margin:0 0 8px">如果做成 <code>/projects</code> <code>/files</code> <code>/file/:id</code> 这样的 REST，
+<b>白名单就散在路由表里</b>——加一条路由就等于加一条能力，而且很容易忘了给它加鉴权。</p>
+<p style="margin:0">收成一个口之后，<b>鉴权和白名单各只有一处</b>：
+任何请求都得先过 token、再过 <code>isAllowed(action)</code>，然后才可能进业务代码。
+漏加一个动作的后果是「这个功能不通」，而不是「这个功能没鉴权」——
+<b>失败方向选对了</b>。</p></div>
+
+<h3>鉴权</h3>
+<pre><code>Authorization: Bearer &lt;token&gt;
+        │
+        ▼  sha256(token)
+   findDevice(state, hash)     ← 比对哈希，明文系统里没存
+        │
+        ├── 没有 → 401，<span class="dim">不区分「token 错」和「设备被吊销」</span>
+        └── 有   → touch(lastSeenAt) → 进白名单闸</code></pre>
+<p class="secnote">401 <b>故意不区分原因</b>：区分了等于告诉探测方「这个 token 曾经有效」。
+手机端把 401 一律当「要重新配对」处理，反正用户的动作是同一个。</p>
+
+<h3>错误码</h3>
+<div class="tw"><table><thead><tr><th>码</th><th>什么时候</th><th>手机上显示</th></tr></thead><tbody>
+<tr><td><b>401</b></td><td>token 无效 / 设备被吊销</td><td>「这台手机的授权已失效，请重新配对」</td></tr>
+<tr><td><b>403</b></td><td>动作不在白名单（含只读档里的 <code>send</code>）</td><td>不该出现——出现了就是手机端有 bug</td></tr>
+<tr><td><b>404</b></td><td>项目 / 节点查不到</td><td>「这个内容已经不在画布上了」</td></tr>
+<tr><td><b>413</b></td><td>文件超过 512KB</td><td>返回截断内容 + 明说截断了</td></tr>
+<tr><td><b>503</b></td><td>渲染层没就绪（窗口最小化到托盘等）</td><td>「电脑正忙，稍后重试」</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="flow"><h2>数据流</h2><div class="sectitle">一次「看文件内容」要经过几手</div>
+<pre><code>手机                主进程 server.ts           渲染层 provider.ts        主进程 fs
+ │                        │                          │                     │
+ ├─ POST /api ───────────▶│                          │                     │
+ │  {action:'file',       │                          │                     │
+ │   projectId, nodeId}   │                          │                     │
+ │                        ├─ ① token → sha256 → findDevice                 │
+ │                        ├─ ② isAllowed('file', readOnly=true)            │
+ │                        ├─ ③ IPC 'phone:query' ──▶│                     │
+ │                        │                          ├─ resolveFile()      │
+ │                        │                          │   <span class="hi">第一道：id 必须是</span>
+ │                        │                          │   <span class="hi">该项目 Frame 里的节点</span>
+ │                        │◀── {path, kind} ─────────┤                     │
+ │                        ├─ ④ fsGuard 校验 ──────────────────────────────▶│
+ │                        │   <span class="hi">第二道：路径必须在项目根/知识库根内</span>          │
+ │                        │◀───────────── 内容（≤512KB）─────────────────────┤
+ │◀── 200 {text} ─────────┤                          │                     │
+</code></pre>
+<div class="warn"><div class="vlabel">③ 和 ④ 顺序不能反</div>
+<p style="margin:0"><b>必须先问渲染层拿到路径，再交给 fsGuard 判。</b>
+反过来（手机直接给路径、主进程只判 fsGuard）的话，
+项目根里的<b>任何</b>文件都能被读——包括没摆上画布的 <code>.env</code>。
+两道校验防的是两件不同的事，缺一道都不够，这一点在 <code>collect.ts</code> 的
+<code>resolveFile</code> 注释里也写了。</p></div>
+</section>
+
+<section id="locks"><h2>安全落点</h2><div class="sectitle">规格里那八道锁，各自落在哪一行</div>
+<p class="secnote">规格说的是「应该有这些锁」，这里说的是「它们具体在哪个文件里」。
+<b>对不上号的锁等于没有。</b>第一步只读，所以第 8 道（留痕）留到第二步——没有写操作就没什么可留的。</p>
+<div class="tw"><table><thead><tr><th>#</th><th>锁</th><th>落在哪</th></tr></thead><tbody>
+<tr><td><b>1</b></td><td>默认关，不开就不监听</td><td><code class="file">index.ts</code> 启动时读 <code>phone.json</code>，
+<code>enabled=false</code> 直接不调 <code>server.start()</code>。<b>不是「监听了但拒绝」，是根本没有这个端口</b></td></tr>
+<tr><td><b>2</b></td><td>TLS 端到端</td><td><span class="b b-gy">第三步</span>（隧道那期）。第一步只在局域网，走明文 HTTP —— 
+<b>这一点必须在手机端界面上说清楚</b>，不能让人以为已经加密了</td></tr>
+<tr><td><b>3</b></td><td>配对要电脑端确认 + 60 秒过期</td><td><code class="file">pairing.ts</code> 的 <code>claim</code>/<code>approve</code>（已完成，有测）</td></tr>
+<tr><td><b>4</b></td><td>每设备独立凭证，可吊销</td><td><code class="file">pairing.ts</code> 的 <code>revoke</code> + <code class="file">PhonePanel.tsx</code> 的设备表</td></tr>
+<tr><td><b>5</b></td><td>白名单在电脑端强制</td><td><code class="file">server.ts</code> 里 <code>isAllowed()</code>，
+<b>在进任何业务分支之前</b></td></tr>
+<tr><td><b>6</b></td><td>路径双重校验</td><td>① <code>collect.ts</code> 的 <code>resolveFile</code>（已完成，有测）
+② <code class="file">server.ts</code> 调 <code>fsGuard</code></td></tr>
+<tr><td><b>7</b></td><td>密钥永不出机器</td><td><b>结构上就没有</b>：<code>provider.ts</code> 只调 <code>collect.ts</code>，
+那三个函数的返回类型里没有任何密钥字段。<code>secrets.json</code> 这条路上一次都不会被读到</td></tr>
+<tr><td><b>8</b></td><td>电脑端留痕</td><td><span class="b b-gy">第二步</span>——第一步是只读，没有写操作可留</td></tr>
+</tbody></table></div>
+
+<div class="dissent"><div class="vlabel">第一步的真实风险等级，说清楚</div>
+<p style="margin:0 0 8px">第一步<b>只在局域网、只读、明文 HTTP</b>。最坏情况：
+<b>同一个 Wi-Fi 下的人，如果拿到了 token，能看你画布上 Frame 里的文件内容。</b></p>
+<p style="margin:0">这比「被人远程操控电脑」轻一个数量级，也正是把它排在第一步的原因。
+但<b>不能因此说它没风险</b>——所以手机页面上要有一行「当前是局域网明文连接」，
+让用户自己判断在什么网络下用。</p></div>
+</section>
+
+<section id="ui"><h2>桌面端 UI</h2><div class="sectitle">设置里加一页「手机端」</div>
+<p class="secnote">设置菜单已经是标签页形式（0.4.64 改的），加一页是既有模式，不动别的页。</p>
+<div class="grid g2">
+<div class="card"><h4>没开的时候</h4>
+<ul class="clean" style="margin:0">
+<li>一个开关 + 一句话说清它是什么</li>
+<li><b>说清代价</b>：「打开后这台电脑会在局域网上开一个端口」</li>
+<li>不预先生成二维码——开关打开才生成</li>
+</ul></div>
+<div class="card"><h4>开了之后</h4>
+<ul class="clean" style="margin:0">
+<li>二维码 + 下面一行 <code>http://192.168.x.x:PORT</code>（手机也能手输）</li>
+<li>倒计时：「这张码还有 47 秒有效」，过期后一个「换一张」按钮</li>
+<li>有人扫了 → 弹「<b>iPhone</b> 请求配对，允许吗」</li>
+<li>设备表：名字 / 配对时间 / 最后访问 / 一个「踢掉」</li>
+</ul></div>
+</div>
+</section>
+
+<section id="page"><h2>手机页面</h2><div class="sectitle">单文件、纯内联、零外部依赖</div>
+<p class="secnote">规格里那五张样机就是它的设计稿，直接用 app 的 token 实现。
+<b>不引任何框架</b>——四个屏、三个接口，用原生 DOM 写完不到 400 行，
+引 React 反而要处理构建产物怎么随包发出去。</p>
+<div class="grid g3">
+<div class="card"><h4>四个视图</h4>
+<p style="margin:0;font-size:13.5px">项目列表 / 会话列表 / 文件列表 / 文件内容。
+底部四页签（第一步「会话」只能看状态，点不进对话——那是第二步）</p></div>
+<div class="card"><h4>状态</h4>
+<p style="margin:0;font-size:13.5px">token 存 <code>localStorage</code>。
+没 token → 配对引导；401 → 清掉 token 回配对；网络错 → 「连不上你的电脑」</p></div>
+<div class="card"><h4>不做</h4>
+<p style="margin:0;font-size:13.5px">不缓存内容（规格红线）、不做离线、不做下载。
+每次进某个视图都重新拉一次</p></div>
+</div>
+</section>
+
+<section id="steps"><h2>实施顺序</h2><div class="sectitle">每一步都能独立验证，不攒到最后</div>
+
+<div class="step ok"><h4>① 纯逻辑两层 <span class="b b-em">已完成</span></h4>
+<p style="margin:0"><code class="file">pairing.ts</code>(18 测) + <code class="file">collect.ts</code>(17 测)，
+关键断言都做过变异测试。</p></div>
+
+<div class="step ok"><h4>② 落盘 + 服务器骨架</h4>
+<p style="margin:0"><code class="file">store.ts</code> + <code class="file">server.ts</code> 起到能回 <code>/health</code>。
+<b>验证</b>：开关关着时 <code>lsof</code> 看不到端口；打开后能 curl 通；绑的是局域网地址不是 <code>0.0.0.0</code>。</p></div>
+
+<div class="step ok"><h4>③ IPC + provider，打通取数</h4>
+<p style="margin:0">四个动作真的能从画布取到数据。<b>验证</b>：CDP 起实例 + curl 打 <code>/api</code>，
+比对返回值和画布上实际有什么。</p></div>
+
+<div class="step"><h4>④ 桌面端面板 <span class="b b-am">还没做</span></h4>
+<p style="margin:0 0 8px">开关、二维码、确认弹窗、设备表。<b>目前只有 IPC，没有界面</b> ——
+所有验证都是直接调 IPC 走的（<code>phone.enable / newCode / approve</code>）。</p>
+<p style="margin:0">先做后面两步是有意的：面板是给这套能力配的壳，
+<b>能力不成立的话壳白做</b>。现在能力已经端到端跑通，面板可以照着实际形状做了。</p></div>
+
+<div class="step ok"><h4>⑤ 手机页面</h4>
+<p style="margin:0">四个视图。<b>验证</b>：CDP 里按手机视口尺寸打开页面截图；
+最后拿真手机连一次（这一步只有你能做）。</p></div>
+
+<div class="step ok"><h4>⑥ 回归风险测试</h4>
+<p style="margin:0">见下一节。<b>你要求的那一步，不省。</b></p></div>
+</section>
+
+<section id="verify"><h2>验证</h2><div class="sectitle">回归风险清单</div>
+<p class="secnote">这个功能<b>新增了一个网络监听面</b>，是这个 app 有史以来风险最高的一类改动。
+所以回归不能只跑单测，要专门验「没开这个功能的人有没有被影响」。</p>
+
+<h3>A · 默认关，等于不存在</h3>
+<ul class="clean">
+<li>全新 userData 启动 → <code>lsof -i -P | grep Eas</code> 只应看到 MCP 那个 127.0.0.1 的口</li>
+<li><code>phone.json</code> 不存在时不报错、不自动创建</li>
+<li>关掉开关 → 端口立刻消失（不是等退出）</li>
+</ul>
+
+<h3>B · 现有功能不受影响</h3>
+<ul class="clean">
+<li>957 个单测全过</li>
+<li>MCP 桥照常工作（画板 52 个工具还能调）</li>
+<li>启动耗时没有明显变化（<code>ipc-slow.log</code> 里不出现 phone 相关的慢调用）</li>
+<li>终端、AI 对话、画布、甘特图、看板逐个开一遍</li>
+</ul>
+
+<h3>C · 安全断言（要真的去打，不是看代码）</h3>
+<ul class="clean">
+<li>不带 token 打 <code>/api</code> → 401</li>
+<li>带错 token → 401，且<b>响应体里不能透露原因差异</b></li>
+<li><code>action</code> 传 <code>send</code> → 403（只读档）</li>
+<li><code>action</code> 传 <code>__proto__</code> / <code>constructor</code> → 403，且不污染任何对象</li>
+<li>伪造 <code>nodeId</code> 读文件 → 404</li>
+<li>真 <code>nodeId</code> 但路径在项目外 → 被 fsGuard 拒</li>
+<li>吊销设备后旧 token 立刻失效</li>
+<li>配对码过期后再 approve → 拒</li>
+</ul>
+
+<h3>D · 打包后还能用</h3>
+<ul class="clean">
+<li><code>resources/phone/index.html</code> 真的进了包（<code>extraResources</code> 加了那一条）</li>
+<li>打包实例里 <code>GET /</code> 拿得到页面，不是 404</li>
+</ul>
+
+<hr>
+<p class="dim" style="font-size:13px">这份文档随实施更新——每完成一步回来把「待做」改成「已完成」，
+发现设计不对的地方<b>当场改文档再改代码</b>，不要让文档和实现脱节。</p>
+</section>
+
+<footer>Eas-Term 手机端 · 技术设计 · 2026-08-28 · 分支 <code>feat/phone-remote</code><br>
+配套文档：《手机端-需求规格》（做什么 / 为什么）· 本文（怎么做）</footer>
+</main></body></html>
