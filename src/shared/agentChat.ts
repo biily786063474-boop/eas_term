@@ -70,6 +70,29 @@ export type ChatEvent =
        *  拿不到就是 undefined，界面据此决定显不显示进度，绝不拿别的字段推算。 */
       utilization?: number
     }
+  /**
+   * **CLI 把上下文压缩了。** Claude Code 的 `system/compact_boundary`。
+   *
+   * 为什么必须接住它（2026-08-28）：压缩之后模型只剩一份摘要，可界面上的 turns
+   * 一条不少地摆着——**人看着满屏历史会以为它记得**，而那正是本仓库在
+   * `contextLostOf` 注释里已经判过「比空白更糟」的那种状态。压缩只是同一个问题的
+   * 另一个入口，之前没覆盖到。
+   *
+   * **绝大多数是自动触发的**：实测本机 transcript 68 次压缩里 62 次 trigger='auto'
+   * ——也就是说这件事在用户完全不知情时反复发生，界面和模型的记忆一路越走越远。
+   *
+   * 顺带也是内存问题：那 68 次累计丢掉 6588 万 token，app 这边一个字节都没释放。
+   *
+   * **Codex 没有对应信号**（记录格式与落点跟 Claude 完全不同，见 agentHistory.ts），
+   * 所以这条只会来自 Claude；Codex 那边靠 reduce.ts 的内存上限兜底。
+   */
+  | {
+      k: 'compacted'
+      /** 'auto' = 上下文满了 CLI 自己压的；'manual' = 用户点了压缩 */
+      trigger: 'auto' | 'manual'
+      preTokens: number
+      postTokens: number
+    }
   | { k: 'error'; message: string; fatal: boolean }
 
 export interface CliCapabilities {
