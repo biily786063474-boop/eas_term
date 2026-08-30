@@ -1000,3 +1000,17 @@ export interface InstallState {
    *  一句「安装失败」什么忙也帮不上），换成进度条必须把它补回来。 */
   output?: string[]
 }
+
+/** GPU 加速有没有生效。**排障用** —— Windows 上退回软件合成时，
+ *  毛玻璃/圆角/阴影全由 CPU 画，界面会卡到「未响应」。 */
+export interface GpuInfo {
+  /** Chromium 报的各项状态，**原样透传**（`enabled` / `software only` / `disabled` …）。
+   *  不翻译成「好/坏」—— 翻译会丢掉中间态，而排障时正是那些有用 */
+  features: Record<string, string>
+  /** 一句话结论。**判据是 gpu_compositing 那一项**，不是「有没有显卡」 */
+  verdict: 'gpu' | 'software' | 'unknown'
+  platform: string
+  release: string
+  arch: string
+  detail?: string
+}

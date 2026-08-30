@@ -4,6 +4,11 @@ import os from 'os'
 import path from 'path'
 import { execFile } from 'child_process'
 import { fileURLToPath } from 'url'
+import { createProbeCache, MAX_CANDIDATES, resolveProbePath } from './probePath'
+
+/** 路径探测的结果缓存。**模块级、跨调用共享** —— 每次调用新建一个等于没有缓存，
+ *  而这条路径的调用者是「鼠标每划过终端一行一次」。 */
+const probeCache = createProbeCache()
 import type {
   DirEntry,
   RecentFile,
@@ -400,26 +405,56 @@ export function registerFsHandlers(): void {
   // 仅返回真实存在者，null 表示该候选不是文件/目录（不渲染为链接）。
   ipcMain.handle(
     'fs:probePaths',
-    (_e, inputs: string[], baseCwd: string): (PathProbe | null)[] => {
+    // ── 这条是「Windows 卡死未响应」的元凶（2026-08-30 用户报的）────────
+    //
+    // 它被 xterm 的 link provider 调用：**鼠标每划过终端一行就一次**，
+    // 一行最多 15 个候选。原来的实现是主进程里 `fs.statSync` 挨个查 ——
+    // macOS 上感觉不到，Windows 上：NTFS 的 stat 慢、Defender 实时扫描要挂钩
+    // 每次文件操作、候选里只要有一个指向网络盘或不存在的 UNC 路径，
+    // statSync 能阻塞好几秒。而这里跑在 ipcMain.handle 里，
+    // **卡住的是主进程** —— 表现就是「应用未响应」。
+    //
+    // 两处改动：
+    // ① **改异步**（fs.promises.stat）—— 主进程不再被文件系统拖住。
+    //    ipcMain.handle 本来就支持返回 Promise，渲染层那侧一个字都不用改。
+    // ② **加缓存** —— 鼠标在终端里移动时同一批路径会被反复查。
+    //    缓存把「划过一整屏」的文件操作数从「行数 × 15」降到「不同路径数」。
+    //
+    // 解析规则（去 :行:列、认 ~、认 file://）搬去了 probePath.ts：那部分没有 IO，
+    // 拆出去才能单测 —— 之前一条测试都没有。
+    async (_e, inputs: string[], baseCwd: string): Promise<(PathProbe | null)[]> => {
       const base = baseCwd && path.isAbsolute(baseCwd) ? baseCwd : os.homedir()
-      return inputs.map((input) => {
-        try {
-          let p = String(input).trim()
-          if (!p) return null
-          if (p.startsWith('file://')) {
-            p = fileURLToPath(p)
-          } else {
-            // 去掉编译器/grep 常见的 :行 或 :行:列 后缀
-            p = p.replace(/:(\d+)(:\d+)?$/, '')
-            if (p === '~' || p.startsWith('~/')) p = path.join(os.homedir(), p.slice(1))
-            if (!path.isAbsolute(p)) p = path.resolve(base, p)
+      const now = Date.now()
+      const helpers = {
+        isAbsolute: path.isAbsolute,
+        resolve: path.resolve,
+        join: path.join,
+        home: os.homedir,
+        fromFileUrl: fileURLToPath
+      }
+      // **限个数**：上限不是省事，是止血 —— 渲染层已经限到 15，
+      // 但协议上挡不住别的调用方，这里再挡一次
+      const list = (inputs ?? []).slice(0, MAX_CANDIDATES)
+      return Promise.all(
+        list.map(async (input) => {
+          const abs = resolveProbePath(input, base, helpers)
+          if (!abs) return null
+          const cached = probeCache.get(abs, now)
+          if (cached) return cached.v
+          let v: PathProbe | null = null
+          try {
+            const st = await fs.promises.stat(abs)
+            v = { absPath: abs, isDir: st.isDirectory() }
+          } catch {
+            // 不存在 / 没权限 / 网络盘超时 —— 都当「不是链接」。
+            // **失败也进缓存**：不缓存的话，一行里那些永远不存在的词
+            // （命令名、参数）每次 hover 都要再查一遍
+            v = null
           }
-          const st = fs.statSync(p)
-          return { absPath: p, isDir: st.isDirectory() }
-        } catch {
-          return null
-        }
-      })
+          probeCache.set(abs, v, now)
+          return v
+        })
+      )
     }
   )
 }

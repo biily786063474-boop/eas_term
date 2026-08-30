@@ -52,7 +52,8 @@ import type {
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
   PluginInfo
 } from '../shared/types'
-import type { CliAuthState, InstallState, LoginState, PhoneStatus } from '../shared/types'
+import type { CliAuthState, GpuInfo, InstallState, LoginState, PhoneStatus } from '../shared/types'
+
 import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -205,6 +206,9 @@ interface PrefsSnapshot {
 
 const api = {
   platform: process.platform,
+  /** GPU 加速有没有生效。**排障用** —— Windows 上退回软件合成时，
+   *  毛玻璃/圆角/阴影全由 CPU 画，界面会卡到「未响应」 */
+  gpuInfo: (): Promise<GpuInfo> => ipcRenderer.invoke('app:gpuInfo'),
   /** 这个包是哪一版、是不是打包过的。界面底部的水印用它 —— 装了三个版本还开着旧包
    *  这种事真发生过，排查时先怀疑代码、最后才发现开的不是新包，白花很多时间。 */
   build: { version: argOf('eas-version'), packaged: argOf('eas-packaged') === '1' },

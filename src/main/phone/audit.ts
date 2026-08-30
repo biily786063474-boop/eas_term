@@ -110,6 +110,10 @@ export function describe(action: string, args: Record<string, unknown>): string 
     case 'file':
       // 记节点 id 不记路径：路径本身是信息（目录结构），日志里同样不该有
       return `打开了 ${p} 里的一个文件（节点 ${String(args.nodeId ?? '').slice(0, 14)}）`
+    case 'send':
+      // **这里返回空，由 server.ts 的分支自己记** —— 同 newSession：
+      // 它知道成没成、发了多少字，而通用记录点只知道「有人发了这个请求」
+      return ''
     case 'newSession':
       // **这里返回空，由 server.ts 的分支自己记** —— 它知道成没成，
       // 而通用记录点只知道「有人发了这个请求」。一次动作记两条会让人

@@ -760,6 +760,32 @@ function reapIdleSessions(): void {
 /** 这个 AI 对话会话还活着吗。**给甘特图判「上次没写完就没了」用**
  *  —— 和 pty.ts 的 isPtyAlive 一个角色，只是换一张表。
  *  查不到就是不在了：sessions 在进程内是唯一真相，会话结束时会被 delete。 */
+/**
+ * 从**界面之外**（目前只有手机端）往一个正在跑的会话发一条消息。
+ *
+ * 和 `agentChat:send` 那条 IPC 的区别只有一处：**这条会先推一个
+ * `user.message` 事件**，让桌面那侧的对话流里出现这句话。
+ *
+ * 桌面自己发的不需要 —— AgentChatView 在调 send 之前就乐观插进去了
+ *（失败会撤回）。两条路都推的话会重复显示两条。
+ *
+ * 事件走的是同一条推送通道，所以自动被 preload 的按会话缓冲接住
+ *（每会话 1000 条，订阅时回放）：**面板没开着也不丢**，
+ * 你把那个节点打开时它会补进对话流里。
+ */
+export function deliverExternalMessage(
+  sessionId: string,
+  message: string
+): { ok: boolean; error?: string } {
+  const live = sessions.get(sessionId)
+  if (!live) return { ok: false, error: '会话不存在（可能已被关闭）' }
+  if (!message) return { ok: false, error: '消息不能为空' }
+  // **先推事件再送 CLI**：反过来的话，CLI 回得快时回答会排在提问前面
+  emitEvent(live, { k: 'user.message', text: message })
+  const r = deliverMessage(live, message)
+  return r.ok ? { ok: true } : { ok: false, error: r.error }
+}
+
 export function isAgentSessionAlive(id: string): boolean {
   return sessions.has(id)
 }

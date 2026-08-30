@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 import {
+  ACTIONS,
   approve,
   cancelPair,
   claim,
@@ -13,6 +14,7 @@ import {
   revoke,
   setEnabled,
   touch,
+  WRITE_ACTIONS,
   type PhoneState
 } from './pairing.ts'
 
@@ -170,4 +172,16 @@ test('只读档：读动作放行，**写动作一律被拒**', () => {
 test('放开写之后写动作才通', () => {
   assert.equal(isAllowed('send', false), true)
   assert.equal(isAllowed('newSession', false), true)
+})
+
+// ── send（第二步，2026-08-30）────────────────────────────────────
+test('**send 是写操作** —— 只读档里必须被拒', () => {
+  // 手机端界面上藏起发送框不算白名单：判定在电脑端，手机是不可信客户端
+  assert.equal(isAllowed('send', true), false)
+  assert.equal(isAllowed('send', false), true)
+})
+
+test('send 在动作白名单里', () => {
+  assert.ok((ACTIONS as readonly string[]).includes('send'))
+  assert.ok(WRITE_ACTIONS.includes('send'))
 })

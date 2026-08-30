@@ -21,6 +21,7 @@ import path from 'path'
 import { guardPath } from '../fsGuard'
 import { mainWindow } from '../island'
 import * as audit from './audit'
+import { deliverExternalMessage } from '../agentChat/session'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
@@ -260,6 +261,43 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     } catch (e) {
       return { code: 503, body: { error: e instanceof Error ? e.message : String(e) } }
     }
+  }
+
+  // ── 给一个正在跑的会话发消息（第二步）────────────────────────────
+  //
+  // **不走 queryRenderer。** 那条路要渲染层应答，而渲染层里知道这个会话的
+  // 只有那个 AgentChatView 组件 —— 画布把视口外的面板裁掉（PaneLayer 的视口裁剪），
+  // 面板一被裁掉就不在了。走它的话，「手机能不能发消息」就取决于
+  // 「你电脑上的画布此刻滚到哪儿」—— 而这功能正是为够不着电脑时用的。
+  //
+  // 直接进主进程：会话在 sessions 表里，跟界面开没开无关。
+  // 桌面那侧的显示由 deliverExternalMessage 推的 user.message 事件负责，
+  // 面板没开时被 preload 缓冲接住，开的时候补上。
+  if (action === 'send') {
+    const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
+    const text = typeof args.text === 'string' ? args.text.trim() : ''
+    if (!sid) return { code: 400, body: { error: '缺少 sessionId' } }
+    if (!text) return { code: 400, body: { error: '消息不能为空' } }
+    // **长度上限。** 手机端输入框限不住协议 —— 不设的话一次请求能把
+    // 几 MB 文本灌进 CLI 的 stdin
+    if (text.length > 4000) return { code: 413, body: { error: '消息太长（上限 4000 字）' } }
+    const r = deliverExternalMessage(sid, text)
+    // **成和不成都记。** 失败也是「手机试过这件事」，回到电脑前该看得见。
+    // **只记长度不记正文** —— 留痕的用途是「回来之后知道发生过什么」，
+    // 不是把对话再存一份（audit.ts 顶部那条）
+    audit.record({
+      at: Date.now(),
+      deviceId: dev.id,
+      deviceName: dev.name,
+      action,
+      detail: r.ok
+        ? `给会话 ${sid.slice(0, 8)} 发了一条消息（${text.length} 字）`
+        : `想给会话 ${sid.slice(0, 8)} 发消息，没成：${r.error ?? '发不出去'}`,
+      outcome: r.ok ? 'allowed' : undefined
+    })
+    hooks?.onClaim()
+    if (!r.ok) return { code: 400, body: { error: r.error ?? '发不出去' } }
+    return { code: 200, body: { ok: true } }
   }
 
   if (action === 'file') return readFile(args.projectId, args.nodeId)

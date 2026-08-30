@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
+import { GpuPanel } from './GpuPanel'
 import { useStore } from '../../store'
 import { THEMES } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
@@ -32,6 +33,7 @@ const TABS = [
   { key: 'update', label: '更新' },
   { key: 'board', label: '画板' },
   { key: 'phone', label: '手机端' },
+  { key: 'perf', label: '性能' },
   { key: 'privacy', label: '隐私' }
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -365,6 +367,7 @@ export function SettingsPanel(): JSX.Element {
               )}
 
               {tab === 'phone' && <PhonePanel />}
+              {tab === 'perf' && <GpuPanel />}
 
 
               {tab === 'privacy' && (
