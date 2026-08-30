@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>手机端 · 进度</title><style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+
+td .dim{color:#525252}
+#all td:nth-child(3),#all td:nth-child(4),#all td:nth-child(5),#all td:nth-child(6){font-variant-numeric:tabular-nums}
+
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;margin-left:6px}
+.p-hi{background:rgba(244,63,94,.16);color:#fda4af}
+.p-md{background:rgba(245,158,11,.16);color:#fcd34d}
+.p-lo{background:rgba(16,185,129,.14);color:#6ee7b7}
+.opt{border:1px solid #262626;border-radius:14px;padding:22px 24px;margin-bottom:16px;background:rgba(23,23,23,.4)}
+.opt h4{margin:0 0 4px;font-size:16px}
+.opt .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#737373;margin:10px 0 14px;
+  font-family:ui-monospace,Menlo,monospace}
+.opt .meta b{color:#d4d4d4;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin-top:12px}
+.kv dt{color:#737373;white-space:nowrap}
+.kv dd{margin:0;color:#d4d4d4}
+.unknown{border-left:2px solid #7dd3fc;background:rgba(14,165,233,.05);border-radius:0 14px 14px 0;padding:18px 22px;margin:20px 0}
+.unknown .vlabel{color:#7dd3fc}
+.file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  background:#141414;border:1px solid #262626;border-radius:7px;padding:2px 8px;color:#e5e5e5;white-space:nowrap}
+.done{color:#6ee7b7}.todo{color:#525252}.part{color:#fcd34d}
+.step{border-left:2px solid #262626;padding-left:22px;margin:16px 0 16px 4px;position:relative}
+.step::before{content:"";position:absolute;left:-5px;top:6px;width:8px;height:8px;border-radius:50%;
+  background:#404040;border:2px solid #0a0a0a}
+.step.ok::before{background:#34d399}
+.step.now::before{background:#fcd34d}
+.step h4{margin:0 0 6px}
+</style></head><body><nav><div class="navwrap"><span class="navbrand">Eas-Term · 手机端进度</span>
+<a href="#now">现在到哪了</a><a href="#trap">踩过的坑</a><a href="#code">代码在哪</a>
+<a href="#next">接下来</a><a href="#open">未决</a></div></nav>
+
+<header class="hero"><span class="eyebrow">2026-08-29 · 阶段沉淀，供之后接手</span>
+<h1>手机端远程<br>做到哪了</h1>
+<p class="lede"><b>第一步（局域网 + 只读）已经端到端跑通并合进 main</b>，还多做了一件原计划在第二步的事
+（手机上新建 AI 对话）和一个「动态」首屏。<b>没做的是跨网（隧道）和给 agent 发消息</b>。</p>
+<p class="lede">这份文档的用途是<b>让下一次接手不用重新推理</b>：现在能干什么、
+哪些判断是拿真数据定的、踩过哪些只有真机才暴露的坑。
+设计依据看《手机端-需求规格》，实现方案看《手机端-技术设计》。</p>
+<div class="meta"><span>提交 <b>12 个</b></span><span>测试 <b>1024 全过</b></span>
+<span>已合进 <b>main</b></span><span>默认 <b>关</b></span></div></header>
+
+<main>
+
+<section id="now"><h2>现状</h2><div class="sectitle">现在手机上能干什么</div>
+<div class="tw"><table><thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead><tbody>
+<tr><td>看画布上的项目</td><td class="done">已完成</td><td>只列画布上有顶层 Frame 的，跟你眼睛看到的一致</td></tr>
+<tr><td>看会话状态</td><td class="done">已完成</td><td>终端 + AI 对话，区分「在跑 / 等你 / 空闲 / 还没启动」</td></tr>
+<tr><td>看 Frame 里的文档和图片</td><td class="done">已完成</td><td>只列名字；点开读内容；<b>不返回绝对路径</b></td></tr>
+<tr><td>新建 AI 对话</td><td class="done">已完成</td><td>不需要电脑确认（那道闸假设你能碰到电脑）；只是加一个空节点，<b>不启动进程</b></td></tr>
+<tr><td>动态首屏</td><td class="done">已完成</td><td>等你处理 → 正在跑 → 刚完成；「刚完成」读甘特图</td></tr>
+<tr><td>给 agent 发消息</td><td class="todo">没做</td><td>第二步。风险台阶在这里</td></tr>
+<tr><td>在外面用（跨网）</td><td class="todo">没做</td><td>第三步，要隧道服务端</td></tr>
+<tr><td>推送通知</td><td class="todo">没做</td><td>要 service worker + 推送服务端，得等有服务端之后</td></tr>
+</tbody></table></div>
+
+<div class="verdict"><div class="vlabel">默认关，等于不存在</div>
+<p style="margin:0">不打开设置里那个开关，<b>一个端口都不监听、userData 里连 phone.json 都不创建</b>。
+装了没用过这功能的人，<code>lsof</code> 里看不到任何新东西。这条实测验过。</p></div>
+</section>
+
+<section id="trap"><h2>坑</h2><div class="sectitle">只有真机才暴露的，别再踩一遍</div>
+
+<div class="dissent"><div class="vlabel">① 挑网卡挑中了 VPN 隧道</div>
+<p style="margin:0 0 8px">朴素的「取第一个非回环 IPv4」在本机挑中了 WireGuard 的 <code>utun0</code>（10.9.0.4），
+二维码里给的是隧道地址，<b>同一个 Wi-Fi 下的手机压根连不上</b>。</p>
+<p style="margin:0">装了 VPN / Docker / 虚拟机的机器上这不是特例是常态。
+现在 <code class="file">lan.ts</code> 先按名字整类排除虚拟/隧道网卡，再按「像不像家用局域网」排
+192.168 &gt; 172.16-31 &gt; 10。9 个单测锁住。</p></div>
+
+<div class="dissent"><div class="vlabel">② 二维码「看着对，扫不出来」</div>
+<p style="margin:0 0 8px">自己写的编码器有两个 bug，<b>结构测试全绿、肉眼完全看不出</b>：
+格式信息的位序整个写反了（规范是 MSB 先出）、固定暗模块一直被占位循环冲掉
+（第二个一直被第一个盖着，改对位序才露出来）。</p>
+<p style="margin:0"><b>定位办法</b>：用 macOS 自带的 <code>CIQRCodeGenerator</code> 生成同一段文本做参照，
+反推位序。<b>验证办法</b>：生成图片交给 Vision 框架<b>真扫一遍</b>——
+结构测试证明不了可扫性，只有真扫能。这两条都留成了常驻测试。</p></div>
+
+<div class="dissent"><div class="vlabel">③ 手机只能看见它自己建的会话</div>
+<p style="margin:0 0 8px">画布节点有<b>两种形态</b>：自带 <code>pane</code> 的，和只有 <code>leafId</code>
+（引用分屏那边的共享 leaf）的。<b>桌面上正常开的终端和 AI 对话全是第二种</b>，
+而 <code>collect.ts</code> 只认了第一种。</p>
+<p style="margin:0">本机实测：21 个节点走 leafId（终端 6 + AI 对话 15），走 pane 的只有 3 个 ——
+<b>日常在用的几乎全被漏掉</b>。而我的单测一条都没抓到，
+<b>因为造数据时只用了 pane 那一种形态</b>。这条教训写进了 collect.ts 的注释。</p></div>
+
+<div class="dissent"><div class="vlabel">④ 合并冲突吃掉一个 <code>}</code>，整个 app 变毛坯房</div>
+<p style="margin:0 0 8px">CSS 解析器遇到未闭合的规则会把后面所有内容当成它的声明块吞掉，
+而 Vite 把全部 CSS 拼成一个文件、<code>base.css</code> 恰好排在最后 ——
+<b>一条断掉的规则吞光了整份基础样式</b>。</p>
+<p style="margin:0">typecheck、1012 个测试、build <b>全绿</b>，只有真打开 app 才看得出来。
+现在有 <code class="file">scripts/check-css-balance.mjs</code> 接在 <code>npm run check</code> 里，
+10 毫秒的静态检查，精确报到行。</p></div>
+
+<div class="warn"><div class="vlabel">⑤ 一个被推翻的设计</div>
+<p style="margin:0">新建会话原本要求「电脑上点允许」。用户一句话点破：
+<b>要求电脑确认，恰恰假设了你能碰到电脑</b> —— 而这功能就是为够不着电脑时用的。
+连带纠正了我一处过度表述：新建对话<b>不会拉起进程</b>，
+它只是 <code>addFileNode</code> 加一个空节点，CLI 要等有人发消息才起。</p></div>
+</section>
+
+<section id="code"><h2>代码</h2><div class="sectitle">在哪、谁管什么</div>
+<p class="secnote">分层标准只有一条：<b>有业务判断的都要能单测</b>。
+所以「挑什么给手机看」「谁能进来」「挑哪个网卡」各自成纯模块；
+HTTP、落盘、IPC 这些搬运工作单独放。</p>
+<div class="tw"><table><thead><tr><th>文件</th><th>管什么</th><th>测试</th></tr></thead><tbody>
+<tr><td><code class="file">main/phone/pairing.ts</code></td><td>配对状态机 + 设备表 + 白名单判定</td><td>19</td></tr>
+<tr><td><code class="file">main/phone/lan.ts</code></td><td>挑哪个网卡地址给手机</td><td>9</td></tr>
+<tr><td><code class="file">main/phone/audit.ts</code></td><td>操作留痕（记谁/何时/干了什么，<b>不记内容</b>）</td><td>—</td></tr>
+<tr><td><code class="file">main/phone/server.ts</code></td><td>HTTP：绑局域网地址、鉴权、白名单闸、静态页</td><td>—</td></tr>
+<tr><td><code class="file">main/phone/store.ts</code></td><td><code>phone.json</code>（600，只存 tokenHash）</td><td>—</td></tr>
+<tr><td><code class="file">main/phone/index.ts</code></td><td>生命周期 + IPC，<b>状态的唯一持有者</b></td><td>—</td></tr>
+<tr><td><code class="file">renderer/features/phone/collect.ts</code></td><td>从画布挑数据（项目/会话/文件/动态）</td><td>29</td></tr>
+<tr><td><code class="file">renderer/features/phone/qr.ts</code></td><td>二维码编码器（字节模式 + M 级 + v1-7）</td><td>14</td></tr>
+<tr><td><code class="file">renderer/features/phone/provider.ts</code></td><td>接主进程问询，取数 + 建会话</td><td>—</td></tr>
+<tr><td><code class="file">renderer/features/phone/PhonePanel.tsx</code></td><td>设置里那一页</td><td>真机验证</td></tr>
+<tr><td><code class="file">resources/phone/index.html</code></td><td>手机页面（单文件、纯内联、零外部依赖）</td><td>真机验证</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="next"><h2>接下来</h2><div class="sectitle">下一次接手从哪继续</div>
+<div class="step ok"><h4>第一步 · 局域网 + 只读 <span class="b b-em">已完成</span></h4>
+<p style="margin:0">含新建会话和动态页（都超出了原计划）。</p></div>
+<div class="step"><h4>第二步 · 给 agent 发消息</h4>
+<p style="margin:0">白名单里 <code>send</code> 已经占了位、也已归到写操作，只是还没实现。
+留痕已经就绪，是当初上写操作的前提。
+<b>要先想清楚审批闭环</b>：人在外面时点不了「允许」，
+而 agent 的 PreToolUse 钩子会卡在第一个工具调用上。</p></div>
+<div class="step"><h4>第三步 · 隧道（在外面也能用）</h4>
+<p style="margin:0">架构红线：<b>绝不在隧道服务端终止 TLS</b>。
+用户自己这台是现成的 WireGuard peer（<code>utun0 = 10.9.0.4</code>），
+写服务端之前可以先靠它把协议和体验验完。</p></div>
+</section>
+
+<section id="open"><h2>未决</h2><div class="sectitle">还欠着的判断</div>
+<ul class="clean">
+<li><b>审批策略</b>：手机不能批 / 只能批「读」类工具 / 全都能批。第二步才需要</li>
+<li><b>Codex 的对话解析</b>：不补的话，终端跑 Codex 时手机只能发不能收</li>
+<li><b>隧道服务端要不要自己出</b>：目标形态是「拿到就能用」，那就得出；
+但可以先发局域网版，看真实需求</li>
+</ul>
+<hr>
+<p class="dim" style="font-size:13px">配套文档：《手机端-需求规格》（做什么 / 为什么）·《手机端-技术设计》（怎么做）·本文（做到哪了）</p>
+</section>
+
+<footer>Eas-Term 手机端 · 阶段沉淀 · 2026-08-29 · 已合进 main（12 个提交）</footer>
+</main></body></html>
