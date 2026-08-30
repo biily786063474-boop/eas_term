@@ -434,6 +434,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
 
+  setNodeAgentSession: (frameId, nodeId, sessionId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id !== frameId
+            ? f
+            : {
+                ...f,
+                nodes: f.nodes.map((n) =>
+                  // **只认自带 pane 的 agent 节点**：引用 leaf 的那些会话 id 在 leaf 上
+                  //（走 setAgentSessionId），在这儿写会造出两个都说了算的地方
+                  n.id === nodeId && n.pane?.kind === 'agent'
+                    ? { ...n, pane: { ...n.pane, sessionId } }
+                    : n
+                )
+              }
+        )
+      }
+    })),
+
   addFileNode: (frameId, pane, x, y) =>
     set((s) => {
       const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300

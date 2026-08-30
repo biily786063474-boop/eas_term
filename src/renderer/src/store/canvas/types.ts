@@ -215,6 +215,15 @@ export interface CanvasSlice {
     h: number
   ) => void
   /** 删画布节点；节点是终端（带 leafId）时连带关掉对应的 leaf，两个视图同时消失 */
+  /** 把会话 id 写回一个**自带 pane 的** AI 对话节点。
+   *
+   *  **窄到只能写这一个字段**，不是通用的「改节点」——
+   *  这条路唯一的调用方是手机端（它在画布外启动了一个会话，
+   *  要让电脑上打开这个节点时能接回去）。给它一个通用入口，
+   *  等于让手机能改画布上的任何东西，那是另一个决定。
+   *
+   *  引用 leaf 的节点不走这条：它们的会话 id 在 leaf 上，走 setAgentSessionId。 */
+  setNodeAgentSession: (frameId: string, nodeId: string, sessionId: string) => void
   removeNode: (frameId: string, nodeId: string) => void
   /** 把一个还在跑的 agent 会话**显示回画布**。已经在画布上就只聚焦。
    *  返回 false = 这个会话的 leaf 找不到了（会话真的没了）。

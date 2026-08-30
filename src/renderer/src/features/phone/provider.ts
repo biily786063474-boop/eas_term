@@ -167,13 +167,16 @@ async function startSession(
       break
     }
   }
-  // **自带 pane 形态的节点写不回去** —— store 里没有改画布节点 pane 的动作，
-  // 而硬造一个等于在这条路上新开一个能改画布的入口（手机能碰的面又大一圈）。
-  // 会话已经真的起来了，如实说清楚：手机这边照常能聊（sessionId 返回了），
-  // 只是电脑上打开那个节点时接不回去 —— 那是下一步该补的，不是这里该糊的。
+  // **自带 pane 形态的走另一条**（2026-08-30 补上）。
   //
-  // 实际影响很小：手机新建的节点走的是 addFileNode，
-  // 它建出来的是 leafId 形态，会走上面那条分支。
+  // 我原来在这儿写「实际影响很小，手机新建的是 leafId 形态」—— **那句是错的**，
+  // 实测 `addFileNode` 建出来的节点带 `pane`、没有 `leafId`：
+  // 也就是说**每一个手机新建的对话都落在这个洞里**，启动之后 sessionId 写不回，
+  // 电脑上打开那个节点接不回这个会话。不是边角，是主路径。
+  //
+  // 补的是一个**只能写 sessionId 的窄动作**，不是通用的「改节点」——
+  // 给手机一个能改画布任何东西的入口是另一个决定。
+  if (!node.leafId) st.setNodeAgentSession(top.id, nodeId, r.sessionId)
   return { ok: true, sessionId: r.sessionId }
 }
 
