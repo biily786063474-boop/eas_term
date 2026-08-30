@@ -80,14 +80,21 @@ export function formatPin(pin: string): string {
  *
  * @param deviceId 这台电脑的稳定 id，进证书的 CN 和 SAN。**不含个人信息** ——
  *                 证书是要发给手机、也要在网络上出现的东西。
+ * @param extraNames 额外的 dNSName。隧道那条路上手机连的是
+ *                 `<tunnelId>.eas-term.local`，放进 SAN 是为了**万一**
+ *                 哪个 TLS 栈坚持要校验主机名时也能过 —— 我们自己是钉指纹的，
+ *                 本来不校验，但不能指望别人家的栈跟我们想的一样。
  */
-export function createIdentity(deviceId: string, now: number): Identity {
+export function createIdentity(deviceId: string, now: number, extraNames: string[] = []): Identity {
   // **deviceId 必须是纯 ASCII。** forge 把 commonName 编成 PrintableString，
   // 塞非 ASCII 进去它**不报错，直接产出一张坏证书** —— PEM 是废的，
   // 而症状要等到「手机连不上」才出现，隔着整条链路查。
   // 2026-08-30 写测试时用中文 CN 当场撞到，实测确认。
   if (!/^[A-Za-z0-9-]{1,64}$/.test(deviceId))
     throw new Error(`deviceId 只能是字母数字和连字符（拿到的是 ${JSON.stringify(deviceId)}）`)
+  for (const n of extraNames)
+    if (!/^[A-Za-z0-9.-]{1,253}$/.test(n))
+      throw new Error(`SAN 里的名字不合法：${JSON.stringify(n)}`)
 
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 })
   const keyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string
@@ -118,6 +125,7 @@ export function createIdentity(deviceId: string, now: number): Identity {
       name: 'subjectAltName',
       altNames: [
         { type: 2, value: `${deviceId}.eas-term.local` }, // 2 = dNSName
+        ...extraNames.map((v) => ({ type: 2, value: v })),
         { type: 2, value: 'localhost' },
         { type: 7, ip: '127.0.0.1' } // 7 = iPAddress
       ]
