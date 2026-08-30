@@ -12,6 +12,7 @@
 // 的原因。但**不能因此说没风险**，所以手机页面上有一行「局域网明文连接」。
 // TLS 是第三步（隧道）的事。
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { createHash } from 'crypto'
 import crypto from 'crypto'
 import fs from 'fs'
 import http from 'http'
@@ -21,7 +22,12 @@ import path from 'path'
 import { guardPath } from '../fsGuard'
 import { mainWindow } from '../island'
 import * as audit from './audit'
-import { deliverExternalMessage, readTranscript } from '../agentChat/session'
+import {
+  deliverExternalMessage,
+  isSessionBusy,
+  noteExternalFirstMessage,
+  readTranscript
+} from '../agentChat/session'
 import { readTermTail } from '../pty'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
@@ -157,11 +163,42 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   if (!st) return { code: 503, body: { error: 'not-ready' } }
 
   // ── 不需要 token 的三个 ──────────────────────────────────
-  if (req.method === 'GET' && url === '/health') return { code: 200, body: { ok: true } }
+  // **带上版本号**：手机页拿它跟自己那份比，不一样就自己重载 ——
+  // 不然电脑升级之后手机上会一直跑旧 JS（见 resources/phone 的 watchVersion）。
+  // 这条不要 token：它只回一个版本号，而「页面是不是过期了」得在配对之前就能问
+/** 页面内容的短哈希。**判「新旧」要看内容，不能看版本号** ——
+ *  开发中改了页面但版本号没变是常态，2026-08-30 实测就卡在这儿：
+ *  用户手机上跑的是旧 JS，而版本号一模一样，自动重载不会触发。 */
+function pageStamp(): string {
+  try {
+    // 和 readPage 里那次算的是**同一个输入**（替换 BUILD 之前的内容）
+    const raw = fs.readFileSync(pageFile(), 'utf8').replace(/__EAS_VER__/g, app.getVersion())
+    return createHash('sha1').update(raw).digest('hex').slice(0, 8)
+  } catch {
+    return 'unknown'
+  }
+}
+
+/** 读页面并把版本占位替换掉。**每次现读** —— 它才 24KB，缓存它省不了什么，
+ *  却会让「改了页面手机上不生效」这种问题多一个来源 */
+function readPage(): string {
+  const raw = fs.readFileSync(pageFile(), 'utf8').replace(/__EAS_VER__/g, app.getVersion())
+  // **哈希算的是「替换 BUILD 之前」的内容** —— 否则每次替换都会改变内容、
+  // 再算又得到新哈希，自己追自己的尾巴
+  const stamp = createHash('sha1').update(raw).digest('hex').slice(0, 8)
+  return raw.replace(/__EAS_BUILD__/g, stamp)
+}
+
+  if (req.method === 'GET' && url === '/health')
+    return { code: 200, body: { ok: true, version: app.getVersion(), build: pageStamp() } }
 
   if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
     try {
-      return { code: 200, body: { __html: fs.readFileSync(pageFile(), 'utf8') } }
+      // **把版本号打进页面**：手机浏览器缓存这个页面时，用户看到的可能是旧版 JS，
+      // 而页面本身看起来一切正常。有了这个标记，「你手机上显示的是哪个版本」
+      // 一问就知道，不用来回猜（2026-08-30 为此来回了好几轮）。
+      const html = readPage()
+      return { code: 200, body: { __html: html } }
     } catch {
       return { code: 500, body: { error: 'page-missing' } }
     }
@@ -310,7 +347,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
         })
         hooks?.onClaim()
         if (!d?.ok || !d.sessionId) return { code: 400, body: { error: d?.error ?? '起不来' } }
-        // 启动时第一条消息已经带进去了，不用再发一次
+        // 启动时第一条消息已经**送给 CLI 了**，不用再发一次；
+        // 但 start 那条路不推 user.message，所以这里补记一笔 ——
+        // 不补的话手机上「启动之后没有对话」（用户实测的原话）：
+        // 他打的那句不见了，AI 的回复十几秒后才来，中间界面是空的
+        noteExternalFirstMessage(d.sessionId, text)
         return { code: 200, body: { ok: true, sessionId: d.sessionId } }
       } catch (e) {
         return { code: 503, body: { error: e instanceof Error ? e.message : String(e) } }
@@ -359,7 +400,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     }
     // **不记留痕**：手机上下拉刷新会反复调，记了会把留痕淹掉；
     // 而「他看了一眼回复没有」也不是事后要复核的东西（同 status 那条）
-    return { code: 200, body: { data: readTranscript(sid, 40) } }
+    //
+    // 带上 busy：手机靠它决定还要不要继续拉。**判据是「它还在干活吗」，
+    // 不是「我等够久了吗」** —— 固定次数猜不准，一句「你好」几秒，
+    // 一次改代码几分钟（用户实测撞到：18 秒窗口没等到，看到「没有返回信息」）
+    return { code: 200, body: { data: readTranscript(sid, 40), busy: isSessionBusy(sid) } }
   }
 
   if (action === 'file') return readFile(args.projectId, args.nodeId)
@@ -416,11 +461,27 @@ export function start(h: Hooks, preferHost?: string): { ok: boolean; error?: str
         .then((r) => {
           const html = (r.body as { __html?: string })?.__html
           if (typeof html === 'string') {
-            res.writeHead(r.code, { 'Content-Type': 'text/html; charset=utf-8' })
+            // **禁缓存**（2026-08-30 实测撞到）：不设这一条时手机浏览器会自己
+            // 决定缓存多久 —— 用户升级软件之后，手机上跑的还是上一版的 JS，
+            // 症状是「新功能全都没有」而页面看起来一切正常。
+            // 这个页面每次请求现读文件、体积也就 24KB，缓存它没有任何收益。
+            //
+            // 三条一起给：Cache-Control 是现代浏览器的判据，
+            // Pragma/Expires 是给老 WebView 兜底（手机端可能跑在任何壳里）。
+            res.writeHead(r.code, {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store, no-cache, must-revalidate',
+              Pragma: 'no-cache',
+              Expires: '0'
+            })
             res.end(html)
             return
           }
-          res.writeHead(r.code, { 'Content-Type': 'application/json; charset=utf-8' })
+          // 接口返回同样不许缓存 —— 会话列表、对话内容都是随时在变的东西
+          res.writeHead(r.code, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-store'
+          })
           res.end(JSON.stringify(r.body))
         })
         .catch(() => {

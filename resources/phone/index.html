@@ -82,6 +82,8 @@ button.big:disabled{opacity:.45}
    气泡沿用规格里那几张样机：自己发的靠右、贴主色；agent 的靠左、玻璃底。
    **底部要给输入条让位** —— 不然最后一条永远压在输入框下面看不全。 */
 .why{font-size:11px;color:var(--fg-mute);margin-top:5px;line-height:1.5}
+.sending{position:fixed;left:0;right:0;bottom:calc(112px + env(safe-area-inset-bottom,0px));
+  text-align:center;font-size:11.5px;color:var(--accent);pointer-events:none}
 .term{margin:0;padding:11px 12px 74px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all;color:var(--fg-dim)}
 .chat{display:flex;flex-direction:column;gap:9px;padding-bottom:74px}
@@ -131,6 +133,8 @@ try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */
 var view = 'live', proj = null, projName = ''
 // 当前打开的对话（第二步）。sess 非空时 view==='chat'
 var sess = null, sessName = '', sessRunning = false, sessNode = null, sessKind = 'agent'
+// 这个会话此刻在不在跑（由 transcript 接口带回来）。轮询靠它决定停不停
+var chatBusy = null
 
 var $ = function (id) { return document.getElementById(id) }
 var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }
@@ -449,7 +453,10 @@ function renderChat (quiet) {
   call('transcript', { sessionId: sess, kind: sessKind }).then(function (r) {
     b.innerHTML = ''
     var d = r.data || []
-    $('h2').textContent = sessRunning ? '在跑' : (d.length ? d.length + ' 条往来' : '还没说过话')
+    chatBusy = typeof r.busy === 'boolean' ? r.busy : null
+    // **「正在想」要看得见** —— 不然等回复那段时间界面是静止的，
+    // 你分不清是它在跑还是已经断了
+    $('h2').textContent = chatBusy ? '正在想…' : (d.length ? d.length + ' 条往来' : '还没说过话')
     if (!d.length) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, sessKind === 'terminal' ? '这个终端还没有输出' : '这个会话还没有对话记录'))
@@ -484,6 +491,24 @@ function renderChat (quiet) {
   }).catch(function (e) { b.innerHTML = ''; fail(b, e && e.message) })
 }
 
+/** 等回复期间的轮询。**停的条件是「它不忙了」**，不是「拉够几次了」。
+ *
+ *  renderChat 每次都会把 busy 写进 chatBusy —— 这里读它。
+ *  两道闸都要：不忙了停（正常出口），5 分钟兜底停（进程卡住时不至于
+ *  在手机后台一直打电脑）。 */
+var pollTimer = null
+function startPoll () {
+  stopChatPoll()
+  var t0 = Date.now()
+  pollTimer = setInterval(function () {
+    if (view !== 'chat' || Date.now() - t0 > 300000) { stopChatPoll(); return }
+    renderChat(true)
+    // chatBusy 由上一次 renderChat 写入；false 说明这一轮跑完了
+    if (chatBusy === false) stopChatPoll()
+  }, 2500)
+}
+function stopChatPoll () { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+
 /** 底部输入条。**发送后不清空到「什么都没发生」** —— 手机上没有回执的话，
  *  你不知道到底送出去没有。 */
 function composer () {
@@ -500,6 +525,9 @@ function composer () {
     var t = ta.value.trim()
     if (!t || busy) return
     busy = true; btn.className = 'send busy'
+    // **发送中要看得见。** 手机上没有回执的话，你不知道到底送出去没有
+    var tip = el('div', 'sending', sess ? '发送中…' : '正在启动对话…（要几秒）')
+    box.parentNode && box.parentNode.insertBefore(tip, box)
     // **两条路**：已启动的按 sessionId 发；没启动的带 nodeId，
     // 由电脑那侧把它跑起来并把第一条带进去（边界写在 provider.ts 的 startSession）
     var payload = sess
@@ -508,12 +536,21 @@ function composer () {
     call('send', payload).then(function (r) {
       ta.value = ''; ta.style.height = 'auto'
       busy = false; btn.className = 'send'
+      if (tip.parentNode) tip.parentNode.removeChild(tip)
       // 刚启动的话把 sessionId 记下来，之后就走正常那条了
       if (!sess && r && r.sessionId) { sess = r.sessionId; sessNode = null }
       // 立刻重拉一次：刚发的那条会出现在列表里（主进程记的是同一份）
       renderChat(true)
+      // **跟着 busy 走，不数次数。**（2026-08-30 用户实测撞到：
+      // 第一版固定 6 次 × 3 秒 ≈ 18 秒，那次回复超过了这个窗口，
+      // 他看到「没有返回信息」—— 而主进程其实早就记下了完整回复。）
+      // 固定次数猜不准：一句「你好」几秒，一次改代码几分钟。
+      // 判据是「它还在干活吗」，不是「我等够久了吗」。
+      // 仍然有上限（5 分钟）—— 进程万一卡住，无限轮询会在手机后台一直打电脑。
+      startPoll()
     }).catch(function (e) {
       busy = false; btn.className = 'send'
+      if (tip.parentNode) tip.parentNode.removeChild(tip)
       // **失败要说出来**。手机上没有回执的话，你会以为发出去了
       var w = el('div', 'warnbar', '没发出去：' + ((e && e.message) || '未知原因'))
       box.parentNode.insertBefore(w, box)
@@ -595,8 +632,15 @@ function openFile (f) {
 
 function render () {
   stopPoll()
+  if (view !== 'chat') stopChatPoll()
   if (!token) { renderPair(); return }
-  if (view === 'chat' && sess) renderChat()
+  // **`sess` 或 `sessNode` 有一个就行**（2026-08-30 用户实测撞到：
+  // 「新建了 AI 对话点击后会自动跳转到动态页面」）——
+  // 还没启动的对话 sess 是 null、只有 sessNode，
+  // 原来只判 sess 就掉到最后那条 else 去了，view 被改成 'live'。
+  // 那条 else 是「状态凑不齐时的兜底」，而这里状态其实是齐的，
+  // 只是齐在另一个字段上。
+  if (view === 'chat' && (sess || sessNode)) renderChat()
   else if (view === 'sessions' && proj) renderSessions()
   else if (view === 'files' && proj) renderFiles()
   else if (view === 'projects') renderProjects()
@@ -624,7 +668,38 @@ document.addEventListener('visibilitychange', function () {
 
 // 连接状态那枚胶囊。第一步只有局域网，**如实写「明文」** ——
 // 不能让人以为已经加密了（TLS 是第三步隧道的事）
-$('connt').textContent = '局域网直连 · 明文'
+// **版本号显示出来**（2026-08-30）：手机浏览器会缓存这个页面，
+// 升级软件之后手机上跑的可能还是旧版 JS —— 症状是「新功能全都没有」
+// 而页面看起来一切正常。排查时来回猜了好几轮，加一个标记就一眼看得出。
+// __EAS_VER__ 由服务端在发送时替换成真实版本号
+var PAGE_VER = '__EAS_VER__'
+// 这一份页面的内容哈希，由服务端在发送时打进来；跟 /health 报的比对
+var PAGE_BUILD = '__EAS_BUILD__'
+$('connt').textContent = '局域网直连 · 明文 · v' + PAGE_VER + ' · ' + PAGE_BUILD
+
+/** **页面自己发现版本变了就重载。**
+ *
+ *  手机浏览器会缓存这个页面（尤其 iOS Safari），电脑上升级软件之后，
+ *  手机上跑的还是上一版的 JS —— 症状是「新功能全都没有」而页面一切正常。
+ *  2026-08-30 用户实测时为此来回了好几轮（他说「一点没变」，
+ *  而服务端发的确实是新页面）。
+ *
+ *  服务端已经加了 no-store，但那只管**下一次加载**；页面开着不动的话，
+ *  内存里跑的还是旧 JS。所以这里主动比一次：
+ *  /health 是不需要 token 的最轻接口，顺带带上版本号。
+ *
+ *  **只在版本真的不一样时才 reload** —— 无条件重载会把用户正在打的字冲掉。 */
+function watchVersion () {
+  setInterval(function () {
+    if (document.visibilityState !== 'visible') return
+    fetch('/health').then(function (r) { return r.json() }).then(function (j) {
+      // **比内容哈希，不比版本号**：开发中改了页面但版本号没变是常态，
+      // 只比版本号的话「新功能全都没有」这个症状还会重演
+      if (j && j.build && PAGE_BUILD && j.build !== PAGE_BUILD) location.reload()
+    }).catch(function () {})
+  }, 20000)
+}
+watchVersion()
 render()
 })()
 </script>

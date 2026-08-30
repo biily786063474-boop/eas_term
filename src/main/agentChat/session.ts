@@ -110,6 +110,16 @@ export function readTranscript(sessionId: string, n?: number) {
   return transcripts.recent(sessionId, n)
 }
 
+/** 这个会话现在还在跑吗。**手机端靠它决定还要不要继续拉**。
+ *
+ *  第一版是固定轮询 6 次 × 3 秒 ≈ 18 秒 —— 实测有一次回复超过这个窗口，
+ *  用户看到的是「没有返回信息」，而主进程其实早就记下了完整回复。
+ *  固定次数猜不准：一句「你好」几秒，一次改代码几分钟。
+ *  **判据应该是「它还在干活吗」，不是「我等够久了吗」。** */
+export function isSessionBusy(sessionId: string): boolean {
+  return sessions.get(sessionId)?.rec.busy === true
+}
+
 const sessions = new Map<string, Live>()
 let nextId = 1
 
@@ -790,6 +800,27 @@ function reapIdleSessions(): void {
  *（每会话 1000 条，订阅时回放）：**面板没开着也不丢**，
  * 你把那个节点打开时它会补进对话流里。
  */
+/**
+ * **从界面之外启动的会话，把第一条消息补记一笔。**
+ *
+ * `agentChat:start` 那条路不推 `user.message` —— 桌面自己发的不需要
+ *（AgentChatView 在调 start 之前就乐观插进对话流了）。
+ * 但手机启动的没有那一步：消息直接进了 CLI，桌面和摘要都不知道它存在。
+ *
+ * 症状是用户实测报的原话：「启动之后没有对话」——
+ * 他打的那句不见了，AI 的回复要等十几秒才来，中间那段时间界面是空的，
+ * 看起来就像启动失败了。
+ *
+ * 由渲染层在 start 成功之后立刻调（provider.ts 的 startSession）。
+ * **不做进 start 本身**：那个 handler 的同步性是承重的（见文件头那段），
+ * 而且桌面走同一条路会重复显示两条。
+ */
+export function noteExternalFirstMessage(sessionId: string, message: string): void {
+  const live = sessions.get(sessionId)
+  if (!live || !message) return
+  handleEvent(live, { k: 'user.message', text: message })
+}
+
 export function deliverExternalMessage(
   sessionId: string,
   message: string
