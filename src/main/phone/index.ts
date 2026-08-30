@@ -20,6 +20,7 @@ import {
 } from './pairing'
 import type { PhoneStatus } from '../../shared/types'
 import * as audit from './audit'
+import { getIdentity, hasIdentity, reset as resetIdentity } from './identityStore'
 import { load, save } from './store'
 import {
   endpoint,
@@ -48,6 +49,12 @@ function status(): PhoneStatus {
     enabled: state.enabled,
     running: isRunning(),
     url: ep ? `http://${ep.host}:${ep.port}` : null,
+    // app 走的那个口。**起不来时是 null 而不是省略** —— 界面要能说
+    // 「浏览器能用、app 连不上」，而不是把两件事糊成一个「没起来」
+    secureUrl: ep && ep.securePort ? `https://${ep.host}:${ep.securePort}` : null,
+    /** 手机 app 要钉的指纹。没建过身份时不显示 —— 免得在界面上凭空
+     *  造出一把还不存在的密钥 */
+    pin: hasIdentity() ? getIdentity().identity.pin : null,
     code: state.pending?.code ?? null,
     codeAt: state.pending?.createdAt ?? null,
     claimingName: state.pending?.claimed ? (state.pending.deviceName ?? '手机') : null,
@@ -72,7 +79,10 @@ const hooks = {
   setState,
   /** 有手机扫了码 / 有新留痕 → 推一次状态，界面跟着更新。
    *  **不在这里自动 approve** —— 那道人工确认是第 3 道锁的全部意义。 */
-  onClaim: pushStatus
+  onClaim: pushStatus,
+  /** 身份是**懒建**的：第一次起 TLS 口时才生成密钥。
+   *  没开过这个功能的人磁盘上不该有私钥（identityStore.ts 文件头） */
+  getIdentity
 }
 
 function startServer(): { ok: boolean; error?: string } {
@@ -146,6 +156,21 @@ export function registerPhoneHandlers(): void {
   })
 
   ipcMain.handle('phone:lanAddress', () => lanAddress())
+
+  /** 换一个 TLS 身份。**已配对的手机会全部失效** —— 指纹变了，
+   *  它们钉的是旧的那把。所以这个动作要在界面上说清后果、要用户确认。
+   *  用途：怀疑私钥泄漏，或者想把所有已授权的手机一次性断干净。 */
+  ipcMain.handle('phone:resetIdentity', () => {
+    resetIdentity()
+    // 证书换了，正在跑的 TLS 口还拿着旧的 —— 必须重起，否则「重置了但
+    // 手机还能用旧指纹连上」，那就等于没重置
+    if (state.enabled) {
+      stop()
+      startServer()
+    }
+    pushStatus()
+    return { ok: true }
+  })
 
   /** 清空留痕。**不自动清** —— 这份东西什么时候不要了由人决定。 */
   ipcMain.handle('phone:clearAudit', () => {

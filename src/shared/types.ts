@@ -931,8 +931,17 @@ export interface SkillCategorizeResult {
 export interface PhoneStatus {
   enabled: boolean
   running: boolean
-  /** 局域网地址，形如 http://192.168.1.20:53412；没起服务时为 null */
+  /** 局域网地址，形如 http://192.168.1.20:53412；没起服务时为 null。
+   *  **这是给浏览器的那个口，明文** —— 自签证书在手机浏览器上是一整页
+   *  红色警告，而浏览器又钉不了证书，强行上 TLS 只会训练人点「继续访问」 */
   url: string | null
+  /** 给 **app** 的那个口（TLS，指纹钉死）。
+   *  **null 表示 TLS 口没起来，而明文口是好的** —— 两件事要分开说，
+   *  糊成一个「没起来」的话用户不知道自己该用浏览器还是该修 */
+  secureUrl: string | null
+  /** app 要钉的公钥指纹（SPKI 的 SHA-256，base64url，43 字符）。
+   *  还没建过身份时为 null —— 不在界面上凭空造出一把不存在的密钥 */
+  pin: string | null
   /** 当前配对码；null = 没在配对 */
   code: string | null
   codeAt: number | null

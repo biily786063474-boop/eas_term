@@ -16,6 +16,7 @@ import { createHash } from 'crypto'
 import crypto from 'crypto'
 import fs from 'fs'
 import http from 'http'
+import https from 'https'
 import os from 'os'
 import path from 'path'
 
@@ -30,6 +31,7 @@ import {
 } from '../agentChat/session'
 import { readTermTail } from '../pty'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
+import type { DeviceIdentity } from './identityStore'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
 /** 单个文档最多传多少。超了截断并明说——不静默截，那会让人以为文件就这么长。 */
@@ -44,9 +46,21 @@ const QUERY_TIMEOUT_MS = 5000
  *  这两样缺一样都不该把它设成 false。 */
 const READ_ONLY = false
 
-let server: http.Server | null = null
+// **两个监听，不是一个。** 它们服务的对象和安全属性都不一样：
+//
+//   plain  明文 HTTP   给**浏览器**（同一个 Wi-Fi 下扫码即用，零安装）
+//   secure TLS         给 **app**（钉死本机证书指纹；隧道也接到这个口上）
+//
+// 为什么不把浏览器那条也升成 HTTPS：自签证书在手机浏览器上是一整页红色警告，
+// 而浏览器**没有办法钉证书**（HPKP 早已从各家移除，JS 也拿不到对方证书）——
+// 强行上 TLS 只会训练用户点「继续访问」，比明文更糟。
+// 浏览器那条就诚实地保持明文 + 界面上写清楚「局域网明文连接」。
+let plain: http.Server | null = null
+let secure: https.Server | null = null
 let boundHost = ''
 let boundPort = 0
+/** TLS 那个口的端口。0 = 没起来 */
+let securePort = 0
 let seq = 1
 const pending = new Map<number, (r: unknown) => void>()
 
@@ -57,6 +71,9 @@ interface Hooks {
   setState: (s: PhoneState) => void
   /** 有手机扫了码，去弹「允许吗」。返回不等人 —— 手机那边自己轮询 /pair/wait */
   onClaim: () => void
+  /** 这台电脑的 TLS 身份。**懒取** —— 只有真要起 HTTPS 时才会建密钥，
+   *  没开过这个功能的人磁盘上不该有私钥（identityStore.ts 文件头） */
+  getIdentity: () => DeviceIdentity
 }
 let hooks: Hooks | null = null
 
@@ -156,16 +173,6 @@ async function readFile(projectId: unknown, nodeId: unknown): Promise<Res> {
   }
 }
 
-/** 一个请求的完整处理。鉴权和白名单各只有一处，都在这里。 */
-async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
-  const url = (req.url ?? '/').split('?')[0]
-  const st = hooks?.getState()
-  if (!st) return { code: 503, body: { error: 'not-ready' } }
-
-  // ── 不需要 token 的三个 ──────────────────────────────────
-  // **带上版本号**：手机页拿它跟自己那份比，不一样就自己重载 ——
-  // 不然电脑升级之后手机上会一直跑旧 JS（见 resources/phone 的 watchVersion）。
-  // 这条不要 token：它只回一个版本号，而「页面是不是过期了」得在配对之前就能问
 /** 页面内容的短哈希。**判「新旧」要看内容，不能看版本号** ——
  *  开发中改了页面但版本号没变是常态，2026-08-30 实测就卡在这儿：
  *  用户手机上跑的是旧 JS，而版本号一模一样，自动重载不会触发。 */
@@ -189,6 +196,16 @@ function readPage(): string {
   return raw.replace(/__EAS_BUILD__/g, stamp)
 }
 
+/** 一个请求的完整处理。鉴权和白名单各只有一处，都在这里。 */
+async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
+  const url = (req.url ?? '/').split('?')[0]
+  const st = hooks?.getState()
+  if (!st) return { code: 503, body: { error: 'not-ready' } }
+
+  // ── 不需要 token 的三个 ──────────────────────────────────
+  // **带上版本号**：手机页拿它跟自己那份比，不一样就自己重载 ——
+  // 不然电脑升级之后手机上会一直跑旧 JS（见 resources/phone 的 watchVersion）。
+  // 这条不要 token：它只回一个版本号，而「页面是不是过期了」得在配对之前就能问
   if (req.method === 'GET' && url === '/health')
     return { code: 200, body: { ok: true, version: app.getVersion(), build: pageStamp() } }
 
@@ -432,87 +449,118 @@ function takeIssuedToken(): string | null {
 }
 
 export function isRunning(): boolean {
-  return !!server
+  return !!plain
 }
-export function endpoint(): { host: string; port: number } | null {
-  return server ? { host: boundHost, port: boundPort } : null
+
+/** 两个口的落点。**HTTPS 那个可能是 null** —— 起 TLS 失败不该连带把
+ *  明文那条也拖垮（浏览器扫码是今天就在用的路径，不能为新功能陪葬）。 */
+export function endpoint(): { host: string; port: number; securePort: number } | null {
+  return plain ? { host: boundHost, port: boundPort, securePort } : null
+}
+
+/** 一个请求怎么处理。**明文口和 TLS 口共用这一份** ——
+ *  两份实现迟早分叉，而分叉的那一半就是没人测到的那一半。 */
+function onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  const chunks: Buffer[] = []
+  let size = 0
+  req.on('data', (c: Buffer) => {
+    size += c.length
+    // 请求体上限：这条路上最大的输入就是配对码和几个 id，1MB 绰绰有余。
+    // 不设上限的话一个大 POST 就能把内存吃穿。
+    if (size > 1024 * 1024) req.destroy()
+    else chunks.push(c)
+  })
+  req.on('end', () => {
+    void handle(req, Buffer.concat(chunks).toString('utf8'))
+      .then((r) => {
+        const html = (r.body as { __html?: string })?.__html
+        if (typeof html === 'string') {
+          // **禁缓存**（2026-08-30 实测撞到）：不设这一条时手机浏览器会自己
+          // 决定缓存多久 —— 用户升级软件之后，手机上跑的还是上一版的 JS，
+          // 症状是「新功能全都没有」而页面看起来一切正常。
+          // 这个页面每次请求现读文件、体积也就 24KB，缓存它没有任何收益。
+          //
+          // 三条一起给：Cache-Control 是现代浏览器的判据，
+          // Pragma/Expires 是给老 WebView 兜底（手机端可能跑在任何壳里）。
+          res.writeHead(r.code, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0'
+          })
+          res.end(html)
+          return
+        }
+        // 接口返回同样不许缓存 —— 会话列表、对话内容都是随时在变的东西
+        res.writeHead(r.code, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store'
+        })
+        res.end(JSON.stringify(r.body))
+      })
+      .catch(() => {
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'internal' }))
+      })
+  })
 }
 
 /** 起服务。**绑局域网地址，不绑 0.0.0.0** —— 见文件头。 */
 export function start(h: Hooks, preferHost?: string): { ok: boolean; error?: string } {
-  if (server) return { ok: true }
+  if (plain) return { ok: true }
   hooks = h
   // 指定了就用指定的（前提是它真在候选里，不接受任意地址 —— 那等于允许绑 0.0.0.0）
   const host = preferHost && lanList().some((c) => c.address === preferHost) ? preferHost : lanAddress()
   if (!host) return { ok: false, error: '没有可用的局域网地址（没连 Wi-Fi？）' }
 
-  server = http.createServer((req, res) => {
-    const chunks: Buffer[] = []
-    let size = 0
-    req.on('data', (c: Buffer) => {
-      size += c.length
-      // 请求体上限：这条路上最大的输入就是配对码和几个 id，1MB 绰绰有余。
-      // 不设上限的话一个大 POST 就能把内存吃穿。
-      if (size > 1024 * 1024) req.destroy()
-      else chunks.push(c)
-    })
-    req.on('end', () => {
-      void handle(req, Buffer.concat(chunks).toString('utf8'))
-        .then((r) => {
-          const html = (r.body as { __html?: string })?.__html
-          if (typeof html === 'string') {
-            // **禁缓存**（2026-08-30 实测撞到）：不设这一条时手机浏览器会自己
-            // 决定缓存多久 —— 用户升级软件之后，手机上跑的还是上一版的 JS，
-            // 症状是「新功能全都没有」而页面看起来一切正常。
-            // 这个页面每次请求现读文件、体积也就 24KB，缓存它没有任何收益。
-            //
-            // 三条一起给：Cache-Control 是现代浏览器的判据，
-            // Pragma/Expires 是给老 WebView 兜底（手机端可能跑在任何壳里）。
-            res.writeHead(r.code, {
-              'Content-Type': 'text/html; charset=utf-8',
-              'Cache-Control': 'no-store, no-cache, must-revalidate',
-              Pragma: 'no-cache',
-              Expires: '0'
-            })
-            res.end(html)
-            return
-          }
-          // 接口返回同样不许缓存 —— 会话列表、对话内容都是随时在变的东西
-          res.writeHead(r.code, {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Cache-Control': 'no-store'
-          })
-          res.end(JSON.stringify(r.body))
-        })
-        .catch(() => {
-          res.writeHead(500, { 'Content-Type': 'application/json' })
-          res.end(JSON.stringify({ error: 'internal' }))
-        })
-    })
-  })
-
+  plain = http.createServer(onRequest)
   try {
     // 端口 0 = 让系统挑一个空闲的。固定端口没有好处：手机是扫码拿地址的，
     // 不需要人记住端口；固定反而更容易被同网段扫到。
-    server.listen(0, host, () => {
-      const addr = server?.address()
+    plain.listen(0, host, () => {
+      const addr = plain?.address()
       boundHost = host
       boundPort = typeof addr === 'object' && addr ? addr.port : 0
-      console.log(`[phone] listening on ${boundHost}:${boundPort}`)
+      console.log(`[phone] http  listening on ${boundHost}:${boundPort}`)
     })
   } catch (e) {
-    server = null
+    plain = null
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+
+  // ── TLS 那个口 ────────────────────────────────────────────────
+  // **起不来不算整体失败。** 明文那条是今天就在用的路径（浏览器扫码），
+  // 不能因为新功能出问题就把它一起拖下水。起不来就是「app 连不上，
+  // 浏览器照常」，而这件事在界面上看得见（securePort = 0）。
+  try {
+    const id = h.getIdentity()
+    secure = https.createServer({ key: id.identity.key, cert: id.identity.cert }, onRequest)
+    secure.listen(0, host, () => {
+      const addr = secure?.address()
+      securePort = typeof addr === 'object' && addr ? addr.port : 0
+      console.log(`[phone] https listening on ${host}:${securePort}`)
+    })
+    secure.on('error', (e) => {
+      console.error('[phone] TLS 口出错，app 将连不上（浏览器不受影响）', e)
+    })
+  } catch (e) {
+    secure = null
+    securePort = 0
+    console.error('[phone] 起 TLS 口失败，app 将连不上（浏览器不受影响）', e)
+  }
+
   return { ok: true }
 }
 
 /** 关服务。**同步关掉，不等退出** —— 用户点了开关就该立刻看不到那个端口。 */
 export function stop(): void {
-  server?.close()
-  server = null
+  plain?.close()
+  plain = null
+  secure?.close()
+  secure = null
   boundHost = ''
   boundPort = 0
+  securePort = 0
   issuedToken = null
   pending.clear()
 }
