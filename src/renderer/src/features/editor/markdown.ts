@@ -8,6 +8,7 @@
 //       行内的 代码·粗体·斜体·删除线·链接·图片。够读技术文档，不追求 CommonMark 全兼容。
 import { easfileUrl, isImagePath } from '../canvas/media'
 import { splitFrontmatter } from './frontmatter'
+import { createValueCache } from './valueCache'
 
 function esc(s: string): string {
   return s
@@ -101,7 +102,37 @@ const RULE = /^\s*([-*_])\s*\1\s*\1[\s\S]*$/
 const LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/
 const isBlank = (l: string): boolean => !l.trim()
 
+/**
+ * 渲染结果缓存。**按值缓存，不是按引用。**
+ *
+ * ── 为什么需要它（2026-08-30 实测）──────────────────────────────────
+ * 用户报「画布平移和放大卡」。3 秒平移采样里 **28% 落在这个文件**
+ *（inline 17.6% + renderMarkdown 7.5% + esc 3.0%）；加计数器量过：
+ * **3 秒调了 48895 次，合每帧 272 段** —— 平移画布把每个可见节点的正文
+ * 全重渲染了一遍。加缓存后中位帧 25ms → 16.4ms，掉帧率 24.3% → 1.9%。
+ *
+ * ── 为什么按值缓存是安全的 ────────────────────────────────────────
+ * MessageList 顶部有一条硬规矩：**不许加 React.memo、不许按 ExecItem/Turn
+ * 的引用做 useMemo 依赖** —— reduce.ts 里 ExecItem 是原地 mutate
+ *（running → ok/failed 不换对象引用），按引用比较会把「状态变了」判成「没变」。
+ *
+ * 这里不违反那条：键是**字符串本身**，字符串在 JS 里按值比较。
+ * 文本没变 → 结果必然没变（这个函数是纯的，输出只由 src 和 filePath 决定）；
+ * 文本变了 → 键就变了，自然重算。执行项的状态根本不在 turn.text 里。
+ *
+ * 缓存本体（上限、淘汰、为什么用两层 Map）在 valueCache.ts ——
+ * 那里零 import、能单测，而这个文件的依赖链引到了整个 store，`node --test` 加载不了。
+ *
+ * **上限 4000**：实测工作集是每帧 272 段，留足富余 ——
+ * 卡在工作集边缘的上限比没有缓存更糟（第一版设 300，命中率只有 1%）。
+ */
+const mdCache = createValueCache<string>(4000)
+
 export function renderMarkdown(src: string, filePath: string): string {
+  return mdCache.get(filePath, src, () => renderMarkdownUncached(src, filePath))
+}
+
+function renderMarkdownUncached(src: string, filePath: string): string {
   const baseDir = filePath.slice(0, filePath.lastIndexOf('/'))
   const lines = (splitFrontmatter(src)?.body ?? src).replace(/\r\n?/g, '\n').split('\n')
   const out: string[] = []
