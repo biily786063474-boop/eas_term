@@ -28,6 +28,28 @@ const hub = createHub({
   log: (m) => console.log(new Date().toISOString(), m)
 })
 
+// ── 证书续期要自己盯 ────────────────────────────────────────────────
+// certbot 每 60 天续一次，续完只会 reload nginx —— **这个进程手里还是旧的**。
+// 不管的话，续期两个月后电脑突然连不上来，而那时候没人会想到是证书。
+//
+// **不改 certbot 的定时任务，也不加 deploy-hook**（那是别人的东西，红线）：
+// 自己每小时看一眼文件的 mtime，变了就重读。
+let certMtime = fs.statSync(certPath).mtimeMs
+setInterval(
+  () => {
+    try {
+      const m = fs.statSync(certPath).mtimeMs
+      if (m === certMtime) return
+      certMtime = m
+      hub.setCert(fs.readFileSync(keyPath, 'utf8'), fs.readFileSync(certPath, 'utf8'))
+    } catch (e) {
+      // 读失败**不换**，继续用手里那张 —— 换成半张证书比用旧的糟得多
+      console.error('重读证书失败，继续用手里那张', e)
+    }
+  },
+  60 * 60 * 1000
+).unref()
+
 // **绑 0.0.0.0 是有意的** —— 这台机器的全部职责就是被公网连上。
 // 跟 app 里那个「绝不绑 0.0.0.0」的规矩不是一回事：那是别人的电脑，这是服务器
 hub.server.listen(port, '0.0.0.0', () => {

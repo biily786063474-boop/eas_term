@@ -78,11 +78,17 @@ export interface HubOptions {
 export interface Hub {
   server: net.Server
   stats: () => { agents: number; streams: number }
+  /** 换证书。**certbot 每 60 天续一次，续完这个进程手里还是旧的** ——
+   *  不换的话续期之后电脑连不上来（证书过期），而这件事要两个月后才发作。
+   *  certbot 的定时任务和 deploy-hook 是不能碰的，所以自己盯文件（见 main.ts）。 */
+  setCert: (key: string, cert: string) => void
   /** 测试用 */
   _agents: Map<string, Agent>
 }
 
 export function createHub({ key, cert, log = (): void => {} }: HubOptions = {}): Hub {
+  let tlsKey = key
+  let tlsCert = cert
   const agents = new Map<string, Agent>()
 
   function dropAgent(id: string, why: string): void {
@@ -270,8 +276,8 @@ export function createHub({ key, cert, log = (): void => {} }: HubOptions = {}):
       sock.unshift(head)
       if (head[0] === 0x16) {
         // TLS → 电脑来挂隧道
-        if (!key || !cert) return sock.destroy()
-        const t = new tls.TLSSocket(sock, { isServer: true, key, cert })
+        if (!tlsKey || !tlsCert) return sock.destroy()
+        const t = new tls.TLSSocket(sock, { isServer: true, key: tlsKey, cert: tlsCert })
         t.on('error', () => t.destroy())
         handleAgentSide(t)
       } else if (head[0] === 0x43 /* 'C' */) {
@@ -286,6 +292,11 @@ export function createHub({ key, cert, log = (): void => {} }: HubOptions = {}):
 
   return {
     server,
+    setCert: (k: string, c: string): void => {
+      tlsKey = k
+      tlsCert = c
+      log('证书已换新')
+    },
     /** 运维指标。**只有数量，没有内容** —— 你不该有能力回答
      *  「某某用户昨天在干什么」，而这不靠自律，是手里没有那些数据 */
     stats: () => ({ agents: agents.size, streams: [...agents.values()].reduce((n, a) => n + a.streams.size, 0) }),

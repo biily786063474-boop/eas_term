@@ -39,10 +39,17 @@ let state: PhoneState = emptyState()
 
 // ── 隧道（在外面用）────────────────────────────────────────────────
 /** 内置的隧道服务器。用户没自定义时用它。
+ *
+ *  **为什么是 eas.biily.top 而不是 tunnel.eas.biily.top**（2026-08-30 部署时定的）：
+ *  用现成的域名就能复用它那张真证书 —— 零 DNS 记录、零新证书、零 certbot 配置。
+ *  代价是以后想把隧道搬到独立机器时，这个端点得继续留着或者推一次 app 更新。
+ *  分发之前改成独立子域更好，那需要先加一条 DNS 记录。
+ *
  *  **端口不是 443**：39.105 上的 443 被宝塔管的 nginx 占着 5 个生产站，
  *  抢它要改所有站点的 listen —— 那是「动别人的」。8443 在家宽和 4G 上
- *  都不受限；少数公司/酒店网络会拦，那时候再加一条端点就行（app 是依次试的）。 */
-const DEFAULT_TUNNEL = { host: 'tunnel.eas.biily.top', port: 8443 }
+ *  都不受限；少数公司/酒店网络会拦，那时候再加一条端点就行（app 是依次试的）。
+ *  **8443 需要在阿里云安全组里放行**，主机防火墙是关着的。 */
+const DEFAULT_TUNNEL = { host: 'eas.biily.top', port: 8443 }
 
 let tunnel: TunnelHandle | null = null
 let tunnelState: TunnelState = 'off'
