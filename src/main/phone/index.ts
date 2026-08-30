@@ -15,13 +15,16 @@ import {
   emptyState,
   revoke,
   setEnabled,
+  setTunnel,
   type Device,
-  type PhoneState
+  type PhoneState,
+  type TunnelPrefs
 } from './pairing'
 import type { PhoneStatus } from '../../shared/types'
 import * as audit from './audit'
 import { getIdentity, hasIdentity, reset as resetIdentity } from './identityStore'
 import { load, save } from './store'
+import { startTunnel, type TunnelHandle, type TunnelState } from './tunnelClient'
 import {
   endpoint,
   isRunning,
@@ -33,6 +36,53 @@ import {
 } from './server'
 
 let state: PhoneState = emptyState()
+
+// ── 隧道（在外面用）────────────────────────────────────────────────
+/** 内置的隧道服务器。用户没自定义时用它。
+ *  **端口不是 443**：39.105 上的 443 被宝塔管的 nginx 占着 5 个生产站，
+ *  抢它要改所有站点的 listen —— 那是「动别人的」。8443 在家宽和 4G 上
+ *  都不受限；少数公司/酒店网络会拦，那时候再加一条端点就行（app 是依次试的）。 */
+const DEFAULT_TUNNEL = { host: 'tunnel.eas.biily.top', port: 8443 }
+
+let tunnel: TunnelHandle | null = null
+let tunnelState: TunnelState = 'off'
+let tunnelDetail: string | undefined
+
+/** 隧道该不该跑。**两个开关都得开** —— 总开关关着时本地服务都没起，
+ *  没有东西可以被隧道过去；隧道开关关着是用户明确不想在外面用。 */
+function syncTunnel(): void {
+  const ep = endpoint()
+  const want = state.enabled && state.tunnel.enabled && !!ep && ep.securePort > 0
+  if (!want) {
+    if (tunnel) {
+      tunnel.stop()
+      tunnel = null
+    }
+    if (tunnelState !== 'off') {
+      tunnelState = 'off'
+      tunnelDetail = undefined
+      pushStatus()
+    }
+    return
+  }
+  if (tunnel) return // 已经在跑
+  const id = getIdentity()
+  tunnel = startTunnel({
+    host: state.tunnel.host || DEFAULT_TUNNEL.host,
+    port: state.tunnel.port || DEFAULT_TUNNEL.port,
+    agentKey: id.agentKey,
+    tunnelId: id.tunnelId,
+    // **接到 TLS 那个口，不是明文口** —— 隧道里跑的必须是手机到本机的
+    // 那条端到端 TLS。接到明文口的话，隧道运营方就能读到内容了
+    localHost: ep.host,
+    localPort: ep.securePort,
+    onState: (s, d) => {
+      tunnelState = s
+      tunnelDetail = d
+      pushStatus()
+    }
+  })
+}
 
 const getState = (): PhoneState => state
 /** 改状态的唯一入口。**落盘和推给界面绑在一起** ——
@@ -55,6 +105,15 @@ function status(): PhoneStatus {
     /** 手机 app 要钉的指纹。没建过身份时不显示 —— 免得在界面上凭空
      *  造出一把还不存在的密钥 */
     pin: hasIdentity() ? getIdentity().identity.pin : null,
+    tunnel: {
+      enabled: state.tunnel.enabled,
+      state: tunnelState,
+      // **把服务器的原话带出来**（「凭证对不上」/「服务器满了」/「连不上」）——
+      // 用户的下一步完全不同，糊成一个「连不上」等于什么都没说
+      detail: tunnelDetail ?? null,
+      host: state.tunnel.host || DEFAULT_TUNNEL.host,
+      port: state.tunnel.port || DEFAULT_TUNNEL.port
+    },
     code: state.pending?.code ?? null,
     codeAt: state.pending?.createdAt ?? null,
     claimingName: state.pending?.claimed ? (state.pending.deviceName ?? '手机') : null,
@@ -87,6 +146,9 @@ const hooks = {
 
 function startServer(): { ok: boolean; error?: string } {
   const r = start(hooks)
+  // **等一拍再拉隧道。** listen 是异步的，端口号要等回调才有 ——
+  // 立刻问 endpoint() 拿到的 securePort 是 0，隧道会被判成「不该跑」
+  setTimeout(syncTunnel, 100)
   pushStatus()
   return r
 }
@@ -107,6 +169,7 @@ export function registerPhoneHandlers(): void {
     setState(setEnabled(state, on))
     if (on) return startServer()
     stop()
+    syncTunnel() // 总开关关了，隧道也得跟着收 —— 不收的话外面还连得进来
     pushStatus()
     return { ok: true }
   })
@@ -157,6 +220,18 @@ export function registerPhoneHandlers(): void {
 
   ipcMain.handle('phone:lanAddress', () => lanAddress())
 
+  /** 隧道开关 / 换隧道服务器。 */
+  ipcMain.handle('phone:setTunnel', (_e, t: Partial<TunnelPrefs>) => {
+    // **合并而不是替换。** 只传 {enabled:false} 来关隧道时，
+    // 替换会把用户自定义的服务器地址一起抹掉 —— 再打开就悄悄连回默认那台了
+    setState(setTunnel(state, { ...state.tunnel, ...t }))
+    // 换服务器要重连 —— 光改设置不重连的话，界面显示新地址而实际还连着旧的
+    tunnel?.stop()
+    tunnel = null
+    syncTunnel()
+    return { ok: true }
+  })
+
   /** 换一个 TLS 身份。**已配对的手机会全部失效** —— 指纹变了，
    *  它们钉的是旧的那把。所以这个动作要在界面上说清后果、要用户确认。
    *  用途：怀疑私钥泄漏，或者想把所有已授权的手机一次性断干净。 */
@@ -181,5 +256,6 @@ export function registerPhoneHandlers(): void {
 }
 
 app.on('will-quit', () => {
+  tunnel?.stop()
   stop()
 })

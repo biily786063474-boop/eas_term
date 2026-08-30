@@ -13,6 +13,7 @@ import {
   pairExpired,
   revoke,
   setEnabled,
+  setTunnel,
   touch,
   WRITE_ACTIONS,
   type PhoneState
@@ -148,7 +149,8 @@ test('关开关清掉待确认的配对，但**不清已配对的设备**', () =
   const s: PhoneState = {
     enabled: true,
     devices: [{ id: 'd1', name: 'A', tokenHash: 'h1', pairedAt: 0, lastSeenAt: 0 }],
-    pending: { code: 'X', createdAt: NOW, claimed: false }
+    pending: { code: 'X', createdAt: NOW, claimed: false },
+    tunnel: { enabled: false }
   }
   const off = setEnabled(s, false)
   assert.equal(off.enabled, false)
@@ -184,4 +186,17 @@ test('**send 是写操作** —— 只读档里必须被拒', () => {
 test('send 在动作白名单里', () => {
   assert.ok((ACTIONS as readonly string[]).includes('send'))
   assert.ok(WRITE_ACTIONS.includes('send'))
+})
+
+// ── 隧道设置（在外面用）─────────────────────────────────────────
+test('**隧道默认关** —— 它把电脑挂到公网可达的位置，不能靠字段缺失就打开', () => {
+  assert.equal(emptyState().tunnel.enabled, false)
+})
+
+test('隧道开关跟总开关是两件事', () => {
+  const s = setTunnel(emptyState(), { enabled: true })
+  assert.equal(s.tunnel.enabled, true)
+  assert.equal(s.enabled, false, '开隧道不该顺手把总开关也打开')
+  // 关总开关不该把隧道的设置抹掉 —— 那是用户的偏好，不是运行状态
+  assert.equal(setEnabled(s, false).tunnel.enabled, true)
 })

@@ -424,6 +424,29 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     return { code: 200, body: { data: readTranscript(sid, 40), busy: isSessionBusy(sid) } }
   }
 
+  // app 问「以后怎么找到你」。**已认证之后才给** —— 见 pairing.ts 那段注释
+  if (action === 'endpoints') {
+    const id = hooks?.getIdentity()
+    if (!id) return { code: 503, body: { error: 'not-ready' } }
+    return {
+      code: 200,
+      body: {
+        data: {
+          // 在外面：隧道
+          tunnelId: id.tunnelId,
+          tunnelHost: st.tunnel.host || null,
+          tunnelPort: st.tunnel.port || null,
+          tunnelEnabled: st.tunnel.enabled,
+          // 同一个 Wi-Fi：**把全部候选都给它，让它自己并发去试**。
+          // 电脑没有办法知道手机能路由到哪个地址 —— 只有手机知道
+          //（lan.ts 文件头那段「设计转向」）
+          lan: lanList(),
+          securePort: boundPort ? securePort : 0
+        }
+      }
+    }
+  }
+
   if (action === 'file') return readFile(args.projectId, args.nodeId)
 
   try {

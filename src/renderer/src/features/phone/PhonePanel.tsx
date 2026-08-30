@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 
 import type { PhoneStatus } from '../../../../shared/types'
 import { CheckIcon, TrashIcon } from '../../ui/Icons'
+import { pairUrl } from './pairPayload'
 import { encodeQR } from './qr'
 
 /** 配对码的有效期，跟主进程的 PAIR_TTL_MS 对齐。
@@ -18,9 +19,19 @@ import { encodeQR } from './qr'
  *  就算这个数字漂了，也只是倒计时不准，不会让一张过期的码被认下来。 */
 const TTL_MS = 60_000
 
-function Qr({ text }: { text: string }): JSX.Element | null {
+function Qr({ text }: { text: string }): JSX.Element {
   const m = encodeQR(text)
-  if (!m) return null
+  // **编不出来要说出来。** 原来这里 return null —— 界面上就是一片空白，
+  // 而空白看起来跟「还没生成」一模一样，不看代码根本查不出发生了什么。
+  // 载荷设计上已经保证装得下（见 pairPayload.ts 的测试），这里是最后一道
+  if (!m)
+    return (
+      <div className="ph-qr-fail">
+        二维码编不出来（内容 {new TextEncoder().encode(text).length} 字节，超出上限）
+        <br />
+        用下面那个地址在手机浏览器里打开
+      </div>
+    )
   const n = m.length
   const q = 2 // 静区（quiet zone）：规范要求 4 个模块，这里给 2 —— 白底卡片本身还有 padding
   const size = n + q * 2
@@ -147,9 +158,18 @@ export function PhonePanel(): JSX.Element {
           {/* ── 配对区 ─────────────────────────────────────────── */}
           {!st.claimingName && (
             <div className="ph-pair">
-              {st.code && !expired ? (
+              {/* **url 也要判。** 原来只判了 code，url 为 null 时模板字符串
+                  会编出一个 `null/?c=ABC123` 的二维码 —— 扫出来是个打不开的地址 */}
+              {st.code && st.url && !expired ? (
                 <>
-                  <Qr text={`${st.url}/?c=${st.code}`} />
+                  <Qr
+                    text={pairUrl({
+                      url: st.url,
+                      code: st.code,
+                      pin: st.pin,
+                      secureUrl: st.secureUrl
+                    })}
+                  />
                   <div className="ph-pair-r">
                     <div className="ph-pair-t">用手机相机扫它</div>
                     <div className="ph-note">

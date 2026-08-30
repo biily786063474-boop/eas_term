@@ -40,15 +40,38 @@ export interface Device {
   lastSeenAt: number
 }
 
+/** 隧道（在外面用）的设置。**跟总开关分开** ——
+ *  「在家能用」和「在外面能用」是两件事，风险也不一样：
+ *  局域网那条最坏是同一个 Wi-Fi 下的人；隧道那条把你的电脑挂到了公网可达的位置
+ *（虽然进门仍要指纹 + token）。所以它有自己的开关，而且**默认关**。 */
+export interface TunnelPrefs {
+  enabled: boolean
+  /** 自定义隧道服务器。空 = 用内置的那个。
+   *  留这个口子是给不愿意用公共隧道、自己架一台的人 —— 不是默认路径 */
+  host?: string
+  port?: number
+}
+
 export interface PhoneState {
   /** 功能总开关。关着时服务器根本不监听 */
   enabled: boolean
   devices: Device[]
   /** 当前展示的配对码；null = 没在配对 */
   pending: PendingPair | null
+  tunnel: TunnelPrefs
 }
 
-export const emptyState = (): PhoneState => ({ enabled: false, devices: [], pending: null })
+export const emptyState = (): PhoneState => ({
+  enabled: false,
+  devices: [],
+  pending: null,
+  tunnel: { enabled: false }
+})
+
+/** 隧道开关。**总开关关着时它没有意义** —— 服务器都没起，没有东西可以被隧道过去 */
+export function setTunnel(s: PhoneState, t: TunnelPrefs): PhoneState {
+  return { ...s, tunnel: t }
+}
 
 /** 配对码过期了吗 */
 export function pairExpired(p: PendingPair, now: number): boolean {
@@ -150,7 +173,14 @@ export const ACTIONS = [
   'send',
   /** 读一个会话最近的对话。**是读操作** —— 只读档里也给，
    *  不然「只读」就成了「只能看状态、看不到内容」，跟看文件那条不一致 */
-  'transcript'
+  'transcript',
+  /** app 配对之后来问「以后怎么找到你」：隧道门牌号 + 全部局域网候选。
+   *
+   *  **故意不放进二维码。** 二维码是唯一的带外通道（从屏幕直接进摄像头，
+   *  中间人碰不到），位置很贵，只该留给真正需要这个性质的东西 ——
+   *  也就是指纹。门牌号和地址不是秘密，从**已认证的 TLS 连接**上取，
+   *  安全性一样，还省下了带外通道的空间（编码器只到 121 字节）。 */
+  'endpoints'
 ] as const
 export type PhoneAction = (typeof ACTIONS)[number]
 

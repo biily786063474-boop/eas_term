@@ -308,6 +308,9 @@ const api = {
     /** 换一把新的 TLS 密钥。**已配对的手机会全部失效** —— 它们钉的是旧指纹。
      *  界面上要先说清这个后果再调 */
     resetIdentity: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('phone:resetIdentity'),
+    /** 隧道开关 / 换隧道服务器。改了会立刻重连 */
+    setTunnel: (t: { enabled?: boolean; host?: string; port?: number }): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('phone:setTunnel', t),
     /** 状态变了主进程会推一次（开关、配对、设备增删都会触发） */
     onStatus: (cb: (s: PhoneStatus) => void): (() => void) => {
       const h = (_e: unknown, s: PhoneStatus): void => cb(s)

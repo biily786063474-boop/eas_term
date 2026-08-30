@@ -2742,3 +2742,16 @@ body.dragging-row * {
   color: var(--fg-dim);
   line-height: 1.6;
 }
+
+/* 二维码编不出来时的提示。**宁可难看也不要空白** ——
+   空白看起来跟「还没生成」一模一样，不看代码查不出发生了什么 */
+.ph-qr-fail {
+  width: 160px;
+  padding: 16px 12px;
+  border: 1px dashed var(--line, #555);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--warn, #d88);
+  text-align: center;
+}

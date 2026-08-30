@@ -37,10 +37,18 @@ export function load(): PhoneState {
     const raw: unknown = JSON.parse(fs.readFileSync(storeFile(), 'utf8'))
     if (!raw || typeof raw !== 'object') return emptyState()
     const o = raw as Record<string, unknown>
+    const t = (o.tunnel ?? {}) as Record<string, unknown>
     return {
       enabled: o.enabled === true,
       devices: Array.isArray(o.devices) ? o.devices.filter(validDevice) : [],
-      pending: null
+      pending: null,
+      tunnel: {
+        // **默认关。** 盘上没有这一项（老版本升上来）就是关着，
+        // 不能因为「字段缺失」把一个把电脑挂到公网可达位置的功能默认打开
+        enabled: t.enabled === true,
+        host: typeof t.host === 'string' && t.host ? t.host : undefined,
+        port: typeof t.port === 'number' && t.port > 0 && t.port < 65536 ? t.port : undefined
+      }
     }
   } catch {
     // 文件不存在 / 坏了 → 当作没开过。**不在这里创建文件**
@@ -53,7 +61,7 @@ export function save(s: PhoneState): void {
   try {
     fs.writeFileSync(
       storeFile(),
-      JSON.stringify({ enabled: s.enabled, devices: s.devices }, null, 2),
+      JSON.stringify({ enabled: s.enabled, devices: s.devices, tunnel: s.tunnel }, null, 2),
       { mode: 0o600 }
     )
   } catch (e) {

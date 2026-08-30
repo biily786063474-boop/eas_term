@@ -942,6 +942,17 @@ export interface PhoneStatus {
   /** app 要钉的公钥指纹（SPKI 的 SHA-256，base64url，43 字符）。
    *  还没建过身份时为 null —— 不在界面上凭空造出一把不存在的密钥 */
   pin: string | null
+  /** 隧道（在外面用）。**跟总开关是两件事**，默认关 */
+  tunnel: {
+    enabled: boolean
+    /** off=没开 / connecting=在连 / online=挂上了 / error=有明确原因连不上 */
+    state: 'off' | 'connecting' | 'online' | 'error'
+    /** 出错时服务器的原话。**「凭证对不上」和「服务器满了」用户的下一步
+     *  完全不同**，糊成一个「连不上」等于什么都没说 */
+    detail: string | null
+    host: string
+    port: number
+  }
   /** 当前配对码；null = 没在配对 */
   code: string | null
   codeAt: number | null
