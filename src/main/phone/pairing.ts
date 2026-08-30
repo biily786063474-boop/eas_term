@@ -140,7 +140,7 @@ export function setEnabled(s: PhoneState, enabled: boolean): PhoneState {
 }
 
 /** 白名单：手机能请求的动作。不在这张表上的一律拒，不进任何业务逻辑。 */
-export const ACTIONS = ['projects', 'sessions', 'files', 'file', 'newSession', 'send'] as const
+export const ACTIONS = ['projects', 'status', 'sessions', 'files', 'file', 'newSession', 'send'] as const
 export type PhoneAction = (typeof ACTIONS)[number]
 
 /** 写操作 —— 这几个会**改变电脑上的状态**，每一次都要留痕（见 audit.ts）。

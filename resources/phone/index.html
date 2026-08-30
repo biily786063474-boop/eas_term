@@ -99,7 +99,7 @@ button.big:disabled{opacity:.45}
 var TK = 'eas.phone.token'
 var token = null
 try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */ }
-var view = 'projects', proj = null, projName = ''
+var view = 'live', proj = null, projName = ''
 
 var $ = function (id) { return document.getElementById(id) }
 var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }
@@ -121,6 +121,7 @@ function forgetToken () { token = null; try { localStorage.removeItem(TK) } catc
 
 // ── 图标 ────────────────────────────────────────────────────
 var ICON = {
+  live: 'M12 2a10 10 0 1 0 10 10M12 6v6l4 2',
   projects: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   sessions: 'M21 12a8 8 0 0 1-8 8H4l2.3-2.3A8 8 0 1 1 21 12z',
   files: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5'
@@ -204,12 +205,12 @@ function shell (title, sub, backTo) {
   $('back').onclick = backTo ? function () { view = backTo; render() } : null
   $('conn').hidden = false
   var n = $('nav'); n.hidden = false; n.innerHTML = ''
-  ;[['projects', '项目'], ['sessions', '会话'], ['files', '文件']].forEach(function (t) {
+  ;[['live', '动态'], ['projects', '项目'], ['sessions', '会话'], ['files', '文件']].forEach(function (t) {
     var b = el('button', view === t[0] ? 'on' : '')
     b.appendChild(svg(ICON[t[0]])); b.appendChild(el('span', null, t[1]))
     b.onclick = function () {
       // 会话和文件都要先选项目 —— 没选就退回项目列表，不给一个空页
-      if (t[0] !== 'projects' && !proj) { view = 'projects' } else { view = t[0] }
+      if ((t[0] === 'sessions' || t[0] === 'files') && !proj) { view = 'projects' } else { view = t[0] }
       render()
     }
     n.appendChild(b)
@@ -224,6 +225,84 @@ function fail (b, e) {
   d.appendChild(document.createTextNode(
     e === 'unauthorized' ? '请重新配对' : '确认电脑开着 Eas-Term，而且手机和它在同一个 Wi-Fi'))
   b.appendChild(d)
+}
+
+/** 动态：一屏回答「现在怎么样了」。
+ *
+ *  三段的顺序按**「要不要你现在动手」**排，不按时间：
+ *  等你处理 → 正在跑 → 刚完成。
+ *  「等你」排最前是因为它是唯一会**卡住**的状态 —— agent 停在那儿等一句话。
+ *
+ *  quiet=true 时不显示「正在读…」：自动刷新每 5 秒来一次，
+ *  每次都闪一下「正在读」会让人以为它在反复出错。 */
+function renderLive (quiet) {
+  var b = shell('动态', '', null)
+  if (!quiet) loading(b)
+  call('status').then(function (r) {
+    b.innerHTML = ''
+    var d = r.data || { waiting: [], running: [], finished: [] }
+    var w = d.waiting.length, g = d.running.length
+    $('h2').textContent = w || g
+      ? (w ? w + ' 个等你处理' : '') + (w && g ? ' · ' : '') + (g ? g + ' 个在跑' : '')
+      : '现在没有在跑的'
+
+    if (w) {
+      b.appendChild(el('div', 'grp', '等你处理'))
+      d.waiting.forEach(function (x) { b.appendChild(liveCard(x, 'wait')) })
+    }
+    if (g) {
+      b.appendChild(el('div', 'grp', '正在跑'))
+      d.running.forEach(function (x) { b.appendChild(liveCard(x, 'on')) })
+    }
+    if (!w && !g) {
+      var e = el('div', 'empty')
+      e.appendChild(el('b', null, '都停下了'))
+      e.appendChild(document.createTextNode('没有正在跑的会话，也没有等你处理的'))
+      b.appendChild(e)
+    }
+    if (d.finished.length) {
+      b.appendChild(el('div', 'grp', '刚完成'))
+      d.finished.forEach(function (f) {
+        var c = el('div', 'card flat')
+        var row = el('div', 'row')
+        row.appendChild(el('span', 'dot off'))
+        row.appendChild(el('span', 'nm', f.prompt))
+        row.appendChild(el('span', 'chip g', ago(f.endAt)))
+        c.appendChild(row)
+        c.appendChild(el('div', 'sub', f.projectName + ' · 用了 ' + dur(f.durationMs)))
+        b.appendChild(c)
+      })
+    }
+    startPoll(function () { renderLive(true) })
+  }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+function liveCard (x, state) {
+  var c = el('div', 'card')
+  var row = el('div', 'row')
+  row.appendChild(el('span', 'dot ' + state))
+  row.appendChild(el('span', 'nm', x.title))
+  row.appendChild(el('span', 'chip g', x.kind === 'agent' ? '对话' : '终端'))
+  c.appendChild(row)
+  c.appendChild(el('div', 'sub', x.projectName))
+  // 点它跳到那个项目的会话列表 —— 「谁在跑」看完自然想看「它在干嘛」
+  c.onclick = function () { proj = x.projectId; projName = x.projectName; view = 'sessions'; render() }
+  return c
+}
+
+/** 「3 分钟前」。**到分钟就够** —— 手机上问的是「刚才还是很久以前」 */
+function ago (t) {
+  var s = Math.max(0, Math.floor((Date.now() - t) / 1000))
+  if (s < 60) return '刚刚'
+  if (s < 3600) return Math.floor(s / 60) + ' 分钟前'
+  if (s < 86400) return Math.floor(s / 3600) + ' 小时前'
+  return Math.floor(s / 86400) + ' 天前'
+}
+function dur (ms) {
+  var m = Math.round(ms / 60000)
+  if (m < 1) return Math.max(1, Math.round(ms / 1000)) + ' 秒'
+  if (m < 60) return m + ' 分钟'
+  return Math.floor(m / 60) + ' 小时' + (m % 60 ? (m % 60) + ' 分' : '')
 }
 
 function renderProjects () {
@@ -355,11 +434,32 @@ function openFile (f) {
 }
 
 function render () {
+  stopPoll()
   if (!token) { renderPair(); return }
   if (view === 'sessions' && proj) renderSessions()
   else if (view === 'files' && proj) renderFiles()
-  else { view = 'projects'; renderProjects() }
+  else if (view === 'projects') renderProjects()
+  else { view = 'live'; renderLive() }
 }
+
+// ── 前台自动刷新 ──────────────────────────────────────────────
+// **只在动态页、只在页面可见时轮询。** 手机上「跑完了没」是要盯着看的，
+// 但也不能在你切走之后还在后台打电脑 —— visibilitychange 一走就停。
+//
+// 真正的推送通知（切出去也能响）需要 service worker + 推送服务端，
+// 那是隧道那一步之后的事。**现在不假装有** —— 这里只是前台刷新。
+var pollTimer = null
+function stopPoll () { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+function startPoll (fn) {
+  stopPoll()
+  pollTimer = setInterval(function () {
+    if (document.visibilityState === 'visible' && view === 'live') fn()
+  }, 5000)
+}
+document.addEventListener('visibilitychange', function () {
+  // 切回来立刻刷一次，不用等下一个 5 秒
+  if (document.visibilityState === 'visible' && view === 'live' && token) renderLive(true)
+})
 
 // 连接状态那枚胶囊。第一步只有局域网，**如实写「明文」** ——
 // 不能让人以为已经加密了（TLS 是第三步隧道的事）

@@ -9,32 +9,55 @@
 // 这条路上一次都不会被读到。不是「记得别传」，是根本没有能传的东西。
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
-import { collectFiles, collectProjects, collectSessions, resolveFile } from './collect'
+import type { LeafInfo } from './collect'
+import { collectFiles, collectProjects, collectSessions, collectStatus, resolveFile } from './collect'
 
-/** leafId → 那个终端/对话所在标签页的标题。跟甘特图 titleByLeaf 同一个信源
- *  （tab.title 是 shell OSC 写的，agent 干活时会同步写入当前任务）。 */
-function titleByLeaf(): Map<string, string> {
-  const m = new Map<string, string>()
+/**
+ * leafId → 那个 leaf 的种类 / 会话 id / 标题。
+ *
+ * **这张表是手机能不能看见桌面会话的关键。** 画布上正常开的终端和 AI 对话
+ * 都只有 leafId、没有 pane（节点引用的是分屏那边的共享 leaf），
+ * 所以种类和会话 id 只能从这里查 —— 本机实测 21 个这种节点对 3 个自带 pane 的。
+ *
+ * 标题跟甘特图用同一个信源（tab.title 是 shell OSC 写的，
+ * agent 干活时会同步写入当前任务，比另起一套命名新鲜）。
+ */
+function leafMap(): Map<string, LeafInfo> {
+  const m = new Map<string, LeafInfo>()
   for (const tab of useStore.getState().tabs) {
     for (const leaf of collectLeaves(tab.root)) {
-      if (leaf.pane.kind === 'terminal' || leaf.pane.kind === 'agent') m.set(leaf.id, tab.title)
+      const p = leaf.pane
+      if (p.kind === 'terminal') m.set(leaf.id, { kind: 'terminal', sessionId: p.ptyId || null, title: tab.title })
+      else if (p.kind === 'agent') m.set(leaf.id, { kind: 'agent', sessionId: p.sessionId || null, title: tab.title })
     }
   }
   return m
 }
 
-function answer(action: string, args: Record<string, unknown>): unknown {
+async function answer(action: string, args: Record<string, unknown>): Promise<unknown> {
   const s = useStore.getState()
   const frames = s.canvas.frames
   const projectId = typeof args.projectId === 'string' ? args.projectId : ''
 
   switch (action) {
     case 'projects':
-      return collectProjects(frames, s.projects, s.runningPtys, s.attentionPtys)
+      return collectProjects(frames, s.projects, leafMap(), s.runningPtys, s.attentionPtys)
     case 'sessions':
-      return collectSessions(frames, projectId, titleByLeaf(), s.runningPtys, s.attentionPtys)
+      return collectSessions(frames, projectId, leafMap(), s.runningPtys, s.attentionPtys)
     case 'files':
       return collectFiles(frames, projectId)
+    // 动态：跨项目的「现在怎么样了」。**「刚完成」直接读甘特图的记录** ——
+    // 那份数据本来就在记「你发出去的话 → agent 干完」，不另造一套
+    case 'status':
+      return collectStatus(
+        frames,
+        s.projects,
+        leafMap(),
+        s.runningPtys,
+        s.attentionPtys,
+        await window.api.gantt.list().catch(() => []),
+        Date.now()
+      )
     // 'resolve' 和 'createSession' 都**不是手机能请求的动作**（白名单里没有它们）——
     // 它们是主进程内部问的一步。手机那边发的是 'file' / 'newSession'，
     // 而 newSession 还必须先过电脑上的人工确认才会走到这里。
@@ -80,14 +103,13 @@ export function bindPhoneProvider(): void {
   if (bound) return
   bound = true
   window.api.phone.onQuery(({ id, action, args }) => {
-    let data: unknown = null
-    try {
-      data = answer(action, args ?? {})
-    } catch (e) {
-      // 抛到主进程那边只会变成一个超时（它在等 reply），
-      // 那样用户看到「电脑正忙」而真实原因埋在这里。宁可回 null + 打日志。
-      console.error('[phone] provider 出错', action, e)
-    }
-    window.api.phone.reply(id, data)
+    // **异步了**（status 要读甘特图），但仍然一定要 reply ——
+    // 不 reply 主进程会一直等到超时，用户看到「电脑正忙」而真实原因埋在这里
+    void answer(action, args ?? {})
+      .catch((e) => {
+        console.error('[phone] provider 出错', action, e)
+        return null
+      })
+      .then((data) => window.api.phone.reply(id, data))
   })
 }

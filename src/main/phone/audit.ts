@@ -99,6 +99,10 @@ export function describe(action: string, args: Record<string, unknown>): string 
   switch (action) {
     case 'projects':
       return '看了项目列表'
+    case 'status':
+      // **不记**：动态页每几秒轮询一次，记了会把日志淹掉，
+      // 而「他看了一眼有没有跑完」也不是事后要复核的东西
+      return ''
     case 'sessions':
       return `看了项目 ${p} 的会话列表`
     case 'files':
