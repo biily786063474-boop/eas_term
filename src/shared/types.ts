@@ -953,3 +953,36 @@ export interface PhoneStatus {
     outcome?: 'allowed' | 'denied' | 'expired'
   }[]
 }
+
+// ---------- CLI 安装 / 登录（分发侧引导） ----------
+
+export interface CliAuthStatus {
+  loggedIn: boolean
+  /** 用什么方式登的。拿不到就 undefined，不编 */
+  method?: string
+  account?: string
+}
+
+export interface CliAuthState {
+  cli: 'claude' | 'codex'
+  /** 命令在不在。**和「登没登录」是两件事** */
+  installed: boolean
+  /** **null = 读不到，不是「没登录」** —— 两者界面上说的话完全不同：
+   *  没登录要引导登录；读不到说明我们跟 CLI 脱节了，推人去重登只会白走一趟 */
+  status: CliAuthStatus | null
+  error?: string
+}
+
+export interface LoginState {
+  cli: 'claude' | 'codex'
+  phase: 'starting' | 'waiting' | 'submitting' | 'done' | 'failed' | 'canceled'
+  prompt?: {
+    /** 要用户打开的网址。**界面上给「点我去登录」按钮 + 右键复制，不自动跳** */
+    url?: string
+    /** 设备码（codex 走 --device-auth 时有；claude 没有） */
+    code?: string
+    /** CLI 在等我们把授权码写回 stdin（claude 是这样） */
+    needsCode?: boolean
+  }
+  error?: string
+}

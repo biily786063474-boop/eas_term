@@ -4,6 +4,7 @@ import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
 import { registerBoardHandlers } from './board'
 import { registerGanttHandlers } from './gantt'
+import { registerCliAuthHandlers } from './cliAuth'
 import { registerPhoneHandlers } from './phone'
 import { registerTodoHandlers } from './todos'
 import { registerProjectHandlers } from './projects'
@@ -357,6 +358,8 @@ app.whenReady().then(() => {
   registerBoardHandlers()
   registerGanttHandlers()
   // 手机端：**默认关**，enabled=false 时连端口都不开（见 phone/index.ts 文件头）
+  // CLI 的安装/登录状态。**不起任何进程**，只在被问到时才 spawn 一次查询
+  registerCliAuthHandlers()
   registerPhoneHandlers()
   registerTodoHandlers()
   registerFsHandlers()

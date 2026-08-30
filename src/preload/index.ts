@@ -52,7 +52,7 @@ import type {
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
   PluginInfo
 } from '../shared/types'
-import type { PhoneStatus } from '../shared/types'
+import type { CliAuthState, LoginState, PhoneStatus } from '../shared/types'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -253,6 +253,26 @@ const api = {
   /** 手机端（feat/phone-remote）。**默认关**——不打开开关时主进程连端口都不开。
    *  这里只暴露「开关 / 配对 / 设备表」和「主进程问数据」两组，
    *  不暴露任何能直接读文件的方法：读文件走 HTTP 那条路，要过两道校验。 */
+  /** CLI 的安装与登录状态。**分发侧「不知道怎么装、怎么登」那条链路的入口。**
+   *  预检必须在渲染层做 —— agentChat:start 的同步性是承重的，不能在那里 await。 */
+  cliAuth: {
+    check: (cli: 'claude' | 'codex'): Promise<CliAuthState> =>
+      ipcRenderer.invoke('cliAuth:check', cli),
+    startLogin: (cli: 'claude' | 'codex'): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('cliAuth:startLogin', cli),
+    /** 把授权码回写给 CLI（claude 那条路要；codex 不需要） */
+    submitCode: (code: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('cliAuth:submitCode', code),
+    cancelLogin: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('cliAuth:cancelLogin'),
+    /** 登录流程的实时状态（URL / 设备码 / 要不要粘码 / 结束） */
+    onLogin: (cb: (s: LoginState) => void): (() => void) => {
+      const h = (_e: unknown, s: LoginState): void => cb(s)
+      ipcRenderer.on('cliAuth:login', h)
+      return () => ipcRenderer.off('cliAuth:login', h)
+    },
+    /** 排障用：日志路径 + 最近 200 行 */
+    log: (): Promise<{ path: string; lines: string[] }> => ipcRenderer.invoke('cliAuth:log')
+  },
   phone: {
     status: (): Promise<PhoneStatus> => ipcRenderer.invoke('phone:status'),
     enable: (on: boolean): Promise<{ ok: boolean; error?: string }> =>
