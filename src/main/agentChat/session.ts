@@ -23,6 +23,9 @@ import { spawn, type ChildProcess } from 'child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
+
+import { alog } from '../cliAuth/log.ts'
+import { unauthedInLine } from '../cliAuth/detect.ts'
 import { getAdapter, listAdapters } from './adapters/index.ts'
 import { ingestChatQuota, scheduleApiRefresh } from '../quotaStore'
 import {
@@ -74,6 +77,15 @@ interface Live {
   translator: { push(line: string): ChatEvent[] }
   approvals: ReturnType<typeof createApprovalRegistry>
   stdoutBuf: string
+  /** 这次进程里已经报过一次「像是没登录」了。
+   *
+   *  **必须限一次**：codex 未登录时会连刷十条 401（重连 1/5…5/5，两种传输各一轮），
+   *  不拦的话日志和界面都会被同一件事刷满。归约器那侧对文本相同的 notice 会合并计数，
+   *  所以界面本来就只有一条 —— 但那是「显示成一条」，不是「只发生一次」，
+   *  日志仍会记十遍，而这条链路的日志正是排障唯一的依据。
+   *
+   *  跟着进程走、不跟着会话走：restart 之后是新一次尝试，该重新报。 */
+  authNoticed?: boolean
   /** 这个会话的事件只推给创建它的那个 webContents——不是全窗口广播。
    *  和 pty.ts 的 `wc.send(pty:data:${id}, ...)` 同一个道理。 */
   wc: WebContents
@@ -96,6 +108,24 @@ function feed(live: Live, chunk: string, emit: (e: ChatEvent) => void): void {
   const lines = live.stdoutBuf.split('\n')
   live.stdoutBuf = lines.pop() ?? ''
   for (const l of lines) {
+    // **登录失效的判定要在翻译之前做。** 翻译层拿不到证据：
+    // claude 把「没登录」放在 result.result 这个字符串里，而 translateResult
+    // 只取 usage / cost，那句话翻译完就没了；codex 的 401 是顶层 error 和
+    // turn.failed，它的翻译器压根没有这两个分支（落进 default 被丢掉）。
+    // 所以修复前的界面上，未登录只剩一句「CLI 进程退出（code 1）」——
+    // 用户描述的「一输入就自动关闭 CLI 进程」就是这么来的（2026-08-30 实测复现）。
+    //
+    // 这里**只加不减**：原来的翻译照常跑，不拦截、不改写任何已有事件。
+    const why = unauthedInLine(l)
+    if (why && !live.authNoticed) {
+      live.authNoticed = true
+      alog(`会话 ${live.rec.id}（${live.rec.cli}）疑似未登录：${why.slice(0, 300)}`)
+      // **fatal: false** —— 这不是"崩了"，是"要你去登录"，它有明确的下一步。
+      // 红色致命样式会让人以为软件坏了。
+      // kind:'auth' 是给界面认的标记：**不要让界面去匹配这句中文**，
+      // 文案随时会改，而匹配文案的代码坏掉时不会有任何报错。
+      emit({ k: 'error', message: '还没登录，或者登录已经失效', fatal: false, kind: 'auth' })
+    }
     // 审批不经过这里——它由 hook 路单独驱动（见 Task 3 背景，实测两路无共同关联键）
     for (const e of live.translator.push(l)) emit(e)
   }

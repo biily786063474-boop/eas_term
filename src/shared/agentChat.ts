@@ -98,7 +98,16 @@ export type ChatEvent =
       preTokens: number
       postTokens: number
     }
-  | { k: 'error'; message: string; fatal: boolean }
+  | {
+      k: 'error'
+      message: string
+      fatal: boolean
+      /** 这条错误属于哪一类。**给界面用来分支，而不是让它去匹配 message 里的中文** ——
+       *  文案随时会改，匹配文案的代码坏掉时不会有任何报错。
+       *  目前只有 'auth'（没登录 / 登录失效）：界面据此摆出登录入口，
+       *  而不是像别的错误那样只显示一行字。不带这个字段就是普通错误。 */
+      kind?: 'auth'
+    }
 
 export interface CliCapabilities {
   models?: { id: string; label: string }[]

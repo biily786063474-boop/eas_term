@@ -49,6 +49,7 @@ export function ChatToolbar({
   sessionId,
   onSend,
   onSetParams,
+  onLogin,
   onNewChat,
   sendError
 }: {
@@ -83,6 +84,8 @@ export function ChatToolbar({
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
   sendError?: string | null
+  /** 点了 notice 上那颗「去登录」。不传就不显示那颗按钮（空态那侧另有入口） */
+  onLogin?: () => void
 }): JSX.Element {
   const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
@@ -218,6 +221,15 @@ export function ChatToolbar({
                 {n.text}
                 {n.count > 1 && <span className="ac-notice-count">×{n.count}</span>}
               </span>
+              {/* 没登录 / 登录失效：给一个当场能登的入口。
+                  **按 kind 分支，不匹配 n.text 里的中文** —— 文案随时会改，
+                  而匹配文案的代码坏掉时不会有任何报错（shared/agentChat.ts 那条注释）。
+                  会话跑到一半 token 过期就走这条路，不用回空态。 */}
+              {n.kind === 'auth' && onLogin && (
+                <button type="button" className="ac-notice-login" onClick={onLogin}>
+                  去登录
+                </button>
+              )}
               <button
                 type="button"
                 className="ac-notice-close"

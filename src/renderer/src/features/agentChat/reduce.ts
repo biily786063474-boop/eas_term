@@ -70,6 +70,10 @@ export interface Notice {
    *  合并成一条 + 计数，既守住"{k:'error',fatal:false} 必须显示"这条硬约束，
    *  又不让重复内容占版面。 */
   count: number
+  /** 错误类别，原样来自事件（见 shared/agentChat.ts 的 ChatEvent）。
+   *  'auth' 那条界面上要摆登录入口，不是只显示一行字。
+   *  **界面按这个分支，不要去匹配 text 里的中文。** */
+  kind?: 'auth'
 }
 
 /** notices 数组的条数上限。**版面不被挤掉这件事已经由 CSS 负责**（.ac-notices 有
@@ -342,7 +346,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
           break
         }
         noticeSeq += 1
-        notices.push({ id: `notice-${noticeSeq}`, text: e.message, fatal: e.fatal, count: 1 })
+        notices.push({ id: `notice-${noticeSeq}`, text: e.message, fatal: e.fatal, count: 1, kind: e.kind })
         if (notices.length > MAX_NOTICES) notices.shift()
         // 致命错误 = 这一轮走不下去了（典型：spawn 失败）。不在这里收的话，
         // turn.done 永远不会来，界面会一直转下去。非致命的不动——那只是条提醒，

@@ -24,6 +24,8 @@ import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Icons'
+import { CliLoginPanel } from './CliLoginPanel'
+import type { CliAuthState } from '../../../../shared/types'
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
@@ -229,6 +231,7 @@ export function AgentChatView({
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
 
+
   // CLI 选择改成下拉（原来是一排芯片）。**三种状态仍然都列出来** —— 没装的、
   // 仅终端可用的都要能看见，那是用户第一次打开软件时唯一的「有哪些可选」的信息源。
   const [cliMenuAt, setCliMenuAt] = useState<{ x: number; y: number } | null>(null)
@@ -263,6 +266,57 @@ export function AgentChatView({
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // ── 登录闸门 ──────────────────────────────────────────────────────
+  //
+  // **这是「一输入就自动关闭 CLI 进程」那条 bug 的正解。** 修复前，没登录的人
+  // 打完字一发送，CLI 照常起得来（thread.started / turn.started 都发了），
+  // 然后撞 401 反复重试、进程死掉，界面上只剩一句「CLI 进程退出（code 1）」。
+  // 与其等它死了再解释，不如在发送之前就问一句。
+  //
+  // **为什么在渲染层查、而不是在主进程的 start 里查**：
+  // `agentChat:start` 那个 handler 的同步性是承重的（见 preload/index.ts 里
+  // 2026-08-17 评审那段：它在 return 之前就同步走完 deliverMessage → handleEvent
+  // → wc.send，探针实测同步推的 30 条只到 1 条）。往那里加一个 await 会把整条
+  // 事件时序改掉。所以查询放这儿，start 那侧一个字没动。
+  //
+  // **三态，不是两态**：登录了 / 没登录 / **读不到**。读不到时**不拦** ——
+  // 那说明我们跟上游的输出格式脱节了，凭一次读不到就把人挡在门外，
+  // 等于软件因为自己的解析问题拒绝工作。宁可放行、让 CLI 自己报错。
+  const [auth, setAuth] = useState<CliAuthState | null>(null)
+  const [authChecking, setAuthChecking] = useState(false)
+  /** 正在给哪个 CLI 走登录流程。非空 = 登录面板挂着 */
+  const [loginFor, setLoginFor] = useState<CliInfo | null>(null)
+  useEffect(() => {
+    // 没选、没装、或者这个 CLI 不支持会话，都不用查 —— 那些有各自的提示路径
+    if (!selected || !selected.available || !selected.chatSupported) {
+      setAuth(null)
+      return
+    }
+    // 已经在跑的会话不查：它显然是能用的，查一次纯属白花几百毫秒
+    if (sessionId) return
+    let cancelled = false
+    setAuthChecking(true)
+    void window.api.cliAuth
+      .check(selected.id as 'claude' | 'codex')
+      .then((st) => {
+        if (cancelled) return
+        setAuth(st)
+        setAuthChecking(false)
+      })
+      .catch(() => {
+        // 查询本身崩了也按「读不到」处理 —— 同样不拦
+        if (cancelled) return
+        setAuth(null)
+        setAuthChecking(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selected, sessionId])
+
+  /** **只有明确知道「没登录」时才拦。** 读不到（status 为 null）一律放行 */
+  const blockedByAuth = !!auth && auth.installed && auth.status?.loggedIn === false
   const [view, setView] = useState<ChatView | null>(null)
   /** 上次退出时留在这个节点里的聊天记录。
    *
@@ -530,6 +584,13 @@ export function AgentChatView({
   const handleSend = async (override?: string): Promise<void> => {
     const message = (override ?? text).trim()
     if (!message || !selected || starting || sessionId) return
+    // **没登录就别起进程。** 起了也是撞 401 死掉，还白花一次冷启动，
+    // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
+    // 打的字**留在输入框里** —— 登录完回来就能直接发，不用重打
+    if (blockedByAuth) {
+      setLoginFor(selected)
+      return
+    }
     setStarting(true)
     setStartError(null)
 
@@ -843,7 +904,23 @@ export function AgentChatView({
           onSend={handleFollowupSend}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
+          onLogin={() => selected && setLoginFor(selected)}
         />
+        {/* 会话跑到一半掉线（token 过期）时的登录面板。
+            **和空态那份是同一个组件**，摆在工具栏下面 —— 不用把人赶回空态，
+            登完了直接接着聊。登录成功后 auth 也跟着更新，
+            免得空态闸门那侧留着一份过期的判断。 */}
+        {loginFor && (
+          <CliLoginPanel
+            cli={loginFor.id as 'claude' | 'codex'}
+            displayName={loginFor.displayName}
+            onCancel={() => setLoginFor(null)}
+            onDone={(status) => {
+              setAuth((cur) => (cur ? { ...cur, status } : cur))
+              setLoginFor(null)
+            }}
+          />
+        )}
       </div>
     )
   }
@@ -1005,6 +1082,44 @@ export function AgentChatView({
           <div className="ac-clis-hint">
             {phase.k === 'detecting' ? '正在检测可用的 CLI…' : '没有可用的 CLI'}
           </div>
+        )}
+        {/* ── 登录闸门 ────────────────────────────────────────────────
+            **摆在输入框下面而不是替换掉它**：用户可能已经打了半屏字，
+            把输入框换掉等于把那些字藏起来（回来还得重打）。
+            让他照常打、照常按发送，handleSend 拦一下把这块展开就够了。 */}
+        {loginFor ? (
+          <CliLoginPanel
+            cli={loginFor.id as 'claude' | 'codex'}
+            displayName={loginFor.displayName}
+            onCancel={() => setLoginFor(null)}
+            onDone={(status) => {
+              // 登录成功：把闸门放下，并**就地更新 auth**，不等下一次 effect ——
+              // 那个 effect 依赖 [selected, sessionId]，登录并不改变这两个，
+              // 不手动更新的话闸门会一直挂着，用户登完了还被挡着发不出去
+              setAuth((cur) => (cur ? { ...cur, status } : cur))
+              setLoginFor(null)
+            }}
+          />
+        ) : (
+          blockedByAuth && (
+            <div className="ac-authgate">
+              <span>
+                <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
+                整个过程在这里完成，不用去终端。
+              </span>
+              <button
+                type="button"
+                className="ac-authgate-go"
+                onClick={() => selected && setLoginFor(selected)}
+              >
+                点我去登录
+              </button>
+            </div>
+          )
+        )}
+        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了 */}
+        {authChecking && !loginFor && !blockedByAuth && (
+          <div className="ac-clis-hint">正在确认 {selected?.displayName} 的登录状态…</div>
         )}
         {cliMenuAt && (
           <CanvasContextMenu

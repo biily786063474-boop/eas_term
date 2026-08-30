@@ -1842,3 +1842,254 @@
   color: var(--fg-dim);
   line-height: 1.55;
 }
+
+/* ── 登录面板（CliLoginPanel）─────────────────────────────────────
+   整条登录都在 AI 对话里完成，不把人赶回终端（用户 2026-08-29 要求）。
+   用色跟 .ac-cli-note 那条「还没装」的提示区分开：那条是琥珀色的提醒，
+   这条是**要你动手的一步**，所以用 accent 做主色、按钮做成实心 CTA。 */
+.ac-login {
+  margin-top: 10px;
+  padding: 12px 13px 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.06);
+  max-width: min(520px, 100%);
+  text-align: left;
+}
+
+.ac-login-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.ac-login-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.ac-login-x {
+  border: none;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.ac-login-x:hover {
+  color: var(--fg);
+}
+
+.ac-login-step {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+}
+
+/* 主 CTA。左键打开浏览器、右键复制链接——右键那条在下面的 hint 里写着 */
+.ac-login-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--accent-rgb), 0.55);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.ac-login-go:hover {
+  border-color: rgba(var(--accent-rgb), 0.85);
+}
+
+.ac-login-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  line-height: 1.6;
+}
+
+/* 网址原文：有人想先看清楚要去哪儿。**可选中**——这也是复制的兜底路径 */
+.ac-login-url {
+  margin-top: 6px;
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+  word-break: break-all;
+  user-select: text;
+  max-height: 52px;
+  overflow-y: auto;
+}
+
+.ac-login-code,
+.ac-login-paste {
+  margin-top: 10px;
+}
+
+.ac-login-code-l {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+/* 一次性码：用户要照着往网页里手输，所以要大、要等宽、字距要拉开 */
+.ac-login-code-v {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(var(--accent-rgb), 0.45);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-align: center;
+  cursor: pointer;
+  user-select: text;
+}
+.ac-login-code-v:hover {
+  border-style: solid;
+  border-color: rgba(var(--accent-rgb), 0.7);
+}
+
+.ac-login-paste-row {
+  display: flex;
+  gap: 6px;
+}
+
+.ac-login-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+.ac-login-input:focus {
+  outline: none;
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+.ac-login-submit {
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ac-login-submit:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.ac-login-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.ac-login-err {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--danger, #e0796b);
+  line-height: 1.6;
+}
+
+.ac-login-retry {
+  flex-shrink: 0;
+  padding: 4px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.ac-login-retry:hover {
+  border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+/* 未登录闸门：空态里选了 CLI 但没登录时，替代输入框摆出来的那一条 */
+.ac-authgate {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.06);
+  max-width: min(520px, 100%);
+  text-align: left;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  line-height: 1.65;
+}
+.ac-authgate b {
+  color: var(--fg);
+}
+
+.ac-authgate-go {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--accent-rgb), 0.55);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+.ac-authgate-go:hover {
+  border-color: rgba(var(--accent-rgb), 0.85);
+}
+
+/* notices 里那条「没登录」自带的入口按钮（kind==='auth'）。
+   会话跑到一半掉线时走这条路——不用回空态也能登。 */
+.ac-notice-login {
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--accent-rgb), 0.55);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ac-notice-login:hover {
+  border-color: rgba(var(--accent-rgb), 0.85);
+}

@@ -68,7 +68,18 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
   // ② 浮层里不归画布管。灯箱/设置这些是 portal 到 body 的，前面那条
   //    closest('.canvas-viewport') 已经挡住；但抽屉和技能面板是渲染在画布内的，
   //    它们盖在画布上、自己就是一层，右键穿透到底下弹「关闭终端」是错的。
-  if (t.closest('.canvas-drawer, .wiki-drawer, .cskill-panel, .canvas-ctxmenu, .cset-box, .ctodo-lightbox'))
+  //
+  //    **.ac-login（登录面板）在这里尤其要紧**：它的「点我去登录」按钮把右键
+  //    定义成了「复制登录链接」（用户 2026-08-29 专门要的，为了拿去自己信任的
+  //    浏览器打开）。不挡的话，右键弹出来的是画布的「关闭终端」——
+  //    用户想复制链接，结果差一点把整个节点关掉。
+  //    组件里那个 e.preventDefault() 挡不住这条路：画布菜单挂在 **document** 上，
+  //    preventDefault 只压系统菜单，压不住另一个监听器。
+  if (
+    t.closest(
+      '.canvas-drawer, .wiki-drawer, .cskill-panel, .canvas-ctxmenu, .cset-box, .ctodo-lightbox, .ac-login'
+    )
+  )
     return null
 
   const { setEditingSticky, setEditingFrame, viewportEl } = deps

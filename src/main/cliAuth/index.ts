@@ -167,7 +167,16 @@ function endLogin(phase: LoginState['phase'], error?: string): void {
 }
 
 export function startLogin(cli: CliId): { ok: boolean; error?: string } {
-  if (live) return { ok: false, error: '已经有一个登录流程在跑' }
+  // **同一个 CLI 再点一次登录 = 重来一遍，不是错误。**
+  // 界面上「重试」的实现是先 cancel 再 start，中间隔着两次 IPC 往返；
+  // 靠消息顺序保证「cancel 一定先到」太脆 —— 一旦顺序颠倒，用户看到的是
+  // 「已经有一个登录流程在跑」，而屏幕上明明什么都没有，只能重启软件。
+  // 这里自己收掉旧的，让重试永远有效。
+  if (live && live.cli === cli) {
+    alog(`重新发起登录：${cli}（先收掉上一个）`)
+    cancelLogin()
+  }
+  if (live) return { ok: false, error: `正在登录 ${live.cli}，先完成或取消那一个` }
   const args = LOGIN_ARGS[cli]
   alog(`开始登录：${cli} ${args.join(' ')}`)
   let proc: ChildProcess
@@ -179,7 +188,10 @@ export function startLogin(cli: CliId): { ok: boolean; error?: string } {
   }
   live = { cli, proc, sofar: '', state: { cli, phase: 'starting' } }
   const onData = (d: Buffer): void => {
-    if (!live) return
+    // **认身份**：这个回调闭包捕获的是它自己那个 proc，而 live 可能已经换人了
+    //（重试：cancel 旧的 → start 新的，旧进程还会再吐几行）。
+    // 不认的话，旧进程的输出会覆盖新流程的网址和设备码 —— 用户拿到的是过期的那份
+    if (!live || live.proc !== proc) return
     live.sofar += d.toString()
     const prompt = parseLoginOutput(cli, live.sofar)
     // **只在真的多出东西时才推** —— CLI 会持续刷新那几行，
@@ -197,8 +209,19 @@ export function startLogin(cli: CliId): { ok: boolean; error?: string } {
   }
   proc.stdout?.on('data', onData)
   proc.stderr?.on('data', onData)
-  proc.on('error', (e) => endLogin('failed', String(e)))
+  // 下面两个回调都要先认身份，理由同 onData —— 而且这里错得更狠：
+  // 旧进程被 kill 之后 close 事件是**异步**到的，那时新的登录早就起来了。
+  // 不认身份的话，旧进程的死会把新流程标成「已结束」，界面立刻跑去查 status、
+  // 查到没登录、报「登录流程结束了，但还是没登上」—— 而新进程其实正跑得好好的。
+  proc.on('error', (e) => {
+    if (!live || live.proc !== proc) return
+    endLogin('failed', String(e))
+  })
   proc.on('close', (code) => {
+    if (!live || live.proc !== proc) {
+      alog(`旧登录进程退出：${cli} code=${String(code)}（已经不是当前流程，忽略）`)
+      return
+    }
     // **不拿退出码当成功判据** —— 用户取消、超时都可能 0 退出。
     // 真正的判据是登录之后再查一次 status，那一步由渲染层做。
     alog(`登录进程退出：${cli} code=${String(code)}`)
