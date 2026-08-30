@@ -81,6 +81,9 @@ button.big:disabled{opacity:.45}
 /* ── 对话（第二步）──────────────────────────────────────────
    气泡沿用规格里那几张样机：自己发的靠右、贴主色；agent 的靠左、玻璃底。
    **底部要给输入条让位** —— 不然最后一条永远压在输入框下面看不全。 */
+.why{font-size:11px;color:var(--fg-mute);margin-top:5px;line-height:1.5}
+.term{margin:0;padding:11px 12px 74px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-all;color:var(--fg-dim)}
 .chat{display:flex;flex-direction:column;gap:9px;padding-bottom:74px}
 .bub{max-width:82%;padding:9px 12px;border-radius:var(--r-lg);font-size:14px;line-height:1.65;
   white-space:pre-wrap;word-break:break-word}
@@ -127,7 +130,7 @@ var token = null
 try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */ }
 var view = 'live', proj = null, projName = ''
 // 当前打开的对话（第二步）。sess 非空时 view==='chat'
-var sess = null, sessName = '', sessRunning = false
+var sess = null, sessName = '', sessRunning = false, sessNode = null, sessKind = 'agent'
 
 var $ = function (id) { return document.getElementById(id) }
 var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }
@@ -383,15 +386,28 @@ function renderSessions () {
       // 后者是聊过但现在没在跑。混成一个词会让人以为新建的那个坏了
       c.appendChild(el('div', 'sub',
         s.waiting ? '等你处理' : s.running ? '在跑' : s.started ? '空闲' : '还没启动'))
-      // **只有 AI 对话、且真的起过进程的才点得进去**。
-      // 终端那种进不去（协议上没有给终端发消息这条路）；
-      // 没起过进程的也进不去 —— 那时候没有 sessionId，发给谁都不知道。
-      // **点不了的就不做成可点的**：点了没反应比不能点更让人困惑（同第一步那条）
-      if (s.kind === 'agent' && s.sessionId) {
+      // **点不了的要说清为什么。**（2026-08-30 用户实测撞到：
+      // 「点抖点不开，到不了可以发送对话的界面」—— 当时的实现只让已启动的能点，
+      // 而他画布上 13 个 AI 对话一个都没启动过，于是全都点不动、还一个字都没解释。
+      // 「点了没反应比不能点更让人困惑」这条我自己写过，却做出了同样的东西。）
+      //
+      // 现在**没启动的也能点进去** —— 进去发第一条就把它拉起来
+      //（用户 2026-08-30 要求「手机可以启动对话」：建出来一个聊不了的框没有意义）。
+      // **终端也能点进去看**（用户 2026-08-30 要求「终端的信息也可以被手机读到」），
+      // 但只读不发 —— 协议上没有给终端发消息这条路，
+      // 而给它做一个发不出去的输入框比不给更糟
+      if (s.kind !== 'agent') {
+        c.appendChild(el('div', 'why', s.sessionId ? '只能看，不能发' : '还没启动'))
+      } else if (!s.sessionId) {
+        c.appendChild(el('div', 'why', '还没启动 —— 进去说第一句就开始'))
+      }
+      // 终端要有 sessionId（其实是 ptyId）才有输出可读；AI 对话没启动也能进去（进去就启动）
+      if (s.kind === 'agent' || s.sessionId) {
         c.className = 'card'
         c.onclick = (function (x) {
           return function () {
-            sess = x.sessionId; sessName = x.title; sessRunning = !!x.running
+            sess = x.sessionId || null; sessNode = x.sessionId ? null : x.id
+            sessName = x.title; sessRunning = !!x.running; sessKind = x.kind
             view = 'chat'; render()
           }
         })(s)
@@ -416,27 +432,52 @@ function renderSessions () {
  *  要看它跑了哪些命令，回电脑上看。 */
 function renderChat (quiet) {
   var b = shell(sessName || '对话', proj ? projName : '', 'sessions')
+  // **还没启动的会话没有 transcript 可读** —— 直接摆输入框，
+  // 第一条消息会把它拉起来。不要去请求一个必然为空的接口，
+  // 那只会让人看见「正在读…」闪一下再变空
+  if (!sess) {
+    b.innerHTML = ''
+    $('h2').textContent = '还没启动'
+    var e0 = el('div', 'empty')
+    e0.appendChild(el('b', null, '说第一句就开始'))
+    e0.appendChild(document.createTextNode('会在这个项目的目录下起一个 AI 对话，用电脑上第一个可用的 CLI'))
+    b.appendChild(e0)
+    b.appendChild(composer())
+    return
+  }
   if (!quiet) loading(b)
-  call('transcript', { sessionId: sess }).then(function (r) {
+  call('transcript', { sessionId: sess, kind: sessKind }).then(function (r) {
     b.innerHTML = ''
     var d = r.data || []
     $('h2').textContent = sessRunning ? '在跑' : (d.length ? d.length + ' 条往来' : '还没说过话')
     if (!d.length) {
       var e = el('div', 'empty')
-      e.appendChild(el('b', null, '这个会话还没有对话记录'))
+      e.appendChild(el('b', null, sessKind === 'terminal' ? '这个终端还没有输出' : '这个会话还没有对话记录'))
       // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
-      e.appendChild(document.createTextNode('电脑上开始聊之后，这里就能看到；从这儿发一条也可以'))
+      e.appendChild(document.createTextNode(sessKind === 'terminal'
+        ? '它跑起来之后，最近的输出会显示在这里'
+        : '电脑上开始聊之后，这里就能看到；从这儿发一条也可以'))
       b.appendChild(e)
     } else {
-      var wrap = el('div', 'chat')
-      d.forEach(function (m) {
-        var bub = el('div', 'bub ' + (m.role === 'user' ? 'me' : 'ai'))
-        bub.textContent = m.text
-        wrap.appendChild(bub)
-      })
-      b.appendChild(wrap)
+      if (sessKind === 'terminal') {
+        // 终端输出是**等宽的整块**，不是一问一答 —— 做成气泡会把每一行
+        // 都框起来，反而看不出哪些是同一段
+        var pre = el('pre', 'term')
+        pre.textContent = d.map(function (m) { return m.text }).join('\n')
+        b.appendChild(pre)
+      } else {
+        var wrap = el('div', 'chat')
+        d.forEach(function (m) {
+          var bub = el('div', 'bub ' + (m.role === 'user' ? 'me' : 'ai'))
+          bub.textContent = m.text
+          wrap.appendChild(bub)
+        })
+        b.appendChild(wrap)
+      }
     }
-    b.appendChild(composer())
+    // **终端不给输入框** —— 协议上没有给终端发消息这条路，
+    // 给一个发不出去的框比不给更糟
+    if (sessKind === 'agent') b.appendChild(composer())
     // 读完滚到底 —— 手机上要看的是最新那条，不是最早那条
     var sc = document.scrollingElement || document.documentElement
     sc.scrollTop = sc.scrollHeight
@@ -459,9 +500,16 @@ function composer () {
     var t = ta.value.trim()
     if (!t || busy) return
     busy = true; btn.className = 'send busy'
-    call('send', { sessionId: sess, text: t }).then(function () {
+    // **两条路**：已启动的按 sessionId 发；没启动的带 nodeId，
+    // 由电脑那侧把它跑起来并把第一条带进去（边界写在 provider.ts 的 startSession）
+    var payload = sess
+      ? { sessionId: sess, text: t }
+      : { nodeId: sessNode, projectId: proj, text: t }
+    call('send', payload).then(function (r) {
       ta.value = ''; ta.style.height = 'auto'
       busy = false; btn.className = 'send'
+      // 刚启动的话把 sessionId 记下来，之后就走正常那条了
+      if (!sess && r && r.sessionId) { sess = r.sessionId; sessNode = null }
       // 立刻重拉一次：刚发的那条会出现在列表里（主进程记的是同一份）
       renderChat(true)
     }).catch(function (e) {

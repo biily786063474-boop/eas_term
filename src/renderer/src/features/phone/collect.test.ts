@@ -276,3 +276,42 @@ test('查不到名字的项目说「（未命名项目）」，不摆 UUID', () 
   const r = collectStatus([], PROJECTS, NO_LEAVES, [], [], [gt({ startAt: 1, projectId: '没这个' })], 0)
   assert.equal(r.finished[0].projectName, '（未命名项目）')
 })
+
+// ── sessionId 单独成字段（2026-08-30 事故）────────────────────────
+//
+// 手机端第二步要给会话发消息，我当时以为「有 id 就能发」——
+// 但 `id` 在没启动时是**节点 id**，而且从字段名看不出区别。
+// 界面判断写成 `s.sessionId` 之后**永远是 undefined**，
+// 卡片全都点不进去，而且不报任何错（undefined 只是让判断静默为假）。
+// 用户的原话：「无法点开对话并且无法查看对话内容」。
+
+test('**起来了的会话要有 sessionId**，不能只藏在 id 里', () => {
+  const leaves = new Map([['leaf-1', { kind: 'agent' as const, sessionId: 'ac-7' }]])
+  const frames = [
+    { id: 'f1', projectId: 'p1', parentId: undefined, nodes: [{ id: 'n1', leafId: 'leaf-1' }] }
+  ] as never
+  const out = collectSessions(frames, 'p1', leaves, ['ac-7'], [])
+  assert.equal(out.length, 1)
+  assert.equal(out[0].sessionId, 'ac-7', '起来了就必须给 sessionId')
+  assert.equal(out[0].started, true)
+})
+
+test('**没起来的不给 sessionId** —— 没有就是没有，让调用方一眼看出发不了', () => {
+  const leaves = new Map([['leaf-2', { kind: 'agent' as const, sessionId: null }]])
+  const frames = [
+    { id: 'f1', projectId: 'p1', parentId: undefined, nodes: [{ id: 'n9', leafId: 'leaf-2' }] }
+  ] as never
+  const out = collectSessions(frames, 'p1', leaves, [], [])
+  assert.equal(out[0].sessionId, undefined)
+  assert.equal(out[0].started, false)
+  assert.equal(out[0].id, 'n9', 'id 退回节点 id（它稳定）')
+})
+
+test('**id 和 sessionId 在没启动时不是一回事** —— 这就是当初踩坑的地方', () => {
+  const leaves = new Map([['leaf-3', { kind: 'agent' as const, sessionId: null }]])
+  const frames = [
+    { id: 'f1', projectId: 'p1', parentId: undefined, nodes: [{ id: 'node-abc', leafId: 'leaf-3' }] }
+  ] as never
+  const s = collectSessions(frames, 'p1', leaves, [], [])[0]
+  assert.notEqual(s.id, s.sessionId, '拿 id 当 sessionId 用会把节点 id 当会话 id 发出去')
+})

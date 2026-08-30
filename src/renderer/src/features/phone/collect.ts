@@ -12,10 +12,20 @@ import type { GanttTask, Project } from '../../../../shared/types'
 /** 一台会话在手机上的样子。ptyId 对终端是 pty 号，对 AI 对话是 sessionId —— 
  *  跟甘特图 GanttTask.ptyId 是同一个历史包袱，同样靠 kind 区分。 */
 export interface PhoneSession {
-  /** 手机端拿它回指某个会话。
+  /** 列表的稳定键。
    *  **已启动的用会话 id，没启动的用画布节点 id** —— 后者是稳定的，
-   *  而 sessionId 每次启动都变。 */
+   *  而 sessionId 每次启动都变。
+   *
+   *  **别拿它当 sessionId 用**（2026-08-30 踩过）：手机端第二步要给会话发消息，
+   *  当时以为「有 id 就能发」，结果没启动的节点那个 id 是节点 id，
+   *  而且从字段名看不出区别。真正的会话 id 在下面那个字段，没有就是没有。 */
   id: string
+  /** **真正的会话 id，没启动就没有。** 手机端要发消息/读对话只认它。
+   *
+   *  单独一个字段而不是复用 `id`：一个字段承担两种含义，
+   *  调用方迟早会猜错 —— 这次就是「界面上卡片永远点不进去」，
+   *  而且不报错，因为 `undefined` 只是让判断静默失败。 */
+  sessionId?: string
   kind: 'terminal' | 'agent'
   title: string
   /** 已经起来了（有 pty / 有 session）。**false 不等于「不存在」** ——
@@ -158,6 +168,8 @@ export function collectSessions(
       out.push({
         // 没启动的用节点 id 回指 —— 它稳定，而 sessionId 每次启动都变
         id: sid ?? node.id,
+        // **只有真起来了才给**。没有就是没有，让调用方一眼看出「发不了」
+        ...(sid ? { sessionId: sid } : {}),
         kind: slot.kind,
         title: titleOf(node, slot.title, out.length + 1),
         started: !!sid,

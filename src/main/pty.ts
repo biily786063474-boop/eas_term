@@ -6,6 +6,7 @@ import path from 'path'
 import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions, AgentKind } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
+import { createTermTailStore } from './termTail'
 import {
   secretsEnv,
   noteInjected,
@@ -399,6 +400,19 @@ export async function anyPtyBusy(): Promise<boolean> {
   return busy.size > 0
 }
 
+/** 每个终端最近的输出。**给手机端读的**（用户 2026-08-30 要求
+ *  「终端的信息也可以被转换为手机可以读到的」）。
+ *
+ *  存原始文本、读的时候才清洗 —— 终端数据是热路径（一次 npm install 能刷几 MB），
+ *  在写入侧剥 ANSI 等于给每一块输出加一遍正则。上限按字节（32KB/终端），
+ *  不按行 —— 一行可以无限长。 */
+const termTail = createTermTailStore()
+
+/** 给手机端读的入口。**只读最近若干行** */
+export function readTermTail(ptyId: string, maxLines?: number): string[] {
+  return termTail.recent(ptyId, maxLines)
+}
+
 export function registerPtyHandlers(): void {
   watchUrlQueue() // 监听 CLI 经 open shim 投递的网址 → 通知渲染层在画板浏览器打开
   ipcMain.handle('pty:create', (e, opts: PtyCreateOptions) => {
@@ -477,6 +491,9 @@ export function registerPtyHandlers(): void {
       const data = outBuf.join('')
       outBuf = []
       outBytes = 0
+      // **挂在这儿而不是 onData**：这里已经是 ~16ms 合并过一次的批，
+      // 挂 onData 等于每一小块都存一次。存的是原始文本，不做清洗（见 termTail.ts）
+      termTail.push(id, data)
       if (!wc.isDestroyed()) wc.send(`pty:data:${id}`, data)
     }
     proc.onData((data) => {
@@ -489,6 +506,7 @@ export function registerPtyHandlers(): void {
     proc.onExit(({ exitCode }) => {
       flushOut() // 把残留输出先发完再发 exit,避免丢尾巴
       ptys.delete(id)
+      termTail.drop(id) // 终端没了，留存的输出也别赖着
       forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
     })

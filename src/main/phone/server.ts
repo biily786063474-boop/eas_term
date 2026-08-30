@@ -22,6 +22,7 @@ import { guardPath } from '../fsGuard'
 import { mainWindow } from '../island'
 import * as audit from './audit'
 import { deliverExternalMessage, readTranscript } from '../agentChat/session'
+import { readTermTail } from '../pty'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
@@ -274,10 +275,47 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   // 桌面那侧的显示由 deliverExternalMessage 推的 user.message 事件负责，
   // 面板没开时被 preload 缓冲接住，开的时候补上。
   if (action === 'send') {
-    const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
+    let sid = typeof args.sessionId === 'string' ? args.sessionId : ''
     const text = typeof args.text === 'string' ? args.text.trim() : ''
-    if (!sid) return { code: 400, body: { error: '缺少 sessionId' } }
     if (!text) return { code: 400, body: { error: '消息不能为空' } }
+    // ── 还没启动的对话：**第一条消息顺带把它拉起来**（2026-08-30 用户要求）──
+    //
+    // 手机新建出来的对话本来只是画布上一个空节点，不启动任何进程 ——
+    // 建出来一个聊不了的框没有意义。所以这里补上：没有 sessionId 但给了 nodeId，
+    // 就走渲染层把它跑起来（那边有画布状态，能把 sessionId 写回节点）。
+    //
+    // **边界在渲染层那侧写死**（provider.ts 的 startSession）：
+    // 只能启动画布上已经存在的节点、cwd 用项目自己的路径、
+    // 已经在跑的直接拒、CLI 不由手机选。这里不重复判断 ——
+    // 同一件事判两处，「到底谁说了算」就有两个答案。
+    if (!sid) {
+      const nodeId = typeof args.nodeId === 'string' ? args.nodeId : ''
+      if (!nodeId) return { code: 400, body: { error: '缺少 sessionId 或 nodeId' } }
+      if (text.length > 4000) return { code: 413, body: { error: '消息太长（上限 4000 字）' } }
+      try {
+        const d = (await queryRenderer('startSession', { ...args, message: text })) as
+          | { ok: boolean; sessionId?: string; error?: string }
+          | null
+        const pid = String(args.projectId ?? '').slice(0, 8)
+        audit.record({
+          at: Date.now(),
+          deviceId: dev.id,
+          deviceName: dev.name,
+          action,
+          // **只记长度不记正文**（同下面那条）
+          detail: d?.ok
+            ? `在项目 ${pid} 里启动了一个 AI 对话，并发了第一条（${text.length} 字）`
+            : `想启动 ${pid} 里的一个对话，没成：${d?.error ?? '起不来'}`,
+          outcome: d?.ok ? 'allowed' : undefined
+        })
+        hooks?.onClaim()
+        if (!d?.ok || !d.sessionId) return { code: 400, body: { error: d?.error ?? '起不来' } }
+        // 启动时第一条消息已经带进去了，不用再发一次
+        return { code: 200, body: { ok: true, sessionId: d.sessionId } }
+      } catch (e) {
+        return { code: 503, body: { error: e instanceof Error ? e.message : String(e) } }
+      }
+    }
     // **长度上限。** 手机端输入框限不住协议 —— 不设的话一次请求能把
     // 几 MB 文本灌进 CLI 的 stdin
     if (text.length > 4000) return { code: 413, body: { error: '消息太长（上限 4000 字）' } }
@@ -306,6 +344,19 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   if (action === 'transcript') {
     const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
     if (!sid) return { code: 400, body: { error: '缺少 sessionId' } }
+    // **AI 对话和终端走同一个动作。** 手机上它们是同一件事（「这个东西在说什么」），
+    // 分成两个接口只会让手机端多一处判断，而判断错了就是白屏。
+    // 谁是谁按 kind 分：AI 对话读事件流摘要，终端读原始输出的尾巴。
+    if (args.kind === 'terminal') {
+      // **终端的 sessionId 其实是 ptyId** —— 会话列表里那个字段对终端就是 ptyId
+      //（collect.ts 的 slotOf 对 terminal 返回 p.ptyId）。
+      // 这条 API 不纠正它：改字段名要动手机端和采集层两处，
+      // 而这里只要按 kind 分流就够了。
+      return {
+        code: 200,
+        body: { data: readTermTail(sid, 300).map((t) => ({ role: 'assistant', text: t, at: 0 })) }
+      }
+    }
     // **不记留痕**：手机上下拉刷新会反复调，记了会把留痕淹掉；
     // 而「他看了一眼回复没有」也不是事后要复核的东西（同 status 那条）
     return { code: 200, body: { data: readTranscript(sid, 40) } }

@@ -65,6 +65,12 @@ async function answer(action: string, args: Record<string, unknown>): Promise<un
       return resolveFile(frames, projectId, typeof args.nodeId === 'string' ? args.nodeId : '')
     case 'createSession':
       return createSession(projectId)
+    case 'startSession':
+      return startSession(
+        projectId,
+        typeof args.nodeId === 'string' ? args.nodeId : '',
+        typeof args.message === 'string' ? args.message : ''
+      )
     default:
       return null
   }
@@ -94,6 +100,94 @@ function createSession(projectId: string): { ok: boolean; nodeId?: string; error
   const after = useStore.getState().canvas.frames.find((f) => f.id === top.id)
   const added = after?.nodes.find((n) => !before.has(n.id))
   return added ? { ok: true, nodeId: added.id } : { ok: false, error: '节点没建出来' }
+}
+
+/**
+ * 把一个还没启动的 AI 对话节点**真正跑起来**，并把第一条消息送进去。
+ *
+ * ── 这是手机第一次能在你电脑上拉起进程 ────────────────────────────
+ * 之前 `createSession` 只往画布上加一个空节点，**不启动任何东西**
+ *（那条注释还在上面）。用户 2026-08-30 明确要求「手机可以启动对话」——
+ * 建出来一个聊不了的框确实没有意义。
+ *
+ * 但这一步的分量跟「加个节点」完全不同：**起来的是能读写你项目文件、
+ * 能跑命令、能联网的 agent**。所以边界写死在这里，一条都不放开：
+ *
+ * · **只能启动画布上已经存在的节点** —— 不新建节点、不新建 Frame、不新建项目。
+ *   手机能拉起的东西必须落在你已经摆出来的范围内。
+ * · **cwd 用项目自己的路径**，不接受手机传路径（那等于让它选在哪跑）。
+ * · **已经启动过的直接拒绝** —— 这条只负责「从无到有」，
+ *   重复启动会把上一个会话变成没人管的孤儿。
+ * · CLI **不由手机选**：用本机第一个可用的（和桌面空态同一条规则）。
+ *   让手机指定 CLI 等于多一个它能影响的维度，收益却是零。
+ *
+ * 兜底仍在：设备得先配过对（那一步有人工确认）、每一次都留痕。
+ */
+async function startSession(
+  projectId: string,
+  nodeId: string,
+  message: string
+): Promise<{ ok: boolean; sessionId?: string; error?: string }> {
+  const s = useStore.getState()
+  const top = s.canvas.frames.find((f) => !f.parentId && f.projectId === projectId)
+  if (!top) return { ok: false, error: '这个项目在画布上没有 Frame' }
+  const node = top.nodes.find((n) => n.id === nodeId)
+  if (!node) return { ok: false, error: '这个节点已经不在画布上了' }
+  const proj = s.projects.find((p) => p.id === projectId)
+  if (!proj?.path) return { ok: false, error: '这个项目没有目录' }
+
+  // **已经起来了就不许再起**：会话 id 可能挂在节点自己的 pane 上，
+  // 也可能挂在它引用的 leaf 上（画布节点有这两种形态），两处都要看
+  const leafSid = node.leafId
+    ? (() => {
+        for (const t of s.tabs) {
+          const found = findLeaf(t.root, node.leafId as string)
+          if (found?.pane.kind === 'agent') return found.pane.sessionId || null
+        }
+        return null
+      })()
+    : null
+  // pane 是联合类型（terminal 没有 sessionId），先收窄再读
+  const paneSid = node.pane && node.pane.kind === 'agent' ? node.pane.sessionId : undefined
+  if (paneSid || leafSid) return { ok: false, error: '这个对话已经在跑了' }
+
+  const clis = await window.api.agentChat.listClis()
+  const usable = clis.find((c) => c.available && c.chatSupported)
+  if (!usable) return { ok: false, error: '这台电脑上没有可用的 CLI' }
+
+  const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message })
+  if (!r.ok) return { ok: false, error: r.error }
+
+  // **把 sessionId 写回画布**，否则电脑上打开这个节点时接不回这个会话，
+  // 手机下一次也认不出它已经起来了
+  const st = useStore.getState()
+  for (const t of st.tabs) {
+    if (node.leafId && findLeaf(t.root, node.leafId)) {
+      st.setAgentSessionId(t.id, node.leafId, r.sessionId)
+      break
+    }
+  }
+  // **自带 pane 形态的节点写不回去** —— store 里没有改画布节点 pane 的动作，
+  // 而硬造一个等于在这条路上新开一个能改画布的入口（手机能碰的面又大一圈）。
+  // 会话已经真的起来了，如实说清楚：手机这边照常能聊（sessionId 返回了），
+  // 只是电脑上打开那个节点时接不回去 —— 那是下一步该补的，不是这里该糊的。
+  //
+  // 实际影响很小：手机新建的节点走的是 addFileNode，
+  // 它建出来的是 leafId 形态，会走上面那条分支。
+  return { ok: true, sessionId: r.sessionId }
+}
+
+/** 在一棵分屏树里找某个 leaf。**递归而不是 collectLeaves** —— 这里只要一个，
+ *  不值得为它把整棵树摊平 */
+function findLeaf(node: unknown, leafId: string): { pane: { kind: string; sessionId?: string } } | null {
+  const n = node as { type?: string; id?: string; pane?: { kind: string; sessionId?: string }; children?: unknown[] }
+  if (!n) return null
+  if (n.type === 'leaf') return n.id === leafId && n.pane ? { pane: n.pane } : null
+  for (const c of n.children ?? []) {
+    const f = findLeaf(c, leafId)
+    if (f) return f
+  }
+  return null
 }
 
 let bound = false
