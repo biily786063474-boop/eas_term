@@ -29,8 +29,9 @@ import { spawn, type ChildProcess } from 'child_process'
 
 import { PROBE_ENV } from '../probeEnv'
 import { alog } from './log'
-import { checkAuth } from './index'
+import { checkAuth, type CliAuthState } from './index'
 import { installVerdict, lastLine, outLines } from './installOut'
+import { createSlot } from './slot'
 import type { CliId } from './parse'
 
 /** 安装最多跑多久。**给足** —— 慢网络上 curl 拉一个几十兆的包要好几分钟，
@@ -52,9 +53,18 @@ export interface InstallState {
 }
 
 
-let live: { cli: CliId; proc: ChildProcess; out: string[]; state: InstallState } | null = null
+// **同时只允许一个，且旧进程的回调必须哑掉** —— 靠 slot.guard 结构性保证，
+// 不是靠每处记得写判断（那条 428ms 的真实事故见 slot.ts）
+interface InstallLive {
+  cli: CliId
+  proc: ChildProcess
+  out: string[]
+  state: InstallState
+}
+const slot = createSlot<InstallLive>()
 
 function push(): void {
+  const live = slot.any()
   if (!live) return
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send('cliAuth:install', live.state)
@@ -62,6 +72,7 @@ function push(): void {
 }
 
 function finish(phase: 'done' | 'failed', error?: string): void {
+  const live = slot.any()
   if (!live) return
   alog(`安装结束：${live.cli} → ${phase}${error ? '（' + error + '）' : ''}`)
   live.state = {
@@ -72,7 +83,7 @@ function finish(phase: 'done' | 'failed', error?: string): void {
     output: phase === 'failed' ? live.out.slice(-TAIL_LINES) : undefined
   }
   push()
-  live = null
+  slot.clear()
 }
 
 /**
@@ -82,7 +93,8 @@ function finish(phase: 'done' | 'failed', error?: string): void {
  * 这一层不拼命令 —— 拼命令的地方只有 agentInstall.ts 一处，两处各拼一份必然分叉。
  */
 export function startInstall(cli: CliId, cmd: string): { ok: boolean; error?: string } {
-  if (live) return { ok: false, error: `正在安装 ${live.cli}，等它完成` }
+  const running = slot.any()
+  if (running) return { ok: false, error: `正在安装 ${running.cli}，等它完成` }
   if (!cmd || !cmd.trim()) return { ok: false, error: '没有可用的安装命令' }
   alog(`开始安装：${cli} → ${cmd}`)
   let proc: ChildProcess
@@ -97,10 +109,11 @@ export function startInstall(cli: CliId, cmd: string): { ok: boolean; error?: st
     alog('安装进程起不来：' + String(e))
     return { ok: false, error: String(e) }
   }
-  live = { cli, proc, out: [], state: { cli, phase: 'running', step: '正在准备…' } }
+  slot.claim(proc, { cli, proc, out: [], state: { cli, phase: 'running', step: '正在准备…' } })
 
-  const onData = (d: Buffer): void => {
-    if (!live || live.proc !== proc) return // 认身份，理由同 index.ts 的登录回调
+  // **每个回调都包 guard(proc, …)** —— 见 slot.ts：漏写的唯一方式是不包，
+  // 而不包就拿不到 live，写不出能跑的代码
+  const onData = slot.guard(proc, (live, d: Buffer) => {
     const chunk = d.toString()
     live.out.push(...outLines(chunk))
     // 只留够回显的量，别让一次 npm 安装把内存吃掉
@@ -110,56 +123,65 @@ export function startInstall(cli: CliId, cmd: string): { ok: boolean; error?: st
       live.state = { ...live.state, step }
       push()
     }
-  }
+  })
   proc.stdout?.on('data', onData)
   // **stderr 也当进度看**：curl 的进度、npm 的 warning 全在 stderr，
   // 只收 stdout 的话进度条会一直停在「正在准备…」
   proc.stderr?.on('data', onData)
 
-  const timer = setTimeout(() => {
-    if (!live || live.proc !== proc) return
-    alog(`安装超时：${cli}`)
-    try {
-      proc.kill()
-    } catch {
-      /* 已经没了 */
-    }
-    finish('failed', `超过 ${INSTALL_TIMEOUT_MS / 60000} 分钟还没装完`)
-  }, INSTALL_TIMEOUT_MS)
+  const timer = setTimeout(
+    slot.guard(proc, () => {
+      alog(`安装超时：${cli}`)
+      try {
+        proc.kill()
+      } catch {
+        /* 已经没了 */
+      }
+      finish('failed', `超过 ${INSTALL_TIMEOUT_MS / 60000} 分钟还没装完`)
+    }),
+    INSTALL_TIMEOUT_MS
+  )
 
-  proc.on('error', (e) => {
-    if (!live || live.proc !== proc) return
-    clearTimeout(timer)
-    finish('failed', String(e))
-  })
-  proc.on('close', (code) => {
-    if (!live || live.proc !== proc) {
-      alog(`旧安装进程退出：${cli} code=${String(code)}（已经不是当前流程，忽略）`)
-      return
-    }
-    clearTimeout(timer)
-    alog(`安装进程退出：${cli} code=${String(code)}`)
-    // **退出码 0 不等于装上了**（装到不在 PATH 的地方、脚本吞了错、半路网断），
-    // 所以还要查一次命令在不在。但**两条判据都要**：
-    // 只看命令在不在会让「本来就装着、这次升级失败了」被报成成功
-    //（2026-08-30 真机验证抓到的洞，判定逻辑抽成了 installVerdict 并有测试盯着）。
-    live.state = { ...live.state, phase: 'verifying', step: '装好了，正在核实…' }
-    push()
-    void checkAuth(cli).then((st) => {
-      if (!live || live.proc !== proc) return
-      // 注意判据是 st.installed（命令在不在），**不是 st.status**：
-      // 状态读不到是解析层跟上游脱节，不是安装失败，
-      // 别拿我们自己的问题去告诉用户「装失败了」
-      const v = installVerdict(code, st.installed)
-      if (v.ok) finish('done')
-      else finish('failed', v.error)
+  proc.on(
+    'error',
+    slot.guard(proc, (_l, e: Error) => {
+      clearTimeout(timer)
+      finish('failed', String(e))
     })
-  })
+  )
+  proc.on(
+    'close',
+    slot.guard(proc, (live, code: number | null) => {
+      clearTimeout(timer)
+      alog(`安装进程退出：${cli} code=${String(code)}`)
+      // **退出码 0 不等于装上了**（装到不在 PATH 的地方、脚本吞了错、半路网断），
+      // 所以还要查一次命令在不在。但**两条判据都要**：
+      // 只看命令在不在会让「本来就装着、这次升级失败了」被报成成功
+      //（2026-08-30 真机验证抓到的洞，判定逻辑抽成了 installVerdict 并有测试盯着）。
+      live.state = { ...live.state, phase: 'verifying', step: '装好了，正在核实…' }
+      push()
+      // **这里要重新认一次身份**：checkAuth 是异步的，等它回来时槽位可能已经换人
+      //（用户取消了这次安装又开了新的）。外层那个 guard 只保证进入 close 那一刻
+      // 是当前主人，保证不了 await 之后还是。
+      void checkAuth(cli).then(
+        slot.guard(proc, (_l, st: CliAuthState) => {
+          // 判据是 st.installed（命令在不在），**不是 st.status**：
+          // 状态读不到是解析层跟上游脱节，不是安装失败，
+          // 别拿我们自己的问题去告诉用户「装失败了」
+          const v = installVerdict(code, st.installed)
+          if (v.ok) finish('done')
+          else finish('failed', v.error)
+        })
+      )
+    })
+  )
   push()
   return { ok: true }
 }
 
 export function cancelInstall(): void {
+  // 外部调用（用户点取消），不属于任何进程的回调 —— 用 any() 拿当前那个
+  const live = slot.any()
   if (!live) return
   alog(`用户取消安装：${live.cli}`)
   try {

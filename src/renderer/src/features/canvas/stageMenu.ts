@@ -9,6 +9,7 @@ import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from './CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
+import { menuOwnerOf } from './menuOwnership'
 
 /** 「关闭终端」这一项。只有直接右键终端时才给 —— 理由见下面 shapeEl 分支的注释。 */
 function closeTerminalItem(leafId: string): CanvasMenuItem {
@@ -46,61 +47,22 @@ export interface StageMenuDeps {
 /** 返回 null = 右键落在画布之外，不该弹我们的菜单 */
 export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuItem[] | null {
   const t = e.target as HTMLElement
-  // 标记层（.canvas-shape-layer）是 .canvas-viewport / .pane-layer 的**兄弟**，
-  // 不在它俩里面。少了第三条的话，右键落在任何一个标记上都会在入口被判成
-  // 「落在画布之外」→ 走 Electron 默认系统菜单，图形分支（编辑 / 删除）整体不可达；
-  // 标记盖住终端时，那块区域连「关闭终端」也一起没了。
-  if (!t.closest('.canvas-viewport') && !t.closest('.pane-layer') && !t.closest('.canvas-shape-layer'))
-    return null
-  // ── 层级归属：内层在用的时候，画布层不许抢 ────────────────────────────────
+  // ── 右键归谁：画布层，还是压在它上面的那一层 ───────────────────────
   //
-  // 下面三条是同一个原则的三种情形 —— **谁在最上面、谁正在被使用，事件就归谁**。
-  // 原来只零敲碎打挡了 .term-input 和 .cshape.editing，于是「展开的面板」「输入框」
-  // 「最大化的模块」里右键，照样跨层级命中画布的菜单。
-
-  // ① 任何表单控件里都让给系统菜单。用户在输入框里右键要的是复制/粘贴/拼写，
-  //    不是「新建便签」。终端输入框（.term-input）和便签编辑态只是这条的两个特例，
-  //    按标签判才不会每冒出一个新输入框就漏一次。
-  if (t.closest('input, textarea, [contenteditable="true"], [contenteditable=""]')) return null
-  if (t.closest('.term-input')) return null
-  if (t.closest('.cshape.editing')) return null
-
-  // ② 浮层里不归画布管。灯箱/设置这些是 portal 到 body 的，前面那条
-  //    closest('.canvas-viewport') 已经挡住；但抽屉和技能面板是渲染在画布内的，
-  //    它们盖在画布上、自己就是一层，右键穿透到底下弹「关闭终端」是错的。
+  // **这几条判定搬去 menuOwnership.ts 了**（2026-08-30），理由是它们
+  // 在这里一条测试都盖不到 —— 这个函数要 useStore 和一堆 DOM，
+  // node --test 加载不了。而它的坏法是静默的：漏掉一个选择器，
+  // 右键照样弹一个菜单，只是弹错了那个（用户在登录面板上右键弹出
+  // 「关闭终端」就是这么来的）。抽出去之后只依赖一个 closest，拿假节点就能测。
   //
-  //    **.ac-login（登录面板）在这里尤其要紧**：它的「点我去登录」按钮把右键
-  //    定义成了「复制登录链接」（用户 2026-08-29 专门要的，为了拿去自己信任的
-  //    浏览器打开）。不挡的话，右键弹出来的是画布的「关闭终端」——
-  //    用户想复制链接，结果差一点把整个节点关掉。
-  //    组件里那个 e.preventDefault() 挡不住这条路：画布菜单挂在 **document** 上，
-  //    preventDefault 只压系统菜单，压不住另一个监听器。
-  if (
-    t.closest(
-      '.canvas-drawer, .wiki-drawer, .cskill-panel, .canvas-ctxmenu, .cset-box, .ctodo-lightbox, .ac-login'
-    )
-  )
-    return null
+  // 最大化那条要先拿 store 算：liveMaximizedNode 而不是直接读 maximizedNode ——
+  // 它指的节点可能已经被关掉了（理由见 store/canvas/selectors.ts）。
+  const owner = menuOwnerOf(t, liveMaximizedNode(useStore.getState()) !== null)
+  if (owner !== 'canvas') return null
 
   const { setEditingSticky, setEditingFrame, viewportEl } = deps
   const st = useStore.getState()
 
-  // ③ **模块最大化时，它的内容区里不归画布管。**
-  //
-  //    最大化后模块铺满整个屏幕，画布根本看不见了；这时候在内容区里右键却弹出
-  //    画布层的「复制 / 删除节点」，等于对着一块看不见的东西操作 —— 用户明确报过。
-  //    内容区（.cfile-body / .pane-body）是模块自己的地盘：网页节点要浏览器菜单、
-  //    对话要复制、预览要它自己的操作。
-  //
-  //    **只挡内容区，不挡整个节点**：头部那条 chrome（标题栏、关闭钮、缩放角）
-  //    仍然是画布的东西，在那儿右键要「删除节点」是对的，最大化时也一样。
-  //
-  //    没最大化时不挡：那时候画布就在眼前，在模块上右键要节点操作不会让人意外。
-  //
-  //    用 liveMaximizedNode 而不是直接读 maximizedNode：它指的节点可能已经被关掉了
-  //    （理由见 store/canvas/selectors.ts）。
-  const max = liveMaximizedNode(st)
-  if (max && t.closest('.cfile-body, .pane-body')) return null
   const paneEl = t.closest('.pane[data-leaf-id]') as HTMLElement | null
   const nodeEl = t.closest('.cfile-node[data-node-id]') as HTMLElement | null
   const shapeEl = t.closest('.cshape[data-sid]') as HTMLElement | null
