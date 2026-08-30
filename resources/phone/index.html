@@ -77,6 +77,32 @@ button.big:disabled{opacity:.45}
 .pair h3{font-size:19px;margin:0 0 6px;font-weight:650}
 .pair p{font-size:13px;color:var(--fg-dim);margin:0 0 18px;line-height:1.7}
 .err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:18px}
+
+/* ── 对话（第二步）──────────────────────────────────────────
+   气泡沿用规格里那几张样机：自己发的靠右、贴主色；agent 的靠左、玻璃底。
+   **底部要给输入条让位** —— 不然最后一条永远压在输入框下面看不全。 */
+.chat{display:flex;flex-direction:column;gap:9px;padding-bottom:74px}
+.bub{max-width:82%;padding:9px 12px;border-radius:var(--r-lg);font-size:14px;line-height:1.65;
+  white-space:pre-wrap;word-break:break-word}
+.bub.me{align-self:flex-end;background:rgba(var(--accent-rgb),.16);
+  border:1px solid rgba(var(--accent-rgb),.3);border-bottom-right-radius:6px}
+.bub.ai{align-self:flex-start;background:var(--glass-2);border:1px solid var(--gb);
+  border-bottom-left-radius:6px}
+/* 吸底输入条。fixed 而不是 sticky —— 手机上滚动容器的 sticky 在某些浏览器里会跳。
+   env(safe-area-inset-bottom) 是给全面屏底部那条 home 指示器让位的 */
+.composer{position:fixed;left:0;right:0;bottom:calc(50px + env(safe-area-inset-bottom,0px));
+  display:flex;gap:8px;align-items:flex-end;padding:9px 14px;
+  background:rgba(12,13,17,.94);backdrop-filter:blur(12px);border-top:1px solid var(--gb)}
+.composer textarea{flex:1;font-family:inherit;font-size:15px;line-height:1.5;padding:10px 12px;
+  border-radius:18px;border:1px solid var(--gb);background:var(--glass-3);color:var(--fg);
+  resize:none;max-height:120px;overflow-y:auto}
+.composer textarea:focus{outline:none;border-color:rgba(var(--accent-rgb),.55)}
+/* 44px 是触控目标下限（规格里写死的） */
+.send{width:44px;height:44px;flex:0 0 44px;border-radius:50%;border:0;
+  background:rgba(var(--accent-rgb),.9);color:#0c0d11;display:flex;align-items:center;
+  justify-content:center;cursor:pointer}
+.send.busy{opacity:.5}
+.send svg{width:19px;height:19px}
 </style></head><body>
 
 <div id="hd"><div id="back">‹ 返回</div><h1 id="h1">项目</h1><div id="h2"></div></div>
@@ -100,6 +126,8 @@ var TK = 'eas.phone.token'
 var token = null
 try { token = localStorage.getItem(TK) } catch (e) { /* 隐私模式下会抛 */ }
 var view = 'live', proj = null, projName = ''
+// 当前打开的对话（第二步）。sess 非空时 view==='chat'
+var sess = null, sessName = '', sessRunning = false
 
 var $ = function (id) { return document.getElementById(id) }
 var el = function (t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e }
@@ -334,9 +362,8 @@ function renderSessions () {
     var d = r.data || []
     var run = d.filter(function (s) { return s.running }).length
     $('h2').textContent = d.length + ' 个会话 · ' + run + ' 个在跑'
-    // 这一版会话只显示状态，点不进对话。**不做成假的可点** ——
-    // 点了没反应比灰着更让人困惑
-    b.appendChild(el('div', 'warnbar', '这一版只能看状态，还不能和 agent 对话。'))
+    // 能点进去的是「AI 对话 + 已经起过进程」的那些（见下面卡片上的判断）。
+    // 终端进不去 —— 协议上没有给终端发消息这条路。
     if (!d.length) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, '这个项目还没有会话'))
@@ -356,11 +383,96 @@ function renderSessions () {
       // 后者是聊过但现在没在跑。混成一个词会让人以为新建的那个坏了
       c.appendChild(el('div', 'sub',
         s.waiting ? '等你处理' : s.running ? '在跑' : s.started ? '空闲' : '还没启动'))
+      // **只有 AI 对话、且真的起过进程的才点得进去**。
+      // 终端那种进不去（协议上没有给终端发消息这条路）；
+      // 没起过进程的也进不去 —— 那时候没有 sessionId，发给谁都不知道。
+      // **点不了的就不做成可点的**：点了没反应比不能点更让人困惑（同第一步那条）
+      if (s.kind === 'agent' && s.sessionId) {
+        c.className = 'card'
+        c.onclick = (function (x) {
+          return function () {
+            sess = x.sessionId; sessName = x.title; sessRunning = !!x.running
+            view = 'chat'; render()
+          }
+        })(s)
+      }
       b.appendChild(c)
     })
     // 已经有会话时也留一个入口 —— 一个项目开两三个对话是常态
     b.appendChild(newSessionBtn())
   }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+/** 对话：读最近的往来 + 发一条新的。**手机端第二步。**
+ *
+ *  ── 为什么内容从主进程来，不从渲染层 ────────────────────────────
+ *  对话内容在电脑上只活在那个 AgentChatView 组件的归约器里，
+ *  而画布会把视口外的面板整个裁掉 —— 走渲染层的话，「手机上能不能看到回复」
+ *  会取决于「电脑画布此刻滚到哪儿」。而这功能正是为够不着电脑时用的。
+ *  所以主进程自己留了一份摘要（transcript.ts），这里读它。
+ *
+ *  ── 只给「说了什么」，不给工具调用 ──────────────────────────────
+ *  手机屏就这么大，把执行项也铺上来，正文就被挤没了。
+ *  要看它跑了哪些命令，回电脑上看。 */
+function renderChat (quiet) {
+  var b = shell(sessName || '对话', proj ? projName : '', 'sessions')
+  if (!quiet) loading(b)
+  call('transcript', { sessionId: sess }).then(function (r) {
+    b.innerHTML = ''
+    var d = r.data || []
+    $('h2').textContent = sessRunning ? '在跑' : (d.length ? d.length + ' 条往来' : '还没说过话')
+    if (!d.length) {
+      var e = el('div', 'empty')
+      e.appendChild(el('b', null, '这个会话还没有对话记录'))
+      // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
+      e.appendChild(document.createTextNode('电脑上开始聊之后，这里就能看到；从这儿发一条也可以'))
+      b.appendChild(e)
+    } else {
+      var wrap = el('div', 'chat')
+      d.forEach(function (m) {
+        var bub = el('div', 'bub ' + (m.role === 'user' ? 'me' : 'ai'))
+        bub.textContent = m.text
+        wrap.appendChild(bub)
+      })
+      b.appendChild(wrap)
+    }
+    b.appendChild(composer())
+    // 读完滚到底 —— 手机上要看的是最新那条，不是最早那条
+    var sc = document.scrollingElement || document.documentElement
+    sc.scrollTop = sc.scrollHeight
+  }).catch(function (e) { b.innerHTML = ''; fail(b, e && e.message) })
+}
+
+/** 底部输入条。**发送后不清空到「什么都没发生」** —— 手机上没有回执的话，
+ *  你不知道到底送出去没有。 */
+function composer () {
+  var box = el('div', 'composer')
+  var ta = document.createElement('textarea')
+  ta.placeholder = '说点什么…'
+  ta.rows = 1
+  // 跟着内容长高，但有上限 —— 不然长文本会把整屏占满
+  ta.oninput = function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px' }
+  var btn = el('button', 'send')
+  btn.appendChild(svg('M3 20l18-8L3 4v6l12 2-12 2z'))
+  var busy = false
+  btn.onclick = function () {
+    var t = ta.value.trim()
+    if (!t || busy) return
+    busy = true; btn.className = 'send busy'
+    call('send', { sessionId: sess, text: t }).then(function () {
+      ta.value = ''; ta.style.height = 'auto'
+      busy = false; btn.className = 'send'
+      // 立刻重拉一次：刚发的那条会出现在列表里（主进程记的是同一份）
+      renderChat(true)
+    }).catch(function (e) {
+      busy = false; btn.className = 'send'
+      // **失败要说出来**。手机上没有回执的话，你会以为发出去了
+      var w = el('div', 'warnbar', '没发出去：' + ((e && e.message) || '未知原因'))
+      box.parentNode.insertBefore(w, box)
+    })
+  }
+  box.appendChild(ta); box.appendChild(btn)
+  return box
 }
 
 function renderFiles () {
@@ -436,7 +548,8 @@ function openFile (f) {
 function render () {
   stopPoll()
   if (!token) { renderPair(); return }
-  if (view === 'sessions' && proj) renderSessions()
+  if (view === 'chat' && sess) renderChat()
+  else if (view === 'sessions' && proj) renderSessions()
   else if (view === 'files' && proj) renderFiles()
   else if (view === 'projects') renderProjects()
   else { view = 'live'; renderLive() }

@@ -26,6 +26,7 @@ import { app, ipcMain, type WebContents } from 'electron'
 
 import { alog } from '../cliAuth/log.ts'
 import { unauthedInLine } from '../cliAuth/detect.ts'
+import { createTranscriptStore } from './transcript'
 import { getAdapter, listAdapters } from './adapters/index.ts'
 import { ingestChatQuota, scheduleApiRefresh } from '../quotaStore'
 import {
@@ -96,6 +97,17 @@ interface Live {
   wcId: number
   /** 切模型/切强度的 slash 回执静默期。状态机在 slashSilence.ts（纯函数，可单测）。 */
   silence: SilenceState
+}
+
+/** 每个会话的对话摘要。**给手机端「收」那半用的** ——
+ *  对话内容原本只活在渲染层那个组件的归约器里，而画布会把视口外的面板整个裁掉，
+ *  于是「手机上能不能看到回复」会取决于「电脑画布此刻滚到哪儿」。
+ *  主进程手里本来就有完整事件流，留一份几乎不花什么（两层上限见 transcript.ts）。 */
+const transcripts = createTranscriptStore()
+
+/** 给手机端读的入口。**只读最近若干条**，全量没意义也撑不住小屏 */
+export function readTranscript(sessionId: string, n?: number) {
+  return transcripts.recent(sessionId, n)
 }
 
 const sessions = new Map<string, Live>()
@@ -317,6 +329,11 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (isSilenced(live, e)) return
+  // 对话摘要：**只挂在「一轮一次」的事件上**（text.done / user.message），
+  // 不挂 text.delta —— 那个每几十毫秒一次，挂上去这份旁支记录就成了事件流上的热点。
+  // 静默期（切模型/切强度的 slash 回执）已经在上面被 return 掉了，不会混进来。
+  if (e.k === 'text.done') transcripts.push(live.rec.id, 'assistant', e.text, Date.now())
+  else if (e.k === 'user.message') transcripts.push(live.rec.id, 'user', e.text, Date.now())
   // busy 的唯一来源。**放在 isSilenced 之后是有意的** —— 静默期吞掉的那些
   // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
   // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。
@@ -780,8 +797,13 @@ export function deliverExternalMessage(
   const live = sessions.get(sessionId)
   if (!live) return { ok: false, error: '会话不存在（可能已被关闭）' }
   if (!message) return { ok: false, error: '消息不能为空' }
+  // **走 handleEvent 而不是 emitEvent。** 两者差一层：emitEvent 只负责推给渲染层，
+  // handleEvent 才会顺手把这条记进主进程的对话摘要（transcript）——
+  // 而摘要正是手机端「收」那半的数据源。
+  // 第一版写成 emitEvent，实测时手机上看得到 AI 的回复、**看不到自己刚发的那句**。
+  //
   // **先推事件再送 CLI**：反过来的话，CLI 回得快时回答会排在提问前面
-  emitEvent(live, { k: 'user.message', text: message })
+  handleEvent(live, { k: 'user.message', text: message })
   const r = deliverMessage(live, message)
   return r.ok ? { ok: true } : { ok: false, error: r.error }
 }
@@ -845,6 +867,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
   for (const [id, live] of sessions) {
     if (live.wcId !== wcId) continue
     sessions.delete(id)
+    transcripts.drop(id) // 会话没了，它那份摘要也别赖着
     const proc = live.proc
     live.proc = undefined
     if (!proc) continue
@@ -1163,6 +1186,7 @@ export function registerAgentChatHandlers(): void {
     const live = sessions.get(id)
     if (!live) return
     sessions.delete(id)
+    transcripts.drop(id) // 同上：删会话就删摘要，两处都要，漏一处就是慢性泄漏
     live.killing = true // 用户点了「停」——他要它停，不许自己爬起来
     live.proc?.kill()
   })

@@ -21,7 +21,7 @@ import path from 'path'
 import { guardPath } from '../fsGuard'
 import { mainWindow } from '../island'
 import * as audit from './audit'
-import { deliverExternalMessage } from '../agentChat/session'
+import { deliverExternalMessage, readTranscript } from '../agentChat/session'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
@@ -298,6 +298,17 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     hooks?.onClaim()
     if (!r.ok) return { code: 400, body: { error: r.error ?? '发不出去' } }
     return { code: 200, body: { ok: true } }
+  }
+
+  // 读一个会话最近的对话。**不走 queryRenderer**，理由同 send：
+  // 对话内容在渲染层只活在那个组件里，而画布会把视口外的面板裁掉。
+  // 主进程手里有完整事件流，摘要就留在那儿（transcript.ts，两层上限）。
+  if (action === 'transcript') {
+    const sid = typeof args.sessionId === 'string' ? args.sessionId : ''
+    if (!sid) return { code: 400, body: { error: '缺少 sessionId' } }
+    // **不记留痕**：手机上下拉刷新会反复调，记了会把留痕淹掉；
+    // 而「他看了一眼回复没有」也不是事后要复核的东西（同 status 那条）
+    return { code: 200, body: { data: readTranscript(sid, 40) } }
   }
 
   if (action === 'file') return readFile(args.projectId, args.nodeId)

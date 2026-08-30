@@ -334,6 +334,22 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         streamingTurn = null
         break
       }
+      case 'user.message': {
+        // **归约器唯一一次产出用户消息**（文件头和 MessageList 头部那条
+        // 「reduce 从不产出用户消息」的显式例外）。
+        //
+        // 只有手机端那条路会发这个事件 —— 桌面自己发的消息由 AgentChatView
+        // 在调 send 之前就乐观插进对话流了，走这里会重复显示两条。
+        //
+        // 插在**当前末尾**：事件是按到达顺序来的，手机那条消息就是此刻发生的，
+        // 它后面跟着的 assistant 轮次自然接在它下面。
+        // 不需要 beforeTurnCount 那套（那是给「组件本地记录 + 事后合并」用的，
+        // 这条一到就落位）。
+        turns.push({ role: 'user', text: e.text, execs: [] })
+        // **不动 streamingTurn**：上一轮如果还在流式输出，它的引用还挂在那儿，
+        // 清掉的话那一轮剩下的 delta 会另起一个轮次，看起来像回答被劈成两半。
+        break
+      }
       case 'error': {
         // 任何情况都不丢弃：不分 fatal，一律进 notices。
         // 内容完全相同（文本 + fatal 都一样）的，合并到已有那条上计数——**不是丢弃**，

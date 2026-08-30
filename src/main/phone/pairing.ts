@@ -140,7 +140,18 @@ export function setEnabled(s: PhoneState, enabled: boolean): PhoneState {
 }
 
 /** 白名单：手机能请求的动作。不在这张表上的一律拒，不进任何业务逻辑。 */
-export const ACTIONS = ['projects', 'status', 'sessions', 'files', 'file', 'newSession', 'send'] as const
+export const ACTIONS = [
+  'projects',
+  'status',
+  'sessions',
+  'files',
+  'file',
+  'newSession',
+  'send',
+  /** 读一个会话最近的对话。**是读操作** —— 只读档里也给，
+   *  不然「只读」就成了「只能看状态、看不到内容」，跟看文件那条不一致 */
+  'transcript'
+] as const
 export type PhoneAction = (typeof ACTIONS)[number]
 
 /** 写操作 —— 这几个会**改变电脑上的状态**，每一次都要留痕（见 audit.ts）。
