@@ -220,35 +220,42 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 
   const cs = canvasRect?.scale ?? 1 // 实时缩放比(每帧跟手)
-  // 落定的缩放比:画布终端的字号/头部按它渲染;缩放手势中它不变,pane 用 transform 做实时预览,
-  // 手势停止后才落到 cs(此时终端才真正落字号+fit,鼠标坐标精准)。见 canvasSlice.canvasCommittedScale。
-  const committedScale = useStore((s) => s.canvasCommittedScale)
+  // ── canvasCommittedScale 这里不再用了（2026-08-30 改真缩放）──────────
+  // 它原来的用途：画布终端按「落定的缩放比」重排字号，缩放手势中先用 transform
+  // 做视觉预览，停定后再真正 fit。真缩放之后终端在自己的坐标系里恒为 1:1、
+  // 视觉缩放全交给 pane 的 transform，**没有「落定」这件事了**。
+  // store 里那个字段还在（画布场景要持久化它），PaneLayer 也还引着，
+  // 但渲染这一侧不再依赖它 —— 别再从它推导终端该多大。
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
-  // 画布终端走「字体缩放」而非常驻 CSS transform（为了鼠标坐标精准）；但缩放手势进行中(cs≠committed)
-  // 临时套一层 transform 做实时视觉预览，手势停定后 transform 归 1、落真实字号。
   const canvasTerm = !!canvasRect && pane.kind === 'terminal'
   // 还没探测出结果（null）时按「可用」渲染，避免启动瞬间控制条闪一下才出现
   const agentCli = useStore((s) => s.agentCli)
   const agentAvailable = !agentCli || agentCli.claude || agentCli.codex
   const isMax = !!canvasRect?.maximized
   // 最大化：脱离画布缩放，按 1:1 渲染（字号正常，真沉浸）
-  const effScale = isMax ? 1 : committedScale
-  const zoomPreview = canvasTerm && !isMax && Math.abs(cs - committedScale) > 0.0005
 
   // 画布模式：终端=按 committed 像素尺寸 + 缩放手势中 transform 预览；其它节点=像素定位 + 整体位图缩放；分屏=百分比 rect
   const paneStyle: CSSProperties = canvasRect
     ? canvasTerm
       ? {
+          // ── 真缩放（2026-08-30，用户在对比页上选的 B）──────────────────
+          // 原来终端走的是「裁剪」：按 committed 缩放渲染成真实像素，字号不跟着缩，
+          // 缩小 = 少看几行。问题是**输入框没有内容可裁**（它就一行），
+          // 只能整块占着 —— 缩到 35% 时它从占 8.9% 涨到 25.6%，整个节点头重脚轻。
+          // 而且手势中做位图预览、停定后重排回真实尺寸，那一下会跳。
+          //
+          // 现在和画布上其它节点走同一条路：**按 1:1 布局，再整体 transform**。
+          // 比例在任何缩放下都恒定，手势中的跳变也自然消失（全程就是同一个 transform）。
+          // 代价是缩小时字会跟着变小 —— 那正是「缩略图」该有的样子，
+          // 想读内容就放大或最大化。
           display: hidden ? 'none' : undefined,
           left: canvasRect.left,
           top: canvasRect.top,
-          width: canvasRect.w * effScale,
-          height: canvasRect.h * effScale,
+          width: canvasRect.w,
+          height: canvasRect.h,
           zIndex: isMax ? 200 : undefined,
-          // 手势中：把按 committed 渲染的终端整体缩放到实时 cs（丝滑、不重建 GPU）；停定后 =scale(1)
-          transform: zoomPreview ? `scale(${cs / committedScale})` : undefined,
-          transformOrigin: '0 0',
-          willChange: zoomPreview ? 'transform' : undefined
+          transform: isMax ? undefined : `scale(${cs})`,
+          transformOrigin: '0 0'
         }
       : {
           display: hidden ? 'none' : undefined,
@@ -337,10 +344,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         hidden={!!canvasRect?.board}
         style={
           canvasRect
-            ? // 画布终端：头部按 committed 缩放（缩放手势中由 pane transform 提供实时增量），按钮仍精准可点
-              canvasTerm
-              ? { cursor: 'move', zoom: effScale }
-              : { cursor: 'move' }
+            ? // 改真缩放之后**不再需要 zoom 补偿**：面板本身按 1:1 布局、整体 transform 缩放，
+              // 头部跟着一起缩就对了。留着 `zoom: effScale` 会缩两次（外层 transform 一次、
+              // 这里再一次），节点越小头部越扁
+              { cursor: 'move' }
             : undefined
         }
         onMouseDown={canvasRect ? onCanvasHeadDown : undefined}
@@ -437,14 +444,16 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           ptyAgent[ptyId]（主进程探出来的真实进程名）决定显不显示，认不出就返回 null。 */}
       {!canvasRect && pane.kind === 'terminal' && <AgentCmdBar ptyId={pane.ptyId} />}
       {canvasTerm && pane.kind === 'terminal' && (
-        // Agent 控制台控制条（画布终端专属；按 committed 缩放，缩放增量由 pane transform 提供，与头部一致）
+        // Agent 控制台控制条（画布终端专属；跟着 pane 的 transform 一起缩，与头部一致）
         //
         // **一个 CLI 都没装时也照常显示**（2026-08-27 用户要求）。原来是整条藏掉，
         // 理由是「模型/档位/启动全是死的，摆着让人困惑」—— 但藏掉的代价更大：
         // 新用户第一次打开软件时**什么都看不到**，也就不知道这里本来能选 CLI、
         // 更不知道该装什么。现在改成照常显示，启动按钮在没装时变成「安装」，
         // 点它直接装 —— 把「困惑」换成了「一条能往下走的路」。
-        <div className="agentbar-wrap" style={{ zoom: effScale }}>
+        //
+        // 同头部：真缩放之后**不再 zoom 补偿**，否则和外层 transform 叠成缩两次。
+        <div className="agentbar-wrap">
           <CanvasAgentBar
             frameId={canvasRect!.frameId}
             nodeId={canvasRect!.nodeId}
@@ -460,7 +469,10 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
             leafId={leaf.id}
             ptyId={pane.ptyId}
             isActive={isActive}
-            canvasScale={canvasTerm ? effScale : 1}
+            // **恒为 1**：真缩放之后终端在自己的坐标系里始终 1:1 排版，
+            // 视觉缩放由 pane 的 transform 承担。传 committedScale 会让它
+            // 再缩一次字号 —— 那是「裁剪」那条路的做法，两条叠加就是缩两次
+            canvasScale={1}
           />
         )}
         {pane.kind === 'code' &&

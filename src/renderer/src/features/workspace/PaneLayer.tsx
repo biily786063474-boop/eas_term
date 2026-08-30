@@ -37,7 +37,6 @@ export function PaneLayer(): JSX.Element {
   // 走 liveMaximizedNode 而不是直接读 —— 它指向的节点可能已经被关掉了，
   // 那时候直接读会让下面的 `maximizedNode && !isMax` 把**所有**节点都隐藏掉
   const maximizedNode = useStore(liveMaximizedNode)
-  const committedScale = useStore((s) => s.canvasCommittedScale)
   // 看板全屏进/出时必须重挂观察器 —— 见下面 measure effect 依赖里的说明。
   // 这个 leafId 本身在这里用不上，要的是「它变了」这个事实。
   const boardFull = useStore((s) => s.boardFullscreen)
@@ -123,7 +122,11 @@ export function PaneLayer(): JSX.Element {
       })
     })
     return m
-  }, [viewMode, canvas, titleByLeaf, maximizedNode, committedScale])
+    // committedScale 从依赖里去掉了（2026-08-30 改真缩放）：这个 memo 里算的
+    // left/top/w/h 全部来自 `canvas.viewport.scale`，从来没读过 committedScale。
+    // 它当初在这儿是为了「缩放落定时强制重算一次」，而真缩放之后没有落定这一步了。
+    // `canvas` 本身已经涵盖 viewport 的变化。
+  }, [viewMode, canvas, titleByLeaf, maximizedNode])
 
   // board 模式：量每张卡片里那个空槽位，把终端浮到它上面。
   //
