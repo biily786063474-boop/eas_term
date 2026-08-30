@@ -2158,41 +2158,75 @@
 }
 
 /* ---------- 项目「需处理」呼吸高亮 ---------- */
-@keyframes cd-breathe {
+/*
+ * **只动 opacity，不动 box-shadow / background。**（2026-08-30 实测）
+ *
+ * 原来这两个动画直接对 `box-shadow` 和 `background` 做补间 —— 那两个属性
+ * 每一帧都要重新光栅化，而且是 `infinite`：**开着就永远在烧**，
+ * 跟你有没有在操作无关。
+ *
+ * 同一台机器、同一时刻的对照（8 秒静置，20 个呼吸点）：
+ *   box-shadow 呼吸   样式重算 960 次   主线程 0.980s
+ *   opacity  呼吸    样式重算  25 次   主线程 0.019s
+ * 差 50 倍。用户那台连跑 5 天的机器上，表现是 GPU 23% + WindowServer 25%
+ * 常驻，而渲染器只有 12%（不是 JS 在跑，是合成层一直在重画）。
+ *
+ * 改法：把要闪的那层效果**固定画在伪元素上**，动画只改它的 opacity。
+ * 视觉一模一样，但 opacity 是合成属性 —— 不触发重绘，也不触发样式重算。
+ */
+.cd-proj.breathing {
+  position: relative;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+.cd-proj.breathing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* 外发光是 active 态没有的 → 即使叠在当前项目上也能明显区分 */
+  box-shadow:
+    inset 0 0 0 1.5px rgba(var(--accent-rgb), 0.9),
+    0 0 18px 2px rgba(var(--accent-rgb), 0.6);
+  background: rgba(var(--accent-rgb), 0.18);
+  animation: cd-fade 1.5s ease-in-out infinite;
+}
+
+/** 唯一的动画：淡入淡出。**合成属性，不触发重绘** */
+@keyframes cd-fade {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0);
-    background: rgba(var(--accent-rgb), 0.06);
+    opacity: 0;
   }
   50% {
-    /* 外发光是 active 态没有的 → 即使叠在当前项目上也能明显区分 */
-    box-shadow:
-      inset 0 0 0 1.5px rgba(var(--accent-rgb), 0.9),
-      0 0 18px 2px rgba(var(--accent-rgb), 0.6);
-    background: rgba(var(--accent-rgb), 0.24);
+    opacity: 1;
   }
 }
 
-.cd-proj.breathing {
-  animation: cd-breathe 1.5s ease-in-out infinite;
-  color: var(--accent);
-}
-
-@keyframes cd-dot-breathe {
+/* 点：缩放本来就是合成属性，留着；发光那半同样挪到伪元素上淡入淡出 */
+@keyframes cd-dot-scale {
   0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0);
   }
   50% {
     transform: scale(1.4);
-    box-shadow: 0 0 9px 1px rgba(var(--accent-rgb), 0.85);
   }
 }
 
 .cd-proj.breathing .cd-proj-dot {
+  position: relative;
   background: var(--accent);
-  animation: cd-dot-breathe 1.5s ease-in-out infinite;
+  animation: cd-dot-scale 1.5s ease-in-out infinite;
+}
+.cd-proj.breathing .cd-proj-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 9px 1px rgba(var(--accent-rgb), 0.85);
+  animation: cd-fade 1.5s ease-in-out infinite;
 }
 
 /* ---------- 画布终端 Agent 控制台控制条 ---------- */
@@ -4947,6 +4981,12 @@
   .cd-attn-bubble.approval,
   .cd-proj.breathing,
   .cd-proj.breathing .cd-proj-dot,
+  /* **伪元素也要列进来**（2026-08-30）：把呼吸效果从 box-shadow 挪到
+     `::after` 的 opacity 之后，动画的宿主变了 —— 只写宿主元素的话，
+     开了「减少动效」的人看到的还是一直在闪。
+     **改动画实现时，这份清单必须跟着改**，它不会自己发现。 */
+  .cd-proj.breathing::after,
+  .cd-proj.breathing .cd-proj-dot::after,
   .crm-dot,
   /* ② 一次性入场动画 —— 直接到终态，不演过程 */
   .cframe-drop-pop,

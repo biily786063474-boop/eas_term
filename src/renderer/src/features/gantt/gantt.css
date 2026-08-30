@@ -325,9 +325,34 @@
   background: color-mix(in srgb, var(--accent) 70%, var(--pane-solid));
 }
 
+/*
+ * **不用 filter 做呼吸。**（2026-08-30 实测）
+ * `filter: brightness()` 每一帧都要重新光栅化整条，而这是 infinite ——
+ * 甘特图上有几条在跑就烧几条。改成叠一层固定的高光、只动它的 opacity：
+ * 视觉是同样的「一亮一暗」，但 opacity 是合成属性。
+ */
 .gantt-bar.running {
   background: var(--accent);
-  animation: gantt-breathe 2.4s ease-in-out infinite;
+  position: relative;
+}
+.gantt-bar.running::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.16);
+  animation: gantt-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes gantt-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .gantt-bar.aborted {
@@ -337,15 +362,7 @@
   color: #0b0d13;
 }
 
-@keyframes gantt-breathe {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.18);
-  }
-}
+
 
 /* 条内标签：深墨。窄条放不下就整个藏起来，别让半个字露在外面 */
 .gantt-bar-label {
@@ -876,4 +893,14 @@
   margin-top: 6px;
   color: var(--fg-dim);
   font-size: 11.5px;
+}
+
+/* 「减少动效」：**无限循环的呼吸/脉冲必须彻底停** —— 这是这个系统设置
+   最主要针对的东西。有限次的入场动画不在此列（跑完就停，不构成困扰）。
+   **改动画实现时这份清单要跟着改**：2026-08-30 把呼吸效果从元素本身
+   挪到 `::after` 之后，只写宿主元素就漏了 —— 清单不会自己发现宿主变了。 */
+@media (prefers-reduced-motion: reduce) {
+  .gantt-bar.running::after {
+    animation: none;
+  }
 }

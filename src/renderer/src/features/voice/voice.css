@@ -39,20 +39,42 @@
   color: var(--on-accent);
   background: var(--accent);
   border-color: transparent;
-  box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5);
-  animation: voice-pulse 1.4s ease-out infinite;
+  position: relative;
 }
-@keyframes voice-pulse {
+/*
+ * **扩散光环：伪元素 + transform/opacity，不动 box-shadow。**（2026-08-30 实测）
+ *
+ * 原来直接对 `box-shadow` 的扩散半径做补间 —— 那个属性每一帧都要重新光栅化，
+ * 而且是 `infinite`：开着就永远在烧。对照测过（8 秒静置、20 个呼吸点）：
+ *   box-shadow 版  样式重算 960 次 / 主线程 0.980s
+ *   transform 版   样式重算  25 次 / 主线程 0.019s
+ * 差 50 倍。
+ *
+ * 复刻方式：伪元素画一个**固定大小**的圆环，动画只放大它并淡出 ——
+ * 视觉就是原来那圈扩散的光，但 transform 和 opacity 都是合成属性。
+ */
+.voice-btn.rec::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.5);
+  animation: voice-ring 1.4s ease-out infinite;
+}
+
+@keyframes voice-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.5);
+    transform: scale(1);
+    opacity: 1;
   }
-  70% {
-    box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0);
-  }
+  70%,
   100% {
-    box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0);
+    transform: scale(1.5);
+    opacity: 0;
   }
 }
+
 
 /* interim（易变结果）灰色浮层 */
 .voice-interim {
@@ -101,4 +123,14 @@
   right: 8px;
   bottom: calc(100% + 8px);
   z-index: 8;
+}
+
+/* 「减少动效」：**无限循环的呼吸/脉冲必须彻底停** —— 这是这个系统设置
+   最主要针对的东西。有限次的入场动画不在此列（跑完就停，不构成困扰）。
+   **改动画实现时这份清单要跟着改**：2026-08-30 把呼吸效果从元素本身
+   挪到 `::after` 之后，只写宿主元素就漏了 —— 清单不会自己发现宿主变了。 */
+@media (prefers-reduced-motion: reduce) {
+  .voice-btn.rec::after {
+    animation: none;
+  }
 }

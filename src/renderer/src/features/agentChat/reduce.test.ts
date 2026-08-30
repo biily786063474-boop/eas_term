@@ -642,3 +642,60 @@ test('非致命提醒不会结束这一轮 —— 那只是条提示，会话还
   ])
   assert.equal(v.busy, true, 'fatal:false 不该把正在跑的一轮判成结束')
 })
+
+// ============================================================
+// user.message —— 手机端发进来的消息（2026-08-30）
+//
+// 这是归约器**唯一一次**产出用户消息，是对文件头那条
+// 「reduce 从不产出用户消息」的显式例外。桌面自己发的不走这条
+//（AgentChatView 乐观插入），只有手机那条路会。
+// ============================================================
+
+test('user.message 变成一条 role:user 的轮次', () => {
+  const v = run([ready, { k: 'user.message', text: '继续，把剩下的做完' }])
+  const u = v.turns.filter((t) => t.role === 'user')
+  assert.equal(u.length, 1)
+  assert.equal(u[0].text, '继续，把剩下的做完')
+  assert.deepEqual(u[0].execs, [], '用户轮次没有执行项')
+})
+
+test('插在当前末尾 —— 后面的回答接在它下面', () => {
+  const v = run([
+    ready,
+    { k: 'text.done', text: '第一段回答' },
+    { k: 'user.message', text: '手机上补的一句' },
+    { k: 'text.done', text: '针对补充的回答' }
+  ])
+  assert.deepEqual(
+    v.turns.map((t) => `${t.role}:${t.text}`),
+    ['assistant:第一段回答', 'user:手机上补的一句', 'assistant:针对补充的回答']
+  )
+})
+
+test('**不打断正在流式输出的那一轮** —— 否则回答会被劈成两半', () => {
+  // 手机的消息可能在 AI 正说到一半时到达。清掉 streamingTurn 的话，
+  // 剩下的 delta 会另起一个轮次，界面上看起来像同一段回答断成了两条
+  const r = createChatReducer()
+  r.push(ready)
+  r.push({ k: 'text.delta', text: '正在说' })
+  r.push({ k: 'user.message', text: '插一句' })
+  r.push({ k: 'text.delta', text: '的后半句' })
+  const assistants = r.view().turns.filter((t) => t.role === 'assistant')
+  assert.equal(assistants.length, 1, `流式那一轮被劈成了 ${assistants.length} 条`)
+  assert.equal(assistants[0].text, '正在说的后半句')
+})
+
+test('多条累积，顺序不乱', () => {
+  const v = run([
+    ready,
+    { k: 'user.message', text: '一' },
+    { k: 'user.message', text: '二' },
+    { k: 'user.message', text: '三' }
+  ])
+  assert.deepEqual(v.turns.map((t) => t.text), ['一', '二', '三'])
+})
+
+test('空文本也照样落一条 —— 由发送侧负责不发空的，归约器不替它做判断', () => {
+  const v = run([ready, { k: 'user.message', text: '' }])
+  assert.equal(v.turns.length, 1)
+})
