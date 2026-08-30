@@ -173,9 +173,11 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
     return [
       {
         k: 'compacted',
-        // 只认 'manual'，其余（含缺失）一律当 auto —— 自动压缩是常态（实测 68 次里 62 次），
-        // 认错方向的话提示会把「它自己压的」说成「你压的」
-        trigger: m.trigger === 'manual' ? 'manual' : 'auto',
+        // **拿不到就是 null，不猜。** 2026-08-29 真机实测：app 的 stream-json 里
+        // 这个事件**不带 compactMetadata**（transcript 里那份带），
+        // 于是原来「缺失一律当 auto」会把手动 /compact 说成「上下文满了自动压缩」——
+        // 那是在编一件没发生的事。界面拿到 null 会说中性的话。
+        trigger: m.trigger === 'manual' ? 'manual' : m.trigger === 'auto' ? 'auto' : null,
         preTokens: num(m.preTokens),
         postTokens: num(m.postTokens)
       }

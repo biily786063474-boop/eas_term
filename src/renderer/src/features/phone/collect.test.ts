@@ -33,9 +33,26 @@ test('子 Frame 里的会话算进父项目', () => {
   assert.equal(r[0].waiting, 1)
 })
 
-test('没起来的会话（没有 ptyId/sessionId）不计数', () => {
+test('**还没启动的 AI 对话也要算一个会话** —— 否则手机上刚新建的看不见', () => {
+  // 2026-08-29 端到端验证抓到的：手机新建成功、列表却还是空，
+  // 用户会以为没建成然后再点一次。节点在画布上摆着就是存在，
+  // 有没有 sessionId 只代表启没启动。
   const top = frame({ nodes: [node({ pane: { kind: 'agent', cwd: '/x' } })] })
-  assert.equal(collectProjects([top], PROJECTS, [], [])[0].sessions, 0)
+  assert.equal(collectProjects([top], PROJECTS, [], [])[0].sessions, 1)
+  const ss = collectSessions([top], 'p1', new Map(), [], [])
+  assert.equal(ss.length, 1)
+  assert.equal(ss[0].started, false, '标成没启动，但要出现在列表里')
+  assert.equal(ss[0].running, false)
+})
+
+test('没启动的会话用**节点 id** 回指（sessionId 每次启动都变，节点 id 稳定）', () => {
+  const n1 = node({ pane: { kind: 'agent', cwd: '/x' } })
+  const n2 = node({ pane: { kind: 'agent', cwd: '/x', sessionId: 'ac-9' } })
+  const top = frame({ id: 'top', nodes: [n1, n2] })
+  const ss = collectSessions([top], 'p1', new Map(), [], [])
+  assert.equal(ss[0].id, n1.id, '没启动 → 节点 id')
+  assert.equal(ss[1].id, 'ac-9', '已启动 → 会话 id')
+  assert.deepEqual(ss.map((s) => s.started), [false, true])
 })
 
 test('不属于任何项目的 Frame 不进手机端', () => {

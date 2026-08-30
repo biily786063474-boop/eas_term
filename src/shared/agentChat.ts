@@ -88,8 +88,13 @@ export type ChatEvent =
    */
   | {
       k: 'compacted'
-      /** 'auto' = 上下文满了 CLI 自己压的；'manual' = 用户点了压缩 */
-      trigger: 'auto' | 'manual'
+      /** 'auto' = 上下文满了 CLI 自己压的；'manual' = 用户点了压缩；
+       *  **null = 不知道** —— 2026-08-29 实测：stream-json 里的 compact_boundary
+       *  **不带 compactMetadata**（transcript 里那份带），所以多数时候就是不知道。
+       *  不知道时界面必须说中性的话，不能默认说成「自动」——我发的明明是 /compact。 */
+      trigger: 'auto' | 'manual' | null
+      /** 压缩前后的 token 数。**同样经常拿不到**（metadata 缺席时为 0），
+       *  为 0 就不显示，不编 */
       preTokens: number
       postTokens: number
     }

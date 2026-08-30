@@ -12,10 +12,15 @@ import type { Project } from '../../../../shared/types'
 /** 一台会话在手机上的样子。ptyId 对终端是 pty 号，对 AI 对话是 sessionId —— 
  *  跟甘特图 GanttTask.ptyId 是同一个历史包袱，同样靠 kind 区分。 */
 export interface PhoneSession {
-  /** 手机端拿它回指某个会话；不是路径、不是 pid */
+  /** 手机端拿它回指某个会话。
+   *  **已启动的用会话 id，没启动的用画布节点 id** —— 后者是稳定的，
+   *  而 sessionId 每次启动都变。 */
   id: string
   kind: 'terminal' | 'agent'
   title: string
+  /** 已经起来了（有 pty / 有 session）。**false 不等于「不存在」** ——
+   *  刚建出来还没聊过的 AI 对话就是这种：画布上看得见，进程还没起。 */
+  started: boolean
   /** 在跑（spinner 转着） */
   running: boolean
   /** 等你处理（attention 标记） */
@@ -53,7 +58,18 @@ function withChildren(frames: CanvasFrame[], top: CanvasFrame): CanvasFrame[] {
   return out
 }
 
-/** 节点上那个会话的 id：终端取 ptyId，AI 对话取 sessionId。取不到 = 还没起来 */
+/** 这个节点是不是一个「会话位」（终端或 AI 对话）。
+ *
+ *  **和「起没起来」是两件事。** 原来这里把两者混在一起（取不到 id 就当不存在），
+ *  结果手机上新建一个 AI 对话之后列表还是空的 —— 节点在画布上明明摆着，
+ *  只是还没聊过所以没有 sessionId。2026-08-29 端到端验证时抓到。 */
+function slotKindOf(n: CanvasNode): 'terminal' | 'agent' | null {
+  const p = n.pane
+  if (!p) return null
+  return p.kind === 'terminal' || p.kind === 'agent' ? p.kind : null
+}
+
+/** 已启动的会话 id；没启动就是 null */
 function sessionIdOf(n: CanvasNode): string | null {
   const p = n.pane
   if (!p) return null
@@ -89,9 +105,12 @@ export function collectProjects(
     let n = 0
     for (const f of withChildren(frames, top)) {
       for (const node of f.nodes) {
+        if (!slotKindOf(node)) continue
+        // **没启动的也算一个会话** —— 否则手机上刚新建的对话看不见，
+        // 用户会以为没建成，然后再点一次
+        n++
         const id = sessionIdOf(node)
         if (!id) continue
-        n++
         if (runSet.has(id)) run++
         if (waitSet.has(id)) wait++
       }
@@ -117,15 +136,17 @@ export function collectSessions(
   const out: PhoneSession[] = []
   for (const f of withChildren(frames, top)) {
     for (const node of f.nodes) {
-      const id = sessionIdOf(node)
-      if (!id) continue
-      const kind = node.pane?.kind === 'agent' ? 'agent' : 'terminal'
+      const kind = slotKindOf(node)
+      if (!kind) continue
+      const sid = sessionIdOf(node)
       out.push({
-        id,
+        // 没启动的用节点 id 回指 —— 它稳定，而 sessionId 每次启动都变
+        id: sid ?? node.id,
         kind,
         title: titleOf(node, node.leafId ? titleByLeaf.get(node.leafId) : undefined, out.length + 1),
-        running: runSet.has(id),
-        waiting: waitSet.has(id)
+        started: !!sid,
+        running: !!sid && runSet.has(sid),
+        waiting: !!sid && waitSet.has(sid)
       })
     }
   }

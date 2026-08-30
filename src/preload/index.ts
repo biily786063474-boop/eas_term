@@ -265,6 +265,12 @@ const api = {
     revoke: (deviceId: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('phone:revoke', deviceId),
     restart: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('phone:restart'),
+    /** 允许手机那个写请求。**真正的动作在这一步才发生** ——
+     *  执行失败会如实返回 error，不装成成功 */
+    allowRequest: (): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('phone:allowRequest'),
+    denyRequest: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('phone:denyRequest'),
+    clearAudit: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('phone:clearAudit'),
     /** 状态变了主进程会推一次（开关、配对、设备增删都会触发） */
     onStatus: (cb: (s: PhoneStatus) => void): (() => void) => {
       const h = (_e: unknown, s: PhoneStatus): void => cb(s)

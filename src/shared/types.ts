@@ -939,4 +939,17 @@ export interface PhoneStatus {
   /** 有手机扫了码、正在等你点确认时它自报的名字（**不可信**，已过滤控制字符） */
   claimingName: string | null
   devices: { id: string; name: string; pairedAt: number; lastSeenAt: number }[]
+  /** 手机发来的、正等你点允许的**写请求**（目前只有「新建 AI 对话」）。
+   *  null = 没有。**不含请求参数** —— 界面只需要「谁、要干什么」。 */
+  request: { id: string; deviceName: string; action: string; projectId: string } | null
+  /** 操作留痕，最近的排最前。**放开写操作的前提** ——
+   *  没有它，出问题时用户没有任何依据（见 main/phone/audit.ts）。 */
+  audit: {
+    at: number
+    deviceId: string
+    deviceName: string
+    action: string
+    detail: string
+    outcome?: 'allowed' | 'denied' | 'expired'
+  }[]
 }

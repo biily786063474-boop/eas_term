@@ -35,13 +35,42 @@ function answer(action: string, args: Record<string, unknown>): unknown {
       return collectSessions(frames, projectId, titleByLeaf(), s.runningPtys, s.attentionPtys)
     case 'files':
       return collectFiles(frames, projectId)
-    // 'resolve' 不是手机能请求的动作（白名单里没有它）——
-    // 它是 server.ts 读文件时内部问的一步，手机给的是 nodeId，路径它永远拿不到
+    // 'resolve' 和 'createSession' 都**不是手机能请求的动作**（白名单里没有它们）——
+    // 它们是主进程内部问的一步。手机那边发的是 'file' / 'newSession'，
+    // 而 newSession 还必须先过电脑上的人工确认才会走到这里。
     case 'resolve':
       return resolveFile(frames, projectId, typeof args.nodeId === 'string' ? args.nodeId : '')
+    case 'createSession':
+      return createSession(projectId)
     default:
       return null
   }
+}
+
+/**
+ * 在某个项目的 Frame 里新建一个 AI 对话节点。
+ *
+ * **只有走完「手机请求 → 电脑上点允许」才会调到这里**（见 main/phone/index.ts
+ * 的 phone:allowRequest）。这个函数本身不做任何权限判断 —— 判断在那条链路上，
+ * 重复判断只会让「到底谁说了算」变成两个答案。
+ *
+ * 三条边界：
+ * · **只能建在已有的顶层 Frame 里** —— 不新建 Frame、不新建项目。
+ *   手机能拉起的东西必须落在你已经摆出来的范围内。
+ * · **cwd 用项目自己的路径**，不接受手机传路径（那等于让它选在哪跑）。
+ * · 项目没有 Frame 就如实失败，不悄悄找个别的地方建。
+ */
+function createSession(projectId: string): { ok: boolean; nodeId?: string; error?: string } {
+  const s = useStore.getState()
+  const top = s.canvas.frames.find((f) => !f.parentId && f.projectId === projectId)
+  if (!top) return { ok: false, error: '这个项目在画布上没有 Frame' }
+  const proj = s.projects.find((p) => p.id === projectId)
+  if (!proj?.path) return { ok: false, error: '这个项目没有目录' }
+  const before = new Set(top.nodes.map((n) => n.id))
+  s.addFileNode(top.id, { kind: 'agent', cwd: proj.path }, 40, 40)
+  const after = useStore.getState().canvas.frames.find((f) => f.id === top.id)
+  const added = after?.nodes.find((n) => !before.has(n.id))
+  return added ? { ok: true, nodeId: added.id } : { ok: false, error: '节点没建出来' }
 }
 
 let bound = false

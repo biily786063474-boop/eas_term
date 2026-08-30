@@ -255,10 +255,17 @@ function renderSessions () {
     var d = r.data || []
     var run = d.filter(function (s) { return s.running }).length
     $('h2').textContent = d.length + ' 个会话 · ' + run + ' 个在跑'
-    // 第一步是只读：会话只显示状态，点不进对话。**不做成假的可点** ——
+    // 这一版会话只显示状态，点不进对话。**不做成假的可点** ——
     // 点了没反应比灰着更让人困惑
-    b.appendChild(el('div', 'warnbar', '这一版只能看状态。和进程对话是下一步的功能。'))
-    if (!d.length) { b.appendChild(el('div', 'empty', '这个项目还没有会话')); return }
+    b.appendChild(el('div', 'warnbar', '这一版只能看状态，还不能和 agent 对话。'))
+    if (!d.length) {
+      var e = el('div', 'empty')
+      e.appendChild(el('b', null, '这个项目还没有会话'))
+      e.appendChild(document.createTextNode('可以从这里新建一个 —— 要在电脑上点一次允许'))
+      b.appendChild(e)
+      b.appendChild(newSessionBtn())
+      return
+    }
     d.forEach(function (s) {
       var c = el('div', 'card flat')
       var row = el('div', 'row')
@@ -266,9 +273,14 @@ function renderSessions () {
       row.appendChild(el('span', 'nm', s.title))
       row.appendChild(el('span', 'chip g', s.kind === 'agent' ? '对话' : '终端'))
       c.appendChild(row)
-      c.appendChild(el('div', 'sub', s.waiting ? '等你处理' : s.running ? '在跑' : '空闲'))
+      // **「还没启动」和「空闲」是两回事** —— 前者是刚建出来还没聊过，
+      // 后者是聊过但现在没在跑。混成一个词会让人以为新建的那个坏了
+      c.appendChild(el('div', 'sub',
+        s.waiting ? '等你处理' : s.running ? '在跑' : s.started ? '空闲' : '还没启动'))
       b.appendChild(c)
     })
+    // 已经有会话时也留一个入口 —— 一个项目开两三个对话是常态
+    b.appendChild(newSessionBtn())
   }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
 }
 
@@ -296,6 +308,40 @@ function renderFiles () {
       b.appendChild(c)
     })
   }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
+}
+
+/** 「新建 AI 对话」。**发出去只是一个请求** —— 真正建不建由电脑上那一下决定。
+ *  这里不做乐观更新：说了「建好了」而电脑上没人点允许，比转圈等着更糟。 */
+function newSessionBtn () {
+  var btn = el('button', 'big', '在这个项目新建一个 AI 对话')
+  var msg = el('div', 'err', '')
+  var wrap = el('div'); wrap.appendChild(btn); wrap.appendChild(msg)
+  btn.addEventListener('click', function () {
+    btn.disabled = true; btn.textContent = '等电脑上点允许…'; msg.textContent = ''
+    call('newSession', { projectId: proj }).then(function (r) {
+      poll(r.requestId, 0)
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = '在这个项目新建一个 AI 对话'
+      msg.textContent = e.message === 'busy' ? '电脑上还有一个请求没处理完' : e.message
+    })
+  })
+  // 轮询自己那个请求。**四种结局分开说** —— 用户的下一步完全不同：
+  // 过期 = 他不在电脑前；拒绝 = 他不同意；失败 = 建的时候出错了
+  function poll (id, n) {
+    if (n > 80) { reset('等太久了，他可能不在电脑前'); return }
+    call('newSessionStatus', { requestId: id }).then(function (r) {
+      if (r.state === 'done') { view = 'sessions'; render(); return }
+      if (r.state === 'denied') { reset('他拒绝了这次请求'); return }
+      if (r.state === 'expired') { reset('请求过期了，他没来得及看'); return }
+      if (r.state === 'failed') { reset(r.error || '建的时候出错了'); return }
+      if (r.state === 'none') { reset('这个请求不见了'); return }
+      setTimeout(function () { poll(id, n + 1) }, 1500)
+    }).catch(function () { setTimeout(function () { poll(id, n + 1) }, 2000) })
+  }
+  function reset (m) {
+    btn.disabled = false; btn.textContent = '在这个项目新建一个 AI 对话'; msg.textContent = m
+  }
+  return wrap
 }
 
 function openFile (f) {

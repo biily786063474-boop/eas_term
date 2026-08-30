@@ -14,7 +14,7 @@
     "dist": "electron-vite build && node scripts/check-renderer-entries.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
     "dist:ci": "electron-vite build && node scripts/check-renderer-entries.mjs && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty",
-    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && npm test",
+    "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && npm test",
     "verify": "npm run build && node scripts/verify-app.mjs --seed"
   },
   "build": {

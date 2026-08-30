@@ -160,12 +160,18 @@ test('白名单之外的动作一律拒', () => {
     assert.equal(isAllowed(bad, true), false, bad)
 })
 
-test('只读档：三个读动作放行，**send 被拒**', () => {
-  for (const ok of ['projects', 'sessions', 'files', 'file'])
+test('只读档：读动作放行，**写动作一律被拒**', () => {
+  for (const ok of ['projects', 'sessions', 'files', 'file', 'newSessionStatus'])
     assert.equal(isAllowed(ok, true), true, ok)
-  assert.equal(isAllowed('send', true), false, '藏起按钮不算白名单，协议层面也要拒')
+  for (const no of ['send', 'newSession'])
+    assert.equal(isAllowed(no, true), false, `${no}：藏起按钮不算白名单，协议层面也要拒`)
 })
 
-test('放开写之后 send 才通', () => {
+test('放开写之后写动作才通', () => {
   assert.equal(isAllowed('send', false), true)
+  assert.equal(isAllowed('newSession', false), true)
+})
+
+test('**newSessionStatus 不算写** —— 它只是查自己那个请求的结果', () => {
+  assert.equal(isAllowed('newSessionStatus', true), true)
 })

@@ -20,6 +20,7 @@ import path from 'path'
 
 import { guardPath } from '../fsGuard'
 import { mainWindow } from '../island'
+import * as audit from './audit'
 import { lanCandidates, pickLan, type LanCandidate } from './lan'
 import { findDevice, isAllowed, touch, type PhoneState } from './pairing'
 
@@ -28,8 +29,12 @@ const MAX_TEXT = 512 * 1024
 /** 问渲染层要数据的超时。都是纯 store 计算，5 秒绰绰有余；
  *  这条链路上没有「等人点确认」的动作，不需要 mcpBridge 那套长超时清单。 */
 const QUERY_TIMEOUT_MS = 5000
-/** 第一步是只读档。放开写要连同留痕面板一起上，见技术设计文档第 8 道锁。 */
-const READ_ONLY = true
+/** 只读档。**2026-08-29 关掉了** —— 用户要求手机端能在没有对话的项目里新建会话。
+ *  放开写的前提（技术设计文档第 8 道锁写着的那条）已经补齐：
+ *  · 每个写请求逐次经过电脑上的人工确认（request.ts）
+ *  · 每一次请求都留痕，包括读操作（audit.ts）
+ *  这两样缺一样都不该把它设成 false。 */
+const READ_ONLY = false
 
 let server: http.Server | null = null
 let boundHost = ''
@@ -44,6 +49,15 @@ interface Hooks {
   setState: (s: PhoneState) => void
   /** 有手机扫了码，去弹「允许吗」。返回不等人 —— 手机那边自己轮询 /pair/wait */
   onClaim: () => void
+  /** 手机发来一个写请求。返回 requestId 或拒绝理由；**不等人**，
+   *  手机自己轮询 newSessionStatus */
+  openRequest: (
+    dev: { id: string; name: string },
+    action: string,
+    args: Record<string, unknown>
+  ) => { ok: true; requestId: string } | { ok: false; reason: string }
+  /** 查一个写请求现在什么状态 */
+  requestStatus: (requestId: string) => Record<string, unknown>
 }
 let hooks: Hooks | null = null
 
@@ -68,7 +82,7 @@ const pageFile = (): string =>
 
 /** 问渲染层要数据。照 mcpBridge.invokeRenderer 的做法，但简单得多：
  *  这里的动作全是纯 store 计算，没有会阻塞等人的那一类。 */
-function queryRenderer(action: string, args: unknown): Promise<unknown> {
+export function queryRenderer(action: string, args: unknown): Promise<unknown> {
   const win = mainWindow()
   // 必须是主窗口 —— 灵动岛也是 BrowserWindow，但它的 preload 里没有这个监听，
   // 挑到它这次调用只会一直等到超时。mcpBridge 顶部记过同一个坑。
@@ -209,8 +223,34 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
   }
 
   // **白名单闸。在进任何业务分支之前。**
-  // 不在表上的一律 403，包括只读档里的 send —— 藏起手机上的按钮不算白名单。
+  // 不在表上的一律 403 —— 藏起手机上的按钮不算白名单。
   if (!isAllowed(action, READ_ONLY)) return { code: 403, body: { error: 'not-allowed' } }
+
+  // **留痕：放在业务分支之前，成不成都记。**
+  // 记在这里而不是各分支里，是因为「记录一次请求」这件事不该依赖某个分支记得去调它 ——
+  // 漏一个分支就是一个看不见的盲区，而盲区正是留痕最不能有的东西。
+  const line = audit.describe(action, args)
+  if (line) {
+    audit.record({ at: Date.now(), deviceId: dev.id, deviceName: dev.name, action, detail: line })
+    hooks?.onClaim() // 复用「推一次状态」——界面上的留痕列表要跟着更新
+  }
+
+  // ── 写操作：不在这里做，只登记一个待确认请求 ──────────────────
+  // 真正的动作要等人在电脑上点允许（见 request.ts 的设计 ③）
+  if (action === 'newSession') {
+    const r = hooks?.openRequest(
+      { id: dev.id, name: dev.name },
+      action,
+      args as Record<string, unknown>
+    )
+    if (!r) return { code: 503, body: { error: 'not-ready' } }
+    if (!r.ok) return { code: 409, body: { error: r.reason } }
+    return { code: 200, body: { requestId: r.requestId } }
+  }
+  if (action === 'newSessionStatus') {
+    const id = typeof args.requestId === 'string' ? args.requestId : ''
+    return { code: 200, body: hooks?.requestStatus(id) ?? { state: 'none' } }
+  }
 
   if (action === 'file') return readFile(args.projectId, args.nodeId)
 

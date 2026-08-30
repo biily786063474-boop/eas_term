@@ -139,17 +139,29 @@ export function setEnabled(s: PhoneState, enabled: boolean): PhoneState {
   return { ...s, enabled, pending: enabled ? s.pending : null }
 }
 
-/** 白名单：手机能请求的动作，**就这五个**（规格里的动作 1/2/3/4，send 属于动作 2）。
- *  不在这张表上的一律拒，不进任何业务逻辑。 */
-export const ACTIONS = ['projects', 'sessions', 'files', 'file', 'send'] as const
+/** 白名单：手机能请求的动作。不在这张表上的一律拒，不进任何业务逻辑。 */
+export const ACTIONS = [
+  'projects',
+  'sessions',
+  'files',
+  'file',
+  'newSession',
+  'newSessionStatus',
+  'send'
+] as const
 export type PhoneAction = (typeof ACTIONS)[number]
+
+/** 写操作 —— 这几个会**改变电脑上的状态**，必须逐次经过人工确认（见 request.ts），
+ *  而且每一次都要留痕（见 audit.ts）。
+ *  `newSessionStatus` 只是轮询自己那个请求的结果，不算写。 */
+export const WRITE_ACTIONS: readonly string[] = ['newSession', 'send']
 
 /** 这个动作现在放不放行。**在电脑端判，不在手机端判** —— 手机是不可信客户端，
  *  它界面上没有的功能，协议层面也必须没有。
  *
- *  readOnly = 第一步（只读）。`send` 是写操作，那一档还没开，
- *  即使协议上认得这个名字也要拒 —— 藏起按钮不算白名单。 */
+ *  readOnly = 只读档：所有写操作一律拒，即使协议上认得这个名字 ——
+ *  藏起手机上的按钮不算白名单。 */
 export function isAllowed(action: string, readOnly: boolean): action is PhoneAction {
   if (!(ACTIONS as readonly string[]).includes(action)) return false
-  return readOnly ? action !== 'send' : true
+  return readOnly ? !WRITE_ACTIONS.includes(action) : true
 }

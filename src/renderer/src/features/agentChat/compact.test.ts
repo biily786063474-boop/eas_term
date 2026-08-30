@@ -141,11 +141,15 @@ test('压缩发生在一轮进行到一半时：**正在流的那一轮保住，
   )
 })
 
-test('trigger 只认 manual，其余一律 auto（自动压缩是常态，认反了提示就说谎）', () => {
-  const a = run([{ k: 'compacted', trigger: 'auto', preTokens: 1, postTokens: 1 }])
-  const m = run([{ k: 'compacted', trigger: 'manual', preTokens: 1, postTokens: 1 }])
-  assert.equal(a.turns[0].compact?.trigger, 'auto')
-  assert.equal(m.turns[0].compact?.trigger, 'manual')
+test('trigger 三态原样透传，**包括「不知道」**', () => {
+  // 2026-08-29 真机实测：app 的 stream-json 里 compact_boundary 不带
+  // compactMetadata，所以 null 是常态而不是边角情况。
+  // 归约器不能把 null 补成 auto —— 界面拿到 auto 会说「上下文满了」，
+  // 而那次可能是用户自己点的压缩。
+  for (const t of ['auto', 'manual', null] as const) {
+    const v = run([{ k: 'compacted', trigger: t, preTokens: 1, postTokens: 1 }])
+    assert.equal(v.turns[0].compact?.trigger, t)
+  }
 })
 
 test('空对话时压缩不抛，也不产出假数据', () => {

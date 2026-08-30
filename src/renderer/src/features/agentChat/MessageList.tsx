@@ -155,7 +155,13 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
     <div className="ac-compact" role="separator">
       <span className="ac-compact-line" />
       <span className="ac-compact-txt">
-        {c.trigger === 'auto' ? '上下文满了，自动压缩过' : '这里压缩过上下文'}
+        {/* **不知道就说中性的话。** stream 里多数时候不带 trigger，
+            默认说成「自动」会把手动压缩说成「上下文满了」—— 编一件没发生的事 */}
+        {c.trigger === 'auto'
+          ? '上下文满了，自动压缩过'
+          : c.trigger === 'manual'
+            ? '你在这里压缩过上下文'
+            : '这里压缩过上下文'}
         {c.droppedTurns > 0 && ` · 收起 ${c.droppedTurns} 轮`}
         {nums && ` · ${nums}`}
         <em>以上内容 agent 不再记得细节</em>

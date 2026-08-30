@@ -1766,6 +1766,8 @@
   font-style: normal;
   font-size: 10px;
   color: color-mix(in srgb, var(--fg-dim) 72%, transparent);
+}
+
 /* ---------- 选项卡（2026-08-28）----------
    agent 在正文里问「你选哪个」时，把那几行变成可点的。
    **挂在正文下面，不替换正文** —— 识别是启发式的（options.ts 顶部有量化数据），

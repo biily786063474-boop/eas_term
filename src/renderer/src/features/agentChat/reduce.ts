@@ -37,7 +37,8 @@ export interface Turn {
    * **它不是谁说的话，它是时间轴上的一道线。**
    */
   compact?: {
-    trigger: 'auto' | 'manual'
+    /** null = 不知道是自动还是手动（stream 里多数时候不带这个信息） */
+    trigger: 'auto' | 'manual' | null
     preTokens: number
     postTokens: number
     /** 这一刀砍掉了界面上多少轮 */
