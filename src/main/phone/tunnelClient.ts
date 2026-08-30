@@ -40,8 +40,13 @@ export interface TunnelOptions {
   localPort: number
   onState: (s: TunnelState, detail?: string) => void
   /** **只给测试用**：接受自签的隧道服务器证书。
-   *  生产环境隧道服务器有公共 CA 签的真证书，正常校验就行 */
+   *  生产环境隧道服务器有公共 CA 签的真证书，正常校验就行。
+   *  **没有从 IPC 透出去**（index.ts 不传它），所以用户设置里碰不到 */
   insecure?: boolean
+  /** **只给测试用**：覆盖退避表。真表最长要等 60 秒，测试等不起。
+   *  留这个口子是为了让退避这段逻辑**能被测到** —— 它只在失败时跑，
+   *  而失败路径不测就等于没写 */
+  backoff?: number[]
 }
 
 export interface TunnelHandle {
@@ -50,6 +55,7 @@ export interface TunnelHandle {
 }
 
 export function startTunnel(opt: TunnelOptions): TunnelHandle {
+  const table = opt.backoff ?? BACKOFF_MS
   let control: tls.TLSSocket | null = null
   let stopped = false
   let attempt = 0
@@ -157,7 +163,7 @@ export function startTunnel(opt: TunnelOptions): TunnelHandle {
       sock = dial()
     } catch (e) {
       setState('error', e instanceof Error ? e.message : String(e))
-      const wait = BACKOFF_MS[Math.min(attempt++, BACKOFF_MS.length - 1)]
+      const wait = table[Math.min(attempt++, table.length - 1)]
       retryTimer = setTimeout(connect, wait)
       return
     }
@@ -214,7 +220,7 @@ export function startTunnel(opt: TunnelOptions): TunnelHandle {
       control = null
       // error 状态是「有明确原因」，不要被普通断线覆盖掉
       if (state !== 'error') setState('connecting')
-      const wait = BACKOFF_MS[Math.min(attempt++, BACKOFF_MS.length - 1)]
+      const wait = table[Math.min(attempt++, table.length - 1)]
       retryTimer = setTimeout(connect, wait)
     }
     sock.on('error', () => sock.destroy())
@@ -225,6 +231,11 @@ export function startTunnel(opt: TunnelOptions): TunnelHandle {
 
   return {
     stop: (): void => {
+      // **`stopped` 是第二道保险，不是唯一那道。** 真正拦住「关了还重连」的是
+      // 下面那句 `control = null` 加上 onGone 里的 `control !== sock` 身份检查 ——
+      // 把这一行改成 false，行为一点不变（变异测试验过）。
+      // 写在这里免得以后有人看到测试全绿就以为这一行被覆盖着。
+      // 它管的是另一件事：stop() 之后才到达的 `open` 指令不再拨新连接。
       stopped = true
       if (pingTimer) clearInterval(pingTimer)
       if (retryTimer) clearTimeout(retryTimer)

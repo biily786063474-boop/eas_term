@@ -57,7 +57,15 @@ export function takeLine(buf: Buffer): Line {
   if (i > MAX_LINE) return { ok: false, reason: 'too-long' }
   // 容忍 \r\n：手机那边可能是任何 HTTP 客户端
   const end = i > 0 && buf[i - 1] === 0x0d ? i - 1 : i
-  return { ok: true, line: buf.subarray(0, end).toString('latin1'), rest: buf.subarray(i + 1) }
+  // **必须按 UTF-8 解。** 协议行本身都是 ASCII（十六进制 id、base64url），
+  // latin1 看起来也没问题 —— 但 `EAS-TUNNEL/1 error <原因>` 里的原因是
+  // **给人看的中文**，latin1 会把它解成一串乱码，然后原样显示在界面上。
+  // 2026-08-30 写客户端测试时当场撞到：期望「服务器满了」，
+  // 拿到 'æ\x9C\x8Då\x8A¡å\x99¨æ»¡äº\x86'。
+  //
+  // 换成 utf8 没有副作用：rest 是 Buffer 的切片，偏移按字节算，
+  // 跟怎么解码这个字符串无关。
+  return { ok: true, line: buf.subarray(0, end).toString('utf8'), rest: buf.subarray(i + 1) }
 }
 
 export type Hello =

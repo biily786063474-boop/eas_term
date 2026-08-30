@@ -180,3 +180,27 @@ test('**切行：不发换行的连接要被掐掉**，不能一直缓冲', () =
 test('手机该连的主机名', () => {
   assert.equal(tunnelHost(ID), `${ID}.eas-term.local`)
 })
+
+test('**读行要按 UTF-8 解** —— 错误原因是给人看的中文', () => {
+  // 协议行本身都是 ASCII（十六进制 id、base64url），latin1 看起来毫无问题，
+  // 所以这个 bug 一直到写客户端测试才露头：期望「服务器满了」，
+  // 拿到 'æ\x9C\x8Då\x8A¡å\x99¨æ»¡äº\x86'，然后原样显示在界面上。
+  const r = takeLine(Buffer.from('EAS-TUNNEL/1 error 服务器满了\n剩下的', 'utf8'))
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.line, 'EAS-TUNNEL/1 error 服务器满了')
+    assert.equal(r.rest.toString('utf8'), '剩下的', '剩余字节按字节切，不受解码影响')
+  }
+})
+
+test('多字节字符跨在换行两侧也不会切坏', () => {
+  // rest 是 Buffer 的切片，偏移按字节算 —— 换成 utf8 解码不影响这一点
+  const buf = Buffer.from('中文一行\n中文二行\n', 'utf8')
+  const a = takeLine(buf)
+  assert.equal(a.ok, true)
+  if (!a.ok) return
+  assert.equal(a.line, '中文一行')
+  const b = takeLine(a.rest)
+  assert.equal(b.ok, true)
+  if (b.ok) assert.equal(b.line, '中文二行')
+})
