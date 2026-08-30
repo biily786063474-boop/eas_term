@@ -1085,7 +1085,30 @@ export function AgentChatView({
             **摆在输入框下面而不是替换掉它**：用户可能已经打了半屏字，
             把输入框换掉等于把那些字藏起来（回来还得重打）。
             让他照常打、照常按发送，handleSend 拦一下把这块展开就够了。 */}
-        {setupFor ? (
+        {/* **闸门和灯箱不再是二选一。** 灯箱现在 portal 到 body、盖在整个窗口上，
+            闸门留在原地就好 —— 关掉灯箱时它还在，用户知道自己回到了哪儿。
+            （改成灯箱之前这里是三元表达式，灯箱一开闸门就消失，
+            关掉灯箱那一瞬间闸门又跳回来，闪一下） */}
+        {blockedByAuth && (
+          <div className="ac-authgate">
+            <span>
+              <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
+              整个过程在这里完成，不用去终端。
+            </span>
+            <button
+              type="button"
+              className="ac-authgate-go"
+              onClick={() => selected && setSetupFor({ cli: selected, from: 'login' })}
+            >
+              点我去登录
+            </button>
+          </div>
+        )}
+        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了 */}
+        {authChecking && !setupFor && !blockedByAuth && (
+          <div className="ac-clis-hint">正在确认 {selected?.displayName} 的登录状态…</div>
+        )}
+        {setupFor && (
           <CliSetupPanel
             cliId={setupFor.cli.id as 'claude' | 'codex'}
             displayName={setupFor.cli.displayName}
@@ -1100,26 +1123,6 @@ export function AgentChatView({
               setSetupFor(null)
             }}
           />
-        ) : (
-          blockedByAuth && (
-            <div className="ac-authgate">
-              <span>
-                <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
-                整个过程在这里完成，不用去终端。
-              </span>
-              <button
-                type="button"
-                className="ac-authgate-go"
-                onClick={() => selected && setSetupFor({ cli: selected, from: 'login' })}
-              >
-                点我去登录
-              </button>
-            </div>
-          )
-        )}
-        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了 */}
-        {authChecking && !setupFor && !blockedByAuth && (
-          <div className="ac-clis-hint">正在确认 {selected?.displayName} 的登录状态…</div>
         )}
         {cliMenuAt && (
           <CanvasContextMenu

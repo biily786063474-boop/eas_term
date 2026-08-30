@@ -188,12 +188,24 @@ export function CliLoginPanel(props: {
             </div>
           )}
 
-          {/* claude 的那条路：它在等我们把授权码写回 stdin。
-              **这就是不让用户去终端的关键一步** —— 换成终端的话，
-              用户得自己找到那个进程、把码粘进去 */}
+          {/* claude 那条路的**兜底**输入框。
+              ── 它不是必做的一步（2026-08-30 实测澄清）──
+              claude 登录时会在本地起一个随机端口的回调监听
+              （`http://127.0.0.1:<port>/callback`，拿假 state 打过去它答
+              「Invalid state parameter」，证明它就是 OAuth 回调）。
+              浏览器在同一台机器上时，授权完会**自己回来**，进程退出，
+              根本不需要粘码 —— CLI 自己那句话也是「Paste code here **if prompted**」。
+              所以这里的措辞不能写成「把码粘进来」那种必做口气，
+              否则用户会以为自己漏了一步，坐在那儿等一个不会出现的码。
+              留着它是因为「网页真的给了码」那条路确实存在（浏览器不在本机、
+              回调被拦），那时候这个框是唯一的出口 ——
+              **这也正是不能让用户回终端的关键一步**：换成终端的话，
+              他得自己找到那个进程再把码贴进去。 */}
           {phase.needsCode && (
             <div className="ac-login-paste">
-              <span className="ac-login-code-l">把网页给你的授权码粘在这里</span>
+              <span className="ac-login-code-l">
+                授权完通常会自动跳回来。<b>如果网页给了你一串码</b>，粘在这里
+              </span>
               <div className="ac-login-paste-row">
                 <input
                   className="ac-login-input"
@@ -202,7 +214,7 @@ export function CliLoginPanel(props: {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && code.trim()) void window.api.cliAuth.submitCode(code)
                   }}
-                  placeholder="粘贴授权码"
+                  placeholder="没有码就不用管"
                   autoFocus
                   spellCheck={false}
                 />

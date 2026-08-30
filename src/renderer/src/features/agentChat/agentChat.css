@@ -2094,17 +2094,99 @@
   border-color: rgba(var(--accent-rgb), 0.85);
 }
 
-/* ── 安装 / 首次设置面板（CliSetupPanel）─────────────────────────
-   跟 .ac-login 同一套外观：对用户来说「装」和「登录」是同一件事的两步，
+/* ── 安装 / 首次设置灯箱（CliSetupPanel）─────────────────────────
+   **是灯箱不是内嵌**（2026-08-30 用户要求）。原来它长在对话框空态里 ——
+   画布上的节点常常只有三四百像素高，面板一展开就把输入框和历史全挤没了，
+   网址那一长串还要在里面横向滚。登录是「做完就走」的事，配得上自己一层。
+
+   遮罩层级 3100：压过首启引导（.onb-mask 是 3000）—— 引导页里点「登录」
+   弹出来的就是它，压不住的话会藏在引导页底下。 */
+.ac-setup-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 3100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* 卡片本身仍沿用 .ac-login 那套配色：对用户来说「装」和「登录」是同一件事的两步，
    长得不一样只会让人以为撞上了两个不同的东西。 */
 .ac-setup {
-  margin-top: 10px;
-  padding: 12px 13px 13px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  background: rgba(var(--accent-rgb), 0.06);
-  max-width: min(520px, 100%);
+  width: 460px;
+  max-width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 16px 17px 17px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  color: var(--fg);
   text-align: left;
+}
+
+/* 头部右侧：问号 + 关闭 */
+.ac-setup-head-r {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* GUI 走不通时的出口。**平时只是个小图标，不抢戏** —— 默认路径仍然是 GUI */
+.ac-setup-help {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ac-setup-help:hover,
+.ac-setup-help[aria-expanded='true'] {
+  border-color: rgba(var(--accent-rgb), 0.6);
+  color: var(--fg);
+}
+
+.ac-setup-help-box {
+  margin-bottom: 11px;
+  padding: 10px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+}
+.ac-setup-help-t {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 5px;
+}
+.ac-setup-help-d {
+  font-size: 11px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+.ac-setup-help-d b {
+  color: var(--fg);
+}
+/* 展开态里的按钮带图标，要能并排 */
+.ac-setup-help-box .ac-login-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* 嵌在 .ac-setup 里的登录面板不再画自己的框（bare）—— 否则是框里套框 */

@@ -20,11 +20,26 @@
 // 公司网络 / 代理 / 权限失败时，一句「安装失败」什么忙也帮不上。
 // 换成进度条就得把它补回来 —— 所以失败时展开输出尾部，并留一条「填进终端」的退路。
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
-import { CheckIcon } from '../../ui/Icons'
+import { CheckIcon, TerminalIcon } from '../../ui/Icons'
 import { CliLoginPanel } from './CliLoginPanel'
 import { useStore } from '../../store'
 import type { CliAuthStatus, InstallState } from '../../../../shared/types'
+
+/** GUI 走不通时，在终端里登录用的命令。
+ *
+ *  **和主进程 cliAuth/index.ts 的 LOGIN_ARGS 是同一套命令**（那边跑的就是这两条）。
+ *  两处各写一份必然分叉 —— 但这里没法 import 那个模块（它引 electron，
+ *  渲染层加载不了），所以退而求其次：写死在这里，并在两边都留一句互指的注释。
+ *
+ *  为什么需要这条兜底：GUI 这条路会被我们控制不了的东西挡住 ——
+ *  出口 IP 的地区限制、公司代理、浏览器打不开。那时候「全程 GUI」这条原则
+ *  不该变成「那你就没法用了」。默认仍然是 GUI，这只是走不通时的出口。 */
+const TERMINAL_LOGIN: Record<'claude' | 'codex', string> = {
+  claude: 'claude auth login --claudeai',
+  codex: 'codex login'
+}
 
 type Step =
   /** 还没动手，摆着命令等用户点「开始安装」。**命令必须看得见** */
@@ -53,7 +68,14 @@ export function CliSetupPanel(props: {
   const aliveRef = useRef(true)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
+  // 给上面那个 Esc 监听读当前值用 —— 它只挂一次，闭包捕获的是首帧的值
+  const stepRef = useRef(step)
+  stepRef.current = step
+  const onCancelRef = useRef(onCancel)
+  onCancelRef.current = onCancel
   const prefillTerminal = useStore((s) => s.prefillTerminal)
+  /** 问号展开了没。**默认收着** —— 它是兜底，不该在正常路径上占版面 */
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     aliveRef.current = true
@@ -76,6 +98,20 @@ export function CliSetupPanel(props: {
     }
   }, [cliId])
 
+  // Esc 关掉。**装的过程中不响应** —— 同点遮罩那条：
+  // 一下误触取消掉跑了两分钟的安装，代价太大
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      if (stepRef.current.k === 'installing') return
+      e.stopPropagation()
+      onCancelRef.current()
+    }
+    // 捕获阶段：画布那侧也听 Esc（退出最大化），不抢在前面的话两个会一起响应
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
+
   const begin = (): void => {
     if (!installCmd) return
     setStep({ k: 'installing', state: { cli: cliId, phase: 'running', step: '正在准备…' } })
@@ -85,25 +121,82 @@ export function CliSetupPanel(props: {
     })
   }
 
-  return (
-    <div className="ac-setup">
+  const close = (): void => {
+    // 装到一半关掉 = 取消安装。留着它在后台跑完，用户既看不到进度也不知道成没成
+    if (step.k === 'installing') void window.api.cliAuth.cancelInstall()
+    onCancel()
+  }
+
+  const termCmd = TERMINAL_LOGIN[cliId]
+
+  // **灯箱，不是内嵌。** 原来它长在对话框空态里 —— 画布上的节点常常只有三四百像素高，
+  // 面板一展开就把输入框和历史全挤没了，网址那一长串还要在里面横向滚。
+  // 登录是一件「做完就走」的事，配得上一个自己的层。
+  const body = (
+    <div
+      className="ac-setup-mask"
+      onMouseDown={(e) => {
+        // **装的过程中点遮罩不关。** 那一下会取消一个跑了两分钟的安装，
+        // 而点空白处通常是无意的。要放弃就点右上角那个 ×（那是明确动作）
+        if (e.target === e.currentTarget && step.k !== 'installing') close()
+      }}
+    >
+      <div className="ac-setup" onMouseDown={(e) => e.stopPropagation()}>
       <div className="ac-login-head">
         <span className="ac-login-title">
           {step.k === 'login' ? `登录 ${displayName}` : `安装 ${displayName}`}
         </span>
-        <button
-          type="button"
-          className="ac-login-x"
-          onClick={() => {
-            // 装到一半关掉 = 取消安装。留着它在后台跑完，用户既看不到进度也不知道成没成
-            if (step.k === 'installing') void window.api.cliAuth.cancelInstall()
-            onCancel()
-          }}
-          aria-label="取消"
-        >
-          ×
-        </button>
+        <span className="ac-setup-head-r">
+          {/* **GUI 走不通时的出口。** hover 说清楚怎么办，点开给命令和一键填进终端。
+              默认仍然是 GUI —— 这颗问号平时只是个 12px 的小图标，不抢戏。 */}
+          <button
+            type="button"
+            className="ac-setup-help"
+            aria-label="登录不了怎么办"
+            aria-expanded={helpOpen}
+            onClick={() => setHelpOpen((v) => !v)}
+            data-tip={`登录不了？\n\n出口 IP 的地区限制、公司代理、浏览器打不开 —— 这些我们挡不住。\n遇到这些情况可以改在终端里登录：\n\n${termCmd}\n\n点这个问号展开，可以一键把命令填进终端。\n登录完回到这里，状态会自动刷新。`}
+          >
+            ?
+          </button>
+          <button type="button" className="ac-login-x" onClick={close} aria-label="取消">
+            ×
+          </button>
+        </span>
       </div>
+
+      {/* 展开态：把 hover 里说的那些变成能点的。
+          hover 只能看不能复制，而命令是要拿去用的 */}
+      {helpOpen && (
+        <div className="ac-setup-help-box">
+          <div className="ac-setup-help-t">GUI 登录走不通时</div>
+          <div className="ac-setup-help-d">
+            地区限制、公司代理、浏览器打不开都会挡住上面这条路 —— 那些不在我们能控制的范围里。
+            这种时候改在终端里登录，走的是同一个账号、同一套凭证，
+            <b>登录完回到这里状态会自动刷新</b>。
+          </div>
+          <div className="ac-setup-cmd">{termCmd}</div>
+          <div className="ac-setup-row">
+            <button
+              type="button"
+              className="ac-login-retry"
+              onClick={() => {
+                void prefillTerminal(termCmd, { run: true })
+                onCancel()
+              }}
+            >
+              <TerminalIcon size={11} /> 开个终端跑这条
+            </button>
+            <button
+              type="button"
+              className="ac-login-retry"
+              onClick={() => void window.api.clipboard.writeText(termCmd)}
+            >
+              复制命令
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 第一步：让他看清要执行什么 ───────────────────────────────
           **命令原文必须摆出来。** 后台代跑的前提是用户看得见自己同意了什么 ——
@@ -208,8 +301,12 @@ export function CliSetupPanel(props: {
           {displayName} 已经可以用了{step.status?.account ? ` · ${step.status.account}` : ''}
         </div>
       )}
+      </div>
     </div>
   )
+  // portal 到 body：它原来长在画布节点里，被节点的 overflow 和层级裁着。
+  // 灯箱要盖住整个窗口，就不能待在那棵子树里
+  return createPortal(body, document.body)
 }
 
 /** 首启引导里那一行「某个 CLI 的状态」。抽出来是因为引导页和空态都要用同一套措辞 */
