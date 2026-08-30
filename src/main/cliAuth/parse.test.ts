@@ -34,6 +34,18 @@ Follow these steps to sign in with ChatGPT using device code authorization:
    [94mKC89-BN60L[0m
 `
 
+// **2026-08-30 起 codex 走的是这条**（普通 `codex login`，不带 --device-auth）。
+// 真跑出来的：它把网址打出来，自动弹浏览器那一下由 no-op open shim 挡掉。
+// 换过来的理由见 cliAuth/index.ts 的 LOGIN_ARGS —— --device-auth 有一个默认关着的
+// 前置条件（要先去 ChatGPT 安全设置里启用「设备代码授权」），分发用户会卡在那儿。
+const CODEX_LOGIN_PLAIN = `Starting local login server on http://localhost:1455.
+If your browser did not open, navigate to this URL to authenticate:
+
+https://auth.openai.com/oauth/authorize?response_type=code&client_id=app_EMoamEEZ73f0CkXaXp7hrann&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&scope=openid%20profile%20email%20offline_access%20api.connectors.read%20api.connectors.invoke&code_challenge=-bd1d9scSZOWkDCPXFc4kLstU8H3b6NiaVDFm_fAaNc&code_challenge_method=S256&id_token_add_organizations=true&codex_cli_simplified_flow=true&state=WrcrKuVvrhWV8ixc8eXOyr4wl6ximzJgkxrZEnl3kcs&originator=codex_cli_rs
+
+On a remote or headless machine? Use \`codex login --device-auth\` instead.
+`
+
 const CLAUDE_LOGIN = `Opening browser to sign in…
 If the browser didn't open, visit: https://claude.com/cai/oauth/authorize?code=true&client_id=9d1c250a-e61b-44d9-88ed-5944d1962f5e&response_type=code&state=f_2iBR8p
 Paste code here if prompted > `
@@ -141,4 +153,39 @@ test('looksSucceeded 只是提前给个提示，**真正的判据是再查一次
   assert.equal(looksSucceeded('codex', 'Successfully logged in'), true)
   assert.equal(looksSucceeded('claude', 'Logged in as foo@bar.com'), true)
   assert.equal(looksSucceeded('codex', 'Waiting for authorization…'), false)
+})
+
+// ── codex 普通登录（现在的默认路径）────────────────────────────────
+test('**codex 普通登录：抓出完整授权网址**（475 字符，一个字符都不能少）', () => {
+  const r = parseLoginOutput('codex', CODEX_LOGIN_PLAIN)
+  assert.ok(r.url?.startsWith('https://auth.openai.com/oauth/authorize'))
+  // 截断的网址点开是坏的 —— 长度必须和原文一致
+  assert.equal(r.url?.length, 475)
+  assert.ok(r.url?.endsWith('originator=codex_cli_rs'), '结尾被截断了')
+})
+
+test('**只认 https，正好跳过前面那条 http://localhost:1455**', () => {
+  // 那条是 codex 自己起的回调服务器，不是给用户点的。
+  // 抓成它的话，用户打开的是一个空白页，然后以为登录坏了。
+  //
+  // 注意判据是**开头**不是「不含 localhost」—— 授权网址的 redirect_uri 参数里
+  // 本来就带着 `http%3A%2F%2Flocalhost%3A1455`，那是对的、必须留着。
+  // 第一版这条测试写成 includes('localhost') 就误判成失败了。
+  const r = parseLoginOutput('codex', CODEX_LOGIN_PLAIN)
+  assert.ok(r.url?.startsWith('https://auth.openai.com/'), `抓错了：${r.url?.slice(0, 40)}`)
+  assert.ok(!r.url?.startsWith('http://localhost'), '抓成了本地回调服务器')
+  // 回调参数要原样留着，否则登录完回不来
+  assert.ok(r.url?.includes('localhost%3A1455'), 'redirect_uri 被弄丢了')
+})
+
+test('codex 普通登录没有设备码，也不需要我们喂码', () => {
+  const r = parseLoginOutput('codex', CODEX_LOGIN_PLAIN)
+  assert.equal(r.code, undefined)
+  assert.equal(r.needsCode, undefined)
+})
+
+test('**--device-auth 的样本仍然解析得了** —— 只是不再是默认路径', () => {
+  // 保留这条：万一以后要给远程/无头机器加回这条路，解析层不用重写
+  const r = parseLoginOutput('codex', CODEX_LOGIN_DEVICE)
+  assert.equal(r.code, 'KC89-BN60L')
 })

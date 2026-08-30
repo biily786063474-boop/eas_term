@@ -158,7 +158,11 @@ export function CliLoginPanel(props: {
               </button>
               <div className="ac-login-hint">
                 <CopyIcon size={10} />
-                右键这个按钮可以<b>复制登录链接</b>，去你信任的浏览器里打开
+                右键这个按钮可以<b>复制登录链接</b>，换一个浏览器打开也行
+                {/* **但必须还在这台电脑上。** codex 的回调打到 localhost:1455，
+                    claude 那条要把授权码粘回下面的输入框 —— 两条都跨不了设备。
+                    不写清楚的话，有人会把链接发到手机上打开，然后卡住不知道为什么。 */}
+                <b>（要在这台电脑上）</b>
               </div>
               {/* 网址原文也摆出来：有人就是想先看清楚要去哪儿再点 */}
               <div className="ac-login-url" title={phase.url}>

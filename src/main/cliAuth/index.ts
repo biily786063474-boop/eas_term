@@ -69,8 +69,25 @@ const STATUS_ARGS: Record<CliId, string[]> = {
  *  Console / SSO 那两条收在「其它方式」里，不在首次链路上出现。 */
 const LOGIN_ARGS: Record<CliId, string[]> = {
   claude: ['auth', 'login', '--claudeai'],
-  // --device-auth：给链接 + 一次性码，**自己不开浏览器**，正是要的形态
-  codex: ['login', '--device-auth']
+  // ── codex 为什么**不用** `--device-auth`（2026-08-30 改的，用户实测撞到）──
+  //
+  // 一开始选它是因为「它自己不开浏览器」，正合「不要直接跳网页」的要求。
+  // 但它有一个**默认关着的前置条件**：OpenAI 的授权页会直接拒绝，并说
+  //   「在 ChatGPT 安全设置中为 Codex 启用设备代码授权，然后重新运行
+  //     "codex login --device-auth" 指令」
+  // 分发出去的话，绝大多数人点到这一步就断了 —— 还得先去 ChatGPT 网站翻设置。
+  //
+  // 普通 `codex login` 没有这个前置条件，而且**照样把网址打出来**：
+  //   Starting local login server on http://localhost:1455.
+  //   If your browser did not open, navigate to this URL to authenticate:
+  //   https://auth.openai.com/oauth/authorize?...
+  // 自动弹浏览器那一下由我们的 no-op `open` shim 挡掉（实测有效）。
+  //
+  // 它的回调打到 **localhost:1455**，所以浏览器必须在这台电脑上 ——
+  // 对桌面 app 来说本来就是这样，界面上也点明了。
+  // `--device-auth` 是给远程 / 无头机器用的（codex 自己的输出里就这么写），
+  // 我们是同机 GUI，本来就不该选它。
+  codex: ['login']
 }
 
 /**
