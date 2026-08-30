@@ -50,8 +50,11 @@ export function CliLoginPanel(props: {
   /** 登录确认成功（已经查过 status）。调用方据此关掉面板、继续原来的动作 */
   onDone: (status: CliAuthStatus) => void
   onCancel: () => void
+  /** 嵌在 CliSetupPanel（装→登录那条链路）里时为真：**不画自己的外框和标题栏** ——
+   *  外面那层已经有了，再画一层会变成框里套框，标题还重复一遍 */
+  bare?: boolean
 }): React.JSX.Element {
-  const { cli, displayName, onDone, onCancel } = props
+  const { cli, displayName, onDone, onCancel, bare } = props
   const [phase, setPhase] = useState<Phase>({ k: 'starting' })
   const [code, setCode] = useState('')
   const [copied, setCopied] = useState(false)
@@ -122,13 +125,15 @@ export function CliLoginPanel(props: {
   }
 
   return (
-    <div className="ac-login">
-      <div className="ac-login-head">
-        <span className="ac-login-title">登录 {displayName}</span>
-        <button type="button" className="ac-login-x" onClick={onCancel} aria-label="取消登录">
-          ×
-        </button>
-      </div>
+    <div className={bare ? 'ac-login bare' : 'ac-login'}>
+      {!bare && (
+        <div className="ac-login-head">
+          <span className="ac-login-title">登录 {displayName}</span>
+          <button type="button" className="ac-login-x" onClick={onCancel} aria-label="取消登录">
+            ×
+          </button>
+        </div>
+      )}
 
       {phase.k === 'starting' && <div className="ac-login-step">正在准备登录…</div>}
 

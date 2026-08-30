@@ -2634,3 +2634,31 @@ body.dragging-row * {
 .ph-log-x.allowed { color: var(--accent); }
 .ph-log-x.denied { color: var(--fg-dim); text-decoration: line-through; }
 .ph-devs-t { display: flex; align-items: center; gap: 8px; }
+
+/* ── 引导页 2026-08-30 新增 ────────────────────────────────────────
+   卡片上多了一行「装没装 / 登没登」。原来只有装没装 ——
+   而「装了但没登录」的人一样用不了，却看不到任何提示。 */
+.onb-card-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0 10px;
+}
+
+/* 引导页里的「装 → 登录」面板。它铺在卡片下面，宽度跟着 modal 走，
+   不用 .ac-setup 自己那个 520px 上限（那是给画布节点里用的）。 */
+.onb-modal .ac-setup {
+  max-width: none;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.onb-note {
+  font-size: 11px;
+  color: var(--fg-dim);
+  opacity: 0.8;
+  line-height: 1.6;
+  text-align: right;
+  max-width: 60%;
+}

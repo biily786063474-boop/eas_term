@@ -2093,3 +2093,180 @@
 .ac-notice-login:hover {
   border-color: rgba(var(--accent-rgb), 0.85);
 }
+
+/* ── 安装 / 首次设置面板（CliSetupPanel）─────────────────────────
+   跟 .ac-login 同一套外观：对用户来说「装」和「登录」是同一件事的两步，
+   长得不一样只会让人以为撞上了两个不同的东西。 */
+.ac-setup {
+  margin-top: 10px;
+  padding: 12px 13px 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: rgba(var(--accent-rgb), 0.06);
+  max-width: min(520px, 100%);
+  text-align: left;
+}
+
+/* 嵌在 .ac-setup 里的登录面板不再画自己的框（bare）—— 否则是框里套框 */
+.ac-setup .ac-login.bare {
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  max-width: none;
+}
+
+.ac-setup-say {
+  font-size: 11.5px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+  margin-bottom: 9px;
+}
+.ac-setup-say b {
+  color: var(--fg);
+}
+
+.ac-setup-cmd-l {
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-bottom: 5px;
+}
+
+/* 要执行的命令原文。**必须看得见** —— 代跑的前提是用户知道自己同意了什么。
+   可选中：想拿去自己跑的人直接复制。 */
+.ac-setup-cmd {
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 1.55;
+  word-break: break-all;
+  user-select: text;
+}
+
+.ac-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ac-setup-primary {
+  width: auto;
+  flex: 1;
+}
+
+/* 进度条：**不确定态**。curl|bash 和 npm 都不给可解析的进度，
+   凑一个百分比是在骗人（卡在 87% 比没有更让人焦虑）。
+   这条动画只表达「还在动」，真正的信息在下面那行字。 */
+.ac-setup-bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.ac-setup-bar-run {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 34%;
+  border-radius: 2px;
+  background: rgba(var(--accent-rgb), 0.75);
+  animation: ac-setup-slide 1.25s ease-in-out infinite;
+}
+
+@keyframes ac-setup-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+/* 动效关掉时不能只剩一条静止的短杠 —— 那看着像卡死了。铺满并轻微呼吸。 */
+@media (prefers-reduced-motion: reduce) {
+  .ac-setup-bar-run {
+    width: 100%;
+    animation: ac-setup-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes ac-setup-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+}
+
+/* 安装器自己最后说的那句话。等宽 + 单行省略：它常常是一条长路径 */
+.ac-setup-step {
+  margin-top: 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: var(--fg);
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-setup-err {
+  margin-bottom: 8px;
+}
+
+/* 失败时的输出。**这是终端那条路唯一不可替代的地方**，别为了界面干净删掉：
+   公司网络 / 代理 / 权限的问题，只有原始报错才解得开。 */
+.ac-setup-out {
+  margin: 0;
+  padding: 7px 9px;
+  max-height: 132px;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--fg-dim);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+
+/* 「装没装 / 登没登」那枚小标签。引导页和空态共用一套措辞。 */
+.ac-ob-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.ac-ob-tag.warn {
+  border-color: rgba(224, 164, 94, 0.4);
+  color: #e0a45e;
+}
+.ac-ob-tag.ok {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--fg);
+}
+
+.ac-ob-acc {
+  margin-left: 6px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  opacity: 0.85;
+}

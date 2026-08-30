@@ -5,6 +5,7 @@ import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, a
 import { registerBoardHandlers } from './board'
 import { registerGanttHandlers } from './gantt'
 import { registerCliAuthHandlers } from './cliAuth'
+import { registerCliInstallHandlers } from './cliAuth/install'
 import { registerPhoneHandlers } from './phone'
 import { registerTodoHandlers } from './todos'
 import { registerProjectHandlers } from './projects'
@@ -360,6 +361,9 @@ app.whenReady().then(() => {
   // 手机端：**默认关**，enabled=false 时连端口都不开（见 phone/index.ts 文件头）
   // CLI 的安装/登录状态。**不起任何进程**，只在被问到时才 spawn 一次查询
   registerCliAuthHandlers()
+  // 安装单独注册：install.ts 反过来引 cliAuth/index 的 checkAuth（装完要核实），
+  // 让 index 再引它就成环了
+  registerCliInstallHandlers()
   registerPhoneHandlers()
   registerTodoHandlers()
   registerFsHandlers()

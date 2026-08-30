@@ -24,7 +24,7 @@ import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Icons'
-import { CliLoginPanel } from './CliLoginPanel'
+import { CliSetupPanel } from './CliSetupPanel'
 import type { CliAuthState } from '../../../../shared/types'
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
@@ -200,7 +200,6 @@ export function AgentChatView({
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   /** 点了一个不能直接用的 CLI（没装 / 仅终端）时，下面显示的说明 */
   const [cliNote, setCliNote] = useState<CliInfo | null>(null)
-  const prefillTerminal = useStore((s) => s.prefillTerminal)
 
   /** 点未安装的 CLI → 弹确认框问装不装，点了「安装」就**开个终端把它跑起来**。
    *
@@ -214,19 +213,15 @@ export function AgentChatView({
    *      比一句「安装失败」有用得多
    *  第一条（静默装全局 CLI 是恶意软件行为特征）在这里不成立：这是用户在界面上
    *  主动点确认触发的，不是 agent 背着他装。 */
-  const requestConfirm = useStore((s) => s.requestConfirm)
+  //
+  // **2026-08-30 改：不再弹确认框把命令甩进终端**（用户要求「AI 对话模式下的安装
+  // 行为也不要去显示终端，要用安装进度条」）。改成就地打开 CliSetupPanel：
+  // 先摆出命令原文让他看清 → 进度条 → 装完自动接上登录，全程不离开这个面板。
+  // 上面那三条理由里只有第三条还成立（失败要能看到报错），CliSetupPanel 把它接住了：
+  // 失败时展开输出尾部，并保留「把命令填进终端，我自己来」这条退路。
   const installCli = (c: CliInfo): void => {
-    if (!c.installCmd) return
     setCliNote(null)
-    requestConfirm({
-      message: `${c.displayName} 还没装。要现在装吗？\n\n会开一个终端执行：\n${c.installCmd}\n\n装完通常还要用你自己的账号登录一次，那一步在同一个终端里接着做。`,
-      confirmLabel: '安装',
-      cancelLabel: '只把命令填进终端',
-      onConfirm: () => void prefillTerminal(c.installCmd as string, { run: true }),
-      // 「取消」不是「什么都不做」：把命令填进去让他自己看着办，
-      // 这正是这个功能改之前的行为，保留成一条退路
-      onCancel: () => void prefillTerminal(c.installCmd as string)
-    })
+    setSetupFor({ cli: c, from: c.available ? 'login' : 'install' })
   }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
@@ -285,8 +280,9 @@ export function AgentChatView({
   // 等于软件因为自己的解析问题拒绝工作。宁可放行、让 CLI 自己报错。
   const [auth, setAuth] = useState<CliAuthState | null>(null)
   const [authChecking, setAuthChecking] = useState(false)
-  /** 正在给哪个 CLI 走登录流程。非空 = 登录面板挂着 */
-  const [loginFor, setLoginFor] = useState<CliInfo | null>(null)
+  /** 正在给哪个 CLI 走「装 → 登录」这条链路。非空 = 设置面板挂着。
+   *  from 决定从哪一步进：没装从安装进，装了没登录直接进登录。 */
+  const [setupFor, setSetupFor] = useState<{ cli: CliInfo; from: 'install' | 'login' } | null>(null)
   useEffect(() => {
     // 没选、没装、或者这个 CLI 不支持会话，都不用查 —— 那些有各自的提示路径
     if (!selected || !selected.available || !selected.chatSupported) {
@@ -588,7 +584,7 @@ export function AgentChatView({
     // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
     // 打的字**留在输入框里** —— 登录完回来就能直接发，不用重打
     if (blockedByAuth) {
-      setLoginFor(selected)
+      setSetupFor({ cli: selected, from: 'login' })
       return
     }
     setStarting(true)
@@ -904,20 +900,22 @@ export function AgentChatView({
           onSend={handleFollowupSend}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
-          onLogin={() => selected && setLoginFor(selected)}
+          onLogin={() => selected && setSetupFor({ cli: selected, from: 'login' })}
         />
         {/* 会话跑到一半掉线（token 过期）时的登录面板。
             **和空态那份是同一个组件**，摆在工具栏下面 —— 不用把人赶回空态，
             登完了直接接着聊。登录成功后 auth 也跟着更新，
             免得空态闸门那侧留着一份过期的判断。 */}
-        {loginFor && (
-          <CliLoginPanel
-            cli={loginFor.id as 'claude' | 'codex'}
-            displayName={loginFor.displayName}
-            onCancel={() => setLoginFor(null)}
+        {setupFor && (
+          <CliSetupPanel
+            cliId={setupFor.cli.id as 'claude' | 'codex'}
+            displayName={setupFor.cli.displayName}
+            installCmd={setupFor.cli.installCmd}
+            from={setupFor.from}
+            onCancel={() => setSetupFor(null)}
             onDone={(status) => {
               setAuth((cur) => (cur ? { ...cur, status } : cur))
-              setLoginFor(null)
+              setSetupFor(null)
             }}
           />
         )}
@@ -1087,17 +1085,19 @@ export function AgentChatView({
             **摆在输入框下面而不是替换掉它**：用户可能已经打了半屏字，
             把输入框换掉等于把那些字藏起来（回来还得重打）。
             让他照常打、照常按发送，handleSend 拦一下把这块展开就够了。 */}
-        {loginFor ? (
-          <CliLoginPanel
-            cli={loginFor.id as 'claude' | 'codex'}
-            displayName={loginFor.displayName}
-            onCancel={() => setLoginFor(null)}
+        {setupFor ? (
+          <CliSetupPanel
+            cliId={setupFor.cli.id as 'claude' | 'codex'}
+            displayName={setupFor.cli.displayName}
+            installCmd={setupFor.cli.installCmd}
+            from={setupFor.from}
+            onCancel={() => setSetupFor(null)}
             onDone={(status) => {
               // 登录成功：把闸门放下，并**就地更新 auth**，不等下一次 effect ——
               // 那个 effect 依赖 [selected, sessionId]，登录并不改变这两个，
               // 不手动更新的话闸门会一直挂着，用户登完了还被挡着发不出去
               setAuth((cur) => (cur ? { ...cur, status } : cur))
-              setLoginFor(null)
+              setSetupFor(null)
             }}
           />
         ) : (
@@ -1110,7 +1110,7 @@ export function AgentChatView({
               <button
                 type="button"
                 className="ac-authgate-go"
-                onClick={() => selected && setLoginFor(selected)}
+                onClick={() => selected && setSetupFor({ cli: selected, from: 'login' })}
               >
                 点我去登录
               </button>
@@ -1118,7 +1118,7 @@ export function AgentChatView({
           )
         )}
         {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了 */}
-        {authChecking && !loginFor && !blockedByAuth && (
+        {authChecking && !setupFor && !blockedByAuth && (
           <div className="ac-clis-hint">正在确认 {selected?.displayName} 的登录状态…</div>
         )}
         {cliMenuAt && (

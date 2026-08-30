@@ -52,7 +52,7 @@ import type {
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
   PluginInfo
 } from '../shared/types'
-import type { CliAuthState, LoginState, PhoneStatus } from '../shared/types'
+import type { CliAuthState, InstallState, LoginState, PhoneStatus } from '../shared/types'
 import { AGENT_CHAT_EVENT_CHANNEL } from '../shared/agentChat.ts'
 import type {
   ChatEvent,
@@ -271,7 +271,17 @@ const api = {
       return () => ipcRenderer.off('cliAuth:login', h)
     },
     /** 排障用：日志路径 + 最近 200 行 */
-    log: (): Promise<{ path: string; lines: string[] }> => ipcRenderer.invoke('cliAuth:log')
+    log: (): Promise<{ path: string; lines: string[] }> => ipcRenderer.invoke('cliAuth:log'),
+    /** 后台装 CLI（**不开终端**）。cmd 从 CliInfo.installCmd 来，这一层不拼命令 */
+    startInstall: (cli: 'claude' | 'codex', cmd: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('cliAuth:startInstall', cli, cmd),
+    cancelInstall: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('cliAuth:cancelInstall'),
+    /** 安装进度（当前步骤 / 成败 / **失败时的输出尾部**） */
+    onInstall: (cb: (s: InstallState) => void): (() => void) => {
+      const h = (_e: unknown, s: InstallState): void => cb(s)
+      ipcRenderer.on('cliAuth:install', h)
+      return () => ipcRenderer.off('cliAuth:install', h)
+    }
   },
   phone: {
     status: (): Promise<PhoneStatus> => ipcRenderer.invoke('phone:status'),
