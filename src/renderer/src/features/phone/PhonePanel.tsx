@@ -10,7 +10,6 @@
 import { useEffect, useState } from 'react'
 
 import type { PhoneStatus } from '../../../../shared/types'
-import { useStore } from '../../store'
 import { CheckIcon, TrashIcon } from '../../ui/Icons'
 import { encodeQR } from './qr'
 
@@ -50,10 +49,6 @@ function Qr({ text }: { text: string }): JSX.Element | null {
 }
 
 export function PhonePanel(): JSX.Element {
-  const projects = useStore((s) => s.projects)
-  /** 项目 id → 名字。**查不到就说「某个项目」**，不把 UUID 摆给人看
-   *  （项目可能刚被删掉，或者手机拿的是一个不存在的 id） */
-  const projName = (id: string): string => projects.find((p) => p.id === id)?.name ?? '某个项目'
   const [st, setSt] = useState<PhoneStatus | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -142,37 +137,6 @@ export function PhonePanel(): JSX.Element {
                   className="ph-btn"
                   disabled={busy}
                   onClick={() => void run(() => window.api.phone.rejectPair())}
-                >
-                  拒绝
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── 手机发来的写请求，等你点允许 ────────────────────
-              **这道闸和配对那道是两回事**：配过对只代表「这台设备能进来」，
-              每一次写操作仍然要单独问。混为一谈就等于取消了这道闸。 */}
-          {st.request && (
-            <div className="ph-ask">
-              <div className="ph-ask-t">
-                <b>{st.request.deviceName}</b> 想在 <b>{projName(st.request.projectId)}</b>{' '}
-                里新建一个 AI 对话
-              </div>
-              <div className="ph-note">
-                允许之后会<b>在你电脑上真的建一个对话节点</b>。不确定就点拒绝。
-              </div>
-              <div className="ph-ask-b">
-                <button
-                  className="ph-btn primary"
-                  disabled={busy}
-                  onClick={() => void run(() => window.api.phone.allowRequest())}
-                >
-                  <CheckIcon size={12} /> 允许
-                </button>
-                <button
-                  className="ph-btn"
-                  disabled={busy}
-                  onClick={() => void run(() => window.api.phone.denyRequest())}
                 >
                   拒绝
                 </button>
@@ -280,7 +244,7 @@ export function PhonePanel(): JSX.Element {
             <ul>
               <li>看画布上的项目、看哪些终端和对话在跑</li>
               <li>看 Frame 里的文档和图片，点开看内容</li>
-              <li>在没有对话的项目里<b>新建一个 AI 对话</b> —— 每次都要你在这里点允许</li>
+              <li><b>新建 AI 对话</b>（只是在画布上加一个空对话框，不会启动任何进程）</li>
               <li>
                 <span className="ph-no">还不能</span>给 agent 发消息
               </li>

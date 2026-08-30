@@ -310,37 +310,25 @@ function renderFiles () {
   }).catch(function (e) { b.innerHTML = ''; fail(b, e.message) })
 }
 
-/** 「新建 AI 对话」。**发出去只是一个请求** —— 真正建不建由电脑上那一下决定。
- *  这里不做乐观更新：说了「建好了」而电脑上没人点允许，比转圈等着更糟。 */
+/** 「新建 AI 对话」。**一次调用就完事，不用等电脑上确认** ——
+ *  那道闸假设你能碰到电脑，而这功能就是为够不着电脑时用的（2026-08-29 拆掉）。
+ *
+ *  它只是在画布上加一个空对话框，**不会启动任何进程**；
+ *  真正的兜底是：这台设备配过对、每次都留痕、只能建在已有的 Frame 里。 */
 function newSessionBtn () {
   var btn = el('button', 'big', '在这个项目新建一个 AI 对话')
   var msg = el('div', 'err', '')
   var wrap = el('div'); wrap.appendChild(btn); wrap.appendChild(msg)
   btn.addEventListener('click', function () {
-    btn.disabled = true; btn.textContent = '等电脑上点允许…'; msg.textContent = ''
-    call('newSession', { projectId: proj }).then(function (r) {
-      poll(r.requestId, 0)
+    btn.disabled = true; btn.textContent = '正在建…'; msg.textContent = ''
+    call('newSession', { projectId: proj }).then(function () {
+      // 建好了直接刷新会话列表 —— 新的那个会以「还没启动」出现在里面
+      view = 'sessions'; render()
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = '在这个项目新建一个 AI 对话'
-      msg.textContent = e.message === 'busy' ? '电脑上还有一个请求没处理完' : e.message
+      msg.textContent = e.message === 'renderer-not-ready' ? '电脑正忙，稍后再试' : e.message
     })
   })
-  // 轮询自己那个请求。**四种结局分开说** —— 用户的下一步完全不同：
-  // 过期 = 他不在电脑前；拒绝 = 他不同意；失败 = 建的时候出错了
-  function poll (id, n) {
-    if (n > 80) { reset('等太久了，他可能不在电脑前'); return }
-    call('newSessionStatus', { requestId: id }).then(function (r) {
-      if (r.state === 'done') { view = 'sessions'; render(); return }
-      if (r.state === 'denied') { reset('他拒绝了这次请求'); return }
-      if (r.state === 'expired') { reset('请求过期了，他没来得及看'); return }
-      if (r.state === 'failed') { reset(r.error || '建的时候出错了'); return }
-      if (r.state === 'none') { reset('这个请求不见了'); return }
-      setTimeout(function () { poll(id, n + 1) }, 1500)
-    }).catch(function () { setTimeout(function () { poll(id, n + 1) }, 2000) })
-  }
-  function reset (m) {
-    btn.disabled = false; btn.textContent = '在这个项目新建一个 AI 对话'; msg.textContent = m
-  }
   return wrap
 }
 

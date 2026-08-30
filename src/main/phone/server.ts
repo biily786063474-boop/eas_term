@@ -49,15 +49,6 @@ interface Hooks {
   setState: (s: PhoneState) => void
   /** 有手机扫了码，去弹「允许吗」。返回不等人 —— 手机那边自己轮询 /pair/wait */
   onClaim: () => void
-  /** 手机发来一个写请求。返回 requestId 或拒绝理由；**不等人**，
-   *  手机自己轮询 newSessionStatus */
-  openRequest: (
-    dev: { id: string; name: string },
-    action: string,
-    args: Record<string, unknown>
-  ) => { ok: true; requestId: string } | { ok: false; reason: string }
-  /** 查一个写请求现在什么状态 */
-  requestStatus: (requestId: string) => Record<string, unknown>
 }
 let hooks: Hooks | null = null
 
@@ -235,21 +226,40 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     hooks?.onClaim() // 复用「推一次状态」——界面上的留痕列表要跟着更新
   }
 
-  // ── 写操作：不在这里做，只登记一个待确认请求 ──────────────────
-  // 真正的动作要等人在电脑上点允许（见 request.ts 的设计 ③）
+  // ── 新建对话：**立即执行，不等电脑上确认** ────────────────────
+  //
+  // 原来这里挂了一道「等人在电脑上点允许」的闸，2026-08-29 拆掉了。
+  // 用户一句话点破：**要求电脑确认，恰恰假设了你能碰到电脑** ——
+  // 而这个功能存在的理由就是人不在电脑前。那道闸让功能在它唯一的使用场景下失效。
+  //
+  // 拆掉之后风险并没有变高，因为这个动作本身是**惰性的**：
+  // 它只是往画布上加一个空的对话节点（addFileNode），**不启动任何进程**——
+  // CLI 要等有人真的发消息才起。我早先把它说成「能在你电脑上拉起进程」，那是错的。
+  //
+  // 兜底的三样仍在：① 设备得先配过对（那一步有人工确认）；
+  // ② 每一次都留痕；③ 只能建在已有的顶层 Frame 里，cwd 取项目自己的路径
+  //（边界写在 renderer/features/phone/provider.ts 的 createSession）。
   if (action === 'newSession') {
-    const r = hooks?.openRequest(
-      { id: dev.id, name: dev.name },
-      action,
-      args as Record<string, unknown>
-    )
-    if (!r) return { code: 503, body: { error: 'not-ready' } }
-    if (!r.ok) return { code: 409, body: { error: r.reason } }
-    return { code: 200, body: { requestId: r.requestId } }
-  }
-  if (action === 'newSessionStatus') {
-    const id = typeof args.requestId === 'string' ? args.requestId : ''
-    return { code: 200, body: hooks?.requestStatus(id) ?? { state: 'none' } }
+    try {
+      const d = (await queryRenderer('createSession', args)) as
+        | { ok: boolean; nodeId?: string; error?: string }
+        | null
+      const pid = String(args.projectId ?? '').slice(0, 8)
+      // **成和不成都记。** 失败也是「手机试过这件事」，回到电脑前该看得见
+      audit.record({
+        at: Date.now(),
+        deviceId: dev.id,
+        deviceName: dev.name,
+        action,
+        detail: d?.ok ? `在项目 ${pid} 里新建了一个 AI 对话` : `想在项目 ${pid} 里新建对话，没成：${d?.error ?? '建不出来'}`,
+        outcome: d?.ok ? 'allowed' : undefined
+      })
+      hooks?.onClaim()
+      if (!d?.ok) return { code: 400, body: { error: d?.error ?? '建不出来' } }
+      return { code: 200, body: { nodeId: d.nodeId } }
+    } catch (e) {
+      return { code: 503, body: { error: e instanceof Error ? e.message : String(e) } }
+    }
   }
 
   if (action === 'file') return readFile(args.projectId, args.nodeId)

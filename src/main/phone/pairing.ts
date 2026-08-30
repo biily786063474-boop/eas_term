@@ -140,20 +140,13 @@ export function setEnabled(s: PhoneState, enabled: boolean): PhoneState {
 }
 
 /** 白名单：手机能请求的动作。不在这张表上的一律拒，不进任何业务逻辑。 */
-export const ACTIONS = [
-  'projects',
-  'sessions',
-  'files',
-  'file',
-  'newSession',
-  'newSessionStatus',
-  'send'
-] as const
+export const ACTIONS = ['projects', 'sessions', 'files', 'file', 'newSession', 'send'] as const
 export type PhoneAction = (typeof ACTIONS)[number]
 
-/** 写操作 —— 这几个会**改变电脑上的状态**，必须逐次经过人工确认（见 request.ts），
- *  而且每一次都要留痕（见 audit.ts）。
- *  `newSessionStatus` 只是轮询自己那个请求的结果，不算写。 */
+/** 写操作 —— 这几个会**改变电脑上的状态**，每一次都要留痕（见 audit.ts）。
+ *
+ *  **不再要求逐次人工确认**（2026-08-29 拆掉）：那道闸假设你能碰到电脑，
+ *  而这个功能就是为够不着电脑时用的 —— 详见 server.ts 里 newSession 那段。 */
 export const WRITE_ACTIONS: readonly string[] = ['newSession', 'send']
 
 /** 这个动作现在放不放行。**在电脑端判，不在手机端判** —— 手机是不可信客户端，
