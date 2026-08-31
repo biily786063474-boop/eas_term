@@ -481,3 +481,49 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
 }
+
+/* 只在正文（解释 / 提示词）里命中的词条：名字跟你搜的词对不上，
+   得让它跟「名字直接命中」的区分开，否则看着像乱匹配 */
+.dict-pill.via-text {
+  border-style: dashed;
+  opacity: 0.86;
+}
+/* 浮层顶部那句「你搜的词在这儿」 */
+.dict-pop-why {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-left: 2px solid rgba(var(--accent-rgb), 0.55);
+  color: var(--fg-dim);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+/* ── 两级分类导航（2026-08-31）────────────────────────────────────
+   九个一级 chip 在 320px 宽的面板里铺开要三行，加上二级就把词条挤没了。
+   改成横着滚：固定一行高，滚动条藏起来，**两边渐隐**告诉用户还有更多 ——
+   没有这个渐隐，被裁掉的那半个字看着像渲染错误而不是「可以滚」。 */
+.dict-cats {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 14px), transparent 100%);
+}
+.dict-cats::-webkit-scrollbar {
+  display: none;
+}
+.dict-cats .dict-chip {
+  flex: 0 0 auto;
+}
+/* 二级比一级弱一级：它是「在这一类里再挑」，不该和一级抢注意力 */
+.dict-cats-2 {
+  margin-top: -2px;
+}
+.dict-chip.sub {
+  font-size: 11px;
+  opacity: 0.82;
+}
+.dict-chip.sub.active {
+  opacity: 1;
+}

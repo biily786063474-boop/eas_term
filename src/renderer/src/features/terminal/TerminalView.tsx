@@ -646,7 +646,11 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 再点词典条目内容进了终端。判据必须和「已读」同一个：真实键鼠动作。
     const markRead = (): void => {
       useStore.getState().clearAttention(ptyId)
-      if (useStore.getState().composerAppend) useStore.setState({ composerAppend: null })
+      // 两条通道一起清：只清 append 的话，点完终端再点辞典会挂一个 chip
+      // 到已经看不见的那个对话框上 —— 用户盯着终端，什么都没发生
+      const st = useStore.getState()
+      if (st.composerAppend) useStore.setState({ composerAppend: null })
+      if (st.composerAddChip) useStore.setState({ composerAddChip: null })
     }
     el.addEventListener('keydown', markRead)
     el.addEventListener('mousedown', markRead)

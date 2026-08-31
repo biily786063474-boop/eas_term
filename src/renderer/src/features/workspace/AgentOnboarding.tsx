@@ -156,7 +156,7 @@ export function AgentOnboarding(): JSX.Element | null {
           Eas-Term 自己不会说话 —— 干活的是 <b>Claude Code</b> 或 <b>Codex</b>，
           它们是各自厂商的命令行工具，要用你自己的账号登录。
           <b>装好任意一个就能开始</b>，两个都装也行。
-          没装它们，终端、画布、文件预览、词典照常可用。
+          没装它们，终端、画布、文件预览、辞典照常可用。
         </p>
 
         <div className="onb-cards">

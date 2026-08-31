@@ -50,7 +50,7 @@ const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
   { kind: 'web', label: '网页', Icon: GlobeIcon },
-  { kind: 'dict', label: '名词词典', Icon: DictIcon },
+  { kind: 'dict', label: '辞典', Icon: DictIcon },
   { kind: 'wiki', label: '知识库', Icon: FilesIcon }
 ]
 
@@ -62,7 +62,7 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   history: { label: '历史', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
   agent: { label: 'AI 对话', Icon: SparkleIcon },
-  dict: { label: '名词词典', Icon: DictIcon },
+  dict: { label: '辞典', Icon: DictIcon },
   web: { label: '网页', Icon: GlobeIcon },
   wiki: { label: '知识库', Icon: FilesIcon }
 }
@@ -74,7 +74,7 @@ function PaneKindSelect({
 }: {
   kind: PaneKind
   onChange: (kind: PaneKind) => void
-  /** 画布模式下排除「名词词典」——它改由悬浮气泡承载（且作为画布节点会崩溃） */
+  /** 画布模式下排除「辞典」——它改由标题栏叫出的浮动面板承载（且作为画布节点会崩溃） */
   canvasMode?: boolean
 }): JSX.Element {
   const [open, setOpen] = useState(false)
@@ -493,7 +493,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           </Suspense>
         )}
         {pane.kind === 'dict' && (
-          <Suspense fallback={<div className="pane-placeholder">加载词典…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">加载辞典…</div>}>
             <DictView />
           </Suspense>
         )}

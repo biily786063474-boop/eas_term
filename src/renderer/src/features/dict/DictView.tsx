@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
+import { searchTerms } from './search.ts'
 import { collectLeaves } from '../../layout'
 import { DictIcon } from '../../ui/Icons'
 import { DictHookBar } from './DictHookBar'
@@ -22,9 +23,15 @@ interface DictTerm {
   /** 动效词条独有：演示短片文件名（走 dict-clip:// 协议读，见 main/dictClips.ts）。
    *  有它就播短片，没有才回退到 svg 示意图。 */
   clip?: string
-  /** 动效词条独有：可直接插进命令行交给 agent 的完整提示词。
-   *  比 logic 详细得多（外观 / 动感 / 触发 / 实现 / 关键参数 / 坑），中位 214 字。 */
+  /** 点击后挂成 chip、发送时展开的完整提示词。**381 条全都有**（2026-08-31 补齐）。
+   *  注意有两套格式并存：新写的 242 条是【要达到的效果】…【依赖】六段式，
+   *  原有的 139 条是【外观】【动感】【触发】【实现】那套（为动效组件库写的）。 */
   prompt?: string
+  /** 二级分类（2026-08-31）。一级 = 你想干什么，二级 = 具体手法。
+   *  **老的 category 同时保留**，自建词条和已装的 skill 都还认它。
+   *  自建词条没有这两个字段 —— 界面把它们归到「未分类」，不能让它们消失。 */
+  cat1?: string
+  cat2?: string
   /** 以下只有自建词条有：第一次遇到的日期 / 在哪个项目里遇到的 */
   firstSeen?: string
   project?: string
@@ -35,6 +42,8 @@ interface DictBundle {
   version: number
   count: number
   categories: Record<string, string>
+  /** 一级 → 二级清单。**顺序有意义**，界面照这个顺序渲染导航 */
+  taxonomy?: Record<string, { name: string; desc?: string }[]>
   terms: DictTerm[]
 }
 
@@ -44,7 +53,10 @@ const dict = bundle as unknown as DictBundle
 // 只会让「我想找个动效相关的词」这件事被拆到两个地方去。
 // 想单看自建的走下面那个 onlyUser 开关，它是个筛子而不是分类。
 const CATS: Record<string, string> = dict.categories
-const CAT_KEYS = Object.keys(CATS)
+const TAX = dict.taxonomy ?? {}
+const CAT1_KEYS = Object.keys(TAX)
+/** 自建词条没有 cat1，落到这里。**不是一个真分类**，只是不让它们从界面上消失 */
+const UNSORTED = '未分类'
 
 const POP_W = 320
 const MARGIN = 10 // 浮层贴软件边缘时的内边距
@@ -53,6 +65,9 @@ const GAP = 12 // 浮层与胶囊的间距
 interface HoverState {
   term: DictTerm
   anchor: DOMRect // 触发胶囊的位置，浮层据此定位
+  /** 这条是因为正文（解释或提示词）里的哪一段被搜出来的。
+   *  只有正文命中时才有 —— 名字命中不需要解释「为什么是它」 */
+  excerpt?: string
 }
 
 /** 动效词条的演示短片。
@@ -92,9 +107,12 @@ function ClipVideo({ src }: { src: string }): JSX.Element {
   )
 }
 
-export function DictView(): JSX.Element {
+export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
+  /** 选中的二级。**跟着一级走** —— 换一级时必须清掉，否则会筛出空列表
+   *  （二级名不跨一级重复，但「材质›玻璃与模糊」在「运动规律」下一条都没有） */
+  const [cat2, setCat2] = useState<string | null>(null)
   // 「只看自建」：和分类正交的一个筛子，不是第四个分类
   const [onlyUser, setOnlyUser] = useState(false)
   const [hover, setHover] = useState<HoverState | null>(null)
@@ -141,18 +159,45 @@ export function DictView(): JSX.Element {
   )
 
   const allTerms = useMemo(() => [...dict.terms, ...userTerms], [userTerms])
+  /** 有没有还没归类的词条 —— 没有就不摆那个筛子出来 */
+  const hasUnsorted = useMemo(() => allTerms.some((t) => !t.cat1), [allTerms])
+  /** 当前一级下的二级清单。「全部」和「未分类」没有二级 */
+  const subCats = cat === 'all' || cat === UNSORTED ? [] : (TAX[cat] ?? [])
 
+  // 选中的那个 chip 滚进视野。
+  //
+  // 分类行是横着滚的（九个一级在 320px 里放不下），点了右边那几个之后
+  // **自己选的那一类反而看不见了** —— 用户只能看到一排没高亮的按钮，
+  // 分不清现在筛的是什么。
+  //
+  // **手动算 scrollLeft，不用 scrollIntoView**：那个会把能滚的祖先一起滚，
+  // 面板是浮在画布上的，一路滚上去会把画布也带偏。
+  const catsRef = useRef<HTMLDivElement>(null)
+  const subsRef = useRef<HTMLDivElement>(null)
+  const center = (box: HTMLDivElement | null): void => {
+    const el = box?.querySelector<HTMLElement>('.dict-chip.active')
+    if (!el || !box) return
+    box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' })
+  }
+  useEffect(() => center(catsRef.current), [cat])
+  useEffect(() => center(subsRef.current), [cat2, cat])
+
+  // 分类/自建这两个筛子先过一遍（它们是「只看这一堆」，不参与打分），
+  // 剩下的交给 searchTerms 按字段加权排序：名字 > 英文 > 关键词 > 分类 > 提示词 > 解释。
+  // 搜索范围从「zh/en/keywords 子串」扩到了正文 —— 打「闭包」能找到防抖，
+  // 打「交互行为」能找到那一整类（见 search.ts）
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return allTerms.filter((t) => {
+    const base = allTerms.filter((t) => {
       if (onlyUser && !t.user) return false
-      if (cat !== 'all' && t.category !== cat) return false
-      if (!q) return true
-      if (t.zh.toLowerCase().includes(q)) return true
-      if (t.en.toLowerCase().includes(q)) return true
-      return t.keywords.some((k) => k.toLowerCase().includes(q))
+      if (cat !== 'all' && (t.cat1 ?? UNSORTED) !== cat) return false
+      if (cat2 && t.cat2 !== cat2) return false
+      return true
     })
-  }, [query, cat, onlyUser, allTerms])
+    // 分类名也参与搜索：打「玻璃」既能命中词条名，也能把整个「玻璃与模糊」捞出来
+    return searchTerms(base, query, (t) =>
+      [t.cat1, t.cat2].filter(Boolean).join(' ') || CATS[t.category]
+    )
+  }, [query, cat, cat2, onlyUser, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   //
@@ -192,13 +237,40 @@ export function DictView(): JSX.Element {
     }
   }, [hover])
 
+  const flash = (id: string): void => {
+    setFlashId(id)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashId(null), 1100)
+  }
+  const say = (msg: string): void => {
+    setNotice(msg)
+    if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    noticeTimer.current = setTimeout(() => setNotice(''), 2600)
+  }
+
   const insert = (term: DictTerm): void => {
     const s = useStore.getState()
-    // 优先插 prompt（动效词条才有）：它是给 agent 照着实现用的完整描述，
-    // 含关键参数和踩坑经验，比 logic 那句概述有用得多。
-    // 自建词条的 logic 是空的（脚本不花 token 生成解释）→ 退回插入英文名，
-    // 至少能拿去问 agent；插一个空字符串会闪「已插入」但什么也没发生
+
+    // ── 有提示词、又有对话输入框 → 挂成 chip ────────────────────────────
+    // 提示词有 200-350 字，直接倒进输入框会把用户自己打的那句话淹掉，也撤不回来。
+    // chip 只显示名字，**发送那一刻才展开成全文**（见 chips.ts）。
+    if (term.prompt && s.composerAddChip) {
+      s.composerAddChip({ id: term.id, label: term.zh, text: term.prompt })
+      flash(term.id)
+      return
+    }
+
+    // ── 其余情况：插纯文本 ────────────────────────────────────────────
+    // 终端走这条（字节流没有 DOM，挂不了能点掉的块，全文反而是对的）；
+    // 还没写提示词的词条也走这条，但要**说清楚插进去的不是提示词** ——
+    // 「点出来是解释」正是这次要修的毛病，不能悄悄退化回去还装作成功。
     const text = term.prompt || term.logic || term.en
+    if (!term.prompt && s.composerAddChip) {
+      s.composerAppend?.(text)
+      flash(term.id)
+      say(`「${term.zh}」还没有提示词，插入的是它的解释`)
+      return
+    }
 
     // **AI 对话的输入框优先**（2026-08-26 用户要求：不止终端）。
     // composerAppend 由两个对话输入框在 onFocus 时登记，聚焦终端时被 TerminalView
@@ -208,9 +280,7 @@ export function DictView(): JSX.Element {
     const append = s.composerAppend
     if (append) {
       append(text)
-      setFlashId(term.id)
-      if (flashTimer.current) clearTimeout(flashTimer.current)
-      flashTimer.current = setTimeout(() => setFlashId(null), 1100)
+      flash(term.id)
       return
     }
 
@@ -225,25 +295,28 @@ export function DictView(): JSX.Element {
         )
       )
     if (!t || !alive) {
-      setNotice('没有可插入的地方——先点一下某个终端或 AI 对话的输入框')
-      if (noticeTimer.current) clearTimeout(noticeTimer.current)
-      noticeTimer.current = setTimeout(() => setNotice(''), 2600)
+      say('没有可插入的地方——先点一下某个终端或 AI 对话的输入框')
       return
     }
     // 不带 \n = 插入到光标，不执行（logic 均为单行文本，已确认无换行）
     window.api.pty.write(t.ptyId, text)
-    setFlashId(term.id)
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-    flashTimer.current = setTimeout(() => setFlashId(null), 1100)
+    flash(term.id)
   }
 
   return (
     <div className="dict-view">
       <div className="dict-head">
-        <DictIcon size={13} />
-        <span className="dict-title">名词词典</span>
+        {/* 浮动面板自己的头上已经写着「辞典」了，这里再来一遍是两行一样的字 */}
+        {!embedded && (
+          <>
+            <DictIcon size={13} />
+            <span className="dict-title">辞典</span>
+          </>
+        )}
         <span className="dict-count">
           {filtered.length} / {allTerms.length}
+          {/* 嵌入时标题被收掉了，光一串数字没有着落，补个单位它才是句话 */}
+          {embedded ? ' 条' : ''}
         </span>
         <span className="pane-spacer" />
         <input
@@ -255,49 +328,92 @@ export function DictView(): JSX.Element {
         />
       </div>
 
-      <div className="dict-cats">
+      {/* 一级：九个场景。**横着滚不换行** —— 面板只有 320px 宽，九个 chip 铺开要三行，
+          再加二级就把词条挤没了。滚动条藏起来，两边用渐隐告诉你还有 */}
+      <div className="dict-cats" ref={catsRef}>
         <button
           className={`dict-chip${cat === 'all' ? ' active' : ''}`}
-          onClick={() => setCat('all')}
+          onClick={() => {
+            setCat('all')
+            setCat2(null)
+          }}
         >
           全部
         </button>
-        {CAT_KEYS.map((k) => (
+        {CAT1_KEYS.map((k) => (
           <button
             key={k}
-            className={`dict-chip cat-${k}${cat === k ? ' active' : ''}`}
-            onClick={() => setCat(k)}
+            className={`dict-chip${cat === k ? ' active' : ''}`}
+            onClick={() => {
+              // 再点一次已选中的 → 退回全部。没有这条的话选错了得先找到「全部」
+              setCat(cat === k ? 'all' : k)
+              setCat2(null)
+            }}
           >
-            {CATS[k]}
+            {k}
           </button>
         ))}
+        {hasUnsorted && (
+          <button
+            className={`dict-chip${cat === UNSORTED ? ' active' : ''}`}
+            data-tip="还没归类的词条（自建的都在这儿）"
+            onClick={() => {
+              setCat(cat === UNSORTED ? 'all' : UNSORTED)
+              setCat2(null)
+            }}
+          >
+            {UNSORTED}
+          </button>
+        )}
         {/* 一条自建词条都没有时不显示这个筛子——空筛子只会让人点一下发现什么都没有 */}
         {userTerms.length > 0 && (
           <button
             className={`dict-chip cat-user${onlyUser ? ' active' : ''}`}
             onClick={() => setOnlyUser((v) => !v)}
-            data-tip="只看自动补全进来的词条"
+            data-tip="只看自己加进来的词条"
           >
             自建 {userTerms.length}
           </button>
         )}
       </div>
 
+      {/* 二级：只在选了一级之后出现。没选一级时摆 48 个二级出来等于没分类 */}
+      {subCats.length > 0 && (
+        <div className="dict-cats dict-cats-2" ref={subsRef}>
+          {subCats.map((sc) => (
+            <button
+              key={sc.name}
+              className={`dict-chip sub${cat2 === sc.name ? ' active' : ''}`}
+              data-tip={sc.desc || undefined}
+              onClick={() => setCat2(cat2 === sc.name ? null : sc.name)}
+            >
+              {sc.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <DictHookBar />
 
       <div className="dict-list" onMouseLeave={() => setHover(null)}>
         {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}
-        {filtered.map((term) => (
+        {filtered.map(({ item: term, hit, excerpt }) => (
           <button
             key={term.id}
-            className={`dict-pill cat-${term.category}${term.user ? ' own' : ''}${flashId === term.id ? ' flash' : ''}`}
+            className={`dict-pill cat-${term.category}${term.user ? ' own' : ''}${flashId === term.id ? ' flash' : ''}${hit === 'logic' || hit === 'prompt' ? ' via-text' : ''}`}
             onMouseEnter={(e) =>
-              setHover({ term, anchor: e.currentTarget.getBoundingClientRect() })
+              setHover({ term, anchor: e.currentTarget.getBoundingClientRect(), excerpt })
             }
             // 移开该胶囊就收起预览（不等移出整个列表——停在空白处不该残留浮层）
             onMouseLeave={() => setHover(null)}
             onClick={() => insert(term)}
-            data-tip="点击插入到最后聚焦的终端或 AI 对话输入框"
+            // 两条路的说法不一样，别用一句含糊的话盖过去：
+            // 有提示词 + 对话框 → 挂成 chip；终端 / 没提示词 → 插纯文本
+            data-tip={
+              term.prompt
+                ? '点一下挂到 AI 对话输入框上；聚焦终端时直接插入提示词全文'
+                : '点击插入到最后聚焦的终端或 AI 对话输入框'
+            }
           >
             <span className={`dict-dot cat-${term.category}`} />
             <span className="dict-pill-zh">{term.zh}</span>
@@ -321,12 +437,18 @@ export function DictView(): JSX.Element {
               visibility: popPos.ready ? 'visible' : 'hidden'
             }}
           >
+            {/* 正文命中时先说清「你搜的词在这儿」—— 不然用户看着一个名字对不上的
+                词条，只会觉得搜索乱匹配 */}
+            {hover.excerpt && <div className="dict-pop-why">{hover.excerpt}</div>}
             <div className="dict-pop-head">
               <span className="dict-zh">{hover.term.zh}</span>
               {/* 极少数情况下 zh 缺失会回落成 en，别把同一个词并排印两遍 */}
               {hover.term.zh !== hover.term.en && <span className="dict-en">{hover.term.en}</span>}
+              {/* 归到哪儿。有二级就显示两级，没有（自建词条）才回退到老的三类标签 */}
               <span className={`dict-tag cat-${hover.term.category}`}>
-                {CATS[hover.term.category] ?? hover.term.category}
+                {hover.term.cat1
+                  ? `${hover.term.cat1} › ${hover.term.cat2}`
+                  : (CATS[hover.term.category] ?? hover.term.category)}
               </span>
               {hover.term.user && <span className="dict-tag cat-user">自建</span>}
             </div>

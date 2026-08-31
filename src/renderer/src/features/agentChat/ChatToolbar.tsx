@@ -28,9 +28,10 @@ import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, ImageIcon, SendIcon, StopIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
+import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 
 const MAX_ROWS = 4
 const LINE_H = 19
@@ -89,6 +90,8 @@ export function ChatToolbar({
 }): JSX.Element {
   const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
+  /** 挂在输入框上的辞典提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
+  const [chips, setChips] = useState<DictChip[]>([])
   // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
   // 默认值"（2026-08-17 全分支最终评审 I7）。
   //
@@ -144,15 +147,22 @@ export function ChatToolbar({
 
   const submit = (): void => {
     const t = text.trim()
-    // 只有图没有字也该能发（同终端输入框：图本身就是内容）
-    if (!t && !pics.imgs.length) return
+    // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
+    // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
+    if (!t && !pics.imgs.length && !chips.length) return
+    // chip 在**发送这一刻**才展开成全文：输入框里始终只有名字，模型收到的是整条指令
+    const body = expandChips(t, chips)
     // 图片路径排在文字前面，跟终端那边同一套拼法（agent 先看到「有图」再读要求）
     const paths = pics.pathPrefix()
-    const payload = paths ? (t ? `${paths} ${t}` : paths) : t
+    const payload = paths ? (body ? `${paths} ${body}` : paths) : body
     // 界面要显示的是图本身和你打的字，不是拼好的那串路径 —— 缩略图这会儿还在内存里，
     // 跟着消息带过去就行，不用等下再去磁盘重读一遍。
     const shots = pics.imgs.map((i) => ({ path: i.path, url: i.url }))
     pics.clearImgs()
+    // 回显 body 而不是 t：这条消息真正发出去的就是展开后的全文，
+    // 而且会话恢复时回放的是 CLI 记的那份（也是全文）—— 只显示半截，前后会对不上
+    const sentChips = chips
+    setChips([])
     // 任何"把用户的话发出去"的路径都该停一次麦——照抄 voiceControl.ts 的约定
     // （TerminalInput.tsx 的 send() 是唯一先例：不 await,消息该立刻走,收麦是它旁边的事）。
     void stopVoiceOnSend()
@@ -166,11 +176,14 @@ export function ChatToolbar({
     // deliverMessage 直接返回「当前会话正在处理上一条消息，请稍候再发送」。修复前
     // 用户看到的是：自己那句话已经出现在对话流里（看起来发出去了）、输入框空了、
     // 底下一行小字——想重发只能重新打一遍，长消息就是白打。
-    void Promise.resolve(onSend(payload, { text: t, images: shots })).then((ok) => {
+    void Promise.resolve(onSend(payload, { text: body, images: shots })).then((ok) => {
       if (ok !== false || !aliveRef.current) return
       // 这几十毫秒里用户可能已经开始打下一句：那就把失败的这条接在前面，
       // 绝不覆盖他新打的内容——"不丢用户打的字"是这条修复的全部意义。
       setText((cur) => (cur ? `${t}\n${cur}` : t))
+      // chip 也要放回来。只退字不退 chip 的话，用户重发时提示词悄悄少了 ——
+      // 他看不出来，模型也就不知道该做那件事了
+      setChips((cur) => sentChips.reduce((acc, c) => addChip(acc, c), cur))
       requestAnimationFrame(() => {
         if (!taRef.current) return
         autoGrow(taRef.current)
@@ -277,8 +290,27 @@ export function ChatToolbar({
         {pics.err && <div className="ac-inline-err">{pics.err}</div>}
 
         {/* 图片区：快照占位块和已带上的图排在同一行，都是「这条消息要带的东西」 */}
-        {(pics.imgs.length > 0 || snapHere) && (
+        {(pics.imgs.length > 0 || snapHere || chips.length > 0) && (
           <div className="ac-attach-row">
+            {chips.map((c) => (
+              <span className="ac-chip" key={c.id} data-tip={c.text}>
+                <DictIcon size={11} />
+                <span className="ac-chip-label">{c.label}</span>
+                <button
+                  type="button"
+                  className="ac-chip-x"
+                  aria-label={`不带「${c.label}」这条提示词`}
+                  onMouseDown={(e) => {
+                    // mousedown 而不是 click：click 要等抬手，那时 textarea 已经失焦，
+                    // 跟图片附件那颗 X 保持同一种手感
+                    e.preventDefault()
+                    setChips((cur) => dropChip(cur, c.id))
+                  }}
+                >
+                  <CloseIcon size={9} />
+                </button>
+              </span>
+            ))}
             {snapHere && (
               <span className="ac-attach-snap-wrap">
                 <button
@@ -333,7 +365,11 @@ export function ChatToolbar({
           // 那句「两个输入框共用」说的就是这两个）。
           // 直接复用 appendVoice：它已经处理了空格分隔与 autoGrow，
           // 词典插入和语音插入本来就是同一件事。
-          onFocus={() => useStore.getState().setComposerAppend(appendVoice)}
+          onFocus={() => {
+            const st = useStore.getState()
+            st.setComposerAppend(appendVoice)
+            st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
+          }}
           placeholder="继续和它说…（可粘贴或拖入图片）"
           onChange={(e) => {
             setText(e.target.value)
@@ -497,7 +533,7 @@ export function ChatToolbar({
             // 下一条消息会带 --resume 接回上下文。
             onClick={view.busy ? () => window.api.agentChat.interrupt(sessionId) : submit}
             // 跑着的时候不禁用输入：可以先写下一条
-            disabled={view.busy ? false : !text.trim() && !pics.imgs.length}
+            disabled={view.busy ? false : !text.trim() && !pics.imgs.length && !chips.length}
           >
             {view.busy ? <StopIcon size={13} /> : <SendIcon size={15} />}
           </button>

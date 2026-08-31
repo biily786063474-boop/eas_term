@@ -23,7 +23,7 @@ import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
-import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon } from '../../ui/Icons'
+import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
 import type { CliAuthState } from '../../../../shared/types'
 import { CanvasContextMenu, type CanvasMenuItem } from '../canvas/CanvasContextMenu'
@@ -35,6 +35,7 @@ import { noteSubmitted, noteRunning, drainFollow, forgetPty } from '../gantt/col
 import { collectLeaves } from '../../layout'
 import './agentChat.css'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
+import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 
 /** 归约器（reduce.ts）**从不产出 `Turn.role: 'user'`**——内核的事件流里没有「用户消息」
  *  事件，CLI 不回显用户输入。用户自己发出去的文本在渲染层是同步已知的（按下发送那一刻
@@ -248,6 +249,9 @@ export function AgentChatView({
     }
   })
   const [text, setText] = useState('')
+  /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
+   *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
+  const [chips, setChips] = useState<DictChip[]>([])
 
   /** 点了 agent 给的某个选项。
    *
@@ -611,7 +615,9 @@ export function AgentChatView({
   }
 
   const handleSend = async (override?: string): Promise<void> => {
-    const message = (override ?? text).trim()
+    // override 是程序性发送（空态卡片上的「接上上次的对话」那种），不该带上 chip；
+    // 用户自己按发送才展开挂着的提示词
+    const message = override !== undefined ? override.trim() : expandChips(text, chips)
     if (!message || !selected || starting || sessionId) return
     // **没登录就别起进程。** 起了也是撞 401 死掉，还白花一次冷启动，
     // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
@@ -731,6 +737,7 @@ export function AgentChatView({
     setSessionId(result.sessionId)
     setStarting(false)
     setText('')
+    setChips([])
   }
 
   // **接管一个已经在跑的会话。**
@@ -1045,6 +1052,27 @@ export function AgentChatView({
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         <div className="ac-input-wrap">
           {emptySlash.open && <SlashList {...emptySlash} />}
+          {chips.length > 0 && (
+            <div className="ac-attach-row in-empty">
+              {chips.map((c) => (
+                <span className="ac-chip" key={c.id} data-tip={c.text}>
+                  <DictIcon size={11} />
+                  <span className="ac-chip-label">{c.label}</span>
+                  <button
+                    type="button"
+                    className="ac-chip-x"
+                    aria-label={`不带「${c.label}」这条提示词`}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      setChips((cur) => dropChip(cur, c.id))
+                    }}
+                  >
+                    <CloseIcon size={9} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <textarea
             ref={emptyTaRef}
             className="ac-input"
@@ -1053,11 +1081,13 @@ export function AgentChatView({
             // 聚焦时把「往这儿追加」登记到 store，名词词典点条目就插进这里而不是终端。
             // 在 onFocus 里注册而不是 mount 时：拿到的一定是当前这次渲染的 setText，
             // 也天然表达了「最后聚焦的是我」。
-            onFocus={() =>
-              useStore.getState().setComposerAppend((t) =>
+            onFocus={() => {
+              const st = useStore.getState()
+              st.setComposerAppend((t) =>
                 setText((v) => (v && !/\s$/.test(v) ? v + ' ' : v) + t)
               )
-            }
+              st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
+            }}
             onKeyDown={(e) => {
               // 候选开着时先归它管 —— 上下键/Tab/Esc 在这一刻的意思跟平时不一样
               if (emptySlash.handleKey(e)) return
@@ -1085,7 +1115,7 @@ export function AgentChatView({
               className="ac-input-send"
               data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
               onClick={() => void handleSend()}
-              disabled={!text.trim() || phase.k !== 'ready'}
+              disabled={(!text.trim() && !chips.length) || phase.k !== 'ready'}
             >
               {phase.k === 'starting' ? (
                 <span className="ac-dot" aria-hidden="true" />

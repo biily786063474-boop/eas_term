@@ -71,6 +71,14 @@ export interface UiSlice {
    *  不持久化（函数本来也存不下），uiSlice 只手动存特定字段，不走 persist。 */
   composerAppend: ((text: string) => void) | null
   setComposerAppend: (fn: ((text: string) => void) | null) => void
+  /** 往当前对话输入框挂一个辞典 chip。**和 composerAppend 是两条通道，不是一条**：
+   *  append 收纯文本（终端也走这条），chip 只在 AI 对话成立 —— 终端是字节流，
+   *  没有 DOM，挂不了一个能点掉的块。
+   *
+   *  登记方式和 composerAppend 一样：谁聚焦谁注册自己的 addChip。
+   *  为 null 时 DictView 退回插纯文本（终端 / 没有输入框可插）。 */
+  composerAddChip: ((chip: { id: string; label: string; text: string }) => void) | null
+  setComposerAddChip: (fn: ((chip: { id: string; label: string; text: string }) => void) | null) => void
   /** 最近一次快照。给终端输入框上方的浮层用 —— 只在同项目的终端里显示。
    *  不持久化：它是「刚拍完这一下」的临时状态，重启后没有意义 */
   lastSnapshot: { path: string; projectId: string; at: number } | null
@@ -211,6 +219,15 @@ export interface UiSlice {
    *  重启就冒出来等于没听见。藏起来后标题栏会出现一个恢复按钮。 */
   dictBubbleHidden: boolean
   setDictBubbleHidden: (v: boolean) => void
+  /** 辞典面板开着没有。**不持久化** —— 重启后自动弹出一个面板是打扰，
+   *  而它是「随手查」的工具，该由用户每次主动叫出来 */
+  dictOpen: boolean
+  setDictOpen: (v: boolean) => void
+  /** 辞典面板上次停在哪。**存 localStorage** ——
+   *  用户明确要求「下次出现的位置和上次收回的位置一样」，
+   *  只放内存的话切个视图就忘了 */
+  dictPos: { x: number; y: number } | null
+  setDictPos: (p: { x: number; y: number }) => void
   /** Agent 角色表（~/.eas/roles.json）。启动 app 时拉一次，改完重拉。 */
   roles: AgentRole[]
   loadRoles: () => Promise<void>
@@ -230,6 +247,23 @@ export interface UiSlice {
 
 const SIDEBAR_COLLAPSED_KEY = 'eas.sidebar.collapsed'
 const DICT_HIDDEN_KEY = 'eas.dictbubble.hidden'
+const DICT_POS_KEY = 'eas.dict.pos'
+
+/** 读上次的位置。坏数据 / 没存过 → null（由组件回落到默认位置）。
+ *  **不在这里夹进视口** —— 存的时候窗口可能比现在大，
+ *  夹进「当时的」视口没有意义，那件事必须在渲染时按当前窗口做 */
+function readDictPos(): { x: number; y: number } | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DICT_POS_KEY) || 'null') as unknown
+    if (!raw || typeof raw !== 'object') return null
+    const o = raw as Record<string, unknown>
+    if (typeof o.x !== 'number' || typeof o.y !== 'number') return null
+    if (!Number.isFinite(o.x) || !Number.isFinite(o.y)) return null
+    return { x: o.x, y: o.y }
+  } catch {
+    return null
+  }
+}
 /** MCP 接入开关。存「关」而不是存「开」：默认值是开，只有被明确关掉才需要记住 */
 const MCP_OFF_KEY = 'eas.mcp.off'
 const GANTT_JUMP_MODE_KEY = 'eas.gantt.jumpmode'
@@ -288,6 +322,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   composerAppend: null,
   // set 的对象形式：函数是**值**不是 updater（updater 是 set(fn) 那种写法）
   setComposerAppend: (fn) => set({ composerAppend: fn }),
+  composerAddChip: null,
+  setComposerAddChip: (fn) => set({ composerAddChip: fn }),
   lastSnapshot: null,
   setLastSnapshot: (v) => set({ lastSnapshot: v }),
   boardLeafByProject: {},
@@ -393,6 +429,17 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     if (v) localStorage.setItem(SIDEBAR_COLLAPSED_KEY, '1')
     else localStorage.removeItem(SIDEBAR_COLLAPSED_KEY)
     set({ sidebarCollapsed: v })
+  },
+  dictOpen: false,
+  setDictOpen: (v) => set({ dictOpen: v }),
+  dictPos: readDictPos(),
+  setDictPos: (p) => {
+    try {
+      localStorage.setItem(DICT_POS_KEY, JSON.stringify(p))
+    } catch {
+      /* 隐私模式下写不了，位置不记也不该报错 */
+    }
+    set({ dictPos: p })
   },
   dictBubbleHidden: localStorage.getItem(DICT_HIDDEN_KEY) === '1',
   setDictBubbleHidden: (v) => {

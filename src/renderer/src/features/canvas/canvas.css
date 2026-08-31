@@ -835,36 +835,10 @@
   min-height: 0;
 }
 
-/* ---------- 名词词典悬浮气泡 + 弹出面板 ---------- */
-.cdict-bubble {
-  position: fixed;
-  z-index: 60;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 1px solid var(--glass-border-strong);
-  background: var(--glass-3);
-  backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 6px 20px rgba(0, 0, 0, 0.45);
-  color: var(--fg-dim);
-  cursor: grab;
-  transition: color 0.12s, border-color 0.12s;
-}
-.cdict-bubble:hover {
-  color: var(--fg);
-  border-color: rgba(var(--accent-rgb), 0.5);
-}
-.cdict-bubble:active {
-  cursor: grabbing;
-}
-.cdict-bubble.on {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.6);
-}
-
+/* ---------- 辞典面板（2026-08-31：悬浮球取消，改标题栏触发）----------
+   原来这里还有一个 .cdict-bubble —— 画布上常驻的可拖动小圆钮。
+   它一直压在画布上，而辞典是「随手查一下」的工具，不该常驻占位。
+   现在由标题栏那个按钮叫出面板，样式一并删掉，不留死规则。 */
 .cdict-pop {
   position: fixed;
   z-index: 60;
@@ -878,6 +852,10 @@
   backdrop-filter: var(--blur);
   box-shadow: var(--glass-highlight), 0 16px 44px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  /* **从自己的右上角长出来** —— 那是标题栏那个触发按钮的方向。
+     原点放中心的话它看起来是凭空在半空中缩放，跟你点的按钮没有关系。 */
+  transform-origin: top right;
+  animation: cdict-in 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
 }
 .cdict-pop-head {
   flex: none;
@@ -5703,6 +5681,62 @@
   }
   .cpk-pill:hover .sp-ch,
   .cpk-pill.on .sp-ch {
+    animation: none;
+  }
+}
+
+
+/* 展开：从右上角放大 + 淡入。**只动 transform 和 opacity** ——
+   它们是合成属性，不触发重绘也不触发样式重算。
+   曲线取自苹果窗口那条手感：起步快、尾段长，收得住。 */
+@keyframes cdict-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 收起：反着走。**时长必须和 CanvasDictBubble.tsx 的 ANIM_MS 一致** ——
+   对不上的话要么面板提前消失（JS 快）、要么留一帧空白（CSS 快）。 */
+.cdict-pop.closing {
+  animation: cdict-out 0.26s cubic-bezier(0.32, 0.72, 0, 1) both;
+  /* 收起过程中不该还能点里面的东西 */
+  pointer-events: none;
+}
+
+@keyframes cdict-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-6px);
+  }
+}
+
+/* 拖动中把入场动画摘掉：不摘的话每次 left/top 变化都会重新触发一遍，
+   面板会一边跟手一边反复缩放 */
+.cdict-pop[data-dragging] {
+  animation: none;
+}
+
+/* 顶端那条是拖动把手 —— 光标要说出来，不然没人知道能拖 */
+.cdict-pop-head {
+  cursor: grab;
+  user-select: none;
+}
+.cdict-pop[data-dragging] .cdict-pop-head {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cdict-pop,
+  .cdict-pop.closing {
     animation: none;
   }
 }
