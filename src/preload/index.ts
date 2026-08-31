@@ -197,6 +197,8 @@ function argOf(name: string): string {
  *  没有直接 import type { Prefs }：preload 和 main 各自的类型入口，历史上这里
  *  就是手抄一份最小形状，这次新增字段沿用同一约定，不引入新的跨进程类型耦合。 */
 interface PrefsSnapshot {
+  /** 要不要有灵动岛（屏幕顶部那个状态胶囊）。关掉后那扇窗口根本不建 */
+  island: boolean
   autoUpdateCheck: boolean
   telemetry: boolean
   /** 快照后怎么处理标记。未设置 = 每次都问 */

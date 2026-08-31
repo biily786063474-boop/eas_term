@@ -11,7 +11,7 @@ import path from 'path'
 import fs from 'fs'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
-import { getPrefs, setPref } from './prefs'
+import { getPrefs, onIslandPref, setPref } from './prefs'
 
 const EMPTY: IslandState = { running: [], notices: [] }
 
@@ -120,10 +120,24 @@ function noteFreshNotices(): void {
  *  只有两种情况前台也显示：你自己从 Dock 菜单点了「显示灵动岛」，
  *  或者你正把它展开着在读（held）—— 两者都是你主动要的，不是它自己蹦出来。 */
 function shouldShow(): boolean {
+  // 用户在设置里关掉了 → 根本不建那扇窗口
+  if (!getPrefs().island) return false
   const hasContent = lastState.running.length > 0 || lastState.notices.length > 0
   if (mainInForeground()) {
-    // hasContent 这一条别省：通知被处理光后只看窗口期，会留下一个空胶囊挂着
-    return hasContent && (held || Date.now() < fgUntil)
+    // ── 2026-08-31：主体在前台就让位，不再留 20 秒露面窗口期 ──────────
+    // 用户要求：「不管什么方式打开软件主体，灵动岛都要隐匿到后台，
+    // 不要抢软件主体的 DOM」。
+    //
+    // 原来这里是 `hasContent && (held || Date.now() < fgUntil)` ——
+    // 也就是「你已经在 app 里了，但有新通知的话岛还是要在屏幕顶上待 20 秒」。
+    // 那 20 秒正好压在主窗口的标题栏区域上。
+    //
+    // **只保留 held**：那是「用户自己把它展开着在读」，收走等于把他正看的东西
+    // 抽走。而这条现在很短 —— 主窗口里点任何地方都会收起它（App.tsx 的 mousedown）。
+    //
+    // 在 app 里错过的通知不会没人管：铃铛、抽屉呼吸点、侧栏红点都还在，
+    // 那些才是「你人就在这儿」时该用的提示面。
+    return hasContent && held
   }
   if (lastState.notices.some((n) => n.kind === 'approval')) return true
   return hasContent
@@ -642,6 +656,9 @@ export function registerIslandHandlers(): void {
   //
   // **只在 held（岛确实展开着）时才发**：主窗口每一次 mousedown 都会调过来，
   // 收着的时候这里直接 return，不去碰那扇窗口。
+  // 设置里那个开关一改就重算 —— 关掉时窗口当场消失，打开时当场按现有内容决定建不建
+  onIslandPref(() => reconcile())
+
   ipcMain.on('island:collapse-request', () => {
     if (!held || !islandWin || islandWin.isDestroyed()) return
     islandWin.webContents.send('island:collapse')

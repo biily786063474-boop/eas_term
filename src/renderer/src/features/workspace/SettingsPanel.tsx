@@ -56,6 +56,7 @@ export function SettingsPanel(): JSX.Element {
   const [prefs, setPrefs] = useState<PrefsState>({
     autoUpdateCheck: true,
     telemetry: true,
+    island: true,
     recentDocsOnly: false
   })
   const [checking, setChecking] = useState(false)
@@ -132,7 +133,7 @@ export function SettingsPanel(): JSX.Element {
   }, [open])
 
   const setPref = async (
-    key: 'autoUpdateCheck' | 'telemetry' | 'clearShapesAfterSnapshot' | 'recentDocsOnly',
+    key: 'autoUpdateCheck' | 'telemetry' | 'clearShapesAfterSnapshot' | 'recentDocsOnly' | 'island',
     value: boolean | 'keep' | 'clear' | undefined
   ): Promise<void> => {
     setPrefs(await window.api.prefs.set(key, value))
@@ -233,6 +234,27 @@ export function SettingsPanel(): JSX.Element {
                   ))}
                 </div>
               </div>
+              )}
+
+              {/* 灵动岛开关。**放主题这一栏** —— 它讲的是「界面上出现什么」，
+                  跟配色、字号同类，不是某个功能的行为设置。 */}
+              {tab === 'theme' && (
+                <div className="cset-sec">
+                  <label className="cset-row">
+                    <input
+                      type="checkbox"
+                      checked={prefs.island}
+                      onChange={(e) => void setPref('island', e.target.checked)}
+                    />
+                    <span className="cset-rowname">显示灵动岛</span>
+                  </label>
+                  <div className="cset-sub">
+                    屏幕顶部那个状态胶囊：有终端在跑、或者有事等你处理时冒出来。
+                    <b>你在这个软件里的时候它会自己让位</b>，不占主界面 ——
+                    那时候铃铛和抽屉上的提示是同一件事的更好去处。
+                    关掉之后那扇窗口根本不建。
+                  </div>
+                </div>
               )}
 
               {tab === 'ai' && (
