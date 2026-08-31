@@ -2773,3 +2773,25 @@ body.dragging-row * {
   color: var(--warn, #d88);
   text-align: center;
 }
+
+/* 「扩展能力」长在设置里时的外壳（2026-08-31 从标题栏浮层搬过来）。
+   浮层那份靠 .fp-pop 撑出宽高，进了设置就该跟着分区走 */
+/* 面板自带的标题（浮层时代它是浮层的头）在设置里是多余的 ——
+   分区已经有自己的标题和说明，两个叠在一起是同一句话说两遍 */
+.fp-inline .fp-head {
+  display: none;
+}
+
+.fp-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* MCP 调用记录在设置里的高度。浮层那份是 max-height 固定的，
+   分区里要留给别的内容，收窄一点 */
+.mcp-pop-list.in-settings {
+  max-height: 220px;
+}

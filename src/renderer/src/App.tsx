@@ -298,8 +298,10 @@ export function App(): JSX.Element {
           <QuotaBarToggle />
           <McpIndicator />
           <DictBubbleToggle />
+          {/* 「扩展能力」的按钮搬进设置 →「隐私」了（2026-08-31）。
+              这个实例留着只为**一次性的启动提示** —— 它不能跟着搬进设置，
+              它的意义就是在你还没想到要去设置里翻的时候拦你一下。 */}
           <FootprintPanel />
-          {/* 挨着「扩展能力」放：两者是同类，都在讲「这软件在你机器上存了什么」 */}
           <SecretsPanel />
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />

@@ -7,7 +7,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
+import { FootprintPanel } from './FootprintPanel'
 import { GpuPanel } from './GpuPanel'
+import { McpBody } from './McpIndicator'
 import { useStore } from '../../store'
 import { THEMES } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
@@ -162,6 +164,21 @@ export function SettingsPanel(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey, { capture: true })
   }, [open])
 
+  // 从外部打开并直接落到某个分区。**用自定义事件而不是把状态提到 store** ——
+  // 这个面板的开合是纯 UI 的一次性动作，提到全局状态里就多了一份要同步的真相，
+  // 而且任何订阅了 store 的组件都会因为「有人打开了设置」白重渲染一次。
+  //
+  // 调用方：标题栏的 MCP 指示灯（它自己不再弹浮层，点了就跳到 AI 对话那一栏）。
+  useEffect(() => {
+    const h = (e: Event): void => {
+      const t = (e as CustomEvent<{ tab?: TabKey }>).detail?.tab
+      if (t) setTab(t)
+      setOpen(true)
+    }
+    window.addEventListener('eas:open-settings', h)
+    return () => window.removeEventListener('eas:open-settings', h)
+  }, [])
+
   return (
     <>
       <button
@@ -264,6 +281,16 @@ export function SettingsPanel(): JSX.Element {
                 </div>
                 {slMsg && <div className="cset-sub">{slMsg}</div>}
               </div>
+              )}
+
+              {/* MCP：AI 通过它动你的画板。**放 AI 对话这一栏** ——
+                  它讲的是「AI 能对你做什么、做过什么」。
+                  标题栏只留了一盏会闪的灯（点它跳到这里），
+                  那盏灯不能一起搬走：它存在的理由就是「看得见」。 */}
+              {tab === 'ai' && (
+                <div className="cset-sec">
+                  <McpBody />
+                </div>
               )}
 
               {tab === 'sound' && (
@@ -399,6 +426,20 @@ export function SettingsPanel(): JSX.Element {
                   </a>
                 </div>
               </div>
+              )}
+
+              {/* 扩展能力：这软件在你机器上写过什么，逐个可卸。
+                  **放隐私这一栏**是因为它本来就是那份「动了你什么」的总账 ——
+                  FootprintPanel 自己的注释写着「这份清单同时是写隐私策略的依据」。
+                  2026-08-31 从标题栏搬过来的。 */}
+              {tab === 'privacy' && (
+                <div className="cset-sec">
+                  <div className="cset-label">扩展能力</div>
+                  <div className="cset-note">
+                    这个软件在你机器上写过的全部位置，可以逐个卸掉。
+                  </div>
+                  <FootprintPanel mode="inline" />
+                </div>
               )}
                 </div>
               </div>

@@ -1,8 +1,13 @@
-// MCP 指示灯：AI（Claude Code / Codex）通过 MCP 动画板时，标题栏这个插头亮一下。
-// 目的是「看得见」——AI 在后台开预览、整理、发通知，用户得知道刚才发生了什么，
-// 以及能一键掐断（关掉后所有工具调用立刻被拒，不用去改 ~/.claude.json）。
+// MCP 指示灯 + 调用记录。
+//
+// ── 2026-08-31：记录和开关搬进了设置，标题栏只留那盏灯 ──────────────
+// 用户要「MCP 调用记录放到设置里」。但**这盏灯不能一起搬走** ——
+// 它存在的全部理由是「看得见」：AI 在后台开预览、整理、发通知时，
+// 你得当场知道刚才发生了什么。搬进设置就等于没人看得见了。
+//
+// 所以拆成两半：标题栏留一盏会闪的灯（点它跳到设置 → AI 对话），
+// 记录列表和总开关搬进设置那一栏（McpBody）。
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 
 function ago(ts: number): string {
@@ -15,14 +20,9 @@ function ago(ts: number): string {
 export function McpIndicator(): JSX.Element | null {
   const mcpLog = useStore((s) => s.mcpLog)
   const mcpEnabled = useStore((s) => s.mcpEnabled)
-  const setMcpEnabled = useStore((s) => s.setMcpEnabled)
-  const clearMcpLog = useStore((s) => s.clearMcpLog)
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
   const [flash, setFlash] = useState(false)
   const lastId = useRef(0)
   const btnRef = useRef<HTMLButtonElement>(null)
-  const popRef = useRef<HTMLDivElement>(null)
 
   // 新调用进来 → 闪一下（1.2s 后熄）
   useEffect(() => {
@@ -34,73 +34,67 @@ export function McpIndicator(): JSX.Element | null {
     return () => clearTimeout(t)
   }, [mcpLog])
 
-  // 点外面收起
-  useEffect(() => {
-    if (!open) return
-    const h = (e: MouseEvent): void => {
-      const t = e.target as Node
-      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [open])
-
   // 从没被调用过、且没关过开关 → 完全不占标题栏空间
   if (!mcpLog.length && mcpEnabled) return null
 
   return (
+    <button
+      ref={btnRef}
+      className={`tb-item mcp-ind${flash ? ' flash' : ''}${mcpEnabled ? '' : ' off'}`}
+      data-tip={mcpEnabled ? 'AI 正在通过 MCP 操作画板，点击查看记录' : 'MCP 已关闭，点击查看'}
+      onClick={() =>
+        window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'ai' } }))
+      }
+    >
+      MCP
+      {!!mcpLog.length && <span className="tb-badge">{mcpLog.length}</span>}
+    </button>
+  )
+}
+
+/** 设置 →「AI 对话」里那一段：总开关 + 调用记录。
+ *  **不带自己的弹层容器** —— 它现在长在设置的分区里，外壳由那边给。 */
+export function McpBody(): JSX.Element {
+  const mcpLog = useStore((s) => s.mcpLog)
+  const mcpEnabled = useStore((s) => s.mcpEnabled)
+  const setMcpEnabled = useStore((s) => s.setMcpEnabled)
+  const clearMcpLog = useStore((s) => s.clearMcpLog)
+  return (
     <>
-      <button
-        ref={btnRef}
-        className={`tb-item mcp-ind${flash ? ' flash' : ''}${mcpEnabled ? '' : ' off'}`}
-        data-tip={mcpEnabled ? 'AI 正在通过 MCP 操作画板，点击查看' : 'MCP 已关闭，点击查看'}
-        onClick={() => {
-          const r = btnRef.current!.getBoundingClientRect()
-          setPos({ x: Math.max(8, r.right - 300), y: r.bottom + 6 })
-          setOpen((v) => !v)
-        }}
-      >
-        MCP
-        {!!mcpLog.length && <span className="tb-badge">{mcpLog.length}</span>}
-      </button>
-      {/* 弹窗必须 portal 到 body：标题栏是 overflow:hidden 会把它裁掉，
-          画布里的 webview 遮罩层也会盖住标题栏内的绝对定位元素 */}
-      {open &&
-        createPortal(
-          <div className="mcp-pop" ref={popRef} style={{ left: pos.x, top: pos.y }}>
-            <div className="mcp-pop-head">
-              <span>MCP 接入</span>
-              <label className="mcp-toggle">
-                <input
-                  type="checkbox"
-                  checked={mcpEnabled}
-                  onChange={(e) => setMcpEnabled(e.target.checked)}
-                />
-                <span>{mcpEnabled ? '已开启' : '已关闭'}</span>
-              </label>
+      <div className="mcp-pop-head">
+        <span>MCP 接入</span>
+        <label className="mcp-toggle">
+          <input
+            type="checkbox"
+            checked={mcpEnabled}
+            onChange={(e) => setMcpEnabled(e.target.checked)}
+          />
+          <span>{mcpEnabled ? '已开启' : '已关闭'}</span>
+        </label>
+      </div>
+      {/* **关掉之后要说清后果** —— 光一个开关不解释，用户不知道关了会怎样 */}
+      <div className="cset-note">
+        关掉之后 AI 通过 MCP 发来的调用一律被拒（不用去改 ~/.claude.json）。
+        下面是它动过什么。
+      </div>
+      <div className="mcp-pop-list in-settings">
+        {mcpLog.length ? (
+          mcpLog.map((e) => (
+            <div key={e.id} className={`mcp-row${e.ok ? '' : ' bad'}`}>
+              <span className="mcp-row-tool">{e.tool}</span>
+              <span className="mcp-row-detail">{e.detail}</span>
+              <span className="mcp-row-at">{ago(e.at)}</span>
             </div>
-            <div className="mcp-pop-list">
-              {mcpLog.length ? (
-                mcpLog.map((e) => (
-                  <div key={e.id} className={`mcp-row${e.ok ? '' : ' bad'}`}>
-                    <span className="mcp-row-tool">{e.tool}</span>
-                    <span className="mcp-row-detail">{e.detail}</span>
-                    <span className="mcp-row-at">{ago(e.at)}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="mcp-empty">还没有调用记录</div>
-              )}
-            </div>
-            {!!mcpLog.length && (
-              <button className="mcp-clear" onClick={clearMcpLog}>
-                清空记录
-              </button>
-            )}
-          </div>,
-          document.body
+          ))
+        ) : (
+          <div className="mcp-empty">还没有调用记录</div>
         )}
+      </div>
+      {!!mcpLog.length && (
+        <button className="cset-btn" onClick={clearMcpLog}>
+          清空记录
+        </button>
+      )}
     </>
   )
 }

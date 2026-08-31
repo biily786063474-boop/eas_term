@@ -19,7 +19,9 @@ function short(p: string): string {
   return j > 0 ? '…' + p.slice(j) : p
 }
 
-export function FootprintPanel(): JSX.Element | null {
+/** @param mode `inline` = 长在设置的分区里（只渲染内容体）；
+ *               默认 = 常驻标题栏那个实例，**只负责一次性的启动提示**。 */
+export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element | null {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Footprint[] | null>(null)
   const [skill, setSkill] = useState<SkillStatus | null>(null)
@@ -79,62 +81,8 @@ export function FootprintPanel(): JSX.Element | null {
   if (!items) return null
   const pending = items.filter((x) => !x.installed && x.id === 'rules').length
 
-  return (
+  const body = (
     <>
-      <button
-        ref={btnRef}
-        className={`tb-item${pending ? ' has-todo' : ''}`}
-        data-tip="扩展能力：这个软件在你机器上写过什么，都在这里"
-        onClick={() => {
-          setOpen((v) => !v)
-          void refresh()
-        }}
-      >
-        扩展能力
-        {!!pending && <span className="skill-dot" />}
-      </button>
-
-      {/* 启动提示：只在装了 CLI 但指引没装、且用户没静音时出现一次 */}
-      {prompt &&
-        createPortal(
-          <div className="skill-mask">
-            <div className="skill-modal">
-              <div className="skill-modal-title">让 AI 学会用这块画布</div>
-              <p className="skill-modal-body">
-                装上使用指引后，agent 会知道<b>什么时候</b>该把产出开成预览、什么时候整理画布、
-                什么时候通知你 —— 而不是只丢给你一句「文件已生成」。
-                <br />
-                <span className="skill-modal-note">
-                  它是纯文本，装到 <code>~/.claude/skills/</code> 和 <code>~/.codex/AGENTS.md</code>，
-                  随时能在「扩展能力」里一键卸掉。
-                </span>
-              </p>
-              <div className="skill-modal-actions">
-                <button
-                  className="skill-ghost"
-                  onClick={() => {
-                    void window.api.skill.mute(true).then(setSkill)
-                    setPrompt(false)
-                  }}
-                >
-                  永远不要提醒我
-                </button>
-                <span className="skill-spacer" />
-                <button className="skill-ghost" onClick={() => setPrompt(false)}>
-                  以后再说
-                </button>
-                <button className="skill-primary" onClick={() => void install()}>
-                  安装
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {open &&
-        createPortal(
-          <div className="fp-pop" ref={popRef}>
             <div className="fp-head">
               <span>扩展能力</span>
               <em>这个软件在你机器上写过的全部位置</em>
@@ -274,10 +222,56 @@ export function FootprintPanel(): JSX.Element | null {
                 </button>
               )}
             </div>
-            {!!busy && <div className="fp-busy">{busy}</div>}
+      {!!busy && <div className="fp-busy">{busy}</div>}
+    </>
+  )
+
+  if (mode === 'inline') return <div className="fp-inline">{body}</div>
+
+  // 标题栏那个按钮**没有了** —— 整块搬进了设置 →「隐私」（2026-08-31）。
+  // 这个实例只剩一件事：那个一次性的启动提示。
+  // 它不能跟着搬 —— 它的意义就是在你还没想到要去设置里翻的时候拦你一下。
+  return (
+    <>
+      {/* 启动提示：只在装了 CLI 但指引没装、且用户没静音时出现一次 */}
+      {prompt &&
+        createPortal(
+          <div className="skill-mask">
+            <div className="skill-modal">
+              <div className="skill-modal-title">让 AI 学会用这块画布</div>
+              <p className="skill-modal-body">
+                装上使用指引后，agent 会知道<b>什么时候</b>该把产出开成预览、什么时候整理画布、
+                什么时候通知你 —— 而不是只丢给你一句「文件已生成」。
+                <br />
+                <span className="skill-modal-note">
+                  它是纯文本，装到 <code>~/.claude/skills/</code> 和 <code>~/.codex/AGENTS.md</code>，
+                  随时能在「扩展能力」里一键卸掉。
+                </span>
+              </p>
+              <div className="skill-modal-actions">
+                <button
+                  className="skill-ghost"
+                  onClick={() => {
+                    void window.api.skill.mute(true).then(setSkill)
+                    setPrompt(false)
+                  }}
+                >
+                  永远不要提醒我
+                </button>
+                <span className="skill-spacer" />
+                <button className="skill-ghost" onClick={() => setPrompt(false)}>
+                  以后再说
+                </button>
+                <button className="skill-primary" onClick={() => void install()}>
+                  安装
+                </button>
+              </div>
+            </div>
           </div>,
           document.body
         )}
+
+
     </>
   )
 }
