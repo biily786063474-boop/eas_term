@@ -7,6 +7,7 @@
 //
 // 数据源是发布脚本写的 latest.json，里面已经有版本号、各平台链接和这一版的更新条目。
 import { app, ipcMain, net, shell, BrowserWindow } from 'electron'
+import https from 'node:https'
 import fs from 'fs'
 import path from 'path'
 import { getPrefs } from './prefs'
@@ -52,9 +53,64 @@ function pickUrl(j: Record<string, unknown>): string | null {
   return rel.startsWith('http') ? rel : SITE + rel
 }
 
+/** 用 Node 的 https 再试一次。**只在 Electron 的 net 失败之后走这条。**
+ *
+ *  2026-08-31 用户报「Mac 端一直收不到更新通知」，设置里是
+ *  `检查失败：net::ERR_FAILED`，装的还停在 0.4.62 —— 也就是说这条链路
+ *  从那一版起就没通过，而**用户唯一能察觉的方式是主动去设置里看一眼**。
+ *
+ *  没能复现：同一台机器上开发版走同样的 `net.request` 是成功的，
+ *  服务端也正常（curl 返回 200 / 0.4.69）。所以不猜根因，改成
+ *  **两套网络栈各试一次** —— Chromium 那套挂了还有 Node 这套，
+ *  它们的代理处理、DNS、证书校验都是各自独立的。 */
+function fetchViaNode(): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    // **比第一条短**：两条串起来是用户手动点「检查更新」时要干等的总时长。
+    // 15+15=30 秒太久 —— 第一条已经等过一轮，第二条只是「换条路再碰一下」
+    const req = https.get(LATEST_URL, { timeout: 8_000 }, (res) => {
+      if (res.statusCode !== 200) {
+        res.resume()
+        reject(new Error(`服务器返回 ${String(res.statusCode)}`))
+        return
+      }
+      const chunks: Buffer[] = []
+      res.on('data', (c: Buffer) => chunks.push(c))
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+        } catch {
+          reject(new Error('latest.json 不是合法 JSON'))
+        }
+      })
+    })
+    req.on('timeout', () => {
+      req.destroy(new Error('检查更新超时'))
+    })
+    req.on('error', reject)
+  })
+}
+
 /** 拉 latest.json。走 Electron 的 net 而不是 https 模块：它用 Chromium 的网络栈，
- *  会遵循系统代理设置（这台机器上 Clash 是全局接管的，用 https 模块容易莫名卡住）。 */
+ *  会遵循系统代理设置（这台机器上 Clash 是全局接管的，用 https 模块容易莫名卡住）。
+ *
+ *  **失败了再用 Node 的 https 试一次**（见 fetchViaNode）。 */
 function fetchLatest(): Promise<Record<string, unknown>> {
+  return fetchViaElectron().catch(async (e: unknown) => {
+    const first = e instanceof Error ? e.message : String(e)
+    try {
+      const j = await fetchViaNode()
+      console.log(`[updater] Chromium 那套失败（${first}），Node 这套成功`)
+      return j
+    } catch (e2) {
+      // **两条都带出去。** 只报第一条的话，`net::ERR_FAILED` 这种
+      // 什么都没说的错误会成为唯一线索，下次还是查不动
+      const second = e2 instanceof Error ? e2.message : String(e2)
+      throw new Error(`${first}；换一条网络栈重试也失败：${second}`)
+    }
+  })
+}
+
+function fetchViaElectron(): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const req = net.request({ url: LATEST_URL, cache: 'no-cache' })
     const chunks: Buffer[] = []
