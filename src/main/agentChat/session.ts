@@ -110,6 +110,12 @@ export function readTranscript(sessionId: string, n?: number) {
   return transcripts.recent(sessionId, n)
 }
 
+/** 正在说的那半句。手机端把它当成最后一条 assistant 消息渲染，
+ *  说完之后 readTranscript 里会出现完整的那条、这里变回空串。 */
+export function readPartial(sessionId: string): string {
+  return transcripts.partial(sessionId)
+}
+
 /** 这个会话现在还在跑吗。**手机端靠它决定还要不要继续拉**。
  *
  *  第一版是固定轮询 6 次 × 3 秒 ≈ 18 秒 —— 实测有一次回复超过这个窗口，
@@ -344,6 +350,13 @@ function handleEvent(live: Live, e: ChatEvent): void {
   // 静默期（切模型/切强度的 slash 回执）已经在上面被 return 掉了，不会混进来。
   if (e.k === 'text.done') transcripts.push(live.rec.id, 'assistant', e.text, Date.now())
   else if (e.k === 'user.message') transcripts.push(live.rec.id, 'user', e.text, Date.now())
+  // **正在说的那半句单独存**（用户实测：手机上不是流式，长回答要干等几十秒）。
+  // 上面那段注释说的「不挂 text.delta」对**历史记录**仍然成立 ——
+  // 这里存的是一个**会被覆盖的单格**，不是往列表里追加：
+  // 一个会话最多一条、说完即清，所以它不会把这份旁支记录变成事件流上的热点。
+  //
+  // `e.text` 是累计到此刻的全文（不是增量），所以直接覆盖就对了。
+  else if (e.k === 'text.delta') transcripts.notePartial(live.rec.id, e.text)
   // busy 的唯一来源。**放在 isSilenced 之后是有意的** —— 静默期吞掉的那些
   // turn.start/turn.done 属于 slash 回执（切模型/切强度），不是真的在干活，
   // 不该让面板显示成「在跑」。slashSilence.ts:48-53 明写了这两种事件都会被吞。

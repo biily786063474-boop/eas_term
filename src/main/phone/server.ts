@@ -27,6 +27,7 @@ import {
   deliverExternalMessage,
   isSessionBusy,
   noteExternalFirstMessage,
+  readPartial,
   readTranscript
 } from '../agentChat/session'
 import { readTermTail } from '../pty'
@@ -426,7 +427,12 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     // 带上 busy：手机靠它决定还要不要继续拉。**判据是「它还在干活吗」，
     // 不是「我等够久了吗」** —— 固定次数猜不准，一句「你好」几秒，
     // 一次改代码几分钟（用户实测撞到：18 秒窗口没等到，看到「没有返回信息」）
-    return { code: 200, body: { data: readTranscript(sid, 40), busy: isSessionBusy(sid) } }
+    // **带上正在说的那半句**：不带的话手机上一句话要等它整段说完才出现，
+    // 长回答就是干等几十秒盯着一个「正在想…」（用户 2026-08-31 实测反馈）
+    return {
+      code: 200,
+      body: { data: readTranscript(sid, 40), partial: readPartial(sid), busy: isSessionBusy(sid) }
+    }
   }
 
   // app 问「以后怎么找到你」。**已认证之后才给** —— 见 pairing.ts 那段注释

@@ -85,3 +85,53 @@ test('recent 可以只要最后几条', () => {
   for (let i = 0; i < 10; i++) s.push('a', 'user', String(i), i)
   assert.deepEqual(s.recent('a', 3).map((e) => e.text), ['7', '8', '9'])
 })
+
+// ── 正在说的那半句（2026-08-31）────────────────────────────────────
+// 用户实测：手机上不是流式，一句话要等它整段说完才出现，长回答就是干等几十秒。
+// 所以 text.delta 也要留一份 —— 但**是一个会被覆盖的单格，不是往列表里追加**。
+
+test('**覆盖而不是追加** —— 一个会话最多一条半句', () => {
+  const t = createTranscriptStore()
+  t.notePartial('s1', '你')
+  t.notePartial('s1', '你好')
+  t.notePartial('s1', '你好世界')
+  assert.equal(t.partial('s1'), '你好世界')
+  // 半句不进历史 —— 进了的话说完时会和完整那条重复
+  assert.equal(t.size('s1'), 0)
+})
+
+test('**说完就清** —— 不清的话手机上会同时看到完整的那条和残缺的半句', () => {
+  const t = createTranscriptStore()
+  t.notePartial('s1', '你好世')
+  t.push('s1', 'assistant', '你好世界', 1)
+  assert.equal(t.partial('s1'), '', 'push 之后半句必须没了')
+  assert.equal(t.recent('s1')[0].text, '你好世界')
+})
+
+test('各会话的半句互不串台', () => {
+  const t = createTranscriptStore()
+  t.notePartial('a', 'AAA')
+  t.notePartial('b', 'BBB')
+  t.push('a', 'assistant', 'AAA 完', 1)
+  assert.equal(t.partial('a'), '')
+  assert.equal(t.partial('b'), 'BBB', '清 a 不该动 b')
+})
+
+test('半句也封顶 —— 一次贴几 MB 的日志不该整段驻留', () => {
+  const t = createTranscriptStore(40, 10)
+  t.notePartial('s1', 'x'.repeat(500))
+  assert.equal(t.partial('s1').length, 10)
+})
+
+test('drop 连半句一起丢', () => {
+  const t = createTranscriptStore()
+  t.notePartial('s1', '半句')
+  t.push('s1', 'user', '问题', 1)
+  t.drop('s1')
+  assert.equal(t.partial('s1'), '')
+  assert.equal(t.size('s1'), 0)
+})
+
+test('没记过的会话返回空串，不是 undefined', () => {
+  assert.equal(createTranscriptStore().partial('nope'), '')
+})

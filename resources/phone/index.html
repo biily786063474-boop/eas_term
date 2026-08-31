@@ -91,6 +91,12 @@ button.big:disabled{opacity:.45}
   white-space:pre-wrap;word-break:break-word}
 .bub.me{align-self:flex-end;background:rgba(var(--accent-rgb),.16);
   border:1px solid rgba(var(--accent-rgb),.3);border-bottom-right-radius:6px}
+/* 正在说的那半句：末尾一个闪烁的光标。**必须跟说完的话看得出区别** ——
+   长得一模一样的话，你分不清是「它说完了」还是「还在说」。
+   只动 opacity，不动会触发重绘的属性 */
+.bub.live::after{content:'▌';margin-left:2px;opacity:.55;animation:cur 1s steps(2) infinite}
+@keyframes cur{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.bub.live::after{animation:none}}
 .bub.ai{align-self:flex-start;background:var(--glass-2);border:1px solid var(--gb);
   border-bottom-left-radius:6px}
 /* 吸底输入条。fixed 而不是 sticky —— 手机上滚动容器的 sticky 在某些浏览器里会跳。
@@ -346,7 +352,7 @@ function renderProjects () {
     b.innerHTML = ''
     var d = r.data || []
     $('h2').textContent = d.length + ' 个在画布上'
-    if (!d.length) { b.appendChild(el('div', 'empty', '画布上还没有项目')); return }
+    if (!d.length && !partial) { b.appendChild(el('div', 'empty', '画布上还没有项目')); return }
     d.forEach(function (p) {
       var c = el('div', 'card')
       var row = el('div', 'row')
@@ -371,7 +377,7 @@ function renderSessions () {
     $('h2').textContent = d.length + ' 个会话 · ' + run + ' 个在跑'
     // 能点进去的是「AI 对话 + 已经起过进程」的那些（见下面卡片上的判断）。
     // 终端进不去 —— 协议上没有给终端发消息这条路。
-    if (!d.length) {
+    if (!d.length && !partial) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, '这个项目还没有会话'))
       e.appendChild(document.createTextNode('可以从这里新建一个 —— 要在电脑上点一次允许'))
@@ -454,10 +460,17 @@ function renderChat (quiet) {
     b.innerHTML = ''
     var d = r.data || []
     chatBusy = typeof r.busy === 'boolean' ? r.busy : null
+    // **正在说的那半句**：主进程把 text.delta 存成一个会被覆盖的单格，
+    // 这里当成最后一条 assistant 消息渲染。说完之后它变回空串，
+    // 而完整的那条会出现在 d 里 —— 所以不会重复
+    var partial = (r.partial || '')
     // **「正在想」要看得见** —— 不然等回复那段时间界面是静止的，
     // 你分不清是它在跑还是已经断了
-    $('h2').textContent = chatBusy ? '正在想…' : (d.length ? d.length + ' 条往来' : '还没说过话')
-    if (!d.length) {
+    // 已经开始吐字了就别再说「正在想」—— 那时候字就在屏幕上跑
+    $('h2').textContent = chatBusy
+      ? (partial ? '正在回答…' : '正在想…')
+      : (d.length ? d.length + ' 条往来' : '还没说过话')
+    if (!d.length && !partial) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, sessKind === 'terminal' ? '这个终端还没有输出' : '这个会话还没有对话记录'))
       // **说清楚为什么可能是空的** —— 不说的话用户会以为坏了
@@ -479,6 +492,13 @@ function renderChat (quiet) {
           bub.textContent = m.text
           wrap.appendChild(bub)
         })
+        // 正在说的那半句，接在最后。**带一个光标** —— 不然它跟说完的话
+        // 长得一模一样，你分不清是「它说完了」还是「还在说」
+        if (partial) {
+          var live = el('div', 'bub ai live')
+          live.textContent = partial
+          wrap.appendChild(live)
+        }
         b.appendChild(wrap)
       }
     }
@@ -495,7 +515,12 @@ function renderChat (quiet) {
  *
  *  renderChat 每次都会把 busy 写进 chatBusy —— 这里读它。
  *  两道闸都要：不忙了停（正常出口），5 分钟兜底停（进程卡住时不至于
- *  在手机后台一直打电脑）。 */
+ *  在手机后台一直打电脑）。
+ *
+ *  **间隔 900ms**：主进程现在会带回「正在说的那半句」，这个间隔下字是
+ *  一小段一小段往外冒的，看起来就是流式。2500ms 太钝 —— 一次冒出一大段，
+ *  跟等它说完再显示区别不大。
+ *  代价可控：请求只在这个会话**正在跑**的时候发，而且返回的是一个封顶的字符串。 */
 var pollTimer = null
 function startPoll () {
   stopChatPoll()
@@ -505,7 +530,7 @@ function startPoll () {
     renderChat(true)
     // chatBusy 由上一次 renderChat 写入；false 说明这一轮跑完了
     if (chatBusy === false) stopChatPoll()
-  }, 2500)
+  }, 900)
 }
 function stopChatPoll () { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
 
@@ -566,7 +591,7 @@ function renderFiles () {
     b.innerHTML = ''
     var d = r.data || []
     $('h2').textContent = 'Frame 里的 ' + d.length + ' 个'
-    if (!d.length) {
+    if (!d.length && !partial) {
       var e = el('div', 'empty')
       e.appendChild(el('b', null, '这个项目的 Frame 里没有文件'))
       e.appendChild(document.createTextNode('把文档或图片拖进 Frame 才会出现在这里'))

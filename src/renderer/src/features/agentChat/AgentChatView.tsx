@@ -262,6 +262,24 @@ export function AgentChatView({
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
 
+  // 这个 leaf 的 pane 上挂着的会话 id。**订阅它，不是读一次快照。**
+  //
+  // 下面那段「认领」逻辑原来是 `useStore.getState()` 读一次、依赖 `[selected, sessionId]`。
+  // 那对「重启后恢复」是够的（挂载时 pane 上就有值），但对**别人在运行中把 sessionId
+  // 写进来**是不够的 —— 2026-08-31 用户实测撞到：
+  //
+  //   ① 面板挂载，CLI 探测完 → 认领跑一次 → pane.sessionId 还是空 → return
+  //   ② 手机启动了这个会话 → 把 sessionId 写进 pane
+  //   ③ 组件因 store 变化重渲染，但 effect 依赖没变 → 认领不再跑
+  //   ④ → 界面永远停在空态，而主进程手里连流式 delta 都齐全
+  //
+  // 订阅之后 ② 会让依赖变化，认领自然补上。
+  const paneSessionId = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    const leaf = tab ? collectLeaves(tab.root).find((l) => l.id === leafId) : undefined
+    return leaf?.pane.kind === 'agent' ? leaf.pane.sessionId : undefined
+  })
+
   // ── 登录闸门 ──────────────────────────────────────────────────────
   //
   // **这是「一输入就自动关闭 CLI 进程」那条 bug 的正解。** 修复前，没登录的人
@@ -721,17 +739,13 @@ export function AgentChatView({
     // ChatToolbar 那句 `selected!.capabilities` 当场读 null ——
     // 2026-08-20 真机验证抓到，整个界面被 ErrorBoundary 兜成错误页。
     if (adoptedRef.current || !selected || sessionId) return
-    const st = useStore.getState()
-    const tab = st.tabs.find((t) => t.id === tabId)
-    const leaf = tab ? collectLeaves(tab.root).find((l) => l.id === leafId) : undefined
-    const sid = leaf?.pane.kind === 'agent' ? leaf.pane.sessionId : undefined
-    if (!sid) return
+    if (!paneSessionId) return
     adoptedRef.current = true
-    setSessionId(sid)
-    attachTo(sid)
+    setSessionId(paneSessionId)
+    attachTo(paneSessionId)
     // 解绑不在这里做 —— 卸载时统一走上面那个 unsubRef 的清理
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, sessionId])
+  }, [selected, sessionId, paneSessionId])
 
   // 空态输入框的斜杠候选。**跟对话态那个共用同一套**（SlashPicker.tsx），
   // 「哪些命令能用」只有一个说法。

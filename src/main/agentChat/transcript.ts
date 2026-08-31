@@ -34,6 +34,17 @@ export const MAX_TEXT = 4000
 export interface TranscriptStore {
   /** 记一条。text 为空白时**不记** —— 空气泡在手机上尤其莫名其妙 */
   push(sessionId: string, role: TranscriptEntry['role'], text: string, at: number): void
+  /** 记「正在说的那半句」。**这一条是挂在 text.delta 上的**（见文件头那段
+   *  「只记说完的话」—— 那条现在只对**历史**成立，正在说的这一句要另存）。
+   *
+   *  用户实测反馈：手机上不是流式输出，一句话要等它整段说完才出现，
+   *  长回答就是干等几十秒盯着一个「正在想…」。
+   *
+   *  代价可控：**一个会话只留一条**（覆盖，不追加），而且封顶。
+   *  说完时由 push 顺手清掉。 */
+  notePartial(sessionId: string, text: string): void
+  /** 正在说的那半句；没有就是空串 */
+  partial(sessionId: string): string
   /** 取最近若干条，**旧的在前**（手机上从上往下读） */
   recent(sessionId: string, n?: number): TranscriptEntry[]
   /** 会话没了就丢掉它那份 —— 不清的话，开一天软件攒下的是所有关过的会话 */
@@ -46,8 +57,23 @@ export function createTranscriptStore(
   maxText = MAX_TEXT
 ): TranscriptStore {
   const byId = new Map<string, TranscriptEntry[]>()
+  /** 每个会话「正在说的那半句」。**一个会话最多一条**，说完即清 */
+  const live = new Map<string, string>()
   return {
+    notePartial(sessionId, text) {
+      if (!sessionId) return
+      const t = text ?? ''
+      // 封顶。超长的那部分**直接不要**，不做拼接 ——
+      // 这是给手机看个进度，不是完整记录（完整的在 push 那份里）
+      live.set(sessionId, t.length > maxText ? t.slice(0, maxText) : t)
+    },
+    partial(sessionId) {
+      return live.get(sessionId) ?? ''
+    },
     push(sessionId, role, text, at) {
+      // 这一轮说完了 → 把「正在说」清掉，否则手机上会同时看到
+      // 完整的那条和残缺的半句
+      live.delete(sessionId)
       if (!sessionId) return
       const t = (text ?? '').trim()
       if (!t) return
@@ -68,6 +94,7 @@ export function createTranscriptStore(
     },
     drop(sessionId) {
       byId.delete(sessionId)
+      live.delete(sessionId)
     },
     size(sessionId) {
       return byId.get(sessionId)?.length ?? 0
