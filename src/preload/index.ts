@@ -4,8 +4,6 @@ import type {
   DirEntry,
   RecentFile,
   UserTerm,
-  DictPending,
-  DictSinkStatus,
   PtyCreateOptions,
   TextFileResult,
   ImageFileResult,
@@ -452,10 +450,6 @@ const api = {
       ipcRenderer.invoke('hook:uninstall', targets)
   },
   dict: {
-    // 自动补全词条：默认关，开启会花 token（模型要写解释和示意图）
-    sinkStatus: (): Promise<DictSinkStatus> => ipcRenderer.invoke('dict:sinkStatus'),
-    setSink: (on: boolean): Promise<DictSinkStatus> => ipcRenderer.invoke('dict:setSink', on),
-    pending: (): Promise<DictPending[]> => ipcRenderer.invoke('dict:pending'),
     add: (
       terms: unknown[]
     ): Promise<{ ok: boolean; added: string[]; rejected: { name: string; why: string }[] }> =>

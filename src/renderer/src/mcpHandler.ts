@@ -1332,17 +1332,6 @@ const SHELL_TRAP =
     }
   }
 
-  if (tool === 'dict_pending') {
-    const items = await window.api.dict.pending()
-    return {
-      pending: items.map((x) => ({ name: x.name, project: x.project })),
-      total: items.length,
-      hint: items.length
-        ? '为每个词写完整条目后一次性调 dict_add 提交。拿不准的跳过，宁缺毋滥。'
-        : '没有待补全的术语，不用做任何事。'
-    }
-  }
-
   if (tool === 'dict_add') {
     const list = Array.isArray((args as { terms?: unknown }).terms)
       ? ((args as { terms: unknown[] }).terms as unknown[])

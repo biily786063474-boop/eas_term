@@ -1,42 +1,24 @@
-// 名词词典的用户自建词条：~/.eas/dict-user.json
+// 辞典的用户自建词条：~/.eas/dict-user.json
 //
-// 「提交即复盘」钩子扫出「用了但词典没收录」的术语后，**不再自己写半截词条**——
-// 那样产出的是一堆只有英文名、没解释没图的空壳，混在 242 条完整词条里很难看，
-// 也帮不上任何忙。现在改成：钩子只把候选记进待办，由 agent 补全成
-// 和内置词条**完全同构**的条目（zh/en/category/keywords/logic/svg），再经 dict_add 写入。
+// ── 2026-08-31：自动沉淀整条链路拆掉了 ──────────────────────────────
+// 上一版是「钩子扫出没收录的术语 → 记进待办 → agent 事后补全」。拆掉的理由
+// （见 docs/辞典改造方案.html 第五节）：从代码里扫出来的英文标识符判不出该归哪一类、
+// 补全写不出 hover 要看的示意图、而且**在用户没看的时候花钱**。
 //
-// 代价是这条链路**要花 token**（模型得写解释和示意图），所以功能默认关闭，
-// 开启前界面上必须把这件事说清楚。
+// 现在只剩一条入口：用户主动说「把 X 收进辞典」，agent 走完分类/结构/演示图/提示词
+// 四步，最后调 dict_add 落盘。写入路径一个字没变 —— 变的是**谁发起**。
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import type { DictPending, DictSinkStatus, UserTerm } from '../shared/types'
+import type { UserTerm } from '../shared/types'
 
 const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
-/** 钩子扫出来、等 agent 补全的候选 */
-const pendingFile = (): string => path.join(os.homedir(), '.eas', 'dict-pending.json')
-/** 补全开关。钩子脚本自己也读这个文件——关着就连候选都不记，彻底零开销 */
-const sinkFile = (): string => path.join(os.homedir(), '.eas', 'dict-sink.json')
+// ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
+// **已有文件不删** —— 删掉等于动用户的数据，而留着没有任何代价。
 
 const CATS = new Set(['interaction', 'motion', 'visual'])
-
-/**
- * 补全开关默认 **关**。
- *
- * 单独一个开关、而不是跟着钩子安装走：钩子是按「纯脚本，不花 token」的说法装的，
- * 现在补全要让模型写解释和示意图，是**要花钱的**。拿当初那次同意去顶这次的消费，
- * 无论从产品还是合规角度都不成立。已经装了钩子的人，这一项照样是关的。
- */
-function sinkEnabled(): boolean {
-  try {
-    const raw = JSON.parse(fs.readFileSync(sinkFile(), 'utf8')) as { enabled?: unknown }
-    return raw.enabled === true
-  } catch {
-    return false
-  }
-}
 
 /**
  * 清洗模型生成的 SVG。
@@ -107,25 +89,17 @@ function writeUser(terms: UserTerm[]): void {
   fs.writeFileSync(f, JSON.stringify({ version: 2, terms }, null, 2))
 }
 
-function readPending(): DictPending[] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(pendingFile(), 'utf8')) as { items?: unknown }
-    return Array.isArray(raw.items) ? (raw.items as DictPending[]) : []
-  } catch {
-    return []
-  }
-}
-
 /**
- * 把旧版沉淀的空壳词条转回待补全队列。
+ * 清掉旧版自动沉淀留下的空壳词条。
  *
- * 必须做，否则那些词**永远补不上**：钩子去重时会看到 dict-user.json 里已经有这个 id，
- * 于是不再入队；而它在词典里又只是个点开什么都没有的名字。占着位置还挡着路。
+ * 空壳 = logic 和 svg 都是空的，在辞典里只是个点开什么都没有的名字。占着位置还挡着路。
  *
- * 这一步会从词库里删条目，所以：只删 logic 和 svg 都为空的（纯空壳，删了不丢任何信息，
- * 名字原样进队列），并且改前留一份 .eas-backup。跑完就没有空壳了，自然不会再触发。
+ * ── 2026-08-31：这个函数原来还会把它们转回待补全队列 ──────────────────
+ * 自动沉淀整条链路已经拆掉（见 hooks/scan-commit.mjs 文件头），队列不再有人读，
+ * 所以那一半去掉了。**删空壳这一半留着** —— 它跟队列无关，是在收拾上一版的烂摊子。
+ * 改前照旧留一份 .eas-backup；跑完就没有空壳了，自然不会再触发。
  */
-function migrateLegacyShells(): void {
+function dropLegacyShells(): void {
   const terms = readUser()
   const shells = terms.filter((t) => !t.logic.trim() && !t.svg.trim())
   if (!shells.length) return
@@ -134,18 +108,7 @@ function migrateLegacyShells(): void {
   } catch {
     /* 没有原文件就无所谓备份 */
   }
-  const items = readPending()
-  const queued = new Set(items.map((x) => String(x.name).toLowerCase()))
-  for (const s of shells) {
-    if (queued.has(s.en.toLowerCase())) continue
-    queued.add(s.en.toLowerCase())
-    const at = Date.parse(s.firstSeen)
-    items.push({ name: s.en, project: s.project, at: Number.isNaN(at) ? 0 : at })
-  }
   try {
-    const f = pendingFile()
-    fs.mkdirSync(path.dirname(f), { recursive: true })
-    fs.writeFileSync(f, JSON.stringify({ items }, null, 2))
     writeUser(terms.filter((t) => t.logic.trim() || t.svg.trim()))
   } catch {
     /* 写不动就维持原样，下次启动再试 */
@@ -153,29 +116,10 @@ function migrateLegacyShells(): void {
 }
 
 export function registerDictHandlers(): void {
-  migrateLegacyShells()
+  dropLegacyShells()
 
   /** 读用户词条（词典气泡把它和内置的 242 条合并显示） */
   ipcMain.handle('dict:userTerms', (): UserTerm[] => readUser())
-
-  /** 钩子记下的待补全候选（agent 读它来知道要写哪些词） */
-  ipcMain.handle('dict:pending', (): DictPending[] => readPending())
-
-  ipcMain.handle(
-    'dict:sinkStatus',
-    (): DictSinkStatus => ({ enabled: sinkEnabled(), pending: readPending().length })
-  )
-
-  ipcMain.handle('dict:setSink', (_e, on: boolean): DictSinkStatus => {
-    try {
-      const f = sinkFile()
-      fs.mkdirSync(path.dirname(f), { recursive: true })
-      fs.writeFileSync(f, JSON.stringify({ enabled: !!on }, null, 2))
-    } catch {
-      /* 写不进去就维持原状，下面照实报告 */
-    }
-    return { enabled: sinkEnabled(), pending: readPending().length }
-  })
 
   /**
    * agent 补全后写入。**格式必须和内置词条同构**，缺关键字段一律拒收——
@@ -242,16 +186,6 @@ export function registerDictHandlers(): void {
           writeUser(cur.slice(-500)) // 上限：再多就不是「随手查」而是负担了
         } catch (e) {
           return { ok: false, added: [], rejected: [{ name: '写盘', why: String(e) }] }
-        }
-        // 补全过的候选从待办里划掉，免得下次又提醒一遍
-        try {
-          const p = pendingFile()
-          const raw2 = JSON.parse(fs.readFileSync(p, 'utf8')) as { items?: { name: string }[] }
-          const done = new Set(added.map((x) => x.toLowerCase()))
-          const left = (raw2.items ?? []).filter((x) => !done.has(String(x.name).toLowerCase()))
-          fs.writeFileSync(p, JSON.stringify({ items: left }, null, 2))
-        } catch {
-          /* 没有待办文件就算了 */
         }
       }
       return { ok: true, added, rejected }

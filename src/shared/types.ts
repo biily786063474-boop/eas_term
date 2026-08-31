@@ -348,20 +348,6 @@ export interface UserTerm {
   project: string
 }
 
-/** 钩子扫出来、等 agent 补全的候选术语 */
-export interface DictPending {
-  name: string
-  project: string
-  at: number
-}
-
-/** 自动补全词条的开关状态。和钩子安装分开：钩子当初是按「零 token」承诺装的，
- *  补全要花钱，不能靠那次同意顺带生效。 */
-export interface DictSinkStatus {
-  enabled: boolean
-  pending: number
-}
-
 /** 「最近产生的文件」条目：给画布插入菜单按时间倒序用 */
 export interface RecentFile {
   name: string

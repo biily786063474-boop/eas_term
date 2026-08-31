@@ -452,7 +452,7 @@ export function registerRulesHandlers(): void {
       {
         id: 'hook',
         name: '提交即复盘钩子',
-        desc: 'git commit 后扫一遍新增代码，把用到但词典没收录的术语存进自建词库',
+        desc: 'git commit 后扫一遍新增代码，把这次用到的、辞典已收录的概念记进项目知识手册',
         installed: hookOn,
         files: hookOn ? [claudeSettings, codexHooks].filter((f) => fs.existsSync(f)) : [],
         // 这是侵入性最高的一项，措辞上不含糊

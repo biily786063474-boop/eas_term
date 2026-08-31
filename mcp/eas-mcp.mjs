@@ -513,13 +513,6 @@ const TOOLS = [
     }
   },
   {
-    name: 'dict_pending',
-    description:
-      '列出「提交即复盘」钩子扫出来、等你补全的术语。' +
-      '收到 [词典·待补全] 提示但没记全是哪几个词时调它。返回空数组就是没有待办，别自己找活干。',
-    inputSchema: { type: 'object', properties: {} }
-  },
-  {
     name: 'dict_add',
     description:
       '往用户的名词词典里添加词条。**格式必须和内置的 242 条完全一致**，缺字段会被拒收——' +

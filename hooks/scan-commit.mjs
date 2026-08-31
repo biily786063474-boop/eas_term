@@ -6,47 +6,21 @@
  *       命中专业名词词典(交互行为 / 动效 / UI视觉),把新名词沉淀进
  *       docs/knowledge-manual.html,并向用户输出一条简报。
  *
- * 特性:脚本本身不调用任何模型 —— 扫描/匹配/渲染手册这一路是零 token 的。
- *       唯一花 token 的是「自动补全词条」:发现词典没收录的术语时,请大模型
- *       写成完整条目(中英文名 + 解释 + 示意图 + 分类)。这一项**默认关闭**,
- *       由 ~/.eas/dict-sink.json 单独控制 —— 见 sinkOn()。
+ * 特性:**这个脚本不调用任何模型,零 token**。扫描/匹配/渲染手册全是本地字符串活。
  *       任何异常都静默 exit 0,绝不打断用户的提交流程。
+ *
+ * 2026-08-31:「自动补全词条」那半拆掉了 —— 它在你没看的时候花钱,归类只能靠猜,
+ *       还产不出 hover 要看的示意图,写出来的多是点开什么都没有的空壳。
+ *       想加一条辞典改成主动调 skill,每一步停下来给你确认(见 docs/辞典改造方案.html)。
+ *       ~/.eas/dict-pending.json 和 dict-sink.json 不再读写,已有文件留着不管 ——
+ *       删掉它们等于动用户的数据,而留着没有任何代价。
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-
-// 用户自建词库:这个脚本发现「用了但词典没收录」的术语时沉淀到这里,
-// Eas-Term 的名词词典启动时把它和内置词库合并显示(带「自建」徽章)。
-// 放 home 而不是项目里:词是跟人走的经验,换项目不该从零开始。
-// 这个脚本只读它(用来判断哪些词已经收录过、不必再排队)。写入一律走 dict_add,
-// 那边才有字段校验和 SVG 清洗;两处都能写迟早会分叉。
-const USER_DICT = join(homedir(), '.eas', 'dict-user.json');
-
-// 待补全队列 + 补全开关。
-//
-// 以前这个脚本自己往 USER_DICT 里写半截词条(只有 en 和 keywords,zh/logic/svg 全空)。
-// 结果是词典里多出一堆点开什么都没有的空壳,既帮不上忙又稀释了那 242 条的可信度。
-// 现在改成:脚本只负责【发现】,把候选记进队列;【补全】交给大模型,
-// 经 dict_add 校验成和内置词条同构的完整条目才准写进 USER_DICT。
-const PENDING = join(homedir(), '.eas', 'dict-pending.json');
-const PENDING_MAX = 40;
-const SINK_CFG = join(homedir(), '.eas', 'dict-sink.json');
-
-/**
- * 补全开关,默认关。
- *
- * 为什么不跟着「钩子装没装」走:钩子当初是按「纯脚本,不花 token」的说法请用户装的。
- * 补全要让模型写解释和示意图,是实打实要花钱的 —— 拿当初那次同意去顶这次的消费不成立。
- * 所以已经装了钩子的人,这一项照样是关的,得他自己在词典界面上再点一次。
- */
-function sinkOn() {
-  try { return safeJson(readFileSync(SINK_CFG, 'utf8'))?.enabled === true; } catch { return false; }
-}
 
 // 说明:不再弹窗/跳页。仅当有【新增】名词时,通过 additionalContext 让大模型在回复末尾
 //       不起眼处顺带提一句 + 附手册链接(见 main 末尾)。没有新增则完全安静。
@@ -124,19 +98,13 @@ function main() {
   });
 
   const matched = dict.terms.filter(hit);
-  const candidates = detectCandidates(addedRaw, dict);   // 零 token 启发式:发现"用了但没收录"的疑似术语
-
-  // 入队必须发生在下面那个早退之前。绝大多数提交都命不中【新】词典条目,
-  // 要是放到早退之后,这些提交里发现的新术语就全丢了 —— 而那恰恰是最值得留下的东西。
-  // (这也是"沉淀"这件事以前从未真正发生过的原因:候选词只被拼进一句提示文本,从不落盘)
-  const queued = queueCandidates(candidates, root);
 
   const seen = new Set(state.documented.map(d => d.id));
   const fresh = matched.filter(t => !seen.has(t.id));
 
-  // 两件事各自独立成一段上下文:命中新词典条目(零 token 那半边)和发现待补全术语
-  // (要花 token 那半边)完全可能只发生其中一件。以前只在有新收录时才发消息,
-  // 于是候选词的提醒被那个早退吞掉了。
+  // 2026-08-31：自动沉淀那半拆掉了,这里只剩「本次用到了哪些已收录的概念」一件事。
+  // 留着数组形态而不是收成一个字符串:输出协议是 additionalContext 一段文本,
+  // 以后再加别的简报时不用重新改结构。
   const parts = [];
 
   if (fresh.length > 0) {
@@ -162,9 +130,7 @@ function main() {
     );
   }
 
-  if (queued.length > 0) parts.push(completionInstruction(queued));
-
-  // 两件事都没有 → 完全安静:不弹窗、不发任何消息、不花任何 token。
+  // 没有新收录 → 完全安静:不弹窗、不发任何消息、不花任何 token。
   if (!parts.length) process.exit(0);
 
   process.stdout.write(JSON.stringify({
@@ -173,69 +139,6 @@ function main() {
   process.exit(0);
 }
 
-// 超常见 CSS 属性:即使没收录也不当候选,避免刷屏
-const COMMON_CSS = new Set([
-  'background-color','background-image','background-size','background-position','background-repeat','background-clip',
-  'border-radius','border-color','border-width','border-style','border-top','border-bottom','border-left','border-right',
-  'font-size','font-weight','font-family','font-style','line-height','letter-spacing',
-  'text-align','text-decoration','text-transform','text-overflow','text-shadow','white-space','box-sizing',
-  'align-items','align-self','align-content','justify-content','justify-items','justify-self',
-  'flex-direction','flex-wrap','flex-grow','flex-shrink','flex-basis',
-  'grid-template-columns','grid-template-rows','grid-template-areas','grid-auto-flow','grid-auto-rows','grid-column','grid-row',
-  'column-gap','row-gap','max-width','min-width','max-height','min-height',
-  'margin-top','margin-bottom','margin-left','margin-right','margin-block','margin-inline',
-  'padding-top','padding-bottom','padding-left','padding-right','padding-block','padding-inline',
-  'list-style','overflow-x','overflow-y','vertical-align','word-break','word-wrap','pointer-events','z-index',
-]);
-
-/**
- * 零 token 启发式候选探测:发现"代码里用了、词典却没收录、长得像专业术语"的 token。
- *  规则1:CSS 属性位的连字符词(scroll-snap-type: ...)—— 排除超常见属性与已收录。
- *  规则2:PascalCase 的 Web API(IntersectionObserver、startViewTransition)。
- * 只作提示,不写入手册。最多 5 个。
- */
-function detectCandidates(addedRaw, dict) {
-  const lower = addedRaw.toLowerCase();
-  const covered = new Set();
-  for (const t of dict.terms) {
-    covered.add(String(t.id).toLowerCase());
-    if (t.en) covered.add(String(t.en).toLowerCase());
-    for (const kw of (t.keywords || [])) covered.add(String(kw).toLowerCase());
-  }
-  const found = new Map();  // lower -> 展示形态
-
-  // 规则1:CSS 属性
-  const propRe = /(?:^|[;{\s"'`])([a-z]{2,}(?:-[a-z]{2,}){1,3})\s*:/g;
-  let m;
-  while ((m = propRe.exec(lower)) !== null) {
-    const p = m[1];
-    if (COMMON_CSS.has(p) || covered.has(p)) continue;
-    found.set(p, p);
-  }
-
-  // 规则2:Web API(在原始大小写文本上匹配)
-  const apiRe = /\b([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+)\b/g;
-  const HINT = /(Observer|Animation|Transition|Timeline|Element|Api|Scheduler|Gesture|Snapshot)$/;
-  while ((m = apiRe.exec(addedRaw)) !== null) {
-    const id = m[1];
-    const low = id.toLowerCase();
-    if (covered.has(low)) continue;
-    if (HINT.test(id) || id.startsWith('start') || id.startsWith('request')) found.set(low, id);
-  }
-
-  return [...found.values()].slice(0, 5);
-}
-
-/**
- * 词典从哪来：两种形态都认，找到哪个用哪个。
- *   · term-dictionary.json   —— 本项目的源词库，配图是 diagrams/ 下的独立 SVG 文件
- *   · dictionary-bundle.json —— 打包产物，SVG 已内联进每个词条
- *
- * 之所以两种都认：这个脚本会被原样复制进 Eas-Term 随包分发，
- * 那边只带 bundle（一个文件，不用再拖 968KB 的 diagrams 目录）。
- * 让同一份代码在两处都能跑，比维护两个分叉的版本安全得多
- * —— 分叉的下场是改了一边忘了另一边，过段时间就诈尸。
- */
 function loadDict() {
   for (const name of ['term-dictionary.json', 'dictionary-bundle.json']) {
     try {
@@ -249,77 +152,6 @@ function loadDict() {
 function persist(docsDir, statePath, state) {
   if (!existsSync(docsDir)) mkdirSync(docsDir, { recursive: true });
   writeFileSync(statePath, JSON.stringify(state, null, 2));
-}
-
-/**
- * 把候选新词记进待补全队列 ~/.eas/dict-pending.json。
- *
- * 注意这里【不写词条本身】—— 队列里只有名字。真正的条目由大模型补全后
- * 走 dict_add 落盘,那条路上有字段校验和 SVG 清洗。脚本自己写的话只能产出空壳。
- *
- * 去重要同时看两头:已经在正式词库里的不再排队(补过了),已经在队列里的也不重复入队
- * (否则同一个词每次提交都提醒一遍,很快就变成噪音)。
- *
- * 返回本次新入队的词。任何异常都吞掉:这是个后台增值动作,绝不能因为它让 commit 出问题。
- */
-function queueCandidates(candidates, root) {
-  if (!candidates.length || !sinkOn()) return [];
-  try {
-    const dir = dirname(PENDING);
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-
-    // 已正式收录的
-    const done = new Set();
-    try {
-      const cur = safeJson(readFileSync(USER_DICT, 'utf8'));
-      for (const t of (cur?.terms || [])) {
-        done.add(String(t.id).toLowerCase());
-        if (t.en) done.add(String(t.en).toLowerCase());
-      }
-    } catch { /* 还没有正式词库 */ }
-
-    const cur = (existsSync(PENDING) && safeJson(readFileSync(PENDING, 'utf8'))) || {};
-    const items = Array.isArray(cur.items) ? cur.items : [];
-    const queued = new Set(items.map(x => String(x.name).toLowerCase()));
-    const project = root.split('/').filter(Boolean).pop() || '';
-
-    const added = [];
-    for (const c of candidates) {
-      const low = String(c).toLowerCase();
-      if (done.has(low) || queued.has(low)) continue;
-      queued.add(low);
-      const it = { name: String(c), project, at: Date.now() };
-      items.push(it);
-      added.push(it.name);
-    }
-    if (!added.length) return [];
-
-    // 超上限丢最老的:补不完的陈年候选留着也只是噪音
-    writeFileSync(PENDING, JSON.stringify({ items: items.slice(-PENDING_MAX) }, null, 2));
-    return added;
-  } catch {
-    return [];   // 写不进去就当没这回事,不影响提交
-  }
-}
-
-/**
- * 给大模型的补全指令。
- *
- * 把格式要求写全在这里,而不是指望它去读 MCP 工具描述 —— 少读一次就少一次跑偏,
- * 而跑偏的代价是往词典里塞进格式不一致的条目。
- * 明确交代「没有该工具就忽略」:用户在 app 外面起 claude 时 tools/list 是空的,
- * 不说清楚它会自己想别的办法(写文件、跑脚本),那都不是我们想要的。
- */
-function completionInstruction(names) {
-  return (
-    `[词典·待补全] 本次提交发现 ${names.length} 个词典未收录的术语:${names.join('、')}。` +
-    `若你有 eas-term 的 dict_add 工具,请为每个词写成完整条目、一次性提交;没有该工具就忽略本行,不要用别的方式代替。` +
-    `字段:en(英文原名)、zh(中文名)、category(只能是 interaction 交互行为 / motion 动效 / visual UI视觉)、` +
-    `keywords(检索词,含中英文)、logic(80-140 字中文单行,讲清它是什么和怎么实现,不要同义反复)、` +
-    `svg(极简示意图,viewBox="0 0 240 120",font-family="sans-serif",` +
-    `标注用 #8a8f99、强调用 #e0a45e、输出用 #6ea8fe,不要脚本/外链/foreignObject)。` +
-    `拿不准的词直接跳过,宁缺毋滥。做完在回复最末尾用一行提一句就行,不要展开。`
-  );
 }
 
 function safeJson(s) { try { return JSON.parse(s); } catch { return null; } }

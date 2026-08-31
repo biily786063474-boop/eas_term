@@ -1,17 +1,19 @@
-// 词典里的「自动补全词条」开关条。
+// 辞典里的「提交即复盘」开关条。
 //
 // 为什么不放进首启那一堆一起问：钩子会在用户**每次跑命令**时插入我们的代码，
 // 在他所有项目里，永久 —— 这和「让模型多读一份说明」不是一个量级。
 // 混进一个泛泛的「一键配置」，等于用一次笼统的同意换走一个具体的授权。
-// 放在这里，用户是在**看着词典**的时候被问的，他知道这是干嘛用的，同意才有意义。
+// 放在这里，用户是在**看着辞典**的时候被问的，他知道这是干嘛用的，同意才有意义。
 //
-// 这里管着两个独立的开关，不能合并：
-//   1. 钩子装没装 —— 决定「提交后扫不扫代码」。纯脚本，零 token。
-//   2. 补全开不开 —— 决定「发现生词后要不要让模型写成完整词条」。**要花 token。**
-// 老用户当初是按「纯脚本，不花 token」装的钩子，拿那次同意去顶这次的消费不成立，
-// 所以第 2 项对所有人都默认关，必须单独点一次。
+// ── 2026-08-31：这里原来管着两个开关，现在只剩一个 ────────────────────
+// 拆掉的那个是「自动补全词条」：发现辞典没收录的术语就让模型写成完整词条。
+// 三条理由（见 docs/辞典改造方案.html）：归类只能靠猜、产不出 hover 要看的示意图、
+// **在你没看的时候花钱**。想加一条改成主动跟 agent 说一句，见下面那条说明。
+//
+// 留下的这个是纯脚本、零 token：提交后扫新增代码，命中**已收录**的词条就记进
+// docs/knowledge-manual.html。它不收集新词，只回答「这次用到了哪些概念」。
 import { useCallback, useEffect, useState } from 'react'
-import type { DictSinkStatus, HookStatus, AgentKind } from '../../../../shared/types'
+import type { HookStatus, AgentKind } from '../../../../shared/types'
 import { CheckIcon, SparkleIcon } from '../../ui/Icons'
 
 // **刻意不用 AgentKind。** 这是面 4（提交钩子）的类型，而钩子这个面只对
@@ -22,24 +24,22 @@ const DISMISS_KEY = 'eas.dicthook.dismissed'
 
 export function DictHookBar(): JSX.Element | null {
   const [st, setSt] = useState<HookStatus | null>(null)
-  const [sink, setSink] = useState<DictSinkStatus | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === '1')
   const [expanded, setExpanded] = useState(false)
-  // 点了「开启」之后先摊开成本再问一次。不是走过场——这一步之后就开始花钱了
+  // 点了「开启」之后先摊开会发生什么再问一次。它要往用户的 CLI 配置里写东西，
+  // 不是走过场
   const [confirming, setConfirming] = useState(false)
 
   const refresh = useCallback(async (): Promise<void> => {
-    const [h, s] = await Promise.all([window.api.hook.status(), window.api.dict.sinkStatus()])
-    setSt(h)
-    setSink(s)
+    setSt(await window.api.hook.status())
   }, [])
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  if (!st || !st.available || !sink) return null
+  if (!st || !st.available) return null
 
   const rows: { key: Target; name: string }[] = [
     { key: 'claude', name: 'Claude Code' },
@@ -68,14 +68,6 @@ export function DictHookBar(): JSX.Element | null {
     }
   }
 
-  const toggleSink = async (on: boolean): Promise<void> => {
-    setBusy(true)
-    setSink(await window.api.dict.setSink(on))
-    setBusy(false)
-    setMsg(on ? '已开启补全' : '已关闭补全')
-    setTimeout(() => setMsg(''), 2600)
-  }
-
   // 全新用户（钩子没装、也没说过「不用了」）→ 邀请条
   if (pending.length && !hookOn && !dismissed) {
     return (
@@ -88,10 +80,10 @@ export function DictHookBar(): JSX.Element | null {
               <b>开启前说清楚会发生什么</b>
               {/* 三条都是实打实会发生的事。含糊其辞换来的同意，出问题时一文不值 */}
               <span>
-                · 每次 <code>git commit</code> 后跑一段脚本，扫本次新增的代码 —— 这步不花 token。
-                <br />· 扫到词典里没有的术语时，<b>请你的模型写成完整词条</b>
-                （中英文名 + 解释 + 示意图 + 分类）—— <b>这步要花 token</b>，一个词大致几百到一千。
-                <br />· 词条写进 <code>~/.eas/dict-user.json</code>，只在本机，不上传。
+                · 每次 <code>git commit</code> 后跑一段脚本，扫本次新增的代码。
+                <br />· 命中辞典里<b>已经收录</b>的概念就记一笔到{' '}
+                <code>docs/knowledge-manual.html</code>，并在回复末尾提一句。
+                <br />· <b>纯本地脚本，零 token，不联网，不收集新词</b>。
               </span>
             </div>
             <div className="dhb-acts">
@@ -102,10 +94,7 @@ export function DictHookBar(): JSX.Element | null {
                 className="dhb-primary"
                 disabled={busy}
                 onClick={() =>
-                  void run('install', pending).then(() => {
-                    setConfirming(false)
-                    return toggleSink(true)
-                  })
+                  void run('install', pending).then(() => setConfirming(false))
                 }
               >
                 {busy ? '…' : '知道了，开启'}
@@ -115,10 +104,10 @@ export function DictHookBar(): JSX.Element | null {
         ) : (
           <>
             <div className="dhb-text">
-              <b>让这份词典自己长大</b>
+              <b>记下这个项目用过哪些概念</b>
               <span>
-                开启后，每次 git commit 会扫一遍新增代码，把你用到、但词典里没有的术语补成完整词条
-                （有解释、有示意图、归好类）。补全由你的模型执行，<b>会消耗 token</b>。
+                开启后，每次 git commit 会扫一遍新增代码，把你这次用到的、辞典里已收录的概念
+                记进项目的知识手册。<b>纯本地脚本，零 token</b>。
               </span>
             </div>
             <div className="dhb-acts">
@@ -146,11 +135,7 @@ export function DictHookBar(): JSX.Element | null {
     <div className={`dhb${expanded ? ' open' : ''}`}>
       <button className="dhb-toggle" onClick={() => setExpanded((v) => !v)}>
         {hookOn ? <CheckIcon size={11} /> : <SparkleIcon size={11} />}
-        <span>
-          {hookOn ? (sink.enabled ? '自动补全已开启' : '提交扫描已开启 · 补全未开') : '自动补全已关闭'}
-        </span>
-        {/* 有词排着队但补全关着，是最容易被忽略的一种状态，摆在收起态就得看见 */}
-        {sink.pending > 0 && <span className="dhb-badge">{sink.pending} 待补</span>}
+        <span>{hookOn ? '提交即复盘已开启' : '提交即复盘已关闭'}</span>
         {!!msg && <span className="dhb-msg">{msg}</span>}
         <span className="dhb-chev">{expanded ? '收起' : '详情'}</span>
       </button>
@@ -188,25 +173,13 @@ export function DictHookBar(): JSX.Element | null {
             )
           })}
 
-          {/* 花钱的那一项单独一行，标签直说「花 token」，不藏在说明文字里 */}
-          <div className="dhb-row">
-            <span className="dhb-name">补全成完整词条</span>
-            <span className={`dhb-tag ${sink.enabled ? 'todo' : 'dim'}`}>
-              {sink.enabled ? '开启 · 花 token' : '未开启'}
-            </span>
-            <button className="dhb-mini" disabled={busy} onClick={() => void toggleSink(!sink.enabled)}>
-              {sink.enabled ? '关闭' : '开启'}
-            </button>
+          {/* 原来这儿是「自动补全词条」开关。拆掉之后不能只留一片空白 ——
+              用户会以为加词条这件事没了出口 */}
+          <div className="dhb-note">
+            想往辞典里加一条：直接跟 agent 说「把『XXX』收进辞典」。它会跟你确认归到哪一类、
+            补齐检索词和说明、画出 hover 要看的那张示意图、写好点击后落下去的提示词，最后才收录。
+            <b>不再自动收集</b> —— 加什么、什么时候加，由你说了算。
           </div>
-
-          {sink.pending > 0 && (
-            <div className="dhb-note">
-              有 {sink.pending} 个词排着队。
-              {sink.enabled
-                ? '下次提交后跟 agent 说话时它会顺手补上；也可以直接让它「补一下词典待办」。'
-                : '补全没开，这些词会一直排着——开了才会被写成词条。'}
-            </div>
-          )}
 
           {/* 如实告诉用户我们动了他哪份配置——这是侵入性最高的一项，不该含糊 */}
           <div className="dhb-note">
