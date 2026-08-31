@@ -394,9 +394,22 @@ export function AgentChatView({
   useEffect(() => {
     const turns = view?.turns
     if (!turns?.length) return
+    // **存合并后的，不是归约器的原始输出。**
+    //
+    // 归约器从不产出 `role: 'user'`（CLI 不回显用户输入，见 mergeUserMessages
+    // 上面那段），用户自己发的话只活在渲染层的 `sentMessages` 里、渲染时才合进去。
+    // 原来这里存的是 `view.turns` —— 于是**磁盘上那份从来只有 AI 的话**：
+    // 重开一个对话节点，你看不到自己问过什么，只剩它在自言自语。
+    //
+    // 2026-08-31 用户报「终端的吸顶效果不见了」时查出来的 —— 吸顶路标就挂在
+    // user 轮次上（MessageList.tsx 的哨兵），没有 user 轮次自然没有路标。
+    // 实测盘上最近三份历史：40/27/40 条，**角色分布全是 assistant**。
+    // view 到这儿一定非空（上面 `if (!turns?.length) return` 挡过了），
+    // 但类型上它仍是 ChatView | null —— 给个兜底而不是断言
+    const merged = mergeUserMessages(view ?? EMPTY_VIEW, sentMessages).turns
     const args = [
       histKey,
-      trimForSave([...restored.turns, ...turns]),
+      trimForSave([...restored.turns, ...merged]),
       savedResumeId || null,
       cwd
     ] as Parameters<typeof window.api.agentChat.saveHistory>
@@ -416,7 +429,9 @@ export function AgentChatView({
     }
     const t = window.setTimeout(save, 1000 - since)
     return () => window.clearTimeout(t)
-  }, [view, restored, histKey, savedResumeId, cwd])
+    // sentMessages 进依赖：用户发一条之后要立刻反映到盘上那份，
+    // 不然「发完就关掉节点」那条路又会丢掉最后一问
+  }, [view, restored, histKey, savedResumeId, cwd, sentMessages])
 
   // 卸载兜底：把还没落盘的那一份写掉。
   // **必须单独一个 effect**（依赖 []）—— 挂在上面那个 effect 的 cleanup 里没用，
