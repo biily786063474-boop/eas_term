@@ -34,8 +34,20 @@ function write(line: string): void {
 }
 
 /** 包装 ipcMain.handle / ipcMain.on，给每次调用计时。
- *  **必须在所有 registerXxxHandlers() 之前调** —— 它替换的是注册函数本身，
- *  晚了的话先注册的那些不会被包到。 */
+ *
+ *  它替换的是注册函数本身，所以**只能包到它之后注册的通道**。
+ *
+ *  ⚠️ **当前 index.ts 里它并没有排在最前面** —— 前面已经有一批
+ *  （mcp / plugins / secrets / skill / agentInstall / hook / roles / wiki /
+ *  skillLibrary / dict / rules）注册过了，那些通道的耗时不会进 ipc-slow.log。
+ *  所以排查主进程卡顿时，「ipc-slow.log 里没有」**不等于**那批不慢。
+ *
+ *  这条注释原先写的是「必须在所有 registerXxxHandlers() 之前调」，与实际调用位置
+ *  矛盾。要让那句话重新成立，把 index.ts 里的 installIpcProfiler() 提到
+ *  registerMcpBridge() 之后第一行即可（它唯一的约束是内部要读
+ *  app.getPath('userData')，必须在 whenReady 内，上移不影响别的硬依赖）。
+ *  在没做这件事之前，新增的 registerXxxHandlers() 一律放在它之后，
+ *  否则那组 IPC 会悄悄不被计时。 */
 export function installIpcProfiler(): void {
   if (enabled) return
   enabled = true

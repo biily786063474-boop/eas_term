@@ -351,8 +351,15 @@ app.whenReady().then(() => {
   // （2026-08-19 撞过：generate.md 补了三条关键缺口，分发出去的仍是没有它们的旧版）。
   // **只更新已经装了的，不主动安装** —— 卸载过的人不该被装回来（同 MCP 的 opt-out）。
   refreshInstalledRules()
-  // **必须在所有 registerXxxHandlers() 之前** —— 它替换的是 ipcMain.handle/on 本身，
-  // 晚一步的话先注册的那些就不会被计时到。开销是一次 Date.now()，慢调用才写文件。
+  // 它替换的是 ipcMain.handle/on 本身，所以只包得到**它之后**注册的通道。
+  // ⚠️ 注意它并不在最前面：上面那批（mcp / plugins / secrets / skill / agentInstall /
+  // hook / roles / wiki / skillLibrary / dict / rules）已经注册过了，那些通道不进
+  // ipc-slow.log —— 排查卡顿时「日志里没有」不等于它们不慢。
+  // 这条注释和 ipcProfiler.ts 里那条是同一件事的两处描述，改一处必须改另一处。
+  // 要让「必须在所有 registerXxxHandlers() 之前」重新成立，把这行提到
+  // registerMcpBridge() 之后即可（它只要求在 whenReady 内，好读 userData 路径）。
+  // 在那之前，新增的 registerXxxHandlers() 一律放在这行之后。
+  // 开销是一次 Date.now()，慢调用才写文件。
   installIpcProfiler()
 
   registerPtyHandlers()

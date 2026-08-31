@@ -7,7 +7,8 @@
 //   · 什么算做完
 // 所以一个角色是一份**可执行的配置**，不是一段文案。
 //
-// 落点：~/.eas/roles.json。内置 7 个角色，用户可改可加可删（删了内置的能一键恢复）。
+// 落点：~/.eas/roles.json。内置角色见下方 BUILTIN_ROLES（数量以那个数组为准，别在注释里写死
+// —— 这里原先写「7 个」，加了一个之后就一直骗人）。用户可改可加可删（删了内置的能一键恢复）。
 // 读的时候逐条 sanitize —— 这文件用户和外部工具都能改，一条坏数据不该让整个角色系统失效
 // （同 canvasSlice 里 sanitizeCanvas 的思路，那个教训已经付过学费）。
 import { app, ipcMain } from 'electron'
@@ -20,7 +21,7 @@ import type { AgentRole, AgentKind } from '../shared/types'
 const file = (): string => path.join(os.homedir(), '.eas', 'roles.json')
 
 /**
- * 内置 7 个角色。分两类：
+ * 内置角色。分两类：
  *   主序列（main）—— 沿项目生命周期推进，通常按顺序用
  *   产出型（output）—— 横切，任何阶段都能叫
  *
