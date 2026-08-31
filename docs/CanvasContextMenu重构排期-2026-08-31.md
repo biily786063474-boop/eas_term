@@ -52,9 +52,9 @@ agentChat · workspace · terminal · gantt · files · git。
 
 ## 三步走
 
-### 第 1 步 · 搬组件（低风险，建议做）
+### 第 1 步 · 搬组件（低风险，建议做）— ✅ 已于 2026-08-31 完成
 
-- `features/canvas/CanvasContextMenu.tsx` → `ui/ContextMenu.tsx`
+- `features/canvas/CanvasContextMenu.tsx` → `ui/CanvasContextMenu.tsx`（**实际执行时保留了原文件名**：改名要动 18 个文件的标识符，收益只有命名整洁）
 - `features/canvas/fuzzy.ts` + `fuzzy.test.ts` 一起搬（只有它在用；`features/dict/search.ts`
   的注释专门解释过为什么不能复用 `fuzzyPick`，所以不存在第二个用户）
 - 更新全部 import 路径
@@ -73,7 +73,7 @@ agentChat · workspace · terminal · gantt · files · git。
 `.canvas-ctxmenu` → `.ui-ctxmenu`，必须同步上面那张表的 4 处。
 做之前先确认 `menuOwnership.test.ts` 是绿的，改完必须再跑一次 —— 那是唯一的安全网。
 
-**我的建议：停在第 1 步或第 2 步。** 第 3 步的收益纯粹是命名整洁，
+**实际停在了第 1 步。** 第 3 步的收益纯粹是命名整洁，
 而 `.canvas-` 前缀留在那儿最多让人多看一眼注释，不会让任何人做错事。
 
 ## 不做也可以

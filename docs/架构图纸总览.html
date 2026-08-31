@@ -173,7 +173,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
 
   <div class="dissent">
     <div class="vlabel">保留的分歧</div>
-    <p style="margin:0 0 8px"><b>canvas 是"违章建筑"，图纸只记录未纠正。</b> <code>features/canvas/CanvasContextMenu.tsx</code> 被 canvas 之外的 6 个 feature 依赖 —— agentChat / workspace / terminal / files / git 用<b>菜单组件本身</b>，gantt 只用它导出的 <code>useMenuAnchor</code> / <code>useDismiss</code>（四个导出都是对外 API，动哪个都得全量 grep）。它本该在 <code>ui/</code>。canvas ↔ workspace 还是双向依赖。</p>
+    <p style="margin:0 0 8px"><b>canvas 曾是"违章建筑"，第一步已纠正。</b> <code>CanvasContextMenu</code> 被 canvas 之外的 6 个 feature 依赖 —— agentChat / workspace / terminal / files / git 用<b>菜单组件本身</b>，gantt 只用它导出的 <code>useMenuAnchor</code> / <code>useDismiss</code>（四个导出都是对外 API，动哪个都得全量 grep）。2026-08-31 已搬到 <code>ui/CanvasContextMenu.tsx</code>，但<b>组件名与 CSS 类名刻意没动</b>（类名被四处逻辑依赖，改了会静默弹错菜单）。canvas ↔ workspace 的双向依赖仍在。</p>
     <p style="margin:0;color:#a3a3a3">图纸的立场是：<b>先如实标注风险，不在出图纸这次顺手重构</b>。把它挪进 <code>ui/</code> 是正确方向，但那应该是一次独立的、有验证的重构。</p>
   </div>
 
@@ -559,9 +559,9 @@ AI CLI ──PostToolUse──▶ scan-commit.mjs
   <h3>四条耦合警报</h3>
   <div class="grid g2">
     <div class="card">
-      <h4 style="margin-top:0"><span class="b b-ro">1</span> CanvasContextMenu 是违章建筑</h4>
+      <h4 style="margin-top:0"><span class="b b-em">1</span> CanvasContextMenu 已搬进 ui/</h4>
       <p style="margin:0 0 8px">被 <b>agentChat / workspace(3处) / terminal / gantt / files / git</b> 六个 feature 当通用右键菜单用。</p>
-      <p style="margin:0;color:#a3a3a3">它本该在 <code>ui/</code>，实际长在 canvas 里。动手前先 <code>grep -r CanvasContextMenu src/renderer</code>。</p>
+      <p style="margin:0;color:#a3a3a3">2026-08-31 已搬到 <code>ui/CanvasContextMenu.tsx</code>。<b>类名 <code>.canvas-ctxmenu</code> 与样式仍在 <code>canvas.css</code>，不许动</b> —— 它被 <code>menuOwnership</code> 等四处做逻辑判断，改名后右键弹错菜单且只有一条测试会喊。动它前先 <code>grep -r CanvasContextMenu src/renderer</code>。</p>
     </div>
     <div class="card">
       <h4 style="margin-top:0"><span class="b b-am">2</span> canvas ↔ workspace 双向依赖</h4>
@@ -606,8 +606,8 @@ AI CLI ──PostToolUse──▶ scan-commit.mjs
       <tr><td><code>CLAUDE.md</code> 挂图纸指针</td><td><span class="b b-em">已完成</span></td><td>不挂指针 agent 不会主动读，图纸等于白写</td></tr>
       <tr><td><code>KEEP=5</code> → <code>KEEP=2</code></td><td><span class="b b-em">已修正</span></td><td>与 <code>publish-site.sh:23</code> 对齐</td></tr>
       <tr><td>提交成一个 commit</td><td><span class="b b-am">待定</span></td><td>含 <code>docs/architecture/</code> + <code>CLAUDE.md</code> + 本页</td></tr>
-      <tr><td>把 <code>CanvasContextMenu</code> 挪进 <code>ui/</code></td><td><span class="b b-gy">未做</span></td><td>正确方向，但应是一次独立的、有验证的重构</td></tr>
-      <tr><td>给 <code>fs:read*</code> 加路径边界</td><td><span class="b b-gy">未做</span></td><td>先确认不打断"拖任意文件进画布预览"的既有用法</td></tr>
+      <tr><td>把 <code>CanvasContextMenu</code> 挪进 <code>ui/</code></td><td><span class="b b-em">已完成</span></td><td>第 1 步（搬组件）已做并真机验证；第 2/3 步（搬样式、改类名）刻意未做</td></tr>
+      <tr><td>给 <code>fs:read*</code> 加路径边界</td><td><span class="b b-em">已评估</span></td><td>结论是**不加**；真正补的是 design:exportToDemo 的 projectPath 守卫</td></tr>
     </tbody>
   </table>
   </div>
