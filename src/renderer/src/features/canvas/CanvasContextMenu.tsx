@@ -13,6 +13,9 @@ export interface CanvasMenuItem {
   /** 分隔线：忽略其余字段 */
   sep?: boolean
   disabled?: boolean
+  /** 二级菜单。**给了它就忽略 onClick** —— 一个既能点又能展开的条目，
+   *  点下去到底是执行还是展开，用户没法从外观判断。 */
+  sub?: CanvasMenuItem[]
   onClick: () => void
 }
 
@@ -73,6 +76,34 @@ export function useDismiss(onClose: () => void): void {
   }, [onClose])
 }
 
+/** 一行菜单项。一级和二级共用 —— 两份实现迟早分叉，而分叉的那半没人测。 */
+function Row({
+  it,
+  onPick,
+  onHover
+}: {
+  it: CanvasMenuItem
+  onPick: () => void
+  onHover: (e: React.MouseEvent<HTMLElement>) => void
+}): JSX.Element {
+  return (
+    <button
+      className={`cctx-item${it.danger ? ' danger' : ''}${it.sub ? ' has-sub' : ''}`}
+      disabled={it.disabled}
+      type="button"
+      onMouseEnter={onHover}
+      // **有子菜单的条目点了不执行也不关闭**：它没有「执行」语义，
+      // 点一下就把菜单关掉的话，用户会以为自己误触了什么
+      onClick={it.sub ? undefined : onPick}
+    >
+      <span className="cctx-label">{it.label}</span>
+      {it.kbd && <span className="cctx-kbd">{it.kbd}</span>}
+      {it.icon ?? (it.hint ? <span className="cctx-hint">{it.hint}</span> : null)}
+      {it.sub && <span className="cctx-arrow">›</span>}
+    </button>
+  )
+}
+
 export function CanvasContextMenu({
   x,
   y,
@@ -87,34 +118,75 @@ export function CanvasContextMenu({
   useDismiss(onClose)
   const ref = useRef<HTMLDivElement>(null)
   const pos = useMenuAnchor(x, y, ref, [items.length])
+  /** 展开着的二级菜单：哪一条 + 画在哪。**同一时刻只有一个** ——
+   *  鼠标移到别的条目上就换，移到没有子菜单的条目上就收。
+   *
+   *  **必须记坐标、单独 portal 出去**：父菜单有 `overflow-y: auto`
+   *  （状态列多了要能滚），子菜单当子元素会被那个滚动容器直接裁掉。 */
+  const [sub, setSub] = useState<{ items: CanvasMenuItem[]; x: number; y: number } | null>(null)
+  const subRef = useRef<HTMLDivElement>(null)
+  const subPos = useMenuAnchor(sub?.x ?? 0, sub?.y ?? 0, subRef, [sub?.items.length, sub?.x, sub?.y])
+
+  const open = (it: CanvasMenuItem) => (e: React.MouseEvent<HTMLElement>) => {
+    if (!it.sub) return setSub(null)
+    const r = e.currentTarget.getBoundingClientRect()
+    // 贴着父项右边缘弹出；越界由 useMenuAnchor 夹回来
+    setSub({ items: it.sub, x: r.right - 4, y: r.top - 5 })
+  }
 
   return createPortal(
-    <div
-      ref={ref}
-      className="canvas-ctxmenu"
-      style={{ left: pos?.x ?? x, top: pos?.y ?? y, visibility: pos ? 'visible' : 'hidden' }}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      {items.map((it, i) =>
-        it.sep ? (
-          <div key={i} className="cctx-sep" />
-        ) : (
-          <button
-            key={i}
-            className={`cctx-item${it.danger ? ' danger' : ''}`}
-            disabled={it.disabled}
-            onClick={() => {
-              it.onClick()
-              onClose()
-            }}
-          >
-            <span className="cctx-label">{it.label}</span>
-            {it.kbd && <span className="cctx-kbd">{it.kbd}</span>}
-            {it.icon ?? (it.hint ? <span className="cctx-hint">{it.hint}</span> : null)}
-          </button>
-        )
+    <>
+      <div
+        ref={ref}
+        className="canvas-ctxmenu"
+        style={{ left: pos?.x ?? x, top: pos?.y ?? y, visibility: pos ? 'visible' : 'hidden' }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {items.map((it, i) =>
+          it.sep ? (
+            <div key={i} className="cctx-sep" />
+          ) : (
+            <Row
+              key={i}
+              it={it}
+              onHover={open(it)}
+              onPick={() => {
+                it.onClick()
+                onClose()
+              }}
+            />
+          )
+        )}
+      </div>
+      {sub && (
+        <div
+          ref={subRef}
+          className="canvas-ctxmenu cctx-sub"
+          style={{
+            left: subPos?.x ?? sub.x,
+            top: subPos?.y ?? sub.y,
+            visibility: subPos ? 'visible' : 'hidden'
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {sub.items.map((it, i) =>
+            it.sep ? (
+              <div key={i} className="cctx-sep" />
+            ) : (
+              <Row
+                key={i}
+                it={it}
+                onHover={() => {}}
+                onPick={() => {
+                  it.onClick()
+                  onClose()
+                }}
+              />
+            )
+          )}
+        </div>
       )}
-    </div>,
+    </>,
     document.body
   )
 }

@@ -110,22 +110,43 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     const fid = frameEl.dataset.fid
     const frame = st.canvas.frames.find((f) => f.id === fid)
     const cur = statusOfFrame(st.canvas.frames, st.projects, fid)
+    // 一级只放「这一条是干什么的」，具体选项收进二级。
+    // **状态那一组原来是平铺的** —— 列多了（状态是用户自己建的列）
+    // 一级菜单会被它撑成一长条，而「重命名 / 折叠 / 删除」这些反而被挤到看不见。
+    const curName = boardColumnsNow().find((c) => c.id === cur)?.name
     items = [
       { label: '重命名', onClick: () => setEditingFrame(fid) },
       { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
       { sep: true, label: '', onClick: () => {} },
-      // 和标题栏色点是同一组状态、同一套文案。右键这条是给「已经在右键菜单里」的人用的，
-      // 不指望他为了改状态先关掉菜单再去点那个 9px 的圆点。
-      ...boardColumnsNow().map((c) => ({
-        label: c.name,
-        // 读的是**项目**状态，不是 frame.status —— 后者是旧结构，启动时已经迁走了
-        hint: cur === c.id ? '当前' : undefined,
-        onClick: () => st.setFrameStatus(fid, cur === c.id ? null : c.id)
-      })),
       {
-        label: '未分类',
-        disabled: !cur,
-        onClick: () => st.setFrameStatus(fid, null)
+        // 跟标题栏右上角那排是同一组动作。收进右键是因为**折叠着的时候
+        // 那排按钮是藏起来的**，右键成了唯一入口
+        label: '新建',
+        onClick: () => {},
+        sub: [
+          { label: 'AI 对话', onClick: () => void st.addAgentNode(fid) },
+          { label: '终端', onClick: () => void st.addTerminalNode(fid) },
+          { label: '浏览器', onClick: () => st.addBrowserNode(fid) }
+        ]
+      },
+      {
+        label: '设置项目状态',
+        // **当前状态显示在一级** —— 不然要展开才知道现在是什么，
+        // 而「现在是什么」恰恰是打开这个菜单最常想知道的事
+        hint: curName ?? '未分类',
+        onClick: () => {},
+        sub: [
+          // 和标题栏色点是同一组状态、同一套文案。右键这条是给「已经在右键菜单里」的人用的，
+          // 不指望他为了改状态先关掉菜单再去点那个 9px 的圆点。
+          ...boardColumnsNow().map((c) => ({
+            label: c.name,
+            // 读的是**项目**状态，不是 frame.status —— 后者是旧结构，启动时已经迁走了
+            hint: cur === c.id ? '当前' : undefined,
+            onClick: () => st.setFrameStatus(fid, cur === c.id ? null : c.id)
+          })),
+          { sep: true, label: '', onClick: () => {} },
+          { label: '未分类', disabled: !cur, onClick: () => st.setFrameStatus(fid, null) }
+        ]
       },
       { sep: true, label: '', onClick: () => {} },
       { label: '删除 Frame', danger: true, onClick: () => st.removeFrame(fid) }

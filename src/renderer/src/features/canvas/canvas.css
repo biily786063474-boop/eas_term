@@ -5490,3 +5490,29 @@
     animation: none;
   }
 }
+
+/* ── 右键菜单的二级（2026-08-30）──────────────────────────────────
+   状态那一组原来平铺在一级里。状态列是用户自己建的，列一多
+   一级菜单就被撑成一长条，「重命名 / 折叠 / 删除」反而被挤到看不见。 */
+
+/* 子菜单复用 .canvas-ctxmenu 的外观，只是单独 portal 出去 ——
+   父菜单有 overflow-y:auto，当子元素会被裁掉 */
+.canvas-ctxmenu.cctx-sub {
+  /* 比父菜单高一层，免得贴着边缘时被父菜单盖住 */
+  z-index: 1001;
+}
+
+/* 有子菜单的条目：右边那个箭头 */
+.cctx-arrow {
+  flex: none;
+  margin-left: 6px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.45;
+}
+
+/* 展开着的那条保持高亮 —— 鼠标已经移到子菜单里去了，
+   不这样的话一级那条会失去 hover 态，看起来像「没选中任何东西」 */
+.cctx-item.has-sub:hover .cctx-arrow {
+  opacity: 0.9;
+}
