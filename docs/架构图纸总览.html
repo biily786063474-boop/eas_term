@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term 架构图纸总览</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}.ro{color:#fda4af}.sk{color:#7dd3fc}
+
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+.opts{display:flex;flex-direction:column;gap:9px;margin:14px 0 4px}
+.opts label{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:#d4d4d4;cursor:pointer}
+.opts input{margin-top:5px;accent-color:#34d399}
+
+/* 层图（纯 CSS 盒子） */
+.layers{display:flex;flex-direction:column;gap:10px;margin:20px 0}
+.layer{border:1px solid #262626;border-radius:12px;padding:14px 18px;background:rgba(23,23,23,.5)}
+.layer .lhead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:9px}
+.layer .lno{font-size:11px;letter-spacing:.12em;color:#525252;font-weight:600}
+.layer .lname{font-size:14.5px;font-weight:600}
+.layer .lpath{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#737373}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-size:11.5px;padding:3px 10px;border-radius:7px;background:#171717;border:1px solid #262626;color:#a3a3a3;white-space:nowrap}
+.chip.hot{border-color:#4a3d1d;color:#fcd34d;background:rgba(245,158,11,.06)}
+.chip.red{border-color:#4a1d1d;color:#fda4af;background:rgba(244,63,94,.06)}
+.layer.contract{border-color:#1d3a4a;background:rgba(14,165,233,.05)}
+.arrowrow{text-align:center;color:#404040;font-size:12px;line-height:1;margin:-4px 0}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">EAS-TERM 图纸</span>
+    <a href="#结论">结论</a>
+    <a href="#图纸">图纸清单</a>
+    <a href="#分层">分层</a>
+    <a href="#上下文">外部边界</a>
+    <a href="#禁区">禁区</a>
+    <a href="#mcp">MCP 网络</a>
+    <a href="#注入">注入面</a>
+    <a href="#耦合">耦合与同步</a>
+    <a href="#下一步">下一步</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">架构图纸 · 总览 · v0.4.71</div>
+  <h1>Eas-Term 架构图纸总览</h1>
+  <p class="lede">给 AI 当导航用的一套工程图纸：进仓库先知道自己在哪块地、能改什么、碰什么会出事故。本页是索引与要点，完整规格在 <code>docs/architecture/</code> 八份 markdown 里。</p>
+  <div class="meta">
+    <span>生成 <b>2026-08-31</b></span>
+    <span>代码基线 <b>76K 行 / 778 提交</b></span>
+    <span>探查方式 <b>5 路子 agent 分板块</b></span>
+    <span>产物 <b>8 份 / 982 行</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">这套图纸解决什么</div>
+  <p class="secnote">普通软件图纸解决"模块依赖"。这个项目额外要解决的是：它<b>既是 AI Agent 的宿主，又被 AI Agent 开发</b> —— 两套边界完全不同，混在一起写整套图就废了。</p>
+
+  <div class="grid g4" style="margin-bottom:24px">
+    <div class="stat"><div class="num n-em">8</div><div class="lab">份图纸<br>3 静态 + 4 动态 + 1 索引</div></div>
+    <div class="stat"><div class="num n-am">7</div><div class="lab">条跨文件同步项<br>漏改即静默失效</div></div>
+    <div class="stat"><div class="num">6</div><div class="lab">个规则注入面<br>写进用户机器</div></div>
+    <div class="stat"><div class="num">33</div><div class="lab">个自有 MCP 工具<br>+ 画板 52 个</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">核心裁决</div>
+    <p style="margin:0"><b>图纸最值钱的部分不是架构结构图，是三张"反直觉清单"</b> —— 它们无法从代码结构推导，只存在于注释和事故史里：跨文件同步清单、历史修复区、静默失效区。AI 改代码时踩的几乎全是这三类，而不是"不知道模块关系"。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">保留的分歧</div>
+    <p style="margin:0 0 8px"><b>canvas 是"违章建筑"，图纸只记录未纠正。</b> <code>features/canvas/CanvasContextMenu.tsx</code> 被 canvas 之外的 6 个 feature 依赖 —— agentChat / workspace / terminal / files / git 用<b>菜单组件本身</b>，gantt 只用它导出的 <code>useMenuAnchor</code> / <code>useDismiss</code>（四个导出都是对外 API，动哪个都得全量 grep）。它本该在 <code>ui/</code>。canvas ↔ workspace 还是双向依赖。</p>
+    <p style="margin:0;color:#a3a3a3">图纸的立场是：<b>先如实标注风险，不在出图纸这次顺手重构</b>。把它挪进 <code>ui/</code> 是正确方向，但那应该是一次独立的、有验证的重构。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">出图纸时发现并已修</div>
+    <p style="margin:0">项目 <code>CLAUDE.md</code> 写发布脚本 <code>KEEP=5</code>，<code>scripts/publish-site.sh:23</code> 实际是 <code>KEEP=2</code>。已改齐并记进 13 号图纸的"文档脱节"表 —— 这正是"图纸必须与代码同 commit"要防的事。</p>
+  </div>
+</section>
+
+<section id="图纸">
+  <h2>Deliverables</h2>
+  <div class="sectitle">八份图纸与维护频率</div>
+  <p class="secnote">静态图定型后极少动；动态文档<b>与代码同一个 commit 提交</b>；临时图用完归档、不进本目录，否则会混进"必须维护"的清单。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>文件</th><th>内容</th><th>类型</th><th>更新触发</th></tr></thead>
+    <tbody>
+      <tr><td><b>README.md</b></td><td>索引 + 维护纪律 + 数据基线</td><td><span class="b b-gy">索引</span></td><td>新增图纸</td></tr>
+      <tr><td><b>01-系统上下文</b></td><td>C4-L1，15 个外部系统 + 5 条边界红线</td><td><span class="b b-sk">静态</span></td><td>接新第三方 / 新增出站</td></tr>
+      <tr><td><b>02-分层架构</b></td><td>六层职责 + 启动顺序硬依赖 + 进程模型</td><td><span class="b b-sk">静态</span></td><td>整体重构</td></tr>
+      <tr><td><b>03-agent角色边界</b></td><td>3A 产品内角色/五道闸 · 3B 开发期禁区四级</td><td><span class="b b-sk">静态</span></td><td>新增角色 / 新增禁区</td></tr>
+      <tr><td><b>10-模块领地图</b></td><td>全局领地图 + 4 条耦合警报 + 加东西改哪几处</td><td><span class="b b-am">动态</span></td><td>新增目录 / 重构 / 新禁区</td></tr>
+      <tr><td><b>11-MCP工具网络</b></td><td>网络图、33 工具、三道锁、三层超时</td><td><span class="b b-am">动态</span></td><td>增删工具 / 改超时鉴权</td></tr>
+      <tr><td><b>12-skill与hook流程</b></td><td>六注入面、hook 时序、托管区围栏</td><td><span class="b b-am">动态</span></td><td>新注入面 / 改 skill / 改 hook</td></tr>
+      <tr><td><b>13-所有权矩阵</b></td><td>主矩阵 + <b>跨文件同步清单</b> + 文档脱节表</td><td><span class="b b-am">动态</span></td><td>与领地图同步</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0">两个 agent 语境（不分清整套图会串味）</h4>
+    <div class="tw" style="margin-bottom:0">
+    <table>
+      <thead><tr><th></th><th>产品内 agent</th><th>开发期 agent</th></tr></thead>
+      <tbody>
+        <tr><td><b>指谁</b></td><td>被 Eas-Term 托管的 Claude Code / Codex 会话、team 子 agent、内置角色（当前 8 个，以 <code>roles.ts</code> 的 <code>BUILTIN_ROLES</code> 为准）</td><td>正在读图纸、要改这个仓库的你</td></tr>
+        <tr><td><b>边界由谁定</b></td><td><code>roles.ts</code> + <code>fsGuard.ts</code> + 审批 hook（<b>代码强制</b>）</td><td>领地图与所有权矩阵（<b>只有文档约束</b>）</td></tr>
+        <tr><td><b>对应图纸</b></td><td>01 / 02 / 03A / 11 / 12</td><td>03B / 10 / 13</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<section id="分层">
+  <h2>Layers</h2>
+  <div class="sectitle">六层架构</div>
+  <p class="secnote">比通用 AI 项目五层多一个<b>契约层</b> —— Electron 双进程必须共享类型，这层的纪律是"禁 import electron / fs / net"，要能 <code>node --test</code> 直接跑。</p>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="lhead"><span class="lno">L1</span><span class="lname">交互层</span><span class="lpath">src/renderer</span></div>
+      <div class="chips">
+        <span class="chip hot">features/canvas · 47文件 14.9K行</span>
+        <span class="chip">features/agentChat · 8.6K</span>
+        <span class="chip hot">features/workspace · 7.2K</span>
+        <span class="chip">其余 18 个 feature</span>
+        <span class="chip">island（独立窗口·独立 CSP）</span>
+      </div>
+    </div>
+    <div class="arrowrow">▲ window.api（preload contextBridge） ▼</div>
+    <div class="layer">
+      <div class="lhead"><span class="lno">L2</span><span class="lname">状态与编排</span><span class="lpath">src/renderer/src/store</span></div>
+      <div class="chips">
+        <span class="chip">zustand 单 store · 4 slice</span>
+        <span class="chip red">store/canvas/undo · persist</span>
+        <span class="chip red">mcpHandler.ts · MCP 工具真正执行体</span>
+      </div>
+    </div>
+    <div class="arrowrow">▼</div>
+    <div class="layer contract">
+      <div class="lhead"><span class="lno">L3</span><span class="lname">契约层</span><span class="lpath">src/shared · 22 文件 3.3K 行</span></div>
+      <div class="chips">
+        <span class="chip">types.ts（1029 行）</span>
+        <span class="chip">agentChat 事件模型</span>
+        <span class="chip">team* · quota · dictTaxonomy</span>
+        <span class="chip red">禁 import electron / fs / net</span>
+      </div>
+    </div>
+    <div class="arrowrow">▲ 主渲染共用 ▼</div>
+    <div class="layer">
+      <div class="lhead"><span class="lno">L4</span><span class="lname">主进程能力</span><span class="lpath">src/main · 63 文件 12.2K 行</span></div>
+      <div class="chips">
+        <span class="chip">约 40 个 IPC 前缀</span>
+        <span class="chip red">fsGuard · secrets · agentHistoryKey</span>
+        <span class="chip">fs · pty · git · canvas · board · gantt</span>
+        <span class="chip hot">5 子域：agentChat / cliAuth / phone / skillLibrary / wiki</span>
+      </div>
+    </div>
+    <div class="arrowrow">▼</div>
+    <div class="layer">
+      <div class="lhead"><span class="lno">L5</span><span class="lname">Agent 生态层</span><span class="lpath">对外部 AI CLI 的全部接口</span></div>
+      <div class="chips">
+        <span class="chip red">mcpBridge · approvalRoute</span>
+        <span class="chip red">agentRules · agentHook · agentSkill</span>
+        <span class="chip red">adapters/claude · adapters/codex</span>
+        <span class="chip red">roles.ts · 8 个内置角色</span>
+      </div>
+    </div>
+    <div class="arrowrow">▼</div>
+    <div class="layer">
+      <div class="lhead"><span class="lno">L6</span><span class="lname">持久化与外部</span><span class="lpath">userData/*.json · 子进程</span></div>
+      <div class="chips">
+        <span class="chip">每类数据独立 JSON（坏一个不牵连其余）</span>
+        <span class="chip">PTY 子进程</span>
+        <span class="chip">外部 CLI · 网络</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>启动顺序 —— 打乱是静默失效，不是报错</h3>
+  <p class="secnote">不可调的是 <b>MCP 桥 → 密钥柜 → PTY</b> 这条链：后一步要用前一步的产物，插队不报错、只是悄悄拿错值。<code>installIpcProfiler()</code> 的位置<b>不属于这条不变式</b>，它当前的落点是一处待修的偏差 —— 下面照代码实况画。</p>
+  <pre><code><span class="dim">// src/main/index.ts  whenReady() 内</span>
+
+自定义协议注册（bizone / dictClip / media）  <span class="ro">← 必须在 ready 之前，Electron 原生限制</span>
+   <span class="flow">↓</span>
+registerMcpBridge()          <span class="hi">← 先起，PTY spawn 要用它的 port/token</span>
+   <span class="flow">↓</span>
+registerPluginHandlers() → purgeLegacyDsh()
+   <span class="flow">↓</span>
+registerSecretHandlers()     <span class="hi">← 必须排在 PTY 之前，且断言 app 已 ready</span>
+   <span class="flow">↓</span>                        <span class="dim">否则 safeStorage 静默用错全局密钥桶</span>
+skill / agentInstall / hook / role / wiki / skillLibrary /
+dict / dictClip / rules 共 9 组 handler → refreshInstalledRules()
+   <span class="flow">↓</span>
+installIpcProfiler()         <span class="ro">← 位置与它自己的注释相反</span>
+   <span class="flow">↓</span>                        <span class="dim">注释写「必须在所有 registerXxxHandlers 之前」，代码里</span>
+                            <span class="dim">上面这 11 组却全排在它前面 —— 它们的 IPC 不进 ipc-slow.log。</span>
+                            <span class="dim">查主进程卡顿时「日志里没有」≠「它们不慢」。要修就把这行</span>
+                            <span class="dim">提到 whenReady() 开头（它只需要 app ready 取 userData，安全）。</span>
+registerPtyHandlers() + 其余全部业务 handler  <span class="dim">← 只有这批真被计时</span>
+   <span class="flow">↓</span>
+buildMenu() → createWindow() → 延迟 8s 跑 checkContracts() 自检</code></pre>
+</section>
+
+<section id="上下文">
+  <h2>Context</h2>
+  <div class="sectitle">外部边界（C4-L1）</div>
+  <p class="secnote">15 个外部系统。<b>常驻网络出站只有 4 条</b>，其中 3 条指向自家域名；另有两条<b>按需触发</b>（首次用语音下模型、未装画板时取安装包直链），也算出站，别当它们不存在。加任何新的 <code>fetch</code> / <code>http.request</code> 都要先改 01 号图纸。</p>
+
+  <pre><code>                        ┌─────────────── Eas-Term (Electron) ───────────────┐
+   <span class="sk">👤 用户</span> ──────────────▶│  渲染层 ◀──IPC──▶ 主进程 ◀──▶ MCP 桥            │
+                        │                              127.0.0.1:随机端口   │
+                        └───┬────────┬─────────┬──────────────┬─────────────┘
+                            │        │         │              │
+        ┌───────────────────┘        │         │              └──── <span class="flow">stdio</span> ────┐
+        ▼                            ▼         ▼                                │
+  <span class="dim">本机系统能力</span>                 <span class="dim">网络出站（4 条）</span>   <span class="dim">手机（两条路）</span>              <span class="dim">本机 AI CLI</span>
+  ├ PTY / node-pty            ├ 更新 latest.json   ├ ① 局域网直连 HTTP        ├ Claude Code
+  ├ 文件系统 <span class="ro">← fsGuard</span>       ├ 匿名遥测 /e        │   读+受限写 · 只绑局域网  └ Codex
+  ├ Git CLI（execFile）       ├ 隧道 :8443        └ ② 端到端 TLS                  │
+  ├ 剪贴板                    └ 额度 /oauth/usage      <span class="hi">隧道只搬字节，手里没钥匙</span>       │ <span class="flow">stdio</span>
+  ├ sherpa-onnx STT <span class="hi">首次下模型</span>                                                  ▼
+  └ 系统钥匙串 safeStorage                                                <span class="dim">笔纵画板 App</span>
+                                                                          <span class="dim">bizone-canvas · 52 工具</span>
+
+<span class="hi">出站的准确口径：</span><span class="dim">上面 4 条是常驻/自动发起的。另有两条只在特定动作下才走：</span>
+<span class="dim">· 首次用语音识别 → 从 hf-mirror.com 下模型到 userData/models（模型不随包发，省约 300MB 包体）</span>
+<span class="dim">· 未装笔纵画板时点安装 → 取 bzone.biily.top/version.json 拿安装包直链，失败就退回官网</span>
+<span class="dim">口径写死在这里是为了「加端点必须改图纸」这条红线有得可比 —— 数不对就没法比。</span>
+
+<span class="hi">手机那条不是只读：</span><span class="dim">READ_ONLY 已于 2026-08-29 按用户要求关掉（server.ts）。</span>
+<span class="dim">手机可以新建对话节点、给会话发消息，首条消息还会顺带把 CLI 进程拉起来。</span>
+<span class="ro">这是有意开的，别当 bug 改回 true</span><span class="dim"> —— 逐次人工确认那道闸假设你够得着电脑，而这功能就是为够不着时用的。</span>
+<span class="dim">真正的护栏是四层：配过对 · 动作白名单 isAllowed · 每次留痕 audit · 写动作边界只在渲染层 provider 判一次。</span></code></pre>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">五条边界红线</h4>
+      <ul class="clean" style="margin-bottom:0">
+        <li>隧道<b>绝不终止 TLS</b> —— <code>hub.test.ts</code> 断言手机拿到的证书指纹等于电脑那张</li>
+        <li>手机服务端<b>绝不绑 <code>0.0.0.0</code></b></li>
+        <li>MCP 桥三道锁：只听 <code>127.0.0.1</code> · 随机 token 经 PTY env 注入（同时明文落 <code>mcp-endpoint.json</code>，0600）· 路径白名单</li>
+        <li><b>不得新增网络出站端点</b></li>
+        <li>生图路径只有笔纵画板一条（<code>illustrator</code> 角色 deny 通配符钉死）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">密钥的真实边界（别误传）</h4>
+      <p style="margin:0 0 10px">密钥经 <code>pty.ts</code> 注入为<b>环境变量</b> → 同进程内任何命令（含 AI）<code>echo $KEY</code> 就能读到。</p>
+      <p style="margin:0 0 10px">承诺的是：<b>不进对话、不进 jsonl、不进 shell history</b>。<b>没有</b>承诺"AI 读不到"。</p>
+      <p style="margin:0;color:#a3a3a3">文件型密钥（SSH key / .p8 / .pem）不进环境变量，走 <code>eas-secret run --files</code>：临时落 0600 文件，用完即删。</p>
+    </div>
+  </div>
+</section>
+
+<section id="禁区">
+  <h2>Boundaries</h2>
+  <div class="sectitle">开发期禁区 · 四级</div>
+  <p class="secnote">这是 03 号图纸 3B 节。<b>这些边界没有代码兜底</b> —— 全靠文档约束，所以必须写得足够具体到"改哪一行会怎样"。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>级别</th><th>典型位置</th><th>后果</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="b b-ro">🔴 绝对禁区</span></td>
+        <td><code>fsGuard.ts</code> · <code>secrets.ts</code> 的 assertReady/checksum · <code>fs.ts</code> 各写操作前的 guard 调用 · <code>agentHistoryKey.ts</code> · <code>phone/server.ts</code> 绑定地址 · <code>tunnel/hub.ts</code> 不终止 TLS · <code>roles.ts</code> illustrator deny</td>
+        <td>破坏安全模型。<code>secrets.ts</code> 删 checksum 后，macOS AES-128-CBC 无认证，实测坏 1 bit 有 <b>62.9%</b> 概率静默解出错误内容</td>
+      </tr>
+      <tr>
+        <td><span class="b b-am">⚠️ 静默失效</span></td>
+        <td><code>index.ts</code> 注册顺序 · 自定义协议注册时机 · 两处 <code>LONG_WAITS</code> · 三层超时不等式 · <code>hookResponseBody()</code> 跨进程副本 · adapters 的 buildArgs / stdin</td>
+        <td>不报错，功能悄悄坏掉。一切照常启动，只是密钥桶错了 / profiler 没生效 / PTY 拿不到 MCP token</td>
+      </tr>
+      <tr>
+        <td><span class="b b-vi">🔄 历史修复区</span></td>
+        <td><code>CanvasStage.tsx</code> 故意不订阅 shapes · <code>store/index.ts</code> 撤销 subscribe · <code>persist.ts</code> · <code>RunMonitor.tsx</code> 方向 · CI 固定 windows-2022</td>
+        <td>把已修好的问题改回去。<b>AI 最容易在这里出事</b> —— 这些代码看起来像"漏了"，实际是刻意为之</td>
+      </tr>
+      <tr>
+        <td><span class="b b-gy">⛔ 分发产物</span></td>
+        <td><code>site/vendor/spb-design/</code> · <code>deploy/tunnel/hub.mjs</code> · <code>~/.claude/skills/eas-term/*</code>（chmod 444）· 各类围栏内段 · <code>out/</code></td>
+        <td>手改无效，下次分发原样覆盖。要改去源头改 —— 隧道产物的权威路径是 <code>scripts/publish-tunnel.sh</code> 的 <code>LOCAL=</code>；它<b>被 git 跟踪、不在 .gitignore 里</b>，在磁盘上长得跟普通源码一样，⛔ 标记是唯一护栏</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">已知缺口 · 图纸上必须标出来</div>
+    <p style="margin:0 0 8px"><code>fsGuard</code> 是 IPC 侧唯一的路径白名单（MCP 的 <code>canvas_open_file</code> / <code>open_html</code> 另有一套，在 <code>mcpHandler.ts</code> 里，两者互不知道对方存在），而且它<b>只覆盖写操作</b>。<code>fs:readDir</code> / <code>readTextFile</code> / <code>readImageFile</code> / <code>openPath</code> / <code>showInFolder</code> <b>零路径校验</b>，理论上能读取或在 Finder 打开任意绝对路径。</p>
+    <p style="margin:0;color:#a3a3a3">这是"读比写风险低"的设计取舍，不是遗漏。但<b>要改成有边界时别当成新功能随手加</b> —— 先确认不会打断"拖任意文件进画布预览"这类既有用法。</p>
+  </div>
+
+  <h3>产品内：多 agent 编排的五道闸</h3>
+  <pre><code>MCP <span class="hi">team_spawn</span>
+  <span class="flow">↓</span>
+<span class="ro">闸0</span> 调用者是团队成员？ ──是──▶ <span class="ro">✗ 硬拒</span>  <span class="dim">靠 EAS_TEAM_ROLE 环境变量判定，非猜测</span>
+  <span class="flow">↓</span> 否                              <span class="dim">防止子 agent 递归派活炸开</span>
+<span class="ro">闸1</span> Frame 多 agent 开关开着？ ──关──▶ <span class="ro">✗ 拒绝</span>  <span class="dim">事实查询，不是模型判断</span>
+  <span class="flow">↓</span> 开
+<span class="ro">闸2</span> 批次合法？ <span class="dim">≤6 角色 · kebab-case · 不重名</span> ──否──▶ <span class="ro">✗</span>
+  <span class="flow">↓</span> 是
+<span class="ro">闸3</span> 用户在界面点头确认 ──否──▶ <span class="ro">✗ 取消</span>
+  <span class="flow">↓</span> 是
+<span class="ro">闸4</span> 写代码角色？ ──是──▶ 建 git worktree  .worktrees/&lt;批次&gt;-&lt;role&gt;
+  <span class="flow">↓</span> 否（只读）              <span class="dim">并发写保护 = 物理隔离</span>
+直接用原 cwd
+  <span class="flow">↓</span>
+起 agentChat 会话  <span class="dim">──任一失败──▶ 回滚已建 worktree + 已起 agent</span>
+
+<span class="hi">两条反直觉设计：</span>
+<span class="dim">· 限流闸「现算」不用持久状态位 —— 存过状态导致永久锁死过一个 Frame</span>
+<span class="dim">· 删 worktree 前查 git status，有未提交改动一律拒删；dissolve 也只报告不清理</span></code></pre>
+</section>
+
+<section id="mcp">
+  <h2>MCP Network</h2>
+  <div class="sectitle">MCP 工具网络</div>
+  <p class="secnote">普通后端项目没有这张图。对本项目它是产品能力的核心目录 —— 33 个自有工具 + 画板 52 个（数量的唯一真相源是 <code>mcp/eas-mcp.mjs</code> 的 <code>TOOLS</code> 数组，别信任何一处手抄的计数）。</p>
+
+  <pre><code><span class="dim">用户终端里的 CLI</span>        <span class="dim">MCP shim（每会话一个，轻量）</span>      <span class="dim">Eas-Term 主进程（每 App 一个网关）</span>
+
+Claude Code 会话1 ──stdio──▶ eas-mcp.mjs ──┐
+Claude Code 会话2 ──stdio──▶ eas-mcp.mjs ──┼── <span class="flow">POST /invoke</span> ──▶ <span class="hi">mcpBridge.ts</span>
+Codex            ──stdio──▶ eas-mcp.mjs ──┘   <span class="dim">x-eas-token</span>          <span class="hi">HTTP 127.0.0.1</span>
+                                                                          │
+     └────────────stdio───────▶ bizone-mcp.mjs                            │ <span class="flow">IPC mcp:invoke</span>
+                                    │ <span class="dim">import() 每会话 +93MB</span>            ▼
+                                    ▼                            <span class="hi">渲染层 mcpHandler.ts</span>
+                              <span class="dim">笔纵画板 mcpServer.js</span>          <span class="dim">▶ 工具的真正执行体</span>
+
+<span class="hi">进程模型（容易误传，钉死）：</span>
+<span class="dim">shim 是每会话一个（MCP 协议天然行为），但共享同一个 HTTP 网关。</span>
+<span class="dim">多会话 = 多个轻量 shim + 一个共享后端，不是每会话一套后端。</span>
+<span class="ro">例外：bizone-canvas 真的每会话一个进程（ELECTRON_RUN_AS_NODE），实测每客户端增量约 93MB。</span></code></pre>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">三道锁</h4>
+      <ol style="margin-bottom:0">
+        <li>只监听 <code>127.0.0.1</code></li>
+        <li>随机 token 经 PTY 环境变量注入给 App 自己起的终端 —— 没有这两个变量时 <code>tools/list</code> 返回空工具面，对外无感。<b>但不是「只经 env」</b>：同一个 token 还明文落在 <code>userData/mcp-endpoint.json</code>（0600），所以它是「本机同用户可读」级别，不是每终端独有的密钥</li>
+        <li><code>canvas_open_file</code> / <code>open_html</code> 有<b>项目内路径白名单</b>（防渲染 <code>~/.ssh</code>）</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">三层超时 · 不等式必须成立</h4>
+      <div class="tw" style="margin:0">
+      <table style="min-width:0">
+        <thead><tr><th>层</th><th>普通</th><th>长等待</th></tr></thead>
+        <tbody>
+          <tr><td>① shim http.request</td><td>30s</td><td>15min</td></tr>
+          <tr><td>② invokeRenderer</td><td>15s</td><td>10min</td></tr>
+          <tr><td>③ 渲染层等待窗口</td><td>—</td><td>8min</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="margin:12px 0 0;font-size:13.5px;color:#a3a3a3">破坏不等式的症状：用户看到<b>连接错误</b>而不是业务提示。</p>
+    </div>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>分类</th><th>数量</th><th>工具</th></tr></thead>
+    <tbody>
+      <tr><td><span class="b b-sk">wiki</span></td><td>7</td><td><code>wiki_query</code> <code>wiki_inbox</code> <code>wiki_lint</code> <code>wiki_log</code> <code>wiki_transcript</code> <code>wiki_archive_plan</code>⏳ <code>wiki_archive_exec</code></td></tr>
+      <tr><td><span class="b b-em">canvas</span></td><td>14</td><td><code>open_html</code> <code>open_file</code> <code>open_url</code> <code>list_frames</code> <code>get_state</code> <code>focus_node</code> <code>maximize_node</code> <code>close_node</code> <code>rename_node</code> <code>tidy_frame</code> <code>new_terminal</code> <code>add_note</code> <code>snapshot</code> <code>latest_snapshot</code></td></tr>
+      <tr><td><span class="b b-am">team</span></td><td>4</td><td><code>team_spawn</code>⏳ <code>team_status</code>⏳ <code>team_send</code> <code>team_dissolve</code></td></tr>
+      <tr><td><span class="b b-ro">secret</span></td><td>3</td><td><code>secret_check</code>（只回有无不回值） <code>request_secret</code> <code>report_secret_invalid</code></td></tr>
+      <tr><td><span class="b b-vi">skill</span></td><td>2</td><td><code>skill_list</code> <code>skill_categorize</code>（不碰用户 skill 文件）</td></tr>
+      <tr><td><span class="b b-gy">其它</span></td><td>3</td><td><code>dict_add</code> <code>notify</code> <code>todo_list</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="font-size:13.5px;color:#737373">⏳ = 长等待工具，在 <code>LONG_WAITS</code> 名单里（<b>两个文件各存一份，必须同步</b>）。<code>dict_pending</code> 已随 <code>790e476</code> 移除 —— 若某会话工具面里还有它，那是旧缓存。</p>
+</section>
+
+<section id="注入">
+  <h2>Injection</h2>
+  <div class="sectitle">六个规则注入面</div>
+  <p class="secnote">这张图管的是<b>本 app 往用户机器上写什么</b>。写错了症状是"agent 忽然不听话"，且极难查 —— 所以每个面都有明确的托管区机制。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>注入面</th><th>写到哪</th><th>托管区机制</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>MCP 注册</b></td><td><code>~/.claude.json</code> / <code>~/.codex/config.toml</code></td><td>按 server 名整段替换，不动其余 server</td></tr>
+      <tr><td>2</td><td><b>使用指引</b></td><td><code>~/.claude/skills/eas-term/</code> 整目录<br><code>~/.codex/AGENTS.md</code> 内一段</td><td>Claude 侧写完 <code>chmod 444</code><br>Codex 侧 <code>eas-term:begin</code> 围栏</td></tr>
+      <tr><td>3</td><td><b>提交钩子</b></td><td><code>settings.json</code> PostToolUse</td><td><code>_easTerm</code> 认领单条 + <code>.eas-backup</code> 备份<br><span class="b b-am">侵入性最高，需用户显式点安装</span></td></tr>
+      <tr><td>4</td><td><b>审批钩子</b></td><td><code>settings.json</code> PreToolUse</td><td>matcher <code>*</code> 覆盖全部 Claude 进程，但靠 <code>EAS_AGENT_CHAT_SESSION</code> 区分归属，<b>其余会话无声放行</b></td></tr>
+      <tr><td>5</td><td><b>statusline</b></td><td><code>settings.json</code> statusLine</td><td><code>_easWrapped</code> 标记，卸载时把原命令<b>原样放回</b></td></tr>
+      <tr><td>6</td><td><b>知识库约定</b></td><td>知识库根 <code>CLAUDE.md</code>/<code>AGENTS.md</code>、<code>.eas-wiki.json</code></td><td><code>wiki-schema:begin v4</code> 围栏，围栏外用户随便写</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">一条值得单独立在图纸上的设计决策</div>
+    <p style="margin:0 0 8px"><b>常驻区只放"触发条件 + 路径指针"，正文按需读盘。</b></p>
+    <p style="margin:0;color:#a3a3a3">起因写在 <code>syncRules</code> 文件头：曾经把完整 SKILL.md 全文塞进 <code>AGENTS.md</code>，导致该文件 3306 字符里 <b>3284 字符（99%）</b>是画板说明 —— <b>每次对话都要为此付 token</b>。现在正文放 <code>~/.eas/agent/*.md</code> 按需读。</p>
+  </div>
+
+  <h3>Hook 时序 —— 三个脚本互不相关，各自独立机制</h3>
+  <pre><code><span class="hi">① 危险工具调用前</span>
+AI CLI ──PreToolUse──▶ eas-pretooluse.mjs <span class="dim">（独立进程）</span>
+                          │
+              ┌───────────┴───────────┐
+     <span class="dim">非本 app 会话</span>              <span class="dim">属于本 app 的会话</span>
+              │                       │
+        <span class="flow">无声放行</span>          <span class="flow">POST /agent-approval/request（阻塞）</span>
+                                      <span class="flow">↓</span>
+                          归一化 <span class="dim">Bash→exec / Write·Edit→patch / 其余→tool</span>
+                                      <span class="flow">↓</span>
+                              渲染层弹审批卡 ──▶ 用户点允许/拒绝
+                                      <span class="flow">↓</span>
+                          <span class="flow">POST /agent-approval/resolve → 唤醒 hook</span>
+                          <span class="ro">5 分钟超时 → 兜底一律 deny（安全底线）</span>
+
+<span class="hi">② Bash 工具调用后</span>
+AI CLI ──PostToolUse──▶ scan-commit.mjs
+                          <span class="flow">↓</span> 预筛 /\bgit\b.*\bcommit\b/
+                          <span class="flow">↓</span> <span class="hi">真判据：HEAD 真的变了？</span>
+                          <span class="flow">↓</span> git show HEAD --unified=0 取新增行
+                          <span class="flow">↓</span> 匹配 dictionary-bundle.json 词典
+                        写入 docs/knowledge-data.json + 渲染 manual.html
+                          <span class="dim">零 token 纯本地；任何异常 exit 0 静默放行，绝不阻断提交</span></code></pre>
+</section>
+
+<section id="耦合">
+  <h2>Coupling</h2>
+  <div class="sectitle">耦合警报与跨文件同步</div>
+  <p class="secnote">这一节是整套图纸里 AI 最需要、也最推不出来的部分。</p>
+
+  <h3>跨文件同步清单 —— 本项目最大的静默 bug 源</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>改这个</th><th>必须同步改</th><th>不同步的症状</th></tr></thead>
+    <tbody>
+      <tr><td><code>eas-mcp.mjs</code> 的 <code>LONG_WAITS</code></td><td><code>mcpBridge.ts</code> 的 <code>LONG_WAITS</code></td><td>用户看到连接错误而非业务提示</td></tr>
+      <tr><td><code>approvalRoute.ts</code> <code>hookResponseBody()</code></td><td><code>resources/agent-hooks/responseBody.mjs</code></td><td>审批链路失效（跨进程无法 import）</td></tr>
+      <tr><td><code>APPROVAL_TIMEOUT_MS</code></td><td>hook 脚本的 <code>FETCH_TIMEOUT_MS</code></td><td>审批超时错位</td></tr>
+      <tr><td>skill 分类能力</td><td><b>四处</b>：<code>eas-mcp.mjs</code> schema + <code>mcpHandler.ts</code> + <code>category.ts</code> + <code>skill-organizer/SKILL.md</code></td><td>任一漏改都出问题</td></tr>
+      <tr><td><code>layout.ts</code> 的 <code>PaneKind</code></td><td><code>tabsSlice.ts</code>（编译器挡）+ <code>PaneView.tsx</code>（<b>编译器挡不住</b>）</td><td>新面板类型渲染空白</td></tr>
+      <tr><td>新增 MCP 工具</td><td><code>eas-mcp.mjs</code> schema + <code>mcpHandler.ts</code> 执行体 + 11 号图纸</td><td>工具报错或图纸过期</td></tr>
+      <tr><td>新增 IPC 写通道</td><td>加 <code>guardPath</code>/<code>guardDir</code> + <code>preload/index.ts</code></td><td><b>安全边界出洞</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>四条耦合警报</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-ro">1</span> CanvasContextMenu 是违章建筑</h4>
+      <p style="margin:0 0 8px">被 <b>agentChat / workspace(3处) / terminal / gantt / files / git</b> 六个 feature 当通用右键菜单用。</p>
+      <p style="margin:0;color:#a3a3a3">它本该在 <code>ui/</code>，实际长在 canvas 里。动手前先 <code>grep -r CanvasContextMenu src/renderer</code>。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-am">2</span> canvas ↔ workspace 双向依赖</h4>
+      <p style="margin:0;color:#a3a3a3">canvas → workspace（<code>projectMenu.ts</code>）；workspace → canvas（大量）。canvas 还依赖 editor / web / status / files，并经 registry 依赖 git / team / design。<b>近似循环依赖。</b></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-am">3</span> PaneView 是面板路由中枢</h4>
+      <p style="margin:0;color:#a3a3a3">import 了 terminal / editor / image / git / chat / agentChat / web / canvas 八个 feature。<b>新增面板类型必须改它，且编译器不会提醒。</b></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-sk">4</span> layout.ts 共享 leaf 契约</h4>
+      <p style="margin:0;color:#a3a3a3"><code>PaneKind</code> 的 leaf 在 split / canvas / board 三种 ViewMode 间<b>共享同一份实例</b> —— 绝对定位保证 xterm 永不重挂载。任何导致重挂载的改动都会丢终端会话。</p>
+    </div>
+  </div>
+
+  <h3>加东西要改哪几处（AI 最常问的问题）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>想加什么</th><th>改这几处</th></tr></thead>
+    <tbody>
+      <tr><td><b>一种画布组件节点</b></td><td><span class="b b-em">只改 1 处</span> 写一个 <code>CanvasComponentDef</code> push 进 <code>registry.tsx</code> 的 <code>CANVAS_COMPONENTS</code>，<b>无需改其它文件</b></td></tr>
+      <tr><td><b>一种共享面板类型</b></td><td><span class="b b-am">3 处</span> <code>layout.ts</code> 联合类型 → <code>tabsSlice.ts</code> 穷尽匹配（编译器挡）→ <code>PaneView.tsx</code> 渲染分支（<b>最易漏</b>）</td></tr>
+      <tr><td><b>一个 MCP 工具</b></td><td><span class="b b-am">3–4 处</span> <code>eas-mcp.mjs</code> schema → <code>mcpHandler.ts</code> 执行体 →（长等待则 <code>LONG_WAITS</code> 两处）→ 更新 11 号图纸 → <b>连带改三处手抄的计数</b>：11 号图纸标题、<code>architecture/README.md</code>、本页（脱节的历来都是这三个数字，不是工具表本身）</td></tr>
+      <tr><td><b>一个 IPC 通道</b></td><td><span class="b b-ro">3 处</span> <code>src/main/&lt;域&gt;.ts</code> handler → <code>preload/index.ts</code> → 写操作<b>必须</b>加 <code>guardPath</code>/<code>guardDir</code></td></tr>
+      <tr><td><b>一种持久化数据</b></td><td>在 <code>userData</code> 下开<b>独立 JSON 文件</b>，别塞进现有大文件</td></tr>
+      <tr><td><b>一个新 AI CLI 适配</b></td><td>读 <code>.claude/skills/agent-onboarding/SKILL.md</code>，它是专门的检查清单</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">图纸已落地并挂上 <code>CLAUDE.md</code> 指针。以下三项待你定夺。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>8 份图纸写入 <code>docs/architecture/</code></td><td><span class="b b-em">已完成</span></td><td>982 行，链接与结构已校验</td></tr>
+      <tr><td><code>CLAUDE.md</code> 挂图纸指针</td><td><span class="b b-em">已完成</span></td><td>不挂指针 agent 不会主动读，图纸等于白写</td></tr>
+      <tr><td><code>KEEP=5</code> → <code>KEEP=2</code></td><td><span class="b b-em">已修正</span></td><td>与 <code>publish-site.sh:23</code> 对齐</td></tr>
+      <tr><td>提交成一个 commit</td><td><span class="b b-am">待定</span></td><td>含 <code>docs/architecture/</code> + <code>CLAUDE.md</code> + 本页</td></tr>
+      <tr><td>把 <code>CanvasContextMenu</code> 挪进 <code>ui/</code></td><td><span class="b b-gy">未做</span></td><td>正确方向，但应是一次独立的、有验证的重构</td></tr>
+      <tr><td>给 <code>fs:read*</code> 加路径边界</td><td><span class="b b-gy">未做</span></td><td>先确认不打断"拖任意文件进画布预览"的既有用法</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">勾选后复制这条粘回对话</div>
+    <div class="opts">
+      <label><input type="checkbox" value="commit" checked> 把图纸提交成一个 commit</label>
+      <label><input type="checkbox" value="ctxmenu"> 排期重构 CanvasContextMenu → ui/</label>
+      <label><input type="checkbox" value="readguard"> 评估给 fs:read* 加路径边界</label>
+      <label><input type="checkbox" value="agentsmd"> 把图纸指针也写进 AGENTS.md</label>
+    </div>
+    <div class="dcmd">
+      <span id="cmd">/arch commit</span>
+      <button id="cp">复制</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>Eas-Term v0.4.71 · 架构图纸总览 · 2026-08-31</div>
+  <div>完整规格：<code>docs/architecture/</code>（README · 01 · 02 · 03 · 10 · 11 · 12 · 13）</div>
+  <div>本页为 report 预设固定视觉 · standalone 零外部依赖 · 断网可开</div>
+</footer>
+
+</main>
+
+<script>
+(function(){
+  var boxes=[].slice.call(document.querySelectorAll('.opts input'));
+  var cmd=document.getElementById('cmd');
+  function upd(){
+    var v=boxes.filter(function(b){return b.checked}).map(function(b){return b.value});
+    cmd.textContent=v.length?('/arch '+v.join(' ')):'/arch 先不动';
+  }
+  boxes.forEach(function(b){b.addEventListener('change',upd)});
+  document.getElementById('cp').addEventListener('click',function(){
+    navigator.clipboard.writeText(cmd.textContent);this.textContent='已复制';
+    var t=this;setTimeout(function(){t.textContent='复制'},1600);
+  });
+  upd();
+})();
+</script>
+
+</body>
+</html>

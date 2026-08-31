@@ -181,7 +181,7 @@
 - CSS：`.ab-drawer/.ab-run` → `.ab-seg/.ab-launch/.ab-brand`。
 - **dev 眼验(CDP)**：probe 返回 claude[fable,opus,sonnet]+codex[gpt-5-codex,gpt-5]；段控件切 Codex→胶囊翻 gpt-5-codex/中；切回 Claude→Opus/高(记忆保留)；模型菜单/effort滑块(minimal→xhigh)定位准；**点启动真把 `codex -m gpt-5-codex -c model_reasoning_effort=medium` 写进终端→codex 真启动到登录页**(参数被接受)。
 
-**⚠️ 事故教训（已记 [[工作规则-验证只在dev端-不擅自动release-app]]）**：我收尾用 `pkill -f "Eas-Term"` 太宽，误杀用户正在跑的**正式 release app** 进程→白屏。用户下铁律：①验证只在 dev 端(`npm run dev` 独立实例)；②不经明确指示不安装/打包/碰 release app；③kill 必须精确(按端口 9333/`node_modules/electron` 路径，绝不用名字宽匹配)。
+**⚠️ 事故教训（已记 [[工作规则-验证只在dev端-不擅自动release-app]]）**：我收尾用 `pkill -f "Eas-Term"` 太宽，误杀用户正在跑的**正式 release app** 进程→白屏。用户下铁律：①验证只在**隔离实例**上做（`npm run verify`，**不是** `npm run dev` —— dev 的 userData 与正式版同目录，见该篇更正块）；②不经明确指示不安装/打包/碰 release app；③kill 必须精确(按端口 9333/`node_modules/electron` 路径，绝不用名字宽匹配)。
 
 **白屏隐患系统审查**（用户要求，报告 `docs/白屏隐患-系统级代码审查.html`）：4 路并行 agent 审查(主进程恢复力/渲染崩溃面/画布内存/持久化)。**根因=三道安全网全缺**：零 React Error Boundary(`main.tsx`)、零主进程 uncaughtException 兜底、零渲染/GPU 崩溃自愈 → 任一局部异常放大成永久白屏。实据：DiagnosticReports 零崩溃报告→JS 层卸载 React 树而非原生崩溃。用户在跑的是**旧构建**(canvas.json 里 agent 仍旧字符串)，白屏是它本就有的老 bug、与 Codex 改动无关。三条扳机：①`pty:write` 裸写已死终端 EPIPE；②多终端连续缩放 fit 风暴 GPU OOM；③畸形 canvas.json 渲染期 `f.nodes.length` 抛错(启动即进画布→每次开机白+订阅未挂覆盖不了坏档→永久打不开)。
 

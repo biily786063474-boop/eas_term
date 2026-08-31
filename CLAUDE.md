@@ -1,5 +1,21 @@
 # Eas-Term — 部署目标
 
+## 🗺️ 动手改代码前先读架构图纸
+
+`docs/architecture/` 是本仓库的 AI 导航图纸，**改代码前至少读这两份**：
+
+- [`docs/architecture/10-模块领地图.md`](docs/architecture/10-模块领地图.md) —— 我在哪块地、哪里是禁区、加东西要改哪几个文件
+- [`docs/architecture/03-agent角色边界.md`](docs/architecture/03-agent角色边界.md) —— 3B 节列出**改了会静默失效 / 会把历史修复改回去**的位置
+
+其余：[01 系统上下文](docs/architecture/01-系统上下文.md)（外部依赖边界，不得私自新增出站）·
+[02 分层架构](docs/architecture/02-分层架构.md)（含启动顺序硬依赖）·
+[11 MCP 工具网络](docs/architecture/11-MCP工具网络.md) ·
+[12 Skill 与 Hook 流程](docs/architecture/12-skill与hook流程.md) ·
+[13 所有权矩阵](docs/architecture/13-所有权矩阵.md)（含**跨文件同步清单**）
+
+**改了代码要顺手更新对应图纸，同一个 commit 提交。**
+
+
 ## 📦 下次传到哪
 
 | | |
@@ -18,7 +34,7 @@ scripts/publish-site.sh
 ```
 
 它已经走完整套：逐个 `scp` → 逐个核对字节大小 → 传包比 SHA256 → 写 `latest.json`
-→ 清理旧版本（`KEEP=5`）→ reload 前后比对现有站点 → 线上自检。**别手搓 scp。**
+→ 清理旧版本（`KEEP=2`）→ reload 前后比对现有站点 → 线上自检。**别手搓 scp。**
 
 > **版本排序必须用 `sort -V`** —— 试过 `sort -t. -k1,1n`，遇到 `v1.0.0` 会把它排到 `v0.x` 前面
 > （"v1" 被按数值解析成 0），于是最新版本被当成最老的删掉。造了 9 个版本目录实测确认过。

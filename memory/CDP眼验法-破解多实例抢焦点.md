@@ -7,16 +7,23 @@
 
 ## 可行解：Chrome DevTools Protocol，完全绕开 OS 焦点
 
-1. **临时**在 `src/main/index.ts` 顶部（`app` 已 import）加一行，仅 dev 生效：
-   ```ts
-   if (!app.isPackaged) app.commandLine.appendSwitch('remote-debugging-port', '9333')
-   ```
-   端口**别用 9222**——本机另一个 Electron（数字艺术软件 Aurora）常年占 9222，会 `bind() failed: Address already in use`。9333 空闲。
-2. `npm run dev -- --watch` 启动。`curl -s http://localhost:9333/json` 找 `type:page && url 含 localhost:5173` 的 `webSocketDebuggerUrl`。
+> ⚠️ **第 1、2 步已废弃（2026-08-19）**，下面保留原文只为说明当初为什么这么做。
+> 现在一条命令代替：**`npm run verify`**（= build + `scripts/verify-app.mjs --seed`），
+> 端口由脚本经 argv 传入，**不要再手改 `src/main/index.ts`**；
+> 跑 JS 用 `node scripts/eval-in-app.mjs "<js>"`。
+> 更要紧的是**别再用 `npm run dev` 验证** —— 它的 userData 和正式版是同一个目录（密钥柜就在那儿），
+> 详见 [[工作规则-验证只在dev端-不擅自动release-app]] 的更正块与 `docs/architecture/14-验证与调试.md`。
+
+1. ~~**临时**在 `src/main/index.ts` 顶部加 `remote-debugging-port`~~ —— 已由 `verify-app.mjs` 传参代替。
+   端口**别用 9222** 这条仍然有效：本机另一个 Electron（数字艺术软件 Aurora）常年占 9222，会 `bind() failed`。9333 空闲。
+2. ~~按 `url 含 localhost:5173` 找 page~~ —— 现在跑的是构建产物，没有 5173。
+   **改为按 `p.title === 'Eas-Term'` 认主窗口**：灵动岛与主窗口同 url，画布里每个网页节点还是独立 webview，
+   按 url 会连错；连错的症状是所有 `querySelectorAll` 都返回 0。
 3. Node 22 内置 `WebSocket` + `fetch`，写个极简 CDP 客户端（存档在会话 scratchpad `cdp.mjs`）：
    - `Runtime.evaluate {expression, returnByValue, awaitPromise}` → 在真实页面跑任意 JS（点按钮、派发事件、读 DOM）。
    - `Page.captureScreenshot {format:'png'}` → 拿真实渲染截图（base64），写文件后用 Read 看。
-4. 验证完**务必删掉那行调试代码**（`--watch` 会自动重启，9333 端口关闭即确认干净）。
+4. ~~验证完务必删掉那行调试代码~~ —— 已无调试代码可删（端口走 argv）。收尾改为：按端口或
+   `node_modules/electron/dist` 精确路径关掉实例，**绝不 `pkill -f "Eas-Term"`**（会误杀用户正跑的 release app）。
 
 ## 驱动 React UI 的关键坑（都踩过）
 
