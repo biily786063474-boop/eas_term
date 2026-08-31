@@ -13,6 +13,7 @@ import os from 'os'
 import path from 'path'
 
 import type { UserTerm } from '../shared/types'
+import { isValidCat } from '../shared/dictTaxonomy'
 
 const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
 // ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
@@ -77,7 +78,17 @@ function readUser(): UserTerm[] {
       logic: typeof t.logic === 'string' ? t.logic : '',
       svg: sanitizeSvg(t.svg),
       firstSeen: typeof t.firstSeen === 'string' ? t.firstSeen : '',
-      project: typeof t.project === 'string' ? t.project : ''
+      project: typeof t.project === 'string' ? t.project : '',
+      // ⚠️ **这是个字段白名单，加了新字段一定要加到这里** ——
+      // 不加的话症状很隐蔽：写盘是对的（文件里有），但读出来没有。
+      // 更坏的是 dict:add 开头就是 readUser()，然后把结果整个写回去 ——
+      // 于是每加一条新词，就把已有条目的新字段全洗掉一遍。
+      // 2026-08-31 加 cat1/cat2/prompt 时正是这么踩的。
+      //
+      // 分类要再验一次：这个文件用户和外部脚本都能改，手写进来的分类可能
+      // 根本不存在，那样的词条在界面上一级二级都筛不到，等于消失。
+      ...(isValidCat(t.cat1, t.cat2) ? { cat1: t.cat1 as string, cat2: t.cat2 as string } : {}),
+      ...(typeof t.prompt === 'string' && t.prompt.trim() ? { prompt: t.prompt.trim() } : {})
     })
   }
   return out
@@ -158,6 +169,18 @@ export function registerDictHandlers(): void {
           rejected.push({ name, why: 'category 必须是 interaction / motion / visual 之一' })
           continue
         }
+        // 二级分类：**可选，但给了就必须对**。
+        // 不设成必填是为了兼容已经装在用户机器上的老 skill（它们只写 category）；
+        // 而写错了必须当场拒 —— 一个不存在的分类名会让这条词条在界面上
+        // 一级二级都筛不到，等于收进去就消失了，比拒收难查得多。
+        const hasCat2 = t.cat1 !== undefined || t.cat2 !== undefined
+        if (hasCat2 && !isValidCat(t.cat1, t.cat2)) {
+          rejected.push({
+            name,
+            why: `cat1/cat2 不是有效的分类对（拿到 ${JSON.stringify(t.cat1)} / ${JSON.stringify(t.cat2)}）——两个都要给，且二级必须属于那个一级`
+          })
+          continue
+        }
         const id = (typeof t.id === 'string' && t.id.trim() ? t.id : en).toLowerCase().replace(/\s+/g, '-')
         if (have.has(id)) {
           rejected.push({ name, why: '已经收录过了' })
@@ -170,10 +193,14 @@ export function registerDictHandlers(): void {
           zh,
           en,
           category: cat as UserTerm['category'],
+          ...(hasCat2 ? { cat1: t.cat1 as string, cat2: t.cat2 as string } : {}),
           keywords: Array.isArray(t.keywords)
             ? t.keywords.filter((k): k is string => typeof k === 'string')
             : [en, zh],
           logic,
+          ...(typeof t.prompt === 'string' && t.prompt.trim()
+            ? { prompt: t.prompt.trim() }
+            : {}),
           svg,
           firstSeen: today,
           project: typeof t.project === 'string' ? t.project : ''

@@ -336,10 +336,17 @@ export interface UserTerm {
   id: string
   en: string
   zh: string
-  /** 必须落在内置三类里，自建词条不另开分类 */
+  /** 必须落在内置三类里，自建词条不另开分类。
+   *  **老字段，保留** —— 用户机器上已装的 skill 还在按它写 */
   category: 'interaction' | 'motion' | 'visual'
+  /** 二级分类（2026-08-31）。**可选** —— 强制必填会让已装的老 skill 一调就被拒。
+   *  给了就必须是 shared/dictTaxonomy.ts 里真实存在的一对；没给就落到界面的「未分类」。 */
+  cat1?: string
+  cat2?: string
   keywords: string[]
   logic: string
+  /** 点击后挂成 chip、发送时展开的完整提示词。可选，但没有它点下去只能插解释 */
+  prompt?: string
   /** 演示缩略图（内联 SVG，写入前已清洗） */
   svg: string
   /** 第一次遇到的日期 */

@@ -134,8 +134,13 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           zh: u.zh || u.en,
           en: u.en,
           category: u.category,
+          // 归了类的自建词条要能跟内置的一起被二级导航筛到；没归类的落「未分类」
+          cat1: u.cat1,
+          cat2: u.cat2,
           keywords: u.keywords,
           logic: u.logic,
+          // 有提示词才能挂成 chip（没有的话 insert 会退回插解释并明说）
+          prompt: u.prompt,
           svg: u.svg,
           firstSeen: u.firstSeen,
           project: u.project,
