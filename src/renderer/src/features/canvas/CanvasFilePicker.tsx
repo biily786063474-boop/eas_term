@@ -14,16 +14,8 @@ import { createPortal } from 'react-dom'
 import type { DirEntry, PluginInfo, RecentFile } from '../../../../shared/types'
 import { useMenuAnchor, useDismiss } from './CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
-import {
-  ChevronLeftIcon,
-  ClockIcon,
-  CodeIcon,
-  FileIcon,
-  FolderIcon,
-  GlobeIcon,
-  ImageIcon,
-  PlugIcon
-} from '../../ui/Icons'
+import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, PlugIcon, FilesIcon } from '../../ui/Icons'
+import { SplitText } from '../../ui/SplitText'
 
 const MAX_RECENT = 60
 
@@ -158,18 +150,35 @@ export function CanvasFilePicker({
         <span className="cpk-title">插入</span>
         <span className="cpk-scope">{rootName}</span>
       </div>
-      <div className="cpk-tabs">
-        <button className={mode === 'tree' ? 'on' : ''} onClick={() => setMode('tree')}>
+      {/* ── 两组按钮并排一行（2026-08-31）────────────────────────────
+          原来是上下两行、每个都摊着文字，六个按钮占掉弹层顶部一大块。
+          现在**默认只露 icon**，hover 才展开成带文字的胶囊，文字逐字浮现。
+          一行放得下，弹层的高度全留给真正要看的文件列表。 */}
+      <div className="cpk-bar">
+      <div className="cpk-tabs cpk-pills">
+        <button
+          className={`cpk-pill${mode === 'tree' ? ' on' : ''}`}
+          aria-label="文件夹"
+          onClick={() => setMode('tree')}
+        >
           <FolderIcon size={12} />
-          文件夹
+          <SplitText text="文件夹" />
         </button>
-        <button className={mode === 'recent' ? 'on' : ''} onClick={() => setMode('recent')}>
+        <button
+          className={`cpk-pill${mode === 'recent' ? ' on' : ''}`}
+          aria-label="最近"
+          onClick={() => setMode('recent')}
+        >
           <ClockIcon size={12} />
-          最近
+          <SplitText text="最近" />
         </button>
-        <button className={mode === 'plugin' ? 'on' : ''} onClick={() => setMode('plugin')}>
+        <button
+          className={`cpk-pill${mode === 'plugin' ? ' on' : ''}`}
+          aria-label="插件"
+          onClick={() => setMode('plugin')}
+        >
           <PlugIcon size={12} />
-          插件
+          <SplitText text="插件" />
         </button>
       </div>
 
@@ -177,17 +186,18 @@ export function CanvasFilePicker({
           插图片进画布是这个选择器最常见的用途之一，却只能靠肉眼在一堆代码文件里找。
           **插件 tab 不出现这条** —— 「文档/多媒体」对插件没有意义，留着只是噪声。 */}
       {mode !== 'plugin' && (
-      <div className="cpk-filters">
+      <div className="cpk-filters cpk-pills">
         {(
           [
-            { id: 'all', label: '全部' },
-            { id: 'docs', label: '文档' },
-            { id: 'media', label: '多媒体' }
+            { id: 'all', label: '全部', Icon: FilesIcon },
+            { id: 'docs', label: '文档', Icon: FileIcon },
+            { id: 'media', label: '多媒体', Icon: ImageIcon }
           ] as const
         ).map((f) => (
           <button
             key={f.id}
-            className={filter === f.id ? 'on' : ''}
+            aria-label={f.label}
+            className={`cpk-pill${filter === f.id ? ' on' : ''}`}
             data-tip={
               f.id === 'docs'
                 ? '.md / .txt / .html'
@@ -201,11 +211,13 @@ export function CanvasFilePicker({
               void window.api.prefs.set('recentDocsOnly', f.id === 'docs')
             }}
           >
-            {f.label}
+            <f.Icon size={12} />
+            <SplitText text={f.label} />
           </button>
         ))}
       </div>
       )}
+      </div>
 
       {mode === 'tree' && (
         <div className="cpk-path" title={dir}>
