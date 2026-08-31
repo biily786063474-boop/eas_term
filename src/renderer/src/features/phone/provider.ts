@@ -89,14 +89,33 @@ async function answer(action: string, args: Record<string, unknown>): Promise<un
  * · **cwd 用项目自己的路径**，不接受手机传路径（那等于让它选在哪跑）。
  * · 项目没有 Frame 就如实失败，不悄悄找个别的地方建。
  */
-function createSession(projectId: string): { ok: boolean; nodeId?: string; error?: string } {
+/**
+ * 手机新建一个 AI 对话节点。
+ *
+ * ── 必须走 `addAgentNode`，不能用 `addFileNode` ────────────────────
+ * 2026-08-30 用户实测撞到：手机建出来的节点在画布上是**一个空白的「预览」框**，
+ * 点进去什么都没有。
+ *
+ * 原因是 `addFileNode` 建的是「自带 pane、没有 leafId」的形态，
+ * 而那种形态走的是 `CanvasFileNode` 那条渲染路 —— **它只认 code/image/web**，
+ * agent 落在那儿就是个空框。`materializeCanvas` 里其实早就写着这条
+ *（"agent 落在那儿会渲染成一个空白框"），但它只在画布加载/切视图时跑，
+ * **手机是运行时建的节点，没人给它补 leaf**。
+ *
+ * `addAgentNode` 是桌面那个「新建 AI 对话」按钮走的同一条路：建一个 agent leaf +
+ * 一个引用它的画布节点，由 PaneLayer 渲染成真正的对话界面。
+ *
+ * **它仍然是惰性的**：`openAgentPane` 只建一个空闲的 pane（带「启动」按钮），
+ * 不起任何进程 —— 手机新建不该在你电脑上拉起 agent，那条边界没变。
+ */
+async function createSession(projectId: string): Promise<{ ok: boolean; nodeId?: string; error?: string }> {
   const s = useStore.getState()
   const top = s.canvas.frames.find((f) => !f.parentId && f.projectId === projectId)
   if (!top) return { ok: false, error: '这个项目在画布上没有 Frame' }
   const proj = s.projects.find((p) => p.id === projectId)
   if (!proj?.path) return { ok: false, error: '这个项目没有目录' }
   const before = new Set(top.nodes.map((n) => n.id))
-  s.addFileNode(top.id, { kind: 'agent', cwd: proj.path }, 40, 40)
+  await s.addAgentNode(top.id, { cwd: proj.path })
   const after = useStore.getState().canvas.frames.find((f) => f.id === top.id)
   const added = after?.nodes.find((n) => !before.has(n.id))
   if (!added) return { ok: false, error: '节点没建出来' }
