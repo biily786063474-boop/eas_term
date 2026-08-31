@@ -35,13 +35,22 @@ import { useProjectRows, focusTerminal } from '../status/useStatus.ts'
 import { StatusIcon } from '../status/StatusIcon'
 import { RunMonitor } from '../status/RunMonitor'
 
-/** 把列的颜色变成 .cframe 认的 `--frame-rgb`（它的用法是 rgba(var(--frame-rgb), α)，
- *  所以要的是 "r, g, b" 三个数，不是 #rrggbb）。没颜色就不设，回落主题色。 */
-function frameTint(hex?: string): Record<string, string> {
+/** 把列的颜色变成 CSS 认的 `"r, g, b"`（用法是 rgba(var(--dot-rgb), α)，
+ *  所以要的是三个数，不是 #rrggbb）。没颜色就不设，回落主题色。
+ *
+ *  ── 2026-08-31：只染色点，不再染整个 Frame ──────────────────────
+ *  原来这个值注在 `.cframe` 上，于是**整个框**（边框、标题栏渐变、
+ *  状态高亮）都跟着看板分类的颜色走。用户要的是反过来：
+ *  **框一律主题色，分类色只出现在标题栏那颗圆点上。**
+ *
+ *  理由是对的：画布上十几个 Frame 各染各的色，整体就散了 ——
+ *  而「这个项目属于哪一类」是一条**次要信息**，一颗 9px 的点足够承载，
+ *  不需要把整个容器都染上。 */
+function dotTint(hex?: string): Record<string, string> {
   if (!hex) return {}
   const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex.trim())
   if (!m) return {}
-  return { '--frame-rgb': `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` }
+  return { '--dot-rgb': `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` }
 }
 import { collectLeaves } from '../../layout'
 import './canvas.css'
@@ -1164,8 +1173,11 @@ export function CanvasStage(): JSX.Element {
                 height: f.collapsed ? HEAD_H : f.h,
                 // 状态配色**注入变量，不用写死的 st-* 类**：列是用户自己建的，
                 // 新建一列不可能顺手去 canvas.css 里加一条规则。
-                // .cframe 本来就读 --frame-rgb（不设时回落主题色），正好接上
-                ...frameTint(statusColor(statusOfFrame(frames, projects, f.id)))
+                //
+                // **注的是 `--dot-rgb`，只有那颗圆点读它**（见 .cframe-dot）——
+                // 框本身一律走主题色。十几个 Frame 各染各的色，画布整体就散了，
+                // 而「属于哪一类」是次要信息，一颗 9px 的点足够承载。
+                ...dotTint(statusColor(statusOfFrame(frames, projects, f.id)))
               } as React.CSSProperties
             }
           >

@@ -52,8 +52,13 @@
 
 /* ---------- Frame 卡片（项目边界） ---------- */
 /* Frame 的一切用色都走 --frame-rgb 这一个变量，而不是直接引 --accent-rgb：
- * 颜色状态标签（下面的 .st-*）只需要改这一个值，边框/标题栏/圆点/缩放角/选中高亮
- * 就整体跟着变。否则打一个标签得追着改七八条规则，漏一条就是「红 Frame 配蓝手柄」。 */
+ * 只改这一个值，边框/标题栏/缩放角/选中高亮就整体跟着变。
+ * 否则改一次配色得追着改七八条规则，漏一条就是「红 Frame 配蓝手柄」。
+ *
+ * **2026-08-31 起它不再被状态色覆盖** —— 框一律主题色。
+ * 看板分类的颜色只进那颗圆点（--dot-rgb，见 .cframe-dot）：
+ * 画布上十几个 Frame 各染各的色，整体就散了，而「属于哪一类」
+ * 是次要信息，一颗 9px 的点足够承载。 */
 .cframe {
   --frame-rgb: var(--accent-rgb);
   position: absolute;
@@ -66,8 +71,8 @@
 }
 
 /* 状态配色**不在这里写死**：看板的列是用户自己建的（board.json），
- * 新建一列不可能顺手来 CSS 里加一条规则。颜色由渲染层内联注入 --frame-rgb，
- * 没有状态时回落到 .cframe 自己的默认（主题色）。 */
+ * 新建一列不可能顺手来 CSS 里加一条规则。颜色由渲染层内联注入 `--dot-rgb`，
+ * 只有 .cframe-dot 读它；没有状态时那颗点回落到 --frame-rgb（主题色）。 */
 
 .cframe-head {
   height: 34px;
@@ -95,8 +100,11 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgb(var(--frame-rgb));
-  box-shadow: 0 0 8px rgba(var(--frame-rgb), 0.6);
+  /* **只有这颗点吃分类色**。`--dot-rgb` 由 CanvasStage 按项目状态注入，
+     没设时回落 `--frame-rgb`（也就是主题色）—— 也就是「没分类的项目
+     跟框一个颜色」，而不是凭空多一个色。 */
+  background: rgb(var(--dot-rgb, var(--frame-rgb)));
+  box-shadow: 0 0 8px rgba(var(--dot-rgb, var(--frame-rgb)), 0.6);
   cursor: pointer;
   transition: transform 0.12s ease;
 }
