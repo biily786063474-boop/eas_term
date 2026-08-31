@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>辞典改造方案</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+@media (max-width:640px){h1{font-size:29px}}
+</style>
+</head>
+<body>
+
+<nav><div class="navwrap">
+  <span class="navbrand">辞典改造</span>
+  <a href="#结论">结论</a>
+  <a href="#实情">摸到的实情</a>
+  <a href="#改名">① 改名</a>
+  <a href="#分类">② 分类</a>
+  <a href="#搜索">③ 搜索</a>
+  <a href="#提示词">④ 提示词与 chip</a>
+  <a href="#沉淀">⑤ 沉淀改 skill</a>
+  <a href="#分期">分期</a>
+  <a href="#下一步">要你定的</a>
+</div></nav>
+
+<main>
+<header class="hero">
+  <span class="eyebrow">方案 · 待决策 · v1</span>
+  <h1>名词词典 → 辞典：五件事的改造方案</h1>
+  <p class="lede">
+    五条需求里，<b>只有两条是纯代码活</b>。真正的工作量在数据上：381 条词条要重新归类，
+    242 条要补写提示词。这份方案把代码改动和数据工程分开算，并指出两个必须你拍板的岔口。
+  </p>
+  <div class="meta">
+    <span>词条 <b>381</b> 条</span>
+    <span>已有提示词 <b>139</b> 条</span>
+    <span>缺提示词 <b>242</b> 条</span>
+    <span>2026-08-31</span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">先做能立刻见效的，把要花钱的那块拆开单算</div>
+  <p class="secnote">五件事的性质差别很大，捆在一起做会被最慢的那块拖住。</p>
+
+  <div class="grid g4" style="margin-bottom:24px">
+    <div class="stat"><div class="num n-em">2 天</div><div class="lab">改名 + 搜索 + chip 机制<br>纯代码，可立刻做</div></div>
+    <div class="stat"><div class="num n-am">381</div><div class="lab">要重新归类的词条<br>需要你先定一级分类</div></div>
+    <div class="stat"><div class="num n-ro">242</div><div class="lab">要补写提示词<br>模型生成，<b>要花 token</b></div></div>
+    <div class="stat"><div class="num n-sk">1</div><div class="lab">要拆掉的链路<br>自动沉淀改成 skill 驱动</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">建议</div>
+    <p style="margin:0">
+      <b>分三步走。</b>第一步只动代码（改名、搜索、chip 机制、提示词字段的规格），
+      当天就能用上；第二步定分类体系并批量重标；第三步批量补写 242 条提示词。
+      第二三步都是「模型批量处理数据」，成本可估、可分批、可中断，
+      <b>不该挡住第一步的交付</b>。
+    </p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">但有一条我不同意照字面做</div>
+    <p style="margin:0 0 8px">
+      「用户点击后在输入框中显示的是一个 chip 块」——
+      <b>终端里做不到</b>。终端是一条字节流，没有 DOM，插进去的只能是纯文本。
+    </p>
+    <p style="margin:0">
+      所以 chip 只在 <b>AI 对话</b>的输入框成立；插到终端时仍然是完整提示词的纯文本。
+      好在这不是妥协：终端那条路本来就是「把提示词交给命令行 agent」，全文反而是对的。
+    </p>
+  </div>
+</section>
+
+<section id="实情">
+  <h2>Facts</h2>
+  <div class="sectitle">摸到的实情</div>
+  <p class="secnote">下面每一条都是查过代码和数据得到的，不是估计。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>项目</th><th>现状</th><th>影响哪条需求</th></tr></thead>
+    <tbody>
+      <tr><td><b>词条总数</b></td><td>381 条，来自 <code>dictionary-bundle.json</code>（689 KB）</td><td>②③④</td></tr>
+      <tr><td><b>分类</b></td><td>扁平三类：interaction 131 / motion 120 / visual 130</td><td>②</td></tr>
+      <tr><td><b>字段</b></td><td><code>id·zh·en·category·keywords·logic·svg</code>，另有可选 <code>clip</code>（138 条）和 <code>prompt</code>（139 条）</td><td>④</td></tr>
+      <tr><td><b>提示词覆盖</b></td><td>interaction 49/131 · motion 40/120 · visual 50/130，<b>合计 139/381</b></td><td>④</td></tr>
+      <tr><td><b>点击行为</b></td><td><code>term.prompt || term.logic || term.en</code> —— 没有 prompt 就插解释，再没有就插英文名</td><td>④</td></tr>
+      <tr><td><b>搜索</b></td><td>只在 <code>zh / en / keywords</code> 上做子串匹配，<b>不搜 logic、不搜 prompt、不搜分类名</b></td><td>③</td></tr>
+      <tr><td><b>输入框</b></td><td>原生 <code>&lt;textarea&gt;</code>，<b>无法在里面渲染 chip</b></td><td>④</td></tr>
+      <tr><td><b>但已有附件行</b></td><td><code>.ac-attach-row</code>：输入框上方一行带 ✕ 的缩略图（图片粘贴用）</td><td>④</td></tr>
+      <tr><td><b>「词典」字样</b></td><td>代码里 63 处，跨 12+ 文件；其中<b>标识符和文件路径不能改</b>（<code>dict_add</code>、<code>~/.eas/dict-user.json</code>）</td><td>①</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">一处代码注释已经过时</div>
+    <p style="margin:0">
+      <code>DictTerm.prompt</code> 的注释写着「动效词条独有」。实测 <b>三类都有</b>
+      （49 / 40 / 50）。改的时候顺手修掉，不然下一个人会照着它做错判断。
+    </p>
+  </div>
+</section>
+
+<section id="改名">
+  <h2>Part 1</h2>
+  <div class="sectitle">① 名词词典 → 辞典</div>
+  <p class="secnote">最简单的一件，但有一条边界必须划清楚。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>面</th><th>动不动</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td>界面文案（面板标题、tooltip、设置项、悬浮球）</td><td><span class="b b-em">改</span></td><td>就是这次要改的东西</td></tr>
+      <tr><td>提示语里的「词典」（钩子说明、agent 引导）</td><td><span class="b b-em">改</span></td><td>同上，用户读得到</td></tr>
+      <tr><td>MCP 工具名 <code>dict_add</code> / <code>dict_pending</code></td><td><span class="b b-ro">不改</span></td><td>已经写进了用户机器上的 skill 和 AGENTS.md，改了老配置全失效</td></tr>
+      <tr><td>文件路径 <code>~/.eas/dict-*.json</code></td><td><span class="b b-ro">不改</span></td><td>改了等于所有人的自建词条丢失，收益为零</td></tr>
+      <tr><td>代码标识符 / CSS 类名 <code>dict-*</code></td><td><span class="b b-gy">不改</span></td><td>内部名，改了只是制造一次大 diff</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>
+    也就是说：<b>只改用户读得到的字</b>。工作量约 20 处文案替换 + 一次全量搜索确认没有漏网。
+  </p>
+</section>
+
+<section id="分类">
+  <h2>Part 2</h2>
+  <div class="sectitle">② 二级分类：按「你想干什么」切，不按「它是什么」切</div>
+  <p class="secnote">这一条要你先拍板一级分类，我才能动手重标 381 条。</p>
+
+  <h3>现在的问题</h3>
+  <p>
+    现在的三类是<b>按技术门类</b>切的：交互行为 / 动效 / UI视觉。
+    问题是用户找东西时想的不是「这属于哪个门类」，而是<b>「我现在要做一个什么」</b>——
+    「列表滚起来卡」「表单要防重复提交」「想要个入场效果」。
+    按门类切的话，同一个场景的解法散在三类里：做一个「加载中」要同时翻
+    interaction（骨架屏）、motion（脉冲动画）、visual（占位灰块）。
+  </p>
+
+  <h3>提议的一级分类（<span class="b b-am">要你确认</span>）</h3>
+  <p class="secnote">一级 = 场景/意图，二级 = 具体手法。下面是按现有 381 条实际内容归纳的，不是凭空设计。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>一级（场景）</th><th>二级举例</th><th>现在散在</th></tr></thead>
+    <tbody>
+      <tr><td><b>输入与表单</b></td><td>防抖 · 输入法组合 · 自动保存 · 即时校验 · 乐观更新</td><td>interaction</td></tr>
+      <tr><td><b>列表与滚动</b></td><td>虚拟列表 · 无限滚动 · 吸顶 · 视差 · 滚动驱动动画</td><td>interaction + motion</td></tr>
+      <tr><td><b>加载与等待</b></td><td>骨架屏 · 进度反馈 · 请求取消 · 节流 · 占位图</td><td>三类都有</td></tr>
+      <tr><td><b>转场与入场</b></td><td>入场动画 · 交错 · 页面切换 · 共享元素</td><td>motion</td></tr>
+      <tr><td><b>手势与拖拽</b></td><td>拖放 · 惯性 · 捏合缩放 · 边缘自动滚</td><td>interaction + motion</td></tr>
+      <tr><td><b>反馈与提示</b></td><td>Toast · 气泡 · 震动 · 状态灯</td><td>interaction + visual</td></tr>
+      <tr><td><b>材质与质感</b></td><td>毛玻璃 · 新拟态 · 渐变 · 阴影层级 · 噪点</td><td>visual</td></tr>
+      <tr><td><b>版式与风格</b></td><td>扁平 · 粗野 · Material · 极简 · 拟物</td><td>visual</td></tr>
+      <tr><td><b>运动规律</b></td><td>缓动曲线 · 贝塞尔 · steps · spring · linear()</td><td>motion</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">这一版是提议，不是定案</div>
+    <p style="margin:0">
+      九个一级分类是我按现有词条归纳的。<b>切法变了，重标就得重来一遍</b>，
+      所以请先看这九类合不合你的用法，改完再动手。
+    </p>
+  </div>
+
+  <h3>兼容性怎么处理</h3>
+  <ul class="clean">
+    <li>词条加 <code>cat1</code> / <code>cat2</code> 两个新字段，<b>老的 <code>category</code> 保留</b> —— 自建词条（<code>dict_add</code> 校验 category 落在旧三类里）和已装的 skill 不受影响</li>
+    <li>界面按新字段展示；没有新字段的词条（比如用户自建的）落到「未分类」，不消失</li>
+    <li>重标由模型批量做，<b>产出是一份映射表</b>（id → cat1/cat2），人能扫一遍再合并 —— 不直接改 381 条原始数据</li>
+  </ul>
+</section>
+
+<section id="搜索">
+  <h2>Part 3</h2>
+  <div class="sectitle">③ 搜索：能用片段、分类、名称都搜到</div>
+  <p class="secnote">这一条是纯代码，改动最小，收益立刻可见。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th></th><th>现在</th><th>改成</th></tr></thead>
+    <tbody>
+      <tr><td><b>搜什么</b></td><td>zh / en / keywords</td><td>再加 <b>logic 片段</b>、<b>prompt 片段</b>、<b>分类名</b>（一级+二级）</td></tr>
+      <tr><td><b>怎么匹</b></td><td><code>includes</code> 子串</td><td>子序列匹配 + 打分（今天刚为项目菜单写的 <code>fuzzyPick</code> 直接复用）</td></tr>
+      <tr><td><b>排序</b></td><td>原顺序</td><td>名称命中 &gt; 分类命中 &gt; 关键词命中 &gt; 正文片段命中</td></tr>
+      <tr><td><b>命中要看得见</b></td><td>无</td><td>正文片段命中时，在卡片上高亮那一段 —— 否则用户不知道为什么它被搜出来</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>
+    <code>fuzzyPick</code> 已经在仓库里（<code>features/canvas/fuzzy.ts</code>，10 条测试），
+    能让 <code>bg</code> 匹到 <code>Bzone-Gateway</code>。搬过来加权重即可。
+  </p>
+</section>
+
+<section id="提示词">
+  <h2>Part 4</h2>
+  <div class="sectitle">④ 提示词规格 + chip：这一条最重，也最值</div>
+  <p class="secnote">现在 242 条点下去插入的是「解释」，模型拿到那段话不知道要它干什么。</p>
+
+  <h3>问题有多具体</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">有 prompt 的（139 条）</h4>
+      <p style="font-size:13.5px;color:#a3a3a3;margin:0">
+        「<b>帮我实现一个「入场动画」效果。</b>【外观】内容整块从下方滑入并淡入……
+        【实现】GSAP，依赖 gsap。【关键参数】distance=100……【坑】长列表逐项套用会显得拖沓。」
+      </p>
+      <p style="margin:12px 0 0"><span class="b b-em">是指令</span> 模型知道要做什么</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">没有 prompt 的（242 条）</h4>
+      <p style="font-size:13.5px;color:#a3a3a3;margin:0">
+        「高频事件触发后延迟 N 毫秒再执行；若期间又触发就重置计时器……典型场景：搜索框联想。」
+      </p>
+      <p style="margin:12px 0 0"><span class="b b-ro">是解释</span> 模型拿到只会跟你讨论概念</p>
+    </div>
+  </div>
+
+  <h3>提示词的结构规格（提议）</h3>
+  <p>沿用现有 139 条的骨架并补齐三类都适用的字段。<b>名称 + 实现方法</b>两段式，中位长度控制在 200–350 字：</p>
+<pre><code>在<span class="hi">{此处}</span>实现「<b>{中文名}</b>」（{英文名}）。
+
+【<span class="flow">要达到的效果</span>】 一句话说清用户看到/感受到什么，不解释原理
+【<span class="flow">触发时机</span>】   什么条件下发生（滚动到视口 / 输入停止 / 点击 / 常驻）
+【<span class="flow">实现方法</span>】   具体做法：用什么 API、什么结构、分几步
+【<span class="flow">关键参数</span>】   可调的量和推荐值，带单位
+【<span class="flow">别踩的坑</span>】   这个效果最常见的做错方式
+<span class="dim">【可选 · 依赖】     需要装什么库；能用原生就写「无需依赖」</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">「{此处}」这个占位很关键</div>
+    <p style="margin:0">
+      你说的「让模型明白<b>某个地方</b>要插入某个效果」——
+      提示词开头留一个位置占位，chip 插进对话时它就在你的上下文里，
+      模型知道是「在你正说的那个地方」加，而不是新起一个 demo。
+    </p>
+  </div>
+
+  <h3>chip 怎么做</h3>
+  <p>
+    输入框是原生 <code>textarea</code>，<b>里面塞不了 chip</b>。但图片附件已经解决过同一个问题——
+    <code>.ac-attach-row</code>：输入框上方一行带 ✕ 的小块。chip 直接复用这套。
+  </p>
+<pre><code>┌─────────────────────────────────────────┐
+│ <span class="hi">[⚡ 防抖 ✕]  [✨ 入场动画 ✕]</span>          <span class="dim">← 复用 .ac-attach-row</span>
+├─────────────────────────────────────────┤
+│ 帮我把搜索框改一下                        │  <span class="dim">← 你打的字，还是纯 textarea</span>
+└─────────────────────────────────────────┘
+
+发送时实际送出：
+  帮我把搜索框改一下
+  <span class="dim">---</span>
+  <span class="flow">在上文提到的位置实现「防抖」（Debounce）。【要达到的效果】…</span>
+  <span class="flow">在上文提到的位置实现「入场动画」（AnimatedContent）。【要达到的效果】…</span></code></pre>
+
+  <ul class="clean">
+    <li><b>chip 只显示名字</b>，鼠标悬停看全文 —— 满足「输入框里只看到名字」</li>
+    <li><b>发送时展开</b>，模型拿到完整提示词 —— 满足「实际发送整个提示词」</li>
+    <li><b>可以点 ✕ 撤掉</b>，跟图片附件一致，不用另学一套</li>
+    <li><b>终端路径不变</b>：直接写入完整提示词纯文本（终端没有 DOM，见开头那条反对意见）</li>
+  </ul>
+
+  <h3>242 条提示词怎么补</h3>
+  <div class="tw"><table>
+    <thead><tr><th>做法</th><th>成本</th><th>取舍</th></tr></thead>
+    <tbody>
+      <tr><td><b>模型批量生成</b>（推荐）</td><td>242 条 × 约 350 字 ≈ 一次几十万 token</td><td>可分批（按分类，一次 30–50 条），产出先落成草稿文件再人工扫一遍</td></tr>
+      <tr><td>只补高频的 80 条</td><td>约三分之一</td><td>剩下的仍然插解释 —— 用户还是会撞到「这不是提示词」</td></tr>
+      <tr><td>不补，运行时现生成</td><td>每次点击都花 token</td><td><span class="b b-ro">不推荐</span>：点一下等两秒，而且同一条反复付费</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+
+<section id="沉淀">
+  <h2>Part 5</h2>
+  <div class="sectitle">⑤ 自动沉淀拆掉，改成 skill 驱动</div>
+  <p class="secnote">你要求「不要自动去收集了」。但那个钩子实际是<b>两半</b>，只有一半在收集 —— 这个区别不分清会误删。</p>
+
+  <div class="warn">
+    <div class="vlabel">先分清：scan-commit.mjs 干的是两件事</div>
+    <div class="tw" style="margin-top:12px"><table>
+      <thead><tr><th>哪一半</th><th>干什么</th><th>花 token 吗</th><th>这次动它吗</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>知识手册</b></td>
+          <td>扫本次提交新增的代码行，命中<b>已收录</b>的词条 → 写进
+              <code>docs/knowledge-manual.html</code> + 输出一条简报</td>
+          <td><span class="b b-em">零</span></td>
+          <td><span class="b b-gy">不动</span> 它不收集新词，只是「这次用到了哪些概念」</td>
+        </tr>
+        <tr>
+          <td><b>自动沉淀</b></td>
+          <td>发现<b>没收录</b>的术语 → 记进 <code>~/.eas/dict-pending.json</code> →
+              agent 事后用 <code>dict_add</code> 补全成完整词条</td>
+          <td><span class="b b-ro">要</span></td>
+          <td><span class="b b-ro">拆掉</span> 这一半才是「自动收集」</td>
+        </tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <h3>为什么拆掉是对的</h3>
+  <ul class="clean">
+    <li><b>它猜不准该归哪一类。</b>新分类是二级的、按场景切的 —— 一个从代码里扫出来的英文标识符，机器判不出它属于「加载与等待」还是「反馈与提示」</li>
+    <li><b>它产不出 hover 演示。</b>词条要有 SVG 示意图或演示短片，那是这个辞典最有价值的部分。自动补全写不出来，只能给一个占位</li>
+    <li><b>它在你没看的时候花钱。</b>默认关着正是因为这条不好交代 —— 与其留一个默认关、开了会偷偷消费的开关，不如让添加这件事变成一次明确的动作</li>
+  </ul>
+
+  <h3>换成什么：一个 skill 走完四步</h3>
+  <p class="secnote">用户想加一条时主动调它。skill 不自己写词条，它<b>引导补全</b>并在每一步停下来给你确认。</p>
+
+<pre><code><span class="dim">用户：「把『边缘自动滚』收进辞典」</span>
+
+<span class="flow">① 定分类</span>   在二级体系里定位 → 提 1-2 个候选让你选
+             <span class="dim">「列表与滚动 › 拖拽辅助」还是「手势与拖拽 › 边界行为」？</span>
+
+<span class="flow">② 补结构</span>   按新数据结构逐字段补：zh / en / keywords / logic
+             <span class="dim">keywords 要含实际会打出来的写法（edge scroll、边缘滚动、自动滚）</span>
+
+<span class="flow">③ 做演示</span>   产出 hover 时看的那张图 —— <b>这一步不能省</b>
+             <span class="dim">静态概念 → 内联 SVG；动效 → 短片（走 dict-clip:// 协议）</span>
+
+<span class="flow">④ 写提示词</span> 按 ④ 那节的规格写，含「{此处}」占位
+             <span class="dim">写完当场能被 chip 用</span>
+
+<span class="flow">⑤ 收录</span>     调 <code>dict_add</code> 写进 <code>~/.eas/dict-user.json</code>
+             <span class="dim">校验通过才落盘，字段缺一不可</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">这样换的好处</div>
+    <p style="margin:0">
+      <b>花钱变成一次明确的动作</b>，不再是后台偷偷跑；
+      <b>分类由你确认</b>，不靠机器猜；
+      <b>演示图必出</b>，不会再产生「只有名字没有图」的空壳词条 ——
+      而那正是这条链路上一版就栽过的坑（<code>main/dict.ts</code> 开头记着）。
+    </p>
+  </div>
+
+  <h3>要拆的零件清单</h3>
+  <div class="tw"><table>
+    <thead><tr><th>零件</th><th>处置</th></tr></thead>
+    <tbody>
+      <tr><td><code>hooks/scan-commit.mjs</code> 里的 sink 那半</td><td>删掉；手册那半保留</td></tr>
+      <tr><td><code>~/.eas/dict-sink.json</code>（开关）</td><td>不再读；已有文件留着不管，删了反而是动用户的数据</td></tr>
+      <tr><td><code>~/.eas/dict-pending.json</code>（候选队列）</td><td>同上</td></tr>
+      <tr><td>MCP 工具 <code>dict_pending</code></td><td>下线</td></tr>
+      <tr><td>MCP 工具 <code>dict_add</code></td><td><b>保留</b> —— 新 skill 的最后一步就调它，只是校验要跟上新数据结构</td></tr>
+      <tr><td><code>DictHookBar.tsx</code> 里那个「让这份辞典自己长大」的开关</td><td>换成「怎么加一条」的入口</td></tr>
+      <tr><td>设置 →「扩展能力」里的「提交即复盘钩子」条目</td><td>说明要改 —— 它现在写着「把用到但词典没收录的术语存进自建词库」，那句话将不再成立</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="分期">
+  <h2>Plan</h2>
+  <div class="sectitle">分期</div>
+  <p class="secnote">按「能不能立刻交付」切，不按需求编号切。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一步 · 纯代码 · 不依赖任何决策</div>
+      <div class="tt">改名 + 搜索 + chip 机制 + 提示词字段规格</div>
+      <div class="td">
+        文案改「辞典」；搜索接上 fuzzyPick 并扩到 logic/prompt/分类；
+        chip 复用附件行；<code>prompt</code> 字段的读取逻辑改成「没有就明确提示缺失」而不是偷偷插解释。
+        <b>做完当天可用，139 条已有提示词立刻受益于 chip。</b>
+        同期拆掉自动沉淀那半（不依赖任何决策，它只是删代码）。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第二步 · 要你先定一级分类</div>
+      <div class="tt">二级分类体系 + 批量重标 381 条</div>
+      <div class="td">
+        模型产出 id → cat1/cat2 的映射表，人扫一遍再合并。界面加二级导航。
+        老 <code>category</code> 字段保留不动。<b>「加一条辞典」的 skill 也在这一步写</b> ——
+        它要引用二级体系，体系没定就写不出来。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第三步 · 要你同意花这笔 token</div>
+      <div class="tt">补写 242 条提示词</div>
+      <div class="td">
+        按新规格分批生成，每批落成草稿文件、抽查后合入。
+        可以随时中断，已合入的那部分立刻生效。
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">要你定的两件事</div>
+  <p class="secnote">这两个不定，第二三步没法动手；第一步不受影响，你说开始我就能做。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>要定什么</th><th>不定的后果</th></tr></thead>
+    <tbody>
+      <tr><td><b>1</b></td><td>上面那<b>九个一级分类</b>合不合用？要增/删/改哪几个</td><td>切法变了就得重标一遍，返工整个第二步；「加一条辞典」的 skill 也写不出来</td></tr>
+      <tr><td><b>2</b></td><td>242 条提示词<b>批量生成</b>要花 token，是否同意 / 还是只补高频的那批</td><td>第三步无法开始，用户继续撞到「点出来是解释」</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dcode">
+    <div class="dlabel">决策码 · 复制粘回对话</div>
+    <div class="dcmd">辞典方案：第一步照做；分类 = [同意九类 / 改成…]；提示词 = [全补 / 只补高频 / 先不补]</div>
+  </div>
+</section>
+
+<footer style="border-top:1px solid #1f1f1f;padding-top:24px;color:#525252;font-size:12.5px">
+  <p style="margin:0 0 6px">文件：<code>docs/辞典改造方案.html</code></p>
+  <p style="margin:0">
+    数据来源：<code>src/renderer/src/features/dict/dictionary-bundle.json</code>（381 条）·
+    <code>src/renderer/src/features/dict/DictView.tsx</code> ·
+    <code>src/main/dict.ts</code> ·
+    <code>src/renderer/src/features/agentChat/ChatToolbar.tsx</code>
+  </p>
+</footer>
+</main>
+</body>
+</html>
