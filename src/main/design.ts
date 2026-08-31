@@ -4,6 +4,8 @@ import { ipcMain, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
+import { guardDir } from './fsGuard'
+
 interface ExportResult {
   ok: boolean
   error?: string
@@ -18,7 +20,13 @@ export function registerDesignHandlers(): void {
         if (!projectPath || !filename) return { ok: false, error: '缺少项目路径或文件名' }
         // basename 兜底：防路径穿越，产物只落在项目 demo/ 下
         const safeName = path.basename(filename)
-        const demoDir = path.join(projectPath, 'demo')
+        // projectPath 是渲染层传进来的 —— 按 fsGuard 的前提（渲染进程能被网页内容影响：
+        // 画布里的 webview 开任意网址、MCP 桥接外部 agent），它同样不可尽信。
+        // 只挡 filename 不挡 projectPath 的话，这条通道能在任意位置建出 demo/ 并写文件。
+        // 用 g.path 而不是原始入参：realResolve 已经把符号链接解开，避免软链绕过前缀比对。
+        const g = guardDir(projectPath)
+        if (!g.ok) return g
+        const demoDir = path.join(g.path, 'demo')
         await fs.promises.mkdir(demoDir, { recursive: true })
         const outPath = path.join(demoDir, safeName)
         await fs.promises.writeFile(outPath, Buffer.from(data))
