@@ -1159,7 +1159,7 @@ export function CanvasStage(): JSX.Element {
                   跟色点（状态）同类，不是标题栏右边那排「做一件事」的按钮。
                   **只有顶层项目 Frame 出这个开关**：子 Frame 是文件夹分组，
                   跟着父的走（判定见 teamMode.ts）。 */}
-              {!f.parentId && !!f.projectId && (
+              {!f.collapsed && !f.parentId && !!f.projectId && (
                 <button
                   className={`cframe-team${teamModeOf(frames, f.id) ? ' on' : ''}`}
                   data-tip={
@@ -1193,6 +1193,13 @@ export function CanvasStage(): JSX.Element {
                 <b className="cframe-name">{f.name}</b>
               )}
               <span className="cframe-spacer" />
+              {/* ── 折叠时这排全收掉，只留展开 ────────────────────────────
+                  它们做的事都以「你看得见里面」为前提：整理排列看不到结果、
+                  新建的节点会落进一个收起来的盒子里、复制路径跟展开与否无关
+                  但混在一排里只会让折叠态显得没收干净。
+                  折叠态该只剩三样：状态点、名字、展开。 */}
+              {!f.collapsed && (
+                <>
               <button
                 className="cframe-btn"
                 data-tip="整理排列（模块按大小从左上对齐）"
@@ -1238,6 +1245,8 @@ export function CanvasStage(): JSX.Element {
               >
                 <CopyIcon size={13} />
               </button>
+                </>
+              )}
               <button
                 className="cframe-btn"
                 data-tip={f.collapsed ? '展开' : '折叠'}
