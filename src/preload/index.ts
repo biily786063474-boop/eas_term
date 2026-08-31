@@ -311,6 +311,13 @@ const api = {
     /** 隧道开关 / 换隧道服务器。改了会立刻重连 */
     setTunnel: (t: { enabled?: boolean; host?: string; port?: number }): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('phone:setTunnel', t),
+    /** 手机碰了某段会话（在上面发了消息）→ 渲染层把画布上那个节点标出来。
+     *  新建/启动会话不走这条 —— 那两个本来就经过渲染层，就地标了 */
+    onTouched: (cb: (sessionId: string) => void): (() => void) => {
+      const h = (_e: unknown, sid: string): void => cb(sid)
+      ipcRenderer.on('phone:touched', h)
+      return () => ipcRenderer.off('phone:touched', h)
+    },
     /** 状态变了主进程会推一次（开关、配对、设备增删都会触发） */
     onStatus: (cb: (s: PhoneStatus) => void): (() => void) => {
       const h = (_e: unknown, s: PhoneStatus): void => cb(s)

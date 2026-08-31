@@ -393,6 +393,11 @@ async function handle(req: http.IncomingMessage, body: string): Promise<Res> {
     })
     hooks?.onClaim()
     if (!r.ok) return { code: 400, body: { error: r.error ?? '发不出去' } }
+    // **告诉渲染层「手机碰了这段会话」**，让它在画布上留个痕。
+    // 发消息这条不走 queryRenderer（会话在主进程的 sessions 表里，跟界面开没开无关），
+    // 所以这里得单独推一条 —— 不推的话，手机发过消息的节点在画布上毫无表示，
+    // 而你回到电脑前唯一能知道发生过什么的地方就只剩手机面板里的留痕列表了
+    mainWindow()?.webContents.send('phone:touched', sid)
     return { code: 200, body: { ok: true } }
   }
 

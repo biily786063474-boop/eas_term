@@ -434,6 +434,41 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowFrames(frames) } }
     }),
 
+  /** 标记「手机碰过这个节点」。手机新建会话、在上面发消息时打。
+   *  找不到就静默忽略 —— 节点可能已经被关掉了，那不是错误。 */
+  markPhoneNode: (nodeId, at) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.nodes.some((n) => n.id === nodeId)
+            ? { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, phoneAt: at } : n)) }
+            : f
+        )
+      }
+    })),
+
+  /** 你点开它了 → 痕迹消掉。**判据是「你看过」不是「显示过」** */
+  clearPhoneNode: (nodeId) =>
+    set((s) => {
+      // 没打过标记就别动 —— 每次点节点都重建一遍 frames 数组是白白的重渲染
+      if (!s.canvas.frames.some((f) => f.nodes.some((n) => n.id === nodeId && n.phoneAt)))
+        return s
+      return {
+        canvas: {
+          ...s.canvas,
+          frames: s.canvas.frames.map((f) => ({
+            ...f,
+            nodes: f.nodes.map((n) => {
+              if (n.id !== nodeId || !n.phoneAt) return n
+              const { phoneAt: _drop, ...rest } = n
+              return rest
+            })
+          }))
+        }
+      }
+    }),
+
   setNodeAgentSession: (frameId, nodeId, sessionId) =>
     set((s) => ({
       canvas: {

@@ -72,6 +72,12 @@ function overlayHasKeyboard(): boolean {
   return useStore.getState().fullscreenOverlay !== null
 }
 
+/** 这个 Frame 里有几个「手机碰过、你还没看过」的节点。
+ *  纯函数放组件外 —— 它不依赖任何 hook，放里面每次渲染都要重建一次。 */
+function phoneMarks(f: { nodes: { phoneAt?: number }[] }): number {
+  return f.nodes.reduce((n, x) => n + (x.phoneAt ? 1 : 0), 0)
+}
+
 export function CanvasStage(): JSX.Element {
   const viewportRef = useRef<HTMLDivElement>(null)
   const frames = useStore((s) => s.canvas.frames)
@@ -84,6 +90,7 @@ export function CanvasStage(): JSX.Element {
   const addAgentNode = useStore((s) => s.addAgentNode)
   const addBrowserNode = useStore((s) => s.addBrowserNode)
   const tidyFrame = useStore((s) => s.tidyFrame)
+  const clearPhoneNode = useStore((s) => s.clearPhoneNode)
   // 注意：这里不再读 canvas.shapes——成品标记的渲染搬去了 CanvasShapeLayer（它自己订阅）。
   // 留着这个订阅会让 CanvasStage 在每次拖动/编辑标记时跟着空转重渲染一次。
   const addShape = useStore((s) => s.addShape)
@@ -1192,6 +1199,18 @@ export function CanvasStage(): JSX.Element {
               ) : (
                 <b className="cframe-name">{f.name}</b>
               )}
+              {/* 手机碰过、你还没看过的节点数。
+                  **折叠时也显示** —— 那正是你看不见里面节点的时候，
+                  这条恰恰在折叠态最有用。它是信息不是操作按钮，
+                  跟状态点同类，所以不在「折叠只留展开」那条规矩里 */}
+              {phoneMarks(f) > 0 && (
+                <span
+                  className="cframe-phone"
+                  data-tip={`手机在这里做了 ${phoneMarks(f)} 件事，你还没看过`}
+                >
+                  {phoneMarks(f)}
+                </span>
+              )}
               <span className="cframe-spacer" />
               {/* ── 折叠时这排全收掉，只留展开 ────────────────────────────
                   它们做的事都以「你看得见里面」为前提：整理排列看不到结果、
@@ -1273,7 +1292,10 @@ export function CanvasStage(): JSX.Element {
                       frame={f}
                       node={n}
                       selected={sel.has('n:' + f.id + ':' + n.id)}
-                      onSelect={(add) => selectElement('n:' + f.id + ':' + n.id, add)}
+                      onSelect={(add) => {
+                        selectElement('n:' + f.id + ':' + n.id, add)
+                        clearPhoneNode(n.id) // 点开了就是看过了
+                      }}
                     />
                   ) : (
                     <CanvasFileNode
@@ -1281,10 +1303,38 @@ export function CanvasStage(): JSX.Element {
                       frameId={f.id}
                       node={n}
                       selected={sel.has('n:' + f.id + ':' + n.id)}
-                      onSelect={(add) => selectElement('n:' + f.id + ':' + n.id, add)}
+                      onSelect={(add) => {
+                        selectElement('n:' + f.id + ':' + n.id, add)
+                        clearPhoneNode(n.id) // 点开了就是看过了
+                      }}
                     />
                   )
                 )}
+            {/* 手机碰过的节点：一个角标 + 一圈高亮。
+                **画在这一层而不是节点组件里** —— 节点有两种形态
+                （自带 pane 的、和内容由 PaneLayer 接管的 leafId 形态），
+                按几何位置画的话一处就盖住两种，不用改两个组件。
+                点它就消 —— 判据是「你看过了」。 */}
+            {!f.collapsed &&
+              f.nodes
+                .filter((n) => n.phoneAt)
+                .map((n) => (
+                  <div
+                    key={'ph:' + n.id}
+                    className="cnode-phone"
+                    style={{ left: n.x, top: n.y, width: n.w, height: n.h }}
+                  >
+                    <button
+                      className="cnode-phone-dot"
+                      data-tip="手机在这里做过事，点掉这个标记"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        clearPhoneNode(n.id)
+                      }}
+                    />
+                  </div>
+                ))}
           </div>
         ))}
         {/* 自由节点：拖知识库文件到画布任意位置生成，不属于任何 Frame——世界坐标，直接渲染在

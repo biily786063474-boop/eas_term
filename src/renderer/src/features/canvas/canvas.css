@@ -5401,3 +5401,92 @@
   right: 24px;
   bottom: 9px;
 }
+
+/* ── 手机碰过的痕迹（2026-08-30）────────────────────────────────────
+   用户实测反馈：「手机新建了会话，我并没在电脑端看到」。
+   查下来节点其实建对了、位置也合理 —— Frame 有一千多像素高，
+   新节点落在中段，**画布上没有任何东西闪一下**，所以你不会注意到。
+
+   清除的判据是**你点过它**，不是「显示过一次」——
+   这功能存在的前提就是「你够不着电脑」，痕迹必须能等你回来。 */
+
+/* Frame 标题栏上的计数。**折叠时也显示** —— 那正是你看不见里面节点的时候。
+   它是信息不是操作按钮（跟状态点同类），所以不在「折叠只留展开」那条规矩里 */
+.cframe-phone {
+  flex: none;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.9);
+  /* **不能写死 #fff** —— accent 是用户可换的，浅色主题下白字就看不见了。
+     项目里有 --on-accent 专门管这件事（check-accent-contrast.mjs 会拦） */
+  color: var(--on-accent);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* 节点上的一圈高亮。**必须 pointer-events: none** ——
+   它盖在节点正上方，不关掉指针事件的话会把你点节点的那一下吃掉，
+   于是要点两次才能打开节点（第一次只是消标记）。
+   第一版就是这么写的，改之前自己撞到了。
+   消标记有两条路：点右上角那颗点，或者直接点开节点（选中即已读）。 */
+.cnode-phone {
+  position: absolute;
+  padding: 0;
+  border: 1.5px solid rgba(var(--accent-rgb), 0.85);
+  border-radius: var(--radius-md);
+  background: transparent;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* 只有这颗点接指针事件 */
+.cnode-phone-dot {
+  pointer-events: auto;
+  cursor: pointer;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(var(--accent-rgb));
+}
+
+/* 呼吸。**只动 opacity** —— 动 box-shadow/background 的话每帧都要重新光栅化，
+   而 infinite 意味着开着就一直烧（scripts/check-animations.mjs 会拦）。
+   实测：box-shadow 版 8 秒样式重算 960 次，opacity 版 25 次。 */
+.cnode-phone-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgb(var(--accent-rgb));
+  animation: cnode-phone-ring 1.8s ease-out infinite;
+}
+
+@keyframes cnode-phone-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* **宿主是伪元素，清单里就得写伪元素** —— 动画挪到 ::after 之后
+     只列宿主元素的话，开了这个系统设置的人会看到它还在闪 */
+  .cnode-phone-dot::after {
+    animation: none;
+  }
+}

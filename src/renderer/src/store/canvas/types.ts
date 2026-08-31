@@ -60,6 +60,15 @@ export interface CanvasNode {
    *  之后还能从空态的「接上上次的对话」里认回来），新的从零开始。
    *  跟节点一起落盘，所以跨重启稳定 —— 这是「一个窗口绑一段对话」的根据。 */
   chatId?: string
+  /** **手机碰过这个节点的时刻**（新建会话 / 在上面发过消息）。
+   *
+   *  跟节点一起落盘 —— 这是有意的：这个功能存在的前提就是「你够不着电脑」，
+   *  所以痕迹必须能等你回来，哪怕中间关过软件。
+   *  未设 = 没被碰过（老节点天然如此，行为不变）。
+   *
+   *  清除的时机是**你点开它**，不是「显示过一次」——
+   *  「显示过」和「你看过」是两件事，而这份痕迹的用途是后者。 */
+  phoneAt?: number
   /** 终端节点的 Agent 控制台配置（画布独有；持久化，重开保留选择） */
   agent?: NodeAgent
   /** 只读预览：目前只有从知识库拖出来的自由节点会设——内容离开知识库目录后不该被改，
@@ -224,6 +233,10 @@ export interface CanvasSlice {
    *
    *  引用 leaf 的节点不走这条：它们的会话 id 在 leaf 上，走 setAgentSessionId。 */
   setNodeAgentSession: (frameId: string, nodeId: string, sessionId: string) => void
+  /** 标记「手机碰过这个节点」（新建会话 / 在上面发过消息） */
+  markPhoneNode: (nodeId: string, at: number) => void
+  /** 你点开它了 → 痕迹消掉 */
+  clearPhoneNode: (nodeId: string) => void
   removeNode: (frameId: string, nodeId: string) => void
   /** 把一个还在跑的 agent 会话**显示回画布**。已经在画布上就只聚焦。
    *  返回 false = 这个会话的 leaf 找不到了（会话真的没了）。

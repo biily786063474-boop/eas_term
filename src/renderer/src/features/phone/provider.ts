@@ -99,7 +99,12 @@ function createSession(projectId: string): { ok: boolean; nodeId?: string; error
   s.addFileNode(top.id, { kind: 'agent', cwd: proj.path }, 40, 40)
   const after = useStore.getState().canvas.frames.find((f) => f.id === top.id)
   const added = after?.nodes.find((n) => !before.has(n.id))
-  return added ? { ok: true, nodeId: added.id } : { ok: false, error: '节点没建出来' }
+  if (!added) return { ok: false, error: '节点没建出来' }
+  // **打上「手机碰过」的痕迹。** 不打的话它就是画布上悄悄多出来的一个框 ——
+  // Frame 可能有一千多像素高，新节点落在中段，你根本不会注意到
+  //（用户 2026-08-30 实测反馈：「并没在电脑端看到用户创建了会话」）
+  useStore.getState().markPhoneNode(added.id, Date.now())
+  return { ok: true, nodeId: added.id }
 }
 
 /**
@@ -177,7 +182,28 @@ async function startSession(
   // 补的是一个**只能写 sessionId 的窄动作**，不是通用的「改节点」——
   // 给手机一个能改画布任何东西的入口是另一个决定。
   if (!node.leafId) st.setNodeAgentSession(top.id, nodeId, r.sessionId)
+  // 启动也算「手机碰过」——它比新建的分量更大（起来的是能跑命令的 agent）
+  useStore.getState().markPhoneNode(nodeId, Date.now())
   return { ok: true, sessionId: r.sessionId }
+}
+
+/** 手机在某个已有会话上发了消息 → 找到挂着这段会话的节点，打上痕迹。
+ *
+ *  **这条不走 queryRenderer**：发消息是主进程直连 CLI 的（会话在 sessions 表里，
+ *  跟界面开没开无关），所以主进程发一条事件过来，由这里把 sessionId 映回节点。
+ *  映不到就静默忽略 —— 节点可能已经被关掉了，那不是错误。 */
+export function notePhoneMessage(sessionId: string): void {
+  const s = useStore.getState()
+  for (const f of s.canvas.frames) {
+    for (const n of f.nodes) {
+      // 两种形态都要认：自带 pane 的（手机新建的就是这种），
+      // 和引用分屏 leaf 的（桌面建的）
+      if (n.pane?.kind === 'agent' && n.pane.sessionId === sessionId)
+        return s.markPhoneNode(n.id, Date.now())
+      if (n.leafId && findLeaf(s.tabs.find((t) => t.projectId === f.projectId)?.root, n.leafId)?.pane.sessionId === sessionId)
+        return s.markPhoneNode(n.id, Date.now())
+    }
+  }
 }
 
 /** 在一棵分屏树里找某个 leaf。**递归而不是 collectLeaves** —— 这里只要一个，
@@ -199,6 +225,8 @@ let bound = false
 export function bindPhoneProvider(): void {
   if (bound) return
   bound = true
+  // 手机在某段已有会话上发了消息 → 画布上把那个节点标出来
+  window.api.phone.onTouched((sid) => notePhoneMessage(sid))
   window.api.phone.onQuery(({ id, action, args }) => {
     // **异步了**（status 要读甘特图），但仍然一定要 reply ——
     // 不 reply 主进程会一直等到超时，用户看到「电脑正忙」而真实原因埋在这里
