@@ -53,7 +53,7 @@ graph LR
    不是每终端独有的密钥（密钥柜另用一张 `x-eas-secret-token`，两张都要过，见 `eas-secret.mjs`）
 3. `canvas_open_file` / `canvas_open_html` 有**项目内路径白名单**（防渲染 `~/.ssh`）
 
-## 超时分层（不等式必须成立：外层 > 内层）
+## 四道超时闸（分布在三层，不等式必须成立：外层 > 内层）
 
 | 层 | 位置 | 普通 | 长等待 |
 |---|---|---|---|
@@ -123,7 +123,7 @@ graph LR
 ## 契约红线
 
 - `mcp/*.mjs` 的字段格式 —— 改了，用户 `~/.claude.json` 里已注册的旧配置连不上
-- `LONG_WAITS` 两处必须一致；三层超时不等式不能破
+- `LONG_WAITS` 两处必须一致；四道超时闸的不等式不能破（③ 是两个独立常量，别只改一个）
 - `approvalRoute.ts` 的 `hookResponseBody()` ↔ `resources/agent-hooks/responseBody.mjs`：
   跨进程无法 import，**两处注释互相钉死，改一处必须改另一处**；
   `APPROVAL_TIMEOUT_MS` ↔ hook 脚本里的 `FETCH_TIMEOUT_MS` 同理

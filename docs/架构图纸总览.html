@@ -197,7 +197,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
       <tr><td><b>02-分层架构</b></td><td>六层职责 + 启动顺序硬依赖 + 进程模型</td><td><span class="b b-sk">静态</span></td><td>整体重构</td></tr>
       <tr><td><b>03-agent角色边界</b></td><td>3A 产品内角色/五道闸 · 3B 开发期禁区四级</td><td><span class="b b-sk">静态</span></td><td>新增角色 / 新增禁区</td></tr>
       <tr><td><b>10-模块领地图</b></td><td>全局领地图 + 4 条耦合警报 + 加东西改哪几处</td><td><span class="b b-am">动态</span></td><td>新增目录 / 重构 / 新禁区</td></tr>
-      <tr><td><b>11-MCP工具网络</b></td><td>网络图、33 工具、三道锁、三层超时</td><td><span class="b b-am">动态</span></td><td>增删工具 / 改超时鉴权</td></tr>
+      <tr><td><b>11-MCP工具网络</b></td><td>网络图、33 工具、三道锁、四道超时闸</td><td><span class="b b-am">动态</span></td><td>增删工具 / 改超时鉴权</td></tr>
       <tr><td><b>12-skill与hook流程</b></td><td>六注入面、hook 时序、托管区围栏</td><td><span class="b b-am">动态</span></td><td>新注入面 / 改 skill / 改 hook</td></tr>
       <tr><td><b>13-所有权矩阵</b></td><td>主矩阵 + <b>跨文件同步清单</b> + 文档脱节表</td><td><span class="b b-am">动态</span></td><td>与领地图同步</td></tr>
     </tbody>
@@ -377,7 +377,7 @@ buildMenu() → createWindow() → 延迟 8s 跑 checkContracts() 自检</code><
       </tr>
       <tr>
         <td><span class="b b-am">⚠️ 静默失效</span></td>
-        <td><code>index.ts</code> 注册顺序 · 自定义协议注册时机 · 两处 <code>LONG_WAITS</code> · 三层超时不等式 · <code>hookResponseBody()</code> 跨进程副本 · adapters 的 buildArgs / stdin</td>
+        <td><code>index.ts</code> 注册顺序 · 自定义协议注册时机 · 两处 <code>LONG_WAITS</code> · 四道超时闸的不等式 · <code>hookResponseBody()</code> 跨进程副本 · adapters 的 buildArgs / stdin</td>
         <td>不报错，功能悄悄坏掉。一切照常启动，只是密钥桶错了 / profiler 没生效 / PTY 拿不到 MCP token</td>
       </tr>
       <tr>
@@ -453,18 +453,19 @@ Codex            ──stdio──▶ eas-mcp.mjs ──┘   <span class="dim">
       </ol>
     </div>
     <div class="card">
-      <h4 style="margin-top:0">三层超时 · 不等式必须成立</h4>
+      <h4 style="margin-top:0">四道超时闸 · 不等式必须成立</h4>
       <div class="tw" style="margin:0">
       <table style="min-width:0">
         <thead><tr><th>层</th><th>普通</th><th>长等待</th></tr></thead>
         <tbody>
           <tr><td>① shim http.request</td><td>30s</td><td>15min</td></tr>
           <tr><td>② invokeRenderer</td><td>15s</td><td>10min</td></tr>
-          <tr><td>③ 渲染层等待窗口</td><td>—</td><td>8min</td></tr>
+          <tr><td>③a 渲染层 <code>TEAM_WAIT_MS</code></td><td>—</td><td>8min</td></tr>
+          <tr><td>③b 渲染层 <code>batchRequest</code></td><td>—</td><td>9min</td></tr>
         </tbody>
       </table>
       </div>
-      <p style="margin:12px 0 0;font-size:13.5px;color:#a3a3a3">破坏不等式的症状：用户看到<b>连接错误</b>而不是业务提示。</p>
+      <p style="margin:12px 0 0;font-size:13.5px;color:#a3a3a3"><b>③ 是两个独立常量，不是一个</b> —— 服务不同工具、值也不同，只按其中一个去调另一个的超时会改错文件。破坏不等式的症状：用户看到<b>连接错误</b>而不是业务提示。</p>
     </div>
   </div>
 
@@ -584,7 +585,7 @@ AI CLI ──PostToolUse──▶ scan-commit.mjs
     <tbody>
       <tr><td><b>一种画布组件节点</b></td><td><span class="b b-em">只改 1 处</span> 写一个 <code>CanvasComponentDef</code> push 进 <code>registry.tsx</code> 的 <code>CANVAS_COMPONENTS</code>，<b>无需改其它文件</b></td></tr>
       <tr><td><b>一种共享面板类型</b></td><td><span class="b b-am">3 处</span> <code>layout.ts</code> 联合类型 → <code>tabsSlice.ts</code> 穷尽匹配（编译器挡）→ <code>PaneView.tsx</code> 渲染分支（<b>最易漏</b>）</td></tr>
-      <tr><td><b>一个 MCP 工具</b></td><td><span class="b b-am">3–4 处</span> <code>eas-mcp.mjs</code> schema → <code>mcpHandler.ts</code> 执行体 →（长等待则 <code>LONG_WAITS</code> 两处）→ 更新 11 号图纸 → <b>连带改三处手抄的计数</b>：11 号图纸标题、<code>architecture/README.md</code>、本页（脱节的历来都是这三个数字，不是工具表本身）</td></tr>
+      <tr><td><b>一个 MCP 工具</b></td><td><span class="b b-am">3–4 处</span> <code>eas-mcp.mjs</code> schema → <code>mcpHandler.ts</code> 执行体 →（长等待则 <code>LONG_WAITS</code> 两处）→ 更新 11 号图纸 → <b>连带改本页三处手抄的计数</b>：顶部数字块 / 图纸清单表 / MCP 小节导语（<code>docs/architecture/</code> 那边已改成指向 <code>TOOLS</code> 数组，不用动 —— 脱节的历来是这些手抄数字，不是工具表本身）</td></tr>
       <tr><td><b>一个 IPC 通道</b></td><td><span class="b b-ro">3 处</span> <code>src/main/&lt;域&gt;.ts</code> handler → <code>preload/index.ts</code> → 写操作<b>必须</b>加 <code>guardPath</code>/<code>guardDir</code></td></tr>
       <tr><td><b>一种持久化数据</b></td><td>在 <code>userData</code> 下开<b>独立 JSON 文件</b>，别塞进现有大文件</td></tr>
       <tr><td><b>一个新 AI CLI 适配</b></td><td>读 <code>.claude/skills/agent-onboarding/SKILL.md</code>，它是专门的检查清单</td></tr>
