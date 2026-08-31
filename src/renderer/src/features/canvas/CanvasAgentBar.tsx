@@ -23,7 +23,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '../../ui/Icons'
-import { useMenuAnchor } from './CanvasContextMenu'
+import { useMenuAnchor } from '../../ui/CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
 import { stopVoiceOnSend } from '../voice/voiceControl'

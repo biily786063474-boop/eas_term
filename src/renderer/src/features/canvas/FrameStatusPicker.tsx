@@ -6,7 +6,7 @@ import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { FrameStatus } from '../../store'
-import { useDismiss, useMenuAnchor } from './CanvasContextMenu'
+import { useDismiss, useMenuAnchor } from '../../ui/CanvasContextMenu'
 
 
 export function FrameStatusPicker({

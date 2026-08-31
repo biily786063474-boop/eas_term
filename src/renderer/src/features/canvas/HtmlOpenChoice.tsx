@@ -7,7 +7,7 @@
 // 会把注意力从落点拽走，而且模态只有「确定/取消」两个位置，装不下两个平级的选择。
 // 复用 CanvasContextMenu：它本来就是「在某个坐标弹一组选项」，
 // 连 Esc 关闭、点外面关闭、超出视口自动翻边都是现成的。
-import { CanvasContextMenu } from './CanvasContextMenu'
+import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 
 export function HtmlOpenChoice({
   x,

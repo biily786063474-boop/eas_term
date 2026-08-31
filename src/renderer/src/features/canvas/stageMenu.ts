@@ -7,7 +7,7 @@
 import { useStore } from '../../store'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { collectLeaves } from '../../layout'
-import type { CanvasMenuItem } from './CanvasContextMenu'
+import type { CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
 import { menuOwnerOf } from './menuOwnership'
 

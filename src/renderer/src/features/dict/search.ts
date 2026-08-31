@@ -10,7 +10,7 @@
 // 是对的。但 logic 和 prompt 有 200–700 字：**任意三四个字符都能在里面按顺序找到**。
 // 对长文本用子序列，等于打什么都匹配 381 条，搜索直接失效。
 // 所以长字段只认整段子串（indexOf），短字段才用 fuzzyScore。
-import { fuzzyScore } from '../canvas/fuzzy.ts'
+import { fuzzyScore } from '../../ui/fuzzy.ts'
 
 export type Searchable = {
   zh: string

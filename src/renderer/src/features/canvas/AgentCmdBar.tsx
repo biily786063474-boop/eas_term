@@ -19,7 +19,7 @@ import {
   ChipIcon,
   FileIcon
 } from '../../ui/Icons'
-import { useMenuAnchor } from './CanvasContextMenu'
+import { useMenuAnchor } from '../../ui/CanvasContextMenu'
 import { PRIMARY_CMDS, SECONDARY_CMDS, sendSlash, type AgentCmd } from './agentCommands'
 
 /** 命令 id → 图标。放模块级：每次渲染重建这张表没有意义 */

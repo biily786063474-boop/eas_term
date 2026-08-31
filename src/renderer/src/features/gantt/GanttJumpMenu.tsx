@@ -21,7 +21,7 @@
 import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { TerminalIcon, CanvasIcon, BoardIcon } from '../../ui/Icons'
-import { useMenuAnchor, useDismiss } from '../canvas/CanvasContextMenu'
+import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import type { GanttJumpMode } from '../../store/uiSlice'
 
 const MODES: { key: GanttJumpMode; label: string; Icon: typeof BoardIcon }[] = [

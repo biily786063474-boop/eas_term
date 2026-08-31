@@ -2,7 +2,7 @@
 // 同一个动作在两个地方措辞不一样，用户会怀疑它们干的不是同一件事。
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
-import type { CanvasMenuItem } from '../canvas/CanvasContextMenu'
+import type { CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { boardColumnsNow } from '../canvas/frameStatus'
 
 export function projectMenuItems(

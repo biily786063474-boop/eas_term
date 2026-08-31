@@ -4,7 +4,7 @@ import { computeGraphRows, parseRefs, type GraphSegment } from './gitGraph'
 import { statusInfo } from './gitUi'
 import { DiffView } from '../editor/DiffView'
 import { RefreshIcon, GitBranchIcon } from '../../ui/Icons'
-import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
+import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { useStore } from '../../store'
 import { ErrorBoundary } from '../../ui/ErrorBoundary'
 

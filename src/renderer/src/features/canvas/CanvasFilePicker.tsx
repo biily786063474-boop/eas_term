@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { DirEntry, PluginInfo, RecentFile } from '../../../../shared/types'
-import { useMenuAnchor, useDismiss } from './CanvasContextMenu'
+import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
 import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, PlugIcon, FilesIcon } from '../../ui/Icons'
 import { SplitText } from '../../ui/SplitText'

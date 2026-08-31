@@ -1,4 +1,24 @@
-// 画布右键菜单：统一 CRUD 入口。菜单项由 CanvasStage 按右键目标（节点/Frame/图形/空白）构造。
+// 通用右键菜单 / 弹出菜单。**不只是画布在用** —— agentChat、workspace、terminal、
+// gantt、files、git 六个 feature 都依赖它，所以 2026-08-31 从 features/canvas/ 搬到了这里。
+//
+// ── 两个「看着该改、其实不能改」的地方 ───────────────────────────────
+//
+// 1. **名字还带 Canvas 前缀是故意的。** 组件名、类型名一起改要动 18 个文件的标识符，
+//    收益只有命名整洁；而下面第 2 条那个类名无论如何都改不掉，改了组件名反而更割裂。
+//
+// 2. **CSS 类名 `.canvas-ctxmenu` 绝对不能改，样式也还留在 features/canvas/canvas.css。**
+//    那个类名不只是样式选择器，有四处代码按它做**逻辑判断**：
+//      · features/canvas/menuOwnership.ts 的 OVERLAY_SELECTOR（判右键落在哪一层）
+//      · features/canvas/CanvasDrawer.tsx    （点击外部关闭时的排除项）
+//      · features/canvas/CanvasWikiDrawer.tsx（同上）
+//      · features/canvas/menuOwnership.test.ts
+//    改名后右键会弹错菜单、点菜单会把抽屉关掉，而 menuOwnership.test.ts 开篇就写着
+//    「它的坏法是静默的」—— 只有那一条测试会喊，别的地方一声不吭。
+//    样式能留在 canvas.css 是因为 App.tsx 顶层无条件 import CanvasStage，
+//    而 CanvasStage 无条件 import canvas.css，所以这份样式总是加载。
+//    要把样式也搬走，见 docs/CanvasContextMenu重构排期-2026-08-31.md 的第 2 步。
+//
+// 菜单项由调用方构造（画布侧见 features/canvas/stageMenu.ts）。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 

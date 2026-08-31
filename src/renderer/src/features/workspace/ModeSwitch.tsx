@@ -11,7 +11,7 @@ import type { ViewMode } from '../../store/canvas/types'
 import { TerminalIcon, CanvasIcon, BoardIcon, GanttIcon } from '../../ui/Icons'
 // 夹回可视区的定位逻辑不重写——画布右键菜单已经踩过同一个坑（0.4.11「启动」回溯确认框
 // 越出窗口右边缘）并留下了通用解法，这里直接复用，不重复发明。
-import { useMenuAnchor } from '../canvas/CanvasContextMenu'
+import { useMenuAnchor } from '../../ui/CanvasContextMenu'
 
 const MODES: { key: ViewMode; label: string; Icon: typeof BoardIcon }[] = [
   { key: 'split', label: '分屏', Icon: TerminalIcon },
