@@ -15,6 +15,7 @@ import {
   TerminalIcon,
   CopyIcon,
   GlobeIcon,
+  ClockIcon,
   TidyIcon,
   CameraIcon,
   SparkleIcon, ChipIcon } from '../../ui/Icons'
@@ -23,7 +24,7 @@ import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasComponentNode } from './CanvasComponentNode'
 import { stageMenuItems } from './stageMenu'
-import { CanvasContextMenu, type CanvasMenuItem } from './CanvasContextMenu'
+import { CanvasContextMenu, type CanvasMenuItem, type MenuHeader } from './CanvasContextMenu'
 import { CanvasFilePicker } from './CanvasFilePicker'
 import { paneForFile, isHtmlPath } from './media'
 import { HtmlOpenChoice } from './HtmlOpenChoice'
@@ -112,7 +113,12 @@ export function CanvasStage(): JSX.Element {
   const editingSticky = useStore((s) => s.editingSticky)
   const setEditingSticky = useStore((s) => s.setEditingSticky)
   const [editingFrame, setEditingFrame] = useState<string | null>(null)
-  const [menu, setMenu] = useState<{ x: number; y: number; items: CanvasMenuItem[] } | null>(null)
+  const [menu, setMenu] = useState<{
+    x: number
+    y: number
+    items: CanvasMenuItem[]
+    header?: MenuHeader
+  } | null>(null)
   // 点标题栏色点 → 状态色板（只记 frameId，当前状态每次渲染从 frames 现取，免得色板开着时被改脏）
   const [statusPop, setStatusPop] = useState<{ x: number; y: number; frameId: string } | null>(null)
   // Frame 内双击 → 「插入文件」选择器（wx/wy 是双击处的世界坐标，插进来的节点就落在那儿）
@@ -650,30 +656,47 @@ export function CanvasStage(): JSX.Element {
           }
         }
       })
-      if (list.length) {
-        // 切换项放最上面：它是「这张菜单怎么排」的开关，不是项目动作。
-        // 混在项目行之间点错的代价是白跳一个项目。
-        list.unshift(
-          {
-            label: mode === 'recent' ? '排序：最近使用' : '排序：默认',
-            hint: '点击切换',
-            onClick: () => {
-              const next: ProjectMenuSort = mode === 'recent' ? 'default' : 'recent'
-              st.setProjectMenuSort(next)
-              // CanvasContextMenu 在 onClick 之后一定会 onClose()，同一批 setState
-              // 里重开会被它盖掉 —— 排到下一个宏任务再开，用户才当场看得到新顺序，
-              // 而不是得再双击一遍
-              setTimeout(() => setMenu({ x: mx, y: my, items: buildItems(next) }), 0)
-            }
-          },
-          { label: '', sep: true, onClick: () => {} }
-        )
-        list.push({ label: '', sep: true, onClick: () => {} })
-      }
-      list.push({ label: '添加项目文件夹…', onClick: () => void addProjectAt(wx, wy) })
+      if (list.length) list.push({ label: '', sep: true, onClick: () => {} })
+      // **keep：搜索时不参与筛选。** 它不是候选项、是出口 ——
+      // 恰恰在「搜不到东西」的时候最该在
+      list.push({ label: '添加项目文件夹…', keep: true, onClick: () => void addProjectAt(wx, wy) })
       return list
     }
-    setMenu({ x: mx, y: my, items: buildItems(st.projectMenuSort) })
+    /** 顶部那一条：搜索框 + 两个排序图标。
+     *
+     *  排序原来是**一行文字**（「排序：最近使用 · 点击切换」）——
+     *  它混在项目行之间，点错的代价是白跳一个项目，而且占掉一整行。
+     *  改成右上角两个图标：当前档位亮着，hover 才说明它是什么。 */
+    const makeHeader = (mode: ProjectMenuSort): MenuHeader => ({
+      placeholder: '搜项目…',
+      actions: [
+        {
+          icon: <TidyIcon size={13} />,
+          tip: '按添加顺序排',
+          active: mode !== 'recent',
+          onClick: () => switchSort('default')
+        },
+        {
+          icon: <ClockIcon size={13} />,
+          tip: '按最近使用排',
+          active: mode === 'recent',
+          onClick: () => switchSort('recent')
+        }
+      ]
+    })
+    const switchSort = (next: ProjectMenuSort): void => {
+      st.setProjectMenuSort(next)
+      // CanvasContextMenu 在 onClick 之后一定会 onClose()，同一批 setState
+      // 里重开会被它盖掉 —— 排到下一个宏任务再开，用户才当场看得到新顺序，
+      // 而不是得再双击一遍
+      setTimeout(() => setMenu({ x: mx, y: my, items: buildItems(next), header: makeHeader(next) }), 0)
+    }
+    setMenu({
+      x: mx,
+      y: my,
+      items: buildItems(st.projectMenuSort),
+      header: makeHeader(st.projectMenuSort)
+    })
   }
 
   const rectsIntersect = (
@@ -1495,7 +1518,13 @@ export function CanvasStage(): JSX.Element {
       </div>
 
       {menu && (
-        <CanvasContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+        <CanvasContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={menu.items}
+          header={menu.header}
+          onClose={() => setMenu(null)}
+        />
       )}
 
       {statusPop && (

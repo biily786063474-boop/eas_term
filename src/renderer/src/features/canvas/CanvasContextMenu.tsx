@@ -2,6 +2,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { fuzzyPick } from './fuzzy'
+
 export interface CanvasMenuItem {
   label: string
   danger?: boolean
@@ -16,7 +18,17 @@ export interface CanvasMenuItem {
   /** 二级菜单。**给了它就忽略 onClick** —— 一个既能点又能展开的条目，
    *  点下去到底是执行还是展开，用户没法从外观判断。 */
   sub?: CanvasMenuItem[]
+  /** 搜索时**不参与筛选，永远显示**。给「添加项目文件夹…」这类
+   *  「不是候选项、是出口」的条目用 —— 搜不到东西时它反而最该在 */
+  keep?: boolean
   onClick: () => void
+}
+
+/** 菜单顶部那一条。**只在需要时给** —— 大多数右键菜单不该有搜索框。 */
+export interface MenuHeader {
+  placeholder: string
+  /** 右边那排图标按钮（如排序方式）。当前档位用 `active` 标出来 */
+  actions?: { icon: JSX.Element; tip: string; active?: boolean; onClick: () => void }[]
 }
 
 /**
@@ -108,21 +120,46 @@ export function CanvasContextMenu({
   x,
   y,
   items,
+  header,
   onClose
 }: {
   x: number
   y: number
   items: CanvasMenuItem[]
+  header?: MenuHeader
   onClose: () => void
 }): JSX.Element {
   useDismiss(onClose)
   const ref = useRef<HTMLDivElement>(null)
-  const pos = useMenuAnchor(x, y, ref, [items.length])
   /** 展开着的二级菜单：哪一条 + 画在哪。**同一时刻只有一个** ——
    *  鼠标移到别的条目上就换，移到没有子菜单的条目上就收。
    *
    *  **必须记坐标、单独 portal 出去**：父菜单有 `overflow-y: auto`
    *  （状态列多了要能滚），子菜单当子元素会被那个滚动容器直接裁掉。 */
+  const [q, setQ] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  // **`autoFocus` 在这儿不管用**：菜单是 portal 出去的，而打开它的那一下
+  // （双击画布）之后，画布自己会把焦点抢回去 —— 实测打开菜单直接打字
+  // 一个字都进不去，得先点一下输入框。排到下一帧再抢回来。
+  useEffect(() => {
+    if (!header) return
+    const r = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(r)
+  }, [header])
+  // 搜出来的结果 + 永远保留的出口项。**分隔线在筛选后原样保留会留下
+  // 一堆孤零零的横线**，所以搜索时把它们去掉
+  const shown = q.trim()
+    ? [
+        ...fuzzyPick(
+          items.filter((i) => !i.sep && !i.keep),
+          q,
+          (i) => i.label
+        ),
+        ...items.filter((i) => i.keep)
+      ]
+    : items
+  // 搜出来的条数会变，菜单高度跟着变 —— 夹回可视区的计算要跟着 q 重跑
+  const pos = useMenuAnchor(x, y, ref, [items.length, q])
   const [sub, setSub] = useState<{ items: CanvasMenuItem[]; x: number; y: number } | null>(null)
   const subRef = useRef<HTMLDivElement>(null)
   const subPos = useMenuAnchor(sub?.x ?? 0, sub?.y ?? 0, subRef, [sub?.items.length, sub?.x, sub?.y])
@@ -142,7 +179,39 @@ export function CanvasContextMenu({
         style={{ left: pos?.x ?? x, top: pos?.y ?? y, visibility: pos ? 'visible' : 'hidden' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {items.map((it, i) =>
+        {header && (
+          <div className="cctx-head">
+            <input
+              ref={inputRef}
+              className="cctx-search"
+              placeholder={header.placeholder}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              // 回车直接选中第一条 —— 打完字还要伸手去点，那这个框就只帮了一半
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                const first = shown.find((i) => !i.sep && !i.disabled && !i.sub)
+                if (first) {
+                  first.onClick()
+                  onClose()
+                }
+              }}
+            />
+            {header.actions?.map((a, i) => (
+              <button
+                key={i}
+                className={`cctx-act${a.active ? ' on' : ''}`}
+                data-tip={a.tip}
+                onClick={a.onClick}
+                type="button"
+              >
+                {a.icon}
+              </button>
+            ))}
+          </div>
+        )}
+        {shown.length === 0 && <div className="cctx-none">没有匹配的项目</div>}
+        {shown.map((it, i) =>
           it.sep ? (
             <div key={i} className="cctx-sep" />
           ) : (

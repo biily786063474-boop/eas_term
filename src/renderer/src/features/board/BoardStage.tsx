@@ -10,9 +10,10 @@
 //
 // 状态标签是**项目**的属性（shared/types 的 ProjectStatus），不是画布 Frame 的 ——
 // 所以这里拖一张卡片改的是项目状态，画布那边的 Frame 配色会跟着变，反过来也一样。
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { collectLeaves } from '../../layout'
+import { edgeStep } from './edgeScroll'
 import type { LeafNode } from '../../layout'
 import type { Project, ProjectStatus } from '../../../../shared/types'
 
@@ -80,6 +81,46 @@ export function BoardStage(): JSX.Element {
   /** 拖动中的项目 id + 悬停在哪一列。列的 key 可能是 null，用一个哨兵字符串区分「没悬停」 */
   const [dragId, setDragId] = useState<string | null>(null)
   const [overCol, setOverCol] = useState<string | null>(null)
+
+  // ── 拖到边缘自动滚（2026-08-30）──────────────────────────────────
+  // 看板一屏正好四列，列多了往右滑。**没有自动滚的话，把卡片从第 1 列拖到
+  // 第 6 列是做不到的** —— 手一直按着，没有第二只手去滚横向条。
+  //
+  // 两条轴都要：横向滚 `.board`（跨列），纵向滚指针底下那一列的 `.board-list`
+  //（列里卡片多时同样够不着）。
+  const boardRef = useRef<HTMLDivElement>(null)
+  /** 拖拽时指针在哪。用 ref 不用 state —— 每次 dragover 都 setState 的话
+   *  整个看板每秒重渲染几十次，而这个值只有滚动循环读 */
+  const edgeAt = useRef<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!dragId) return
+    let raf = 0
+    const tick = (): void => {
+      raf = requestAnimationFrame(tick)
+      const at = edgeAt.current
+      const el = boardRef.current
+      if (!at || !el) return
+      const r = el.getBoundingClientRect()
+      const dx = edgeStep(at.x, r.left, r.right)
+      if (dx) el.scrollLeft += dx
+      // 纵向滚的是指针底下那一列。**用 elementFromPoint 找** ——
+      // 拖拽中 dragover 的 target 会在子元素间跳，靠它认列不稳
+      const list = (document.elementFromPoint(at.x, at.y) as HTMLElement | null)?.closest(
+        '.board-list'
+      ) as HTMLElement | null
+      if (list) {
+        const lr = list.getBoundingClientRect()
+        const dy = edgeStep(at.y, lr.top, lr.bottom)
+        if (dy) list.scrollTop += dy
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      edgeAt.current = null
+    }
+  }, [dragId])
 
   /** 每个项目名下的终端 leaf。画布节点和分屏 tab 引用的是同一批 leaf，
    *  所以从 tabs 收一遍就够，不用再去 canvas.frames 里翻一遍（翻了还会重复） */
@@ -224,7 +265,16 @@ export function BoardStage(): JSX.Element {
           真要在这儿加回浮标的话，记住当初为什么它在 .board **外面**：
           .board 是横向滚动容器，absolute 放进去会相对它的 padding box 定位，
           横向滚看板时浮标跟着内容一起滑走。挪出来才是相对 .tab-stack 钉死。 */}
-      <div className="board">
+      <div
+        className="board"
+        ref={boardRef}
+        // **在根容器上收 dragover**：拖拽经过任何一列都会冒到这里，
+        // 而滚动要的是「指针在整块看板里的位置」，不是「在哪一列里」
+        onDragOver={(e) => {
+          e.preventDefault()
+          edgeAt.current = { x: e.clientX, y: e.clientY }
+        }}
+      >
       {cols.map((col) => {
         const list = byCol(col.key)
         const colId = col.key ?? '_none'
