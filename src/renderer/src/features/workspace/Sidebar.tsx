@@ -9,6 +9,7 @@ import { SwipeRow } from '../../ui/SwipeRow'
 import { CanvasContextMenu } from '../canvas/CanvasContextMenu'
 import { projectMenuItems } from './projectMenu'
 import { useProjectRows } from '../status/useStatus.ts'
+import type { TermState } from '../status/machine.ts'
 import './workspace.css'
 
 // 资源管理器区：顶部标签在「文件」(文件树) 与「版本」(Git) 间切换。
@@ -138,23 +139,57 @@ export function Sidebar(): JSX.Element {
   const setCollapsed = useStore((s) => s.setSidebarCollapsed)
 
   // 收起后**留一条窄边**，不彻底消失：没有入口的隐藏等于藏起来，
-  // 下次想调出来只能靠记快捷键。窄边上放展开钮 + 当前项目首字，
-  // 这样收着的时候也知道自己在哪个项目里。
+  // 下次想调出来只能靠记快捷键。
+  //
+  // ── 2026-08-31：窄边上列**全部项目**，不只是当前那个 ────────────────
+  // 原来只放当前项目的首字 —— 收着的时候你只知道「自己在哪」，
+  // 不知道「别处怎么样了」。而收起侧栏恰恰是「专心在一个终端里干活」的时候，
+  // 那时候最想知道的就是别的项目有没有在等你。
+  //
+  // 状态直接读状态机（useProjectRows，跟展开态、看板、甘特图同一份）：
+  //   approval  有人在等你确认   —— 最急，必须最显眼
+  //   running   正在跑           —— 呼吸
+  //   done      跑完了           —— 高亮
+  // 点方块直接切项目（不展开侧栏）；点箭头才展开。
   if (collapsed) {
+    const stateOf = (id: string): TermState | null =>
+      rows.find((r) => r.projectId === id)?.top ?? null
     return (
-      <aside
-        className="sidebar collapsed"
-        onClick={() => setCollapsed(false)}
-        data-tip="展开项目与文件"
-      >
-        <button className="sidebar-rail-btn" aria-label="展开项目与文件">
+      <aside className="sidebar collapsed">
+        <button
+          className="sidebar-rail-btn"
+          aria-label="展开项目与文件"
+          data-tip="展开项目与文件"
+          onClick={() => setCollapsed(false)}
+        >
           <ChevronRightIcon size={13} />
         </button>
-        {activeProject && (
-          <div className="sidebar-rail-proj" title={activeProject.name}>
-            {[...activeProject.name][0] ?? '·'}
-          </div>
-        )}
+        <div className="sidebar-rail-list">
+          {projects.map((p) => {
+            const st = stateOf(p.id)
+            return (
+              <button
+                key={p.id}
+                className={`sidebar-rail-proj${p.id === activeProjectId ? ' on' : ''}${st ? ' st-' + st : ''}`}
+                // **状态写进提示里**：一个会呼吸的方块本身说不清「它在跑」还是
+                // 「它在等你」，而这两件事你的下一步动作完全不同
+                data-tip={
+                  p.name +
+                  (st === 'approval'
+                    ? ' · 在等你确认'
+                    : st === 'running'
+                      ? ' · 正在跑'
+                      : st === 'done'
+                        ? ' · 跑完了'
+                        : '')
+                }
+                onClick={() => setActiveProject(p.id)}
+              >
+                {[...p.name][0] ?? '·'}
+              </button>
+            )
+          })}
+        </div>
       </aside>
     )
   }

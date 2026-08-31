@@ -59,15 +59,39 @@
 }
 
 /* 当前项目首字。竖着的窄边里放不下全名，首字足够认人 —— 悬停有完整名字。 */
+/* 折叠条上的项目列表（2026-08-31：从「只放当前项目」改成「列全部」）。
+   项目可能有几十个，必须能滚 —— 但**不显示滚动条**：38px 宽的条上
+   一根滚动条会占掉三分之一 */
+.sidebar-rail-list {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar-rail-list::-webkit-scrollbar {
+  display: none;
+}
+
 .sidebar-rail-proj {
+  position: relative;
   flex: none;
   width: 24px;
   height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
   display: grid;
   place-items: center;
   border-radius: 7px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  cursor: pointer;
+  /* 默认是**安静的**：没状态的项目不该跟有状态的抢注意力。
+     几十个方块全都亮着等于全都不亮 */
+  background: var(--glass-2);
+  color: var(--fg-dim);
   font-size: 12px;
   font-weight: 700;
   user-select: none;
@@ -2794,4 +2818,68 @@ body.dragging-row * {
    分区里要留给别的内容，收窄一点 */
 .mcp-pop-list.in-settings {
   max-height: 220px;
+}
+
+
+/* 当前项目：只描个边，不抢状态色 —— 「我在哪」和「哪儿有事」是两件事 */
+.sidebar-rail-proj.on {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+/* ── 三档状态，读的是同一个状态机（useProjectRows）────────────────
+   approval  有人在等你确认  最急，实心
+   running   正在跑          呼吸
+   done      跑完了          高亮 */
+.sidebar-rail-proj.st-approval {
+  background: rgba(var(--accent-rgb), 0.9);
+  color: var(--on-accent);
+}
+
+/* 完成 = **高亮**。要跟 running 一眼分得开 —— 它们原来底色一样、
+   只差一圈呼吸环，静止的那一帧里几乎分不出来，开了「减少动效」更是一模一样。
+   动效不能是唯一的区分手段。 */
+.sidebar-rail-proj.st-done {
+  background: var(--accent-soft);
+  border-color: rgba(var(--accent-rgb), 0.55);
+  color: var(--accent);
+}
+
+/* 在跑 = **安静的底 + 呼吸**。它是「还没到你」的状态，
+   不该比「已完成」和「等你确认」更抢眼 */
+.sidebar-rail-proj.st-running {
+  background: var(--glass-2);
+  color: var(--fg);
+}
+
+/* 呼吸：**画在伪元素上、只动 opacity**。
+   直接给方块补间 background/box-shadow 的话每帧都要重新光栅化，
+   而 infinite 意味着开着就一直烧（scripts/check-animations.mjs 会拦）。
+   实测：box-shadow 版 8 秒样式重算 960 次，opacity 版 25 次。 */
+.sidebar-rail-proj.st-running::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9px;
+  border: 1.5px solid rgb(var(--accent-rgb));
+  animation: rail-breathe 1.9s ease-in-out infinite;
+}
+
+@keyframes rail-breathe {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* **宿主是伪元素，清单里就得写伪元素** —— 动画挪到 ::after 之后
+     只列宿主元素的话，开了这个系统设置的人会看到它还在闪 */
+  .sidebar-rail-proj.st-running::after {
+    animation: none;
+    opacity: 0.5;
+  }
 }
