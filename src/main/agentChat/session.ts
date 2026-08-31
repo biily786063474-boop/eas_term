@@ -27,6 +27,7 @@ import { app, ipcMain, type WebContents } from 'electron'
 import { alog } from '../cliAuth/log.ts'
 import { unauthedInLine } from '../cliAuth/detect.ts'
 import { createTranscriptStore } from './transcript'
+import { approvalEnv } from './approvalEnv.ts'
 import { getAdapter, listAdapters } from './adapters/index.ts'
 import { ingestChatQuota, scheduleApiRefresh } from '../quotaStore'
 import {
@@ -588,7 +589,12 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
         // TOKEN，但不会有这个变量——不能拿那两个当标记，PTY 也注入同样的值，复用就等于
         // 没隔离）。同时也是审批路由"点名"找会话的依据，见下面 onApprovalRequest
         // （2026-08-14 全分支评审 C1 ①）。
-        EAS_AGENT_CHAT_SESSION: live.rec.id,
+        //
+        // **没启用审批就不打这个标记**（2026-08-31）：旧版本自动装进用户项目的那条
+        // PreToolUse hook 至今还躺在各人的 .claude/settings.json 里，无条件打标记
+        // 会让它继续拦下每一次工具调用 —— 而「先问再做」那个开关管的是系统提示，
+        // 关掉它对这条 hook 毫无作用。判据和取舍都在 approvalEnv.ts。
+        ...approvalEnv(live.rec.id, live.rec.skipApprovalHook),
         // 只有真的命中兜底分支才注入——见上面 hookNodeBin 的注释（I3）。
         ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {})
       },
