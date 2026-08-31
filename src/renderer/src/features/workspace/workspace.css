@@ -2357,7 +2357,12 @@ body.dragging-row * {
   padding: 4px 0 2px;
 }
 
-.cset-trybtn {
+/* 设置面板里的次要按钮。**两个名字共用一份视觉** ——
+   `.cset-btn` 原来只写在 GpuPanel 的 JSX 里、CSS 里根本没有这条规则，
+   于是那个「复制完整诊断」一直是浏览器默认样式（灰底方角系统字体）。
+   类名写了不等于样式存在，而这种缺失不报错、只是长得不对。 */
+.cset-trybtn,
+.cset-btn {
   height: 26px;
   padding: 0 12px;
   border-radius: var(--radius-sm);
@@ -2370,12 +2375,14 @@ body.dragging-row * {
   transition: background-color 0.15s, color 0.15s;
 }
 
-.cset-trybtn:hover:not(:disabled) {
+.cset-trybtn:hover:not(:disabled),
+.cset-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.11);
   color: var(--fg);
 }
 
-.cset-trybtn:disabled {
+.cset-trybtn:disabled,
+.cset-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -2741,6 +2748,17 @@ body.dragging-row * {
 .gpu-w {
   color: var(--fg-dim);
   line-height: 1.6;
+}
+
+/* 设置面板里的一行次要说明（如「macOS 25.5.0 · arm64」）。
+   **原来 CSS 里没有这条规则**，只写在 GpuPanel 的 JSX 里，
+   于是那行是浏览器默认的正文字号和颜色 —— 跟它上下的东西都不搭。
+   跟 `.cset-btn` 是同一天、同一个文件里发现的同一类问题：
+   类名写了不等于样式存在，而这种缺失不报错、只是长得不对。 */
+.cset-note {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: var(--fg-dim);
 }
 
 /* 二维码编不出来时的提示。**宁可难看也不要空白** ——
