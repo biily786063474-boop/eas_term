@@ -16,7 +16,13 @@ const expr = process.argv.includes('--file')
 if (!expr) { console.error('用法: node scripts/eval-in-app.mjs "<js>"'); process.exit(1) }
 
 const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
-const page = list.find((p) => p.type === 'page' && p.url.includes('out/renderer') && !p.url.includes('island'))
+// **按 title 认主窗口，别按 url。**
+// 灵动岛和主窗口现在是同一个 url（都是 out/renderer，路由在渲染层内部分），
+// `!url.includes('island')` 对两个都成立 —— 于是 find 拿到的是列表里排在前面的那个，
+// 而那个顺序不稳定。2026-08-31 实测抓到过一次连上灵动岛：window.__store 是 undefined，
+// 脚本报的是「读不到属性」而不是「连错窗口」，一时看不出来。
+// 验证脚本连错窗口，会让这一整轮验证结论全部作废，比不验证更糟。
+const page = list.find((p) => p.type === 'page' && p.title === 'Eas-Term')
 if (!page) {
   console.error('找不到主窗口 target。现有：', list.map((p) => `${p.type} ${p.url.slice(0, 60)}`).join(' | '))
   process.exit(1)

@@ -45,6 +45,7 @@ import {
   pushDownOverlaps
 } from './canvas/layout'
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
+import { fitScale } from './canvas/fitScale'
 import { tidyOrder } from './canvas/tidyOrder'
 import {
   TODO_BOARD_DEFAULT_H,
@@ -1224,7 +1225,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     })),
 
-  focusCanvasNode: (frameId, nodeId) => {
+  focusCanvasNode: (frameId, nodeId, opts) => {
     const s = get()
     const f = s.canvas.frames.find((x) => x.id === frameId)
     const n = f?.nodes.find((x) => x.id === nodeId)
@@ -1232,7 +1233,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const vp = document.querySelector('.canvas-viewport') as HTMLElement | null
     const vw = vp?.clientWidth ?? window.innerWidth
     const vh = vp?.clientHeight ?? window.innerHeight
-    const scale = s.canvas.viewport.scale // 保持当前缩放，只平移
+    // 默认保持当前缩放只平移；fit 时缩到整个节点看得全（只缩小不放大，见 fitScale.ts）。
+    // 折叠的 Frame 里节点高度按 HEAD 算没有意义，但 fit 只用 n.w/n.h，
+    // 拿到的就是这个节点自己的尺寸，不受 Frame 折叠影响
+    const scale = opts?.fit
+      ? fitScale({ w: n.w, h: n.h }, { w: vw, h: vh }, s.canvas.viewport.scale)
+      : s.canvas.viewport.scale
     const cx = f.x + n.x + n.w / 2
     const cy = f.y + n.y + n.h / 2
     get().setViewport({ x: vw / 2 - cx * scale, y: vh / 2 - cy * scale, scale })

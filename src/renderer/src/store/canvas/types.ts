@@ -328,7 +328,12 @@ export interface CanvasSlice {
   /** 更新 web 节点的页面标题（存 pane.title；节点头部显示时手动 name 优先，其次标题） */
   setWebNodeTitle: (frameId: string, nodeId: string, title: string) => void
   /** 把画布平移到某节点居中（保持当前缩放）——如浏览器里点链接开新页时聚焦过去 */
-  focusCanvasNode: (frameId: string, nodeId: string) => void
+  /** 把画布平移到某个节点居中。
+   *
+   *  `fit`：**顺带把缩放缩到整个节点看得全**（只缩小不放大，四周留白，见 fitScale.ts）。
+   *  通知类的跳转要传它 —— 那种场景用户是被叫过来的，得一眼看到全貌，
+   *  而且四周得有空地能抓着拖画布。用户自己点节点跳转时不传：他对当前缩放有预期。 */
+  focusCanvasNode: (frameId: string, nodeId: string, opts?: { fit?: boolean }) => void
   /** 一键整理 Frame 内模块：按各自大小从左上角起流式重排，行内对齐、消除重叠与空隙 */
   tidyFrame: (frameId: string) => void
   /** 给这个 AI 对话节点换一段新对话：写一个新的 chatId 进去。

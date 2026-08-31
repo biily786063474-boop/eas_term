@@ -170,7 +170,11 @@ export function focusTerminal(ptyId: string): void {
   const plan = planFocus(st.viewMode as FocusMode, !!(loc.frameId && loc.nodeId))
   if (plan.switchTo) st.setViewMode(plan.switchTo)
   if (plan.target === 'canvas') {
-    st.focusCanvasNode(loc.frameId!, loc.nodeId!)
+    // **fit**：通知把用户叫过来，就得让他一眼看到整个终端。
+    // 原来是保持当前缩放只平移，稍大的缩放下节点比视口还高 ——
+    // 屏幕上全是那一个终端，看不到全貌，四周也没有空地能抓着拖画布
+    //（按下去全落进 xterm 了）。2026-08-31 用户报的就是这个。
+    st.focusCanvasNode(loc.frameId!, loc.nodeId!, { fit: true })
   } else {
     // 必须排在下面 setActiveLeaf 之前：setActiveProject 自己也会顺手挑一个
     // 「该项目上次激活的标签」写回 activeTabId（pickActiveTab，不一定是 loc.tabId）。
