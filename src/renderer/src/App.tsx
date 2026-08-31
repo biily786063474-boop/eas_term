@@ -145,6 +145,22 @@ export function App(): JSX.Element {
     bindPhoneProvider()
   }, [])
 
+  // 主窗口里点了任何地方 → 把展开着的灵动岛收回去。
+  //
+  // **不能指望主进程的 `browser-window-focus`**：岛是 focusable:false 的窗口，
+  // 展开时主窗口本来就是焦点，你在它里面点没有焦点变化，那条事件不触发 ——
+  // 于是「展开详细列表之后点别处，岛一直摊着」（用户 2026-08-31 实测）。
+  //
+  // 用 **capture 阶段**：有些组件会 stopPropagation（画布节点、菜单、输入框），
+  // 挂冒泡阶段的话点到那些地方就收不起来，而那正是「我在干别的事」最明确的信号。
+  //
+  // 主进程侧只在岛确实展开着时才真的发指令，收着的时候这是一次空调用。
+  useEffect(() => {
+    const h = (): void => window.api.island.collapse()
+    window.addEventListener('mousedown', h, { capture: true })
+    return () => window.removeEventListener('mousedown', h, { capture: true })
+  }, [])
+
   // 终端里的 CLI 调 `open <url>`（AI 工具弹网页等）被 open shim 劫持 → 这里在画板内嵌浏览器打开，
   // 而不是弹系统 Safari。没有任何画布 Frame 时才回落系统浏览器。
   useEffect(() => {

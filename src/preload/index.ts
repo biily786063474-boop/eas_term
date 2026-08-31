@@ -771,6 +771,17 @@ const api = {
   },
   /** 灵动岛：主窗口侧只需要「推状态」和「收动作」两件事 */
   island: {
+    /** 请主进程把灵动岛收回去。**主窗口里任何一次点击都会调它。**
+     *
+     *  为什么需要它：岛是 `focusable:false` 的窗口，展开时主窗口**本来就是焦点** ——
+     *  你在主窗口里点，没有焦点变化，主进程那条 `browser-window-focus`
+     *  根本不触发，岛就一直摊着。
+     *
+     *  主进程侧只在「岛确实展开着」时才真的发指令（见 island.ts 的 held），
+     *  所以收着的时候这就是一次空调用。 */
+    collapse: (): void => {
+      ipcRenderer.send('island:collapse-request')
+    },
     sync: (state: IslandState): void => {
       ipcRenderer.send('island:sync', state)
     },

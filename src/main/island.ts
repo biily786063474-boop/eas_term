@@ -634,6 +634,19 @@ export function registerIslandHandlers(): void {
 
   // 用户把岛展开着在读 → 别在这期间把窗口收走。
   // 折叠回去（或跳走）时会再发一次 false，前台的露面计时随即恢复。
+  // 主窗口里点了任何地方 → 把展开着的岛收回去。
+  //
+  // **`browser-window-focus` 覆盖不到这一次**：岛是 focusable:false，
+  // 展开时主窗口本来就是焦点，你在它里面点没有焦点变化，那条事件不触发。
+  // 用户 2026-08-31 实测：展开详细列表之后点别处，岛一直摊在那儿。
+  //
+  // **只在 held（岛确实展开着）时才发**：主窗口每一次 mousedown 都会调过来，
+  // 收着的时候这里直接 return，不去碰那扇窗口。
+  ipcMain.on('island:collapse-request', () => {
+    if (!held || !islandWin || islandWin.isDestroyed()) return
+    islandWin.webContents.send('island:collapse')
+  })
+
   ipcMain.on('island:hold', (_e, v: boolean) => {
     const next = !!v
     if (next === held) return
