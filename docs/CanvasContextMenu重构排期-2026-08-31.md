@@ -63,21 +63,29 @@ agentChat · workspace · terminal · gantt · files · git。
 
 验证：`npm run check`（typecheck 会挡住所有漏改的 import）+ `npm run verify` 打开右键菜单看一眼。
 
-### 第 2 步 · 搬样式（中风险，可选）
+### 第 2 步 · 搬样式（中风险，可选）— ✅ 已于 2026-09-01 完成
 
-把 `.canvas-ctxmenu` / `.cctx-sub` 规则从 `features/canvas/canvas.css` 挪到全局样式。
-**类名仍然不改。** 风险在 CSS 层叠顺序，验证靠肉眼看菜单样式没塌。
+`.canvas-ctxmenu` / `.cctx-*` 两段（共 21 条规则）从 `features/canvas/canvas.css`
+搬到 **`src/renderer/src/styles/base.css`** —— 那是 `ui/` 组件样式的既有落点
+（Tooltip 的 `.app-tooltip`、ConfirmDialog 的 `.confirm-*` 都在那儿），不是新开一个文件。
+**类名一个字没改。** canvas.css 原位置留了一条指路注释。
 
-### 第 3 步 · 改类名（高风险，非必要不做）
+层叠顺序这一关：base.css 在 `main.tsx` 里第一个 import，所以它在层叠上最靠前 ——
+搬之前 grep 过全仓，没有第二处 `.cctx-*` / `.canvas-ctxmenu` 规则会来抢。
 
-`.canvas-ctxmenu` → `.ui-ctxmenu`，必须同步上面那张表的 4 处。
-做之前先确认 `menuOwnership.test.ts` 是绿的，改完必须再跑一次 —— 那是唯一的安全网。
+验证：隔离实例里造一个探针元素读计算值（position fixed / z-index 1000 /
+min-width 168px / radius 14px / border 1px / 玻璃底 / item padding 7px 10px），
+再在画布上派发**真实右键**弹出菜单截图确认 —— 圆角、玻璃底、边框、内距都在。
 
-**实际停在了第 1 步。** 第 3 步的收益纯粹是命名整洁，
-而 `.canvas-` 前缀留在那儿最多让人多看一眼注释，不会让任何人做错事。
+### 第 3 步 · 改类名（高风险）— ⛔ 决定不做
 
-## 不做也可以
+`.canvas-ctxmenu` → `.ui-ctxmenu` 得同步上面那张表的 4 处逻辑判断。
+**收益纯粹是命名整洁，代价是踩一个已知的静默失效面**（右键弹错菜单、点菜单关掉抽屉，
+只有 `menuOwnership.test.ts` 一条会喊）。`.canvas-` 前缀留在那儿最多让人多看一眼注释，
+不会让任何人做错事。**这条排期到此为止，不再是待办。**
 
-如果近期不打算动 canvas，把这份排期留着即可。当前状态**不是 bug**，
-只是一个已知的、有记录的架构瑕疵 —— [10-模块领地图](architecture/10-模块领地图.md)
-的耦合警报里已经标着它，AI 动手前会看到。
+## 收尾
+
+第 1、2 步已做，第 3 步明确不做 —— **这份排期已经清完**。
+当前状态记在 [10-模块领地图](architecture/10-模块领地图.md) 的耦合警报里，
+AI 动手前会看到「组件在 ui/、样式在 base.css、类名带 canvas- 前缀且不许改」。

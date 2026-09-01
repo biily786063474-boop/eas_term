@@ -57,6 +57,9 @@ export function parseKeys(keys: string): ParsedKeys {
     if (low === 'mod') out.mod = true
     else if (low === 'shift') out.shift = true
     else if (low === 'alt' || low === 'option') out.alt = true
+    // 加号只能用名字写：分隔符本身就是 `+`，`'Mod++'.split('+')` 得到 ['Mod','','']，
+    // 过滤空串之后主键就没了 —— 那条键会静默变成「只按 ⌘ 就触发」
+    else if (low === 'plus') out.key = '+'
     else out.key = p.length === 1 ? p.toUpperCase() : p
   }
   return out
@@ -108,6 +111,7 @@ export function formatKeys(keys: string, isMac: boolean): string {
     ArrowUp: '↑',
     ArrowDown: '↓'
   }
+  // '+' 不用进 nice 表：parseKeys 把 `Plus` 解析成 '+'，直接显示就是对的
   const k = nice[p.key] ?? p.key
   if (isMac) return `${p.alt ? '⌥' : ''}${p.shift ? '⇧' : ''}${p.mod ? '⌘' : ''}${k}`
   const segs: string[] = []
@@ -361,6 +365,61 @@ export const SHORTCUTS: ShortcutDef[] = [
     scope: 'canvas',
     keys: 'Mod+J',
     note: '与分屏的「新建 AI 对话」同键 —— 作用域隔开。落在哪个 Frame 的规则同上'
+  },
+  {
+    id: 'canvas.tidy',
+    label: '整理排列',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Shift+Mod+O',
+    note: '把当前 Frame 里的模块按大小对齐。作用在哪个 Frame 的规则同上'
+  },
+  {
+    id: 'canvas.drawer-files',
+    label: '开合「文件信息」抽屉',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+B',
+    note: '抽屉在看板 / 甘特图下也开着，但那两个视图里 CanvasStage 没挂载，所以这条只在画布生效'
+  },
+  {
+    id: 'canvas.drawer-wiki',
+    label: '开合「知识库」抽屉',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Shift+Mod+B'
+  },
+  {
+    id: 'canvas.zoom-in',
+    label: '放大',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+=',
+    alt: ['Shift+Mod+Plus'],
+    note: '主键位是 ⌘= —— 那是不按 Shift 时那个键真正发出来的字符；等价键收下真按 ⌘+ 的人'
+  },
+  {
+    id: 'canvas.zoom-out',
+    label: '缩小',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+-'
+  },
+  {
+    id: 'canvas.zoom-reset',
+    label: '缩放回 100%',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+0',
+    note: '**没按盘点表写的「⌘0 = 适应全部」**：各家 app 的 ⌘0 都是「实际大小」，'
+      + '按成别的意思会让人每次都按错。适应全部让给 ⇧⌘0'
+  },
+  {
+    id: 'canvas.zoom-fit',
+    label: '适应全部',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Shift+Mod+0'
   },
   {
     id: 'canvas.tool-select',

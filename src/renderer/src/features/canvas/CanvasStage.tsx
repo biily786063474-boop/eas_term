@@ -248,6 +248,44 @@ export function CanvasStage(): JSX.Element {
         }
       }
 
+      // 缩放三档 + 适应全部。**经 zoomRef 拿最新闭包**，理由见它的声明处。
+      const ZOOM: [string, () => void][] = [
+        ['canvas.zoom-in', () => zoomRef.current.setScale(useStore.getState().canvas.viewport.scale * 1.15)],
+        ['canvas.zoom-out', () => zoomRef.current.setScale(useStore.getState().canvas.viewport.scale / 1.15)],
+        ['canvas.zoom-reset', () => zoomRef.current.setScale(1)],
+        ['canvas.zoom-fit', () => zoomRef.current.fitAll()]
+      ]
+      for (const [id, run] of ZOOM) {
+        if (!hitKey(e, id)) continue
+        e.preventDefault()
+        run()
+        return
+      }
+
+      // 两个抽屉的开合。状态在 store 里（uiSlice 的 resDrawerOpen / wikiDrawerOpen），
+      // 所以这里直接翻，不用去够那两个组件。
+      const DRAWERS: [string, 'resDrawerOpen' | 'wikiDrawerOpen'][] = [
+        ['canvas.drawer-files', 'resDrawerOpen'],
+        ['canvas.drawer-wiki', 'wikiDrawerOpen']
+      ]
+      for (const [id, key] of DRAWERS) {
+        if (!hitKey(e, id)) continue
+        e.preventDefault()
+        const st = useStore.getState()
+        if (key === 'resDrawerOpen') st.setResDrawerOpen(!st.resDrawerOpen)
+        else st.setWikiDrawerOpen(!st.wikiDrawerOpen)
+        return
+      }
+
+      // 整理排列。跟新建节点一样要先知道「当前是哪个 Frame」，共用 targetFrame()。
+      if (hitKey(e, 'canvas.tidy')) {
+        const fid = targetFrame()
+        if (!fid) return
+        e.preventDefault()
+        useStore.getState().tidyFrame(fid)
+        return
+      }
+
       // 新建终端 / 新建 AI 对话 —— 只有建出来的东西不同，**落在哪个 Frame 是同一套判断**，
       // 所以共用 targetFrame()。抄一份的代价这仓库刚付过（5f37651「两份漂移的缩放算法」）。
       const NEW_NODE: [string, (fid: string) => void][] = [
@@ -1010,6 +1048,14 @@ export function CanvasStage(): JSX.Element {
     })
   }
 
+  // 缩放这两个闭包**每次渲染都会重建**（fitAll 读 frames），而快捷键的 effect 是 []
+  // 依赖、只订阅一次 —— 直接引用会永远拿到首帧那份，frames 停在初始那批，
+  // 「适应全部」算出来的框会越来越不对。用 ref 兜住最新的一份，调用时才取。
+  const zoomRef = useRef<{ setScale: (s: number) => void; fitAll: () => void }>({
+    setScale: () => undefined,
+    fitAll: () => undefined
+  })
+
   const fitAll = (): void => {
     const el = viewportRef.current
     if (!el || !frames.length) return
@@ -1026,6 +1072,7 @@ export function CanvasStage(): JSX.Element {
       y: (sh - (y2 - y1) * sc) / 2 - y1 * sc
     })
   }
+  zoomRef.current = { setScale, fitAll }
 
   // 选中的工作区属于哪个项目。没选中 → null → 按钮禁用
   const snapProject = useMemo(() => {

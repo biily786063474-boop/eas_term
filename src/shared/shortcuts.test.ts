@@ -235,3 +235,32 @@ test('新建终端 / 新建 AI 对话：分屏与画布各一条，同键靠作�
   }
   assert.notEqual(byId('split.new-terminal').keys, byId('split.new-agent').keys)
 })
+
+test('**加号只能写成 `Plus`** —— `+` 是分隔符，`Mod++` 会把主键整个丢掉', () => {
+  assert.deepEqual(parseKeys('Shift+Mod+Plus'), { mod: true, shift: true, alt: false, key: '+' })
+  // 反证：直接写 `Mod++` 解析出来主键是空的，那条键会退化成「只按 ⌘ 就触发」
+  assert.equal(parseKeys('Mod++').key, '')
+  // 真按 ⌘⇧= 时浏览器给的 key 就是 '+'
+  assert.ok(matchesShortcut(
+    { key: '+', metaKey: true, ctrlKey: false, shiftKey: true, altKey: false },
+    'Shift+Mod+Plus', true
+  ))
+})
+
+test('注册表里不许出现无法解析的组合（主键为空 = 只按修饰键就触发）', () => {
+  for (const d of SHORTCUTS) {
+    for (const k of [d.keys, ...(d.alt ?? [])]) {
+      assert.notEqual(parseKeys(k).key, '', `${d.id} 的 "${k}" 解析不出主键`)
+    }
+  }
+})
+
+test('⌘0 是「回 100%」不是「适应全部」—— 各家 app 都这样，按成别的会天天按错', () => {
+  const byId = (id: string): ShortcutDef => {
+    const d = SHORTCUTS.find((x) => x.id === id)
+    assert.ok(d, `${id} 不在注册表里`)
+    return d
+  }
+  assert.equal(byId('canvas.zoom-reset').keys, 'Mod+0')
+  assert.equal(byId('canvas.zoom-fit').keys, 'Shift+Mod+0')
+})

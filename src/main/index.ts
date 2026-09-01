@@ -328,6 +328,20 @@ app.whenReady().then(() => {
       /* 图标缺失不影响启动 */
     }
   }
+  // **必须是这里的第一句。** 它替换的是 ipcMain.handle/on 本身，只包得到它之后
+  // 注册的通道 —— 2026-09-01 之前它排在十几个 registerXxxHandlers() 后面，于是
+  // mcp / plugins / secrets / skill / agentInstall / hook / roles / wiki /
+  // skillLibrary / dict / rules 那一整批的耗时**根本不进 ipc-slow.log**，
+  // 而排查卡顿的人会把「日志里没有」读成「它们不慢」。
+  //
+  // 图纸当时建议挪到 registerMcpBridge() 之**后**；放在**之前**更好，MCP 自己的
+  // 通道也一并计时，而它唯一的约束（内部要读 app.getPath('userData')，必须在
+  // whenReady 内）照样满足 —— whenReady 之前全仓没有任何 ipcMain 注册，查过。
+  // 开销是一次 Date.now()，只有慢调用才写文件。
+  //
+  // ⚠️ **新增的 registerXxxHandlers() 一律放在这行之后**，不然那组 IPC 又会漏掉。
+  installIpcProfiler()
+
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPluginHandlers()
   // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
@@ -351,17 +365,6 @@ app.whenReady().then(() => {
   // （2026-08-19 撞过：generate.md 补了三条关键缺口，分发出去的仍是没有它们的旧版）。
   // **只更新已经装了的，不主动安装** —— 卸载过的人不该被装回来（同 MCP 的 opt-out）。
   refreshInstalledRules()
-  // 它替换的是 ipcMain.handle/on 本身，所以只包得到**它之后**注册的通道。
-  // ⚠️ 注意它并不在最前面：上面那批（mcp / plugins / secrets / skill / agentInstall /
-  // hook / roles / wiki / skillLibrary / dict / rules）已经注册过了，那些通道不进
-  // ipc-slow.log —— 排查卡顿时「日志里没有」不等于它们不慢。
-  // 这条注释和 ipcProfiler.ts 里那条是同一件事的两处描述，改一处必须改另一处。
-  // 要让「必须在所有 registerXxxHandlers() 之前」重新成立，把这行提到
-  // registerMcpBridge() 之后即可（它只要求在 whenReady 内，好读 userData 路径）。
-  // 在那之前，新增的 registerXxxHandlers() 一律放在这行之后。
-  // 开销是一次 Date.now()，慢调用才写文件。
-  installIpcProfiler()
-
   registerPtyHandlers()
   registerProjectHandlers()
   registerBoardHandlers()

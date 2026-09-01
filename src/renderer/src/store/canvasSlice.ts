@@ -10,7 +10,7 @@
 import type { StateCreator } from 'zustand'
 import { teamModeTargetId } from '../features/canvas/teamMode'
 import { collectLeaves, LeafNode, PaneState } from '../layout'
-import { uid } from './shared'
+import { pickActiveTab, uid } from './shared'
 import type { AppState } from './types'
 
 import type {
@@ -87,8 +87,17 @@ let commitScaleTimer: ReturnType<typeof setTimeout> | null = null
  *
  *  只认「单选一个 Frame」：多选时说不清该跟谁，与其乱跳不如不动。
  *  子 Frame 自己不带 projectId（那是顶层 Frame 的字段），得沿 parentId 往上找。
- *  返回空对象表示「这次不改」——展开进 set 的返回值里刚好是无操作。 */
-function followSel(s: AppState, keys: string[]): { activeProjectId?: string } {
+ *  返回空对象表示「这次不改」——展开进 set 的返回值里刚好是无操作。
+ *
+ *  ⚠️ **改 activeProjectId 必须同时改 activeTabId。** 正规路径 `setActiveProject`
+ *  一直是这么做的（`pickActiveTab`），而这里原来只改前者 —— 于是能造出
+ *  「激活的标签属于另一个项目」这种状态，后果不是显示歪一点：
+ *    · 空态与 PaneLayer 的判据打架 → 「没有打开的终端」透在跑着的终端底下
+ *      （已在 App.tsx 那侧按 PaneLayer 的判据修过症状，428e077）
+ *    · ⇧⌘[ / ⇧⌘] 翻标签按 activeProjectId 过滤会得到空数组，整个静默失效
+ *      （App.tsx 里为此专门改成「按当前标签所属的项目」取）
+ *  这次把根因补上：两处用同一个 pickActiveTab，不变量只有一份。 */
+function followSel(s: AppState, keys: string[]): { activeProjectId?: string; activeTabId?: string | null } {
   // 「选中的东西在哪个 Frame 里」——选中 Frame 本身、或选中它里面的节点，都算。
   // 判据在 store/canvas/selKey.ts，skill 面板用的是同一份。
   const fid = soleFrameIdOfSel(keys)
@@ -100,7 +109,11 @@ function followSel(s: AppState, keys: string[]): { activeProjectId?: string } {
     f = s.canvas.frames.find((x) => x.id === pid)
   }
   const projectId = f?.projectId
-  return projectId && projectId !== s.activeProjectId ? { activeProjectId: projectId } : {}
+  if (!projectId || projectId === s.activeProjectId) return {}
+  return {
+    activeProjectId: projectId,
+    activeTabId: pickActiveTab(s.tabs, s.activeTabByProject, projectId)
+  }
 }
 
 /** Frame → 它所属项目的 id。子 Frame（文件夹）自己可能没有 projectId，沿 parentId 往上找。
