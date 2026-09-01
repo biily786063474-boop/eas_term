@@ -225,6 +225,15 @@ export function keysRejectReason(keys: string, scope: ShortcutScope): string | n
  * 先让注册表与代码对得上，补新绑定是下一步的事。
  */
 export const SHORTCUTS: ShortcutDef[] = [
+  // ── 应用级 ──────────────────────────────────────────────────
+  {
+    id: 'app.settings',
+    label: '打开设置',
+    group: '应用',
+    scope: 'global',
+    keys: 'Mod+,',
+    note: '各家通用的那个键。设置面板的开合是它自己的 useState，所以这条走 `eas:open-settings` 自定义事件'
+  },
   // ── 分屏视图 ────────────────────────────────────────────────
   // 这几条现在只在分屏模式下生效（App.tsx 开头 `if (viewMode !== 'split') return`）。
   // 画布是默认视图，所以默认情况下它们是敲不出来的 —— 已知问题，待定夺。
@@ -234,6 +243,13 @@ export const SHORTCUTS: ShortcutDef[] = [
     group: '窗口与标签',
     scope: 'split',
     keys: 'Mod+T'
+  },
+  {
+    id: 'split.new-agent',
+    label: '新建 AI 对话',
+    group: '窗口与标签',
+    scope: 'split',
+    keys: 'Mod+J'
   },
   {
     id: 'split.close-pane',
@@ -337,6 +353,14 @@ export const SHORTCUTS: ShortcutDef[] = [
     scope: 'canvas',
     keys: 'Mod+T',
     note: '与分屏的「新建终端」同键 —— 作用域隔开。开在选中项所在的 Frame；没选中就取视口中心那个'
+  },
+  {
+    id: 'canvas.new-agent',
+    label: '在当前 Frame 新建 AI 对话',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+J',
+    note: '与分屏的「新建 AI 对话」同键 —— 作用域隔开。落在哪个 Frame 的规则同上'
   },
   {
     id: 'canvas.tool-select',

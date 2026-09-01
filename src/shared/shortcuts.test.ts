@@ -192,3 +192,46 @@ test('**拒绝：会打字的作用域里不许用裸键**', () => {
 test('拒绝：Shift＋字母不是独立组合', () => {
   assert.ok(keysRejectReason('Shift+R', 'canvas'))
 })
+
+test('**global 的键不能和任何作用域的键撞** —— findConflicts 按作用域分桶，正好漏掉这一类', () => {
+  // findConflicts 的分桶是 `scope::keys`，所以 global 的 ⌘, 和 split 的 ⌘, 会落进
+  // 两个不同的桶、报不出冲突。但运行时 global 是在每个视图下都要响的，
+  // 撞上就是「在分屏里按这个键，两件事一起发生」，而且没有任何东西会喊。
+  const norm = (k: string): string => {
+    const p = parseKeys(k)
+    return `${p.mod ? 'M' : ''}${p.shift ? 'S' : ''}${p.alt ? 'A' : ''}${p.key}`
+  }
+  const globals = new Map<string, string>()
+  for (const d of SHORTCUTS) {
+    if (d.scope !== 'global') continue
+    for (const k of [d.keys, ...(d.alt ?? [])]) globals.set(norm(k), d.id)
+  }
+  for (const d of SHORTCUTS) {
+    if (d.scope === 'global') continue
+    for (const k of [d.keys, ...(d.alt ?? [])]) {
+      const owner = globals.get(norm(k))
+      assert.equal(owner, undefined, `${d.id}(${d.scope}) 的 ${k} 撞上了 global 的 ${owner}`)
+    }
+  }
+})
+
+test('新建终端 / 新建 AI 对话：分屏与画布各一条，同键靠作用域隔开', () => {
+  const pairs = [
+    ['split.new-terminal', 'canvas.new-terminal'],
+    ['split.new-agent', 'canvas.new-agent']
+  ]
+  for (const [a, b] of pairs) {
+    const da = SHORTCUTS.find((d) => d.id === a)
+    const db = SHORTCUTS.find((d) => d.id === b)
+    assert.ok(da && db, `${a} / ${b} 都要在注册表里`)
+    assert.equal(da.keys, db.keys, `${a} 和 ${b} 应该同键`)
+    assert.notEqual(da.scope, db.scope, '同键必须靠作用域隔开')
+  }
+  // 而且这两组彼此不能同键 —— 否则在同一个作用域里就真撞了
+  const byId = (id: string): ShortcutDef => {
+    const d = SHORTCUTS.find((x) => x.id === id)
+    assert.ok(d, `${id} 不在注册表里`)
+    return d
+  }
+  assert.notEqual(byId('split.new-terminal').keys, byId('split.new-agent').keys)
+})

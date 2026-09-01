@@ -245,6 +245,18 @@ export function App(): JSX.Element {
           return
         }
       }
+      // 打开设置。**发自定义事件而不是把面板的 open 提到 store** ——
+      // SettingsPanel 的开合是它自己的 useState，那是刻意的（提到全局会让每个订阅
+      // store 的组件因为「有人开了设置」白重渲染一次，见那个文件里的说明）。
+      // `eas:open-settings` 本来就是它对外开放的入口，标题栏的 MCP 指示灯也走这条。
+      //
+      // **不做 toggle**：⌘, 在各家都是「打开」，关它是 Escape 的事；
+      // 做成 toggle 的话，面板开着时再按一下会关掉，而人多半是想跳到某个分区。
+      if (hit(e, 'app.settings')) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('eas:open-settings'))
+        return
+      }
       // ── 以下是作用域 split ──
       if (s.viewMode !== 'split') return
       // 顺序在这里不重要：matchesDef 对修饰键是**全等**比对，
@@ -252,6 +264,12 @@ export function App(): JSX.Element {
       if (hit(e, 'split.new-terminal')) {
         e.preventDefault()
         void s.openTerminal({})
+      } else if (hit(e, 'split.new-agent')) {
+        // 跟上面那条逐条对齐：`openAgentPane` 和 `openTerminal` 是同一套流程，
+        // 唯一差别是它不 spawn pty（建一个带「启动」按钮的空闲面板）。
+        // 不传 projectId → 落到 activeProjectId，与点工具栏那个按钮同义。
+        e.preventDefault()
+        void s.openAgentPane({})
       } else if (hit(e, 'split.close-pane')) {
         e.preventDefault()
         const tab = s.tabs.find((t) => t.id === s.activeTabId)

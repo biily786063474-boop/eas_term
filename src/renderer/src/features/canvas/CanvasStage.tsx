@@ -67,6 +67,22 @@ const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(
  *  那份注册表同时喂给设置界面渲染，写死在组件里的键在设置里看不见。 */
 const hitKey = shortcutHit
 
+/** 「在当前 Frame 新建 X」里的**当前 Frame** 是哪个。
+ *
+ *  选中项所在的那个优先；没选中就取视口正中命中的那个。两级都落空返回 undefined ——
+ *  画布上本来就没有「当前 Frame」这个概念，猜一个只会把东西建到用户没在看的地方。
+ *
+ *  读 DOM（`elementFromPoint` + `.cframe[data-fid]`）而不是拿 store 里的坐标反算：
+ *  Frame 的实际位置经过画布的平移与缩放变换，反算等于把那套变换再实现一遍。 */
+function targetFrame(): string | undefined {
+  const sel = useStore.getState().canvasSel
+  const selKey = [...sel].find((k) => k.startsWith('n:') || k.startsWith('f:'))
+  if (selKey?.startsWith('n:')) return selKey.split(':')[1]
+  if (selKey?.startsWith('f:')) return selKey.slice(2)
+  const mid = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
+  return (mid?.closest('.cframe') as HTMLElement | null)?.dataset.fid
+}
+
 /**
  * 有全屏覆盖层盖着时，画布的全局键盘监听一律让路。
  *
@@ -232,23 +248,21 @@ export function CanvasStage(): JSX.Element {
         }
       }
 
-      if (hitKey(e, 'canvas.new-terminal')) {
-        // 开在哪个 Frame：选中项所在的那个优先；没选中就取视口中心命中的那个。
-        // 两级都落空就什么都不做 —— 画布上没有「当前 Frame」这个概念时，
-        // 猜一个反而会把终端开到用户没在看的地方。
-        const st = useStore.getState()
-        let fid: string | undefined
-        const selKey = [...st.canvasSel].find((k) => k.startsWith('n:') || k.startsWith('f:'))
-        if (selKey?.startsWith('n:')) fid = selKey.split(':')[1]
-        else if (selKey?.startsWith('f:')) fid = selKey.slice(2)
-        if (!fid) {
-          const mid = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
-          fid = (mid?.closest('.cframe') as HTMLElement | null)?.dataset.fid
-        }
-        if (fid) {
-          e.preventDefault()
-          void useStore.getState().addTerminalNode(fid)
-        }
+      // 新建终端 / 新建 AI 对话 —— 只有建出来的东西不同，**落在哪个 Frame 是同一套判断**，
+      // 所以共用 targetFrame()。抄一份的代价这仓库刚付过（5f37651「两份漂移的缩放算法」）。
+      const NEW_NODE: [string, (fid: string) => void][] = [
+        ['canvas.new-terminal', (fid) => void useStore.getState().addTerminalNode(fid)],
+        ['canvas.new-agent', (fid) => void useStore.getState().addAgentNode(fid)]
+      ]
+      for (const [id, run] of NEW_NODE) {
+        if (!hitKey(e, id)) continue
+        const fid = targetFrame()
+        // 没有 Frame 就什么都不做，**别 preventDefault** —— 这次按键我们没接住，
+        // 该让它继续走（比如冒泡到别处，或交给系统）
+        if (!fid) return
+        e.preventDefault()
+        run(fid)
+        return
       }
     }
     window.addEventListener('keydown', onKey)
