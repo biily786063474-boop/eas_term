@@ -188,9 +188,22 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
     [ -e "$f" ] || continue
     FOUND=$((FOUND + 1))
     n=$(basename "$f")
+    L=$(shasum -a 256 "$f" | cut -d' ' -f1)
+    # ── 已经传对了就跳过 ────────────────────────────────────────
+    # 一版是 5 个包、共 630MB，家里上行 ~450KB/s，全程要半小时。
+    # 2026-09-01 发 0.4.72 时第 4 个包传到 29/133MB 被 `Connection reset by peer`
+    # 打断，脚本当场退出 —— 而**网页已经先更新成指向新版本了**，于是线上出现
+    # 「下载页链接指着一个只传了零头的包 + 一个根本不存在的 exe」。
+    # 没有这个跳过的话，重跑要把已经传对的 400MB 再赌一遍，断一次就前功尽弃。
+    # 判据用 SHA256 不用大小：截断的文件大小不同，但**内容损坏而大小碰巧相同**也可能。
+    R=$(ssh $HOST "sha256sum $DL/v$VERSION/$n 2>/dev/null | cut -d' ' -f1" 2>/dev/null || true)
+    if [ -n "$R" ] && [ "$L" = "$R" ]; then
+      echo "  跳过 ${n}（远端已有，SHA256 相同）"
+      continue
+    fi
+    [ -n "$R" ] && echo "  重传 ${n}（远端那份对不上，多半是上次传了一半）"
     echo "  传 ${n}（$(( $(stat -f%z "$f") / 1048576 )) MB）…"
     scp -q "$f" "$HOST:$DL/v$VERSION/$n"
-    L=$(shasum -a 256 "$f" | cut -d' ' -f1)
     R=$(ssh $HOST "sha256sum $DL/v$VERSION/$n | cut -d' ' -f1")
     [ "$L" = "$R" ] || { echo "  ✗ $n SHA256 不符，远端已删"; ssh $HOST "rm -f $DL/v$VERSION/$n"; exit 1; }
     echo "    ✓ 校验通过"
