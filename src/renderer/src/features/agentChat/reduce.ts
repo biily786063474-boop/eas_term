@@ -128,6 +128,16 @@ export interface ChatView {
   usage: Usage | null
   costUsd?: number
   busy: boolean
+  /** 累计「从 turns 头部删掉了多少轮」。**与 Turn.compact.droppedTurns 不是一回事** ——
+   * 那个是「这一刀砍了多少」，这个是整场会话累计的头部偏移。
+   *
+   * 裁剪与压缩都用 `turns.splice(0, N)` 从**头部**删，于是所有「按绝对下标记的位置」
+   * 都会偏移 —— 用户自己发的消息就是这么记的（见 userMessages.ts 的 beforeTurnCount）。
+   * 把偏移量暴露出来，渲染层才能把它减回去。
+   *
+   * **压缩时 unshift 的那个分隔标记会抵掉 1**：它在头部新增一个元素，
+   * 后面所有轮次因此往后挪一格，等价于「少删了一轮」。 */
+  trimmedFromHead?: number
 }
 
 export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatView } {
@@ -183,6 +193,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
    * 或者从中间砍），被砍掉的轮次会让结果落不回去，界面上留一个永远转不完的圈 ——
    * 那种 bug 极难查。**代价是两次数组扫描，值。**
    */
+  let trimmedFromHead = 0
+
   function trimTurns(): void {
     if (turns.length <= MAX_LIVE_TURNS) return
     let drop = turns.length - MAX_LIVE_TURNS
@@ -192,7 +204,10 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       if (t === streamingTurn || t.execs.some((x) => x.state === 'running')) break
       i++
     }
-    if (i > 0) turns.splice(0, i)
+    if (i > 0) {
+      turns.splice(0, i)
+      trimmedFromHead += i
+    }
   }
 
   function push(e: ChatEvent): void {
@@ -280,8 +295,14 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 为什么最后一轮必须留：压缩可能发生在一轮进行到一半时，
         // 砍掉它会让**正在流式输出的回答凭空消失**。
         const dropped = Math.max(0, turns.length - 1)
-        if (dropped > 0) turns.splice(0, dropped)
-        // 分隔标记插在最前面 —— 它标的是「这条线以上的内容 agent 已经不记得了」
+        if (dropped > 0) {
+          turns.splice(0, dropped)
+          trimmedFromHead += dropped
+        }
+        // 分隔标记插在最前面 —— 它标的是「这条线以上的内容 agent 已经不记得了」。
+        // 它在头部**新增**一个元素，后面所有轮次往后挪一格，所以偏移量要抵掉 1，
+        // 否则按 trimmedFromHead 修正过的用户消息会插到标记前面（应该在它后面）。
+        trimmedFromHead -= 1
         turns.unshift({
           role: 'assistant',
           text: '',
@@ -390,7 +411,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       costUsd,
       // turnActive 补的是「会话就绪了但第一个字还没来」那一段（实测有 4 秒多，
       // 见它的定义处）——原来那两支都覆盖不到，界面在那段时间是彻底静止的。
-      busy: anyRunning || sawExecStartSinceTurnDone || turnActive
+      busy: anyRunning || sawExecStartSinceTurnDone || turnActive,
+      trimmedFromHead
     }
   }
 

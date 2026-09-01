@@ -17,6 +17,7 @@ import type {
   CliInfo
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
+import { mergeUserMessages, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
@@ -37,35 +38,6 @@ import './agentChat.css'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 
-/** 归约器（reduce.ts）**从不产出 `Turn.role: 'user'`**——内核的事件流里没有「用户消息」
- *  事件，CLI 不回显用户输入。用户自己发出去的文本在渲染层是同步已知的（按下发送那一刻
- *  就知道），这里单独维护一份、渲染前合并进归约器的 turns，否则界面上只有 AI 在自言自语。
- *
- *  beforeTurnCount 记录「这条消息发出那一刻，归约器已经产出了几个 assistant 轮次」——
- *  合并时用它决定这条用户消息该插在哪两个 assistant 轮次之间。turns 只增不减、不重排
- *  （reduce.ts 的 text.done/exec.start 只 push，不 splice），所以这个计数在整段会话里
- *  稳定：一条用户消息永远紧挨着插在它触发的那个 assistant 轮次之前，无论后面又新增了
- *  多少轮次都不会被顶到别的位置。 */
-interface SentMessage {
-  text: string
-  beforeTurnCount: number
-  /** 这条消息带的图（缩略图，只为界面预览）。发给 CLI 的是路径，不是这个 */
-  images?: { path: string; url: string }[]
-}
-
-function mergeUserMessages(view: ChatView, sent: SentMessage[]): ChatView {
-  if (sent.length === 0) return view
-  const merged: Turn[] = []
-  let sentIdx = 0
-  for (let i = 0; i <= view.turns.length; i++) {
-    while (sentIdx < sent.length && sent[sentIdx].beforeTurnCount === i) {
-      merged.push({ role: 'user', text: sent[sentIdx].text, execs: [], images: sent[sentIdx].images })
-      sentIdx += 1
-    }
-    if (i < view.turns.length) merged.push(view.turns[i])
-  }
-  return { ...view, turns: merged }
-}
 
 // 会话刚起、任何事件都还没到达时 view 是 null（onEvent 至少要等第一个事件才会 setView）。
 // 这段真空期用户已经能看到自己刚发的那条消息，不能因为 view 还是 null 就整屏空白——

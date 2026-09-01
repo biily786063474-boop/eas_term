@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createChatReducer, visibleExecs, MAX_NOTICES } from './reduce.ts'
+import { createChatReducer, visibleExecs, MAX_NOTICES, MAX_LIVE_TURNS } from './reduce.ts'
 import type { ChatEvent } from '../../../../shared/agentChat.ts'
 
 /** 把一串事件喂进去，返回最终视图 */
@@ -698,4 +698,37 @@ test('多条累积，顺序不乱', () => {
 test('空文本也照样落一条 —— 由发送侧负责不发空的，归约器不替它做判断', () => {
   const v = run([ready, { k: 'user.message', text: '' }])
   assert.equal(v.turns.length, 1)
+})
+
+// ── 从头部删轮次时，偏移量必须记下来 ──────────────────────────────
+// 用户自己发的消息按**绝对下标**记位置（userMessages.ts 的 beforeTurnCount），
+// 而这里两处 splice(0, N) 都从头部删 —— 不把删了多少暴露出去，那些下标就全偏了，
+// 表现是「聊了几十轮之后自己发的话成批消失」。这两条钉住偏移量的账。
+
+const done: ChatEvent = { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } }
+
+test('**裁剪：从头砍掉几轮就要记几轮**', () => {
+  const events: ChatEvent[] = [ready]
+  const n = MAX_LIVE_TURNS + 5
+  for (let i = 0; i < n; i++) events.push({ k: 'text.done', text: 't' + i }, done)
+  const v = run(events)
+  assert.equal(v.turns.length, MAX_LIVE_TURNS, '只留上限那么多轮')
+  assert.equal(v.trimmedFromHead, 5, '多出来的 5 轮被砍掉，偏移量就是 5')
+})
+
+test('**压缩：分隔标记占了头部一格，偏移量要把它抵掉**', () => {
+  const events: ChatEvent[] = [ready]
+  for (let i = 0; i < 4; i++) events.push({ k: 'text.done', text: 't' + i }, done)
+  events.push({ k: 'compacted', trigger: 'manual', preTokens: 0, postTokens: 0 })
+  const v = run(events)
+  assert.equal(v.turns.length, 2, '分隔标记 + 保留的最后一轮')
+  // 砍掉 3 轮 → +3；unshift 标记让后面的轮次又往后挪一格 → −1；净偏移 2。
+  // 不抵这一格的话，用户消息会插到分隔标记前面（那条线的意思是「以上 agent 不记得了」，
+  // 把话插在线上方等于说这句话它也不记得，不对）。
+  assert.equal(v.trimmedFromHead, 2)
+})
+
+test('没发生裁剪时偏移量是 0（别让修正逻辑平白挪动位置）', () => {
+  const v = run([ready, { k: 'text.done', text: 'a' }, done])
+  assert.equal(v.trimmedFromHead ?? 0, 0)
 })
