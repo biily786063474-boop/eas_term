@@ -12,6 +12,7 @@ import fs from 'fs'
 import { execFile } from 'child_process'
 import type { IslandAction, IslandState } from '../shared/types'
 import { getPrefs, onIslandPref, setPref } from './prefs'
+import { islandShouldShow, acceptHold } from './islandVisibility'
 
 const EMPTY: IslandState = { running: [], notices: [] }
 
@@ -78,18 +79,57 @@ function pushState(win: BrowserWindow): void {
   })
 }
 
-/** 前台被「手动叫出来」之后留多久。
- *  只有 Dock 菜单的「显示灵动岛」会用到 —— 前台不再自动弹窗，见 shouldShow。 */
+/** 从 Dock 菜单「显示灵动岛」手动叫出来之后，留多久自己收摊。
+ *  前台没有别的状态推送会来触发回收，没这个计时器它会一直挂着。 */
 const FG_NOTICE_MS = 20_000
-/** 手动唤出的截止时刻（epoch ms）。0 = 没人叫过它 */
-let fgUntil = 0
-/** 用户把岛展开着在读 —— 这期间不许收窗口。
- *  没有这个的话：前台的露面窗口期一到，正读着的列表会当着人的面消失。 */
+/** 用户**主动**要岛留着：自己展开着在读，或从 Dock 菜单叫出来的。
+ *
+ *  **只在前台那一档起作用**（见 islandVisibility.ts）。后台显不显示只看有没有内容，
+ *  跟它无关 —— 把它做成后台的开关会让「跑着任务但没展开」时岛彻底不出现。 */
 let held = false
 /** 已经为哪些通知露过面。不记的话每一帧推送都会重新开窗口期，等于常驻 */
 const fgSeen = new Set<string>()
-/** 窗口期到点后回来重算一次的定时器 */
+/** 手动唤出的窗口期到点后回来重算一次的定时器 */
 let fgTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * 松开「留着别收」。**清 held 的动作只许走这一个函数。**
+ *
+ * 它有五个调用点，每一个都对应用户的一次明确表态「我现在要用主体软件」：
+ *   1. 从岛上点了某条进软件（dispatchAction 的 focus 分支）
+ *   2. 主窗口拿到焦点（cmd-tab / 点 Dock / 从全屏切回来，都走 browser-window-focus）
+ *   3. 主窗口里点了任何地方（App.tsx capture 阶段的 mousedown → island:collapse-request）
+ *   4. 岛的窗口被销毁（不清的话 held 会**留到下一次**——内容清零→岛销毁→
+ *      新任务来了而人正在软件里干活，`hasContent && held` 成立，岛凭空压上标题栏）
+ *   5. 退出时的 destroyIsland
+ *
+ * **不能指望岛的渲染层回声来清**（原来的做法是发 `island:collapse`、等它
+ * setMode('collapsed') 再回传 hold(false)）：那是两跳 IPC，窗口正在销毁、渲染层卡住、
+ * 或者 mode 本来就是 collapsed（effect 不重跑、不会回传）时，这一跳就丢了，
+ * held 永久卡在 true。视觉上的折叠仍然发消息去做，但**记账以主进程为准**。
+ */
+function releaseHold(reason: string): void {
+  if (fgTimer) {
+    clearTimeout(fgTimer)
+    fgTimer = null
+  }
+  if (!held) return
+  held = false
+  if (!app.isPackaged) console.log('[island] 松手：' + reason)
+  reconcile()
+}
+
+/** 用户从 Dock 菜单主动把岛叫出来（前台唯一能让它露面的路）。
+ *  到点自己收摊；这期间在软件里点任何地方也会当场收掉（releaseHold 的第 3 条）。 */
+function grabHold(): void {
+  held = true
+  if (fgTimer) clearTimeout(fgTimer)
+  fgTimer = setTimeout(() => {
+    fgTimer = null
+    releaseHold('手动唤出的窗口期到点')
+  }, FG_NOTICE_MS)
+  reconcile()
+}
 
 /** 记下哪些通知已经见过。
  *
@@ -108,39 +148,25 @@ function noteFreshNotices(): void {
   lastState.notices.filter((n) => !fgSeen.has(n.id)).forEach((n) => fgSeen.add(n.id))
 }
 
-/** 窗口该不该在。
+/** 窗口该不该在。**判定本身在 `islandVisibility.ts`（纯函数、有测试），这里只喂数据。**
  *
- *  **你正在软件里干活时，这个窗口一概不出现** —— 连审批也不例外。
+ *  总规则一句话：**岛和前台的主体软件互斥，绝不共存。**
  *
- *  它是个 alwaysOnTop('screen-saver') + visibleOnFullScreen 的窗口，
- *  macOS 为了显示它会把你从当前 Space 拽走（全屏用的时候尤其明显，感觉像被强制切了窗口）。
- *  而你人就在屏幕前，通知根本不需要靠它送达：标题栏的待处理计数在闪、提示音在响、
- *  抽屉里那条在呼吸，够了。
+ *  它是个 alwaysOnTop('screen-saver') + visibleOnFullScreen 的窗口，横在屏幕最上沿，
+ *  正压着主窗口的标题栏那一条 —— 只要它在，那一片的点击就是它接走的，
+ *  用户会当成软件坏了。而人就在屏幕前，通知根本不需要靠它送达：
+ *  铃铛在闪、提示音在响、抽屉里那条在呼吸，够了。
  *
- *  只有两种情况前台也显示：你自己从 Dock 菜单点了「显示灵动岛」，
- *  或者你正把它展开着在读（held）—— 两者都是你主动要的，不是它自己蹦出来。 */
+ *  前台唯一的例外是 held（用户自己叫出来 / 正展开着在读），而 held 随时会被
+ *  一次点击掐掉 —— 见 releaseHold 的调用点。 */
 function shouldShow(): boolean {
-  // 用户在设置里关掉了 → 根本不建那扇窗口
-  if (!getPrefs().island) return false
-  const hasContent = lastState.running.length > 0 || lastState.notices.length > 0
-  if (mainInForeground()) {
-    // ── 2026-08-31：主体在前台就让位，不再留 20 秒露面窗口期 ──────────
-    // 用户要求：「不管什么方式打开软件主体，灵动岛都要隐匿到后台，
-    // 不要抢软件主体的 DOM」。
-    //
-    // 原来这里是 `hasContent && (held || Date.now() < fgUntil)` ——
-    // 也就是「你已经在 app 里了，但有新通知的话岛还是要在屏幕顶上待 20 秒」。
-    // 那 20 秒正好压在主窗口的标题栏区域上。
-    //
-    // **只保留 held**：那是「用户自己把它展开着在读」，收走等于把他正看的东西
-    // 抽走。而这条现在很短 —— 主窗口里点任何地方都会收起它（App.tsx 的 mousedown）。
-    //
-    // 在 app 里错过的通知不会没人管：铃铛、抽屉呼吸点、侧栏红点都还在，
-    // 那些才是「你人就在这儿」时该用的提示面。
-    return hasContent && held
-  }
-  if (lastState.notices.some((n) => n.kind === 'approval')) return true
-  return hasContent
+  return islandShouldShow({
+    enabled: getPrefs().island,
+    mainForeground: mainInForeground(),
+    hasContent: lastState.running.length > 0 || lastState.notices.length > 0,
+    hasApproval: lastState.notices.some((n) => n.kind === 'approval'),
+    held
+  })
 }
 
 /** 刘海几何。Electron 没有 safeAreaInsets，这里靠两个信号推：
@@ -540,6 +566,9 @@ function reconcile(): void {
       visible: w?.isVisible() ?? null,
       running: lastState.running.length,
       notices: lastState.notices.length,
+      // held 必须在这行里：前台那一档「显不显示」完全由它决定，
+      // 少了它，日志上会看到 show 在 focused=true 时莫名其妙地反复横跳
+      held,
       hasWin: !!islandWin
     })
     if (line !== lastLogLine) {
@@ -572,6 +601,15 @@ function reconcile(): void {
       leaveTimer = null
       if (!win.isDestroyed()) win.destroy()
       if (islandWin === win) islandWin = null
+      // **窗口没了，held 也必须跟着归零。** 留着的话它会活到下一次：
+      // 内容清零 → 岛销毁（held 仍为 true）→ 新任务来了而人正在软件里干活 →
+      // `hasContent && held` 成立 → 岛凭空压到标题栏上，用户没做任何要它出来的动作。
+      // 这里直接置而不走 releaseHold：那个会再 reconcile 一次，而我们正在收尾。
+      held = false
+      if (fgTimer) {
+        clearTimeout(fgTimer)
+        fgTimer = null
+      }
     }, LEAVE_MS + 60)
   }
 }
@@ -607,11 +645,15 @@ export function registerIslandHandlers(): void {
   // （比如从没被激活过就被别的应用抢了焦点）走不到窗口事件上。
   app.on('browser-window-blur', nudgeIsland)
   app.on('browser-window-focus', (_e, win) => {
-    // 点了岛以外的地方 → 让它收回去。
-    // 岛是 focusable:false 的窗口，自己收不到 blur，只能由主进程在别的窗口拿到焦点时告诉它。
-    // 这覆盖了最常见的那次点击：看完岛上的列表，回主窗口干活。
-    if (!isIslandWindow(win) && islandWin && !islandWin.isDestroyed()) {
-      islandWin.webContents.send('island:collapse')
+    // 主体拿到焦点 = 用户要用软件了 → 岛让位。cmd-tab、点 Dock、从全屏切回来、
+    // 以及从岛上点进来之后 osascript 真正激活到位的那一刻，全走这一条。
+    //
+    // **先清主进程的 held，再让渲染层去折叠。** 记账不能挂在渲染层的回声上
+    // （见 releaseHold 的注释）；发 collapse 只是为了让它在退场动画里已经是收起的样子。
+    // 岛是 focusable:false 的窗口，自己收不到 blur，这条事件是它唯一的信号来源。
+    if (!isIslandWindow(win)) {
+      releaseHold('主窗口拿到焦点')
+      if (islandWin && !islandWin.isDestroyed()) islandWin.webContents.send('island:collapse')
     }
     nudgeIsland()
   })
@@ -660,16 +702,32 @@ export function registerIslandHandlers(): void {
   onIslandPref(() => reconcile())
 
   ipcMain.on('island:collapse-request', () => {
-    if (!held || !islandWin || islandWin.isDestroyed()) return
-    islandWin.webContents.send('island:collapse')
+    // 主窗口里点了任何地方（App.tsx capture 阶段的 mousedown）→ 岛退场。
+    //
+    // **`browser-window-focus` 覆盖不到这一次**：岛是 focusable:false，
+    // 你在已经聚焦的主窗口里点，没有任何焦点变化，那条事件不触发 ——
+    // 「展开详细列表之后点别处，岛一直摊在那儿」就是这么来的（2026-08-31 实测）。
+    //
+    // 收着的时候 releaseHold 里的 `if (!held) return` 会挡掉，
+    // 所以每次 mousedown 都调过来是廉价的。
+    releaseHold('主窗口里点了别处')
+    if (islandWin && !islandWin.isDestroyed()) islandWin.webContents.send('island:collapse')
   })
 
   ipcMain.on('island:hold', (_e, v: boolean) => {
     const next = !!v
-    if (next === held) return
-    held = next
-    // 松手时重新起算露面窗口期，否则「读完折叠」会立刻消失，显得很突兀
-    if (!held && mainInForeground()) fgUntil = Date.now() + FG_NOTICE_MS
+    // **前台一律不接受「留着」的请求** —— 岛不能自己决定在前台露面。
+    // 挡的是这条真实路径：岛在后台展开着 → 用户 cmd-tab 回软件 → 主进程清 held、
+    // 开始播退场动画 → 就在这 200ms 里岛因为来了条新通知**自动展开**、发来 hold(true)
+    // → 退场被撤销，它重新压回软件的标题栏上。用户什么都没做，它自己回来了。
+    // 判定在 islandVisibility.ts（有测试），这里只照着执行。
+    if (!acceptHold(next, mainInForeground())) return
+    if (!next) {
+      releaseHold('岛自己折叠了')
+      return
+    }
+    if (held) return
+    held = true
     reconcile()
   })
 
@@ -749,6 +807,10 @@ function dispatchAction(action: IslandAction): void {
   const main = mainWindow()
   if (!main) return
   if (action?.type === 'focus') {
+    // **先松手。** 从岛上点进软件就是「我来处理了」，那一刻起它不该再留在屏幕上。
+    // 不能等激活到位再说：osascript 是异步的（~100ms），中间这段时间岛还压着标题栏，
+    // 而 held 若还是 true，等主窗口真到前台时 shouldShow 仍然成立，它就不走了。
+    releaseHold('从岛上点了进来')
     // 跳转意味着「我来处理了」→ 主窗口必须回到前台，否则点了没反应。
     // 顺序有讲究：先把 app 整体激活，再聚焦具体窗口。反过来的话，
     // win.focus() 在 app 还不是 active application 时只是把它设成 key window，
@@ -916,17 +978,10 @@ function updateDockMenu(): void {
   items.push({
     label: '显示灵动岛',
     enabled: lastState.notices.length > 0 || lastState.running.length > 0,
-    click: () => {
-      fgUntil = Date.now() + FG_NOTICE_MS
-      // 到点自己回来收摊：前台不会再有别的状态推送来触发回收，
-      // 没这一下的话手动叫出来的窗口会一直挂着
-      if (fgTimer) clearTimeout(fgTimer)
-      fgTimer = setTimeout(() => {
-        fgTimer = null
-        reconcile()
-      }, FG_NOTICE_MS + 100)
-      reconcile()
-    }
+    // 走 held 这条路。**原来这里设的是一个 `fgUntil` 时刻，而 shouldShow 早就不读它了**
+    // ——2026-08-31 把前台改成「只认 held」时漏掉了这一处，于是这个菜单项在前台
+    // （也就是唯一会用到它的场合）点了毫无反应，静默失效。
+    click: () => grabHold()
   })
 
   // 只在真出过事时才露出这一项——平时没出过故障的话，菜单里挂一条打不开东西的
