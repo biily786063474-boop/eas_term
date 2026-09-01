@@ -8,8 +8,11 @@
 // 放 shared 而不是 renderer：它是纯数据 + 纯函数，主进程以后要加菜单 accelerator
 // 时要用同一份定义，两边各存一份迟早对不上。**这一层禁 import electron / fs / net。**
 //
-// ⚠️ 本文件目前只是**真相源**，还没有接管实际的按键分发 —— App.tsx 与 CanvasStage
-// 里的 keydown 仍是各自写死的。改键行为时**两边都要改**，直到迁移完成。
+// 接管进度：App.tsx 的分屏键、CanvasStage 的删除 / 复制 / 聚焦，都已改成从这里取定义。
+// **只剩 `canvas.pan`（空格）没走这条路** —— 它是「按住平移、松开还原」的 hold 语义，
+// 判定用 `e.code === 'Space'`（keydown/keyup 成对），而本注册表现在只表达「按下触发」。
+// 硬套过去会把一个简单的 if 拧成两套状态机，不值。改那条键要动 CanvasStage，
+// 记得回来同步这里的 keys 字段。
 
 /** 作用域。现有代码里那些 `if (viewMode !== 'split') return` 就是它，
  *  写进数据而不是散在各处的 if。 */
@@ -218,6 +221,6 @@ export const SHORTCUTS: ShortcutDef[] = [
     group: '画布',
     scope: 'canvas',
     keys: 'Space',
-    note: '按住不放'
+    note: '按住不放。**这条没走注册表分发** —— hold 语义，判定在 CanvasStage 用 e.code'
   }
 ]

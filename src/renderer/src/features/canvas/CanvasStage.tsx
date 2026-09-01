@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { teamModeOf } from './teamMode'
 import { zoomViewport, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
+import { SHORTCUTS, matchesDef } from '../../../../shared/shortcuts'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
@@ -61,6 +62,14 @@ import { runCanvasSnapshot, setClearDialogOpen } from './snapshotRun'
 
 const HEAD_H = 34
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
+
+/** 键的定义在 src/shared/shortcuts.ts —— **不要在这里写死组合**。
+ *  那份注册表同时喂给设置界面渲染，写死在组件里的键在设置里看不见。 */
+const IS_MAC = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
+function hitKey(e: KeyboardEvent, id: string): boolean {
+  const def = SHORTCUTS.find((d) => d.id === id)
+  return !!def && matchesDef(e, def, IS_MAC)
+}
 
 /**
  * 有全屏覆盖层盖着时，画布的全局键盘监听一律让路。
@@ -308,7 +317,7 @@ export function CanvasStage(): JSX.Element {
       // 框选一堆模块后按删除键**根本没反应**，而人不会想到去按 Fn。
       // 文字编辑的场景由上面那行守着（输入框 / textarea / contentEditable 一律放行），
       // 够了；xterm 的输入代理也是 textarea，同样不会误伤。
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (hitKey(e, 'canvas.delete')) {
         const st = useStore.getState()
         // 终端节点单独收集：它不能只从画布上抹掉，还得把底下的 shell 一起收了，
         // 否则 pty 变成孤儿——进程还在跑，而画布上已经找不到它了。
@@ -372,7 +381,7 @@ export function CanvasStage(): JSX.Element {
             onConfirm: wipe
           })
         })()
-      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') {
+      } else if (hitKey(e, 'canvas.duplicate')) {
         e.preventDefault()
         const st = useStore.getState()
         sel.forEach((k) => {
@@ -393,7 +402,7 @@ export function CanvasStage(): JSX.Element {
               })
           } else if (k[0] === 'p') st.duplicateFreeNode(k.slice(2))
         })
-      } else if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      } else if (hitKey(e, 'canvas.focus-selection')) {
         // F：把画面聚焦到选中内容（fit + 居中）
         e.preventDefault()
         const cv = useStore.getState().canvas
@@ -478,6 +487,10 @@ export function CanvasStage(): JSX.Element {
     const down = (e: KeyboardEvent): void => {
       const tag = (e.target as HTMLElement)?.tagName
       if (overlayHasKeyboard()) return
+      // 空格按住平移。**这条刻意没走 shortcuts 注册表** —— 它是 hold 语义
+      // （keydown 按住 / keyup 还原），而注册表表达的是「按下触发」；套过去要把
+      // 一个 if 拧成两套状态机。定义仍登记在注册表里（canvas.pan）供设置界面显示，
+      // 改键时两处都要动。用 e.code 而不是 e.key：布局无关，换键盘布局也认得准。
       if (e.code === 'Space' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
         spaceHeld.current = true
         viewportRef.current?.classList.add('space-pan')
