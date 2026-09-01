@@ -222,6 +222,21 @@ export function App(): JSX.Element {
     }
     const onKeyDown = (e: KeyboardEvent): void => {
       const s = useStore.getState()
+      // ── 作用域 global：在哪个视图下都要能按（它们本身就是用来换视图的）──
+      const VIEWS: [string, 'split' | 'canvas' | 'board' | 'gantt'][] = [
+        ['view.split', 'split'],
+        ['view.canvas', 'canvas'],
+        ['view.board', 'board'],
+        ['view.gantt', 'gantt']
+      ]
+      for (const [id, mode] of VIEWS) {
+        if (hit(e, id)) {
+          e.preventDefault()
+          s.setViewMode(mode)
+          return
+        }
+      }
+      // ── 以下是作用域 split ──
       if (s.viewMode !== 'split') return
       // 顺序在这里不重要：matchesDef 对修饰键是**全等**比对，
       // ⌘D 不会把 ⇧⌘D 一起吃掉（早先只判「有没有按 Mod」时会）。
@@ -240,13 +255,22 @@ export function App(): JSX.Element {
         e.preventDefault()
         const tab = s.tabs.find((t) => t.id === s.activeTabId)
         if (tab) void s.splitLeaf(tab.id, tab.activeLeafId, 'row')
-      } else if ((isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
-        // ⌘1–⌘9 是一组（注册表里记作 split.switch-tab），不适合逐个建条目
-        const idx = Number(e.key) - 1
-        const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
-        if (projectTabs[idx]) {
+      } else if (hit(e, 'split.next-tab') || hit(e, 'split.prev-tab')) {
+        // ⌘1–⌘9 原本是「切到第 N 个标签」，那组键让给了视图切换（用户定的），
+        // 这里改成前后翻 —— 跟浏览器/编辑器的 ⇧⌘[ ⇧⌘] 一个手势。
+        // **按「当前标签所属的项目」取，而不是 activeProjectId。**
+        // 这两个正常情况下一样，但实测过不一致的状态（激活的标签属于另一个项目）——
+        // 那时按 activeProjectId 过滤会得到空数组，翻页整个静默失效。
+        // 以看得见的那个标签为准，符合「在我正在看的这组里翻」的直觉。
+        const pid = s.tabs.find((t) => t.id === s.activeTabId)?.projectId ?? s.activeProjectId
+        const projectTabs = s.tabs.filter((t) => t.projectId === pid)
+        if (projectTabs.length > 1) {
           e.preventDefault()
-          s.setActiveTab(projectTabs[idx].id)
+          const cur = projectTabs.findIndex((t) => t.id === s.activeTabId)
+          const step = hit(e, 'split.next-tab') ? 1 : -1
+          // 绕回去而不是停在两端：翻标签是循环手势，停住会让人以为按键失灵
+          const next = (cur + step + projectTabs.length) % projectTabs.length
+          s.setActiveTab(projectTabs[next].id)
         }
       }
     }

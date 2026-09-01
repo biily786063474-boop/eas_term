@@ -206,6 +206,59 @@ export function CanvasStage(): JSX.Element {
     else if (leaf?.pane.kind === 'agent' && leaf.pane.sessionId) clearAttention(leaf.pane.sessionId)
   }, [canvasSel, clearAttention])
 
+  // ── 不依赖选中的画布快捷键：工具切换 与 ⌘T ──────────────────────
+  //
+  // **为什么单开一个 effect**：上面那个 keydown 的守卫末尾是 `!sel.size` —— 删除 /
+  // 复制 / 聚焦都是针对选中物的，没选中就该放行。而切工具和开终端跟选中无关，
+  // 塞进去会被那道闸挡掉。
+  //
+  // 单字母键（V/R/A/N/T）**必须让开输入场景**，否则在便签里打个 "r" 就换成了矩形工具。
+  // xterm 的输入代理也是 textarea，同样被这行守住。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
+      if (useStore.getState().viewMode !== 'canvas') return
+
+      const TOOLS: [string, 'select' | 'rect' | 'arrow' | 'sticky' | 'todo'][] = [
+        ['canvas.tool-select', 'select'],
+        ['canvas.tool-rect', 'rect'],
+        ['canvas.tool-arrow', 'arrow'],
+        ['canvas.tool-sticky', 'sticky'],
+        ['canvas.tool-todo', 'todo']
+      ]
+      for (const [id, tool] of TOOLS) {
+        if (hitKey(e, id)) {
+          e.preventDefault()
+          useStore.getState().setCanvasTool(tool)
+          return
+        }
+      }
+
+      if (hitKey(e, 'canvas.new-terminal')) {
+        // 开在哪个 Frame：选中项所在的那个优先；没选中就取视口中心命中的那个。
+        // 两级都落空就什么都不做 —— 画布上没有「当前 Frame」这个概念时，
+        // 猜一个反而会把终端开到用户没在看的地方。
+        const st = useStore.getState()
+        let fid: string | undefined
+        const selKey = [...st.canvasSel].find((k) => k.startsWith('n:') || k.startsWith('f:'))
+        if (selKey?.startsWith('n:')) fid = selKey.split(':')[1]
+        else if (selKey?.startsWith('f:')) fid = selKey.slice(2)
+        if (!fid) {
+          const mid = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
+          fid = (mid?.closest('.cframe') as HTMLElement | null)?.dataset.fid
+        }
+        if (fid) {
+          e.preventDefault()
+          void useStore.getState().addTerminalNode(fid)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // 滚轮缩放 / 双指平移（原生监听以便 passive:false 阻止页面滚动）
   useEffect(() => {
     const el = viewportRef.current

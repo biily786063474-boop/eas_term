@@ -181,12 +181,50 @@ export const SHORTCUTS: ShortcutDef[] = [
     keys: 'Shift+Mod+D'
   },
   {
-    id: 'split.switch-tab',
-    label: '切到第 N 个标签',
+    id: 'split.next-tab',
+    label: '下一个标签',
     group: '窗口与标签',
     scope: 'split',
-    keys: 'Mod+1',
-    note: '⌘1–⌘9 依次切到当前项目的第 1–9 个标签'
+    keys: 'Shift+Mod+]',
+    note: '⌘1–⌘9 原来是「切到第 N 个标签」，那组键让给了视图切换'
+  },
+  {
+    id: 'split.prev-tab',
+    label: '上一个标签',
+    group: '窗口与标签',
+    scope: 'split',
+    keys: 'Shift+Mod+['
+  },
+
+  // ── 视图 ────────────────────────────────────────────────────
+  // 作用域 global：这四条在哪个视图下都要能按 —— 它们本身就是用来换视图的。
+  {
+    id: 'view.split',
+    label: '切到分屏',
+    group: '视图',
+    scope: 'global',
+    keys: 'Mod+1'
+  },
+  {
+    id: 'view.canvas',
+    label: '切到画布',
+    group: '视图',
+    scope: 'global',
+    keys: 'Mod+2'
+  },
+  {
+    id: 'view.board',
+    label: '切到看板',
+    group: '视图',
+    scope: 'global',
+    keys: 'Mod+3'
+  },
+  {
+    id: 'view.gantt',
+    label: '切到甘特图',
+    group: '视图',
+    scope: 'global',
+    keys: 'Mod+4'
   },
 
   // ── 画布 ────────────────────────────────────────────────────
@@ -214,6 +252,51 @@ export const SHORTCUTS: ShortcutDef[] = [
     scope: 'canvas',
     keys: 'F',
     note: '缩放并居中到选中的节点；有输入焦点时让路'
+  },
+  {
+    id: 'canvas.new-terminal',
+    label: '在当前 Frame 新建终端',
+    group: '画布',
+    scope: 'canvas',
+    keys: 'Mod+T',
+    note: '与分屏的「新建终端」同键 —— 作用域隔开。开在选中项所在的 Frame；没选中就取视口中心那个'
+  },
+  {
+    id: 'canvas.tool-select',
+    label: '工具：选择 / 移动',
+    group: '画布工具',
+    scope: 'canvas',
+    keys: 'V',
+    note: '单字母键，**有输入焦点时一律让路**（输入框 / textarea / contentEditable）'
+  },
+  {
+    id: 'canvas.tool-rect',
+    label: '工具：矩形',
+    group: '画布工具',
+    scope: 'canvas',
+    keys: 'R'
+  },
+  {
+    id: 'canvas.tool-arrow',
+    label: '工具：箭头',
+    group: '画布工具',
+    scope: 'canvas',
+    keys: 'A'
+  },
+  {
+    id: 'canvas.tool-sticky',
+    label: '工具：批注',
+    group: '画布工具',
+    scope: 'canvas',
+    keys: 'N'
+  },
+  {
+    id: 'canvas.tool-todo',
+    label: '工具：待办清单',
+    group: '画布工具',
+    scope: 'canvas',
+    keys: 'T',
+    note: '不带 ⌘ —— ⌘T 是「新建终端」，两者靠修饰键区分'
   },
   {
     id: 'canvas.pan',
