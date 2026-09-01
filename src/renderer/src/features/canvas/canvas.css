@@ -1918,7 +1918,9 @@
 .canvas-picker {
   position: fixed;
   z-index: 1000;
-  width: 286px;
+  /* 320 而不是 286：两组分段控件要并排放下（各约 133 ＋ 组间距 8 = 274，
+     内容区 320−5×2−2 = 308，留了余量给最长的中文标签）。顺带列表也更好读。 */
+  width: 320px;
   padding: 5px;
   /* 窗口很矮时也不许捅出去。useMenuAnchor 只能**挪位置**，挪不动一个比窗口还高的浮层，
      所以高度这一头要自己封住：整体限高 + 列表可收缩（.cpk-list 的 min-height: 0）。 */
@@ -1951,39 +1953,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.cpk-tabs {
-  display: flex;
-  gap: 3px;
-  padding: 0 4px 5px;
-}
-
-.cpk-tabs button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  flex: 1;
-  padding: 5px 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--fg);
-  opacity: 0.65;
-  font-size: 11.5px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.cpk-tabs button:hover {
-  opacity: 0.9;
-}
-
-.cpk-tabs button.on {
-  background: rgba(var(--accent-rgb), 0.22);
-  color: var(--accent);
-  opacity: 1;
 }
 
 .cpk-filter {
@@ -5101,40 +5070,6 @@
 /* 「插入文件」选择器的过滤三选一。原来是一个只在「最近」模式出现的复选框，
    现在两种模式都在——插图片进画布是这个选择器最常见的用途之一，
    却只能靠肉眼在一堆代码文件里找。 */
-.cpk-filters {
-  display: flex;
-  gap: 4px;
-  padding: 0 10px 6px;
-}
-.cpk-filters button {
-  flex: 1;
-  padding: 3px 0;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--fg-dim);
-  font-size: 11px;
-  cursor: pointer;
-  transition:
-    color 0.12s ease,
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-.cpk-filters button:hover {
-  color: var(--fg);
-  border-color: var(--glass-border-strong);
-}
-.cpk-filters button.on {
-  color: var(--fg);
-  background: var(--accent-soft);
-  border-color: rgba(var(--accent-rgb), 0.45);
-}
-@media (prefers-reduced-motion: reduce) {
-  .cpk-filters button {
-    transition: none;
-  }
-}
-
 /* ---------- 文件灯箱（抽屉里点开文件的默认看法） ----------
    遮罩/面板/进退场都沿用上面 .ctodo-lightbox 那一套，只有尺寸不同：
    那个装一条待办，这个要装一整篇 markdown。z-index 同为 3500 档。 */
@@ -5576,97 +5511,109 @@
 .cpk-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  /* 两组之间的距离。分区主要靠各自的凹槽表达，这里只要拉开一点。 */
+  gap: 8px;
+  /* **不换行**：两组是并排的两个维度，换行会让它们看起来像上下级 */
+  flex-wrap: nowrap;
 }
 
-/* 两组之间给一条分隔：它们是两个维度（看哪儿 / 看什么），
-   挨在一起不分组的话像六个平级选项 */
-.cpk-bar > .cpk-filters::before {
-  content: '';
-  width: 1px;
-  height: 16px;
-  margin-right: 4px;
-  background: var(--glass-border);
-}
-
+/* 两组是两个维度（看哪儿 / 看什么），要**一眼看出是两个区**。
+   曾经用一条 1px 竖线分隔 —— 太弱，六个圆挨在一起还是像一排平级选项。
+   改成各自一个**凹槽**：底色 ＋ 一圈边框把每组圈起来，这是分段控件的标准形态，
+   分区由「框」表达而不是「线」。按钮在槽里就不再自带边框和投影（双层边框很脏）。 */
 .cpk-pills {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--glass-border);
 }
 
+/* 展开式胶囊：**选中的摊开成胶囊（图标＋文字），没选中的缩成正圆（只剩图标）。**
+   形态对齐知识库抽屉的书签胶囊（`.wk-seg-btn`）—— 那边竖排、这边横排。
+
+   ⚠️ 这里曾经**两代样式并存**：老的 `.cpk-tabs button` / `.cpk-filters button`
+   还在，选择器权重（0,1,1）压过 `.cpk-pill`（0,1,0），把左右 padding 吃成 0、
+   又用 `flex: 1` 把六个按钮拉成平分宽度 —— 于是圆的不圆、胶囊挤成一团，
+   看起来就是「左右太拥挤」。那两块已删。**给这些按钮加样式只用 `.cpk-pill`，
+   别再写 `.cpk-tabs button` 这类后代选择器**，否则又会盖过单类名规则。
+
+   收起态要的是**正圆**：按钮在凹槽里没有自己的边框，所以是
+   图标 12 ＋ 左右 padding 6×2 = 24 = height，正圆。
+   动 padding / gap / max-width 三个量让宽度自然过渡 —— 不给 width 写死值，
+   因为 auto 不可插值、动不了。 */
 .cpk-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--glass-border);
+  height: 24px;
+  padding: 0 6px;
+  flex: 0 0 auto;
+  /* 凹槽已经有边框和底色，按钮自己不要再来一层 */
+  border: none;
   border-radius: 999px;
   background: transparent;
+  box-shadow: none;
   color: var(--fg-dim);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11.5px;
   white-space: nowrap;
   cursor: pointer;
-  /* **阻尼感**：尾段带一点回弹，不是匀速拉开。
-     这条曲线在末尾轻微过冲再落回，手感像被拉住又松开 */
+  /* 尾段带一点回弹，像被拉住又松开 */
   transition:
-    gap 0.34s cubic-bezier(0.22, 1.2, 0.3, 1),
-    background-color 0.16s ease,
-    border-color 0.16s ease,
-    color 0.16s ease;
+    padding 0.3s cubic-bezier(0.22, 1.2, 0.3, 1),
+    gap 0.3s cubic-bezier(0.22, 1.2, 0.3, 1),
+    color 0.14s ease,
+    background 0.14s ease;
 }
 
-.cpk-pill:hover,
-.cpk-pill.on {
-  background: rgba(255, 255, 255, 0.07);
-  color: var(--fg);
-  border-color: var(--glass-border-strong);
-}
-
-/* 文字默认**不占宽**。用 max-width 而不是 display:none ——
-   后者没有中间态，展开会是「啪」地跳出来，而不是拉开。 */
+/* 文字默认不占宽。用 max-width 而不是 display:none —— 后者没有中间态，
+   展开会是「啪」地跳出来，而不是拉开。 */
 .cpk-pill .sp-text {
   display: inline-block;
   overflow: hidden;
   max-width: 0;
-  transition: max-width 0.34s cubic-bezier(0.22, 1.2, 0.3, 1);
+  transition: max-width 0.3s cubic-bezier(0.22, 1.2, 0.3, 1);
 }
 
-.cpk-pill:hover .sp-text,
+.cpk-pill:hover:not(.on) {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* 展开态：只有选中的那个。hover 刻意**不**展开 —— 六个按钮挨着，
+   鼠标扫过去会一路把邻居顶来顶去，那正是上一版「怎么看都挤」的一半原因。 */
+.cpk-pill.on {
+  padding: 0 10px;
+  gap: 4px;
+  color: var(--fg);
+  background: var(--accent-soft);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+
 .cpk-pill.on .sp-text {
   max-width: 90px;
 }
 
-.cpk-pill:hover,
-.cpk-pill.on {
-  gap: 5px;
-}
-
-/* 逐字浮现。**只动 transform 和 opacity** ——
-   「上浮 / 旋转 / 模糊」里挑了前两个：它们是合成属性，不触发重绘也不触发
-   样式重算。`filter: blur()` 每帧都要重新光栅化，而这是个 hover 就触发、
-   十几个字符各来一遍的动画，代价白付而观感差别很小。 */
+/* 逐字浮现。只动 transform 和 opacity（合成属性，不触发重绘与样式重算）。 */
 .sp-ch {
   display: inline-block;
   white-space: pre;
 }
 
-.cpk-pill:hover .sp-ch,
 .cpk-pill.on .sp-ch {
-  animation: sp-in 0.34s cubic-bezier(0.22, 1.2, 0.3, 1) both;
-  /* 递增 delay 由序号算（--i 由 SplitText 注入）。
-     28ms 一档：短句 3-4 个字总共不到 120ms，读起来是「依次浮现」
-     而不是「等它演完」 */
-  animation-delay: calc(var(--i) * 28ms);
+  animation: sp-in 0.3s cubic-bezier(0.22, 1.2, 0.3, 1) both;
+  /* 递增 delay 由序号算（--i 由 SplitText 注入） */
+  animation-delay: calc(var(--i) * 26ms);
 }
 
 @keyframes sp-in {
   from {
     opacity: 0;
-    transform: translateY(5px) rotate(-6deg);
+    transform: translateY(4px) rotate(-5deg);
   }
   to {
     opacity: 1;
@@ -5679,7 +5626,6 @@
   .cpk-pill .sp-text {
     transition: none;
   }
-  .cpk-pill:hover .sp-ch,
   .cpk-pill.on .sp-ch {
     animation: none;
   }

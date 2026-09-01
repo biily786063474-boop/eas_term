@@ -150,10 +150,16 @@ export function CanvasFilePicker({
         <span className="cpk-title">插入</span>
         <span className="cpk-scope">{rootName}</span>
       </div>
-      {/* ── 两组按钮并排一行（2026-08-31）────────────────────────────
-          原来是上下两行、每个都摊着文字，六个按钮占掉弹层顶部一大块。
-          现在**默认只露 icon**，hover 才展开成带文字的胶囊，文字逐字浮现。
-          一行放得下，弹层的高度全留给真正要看的文件列表。 */}
+      {/* ── 两组展开式胶囊 ────────────────────────────────────────
+          **选中的摊开成胶囊（图标＋文字），没选中的缩成正圆（只剩图标）。**
+          形态对齐知识库抽屉的书签胶囊，那边竖排、这边横排。
+
+          之前这里「怎么看都挤」，根因不在这个设计，而在 canvas.css 里还留着
+          上一代的 `.cpk-tabs button` / `.cpk-filters button` —— 权重压过
+          `.cpk-pill`，把 padding 吃成 0、又 `flex: 1` 平分宽度，圆的不圆、
+          胶囊挤成一团。那两块已删，样式统一由 `.cpk-pill` 一处管。
+
+          hover 刻意**不**展开：六个按钮挨着，鼠标扫过去会一路把邻居顶来顶去。 */}
       <div className="cpk-bar">
       <div className="cpk-tabs cpk-pills">
         <button
