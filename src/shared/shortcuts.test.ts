@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  resolveShortcuts,
+  recordKeys,
+  keysRejectReason,
   parseKeys,
   matchesShortcut,
   matchesDef,
@@ -125,4 +128,67 @@ test('注册表：每条都填了必填字段', () => {
   for (const s of SHORTCUTS) {
     assert.ok(s.id && s.label && s.group && s.scope && s.keys, `${s.id} 有空字段`)
   }
+})
+
+// ── 三期：自定义改键 ──────────────────────────────────────────────
+const DEFS: ShortcutDef[] = [
+  { id: 'a', label: 'A', group: 'g', scope: 'split', keys: 'Mod+T' },
+  { id: 'b', label: 'B', group: 'g', scope: 'canvas', keys: 'Delete', alt: ['Backspace'] }
+]
+
+test('覆盖只换主键位', () => {
+  const r = resolveShortcuts(DEFS, { a: 'Mod+K' })
+  assert.equal(r.find((d) => d.id === 'a')!.keys, 'Mod+K')
+  assert.equal(r.find((d) => d.id === 'b')!.keys, 'Delete', '没改的那条不动')
+})
+
+test('**等价键不跟着改** —— 那是物理事实不是偏好', () => {
+  // Mac 键盘上写着 delete 的键发的是 Backspace。用户把主键改成别的，
+  // 这条物理等价关系依然成立；跟着改只会让删除键失灵。
+  const r = resolveShortcuts(DEFS, { b: 'X' })
+  assert.deepEqual(r.find((d) => d.id === 'b')!.alt, ['Backspace'])
+})
+
+test('认不出的 id 直接忽略（老版本改过、后来被删掉的键）', () => {
+  const r = resolveShortcuts(DEFS, { 已经不存在了: 'Mod+Z' })
+  assert.equal(r.length, 2)
+})
+
+test('录制：只按修饰键还不算一个组合', () => {
+  assert.equal(recordKeys(ev('Meta', { meta: true }), true), null)
+  assert.equal(recordKeys(ev('Shift', { shift: true }), true), null)
+})
+
+test('录制：修饰键 + 主键', () => {
+  assert.equal(recordKeys(ev('k', { meta: true }), true), 'Mod+K')
+  assert.equal(recordKeys(ev('d', { meta: true, shift: true }), true), 'Shift+Mod+D')
+  assert.equal(recordKeys(ev('k', { ctrl: true }), false), 'Mod+K', '非 mac 上 Ctrl 就是 Mod')
+})
+
+test('录制：空格录成 Space（事件里它是 " "）', () => {
+  assert.equal(recordKeys(ev(' '), true), 'Space')
+})
+
+test('**录制：mac 上按着 Ctrl 不录** —— 本注册表的组合里没有它的位置', () => {
+  // 录进去会得到一个永远匹配不上的键：matchesShortcut 见到 otherMod 直接判否，
+  // 用户会以为「设了但没反应」。
+  assert.equal(recordKeys(ev('k', { ctrl: true }), true), null)
+})
+
+test('拒绝：系统占着的组合', () => {
+  assert.ok(keysRejectReason('Mod+Q', 'global'), '⌘Q 会让 app 退出')
+  assert.ok(keysRejectReason('Mod+H', 'global'))
+  assert.equal(keysRejectReason('Mod+K', 'global'), null, '普通组合放行')
+})
+
+test('**拒绝：会打字的作用域里不许用裸键**', () => {
+  // global / split 那边没有「输入焦点让路」的守卫，把 R 设成全局键 =
+  // 以后任何输入框里都打不出 r。
+  assert.ok(keysRejectReason('R', 'global'))
+  assert.ok(keysRejectReason('R', 'split'))
+  assert.equal(keysRejectReason('R', 'canvas'), null, '画布有让路守卫，允许裸键')
+})
+
+test('拒绝：Shift＋字母不是独立组合', () => {
+  assert.ok(keysRejectReason('Shift+R', 'canvas'))
 })

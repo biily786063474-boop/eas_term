@@ -143,6 +143,83 @@ export function findConflicts(list: ShortcutDef[]): { keys: string; scope: Short
   return out.filter((c) => c.ids.length > 1)
 }
 
+/** 用户改过的键位：`{ [快捷键 id]: 组合串 }`。**只存改过的那几条** ——
+ *  全量存下来的话，以后改了默认值，用户那份还压着旧的，而他并不知道自己「改过」。 */
+export type ShortcutOverrides = Record<string, string>
+
+/** 注册表 ＋ 用户覆盖 = 实际生效的键位。id 认不出来的覆盖直接忽略
+ *  （老版本改过的键，那条后来被删了 —— 留着会变成幽灵条目）。 */
+export function resolveShortcuts(
+  defs: ShortcutDef[],
+  overrides: ShortcutOverrides
+): ShortcutDef[] {
+  return defs.map((d) => {
+    const k = overrides[d.id]
+    if (!k || k === d.keys) return d
+    // 覆盖只换主键位，`alt`（等价键）跟着默认走：那是「Mac 的 delete 键发的是
+    // Backspace」这类**物理事实**，不该由用户改，改了只会让删除键失灵。
+    return { ...d, keys: k }
+  })
+}
+
+/** 修饰键本身，单独按下不构成一个组合 */
+const MOD_ONLY = new Set(['Meta', 'Control', 'Shift', 'Alt', 'CapsLock'])
+
+/**
+ * 把一次按键录成组合串（`'Shift+Mod+D'`）。还没按主键时返回 null —— 
+ * 录制界面靠这个区分「用户正按着 ⌘ 等着按下一个键」和「录完了」。
+ */
+export function recordKeys(
+  e: { key: string; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean },
+  isMac: boolean
+): string | null {
+  if (MOD_ONLY.has(e.key)) return null
+  // 顺序固定成 Alt → Shift → Mod，跟 mac 的 ⌃⌥⇧⌘ 惯例一致，
+  // 也跟注册表里既有的写法（'Shift+Mod+D'）对得上。
+  // parseKeys 本身不看顺序，但存进 prefs 的字符串要是两种拼法，
+  // 设置界面里就会并排出现 'Mod+Shift+D' 和 'Shift+Mod+D'，看着像两个键。
+  const parts: string[] = []
+  if (e.altKey) parts.push('Alt')
+  if (e.shiftKey) parts.push('Shift')
+  if (isMac ? e.metaKey : e.ctrlKey) parts.push('Mod')
+  // 非 Mod 的那个修饰键按着时不录 —— 本注册表的组合里没有它的位置，
+  // 录进去会得到一个永远匹配不上的键（matchesShortcut 会因 otherMod 直接判否）
+  if ((isMac ? e.ctrlKey : e.metaKey) && !parts.includes('Mod')) return null
+  const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+  parts.push(key)
+  return parts.join('+')
+}
+
+/**
+ * 这个组合能不能给用户用。返回 null = 可以，返回字符串 = 拒绝的理由（直接显示给人看）。
+ *
+ * 两类要挡：
+ * - **系统占着的**：按下去根本到不了我们这儿，或者会让 app 退出/隐藏，
+ *   用户以为自己设成功了，一按发现 app 没了。
+ * - **裸键在会打字的作用域里**：`global` / `split` 那边没有「输入焦点让路」的守卫，
+ *   把 R 设成全局快捷键 = 以后在任何输入框里都打不出 r。
+ *   `canvas` 作用域有那道守卫（见 CanvasStage 的工具键），所以允许。
+ */
+export function keysRejectReason(keys: string, scope: ShortcutScope): string | null {
+  const p = parseKeys(keys)
+  if (!p.key) return '还没按下主键'
+  const sysReserved: Record<string, string> = {
+    Q: '⌘Q 是「退出应用」，改成它以后按一下 app 就没了',
+    H: '⌘H 是系统的「隐藏应用」，按下去到不了这里',
+    Tab: '⌘Tab 是系统的应用切换',
+    Space: '⌘Space 多数机器上是聚焦搜索'
+  }
+  if (p.mod && !p.shift && !p.alt && sysReserved[p.key]) return sysReserved[p.key]
+  const bare = !p.mod && !p.alt
+  if (bare && scope !== 'canvas') {
+    return '这个作用域里没有「输入焦点让路」的守卫，裸键会把输入框里的字符吃掉'
+  }
+  if (bare && p.key.length === 1 && p.shift) {
+    return 'Shift＋字母就是大写字母本身，按不出独立的组合'
+  }
+  return null
+}
+
 /**
  * 现有快捷键。**这一版只录「已经实现的」，一个都不多加** ——
  * 先让注册表与代码对得上，补新绑定是下一步的事。
