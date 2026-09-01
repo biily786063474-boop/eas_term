@@ -49,6 +49,7 @@ export function App(): JSX.Element {
   const tabs = useStore((s) => s.tabs)
   const projects = useStore((s) => s.projects)
   const activeProjectId = useStore((s) => s.activeProjectId)
+  const activeTabId = useStore((s) => s.activeTabId)
   const loadProjects = useStore((s) => s.loadProjects)
   const loadCanvas = useStore((s) => s.loadCanvas)
   const loadRoles = useStore((s) => s.loadRoles)
@@ -280,7 +281,17 @@ export function App(): JSX.Element {
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   // 当前项目是否有标签；没有则显示空状态（其他项目的标签仍挂载但隐藏）
-  const hasProjectTabs = tabs.some((t) => t.projectId === activeProjectId)
+  // 空态显不显示，判据必须与 **PaneLayer 的显示判据一致** ——
+  // 它按 `tabId === activeTabId` 决定画哪个面板（PaneLayer.tsx），压根不看 activeProjectId。
+  //
+  // 早先这里按 `t.projectId === activeProjectId` 过滤，两个判据在
+  // 「激活的标签属于另一个项目」时会打架：PaneLayer 照常把终端画出来，
+  // 空态却认为这个项目没有标签，于是「没有打开的终端」透在跑着的终端底下。
+  //
+  // 那个状态是真会出现的：`canvasSlice.ts` 的 `followSel()` 在画布上单选一个 Frame 时
+  // 会把 activeProjectId 跟过去，但**不同步 activeTabId**（正规路径 setActiveProject
+  // 会调 pickActiveTab 同步，那条没有）。
+  const hasVisibleTab = tabs.some((t) => t.id === activeTabId)
 
   // 兜底：任何「设计上不该滚」的容器被滚了就复位。
   //
@@ -375,7 +386,7 @@ export function App(): JSX.Element {
         <main className="main">
           {viewMode === 'split' && <TabBar />}
           <div className="tab-stack">
-            {viewMode === 'split' && !hasProjectTabs && (
+            {viewMode === 'split' && !hasVisibleTab && (
               <div className="empty-state">
                 <div className="empty-card">
                   <div className="empty-title">没有打开的终端</div>
