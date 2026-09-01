@@ -11,6 +11,7 @@ import { FootprintPanel } from './FootprintPanel'
 import { GpuPanel } from './GpuPanel'
 import { McpBody } from './McpIndicator'
 import { useStore } from '../../store'
+import { SHORTCUTS, formatKeys } from '../../../../shared/shortcuts'
 import { THEMES } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
 import {
@@ -26,8 +27,25 @@ import './workspace.css'
  *  不在这再手抄一份形状——那样迟早跟主进程的 Prefs 字段脱节 */
 type PrefsState = Awaited<ReturnType<typeof window.api.prefs.get>>
 
-/** 设置的六个分区。原来全堆在一个滚动框里，翻到「隐私」要滚过主题、AI、提示音、
- *  更新、画板 —— 找一个开关比想起它叫什么还费劲。改成左侧标签页。 */
+/** 快捷键分区的数据全部来自注册表（src/shared/shortcuts.ts）——
+ *  这里不重复列一遍键，否则又是一处会跟代码脱节的手抄。 */
+const KEY_GROUPS = [...new Set(SHORTCUTS.map((k) => k.group))].map((group) => ({
+  group,
+  items: SHORTCUTS.filter((k) => k.group === group)
+}))
+
+/** 作用域要显示出来：注册表里有 ⌘T，但它现在只在分屏视图生效 ——
+ *  用户在画布下按不出来又在设置里看得见，不说明白就是在骗人。 */
+const SCOPE_LABEL: Record<string, string> = {
+  global: '任何视图',
+  split: '仅分屏视图',
+  canvas: '仅画布视图',
+  board: '仅看板视图'
+}
+
+/** 设置的分区（数量以下面这个数组为准，别在注释里写死 —— 早先写「六个」，
+ *  加到第七个之后就一直在骗人）。原来全堆在一个滚动框里，翻到「隐私」要滚过主题、
+ *  AI、提示音、更新、画板 —— 找一个开关比想起它叫什么还费劲。改成左侧标签页。 */
 const TABS = [
   { key: 'theme', label: '主题' },
   { key: 'ai', label: 'AI 对话' },
@@ -36,7 +54,8 @@ const TABS = [
   { key: 'board', label: '画板' },
   { key: 'phone', label: '手机端' },
   { key: 'perf', label: '性能' },
-  { key: 'privacy', label: '隐私' }
+  { key: 'privacy', label: '隐私' },
+  { key: 'keys', label: '快捷键' }
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -45,6 +64,7 @@ export function SettingsPanel(): JSX.Element {
   // 每次打开都回到「主题」。设置不是工作面板，记住上次停在哪反而让人找不着北 ——
   // 打开发现停在「隐私」，会以为自己点错了地方。
   const [tab, setTab] = useState<TabKey>('theme')
+  const isMac = window.api.platform === 'darwin'
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   // 音效设置存在 localStorage（不进 store：它不影响任何渲染逻辑，
@@ -416,6 +436,32 @@ export function SettingsPanel(): JSX.Element {
               )}
 
               {tab === 'phone' && <PhonePanel />}
+              {tab === 'keys' && (
+                <div className="cset-sec">
+                  <p className="cset-keyintro">
+                    键的定义在 <code>src/shared/shortcuts.ts</code>。
+                    <b>目前还不能改键</b> —— 这一版先把「有哪些键」列全。
+                  </p>
+                  {KEY_GROUPS.map((g) => (
+                    <div className="cset-keygroup" key={g.group}>
+                      <div className="cset-keyhead">
+                        {g.group}
+                        <span className="cset-keyscope">{SCOPE_LABEL[g.items[0].scope] ?? g.items[0].scope}</span>
+                      </div>
+                      {g.items.map((k) => (
+                        <div className="cset-row cset-keyrow" key={k.id}>
+                          <span className="cset-rowname">
+                            {k.label}
+                            {k.note && <em className="cset-keynote">{k.note}</em>}
+                          </span>
+                          <kbd className="cset-kbd">{formatKeys(k.keys, isMac)}</kbd>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {tab === 'perf' && <GpuPanel />}
 
 

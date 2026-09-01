@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { bindPhoneProvider } from './features/phone/provider'
 import { useStore, serializeCanvas } from './store'
+import { SHORTCUTS, matchesDef } from '../../shared/shortcuts'
 import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
@@ -208,27 +209,39 @@ export function App(): JSX.Element {
     window.api.mcp.setEnabled(useStore.getState().mcpEnabled)
   }, [])
 
-  // 全局快捷键：mac 用 ⌘、Windows/Linux 用 Ctrl。T 新终端、W 关面板、D 右分屏、⇧D 下分屏、1-9 切标签
+  // 全局快捷键。**键的定义在 src/shared/shortcuts.ts，不要在这里写死组合** ——
+  // 那份注册表同时喂给设置界面渲染，写死在这儿的键在设置里看不见。
+  //
+  // 作用域 'split'：这几条只在分屏视图生效。画布有自己的 ⌘D / Delete
+  // （复制 / 删除选中），语义不同，不能让分屏这套盖过去。
   useEffect(() => {
     const isMac = window.api.platform === 'darwin'
+    const hit = (e: KeyboardEvent, id: string): boolean => {
+      const def = SHORTCUTS.find((d) => d.id === id)
+      return !!def && matchesDef(e, def, isMac)
+    }
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (isMac ? !e.metaKey : !e.ctrlKey) return
       const s = useStore.getState()
-      // 画布模式有自己的 ⌘D/Delete（复制/删除选中），不走分屏标签快捷键
       if (s.viewMode !== 'split') return
-      const key = e.key.toLowerCase()
-      if (key === 't') {
+      // 顺序在这里不重要：matchesDef 对修饰键是**全等**比对，
+      // ⌘D 不会把 ⇧⌘D 一起吃掉（早先只判「有没有按 Mod」时会）。
+      if (hit(e, 'split.new-terminal')) {
         e.preventDefault()
         void s.openTerminal({})
-      } else if (key === 'w') {
+      } else if (hit(e, 'split.close-pane')) {
         e.preventDefault()
         const tab = s.tabs.find((t) => t.id === s.activeTabId)
         if (tab) void s.closeLeafSafely(tab.id, tab.activeLeafId)
-      } else if (key === 'd') {
+      } else if (hit(e, 'split.split-down')) {
         e.preventDefault()
         const tab = s.tabs.find((t) => t.id === s.activeTabId)
-        if (tab) void s.splitLeaf(tab.id, tab.activeLeafId, e.shiftKey ? 'column' : 'row')
-      } else if (/^[1-9]$/.test(e.key)) {
+        if (tab) void s.splitLeaf(tab.id, tab.activeLeafId, 'column')
+      } else if (hit(e, 'split.split-right')) {
+        e.preventDefault()
+        const tab = s.tabs.find((t) => t.id === s.activeTabId)
+        if (tab) void s.splitLeaf(tab.id, tab.activeLeafId, 'row')
+      } else if ((isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
+        // ⌘1–⌘9 是一组（注册表里记作 split.switch-tab），不适合逐个建条目
         const idx = Number(e.key) - 1
         const projectTabs = s.tabs.filter((t) => t.projectId === s.activeProjectId)
         if (projectTabs[idx]) {
