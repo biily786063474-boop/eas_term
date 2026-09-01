@@ -13,17 +13,62 @@
 
 import type { Turn } from './reduce'
 
-/** 保留最近多少轮。**按轮不按字节** —— 字节裁剪会把一轮切成半截，
- *  读起来比没有更糟；40 轮足够回看「上次聊到哪」，那正是这个功能的目的。 */
+/** 保留最近多少个 **assistant** 轮次。**按轮不按字节** —— 字节裁剪会把一轮切成半截，
+ *  读起来比没有更糟；40 轮足够回看「上次聊到哪」，那正是这个功能的目的。
+ *
+ *  **提问不占这个预算**，见 MAX_USER_TURNS。 */
 export const MAX_TURNS = 40
+
+/** 提问最多留多少条。
+ *
+ *  为什么提问要单独算额度：**一次提问要 6–39 段回答（2026-09-01 实测盘上 4 份含提问的记录：
+ *  5.7 / 9.0 / 19.0 / 39.0，合计 user 13 : assistant 147）。
+ *  原来 40 轮的预算是两者共用的，于是一份记录里常常只装得下一两条提问——
+ *  实测最新的 4 份分别只有 1/2/4/6 条（更早的 21 份一条都没有，那是另一个已修的
+ *  bug：落盘存的是归约器原始输出，里面从来没有 user 轮次）。
+ *
+ *  后果不只是「看不到自己问过什么」：**吸顶路标挂在 user 轮次上**
+ *  （MessageList.tsx 的哨兵），没有 user 轮次就没有路标，滚一整屏答案顶上空空如也。
+ *
+ *  提问的体积可以忽略——一句话 vs 一个带 execs 的 assistant 轮次（2.5–25KB），
+ *  60 条提问加起来也就十几 KB，所以给它一条独立的、宽得多的额度。 */
+export const MAX_USER_TURNS = 60
 
 /** 单条命令输出保留多少字符。回看历史时要的是「跑过什么、成没成」，
  *  不是完整日志 —— 真要看细节的人会去终端里重跑。 */
 export const MAX_EXEC_OUTPUT = 1200
 
+/**
+ * 挑出要落盘的那些轮次的下标（升序）。
+ *
+ * **两条独立额度，从后往前各扣各的**：assistant 轮次扣 MAX_TURNS，user 轮次扣
+ * MAX_USER_TURNS。额度用完的那一类继续往前扫时直接跳过，另一类照常收。
+ *
+ * 所以结果**可能不连续**：最早那几个提问会连成一串出现在开头、它们的答案不在了。
+ * 这是有意的，而且跟内存里的形状一致——归约器 trimTurns() 砍掉的区间里那些提问，
+ * 在 mergeUserMessages 里同样被 `max(0, …)` 收拢到开头。两边同构，
+ * 重开前后看到的东西才是连续的。
+ */
+function keepIndexes(turns: readonly Turn[]): number[] {
+  const keep: number[] = []
+  let asst = 0
+  let user = 0
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i].role === 'user') {
+      if (user >= MAX_USER_TURNS) continue
+      user += 1
+    } else {
+      if (asst >= MAX_TURNS) continue
+      asst += 1
+    }
+    keep.push(i)
+  }
+  return keep.reverse()
+}
+
 /** 落盘前把一份 turns 裁到合理体积。**不改变顺序，也不合并任何轮次。** */
 export function trimForSave(turns: readonly Turn[]): Turn[] {
-  return turns.slice(-MAX_TURNS).map((t) => ({
+  return keepIndexes(turns).map((i) => turns[i]).map((t) => ({
     role: t.role,
     text: t.text,
     execs: t.execs.map((e) => ({

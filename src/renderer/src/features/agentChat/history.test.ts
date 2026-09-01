@@ -1,6 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { trimForSave, settleOnLoad, contextLostOf, MAX_TURNS, MAX_EXEC_OUTPUT } from './history.ts'
+import {
+  trimForSave,
+  settleOnLoad,
+  contextLostOf,
+  MAX_TURNS,
+  MAX_USER_TURNS,
+  MAX_EXEC_OUTPUT
+} from './history.ts'
 import type { Turn } from './reduce.ts'
 
 const turn = (text: string, over: Partial<Turn> = {}): Turn => ({
@@ -73,4 +80,43 @@ test('历史里没记 resumeId → 一律当接得上（宁可漏报不误报）
   // 误报会让人不信任正常的恢复；漏报最多是没提示，那正是上线前的状态
   assert.equal(contextLostOf(null, 'sess-1'), false)
   assert.equal(contextLostOf(null, undefined), false)
+})
+
+// ── 提问不占 assistant 的额度 ─────────────────────────────────────────────────
+// 2026-09-01 实测盘上 4 份含提问的记录：一次提问要 6–39 段回答
+//（5.7/9.0/19.0/39.0 段每问），40 轮的共用预算于是只装得下 1–6 条提问。
+// **吸顶路标挂在 user 轮次上**，没有 user 轮次就整屏没有路标。
+
+const ask = (text: string): Turn => ({ role: 'user', text, execs: [] })
+
+test('提问不占 assistant 的额度：一问 39 段的最坏比例下，提问全留得住', () => {
+  const turns: Turn[] = []
+  for (let q = 0; q < 5; q++) {
+    turns.push(ask(`问${q}`))
+    for (let i = 0; i < 39; i++) turns.push(turn(`答${q}-${i}`))
+  }
+  const out = trimForSave(turns)
+  const users = out.filter((t) => t.role === 'user').map((t) => t.text)
+  assert.deepEqual(users, ['问0', '问1', '问2', '问3', '问4'], '五个提问一条都不能少')
+  // assistant 那侧的额度没被放宽 —— 体积不变，这是敢给提问单独额度的前提
+  assert.equal(out.filter((t) => t.role === 'assistant').length, MAX_TURNS)
+  // 保序：40 个额度装得下最后一问的全部 39 段，所以 问4 必须在 答4-0 之前 ——
+  // **这正是「读答案时顶上钉着的是提出它的那条提问」的判据**
+  const i4 = out.findIndex((t) => t.text === '问4')
+  const a40 = out.findIndex((t) => t.text === '答4-0')
+  assert.ok(a40 > 0 && i4 < a40, `问4@${i4} 应该在 答4-0@${a40} 之前`)
+  // 早几问的答案确实没了 —— 它们连成一串留在开头当路标，这是有意的形状
+  assert.deepEqual(out.slice(0, 4).map((t) => t.text), ['问0', '问1', '问2', '问3'])
+})
+
+test('提问也有上限，不会无限累积', () => {
+  const turns = Array.from({ length: MAX_USER_TURNS + 20 }, (_, i) => ask(`问${i}`))
+  const out = trimForSave(turns)
+  assert.equal(out.length, MAX_USER_TURNS)
+  assert.equal(out[0].text, '问20', '超额时丢最早的那些')
+})
+
+test('一条提问都没有时，行为跟以前完全一样', () => {
+  const many = Array.from({ length: MAX_TURNS + 10 }, (_, i) => turn(`t${i}`))
+  assert.deepEqual(trimForSave(many).map((t) => t.text), many.slice(-MAX_TURNS).map((t) => t.text))
 })

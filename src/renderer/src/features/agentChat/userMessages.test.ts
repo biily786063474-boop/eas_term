@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeUserMessages, type SentMessage } from './userMessages.ts'
+import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import type { ChatView, Turn } from './reduce.ts'
 
 const A = (text: string): Turn => ({ role: 'assistant', text, execs: [] })
@@ -61,4 +61,43 @@ test('被砍区间里的消息落到开头，不丢', () => {
   const v = mergeUserMessages(V([A('a2')], 2), [S('问A', 0), S('问B', 2)])
   assert.deepEqual(texts(v), ['问A', '问B'])
   assert.equal(roles(v), 'UUa')
+})
+
+// ── turnCursor：吸顶路标能不能出现，全看这个下标口径 ─────────────────────────────
+// 2026-09-01「聊久了看不到自己发的话吸顶」的根因就在这里：记录点原本用
+// `view().turns.length`，而归约器每轮结束都把 turns 砍回 MAX_LIVE_TURNS 上限，
+// 于是它到了上限就不再增长，所有提问减完偏移一起塌到 0。
+
+test('turnCursor 在裁剪之后仍然单调递增（turns.length 不会）', () => {
+  const at = (trimmed: number, len: number): ChatView =>
+    V(Array.from({ length: len }, (_, i) => A(`a${i}`)), trimmed)
+  // 砍掉多少，就在另一侧加回多少 —— 游标恒等于「一共产生过多少轮」
+  assert.equal(turnCursor(at(0, 39)), 39)
+  assert.equal(turnCursor(at(18, 60)), 78)
+  assert.equal(turnCursor(at(135, 60)), 195)
+  // 对照：turns.length 在这三个时刻是 39 / 60 / 60 —— 后两个分不开
+  assert.equal(at(48, 60).turns.length, at(210, 60).turns.length)
+})
+
+test('turnCursor 没有 trimmedFromHead 字段时退回 turns.length', () => {
+  const v = V([A('a1'), A('a2')])
+  delete (v as { trimmedFromHead?: number }).trimmedFromHead
+  assert.equal(turnCursor(v), 2)
+})
+
+test('长会话：提问按 turnCursor 记录后，落在各自答案的前面', () => {
+  // 复现盘上量到的最长比例：一次提问对应 39 个 assistant 轮次
+  const PER_Q = 39
+  const LIVE = 60
+  const trimmed = 5 * PER_Q - LIVE // 135
+  const view = V(Array.from({ length: LIVE }, (_, i) => A(`答${trimmed + i}`)), trimmed)
+  const sent = [0, 1, 2, 3, 4].map((q) => S(`问${q}`, q * PER_Q))
+  const pos = mergeUserMessages(view, sent)
+    .turns.map((t, i) => (t.role === 'user' ? i : -1))
+    .filter((i) => i >= 0)
+  // 前四问的答案确实已经被砍出内存，收拢到开头是诚实的位置；
+  // **第五问必须落在它那 54 段答案的前面**，而不是跟着一起塌到 0 ——
+  // 那正是「读答案时顶上钉着哪条提问」的分水岭。
+  assert.deepEqual(pos, [0, 1, 2, 3, 4 + (4 * PER_Q - trimmed)])
+  assert.ok(pos[4] > 4, '第五问不能塌到开头')
 })

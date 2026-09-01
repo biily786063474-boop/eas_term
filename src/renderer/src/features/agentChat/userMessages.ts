@@ -11,10 +11,32 @@ import type { ChatView, Turn } from './reduce.ts'
 /** 一条已发出的用户消息。`beforeTurnCount` 是它在轮次序列里的插入位置。 */
 export interface SentMessage {
   text: string
-  /** 记录时 `reducer.view().turns.length` 的值 —— 即「这条消息发出去时，前面已有多少轮」*/
+  /** 记录时的 {@link turnCursor} —— 即「这条消息发出去时，这个会话已经产生过多少轮」。
+   *  **不是 `turns.length`**：那个到 MAX_LIVE_TURNS 就不长了，见 turnCursor 的说明 */
   beforeTurnCount: number
   /** 这条消息带的图（缩略图，只为界面预览）。发给 CLI 的是路径，不是这个 */
   images?: { path: string; url: string }[]
+}
+
+/**
+ * 「到此刻为止，这个会话一共产生过多少轮」—— 单调递增，永不回退。
+ *
+ * ⚠️ **记 `beforeTurnCount` 必须用它，不能用 `view().turns.length`。**
+ * 归约器每轮结束都会 `trimTurns()` 把 turns 砍回 `MAX_LIVE_TURNS`（60）上限，
+ * 于是 `turns.length` 到了上限就**不再增长**——它是「现在还剩多少」，不是
+ * 「一共有过多少」。而 `mergeUserMessages` 拿它当绝对下标用。
+ *
+ * 实测（2026-09-01，按盘上量到的最长比例「一问 39 段回答」复现 5 个提问）：
+ *   beforeTurnCount = [0, 39, 60, 60, 60]   ← 到了 60 上限就卡死
+ *   减掉 trimmedFromHead(135) 后全部落到 0
+ *   → **五个提问叠在开头，60 轮答案里一个吸顶路标都没有**
+ * 这正是「聊久了就看不到自己发的话吸顶」的根因。
+ *
+ * `trimmedFromHead + turns.length` 则恒等于「产生过的总轮数」：砍掉 n 轮时
+ * 两边一加一减；压缩插分隔标记时 `trimmedFromHead -= 1` 也正好抵掉新增的那一格。
+ */
+export function turnCursor(view: ChatView): number {
+  return (view.trimmedFromHead ?? 0) + view.turns.length
 }
 
 /**

@@ -17,7 +17,7 @@ import type {
   CliInfo
 } from '../../../../shared/agentChat.ts'
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
-import { mergeUserMessages, type SentMessage } from './userMessages.ts'
+import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
@@ -702,10 +702,13 @@ export function AgentChatView({
     // 顺序反过来更安全：候选挂着但 turn.start 迟迟不来，最坏也只是这条不记，
     // 不会串到下一条上（同一个 sid 的候选被下一次 noteRunning 取走即清）。
     if (!isTeamOwned) noteSubmitted(sid, message)
-    // beforeTurnCount 取当前归约器已有的轮次数——此刻订阅刚接上、一个事件都还没喂进去，
-    // 必然是 0，但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个
-    // assistant 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
-    setSentMessages((prev) => [...prev, { text: message, beforeTurnCount: reducerRef.current.view().turns.length }])
+    // beforeTurnCount 取 turnCursor——此刻订阅刚接上、一个事件都还没喂进去，必然是 0，
+    // 但按公式算而不是硬编码 0：这条消息永远紧挨着插在它触发的第一个 assistant
+    // 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
+    setSentMessages((prev) => [
+      ...prev,
+      { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()) }
+    ])
     setSessionId(result.sessionId)
     setStarting(false)
     setText('')
@@ -846,7 +849,10 @@ export function AgentChatView({
       const trimmed = message.trim()
       if (!trimmed) return false
       setSendError(null)
-      const beforeTurnCount = reducerRef.current.view().turns.length
+      // **turnCursor 不是 turns.length。** 后者到 MAX_LIVE_TURNS 就不再增长，
+      // 于是第三问之后每条都记成同一个 60，减去 trimmedFromHead 后一起塌到 0
+      // ——所有提问叠在开头，答案里一条吸顶路标都没有（turnCursor 注释里有实测）。
+      const beforeTurnCount = turnCursor(reducerRef.current.view())
       // 乐观插入：先让这条消息出现在对话流里，界面才跟得上手速。但它是**乐观**的，
       // 失败时必须撤回——留着就是在骗人（那句话从来没有离开过这台机器）。
       // 按对象引用撤回，不按下标：撤回时数组里可能已经又多了别的消息。
