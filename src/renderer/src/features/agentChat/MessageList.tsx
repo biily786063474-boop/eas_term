@@ -24,6 +24,7 @@ import { ChevronDownIcon } from '../../ui/Icons'
 import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { useLinkify } from './useLinkify.ts'
+import { ThinkingOrb } from './ThinkingOrb'
 import '../editor/editor.css'
 
 export function MessageList({
@@ -116,9 +117,7 @@ export function MessageList({
           补上之后又漏了「第二条消息」。见 reduce.ts 里 turnActive 的说明。 */}
       {view.busy && (
         <div className="ac-busy-hint">
-          <span className="ac-dot" aria-hidden="true" />
-          <span className="ac-dot" aria-hidden="true" />
-          <span className="ac-dot" aria-hidden="true" />
+          <ThinkingOrb />
           正在处理…
         </div>
       )}

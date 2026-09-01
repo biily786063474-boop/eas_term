@@ -548,21 +548,23 @@
   opacity: 0.8;
   padding-left: 4px;
 }
-.ac-busy-hint .ac-dot {
-  background: var(--accent);
-  opacity: 1;
-  animation: ac-pulse 1.1s ease-in-out infinite;
-}
-/* 三个点依次亮：等待期是这个界面唯一「什么都没发生」的时段，一个点在原地闪
-   看不出是活的还是卡住了，错开相位才读得出「它在动」。 */
-.ac-busy-hint .ac-dot:nth-child(2) {
-  animation-delay: 0.18s;
-}
-.ac-busy-hint .ac-dot:nth-child(3) {
-  animation-delay: 0.36s;
-}
-.ac-busy-hint .ac-dot + .ac-dot {
-  margin-left: -3px; /* gap 是 7px，三个点之间收紧一些，看着是一组不是三件 */
+/* 「正在处理」那颗球（ThinkingOrb.tsx，画在 canvas 上）。
+   原来这里是三个错相位呼吸的点；换成参考站 orbs.jakubantalik.com 的 `solving` 形态
+   —— 一个点阵球，若干层像魔方一样依次拧过去再拧回来。
+
+   **不给它任何胶囊 / 边框 / 底色**：参考站把它裹在一颗 pill 里，那是它作为展示件的
+   需要；摆进对话流之后，一圈描边会让这行提示看起来像个可点的控件。
+
+   颜色走 currentColor（组件开画时读一次 `color` 计算值），这里把它设成 --accent ——
+   **原来那三个点就是这么做的**（`background: var(--accent); opacity: 1`，特意从
+   .ac-busy-hint 的 --fg-dim 里跳出来）。不接这一手的话球会暗到几乎看不见：
+   容器本身 opacity .8，再乘上远端点 0.38 的透明度就只剩三成。 */
+.ac-busy-hint .ac-orb {
+  flex: none;
+  color: var(--accent);
+  /* 抵掉球面四周那圈空白（点阵只铺到半径的 82%，四周各空 ~2.5px），
+     让它和文字的间距看起来跟别处的 gap 一致；上下负边距是为了不把这行撑高 */
+  margin: -6px -4px -6px -5px;
 }
 
 /* ---------- 审批卡片：唯一的高视觉层级例外（Task 5，spec §B.2 例外一） ---------- */
