@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Terminal, type ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { scaleOf, unscaleClient, isUnscaled } from './zoomCoords'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
@@ -727,6 +728,52 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
   // 故这里可以**立即** fit（落真实字号 + 重排行列）而非去抖——缩放过程中的实时视觉由 PaneView 的
   // transform 预览承担,不经这里;落定这一次用 useLayoutEffect 在 paint 前 fit,避免「容器已变大、
   // 内容还是旧字号」的一帧闪烁。连续缩放期间 canvasScale 不变 → 此 effect 不触发 → 不会每帧重建 GPU。
+  // ── 画布缩放下把鼠标坐标校正回未缩放坐标系 ──────────────────────
+  //
+  // 画布面板靠 CSS transform 放大，而 xterm 算行列用的是
+  // 「(clientX − rect.left) ÷ cellWidth」：rect 含变换、cellWidth 不含 ——
+  // 算出来的行列号被放大了 scale 倍，点第 10 行会选中第 13 行。
+  // 换算细节与这个 bug 复发过一次的经过，见 zoomCoords.ts 文件头。
+  //
+  // 在 **capture 阶段**改掉事件坐标，xterm 后面照原样算就是对的；
+  // 布局方案（真缩放）一点不动。
+  //
+  // **不改 wheel**：滚轮位置是画布缩放的锚点（wheelPassthrough / CanvasStage 都读它），
+  // 改了会让「以光标为中心缩放」跑偏 —— 那是另一套坐标系的事。
+  useEffect(() => {
+    const host = containerRef.current
+    if (!host) return
+    let scale = 1
+    let edge: { left: number; top: number } | null = null
+    // **只在按下 / 进入时量**：offsetWidth 会触发同步 reflow，
+    // 放进 mousemove 就是拖选时每帧一次强制布局。
+    const measure = (): void => {
+      const screen = host.querySelector('.xterm-screen') as HTMLElement | null
+      if (!screen) {
+        edge = null
+        return
+      }
+      const rect = screen.getBoundingClientRect()
+      scale = scaleOf(rect.width, screen.offsetWidth)
+      edge = { left: rect.left, top: rect.top }
+    }
+    const fix = (e: MouseEvent): void => {
+      if (e.type === 'mousedown' || e.type === 'mouseenter' || e.type === 'contextmenu') measure()
+      if (!edge || isUnscaled(scale)) return
+      Object.defineProperty(e, 'clientX', {
+        value: unscaleClient(e.clientX, edge.left, scale),
+        configurable: true
+      })
+      Object.defineProperty(e, 'clientY', {
+        value: unscaleClient(e.clientY, edge.top, scale),
+        configurable: true
+      })
+    }
+    const types: string[] = ['mouseenter', 'mousedown', 'mousemove', 'mouseup', 'click', 'dblclick', 'contextmenu']
+    types.forEach((t) => host.addEventListener(t, fix as EventListener, true))
+    return () => types.forEach((t) => host.removeEventListener(t, fix as EventListener, true))
+  }, [])
+
   useLayoutEffect(() => {
     canvasScaleRef.current = canvasScale
     fitNowRef.current?.()
