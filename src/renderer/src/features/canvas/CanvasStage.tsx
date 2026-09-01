@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { teamModeOf } from './teamMode'
+import { zoomViewport, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
@@ -58,8 +59,6 @@ import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
 import { runCanvasSnapshot, setClearDialogOpen } from './snapshotRun'
 
-const SCALE_MIN = 0.2
-const SCALE_MAX = 2.2
 const HEAD_H = 34
 const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
 
@@ -203,15 +202,24 @@ export function CanvasStage(): JSX.Element {
     const el = viewportRef.current
     if (!el) return
     const onWheel = (e: WheelEvent): void => {
-      // 仅当模块「被选中」时，光标落在其可滚动区（组件/文件预览）才把滚轮交给内容滚动；
-      // 未选中则保持画板平移/缩放（避免鼠标经过模块就抢走 pan）。
+      // **缩放永远归画布，平移才看选中。**
+      //
+      // ctrl+滚轮 / 触控板捏合（macOS 把 pinch 合成为 ctrl+wheel）表达的是「我要看远看近」，
+      // 那是对整块画布说的 —— 光标恰好停在哪个模块上是偶然。以前它跟平移共用同一套
+      // 放行判定，于是选中一个模块之后就缩不动画布了，得先点空白处取消选中，很别扭。
+      //
+      // 平移相反：光标落在选中模块的可滚动区里，滚轮该滚它的内容（终端 scrollback、
+      // 文件预览的长文），这是「未选中则保持画板平移，避免鼠标经过模块就抢走 pan」
+      // 那条约定的另一半，保持不变。
+      const zooming = e.ctrlKey
       const t = e.target as HTMLElement | null
       // 便签写长了要能翻。它比模块小得多，要求「先选中」反而别扭——
       // 光标已经落在一个真的溢出了的便签里，意图很明确，直接给它滚
       const sticky = t?.closest?.('.cshape-sticky-body') as HTMLElement | null
-      if (sticky && sticky.scrollHeight - sticky.clientHeight > 1) return
+      if (!zooming && sticky && sticky.scrollHeight - sticky.clientHeight > 1) return
       const body = t?.closest?.('.cfile-body')
-      if (body) {
+      // 缩放时整个跳过这一段（图片宫格、选中模块的可滚动区都不再截走滚轮）
+      if (!zooming && body) {
         // 图片宫格是显式打开的浏览视图 → 滚轮始终交给它滚（不要求选中）
         const grid = t?.closest?.('.civ-grid-scroll') as HTMLElement | null
         if (grid && grid.scrollHeight - grid.clientHeight > 1) return
@@ -236,33 +244,11 @@ export function CanvasStage(): JSX.Element {
       e.preventDefault()
       const cur = useStore.getState().canvas.viewport
       if (e.ctrlKey) {
-        // 触控板捏合（pinch，macOS 合成为 ctrl+wheel）/ ⌃+滚轮 → 以光标为锚缩放
-        const r = el.getBoundingClientRect()
-        const px = e.clientX - r.left
-        const py = e.clientY - r.top
-        // deltaMode：0=像素（Chromium 常态）、1=行、2=页。不折算的话行/页模式下步长会小得动不了
-        const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1)
-        // **鼠标滚轮和触控板必须分开处理。**
-        //
-        // 原来是 `scale * (1 - dy * 0.01)`，那是照着 macOS 触控板写的 —— 捏合时 dy 是 ±1~10 的
-        // 连续小值，乘出来 0.9~1.1，很顺。但 Windows 的鼠标滚轮**一格就是 100 或 120**：
-        //   dy=100 → 1 - 1.0 = 0     → scale 归零，被 clamp 拉到 SCALE_MIN(20%)
-        //   dy=120 → 1 - 1.2 = -0.2  → 负数，同样掉到 20%
-        // 表现就是「往后拉一下，一步到底 20%」。放大方向同理，一格直接翻倍。
-        //
-        // 判据用「单次跨度是否 ≥40」：触控板再快也是连续小步，滚轮最小的一格也有 100。
-        const byWheel = Math.abs(dy) >= 40
-        const factor = byWheel
-          ? dy > 0
-            ? 1 / 1.12
-            : 1.12 // 滚轮：每格固定 ±12%，与 dy 具体是 100 还是 120 无关
-          : Math.exp(-dy * 0.01) // 触控板：小量下等价于原来的 (1 - dy*0.01)，手感不变，但永远为正
-        const s2 = clamp(cur.scale * factor, SCALE_MIN, SCALE_MAX)
-        setViewport({
-          scale: s2,
-          x: px - (px - cur.x) * (s2 / cur.scale),
-          y: py - (py - cur.y) * (s2 / cur.scale)
-        })
+        // 触控板捏合（pinch，macOS 合成为 ctrl+wheel）/ ⌃+滚轮 → 以光标为锚缩放。
+        // **算法在 wheelPassthrough.ts 的 zoomViewport，全项目只有那一份** ——
+        // 这里曾经自己写一套，浮层那条路（终端 / 标记层）另写一套，
+        // 结果这边修好了「鼠标滚轮一格就掉到 20%」，那边一直没跟上。
+        setViewport(zoomViewport(e, el.getBoundingClientRect(), cur))
       } else {
         // 双指滑动（上下左右）/ 鼠标滚轮 → 平移
         setViewport({ x: cur.x - e.deltaX, y: cur.y - e.deltaY })
