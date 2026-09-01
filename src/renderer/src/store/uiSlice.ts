@@ -1,6 +1,7 @@
 // UI 切片：主题、危险操作确认弹窗、跨面板的「最近活动终端」标记
 
 import type { StateCreator } from 'zustand'
+import type { ShortcutOverrides } from '../../../shared/shortcuts.ts'
 import { ThemeId, loadTheme, applyTheme } from '../themes'
 import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
@@ -34,6 +35,14 @@ export type ProjectMenuSort = 'default' | 'recent'
 export interface UiSlice {
   theme: ThemeId
   setTheme: (theme: ThemeId) => void
+  /** 用户改过的快捷键 `{ id: 组合串 }`，只存改过的。真相源是注册表
+   *  （src/shared/shortcuts.ts），这里只放覆盖层。落盘在 prefs。 */
+  shortcutOverrides: ShortcutOverrides
+  /** 传 null = 恢复这一条的默认键。**写盘失败也保留内存里的改动** ——
+   *  下次启动会回到旧键，但当下这一按就生效，比「点了没反应」强。 */
+  setShortcutOverride: (id: string, keys: string | null) => void
+  /** 启动时从 prefs 灌进来一次 */
+  loadShortcutOverrides: (v: ShortcutOverrides) => void
   /** 危险操作确认弹窗（终端运行中关闭/退出时触发） */
   pendingConfirm: PendingConfirm | null
 
@@ -316,6 +325,7 @@ async function runTranscribeQueue(
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   theme: loadTheme(),
+  shortcutOverrides: {},
   pendingConfirm: null,
   fullscreenOverlay: null,
   lastActiveTerminal: null,
@@ -612,5 +622,15 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setTheme: (theme) => {
     applyTheme(theme)
     set({ theme })
+  },
+  loadShortcutOverrides: (v) => set({ shortcutOverrides: v }),
+  setShortcutOverride: (id, keys) => {
+    const next = { ...get().shortcutOverrides }
+    // 传 null（恢复默认）就把这一条删掉，而不是记一个「等于默认值」的覆盖 ——
+    // 那样以后改了默认键，用户这条还压着旧的，而他并不知道自己「改过」。
+    if (keys) next[id] = keys
+    else delete next[id]
+    set({ shortcutOverrides: next })
+    void window.api.prefs.set('shortcutOverrides', next)
   }
 })

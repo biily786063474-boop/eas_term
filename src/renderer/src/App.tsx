@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { bindPhoneProvider } from './features/phone/provider'
 import { useStore, serializeCanvas } from './store'
-import { SHORTCUTS, matchesDef } from '../../shared/shortcuts'
+import { shortcutHit } from './shortcutHit'
 import { collectLeaves } from './layout'
 import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
@@ -210,6 +210,17 @@ export function App(): JSX.Element {
     window.api.mcp.setEnabled(useStore.getState().mcpEnabled)
   }, [])
 
+  // 用户改过的键位从 prefs 灌进来一次。**读失败就用默认键位** ——
+  // 快捷键读不出来不该拦住 app 启动，最坏是「改的键这次没生效」。
+  useEffect(() => {
+    void window.api.prefs
+      .get()
+      .then((p) => {
+        if (p.shortcutOverrides) useStore.getState().loadShortcutOverrides(p.shortcutOverrides)
+      })
+      .catch((e) => console.error('[shortcuts] 读取改键失败，本次用默认键位', e))
+  }, [])
+
   // 全局快捷键。**键的定义在 src/shared/shortcuts.ts，不要在这里写死组合** ——
   // 那份注册表同时喂给设置界面渲染，写死在这儿的键在设置里看不见。
   //
@@ -217,10 +228,7 @@ export function App(): JSX.Element {
   // （复制 / 删除选中），语义不同，不能让分屏这套盖过去。
   useEffect(() => {
     const isMac = window.api.platform === 'darwin'
-    const hit = (e: KeyboardEvent, id: string): boolean => {
-      const def = SHORTCUTS.find((d) => d.id === id)
-      return !!def && matchesDef(e, def, isMac)
-    }
+    const hit = shortcutHit
     const onKeyDown = (e: KeyboardEvent): void => {
       const s = useStore.getState()
       // ── 作用域 global：在哪个视图下都要能按（它们本身就是用来换视图的）──

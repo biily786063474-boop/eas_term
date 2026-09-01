@@ -2960,3 +2960,55 @@ body.dragging-row * {
   text-align: center;
   white-space: nowrap;
 }
+
+/* 改键：键位本身变成可点的按钮，录制态高亮 */
+.cset-keyactions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.cset-kbdbtn {
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  transition:
+    color 0.14s ease,
+    border-color 0.14s ease,
+    background 0.14s ease;
+}
+
+.cset-kbdbtn:hover {
+  border-color: var(--glass-border-strong);
+  color: var(--fg);
+}
+
+/* 录制中：文案会变长（「按下新组合… (Esc 取消)」），所以这里不定宽 */
+.cset-kbdbtn.rec {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+.cset-keyreset {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--fg-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.14s ease;
+}
+
+.cset-keyreset:hover {
+  color: var(--fg);
+}
+
+/* 被拒的理由（撞键 / 系统占用 / 裸键）。跟说明文字区分开：这条是要人改主意的 */
+.cset-keyerr {
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.5;
+  color: #fda4af;
+}

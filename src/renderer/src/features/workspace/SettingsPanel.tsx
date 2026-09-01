@@ -11,7 +11,14 @@ import { FootprintPanel } from './FootprintPanel'
 import { GpuPanel } from './GpuPanel'
 import { McpBody } from './McpIndicator'
 import { useStore } from '../../store'
-import { SHORTCUTS, formatKeys } from '../../../../shared/shortcuts'
+import {
+  SHORTCUTS,
+  formatKeys,
+  resolveShortcuts,
+  recordKeys,
+  keysRejectReason,
+  findConflicts
+} from '../../../../shared/shortcuts'
 import { THEMES } from '../../themes'
 import { CheckIcon } from '../../ui/Icons'
 import {
@@ -28,11 +35,14 @@ import './workspace.css'
 type PrefsState = Awaited<ReturnType<typeof window.api.prefs.get>>
 
 /** 快捷键分区的数据全部来自注册表（src/shared/shortcuts.ts）——
- *  这里不重复列一遍键，否则又是一处会跟代码脱节的手抄。 */
-const KEY_GROUPS = [...new Set(SHORTCUTS.map((k) => k.group))].map((group) => ({
-  group,
-  items: SHORTCUTS.filter((k) => k.group === group)
-}))
+ *  这里不重复列一遍键，否则又是一处会跟代码脱节的手抄。
+ *  分组顺序按注册表里第一次出现的先后，不另排。 */
+function groupsOf(defs: typeof SHORTCUTS): { group: string; items: typeof SHORTCUTS }[] {
+  return [...new Set(defs.map((k) => k.group))].map((group) => ({
+    group,
+    items: defs.filter((k) => k.group === group)
+  }))
+}
 
 /** 作用域要显示出来：注册表里有 ⌘T，但它现在只在分屏视图生效 ——
  *  用户在画布下按不出来又在设置里看得见，不说明白就是在骗人。 */
@@ -65,6 +75,14 @@ export function SettingsPanel(): JSX.Element {
   // 打开发现停在「隐私」，会以为自己点错了地方。
   const [tab, setTab] = useState<TabKey>('theme')
   const isMac = window.api.platform === 'darwin'
+  const shortcutOverrides = useStore((s) => s.shortcutOverrides)
+  const setShortcutOverride = useStore((s) => s.setShortcutOverride)
+  /** 正在录哪一条的新键位。null = 没在录 */
+  const [recording, setRecording] = useState<string | null>(null)
+  /** 上一次录制被拒的理由，显示在那一行下面 */
+  const [keyError, setKeyError] = useState<string | null>(null)
+  const shortcutDefs = resolveShortcuts(SHORTCUTS, shortcutOverrides)
+  const keyGroups = groupsOf(shortcutDefs)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   // 音效设置存在 localStorage（不进 store：它不影响任何渲染逻辑，
@@ -190,6 +208,48 @@ export function SettingsPanel(): JSX.Element {
   // 而且任何订阅了 store 的组件都会因为「有人打开了设置」白重渲染一次。
   //
   // 调用方：标题栏的 MCP 指示灯（它自己不再弹浮层，点了就跳到 AI 对话那一栏）。
+  // 录制态的按键捕获。**capture 阶段**：这时候按的每一个键都属于「录制」，
+  // 不能让它顺着冒泡去触发应用自己的快捷键（正在录 ⌘T 的时候不该真的开一个终端）。
+  useEffect(() => {
+    if (!recording) return
+    const onKey = (e: KeyboardEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        setRecording(null)
+        setKeyError(null)
+        return
+      }
+      const keys = recordKeys(e, isMac)
+      // null = 还只按着修饰键，等下一个键，不算录完
+      if (!keys) return
+      const def = shortcutDefs.find((d) => d.id === recording)
+      if (!def) {
+        setRecording(null)
+        return
+      }
+      const reason = keysRejectReason(keys, def.scope)
+      if (reason) {
+        setKeyError(reason)
+        return
+      }
+      // 冲突按作用域判（同键不同作用域是刻意复用，见 findConflicts 的注释）
+      const trial = shortcutDefs.map((d) => (d.id === recording ? { ...d, keys } : d))
+      const clash = findConflicts(trial).find((c) => c.ids.includes(recording))
+      if (clash) {
+        const otherId = clash.ids.find((i) => i !== recording)
+        const other = shortcutDefs.find((d) => d.id === otherId)
+        setKeyError(`跟「${other?.label ?? otherId}」撞了，那条也在这个作用域里`)
+        return
+      }
+      setShortcutOverride(recording, keys)
+      setRecording(null)
+      setKeyError(null)
+    }
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [recording, shortcutDefs, isMac, setShortcutOverride])
+
   useEffect(() => {
     const h = (e: Event): void => {
       const t = (e as CustomEvent<{ tab?: TabKey }>).detail?.tab
@@ -439,10 +499,10 @@ export function SettingsPanel(): JSX.Element {
               {tab === 'keys' && (
                 <div className="cset-sec">
                   <p className="cset-keyintro">
-                    键的定义在 <code>src/shared/shortcuts.ts</code>。
-                    <b>目前还不能改键</b> —— 这一版先把「有哪些键」列全。
+                    点右侧的键位即可改键，Esc 取消。改过的那条会多一个「恢复默认」。
+                    默认值在 <code>src/shared/shortcuts.ts</code>，只有改过的存进偏好。
                   </p>
-                  {KEY_GROUPS.map((g) => (
+                  {keyGroups.map((g) => (
                     <div className="cset-keygroup" key={g.group}>
                       <div className="cset-keyhead">
                         {g.group}
@@ -453,8 +513,30 @@ export function SettingsPanel(): JSX.Element {
                           <span className="cset-rowname">
                             {k.label}
                             {k.note && <em className="cset-keynote">{k.note}</em>}
+                            {recording === k.id && keyError && (
+                              <em className="cset-keyerr">{keyError}</em>
+                            )}
                           </span>
-                          <kbd className="cset-kbd">{formatKeys(k.keys, isMac)}</kbd>
+                          <span className="cset-keyactions">
+                            {shortcutOverrides[k.id] && recording !== k.id && (
+                              <button
+                                className="cset-keyreset"
+                                onClick={() => setShortcutOverride(k.id, null)}
+                                title="恢复默认键位"
+                              >
+                                恢复默认
+                              </button>
+                            )}
+                            <button
+                              className={`cset-kbd cset-kbdbtn${recording === k.id ? ' rec' : ''}`}
+                              onClick={() => {
+                                setKeyError(null)
+                                setRecording(recording === k.id ? null : k.id)
+                              }}
+                            >
+                              {recording === k.id ? '按下新组合… (Esc 取消)' : formatKeys(k.keys, isMac)}
+                            </button>
+                          </span>
                         </div>
                       ))}
                     </div>

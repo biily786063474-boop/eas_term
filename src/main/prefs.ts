@@ -26,6 +26,10 @@ export interface Prefs {
   /** 要不要有灵动岛。**关掉之后那扇窗口根本不建** ——
    *  不是「建了但隐藏」，那样它照样占着一个 BrowserWindow 和一份渲染进程。 */
   island: boolean
+  /** 用户改过的快捷键：`{ [快捷键 id]: 组合串 }`。**只存改过的那几条** ——
+   *  全量存下来的话，以后改了默认值，用户那份还压着旧的，而他并不知道自己「改过」。
+   *  id 与组合串的含义见 src/shared/shortcuts.ts。 */
+  shortcutOverrides?: Record<string, string>
 }
 
 const DEFAULTS: Prefs = {
@@ -56,7 +60,18 @@ export function getPrefs(): Prefs {
           ? raw.clearShapesAfterSnapshot
           : undefined,
       recentDocsOnly:
-        typeof raw.recentDocsOnly === 'boolean' ? raw.recentDocsOnly : DEFAULTS.recentDocsOnly
+        typeof raw.recentDocsOnly === 'boolean' ? raw.recentDocsOnly : DEFAULTS.recentDocsOnly,
+      // 逐条挑：这文件用户和外部工具都能改，一条坏数据不该让整份改键失效。
+      // 值限长是防呆 —— 组合串最长也就 'Alt+Shift+Mod+Backspace' 这个量级，
+      // 塞进来一篇文章只会把设置界面撑坏。
+      shortcutOverrides:
+        raw.shortcutOverrides && typeof raw.shortcutOverrides === 'object' && !Array.isArray(raw.shortcutOverrides)
+          ? Object.fromEntries(
+              Object.entries(raw.shortcutOverrides as Record<string, unknown>).filter(
+                ([k, v]) => typeof k === 'string' && k.length <= 64 && typeof v === 'string' && v.length <= 40
+              ) as [string, string][]
+            )
+          : undefined
     }
   } catch {
     cache = { ...DEFAULTS }

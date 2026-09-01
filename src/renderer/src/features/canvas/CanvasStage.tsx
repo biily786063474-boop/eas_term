@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { teamModeOf } from './teamMode'
 import { zoomViewport, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
-import { SHORTCUTS, matchesDef } from '../../../../shared/shortcuts'
+import { shortcutHit } from '../../shortcutHit'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { CanvasFrame, CanvasShape } from '../../store'
@@ -65,11 +65,7 @@ const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(
 
 /** 键的定义在 src/shared/shortcuts.ts —— **不要在这里写死组合**。
  *  那份注册表同时喂给设置界面渲染，写死在组件里的键在设置里看不见。 */
-const IS_MAC = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
-function hitKey(e: KeyboardEvent, id: string): boolean {
-  const def = SHORTCUTS.find((d) => d.id === id)
-  return !!def && matchesDef(e, def, IS_MAC)
-}
+const hitKey = shortcutHit
 
 /**
  * 有全屏覆盖层盖着时，画布的全局键盘监听一律让路。

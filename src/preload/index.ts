@@ -202,6 +202,10 @@ interface PrefsSnapshot {
   /** 快照后怎么处理标记。未设置 = 每次都问 */
   clearShapesAfterSnapshot?: 'keep' | 'clear'
   recentDocsOnly: boolean
+  /** 用户改过的快捷键 `{ id: 组合串 }`，只存改过的。见 src/shared/shortcuts.ts。
+   *  **这份是 main/prefs.ts 的 Prefs 手抄过来的**（刻意不跨进程 import 类型），
+   *  加字段两边都要加 —— 见 13 号图纸的跨文件同步清单。 */
+  shortcutOverrides?: Record<string, string>
 }
 
 const api = {
