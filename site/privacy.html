@@ -426,6 +426,33 @@
             <li>不想用了，「解除绑定」只是让软件忘掉这个位置，<strong>不删你任何文件</strong>。</li>
           </ul>
 
+          <h2 id="bundled">五之二、随安装包附带的第三方程序</h2>
+          <p>
+            软件里内置了一个可直接使用的 AI 底座 <strong>Oh My Pi</strong>（开源，MIT 许可），
+            这样你不装任何东西也能开始对话。它随安装包一起分发，<strong>不会在你用的时候偷偷去下载什么</strong>。
+          </p>
+          <ul>
+            <li>
+              它的<strong>配置、会话记录、凭证全部关在软件自己的目录里</strong>
+              （<code>应用数据目录/omp</code>），不碰你可能自己装过的那一份。
+            </li>
+            <li>
+              <strong>模型服务商的密钥存在密钥柜里，不落明文</strong>，只在起会话的那一刻
+              注入给它的进程；配置文件里写的是变量名，不是密钥本身。
+            </li>
+            <li>
+              <strong>它联网只连你自己选的那家模型服务商</strong>（以及查你自己账号的额度）。
+              选哪家、填哪把密钥，都由你决定。
+            </li>
+            <li>
+              本机会存一份额度快照用于显示进度条，<strong>里面不含账号邮箱</strong>。
+            </li>
+            <li>
+              它的完整第三方许可声明随安装包附带，在
+              <code>Eas-Term.app/Contents/Resources/omp/THIRD-PARTY-NOTICES.txt</code>。
+            </li>
+          </ul>
+
           <h2 id="voice">六、语音输入与音视频转录</h2>
           <p>这一块最容易被误解，所以说细一点。</p>
           <ul>
