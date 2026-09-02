@@ -509,33 +509,67 @@
   color: #0d0d0d;
   font-weight: 600;
 }
-:root[data-theme='light'] .pane-header button {
+/* **把类型选择器排除在外**（`:not(.pane-kind-btn)`）。
+   它是反相块（亮色下深底白字），套上这条深灰会变成
+   「深灰字压深底」—— 真机量到对比度 1.4，等于看不见。
+   越具体的选择器越晚被想起来，而它恰恰更具体：写这条时不会想到
+   将来会有一个「不跟主题走」的按钮混在同一条里。 */
+:root[data-theme='light'] .pane-header button:not(.pane-kind-btn) {
   color: #3d3d3d;
 }
-:root[data-theme='light'] .pane-header button:hover {
+:root[data-theme='light'] .pane-header button:not(.pane-kind-btn):hover {
   color: #0d0d0d;
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* ── 类型选择器：**跟主题反着来的高对比块**（2026-09-02 用户点名）──────────
+   用户：「终端和 AI 对话这个框连着前面改为白底黑字，亮色反之。」
+
+   为什么值得给它这一档最强的对比：整条顶栏上其余的东西
+   （实例名、几个图标）都是弱的，而「这是什么模块」是**这一条上唯一需要
+   一眼认出来的信息**。反相处理让它自己跳出来，不用靠加大字号或加边。
+
+   **「连着前面」= 图标也一起反相** —— 图标和文字是一个整体，
+   只翻文字的话图标会浮在白块上看不见。
+
+   反相意味着它**不跟着主题走**（暗色白底、亮色深底），这跟
+   `.cframe-head` / `--tooltip-bg` 是同一类：表达身份的东西不参与层级明度。 */
 .pane-kind-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 22px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg);
+  padding: 0 9px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1c1c1c;
   font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.12s;
+}
+/* 图标跟着反相 —— 否则它会浮在白块上看不见 */
+.pane-kind-btn > svg {
+  color: #1c1c1c;
+}
+
+/* 亮色反过来：深底白字 */
+:root[data-theme='light'] .pane-kind-btn {
+  background: #1c1c1c;
+  color: #ffffff;
+}
+:root[data-theme='light'] .pane-kind-btn > svg {
+  color: #ffffff;
 }
 
 .pane-kind-btn:hover,
 .pane-kind-btn.open {
-  background: var(--lift-2);
-  border-color: var(--glass-border);
+  background: #eaeaea;
+}
+:root[data-theme='light'] .pane-kind-btn:hover,
+:root[data-theme='light'] .pane-kind-btn.open {
+  background: #333333;
 }
 
 .pane-kind-chevron {
