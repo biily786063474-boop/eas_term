@@ -448,19 +448,19 @@ export const ompAdapter: CliAdapter = {
 
 | 阶段 | 图纸 | 内容 |
 |---|---|---|
-| 1 · P | `10-模块领地图.md` 打包坑段 | `resources/omp/`（⛔ 分发产物、二进制不入库、源头 `manifest.json` + `fetch-omp.mjs`） |
+| 1 · P（已完成 2026-09-02）| `10-模块领地图.md` 打包坑段 | `resources/omp/`（⛔ 分发产物、二进制不入库、源头 `manifest.json` + `fetch-omp.mjs`） |
 | 1 | `01-系统上下文.md` | 构建期出站 `fetch-omp.mjs` → GitHub Releases（**先改图再出站**，01:116 红线 4）；运行时 omp 连用户所选 provider；`omp usage` 出站到各 provider |
 | 1 | `03-agent角色边界.md` 3B | ② `extraResources.to` ↔ `OMP_RESOURCE_DIR`；③ `PI_CONFIG_DIR` 相对 HOME、`PI_CODING_AGENT_DIR` 绝对、五个键必须 scrub；⑦ 受管配置写 `config.yml`，写 `settings.json` 只生效一次；⑧ `--tools` 名单里一个错名字 = 每次 `session/new` 失败 |
 | 1 | `13-所有权矩阵.md` | ⑤ `OMP_PINNED_VERSION` ↔ `manifest.version` ↔ CHANGELOG；⑨ `OMP_TOOLS` ↔ omp `builtin-names.ts`；⑩ `ompBinPath` / env 组装函数有四个调用点（transport 会话、冒烟、`omp usage`、`omp models`） |
-| 2 · T+E | `03` 3B | ① `session.ts` 三处 if-return **必须在旧逻辑之前**（`restartAndDeliver` 在 kill 之前）；⑤ `session/resume` 不用 `session/load`；⑥ `secretsEnv` 必须传显式名单 |
+| 2 · T+E（已完成 2026-09-02）| `03` 3B | ① `session.ts` 三处 if-return **必须在旧逻辑之前**（`restartAndDeliver` 在 kill 之前）；⑤ `session/resume` 不用 `session/load`；⑥ `secretsEnv` 必须传显式名单 |
 | 2 | `13` | ① `secretsEnv` 第二调用点 ↔ `secretsForRun` 闸门；② `mcpEnv` 三处；④ `ACP_APPROVAL_TIMEOUT_MS` ↔ `APPROVAL_TIMEOUT_MS`；⑥ exit 三条判据 ↔ `wireProc`；⑦ `shared/agentChat.ts` 文件头判据；⑪ `resolveUsedFraction` 抄本 ↔ omp `usage.ts` |
 | 2 | `11-MCP工具网络.md` | `agentMcpConfigPath` 的第三个消费者：transport 过滤归一后转成 `session/new.mcpServers` |
 | 2 | `12-skill与hook流程.md` | omp 会话不装 hook、不打 `EAS_AGENT_CHAT_SESSION`；审批走 ACP 双通道时序配对 |
-| 3 · U | `02-分层架构.md` | 启动链图在 `registerAgentChatHandlers()` 之后插 `registerOmpSetupHandlers()`（仍在 `installIpcProfiler()` 之后），注明不参与「MCP 桥 → 密钥柜 → PTY」硬依赖链 |
+| 3 · U（已完成 2026-09-02）| `02-分层架构.md` | 启动链图在 `registerAgentChatHandlers()` 之后插 `registerOmpSetupHandlers()`（仍在 `installIpcProfiler()` 之后），注明不参与「MCP 桥 → 密钥柜 → PTY」硬依赖链 |
 | 3 | `10` 主进程表 | `agentChat/omp/` 子域各文件；`quota` 子域到 `omp/paths.ts` 的跨域引用 |
 | 3 | `13` | ③ `Prefs.omp` **四处**；⑧ `omp/setup.ts` 是第三条不走 fsGuard 的写通道（改掉「多出第三条即红旗」那句） |
 | 3 | `14-验证与调试.md` | 更专脚本表加 omp 判据、`verify-agent-chat-ui.mjs` 状态更新；`npm run verify` 前置「先 `npm run omp:fetch`」；收尾纪律加「omp 子进程按 pid 杀，绝不 `pkill -f omp`」 |
-| 4 · D | `13` | 额度链路；`ompAccountKey` ↔ `claudeAccountUuid` 同一纪律 |
+| 4 · D（已完成 2026-09-02）| `13` | 额度链路；`ompAccountKey` ↔ `claudeAccountUuid` 同一纪律 |
 | 5 | `CHANGELOG.md` / `site/privacy.html` / 下载页 | 「随包分发 oh-my-pi 18.1.2（MIT），许可见 `Resources/omp/THIRD-PARTY-NOTICES.txt`」；额度快照不含邮箱；体积说明 |
 
 ## 十一、由事实导出的七处主动偏离
@@ -547,4 +547,27 @@ export const ompAdapter: CliAdapter = {
 
 ---
 
-**下一步**：决定表 21 条已全部拍板（2026-09-02）。阶段 0.5（修基线工具）与阶段 1（P，打包）先行，阶段 2（T+E）随后；`npm run dist` 与合并 P 之前把 §P.5 的体积数摆给用户看一次。
+## 十五、落地记录（2026-09-02）
+
+阶段 0.5 / 1 / 2 / 3 / 4 全部完成，`npm run check` 1566 条全绿，隔离契约每一轮都复核过。
+
+**真机验证做了什么**（`npm run verify` 起的隔离实例，CDP 9333）：
+- `listClis`：claude / codex 的 `auth` 是 `'cli-login'`（`buildCliList` 补的默认值），
+  omp 是 `'provider-key'` + `bundled` + `transport:'acp'`。
+- **没配 provider 时起 omp 会话** → 事件是 `turn.start` → `{k:'error', kind:'setup'}`，
+  **没有任何 omp 进程被起起来**（三道闸生效）。
+- 额度快照里**没有 omp 那半**（两道门生效，没配就不去问）；Claude 的额度照常经
+  `src:'api'` 采到；Claude 的登录预检跑了 34 次，一次没被跳过。
+
+**真机抓到、纸面推不出来的一个 bug**：`deliverMessage` 的 acp 分支里 `turn.start`
+写在了 `deliver()` **之后**。而 `deliver()` 的前半段是同步的 —— 闸门当场就推
+`{fatal:true}` 出去，于是事件顺序成了「fatal error → turn.start」：
+归约器里 fatal 收掉这一轮、紧跟着的 turn.start 又把它立起来，
+**界面上「正在处理」再也不消失**。既有代码在 restart 那支早就写明「turn.start 要先推」，
+这一支写反了。改完复验，顺序正确。
+
+**还没做的**：`npm run dist` 与公证（红线操作，等用户明说）；
+带真 key 的端到端（选服务商 → 填 key → 冒烟 → 发一句 → 审批卡 → 画图被拦）。
+
+**下一步**：`npm run dist` 打一次包验公证，以及拿一把真 key 走完引导链路。
+两件都要用户点头。

@@ -674,10 +674,15 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   // 不截的话，第二条消息会被 :648 的 writeStdin 按 Claude 的 `{type:'user'}` 格式
   // 写进 ACP 进程 —— omp 收到非 JSON-RPC 行不会报错，界面永远停在「正在处理」。
   if (live.acp) {
-    live.acp.deliver(message)
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
-    // 与下面 send 分支同一个理由：消息已经在投递路上，界面这段时间最需要表态。
+    // **turn.start 必须在 deliver 之前推**，与下面 restart 那支同一个理由（也是同一个坑）：
+    // `deliver()` 里那几步（判闸、起进程、握手）有一部分是**同步**跑完的 ——
+    // 「还没选模型服务商」这类闸门当场就推一条 `{fatal:true}` 出去。
+    // 反过来写的话事件顺序是「fatal error → turn.start」，而归约器里 fatal 会收掉这一轮、
+    // 紧跟着的 turn.start 又把它立起来 —— 界面上「正在处理」再也不消失。
+    // 2026-09-02 隔离实例上真的撞到过，不是推演。
     handleEvent(live, { k: 'turn.start' })
+    live.acp.deliver(message)
     return { ok: true }
   }
   const plan = planSend(live.rec, Date.now())
