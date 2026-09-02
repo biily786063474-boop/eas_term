@@ -354,11 +354,19 @@ export function OmpSetupPanel(props: {
     setBusy({ k: 'idle' })
   }, [])
 
-  // 走到「选模型」这一步才去拉清单。**提前拉没有意义** —— 它要起一次 omp，
-  // 而在还没填 key 的机器上那一趟必然空手而归
+  // 走到「选模型」这一屏才去拉清单。**提前拉没有意义** —— 它要起一次 omp，
+  // 而在还没登录的机器上那一趟必然空手而归。
+  //
+  // **判据是「这一屏在显示」，不是 `step`。** 只看 step 的话，
+  // 已经配好的用户（step 恒为 `ready`）点「换模型」进来，清单**永远不去拉** ——
+  // 界面停在「一个模型都没列出来」，而 `omp:listModels` 明明回得出 9 个。
+  // 2026-09-02 用户问「配好之后怎么改模型」时当场撞到。
+  // 这和同一天那个「服务商名单永远转圈」是同一个形状：副作用挂在了
+  // 一个**恰好不成立**的条件上，而不是挂在「用户现在看着什么」。
+  const showingModels = step?.k === 'model' || editing === 'model'
   useEffect(() => {
-    if (step?.k === 'model' && models === null && busy.k === 'idle') void loadModels()
-  }, [step, models, busy.k, loadModels])
+    if (showingModels && models === null && busy.k === 'idle') void loadModels()
+  }, [showingModels, models, busy.k, loadModels])
 
   const pickModel = async (id: string): Promise<void> => {
     const pid = omp?.provider

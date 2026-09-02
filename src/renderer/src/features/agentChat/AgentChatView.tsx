@@ -265,6 +265,24 @@ export function AgentChatView({
         usable ? setSelected(c) : !c.available && c.installCmd ? installCli(c) : setCliNote(c)
     }
   })
+  // **配好之后也要有路回设置面板。**
+  //
+  // 原来三个入口全是「出事了才出现」：空态闸门（没配好时）、工具栏那条
+  // auth/setup notice（报错时）、以及安装流程。一旦配通，**入口全部消失** ——
+  // 想换个服务商、或者不在会话里想换模型的起点，就无路可走了。
+  // 2026-09-02 用户问：「配置好后想改模型的话，怎么通过 UI 去改？」
+  // 真机数过：那时闸门 0 个、notice 0 个。
+  //
+  // 挂在换 CLI 那个菜单里 —— 用户本来就是从这儿挑 CLI 的，同一个地方一并解决。
+  // **只对声明了 `provider-key` 的那支给**（omp）：claude / codex 走的是各自
+  // CLI 的登录，没有「我们这边的设置」这回事。
+  if (selected?.auth === 'provider-key' && selected.available && selected.chatSupported) {
+    cliMenuItems.push({
+      label: `设置 ${selected.displayName}…`,
+      hint: '换服务商 / 换模型',
+      onClick: () => setSetupFor({ cli: selected, from: 'login' })
+    })
+  }
   const [text, setText] = useState('')
   /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
