@@ -548,7 +548,15 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
       <tr><td><code>exec.start</code> / <code>exec.done</code></td><td><code>tool_execution_start</code> / <code>_update</code> / <code>_end</code></td><td><span class="b b-em">直通</span> 它比我们多一个 update，正好喂给执行卡片的流式刷新</td></tr>
       <tr><td><code>approval.request</code><br><code>approval.resolved</code></td><td>ACP <code>session/request_permission</code></td><td><span class="b b-em">直通</span> <b>这一对只有 ACP 给得出</b>。kind 映射：bash→exec，edit/delete/move→patch，其余→tool</td></tr>
       <tr><td><code>compacted</code></td><td><code>auto_compaction_start</code> / <code>_end</code></td><td><span class="b b-em">直通</span> pre/postTokens 从 telemetry 取</td></tr>
-      <tr><td><code>quota</code></td><td><span class="b b-ro">没有对等物</span></td><td>omp 的用量在 <code>auth-broker</code> 的 <code>/v1/usage</code>，是<b>另一条 HTTP 通道</b>，不在会话事件流里。<br>短期：不报 quota（我们的 UI 本来就允许缺）。长期：见下节</td></tr>
+      <tr><td><code>quota</code>（额度）</td><td><span class="b b-ro">概念不成立</span></td>
+        <td><b>额度是订阅制的概念</b>——「5 小时窗口用了 79%、几点重置」。omp 走 API 按 token 计费，
+          它自己没有账号，用的是我们配的 provider。这一格不该有值，<b>不是拿不到</b></td></tr>
+      <tr><td><code>turn.done.costUsd</code><br><code>Usage.contextRatio</code></td><td><span class="b b-em">有，而且齐</span></td>
+        <td><b>都在 <code>usage_update</code> 这一个事件里</b>：<code>size</code>（上下文窗口＝分母）·
+          <code>used</code>（分子）· <code>cost:{amount,currency}</code>（<b>会话累计</b>花费，与 Claude 的
+          <code>total_cost_usd</code> 同语义）。<br>
+          <span class="b b-am">注意</span> omp <b>只在 <code>cost &gt; 0</code> 时才带这个字段</b> ——
+          免费模型永远拿不到，那是「没有」不是「0」</td></tr>
       <tr><td><code>error</code></td><td><code>notice</code> / <code>extension_error</code> / 响应里的失败</td><td><span class="b b-am">要归类</span> <code>kind:'auth'</code> 那一档要能认出来，否则登录失效时用户看到的是一句白话报错</td></tr>
       <tr><td><code>user.message</code></td><td>—</td><td>不用管。这个分支只有手机端那条路会产出（<code>reduce.ts</code> 里唯一的例外）</td></tr>
     </tbody>

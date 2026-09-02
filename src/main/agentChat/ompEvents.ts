@@ -33,6 +33,25 @@ export interface AcpReply {
   result: unknown
 }
 
+/**
+ * 会话级的累计数据。**这是留给数据层的接口** —— 当前 UI 只消费其中一部分
+ * （花费进 turn.done.costUsd，上下文占比进 Usage.contextRatio），
+ * 但采集是全的，以后要做用量统计 / 成本看板不用回来改 translator。
+ *
+ * 全部字段可选，语义是「**没有**」而不是「0」：omp 只在 `cost > 0` 时才报花费，
+ * 免费模型（或价格配成 0 的自定义 provider）永远拿不到这个字段。
+ * 报成 0 会被界面读成「花了 $0」，那是错误信息不是「没有信息」
+ * —— 这条规矩 codexEvents.ts 文件头写过，这里同一条。
+ */
+export interface OmpSessionStats {
+  /** 累计花费（USD）。**累计不是单轮** —— 与 Claude 的 total_cost_usd 同语义，所以不会倒退 */
+  costUsd?: number
+  /** 上下文窗口大小（token）。omp 在 usage_update 里给 `size` */
+  contextWindow?: number
+  /** 已占用 token。omp 在 usage_update 里给 `used` */
+  contextUsed?: number
+}
+
 export interface OmpTranslateResult {
   events: ChatEvent[]
   /** 要回给 agent 的响应（审批那两条通道）。**不回就会挂死**，见文件头 */
@@ -50,6 +69,8 @@ export type ApprovalDecider = (req: {
 
 export interface OmpTranslator {
   push(line: string): OmpTranslateResult
+  /** 到此刻为止的会话级累计数据。见 OmpSessionStats —— **数据层的入口在这里**。 */
+  stats(): OmpSessionStats
 }
 
 /** ACP 的 toolCall.kind → 我们的 approval kind。
@@ -93,6 +114,9 @@ export function createOmpTranslator(decide: ApprovalDecider): OmpTranslator {
   /** 已经报过 exec.start 的 toolCallId。tool_call_update 只带 id 不带 title，
    *  要靠这张表把 done 和 start 配上。 */
   const execTitles = new Map<string, string>()
+  /** usage_update 攒下来的会话级数据。**这个事件是轮末发的**
+   *  （omp 的 #emitEndOfTurnUpdates），所以它到达时正好可以并进 turn.done。 */
+  const acc: OmpSessionStats = {}
 
   const openTurn = (out: ChatEvent[]): void => {
     if (turnOpen) return
@@ -206,35 +230,65 @@ export function createOmpTranslator(decide: ApprovalDecider): OmpTranslator {
           execTitles.delete(id)
           break
         }
-        // available_commands_update / session_info_update / usage_update：
-        // 前两个是纯元信息（可用斜杠命令、时间戳），我们界面上没有对应的东西。
-        // usage_update 的 {size, used} 是**上下文占用**不是用量计费，而 toolbarModel
-        // 那边明确写着「绝不显示上下文百分比」，所以也丢掉。
+        case 'usage_update': {
+          // **这个事件比它的名字重要得多**，一度被我整个丢掉过。它装着三样：
+          //   size —— 上下文窗口（**分母**）
+          //   used —— 已占用 token（分子）
+          //   cost —— 会话累计花费 { amount, currency }，omp 只在 > 0 时才带
+          //
+          // 丢掉的理由当时写的是「那是上下文占用不是计费」—— **说反了，两样都在里面**。
+          // 而且 Usage.contextRatio 的规矩是「拿不到分母时不填」，omp 恰恰给了分母，
+          // 所以这里填出来的比例是**算出来的不是猜的**。
+          // 不产出事件：我们的 ChatEvent 没有轮中用量这一档，攒着并进 turn.done。
+          if (typeof u.size === 'number' && u.size > 0) acc.contextWindow = u.size
+          if (typeof u.used === 'number') acc.contextUsed = u.used
+          const c = u.cost as Record<string, unknown> | undefined
+          if (c && typeof c.amount === 'number') acc.costUsd = c.amount
+          break
+        }
+        // available_commands_update / session_info_update：纯元信息
+        //（可用斜杠命令、时间戳），界面上没有对应的东西，丢掉。
         default:
           break
       }
       return { events: out, reply: null }
+    },
+    stats(): OmpSessionStats {
+      return { ...acc }
     }
   }
 }
 
 /** `session/prompt` 的响应 → turn.done。
  *
- *  **不在 push() 里做**：那是一个请求的响应（带我们自己发的 id），不是事件流的一部分，
- *  由发起方拿到 Promise 之后自己转。放这儿是为了让「怎么转」和事件翻译待在一起。 */
-export function turnDoneOf(promptResult: Record<string, unknown>): ChatEvent {
+ *  **要两份数据才拼得全**：
+ *   · promptResult.usage —— **本轮**的 token 增量（omp 的 #buildTurnUsage 算的 current − previous）
+ *   · translator.stats() —— **会话累计**的花费与上下文占用（从 usage_update 攒的）
+ *
+ *  **不在 push() 里做**：prompt 的响应是一个请求的回值（带我们自己发的 id），
+ *  不是事件流的一部分，由发起方拿到 Promise 之后自己转。放这儿是为了让
+ *  「怎么转」和事件翻译待在一起。 */
+export function turnDoneOf(
+  promptResult: Record<string, unknown>,
+  stats: OmpSessionStats = {}
+): Extract<ChatEvent, { k: 'turn.done' }> {
   const usage = (promptResult?.usage ?? {}) as Record<string, number>
+  // 分母拿得到才填比例 —— 这条原则一个字没改，只是 omp 恰好给了分母
+  const ratio =
+    stats.contextWindow && stats.contextWindow > 0 && typeof stats.contextUsed === 'number'
+      ? Math.min(1, stats.contextUsed / stats.contextWindow)
+      : undefined
   return {
     k: 'turn.done',
     usage: {
       inputTokens: usage.inputTokens ?? 0,
       outputTokens: usage.outputTokens ?? 0,
       // omp 报 cachedReadTokens（实测见过 10944），我们的字段叫 cachedInputTokens
-      cachedInputTokens: usage.cachedReadTokens ?? 0
-      // contextRatio 不填：omp 的 usage 里没有窗口上限这个分母。
-      // 那条原则一个字没改 —— 拿不到分母就不填，绝不显示一个看着精确、实则猜的比例
-    }
-    // costUsd 不填：omp 不在这里报花费。toolbarModel 的规则是「缺就整段省略，
-    // 不显示 $0」—— 显示「花了 $0」是错的信息，不是「没有信息」
+      cachedInputTokens: usage.cachedReadTokens ?? 0,
+      contextRatio: ratio
+    },
+    // **缺就是缺，不补 0。** omp 只在 cost > 0 时报 —— 免费模型永远没有这个字段，
+    // 显示「花了 $0」是错的信息，不是「没有信息」（同 codexEvents 文件头那条）
+    costUsd: stats.costUsd
   }
 }

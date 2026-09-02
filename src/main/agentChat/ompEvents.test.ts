@@ -147,13 +147,49 @@ test('failed 状态要翻成 ok:false，不能一律当成功', () => {
 })
 
 test('元信息事件一律丢弃，不产出任何东西', () => {
+  // **usage_update 不在这个名单里**，它有自己的一组测试 ——
+  // 它曾经被当成「元信息」丢掉过，而它装着花费和上下文分母。别再把它加回来。
   const t = createOmpTranslator(ALLOW)
-  for (const k of ['available_commands_update', 'session_info_update', 'usage_update']) {
+  for (const k of ['available_commands_update', 'session_info_update']) {
     const r = t.push(
       JSON.stringify({ jsonrpc: '2.0', method: 'session/update', params: { update: { sessionUpdate: k } } })
     )
     assert.deepEqual(r.events, [], `${k} 不该产出事件`)
   }
+})
+
+// ── usage_update：花费与上下文的唯一来源 ─────────────────────────────────
+//
+// 这个事件一度被整个丢掉过（理由写成了「那是上下文占用不是计费」——说反了，两样都在里面）。
+// 下面几条就是为了不让它再被丢一次。
+
+const usageLine = (o: Record<string, unknown>): string =>
+  JSON.stringify({ jsonrpc: '2.0', method: 'session/update', params: { update: { sessionUpdate: 'usage_update', ...o } } })
+
+test('**usage_update 装着三样：分母 size、分子 used、累计 cost**', () => {
+  const t = createOmpTranslator(ALLOW)
+  t.push(usageLine({ size: 128000, used: 12289, cost: { amount: 0.0123, currency: 'USD' } }))
+  assert.deepEqual(t.stats(), { contextWindow: 128000, contextUsed: 12289, costUsd: 0.0123 })
+})
+
+test('usage_update 不产出事件 —— 我们没有轮中用量这一档，攒着并进 turn.done', () => {
+  const t = createOmpTranslator(ALLOW)
+  assert.deepEqual(t.push(usageLine({ size: 1000, used: 10 })).events, [])
+})
+
+test('**免费模型没有 cost 字段** —— omp 只在 > 0 时报，此时必须是「没有」不是 0', () => {
+  const t = createOmpTranslator(ALLOW)
+  t.push(usageLine({ size: 128000, used: 100 }))
+  assert.equal(t.stats().costUsd, undefined, 'costUsd 缺省不能被补成 0')
+  assert.equal(turnDoneOf({}, t.stats()).costUsd, undefined)
+})
+
+test('stats() 返回的是副本，外部改不动内部状态', () => {
+  const t = createOmpTranslator(ALLOW)
+  t.push(usageLine({ size: 1000, used: 10 }))
+  const a = t.stats()
+  a.contextWindow = 999
+  assert.equal(t.stats().contextWindow, 1000)
 })
 
 // ── turn.done ────────────────────────────────────────────────────────────
@@ -163,22 +199,34 @@ test('prompt 的响应翻成 turn.done，缓存命中要落到 cachedInputTokens
     fs.readFileSync(path.join(import.meta.dirname, '__fixtures__', 'omp-acp-handshake.json'), 'utf8')
   ) as { promptResult: Record<string, unknown> }
   const e = turnDoneOf(raw.promptResult)
-  assert.ok(e.k === 'turn.done')
   assert.ok(e.usage.inputTokens >= 0 && e.usage.outputTokens > 0)
-  assert.equal(e.costUsd, undefined, 'omp 不报花费 —— 必须缺省，显示 $0 是错的信息')
+  assert.ok((e.usage.cachedInputTokens ?? 0) > 0, 'fixture 里缓存命中过一万多 token')
 })
 
 test('usage 缺字段时补 0，不给 undefined（下游会渲染成字面的 undefined）', () => {
   const e = turnDoneOf({})
-  assert.ok(e.k === 'turn.done')
   assert.equal(e.usage.inputTokens, 0)
   assert.equal(e.usage.outputTokens, 0)
 })
 
-test('**contextRatio 一律不填** —— omp 的 usage 里没有窗口上限这个分母', () => {
-  const e = turnDoneOf({ usage: { inputTokens: 100, outputTokens: 5 } })
-  assert.ok(e.k === 'turn.done')
-  assert.equal(e.usage.contextRatio, undefined)
+test('**拿到分母才填 contextRatio** —— 拿不到就不填，绝不猜一个', () => {
+  assert.equal(turnDoneOf({}).usage.contextRatio, undefined, '没有 stats 就没有比例')
+  assert.equal(turnDoneOf({}, { contextUsed: 100 }).usage.contextRatio, undefined, '只有分子也不填')
+  assert.equal(turnDoneOf({}, { contextWindow: 0, contextUsed: 100 }).usage.contextRatio, undefined, '分母是 0 不填')
+  const r = turnDoneOf({}, { contextWindow: 1000, contextUsed: 250 }).usage.contextRatio
+  assert.equal(r, 0.25)
+})
+
+test('比例封顶在 1 —— 压缩前的瞬间可能超窗，显示 120% 是在吓人', () => {
+  assert.equal(turnDoneOf({}, { contextWindow: 100, contextUsed: 150 }).usage.contextRatio, 1)
+})
+
+test('**costUsd 是会话累计不是单轮** —— 与 Claude 的 total_cost_usd 同语义，不会倒退', () => {
+  const t = createOmpTranslator(ALLOW)
+  t.push(usageLine({ size: 1000, used: 10, cost: { amount: 0.01, currency: 'USD' } }))
+  assert.equal(turnDoneOf({}, t.stats()).costUsd, 0.01)
+  t.push(usageLine({ size: 1000, used: 20, cost: { amount: 0.03, currency: 'USD' } }))
+  assert.equal(turnDoneOf({}, t.stats()).costUsd, 0.03, '累计值应该只增不减')
 })
 
 // ── 整体形状 ─────────────────────────────────────────────────────────────
