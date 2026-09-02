@@ -19,7 +19,7 @@
 // （preload/index.ts 与 session.ts 的 IPC handler 都明确只读这两个字段），没有能中途
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo} from 'react'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
@@ -92,6 +92,8 @@ export function ChatToolbar({
   const [text, setText] = useState('')
   /** 挂在输入框上的辞典提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useState<DictChip[]>([])
+  /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */
+  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
   // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
   // 默认值"（2026-08-17 全分支最终评审 I7）。
   //
@@ -151,7 +153,7 @@ export function ChatToolbar({
     // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
     if (!t && !pics.imgs.length && !chips.length) return
     // chip 在**发送这一刻**才展开成全文：输入框里始终只有名字，模型收到的是整条指令
-    const body = expandChips(t, chips)
+    const { text: body, usedIds } = expandChips(t, chips)
     // 图片路径排在文字前面，跟终端那边同一套拼法（agent 先看到「有图」再读要求）
     const paths = pics.pathPrefix()
     const payload = paths ? (body ? `${paths} ${body}` : paths) : body
@@ -161,8 +163,11 @@ export function ChatToolbar({
     pics.clearImgs()
     // 回显 body 而不是 t：这条消息真正发出去的就是展开后的全文，
     // 而且会话恢复时回放的是 CLI 记的那份（也是全文）—— 只显示半截，前后会对不上
-    const sentChips = chips
-    setChips([])
+    // **只把「真的发出去了」的那些当作已发**（2026-09-02 起 chip 由正文里的
+    // `@` 决定发不发）。没被引用的留在原地 —— 用户预加载它就是为了下次还能 @，
+    // 发一次消息就被清空的话，等于每次都要重新加载一遍。
+    const sentChips = chips.filter((c) => usedIds.includes(c.id))
+    setChips((cur) => cur.filter((c) => !usedIds.includes(c.id)))
     // 任何"把用户的话发出去"的路径都该停一次麦——照抄 voiceControl.ts 的约定
     // （TerminalInput.tsx 的 send() 是唯一先例：不 await,消息该立刻走,收麦是它旁边的事）。
     void stopVoiceOnSend()
@@ -301,7 +306,11 @@ export function ChatToolbar({
         {(pics.imgs.length > 0 || snapHere || chips.length > 0) && (
           <div className="ac-attach-row">
             {chips.map((c) => (
-              <span className="ac-chip" key={c.id} data-tip={c.text}>
+              <span
+                  className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
+                  key={c.id}
+                  data-tip={c.text}
+                >
                 <DictIcon size={11} />
                 <span className="ac-chip-label">{c.label}</span>
                 <button

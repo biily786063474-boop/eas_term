@@ -9,7 +9,7 @@
 //
 // **不允许按 CLI 名字分支**：CLI 选项、它的能力声明，全部来自 listClis() 原样透传的
 // CliInfo，选项按钮只认 id/displayName，不认「是不是 claude」。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo} from 'react'
 import type {
   AgentApprovalHookStatus,
   AgentChatStartResult,
@@ -296,6 +296,10 @@ export function AgentChatView({
   /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
   const [chips, setChips] = useState<DictChip[]>([])
+  /** 正文里**这一刻**引用到了哪些 chip。
+   *  拿它把 chip 行分成两种样子 —— 不显形的话，「预加载了但没 @、所以不会发」
+   *  这件事用户完全看不出来。 */
+  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
 
   /** 点了 agent 给的某个选项。
    *
@@ -676,7 +680,8 @@ export function AgentChatView({
   const handleSend = async (override?: string): Promise<void> => {
     // override 是程序性发送（空态卡片上的「接上上次的对话」那种），不该带上 chip；
     // 用户自己按发送才展开挂着的提示词
-    const message = override !== undefined ? override.trim() : expandChips(text, chips)
+    const expanded = override !== undefined ? null : expandChips(text, chips)
+    const message = override !== undefined ? override.trim() : expanded!.text
     if (!message || !selected || starting || sessionId) return
     // **没登录就别起进程。** 起了也是撞 401 死掉，还白花一次冷启动，
     // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
@@ -1152,7 +1157,11 @@ export function AgentChatView({
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
               {chips.map((c) => (
-                <span className="ac-chip" key={c.id} data-tip={c.text}>
+                <span
+                  className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
+                  key={c.id}
+                  data-tip={c.text}
+                >
                   <DictIcon size={11} />
                   <span className="ac-chip-label">{c.label}</span>
                   <button
