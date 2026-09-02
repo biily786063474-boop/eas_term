@@ -431,8 +431,8 @@
   opacity: 1;
   /* 危险色沿用右键菜单 .cctx-item.danger 的同一个红——这类删除色语义固定，
      不随主题的蓝/粉强调色变化 */
-  background: rgba(247, 118, 142, 0.16);
-  color: #f7768e;
+  background: rgba(var(--sem-danger-rgb), 0.16);
+  color: var(--sem-danger);
 }
 
 .term-todo-body {
@@ -541,8 +541,8 @@
 
 .term-todo-x:hover {
   opacity: 1 !important;
-  color: #f7768e;
-  background: rgba(247, 118, 142, 0.14);
+  color: var(--sem-danger);
+  background: rgba(var(--sem-danger-rgb), 0.14);
 }
 
 .term-todo-add {

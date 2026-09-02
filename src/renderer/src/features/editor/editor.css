@@ -27,7 +27,7 @@
   padding: 5px 12px;
   font-size: 11.5px;
   color: var(--fg-dim);
-  background: rgba(224, 175, 104, 0.08);
+  background: rgba(var(--sem-orange-dim-rgb), 0.08);
 }
 
 .pane-placeholder {

@@ -169,8 +169,8 @@
   margin-top: 10px;
   padding: 9px 26px 9px 11px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(224, 164, 94, 0.32);
-  background: rgba(224, 164, 94, 0.08);
+  border: 1px solid rgba(var(--sem-orange-dim-rgb), 0.32);
+  background: rgba(var(--sem-orange-dim-rgb), 0.08);
   color: var(--fg-dim);
   font-size: 11.5px;
   line-height: 1.7;
@@ -286,8 +286,8 @@
   line-height: 1.5;
   text-align: center;
   color: var(--sem-danger);
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.25);
+  background: rgba(var(--sem-danger-rgb), 0.1);
+  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
 }
 
 /* ---------- 对话态：消息列表（Task 4） ---------- */
@@ -485,8 +485,8 @@
    跟改名失败提示条用同一套红，界面上「出错了」的视觉语言统一。 */
 .ac-exec-row.ac-exec-failed {
   color: var(--sem-danger);
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.25);
+  background: rgba(var(--sem-danger-rgb), 0.1);
+  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
 }
 .ac-exec-row.ac-exec-failed .ac-exec-row-head {
   padding: 3px 6px;
@@ -598,8 +598,8 @@
   margin: 4px 0;
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  background: rgba(224, 175, 104, 0.1);
-  border: 1px solid rgba(224, 175, 104, 0.38);
+  background: rgba(var(--sem-orange-dim-rgb), 0.1);
+  border: 1px solid rgba(var(--sem-orange-dim-rgb), 0.38);
 }
 
 .ac-approval-kind {
@@ -692,7 +692,7 @@
   color: var(--fg-dim);
 }
 .ac-approval-btn.deny:hover {
-  border-color: rgba(244, 63, 94, 0.4);
+  border-color: rgba(var(--sem-danger-rgb), 0.4);
   color: var(--sem-danger);
 }
 
@@ -789,8 +789,8 @@
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--sem-path);
-  background: rgba(224, 175, 104, 0.1);
-  border: 1px solid rgba(224, 175, 104, 0.3);
+  background: rgba(var(--sem-orange-dim-rgb), 0.1);
+  border: 1px solid rgba(var(--sem-orange-dim-rgb), 0.3);
 }
 .ac-notice-text {
   flex: 1;
@@ -826,8 +826,8 @@
 }
 .ac-notice-fatal {
   color: var(--sem-danger);
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.25);
+  background: rgba(var(--sem-danger-rgb), 0.1);
+  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
 }
 
 /* 次级信息行：用量 / 审批 hook 状态 / 压缩 / 沙箱只读展示。始终可见、弱视觉层级
@@ -1295,14 +1295,14 @@
 }
 .ac-ctx.warm {
   color: var(--sem-path);
-  border-color: rgba(224, 175, 104, 0.4);
+  border-color: rgba(var(--sem-orange-dim-rgb), 0.4);
 }
 .ac-ctx.warm .ac-ctx-fill {
   background: #e0af68;
 }
 .ac-ctx.hot {
   color: var(--sem-danger);
-  border-color: rgba(244, 63, 94, 0.4);
+  border-color: rgba(var(--sem-danger-rgb), 0.4);
 }
 .ac-ctx.hot .ac-ctx-fill {
   background: #fb7185;
@@ -1426,11 +1426,11 @@
 }
 .ac-quota.warm {
   color: var(--sem-path);
-  border-color: rgba(224, 175, 104, 0.4);
+  border-color: rgba(var(--sem-orange-dim-rgb), 0.4);
 }
 .ac-quota.hot {
   color: var(--sem-danger);
-  border-color: rgba(244, 63, 94, 0.4);
+  border-color: rgba(var(--sem-danger-rgb), 0.4);
 }
 
 /* 额度进度条。只在 CLI 真给了 utilization 时才渲染（五小时那条不带）。
@@ -1746,12 +1746,12 @@
    同一个位置上的两种动作，长得像就会误点：一个是「再说一句」，
    另一个是「把正在跑的这轮掐掉」。 */
 .ac-bar-send.stop {
-  background: rgba(251, 146, 60, 0.16);
-  border-color: rgba(251, 146, 60, 0.45);
+  background: rgba(var(--sem-orange-rgb), 0.16);
+  border-color: rgba(var(--sem-orange-rgb), 0.45);
   color: var(--sem-orange);
 }
 .ac-bar-send.stop:hover {
-  background: rgba(251, 146, 60, 0.26);
+  background: rgba(var(--sem-orange-rgb), 0.26);
 }
 
 /* ---------- 压缩分隔线（2026-08-28）----------
@@ -2363,7 +2363,7 @@
   line-height: 1.5;
 }
 .ac-ob-tag.warn {
-  border-color: rgba(224, 164, 94, 0.4);
+  border-color: rgba(var(--sem-orange-dim-rgb), 0.4);
   color: var(--sem-orange-dim);
 }
 .ac-ob-tag.ok {
@@ -2663,7 +2663,7 @@
   gap: 8px;
   padding: 12px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--ac-danger, #f7768e) 10%, transparent);
+  background: color-mix(in srgb, var(--ac-danger, var(--sem-danger)) 10%, transparent);
 }
 
 /* 对方自己那句「为什么不行」。**排在结论下面、提示上面** ——
@@ -2677,8 +2677,8 @@
   color: var(--ac-fg-dim, #9aa5b1);
   padding: 6px 8px;
   border-radius: 5px;
-  border-left: 2px solid color-mix(in srgb, var(--ac-danger, #f7768e) 40%, transparent);
-  background: color-mix(in srgb, var(--ac-danger, #f7768e) 6%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--ac-danger, var(--sem-danger)) 40%, transparent);
+  background: color-mix(in srgb, var(--ac-danger, var(--sem-danger)) 6%, transparent);
   /* 一句话本来就该放得下；真放不下也要换行，不许横向撑破灯箱 */
   overflow-wrap: anywhere;
 }

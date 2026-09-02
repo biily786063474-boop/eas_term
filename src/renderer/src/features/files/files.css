@@ -73,8 +73,8 @@
   border-radius: var(--radius-sm);
   /* 危险色在这个项目里是硬编码的 rgba(247,118,142,…)（见 base.css 的 .danger-btn），
      没有全局 --danger 变量，这里跟着用同一组值 */
-  background: rgba(247, 118, 142, 0.18);
-  border: 1px solid rgba(247, 118, 142, 0.5);
+  background: rgba(var(--sem-danger-rgb), 0.18);
+  border: 1px solid rgba(var(--sem-danger-rgb), 0.5);
   color: #ffb3c0;
   font-size: 11.5px;
   line-height: 1.45;

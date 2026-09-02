@@ -3,7 +3,7 @@
    已完成 = accent 混 70% 底色，vs 底 5.21(蓝) / 4.69(粉) —— ≥4.5 才放得下条内文字
    条内标签用 #0b0d13，它和 --pane-solid 同色，所以「填充 vs 底」的对比数
    就是「文字 vs 填充」的对比数，两者不能分开调。
-   异常中断固定 #ef6f7b 且必须带图标：状态色不跟主题走，也不能只靠颜色表达。 */
+   异常中断固定 var(--sem-danger) 且必须带图标：状态色不跟主题走，也不能只靠颜色表达。 */
 .gantt {
   position: absolute;
   inset: 0;
@@ -84,17 +84,17 @@
     opacity 0.12s;
 }
 
-/* 危险色沿用 #ef6f7b——这是 gantt.css 里唯一固定不走 token 的颜色，专门表达
+/* 危险色沿用 var(--sem-danger)——这是 gantt.css 里唯一固定不走 token 的颜色，专门表达
    "状态不该被主题稀释"（.gantt-bar.aborted 已经在用它）。清空按钮的 hover/
    danger 态是同一件事的另一处出现：都是"这个操作要小心"，沿用同一个色，
    不再引入第三种红。 */
 .gantt-clean-btn:hover:not(:disabled) {
-  background: rgba(239, 111, 123, 0.16);
-  color: #ef6f7b;
+  background: rgba(var(--sem-danger-rgb), 0.16);
+  color: var(--sem-danger);
 }
 
 .gantt-clean-btn.danger {
-  color: rgba(239, 111, 123, 0.85);
+  color: rgba(var(--sem-danger-rgb), 0.85);
 }
 
 .gantt-clean-btn:disabled {
@@ -356,7 +356,7 @@
 }
 
 .gantt-bar.aborted {
-  background: #ef6f7b;
+  background: var(--sem-danger);
   /* 右端渐隐 = 结束时间未知。不编一个结束时间，编出来的会被当成真的 */
   mask-image: linear-gradient(90deg, #000 72%, transparent 100%);
   color: #0b0d13;
@@ -471,8 +471,8 @@
 
 .gantt-pop-del:hover {
   opacity: 1;
-  background: rgba(239, 111, 123, 0.18);
-  color: #ef6f7b;
+  background: rgba(var(--sem-danger-rgb), 0.18);
+  color: var(--sem-danger);
 }
 
 .gantt-pop-dur {
@@ -481,7 +481,7 @@
 
 .gantt-pop-abort {
   margin-top: 3px;
-  color: #ef6f7b;
+  color: var(--sem-danger);
   font-size: 11px;
 }
 
@@ -651,7 +651,7 @@
 .gantt-nav-bucket.aborted {
   /* 异常中断：固定色、不受密度不透明度影响——它是要引起注意的东西，
      被密度公式稀释掉就没意义了 */
-  background: #ef6f7b;
+  background: var(--sem-danger);
 }
 
 /* 取景框：只用 transform 移动、只用 width 变跨度，绝不碰 left。
@@ -734,7 +734,7 @@
 .gantt-crash-title {
   font-size: 15px;
   font-weight: 700;
-  color: #ef6f7b;
+  color: var(--sem-danger);
   margin-bottom: 8px;
 }
 
@@ -796,12 +796,12 @@
 }
 
 .gantt-crash-btn.danger {
-  border-color: rgba(239, 111, 123, 0.4);
-  color: #ef6f7b;
+  border-color: rgba(var(--sem-danger-rgb), 0.4);
+  color: var(--sem-danger);
 }
 
 .gantt-crash-btn.danger:hover {
-  background: rgba(239, 111, 123, 0.16);
+  background: rgba(var(--sem-danger-rgb), 0.16);
 }
 
 /* ---------- 阶段条与里程碑（2026-08-27 新增：项目 / 里程碑两种模式） ----------

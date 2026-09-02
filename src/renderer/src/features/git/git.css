@@ -178,7 +178,7 @@
 }
 
 .git-badge.del {
-  color: #f7768e;
+  color: var(--sem-danger);
 }
 
 .git-badge.conflict {
@@ -285,8 +285,8 @@
 
 .git-ref.tag {
   color: #e0af68;
-  background: rgba(224, 175, 104, 0.14);
-  border-color: rgba(224, 175, 104, 0.35);
+  background: rgba(var(--sem-orange-dim-rgb), 0.14);
+  border-color: rgba(var(--sem-orange-dim-rgb), 0.35);
 }
 
 .git-commit-main {
@@ -366,7 +366,7 @@
 .git-ai-error {
   margin-top: 3px;
   font-size: 10.5px;
-  color: #f7768e;
+  color: var(--sem-danger);
 }
 
 .git-toast {

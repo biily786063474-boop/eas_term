@@ -97,8 +97,8 @@
 
 .dict-chip.cat-motion.active {
   color: #f6dcb3;
-  border-color: rgba(224, 164, 94, 0.55);
-  background: rgba(224, 164, 94, 0.18);
+  border-color: rgba(var(--sem-orange-dim-rgb), 0.55);
+  background: rgba(var(--sem-orange-dim-rgb), 0.18);
 }
 
 .dict-chip.cat-visual.active {
@@ -266,7 +266,7 @@
 
 .dict-tag.cat-motion {
   color: #f6dcb3;
-  background: rgba(224, 164, 94, 0.18);
+  background: rgba(var(--sem-orange-dim-rgb), 0.18);
 }
 
 .dict-tag.cat-visual {
@@ -481,11 +481,11 @@
   border-radius: 5px;
 }
 .dhb-tag.ok {
-  background: rgba(110, 231, 183, 0.15);
+  background: rgba(var(--sem-ok-rgb), 0.15);
   color: var(--sem-ok);
 }
 .dhb-tag.todo {
-  background: rgba(252, 211, 77, 0.15);
+  background: rgba(var(--sem-warn-rgb), 0.15);
   color: var(--sem-warn);
 }
 .dhb-tag.dim {

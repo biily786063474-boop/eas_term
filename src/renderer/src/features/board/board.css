@@ -63,7 +63,7 @@
   opacity: 1;
 }
 .board-col.st-done .board-coldot {
-  background: #ef6f7b;
+  background: var(--sem-danger);
   opacity: 1;
 }
 .board-collabel {
@@ -305,8 +305,8 @@
 }
 .board-termx:hover {
   opacity: 1;
-  background: rgba(239, 111, 123, 0.18);
-  color: #ef6f7b;
+  background: rgba(var(--sem-danger-rgb), 0.18);
+  color: var(--sem-danger);
 }
 
 .board-fs-kill {
@@ -323,8 +323,8 @@
   cursor: pointer;
 }
 .board-fs-kill:hover {
-  background: rgba(239, 111, 123, 0.18);
-  color: #ef6f7b;
+  background: rgba(var(--sem-danger-rgb), 0.18);
+  color: var(--sem-danger);
 }
 
 .board-termmore {
@@ -471,8 +471,8 @@
 }
 .board-coldel:hover {
   opacity: 1;
-  background: rgba(239, 111, 123, 0.16);
-  color: #ef6f7b;
+  background: rgba(var(--sem-danger-rgb), 0.16);
+  color: var(--sem-danger);
 }
 
 .board-addcol {
