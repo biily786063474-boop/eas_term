@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>把 oh-my-pi 接成第三个 CLI · 可行性与改造清单</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="navwrap">
+  <span class="navbrand">omp 接入评估</span>
+  <a href="#结论">结论</a>
+  <a href="#实测">实测结果</a>
+  <a href="#两面">两个接入面</a>
+  <a href="#模式">选 RPC 还是 ACP</a>
+  <a href="#事件">事件映射</a>
+  <a href="#模型">模型填入</a>
+  <a href="#清单">改造清单</a>
+  <a href="#兼容">要兼容什么</a>
+  <a href="#风险">反对意见</a>
+  <a href="#下一步">下一步</a>
+</div></nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">接入评估 · <b style="color:#6ee7b7">实测版 v2</b>（v1 是源码核对）</div>
+  <h1>把 oh-my-pi 接成 cc / codex 的同级</h1>
+  <p class="lede">v1 是读报告 + 逐文件核对。<b>v2 把 omp 真装起来跑了</b>——三项判据全过，
+  同时撞出三件只有跑起来才知道的事，其中一件会让整轮挂死。translator 也写了，18 条测试用真录的会话钉住。</p>
+  <div class="meta">
+    <span>日期 <b>2026-09-01</b></span>
+    <span>omp 版本 <b>18.0.11</b></span>
+    <span>本机 Bun <b>1.3.14</b>（正好是它的下限）</span>
+    <span>Eas-Term <b>0.4.72</b></span>
+    <span>实测模型 <b>智谱 glm-5.3-flash</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">三句话结论</div>
+  <p class="secnote">先给能拿去做决定的判断，论证在后面每一节。</p>
+
+  <div class="verdict">
+    <div class="vlabel">裁决 · 1 · 接得进来，但「便宜」只对一半成立</div>
+    <p style="margin:0"><b>AI 对话那一面是真的零 UI 改动</b>——<code>toolbarModel.ts</code> 的文件头就写着这条硬约束：
+    「加第三个 CLI 时，只要它的 adapter 如实填好 capabilities，这个文件和它的调用方都不需要改一行」。
+    我核对过，工具栏确实一处 CLI 身份判断都没有。<br>
+    <b>但画布终端那一面完全不是这样</b>：<code>CanvasAgentBar.tsx</code> 把 <code>'claude'|'codex'</code> 写死在 20 处，
+    连命令行都是两个手写函数（<code>buildClaudeCmd</code> / <code>buildCodexCmd</code>）。那才是主要工作量。</p>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁决 · 2 · 走 ACP，不走 RPC</div>
+    <p style="margin:0"><span class="b b-em">v2 实测坐实</span> 这是本评估里最硬的一条：
+    <b><code>docs/rpc.md</code> 全文没有 approval / permission 任何一个字</b>——RPC 模式没有审批面。
+    审批只在 ACP 上：<code>session/request_permission</code>，client-gated 的 <code>bash / edit / delete / move</code>。<br>
+    选 RPC 等于新 CLI 天生比 Claude 弱一档（<code>capabilities.approval: []</code>，只能退回沙箱级）。
+    而 ACP 的 12 个 session 方法里，<code>session/set_config_option</code> 带 <code>MODEL_CONFIG_ID = "model"</code>，
+    换模型也覆盖得到——ACP 是我们要的能力的超集。<br>
+    <b>实测：审批请求真的发出来了</b>，载荷比我们现在的 <code>approval.request</code> 还丰富（见下一节）。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">警示 · 3 · 真正的代价不在写 adapter，在 AgentKind 这个联合类型</div>
+    <p style="margin:0"><code>export type AgentKind = 'claude' | 'codex'</code> 在非测试代码里被引用 <b>54 处</b>。
+    加第三个值会让 TypeScript 全线爆红——<b>这是好事</b>（编译器帮你把该改的地方全找出来，不会漏），
+    但意味着这不是一个「加个文件就完事」的增量改动，而是一次必须一口气改完的横切。</p>
+  </div>
+
+  <div class="grid g4" style="margin-top:26px">
+    <div class="stat"><div class="num n-am">2</div><div class="lab">独立接入面<br>各自要单独做</div></div>
+    <div class="stat"><div class="num n-em">0</div><div class="lab">AI 对话工具栏<br>需要改的行数</div></div>
+    <div class="stat"><div class="num n-ro">20</div><div class="lab">画布 AgentBar 里<br>写死的 CLI 名字</div></div>
+    <div class="stat"><div class="num n-am">54</div><div class="lab">AgentKind 的<br>非测试引用点</div></div>
+  </div>
+  <div class="grid g4" style="margin-top:16px">
+    <div class="stat"><div class="num n-sk">12</div><div class="lab">ACP 的 session 方法<br>（含权限请求）</div></div>
+    <div class="stat"><div class="num n-ro">0</div><div class="lab">RPC 模式里的<br>审批 / 权限接口</div></div>
+    <div class="stat"><div class="num n-am">~31</div><div class="lab">omp 上游<br>提交 / 活跃日</div></div>
+    <div class="stat"><div class="num n-em">MIT</div><div class="lab">全部 18 个包<br>统一许可</div></div>
+  </div>
+</section>
+
+<section id="实测">
+  <h2>Field Test</h2>
+  <div class="sectitle">实测：三项判据全过，外加三件文档里没写的事</div>
+  <p class="secnote">环境全程隔离：<code>PI_CONFIG_DIR</code> 指到一个临时目录、自定义 provider 走智谱免费档，
+  <b>没有碰用户的任何现有凭证</b>（<code>~/.codex/auth.json</code> 时间戳仍是 8-30）。验完即删。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">判据</th><th style="width:12%">结果</th><th>实测到什么</th></tr></thead>
+    <tbody>
+      <tr><td><b>① <code>omp acp</code> 能握手</b></td><td><span class="b b-em">过</span></td>
+        <td><code>initialize</code> 回 <code>agentInfo: oh-my-pi 18.0.11</code>、protocolVersion 1；
+          <code>agentCapabilities</code> 报 <code>loadSession</code> / <code>fork</code> / <code>resume</code> / <code>close</code> 全有，
+          MCP 支持 http + sse</td></tr>
+      <tr><td><b>② 审批真的从 ACP 发出来</b></td><td><span class="b b-em">过</span></td>
+        <td>让它跑一条 <code>bash ls</code>，<code>session/request_permission</code> 如约而至，载荷带
+          <code>toolCallId</code> / <code>title</code> / <code>kind:"execute"</code> / <code>rawInput:{command:"ls"}</code>
+          + <b>四个选项</b>。我们回 <code>allow_once</code> 之后，工具真的从 pending → in_progress → completed 跑完</td></tr>
+      <tr><td><b>③ 认不认 <code>.claude/CLAUDE.md</code></b></td><td><span class="b b-em">过</span></td>
+        <td>在工作目录塞了一份写着暗号的 CLAUDE.md，直接问它「暗号是什么」——<b>答对了</b>。
+          <b>我们注入项目规则那块工作量确实是 0</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>跑起来才知道的三件事</h3>
+
+  <div class="dissent">
+    <div class="vlabel">意外 · 1 · 审批有两条通道，只答一条会整轮挂死</div>
+    <p style="margin:0">同一次 <code>bash ls</code>，omp 问了<b>两遍</b>：</p>
+<pre><code><span class="flow">→</span> session/request_permission   <span class="dim">// 结构化，带 toolCall + 四个选项</span>
+<span class="flow">←</span> {outcome:{outcome:"selected",optionId:"allow_once"}}
+<span class="flow">→</span> elicitation/create           <span class="hi">// 第二条！形状完全不同，是个 JSON Schema 表单</span>
+<span class="dim">   {mode:"form", message:"Allow tool: bash\nCommand: ls",
+    requestedSchema:{properties:{value:{enum:["Approve","Deny"]}}}}</span>
+<span class="flow">←</span> {action:"accept", content:{value:"Approve"}}
+<span class="flow">→</span> tool_call_update: in_progress → in_progress → completed</code></pre>
+    <p style="margin:0">我第一次只答了第一条，<b><code>session/prompt</code> 干等到 180 秒超时</b>。
+    第二条只在客户端声明了 <code>elicitation.form</code> 能力时才发——不声明的话它会**直接拒掉那次工具调用**
+    （我更早一次 <code>task</code> 调用报 failed，就是这个原因，当时误以为是模型太笨）。<br>
+    <b>接入时两条都得答。</b>这件事两份报告和 omp 的 <code>docs/</code> 里都没写。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">意外 · 2 · 模型清单是动态的，我们的 capabilities 是静态的</div>
+    <p style="margin:0">没配 provider 时，<code>session/new</code> 只回两个 configOptions（<code>mode</code> / <code>thinking</code>）；
+    配上之后才出现第三个 <code>model</code>。<b>也就是说「有哪些模型可选」是会话建立时才知道的，而且随用户配了什么变。</b><br>
+    我们的 <code>CliAdapter.capabilities</code> 是<b>挂在 adapter 上的静态对象</b>，
+    在起会话之前就要交给 UI 渲染。<br>
+    <span class="b b-am">影响</span> 要么照 Codex 那样 <code>models: []</code> 给自由输入（能用但丢了 omp 的一大优势），
+    要么给 <code>CliCapabilities</code> 加一条「会话建立后可修订」的路。<b>这是第三步真正要设计的地方，不是写 adapter。</b></p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">意外 · 3 · 三个小坑，每个都够卡半小时</div>
+    <ul class="clean" style="margin:0">
+      <li><b><code>PI_CONFIG_DIR</code> 是相对 HOME 解析的。</b>我传了绝对路径 <code>/private/tmp/…</code>，
+        <code>omp config path</code> 回的是 <code>/Users/biily/private/tmp/…</code> —— 前面拼了 HOME。
+        <b>不是它读不到配置，是它在另一个地方找。</b>要不是有 <code>omp config path</code> 这条命令，这个能查很久</li>
+      <li><b>ACP 没有 <code>turn_start</code> 事件。</b>要自己在第一条实质更新时合成，
+        否则我们的 <code>reduce.ts</code> 里 <code>turnActive</code> 永远置不起来，界面上「正在处理」不出现</li>
+      <li><b><code>tool_call_update</code> 的 <code>in_progress</code> 会来好几次</b>（一次 bash 来了两条）。
+        每条都当完成的话，执行卡片会在「跑着」和「跑完」之间来回跳</li>
+    </ul>
+  </div>
+
+  <h3>顺带确认的两件好事</h3>
+  <div class="grid g2">
+    <div class="card"><h4 style="margin-top:0">审批选项比我们现在的丰富</h4>
+      <p style="margin:0">它给四个：<code>allow_once</code> / <code>allow_always</code> / <code>reject_once</code> / <code>reject_always</code>。
+      我们的 <code>approval.resolved</code> 只有 <code>'allow' | 'deny'</code> 两档。<br>
+      <b>translator 里我只用 <code>*_once</code></b> —— <code>*_always</code> 会在 omp 那侧记住，
+      等于我们替用户改了他的配置。</p></div>
+    <div class="card"><h4 style="margin-top:0">prompt 缓存是通的</h4>
+      <p style="margin:0">第二轮起 <code>cachedReadTokens: 10944</code>，实际计费 input 掉到 75。
+      omp 塞的系统提示词很大（首轮 24578 token），有缓存才用得起。</p></div>
+  </div>
+
+  <h3>第二步产物：translator + 18 条测试</h3>
+  <p>已落地，<b>但不接进任何运行路径</b>——它现在只是一份「翻译对不对」的证据。</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:36%">文件</th><th>是什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/main/agentChat/ompEvents.ts</code></td>
+        <td>ACP → <code>ChatEvent</code>。比另两个 translator 多一件事：<b>返回「这一行要回什么」</b>，
+          因为 ACP 是双向的</td></tr>
+      <tr><td><code>ompEvents.test.ts</code></td>
+        <td>18 条。钉住的都是会真出事的：两条通道都要答 · 第二条不重复弹卡 ·
+          <code>in_progress</code> 不算完成 · turn.start 只许一个 · 喂垃圾绝不抛 ·
+          <code>contextRatio</code> 一律不填</td></tr>
+      <tr><td><code>__fixtures__/omp-acp-bash.jsonl</code></td>
+        <td><b>真跑出来的</b>会话（omp 18.0.11 + glm-5.3-flash，一条 bash 走完全程）。
+          思考流原 117 条抽稀到 3 条</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="两面">
+  <h2>Two Surfaces</h2>
+  <div class="sectitle">先认清：我们有两个互不相干的 CLI 接入面</div>
+  <p class="secnote">这是整份评估的前提。你问「接成 cc 和 codex 的同级」，但我们这儿「cc 和 codex」同时存在于两个地方，
+  两边的扩展性天差地别。不分开谈会把工作量估错一倍。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:15%">接入面</th><th style="width:26%">是什么</th><th style="width:26%">怎么扩展</th><th>接 omp 的成本</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>A · AI 对话</b><br><span class="b b-em">能力驱动</span></td>
+        <td><code>AgentChatView</code> + <code>src/main/agentChat/</code>。结构化对话：气泡、执行卡片、审批卡、用量。
+          进程由 <code>session.ts</code> 统一 spawn，输出经 translator 翻成 <code>ChatEvent</code></td>
+        <td>写一个 <code>CliAdapter</code> 放进 <code>adapters/index.ts</code> 的数组。
+          <code>adapters/index.ts</code> 头上写着「<b>这里不许写任何 CLI 特有逻辑</b>」</td>
+        <td><span class="b b-em">低</span> 一个 adapter 文件 + 一个 translator。工具栏、模型下拉、审批卡全部自动跟上</td>
+      </tr>
+      <tr>
+        <td><b>B · 画布终端</b><br><span class="b b-ro">写死两档</span></td>
+        <td><code>CanvasAgentBar.tsx</code>（就是你截图里「角色 / 模型 / 思考 / 启动」那一条）。
+          它不走 adapter，直接<b>拼一条 shell 命令喂给 xterm</b></td>
+        <td>没有扩展点。<code>type Kind = 'claude' | 'codex'</code> 写在文件第 36 行，
+          下面 19 处按它分支，命令行是两个手写函数</td>
+        <td><span class="b b-ro">中高</span> 要么补第三个分支（欠债 +1），要么顺手把它也改成能力驱动</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="dissent">
+    <div class="vlabel">保留的分歧 · 别顺手把 B 也重构了</div>
+    <p style="margin:0">「既然要改，不如把 B 也改成 adapter 驱动」听起来很对，但 B 和 A 的语义<b>不一样</b>：
+    A 是「我们托管这个进程、解析它的输出」；B 是「用户自己在终端里跟 CLI 打交道，我们只帮他把命令拼对」。
+    B 的命令里还夹着角色契约文件、工具 allow/deny、MCP server 开关——这些在 A 那边是 <code>StartOpts</code> 的字段，
+    在 B 那边是 shell 参数。<br>
+    <b>我的建议是先只做 A</b>，B 留着两档不动。理由：A 做完就能验证 omp 到底好不好用；
+    B 的重构在「还不确定要不要长期用 omp」的阶段是纯负债。</p>
+  </div>
+</section>
+
+<section id="模式">
+  <h2>Protocol</h2>
+  <div class="sectitle">RPC 还是 ACP：审批把这道题做完了</div>
+  <p class="secnote">omp 有四个进程入口（TUI / <code>-p</code> 一次性 / <code>--mode rpc</code> / <code>acp</code>）。
+  对我们只有后两个是候选。它们不是「差不多的两条路」，能力面差得很远。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">能力</th><th style="width:30%"><code>omp --mode rpc</code></th><th style="width:30%"><code>omp acp</code></th><th>我们需要吗</th></tr></thead>
+    <tbody>
+      <tr><td><b>逐次审批</b></td>
+        <td><span class="b b-ro">没有</span> rpc.md 全文 0 处 approval/permission</td>
+        <td><span class="b b-em">有</span> <code>session/request_permission</code>；bash/edit/delete/move 由客户端把关</td>
+        <td><b>必须</b>。Claude 有、Codex 没有，新 CLI 若也没有就只能退回沙箱级</td></tr>
+      <tr><td>换模型</td>
+        <td><code>set_model</code> / <code>cycle_model</code> / <code>get_available_models</code></td>
+        <td><code>session/set_config_option</code>（<code>MODEL_CONFIG_ID="model"</code>）</td>
+        <td>要。对应我们的 <code>paramChange</code> 能力位</td></tr>
+      <tr><td>思考档位</td>
+        <td><code>set_thinking_level</code></td>
+        <td>同上，走 config option</td>
+        <td>要。对应 <code>capabilities.effortLevels</code></td></tr>
+      <tr><td>流式增量</td>
+        <td><code>message_update</code> 带 <code>assistantMessageEvent</code>（text/thinking/toolcall 三种 delta）</td>
+        <td><code>session/update</code></td>
+        <td>要。对应 <code>text.delta</code> / <code>thinking</code></td></tr>
+      <tr><td>会话恢复</td>
+        <td><code>switch_session</code> / <code>branch</code></td>
+        <td><code>session/load</code> / <code>resume</code> / <code>fork</code></td>
+        <td>要。对应 <code>StartOpts.resumeId</code></td></tr>
+      <tr><td>把宿主工具塞给模型</td>
+        <td><span class="b b-em">有</span> <code>set_host_tools</code> + <code>set_host_uri_schemes</code></td>
+        <td>未见等价物</td>
+        <td><span class="b b-am">诱人但不必要</span> 见下</td></tr>
+      <tr><td>协议稳定性</td>
+        <td>omp 自己的私有 NDJSON，随它演进</td>
+        <td><b>ACP 是外部标准</b>（Zed 那套），omp 只是实现方</td>
+        <td>ACP 更稳——对上游一天 31 个提交的项目，这一条分量很重</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">值得单独说 · set_host_tools 是个诱惑，但先别咬</div>
+    <p style="margin:0">RPC 的 <code>set_host_tools</code> 能让我们<b>把画板那 52 个 MCP 工具直接注册进 omp 的工具表</b>，
+    不经 MCP 进程、不占 <code>xd://</code>。听起来能省掉整条 MCP 桥。<br>
+    但它只在 RPC 上有，而 RPC 没有审批——<b>把我们的工具交给一个没有审批面的会话</b>，
+    等于绕过我们自己那套 <code>fsGuard</code> 之外的第二道闸。这笔交易不划算。
+    先走 ACP + 现成的 MCP 配置注入（<code>StartOpts.mcpConfigPath</code> 那条路已经在跑）。</p>
+  </div>
+</section>
+
+<section id="事件">
+  <h2>Event Mapping</h2>
+  <div class="sectitle">omp 的事件怎么翻成我们的 ChatEvent</div>
+  <p class="secnote">这是 translator 要干的全部活。我们的 <code>ChatEvent</code> 有 13 个分支，
+  逐个对一遍看有没有对不上的——<b>对不上的那几个才是真正的设计决定</b>。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">我们的 ChatEvent</th><th style="width:34%">omp 侧的来源</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>session.ready</code></td><td>ACP <code>session/new</code> 的响应 / RPC ready 帧</td><td><span class="b b-em">直通</span> 拿 sessionId + 当前模型</td></tr>
+      <tr><td><code>turn.start</code> / <code>turn.done</code></td><td><code>turn_start</code> / <code>turn_end</code></td><td><span class="b b-em">直通</span> 名字都一样</td></tr>
+      <tr><td><code>text.delta</code></td><td><code>message_update</code> 的 text delta</td><td><span class="b b-em">直通</span></td></tr>
+      <tr><td><code>text.done</code></td><td><code>message_end</code></td><td><span class="b b-em">直通</span></td></tr>
+      <tr><td><code>thinking</code></td><td><code>message_update</code> 的 thinking delta</td><td><span class="b b-am">要换算</span> 我们要的是 token 数，它给的是文本增量——按 delta 长度估，或改用它的 telemetry</td></tr>
+      <tr><td><code>exec.start</code> / <code>exec.done</code></td><td><code>tool_execution_start</code> / <code>_update</code> / <code>_end</code></td><td><span class="b b-em">直通</span> 它比我们多一个 update，正好喂给执行卡片的流式刷新</td></tr>
+      <tr><td><code>approval.request</code><br><code>approval.resolved</code></td><td>ACP <code>session/request_permission</code></td><td><span class="b b-em">直通</span> <b>这一对只有 ACP 给得出</b>。kind 映射：bash→exec，edit/delete/move→patch，其余→tool</td></tr>
+      <tr><td><code>compacted</code></td><td><code>auto_compaction_start</code> / <code>_end</code></td><td><span class="b b-em">直通</span> pre/postTokens 从 telemetry 取</td></tr>
+      <tr><td><code>quota</code></td><td><span class="b b-ro">没有对等物</span></td><td>omp 的用量在 <code>auth-broker</code> 的 <code>/v1/usage</code>，是<b>另一条 HTTP 通道</b>，不在会话事件流里。<br>短期：不报 quota（我们的 UI 本来就允许缺）。长期：见下节</td></tr>
+      <tr><td><code>error</code></td><td><code>notice</code> / <code>extension_error</code> / 响应里的失败</td><td><span class="b b-am">要归类</span> <code>kind:'auth'</code> 那一档要能认出来，否则登录失效时用户看到的是一句白话报错</td></tr>
+      <tr><td><code>user.message</code></td><td>—</td><td>不用管。这个分支只有手机端那条路会产出（<code>reduce.ts</code> 里唯一的例外）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>omp 有而我们没有的事件</h3>
+  <p>这些不是「要不要翻译」的问题，是「要不要在界面上表达」的问题。我的判断：<b>第一版全部丢弃</b>，
+  它们都不影响对话本身能不能用，而每接一个都要动 <code>reduce.ts</code> 和 <code>MessageList</code>。</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">事件</th><th style="width:22%">它表达什么</th><th>第一版怎么办</th></tr></thead>
+    <tbody>
+      <tr><td><code>ttsr_triggered</code></td><td>规则在流式中途掐流并注入了</td><td>丢弃。真要显示的话是一张「它被纠正了」的卡片，属于新概念</td></tr>
+      <tr><td><code>subagent_lifecycle</code><br><code>subagent_progress</code><br><code>subagent_event</code></td><td>子 Agent 的生死与进度</td><td>丢弃（默认就是 <code>off</code>，不订阅）。<b>我们自己有一套多 agent 编排</b>，两套并存会打架</td></tr>
+      <tr><td><code>irc_message</code></td><td>Agent 之间互相发消息</td><td>丢弃。同上</td></tr>
+      <tr><td><code>auto_retry_start</code> / <code>retry_fallback_applied</code></td><td>自动重试与模型降级</td><td>丢弃，但<b>要记一笔</b>：模型可能在我们不知情时被换掉了，界面上显示的模型名会不准</td></tr>
+      <tr><td><code>model_changed</code></td><td>模型真的换了</td><td><span class="b b-am">这个要接</span> 正好治上面那条。我们的 <code>session.ready</code> 已经带 model 字段，复用它重推一次</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="warn">
+    <div class="vlabel">一个必须处理的时序坑（omp 文档自己写的）</div>
+    <p style="margin:0"><code>agent_end</code> 带一个可选的 <code>isTerminal</code>。
+    <b><code>isTerminal: false</code> 表示还有后续工作被调度了，会话还会继续</b>——
+    只有 <code>isTerminal !== false</code> 才算真的跑完。<br>
+    我们的 <code>turn.done</code> 会直接驱动 <code>view.busy</code> 变 false、灵动岛收通知、待办打钩。
+    翻错这一个布尔，表现就是「它说做完了，然后又自己动起来」——而且字段是可选的，老版本没有，
+    所以判据必须写成 <code>!== false</code> 而不是 <code>=== true</code>。</p>
+  </div>
+</section>
+
+<section id="模型">
+  <h2>Model Wiring</h2>
+  <div class="sectitle">「模型填入那边」要做什么</div>
+  <p class="secnote">你专门问了这条。答案分两半，因为前面说的两个接入面在这件事上也是分开的。</p>
+
+  <h3>A 面（AI 对话）：填 capabilities，别写清单</h3>
+  <p>工具栏渲染什么，全看 adapter 的 <code>capabilities</code>。omp 有 <b>60+ provider</b>，
+  硬编码一份模型清单三天就过期。<b>照抄 Codex 的做法</b>——它的 <code>models: []</code> 后面跟着一句注释：
+  「由 -m 传任意模型名，不预设列表——<b>不是没填，是设计如此</b>」。</p>
+<pre><code>capabilities: {
+  models: [],                       <span class="dim">// 空数组 = UI 给自由输入框，不给下拉</span>
+  effortLevels: [ ... ],            <span class="dim">// 映射 omp 的 ThinkingLevel 档位</span>
+  compact: 'native',                <span class="dim">// ACP 有 compact 命令，不是靠 slash</span>
+  contextUsage: true,
+  approval: ['exec','patch','tool'], <span class="hi">// ← 只有走 ACP 才敢这么填</span>
+  <span class="dim">// approval 非空时不需要 sandboxLevels（adapters.test.ts 有断言钉这条）</span>
+}
+<span class="dim">// approvalHook 字段：**留空**。那是 Claude 专属的 PreToolUse hook 文件机制，</span>
+<span class="dim">// omp 的审批走 ACP 协议，不装任何 hook。shared/agentChat.ts 里为这件事</span>
+<span class="dim">// 写了整段注释：capabilities.approval 与 approvalHook 是两件事，混成一个布尔是事故的根。</span></code></pre>
+
+  <p><b>换模型的能力位要新增一个取值。</b>现在 <code>paramChange?: 'slash'</code> 只有一档（Claude 认 <code>/model x</code>）。
+  omp 走 <code>session/set_config_option</code>，既不是 slash 也不是「只能重启」，
+  要加第三个取值（比如 <code>'acp-config'</code>）。<b>调用点判的是这个字段不是 CLI 名字</b>，这条纪律已经写在类型注释里了。</p>
+
+  <h3>B 面（画布 AgentBar）：动的是数据结构，不只是 UI</h3>
+  <p>模型和思考档位<b>按 kind 各存一套</b>：</p>
+<pre><code>export type AgentKind = 'claude' | 'codex'          <span class="hi">// ← 加值的地方</span>
+model?:  Partial&lt;Record&lt;AgentKind, string&gt;&gt;          <span class="dim">// 切 agent 互不覆盖</span>
+effort?: Partial&lt;Record&lt;AgentKind, string&gt;&gt;
+session?: Partial&lt;Record&lt;AgentKind, string&gt;&gt;         <span class="dim">// 每个 kind 一条会话绑定</span></code></pre>
+  <p>好消息：<b>这个结构本来就是为「多个 CLI」设计的</b>，加一个键不需要迁移旧存档（都是 <code>Partial</code>）。
+  <span class="b b-am">但</span>画布上「继续上次会话」那套按 kind 找绑定的逻辑、以及
+  <code>canvasSlice.ts</code> 里 <code>migrateAgent</code> 那段把老字符串转成对象的迁移代码，都要跟着认第三个键。</p>
+
+  <div class="warn">
+    <div class="vlabel">前端要做的匹配事件，一句话清单</div>
+    <ul class="clean" style="margin:0">
+      <li><b>模型下拉</b>：不用做。<code>toolbarModel.ts</code> 读 <code>capabilities.models</code>，空数组自动变自由输入</li>
+      <li><b>思考档位</b>：不用做。同上，读 <code>effortLevels</code></li>
+      <li><b>审批卡片</b>：不用做。<code>approval</code> 非空就渲染，判的是能力不是身份</li>
+      <li><b>「审批保护已开启」那个 chip</b>：不用做，但<b>必须确认它不出现</b>——它问的是 <code>usesApprovalHookFile(approvalHook)</code>，
+        我们 <code>approvalHook</code> 留空，所以自动不显示。<b>这正是当初把这两个字段拆开的原因</b></li>
+      <li><b>登录 / 安装面板</b>：<span class="b b-ro">要改</span> <code>CliLoginPanel</code>、<code>CliSetupPanel</code>、
+        <code>AgentChatView</code> 三处 <code>as 'claude'|'codex'</code> 断言写死了两档</li>
+      <li><b>模型换了的回显</b>：接 <code>model_changed</code> → 重推一次 <code>session.ready</code>，否则自动降级后界面显示的模型是假的</li>
+    </ul>
+  </div>
+</section>
+
+<section id="清单">
+  <h2>Checklist</h2>
+  <div class="sectitle">改造清单：按文件列，分必改和可选</div>
+  <p class="secnote">这份清单是逐个 grep 出来的，不是凭印象。<b>「新增」的都不碰现有逻辑，「改」的每一条都要过一遍现有测试。</b></p>
+
+  <h3>必改 · A 面能跑起来的最小集</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:34%">文件</th><th style="width:12%">动作</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>agentChat/adapters/omp.ts</code></td><td><span class="b b-em">新增</span></td><td>能力声明 + <code>buildArgs</code>（<code>omp acp</code>）+ <code>detect</code>。<code>stdin: 'pipe'</code>（ACP 是双向 JSON-RPC）</td></tr>
+      <tr><td><code>agentChat/ompEvents.ts</code></td><td><span class="b b-em">新增</span></td><td>translator。ACP 的 <code>session/update</code> → <code>ChatEvent</code>。<b>解析失败一律返回空数组，绝不抛</b>（接口注释里的硬要求）</td></tr>
+      <tr><td><code>agentChat/adapters/index.ts</code></td><td><span class="b b-am">加一行</span></td><td>数组里补 <code>ompAdapter</code>。<b>这个文件只许加这一行</b></td></tr>
+      <tr><td><code>shared/agentChat.ts</code></td><td><span class="b b-am">改</span></td><td><code>paramChange</code> 加一个取值。若要接双向请求，<code>CliAdapter</code> 可能要多一个「怎么回话」的字段——<b>这是最需要设计的一处</b></td></tr>
+      <tr><td><code>agentChat/session.ts</code></td><td><span class="b b-am">改</span></td><td>现在的 spawn 假设是「写 stdin / 读 stdout 行」的单向流。ACP 是<b>请求-响应双向</b>，
+        审批要从我们这边回一个 response。这条是 A 面唯一的结构性改动</td></tr>
+      <tr><td><code>shared/types.ts</code> 的 <code>AgentKind</code></td><td><span class="b b-ro">改</span></td><td>加第三个值 → 54 处引用点全线爆红，逐个处理</td></tr>
+      <tr><td><code>cliAuth/index.ts</code></td><td><span class="b b-am">改</span></td><td><code>STATUS_ARGS</code> / <code>LOGIN_ARGS</code> 各加一档。omp 有 <code>get_login_providers</code> / <code>login</code>，
+        但那是<b>会话内命令</b>，跟我们「起个进程查状态」的模型不一样，要单独摸</td></tr>
+      <tr><td><code>agentInstall.ts</code></td><td><span class="b b-am">改</span></td><td><code>optionsFor()</code> 加一档：<code>bun install -g @oh-my-pi/pi-coding-agent</code>。<b>并且要检测 Bun</b>——没 Bun 装不了</td></tr>
+      <tr><td><code>cliContractRun.ts</code></td><td><span class="b b-am">改</span></td><td>加一份契约（我们依赖 omp 的哪几个 flag）。这套东西的价值就是上游改了能提前知道</td></tr>
+      <tr><td><code>agentChat/adapters/adapters.test.ts</code></td><td><span class="b b-am">改</span></td><td>现有断言写死「注册表至少含 claude 与 codex」，要扩。
+        另外那条「approval 为空必须给 sandboxLevels」对 omp 不适用（我们填非空）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>可选 · 做了更好，不做也能跑</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:34%">文件</th><th>做什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>quotaStore.ts</code></td><td><code>merge(cli: 'claude'|'codex')</code> 写死两档。omp 的用量在 auth-broker 的 HTTP 接口上，是另一条路——<b>第一版不接，UI 允许缺</b></td></tr>
+      <tr><td><code>agentHook.ts</code> / <code>agentSkill.ts</code></td><td>「提交即复盘」hook 与 skill 安装。omp 的发现机制<b>会主动读 <code>.claude/CLAUDE.md</code>（优先级 80）</b>，
+        我们注入的项目规则大概率白捡——但要实测确认</td></tr>
+      <tr><td><code>roles.ts</code> / <code>CanvasRoleEditor</code></td><td>角色契约怎么喂给 omp。它没有 <code>--append-system-prompt-file</code>，但有 <code>APPEND_SYSTEM.md</code> 和 <code>--append-system-prompt</code></td></tr>
+      <tr><td><code>pty.ts</code> 的 base 名识别</td><td>只认 <code>claude</code> / <code>codex</code> 两个可执行名。不改的话，用户在终端里手敲 <code>omp</code> 我们认不出来</td></tr>
+      <tr><td><code>CanvasAgentBar.tsx</code>（B 面）</td><td>20 处分支 + 第三个 <code>buildOmpCmd</code>。<b>建议第一版不做</b>，见前面那条保留意见</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="兼容">
+  <h2>Compat</h2>
+  <div class="sectitle">要兼容哪些模块：一张对照表</div>
+  <p class="secnote">你问「需要兼容哪些模块」。这里按<b>我们已有的机制</b>逐个对，标出它在 omp 上成不成立。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:20%">我们的机制</th><th style="width:14%">在 omp 上</th><th>怎么处理</th></tr></thead>
+    <tbody>
+      <tr><td><b>MCP 注入</b><br><code>StartOpts.mcpConfigPath</code></td><td><span class="b b-em">成立</span></td>
+        <td>omp 有完整 MCP 支持，而且<b>默认挂在 <code>xd://</code> 后面不占 schema 位</b>——这比 Claude 那边更好：
+          画板那 52 个工具不会再把系统提示词撑爆（我们量过一次涨 39k token）。<br>
+          <span class="b b-am">但</span>它的 MCP 配置格式和 Claude 的 <code>--mcp-config</code> 不同，要另写一份生成器</td></tr>
+      <tr><td><b>审批 hook 文件</b><br><code>&lt;cwd&gt;/.claude/settings.json</code></td><td><span class="b b-ro">不适用</span></td>
+        <td><code>approvalHook</code> 留空即可。<b>绝不要因为「它有审批能力」就去装那个 hook</b>——
+          类型注释里为这件事写了整段：这正是当初那个 Critical 的根</td></tr>
+      <tr><td><b>项目规则注入</b><br><code>refreshInstalledRules</code></td><td><span class="b b-am">可能白捡</span></td>
+        <td>omp 的 18 个 discovery provider 里，<code>claude(.claude/CLAUDE.md)</code> 优先级 80。
+          我们写进项目的规则它<b>直接就读</b>，不需要迁移脚本。要实测确认，但如果成立，这块工作量是 0</td></tr>
+      <tr><td><b>密钥注入</b><br><code>secretsEnv()</code></td><td><span class="b b-em">成立</span></td>
+        <td>走环境变量，与 CLI 无关。<span class="b b-am">注意</span> omp 自己也有一套 <code>secrets.yml</code> 脱敏，
+          两套并存要想清楚谁管谁</td></tr>
+      <tr><td><b>额度条</b></td><td><span class="b b-ro">不成立</span></td>
+        <td>omp 不在事件流里报额度。第一版留空</td></tr>
+      <tr><td><b>多 agent 编排</b><br><code>team_spawn</code> 那套</td><td><span class="b b-ro">会打架</span></td>
+        <td>omp 自己有一整套子 Agent 生命周期（running/idle/parked/aborted + IrcBus + Agent Hub）。
+          <b>两套并存必须选一套</b>。第一版：<code>set_subagent_subscription: off</code>（本来就是默认），
+          让 omp 的子 Agent 对我们完全隐形，我们那套照旧</td></tr>
+      <tr><td><b>会话恢复</b><br><code>resumeId</code></td><td><span class="b b-em">成立</span></td>
+        <td>ACP 的 <code>session/load</code> / <code>resume</code>。<span class="b b-am">但</span>它的会话文件格式做过
+          v1→v2→v3 迁移，<b>向后迁移是单向的</b>——我们存在画布节点上的 resumeId 可能在 omp 升级后失效</td></tr>
+      <tr><td><b>灵动岛 / 待办 / 快照</b></td><td><span class="b b-em">成立</span></td>
+        <td>它们吃的是 <code>ChatEvent</code>，不问 CLI 是谁。translator 翻对了就自动跟上</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="风险">
+  <h2>Dissent</h2>
+  <div class="sectitle">反对意见与风险：不抹平</div>
+  <p class="secnote">每一条都可能改变你的决定。</p>
+
+  <div class="dissent">
+    <div class="vlabel">反对 · 1 · omp 默认 yolo，而我们的用户不是开发者心智</div>
+    <p style="margin:0"><code>tools.approvalMode</code> 默认值是 <b>yolo</b>：read / write / exec 全自动放行。
+    更细的一条：<code>bash.patterns</code> 的 deny 规则<b>只管 bash 工具</b>，同一条命令通过 <code>eval</code>
+    起子进程跑，在 yolo 下会被判成普通 exec 直接放行。<br>
+    我们要接的话，<b>第一天就得把默认改掉</b>并显式配 <code>tools.approval.eval</code>。
+    这不是 omp 的 bug（它是开发者工具），但我们的画布上一个节点就是一个会话，
+    用户不会去读它的配置文档。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">反对 · 2 · Bun 是硬依赖，而且我们正好卡在下限</div>
+    <p style="margin:0">omp 要 Bun ≥ 1.3.14，代码里大量用 <code>Bun.file</code> / <code>Bun.$</code> / <code>bun:sqlite</code>。
+    这台机器上 <code>bun --version</code> 正好是 <b>1.3.14</b>——一格不多。<br>
+    对<b>用户</b>意味着：装 Eas-Term 之后还要装 Bun 才能用第三个 CLI。
+    我们的 <code>agentInstall</code> 面板要多一层前置检查，否则用户点了安装、跑一条 <code>bun install -g</code>、
+    然后看到 <code>command not found: bun</code>。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">警示 · 3 · 上游一天 31 个提交，而且真的会改格式</div>
+    <p style="margin:0">有确凿证据：会话格式做过 v1→v2→v3；会话目录命名在 17.2.5 改成哈希式、17.2.9 又被回滚；
+    <code>pi-native</code> 这个名字先是一种工具调用方言，v16.0.10 换格式、v16.2.2 直接删掉、名字被复用给了别的东西。<br>
+    <b>这正是选 ACP 而不是 RPC 的第二个理由</b>——ACP 是外部标准，omp 只是实现方；
+    RPC 是它的私有协议，跟着它一起动。我们的 <code>cliContract</code> 自检机制要给 omp 也配一份。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">警示 · 4 · 这两份报告都没实跑过</div>
+    <p style="margin:0">报告作者自己写了：「我没有安装、没有运行、没有跑测试」。
+    性能数字（Grok 4 Fast −61% token 之类）是 README 自述。<br>
+    我这份评估同样是<b>源码与文档核对</b>——omp 侧我读的是它的 <code>docs/rpc.md</code> 与
+    <code>approval-mode.md</code> 原文和 ACP 实现里的方法名，我们侧是逐文件 grep。
+    <b>但我一次都没有真的把 omp 跑起来。</b>下一节第一步就是这个。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">反对 · 5 · 「同级」这个目标本身值得推敲</div>
+    <p style="margin:0">cc 和 codex 是<b>同一类东西</b>：一个 headless CLI，吃 prompt 吐事件流。
+    omp 不是——它是一个 harness 底座，自带子 Agent 集群、记忆管线、A2A 总线、Agent Hub UI。
+    把它塞进「第三个 CLI」这个位置，等于<b>只用它 20% 的能力，还要为剩下 80% 做隔离</b>
+    （关子 Agent 订阅、关记忆、关 collab、关桌面控制…）。<br>
+    另一种可能性：omp 的价值对我们不在「多一个 CLI 选项」，而在<b>它的几个设计可以搬进我们自己的内核</b>——
+    会话 append-only 树 + leaf 指针、URL 寻址、提示词一律 .md 不进代码。
+    这三样与语言栈无关，报告自己也把它们标成「可移植性最高」。</p>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步：先证伪，别立项</div>
+  <p class="secnote">三步，前两步加起来一天以内，做完才知道值不值得投第三步。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一步 · <b style="color:#6ee7b7">已完成</b></div>
+      <div class="tt">把 omp 装起来，手工验三件事 —— 三项全过</div>
+      <div class="td"><code>bun install -g @oh-my-pi/pi-coding-agent</code>，接一个国产 provider（它自带 DeepSeek / Kimi / GLM / 通义）。
+        然后：① <code>omp acp</code> 能不能握手；② 让它改一个文件，<b>审批请求是不是真的从 ACP 发出来</b>；
+        ③ 把项目里的 <code>.claude/CLAUDE.md</code> 放在那儿，看它认不认。<br>
+        <b>判据：三个都成立才继续。</b>第二个不成立的话，整份方案退回「只能做沙箱级」，价值大打折扣</div>
+    </div>
+    <div class="it on">
+      <div class="tm">第二步 · <b style="color:#6ee7b7">已完成</b></div>
+      <div class="tt">写一个只读的 translator，不接进 UI —— 18 条测试全绿</div>
+      <div class="td">新建 <code>ompEvents.ts</code> + 一份录下来的真实 ACP 输出当 fixture（我们已有
+        <code>__fixtures__</code> 这个惯例）。<b>先只做单测</b>，把 13 个 ChatEvent 分支逐个对通。<br>
+        <b>判据：<code>agent_end.isTerminal</code> 那条时序坑有没有被测试钉住。</b>没钉住就不要往下走</div>
+    </div>
+    <div class="it">
+      <div class="tm">第三步 · 2–4 天 · <b style="color:#fcd34d">待你拍板</b></div>
+      <div class="tt">接进 A 面，B 面不动</div>
+      <div class="td">adapter + session.ts 的双向改造 + <code>AgentKind</code> 那 54 处。
+        画布 AgentBar 保持两档不变。<br>
+        <b>判据：起一个 omp 对话节点，能发消息、能看到执行卡片、能弹审批卡、能换模型。</b>
+        这四件事做到了，才谈得上「同级」</div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">我的建议</div>
+    <p style="margin:0"><b>那个决定成败的未知已经解开了：ACP 的审批能用，而且比我们现在的模型还细。</b>
+    所以 omp 确实能当一个<b>比 Codex 更强的第三档</b>（Codex 在 exec 模式下连审批都没有）。<br><br>
+    第三步我仍然建议<b>先别排</b>，但理由变了 —— 不再是「不确定能不能接」，而是这三条：<br>
+    ① <code>AgentKind</code> 那 54 处是一次不能半途而废的横切；<br>
+    ② <code>capabilities</code> 静态 vs omp 动态那个矛盾，是实测才冒出来的<b>设计题</b>，值得单独想清楚；<br>
+    ③ 用户得先装 Bun —— 这条在安装引导里怎么说，是产品决定不是技术决定。<br><br>
+    翻译层已经写好并钉住了，<b>随时可以接</b>。</p>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">/omp 第三步</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+  <p style="font-size:13px;color:#737373">其他可选：<code>/omp 先只解决 capabilities 动态化</code>（把那个设计题单独做掉）·
+  <code>/omp 只搬设计</code>（不接 CLI，只把会话树 / URL 寻址 / 提示词纪律搬进我们内核）·
+  <code>/omp 对比 deepseek</code>（隔壁目录那个 harness 还是空的，要先让它出报告）</p>
+</section>
+
+<footer>
+  <p><b>来源</b>——omp 侧：<code>~/Biily/harnees 底座/oh my pi/docs/</code> 的《架构梳理》与《企业二开可行性报告》两份报告全文，
+  加上仓库副本里的 <code>docs/rpc.md</code>、<code>docs/approval-mode.md</code>、
+  <code>packages/coding-agent/src/modes/acp/acp-agent.ts</code>、<code>packages/utils/src/acp/connection.ts</code> 原文核对。</p>
+  <p>我们侧：<code>src/shared/agentChat.ts</code>（CliAdapter / CliCapabilities / ChatEvent）·
+  <code>src/main/agentChat/adapters/</code> · <code>src/renderer/src/features/agentChat/toolbarModel.ts</code> ·
+  <code>src/renderer/src/features/canvas/CanvasAgentBar.tsx</code> · <code>src/shared/types.ts</code> ·
+  以及对 <code>'claude'|'codex'</code> 字面量的全仓 grep（28 个文件）。</p>
+  <p><b>边界（v2 更新）</b>——v1 的结论来自源码与文档核对；v2 把 omp 装起来真跑了：
+  <code>bun install -g @oh-my-pi/pi-coding-agent</code>（18.0.11），走 <code>omp acp</code>，
+  模型是智谱 <code>glm-5.3-flash</code>（自定义 provider，隔离配置 <code>PI_CONFIG_DIR</code>）。
+  <b>没有验证的部分</b>：<code>edit</code> / <code>delete</code> / <code>move</code> 这几种审批 kind 我只跑到了
+  <code>execute</code>，其余映射是照 ACP 规范写的；多轮会话、resume、MCP 注入、子 Agent 都没跑。
+  实测总花费不到 4 万 token（智谱 flash 档）。</p>
+  <p>本地文件：<code>docs/omp接入评估-2026-09-01.html</code> · 视觉规格：report 预设 · 生成于 2026-09-01</p>
+</footer>
+
+</main>
+</body>
+</html>
