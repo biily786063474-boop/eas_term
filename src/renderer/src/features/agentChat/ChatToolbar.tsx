@@ -234,13 +234,21 @@ export function ChatToolbar({
                 {n.text}
                 {n.count > 1 && <span className="ac-notice-count">×{n.count}</span>}
               </span>
-              {/* 没登录 / 登录失效：给一个当场能登的入口。
+              {/* 没登录 / 登录失效 / 还没配好：给一个当场能处理的入口。
                   **按 kind 分支，不匹配 n.text 里的中文** —— 文案随时会改，
                   而匹配文案的代码坏掉时不会有任何报错（shared/agentChat.ts 那条注释）。
-                  会话跑到一半 token 过期就走这条路，不用回空态。 */}
-              {n.kind === 'auth' && onLogin && (
+                  会话跑到一半 token 过期就走这条路，不用回空态。
+
+                  **`'setup'` 也要给按钮**：它在对话态几乎必然发生 —— 密钥柜 15 分钟
+                  自动上锁、会话 2 小时空闲回收，人走开一会儿回来发一句就正好撞上。
+                  而 `.ac-authgate`（另一个出口）**只存在于空态**，对话态根本没有它；
+                  不扩这一支的话，用户看到的是一条没有任何出口的红字。
+
+                  判的仍然是 kind 不是 CLI 名字：Claude / Codex 的 adapter 不产
+                  `'setup'`，这一支对它们恒假，行为一个字节都不变。 */}
+              {(n.kind === 'auth' || n.kind === 'setup') && onLogin && (
                 <button type="button" className="ac-notice-login" onClick={onLogin}>
-                  去登录
+                  {n.kind === 'auth' ? '去登录' : '去设置'}
                 </button>
               )}
               <button

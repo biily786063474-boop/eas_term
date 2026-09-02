@@ -414,6 +414,27 @@ export interface CliInfo {
    *  **这是能力声明，不是 CLI 名字**——UI 判 `approvalHook === 'claude-pretooluse'`
    *  不违反"UI 不许按 CLI 名字分支"这条硬约束，判 `id === 'claude'` 才违反。 */
   approvalHook?: CliAdapter['approvalHook']
+  /** 原样透传 `CliAdapter.auth`。**渲染层判断「这个 CLI 该走哪条配置链路」唯一正确的依据。**
+   *
+   *  理由与上面 approvalHook 那条逐字相同：主进程那边的判据是 adapter 上的能力位，
+   *  而渲染层手上只有 CliInfo —— 不透传的话它只能退回按 id 猜，那正是这份约束禁止的事。
+   *
+   *  **下游一律写成排除式**：`=== 'provider-key'` 走新路、其余一切走老路。
+   *  反过来写 `=== 'cli-login'` 对**不声明这个字段的老 adapter 恒假**
+   *  （Claude / Codex 都没声明），会把它们的登录预检整个跳过。
+   *
+   *  **`buildCliList` 一定会把它填成 `'cli-login'`**（有断言钉着），所以运行时
+   *  拿到 undefined 是不可能的。类型上仍留可选，是为了不逼既有测试里那些
+   *  手写的 CliInfo 字面量跟着改 —— 那批 fixture 与这个字段毫无关系。 */
+  auth?: CliAdapter['auth']
+  /** 原样透传 `CliAdapter.bundled`。渲染层拿它做**默认选择的排序**：
+   *  随包的 CLI `available` 恒真（它就在安装包里，探测必过），让它参与
+   *  「取第一个可用的」会把只登了 Claude 的老用户在升级当天全部换掉。
+   *  判据是这个能力位，不是 id —— 将来再随包带第二个也照样成立。 */
+  bundled?: CliAdapter['bundled']
+  /** 原样透传 `CliAdapter.transport`。渲染层今天不用它，
+   *  留着是为了让「这个 CLI 是不是走独立传输」在 UI 侧也能按能力位判，而不是按 id。 */
+  transport?: CliAdapter['transport']
 }
 
 /** 附加给 CLI 的输出格式约定。

@@ -81,8 +81,17 @@ export type PaneState =
        * claude-mem 是 Claude 的），从「插件」选项卡开出来的会话必须用对家伙，
        * 否则那个插件的工具在会话里根本不存在 —— 又是一次「说你能做、工具却不在」。
        * 形状照抄 initialMessage：写进 pane、由组件读取，不从外面直接驱动会话。
+       *
+       * **类型是 string 不是字面量联合**：CLI 清单本来就是 listClis() 运行时给的，
+       * 写死两个名字等于把「第三个 CLI」挡在类型层外面（omp 就是第三个）。
+       * 校验放在读的那一侧 —— AgentChatView 拿它去 `usable.find(c => c.id === pinnedCli)`，
+       * 找不到就退回默认选择，不会因为一个不认识的名字硬失败。
+       *
+       * **它今天不落盘**：persist.ts 的 serializeCanvas 对 agent pane 只写
+       * `{kind, cwd, resumeId}`。所以别把它当成「记住用户选的 CLI」—— 它只是
+       * 内存里的一次性传参（插件页开会话 / 派活），重启后就没了。
        */
-      cli?: 'claude' | 'codex'
+      cli?: string
       /** 这次会话带哪个插件（PluginInfo.id）。**一次只带一个**（用户 2026-08-24 定死）——
        *  180 个插件全带会把系统提示词撑爆。主进程据此决定往 agent-mcp.json 里合并谁。 */
       pluginId?: string

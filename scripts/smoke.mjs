@@ -6,10 +6,10 @@
 // 主进程照样活着——只看进程等于没测。CDP 能直接问渲染层「你还好吗」。
 //
 // 不需要为此改生产代码：--remote-debugging-port 是 Chromium 自带开关，Electron 直接认。
-import { spawn } from 'child_process'
-import { writeFileSync, mkdirSync, rmSync } from 'fs'
+import { execFileSync, spawn } from 'child_process'
+import { existsSync, writeFileSync, mkdirSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { setTimeout as sleep } from 'timers/promises'
 
 // 原生 WebSocket 是 Node 22+ 才有的；低版本直接说清楚，别让人对着
@@ -138,6 +138,25 @@ try {
   writeFileSync(`${OUT}/screen.png`, Buffer.from(s.result.data, 'base64'))
   ok('截图', `${OUT}/screen.png`)
 } catch (e) { bad('截图', e.message) }
+
+// ── 随包的 omp 二进制真的能跑吗 ───────────────────────────────────
+// **这是唯一能验 Windows 那份的地方**：本机打不出 Windows 包，CI 上也没别的环节
+// 会去碰它。漏掉的症状是 Windows 用户装上之后 omp 恒显示「未安装」，
+// 而 dev / check / node --test 全绿。
+//
+// 路径基准要按产物布局取，**不是 app bundle 的 Contents/Resources**：
+// CI 传进来的是 `release/win-unpacked/Eas-Term.exe`，extraResources 落在
+// 与 exe 同级的 `resources/`；mac 的 .app 才是 `Contents/Resources`。
+try {
+  const dir = APP.endsWith('.app') || APP.includes('.app/')
+    ? join(APP.slice(0, APP.indexOf('.app') + 4), 'Contents', 'Resources')
+    : join(dirname(APP), 'resources')
+  const bin = join(dir, 'omp', process.platform === 'win32' ? 'omp.exe' : 'omp')
+  if (!existsSync(bin)) throw new Error(`包里没有 ${bin}`)
+  const out = execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 20000 }).trim()
+  if (!/^omp\//.test(out)) throw new Error(`--version 输出不像 omp：${out}`)
+  ok('随包 omp', out)
+} catch (e) { bad('随包 omp', e.message) }
 
 writeFileSync(`${OUT}/stderr.log`, stderr)
 ws.close()

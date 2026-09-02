@@ -1,0 +1,30 @@
+{
+  "_": "omp（Oh My Pi）随包分发的独立二进制。版本钉死在这里，升级是一次显式改这份文件 + 跑回归集的动作，不是打包时顺手拿最新。二进制本身不入库（每个 ~130MB），由 scripts/fetch-omp.mjs 按这份清单下载并校 SHA256。",
+  "version": "18.1.2",
+  "repo": "can1357/oh-my-pi",
+  "assets": {
+    "mac-arm64": {
+      "file": "omp",
+      "asset": "omp-darwin-arm64",
+      "sha256": "5f2512cce2a154ad2406a4792421c42f022b1335f83dcbde4236f76e50ab35b4",
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/omp-darwin-arm64"
+    },
+    "mac-x64": {
+      "file": "omp",
+      "asset": "omp-darwin-x64",
+      "sha256": "fff1ecc1950b45530bc30fac54783c45d93f1bc8a5c49186b1bd796cc6cb62d0",
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/omp-darwin-x64"
+    },
+    "win-x64": {
+      "file": "omp.exe",
+      "asset": "omp-windows-x64.exe",
+      "sha256": "8a36c4a4be135ff94f5eed287f62b5eb39e65e78d18bdeccf8a493d02d82722b",
+      "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/omp-windows-x64.exe"
+    }
+  },
+  "notices": {
+    "file": "THIRD-PARTY-NOTICES.txt",
+    "sha256": "104142244b8781b7828e64aa79a61b03fdf16e8a3464278647c3d84ad22cbce0",
+    "url": "https://github.com/can1357/oh-my-pi/releases/download/v18.1.2/THIRD-PARTY-NOTICES.txt"
+  }
+}

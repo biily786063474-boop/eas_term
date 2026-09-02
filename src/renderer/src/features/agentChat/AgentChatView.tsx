@@ -26,6 +26,7 @@ import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
+import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState } from '../../../../shared/types'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
@@ -56,6 +57,33 @@ function fmtWhen(ts: number): string {
 }
 
 const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
+
+/** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
+ *
+ *  `CliAuthState['cli']` 是 `'claude' | 'codex'` 的字面量联合 —— 那是 cliAuth 那面的
+ *  **身份类型**（`STATUS_ARGS` / `LOGIN_ARGS` 都是以它为键的 Record），放宽它等于把
+ *  `shared/types.ts` 和整个 `cliAuth/*` 一起拖下水，而那批文件承诺零改动。
+ *  所以在**用的这一侧**放宽，源头一个字节不动。
+ *
+ *  下面 `installed` / `status` 两个字段的语义与 `CliAuthState` 逐字相同，
+ *  尤其 **`status: null` 是「读不到」不是「没登录」** —— 闸门只在明确的
+ *  `loggedIn === false` 上落下，读不到一律放行。 */
+type AuthProbe = Omit<CliAuthState, 'cli'> & { cli?: string }
+
+/** 问一次 omp 自己那条状态通道，归一成 `AuthProbe`。
+ *
+ *  **它不能走 `cliAuth.check`**：那套只认 claude / codex（见 preload 里 `api.omp`
+ *  上方的注释），把 omp 送进去主进程直接抛。两条路各查各的，汇到同一个形状上，
+ *  于是 `blockedByAuth`、`.ac-authgate`、`CliStateLabel` 这些下游一处都不用分叉。
+ *
+ *  `omp:status` 声明的返回是 `unknown`（preload 不想为它多引一个主进程类型），
+ *  这里只挑用得上的两个字段落地，多的原样丢掉。 */
+function probeOmp(): Promise<AuthProbe | null> {
+  return window.api.omp.status().then((raw) => {
+    const st = raw as { installed?: boolean; status?: { loggedIn: boolean; account?: string } | null } | null
+    return st ? { installed: !!st.installed, status: st.status ?? null } : null
+  })
+}
 
 
 export function AgentChatView({
@@ -192,6 +220,10 @@ export function AgentChatView({
   // 先摆出命令原文让他看清 → 进度条 → 装完自动接上登录，全程不离开这个面板。
   // 上面那三条理由里只有第三条还成立（失败要能看到报错），CliSetupPanel 把它接住了：
   // 失败时展开输出尾部，并保留「把命令填进终端，我自己来」这条退路。
+  //
+  // **这是第三个会置 setupFor 的入口**（另两个是空态闸门与工具栏那条 notice）。
+  // 它不用自己判断「该开哪张面板」—— 分支放在**渲染那一侧**（按 setupFor.cli.auth），
+  // 三个入口于是自动都覆盖到了。判断写在这里的话，每加一个入口就要记得再判一次。
   const installCli = (c: CliInfo): void => {
     setCliNote(null)
     setSetupFor({ cli: c, from: c.available ? 'login' : 'install' })
@@ -272,7 +304,7 @@ export function AgentChatView({
   // **三态，不是两态**：登录了 / 没登录 / **读不到**。读不到时**不拦** ——
   // 那说明我们跟上游的输出格式脱节了，凭一次读不到就把人挡在门外，
   // 等于软件因为自己的解析问题拒绝工作。宁可放行、让 CLI 自己报错。
-  const [auth, setAuth] = useState<CliAuthState | null>(null)
+  const [auth, setAuth] = useState<AuthProbe | null>(null)
   const [authChecking, setAuthChecking] = useState(false)
   /** 正在给哪个 CLI 走「装 → 登录」这条链路。非空 = 设置面板挂着。
    *  from 决定从哪一步进：没装从安装进，装了没登录直接进登录。 */
@@ -287,8 +319,20 @@ export function AgentChatView({
     if (sessionId) return
     let cancelled = false
     setAuthChecking(true)
-    void window.api.cliAuth
-      .check(selected.id as 'claude' | 'codex')
+    // **判据是能力位，而且必须写成排除式。**
+    // 声明了 `provider-key` 的（omp —— 它压根没有「登录」这件事，只有「选服务商 + 填 key」）
+    // 走自己那条状态通道，**其余一切原样走 `cliAuth.check`**。
+    //
+    // 反过来写成 `=== 'cli-login'` 会出事：`auth` 在 adapter 上是**后加的可选字段**，
+    // Claude / Codex 一个都没声明它。今天 `buildCliList` 在合成 CliInfo 时补了默认值
+    // 兜住这一层，但这条判据不该依赖那个默认值还在 —— 排除式写法在两种情况下都对，
+    // 而 `=== 'cli-login'` 只要哪天默认值没补上就**恒假**，把两个旧 CLI 的登录预检
+    // 整个跳过（spec 评审阶段实测过：闸门恒不落下、没登录的节点照发不误）。
+    const probe: Promise<AuthProbe | null> =
+      selected.auth === 'provider-key'
+        ? probeOmp()
+        : window.api.cliAuth.check(selected.id as 'claude' | 'codex')
+    void probe
       .then((st) => {
         if (cancelled) return
         setAuth(st)
@@ -442,7 +486,12 @@ export function AgentChatView({
         // 指定的那个没装 / 不支持会话时退回既有逻辑，不是硬失败——
         // 用户至少还能看到界面并自己换一个。
         const pinned = pinnedCli ? usable.find((c) => c.id === pinnedCli) : undefined
-        setSelected((cur) => cur ?? pinned ?? usable[0] ?? null)
+        // **随包的那个排最后。** `bundled` 的 CLI（omp）`available` 恒真 —— 它就在
+        // 安装包里，探测必过。让它按 listClis 的顺序参与「取第一个」，结果是
+        // **只登了 Claude 的老用户，升级当天每开一个新会话都被换成 omp**，
+        // 而他的 key 还没填，等于软件自己把自己变成不可用。
+        // 判据是 `bundled` 这个能力位，不是 id —— 将来再随包带第二个也照样成立。
+        setSelected((cur) => cur ?? pinned ?? usable.find((c) => !c.bundled) ?? usable[0] ?? null)
       })
       .catch(() => {
         if (!cancelled) setClis([])
@@ -905,7 +954,14 @@ export function AgentChatView({
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
         <ChatToolbar
-          caps={selected!.capabilities}
+          /* 会话**报过** capabilities 事件就用它覆盖静态清单。
+             判据是「这条事件来过没有」（`view?.capabilities` 有没有值），不是 CLI 名字 ——
+             不报的 CLI（Claude / Codex）走到 else，拿到的还是原来那份，行为一个字不变。
+             对 omp 则是必需的：它的静态清单是空的（模型随服务商整份变，adapter 写不死），
+             不覆盖的话工具栏里一个模型都选不了。 */
+          caps={
+            view?.capabilities ? { ...selected!.capabilities, ...view.capabilities } : selected!.capabilities
+          }
           approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
@@ -920,19 +976,37 @@ export function AgentChatView({
             **和空态那份是同一个组件**，摆在工具栏下面 —— 不用把人赶回空态，
             登完了直接接着聊。登录成功后 auth 也跟着更新，
             免得空态闸门那侧留着一份过期的判断。 */}
-        {setupFor && (
-          <CliSetupPanel
-            cliId={setupFor.cli.id as 'claude' | 'codex'}
-            displayName={setupFor.cli.displayName}
-            installCmd={setupFor.cli.installCmd}
-            from={setupFor.from}
-            onCancel={() => setSetupFor(null)}
-            onDone={(status) => {
-              setAuth((cur) => (cur ? { ...cur, status } : cur))
-              setSetupFor(null)
-            }}
-          />
-        )}
+        {setupFor &&
+          // **排除式分支**：只有明确声明 `provider-key` 的走 omp 那张面板，
+          // 其余一切照旧。三处 `as 'claude'|'codex'` 断言留在 else 里 ——
+          // 走到那儿的必然是 cliAuth 认识的那两个，断言仍然成立。
+          (setupFor.cli.auth === 'provider-key' ? (
+            <OmpSetupPanel
+              cli={setupFor.cli}
+              onCancel={() => setSetupFor(null)}
+              onDone={() => {
+                setSetupFor(null)
+                // **重新问主进程，不在这里自己拼一个 `loggedIn: true`。**
+                // omp 那边的「就绪」是「选了模型 ＋ 冒烟通过」合起来算出来的，
+                // 渲染层臆造一个 true 会跟它对不上（面板说好了、闸门还拦着，或反过来）。
+                void probeOmp().then((st) => {
+                  if (aliveRef.current) setAuth(st)
+                })
+              }}
+            />
+          ) : (
+            <CliSetupPanel
+              cliId={setupFor.cli.id as 'claude' | 'codex'}
+              displayName={setupFor.cli.displayName}
+              installCmd={setupFor.cli.installCmd}
+              from={setupFor.from}
+              onCancel={() => setSetupFor(null)}
+              onDone={(status) => {
+                setAuth((cur) => (cur ? { ...cur, status } : cur))
+                setSetupFor(null)
+              }}
+            />
+          ))}
       </div>
     )
   }
@@ -1128,39 +1202,73 @@ export function AgentChatView({
             关掉灯箱那一瞬间闸门又跳回来，闪一下） */}
         {blockedByAuth && (
           <div className="ac-authgate">
-            <span>
-              <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
-              整个过程在这里完成，不用去终端。
-            </span>
+            {/* **两支文案按 `auth` 能力位分，不按 CLI 名字。**
+                omp 这一支说的是完全不同的一件事：它没有账号、没有浏览器授权，
+                拦住人的是「还没选服务商 / 还没填 key」。照搬「还没登录」的原文案
+                会把人推去找一个根本不存在的登录入口。
+                原文案原样留给 `cli-login`（也留给所有不声明这个字段的老 adapter）。 */}
+            {selected?.auth === 'provider-key' ? (
+              <span>
+                <b>{selected.displayName}</b> 还没配好。选一个模型服务商、填一把 key
+                就能开始 —— 全程在这里完成。
+              </span>
+            ) : (
+              <span>
+                <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
+                整个过程在这里完成，不用去终端。
+              </span>
+            )}
             <button
               type="button"
               className="ac-authgate-go"
               onClick={() => selected && setSetupFor({ cli: selected, from: 'login' })}
             >
-              点我去登录
+              {selected?.auth === 'provider-key' ? '去设置' : '点我去登录'}
             </button>
           </div>
         )}
-        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了 */}
+        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了。
+            omp 那支查的是「配好了没有」而不是「登没登录」，措辞跟着 `auth` 走。 */}
         {authChecking && !setupFor && !blockedByAuth && (
-          <div className="ac-clis-hint">正在确认 {selected?.displayName} 的登录状态…</div>
+          <div className="ac-clis-hint">
+            正在确认 {selected?.displayName} 的
+            {selected?.auth === 'provider-key' ? '配置状态' : '登录状态'}…
+          </div>
         )}
-        {setupFor && (
-          <CliSetupPanel
-            cliId={setupFor.cli.id as 'claude' | 'codex'}
-            displayName={setupFor.cli.displayName}
-            installCmd={setupFor.cli.installCmd}
-            from={setupFor.from}
-            onCancel={() => setSetupFor(null)}
-            onDone={(status) => {
-              // 登录成功：把闸门放下，并**就地更新 auth**，不等下一次 effect ——
-              // 那个 effect 依赖 [selected, sessionId]，登录并不改变这两个，
-              // 不手动更新的话闸门会一直挂着，用户登完了还被挡着发不出去
-              setAuth((cur) => (cur ? { ...cur, status } : cur))
-              setSetupFor(null)
-            }}
-          />
-        )}
+        {setupFor &&
+          // 分支理由同对话态那处：**排除式**，只有 `provider-key` 走 omp，
+          // 其余一切（含所有不声明这个字段的老 adapter）原样走 CliSetupPanel。
+          (setupFor.cli.auth === 'provider-key' ? (
+            <OmpSetupPanel
+              cli={setupFor.cli}
+              onCancel={() => setSetupFor(null)}
+              onDone={() => {
+                setSetupFor(null)
+                // 和登录那支一样：**就地重查一次**，不等下一次 effect ——
+                // 那个 effect 依赖 [selected, sessionId]，配完 key 这两个都没变，
+                // 不主动更新的话闸门会一直挂着，人配完了还被挡着发不出去。
+                // 用重查而不是自己拼 true 的理由见对话态那处的注释。
+                void probeOmp().then((st) => {
+                  if (aliveRef.current) setAuth(st)
+                })
+              }}
+            />
+          ) : (
+            <CliSetupPanel
+              cliId={setupFor.cli.id as 'claude' | 'codex'}
+              displayName={setupFor.cli.displayName}
+              installCmd={setupFor.cli.installCmd}
+              from={setupFor.from}
+              onCancel={() => setSetupFor(null)}
+              onDone={(status) => {
+                // 登录成功：把闸门放下，并**就地更新 auth**，不等下一次 effect ——
+                // 那个 effect 依赖 [selected, sessionId]，登录并不改变这两个，
+                // 不手动更新的话闸门会一直挂着，用户登完了还被挡着发不出去
+                setAuth((cur) => (cur ? { ...cur, status } : cur))
+                setSetupFor(null)
+              }}
+            />
+          ))}
         {cliMenuAt && (
           <CanvasContextMenu
             x={cliMenuAt.x}

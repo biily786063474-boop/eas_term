@@ -2410,3 +2410,159 @@
 .ac-attach-row.in-empty {
   padding: 0 2px 6px;
 }
+
+/* ── omp 设置灯箱（OmpSetupPanel）──────────────────────────────────────────
+   卡片、头部、按钮、进度条、错误输出全部复用上面 .ac-setup-* / .ac-login-* 那套：
+   对用户来说「让这个 CLI 能用」是同一类事，长得不一样只会让人以为撞上了
+   两个不同的东西。这里只补它独有的四样：链路面包屑、可选列表、搜索框、附注行。 */
+
+/* 走到哪一步了。**这不是进度条** —— 四段全摆出来、当前那段标亮，
+   一个编出来的百分比都没有（那条约束在 OmpSetupPanel 文件头写着）。 */
+.ac-omp-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
+.ac-omp-chain-i {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ac-omp-chain-i.on {
+  color: var(--fg);
+  font-weight: 600;
+}
+.ac-omp-chain-sep {
+  font-style: normal;
+  opacity: 0.45;
+}
+
+/* 服务商 / 模型的候选列表。**自己滚，不把灯箱撑高** ——
+   omp 一家服务商能列出几十个模型，撑高之后底下那排按钮会被挤出屏幕。 */
+.ac-omp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+.ac-omp-list.tall {
+  max-height: 240px;
+}
+
+.ac-omp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.ac-omp-item:hover {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+.ac-omp-item.on {
+  border-color: rgba(var(--accent-rgb), 0.75);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+.ac-omp-item-l {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 模型 id。人眼认的是 label，但真正传给 omp 的是 id —— 两者不一样时必须都看得见，
+   否则「我选的明明是 X」和账单上的名字对不上时无从查起。 */
+.ac-omp-item-s {
+  flex-shrink: 0;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+
+.ac-omp-empty {
+  padding: 14px 10px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+  text-align: center;
+}
+
+.ac-omp-search {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  outline: none;
+}
+.ac-omp-search:focus {
+  border-color: rgba(var(--accent-rgb), 0.6);
+}
+
+/* 输入框 + 提交按钮并排。.ac-login-input 自己是块级的，单独用会把按钮挤到下一行 */
+.ac-omp-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ac-omp-row .ac-login-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.ac-omp-row .ac-login-submit {
+  flex-shrink: 0;
+}
+
+/* 附注行：上次冒烟的结果、key 被别的组占着这类「得说清楚但不该抢戏」的话 */
+.ac-omp-meta {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  line-height: 1.7;
+}
+.ac-omp-meta b {
+  color: var(--fg);
+}
+
+/* 「去申请一个」。是链接不是按钮：它把人送出这个 app，不该长得像主操作 */
+.ac-omp-link {
+  padding: 0 0 0 4px;
+  border: none;
+  background: none;
+  color: rgba(var(--accent-rgb), 0.95);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ac-omp-link:hover {
+  color: var(--fg);
+}

@@ -27,3 +27,10 @@ screenshot/
 # 不忽略的话，一派活用户的 git status 就多出一个 ?? .worktrees/ ——
 # 而那里面是几棵完整的工作树，噪音极大。改动本身在各自的 eas-team/* 分支上，不会丢。
 .worktrees/
+
+# oh-my-pi 的独立二进制（每平台约 130MB，打包时经 extraResources 附带，不入库；
+# 由 scripts/fetch-omp.mjs 按 resources/omp/manifest.json 下载并校 SHA256。
+# manifest.json 与 THIRD-PARTY-NOTICES.txt 保持跟踪）
+resources/omp/mac-*/
+resources/omp/win-*/
+resources/omp/THIRD-PARTY-NOTICES.txt

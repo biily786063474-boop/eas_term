@@ -47,7 +47,16 @@ export function buildCliList(
       // 已装的不给安装命令 —— 免得界面上出现「已经装了还劝你装」
       installCmd: available ? undefined : installCmds[a.id],
       capabilities: a.capabilities,
-      approvalHook: a.approvalHook ?? undefined
+      approvalHook: a.approvalHook ?? undefined,
+      // 两个能力位跟着 approvalHook 一起过 IPC —— 渲染层的「走哪条配置链路」
+      // 与「默认别选它」都只认这两个字段。**不带出去 = 渲染层只剩按 id 猜这一条路。**
+      // **`auth` 补默认值而不是留 undefined**：留空的话下游写得出
+      // `=== 'cli-login'` 那种判据，而它对两个旧 adapter 恒假、会把它们的登录预检
+      // 整个跳过（`blockedByAuth` 恒为 false，没登录的节点不再拦发送）。
+      // 缺省即老行为 —— 让那种写法根本写不出来，比靠人记得写对可靠。
+      auth: a.auth ?? 'cli-login',
+      bundled: a.bundled ?? undefined,
+      transport: a.transport ?? undefined
     }
   })
   const extra: CliInfo[] = terminalOnly.map((t) => {
@@ -62,7 +71,9 @@ export function buildCliList(
       // 不能用于会话 → 能力一律为空，UI 不会为它渲染任何模型/强度/审批控件。
       // **照 CliCapabilities 的真实字段填**，别凭印象编（contextUsage 是必填的）
       capabilities: { models: [], effortLevels: [], compact: false, contextUsage: false, approval: [], sandboxLevels: [] },
-      approvalHook: undefined
+      approvalHook: undefined,
+      // 仅终端可用的那些走的仍是「CLI 自己的登录态」那条路
+      auth: 'cli-login' as const
     }
   })
   return [...main, ...extra]

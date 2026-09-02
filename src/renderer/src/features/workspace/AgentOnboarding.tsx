@@ -51,15 +51,31 @@ export function AgentOnboarding(): JSX.Element | null {
   const [setup, setSetup] = useState<{ kind: AgentKind; cmd?: string } | null>(null)
   /** 每个 CLI 的真实状态（装没装 / 登没登 / 读不到）。null = 还没查回来 */
   const [auth, setAuth] = useState<Partial<Record<AgentKind, CliAuthState>>>({})
+  /** 随包的 omp 配好了没有。**undefined = 还没查回来**，与「查回来是 false」必须分开 ——
+   *  合成一个布尔的话，omp 状态还在路上时 anyReady 先算出 false，引导页会闪一下再消失。
+   *  它不走 cliAuth（那套只认 claude / codex，见 preload 的注释），所以另存一份。 */
+  const [ompReady, setOmpReady] = useState<boolean | undefined>(undefined)
 
   const check = (k: AgentKind): void => {
     void window.api.cliAuth.check(k).then((st) => setAuth((cur) => ({ ...cur, [k]: st })))
+  }
+  /** 查一次 omp。读不到（IPC 抛了）按「没配好」算 —— 这里的代价只是多弹一次引导页，
+   *  而反过来（读不到当已就绪）会让真正一个大脑都没有的人什么提示都收不到。 */
+  const checkOmp = (): void => {
+    void window.api.omp
+      .status()
+      .then((raw) => {
+        const st = raw as { installed?: boolean; status?: { loggedIn?: boolean } } | null
+        setOmpReady(!!st?.installed && st?.status?.loggedIn === true)
+      })
+      .catch(() => setOmpReady(false))
   }
 
   useEffect(() => {
     void refreshAgentCli()
     // **并发查，不排队** —— 串行的话两个 CLI 冷启要等两遍
     for (const k of AGENT_KINDS) check(k)
+    checkOmp()
   }, [refreshAgentCli])
 
   useEffect(() => {
@@ -79,6 +95,7 @@ export function AgentOnboarding(): JSX.Element | null {
     const onFocus = (): void => {
       void refreshAgentCli()
       for (const k of AGENT_KINDS) check(k)
+      checkOmp()
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
@@ -86,8 +103,12 @@ export function AgentOnboarding(): JSX.Element | null {
 
   // **每一个都查回来了才判断要不要弹。** 少一个就下结论的话，
   // 会在启动瞬间闪一下引导页然后消失（查得慢的那个刚好是装好的）。
-  const allChecked = AGENT_KINDS.every((k) => auth[k])
-  const anyReady = AGENT_KINDS.some((k) => auth[k]?.status?.loggedIn === true)
+  //
+  // **omp 这一项两处都要并进去。** 只并 anyReady 的话，allChecked 会在两个 CLI 查完
+  // 的那一刻就为真，而此时 omp 还没回来 → anyReady 暂时是 false → 引导页先弹出来，
+  // 等 omp 回来才消失，用户看到的是一次闪烁。
+  const allChecked = AGENT_KINDS.every((k) => auth[k]) && ompReady !== undefined
+  const anyReady = AGENT_KINDS.some((k) => auth[k]?.status?.loggedIn === true) || ompReady === true
   // 已经有一个能用了就不打扰 —— 这一页的目的是「让他能开始用」，
   // 不是「把两个都装齐」。装第二个是随时可以做的事，不该拦在启动路上。
   if (dismissed || !plan || !allChecked || anyReady) return null
@@ -155,7 +176,8 @@ export function AgentOnboarding(): JSX.Element | null {
         <p className="onb-body">
           Eas-Term 自己不会说话 —— 干活的是 <b>Claude Code</b> 或 <b>Codex</b>，
           它们是各自厂商的命令行工具，要用你自己的账号登录。
-          <b>装好任意一个就能开始</b>，两个都装也行。
+          <b>装好任意一个就能开始</b>，两个都装也行；
+          <b>也可以直接用自带的 omp</b> —— 它随软件一起装好了，选个模型服务商、填一把 key 就能聊。
           没装它们，终端、画布、文件预览、辞典照常可用。
         </p>
 

@@ -196,3 +196,17 @@ test('有 adapter 的 chatSupported 恒为 true', () => {
   const out = buildCliList([fake('claude', 'Claude Code')], { claude: false })
   assert.equal(out[0].chatSupported, true, '没装不代表不支持 —— 那是 available 管的事')
 })
+
+// ── omp 接入时补的一条（2026-09-02）。**只新增，不改上面任何既有断言** ──────────
+
+test('**auth 一定被填上，不留 undefined 给渲染层**', () => {
+  // 留空的话，下游写得出 `=== 'cli-login'` 那种判据 —— 它对不声明该字段的
+  // Claude / Codex **恒假**，会把它们的登录预检整个跳过（`blockedByAuth` 恒为 false：
+  // 没登录的节点不再显示「点我去登录」，发送也不再被拦）。
+  // 那种写法编得过、跑起来还静悄悄，只能靠这条断言挡。
+  const withAuth = { ...fake('b', 'B'), auth: 'provider-key' as const }
+  const list = buildCliList([fake('a', 'A'), withAuth], { a: true, b: true }, {}, [
+    { id: 'c', displayName: 'C', scopeNote: '', installCmd: '' }
+  ])
+  assert.deepEqual(list.map((c) => c.auth), ['cli-login', 'provider-key', 'cli-login'])
+})
