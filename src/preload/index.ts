@@ -263,6 +263,21 @@ const api = {
    *  不暴露任何能直接读文件的方法：读文件走 HTTP 那条路，要过两道校验。 */
   /** CLI 的安装与登录状态。**分发侧「不知道怎么装、怎么登」那条链路的入口。**
    *  预检必须在渲染层做 —— agentChat:start 的同步性是承重的，不能在那里 await。 */
+  /** omp（随包底座）的引导链路。**与 cliAuth 是两条独立的路** ——
+   *  那套只认 claude / codex（`STATUS_ARGS` / `LOGIN_ARGS` 是 Record<'claude'|'codex'>），
+   *  把 omp 送进去会在主进程直接抛。 */
+  omp: {
+    status: (): Promise<unknown> => ipcRenderer.invoke('omp:status'),
+    listModels: (): Promise<{ id: string; label: string }[]> => ipcRenderer.invoke('omp:listModels'),
+    saveProvider: (input: { provider: string; model?: string; thinking?: string }): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('omp:saveProvider', input),
+    /** 这家服务商的 key 存在密钥柜的哪个变量名下。**明文 key 不经这条路** ——
+     *  渲染层拿到变量名后直接走 `secrets.save`，与用户手填密钥同一条通道。 */
+    keyVar: (provider: string): Promise<{ varName: string } | null> => ipcRenderer.invoke('omp:keyVar', provider),
+    noteSmoke: (r: { ok: boolean; message?: string }): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('omp:noteSmoke', r),
+    usage: (): Promise<unknown> => ipcRenderer.invoke('omp:usage')
+  },
   cliAuth: {
     check: (cli: 'claude' | 'codex'): Promise<CliAuthState> =>
       ipcRenderer.invoke('cliAuth:check', cli),
