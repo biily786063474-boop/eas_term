@@ -611,7 +611,10 @@ body {
   padding: 7px 10px;
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
+  /* 跟外壳成比例：菜单是 `--radius-lg`（20px），条目用 sm（7px）差了近三倍，
+     像圆盒子里塞方卡片。**内圈 ≈ 外圈 − 内边距** 才同心。
+     （2026-09-02 已在 `.cctx-item` 上修过一次，这里是同一个毛病。）*/
+  border-radius: var(--radius-md);
   color: var(--fg);
   font-size: 12.5px;
   cursor: pointer;

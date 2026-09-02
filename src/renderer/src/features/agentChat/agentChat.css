@@ -2492,6 +2492,13 @@
   max-height: 190px;
   overflow-y: auto;
   margin-top: 4px;
+  /* 藏掉原生滚动条 —— 沿边那条（`CtxScrollRail`）已经在表达同一件事，
+     两条同时在就是「一个信息画了两遍」（同双击菜单那处的理由）。 */
+  scrollbar-width: none;
+}
+.ac-omp-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 .ac-omp-list.tall {
   max-height: 240px;

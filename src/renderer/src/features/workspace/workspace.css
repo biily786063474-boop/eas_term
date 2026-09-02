@@ -548,7 +548,12 @@
   padding: 0 9px;
   border: none;
   border-radius: 999px;
-  background: #ffffff;
+  /* **不是纯白。** 纯白压在深色顶栏上是 17:1 —— 比 CTA 还抢眼，
+     而它只是个「这是什么」的标识，不是动作。
+     用户 2026-09-02：「终端胶囊的视觉层级要弱于 CTA 按钮，
+     不要和外面的黑色对比太高，亮色主题同理。」
+     退到 `#c8cad0` 一档（约 10:1）：仍然一眼看得见，但不跟 CTA 抢。 */
+  background: #c8cad0;
   /* **跟 CTA 同一套渐变，但整体弱一档**（2026-09-02 用户点名）。
      数值就是 `.ab-launch` 那条按比例收：0.24→0.14、0.04→0.03、0.12→0.07，
      内高光 0.5→0.3。**保持同一个形状（上亮、46% 转折、下压暗）**，
@@ -577,22 +582,23 @@
   color: #1c1c1c;
 }
 
-/* 亮色反过来：深底白字 */
+/* 亮色同理：不是纯黑，退一档到深灰 —— 对比拉满会盖过 CTA */
 :root[data-theme='light'] .pane-kind-btn {
-  background: #1c1c1c;
+  background: #4a4d52;
   color: #ffffff;
 }
 :root[data-theme='light'] .pane-kind-btn > svg {
   color: #ffffff;
 }
 
+/* hover 才往「更亮/更深」走一步 —— 静止态退让，指上去再给反馈 */
 .pane-kind-btn:hover,
 .pane-kind-btn.open {
-  background: #eaeaea;
+  background: #e2e4e8;
 }
 :root[data-theme='light'] .pane-kind-btn:hover,
 :root[data-theme='light'] .pane-kind-btn.open {
-  background: #333333;
+  background: #34373c;
 }
 
 .pane-kind-chevron {

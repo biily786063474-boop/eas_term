@@ -28,6 +28,7 @@ import { createPortal } from 'react-dom'
 
 import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
+import { CtxScrollRail } from '../../ui/CtxScrollRail'
 import {
   authFailureInTail,
   explainOmpFailure,
@@ -226,6 +227,10 @@ export function OmpSetupPanel(props: {
 
   /** omp 报的全名单（69 家，`auth-broker list`）。 */
   const [authProviders, setAuthProviders] = useState<{ id: string; name: string }[] | null>(null)
+  /** 两个名单的滚动宿主 —— 沿边滚动条（`CtxScrollRail`）挂在它们上面。
+   *  跟双击菜单同一套：藏掉原生条，只留沿着圆角走的那一条。 */
+  const provListRef = useRef<HTMLDivElement>(null)
+  const modelListRef = useRef<HTMLDivElement>(null)
 
   /** omp 支持登录的服务商全名单（69 家，由它自己报）。
    *
@@ -562,6 +567,16 @@ export function OmpSetupPanel(props: {
             : null
       : null
 
+  // 沿边滚动条**渲染在灯箱根部**，不放在名单旁边 —— 它虽然是 `position: fixed`，
+  // 但只要祖先有 `overflow: hidden`（灯箱那层就有），fixed 一样会被裁掉。
+  // 挂在根部则不受任何一层 overflow 影响；宿主由 ref 指过去，跟位置无关。
+  const rails = (
+    <>
+      <CtxScrollRail host={provListRef} />
+      <CtxScrollRail host={modelListRef} />
+    </>
+  )
+
   const body = (
     <div
       className="ac-setup-mask"
@@ -571,6 +586,7 @@ export function OmpSetupPanel(props: {
         if (e.target === e.currentTarget && !working) close()
       }}
     >
+      {rails}
       <div className="ac-setup" onMouseDown={(e) => e.stopPropagation()}>
         <div className="ac-login-head">
           <span className="ac-login-title">设置 {cli.displayName}</span>
@@ -638,7 +654,7 @@ export function OmpSetupPanel(props: {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
-                <div className="ac-omp-list">
+                <div className="ac-omp-list" ref={provListRef}>
                   {authProviders
                     .filter((p) => {
                       const q = query.trim().toLowerCase()
@@ -832,7 +848,7 @@ export function OmpSetupPanel(props: {
               onChange={(e) => setQuery(e.target.value)}
               autoFocus
             />
-            <div className="ac-omp-list tall">
+            <div className="ac-omp-list tall" ref={modelListRef}>
               {filtered.map((m) => (
                 <button
                   key={m.id}
