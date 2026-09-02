@@ -225,7 +225,29 @@
   },
   "costUsd": 0.5,
   "busy": false,
-  "trimmedFromHead": 0
+  "trimmedFromHead": 0,
+  "capabilities": {
+   "models": [
+    {
+     "id": "p/m1",
+     "label": "M1"
+    },
+    {
+     "id": "p/m2",
+     "label": "M2"
+    }
+   ],
+   "effortLevels": [
+    {
+     "id": "off",
+     "label": "关"
+    },
+    {
+     "id": "auto",
+     "label": "自动"
+    }
+   ]
+  }
  },
  "synth-approval": {
   "model": "test-model",

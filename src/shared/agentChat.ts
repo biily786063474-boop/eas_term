@@ -1,7 +1,14 @@
 // 通用 AI CLI 对话前端的中间事件模型。
 // **这里不允许出现任何 CLI 特有的概念** —— 不能有 hookEventName / thread_id /
 // tool_use_id 这类只有一边存在的字段。它们只属于 adapter 内部。
-// 判据很简单：加第三个 CLI 时，这个文件不该需要改。
+//
+// 判据（2026-09-02 按第三个 CLI 的实际接入修订过一次）：加第三个 CLI 时，这个文件
+// **只允许新增可选的能力位与事件变体，不允许出现某个 CLI 独有的概念**。
+// 原来那句写的是「不该需要改」，太绝对：`transport` / `auth` / `bundled` / `quotaSource`
+// 这类是「这个 CLI 会什么」的声明，正是本文件该有的东西；真正要挡的是把
+// `session/set_config_option`、`PI_CONFIG_DIR` 这种协议或产品细节漏进来。
+// 新增字段一律可选，且**缺省即老行为** —— 判据写成 `!== '新值'` 走老路，
+// 而不是 `=== '老值'`（后者对不声明该字段的旧 adapter 恒假，会把它们的老路整个跳过）。
 
 export interface Usage {
   inputTokens: number
@@ -124,11 +131,68 @@ export type ChatEvent =
       message: string
       fatal: boolean
       /** 这条错误属于哪一类。**给界面用来分支，而不是让它去匹配 message 里的中文** ——
-       *  文案随时会改，匹配文案的代码坏掉时不会有任何报错。
-       *  目前只有 'auth'（没登录 / 登录失效）：界面据此摆出登录入口，
-       *  而不是像别的错误那样只显示一行字。不带这个字段就是普通错误。 */
-      kind?: 'auth'
+       *  文案随时会改，匹配文案的代码坏掉时不会有任何报错。不带这个字段就是普通错误。
+       *
+       *  · `'auth'`  —— 没登录 / 登录失效。界面据此摆出**登录**入口。
+       *  · `'setup'` —— 还没配好（没选 provider、没填 key、密钥柜锁着）。界面摆的是
+       *    **设置**入口，不是登录入口 —— 这两件事对用户是完全不同的动作，而
+       *    `ChatToolbar` 对 `'auth'` 渲染的「去登录」按钮会把人引到 `CliLoginPanel`，
+       *    那条路对「靠 provider key 起会话」的 CLI 根本走不通（`cliAuth` 那套只认
+       *    claude / codex）。所以它必须是独立的一类，不能复用 'auth'。 */
+      kind?: 'auth' | 'setup'
     }
+  /**
+   * **这个 CLI 能用哪些模型 / 强度档，是它自己在会话建立时报的。**
+   *
+   * `CliCapabilities.models` 那份是**静态清单**，写死在 adapter 里 —— 对 Claude 与 Codex
+   * 够用（模型名基本不变），但装不下「provider × model 动态组合」那种：同一个 CLI 换个
+   * provider，能选的模型整份都不一样，而这件事只有会话真的建立起来之后才知道。
+   *
+   * 所以多一条事件：**拿得到就报，界面用它覆盖静态清单**。判据是「这条事件来过没有」，
+   * 不是 CLI 的名字 —— 不报的 CLI（Claude / Codex）行为一个字不变。
+   */
+  | {
+      k: 'capabilities'
+      models?: { id: string; label: string }[]
+      effortLevels?: { id: string; label: string }[]
+    }
+
+/** 宿主进程的几个路径事实。**由 session.ts 注入，adapter 不自己去算** ——
+ *  理由与 `StartOpts.mcpConfigPath` 那条逐字相同：adapter 有独立单测、跑在纯 node 环境里，
+ *  import `electron` 会把整个主进程那套拉进来。
+ *
+ *  这是「随包资源在哪、用户数据在哪」的通用事实，**不含任何 CLI 名字**。
+ *  走 PATH 探测的 CLI（Claude / Codex）用不到它，`detect()` 的实现签名可以不收这个参数
+ *  —— TS 允许实现比接口少一个形参，所以那两个 adapter 一个字都不用改。 */
+export interface HostPaths {
+  /** `app.isPackaged` */
+  isPackaged: boolean
+  /** `process.resourcesPath`。**dev 下是 undefined**，所以这里允许空串，取路径的一方要能接住 */
+  resourcesPath: string
+  /** `app.getAppPath()`（dev 时 = 仓库根） */
+  appPath: string
+  /** `app.getPath('userData')` */
+  userData: string
+  /** `app.getPath('home')`。**随包 CLI 的配置目录若按「相对 HOME」解析，这个值必须与
+   *  spawn 时传给子进程的 `HOME` 同源** —— `agentRules.ts` 记着一次实测事故：
+   *  `os.homedir()` 跟随 `$HOME`、`app.getPath('home')` 不跟随，两者分叉过。 */
+  home: string
+}
+
+/** 一个会话累计到此刻的统计。**给数据层留的口子**，不是给工具栏用的
+ *  （工具栏的 `formatUsage` 只显示 token 与花费，从不读上下文比例）。
+ *
+ *  **这里刻意没有 `costUsd`**：花费已经有唯一出口 —— `turn.done.costUsd` 经
+ *  `handleEvent` 进 `SessionRecord.tally`。两处都放同一个数，跨会话求和的代码
+ *  （`mcpHandler` 今天就在对 `tally.costUsd` 求和）迟早会把它加两遍。 */
+export interface SessionStats {
+  /** 上下文窗口大小（分母）。拿不到就不填，绝不猜 */
+  contextWindow?: number
+  /** 当前占用（分子） */
+  contextUsed?: number
+  /** 币种。CLI 报什么就是什么；留这个字段是为了不让数据层自己假定美元 */
+  currency?: string
+}
 
 export interface CliCapabilities {
   models?: { id: string; label: string }[]
@@ -180,7 +244,29 @@ export interface CliAdapter {
   id: string
   displayName: string
   capabilities: CliCapabilities
-  detect(): Promise<boolean>
+  /** 这台机器上能不能用。
+   *  `host` 是**可选参数**：随包分发的 CLI 用它算绝对路径，走 PATH 探测的忽略。
+   *  TS 允许实现签名少一个形参，所以 claude.ts / codex.ts 的 `detect()` 不用改。
+   *  **实现里 `host` 为空时必须返回 false 而不是抛** —— `adapters.test.ts` 会无参调用它。 */
+  detect(host?: HostPaths): Promise<boolean>
+  /** 这个 CLI 走哪种传输。不声明 = 现状：stdout 逐行喂 `createTranslator()` 的翻译器、
+   *  stdin 写 CLI 自己的 wire format。`'acp'` = 双向 JSON-RPC，进程与收发由独立的
+   *  transport 负责，**不经过 `feed()` 与 `writeStdin()`**。
+   *
+   *  **这是能力位，不是 CLI 名字** —— 调用点判的是这个字段，不是 `id === 'omp'`。 */
+  transport?: 'acp'
+  /** 怎么算「配好了、能开始对话」。不声明按 `'cli-login'` 处理（= 现状：`cliAuth` 那套
+   *  探测 CLI 自己的登录态）。`'provider-key'` = 要先选模型服务商、填一把 key，
+   *  界面走独立的设置面板，**不能进 `CliLoginPanel`**（那条路只认 claude / codex）。
+   *
+   *  判据一律写成 `!== 'provider-key'` 走老路 —— 缺省即老行为，新字段不改任何现状。 */
+  auth?: 'cli-login' | 'provider-key'
+  /** 随软件一起分发、不用用户自己装。真值时 `installCmd` 没有意义，
+   *  而且**默认选择要避开它**：随包的 CLI `available` 恒真，让它排在前面会把
+   *  「只装了 Claude 的老用户」的每个新会话都换掉。 */
+  bundled?: true
+  /** 额度从哪来。不声明 = 现状（Claude 走直连接口、Codex 读它自己的日志）。 */
+  quotaSource?: 'omp-usage'
   /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn。
    *  stdin 必填（不给可选，是怕下一个 CLI 接入时又忘记声明）——每个 CLI 怎么用 stdin
    *  是它自己的怪癖，adapter 知道，下游不该替它记：
@@ -212,8 +298,12 @@ export interface CliAdapter {
    *
    *  不声明 = 只能重启带启动参数（Codex 的 `exec` 是一次性的，压根没有会话内命令）。
    *
+   *  `'acp-config'` = 走 ACP 的 `session/set_config_option`（请求/响应，不用静默期、
+   *  不用猜回执）。**改完要就地回写 `SessionRecord.model / effort`** —— 与 slash 那条
+   *  路同一个坑：不回写的话，空闲回收后 restart 会悄悄退回旧模型，而界面还显示着新的。
+   *
    *  **这是能力声明，不是 CLI 名字**——调用点判的是这个字段，不是 `id === 'claude'`。 */
-  paramChange?: 'slash'
+  paramChange?: 'slash' | 'acp-config'
 }
 
 // ── session.ts 的 IPC 面用到的形状（Task 8）。放共享文件是因为 preload 和主进程

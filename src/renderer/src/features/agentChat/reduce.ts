@@ -71,9 +71,11 @@ export interface Notice {
    *  又不让重复内容占版面。 */
   count: number
   /** 错误类别，原样来自事件（见 shared/agentChat.ts 的 ChatEvent）。
-   *  'auth' 那条界面上要摆登录入口，不是只显示一行字。
-   *  **界面按这个分支，不要去匹配 text 里的中文。** */
-  kind?: 'auth'
+   *  'auth' 那条界面上要摆**登录**入口、'setup' 那条摆**设置**入口，都不是只显示一行字。
+   *  **界面按这个分支，不要去匹配 text 里的中文。**
+   *  取值与来源见 shared/agentChat.ts 的 ChatEvent.error.kind（这里是它的镜像，
+   *  两边要一起改 —— 少放宽一边，`kind: e.kind` 那行当场 TS2322）。 */
+  kind?: 'auth' | 'setup'
 }
 
 /** notices 数组的条数上限。**版面不被挤掉这件事已经由 CSS 负责**（.ac-notices 有
@@ -138,6 +140,13 @@ export interface ChatView {
    * **压缩时 unshift 的那个分隔标记会抵掉 1**：它在头部新增一个元素，
    * 后面所有轮次因此往后挪一格，等价于「少删了一轮」。 */
   trimmedFromHead?: number
+  /** CLI **在会话建立时报的**能选哪些模型 / 强度档。`undefined` = 它没报过。
+   *
+   *  为什么不是直接用 `CliInfo.capabilities`：那份是写死在 adapter 里的**静态**清单，
+   *  对 Claude / Codex 够用，但装不下「换个 provider 整份模型都不一样」那种 ——
+   *  而那件事只有会话真的建立起来之后才知道。工具栏拿到它就覆盖静态清单，
+   *  判据是「报过没有」，不是 CLI 的名字。 */
+  capabilities?: { models?: { id: string; label: string }[]; effortLevels?: { id: string; label: string }[] }
 }
 
 export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatView } {
@@ -147,6 +156,10 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   let usage: Usage | null = null
   let costUsd: number | undefined
   let noticeSeq = 0
+  /** CLI 在会话建立时报的能力（能选哪些模型 / 强度档）。
+   *  `null` = 它没报过 —— 那就用 adapter 的静态清单，判据是「有没有报过」，不是 CLI 名字。
+   *  **整份覆盖不合并**：报的这份就是它当前 provider 下的全集，合并会留下上一份的残渣。 */
+  let capabilities: ChatView['capabilities'] = undefined
   // busy 的第二支：「收到过 exec.start 但还没 turn.done」。独立于「execs 里还有没有
   // running 项」，是因为一个 exec 全部跑完之后、turn.done 到达之前，agent 仍可能继续
   // 说话或再发起下一个 exec——这段真空期界面也该显示忙碌，不能因为暂时没有 running
@@ -391,6 +404,10 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         if (e.fatal) turnActive = false
         break
       }
+      case 'capabilities': {
+        capabilities = { models: e.models, effortLevels: e.effortLevels }
+        break
+      }
       // session.ready / thinking / turn.start，以及任何未来新增但这一层还没接的事件类型：
       // 当前视图模型没有对应字段，忽略即可——但绝不能抛。
       //（text.delta 已经在上面接了，不再走这条路。）
@@ -412,7 +429,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       // turnActive 补的是「会话就绪了但第一个字还没来」那一段（实测有 4 秒多，
       // 见它的定义处）——原来那两支都覆盖不到，界面在那段时间是彻底静止的。
       busy: anyRunning || sawExecStartSinceTurnDone || turnActive,
-      trimmedFromHead
+      trimmedFromHead,
+      capabilities
     }
   }
 

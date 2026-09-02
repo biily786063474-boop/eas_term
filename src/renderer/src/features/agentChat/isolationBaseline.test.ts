@@ -63,7 +63,12 @@ const ALL_VARIANTS: ChatEvent[] = [
   { k: 'turn.done', usage: { inputTokens: 100, outputTokens: 30, cachedInputTokens: 7, contextRatio: 0.25 }, costUsd: 0.5 },
   { k: 'quota', window: 'five_hour', status: 'allowed', resetsAt: 1786996800 },
   { k: 'quota', window: 'seven_day', status: 'allowed_warning', resetsAt: 1787996800, utilization: 0.79 },
-  { k: 'compacted', trigger: 'auto', preTokens: 120_000, postTokens: 8_000 }
+  { k: 'compacted', trigger: 'auto', preTokens: 120_000, postTokens: 8_000 },
+  {
+    k: 'capabilities',
+    models: [{ id: 'p/m1', label: 'M1' }, { id: 'p/m2', label: 'M2' }],
+    effortLevels: [{ id: 'off', label: '关' }, { id: 'auto', label: '自动' }]
+  }
 ]
 
 /** notice 的规矩，全在 reduce.ts 的注释里写死过：
@@ -178,7 +183,7 @@ const ALL_KINDS: Record<ChatEvent['k'], true> = {
   'session.ready': true, 'turn.start': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
-  'user.message': true, error: true
+  'user.message': true, error: true, capabilities: true
 }
 
 test('两组合起来必须盖到 ChatEvent 的每一个变体', () => {
