@@ -867,7 +867,7 @@
 /* ═══ Export Dialog ═══ */
 .uc-export-overlay {
   position: fixed; inset: 0; z-index: 9000;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  background: var(--wash-3); backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
 }
 .uc-export {
@@ -992,7 +992,7 @@
 .uc__complib-confirm {
   position: absolute; inset: 0; z-index: 10;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.3); border-radius: 8px;
+  background: var(--wash-1); border-radius: 8px;
 }
 .uc__complib-confirm-box {
   background: var(--bg-1); border-radius: 10px; padding: 16px 20px;

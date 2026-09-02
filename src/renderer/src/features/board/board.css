@@ -348,7 +348,7 @@
   gap: 8px;
   padding: 6px 10px;
   border-bottom: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--wash-1);
   /* 空白处能拖窗口 —— 全屏时这条是屏幕上最像「标题栏」的东西，
      拖不动很反直觉。**按钮和下拉必须显式 no-drag**，否则点不动 */
   -webkit-app-region: drag;
@@ -386,7 +386,7 @@
   padding: 0 5px;
   border-radius: 6px;
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--wash-1);
   color: var(--fg-dim);
   font-family: inherit;
   font-size: 11px;
@@ -443,7 +443,7 @@
   padding: 0 5px;
   border: 1px solid rgba(var(--accent-rgb), 0.5);
   border-radius: 5px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--wash-2);
   color: var(--fg);
   font-family: inherit;
   font-size: 12px;

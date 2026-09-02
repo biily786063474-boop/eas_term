@@ -61,7 +61,7 @@
   overflow: auto;
   /* 节点面板本身是半透明玻璃，长文档直接透出下面的画布没法读——叠一层黑压住。
      用黑色而不是固定色值，是为了跟随各主题自己的玻璃色调。 */
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--wash-3);
   padding: 22px 26px 60px;
   font-size: 13.5px;
   line-height: 1.8;
@@ -202,7 +202,7 @@
   padding: 32px 16px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--wash-1);
   overflow-x: auto;
   font-size: 12px;
   line-height: 1.7;

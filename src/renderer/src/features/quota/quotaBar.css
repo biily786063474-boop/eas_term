@@ -8,7 +8,7 @@
   padding: 4px 10px;
   border-radius: 999px;
   /* 底色要能压住画布点阵，但不能像个按钮 —— 这条不可点 */
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--wash-1);
   backdrop-filter: blur(8px);
   font-size: 11px;
   line-height: 1;

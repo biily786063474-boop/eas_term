@@ -377,15 +377,17 @@
      而不是浮在内容里的一块板子 */
   left: -18px;
   right: -18px;
-  padding: 6px 18px;
+  padding: 4px 18px;
   /* **实心底**。半透明 + blur 挡不住从背后滚过去的正文——两层字叠在一起
      谁都读不了。--popover-solid 是主题里唯一完全不透明的那档，
      菜单和下拉也用它。多条路标同时粘在 top:0 时，也靠它让后来的完整盖住先前的。 */
   background: var(--popover-solid);
   box-shadow: 0 1px 0 var(--glass-border);
-  color: var(--fg-dim);
-  font-size: 13px;
-  line-height: 1.5;
+  /* 吸顶那条是**路标不是标题** —— 用户要它「再小一点、淡一点」。
+     它的作用是「你现在在哪一段」，读完就该被忽略；跟正文抢注意力就是干扰。 */
+  color: var(--t-3);
+  font-size: 11.5px;
+  line-height: 1.45;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -414,20 +416,24 @@
   padding-left: 2px;
 }
 
+/* 工具调用行。**它是伴奏不是主旋律** —— 用户要它「行间距再窄一点、字号小一点、
+   颜色层级低一点」。这三样是同一件事的三个面：让眼睛滑过去，而不是停下来读。
+   所以用 `--t-3`（三级文字，那一档就是「弱到几乎不参与阅读」）。 */
 .ac-exec-row {
   display: flex;
   flex-direction: column;
-  font-size: 11.5px;
-  color: var(--fg-dim);
+  font-size: 10.5px;
+  color: var(--t-3);
   border-radius: var(--radius-sm);
 }
 
 .ac-exec-row-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 6px;
-  line-height: 1.5;
+  gap: 5px;
+  /* 上下 1px：多行工具调用连着排时，这一像素决定它是「一串」还是「一堆」 */
+  padding: 1px 6px;
+  line-height: 1.35;
 }
 
 .ac-exec-label {
@@ -501,7 +507,7 @@
   padding: 7px 9px;
   max-height: 220px;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--wash-1);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -631,7 +637,7 @@
   padding: 7px 9px;
   max-height: 220px;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--wash-1);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -963,7 +969,7 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.62);
+  background: var(--wash-3);
   color: #fff;
   cursor: pointer;
   /* 默认就看得见（原来是 0，只有 hover 才出现——用户找不到它）。
@@ -1100,7 +1106,7 @@
   padding: 9px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--wash-1);
   font-size: 13.5px;
   line-height: 1.65;
 }
@@ -2111,7 +2117,7 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--wash-3);
   backdrop-filter: blur(4px);
 }
 
@@ -2316,7 +2322,7 @@
   overflow: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
-  background: rgba(0, 0, 0, 0.24);
+  background: var(--wash-1);
   color: var(--fg-dim);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 10.5px;

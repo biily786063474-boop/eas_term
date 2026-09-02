@@ -1,7 +1,11 @@
 // 主题系统：CSS 侧用 data-theme 属性切换自定义属性，xterm 侧用这里的主题对象。
 import type { ITheme } from '@xterm/xterm'
 
-export type ThemeId = 'default' | 'pink'
+/** **`light` 是这个软件的第一个亮色主题**（2026-09-02）。
+ *  前两个（default / pink）都是暗色，所以 `base.css` 之外那 792 处硬编码颜色
+ *  全都建立在「底是暗的」这个假设上 —— 那才是亮色模式的真实成本，
+ *  要一处处迁到令牌上来。 */
+export type ThemeId = 'default' | 'pink' | 'light'
 
 export interface ThemeMeta {
   id: ThemeId
@@ -12,7 +16,8 @@ export interface ThemeMeta {
 
 export const THEMES: ThemeMeta[] = [
   { id: 'default', label: '默认 · 蓝', swatch: '#a2b9e0' },
-  { id: 'pink', label: '黑粉', swatch: '#f78bb0' }
+  { id: 'pink', label: '黑粉', swatch: '#f78bb0' },
+  { id: 'light', label: '亮色', swatch: '#f7f7f8' }
 ]
 
 const XTERM_BASE = {
@@ -35,7 +40,37 @@ const XTERM_BASE = {
   brightWhite: '#acb0d0'
 }
 
+/** 亮色终端。**不能拿暗色那套前景色直接放白底上** ——
+ *  `#d8dae0` 在白底上对比度不到 1.3:1，等于没有字。整套换成深色前景，
+ *  ANSI 八色也换成在白底上读得出的那一档（暗色版是为黑底调的，饱和度偏高）。 */
+const XTERM_LIGHT = {
+  foreground: '#24292f',
+  black: '#24292f',
+  red: '#cf222e',
+  green: '#1a7f37',
+  yellow: '#9a6700',
+  blue: '#0969da',
+  magenta: '#8250df',
+  cyan: '#1b7c83',
+  white: '#6e7781',
+  brightBlack: '#57606a',
+  brightRed: '#a40e26',
+  brightGreen: '#1a7f37',
+  brightYellow: '#7d4e00',
+  brightBlue: '#0550ae',
+  brightMagenta: '#6639ba',
+  brightCyan: '#1b7c83',
+  brightWhite: '#24292f'
+}
+
 const XTERM_THEMES: Record<ThemeId, ITheme> = {
+  light: {
+    ...XTERM_LIGHT,
+    background: 'rgba(255, 255, 255, 0.45)',
+    cursor: '#3b6bb5',
+    cursorAccent: '#ffffff',
+    selectionBackground: 'rgba(59, 107, 181, 0.22)'
+  },
   default: {
     ...XTERM_BASE,
     background: 'rgba(14, 15, 20, 0.45)',

@@ -740,7 +740,7 @@
   overflow-y: auto;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--wash-1);
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 11.5px;
   color: var(--fg-dim);
