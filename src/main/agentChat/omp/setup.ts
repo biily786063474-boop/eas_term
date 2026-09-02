@@ -18,6 +18,7 @@ import { readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
 import { keyVarOf, nextStepOf, OMP_PROVIDERS, providerById, type OmpStep } from './setupModel.ts'
 import { ompAdapter } from '../adapters/omp.ts'
 import { refreshCliCache } from '../session.ts'
+import { cancelOmpLogin, ompLoginInFlight, startOmpLogin, submitOmpLogin, type OmpLoginState } from './login.ts'
 
 /** 渲染层要的那份状态。**形状照 `CliAuthState` 的前两个字段**（installed / status），
  *  好让 `blockedByAuth`、`.ac-authgate`、`CliStateLabel` 三处不改就能复用；
@@ -28,8 +29,12 @@ export interface OmpStatus {
   status: { loggedIn: boolean; account?: string }
   /** 面板据此决定停在哪一步 */
   step: OmpStep
+  /** 带「去哪儿取 key」链接的推荐几家。**不是全集** ——
+   *  订阅登录那条路的全名单走 `omp:listAuthProviders`（70 家，由 omp 自己报）。 */
   providers: { id: string; label: string; keyUrl: string }[]
   provider?: string
+  /** 上次是用订阅还是填 key 配的 */
+  authMode?: 'subscription' | 'apikey'
   model?: string
   lastSmoke?: OmpSetup['lastSmoke']
 }
@@ -37,9 +42,13 @@ export interface OmpStatus {
 type Res = { ok: true } | { ok: false; error: string }
 
 /** 服务商 id 的守卫。**它会被拼进环境变量名与文件路径**，
- *  一个 `../` 就能写到 `<userData>/omp` 之外。清单之外的一律拒。 */
+ *  一个 `../` 就能写到 `<userData>/omp` 之外。
+ *
+ *  **不再要求在我们那份清单里**：omp 认识 70 家，订阅登录那条路要能选到它们全部
+ *  （我们那份四家的清单只是「带取 key 链接的推荐位」）。所以判据从「在白名单里」
+ *  放宽成「形状安全」—— 真不认识的 id，omp 自己会拒，那句话比我们编的准。 */
 function safeProvider(id: unknown): string | null {
-  return typeof id === 'string' && /^[a-z0-9-]+$/.test(id) && providerById(id) ? id : null
+  return typeof id === 'string' && /^[a-z0-9.-]+$/.test(id) && id.length <= 64 ? id : null
 }
 
 function statusOf(): OmpStatus {
@@ -56,7 +65,11 @@ function statusOf(): OmpStatus {
     // 柜子那三项在这里一律填「好的」—— 真正的判定在渲染层用 `secrets.status()` 补齐后重算。
     vault: { available: true, configured: true, locked: false, foreign: false },
     provider: setup.provider?.id,
+    authMode: setup.provider?.authMode,
     keyInVault: !!p, // 同上，渲染层用 secretsHas 的结果覆盖
+    // 订阅那条路「登过没有」的唯一可信判据是**冒烟跑通过** —— broker 的
+    // `status` 问的是它自己那个服务，不是「哪些订阅登过」，没有更直接的查法。
+    loggedIn: !!setup.lastSmoke?.ok,
     model: setup.provider?.model
   })
   return {
@@ -65,6 +78,7 @@ function statusOf(): OmpStatus {
     step,
     providers: OMP_PROVIDERS.map((x) => ({ id: x.id, label: x.label, keyUrl: x.keyUrl })),
     provider: setup.provider?.id,
+    authMode: setup.provider?.authMode,
     model: setup.provider?.model,
     lastSmoke: setup.lastSmoke
   }
@@ -105,15 +119,19 @@ export function registerOmpSetupHandlers(): void {
    *  `secrets:save` 存进密钥柜（与用户手填密钥同一条路），这一层只记「选了谁」。
    *  这么分是有意的：密钥的明文一次都不该多经过一个 IPC 通道。 */
   ipcMain.handle('omp:saveProvider', (_e, raw: unknown): Res => {
-    const inp = (raw ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown }
+    const inp = (raw ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown; authMode?: unknown }
     const id = safeProvider(inp.provider)
     if (!id) return { ok: false, error: '不认识这个模型服务商' }
+    // 只认这两个字面量；给不出就按 'apikey'（这个字段是后加的，老配置里没有，
+    // 而在它存在之前只有填 key 那一条路）
+    const authMode: 'subscription' | 'apikey' = inp.authMode === 'subscription' ? 'subscription' : 'apikey'
     const host = hostPaths()
     const prev = readOmpSetup(host.userData)
     const next: OmpSetup = {
       ...prev,
       provider: {
         id,
+        authMode,
         model: typeof inp.model === 'string' ? inp.model : prev.provider?.model,
         thinking: typeof inp.thinking === 'string' ? inp.thinking : prev.provider?.thinking
       },
@@ -124,7 +142,9 @@ export function registerOmpSetupHandlers(): void {
       writeOmpSetup(host.userData, next)
       // 受管配置跟着重写一遍：不写的话 models.yml 里还是上一家的 apiKey 变量名，
       // 下次起会话会去柜里取一把不存在的 key，症状是 401。
-      writeManagedConfig(host, [{ id }])
+      // **订阅那条路一条都不写** —— 上游明写 `apiKey` 会压过 broker 的 OAuth 令牌，
+      // 写下去等于用一个不存在的环境变量顶掉刚登好的订阅。
+      writeManagedConfig(host, authMode === 'subscription' ? [] : [{ id }])
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) }
     }
@@ -161,6 +181,54 @@ export function registerOmpSetupHandlers(): void {
     const p = providerById(id ?? '')
     return p ? { varName: keyVarOf(p) } : null
   })
+
+  // ── 订阅登录 ────────────────────────────────────────────────────────────
+  //
+  // **和「填 API key」是并列的两种选择。** omp 认识 70 家，头几个正是最要紧的订阅
+  // （Claude Pro/Max、ChatGPT Plus/Pro、智谱 GLM Coding Plan、Kimi、Copilot…）——
+  // 订阅用户没有 API key，也不该被逼着去申请一把。
+
+  /** omp 支持登录的服务商全名单（`auth-broker list --json`）。
+   *  **从它那儿取而不是我们写死** —— 写死的清单会随上游更新而过期，
+   *  而且「哪家能订阅登录」本来就该由 omp 说了算。 */
+  ipcMain.handle('omp:listAuthProviders', (): Promise<{ id: string; name: string }[]> => {
+    const host = hostPaths()
+    const bin = ompBinPathOrNull(host)
+    if (!bin) return Promise.resolve([])
+    return new Promise((resolve) => {
+      execFile(bin, ['auth-broker', 'list', '--json'], { env: ompBaseEnv(host), timeout: 12_000 }, (err, stdout) => {
+        if (err) return resolve([])
+        try {
+          const j = JSON.parse(stdout) as { id?: unknown; name?: unknown }[]
+          resolve(
+            (Array.isArray(j) ? j : [])
+              .map((x) => ({ id: String(x?.id ?? ''), name: String(x?.name ?? x?.id ?? '') }))
+              .filter((x) => /^[a-z0-9.-]+$/.test(x.id))
+          )
+        } catch {
+          resolve([])
+        }
+      })
+    })
+  })
+
+  ipcMain.handle('omp:startLogin', (e, raw: unknown): { ok: boolean; error?: string } => {
+    const provider = typeof raw === 'string' && /^[a-z0-9.-]+$/.test(raw) ? raw : null
+    if (!provider) return { ok: false, error: '不认识这个服务商' }
+    const wc = e.sender
+    return startOmpLogin(hostPaths(), provider, (st: OmpLoginState) => {
+      // 只推给发起的那个窗口 —— 与 agentChat 的事件同一条纪律，不全窗口广播
+      if (!wc.isDestroyed()) wc.send('omp:login', st)
+    })
+  })
+
+  ipcMain.handle('omp:submitLogin', (_e, raw: unknown): { ok: boolean; error?: string } =>
+    typeof raw === 'string' ? submitOmpLogin(raw) : { ok: false, error: '要提交的内容不能为空' }
+  )
+
+  ipcMain.handle('omp:cancelLogin', (): { ok: boolean } => cancelOmpLogin())
+
+  ipcMain.handle('omp:loginInFlight', (): OmpLoginState | null => ompLoginInFlight())
 
   /** 订阅额度的原始数据（数据层用）。**不做任何裁剪之外的加工** ——
    *  额度条那条路走 `quotaStore`，这里是给「看一眼原始输出」用的。 */

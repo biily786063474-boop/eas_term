@@ -990,14 +990,18 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
         // 受管配置**每次起进程之前重写一遍**：这是我们的目录、我们说了算
         // （与 agentRules 分发规则同一条纪律）。写不进去就不该起 —— 那等于分发一个
         // approvalMode 是 yolo、生图没被 deny 的 agent。
+        const setup = readOmpSetup(host.userData)
+        const sub = setup.provider?.authMode === 'subscription'
         try {
-          const setup = readOmpSetup(host.userData)
           // 只传 provider id：`ompModelsYml` 会据此写 `apiKey: EAS_OMP_<ID>_KEY`。
           // **不给 `models` 数组** —— 上游 `models-config.ts:44-96` 规定「列了 models
           // 就必须给 baseUrl」，而内置 provider 用的是 omp 自带的模型表，硬写会让
-          // 整份 models.yml 校验失败、provider 一个都注册不上。自定义 provider
-          // （要 baseUrl 与模型清单的那种）由设置面板写进 store，这里原样透传。
-          writeManagedConfig(host, setup.provider ? [{ id: setup.provider.id }] : [])
+          // 整份 models.yml 校验失败、provider 一个都注册不上。
+          //
+          // **订阅那条路一条都不写。** 上游 `model-registry.ts:1377-1379` 明写
+          // `apiKey` 会「wins over OAuth tokens from the broker」—— 写下去等于让 omp
+          // 拿一个不存在的环境变量去顶掉用户刚登好的订阅令牌，症状是登录成功却 401。
+          writeManagedConfig(host, sub || !setup.provider ? [] : [{ id: setup.provider.id }])
         } catch (e) {
           return { ok: false, message: `写不进 omp 的配置目录：${e instanceof Error ? e.message : String(e)}`, setup: false }
         }
@@ -1005,7 +1009,9 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           cwd,
           host,
           // **现算**，不缓存在 adapter 上 —— 见 omp/store.ts 的 ompKeyVarNames
-          keyVarNames: ompKeyVarNames(readOmpSetup(host.userData)),
+          keyVarNames: ompKeyVarNames(setup),
+          authMode: setup.provider?.authMode,
+          provider: setup.provider?.id,
           mcp: true
         })
       },

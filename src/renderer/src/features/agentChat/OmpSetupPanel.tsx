@@ -48,11 +48,28 @@ const SMOKE_MSG = '请只回复两个字：你好'
  *  而用户下一步的动作（去换一把好好的 key）完全是白费。 */
 const SMOKE_TIMEOUT_MS = 60_000
 
+/** `omp:login` 推回来的形状。同上，重新声明一份而不是跨层 import。 */
+interface OmpLoginWire {
+  provider: string
+  phase: 'starting' | 'browser' | 'input' | 'done' | 'failed'
+  /** 要用户去浏览器打开的地址 */
+  url?: string
+  /** 本机快捷入口（同机点它更省事；SSH 场景下只有 url 有意义） */
+  launchUrl?: string
+  /** omp 正在问什么。**原样显示它的原话** —— 不同服务商问的不一样
+   *  （贴授权码 / 填 key / 选账号），我们改写就等于替它做分类 */
+  prompt?: string
+  lines: string[]
+  error?: string
+}
+
 /** `omp:status` 的返回形状。**这里重新声明一份，不从 `main/agentChat/omp/setup.ts` import** ——
  *  `tsconfig.web.json` 只 include `src/renderer/src` 与 `src/shared`，composite 工程
  *  要求列全文件，跨过去就是 TS6307；preload 那侧本来也只声明成 `Promise<unknown>`。
  *  字段按需取、缺了就当没有，不做整体断言。 */
 interface OmpStatusWire {
+  /** 上次是用订阅还是填 key 配的。**两条路的判据完全不同** */
+  authMode?: 'subscription' | 'apikey'
   installed?: boolean
   provider?: string
   model?: string
@@ -77,7 +94,7 @@ type Busy =
  *  `nextStepOf` 说的是「还缺什么」，全都齐了它只会说 ready；
  *  而「我想换一家 / 这把 key 我要重填」是用户自己的决定，状态机答不了。
  *  所以单独一个覆盖位，而不是去伪造事实（比如假装 key 不在柜里）把状态机骗回去。 */
-type Editing = 'provider' | 'key' | 'model' | null
+type Editing = 'mode' | 'provider' | 'login' | 'key' | 'model' | null
 
 export function OmpSetupPanel(props: {
   cli: CliInfo
@@ -229,21 +246,69 @@ export function OmpSetupPanel(props: {
 
   // ── 动作 ──────────────────────────────────────────────────────────────────
 
-  const pickProvider = async (id: string): Promise<void> => {
+  /** omp 报的全名单（70 家）。**懒加载** —— 只有用户真选了「用订阅」才去问，
+   *  那是一次 spawn，没必要在打开面板时就付这个代价。 */
+  const [authProviders, setAuthProviders] = useState<{ id: string; name: string }[] | null>(null)
+  /** 正在跑的那次订阅登录。null = 没在跑 */
+  const [login, setLogin] = useState<OmpLoginWire | null>(null)
+  /** 用户往登录提问里贴的东西（授权码 / key / 它问的任何东西） */
+  const [loginInput, setLoginInput] = useState('')
+
+  /** 起一次订阅登录。**订阅它的实时状态要在 invoke 之前挂上** ——
+   *  第一条状态是主进程在 `startOmpLogin` 里同步推的，晚挂就丢了，
+   *  界面会停在「正在启动」而它其实早就把网址给出来了。 */
+  const startLogin = async (id: string): Promise<void> => {
+    setErr('')
+    setLoginInput('')
+    setLogin({ provider: id, phase: 'starting', lines: [] })
+    const r = await window.api.omp.startLogin(id)
+    if (!aliveRef.current) return
+    if (!r.ok) {
+      setLogin(null)
+      setErr(r.error ?? '起不来登录流程')
+    }
+  }
+
+  // 登录状态的订阅**挂在组件上、不挂在某一次登录上**：主进程那条是同步推的，
+  // 等到点了按钮再订阅就已经晚了（见 startLogin 的注释）。
+  useEffect(() => {
+    const off = window.api.omp.onLogin((raw) => {
+      if (!aliveRef.current) return
+      const st = raw as OmpLoginWire
+      setLogin(st)
+      // 登完了就把事实重新拉一遍 —— 「登过没有」的判据在主进程那侧
+      if (st.phase === 'done') void refresh()
+    })
+    return () => {
+      off()
+      // 面板关掉 = 放弃这次登录。留着它在后台跑完，用户既看不到结果也关不掉那个进程
+      void window.api.omp.cancelLogin()
+    }
+  }, [refresh])
+
+  // ── 订阅登录（与填 key 并列的第二条路）────────────────────────────────────
+  //
+  // omp 认识 70 家，头几个正是最要紧的订阅（Claude Pro/Max、ChatGPT Plus/Pro、
+  // 智谱 GLM Coding Plan、Kimi、Copilot…）。**订阅用户没有 API key，
+  // 也不该被逼着去申请一把** —— 所以这不是「填 key 的补充」，是并列的另一条。
+  //
+  // 凭证落点也不同，界面上要说清楚：订阅的 OAuth 令牌**要能刷新**，
+  // 所以存在 omp 自己的库里由它管；API key 进我们的密钥柜。
+  const pickProvider = async (id: string, authMode: 'subscription' | 'apikey'): Promise<void> => {
     setErr('')
     setBusy({ k: 'busy', what: '正在记下这家服务商…' })
     // 换服务商会把上一次的冒烟结果作废（主进程那边清 lastSmoke），
     // 顺手把本地的模型清单也丢掉：那份是上一家的，留着会让人从中选出一个用不了的
     setModels(null)
     setQuery('')
-    const r = await window.api.omp.saveProvider({ provider: id })
+    const r = await window.api.omp.saveProvider({ provider: id, authMode })
     if (!aliveRef.current) return
     if (!r.ok) {
       setBusy({ k: 'idle' })
       setErr(r.error ?? '存不下这家服务商')
       return
     }
-    setEditing(null)
+    setEditing(authMode === 'subscription' ? 'login' : null)
     await refresh()
     if (aliveRef.current) setBusy({ k: 'idle' })
   }
@@ -467,9 +532,12 @@ export function OmpSetupPanel(props: {
   const working = busy.k === 'busy' || busy.k === 'smoke'
   // 面包屑要显示「走到哪了」。**它不是进度百分比**（约束 ②）——
   // 只是把四段链路摆出来、把当前这段标亮，没有任何编出来的数字
+  // 第二段随路子变：订阅那条是「登录」，填 key 那条是「密钥」。
+  // 两条路的步数一样，所以面包屑的长度不跳。
+  const isSub = omp?.authMode === 'subscription'
   const chain: { k: Editing | 'smoke'; label: string }[] = [
     { k: 'provider', label: '服务商' },
-    { k: 'key', label: '密钥' },
+    isSub ? { k: 'login', label: '登录' } : { k: 'key', label: '密钥' },
     { k: 'model', label: '模型' },
     { k: 'smoke', label: '试一句' }
   ]
@@ -477,7 +545,15 @@ export function OmpSetupPanel(props: {
     busy.k === 'smoke' || busy.k === 'smoke-failed' || busy.k === 'done'
       ? 'smoke'
       : editing ??
-        (step?.k === 'provider' ? 'provider' : step?.k === 'key' ? 'key' : step?.k === 'model' ? 'model' : null)
+        (step?.k === 'provider'
+          ? 'provider'
+          : step?.k === 'login'
+            ? 'login'
+            : step?.k === 'key'
+              ? 'key'
+              : step?.k === 'model'
+                ? 'model'
+                : null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -499,7 +575,7 @@ export function OmpSetupPanel(props: {
    *  临时态排最前的理由：冒烟跑着跑着事实一变（比如柜子到点自动锁了），
    *  正在跑的那一屏会被换掉，用户以为自己的测试凭空消失了。让它跑完再说 ——
    *  失败分类那一步会重新拉事实，该打回哪就打回哪。 */
-  const shown: OmpStep['k'] | 'busy' | 'smoke' | 'smoke-failed' | 'done' =
+  const shown: OmpStep['k'] | 'mode' | 'busy' | 'smoke' | 'smoke-failed' | 'done' =
     busy.k !== 'idle' ? busy.k : gate ?? editing ?? step?.k ?? 'blocked'
 
   const body = (
@@ -614,27 +690,41 @@ export function OmpSetupPanel(props: {
           </>
         )}
 
-        {/* ── 选服务商 ─────────────────────────────────────────────────────
-            清单写死在 shared/ompSetup.ts：omp 认识几十家，一股脑摆出来
-            对第一次配置的人是灾难。这几家是「填一把 key 就能用」的那批 */}
+        {/* ── 先选走哪条路 ─────────────────────────────────────────────────
+            **订阅和填 key 是并列的两种选择，不是一种的补充。**
+            订阅用户已经付过钱了，没有 API key，也不该被逼着去申请一把 —— 
+            之前这个面板只给填 key 那一条，等于把他们挡在门外。 */}
         {shown === 'provider' && (
           <>
             <div className="ac-setup-say">
-              <b>{cli.displayName}</b> 不用登录账号，它<b>借你自己的一把 API key 说话</b>。
-              先挑一家你有账号的。
+              <b>{cli.displayName}</b> 有两种连法，<b>挑你已经有的那种</b>。
             </div>
             <div className="ac-omp-list">
-              {OMP_PROVIDERS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`ac-omp-item${p.id === omp?.provider ? ' on' : ''}`}
-                  onClick={() => void pickProvider(p.id)}
-                >
-                  <span className="ac-omp-item-l">{p.label}</span>
-                  {p.id === omp?.provider && <CheckIcon size={12} />}
-                </button>
-              ))}
+              <button
+                type="button"
+                className="ac-omp-item"
+                onClick={() => {
+                  setEditing('mode')
+                  if (authProviders === null) {
+                    void window.api.omp.listAuthProviders().then((l) => {
+                      if (aliveRef.current) setAuthProviders(l)
+                    })
+                  }
+                }}
+              >
+                <span className="ac-omp-item-l">
+                  用已有的订阅登录
+                  <span className="ac-omp-meta">
+                    Claude Pro/Max、ChatGPT Plus/Pro、智谱 GLM、Kimi、Copilot… 共 70 家
+                  </span>
+                </span>
+              </button>
+              <button type="button" className="ac-omp-item" onClick={() => setEditing('key')}>
+                <span className="ac-omp-item-l">
+                  填一把 API key
+                  <span className="ac-omp-meta">按用量计费，key 存进这台机器的密钥柜</span>
+                </span>
+              </button>
             </div>
             {editing === 'provider' && (
               <div className="ac-setup-row">
@@ -643,6 +733,130 @@ export function OmpSetupPanel(props: {
                 </button>
               </div>
             )}
+          </>
+        )}
+
+        {/* ── 订阅：从 omp 报的全名单里挑一家 ───────────────────────────────
+            **名单由 omp 自己报**（`auth-broker list`），不写死在我们这边：
+            写死的会随上游更新过期，而且「哪家能订阅登录」本来就该它说了算。 */}
+        {shown === 'mode' && (
+          <>
+            <div className="ac-setup-say">
+              挑你<b>已经买了订阅</b>的那一家。接下来会打开浏览器让你登录，
+              <b>凭证存在这台机器上</b>（由 {cli.displayName} 自己保管并续期，不进密钥柜）。
+            </div>
+            {authProviders === null ? (
+              <div className="ac-omp-empty">正在问 {cli.displayName} 支持哪些…</div>
+            ) : (
+              <>
+                <input
+                  className="ac-omp-search"
+                  placeholder="搜一下（claude / chatgpt / 智谱 / kimi…）"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <div className="ac-omp-list">
+                  {authProviders
+                    .filter((p) => {
+                      const q = query.trim().toLowerCase()
+                      return !q || p.id.includes(q) || p.name.toLowerCase().includes(q)
+                    })
+                    .slice(0, 60)
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`ac-omp-item${p.id === omp?.provider ? ' on' : ''}`}
+                        onClick={() => void pickProvider(p.id, 'subscription')}
+                      >
+                        <span className="ac-omp-item-l">{p.name}</span>
+                        {p.id === omp?.provider && <CheckIcon size={12} />}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+            <div className="ac-setup-row">
+              <button type="button" className="ac-login-retry" onClick={() => setEditing('provider')}>
+                回上一步
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── 订阅：跑登录 ─────────────────────────────────────────────────
+            这一屏只是把 omp 自己的登录流程搬进来：它说打开哪个网址就显示哪个，
+            它问什么就照着问什么。**分类不由我们做** —— 那 70 家有的走浏览器
+            OAuth、有的引导你贴 key，猜错就是给用户一个走不通的按钮。 */}
+        {shown === 'login' && (
+          <>
+            <div className="ac-setup-say">
+              正在登录 <b>{omp?.provider}</b>。
+            </div>
+            {!login && (
+              <div className="ac-setup-row">
+                <button type="button" className="ac-login-submit" onClick={() => void startLogin(omp?.provider ?? '')}>
+                  开始登录
+                </button>
+              </div>
+            )}
+            {login?.url && (
+              <div className="ac-setup-cmd-l">
+                在浏览器里打开这个地址完成登录：
+                <button
+                  type="button"
+                  className="ac-omp-link"
+                  onClick={() => void window.api.shell.openExternal(login.launchUrl ?? login.url ?? '')}
+                >
+                  {login.url}
+                </button>
+              </div>
+            )}
+            {login?.phase === 'input' && login.prompt && (
+              <div className="ac-login-paste-row">
+                <div className="ac-setup-cmd-l">{login.prompt}</div>
+                <input
+                  className="ac-login-input"
+                  value={loginInput}
+                  autoFocus
+                  onChange={(e) => setLoginInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && loginInput.trim()) {
+                      void window.api.omp.submitLogin(loginInput.trim())
+                      setLoginInput('')
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="ac-login-submit"
+                  disabled={!loginInput.trim()}
+                  onClick={() => {
+                    void window.api.omp.submitLogin(loginInput.trim())
+                    setLoginInput('')
+                  }}
+                >
+                  提交
+                </button>
+              </div>
+            )}
+            {login && login.lines.length > 0 && (
+              <pre className="ac-setup-out">{login.lines.slice(-12).join('\n')}</pre>
+            )}
+            {login?.phase === 'failed' && <div className="ac-login-err">{login.error}</div>}
+            <div className="ac-setup-row">
+              <button
+                type="button"
+                className="ac-login-retry"
+                onClick={() => {
+                  void window.api.omp.cancelLogin()
+                  setLogin(null)
+                  setEditing('mode')
+                }}
+              >
+                换一家
+              </button>
+            </div>
           </>
         )}
 

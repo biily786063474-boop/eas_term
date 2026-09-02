@@ -269,8 +269,32 @@ const api = {
   omp: {
     status: (): Promise<unknown> => ipcRenderer.invoke('omp:status'),
     listModels: (): Promise<{ id: string; label: string }[]> => ipcRenderer.invoke('omp:listModels'),
-    saveProvider: (input: { provider: string; model?: string; thinking?: string }): Promise<{ ok: boolean; error?: string }> =>
-      ipcRenderer.invoke('omp:saveProvider', input),
+    saveProvider: (input: {
+      provider: string
+      /** **订阅还是填 key**。两条并列的路，起会话前的闸门判据完全不同 */
+      authMode?: 'subscription' | 'apikey'
+      model?: string
+      thinking?: string
+    }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('omp:saveProvider', input),
+    /** omp 支持登录的服务商全名单（70 家，由 omp 自己报）。
+     *  **不是我们那份四家的推荐位** —— 那份只带「去哪儿取 key」的链接。 */
+    listAuthProviders: (): Promise<{ id: string; name: string }[]> =>
+      ipcRenderer.invoke('omp:listAuthProviders'),
+    /** 起一次订阅登录。进度经 `onLogin` 推回来 */
+    startLogin: (provider: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('omp:startLogin', provider),
+    /** 把用户贴回来的东西交给它（授权码 / key / 它问的任何东西） */
+    submitLogin: (text: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('omp:submitLogin', text),
+    cancelLogin: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('omp:cancelLogin'),
+    /** 面板重新挂载时用它接回正在跑的那次登录 */
+    loginInFlight: (): Promise<unknown> => ipcRenderer.invoke('omp:loginInFlight'),
+    /** 登录过程的实时状态（要打开的网址 / 要贴的东西 / 成败） */
+    onLogin: (cb: (s: unknown) => void): (() => void) => {
+      const h = (_e: unknown, s: unknown): void => cb(s)
+      ipcRenderer.on('omp:login', h)
+      return () => ipcRenderer.off('omp:login', h)
+    },
     /** 这家服务商的 key 存在密钥柜的哪个变量名下。**明文 key 不经这条路** ——
      *  渲染层拿到变量名后直接走 `secrets.save`，与用户手填密钥同一条通道。 */
     keyVar: (provider: string): Promise<{ varName: string } | null> => ipcRenderer.invoke('omp:keyVar', provider),

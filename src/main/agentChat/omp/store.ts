@@ -19,6 +19,11 @@ import { ompKeyEnvName } from './config.ts'
 export interface OmpProviderChoice {
   /** 服务商 id，与 `models.yml` 里的键、以及 `EAS_OMP_<ID>_KEY` 的中段一致 */
   id: string
+  /** **用订阅还是填 key**。两条并列的路，起会话前的闸门判据完全不同
+   *  （见 `shared/ompSetup.ts` 的 `ompLaunchGate`）。
+   *  缺省按 `'apikey'` 算 —— 这个字段是后加的，老配置里没有它，
+   *  而在它存在之前只有填 key 那一条路。 */
+  authMode?: 'subscription' | 'apikey'
   /** 选中的模型。**值是 `<provider>/<model>`**，因为 ACP 的 `set_config_option`
    *  收的就是这个形态（真录：`zhipu-free/glm-5.3-flash`），不是裸模型名 */
   model?: string
@@ -67,5 +72,9 @@ export function writeOmpSetup(userData: string, next: OmpSetup): void {
  *  `secretsEnv([])` 直接回 `{}`、`secretsHas([])` 的 `.every()` 恒真 —— 两道闸一起失效，
  *  进程照起、一把 key 都没注入，用户看到的是 provider 回的 401。 */
 export function ompKeyVarNames(setup: OmpSetup): string[] {
+  // **订阅那条路没有 key 可注入**：凭证是 OAuth 令牌，在 omp 自己的 agent.db 里，
+  // 由它负责刷新。这里返回空名单，闸门那侧靠 authMode 分辨「空是因为订阅」
+  // 还是「空是因为还没选服务商」—— 两者的下一步完全不同。
+  if (setup.provider?.authMode === 'subscription') return []
   return setup.provider?.id ? [ompKeyEnvName(setup.provider.id)] : []
 }

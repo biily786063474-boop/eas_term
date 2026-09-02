@@ -15,6 +15,7 @@ export {
   OMP_PROVIDERS,
   providerById,
   nextStepOf,
+  ompLaunchGate,
   authFailureInTail,
   type OmpProvider,
   type OmpStep,

@@ -99,3 +99,60 @@ test('id 不重复，且查得到', () => {
   assert.equal(providerById(ids[0])?.id, ids[0])
   assert.equal(providerById('没有这个'), undefined)
 })
+
+// ── 订阅登录：与「填 API key」并列的第二条路（2026-09-02 加） ────────────────
+//
+// omp 认识 70 家，头几个正是最要紧的订阅（Claude Pro/Max、ChatGPT Plus/Pro、
+// 智谱 GLM Coding Plan、Kimi、Copilot…）。**订阅用户没有 API key，
+// 也不该被逼着去申请一把** —— 所以这条路上的判据必须和填 key 那条分开走。
+
+import { ompLaunchGate } from './setupModel.ts'
+
+const sub = { ...base, provider: 'anthropic', authMode: 'subscription' as const }
+
+test('**订阅路上不问 key 在不在柜里** —— 那条路根本没有 key', () => {
+  // 不分开的话，订阅用户会卡在「还没填 key」那一步，而他压根没有 key 可填。
+  // 登录过了、模型还没选 → 下一步是选模型，**不是**「去填 key」。
+  assert.equal(nextStepOf({ ...sub, loggedIn: true, keyInVault: false }).k, 'model')
+})
+
+test('订阅但还没登录成功 → 停在登录那一步', () => {
+  assert.equal(nextStepOf({ ...sub, provider: undefined }).k, 'provider')
+  assert.equal(nextStepOf({ ...sub, loggedIn: false }).k, 'login')
+})
+
+test('订阅登录过了、也选了模型 → ready', () => {
+  assert.equal(nextStepOf({ ...sub, loggedIn: true, model: 'anthropic/claude' }).k, 'ready')
+})
+
+test('**柜子的状态不该拦住订阅路** —— 订阅凭证不进密钥柜', () => {
+  // 凭证在 omp 自己的 agent.db 里（OAuth 令牌要它自己刷新）。
+  // 拿柜子锁没锁去拦订阅登录，是把两条无关的路绑在了一起。
+  const locked = { ...sub, loggedIn: true, model: 'm', vault: { ...base.vault, locked: true } }
+  assert.equal(nextStepOf(locked).k, 'ready')
+})
+
+test('填 key 那条路照旧要过柜子那几关', () => {
+  const k = { ...base, provider: 'zai', authMode: 'apikey' as const, keyInVault: true, model: 'm' }
+  assert.equal(nextStepOf({ ...k, vault: { ...base.vault, locked: true } }).k, 'vault-unlock')
+  assert.equal(nextStepOf(k).k, 'ready')
+})
+
+// ── 起进程前那道闸，两条路的判据不一样 ────────────────────────────────────
+
+test('订阅路：不检查 key，直接放行', () => {
+  assert.deepEqual(ompLaunchGate({ authMode: 'subscription', provider: 'anthropic', keyVarNames: [], keysReadable: false, vaultUnlocked: false }), { ok: true })
+})
+
+test('填 key 路：没选服务商 / 没填 key / 柜子锁着，三种要分开说', () => {
+  const g = (o: Partial<Parameters<typeof ompLaunchGate>[0]>) =>
+    ompLaunchGate({ authMode: 'apikey', provider: 'zai', keyVarNames: ['K'], keysReadable: true, vaultUnlocked: true, ...o })
+  assert.equal(g({ provider: undefined, keyVarNames: [] }).ok, false)
+  assert.equal(g({ keysReadable: false }).ok, false)
+  assert.equal(g({ vaultUnlocked: false }).ok, false)
+  assert.equal(g({}).ok, true)
+  // **三种原因不能合并成一句「配置有问题」**：每种对应用户要做的一件不同的事
+  const reasons = [g({ provider: undefined, keyVarNames: [] }), g({ keysReadable: false }), g({ vaultUnlocked: false })]
+    .map((r) => (r.ok ? '' : r.reason))
+  assert.equal(new Set(reasons).size, 3)
+})

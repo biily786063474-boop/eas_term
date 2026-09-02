@@ -26,6 +26,7 @@ import { agentMcpConfigPath, mcpEnv } from '../../mcpBridge'
 import { secretsEnv, secretsHas } from '../../secrets'
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
+import { ompLaunchGate } from '../../../shared/ompSetup.ts'
 import { ompAgentDir, ompBinPathOrNull, ompConfigDirRelative, OMP_TOOLS } from './paths.ts'
 import {
   ompConfigYml,
@@ -116,8 +117,12 @@ export interface OmpLaunchInput {
   host: HostPaths
   /** 这个会话要注入哪几个环境变量名（`EAS_OMP_<ID>_KEY`）。
    *  **每次 spawn 现算，不缓存在 adapter 上** —— adapter 是模块级常量，
-   *  用户换 provider 之后那份静态值就是错的，而空名单会让下面两道闸恒真放行。 */
+   *  用户换 provider 之后那份静态值就是错的。订阅那条路这里是空的。 */
   keyVarNames: string[]
+  /** 用订阅还是填 key。判据见 `shared/ompSetup.ts` 的 `ompLaunchGate` */
+  authMode?: 'subscription' | 'apikey'
+  /** 选了哪家。闸门要靠它把「订阅但没登录」和「还没选服务商」分开 */
+  provider?: string
   /** 带不带 MCP 桥的凭证。**冒烟传 false**：那一轮按设计不碰任何工具，
    *  多给一个能调本机 MCP 桥（含 `/secret-env` 路由）的 token 是白送一条出口。 */
   mcp: boolean
@@ -139,29 +144,27 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
     }
   }
 
-  // 闸 ①：名单为空 = 还没选 provider。
-  // **必须单独判**：`secretsEnv([])` 直接返回 `{}`（`secrets.ts:329`），
-  // 而 `secretsHas([])` 返回空数组、任何 `.every()` 形式的判据对它**恒真**。
-  // 少了这一闸，「没选 provider」会一路放行到 401。
-  if (input.keyVarNames.length === 0) {
-    return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一个并填 key。' }
-  }
-
-  // 闸 ②：key 在不在柜里。`secretsHas` **故意不要求解锁**（它的文件头写着），
-  // 所以它只回答「有没有」，回答不了「现在拿不拿得到」。
-  const has = secretsHas(input.keyVarNames)
-  const missing = has.filter((h) => !h.inVault || !h.readable).map((h) => h.varName)
-  if (missing.length > 0) {
-    return { ok: false, reason: 'no-key', message: `密钥柜里还没有 ${missing.join('、')}，先在设置里填。` }
-  }
-
-  // 闸 ③：柜子锁着。`secretsEnv` 在锁定态返回 `{}`（`secrets.ts:330-334`）——
-  // 于是「柜里有、但现在取不到」只能靠这个组合推出来：②说有、③拿到空。
-  // **不给 secrets.ts 加 `isUnlocked` 导出**：那是 🔴 文件，为一个只读判断去动它不值当。
-  const keys = secretsEnv(input.keyVarNames)
-  if (Object.keys(keys).length === 0) {
-    return { ok: false, reason: 'vault-locked', message: '密钥柜锁着，解锁之后才能起会话。' }
-  }
+  // 三道闸的**判据**在 `shared/ompSetup.ts` 的 `ompLaunchGate`（纯函数、有单测）——
+  // 这里只负责去问密钥柜拿事实。分开是因为「订阅 vs 填 key 判据不同」这件事
+  // 值得被测到，而这个文件 import 了 electron、测不了。
+  //
+  // 两个事实要注意各自的脾气：
+  // · `secretsHas` **故意不要求解锁**（它的文件头写着），所以它只回答「有没有」，
+  //   回答不了「现在拿不拿得到」；
+  // · `secretsEnv` 在锁定态返回 `{}`（`secrets.ts:330-334`）—— 于是「柜里有、
+  //   但现在取不到」只能靠这个组合推出来：前者说有、后者拿到空。
+  //   **不给 secrets.ts 加 `isUnlocked` 导出**：那是 🔴 文件，为一个只读判断去动它不值当。
+  const keys = input.keyVarNames.length > 0 ? secretsEnv(input.keyVarNames) : {}
+  const gate = ompLaunchGate({
+    authMode: input.authMode,
+    provider: input.provider,
+    keyVarNames: input.keyVarNames,
+    keysReadable:
+      input.keyVarNames.length > 0 &&
+      secretsHas(input.keyVarNames).every((h) => h.inVault && h.readable),
+    vaultUnlocked: Object.keys(keys).length > 0
+  })
+  if (!gate.ok) return { ok: false, reason: gate.reason, message: gate.message }
 
   const env: Record<string, string> = {
     ...ompBaseEnv(input.host),

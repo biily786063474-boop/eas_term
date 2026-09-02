@@ -50,6 +50,8 @@ export type OmpStep =
   /** 什么都做不了：包里没二进制、系统加密不可用、或柜子是别人机器上的 */
   | { k: 'blocked'; why: 'no-binary' | 'no-encryption' | 'foreign-vault' }
   | { k: 'vault-setup' }
+  /** 订阅那条路：去 omp 那边跑一次 OAuth 登录 */
+  | { k: 'login' }
   | { k: 'vault-unlock' }
   | { k: 'provider' }
   | { k: 'key' }
@@ -61,8 +63,20 @@ export interface OmpSetupState {
   installed: boolean
   vault: { available: boolean; configured: boolean; locked: boolean; foreign: boolean }
   provider?: string
-  /** 这家的 key 已经在柜里（`secretsHas` 说 inVault && readable） */
+  /** **怎么连上这家服务商。两条并列的路，判据完全不同。**
+   *
+   *  · `'subscription'` —— 用已经买了的订阅登录（Claude Pro/Max、ChatGPT Plus/Pro、
+   *    智谱 GLM Coding Plan、Kimi、Copilot…）。凭证是 OAuth 令牌，**要能刷新**，
+   *    所以存在 omp 自己的 `agent.db` 里由它管，不进我们的密钥柜。
+   *  · `'apikey'` —— 填一把 key。进密钥柜，起会话时按变量名注入。
+   *
+   *  不分开的话，订阅用户会卡在「还没填 key」那一步 —— 而他压根没有 key 可填，
+   *  也不该被逼着去申请一把。 */
+  authMode?: 'subscription' | 'apikey'
+  /** 这家的 key 已经在柜里（`secretsHas` 说 inVault && readable）。只对 `'apikey'` 有意义 */
   keyInVault: boolean
+  /** 订阅登录成功过。只对 `'subscription'` 有意义 */
+  loggedIn?: boolean
   model?: string
 }
 
@@ -77,6 +91,15 @@ export interface OmpSetupState {
  */
 export function nextStepOf(s: OmpSetupState): OmpStep {
   if (!s.installed) return { k: 'blocked', why: 'no-binary' }
+  // **订阅那条路整条绕开密钥柜。** 它的凭证是 OAuth 令牌，存在 omp 的 agent.db 里
+  // 由它自己刷新 —— 拿柜子锁没锁去拦订阅登录，是把两条无关的路绑在了一起
+  // （用户会看到「密钥柜锁着」，而他要做的事跟密钥柜毫无关系）。
+  if (s.authMode === 'subscription') {
+    if (!s.provider) return { k: 'provider' }
+    if (!s.loggedIn) return { k: 'login' }
+    if (!s.model) return { k: 'model' }
+    return { k: 'ready' }
+  }
   if (!s.vault.available) return { k: 'blocked', why: 'no-encryption' }
   if (s.vault.foreign) return { k: 'blocked', why: 'foreign-vault' }
   if (!s.vault.configured) return { k: 'vault-setup' }
@@ -85,6 +108,36 @@ export function nextStepOf(s: OmpSetupState): OmpStep {
   if (!s.keyInVault) return { k: 'key' }
   if (!s.model) return { k: 'model' }
   return { k: 'ready' }
+}
+
+/** 起进程之前那道闸：现在到底能不能起。
+ *
+ *  **两条路的判据完全不同**，所以判断在这里做一次、`launch.ts` 照做：
+ *  · 订阅 —— 凭证在 omp 的 agent.db 里，我们检查不了也不该检查，直接放行；
+ *    真没登录的话它自己会报，那句话比我们编的准。
+ *  · 填 key —— 三道闸各自对应用户要做的一件**不同**的事，所以原因不能合并成
+ *    一句「配置有问题」。
+ *
+ *  纯函数：`launch.ts` 那边要 electron（密钥柜、MCP 桥），判据放在这里才测得到。 */
+export function ompLaunchGate(i: {
+  authMode?: 'subscription' | 'apikey'
+  provider?: string
+  /** 要注入的变量名（填 key 那条路算出来的） */
+  keyVarNames: string[]
+  /** 那些变量在柜里且解得开 */
+  keysReadable: boolean
+  /** 柜子现在没锁 */
+  vaultUnlocked: boolean
+}): { ok: true } | { ok: false; reason: 'no-provider' | 'no-key' | 'vault-locked'; message: string } {
+  if (i.authMode === 'subscription') return { ok: true }
+  if (!i.provider || i.keyVarNames.length === 0) {
+    return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一个。' }
+  }
+  if (!i.keysReadable) {
+    return { ok: false, reason: 'no-key', message: `密钥柜里还没有 ${i.keyVarNames.join('、')}，先在设置里填。` }
+  }
+  if (!i.vaultUnlocked) return { ok: false, reason: 'vault-locked', message: '密钥柜锁着，解锁之后才能起会话。' }
+  return { ok: true }
 }
 
 /** 「key 不对」长什么样。**在错误原文上匹配，不看结构**。
