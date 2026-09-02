@@ -175,6 +175,8 @@ export const OMP_RESOURCE_DIR = 'omp'        // ↔ extraResources.to
 export const OMP_TOOLS = ['read','bash','edit','write','grep','glob','todo','ask']   // ↔ omp tools/builtin-names.ts；**没有 ls**（不是工具名，validateToolNames 会抛）
 ompBinPath(host: HostPaths): string          // 拿不到就 throw，绝不返回 'omp'
 ompConfigDirRelative(home, userData): string // PI_CONFIG_DIR 用；path.join 会规范化 '..'，隔离实例的 tmpdir 可直接传（已核实 dirs.ts:110-112）
+                                              // **算出空串必须抛**：omp 那边是 `process.env.PI_CONFIG_DIR || '.omp'`，
+                                              // 空串会被 `||` 吃掉、回落进用户**真实的 ~/.omp** —— 正是 §2.4 要挡的事，且静默
 ompAgentDir(home, userData): string          // 绝对路径，PI_CODING_AGENT_DIR 用
 ```
 
@@ -188,7 +190,7 @@ ompAgentDir(home, userData): string          // 绝对路径，PI_CODING_AGENT_D
 | 文件 | 内容 | 何时写 |
 |---|---|---|
 | `<agentDir>/config.yml` | 下表（YAML；点分键按 `.` 拆成嵌套，`settings.ts:165-178`）。**不生成 `settings.json`**；写之前删同目录的 `config.yaml`（两个候选按序命中） | **每次 spawn 前整份重写**。文件头注释「手改无效」 |
-| `<agentDir>/models.yml` | `providers.<id>: { baseUrl?, api?, apiKey: "EAS_OMP_<ID>_KEY", models: [...] }`——**内置 provider 也写**（决定 13）；`apiKey` 写变量名不写值 | 用户在面板保存 provider 时 |
+| `<agentDir>/models.yml` | `providers.<id>: { baseUrl?, api?, apiKey: "EAS_OMP_<ID>_KEY", models?: [...] }`——**内置 provider 也写 apiKey**（决定 13）；`apiKey` 写变量名不写值。<br>⚠️ **内置 provider 必须省掉 `models` 数组**：上游 `config/models-config.ts:44-96` 的 `validateProviderConfiguration` 规定「列了 `models` 就必须给 `baseUrl`，且每个模型要有非空 `id` 与 `api`」，而内置 provider 用的是 omp 自带的模型表、没有我们的 baseUrl —— 硬写 `models` 会让**整份 models.yml 校验失败、provider 一个都注册不上** | 用户在面板保存 provider 时 |
 | `<agentDir>/skills/eas-term/*` | 决定 21：把随包的 `skills/eas-term/` **整个目录原样拷贝**（源头与 `agentRules.ts` 分发用的是同一份：`process.resourcesPath/skills/eas-term`，dev 时 `app.getAppPath()/skills/eas-term`），然后只对 `SKILL.md` 做一件事——在末尾追加下面这段。生成器不解析、不删改任何原文 | 每次 spawn 前（7 个小文件，代价可忽略） |
 | omp 的 `secrets.yml` | **永远不写**（明文） | — |
 | `<agentDir>/secret-placeholder.key` | omp 开了 `secrets.enabled` 后自己写；**升级 / 清理时不要删** | omp 自己 |
@@ -249,7 +251,7 @@ ompAgentDir(home, userData): string          // 绝对路径，PI_CODING_AGENT_D
 | 5 | `agentChat:interrupt` L1208 | if-return | `if (live.acp) return acpInterrupt(live)`：发 `session/cancel` → 等 prompt 响应 ≤3s → `turnDoneOf(result)` → `phase='ready'`、**不 kill**；等不到才退回 kill + 合成 `turn.done` |
 | 6 | `agentChat:stop` L1234，`live.proc?.kill()` 之前 | 可选链，旧会话 no-op | `live.acp?.close()`（发 `session/close` 不等，随后照旧 kill） |
 | 7 | `agentChat:resolveApproval` L1150–1156 | 短路，陌生 id 右侧空操作 | `{ ok: resolveApprovalGlobal(aid, d, '') \|\| resolveAcpApproval(aid, d) }` |
-| 8 | `listSessionBriefs` L865 | 可选链 | `stats: live.acp?.translator.stats()` |
+| 8 | `listSessionBriefs` L865 | 可选链 | `stats: live.acp?.translator.sessionStats()` —— **必须是 `sessionStats()` 不是 `stats()`**。翻译器有两个出口：`stats()` 含 `costUsd`、喂 `turnDoneOf`；`sessionStats()` 才是共享的 `SessionStats`（不含 costUsd）。写错就把花费漏进数据层，而它已经经 `turn.done.costUsd` 进了 `tally` —— 正是 §2.2 要防的「加两遍」 |
 | 9 | `listClis` 的 `probeClis()` L1023 | 加参数，旧 adapter 忽略 | `await a.detect(host)` |
 | 9′ | `handleEvent` L378 | 条件，旧 adapter 恒真 | `if (getAdapter(live.rec.cli)?.quotaSource !== 'omp-usage') scheduleApiRefresh()`——不加门，omp 每轮都去刷 Claude 账号的额度接口；Anthropic / OpenAI 的 usage 端点按 IP 限流（omp `sqlite-credential-store.ts:40-42` 注释），同一 IP 上多打是实打实的风险 |
 
@@ -498,7 +500,7 @@ export const ompAdapter: CliAdapter = {
 - 手机端验收；omp 的 `plan` 模式、`fork`、`session/list`、`/compact`、`--history`
 - 把 omp 暴露成终端里可用的 CLI；`secret_check` / `request_secret` 对 omp 会话生效；Claude 的 `contextWindow` 暴露给数据层
 
-## 十四、已核实的结论 与 实现前必须复核的七处
+## 十四、已核实的结论 与 实现前必须复核的六处
 
 ### 14.1 已核实（源码依据，v2 里列为待复核的 14 条中有 11 条定案）
 
@@ -515,8 +517,11 @@ export const ompAdapter: CliAdapter = {
 | `session/resume` 不重放、响应无 `sessionId` | `acp-agent.ts:702-712 / 731-740` |
 | `omp models --json` 存在 | `cli-commands.ts:135-139`、`models-cli.ts:199-206` |
 | cost 在 resume 后延续 | `session-manager.ts:187-268 / 2037-2039` |
+| **`customDirectories` 里的同名 skill 顶掉默认路径那一份**（决定 21 的前提，原列为待真机验） | `extensibility/skills.ts:318-334`（上游 issue #7190）。顺带：`customDirectories` 收的是**装 skill 的那一层**，所以配 `<agentDir>/skills` 而不是 `.../skills/eas-term`（`skills.ts:268-280` 跑 `scanSkillsFromDir`） |
+| **`config.yaml` 残留不构成风险**（P.4 说要删它，别当安全前提） | `settings.ts:1515-1528` 与 `discovery/omp-extension-roots.ts:191-207` 都是命中第一个就 return，`config.yml` 排 `MAIN_CONFIG_FILENAMES[0]` —— 残留的 `config.yaml` 根本读不到。删它只为排障时不对着一个永不生效的文件想半天 |
+| **没注入 key 时的症状是 401，不是「未配置」** | `resolve-config-value.ts:21-27` 取不到环境变量就把那串字面量当 key 用。冒烟的失败分类要按这个形状写 |
 
-### 14.2 仍要真机 / 外部验的七处
+### 14.2 仍要真机 / 外部验的六处
 
 | # | 假设 | 怎么核 | 错了怎么办 |
 |---|---|---|---|
@@ -526,7 +531,7 @@ export const ompAdapter: CliAdapter = {
 | 4 | Bun 二进制最低 macOS 版本与 app（跟 Electron 37 走）有交集问题 | 查 Bun 官方要求 | UI 上对 omp 显示「需要 macOS ≥ N」 |
 | 5 | compaction 重写会话文件后 `usage_update.cost` 是否缩水 | 触发一次 compaction 后看 `costUsd` | 只影响显示，记 hazard |
 | 6 | 纯 API key（非 OAuth）下 `omp usage --json` 对已配 provider 是否回 reports（zai 有 `/api/monitor/usage` 适配器） | 配好智谱 key 后跑一次 | 若回：§十一 ② 改措辞，D.3 的显示分支按数据来不来判，不按模式判 |
-| 7 | `skills.customDirectories` 里的 `eas-term` 副本与 `~/.claude/skills/eas-term` 原版同名时，omp 用的是副本（决定 21 的前提） | 起会话问「凭证卡住怎么办」，回答里应出现「在设置里填 key」而不是 `request_secret` | 加 `skills.ignoredSkills: ['eas-term']`；仍不行就把副本目录改名 `eas-term-omp`（frontmatter 的 description 保持原文，触发不变） |
+
 
 ---
 
