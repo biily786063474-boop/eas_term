@@ -172,15 +172,23 @@
   background: #b48ef0;
 }
 
+/* 三样都收小一档、都不许换行。**中文名是主角**，所以只有它 `flex-shrink: 0`
+   （宁可挤英文名和分类，也要把词条名完整显示出来）。 */
 .dict-zh {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--fg);
+  white-space: nowrap;
+  flex: none;
 }
 
 .dict-en {
-  font-size: 11.5px;
+  font-size: 10.5px;
   color: var(--fg-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .dict-notice {
@@ -218,16 +226,33 @@
   pointer-events: none;
 }
 
+/* ── 头一行：**钉死一行**（2026-09-02 用户点名）───────────────────────────
+   词条名、英文名、分类路径三样挤在一起，任何一个长一点就换行，
+   浮层的头会从一行变两行、甚至三行 —— 头一变高，底下的内容位置就跟着跳，
+   而用户的鼠标还停在原处。
+
+   `min-width: 0` 是关键：flex 子项的默认 `min-width: auto` 会让它们
+   **拒绝收缩到内容宽度以下**，于是 `text-overflow: ellipsis` 永远不触发，
+   只会把行撑破。这条不写，下面那些 `overflow: hidden` 一个都不生效。 */
 .dict-pop-head {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.dict-pop-head > * {
+  min-width: 0;
 }
 
 .dict-tag {
   margin-left: auto;
   padding: 2px 9px;
-  font-size: 10.5px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
   font-weight: 600;
   border-radius: 999px;
   color: var(--fg-dim);

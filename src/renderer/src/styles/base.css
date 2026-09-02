@@ -56,6 +56,8 @@
   --bg-grad-2: rgba(3, 4, 6, 0.85);
   /* 自定义 tooltip：比画布背景再暗一点的近黑 */
   --tooltip-bg: rgba(3, 4, 7, 0.97);
+  /* 跟 `--tooltip-bg` 成对：底不跟主题，字也不跟 */
+  --tooltip-fg: #ececec;
 
   /* xl / lg 是 frame 与模块面板在用的两档；md / sm 是芯片、按钮那一层。
      2026-09-02 调了三轮，**基准最后钉在灵动岛上**（用户：「和灵动岛一个体感」）：
@@ -264,6 +266,7 @@
   --bg-grad-1: rgba(255, 255, 255, 0.86);
   --bg-grad-2: rgba(247, 247, 248, 0.94);
   --tooltip-bg: rgba(28, 28, 28, 0.96);
+  --tooltip-fg: #ececec;
   /* ── 亮色下**不用蓝**（2026-09-02 用户：「还有蓝色」）───────────────────
      ChatGPT / Codex 那套的强调不是靠色相，是靠**明度对比**：近黑的实心块、
      近黑的文字。白底上一块低彩度的蓝既不够抢眼、又把整个界面拉出一层杂色。
@@ -291,9 +294,19 @@
   width: max-content;
   max-width: 280px;
   padding: 5px 9px;
-  border-radius: var(--radius-sm);
+  /* **跟外壳成比例**（2026-09-02 用户：「双击菜单的圆角和输入框也有点不协调」）。
+     外壳是 `--radius-lg`（20px），里面却是 `--radius-sm`（7px）—— 差了近三倍，
+     看着像一个圆盒子里塞了几张方卡片。
+     **内圈 ≈ 外圈 − 内边距**是圆角嵌套的通行算法：这样两条圆弧才是同心的。 */
+  border-radius: var(--radius-md);
   background: var(--tooltip-bg);
-  color: var(--fg);
+  /* **不能用 `--fg`。** tooltip 的底是「跟主题反着来」的深色（亮色主题下
+     它仍然是深底 —— 那是这类小气泡的通行做法），而 `--fg` 是**跟着主题走**的：
+     亮色下它是近黑，深字压深底，对比度 1.2，等于看不见
+     （用户 2026-09-02 截图：「hover 的文字看不清」）。
+     底不跟主题，字就也不能跟 —— 两者必须成对，见 15 号图纸「表达身份的东西
+     不参与层级明度」。 */
+  color: var(--tooltip-fg);
   font-size: 11.5px;
   line-height: 1.45;
   white-space: pre-line;
@@ -989,7 +1002,8 @@ body {
   padding: 7px 10px;
   border: none;
   background: none;
-  border-radius: var(--radius-sm);
+  /* 同上：跟外壳成比例，别在圆盒子里塞方卡片 */
+  border-radius: var(--radius-md);
   color: var(--fg);
   font-size: 12.5px;
   font-family: inherit;
@@ -1086,7 +1100,11 @@ body {
   min-width: 0;
   height: 26px;
   padding: 0 8px;
-  border-radius: var(--radius-sm);
+  /* **跟外壳成比例**（2026-09-02 用户：「双击菜单的圆角和输入框也有点不协调」）。
+     外壳 `.canvas-ctxmenu` 是 `--radius-lg`（20px），里面却是 `--radius-sm`（7px）
+     —— 差了近三倍，看着像一个圆盒子里塞了几张方卡片。
+     **内圈 ≈ 外圈 − 内边距**是圆角嵌套的通行算法，这样两条圆弧才是同心的。 */
+  border-radius: var(--radius-md);
   border: 1px solid var(--stroke-input);
   background: rgba(255, 255, 255, 0.05);
   color: var(--fg);

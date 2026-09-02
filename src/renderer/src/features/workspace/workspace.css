@@ -298,7 +298,13 @@
   padding: 0 8px 0 12px;
   max-width: 200px;
   min-width: 104px;
-  border-radius: var(--radius-md);
+  /* **胶囊，跟类型选择器同一个语汇**（2026-09-02 用户：「分屏模式下，
+     标签页圆角不和谐」）。旁边的 `.pane-kind-btn` 已经是 999px 的胶囊，
+     而这里是 10px 的圆角矩形 —— 两种形状挨在一起，看着像两套设计。
+
+     这一档**不跟 `--radius-md` 走**：那个令牌管的是「小控件的圆角」，
+     而这里要的是「胶囊」——语义不同，跟着令牌走反而会在下次调 md 时被带偏。 */
+  border-radius: 999px;
   color: var(--fg-dim);
   cursor: pointer;
   font-size: 12.5px;
