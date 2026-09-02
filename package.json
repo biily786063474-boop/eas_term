@@ -1,7 +1,7 @@
 {
   "name": "eas-term",
   "productName": "Eas-Term",
-  "version": "0.4.73",
+  "version": "0.4.74",
   "description": "多终端 + 项目文件浏览的桌面终端应用",
   "main": "out/main/index.js",
   "private": true,
