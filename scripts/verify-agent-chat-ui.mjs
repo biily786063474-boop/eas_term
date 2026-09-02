@@ -14,10 +14,17 @@
 // 所有点击坐标只需要 getBoundingClientRect()，不用手算画布世界坐标 × 缩放。
 //
 // ── 怎么喂事件：临时挂测试钩子，不花 CLI 额度 ────────────────────────────────────
-// 生产构建里 window.__store 只在 DEV 挂、agentChat.start() 真的会 spawn CLI 花 token。
-// 本脚本会在构建前对两个源文件做**临时、可逆**的补丁：
-//   1. src/renderer/src/main.tsx —— __store 的 DEV 门槛临时短路成恒真。
-//   2. src/preload/index.ts —— 加一个只在 EAS_AGENT_CHAT_TEST=1 时生效的分支，
+// 生产构建里 agentChat.start() 真的会 spawn CLI 花 token。
+//
+// **window.__store 不再需要打补丁**（2026-09-02）：`src/renderer/src/main.tsx` 现在认
+// `window.__easVerify`，而它由 `src/preload/index.ts` 读 `EAS_VERIFY` 决定 —— 起实例时
+// 传一个环境变量就够了（`verify-app.mjs` 一直是这么做的）。原来那处补丁的锚点写的是
+// `if (import.meta.env.DEV) {`，main.tsx 加上 __easVerify 之后这个字符串就再也匹配不到，
+// applyPatch 第一步直接抛 —— **本脚本因此有一段时间根本跑不起来**。少一处可逆源码改动，
+// 就少一种「改坏了没人发现」的方式。
+//
+// 剩下这一处补丁仍然需要，构建前打、跑完还原：
+//   · src/preload/index.ts —— 加一个只在 EAS_AGENT_CHAT_TEST=1 时生效的分支，
 //      把 agentChat.start()/onEvent() 换成进程内假实现（不真的 IPC 到主进程、
 //      不 spawn 任何 CLI），并额外暴露 window.__agentChatTestPush(sessionId, event)
 //      把造好的 ChatEvent 直接喂给已订阅的回调——链路是「真实 handleSend() → 假
@@ -28,7 +35,7 @@
 //      其余 IPC（listClis / hookStatus / hookUninstall / setParams / stop）**保持
 //      真实**——listClis 是真探测（本机装了 claude 与 codex，无成本），hookStatus
 //      是只读文件检查。
-// 跑完（无论成功失败、甚至被 Ctrl-C/SIGTERM/未捕获异常中断）都会把这两个文件还原成
+// 跑完（无论成功失败、甚至被 Ctrl-C/SIGTERM/未捕获异常中断）都会把它还原成
 // 原样并重新 build，不会把测试专用代码留在仓库里——见下面「补丁安全网」一节。
 //
 // ── 补丁安全网（2026-08-17 独立评审 CHANGES_REQUESTED 后加固，P0-1/P0-2）───────────
@@ -37,10 +44,10 @@
 // 已经落盘的补丁就会被 finally 的 `if (patched)` 短路掉，永久留在"生产环境暴露
 // window.__store"的状态，且 git status 只会在这一种失败模式下露出线索。
 // 修法：**去掉 patched/builtOnce 这两个条件标志，finally 无条件调用
-// restoreSources(ORIGINALS) + 无条件重新 build**——两个文件原本就没改时，写回同样的
+// restoreSources(ORIGINALS) + 无条件重新 build**——文件原本就没改时，写回同样的
 // 内容、重建同样的产物都是无害的 no-op，不需要用标志去"聪明地"跳过。
 // 第二条复现：脚本没有注册任何信号 handler，Ctrl-C（SIGINT）或终端被关掉时 Node
-// 直接终止、finally 完全不会跑，两个源文件 **连同已经构建进 out/ 的假 transport 产物**
+// 直接终止、finally 完全不会跑，被补丁的源文件 **连同已经构建进 out/ 的假 transport 产物**
 // 一起留在补丁态（out/ 是 gitignored 的，git status 连痕迹都不会露）。修法：在模块
 // 顶层注册 SIGINT/SIGTERM/uncaughtException/unhandledRejection，同步把 ORIGINALS
 // 写回去再退出（同步 fs 写在信号处理里是安全的）——这条路径不重新 build（构建要
@@ -213,11 +220,7 @@ function runBuild(label) {
 
 // ════════════════════════════ 第一部分：临时源码补丁（可逆） ════════════════════════════
 
-const MAIN_TSX = path.join(PROJECT_ROOT, 'src/renderer/src/main.tsx')
 const PRELOAD_TS = path.join(PROJECT_ROOT, 'src/preload/index.ts')
-
-const MAIN_TSX_ANCHOR = `if (import.meta.env.DEV) {`
-const MAIN_TSX_PATCHED = `if (true /* TEMP task-8 e2e，见 scripts/verify-agent-chat-ui.mjs，验完自动还原 */ || import.meta.env.DEV) {`
 
 const PRELOAD_CONST_ANCHOR = `const api = {\n  platform: process.platform,`
 const PRELOAD_CONST_PATCHED = `// TEMP(task-8 e2e，见 scripts/verify-agent-chat-ui.mjs)：只在显式传 EAS_AGENT_CHAT_TEST=1
@@ -344,7 +347,6 @@ function applyPatch(file, replacements, label) {
 }
 
 function patchSources() {
-  applyPatch(MAIN_TSX, [[MAIN_TSX_ANCHOR, MAIN_TSX_PATCHED]], 'main.tsx（__store 恒暴露）')
   applyPatch(
     PRELOAD_TS,
     [
@@ -362,7 +364,7 @@ function restoreSources(originals) {
   for (const [file, content] of originals) {
     fs.writeFileSync(file, content)
   }
-  log('  ✓ 两个文件已还原成原样')
+  log('  ✓ 源文件已还原成原样')
 }
 
 // ════════════════════════════ 第二部分：CDP 小工具 ════════════════════════════
@@ -507,7 +509,7 @@ async function main() {
 
   // 先读原始内容、立刻挂到模块级 ORIGINALS——从这一刻起，不管接下来在哪一步失败、
   // 还是收到 Ctrl-C/SIGTERM，都有"真相"可以还原（P0-1/P0-2 的安全网见文件顶部注释）。
-  ORIGINALS = [MAIN_TSX, PRELOAD_TS].map((f) => [f, fs.readFileSync(f, 'utf8')])
+  ORIGINALS = [PRELOAD_TS].map((f) => [f, fs.readFileSync(f, 'utf8')])
 
   let proc = null
   let ws = null
@@ -545,7 +547,9 @@ async function main() {
       [PROJECT_ROOT, `--user-data-dir=${userDataDir}`, `--remote-debugging-port=${port}`, '--no-sandbox'],
       {
         cwd: PROJECT_ROOT,
-        env: envFor({ EAS_AGENT_CHAT_TEST: '1' }),
+        // EAS_VERIFY 让 preload 暴露 window.__easVerify，main.tsx 据此把 store 挂到
+        // window.__store 上 —— 代替了原来对 main.tsx 打补丁那条路（见文件头）。
+        env: envFor({ EAS_AGENT_CHAT_TEST: '1', EAS_VERIFY: '1' }),
         stdio: ['ignore', 'pipe', 'pipe'],
         // detached:true 让 node_modules/.bin/electron 这层包装脚本自成一个新进程组
         // （见 killIsolatedInstance 注释）——不加这个选项它会留在编排者自己的进程组里，
@@ -1400,7 +1404,7 @@ async function main() {
     // P0-1：无条件还原 + 无条件重新构建，不靠任何"是否已经改过/是否已经构建过"的
     // 标志去判断要不要做——ORIGINALS 在 main() 一开始就读好了，写回同样的内容、
     // 重建同样的产物，在"其实什么都没改"的情况下都只是无害的 no-op。
-    log('▸ 还原临时补丁的两个源文件…')
+    log('▸ 还原临时补丁的源文件…')
     restoreSources(ORIGINALS)
     try {
       runBuild('还原后重新构建，确保仓库产物与源码一致')
