@@ -77,6 +77,24 @@ sequenceDiagram
 > 2026-08-31 已阉割"自动补全词条到待办"那半（归类靠猜、产不出示意图、花用户没看到的钱），
 > 现在只做"记录本次用到了哪些已收录概念"。
 
+**`arch-guard.mjs`（PreToolUse · matcher `Bash`）**：预筛 `/\bgit\s+(-C \S+ )?commit\b/` →
+读 `git diff --cached --name-status` → 四条**高信号**规则（新增 `register*Handlers()` ·
+`eas-mcp.mjs` 新增工具定义 · preload 新增 API 分组 · 新增/删除源码模块）→
+命中且 `docs/architecture/` 无暂存改动就 **exit 2 阻断**，stderr 里写明该改哪份图纸。
+另外每次都扫一遍图纸里的路径引用，指不到东西的作为 `additionalContext` 递出去（**不阻塞**——
+那是既有债，不该由一次无关提交来还）。零 token 纯本地；**守门自己抛异常一律 exit 0**，
+坏了不能把人锁在门外。
+
+> **它和 `scan-commit.mjs` 是一对**：一个在提交**前**拦（图纸别脱节），一个在提交**后**记
+> （新概念沉进辞典）。两条都挂在 `.claude/settings.json`，都只认 `git commit`。
+>
+> ⚠️ **`.claude/settings.json` 没进版本库**（`.gitignore` 并没有忽略它，是**故意不提交**：
+> 里面是这台机器的绝对路径，而且 app 自己也会往它写审批 hook ——
+> `agentChat/session.ts` 的 `installApprovalHook`，合并式写入、只动自己那条 marker）。
+> 所以：**换机器 / 重新 clone 之后这道闸不会自己回来**，跑一次
+> `node hooks/install-arch-guard.mjs` 把它装回去（幂等，重复跑不会写重）。
+> 那个脚本只往 PreToolUse 里加自己那条，**app 写的那条 matcher `*` 一个字不动** —— 那是审批链路。
+
 ## Skill 体系
 
 ### 本项目分发给用户的：`skills/eas-term/`
