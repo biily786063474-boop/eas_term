@@ -6,7 +6,6 @@ import { spawnSync } from 'node:child_process'
 import {
   ompConfigYml,
   ompModelsYml,
-  ompKeyEnvName,
   ompSkillMarkdown,
   ompSkillsDir,
   ompEasTermSkillDir,
@@ -118,108 +117,36 @@ test('ignoredSkills 默认不写 —— 上游 customDirectories 本来就顶得
   assert.match(forced, /ignoredSkills:\n {4}- "eas-term"/)
 })
 
-test('空数组写成 []、空对象写成 {} —— 只留一个裸键会被解析成显式 null', () => {
-  assert.ok(ompModelsYml([]).includes('providers: {}'))
-  assert.ok(!ompModelsYml([]).match(/providers:\s*\n/))
+// ── models.yml：**它恒为空，这就是全部要测的** ────────────────────────────
+//
+// 原来这里有 11 条测试，测的是「怎么把 provider 连同
+// `apiKey: EAS_OMP_<ID>_KEY` 写进去」—— 那是密钥柜那条路的产物。
+//
+// **2026-09-02 密钥柜整条删掉了**（用户：「取消密钥柜的概念呢，单纯用
+// oh my pi 成熟的登录流程然后 UI 化」），那些测试连同被测的代码一起删。
+//
+// 留下的这两条钉的是**新的不变量**：这份文件永远不许出现 apiKey。
+// 上游 `model-registry.ts:1377-1379` 明写 apiKey 会
+// 「wins over OAuth tokens from the broker」—— 一旦有人把 provider 写回去，
+// 就会用一个不存在的变量名顶掉 omp 存好的凭证，症状是**登录成功却 401**
+// （用户当天看到的 MiniMax 1004 就是这么来的）。
+
+test('models.yml 就是空的 providers，一个字都不多', () => {
+  const yml = ompModelsYml()
+  assert.ok(yml.includes('providers: {}'))
+  // 只留一个裸键会被解析成显式 null —— 那和「空对象」在 omp 那边不是一回事
+  assert.ok(!yml.match(/providers:\s*\n/))
 })
 
-// ── models.yml ─────────────────────────────────────────────────────────────
-
-const ZAI = {
-  id: 'zai-coding-plan',
-  baseUrl: 'https://api.z.ai/api/coding/paas/v4',
-  api: 'openai-completions' as const,
-  models: [{ id: 'glm-5.3', name: 'GLM 5.3', contextWindow: 200_000 }],
-}
-
-test('apiKey 写的是**环境变量名**，不是值', () => {
-  const yml = ompModelsYml([ZAI])
-  assert.ok(yml.includes('apiKey: "EAS_OMP_ZAI_CODING_PLAN_KEY"'), yml)
-  // 这个模块的签名里根本没有放 key 的地方——真值只在 spawn env 里，永不进文件
-  assert.ok(!yml.includes('sk-'))
-})
-
-test('**内置 provider 也写 EAS_OMP_ 前缀**，绝不用 ANTHROPIC_API_KEY（决定 13）', () => {
-  // model-registry.ts:1377-1379 对内置 provider 一样装 apiKey 且「wins over OAuth tokens」，
-  // 所以自定义名字照样生效；改成标准名的代价是 omp 起的 bash 里再跑 claude 会继承它，
-  // Claude Code 从订阅 OAuth 静默切成 API key 计费——最难发现的一种「影响 CC」。
-  const yml = ompModelsYml([{ id: 'anthropic' }, { id: 'openai' }])
-  assert.ok(yml.includes('apiKey: "EAS_OMP_ANTHROPIC_KEY"'))
-  assert.ok(yml.includes('apiKey: "EAS_OMP_OPENAI_KEY"'))
-  for (const std of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'ANTHROPIC_AUTH_TOKEN']) {
-    assert.ok(!yml.includes(std), `文件里出现了标准 provider 变量名 ${std}`)
-  }
-})
-
-test('变量名带 KEY —— omp 的脱敏按名字里的 KEY/SECRET/TOKEN 收', () => {
-  assert.equal(ompKeyEnvName('zai'), 'EAS_OMP_ZAI_KEY')
-  assert.equal(ompKeyEnvName('my.proxy v2'), 'EAS_OMP_MY_PROXY_V2_KEY')
-  assert.ok(ompKeyEnvName('anything').endsWith('_KEY'))
-})
-
-test('两个 provider 规范化成同一个变量名 → 当场抛（否则两家共用一把 key）', () => {
-  assert.throws(() => ompModelsYml([{ id: 'a-b' }, { id: 'a_b' }]), /变量名撞了/)
-})
-
-test('provider id 重复 → 当场抛（YAML 重复键是静默后者覆盖前者）', () => {
-  assert.throws(() => ompModelsYml([{ id: 'zai' }, { id: 'zai' }]), /重复/)
-})
-
-test('照抄 omp 的校验：列了模型就必须给 baseUrl / api，缺了在我们这边抛', () => {
-  // models-config.ts:64-90。不抄的话，错误发生在 session/new 里，
-  // 用户看到的只是「起不来」，看不到是哪一条配错了。
-  assert.throws(
-    () => ompModelsYml([{ id: 'zai', models: [{ id: 'glm-5.3', api: 'openai-completions' }] }]),
-    /baseUrl/,
-  )
-  assert.throws(
-    () => ompModelsYml([{ id: 'zai', baseUrl: 'https://x', models: [{ id: 'glm-5.3' }] }]),
-    /没有 api/,
-  )
-  // provider 层给了 api 就够，模型层可以不写
-  assert.ok(ompModelsYml([ZAI]).includes('- id: "glm-5.3"'))
-})
-
-test('模型数组的缩进：`- id:` 之后的键要对齐，不能掉到上一层', () => {
-  const yml = ompModelsYml([ZAI])
-  assert.ok(yml.includes('    models:\n      - id: "glm-5.3"\n        name: "GLM 5.3"\n'), yml)
-})
-
-// ── 用 omp 同款解析器解回来 ────────────────────────────────────────────────
-
-const bunOk = (() => {
-  try {
-    return spawnSync('bun', ['--version'], { encoding: 'utf8' }).status === 0
-  } catch {
-    return false
-  }
-})()
-
-function bunParse(yaml: string): unknown {
-  const r = spawnSync('bun', ['-e', 'const {YAML}=require("bun");console.log(JSON.stringify(YAML.parse(process.env.OMP_YAML)))'], {
-    encoding: 'utf8',
-    env: { ...process.env, OMP_YAML: yaml },
-  })
-  assert.equal(r.status, 0, r.stderr)
-  return JSON.parse(r.stdout)
-}
-
-// omp 解析这两份文件用的就是 `import { YAML } from "bun"`（settings.ts:31/1377）。
-// 手写的序列化器是否被接受，只有拿同一个解析器解回来才算数——所以这条用例装了 bun 才跑。
-test('bun 的 YAML 解析器（omp 用的同一个）解回来就是我们想要的嵌套结构', { skip: bunOk ? false : '本机没有 bun' }, () => {
-  const cfg = bunParse(ompConfigYml('C:\\Users\\bi ily\\omp\\agent')) as Record<string, any>
-  assert.equal(cfg.tools.approvalMode, 'always-ask')
-  assert.equal(cfg.tools.approval.tts, 'deny')
-  assert.equal(cfg.tools.xdev, false)
-  assert.equal(cfg.browser.enabled, false)
-  assert.equal(cfg.secrets.enabled, true)
-  assert.equal(cfg.retry.modelFallback, false)
-  // 反斜杠原样回来，没被当转义吃掉
-  assert.deepEqual(cfg.skills.customDirectories, [path.join('C:\\Users\\bi ily\\omp\\agent', 'skills')])
-
-  const models = bunParse(ompModelsYml([{ id: 'anthropic' }, ZAI])) as Record<string, any>
-  assert.equal(models.providers.anthropic.apiKey, 'EAS_OMP_ANTHROPIC_KEY')
-  assert.equal(models.providers['zai-coding-plan'].models[0].contextWindow, 200_000)
+test('**数据里永远不许出现 apiKey / 变量名** —— 它会压过 broker 的凭证', () => {
+  // 只查**非注释行**：文件头那几句注释正是在解释这个危险，
+  // 连它一起禁掉就成了「不许写下为什么」。数据干净、说明照写。
+  const data = ompModelsYml()
+    .split('\n')
+    .filter((l) => !l.trimStart().startsWith('#'))
+    .join('\n')
+  assert.ok(!/apiKey/i.test(data), `models.yml 的数据里出现了 apiKey：\n${data}`)
+  assert.ok(!/EAS_OMP/.test(data))
 })
 
 // ── skill 副本的尾巴 ───────────────────────────────────────────────────────

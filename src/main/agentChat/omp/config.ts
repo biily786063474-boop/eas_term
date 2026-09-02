@@ -181,7 +181,7 @@ export function ompConfigYml(agentDir: string, opts?: OmpConfigOptions): string 
     // schema:4486，默认 **true** —— 四个里唯一默认开着的，不写就是开着
     browser: { enabled: false },
     // schema:5250，默认 false。不开就没有脱敏：bash 跑一句 `env`，key 明文进会话记录并发给模型。
-    // 脱敏按变量名里的 KEY/SECRET/TOKEN 收 —— 所以我们的注入变量名带 `KEY`（见 ompKeyEnvName）。
+    // 脱敏按变量名里的 KEY/SECRET/TOKEN 收。（我们自己不再注入任何 key —— 密钥柜那条路已删。）
     secrets: { enabled: true },
     skills: {
       // schema:5194，默认 []
@@ -209,100 +209,32 @@ export function ompConfigYml(agentDir: string, opts?: OmpConfigOptions): string 
 
 export const OMP_MODELS_FILENAME = 'models.yml'
 
-/** provider key 的注入变量名。
+/** `<agentDir>/models.yml` 的整份内容。**它恒为空。**
  *
- *  **内置 provider 也用这个名字，绝不改成 `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`**（决定 13）：
- *  `model-registry.ts:1377-1379` 对任意 providerName（含内置）在 apiKey 存在时都装上，
- *  并且明写「wins over OAuth tokens」，所以自定义名字照样生效；而用标准名字的后果是
- *  omp 起的 bash 里再跑 `claude` / `codex` 会继承它 —— Claude Code 从订阅 OAuth
- *  静默切成 API key 计费。那是最难发现的一种「影响 CC」。
+ *  ── 这个函数为什么不再收 provider ────────────────────────────────────────
+ *  它原本能写出 `providers.<id>.apiKey = "EAS_OMP_<ID>_KEY"` —— 那是密钥柜那条路
+ *  的产物：我们把 key 存柜里，spawn 时按这个变量名注进去。
  *
- *  名字里带 `KEY` 也是有意的：omp 的 secrets 脱敏按变量名含 KEY/SECRET/TOKEN 收。 */
-export function ompKeyEnvName(providerId: string): string {
-  const upper = providerId.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-  if (!upper) throw new Error(`omp models: provider id 里没有可用字符：${JSON.stringify(providerId)}`)
-  return `EAS_OMP_${upper}_KEY`
-}
-
-export interface OmpModelDef {
-  id: string
-  name?: string
-  /** provider 层没给 api 时，每个模型都必须自己给（`models-config.ts:83-90`） */
-  api?: OmpApi
-  contextWindow?: number
-  maxTokens?: number
-}
-
-/** 一个 provider 的可配置面。**这里没有放 key 的地方，是故意的**——
- *  key 永远只以变量名的形式出现在文件里，真值走 spawn env，不经过这个模块。 */
-export interface OmpProviderConfig {
-  id: string
-  baseUrl?: string
-  api?: OmpApi
-  models?: OmpModelDef[]
-}
-
-/** `<agentDir>/models.yml` 的整份内容。
+ *  **2026-09-02 密钥柜整条删掉了**（用户：「取消密钥柜的概念呢，单纯用
+ *  oh my pi 成熟的登录流程然后 UI 化」），这段代码随之够不着。
+ *  但**够不着不等于该留**：上游 `model-registry.ts:1377-1379` 明写 `apiKey`
+ *  会「wins over OAuth tokens from the broker」——只要有人把它重新接回去，
+ *  就会用一个不存在的变量名顶掉 omp 刚存好的凭证，症状是
+ *  **登录成功却 401**（用户当天看到的 MiniMax 1004 就是这么来的）。
  *
- *  这里**照抄了 omp 自己的校验**（`config/models-config.ts:36-96` 的
- *  `validateProviderConfiguration`，mode = 'models-config'），宁可在我们这一侧抛，
- *  也不要写出一份 omp 会整体拒绝的文件 —— 那种失败发生在 `session/new` 里，
- *  用户看到的只是「起不来」。 */
-export function ompModelsYml(providers: OmpProviderConfig[]): string {
-  const byEnv = new Map<string, string>()
-  const providersTree: Record<string, YamlValue | undefined> = {}
-
-  for (const p of providers) {
-    if (!p.id) throw new Error('omp models: provider id 不能为空')
-    if (Object.hasOwn(providersTree, p.id)) {
-      // YAML 重复键是「后者覆盖前者」的静默行为，不能让它发生
-      throw new Error(`omp models: provider id 重复：${p.id}`)
-    }
-    const env = ompKeyEnvName(p.id)
-    const clash = byEnv.get(env)
-    // 'a-b' 与 'a_b' 会规范化成同一个变量名，两个 provider 就会共用一把 key
-    if (clash) throw new Error(`omp models: ${p.id} 与 ${clash} 的 key 变量名撞了（都是 ${env}）`)
-    byEnv.set(env, p.id)
-
-    const models = p.models ?? []
-    if (models.length > 0 && !p.baseUrl) {
-      throw new Error(`omp models: ${p.id} 列了自定义模型就必须给 baseUrl（omp models-config.ts:64-67）`)
-    }
-    for (const m of models) {
-      if (!m.id) throw new Error(`omp models: ${p.id} 有个模型没写 id`)
-      if (!p.api && !m.api) {
-        throw new Error(`omp models: ${p.id}/${m.id} 没有 api —— provider 层或模型层至少给一个`)
-      }
-    }
-
-    providersTree[p.id] = {
-      baseUrl: p.baseUrl,
-      api: p.api,
-      // 只写变量名。omp 侧 `resolve-config-value.ts:21-27`：先查同名环境变量，
-      // 查不到就**把这串字面量当成 key 用**（不是报错）—— 所以变量没注入时
-      // 表现是 401 而不是「没配」，冒烟那一步要能认出这个形状。
-      apiKey: ompKeyEnvName(p.id),
-      models:
-        models.length > 0
-          ? models.map((m) => ({
-              id: m.id,
-              name: m.name,
-              api: m.api,
-              contextWindow: m.contextWindow,
-              maxTokens: m.maxTokens,
-            }))
-          : undefined,
-    }
-  }
-
-  const header = [
+ *  一个能把已修好的事故原样带回来的函数，留着就是留一颗雷。所以连同
+ *  `ompKeyEnvName` / `OmpProviderConfig` / `OmpModelDef` 一起删干净 ——
+ *  真要再支持自定义 provider，那时重写一份、连同「apiKey 会压过 broker」
+ *  这条约束一起想清楚，比让它在这里等着被误用强。 */
+export function ompModelsYml(): string {
+  return [
     '# 由 Eas-Term 生成。**这份恒为空** —— 模型表与凭证都是 omp 自己的事',
     '# （auth-broker 存在 agent.db 里）。往这里写 provider，其中的 apiKey 会压过',
     '# broker 的凭证，症状是「登录成功却 401」。手改这里会被覆盖。',
     '',
+    'providers: {}',
+    ''
   ].join('\n')
-
-  return header + toYaml({ providers: providersTree })
 }
 
 // ── eas-term skill 副本的尾巴 ──────────────────────────────────────────────

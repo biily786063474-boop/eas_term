@@ -133,7 +133,7 @@ export function writeManagedConfig(host: HostPaths): void {
   // `apiKey` 会「wins over OAuth tokens from the broker」—— 我们往里写任何一条，
   // 都等于用自己那套顶掉 omp 刚存好的凭证（2026-09-02 用户看到的 MiniMax 1004）。
   // 拆掉密钥柜之后我们没有任何理由再声明 provider：模型表是 omp 自己的。
-  fs.writeFileSync(path.join(agentDir, OMP_MODELS_FILENAME), ompModelsYml([]), 'utf8')
+  fs.writeFileSync(path.join(agentDir, OMP_MODELS_FILENAME), ompModelsYml(), 'utf8')
   // 残留的 config.yaml 读不到（上游命中第一个就 return，`config.yml` 排第一），
   // 删它纯粹是别让排障的人对着一个永不生效的文件想半天。
   const stale = path.join(agentDir, 'config.yaml')
