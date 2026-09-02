@@ -566,8 +566,32 @@ export const ompAdapter: CliAdapter = {
 **界面上「正在处理」再也不消失**。既有代码在 restart 那支早就写明「turn.start 要先推」，
 这一支写反了。改完复验，顺序正确。
 
-**还没做的**：`npm run dist` 与公证（红线操作，等用户明说）；
-带真 key 的端到端（选服务商 → 填 key → 冒烟 → 发一句 → 审批卡 → 画图被拦）。
+**打包与公证（2026-09-02 用户点头后真跑了一次 `EAS_NOTARIZE=1 npm run dist`）**：
 
-**下一步**：`npm run dist` 打一次包验公证，以及拿一把真 key 走完引导链路。
-两件都要用户点头。
+| 核的东西 | 结果 |
+|---|---|
+| 打包链 | `fetch-omp` 缓存命中 → `check-omp-bundle` 放行 → `afterPack` 正确识别出配了正式签名而跳过 ad-hoc 重签 |
+| 包里的二进制 | `Contents/Resources/omp/omp` 在，arm64 那份是 arm64、x64 那份是 x86_64，`THIRD-PARTY-NOTICES.txt` 一并进去了 |
+| 它的签名 | TeamIdentifier 是我们的、`flags=0x10000(runtime)`、带时间戳、**六条 entitlements 全在**（含 Bun 要的 allow-jit 三条）—— electron-builder 的 `entitlementsInherit` 确实覆盖到了嵌套二进制，`build/` 下一个字都不用改 |
+| 从包里跑 | 两个架构都输出 `omp/18.1.2` |
+| 整包 | `codesign --verify --deep --strict` 通过 |
+| 公证 | 两个架构都 `✓ 公证 + staple 完成`；`spctl` 判 `accepted, source=Notarized Developer ID`；`stapler validate` 通过 |
+
+**§P.2「假设 A」到此关闭**：Bun 独立二进制被 Developer ID + hardened runtime 重签后
+能跑、公证也接受。这条原本是整个 P 阶段的硬前提。
+
+**体积的真实数**（此前估的是 +40～85MB，实测落在上沿）：
+
+| 架构 | 之前 | 现在 | 增量 |
+|---|---|---|---|
+| arm64 dmg | 128M | 192M | **+64M** |
+| x64 dmg | 135M | 204M | **+69M** |
+
+服务器 `KEEP=2` 下每版从约 0.5G 涨到约 0.8G，14G 可用够，但 `publish-site.sh` 的 `df`
+只打印不拦 —— 发版前仍要自己看一眼。
+
+**还没做的**：带真 key 的端到端（选服务商 → 填 key → 冒烟 → 发一句 → 审批卡 →
+让它画张图确认被拦）。**这一条需要用户提供一把 key**，没有别的验法。
+
+**下一步**：拿一把真 key 走完引导链路；确认无误后按 §12.2 阶段 5 发版
+（CHANGELOG、下载页体积说明）。
