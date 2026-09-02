@@ -38,6 +38,9 @@ import {
   type SilenceState
 } from './slashSilence'
 import { createApprovalRegistry } from './approvalRegistry.ts'
+import { createAcpLive, type AcpLive } from './omp/transport.ts'
+import { hostPaths, openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
+import { ompKeyVarNames, readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord , planRecovery} from './sessionState.ts'
@@ -61,6 +64,7 @@ import type {
   AgentApprovalHookStatus,
   AgentChatEventEnvelope,
   CliInfo,
+  CliAdapter,
   SessionBrief
 } from '../../shared/agentChat.ts'
 
@@ -98,6 +102,13 @@ interface Live {
   wcId: number
   /** 切模型/切强度的 slash 回执静默期。状态机在 slashSilence.ts（纯函数，可单测）。 */
   silence: SilenceState
+  /** 走 ACP 的会话（目前只有 omp）。**它在，就说明这个会话整条不走上面那套**：
+   *  不经 `feed()`（那里假定翻译器只回事件数组）、不经 `writeStdin()`（那是 Claude 的行格式）。
+   *
+   *  下面每一处 `if (live.acp)` 对 Claude / Codex 都恒假 —— 它们的 Live 里没有这个字段，
+   *  所以那两条路走的还是与今天逐字相同的代码。判据是**这个字段在不在**，
+   *  不是 `rec.cli === 'omp'`（`adapters/index.ts` 文件头禁止按 CLI 名字分支）。 */
+  acp?: AcpLive
 }
 
 /** 每个会话的对话摘要。**给手机端「收」那半用的** ——
@@ -375,7 +386,12 @@ function handleEvent(live: Live, e: ChatEvent): void {
     // 顺手排一次直连刷新（`/api/oauth/usage`，**不花推理 token**，内部有节流）。
     // 这是「只用 AI 对话、从不开终端」的人拿到**准确**额度的唯一途径：
     // statusline 那条路只存在于交互式 TUI，事件流那条五小时窗口根本不带用量。
-    scheduleApiRefresh()
+    // **加一道门**：这条是 Claude 账号的额度接口，omp 的轮次不该去打它。
+    // 判据是 adapter 声明的 quotaSource —— Claude / Codex 不声明，条件恒真，
+    // 它们的行为与今天逐字相同。不加门不算事故（内部有节流、没登录会静默返回），
+    // 但 Anthropic / OpenAI 的 usage 端点按 IP 限流（omp 自己的源码注释里写着），
+    // 同一个 IP 上多一个客户端去打，赔的是 Claude 那半额度条。
+    if (getAdapter(live.rec.cli)?.quotaSource !== 'omp-usage') scheduleApiRefresh()
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
     live.rec = {
@@ -492,6 +508,15 @@ function wireProc(live: Live, proc: ChildProcess): void {
  *  stdout 都灌进同一个 translator。kill 是幂等的（已经死的进程再 kill 一次没有副作用），
  *  无脑调即可。 */
 function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
+  // **必须在下面那句 kill 之前**：ACP 那条路自己决定怎么收尾旧进程
+  // （先发 session/close 再 kill），被这里裸 SIGTERM 掉的话 close 永远没机会发，
+  // omp 那一轮可能没写进会话文件，resume 接回来就缺一段。
+  // 唯一会走到这里的是 recoverInterrupted（团队自动恢复）—— 一期 omp 不是团队成员，
+  // 实际不触发；留着是保险，且它是 if-return，Claude 的装 hook / spawn / writeStdin 全在它之后。
+  if (live.acp) {
+    live.acp.deliver(message)
+    return
+  }
   // **只有真的有进程要杀时才立这个标记。**
   // 写成无条件 `live.killing = true` 会留下一个永久为真的标记：
   // proc 已经是 undefined（会话刚建、或已被空闲回收）时 kill() 根本不发生，
@@ -640,6 +665,17 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
   live.silence = endSilence()
+  // **ACP 那条路整个从这里截走。** 这是三条消息入口（start / send / 手机端
+  // deliverExternalMessage）的汇合点，一行 if-return 就够，下面那套一个字节不动。
+  // 不截的话，第二条消息会被 :648 的 writeStdin 按 Claude 的 `{type:'user'}` 格式
+  // 写进 ACP 进程 —— omp 收到非 JSON-RPC 行不会报错，界面永远停在「正在处理」。
+  if (live.acp) {
+    live.acp.deliver(message)
+    live.rec = { ...live.rec, lastActiveAt: Date.now() }
+    // 与下面 send 分支同一个理由：消息已经在投递路上，界面这段时间最需要表态。
+    handleEvent(live, { k: 'turn.start' })
+    return { ok: true }
+  }
   const plan = planSend(live.rec, Date.now())
   if (plan.action === 'send') {
     if (!live.proc?.stdin) {
@@ -887,7 +923,10 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
         return !!p && p.act !== 'give-up'
       })(),
       retries: r.retries,
-      tally: r.tally
+      tally: r.tally,
+      // **是 sessionStats() 不是 stats()**：后者含花费，而花费已经经
+      // `turn.done.costUsd` 进了上面那个 tally —— 两处都给，数据层求和就会加两遍。
+      stats: live.acp?.stats()
     })
   }
   return out
@@ -927,6 +966,72 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
       if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL')
     }, 300).unref?.()
   }
+}
+
+/** 给一个走 ACP 的会话装配 transport。
+ *
+ *  这里是**唯一**一处把「主进程那一堆能力」交给 transport 的地方：进程怎么起、
+ *  MCP 配置从哪读、事件往哪推、版本号是多少。transport 自己不认识 electron、
+ *  不认识密钥柜、不认识 MCP 桥 —— 它只收这个 deps 对象，所以能在 `node --test` 下裸跑。 */
+function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
+  const host = hostPaths()
+  return createAcpLive(
+    {
+      open(cwd) {
+        // 受管配置**每次起进程之前重写一遍**：这是我们的目录、我们说了算
+        // （与 agentRules 分发规则同一条纪律）。写不进去就不该起 —— 那等于分发一个
+        // approvalMode 是 yolo、生图没被 deny 的 agent。
+        try {
+          const setup = readOmpSetup(host.userData)
+          // 只传 provider id：`ompModelsYml` 会据此写 `apiKey: EAS_OMP_<ID>_KEY`。
+          // **不给 `models` 数组** —— 上游 `models-config.ts:44-96` 规定「列了 models
+          // 就必须给 baseUrl」，而内置 provider 用的是 omp 自带的模型表，硬写会让
+          // 整份 models.yml 校验失败、provider 一个都注册不上。自定义 provider
+          // （要 baseUrl 与模型清单的那种）由设置面板写进 store，这里原样透传。
+          writeManagedConfig(host, setup.provider ? [{ id: setup.provider.id }] : [])
+        } catch (e) {
+          return { ok: false, message: `写不进 omp 的配置目录：${e instanceof Error ? e.message : String(e)}`, setup: false }
+        }
+        return openOmpProcess({
+          cwd,
+          host,
+          // **现算**，不缓存在 adapter 上 —— 见 omp/store.ts 的 ompKeyVarNames
+          keyVarNames: ompKeyVarNames(readOmpSetup(host.userData)),
+          mcp: true
+        })
+      },
+      emit: (e) => handleEvent(live, e),
+      log: (m) => logSession(m),
+      clientVersion: app.getVersion(),
+      mcpServers() {
+        const { servers, dropped } = readMcpServers(live.rec.pluginId)
+        // 丢掉的那些要说一声：ACP 只收 stdio 型，插件里的 http/sse 型带进去会让
+        // **整个 session/new 失败**（上游对认不出的 transport 直接 throw），
+        // 而用户看到的是一条 JSON-RPC error，跟「模型配错了」长得一模一样。
+        if (dropped.length) {
+          handleEvent(live, {
+            k: 'error',
+            fatal: false,
+            message: `这个会话没带上 ${dropped.join('、')} 的 MCP 工具（omp 只接受本地 stdio 型）。`
+          })
+        }
+        return servers
+      },
+      now: () => Date.now()
+    },
+    live.rec.cwd,
+    {
+      idPrefix: `${live.rec.id}:`,
+      model: live.rec.model,
+      effort: live.rec.effort,
+      resumeId: live.rec.resumeId,
+      onSessionId(sid) {
+        // 与 Claude 那条路的 session.ready 分支同一件事：记下 CLI 原生的会话 id，
+        // 下次 restart 才接得回上下文。
+        live.rec = { ...live.rec, resumeId: sid, alive: true, lastActiveAt: Date.now() }
+      }
+    }
+  )
 }
 
 export function registerAgentChatHandlers(): void {
@@ -1020,7 +1125,10 @@ export function registerAgentChatHandlers(): void {
     const availability: Record<string, boolean> = {}
     await Promise.all([
       ...adapters.map(async (a) => {
-        availability[a.id] = await a.detect().catch(() => false)
+        // **host 必须传下去**：随包分发的 CLI 要靠它算绝对路径（走 PATH 探测的忽略这个参数）。
+        // 不传的话它的 available 恒为 false，而 `.catch(() => false)` 会把这件事吞得
+        // 一点痕迹都不剩 —— 界面上那一项永远置灰，日志里一个字都没有。
+        availability[a.id] = await a.detect(hostPaths()).catch(() => false)
       }),
       ...terminalOnly.map(async (t) => {
         availability[t.id] = await detectByWhich(t.id)().catch(() => false)
@@ -1082,6 +1190,10 @@ export function registerAgentChatHandlers(): void {
       approvals: createApprovalRegistry(),
       stdoutBuf: ''
     }
+    // ACP 那条路：**spawn 之前就把 acp 建起来**（而不是握手完再建）。
+    // 晚建的后果：握手那几秒里用户改模型会落进 `pending`，下一条消息就把刚起好的
+    // 进程杀掉重启、上下文归零 —— 正是「不重启改模型」这条要避免的。
+    if (adapter.transport === 'acp') live.acp = makeAcpLive(live, adapter)
     sessions.set(id, live)
     deliverMessage(live, p.message) // 首次投递等价于「进程不活 → restart」，spawn 失败经 error 事件异步通知
     return { ok: true, sessionId: id }
@@ -1116,6 +1228,14 @@ export function registerAgentChatHandlers(): void {
     // 判据是能力声明不是 CLI 名字。进程不在（已被空闲回收）时退回老路：记 pending，
     // 下次 restart 带启动参数——两条路殊途同归。
     const adapter = getAdapter(live.rec.cli)
+    // ACP 走 session/set_config_option：请求/响应，不用静默期、不用猜回执，
+    // 也不用重启进程。**回写 rec.model/effort 由 transport 那侧负责**（它拿得到
+    // 服务端的确认），与 slash 分支下面那两行是同一件事、同一个理由。
+    if (adapter?.paramChange === 'acp-config' && live.acp) {
+      live.acp.setParams(clean)
+      live.rec = { ...live.rec, model: clean.model ?? live.rec.model, effort: clean.effort ?? live.rec.effort }
+      return { ok: true }
+    }
     if (adapter?.paramChange === 'slash' && live.proc?.stdin) {
       // 每条 slash 会引出一个带回执的 turn，逐个吞掉（理由见 isSilenced）
       let sent = 0
@@ -1151,7 +1271,14 @@ export function registerAgentChatHandlers(): void {
     (_e, _sessionId: unknown, approvalId: unknown, decision: unknown): { ok: boolean } => {
       const d: 'allow' | 'deny' = decision === 'allow' ? 'allow' : 'deny'
       const aid = typeof approvalId === 'string' ? approvalId : ''
-      return { ok: resolveApprovalGlobal(aid, d, '') }
+      // 两条审批路在这里会合。**hook 那路先认领**，它返回 false 才问 ACP 那路。
+      // 两张表的 id 空间不同（`tool_use_id` vs `<liveId>:<toolCallId>`），不会撞；
+      // 短路顺序也保证同一个 id 不会被两边各处理一次。
+      if (resolveApprovalGlobal(aid, d, '')) return { ok: true }
+      for (const live of sessions.values()) {
+        if (live.acp?.resolveApproval(aid, d)) return { ok: true }
+      }
+      return { ok: false }
     }
   )
 
@@ -1208,6 +1335,16 @@ export function registerAgentChatHandlers(): void {
   ipcMain.on('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
+    // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
+    // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
+    // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
+    // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
+    // 拿到 cancelled 响应时产出，不在这里合成。
+    if (live?.acp) {
+      live.acp.interrupt()
+      handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
+      return
+    }
     if (!live?.proc) return
     live.killing = true
     live.proc.kill()
@@ -1238,6 +1375,10 @@ export function registerAgentChatHandlers(): void {
     sessions.delete(id)
     transcripts.drop(id) // 同上：删会话就删摘要，两处都要，漏一处就是慢性泄漏
     live.killing = true // 用户点了「停」——他要它停，不许自己爬起来
+    // ACP：先打个招呼让它把会话收干净（通知，不等回话），随后照旧 kill。
+    // 与 interrupt 不同 —— 那边是「这一轮不要了、会话留着」，这边是整个会话都不要了。
+    live.acp?.close()
+    live.acp?.onProcessGone()
     live.proc?.kill()
   })
 }

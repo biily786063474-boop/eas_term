@@ -469,6 +469,10 @@ import type { CostTally } from './teamCost'
 export interface SessionBrief {
   id: string
   cli: string
+  /** 这个会话累计到此刻的上下文占用等等。**给数据层的口子**，界面今天不读它。
+   *  只有报得出这些的 CLI 才有（目前是 omp）；**刻意不含花费** —— 那个在 `tally` 里，
+   *  见 shared 的 `SessionStats`。 */
+  stats?: SessionStats
   cwd: string
   /** 进程还在不在。false = 被空闲回收或已退出，**但会话记录还在**（下次发消息能续上） */
   alive: boolean

@@ -5,8 +5,15 @@
 import type { CliAdapter } from '../../../shared/agentChat.ts'
 import { claudeAdapter } from './claude.ts'
 import { codexAdapter } from './codex.ts'
+import { ompAdapter } from './omp.ts'
 
-const ADAPTERS: CliAdapter[] = [claudeAdapter, codexAdapter]
+/** **顺序有意义，omp 必须排最后。**
+ *
+ *  三条路都取「第一个可用的 CLI」：`AgentChatView.tsx` 的空态默认、手机端
+ *  `phone/provider.ts`、团队派活。omp 是随包的、`available` 恒真 —— 排前面会让
+ *  **只登了 Claude 的老用户**升级当天每个新会话都被换成 omp。
+ *  这条由 `adapters.test.ts` 的一条断言钉住（判据是 `bundled` 能力位，不是 id）。 */
+const ADAPTERS: CliAdapter[] = [claudeAdapter, codexAdapter, ompAdapter]
 
 export function listAdapters(): CliAdapter[] {
   return ADAPTERS

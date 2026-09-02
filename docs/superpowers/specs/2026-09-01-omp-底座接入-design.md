@@ -234,7 +234,13 @@ ompAgentDir(home, userData): string          // 绝对路径，PI_CODING_AGENT_D
 
 `omp/transport.ts` —— **electron-free**（不 import `electron` / `mcpBridge` / `secrets` / `approvalRoute` / `hookInstall` / `claudeEvents` / `codexEvents` / `slashSilence` / `cliAuth`；错误类不用 TS 参数属性，node 26 strip-only 下 `constructor(public x)` 直接 `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`）。它拥有：`proc`、`rpc`（帧 + 请求表 `id → {method, resolve, reject, timer}`）、`phase: 'spawning'|'initializing'|'ready'|'prompting'|'dead'`、`sessionId`、`translator`（**只造一次，restart 复用**——`stats()` 的累计在它的闭包里，重建就归零，团队面板同一行会出现 `tally.costUsd = $1.2` 而 `stats` 为空）、`approvals`、`queue`。
 
-`omp/spawnEnv.ts` —— **允许 import electron / mcpBridge / secrets**。组出 `{ bin, args, env, cwd }` 整包，经 `AcpHostIo.spawnSpec()` 传进 transport。`mcpBridge.ts:12` import electron、`:21` import `approvalRoute`——transport 若自己组 env 就把这条禁止的边拉进来了。
+`omp/launch.ts`（实现时从 `spawnEnv.ts` 改的名）—— **允许 import electron / mcpBridge / secrets**。
+它管两件事：**受管配置落盘** ＋ **spawn 参数组装**。放一个文件是因为它们是同一个不变量的两半
+（「omp 跑起来时看到的必须是我们说了算的那套配置」）；拆开很容易长出「env 指向 A、配置写进 B」
+这种谁看都对、合起来全错的状态。它还提供 `openOmpProcess()`（把 `child_process` 包成 transport
+认识的最小形状）与 `readMcpServers()`（把那份 JSON 过滤归一成 ACP 的 `mcpServers`）。
+`mcpBridge.ts:12` import electron、`:21` import `approvalRoute` —— transport 若自己组 env
+就把这条禁止的边拉进来了。
 
 `AcpHostIo`（由 `session.ts` 提供）：`{ emit: (e) => handleEvent(live, e), log: logSession, version: app.getVersion(), host: HostPaths, spawnSpec: () => SpawnSpec, waitDecision }`。`handleEvent` / `emitEvent` 是模块私有、`live` 在 IPC 闭包里造，transport 只能经这条注入通道拿到它们。
 
@@ -387,7 +393,13 @@ export const ompAdapter: CliAdapter = {
 - **走和真会话同一个 spawn 组装函数**：先 `omp/config.ts` 整份重写 `config.yml`，env 含 `PI_CONFIG_DIR` + `PI_CODING_AGENT_DIR` + `HOME` + `OMP_SKIP_SETUP=1` + scrub 五个键 + `secretsEnv(names)`，**只减去 `mcpEnv`**（冒烟不该拿到 MCP 桥凭证）。`--tools` 钉最小集 + 审批全 deny 是第二道锁不是唯一一道。不带 `PI_CONFIG_DIR` 会读写用户的 `~/.omp`；不带 `OMP_SKIP_SETUP` 会撞交互向导挂 60s
 - `cwd` 用 `os.tmpdir()` 下的空目录；`session/prompt "请只回复两个字：你好"`；看到 `text.delta` 就算过；超时 60s；失败贴 omp 原话；自建 slot，不借 `cliAuth` 的 `loginSlot`
 - 冒烟后断言：`<userData>/omp/agent/config.yml` 存在且 `tools.approvalMode === 'always-ask'`（配置目录没被改道、我们的值没被吃掉）
-- 选定的 `{provider, model, thinking}` 存 `prefs.omp`（四处，§2.2）；`agentChat:start` 的 `model` 传 `<provider>/<model>`
+- 选定的 `{provider, model, thinking}` 存 **`omp/store.ts`（`<userData>/omp-setup.json`）**，
+  **不放 `prefs.omp`**（实现时改的）：`prefs:set` 是一张 key 白名单，不在名单里的写入会走到
+  最后那句 `return getPrefs()` —— 不报错、还回一个看起来正常的快照；`getPrefs()` 又逐字段重建缓存，
+  没登记的键连读都读不回来。放进去要同时改四处，漏任一处的症状都是「界面显示已保存、重启归零」。
+  这份状态只有主进程读、只有设置面板写，不需要跟着 prefs 同步给渲染层，独立文件更难写坏。
+  代价是多一种持久化数据（图纸 10 那条规矩），落点写死在 userData 下。
+  `agentChat:start` 的 `model` 传 `<provider>/<model>`
 - 订阅 `onSmokeProgress` **必须在** `omp.smoke()` 调用之前挂上（同一 effect 内先订阅再 invoke）
 
 ### U.4 工具栏

@@ -447,3 +447,35 @@ test('askFirst 不改动任何与 hook 相关的启动参数（两条路互不�
   const b = getAdapter('claude')!.buildArgs({ cwd: '/x' }).args
   assert.equal(a.length, b.length, '只该换掉系统提示的内容，不该多出参数')
 })
+
+// ── omp 接入时补的两条（2026-09-02）。**只新增，不改上面任何既有断言** ──────────
+
+test('随包的 adapter 必须排在需要用户自己装的后面', () => {
+  // 三条路都取「第一个可用的 CLI」（空态默认 / 手机端 / 团队派活），而随包的
+  // `available` 恒真 —— 排前面就会把只登了 Claude 的老用户的默认选择换掉。
+  // 判据是 `bundled` 能力位，不是 id：以后再来一个随包的 CLI 同样受这条约束。
+  const ids = listAdapters().map((a) => a.id)
+  const firstBundled = listAdapters().findIndex((a) => a.bundled === true)
+  const lastPlain = listAdapters().map((a) => a.bundled === true).lastIndexOf(false)
+  if (firstBundled === -1) return // 没有随包的就没什么要钉的
+  assert.ok(
+    firstBundled > lastPlain,
+    `随包的 adapter 排到了前面：${ids.join(' → ')}（第 ${firstBundled} 个是随包的，而第 ${lastPlain} 个不是）`
+  )
+})
+
+test('走独立传输的 adapter，buildArgs 不是它的启动依据——但也不许假装接了 mcpConfigPath', () => {
+  // omp 的进程由 `omp/launch.ts` 组参数、`omp/transport.ts` 收发，`buildArgs()` 只为
+  // 满足接口而存在。**这条断言锁的是语义不是实现**：MCP 配置不进它的 args，
+  // 是因为 ACP 在 `session/new` 的握手里收 `mcpServers`，不是因为被丢掉了。
+  // 没有这条，后人很容易把「不带」固化成「丢掉」，重演 Claude 那次
+  // 「AI 对话窗口里一个 MCP 工具都没有」的回归。
+  for (const a of listAdapters()) {
+    if (!a.transport) continue
+    const built = a.buildArgs({ cwd: '/w', mcpConfigPath: '/tmp/should-not-appear.json' })
+    assert.ok(
+      !built.args.some((x) => x.includes('should-not-appear')),
+      `${a.id} 把 mcpConfigPath 塞进了命令行，而它声明走 ${a.transport} —— 两处会各带一份配置`
+    )
+  }
+})
