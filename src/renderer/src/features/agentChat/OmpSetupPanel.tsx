@@ -115,7 +115,9 @@ export function OmpSetupPanel(props: {
 
   // 冒烟那一路的清理句柄。**必须挂在 ref 上** —— 超时、成功、卸载三条路都要能收尾，
   // 少收一条就是一个在后台自己跑着的 omp 进程（用户既看不到也关不掉）
-  const smokeRef = useRef<{ sessionId?: string; off?: () => void; timer?: number }>({})
+  const smokeRef = useRef<{ settled: boolean; sessionId?: string; off?: () => void; timer?: number }>({
+    settled: true
+  })
 
   // 冒烟要一个工作目录。**从当前项目取，不自己造一个临时目录** ——
   // omp 起来会读那个目录的 AGENTS.md / skill 配置，换个空目录等于在测一套
@@ -166,10 +168,11 @@ export function OmpSetupPanel(props: {
       aliveRef.current = false
       // 卸载 = 放弃这次冒烟。留着它在后台跑完，用户既看不到结果也关不掉那个进程
       const s = smokeRef.current
+      s.settled = true
       if (s.timer) window.clearTimeout(s.timer)
       s.off?.()
       if (s.sessionId) window.api.agentChat.stop(s.sessionId)
-      smokeRef.current = {}
+      smokeRef.current = { settled: true }
     }
   }, [refresh])
 
@@ -376,12 +379,25 @@ export function OmpSetupPanel(props: {
     setErr('')
     setBusy({ k: 'smoke', out: [] })
 
+    // 这一趟自己的收尾句柄。**不能直接读 smokeRef** ——
+    // preload 的按会话缓冲会在 `onEvent()` 调用**当场**回放已经攒下的事件
+    // （那套本来是为「订阅之前的事件不许丢」做的），所以首字可能在
+    // `smokeRef.current.off = …` 这行赋值**之前**就到了。那时 finish() 读到的是空句柄：
+    // 监听器摘不掉、定时器还没挂上，等赋值语句跑完，一个 60 秒后必然开火的
+    // 超时就留在了那里 —— 已经成功的这一屏会在一分钟后被一句「没等到回话」盖掉。
+    const h: { settled: boolean; off?: () => void; timer?: number; sessionId?: string } = {
+      settled: false
+    }
+    smokeRef.current = h
+
     const finish = (): void => {
-      const s = smokeRef.current
-      if (s.timer) window.clearTimeout(s.timer)
-      s.off?.()
-      if (s.sessionId) window.api.agentChat.stop(s.sessionId)
-      smokeRef.current = {}
+      h.settled = true
+      if (h.timer) window.clearTimeout(h.timer)
+      h.timer = undefined
+      h.off?.()
+      h.off = undefined
+      if (h.sessionId) window.api.agentChat.stop(h.sessionId)
+      h.sessionId = undefined
     }
 
     // 攒 omp 自己说的话。**失败时这些是唯一有用的东西** ——
@@ -389,6 +405,7 @@ export function OmpSetupPanel(props: {
     // 这三种故障用户的下一步动作完全不同
     const out: string[] = []
     const fail = (message: string): void => {
+      if (h.settled) return
       finish()
       if (!aliveRef.current) return
       void window.api.omp.noteSmoke({ ok: false, message })
@@ -408,9 +425,10 @@ export function OmpSetupPanel(props: {
       fail(r.error)
       return
     }
-    smokeRef.current.sessionId = r.sessionId
+    h.sessionId = r.sessionId
 
-    smokeRef.current.off = window.api.agentChat.onEvent(r.sessionId, (e: ChatEvent) => {
+    const off = window.api.agentChat.onEvent(r.sessionId, (e: ChatEvent) => {
+      if (h.settled) return
       if (e.k === 'text.delta') {
         finish()
         if (!aliveRef.current) return
@@ -427,8 +445,14 @@ export function OmpSetupPanel(props: {
         else setBusy({ k: 'smoke', out: [...out] })
       }
     })
+    // 回放已经在上面那次调用里跑完了 —— 结果出来了就当场摘掉监听、别再挂超时
+    if (h.settled) {
+      off()
+      return
+    }
+    h.off = off
 
-    smokeRef.current.timer = window.setTimeout(() => {
+    h.timer = window.setTimeout(() => {
       fail(`等了 ${SMOKE_TIMEOUT_MS / 1000} 秒还没等到回话`)
     }, SMOKE_TIMEOUT_MS)
   }
@@ -673,6 +697,20 @@ export function OmpSetupPanel(props: {
               )}
             </div>
           </>
+        )}
+
+        {/* 兜底：不该发生（nextStepOf 只在选过服务商之后才说 'key'），
+            但真发生了要有出口 —— **一片空白的灯箱比任何错误提示都难查** */}
+        {shown === 'key' && !provider && (
+          <div className="ac-setup-row">
+            <button
+              type="button"
+              className="ac-login-go ac-setup-primary"
+              onClick={() => setEditing('provider')}
+            >
+              先挑一家服务商
+            </button>
+          </div>
         )}
 
         {/* ── 选模型 ───────────────────────────────────────────────────────
