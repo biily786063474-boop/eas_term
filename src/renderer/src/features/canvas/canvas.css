@@ -95,6 +95,16 @@
    而不是层级明度 —— 所以它不适用「靠明度差分层」那条规矩。
 
    同理这里保留了那条 `border-bottom`：它分的不是层级，是窗与内容的界。 */
+/* Frame 本体：**整块填灰，不描蓝边**（2026-09-02 用户点名）。
+   `--accent` 在亮色下已经是中性近黑，所以 `rgba(var(--frame-rgb), …)` 自动跟着
+   变成灰 —— 但那点 0.045 的灰在白底上几乎看不见，Frame 会「没有身体」，
+   只剩一条黑标题栏浮着。所以显式给一层能看见的灰底，边整个去掉：
+   **Frame 的边界靠「灰底 vs 白画布」的明度差表达**，正是那条总规矩。 */
+:root[data-theme='light'] .cframe {
+  background: #f0f0f0;
+  border-color: transparent;
+}
+
 :root[data-theme='light'] .cframe-head {
   background: #1c1c1c;
   border-bottom-color: rgba(255, 255, 255, 0.08);

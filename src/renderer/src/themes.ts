@@ -66,7 +66,10 @@ const XTERM_LIGHT = {
 const XTERM_THEMES: Record<ThemeId, ITheme> = {
   light: {
     ...XTERM_LIGHT,
-    background: 'rgba(255, 255, 255, 0.45)',
+    // **0.92 而不是 0.45**：半透明白压在暗色容器上会调出一片中灰
+    // （用户 2026-09-02：「灰色再浅一点」）。终端是大面积阅读区，
+    // 底色发灰会把整块界面的明度拖下来。
+    background: 'rgba(255, 255, 255, 0.92)',
     cursor: '#3b6bb5',
     cursorAccent: '#ffffff',
     selectionBackground: 'rgba(59, 107, 181, 0.22)'

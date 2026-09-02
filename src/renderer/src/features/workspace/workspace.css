@@ -478,29 +478,29 @@
   background: var(--lift-1);
 }
 
-/* ── 亮色下的深色条：**比 frame 的窗口条弱一档**（2026-09-02 用户点名）──────
-   用户：「每个 frame 中的模块的 topbar 要用视弱于 frame windowsbar 黑色的灰色。」
+/* ── 亮色下模块的 topbar：**极浅的灰、黑字加粗**（2026-09-02 用户点名）──────
+   用户先说「视弱于 frame windowsbar 黑色的灰色」，我做成了 #333 深灰；
+   随后他改成「极浅的灰色，接近白色，文字是黑字加粗」。**照后一条。**
 
-   这是一条**嵌套关系**：frame 是窗、模块是窗里的分区。两条都深色时，
-   如果深浅一样，看上去就是两条并列的条，「谁装着谁」这层信息就丢了。
-   所以：
+   改了之后层级反而更清楚：两条深色条并排时，眼睛要靠「哪个更黑」去分主次，
+   那是很弱的信号；一深一浅是**两种不同的东西**，一眼就分得开：
 
-     .cframe-head  #1c1c1c  ← 窗（最强）
-     .pane-header  #333333  ← 窗里的分区（弱一档）
+     .cframe-head  #1c1c1c 底 / #f2f2f2 字   ← 窗（深）
+     .pane-header  #fafafa 底 / #0d0d0d 粗字 ← 窗里的分区（浅）
 
-   字色也跟着退一档（窗是 #f2f2f2，这里 #d0d0d0）—— 层级要在**底和字上同时成立**，
-   只压底色的话，两条上的白字一样亮，眼睛仍然会把它们读成同级。 */
+   加粗是这里唯一的强调手段 —— 底已经接近白，不能再靠明度往上走了。 */
 :root[data-theme='light'] .pane-header {
-  background: #333333;
-  border-bottom-color: rgba(255, 255, 255, 0.07);
-  color: #d0d0d0;
+  background: #fafafa;
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+  color: #0d0d0d;
+  font-weight: 600;
 }
 :root[data-theme='light'] .pane-header button {
-  color: #d0d0d0;
+  color: #3d3d3d;
 }
 :root[data-theme='light'] .pane-header button:hover {
-  color: #f2f2f2;
-  background: rgba(255, 255, 255, 0.09);
+  color: #0d0d0d;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .pane-kind-btn {
