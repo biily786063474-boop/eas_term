@@ -344,7 +344,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       // **没配 provider 的唯一判据**（2026-09-02 在 18.1.2 上实测：没配时
       // configOptions 只有 mode 与 thinking 两项）。这里发 'setup' 而不是 'auth' ——
       // 'auth' 会让工具栏摆出「去登录」，那条路只认 claude/codex，点下去是死路。
-      deps.emit({ k: 'error', fatal: true, kind: 'setup', message: '还没配好模型服务商，先在设置里选一个并填 key。' })
+      deps.emit({ k: 'error', fatal: true, kind: 'setup', message: '还没配好模型服务商。去设置里选一家 —— 用你已经买的订阅登录，或者填一把 API key，两条都行。' })
       throw new Error('omp 还没配 provider')
     }
     currentModel = caps.model

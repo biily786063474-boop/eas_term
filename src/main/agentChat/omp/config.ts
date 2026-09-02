@@ -320,7 +320,9 @@ const FENCE_BODY = [
   '## 本会话是 omp 底座，只有这一条不同',
   '上面「触发情境 C」与工具表里的 `request_secret` / `secret_check` / `report_secret_invalid`',
   '在本会话里**看得见但调不通**（它们按终端授权，这个会话不是终端）。缺 key、401/403、鉴权失败时：',
-  '直接告诉用户「在 AI 对话面板的设置里填 key」，不要调那三个工具，也绝不让密钥进对话。其余规则原样适用。',
+  '直接告诉用户「去 AI 对话面板的设置里检查模型服务商」——**别指定他该做什么**：',
+  '订阅那条路要重新登录，填 key 那条路才是改 key，你分不清他用的是哪条。',
+  '不要调那三个工具，也绝不让密钥进对话。其余规则原样适用。',
 ].join('\n')
 
 export const OMP_SKILL_ADDENDUM = `${FENCE_BEGIN}\n${FENCE_BODY}\n${FENCE_END}`

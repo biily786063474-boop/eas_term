@@ -266,7 +266,10 @@ test('追加的那段把三个调不通的工具点名说清，并给了替代�
   for (const tool of ['request_secret', 'secret_check', 'report_secret_invalid']) {
     assert.ok(OMP_SKILL_ADDENDUM.includes(tool), `没点名 ${tool}`)
   }
-  assert.ok(OMP_SKILL_ADDENDUM.includes('在 AI 对话面板的设置里填 key'))
+  // **替代动作要对两条路都成立**：omp 的鉴权既可能是订阅登录过期、也可能是 key 填错，
+  // 写死「去填 key」会把订阅用户支到一个他压根没有的东西上。
+  assert.ok(OMP_SKILL_ADDENDUM.includes('去 AI 对话面板的设置里检查模型服务商'))
+  assert.ok(!OMP_SKILL_ADDENDUM.includes('设置里填 key'), '别把用户往「只有 key 一条路」上引')
   assert.ok(OMP_SKILL_ADDENDUM.includes('绝不让密钥进对话'))
 })
 

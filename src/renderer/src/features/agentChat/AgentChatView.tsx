@@ -1209,8 +1209,8 @@ export function AgentChatView({
                 原文案原样留给 `cli-login`（也留给所有不声明这个字段的老 adapter）。 */}
             {selected?.auth === 'provider-key' ? (
               <span>
-                <b>{selected.displayName}</b> 还没配好。选一个模型服务商、填一把 key
-                就能开始 —— 全程在这里完成。
+                <b>{selected.displayName}</b> 还没配好。选一家模型服务商，用你已经买的
+                订阅登录、或者填一把 API key —— 两条都行，全程在这里完成。
               </span>
             ) : (
               <span>
