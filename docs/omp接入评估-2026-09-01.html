@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>把 oh-my-pi 接成第三个 CLI · 可行性与改造清单</title>
+<title>oh-my-pi 作为默认 agent 底座 · 可行性与改造清单</title>
 <style>
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:76px}
@@ -108,6 +108,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
 <nav><div class="navwrap">
   <span class="navbrand">omp 接入评估</span>
   <a href="#结论">结论</a>
+  <a href="#定位">定位修订</a>
   <a href="#实测">实测结果</a>
   <a href="#两面">两个接入面</a>
   <a href="#模式">选 RPC 还是 ACP</a>
@@ -122,10 +123,11 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
 <main>
 
 <header class="hero">
-  <div class="eyebrow">接入评估 · <b style="color:#6ee7b7">实测版 v2</b>（v1 是源码核对）</div>
-  <h1>把 oh-my-pi 接成 cc / codex 的同级</h1>
-  <p class="lede">v1 是读报告 + 逐文件核对。<b>v2 把 omp 真装起来跑了</b>——三项判据全过，
-  同时撞出三件只有跑起来才知道的事，其中一件会让整轮挂死。translator 也写了，18 条测试用真录的会话钉住。</p>
+  <div class="eyebrow">接入评估 · <b style="color:#6ee7b7">v3 定位修订</b>（v1 源码核对 · v2 实测）</div>
+  <h1>oh-my-pi 作为软件自带的 agent 底座</h1>
+  <p class="lede">v1/v2 按「接成 cc、codex 的同级」评的。<b>v3 定位改了</b>：它不进终端，
+  只做 AI 对话模块里那个<b>和软件深度绑定的默认 agent</b>，用户选它时我们负责把模型配好、跑起来。<br>
+  这一改，之前算出来最大的两块工作量<b>直接归零</b>，而新增的那块是产品工作不是协议工作。</p>
   <div class="meta">
     <span>日期 <b>2026-09-01</b></span>
     <span>omp 版本 <b>18.0.11</b></span>
@@ -141,43 +143,207 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
   <p class="secnote">先给能拿去做决定的判断，论证在后面每一节。</p>
 
   <div class="verdict">
-    <div class="vlabel">裁决 · 1 · 接得进来，但「便宜」只对一半成立</div>
-    <p style="margin:0"><b>AI 对话那一面是真的零 UI 改动</b>——<code>toolbarModel.ts</code> 的文件头就写着这条硬约束：
-    「加第三个 CLI 时，只要它的 adapter 如实填好 capabilities，这个文件和它的调用方都不需要改一行」。
-    我核对过，工具栏确实一处 CLI 身份判断都没有。<br>
-    <b>但画布终端那一面完全不是这样</b>：<code>CanvasAgentBar.tsx</code> 把 <code>'claude'|'codex'</code> 写死在 20 处，
-    连命令行都是两个手写函数（<code>buildClaudeCmd</code> / <code>buildCodexCmd</code>）。那才是主要工作量。</p>
+    <div class="vlabel">裁决 · 1 · 定位一改，成本塌掉一大半</div>
+    <p style="margin:0">v1 里我算的两块最大工作量，<b>在「不进终端」这个前提下全部归零</b>：<br>
+    · <code>CanvasAgentBar</code> 那 20 处写死 —— 那是终端节点的 agent 条，omp 不出现在那儿；<br>
+    · <code>AgentKind</code> 那 54 处横切 —— 我核实过，<b><code>agentChat/</code> 下一处都没有</b>，
+      它整个是画布 / 终端 / PTY 那一面的类型。AI 对话用的是 <code>CliInfo.id</code>（就是个 string）。<br>
+    剩下的真工作量只有三样：<code>session.ts</code> 的双向改造、三处 <code>as 'claude'|'codex'</code> 断言、
+    以及<b>新的配置引导</b>。</p>
   </div>
 
   <div class="verdict">
-    <div class="vlabel">裁决 · 2 · 走 ACP，不走 RPC</div>
-    <p style="margin:0"><span class="b b-em">v2 实测坐实</span> 这是本评估里最硬的一条：
-    <b><code>docs/rpc.md</code> 全文没有 approval / permission 任何一个字</b>——RPC 模式没有审批面。
-    审批只在 ACP 上：<code>session/request_permission</code>，client-gated 的 <code>bash / edit / delete / move</code>。<br>
-    选 RPC 等于新 CLI 天生比 Claude 弱一档（<code>capabilities.approval: []</code>，只能退回沙箱级）。
-    而 ACP 的 12 个 session 方法里，<code>session/set_config_option</code> 带 <code>MODEL_CONFIG_ID = "model"</code>，
-    换模型也覆盖得到——ACP 是我们要的能力的超集。<br>
-    <b>实测：审批请求真的发出来了</b>，载荷比我们现在的 <code>approval.request</code> 还丰富（见下一节）。</p>
+    <div class="vlabel">裁决 · 2 · Bun 不是依赖，而且能做到真·开箱即用</div>
+    <p style="margin:0">v1 把「Bun 是硬依赖」列成反对意见之一。<b>那条不成立</b>：
+    上游发独立二进制，我取了头 1MB 验过 —— <code>Mach-O 64-bit executable arm64</code>，
+    没有 shebang、没有 node_modules，运行时是编进去的。只有走 npm/bun 安装那条路才需要 Bun。<br><br>
+    <b>更进一步：可以直接打进安装包，用户不用二次下载。</b>代价比想象小得多 ——
+    Bun 编出来的二进制压得很好（实测 76MB 样本：gzip 压到 33%、xz 压到 24%），
+    <b>整包只涨三成左右</b>。而且我们现有的 entitlements 正好就是它需要的那三条
+    （<code>allow-jit</code> / <code>allow-unsigned-executable-memory</code> /
+    <code>disable-library-validation</code>），签名这关不用额外做事。</p>
   </div>
 
-  <div class="warn">
-    <div class="vlabel">警示 · 3 · 真正的代价不在写 adapter，在 AgentKind 这个联合类型</div>
-    <p style="margin:0"><code>export type AgentKind = 'claude' | 'codex'</code> 在非测试代码里被引用 <b>54 处</b>。
-    加第三个值会让 TypeScript 全线爆红——<b>这是好事</b>（编译器帮你把该改的地方全找出来，不会漏），
-    但意味着这不是一个「加个文件就完事」的增量改动，而是一次必须一口气改完的横切。</p>
+  <div class="verdict">
+    <div class="vlabel">裁决 · 3 · 「深度绑定」把一道协议难题变成了产品决定</div>
+    <p style="margin:0">v2 实测撞出的那个矛盾 —— omp 的模型清单是<b>会话建立后</b>才知道的，
+    而我们的 <code>capabilities</code> 是<b>静态挂在 adapter 上</b>的 —— 在「第三个平级 CLI」的定位下是个硬伤，
+    因为用户配了什么 provider 我们不知道。<br>
+    但作为<b>自带底座</b>，<code>models.yml</code> 是<b>我们写的</b>：给用户哪几个模型、叫什么名字、
+    走哪个 provider，全是我们的产品决定。<b>清单可以静态，因为它本来就是我们定的。</b><br>
+    这不是绕过问题，是定位换掉了问题。</p>
   </div>
 
   <div class="grid g4" style="margin-top:26px">
-    <div class="stat"><div class="num n-am">2</div><div class="lab">独立接入面<br>各自要单独做</div></div>
-    <div class="stat"><div class="num n-em">0</div><div class="lab">AI 对话工具栏<br>需要改的行数</div></div>
-    <div class="stat"><div class="num n-ro">20</div><div class="lab">画布 AgentBar 里<br>写死的 CLI 名字</div></div>
-    <div class="stat"><div class="num n-am">54</div><div class="lab">AgentKind 的<br>非测试引用点</div></div>
+    <div class="stat"><div class="num n-em">0</div><div class="lab">CanvasAgentBar<br>要改的地方（原 20）</div></div>
+    <div class="stat"><div class="num n-em">0</div><div class="lab">AgentKind<br>要改的地方（原 54）</div></div>
+    <div class="stat"><div class="num n-em">0</div><div class="lab">用户要装的<br>运行时（独立二进制）</div></div>
+    <div class="stat"><div class="num n-am">3</div><div class="lab">剩下的真工作量<br>见「定位修订」</div></div>
   </div>
   <div class="grid g4" style="margin-top:16px">
-    <div class="stat"><div class="num n-sk">12</div><div class="lab">ACP 的 session 方法<br>（含权限请求）</div></div>
-    <div class="stat"><div class="num n-ro">0</div><div class="lab">RPC 模式里的<br>审批 / 权限接口</div></div>
-    <div class="stat"><div class="num n-am">~31</div><div class="lab">omp 上游<br>提交 / 活跃日</div></div>
-    <div class="stat"><div class="num n-em">MIT</div><div class="lab">全部 18 个包<br>统一许可</div></div>
+    <div class="stat"><div class="num n-sk">3/3</div><div class="lab">实测判据<br>全部通过</div></div>
+    <div class="stat"><div class="num n-am">173</div><div class="lab">GitHub 直下 KB/s<br>128MB 要 12 分钟</div></div>
+    <div class="stat"><div class="num n-ro">2</div><div class="lab">审批通道<br>只答一条会挂死</div></div>
+    <div class="stat"><div class="num n-em">18</div><div class="lab">translator 测试<br>已全绿</div></div>
+  </div>
+</section>
+
+<section id="定位">
+  <h2>Repositioned</h2>
+  <div class="sectitle">定位修订：不进终端，只做 AI 对话里的自带底座</div>
+  <p class="secnote">v1/v2 按「第三个平级 CLI」评的。新定位是三件事：<b>不出现在终端</b>；
+  <b>作为软件自带、深度绑定的默认 agent</b>；<b>用户选它时我们负责把模型配好、跑起来</b>。
+  下面逐条说这三件事各自改变了什么。</p>
+
+  <h3>① 不进终端 —— 成本塌掉的那一半</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:30%">v1 里的工作量</th><th style="width:12%">新定位下</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>CanvasAgentBar.tsx</code> 20 处写死 + 第三个 <code>buildOmpCmd</code></td>
+        <td><span class="b b-em">0</span></td>
+        <td>那是<b>终端节点</b>的 agent 条，拼一条 shell 命令喂给 xterm。omp 不出现在那儿</td></tr>
+      <tr><td><code>AgentKind</code> 54 处横切</td><td><span class="b b-em">0</span></td>
+        <td><b>核实过</b>：<code>grep -rn AgentKind src/main/agentChat/ src/renderer/src/features/agentChat/</code>
+          <b>一处都没有</b>。它分布在 CanvasAgentBar / CanvasRoleEditor / pty.ts / roles.ts / agentHook.ts 等，
+          全是画布与终端那一面。AI 对话用的是 <code>CliInfo.id</code>，就是个 string</td></tr>
+      <tr><td><code>pty.ts</code> 的可执行名识别</td><td><span class="b b-em">0</span></td>
+        <td>同上 —— 用户不会在终端里手敲 omp，因为我们不引导他那么做</td></tr>
+      <tr><td><code>agentHook.ts</code> / <code>roles.ts</code> / <code>agentInstall.ts</code> 的 kind 分支</td>
+        <td><span class="b b-am">部分</span></td>
+        <td>「提交即复盘」hook 与角色契约是画布那侧的概念，不动。
+          <code>agentInstall</code> 那条要改，但改的不是「加一档 CLI」，是<b>加一条新的安装形态</b>（下载二进制）</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>② 自带底座 —— 我们能拿到什么</h3>
+  <p>「深度绑定」不是修辞，它具体意味着<b>那七条知识注入通道和全部安全默认值都归我们</b>。
+  这是它和「用户自己装的第三个 CLI」最本质的差别：</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">我们控制的</th><th>拿到什么</th></tr></thead>
+    <tbody>
+      <tr><td><code>config.yml</code></td>
+        <td><b>第一天就把 <code>approvalMode</code> 从 yolo 改掉</b>，并显式配 <code>tools.approval.eval</code>
+          堵住 <code>bash.patterns</code> 那个绕过缺口。v1 把这条列成反对意见 ——
+          作为自带底座它不再是风险，是我们的默认值</td></tr>
+      <tr><td><code>models.yml</code></td>
+        <td>给用户哪几个模型、叫什么名字、走哪个 provider，全是产品决定。
+          <b>顺带解决了 capabilities 静态 vs 动态那道题</b></td></tr>
+      <tr><td>MCP 配置</td>
+        <td>画板那 52 个工具默认接上，而且 <b>omp 把 MCP 挂在 <code>xd://</code> 后面不占 schema 位</b> ——
+          Claude 那边它们让单轮输入涨了约 39k token，这边不会</td></tr>
+      <tr><td>skills / rules / AGENTS.md</td>
+        <td>omp 的七条注入通道我们可以随产品分发。
+          <b>而且它本来就读 <code>.claude/CLAUDE.md</code>（实测确认）</b>，用户已有的项目规则白捡</td></tr>
+      <tr><td>关掉什么</td>
+        <td>子 Agent 订阅（默认就 off，我们那套编排照旧）、collab relay、桌面控制、
+          浏览器驱动、TTS、图像生成 —— v1 说的「80% 是要评估和关闭的攻击面」，
+          作为底座这件事只做一次，不是每个用户各做一次</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>开箱即用：打进安装包，还是让用户下？</h3>
+  <p>「深度植入」如果要做到用户装完就能用、不再下第二次东西，那就是<b>把二进制打进安装包</b>。
+  这件事我把数都量了：</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">平台</th><th style="width:16%">现在</th><th style="width:20%">带上 omp 之后</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>mac arm64 (dmg)</td><td>128 MB</td><td><b>~170 MB</b> <span class="b b-am">+33%</span></td>
+        <td>omp-darwin-arm64 原始 128MB，dmg 用 zlib，按实测 gzip 33% 算约 +42MB</td></tr>
+      <tr><td>mac x64 (dmg)</td><td>135 MB</td><td><b>~180 MB</b> <span class="b b-am">+33%</span></td><td>同上，二进制 135MB</td></tr>
+      <tr><td>Windows (setup.exe)</td><td>111 MB</td><td><b>~145 MB</b> <span class="b b-am">+31%</span></td>
+        <td>NSIS 用 LZMA，更接近实测的 xz 24%；二进制 153MB</td></tr>
+    </tbody>
+  </table></div>
+  <p class="secnote" style="margin-top:-6px">压缩率是实测的：拿 76MB 真实样本量出 gzip -6 → 33%、xz -3 → 24%。
+  <b>每个平台只带自己那一个二进制</b>，不是三个都带。</p>
+
+  <div class="grid g2">
+    <div class="card"><h4 style="margin-top:0">打进包里 <span class="b b-em">推荐</span></h4>
+      <ul class="clean" style="margin:0">
+        <li>选了这个 agent 就能用，引导里少一整步</li>
+        <li>版本天然钉死，跟安装包一起走 —— 上游一天 31 个提交那条风险自动解决</li>
+        <li>断网 / 内网环境也能用</li>
+        <li>走 <code>extraResources</code>，那条路已经在用（mcp / skills / hooks / dict-clips 都在里面）</li>
+        <li class="dim">代价：整包 +33%，每次发版多传约 40MB</li>
+      </ul></div>
+    <div class="card"><h4 style="margin-top:0">按需下载 <span class="b b-gy">备选</span></h4>
+      <ul class="clean" style="margin:0">
+        <li>安装包不变</li>
+        <li>可以不重发版就换 omp 版本</li>
+        <li class="dim">但要自己托管 —— <b>GitHub 直下实测 173 KB/s（本机）/ 297 KB/s（我们服务器）</b>，
+          128MB 要跑七到十二分钟，放在首次引导里不可接受</li>
+        <li class="dim">还要写下载器：断点续传 + SHA256 校验 + 失败重试</li>
+      </ul></div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">如果打进包，有两件事要一起做</div>
+    <ul class="clean" style="margin:0">
+      <li><b>THIRD-PARTY-NOTICES.txt 要随产品分发。</b>omp 全仓 MIT，商用/闭源/贴牌都没问题，
+        但 MIT 要求保留版权声明。它那份 notices 有 1MB，别忘了</li>
+      <li><b>签名要覆盖到它。</b>放进 <code>extraResources</code> 的可执行文件也要签，
+        否则 Gatekeeper 会拦。好消息是<b>我们现有的 entitlements 正好够用</b> ——
+        那三条（JIT / 未签名可执行内存 / 关掉库校验）本来是给 Electron 和 node-pty 的，
+        Bun 需要的是同一组</li>
+    </ul>
+  </div>
+
+  <h3>③ 引导用户配好、跑起来 —— 新增的那块</h3>
+  <p>这是新定位里<b>唯一真正新增</b>的工作。好消息：<b>形态已经有了，不用重新发明。</b>
+  <code>AgentOnboarding.tsx</code> + <code>CliSetupPanel.tsx</code> 那条链路是 2026-08-30 为
+  「装 CLI → 登录」做的，它的三条设计约束原样适用：全程 GUI 不甩终端 ·
+  进度条用不确定态不编百分比 · 失败时展开输出并留「填进终端我自己来」的退路。</p>
+<pre><code><span class="dim">claude / codex 的链路</span>
+  装 CLI  <span class="flow">──→</span>  登录  <span class="flow">──→</span>  能用了
+
+<span class="dim">omp 的链路（打进包之后，第一步整个没了）</span>
+  <span class="dim">（二进制已在包里）</span>  <span class="flow">──→</span>  <span class="hi">配 provider + key</span>  <span class="flow">──→</span>  选模型  <span class="flow">──→</span>  冒烟一次  <span class="flow">──→</span>  能用了
+                        <span class="dim">密钥进密钥柜         我们给的清单      真发一条消息</span>
+                        <span class="dim">不进对话                            确认整条链通</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">这条链路里三个必须做对的地方</div>
+    <ul class="clean" style="margin:0">
+      <li><b>密钥走密钥柜，不进对话也不落明文。</b>这是仓库已有的红线机制（<code>secrets.ts</code> +
+        钥匙串），不要为 omp 另起一套。omp 自己也有 <code>secrets.yml</code> 脱敏 ——
+        <b>两套并存要先想清楚谁管谁</b>，别两边都以为对方管了</li>
+      <li><b>冒烟必须真发一条消息。</b>「配置写好了」不等于「能用」——
+        provider 不通、key 没权限、模型名拼错，都要到第一次真调用才暴露。
+        这正是 v2 实测里我自己踩的：配了 <code>glm-4-flash</code>，它其实早就不在那个账号的模型列表里了</li>
+      <li><b>配置目录指到我们的 userData。</b><code>PI_CONFIG_DIR</code> <b>相对 HOME 解析</b>（v2 实测的坑），
+        所以传的是 <code>Library/Application Support/Eas-Term/omp</code> 这种相对路径。
+        带空格能用，我验过</li>
+    </ul>
+  </div>
+
+  <h3>剩下的真工作量</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:26%">事</th><th style="width:14%">量级</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b><code>session.ts</code> 的双向改造</b></td><td><span class="b b-am">中</span></td>
+        <td>现在的 spawn 假设是「写 stdin、读 stdout 行」的单向流。ACP 是请求-响应双向，
+          审批要从我们这边回。<b>这是唯一的结构性改动</b>，translator 已经把「要回什么」算好了</td></tr>
+      <tr><td><b>配置引导面板</b></td><td><span class="b b-am">中</span></td>
+        <td>复用 <code>CliSetupPanel</code> 的形态，换掉中间那段。新增的是 provider/key 表单与冒烟</td></tr>
+      <tr><td><b>打包带上二进制</b></td><td><span class="b b-em">小</span></td>
+        <td>加进 <code>extraResources</code>（那条路已经在用），按平台各带一个。
+          整包 +33%，签名沿用现有 entitlements。**比原计划的「自己托管 + 写下载器」省一大截**</td></tr>
+      <tr><td>adapter + 三处断言</td><td><span class="b b-em">小</span></td>
+        <td><code>omp.ts</code> 一个文件；<code>CliLoginPanel</code> / <code>CliSetupPanel</code> /
+          <code>AgentChatView</code> 那三处 <code>as 'claude'|'codex'</code></td></tr>
+      <tr><td>translator</td><td><span class="b b-em">已完成</span></td>
+        <td><code>ompEvents.ts</code> + 18 条测试，fixture 是真录的</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="dissent">
+    <div class="vlabel">新定位带来的新反对意见</div>
+    <p style="margin:0"><b>「默认」意味着它坏了就是我们坏了。</b>作为可选的第三个 CLI，omp 出问题用户可以换回
+    Claude；作为<b>自带底座</b>，它的每一次上游 bug、每一次协议改动、每一个 provider 兼容问题，
+    都直接变成 Eas-Term 的故障报告。<br>
+    而它是一个<b>一天 31 个提交、会改会话格式、v16 到 v18 已经跨过两个大版本</b>的项目。<br>
+    对策只有一个而且必须做：<b>版本钉死 + 自己托管 + 升级前跑一遍自己的回归集</b>。
+    「跟着上游走」在这个定位下不是选项。</p>
   </div>
 </section>
 
@@ -658,7 +824,10 @@ session?: Partial&lt;Record&lt;AgentKind, string&gt;&gt;         <span class="di
   模型是智谱 <code>glm-5.3-flash</code>（自定义 provider，隔离配置 <code>PI_CONFIG_DIR</code>）。
   <b>没有验证的部分</b>：<code>edit</code> / <code>delete</code> / <code>move</code> 这几种审批 kind 我只跑到了
   <code>execute</code>，其余映射是照 ACP 规范写的；多轮会话、resume、MCP 注入、子 Agent 都没跑。
-  实测总花费不到 4 万 token（智谱 flash 档）。</p>
+  实测总花费不到 4 万 token（智谱 flash 档）。<br>
+  <b>v3 新增的实测</b>：独立二进制取头 1MB 确认是 <code>Mach-O 64-bit arm64</code>（没跑过它）；
+  压缩率用 76MB 真实样本量的（gzip 33% / xz 24%），整包增量是<b>按这个外推的估算</b>，
+  不是真打过一次包；<code>PI_CONFIG_DIR</code> 用带空格的相对路径验过能读到配置。</p>
   <p>本地文件：<code>docs/omp接入评估-2026-09-01.html</code> · 视觉规格：report 预设 · 生成于 2026-09-01</p>
 </footer>
 
