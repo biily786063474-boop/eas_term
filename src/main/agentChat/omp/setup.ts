@@ -17,13 +17,10 @@ import { ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { ompModelSelector, ompModelsFromJson } from './config.ts'
 import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
 import {
-  keyVarOf,
   nextStepOf,
   ompLoggedInFrom,
   ompModelUsable,
   ompStateFrom,
-  OMP_PROVIDERS,
-  providerById,
   type OmpStatus,
   type OmpStep
 } from './setupModel.ts'
@@ -51,57 +48,39 @@ async function statusOf(): Promise<OmpStatus> {
   const host = hostPaths()
   const setup = readOmpSetup(host.userData)
   const bin = ompBinPathOrNull(host)
-  const p = providerById(setup.provider?.id)
-  // 密钥柜与 key 的实际状态由渲染层自己查（它本来就要 `secrets.status()` 来渲染解锁入口），
-  // 这一层只回答「配置里记了什么」——两边的判据合起来才是 nextStepOf 的输入。
-  // 这么分是为了不让主进程去猜渲染层此刻看到的柜子状态：柜子会 15 分钟自动上锁，
-  // 隔一次 IPC 往返就可能变。
+
   // ── 「配好了没有」的判据：**问 omp，不是查我们自己的账本** ────────────────
   //
   // 2026-09-02 用户撞到的那一屏：面板说「配好了」，一点「试一句」就回
   // 「还没配好模型服务商」。根因是整条链路只读 `omp-setup.json`，
-  // 而真正的权威在 omp 的 broker 里 —— 两者一分叉，界面就在骗人。
+  // 而权威在 omp 的 broker 里 —— 两者一分叉，界面就在骗人。
   // `loggedInAt` 更是一条写下去就永远为真的记录，凭证过期它一概不知道。
+  //
+  // 拆掉密钥柜之后这个判据**无条件成立**：`models.yml` 恒为 `providers: {}`，
+  // 所以列出来的每一家都只可能来自 broker 里那份真凭证。
   const models = await cachedModels()
-  // **只有订阅那条路能信这个判据**（边界见 `ompLoggedInFrom` 的注释：
-  // models.yml 里声明过的 provider，零凭证也照样被列出来）。
-  // 填 key 那条路上它恒为真，报上去只会让人误用 —— 所以那边直接报 false。
-  const loggedIn = setup.provider?.authMode !== 'subscription' ? false : ompLoggedInFrom({
+  const loggedIn = ompLoggedInFrom({
     models,
     providerId: setup.provider?.id,
     // 探测失败时才退回它 —— 探不到 ≠ 没登录
     hint: !!setup.provider?.loggedInAt
   })
+
   // **存量自愈**：老配置里存的是裸模型名（真机现场 `"model": "MiniMax-M3"`），
   // 补上 provider 前缀再对外报。不补的话用户继续 401，而界面上模型明明选着。
   const stored = ompModelSelector(setup.provider?.id, setup.provider?.model)
-  // 存的模型 omp 现在还认吗。不认就当没选，把人送回选模型那步 ——
-  // 留着它的后果是起会话时解析不到，报一句跟「模型」毫无关系的错。
+  // 存的模型 omp 现在还认吗。不认就当没选，把人送回选模型那步。
   const model = ompModelUsable(models, stored) ? stored : undefined
-  // **入参也只在一处拼**（`ompStateFrom`）。两侧各拼各的时，渲染层那份漏过
-  // authMode 与 loggedIn —— 判据一致、入参分叉，单测全绿而真机全错。
+
+  // **入参只在一处拼**（`ompStateFrom`）。两侧各拼各的时曾经分叉过：
+  // 判据一致、入参不一致 —— 单测全绿而真机全错。
   const step = nextStepOf(
-    ompStateFrom({
-      installed: !!bin,
-      // 柜子那三项在这里一律填「好的」—— 真正的判定在渲染层用 `secrets.status()` 补齐后重算。
-      vault: { available: true, configured: true, locked: false, foreign: false },
-      provider: setup.provider?.id,
-      authMode: setup.provider?.authMode,
-      keyInVault: !!p, // 同上，渲染层用 secretsHas 的结果覆盖
-      // **判据是「登录那一步真的成功过」，不是「冒烟跑通过」。**
-      // 拿冒烟顶替的后果：登录刚完成时冒烟还没跑，于是状态机说「还要去登录」——
-      // 用户刚登完就被弹回登录页，再登一次还是弹回来（2026-09-02 真机撞到）。
-      loggedIn,
-      model
-    })
+    ompStateFrom({ installed: !!bin, provider: setup.provider?.id, loggedIn, model })
   )
   return {
     installed: !!bin,
-    status: { loggedIn: !!model && !!setup.lastSmoke?.ok, account: p?.label },
     step,
-    providers: OMP_PROVIDERS.map((x) => ({ id: x.id, label: x.label, keyUrl: x.keyUrl })),
     provider: setup.provider?.id,
-    authMode: setup.provider?.authMode,
     loggedIn,
     model,
     lastSmoke: setup.lastSmoke
@@ -164,22 +143,18 @@ export function registerOmpSetupHandlers(): void {
    *  `secrets:save` 存进密钥柜（与用户手填密钥同一条路），这一层只记「选了谁」。
    *  这么分是有意的：密钥的明文一次都不该多经过一个 IPC 通道。 */
   ipcMain.handle('omp:saveProvider', (_e, raw: unknown): Res => {
-    const inp = (raw ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown; authMode?: unknown }
+    const inp = (raw ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown }
     const id = safeProvider(inp.provider)
     if (!id) return { ok: false, error: '不认识这个模型服务商' }
-    // 只认这两个字面量；给不出就按 'apikey'（这个字段是后加的，老配置里没有，
-    // 而在它存在之前只有填 key 那一条路）
-    const authMode: 'subscription' | 'apikey' = inp.authMode === 'subscription' ? 'subscription' : 'apikey'
     const host = hostPaths()
     const prev = readOmpSetup(host.userData)
     const next: OmpSetup = {
       ...prev,
       // **别在这里手拼这个对象。** 原来就是手拼的，`loggedInAt` 被静默丢掉 ——
       // 于是「登录成功 → 重选一次同一家 → 登录记录没了 → 再登」形成闭环。
-      // 合并规则（同家同路留着、换家换路清掉）连同 7 条单测在 `store.ts`。
+      // 合并规则连同单测在 `store.ts`。
       provider: mergeProviderChoice(prev.provider, {
         id,
-        authMode,
         model: typeof inp.model === 'string' ? inp.model : undefined,
         thinking: typeof inp.thinking === 'string' ? inp.thinking : undefined
       }),
@@ -188,11 +163,11 @@ export function registerOmpSetupHandlers(): void {
     }
     try {
       writeOmpSetup(host.userData, next)
-      // 受管配置跟着重写一遍：不写的话 models.yml 里还是上一家的 apiKey 变量名，
-      // 下次起会话会去柜里取一把不存在的 key，症状是 401。
-      // **订阅那条路一条都不写** —— 上游明写 `apiKey` 会压过 broker 的 OAuth 令牌，
-      // 写下去等于用一个不存在的环境变量顶掉刚登好的订阅。
-      writeManagedConfig(host, authMode === 'subscription' ? [] : [{ id }])
+      // 受管配置跟着重写一遍。**`providers` 恒为空**：
+      // 上游 `model-registry.ts:1377-1379` 明写 `apiKey` 会
+      // 「wins over OAuth tokens from the broker」—— 我们写任何一条进去，
+      // 都等于用自己那套去顶掉 omp 刚存好的凭证（2026-09-02 那个 1004）。
+      writeManagedConfig(host)
       // 换了服务商，「omp 认不认这家」这个答案当场就变了 —— 别让缓存把旧答案再端 20 秒
       invalidateModels()
     } catch (e) {
@@ -226,11 +201,9 @@ export function registerOmpSetupHandlers(): void {
   })
 
   /** 这家服务商的 key 该存在哪个变量名下。渲染层拿它去调 `secrets:save`。 */
-  ipcMain.handle('omp:keyVar', (_e, raw: unknown): { varName: string } | null => {
-    const id = safeProvider(raw)
-    const p = providerById(id ?? '')
-    return p ? { varName: keyVarOf(p) } : null
-  })
+  // **`omp:keyVar` 删了。** 它回的是「这家的 key 存在密钥柜哪个变量名下」，
+  // 而密钥柜那条路整个不存在了 —— 凭证由 omp 的 `auth-broker` 自己管。
+
 
   // ── 订阅登录 ────────────────────────────────────────────────────────────
   //

@@ -1,160 +1,107 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { authFailureInTail, nextStepOf, ompStateFrom, OMP_PROVIDERS, providerById } from './setupModel.ts'
+import {
+  authFailureInTail,
+  explainOmpFailure,
+  humanReasonIn,
+  nextStepOf,
+  ompLaunchGate,
+  ompLoggedInFrom,
+  ompModelUsable,
+  ompStateFrom
+} from './setupModel.ts'
 
 // ── 下一步该让用户做什么 ──────────────────────────────────────────────────
 //
-// 这是引导面板的**唯一**判据来源。写成纯函数是因为它有六七个分支，
-// 而每个分支都对应「用户此刻要做的一件不同的事」—— 合并任意两条都会把人引错方向。
+// 这是引导面板的**唯一**判据来源。写成纯函数是因为每个分支都对应
+// 「用户此刻要做的一件不同的事」—— 合并任意两条都会把人引错方向。
+//
+// **2026-09-02：从七个分支砍到四个。** 密钥柜那条路（建柜 / 解锁 / 填 key）
+// 整个删掉了 —— 用户原话：「取消密钥柜的概念呢，单纯用 oh my pi 成熟的
+// 登录流程然后 UI 化。」omp 的 auth-broker 覆盖 69 家、需要 key 的自己会问。
+// 那套平行系统制造的 bug 比它解决的多。
 
-const base = {
-  installed: true,
-  vault: { available: true, configured: true, locked: false, foreign: false },
-  provider: undefined as string | undefined,
-  keyInVault: false,
-  model: undefined as string | undefined
-}
+const base = { installed: true, provider: undefined as string | undefined, loggedIn: false, model: undefined as string | undefined }
 
 test('二进制不在 → blocked，且**不是**「去配 provider」', () => {
-  // 包坏了跟没配好是两件事：前者用户什么也做不了，后者他能自己解决。
   assert.equal(nextStepOf({ ...base, installed: false }).k, 'blocked')
 })
 
-test('系统加密不可用 / 柜子是别人的 → blocked（面板只显示一句话，没有出口）', () => {
-  assert.equal(nextStepOf({ ...base, vault: { ...base.vault, available: false } }).k, 'blocked')
-  assert.equal(nextStepOf({ ...base, vault: { ...base.vault, foreign: true } }).k, 'blocked')
-})
-
-test('柜子还没建 → 先建柜', () => {
-  assert.equal(nextStepOf({ ...base, vault: { ...base.vault, configured: false } }).k, 'vault-setup')
-})
-
-test('柜子锁着 → 先解锁（**排在选 provider 之前**）', () => {
-  // 反过来的话，用户填完 key 点保存才被打回，白填一遍。
-  assert.equal(nextStepOf({ ...base, vault: { ...base.vault, locked: true } }).k, 'vault-unlock')
-})
-
-test('柜子好了但没选 provider → 选 provider', () => {
+test('没选服务商 → 选服务商', () => {
   assert.equal(nextStepOf(base).k, 'provider')
 })
 
-test('选了 provider、key 不在柜里 → 填 key', () => {
-  assert.equal(nextStepOf({ ...base, provider: 'zai' }).k, 'key')
+test('选了但 omp 还没这家的凭证 → 去登录（**不是**去填 key，那条路没了）', () => {
+  assert.equal(nextStepOf({ ...base, provider: 'minimax-code-cn' }).k, 'login')
 })
 
-test('key 在柜里但没选模型 → 选模型', () => {
-  assert.equal(nextStepOf({ ...base, provider: 'zai', keyInVault: true }).k, 'model')
+test('登进去了、还没挑模型 → 选模型', () => {
+  assert.equal(nextStepOf({ ...base, provider: 'minimax-code-cn', loggedIn: true }).k, 'model')
 })
 
-test('全齐 → ready', () => {
-  assert.equal(nextStepOf({ ...base, provider: 'zai', keyInVault: true, model: 'zai/glm' }).k, 'ready')
+test('都齐了 → ready', () => {
+  assert.equal(
+    nextStepOf({ installed: true, provider: 'minimax-code-cn', loggedIn: true, model: 'minimax-code-cn/MiniMax-M3' }).k,
+    'ready'
+  )
 })
 
-test('**中途锁柜要能打回来** —— 柜子 15 分钟不动会自动锁', () => {
-  // 用户去找 key 找了一刻钟回来，面板不能还停在「填 key」，
-  // 否则他填完点保存才撞上「柜子锁着」。
-  const s = nextStepOf({ ...base, provider: 'zai', keyInVault: true, model: 'm', vault: { ...base.vault, locked: true } })
-  assert.equal(s.k, 'vault-unlock')
+test('**入参只在 `ompStateFrom` 拼一次** —— 两侧各拼各的曾经分叉过（单测全绿、真机全错）', () => {
+  const s = ompStateFrom({ installed: true, provider: 'zai', loggedIn: true, model: 'zai/glm-5' })
+  assert.deepEqual(s, { installed: true, provider: 'zai', loggedIn: true, model: 'zai/glm-5' })
 })
 
-// ── 冒烟失败是哪一类 ──────────────────────────────────────────────────────
+// ── 起进程之前那道闸 ──────────────────────────────────────────────────────
 
-test('**401 / invalid api key 认成 auth** —— 那是「key 不对」，要把人打回填 key 那步', () => {
-  for (const line of [
-    '{"jsonrpc":"2.0","id":1,"error":{"message":"401 Unauthorized"}}',
-    'Error: invalid api key',
-    'authentication_error: bad token',
-    'HTTP 401'
-  ]) {
-    assert.equal(authFailureInTail([line]), 'auth', line)
+test('**闸门只剩一条判据**：没选服务商才拦，其余交给 omp 自己报', () => {
+  const no = ompLaunchGate({})
+  assert.equal(no.ok, false)
+  if (!no.ok) {
+    assert.equal(no.reason, 'no-provider')
+    // 不许出现环境变量名 —— 用户从没见过 `EAS_OMP_*`，那是我们的实现细节
+    assert.ok(!/EAS_OMP|[A-Z][A-Z0-9]*_[A-Z0-9_]+/.test(no.message), no.message)
   }
+  assert.equal(ompLaunchGate({ provider: 'minimax-code-cn' }).ok, true)
 })
 
-test('别的错误认成 unknown（原话给用户看，别硬套成 key 不对）', () => {
-  assert.equal(authFailureInTail(['ECONNREFUSED 127.0.0.1:443']), 'unknown')
-  assert.equal(authFailureInTail([]), 'unknown')
+// ── 「omp 认不认这家」：判据是问它，不是查我们自己的账本 ──────────────────
+
+const M = (...ids: string[]) => ids.map((id) => ({ id }))
+
+test('omp 列得出这家的模型 → 才算真的登录上了', () => {
+  assert.equal(ompLoggedInFrom({ models: M('minimax-code-cn/MiniMax-M3'), providerId: 'minimax-code-cn', hint: true }), true)
 })
 
-test('**不复用 cliAuth 那套判据** —— 它对 ACP 的行零命中', () => {
-  // `unauthedInLine` 先用 `"type":"error|turn.failed|result"` 预过滤，
-  // 而 ACP 的 JSON-RPC 行没有 type 字段，所以那条路对 omp 恒不命中。
-  // 这里直接对错误原文做匹配，所以**没有 type 字段也要认得出来**。
-  assert.equal(authFailureInTail(['{"error":{"code":-32000,"message":"Incorrect API key provided"}}']), 'auth')
+test('**一个都列不出来 → 不算，哪怕我们自己记着「登录过」**', () => {
+  // 真机现场：loggedInAt 写着，agent.db 里 auth_credentials 是 0 条。
+  assert.equal(ompLoggedInFrom({ models: [], providerId: 'minimax-code-cn', hint: true }), false)
 })
 
-// ── 服务商表 ──────────────────────────────────────────────────────────────
-
-test('每个服务商都有取 key 的地址 —— 没有的话用户不知道去哪弄', () => {
-  for (const p of OMP_PROVIDERS) assert.ok(p.keyUrl.startsWith('https://'), p.id)
+test('列出来的是别家的 → 也不算（登过 A 不等于登上了 B）', () => {
+  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: 'minimax-code-cn', hint: true }), false)
 })
 
-test('服务商 id 只允许小写字母数字和横线 —— 它会被拼进环境变量名与文件路径', () => {
-  for (const p of OMP_PROVIDERS) assert.match(p.id, /^[a-z0-9-]+$/)
+test('**探测失败（undefined）才退回我们自己的记录** —— 探不到 ≠ 没登录', () => {
+  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: true }), true)
+  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: false }), false)
 })
 
-test('id 不重复，且查得到', () => {
-  const ids = OMP_PROVIDERS.map((p) => p.id)
-  assert.equal(new Set(ids).size, ids.length)
-  assert.equal(providerById(ids[0])?.id, ids[0])
-  assert.equal(providerById('没有这个'), undefined)
+test('没选服务商 → 一律 false', () => {
+  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: undefined, hint: true }), false)
 })
 
-// ── 订阅登录：与「填 API key」并列的第二条路（2026-09-02 加） ────────────────
-//
-// omp 认识 70 家，头几个正是最要紧的订阅（Claude Pro/Max、ChatGPT Plus/Pro、
-// 智谱 GLM Coding Plan、Kimi、Copilot…）。**订阅用户没有 API key，
-// 也不该被逼着去申请一把** —— 所以这条路上的判据必须和填 key 那条分开走。
-
-import { ompLaunchGate } from './setupModel.ts'
-
-const sub = { ...base, provider: 'anthropic', authMode: 'subscription' as const }
-
-test('**订阅路上不问 key 在不在柜里** —— 那条路根本没有 key', () => {
-  // 不分开的话，订阅用户会卡在「还没填 key」那一步，而他压根没有 key 可填。
-  // 登录过了、模型还没选 → 下一步是选模型，**不是**「去填 key」。
-  assert.equal(nextStepOf({ ...sub, loggedIn: true, keyInVault: false }).k, 'model')
+test('**存的模型不在 omp 的清单里 → 当成没选**，把人送回选模型那步', () => {
+  assert.equal(ompModelUsable(M('minimax-code-cn/MiniMax-M3'), 'minimax-code-cn/MiniMax-M2'), false)
+  assert.equal(ompModelUsable(M('minimax-code-cn/MiniMax-M3'), 'minimax-code-cn/MiniMax-M3'), true)
 })
 
-test('订阅但还没登录成功 → 停在登录那一步', () => {
-  assert.equal(nextStepOf({ ...sub, provider: undefined }).k, 'provider')
-  assert.equal(nextStepOf({ ...sub, loggedIn: false }).k, 'login')
+test('探测失败时不判它坏 —— 探不到 ≠ 不存在', () => {
+  assert.equal(ompModelUsable(undefined, 'minimax-code-cn/MiniMax-M3'), true)
 })
 
-test('订阅登录过了、也选了模型 → ready', () => {
-  assert.equal(nextStepOf({ ...sub, loggedIn: true, model: 'anthropic/claude' }).k, 'ready')
-})
-
-test('**柜子的状态不该拦住订阅路** —— 订阅凭证不进密钥柜', () => {
-  // 凭证在 omp 自己的 agent.db 里（OAuth 令牌要它自己刷新）。
-  // 拿柜子锁没锁去拦订阅登录，是把两条无关的路绑在了一起。
-  const locked = { ...sub, loggedIn: true, model: 'm', vault: { ...base.vault, locked: true } }
-  assert.equal(nextStepOf(locked).k, 'ready')
-})
-
-test('填 key 那条路照旧要过柜子那几关', () => {
-  const k = { ...base, provider: 'zai', authMode: 'apikey' as const, keyInVault: true, model: 'm' }
-  assert.equal(nextStepOf({ ...k, vault: { ...base.vault, locked: true } }).k, 'vault-unlock')
-  assert.equal(nextStepOf(k).k, 'ready')
-})
-
-// ── 起进程前那道闸，两条路的判据不一样 ────────────────────────────────────
-
-test('订阅路：不检查 key，直接放行', () => {
-  assert.deepEqual(ompLaunchGate({ authMode: 'subscription', provider: 'anthropic', keyVarNames: [], keysReadable: false, vaultUnlocked: false }), { ok: true })
-})
-
-test('填 key 路：没选服务商 / 没填 key / 柜子锁着，三种要分开说', () => {
-  const g = (o: Partial<Parameters<typeof ompLaunchGate>[0]>) =>
-    ompLaunchGate({ authMode: 'apikey', provider: 'zai', keyVarNames: ['K'], keysReadable: true, vaultUnlocked: true, ...o })
-  assert.equal(g({ provider: undefined, keyVarNames: [] }).ok, false)
-  assert.equal(g({ keysReadable: false }).ok, false)
-  assert.equal(g({ vaultUnlocked: false }).ok, false)
-  assert.equal(g({}).ok, true)
-  // **三种原因不能合并成一句「配置有问题」**：每种对应用户要做的一件不同的事
-  const reasons = [g({ provider: undefined, keyVarNames: [] }), g({ keysReadable: false }), g({ vaultUnlocked: false })]
-    .map((r) => (r.ok ? '' : r.reason))
-  assert.equal(new Set(reasons).size, 3)
+test('压根没存模型 → false（那本来就该去选）', () => {
+  assert.equal(ompModelUsable(M('a/b'), undefined), false)
 })
 
 // ── 登录失败要说人话，不给用户看日志（2026-09-02 用户提的）─────────────────
@@ -165,7 +112,6 @@ test('填 key 路：没选服务商 / 没填 key / 柜子锁着，三种要分�
 // 所以要把 omp 的输出**分类**成一句人话 + 一个明确的下一步动作。
 // 分不出来的也不能倒日志 —— 那时就诚实说「没成功」，并把日志留给日志文件。
 
-import { explainOmpFailure, humanReasonIn } from './setupModel.ts'
 
 const login = (lines: string[], error?: string, ours?: boolean) =>
   explainOmpFailure({ ctx: 'login', lines, error, ours })
@@ -278,136 +224,6 @@ test('认得出的分类，detail 只是补充，不能顶替 title', () => {
   assert.ok(!(r.detail ?? '').includes('{'))
 })
 
-// ── 2026-09-02 真机事故：订阅登录完，面板跳回「先挑一家服务商」 ─────────────
-//
-// 用户原话：「当我选择或者输入了 API key 之后，那个订阅就跳回到了一个设置的最初页面，
-// 而且登录好像没有成功，我并不知道这中间发生了什么事，很疑惑。」
-//
-// 现场证据（`~/Library/Application Support/Eas-Term/omp-setup.json`）：
-//   { "provider": { "id": "minimax-code-cn", "authMode": "subscription" } }
-// —— provider 与 authMode 都在，**`loggedInAt` 不在**。
-//
-// 根因有两条，各自都足以单独造成这个现象：
-//
-//  A. **渲染层自己拼 `nextStepOf` 的入参时漏了 `authMode` 与 `loggedIn`**，
-//     于是订阅这条路在渲染层**永远**走 apikey 分支 → 「没 key」→ 'key' 屏；
-//     而 `providerById('minimax-code-cn')` 又是 undefined（那 id 不在我们四家的
-//     推荐清单里），'key' 屏渲染不出来，落到兜底的那个「先挑一家服务商」按钮上。
-//     **就算登录完全成功，也会落到这里** —— 这就是用户看到的那一屏。
-//
-//     判据搬到 shared 里本来就是为了「两侧照同一份说话」，结果两侧喂的**入参**分叉了。
-//     所以这次连拼入参也一起搬进来：`ompStateFrom`。
-//
-//  B. `omp:saveProvider` 重写 provider 时整个对象重建，**`loggedInAt` 没带上**。
-//     于是「登录成功 → 被 A 弹回选服务商 → 再选一次 → 登录记录被抹掉」形成闭环，
-//     用户怎么登都登不进去。见 `store.ts` 的 `mergeProviderChoice`。
-
-test('**A 的回归**：订阅 + 已登录 + 没模型 → 选模型，绝不能落到「填 key」', () => {
-  const s = ompStateFrom({
-    installed: true,
-    provider: 'minimax-code-cn',
-    authMode: 'subscription',
-    loggedIn: true,
-    model: undefined,
-    vault: { available: true, configured: true, locked: false, foreign: false },
-    keyInVault: false // 订阅这条路本来就没有 key 在柜里
-  })
-  assert.equal(s.authMode, 'subscription', 'authMode 必须传下去')
-  assert.equal(s.loggedIn, true, 'loggedIn 必须传下去')
-  assert.equal(nextStepOf(s).k, 'model')
-})
-
-test('**A 的回归**：订阅 + 还没登录 → 去登录，不是去填 key', () => {
-  // 漏传 authMode 的症状就是这里回 'key' —— 而订阅用户压根没有 key 可填。
-  const s = ompStateFrom({
-    installed: true,
-    provider: 'minimax-code-cn',
-    authMode: 'subscription',
-    loggedIn: false,
-    model: undefined,
-    vault: { available: true, configured: true, locked: false, foreign: false },
-    keyInVault: false
-  })
-  assert.equal(nextStepOf(s).k, 'login')
-})
-
-test('订阅那条路不受密钥柜锁没锁影响（拼入参这一层也不许把它绑进去）', () => {
-  const s = ompStateFrom({
-    installed: true,
-    provider: 'minimax-code-cn',
-    authMode: 'subscription',
-    loggedIn: true,
-    model: 'minimax-code-cn/MiniMax-M2',
-    vault: { available: true, configured: true, locked: true, foreign: false },
-    keyInVault: false
-  })
-  assert.equal(nextStepOf(s).k, 'ready')
-})
-
-test('填 key 那条路原样：拼出来的入参照旧带柜子状态', () => {
-  const s = ompStateFrom({
-    installed: true,
-    provider: 'deepseek',
-    authMode: 'apikey',
-    loggedIn: false,
-    model: undefined,
-    vault: { available: true, configured: true, locked: true, foreign: false },
-    keyInVault: false
-  })
-  assert.equal(nextStepOf(s).k, 'vault-unlock')
-})
-
-// ── 2026-09-02 第三轮：面板说「配好了」，一试就说「还没配好模型服务商」──────
-//
-// 用户原话：「他说配置好了但是当我测试的时候就返回这个结果，
-// 好好排查整个链路和 UI 之间的关系。」
-//
-// 排查结论是**结构性的**，不是某一行写错：
-//
-//   `omp-setup.json` 是我们自己的一套账本（provider / authMode / loggedInAt / model），
-//   而真正的权威在 omp 那边（broker 凭证在 agent.db 里）。
-//   **整条链路只读账本** —— nextStepOf 读它、闸门读它、面包屑读它 ——
-//   只有最后 `session/new` 那一下读现实。两者一分叉，界面就会说「配好了」，
-//   而用户一点「试一句」就被现实打脸。
-//
-// 分叉不是假想：凭证会过期、会被吊销、会因为换了配置目录而读不到；
-// 而 `loggedInAt` 是一条**写下去就永远为真**的记录（这正是立档里
-// 「标记永久为真」那条老教训的同一个形状）。
-//
-// 判据换成问 omp 自己：**没凭证时 `omp models ls --json` 回 `{"models":[]}`**
-// （2026-09-02 在 18.1.2 上实测，约 0.55s，够便宜）。
-
-import { ompLoggedInFrom, ompModelUsable } from './setupModel.ts'
-
-const M = (...ids: string[]) => ids.map((id) => ({ id }))
-
-test('**omp 列得出这家的模型 → 才算真的登录上了**', () => {
-  assert.equal(
-    ompLoggedInFrom({ models: M('minimax-code-cn/MiniMax-M3'), providerId: 'minimax-code-cn', hint: true }),
-    true
-  )
-})
-
-test('**omp 一个都列不出来 → 不算，哪怕我们自己记着「登录过」**', () => {
-  // 这就是用户那一屏：loggedInAt 写着，agent.db 里 auth_credentials 是 0 条。
-  assert.equal(ompLoggedInFrom({ models: [], providerId: 'minimax-code-cn', hint: true }), false)
-})
-
-test('列出来的是**别家**的模型 → 也不算', () => {
-  // 用户之前登过 A，后来改选了 B。A 的凭证还在，B 的没有。
-  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: 'minimax-code-cn', hint: true }), false)
-})
-
-test('**探测失败（undefined）才退回我们自己的记录** —— 别因为探不到就把人锁在门外', () => {
-  // 二进制起不来 / 超时。这时说「你没登录」是撒谎，把他挡住更是白挡。
-  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: true }), true)
-  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: false }), false)
-})
-
-test('没选服务商 → 一律 false', () => {
-  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: undefined, hint: true }), false)
-})
-
 // ── 存下来的模型也可能已经不存在了 ────────────────────────────────────────
 
 test('**存的模型不在 omp 的清单里 → 当成没选**，把人送回选模型那步', () => {
@@ -425,84 +241,3 @@ test('压根没存模型 → false（那本来就该去选）', () => {
   assert.equal(ompModelUsable(M('a/b'), undefined), false)
 })
 
-// ── 2026-09-02 第四轮：闸门那句话把内部变量名摆给用户看 ────────────────────
-//
-// 用户截图：「密钥柜里还没有 EAS_OMP_MINIMAX_CODE_CN_KEY，先在设置里填。」
-// 底下三个按钮：再试一次 / 换个模型 / 先这样，我自己再看。
-//
-// 两个问题，都不是小事：
-//
-//  1. `EAS_OMP_MINIMAX_CODE_CN_KEY` 是**我们的实现细节** —— 用户在界面上从来
-//     没见过这个名字，也不需要知道它。他既定的规矩是「不要让用户在软件中
-//     看到开发者看的东西」，一个全大写下划线的环境变量名正是那种东西。
-//     （上一轮我让 `ours` 的消息原样透出，理由是「已经是给用户看的中文」——
-//     这一句证明了那个前提并不总成立，所以要把这些话本身改干净。）
-//
-//  2. 三个按钮**没有一个能解决它**。真正该做的是「去填 key」，
-//     而「再试一次」必然原样再失败一次 —— 一个保证无效的按钮
-//     比没有按钮更糟：它让人以为自己还有救，反复点。
-
-test('**闸门的每一句话都不许出现环境变量名**', () => {
-  const cases = [
-    { provider: undefined, keyVarNames: [], keysReadable: false, vaultUnlocked: true },
-    { provider: 'minimax-code-cn', keyVarNames: ['EAS_OMP_MINIMAX_CODE_CN_KEY'], keysReadable: false, vaultUnlocked: true },
-    { provider: 'minimax-code-cn', keyVarNames: ['EAS_OMP_MINIMAX_CODE_CN_KEY'], keysReadable: true, vaultUnlocked: false }
-  ]
-  for (const c of cases) {
-    const r = ompLaunchGate(c)
-    assert.equal(r.ok, false)
-    if (r.ok) continue
-    assert.ok(!/EAS_OMP/.test(r.message), `漏出了变量名：${r.message}`)
-    assert.ok(!/[A-Z][A-Z0-9]*_[A-Z0-9_]+/.test(r.message), `漏出了全大写下划线的名字：${r.message}`)
-  }
-})
-
-test('三种原因仍然分得开 —— 它们对应用户要做的三件不同的事', () => {
-  const base = { provider: 'minimax-code-cn', keyVarNames: ['X'], keysReadable: true, vaultUnlocked: true }
-  const noProvider = ompLaunchGate({ ...base, provider: undefined, keyVarNames: [] })
-  const noKey = ompLaunchGate({ ...base, keysReadable: false })
-  const locked = ompLaunchGate({ ...base, vaultUnlocked: false })
-  assert.equal(noProvider.ok === false && noProvider.reason, 'no-provider')
-  assert.equal(noKey.ok === false && noKey.reason, 'no-key')
-  assert.equal(locked.ok === false && locked.reason, 'vault-locked')
-  // 三句话彼此不同 —— 合并任何两条都会把人引向错误的下一步
-  const msgs = [noProvider, noKey, locked].map((r) => (r.ok ? '' : r.message))
-  assert.equal(new Set(msgs).size, 3)
-})
-
-// ── 「问 omp」这个判据有边界，必须钉死 ────────────────────────────────────
-//
-// 2026-09-02 实测（18.1.2）：**只要 provider 在 `models.yml` 里被声明过，
-// 哪怕一条凭证都没有，`omp models ls --json` 照样把它的模型全列出来。**
-//
-//   零凭证 + 空 models.yml            → {"models":[]}
-//   零凭证 + models.yml 声明了这家     → 9 个模型，跟有凭证时一模一样
-//
-// 所以「omp 列得出模型」只能证明「配置里有这家」，不能证明「认证得了」——
-// **它只在 `providers: {}` 的时候才是认证凭据**，而那恰好只有订阅那条路
-// （填 key 那条我们会把 provider 连同 apiKey 变量名一起写进 models.yml）。
-//
-// 这条边界不写下来，下一个人（或者下一次的我）就会把它用到填 key 那条路上，
-// 得到一个「永远说已登录」的判据 —— 那比没有判据更糟。
-
-test('**订阅路**：omp 列得出 → 算登录上了', () => {
-  assert.equal(
-    ompLoggedInFrom({ models: M('minimax-code-cn/MiniMax-M3'), providerId: 'minimax-code-cn', hint: false }),
-    true
-  )
-})
-
-test('**填 key 路不许用这个判据** —— 那条路上 models.yml 声明了 provider，列得出不代表认证得了', () => {
-  // 这条测试钉的是**调用方**的纪律：`nextStepOf` 的 apikey 分支只看 `keyInVault`，
-  // 一个字都不看 `loggedIn`。改动那个分支去读 loggedIn，这条就该红。
-  const s = ompStateFrom({
-    installed: true,
-    provider: 'minimax-code-cn',
-    authMode: 'apikey',
-    loggedIn: true, // omp 列得出 —— 但那只是因为 models.yml 里声明了它
-    model: 'minimax-code-cn/MiniMax-M3',
-    vault: { available: true, configured: true, locked: false, foreign: false },
-    keyInVault: false // 柜里没 key
-  })
-  assert.equal(nextStepOf(s).k, 'key', 'apikey 路把 loggedIn 当成了认证凭据 —— 那是假的')
-})

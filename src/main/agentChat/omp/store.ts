@@ -14,50 +14,45 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { ompKeyEnvName } from './config.ts'
 import type { OmpSmokeResult } from '../../../shared/ompSetup.ts'
 
+
 export interface OmpProviderChoice {
-  /** 服务商 id，与 `models.yml` 里的键、以及 `EAS_OMP_<ID>_KEY` 的中段一致 */
+  /** 服务商 id。**用 omp 自己那份名单里的 id**（`auth-broker list`，69 家） */
   id: string
-  /** **用订阅还是填 key**。两条并列的路，起会话前的闸门判据完全不同
-   *  （见 `shared/ompSetup.ts` 的 `ompLaunchGate`）。
-   *  缺省按 `'apikey'` 算 —— 这个字段是后加的，老配置里没有它，
-   *  而在它存在之前只有填 key 那一条路。 */
-  authMode?: 'subscription' | 'apikey'
-  /** 选中的模型。**值是 `<provider>/<model>`**，因为 ACP 的 `set_config_option`
-   *  收的就是这个形态（真录：`zhipu-free/glm-5.3-flash`），不是裸模型名 */
+  /** 选中的模型。**值是 `<provider>/<model>`** —— omp 按 selector 认模型，
+   *  裸名字它解析不到 provider（2026-09-02 那个 1004 就是这么来的）。 */
   model?: string
   /** 思考档（ACP 的 `thinking` 配置项） */
   thinking?: string
-  /** 订阅登录**成功**的时刻（ms epoch）。只对 `'subscription'` 有意义。
-   *
-   *  **必须单独记，不能拿「冒烟跑通过没有」顶替**：登录刚完成时冒烟还没跑，
-   *  用后者判的话 `nextStepOf` 会说「还要去登录」—— 用户刚登完就被弹回登录页，
-   *  再登一次还是弹回来。2026-09-02 真机撞到过。 */
+  /** 登录**成功**的时刻（ms epoch）。**只当探测失败时的兜底** ——
+   *  真判据是「omp 列不列得出这家的模型」（`ompLoggedInFrom`）。
+   *  单靠它的后果 2026-09-02 真机见过：写下去就永远为真，
+   *  凭证过期了面板还说「配好了」，一试就翻车。 */
   loggedInAt?: number
 }
 
 /** 用户又选了一次服务商时，新的 provider 记录长什么样。
  *
  *  **单独摘成纯函数是因为这里错过一次，而且错得看不出来。**
- *  原来的写法是把对象整个重建（`{ id, authMode, model, thinking }`），
- *  于是 `loggedInAt` 被静默丢掉 —— 症状不是报错，是「登录成功了，
- *  回头一看还要再登一次」，而且每次都这样。2026-09-02 真机撞到。
+ *  原来是把对象整个重建，`loggedInAt` 被静默丢掉 —— 症状不是报错，
+ *  是「登录成功了，回头一看还要再登一次」，而且每次都这样。
  *
- *  两条规则，方向相反，所以不能简单地「合并旧的」或「整个重建」：
- *  · **同一家、同一条路** → 已登录这件事仍然成立，必须留着。
- *  · **换了家，或换了条路（订阅↔key）** → 必须清掉。带着上一家的登录记录，
- *    面板会说「已登录」而一发消息就 401 —— 那种错比拦住他更难查。
- *    model 同理：那是上一家的模型名。 */
+ *  规则：**同一家**留着登录记录与模型；**换一家**全部清掉 ——
+ *  带着上一家的登录记录，面板会说「已登录」而一发消息就 401；
+ *  model 同理，那是上一家的模型名。
+ *
+ *  （原来这里还有个 `authMode` 参数。它是我们自己记的一个选择，
+ *  而保存模型那处调用**忘了带**，于是订阅用户被静默翻成「填 key」，
+ *  转头被要求去填一把他根本没有的 key —— 2026-09-02 用户截图实拍。
+ *  拆掉密钥柜之后这个字段整个没了，那类错也就没地方发生了。） */
 export function mergeProviderChoice(
   prev: OmpProviderChoice | undefined,
-  next: { id: string; authMode: 'subscription' | 'apikey'; model?: string; thinking?: string }
+  next: { id: string; model?: string; thinking?: string }
 ): OmpProviderChoice {
-  const same = prev?.id === next.id && prev?.authMode === next.authMode
+  const same = prev?.id === next.id
   return {
     id: next.id,
-    authMode: next.authMode,
     model: next.model ?? (same ? prev?.model : undefined),
     thinking: next.thinking ?? (same ? prev?.thinking : undefined),
     loggedInAt: same ? prev?.loggedInAt : undefined
@@ -98,16 +93,7 @@ export function writeOmpSetup(userData: string, next: OmpSetup): void {
   fs.writeFileSync(ompSetupPath(userData), JSON.stringify(next, null, 2), 'utf8')
 }
 
-/** 这个会话要从密钥柜取哪几个变量名。
- *
- *  **每次 spawn 现算，不缓存在 adapter 上**：`adapters/index.ts` 的注册表是模块级常量，
- *  把名单写死在上面的话，用户换 provider 之后那份值就是错的；而**空名单**会让
- *  `secretsEnv([])` 直接回 `{}`、`secretsHas([])` 的 `.every()` 恒真 —— 两道闸一起失效，
- *  进程照起、一把 key 都没注入，用户看到的是 provider 回的 401。 */
-export function ompKeyVarNames(setup: OmpSetup): string[] {
-  // **订阅那条路没有 key 可注入**：凭证是 OAuth 令牌，在 omp 自己的 agent.db 里，
-  // 由它负责刷新。这里返回空名单，闸门那侧靠 authMode 分辨「空是因为订阅」
-  // 还是「空是因为还没选服务商」—— 两者的下一步完全不同。
-  if (setup.provider?.authMode === 'subscription') return []
-  return setup.provider?.id ? [ompKeyEnvName(setup.provider.id)] : []
-}
+// **不再有 `ompKeyVarNames`。** 拆掉密钥柜之后 omp 一个环境变量都不需要我们注入 ——
+// 凭证在它自己的 `agent.db` 里，由 `auth-broker` 存、由它续期、需要 key 的那些
+// 它自己会问。用户 2026-09-02：「取消密钥柜的概念呢，单纯用 oh my pi
+// 成熟的登录流程然后 UI 化。」

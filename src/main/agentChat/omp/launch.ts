@@ -22,7 +22,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { agentMcpConfigPath, mcpEnv } from '../../mcpBridge.ts'
-import { secretsEnv, secretsHas } from '../../secrets.ts'
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
@@ -33,8 +32,7 @@ import {
   ompModelsYml,
   ompSkillMarkdown,
   ompSkillsDir,
-  OMP_MODELS_FILENAME,
-  type OmpProviderConfig
+  OMP_MODELS_FILENAME
 } from './config.ts'
 
 
@@ -65,13 +63,9 @@ export type OmpLaunchPlan =
 export interface OmpLaunchInput {
   cwd: string
   host: HostPaths
-  /** 这个会话要注入哪几个环境变量名（`EAS_OMP_<ID>_KEY`）。
-   *  **每次 spawn 现算，不缓存在 adapter 上** —— adapter 是模块级常量，
-   *  用户换 provider 之后那份静态值就是错的。订阅那条路这里是空的。 */
-  keyVarNames: string[]
-  /** 用订阅还是填 key。判据见 `shared/ompSetup.ts` 的 `ompLaunchGate` */
-  authMode?: 'subscription' | 'apikey'
-  /** 选了哪家。闸门要靠它把「订阅但没登录」和「还没选服务商」分开 */
+  /** 选了哪家。**闸门现在只剩这一条判据** —— 凭证在不在、过没过期全是 omp
+   *  自己的事（在它的 `agent.db` 里），它比我们清楚，报的话也比我们编的准。
+   *  我们唯一还该拦的是「压根没选服务商」，因为那时连起哪一家都不知道。 */
   provider?: string
   /** 带不带 MCP 桥的凭证。**冒烟传 false**：那一轮按设计不碰任何工具，
    *  多给一个能调本机 MCP 桥（含 `/secret-env` 路由）的 token 是白送一条出口。 */
@@ -94,33 +88,18 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
     }
   }
 
-  // 三道闸的**判据**在 `shared/ompSetup.ts` 的 `ompLaunchGate`（纯函数、有单测）——
-  // 这里只负责去问密钥柜拿事实。分开是因为「订阅 vs 填 key 判据不同」这件事
-  // 值得被测到，而这个文件 import 了 electron、测不了。
-  //
-  // 两个事实要注意各自的脾气：
-  // · `secretsHas` **故意不要求解锁**（它的文件头写着），所以它只回答「有没有」，
-  //   回答不了「现在拿不拿得到」；
-  // · `secretsEnv` 在锁定态返回 `{}`（`secrets.ts:330-334`）—— 于是「柜里有、
-  //   但现在取不到」只能靠这个组合推出来：前者说有、后者拿到空。
-  //   **不给 secrets.ts 加 `isUnlocked` 导出**：那是 🔴 文件，为一个只读判断去动它不值当。
-  const keys = input.keyVarNames.length > 0 ? secretsEnv(input.keyVarNames) : {}
-  const gate = ompLaunchGate({
-    authMode: input.authMode,
-    provider: input.provider,
-    keyVarNames: input.keyVarNames,
-    keysReadable:
-      input.keyVarNames.length > 0 &&
-      secretsHas(input.keyVarNames).every((h) => h.inVault && h.readable),
-    vaultUnlocked: Object.keys(keys).length > 0
-  })
+  // **闸门只剩一条判据了**（`shared/ompSetup.ts` 的 `ompLaunchGate`，纯函数、有单测）。
+  // 拆掉密钥柜之后这里不再问柜子要任何东西 —— 凭证是 omp 自己的事。
+  const gate = ompLaunchGate({ provider: input.provider })
   if (!gate.ok) return { ok: false, reason: gate.reason, message: gate.message }
 
+  // **一个 key 都不注入。** omp 的 `auth-broker` 自己存、自己续期，
+  // 需要 API key 的那些 provider 它自己会问。我们再塞一份进去只会打架：
+  // `models.yml` 里的 `apiKey` 会**压过** broker 的凭证，登录成功也 401
+  // （2026-09-02 真机，用户看到的是 MiniMax 的 1004）。
   const env: Record<string, string> = {
     ...ompBaseEnv(input.host),
-    ...(input.mcp ? mcpEnv({ project: input.cwd }) : {}),
-    // **放最后**：用户 rc 里可能 export 过同名变量，我们注入的这份必须压过它
-    ...keys
+    ...(input.mcp ? mcpEnv({ project: input.cwd }) : {})
   }
 
   return {
@@ -146,11 +125,15 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
  *
  *  失败一律抛 —— 配置写不进去还硬起进程，等于分发一个 approvalMode 是 **yolo**、
  *  生图没被 deny 的 agent，那是红线。 */
-export function writeManagedConfig(host: HostPaths, providers: OmpProviderConfig[]): void {
+export function writeManagedConfig(host: HostPaths): void {
   const agentDir = ompAgentDir(host.userData)
   fs.mkdirSync(agentDir, { recursive: true })
   fs.writeFileSync(path.join(agentDir, 'config.yml'), ompConfigYml(agentDir), 'utf8')
-  fs.writeFileSync(path.join(agentDir, OMP_MODELS_FILENAME), ompModelsYml(providers), 'utf8')
+  // **`providers` 恒为空，不接受参数。** 上游 `model-registry.ts:1377-1379` 明写
+  // `apiKey` 会「wins over OAuth tokens from the broker」—— 我们往里写任何一条，
+  // 都等于用自己那套顶掉 omp 刚存好的凭证（2026-09-02 用户看到的 MiniMax 1004）。
+  // 拆掉密钥柜之后我们没有任何理由再声明 provider：模型表是 omp 自己的。
+  fs.writeFileSync(path.join(agentDir, OMP_MODELS_FILENAME), ompModelsYml([]), 'utf8')
   // 残留的 config.yaml 读不到（上游命中第一个就 return，`config.yml` 排第一），
   // 删它纯粹是别让排障的人对着一个永不生效的文件想半天。
   const stale = path.join(agentDir, 'config.yaml')

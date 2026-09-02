@@ -296,8 +296,9 @@ export function ompModelsYml(providers: OmpProviderConfig[]): string {
   }
 
   const header = [
-    '# 由 Eas-Term 生成 —— provider 的 key **只写环境变量名，不写值**，真值在 spawn 时注入。',
-    '# 手改这里会在下次保存 provider 时被覆盖。',
+    '# 由 Eas-Term 生成。**这份恒为空** —— 模型表与凭证都是 omp 自己的事',
+    '# （auth-broker 存在 agent.db 里）。往这里写 provider，其中的 apiKey 会压过',
+    '# broker 的凭证，症状是「登录成功却 401」。手改这里会被覆盖。',
     '',
   ].join('\n')
 

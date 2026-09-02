@@ -19,64 +19,49 @@
 /** 一家模型服务商。**清单写死在这里**，不从 omp 那边动态拉：
  *  omp 认识几十家，一股脑摆出来对第一次配置的人是灾难；
  *  而这几家是「填一把 key 就能用」的那批。要加就在这里加。 */
-export interface OmpProvider {
-  /** 与 `models.yml` 里的键、以及 `EAS_OMP_<ID>_KEY` 的中段一致。
-   *  **只允许小写字母数字与横线** —— 它会被拼进环境变量名与文件路径。 */
-  id: string
-  label: string
-  /** 去哪儿弄这把 key。没有这个字段，用户拿到一个输入框却不知道去哪申请 */
-  keyUrl: string
-  /** omp 自己认识这家（内置 provider）。
-   *  内置的**只写 apiKey、不写 models 数组** —— 上游 `models-config.ts:44-96` 规定
-   *  「列了 models 就必须给 baseUrl」，而内置的用的是 omp 自带模型表，
-   *  硬写会让整份 models.yml 校验失败、provider 一个都注册不上。 */
-  builtin: boolean
-}
 
-export const OMP_PROVIDERS: OmpProvider[] = [
-  { id: 'anthropic', label: 'Anthropic（Claude）', keyUrl: 'https://console.anthropic.com/settings/keys', builtin: true },
-  { id: 'openai', label: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys', builtin: true },
-  // omp 内置的智谱叫 zai（`ZAI_API_KEY`），也是唯一在 18.x 上真跑通过的那家
-  { id: 'zai', label: '智谱 GLM', keyUrl: 'https://open.bigmodel.cn/usercenter/apikeys', builtin: true },
-  { id: 'deepseek', label: 'DeepSeek', keyUrl: 'https://platform.deepseek.com/api_keys', builtin: true }
-]
+// ── 2026-09-02：**密钥柜那条路整条删掉了** ─────────────────────────────────
+//
+// 用户原话：「取消密钥柜的概念呢，单纯用 oh my pi 成熟的登录流程然后 UI 化。」
+//
+// 他是对的，而且这不是口味问题 —— 我们原来维护着**一套和 omp 平行的凭证系统**：
+// 密钥柜存 key、spawn 时注环境变量、`models.yml` 里写 `apiKey: EAS_OMP_<ID>_KEY`。
+// 而 omp 的 `auth-broker` 早就把这件事做完了，**69 家**（含 DeepSeek、Moonshot、
+// Qwen、两个 MiniMax、本地 Ollama / LM Studio）都能 `auth-broker login`，
+// 需要 API key 的那些它自己会问、自己存进 `agent.db`、自己续期。
+//
+// 平行系统的代价这一天全兑现了，每一个 bug 都长在接缝上：
+//   · `models.yml` 里的 apiKey **压过** broker 的凭证 → 登录成功却 401
+//   · `authMode` 是我们自己记的一个选择 → 保存模型时忘了带，**静默翻转成 apikey**，
+//     于是订阅用户被要求去填一把他根本没有的 key（用户截图实拍）
+//   · `loggedInAt` 写下去就永远为真 → 面板说「配好了」，一试就翻车
+//   · 闸门把 `EAS_OMP_MINIMAX_CODE_CN_KEY` 摆到用户脸上
+//
+// 现在只剩一条路：**选一家 → 用 omp 自己的登录流程登进去 → 选模型**。
+// 没有 authMode、没有密钥柜、没有环境变量注入，`models.yml` 恒为 `providers: {}`。
+// 少一套账本，就少一整类「账本和现实对不上」的 bug。
 
-export function providerById(id: string | undefined): OmpProvider | undefined {
-  return OMP_PROVIDERS.find((p) => p.id === id)
-}
-
-/** 面板此刻该停在哪一步。 */
+/** 引导面板停在哪一步。**顺序即依赖**：前一步没完成，后一步无从谈起。 */
 export type OmpStep =
-  /** 什么都做不了：包里没二进制、系统加密不可用、或柜子是别人机器上的 */
-  | { k: 'blocked'; why: 'no-binary' | 'no-encryption' | 'foreign-vault' }
-  | { k: 'vault-setup' }
-  /** 订阅那条路：去 omp 那边跑一次 OAuth 登录 */
-  | { k: 'login' }
-  | { k: 'vault-unlock' }
+  /** 随包的二进制不在 —— 用户什么也做不了，只能报修 */
+  | { k: 'blocked'; why: 'no-binary' }
+  /** 还没选服务商 */
   | { k: 'provider' }
-  | { k: 'key' }
+  /** 选了，但 omp 还没有这家的凭证 —— 走它自己的 `auth-broker login` */
+  | { k: 'login' }
+  /** 登进去了，还没挑模型 */
   | { k: 'model' }
+  /** 齐了 */
   | { k: 'ready' }
 
 export interface OmpSetupState {
   /** 随包的二进制在不在 */
   installed: boolean
-  vault: { available: boolean; configured: boolean; locked: boolean; foreign: boolean }
   provider?: string
-  /** **怎么连上这家服务商。两条并列的路，判据完全不同。**
-   *
-   *  · `'subscription'` —— 用已经买了的订阅登录（Claude Pro/Max、ChatGPT Plus/Pro、
-   *    智谱 GLM Coding Plan、Kimi、Copilot…）。凭证是 OAuth 令牌，**要能刷新**，
-   *    所以存在 omp 自己的 `agent.db` 里由它管，不进我们的密钥柜。
-   *  · `'apikey'` —— 填一把 key。进密钥柜，起会话时按变量名注入。
-   *
-   *  不分开的话，订阅用户会卡在「还没填 key」那一步 —— 而他压根没有 key 可填，
-   *  也不该被逼着去申请一把。 */
-  authMode?: 'subscription' | 'apikey'
-  /** 这家的 key 已经在柜里（`secretsHas` 说 inVault && readable）。只对 `'apikey'` 有意义 */
-  keyInVault: boolean
-  /** 订阅登录成功过。只对 `'subscription'` 有意义 */
-  loggedIn?: boolean
+  /** **omp 认不认这家**。判据是它列不列得出这家的模型，见 `ompLoggedInFrom` */
+  loggedIn: boolean
+  /** 选中的模型。**值是 `<provider>/<model>`**（omp 按 selector 认模型，
+   *  裸名字它解析不到 provider —— 2026-09-02 那个 1004 就是这么来的） */
   model?: string
 }
 
@@ -89,54 +74,33 @@ export interface OmpSmokeResult {
 
 /** `omp:status` 回什么。**两侧共用这一份，别在渲染层手抄。**
  *
- *  手抄那份漏过 `loggedIn`，而漏掉的代价是订阅用户完全走不通
- *  （2026-09-02 真机）。抄一份就有了第二份，迟早分叉；放在这里，
- *  再漏字段就是一个编译错误而不是一个「只在真机上出现」的 bug。 */
+ *  手抄那份漏过 `loggedIn`，代价是订阅用户完全走不通（2026-09-02 真机）。
+ *  放在这里，再漏字段就是一个编译错误而不是一个「只在真机上出现」的 bug。 */
 export interface OmpStatus {
   installed: boolean
-  status: { loggedIn: boolean; account?: string }
-  /** 主进程按它知道的事实算出来的下一步。**渲染层还会用柜子的真实状态重算一次** */
+  /** 主进程按它知道的事实算出来的下一步 */
   step: OmpStep
-  /** 带「去哪儿取 key」链接的推荐几家。**不是全集** ——
-   *  订阅登录那条路的全名单走 `omp:listAuthProviders`（70 家，由 omp 自己报）。 */
-  providers: { id: string; label: string; keyUrl: string }[]
   provider?: string
-  /** 上次是用订阅还是填 key 配的。**两条路的判据完全不同** */
-  authMode?: 'subscription' | 'apikey'
-  /** 订阅登录**成功过**。只对 `'subscription'` 有意义。
-   *  **必须上线**：渲染层要自己算一次 `nextStepOf`，缺了它订阅用户永远停在「还没登录」。 */
+  /** omp 有没有这家的凭证 */
   loggedIn: boolean
   model?: string
   lastSmoke?: OmpSmokeResult
 }
 
-/** 「真的登录上了吗」——**判据是问 omp，不是查我们自己的账本**。
+/** 「omp 认不认这家」——**判据是问 omp，不是查我们自己的账本**。
  *
  *  2026-09-02 用户撞到的那一屏：面板说「配好了」，一点「试一句」就回
- *  「还没配好模型服务商」。查下来是结构问题而不是某行写错 ——
- *  `omp-setup.json` 是我们自己记的一套（provider / authMode / loggedInAt / model），
- *  真正的权威在 omp 那边（broker 凭证在 `agent.db`）。**整条链路只读账本**，
- *  只有最后 `session/new` 那一下读现实，两者一分叉用户就被打脸。
+ *  「还没配好模型服务商」。根因是整条链路只读我们的账本，而权威在 omp 那边
+ *  （凭证在 `agent.db`）。而写下去的记录**永远为真** —— 凭证会过期、会被吊销、
+ *  会因为换了配置目录读不到，账本一概不知道。
  *
- *  而 `loggedInAt` 是一条**写下去就永远为真**的记录 —— 凭证会过期、会被吊销、
- *  会因为换了配置目录读不到，它一概不知道。（立档里「标记永久为真」那条老教训
- *  是同一个形状。）
- *
- *  所以判据换成：**omp 列不列得出这家的模型**。没凭证时
+ *  判据换成：**omp 列不列得出这家的模型**。没凭证时
  *  `omp models ls --json` 回 `{"models":[]}`（18.1.2 实测，约 0.55s）。
  *
- *  ── **只对订阅那条路成立，这是硬边界** ──────────────────────────────────
- *  同一天实测：**只要 provider 在 `models.yml` 里被声明过，哪怕一条凭证都没有，
- *  `models ls` 照样把它的模型全列出来**（跟有凭证时一模一样）。
- *
- *    零凭证 ＋ 空 models.yml         → `{"models":[]}`
- *    零凭证 ＋ models.yml 声明了这家  → 9 个模型
- *
- *  所以「列得出」只证明「配置里有这家」，不证明「认证得了」——
- *  它只在 `providers: {}` 时才是认证凭据，而那恰好只有订阅那条路
- *  （填 key 那条我们会把 provider 连同 apiKey 变量名一起写进 models.yml）。
- *  **`nextStepOf` 的 apikey 分支因此一个字都不看 `loggedIn`**，只看 `keyInVault`。
- *  拿它去判填 key 那条路，会得到一个「永远说已登录」的判据 —— 比没有判据更糟。
+ *  这个判据现在**无条件成立**：`models.yml` 恒为 `providers: {}`，
+ *  所以列出来的每一家都只可能来自 broker 里那份真凭证。
+ *  （拆掉密钥柜之前它有个坑：models.yml 里声明过的 provider 零凭证也照列，
+ *  于是那条路上它恒为真 —— 现在那条路没了，坑也跟着没了。）
  *
  *  **`models` 为 `undefined` 表示「没探到」，不是「空清单」** —— 二进制起不来、
  *  超时，这时退回我们自己的记录：探不到就把人锁在门外，是拿一次探测失败
@@ -166,111 +130,47 @@ export function ompModelUsable(models: { id: string }[] | undefined, model: stri
   return models.some((m) => m.id === model)
 }
 
-/** 把「主进程报的配置」与「渲染层查到的密钥柜状态」拼成 `nextStepOf` 的入参。
+/** 把主进程报的配置拼成 `nextStepOf` 的入参。
  *
- *  **单独摘成纯函数，是因为这一步已经错过一次，而且错法很隐蔽。**
- *  判据（`nextStepOf`）搬到 shared 本来就是为了「两侧照同一份说话」，
- *  但**入参是两侧各自拼的** —— 渲染层那份漏了 `authMode` 与 `loggedIn`，
- *  于是订阅这条路在渲染层永远走 apikey 分支：登录成功也被判成「还没填 key」，
- *  而那一屏又渲染不出来（订阅那些 id 不在我们四家的推荐清单里），
- *  落到兜底按钮上 —— 用户看到的是「先挑一家服务商」。
- *  两侧的判据一致、入参不一致，比判据本身写错更难查：单测全绿，真机全错。
- *  2026-09-02 真机撞到，用户原话：「跳回到了一个设置的最初页面…很疑惑。」
- *
- *  所以入参也只许在这里拼一次。 */
+ *  **单独摘成纯函数**：判据搬到 shared 本来就是为了「两侧照同一份说话」，
+ *  但入参曾经是两侧各自拼的 —— 渲染层那份漏了字段，判据一致、入参分叉，
+ *  单测全绿而真机全错（2026-09-02）。所以入参也只许在这里拼一次。 */
 export function ompStateFrom(i: {
   installed: boolean
   provider?: string
-  authMode?: 'subscription' | 'apikey'
-  /** 订阅登录成功过。**必须传** —— 漏了它订阅用户永远停在「还没登录」 */
-  loggedIn?: boolean
+  loggedIn: boolean
   model?: string
-  vault: OmpSetupState['vault']
-  keyInVault: boolean
 }): OmpSetupState {
-  return {
-    installed: i.installed,
-    vault: i.vault,
-    provider: i.provider,
-    authMode: i.authMode,
-    keyInVault: i.keyInVault,
-    loggedIn: i.loggedIn,
-    model: i.model
-  }
+  return { installed: i.installed, provider: i.provider, loggedIn: i.loggedIn, model: i.model }
 }
 
 /**
- * 下一步。**顺序不是随意排的**，每一条都有理由：
- *
- * · 三种 blocked 排最前 —— 它们之后的每一步都做不成，先让用户看到一句实话
- *   比让他填到一半才被打回强。
- * · **「柜子锁着」排在「选 provider / 填 key」之前**：反过来的话，用户填完点保存
- *   才撞上锁定，白填一遍。而柜子 15 分钟不动会自动锁 —— 去找一趟 key 回来正好赶上。
- * · 「选模型」排在「填 key」之后：模型清单要起一次 omp 才拿得到，没 key 拿不到。
+ * 下一步。**顺序不是随意排的**：
+ * · 二进制不在排最前 —— 它之后的每一步都做不成。
+ * · 「选模型」排在「登录」之后：模型清单要 omp 认了这家才拿得到。
  */
 export function nextStepOf(s: OmpSetupState): OmpStep {
   if (!s.installed) return { k: 'blocked', why: 'no-binary' }
-  // **订阅那条路整条绕开密钥柜。** 它的凭证是 OAuth 令牌，存在 omp 的 agent.db 里
-  // 由它自己刷新 —— 拿柜子锁没锁去拦订阅登录，是把两条无关的路绑在了一起
-  // （用户会看到「密钥柜锁着」，而他要做的事跟密钥柜毫无关系）。
-  if (s.authMode === 'subscription') {
-    if (!s.provider) return { k: 'provider' }
-    if (!s.loggedIn) return { k: 'login' }
-    if (!s.model) return { k: 'model' }
-    return { k: 'ready' }
-  }
-  if (!s.vault.available) return { k: 'blocked', why: 'no-encryption' }
-  if (s.vault.foreign) return { k: 'blocked', why: 'foreign-vault' }
-  if (!s.vault.configured) return { k: 'vault-setup' }
-  if (s.vault.locked) return { k: 'vault-unlock' }
   if (!s.provider) return { k: 'provider' }
-  if (!s.keyInVault) return { k: 'key' }
+  if (!s.loggedIn) return { k: 'login' }
   if (!s.model) return { k: 'model' }
   return { k: 'ready' }
 }
 
-/** 起进程之前那道闸：现在到底能不能起。
+/** 起进程之前那道闸。
  *
- *  **两条路的判据完全不同**，所以判断在这里做一次、`launch.ts` 照做：
- *  · 订阅 —— 凭证在 omp 的 agent.db 里，我们检查不了也不该检查，直接放行；
- *    真没登录的话它自己会报，那句话比我们编的准。
- *  · 填 key —— 三道闸各自对应用户要做的一件**不同**的事，所以原因不能合并成
- *    一句「配置有问题」。
+ *  **只剩一条判据了。** 拆掉密钥柜之后，凭证在不在、过没过期，全是 omp 自己的事 ——
+ *  它比我们清楚，报的话也比我们编的准。我们唯一还该拦的是「压根没选服务商」，
+ *  因为那时候连起哪一家都不知道。
  *
- *  纯函数：`launch.ts` 那边要 electron（密钥柜、MCP 桥），判据放在这里才测得到。 */
-export function ompLaunchGate(i: {
-  authMode?: 'subscription' | 'apikey'
-  provider?: string
-  /** 要注入的变量名（填 key 那条路算出来的） */
-  keyVarNames: string[]
-  /** 那些变量在柜里且解得开 */
-  keysReadable: boolean
-  /** 柜子现在没锁 */
-  vaultUnlocked: boolean
-}): { ok: true } | { ok: false; reason: 'no-provider' | 'no-key' | 'vault-locked'; message: string } {
-  if (i.authMode === 'subscription') return { ok: true }
-  if (!i.provider || i.keyVarNames.length === 0) {
-    return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一个。' }
+ *  纯函数：`launch.ts` 那边要 electron，判据放在这里才测得到。 */
+export function ompLaunchGate(i: { provider?: string }): { ok: true } | { ok: false; reason: 'no-provider'; message: string } {
+  if (!i.provider) {
+    return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一家。' }
   }
-  if (!i.keysReadable) {
-    // **不许把变量名写进这句话。** `EAS_OMP_<ID>_KEY` 是我们的实现细节，
-    // 用户在界面上从来没见过它，也不需要知道 —— 他要做的事是「把这家的 key 填进去」，
-    // 而那件事在面板上有专门一屏。2026-09-02 用户截图里就摆着这么一串全大写名字。
-    return { ok: false, reason: 'no-key', message: '还没填这家服务商的 API key。' }
-  }
-  if (!i.vaultUnlocked) return { ok: false, reason: 'vault-locked', message: '密钥柜锁着，解锁之后才能起会话。' }
   return { ok: true }
 }
 
-/** 「key 不对」长什么样。**在错误原文上匹配，不看结构**。
- *
- *  为什么不复用 `cliAuth/detect.ts` 的 `unauthedInLine`：它先用
- *  `"type":"error|turn.failed|result"` 预过滤，而 ACP 的 JSON-RPC 行**没有 `type` 字段**，
- *  所以那条路对 omp 恒不命中 —— 复用的结果是每次都落到 unknown，
- *  用户看到一堆原始报文而不是「这把 key 不对，回去改」。
- *
- *  认不出的一律 `unknown`：把别的故障（网络不通、baseUrl 写错）硬说成「key 不对」，
- *  会让人去反复更换一把其实没问题的 key。 */
 const AUTH_RE = /\b401\b|unauthori[sz]ed|invalid[ _-]?api[ _-]?key|incorrect api key|authentication[_ ]error|api key not valid/i
 
 export function authFailureInTail(lines: string[]): 'auth' | 'unknown' {

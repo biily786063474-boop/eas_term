@@ -271,8 +271,6 @@ const api = {
     listModels: (): Promise<{ id: string; label: string }[]> => ipcRenderer.invoke('omp:listModels'),
     saveProvider: (input: {
       provider: string
-      /** **订阅还是填 key**。两条并列的路，起会话前的闸门判据完全不同 */
-      authMode?: 'subscription' | 'apikey'
       model?: string
       thinking?: string
     }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('omp:saveProvider', input),
@@ -297,7 +295,7 @@ const api = {
     },
     /** 这家服务商的 key 存在密钥柜的哪个变量名下。**明文 key 不经这条路** ——
      *  渲染层拿到变量名后直接走 `secrets.save`，与用户手填密钥同一条通道。 */
-    keyVar: (provider: string): Promise<{ varName: string } | null> => ipcRenderer.invoke('omp:keyVar', provider),
+    // **`keyVar` 删了** —— 密钥柜那条路整个不存在了，凭证由 omp 的 auth-broker 管
     noteSmoke: (r: { ok: boolean; message?: string }): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke('omp:noteSmoke', r),
     usage: (): Promise<unknown> => ipcRenderer.invoke('omp:usage')

@@ -40,7 +40,7 @@ import {
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
 import { hostPaths, openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
-import { ompKeyVarNames, readOmpSetup } from './omp/store.ts'
+import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
 import { shouldReap, planSend, applyParamChange, type SessionRecord , planRecovery} from './sessionState.ts'
@@ -991,26 +991,22 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
         // （与 agentRules 分发规则同一条纪律）。写不进去就不该起 —— 那等于分发一个
         // approvalMode 是 yolo、生图没被 deny 的 agent。
         const setup = readOmpSetup(host.userData)
-        const sub = setup.provider?.authMode === 'subscription'
         try {
-          // 只传 provider id：`ompModelsYml` 会据此写 `apiKey: EAS_OMP_<ID>_KEY`。
-          // **不给 `models` 数组** —— 上游 `models-config.ts:44-96` 规定「列了 models
-          // 就必须给 baseUrl」，而内置 provider 用的是 omp 自带的模型表，硬写会让
-          // 整份 models.yml 校验失败、provider 一个都注册不上。
+          // 受管配置**每次起进程之前重写一遍**：这是我们的目录、我们说了算
+          // （与 agentRules 分发规则同一条纪律）。写不进去就不该起 —— 那等于分发一个
+          // approvalMode 是 yolo、生图没被 deny 的 agent。
           //
-          // **订阅那条路一条都不写。** 上游 `model-registry.ts:1377-1379` 明写
-          // `apiKey` 会「wins over OAuth tokens from the broker」—— 写下去等于让 omp
-          // 拿一个不存在的环境变量去顶掉用户刚登好的订阅令牌，症状是登录成功却 401。
-          writeManagedConfig(host, sub || !setup.provider ? [] : [{ id: setup.provider.id }])
+          // **`models.yml` 恒为 `providers: {}`。** 上游明写 `apiKey` 会
+          // 「wins over OAuth tokens from the broker」，我们写任何一条进去，
+          // 都等于顶掉 omp 自己存好的凭证 —— 症状是登录成功却 401（2026-09-02）。
+          writeManagedConfig(host)
         } catch (e) {
           return { ok: false, message: `写不进 omp 的配置目录：${e instanceof Error ? e.message : String(e)}`, setup: false }
         }
         return openOmpProcess({
           cwd,
           host,
-          // **现算**，不缓存在 adapter 上 —— 见 omp/store.ts 的 ompKeyVarNames
-          keyVarNames: ompKeyVarNames(setup),
-          authMode: setup.provider?.authMode,
+          // **一个 key 都不注入** —— 凭证是 omp 自己的事（`auth-broker` + `agent.db`）
           provider: setup.provider?.id,
           mcp: true
         })

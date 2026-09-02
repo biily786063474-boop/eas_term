@@ -28,6 +28,7 @@ import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, CloseIcon, DictIcon
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState } from '../../../../shared/types'
+import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
@@ -80,8 +81,20 @@ type AuthProbe = Omit<CliAuthState, 'cli'> & { cli?: string }
  *  这里只挑用得上的两个字段落地，多的原样丢掉。 */
 function probeOmp(): Promise<AuthProbe | null> {
   return window.api.omp.status().then((raw) => {
-    const st = raw as { installed?: boolean; status?: { loggedIn: boolean; account?: string } | null } | null
-    return st ? { installed: !!st.installed, status: st.status ?? null } : null
+    // **判据是 `step`，不是某个「已登录」布尔。**
+    // 原来读的是 `status.loggedIn`（`omp:status` 上曾有的一个字段）——
+    // 2026-09-02 拆密钥柜时那个字段随手删了，而这里一声不吭地读到 undefined，
+    // 于是闸门永远不出现、用户根本进不去设置面板。**类型断言把编译器也蒙了过去。**
+    // 改成读 `step`：它是主进程算好的「还缺什么」，`ready` 才算配好。
+    // **用 shared 那份真类型，不再手写断言。**
+    // 手写断言正是这次能溜过去的原因：字段删了，`as` 照样让它编译通过，
+    // 只在真机上表现为「闸门永远不出现」。用真类型的话，删字段当场是编译错误。
+    const st = raw as OmpStatus | null
+    if (!st) return null
+    return {
+      installed: !!st.installed,
+      status: { loggedIn: st.step?.k === 'ready' }
+    }
   })
 }
 

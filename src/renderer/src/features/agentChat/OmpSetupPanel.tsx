@@ -33,8 +33,6 @@ import {
   explainOmpFailure,
   nextStepOf,
   ompStateFrom,
-  OMP_PROVIDERS,
-  providerById,
   type OmpStatus,
   type OmpStep
 } from '../../../../shared/ompSetup'
@@ -97,7 +95,7 @@ type Busy =
  *  `nextStepOf` 说的是「还缺什么」，全都齐了它只会说 ready；
  *  而「我想换一家 / 这把 key 我要重填」是用户自己的决定，状态机答不了。
  *  所以单独一个覆盖位，而不是去伪造事实（比如假装 key 不在柜里）把状态机骗回去。 */
-type Editing = 'mode' | 'provider' | 'login' | 'key' | 'model' | null
+type Editing = 'mode' | 'provider' | 'login' | 'model' | null
 
 export function OmpSetupPanel(props: {
   cli: CliInfo
@@ -108,15 +106,11 @@ export function OmpSetupPanel(props: {
 
   // ── 事实（两处拼出来的）───────────────────────────────────────────────────
   const [omp, setOmp] = useState<OmpStatus | null>(null)
-  const [vault, setVault] = useState<SecretsStatus | null>(null)
-  const [keyInVault, setKeyInVault] = useState(false)
 
   // ── 草稿。**刻意与事实分开存** ──────────────────────────────────────────
   // 柜子 15 分钟不动会自动锁，用户去申请 key 的这一趟正好赶上。
   // 回来时状态被打回「先解锁」，但他已经粘进去的那半截 key 必须还在 ——
   // 把草稿并进事实里刷新一次就没了，那是最气人的一种「白填一遍」。
-  const [keyText, setKeyText] = useState('')
-  const [code, setCode] = useState('')
   const [query, setQuery] = useState('')
 
   const [busy, setBusy] = useState<Busy>({ k: 'idle' })
@@ -151,39 +145,22 @@ export function OmpSetupPanel(props: {
 
   // ── 拼事实 ────────────────────────────────────────────────────────────────
   //
-  // **两处都要查，缺一不可。** 主进程那侧不知道柜子此刻锁没锁：它 15 分钟不动就
-  // 自动锁，隔一次 IPC 往返就可能变。所以 `omp:status` 里柜子那三项一律填「好的」，
-  // 真正的判定在这里用 `secrets.status()` 补齐后重算。
-  const refresh = useCallback(async (): Promise<void> => {
-    const [o, v] = await Promise.all([
-      window.api.omp.status() as Promise<OmpStatus | null>,
-      window.api.secrets.status()
-    ])
-    if (!aliveRef.current) return
+  // **只问一处了。** 原来还要并查 `secrets.status()`（柜子锁没锁），
+  // 因为主进程那侧看不到渲染层此刻的柜子状态。拆掉密钥柜之后没这回事了 ——
+  // 「配好了没有」是 omp 自己的事，`omp:status` 已经替我们问过它。
+  const refresh = useCallback(async (): Promise<OmpStatus | null> => {
+    const o = (await window.api.omp.status()) as OmpStatus | null
+    if (!aliveRef.current) return null
     // **不再 `?? {}` 兜底。** 那个空对象是为了让下面少写几个 `?.`，
     // 代价是类型上「什么都可以缺」，于是漏一个字段编译器一声不吭 ——
     // 这次漏掉的 loggedIn 就是这么溜过去的。
     // 拿不到状态时留 null：`step` 那个 memo 会回 null，界面走 'blocked'，
     // 跟原来 `{}` 走到的是同一屏（installed 为假），行为不变。
     setOmp(o)
-    setVault(v)
-    // 这家的 key 在不在柜里。`has` 不要求解锁，所以锁着也能问 —— 但锁着时 readable
-    // 为假，nextStepOf 会先把人送去解锁，不会误判成「还没填 key」
-    const pid = o?.provider
-    if (!pid) {
-      setKeyInVault(false)
-      return
-    }
-    const kv = await window.api.omp.keyVar(pid)
-    if (!aliveRef.current) return
-    if (!kv) {
-      setKeyInVault(false)
-      return
-    }
-    const h = await window.api.secrets.has([kv.varName])
-    if (!aliveRef.current) return
-    const row = h.vars.find((x) => x.varName === kv.varName)
-    setKeyInVault(!!row?.inVault && !!row?.readable)
+    // **把状态回给调用方。** 拿它做决定的地方不能读 `step` 那个 memo ——
+    // 这一轮 render 里它还是旧的（2026-09-02：`pickProvider` 要据此决定
+    // 「还用不用登录」，读 memo 会永远得到「要登录」）。
+    return o
   }, [])
 
   useEffect(() => {
@@ -232,39 +209,38 @@ export function OmpSetupPanel(props: {
 
   // ── 下一步是哪一步。**唯一的判据来源** ───────────────────────────────────
   const step: OmpStep | null = useMemo(() => {
-    if (!omp || !vault) return null
+    if (!omp) return null
     // **入参必须走 `ompStateFrom`，别在这里手拼。**
-    // 手拼的那版漏了 `authMode` 与 `loggedIn`：判据两侧一致、入参两侧分叉，
-    // 于是订阅这条路在渲染层永远走 apikey 分支 —— 登录成功也被判成「还没填 key」，
-    // 而那一屏对订阅那些 id 又渲染不出来，落到兜底按钮上。
-    // 用户看到的就是「登完了，却跳回最初那页」。2026-09-02 真机。
+    // 手拼的那版漏过字段：判据两侧一致、入参两侧分叉 —— 单测全绿而真机全错。
     return nextStepOf(
       ompStateFrom({
         installed: omp.installed === true,
-        vault: {
-          available: vault.available,
-          configured: vault.configured,
-          locked: vault.locked,
-          foreign: vault.foreign
-        },
         provider: omp.provider,
-        authMode: omp.authMode,
         loggedIn: omp.loggedIn,
-        keyInVault,
         model: omp.model
       })
     )
-  }, [omp, vault, keyInVault])
-
-  // 服务商清单直接用 shared 那份 —— **主进程用的就是同一个模块**，
-  // 没必要再从 `omp:status` 的返回里抄一遍（抄一遍就有了第二份，迟早分叉）
-  const provider = providerById(omp?.provider)
+  }, [omp])
 
   // ── 动作 ──────────────────────────────────────────────────────────────────
 
-  /** omp 报的全名单（70 家）。**懒加载** —— 只有用户真选了「用订阅」才去问，
-   *  那是一次 spawn，没必要在打开面板时就付这个代价。 */
+  /** omp 报的全名单（69 家，`auth-broker list`）。 */
   const [authProviders, setAuthProviders] = useState<{ id: string; name: string }[] | null>(null)
+
+  /** omp 支持登录的服务商全名单（69 家，由它自己报）。
+   *
+   *  **懒加载，但触发点是「这一屏显示出来」而不是某个按钮。**
+   *  原来它挂在「用已有的订阅登录」那颗按钮上 —— 2026-09-02 把那颗按钮
+   *  连同「订阅还是填 key」那一屏一起删掉之后，**没有任何东西再去拉这份名单**，
+   *  界面就永远停在「正在问 Oh My Pi 支持哪些…」。
+   *  挂在状态上而不是挂在某次点击上，才不会随按钮一起消失。 */
+  const needProviders = !!step && (step.k === 'provider' || editing === 'provider' || editing === 'mode')
+  useEffect(() => {
+    if (!needProviders || authProviders !== null) return
+    void window.api.omp.listAuthProviders().then((l) => {
+      if (aliveRef.current) setAuthProviders(l)
+    })
+  }, [needProviders, authProviders])
   /** 正在跑的那次订阅登录。null = 没在跑 */
   const [login, setLogin] = useState<OmpLoginWire | null>(null)
 
@@ -341,101 +317,34 @@ export function OmpSetupPanel(props: {
   //
   // 凭证落点也不同，界面上要说清楚：订阅的 OAuth 令牌**要能刷新**，
   // 所以存在 omp 自己的库里由它管；API key 进我们的密钥柜。
-  const pickProvider = async (id: string, authMode: 'subscription' | 'apikey'): Promise<void> => {
+  const pickProvider = async (id: string): Promise<void> => {
     setErr('')
     setBusy({ k: 'busy', what: '正在记下这家服务商…' })
     // 换服务商会把上一次的冒烟结果作废（主进程那边清 lastSmoke），
     // 顺手把本地的模型清单也丢掉：那份是上一家的，留着会让人从中选出一个用不了的
     setModels(null)
     setQuery('')
-    const r = await window.api.omp.saveProvider({ provider: id, authMode })
+    const r = await window.api.omp.saveProvider({ provider: id })
     if (!aliveRef.current) return
     if (!r.ok) {
       setBusy({ k: 'idle' })
       setErr(r.error ?? '存不下这家服务商')
       return
     }
-    setEditing(authMode === 'subscription' ? 'login' : null)
-    await refresh()
-    if (aliveRef.current) setBusy({ k: 'idle' })
-  }
-
-  const submitCode = async (): Promise<void> => {
-    if (!vault) return
-    setErr('')
-    setBusy({ k: 'busy', what: vault.configured ? '正在解锁…' : '正在建柜…' })
-    const r = vault.configured
-      ? await window.api.secrets.unlock(code)
-      : await window.api.secrets.setup(code)
+    // **别急着把人推去登录。** 先问一次 omp：它要是已经有这家的凭证
+    // （以前登过、或者在别处登过），再逼他登一遍就是白跑一趟 ——
+    // 而「登录」恰恰是整条路上最容易出岔子的一段。
+    const fresh = await refresh()
     if (!aliveRef.current) return
-    setCode('')
+    setEditing(fresh?.loggedIn ? null : 'login')
     setBusy({ k: 'idle' })
-    if (!r.ok) {
-      setErr(r.error ?? '出错了')
-      setVault(r.status)
-      return
-    }
-    await refresh()
   }
 
-  /**
-   * 把 key 存进密钥柜。**明文只走 `secrets:save` 这一条通道**，不经 omp 的任何 IPC ——
-   * 密钥的明文一次都不该多经过一个通道（`omp:keyVar` 回的只是变量名）。
-   *
-   * `autoInject` 必须是 false：这把 key 只该进 omp 那个进程。开着的话它会跟进**每一个**
-   * 新终端 —— 用户在终端里随手跑个 `env` 就把它打出来了，而他根本不知道有这回事。
-   */
-  const saveKey = async (): Promise<void> => {
-    const pid = omp?.provider
-    // **同上：不在推荐清单里不等于不能填 key。** `p` 只用来起个好看的组名。
-    const p = providerById(pid)
-    if (!pid) return
-    const val = keyText.trim()
-    if (!val) return
-    setErr('')
-    setBusy({ k: 'busy', what: '正在存进密钥柜…' })
+  // **`submitCode`（建柜 / 解锁）删了** —— 随密钥柜一起。
 
-    const kv = await window.api.omp.keyVar(pid)
-    if (!aliveRef.current) return
-    if (!kv) {
-      setBusy({ k: 'idle' })
-      setErr('取不到这家服务商的变量名')
-      return
-    }
+  // **`saveKey` 删了。** 需要 API key 的服务商由 omp 的登录流程自己问、自己存。
 
-    // **已经有人占着这个变量名就必须复用那一条**，否则 `secrets:save` 会以
-    // 「XXX 已经被「某某」占用了」直接拒掉 —— 而用户只会看到一句莫名其妙的报错。
-    const list = await window.api.secrets.list()
-    if (!aliveRef.current) return
-    const holder = list.find((g) => g.vars.some((v) => v.varName === kv.varName))
-    // 那一组里还有别的变量 = 它是用户自己建的，不是我们的。
-    // 这时**只更新值**：不改名、不动它的自动注入开关、更不能把别的变量挤掉
-    // （`secrets:save` 是整组替换 `old.vars = next`，少传一个就是删一个）
-    const shared = !!holder && holder.vars.length > 1
 
-    const r = await window.api.secrets.save({
-      id: holder?.id,
-      name: holder?.name ?? `omp · ${p?.label ?? pid}`,
-      // 别的变量原样带回去：不给 value 就是「沿用旧密文」，值不经过渲染层
-      vars: holder
-        ? holder.vars.map((v) => (v.varName === kv.varName ? { varName: v.varName, value: val } : { varName: v.varName }))
-        : [{ varName: kv.varName, value: val }],
-      // 共用组不碰它原来的开关；我们自己的那条一律 false
-      ...(shared ? {} : { autoInject: false })
-    })
-    if (!aliveRef.current) return
-    setBusy({ k: 'idle' })
-    if (!r.ok) {
-      setVault(r.status)
-      setErr(r.error ?? '存不进去')
-      return
-    }
-    setKeyHolder(holder ? { id: holder.id, name: holder.name, shared } : null)
-    // 存进去了就把草稿清掉 —— 留着一串明文在内存里没有任何用处
-    setKeyText('')
-    setEditing(null)
-    await refresh()
-  }
 
   const loadModels = useCallback(async (): Promise<void> => {
     setBusy({ k: 'busy', what: '正在问 omp 有哪些模型…' })
@@ -585,26 +494,24 @@ export function OmpSetupPanel(props: {
 
   const working = busy.k === 'busy' || busy.k === 'smoke'
   // 面包屑要显示「走到哪了」。**它不是进度百分比**（约束 ②）——
-  // 只是把四段链路摆出来、把当前这段标亮，没有任何编出来的数字
-  // 第二段随路子变：订阅那条是「登录」，填 key 那条是「密钥」。
-  // 两条路的步数一样，所以面包屑的长度不跳。
-  const isSub = omp?.authMode === 'subscription'
+  // 只是把四段链路摆出来、把当前这段标亮，没有任何编出来的数字。
+  // **现在恒定四段** —— 拆掉密钥柜之后只剩一条路，不再随 authMode 变。
   const chain: { k: Editing | 'smoke'; label: string }[] = [
     { k: 'provider', label: '服务商' },
-    isSub ? { k: 'login', label: '登录' } : { k: 'key', label: '密钥' },
+    { k: 'login', label: '登录' },
     { k: 'model', label: '模型' },
     { k: 'smoke', label: '试一句' }
   ]
   const atChain: (Editing | 'smoke') | null =
     busy.k === 'smoke' || busy.k === 'smoke-failed' || busy.k === 'done'
       ? 'smoke'
-      : editing ??
-        (step?.k === 'provider'
-          ? 'provider'
-          : step?.k === 'login'
-            ? 'login'
-            : step?.k === 'key'
-              ? 'key'
+      : editing === 'mode'
+        ? 'provider'
+        : editing ??
+          (step?.k === 'provider'
+            ? 'provider'
+            : step?.k === 'login'
+              ? 'login'
               : step?.k === 'model'
                 ? 'model'
                 : null)
@@ -616,13 +523,9 @@ export function OmpSetupPanel(props: {
     return all.filter((m) => m.id.toLowerCase().includes(q) || m.label.toLowerCase().includes(q))
   }, [models, query])
 
-  /** 走不通 / 柜子没建 / 柜子锁着这三步是**闸门**：它们不成立时后面每一步都做不成。
-   *  单独摘出来是因为它们必须压过用户的覆盖位 —— 否则柜子在他去申请 key 的路上
-   *  自动锁了，回来点「改 key」还能填，填完点保存才撞上锁定，白填一遍。 */
-  const gate =
-    step && (step.k === 'blocked' || step.k === 'vault-setup' || step.k === 'vault-unlock')
-      ? step.k
-      : null
+  /** 「二进制不在」是**闸门**：它不成立时后面每一步都做不成，必须压过用户的覆盖位。
+   *  （原来这里还有「柜子没建 / 柜子锁着」两条 —— 随密钥柜一起删了。） */
+  const gate = step && step.k === 'blocked' ? step.k : null
 
   /** 该画哪一屏。顺序：**临时态 → 闸门 → 覆盖位 → 判据**。
    *
@@ -641,17 +544,14 @@ export function OmpSetupPanel(props: {
    *  `null` 表示「东西都齐了，就是没跑通」—— 那时才轮到「再试一次」。 */
   const fixStep: { to: Editing; label: string } | null =
     busy.k === 'smoke-failed'
-      ? step?.k === 'key'
-        ? { to: 'key', label: '去填这家的 API key' }
-        : step?.k === 'login'
-          ? { to: 'login', label: '去登录' }
-          : step?.k === 'provider'
-            ? { to: 'provider', label: '先挑一家服务商' }
-            : step?.k === 'vault-unlock' || step?.k === 'vault-setup'
-            ? { to: null, label: step.k === 'vault-unlock' ? '去解锁密钥柜' : '去建密钥柜' }
-            : busy.auth
-              ? { to: 'key', label: '回去改 key' }
-              : null
+      ? step?.k === 'login'
+        ? { to: 'login', label: '去登录' }
+        : step?.k === 'provider'
+          ? { to: 'provider', label: '先挑一家服务商' }
+          : busy.auth
+            ? // 凭证被对方拒了 —— 重登一次是唯一有意义的动作
+              { to: 'login', label: '重新登录一次' }
+            : null
       : null
 
   const body = (
@@ -674,7 +574,7 @@ export function OmpSetupPanel(props: {
         </div>
 
         {/* 一条链，不是四个各自弹一次的面板 —— 约束 ① */}
-        {step && step.k !== 'blocked' && step.k !== 'vault-setup' && step.k !== 'vault-unlock' && (
+        {step && step.k !== 'blocked' && (
           <div className="ac-omp-chain">
             {chain.map((c, i) => (
               <span key={c.k} className={`ac-omp-chain-i${c.k === atChain ? ' on' : ''}`}>
@@ -694,132 +594,31 @@ export function OmpSetupPanel(props: {
             摆一颗点了没反应的按钮，比明说「这条路走不通」更糟 */}
         {shown === 'blocked' && step?.k === 'blocked' && (
           <div className="ac-setup-say">
-            {step.why === 'no-binary' && (
-              <>
-                这个安装包里没带上 <b>{cli.displayName}</b> 的程序本体。
-                这多半是安装包坏了 —— 重新下载一次能解决。
-              </>
-            )}
-            {step.why === 'no-encryption' && (
-              <>
-                这台机器的系统加密不可用（macOS 看钥匙串，Windows 看系统凭据），
-                <b>密钥没法安全存下来</b>。在修好之前这条路走不通 —— 不会把你的 key 明文落盘。
-              </>
-            )}
-            {step.why === 'foreign-vault' && (
-              <>
-                密钥柜是**另一台机器 / 另一个 app** 写的，这台机器解不开它。
-                先在密钥面板里处理掉那份，再回来。
-              </>
-            )}
+            这个安装包里没带上 <b>{cli.displayName}</b> 的程序本体。
+            这多半是安装包坏了 —— 重新下载一次能解决。
           </div>
         )}
 
-        {/* ── 柜子：建 / 解锁 ────────────────────────────────────────────────
-            **排在选服务商与填 key 之前**（nextStepOf 的顺序）：反过来的话，
-            用户填完点保存才撞上锁定，白填一遍 */}
-        {(shown === 'vault-setup' || shown === 'vault-unlock') && vault && (
-          <>
-            <div className="ac-setup-say">
-              <LockIcon size={12} />{' '}
-              {shown === 'vault-setup' ? (
-                <>
-                  这把 key 要存进<b>密钥柜</b>。先设一个六位码 ——
-                  它只用来确认「是你本人在操作」，<b>不参与加密</b>，真正的保护交给系统钥匙串。
-                </>
-              ) : (
-                <>
-                  密钥柜锁着。<b>15 分钟没操作会自动锁上</b> —— 你填的东西还在，解锁就接着走。
-                </>
-              )}
-            </div>
-            <div className="ac-omp-row">
-              <input
-                className="ac-login-input"
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={6}
-                placeholder="······"
-                value={code}
-                disabled={!vault.available || vault.lockedOutMs > 0}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && code.length === 6) void submitCode()
-                }}
-                autoFocus
-              />
-              <button
-                type="button"
-                className="ac-login-submit"
-                disabled={code.length !== 6 || !vault.available || vault.lockedOutMs > 0}
-                onClick={() => void submitCode()}
-              >
-                {shown === 'vault-setup' ? '启用' : '解锁'}
-              </button>
-            </div>
-            {vault.lockedOutMs > 0 && (
-              <div className="ac-login-hint">
-                错太多次了，等 {Math.ceil(vault.lockedOutMs / 1000)} 秒再试。
-              </div>
-            )}
-          </>
-        )}
 
-        {/* ── 先选走哪条路 ─────────────────────────────────────────────────
-            **订阅和填 key 是并列的两种选择，不是一种的补充。**
-            订阅用户已经付过钱了，没有 API key，也不该被逼着去申请一把 —— 
-            之前这个面板只给填 key 那一条，等于把他们挡在门外。 */}
-        {shown === 'provider' && (
-          <>
-            <div className="ac-setup-say">
-              <b>{cli.displayName}</b> 有两种连法，<b>挑你已经有的那种</b>。
-            </div>
-            <div className="ac-omp-list">
-              <button
-                type="button"
-                className="ac-omp-item"
-                onClick={() => {
-                  setEditing('mode')
-                  if (authProviders === null) {
-                    void window.api.omp.listAuthProviders().then((l) => {
-                      if (aliveRef.current) setAuthProviders(l)
-                    })
-                  }
-                }}
-              >
-                <span className="ac-omp-item-l">
-                  用已有的订阅登录
-                  <span className="ac-omp-meta">
-                    Claude Pro/Max、ChatGPT Plus/Pro、智谱 GLM、Kimi、Copilot… 共 70 家
-                  </span>
-                </span>
-              </button>
-              <button type="button" className="ac-omp-item" onClick={() => setEditing('key')}>
-                <span className="ac-omp-item-l">
-                  填一把 API key
-                  <span className="ac-omp-meta">按用量计费，key 存进这台机器的密钥柜</span>
-                </span>
-              </button>
-            </div>
-            {editing === 'provider' && (
-              <div className="ac-setup-row">
-                <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
-                  算了，不换
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        {/* **柜子那两屏删了。** 2026-09-02 用户：「取消密钥柜的概念呢，
+            单纯用 oh my pi 成熟的登录流程然后 UI 化。」omp 的 `auth-broker`
+            自己存凭证、自己续期、需要 API key 的那些自己会问 —— 我们那套
+            「建柜 / 解锁 / 填 key / 注环境变量」是纯粹的重复建设，
+            而这一天所有的 bug 都长在两套系统的接缝上。 */}
 
-        {/* ── 订阅：从 omp 报的全名单里挑一家 ───────────────────────────────
-            **名单由 omp 自己报**（`auth-broker list`），不写死在我们这边：
-            写死的会随上游更新过期，而且「哪家能订阅登录」本来就该它说了算。 */}
-        {shown === 'mode' && (
+        {/* ── 挑一家服务商 ─────────────────────────────────────────────────
+            **只有一条路了。** 原来这里先问「订阅还是填 key」，再进名单 ——
+            两屏、两条判据、一个要我们自己记的 `authMode`。
+            那个字段正是 2026-09-02 那个 bug 的正主：保存模型时的调用忘了带它，
+            于是订阅用户被静默翻成「填 key」，转头被要求去填一把他根本没有的 key。
+
+            名单**由 omp 自己报**（`auth-broker list`，69 家），不写死在我们这边：
+            写死的会随上游更新过期，而且「哪家能登录」本来就该它说了算。 */}
+        {(shown === 'provider' || shown === 'mode') && (
           <>
             <div className="ac-setup-say">
-              挑你<b>已经买了订阅</b>的那一家。接下来会打开浏览器让你登录，
-              <b>凭证存在这台机器上</b>（由 {cli.displayName} 自己保管并续期，不进密钥柜）。
+              挑一家你<b>已经有账号或订阅</b>的。接下来用 <b>{cli.displayName} 自己的登录流程</b>
+              走一遍，凭证存在这台机器上，由它保管并续期。
             </div>
             {authProviders === null ? (
               <div className="ac-omp-empty">正在问 {cli.displayName} 支持哪些…</div>
@@ -827,7 +626,7 @@ export function OmpSetupPanel(props: {
               <>
                 <input
                   className="ac-omp-search"
-                  placeholder="搜一下（claude / chatgpt / 智谱 / kimi…）"
+                  placeholder="搜一下（claude / chatgpt / 智谱 / kimi / minimax / deepseek…）"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -843,7 +642,7 @@ export function OmpSetupPanel(props: {
                         key={p.id}
                         type="button"
                         className={`ac-omp-item${p.id === omp?.provider ? ' on' : ''}`}
-                        onClick={() => void pickProvider(p.id, 'subscription')}
+                        onClick={() => void pickProvider(p.id)}
                       >
                         <span className="ac-omp-item-l">{p.name}</span>
                         {p.id === omp?.provider && <CheckIcon size={12} />}
@@ -852,11 +651,13 @@ export function OmpSetupPanel(props: {
                 </div>
               </>
             )}
-            <div className="ac-setup-row">
-              <button type="button" className="ac-login-retry" onClick={() => setEditing('provider')}>
-                回上一步
-              </button>
-            </div>
+            {editing === 'provider' && (
+              <div className="ac-setup-row">
+                <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
+                  算了，不换
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -1003,82 +804,9 @@ export function OmpSetupPanel(props: {
           </>
         )}
 
-        {/* ── 填 key ──────────────────────────────────────────────────────── */}
-        {/* **判据是「选过服务商没有」，不是「在我们那份清单里没有」。**
-            `OMP_PROVIDERS` 只有四家，那是「带取 key 链接的推荐位」；而 `safeProvider`
-            早就放宽到接受 omp 认识的全部 70 家。用清单当判据的后果 2026-09-02
-            真机拍到了：选了 `minimax-code-cn` 再走填 key，这一屏渲染不出来，
-            整个面板落到兜底那个「先挑一家服务商」上 —— 点它，再选一次，还是那样。
-            **一个走不出去的圈。** 清单只该决定「有没有那条申请链接」。 */}
-        {shown === 'key' && omp?.provider && (
-          <>
-            <div className="ac-setup-say">
-              把 <b>{provider?.label ?? omp.provider}</b> 的 API key 填进来。它
-              <b>只进这个模型进程</b> —— 不会跟着你新开的终端跑（那样在终端里随手一句{' '}
-              <code>env</code> 就把它打出来了）。
-            </div>
-            {provider && (
-              <div className="ac-setup-cmd-l">
-                还没有 key？
-                <button
-                  type="button"
-                  className="ac-omp-link"
-                  onClick={() => void window.api.shell.openExternal(provider.keyUrl)}
-                >
-                  去 {provider.label} 申请一个
-                </button>
-              </div>
-            )}
-            <div className="ac-omp-row">
-              <input
-                className="ac-login-input"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="粘贴 API key"
-                value={keyText}
-                onChange={(e) => setKeyText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && keyText.trim()) void saveKey()
-                }}
-                autoFocus
-              />
-              <button
-                type="button"
-                className="ac-login-submit"
-                disabled={!keyText.trim()}
-                onClick={() => void saveKey()}
-              >
-                存进密钥柜
-              </button>
-            </div>
-            <div className="ac-setup-row">
-              <button type="button" className="ac-login-retry" onClick={() => setEditing('provider')}>
-                换一家服务商
-              </button>
-              {editing === 'key' && (
-                <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
-                  算了，不改
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* 兜底：nextStepOf 只在选过服务商之后才说 'key'，所以这里只剩
-            「状态文件被手改坏了」这一种可能。留着是因为**一片空白的灯箱比任何
-            错误提示都难查** —— 但它不该再被正常流程走到（见上面那条注释）。 */}
-        {shown === 'key' && !omp?.provider && (
-          <div className="ac-setup-row">
-            <button
-              type="button"
-              className="ac-login-go ac-setup-primary"
-              onClick={() => setEditing('provider')}
-            >
-              先挑一家服务商
-            </button>
-          </div>
-        )}
+        {/* **「填 key」那一屏删了** —— 见上面柜子那条注释。
+            需要 API key 的服务商（比如 MiniMax Token Plan），omp 的登录流程
+            自己会问、自己存，我们不该再要一遍。 */}
 
         {/* ── 选模型 ───────────────────────────────────────────────────────
             清单可能很长（omp 一家服务商就能列出几十个），所以给搜索框 */}
@@ -1111,13 +839,8 @@ export function OmpSetupPanel(props: {
               {models !== null && filtered.length === 0 && (
                 <div className="ac-omp-empty">
                   {models.length === 0
-                    ? // **不猜原因**：拿不到清单可能是 key 不对、可能是网络，
-                      // 这里只说事实，出口给「重来一次」和「回去改 key」
-                      // **两条路的原因不一样，别混着说。** 订阅用户没有 key
-                      // 可以「还没通」——把他往那儿引，他会去找一个自己没有的东西。
-                      isSub
-                        ? '一个模型都没列出来 —— 多半是这次登录没真的生效。'
-                        : '一个模型都没列出来 —— 多半是这把 key 还没通。'
+                    ? // **不猜原因**，只说事实 + 一个明确的出口。
+                      '一个模型都没列出来 —— 多半是这次登录没真的生效。'
                     : '没有匹配的模型。'}
                 </div>
               )}
@@ -1126,14 +849,8 @@ export function OmpSetupPanel(props: {
               <button type="button" className="ac-login-retry" onClick={() => void loadModels()}>
                 重新拉一次
               </button>
-              {/* 出口也随路子变：订阅那条回登录，填 key 那条回密钥。
-                  按钮上写着一件他做不到的事，比没有这个按钮更糟。 */}
-              <button
-                type="button"
-                className="ac-login-retry"
-                onClick={() => setEditing(isSub ? 'login' : 'key')}
-              >
-                {isSub ? '回去重登一次' : '回去改 key'}
+              <button type="button" className="ac-login-retry" onClick={() => setEditing('login')}>
+                回去重登一次
               </button>
               {editing === 'model' && (
                 <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>
@@ -1255,7 +972,6 @@ export function OmpSetupPanel(props: {
             <div className="ac-login-ok">
               <CheckIcon size={13} />
               {cli.displayName} 已经可以用了
-              {provider ? ` · ${provider.label}` : ''}
               {omp?.model ? ` · ${omp.model}` : ''}
             </div>
             {/* 上一次试的结果如实摆着。**没试过就说没试过，不假装 ok** */}
@@ -1288,8 +1004,8 @@ export function OmpSetupPanel(props: {
               <button type="button" className="ac-login-retry" onClick={() => setEditing('model')}>
                 换模型
               </button>
-              <button type="button" className="ac-login-retry" onClick={() => setEditing('key')}>
-                <KeyIcon size={11} /> 改 key
+              <button type="button" className="ac-login-retry" onClick={() => setEditing('login')}>
+                <KeyIcon size={11} /> 重新登录
               </button>
               <button type="button" className="ac-login-retry" onClick={() => setEditing('provider')}>
                 换服务商
