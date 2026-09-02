@@ -2,7 +2,7 @@
 
 import type { StateCreator } from 'zustand'
 import type { ShortcutOverrides } from '../../../shared/shortcuts.ts'
-import { ThemeId, loadTheme, applyTheme } from '../themes'
+import { type ThemeChoice, loadTheme, applyTheme, watchSystemTheme } from '../themes'
 import type { AgentRole, ArchiveItem, BoardColumn, AgentKind } from '../../../shared/types'
 import type { PendingConfirm } from './shared'
 import type { AppState } from './types'
@@ -33,8 +33,10 @@ export type GanttViewMode = 'session' | 'project' | 'milestone'
 export type ProjectMenuSort = 'default' | 'recent'
 
 export interface UiSlice {
-  theme: ThemeId
-  setTheme: (theme: ThemeId) => void
+  /** 用户**选的**那一项（可能是 `system`），不是解析后的结果 ——
+   *  只存结果的话，「跟随系统」下次启动就不跟随了 */
+  theme: ThemeChoice
+  setTheme: (theme: ThemeChoice) => void
   /** 用户改过的快捷键 `{ id: 组合串 }`，只存改过的。真相源是注册表
    *  （src/shared/shortcuts.ts），这里只放覆盖层。落盘在 prefs。 */
   shortcutOverrides: ShortcutOverrides
@@ -322,6 +324,9 @@ async function runTranscribeQueue(
     ttRunning = false
   }
 }
+
+/** 「跟随系统」的退订句柄。模块级：切主题时要先退掉上一个。 */
+let stopWatch: (() => void) | null = null
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
   theme: loadTheme(),
@@ -622,6 +627,11 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setTheme: (theme) => {
     applyTheme(theme)
     set({ theme })
+    // **只有「跟随系统」才挂订阅**，别的选项挂着是白占一个监听器。
+    // 不挂的话「跟随系统」只在启动那一刻跟随一次 —— 用户在系统里切了亮暗
+    // 我们纹丝不动，这个选项就是假的。
+    stopWatch?.()
+    stopWatch = theme === 'system' ? watchSystemTheme(() => applyTheme('system')) : null
   },
   loadShortcutOverrides: (v) => set({ shortcutOverrides: v }),
   setShortcutOverride: (id, keys) => {

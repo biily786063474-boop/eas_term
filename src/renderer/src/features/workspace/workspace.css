@@ -459,6 +459,14 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+/* **hover 也给边缘高亮** —— 原来只有 `.active` 有，于是「鼠标在哪个模块上」
+   这件事没有任何反馈；而画布上模块挨得近，没反馈就容易点错。
+   比 `.active` 弱一档：hover 是「我正指着它」，active 是「它是当前的」，
+   两者要分得开（用户 2026-09-02：「hover 边缘高亮要和其他模块一致」）。 */
+.pane:hover {
+  border-color: rgba(var(--accent-rgb), 0.22);
+}
+
 .pane.active {
   border-color: rgba(var(--accent-rgb), 0.4);
   box-shadow:
@@ -472,10 +480,13 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 6px;
+  /* 圆角翻倍（36/28px）之后，顶栏两端的内容会顶到圆弧里 —— 内边距跟着加大
+     （用户 2026-09-02：「因为加大了圆角，所以内容的内边距要加大一些」）。 */
+  gap: 8px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--glass-border);
-  background: var(--lift-1);
+  /* 渐变而不是平色，同 `.cframe-head` 的做法 */
+  background: linear-gradient(180deg, var(--lift-2), var(--lift-1));
 }
 
 /* ── 亮色下模块的 topbar：**极浅的灰、黑字加粗**（2026-09-02 用户点名）──────
@@ -490,7 +501,10 @@
 
    加粗是这里唯一的强调手段 —— 底已经接近白，不能再靠明度往上走了。 */
 :root[data-theme='light'] .pane-header {
-  background: #fafafa;
+  /* 渐变而不是平色 —— 跟 Frame 的窗口条同一种做法（`.cframe-head`），
+     让「这是一条顶栏」在两处读起来是一回事（用户：「上方的 bar 也要
+     其他模块一样的渐变」）。上浅下深一点点，够表达「有厚度」就行。 */
+  background: linear-gradient(180deg, #fdfdfd, #f2f2f2);
   border-bottom-color: rgba(0, 0, 0, 0.06);
   color: #0d0d0d;
   font-weight: 600;

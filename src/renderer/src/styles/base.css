@@ -57,8 +57,11 @@
   /* 自定义 tooltip：比画布背景再暗一点的近黑 */
   --tooltip-bg: rgba(3, 4, 7, 0.97);
 
-  --radius-xl: 18px;
-  --radius-lg: 14px;
+  /* **xl / lg 在 2026-09-02 翻倍**（用户：「所有的模块和 frame 圆角加大二倍」）。
+     这两档正是 frame（xl）与模块面板（lg）在用的；md / sm 是芯片、按钮、
+     小控件那一层，跟着翻会把它们变成胶囊，所以不动。 */
+  --radius-xl: 36px;
+  --radius-lg: 28px;
   --radius-md: 10px;
   --radius-sm: 7px;
 
@@ -265,20 +268,8 @@
   --folder-icon: #5d5d5d;
 }
 
-/* ---------- 黑粉主题：纯黑背景 + 粉色系高亮 ---------- */
-:root[data-theme='pink'] {
-  --glass-1: rgba(20, 14, 18, 0.5);
-  --glass-2: rgba(16, 10, 14, 0.62);
-  --pane-solid: rgba(16, 10, 14, 0.86);
-  --popover-solid: #150e13;
-  --glass-3: rgba(34, 22, 30, 0.82);
-  --accent: #f78bb0;
-  --accent-rgb: 247, 139, 176;
-  --folder-icon: #f0a3c0;
-  --bg-grad-1: rgba(10, 7, 9, 0.72);
-  --bg-grad-2: rgba(4, 3, 5, 0.85);
-  --tooltip-bg: rgba(6, 3, 5, 0.97);
-}
+/* 黑粉主题 2026-09-02 删除（用户：「取消黑粉配色主题」）。
+   老配置里存着 'pink' 的用户会被 `loadTheme()` 认成 'dark'，不会被重置。 */
 
 /* ---------- 全局自定义 tooltip（替代原生 title） ---------- */
 .app-tooltip {

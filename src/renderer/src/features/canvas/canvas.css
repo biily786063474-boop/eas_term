@@ -66,7 +66,12 @@
   flex-direction: column;
   border-radius: var(--radius-xl);
   background: rgba(var(--frame-rgb), 0.045);
-  border: 1.5px solid rgba(var(--frame-rgb), 0.34);
+  /* **一条细虚线**（2026-09-02 用户点名）。
+     这是「不要 stroke」那条总规矩的一个例外，而且理由是站得住的：
+     Frame 是**画布上的一块地**，它的边界要能看出「到这儿为止」，
+     而毛玻璃 + 半透明底在深色画布上跟背景差得很少，光靠明度看不出边在哪。
+     虚线比实线合适 —— 它读作「范围」而不是「容器的外壳」。 */
+  border: 1px dashed rgba(var(--frame-rgb), 0.34);
   box-shadow: 0 18px 60px var(--ink-2);
   /* **两个主题都要毛玻璃**（2026-09-02 用户点名）。
      Frame 是「盖在画布上的一块地」，透出底下的点阵才有「浮在上面」的实感；
@@ -85,7 +90,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px 0 12px;
+  /* 圆角 36px 之后两端会吃进圆弧，内边距跟着放大（用户 2026-09-02）*/
+  padding: 0 16px 0 20px;
   cursor: move;
   border-bottom: 1px solid rgba(var(--frame-rgb), 0.2);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
@@ -110,7 +116,8 @@
      叠在白画布上视觉仍然是 #e8e8e8 那一档灰（用户要的「再深一点」），
      但点阵会从底下透上来。 */
   background: rgba(232, 232, 232, 0.72);
-  border-color: transparent;
+  /* 虚线在亮色下要压深一点才看得见（白底上浅灰虚线几乎等于没有） */
+  border-color: rgba(0, 0, 0, 0.18);
 }
 
 :root[data-theme='light'] .cframe-head {
@@ -755,7 +762,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 5px 0 9px;
+  /* 同 .cframe-head：圆角放大后两端要让出更多位置 */
+  padding: 0 12px 0 16px;
   cursor: move;
   border-bottom: 1px solid var(--glass-border);
   background: var(--lift-1);

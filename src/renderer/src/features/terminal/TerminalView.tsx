@@ -7,7 +7,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
 import { useStore } from '../../store'
-import { xtermTheme } from '../../themes'
+import { xtermTheme, resolveTheme } from '../../themes'
 import {
   routeOpen,
   extractPathCandidates,
@@ -124,7 +124,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     // 这样输入框长高时终端会跟着缩，不会被顶出可视区。
     const screen = screenRef.current!
     const term = new Terminal({
-      theme: xtermTheme(useStore.getState().theme),
+      theme: xtermTheme(resolveTheme(useStore.getState().theme)),
       // 跨平台等宽字体回退：mac 用 SF Mono，Windows 用 Cascadia Code/Consolas
       fontFamily:
         '"SF Mono", Menlo, Monaco, "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace',
@@ -721,7 +721,8 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
   // 主题切换时同步更新已存在的终端配色
   const theme = useStore((s) => s.theme)
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = xtermTheme(theme)
+    if (termRef.current) // **要传解析后的那个** —— `theme` 可能是 'system'，xterm 不认识它
+      termRef.current.options.theme = xtermTheme(resolveTheme(theme))
   }, [theme])
 
   // canvasScale = PaneView 传入的 committedScale（缩放「落定」值，只在手势停止后变一次，不逐帧变）。
