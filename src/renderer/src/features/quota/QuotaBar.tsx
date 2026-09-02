@@ -7,8 +7,9 @@
 // 不要相互挤占空间）。它是随时可以看一眼的参考信息，不是非得占着那个角落 ——
 // 而抽屉和提醒都是用户正在处理的事，那两个更要紧。
 
-import { useEffect, useReducer, useState } from 'react'
+import { Fragment, useEffect, useReducer, useState } from 'react'
 import { useStore } from '../../store'
+import { liveCells, quotaSegments } from './segments'
 import { windowLabel, agoLabel, untilReset, isWindowExpired, type QuotaSnapshot, type CliQuota, type QuotaWindow, isHot } from '../../../../shared/quota'
 import './quotaBar.css'
 
@@ -36,18 +37,6 @@ export function setQuotaBarOn(on: boolean): void {
 /** 一个 CLI 的那一截。**两个窗口都没有数据就整段不渲染** —— 用户拍板：
  *  没数就不显示那一侧，不显示 0%、也不占位。一个永远是「—」的格子
  *  每天看着，不如没有。 */
-/** 这个 CLI 现在**还算数**的那些格子。
- *
- *  过了重置时刻的要作废：事件流只在跨阈值时才报，「本周 79% → 窗口重置 → 下周一直
- *  没到阈值」这条路上没有任何东西会来覆盖它，那个 79% 会一直挂着，
- *  tooltip 里的「X 月 X 日重置」指的还是已经过去的时刻。 */
-function liveCells(q: CliQuota | undefined, now: number): QuotaWindow[] {
-  if (!q) return []
-  return [q.primary, q.secondary].filter(
-    (w): w is QuotaWindow => !!w && !isWindowExpired(w, now)
-  )
-}
-
 function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | null {
   const now = Date.now()
   const cells = liveCells(q, now)
@@ -139,16 +128,19 @@ export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' }
   // **按数据判，不能按元素判。** `<CliPart/>` 即使内部 return null，
   // 元素本身永远是 truthy —— 拿它做条件的话，只有一边有数据时
   // 末尾会多挂一个孤零零的分隔符（实测「Codex 2% |」）。
-  const has = (c?: CliQuota): boolean => liveCells(c, Date.now()).length > 0
-  const hasCodex = has(q.codex)
-  const hasClaude = has(q.claude)
-  if (!hasCodex && !hasClaude) return null // 两边都还没数据 —— 整条不出现
+  // 哪几段、什么顺序，全在 `segments.ts`（纯函数、有单测）。
+  // **分隔符按段数拼，不要两两判断** —— 原来那种写法两段时对、三段时会漏一根竖线。
+  const parts = quotaSegments(q, Date.now())
+  if (parts.length === 0) return null // 都还没数据 —— 整条不出现
 
   return (
     <div className={`qb qb-${variant}`} role="status" aria-label="额度用量">
-      {hasCodex && <CliPart name="Codex" q={q.codex} />}
-      {hasCodex && hasClaude && <span className="qb-sep">|</span>}
-      {hasClaude && <CliPart name="Claude Code" q={q.claude} />}
+      {parts.map((p, i) => (
+        <Fragment key={p.name}>
+          {i > 0 && <span className="qb-sep">|</span>}
+          <CliPart name={p.name} q={p.q} />
+        </Fragment>
+      ))}
     </div>
   )
 }

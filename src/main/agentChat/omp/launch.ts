@@ -17,7 +17,7 @@
 // 「未配置」而是 **provider 回 401**，用户会跑去改一把**根本没被读到**的 key。
 // 与其让他去追那个幻觉，不如在起进程之前就说清楚缺什么。
 import { app } from 'electron'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -60,6 +60,32 @@ const SCRUB_KEYS = [
   'XDG_STATE_HOME',
   'XDG_CACHE_HOME'
 ] as const
+
+/** 所有 omp 子进程共用的那半环境：**把它关进我们自己的配置目录**。
+ *
+ *  会话、冒烟、`omp usage`、`omp models` 四处都要用同一份 —— 少设一处的症状是
+ *  那条命令读的是用户**真实的 `~/.omp`**（凭证、会话记录、额度全是别人的那套），
+ *  而且不报错。所以抽出来，四个调用点都从这里拿。 */
+export function ompBaseEnv(host: HostPaths): Record<string, string> {
+  const env: Record<string, string> = {
+    ...(PROBE_ENV as Record<string, string>),
+    // **HOME 必须与算相对路径用的那个同源**。`agentRules.ts:41-43` 记着一次实测事故：
+    // `os.homedir()` 跟随 `$HOME`、`app.getPath('home')` 不跟随，两者分叉过。
+    // omp 那边用的是 `os.homedir()`，所以显式把 HOME 钉成我们算路径时用的那一个，
+    // 否则会出现「配置写进 A、omp 读的是 B」，而界面显示「已配置」。
+    HOME: host.home,
+    PI_CONFIG_DIR: ompConfigDirRelative(host.home, host.userData),
+    // 绝对路径版。同时设两个是有意的：它优先级最高、且**把 XDG 分支整个关掉**
+    // （`dirs.ts:316-320` 一旦有 override，`isDefault` 为假）——
+    // 于是 agentDir 不再依赖「相对 HOME」这条假设，Windows 跨盘符那种情形也稳。
+    PI_CODING_AGENT_DIR: ompAgentDir(host.userData),
+    // 跳过 omp 的交互式初始化向导（上游 `modes/setup-wizard/index.ts:49`）。
+    // 不设的话首次起会话会挂在等输入，界面上看到的是「超时」而看不出原因。
+    OMP_SKIP_SETUP: '1'
+  }
+  for (const k of SCRUB_KEYS) delete env[k]
+  return env
+}
 
 /** 起 omp 要的一切。transport 只认这个结构，不认识它是怎么算出来的。 */
 export interface OmpSpawnSpec {
@@ -137,27 +163,12 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
     return { ok: false, reason: 'vault-locked', message: '密钥柜锁着，解锁之后才能起会话。' }
   }
 
-  const agentDir = ompAgentDir(input.host.userData)
   const env: Record<string, string> = {
-    ...(PROBE_ENV as Record<string, string>),
+    ...ompBaseEnv(input.host),
     ...(input.mcp ? mcpEnv({ project: input.cwd }) : {}),
-    // **HOME 必须与算相对路径用的那个同源**。`agentRules.ts:41-43` 记着一次实测事故：
-    // `os.homedir()` 跟随 `$HOME`、`app.getPath('home')` 不跟随，两者分叉过。
-    // omp 那边用的是 `os.homedir()`，所以显式把 HOME 钉成我们算路径时用的那一个，
-    // 否则会出现「配置写进 A、omp 读的是 B」，而界面显示「已配置」。
-    HOME: input.host.home,
-    PI_CONFIG_DIR: ompConfigDirRelative(input.host.home, input.host.userData),
-    // 绝对路径版。同时设两个是有意的：它优先级最高、且**把 XDG 分支整个关掉**
-    // （`dirs.ts:316-320` 一旦有 override，`isDefault` 为假）——
-    // 于是 agentDir 不再依赖「相对 HOME」这条假设，Windows 跨盘符那种情形也稳。
-    PI_CODING_AGENT_DIR: agentDir,
-    // 跳过 omp 的交互式初始化向导（上游 `modes/setup-wizard/index.ts:49`）。
-    // 不设的话首次起会话会挂在等输入，界面上看到的是「超时」而看不出原因。
-    OMP_SKIP_SETUP: '1',
     // **放最后**：用户 rc 里可能 export 过同名变量，我们注入的这份必须压过它
     ...keys
   }
-  for (const k of SCRUB_KEYS) delete env[k]
 
   return {
     ok: true,
@@ -330,4 +341,32 @@ export function hostPaths(): HostPaths {
     userData: app.getPath('userData'),
     home: app.getPath('home')
   }
+}
+
+/** 问 omp 要订阅额度。**独立的短命进程**，与 Codex 读自己的日志是同一个模式。
+ *
+ *  事件流里只有花费与上下文占用，订阅额度只有这条路拿得到。
+ *  **失败一律安静返回 null** —— 为一个百分比惊动用户，比额度条空着更烦人
+ *  （`quotaApi.ts` 的四条纪律第 2 条，逐字适用）。
+ *
+ *  env 走 `ompBaseEnv`：少设一处就会去读用户**真实的 `~/.omp`**，
+ *  拿回来的是别人账号的额度，而且不报错。 */
+export function readOmpUsage(host: HostPaths, timeoutMs = 8000): Promise<unknown | null> {
+  const bin = ompBinPathOrNull(host)
+  if (!bin || !fs.existsSync(bin)) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      ['usage', '--json'],
+      { env: ompBaseEnv(host), timeout: timeoutMs, maxBuffer: 4 * 1024 * 1024 },
+      (err, stdout) => {
+        if (err) return resolve(null)
+        try {
+          resolve(JSON.parse(stdout))
+        } catch {
+          resolve(null)
+        }
+      }
+    )
+  })
 }

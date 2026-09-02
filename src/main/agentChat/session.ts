@@ -29,7 +29,7 @@ import { unauthedInLine } from '../cliAuth/detect.ts'
 import { createTranscriptStore } from './transcript'
 import { approvalEnv } from './approvalEnv.ts'
 import { getAdapter, listAdapters } from './adapters/index.ts'
-import { ingestChatQuota, scheduleApiRefresh } from '../quotaStore'
+import { ingestChatQuota, scheduleApiRefresh, scheduleOmpRefresh } from '../quotaStore'
 import {
   NO_SILENCE,
   silenceAfterSlash,
@@ -391,7 +391,11 @@ function handleEvent(live: Live, e: ChatEvent): void {
     // 它们的行为与今天逐字相同。不加门不算事故（内部有节流、没登录会静默返回），
     // 但 Anthropic / OpenAI 的 usage 端点按 IP 限流（omp 自己的源码注释里写着），
     // 同一个 IP 上多一个客户端去打，赔的是 Claude 那半额度条。
-    if (getAdapter(live.rec.cli)?.quotaSource !== 'omp-usage') scheduleApiRefresh()
+    // 两条路互斥：Claude/Codex 走直连接口，omp 走它自己那个短命进程。
+    // 都放在这里而不是各自散在两处 —— 「跑完一轮 = 额度刚变过」这个判断只有一个，
+    // 分头写迟早有一边漏掉。
+    if (getAdapter(live.rec.cli)?.quotaSource === 'omp-usage') scheduleOmpRefresh()
+    else scheduleApiRefresh()
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
     live.rec = {

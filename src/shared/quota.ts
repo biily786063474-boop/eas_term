@@ -33,8 +33,9 @@ export interface QuotaWindow {
    *  `api` 直连 `/api/oauth/usage`，两个窗口永远都在、服务端原始口径，最权威；
    *  `statusline` 同样精确，但 payload 是条件展开的（某个窗口可能整个缺席）；
    *  `event` 只在跨阈值时报、且五小时不带用量；
-   *  `log` 是 Codex 读自己的会话日志。 */
-  src: 'api' | 'statusline' | 'event' | 'log'
+   *  `log` 是 Codex 读自己的会话日志；
+   *  `omp` 是起一个短命的 `omp usage --json` 进程问它（映射在 ompQuota.ts）。 */
+  src: 'api' | 'statusline' | 'event' | 'log' | 'omp'
   /** 服务端对这一格的告警判定原文（`limits[].severity`）。**只有 `api` 这条通道带**。
    *
    *  **存原文不存布尔**：目前只实测见过 `"normal"` 一个值（2026-08-23，当时额度
@@ -48,7 +49,7 @@ export interface QuotaWindow {
 /** 来源的权威度，数字大的说了算。**新增来源必须在这里排位** ——
  *  漏排会 `?? 0` 落到最低阶，表现成「新通道的数据永远盖不掉旧值」，
  *  而且不报错，只是安静地不更新。 */
-const SRC_RANK: Record<QuotaWindow['src'], number> = { api: 3, statusline: 2, event: 1, log: 1 }
+const SRC_RANK: Record<QuotaWindow['src'], number> = { api: 3, statusline: 2, event: 1, log: 1, omp: 3 }
 
 /** 一条新数据该不该盖掉这一格已有的值。
  *
@@ -115,6 +116,9 @@ export interface CliQuota {
   updatedAt: number
   /** Codex 侧带的计划类型，Claude 侧没有。只用于 hover 说明，不参与判断 */
   planType?: string
+  /** 这一段在额度条上叫什么。不给就由调用点写死的字面量决定（Claude / Codex 那两段就是这样）。
+   *  omp 那段必须带 —— 同一个 omp 可以配不同的服务商，只显示「omp」看不出这是谁的额度。 */
+  label?: string
 }
 
 export interface QuotaSnapshot {
@@ -129,6 +133,14 @@ export interface QuotaSnapshot {
    *
    *  只对 Claude 侧有意义；Codex 那半读的是本机会话日志，不存在这个问题。 */
   claudeAccountUuid?: string
+  /** omp 那半（映射在 ompQuota.ts）。缺席 = 没数据，那一段不显示。
+   *  **不与 claude / codex 那两半互通** —— 即便 omp 里登的是同一个 Anthropic 账号，
+   *  也分开显示（合并要先定 SRC_RANK 的位次并处理两边差 1 的横跳，那是另一件事）。 */
+  omp?: CliQuota
+  /** 落盘的这份 omp 额度属于哪个账号（`ompAccountKeyOf` 算的短哈希，不含明文邮箱）。
+   *  **与 claudeAccountUuid 同一条纪律**：对不上就把 omp 那半整个丢掉，
+   *  宁可空着也不显示别人的额度。 */
+  ompAccountKey?: string
 }
 
 /** 百分比归一到 0–100 的整数。

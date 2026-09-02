@@ -17,6 +17,10 @@ import {
   type QuotaWindow
 } from '../shared/quota.ts'
 import { fetchUsage } from './quotaApi'
+import { ompAccountKeyOf, ompQuotaFromUsageJson, nextOmpSnapshot } from '../shared/ompQuota.ts'
+import { hostPaths, readOmpUsage } from './agentChat/omp/launch.ts'
+import { readOmpSetup } from './agentChat/omp/store.ts'
+import { ompAdapter } from './agentChat/adapters/omp.ts'
 
 /** 落盘位置。**要落盘**（用户 2026-08-21 拍板）：两边都是「跑过一轮才有数」，
  *  不落的话每天第一次打开软件那个常驻 bar 都是空的，等于没有。 */
@@ -255,6 +259,74 @@ function readCodexQuota(): CliQuota | null {
  *  而且只读 8KB 尾巴，代价很小。 */
 const CODEX_POLL_MS = 30_000
 
+// ── omp：第三条采集路 ─────────────────────────────────────────────────────
+//
+// 与 Claude / Codex 都不同：**起一个短命进程去问它**（`omp usage --json`）。
+// 事件流里只有花费与上下文占用，订阅额度只有这条路拿得到。
+//
+// **不走 merge() 也不走 putWindow()**：那两个是为「多来源部分载荷」写的
+// （Claude 有三条来源、statusline 的 payload 是条件展开的）。omp 是单来源全量载荷，
+// 形状和 Codex 一样 —— 逐格写入反而会让消失的窗口永不清除。
+// 换账号要整个丢掉那一半，判据与 `claudeAccountUuid` 同一条。
+// 纯逻辑（挑哪两条、单位换算、换账号、同值不广播）全在 `shared/ompQuota.ts`，有单测。
+
+/** 两次真实调用之间的最小间隔。**按 omp 自己的缓存定的**：它的 usage 报告 TTL 是
+ *  5 分钟、还带 ±25% 抖动（上游 `auth-storage.ts` 的 ttlJitter），最长 6.25 分钟。
+ *  照 Codex 那边 30 秒的节奏轮询，只是在反复冷启动一个 128MB 的进程去读同一份缓存。 */
+const OMP_MIN_GAP_MS = 6.25 * 60_000
+/** 定时兜底。真正的触发点是「omp 会话跑完一轮」，这个只是它长时间没跑时的补拉。 */
+const OMP_POLL_MS = 10 * 60_000
+/** 连着这么多次读到空 reports 就停掉定时器。
+ *
+ *  **必须有这道门**：API key 模式（没订阅）下 reports 恒为空，而这是常态。
+ *  没有它的话，一个从没配过 omp 的用户从升级当天起，每 10 分钟被拉起一个 128MB 的
+ *  Bun 进程去打一串必然失败的网络请求 —— 而「失败一律静默」意味着它永远不会自己停。
+ *  omp 会话跑完一轮那条触发路仍然留着，所以真配上了还是会恢复。 */
+const OMP_EMPTY_GIVE_UP = 3
+
+let ompTimer: NodeJS.Timeout | null = null
+let ompLastAt = 0
+let ompInFlight = false
+let ompEmptyStreak = 0
+
+/** 真的去问一次。任何失败都安静吞掉。 */
+async function refreshOmp(): Promise<void> {
+  if (ompInFlight) return
+  const provider = readOmpSetup(app.getPath('userData')).provider?.id
+  // 没选服务商就没有「谁的额度」可言 —— 不起进程
+  if (!provider) return
+  ompInFlight = true
+  try {
+    const payload = await readOmpUsage(hostPaths())
+    ompLastAt = Date.now()
+    const q = ompQuotaFromUsageJson(payload, provider, ompLastAt)
+    if (!q) {
+      // 读到了但没数据（API key 模式的常态）→ 累计空次数。
+      // **读失败（payload 为 null）不算**：那是一次性故障，不该让它把定时器关掉。
+      if (payload !== null && ++ompEmptyStreak >= OMP_EMPTY_GIVE_UP && ompTimer) {
+        clearInterval(ompTimer)
+        ompTimer = null
+      }
+      return
+    }
+    ompEmptyStreak = 0
+    const next = nextOmpSnapshot(snapshot, q, ompAccountKeyOf(payload, provider))
+    if (!next) return
+    snapshot = { ...snapshot, ...next }
+    save()
+    broadcast()
+  } finally {
+    ompInFlight = false
+  }
+}
+
+/** 排一次 omp 额度刷新。**omp 会话每跑完一轮都会叫它**，所以必须幂等且便宜。
+ *  与 Claude 那条 `scheduleApiRefresh` 是两个独立的节流状态 —— 共用会让两条路互相压制。 */
+export function scheduleOmpRefresh(): void {
+  if (Date.now() - ompLastAt < OMP_MIN_GAP_MS) return
+  void refreshOmp()
+}
+
 export function registerQuotaHandlers(): void {
   load()
   ipcMain.handle('quota:get', (): QuotaSnapshot => snapshot)
@@ -267,6 +339,16 @@ export function registerQuotaHandlers(): void {
   // macOS 的 recursive 监听对「监听之后才创建的深层目录」也不总是可靠。
   setInterval(tick, CODEX_POLL_MS)
   watchCodex(tick)
+
+  // omp 那条：**两道门之后才注册定时器**。
+  // ① 包里没有这个平台的二进制（或被改名）→ 根本不注册；
+  // ② 注册之后连着几次读到空 reports 也会自己停（见 OMP_EMPTY_GIVE_UP）。
+  // 少这两道门，只用 Claude 的用户会被一个跟他毫无关系的功能每 10 分钟拖一次。
+  void ompAdapter.detect(hostPaths()).then((ok) => {
+    if (!ok) return
+    void refreshOmp()
+    ompTimer = setInterval(() => void refreshOmp(), OMP_POLL_MS)
+  })
 }
 
 /** 盯住 Codex 的会话日志目录 —— 它一写盘就重读。
