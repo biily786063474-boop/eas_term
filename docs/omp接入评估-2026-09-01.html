@@ -113,6 +113,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
   <a href="#两面">两个接入面</a>
   <a href="#模式">选 RPC 还是 ACP</a>
   <a href="#事件">事件映射</a>
+  <a href="#额度">额度与用量</a>
   <a href="#模型">模型填入</a>
   <a href="#清单">改造清单</a>
   <a href="#兼容">要兼容什么</a>
@@ -184,7 +185,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
     <div class="stat"><div class="num n-sk">3/3</div><div class="lab">实测判据<br>全部通过</div></div>
     <div class="stat"><div class="num n-am">173</div><div class="lab">GitHub 直下 KB/s<br>128MB 要 12 分钟</div></div>
     <div class="stat"><div class="num n-ro">2</div><div class="lab">审批通道<br>只答一条会挂死</div></div>
-    <div class="stat"><div class="num n-em">18</div><div class="lab">translator 测试<br>已全绿</div></div>
+    <div class="stat"><div class="num n-em">20</div><div class="lab">provider 的额度采集<br>接了就白捡</div></div>
   </div>
 </section>
 
@@ -548,9 +549,11 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
       <tr><td><code>exec.start</code> / <code>exec.done</code></td><td><code>tool_execution_start</code> / <code>_update</code> / <code>_end</code></td><td><span class="b b-em">直通</span> 它比我们多一个 update，正好喂给执行卡片的流式刷新</td></tr>
       <tr><td><code>approval.request</code><br><code>approval.resolved</code></td><td>ACP <code>session/request_permission</code></td><td><span class="b b-em">直通</span> <b>这一对只有 ACP 给得出</b>。kind 映射：bash→exec，edit/delete/move→patch，其余→tool</td></tr>
       <tr><td><code>compacted</code></td><td><code>auto_compaction_start</code> / <code>_end</code></td><td><span class="b b-em">直通</span> pre/postTokens 从 telemetry 取</td></tr>
-      <tr><td><code>quota</code>（额度）</td><td><span class="b b-ro">概念不成立</span></td>
-        <td><b>额度是订阅制的概念</b>——「5 小时窗口用了 79%、几点重置」。omp 走 API 按 token 计费，
-          它自己没有账号，用的是我们配的 provider。这一格不该有值，<b>不是拿不到</b></td></tr>
+      <tr><td><code>quota</code>（额度）</td><td><span class="b b-am">看模式</span></td>
+        <td><b>API key 模式</b>：额度这个概念不成立 —— 按 token 计费没有「窗口用了 79%、几点重置」，
+          该有的是花费（见下一行）。<br>
+          <b>订阅登录模式</b>：<b>完全成立，而且数据比我们现有的全</b> —— 见「额度与用量」那一节。
+          <b>但这条不在事件流里</b>，走的是 <code>omp usage --json</code> 这个独立进程</td></tr>
       <tr><td><code>turn.done.costUsd</code><br><code>Usage.contextRatio</code></td><td><span class="b b-em">有，而且齐</span></td>
         <td><b>都在 <code>usage_update</code> 这一个事件里</b>：<code>size</code>（上下文窗口＝分母）·
           <code>used</code>（分子）· <code>cost:{amount,currency}</code>（<b>会话累计</b>花费，与 Claude 的
@@ -584,6 +587,89 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
     我们的 <code>turn.done</code> 会直接驱动 <code>view.busy</code> 变 false、灵动岛收通知、待办打钩。
     翻错这一个布尔，表现就是「它说做完了，然后又自己动起来」——而且字段是可选的，老版本没有，
     所以判据必须写成 <code>!== false</code> 而不是 <code>=== true</code>。</p>
+  </div>
+</section>
+
+<section id="额度">
+  <h2>Usage &amp; Quota</h2>
+  <div class="sectitle">额度与用量：这一条我说错过，纠正后它从减分项变成了加分项</div>
+  <p class="secnote">先前两版我写的是「omp 的额度触达不了」。<b>那只对了一半</b> ——
+  取决于用户用哪种模式接 provider，而订阅那一半不但成立，数据还比我们现有的全。</p>
+
+  <div class="dissent">
+    <div class="vlabel">先纠正我自己说错的两句</div>
+    <ul class="clean" style="margin:0">
+      <li>v2 我说「omp 不报花费」—— <b>错的</b>。它报，在 <code>usage_update</code> 事件里。
+        我没看到是因为<b>自己把测试用的免费模型价格配成了 0</b>，而它的条件是 <code>cost &gt; 0</code> 才带</li>
+      <li>v3 我说「额度概念不成立」—— <b>只对 API key 模式</b>。
+        订阅登录时额度完全成立，omp 有一整套归一化的采集</li>
+    </ul>
+  </div>
+
+  <h3>两种模式，该显示的东西不一样</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:20%">模式</th><th style="width:22%">该显示什么</th><th style="width:20%">从哪来</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><b>API key</b><br><span class="b b-gy">按 token 计费</span></td>
+        <td><b>花费</b> + 上下文占比<br><span class="b b-ro">不是额度</span></td>
+        <td><code>usage_update</code> 事件<br>（在会话事件流里）</td>
+        <td>「窗口用了 79%、几点重置」这种说法不成立 —— 按量付费没有窗口。
+          该有的是「这个会话花了多少」</td></tr>
+      <tr><td><b>订阅登录</b><br><span class="b b-em">OAuth</span></td>
+        <td><b>额度</b>（窗口 / 用量 / 重置时间）</td>
+        <td><code>omp usage --json</code><br>（独立进程，<b>不在事件流里</b>）</td>
+        <td>Anthropic Claude Pro/Max · ChatGPT/Codex · GitHub Copilot ·
+          智谱 / Kimi / MiniMax / 通义 / Cursor / Gemini / xAI 等，
+          <b>20 家各一份适配器</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>它的额度数据比我们现在的全</h3>
+  <p>不是「每家各报各的」，omp 有一层归一化 schema：</p>
+<pre><code>UsageLimit {
+  id, label, scope,
+  window: { id, label, durationMs?, <span class="hi">resetsAt?</span>, resetLabel? },
+  amount: { used?, <span class="hi">limit?</span>, <span class="hi">remaining?</span>, usedFraction?, remainingFraction?, unit },
+  status, notes?
+}
+UsageUnit   = percent | tokens | requests | credits | usd | minutes | bytes | unknown
+UsageStatus = ok | warning | exhausted | unknown</code></pre>
+  <p>对比我们的 <code>ChatEvent.quota</code>：<code>{ window, status, resetsAt?, utilization? }</code>
+  —— <b>我们是它的子集</b>。它还有我们完全没建模的东西，比如 <code>UsageResetCredit</code>
+  （Codex 那个「存起来的额度重置券」，带 <code>grantedAt</code> / <code>expiresAt</code> / 状态）。</p>
+
+  <h3>接法：不走 ACP，起个短命进程</h3>
+  <p><b>这一点很重要</b> —— 额度不在 ACP 的事件流里，也不在 RPC 的命令表里，它是个 CLI 子命令。
+  所以接法和我们<b>现在采 codex 额度是同一个模型</b>：定时起一个进程、读它的输出、并进快照广播。
+  <code>quotaStore.ts</code> 加第三条采集路，不动现有那两条。</p>
+<pre><code>$ omp usage --json          <span class="dim"># 实跑过，本机没登录订阅账号所以是空的</span>
+{ "generatedAt": 1788320266765,
+  "reports": [], "accountsWithoutUsage": [], "disabledCredentials": [], "capacity": {} }
+
+<span class="dim">可用参数：</span>
+  -p &lt;provider&gt;   <span class="dim">只看某一家</span>
+  -r              <span class="dim">脱敏账号邮箱/id（截图分享用）</span>
+  --history -d N  <span class="hi">小时级快照历史</span> <span class="dim">← 我们现在没有这个</span>
+  invalidate      <span class="dim">清缓存（说明它是有缓存的，不用担心频繁打 provider 接口）</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">接之前必须先想清楚的一件事：同一个账号会有两条来源</div>
+    <p style="margin:0">如果用户 <b>Claude Code 登着</b>、同时又把 <b>Anthropic 账号登进了 omp</b>，
+    那么同一个订阅的额度会有两条采集路。<br>
+    这不是新问题 —— <code>quotaStore.ts</code> 里已经为「两条来源并存」写过一整段：
+    statusline 和事件流对同一格给出的数字<b>差 1</b>（79 vs 0.796×100 四舍五入成 80），
+    所以有 <code>shouldReplaceWindow</code> 那套「什么时候才允许盖掉旧值」的判据。<br>
+    <b>加第三条要照那个先例来，不能直接覆盖</b> —— 否则界面上那个数字会在两个值之间跳，
+    而用户不知道该信哪个。</p>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">结论</div>
+    <p style="margin:0">额度这条从「减分项」变成了<b>加分项</b>：我们现在手写了两家
+    （Claude 三条来源、Codex 一条读文件），接了 omp 等于<b>白捡 20 家 provider 的归一化额度采集</b>，
+    还附带一份我们没有的历史快照。<br>
+    <b>但第一版仍建议留空</b> —— 理由不是拿不到，是「同一账号两条来源」那个合并规则值得单独想，
+    而它不阻塞对话本身能不能用。</p>
   </div>
 </section>
 
@@ -697,8 +783,9 @@ session?: Partial&lt;Record&lt;AgentKind, string&gt;&gt;         <span class="di
       <tr><td><b>密钥注入</b><br><code>secretsEnv()</code></td><td><span class="b b-em">成立</span></td>
         <td>走环境变量，与 CLI 无关。<span class="b b-am">注意</span> omp 自己也有一套 <code>secrets.yml</code> 脱敏，
           两套并存要想清楚谁管谁</td></tr>
-      <tr><td><b>额度条</b></td><td><span class="b b-ro">不成立</span></td>
-        <td>omp 不在事件流里报额度。第一版留空</td></tr>
+      <tr><td><b>额度条</b></td><td><span class="b b-em">反而是升级</span></td>
+        <td>订阅登录时 <code>omp usage --json</code> 给归一化的额度数据，20 家 provider 各一份适配器。
+          <b>接法和我们现在采 codex 额度是同一个模型</b>（起个短命进程读输出）。见「额度与用量」那一节</td></tr>
       <tr><td><b>多 agent 编排</b><br><code>team_spawn</code> 那套</td><td><span class="b b-ro">会打架</span></td>
         <td>omp 自己有一整套子 Agent 生命周期（running/idle/parked/aborted + IrcBus + Agent Hub）。
           <b>两套并存必须选一套</b>。第一版：<code>set_subagent_subscription: off</code>（本来就是默认），
