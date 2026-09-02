@@ -148,6 +148,7 @@ Write·Edit·NotebookEdit→patch / 其余→tool）→ 渲染层弹审批卡 �
 | **不要给注入面"补上漏掉的 `guardPath`"** | fsGuard 的白名单里永远没有 home，一加规则分发当场全量失败**且不报错**（`syncRules` 静默写不进去），症状是 agent 不再知道画板工具、首启"有更新待安装"反复弹。同理 `skillLibrary/write.ts`、`projectPaths.ts` 也不许换成 fsGuard，两处文件头都写明了理由 |
 | `adapters/claude.ts` buildArgs | 绝不能带 `--bare` / `--permission-mode manual`（实测硬约束） |
 | `adapters/codex.ts` stdin | 必须 `ignore`，否则卡在等 stdin |
+| `src/main/probeEnv.ts` 的 `userBinDirs()` 候选目录 | 探测子进程的 PATH 从这里来。**漏一个安装位 = 那种装法的用户永远显示「未安装」**，而且不报错、不进日志、测试全绿 —— 开发机从终端起实例有完整 PATH，永远复现不出来。复现只能靠 `env PATH="/usr/bin:/bin:/usr/sbin:/sbin"` 起构建产物（模拟 launchd）。**删 `applyLoginShellPath()` 的调用同样静默** —— 只是从「装在哪都找得到」退回「只认写死那几个目录」 |
 | `src/main/cliContractRun.ts` 的探测命令 | 只能是 `--help` / `--version`。**绝不能加会拉起交互会话的子命令** —— 曾误用 `claude config list` 启动了一次真实会话（教训记在 `agent.ts` 的注释里）。自检每次启动都跑，有副作用就是每次启动都有副作用 |
 | `skillLibrary` 的分类口子 | **下面这些一起改**：`mcp/eas-mcp.mjs` schema + `mcpHandler.ts` 执行 + `skillLibrary/index.ts` 落盘（IPC + `saveConfig` patch 语义 + `skippedLocked` 跳过）与 `category.ts` 校验（`validateCategoryBatch`，有单测）+ `.claude/skills/skill-organizer/SKILL.md` 说明。只改 `category.ts` 会漏掉落盘那半 |
 

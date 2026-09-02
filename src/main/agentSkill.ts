@@ -14,6 +14,7 @@ import path from 'path'
 
 import type { AgentStatus, SkillStatus } from '../shared/types'
 import { expectedCodexRegion } from './agentRules'
+import { userBinDirs } from './probeEnv'
 
 const CODEX_BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
 const CODEX_END = '<!-- eas-term:end -->'
@@ -55,22 +56,17 @@ const skillFiles = (dir: string): string[] => {
   }
 }
 
-/** CLI 在不在。主进程 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin），所以是探常见安装位置而不是 which。 */
+/** CLI 在不在。主进程 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin），所以是探常见安装位置而不是 which。
+ *
+ *  **候选目录来自 probeEnv.userBinDirs()，这里不再自己列**（见 probeEnv.ts 文件头
+ *  「同一个事实写三处」那段）。 */
 export function hasCli(bin: string): boolean {
   const home = app.getPath('home')
   const win = process.platform === 'win32'
   // Windows 的可执行文件带扩展名（npm 装的 CLI 通常是 .cmd），只查裸名会漏——
   // 结果就是「明明装了 Claude Code 却检测不到、不提示装技能包」
   const exts = win ? ['.cmd', '.exe', '.bat', '.ps1', ''] : ['']
-  const dirs = win
-    ? [path.join(process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'), 'npm')]
-    : [
-        path.join(home, '.local', 'bin'),
-        '/opt/homebrew/bin',
-        '/usr/local/bin',
-        path.join(home, '.bun', 'bin'),
-        path.join(home, '.npm-global', 'bin')
-      ]
+  const dirs = [...userBinDirs(home, process.platform, process.env)]
   // PATH 里也找一遍（从终端起的 app 能拿到完整 PATH）
   for (const d of (process.env.PATH ?? '').split(path.delimiter)) {
     if (d) dirs.push(d)

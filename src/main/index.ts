@@ -20,6 +20,7 @@ import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
 import { registerAgentHandlers } from './agent'
+import { applyLoginShellPath } from './probeEnv'
 import { checkContracts } from './cliContractRun'
 import { registerStatuslineHandlers } from './statuslineRuntime'
 import { registerQuotaHandlers } from './quotaStore'
@@ -341,6 +342,13 @@ app.whenReady().then(() => {
   //
   // ⚠️ **新增的 registerXxxHandlers() 一律放在这行之后**，不然那组 IPC 又会漏掉。
   installIpcProfiler()
+
+  // 问登录 shell 要一次真实的 $PATH，合进 PROBE_ENV。**不 await** —— 它要跑一个
+  // 交互式 shell（读 .zshrc，p10k 之类的能拖到几百毫秒），拦在启动路上不值得。
+  // 在它回来之前探测用的是写死候选目录，本来就够覆盖绝大多数装法；
+  // 它兜的是「装在 volta / asdf / 自定义前缀」这类猜不到的位置。
+  // 2026-09-01：claude 迁到 ~/.local/bin 后一直被判「未安装」，就是没有这一步。
+  void applyLoginShellPath()
 
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPluginHandlers()

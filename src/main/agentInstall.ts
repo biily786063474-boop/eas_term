@@ -17,27 +17,19 @@ import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
+import { userBinDirs } from './probeEnv'
 import type { InstallPlan, InstallOption, AgentKind } from '../shared/types'
 
-/** 某个可执行文件在不在。和 agentSkill 里的 hasCli 同源：GUI 启动时 PATH 很贫瘠，探常见位置 + PATH。 */
+/** 某个可执行文件在不在。和 agentSkill 里的 hasCli 同源：GUI 启动时 PATH 很贫瘠，探常见位置 + PATH。
+ *
+ *  **候选目录来自 probeEnv.userBinDirs()，这里不再自己列** —— 曾经三处各列一份
+ *  （这里、agentSkill.hasCli、probeEnv 的 PATH），结果 probeEnv 那份漏了
+ *  `~/.local/bin`，于是「安装引导说已装、探测说没装」自相矛盾。见 probeEnv.ts 文件头。 */
 function hasBin(bin: string): boolean {
   const home = app.getPath('home')
   const win = process.platform === 'win32'
   const exts = win ? ['.cmd', '.exe', '.bat', ''] : ['']
-  const dirs = win
-    ? [
-        path.join(process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'), 'npm'),
-        'C:\\Program Files\\nodejs',
-        path.join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps')
-      ]
-    : [
-        path.join(home, '.local', 'bin'),
-        '/opt/homebrew/bin',
-        '/usr/local/bin',
-        '/usr/bin',
-        path.join(home, '.bun', 'bin'),
-        path.join(home, '.npm-global', 'bin')
-      ]
+  const dirs = [...userBinDirs(home, process.platform, process.env)]
   for (const d of (process.env.PATH ?? '').split(path.delimiter)) if (d) dirs.push(d)
   return dirs.some((d) => exts.some((e) => {
     try {
