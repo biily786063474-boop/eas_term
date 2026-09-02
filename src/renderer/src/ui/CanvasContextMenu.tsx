@@ -21,6 +21,7 @@
 // 菜单项由调用方构造（画布侧见 features/canvas/stageMenu.ts）。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CtxScrollRail } from './CtxScrollRail'
 
 import { fuzzyPick } from './fuzzy'
 
@@ -247,6 +248,9 @@ export function CanvasContextMenu({
           )
         )}
       </div>
+      {/* 沿边滚动条。**兄弟节点，不放进菜单里** —— 菜单自己是滚动容器，
+          放进去会跟着内容滚走（详见 CtxScrollRail 的注释）。 */}
+      <CtxScrollRail host={ref} />
       {sub && (
         <div
           ref={subRef}

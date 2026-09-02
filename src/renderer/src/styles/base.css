@@ -1062,6 +1062,35 @@ body {
 
 /* 子菜单复用 .canvas-ctxmenu 的外观，只是单独 portal 出去 ——
    父菜单有 overflow-y:auto，当子元素会被裁掉 */
+/* ── 沿边滚动条（`CtxScrollRail`）────────────────────────────────────────────
+   进度不画成一根竖条，而是**沿着菜单自己的圆角边框走**（用户 2026-09-02 点名）。
+   几何在 `ui/ctxRail.ts`（纯函数、10 条单测），组件在 `ui/CtxScrollRail.tsx`。
+
+   `position: fixed` 且**不在菜单里面**：菜单自己是滚动容器，
+   放进去的话轨道会跟着内容滚出边框。 */
+.cctx-rail {
+  position: fixed;
+  z-index: 1001;
+  /* 盖在菜单上，能接事件就会挡住底下的条目 */
+  pointer-events: none;
+  overflow: visible;
+}
+.cctx-rail path {
+  fill: none;
+  stroke-linecap: round;
+}
+/* 轨道：很淡，只是告诉你「滑块会在这条线上走」 */
+.cctx-rail-track {
+  stroke: var(--glass-border-strong);
+  stroke-width: 2;
+}
+/* 滑块：`--t-2` 那一档 —— 它是状态指示，不该比内容还抢眼 */
+.cctx-rail-thumb {
+  stroke: var(--t-2);
+  stroke-width: 2.5;
+  transition: stroke-dashoffset 0.06s linear;
+}
+
 .canvas-ctxmenu.cctx-sub {
   /* 比父菜单高一层，免得贴着边缘时被父菜单盖住 */
   z-index: 1001;
