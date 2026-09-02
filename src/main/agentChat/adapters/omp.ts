@@ -19,7 +19,15 @@ import { ompBinPathOrNull } from '../omp/paths.ts'
 
 export const ompAdapter: CliAdapter = {
   id: 'omp',
-  displayName: 'Oh My Pi',
+  // **界面上叫「默认 harness」，不叫产品名。**
+  // 用户 2026-09-02：「名字不要说 OMP，而是写默认 harness。」
+  // 理由站得住：对用户来说这就是「不用装任何东西就能用的那个」，
+  // 而 Claude Code / Codex 是他自己去装的、认得出名字的东西 —— 三者摆在一起时，
+  // 一个他没听过的产品名只会让他去猜「这是什么，我要不要也装一个」。
+  //
+  // **署名不受影响**：随包的 `THIRD-PARTY-NOTICES.txt`（1MB，MIT）原样带着，
+  // 隐私页里也照旧写明它是 Oh My Pi —— 改的是界面标签，不是出处。
+  displayName: '默认 harness',
 
   // ── 能力位：下游按这些分流，**不许按 id 分流** ──────────────────────────
   /** 双向 JSON-RPC。`session.ts` 见到它就把这个会话整个交给 transport，

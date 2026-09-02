@@ -64,9 +64,13 @@ export function AgentOnboarding(): JSX.Element | null {
   const checkOmp = (): void => {
     void window.api.omp
       .status()
-      .then((raw) => {
-        const st = raw as { installed?: boolean; status?: { loggedIn?: boolean } } | null
-        setOmpReady(!!st?.installed && st?.status?.loggedIn === true)
+      .then((st) => {
+        // **判据是 `step`，不是某个「已登录」布尔。**
+        // 原来读的是 `status.loggedIn` —— 那个字段 2026-09-02 拆密钥柜时删掉了，
+        // 而这里用的是手写断言（`raw as {...}`），编译器一声不吭，
+        // 真机上表现为「配好了引导页还一直弹」。现在 preload 给了真类型，
+        // 再删字段就是编译错误。
+        setOmpReady(!!st?.installed && st.step?.k === 'ready')
       })
       .catch(() => setOmpReady(false))
   }

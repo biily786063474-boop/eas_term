@@ -20,6 +20,7 @@ import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
+import { pickDefaultCli, readLastCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
@@ -86,11 +87,11 @@ function probeOmp(): Promise<AuthProbe | null> {
     // 2026-09-02 拆密钥柜时那个字段随手删了，而这里一声不吭地读到 undefined，
     // 于是闸门永远不出现、用户根本进不去设置面板。**类型断言把编译器也蒙了过去。**
     // 改成读 `step`：它是主进程算好的「还缺什么」，`ready` 才算配好。
-    // **用 shared 那份真类型，不再手写断言。**
-    // 手写断言正是这次能溜过去的原因：字段删了，`as` 照样让它编译通过，
-    // 只在真机上表现为「闸门永远不出现」。用真类型的话，删字段当场是编译错误。
-    const st = raw as OmpStatus | null
-    if (!st) return null
+    // **不再手写断言** —— preload 现在直接回真类型。
+    // 断言正是这一类 bug 的温床：字段删了，`as` 照样让它编译通过，
+    // 只在真机上表现为「闸门永远不出现」。
+    if (!raw) return null
+    const st = raw
     return {
       installed: !!st.installed,
       status: { loggedIn: st.step?.k === 'ready' }
@@ -262,7 +263,15 @@ export function AgentChatView({
       // 未安装且有安装命令的**直接弹确认框**，不再先给一张提示卡让用户再点一次；
       // 没有安装命令的（要去官网装）仍然给提示卡说明。
       onClick: () =>
-        usable ? setSelected(c) : !c.available && c.installCmd ? installCli(c) : setCliNote(c)
+        usable
+          ? // **记下他的选择。** 下次新建会话就默认这个 ——
+            // 用户 2026-09-02：「我上次用了 cc 下次新建还是 cc。」
+            // 只在**手动切换**这一处记，不在自动挑选那处记：否则第一次的推测
+            // 会被写成「他的选择」，从此再也回不到推测逻辑上去。
+            (writeLastCli(c.id), setSelected(c))
+          : !c.available && c.installCmd
+            ? installCli(c)
+            : setCliNote(c)
     }
   })
   // **配好之后也要有路回设置面板。**
@@ -517,12 +526,10 @@ export function AgentChatView({
         // 指定的那个没装 / 不支持会话时退回既有逻辑，不是硬失败——
         // 用户至少还能看到界面并自己换一个。
         const pinned = pinnedCli ? usable.find((c) => c.id === pinnedCli) : undefined
-        // **随包的那个排最后。** `bundled` 的 CLI（omp）`available` 恒真 —— 它就在
-        // 安装包里，探测必过。让它按 listClis 的顺序参与「取第一个」，结果是
-        // **只登了 Claude 的老用户，升级当天每开一个新会话都被换成 omp**，
-        // 而他的 key 还没填，等于软件自己把自己变成不可用。
-        // 判据是 `bundled` 这个能力位，不是 id —— 将来再随包带第二个也照样成立。
-        setSelected((cur) => cur ?? pinned ?? usable.find((c) => !c.bundled) ?? usable[0] ?? null)
+        // 规矩连同 5 条单测在 `pickCli.ts`：随包那个排最后，但**别人都没装时就用它**。
+        // 摘出去是因为它决定用户打开软件看到的第一个 agent，写反了每个人都撞得上，
+        // 而写在 effect 里测不到。
+        setSelected((cur) => cur ?? pickDefaultCli(usable, pinned, readLastCli()))
       })
       .catch(() => {
         if (!cancelled) setClis([])

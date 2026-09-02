@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
+import type { OmpStatus } from '../shared/ompSetup.ts'
 import type {
   Project,
   DirEntry,
@@ -267,7 +268,13 @@ const api = {
    *  那套只认 claude / codex（`STATUS_ARGS` / `LOGIN_ARGS` 是 Record<'claude'|'codex'>），
    *  把 omp 送进去会在主进程直接抛。 */
   omp: {
-    status: (): Promise<unknown> => ipcRenderer.invoke('omp:status'),
+    /** **返回真类型，不是 `unknown`。**
+     *  声明成 unknown 的代价：每个调用方各写各的 `as {...}` 断言，
+     *  而断言**永远不会失败** —— 2026-09-02 拆密钥柜时删掉一个字段，
+     *  两个调用方（对话闸门、首启引导）同时静默失效，编译器一声不吭，
+     *  只在真机上表现为「闸门不出现」和「引导页永远不消失」。
+     *  给了真类型，再删字段就是编译错误。 */
+    status: (): Promise<OmpStatus | null> => ipcRenderer.invoke('omp:status'),
     listModels: (): Promise<{ id: string; label: string }[]> => ipcRenderer.invoke('omp:listModels'),
     saveProvider: (input: {
       provider: string
