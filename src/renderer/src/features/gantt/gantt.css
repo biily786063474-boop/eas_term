@@ -415,9 +415,15 @@
   padding: 9px 11px;
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-md);
-  background: var(--tooltip-bg);
+  /* **用浮层底（`--s-3`）而不是 `--tooltip-bg`。**
+     `--tooltip-bg` 是给「小气泡提示」的 —— 那种在亮色主题下惯例就是深色反相，
+     一两行字、看完即走。但这个浮层是**带内容的卡片**：时间、状态、可删除、
+     里面还能滚动。深色卡片摆在亮色界面里，看着像另一个软件的东西
+     （用户 2026-09-02：「甘特图的 hover popup 主题还没有和亮色统一」）。
+     判据是「它是提示还是面板」，不是「它浮不浮着」。 */
+  background: var(--s-3);
   backdrop-filter: var(--blur);
-  box-shadow: 0 14px 36px var(--ink-3);
+  box-shadow: var(--shadow-pop);
   /* 原来是 none（纯展示、鼠标穿透条下方的内容）。开了内部滚动就必须能接鼠标事件，
      否则滚动条画出来是摆设——wheel/拖 thumb 都会穿透到浮层背后的元素，白加。
      改成 auto 之后"鼠标从条移到浮层"这段本来会立刻触发条的 onMouseLeave 而够不着
@@ -516,7 +522,8 @@
   padding: 5px;
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-md);
-  background: var(--tooltip-bg);
+  /* 菜单是**面板**不是提示 —— 跟亮色浮层走（见 .gantt-pop 那条的判据）*/
+  background: var(--s-3);
   backdrop-filter: var(--blur);
   box-shadow: 0 14px 36px var(--ink-3);
   z-index: 3450;
@@ -597,6 +604,9 @@
   z-index: 10;
   padding: 7px 14px;
   border-radius: var(--radius-md);
+  /* **toast 保持深色反相，这是有意的。** 判据同 .gantt-pop：
+     它是「转瞬即逝的提示」而不是面板 —— 一两行字、看完即走，
+     深色反相正是这类东西在亮色界面里的通行做法（同 --tooltip-bg 本身）。*/
   background: var(--tooltip-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--blur);
@@ -715,7 +725,8 @@
   padding: 22px 22px 18px;
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-md);
-  background: var(--tooltip-bg);
+  /* 崩溃卡片是**面板** —— 它要被读、被点，不是一闪而过（见 .gantt-pop 那条的判据）*/
+  background: var(--s-3);
   backdrop-filter: var(--blur);
   box-shadow: 0 20px 60px var(--ink-2);
 }

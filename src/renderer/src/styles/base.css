@@ -31,9 +31,18 @@
 
   --fg: #e2e4ea;
   --fg-dim: #969aa8;
-  /* 柔和雾霾蓝：低饱和不扎眼，亮度(HSL≈76%)对齐粉主题的粉色背景 */
-  --accent: #a2b9e0;
-  --accent-rgb: 162, 185, 224;
+  /* ── 暗色的强调色：**近乎白的浅灰，不用蓝**（2026-09-02 用户点名）─────────
+     原来是柔和雾霾蓝 `#a2b9e0`。用户：「暗色的蓝色都改为近乎于白色的浅灰，
+     CTA 的渐变也要有中性色渐变。」
+
+     和亮色那边是同一条思路（见 `:root[data-theme='light']` 的 `--accent`）：
+     **强调靠明度对比，不靠色相。** 暗底上最强的对比就是近白 —— 一块浅色实心
+     比任何彩色都抢眼，而且不会给界面拉出一层杂色。
+
+     **CTA 的渐变自动跟着中性化**：`--accent-dark` 是
+     `color-mix(in srgb, var(--accent) 78%, #000)` 派生的，改这一处两端一起变。 */
+  --accent: #dfe3e8;
+  --accent-rgb: 223, 227, 232;
   --accent-soft: rgba(var(--accent-rgb), 0.16);
   /* 强调色**实心底**上的前景色。
      两个主题的 accent 都是浅色（上面那条注释写着亮度是刻意对齐的：HSL≈76%），
@@ -42,7 +51,7 @@
      于是后加的 CTA 一个个又写回了 #fff。**实心 accent 底上一律用它。**
      注意淡底不算：`--accent-soft`(0.16) 这类在暗色背景上混出来是深色，那里该用白字。 */
   --on-accent: #0b0d12;
-  --folder-icon: #a8bee4;
+  --folder-icon: #c9ced6;
   --bg-grad-1: rgba(7, 8, 13, 0.72);
   --bg-grad-2: rgba(3, 4, 6, 0.85);
   /* 自定义 tooltip：比画布背景再暗一点的近黑 */
@@ -152,6 +161,37 @@
      受 `check-accent-contrast.mjs` 管；前者跟着 `--hl-bg` 走。 */
   --hl-bg: var(--accent);
   --hl-fg: var(--on-accent);
+
+  /* ── 移植模块的别名层（2026-09-02）───────────────────────────────────────
+     `features/design/composer/` 整体移植自 taptv（见 10 图纸），带着 taptv 那套
+     变量名。**这 14 个名字在本仓库从来没有定义过** —— 于是
+     `color: var(--text-1, #fff)` 里的 fallback **永远生效**：
+
+       看着像是「跟着主题走」，实际上写死成白色。亮色下就是白字压白底。
+
+     这类「声明作废，静默落回 fallback」正是 `check-accent-contrast.mjs` 文件头
+     记着的第 ③ 种漏法。**不改那 80 多处声明，给这些名字一个别名层就够** ——
+     移植过来的代码将来还会从上游更新，改了它下次同步又被覆盖。 */
+  --text-1: var(--t-1);
+  --text-2: var(--t-2);
+  --text-3: var(--t-3);
+  --text-4: var(--t-3);
+  --bg-app: var(--bg);
+  --bg-1: var(--s-1);
+  --bg-2: var(--s-2);
+  --bg-subtle: var(--lift-1);
+  --bg-hover: var(--lift-2);
+  --border: var(--glass-border);
+  --border-2: var(--glass-border-strong);
+  --glass-bg: var(--glass-2);
+  --glass-blur: var(--blur);
+  --dur-fast: 0.15s;
+
+  /* 画布的背景点阵。**这是「靠明度差表达」的又一个面** ——
+     原来写死 `rgba(255,255,255,0.06)`，白底上等于没有
+     （用户 2026-09-02：「亮色主题画布里面还没有背景波点」）。
+     暗色靠加白、亮色靠压黑，跟 lift 是同一个道理。 */
+  --canvas-dot: rgba(255, 255, 255, 0.06);
 }
 
 /* ══ 亮色主题 ═══════════════════════════════════════════════════════════════
@@ -195,6 +235,8 @@
      纯黑在白底上边缘会发「锐」，#1c1c1c 与 --s-3 同源，看着是一家的。 */
   --hl-bg: #1c1c1c;
   --hl-fg: #ffffff;
+  /* 白底上的点阵：压黑。0.07 是实测能看清又不抢戏的那一档 */
+  --canvas-dot: rgba(0, 0, 0, 0.07);
 
   /* 老令牌也要跟着翻，否则用老令牌的地方在亮色下是黑块 */
   --fg: #0d0d0d;
@@ -845,8 +887,11 @@ body {
 }
 .err-btn.primary {
   border: none;
-  background: #7c8cff;
-  color: #0b0d12;
+  /* **CTA 走 `--hl-bg`，不写死蓝。** 用户 2026-09-02：
+     「暗色的蓝色都改为近乎于白色的浅灰，CTA 的渐变也要有中性色渐变。」
+     写死的话它既不跟主题、也不跟「强调靠明度不靠色相」那条总规矩。 */
+  background: var(--hl-bg);
+  color: var(--hl-fg);
 }
 .err-btn.primary:hover {
   filter: brightness(1.08);

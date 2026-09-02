@@ -55,13 +55,19 @@
 
 /* 空态的一句话。它是氛围，不是操作指引 —— 所以比正文淡、比正文大一点，
    不跟下面输入框里的 placeholder 抢注意力。 */
+/* 空态那句招呼。**它是这一屏唯一的主角** —— 底下是历史会话和输入框，
+   都是次要的；原来 15px / 400 / `--fg-dim` 三样都在往后退，
+   结果整屏没有视觉重心，看着像还没加载完。
+   用户 2026-09-02：「加大加粗，最好是 bold 字号。」
+   字号提到 24px、字重 700、颜色从次级提到主级 —— 三样一起往前站才立得住。 */
 .ac-slogan {
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--fg-dim);
-  letter-spacing: 0.03em;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.55;
+  color: var(--t-1);
+  letter-spacing: 0.01em;
   text-align: center;
-  max-width: min(480px, 100%);
+  max-width: min(560px, 100%);
   user-select: none;
 }
 
@@ -81,6 +87,17 @@
 }
 .ac-input-wrap:focus-within {
   border-color: rgba(var(--accent-rgb), 0.55);
+}
+
+/* 有历史记录时：**通栏 ＋ 紧凑**，跟对话态那个框（.ac-composer-box）一致。
+   视觉本来就同一套，这里只对齐尺寸 —— 居中的大框传达的是「从零开始」，
+   而这一屏上面明明摆着满屏对话，那个信号是错的。 */
+.ac-input-wrap.resumed {
+  width: 100%;
+}
+.ac-input-wrap.resumed .ac-input {
+  padding: 10px 12px 4px;
+  min-height: 38px;
 }
 
 .ac-input {

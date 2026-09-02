@@ -1083,7 +1083,7 @@ export function AgentChatView({
                 （会话在 CLI 那边已失效，或者换过 CLI）。下一条消息是从头开始的。
               </div>
             ) : (
-              <div className="ac-restored-hint">上次聊到这里 —— 发一条消息接着聊</div>
+              <div className="ac-restored-hint">上次聊到这里 —— <b>点击发送继续对话</b></div>
             )}
           </div>
         ) : (
@@ -1140,7 +1140,14 @@ export function AgentChatView({
         </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
-        <div className="ac-input-wrap">
+        {/* **有历史时用对话态的输入框尺寸。**
+            两者的视觉（圆角/边/底）本来就是同一套，差的是**宽度与留白**：
+            空态是 `min(560px)` 居中的高框 —— 那是「从零开始」该有的样子，
+            大而居中，请你说第一句话。
+            但有历史时上面已经摆着满屏对话了，再来一个居中大框，
+            看着像是「另起一个新会话」而不是「接着上面聊」。
+            用户 2026-09-02：「希望输入框保持和启动的时候样式一致。」 */}
+        <div className={`ac-input-wrap${restored.turns.length > 0 ? ' resumed' : ''}`}>
           {emptySlash.open && <SlashList {...emptySlash} />}
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">

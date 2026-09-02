@@ -12,7 +12,7 @@
   inset: 0;
   overflow: clip; /* 不用 hidden：它是个滚动端口，会被浏览器程序性滚动（见 .tab-stack）*/
   cursor: default; /* 画板默认箭头，不是手 */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.4px, transparent 1.4px);
+  background-image: radial-gradient(var(--canvas-dot) 1.4px, transparent 1.4px);
 }
 
 /* 按住空格进入平移手势（空白判定区）才显示抓手 */
@@ -68,6 +68,11 @@
   background: rgba(var(--frame-rgb), 0.045);
   border: 1.5px solid rgba(var(--frame-rgb), 0.34);
   box-shadow: 0 18px 60px var(--ink-2);
+  /* **两个主题都要毛玻璃**（2026-09-02 用户点名）。
+     Frame 是「盖在画布上的一块地」，透出底下的点阵才有「浮在上面」的实感；
+     实心底会把它压成一块贴纸。
+     ⚠️ 毛玻璃要生效，底色**必须是半透明的** —— 不透明底下面什么都没有可模糊。 */
+  backdrop-filter: var(--blur);
 }
 
 /* 状态配色**不在这里写死**：看板的列是用户自己建的（board.json），
@@ -101,7 +106,10 @@
    只剩一条黑标题栏浮着。所以显式给一层能看见的灰底，边整个去掉：
    **Frame 的边界靠「灰底 vs 白画布」的明度差表达**，正是那条总规矩。 */
 :root[data-theme='light'] .cframe {
-  background: #f0f0f0;
+  /* 0.72 而不是实色：**留出透明度，毛玻璃才有东西可模糊**。
+     叠在白画布上视觉仍然是 #e8e8e8 那一档灰（用户要的「再深一点」），
+     但点阵会从底下透上来。 */
+  background: rgba(232, 232, 232, 0.72);
   border-color: transparent;
 }
 
