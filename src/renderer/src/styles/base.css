@@ -76,6 +76,27 @@
   --radius-md: 10px;
   --radius-sm: 7px;
 
+  /* ── 弹窗版式的一套节奏（2026-09-02）─────────────────────────────────────
+     用户：「不规范的弹窗 UI 版式要优化，参考大厂的信息层级排布，主要看 Codex。」
+
+     清点下来问题不在「哪个数不好看」，而在**每个弹窗各用各的一套**：
+     `.confirm-dialog` 是 `24px 22px 18px`、`.ac-setup` 是 `16px 17px 17px`，
+     圆角一个 xl 一个 lg。同一个软件里弹出来的东西量感不一，
+     用户读到的是「这几个界面不是一伙的」。
+
+     Codex / ChatGPT 那套的做法是**一个尺度贯穿到底**：
+     容器内边距一档、标题到正文一档、正文到按钮一档，不为单个弹窗微调。
+
+       --pop-pad     容器内边距
+       --pop-gap     区块之间（标题↔正文↔按钮行）
+       --pop-gap-sm  区块**内部**（比如两行说明之间）
+
+     **区块间距要明显大于区块内间距**（20 vs 8），层级才读得出来 ——
+     两者接近时，一个弹窗看着就是一堆平铺的东西。 */
+  --pop-pad: 20px;
+  --pop-gap: 20px;
+  --pop-gap-sm: 8px;
+
   --titlebar-h: 34px;
 
   /* ══ 层级令牌（2026-09-02 新增）══════════════════════════════════════════
@@ -771,8 +792,9 @@ body {
   width: min(384px, 84vw);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px 22px 18px;
+  gap: var(--pop-gap);
+  /* 底部比顶部略窄：按钮行本身自带视觉重量，等距会显得下沉 */
+  padding: var(--pop-pad) var(--pop-pad) calc(var(--pop-pad) - 4px);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
