@@ -15,11 +15,14 @@ export {
   OMP_PROVIDERS,
   providerById,
   nextStepOf,
+  ompStateFrom,
   ompLaunchGate,
   authFailureInTail,
   loginFailureOf,
   type OmpLoginFailure,
   type OmpProvider,
+  type OmpSmokeResult,
+  type OmpStatus,
   type OmpStep,
   type OmpSetupState
 } from '../../../shared/ompSetup.ts'

@@ -122,6 +122,13 @@ export function startOmpLogin(
   })
   proc.on('exit', (code) => {
     if (!current) return
+    // **先把解析器缓冲里那半行结算掉，再判成败。**
+    // 「Credentials saved to …」是唯一的成功判据；它要是没带换行就留在缓冲里，
+    // 一次成功的登录会被报成失败 —— 而用户明明看到了那句话。
+    for (const e of parser.end()) {
+      if (e.k === 'done') emit({ phase: 'done', prompt: undefined, progress: undefined })
+      else if (e.k === 'progress') emit({ progress: e.text })
+    }
     // 退出码 0 **不等于**登录成功：用户中途 Ctrl-C、或者 omp 自己判定放弃，
     // 都可能是 0。真正的判据是它写没写过那句「Credentials saved to …」。
     if (current.state.phase !== 'done') {

@@ -14,8 +14,16 @@ import { ipcMain } from 'electron'
 
 import { hostPaths, readOmpUsage, writeManagedConfig, ompBaseEnv } from './launch.ts'
 import { ompBinPathOrNull } from './paths.ts'
-import { readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
-import { keyVarOf, nextStepOf, OMP_PROVIDERS, providerById, type OmpStep } from './setupModel.ts'
+import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
+import {
+  keyVarOf,
+  nextStepOf,
+  ompStateFrom,
+  OMP_PROVIDERS,
+  providerById,
+  type OmpStatus,
+  type OmpStep
+} from './setupModel.ts'
 import { ompAdapter } from '../adapters/omp.ts'
 import { refreshCliCache } from '../session.ts'
 import { cancelOmpLogin, ompLoginInFlight, startOmpLogin, submitOmpLogin, type OmpLoginState } from './login.ts'
@@ -24,21 +32,6 @@ import { cancelOmpLogin, ompLoginInFlight, startOmpLogin, submitOmpLogin, type O
  *  好让 `blockedByAuth`、`.ac-authgate`、`CliStateLabel` 三处不改就能复用；
  *  但**不带 `cli` 字段** —— `CliAuthState['cli']` 是 `'claude' | 'codex'` 的字面联合，
  *  放宽它会把 `cliAuth/*`（承诺零改动的那批）一起拖下水。 */
-export interface OmpStatus {
-  installed: boolean
-  status: { loggedIn: boolean; account?: string }
-  /** 面板据此决定停在哪一步 */
-  step: OmpStep
-  /** 带「去哪儿取 key」链接的推荐几家。**不是全集** ——
-   *  订阅登录那条路的全名单走 `omp:listAuthProviders`（70 家，由 omp 自己报）。 */
-  providers: { id: string; label: string; keyUrl: string }[]
-  provider?: string
-  /** 上次是用订阅还是填 key 配的 */
-  authMode?: 'subscription' | 'apikey'
-  model?: string
-  lastSmoke?: OmpSetup['lastSmoke']
-}
-
 type Res = { ok: true } | { ok: false; error: string }
 
 /** 服务商 id 的守卫。**它会被拼进环境变量名与文件路径**，
@@ -60,19 +53,24 @@ function statusOf(): OmpStatus {
   // 这一层只回答「配置里记了什么」——两边的判据合起来才是 nextStepOf 的输入。
   // 这么分是为了不让主进程去猜渲染层此刻看到的柜子状态：柜子会 15 分钟自动上锁，
   // 隔一次 IPC 往返就可能变。
-  const step = nextStepOf({
-    installed: !!bin,
-    // 柜子那三项在这里一律填「好的」—— 真正的判定在渲染层用 `secrets.status()` 补齐后重算。
-    vault: { available: true, configured: true, locked: false, foreign: false },
-    provider: setup.provider?.id,
-    authMode: setup.provider?.authMode,
-    keyInVault: !!p, // 同上，渲染层用 secretsHas 的结果覆盖
-    // **判据是「登录那一步真的成功过」，不是「冒烟跑通过」。**
-    // 拿冒烟顶替的后果：登录刚完成时冒烟还没跑，于是状态机说「还要去登录」——
-    // 用户刚登完就被弹回登录页，再登一次还是弹回来（2026-09-02 真机撞到）。
-    loggedIn: !!setup.provider?.loggedInAt,
-    model: setup.provider?.model
-  })
+  const loggedIn = !!setup.provider?.loggedInAt
+  // **入参也只在一处拼**（`ompStateFrom`）。两侧各拼各的时，渲染层那份漏过
+  // authMode 与 loggedIn —— 判据一致、入参分叉，单测全绿而真机全错。
+  const step = nextStepOf(
+    ompStateFrom({
+      installed: !!bin,
+      // 柜子那三项在这里一律填「好的」—— 真正的判定在渲染层用 `secrets.status()` 补齐后重算。
+      vault: { available: true, configured: true, locked: false, foreign: false },
+      provider: setup.provider?.id,
+      authMode: setup.provider?.authMode,
+      keyInVault: !!p, // 同上，渲染层用 secretsHas 的结果覆盖
+      // **判据是「登录那一步真的成功过」，不是「冒烟跑通过」。**
+      // 拿冒烟顶替的后果：登录刚完成时冒烟还没跑，于是状态机说「还要去登录」——
+      // 用户刚登完就被弹回登录页，再登一次还是弹回来（2026-09-02 真机撞到）。
+      loggedIn,
+      model: setup.provider?.model
+    })
+  )
   return {
     installed: !!bin,
     status: { loggedIn: !!setup.provider?.model && !!setup.lastSmoke?.ok, account: p?.label },
@@ -80,6 +78,7 @@ function statusOf(): OmpStatus {
     providers: OMP_PROVIDERS.map((x) => ({ id: x.id, label: x.label, keyUrl: x.keyUrl })),
     provider: setup.provider?.id,
     authMode: setup.provider?.authMode,
+    loggedIn,
     model: setup.provider?.model,
     lastSmoke: setup.lastSmoke
   }
@@ -130,12 +129,15 @@ export function registerOmpSetupHandlers(): void {
     const prev = readOmpSetup(host.userData)
     const next: OmpSetup = {
       ...prev,
-      provider: {
+      // **别在这里手拼这个对象。** 原来就是手拼的，`loggedInAt` 被静默丢掉 ——
+      // 于是「登录成功 → 重选一次同一家 → 登录记录没了 → 再登」形成闭环。
+      // 合并规则（同家同路留着、换家换路清掉）连同 7 条单测在 `store.ts`。
+      provider: mergeProviderChoice(prev.provider, {
         id,
         authMode,
-        model: typeof inp.model === 'string' ? inp.model : prev.provider?.model,
-        thinking: typeof inp.thinking === 'string' ? inp.thinking : prev.provider?.thinking
-      },
+        model: typeof inp.model === 'string' ? inp.model : undefined,
+        thinking: typeof inp.thinking === 'string' ? inp.thinking : undefined
+      }),
       // 换了服务商 / 换了模型，上一次冒烟的结果就不再代表任何东西
       lastSmoke: undefined
     }

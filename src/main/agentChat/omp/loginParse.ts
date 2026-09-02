@@ -36,9 +36,36 @@ const SHORTCUT_PREFIX = 'Local shortcut (this machine only):'
 /** 上游成功时写的最后一句。 */
 const DONE_PREFIX = 'Credentials saved to'
 
+/** 这一行是「说给人听的进度」，还是「倒给开发者看的日志」。
+ *
+ *  **必须分开**：omp 失败时往 stderr 倒一整段 Bun 堆栈 —— 源码回显（`42710 | …`）、
+ *  插入符、`at fn (/$bunfs/root/…)` 的帧、整坨 JSON。这些会一行行盖掉进度那一栏，
+ *  用户最后停在一个看不懂的堆栈帧上。用户 2026-09-02 的原话：
+ *  「不要让用户在软件中看到开发者看的东西。」
+ *
+ *  **只挡形状，不挡内容**：不去猜哪句是错误、哪句是正常，那种猜法迟早把
+ *  真正该显示的话也挡了。认的是「这一行长得就不是说给人听的」。
+ *  真正的失败原因不靠这条路 —— 走 `loginFailureOf` 的分类。 */
+export function isHumanProgress(s: string): boolean {
+  if (!s || s.length > 120) return false // 超长的是 JSON / headers 那一坨
+  if (/^\d+ \|/.test(s)) return false // Bun 的源码回显
+  if (/^\^+$/.test(s)) return false // 指位置的插入符
+  if (/^at \S+ \(/.test(s)) return false // 堆栈帧
+  if (/^[\w.]*(Error|Exception):/.test(s)) return false // 异常抬头，交给 loginFailureOf 归类
+  if (/^[[\]{}]|[{[]$/.test(s)) return false // 对象 / 数组的开头结尾
+  if (/^[\w-]+:\s*[["{]/.test(s)) return false // `headers: Headers {` 这类
+  return true
+}
+
 export interface OmpLoginParser {
   /** 喂一块 stdout。返回这一块里认出来的事件（可能是零个）。 */
   push(chunk: string): OmpLoginEvent[]
+  /** 进程结束了。**把缓冲里那半行结算掉。**
+   *
+   *  非做不可：`Credentials saved to …` 是唯一的成功判据，它要是没带换行就
+   *  留在缓冲里，一次成功的登录会被报成失败 —— 而用户明明看到了那句话。
+   *  「按行处理」这条契约对一个会结束的流本来就不完整。 */
+  end(): OmpLoginEvent[]
 }
 
 export function createOmpLoginParser(): OmpLoginParser {
@@ -77,7 +104,9 @@ export function createOmpLoginParser(): OmpLoginParser {
       out.push({ k: 'done' })
       return
     }
-    out.push({ k: 'progress', text: s })
+    // 长得不像说给人听的就不往外报。原文没丢：`login.ts` 攒着全文，
+    // 失败时进控制台、并交给 `loginFailureOf` 归类。
+    if (isHumanProgress(s)) out.push({ k: 'progress', text: s })
   }
 
   return {
@@ -98,6 +127,13 @@ export function createOmpLoginParser(): OmpLoginParser {
         lastPrompt = tail
         out.push({ k: 'prompt', message: tail })
       }
+      return out
+    },
+    end(): OmpLoginEvent[] {
+      const out: OmpLoginEvent[] = []
+      const tail = buf
+      buf = ''
+      if (tail.trim()) line(tail, out)
       return out
     }
   }

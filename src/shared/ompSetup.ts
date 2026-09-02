@@ -80,6 +80,69 @@ export interface OmpSetupState {
   model?: string
 }
 
+/** 一次冒烟的结果。 */
+export interface OmpSmokeResult {
+  ok: boolean
+  at: number
+  message?: string
+}
+
+/** `omp:status` 回什么。**两侧共用这一份，别在渲染层手抄。**
+ *
+ *  手抄那份漏过 `loggedIn`，而漏掉的代价是订阅用户完全走不通
+ *  （2026-09-02 真机）。抄一份就有了第二份，迟早分叉；放在这里，
+ *  再漏字段就是一个编译错误而不是一个「只在真机上出现」的 bug。 */
+export interface OmpStatus {
+  installed: boolean
+  status: { loggedIn: boolean; account?: string }
+  /** 主进程按它知道的事实算出来的下一步。**渲染层还会用柜子的真实状态重算一次** */
+  step: OmpStep
+  /** 带「去哪儿取 key」链接的推荐几家。**不是全集** ——
+   *  订阅登录那条路的全名单走 `omp:listAuthProviders`（70 家，由 omp 自己报）。 */
+  providers: { id: string; label: string; keyUrl: string }[]
+  provider?: string
+  /** 上次是用订阅还是填 key 配的。**两条路的判据完全不同** */
+  authMode?: 'subscription' | 'apikey'
+  /** 订阅登录**成功过**。只对 `'subscription'` 有意义。
+   *  **必须上线**：渲染层要自己算一次 `nextStepOf`，缺了它订阅用户永远停在「还没登录」。 */
+  loggedIn: boolean
+  model?: string
+  lastSmoke?: OmpSmokeResult
+}
+
+/** 把「主进程报的配置」与「渲染层查到的密钥柜状态」拼成 `nextStepOf` 的入参。
+ *
+ *  **单独摘成纯函数，是因为这一步已经错过一次，而且错法很隐蔽。**
+ *  判据（`nextStepOf`）搬到 shared 本来就是为了「两侧照同一份说话」，
+ *  但**入参是两侧各自拼的** —— 渲染层那份漏了 `authMode` 与 `loggedIn`，
+ *  于是订阅这条路在渲染层永远走 apikey 分支：登录成功也被判成「还没填 key」，
+ *  而那一屏又渲染不出来（订阅那些 id 不在我们四家的推荐清单里），
+ *  落到兜底按钮上 —— 用户看到的是「先挑一家服务商」。
+ *  两侧的判据一致、入参不一致，比判据本身写错更难查：单测全绿，真机全错。
+ *  2026-09-02 真机撞到，用户原话：「跳回到了一个设置的最初页面…很疑惑。」
+ *
+ *  所以入参也只许在这里拼一次。 */
+export function ompStateFrom(i: {
+  installed: boolean
+  provider?: string
+  authMode?: 'subscription' | 'apikey'
+  /** 订阅登录成功过。**必须传** —— 漏了它订阅用户永远停在「还没登录」 */
+  loggedIn?: boolean
+  model?: string
+  vault: OmpSetupState['vault']
+  keyInVault: boolean
+}): OmpSetupState {
+  return {
+    installed: i.installed,
+    vault: i.vault,
+    provider: i.provider,
+    authMode: i.authMode,
+    keyInVault: i.keyInVault,
+    loggedIn: i.loggedIn,
+    model: i.model
+  }
+}
+
 /**
  * 下一步。**顺序不是随意排的**，每一条都有理由：
  *

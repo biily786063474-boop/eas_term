@@ -80,3 +80,49 @@ test('提示语本身不当进度行往外报（那是给下一行网址做铺�
 test('空行一律忽略', () => {
   assert.deepEqual(run('\n\n\n'), [])
 })
+
+// ── 2026-09-02：拿真机字节回填的两条 ───────────────────────────────────────
+//
+// 下面这段是**真的**从 `omp auth-broker login minimax-code-cn` 抓下来的
+// （隔离配置目录，喂一把假 key）。用真字节写测试的理由：这一路上每一条
+// 「界面卡住 / 界面倒日志」的 bug，都是因为我们对它的输出形状猜错了。
+
+test('**失败时它往 stderr 倒一整段 Bun 堆栈** —— 那些行一句都不许当成「进度」显示', () => {
+  const p = createOmpLoginParser()
+  const real =
+    '42710 |   return new Es(r, t.status, { headers: t.headers, code: o });\n' +
+    '                 ^\n' +
+    'ProviderHttpError: MiniMax Token Plan (China) API key validation failed (401): {"type":"error"}\n' +
+    '  status: 401,\n' +
+    ' headers: Headers {\n' +
+    '      at dNt (/$bunfs/root/omp-darwin-arm64:42710:10)\n' +
+    '      at k3 (/$bunfs/root/omp-darwin-arm64:42737:18)\n'
+  const progress = p.push(real).filter((e) => e.k === 'progress')
+  for (const e of progress) {
+    assert.ok(!/^\d+ \|/.test(e.text), `源码回显漏出去了：${e.text}`)
+    assert.ok(!/^at \S+ \(/.test(e.text), `堆栈帧漏出去了：${e.text}`)
+    assert.ok(!e.text.startsWith('^'), `插入符漏出去了：${e.text}`)
+    assert.ok(e.text.length <= 120, `一行 ${e.text.length} 字，那是日志不是进度：${e.text.slice(0, 60)}…`)
+  }
+})
+
+test('**正常的进度句照旧透传** —— 别把过滤做成「什么都不显示」', () => {
+  const p = createOmpLoginParser()
+  const out = p.push('Validating API key...\n')
+  assert.deepEqual(out, [{ k: 'progress', text: 'Validating API key...' }])
+})
+
+test('**进程结束时残留的半行要交出来**：最后一句不带换行就等于登录成功被丢掉', () => {
+  // 「Credentials saved to …」是唯一的成功判据。它要是没带换行就留在缓冲里，
+  // 我们会把一次成功的登录报成失败，而用户明明看到了那句话。
+  const p = createOmpLoginParser()
+  assert.deepEqual(p.push('Credentials saved to /tmp/agent.db'), [], '没换行时先不急着判')
+  assert.deepEqual(p.end(), [{ k: 'done' }], 'end() 要把残留的那半行结算掉')
+})
+
+test('end() 之后再 end() 不会重复报', () => {
+  const p = createOmpLoginParser()
+  p.push('Credentials saved to /tmp/agent.db')
+  p.end()
+  assert.deepEqual(p.end(), [])
+})

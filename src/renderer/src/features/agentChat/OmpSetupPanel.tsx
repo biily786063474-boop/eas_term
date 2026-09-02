@@ -32,9 +32,10 @@ import {
   authFailureInTail,
   loginFailureOf,
   nextStepOf,
+  ompStateFrom,
   OMP_PROVIDERS,
   providerById,
-  type OmpSetupState,
+  type OmpStatus,
   type OmpStep
 } from '../../../../shared/ompSetup'
 import type { ChatEvent, CliInfo } from '../../../../shared/agentChat'
@@ -70,15 +71,6 @@ interface OmpLoginWire {
  *  `tsconfig.web.json` 只 include `src/renderer/src` 与 `src/shared`，composite 工程
  *  要求列全文件，跨过去就是 TS6307；preload 那侧本来也只声明成 `Promise<unknown>`。
  *  字段按需取、缺了就当没有，不做整体断言。 */
-interface OmpStatusWire {
-  /** 上次是用订阅还是填 key 配的。**两条路的判据完全不同** */
-  authMode?: 'subscription' | 'apikey'
-  installed?: boolean
-  provider?: string
-  model?: string
-  lastSmoke?: { ok: boolean; at: number; message?: string }
-}
-
 /** 面板叠在 `nextStepOf` 之上的**临时态**。
  *
  *  它和「下一步该做什么」是两件事：`nextStepOf` 回答的是「按当前事实，用户还缺什么」，
@@ -107,7 +99,7 @@ export function OmpSetupPanel(props: {
   const { cli, onDone, onCancel } = props
 
   // ── 事实（两处拼出来的）───────────────────────────────────────────────────
-  const [omp, setOmp] = useState<OmpStatusWire | null>(null)
+  const [omp, setOmp] = useState<OmpStatus | null>(null)
   const [vault, setVault] = useState<SecretsStatus | null>(null)
   const [keyInVault, setKeyInVault] = useState(false)
 
@@ -156,11 +148,16 @@ export function OmpSetupPanel(props: {
   // 真正的判定在这里用 `secrets.status()` 补齐后重算。
   const refresh = useCallback(async (): Promise<void> => {
     const [o, v] = await Promise.all([
-      window.api.omp.status() as Promise<OmpStatusWire | null>,
+      window.api.omp.status() as Promise<OmpStatus | null>,
       window.api.secrets.status()
     ])
     if (!aliveRef.current) return
-    setOmp(o ?? {})
+    // **不再 `?? {}` 兜底。** 那个空对象是为了让下面少写几个 `?.`，
+    // 代价是类型上「什么都可以缺」，于是漏一个字段编译器一声不吭 ——
+    // 这次漏掉的 loggedIn 就是这么溜过去的。
+    // 拿不到状态时留 null：`step` 那个 memo 会回 null，界面走 'blocked'，
+    // 跟原来 `{}` 走到的是同一屏（installed 为假），行为不变。
+    setOmp(o)
     setVault(v)
     // 这家的 key 在不在柜里。`has` 不要求解锁，所以锁着也能问 —— 但锁着时 readable
     // 为假，nextStepOf 会先把人送去解锁，不会误判成「还没填 key」
@@ -228,19 +225,27 @@ export function OmpSetupPanel(props: {
   // ── 下一步是哪一步。**唯一的判据来源** ───────────────────────────────────
   const step: OmpStep | null = useMemo(() => {
     if (!omp || !vault) return null
-    const s: OmpSetupState = {
-      installed: omp.installed === true,
-      vault: {
-        available: vault.available,
-        configured: vault.configured,
-        locked: vault.locked,
-        foreign: vault.foreign
-      },
-      provider: omp.provider,
-      keyInVault,
-      model: omp.model
-    }
-    return nextStepOf(s)
+    // **入参必须走 `ompStateFrom`，别在这里手拼。**
+    // 手拼的那版漏了 `authMode` 与 `loggedIn`：判据两侧一致、入参两侧分叉，
+    // 于是订阅这条路在渲染层永远走 apikey 分支 —— 登录成功也被判成「还没填 key」，
+    // 而那一屏对订阅那些 id 又渲染不出来，落到兜底按钮上。
+    // 用户看到的就是「登完了，却跳回最初那页」。2026-09-02 真机。
+    return nextStepOf(
+      ompStateFrom({
+        installed: omp.installed === true,
+        vault: {
+          available: vault.available,
+          configured: vault.configured,
+          locked: vault.locked,
+          foreign: vault.foreign
+        },
+        provider: omp.provider,
+        authMode: omp.authMode,
+        loggedIn: omp.loggedIn,
+        keyInVault,
+        model: omp.model
+      })
+    )
   }, [omp, vault, keyInVault])
 
   // 服务商清单直接用 shared 那份 —— **主进程用的就是同一个模块**，
@@ -1045,7 +1050,11 @@ export function OmpSetupPanel(props: {
                   {models.length === 0
                     ? // **不猜原因**：拿不到清单可能是 key 不对、可能是网络，
                       // 这里只说事实，出口给「重来一次」和「回去改 key」
-                      '一个模型都没列出来 —— 多半是这把 key 还没通。'
+                      // **两条路的原因不一样，别混着说。** 订阅用户没有 key
+                      // 可以「还没通」——把他往那儿引，他会去找一个自己没有的东西。
+                      isSub
+                        ? '一个模型都没列出来 —— 多半是这次登录没真的生效。'
+                        : '一个模型都没列出来 —— 多半是这把 key 还没通。'
                     : '没有匹配的模型。'}
                 </div>
               )}
@@ -1054,8 +1063,14 @@ export function OmpSetupPanel(props: {
               <button type="button" className="ac-login-retry" onClick={() => void loadModels()}>
                 重新拉一次
               </button>
-              <button type="button" className="ac-login-retry" onClick={() => setEditing('key')}>
-                回去改 key
+              {/* 出口也随路子变：订阅那条回登录，填 key 那条回密钥。
+                  按钮上写着一件他做不到的事，比没有这个按钮更糟。 */}
+              <button
+                type="button"
+                className="ac-login-retry"
+                onClick={() => setEditing(isSub ? 'login' : 'key')}
+              >
+                {isSub ? '回去重登一次' : '回去改 key'}
               </button>
               {editing === 'model' && (
                 <button type="button" className="ac-login-retry" onClick={() => setEditing(null)}>

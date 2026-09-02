@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { authFailureInTail, nextStepOf, OMP_PROVIDERS, providerById } from './setupModel.ts'
+import { authFailureInTail, nextStepOf, ompStateFrom, OMP_PROVIDERS, providerById } from './setupModel.ts'
 
 // ── 下一步该让用户做什么 ──────────────────────────────────────────────────
 //
@@ -200,4 +200,83 @@ test('**认不出来时也不倒日志** —— 诚实说没成功，别塞原�
 test('空输入也要给得出一句话，不能是 undefined', () => {
   const r = loginFailureOf([], undefined)
   assert.ok(r.title.length > 0)
+})
+
+// ── 2026-09-02 真机事故：订阅登录完，面板跳回「先挑一家服务商」 ─────────────
+//
+// 用户原话：「当我选择或者输入了 API key 之后，那个订阅就跳回到了一个设置的最初页面，
+// 而且登录好像没有成功，我并不知道这中间发生了什么事，很疑惑。」
+//
+// 现场证据（`~/Library/Application Support/Eas-Term/omp-setup.json`）：
+//   { "provider": { "id": "minimax-code-cn", "authMode": "subscription" } }
+// —— provider 与 authMode 都在，**`loggedInAt` 不在**。
+//
+// 根因有两条，各自都足以单独造成这个现象：
+//
+//  A. **渲染层自己拼 `nextStepOf` 的入参时漏了 `authMode` 与 `loggedIn`**，
+//     于是订阅这条路在渲染层**永远**走 apikey 分支 → 「没 key」→ 'key' 屏；
+//     而 `providerById('minimax-code-cn')` 又是 undefined（那 id 不在我们四家的
+//     推荐清单里），'key' 屏渲染不出来，落到兜底的那个「先挑一家服务商」按钮上。
+//     **就算登录完全成功，也会落到这里** —— 这就是用户看到的那一屏。
+//
+//     判据搬到 shared 里本来就是为了「两侧照同一份说话」，结果两侧喂的**入参**分叉了。
+//     所以这次连拼入参也一起搬进来：`ompStateFrom`。
+//
+//  B. `omp:saveProvider` 重写 provider 时整个对象重建，**`loggedInAt` 没带上**。
+//     于是「登录成功 → 被 A 弹回选服务商 → 再选一次 → 登录记录被抹掉」形成闭环，
+//     用户怎么登都登不进去。见 `store.ts` 的 `mergeProviderChoice`。
+
+test('**A 的回归**：订阅 + 已登录 + 没模型 → 选模型，绝不能落到「填 key」', () => {
+  const s = ompStateFrom({
+    installed: true,
+    provider: 'minimax-code-cn',
+    authMode: 'subscription',
+    loggedIn: true,
+    model: undefined,
+    vault: { available: true, configured: true, locked: false, foreign: false },
+    keyInVault: false // 订阅这条路本来就没有 key 在柜里
+  })
+  assert.equal(s.authMode, 'subscription', 'authMode 必须传下去')
+  assert.equal(s.loggedIn, true, 'loggedIn 必须传下去')
+  assert.equal(nextStepOf(s).k, 'model')
+})
+
+test('**A 的回归**：订阅 + 还没登录 → 去登录，不是去填 key', () => {
+  // 漏传 authMode 的症状就是这里回 'key' —— 而订阅用户压根没有 key 可填。
+  const s = ompStateFrom({
+    installed: true,
+    provider: 'minimax-code-cn',
+    authMode: 'subscription',
+    loggedIn: false,
+    model: undefined,
+    vault: { available: true, configured: true, locked: false, foreign: false },
+    keyInVault: false
+  })
+  assert.equal(nextStepOf(s).k, 'login')
+})
+
+test('订阅那条路不受密钥柜锁没锁影响（拼入参这一层也不许把它绑进去）', () => {
+  const s = ompStateFrom({
+    installed: true,
+    provider: 'minimax-code-cn',
+    authMode: 'subscription',
+    loggedIn: true,
+    model: 'minimax-code-cn/MiniMax-M2',
+    vault: { available: true, configured: true, locked: true, foreign: false },
+    keyInVault: false
+  })
+  assert.equal(nextStepOf(s).k, 'ready')
+})
+
+test('填 key 那条路原样：拼出来的入参照旧带柜子状态', () => {
+  const s = ompStateFrom({
+    installed: true,
+    provider: 'deepseek',
+    authMode: 'apikey',
+    loggedIn: false,
+    model: undefined,
+    vault: { available: true, configured: true, locked: true, foreign: false },
+    keyInVault: false
+  })
+  assert.equal(nextStepOf(s).k, 'vault-unlock')
 })

@@ -15,6 +15,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { ompKeyEnvName } from './config.ts'
+import type { OmpSmokeResult } from '../../../shared/ompSetup.ts'
 
 export interface OmpProviderChoice {
   /** 服务商 id，与 `models.yml` 里的键、以及 `EAS_OMP_<ID>_KEY` 的中段一致 */
@@ -37,13 +38,39 @@ export interface OmpProviderChoice {
   loggedInAt?: number
 }
 
+/** 用户又选了一次服务商时，新的 provider 记录长什么样。
+ *
+ *  **单独摘成纯函数是因为这里错过一次，而且错得看不出来。**
+ *  原来的写法是把对象整个重建（`{ id, authMode, model, thinking }`），
+ *  于是 `loggedInAt` 被静默丢掉 —— 症状不是报错，是「登录成功了，
+ *  回头一看还要再登一次」，而且每次都这样。2026-09-02 真机撞到。
+ *
+ *  两条规则，方向相反，所以不能简单地「合并旧的」或「整个重建」：
+ *  · **同一家、同一条路** → 已登录这件事仍然成立，必须留着。
+ *  · **换了家，或换了条路（订阅↔key）** → 必须清掉。带着上一家的登录记录，
+ *    面板会说「已登录」而一发消息就 401 —— 那种错比拦住他更难查。
+ *    model 同理：那是上一家的模型名。 */
+export function mergeProviderChoice(
+  prev: OmpProviderChoice | undefined,
+  next: { id: string; authMode: 'subscription' | 'apikey'; model?: string; thinking?: string }
+): OmpProviderChoice {
+  const same = prev?.id === next.id && prev?.authMode === next.authMode
+  return {
+    id: next.id,
+    authMode: next.authMode,
+    model: next.model ?? (same ? prev?.model : undefined),
+    thinking: next.thinking ?? (same ? prev?.thinking : undefined),
+    loggedInAt: same ? prev?.loggedInAt : undefined
+  }
+}
+
 export interface OmpSetup {
   provider?: OmpProviderChoice
   /** 上一次冒烟的结果。**只当展示用，不做放行判据** ——
    *  用户之后在密钥面板里换了 key，这里仍然是 true（`secrets:save` 改 key 不动
    *  `createdAt`、也没有 `updatedAt`，指纹核不出「换错了」）。
    *  真正的判据是起会话时那三道闸，以及第一轮撞到 401 时把状态打回去。 */
-  lastSmoke?: { ok: boolean; at: number; message?: string }
+  lastSmoke?: OmpSmokeResult
 }
 
 const FILE = 'omp-setup.json'
