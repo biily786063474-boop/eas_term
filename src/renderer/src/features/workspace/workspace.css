@@ -455,7 +455,9 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 8px 28px var(--ink-1);
-  overflow: hidden;
+  /* **不能是 hidden** —— 类型标签是负 top 探出上沿的，裁了就被咬掉一口。
+     内容自己的滚动裁切归 `.pane-body`（它是 overflow:hidden），不靠这一层。 */
+  overflow: visible;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -487,6 +489,19 @@
   border-bottom: 1px solid var(--glass-border);
   /* 渐变而不是平色，同 `.cframe-head` 的做法 */
   background: linear-gradient(180deg, var(--lift-2), var(--lift-1));
+  /* 标签是 `position: absolute` 探出去的，这里是它的定位上下文；
+     左边留出标签的位置，实例名才不会被压住 */
+  position: relative;
+  /* 给标签让出位置。标签是绝对定位的，不占流内空间 —— 不留这段
+     实例名会被压在它下面 */
+  padding-left: 130px;
+}
+
+/* 实例名：**弱化**。它回答「这一个叫什么」，而类型标签回答「这是什么」——
+   后者是主角，前者退到后面去（照用户给的稿：白标签 + 灰名字）。 */
+.pane-node-name {
+  color: var(--t-3);
+  font-weight: 400;
 }
 
 /* ── 亮色下模块的 topbar：**极浅的灰、黑字加粗**（2026-09-02 用户点名）──────
@@ -517,24 +532,54 @@
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* ── 类型选择器 = 探出模块上沿的一枚「标签」（2026-09-02 照用户给的稿）──────
+   信息结构分成两层，各答一个问题：
+
+     标签（这枚）   「这是**什么**模块」—— 类型，可切换
+     模块条上的名字 「这一个**叫什么**」—— 实例名，弱化
+
+   原来两者并排在同一条里，读起来是一串平级的东西，
+   分不出「类型」和「名字」是两个维度。
+   做成探出上沿的标签之后，它在**视觉上先于模块存在** —— 像文件夹的标签、
+   浏览器的页签：先有类型，再有这一个实例。
+
+   ⚠️ 探出去要靠 `.pane` 那侧**不裁切**（`overflow: visible`），
+   否则标签超出的那半截会被切掉，看着像被咬了一口。 */
 .pane-kind-btn {
+  position: absolute;
+  /* 负 top：往上探出模块本体。18px = 标签高 26 的约 2/3，
+     留 1/3 压在模块条上，「长在上面」的关系才读得出来 */
+  top: -15px;
+  left: 14px;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 22px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--fg);
-  font-size: 11.5px;
+  gap: 7px;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  /* **整枚胶囊**（照用户第二版稿）：四角全圆，明确是「贴在上面的一枚标签」，
+     而不是从模块长出来的一块。上一版做成「上圆下方」是想跟模块条接住，
+     但那读起来像模块的一部分 —— 用户要的是它**独立于**模块。 */
+  border-radius: 999px;
+  /* 白底深字：这是整个模块上**唯一的高对比块**，用它说「这是什么」。
+     两个主题都用白 —— 它压在深色模块条上，不跟着主题翻
+     （同 `.cframe-head` 那条：表达的是身份，不是层级）。 */
+  background: #ffffff;
+  color: #1c1c1c;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--ink-2);
   cursor: pointer;
   transition: background 0.12s;
+}
+.pane-kind-btn .pane-kind-chevron {
+  color: #8f8f8f;
 }
 
 .pane-kind-btn:hover,
 .pane-kind-btn.open {
-  background: var(--lift-2);
+  background: #f0f0f0;
   border-color: var(--glass-border);
 }
 
@@ -567,6 +612,10 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
+  /* **圆角在这里接住。** `.pane` 为了让类型标签探出上沿改成了 `overflow: visible`，
+     内容的下两角就没人裁了 —— 终端底色会方方正正地顶到圆角外面去。
+     `calc(... - 1px)` 是让开 `.pane` 那 1px 边，不然圆弧内侧会露出一线底色。 */
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
 }
 
 /* ========== 资源管理器标签（文件 / 版本） ========== */
