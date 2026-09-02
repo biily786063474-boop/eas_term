@@ -51,7 +51,9 @@ const SMOKE_TIMEOUT_MS = 60_000
 /** `omp:login` 推回来的形状。同上，重新声明一份而不是跨层 import。 */
 interface OmpLoginWire {
   provider: string
-  phase: 'starting' | 'browser' | 'input' | 'done' | 'failed'
+  phase: 'starting' | 'browser' | 'input' | 'working' | 'done' | 'failed'
+  /** omp 最新说的那一句进度。**只显示这一行，不倒日志** */
+  progress?: string
   /** 要用户去浏览器打开的地址 */
   url?: string
   /** 本机快捷入口（同机点它更省事；SSH 场景下只有 url 有意义） */
@@ -276,8 +278,18 @@ export function OmpSetupPanel(props: {
       if (!aliveRef.current) return
       const st = raw as OmpLoginWire
       setLogin(st)
-      // 登完了就把事实重新拉一遍 —— 「登过没有」的判据在主进程那侧
-      if (st.phase === 'done') void refresh()
+      // **登完了自动往下一步走，不把用户留在这一屏。**
+      // 两件事都要做，缺一个都会卡住：
+      // · `refresh()` 重新拉事实 —— 「登过没有」的判据在主进程那侧；
+      // · **清掉 `editing`** —— 它是覆盖位，压过状态机；不清的话屏幕永远停在登录页，
+      //   哪怕状态机早就说该去选模型了。
+      if (st.phase === 'done') {
+        void refresh().then(() => {
+          if (!aliveRef.current) return
+          setLogin(null)
+          setEditing(null)
+        })
+      }
     })
     return () => {
       off()
@@ -785,65 +797,131 @@ export function OmpSetupPanel(props: {
         )}
 
         {/* ── 订阅：跑登录 ─────────────────────────────────────────────────
-            这一屏只是把 omp 自己的登录流程搬进来：它说打开哪个网址就显示哪个，
-            它问什么就照着问什么。**分类不由我们做** —— 那 70 家有的走浏览器
-            OAuth、有的引导你贴 key，猜错就是给用户一个走不通的按钮。 */}
+            **这一屏由我们接管，不把 omp 的终端输出倒给用户看。**
+
+            第一版就是那样做的（`<pre>` 摆一整段日志），用户的原话是
+            「不知道他在干什么、下面这一行他在干什么」。日志里那几句
+            （`Validating API key...` / `Credentials saved to …`）对写代码的人是信息，
+            对用户是噪音 —— 他要的是「现在轮到我做什么」和「好了没有」。
+
+            所以这里只有三种画面：**去拿** → **贴进来** → **正在验证**，
+            成功了自动进下一步，一个字的日志都不显示。
+            原始输出只在**失败**时才放出来（折叠着），那时它才是有用的。 */}
         {shown === 'login' && (
           <>
-            <div className="ac-setup-say">
-              正在登录 <b>{omp?.provider}</b>。
-            </div>
             {!login && (
-              <div className="ac-setup-row">
-                <button type="button" className="ac-login-submit" onClick={() => void startLogin(omp?.provider ?? '')}>
-                  开始登录
-                </button>
+              <>
+                <div className="ac-setup-say">
+                  接下来会打开 <b>{omp?.provider}</b> 的页面让你登录。
+                  <b>登好之后这里会自动继续</b>，你不用回来点什么。
+                </div>
+                <div className="ac-setup-row">
+                  <button
+                    type="button"
+                    className="ac-login-submit"
+                    onClick={() => void startLogin(omp?.provider ?? '')}
+                  >
+                    开始登录
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ① 去浏览器拿东西。**只有这一步需要用户离开软件**，所以给足提示 */}
+            {login?.url && login.phase !== 'done' && (
+              <div className="ac-omp-stage">
+                <div className="ac-omp-stage-n">1</div>
+                <div className="ac-omp-stage-b">
+                  <div className="ac-setup-say">在浏览器里打开这个页面，按它说的做。</div>
+                  <button
+                    type="button"
+                    className="ac-login-submit"
+                    onClick={() => void window.api.shell.openExternal(login.launchUrl ?? login.url ?? '')}
+                  >
+                    打开页面
+                  </button>
+                  <div className="ac-omp-meta">{login.url}</div>
+                </div>
               </div>
             )}
-            {login?.url && (
-              <div className="ac-setup-cmd-l">
-                在浏览器里打开这个地址完成登录：
-                <button
-                  type="button"
-                  className="ac-omp-link"
-                  onClick={() => void window.api.shell.openExternal(login.launchUrl ?? login.url ?? '')}
-                >
-                  {login.url}
-                </button>
+
+            {/* ② 它要你贴点东西。**问句用 omp 的原话** —— 69 家问的不一样
+                （贴授权码 / 贴 key / 选账号），我们改写就等于替它做分类、迟早说错 */}
+            {login?.phase === 'input' && (
+              <div className="ac-omp-stage">
+                <div className="ac-omp-stage-n">2</div>
+                <div className="ac-omp-stage-b">
+                  <div className="ac-setup-say">{login.prompt ?? '把它要的东西贴进来。'}</div>
+                  <div className="ac-login-paste-row">
+                    <input
+                      className="ac-login-input"
+                      value={loginInput}
+                      autoFocus
+                      spellCheck={false}
+                      onChange={(e) => setLoginInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && loginInput.trim()) {
+                          void window.api.omp.submitLogin(loginInput.trim())
+                          setLoginInput('')
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="ac-login-submit"
+                      disabled={!loginInput.trim()}
+                      onClick={() => {
+                        void window.api.omp.submitLogin(loginInput.trim())
+                        setLoginInput('')
+                      }}
+                    >
+                      提交
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
-            {login?.phase === 'input' && login.prompt && (
-              <div className="ac-login-paste-row">
-                <div className="ac-setup-cmd-l">{login.prompt}</div>
-                <input
-                  className="ac-login-input"
-                  value={loginInput}
-                  autoFocus
-                  onChange={(e) => setLoginInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && loginInput.trim()) {
-                      void window.api.omp.submitLogin(loginInput.trim())
-                      setLoginInput('')
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="ac-login-submit"
-                  disabled={!loginInput.trim()}
-                  onClick={() => {
-                    void window.api.omp.submitLogin(loginInput.trim())
-                    setLoginInput('')
-                  }}
-                >
-                  提交
-                </button>
+
+            {/* ③ 等待态。**这里不需要用户读任何东西** ——
+                一句话说清在等什么，加上 omp 自己那句进度（一行，不是一段）。
+                进度条是不确定态：我们不知道要多久，编一个百分比是撒谎（约束 ②） */}
+            {(login?.phase === 'starting' || login?.phase === 'working') && (
+              <div className="ac-omp-stage">
+                <div className="ac-omp-stage-n">
+                  <span className="ac-omp-dot" />
+                </div>
+                <div className="ac-omp-stage-b">
+                  <div className="ac-setup-say">
+                    {login.phase === 'working' ? '正在验证，稍等…' : '正在启动登录…'}
+                  </div>
+                  {login.progress && <div className="ac-omp-meta">{login.progress}</div>}
+                  <div className="ac-setup-bar" />
+                </div>
               </div>
             )}
-            {login && login.lines.length > 0 && (
-              <pre className="ac-setup-out">{login.lines.slice(-12).join('\n')}</pre>
+
+            {/* 失败：**这时候才该看见 omp 的原话**，而且要看得全 */}
+            {login?.phase === 'failed' && (
+              <>
+                <div className="ac-login-err">{login.error ?? '登录没有完成'}</div>
+                {login.lines.length > 0 && (
+                  <details className="ac-omp-raw">
+                    <summary>看看它说了什么</summary>
+                    <pre className="ac-setup-out">{login.lines.slice(-14).join('\n')}</pre>
+                  </details>
+                )}
+                <div className="ac-setup-row">
+                  <button
+                    type="button"
+                    className="ac-login-retry"
+                    onClick={() => void startLogin(omp?.provider ?? '')}
+                  >
+                    再试一次
+                  </button>
+                </div>
+              </>
             )}
-            {login?.phase === 'failed' && <div className="ac-login-err">{login.error}</div>}
+
             <div className="ac-setup-row">
               <button
                 type="button"

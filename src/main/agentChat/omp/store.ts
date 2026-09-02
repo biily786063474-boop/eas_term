@@ -29,6 +29,12 @@ export interface OmpProviderChoice {
   model?: string
   /** 思考档（ACP 的 `thinking` 配置项） */
   thinking?: string
+  /** 订阅登录**成功**的时刻（ms epoch）。只对 `'subscription'` 有意义。
+   *
+   *  **必须单独记，不能拿「冒烟跑通过没有」顶替**：登录刚完成时冒烟还没跑，
+   *  用后者判的话 `nextStepOf` 会说「还要去登录」—— 用户刚登完就被弹回登录页，
+   *  再登一次还是弹回来。2026-09-02 真机撞到过。 */
+  loggedInAt?: number
 }
 
 export interface OmpSetup {

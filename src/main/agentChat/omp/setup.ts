@@ -67,9 +67,10 @@ function statusOf(): OmpStatus {
     provider: setup.provider?.id,
     authMode: setup.provider?.authMode,
     keyInVault: !!p, // 同上，渲染层用 secretsHas 的结果覆盖
-    // 订阅那条路「登过没有」的唯一可信判据是**冒烟跑通过** —— broker 的
-    // `status` 问的是它自己那个服务，不是「哪些订阅登过」，没有更直接的查法。
-    loggedIn: !!setup.lastSmoke?.ok,
+    // **判据是「登录那一步真的成功过」，不是「冒烟跑通过」。**
+    // 拿冒烟顶替的后果：登录刚完成时冒烟还没跑，于是状态机说「还要去登录」——
+    // 用户刚登完就被弹回登录页，再登一次还是弹回来（2026-09-02 真机撞到）。
+    loggedIn: !!setup.provider?.loggedInAt,
     model: setup.provider?.model
   })
   return {
@@ -217,6 +218,18 @@ export function registerOmpSetupHandlers(): void {
     if (!provider) return { ok: false, error: '不认识这个服务商' }
     const wc = e.sender
     return startOmpLogin(hostPaths(), provider, (st: OmpLoginState) => {
+      // **成功的那一刻就落盘。** 由这边记而不是让渲染层回头调一次 IPC：
+      // 观察到这件事的是主进程，让它自己记，中间少一个可能丢的往返。
+      if (st.phase === 'done') {
+        const host = hostPaths()
+        const prev = readOmpSetup(host.userData)
+        if (prev.provider?.id === provider) {
+          writeOmpSetup(host.userData, {
+            ...prev,
+            provider: { ...prev.provider, loggedInAt: Date.now() }
+          })
+        }
+      }
       // 只推给发起的那个窗口 —— 与 agentChat 的事件同一条纪律，不全窗口广播
       if (!wc.isDestroyed()) wc.send('omp:login', st)
     })

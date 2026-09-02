@@ -29,7 +29,10 @@ import { createOmpLoginParser } from './loginParse.ts'
  *  一个可点的网址、一个可能要贴东西的输入框、一段能看见的输出。 */
 export interface OmpLoginState {
   provider: string
-  phase: 'starting' | 'browser' | 'input' | 'done' | 'failed'
+  /** `working` = 已经把用户输入交给它、正在验证。**单独一个态**：
+   *  没有它的话界面只能停在上一屏（那时它还显示着输入框和已经提交过的内容），
+   *  用户不知道自己那一下有没有生效。 */
+  phase: 'starting' | 'browser' | 'input' | 'working' | 'done' | 'failed'
   /** 要用户去浏览器打开的地址 */
   url?: string
   /** 本机快捷入口（同一台机器上点它更省事；SSH 场景下只有 `url` 有意义） */
@@ -37,7 +40,11 @@ export interface OmpLoginState {
   /** omp 正在问什么。**原样透传它的原话** —— 不同 provider 问的不一样
    *  （贴授权码 / 填 key / 选账号），我们改写就等于把分类揽回自己身上 */
   prompt?: string
-  /** 输出尾部。失败时界面要能看见 omp 自己说了什么 */
+  /** omp 最新说的那一句进度（比如「Validating API key...」）。
+   *  **界面只显示这一行，不倒整段日志** —— 用户不该在设置面板里读终端输出。
+   *  它是 omp 的原话，所以是真话；一行就够，而且随时被下一句覆盖。 */
+  progress?: string
+  /** 输出尾部。**只在失败时给用户看** —— 正常流程里读日志是我们没做完事。 */
   lines: string[]
   error?: string
 }
@@ -95,7 +102,8 @@ export function startOmpLogin(
     for (const e of parser.push(chunk)) {
       if (e.k === 'url') emit({ phase: 'browser', url: e.url, launchUrl: e.launchUrl })
       else if (e.k === 'prompt') emit({ phase: 'input', prompt: e.message })
-      else if (e.k === 'done') emit({ phase: 'done', prompt: undefined })
+      else if (e.k === 'progress') emit({ progress: e.text })
+      else if (e.k === 'done') emit({ phase: 'done', prompt: undefined, progress: undefined })
     }
   }
 
@@ -128,7 +136,7 @@ export function submitOmpLogin(text: string): { ok: boolean; error?: string } {
   if (!current?.proc.stdin) return { ok: false, error: '没有正在进行的登录' }
   try {
     current.proc.stdin.write(`${text}\n`)
-    emit({ phase: 'starting', prompt: undefined })
+    emit({ phase: 'working', prompt: undefined })
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
