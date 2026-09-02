@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, useLayoutEffect} from 'react'
+import { invertTransform, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from './flip.ts'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
@@ -185,6 +186,39 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   const toggleCanvasSel = useStore((s) => s.toggleCanvasSel)
   const [editingName, setEditingName] = useState(false)
   const paneRef = useRef<HTMLDivElement>(null)
+
+  // ── 最大化 / 还原的丝滑动画（FLIP）─────────────────────────────────────
+  //
+  // 用户 2026-09-02：「所有的全屏都要有丝滑的放大动画，缩小也有，
+  // 类似于苹果的最大化动画。」
+  //
+  // **不能直接给 left/top/width/height 加 transition** —— 那四个属性每帧触发
+  // 布局→绘制→合成，而节点里装的是终端、编辑器这些重内容；xterm 还会按容器尺寸
+  // 重算字符网格，动画期间字一直跳。
+  //
+  // FLIP：布局一步到位（瞬间变成终态），只用 transform 把视觉倒推回起点，
+  // 再跑回 identity。**全程只动 transform** —— 走合成层，不触发布局，
+  // 也满足 `check-animations.mjs` 那道闸。
+  const lastRect = useRef<FlipRect | null>(null)
+  useLayoutEffect(() => {
+    const el = paneRef.current
+    if (!el || !canvasRect) return
+    const now: FlipRect = { left: canvasRect.left, top: canvasRect.top, w: canvasRect.w, h: canvasRect.h }
+    const prev = lastRect.current
+    lastRect.current = now
+    // 第一次挂载没有起点可倒推；几乎没变的也别动画（硬跑一遍只会闪一下）
+    if (!prev || sameRect(prev, now)) return
+    // **只给最大化/还原这一类跳变做动画**，平移和缩放画布时 rect 也在变，
+    // 那些本来就是连续的，再叠一层补间会拖泥带水。判据是「面积变了一大截」。
+    const ratio = (now.w * now.h) / Math.max(1, prev.w * prev.h)
+    if (ratio > 0.6 && ratio < 1.7) return
+    const grow = ratio > 1
+    const anim = el.animate(
+      [{ transform: invertTransform(prev, now) }, { transform: 'none' }],
+      { duration: grow ? FLIP_MS.grow : FLIP_MS.shrink, easing: FLIP_EASING }
+    )
+    return () => anim.cancel()
+  }, [canvasRect?.left, canvasRect?.top, canvasRect?.w, canvasRect?.h])
   // 画布模式下本终端节点的选中 key，供高亮 + 点选
   const selKey = canvasRect && !canvasRect.board ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
   const selected = useStore((s) => (selKey ? s.canvasSel.includes(selKey) : false))
