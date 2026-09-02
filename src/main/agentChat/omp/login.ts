@@ -21,8 +21,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 
 import type { HostPaths } from '../../../shared/agentChat.ts'
-import { ompBaseEnv } from './launch.ts'
-import { ompBinPathOrNull } from './paths.ts'
+import { ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { createOmpLoginParser } from './loginParse.ts'
 
 /** 登录进行到哪一步。**照 `LoginState` 的形状想** —— 渲染层那侧要显示的东西是一样的：
@@ -160,6 +159,16 @@ export function submitOmpLogin(text: string): { ok: boolean; error?: string } {
 export function cancelOmpLogin(): { ok: boolean } {
   if (!current) return { ok: true }
   const p = current.proc
+  // **先通知界面，再清掉 `current`。**
+  //
+  // 反过来写（原来就是）的后果：`current` 一为空，exit 回调开头那句
+  // `if (!current) return` 就把 failed 事件整个吞掉 —— 界面留在一个
+  // **看起来还活着、其实已经死了**的表单上：输入框还在、按钮还能点，
+  // 点下去什么也不会发生，而且不会有任何提示。
+  // 2026-09-02 真机：用户贴完 key 点「提交」，界面就停在那儿再也不动。
+  //
+  // 这类「没人通知」的死界面最难自查 —— 用户手里一条线索都没有。
+  emit({ phase: 'failed', error: '登录已取消' })
   current = null
   try {
     p.kill()

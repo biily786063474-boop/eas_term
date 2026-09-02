@@ -267,6 +267,27 @@ export function OmpSetupPanel(props: {
   const [authProviders, setAuthProviders] = useState<{ id: string; name: string }[] | null>(null)
   /** 正在跑的那次订阅登录。null = 没在跑 */
   const [login, setLogin] = useState<OmpLoginWire | null>(null)
+
+  /** 把用户贴的东西交给正在跑的那个登录进程。
+   *
+   *  **结果必须接住。** 原来两处都是 `void window.api.omp.submitLogin(...)` ——
+   *  `void` 把失败整个扔了：那个登录要是已经不在了（被取消、自己退了、
+   *  另一个窗口抢了那把锁），用户点「提交」什么也不会发生，也不会有任何提示。
+   *  2026-09-02 真机：贴完 key 点提交，界面就停在那儿再也不动。
+   *
+   *  失败时**造一个 failed 态**而不是只弹一行红字 —— 那样他能看到
+   *  「登录没有完成」那一屏，上面有「再试一次」，是条走得出去的路。 */
+  const sendLoginInput = (text: string): void => {
+    const v = text.trim()
+    if (!v) return
+    setLoginInput('')
+    void window.api.omp.submitLogin(v).then((r) => {
+      if (!aliveRef.current || r.ok) return
+      setLogin((cur) =>
+        cur ? { ...cur, phase: 'failed', prompt: undefined, error: r.error ?? '提交没送到' } : cur
+      )
+    })
+  }
   /** 用户往登录提问里贴的东西（授权码 / key / 它问的任何东西） */
   const [loginInput, setLoginInput] = useState('')
 
@@ -881,20 +902,14 @@ export function OmpSetupPanel(props: {
                       spellCheck={false}
                       onChange={(e) => setLoginInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && loginInput.trim()) {
-                          void window.api.omp.submitLogin(loginInput.trim())
-                          setLoginInput('')
-                        }
+                        if (e.key === 'Enter') sendLoginInput(loginInput)
                       }}
                     />
                     <button
                       type="button"
                       className="ac-login-submit"
                       disabled={!loginInput.trim()}
-                      onClick={() => {
-                        void window.api.omp.submitLogin(loginInput.trim())
-                        setLoginInput('')
-                      }}
+                      onClick={() => sendLoginInput(loginInput)}
                     >
                       提交
                     </button>

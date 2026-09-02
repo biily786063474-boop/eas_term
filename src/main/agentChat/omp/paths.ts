@@ -18,6 +18,8 @@
 //   这是本文件最不显眼、后果最重的一条边界。
 
 import path from 'node:path'
+
+import { PROBE_ENV } from '../../probeEnv.ts'
 import type { HostPaths } from '../../../shared/agentChat.ts'
 
 /** 钉死的上游版本。↔ `resources/omp/manifest.json` 的 `version`，由
@@ -217,4 +219,62 @@ export function ompConfigDirRelative(home: string, userData: string, p: Platform
 export function parseOmpVersion(stdout: string): string | null {
   const m = /omp\/(\d+\.\d+\.\d+[^\s]*)/.exec(stdout)
   return m ? m[1] : null
+}
+
+/** omp 会读、但会把配置目录整个挪走的环境变量。**必须从子进程环境里删掉**。
+ *
+ *  只设 `PI_CONFIG_DIR` 是不够的（spec v2 一度这么以为）：
+ *  · `PI_CODING_AGENT_DIR`（上游 `utils/src/dirs.ts:316-320`）直接覆盖 agentDir，优先级最高
+ *  · `OMP_PROFILE` / `PI_PROFILE`（`dirs.ts:39`）让 agentDir 变成 `<root>/profiles/<p>/agent`
+ *  · XDG 三件套（`dirs.ts:338-361`）**在 darwin 上也生效**，会把 sessions / agent.db 挪出去
+ *
+ *  而我们的 spawn 环境是 `{...PROBE_ENV}`＝`{...process.env}` 全量透传，
+ *  用户 shell 里设过任何一个都会被继承。目标用户恰恰是「已经在自己装 omp 做实验」的人
+ *  —— 最可能设过它们的那批。命中的后果是受管配置整份读不到：`approvalMode` 回落成
+ *  omp 的默认值 **yolo**、生图没被 deny、脱敏没开，而且**全程不报错**。
+ *
+ *  **置空串不算删**：`x || default` 那类判空写法会把空串当没有、回落默认值，
+ *  但 `PI_CODING_AGENT_DIR` 那条走的是 `path.resolve()`，空串会解析成进程 cwd。
+ *  两种回落方向不同，只有真的 `delete` 才对两者都安全。 */
+const SCRUB_KEYS = [
+  'PI_CODING_AGENT_DIR',
+  'OMP_PROFILE',
+  'PI_PROFILE',
+  'XDG_DATA_HOME',
+  'XDG_STATE_HOME',
+  'XDG_CACHE_HOME'
+] as const
+
+/** 起 omp 子进程时的那份环境。**四个调用点（起会话 / 冒烟 / 订阅登录 / 查额度）
+ *  必须用同一份** —— 少设一个变量就会登进用户自己的 `~/.omp`，
+ *  而我们的会话读的是隔离目录，症状是「登录成功了，一发消息说没配」。
+ *
+ *  **它住在 paths.ts 而不是 launch.ts**：这几个变量管的就是「omp 的配置目录指到哪」，
+ *  跟这份文件里其它东西是同一件事。更实际的理由是 `launch.ts` 拖着 electron
+ *  （密钥柜、MCP 桥），而订阅登录那条路只要这份环境 —— 放在那边会让
+ *  `login.ts` 整条依赖链都进不了单测。2026-09-02 写 `login.test.ts` 时撞到。
+ * 所有 omp 子进程共用的那半环境：**把它关进我们自己的配置目录**。
+ *
+ *  会话、冒烟、`omp usage`、`omp models` 四处都要用同一份 —— 少设一处的症状是
+ *  那条命令读的是用户**真实的 `~/.omp`**（凭证、会话记录、额度全是别人的那套），
+ *  而且不报错。所以抽出来，四个调用点都从这里拿。 */
+export function ompBaseEnv(host: HostPaths): Record<string, string> {
+  const env: Record<string, string> = {
+    ...(PROBE_ENV as Record<string, string>),
+    // **HOME 必须与算相对路径用的那个同源**。`agentRules.ts:41-43` 记着一次实测事故：
+    // `os.homedir()` 跟随 `$HOME`、`app.getPath('home')` 不跟随，两者分叉过。
+    // omp 那边用的是 `os.homedir()`，所以显式把 HOME 钉成我们算路径时用的那一个，
+    // 否则会出现「配置写进 A、omp 读的是 B」，而界面显示「已配置」。
+    HOME: host.home,
+    PI_CONFIG_DIR: ompConfigDirRelative(host.home, host.userData),
+    // 绝对路径版。同时设两个是有意的：它优先级最高、且**把 XDG 分支整个关掉**
+    // （`dirs.ts:316-320` 一旦有 override，`isDefault` 为假）——
+    // 于是 agentDir 不再依赖「相对 HOME」这条假设，Windows 跨盘符那种情形也稳。
+    PI_CODING_AGENT_DIR: ompAgentDir(host.userData),
+    // 跳过 omp 的交互式初始化向导（上游 `modes/setup-wizard/index.ts:49`）。
+    // 不设的话首次起会话会挂在等输入，界面上看到的是「超时」而看不出原因。
+    OMP_SKIP_SETUP: '1'
+  }
+  for (const k of SCRUB_KEYS) delete env[k]
+  return env
 }

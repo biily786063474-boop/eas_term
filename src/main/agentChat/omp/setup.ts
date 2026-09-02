@@ -12,8 +12,8 @@
 import { execFile } from 'node:child_process'
 import { ipcMain } from 'electron'
 
-import { hostPaths, readOmpUsage, writeManagedConfig, ompBaseEnv } from './launch.ts'
-import { ompBinPathOrNull } from './paths.ts'
+import { hostPaths, readOmpUsage, writeManagedConfig } from './launch.ts'
+import { ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { ompModelSelector, ompModelsFromJson } from './config.ts'
 import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
 import {
