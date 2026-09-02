@@ -156,3 +156,48 @@ test('填 key 路：没选服务商 / 没填 key / 柜子锁着，三种要分�
     .map((r) => (r.ok ? '' : r.reason))
   assert.equal(new Set(reasons).size, 3)
 })
+
+// ── 登录失败要说人话，不给用户看日志（2026-09-02 用户提的）─────────────────
+//
+// 用户原话：「如果真的失败，不要给用户看日志，而是 popup 的形式告诉用户填错了
+// 还是其他的什么，不要让用户在软件中看到开发者看的东西。」
+//
+// 所以要把 omp 的输出**分类**成一句人话 + 一个明确的下一步动作。
+// 分不出来的也不能倒日志 —— 那时就诚实说「没成功」，并把日志留给日志文件。
+
+import { loginFailureOf } from './setupModel.ts'
+
+test('**key 填错了 → 直接说 key 不对，并让他回去重填**', () => {
+  const r = loginFailureOf(['Validating API key...', 'Error: 401 invalid api key'], undefined)
+  assert.equal(r.retry, 'input')
+  assert.match(r.title, /密钥|key/i)
+  // 不能把原始那行塞进给用户看的文案里
+  assert.ok(!r.title.includes('401'))
+  assert.ok(!(r.hint ?? '').includes('Error:'))
+})
+
+test('连不上 → 说网络，不说 key（把网络问题说成 key 错，用户会去换一把好好的 key）', () => {
+  for (const l of ['fetch failed: ECONNREFUSED', 'getaddrinfo ENOTFOUND api.example.com', 'network timeout']) {
+    const r = loginFailureOf([l], undefined)
+    assert.equal(r.retry, 'retry', l)
+    assert.match(r.title, /连不上|网络/)
+  }
+})
+
+test('用户自己取消 / 中途关掉 → 不当成错误吓唬他', () => {
+  const r = loginFailureOf(['Login cancelled'], undefined)
+  assert.equal(r.retry, 'retry')
+  assert.match(r.title, /取消/)
+})
+
+test('**认不出来时也不倒日志** —— 诚实说没成功，别塞原文进去', () => {
+  const r = loginFailureOf(['Segmentation fault at 0xdeadbeef', '  at foo.ts:12'], '退出码 1')
+  assert.equal(r.retry, 'retry')
+  assert.ok(!r.title.includes('0xdeadbeef'))
+  assert.ok(!(r.hint ?? '').includes('foo.ts'))
+})
+
+test('空输入也要给得出一句话，不能是 undefined', () => {
+  const r = loginFailureOf([], undefined)
+  assert.ok(r.title.length > 0)
+})

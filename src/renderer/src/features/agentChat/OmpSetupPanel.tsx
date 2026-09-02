@@ -30,6 +30,7 @@ import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import {
   authFailureInTail,
+  loginFailureOf,
   nextStepOf,
   OMP_PROVIDERS,
   providerById,
@@ -488,6 +489,9 @@ export function OmpSetupPanel(props: {
       void window.api.omp.noteSmoke({ ok: false, message })
       // 认得出是「key 不对」才把人打回填 key 那步。认不出的一律不猜 ——
       // 把网络故障说成 key 不对，会让人去反复更换一把其实没问题的 key
+      // **原始输出进控制台，不进界面。** 界面给的是分类之后的一句人话；
+      // 而排障要的恰恰是这段原文 —— 两种需求分开满足，不要让用户替我们读日志。
+      console.error('[omp:smoke] 没跑通：\n' + [message, ...out].filter(Boolean).join('\n'))
       setBusy({ k: 'smoke-failed', message, out: [...out], auth: authFailureInTail(out) === 'auth' })
       void refresh()
     }
@@ -900,27 +904,30 @@ export function OmpSetupPanel(props: {
               </div>
             )}
 
-            {/* 失败：**这时候才该看见 omp 的原话**，而且要看得全 */}
-            {login?.phase === 'failed' && (
-              <>
-                <div className="ac-login-err">{login.error ?? '登录没有完成'}</div>
-                {login.lines.length > 0 && (
-                  <details className="ac-omp-raw">
-                    <summary>看看它说了什么</summary>
-                    <pre className="ac-setup-out">{login.lines.slice(-14).join('\n')}</pre>
-                  </details>
-                )}
-                <div className="ac-setup-row">
-                  <button
-                    type="button"
-                    className="ac-login-retry"
-                    onClick={() => void startLogin(omp?.provider ?? '')}
-                  >
-                    再试一次
-                  </button>
-                </div>
-              </>
-            )}
+            {/* 失败：**一句人话 + 一个明确的下一步，不给用户看日志。**
+                分类在 `loginFailureOf`（纯函数、有单测）；原始输出只进控制台，
+                那是给我们排障用的。折叠起来让用户自己展开也不行 ——
+                那还是把终端输出摆在了他面前，而且「要不要展开」这个选择
+                本身就是在让他替我们做分类。 */}
+            {login?.phase === 'failed' &&
+              (() => {
+                const f = loginFailureOf(login.lines, login.error)
+                return (
+                  <div className="ac-omp-fail">
+                    <div className="ac-login-err">{f.title}</div>
+                    {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
+                    <div className="ac-setup-row">
+                      <button
+                        type="button"
+                        className="ac-login-submit"
+                        onClick={() => void startLogin(omp?.provider ?? '')}
+                      >
+                        {f.retry === 'input' ? '重新填一次' : '再试一次'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
 
             <div className="ac-setup-row">
               <button
@@ -1074,26 +1081,31 @@ export function OmpSetupPanel(props: {
                 <div className="ac-login-hint">
                   第一次要起进程、连服务商，可能要等十几秒。最多等 {SMOKE_TIMEOUT_MS / 1000} 秒。
                 </div>
-                {/* 跑的过程中它已经说了话就先摆出来 —— 卡住时这些是唯一的线索 */}
-                {busy.out.length > 0 && <pre className="ac-setup-out">{busy.out.join('\n')}</pre>}
+                {/* **跑的过程中不摆输出。** 之前这里把它说的话原样倒出来，理由是
+                    「卡住时这些是唯一的线索」—— 那是**我们**的线索，不是用户的。
+                    他在等一个结果，不是在读日志。真卡住了，超时那一下会给他一句人话。 */}
+                <div className="ac-setup-bar" />
               </>
             )}
           </>
         )}
 
-        {/* ── 试不通：把原话给他看（约束 ③）───────────────────────────────── */}
+        {/* ── 试不通：**一句人话，不给用户看日志** ─────────────────────────
+            原来这里摆着「它自己说的话」＋一整段输出。用户 2026-09-02 说得很清楚：
+            「不要让用户在软件中看到开发者看的东西。」
+            分类走 `loginFailureOf`（与登录那条同一个，纯函数、有单测），
+            原始输出进控制台给我们排障。 */}
         {shown === 'smoke-failed' && busy.k === 'smoke-failed' && (
           <>
-            <div className="ac-login-err ac-setup-err">
-              {busy.auth ? '这把 key 没通过验证。' : '没能跑通。'}
-            </div>
-            <div className="ac-setup-say">{busy.message}</div>
-            {busy.out.length > 0 && (
-              <>
-                <div className="ac-setup-cmd-l">它自己说的话</div>
-                <pre className="ac-setup-out">{busy.out.join('\n')}</pre>
-              </>
-            )}
+            {(() => {
+              const f = loginFailureOf(busy.out, busy.message)
+              return (
+                <div className="ac-omp-fail">
+                  <div className="ac-login-err">{busy.auth ? '这把密钥没通过验证' : f.title}</div>
+                  {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
+                </div>
+              )
+            })()}
             <div className="ac-setup-row">
               {/* 认出是 key 的问题才给这颗按钮。认不出时给它，等于建议用户
                   去改一把其实没问题的 key */}

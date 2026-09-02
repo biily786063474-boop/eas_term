@@ -154,3 +154,50 @@ const AUTH_RE = /\b401\b|unauthori[sz]ed|invalid[ _-]?api[ _-]?key|incorrect api
 export function authFailureInTail(lines: string[]): 'auth' | 'unknown' {
   return lines.some((l) => AUTH_RE.test(l)) ? 'auth' : 'unknown'
 }
+
+/** 登录失败要怎么跟用户说。
+ *
+ *  **一句人话 + 一个明确的下一步，不给他看日志。**
+ *  用户 2026-09-02 的原话：「不要让用户在软件中看到开发者看的东西。」
+ *  折叠起来让他自己展开也算 —— 那还是把终端输出摆在了他面前，
+ *  而且「要不要展开」这个选择本身就是在让他替我们做分类。
+ *
+ *  **认不出来的时候也不许倒原文**：那时诚实说「没成功」，日志写进日志文件给我们看。
+ *  把一段看不懂的英文塞给用户，比什么都不说更让人无措。
+ */
+export interface OmpLoginFailure {
+  /** 一句话说清哪儿不对。**不含任何原始输出** */
+  title: string
+  /** 可选的一句补充，告诉他接下来能做什么 */
+  hint?: string
+  /** 界面该把他送回哪一步。`input` = 回到那个输入框重填；`retry` = 从头再试一次 */
+  retry: 'input' | 'retry'
+}
+
+/** 网络类故障的样子。**要和 key 错分开** ——
+ *  把连不上说成「key 不对」，用户会去反复更换一把其实好好的 key。 */
+const NET_RE = /econnrefused|enotfound|etimedout|eai_again|network|fetch failed|timeout|socket hang up|certificate/i
+/** 用户自己中断的样子。不该被当成错误吓唬他。 */
+const CANCEL_RE = /cancell?ed|aborted|interrupted|sigint/i
+
+export function loginFailureOf(lines: string[], error: string | undefined): OmpLoginFailure {
+  const hay = [...lines, error ?? ''].join('\n')
+  if (AUTH_RE.test(hay)) {
+    return {
+      title: '这把密钥不对',
+      hint: '对方拒绝了它。回去检查一下有没有复制全、或者是不是过期了。',
+      retry: 'input'
+    }
+  }
+  if (NET_RE.test(hay)) {
+    return { title: '连不上这家服务商', hint: '检查一下网络（或代理），然后再试一次。', retry: 'retry' }
+  }
+  if (CANCEL_RE.test(hay)) {
+    return { title: '登录取消了', retry: 'retry' }
+  }
+  return {
+    title: '登录没有完成',
+    hint: '可以再试一次。如果一直不行，告诉我们你选的是哪一家。',
+    retry: 'retry'
+  }
+}

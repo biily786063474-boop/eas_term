@@ -2607,11 +2607,13 @@
   0%, 100% { opacity: 0.35; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1); }
 }
-/* 失败时才展开的原始输出。正常流程里读日志是我们没做完事 */
-.ac-omp-raw > summary {
-  cursor: pointer;
-  font-size: 12px;
-  opacity: 0.7;
-  padding: 4px 0;
+/* 失败：一句人话 + 一个动作。**这里不放任何原始输出** ——
+   那些进控制台给我们排障，用户看到的是分类之后的结论 */
+.ac-omp-fail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ac-danger, #f7768e) 10%, transparent);
 }
-.ac-omp-raw > summary:hover { opacity: 1; }

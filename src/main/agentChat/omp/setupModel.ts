@@ -17,6 +17,8 @@ export {
   nextStepOf,
   ompLaunchGate,
   authFailureInTail,
+  loginFailureOf,
+  type OmpLoginFailure,
   type OmpProvider,
   type OmpStep,
   type OmpSetupState

@@ -44,7 +44,9 @@ export interface OmpLoginState {
    *  **界面只显示这一行，不倒整段日志** —— 用户不该在设置面板里读终端输出。
    *  它是 omp 的原话，所以是真话；一行就够，而且随时被下一句覆盖。 */
   progress?: string
-  /** 输出尾部。**只在失败时给用户看** —— 正常流程里读日志是我们没做完事。 */
+  /** 输出尾部。**这份不给用户看** —— 它只用来给失败分类（`loginFailureOf`），
+   *  以及在控制台留一份给我们排障。用户看到的是分类之后的一句人话。
+   *  用户 2026-09-02 的原话：「不要让用户在软件中看到开发者看的东西。」 */
   lines: string[]
   error?: string
 }
@@ -123,6 +125,10 @@ export function startOmpLogin(
     // 退出码 0 **不等于**登录成功：用户中途 Ctrl-C、或者 omp 自己判定放弃，
     // 都可能是 0。真正的判据是它写没写过那句「Credentials saved to …」。
     if (current.state.phase !== 'done') {
+      // **原始输出只进控制台，不进界面。** 失败的时候用户要的是「哪儿不对、
+      // 接下来干什么」，不是一段英文日志；而我们排障要的恰恰是那段日志。
+      // 两种需求分开满足，不要用「折叠起来让他自己展开」去糊弄 —— 那还是把它摆在了他面前。
+      console.error(`[omp:login] ${provider} 失败（退出码 ${String(code)}）：\n` + current.state.lines.join('\n'))
       emit({ phase: 'failed', error: `登录没有完成（退出码 ${String(code)}）` })
     }
     current = null
