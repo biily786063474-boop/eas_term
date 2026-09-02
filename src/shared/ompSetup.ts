@@ -125,6 +125,19 @@ export interface OmpStatus {
  *  所以判据换成：**omp 列不列得出这家的模型**。没凭证时
  *  `omp models ls --json` 回 `{"models":[]}`（18.1.2 实测，约 0.55s）。
  *
+ *  ── **只对订阅那条路成立，这是硬边界** ──────────────────────────────────
+ *  同一天实测：**只要 provider 在 `models.yml` 里被声明过，哪怕一条凭证都没有，
+ *  `models ls` 照样把它的模型全列出来**（跟有凭证时一模一样）。
+ *
+ *    零凭证 ＋ 空 models.yml         → `{"models":[]}`
+ *    零凭证 ＋ models.yml 声明了这家  → 9 个模型
+ *
+ *  所以「列得出」只证明「配置里有这家」，不证明「认证得了」——
+ *  它只在 `providers: {}` 时才是认证凭据，而那恰好只有订阅那条路
+ *  （填 key 那条我们会把 provider 连同 apiKey 变量名一起写进 models.yml）。
+ *  **`nextStepOf` 的 apikey 分支因此一个字都不看 `loggedIn`**，只看 `keyInVault`。
+ *  拿它去判填 key 那条路，会得到一个「永远说已登录」的判据 —— 比没有判据更糟。
+ *
  *  **`models` 为 `undefined` 表示「没探到」，不是「空清单」** —— 二进制起不来、
  *  超时，这时退回我们自己的记录：探不到就把人锁在门外，是拿一次探测失败
  *  去否定一件他明明做过的事。 */
@@ -240,7 +253,10 @@ export function ompLaunchGate(i: {
     return { ok: false, reason: 'no-provider', message: '还没选模型服务商，先在设置里选一个。' }
   }
   if (!i.keysReadable) {
-    return { ok: false, reason: 'no-key', message: `密钥柜里还没有 ${i.keyVarNames.join('、')}，先在设置里填。` }
+    // **不许把变量名写进这句话。** `EAS_OMP_<ID>_KEY` 是我们的实现细节，
+    // 用户在界面上从来没见过它，也不需要知道 —— 他要做的事是「把这家的 key 填进去」，
+    // 而那件事在面板上有专门一屏。2026-09-02 用户截图里就摆着这么一串全大写名字。
+    return { ok: false, reason: 'no-key', message: '还没填这家服务商的 API key。' }
   }
   if (!i.vaultUnlocked) return { ok: false, reason: 'vault-locked', message: '密钥柜锁着，解锁之后才能起会话。' }
   return { ok: true }

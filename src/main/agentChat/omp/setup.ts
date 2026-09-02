@@ -63,7 +63,10 @@ async function statusOf(): Promise<OmpStatus> {
   // 而真正的权威在 omp 的 broker 里 —— 两者一分叉，界面就在骗人。
   // `loggedInAt` 更是一条写下去就永远为真的记录，凭证过期它一概不知道。
   const models = await cachedModels()
-  const loggedIn = ompLoggedInFrom({
+  // **只有订阅那条路能信这个判据**（边界见 `ompLoggedInFrom` 的注释：
+  // models.yml 里声明过的 provider，零凭证也照样被列出来）。
+  // 填 key 那条路上它恒为真，报上去只会让人误用 —— 所以那边直接报 false。
+  const loggedIn = setup.provider?.authMode !== 'subscription' ? false : ompLoggedInFrom({
     models,
     providerId: setup.provider?.id,
     // 探测失败时才退回它 —— 探不到 ≠ 没登录

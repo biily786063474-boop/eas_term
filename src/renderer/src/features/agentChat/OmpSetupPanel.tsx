@@ -632,6 +632,28 @@ export function OmpSetupPanel(props: {
   const shown: OmpStep['k'] | 'mode' | 'busy' | 'smoke' | 'smoke-failed' | 'done' =
     busy.k !== 'idle' ? busy.k : gate ?? editing ?? step?.k ?? 'blocked'
 
+  /** 冒烟失败之后，那颗**真能解决问题**的按钮送他去哪一步。
+   *
+   *  判据用 `step`（失败后面板已经 refresh 过，它是权威的「还缺什么」），
+   *  **不猜、也不看错误文案**。缺什么就修什么：
+   *  缺 key → 去填 key；没登录 → 去登录；柜子锁着 → 去解锁；没选服务商 → 去选。
+   *
+   *  `null` 表示「东西都齐了，就是没跑通」—— 那时才轮到「再试一次」。 */
+  const fixStep: { to: Editing; label: string } | null =
+    busy.k === 'smoke-failed'
+      ? step?.k === 'key'
+        ? { to: 'key', label: '去填这家的 API key' }
+        : step?.k === 'login'
+          ? { to: 'login', label: '去登录' }
+          : step?.k === 'provider'
+            ? { to: 'provider', label: '先挑一家服务商' }
+            : step?.k === 'vault-unlock' || step?.k === 'vault-setup'
+            ? { to: null, label: step.k === 'vault-unlock' ? '去解锁密钥柜' : '去建密钥柜' }
+            : busy.auth
+              ? { to: 'key', label: '回去改 key' }
+              : null
+      : null
+
   const body = (
     <div
       className="ac-setup-mask"
@@ -1173,30 +1195,41 @@ export function OmpSetupPanel(props: {
               )
             })()}
             <div className="ac-setup-row">
-              {/* 认出是 key 的问题才给这颗按钮。认不出时给它，等于建议用户
-                  去改一把其实没问题的 key */}
-              {busy.auth && (
+              {/* **出口来自 `step`，不是猜的。**
+                  失败之后面板已经 `refresh()` 过一次，`step` 就是此刻权威的
+                  「还缺什么」—— 缺 key 就送去填 key，没登录就送去登录，
+                  柜子锁着就送去解锁。
+
+                  2026-09-02 用户截图：闸门说「密钥柜里还没有这家的 key」，
+                  底下却只有「再试一次 / 换个模型 / 先这样」——**没有一个能解决它**，
+                  而「再试一次」必然原样再失败一次。一个保证无效的按钮比没有按钮更糟：
+                  它让人以为自己还有救，于是反复点。 */}
+              {fixStep && (
                 <button
                   type="button"
                   className="ac-login-go ac-setup-primary"
                   onClick={() => {
                     setBusy({ k: 'idle' })
-                    setEditing('key')
+                    setEditing(fixStep.to)
                   }}
                 >
-                  回去改 key
+                  {fixStep.label}
                 </button>
               )}
-              <button
-                type="button"
-                className="ac-login-retry"
-                onClick={() => {
-                  setBusy({ k: 'idle' })
-                  void runSmoke()
-                }}
-              >
-                再试一次
-              </button>
+              {/* **缺东西的时候不给「再试一次」** —— 那一下必然原样再失败。
+                  只有在「东西都齐了、就是没跑通」时它才是条真出路。 */}
+              {!fixStep && (
+                <button
+                  type="button"
+                  className="ac-login-retry"
+                  onClick={() => {
+                    setBusy({ k: 'idle' })
+                    void runSmoke()
+                  }}
+                >
+                  再试一次
+                </button>
+              )}
               <button
                 type="button"
                 className="ac-login-retry"

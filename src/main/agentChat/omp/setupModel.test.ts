@@ -424,3 +424,85 @@ test('探测失败时不判它坏 —— 探不到 ≠ 不存在', () => {
 test('压根没存模型 → false（那本来就该去选）', () => {
   assert.equal(ompModelUsable(M('a/b'), undefined), false)
 })
+
+// ── 2026-09-02 第四轮：闸门那句话把内部变量名摆给用户看 ────────────────────
+//
+// 用户截图：「密钥柜里还没有 EAS_OMP_MINIMAX_CODE_CN_KEY，先在设置里填。」
+// 底下三个按钮：再试一次 / 换个模型 / 先这样，我自己再看。
+//
+// 两个问题，都不是小事：
+//
+//  1. `EAS_OMP_MINIMAX_CODE_CN_KEY` 是**我们的实现细节** —— 用户在界面上从来
+//     没见过这个名字，也不需要知道它。他既定的规矩是「不要让用户在软件中
+//     看到开发者看的东西」，一个全大写下划线的环境变量名正是那种东西。
+//     （上一轮我让 `ours` 的消息原样透出，理由是「已经是给用户看的中文」——
+//     这一句证明了那个前提并不总成立，所以要把这些话本身改干净。）
+//
+//  2. 三个按钮**没有一个能解决它**。真正该做的是「去填 key」，
+//     而「再试一次」必然原样再失败一次 —— 一个保证无效的按钮
+//     比没有按钮更糟：它让人以为自己还有救，反复点。
+
+test('**闸门的每一句话都不许出现环境变量名**', () => {
+  const cases = [
+    { provider: undefined, keyVarNames: [], keysReadable: false, vaultUnlocked: true },
+    { provider: 'minimax-code-cn', keyVarNames: ['EAS_OMP_MINIMAX_CODE_CN_KEY'], keysReadable: false, vaultUnlocked: true },
+    { provider: 'minimax-code-cn', keyVarNames: ['EAS_OMP_MINIMAX_CODE_CN_KEY'], keysReadable: true, vaultUnlocked: false }
+  ]
+  for (const c of cases) {
+    const r = ompLaunchGate(c)
+    assert.equal(r.ok, false)
+    if (r.ok) continue
+    assert.ok(!/EAS_OMP/.test(r.message), `漏出了变量名：${r.message}`)
+    assert.ok(!/[A-Z][A-Z0-9]*_[A-Z0-9_]+/.test(r.message), `漏出了全大写下划线的名字：${r.message}`)
+  }
+})
+
+test('三种原因仍然分得开 —— 它们对应用户要做的三件不同的事', () => {
+  const base = { provider: 'minimax-code-cn', keyVarNames: ['X'], keysReadable: true, vaultUnlocked: true }
+  const noProvider = ompLaunchGate({ ...base, provider: undefined, keyVarNames: [] })
+  const noKey = ompLaunchGate({ ...base, keysReadable: false })
+  const locked = ompLaunchGate({ ...base, vaultUnlocked: false })
+  assert.equal(noProvider.ok === false && noProvider.reason, 'no-provider')
+  assert.equal(noKey.ok === false && noKey.reason, 'no-key')
+  assert.equal(locked.ok === false && locked.reason, 'vault-locked')
+  // 三句话彼此不同 —— 合并任何两条都会把人引向错误的下一步
+  const msgs = [noProvider, noKey, locked].map((r) => (r.ok ? '' : r.message))
+  assert.equal(new Set(msgs).size, 3)
+})
+
+// ── 「问 omp」这个判据有边界，必须钉死 ────────────────────────────────────
+//
+// 2026-09-02 实测（18.1.2）：**只要 provider 在 `models.yml` 里被声明过，
+// 哪怕一条凭证都没有，`omp models ls --json` 照样把它的模型全列出来。**
+//
+//   零凭证 + 空 models.yml            → {"models":[]}
+//   零凭证 + models.yml 声明了这家     → 9 个模型，跟有凭证时一模一样
+//
+// 所以「omp 列得出模型」只能证明「配置里有这家」，不能证明「认证得了」——
+// **它只在 `providers: {}` 的时候才是认证凭据**，而那恰好只有订阅那条路
+// （填 key 那条我们会把 provider 连同 apiKey 变量名一起写进 models.yml）。
+//
+// 这条边界不写下来，下一个人（或者下一次的我）就会把它用到填 key 那条路上，
+// 得到一个「永远说已登录」的判据 —— 那比没有判据更糟。
+
+test('**订阅路**：omp 列得出 → 算登录上了', () => {
+  assert.equal(
+    ompLoggedInFrom({ models: M('minimax-code-cn/MiniMax-M3'), providerId: 'minimax-code-cn', hint: false }),
+    true
+  )
+})
+
+test('**填 key 路不许用这个判据** —— 那条路上 models.yml 声明了 provider，列得出不代表认证得了', () => {
+  // 这条测试钉的是**调用方**的纪律：`nextStepOf` 的 apikey 分支只看 `keyInVault`，
+  // 一个字都不看 `loggedIn`。改动那个分支去读 loggedIn，这条就该红。
+  const s = ompStateFrom({
+    installed: true,
+    provider: 'minimax-code-cn',
+    authMode: 'apikey',
+    loggedIn: true, // omp 列得出 —— 但那只是因为 models.yml 里声明了它
+    model: 'minimax-code-cn/MiniMax-M3',
+    vault: { available: true, configured: true, locked: false, foreign: false },
+    keyInVault: false // 柜里没 key
+  })
+  assert.equal(nextStepOf(s).k, 'key', 'apikey 路把 loggedIn 当成了认证凭据 —— 那是假的')
+})
