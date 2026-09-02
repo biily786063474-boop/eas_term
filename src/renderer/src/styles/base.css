@@ -1068,6 +1068,14 @@ body {
 
    `position: fixed` 且**不在菜单里面**：菜单自己是滚动容器，
    放进去的话轨道会跟着内容滚出边框。 */
+/* 菜单自己的原生滚动条**要藏掉** —— 沿边那条已经在表达同一件事，
+   两条同时在就是「一个信息画了两遍」（用户 2026-09-02 截图指出）。
+   只藏这一处，不动全局那套（别的地方还靠它）。 */
+.canvas-ctxmenu::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .cctx-rail {
   position: fixed;
   z-index: 1001;
@@ -1088,7 +1096,9 @@ body {
 .cctx-rail-thumb {
   stroke: var(--t-2);
   stroke-width: 2.5;
-  transition: stroke-dashoffset 0.06s linear;
+  /* **不加 transition。** 滚动条要和内容零延迟同步 —— 加过渡的话滑块永远
+     追在滚动后面跑，用户读到的是「卡」而不是「顺」（原来那 60ms 就是这个下场）。
+     顺滑来自滚动事件本身的密度，不来自补间。 */
 }
 
 .canvas-ctxmenu.cctx-sub {
