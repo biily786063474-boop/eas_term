@@ -39,9 +39,9 @@ export const OMP_USERDATA_DIR = 'omp'
 /** omp 全部内建工具名。**逐字抄自上游**
  *  `packages/coding-agent/src/tools/builtin-names.ts` 的 `BUILTIN_TOOL_NAMES`
  *  （2026-09-02 对 18.1.2 源码核对，29 个，顺序照原样）。
- *  抄一份的唯一用途是让 `check-omp-bundle.mjs` 与本目录的测试能在**打包前**
- *  拦下写错的工具名——运行期写错的代价是每次 `session/new` 都被
- *  `validateToolNames` 抛掉，而那是个只有真起会话才看得见的失败。 */
+ *  **它只是一道粗筛，不是判据。** 2026-09-02 实测：`ask` 在这份清单里、
+ *  却不被 ACP 模式的 `--tools` 接受 —— 「是不是内建工具」和「当前模式注册了没有」
+ *  是两个问题，这份清单只答得了前一个。真判据是二进制自己跑一次 ACP 握手。 */
 export const OMP_BUILTIN_TOOLS = [
   'read', 'bash', 'edit', 'ast_grep', 'ast_edit', 'ask', 'debug', 'eval',
   'github', 'glob', 'grep', 'lsp', 'inspect_image', 'browser', 'computer',
@@ -53,12 +53,20 @@ export const OMP_BUILTIN_TOOLS = [
  *
  *  **没有 `ls`** —— 直觉上「列目录」该有个 `ls`，omp 里没有这个工具名（列目录归 `glob`）。
  *  写进去的后果不是「多一个没人用的名字」，是 `validateToolNames` 直接抛、
- *  **每一次 `session/new` 都失败**。上面这 8 个 2026-09-02 已逐个在
- *  `BUILTIN_TOOL_NAMES` 里核对到（同文件的测试会再钉一遍）。
+ *  **每一次 `session/new` 都失败**。
+ *
+ *  **也没有 `ask`。** 它确实在 `BUILTIN_TOOL_NAMES` 里，所以「逐个核对内建清单」
+ *  这个办法放它过去了 —— 但 `--tools` 校验的不是「是不是内建工具」，是
+ *  「**在当前模式下注册了没有**」：`ask` 是交互式 TUI 的工具，ACP 无头模式没有它。
+ *  2026-09-02 真机代价：用户以为是订阅登录的问题（看到的是 provider 的 401），
+ *  实际上每一次 `session/new` 都死在这一行，凭证从头到尾都是好的。
+ *
+ *  **所以手抄的清单不是靠得住的判据**（见下面 `OMP_BUILTIN_TOOLS` 的说明），
+ *  真判据是让二进制自己跑一次 ACP 握手 —— `scripts/check-omp-bundle.mjs` 打包前做。
  *
  *  没放进来的高危项另有第二道锁（见 spec §P.4 的 `tools.approval` deny 与
  *  `browser.enabled: false`）——白名单不是唯一防线，因为 `sdk.ts` 推 tts 时不看 `--tools`。 */
-export const OMP_TOOLS = ['read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo', 'ask']
+export const OMP_TOOLS = ['read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo']
 
 /** 调用方（`session.ts`）算 `HostPaths` 时用的是真的 `process.platform`；
  *  测试要能在 mac 上验 Windows 的分支，所以把平台做成可注入的参数。 */

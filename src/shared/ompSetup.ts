@@ -218,49 +218,133 @@ export function authFailureInTail(lines: string[]): 'auth' | 'unknown' {
   return lines.some((l) => AUTH_RE.test(l)) ? 'auth' : 'unknown'
 }
 
-/** 登录失败要怎么跟用户说。
+/** 连不上。**必须和「key 不对」分开** —— 把网络故障说成 key 错，
+ *  用户会去反复更换一把其实好好的密钥。 */
+const NET_RE =
+  /econnrefused|enotfound|etimedout|eai_again|econnreset|network|fetch failed|timeout|timed out|socket hang up|certificate|proxy/i
+/** 他自己取消的。不当成错误吓唬他。 */
+const CANCEL_RE = /cancell?ed|aborted|interrupted|sigint/i
+/** 额度 / 频率。**下一步跟 key 不对完全不同**：key 没问题，是账上没钱或太频繁了。 */
+const QUOTA_RE =
+  /\b429\b|quota|rate[ _-]?limit|too many requests|insufficient|credit|balance|billing|exceeded your/i
+/** 模型名用不了。换个模型就行，跟凭证无关。 */
+const MODEL_RE = /model[^\n]{0,40}(not found|not exist|unavailable|not support|unknown|invalid)|\bno such model\b/i
+
+/** 失败要怎么跟用户说。
  *
- *  **一句人话 + 一个明确的下一步，不给他看日志。**
+ *  **一句人话 + 一个明确的下一步。**
  *  用户 2026-09-02 的原话：「不要让用户在软件中看到开发者看的东西。」
  *  折叠起来让他自己展开也算 —— 那还是把终端输出摆在了他面前，
  *  而且「要不要展开」这个选择本身就是在让他替我们做分类。
  *
- *  **认不出来的时候也不许倒原文**：那时诚实说「没成功」，日志写进日志文件给我们看。
- *  把一段看不懂的英文塞给用户，比什么都不说更让人无措。
+ *  同一天他又说：「登录未完成的时候用户并不知道是什么原因。」
+ *  **这两句不矛盾。** 矛盾的是「倒一整段」和「一个字都不说」这两个极端 ——
+ *  服务商自己那句错误描述是**原因**，堆栈帧、源码回显、JSON 才是日志。
+ *  所以：分类给一句结论（`title`），再从输出里摘一句原因（`detail`）。
  */
 export interface OmpLoginFailure {
   /** 一句话说清哪儿不对。**不含任何原始输出** */
   title: string
   /** 可选的一句补充，告诉他接下来能做什么 */
   hint?: string
+  /** 从输出里摘出来的**一句**原因原话（已清洗：没有堆栈、没有 JSON、没有路径）。
+   *  摘不到就没有 —— 宁可不说，也不胡说。 */
+  detail?: string
   /** 界面该把他送回哪一步。`input` = 回到那个输入框重填；`retry` = 从头再试一次 */
   retry: 'input' | 'retry'
 }
 
-/** 网络类故障的样子。**要和 key 错分开** ——
- *  把连不上说成「key 不对」，用户会去反复更换一把其实好好的 key。 */
-const NET_RE = /econnrefused|enotfound|etimedout|eai_again|network|fetch failed|timeout|socket hang up|certificate/i
-/** 用户自己中断的样子。不该被当成错误吓唬他。 */
-const CANCEL_RE = /cancell?ed|aborted|interrupted|sigint/i
+/** 这一屏是在做什么。**同一段输出，两种上下文要说两种话** ——
+ *  用户点的是「试一句」，界面却回他「登录没有完成」，他会以为自己漏了一步登录。
+ *  2026-09-02 截图实拍到过。 */
+export type OmpFailContext = 'login' | 'smoke'
 
-export function loginFailureOf(lines: string[], error: string | undefined): OmpLoginFailure {
+/** 一行里长得像日志的部分。摘原因时要把它们剔掉。 */
+const NOISE_LINE =
+  /^\d+ \||^\^+$|^\s*at \S+ \(|\$bunfs|^\s*[[\]{}]|^[\w-]+:\s*[["{]|^\s*(status|headers|code|stack)\s*[:=]/i
+/** 值得当「原因」的那种句子。 */
+const REASON_HINT = /error|fail|refus|invalid|unauthor|denied|not found|missing|timeout|expire|quota|limit/i
+
+/** 从一段输出里摘出**一句能给人看的原因**。摘不到就回 undefined。
+ *
+ *  只做减法，不做改写：去掉异常类名前缀、切掉后面那坨 JSON、剔掉堆栈行。
+ *  剩下的是对方自己说的那句话 —— 那是原因，不是日志。 */
+export function humanReasonIn(lines: string[]): string | undefined {
+  for (const raw of lines) {
+    let t = raw.trim()
+    if (!t || NOISE_LINE.test(t)) continue
+    if (!REASON_HINT.test(t)) continue
+    // 切掉 JSON / 对象那一坨（`…: {"type":"error"}`、`… { status: 401 }`）
+    const brace = t.search(/[{[]/)
+    if (brace >= 0) t = t.slice(0, brace).trim().replace(/[:：,，]\s*$/, '')
+    // 去掉异常类名前缀：`ProviderHttpError: xxx` → `xxx`。类名是给开发者的。
+    t = t.replace(/^[\w.$]*(?:Error|Exception|Failure)\s*:\s*/i, '').trim()
+    // 去掉行首的 `Error:` 之类残留与多余空白
+    t = t.replace(/\s+/g, ' ').trim()
+    if (!t || NOISE_LINE.test(t)) continue
+    // 一行放不下就不是「一句话」了 —— 那种多半是被塞进来的结构化数据
+    if (t.length > 140) continue
+    return t
+  }
+  return undefined
+}
+
+/** 两种上下文各自的兜底说法。 */
+const FALLBACK: Record<OmpFailContext, { title: string; hint: string }> = {
+  login: { title: '登录没有完成', hint: '可以再试一次。' },
+  smoke: { title: '这一句没能跑通', hint: '可以再试一次，或者换个模型。' }
+}
+
+export function explainOmpFailure(i: {
+  ctx: OmpFailContext
+  lines: string[]
+  error?: string
+  /** 这句 `error` 是**我们自己写的**（`ChatEvent` 的 `kind: 'setup'`、闸门的 message、
+   *  超时那句…）。**它已经是给用户看的中文，原样透出，不许再进分类器。**
+   *
+   *  这条是 2026-09-02 那一屏的正主：闸门明明说了「密钥柜里还没有
+   *  EAS_OMP_MINIMAX_CODE_CN_KEY，先在设置里填」，却被兜底成「登录没有完成」。
+   *  分类器是为了翻译 omp 的英文而写的，把我们自己的话也喂进去，就是自己盖掉自己。 */
+  ours?: boolean
+}): OmpLoginFailure {
+  const { ctx, lines, error, ours } = i
+  if (ours && error?.trim()) {
+    // 送他回上一步去补，而不是「再试一次」—— 这类错重试一百遍也还是那样。
+    return { title: error.trim(), retry: 'input' }
+  }
   const hay = [...lines, error ?? ''].join('\n')
+  const detail = humanReasonIn([...lines, ...(error ? [error] : [])])
   if (AUTH_RE.test(hay)) {
     return {
-      title: '这把密钥不对',
+      title: ctx === 'login' ? '这把密钥不对' : '模型服务商拒绝了这把密钥',
       hint: '对方拒绝了它。回去检查一下有没有复制全、或者是不是过期了。',
+      detail,
       retry: 'input'
     }
   }
   if (NET_RE.test(hay)) {
-    return { title: '连不上这家服务商', hint: '检查一下网络（或代理），然后再试一次。', retry: 'retry' }
+    return { title: '连不上这家服务商', hint: '检查一下网络（或代理），然后再试一次。', detail, retry: 'retry' }
+  }
+  if (QUOTA_RE.test(hay)) {
+    return {
+      title: '这个账号的额度不够了',
+      hint: '对方按额度拒绝了这次请求。去服务商那边看一眼余额或套餐。',
+      detail,
+      retry: 'retry'
+    }
+  }
+  if (MODEL_RE.test(hay)) {
+    return { title: '这个模型用不了', hint: '换一个模型再试 —— 你的账号可能没开通它。', detail, retry: 'retry' }
   }
   if (CANCEL_RE.test(hay)) {
-    return { title: '登录取消了', retry: 'retry' }
+    return { title: ctx === 'login' ? '登录取消了' : '试的这一句被中断了', detail, retry: 'retry' }
   }
+  const f = FALLBACK[ctx]
   return {
-    title: '登录没有完成',
-    hint: '可以再试一次。如果一直不行，告诉我们你选的是哪一家。',
+    title: f.title,
+    // 摘得到原因就把原因给他；摘不到才说那句「告诉我们你选的是哪一家」。
+    hint: detail ? f.hint : `${f.hint}如果一直不行，告诉我们你选的是哪一家。`,
+    detail,
     retry: 'retry'
   }
 }

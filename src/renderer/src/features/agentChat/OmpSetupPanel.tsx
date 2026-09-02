@@ -30,7 +30,7 @@ import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import {
   authFailureInTail,
-  loginFailureOf,
+  explainOmpFailure,
   nextStepOf,
   ompStateFrom,
   OMP_PROVIDERS,
@@ -82,7 +82,15 @@ type Busy =
   | { k: 'busy'; what: string }
   /** 正在试一句。`out` 攒的是 omp 自己说的话，失败时原样给用户看 */
   | { k: 'smoke'; out: string[] }
-  | { k: 'smoke-failed'; message: string; out: string[]; auth: boolean }
+  | {
+      k: 'smoke-failed'
+      message: string
+      out: string[]
+      auth: boolean
+      /** `message` 是**我们自己写的**（闸门、超时、没有工作目录…）。
+       *  这种话已经是给用户看的中文，原样透出，不进分类器 —— 见 `explainOmpFailure`。 */
+      ours: boolean
+    }
   | { k: 'done' }
 
 /** 用户主动要求回去改某一步。**这不是判据，是意图** ——
@@ -358,8 +366,9 @@ export function OmpSetupPanel(props: {
    */
   const saveKey = async (): Promise<void> => {
     const pid = omp?.provider
+    // **同上：不在推荐清单里不等于不能填 key。** `p` 只用来起个好看的组名。
     const p = providerById(pid)
-    if (!pid || !p) return
+    if (!pid) return
     const val = keyText.trim()
     if (!val) return
     setErr('')
@@ -385,7 +394,7 @@ export function OmpSetupPanel(props: {
 
     const r = await window.api.secrets.save({
       id: holder?.id,
-      name: holder?.name ?? `omp · ${p.label}`,
+      name: holder?.name ?? `omp · ${p?.label ?? pid}`,
       // 别的变量原样带回去：不给 value 就是「沿用旧密文」，值不经过渲染层
       vars: holder
         ? holder.vars.map((v) => (v.varName === kv.varName ? { varName: v.varName, value: val } : { varName: v.varName }))
@@ -455,7 +464,8 @@ export function OmpSetupPanel(props: {
         k: 'smoke-failed',
         message: '没有可用的工作目录，试不了 —— 先在左边打开一个项目再回来。',
         out: [],
-        auth: false
+        auth: false,
+        ours: true
       })
       return
     }
@@ -487,7 +497,7 @@ export function OmpSetupPanel(props: {
     // 「设置失败」四个字帮不上任何忙，而 401 / 连不上 / 模型名不认识
     // 这三种故障用户的下一步动作完全不同
     const out: string[] = []
-    const fail = (message: string): void => {
+    const fail = (message: string, ours = true): void => {
       if (h.settled) return
       finish()
       if (!aliveRef.current) return
@@ -497,7 +507,7 @@ export function OmpSetupPanel(props: {
       // **原始输出进控制台，不进界面。** 界面给的是分类之后的一句人话；
       // 而排障要的恰恰是这段原文 —— 两种需求分开满足，不要让用户替我们读日志。
       console.error('[omp:smoke] 没跑通：\n' + [message, ...out].filter(Boolean).join('\n'))
-      setBusy({ k: 'smoke-failed', message, out: [...out], auth: authFailureInTail(out) === 'auth' })
+      setBusy({ k: 'smoke-failed', message, out: [...out], auth: authFailureInTail(out) === 'auth', ours })
       void refresh()
     }
 
@@ -527,7 +537,9 @@ export function OmpSetupPanel(props: {
       if (e.k === 'error') {
         out.push(e.message)
         // 非致命的先攒着：omp 会先推一条 notice 再继续跑，这时候中断等于误报
-        if (e.fatal) fail(e.message)
+        // **`kind: 'setup'` 是我们自己写的话**（闸门那几句），原样透出；
+        // 其余的是 omp / 服务商说的，要分类。
+        if (e.fatal) fail(e.message, e.kind === 'setup')
         else setBusy({ k: 'smoke', out: [...out] })
       }
     })
@@ -916,10 +928,14 @@ export function OmpSetupPanel(props: {
                 本身就是在让他替我们做分类。 */}
             {login?.phase === 'failed' &&
               (() => {
-                const f = loginFailureOf(login.lines, login.error)
+                const f = explainOmpFailure({ ctx: 'login', lines: login.lines, error: login.error })
                 return (
                   <div className="ac-omp-fail">
                     <div className="ac-login-err">{f.title}</div>
+                    {/* 对方自己那句原因。**这不是日志** —— 日志是堆栈和 JSON，
+                        这是一句「为什么不行」。用户 2026-09-02：「登录未完成的时候
+                        用户并不知道是什么原因。」摘不到就不显示，宁可不说不胡说。 */}
+                    {f.detail && <div className="ac-omp-why">{f.detail}</div>}
                     {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
                     <div className="ac-setup-row">
                       <button
@@ -951,22 +967,31 @@ export function OmpSetupPanel(props: {
         )}
 
         {/* ── 填 key ──────────────────────────────────────────────────────── */}
-        {shown === 'key' && provider && (
+        {/* **判据是「选过服务商没有」，不是「在我们那份清单里没有」。**
+            `OMP_PROVIDERS` 只有四家，那是「带取 key 链接的推荐位」；而 `safeProvider`
+            早就放宽到接受 omp 认识的全部 70 家。用清单当判据的后果 2026-09-02
+            真机拍到了：选了 `minimax-code-cn` 再走填 key，这一屏渲染不出来，
+            整个面板落到兜底那个「先挑一家服务商」上 —— 点它，再选一次，还是那样。
+            **一个走不出去的圈。** 清单只该决定「有没有那条申请链接」。 */}
+        {shown === 'key' && omp?.provider && (
           <>
             <div className="ac-setup-say">
-              把 <b>{provider.label}</b> 的 API key 填进来。它<b>只进这个模型进程</b> ——
-              不会跟着你新开的终端跑（那样在终端里随手一句 <code>env</code> 就把它打出来了）。
+              把 <b>{provider?.label ?? omp.provider}</b> 的 API key 填进来。它
+              <b>只进这个模型进程</b> —— 不会跟着你新开的终端跑（那样在终端里随手一句{' '}
+              <code>env</code> 就把它打出来了）。
             </div>
-            <div className="ac-setup-cmd-l">
-              还没有 key？
-              <button
-                type="button"
-                className="ac-omp-link"
-                onClick={() => void window.api.shell.openExternal(provider.keyUrl)}
-              >
-                去 {provider.label} 申请一个
-              </button>
-            </div>
+            {provider && (
+              <div className="ac-setup-cmd-l">
+                还没有 key？
+                <button
+                  type="button"
+                  className="ac-omp-link"
+                  onClick={() => void window.api.shell.openExternal(provider.keyUrl)}
+                >
+                  去 {provider.label} 申请一个
+                </button>
+              </div>
+            )}
             <div className="ac-omp-row">
               <input
                 className="ac-login-input"
@@ -1003,9 +1028,10 @@ export function OmpSetupPanel(props: {
           </>
         )}
 
-        {/* 兜底：不该发生（nextStepOf 只在选过服务商之后才说 'key'），
-            但真发生了要有出口 —— **一片空白的灯箱比任何错误提示都难查** */}
-        {shown === 'key' && !provider && (
+        {/* 兜底：nextStepOf 只在选过服务商之后才说 'key'，所以这里只剩
+            「状态文件被手改坏了」这一种可能。留着是因为**一片空白的灯箱比任何
+            错误提示都难查** —— 但它不该再被正常流程走到（见上面那条注释）。 */}
+        {shown === 'key' && !omp?.provider && (
           <div className="ac-setup-row">
             <button
               type="button"
@@ -1108,15 +1134,25 @@ export function OmpSetupPanel(props: {
         {/* ── 试不通：**一句人话，不给用户看日志** ─────────────────────────
             原来这里摆着「它自己说的话」＋一整段输出。用户 2026-09-02 说得很清楚：
             「不要让用户在软件中看到开发者看的东西。」
-            分类走 `loginFailureOf`（与登录那条同一个，纯函数、有单测），
+            分类走 `explainOmpFailure`，**必须带 ctx: 'smoke'** ——
+            带成 'login' 的后果 2026-09-02 截图拍到了：用户点的是「试一句」，
+            界面回他「登录没有完成」，他以为自己漏了一步登录。
+            `ours` 那个参数同样要紧：闸门/超时那些话是我们自己写的中文，
+            已经说清楚了，喂进分类器等于自己盖掉自己。
             原始输出进控制台给我们排障。 */}
         {shown === 'smoke-failed' && busy.k === 'smoke-failed' && (
           <>
             {(() => {
-              const f = loginFailureOf(busy.out, busy.message)
+              const f = explainOmpFailure({
+                ctx: 'smoke',
+                lines: busy.out,
+                error: busy.message,
+                ours: busy.ours
+              })
               return (
                 <div className="ac-omp-fail">
                   <div className="ac-login-err">{busy.auth ? '这把密钥没通过验证' : f.title}</div>
+                  {f.detail && <div className="ac-omp-why">{f.detail}</div>}
                   {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
                 </div>
               )

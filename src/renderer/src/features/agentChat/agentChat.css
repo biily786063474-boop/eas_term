@@ -2617,3 +2617,20 @@
   border-radius: 8px;
   background: color-mix(in srgb, var(--ac-danger, #f7768e) 10%, transparent);
 }
+
+/* 对方自己那句「为什么不行」。**排在结论下面、提示上面** ——
+   结论是我们的判断，这一句是原始事实，提示是下一步动作，顺序就该是这个。
+   等宽是有意的：它是引述，不是我们说的话，字形上就该看得出来。
+   摘不到这一句时整个元素不渲染 —— 不摆一个空框子在那儿。 */
+.ac-omp-why {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ac-fg-dim, #9aa5b1);
+  padding: 6px 8px;
+  border-radius: 5px;
+  border-left: 2px solid color-mix(in srgb, var(--ac-danger, #f7768e) 40%, transparent);
+  background: color-mix(in srgb, var(--ac-danger, #f7768e) 6%, transparent);
+  /* 一句话本来就该放得下；真放不下也要换行，不许横向撑破灯箱 */
+  overflow-wrap: anywhere;
+}

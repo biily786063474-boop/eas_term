@@ -14,6 +14,7 @@ import { ipcMain } from 'electron'
 
 import { hostPaths, readOmpUsage, writeManagedConfig, ompBaseEnv } from './launch.ts'
 import { ompBinPathOrNull } from './paths.ts'
+import { ompModelSelector, ompModelsFromJson } from './config.ts'
 import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
 import {
   keyVarOf,
@@ -54,6 +55,9 @@ function statusOf(): OmpStatus {
   // 这么分是为了不让主进程去猜渲染层此刻看到的柜子状态：柜子会 15 分钟自动上锁，
   // 隔一次 IPC 往返就可能变。
   const loggedIn = !!setup.provider?.loggedInAt
+  // **存量自愈**：老配置里存的是裸模型名（真机现场 `"model": "MiniMax-M3"`），
+  // 补上 provider 前缀再对外报。不补的话用户继续 401，而界面上模型明明选着。
+  const model = ompModelSelector(setup.provider?.id, setup.provider?.model)
   // **入参也只在一处拼**（`ompStateFrom`）。两侧各拼各的时，渲染层那份漏过
   // authMode 与 loggedIn —— 判据一致、入参分叉，单测全绿而真机全错。
   const step = nextStepOf(
@@ -68,18 +72,18 @@ function statusOf(): OmpStatus {
       // 拿冒烟顶替的后果：登录刚完成时冒烟还没跑，于是状态机说「还要去登录」——
       // 用户刚登完就被弹回登录页，再登一次还是弹回来（2026-09-02 真机撞到）。
       loggedIn,
-      model: setup.provider?.model
+      model
     })
   )
   return {
     installed: !!bin,
-    status: { loggedIn: !!setup.provider?.model && !!setup.lastSmoke?.ok, account: p?.label },
+    status: { loggedIn: !!model && !!setup.lastSmoke?.ok, account: p?.label },
     step,
     providers: OMP_PROVIDERS.map((x) => ({ id: x.id, label: x.label, keyUrl: x.keyUrl })),
     provider: setup.provider?.id,
     authMode: setup.provider?.authMode,
     loggedIn,
-    model: setup.provider?.model,
+    model,
     lastSmoke: setup.lastSmoke
   }
 }
@@ -97,15 +101,10 @@ function listModels(timeoutMs = 12_000): Promise<{ id: string; label: string }[]
   return new Promise((resolve) => {
     execFile(bin, ['models', 'ls', '--json'], { env: ompBaseEnv(host), timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
       if (err) return resolve([])
-      try {
-        const j = JSON.parse(stdout) as { models?: { id?: unknown; name?: unknown }[] }
-        const out = (j.models ?? [])
-          .map((m) => ({ id: String(m?.id ?? ''), label: String(m?.name ?? m?.id ?? '') }))
-          .filter((m) => m.id)
-        resolve(out)
-      } catch {
-        resolve([])
-      }
+      // **值必须是 selector（`<provider>/<model>`），不是裸 id。**
+      // 裸 id 交给 omp，它不知道走哪个 provider，解析不到 broker 里那条凭证，
+      // 拿空 Authorization 去请求 —— 2026-09-02 用户看到的那个 1004 就是这么来的。
+      resolve(ompModelsFromJson(stdout))
     })
   })
 }

@@ -153,3 +153,37 @@ test('打包常量与配置目录常量是两个东西，别合并（一个只�
   assert.equal(OMP_USERDATA_DIR, 'omp')
   assert.equal(OMP_PINNED_VERSION, '18.1.2')
 })
+
+// ── 2026-09-02 真机事故：`ask` 让每一次 session/new 都失败 ──────────────────
+//
+// 用户报的是「登录后发信息展示 401 …(1004)」。查到最后跟凭证毫无关系 ——
+// 拿 app 一模一样的参数跑 ACP，`session/new` 当场回：
+//
+//   Unknown tool in --tools: ask.
+//   Valid tools: read, bash, edit, write, grep, glob, todo, ast_edit,
+//                goal, init_experiment, run_experiment, log_experiment, update_notes.
+//
+// 把 `ask` 去掉，同一条命令立刻走通：omp 自己选中 `minimax-code-cn/MiniMax-M3`，
+// 用 broker 里那条订阅凭证正常回话。
+//
+// **为什么上面那条「每个名字都是内建工具」的测试没拦住？**
+// 因为它对的是我们手抄的 `OMP_BUILTIN_TOOLS`（29 个），而 `ask` 确实在那份里。
+// 但 `--tools` 校验的不是「是不是内建工具」，是「**在当前模式下注册了没有**」——
+// `ask` 是交互式 TUI 的工具，ACP 无头模式压根没有它。
+// 手抄的清单答不了这个问题，所以真正的判据只能是**让二进制自己跑一遍**
+// （`scripts/check-omp-bundle.mjs` 打包前做这件事）。
+
+test('**白名单里没有 ask** —— 它是 TUI 的工具，ACP 模式下不注册，写进去每次 session/new 都失败', () => {
+  assert.ok(!OMP_TOOLS.includes('ask'), 'ask 回到白名单里了 —— 那会让 omp 完全起不来')
+})
+
+test('白名单只留 ACP 模式确认收得下的那几个（2026-09-02 对 18.1.2 实测）', () => {
+  // 这是二进制自己报的「Valid tools」里属于内建的那一段。
+  const ACCEPTED_IN_ACP = [
+    'read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo',
+    'ast_edit', 'goal', 'init_experiment', 'run_experiment', 'log_experiment', 'update_notes'
+  ]
+  for (const t of OMP_TOOLS) {
+    assert.ok(ACCEPTED_IN_ACP.includes(t), `${t} 在 ACP 模式下不被接受 —— session/new 会整个失败`)
+  }
+})

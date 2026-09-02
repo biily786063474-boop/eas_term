@@ -347,3 +347,55 @@ export function ompSkillMarkdown(original: string): string {
   const sep = base.endsWith('\n\n') || base === '' ? '' : base.endsWith('\n') ? '\n' : '\n\n'
   return `${base}${sep}${OMP_SKILL_ADDENDUM}\n`
 }
+
+/** `omp models ls --json` 的一条。**`selector` 才是能拿去用的那个值。** */
+interface OmpModelRow {
+  provider?: unknown
+  id?: unknown
+  name?: unknown
+  selector?: unknown
+}
+
+/** 把 `omp models ls --json` 读成「界面挑一个、我们存下来」的形状。
+ *
+ *  **id 一律用 `selector`（`<provider>/<model>`），绝不用裸的 `id`。**
+ *  2026-09-02 真机事故就是这么来的：我们存了裸的 `MiniMax-M3`，
+ *  omp 按 selector 认模型 —— 只给名字它不知道走哪个 provider，
+ *  于是解析不到 broker 里那条凭证，拿着空 Authorization 去请求，
+ *  MiniMax 回 `login fail: Please carry the API secret key ... (1004)`。
+ *  用户看到的是「登录成功了，一发消息还是 401」，而凭证其实好好地存着。
+ *
+ *  **没有 provider 也拼不出 selector 的那条直接丢掉** —— 留着就是留一个
+ *  选中之后必然 401 的选项，而用户无从判断它跟别的有什么不同。 */
+export function ompModelsFromJson(stdout: string): { id: string; label: string }[] {
+  let rows: OmpModelRow[]
+  try {
+    const j = JSON.parse(stdout) as { models?: OmpModelRow[] }
+    rows = Array.isArray(j?.models) ? j.models : []
+  } catch {
+    return []
+  }
+  const out: { id: string; label: string }[] = []
+  for (const m of rows) {
+    const id = typeof m?.id === 'string' ? m.id : ''
+    const provider = typeof m?.provider === 'string' ? m.provider : ''
+    // 老版本可能没有 selector，用 provider/id 补一个
+    const selector = typeof m?.selector === 'string' && m.selector ? m.selector : provider && id ? `${provider}/${id}` : ''
+    if (!selector) continue
+    out.push({ id: selector, label: typeof m?.name === 'string' && m.name ? m.name : id || selector })
+  }
+  return out
+}
+
+/** 存量修复：把已经存下来的**裸**模型名补成 selector。
+ *
+ *  修好写入那一侧之后，用户机器上仍然存着一个裸名字（真机现场
+ *  `"model": "MiniMax-M3"`）。不补的话他继续 401，而界面上模型明明选着 ——
+ *  这种「看起来配好了却用不了」的状态最难自查。
+ *
+ *  **已经带 `/` 的一律原样不动**，哪怕前缀是别家的：那多半是用户自己
+ *  在工具栏里换过，硬套当前 provider 会把他的选择改错。 */
+export function ompModelSelector(providerId: string | undefined, model: string | undefined): string | undefined {
+  if (!model || !providerId) return undefined
+  return model.includes('/') ? model : `${providerId}/${model}`
+}

@@ -11,6 +11,8 @@ import {
   ompSkillsDir,
   ompEasTermSkillDir,
   OMP_SKILL_ADDENDUM,
+  ompModelsFromJson,
+  ompModelSelector,
 } from './config.ts'
 
 // 这些行号指向 omp 18.0.11 的 `packages/coding-agent/src/config/settings-schema.ts`。
@@ -284,4 +286,98 @@ test('拿真的 skills/eas-term/SKILL.md 跑：frontmatter 与正文原样，尾
   assert.ok(out.startsWith(real))
   assert.ok(out.endsWith(`${OMP_SKILL_ADDENDUM}\n`))
   assert.equal(ompSkillMarkdown(out), out)
+})
+
+// ── 2026-09-02 真机事故：订阅登录成功了，一发消息还是 401 ──────────────────
+//
+// 用户原话：「登录后发信息展示 401 login fail: Please carry the API secret key
+// in the 'Authorization' field of the request header (1004)」
+//
+// 查下来跟凭证一点关系都没有 —— 凭证好好地躺在 `agent.db` 里
+// （`provider=minimax-code-cn`、`credential_type=api_key`、没禁用）。
+// 病根是**我们把模型名截短了**。`omp models ls --json` 每条同时给：
+//
+//     { "id": "MiniMax-M3", "selector": "minimax-code-cn/MiniMax-M3", ... }
+//
+// 我们存的是 `id`。**但 omp 是按 selector 认模型的** —— 只给裸名字，
+// 它不知道该走哪个 provider，于是解析不到那条 broker 凭证，
+// 拿着空 Authorization 去请求，MiniMax 回 1004。
+//
+// 下面这段 JSON 是真机上抓的（`omp models ls --json`，18.1.2）。
+
+const REAL_MODELS_JSON = JSON.stringify({
+  models: [
+    {
+      provider: 'minimax-code-cn',
+      id: 'MiniMax-M3',
+      selector: 'minimax-code-cn/MiniMax-M3',
+      name: 'MiniMax-M3',
+      contextWindow: 204800
+    },
+    {
+      provider: 'minimax-code-cn',
+      id: 'MiniMax-M2.1-lightning',
+      selector: 'minimax-code-cn/MiniMax-M2.1-lightning',
+      name: 'MiniMax M2.1 Lightning (Coding Plan CN)'
+    }
+  ]
+})
+
+test('**模型的值必须是 selector，不是裸 id** —— 裸 id 就是那个 1004', () => {
+  const out = ompModelsFromJson(REAL_MODELS_JSON)
+  assert.equal(out[0].id, 'minimax-code-cn/MiniMax-M3')
+  assert.ok(
+    out.every((m) => m.id.includes('/')),
+    '有一条不带 provider 前缀 —— 那条选中之后就会 401'
+  )
+})
+
+test('label 用 name（给人看的），id 用 selector（给 omp 用的）—— 两者不能混', () => {
+  const out = ompModelsFromJson(REAL_MODELS_JSON)
+  assert.equal(out[1].label, 'MiniMax M2.1 Lightning (Coding Plan CN)')
+  assert.equal(out[1].id, 'minimax-code-cn/MiniMax-M2.1-lightning')
+})
+
+test('老版本没有 selector 字段时，用 provider/id 拼一个', () => {
+  const j = JSON.stringify({ models: [{ provider: 'zai', id: 'glm-5', name: 'GLM-5' }] })
+  assert.equal(ompModelsFromJson(j)[0].id, 'zai/glm-5')
+})
+
+test('provider 和 selector 都没有 → 这条丢掉，不留一个会 401 的裸名字', () => {
+  const j = JSON.stringify({ models: [{ id: 'mystery', name: 'Mystery' }, { provider: 'zai', id: 'ok' }] })
+  const out = ompModelsFromJson(j)
+  assert.equal(out.length, 1)
+  assert.equal(out[0].id, 'zai/ok')
+})
+
+test('不是 JSON / 空的 → 空数组，别抛（它在起会话那条路上）', () => {
+  assert.deepEqual(ompModelsFromJson('not json at all'), [])
+  assert.deepEqual(ompModelsFromJson('{}'), [])
+})
+
+// ── 已经存下来的那些裸名字要能自愈 ────────────────────────────────────────
+//
+// 修好之后新存的都带前缀了，但**用户机器上已经存着一个裸的**
+// （真机现场：`"model": "MiniMax-M3"`）。不修的话他还是 401，
+// 而且看不出为什么 —— 界面上模型明明选着。
+
+test('**存量的裸模型名，读的时候补上 provider 前缀**', () => {
+  assert.equal(ompModelSelector('minimax-code-cn', 'MiniMax-M3'), 'minimax-code-cn/MiniMax-M3')
+})
+
+test('已经带前缀的原样不动（别拼成 a/a/b）', () => {
+  assert.equal(
+    ompModelSelector('minimax-code-cn', 'minimax-code-cn/MiniMax-M3'),
+    'minimax-code-cn/MiniMax-M3'
+  )
+})
+
+test('前缀是**别家**的也原样不动 —— 那是用户自己选的，我们不改他的选择', () => {
+  // 用户可能在工具栏里换成了另一家的模型。硬套当前 provider 会把它改错。
+  assert.equal(ompModelSelector('minimax-code-cn', 'zai/glm-5'), 'zai/glm-5')
+})
+
+test('没有模型 / 没有 provider → undefined，不要凭空造一个', () => {
+  assert.equal(ompModelSelector('minimax-code-cn', undefined), undefined)
+  assert.equal(ompModelSelector(undefined, 'MiniMax-M3'), undefined)
 })
