@@ -97,6 +97,61 @@
   --wash-1: rgba(0, 0, 0, 0.28);
   --wash-2: rgba(0, 0, 0, 0.4);
   --wash-3: rgba(0, 0, 0, 0.55);
+
+  /* ── 投影的墨色（ink）───────────────────────────────────────────────────
+     **和 wash 是同一个病**：95 处 box-shadow 的黑度（0.28~0.6）是照暗底调的 ——
+     暗底上那么黑才看得见，压到白底上就是一圈脏晕。
+     用户 2026-09-02 看着亮色截图说：「投影太重了 太脏了。」
+
+     所以投影的**颜色**也要跟着主题走。三档对应原来的三个黑度区间；
+     **暗色这三档与原值几乎一致**（改动只为归一，不改观感），
+     亮色则整体降到 1/6 上下 —— 白底上投影是用来「托一下」，不是画一圈边。 */
+  --ink-1: rgba(0, 0, 0, 0.28);
+  --ink-2: rgba(0, 0, 0, 0.42);
+  --ink-3: rgba(0, 0, 0, 0.55);
+
+  /* ── 「提一层」的叠色（lift）—— wash 的镜像 ───────────────────────────────
+     暗色主题里 211 处用 `background: rgba(255,255,255,x)` 表达「比周围浮一点」。
+     **亮色下白压白等于没有**：那些面会整片消失，只剩文字飘着。
+
+     语义是**「浮一档」**：暗色靠加白，亮色靠压出一层浅灰（白底上「更浮」
+     只能靠比底更沉一点点，或者靠投影 —— 见 15 号图纸「两个主题的手法不一样」）。
+
+     三档按原来的透明度分布切（≤0.045 / ≤0.09 / 更高）。 */
+  --lift-1: rgba(255, 255, 255, 0.035);
+  --lift-2: rgba(255, 255, 255, 0.07);
+  --lift-3: rgba(255, 255, 255, 0.12);
+
+  /* ── 语义色（sem-*）───────────────────────────────────────────────────────
+     红/黄/绿/橙这几种「表示是什么」的颜色，全软件散着 68 处写死值
+     （`#fda4af` 18 处、`#fcd34d` 15 处…）。它们是**照暗底挑的**：
+     那种明度的粉、米黄压在白底上对比度只有 1.4~1.9，等于没有字
+     （2026-09-02 用户截图：「AI 对话模块这里的有颜色的地方，亮色模式下看不太清」）。
+
+     **色相保持不变，只换明度** —— 用户认的是「粉=出错、黄=注意」这层意思，
+     换了色相等于换了语义。亮色版一律压到 WCAG AA 4.5:1 以上。 */
+  --sem-danger: #fda4af;
+  --sem-warn: #fcd34d;
+  --sem-ok: #6ee7b7;
+  --sem-path: #f0d9ad;
+  --sem-orange: #fb923c;
+  --sem-orange-dim: #e0a45e;
+
+  /* ── 高亮（选中 / 激活的**实心底**）─────────────────────────────────────
+     全软件 58 处 `background: var(--accent)` 表达「这个被选中了」。
+
+     用户 2026-09-02：「亮色模式下的高亮都要改为黑底白字。」
+     这条不是配色偏好，是**信息层级**：白底上一块低彩度的蓝，跟周围的浅灰
+     拉不开距离，「选中」这件事就传达不出去；而近黑的实心块在白底上是最强的对比，
+     一眼就知道焦点在哪。ChatGPT / Codex 那套也是这么做的。
+
+     **暗色维持 accent 不变** —— 暗底上 accent 已经是最亮的一档，够抢眼了；
+     换成白块反而过曝。两个主题的手法不同，跟投影那条是同一个道理。
+
+     ⚠️ `--hl-fg` 与 `--on-accent` 是两个东西：后者是「accent 实心底上的前景」，
+     受 `check-accent-contrast.mjs` 管；前者跟着 `--hl-bg` 走。 */
+  --hl-bg: var(--accent);
+  --hl-fg: var(--on-accent);
 }
 
 /* ══ 亮色主题 ═══════════════════════════════════════════════════════════════
@@ -121,6 +176,25 @@
   --wash-1: rgba(0, 0, 0, 0.035);
   --wash-2: rgba(0, 0, 0, 0.055);
   --wash-3: rgba(0, 0, 0, 0.08);
+  /* 白底上的投影：**托一下就够**，重了就是脏 */
+  --ink-1: rgba(0, 0, 0, 0.04);
+  --ink-2: rgba(0, 0, 0, 0.07);
+  --ink-3: rgba(0, 0, 0, 0.10);
+  /* 白底上「浮一档」只能靠比底沉一点点 —— 加白是看不见的 */
+  --lift-1: rgba(0, 0, 0, 0.028);
+  --lift-2: rgba(0, 0, 0, 0.05);
+  --lift-3: rgba(0, 0, 0, 0.075);
+  /* 语义色的亮色版：**同色相、压明度**，都过 4.5:1 */
+  --sem-danger: #b42318;
+  --sem-warn: #8a6100;
+  --sem-ok: #0f7a4d;
+  --sem-path: #7a5c17;
+  --sem-orange: #a54c00;
+  --sem-orange-dim: #8a5312;
+  /* 亮色下高亮 = 黑底白字（用户点名）。近黑而不是纯黑：
+     纯黑在白底上边缘会发「锐」，#1c1c1c 与 --s-3 同源，看着是一家的。 */
+  --hl-bg: #1c1c1c;
+  --hl-fg: #ffffff;
 
   /* 老令牌也要跟着翻，否则用老令牌的地方在亮色下是黑块 */
   --fg: #0d0d0d;
@@ -177,7 +251,7 @@
   white-space: pre-line;
   text-align: center;
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 22px var(--ink-3);
   pointer-events: none;
   animation: app-tooltip-in 0.11s ease;
 }
@@ -252,7 +326,7 @@ body {
   /* **不画分隔线** —— 用户 2026-09-02：「尽量不要用 stroke，靠颜色的明度差异区分层级」。
      标题栏和底下已经靠 `--bg` 与画布底的明度差分开了，投影再补一点纵深就够。
      那条 6% 白线在亮色主题下还会变成一道脏边。 */
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 3px 14px var(--ink-2);
 }
 
 .titlebar-actions {
@@ -412,7 +486,7 @@ body {
   background: var(--accent-soft);
   border: 1px solid rgba(var(--accent-rgb), 0.36);
   border-radius: 999px;
-  box-shadow: var(--glass-highlight), 0 2px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--glass-highlight), 0 2px 12px var(--ink-1);
 }
 
 .titlebar-project-icon {
@@ -463,7 +537,7 @@ body {
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
   padding: 5px;
-  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
 }
 
 .context-menu button,
@@ -548,7 +622,7 @@ body {
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
-  box-shadow: var(--glass-highlight), 0 14px 48px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--glass-highlight), 0 14px 48px var(--ink-1);
 }
 
 .empty-title {
@@ -624,7 +698,7 @@ body {
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--glass-highlight), 0 22px 64px var(--ink-3);
 }
 
 .confirm-message {
@@ -715,7 +789,7 @@ body {
   border: 1px solid #2e3444;
   border-radius: 16px;
   padding: 26px 26px 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--ink-3);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Segoe UI', sans-serif;
 }
 .err-title {
@@ -852,7 +926,7 @@ body {
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
 }
 
 .cctx-item {

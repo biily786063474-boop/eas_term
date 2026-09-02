@@ -218,9 +218,9 @@
   );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.34),
-    0 3px 8px rgba(0, 0, 0, 0.2);
+    inset 0 -1px 0 var(--ink-1),
+    0 1px 2px var(--ink-2),
+    0 3px 8px var(--ink-1);
 }
 
 .ab-launch:not(:disabled):hover,
@@ -230,9 +230,9 @@
   transform: translateY(-0.5px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.36),
-    0 5px 14px rgba(0, 0, 0, 0.24);
+    inset 0 -1px 0 var(--ink-1),
+    0 2px 4px var(--ink-2),
+    0 5px 14px var(--ink-1);
 }
 
 /* ── 玻璃淡底：保持通透，只描出受光的边 ── */
@@ -246,7 +246,7 @@
   );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 1px 2px rgba(0, 0, 0, 0.22);
+    0 1px 2px var(--ink-1);
 }
 
 .primary-btn:not(:disabled):hover,
@@ -254,7 +254,7 @@
   transform: translateY(-0.5px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.26);
+    0 2px 6px var(--ink-1);
 }
 
 /* ── 按下去：渐变翻过来 + 沉下去 ──
@@ -273,9 +273,9 @@
     rgba(255, 255, 255, 0.12)
   );
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px var(--ink-1),
     inset 0 -1px 0 rgba(255, 255, 255, 0.14),
-    0 0 0 rgba(0, 0, 0, 0);
+    0 0 0 var(--ink-1);
 }
 
 /* 按不动的按钮不该看起来能按 */

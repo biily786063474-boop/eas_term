@@ -59,7 +59,7 @@
 /* 用得多了才变色。**只有一档**，不做三档渐变 ——
    边缘视野里的颜色变化是打扰，只在真该注意时才用 */
 .qb-pct.hot {
-  color: #fb923c;
+  color: var(--sem-orange);
   opacity: 1;
 }
 .qb-sep {

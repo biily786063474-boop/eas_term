@@ -95,7 +95,7 @@
   font-weight: 500;
   font-family: inherit;
   color: var(--text-2);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -103,7 +103,7 @@
   transition: background var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
 .ua__btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--lift-3);
   color: var(--text-1);
 }
 .ua__btn:disabled,
@@ -536,7 +536,7 @@
   backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 28px var(--ink-2);
   padding: 4px;
   font-size: 12px;
   user-select: none;
@@ -583,11 +583,11 @@
   color: var(--accent);
 }
 .ua__ctx-item--danger {
-  color: #f87171;
+  color: var(--sem-danger);
 }
 .ua__ctx-item--danger:hover {
   background: rgba(248,113,113,0.12);
-  color: #f87171;
+  color: var(--sem-danger);
 }
 .ua__ctx-check {
   width: 12px;
@@ -738,10 +738,10 @@
   width: 3px;
   height: 12px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.45);
+  background: var(--lift-3);
   opacity: 0;
   transition: opacity 0.12s;
 }
 .ua__tl-bar:hover .ua__tl-bar-handle::after,
 .ua__tl-bar--on .ua__tl-bar-handle::after { opacity: 1; }
-.ua__tl-bar-handle:hover::after { background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.4); }
+.ua__tl-bar-handle:hover::after { background: #fff; box-shadow: 0 0 4px var(--ink-2); }

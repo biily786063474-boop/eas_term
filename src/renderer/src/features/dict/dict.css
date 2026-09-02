@@ -41,7 +41,7 @@
   padding: 5px 10px;
   font-size: 12px;
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   border: 1px solid var(--stroke-input);
   border-radius: var(--radius-md);
   outline: none;
@@ -55,7 +55,7 @@
 
 .dict-search:focus {
   border-color: rgba(var(--accent-rgb), 0.5);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
 }
 
 .dict-cats {
@@ -71,7 +71,7 @@
   padding: 3px 11px;
   font-size: 11.5px;
   color: var(--fg-dim);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--lift-1);
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   cursor: pointer;
@@ -80,7 +80,7 @@
 
 .dict-chip:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
 }
 
 .dict-chip.active {
@@ -125,7 +125,7 @@
   gap: 7px;
   padding: 5px 12px 5px 10px;
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--lift-1);
   border-radius: 999px;
   cursor: pointer;
   color: var(--fg);
@@ -133,7 +133,7 @@
 }
 
 .dict-pill:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--lift-2);
   border-color: var(--glass-border-strong);
 }
 
@@ -165,7 +165,7 @@
 }
 
 .dict-dot.cat-motion {
-  background: #e0a45e;
+  background: var(--sem-orange-dim);
 }
 
 .dict-dot.cat-visual {
@@ -195,7 +195,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: 999px;
-  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
   z-index: 30;
   pointer-events: none;
 }
@@ -214,7 +214,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
   pointer-events: none;
 }
 
@@ -231,7 +231,7 @@
   font-weight: 600;
   border-radius: 999px;
   color: var(--fg-dim);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
 }
 
 .dict-tag.cat-interaction {
@@ -314,7 +314,7 @@
   margin: 0 10px 8px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
   font-size: 11.5px;
 }
 .dhb-invite {
@@ -350,7 +350,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   padding: 0 3px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
 }
 /* 「N 待补」：排着队但补全没开是最容易被忽略的状态，收起态就得看见 */
 .dhb-badge {
@@ -402,7 +402,7 @@
 }
 .dhb-primary {
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-weight: 600;
 }
@@ -457,14 +457,14 @@
 }
 .dhb-tag.ok {
   background: rgba(110, 231, 183, 0.15);
-  color: #6ee7b7;
+  color: var(--sem-ok);
 }
 .dhb-tag.todo {
   background: rgba(252, 211, 77, 0.15);
-  color: #fcd34d;
+  color: var(--sem-warn);
 }
 .dhb-tag.dim {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
   color: var(--fg-dim);
 }
 .dhb-note {
@@ -474,7 +474,7 @@
   font-size: 10.5px;
 }
 .dhb-note.warn {
-  color: #fcd34d;
+  color: var(--sem-warn);
   opacity: 0.85;
 }
 .dhb-note code {

@@ -50,7 +50,7 @@
   display: flex;
 }
 .wikiv-side-h button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 /* 必须 position:relative —— FileTree 内部的 .filetree-body 是 absolute+inset:0，
@@ -198,7 +198,7 @@
   border: 1px solid var(--glass-border-strong);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--glass-highlight), 0 24px 70px var(--ink-3);
   color: var(--fg);
 }
 .ap-head {
@@ -228,11 +228,11 @@
 }
 .ap-snap.ok {
   background: rgba(16, 185, 129, 0.12);
-  color: #6ee7b7;
+  color: var(--sem-ok);
 }
 .ap-snap.warn {
   background: rgba(245, 158, 11, 0.14);
-  color: #fcd34d;
+  color: var(--sem-warn);
 }
 .ap-snap em {
   font-style: normal;
@@ -253,7 +253,7 @@
   padding: 9px 11px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
 }
 .ap-row.off {
   opacity: 0.42;
@@ -348,7 +348,7 @@
 }
 .ap-primary {
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-weight: 600;
 }
@@ -371,7 +371,7 @@
   padding: 4px 0;
   border: none;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg-dim);
   font-size: 11px;
   font-family: inherit;
@@ -394,7 +394,7 @@
   color: var(--fg-dim);
 }
 .wikiv-lint-ok {
-  color: #6ee7b7;
+  color: var(--sem-ok);
 }
 .wikiv-lint-row {
   display: flex;
@@ -410,7 +410,7 @@
   font-family: inherit;
 }
 .wikiv-lint-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 .wikiv-lint-row b {
   font-size: 11.5px;
@@ -423,10 +423,10 @@
 }
 /* 死链最该先修：它是「本该有页却还没写」的信号 */
 .wikiv-lint-row.k-deadlink {
-  border-left-color: #fda4af;
+  border-left-color: var(--sem-danger);
 }
 .wikiv-lint-row.k-orphan {
-  border-left-color: #fcd34d;
+  border-left-color: var(--sem-warn);
 }
 .wikiv-lint-row.k-noindex {
   border-left-color: #7dd3fc;
@@ -453,7 +453,7 @@
   gap: 2px;
 }
 .wikiv-stats.warn {
-  color: #fcd34d;
+  color: var(--sem-warn);
 }
 .wikiv-stats em {
   font-style: normal;
@@ -483,7 +483,7 @@
 }
 .wg-legend em {
   font-style: normal;
-  color: #fcd34d;
+  color: var(--sem-warn);
 }
 .wg-legend span {
   opacity: 0.6;

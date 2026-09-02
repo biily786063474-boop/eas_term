@@ -28,7 +28,7 @@
 }
 
 .tree-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 
 .tree-item.hidden-file {
@@ -79,7 +79,7 @@
   font-size: 11.5px;
   line-height: 1.45;
   white-space: normal;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 14px var(--ink-2);
 }
 
 .tree-arrow {

@@ -25,7 +25,7 @@
   flex-direction: column;
   overflow: hidden;
   animation: pap-up 0.16s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 50px var(--ink-2);
 }
 @keyframes pap-up {
   from { transform: translateY(8px) scale(0.97); opacity: 0 }

@@ -54,7 +54,7 @@
 }
 
 .chat-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 
 .chat-item.active {
@@ -163,7 +163,7 @@
   max-height: 180px;
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border-strong);
-  box-shadow: var(--glass-highlight), 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--glass-highlight), 0 4px 16px var(--ink-1);
   cursor: zoom-in;
   object-fit: contain;
   background: var(--wash-1);
@@ -190,5 +190,5 @@
   max-height: 92vh;
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border-strong);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 80px var(--ink-3);
 }

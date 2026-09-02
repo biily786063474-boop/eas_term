@@ -28,12 +28,12 @@
   gap: 6px;
   padding: 6px 8px 6px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--lift-1);
   transition: background-color 180ms ease, border-top-color 180ms ease;
 }
 
 .term-input:focus-within {
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--lift-1);
   border-top-color: rgba(var(--accent-rgb), 0.4);
 }
 
@@ -63,7 +63,7 @@
   padding: 0 10px;
   border-radius: 7px;
   border: 1px solid var(--stroke-input);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg-dim);
   font-size: 11.5px;
   font-family: inherit;
@@ -91,7 +91,7 @@
     background: rgba(var(--accent-rgb), 0.22);
   }
   to {
-    background: rgba(255, 255, 255, 0.045);
+    background: var(--lift-1);
   }
 }
 
@@ -142,18 +142,18 @@
   width: 8px;
   min-height: 28px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--lift-3);
   pointer-events: auto;
   cursor: pointer;
   transition: background-color 0.12s;
 }
 
 .term-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--lift-3);
 }
 
 .term-scrollbar-thumb:active {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--lift-3);
 }
 
 /* 「回到最新」常驻按钮：终端右下角浮动药丸 */
@@ -171,7 +171,7 @@
   border-radius: 999px;
   background: var(--glass-3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 6px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 6px 20px var(--ink-2);
   color: var(--fg);
   font-size: 11.5px;
   font-family: inherit;
@@ -243,7 +243,7 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border-strong);
   background: var(--glass-3);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 28px var(--ink-3);
 }
 .sec-badge-t {
   font-size: 10.5px;
@@ -254,7 +254,7 @@
   font-size: 10.5px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   color: var(--fg);
   word-break: break-all;
 }
@@ -288,7 +288,7 @@
   border-radius: 7px;
   overflow: hidden;
   border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   flex: none;
 }
 
@@ -458,7 +458,7 @@
 }
 
 .term-todo-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
 }
 
 .term-todo-check {
@@ -483,7 +483,7 @@
 /* 打钩状态：填色 + 打勾图标——**不只靠颜色**，未勾选时框内本来就没有图标，
    打钩后图标从无到有，色弱也分得出「勾没勾」 */
 .term-todo-item.done .term-todo-check {
-  background: var(--accent);
+  background: var(--hl-bg);
   border-color: var(--accent);
 }
 
@@ -508,7 +508,7 @@
 .term-todo-edit {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
   border: 1px solid var(--accent);
   border-radius: 4px;
   outline: none;
@@ -559,7 +559,7 @@
   padding: 0 7px;
   border: 1px solid var(--stroke-input);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
   outline: none;
   color: var(--fg);
   font-size: 11.5px;
@@ -584,7 +584,7 @@
   justify-content: center;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg-dim);
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background-color 0.12s;

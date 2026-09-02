@@ -67,7 +67,7 @@
   border-radius: var(--radius-xl);
   background: rgba(var(--frame-rgb), 0.045);
   border: 1.5px solid rgba(var(--frame-rgb), 0.34);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 18px 60px var(--ink-2);
 }
 
 /* 状态配色**不在这里写死**：看板的列是用户自己建的（board.json），
@@ -85,6 +85,30 @@
   border-bottom: 1px solid rgba(var(--frame-rgb), 0.2);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: linear-gradient(180deg, rgba(var(--frame-rgb), 0.14), rgba(var(--frame-rgb), 0.05));
+}
+
+/* ── 亮色主题下这条改成**黑底白字**（2026-09-02 用户点名）───────────────────
+   为什么单独给它开一条、而不是跟着令牌走：
+   模块窗口条在亮色下如果也是白的，整块模块就**没有「窗口」这个边界**了 ——
+   卡片、内容、标题条连成一片白，用户找不到「哪儿能拖、哪儿能关」。
+   深色的条是操作系统窗口栏的通用语汇，它承担的是**「这是一扇窗」**这个信息，
+   而不是层级明度 —— 所以它不适用「靠明度差分层」那条规矩。
+
+   同理这里保留了那条 `border-bottom`：它分的不是层级，是窗与内容的界。 */
+:root[data-theme='light'] .cframe-head {
+  background: #1c1c1c;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-theme='light'] .cframe-name {
+  color: #f2f2f2;
+}
+/* 条上的图标/按钮也要跟着翻，否则深色底上是一排看不见的深色图标 */
+:root[data-theme='light'] .cframe-head button:not(.cframe-dot) {
+  color: rgba(242, 242, 242, 0.72);
+}
+:root[data-theme='light'] .cframe-head button:not(.cframe-dot):hover {
+  color: #f2f2f2;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .cframe.collapsed .cframe-head {
@@ -146,7 +170,7 @@
 }
 
 .cframe-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 
@@ -204,7 +228,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: 999px;
-  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 12px 40px var(--ink-2);
 }
 
 .canvas-zoombar button {
@@ -222,7 +246,7 @@
 }
 
 .canvas-zoombar button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 
@@ -259,7 +283,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--glass-highlight), 0 10px 36px var(--ink-1);
   overflow: hidden;
   /* 弹簧物理感：末端回弹的 back 曲线 */
   transition:
@@ -447,7 +471,7 @@
 
 .cd-collapse:hover,
 .cd-add:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
@@ -595,7 +619,7 @@
 }
 
 .cd-proj:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   color: var(--fg);
 }
 
@@ -613,7 +637,7 @@
 }
 
 .cd-proj.active .cd-proj-dot {
-  background: var(--accent);
+  background: var(--hl-bg);
 }
 
 /* 画布里选中该项目 Frame → 抽屉对应项高亮（accent 描边环，区别于 active 的底色） */
@@ -623,7 +647,7 @@
   box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55);
 }
 .cd-proj.framesel .cd-proj-dot {
-  background: var(--accent);
+  background: var(--hl-bg);
 }
 
 .cd-proj-name {
@@ -664,7 +688,7 @@
   border-radius: var(--radius-md);
   color: var(--fg-dim);
   cursor: pointer;
-  box-shadow: var(--glass-highlight), 0 6px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 6px 20px var(--ink-2);
 }
 
 .drawer-expand:hover {
@@ -683,7 +707,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid rgba(var(--accent-rgb), 0.5);
   border-radius: var(--radius-md);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px var(--ink-3);
 }
 
 .canvas-viewport.drop-active {
@@ -699,7 +723,7 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
 }
 
 /* 自由节点：不属于任何 Frame，虚线边框跟常规文件节点拉开一眼可辨的区别（不是渲染出 bug 了） */
@@ -716,7 +740,7 @@
   padding: 0 5px 0 9px;
   cursor: move;
   border-bottom: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--lift-1);
   color: var(--accent);
 }
 
@@ -770,7 +794,7 @@
 
 .cfile-btn:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 
@@ -783,14 +807,14 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--hl-bg);
 }
 
 /* 节点重命名输入 */
 .cfile-rename {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -818,7 +842,7 @@
 .pane-node-rename {
   min-width: 0;
   width: 130px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -850,7 +874,7 @@
   border: 1px solid var(--glass-border);
   background: var(--glass-2);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 16px 44px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 44px var(--ink-3);
   overflow: hidden;
   /* **从自己的右上角长出来** —— 那是标题栏那个触发按钮的方向。
      原点放中心的话它看起来是凭空在半空中缩放，跟你点的按钮没有关系。 */
@@ -884,7 +908,7 @@
   cursor: pointer;
 }
 .cdict-pop-x:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .cdict-pop-body {
@@ -973,12 +997,12 @@
   height: 22px;
   border: none;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--lift-3);
   color: #fff;
   cursor: pointer;
 }
 .civ-btn:hover {
-  background: rgba(255, 255, 255, 0.24);
+  background: var(--lift-3);
 }
 .civ-count {
   font-size: 11px;
@@ -1019,7 +1043,7 @@
   border: 1.5px solid transparent;
   border-radius: 6px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   cursor: pointer;
   padding: 0;
 }
@@ -1073,7 +1097,7 @@
 /* 拖文件落区高亮 */
 .cframe.drop-target {
   border-color: rgb(var(--frame-rgb));
-  box-shadow: 0 0 0 2px rgba(var(--frame-rgb), 0.5), 0 18px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(var(--frame-rgb), 0.5), 0 18px 60px var(--ink-3);
 }
 
 .pane.drop-target {
@@ -1116,7 +1140,7 @@
 }
 
 .cd-comp:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   color: var(--fg);
 }
 
@@ -1153,7 +1177,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 12px 40px var(--ink-2);
   /* 抽屉化：弹簧滑入/滑出，动效与左侧资源抽屉一致 */
   transition:
     transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -1242,12 +1266,12 @@
 }
 
 .ctool:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
 .ctool.on {
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
 }
 
@@ -1278,9 +1302,9 @@
   border: 1px solid rgba(224, 175, 104, 0.4);
   border-radius: var(--radius-sm);
   font-size: 12px;
-  color: #f0d9ad;
+  color: var(--sem-path);
   line-height: 1.5;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px var(--ink-2);
   cursor: move;
   overflow: hidden; /* 圆角裁切用；真正滚动的是里面那层 */
 }
@@ -1357,7 +1381,7 @@
   background: var(--glass-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
   overflow: hidden;
 }
 
@@ -1370,7 +1394,7 @@
   padding: 0 6px 0 11px;
   cursor: move;
   border-bottom: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--lift-1);
   color: var(--accent);
 }
 
@@ -1389,7 +1413,7 @@
 .ctodo-rename {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -1419,7 +1443,7 @@
 }
 
 .ctodo-add:hover {
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   transform: scale(1.1);
 }
@@ -1456,7 +1480,7 @@
   align-items: center;
   gap: 7px;
   padding: 0 7px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -1481,7 +1505,7 @@
 .ctodo-item:hover {
   transform: scale(1.035);
   border-color: rgba(var(--accent-rgb), 0.4);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 14px var(--ink-1);
   z-index: 3;
 }
 
@@ -1490,12 +1514,12 @@
 .ctodo-item.dragging {
   cursor: grabbing;
   transform: scale(1.045);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 28px var(--ink-2);
   border-color: rgba(var(--accent-rgb), 0.55);
 }
 
 .ctodo-item.done {
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--lift-1);
   opacity: 0.72;
 }
 
@@ -1524,7 +1548,7 @@
 }
 
 .ctodo-item.done .ctodo-check {
-  background: var(--accent);
+  background: var(--hl-bg);
   border-color: var(--accent);
 }
 
@@ -1546,7 +1570,7 @@
 .ctodo-item-rename {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(var(--accent-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -1626,7 +1650,7 @@
 
 .ctodo-done-toggle:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 
 .ctodo-chevron {
@@ -1671,7 +1695,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--glass-highlight), 0 22px 64px var(--ink-3);
   opacity: 0;
   transform: scale(0.92) translateY(6px);
   transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1721,7 +1745,7 @@
 }
 
 .ctodo-lightbox-x:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 
@@ -1740,7 +1764,7 @@
   /* 右下角给语音钮腾位，否则打字会写到按钮底下 */
   padding: 10px 12px 36px;
   resize: vertical;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--fg);
@@ -1773,7 +1797,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
 }
 
 .cfs-item {
@@ -1857,7 +1881,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
   color: var(--fg);
 }
 
@@ -1929,7 +1953,7 @@
 }
 
 .cpk-row:hover {
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
 }
 
@@ -1973,7 +1997,7 @@
 
 /* Frame 重命名输入 */
 .cframe-rename {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   border: 1px solid rgba(var(--frame-rgb), 0.6);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -1993,12 +2017,12 @@
 
 .cframe.sel {
   border-color: rgba(var(--frame-rgb), 0.85);
-  box-shadow: 0 0 0 1px rgba(var(--frame-rgb), 0.6), 0 18px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--frame-rgb), 0.6), 0 18px 60px var(--ink-3);
 }
 
 .cfile-node.sel {
   border-color: rgba(var(--accent-rgb), 0.8);
-  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 10px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.55), 0 10px 32px var(--ink-3);
 }
 
 /* 拖模块悬停在子 Frame 上（计时中）→ 虚线高亮提示「松开将移入」 */
@@ -2027,7 +2051,7 @@
 /* 浮层终端节点（PaneView）选中高亮 —— 与文件/组件节点视觉一致 */
 .pane-layer.canvas-mode .pane.sel {
   border-color: rgba(var(--accent-rgb), 0.8);
-  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.6), 0 10px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.6), 0 10px 32px var(--ink-3);
 }
 
 .canvas-band {
@@ -2098,7 +2122,7 @@
 
 .cd-proj.breathing .cd-proj-dot {
   position: relative;
-  background: var(--accent);
+  background: var(--hl-bg);
   animation: cd-dot-scale 1.5s ease-in-out infinite;
 }
 .cd-proj.breathing .cd-proj-dot::after {
@@ -2119,7 +2143,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
   border-bottom: 1px solid var(--glass-border);
   font-size: 11.5px;
 }
@@ -2250,7 +2274,7 @@
   color: var(--fg);
 }
 .ab-seg-b.on {
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   box-shadow: 0 1px 6px rgba(var(--accent-rgb), 0.4);
 }
@@ -2274,7 +2298,7 @@
   font-family: inherit;
   padding: 5px 13px;
   cursor: pointer;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   transition: filter 0.15s, opacity 0.15s;
 }
@@ -2341,7 +2365,7 @@
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
   padding: 8px;
-  box-shadow: var(--glass-highlight), 0 16px 44px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--glass-highlight), 0 16px 44px var(--ink-3);
   animation: ab-pop-in 0.14s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes ab-pop-in {
@@ -2392,7 +2416,7 @@
 }
 .ab-ask-yes {
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
 }
 .ab-ask-yes:hover {
@@ -2400,11 +2424,11 @@
 }
 .ab-ask-no {
   border: 1px solid var(--glass-border-strong);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   color: var(--fg);
 }
 .ab-ask-no:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--lift-2);
 }
 
 /* 模型菜单 */
@@ -2430,7 +2454,7 @@
   cursor: pointer;
 }
 .ab-menu-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
 }
 .ab-menu-item.on {
   color: var(--accent);
@@ -2473,7 +2497,7 @@
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--lift-3);
   outline: none;
 }
 .ab-slider input[type='range']::-webkit-slider-thumb {
@@ -2482,9 +2506,9 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--hl-bg);
   cursor: pointer;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 1px 5px var(--ink-2);
 }
 .ab-slider-ticks {
   display: flex;
@@ -2516,7 +2540,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 12px 40px var(--ink-2);
   user-select: none;
 }
 .canvas-minimap.collapsed {
@@ -2648,7 +2672,7 @@
   backdrop-filter: var(--blur);
   color: var(--fg-dim);
   cursor: pointer;
-  box-shadow: var(--glass-highlight), 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
   /* left 必须和抽屉走同一条曲线：这里原本只有 0.14s 的 color/border 过渡，
      于是抽屉还在弹的时候缩略图已经瞬移到位了，看着像两个东西各飞各的。
      展开态的 .canvas-minimap 早就配了，漏的是这个默认渲染的收起态 */
@@ -2682,7 +2706,7 @@
 }
 .cmm-fold:hover {
   color: var(--accent);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
 }
 
 /* ========== 画布左上角「运行监视窗」（刻意做得很淡） ========== */
@@ -2774,7 +2798,7 @@
   cursor: pointer;
 }
 .crm-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .crm-proj {
@@ -2839,7 +2863,7 @@
   opacity: 0.45;
 }
 .ab-role-dot.on {
-  background: var(--accent);
+  background: var(--hl-bg);
   opacity: 1;
   box-shadow: 0 0 5px rgba(var(--accent-rgb), 0.6);
 }
@@ -2877,7 +2901,7 @@
   color: var(--fg);
 }
 .cd-role:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
 }
 .cd-role-dot {
   width: 7px;
@@ -2914,7 +2938,7 @@
   border: 1px solid var(--glass-border-strong);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--glass-highlight), 0 24px 70px var(--ink-3);
   color: var(--fg);
 }
 .re-head {
@@ -2946,14 +2970,14 @@
 .re-name:hover,
 .re-name:focus {
   border-color: var(--glass-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
 }
 .re-badge {
   flex: none;
   font-size: 10.5px;
   padding: 2px 8px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   color: var(--fg-dim);
 }
 .re-x {
@@ -2970,7 +2994,7 @@
   justify-content: center;
 }
 .re-x:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .re-body {
@@ -3007,7 +3031,7 @@
 .re-field input,
 .re-field select,
 .re-contract {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   border: 1px solid var(--stroke-input);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -3032,14 +3056,14 @@
   line-height: 1.65;
 }
 .re-hint.warn {
-  color: #fcd34d;
+  color: var(--sem-warn);
   opacity: 0.9;
 }
 .re-hint code,
 .re-tools code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10.5px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -3096,7 +3120,7 @@
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: rgba(244, 63, 94, 0.14);
-  color: #fda4af;
+  color: var(--sem-danger);
   font-size: 11.5px;
 }
 .re-foot {
@@ -3130,12 +3154,12 @@
   border-color: var(--glass-border-strong);
 }
 .re-ghost.danger:hover {
-  color: #fda4af;
+  color: var(--sem-danger);
   border-color: rgba(244, 63, 94, 0.5);
 }
 .re-primary {
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-weight: 600;
 }
@@ -3150,7 +3174,7 @@
   line-height: 1.6;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11.5px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--fg);
@@ -3172,7 +3196,7 @@
   padding: 9px 10px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--lift-1);
 }
 .re-tools-row {
   display: flex;
@@ -3237,7 +3261,7 @@
 .re-chip.on {
   background: rgba(244, 63, 94, 0.16);
   border-color: rgba(244, 63, 94, 0.4);
-  color: #fda4af;
+  color: var(--sem-danger);
 }
 
 /* ---------- 左侧知识库抽屉（原「基本操作」的位置） ---------- */
@@ -3308,7 +3332,7 @@
   height: 17px;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-size: 10.5px;
   font-weight: 800;
@@ -3331,7 +3355,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 10px 36px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--glass-highlight), 0 10px 36px var(--ink-1);
   overflow: hidden;
 }
 
@@ -3374,7 +3398,7 @@
 }
 .wiki-drawer.dropping {
   border-color: rgba(var(--accent-rgb), 0.8);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35), 0 10px 36px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35), 0 10px 36px var(--ink-1);
 }
 .wk-head {
   height: 34px;
@@ -3405,7 +3429,7 @@
   justify-content: center;
 }
 .wk-icon:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
@@ -3450,7 +3474,7 @@
   padding: 7px 0;
   border: none;
   border-radius: var(--radius-sm);
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-size: 12px;
   font-weight: 600;
@@ -3465,7 +3489,7 @@
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: rgba(245, 158, 11, 0.14);
-  color: #fcd34d;
+  color: var(--sem-warn);
   font-size: 11px;
   line-height: 1.6;
 }
@@ -3537,7 +3561,7 @@
   line-height: 1.5;
 }
 .wk-rules.ok {
-  color: #6ee7b7;
+  color: var(--sem-ok);
   background: rgba(16, 185, 129, 0.1);
 }
 .wk-rules span {
@@ -3640,7 +3664,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: 999px;
-  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 12px 40px var(--ink-2);
 }
 .ctoolbar-mini .ctool {
   width: 26px;
@@ -3655,7 +3679,7 @@
   justify-content: center;
 }
 .ctoolbar-mini .ctool:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 .ctoolbar-mini .ctool.on {
@@ -3676,7 +3700,7 @@
   padding: 6px 10px;
   border: 1px solid var(--stroke-input);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg);
   font-size: 11.5px;
   font-family: inherit;
@@ -3694,7 +3718,7 @@
   padding: 10px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -3733,7 +3757,7 @@
   color: var(--fg);
 }
 .wk-set-btns button.danger:hover {
-  color: #fda4af;
+  color: var(--sem-danger);
   border-color: rgba(244, 63, 94, 0.5);
 }
 .wk-ghost {
@@ -3768,7 +3792,7 @@
   font-family: inherit;
 }
 .wk-hit:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
 }
 .wk-hit b {
   font-size: 12px;
@@ -3825,7 +3849,7 @@
   cursor: pointer;
 }
 .wk-hist-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
 }
 .wk-hist-row span {
   flex: 1;
@@ -3874,7 +3898,7 @@
   color: var(--accent);
 }
 .wk-tt.fail .wk-tt-row em {
-  color: #fda4af;
+  color: var(--sem-danger);
 }
 /* 角色下拉：每行右侧的编辑铅笔（悬停才显形，别干扰选择这个主动作） */
 .ab-role-line {
@@ -3905,7 +3929,7 @@
 }
 .ab-role-edit:hover {
   opacity: 1 !important;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 
@@ -3930,7 +3954,7 @@
   border: 1px solid var(--glass-border-strong);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 24px 70px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--glass-highlight), 0 24px 70px var(--ink-3);
   color: var(--fg);
 }
 .rm-head {
@@ -3961,7 +3985,7 @@
   justify-content: center;
 }
 .rm-x:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .rm-list {
@@ -3980,7 +4004,7 @@
   padding: 7px 10px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
 }
 .rm-row.dragging {
   opacity: 0.4;
@@ -4015,7 +4039,7 @@
   font-style: normal;
   font-size: 10px;
   color: var(--fg-dim);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   padding: 1px 6px;
   border-radius: 5px;
   margin-left: 7px;
@@ -4054,11 +4078,11 @@
   justify-content: center;
 }
 .rm-icon:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--lift-3);
   color: var(--fg);
 }
 .rm-icon.danger:hover {
-  color: #fda4af;
+  color: var(--sem-danger);
   background: rgba(244, 63, 94, 0.16);
 }
 .rm-err {
@@ -4066,7 +4090,7 @@
   padding: 7px 10px;
   border-radius: var(--radius-sm);
   background: rgba(244, 63, 94, 0.14);
-  color: #fda4af;
+  color: var(--sem-danger);
   font-size: 11.5px;
 }
 .rm-foot {
@@ -4108,7 +4132,7 @@
 }
 .rm-primary {
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-weight: 600;
 }
@@ -4152,7 +4176,7 @@
   opacity: 0.7;
 }
 .ab-step-dot.cur {
-  background: var(--accent);
+  background: var(--hl-bg);
   opacity: 1;
   transform: scale(1.28);
   box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.55);
@@ -4216,7 +4240,7 @@
   cursor: pointer;
 }
 .ab-step-edit:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
@@ -4241,7 +4265,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .ab-step-nav:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .ab-step-nav:disabled {
@@ -4255,7 +4279,7 @@
   padding: 0 10px;
   border: none;
   border-radius: 7px;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-family: inherit;
   font-size: 12px;
@@ -4266,7 +4290,7 @@
   text-overflow: ellipsis;
 }
 .ab-step-use:disabled {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
   color: var(--fg-dim);
   cursor: default;
 }
@@ -4293,7 +4317,7 @@
   cursor: pointer;
 }
 .ab-step-more button:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
@@ -4313,7 +4337,7 @@
   align-items: center;
   gap: 2px;
   padding: 3px 10px 5px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
 }
 .ab-cmd {
   display: inline-flex;
@@ -4330,7 +4354,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .ab-cmd:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
   color: var(--fg);
 }
 .ab-cmd:disabled {
@@ -4350,7 +4374,7 @@
   padding: 1px 6px;
   border-radius: 5px;
   background: rgba(245, 158, 11, 0.14);
-  color: #fcd34d;
+  color: var(--sem-warn);
   white-space: nowrap;
 }
 
@@ -4446,11 +4470,11 @@
   border-radius: 8px;
   font-size: 12px;
   line-height: 1.5;
-  color: #fda4af;
+  color: var(--sem-danger);
   background: rgba(244, 63, 94, 0.14);
   border: 1px solid rgba(244, 63, 94, 0.3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-highlight), 0 12px 40px var(--ink-2);
   cursor: pointer;
 }
 
@@ -4461,7 +4485,7 @@
   padding: 8px 18px;
   border: 1px solid var(--glass-border-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--lift-1);
   color: var(--fg-dim);
   font-size: 13px;
   font-weight: 600;
@@ -4470,7 +4494,7 @@
 }
 
 .csnap-keep-btn:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--lift-2);
   color: var(--fg);
 }
 
@@ -4537,7 +4561,7 @@
   padding: 6px 10px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg);
   font-size: 11.5px;
   font-family: inherit;
@@ -4591,7 +4615,7 @@
   cursor: pointer;
 }
 .skl-sec-head:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 /* 来源标注。项目级用强调色，全局用中性灰——一眼分得清哪些是这个项目自己的 */
 .skl-sec-tag {
@@ -4609,7 +4633,7 @@
 }
 .skl-sec-tag.global {
   color: var(--fg-dim);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
   border-color: var(--glass-border);
 }
 .skl-sec-name {
@@ -4634,14 +4658,14 @@
   margin: 8px 8px 0;
   padding: 5px 8px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--lift-2);
   border: 1px solid var(--glass-border);
   font-size: 10.5px;
   line-height: 1.5;
   color: var(--fg-dim);
 }
 .skl-notice.bad {
-  color: var(--warn, #e0a45e);
+  color: var(--warn, var(--sem-orange-dim));
   border-color: rgba(224, 164, 94, 0.4);
   background: rgba(224, 164, 94, 0.08);
 }
@@ -4714,7 +4738,7 @@
   font-family: inherit;
 }
 .skl-cat-head:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
 }
 .skl-cat-name {
   flex: 1;
@@ -4775,7 +4799,7 @@
   margin-left: 4px;
   padding: 0 4px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
   font-size: 9px;
   color: var(--fg-dim);
   white-space: nowrap;
@@ -4966,7 +4990,7 @@
   font-size: 10.5px;
   cursor: pointer;
   /* 悬浮：投影把它从画布上托起来 */
-  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 9px var(--ink-1);
   transition:
     color 0.14s ease,
     background 0.14s ease,
@@ -4981,7 +5005,7 @@
   color: var(--fg);
   background: var(--accent-soft);
   border-color: rgba(var(--accent-rgb), 0.5);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 3px 12px var(--ink-2);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5025,7 +5049,7 @@
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-highlight), 0 22px 64px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--glass-highlight), 0 22px 64px var(--ink-3);
   overflow: hidden;
   opacity: 0;
   transform: scale(0.92) translateY(6px);
@@ -5139,7 +5163,7 @@
   padding: 5px 8px;
   border: 1px solid rgba(var(--accent-rgb), 0.5);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--lift-2);
   color: var(--fg);
   font-family: inherit;
   font-size: 12px;
@@ -5178,7 +5202,7 @@
 .skl-cat-x:hover {
   opacity: 1;
   background: rgba(255, 120, 120, 0.16);
-  color: #ff9b9b;
+  color: var(--sem-danger);
 }
 
 /* 拖到这个分类上：整块高亮，不只是标题那一行 —— 落点有多大要一眼看得出来 */
@@ -5222,7 +5246,7 @@
 }
 .cframe-team:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
 }
 .cframe-team.on {
   opacity: 1;
@@ -5361,7 +5385,7 @@
   gap: 3px;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--lift-1);
   border: 1px solid var(--glass-border);
 }
 
@@ -5415,7 +5439,7 @@
 
 .cpk-pill:hover:not(.on) {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--lift-2);
 }
 
 /* 展开态：只有选中的那个。hover 刻意**不**展开 —— 六个按钮挨着，
@@ -5425,7 +5449,7 @@
   gap: 4px;
   color: var(--fg);
   background: var(--accent-soft);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1px 4px var(--ink-1);
 }
 
 .cpk-pill.on .sp-text {

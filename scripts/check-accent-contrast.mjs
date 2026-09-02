@@ -45,7 +45,13 @@ for (const { f, s } of all) {
     if (!bg) continue
     const v = bg[1]
     const a = v.match(/rgba\(\s*var\(--accent-rgb\)\s*,\s*([\d.]+)\)/)
-    const solid = (a && parseFloat(a[1]) >= 0.6) || /\bvar\(--accent\)/.test(v)
+    // **`--hl-bg` 也算实心高亮底**（2026-09-02）：那天把 47 处
+    // `background: var(--accent)` 迁成了 `var(--hl-bg)`，这道闸当场就瞎了 ——
+    // 它只认 `--accent`，迁完照样报「一处都没有」。
+    // 这类「重命名之后检查器静默失效」和当天 omp 那几处手写类型断言是同一个形状：
+    // **没报错不等于查过了。**
+    const solid =
+      (a && parseFloat(a[1]) >= 0.6) || /\bvar\(--accent\)/.test(v) || /\bvar\(--hl-bg\)/.test(v)
     if (!solid) continue
 
     const col = body.match(/(?<![-\w])color\s*:\s*([^;]+)/)

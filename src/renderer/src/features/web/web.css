@@ -13,7 +13,7 @@
   align-items: center;
   gap: 5px;
   padding: 0 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--lift-1);
   border-bottom: 1px solid var(--glass-border);
 }
 
@@ -33,7 +33,7 @@
 }
 .web-nav:hover:not(:disabled) {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--lift-2);
 }
 .web-nav:disabled {
   opacity: 0.32;
@@ -170,7 +170,7 @@
   padding: 6px 16px;
   border-radius: 8px;
   border: none;
-  background: var(--accent);
+  background: var(--hl-bg);
   color: var(--on-accent);
   font-size: 12.5px;
   font-weight: 600;
