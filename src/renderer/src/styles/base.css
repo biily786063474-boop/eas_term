@@ -1090,15 +1090,19 @@ body {
   fill: none;
   stroke-linecap: round;
 }
-/* 轨道：很淡，只是告诉你「滑块会在这条线上走」 */
+/* 轨道：**几乎看不见**。它只在滑块经过时给一点「这条线上还有路」的暗示，
+   平时不该被注意到（用户 2026-09-02：「不要那么明显，存在感弱一些」）。 */
 .cctx-rail-track {
-  stroke: var(--glass-border-strong);
-  stroke-width: 2;
+  stroke: var(--glass-border);
+  stroke-width: 1.5;
 }
-/* 滑块：`--t-2` 那一档 —— 它是状态指示，不该比内容还抢眼 */
+/* 滑块：退到 `--t-3` 并压半透明 —— 它是**状态指示，不是内容**。
+   原来 `--t-2` ＋ 2.5px 在暗底上是一道亮线，眼睛会先去看它再看菜单项，
+   而滚动条本该是「需要时瞥一眼」的东西。 */
 .cctx-rail-thumb {
-  stroke: var(--t-2);
-  stroke-width: 2.5;
+  stroke: var(--t-3);
+  opacity: 0.55;
+  stroke-width: 2;
   /* **不加 transition。** 滚动条要和内容零延迟同步 —— 加过渡的话滑块永远
      追在滚动后面跑，用户读到的是「卡」而不是「顺」（原来那 60ms 就是这个下场）。
      顺滑来自滚动事件本身的密度，不来自补间。 */
