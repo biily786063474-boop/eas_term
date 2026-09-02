@@ -356,3 +356,71 @@ test('填 key 那条路原样：拼出来的入参照旧带柜子状态', () => 
   })
   assert.equal(nextStepOf(s).k, 'vault-unlock')
 })
+
+// ── 2026-09-02 第三轮：面板说「配好了」，一试就说「还没配好模型服务商」──────
+//
+// 用户原话：「他说配置好了但是当我测试的时候就返回这个结果，
+// 好好排查整个链路和 UI 之间的关系。」
+//
+// 排查结论是**结构性的**，不是某一行写错：
+//
+//   `omp-setup.json` 是我们自己的一套账本（provider / authMode / loggedInAt / model），
+//   而真正的权威在 omp 那边（broker 凭证在 agent.db 里）。
+//   **整条链路只读账本** —— nextStepOf 读它、闸门读它、面包屑读它 ——
+//   只有最后 `session/new` 那一下读现实。两者一分叉，界面就会说「配好了」，
+//   而用户一点「试一句」就被现实打脸。
+//
+// 分叉不是假想：凭证会过期、会被吊销、会因为换了配置目录而读不到；
+// 而 `loggedInAt` 是一条**写下去就永远为真**的记录（这正是立档里
+// 「标记永久为真」那条老教训的同一个形状）。
+//
+// 判据换成问 omp 自己：**没凭证时 `omp models ls --json` 回 `{"models":[]}`**
+// （2026-09-02 在 18.1.2 上实测，约 0.55s，够便宜）。
+
+import { ompLoggedInFrom, ompModelUsable } from './setupModel.ts'
+
+const M = (...ids: string[]) => ids.map((id) => ({ id }))
+
+test('**omp 列得出这家的模型 → 才算真的登录上了**', () => {
+  assert.equal(
+    ompLoggedInFrom({ models: M('minimax-code-cn/MiniMax-M3'), providerId: 'minimax-code-cn', hint: true }),
+    true
+  )
+})
+
+test('**omp 一个都列不出来 → 不算，哪怕我们自己记着「登录过」**', () => {
+  // 这就是用户那一屏：loggedInAt 写着，agent.db 里 auth_credentials 是 0 条。
+  assert.equal(ompLoggedInFrom({ models: [], providerId: 'minimax-code-cn', hint: true }), false)
+})
+
+test('列出来的是**别家**的模型 → 也不算', () => {
+  // 用户之前登过 A，后来改选了 B。A 的凭证还在，B 的没有。
+  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: 'minimax-code-cn', hint: true }), false)
+})
+
+test('**探测失败（undefined）才退回我们自己的记录** —— 别因为探不到就把人锁在门外', () => {
+  // 二进制起不来 / 超时。这时说「你没登录」是撒谎，把他挡住更是白挡。
+  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: true }), true)
+  assert.equal(ompLoggedInFrom({ models: undefined, providerId: 'minimax-code-cn', hint: false }), false)
+})
+
+test('没选服务商 → 一律 false', () => {
+  assert.equal(ompLoggedInFrom({ models: M('zai/glm-5'), providerId: undefined, hint: true }), false)
+})
+
+// ── 存下来的模型也可能已经不存在了 ────────────────────────────────────────
+
+test('**存的模型不在 omp 的清单里 → 当成没选**，把人送回选模型那步', () => {
+  // 换过套餐、模型下架、或者存的是上一家的。留着它的后果是起会话时
+  // omp 解析不到，报一句跟「模型」毫无关系的错。
+  assert.equal(ompModelUsable(M('minimax-code-cn/MiniMax-M3'), 'minimax-code-cn/MiniMax-M2'), false)
+  assert.equal(ompModelUsable(M('minimax-code-cn/MiniMax-M3'), 'minimax-code-cn/MiniMax-M3'), true)
+})
+
+test('探测失败时不判它坏 —— 探不到 ≠ 不存在', () => {
+  assert.equal(ompModelUsable(undefined, 'minimax-code-cn/MiniMax-M3'), true)
+})
+
+test('压根没存模型 → false（那本来就该去选）', () => {
+  assert.equal(ompModelUsable(M('a/b'), undefined), false)
+})

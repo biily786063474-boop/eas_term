@@ -19,6 +19,8 @@ import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from 
 import {
   keyVarOf,
   nextStepOf,
+  ompLoggedInFrom,
+  ompModelUsable,
   ompStateFrom,
   OMP_PROVIDERS,
   providerById,
@@ -45,7 +47,7 @@ function safeProvider(id: unknown): string | null {
   return typeof id === 'string' && /^[a-z0-9.-]+$/.test(id) && id.length <= 64 ? id : null
 }
 
-function statusOf(): OmpStatus {
+async function statusOf(): Promise<OmpStatus> {
   const host = hostPaths()
   const setup = readOmpSetup(host.userData)
   const bin = ompBinPathOrNull(host)
@@ -54,10 +56,25 @@ function statusOf(): OmpStatus {
   // 这一层只回答「配置里记了什么」——两边的判据合起来才是 nextStepOf 的输入。
   // 这么分是为了不让主进程去猜渲染层此刻看到的柜子状态：柜子会 15 分钟自动上锁，
   // 隔一次 IPC 往返就可能变。
-  const loggedIn = !!setup.provider?.loggedInAt
+  // ── 「配好了没有」的判据：**问 omp，不是查我们自己的账本** ────────────────
+  //
+  // 2026-09-02 用户撞到的那一屏：面板说「配好了」，一点「试一句」就回
+  // 「还没配好模型服务商」。根因是整条链路只读 `omp-setup.json`，
+  // 而真正的权威在 omp 的 broker 里 —— 两者一分叉，界面就在骗人。
+  // `loggedInAt` 更是一条写下去就永远为真的记录，凭证过期它一概不知道。
+  const models = await cachedModels()
+  const loggedIn = ompLoggedInFrom({
+    models,
+    providerId: setup.provider?.id,
+    // 探测失败时才退回它 —— 探不到 ≠ 没登录
+    hint: !!setup.provider?.loggedInAt
+  })
   // **存量自愈**：老配置里存的是裸模型名（真机现场 `"model": "MiniMax-M3"`），
   // 补上 provider 前缀再对外报。不补的话用户继续 401，而界面上模型明明选着。
-  const model = ompModelSelector(setup.provider?.id, setup.provider?.model)
+  const stored = ompModelSelector(setup.provider?.id, setup.provider?.model)
+  // 存的模型 omp 现在还认吗。不认就当没选，把人送回选模型那步 ——
+  // 留着它的后果是起会话时解析不到，报一句跟「模型」毫无关系的错。
+  const model = ompModelUsable(models, stored) ? stored : undefined
   // **入参也只在一处拼**（`ompStateFrom`）。两侧各拼各的时，渲染层那份漏过
   // authMode 与 loggedIn —— 判据一致、入参分叉，单测全绿而真机全错。
   const step = nextStepOf(
@@ -94,13 +111,16 @@ function statusOf(): OmpStatus {
  *  `models-cli.ts:199-206` 在 json 模式直接吐 `{models:[…]}`）——
  *  **不为了列个模型去起一次真会话**：那要走完 initialize + session/new + close，
  *  而在「还没配好」的机器上这一步本来就最容易失败，失败信息还得从 JSON-RPC error 里挖。 */
-function listModels(timeoutMs = 12_000): Promise<{ id: string; label: string }[]> {
+/** **`undefined` = 没探到**（二进制不在 / 起不来 / 超时），跟「探到了，一个都没有」
+ *  是两件完全不同的事：前者不该拿来否定用户，后者恰恰是「没凭证」的铁证。
+ *  原来这里一律回 `[]`，两者混为一谈 —— 一次超时就会被读成「你没登录」。 */
+function probeModels(timeoutMs = 12_000): Promise<{ id: string; label: string }[] | undefined> {
   const host = hostPaths()
   const bin = ompBinPathOrNull(host)
-  if (!bin) return Promise.resolve([])
+  if (!bin) return Promise.resolve(undefined)
   return new Promise((resolve) => {
     execFile(bin, ['models', 'ls', '--json'], { env: ompBaseEnv(host), timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
-      if (err) return resolve([])
+      if (err) return resolve(undefined)
       // **值必须是 selector（`<provider>/<model>`），不是裸 id。**
       // 裸 id 交给 omp，它不知道走哪个 provider，解析不到 broker 里那条凭证，
       // 拿空 Authorization 去请求 —— 2026-09-02 用户看到的那个 1004 就是这么来的。
@@ -109,10 +129,33 @@ function listModels(timeoutMs = 12_000): Promise<{ id: string; label: string }[]
   })
 }
 
-export function registerOmpSetupHandlers(): void {
-  ipcMain.handle('omp:status', (): OmpStatus => statusOf())
+/** 探测结果的缓存。**面板每次拿焦点都会 `omp:status`**，而每次探测约 0.55s ——
+ *  不缓存的话切个窗口就卡一下。TTL 短是有意的：它代表的是「omp 此刻认不认」，
+ *  而那件事会因为登录、换服务商、凭证过期而变。
+ *  登录成功与保存服务商这两处**当场作废**它，不等 TTL。 */
+let modelsCache: { at: number; models: { id: string; label: string }[] | undefined } | null = null
+const MODELS_TTL_MS = 20_000
 
-  ipcMain.handle('omp:listModels', (): Promise<{ id: string; label: string }[]> => listModels())
+function invalidateModels(): void {
+  modelsCache = null
+}
+
+async function cachedModels(): Promise<{ id: string; label: string }[] | undefined> {
+  if (modelsCache && Date.now() - modelsCache.at < MODELS_TTL_MS) return modelsCache.models
+  const models = await probeModels()
+  modelsCache = { at: Date.now(), models }
+  return models
+}
+
+export function registerOmpSetupHandlers(): void {
+  ipcMain.handle('omp:status', (): Promise<OmpStatus> => statusOf())
+
+  // 面板主动拉清单时**绕开缓存**：它多半正是刚登录完过来的，
+  // 这时候给他一份 20 秒前的旧答案，就是让他盯着一个空列表发呆。
+  ipcMain.handle('omp:listModels', async (): Promise<{ id: string; label: string }[]> => {
+    invalidateModels()
+    return (await cachedModels()) ?? []
+  })
 
   /** 选定服务商与模型。**key 本身不经这里** —— 它由渲染层直接走
    *  `secrets:save` 存进密钥柜（与用户手填密钥同一条路），这一层只记「选了谁」。
@@ -147,6 +190,8 @@ export function registerOmpSetupHandlers(): void {
       // **订阅那条路一条都不写** —— 上游明写 `apiKey` 会压过 broker 的 OAuth 令牌，
       // 写下去等于用一个不存在的环境变量顶掉刚登好的订阅。
       writeManagedConfig(host, authMode === 'subscription' ? [] : [{ id }])
+      // 换了服务商，「omp 认不认这家」这个答案当场就变了 —— 别让缓存把旧答案再端 20 秒
+      invalidateModels()
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) }
     }
@@ -229,6 +274,9 @@ export function registerOmpSetupHandlers(): void {
             ...prev,
             provider: { ...prev.provider, loggedInAt: Date.now() }
           })
+          // **刚登完必须作废缓存**：面板紧接着就会 `omp:status`，
+          // 拿到 20 秒前那份「一个模型都没有」，用户会以为白登了
+          invalidateModels()
         }
       }
       // 只推给发起的那个窗口 —— 与 agentChat 的事件同一条纪律，不全窗口广播

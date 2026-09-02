@@ -110,6 +110,49 @@ export interface OmpStatus {
   lastSmoke?: OmpSmokeResult
 }
 
+/** 「真的登录上了吗」——**判据是问 omp，不是查我们自己的账本**。
+ *
+ *  2026-09-02 用户撞到的那一屏：面板说「配好了」，一点「试一句」就回
+ *  「还没配好模型服务商」。查下来是结构问题而不是某行写错 ——
+ *  `omp-setup.json` 是我们自己记的一套（provider / authMode / loggedInAt / model），
+ *  真正的权威在 omp 那边（broker 凭证在 `agent.db`）。**整条链路只读账本**，
+ *  只有最后 `session/new` 那一下读现实，两者一分叉用户就被打脸。
+ *
+ *  而 `loggedInAt` 是一条**写下去就永远为真**的记录 —— 凭证会过期、会被吊销、
+ *  会因为换了配置目录读不到，它一概不知道。（立档里「标记永久为真」那条老教训
+ *  是同一个形状。）
+ *
+ *  所以判据换成：**omp 列不列得出这家的模型**。没凭证时
+ *  `omp models ls --json` 回 `{"models":[]}`（18.1.2 实测，约 0.55s）。
+ *
+ *  **`models` 为 `undefined` 表示「没探到」，不是「空清单」** —— 二进制起不来、
+ *  超时，这时退回我们自己的记录：探不到就把人锁在门外，是拿一次探测失败
+ *  去否定一件他明明做过的事。 */
+export function ompLoggedInFrom(i: {
+  /** omp 报的模型清单。`undefined` = 探测失败（≠ 空清单） */
+  models?: { id: string }[]
+  providerId?: string
+  /** 我们自己记的「登录过」。**只在探测失败时**当兜底 */
+  hint: boolean
+}): boolean {
+  if (!i.providerId) return false
+  if (!i.models) return i.hint
+  const prefix = `${i.providerId}/`
+  return i.models.some((m) => m.id.startsWith(prefix))
+}
+
+/** 存下来的那个模型，omp 现在还认吗。
+ *
+ *  换过套餐、模型下架、或者存的是上一家的 —— 留着它的后果是起会话时
+ *  omp 解析不到，报一句跟「模型」毫无关系的错，而界面上模型明明选着。
+ *
+ *  **探不到（`undefined`）时不判它坏**：探不到 ≠ 不存在。 */
+export function ompModelUsable(models: { id: string }[] | undefined, model: string | undefined): boolean {
+  if (!model) return false
+  if (!models) return true
+  return models.some((m) => m.id === model)
+}
+
 /** 把「主进程报的配置」与「渲染层查到的密钥柜状态」拼成 `nextStepOf` 的入参。
  *
  *  **单独摘成纯函数，是因为这一步已经错过一次，而且错法很隐蔽。**

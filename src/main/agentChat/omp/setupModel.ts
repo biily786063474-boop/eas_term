@@ -15,6 +15,8 @@ export {
   OMP_PROVIDERS,
   providerById,
   nextStepOf,
+  ompLoggedInFrom,
+  ompModelUsable,
   ompStateFrom,
   ompLaunchGate,
   authFailureInTail,
