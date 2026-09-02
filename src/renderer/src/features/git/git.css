@@ -56,7 +56,7 @@
   flex: 1;
   min-width: 0;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   border-radius: var(--radius-sm);
   color: var(--fg);
   font-size: 12px;

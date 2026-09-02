@@ -1878,7 +1878,7 @@ body.dragging-row * {
   width: 100%;
   padding: 7px 10px;
   border-radius: 6px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   background: var(--wash-1);
   color: var(--fg);
   font-size: 12px;

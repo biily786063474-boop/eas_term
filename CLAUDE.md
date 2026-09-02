@@ -11,7 +11,8 @@
 [02 分层架构](docs/architecture/02-分层架构.md)（含启动顺序硬依赖）·
 [11 MCP 工具网络](docs/architecture/11-MCP工具网络.md) ·
 [12 Skill 与 Hook 流程](docs/architecture/12-skill与hook流程.md) ·
-[13 所有权矩阵](docs/architecture/13-所有权矩阵.md)（含**跨文件同步清单**）
+[13 所有权矩阵](docs/architecture/13-所有权矩阵.md)（含**跨文件同步清单**）·
+[15 视觉令牌与主题](docs/architecture/15-视觉令牌与主题.md)（**改颜色/层级/间距先读它** —— 三条硬规矩 ＋ 暗亮两套手法为何不同）
 
 **改了代码要顺手更新对应图纸，同一个 commit 提交。**
 

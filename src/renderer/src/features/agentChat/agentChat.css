@@ -75,7 +75,7 @@
      空态和对话态两个输入框各自是自己那份候选的锚点。 */
   position: relative;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   border-radius: 18px;
   transition: border-color 0.15s ease;
 }
@@ -869,7 +869,7 @@
   position: relative;
   padding: 10px 12px 8px;
   border-radius: 18px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   background: rgba(255, 255, 255, 0.05);
   transition: border-color 0.12s ease;
 }
@@ -1987,7 +1987,7 @@
   min-width: 0;
   padding: 7px 9px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   background: rgba(255, 255, 255, 0.05);
   color: var(--fg);
   font-family: var(--font-mono, ui-monospace, monospace);
@@ -2519,7 +2519,7 @@
   margin-top: 6px;
   padding: 7px 9px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--stroke-input);
   background: rgba(255, 255, 255, 0.05);
   color: var(--fg);
   font-family: inherit;
