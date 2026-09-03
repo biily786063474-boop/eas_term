@@ -415,7 +415,25 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
 
   async function ensureAndSend(message: string): Promise<void> {
     queue.push(message)
-    if (phase !== 'dead') return
+    if (phase !== 'dead') {
+      // **进了队列还得有人泵它。**
+      //
+      // 2026-09-03 用户实拍那次的真根因就在这一行：原来是 `if (phase !== 'dead') return`，
+      // 排完队直接走人。而 `pump()` 只有两个调用点 —— `prompt()` 的 finally
+      // （一轮结束时泵下一条）和下面那处（只有会话死了重开才走到）。于是：
+      //   · 上一轮还在跑时发 → 排队 → finally 泵它 ✓
+      //   · 会话已经死了再发 → 重开 → 泵它 ✓
+      //   · **会话活着且空闲时发 → 排队 → 没有任何东西泵它 ✗**
+      //
+      // 第三条正是「它答完话之后我再问一句」这个最普通的用法。
+      // 症状：界面上消息显示着（乐观插入）、一直转「正在处理」，
+      // 而 omp 的会话记录里根本没有这条消息 —— 翻它自己的 jsonl 才看出来。
+      //
+      // 无条件调 `pump()` 是安全的：它自己第一行就守着
+      // `phase !== 'ready' || queue.length === 0`，上一轮在跑时它会自己退出去。
+      pump()
+      return
+    }
     if (!open()) {
       queue.length = 0
       return

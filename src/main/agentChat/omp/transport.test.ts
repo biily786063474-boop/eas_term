@@ -460,3 +460,46 @@ test('**进程在有排队消息时死掉，也要把那一轮收掉** —— �
   const after = h.kinds().filter((k) => k === 'turn.done').length
   assert.ok(after > before, '进程死了却没有 turn.done，busy 三支判据一支都放不倒')
 })
+
+// ── 2026-09-03 · 真根因：**会话空闲时发的消息永远发不出去** ──────────────────
+//
+// 用户实拍那次，翻 omp 自己的会话记录发现：整段会话里**只有一条**用户消息。
+// 助手答完进入空闲之后，用户又发的两条根本没进会话 —— 界面上显示着（乐观插入），
+// omp 那侧一个字都没收到。
+//
+// `pump()` 只有两个调用点：`prompt()` 的 finally（一轮结束时泵下一条），
+// 和 `ensureAndSend` 里**只有 phase==='dead' 才走到**的那一处。
+// 于是：
+//   · 上一轮还在跑时发 → 排队 → finally 泵它 ✓
+//   · 会话已经死了再发 → 重开 → 泵它 ✓
+//   · **会话活着且空闲时发 → 排队 → 没有任何东西泵它 ✗**
+// 第三条正是「答完话之后再问一句」这个最普通的用法。
+
+test('**会话空闲时发消息要立刻送出去**（不是排队等一个不会来的泵）', async () => {
+  const h = harness()
+  await open(h)
+  // 第一轮跑完 → phase 回到 ready
+  h.f.reply('session/prompt', { stopReason: 'end_turn' })
+  await tick()
+  const before = h.f.sent.filter((m) => m.method === 'session/prompt').length
+  // 现在是空闲态，再发一条
+  h.live.deliver('答完了我再问一句')
+  await tick()
+  assert.equal(
+    h.f.sent.filter((m) => m.method === 'session/prompt').length,
+    before + 1,
+    '空闲时发的消息没有送出去 —— 它排在队列里，而没有任何东西会去泵它'
+  )
+})
+
+test('上一轮还在跑时发的，仍然按原样排队、由那一轮结束时泵出去', async () => {
+  const h = harness()
+  await open(h)
+  const before = h.f.sent.filter((m) => m.method === 'session/prompt').length
+  h.live.deliver('插队的第二条')
+  await tick()
+  assert.equal(h.f.sent.filter((m) => m.method === 'session/prompt').length, before, '上一轮没结束就抢跑了')
+  h.f.reply('session/prompt', { stopReason: 'end_turn' })
+  await tick()
+  assert.equal(h.f.sent.filter((m) => m.method === 'session/prompt').length, before + 1, '上一轮结束了却没泵出排队的那条')
+})
