@@ -5665,3 +5665,13 @@
   visibility: hidden;
   pointer-events: none;
 }
+
+/* 双击迸发的画布。铺满视口、**绝不接点击** —— 它正下方就是双击热区，
+   接了等于把「双击创建造梦空间」这个入口堵死（空画布引导踩过同一个坑）。
+   z-index 压在浮层之下、内容之上：它是反馈，不是遮罩。 */
+.click-spark {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}

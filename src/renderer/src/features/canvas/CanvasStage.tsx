@@ -23,6 +23,7 @@ import {
   SparkleIcon, ChipIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
 import { FrameStart } from './FrameStart'
+import { ClickSpark, type ClickSparkHandle } from '../../ui/motion/ClickSpark'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasComponentNode } from './CanvasComponentNode'
@@ -131,6 +132,10 @@ export function CanvasStage(): JSX.Element {
   // 有模块在「最大化沉浸」时，右下角那两条要让位（见下面 .on-max 的注释）。
   // 用 liveMaximizedNode 而不是直接读 store：它指的节点可能已经被关掉了。
   const maximized = !!useStore(liveMaximizedNode)
+  /** 双击迸发。**只在这一处触发** —— 用户给规格时一并给了坑：
+   *  「全站包裹会让每次点击都放烟花，严肃的后台界面容易显吵。」
+   *  所以组件本身不监听事件，由这里在「双击空白」那一下手动放。 */
+  const sparkRef = useRef<ClickSparkHandle>(null)
   const freeNodes = useStore((s) => s.canvas.freeNodes)
   // tool / editingSticky 提到 store 了（修复轮 1 的 Important 1/2）：CanvasShapeLayer
   // 要读同一份 tool 才知道选着绘图工具时该不该把 mousedown 让给画布视口穿透过去；
@@ -697,6 +702,9 @@ export function CanvasStage(): JSX.Element {
       )
     )
       return
+    // 放在上面那组 `return` **之后**：命中模块头 / 终端选词 / 便签编辑 / 浮层控件的
+    // 双击各有各的意思，那些不是「在画布上双击」，不该有迸发。
+    sparkRef.current?.fire(e.clientX, e.clientY)
     const st = useStore.getState()
     const { wx, wy } = screenToWorld(e.clientX, e.clientY)
     const fid = (t.closest('.cframe') as HTMLElement | null)?.dataset.fid
@@ -1259,6 +1267,9 @@ export function CanvasStage(): JSX.Element {
       {!frames.length && !freeNodes.length && (
         <div className="canvas-empty-hint">双击创建你第一个造梦空间</div>
       )}
+      {/* 双击迸发。铺满视口但 `pointer-events:none`（见 canvas.css）——
+          它正下方就是双击热区，接了点击等于把入口堵死。 */}
+      <ClickSpark handleRef={sparkRef} />
       {/* **有节点最大化时整个画布世界让开。**
           最大化的面板由 PaneLayer 渲染（App 里的独立层，不在这个 div 底下），
           所以藏这一层不会把它一起藏掉。
