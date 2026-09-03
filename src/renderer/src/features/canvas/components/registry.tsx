@@ -85,7 +85,11 @@ const teamComponent: CanvasComponentDef = {
   render: (ctx) => <TeamPanel cwd={ctx.cwd} />
 }
 
-/** 代码视图：这个项目的模块依赖与耦合状态。
+/** 代码地图：这个项目的模块依赖与耦合状态。
+ *
+ *  名字用「地图」而不是「视图」（用户 2026-09-03：「代码视图这个名词
+ *  不是很直观」）—— 和项目里已有的「模块领地图」是同一套话，
+ *  也说清了它是「看清楚在哪、谁挨着谁」而不是「另一种打开代码的方式」。
  *
  *  `needsProject: true` —— 没有项目就没有可扫的东西。
  *
@@ -97,7 +101,7 @@ const teamComponent: CanvasComponentDef = {
  *  「只 push def、不动渲染框架」那条要防的事。 */
 const codeGraphComponent: CanvasComponentDef = {
   id: 'codegraph',
-  name: '代码视图',
+  name: '代码地图',
   Icon: GitBranchIcon,
   description: '模块依赖图 / 耦合与循环依赖',
   defaultSize: { w: 620, h: 480 },

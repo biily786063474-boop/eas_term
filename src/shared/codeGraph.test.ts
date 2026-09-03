@@ -1,13 +1,16 @@
-import { test } from 'node:test'
+import { describe, it, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   aggregateByTerritory,
   cycleSeverity,
+  deriveTerritories,
   isTypeOnlyStatement,
+  riskByCoupling,
   territoryOf,
-  typeOnlyFor,
   type GraphEdge,
-  type GraphNode
+  type GraphNode,
+  type TerritoryStat,
+  typeOnlyFor
 } from './codeGraph.ts'
 
 // ── 领地划分 ────────────────────────────────────────────────────────────────
@@ -145,4 +148,65 @@ test('同一块地里风险不一致时取更严的（宁可标红）', () => {
     { id: 'b', territory: 'X', risk: 'red', inDegree: 0, outDegree: 0 }
   ]
   assert.equal(aggregateByTerritory(nodes, []).stats[0].risk, 'red')
+})
+
+// ── 陌生项目的领地推导 ──────────────────────────────────────────────────────
+describe('deriveTerritories', () => {
+  it('按第一段目录分组', () => {
+    const m = deriveTerritories(['src/a.ts', 'src/b.ts', 'lib/c.ts'])
+    assert.equal(m.get('src/a.ts'), 'src')
+    assert.equal(m.get('lib/c.ts'), 'lib')
+  })
+
+  it('**一段吃掉大半时往下再拆一层** —— 否则整张图只剩一个巨大的 src 节点', () => {
+    const paths = [
+      'src/main/a.ts', 'src/main/b.ts', 'src/main/c.ts',
+      'src/ui/d.ts', 'src/ui/e.ts',
+      'src/store/f.ts'
+    ]
+    const m = deriveTerritories(paths)
+    assert.equal(m.get('src/main/a.ts'), 'src/main')
+    assert.equal(m.get('src/ui/d.ts'), 'src/ui')
+    assert.equal(new Set(m.values()).size, 3)
+  })
+
+  it('根目录下的文件归「根目录」，不会变成空字符串', () => {
+    const m = deriveTerritories(['build.js', 'serve.js'])
+    assert.equal(m.get('build.js'), '根目录')
+  })
+
+  it('分组数量压在可读范围内（不会推出 100 块地）', () => {
+    const paths = Array.from({ length: 200 }, (_, i) => `pkg${i}/index.ts`)
+    const m = deriveTerritories(paths)
+    assert.ok(new Set(m.values()).size <= 24, '组数 ' + new Set(m.values()).size)
+  })
+
+  it('空输入不炸', () => {
+    assert.equal(deriveTerritories([]).size, 0)
+  })
+})
+
+describe('riskByCoupling', () => {
+  const mk = (name: string, cross: number): TerritoryStat => ({
+    name, risk: 'green', files: 1, crossOut: cross, crossIn: 0
+  })
+
+  it('耦合最重的标红、最轻的标绿', () => {
+    const s = [mk('a', 100), mk('b', 50), mk('c', 1)]
+    riskByCoupling(s)
+    assert.equal(s.find((x) => x.name === 'a')!.risk, 'red')
+    assert.equal(s.find((x) => x.name === 'c')!.risk, 'green')
+  })
+
+  it('全都零耦合时不乱标红', () => {
+    const s = [mk('a', 0), mk('b', 0)]
+    riskByCoupling(s)
+    assert.ok(s.every((x) => x.risk === 'green'))
+  })
+
+  it('只有一块地时不标红 —— 没有可比的对象', () => {
+    const s = [mk('solo', 999)]
+    riskByCoupling(s)
+    assert.equal(s[0].risk, 'green')
+  })
 })

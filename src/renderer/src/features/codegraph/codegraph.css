@@ -170,3 +170,118 @@
   white-space: nowrap;
 }
 .cg-deg { margin-left: auto; color: var(--t-3); font-size: 11px; white-space: nowrap; }
+
+/* ── 节点连线图 ────────────────────────────────────────────────────────────
+   布局在 radial.ts（纯函数、有测试）。这里只管画得清楚。 */
+
+.cg-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62vh;
+  margin: 0 auto 18px;
+}
+
+.cg-empty {
+  padding: 30px;
+  text-align: center;
+  color: var(--t-3);
+  font-size: 12px;
+}
+
+/* 连线。**默认很淡** —— 一屏几十条线，都画实了就是一张网，什么都看不出。
+   悬停某个节点时它相关的那些才亮起来。 */
+.cg-edge {
+  stroke: var(--t-3);
+  opacity: 0.22;
+  transition: opacity 0.15s ease, stroke 0.15s ease;
+}
+
+/* 参与运行时循环的边单独标红 —— 它是这张图上唯一「要修」的东西 */
+.cg-edge.cyc {
+  stroke: #fb7185;
+  opacity: 0.55;
+}
+
+/* 悬停时不相关的线压得更暗，而不是隐藏：
+   隐藏会让图的密度突变，看着像换了张图 */
+.cg-edge.dim {
+  opacity: 0.05;
+}
+
+.cg-node {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.cg-node.dim {
+  opacity: 0.25;
+}
+
+/* 命中区：透明但接事件。小节点只有 5px 半径，照着圆点点很难点中 */
+.cg-hit {
+  fill: transparent;
+}
+
+.cg-dot {
+  transition: r 0.12s ease;
+}
+
+.cg-node.hot .cg-dot,
+.cg-node:focus-visible .cg-dot {
+  stroke: var(--t-1);
+  stroke-width: 1.5;
+}
+
+.cg-node:focus-visible {
+  outline: none;
+}
+
+.cg-label {
+  fill: var(--t-2);
+  font-size: 10.5px;
+  pointer-events: none;
+  transition: fill 0.15s ease;
+}
+
+.cg-node.hot .cg-label {
+  fill: var(--t-1);
+  font-weight: 600;
+}
+
+.cg-note {
+  margin-left: 8px;
+  color: var(--t-3);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* 循环依赖那块的折叠头。**默认收起** —— 别人的项目里一个环几十条边，
+   摊开会把主视图那张图挤出屏幕（taptv 实测 35 条）。 */
+.cg-cycles-hd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fda4af;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.cg-caret {
+  display: inline-block;
+  transition: transform var(--dur-fast);
+}
+.cg-caret.open {
+  transform: rotate(90deg);
+}
+/* 条数**留在折叠头上** —— 收起细节可以，藏起「有多少」不行 */
+.cg-cycles-n {
+  margin-left: auto;
+  color: var(--text-3);
+  font-weight: 400;
+}

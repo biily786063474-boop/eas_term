@@ -222,6 +222,106 @@ export function aggregateByTerritory(
 
 const RISK_ORDER: Record<Risk, number> = { green: 0, amber: 1, red: 2, frozen: 3 }
 
+// ── 陌生项目：按目录结构现推领地 ────────────────────────────────────────────
+//
+// 上面那张 TERRITORIES 表是**本仓库专用**的（它编码的是图纸 10 里的真实知识：
+// 哪块是禁区、哪块高耦合）。换个项目它一条也命中不了 ——
+// 2026-09-03 实测：给别人的仓库跑，3229 个模块**全部落进「未登记」**，
+// 图就是一坨没有结构的灰点。
+//
+// 所以陌生项目退回「按目录分组」：不假装懂它的架构，只如实把目录结构画出来。
+
+/** 分组数的上限。超过这么多，环形图上的标签就开始互相压，读不出东西。 */
+const MAX_GROUPS = 24
+/** 一段占比超过这个值就往下再拆一层 —— 否则「src 一个节点装 90% 的文件」，
+ *  图上什么也看不出来。 */
+const SPLIT_AT = 0.5
+
+/**
+ * 按目录结构推领地：路径 → 领地名。
+ *
+ * 先按第一段分；某一段占比过半时，把**那一段**单独再往下拆一层
+ *（只拆它，不是全体加深 —— 全体加深会把本来就均匀的那些也炸成一堆碎片）。
+ */
+export function deriveTerritories(paths: readonly string[]): Map<string, string> {
+  const out = new Map<string, string>()
+  if (!paths.length) return out
+
+  const seg = (p: string, n: number): string => {
+    const parts = p.split('/').filter(Boolean)
+    // **最后一段是文件名，不是目录** —— 夹在目录段数以内。
+    // 不夹的话 `src/a.ts` 会被拆成领地「src/a.ts」，每个文件自成一块地。
+    const dirs = parts.length - 1
+    const take = Math.min(n, dirs)
+    // 根目录下的文件没有目录段 —— 给个名字，不能是空串
+    if (take <= 0) return '根目录'
+    return parts.slice(0, take).join('/')
+  }
+
+  const count = (n: number, only?: string): Map<string, number> => {
+    const c = new Map<string, number>()
+    for (const p of paths) {
+      if (only !== undefined && seg(p, n - 1) !== only) continue
+      const k = seg(p, n)
+      c.set(k, (c.get(k) ?? 0) + 1)
+    }
+    return c
+  }
+
+  const top = count(1)
+  // 哪些一级目录大到该再拆一层
+  const split = new Set<string>()
+  for (const [k, v] of top) {
+    if (k === '根目录') continue
+    if (v / paths.length > SPLIT_AT && count(2, k).size > 1) split.add(k)
+  }
+
+  for (const p of paths) {
+    const one = seg(p, 1)
+    out.set(p, split.has(one) ? seg(p, 2) : one)
+  }
+
+  // 组太多就退回一级目录；还是太多就把小的并成「其它」
+  if (new Set(out.values()).size > MAX_GROUPS) {
+    for (const p of paths) out.set(p, seg(p, 1))
+  }
+  if (new Set(out.values()).size > MAX_GROUPS) {
+    const c = new Map<string, number>()
+    for (const v of out.values()) c.set(v, (c.get(v) ?? 0) + 1)
+    const keep = new Set(
+      [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, MAX_GROUPS - 1).map(([k]) => k)
+    )
+    for (const [p, v] of out) if (!keep.has(v)) out.set(p, '其它')
+  }
+  return out
+}
+
+/**
+ * 陌生项目没有「风险等级」可言 —— 我们对它的架构一无所知，
+ * 硬套「安全边界 / 禁区」是**编造**。
+ * 但颜色这一维不该浪费，所以改成表达**耦合轻重**（跨界边越多越红）。
+ * 界面上的图例文案要跟着换，不能还写「安全边界」。
+ *
+ * 就地改写传入的 stats。
+ */
+export function riskByCoupling(stats: TerritoryStat[]): void {
+  // 只有一块地时没有可比对象，全绿 —— 标红等于在说「它比谁都重」，而根本没有谁
+  if (stats.length < 2) {
+    for (const s of stats) s.risk = 'green'
+    return
+  }
+  const score = (s: TerritoryStat): number => s.crossOut + s.crossIn
+  const max = Math.max(...stats.map(score))
+  for (const s of stats) {
+    if (max <= 0) {
+      s.risk = 'green'
+      continue
+    }
+    const r = score(s) / max
+    s.risk = r > 0.6 ? 'red' : r > 0.25 ? 'amber' : 'green'
+  }
+}
+
 // ── 分析结果的形状 ──────────────────────────────────────────────────────────
 //
 // **放在 shared 而不是主进程**：渲染层要用它，而渲染层不许 import 主进程的文件
@@ -240,4 +340,17 @@ export interface CodeGraphResult {
   ms: number
   /** 没能解析的依赖（如可选原生模块）。**如实报，不吞** */
   unresolved: string[]
+  /** 入口是怎么来的。
+   *  · `entries` —— 认出了具名入口（`src/main.tsx` / index.html 的 script / package.json main）
+   *  · `dirs`    —— 一个都没认出来，退回「扫所有装着源码的目录」
+   *  **界面必须如实说明用的是哪种** —— 两者回答的不是同一个问题：
+   *  入口扫给的是「从入口够得着的」，目录扫给的是「目录里有的」（含死代码）。 */
+  strategy: 'entries' | 'dirs'
+  /** 实际交给分析器的那些入口/目录。用户能据此判断「是不是漏了我关心的那块」。 */
+  scanned: string[]
+  /** 领地是哪来的。
+   *  · `mapped`  —— 命中了内置领地表（只有本仓库会命中），颜色表示**风险等级**
+   *  · `derived` —— 按项目自己的目录结构现推，颜色表示**耦合轻重**
+   *  **图例文案必须跟着换** —— 对陌生项目写「安全边界」是编造。 */
+  territoryMode: 'mapped' | 'derived'
 }

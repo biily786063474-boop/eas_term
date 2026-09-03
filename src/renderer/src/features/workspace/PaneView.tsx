@@ -64,7 +64,7 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   code: { label: '代码预览', Icon: CodeIcon },
   image: { label: '图片预览', Icon: ImageIcon },
   history: { label: '历史', Icon: GitBranchIcon },
-  codegraph: { label: '代码视图', Icon: GitBranchIcon },
+  codegraph: { label: '代码地图', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
   agent: { label: 'AI 对话', Icon: SparkleIcon },
   dict: { label: '辞典', Icon: DictIcon },
@@ -536,7 +536,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           </Suspense>
         )}
         {pane.kind === 'codegraph' && (
-          <Suspense fallback={<div className="pane-placeholder">加载代码视图…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">加载代码地图…</div>}>
             <CodeGraphView root={pane.root} />
           </Suspense>
         )}
