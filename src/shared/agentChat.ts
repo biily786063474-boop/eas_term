@@ -229,6 +229,18 @@ export interface StartOpts {
    *  让模型在动手前先说明并等回复 —— 不装 hook、不阻塞进程。
    *  与 skipApprovalHook 是两条独立的路：那条管硬拦截，这条管软约定。 */
   askFirst?: boolean
+  /** 角色契约：这个角色产出什么、落在哪、什么算做完（`AgentRole.contract` 的原文）。
+   *
+   *  2026-09-03 加。此前这 8 个角色（工匠 / 验官 / 画师…）**只对终端里 ▶ 启动的
+   *  agent 生效** —— `CanvasAgentBar` 把它拼进 `buildClaudeCmd()` 写进终端，
+   *  AI 对话会话完全不吃。用户 2026-09-02：「转移到 AI 对话中的合适位置
+   *  进行角色的注入这个 session」。
+   *
+   *  ⚠️ **它只在 spawn 时传一次**（和 OUTPUT_STYLE_PROMPT 同一条 flag）。
+   *  也就是说**会话跑起来之后换角色是改不了的** —— 界面那侧因此规定
+   *  「换角色 = 结束当前会话重开」（用户 2026-09-03 在 (a)(b)(c) 里选了 b）。
+   *  别在这里加「中途生效」的错觉。 */
+  roleContract?: string
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts

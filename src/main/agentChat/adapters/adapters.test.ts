@@ -479,3 +479,59 @@ test('走独立传输的 adapter，buildArgs 不是它的启动依据——但�
     )
   }
 })
+
+// ── 2026-09-03：角色契约要能注入 AI 对话会话 ────────────────────────────────
+//
+// 此前这 8 个角色只对终端里 ▶ 启动的 agent 生效（CanvasAgentBar 拼进启动命令），
+// AI 对话会话完全不吃。用户：「转移到 AI 对话中的合适位置进行角色的注入这个 session」。
+
+test('**角色契约拼进 --append-system-prompt**，和输出规范同一条 flag', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '你是工匠，只写代码。' })
+  const i = args.indexOf('--append-system-prompt')
+  assert.ok(i >= 0)
+  const prompt = args[i + 1]
+  assert.ok(prompt.includes('你是工匠，只写代码。'), '契约没进去')
+  assert.ok(prompt.includes(OUTPUT_STYLE_PROMPT), '**输出规范不能被挤掉** —— 两者是并存的')
+})
+
+test('没有角色时，args 与今天逐字节相同（老路径一点不动）', () => {
+  const withRole = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '   ' }).args
+  const without = getAdapter('claude')!.buildArgs({ cwd: '/p' }).args
+  // 全空白的契约等于没有 —— 拼进去只会在系统提示里留一段空行
+  assert.deepEqual(withRole, without)
+})
+
+test('角色契约与「先问再做」能同时存在，三段都在', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', askFirst: true, roleContract: '契约正文' })
+  const prompt = args[args.indexOf('--append-system-prompt') + 1]
+  assert.ok(prompt.includes(OUTPUT_STYLE_PROMPT))
+  assert.ok(prompt.includes(ASK_FIRST_PROMPT))
+  assert.ok(prompt.includes('契约正文'))
+})
+
+test('**只传一次 --append-system-prompt** —— 传两次的行为没实测过', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', askFirst: true, roleContract: 'x' })
+  assert.equal(args.filter((a) => a === '--append-system-prompt').length, 1)
+})
+
+test('Codex 的角色契约走 `-c instructions=`（它没有 --append-system-prompt）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '你是验官，禁改代码。' })
+  const i = args.findIndex((a) => a.startsWith('instructions='))
+  assert.ok(i > 0, '没拼进去')
+  assert.equal(args[i - 1], '-c')
+  assert.ok(args[i].includes('你是验官，禁改代码。'))
+})
+
+test('**Codex 的契约要压成单行** —— 多行会把 -c 的取值解析弄乱', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '第一行\n\n  第二行' })
+  const v = args.find((a) => a.startsWith('instructions=')) ?? ''
+  assert.ok(!v.includes('\n'), '还有换行')
+  assert.ok(v.includes('第一行 第二行'))
+})
+
+test('Codex 没角色时 args 与今天逐字节相同', () => {
+  assert.deepEqual(
+    getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '  ' }).args,
+    getAdapter('codex')!.buildArgs({ cwd: '/p' }).args
+  )
+})

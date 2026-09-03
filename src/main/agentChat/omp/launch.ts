@@ -25,7 +25,7 @@ import { agentMcpConfigPath, mcpEnv } from '../../mcpBridge.ts'
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
-import { ompAgentDir, ompBaseEnv, ompBinPathOrNull, OMP_TOOLS } from './paths.ts'
+import { ompAcpArgs, ompAgentDir, ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { readOmpSetup } from './store.ts'
 import {
   ompConfigYml,
@@ -73,6 +73,10 @@ export interface OmpLaunchInput {
   mcp: boolean
   /** 覆盖默认的 `omp acp` 参数。冒烟用它把工具集钉更窄 */
   extraArgs?: string[]
+  /** 角色契约原文（`AgentRole.contract`）。走 `--append-system-prompt`。
+   *  **只在 spawn 时传一次** —— 会话跑起来之后换角色改不了，
+   *  界面那侧因此规定「换角色 = 结束当前会话重开」。 */
+  roleContract?: string
 }
 
 /** 组装 spawn 需要的一切，并在起进程**之前**把不该起的挡下来。
@@ -109,7 +113,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
       bin,
       cwd: input.cwd,
       env,
-      args: input.extraArgs ?? ['acp', '--approval-mode=always-ask', `--tools=${OMP_TOOLS.join(',')}`]
+      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract)
     }
   }
 }

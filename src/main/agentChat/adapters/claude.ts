@@ -101,7 +101,18 @@ export const claudeAdapter: CliAdapter = {
       // 让模型自己先说打算。取舍见 ASK_FIRST_PROMPT 的说明）。
       // 拼成一条而不是传两次 --append-system-prompt：那个 flag 传两次的行为
       // 没实测过，拼字符串是确定的。
-      opts.askFirst ? `${OUTPUT_STYLE_PROMPT}\n\n${ASK_FIRST_PROMPT}` : OUTPUT_STYLE_PROMPT
+      // 三段拼成一条，**绝不传两次这个 flag**（传两次的行为没实测过，
+      // 拼字符串是确定的 —— 这是加「先问再做」时定下的规矩，角色契约照办）。
+      // 顺序：输出规范 → 先问再做 → 角色契约。角色放最后是有意的：
+      // 它是最具体的一层（「你现在是工匠」），压在通用规范之上更符合直觉。
+      [
+        OUTPUT_STYLE_PROMPT,
+        opts.askFirst ? ASK_FIRST_PROMPT : '',
+        // 全空白的契约当没有 —— 拼进去只会在系统提示里留一段空行
+        opts.roleContract?.trim() ?? ''
+      ]
+        .filter(Boolean)
+        .join('\n\n')
     ]
     // 只含自家两个 server 的那份配置（生成与 opt-out 判定在 main/mcpBridge.ts）。
     // 拿不到就退回原状：有 --strict-mcp-config 而无 --mcp-config = 零 MCP 工具。

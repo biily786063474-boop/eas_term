@@ -63,6 +63,17 @@ export const codexAdapter: CliAdapter = {
     args.push('--json', '--sandbox', opts.sandbox ?? DEFAULT_SANDBOX)
     if (opts.model) args.push('-m', opts.model)
     if (opts.effort) args.push('-c', `model_reasoning_effort=${opts.effort}`)
+    // 角色契约。**Codex 没有 `--append-system-prompt`**（Claude 那条走的是那个），
+    // 也没有 `--append-system-prompt-file` 这类文件参数
+    // —— `experimental_instructions_file` 在 0.145 里已被移除，实测报 unknown
+    // configuration field。能用的只有内联 `-c instructions=`。
+    //
+    // **必须压成单行**：`-c` 的取值里带换行会把解析弄乱。
+    // 这一段与终端那条路（CanvasAgentBar 的 buildCodexCmd）是同一个结论，
+    // 那边多做一步去双引号是因为它还要再过一次 shell；这里是 execFile 的 argv，
+    // 不经 shell，引号原样传反而更准。
+    const contract = opts.roleContract?.trim().replace(/\s*\n\s*/g, ' ')
+    if (contract) args.push('-c', `instructions=${contract}`)
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }

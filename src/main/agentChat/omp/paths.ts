@@ -44,6 +44,9 @@ export const OMP_USERDATA_DIR = 'omp'
  *  **它只是一道粗筛，不是判据。** 2026-09-02 实测：`ask` 在这份清单里、
  *  却不被 ACP 模式的 `--tools` 接受 —— 「是不是内建工具」和「当前模式注册了没有」
  *  是两个问题，这份清单只答得了前一个。真判据是二进制自己跑一次 ACP 握手。 */
+import { safeApprovalMode } from './config.ts'
+import { readOmpSetup } from './store.ts'
+
 export const OMP_BUILTIN_TOOLS = [
   'read', 'bash', 'edit', 'ast_grep', 'ast_edit', 'ask', 'debug', 'eval',
   'github', 'glob', 'grep', 'lsp', 'inspect_image', 'browser', 'computer',
@@ -301,4 +304,22 @@ export function ompBaseEnv(host: HostPaths): Record<string, string> {
   }
   for (const k of SCRUB_KEYS) delete env[k]
   return env
+}
+
+/** `omp acp` 的参数。
+ *
+ *  ⚠️ **审批档位必须从设置读，不能硬写。** 这里原来写死
+ *  `--approval-mode=always-ask`，而 2026-09-02 把档位做成了 `config.yml` 里的设置
+ *  （用户：「approvalMode 默认应该是 yolo，审批要用户去点设置」）——
+ *  **命令行参数压过配置文件**，于是那个开关落了盘却不生效：
+ *  设置里关掉审批，起会话照样每一步都问。
+ *  两处必须给同一个值，判据只有一个（`safeApprovalMode(readOmpSetup(...))`）。
+ *
+ *  角色契约走 `--append-system-prompt`（2026-09-03 实测 `omp acp` 收这个参数）。 */
+export function ompAcpArgs(host: HostPaths, roleContract?: string): string[] {
+  const mode = safeApprovalMode(readOmpSetup(host.userData).approvalMode)
+  const args = ['acp', `--approval-mode=${mode}`, `--tools=${OMP_TOOLS.join(',')}`]
+  const contract = roleContract?.trim()
+  if (contract) args.push(`--append-system-prompt=${contract}`)
+  return args
 }

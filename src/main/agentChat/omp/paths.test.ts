@@ -6,7 +6,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
+import fs from 'node:fs'
+import os from 'node:os'
 import {
+  ompAcpArgs,
   OMP_PINNED_VERSION,
   OMP_RESOURCE_DIR,
   OMP_USERDATA_DIR,
@@ -211,4 +214,32 @@ test('`task` 与 `eval` 能注册，但**故意不放** —— 放它们要单�
 
 test('白名单不许有重复项 —— 重复不报错，只是让人读不准到底开了什么', () => {
   assert.equal(new Set(OMP_TOOLS).size, OMP_TOOLS.length)
+})
+
+// ── 2026-09-03：命令行的审批档位必须跟着设置走 ─────────────────────────────
+//
+// **这里修的是一个静默失败**：`launch.ts` 原来硬写 `--approval-mode=always-ask`，
+// 而 2026-09-02 把档位做成了 `config.yml` 里的设置。**命令行压过配置文件** ——
+// 于是那个开关落了盘、界面显示也对，起会话却照样每一步都问。
+// 「配置写对了但不生效」这类问题没有任何报错，只能靠断言钉住。
+
+test('**`--approval-mode` 用设置里的值，不是写死的 always-ask**', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompargs-'))
+  fs.writeFileSync(path.join(dir, 'omp-setup.json'), JSON.stringify({ approvalMode: 'yolo' }))
+  const args = ompAcpArgs({ userData: dir } as never)
+  assert.ok(args.includes('--approval-mode=yolo'), `拿到的是 ${args.join(' ')}`)
+  assert.ok(!args.some((a) => a.includes('always-ask')), '还残留着写死的 always-ask')
+})
+
+test('设置里开了审批 → 命令行也跟着变严', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompargs-'))
+  fs.writeFileSync(path.join(dir, 'omp-setup.json'), JSON.stringify({ approvalMode: 'always-ask' }))
+  assert.ok(ompAcpArgs({ userData: dir } as never).includes('--approval-mode=always-ask'))
+})
+
+test('角色契约进 `--append-system-prompt`；没有角色就不加这个参数', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompargs-'))
+  const withRole = ompAcpArgs({ userData: dir } as never, '你是工匠')
+  assert.ok(withRole.includes('--append-system-prompt=你是工匠'))
+  assert.ok(!ompAcpArgs({ userData: dir } as never, '   ').some((a) => a.startsWith('--append-system-prompt')))
 })
