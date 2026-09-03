@@ -25,7 +25,7 @@ const AGENT_DIR = '/tmp/eas-omp/agent'
 const EXPECTED_CONFIG = `# 由 Eas-Term 生成，**每次起 omp 会话前整份重写** —— 手改这里无效，改动会被覆盖。
 # 想调这些值请改 src/main/agentChat/omp/config.ts（依据写在那里的注释里）。
 tools:
-  approvalMode: "always-ask"
+  approvalMode: "yolo"
   approval:
     generate_image: "deny"
     browser: "deny"
@@ -46,7 +46,7 @@ skills:
   customDirectories:
     - "/tmp/eas-omp/agent/skills"
 retry:
-  modelFallback: false
+  modelFallback: true
 `
 
 test('config.yml 就是这一份 —— 多一个键少一个键都要在 diff 里被看见', () => {
@@ -73,14 +73,30 @@ test('**点分键必须拆成嵌套** —— 扁平写 omp 静默用默认值，
   }
 })
 
-test('五个「与上游默认相反」的键一个都不能漏 —— 漏了就是默认值在管事', () => {
+test('**三个与上游默认相反**的键一个都不能漏 —— 漏了就是上游默认在管事', () => {
   const yml = ompConfigYml(AGENT_DIR)
-  // 括号里是 settings-schema.ts 的行号与该键的上游默认值
-  assert.match(yml, /approvalMode: "always-ask"/) //   :4061 默认 yolo
+  // 括号里是 settings-schema.ts 的行号与该键的上游默认值。
+  // 只有这三个是我们**逆着上游**设的 —— 它们一旦漏写，行为会静默回到上游那一档。
   assert.match(yml, /\n {2}xdev: false\n/) //          :4670 默认 true
   assert.match(yml, /browser:\n {2}enabled: false/) // :4486 默认 true（四个开关里唯一默认开着的）
   assert.match(yml, /secrets:\n {2}enabled: true/) //  :5250 默认 false（不开就没有脱敏）
-  assert.match(yml, /retry:\n {2}modelFallback: false/) // :1813 默认 true
+})
+
+test('两个**跟随上游**的键也要显式写出来，别靠默认值', () => {
+  // 这两条 2026-09-02 从「逆着上游」改成了「跟随上游」，但**仍然显式写**：
+  // 靠默认值等于把行为托付给一次上游改版，而这两条都改行为。
+  const yml = ompConfigYml(AGENT_DIR)
+  assert.match(yml, /approvalMode: "yolo"/) //             :4061 上游默认 yolo
+  assert.match(yml, /retry:\n {2}modelFallback: true/) //   :1813 上游默认 true
+})
+
+test('**降级今天无候选可降** —— 我们一条 modelRoles 都没写', () => {
+  // 打开 modelFallback 之所以安全，全靠这一条：候选只来自 `modelRoles`
+  // （binary 里默认 `Q0i = {}`），我们没写过任何一条，所以没有任何模型可降。
+  // 哪天这条断言红了，说明有人加了角色配置 —— 那就必须同时解决
+  // 「ACP 收不到 retry_fallback_applied、工具栏会显示错模型」那个问题。
+  assert.ok(!ompConfigYml(AGENT_DIR).includes('modelRoles'), 'config.yml 里出现了 modelRoles')
+  assert.ok(!ompModelsYml().includes('modelRoles'), 'models.yml 里出现了 modelRoles')
 })
 
 test('deny 表的键是**工具名**（tts）不是开关名（speechgen）', () => {
@@ -307,4 +323,40 @@ test('前缀是**别家**的也原样不动 —— 那是用户自己选的，�
 test('没有模型 / 没有 provider → undefined，不要凭空造一个', () => {
   assert.equal(ompModelSelector('minimax-code-cn', undefined), undefined)
   assert.equal(ompModelSelector(undefined, 'MiniMax-M3'), undefined)
+})
+
+// ── 2026-09-02：审批改成「默认放行、用户可开」 ────────────────────────────
+//
+// 用户：「approvalMode 默认应该是 yolo，审批要用户去点设置。」
+//
+// **这不是改一个默认值那么简单**：我们的审批卡片是 omp 的
+// `session/request_permission` 驱动的（见 `omp/approvals.ts`）——
+// yolo 模式下 omp 压根不发那个请求，**审批功能整个消失**。
+// 所以默认值和设置项必须一起做，只做一半等于把功能删了而没有开关。
+
+test('**默认 yolo** —— 不打断，符合用户对这个 app 的定位', () => {
+  assert.match(ompConfigYml('/a'), /approvalMode: "yolo"/)
+})
+
+test('**用户在设置里开了审批 → always-ask**', () => {
+  assert.match(ompConfigYml('/a', { approvalMode: 'always-ask' }), /approvalMode: "always-ask"/)
+})
+
+test('中间档 write（只有写类要批）也要能选', () => {
+  assert.match(ompConfigYml('/a', { approvalMode: 'write' }), /approvalMode: "write"/)
+})
+
+test('**四条 deny 在任何模式下都不许松**（生图 / 浏览器 / 电脑控制 / TTS）', () => {
+  // `approval.ts:126-153` 里 deny 先于 mode 判定生效 —— 这是第二道锁，
+  // yolo 也压不过它。红线不随审批档位变。
+  for (const mode of ['yolo', 'write', 'always-ask'] as const) {
+    const y = ompConfigYml('/a', { approvalMode: mode })
+    for (const t of ['generate_image', 'browser', 'computer', 'tts']) {
+      assert.match(y, new RegExp(`${t}: "deny"`), `${mode} 模式下 ${t} 的 deny 没了`)
+    }
+  }
+})
+
+test('给了不认识的档位 → 回落 yolo，不要写出一份 omp 拒收的配置', () => {
+  assert.match(ompConfigYml('/a', { approvalMode: 'nonsense' as never }), /approvalMode: "yolo"/)
 })

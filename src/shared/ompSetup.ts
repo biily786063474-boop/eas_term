@@ -85,6 +85,10 @@ export interface OmpStatus {
   loggedIn: boolean
   model?: string
   lastSmoke?: OmpSmokeResult
+  /** 当前审批档位。**缺省 `yolo`** —— 面板拿它点亮开关。
+   *  是 `OmpStatus` 的一部分而不是另开一个 IPC：面板已经在轮 `omp:status`，
+   *  两个来源就会有两个真相（`authMode` 当年就是这么分叉的）。 */
+  approvalMode: 'always-ask' | 'write' | 'yolo'
 }
 
 /** 「omp 认不认这家」——**判据是问 omp，不是查我们自己的账本**。

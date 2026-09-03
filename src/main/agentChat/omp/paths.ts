@@ -68,7 +68,31 @@ export const OMP_BUILTIN_TOOLS = [
  *
  *  没放进来的高危项另有第二道锁（见 spec §P.4 的 `tools.approval` deny 与
  *  `browser.enabled: false`）——白名单不是唯一防线，因为 `sdk.ts` 推 tts 时不看 `--tools`。 */
-export const OMP_TOOLS = ['read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo']
+export const OMP_TOOLS = [
+  'read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo',
+  // ── 2026-09-02 补进来的四个。每一个都跑过真 ACP 握手才敢写（下同上）───────
+  //
+  // `web_search`  ⚠️ **这个不是零代价的**：它给模型开了**自主出站** ——
+  //               不是用户点了什么才联网，是模型自己决定去搜。而审批默认 `yolo`，
+  //               所以没有那道确认。已按图纸 01 红线 4 登记在「网络出站清单」里。
+  //               **要撤就删这一行**，同时回去改图纸那一行。
+  // `lsp`         本机语言服务器（`lsp.enabled` 上游默认 true）。不出站，
+  //               但会**起额外进程** —— 记在长跑资源那本账上（每会话一份固定成本）。
+  // `ast_edit`    结构化改代码，纯本机。与已经在名单里的 `edit` 同一风险档，
+  //               真·零新增代价。
+  // `inspect_image` 看图。缺 `modelRoles.vision` 时**不会瘫**：实现里是
+  //               `@vision ?? @default ?? 当前模型`，vision-capable 的模型直接就用。
+  //
+  // 没进来的那批不是漏了，是 **ACP 无头模式压根不注册**（实测逐个被
+  // `Unknown tool in --tools` 拒掉）：ast_grep · checkpoint · rewind · memory_edit ·
+  // retain · recall · reflect · learn · manage_skill · github · security_scan。
+  // 其中 checkpoint / rewind（会话回滚）最可惜，它们依赖 TUI 的会话模型。
+  //
+  // `task`（起子 agent）和 `eval`（执行任意代码）**能注册但故意没放**：
+  // 前者 token 成本成倍且子 agent 权限是另一套，后者与 `bash` 同档危险 ——
+  // 这两个要放得单独议，不该混在「顺手加几个」里。
+  'web_search', 'lsp', 'ast_edit', 'inspect_image'
+]
 
 /** 调用方（`session.ts`）算 `HostPaths` 时用的是真的 `process.platform`；
  *  测试要能在 mac 上验 Windows 的分支，所以把平台做成可注入的参数。 */

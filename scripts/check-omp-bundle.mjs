@@ -15,6 +15,18 @@ import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+/** 从一段 TS 数组字面量里取出工具名。**先剥注释，再抠引号串。**
+ *
+ *  2026-09-02 踩的坑：原来这里是 `split(',')` 切原始文本 —— 白名单一加注释，
+ *  整段注释被当成一个「工具名」传进 `--tools`，闸门于是报
+ *  「Unknown tool: // ── 2026-09-02 补进来的四个…」。
+ *  **假阳性比假阴性还危险**：它会让人以为刚加的工具不被接受，
+ *  转头去删一个其实好好的工具（当时差点就把 `web_search` 删了）。 */
+function quotedNames(src) {
+  const noComments = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+  return [...noComments.matchAll(/'([^']+)'/g)].map((x) => x[1])
+}
 const DIR = path.join(ROOT, 'resources', 'omp')
 
 const problems = []
@@ -65,7 +77,7 @@ const pkg = JSON.parse(read(path.join(ROOT, 'package.json')))
 {
   const pickList = (name) => {
     const m = paths.match(new RegExp(`${name}\\s*=\\s*\\[([\\s\\S]*?)\\]`))
-    return m ? [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : null
+    return m ? quotedNames(m[1]) : null
   }
   const tools = pickList('OMP_TOOLS')
   const builtin = pickList('OMP_BUILTIN_TOOLS')
@@ -113,9 +125,10 @@ async function acpHandshake(bin) {
   const os = await import('node:os')
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'omp-bundle-check-'))
   const src = fs.readFileSync(path.join(ROOT, 'src/main/agentChat/omp/paths.ts'), 'utf8')
-  const m = src.match(/export const OMP_TOOLS = \[([^\]]*)\]/)
+  const m = src.match(/export const OMP_TOOLS = \[([\s\S]*?)\]/)
   if (!m) return 'paths.ts 里读不到 OMP_TOOLS —— 改了名字就把这道检查也一起更新'
-  const tools = m[1].split(',').map((x) => x.trim().replace(/^'|'$/g, '')).filter(Boolean)
+  const tools = quotedNames(m[1])
+  if (!tools.length) return 'OMP_TOOLS 解析出来是空的 —— 解析器和源码写法对不上了'
   const env = {
     PATH: process.env.PATH,
     HOME: tmp,

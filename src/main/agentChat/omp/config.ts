@@ -147,6 +147,30 @@ export interface OmpConfigOptions {
    *  **默认不写**——上游 `skills.ts:318-334` 明写 customDirectories 的同名 skill
    *  会顶掉 DEFAULT-path provider 的那份（issue #7190），所以正常情况下我们的副本已经赢了。 */
   ignoredSkills?: string[]
+  /** 工具审批档位。**默认 `yolo`（不打断）**，用户在设置里可以调严。
+   *
+   *  用户 2026-09-02：「approvalMode 默认应该是 yolo，审批要用户去点设置。」
+   *
+   *  ⚠️ **这个字段决定审批功能存不存在**，不只是「默认值」：
+   *  界面上那张审批卡片是 omp 的 `session/request_permission` 驱动的
+   *  （见 `omp/approvals.ts`）—— yolo 模式下 omp 压根不发那个请求，
+   *  卡片永远不会出现。所以改默认值必须**连同设置项一起做**。
+   *
+   *  三档来自上游 `approval.ts:37-41` 的 `APPROVAL_MODE_MAX_TIER`：
+   *    always-ask  读之外全要批
+   *    write       写类自动放行，执行类still要批
+   *    yolo        全放行
+   *
+   *  **四条 deny 不随它变**（`approval.ts:126-153`：deny 先于 mode 判定生效）——
+   *  生图 / 浏览器 / 电脑控制 / TTS 是红线，yolo 也压不过。 */
+  approvalMode?: 'always-ask' | 'write' | 'yolo'
+}
+
+/** 认得出的三档，认不出一律回落 `yolo`。
+ *  写出一份 omp 拒收的配置的后果是**整份 config.yml 失效**，
+ *  连那四条 deny 一起没了 —— 比「档位不对」严重得多。 */
+export function safeApprovalMode(v: unknown): 'always-ask' | 'write' | 'yolo' {
+  return v === 'always-ask' || v === 'write' ? v : 'yolo'
 }
 
 /** `<agentDir>/config.yml` 的整份内容。
@@ -161,7 +185,7 @@ export function ompConfigYml(agentDir: string, opts?: OmpConfigOptions): string 
       // schema:4061，默认 **yolo**。`approval.ts:37-41` 的 APPROVAL_MODE_MAX_TIER 是
       // { 'always-ask':'read', write:'write', yolo:'exec' } —— `write` 是「写也自动放行」，
       // 只有 always-ask 才是「读自动、写与执行都问」，才和 Claude 侧要弹卡的粒度一致。
-      approvalMode: 'always-ask',
+      approvalMode: safeApprovalMode(opts?.approvalMode),
       // schema:4045，默认 {}。`approval.ts:126-153` 按 `tool.name` 查这张表，
       // **不校验是不是 builtin**，且 deny 在每种模式下都先于 mode 判定生效（第二道锁）。
       // 键名就是工具名：`tools/image-gen.ts:1220` 的 `generate_image`、`tools/tts.ts:322` 的 `tts`
@@ -191,9 +215,29 @@ export function ompConfigYml(agentDir: string, opts?: OmpConfigOptions): string 
       // `skills.enableClaudeUser`（schema:5182，默认 true）**故意不写**：
       // 用户自己的其他 Claude skill 该照常可见。
     },
-    // schema:1813，默认 **true**。这条是真的在改行为：用户选了哪个模型就用哪个，
-    // 不许重试时悄悄换成别的模型（换了之后工具栏显示的还是原来那个，账也对不上）。
-    retry: { modelFallback: false },
+    // schema:1813，默认 **true**，我们跟随它。
+    //
+    // 2026-09-02 从 `false` 改回来，依据是**读了它的实现**，不是猜：
+    //
+    // - 候选**只来自 `modelRoles`**（`retryFallbackChainKeys` → `resolveRetryFallbackRole`
+    //   → `settings.getModelRole`），而 `modelRoles` 的默认值是 **`{}`**（binary 里 `Q0i = {}`）。
+    //   我们也没往里写过任何一条。**所以今天它是惰性的：没有任何候选可降。**
+    // - 它不会「自己在同一家里另找一个模型」—— 没有这种模式。schema 的原话是
+    //   "switch to **configured** fallback models"。降级方案是用户配出来的，
+    //   这正好是用户 2026-09-02 说的：「如果配置的多个 provider 需要用户去设置降级方案」。
+    //
+    // ⚠️ **等哪天真给 `modelRoles` 做界面，先解决这个再上**：
+    //   omp 换模型时发的是 `retry_fallback_applied` 事件，而 **ACP 只认十种
+    //   `sessionUpdate`**（agent_message_chunk / tool_call / usage_update / …），
+    //   那个事件**不在名单里**；`session_info_update` 也只带 title + updatedAt，不带模型。
+    //   也就是说**降级在 ACP 这条管子里是完全静默的** —— 工具栏会继续显示原来那个模型。
+    //   这是当初写 `false` 的真实理由，那个理由在「有候选可降」的那天依然成立。
+    //
+    // （另有 `retry.usageAwareFallback`，schema:默认 false：它是**同一家里换账号**
+    //   ——"prefer same-provider accounts"，最贴近「同一个 provider 下找」的字面意思，
+    //   但只对有额度上报的订阅计划生效，"Ordinary configured API keys are excluded"，
+    //   且要同一家有多个账号才有意义。没开，留个记录。）
+    retry: { modelFallback: true },
   }
 
   const header = [

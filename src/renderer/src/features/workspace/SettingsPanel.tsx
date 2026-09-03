@@ -108,6 +108,35 @@ export function SettingsPanel(): JSX.Element {
   const [hookBusy, setHookBusy] = useState(false)
   const [hookMsg, setHookMsg] = useState<string | null>(null)
 
+  /** 默认 harness 的**硬审批**档位。与上面那条「先问再做」不是一回事：
+   *  那条是给 cc/codex 的系统提示（软约定，靠模型自觉），
+   *  这条是 omp 进程级的闸 —— 到档位就停下来等你点，模型绕不过去。
+   *
+   *  **`null` = 还没读到**（面板刚开 / omp 没装）。不要用 `'yolo'` 当初值：
+   *  那会让开关在读回来之前先显示成「关着」，用户看到的是一次假状态。 */
+  const [omMode, setOmMode] = useState<'always-ask' | 'write' | 'yolo' | null>(null)
+  const [omBusy, setOmBusy] = useState(false)
+  useEffect(() => {
+    // 只在面板真的打开时读 —— 关着的时候读，等于每次挂载都白跑一次 IPC
+    if (!open) return
+    let alive = true
+    void window.api.omp.status().then((st) => {
+      if (alive) setOmMode(st?.approvalMode ?? null)
+    })
+    return () => {
+      alive = false
+    }
+  }, [open])
+
+  async function setApproval(mode: 'always-ask' | 'write' | 'yolo'): Promise<void> {
+    setOmBusy(true)
+    const prev = omMode
+    setOmMode(mode) // 先动，让开关跟手
+    const r = await window.api.omp.setApprovalMode(mode)
+    if (!r.ok) setOmMode(prev) // 写不进去就退回去，别让界面显示一个没落盘的档位
+    setOmBusy(false)
+  }
+
   // statusline 转发器（真实额度 + 与 /context 一致的上下文占用）
   const [slOn, setSlOn] = useState(false)
   const [slWrapped, setSlWrapped] = useState(false)
@@ -358,6 +387,47 @@ export function SettingsPanel(): JSX.Element {
                       : '关着时模型按 CLI 自己的默认权限直接执行，不会先征求同意。'}
                 </div>
                 {hookMsg && <div className="cset-sub">{hookMsg}</div>}
+
+                {/* 默认 harness 的硬审批。**和上面那条是两种东西**，所以分开写：
+                    上面是系统提示（软约定，模型可以不听），这条是进程级的闸。
+                    默认关着 —— 用户 2026-09-02：「approvalMode 默认应该是 yolo，
+                    审批要用户去点设置。」omp 没装时读不到档位，整段不出现，
+                    免得给一个点了不会有任何效果的开关。 */}
+                {omMode !== null && (
+                  <>
+                    <label className="cset-row">
+                      <input
+                        type="checkbox"
+                        checked={omMode !== 'yolo'}
+                        disabled={omBusy}
+                        onChange={(e) => void setApproval(e.target.checked ? 'always-ask' : 'yolo')}
+                      />
+                      <span className="cset-rowname">
+                        默认 harness：动手前停下来等你批准
+                      </span>
+                    </label>
+                    <div className="cset-sub">
+                      {omMode === 'yolo'
+                        ? '关着时不打断，工具直接执行。生成图片、控制浏览器、控制电脑、语音合成这四类无论开关如何都始终禁止。'
+                        : '开着时会弹出审批卡片，你点了才继续。这是进程级的闸，不是提示词约定。'}
+                    </div>
+                    {omMode !== 'yolo' && (
+                      <div className="cset-sub">
+                        <label className="cset-row">
+                          <input
+                            type="checkbox"
+                            checked={omMode === 'write'}
+                            disabled={omBusy}
+                            onChange={(e) => void setApproval(e.target.checked ? 'write' : 'always-ask')}
+                          />
+                          <span className="cset-rowname">
+                            改文件不用批，只批执行命令
+                          </span>
+                        </label>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* 真实额度与准确的上下文占用只在 statusline 那条通道里
                     （2026-08-18 实测：headless 事件流里五小时额度没有百分比，

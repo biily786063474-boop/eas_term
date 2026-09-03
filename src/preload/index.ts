@@ -281,6 +281,13 @@ const api = {
       model?: string
       thinking?: string
     }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('omp:saveProvider', input),
+    /** 工具审批档位。**默认 `yolo`（不打断）**，这是用户把它调严的唯一入口。
+     *
+     *  档位不只是偏好：审批卡片由 omp 的 `session/request_permission` 驱动，
+     *  `yolo` 下它不发请求 —— 也就没有卡片。所以这个开关关掉的是「功能」，
+     *  不是「打扰频率」。当前档位在 `status().approvalMode` 里。 */
+    setApprovalMode: (mode: 'always-ask' | 'write' | 'yolo'): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('omp:setApprovalMode', { mode }),
     /** omp 支持登录的服务商全名单（70 家，由 omp 自己报）。
      *  **不是我们那份四家的推荐位** —— 那份只带「去哪儿取 key」的链接。 */
     listAuthProviders: (): Promise<{ id: string; name: string }[]> =>

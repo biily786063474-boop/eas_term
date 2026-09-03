@@ -177,13 +177,38 @@ test('**白名单里没有 ask** —— 它是 TUI 的工具，ACP 模式下不�
   assert.ok(!OMP_TOOLS.includes('ask'), 'ask 回到白名单里了 —— 那会让 omp 完全起不来')
 })
 
-test('白名单只留 ACP 模式确认收得下的那几个（2026-09-02 对 18.1.2 实测）', () => {
-  // 这是二进制自己报的「Valid tools」里属于内建的那一段。
-  const ACCEPTED_IN_ACP = [
-    'read', 'bash', 'edit', 'write', 'grep', 'glob', 'todo',
-    'ast_edit', 'goal', 'init_experiment', 'run_experiment', 'log_experiment', 'update_notes'
-  ]
+// ⚠️ **这里曾经放着一张手抄的「ACP 能接受的工具」白名单，它是错的。**
+// 那张名单抄自二进制报错里的 "Valid tools: …" 那一句 —— 而那句是**上下文相关**的：
+// `--tools=read,__nope__` 报的是 "read, write, goal, init_experiment, …"，
+// 它列的是**当前这次请求已注册的**，不是完整目录。照它抄，
+// 就会把 `web_search` / `lsp` / `inspect_image` 这些真能用的判成「不被接受」。
+//
+// **正向名单这一层根本证明不了**（要起真进程），所以这里只做两件做得到的事：
+// ① 钉住那批**实测被拒**的名字（负向断言，可靠）；② 指到真判据去。
+// 真判据是 `scripts/check-omp-bundle.mjs` 打包前那次真 ACP 握手。
+
+/** ACP 无头模式**不注册**的工具（2026-09-02 对 18.1.2 逐个真握手实测）。
+ *  它们都在上游 `BUILTIN_TOOL_NAMES` 里 —— 所以「是不是内建工具」答不了这个问题。
+ *  写进 `--tools` 的后果是 **每一次 `session/new` 都失败**。 */
+const REJECTED_IN_ACP = [
+  'ask', 'ast_grep', 'checkpoint', 'rewind', 'memory_edit',
+  'retain', 'recall', 'reflect', 'learn', 'manage_skill', 'github', 'security_scan'
+]
+
+test('白名单里不许出现 ACP 模式拒收的工具 —— 沾一个 session/new 就全废', () => {
   for (const t of OMP_TOOLS) {
-    assert.ok(ACCEPTED_IN_ACP.includes(t), `${t} 在 ACP 模式下不被接受 —— session/new 会整个失败`)
+    assert.ok(!REJECTED_IN_ACP.includes(t), `${t} 在 ACP 无头模式下不注册 —— session/new 会整个失败`)
   }
+})
+
+test('`task` 与 `eval` 能注册，但**故意不放** —— 放它们要单独议', () => {
+  // 都实测能通过握手，不放是成本与风险的决定，不是技术限制：
+  // `task` 起子 agent（token 成倍、子 agent 权限另一套），
+  // `eval` 执行任意代码（与 `bash` 同档）。哪天要放，连同审批档位一起想。
+  assert.ok(!OMP_TOOLS.includes('task'))
+  assert.ok(!OMP_TOOLS.includes('eval'))
+})
+
+test('白名单不许有重复项 —— 重复不报错，只是让人读不准到底开了什么', () => {
+  assert.equal(new Set(OMP_TOOLS).size, OMP_TOOLS.length)
 })

@@ -14,7 +14,7 @@ import { ipcMain } from 'electron'
 
 import { hostPaths, readOmpUsage, writeManagedConfig } from './launch.ts'
 import { ompBaseEnv, ompBinPathOrNull } from './paths.ts'
-import { ompModelSelector, ompModelsFromJson } from './config.ts'
+import { ompModelSelector, ompModelsFromJson, safeApprovalMode } from './config.ts'
 import { mergeProviderChoice, readOmpSetup, writeOmpSetup, type OmpSetup } from './store.ts'
 import {
   nextStepOf,
@@ -83,7 +83,9 @@ async function statusOf(): Promise<OmpStatus> {
     provider: setup.provider?.id,
     loggedIn,
     model,
-    lastSmoke: setup.lastSmoke
+    lastSmoke: setup.lastSmoke,
+    // 洗一遍再对外：这份 JSON 用户手改得到，脏值不该让开关显示成一个不存在的档位
+    approvalMode: safeApprovalMode(setup.approvalMode)
   }
 }
 
@@ -131,6 +133,22 @@ async function cachedModels(): Promise<{ id: string; label: string }[] | undefin
 
 export function registerOmpSetupHandlers(): void {
   ipcMain.handle('omp:status', (): Promise<OmpStatus> => statusOf())
+
+  /** 改审批档位。**改完当场重写受管配置** —— 不然要等下一次
+   *  saveProvider 或起会话才生效，用户会以为开关没用。
+   *  （起会话那条路径也照读一遍，两处都写是有意的冗余：
+   *  设置面板改完立刻生效，而起会话是那条谁也绕不开的必经之路。） */
+  ipcMain.handle('omp:setApprovalMode', (_e, raw: unknown): Res => {
+    const mode = safeApprovalMode((raw as { mode?: unknown } | null)?.mode)
+    const host = hostPaths()
+    try {
+      writeOmpSetup(host.userData, { ...readOmpSetup(host.userData), approvalMode: mode })
+      writeManagedConfig(host)
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+    return { ok: true }
+  })
 
   // 面板主动拉清单时**绕开缓存**：它多半正是刚登录完过来的，
   // 这时候给他一份 20 秒前的旧答案，就是让他盯着一个空列表发呆。

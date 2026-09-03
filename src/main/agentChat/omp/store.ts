@@ -66,6 +66,19 @@ export interface OmpSetup {
    *  `createdAt`、也没有 `updatedAt`，指纹核不出「换错了」）。
    *  真正的判据是起会话时那三道闸，以及第一轮撞到 401 时把状态打回去。 */
   lastSmoke?: OmpSmokeResult
+  /** 工具审批档位。**不写 = `yolo`（默认不打断）**，用户在设置里可以调严。
+   *
+   *  用户 2026-09-02：「approvalMode 默认应该是 yolo，审批要用户去点设置。」
+   *
+   *  ⚠️ **它决定审批卡片存不存在**：那张卡是 omp 的 `session/request_permission`
+   *  驱动的（`omp/approvals.ts`），yolo 下 omp 压根不发请求，卡片永远不出现。
+   *  所以这里存的不是「偏好」，是「功能开不开」。
+   *
+   *  **档位管不到那四条 deny**（生图 / 浏览器 / 电脑控制 / TTS）——
+   *  上游 deny 先于 mode 判定生效，红线不随它松。
+   *
+   *  这份文件是用户手改得到的 JSON，值一律经 `safeApprovalMode` 洗一遍再用。 */
+  approvalMode?: 'always-ask' | 'write' | 'yolo'
 }
 
 const FILE = 'omp-setup.json'

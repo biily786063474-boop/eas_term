@@ -26,6 +26,7 @@ import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
 import { ompAgentDir, ompBaseEnv, ompBinPathOrNull, OMP_TOOLS } from './paths.ts'
+import { readOmpSetup } from './store.ts'
 import {
   ompConfigYml,
   ompEasTermSkillDir,
@@ -123,12 +124,22 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
  *  哪天要给它留自留地，就改成「读回来 + 只覆盖我们那几个键」，`ompConfigYml` 的返回值
  *  仍然是那份权威清单。
  *
- *  失败一律抛 —— 配置写不进去还硬起进程，等于分发一个 approvalMode 是 **yolo**、
- *  生图没被 deny 的 agent，那是红线。 */
+ *  失败一律抛 —— 配置写不进去还硬起进程，等于分发一个**四条 deny 全没生效**的
+ *  agent（生图 / 浏览器 / 电脑控制 / TTS 一路放行），那是红线。
+ *  审批档位倒是可以缺省（缺省即 yolo，那本来就是默认），deny 不行。
+ *
+ *  **每次 spawn 前都读一遍用户的档位**，所以设置面板改完不用重启 ——
+ *  下一次起会话自然带上。（判据挂在「起会话」这个必经之路上，
+ *  不挂在某次点击的回调里 —— 那个形状在 omp 这条链路上已经错过三次。） */
 export function writeManagedConfig(host: HostPaths): void {
   const agentDir = ompAgentDir(host.userData)
   fs.mkdirSync(agentDir, { recursive: true })
-  fs.writeFileSync(path.join(agentDir, 'config.yml'), ompConfigYml(agentDir), 'utf8')
+  const approvalMode = readOmpSetup(host.userData).approvalMode
+  fs.writeFileSync(
+    path.join(agentDir, 'config.yml'),
+    ompConfigYml(agentDir, { approvalMode }),
+    'utf8'
+  )
   // **`providers` 恒为空，不接受参数。** 上游 `model-registry.ts:1377-1379` 明写
   // `apiKey` 会「wins over OAuth tokens from the broker」—— 我们往里写任何一条，
   // 都等于用自己那套顶掉 omp 刚存好的凭证（2026-09-02 用户看到的 MiniMax 1004）。
