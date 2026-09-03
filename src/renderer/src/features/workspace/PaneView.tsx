@@ -15,7 +15,6 @@ import { WebView } from '../web/WebView'
 import { useCanvasWheelPassthrough } from '../canvas/wheelPassthrough'
 import { makeSubframeDrop } from '../canvas/subframeDrop'
 import { AgentCmdBar } from '../canvas/AgentCmdBar'
-import { CanvasAgentBar } from '../canvas/CanvasAgentBar'
 
 // 词典懒加载：242 词条的内联 SVG bundle 有 368KB，不该进主包，首次打开词典面板才拉取
 const DictView = lazy(() =>
@@ -473,28 +472,33 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           <CloseIcon />
         </button>
       </div>
-      {/* 分屏的终端也要有命令按钮。画布/看板走上面那条（CanvasAgentBar 的第二行），
-          这里是分屏专属 —— 分屏没有 Agent 控制台，AgentCmdBar 自己按
-          ptyAgent[ptyId]（主进程探出来的真实进程名）决定显不显示，认不出就返回 null。 */}
-      {!canvasRect && pane.kind === 'terminal' && <AgentCmdBar ptyId={pane.ptyId} />}
-      {canvasTerm && pane.kind === 'terminal' && (
-        // Agent 控制台控制条（画布终端专属；跟着 pane 的 transform 一起缩，与头部一致）
-        //
-        // **一个 CLI 都没装时也照常显示**（2026-08-27 用户要求）。原来是整条藏掉，
-        // 理由是「模型/档位/启动全是死的，摆着让人困惑」—— 但藏掉的代价更大：
-        // 新用户第一次打开软件时**什么都看不到**，也就不知道这里本来能选 CLI、
-        // 更不知道该装什么。现在改成照常显示，启动按钮在没装时变成「安装」，
-        // 点它直接装 —— 把「困惑」换成了「一条能往下走的路」。
-        //
-        // 同头部：真缩放之后**不再 zoom 补偿**，否则和外层 transform 叠成缩两次。
-        <div className="agentbar-wrap">
-          <CanvasAgentBar
-            frameId={canvasRect!.frameId}
-            nodeId={canvasRect!.nodeId}
-            ptyId={pane.ptyId}
-          />
-        </div>
-      )}
+      {/* 终端的命令按钮条。**画布和分屏都要有。**
+          用户 2026-09-03 明确要求：「下面那行要留。」
+
+          ⚠️ 这里原来的条件是 `!canvasRect`（只在分屏渲染），因为画布那侧
+          由 `CanvasAgentBar` 的第二行内嵌一份。**2026-09-03 那条控制条下线之后，
+          画布上的这一份也跟着没了** —— 那是拆除时最容易漏的一处：
+          用户要拆的是上面那排胶囊（选 CLI / 模型 / 角色 / 启动），
+          而这排是往终端里塞常用命令的快捷键，**跟 AI 对话入口无关，纯终端也用得上**。
+          去掉条件之后两种视图各渲染一份，不再依赖那条已经不存在的控制条。
+
+          AgentCmdBar 自己按 `ptyAgent[ptyId]`（主进程探出来的真实进程名）
+          决定显不显示，认不出就返回 null —— 所以无条件挂着是安全的。 */}
+      {pane.kind === 'terminal' && <AgentCmdBar ptyId={pane.ptyId} />}
+      {/* ── Agent 控制台控制条已下线（2026-09-03）────────────────────────────
+          用户：「终端里面的 top bar 上面的内容选项等取消，终端就是纯粹的终端。
+          所有的 AI 对话由 AI 对话模块来单方面承接。」
+
+          它原来在这儿渲染 `<CanvasAgentBar>`（角色/模型/思考三枚胶囊 + ▶ 启动）。
+          取代它的是**空造梦空间上那三颗按钮**（`canvas/FrameStart.tsx`）——
+          那也是 2026-08-27 那条「一个 CLI 都没装时也照常显示」要解决的问题
+          （新用户什么都看不到）现在的去处。
+
+          **组件文件保留在仓库里**，见 `CanvasAgentBar.tsx` 文件头的说明。
+
+          ⚠️ **终端里手敲 `claude` 的一切照常** —— 状态机、甘特采集、审批解析、
+          终端待办、密钥徽章、MCP 桥全由终端 I/O 驱动，与这条控制条零引用关系
+          （改动前 grep 实证）。这里拆掉的只是 UI 入口。 */}
       <div className="pane-body">
         {pane.kind === 'terminal' && (
           <TerminalView
