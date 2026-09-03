@@ -5656,3 +5656,12 @@
     animation: none;
   }
 }
+
+/* 有节点最大化时，画布世界（Frame 边框 / 头部按钮 / 便签…）整层让开。
+   最大化的面板由 PaneLayer 在另一层渲染，不受这条影响。
+   **用 visibility 不用 display:none** —— 后者会让子树重新布局，
+   而这底下挂着 xterm 和 webview，重新布局的代价比不画大得多。 */
+.canvas-world.hidden-by-max {
+  visibility: hidden;
+  pointer-events: none;
+}

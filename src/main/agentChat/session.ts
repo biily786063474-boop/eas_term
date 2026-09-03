@@ -1008,7 +1008,10 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           host,
           // **一个 key 都不注入** —— 凭证是 omp 自己的事（`auth-broker` + `agent.db`）
           provider: setup.provider?.id,
-          mcp: true
+          mcp: true,
+          // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
+          // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
+          roleContract: live.rec.roleContract
         })
       },
       emit: (e) => handleEvent(live, e),
@@ -1186,7 +1189,11 @@ export function registerAgentChatHandlers(): void {
       // 布尔值（字符串 'true'、1……）一律当没给，照旧装 hook，不猜用户意图。
       skipApprovalHook: p.skipApprovalHook === true,
       // 伪无头审批：不装 hook、不阻塞，靠系统提示让模型先问（见 ASK_FIRST_PROMPT）
-      askFirst: p.askFirst === true
+      askFirst: p.askFirst === true,
+      // 角色契约（`AgentRole.contract` 原文）。同上，params 来自 unknown，
+      // 非字符串一律当没给 —— 不猜、不转换。
+      roleContract:
+        typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined
     }
     const live: Live = {
       rec,

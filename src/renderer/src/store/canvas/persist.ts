@@ -86,7 +86,14 @@ export function serializeCanvas(
             //   用户在空 Frame 上点了「Codex」，重启之后这个节点还得是 Codex，
             //   而不是悄悄退回 pickDefaultCli 的推测值。
             //   老存档里没有这个字段 → 读回来是 undefined → 正好退回原来的行为。
-            copy.pane = { kind: 'agent', cwd: pane.cwd, resumeId: pane.resumeId, cli: pane.cli }
+            // · cli / roleId **都要存**：用户选的 CLI 和角色重启后还得是那个
+            copy.pane = {
+              kind: 'agent',
+              cwd: pane.cwd,
+              resumeId: pane.resumeId,
+              cli: pane.cli,
+              roleId: pane.roleId
+            }
           }
         }
         delete copy.leafId

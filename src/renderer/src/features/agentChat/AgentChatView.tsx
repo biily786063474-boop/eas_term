@@ -197,6 +197,20 @@ export function AgentChatView({
   })
   /** 这个节点指定了用哪个 CLI 吗（从「插件」选项卡开出来的会指定）。
    *  缺省 undefined = 沿用既有行为，自己挑第一个可用的。 */
+  /** 这个面板选的角色。**订阅它**（不是读一次快照）—— 换角色要立刻反映到
+   *  下一次 spawn，而换角色本身会重开会话，组件不重挂载。 */
+  const roleId = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.roleId : undefined
+  })
+  const roles = useStore((s) => s.roles)
+  const setAgentRole = useStore((s) => s.setAgentRole)
+  const requestConfirm = useStore((s) => s.requestConfirm)
+  /** 角色契约原文。**找不到那个 id 就当没角色** —— 用户可能把它删了，
+   *  拿一个不存在的 id 去起会话不该硬失败。 */
+  const roleContract = roles.find((r) => r.id === roleId)?.contract?.trim() || undefined
+
   const pinnedCli = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
     if (!tab) return undefined
@@ -747,6 +761,9 @@ export function AgentChatView({
         message,
         skipApprovalHook,
         askFirst,
+        // 角色契约。**两处 start 都要带** —— 漏掉哪条路径，
+        // 走那条路开出来的会话就没有角色（同 identity 那条注释的理由）。
+        ...(roleContract ? { roleContract } : {}),
         ...identity,
         // 这次会话带哪个插件。**两处 start 都要带** —— 漏掉哪条路径，
         // 走那条路开出来的会话就没有插件的工具（同 identity 那条注释的理由）。
@@ -763,6 +780,10 @@ export function AgentChatView({
           message,
           skipApprovalHook,
           askFirst,
+          // 这条是「带着旧会话 id 起不来 → 清掉重来」的重试路径。
+          // **角色同样要带** —— 漏掉的话，撞上一次重试就悄悄丢了角色，
+          // 而用户什么都看不出来（界面上角色还显示着）。
+          ...(roleContract ? { roleContract } : {}),
           ...identity
         })
       }
@@ -1022,6 +1043,26 @@ export function AgentChatView({
           onNewChat={handleNewChat}
           sessionId={sessionId}
           onSend={handleFollowupSend}
+          roleId={roleId}
+          // ── 换角色 = 结束当前会话重开（用户 2026-09-03 在 (a)(b)(c) 里选了 b）──
+          //
+          // 角色契约走系统提示，那条 flag **只在 spawn 时传一次** —— 会话跑起来之后
+          // 改不了。三条路里选 b 的理由：角色不是「参数」是「换了个人」，
+          // 半路换掉而上下文还是旧的，比重开更让人困惑。
+          //
+          // **确认之后走的是既有的「新对话」那条路**，不另写一条结束会话的代码 ——
+          // 那条路上有乐观插入撤回、麦克风收音、resumeId 记账，各自都有事故史。
+          onPickRole={(next) => {
+            const name = roles.find((r) => r.id === next)?.name ?? '无角色'
+            requestConfirm({
+              message: `换成「${name}」会结束当前会话重新开始，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？`,
+              confirmLabel: '换角色并重开',
+              onConfirm: () => {
+                setAgentRole(tabId, leafId, next)
+                handleNewChat()
+              }
+            })
+          }}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
           onLogin={() => selected && setSetupFor({ cli: selected, from: 'login' })}

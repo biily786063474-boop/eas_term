@@ -86,6 +86,8 @@ export interface SessionRecord {
   /** 「先问再做」模式。跟 sandbox / skipApprovalHook 一样要带过 restart ——
    *  不带的话空闲回收后重开，模型就不再先问了，而界面上开关还开着 */
   askFirst?: boolean
+  /** 角色契约原文。**只在 spawn 时用一次**（拼进系统提示） */
+  roleContract?: string
   /** 谁开的 / 叫什么。**身份必须存在这里，不能只留在渲染层的 pane 上。**
    *
    *  「关节点不杀进程」把节点和进程的生命周期拆开了：pane 随节点关闭消失，进程还在跑。
@@ -277,6 +279,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     resumeId: s.resumeId,
     sandbox: s.sandbox,
     skipApprovalHook: s.skipApprovalHook,
-    askFirst: s.askFirst
+    askFirst: s.askFirst,
+    roleContract: s.roleContract
   }
 }

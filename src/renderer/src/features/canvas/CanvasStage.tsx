@@ -1259,8 +1259,19 @@ export function CanvasStage(): JSX.Element {
       {!frames.length && !freeNodes.length && (
         <div className="canvas-empty-hint">双击创建你第一个造梦空间</div>
       )}
+      {/* **有节点最大化时整个画布世界让开。**
+          最大化的面板由 PaneLayer 渲染（App 里的独立层，不在这个 div 底下），
+          所以藏这一层不会把它一起藏掉。
+
+          不藏的后果 2026-09-03 用户实拍：Frame 的虚线边框和头部那排按钮
+          压在最大化的网页上 —— 那一片的点击也被它们接走。
+          最大化本来就叫「沉浸」，画布 chrome 不该出现在里面。
+
+          用 visibility 而不是 display:none：后者会让子树里的终端/网页节点
+          重新布局（xterm 尤其怕这个，见图纸 10「xterm 绝不能重挂载」），
+          而 visibility 只是不画。 */}
       <div
-        className="canvas-world"
+        className={`canvas-world${maximized ? ' hidden-by-max' : ''}`}
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}
       >
         {draft && renderShape(draft, true)}

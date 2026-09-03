@@ -63,6 +63,8 @@ export interface TabsSlice {
      *  切到哪个」，拿它传参会连全局默认一起改掉，两个 Frame 想开不同 CLI 时
      *  后建的还会把先建的冲掉。传参和记忆是两件事。 */
     cli?: string
+    /** 用哪个角色（`AgentRole.id`）。空 = 无角色 */
+    roleId?: string
   }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
@@ -93,6 +95,12 @@ export interface TabsSlice {
    *  这个会随 canvas.json 落盘，下次打开这个节点靠它续上上次的上下文
    *  （Claude `--resume` / Codex `exec resume`）。 */
   setAgentResumeId: (tabId: string, leafId: string, resumeId: string) => void
+  /** 换这个面板的角色（`AgentRole.id`，空串 = 无角色）。
+   *
+   *  ⚠️ **调用方要先把会话结束掉。** 角色契约走系统提示，那条 flag 只在 spawn 时
+   *  传一次 —— 会话跑着的时候改这个字段，界面会显示新角色而模型还是旧的那个人。
+   *  用户 2026-09-03 定的规矩：换角色 = 弹确认 + 结束当前会话重开。 */
+  setAgentRole: (tabId: string, leafId: string, roleId: string) => void
   /** 派活的首条消息发出去之后清掉它。**必须清** —— 不清的话组件重新挂载
    *  （切视图、面板重排）会把同一条任务再发一遍，等于白烧一次。 */
   clearAgentInitialMessage: (tabId: string, leafId: string) => void
@@ -221,7 +229,8 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         // 会带 --resume 接回原来的上下文，而不是开一个什么都不记得的新会话
         resumeId: opts?.resumeId,
         // 用户在空 Frame 上点了哪颗（Claude / Codex / 默认 harness）
-        cli: opts?.cli
+        cli: opts?.cli,
+        roleId: opts?.roleId
       }
     }
     const tab: TermTab = {
@@ -550,6 +559,20 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         if (!leaf || leaf.pane.kind !== 'agent') return t
         if (leaf.pane.resumeId === resumeId) return t // 同一个值不必制造新对象
         const pane: PaneState = { ...leaf.pane, resumeId }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  setAgentRole: (tabId, leafId, roleId) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        const next = roleId || undefined
+        if (leaf.pane.roleId === next) return t // 同一个值不必制造新对象
+        const pane: PaneState = { ...leaf.pane, roleId: next }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))

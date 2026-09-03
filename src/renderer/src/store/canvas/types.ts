@@ -323,6 +323,8 @@ export interface CanvasSlice {
       sessionId?: string
       /** 钉死用哪个 CLI（空造梦空间那三颗引导按钮靠它送值） */
       cli?: string
+      /** 用哪个角色（`AgentRole.id`） */
+      roleId?: string
     }
   ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
