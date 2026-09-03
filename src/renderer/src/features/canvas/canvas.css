@@ -233,8 +233,14 @@
 .cframe-start-row {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
   justify-content: center;
+  /* **永远一行，不许换行**（用户 2026-09-03：「无论什么情况下，
+     他们三个按钮都应该在一行，不应该分成两行」）。
+     原来是 `flex-wrap: wrap` —— Frame 一窄，第三颗就被挤到第二行，
+     而空造梦空间可以被用户拖得很窄。
+     换行没了之后，窄的时候改成**一起缩**，见下面按钮上的 min-width/flex。 */
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .cframe-start-btn {
@@ -243,8 +249,13 @@
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  min-width: 92px;
-  padding: 12px 14px;
+  /* 一行放不下时**一起缩**而不是换行。
+     `min-width: 0` 是关键：flex 项默认 `min-width: auto`，
+     会被里面那行字撑住不肯缩，于是又溢出去 —— 换行只是换了种坏法。 */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 150px;
+  padding: 12px 10px;
   border: 1px solid var(--stroke-input);
   /* 用户给定 radius=18 */
   border-radius: 18px;
@@ -268,6 +279,12 @@
 
 .cframe-start-name {
   font-weight: 600;
+  /* 缩到很窄时截断而不是撑破容器。三颗里「默认 harness」最长，
+     它是第一个会撞到这条的。 */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 「点一下装好」「点一下登录」。**弱一档但不能太弱** ——
@@ -5732,6 +5749,17 @@
 }
 
 /* ── hover：高光收掉，换成一道扫光 ──────────────────────────────────────── */
+
+/* **hover 任意一颗，整排的高光都停下来**（用户 2026-09-03：
+   「当 hover 一个按钮的时候，其他的高光也都全部停止」）。
+   停的是转动 —— 其余那几颗的高光**留在原地不动**，不是一起消失：
+   全消失会让整排在鼠标进出时忽明忽暗，比转着还吵。
+   注意力集中在被 hover 的那颗，其余保持安静，这是「停止」该有的样子。 */
+.cframe-start-row:hover .cframe-start-btn::before {
+  animation-play-state: paused;
+}
+
+/* 被 hover 的那颗：高光整个收掉，位置让给下面那道扫光 */
 .cframe-start-btn:hover::before {
   opacity: 0;
 }
