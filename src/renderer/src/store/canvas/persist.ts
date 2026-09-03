@@ -82,7 +82,11 @@ export function serializeCanvas(
             //   存下来只会让重开后的界面以为有个活会话，send/stop 都打到不存在的 id 上。
             // · resumeId（CLI 自己的会话 id）**要存** —— 它就是为跨重启续上下文设计的，
             //   不存的话重开这个节点，模型完全不记得之前聊过什么。
-            copy.pane = { kind: 'agent', cwd: pane.cwd, resumeId: pane.resumeId }
+            // · cli（用哪个 CLI）**要存**。2026-09-03 起它不再只是内存里的一次性传参：
+            //   用户在空 Frame 上点了「Codex」，重启之后这个节点还得是 Codex，
+            //   而不是悄悄退回 pickDefaultCli 的推测值。
+            //   老存档里没有这个字段 → 读回来是 undefined → 正好退回原来的行为。
+            copy.pane = { kind: 'agent', cwd: pane.cwd, resumeId: pane.resumeId, cli: pane.cli }
           }
         }
         delete copy.leafId

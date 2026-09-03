@@ -55,6 +55,14 @@ export interface TabsSlice {
     /** 跨重启接回上下文用的 CLI 会话 id。**画布恢复时必须带上** ——
      *  它是 canvas.json 里唯一为「续上次对话」存的东西，不传等于白存。 */
     resumeId?: string
+    /** 钉死用哪个 CLI（`CliInfo.id`）。空 Frame 上那三颗引导按钮靠它把用户的
+     *  选择送进新面板 —— `AgentChatView` 读 `pane.cli` 当 `pickDefaultCli` 的
+     *  `pinned`，而那一档压过一切。
+     *
+     *  **不要改用 localStorage 的 `lastCli` 来传**：那个格子记的是「用户上次手动
+     *  切到哪个」，拿它传参会连全局默认一起改掉，两个 Frame 想开不同 CLI 时
+     *  后建的还会把先建的冲掉。传参和记忆是两件事。 */
+    cli?: string
   }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
@@ -211,7 +219,9 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         sessionId: opts?.sessionId,
         // 画布恢复时带回来的 CLI 会话 id —— 有它，重启后发的第一条消息
         // 会带 --resume 接回原来的上下文，而不是开一个什么都不记得的新会话
-        resumeId: opts?.resumeId
+        resumeId: opts?.resumeId,
+        // 用户在空 Frame 上点了哪颗（Claude / Codex / 默认 harness）
+        cli: opts?.cli
       }
     }
     const tab: TermTab = {
