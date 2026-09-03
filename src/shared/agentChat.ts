@@ -241,6 +241,49 @@ export interface StartOpts {
    *  「换角色 = 结束当前会话重开」（用户 2026-09-03 在 (a)(b)(c) 里选了 b）。
    *  别在这里加「中途生效」的错觉。 */
   roleContract?: string
+  /** 角色的工具边界（`AgentRole.tools`）。
+   *
+   *  ⚠️ **和 roleContract 有一条关键区别：它回溯时也要拼。**
+   *  契约走系统提示，而 `--resume` 不重放系统提示，加了也是白加；
+   *  工具边界是 **CLI 层的强制规则**，每次启动都重新生效 ——
+   *  恢复会话时不拼，等于把护栏卸了。（这条结论来自终端那条路，
+   *  `CanvasAgentBar.buildClaudeCmd` 里有同样的注释。）
+   *
+   *  三个 CLI 能力不对等，各自的落法见各 adapter：
+   *    · Claude —— `--allowedTools` / `--disallowedTools`，支持工具名与通配
+   *    · Codex  —— **没有工具级开关**（实测 tools.deny / allowed_tools 都是
+   *                unknown field），只能整个关掉某个 MCP server
+   *    · omp    —— `--tools` 是**白名单**，与这里的黑名单语义相反，要做减法 */
+  roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
+}
+
+/** 把 IPC 传来的 `roleTools` 洗成可信的形状。
+ *
+ *  **它直接决定安全边界，所以不猜、不修补、不部分接受。**
+ *  params 来自 `unknown`（渲染进程可以传任何东西）。三条规矩：
+ *
+ *  1. 不是对象、或三个字段都不是字符串数组 → 一律 `undefined`（当没给）。
+ *  2. **数组里混进非字符串就把那一条整个丢掉**，不做「过滤掉坏元素、留下好的」——
+ *     那种「部分接受」在安全边界上最危险：调用方以为限制生效了，
+ *     实际上少了几条，而没有任何报错。
+ *  3. 空数组等于没有那一条。
+ *
+ *  放在 shared 而不是 session.ts：这里零依赖、进得了 `node --test`，
+ *  而 session.ts 拖着 electron。 */
+export function safeRoleTools(raw: unknown): StartOpts['roleTools'] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const r = raw as Record<string, unknown>
+  const list = (v: unknown): string[] | undefined => {
+    if (!Array.isArray(v) || !v.length) return undefined
+    // 混进非字符串 → 整条丢掉（见上面第 2 条）
+    return v.every((x) => typeof x === 'string' && x) ? (v as string[]) : undefined
+  }
+  const out = {
+    allow: list(r.allow),
+    deny: list(r.deny),
+    denyServers: list(r.denyServers)
+  }
+  return out.allow || out.deny || out.denyServers ? out : undefined
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts

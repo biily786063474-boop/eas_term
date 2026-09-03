@@ -243,3 +243,41 @@ test('角色契约进 `--append-system-prompt`；没有角色就不加这个参�
   assert.ok(withRole.includes('--append-system-prompt=你是工匠'))
   assert.ok(!ompAcpArgs({ userData: dir } as never, '   ').some((a) => a.startsWith('--append-system-prompt')))
 })
+
+// ── D4 · omp 的工具边界：**白名单减 deny**，不是塞黑名单 ────────────────────
+//
+// omp 的 `--tools` 是白名单，而角色给的是黑名单，两者语义相反。
+// 直接把 deny 名单塞进 `--tools` 是语义反转 —— 那等于「只允许被禁的那些」。
+// 而且算错的后果不是「限制没生效」，是**每一次 session/new 都失败**
+// （白名单里出现 omp 不认识的名字，validateToolNames 直接抛）。
+
+test('**deny 从白名单里减掉**，不是加进去', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
+  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: ['bash', 'write'] })
+  const tools = (args.find((a) => a.startsWith('--tools=')) ?? '').slice('--tools='.length).split(',')
+  assert.ok(!tools.includes('bash'), 'bash 还在白名单里')
+  assert.ok(!tools.includes('write'), 'write 还在白名单里')
+  assert.ok(tools.includes('read'), '把不该减的也减掉了')
+})
+
+test('**减到空也要留至少一个** —— 空的 --tools 会让 session/new 失败', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
+  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: [...OMP_TOOLS] })
+  const v = args.find((a) => a.startsWith('--tools='))
+  assert.ok(v && v !== '--tools=', `减成了 ${v}`)
+})
+
+test('deny 里有 omp 根本没有的工具名 → 忽略，不许污染白名单', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
+  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: ['不存在的工具'] })
+  const tools = (args.find((a) => a.startsWith('--tools=')) ?? '').slice('--tools='.length).split(',')
+  assert.deepEqual(tools, [...OMP_TOOLS], '白名单被动了')
+})
+
+test('没有角色工具时 --tools 与今天逐字相同', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
+  assert.equal(
+    ompAcpArgs({ userData: dir } as never, undefined, {}).find((a) => a.startsWith('--tools=')),
+    ompAcpArgs({ userData: dir } as never).find((a) => a.startsWith('--tools='))
+  )
+})

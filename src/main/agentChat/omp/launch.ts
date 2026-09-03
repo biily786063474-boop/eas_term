@@ -77,6 +77,9 @@ export interface OmpLaunchInput {
    *  **只在 spawn 时传一次** —— 会话跑起来之后换角色改不了，
    *  界面那侧因此规定「换角色 = 结束当前会话重开」。 */
   roleContract?: string
+  /** 角色的工具边界。`deny` 作用到 `--tools` 白名单（做减法，见 `ompToolsFor`），
+   *  `denyServers` 作用到交给 `session/new` 的 MCP 名单（见 `readMcpServers`）。 */
+  roleTools?: { deny?: string[]; denyServers?: string[] }
 }
 
 /** 组装 spawn 需要的一切，并在起进程**之前**把不该起的挡下来。
@@ -113,7 +116,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
       bin,
       cwd: input.cwd,
       env,
-      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract)
+      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract, input.roleTools)
     }
   }
 }
@@ -256,14 +259,26 @@ export function openOmpProcess(
  *    `session/new` —— 用户看到的是一条 JSON-RPC error，和「模型配错了」长得一模一样。
  *  · **`env` 一律给数组，哪怕是空的**：上游 `#toNameValueMap` 无条件遍历它，
  *    省掉就是 TypeError。 */
-export function readMcpServers(pluginId?: string): { servers: AcpMcpServer[]; dropped: string[] } {
+export function readMcpServers(
+  pluginId?: string,
+  /** 角色禁用的 MCP server 名。**在这里就摘掉，不交给 omp** ——
+   *  omp 的 ACP `session/new` 只收一份「要连哪些」的名单，没有「连上但禁用」的说法。
+   *  Claude 那侧是把它展开成 `mcp__<名>__*` 加进 deny，Codex 是
+   *  `mcp_servers.<名>.enabled=false`；三条路各不相同，但结论一致：
+   *  选了「画师」，图像类 MCP 的工具在会话里就不该存在。 */
+  denyServers?: readonly string[]
+): { servers: AcpMcpServer[]; dropped: string[] } {
   const p = agentMcpConfigPath(pluginId)
   if (!p) return { servers: [], dropped: [] }
   try {
     const raw = JSON.parse(fs.readFileSync(p, 'utf8')) as { mcpServers?: Record<string, unknown> }
     const servers: AcpMcpServer[] = []
     const dropped: string[] = []
+    const banned = new Set(denyServers ?? [])
     for (const [name, cfgRaw] of Object.entries(raw.mcpServers ?? {})) {
+      // 角色禁掉的：**不进 servers，也不记进 dropped** ——
+      // dropped 是给用户看的「这几个配置坏了」，而这是有意不连的，不是故障。
+      if (banned.has(name)) continue
       const cfg = (cfgRaw ?? {}) as { command?: unknown; args?: unknown; env?: Record<string, string> }
       if (typeof cfg.command !== 'string' || !cfg.command) {
         dropped.push(name)

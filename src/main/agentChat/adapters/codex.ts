@@ -74,6 +74,14 @@ export const codexAdapter: CliAdapter = {
     // 不经 shell，引号原样传反而更准。
     const contract = opts.roleContract?.trim().replace(/\s*\n\s*/g, ' ')
     if (contract) args.push('-c', `instructions=${contract}`)
+    // 角色的工具边界。**Codex 只能整个关掉某个 MCP server** ——
+    // 实测 `tools.deny` / `allowed_tools` 都是 unknown configuration field，
+    // 它没有工具级开关。所以 `roleTools.deny` 里那些**裸工具名在这里无处可去**：
+    // 不硬塞、不假装接了 —— UI 那侧要如实说明这个粒度差异，
+    // 而不是让用户以为选了「验官」Codex 就真的改不了代码。
+    for (const n of opts.roleTools?.denyServers ?? []) {
+      args.push('-c', `mcp_servers.${n}.enabled=false`)
+    }
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }

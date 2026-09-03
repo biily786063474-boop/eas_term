@@ -120,6 +120,28 @@ export const claudeAdapter: CliAdapter = {
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
     if (opts.resumeId) args.push('--resume', opts.resumeId)
+    // ── 角色的工具边界。**必须排在所有参数最后** ───────────────────────────
+    //
+    // `--allowedTools` / `--disallowedTools` 是**变长参数**（`<tools...>`）：
+    // 夹在中间会把后面的选项一起吞掉 —— `--mcp-config` 那次已经栽过一回
+    // （见 CanvasAgentBar.buildClaudeCmd 里同一条注释）。有测试钉着这个顺序。
+    //
+    // **恢复会话时也要拼**：它和角色契约不同 —— 契约走系统提示，而 `--resume`
+    // 不重放系统提示；工具边界是 CLI 层的强制规则，每次启动都要重新生效，
+    // 不拼等于恢复会话时把护栏卸了。所以这里不看 `opts.resumeId`。
+    //
+    // **不做 shell 引用**：这是 execFile 的 argv，不经 shell，
+    // 通配符 `*` 原样传过去才对。终端那条路要 `shq()` 是因为它还要再过一次 zsh。
+    const allow = opts.roleTools?.allow ?? []
+    if (allow.length) args.push('--allowedTools', ...allow)
+    const deny = [
+      ...(opts.roleTools?.deny ?? []),
+      // MCP server 名 → 该 server 下的所有工具。裸工具名 deny 会让那个工具
+      // 从模型上下文里整个消失，由 CLI 强制，不靠模型自觉。
+      ...(opts.roleTools?.denyServers ?? []).map((n) => `mcp__${n}__*`)
+    ]
+    if (deny.length) args.push('--disallowedTools', ...deny)
+
     // stdin 是送消息的活跃通道：--input-format stream-json 靠它逐行写用户消息，
     // 必须保持打开——绝不能是 'ignore'。
     return { bin: 'claude', args, stdin: 'pipe' }

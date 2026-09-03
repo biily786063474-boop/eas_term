@@ -53,7 +53,7 @@ import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
-import { AGENT_CHAT_EVENT_CHANNEL } from '../../shared/agentChat.ts'
+import { AGENT_CHAT_EVENT_CHANNEL, safeRoleTools } from '../../shared/agentChat.ts'
 import { agentMcpConfigPath } from '../mcpBridge.ts'
 import type {
   ChatEvent,
@@ -1011,14 +1011,15 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           mcp: true,
           // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
-          roleContract: live.rec.roleContract
+          roleContract: live.rec.roleContract,
+          roleTools: live.rec.roleTools
         })
       },
       emit: (e) => handleEvent(live, e),
       log: (m) => logSession(m),
       clientVersion: app.getVersion(),
       mcpServers() {
-        const { servers, dropped } = readMcpServers(live.rec.pluginId)
+        const { servers, dropped } = readMcpServers(live.rec.pluginId, live.rec.roleTools?.denyServers)
         // 丢掉的那些要说一声：ACP 只收 stdio 型，插件里的 http/sse 型带进去会让
         // **整个 session/new 失败**（上游对认不出的 transport 直接 throw），
         // 而用户看到的是一条 JSON-RPC error，跟「模型配错了」长得一模一样。
@@ -1193,7 +1194,10 @@ export function registerAgentChatHandlers(): void {
       // 角色契约（`AgentRole.contract` 原文）。同上，params 来自 unknown，
       // 非字符串一律当没给 —— 不猜、不转换。
       roleContract:
-        typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined
+        typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined,
+      // 工具边界。**只收字符串数组**，任何别的形状一律当没给 ——
+      // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
+      roleTools: safeRoleTools(p.roleTools)
     }
     const live: Live = {
       rec,

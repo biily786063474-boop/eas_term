@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
-import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleTools } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -534,4 +534,94 @@ test('Codex 没角色时 args 与今天逐字节相同', () => {
     getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '  ' }).args,
     getAdapter('codex')!.buildArgs({ cwd: '/p' }).args
   )
+})
+
+// ── 2026-09-03 · D4：角色的工具边界 ─────────────────────────────────────────
+//
+// 这一块是图纸 01 红线 5 点名的东西（`roles.ts` 的 illustrator 用 tools.deny
+// 通配符挡图像类 MCP）。把它接进对话会话 = 把一条现有的安全边界搬到新链路上，
+// 所以断言写得比别处密。
+
+test('Claude：deny 走 --disallowedTools，denyServers 展开成 mcp__<名>__*', () => {
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+  })
+  const i = args.indexOf('--disallowedTools')
+  assert.ok(i >= 0)
+  const rest = args.slice(i + 1)
+  assert.ok(rest.includes('Bash'))
+  assert.ok(rest.includes('mcp__bizone-canvas__*'), 'server 名没展开成通配')
+})
+
+test('Claude：allow 走 --allowedTools', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { allow: ['Read', 'Grep'] } })
+  const i = args.indexOf('--allowedTools')
+  assert.ok(i >= 0 && args.slice(i + 1, i + 3).join(',') === 'Read,Grep')
+})
+
+test('**变长参数必须排在最后** —— 夹在中间会把后面的选项一起吞掉', () => {
+  // --mcp-config 那次已经栽过一回（见 buildClaudeCmd 的注释）
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    model: 'opus',
+    resumeId: 'r1',
+    mcpConfigPath: '/tmp/m.json',
+    roleTools: { deny: ['Bash'] }
+  })
+  const i = args.indexOf('--disallowedTools')
+  const after = args.slice(i + 1)
+  for (const flag of ['--model', '--resume', '--mcp-config']) {
+    assert.ok(!after.includes(flag), `${flag} 排在变长参数后面，会被吞掉`)
+  }
+})
+
+test('**工具边界在恢复会话时也要拼** —— 它是 CLI 强制规则，不是系统提示', () => {
+  // 契约走 --append-system-prompt，--resume 不重放它；工具边界每次都要重新生效，
+  // 不拼等于恢复会话时把护栏卸了。
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    resumeId: 'r1',
+    roleTools: { denyServers: ['bizone-canvas'] }
+  })
+  assert.ok(args.includes('--disallowedTools'))
+  assert.ok(args.includes('mcp__bizone-canvas__*'))
+})
+
+test('Claude：没有角色工具时，一个相关参数都不加', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { deny: [], denyServers: [] } })
+  assert.ok(!args.includes('--disallowedTools'))
+  assert.ok(!args.includes('--allowedTools'))
+})
+
+test('Codex：只能整个关 MCP server（它没有工具级开关）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+  })
+  assert.ok(args.includes('mcp_servers.bizone-canvas.enabled=false'))
+  // deny 的工具名在 Codex 上**无处可去**，不能假装接了
+  assert.ok(!args.some((a) => a.includes('Bash')), 'Codex 没有工具级 deny，别硬塞')
+})
+
+// ── safeRoleTools：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────
+
+test('不是对象 → undefined（当没给）', () => {
+  for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleTools(v), undefined)
+})
+
+test('**数组里混进非字符串 → 那一条整个丢掉**，不做部分接受', () => {
+  // 「过滤掉坏元素、留下好的」在安全边界上最危险：调用方以为限制生效了，
+  // 实际上少了几条，而没有任何报错。
+  assert.equal(safeRoleTools({ deny: ['Bash', 123] }), undefined)
+  assert.deepEqual(safeRoleTools({ deny: ['Bash'], denyServers: [null] })?.denyServers, undefined)
+})
+
+test('正常形状原样通过', () => {
+  const got = safeRoleTools({ deny: ['Bash'], denyServers: ['x'], allow: ['Read'] })
+  assert.deepEqual(got, { allow: ['Read'], deny: ['Bash'], denyServers: ['x'] })
+})
+
+test('空数组等于没有那一条；三条都空 → undefined', () => {
+  assert.equal(safeRoleTools({ deny: [], denyServers: [], allow: [] }), undefined)
 })

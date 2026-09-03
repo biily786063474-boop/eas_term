@@ -88,6 +88,8 @@ export interface SessionRecord {
   askFirst?: boolean
   /** 角色契约原文。**只在 spawn 时用一次**（拼进系统提示） */
   roleContract?: string
+  /** 角色的工具边界。**每次 spawn 都要用**（包括恢复会话） */
+  roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
   /** 谁开的 / 叫什么。**身份必须存在这里，不能只留在渲染层的 pane 上。**
    *
    *  「关节点不杀进程」把节点和进程的生命周期拆开了：pane 随节点关闭消失，进程还在跑。
@@ -280,6 +282,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     sandbox: s.sandbox,
     skipApprovalHook: s.skipApprovalHook,
     askFirst: s.askFirst,
-    roleContract: s.roleContract
+    roleContract: s.roleContract,
+    roleTools: s.roleTools
   }
 }

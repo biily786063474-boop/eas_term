@@ -316,10 +316,37 @@ export function ompBaseEnv(host: HostPaths): Record<string, string> {
  *  两处必须给同一个值，判据只有一个（`safeApprovalMode(readOmpSetup(...))`）。
  *
  *  角色契约走 `--append-system-prompt`（2026-09-03 实测 `omp acp` 收这个参数）。 */
-export function ompAcpArgs(host: HostPaths, roleContract?: string): string[] {
+export function ompAcpArgs(
+  host: HostPaths,
+  roleContract?: string,
+  roleTools?: { deny?: string[]; denyServers?: string[] }
+): string[] {
   const mode = safeApprovalMode(readOmpSetup(host.userData).approvalMode)
-  const args = ['acp', `--approval-mode=${mode}`, `--tools=${OMP_TOOLS.join(',')}`]
+  const args = ['acp', `--approval-mode=${mode}`, `--tools=${ompToolsFor(roleTools?.deny).join(',')}`]
   const contract = roleContract?.trim()
   if (contract) args.push(`--append-system-prompt=${contract}`)
   return args
+}
+
+/** 角色的 deny 作用到 omp 的白名单上。
+ *
+ *  ⚠️ **语义是反的，这是这段代码存在的全部理由。**
+ *  omp 的 `--tools` 是**白名单**（只有列出来的才注册），
+ *  而角色的 `tools.deny` 是**黑名单**。把 deny 直接塞进 `--tools`
+ *  等于「只允许被禁的那些」—— 正好反过来。所以这里做减法。
+ *
+ *  两条兜底，都是为了不让 `session/new` 整个失败（那是白名单算错的真实后果，
+ *  不是「限制没生效」这种温和的失败）：
+ *
+ *  1. **认不出的名字直接忽略**。角色的 deny 是给 Claude 写的工具名
+ *     （`Bash` / `Read` / `mcp__x__*`），与 omp 的小写名字（`bash` / `read`）
+ *     不是一套。硬映射会把 omp 不认识的名字带进白名单 → `validateToolNames` 抛。
+ *     判据只认「在 OMP_TOOLS 里」，大小写不敏感。
+ *  2. **减到空时留 `read`**。空的 `--tools=` omp 收不下；
+ *     而留一个只读工具，比「整个会话起不来」对用户友好得多。 */
+export function ompToolsFor(deny?: readonly string[]): string[] {
+  if (!deny?.length) return [...OMP_TOOLS]
+  const banned = new Set(deny.map((d) => d.toLowerCase()))
+  const left = OMP_TOOLS.filter((t) => !banned.has(t.toLowerCase()))
+  return left.length ? left : ['read']
 }
