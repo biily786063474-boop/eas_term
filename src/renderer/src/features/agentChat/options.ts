@@ -65,7 +65,7 @@ const ASKING = [
   '哪个',
   '哪种',
   '要不要',
-  '还是',
+  // 「还是」**不在这张强表里** —— 它是两面词，见下面的 ASKING_WEAK。
   '建议下一步',
   '下一步建议',
   '怎么办',
@@ -74,8 +74,32 @@ const ASKING = [
   '你说了算',
   '我倾向',
   '二选一',
-  '三选一'
+  '三选一',
+  // ↓ 2026-09-02 从本机 27 份 agent-history、**748 条 assistant 正文**里量出来补的。
+  //   补之前整份语料**一条都认不出**（0/748）—— 这个功能实际上是死的，
+  //   用户看到的就是「选项卡没法点」，因为按钮从来没出现过。
+  '拍板', // 「两个问题要你拍板：」
+  '先确认', // 「**先确认两件事再动手：**」
+  '问你', // 「### 问你两件事」
+  '你来定'
 ]
+
+/** 弱信号：**只在短引导句里才算**。
+ *
+ *  `还是` 是个两面词：「先做甲还是先做乙」是选择，
+ *  「产出还是那两份」是「仍然」。真语料里后者害我误判过一条
+ *  （748 条里唯一的假阳性，就是它）。
+ *
+ *  分界用**引导句长度**而不是词法：真在问你选哪个的那句话都短，
+ *  而误判那条是 40+ 字的陈述句收尾。24 字这个数是对着语料量的
+ *  （真例最长 30 字那条另有 `你定` 命中，不靠这条弱信号）。 */
+const ASKING_WEAK = ['还是']
+const WEAK_LEAD_MAX = 24
+
+/** 列表后面还能跟多少收尾话。**放宽这两个数之前先拿语料跑一遍** ——
+ *  它们直接决定误判率，而误判现在是有代价的（点一下就发出去了）。 */
+const TAIL_MAX_LINES = 2
+const TAIL_MAX_CHARS = 160
 
 /** 去掉 markdown 的粗体/行内码记号 —— 按钮上不该出现 `**` 和反引号 */
 const plain = (s: string): string =>
@@ -98,8 +122,16 @@ function splitItem(raw: string): ChatOption {
  * 认不认得出选项。认不出返回 null（**绝大多数消息都该返回 null**）。
  *
  * 五条判据，全部成立才算：
- *   ① 正文**结尾**是一段连续列表（选项一定在最后 —— 问完还接着说别的，
- *      那就不是在等你回答）
+ *   ① 正文结尾是一段连续列表，**后面最多再跟一小段收尾话**
+ *      （≤2 行且 ≤160 字，见 TAIL_* ）。
+ *
+ *      「必须一个字都不剩」曾经是这里的写法，**而它把这个功能整个废掉了**：
+ *      2026-09-02 拿本机 27 份 agent-history、748 条 assistant 正文实测，
+ *      `optionsOf` 认出 **0 条** —— 用户看到的「选项卡没法点」，
+ *      根因是按钮从来没出现过。真语料里选项后面几乎总要再说一句
+ *      （「你说一声我就开始」「来源：…」），**连本文件开头举的那个
+ *      ✅ 正例（「建议下一步（推荐第 1 条）」）都栽在这一条上。**
+ *      放宽之后同一份语料 8 命中 / 0 误判（每条都人工判过，测试里钉着）。
  *   ② 2-6 项（1 项不是选择；超过 6 项是清单不是选项）
  *   ③ 同一族标记（混着 `-` 和 `1.` 多半不是一组并列项）
  *   ④ 列表前面有一句**征求意见**的引导句（见 ASKING 的说明）
@@ -110,10 +142,24 @@ export function optionsOf(text: string): ChatOptions | null {
   if (!body) return null
   const lines = body.split('\n')
 
-  // ① 从末尾往上收连续的列表行
+  // ① 先找到**最后一个**列表行；它后面允许再有一小段收尾话。
+  let last = -1
+  for (let k = lines.length - 1; k >= 0; k--) {
+    if (MARKERS.some((m) => m.re.test(lines[k]))) {
+      last = k
+      break
+    }
+  }
+  if (last < 0) return null
+  const tail = lines.slice(last + 1).filter((l) => l.trim())
+  // 收尾话要短：长了说明列表只是段落中间的插叙，这段话的落点在别处。
+  if (tail.length > TAIL_MAX_LINES) return null
+  if (tail.join('').length > TAIL_MAX_CHARS) return null
+
+  // 从最后一个列表行往上收连续的列表行
   const items: string[] = []
   let family: string | null = null
-  let i = lines.length - 1
+  let i = last
   for (; i >= 0; i--) {
     const ln = lines[i]
     if (!ln.trim()) {
@@ -151,7 +197,10 @@ export function optionsOf(text: string): ChatOptions | null {
     }
   }
   if (!lead) return null
-  if (!ASKING.some((k) => lead.includes(k))) return null
+  const asks =
+    ASKING.some((k) => lead.includes(k)) ||
+    (lead.length <= WEAK_LEAD_MAX && ASKING_WEAK.some((k) => lead.includes(k)))
+  if (!asks) return null
 
   const options = items.map(splitItem).filter((o) => o.label.length > 0)
   // 去重：同样的标签出现两次说明解析错了，不是两个选项

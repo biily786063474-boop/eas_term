@@ -338,7 +338,10 @@ function MessageTurn({
               key={i}
               className="ac-opt"
               onClick={() => onPickOption(o.label)}
-              title="填进输入框（不会直接发出去）"
+              // 2026-09-02 起点了**直接发出去**（用户要的就是这个）。
+              // 提示语得跟着改 —— 留着旧的比没有更糟：它明写「不会直接发出去」，
+              // 用户照着这句话点，结果消息已经走了。
+              title="点一下就把这条发出去"
             >
               <span className="ac-opt-n">{i + 1}</span>
               <span className="ac-opt-b">

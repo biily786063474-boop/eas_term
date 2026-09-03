@@ -301,15 +301,23 @@ export function AgentChatView({
    *  这件事用户完全看不出来。 */
   const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
 
-  /** 点了 agent 给的某个选项。
-   *
-   *  **填进输入框，不自动发送。** 两个理由：
-   *  ① 选完常常还要补一句「但是 xxx / 顺便 yyy」，直接发出去就没机会了；
-   *  ② 识别选项是启发式的（见 options.ts），不自动发意味着**误点零代价** ——
-   *     这是敢在正文里认选项的前提之一。
-   *  输入框里已经有字就追加而不是覆盖，别把人正在打的话吃掉。 */
-  const pickOption = (t: string): void =>
-    setText((v) => (v.trim() ? v.replace(/\s*$/, '') + '\n' : '') + t)
+  // ── 点了 agent 给的某个选项 → **直接发出去** ────────────────────────────
+  //
+  // 用户 2026-09-02：「返回的选项卡无法点击、发送对应选项内容，需要打通这一层。」
+  //
+  // 原来是「填进输入框、等用户自己按发送」，理由是「识别是启发式的，
+  // 不自动发 = 误点零代价」。**那个顾虑现在由识别本身兜住了**：
+  // options.ts 的判据拿本机 748 条真实回复回归过，8 命中 / 0 误判，
+  // 而且每一条都人工判过是真在问你选哪个（测试里逐条钉着）。
+  //
+  // **输入框里已经打的字不动。** 选项是独立的一句话，直接发它；
+  // 用户正打到一半的内容留在原地，他自己决定要不要接着发 ——
+  // 清掉它等于替他把话吃了。
+  //
+  // 发送口有两个，**不能在这里统一**：会话已经起来了要走
+  // `handleFollowupSend`（它管乐观插入与失败回滚），还没起来要走 `handleSend`
+  // （它负责起进程）。所以下面两处 MessageList 各接各的，这里不留中间层 ——
+  // 中间层要么得用 ref 兜住闭包，要么就会在某一侧悄悄发错通道。
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -994,7 +1002,8 @@ export function AgentChatView({
           view={displayView}
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
-          onPickOption={pickOption}
+          // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
+          onPickOption={(t) => void handleFollowupSend(t)}
         />
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
@@ -1073,7 +1082,8 @@ export function AgentChatView({
         {restored.turns.length > 0 ? (
           <div className="ac-restored">
             <MessageList
-              onPickOption={pickOption}
+              // 还没起会话：这一下**顺带把进程起起来**，选项就是第一句话
+              onPickOption={(t) => void handleSend(t)}
               view={{ ...EMPTY_VIEW, turns: restored.turns, busy: false }}
               onApprovalDecide={() => undefined}
               leafId={leafId}
