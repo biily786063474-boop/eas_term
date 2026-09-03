@@ -58,13 +58,37 @@ export function CliSetupPanel(props: {
    *  这一层不挑也不拼命令：拼命令的地方只有 agentInstall.ts 一处。
    *  没有就只能引导去官网。 */
   installCmd?: string
+  /** 进来就开装，不停在「摆着命令等你点」那一屏。
+   *  **只有在用户已经明确表达过「装」的入口上才给 true**（空造梦空间那三颗按钮）。 */
+  autoStart?: boolean
   /** 从哪一步开始。'install' = 没装；'login' = 装了但没登录 */
   from: 'install' | 'login'
   onDone: (status: CliAuthStatus | null) => void
   onCancel: () => void
 }): React.JSX.Element {
-  const { cliId, displayName, installCmd, from, onDone, onCancel } = props
+  const { cliId, displayName, installCmd, autoStart, from, onDone, onCancel } = props
   const [step, setStep] = useState<Step>(from === 'login' ? { k: 'login' } : { k: 'confirm' })
+
+  // ── 「点了安装就直接装」──────────────────────────────────────────────────
+  //
+  // 用户 2026-09-02：「所有的安装都要在 UI 里面完成，不要让用户看到不该看到的
+  // 开发者相关的东西。**用户点击安装之后就直接安装完成。**」
+  //
+  // `confirm` 那一屏把 `curl … | bash` 摆出来等用户再点一次「开始安装」。
+  // 从空造梦空间那三颗按钮进来时，他点的那颗底下就写着「点一下装好」——
+  // **那一下就是他的确认**，再拦一次是让人在同一条路上被问两遍，
+  // 而且摆出来的那行命令正是他说的「不该看到的开发者相关的东西」。
+  //
+  // ⚠️ **只在 `autoStart` 时跳过。** 别把 `confirm` 整个删掉：
+  // 它跑的是**远程脚本以用户权限执行**（图纸 01 把这条列为全仓风险最高的出站），
+  // 从别的入口（没有明确表达过「装」的地方）进来时，那一屏仍然是必要的知情环节。
+  const started = useRef(false)
+  useEffect(() => {
+    if (!autoStart || started.current) return
+    if (step.k !== 'confirm' || !installCmd) return
+    started.current = true
+    begin()
+  }, [autoStart, step.k, installCmd])
   const aliveRef = useRef(true)
   const doneRef = useRef(onDone)
   doneRef.current = onDone

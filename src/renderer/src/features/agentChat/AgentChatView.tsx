@@ -1053,6 +1053,10 @@ export function AgentChatView({
               cliId={setupFor.cli.id as 'claude' | 'codex'}
               displayName={setupFor.cli.displayName}
               installCmd={setupFor.cli.installCmd}
+              // `from: 'install'` 只会在用户**自己点了一个没装的 CLI** 时置起
+              // （唯一置起点在上面那个 pickCliAndSetup）。那一下就是他的确认，
+              // 所以不再停在「摆着命令等你点开始」那一屏。
+              autoStart={setupFor.from === 'install'}
               from={setupFor.from}
               onCancel={() => setSetupFor(null)}
               onDone={(status) => {
@@ -1324,6 +1328,10 @@ export function AgentChatView({
               cliId={setupFor.cli.id as 'claude' | 'codex'}
               displayName={setupFor.cli.displayName}
               installCmd={setupFor.cli.installCmd}
+              // `from: 'install'` 只会在用户**自己点了一个没装的 CLI** 时置起
+              // （唯一置起点在上面那个 pickCliAndSetup）。那一下就是他的确认，
+              // 所以不再停在「摆着命令等你点开始」那一屏。
+              autoStart={setupFor.from === 'install'}
               from={setupFor.from}
               onCancel={() => setSetupFor(null)}
               onDone={(status) => {
