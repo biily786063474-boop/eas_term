@@ -143,6 +143,7 @@
   },
   "dependencies": {
     "@codemirror/merge": "^6.12.2",
+    "dependency-cruiser": "^18.2.0",
     "imagetracerjs": "^1.2.6",
     "konva": "^9.3.22",
     "mp4-muxer": "^5.2.2",

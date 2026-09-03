@@ -2695,3 +2695,33 @@
   /* 一句话本来就该放得下；真放不下也要换行，不许横向撑破灯箱 */
   overflow-wrap: anywhere;
 }
+
+/* 「关掉的对话」的折叠头。默认收起（用户 2026-09-03：空态太满）。
+   做成按钮而不是纯文字：它现在是可点的，得看起来可点。 */
+.ac-orphans-t {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--t-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.ac-orphans-t:hover {
+  color: var(--t-2);
+  background: var(--lift-1);
+}
+
+/* 展开时箭头转下来 —— 折叠态的方向本身就是「还有东西没露出来」的提示 */
+.ac-orphans-t svg {
+  transition: transform 0.18s ease;
+}
+
+.ac-orphans-t.on svg {
+  transform: rotate(90deg);
+}

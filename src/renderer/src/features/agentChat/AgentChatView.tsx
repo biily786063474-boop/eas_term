@@ -25,7 +25,7 @@ import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
-import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState } from '../../../../shared/types'
@@ -381,6 +381,8 @@ export function AgentChatView({
   /** 正在给哪个 CLI 走「装 → 登录」这条链路。非空 = 设置面板挂着。
    *  from 决定从哪一步进：没装从安装进，装了没登录直接进登录。 */
   const [setupFor, setSetupFor] = useState<{ cli: CliInfo; from: 'install' | 'login' } | null>(null)
+  /** 「关掉的对话」那段展开了没有。**默认收起** —— 见渲染处的注释。 */
+  const [orphansOpen, setOrphansOpen] = useState(false)
   useEffect(() => {
     // 没选、没装、或者这个 CLI 不支持会话，都不用查 —— 那些有各自的提示路径
     if (!selected || !selected.available || !selected.chatSupported) {
@@ -1174,8 +1176,21 @@ export function AgentChatView({
                 只列最近 3 条，再多就成了历史管理界面，不是这里该干的事。 */}
             {orphans.length > 0 && (
               <div className="ac-orphans">
-                <div className="ac-orphans-t">这个项目里还有关掉的对话</div>
-                {orphans.slice(0, 3).map((h) => (
+                {/* **默认折叠**（用户 2026-09-03：「中间这个部分应该默认折叠，
+                    现在这种状态看起来太满了」）。
+                    空态第一屏该只有一句 slogan 和输入框 —— 三条历史摊开会把它填满，
+                    而那是「可能要接回去」的东西，不是「现在要做」的事。
+                    条数写在标题上：不展开也知道有没有、有几条。 */}
+                <button
+                  type="button"
+                  className={`ac-orphans-t${orphansOpen ? ' on' : ''}`}
+                  onClick={() => setOrphansOpen((v) => !v)}
+                >
+                  <ChevronRightIcon size={11} />
+                  这个项目里还有 {orphans.length} 段关掉的对话
+                </button>
+                {orphansOpen &&
+                  orphans.slice(0, 3).map((h) => (
                   <button
                     key={h.leafId}
                     type="button"
@@ -1188,7 +1203,7 @@ export function AgentChatView({
                       {h.turns} 轮 · {fmtWhen(h.savedAt)}
                     </span>
                   </button>
-                ))}
+                  ))}
               </div>
             )}
           </>
