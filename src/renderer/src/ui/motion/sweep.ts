@@ -37,25 +37,9 @@ export const SWEEP = {
   gapDeg: 180
 } as const
 
-/**
- * 光标相对元素中心的角度，用作 conic-gradient 的起始角。
- *
- * **返回 CSS 的 deg 语义**：0° 在正上方、顺时针增大 —— 和 `atan2` 的
- * 「0 在正右方、逆时针」差 90° 且方向相反。两者混了的表现是
- * 「高光跟着鼠标转，但总差 90 度」，看着像随机跑。
- *
- * @param rect 元素的 `getBoundingClientRect()`（只用 4 个数，方便测）
- */
-export function sweepAngle(
-  rect: { left: number; top: number; width: number; height: number },
-  clientX: number,
-  clientY: number
-): number {
-  const cx = rect.left + rect.width / 2
-  const cy = rect.top + rect.height / 2
-  // atan2(y, x)：0 在正右、逆时针为正。+90 把 0 挪到正上方，
-  // 而 CSS conic 是顺时针，所以 y 分量取原样即可（屏幕 y 轴本来就朝下）。
-  const deg = (Math.atan2(clientY - cy, clientX - cx) * 180) / Math.PI + 90
-  // 归一化到 [0, 360)：负角度直接塞进 CSS 也能用，但读日志时一堆负数很难对
-  return ((deg % 360) + 360) % 360
-}
+// **`sweepAngle`（光标 → 角度）已删。** 2026-09-03 用户改了三轮，最后定的是
+// 「平时自己转、hover 时高光收掉换成扫光」—— 高光不再跟指针，那个函数没有调用点了。
+// 留着一个没人用的函数（还带 4 条测试）比删掉更糟：下一个人会以为它还在生效。
+// 真要恢复跟指针：`atan2(y-cy, x-cx)*180/PI + 90`，再归一化到 [0,360)。
+// **注意 CSS conic 是「0° 在正上、顺时针」，atan2 是「0 在正右、逆时针」** ——
+// 混了的表现是「跟着鼠标转但总差 90 度」，看着像随机跑。
