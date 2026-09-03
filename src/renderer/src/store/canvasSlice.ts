@@ -329,21 +329,27 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   addProjectFrame: async (projectId, x, y) => {
     if (get().canvas.frames.some((f) => f.projectId === projectId)) return
-    // 项目在画布上从零开始 → 先开一个面板，Frame 里才有内容。
-    // **开的是 AI 对话而不是终端** —— 规格 §六：这个前端是新建 Frame 的新默认
-    //（终端保留，只是不再是唯一入口，面板类型下拉里随时能换回去）。
-    // 只影响「这个项目一个 leaf 都还没有」这条路；已经开着终端的项目拖进画布，
-    // 照旧把现有终端铺进 Frame，不动用户正在干的活。
-    let leaves = get()
+    // 这个项目已经开着的面板，铺进新 Frame —— **不动用户正在干的活**。
+    const leaves = get()
       .tabs.filter((t) => t.projectId === projectId)
       .flatMap((t) => collectLeaves(t.root))
-    if (!leaves.length) {
-      await get().openAgentPane({ projectId })
-      leaves = get()
-        .tabs.filter((t) => t.projectId === projectId)
-        .flatMap((t) => collectLeaves(t.root))
-    }
-    if (!leaves.length) return
+
+    // ── 一个 leaf 都没有时：**建一个空的造梦空间**，什么都不替用户开 ──────────
+    //
+    // 用户 2026-09-02：「双击之后建立了一个项目的 frame，**初次建立 frame 是空的
+    // frame**。空的 frame 上面有三个按钮，分别是 claude code、codex 和系统默认的
+    // harness。用户点击后自动在 frame 中创建 AI 对话模块。」
+    //
+    // **这条推翻了原来那个默认**：这里以前会 `await openAgentPane({ projectId })`，
+    // 注释写着「规格 §六：AI 对话是新建 Frame 的新默认」。那一版替用户做了两个决定
+    // ——「你要的是 AI 对话」和「用哪个 CLI」（后者走 pickDefaultCli 推测）。
+    // 新用户于是一上来就撞进一个可能没配好的 CLI，而他还不知道有得选。
+    // 现在把这两个决定交还给他：Frame 空着，`FrameStart` 摆出三颗按钮 + 一颗
+    // 「先开个终端」，点哪颗开哪个。
+    //
+    // ⚠️ **空 Frame 是允许的，别再加「没内容就不建」的守卫。**
+    // 原来这里有一句 `if (!leaves.length) return` —— 留着它，双击新项目
+    // 会变成「什么都没发生」，那是这条改动最容易犯的错。
     const project = get().projects.find((p) => p.id === projectId)
     const frame = makeProjectFrame(leaves, project?.name ?? '未命名', projectId ?? null, x, y)
     set((st) => ({ canvas: { ...st.canvas, frames: [...st.canvas.frames, frame] } }))

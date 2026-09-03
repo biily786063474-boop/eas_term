@@ -311,7 +311,19 @@ export interface CanvasSlice {
    *  画布上没有节点，用户在画布模式下什么都看不到（2026-08-19 端到端验证踩到）。 */
   addAgentNode: (
     frameId: string,
-    opts?: { owner?: 'team'; role?: string; initialMessage?: string ; cwd?: string; sessionId?: string}
+    /** 原样转给 `openAgentPane` —— **它那份参数表才是权威**，这里只是个通道。
+     *  两边各写一份必然分叉：`cli` 就是 2026-09-03 加的时候，
+     *  openAgentPane 那侧加了、这侧忘了，于是空造梦空间上点了按钮
+     *  CLI 传不进去（编译期拦住了，否则就是「选了 Codex 却开出 Claude」）。 */
+    opts?: {
+      owner?: 'team'
+      role?: string
+      initialMessage?: string
+      cwd?: string
+      sessionId?: string
+      /** 钉死用哪个 CLI（空造梦空间那三颗引导按钮靠它送值） */
+      cli?: string
+    }
   ) => Promise<string | undefined>
   /** 开一个终端并把命令**填进去但不回车**（首启引导装 CLI 用）。
    *  只填不发是刻意的：跑什么用户看得见，回车由他自己按——我们不在别人机器上静默装东西。 */

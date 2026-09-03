@@ -22,6 +22,7 @@ import {
   CameraIcon,
   SparkleIcon, ChipIcon } from '../../ui/Icons'
 import { CanvasFileNode } from './CanvasFileNode'
+import { FrameStart } from './FrameStart'
 import { CanvasFreeFileNode } from './CanvasFreeFileNode'
 import { CanvasMiniMap } from './CanvasMiniMap'
 import { CanvasComponentNode } from './CanvasComponentNode'
@@ -1419,7 +1420,9 @@ export function CanvasStage(): JSX.Element {
                 {f.collapsed ? <PlusIcon size={13} /> : <MinusIcon size={13} />}
               </button>
             </div>
-            {!f.collapsed && f.nodes.length === 0 && <div className="cframe-empty">空 Frame</div>}
+            {/* 空造梦空间 → 引导（三颗 AI 按钮 + 先开个终端），不再是一行死字。
+                「空 Frame」那句话只说了现状，没告诉人下一步该干什么。 */}
+            {!f.collapsed && f.nodes.length === 0 && <FrameStart frameId={f.id} />}
             {!f.collapsed &&
               f.nodes
                 // **有 leafId 就不画壳。** 那说明这个节点的内容已经由 PaneLayer
