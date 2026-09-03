@@ -8,6 +8,7 @@ import { HistoryView } from '../../git/HistoryView'
 import { DesignNode, type SavedBlob } from '../../design/DesignNode'
 import { GitBranchIcon, DesignIcon, ChipIcon } from '../../../ui/Icons'
 import { TeamPanel } from '../../team/TeamPanel'
+import { CodeGraphView } from '../../codegraph/CodeGraphView'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
 export interface CanvasComponentCtx {
@@ -84,7 +85,32 @@ const teamComponent: CanvasComponentDef = {
   render: (ctx) => <TeamPanel cwd={ctx.cwd} />
 }
 
-export const CANVAS_COMPONENTS: CanvasComponentDef[] = [gitComponent, designComponent, teamComponent]
+/** 代码视图：这个项目的模块依赖与耦合状态。
+ *
+ *  `needsProject: true` —— 没有项目就没有可扫的东西。
+ *
+ *  默认给得比别的组件大（620×480）：它默认展示的是领地卡片网格
+ *  （这个仓库 23 块地），太窄的话每行只放得下一张卡，就成了一列长条。
+ *
+ *  ⚠️ **复用 `CodeGraphView`，不为这个入口另写一份。** 面板类型下拉里
+ *  已经有「代码视图」了，两处各写一份必然分叉 —— 这正是组件协议里
+ *  「只 push def、不动渲染框架」那条要防的事。 */
+const codeGraphComponent: CanvasComponentDef = {
+  id: 'codegraph',
+  name: '代码视图',
+  Icon: GitBranchIcon,
+  description: '模块依赖图 / 耦合与循环依赖',
+  defaultSize: { w: 620, h: 480 },
+  needsProject: true,
+  render: (ctx) => <CodeGraphView root={ctx.cwd} />
+}
+
+export const CANVAS_COMPONENTS: CanvasComponentDef[] = [
+  gitComponent,
+  designComponent,
+  teamComponent,
+  codeGraphComponent
+]
 
 export const getCanvasComponent = (id: string): CanvasComponentDef | undefined =>
   CANVAS_COMPONENTS.find((c) => c.id === id)
