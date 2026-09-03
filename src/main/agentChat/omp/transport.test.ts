@@ -412,3 +412,51 @@ test('stats() 是给数据层那份——**不含花费**（花费的唯一出�
   assert.equal(s.costUsd, undefined, '两处都放同一个数，跨会话求和就会加两遍')
   assert.equal(s.currency, 'USD')
 })
+
+// ── 2026-09-03 · 用户实拍：omp 卡在「正在处理」，点停止也停不下来 ────────────
+//
+// 日志最后一行是 `[omp] omp 进程已结束`，比截图早 4 分钟 —— 进程早死了，
+// 界面却一直转。根因两条叠在一起：
+//   ① `interrupt()` 第一行 `if (phase !== 'prompting') return` —— 进程死了
+//      phase 是 'dead'，这一下**什么都没做**；
+//   ② `session.ts` 的 ACP 分支只推一条 `fatal:false` 的提醒，**没有 turn.done**，
+//      它指望 transport 拿到 cancelled 响应时产出 —— 而那条响应永远不会来。
+//
+// 「能一次放倒三支 busy 判据的只有 turn.done」这条结论，非 ACP 分支的注释里
+// 早就写着（那边为此修过一次），ACP 分支漏了。
+
+test('**进程死了之后按停止：interrupt 要如实说「我没接手」**', async () => {
+  const h = harness()
+  await open(h)
+  h.live.deliver('干活')
+  await tick()
+  h.f.exit() // 进程没了
+  await tick()
+  assert.equal(h.live.interrupt(), false, '没接手就要返回 false，让调用方自己补 turn.done')
+})
+
+test('正常在跑时按停止：interrupt 接手，返回 true', async () => {
+  const h = harness()
+  await open(h)
+  await tick()
+  assert.equal(h.live.interrupt(), true)
+})
+
+test('还没起会话时按停止：返回 false（没有轮次可停）', () => {
+  const h = harness()
+  assert.equal(h.live.interrupt(), false)
+})
+
+test('**进程在有排队消息时死掉，也要把那一轮收掉** —— 否则界面一直转', async () => {
+  const h = harness()
+  await open(h)
+  h.live.deliver('第一条')
+  await tick()
+  h.live.deliver('第二条') // 上一轮在飞，这条进队列
+  await tick()
+  const before = h.kinds().filter((k) => k === 'turn.done').length
+  h.f.exit()
+  await tick()
+  const after = h.kinds().filter((k) => k === 'turn.done').length
+  assert.ok(after > before, '进程死了却没有 turn.done，busy 三支判据一支都放不倒')
+})

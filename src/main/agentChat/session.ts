@@ -1363,7 +1363,25 @@ export function registerAgentChatHandlers(): void {
     // 用户看到的是「我只是停了一下，整段对话没了」。turn.done 由 transport 在
     // 拿到 cancelled 响应时产出，不在这里合成。
     if (live?.acp) {
-      live.acp.interrupt()
+      // **看返回值。** true = 它接手了，`turn.done` 由 transport 在拿到
+      // cancelled 响应时产出（不在这里合成，否则会重复）。
+      // false = 这一刻没有在飞的轮次 —— 最常见的是**进程已经死了**，
+      // 那条 cancel 发不出去、响应也永远不会来。这时必须自己补 turn.done，
+      // 理由和下面非 ACP 那支一模一样：busy 三支判据里，
+      // 能一次放倒三支的只有 turn.done，`error` 就算 fatal 也只放倒 turnActive。
+      //
+      // 2026-09-03 用户实拍就是这条：omp 进程先没了，界面停在「正在处理」，
+      // 按停止毫无反应。
+      if (!live.acp.interrupt()) {
+        handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        live.rec = { ...live.rec, busy: false }
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: '这一轮已经结束了（后台进程已退出）。接着说会重新起一个。'
+        })
+        return
+      }
       handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
       return
     }

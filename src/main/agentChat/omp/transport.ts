@@ -98,8 +98,19 @@ export interface AcpLive {
   deliver(message: string): void
   /** 会话中途改模型 / 强度。走 `session/set_config_option`，不重启、不丢上下文 */
   setParams(patch: { model?: string; effort?: string }): void
-  /** 用户按了「停」。发 cancel、等响应、**进程留着** */
-  interrupt(): void
+  /** 用户按了「停」。发 cancel、等响应、**进程留着**。
+   *
+   *  **返回「我有没有接手这一轮的收尾」**：
+   *  `true`  —— cancel 已发出，`turn.done` 由这边在拿到 cancelled 响应时产出；
+   *  `false` —— 这一刻根本没有在飞的轮次（最常见的是**进程已经死了**），
+   *             调用方必须**自己补 `turn.done`**。
+   *
+   *  ⚠️ 这个返回值不是可有可无的。2026-09-03 用户实拍：omp 进程先死了，
+   *  界面还停在「正在处理」，按停止毫无反应 —— 因为这里直接 return、
+   *  而 `session.ts` 那侧只推了一条 `fatal:false` 的提醒。
+   *  渲染层的 busy 有三支判据，**能一次放倒三支的只有 `turn.done`**
+   *  （非 ACP 分支的注释里早写着，那边为此修过一次）。 */
+  interrupt(): boolean
   /** 会话被关掉：发 `session/close`（不等），随后调用方照旧 kill */
   close(): void
   /** 渲染层点了审批卡片。不是这条路的 id 返回 false */
@@ -448,8 +459,10 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       })
     },
 
-    interrupt(): void {
-      if (phase !== 'prompting' || !sessionId) return
+    interrupt(): boolean {
+      // 没有在飞的轮次就**如实说没接手**，让调用方补 turn.done。
+      // 进程已死（phase === 'dead'）走的正是这条 —— 那是用户撞到的那次。
+      if (phase !== 'prompting' || !sessionId) return false
       // `session/cancel` 是**通知**（上游没有对应的响应），收到后它会立刻用
       // `stopReason:'cancelled'` 回掉在飞的那条 prompt。所以这里发完就等那条响应，
       // **不 kill 进程**：kill 会打断它后台那 5 秒的收尾，而收尾没做完的话
@@ -463,6 +476,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
         proc?.kill()
       }, CANCEL_WAIT_MS)
       t.unref?.()
+      return true
     },
 
     close(): void {
