@@ -238,6 +238,7 @@
 }
 
 .cframe-start-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -245,7 +246,8 @@
   min-width: 92px;
   padding: 12px 14px;
   border: 1px solid var(--stroke-input);
-  border-radius: 14px;
+  /* 用户给定 radius=18 */
+  border-radius: 18px;
   background: var(--lift-1);
   color: var(--t-1);
   font-size: 11.5px;
@@ -5674,4 +5676,83 @@
   inset: 0;
   pointer-events: none;
   z-index: 40;
+}
+
+/* ── 深色玻璃药丸按钮：一道细亮镜面高光沿圆角边框滑动，方向跟着鼠标转 ─────────
+   用户 2026-09-03 给的规格。参数（radius=18 / blur=0 / intensity=1 / speed=0.35）
+   在 `ui/motion/sweep.ts`，那里也写了**为什么不用 webgl-ogl**：
+   用户连规格一起给的坑是「每个按钮吃一个 WebGL 上下文，一屏里放好几个会明显掉帧」，
+   而要加特效的正是并排的三颗 —— 恰好命中。conic-gradient 上下文 0 个。
+
+   做法：一层 ::before 铺满按钮，画一个 conic-gradient，
+   用 mask 只留下边框那一圈（`padding-box` 挖掉中间）。
+   `--sweep` 由 JS 在 mousemove 时写入；没有它（鼠标不在上面）时
+   由 `spin` 动画自动巡游。 */
+@property --sweep {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.cframe-start-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px; /* 环的粗细：**细** —— 粗了就从「镜面高光」变成「发光边框」 */
+  background: conic-gradient(
+    from var(--sweep),
+    transparent 0deg,
+    var(--sweep-hl) 16deg,
+    transparent 34deg
+  );
+  /* 只留边框那一圈：外层 border-box 减去内层 content-box */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  /* 没有鼠标时自动巡游（ambient）。周期对应 speed=0.35，见 ambientPeriodMs 的注释。 */
+  animation: cframe-sweep 5714ms linear infinite;
+}
+
+/* 触发：hover / click 都亮起来（用户规格：click / hover / ambient）。
+   平时留一点点，才叫 ambient —— 全隐则「跟着鼠标转」这件事没人会发现。 */
+.cframe-start-btn::before { opacity: 0.35; }
+.cframe-start-btn:hover::before,
+.cframe-start-btn:active::before { opacity: 1; }
+
+/* 鼠标在上面时角度由 JS 写死，停掉自动巡游 —— 两者同时作用会打架 */
+.cframe-start-btn:hover::before { animation: none; }
+
+@keyframes cframe-sweep {
+  to {
+    --sweep: 360deg;
+  }
+}
+
+/* ⚠️ **亮色下要换高光色**（用户给的坑的后半句：「亮色背景上高光看不出来」）。
+   暗色用近白，亮色用近黑 —— 「镜面高光」在浅底上本来就该是暗的那一道。 */
+:root {
+  --sweep-hl: rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme='light'] {
+  --sweep-hl: rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --sweep-hl: rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* 尊重「减少动效」：留住高光的静态那一圈，只停掉转动 */
+@media (prefers-reduced-motion: reduce) {
+  .cframe-start-btn::before {
+    animation: none;
+  }
 }

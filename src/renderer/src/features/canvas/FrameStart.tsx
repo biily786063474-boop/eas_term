@@ -18,6 +18,7 @@ import { useStore } from '../../store'
 import type { CliInfo } from '../../../../shared/agentChat'
 import type { OmpStatus } from '../../../../shared/ompSetup'
 import { startChoices } from './startChoices.ts'
+import { sweepAngle } from '../../ui/motion/sweep.ts'
 import { ClaudeIcon, CodexIcon, SparkleIcon, TerminalIcon } from '../../ui/Icons'
 
 /** CLI 清单**整个应用只拉一次**：每个空造梦空间都拉一遍等于开一堆重复 IPC，
@@ -76,6 +77,18 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
   )
   if (!choices.length) return null
 
+  /** 「高光跟着鼠标转」：把角度写进 CSS 变量，conic-gradient 读它。
+   *  **直接改 style 而不是 setState** —— mousemove 每帧一次，
+   *  走 React 的话这三颗按钮每帧各重渲染一遍，正是这个效果最不该付的代价。 */
+  const onMove = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    const el = e.currentTarget
+    el.style.setProperty('--sweep', `${sweepAngle(el.getBoundingClientRect(), e.clientX, e.clientY)}deg`)
+  }
+  /** 鼠标离开就交还给自动巡游：清掉变量，CSS 那侧的 animation 接管。 */
+  const onLeave = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    e.currentTarget.style.removeProperty('--sweep')
+  }
+
   const start = (cli: string): void => {
     if (busy) return
     setBusy(true)
@@ -93,6 +106,8 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
             className={`cframe-start-btn${state === 'ready' ? '' : ' pending'}`}
             disabled={busy}
             onClick={() => start(cli.id)}
+            onMouseMove={onMove}
+            onMouseLeave={onLeave}
           >
             {iconOf(cli.id)}
             <span className="cframe-start-name">{cli.displayName}</span>
