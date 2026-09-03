@@ -1218,10 +1218,18 @@
   position: absolute;
   right: 3px;
   bottom: 3px;
-  width: 6px;
-  height: 6px;
+  /* 圆角要和模块**同心**，不是随便给个圆角就算配上了。
+     几何：抓手盒比容器内缩 1px，::after 再内缩 3px —— 外沿距容器边 4px。
+     容器圆角 var(--radius-lg)，所以这道弧的半径必须是 (--radius-lg - 4px)，
+     两条弧才共用同一个圆心。给别的值（比如照抄 20px、或者图省事写 50%）
+     的表现是「有圆角了但还是不贴」，比直角更难看出问题出在哪。
+     宽高也必须 ≥ 半径：小于半径时浏览器会把圆角按盒子尺寸等比夹小，
+     弧就比容器更弯 —— 这正是它原来 6×6 时看着别扭的另一半原因。 */
+  width: calc(var(--radius-lg) - 4px);
+  height: calc(var(--radius-lg) - 4px);
   border-right: 2px solid var(--fg-dim);
   border-bottom: 2px solid var(--fg-dim);
+  border-bottom-right-radius: calc(var(--radius-lg) - 4px);
   opacity: 0.6;
 }
 
@@ -1247,15 +1255,17 @@
   z-index: 5;
 }
 
+/* 几何同 `.cfile-rz::after`（容器也是 --radius-lg），改一个记得改另一个 */
 .pane-rz::after {
   content: '';
   position: absolute;
   right: 3px;
   bottom: 3px;
-  width: 7px;
-  height: 7px;
+  width: calc(var(--radius-lg) - 4px);
+  height: calc(var(--radius-lg) - 4px);
   border-right: 2px solid var(--fg-dim);
   border-bottom: 2px solid var(--fg-dim);
+  border-bottom-right-radius: calc(var(--radius-lg) - 4px);
   opacity: 0.5;
 }
 
