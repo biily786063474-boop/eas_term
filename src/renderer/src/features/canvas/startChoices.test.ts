@@ -29,10 +29,16 @@ test('不支持在这儿跑会话的不列出来 —— 列了也是点了没用
   assert.deepEqual(ids(startChoices([cli('claude'), cli('x', { chatSupported: false })], () => true)), ['claude'])
 })
 
-test('**没装 → 「点一下装好」**，不是藏起来', () => {
+test('**没装的也列出来**，不是藏起来 —— 状态标成 need-install', () => {
   const [c] = startChoices([cli('claude', { available: false })], () => true)
   assert.equal(c.state, 'need-install')
-  assert.equal(c.hint, '点一下装好')
+})
+
+test('**不带任何提示文案** —— 三颗并排，一颗底下多一行字就三颗不一样高', () => {
+  // 用户 2026-09-03：「这三个胶囊中不要有什么点一下登录类似的文案」。
+  // 状态留着（界面靠它压暗一档），只是不再用文字讲。
+  const [c] = startChoices([cli('claude', { available: false })], () => true)
+  assert.ok(!('hint' in c), 'hint 字段回来了')
 })
 
 test('装了但没配好 → 「点一下登录」（和没装是两件事）', () => {
@@ -43,7 +49,6 @@ test('装了但没配好 → 「点一下登录」（和没装是两件事）', 
 test('**探测还没回来（undefined）→ 按就绪显示**，别在加载中吓唬人', () => {
   const [c] = startChoices([cli('claude')], () => undefined)
   assert.equal(c.state, 'ready')
-  assert.equal(c.hint, undefined, '一切正常时不该有字解释「一切正常」')
 })
 
 test('没装优先于没配好 —— 都不成立时先说装', () => {

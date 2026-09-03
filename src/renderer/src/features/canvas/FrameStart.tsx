@@ -86,7 +86,7 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
     <div className="cframe-start">
       <div className="cframe-start-hd">选一个 AI 开始</div>
       <div className="cframe-start-row">
-        {choices.map(({ cli, state, hint }) => (
+        {choices.map(({ cli, state }) => (
           <button
             key={cli.id}
             type="button"
@@ -96,7 +96,6 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
           >
             {iconOf(cli.id)}
             <span className="cframe-start-name">{cli.displayName}</span>
-            {hint && <span className="cframe-start-hint">{hint}</span>}
           </button>
         ))}
       </div>

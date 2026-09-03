@@ -20,11 +20,15 @@ export const START_ORDER = ['claude', 'codex', 'omp'] as const
 /** 一颗按钮该长什么样。 */
 export interface StartChoice {
   cli: CliInfo
-  /** 点下去会发生什么。**界面按它决定小字，不是按 available 单独判** ——
-   *  「装了但没登录」和「没装」对用户是两件事，混成一个布尔就只能说一句含糊话。 */
+  /** 点下去会发生什么。
+   *
+   *  **界面上不再显示这句话**（用户 2026-09-03：「这三个胶囊中不要有什么
+   *  点一下登录类似的文案」）—— 三颗并排的胶囊，一颗底下多一行字，
+   *  三颗就不一样高，而那行字说的事点进去自然会看到。
+   *
+   *  留着这个字段是因为**界面仍然要靠它把没配好的那颗压暗一档**
+   *  （`.pending`），只是不再用文字讲。 */
   state: 'ready' | 'need-install' | 'need-setup'
-  /** 按钮下面那行小字。`ready` 时没有 —— 一切正常时不该有字解释「一切正常」。 */
-  hint?: string
 }
 
 /**
@@ -49,9 +53,9 @@ export function startChoices(
     .filter((c) => c.chatSupported)
     .sort((a, b) => rank(a.id) - rank(b.id))
     .map((cli) => {
-      if (!cli.available) return { cli, state: 'need-install' as const, hint: '点一下装好' }
-      // 探测还没回来时不显示「要登录」：那一瞬间的红字是假的
-      if (setUp(cli) === false) return { cli, state: 'need-setup' as const, hint: '点一下登录' }
+      if (!cli.available) return { cli, state: 'need-install' as const }
+      // 探测还没回来时不压暗：那一瞬间的「没配好」是假的
+      if (setUp(cli) === false) return { cli, state: 'need-setup' as const }
       return { cli, state: 'ready' as const }
     })
 }
