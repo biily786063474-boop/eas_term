@@ -42,7 +42,8 @@
 - **闸 0 靠 `EAS_TEAM_ROLE` 环境变量判定**，不是猜测 —— 防子 agent 递归派活炸开。
 - **要不要隔离是派活方自己填的**：`agents[].isolation` **只认严格的 `'worktree'`，没填 / 写错 /
   大小写不同一律 `none`**（`isolationOf` 与 `batchSpec.ts` 注释写着"**不猜**"）。**系统不会替你
-  判断这个角色写不写代码** —— `roles.ts` 那套角色是画布上角色选择器（`CanvasAgentBar`）用的，
+  判断这个角色写不写代码** —— `roles.ts` 那套角色是 AI 对话工具栏上的角色轮播
+  （`agentChat/RolePicker.tsx`，判断层在 `agentChat/carousel.ts`）用的，
   `team_spawn` 的 `role` 只是自由的 kebab-case 标签（同时是 `.plans/<role>/` 的目录名），
   两者没有任何代码关联。**派写码 agent 忘填 `isolation:'worktree'` = 直接落进 E-07 那个
   静默覆盖，而且不会报错。**

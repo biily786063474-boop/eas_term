@@ -2725,3 +2725,197 @@
 .ac-orphans-t.on svg {
   transform: rotate(90deg);
 }
+
+/* ── 角色轮播（RolePicker）─────────────────────────────────────────────────
+   一次一张卡，横向滑动/拖拽切换，底部圆点指示。
+
+   ⚠️ 这套样式**曾经整个不存在** —— 组件写了、CSS 忘了写，
+   于是线上是一堵没有边框没有底色的裸文字墙（2026-09-03 用户实拍）。
+   新增 .rp-* 类时记得样式和组件同一个 commit 走。 */
+
+.rolepick-card {
+  z-index: 60;
+  width: 288px;
+  padding: 12px 10px 10px;
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--glass-3);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--glass-highlight), 0 18px 48px var(--ink-3);
+  color: var(--fg);
+}
+
+.rp-stage {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* 裁剪窗口。卡片被拖出边界的部分在这儿切掉。
+   overflow:hidden 会顺带裁掉倾斜时甩出去的角 —— 那正是我们要的「窗口感」。 */
+.rp-win {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+/* 卡片本体。
+   **「弹簧」和「回弹带倾斜」都出自下面这条曲线** ——
+   cubic-bezier 的第二个控制点 y 大于 1，回正时会冲过 0 再荡回来，
+   而 rotate 和 translateX 在同一个 transform 里，于是倾斜跟着一起过冲。
+   强度按规格是 subtle：1.28 已经能看出来，再大就开始晃眼。 */
+.rp-slide {
+  padding: 11px 12px 10px;
+  border-radius: var(--radius-md);
+  background: var(--lift-1);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  transition: transform 0.42s cubic-bezier(0.22, 1.28, 0.36, 1);
+}
+.rp-slide.dragging {
+  cursor: grabbing;
+  /* 跟手：拖的时候必须**没有** transition，否则每一帧都在追一个旧目标 */
+  transition: none;
+}
+
+.rp-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.rp-nm {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rp-dot-c {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.rp-cur {
+  flex: none;
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* 说明文字：**两行起，最多三行**。
+   这里原来是死高三行，理由是「浮层 bottom 定位，高度一变整张卡就在原地弹」——
+   理由没错，但代价看错了：9 个角色里只有「全流程」那条要三行，其余全是一行，
+   于是每张卡中间空掉两行（2026-09-03 实测截图）。
+   两行起把常见情况的空档砍掉一半，而高度最多只在落到那一张时跳一行（约 17px），
+   比「张张都空着」划算。 */
+.rp-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  min-height: 2.9em;
+  overflow: hidden;
+  margin: 5px 0 10px;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rp-use {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--lift-2);
+  color: var(--text-1);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+.rp-use:hover:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.rp-use:disabled {
+  color: var(--text-3);
+  cursor: default;
+}
+
+.rp-arrow {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast);
+}
+.rp-arrow:hover:not(:disabled) {
+  background: var(--lift-2);
+  color: var(--text-1);
+}
+/* 到头的箭头**留在原地变淡，不隐藏** —— 隐藏会让两侧宽度变化，卡片跟着横跳 */
+.rp-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.rp-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 9px;
+}
+.rp-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--text-3);
+  opacity: 0.35;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-fast),
+    transform var(--dur-fast);
+}
+.rp-dot:hover {
+  opacity: 0.7;
+}
+.rp-dot.on {
+  opacity: 1;
+  transform: scale(1.35);
+}
+/* 「当前生效的角色」那一颗染成强调色 ——
+   于是翻到别处时，你仍看得见自己原本在哪一颗上 */
+.rp-dot.cur {
+  background: var(--accent);
+  opacity: 0.85;
+}
+
+/* 角色生效时，工具栏上那枚 icon 亮起来 */
+.rolepick-btn.on {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-slide {
+    transition: none;
+  }
+}
