@@ -197,7 +197,9 @@ const TOOLS = [
   },
   {
     name: 'canvas_list_frames',
-    description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。',
+    description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。' +
+      '**Frame 就是用户口中的「造梦空间」，也叫「项目区」** —— 一个 Frame 绑一个项目，'  +
+      '装着它的终端、AI 对话、文件预览。用户说「造梦空间」「项目区」「我那个框」，指的都是它。',
     inputSchema: { type: 'object', properties: {} }
   },
   {

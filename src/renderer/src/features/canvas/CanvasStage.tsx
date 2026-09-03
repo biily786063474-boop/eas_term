@@ -1256,7 +1256,7 @@ export function CanvasStage(): JSX.Element {
           本组件刻意不订阅它（见上面第 58 行），不为一句引导把那次重渲染优化撤回来。
           画了便签但还没有项目的画布上仍然显示这句 —— 那时它说的也是实话。 */}
       {!frames.length && !freeNodes.length && (
-        <div className="canvas-empty-hint">双击开始你第一个项目吧</div>
+        <div className="canvas-empty-hint">双击创建你第一个造梦空间</div>
       )}
       <div
         className="canvas-world"
