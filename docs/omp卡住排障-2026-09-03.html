@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>omp 卡在「正在处理」· 排障报告</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">omp 排障</span>
+    <a href="#结论">结论</a>
+    <a href="#证据">证据链</a>
+    <a href="#更正">一次误判</a>
+    <a href="#根因">根因</a>
+    <a href="#修复">修了什么</a>
+    <a href="#教训">教训</a>
+    <a href="#下一步">下一步</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">排障报告 · 2026-09-03</div>
+  <h1>omp 卡在「正在处理」，且点停止没反应</h1>
+  <p class="lede">
+    不是崩溃，不是模型慢，也不是网络。<strong style="color:#f5f5f5">是一条消息从来没被送出去</strong> ——
+    它排进了队列，而那一刻没有任何代码会去取它。
+  </p>
+  <div class="meta">
+    <span>现象时间 <b>01:31 – 01:57</b></span>
+    <span>会话 <b>设计 / MiniMax-M3</b></span>
+    <span>证据 <b>omp 自带日志 + 会话 jsonl</b></span>
+    <span>修复 <b>67f7e13 · ee3c1f8</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>VERDICT</h2>
+  <div class="sectitle">结论先说</div>
+  <p class="secnote">两个独立缺陷叠在一起：一个让消息发不出去，另一个让你连停都停不掉。</p>
+
+  <div class="verdict">
+    <div class="vlabel">真根因</div>
+    <p style="margin:0">
+      <code>ensureAndSend</code> 把消息推进队列之后<strong>少调了一次 <code>pump()</code></strong>。
+      于是「会话活着、且刚好空闲」时发的消息，永远躺在队列里没人取。
+      而这正是<strong>「它答完话之后我再问一句」</strong>这个最普通的用法。
+    </p>
+  </div>
+
+  <div class="grid g4" style="margin-top:24px">
+    <div class="stat"><div class="num n-ro">1</div><div class="lab">整段会话里 omp 真正收到的用户消息条数</div></div>
+    <div class="stat"><div class="num n-am">2</div><div class="lab">界面上显示了、却从未送达的消息</div></div>
+    <div class="stat"><div class="num n-sk">26<span style="font-size:16px"> 分钟</span></div><div class="lab">从卡住到进程正常退出，全程无报错</div></div>
+    <div class="stat"><div class="num n-em">2</div><div class="lab">修掉的独立缺陷</div></div>
+  </div>
+
+  <div class="warn" style="margin-top:24px">
+    <div class="vlabel">为什么之前没暴露</div>
+    <p style="margin:0">
+      三条投递路径里只有一条是坏的。<b>边跑边打下一句</b>走排队路径（通）、
+      <b>隔很久再发</b>会因会话被空闲回收走重开路径（通）——
+      只有<b>刚答完就接着问</b>这个窗口会撞上。
+    </p>
+  </div>
+</section>
+
+<section id="证据">
+  <h2>EVIDENCE</h2>
+  <div class="sectitle">证据链：omp 自己写了日志</div>
+  <p class="secnote">
+    这次能定性，靠的是 omp 把日志和完整会话记录都落在了本地。位置此前没被用过，值得记住。
+  </p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>位置</th><th>内容</th><th>这次起了什么作用</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>omp/logs/omp.&lt;日期&gt;.&lt;pid&gt;.log</code></td>
+          <td>每个 omp 进程一份，JSON 行格式，含 warn / error</td>
+          <td>确认<b>没有任何 error</b>，排除崩溃</td>
+        </tr>
+        <tr>
+          <td><code>omp/agent/sessions/&lt;项目&gt;/*.jsonl</code></td>
+          <td>完整会话记录：每条消息、工具调用、退出原因</td>
+          <td><b>决定性证据</b>：整段会话只有 1 条用户消息</td>
+        </tr>
+        <tr>
+          <td><code>agent-sessions.log</code></td>
+          <td>app 侧的进程起止流水</td>
+          <td>提供了时间锚点，但<b>也是这次误判的来源</b>（见下节）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>会话记录里发生了什么</h3>
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">08:30:18Z · 01:30 本地</div>
+      <div class="tt">用户发出第一条：「我想做一个图标设计…」</div>
+      <div class="td">正常送达，omp 收到。</div>
+    </div>
+    <div class="it on">
+      <div class="tm">08:30:36 – 08:31:10</div>
+      <div class="tt">助手回了两轮，最后停在「问题先停在这」并等待回答</div>
+      <div class="td">这一刻会话进入<b>空闲</b>（<code>phase = 'ready'</code>）—— 坑就在这里张着口。</div>
+    </div>
+    <div class="it">
+      <div class="tm">此后</div>
+      <div class="tt">用户发「启动yolo权限模式」「咋样了」</div>
+      <div class="td"><b>会话记录里完全没有这两条。</b>界面显示了（乐观插入），omp 一个字都没收到。</div>
+    </div>
+    <div class="it">
+      <div class="tm">08:57:48Z</div>
+      <div class="tt">进程正常退出（<code>reason: dispose · kind: normal</code>）</div>
+      <div class="td">整整 26 分钟，进程一直健康活着 —— 它只是没有活干。</div>
+    </div>
+  </div>
+</section>
+
+<section id="更正">
+  <h2>CORRECTION</h2>
+  <div class="sectitle">一次误判，以及它是怎么来的</div>
+  <p class="secnote">第一轮排查我给出的结论是错的。记在这里，因为出错的方式会重演。</p>
+
+  <div class="dissent">
+    <div class="vlabel">被推翻的结论</div>
+    <p style="margin:0 0 10px">
+      「omp 进程死了，而按停止时 <code>interrupt()</code> 是空操作。」
+    </p>
+    <p style="margin:0;color:#a3a3a3">
+      依据是 app 日志最后一行 <code>[omp] omp 进程已结束</code>，时间戳恰好比用户截图早 4 分钟。
+      看起来严丝合缝。
+    </p>
+  </div>
+
+  <h4>错在哪</h4>
+  <p>
+    那行日志记的是<strong>另一个进程</strong> —— 一次 2 秒的冒烟测试。
+    翻开它对应的会话记录，里面写着「请只回复两个字：你好」，
+    是我们自己那句「试一句」。真正的会话进程当时活得好好的。
+  </p>
+
+  <pre><code><span class="dim"># 同一分钟里，机器上有 4 个 omp 进程</span>
+omp.2026-09-03.75471.log   397 B   <span class="dim">← 探测（omp models ls）</span>
+omp.2026-09-03.75531.log   397 B   <span class="dim">← 探测</span>
+omp.2026-09-03.75658.log   884 B   <span class="dim">← 探测</span>
+omp.2026-09-03.75668.log  9947 B   <span class="hi">← 冒烟测试，2 秒后正常退出</span>
+                                   <span class="dim">  app 日志记的是它</span>
+
+omp.2026-09-03.78086.log 10793 B   <span class="flow">← 用户那段真实会话，活到 01:57</span></code></pre>
+
+  <div class="warn">
+    <div class="vlabel">教训</div>
+    <p style="margin:0">
+      一台机器上<b>同时跑着好几个 omp 进程</b>（会话 / 冒烟 / 模型探测各起各的）。
+      <b>按时间戳认进程一定会认错</b> —— 必须用 pid 或会话 id 对上，
+      再看那个进程自己的会话记录里到底有什么。
+    </p>
+  </div>
+</section>
+
+<section id="根因">
+  <h2>ROOT CAUSE</h2>
+  <div class="sectitle">三条投递路径，只有一条是坏的</div>
+  <p class="secnote">
+    <code>pump()</code> 负责从队列取出下一条消息发给 omp。它只有两个调用点，而投递有三种情形。
+  </p>
+
+  <pre><code><span class="dim">// 修复前</span>
+async function ensureAndSend(message) {
+  queue.push(message)
+  if (phase !== 'dead') <span class="hi">return</span>        <span class="dim">// ← 排完队直接走人</span>
+  <span class="dim">…开进程、握手…</span>
+  pump()                            <span class="dim">// ← 只有「会话已死」这条路才泵</span>
+}
+
+<span class="dim">// pump 的另一个调用点在 prompt() 的 finally —— 一轮结束时泵下一条</span></code></pre>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>发消息时的状态</th><th>典型场景</th><th>谁来泵</th><th>结果</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>prompting</code>（上一轮在跑）</td>
+          <td>边看它干活边打下一句</td>
+          <td><code>prompt()</code> 的 <code>finally</code></td>
+          <td><span class="b b-em">通</span></td>
+        </tr>
+        <tr>
+          <td><code>dead</code>（会话已回收）</td>
+          <td>隔了很久再回来说话</td>
+          <td><code>ensureAndSend</code> 末尾</td>
+          <td><span class="b b-em">通</span></td>
+        </tr>
+        <tr>
+          <td><b><code>ready</code>（活着且空闲）</b></td>
+          <td><b>它答完话之后我再问一句</b></td>
+          <td><b>没有人</b></td>
+          <td><span class="b b-ro">消息永远躺在队列里</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    从外面看，这个状态和「模型正在慢慢想」完全一样：消息在气泡里、转圈在转、没有任何报错。
+    而 omp 那侧根本不知道你说过话。
+  </p>
+</section>
+
+<section id="修复">
+  <h2>FIXES</h2>
+  <div class="sectitle">修了两处</div>
+  <p class="secnote">一处让消息真的发出去，一处让「停止」在任何状态下都能把界面收干净。</p>
+
+  <h3>① 空闲时也要泵一次 <span class="b b-gy">67f7e13</span></h3>
+  <pre><code>if (phase !== 'dead') {
+  <span class="flow">pump()</span>        <span class="dim">// 无条件调是安全的：pump 自己守着</span>
+  return        <span class="dim">// phase !== 'ready' || queue.length === 0</span>
+}</code></pre>
+
+  <h3>② 停止要能在任何状态收场 <span class="b b-gy">ee3c1f8</span></h3>
+  <p>
+    <code>interrupt()</code> 原来在「没有在飞的轮次」时直接 <code>return</code>，
+    而且<strong>没有返回值告诉调用方它什么都没做</strong>。
+    改成返回布尔：没接手时，由上层自己补一条 <code>turn.done</code>。
+  </p>
+  <div class="warn">
+    <div class="vlabel">为什么必须是 turn.done</div>
+    <p style="margin:0">
+      界面判断「还在忙」有三支判据，<b>能一次放倒三支的只有 <code>turn.done</code></b>；
+      <code>error</code> 就算标成 fatal 也只放倒一支。
+      这条结论 cc/codex 那支的注释里早就写着 —— <b>ACP 这支漏了同一课。</b>
+    </p>
+  </div>
+
+  <h3>验证</h3>
+  <ul class="clean">
+    <li>新增断言：空闲时发出的消息必须立刻送出（修复前红）</li>
+    <li>新增断言：上一轮在跑时仍按原样排队、结束时泵出（修复前就绿，钉住别改坏）</li>
+    <li>新增断言：进程已死时 <code>interrupt()</code> 返回 <code>false</code>；正常在跑时返回 <code>true</code></li>
+    <li>transport 28 条全绿 · 全仓 1728 条全绿 · 打包前真 ACP 握手通过</li>
+  </ul>
+</section>
+
+<section id="教训">
+  <h2>LESSONS</h2>
+  <div class="sectitle">三条留给下次的</div>
+  <p class="secnote">这次排障里，最贵的不是修复本身，是走错的那一段。</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">omp 自己有日志，先去读它</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        <code>omp/logs/</code> 与 <code>omp/agent/sessions/</code> 里有完整的进程日志和会话记录。
+        这次的决定性证据（「整段会话只有 1 条用户消息」）只有那里有 ——
+        app 侧的日志根本看不出来。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">按时间戳认进程一定会认错</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        会话、冒烟测试、模型探测各起各的进程，同一分钟里可能有四个。
+        要用 pid 或会话 id 对上，再看那个进程<b>自己的</b>记录。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">「界面转圈」不等于「后端在忙」</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        乐观插入让消息立刻显示在界面上。所以「消息在气泡里 + 转圈在转」
+        既可能是模型在想，也可能是<b>那条消息压根没离开过这台电脑</b>。
+        两者从外面完全一样，只能靠对面的记录区分。
+      </p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">同类分支要一起改</h4>
+      <p style="margin:0;color:#a3a3a3;font-size:14px">
+        「停止必须推 turn.done」在 cc/codex 那支修过、注释也写了，
+        但 ACP 这支是后加的，没跟上。
+        <b>加新分支时要回头看老分支的注释里有没有已经付过学费的结论。</b>
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="下一步">
+  <h2>NEXT</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">两处修复都在代码里了，但还没到你手上。</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>事项</th><th>状态</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>空闲投递修复</td><td><span class="b b-em">已修</span></td><td><code>67f7e13</code>，带两条回归断言</td></tr>
+        <tr><td>停止收场修复</td><td><span class="b b-em">已修</span></td><td><code>ee3c1f8</code>，带三条回归断言</td></tr>
+        <tr><td>你机器上那个卡住的会话</td><td><span class="b b-am">仍是旧版</span></td><td>正式包还没更新；点「新对话」可立刻脱困</td></tr>
+        <tr><td>进程退出日志补退出码与 stderr</td><td><span class="b b-sk">建议</span></td><td>这次「为什么退出」全靠翻 omp 自己的日志才知道，app 侧那行只写了「已结束」</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">打包，我装上验一遍</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  排障对象：Eas-Term 内置 harness（omp / Oh My Pi）· 会话 <code>01a06663-e46c-7300-be4c-0026992c9c1f</code><br>
+  代码位置：<code>src/main/agentChat/omp/transport.ts</code> · <code>src/main/agentChat/session.ts</code><br>
+  证据位置：<code>~/Library/Application Support/Eas-Term/omp/logs/</code> · <code>omp/agent/sessions/-Biily-cowork-设计/</code><br>
+  本页由 Claude Code 生成 · 2026-09-03
+</footer>
+
+</main>
+</body>
+</html>
