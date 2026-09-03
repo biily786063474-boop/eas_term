@@ -1050,6 +1050,16 @@
   cursor: pointer;
   transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
 }
+/* 只有图标的那几颗（新对话 / 压缩 / 角色）。名字进 hover 的 tip ——
+   用户 2026-09-02：「新对话和压缩都精简为一个 icon，hover 的时候再显示功能名」。
+   左右内边距收成和上下一样，才是个正方形；不收的话图标会偏在一个胶囊的左边。 */
+.ac-bar-btn.icon-only {
+  padding: 3px;
+  gap: 0;
+  width: 22px;
+  justify-content: center;
+}
+
 .ac-bar-btn:hover:not(:disabled) {
   border-color: var(--glass-border-strong);
   color: var(--fg);

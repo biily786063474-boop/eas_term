@@ -28,7 +28,7 @@ import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, SendIcon, StopIcon } from '../../ui/Icons'
+import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
@@ -441,7 +441,11 @@ export function ChatToolbar({
                   onSetParams({ model: e.target.value })
                 }}
               >
-                <option value="">模型：默认</option>
+                {/* **只放模型名，不加「模型：」前缀。** 用户 2026-09-02：
+                    「仅显示模型名称不要加前缀，这样缩短一个前缀的空间。」
+                    左边那枚 ChipIcon 已经说明了这是什么，前缀是重复信息，
+                    而这条控件行是全应用最挤的地方之一。 */}
+                <option value="">默认</option>
                 {model.models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -490,8 +494,12 @@ export function ChatToolbar({
           {onNewChat && (
             <button
               type="button"
-              className="ac-bar-btn"
-              data-tip="结束这一段，开一段新的（旧记录还在，能从空态找回来）"
+              className="ac-bar-btn icon-only"
+              aria-label="新对话"
+              // **名字进 tip，第一句就是功能名**（用户 2026-09-02：「hover 的时候再
+              // 显示功能名」）。后半句说明留着是有意的 —— 这两个按钮都不可撤销，
+              // 只报个名字等于把「会发生什么」藏起来。
+              data-tip="新对话 —— 结束这一段，开一段新的（旧记录还在，能从空态找回来）"
               onClick={() => {
                 void stopVoiceOnSend()
                 // 会结束当前会话，上下文接不回来了 —— 照「压缩」那条的规矩弹确认
@@ -503,15 +511,16 @@ export function ChatToolbar({
                 })
               }}
             >
-              新对话
+              <MessageIcon size={11} />
             </button>
           )}
 
           {model.showCompact && (
             <button
               type="button"
-              className="ac-bar-btn"
-              data-tip="把之前的对话换成一份摘要"
+              className="ac-bar-btn icon-only"
+              aria-label="压缩"
+              data-tip="压缩 —— 把之前的对话换成一份摘要"
               onClick={() => {
                 void stopVoiceOnSend()
                 requestConfirm({
@@ -523,7 +532,6 @@ export function ChatToolbar({
               }}
             >
               <CompressIcon size={11} />
-              压缩
             </button>
           )}
 
