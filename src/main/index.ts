@@ -44,6 +44,7 @@ import { registerSecretHandlers } from './secrets'
 import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
 import { installIpcProfiler, flushIpcProfile } from './ipcProfiler.ts'
 import { registerOmpSetupHandlers } from './agentChat/omp/setup.ts'
+import { registerCodeGraphHandlers } from './codeGraph.ts'
 import {
   registerAgentChatHandlers,
   killAllAgentChatSessions,
@@ -413,6 +414,7 @@ app.whenReady().then(() => {
   // （02-分层架构的启动顺序）：它不参与「MCP 桥 → 密钥柜 → PTY」那条硬依赖链，
   // 只是又一组 handler；放在 profiler 之前的话这组 IPC 不进 ipc-slow.log，而且不报错。
   registerOmpSetupHandlers()
+  registerCodeGraphHandlers()
   registerAgentHistory()
   registerTeamFindings()
   registerTeamRoster()

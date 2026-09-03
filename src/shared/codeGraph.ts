@@ -221,3 +221,23 @@ export function aggregateByTerritory(
 }
 
 const RISK_ORDER: Record<Risk, number> = { green: 0, amber: 1, red: 2, frozen: 3 }
+
+// ── 分析结果的形状 ──────────────────────────────────────────────────────────
+//
+// **放在 shared 而不是主进程**：渲染层要用它，而渲染层不许 import 主进程的文件
+// （tsconfig.web 根本不含那些文件，硬 import 是 TS6307）。
+// 跨层的线上类型只许有一份定义 —— omp 那次「每个调用方各写各的 as {...}、
+// 删字段静默失效」咬过三回。
+
+export interface CodeGraphResult {
+  root: string
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  /** 每个环一组边。`severity` 见 `cycleSeverity` —— type 那档不是病 */
+  cycles: { edges: GraphEdge[]; severity: 'runtime' | 'type' | 'unknown' }[]
+  territories: { stats: TerritoryStat[]; links: { from: string; to: string; count: number }[] }
+  /** 扫了多久（ms），界面上如实显示 */
+  ms: number
+  /** 没能解析的依赖（如可选原生模块）。**如实报，不吞** */
+  unresolved: string[]
+}

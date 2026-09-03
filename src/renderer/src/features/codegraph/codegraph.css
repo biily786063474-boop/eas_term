@@ -1,0 +1,172 @@
+/* 代码可视化模块。视觉走项目的统一令牌（见图纸 15），不自造颜色 ——
+   唯一的例外是风险等级那四色，它们直接对着图纸 10 的 🟢🟡🔴⛔，
+   在 CodeGraphView.tsx 里以常量给出。 */
+
+.cg-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--t-1);
+  font-size: 13px;
+}
+
+.cg-msg {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--t-3);
+}
+
+.cg-err {
+  max-width: 420px;
+  text-align: center;
+  color: var(--t-2);
+  line-height: 1.7;
+}
+
+/* 顶部计数条 */
+.cg-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--stroke-input);
+  flex-wrap: wrap;
+}
+
+.cg-stat {
+  color: var(--t-3);
+  font-size: 12px;
+}
+.cg-stat b {
+  color: var(--t-1);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+/* 运行时环有就标红、没有就标绿 —— 它是这个面板唯一需要「一眼看结论」的数字 */
+.cg-stat.bad b { color: #fda4af; }
+.cg-stat.ok b { color: #6ee7b7; }
+.cg-stat.dim { color: var(--t-3); opacity: 0.7; }
+.cg-stat.warn { color: #fcd34d; }
+
+.cg-sep { width: 1px; height: 14px; background: var(--stroke-input); }
+.cg-spacer { flex: 1; }
+.cg-ms { color: var(--t-3); font-size: 11px; }
+
+.cg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--stroke-input);
+  border-radius: 8px;
+  background: var(--lift-1);
+  color: var(--t-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.cg-btn:hover:not(:disabled) { color: var(--t-1); background: var(--lift-2); }
+.cg-btn:disabled { opacity: 0.5; cursor: default; }
+.cg-btn.icon { padding: 4px 6px; }
+
+.cg-body { flex: 1; overflow-y: auto; padding: 14px; }
+
+/* 运行时循环依赖 —— 放最前面，它是要修的 */
+.cg-cycles {
+  border-left: 2px solid #fb7185;
+  background: rgba(244, 63, 94, 0.05);
+  border-radius: 0 12px 12px 0;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.cg-cycles-hd { color: #fda4af; font-size: 12px; margin-bottom: 8px; }
+.cg-cycle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--t-2);
+  line-height: 1.9;
+  word-break: break-all;
+}
+
+/* 领地卡片 */
+.cg-terr {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.cg-tcard {
+  text-align: left;
+  border: 1px solid var(--stroke-input);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: var(--lift-1);
+  padding: 11px 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.cg-tcard:hover { background: var(--lift-2); transform: translateY(-1px); }
+.cg-tname {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--t-1);
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.cg-trisk { font-size: 10.5px; font-weight: 400; }
+.cg-tnum { color: var(--t-2); font-size: 12px; }
+.cg-tcross { color: var(--t-3); font-size: 11px; margin-top: 3px; }
+.cg-tcross b { color: var(--t-2); font-weight: 600; }
+
+/* 跨领地依赖表 */
+.cg-links-hd { color: var(--t-3); font-size: 11.5px; margin-bottom: 8px; }
+.cg-links { display: flex; flex-direction: column; gap: 4px; }
+.cg-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--lift-1);
+  font-size: 12px;
+}
+.cg-lf, .cg-lt { color: var(--t-2); }
+.cg-la { color: var(--t-3); }
+.cg-lc { margin-left: auto; color: var(--t-1); font-weight: 600; }
+
+.cg-unres { margin-top: 14px; color: var(--t-3); font-size: 11.5px; }
+
+/* 下钻：某块地里的文件 */
+.cg-back {
+  border: none;
+  background: transparent;
+  color: var(--t-3);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 0 8px;
+}
+.cg-back:hover { color: var(--t-1); }
+.cg-drill-hd { color: var(--t-1); font-weight: 600; margin-bottom: 10px; }
+.cg-files { display: flex; flex-direction: column; gap: 3px; }
+.cg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--lift-1);
+  font-size: 12px;
+}
+.cg-file-n {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--t-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cg-deg { margin-left: auto; color: var(--t-3); font-size: 11px; white-space: nowrap; }

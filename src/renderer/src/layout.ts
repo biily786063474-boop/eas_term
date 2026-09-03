@@ -22,6 +22,7 @@ export type PaneKind =
   | 'dict'
   | 'web'
   | 'wiki'
+  | 'codegraph'
 
 /** Git diff 在主区域的展示参数（由侧栏「版本」标签点击文件时下发） */
 export interface DiffSpec {
@@ -104,6 +105,9 @@ export type PaneState =
        *  180 个插件全带会把系统提示词撑爆。主进程据此决定往 agent-mcp.json 里合并谁。 */
       pluginId?: string
     }
+  /** 代码可视化：把这个项目的模块依赖与耦合状态画出来。
+   *  `root` 是要扫的项目根 —— 存下来，重启后不用再问一次。 */
+  | { kind: 'codegraph'; root: string }
   | { kind: 'dict' }
   | { kind: 'wiki' }
   | { kind: 'web'; url: string | null; title?: string }

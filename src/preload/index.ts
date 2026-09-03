@@ -1,3 +1,4 @@
+import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
 import type {
@@ -226,6 +227,14 @@ const api = {
     } catch {
       return ''
     }
+  },
+  codeGraph: {
+    /** 扫一个项目，返回模块依赖图 + 领地聚合 + 循环分级。
+     *  **返回真类型不是 unknown** —— 跨层的线上类型只许有一份定义
+     *  （omp 那次「删字段静默失效」咬过三回，见 `omp/setup.ts` 的注释）。 */
+    analyze: (root: string): Promise<
+      { ok: true; graph: CodeGraphResult } | { ok: false; error: string }
+    > => ipcRenderer.invoke('codeGraph:analyze', root)
   },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),

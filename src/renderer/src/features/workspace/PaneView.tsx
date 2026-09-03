@@ -20,6 +20,10 @@ import { AgentCmdBar } from '../canvas/AgentCmdBar'
 const DictView = lazy(() =>
   import('../dict/DictView').then((m) => ({ default: m.DictView }))
 )
+// 代码可视化同样懒加载：只有真打开这个面板才需要它
+const CodeGraphView = lazy(() =>
+  import('../codegraph/CodeGraphView').then((m) => ({ default: m.CodeGraphView }))
+)
 const WikiView = lazy(() => import('../wiki/WikiView').then((m) => ({ default: m.WikiView })))
 import {
   TerminalIcon,
@@ -60,6 +64,7 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   code: { label: '代码预览', Icon: CodeIcon },
   image: { label: '图片预览', Icon: ImageIcon },
   history: { label: '历史', Icon: GitBranchIcon },
+  codegraph: { label: '代码视图', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
   agent: { label: 'AI 对话', Icon: SparkleIcon },
   dict: { label: '辞典', Icon: DictIcon },
@@ -528,6 +533,11 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'wiki' && (
           <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>
             <WikiView />
+          </Suspense>
+        )}
+        {pane.kind === 'codegraph' && (
+          <Suspense fallback={<div className="pane-placeholder">加载代码视图…</div>}>
+            <CodeGraphView root={pane.root} />
           </Suspense>
         )}
         {pane.kind === 'dict' && (

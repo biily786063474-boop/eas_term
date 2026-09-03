@@ -518,6 +518,10 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       pane = { kind: 'wiki' }
     } else if (kind === 'web') {
       pane = { kind: 'web', url: null }
+    } else if (kind === 'codegraph') {
+      // 代码视图要知道扫哪个项目。**用这个 tab 的 cwd** —— 面板类型下拉是在
+      // 某个已有面板上切换的，那个面板本来就绑着一个项目。
+      pane = { kind: 'codegraph', root: get().tabs.find((t) => t.id === tabId)?.cwd ?? '' }
     } else {
       pane = { kind, filePath: null }
     }
