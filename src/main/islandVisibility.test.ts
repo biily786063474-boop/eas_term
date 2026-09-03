@@ -79,3 +79,50 @@ test('场景三：岛被销毁时忘了清 held 的话，下次会凭空压在�
   // 销毁时清掉 held 之后就不会了
   assert.equal(islandShouldShow(V({ mainForeground: true, hasContent: true, held: false })), false)
 })
+
+// ── 2026-09-02：点了「进软件」之后，岛必须当场让开 ──────────────────────────
+//
+// 用户报的：「最大化软件的情况下，用户点击灵动岛进入软件的时候，
+// 还是会灵动岛没退后台、主软件的点击（被它接走）。」
+//
+// **根因不在 held，在这个函数的后台分支**：
+// `dispatchAction` 的 focus 分支一直有 `releaseHold('从岛上点了进来')`，
+// 但那一刻 `mainForeground` 还是 false（激活是异步的），于是判定落到后台分支
+// `return v.hasContent` —— **那条分支压根不看 held**。清了等于没清。
+//
+// 于是从「点岛」到「窗口真拿到焦点」这一整段，岛都还挂在屏幕最上沿。
+// 窗口态下这段约 100ms 不太看得出来；**全屏态下它是一次 Space 切换动画**，
+// 而展开态的岛有 82px 高、主窗口在全屏下从 y=26 开始 —— 正好盖住 app 顶上 56px
+// 那条（标题栏/标签栏）。用户以为点的是软件，点到的是岛。
+
+test('**点了进软件 → 当场不显示**，不等激活到位（后台分支也管得住）', () => {
+  const base = { enabled: true, mainForeground: false, hasContent: true, hasApproval: false, held: false }
+  assert.equal(islandShouldShow(base), true, '前提：本来是要显示的')
+  assert.equal(islandShouldShow({ ...base, enteringApp: true }), false)
+})
+
+test('等审批也压得住 —— 用户正要进软件，审批在软件里看得到', () => {
+  // 后台那条「审批有特权」的规则不能盖过这个意图，否则有审批时岛照样挡着。
+  assert.equal(
+    islandShouldShow({ enabled: true, mainForeground: false, hasContent: true, hasApproval: true, held: false, enteringApp: true }),
+    false
+  )
+})
+
+test('进到前台之后仍然不显示 —— 意图和前台判定说的是同一件事', () => {
+  assert.equal(
+    islandShouldShow({ enabled: true, mainForeground: true, hasContent: true, hasApproval: false, held: true, enteringApp: true }),
+    false
+  )
+})
+
+test('**不传这个字段时行为一个字都不变**', () => {
+  // 老调用点（设置面板改开关、内容变化）不会传它，那些路径的判定必须原样。
+  for (const mainForeground of [true, false])
+    for (const hasContent of [true, false])
+      for (const hasApproval of [true, false])
+        for (const held of [true, false]) {
+          const v = { enabled: true, mainForeground, hasContent, hasApproval, held }
+          assert.equal(islandShouldShow(v), islandShouldShow({ ...v, enteringApp: false }))
+        }
+})

@@ -126,3 +126,22 @@ test('只有 @ 引用、没有别的字 → 也要能发', () => {
 test('什么都没有 → 空串（调用方拿它判断能不能发）', () => {
   assert.equal(_expand('', []).text, '')
 })
+
+
+// ── 跨模块契约：`@` 候选插进来的形状，这边必须认得 ─────────────────────────
+//
+// 插入规则在 `shared/slashCommands.ts`（chipsToCmds 的 `name` + applyAtPick），
+// 读取规则在这个文件（expandChips 按 label 匹配）。两边各写各的必然分叉，
+// 症状是「候选里选得出来、发出去却没展开」—— 一个测试同时钉住两边。
+//
+// **放在渲染侧而不是 shared 侧**：shared 的 tsconfig 不含渲染层文件，
+// 从那边 import 这个文件是 TS6307，而 `node --test` 照跑不误 ——
+// 那种「测试全绿、类型检查报错」最容易漏过去。
+import { applyAtPick, chipsToCmds } from '../../../../shared/slashCommands.ts'
+
+test('选中 chip 后插进去的形状，expandChips 认得出来', () => {
+  const chip = { id: 'd1', label: '文案风格', text: '要活泼' }
+  const inserted = applyAtPick('帮我按 @文案', chipsToCmds([chip])[0].name)
+  assert.equal(inserted, '帮我按 @文案风格 ')
+  assert.deepEqual(expandChips(inserted, [chip]).usedIds, ['d1'])
+})

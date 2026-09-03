@@ -36,6 +36,23 @@ export interface IslandVisibility {
   hasApproval: boolean
   /** 用户主动要它留着（Dock 菜单叫出来 / 自己展开着在读）。**只在前台这一档起作用** */
   held: boolean
+  /** 用户刚点了「进软件」，正在激活途中。**压过下面所有规则。**
+   *
+   *  2026-09-02 用户报的那个：「最大化软件的情况下，点灵动岛进入软件的时候，
+   *  灵动岛没退、主软件的点击（被它接走）。」
+   *
+   *  为什么单开一个字段、不复用 held：`dispatchAction` 的 focus 分支一直在清 held，
+   *  但清了**没用** —— 那一刻 `mainForeground` 还是 false（激活是异步的），
+   *  判定落到后台分支 `return hasContent`，**那条分支不看 held**。
+   *
+   *  这段空窗有多长取决于激活要多久：窗口态约 100ms；**全屏态是一整次
+   *  Space 切换动画**。而展开着的岛有 82px 高、全屏下主窗口从 y=26 起 ——
+   *  正好盖住 app 顶上 56px 那条，用户以为点的是软件，点到的是岛。
+   *
+   *  **必须有超时兜底**（island.ts 里）：macOS 对「后台进程自己切自己到前台」
+   *  有节流，激活可能压根不成功（见 verifyRealActivation 那段实测）。
+   *  没有超时的话，一次失败的激活会把岛永久藏起来。 */
+  enteringApp?: boolean
 }
 
 /**
@@ -43,6 +60,9 @@ export interface IslandVisibility {
  */
 export function islandShouldShow(v: IslandVisibility): boolean {
   if (!v.enabled) return false
+  // 用户已经表态「我要用软件了」。**放在最前面**：后台那条「审批有特权」
+  // 也不该盖过它 —— 他正要进去，审批在软件里看得见，岛没有理由再挡在路上。
+  if (v.enteringApp) return false
   // 前台：默认让位。只有用户自己叫出来 / 正展开着在读才留着，
   // 且这一档随时会被一次点击掐掉（见文件头）。
   if (v.mainForeground) return v.hasContent && v.held

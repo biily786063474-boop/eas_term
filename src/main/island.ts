@@ -92,6 +92,68 @@ const fgSeen = new Set<string>()
 /** 手动唤出的窗口期到点后回来重算一次的定时器 */
 let fgTimer: ReturnType<typeof setTimeout> | null = null
 
+/** 用户刚点了「进软件」，激活还在路上。**这段时间岛一律不显示。**
+ *
+ *  没有它的时候（2026-09-02 之前）：focus 分支只清 held，而那一刻
+ *  `mainInForeground()` 还是 false，判定走后台分支 `return hasContent` ——
+ *  **那条不看 held**，于是岛原地不动，直到窗口真的拿到焦点才开始退场。
+ *  全屏下这段是一次 Space 切换动画，而展开态的岛（82px）盖着主窗口顶上 56px，
+ *  用户下一下点击就被它接走了 —— 正是用户报的那个现象。 */
+let enteringApp = false
+let enterTimer: ReturnType<typeof setTimeout> | null = null
+
+/** macOS 对「后台进程自己把自己切到前台」有节流，激活**可能压根不成功**
+ *  （见 verifyRealActivation 那段实测）。这个超时是兜底：到点还没进到前台，
+ *  就把意图撤掉、按真实状态重算 —— 否则一次失败的激活会把岛**永久**藏起来，
+ *  而那台机器上正跑着的任务从此再没有出口。
+ *  取 4s：verifyRealActivation 最多两轮（各 ~600ms + osascript），留足余量。 */
+const ENTER_MS = 4000
+
+/** 表态「我要用软件了」：**当场让岛既不挡视线也不接点击，但不销毁那扇窗口。**
+ *
+ *  ⚠️ **「不销毁」是这段的重点，别顺手改成 reconcile()。**
+ *  2026-09-02 第一版就是直接 reconcile，结果窗口在**激活途中**被销毁，
+ *  实测把激活本身弄坏了：app 先到前台、约 1 秒后又掉回后台，岛于是"自己回来了"
+ *  —— 比原来的 bug 还糟。这跟 verifyRealActivation 注释里那条同源：
+ *  macOS 正在处理激活时去动窗口的显示状态，前台会被交给别的 app
+ *  （那边实测 `hide()+show()` 3/8 破坏率）。
+ *
+ *  所以这里只做两件不碰窗口存亡的事：
+ *    · `setIgnoreMouseEvents(true)` —— 点击直接穿过去给底下的主窗口。
+ *      **这一条才是用户真正抱怨的那件事**（「主软件的点击」被岛接走）。
+ *    · `island:leave` —— 让渲染层播退场动画，视觉上它已经走了。
+ *  窗口本体留到焦点落定后由正常的 reconcile 收掉。 */
+function markEnteringApp(): void {
+  enteringApp = true
+  if (enterTimer) clearTimeout(enterTimer)
+  enterTimer = setTimeout(() => {
+    enterTimer = null
+    enteringApp = false
+    // 激活没成功 → 把岛原样放回来（能点、能看见），再按真实状态重算
+    if (islandWin && !islandWin.isDestroyed()) {
+      islandWin.setIgnoreMouseEvents(false)
+      islandWin.webContents.send('island:enter')
+    }
+    reconcile()
+  }, ENTER_MS)
+  if (islandWin && !islandWin.isDestroyed()) {
+    islandWin.setIgnoreMouseEvents(true)
+    islandWin.webContents.send('island:leave')
+  }
+  // **故意不 reconcile** —— 见上面。真正的收尾走 browser-window-focus 那一跳。
+}
+
+/** 撤销意图。**主窗口真到前台**时调，或超时。
+ *  穿透标记不在这里恢复：到了前台，岛接着就该被 reconcile 收掉；
+ *  万一它因为 held 又要留下，createIsland 之后是新窗口，本来就不带这个标记。 */
+function clearEnteringApp(): void {
+  if (enterTimer) {
+    clearTimeout(enterTimer)
+    enterTimer = null
+  }
+  enteringApp = false
+}
+
 /**
  * 松开「留着别收」。**清 held 的动作只许走这一个函数。**
  *
@@ -165,7 +227,8 @@ function shouldShow(): boolean {
     mainForeground: mainInForeground(),
     hasContent: lastState.running.length > 0 || lastState.notices.length > 0,
     hasApproval: lastState.notices.some((n) => n.kind === 'approval'),
-    held
+    held,
+    enteringApp
   })
 }
 
@@ -591,6 +654,19 @@ function reconcile(): void {
     // 只推数据，不重摆窗口：位置/尺寸由 island:resize 驱动（内容变了才动），
     // 在这里跟着每帧推送一起 setBounds 会让窗口每 250ms 抖一次。
     pushState(islandWin)
+  } else if (enteringApp) {
+    // **正在激活途中：一个窗口都别动。**
+    //
+    // 岛此刻已经是「穿透 + 播着退场动画」（markEnteringApp 做的），
+    // 用户既看不见它也点不到它 —— 该解决的问题已经解决了。
+    // 但**这扇窗口不能在这会儿销毁**：macOS 正在处理激活，
+    // 这时候动窗口存亡会把前台交给别的 app，实测表现是
+    // app 先到前台、几秒后又掉回去，岛于是"自己回来了"（比原 bug 更糟）。
+    // 同源的实测见 verifyRealActivation 的注释（`hide()+show()` 3/8 破坏率）。
+    //
+    // 少了这道闸也照样会被销毁 —— 渲染层每隔一会儿推一次 `island:sync`，
+    // 那条路一样走到这里。**别以为「markEnteringApp 里不调 reconcile」就够了。**
+    return
   } else if (islandWin && !islandWin.isDestroyed() && !leaveTimer) {
     // 不能直接 destroy —— 那样窗口是「啪」地消失的。先让渲染层播退场动画，
     // 到点再销毁。窗口销毁是主进程的事，动画是渲染层的事，中间只能靠这个时间差对齐：
@@ -628,6 +704,7 @@ export function isIslandWindow(win: BrowserWindow): boolean {
 
 export function destroyIsland(): void {
   held = false
+  clearEnteringApp()
   // 退出路径上不播动画，直接收掉——这时候没人在看，动画只会拖慢退出
   if (leaveTimer) {
     clearTimeout(leaveTimer)
@@ -652,6 +729,8 @@ export function registerIslandHandlers(): void {
     // （见 releaseHold 的注释）；发 collapse 只是为了让它在退场动画里已经是收起的样子。
     // 岛是 focusable:false 的窗口，自己收不到 blur，这条事件是它唯一的信号来源。
     if (!isIslandWindow(win)) {
+      // 真到前台了 —— 意图兑现，撤掉它，之后一切由真实状态说了算
+      clearEnteringApp()
       releaseHold('主窗口拿到焦点')
       if (islandWin && !islandWin.isDestroyed()) islandWin.webContents.send('island:collapse')
     }
@@ -811,6 +890,9 @@ function dispatchAction(action: IslandAction): void {
     // 不能等激活到位再说：osascript 是异步的（~100ms），中间这段时间岛还压着标题栏，
     // 而 held 若还是 true，等主窗口真到前台时 shouldShow 仍然成立，它就不走了。
     releaseHold('从岛上点了进来')
+    // **并且当场把岛按下去。** 光清 held 不够 —— 这一刻主窗口还没到前台，
+    // 判定走的是后台分支，那条不看 held（这正是 2026-09-02 那个 bug）。
+    markEnteringApp()
     // 跳转意味着「我来处理了」→ 主窗口必须回到前台，否则点了没反应。
     // 顺序有讲究：先把 app 整体激活，再聚焦具体窗口。反过来的话，
     // win.focus() 在 app 还不是 active application 时只是把它设成 key window，
