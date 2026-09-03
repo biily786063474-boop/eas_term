@@ -69,3 +69,35 @@ test('没有「上次」（第一次用）→ 照旧走推测', () => {
   assert.equal(pickDefaultCli([boxed, claude], undefined, undefined)?.id, 'claude')
   assert.equal(pickDefaultCli([boxed], undefined, '')?.id, 'omp')
 })
+
+// ── 2026-09-03：已经绑定的对话不许换底座 ────────────────────────────────────
+//
+// 用户：「AI 对话中的已经绑定的对话要用对应的 harness，不要随便切换 harness 底座。」
+//
+// 「绑定」的标志是手里有 `resumeId`（CLI 自己的会话 id）—— 那个 id 只有产生它的
+// 那个 harness 认得。这时候**推测链必须整个让位**：
+// `readLastCli()` 会随用户在别处切换 harness 而变，
+// 而「随包的排最后」「取第一个」更是与这段对话毫无关系的规则。
+
+test('**绑定了就用绑定的那个**，压过 lastUsed', () => {
+  const usable = [cli('claude'), cli('codex')]
+  const got = pickDefaultCli(usable, usable[1], 'claude')
+  assert.equal(got?.id, 'codex', 'pinned 没压过 lastUsed')
+})
+
+test('**绑定的那个不可用了 → 不许悄悄换一个顶上**', () => {
+  // 卸载了 Codex，而这段对话是 Codex 起的。此时换成 Claude 会拿着
+  // Codex 的 resumeId 去 --resume，接不回去且用户看不出来。
+  // 判据：pinned 传不进来（调用方 find 不到）时才退回推测 —— 这条钉的是
+  // 「调用方必须先确认 pinned 可用」，而不是让 pickDefaultCli 自作主张。
+  const usable = [cli('claude')]
+  const pinned = usable.find((c) => c.id === 'codex') // undefined
+  assert.equal(pinned, undefined, '前提：不可用的 pinned 取不到')
+  // 退回推测是有意的 —— 至少让用户看得到界面并自己换一个（见 AgentChatView 注释）
+  assert.equal(pickDefaultCli(usable, pinned, undefined)?.id, 'claude')
+})
+
+test('没绑定时才轮到 lastUsed（这条是既有行为，别改坏）', () => {
+  const usable = [cli('claude'), cli('codex')]
+  assert.equal(pickDefaultCli(usable, undefined, 'codex')?.id, 'codex')
+})

@@ -206,6 +206,7 @@ export function AgentChatView({
   })
   const roles = useStore((s) => s.roles)
   const setAgentRole = useStore((s) => s.setAgentRole)
+  const setAgentCli = useStore((s) => s.setAgentCli)
   const requestConfirm = useStore((s) => s.requestConfirm)
   /** 角色契约原文。**找不到那个 id 就当没角色** —— 用户可能把它删了，
    *  拿一个不存在的 id 去起会话不该硬失败。 */
@@ -814,6 +815,14 @@ export function AgentChatView({
     // 回来、面板就被切走/关掉」这种时序下 sessionId 会连本地变量都不落地，从诞生起
     // 就不可追踪，变成一个没人管的常驻会话（2026-08-15 审查 Important 点名的场景）。
     setAgentSessionId(tabId, leafId, result.sessionId)
+    // **把这次真正用的 CLI 钉住**（用户 2026-09-03：「已经绑定的对话要用对应的
+    // harness，不要随便切换 harness 底座」）。
+    //
+    // 和上面那句同处一个理由：放在 aliveRef 判断**之前**。这一刻会话已经真实存在，
+    // 而它绑的是 `selected.id` 这个 harness —— 手里的 `resumeId` 也只有它认得。
+    // 不钉的话，重挂载时 `pickDefaultCli` 会重挑，推测链里的 `readLastCli()`
+    // 会随用户在别处切换 harness 而变，于是这段对话会悄悄换底座、且接不回上下文。
+    setAgentCli(tabId, leafId, selected.id)
     // 面板已经被切走/关掉：不再订阅事件、不再 setState，但会话已经能从 store 里
     // 追踪到了，killPanePty 收得到——上面那句写回不受这里提前 return 的影响。
     if (!aliveRef.current) return

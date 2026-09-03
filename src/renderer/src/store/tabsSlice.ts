@@ -95,6 +95,19 @@ export interface TabsSlice {
    *  这个会随 canvas.json 落盘，下次打开这个节点靠它续上上次的上下文
    *  （Claude `--resume` / Codex `exec resume`）。 */
   setAgentResumeId: (tabId: string, leafId: string, resumeId: string) => void
+  /** 把这次会话真正用的 CLI 钉进面板。**会话一建立就调。**
+   *
+   *  用户 2026-09-03：「AI 对话中的已经绑定的对话要用对应的 harness，
+   *  不要随便切换 harness 底座。」
+   *
+   *  不钉的话：`AgentChatView` 重挂载（切视图 / 画布重排 / 重启）时 `selected`
+   *  会被重挑，而推测链里有 `readLastCli()` —— **那个值会随用户在别处切换 harness 而变**。
+   *  于是一段本来跑在 Claude Code 上的对话，可能重挂载之后变成 Codex，
+   *  而它手里的 `resumeId` 是 Claude 的，接不回去。
+   *
+   *  钉进 `pane.cli` 之后：`pickDefaultCli` 的第一条就是「pinned 压过一切」，
+   *  而这个字段会随 canvas.json 落盘，重启也还在。 */
+  setAgentCli: (tabId: string, leafId: string, cli: string) => void
   /** 换这个面板的角色（`AgentRole.id`，空串 = 无角色）。
    *
    *  ⚠️ **调用方要先把会话结束掉。** 角色契约走系统提示，那条 flag 只在 spawn 时
@@ -560,6 +573,19 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         if (leaf.pane.resumeId === resumeId) return t // 同一个值不必制造新对象
         const pane: PaneState = { ...leaf.pane, resumeId }
         return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  setAgentCli: (tabId, leafId, cli) => {
+    if (!cli) return
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        if (leaf.pane.cli === cli) return t // 同一个值不必制造新对象
+        return { ...t, root: updatePane(t.root, leafId, { ...leaf.pane, cli }) }
       })
     }))
   },
