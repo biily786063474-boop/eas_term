@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SWEEP, ambientPeriodMs, sweepAngle } from './sweep.ts'
+import { SWEEP, sweepAngle } from './sweep.ts'
 
 const box = { left: 100, top: 100, width: 100, height: 100 } // 中心 (150,150)
 
@@ -44,13 +44,6 @@ test('元素在页面上被滚动/平移过也算得对（用的是 rect 不是�
   assert.equal(Math.round(sweepAngle(moved, 950, 450)), 0)
 })
 
-test('speed=0.35 → 一圈约 5.7 秒，是 ambient 该有的慢', () => {
-  const ms = ambientPeriodMs()
-  assert.ok(ms > 4000 && ms < 8000, `${ms}ms 不像 ambient`)
-  // 当成「转/秒」会算出 ~2.8 秒，快得像加载动画 —— 这条钉住那个误读
-  assert.ok(ms > 3000)
-})
-
-test('speed 给 0 也不会除零炸掉', () => {
-  assert.ok(Number.isFinite(ambientPeriodMs(0)))
+test('**两道高光正对角**（用户：对角去进行高光的设计）', () => {
+  assert.equal(SWEEP.gapDeg, 180)
 })

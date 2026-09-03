@@ -22,17 +22,20 @@ export const SWEEP = {
   blur: 0,
   /** 高光亮度倍数。用户给定 intensity=1 */
   intensity: 1,
-  /** 自动巡游速度。用户给定 speed=0.35。
-   *  **单位是「转/秒」的十分之一** —— 0.35 → 一圈约 5.7 秒，是「ambient」该有的慢。
-   *  当成「转/秒」会快到像加载动画，那不是这个效果要的。 */
-  speed: 0.35
+  /** 规格里的自动巡游速度。**当前没有用到，故意留着这条记录。**
+   *
+   *  用户 2026-09-03 看过第一版之后改了主意：
+   *  「高光不应该自己动，而是跟着鼠标的指针位置去定位。」
+   *  所以 CSS 那侧没有 animation，位置完全由 `--sweep` 决定。
+   *
+   *  留着这个数字是为了**别再有人照原规格把自转加回来** ——
+   *  它不是漏做的，是撤掉的。真要恢复：给 `::before` 加一条
+   *  `animation: … 5714ms linear infinite`（2000/0.35）。 */
+  speed: 0.35,
+  /** 两道高光相隔多少度。用户：「应该有两层高光啊，**对角**去进行高光的设计」。
+   *  180 = 正对角。改这个数就不叫对角了，改之前先确认用户要的是别的。 */
+  gapDeg: 180
 } as const
-
-/** 自动巡游转一圈要多久（ms）。 */
-export function ambientPeriodMs(speed: number = SWEEP.speed): number {
-  // speed 0.35 → 2000/0.35 ≈ 5714ms
-  return Math.round(2000 / Math.max(0.01, speed))
-}
 
 /**
  * 光标相对元素中心的角度，用作 conic-gradient 的起始角。

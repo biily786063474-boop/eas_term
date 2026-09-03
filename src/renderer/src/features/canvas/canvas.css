@@ -5678,16 +5678,16 @@
   z-index: 40;
 }
 
-/* ── 深色玻璃药丸按钮：一道细亮镜面高光沿圆角边框滑动，方向跟着鼠标转 ─────────
-   用户 2026-09-03 给的规格。参数（radius=18 / blur=0 / intensity=1 / speed=0.35）
-   在 `ui/motion/sweep.ts`，那里也写了**为什么不用 webgl-ogl**：
-   用户连规格一起给的坑是「每个按钮吃一个 WebGL 上下文，一屏里放好几个会明显掉帧」，
-   而要加特效的正是并排的三颗 —— 恰好命中。conic-gradient 上下文 0 个。
+/* ── 深色玻璃药丸按钮：两道对角镜面高光，位置跟着鼠标 ────────────────────────
+   用户 2026-09-03 的规格 + 两条修正：
+     ① **高光不自己动**，只跟着指针位置定位（原来那版有 ambient 自转，撤掉了）；
+     ② **两层高光、对角**（原来只有一道）。
 
-   做法：一层 ::before 铺满按钮，画一个 conic-gradient，
-   用 mask 只留下边框那一圈（`padding-box` 挖掉中间）。
-   `--sweep` 由 JS 在 mousemove 时写入；没有它（鼠标不在上面）时
-   由 `spin` 动画自动巡游。 */
+   参数在 `ui/motion/sweep.ts`，那里也写了为什么不用 webgl-ogl
+   （用户自己给的坑：一屏并排三颗会各吃一个 WebGL 上下文）。
+
+   做法：一层 ::before 铺满按钮画 conic-gradient，用 mask 只留边框那一圈。
+   `--sweep` 由 JS 在 mousemove 时写入。 */
 @property --sweep {
   syntax: '<angle>';
   inherits: false;
@@ -5700,11 +5700,18 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px; /* 环的粗细：**细** —— 粗了就从「镜面高光」变成「发光边框」 */
+  /* **两道，相隔 180°**（用户：「应该有两层高光啊，对角去进行高光的设计」）。
+     第二道比第一道暗一档：完全等亮会读成「一个环缺了两块」，
+     有主次才像一束光扫过一个圆角矩形的两条对边。 */
   background: conic-gradient(
     from var(--sweep),
     transparent 0deg,
     var(--sweep-hl) 16deg,
-    transparent 34deg
+    transparent 34deg,
+    transparent 146deg,
+    var(--sweep-hl-2) 196deg,
+    transparent 214deg,
+    transparent 360deg
   );
   /* 只留边框那一圈：外层 border-box 减去内层 content-box */
   -webkit-mask:
@@ -5712,47 +5719,36 @@
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.25s ease;
+  /* **没有 animation** —— 用户明确要求不自己动。位置完全由 --sweep 决定。 */
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
   pointer-events: none;
-  /* 没有鼠标时自动巡游（ambient）。周期对应 speed=0.35，见 ambientPeriodMs 的注释。 */
-  animation: cframe-sweep 5714ms linear infinite;
 }
 
-/* 触发：hover / click 都亮起来（用户规格：click / hover / ambient）。
-   平时留一点点，才叫 ambient —— 全隐则「跟着鼠标转」这件事没人会发现。 */
-.cframe-start-btn::before { opacity: 0.35; }
+/* 触发：hover / click 更亮（用户规格里的 click / hover）。
+   平时留 0.4 是「ambient」那一档 —— 全隐的话，鼠标没进来之前
+   没人知道这里有个会跟手的高光。 */
 .cframe-start-btn:hover::before,
-.cframe-start-btn:active::before { opacity: 1; }
-
-/* 鼠标在上面时角度由 JS 写死，停掉自动巡游 —— 两者同时作用会打架 */
-.cframe-start-btn:hover::before { animation: none; }
-
-@keyframes cframe-sweep {
-  to {
-    --sweep: 360deg;
-  }
+.cframe-start-btn:active::before {
+  opacity: 1;
 }
 
 /* ⚠️ **亮色下要换高光色**（用户给的坑的后半句：「亮色背景上高光看不出来」）。
-   暗色用近白，亮色用近黑 —— 「镜面高光」在浅底上本来就该是暗的那一道。 */
+   暗色用近白，亮色用近黑 —— 「镜面高光」在浅底上本来就该是暗的那一道。
+   第二道（对角那束）统一弱一档。 */
 :root {
   --sweep-hl: rgba(255, 255, 255, 0.85);
+  --sweep-hl-2: rgba(255, 255, 255, 0.4);
 }
 
 :root[data-theme='light'] {
   --sweep-hl: rgba(0, 0, 0, 0.5);
+  --sweep-hl-2: rgba(0, 0, 0, 0.24);
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     --sweep-hl: rgba(0, 0, 0, 0.5);
-  }
-}
-
-/* 尊重「减少动效」：留住高光的静态那一圈，只停掉转动 */
-@media (prefers-reduced-motion: reduce) {
-  .cframe-start-btn::before {
-    animation: none;
+    --sweep-hl-2: rgba(0, 0, 0, 0.24);
   }
 }
