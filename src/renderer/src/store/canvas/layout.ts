@@ -6,6 +6,7 @@
 import type { CanvasFrame, CanvasNode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
 import { uid } from '../shared'
+import { frameMinSize } from './frameSize.ts'
 
 // 节点网格布局参数（终端节点默认高度保证 ≥20 行：body≈NODE_H-30，行高 fontSize13×1.25≈16.25px）
 export const NODE_W = 440
@@ -61,7 +62,10 @@ export function frameExtent(frame: CanvasFrame, allFrames: CanvasFrame[]): { w: 
     right = Math.max(right, c.x - frame.x + c.w)
     bottom = Math.max(bottom, c.y - frame.y + ch)
   }
-  return { w: Math.max(240, right + PAD), h: Math.max(120, bottom + PAD) }
+  // 下限：**空 Frame 走另一条**（它里面画着引导，比老那条 240×120 大得多）。
+  // 两个数字连同「为什么」在 frameSize.ts —— 摘出去是为了能单测。
+  const min = frameMinSize(frame.nodes.length === 0 && !allFrames.some((c) => c.parentId === frame.id))
+  return { w: Math.max(min.w, right + PAD), h: Math.max(min.h, bottom + PAD) }
 }
 
 /** 全场景重排：每个 Frame 的宽高都收紧到「裹住自身节点 + 子 Frame」。
