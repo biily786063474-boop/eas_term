@@ -39,7 +39,8 @@ import {
 } from './slashSilence'
 import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
-import { hostPaths, openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
+import { openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
+import { hostPaths } from './omp/host.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
@@ -1008,7 +1009,9 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           host,
           // **一个 key 都不注入** —— 凭证是 omp 自己的事（`auth-broker` + `agent.db`）
           provider: setup.provider?.id,
-          mcp: true,
+          // MCP 桥的凭证由这里算好传进去 —— launch.ts 不再认识 mcpBridge
+          //（那条 import 既是循环依赖的一环，也让整个模块没法单测，见它的文件头）
+          mcpEnv: mcpEnv({ project: cwd }),
           // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
           roleContract: live.rec.roleContract,
@@ -1019,7 +1022,10 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
       log: (m) => logSession(m),
       clientVersion: app.getVersion(),
       mcpServers() {
-        const { servers, dropped } = readMcpServers(live.rec.pluginId, live.rec.roleTools?.denyServers)
+        const { servers, dropped } = readMcpServers(
+          agentMcpConfigPath(live.rec.pluginId),
+          live.rec.roleTools?.denyServers
+        )
         // 丢掉的那些要说一声：ACP 只收 stdio 型，插件里的 http/sse 型带进去会让
         // **整个 session/new 失败**（上游对认不出的 transport 直接 throw），
         // 而用户看到的是一条 JSON-RPC error，跟「模型配错了」长得一模一样。

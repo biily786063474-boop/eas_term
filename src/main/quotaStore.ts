@@ -18,7 +18,8 @@ import {
 } from '../shared/quota.ts'
 import { fetchUsage } from './quotaApi'
 import { ompAccountKeyOf, ompQuotaFromUsageJson, nextOmpSnapshot } from '../shared/ompQuota.ts'
-import { hostPaths, readOmpUsage } from './agentChat/omp/launch.ts'
+import { readOmpUsage } from './agentChat/omp/launch.ts'
+import { hostPaths } from './agentChat/omp/host.ts'
 import { readOmpSetup } from './agentChat/omp/store.ts'
 import { ompAdapter } from './agentChat/adapters/omp.ts'
 

@@ -3,28 +3,13 @@
 // 拿不到路径时回落到 PATH（跑用户自己那个 omp）、工具白名单里混进不存在的名字
 // （每次 session/new 都失败）。覆盖率不是目的。
 
-import { test } from 'node:test'
+import type { HostPaths } from '../../../shared/agentChat.ts'
+import { describe, it, test } from 'node:test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import {
-  ompAcpArgs,
-  OMP_PINNED_VERSION,
-  OMP_RESOURCE_DIR,
-  OMP_USERDATA_DIR,
-  OMP_TOOLS,
-  OMP_BUILTIN_TOOLS,
-  ompResourceDirName,
-  ompBinFileName,
-  ompBinPath,
-  ompBinPathOrNull,
-  ompConfigRoot,
-  ompAgentDir,
-  ompConfigDirRelative,
-  parseOmpVersion
-} from './paths.ts'
-import type { HostPaths } from '../../../shared/agentChat.ts'
+import { OMP_BUILTIN_TOOLS, OMP_PINNED_VERSION, OMP_RESOURCE_DIR, OMP_TOOLS, OMP_USERDATA_DIR, ompAcpArgs, ompAgentDir, ompBaseEnv, ompBinFileName, ompBinPath, ompBinPathOrNull, ompConfigDirRelative, ompConfigRoot, ompResourceDirName, parseOmpVersion } from './paths.ts'
 
 const MAC = { platform: 'darwin', arch: 'arm64' }
 const WIN = { platform: 'win32', arch: 'x64' }
@@ -280,4 +265,55 @@ test('没有角色工具时 --tools 与今天逐字相同', () => {
     ompAcpArgs({ userData: dir } as never, undefined, {}).find((a) => a.startsWith('--tools=')),
     ompAcpArgs({ userData: dir } as never).find((a) => a.startsWith('--tools='))
   )
+})
+
+describe('ompBaseEnv · 不许把本机 Eas-Term 的凭证漏给 omp', () => {
+  const host: HostPaths = {
+    isPackaged: false,
+    resourcesPath: '',
+    appPath: '/app',
+    userData: '/ud',
+    home: '/home'
+  }
+  /** 这几个是 Eas-Term 发给**自己的子进程**的凭证。
+   *
+   *  omp 是我们 spawn 的子进程，会继承主进程的 env —— 而主进程在
+   *  「从另一个 Eas-Term 的终端里启动」时**自己就带着外层那套**
+   *  （2026-09-03 实测：隔离实例的主进程里就有 EAS_TERM_TOKEN）。
+   *  漏过去的后果是这个会话能调外层那个 app 的 MCP 桥，含 `/secret-env` 路由。
+   *  `planOmpLaunch` 里那条「不传 mcpEnv 就不注入」的保证，
+   *  必须靠这里先擦干净才成立 —— 否则它只是没**再**给一份，而不是没给。 */
+  const LEAKY = [
+    'EAS_TERM_PORT',
+    'EAS_TERM_TOKEN',
+    'EAS_SECRET_TOKEN',
+    'EAS_PTY_ID',
+    'EAS_PROJECT',
+    'EAS_TEAM_ROLE'
+  ]
+
+  it('环境里有这些时一个都不带进去', () => {
+    const saved: Record<string, string | undefined> = {}
+    for (const k of LEAKY) {
+      saved[k] = process.env[k]
+      process.env[k] = 'leaked-' + k
+    }
+    try {
+      const env = ompBaseEnv(host)
+      for (const k of LEAKY) {
+        assert.equal(env[k], undefined, `${k} 漏进了 omp 的环境`)
+      }
+    } finally {
+      for (const k of LEAKY) {
+        if (saved[k] === undefined) delete process.env[k]
+        else process.env[k] = saved[k]
+      }
+    }
+  })
+
+  it('**擦掉不影响显式注入** —— planOmpLaunch 把 mcpEnv 铺在它后面', () => {
+    const env = { ...ompBaseEnv(host), EAS_TERM_PORT: '5', EAS_TERM_TOKEN: 't' }
+    assert.equal(env.EAS_TERM_PORT, '5')
+    assert.equal(env.EAS_TERM_TOKEN, 't')
+  })
 })

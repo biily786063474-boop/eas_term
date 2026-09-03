@@ -5,23 +5,26 @@
 // 拆开的话，很容易出现「env 指向 A 目录、配置写进 B 目录」这种谁看都对、合起来全错的状态
 // —— 而那正是 §2.4 隔离承诺里最难发现的破法（`docs/superpowers/specs/2026-09-01-omp-底座接入-design.md`）。
 //
-// ── 为什么它允许 import electron，而 transport.ts 不允许 ──────────────────────
-// 这一层要 `mcpEnv()`（`mcpBridge.ts` 第一行就 import electron）与 `secretsEnv()`
-// （用 `app.isReady()`）。transport 那边要能在 `node --test` 下裸跑，
-// 所以它只收一个**已经算好**的 spec，不认识 electron、不认识密钥柜、不认识 MCP 桥。
-// 这条边界由 `scripts/verify-agent-chat.mjs` 的静态检查钉住。
+// ── 这个文件**零 electron、零 mcpBridge**，别加回去 ──────────────────────────
+// 原来它 import 了两样东西：`app`（只为 `hostPaths()` 那 5 行）和 mcpBridge 的
+// `mcpEnv` / `agentMcpConfigPath`。代价是两条：
+//   ① 循环依赖 `launch → mcpBridge → quotaStore → launch`（2026-09-03 代码地图查出来的）；
+//   ② mcpBridge 那条链上有无扩展名的相对 import（`./plugins`），Node 的 ESM 解析器认不了，
+//      于是整个模块在 `node --test` 下**加载不了** —— `readMcpServers` 里那段
+//      角色禁用逻辑一条测试都没有，而它静默失效的表现是「某个角色够到了不该够到的 MCP server」。
+// 现在两样都由**调用方注入**：`hostPaths()` 搬去了 `./host.ts`，
+// `mcpEnv` 与 MCP 配置路径由 `session.ts` 算好传进来。
+// `launch.test.ts` 第一条测试就钉着这件事 —— 加回任何一个 import，它当场红。
 //
 // ── 三道闸：不满足就不起进程 ────────────────────────────────────────────────
 // omp 的 `resolveConfigValue`（上游 `config/resolve-config-value.ts:21-27`）是
 // 「环境变量取不到就**把那串字面量当 key 用**」。所以少注入一把 key 的症状不是
 // 「未配置」而是 **provider 回 401**，用户会跑去改一把**根本没被读到**的 key。
 // 与其让他去追那个幻觉，不如在起进程之前就说清楚缺什么。
-import { app } from 'electron'
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import { agentMcpConfigPath, mcpEnv } from '../../mcpBridge.ts'
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
@@ -68,9 +71,13 @@ export interface OmpLaunchInput {
    *  自己的事（在它的 `agent.db` 里），它比我们清楚，报的话也比我们编的准。
    *  我们唯一还该拦的是「压根没选服务商」，因为那时连起哪一家都不知道。 */
   provider?: string
-  /** 带不带 MCP 桥的凭证。**冒烟传 false**：那一轮按设计不碰任何工具，
-   *  多给一个能调本机 MCP 桥（含 `/secret-env` 路由）的 token 是白送一条出口。 */
-  mcp: boolean
+  /** MCP 桥的凭证（`mcpBridge.mcpEnv()` 的产物）。**由调用方算好传进来。**
+   *
+   *  **不传就一个都不注入** —— 冒烟那条路径按设计不碰任何工具，
+   *  多给一个能调本机 MCP 桥（含 `/secret-env` 路由）的 token 是白送一条出口。
+   *  从「传 false」改成「不传」是有意的：默认值现在站在安全那一边，
+   *  忘了传的后果是少一个能力，而不是多一条出口。 */
+  mcpEnv?: Record<string, string>
   /** 覆盖默认的 `omp acp` 参数。冒烟用它把工具集钉更窄 */
   extraArgs?: string[]
   /** 角色契约原文（`AgentRole.contract`）。走 `--append-system-prompt`。
@@ -107,7 +114,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
   // （2026-09-02 真机，用户看到的是 MiniMax 的 1004）。
   const env: Record<string, string> = {
     ...ompBaseEnv(input.host),
-    ...(input.mcp ? mcpEnv({ project: input.cwd }) : {})
+    ...(input.mcpEnv ?? {})
   }
 
   return {
@@ -260,7 +267,11 @@ export function openOmpProcess(
  *  · **`env` 一律给数组，哪怕是空的**：上游 `#toNameValueMap` 无条件遍历它，
  *    省掉就是 TypeError。 */
 export function readMcpServers(
-  pluginId?: string,
+  /** MCP 配置文件的路径（`mcpBridge.agentMcpConfigPath(pluginId)` 的产物）。
+   *  **由调用方算好传进来** —— 那个函数深度依赖 electron 与插件系统，
+   *  在这里调用就等于把整个模块钉死在主进程里（见文件头）。
+   *  `null` = 没有可用配置，安静返回空。 */
+  configPath: string | null,
   /** 角色禁用的 MCP server 名。**在这里就摘掉，不交给 omp** ——
    *  omp 的 ACP `session/new` 只收一份「要连哪些」的名单，没有「连上但禁用」的说法。
    *  Claude 那侧是把它展开成 `mcp__<名>__*` 加进 deny，Codex 是
@@ -268,7 +279,7 @@ export function readMcpServers(
    *  选了「画师」，图像类 MCP 的工具在会话里就不该存在。 */
   denyServers?: readonly string[]
 ): { servers: AcpMcpServer[]; dropped: string[] } {
-  const p = agentMcpConfigPath(pluginId)
+  const p = configPath
   if (!p) return { servers: [], dropped: [] }
   try {
     const raw = JSON.parse(fs.readFileSync(p, 'utf8')) as { mcpServers?: Record<string, unknown> }
@@ -294,18 +305,6 @@ export function readMcpServers(
     return { servers, dropped }
   } catch {
     return { servers: [], dropped: [] }
-  }
-}
-
-/** 当前进程的 `HostPaths`。**算一次就够**，不要在每个调用点各取一次
- *  —— `process.resourcesPath` 在 dev 下是 undefined，各处各自兜底会长出好几种写法。 */
-export function hostPaths(): HostPaths {
-  return {
-    isPackaged: app.isPackaged,
-    resourcesPath: process.resourcesPath ?? '',
-    appPath: app.getAppPath(),
-    userData: app.getPath('userData'),
-    home: app.getPath('home')
   }
 }
 

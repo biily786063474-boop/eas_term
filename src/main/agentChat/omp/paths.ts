@@ -269,7 +269,27 @@ const SCRUB_KEYS = [
   'PI_PROFILE',
   'XDG_DATA_HOME',
   'XDG_STATE_HOME',
-  'XDG_CACHE_HOME'
+  'XDG_CACHE_HOME',
+
+  // ── 下面这组是 **Eas-Term 发给自己子进程的凭证**，绝不能被 omp 继承 ──────────
+  //
+  // `PROBE_ENV` 是 `{ ...process.env, PATH: … }`，所以主进程环境里有什么，
+  // omp 子进程就跟着有什么。而主进程在**「从另一个 Eas-Term 的终端里启动」**时
+  // 自己就带着外层那一套（2026-09-03 实测：隔离实例的主进程里就有 EAS_TERM_TOKEN）。
+  //
+  // 漏过去的后果不是「多个变量」：`EAS_TERM_PORT`+`EAS_TERM_TOKEN` 就是本机 MCP 桥的
+  // 全部门票（含 `/secret-env` 路由），`EAS_SECRET_TOKEN` 是密钥柜的，
+  // `EAS_TEAM_ROLE` 会让这个会话被当成团队成员（`mcpEnv` 注释里那道闸 0 的判据）。
+  //
+  // **擦掉不影响该给的时候给**：`planOmpLaunch` 是 `{ ...ompBaseEnv(host), ...mcpEnv }`，
+  // 显式注入铺在后面会覆盖回来。擦掉之后「不传 mcpEnv 就一个都不给」才真的成立 ——
+  // 在此之前那句保证只是「没有**再**给一份」，冒烟那条路径照样带着外层的票。
+  'EAS_TERM_PORT',
+  'EAS_TERM_TOKEN',
+  'EAS_SECRET_TOKEN',
+  'EAS_PTY_ID',
+  'EAS_PROJECT',
+  'EAS_TEAM_ROLE'
 ] as const
 
 /** 起 omp 子进程时的那份环境。**四个调用点（起会话 / 冒烟 / 订阅登录 / 查额度）
