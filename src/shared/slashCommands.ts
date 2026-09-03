@@ -14,7 +14,7 @@ export interface SlashCmd {
   name: string
   /** 一句话说清点下去会发生什么。**写「会得到什么」，不是复述命令名** */
   desc: string
-  from: 'builtin' | 'skill' | 'file'
+  from: 'builtin' | 'skill' | 'file' | 'chip'
 }
 
 /** 内置命令：每一条都在 2026-08-20 的 headless 实测里确认过有响应。
@@ -51,6 +51,38 @@ export function slashQuery(text: string): string | null {
  *  排序：前缀匹配的排在包含匹配前面（打 `co` 时 `compact` 该在 `context` 之类之前，
  *  而不是被一个只是名字里含 co 的 skill 顶掉）；同档内内置命令优先 ——
  *  内置的就那几个，skill 可能有几十个，让 skill 把它们挤出视野是不合理的。 */
+/** 同分时谁排前面。
+ *
+ *  **`chip` 最靠前**：那是用户为**这一条消息**专门挂上去的东西，
+ *  他打 `@` 十有八九就是要引用它 —— 排在几十个最近文件后面等于没有。
+ *
+ *  原来这里是个三元表达式（`a.from === 'builtin' ? -1 : 1`），
+ *  **只在两档时成立**：三档以上它给不出传递一致的序，
+ *  排序结果会随输入顺序变。加 `chip` 顺手换成显式表。 */
+const FROM_ORDER: Record<SlashCmd['from'], number> = {
+  chip: 0,
+  builtin: 1,
+  skill: 2,
+  file: 3
+}
+
+/** 预加载的 chip → `@` 候选。
+ *
+ *  **`name` 存 label**，因为那正是要插进正文的东西，也正是
+ *  `chips.ts` 的 `expandChips` 拿去匹配的键。两边用不同的字段就会分叉，
+ *  症状是「选得出来、发出去却没展开」—— 有测试同时钉着两边。
+ *
+ *  `desc` 摘提示词开头：候选列表里光有中文标题看不出这条会带来什么。 */
+export function chipsToCmds(
+  chips: readonly { id: string; label: string; text: string }[]
+): SlashCmd[] {
+  return chips.map((c) => ({
+    name: c.label,
+    desc: c.text.trim().replace(/\s+/g, ' ').slice(0, 40),
+    from: 'chip' as const
+  }))
+}
+
 export function matchSlash(query: string, all: readonly SlashCmd[]): SlashCmd[] {
   const q = query.trim().toLowerCase()
   if (!q) return [...all]
@@ -61,7 +93,7 @@ export function matchSlash(query: string, all: readonly SlashCmd[]): SlashCmd[] 
     else if (n.includes(q)) scored.push({ c, rank: 1 })
   }
   return scored
-    .sort((a, b) => a.rank - b.rank || (a.c.from === b.c.from ? 0 : a.c.from === 'builtin' ? -1 : 1))
+    .sort((a, b) => a.rank - b.rank || FROM_ORDER[a.c.from] - FROM_ORDER[b.c.from])
     .map((x) => x.c)
 }
 

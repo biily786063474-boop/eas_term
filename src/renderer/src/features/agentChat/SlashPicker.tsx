@@ -6,6 +6,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
   type RefObject
@@ -19,8 +20,10 @@ import {
   atQuery,
   applyAtPick,
   filesToCmds,
+  chipsToCmds,
   type SlashCmd
 } from '../../../../shared/slashCommands'
+import type { DictChip } from './chips.ts'
 
 /** 已装 skill 的候选。**整个应用只扫一次**：两个输入框、每个 agent 节点都要用，
  *  各扫各的等于开一堆重复 IPC。第一次调用时发起，之后共享同一个 promise。 */
@@ -63,7 +66,14 @@ export function useSlashPicker(
   /** 项目根路径。给了才有 `@` 文件引用 —— 没有它不知道去哪找文件。 */
   cwd?: string,
   /** 浮层贴着哪个元素弹（一般就是那个 textarea） */
-  anchorRef?: RefObject<HTMLElement | null>
+  anchorRef?: RefObject<HTMLElement | null>,
+  /** 输入框上方预加载着的 chip。**给了才能用 `@` 引用它们。**
+   *
+   *  2026-09-02 补：`expandChips` 早就认得 `@词条名`，但 `@` 这个键
+   *  一直被「引用文件」独占 —— 用户打 `@` 弹出的是文件名，
+   *  预加载的 chip 一个都看不见，只能手敲那个 200 字提示词的中文标题。
+   *  功能其实在，缺的是入口。 */
+  chips?: readonly DictChip[]
 ): SlashPickerState {
   const [skills, setSkills] = useState<SlashCmd[]>([])
   const [idx, setIdx] = useState(0)
@@ -100,11 +110,17 @@ export function useSlashPicker(
 
   const q = slashQuery(text)
   // 两者不会同时命中：slash 只认开头且不含空格，@ 只认末尾那一段
+  // `@` 的候选 = 预加载的 chip + 最近文件。**chip 排前面**（`FROM_ORDER`）——
+  // 那是用户为这条消息专门挂的，排在几十个文件后面等于没有。
+  const atPool = useMemo(
+    () => [...chipsToCmds(chips ?? []), ...files],
+    [chips, files]
+  )
   const hits =
     q !== null
       ? matchSlash(q, [...BUILTIN_SLASH, ...skills])
       : aq !== null
-        ? matchSlash(aq, files)
+        ? matchSlash(aq, atPool)
         : []
   const open = !off && (q !== null || aq !== null) && hits.length > 0
 
@@ -120,8 +136,9 @@ export function useSlashPicker(
   const pick = (i: number): void => {
     const c = hits[i]
     if (!c) return
-    if (c.from === 'file') {
-      // 只替换末尾那段 `@xxx`，前面写的字一个不动
+    if (c.from === 'file' || c.from === 'chip') {
+      // 只替换末尾那段 `@xxx`，前面写的字一个不动。
+      // **chip 插的是 label** —— `expandChips` 正是按它匹配的（契约有测试钉着）。
       setText(applyAtPick(text, c.name))
       onPicked?.()
       return
@@ -233,7 +250,7 @@ export function SlashList({ hits, idx, setIdx, pick, anchorRef }: SlashPickerSta
           onMouseEnter={() => setIdx(i)}
         >
           <span className="ac-slash-name">
-            {c.from === 'file' ? '@' : '/'}
+            {c.from === 'file' || c.from === 'chip' ? '@' : '/'}
             {c.name}
           </span>
           <span className="ac-slash-desc">{c.desc}</span>

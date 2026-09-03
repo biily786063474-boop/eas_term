@@ -144,7 +144,9 @@ export function ChatToolbar({
     () => requestAnimationFrame(() => taRef.current?.focus()),
     cwd,
     // 浮层贴着输入框弹（它渲染在 body 上，需要一个锚点）
-    taRef
+    taRef,
+    // 预加载的 chip 也进 `@` 候选，且排在文件前面
+    chips
   )
 
   const submit = (): void => {

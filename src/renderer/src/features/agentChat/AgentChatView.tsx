@@ -843,7 +843,9 @@ export function AgentChatView({
     setText,
     () => requestAnimationFrame(() => emptyTaRef.current?.focus()),
     cwd,
-    emptyTaRef
+    emptyTaRef,
+    // 预加载的 chip 也进 `@` 候选，且排在文件前面
+    chips
   )
 
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
