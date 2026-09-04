@@ -1,6 +1,16 @@
 import { describe, it, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MAGNET_MAX, chordPath, labelAt, linkWidth, magnetOffset, radialLayout, type RadialNode } from './radial.ts'
+import {
+  MAGNET_MAX,
+  arcPath,
+  chordPath,
+  inboundRatio,
+  labelAt,
+  linkWidth,
+  magnetOffset,
+  radialLayout,
+  type RadialNode
+} from './radial.ts'
 
 const n = (id: string, weight = 1, group = 'a'): RadialNode => ({ id, weight, group })
 
@@ -79,8 +89,11 @@ test('**连线粗细用对数** —— 线性映射会让小的细到看不见',
   // 这个仓库的跨界依赖条数从 1 到 160
   const thin = linkWidth(1, 160)
   const thick = linkWidth(160, 160)
-  assert.ok(thin >= 0.6, `最细的看不见了：${thin}`)
-  assert.ok(thick <= 4.5)
+  // **阈值随设计意图收窄了**（2026-09-03 用户：「连线细一点」）：
+  // 上限 4.5 → 2.0。密集图上几百条线，单条稍粗乘以条数就是一片糊。
+  // 被测的性质没变 —— 仍是对数、最细的仍要看得见（0.5px 在 retina 上是实的一条）。
+  assert.ok(thin >= 0.45, `最细的看不见了：${thin}`)
+  assert.ok(thick <= 2, `太粗了：${thick}`)
   // 对数的特征：中间值离粗的一端更近
   const mid = linkWidth(13, 160) // sqrt(160)≈12.6
   assert.ok(mid - thin > (thick - thin) * 0.35, '压缩得太狠，中间档全挤在细的一头')
@@ -129,5 +142,45 @@ describe('磁吸', () => {
     const near = Math.hypot(...Object.values(magnetOffset(4, 0)))
     const far = Math.hypot(...Object.values(magnetOffset(18, 0)))
     assert.ok(near > far, `近 ${near} 应大于远 ${far}`)
+  })
+})
+
+describe('出入弧', () => {
+  it('占比 0 不画', () => {
+    assert.equal(arcPath(50, 50, 10, 0), '')
+    assert.equal(arcPath(50, 50, 10, -1), '')
+  })
+
+  it('**超过半圈要置大弧标志** —— 不置的话占比一过 50% 弧突然变短，看着像数据错了', () => {
+    assert.match(arcPath(50, 50, 10, 0.75), /A 10 10 0 1 1/)
+    assert.match(arcPath(50, 50, 10, 0.25), /A 10 10 0 0 1/)
+  })
+
+  it('**满圈用两段半圆** —— 起点终点重合时单段 arc 会渲染成什么都不画', () => {
+    const p = arcPath(50, 50, 10, 1)
+    assert.equal((p.match(/A /g) ?? []).length, 2, '满圈应该是两段：' + p)
+  })
+
+  it('从正上方起手', () => {
+    assert.match(arcPath(50, 50, 10, 0.25), /^M 50\.00 40\.00/)
+  })
+
+  it('占比夹在 0..1', () => {
+    assert.equal(arcPath(0, 0, 5, 2), arcPath(0, 0, 5, 1))
+  })
+})
+
+describe('inboundRatio', () => {
+  it('全是被依赖 → 1', () => {
+    assert.equal(inboundRatio(10, 0), 1)
+  })
+  it('全是依赖别人 → 0', () => {
+    assert.equal(inboundRatio(0, 10), 0)
+  })
+  it('一半一半', () => {
+    assert.equal(inboundRatio(5, 5), 0.5)
+  })
+  it('**两边都是 0 返回 null** —— 那是「没有跨界依赖」，不是「占比 0」', () => {
+    assert.equal(inboundRatio(0, 0), null)
   })
 })

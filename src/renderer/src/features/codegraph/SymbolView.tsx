@@ -14,6 +14,7 @@ import type { SymbolGraphResult, SymbolNode } from '../../../../shared/symbolGra
 import { refOf, type Neighborhood, type ProviderInfo } from '../../../../shared/symbolProvider.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
+import { inboundRatio } from './radial.ts'
 
 /** 符号种类 → 颜色。和模块级那套风险色**刻意不同** ——
  *  这里表达的是「它是什么」，不是「它有多危险」，共用一套色会让人读串。 */
@@ -27,6 +28,14 @@ const KIND_COLOR: Record<SymbolNode['kind'], string> = {
   class: 'var(--sem-warn)',
   arrow: 'var(--t-3)',
   other: 'var(--t-3)'
+}
+/** 图上用的 RGB 三元组（渲染层组 alpha）。**只有「类」给色相**，其余走灰阶。 */
+const KIND_RGB: Record<SymbolNode['kind'], string> = {
+  function: '255, 255, 255',
+  method: '255, 255, 255',
+  class: 'var(--sem-warn-rgb)',
+  arrow: '255, 255, 255',
+  other: '255, 255, 255'
 }
 const KIND_LABEL: Record<SymbolNode['kind'], string> = {
   function: '函数',
@@ -101,7 +110,10 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
         label: s.name,
         weight: s.refs + 1,
         group: s.kind,
-        color: KIND_COLOR[s.kind],
+        rgb: KIND_RGB[s.kind],
+        // 文件内结构里没有「跨界出入」，改用**被引用 vs 文件内出边** ——
+        // 同一个问句的文件内版本：它是被大家用的，还是它在用别人
+        ratio: inboundRatio(s.refs, f.edges.filter((e) => e.from === s.id).length),
         hint: `${KIND_LABEL[s.kind]} · 第 ${s.line} 行 · 被引用 ${s.refs} 次${s.exported ? ' · 导出' : ''}`
       })),
       links: f.edges

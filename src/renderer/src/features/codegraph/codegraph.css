@@ -204,12 +204,30 @@
 /* ── 节点连线图 ────────────────────────────────────────────────────────────
    布局在 radial.ts（纯函数、有测试）。这里只管画得清楚。 */
 
+/* 图是**唯一的视觉重心**，所以它拿一块明确的、足够大的地。
+   高度写死而不是 auto：auto 在 flex 里会被压扁（实测被压成 182px，
+   图缩在中间只占一小块）。 */
+.cg-canvas-box {
+  /* **flex: none 是必须的。** `.cg-body` 是 flex 列容器，
+     不写的话这个盒子会被 shrink 掉（实测从 390px 被压到 170px，
+     于是 `preserveAspectRatio="meet"` 按高度适配，图缩在中间一小块）。 */
+  flex: none;
+  /* **给一个合理的宽高比并居中。** 模块最大化后容器能有 2600px 宽，
+     而环形图按 `min(w,h)` 定半径 —— 6.7:1 的窄条里会缩成中间一个小圈，
+     两边全是空。1.9:1 是「够宽能摊开、又不至于把图挤扁」的比例。 */
+  /* **宽度跟着高度走**（不是反过来）：高度由视口定，宽度按 1.9:1 推出来，
+     再被容器宽度封顶。这样任何面板宽度下图都是同一个比例，不会时扁时方。 */
+  aspect-ratio: 1.9 / 1;
+  height: min(56vh, 520px);
+  min-height: 300px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+}
 .cg-svg {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 62vh;
-  margin: 0 auto 18px;
+  height: 100%;
 }
 
 .cg-empty {
@@ -559,4 +577,185 @@
 .cg-layout.on {
   color: var(--t-1);
   background: var(--lift-2);
+}
+
+/* 渐变球的两层叠色。**不接鼠标** —— 它们盖在圆上面，接了会把 hover 抢走。 */
+.cg-shade {
+  pointer-events: none;
+}
+
+/* 出入弧：**发丝级**，而且比节点本身更淡 —— 它是补充信息，不该抢过节点本身。
+   1.25px 是在「看得见」和「不成为一条粗 stroke」之间量出来的。 */
+.cg-arc {
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  opacity: 0.32;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.cg-node:hover .cg-arc,
+.cg-node.hot .cg-arc {
+  opacity: 0.95;
+}
+.cg-node.dim .cg-arc {
+  opacity: 0.08;
+}
+
+/* 扁平同心：内环发丝级、核心不接鼠标。
+   **hover 时加的是明度不是缩放** —— 缩放会让节点位置读起来在动，
+   而磁吸已经在动了，两个动作叠一起就乱。 */
+.cg-mid {
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.cg-core {
+  pointer-events: none;
+  transition: r 0.15s ease;
+}
+.cg-node:hover .cg-core,
+.cg-node.hot .cg-core {
+  r: 3;
+}
+/* 弧也压一档 —— 它是补充信息，一屏 26 道弧同时亮着就成了噪声 */
+
+
+/* ── dashboard：一排二的两个紧凑面板 ────────────────────────────────────────
+   用户 2026-09-03：「一页里面只去展示一个视觉重心」。
+   图是主角，这两块要**明显降一档**：更小的字、更弱的色、更紧的行高，
+   而且默认只露 6 行。它们回答「具体多少」，图回答「谁和谁连」。 */
+.cg-dash {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 22px;
+}
+@media (max-width: 620px) {
+  .cg-dash {
+    grid-template-columns: 1fr;
+  }
+}
+.cg-panel {
+  min-width: 0;
+  border-radius: var(--radius-md);
+  background: var(--lift-1);
+  overflow: hidden;
+}
+.cg-panel-hd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--t-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.cg-panel-hd:hover {
+  color: var(--t-1);
+}
+/* 数量**放在标题右边而不是标题里** —— 「领地 26」读起来像个名字，
+   「领地  ⟨26⟩」才读得出是「一共 26 个」 */
+.cg-panel-n {
+  margin-left: auto;
+  color: var(--t-3);
+  font-variant-numeric: tabular-nums;
+}
+.cg-rows {
+  display: flex;
+  flex-direction: column;
+}
+.cg-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  color: var(--t-2);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  /* 分类色只留一道极短的渐变在最左 —— 比整行染色克制得多 */
+  background: linear-gradient(to right, rgba(var(--tint, 255, 255, 255), 0.06), transparent 14%);
+  transition: background-color var(--dur-fast);
+}
+.cg-row:hover {
+  background-color: var(--lift-2);
+}
+.cg-row.static {
+  cursor: default;
+  background: none;
+}
+.cg-row-n {
+  color: var(--t-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 1 auto;
+}
+.cg-row-tag {
+  font-size: 10.5px;
+  flex: none;
+}
+.cg-row-arrow {
+  color: var(--t-3);
+  flex: none;
+}
+/* 数字右对齐 ＋ 等宽数字：一列数字对不齐时，扫一眼比大小就变成逐个读 */
+.cg-row-v {
+  margin-left: auto;
+  color: var(--t-3);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  font-size: 11.5px;
+}
+.cg-row-v + .cg-row-v {
+  margin-left: 10px;
+}
+.cg-row-v.dim {
+  opacity: 0.7;
+}
+.cg-more {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: none;
+  color: var(--t-3);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--dur-fast);
+}
+.cg-more:hover {
+  color: var(--t-1);
+}
+/* 图那块给足呼吸 —— 它是唯一的视觉重心，上下留白比两个面板大一档 */
+.cg-body > .cg-svg {
+  margin: 6px 0 4px;
+}
+
+/* 环境光。**铺满盒子、压在图底下、不接鼠标。**
+   规格里那句「刻意很安静」是对的 —— 它的作用是让纯黑底不那么死，
+   不是要抢眼；所以点很小、很淡，靠数量而不是靠亮度。 */
+.cg-canvas-box {
+  position: relative;
+}
+.cg-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* 中心稍亮、边缘淡出 —— 给「略微有些光感」那句一个中心，
+     否则均匀铺满的点只是噪点纹理 */
+  mask-image: radial-gradient(ellipse 72% 78% at 50% 48%, #000 42%, transparent 100%);
+}
+.cg-svg {
+  position: relative;
 }

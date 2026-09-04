@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeGraphResult, Risk } from '../../../../shared/codeGraph.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink, type LayoutKind } from './GraphCanvas.tsx'
+import { inboundRatio } from './radial.ts'
 import { SymbolView } from './SymbolView.tsx'
 import './codegraph.css'
 
@@ -24,15 +25,19 @@ import './codegraph.css'
  *
  *  ⚠️ **`frozen` 不给独立色相。** 图纸 15 规矩 ④：强调靠明度不靠色相，
  *  一屏里色相越少越好；「分发产物」用弱文字色退到后面就够了。 */
-const RISK_COLOR: Record<Risk, string> = {
-  // **「常规 / 耦合轻」不给色相。** 它表达的是「这里没事」——
-  // 而一屏 26 个节点里它占大多数，给了色相就等于让「没事」占掉最大的一块彩色面积。
-  // 色相要留给真正需要被看见的那两档（图纸 15 规矩 ④：强调靠明度不靠色相）。
-  green: 'color-mix(in srgb, var(--t-3) 52%, transparent)',
-  // 中间档再压一档：它是「留意」，不是「警报」
-  amber: 'color-mix(in srgb, var(--sem-warn) 40%, var(--s-2))',
-  red: 'color-mix(in srgb, var(--sem-danger) 52%, var(--s-2))',
-  frozen: 'color-mix(in srgb, var(--t-3) 28%, transparent)'
+/** 风险等级 → **RGB 三元组**。渲染层按不同 alpha 组出体量/内环/核心三层。
+ *
+ *  ⚠️ **不要在这里掺灰。** 上一版用 `color-mix(… , var(--s-2))` 把干净色相往
+ *  近黑里掺 —— 同时降明度和降饱和，出来是泥（用户原话「配色也脏」）。
+ *  干净色相 ＋ 低 alpha 压在暗底上，才是干净的淡色。
+ *
+ *  **「常规」仍然不给色相**（它表达的是「这里没事」，一屏里占大多数）：
+ *  给白，于是三层退化成干净的灰阶，不引入任何色相。 */
+const RISK_RGB: Record<Risk, string> = {
+  green: '255, 255, 255',
+  amber: 'var(--sem-warn-rgb)',
+  red: 'var(--sem-danger-rgb)',
+  frozen: '255, 255, 255'
 }
 /** 标签文字的颜色。**和节点填充分开一套** ——
  *  节点是半透明的色块（可以很淡），文字要读得清，不能直接套那个值。
@@ -103,6 +108,10 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
   /** 排布方式。**默认环形** —— 它确定、不掉帧，且任意两点之间的弦一眼可见；
    *  力导向答的是另一个问题（哪几块抱团），并列给出让用户自己挑。 */
   const [layout, setLayout] = useState<LayoutKind>('ring')
+  /** 下面两个面板默认收起（只露前 `DASH_ROWS` 条）——
+   *  它们是 dashboard，不该和图抢视觉重心 */
+  const [terrOpen, setTerrOpen] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
   const aliveRef = useRef(true)
 
   const scan = (): void => {
@@ -146,8 +155,15 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
         label: t.name,
         weight: t.files,
         group: t.risk,
-        color: RISK_COLOR[t.risk],
-        hint: `${t.files} 个文件，跨界出 ${t.crossOut} 入 ${t.crossIn}`
+        rgb: RISK_RGB[t.risk],
+        // 外弧 = 被依赖占比。**「大家都在用它」和「它在用所有人」是两种耦合**，
+        // 处理方式完全不同，而在这之前这个信息只在下面的卡片里
+        ratio: inboundRatio(t.crossIn, t.crossOut),
+        hint: `${t.files} 个文件，跨界出 ${t.crossOut} 入 ${t.crossIn}${
+          inboundRatio(t.crossIn, t.crossOut) === null
+            ? '（没有跨界依赖）'
+            : `　外弧＝被依赖占 ${Math.round((inboundRatio(t.crossIn, t.crossOut) ?? 0) * 100)}%`
+        }`
       })),
       links: graph.territories.links.map((l) => ({
         from: l.from,
@@ -180,7 +196,8 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
         label: n.id.split('/').pop() ?? n.id,
         weight: n.inDegree + n.outDegree || 1,
         group: n.risk,
-        color: RISK_COLOR[n.risk],
+        rgb: RISK_RGB[n.risk],
+        ratio: inboundRatio(n.inDegree, n.outDegree),
         hint: `被依赖 ${n.inDegree} · 依赖 ${n.outDegree}`
       })),
       links: [...links.values()]
@@ -376,41 +393,80 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
             onPick={setDrill}
           />
 
-          {/* 卡片降为图例 + 明细：图回答「谁和谁连」，卡片回答「具体多少」。 */}
-          <div className="cg-terr">
-            {graph.territories.stats.map((t) => (
+          {/* ── 下面两块是 dashboard，不是第二个视觉重心 ──────────────────────
+              用户 2026-09-03：「三部分的视觉重心好像都一样，我希望一页里面
+              只去展示一个视觉重心」。**图是主角**，所以这两块：
+                · 从大卡片网格降成紧凑行列表（26 张卡撑满一屏就成了第二个重心）
+                · 一排二并列，不再上下各占一大段
+                · 默认只露前 6 条，其余渐进式披露 —— 要看全的人点一下就有，
+                  不看的人不用为它滚过半屏 */}
+          <div className="cg-dash">
+            <section className="cg-panel">
               <button
-                key={t.name}
                 type="button"
-                className="cg-tcard"
-                onClick={() => setDrill(t.name)}
-                style={{ ['--tint' as string]: RISK_TINT[t.risk] } as React.CSSProperties}
+                className="cg-panel-hd"
+                onClick={() => setTerrOpen((v) => !v)}
+                aria-expanded={terrOpen}
               >
-                <div className="cg-tname">
-                  {t.name}
-                  <span className="cg-trisk" style={{ color: RISK_TEXT[t.risk] }}>
-                    {RISK_LABEL[graph.territoryMode][t.risk]}
-                  </span>
-                </div>
-                <div className="cg-tnum">{t.files} 个文件</div>
-                <div className="cg-tcross">
-                  跨界 出 <b>{t.crossOut}</b> · 入 <b>{t.crossIn}</b>
-                </div>
+                <span className={`cg-caret${terrOpen ? ' open' : ''}`}>›</span>
+                领地
+                <span className="cg-panel-n">{graph.territories.stats.length}</span>
               </button>
-            ))}
-          </div>
-
-          {/* 跨领地的边，按条数排 —— 排最前的那几条就是这个项目的主耦合线 */}
-          <div className="cg-links-hd">跨领地依赖（前 10）</div>
-          <div className="cg-links">
-            {graph.territories.links.slice(0, 10).map((l) => (
-              <div key={`${l.from}→${l.to}`} className="cg-link">
-                <span className="cg-lf">{l.from}</span>
-                <span className="cg-la">→</span>
-                <span className="cg-lt">{l.to}</span>
-                <span className="cg-lc">{l.count}</span>
+              <div className="cg-rows">
+                {(terrOpen ? graph.territories.stats : graph.territories.stats.slice(0, DASH_ROWS)).map((t) => (
+                  <button
+                    key={t.name}
+                    type="button"
+                    className="cg-row"
+                    onClick={() => setDrill(t.name)}
+                    style={{ ['--tint' as string]: RISK_TINT[t.risk] } as React.CSSProperties}
+                  >
+                    <span className="cg-row-n">{t.name}</span>
+                    <span className="cg-row-tag" style={{ color: RISK_TEXT[t.risk] }}>
+                      {RISK_LABEL[graph.territoryMode][t.risk]}
+                    </span>
+                    <span className="cg-row-v">{t.files} 文件</span>
+                    <span className="cg-row-v dim">出 {t.crossOut} · 入 {t.crossIn}</span>
+                  </button>
+                ))}
               </div>
-            ))}
+              {!terrOpen && graph.territories.stats.length > DASH_ROWS && (
+                <button type="button" className="cg-more" onClick={() => setTerrOpen(true)}>
+                  还有 {graph.territories.stats.length - DASH_ROWS} 块地
+                </button>
+              )}
+            </section>
+
+            <section className="cg-panel">
+              <button
+                type="button"
+                className="cg-panel-hd"
+                onClick={() => setLinkOpen((v) => !v)}
+                aria-expanded={linkOpen}
+              >
+                <span className={`cg-caret${linkOpen ? ' open' : ''}`}>›</span>
+                跨领地依赖
+                <span className="cg-panel-n">{graph.territories.links.length}</span>
+              </button>
+              <div className="cg-rows">
+                {(linkOpen
+                  ? graph.territories.links.slice(0, 40)
+                  : graph.territories.links.slice(0, DASH_ROWS)
+                ).map((l) => (
+                  <div key={`${l.from}→${l.to}`} className="cg-row static">
+                    <span className="cg-row-n">{l.from}</span>
+                    <span className="cg-row-arrow">→</span>
+                    <span className="cg-row-n">{l.to}</span>
+                    <span className="cg-row-v">{l.count}</span>
+                  </div>
+                ))}
+              </div>
+              {!linkOpen && graph.territories.links.length > DASH_ROWS && (
+                <button type="button" className="cg-more" onClick={() => setLinkOpen(true)}>
+                  还有 {Math.min(graph.territories.links.length, 40) - DASH_ROWS} 条
+                </button>
+              )}
+            </section>
           </div>
 
           {graph.unresolved.length > 0 && (
@@ -433,6 +489,10 @@ const STACK_LABEL: Record<string, string> = {
   c: 'C/C++',
   swift: 'Swift'
 }
+
+/** 收起时每个面板露几行。**6 行是「够看出趋势、又不占版面」的量** ——
+ *  再多就开始和图抢注意力，再少则连排第一的那几条都看不全。 */
+const DASH_ROWS = 6
 
 /** 环上的分组顺序：安全边界的排在一起，绿的排一起 ——
  *  于是「红区之间的连线」在图上是一段集中的弦，一眼认得出。 */

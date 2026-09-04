@@ -113,8 +113,11 @@ export function labelAt(
 /** 连线粗细。**用对数**：跨界依赖的条数跨度很大
  *  （这个仓库里从 1 到 160），线性映射会让小的那些细到看不见。 */
 export function linkWidth(count: number, max: number): number {
-  if (max <= 1) return 1
-  return 0.6 + (Math.log(count + 1) / Math.log(max + 1)) * 3.4
+  // **细**（用户 2026-09-03）：上限从 4.0 收到 1.8。
+  // 密集图上几百条线，单条稍粗一点乘以条数就是一片糊；
+  // 「哪条更重」靠对比读得出来即可，不需要粗到抢过节点。
+  if (max <= 1) return 0.5
+  return 0.35 + (Math.log(count + 1) / Math.log(max + 1)) * 1.45
 }
 
 // ── 磁吸 ────────────────────────────────────────────────────────────────────
@@ -144,4 +147,44 @@ export function magnetOffset(dx: number, dy: number): { x: number; y: number } {
   const strength = Math.max(0, 1 - d / MAGNET_RANGE)
   const k = (Math.min(d, MAGNET_MAX) * strength) / d
   return { x: dx * k, y: dy * k }
+}
+
+// ── 出入弧 ──────────────────────────────────────────────────────────────────
+//
+// 节点外面那道细弧，长度 = **被依赖占比**（入 /（出＋入））。
+// 它回答的是「这块地是大家都在用它，还是它在用所有人」——
+// 两种耦合的处理方式完全不同，而在这之前这个信息只在下面的卡片里。
+
+/** 弧离圆边多远（px）。太近会和圆糊在一起，太远读不出是同一个东西的。 */
+export const ARC_GAP = 4.5
+
+/**
+ * 一段圆弧的 path。从**正上方**开始顺时针走 `fraction` 圈。
+ *
+ * ⚠️ **大弧标志（large-arc-flag）是这里唯一会错的地方**：超过半圈时必须置 1，
+ * 否则 SVG 会画成「另一边那段短的」—— 症状是占比一过 50% 弧突然变短，
+ * 看着像数据错了。
+ */
+export function arcPath(cx: number, cy: number, r: number, fraction: number): string {
+  const f = Math.max(0, Math.min(1, fraction))
+  if (f <= 0) return ''
+  // 满圈用两段半圆画 —— 起点终点重合时单段 arc 会被渲染成「什么都不画」
+  if (f >= 0.999) {
+    return `M ${cx.toFixed(2)} ${(cy - r).toFixed(2)} A ${r} ${r} 0 1 1 ${cx.toFixed(2)} ${(cy + r).toFixed(2)} A ${r} ${r} 0 1 1 ${cx.toFixed(2)} ${(cy - r).toFixed(2)}`
+  }
+  const a0 = -Math.PI / 2
+  const a1 = a0 + f * Math.PI * 2
+  const x0 = cx + Math.cos(a0) * r
+  const y0 = cy + Math.sin(a0) * r
+  const x1 = cx + Math.cos(a1) * r
+  const y1 = cy + Math.sin(a1) * r
+  const large = f > 0.5 ? 1 : 0
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`
+}
+
+/** 被依赖占比。**两边都是 0 时返回 null** —— 那是「没有跨界依赖」，
+ *  不是「占比 0」，画一道空弧会让人以为它全在依赖别人。 */
+export function inboundRatio(crossIn: number, crossOut: number): number | null {
+  const total = crossIn + crossOut
+  return total > 0 ? crossIn / total : null
 }
