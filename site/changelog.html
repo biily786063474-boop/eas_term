@@ -54,6 +54,78 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.77">0.4.77</h2>
+          <time datetime="2026-09-04">2026-09-04</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>代码地图</strong>：一个新模块，把项目摊成一张图。外圈是「哪几块地」（按你自己的架构图纸分），线的粗细是依赖有多重，颜色是耦合风险。<strong>运行时循环依赖单独拎出来放最上面</strong> —— 那些是真要修的。支持 <strong>JS/TS · Python · C/C++ · Swift</strong>，混合项目两边都出结果</li>
+          <li><strong>代码地图能看到函数层</strong>：切到「符号」就从「文件依赖谁」下沉到「函数调用谁」，附一份<strong>死代码清单</strong>（本仓库跑出来 8 条，逐条核实全对）。点一个符号能看「谁调用了它 / 它调用了谁」。C/C++、Swift 走系统自带的语言服务器，Python 需要你自己装 pyright</li>
+          <li><strong>两种排布</strong>：环形答「谁和谁连」，聚类答「哪几块抱团」。圆的大小按内容多少</li>
+          <li><strong>辞典大改</strong>：一级分类从「它是什么」换成<strong>「你在干哪种活」</strong>（前端·组件 / 视觉 / 动效 / 数据，加上后端·服务），48 个二级手法名一个字没改</li>
+          <li><strong>辞典多了一排「区块」筛子</strong>：导航栏、金刚区、弹层、表格、页脚…… 想做哪一块就筛哪一块。它和分类是横切关系，一条手法可以属于好几块，也可以哪块都不属于</li>
+          <li><strong>辞典里加了「原型图预设」</strong>：10 张常见页面（移动端首页 / 详情页 / 表单页…，桌面端落地页 / 控制台 / 看板…），竖着列出这张页面由哪些区块组成、每块一句要点，点一块就展开那块能用的手法</li>
+          <li><strong>辞典补了 74 条</strong>（共 455 条），其中<strong>后端 40 条</strong>是全新的一支：接口与契约、存储与查询、可靠性与容错、性能与容量。它们用另一套提示词模板，多一段【怎么验证】—— 后端改动往往肉眼看不见</li>
+          <li><strong>新词条都有动画预览</strong>：前端的从整张页面推进到它所在的那一块，后端的画成「调用方 → 服务 → 存储」的流向图</li>
+          <li><strong>在造梦空间里右键就能插模块</strong>：Frame 空白处右键 →「新建」，下面直接是版本管理 / 设计模块 / 团队面板 / 代码地图，点哪个就插在你右键的位置</li>
+          <li><strong>最大化的模块能调显示比例</strong>：双指捏合，或 ⌘+ / ⌘- / ⌘0</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>角色选择改成了轮播卡片</strong>，一次看一张、可以拖着划，底下有圆点指示；入口也从工具栏搬到了空态，和「选哪个 CLI」并排 —— 那才是你要挑角色的时刻</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>把 HTML / 文件 / 组件模块最大化，内容整个消失，只剩空白画板</strong></li>
+          <li><strong>代码地图最大化之后下半屏是空的</strong>，图缩在上面一小条</li>
+          <li><strong>一个对话重新挂载之后会换掉底座</strong>（本来在用 Codex，回来变成别的），现在会话一建立就钉死</li>
+          <li><strong>空态里已经关掉的对话默认摊开一大片</strong>，现在默认折叠</li>
+          <li><strong>缩放抓手的圆角和模块对不齐</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.76">0.4.76</h2>
+          <time datetime="2026-09-03">2026-09-03</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>空的造梦空间不再是一片空白</strong>：中间给三颗 AI 按钮（Claude Code / Codex / omp）和一颗「先开个终端」，点安装就直接开装，不再多拦一次确认</li>
+          <li><strong>角色能真的约束 AI 了</strong>：选定的角色会作为契约注入会话，工具边界也跟着收 —— 三个 CLI 各走各的路，但规矩一样</li>
+          <li><strong>AI 面板能钉死用哪个 CLI</strong>，跨重启还在</li>
+          <li><strong>双击画布有一下迸发</strong>；三颗引导按钮的镜面高光会沿着边滑动，鼠标靠近时收成一道扫光</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>终端退回纯终端</strong>：原来终端顶上挂着一条 Agent 控制条，现在拆掉了 —— 要跟 AI 说话就开 AI 对话，终端只做终端</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>omp 进程死掉之后按停止毫无反应，界面永远卡在「正在处理」</strong></li>
+          <li><strong>omp 会话空闲一阵之后，发出去的消息永远发不出去</strong> —— 这才是「卡住」的真根因</li>
+          <li><strong>最大化时画布的边栏挡住内容</strong></li>
+          <li><strong>胶囊上的名字被截断</strong></li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
+          <h2 id="v0.4.74">0.4.74</h2>
+          <time datetime="2026-09-02">2026-09-02</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>自带了一个能直接用的 AI 底座</strong>。不用先去装 Claude Code 或 Codex —— 打开就能开始对话。它随安装包一起来，不会在你用的时候偷偷去下载什么</li>
+          <li><strong>接它有两条路，用你已经有的那种</strong>：拿<strong>已经买了的订阅</strong>登录（ChatGPT Plus/Pro、Claude Pro/Max、智谱 GLM Coding Plan、Kimi Code、GitHub Copilot、Cursor…共 69 家），或者<strong>填一把 API key</strong>。订阅登录会打开浏览器让你登，凭证存在这台机器上并自动续期；API key 走密钥柜，只进这个模型进程、不跟着你新开的终端跑</li>
+          <li><strong>它的工具调用照样要你点头</strong>。要跑命令、要改文件，都会先弹审批卡片，和 Claude Code 那边一个规矩</li>
+          <li><strong>画图这类工具在它身上是关掉的</strong> —— 这台机器上生图只走笔纵画板那条路</li>
+        </ul>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li><strong>额度条能显示第三家了</strong>。订阅登录之后，它的用量和重置时间会和 Claude、Codex 并排显示；用 API key 的话没有「额度」这个概念，那一段就不出现（不会给你看一个永远是 0% 的格子）</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.73">0.4.73</h2>
           <time datetime="2026-09-01">2026-09-01</time>
         </div>
