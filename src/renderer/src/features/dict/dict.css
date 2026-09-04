@@ -552,3 +552,46 @@
 .dict-chip.sub.active {
   opacity: 1;
 }
+
+/* 区块筛子。**和分类 chip 长得要不一样** —— 它是横切的一维，
+   跟一级二级不是同一种东西；长一样的话用户会以为是三级分类。
+   手法：不填底、只用一圈很淡的描边（图纸 15 规矩②的例外之一是"状态"，
+   这里的选中态才填底）。 */
+.dict-cats-blk {
+  gap: 5px;
+}
+.dict-chip.blk {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--t-3);
+  font-size: 11.5px;
+  padding: 2px 8px;
+}
+.dict-chip.blk:hover {
+  color: var(--t-1);
+  border-color: var(--t-3);
+}
+.dict-chip.blk.active {
+  background: var(--lift-2);
+  border-color: transparent;
+  color: var(--t-1);
+}
+/* 0 条的格子照常显示、可点，但压暗 —— 它是「还没有」不是「不支持」 */
+.dict-chip.blk.empty {
+  opacity: 0.42;
+}
+.dict-chip-n {
+  color: var(--t-3);
+  font-variant-numeric: tabular-nums;
+  margin-left: 1px;
+}
+.dict-chip.blk.active .dict-chip-n {
+  color: var(--t-2);
+}
+.dict-chip.clear {
+  background: transparent;
+  border: none;
+  color: var(--t-3);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

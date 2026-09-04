@@ -14,6 +14,7 @@ import path from 'path'
 
 import type { UserTerm } from '../shared/types'
 import { isValidCat, normalizeCat1 } from '../shared/dictTaxonomy'
+import { normalizeBlocks } from '../shared/dictBlocks'
 
 const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
 // ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
@@ -94,7 +95,13 @@ function readUser(): UserTerm[] {
         const c1 = normalizeCat1(t.cat1, t.cat2)
         return c1 ? { cat1: c1, cat2: t.cat2 as string } : {}
       })(),
-      ...(typeof t.prompt === 'string' && t.prompt.trim() ? { prompt: t.prompt.trim() } : {})
+      ...(typeof t.prompt === 'string' && t.prompt.trim() ? { prompt: t.prompt.trim() } : {}),
+      // ⚠️ **这一行就是上面那段警告说的事。** 加了 blocks 却不在这里读，
+      // 症状不是「读不到」而是「每加一条新词就把已有条目的 blocks 洗掉一遍」。
+      ...(() => {
+        const b = normalizeBlocks(t.blocks)
+        return b ? { blocks: b } : {}
+      })()
     })
   }
   return out
@@ -201,6 +208,13 @@ export function registerDictHandlers(): void {
           category: cat as UserTerm['category'],
           // 同 readUser()：落盘的是归一后的新名，不是调用方传的那个
           ...(hasCat2 ? { cat1: normalizeCat1(t.cat1, t.cat2) as string, cat2: t.cat2 as string } : {}),
+          // 区块标签：给了就收下合法的那几个，没给就不写这个字段。
+          // **不校验失败**（不像 cat1/cat2 那样拒收）—— 区块是锦上添花的筛子，
+          // 为它拒掉一条本来合格的词条不划算。
+          ...(() => {
+            const b = normalizeBlocks(t.blocks)
+            return b ? { blocks: b } : {}
+          })(),
           keywords: Array.isArray(t.keywords)
             ? t.keywords.filter((k): k is string => typeof k === 'string')
             : [en, zh],

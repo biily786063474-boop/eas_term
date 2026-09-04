@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
+import { DICT_BLOCKS } from '../../../../shared/dictBlocks'
 import { searchTerms } from './search.ts'
 import { collectLeaves } from '../../layout'
 import { DictIcon } from '../../ui/Icons'
@@ -32,6 +33,10 @@ interface DictTerm {
    *  自建词条没有这两个字段 —— 界面把它们归到「未分类」，不能让它们消失。 */
   cat1?: string
   cat2?: string
+  /** 区块标签（2026-09-04）：这条手法适合用在页面的哪一块。
+   *  **和 cat1/cat2 正交** —— 一条可以属于 0~3 个区块，也可以一个都不属于
+   *  （缓动曲线、噪点这类通用手法就该是空的，不是漏标）。 */
+  blocks?: string[]
   /** 以下只有自建词条有：第一次遇到的日期 / 在哪个项目里遇到的 */
   firstSeen?: string
   project?: string
@@ -118,6 +123,8 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
   /** 选中的二级。**跟着一级走** —— 换一级时必须清掉，否则会筛出空列表
    *  （二级名不跨一级重复，但「材质›玻璃与模糊」在「运动规律」下一条都没有） */
   const [cat2, setCat2] = useState<string | null>(null)
+  /** 选中的区块（多选）。**空 = 不筛**，不是「筛出没有区块的」 */
+  const [blocks, setBlocks] = useState<string[]>([])
   // 「只看自建」：和分类正交的一个筛子，不是第四个分类
   const [onlyUser, setOnlyUser] = useState(false)
   const [hover, setHover] = useState<HoverState | null>(null)
@@ -142,6 +149,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           // 归了类的自建词条要能跟内置的一起被二级导航筛到；没归类的落「未分类」
           cat1: u.cat1,
           cat2: u.cat2,
+          blocks: u.blocks,
           keywords: u.keywords,
           logic: u.logic,
           // 有提示词才能挂成 chip（没有的话 insert 会退回插解释并明说）
@@ -201,13 +209,16 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
       if (onlyUser && !t.user) return false
       if (cat !== 'all' && (t.cat1 ?? UNSORTED) !== cat) return false
       if (cat2 && t.cat2 !== cat2) return false
+      // **多选是「或」不是「与」。** 选了卡片＋弹层，要的是「这两块能用上的手法」
+      // 的并集；取交集的话结果几乎总是空的（同时属于两个区块的本来就少）。
+      if (blocks.length && !blocks.some((b) => t.blocks?.includes(b))) return false
       return true
     })
     // 分类名也参与搜索：打「玻璃」既能命中词条名，也能把整个「玻璃与模糊」捞出来
     return searchTerms(base, query, (t) =>
       [t.cat1, t.cat2].filter(Boolean).join(' ') || CATS[t.category]
     )
-  }, [query, cat, cat2, onlyUser, allTerms])
+  }, [query, cat, cat2, blocks, onlyUser, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   //
@@ -383,6 +394,32 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
             data-tip="只看自己加进来的词条"
           >
             自建 {userTerms.length}
+          </button>
+        )}
+      </div>
+
+      {/* 区块：**横切在分类之上的一维筛子**，跟选没选一级无关。
+          放在二级上面是因为它常用 —— 「我在做弹层」比「我在找某个具体手法」先发生。
+          每个 chip 后面带条数：0 条的格子（表格 / 页脚）如实显示 0 而不是藏起来，
+          藏起来的话用户不知道那是「没有」还是「不支持」。 */}
+      <div className="dict-cats dict-cats-blk">
+        {DICT_BLOCKS.map((b) => {
+          const n = allTerms.filter((t) => t.blocks?.includes(b)).length
+          const on = blocks.includes(b)
+          return (
+            <button
+              key={b}
+              className={`dict-chip blk${on ? ' active' : ''}${n === 0 ? ' empty' : ''}`}
+              data-tip={n === 0 ? `还没有归到「${b}」的词条` : `${n} 条能用在${b}`}
+              onClick={() => setBlocks((v) => (on ? v.filter((x) => x !== b) : [...v, b]))}
+            >
+              {b} <span className="dict-chip-n">{n}</span>
+            </button>
+          )
+        })}
+        {blocks.length > 0 && (
+          <button className="dict-chip clear" onClick={() => setBlocks([])}>
+            清除
           </button>
         )}
       </div>

@@ -343,6 +343,11 @@ export interface UserTerm {
    *  给了就必须是 shared/dictTaxonomy.ts 里真实存在的一对；没给就落到界面的「未分类」。 */
   cat1?: string
   cat2?: string
+  /** 区块标签（2026-09-04）：这条手法适合用在页面的哪一块。**可选**，
+   *  且和 cat1/cat2 正交 —— 一条词条可以属于 0~3 个区块。
+   *  合法值见 shared/dictBlocks.ts；**加了这个字段就必须同步 dict.ts 的
+   *  readUser() 白名单**，否则每加一条新词会把已有条目的它洗掉一遍。 */
+  blocks?: string[]
   keywords: string[]
   logic: string
   /** 点击后挂成 chip、发送时展开的完整提示词。可选，但没有它点下去只能插解释 */
