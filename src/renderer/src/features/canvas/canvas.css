@@ -5863,3 +5863,15 @@
     animation: none;
   }
 }
+
+/* 最大化后的显示比例（双指捏合调，用户 2026-09-03）。
+   **只作用在非 webview 的内容上** —— HTML 节点走 webview 自己的 setZoomFactor，
+   那个是让页面按新比例重新排版；CSS 缩放只是把渲染好的位图拉伸，字会糊、
+   点击命中还会错位。两种内容各用各的手段，别图省事统一成 CSS。 */
+.cfile-node.is-max .cfile-body {
+  zoom: var(--max-scale, 1);
+}
+/* web 节点排除掉：它那侧已经缩过一次，再叠一层就是双重缩放 */
+.cfile-node.is-max .cfile-body:has(.web-view) {
+  zoom: 1;
+}

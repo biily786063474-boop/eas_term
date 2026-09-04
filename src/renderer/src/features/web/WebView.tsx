@@ -22,6 +22,8 @@ interface WebviewEl extends HTMLElement {
   canGoBack(): boolean
   canGoForward(): boolean
   openDevTools(): void
+  /** 显示比例。**不是 CSS 缩放** —— 它让页面按新比例重新排版，字不糊、命中不错位 */
+  setZoomFactor(f: number): void
 }
 
 // guestId → 聚焦该浏览器节点的回调。主进程拦截「链接开新窗」后按 guest webContents id 通知，
@@ -53,7 +55,8 @@ export function WebView({
   frameId,
   nodeId,
   free,
-  selected
+  selected,
+  zoom
 }: {
   url: string | null
   /** 画布 web 节点的归属（用于导航回写 url 持久化 + 链接开新窗时聚焦过去）；分屏无 */
@@ -64,6 +67,10 @@ export function WebView({
   free?: boolean
   /** 画布中该节点是否被选中：未选中时盖透明遮罩，双指手势冒泡给画布 pan（不进网页内部滚动） */
   selected?: boolean
+  /** 显示比例（最大化后双指捏合调）。**走 webview 自己的 setZoomFactor，不用 CSS 缩放** ——
+   *  CSS transform/zoom 作用在宿主元素上，网页内部仍按原尺寸排版再被拉伸，
+   *  字会糊、点击命中也会错位。webview 的 zoomFactor 是让页面**按新比例重新排版**。 */
+  zoom?: number
 }): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const wvRef = useRef<WebviewEl | null>(null)
@@ -76,6 +83,18 @@ export function WebView({
   const [menu, setMenu] = useState<DOMRect | null>(null) // ⋯ 溢出菜单锚点
   /** 最后停留的地址。离屏回收后重建要用它 —— 用 initialUrl 会把人送回节点刚建时那一页 */
   const lastUrlRef = useRef(initialUrl ?? '')
+
+  // 显示比例。**只在真的变了时调** —— setZoomFactor 会触发页面重排，
+  // 每次渲染都调一次的话滚动位置会被反复重置。
+  useEffect(() => {
+    const wv = wvRef.current
+    if (!wv) return
+    try {
+      wv.setZoomFactor(zoom ?? 1)
+    } catch {
+      /* 页面还没 attach 时会抛，下次 zoom 变化再试 */
+    }
+  }, [zoom])
 
   // 菜单外部点击 / Esc 关闭
   useEffect(() => {

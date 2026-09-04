@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { teamModeOf } from './teamMode'
-import { zoomViewport, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
+import { zoomViewport, zoomContent, clampContent, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
 import { shortcutHit } from '../../shortcutHit'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
@@ -358,7 +358,15 @@ export function CanvasStage(): JSX.Element {
         }
       }
       e.preventDefault()
-      const cur = useStore.getState().canvas.viewport
+      // **最大化时双指缩的是这个模块的内容，不是画布。**
+      // 那会儿 `canvas-world` 整个 `visibility:hidden`（见 canvas.css 那条），
+      // 缩视口的效果是零 —— 用户捏半天没反应。用户 2026-09-03 提的。
+      const st = useStore.getState()
+      if (st.maximizedNode && e.ctrlKey) {
+        st.setMaxScale(zoomContent(st.maxScale, e))
+        return
+      }
+      const cur = st.canvas.viewport
       if (e.ctrlKey) {
         // 触控板捏合（pinch，macOS 合成为 ctrl+wheel）/ ⌃+滚轮 → 以光标为锚缩放。
         // **算法在 wheelPassthrough.ts 的 zoomViewport，全项目只有那一份** ——
@@ -585,6 +593,29 @@ export function CanvasStage(): JSX.Element {
       if (e.shiftKey) st.redoCanvas()
       else st.undoCanvas()
     }
+    // ── 最大化时的显示比例：⌘+ / ⌘- / ⌘0 ────────────────────────────────
+    //
+    // **为什么除了双指还要有键盘这条。** 双指（macOS 合成为 ctrl+wheel）在普通
+    // DOM 节点上验过是通的，但 HTML 节点是 `<webview>` —— 它是独立进程，
+    // 滚轮落在上面时宿主页面**一个事件都收不到**（隔离实例实测：宿主在 webview
+    // 元素上挂 wheel 监听，捏 5 次收到 0 次）。
+    // 键盘这条不经过那一层，所有节点类型都吃得到，是可靠的那一条。
+    const onZoomKey = (e: KeyboardEvent): void => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      const st = useStore.getState()
+      if (!st.maximizedNode) return
+      const el = e.target as HTMLElement | null
+      const tag = el?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return
+      // `=` 是因为不按 shift 的 `+` 键报的就是 `=`
+      const k = e.key
+      if (k === '+' || k === '=') st.setMaxScale(clampContent(st.maxScale * 1.15))
+      else if (k === '-' || k === '_') st.setMaxScale(clampContent(st.maxScale / 1.15))
+      else if (k === '0') st.setMaxScale(1)
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onZoomKey)
     window.addEventListener('keydown', onUndoKey)
     return () => window.removeEventListener('keydown', onUndoKey)
   }, [])

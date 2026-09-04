@@ -419,37 +419,113 @@ export { <span class="hi">foo</span> }                             <span class="
 </section>
 
 <section id="其他语言">
-  <h2>Other Stacks</h2>
-  <div class="sectitle">Python / C / Swift 的 AST：建议不做</div>
-  <p class="secnote">
-    模块依赖图那一层已经支持这三种（正则提取 import ＋ 路径解析，够用）。
-    但符号级是完全不同的量级。
-  </p>
+  <h2>Other Stacks · 已修正</h2>
+  <div class="sectitle">接现成的语言服务器（LSP），不要自己写解析</div>
 
+  <div class="dissent">
+    <div class="vlabel">这一节被用户推翻了 · 原结论是错的</div>
+    <p style="margin:0 0 10px">本报告初稿在这里写的是「Python / C / Swift 的符号级<b>建议不做</b>」，
+    理由是「tree-sitter 只给语法树不给符号表，解析准确率没法看」。</p>
+    <p style="margin:0"><b>那个理由建立在一个错误前提上：以为只能自己写解析。</b>
+    用户指出应该「根据各语言开源工具的状态去集成」—— 这是对的，而且指向一个
+    比 tree-sitter 好一个数量级的方案：<b>LSP</b>。</p>
+  </div>
+
+  <h3>关键事实：LSP 标准里就有调用图</h3>
+  <p>需要的三个查询，LSP 全都有标准方法，<b>而且各语言的服务器都实现了</b>：</p>
   <div class="tw">
   <table>
-    <thead><tr><th>语言</th><th>要什么</th><th>成本</th><th>能拿到的准确率</th></tr></thead>
+    <thead><tr><th>要什么</th><th>LSP 方法</th><th>对应本报告的视图</th></tr></thead>
     <tbody>
-      <tr><td><b>TS/JS</b></td><td>已有的 typescript</td><td><span class="b b-em">零新依赖</span></td>
-        <td>调用点解析 <b>96.6%</b>，有完整类型信息</td></tr>
-      <tr><td>Python</td><td>tree-sitter WASM ＋ python 语法</td><td>约 +3MB 包体</td>
-        <td class="dim">只能按名字猜。<code>self.foo()</code> 的 foo 是哪个类的？没有类型检查器就是猜</td></tr>
-      <tr><td>C/C++</td><td>tree-sitter ＋ c/cpp 语法</td><td>约 +5MB（两套语法）</td>
-        <td class="dim">宏展开前解析，<code>#define</code> 出来的调用全丢</td></tr>
-      <tr><td>Swift</td><td>tree-sitter ＋ swift 语法</td><td>约 +4MB</td>
-        <td class="dim">同模块内文件互相可见 —— 连模块边界都没有，符号级更是全靠猜</td></tr>
+      <tr><td>文件里有哪些函数</td><td><code>textDocument/documentSymbol</code></td><td>文件内结构图</td></tr>
+      <tr><td><b>谁调用了这个</b></td><td><code>callHierarchy/incomingCalls</code></td><td>邻域视图（最值钱的那个）</td></tr>
+      <tr><td>这个调用了谁</td><td><code>callHierarchy/outgoingCalls</code></td><td>邻域视图</td></tr>
+      <tr><td>还有没有人用</td><td><code>textDocument/references</code></td><td>死代码清单</td></tr>
     </tbody>
   </table>
   </div>
 
+  <h3>本机实测：不用装任何东西，两个最难的语言已经就位</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>语言</th><th>服务器</th><th>本机状态</th><th>callHierarchy</th></tr></thead>
+    <tbody>
+      <tr><td><b>C / C++ / ObjC</b></td><td><code>clangd</code></td>
+        <td><span class="b b-em">已装</span> <code>/usr/bin/clangd</code>（随 Xcode）</td>
+        <td><span class="b b-em">✓ 握手确认</span></td></tr>
+      <tr><td><b>Swift</b></td><td><code>sourcekit-lsp</code></td>
+        <td><span class="b b-em">已装</span> <code>/usr/bin/sourcekit-lsp</code>（随 Xcode）</td>
+        <td><span class="b b-em">✓ 握手确认</span></td></tr>
+      <tr><td>Python</td><td><code>pyright-langserver</code></td>
+        <td><span class="b b-am">要装</span> 一条 npm（MIT，微软）</td><td>✓（文档）</td></tr>
+      <tr><td>Go</td><td><code>gopls</code></td><td><span class="b b-am">要装</span></td><td>✓（文档）</td></tr>
+      <tr><td>Rust</td><td><code>rust-analyzer</code></td><td><span class="b b-am">要装</span></td><td>✓（文档）</td></tr>
+      <tr><td>TS/JS</td><td>—</td><td colspan="2"><span class="b b-sk">不走 LSP</span>
+        直接用已有的 typescript 包更快更准（见前面实测：2.5 秒 / 96.6%），不必为它起一个进程</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">端到端实测 · 不只是「声明支持」</div>
+    <p style="margin:0 0 8px">起一个 clangd，喂一个三层调用的 C 文件，走完整流程
+    （<code>initialize</code> → <code>didOpen</code> → <code>prepareCallHierarchy</code>
+    → <code>incomingCalls</code>）：</p>
+<pre style="margin:8px 0 0"><code>static int helper(int x) { return x * 2; }
+static int middle(int x) { return <span class="hi">helper</span>(x) + 1; }
+
+<span class="flow">prepareCallHierarchy →</span> helper
+<span class="flow">谁调用了 helper →</span> <span class="hi">middle</span>   <span class="dim">← 答对了</span></code></pre>
+  </div>
+
+  <h3>这条路为什么比 tree-sitter 强一个数量级</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>tree-sitter（初稿的方案）</th><th>LSP（用户的方案）</th></tr></thead>
+    <tbody>
+      <tr><td>拿到的东西</td><td>语法树 —— 「这里有个调用，名字叫 foo」</td>
+        <td><b>符号表 ＋ 类型信息</b> —— 「这个 foo 是哪个 foo」</td></tr>
+      <tr><td>同名函数</td><td class="dim">区分不了</td><td>区分得了</td></tr>
+      <tr><td>方法调用 / 动态派发</td><td class="dim">区分不了</td><td>区分得了</td></tr>
+      <tr><td>包体代价</td><td class="dim">每种语言 +1~5MB wasm</td><td><b>0</b> —— 服务器是外部进程</td></tr>
+      <tr><td>加一门语言的成本</td><td class="dim">找语法 ＋ 写 query ＋ 写解析</td>
+        <td><b>加一行配置</b>（可执行文件名 ＋ 启动参数）</td></tr>
+      <tr><td>维护</td><td class="dim">语言演进要自己跟</td><td>各语言社区替你跟</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>本项目已经有这套通信的现成经验</h3>
+  <p>LSP 是 <b>JSON-RPC over stdio ＋ Content-Length 分帧</b> ——
+  和 omp 那条 ACP 传输<b>是同一种协议形态</b>。
+  <code>src/main/agentChat/omp/transport.ts</code> 就是一个写过、测过、
+  踩过坑的双向 JSON-RPC 状态机（零 electron、可 <code>node --test</code> 裸跑）。
+  新写一个 LSP 客户端可以直接照它的形状来，包括那些已经用事故换来的纪律
+  （空闲时也要泵队列、进程死了要合成终止事件、超时要能区分「没回」和「回了坏包」）。</p>
+
   <div class="warn">
-    <div class="vlabel">关键差别</div>
-    <p style="margin:0">tree-sitter 给的是<b>语法树，不是符号表</b>。
-    它能告诉你「这里有个调用，名字叫 foo」，但<b>不能告诉你这个 foo 是哪个 foo</b>。
-    TS 那 96.6% 的解析率来自 checker（类型推导 ＋ 作用域分析），
-    tree-sitter 没有这个东西。同名函数、方法调用、动态派发全都区分不了。</p>
-    <p style="margin:10px 0 0">要在 Python 上做到 TS 那种质量，得接 pyright 或 jedi ——
-    那是<b>另起一个进程、另一套依赖</b>，成本比整个 TS 方案高一个数量级。</p>
+    <div class="vlabel">代价必须说清楚 · 三条</div>
+    <ol style="margin:0">
+      <li><b>服务器得装。</b>C/Swift 在这台 Mac 上白送（Xcode 带），
+      Python/Go/Rust 要用户自己装。<b>没装就如实说「装了 pyright 才能画 Python 的调用图」</b>，
+      不要静默降级 —— 那正是现在「按目录 / 按入口」标记在做的事。</li>
+      <li><b>服务器要项目配置才准。</b>clangd 要 <code>compile_commands.json</code>、
+      sourcekit-lsp 要构建过的索引、pyright 要认得出 venv。
+      缺了不会报错，<b>只是答得少</b> —— 这是最危险的失败模式，必须在界面上标出可信度。</li>
+      <li><b>索引要时间。</b>大项目首次起服务器要几秒到几分钟。
+      不能像现在这样「点开就同步扫完」，得做成异步 ＋ 进度。</li>
+    </ol>
+  </div>
+
+  <h3>修正后的建议</h3>
+  <div class="verdict">
+    <div class="vlabel">新的分期</div>
+    <p style="margin:0 0 8px"><b>第一期照旧走 TS 直连</b> —— typescript 包已经在依赖里，
+    2.5 秒、96.6%，比起一个 tsserver 更快更准，没必要为它引 LSP。</p>
+    <p style="margin:0"><b>第二期把邻域视图做成 LSP 客户端的形状</b>，
+    TS 那条作为「内置 provider」接进同一个接口。
+    这样加 C/Swift/Python 就真的只是加配置 —— 而不是各写一套。
+    这个抽象<b>要在第二期就定下来</b>，第三期再改会很贵。</p>
   </div>
 </section>
 

@@ -367,6 +367,15 @@ export interface CanvasSlice {
   /** 最大化沉浸的节点（画布模式下铺满整个视口工作；再点还原回原位）。不持久化。
    *  frameId 缺省 = 自由节点（不属于任何 Frame，本来就没有 frameId 可填）。 */
   maximizedNode: { frameId?: string; nodeId: string } | null
+  /** 最大化之后这个模块的**显示比例**（双指捏合调，用户 2026-09-03）。
+   *
+   *  只在最大化时有意义：那会儿画布世界整个 `visibility:hidden`，
+   *  缩画布视口毫无意义，双指该缩的是这个模块自己的内容。
+   *  **每次进入最大化都重置回 1** —— 上一个模块缩到 2.5 倍，
+   *  下一个也铺满屏幕却继承那个比例，是解释不通的。 */
+  maxScale: number
+  /** 设最大化模块的显示比例（夹在 CONTENT_MIN..MAX 由调用方保证） */
+  setMaxScale: (v: number) => void
   setMaximizedNode: (v: { frameId?: string; nodeId: string } | null) => void
   /** 画布选中集合（key：s:形状 / f:Frame / n:frameId:nodeId 节点(含终端) / p:nodeId 自由节点）。
    *  提到 store 是为了让浮在 PaneLayer 的终端节点也能被选中并显示高亮 + F 聚焦。 */

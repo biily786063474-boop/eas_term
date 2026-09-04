@@ -14,46 +14,17 @@ import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useStore } from '../../store'
 
-export const SCALE_MIN = 0.2
-export const SCALE_MAX = 2.2
-const clamp = (v: number, a: number, b: number): number => Math.min(b, Math.max(a, v))
-
-/**
- * 一次滚轮该把视口缩放到哪。**全项目只有这一份缩放算法** —— CanvasStage 的画布视口
- * 和这里的浮层穿透都调它。
- *
- * 曾经是两份：这边写着 `scale * (1 - deltaY * 0.01)`，CanvasStage 那边早就修好了、
- * 这边没跟上。那条旧公式是照着 macOS 触控板写的（捏合时 deltaY 是 ±1~10 的连续小值，
- * 乘出来 0.9~1.1，很顺），但鼠标滚轮**一格就是 100 或 120**：
- *   dy=100 → 1 - 1.0 = 0     → scale 归零，被 clamp 拉到 SCALE_MIN(20%)
- *   dy=120 → 1 - 1.2 = -0.2  → 负数，同样掉到 20%
- * 表现就是「往后拉一下，一步到底 20%」。
- *
- * @param rect 画布视口的 getBoundingClientRect()，用来把鼠标位置换算成视口内坐标
- */
-export function zoomViewport(
-  e: WheelEvent,
-  rect: DOMRect,
-  cur: { scale: number; x: number; y: number }
-): { scale: number; x: number; y: number } {
-  const px = e.clientX - rect.left
-  const py = e.clientY - rect.top
-  // deltaMode：0=像素（Chromium 常态）、1=行、2=页。不折算的话行/页模式下步长会小得动不了
-  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1)
-  // 判据用「单次跨度是否 ≥40」：触控板再快也是连续小步，滚轮最小的一格也有 100
-  const byWheel = Math.abs(dy) >= 40
-  const factor = byWheel
-    ? dy > 0
-      ? 1 / 1.12
-      : 1.12 // 滚轮：每格固定 ±12%，与 dy 具体是 100 还是 120 无关
-    : Math.exp(-dy * 0.01) // 触控板：小量下等价于旧的 (1 - dy*0.01)，手感不变，但永远为正
-  const s2 = clamp(cur.scale * factor, SCALE_MIN, SCALE_MAX)
-  return {
-    scale: s2,
-    x: px - (px - cur.x) * (s2 / cur.scale),
-    y: py - (py - cur.y) * (s2 / cur.scale)
-  }
-}
+export {
+  clampContent,
+  CONTENT_MAX,
+  CONTENT_MIN,
+  SCALE_MAX,
+  SCALE_MIN,
+  wheelZoomFactor,
+  zoomContent,
+  zoomViewport
+} from './zoomMath.ts'
+import { zoomViewport } from './zoomMath.ts'
 
 /** 把这一次滚轮拿去驱动画布视口：ctrl 是以光标为锚点缩放，否则平移。 */
 function driveCanvas(e: WheelEvent): void {

@@ -1400,9 +1400,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     })),
 
   maximizedNode: null,
+  maxScale: 1,
+  setMaxScale: (v) => set(() => ({ maxScale: v })),
   setMaximizedNode: (v) =>
     set(() => {
-      if (!v) return { maximizedNode: null }
+      // **每次进出最大化都把显示比例归 1。** 上一个模块捏到 2.5 倍之后，
+      // 下一个铺满屏幕却继承那个比例，用户没法解释它是哪来的。
+      if (!v) return { maximizedNode: null, maxScale: 1 }
       // **最大化 = 你要专心用这个模块，所以顺手把它选中。**
       // 画布上「未选中的模块」滚轮是拿去平移画布的（见 PaneView 的 onWheel），
       // 不选中的话铺满屏幕之后还得再点一下才能滚内容 —— 而那会儿画布已经被
@@ -1410,12 +1414,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       // 写在 action 里而不是四个调用点各写一遍：三种节点组件 + PaneView 都会调它。
       // 节点的 key（n: / p:）不触发 followSel（那个只认 f:），所以直接置换选中集是安全的。
       const key = v.frameId ? 'n:' + v.frameId + ':' + v.nodeId : 'p:' + v.nodeId
+      // 进入最大化同样归 1（理由见上面那条注释）
       // canvasSelFromMaximize=true：标记这次的 canvasSel 是最大化的副作用，不是用户真点的
       // （见 types.ts 里这个字段的注释——mcpHandler 的 canvas_snapshot 靠它避免把截图存错项目）。
       // 还原（v 为 null 的分支）故意不清它、也不碰 canvasSel：还原历来就只清 maximizedNode，
       // 这里不改这条既有行为，只是让"是不是最大化遗留"这份标记如实反映现状，直到下一次
       // 真实选中（setCanvasSel/toggleCanvasSel/clearCanvasSel）发生为止。
-      return { maximizedNode: v, canvasSel: [key], canvasSelFromMaximize: true }
+      return { maximizedNode: v, maxScale: 1, canvasSel: [key], canvasSelFromMaximize: true }
     }),
   canvasSel: [],
   canvasSelFromMaximize: false,

@@ -33,6 +33,8 @@ export function CanvasFreeFileNode({
   const renameFreeNode = useStore((s) => s.renameFreeNode)
   const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
+  /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
+  const maxScale = useStore((s) => s.maxScale)
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = !maximizedNode?.frameId && maximizedNode?.nodeId === node.id
   const hiddenByMax = !!maximizedNode && !isMax
@@ -44,7 +46,16 @@ export function CanvasFreeFileNode({
     const el = document.querySelector('.canvas-viewport') as HTMLElement | null
     const cw = el?.clientWidth ?? window.innerWidth
     const ch = el?.clientHeight ?? window.innerHeight
-    return { left: -vp.x / vp.scale, top: -vp.y / vp.scale, width: cw / vp.scale, height: ch / vp.scale, zIndex: 200 }
+    return {
+      left: -vp.x / vp.scale,
+      top: -vp.y / vp.scale,
+      width: cw / vp.scale,
+      height: ch / vp.scale,
+      zIndex: 200,
+      // 最大化后的显示比例（双指捏合调）。**HTML 节点不吃这个**，
+      // 它走 webview 自己的 setZoomFactor（见 canvas.css 那条）
+      ['--max-scale' as string]: maxScale
+    } as React.CSSProperties
   })()
   const [editing, setEditing] = useState(false)
   // skill 面板拖出来的文件走自己的写入口：那些文件在 `~/.claude/skills` 这类位置，
@@ -209,7 +220,9 @@ export function CanvasFreeFileNode({
           ) : (
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
-        {pane.kind === 'web' && <WebView url={pane.url} free nodeId={node.id} selected={selected} />}
+        {pane.kind === 'web' && (
+          <WebView url={pane.url} free nodeId={node.id} selected={selected} zoom={isMax ? maxScale : 1} />
+        )}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />
     </div>

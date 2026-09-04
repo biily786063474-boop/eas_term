@@ -32,6 +32,8 @@ export function CanvasFileNode({
   const removeNode = useStore((s) => s.removeNode)
   const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
+  /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
+  const maxScale = useStore((s) => s.maxScale)
   const vp = useStore((s) => s.canvas.viewport)
   const frames = useStore((s) => s.canvas.frames)
   const isMax = maximizedNode?.frameId === frameId && maximizedNode?.nodeId === node.id
@@ -51,8 +53,11 @@ export function CanvasFileNode({
       top: -vp.y / vp.scale - frame.y,
       width: cw / vp.scale,
       height: ch / vp.scale,
-      zIndex: 200
-    }
+      zIndex: 200,
+      // 最大化后的显示比例（双指捏合调）。挂成 CSS 变量给 `.cfile-body` 用 ——
+      // **HTML 节点不吃这个**，它走 webview 自己的 setZoomFactor（见 canvas.css 那条）
+      ['--max-scale' as string]: maxScale
+    } as React.CSSProperties
   })()
   const renameNode = useStore((s) => s.renameNode)
   const projectPath = useStore((s) => {
@@ -243,7 +248,13 @@ export function CanvasFileNode({
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
         {pane.kind === 'web' && (
-          <WebView url={pane.url} frameId={frameId} nodeId={node.id} selected={selected} />
+          <WebView
+              url={pane.url}
+              frameId={frameId}
+              nodeId={node.id}
+              selected={selected}
+              zoom={isMax ? maxScale : 1}
+            />
         )}
       </div>
       <div className="cfile-rz" onMouseDown={startResize} />
