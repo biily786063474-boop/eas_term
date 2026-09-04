@@ -129,3 +129,33 @@ test('【坑】一律是提示词的最后一段 —— 自动打标靠它切一
     })
   assert.deepEqual(bad.map((t) => t.id), [])
 })
+
+test('没有 svg 超过 sanitizeSvg 的 8000 字符上限', () => {
+  // 超了不是"显示不全"而是 **sanitizeSvg 整个返回空字符串，且不报错** ——
+  // 表现是某几条词条的 hover 预览莫名其妙没有图（main/dict.ts:48）。
+  const bundle = JSON.parse(
+    fs.readFileSync('src/renderer/src/features/dict/dictionary-bundle.json', 'utf8')
+  ) as { terms: { id: string; svg?: string }[] }
+  const over = bundle.terms.filter((t) => (t.svg?.length ?? 0) > 8000)
+  assert.deepEqual(over.map((t) => `${t.id} (${t.svg!.length})`), [])
+})
+
+test('svg 里每条动画的 keyTimes 与 values 个数相等', () => {
+  // 不等长时 SMIL **判定整条动画非法、直接忽略，且不报任何错**。
+  // 症状是「图画了但不动」或「以 opacity=0 起手的元素永远不显形」，
+  // 而看代码完全看不出哪里错了（2026-09-04 的镜头图就是这么错的）。
+  const bundle = JSON.parse(
+    fs.readFileSync('src/renderer/src/features/dict/dictionary-bundle.json', 'utf8')
+  ) as { terms: { id: string; svg?: string }[] }
+  const bad: string[] = []
+  for (const t of bundle.terms) {
+    if (!t.svg) continue
+    const re = /keyTimes="([^"]+)"[^>]*?values="([^"]+)"|values="([^"]+)"[^>]*?keyTimes="([^"]+)"/g
+    for (const m of t.svg.matchAll(re)) {
+      const kt = (m[1] ?? m[4]).split(';').length
+      const vs = (m[2] ?? m[3]).split(';').length
+      if (kt !== vs) bad.push(`${t.id}: keyTimes=${kt} values=${vs}`)
+    }
+  }
+  assert.deepEqual(bad, [])
+})

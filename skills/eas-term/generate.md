@@ -251,6 +251,9 @@ generate(nodeId, modelId, mode: 'i2v', prompt: '……')
 | **被拒说估不出价** | 看 `estimate_error`：套餐过期/没墨水就引导续费 | **换模型重试 —— 换哪个都一样** |
 | 生成失败想重试 | 先 `get_node` 看 prompt，改完再触发 | 对同一节点连着调 `generate` |
 | 想先知道用户够不够钱 | `get_user_billing_tier()` | 直接发起然后吃拒绝 |
+| **`generate_now` 后秒回 `资源不存在`** | 先 `get_user_billing_tier` 看余额动没动（实测没扣）→ **直接换模型**，别动参考图 | 换 PNG/JPG、放大、换节点重试**同一个模型** —— 2026-09-03 `ac-nano-banana-pro` 连试 3 次都秒回，换 `ac-gpt-image-2` 一次就过 |
+| 节点报错后想重跑 | **建新节点**，重新 connect + generate | 对 error 状态的节点 `generate_now` —— 会被 `not_idle` 拒掉 |
+| 报了价、隔一会用户才点头，`generate_now` 回 `not_configured` | 对同一节点**再调一次 `generate`** 重写参数（不扣费），再 `generate_now` | 以为节点坏了去重建 |
 
 ### 挑哪个模型
 
