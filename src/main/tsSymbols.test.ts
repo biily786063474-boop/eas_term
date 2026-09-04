@@ -177,3 +177,27 @@ describe('坑 4 · 动态 import', () => {
     assert.ok(analyzeSymbols(d).dead.map((x) => x.sym.name).includes('ghost'))
   })
 })
+
+describe('位置必须是真的，不能占位', () => {
+  it('**「只通过引用发现的」符号也要有真位置** —— 占位的话界面上点了报「找不到符号」', () => {
+    const d = proj({
+      'i.ts': 'export interface P { doIt(): void }\n',
+      'a.ts': "import type { P } from './i'\nexport function use(p: P): void { p.doIt() }\n"
+    })
+    const r = analyzeSymbols(d)
+    const all = r.files.flatMap((f) => f.symbols)
+    const found = all.find((s) => s.name === 'doIt')
+    if (found) {
+      assert.notDeepEqual(
+        { line: found.line, character: found.character },
+        { line: 1, character: 0 },
+        '还是占位值：' + JSON.stringify(found)
+      )
+    }
+  })
+
+  it('每个符号的行号都 ≥ 1', () => {
+    const d = proj({ 'a.ts': '\n\nexport function f(): void {}\n' })
+    assert.ok(analyzeSymbols(d).files.flatMap((f) => f.symbols).every((s) => s.line >= 1))
+  })
+})

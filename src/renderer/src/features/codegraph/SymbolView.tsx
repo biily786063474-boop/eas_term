@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SymbolGraphResult, SymbolNode } from '../../../../shared/symbolGraph.ts'
+import { refOf, type Neighborhood } from '../../../../shared/symbolProvider.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
 
@@ -37,6 +38,10 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
   const [busy, setBusy] = useState(false)
   /** 打开了哪个文件的结构图。null = 只看清单 */
   const [openFile, setOpenFile] = useState<string | null>(null)
+  /** 选中的符号的邻域。null = 没选 */
+  const [nb, setNb] = useState<Neighborhood | null>(null)
+  const [nbErr, setNbErr] = useState<string | null>(null)
+  const [nbBusy, setNbBusy] = useState(false)
   const alive = useRef(true)
 
   const scan = (): void => {
@@ -56,6 +61,20 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
       alive.current = false
     }
   }, [root])
+
+  /** 查一个符号的邻域。**列传 0** —— `refOf` 里做 1-based → 0-based 的转换，
+   *  而 TS provider 会从那个位置往里找标识符，落在行首也找得到。 */
+  const askNeighborhood = (sym: SymbolNode): void => {
+    setNbBusy(true)
+    setNbErr(null)
+    setNb(null)
+    void window.api.codeGraph.neighborhood(root, refOf(sym)).then((r) => {
+      if (!alive.current) return
+      setNbBusy(false)
+      if (r.ok) setNb(r.neighborhood)
+      else setNbErr(r.error)
+    })
+  }
 
   /** 打开的那个文件的结构图。 */
   const structure = useMemo((): { items: GraphItem[]; links: GraphLink[] } => {
@@ -134,16 +153,72 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
               items={structure.items}
               links={structure.links}
               groupOrder={['class', 'function', 'method', 'arrow', 'other']}
+              onPick={(id) => {
+                const s2 = opened.symbols.find((x) => x.id === id)
+                if (s2) askNeighborhood(s2)
+              }}
             />
+
+            {/* ── 邻域：谁调用了这个 / 这个调用了谁 ────────────────────────
+                **这是符号级最值钱的一个问句**：「我要改这个函数，谁会受影响？」
+                现在只能靠全局搜索加人脑过滤，有了它是一次查询。 */}
+            {nbBusy && <div className="cg-nb-msg">正在查邻域…</div>}
+            {nbErr && <div className="cg-nb-msg cg-err">{nbErr}</div>}
+            {nb && (
+              <div className="cg-nb">
+                <div className="cg-nb-hd">
+                  <b>{nb.center.name}</b>
+                  <span className="cg-note">
+                    {nb.center.file.replace(/^src\//, '')}:{nb.center.line} · 由 {nb.provider} 解析
+                    {nb.truncated && ' · 邻居太多，只列了前 30 个'}
+                  </span>
+                  <button type="button" className="cg-btn icon" onClick={() => setNb(null)} title="收起">
+                    ✕
+                  </button>
+                </div>
+                <div className="cg-nb-cols">
+                  <div>
+                    <div className="cg-nb-col-hd">谁调用了它（{nb.incoming.length}）</div>
+                    {nb.incoming.length === 0 && <div className="cg-note">没有调用方</div>}
+                    {nb.incoming.map((c) => (
+                      <div key={c.symbol.id} className="cg-nb-item">
+                        <span className="cg-nb-name">{c.symbol.name}</span>
+                        <span className="cg-note">
+                          {c.symbol.file.replace(/^src\//, '')} · {c.lines.length} 处
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="cg-nb-col-hd">它调用了谁（{nb.outgoing.length}）</div>
+                    {nb.outgoing.length === 0 && <div className="cg-note">没有调用别人</div>}
+                    {nb.outgoing.map((c) => (
+                      <div key={c.symbol.id} className="cg-nb-item">
+                        <span className="cg-nb-name">{c.symbol.name}</span>
+                        <span className="cg-note">
+                          {c.symbol.file.replace(/^src\//, '')} · {c.lines.length} 处
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="cg-files">
               {opened.symbols.map((s) => (
-                <div key={s.id} className="cg-file">
+                <button
+                  key={s.id}
+                  type="button"
+                  className="cg-file as-btn"
+                  onClick={() => askNeighborhood(s)}
+                  title="看谁调用了它"
+                >
                   <span className="cg-file-n" title={`${KIND_LABEL[s.kind]} · 第 ${s.line} 行`}>
                     <span style={{ color: KIND_COLOR[s.kind] }}>●</span> {s.name}
                     {s.exported && <span className="cg-note"> 导出</span>}
                   </span>
                   <span className="cg-deg">引用 {s.refs}</span>
-                </div>
+                </button>
               ))}
             </div>
           </>

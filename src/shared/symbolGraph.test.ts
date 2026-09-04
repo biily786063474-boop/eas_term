@@ -9,7 +9,7 @@ import {
 } from './symbolGraph.ts'
 
 const sym = (o: Partial<SymbolNode>): SymbolNode => ({
-  id: 'x#y', file: 'src/a.ts', name: 'y', kind: 'function', line: 1, exported: true, refs: 0, topLevel: true, ...o
+  id: 'x#y', file: 'src/a.ts', name: 'y', kind: 'function', line: 1, character: 0, exported: true, refs: 0, topLevel: true, ...o
 })
 
 describe('可信度（坑 3）', () => {
@@ -70,5 +70,12 @@ describe('topLevel（接口实现的误判）', () => {
   })
   it('顶层的照旧判', () => {
     assert.equal(deadCodeVerdict(sym({ refs: 0, topLevel: true }), true), 'dead')
+  })
+})
+
+describe('character 字段', () => {
+  it('**符号要记住自己名字的列** —— 没有它就没法给 LSP 定位', () => {
+    const s = sym({ character: 9 })
+    assert.equal(s.character, 9)
   })
 })

@@ -2,6 +2,7 @@ import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
 import type { SymbolGraphResult } from '../shared/symbolGraph.ts'
+import type { Neighborhood, SymbolRef } from '../shared/symbolProvider.ts'
 import type {
   Project,
   DirEntry,
@@ -240,7 +241,14 @@ const api = {
     symbols: (
       root: string
     ): Promise<{ ok: true; graph: SymbolGraphResult } | { ok: false; error: string }> =>
-      ipcRenderer.invoke('codeGraph:symbols', root)
+      ipcRenderer.invoke('codeGraph:symbols', root),
+    /** 一个符号的邻域：谁调用了它 / 它调用了谁。
+     *  **行列是 0-based（LSP 约定）** —— 转换只许在 `refOf` 那一处做。 */
+    neighborhood: (
+      root: string,
+      ref: SymbolRef
+    ): Promise<{ ok: true; neighborhood: Neighborhood } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('codeGraph:neighborhood', { root, ref })
   },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),

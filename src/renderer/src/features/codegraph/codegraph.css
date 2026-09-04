@@ -339,3 +339,89 @@
 .cg-link.as-btn:hover {
   background: var(--lift-1);
 }
+
+/* 邻域面板：谁调用了这个 / 这个调用了谁。 */
+.cg-nb {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--lift-1);
+  overflow: hidden;
+}
+.cg-nb-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--lift-2);
+  font-size: 13px;
+}
+.cg-nb-hd b {
+  color: var(--text-1);
+}
+.cg-nb-hd .cg-btn {
+  margin-left: auto;
+}
+/* **两栏并排**：调用方和被调方是一组对照，上下排的话要来回滚才能比 */
+.cg-nb-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.cg-nb-cols > div {
+  padding: 10px 12px;
+  min-width: 0;
+}
+.cg-nb-cols > div:first-child {
+  border-right: 1px solid var(--border);
+}
+.cg-nb-col-hd {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-bottom: 7px;
+}
+.cg-nb-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12.5px;
+  min-width: 0;
+}
+.cg-nb-name {
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cg-nb-item .cg-note {
+  margin-left: auto;
+  flex: none;
+}
+.cg-nb-msg {
+  padding: 12px;
+  color: var(--text-3);
+  font-size: 12.5px;
+}
+/* 符号列表的每一行也能点 */
+.cg-file.as-btn {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast);
+}
+.cg-file.as-btn:hover {
+  background: var(--lift-1);
+}
+@media (max-width: 560px) {
+  .cg-nb-cols {
+    grid-template-columns: 1fr;
+  }
+  .cg-nb-cols > div:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}

@@ -26,64 +26,9 @@ import {
   type SymbolGraphResult,
   type SymbolNode
 } from '../shared/symbolGraph.ts'
+import { declOf, isImportBinding, isTopLevel, posOf, realSymbol, tsconfigsOf } from './tsAst.ts'
 
 export type { SymbolGraphResult }
-
-/** 这个项目里有哪几份 tsconfig 要各建一个 Program。
- *
- *  **不能合成一个**：本仓库 `tsconfig.node.json`（主进程）与 `tsconfig.web.json`
- *  （渲染层）的编译选项和文件集都不同，合起来两边都错。 */
-function tsconfigsOf(root: string): string[] {
-  const named = ['tsconfig.node.json', 'tsconfig.web.json', 'tsconfig.app.json', 'tsconfig.json']
-  const hit = named.filter((n) => fs.existsSync(path.join(root, n)))
-  // node/web 那两份存在时就不要再带上根 tsconfig —— 它多半只是个 references 壳子，
-  // 建出来的 Program 是空的，白花几百毫秒
-  const split = hit.filter((n) => n !== 'tsconfig.json')
-  return split.length ? split : hit
-}
-
-/** **必须解别名。**
- *
- *  `import { foo } from './a'` 之后在本文件里调 `foo()`，
- *  `getSymbolAtLocation` 返回的符号，它的 `declarations[0]` 是**本文件里那条
- *  import 语句**，不是 `a.ts` 里的函数本体。不解的话：
- *   · 每条跨文件调用都变成自环（图上像「每个文件都高度内聚」）
- *   · 死代码清单里 644 个假阳性（真实数 24）—— 2026-09-03 实测 */
-function realSymbol(checker: ts.TypeChecker, sym: ts.Symbol | undefined): ts.Symbol | undefined {
-  if (!sym) return undefined
-  return sym.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(sym) : sym
-}
-
-/** 这个标识符是不是 **import 语句里的绑定名**（而不是一次真正的使用）。
- *
- *  `import { foo } from './a'` 里的那个 `foo` 不算「用了 foo」——
- *  只 import 却没用到的符号仍然是死的（TS 自己也会把它报成 unused import）。
- *
- *  ⚠️ **`export { foo } from './a'` 要算。** 再导出是把它放进了公开 API，
- *  谁都可能从这儿拿走 —— 判成死代码会误伤整个 re-export 桶文件。
- *  所以这里只挡 Import*，不挡 ExportSpecifier。 */
-function isImportBinding(n: ts.Identifier): boolean {
-  const p = n.parent
-  if (ts.isImportSpecifier(p) || ts.isImportClause(p) || ts.isNamespaceImport(p)) return true
-  return false
-}
-
-/** 这个节点是不是一个「函数声明」，是的话返回名字与种类。 */
-function declOf(n: ts.Node): { name: string; kind: SymbolNode['kind'] } | null {
-  if (ts.isFunctionDeclaration(n) && n.name) return { name: n.name.text, kind: 'function' }
-  if (ts.isMethodDeclaration(n) && ts.isIdentifier(n.name)) return { name: n.name.text, kind: 'method' }
-  if (ts.isClassDeclaration(n) && n.name) return { name: n.name.text, kind: 'class' }
-  // `const foo = () => {}` / `const foo = function () {}`
-  if (
-    ts.isVariableDeclaration(n) &&
-    ts.isIdentifier(n.name) &&
-    n.initializer &&
-    (ts.isArrowFunction(n.initializer) || ts.isFunctionExpression(n.initializer))
-  ) {
-    return { name: n.name.text, kind: 'arrow' }
-  }
-  return null
-}
 
 /** 这个声明有没有被 export。 */
 function isExported(n: ts.Node): boolean {
@@ -102,15 +47,6 @@ function isExported(n: ts.Node): boolean {
   return false
 }
 
-/** 这个声明是不是在**模块顶层**（而不是嵌在函数/对象字面量里）。
- *  只有顶层的进死代码清单，理由见 `SymbolNode.topLevel`。 */
-function isTopLevel(n: ts.Node): boolean {
-  // 变量声明要跳过 VariableDeclarationList / VariableStatement 那两层
-  let cur: ts.Node | undefined = n.parent
-  while (cur && (ts.isVariableDeclarationList(cur) || ts.isVariableStatement(cur))) cur = cur.parent
-  return !!cur && ts.isSourceFile(cur)
-}
-
 /** 往上找这个节点属于哪个函数声明（文件内调用边的起点）。 */
 function enclosingDecl(n: ts.Node): { name: string } | null {
   let cur: ts.Node | undefined = n.parent
@@ -124,7 +60,7 @@ function enclosingDecl(n: ts.Node): { name: string } | null {
 
 export function analyzeSymbols(root: string): SymbolGraphResult {
   const t0 = Date.now()
-  const cfgs = tsconfigsOf(root)
+  const cfgs = tsconfigsOf(root, (n) => fs.existsSync(path.join(root, n)))
   if (!cfgs.length) {
     throw new Error('这个项目里没有 tsconfig —— 符号级视图暂时只支持有 tsconfig 的 TS/JS 项目')
   }
@@ -165,7 +101,7 @@ export function analyzeSymbols(root: string): SymbolGraphResult {
               file,
               name: d.name,
               kind: d.kind,
-              line: sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1,
+              ...posOf(sf, n),
               exported: isExported(n),
               topLevel: isTopLevel(n),
               refs: 0
@@ -194,7 +130,12 @@ export function analyzeSymbols(root: string): SymbolGraphResult {
                   file: rel(decl.getSourceFile().fileName),
                   name: sym!.getName(),
                   kind: 'other',
-                  line: 1,
+                  // **用真实位置，不要占位。** 这里原来填 `line:1, character:0` ——
+                  // 于是这些「只通过引用发现的」符号（接口成员之类）在界面上点了
+                  // 一律报「在那个位置找不到符号」，而它们在 session.ts 这种文件里
+                  // 占了前 25 个符号的全部（2026-09-03 真机撞到）。
+                  // 声明节点 `decl` 当时就在手上，没有任何理由填占位。
+                  ...posOf(decl.getSourceFile(), decl),
                   exported: false,
                   // 这条是「被引用时才发现」的符号（跨 Program 边界的情形），
                   // **不当顶层** —— 没见过它的声明现场，判死代码不可靠

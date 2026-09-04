@@ -14,6 +14,13 @@ export interface SymbolNode {
   kind: 'function' | 'method' | 'class' | 'arrow' | 'other'
   /** 起始行（1-based），点进去要用 */
   line: number
+  /** **符号名**的起始列（0-based）。
+   *
+   *  ⚠️ 不是声明的起始列 —— LSP 的 `prepareCallHierarchy` 要求位置落在**名字**上，
+   *  落在 `function` 关键字或缩进的空白上会拿不到符号。
+   *  一开始 `refOf` 默认传 0，于是所有缩进过的符号（类里的方法、嵌套函数）
+   *  全部查不到邻域，报「在那个位置找不到符号」（2026-09-03 真机撞到）。 */
+  character: number
   exported: boolean
   /** 被本仓库引用了多少次（**不只是调用点**） */
   refs: number
