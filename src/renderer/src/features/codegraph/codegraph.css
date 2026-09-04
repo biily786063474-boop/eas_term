@@ -292,3 +292,50 @@
   color: #fcd34d;
   font-weight: 500;
 }
+
+/* 模块 / 符号两个视图的切换。**做成分段按钮而不是下拉** ——
+   只有两个选项，下拉多一次点击且藏住了另一个选项的存在。 */
+.cg-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.cg-modes {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  padding: 8px 12px 0;
+}
+.cg-mode {
+  padding: 4px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-3);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast),
+    background-color var(--dur-fast);
+}
+.cg-mode:hover {
+  color: var(--text-1);
+  background: var(--lift-1);
+}
+.cg-mode.on {
+  background: var(--lift-2);
+  color: var(--text-1);
+}
+/* 清单里的每一行也能点（点开那个文件的结构图） */
+.cg-link.as-btn {
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast);
+}
+.cg-link.as-btn:hover {
+  background: var(--lift-1);
+}

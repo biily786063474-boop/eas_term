@@ -6,6 +6,21 @@ import fs from 'node:fs'
 
 import { analyzeProject } from './codeGraphAnalyze.ts'
 
+/** 「这个路径能不能扫」。**两个 handler 共用一份** ——
+ *  各写一遍的话，以后收紧了其中一处，另一处会一直松着。
+ *  返回 null = 过了；返回对象 = 直接把它回给渲染层。 */
+function checkRoot(root: string): { ok: false; error: string } | null {
+  if (!root) return { ok: false, error: '没有指定项目目录' }
+  let stat: fs.Stats
+  try {
+    stat = fs.statSync(root)
+  } catch {
+    return { ok: false, error: '这个目录不存在了 —— 可能被移走或改名了' }
+  }
+  if (!stat.isDirectory()) return { ok: false, error: '这不是一个目录' }
+  return null
+}
+
 export function registerCodeGraphHandlers(): void {
   ipcMain.handle('codeGraph:analyze', async (_e, raw: unknown) => {
     const root = typeof raw === 'string' ? raw : ''
@@ -17,20 +32,26 @@ export function registerCodeGraphHandlers(): void {
     // 纯前端 / 一堆脚本的项目，代码地图本来完全画得出来。
     // 判据改成「是不是一个存在的目录」，有没有源码交给分析器去说
     //（它会给出一句人话，而不是在这儿一刀切）。
-    if (!root) {
-      return { ok: false as const, error: '没有指定项目目录' }
-    }
-    let stat: fs.Stats
-    try {
-      stat = fs.statSync(root)
-    } catch {
-      return { ok: false as const, error: '这个目录不存在了 —— 可能被移走或改名了' }
-    }
-    if (!stat.isDirectory()) {
-      return { ok: false as const, error: '这不是一个目录' }
-    }
+    const gate = checkRoot(root)
+    if (gate) return gate
     try {
       return { ok: true as const, graph: await analyzeProject(root) }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // 符号级（第一期：文件内结构 ＋ 死代码清单）。
+  // **和模块级共用同一道门槛**，不另写一遍「这个路径可不可信」。
+  ipcMain.handle('codeGraph:symbols', async (_e, raw: unknown) => {
+    const root = typeof raw === 'string' ? raw : ''
+    const gate = checkRoot(root)
+    if (gate) return gate
+    try {
+      // 动态 import：TS Compiler API 建 Program 要几百毫秒 ＋ 几十 MB，
+      // 只有真点开符号视图才值得把它拉进主进程（同 dependency-cruiser 那条）。
+      const { analyzeSymbols } = await import('./tsSymbols.ts')
+      return { ok: true as const, graph: analyzeSymbols(root) }
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }

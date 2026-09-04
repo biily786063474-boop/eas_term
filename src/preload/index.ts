@@ -1,6 +1,7 @@
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
+import type { SymbolGraphResult } from '../shared/symbolGraph.ts'
 import type {
   Project,
   DirEntry,
@@ -234,7 +235,12 @@ const api = {
      *  （omp 那次「删字段静默失效」咬过三回，见 `omp/setup.ts` 的注释）。 */
     analyze: (root: string): Promise<
       { ok: true; graph: CodeGraphResult } | { ok: false; error: string }
-    > => ipcRenderer.invoke('codeGraph:analyze', root)
+    > => ipcRenderer.invoke('codeGraph:analyze', root),
+    /** 符号级（文件内结构 ＋ 死代码清单）。第一期只认有 tsconfig 的 TS/JS 项目 */
+    symbols: (
+      root: string
+    ): Promise<{ ok: true; graph: SymbolGraphResult } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('codeGraph:symbols', root)
   },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),

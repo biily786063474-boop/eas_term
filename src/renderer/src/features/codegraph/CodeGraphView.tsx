@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeGraphResult, Risk } from '../../../../shared/codeGraph.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
+import { SymbolView } from './SymbolView.tsx'
 import './codegraph.css'
 
 /** 风险等级 → 颜色。**直接对着图纸 10 的 🟢🟡🔴⛔**，别在这儿另立一套。 */
@@ -32,7 +33,38 @@ const RISK_LABEL: Record<'mapped' | 'derived', Record<Risk, string>> = {
   derived: { green: '耦合轻', amber: '耦合中', red: '耦合重', frozen: '分发产物' }
 }
 
+/** 代码地图的外壳：**模块级**（谁 import 谁）和**符号级**（谁调用谁）两个视图。
+ *
+ *  分成两个而不是一个，是因为它们回答的不是同一个问题、规模也差两个数量级：
+ *  模块级 448 个节点（聚合到 23 块地），符号级 22909 个（只能按文件下钻）。
+ *  硬塞进一张图的结果是两边都读不了。 */
 export function CodeGraphView({ root }: { root: string }): JSX.Element {
+  const [mode, setMode] = useState<'module' | 'symbol'>('module')
+  return (
+    <div className="cg-shell">
+      <div className="cg-modes">
+        <button
+          type="button"
+          className={`cg-mode${mode === 'module' ? ' on' : ''}`}
+          onClick={() => setMode('module')}
+        >
+          模块
+        </button>
+        <button
+          type="button"
+          className={`cg-mode${mode === 'symbol' ? ' on' : ''}`}
+          onClick={() => setMode('symbol')}
+          title="文件内结构 ＋ 没人用的清单（只认有 tsconfig 的 TS/JS 项目）"
+        >
+          符号
+        </button>
+      </div>
+      {mode === 'module' ? <ModuleGraphView root={root} /> : <SymbolView root={root} />}
+    </div>
+  )
+}
+
+function ModuleGraphView({ root }: { root: string }): JSX.Element {
   const [graph, setGraph] = useState<CodeGraphResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
