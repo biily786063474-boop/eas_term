@@ -21,7 +21,6 @@
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
 import { useEffect, useRef, useState, useMemo} from 'react'
 import { useSlashPicker, SlashList } from './SlashPicker'
-import { RolePicker } from './RolePicker'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
 import { toolbarModel } from './toolbarModel.ts'
@@ -53,8 +52,6 @@ export function ChatToolbar({
   onSetParams,
   onLogin,
   onNewChat,
-  roleId,
-  onPickRole,
   sendError
 }: {
   caps: CliCapabilities
@@ -85,11 +82,13 @@ export function ChatToolbar({
   onSetParams: (patch: { model?: string; effort?: string }) => void
   /** 「新对话」：结束当前这段，给这个窗口挂一段新的。旧记录不删。 */
   onNewChat?: () => void
-  /** 当前角色（`AgentRole.id`），空 = 无角色 */
-  roleId?: string
-  /** 换角色。**调用方负责「会不会结束当前会话」那一问** ——
-   *  角色契约走系统提示、只在 spawn 时传一次，跑着的会话改不了。 */
-  onPickRole?: (roleId: string) => void
+  // ⚠️ **这里曾经有 `roleId` / `onPickRole`，别再加回来。**
+  // 角色契约走系统提示，`roleContract` 只在 `agentChat:start` 读一次 ——
+  // 会话跑起来之后改它一点效果都没有。摆在对话态工具栏上等于给了一个
+  // 改了也不生效的开关（当时只好用「确认 + 结束会话重开」兜着，
+  // 那是在为放错位置的入口打补丁）。
+  // 入口现在在**空态的上下文条**上，和「选哪个 CLI」并排 ——
+  // 那两件事是同一类：都在 spawn 那一刻生效、之后改不了。
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
   sendError?: string | null
@@ -498,8 +497,6 @@ export function ChatToolbar({
               </span>
             </div>
           )}
-
-          {onPickRole && <RolePicker roleId={roleId} onPick={onPickRole} />}
 
           {onNewChat && (
             <button

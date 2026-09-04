@@ -25,6 +25,7 @@ import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
+import { RolePicker } from './RolePicker'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
@@ -1061,26 +1062,13 @@ export function AgentChatView({
           onNewChat={handleNewChat}
           sessionId={sessionId}
           onSend={handleFollowupSend}
-          roleId={roleId}
-          // ── 换角色 = 结束当前会话重开（用户 2026-09-03 在 (a)(b)(c) 里选了 b）──
-          //
-          // 角色契约走系统提示，那条 flag **只在 spawn 时传一次** —— 会话跑起来之后
-          // 改不了。三条路里选 b 的理由：角色不是「参数」是「换了个人」，
-          // 半路换掉而上下文还是旧的，比重开更让人困惑。
-          //
-          // **确认之后走的是既有的「新对话」那条路**，不另写一条结束会话的代码 ——
-          // 那条路上有乐观插入撤回、麦克风收音、resumeId 记账，各自都有事故史。
-          onPickRole={(next) => {
-            const name = roles.find((r) => r.id === next)?.name ?? '无角色'
-            requestConfirm({
-              message: `换成「${name}」会结束当前会话重新开始，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？`,
-              confirmLabel: '换角色并重开',
-              onConfirm: () => {
-                setAgentRole(tabId, leafId, next)
-                handleNewChat()
-              }
-            })
-          }}
+          // ── 角色入口**不在这里**（用户 2026-09-03）───────────────────────────
+          // 角色契约走系统提示，`roleContract` 只在 `agentChat:start` 读一次 ——
+          // **会话跑起来之后改它一点效果都没有**。摆在对话态工具栏上，
+          // 等于给了一个改了也不生效的开关；原来只好用「确认 + 结束会话重开」
+          // 兜着，那是在为一个放错位置的入口打补丁。
+          // 现在它在**空态的上下文条**上，和「选哪个 CLI」并排 ——
+          // 那两件事本来就是同一类：都是「这次对话开起来之前要定的」。
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
           onLogin={() => selected && setSetupFor({ cli: selected, from: 'login' })}
@@ -1230,6 +1218,13 @@ export function AgentChatView({
             </span>
             <ChevronDownIcon size={10} />
           </button>
+          {/* 角色。**和「选哪个 CLI」并排是有意的** —— 两者都是「这次对话
+              开起来之前要定的」，而且都在 spawn 那一刻生效、之后改不了。
+              默认没有角色（轮播第一张就是「无角色」）。 */}
+          <RolePicker
+            roleId={roleId}
+            onPick={(next) => setAgentRole(tabId, leafId, next)}
+          />
         </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}

@@ -22,7 +22,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
-import { ChevronLeftIcon, ChevronRightIcon, PlanIcon } from '../../ui/Icons'
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlanIcon } from '../../ui/Icons'
 import { DRAG_MIN, clampIndex, dragOffset, settleIndex, tiltFor } from './carousel.ts'
 
 
@@ -67,11 +67,17 @@ export function RolePicker({
     const el = btnRef.current
     if (!el) return
     const r = el.getBoundingClientRect()
+    // **方向按空间定，不写死。** 这个入口从对话工具栏（贴着底）搬到了空态的
+    // 上下文条（在面板中段），写死向上会在上方空间不够时把卡片顶出可视区。
+    // 卡片高度 158~175，留 24 余量。
+    const NEED = 200
+    const up = r.top > NEED
     setPos({
       position: 'fixed',
       left: Math.max(8, Math.min(r.left - 60, window.innerWidth - 300)),
-      // **向上**：底边贴住按钮顶边（这条控件行贴在输入框底部，向下会掉出可视区）
-      bottom: window.innerHeight - r.top + 8
+      ...(up
+        ? { bottom: window.innerHeight - r.top + 8 }
+        : { top: r.bottom + 8 })
     })
   }, [open])
 
@@ -134,15 +140,25 @@ export function RolePicker({
 
   return (
     <>
+      {/* 长得和旁边的「选一个 CLI」一样 —— 它们是同一类东西：
+          都是这次对话**开起来之前**要定的，都在 spawn 那一刻生效。
+          所以显示名字而不是只有图标：空态是「摆条件」的地方，
+          当前是什么角色应该一眼看见，不用 hover。 */}
       <button
         ref={btnRef}
         type="button"
-        className={`ac-bar-btn icon-only rolepick-btn${current ? ' on' : ''}`}
+        className={`ac-ctxbar-item as-btn rolepick-btn${current ? ' on' : ''}`}
         aria-label={current ? `角色：${current.name}` : '角色'}
-        data-tip={current ? `角色：${current.name}` : '角色 —— 给这次对话定个职责'}
+        data-tip={
+          current
+            ? `角色：${current.name} —— ${current.desc}`
+            : '角色 —— 给这次对话定个职责（会话开起来之后改不了）'
+        }
         onClick={() => setOpen((v) => !v)}
       >
-        <PlanIcon size={11} />
+        <PlanIcon size={12} />
+        <span className="ac-ctxbar-name">{current?.name ?? '无角色'}</span>
+        <ChevronDownIcon size={10} />
       </button>
       {open &&
         pos &&

@@ -2919,3 +2919,9 @@
     transition: none;
   }
 }
+
+/* 角色入口在空态的上下文条上，样式跟着 `.ac-ctxbar-item` 走。
+   选了角色就点亮 —— 和「选了哪个 CLI」一样，是这次对话的既定条件。 */
+.ac-ctxbar-item.rolepick-btn.on {
+  color: var(--accent);
+}
