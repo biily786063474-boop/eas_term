@@ -102,7 +102,7 @@ export function CanvasComponentNode({
 
   return (
     <div
-      className={`cfile-node${selected ? ' sel' : ''}`}
+      className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frame.id}
       onMouseDownCapture={(e) => {

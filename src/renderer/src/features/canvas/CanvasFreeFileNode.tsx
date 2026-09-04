@@ -139,7 +139,7 @@ export function CanvasFreeFileNode({
 
   return (
     <div
-      className={`cfile-node cfile-node-free${selected ? ' sel' : ''}`}
+      className={`cfile-node cfile-node-free${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)

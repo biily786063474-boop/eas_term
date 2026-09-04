@@ -5695,6 +5695,23 @@
   pointer-events: none;
 }
 
+/* ⚠️ **上面那条注释里「最大化的面板由 PaneLayer 在另一层渲染」只对一部分节点成立。**
+ *
+ * PaneLayer 渲染的是终端 / AI 对话那类 pane（它们确实在画布世界之外）。
+ * 但**文件预览、HTML（webview）、组件节点（代码地图 / Git…）的内容就长在
+ * `canvas-world` 里** —— 于是上面那条 `visibility:hidden` 把它们连同背景一起藏了。
+ *
+ * 症状：最大化一个 HTML 模块，内容消失、只剩空画板（2026-09-03 用户在安装版上撞到，
+ * 隔离实例复现：webview 的 rect 是 1145×564 一切正常，只是整条祖先链 visibility 都是 hidden）。
+ *
+ * `visibility` 是**可以被子元素改回来的**（不像 `display:none`），所以这里让
+ * 最大化的那一个显式设回 visible —— 不用动上面那条，也不用把节点搬出画布世界
+ *（搬出去等于重挂载，底下的 webview 会白屏重载，代价比这大得多）。 */
+.canvas-world.hidden-by-max .cfile-node.is-max {
+  visibility: visible;
+  pointer-events: auto;
+}
+
 /* 双击迸发的画布。铺满视口、**绝不接点击** —— 它正下方就是双击热区，
    接了等于把「双击创建造梦空间」这个入口堵死（空画布引导踩过同一个坑）。
    z-index 压在浮层之下、内容之上：它是反馈，不是遮罩。 */

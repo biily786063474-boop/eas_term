@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>代码地图 · AST 符号级可视化 —— 可行性与分层设计</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}.ro{color:#fda4af}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">AST 可视化</span>
+    <a href="#结论">结论</a>
+    <a href="#实测">实测数据</a>
+    <a href="#坑">四个坑</a>
+    <a href="#分层">分层设计</a>
+    <a href="#难点">真正的难点</a>
+    <a href="#其他语言">其他语言</a>
+    <a href="#分期">分期与工作量</a>
+    <a href="#下一步">下一步</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">可行性调研 · 已在本仓库实测</div>
+  <h1>代码地图加 AST 符号级可视化</h1>
+  <p class="lede">
+    从「文件依赖谁」下沉到「函数调用谁」。结论是<b>值得做，而且比预想便宜得多</b> ——
+    TypeScript 5.6 已经是本项目依赖，全仓 529 个文件跑一遍 2.5 秒、调用点解析率 96.6%，
+    <b>零新依赖</b>。真正的难点不在解析，在画面。
+  </p>
+  <div class="meta">
+    <span>日期 <b>2026-09-03</b></span>
+    <span>实测对象 <b>本仓库 529 个 TS/TSX 文件</b></span>
+    <span>数据来源 <b>TypeScript Compiler API 真跑</b></span>
+    <span>关联 <b>docs/代码地图-适配范围.md</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">一句话：解析这一层几乎白送，画面这一层才是活</div>
+  <p class="secnote">
+    所有数字都是在本仓库真跑出来的，不是估算。四个「看着对其实错」的坑也是跑的过程中撞出来的，
+    写在第三节 —— 那部分比工作量估算更值钱。
+  </p>
+
+  <div class="grid g4">
+    <div class="stat"><div class="num n-em">0</div><div class="lab">需要新增的依赖<br>typescript 5.6 已在 devDependencies</div></div>
+    <div class="stat"><div class="num n-em">2.5<span style="font-size:18px">s</span></div><div class="lab">全仓 529 文件<br>建 Program ＋ 解析 34309 个调用点</div></div>
+    <div class="stat"><div class="num n-em">96.6<span style="font-size:18px">%</span></div><div class="lab">调用点解析成功率<br>解析不出的只有 3.4%</div></div>
+    <div class="stat"><div class="num n-am">2756</div><div class="lab">具名函数节点<br>现有环形图上限约 24 个</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">裁 决</div>
+    <p style="margin:0"><b>做，但只做 TS/JS，且分三期。</b>
+    第一期只做「文件内结构 ＋ 死代码清单」—— 数据现成、画面简单、当天能看到东西。
+    第二期做「谁调用了这个」的邻域视图，那是理解代码最有用的一个问句。
+    第三期（跨文件全局符号图）<b>建议不做</b>，理由在第五节。</p>
+  </div>
+
+  <div class="dissent">
+    <div class="vlabel">反对意见 · 必须先说清</div>
+    <p style="margin:0 0 10px"><b>「AST 可视化」这个说法本身会误导。</b>
+    真把语法树画出来（<code>SourceFile → ClassDeclaration → MethodDeclaration → ...</code>）
+    对读代码几乎没有帮助 —— 那是编译器开发者的视图，不是理解业务的视图。</p>
+    <p style="margin:0">本报告讨论的是<b>符号级依赖图</b>：节点是函数/方法，边是「谁调用谁」。
+    AST 只是拿到它的手段。如果你要的是真·语法树浏览器，那是另一个东西，
+    价值低得多，我不建议做。</p>
+  </div>
+</section>
+
+<section id="实测">
+  <h2>Measurements</h2>
+  <div class="sectitle">在本仓库真跑出来的数字</div>
+  <p class="secnote">
+    分两个 tsconfig 各建一个 Program（<code>tsconfig.node.json</code> 主进程 ＋
+    <code>tsconfig.web.json</code> 渲染层），因为它们的编译选项与文件集不同，
+    合成一个会两边都错。
+  </p>
+
+  <h3>耗时拆解</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>阶段</th><th>主进程（210 文件）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>读 tsconfig</td><td><b>6ms</b></td><td>可忽略</td></tr>
+      <tr><td><code>ts.createProgram</code></td><td><b>431ms</b></td><td>最贵的一步，读盘 ＋ 建 SourceFile</td></tr>
+      <tr><td><code>getTypeChecker</code></td><td><b>133ms</b></td><td>惰性的，真正的代价摊在后面的查询里</td></tr>
+      <tr><td>遍历全部 AST</td><td><b>16ms</b></td><td>纯遍历极快</td></tr>
+      <tr><td>解析 14402 个调用点</td><td><b>307ms</b></td><td>21µs/个 —— 这是 checker 查询的真实单价</td></tr>
+      <tr><td><b>主进程小计</b></td><td><b>854ms</b></td><td>—</td></tr>
+      <tr><td><b>渲染层（319 文件）</b></td><td><b>1646ms</b></td><td>文件更多、JSX 更重</td></tr>
+      <tr><td><b>全仓合计</b></td><td><b>2460ms</b></td><td>对比：现有依赖图扫 oh-my-pi 用 6.2 秒</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>调用点都落到哪儿</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">34309 个调用点的去向</h4>
+      <div style="font-size:13.5px;color:#a3a3a3;line-height:2">
+        <div><span class="b b-em">37%</span> &nbsp;落到本仓库的定义（12608）</div>
+        <div class="bar"><i style="width:37%;background:#34d399"></i></div>
+        <div style="margin-top:12px"><span class="b b-gy">60%</span> &nbsp;落到 node_modules / lib.d.ts（20535）</div>
+        <div class="bar"><i style="width:60%;background:#404040"></i></div>
+        <div style="margin-top:12px"><span class="b b-ro">3.4%</span> &nbsp;解析不出来（1166）</div>
+        <div class="bar"><i style="width:3.4%;background:#fb7185"></i></div>
+      </div>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">落本地那 12608 条再拆</h4>
+      <div class="tw" style="margin:0;border:none">
+      <table style="min-width:0">
+        <tbody>
+          <tr><td>同文件内调用</td><td><b>7313</b></td><td class="dim">文件内结构图的原料</td></tr>
+          <tr><td>跨文件调用</td><td><b>5295</b></td><td class="dim">符号级依赖图的原料</td></tr>
+          <tr><td>去重后的符号边</td><td><b>4886</b></td><td class="dim">「A 文件的 x() 调了 B 文件的 y()」</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="margin:14px 0 0;font-size:13px;color:#737373">
+        同文件内的占了 58% —— 这正是<b>第一期只做文件内结构</b>的依据：
+        原料最多、画面最小、价值直接。
+      </p>
+    </div>
+  </div>
+
+  <h3>顺带白送的一个能力：死代码清单</h3>
+  <p>同一份数据反过来查一遍就有。本仓库 1444 个具名函数（已排除 <code>.test.</code>），
+  报出 24 个「零引用」。逐个核过之后：</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>类别</th><th>数量</th><th>可信度</th><th>例子</th></tr></thead>
+    <tbody>
+      <tr><td>真的没人用</td><td><b>5</b></td><td><span class="b b-em">已手工核实 3 个</span></td>
+        <td><code>shared/codeGraph.ts#territoryNames</code>（我自己这次加的，写了没用上）</td></tr>
+      <tr><td>在 <code>checkJs:false</code> 区</td><td><b>8</b></td><td><span class="b b-ro">不可信，必须排除</span></td>
+        <td><code>design/composer/**/*.jsx</code> —— TS 不检查它们，符号解析失效</td></tr>
+      <tr><td>动态 import 漏检</td><td><b>1</b></td><td><span class="b b-ro">假阳性</span></td>
+        <td><code>const { transcribeFile } = await import(...)</code></td></tr>
+      <tr><td>其余待核</td><td><b>10</b></td><td><span class="b b-am">未逐个核</span></td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="warn">
+    <div class="vlabel">期望管理</div>
+    <p style="margin:0">死代码清单<b>只能在真正进类型检查的 TS/TSX 上给结论</b>。
+    <code>checkJs:false</code> 那片（design 模块）必须整块排除，
+    否则 8/24 的误报率会让整个清单不可信 —— 一个 33% 误报的清单比没有更糟，
+    因为你会开始不信它，然后连真的那 5 个也漏掉。</p>
+  </div>
+</section>
+
+<section id="坑">
+  <h2>Pitfalls</h2>
+  <div class="sectitle">四个「看着对其实全错」的坑</div>
+  <p class="secnote">
+    这一节是这份报告里最值钱的部分。四个坑全是我在测的过程中撞出来的 ——
+    每一个的共同点是：<b>不报错、数字看着像那么回事，只是全错。</b>
+    真动手时按这四条写测试，能省掉一轮返工。
+  </p>
+
+  <div class="card">
+    <h4 style="margin-top:0"><span class="b b-ro">坑 1</span> &nbsp;不解 alias → 每条跨文件调用都变成自环</h4>
+    <p><code>checker.getSymbolAtLocation()</code> 在 <code>registerAgentHandlers()</code> 上返回的符号，
+    它的 <code>declarations[0]</code> 是<b>调用方文件里那条 import 语句</b>，不是函数本体。</p>
+<pre><code><span class="dim">// index.ts:22</span>  import { registerAgentHandlers } from './agent'
+<span class="dim">// index.ts:405</span> registerAgentHandlers()
+                     <span class="ro">↑ getSymbolAtLocation 给的声明处是 index.ts 自己</span>
+
+<span class="flow">修法</span>  sym.flags &amp; ts.SymbolFlags.Alias ? checker.getAliasedSymbol(sym) : sym</code></pre>
+    <p style="margin-bottom:0"><b>症状</b>：死代码清单报出 <b>644</b> 个假阳性（真实数是 24）。
+    而且跨文件调用图会全变成一堆自环，看着像「每个文件都高度内聚」。</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0"><span class="b b-ro">坑 2</span> &nbsp;「调用点」≠「被使用」</h4>
+    <p>只数 <code>CallExpression</code> 会漏掉所有<b>把函数作为值传出去</b>的用法：</p>
+<pre><code>setInterval(<span class="hi">reapIdleSessions</span>, 60_000)      <span class="dim">// 不是 CallExpression</span>
+&lt;button onClick={<span class="hi">handleSend</span>}&gt;              <span class="dim">// JSX 属性</span>
+export { <span class="hi">foo</span> }                             <span class="dim">// 再导出</span>
+
+<span class="flow">修法</span>  数 Identifier 的符号引用，不是数调用点</code></pre>
+    <p style="margin-bottom:0"><b>症状</b>：<code>reapIdleSessions</code> / <code>recoverInterrupted</code>
+    被判成死代码，而它们正跑在 <code>setInterval</code> 里。修完之后 57 → 24。</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0"><span class="b b-ro">坑 3</span> &nbsp;<code>checkJs:false</code> 的区域，符号解析静默失效</h4>
+    <p>本仓库 <code>tsconfig.web.json</code> 是 <code>allowJs:true</code> ＋ <code>checkJs:false</code>，
+    design 模块那一大片 <code>.jsx</code> 不进类型检查。checker 在那里<b>不报错，只是解析不出来</b>。</p>
+    <p style="margin-bottom:0"><b>症状</b>：<code>DesignerView</code> 有 10 处真实引用，却被判成死代码。
+    <b>必须在结果里按文件标出「这块不可信」</b>，不能混在一起给用户。</p>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-top:0"><span class="b b-am">坑 4</span> &nbsp;动态 import 的解构绑定连不上</h4>
+<pre><code>const { <span class="hi">transcribeFile</span> } = await import('../features/wiki/transcribe')</code></pre>
+    <p style="margin-bottom:0">这是静态分析的固有边界，和 JS 那侧「<code>import('./x' + name)</code> 连不上」同类。
+    量不大（本仓库 1 处），<b>但要在界面上如实说「这类连不上」</b>，不要让用户以为图是完整的。</p>
+  </div>
+</section>
+
+<section id="分层">
+  <h2>Architecture</h2>
+  <div class="sectitle">加在哪一层</div>
+  <p class="secnote">
+    完全照现有代码地图的分层走，<b>不新建平行体系</b>。
+    现有的三层（纯判定 / 分析器 / IPC）都是 2026-09-03 这两天刚定型的，
+    符号图直接插进同一套。
+  </p>
+
+<pre><code><span class="dim">┌─ 现有 ─────────────────────────────────────────────┐</span>
+   src/shared/codeGraph.ts        <span class="dim">纯判定 · 领地 · 循环定性</span>
+   src/shared/langImports.ts      <span class="dim">Python/C/Swift 的 import 提取</span>
+   src/shared/gitignore.ts        <span class="dim">目录该不该扫</span>
+   src/main/codeGraphAnalyze.ts   <span class="dim">JS/TS 分析器（dependency-cruiser）</span>
+   src/main/multiLang.ts          <span class="dim">另三种栈的路径解析</span>
+   src/main/codeGraph.ts          <span class="dim">IPC 口（唯一碰 electron 的）</span>
+<span class="dim">└────────────────────────────────────────────────────┘</span>
+
+<span class="flow">新增 ↓</span>
+
+   <span class="hi">src/shared/symbolGraph.ts</span>       契约 ＋ 纯判定
+                                  <span class="dim">· SymbolNode / SymbolEdge 的形状</span>
+                                  <span class="dim">· 「这个文件可不可信」（checkJs 判据 → 坑 3）</span>
+                                  <span class="dim">· 死代码定性（导出/内部/入口豁免）</span>
+
+   <span class="hi">src/main/tsSymbols.ts</span>           TS Compiler API 那一层
+                                  <span class="dim">**零 electron，可 node --test**</span>
+                                  <span class="dim">· 建 Program（两个 tsconfig 各一个）</span>
+                                  <span class="dim">· 解 alias（→ 坑 1）</span>
+                                  <span class="dim">· 数 Identifier 引用而非调用点（→ 坑 2）</span>
+
+   src/main/codeGraph.ts          <span class="dim">复用同一个 IPC 口，加一个 mode 参数</span>
+                                  <span class="dim">—— 不新开 channel，preload 那侧不用动</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">为什么不新开 IPC channel</div>
+    <p style="margin:0">现有 <code>codeGraph:analyze</code> 已经有「路径可不可信」那道门槛（
+    <code>fs.statSync</code> ＋ 目录判定），新开一个就要把那道门槛再写一遍。
+    加个 <code>mode: 'module' | 'symbol'</code> 参数，preload 和渲染层的类型都跟着现有的
+    <code>CodeGraphResult</code> 走。</p>
+  </div>
+
+  <h3>为什么 tsSymbols 必须零 electron</h3>
+  <p>和 <code>multiLang.ts</code>、<code>omp/launch.ts</code> 同一条纪律。
+  这一层全是<b>判断</b>，而判断错了的表现极其隐蔽（图照画、只是少几条边）——
+  上面那四个坑没有一个会抛异常。<b>只有能 <code>node --test</code> 裸跑，才可能给它们写回归测试。</b></p>
+  <p>顺带一提：这条纪律今天刚在 omp 那块兑现过一次 ——
+  <code>launch.ts</code> 因为 import 了 mcpBridge 而无法单测，那段角色禁用逻辑一条测试都没有；
+  拆开之后补了 12 条。</p>
+</section>
+
+<section id="难点">
+  <h2>The Hard Part</h2>
+  <div class="sectitle">真正的难点：2756 个节点怎么画</div>
+  <p class="secnote">
+    解析已经证明便宜了。难的是现有的环形图<b>装不下</b> ——
+    它在领地级是 23 个点、下钻到文件级已经要截到「耦合最重的 24 个」。
+    符号级是 2756 个。
+  </p>
+
+  <div class="dissent">
+    <div class="vlabel">这是最容易做砸的地方</div>
+    <p style="margin:0">直接把 2756 个函数扔进环形图，得到的是一团毛线 ——
+    <b>而毛线回答不了任何问题。</b>
+    这和之前那条判断是同一个道理：一张全是红的图等于没有红。
+    所以第三期（全局符号图）我建议<b>不做</b>，不是做不出来，是做出来没用。</p>
+  </div>
+
+  <h3>三个能用的视图（按价值排序）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>视图</th><th>回答什么问题</th><th>规模</th><th>画法</th><th>建议</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>文件内结构</b></td>
+        <td>这个文件里有哪些函数、谁调谁</td>
+        <td>单文件 5–30 个</td>
+        <td><b>现有环形图直接能用</b>，不用新写布局</td>
+        <td><span class="b b-em">第一期</span></td>
+      </tr>
+      <tr>
+        <td><b>死代码清单</b></td>
+        <td>哪些函数没人用了</td>
+        <td>列表，本仓库 5 条</td>
+        <td>表格，不用画图</td>
+        <td><span class="b b-em">第一期</span></td>
+      </tr>
+      <tr>
+        <td><b>邻域视图</b></td>
+        <td>谁调用了这个 / 这个调用了谁（1–2 跳）</td>
+        <td>典型 10–40 个</td>
+        <td>环形图 ＋ 中心节点，需要「选中一个符号」的交互</td>
+        <td><span class="b b-am">第二期</span></td>
+      </tr>
+      <tr>
+        <td style="color:#737373">全局符号图</td>
+        <td style="color:#737373">整个项目的函数调用全景</td>
+        <td style="color:#737373">2756 个</td>
+        <td style="color:#737373">要换力导向 ＋ 聚类 ＋ WebGL</td>
+        <td><span class="b b-ro">建议不做</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>邻域视图为什么值钱</h3>
+  <p>「<b>我要改这个函数，谁会受影响？</b>」——这是读代码时最高频的一个问句，
+  而且现在只能靠全局搜索加人脑过滤。有了符号图它是一次查询。</p>
+  <p style="margin-bottom:0">这也是它和现有模块图的分工：模块图回答「<b>哪块地在跨界拉扯</b>」（宏观、找架构问题），
+  邻域视图回答「<b>动这里会碰到什么</b>」（微观、找改动风险）。两者不重叠。</p>
+</section>
+
+<section id="其他语言">
+  <h2>Other Stacks</h2>
+  <div class="sectitle">Python / C / Swift 的 AST：建议不做</div>
+  <p class="secnote">
+    模块依赖图那一层已经支持这三种（正则提取 import ＋ 路径解析，够用）。
+    但符号级是完全不同的量级。
+  </p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>语言</th><th>要什么</th><th>成本</th><th>能拿到的准确率</th></tr></thead>
+    <tbody>
+      <tr><td><b>TS/JS</b></td><td>已有的 typescript</td><td><span class="b b-em">零新依赖</span></td>
+        <td>调用点解析 <b>96.6%</b>，有完整类型信息</td></tr>
+      <tr><td>Python</td><td>tree-sitter WASM ＋ python 语法</td><td>约 +3MB 包体</td>
+        <td class="dim">只能按名字猜。<code>self.foo()</code> 的 foo 是哪个类的？没有类型检查器就是猜</td></tr>
+      <tr><td>C/C++</td><td>tree-sitter ＋ c/cpp 语法</td><td>约 +5MB（两套语法）</td>
+        <td class="dim">宏展开前解析，<code>#define</code> 出来的调用全丢</td></tr>
+      <tr><td>Swift</td><td>tree-sitter ＋ swift 语法</td><td>约 +4MB</td>
+        <td class="dim">同模块内文件互相可见 —— 连模块边界都没有，符号级更是全靠猜</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">关键差别</div>
+    <p style="margin:0">tree-sitter 给的是<b>语法树，不是符号表</b>。
+    它能告诉你「这里有个调用，名字叫 foo」，但<b>不能告诉你这个 foo 是哪个 foo</b>。
+    TS 那 96.6% 的解析率来自 checker（类型推导 ＋ 作用域分析），
+    tree-sitter 没有这个东西。同名函数、方法调用、动态派发全都区分不了。</p>
+    <p style="margin:10px 0 0">要在 Python 上做到 TS 那种质量，得接 pyright 或 jedi ——
+    那是<b>另起一个进程、另一套依赖</b>，成本比整个 TS 方案高一个数量级。</p>
+  </div>
+</section>
+
+<section id="分期">
+  <h2>Phasing</h2>
+  <div class="sectitle">分期与工作量</div>
+  <p class="secnote">
+    工作量的参照系是今天刚做完的多语言支持：
+    <code>langImports.ts</code> ＋ <code>multiLang.ts</code> ＋ <code>gitignore.ts</code>
+    ＝ 3 个新模块、47 条测试、约半天。
+  </p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一期 · 约 3–4 小时</div>
+      <div class="tt">文件内结构图 ＋ 死代码清单</div>
+      <div class="td">
+        新增 <code>shared/symbolGraph.ts</code>（契约 ＋ 可信度判据）、
+        <code>main/tsSymbols.ts</code>（建 Program、解 alias、数引用）。
+        界面上给代码地图的下钻视图加一个「符号」开关 —— <b>环形图不用改</b>，
+        单文件 5–30 个节点它本来就画得好。死代码是一张表。<br>
+        <b>验收</b>：本仓库那 5 个真死函数报得出来，8 个 <code>checkJs:false</code> 的必须被标成「不可信」而不是混进清单。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第二期 · 约 4–6 小时</div>
+      <div class="tt">邻域视图（谁调用了这个）</div>
+      <div class="td">
+        需要一个「选中符号」的交互入口 —— 从文件内结构图点一个函数，
+        或者从死代码清单点一条。加 1–2 跳的邻域查询与布局（中心 ＋ 环）。<br>
+        <b>验收</b>：随便选一个函数，列出的调用方和 <code>grep</code> 出来的一致。
+      </div>
+    </div>
+    <div class="it">
+      <div class="tm">第三期</div>
+      <div class="tt">全局符号图 —— 建议不做</div>
+      <div class="td">
+        2756 个节点要换布局引擎（力导向 ＋ 聚类）、要 WebGL 才不掉帧，
+        而画出来是一团毛线。<b>成本最高、价值最低。</b>
+        真需要全局视角时，现有的模块级依赖图已经在回答那个问题了。
+      </div>
+    </div>
+  </div>
+
+  <h3>要提前定的两件事</h3>
+  <ol>
+    <li><b>Program 缓存策略。</b>2.5 秒是冷启动。改一个文件重扫要不要复用 Program？
+    TS 有 <code>createIncrementalProgram</code>，但要自己管 watch。
+    第一期<b>先不做缓存</b>，2.5 秒可接受；等真嫌慢再说。</li>
+    <li><b>别人的项目怎么办。</b>本仓库有 tsconfig，别的 TS 项目也大多有。
+    没有 tsconfig 的纯 JS 项目 → 用默认 compilerOptions 兜底，但准确率会掉
+    （没有类型信息，方法调用解析不了）。<b>这种情况要在界面上标出来</b>，
+    和现在「按目录 / 按入口」那个标记同一个位置。</li>
+  </ol>
+</section>
+
+<section id="下一步">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">选一个回给我就行。默认建议是第一期。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>选项</th><th>做什么</th><th>产出</th></tr></thead>
+    <tbody>
+      <tr><td><code>A</code></td><td><b>做第一期</b>（推荐）</td><td>文件内结构图 ＋ 死代码清单，约 3–4 小时</td></tr>
+      <tr><td><code>B</code></td><td>一二期一起做</td><td>再加邻域视图，约 8–10 小时</td></tr>
+      <tr><td><code>C</code></td><td>只要死代码清单</td><td>不画图，纯一张表，约 1.5 小时</td></tr>
+      <tr><td><code>D</code></td><td>先不做</td><td>这份报告存档，需要时再翻出来</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话</div>
+    <div class="dcmd">
+      <span id="cmd">A</span>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>数据全部来自 2026-09-03 在本仓库的实测，脚本临时跑完即删，可复现。</div>
+  <div>关联：<code>docs/代码地图-适配范围.md</code>（模块级的适配账） ·
+    <code>docs/architecture/10-模块领地图.md</code> ·
+    <code>src/main/codeGraphAnalyze.ts</code> · <code>src/main/multiLang.ts</code></div>
+  <div>本页为项目内本地文件，零外部依赖，断网可开。</div>
+</footer>
+
+</main>
+</body>
+</html>

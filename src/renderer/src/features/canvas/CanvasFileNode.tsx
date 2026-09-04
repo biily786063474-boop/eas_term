@@ -150,7 +150,7 @@ export function CanvasFileNode({
 
   return (
     <div
-      className={`cfile-node${selected ? ' sel' : ''}`}
+      className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frameId}
       // 点模块任意部分即选中（捕获阶段，早于内容；不 preventDefault 故内容交互照常）
