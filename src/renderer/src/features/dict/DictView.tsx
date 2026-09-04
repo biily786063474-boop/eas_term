@@ -57,6 +57,11 @@ const TAX = dict.taxonomy ?? {}
 const CAT1_KEYS = Object.keys(TAX)
 /** 自建词条没有 cat1，落到这里。**不是一个真分类**，只是不让它们从界面上消失 */
 const UNSORTED = '未分类'
+/** 分类表里有、但一条词条都还没有的一级 —— **是故意留的空货架，不是 bug**。
+ *  给它一句自己的空态，否则用户点进去看到「没有匹配的词条」会以为功能坏了。 */
+const EMPTY_SHELF: Record<string, string> = {
+  '后端 · 服务': '这一格还是空的 —— 词库目前全是前端的手法。要往里加，用 dict_add 或让 AI 直接写。'
+}
 
 const POP_W = 320
 const MARGIN = 10 // 浮层贴软件边缘时的内边距
@@ -401,7 +406,13 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
       <DictHookBar />
 
       <div className="dict-list" onMouseLeave={() => setHover(null)}>
-        {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}
+        {filtered.length === 0 && (
+          <div className="git-empty">
+            {/* 空货架只在「没搜、没筛二级、就是点了这个一级」时才算空货架；
+                搜了半天没结果时还说「这格是空的」会答非所问 */}
+            {!query && !cat2 && EMPTY_SHELF[cat] ? EMPTY_SHELF[cat] : '没有匹配的词条'}
+          </div>
+        )}
         {filtered.map(({ item: term, hit, excerpt }) => (
           <button
             key={term.id}

@@ -13,7 +13,7 @@ import os from 'os'
 import path from 'path'
 
 import type { UserTerm } from '../shared/types'
-import { isValidCat } from '../shared/dictTaxonomy'
+import { isValidCat, normalizeCat1 } from '../shared/dictTaxonomy'
 
 const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
 // ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
@@ -87,7 +87,13 @@ function readUser(): UserTerm[] {
       //
       // 分类要再验一次：这个文件用户和外部脚本都能改，手写进来的分类可能
       // 根本不存在，那样的词条在界面上一级二级都筛不到，等于消失。
-      ...(isValidCat(t.cat1, t.cat2) ? { cat1: t.cat1 as string, cat2: t.cat2 as string } : {}),
+      // **存归一后的新一级名**（`normalizeCat1` 认 2026-08-31 那版的老名）。
+      // 存用户传进来的那个的话，老名会一直在库里留着 ——
+      // 而界面的一级导航只渲染新表里的名字，那些词条就永远筛不到。
+      ...(() => {
+        const c1 = normalizeCat1(t.cat1, t.cat2)
+        return c1 ? { cat1: c1, cat2: t.cat2 as string } : {}
+      })(),
       ...(typeof t.prompt === 'string' && t.prompt.trim() ? { prompt: t.prompt.trim() } : {})
     })
   }
@@ -193,7 +199,8 @@ export function registerDictHandlers(): void {
           zh,
           en,
           category: cat as UserTerm['category'],
-          ...(hasCat2 ? { cat1: t.cat1 as string, cat2: t.cat2 as string } : {}),
+          // 同 readUser()：落盘的是归一后的新名，不是调用方传的那个
+          ...(hasCat2 ? { cat1: normalizeCat1(t.cat1, t.cat2) as string, cat2: t.cat2 as string } : {}),
           keywords: Array.isArray(t.keywords)
             ? t.keywords.filter((k): k is string => typeof k === 'string')
             : [en, zh],
