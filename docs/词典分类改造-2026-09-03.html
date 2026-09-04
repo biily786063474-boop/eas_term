@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>词典分类改造 —— 场景一级 · 区块分面 · 原型图预设</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}.ro{color:#fda4af}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="navwrap">
+    <span class="navbrand">词典分类改造</span>
+    <a href="#结论">结论</a>
+    <a href="#读法">你说的四件事</a>
+    <a href="#事实">三个先于设计的事实</a>
+    <a href="#模型">目标模型</a>
+    <a href="#poc">POC 实测</a>
+    <a href="#mvp">MVP</a>
+    <a href="#补什么">要补的知识与提示词</a>
+    <a href="#落地">落地位置与三个坑</a>
+    <a href="#定">要你定的</a>
+  </div>
+</nav>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">方案报告 · POC 已在真实 381 条上跑过</div>
+  <h1>词典分类改造：场景一级 · 区块分面 · 原型图预设</h1>
+  <p class="lede">
+    你要的三件事里，<b>两件能直接做，一件的形状和你说的不一样</b>。
+    「一级按场景分」成立，规则表一跑 381 条零掉队；「原型图预设展现页面关系」成立，是个新实体；
+    但<b>「区块」不能做成三级分类</b> —— 实测 115 条词条同时属于 2 个以上区块，
+    做成树它们要么重复挂、要么被迫二选一。它该是一维<b>可多选的标签</b>。
+  </p>
+  <div class="meta">
+    <span>词条总量 <b>381 条</b></span>
+    <span>现有分类 <b>9 一级 / 40 二级</b></span>
+    <span>POC <b>已跑，数据在下面</b></span>
+    <span>日期 <b>2026-09-03</b></span>
+  </div>
+</header>
+
+<section id="结论">
+  <h2>Verdict</h2>
+  <div class="sectitle">一级改场景成立，区块改成标签，原型图是第四件新东西</div>
+  <p class="secnote">下面每个数字都是在 <code>dictionary-bundle.json</code> 的真实 381 条上跑出来的，不是估的。</p>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="stat"><div class="num n-em">381 / 381</div><div class="lab">按规则表重映射到新一级，<b>零条掉队</b> —— 不需要人工兜底</div></div>
+    <div class="stat"><div class="num n-am">115 条</div><div class="lab">同时属于 <b>≥2 个区块</b>（30%）—— 区块做成树就在这里崩</div></div>
+    <div class="stat"><div class="num n-ro">0 条</div><div class="lab">真正的<b>后端</b>词条。这一支不是「重新分类」，是<b>从零建</b></div></div>
+    <div class="stat"><div class="num n-sk">4 个</div><div class="lab">区块<b>填不满</b>：页脚 0 · 侧边栏 2 · 金刚区 3 · 标签栏 4</div></div>
+  </div>
+
+  <div class="verdict">
+    <div class="vlabel">建议</div>
+    <p style="margin:0"><b>主树两级不变深，把「出现在哪儿」拆成分面。</b>
+    一级 = 场景（前端·组件 / 前端·视觉 / 前端·动效 / 前端·数据 / 后端·服务），
+    二级 = 沿用现在那 40 个「手法」名（它们质量不错，直接换个爹）。
+    「区块」「端」作为<b>正交标签</b>横切，不进树。
+    原型图预设是<b>另一个实体</b>（不是词条），它引用区块，区块再引用词条 —— 这才是你要的「页面关系」。</p>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">一句必须先说清的</div>
+    <p style="margin:0">这份改造会<b>推翻 8-31 那份《辞典改造方案》里定的一级分类</b>。
+    不过那次的活没白干：现在这 9 个一级的下一层（40 个二级）<b>原样保留</b>，
+    只是上面换了一层。真正作废的只有 9 个一级的名字。</p>
+  </div>
+</section>
+
+<section id="读法">
+  <h2>Interpretation</h2>
+  <div class="sectitle">你说的四件事，拆开是四种不同的东西</div>
+  <p class="secnote">你一口气说了四层，但它们在数据模型上不是同一类。混着做会做成一棵长不出来的树。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:30%">你说的</th><th style="width:16%">它其实是</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>「一级分类按场景分，应用在后端还是前端，是视觉风格还是动效」</td>
+        <td><span class="b b-em">树 · 一级</span></td>
+        <td><b>成立，直接做。</b>它回答的是「我现在在干哪种活」，一条词条只属于一种活。互斥 → 适合做树。</td>
+      </tr>
+      <tr>
+        <td>「前端设计里面的组件」</td>
+        <td><span class="b b-em">树 · 二级</span></td>
+        <td>现有 40 个二级名（输入与补全 / 玻璃与模糊 / 缓动曲线…）就是这一层，<b>一个字不用改，换个父节点即可</b>。</td>
+      </tr>
+      <tr>
+        <td>「对应的前端区块里面，比如出现在金刚区、标签栏、pop up」</td>
+        <td><span class="b b-am">分面 · 标签</span></td>
+        <td><b>不能做成三级。</b>「毛玻璃」同时用在导航栏、弹层、卡片；「防抖」同时用在搜索、表单、按钮。
+        实测 <b>115 条（30%）同时命中 ≥2 个区块</b>，另有 158 条（41%）<b>不属于任何区块</b>（缓动曲线、噪点、金属质感 —— 它们是通用手法）。
+        塞进树里，这 273 条都要被扭曲。</td>
+      </tr>
+      <tr>
+        <td>「预设一些基本的原型图，桌面端和移动端分开，展现页面的关系」</td>
+        <td><span class="b b-vi">新实体 · 蓝图</span></td>
+        <td><b>这是词典里现在没有的第四种东西。</b>它不是分类也不是词条，是「一张页面由哪些区块按什么顺序组成」。
+        它引用区块，区块再引用词条 —— 关系是<b>组合</b>，不是<b>归属</b>。</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="card">
+    <h4 style="margin-top:0">一句话区分「归属」和「组合」</h4>
+    <p style="margin:0">分类树答的是「<b>这条词条是什么</b>」——「弹簧动效」是一种运动规律，只能是一种。<br>
+    分面标签答的是「<b>这条词条能用在哪</b>」—— 可以用在很多地方，也可以哪都不特指。<br>
+    蓝图答的是「<b>一张页面由什么拼起来</b>」—— 这是第三个问题，跟前两个都不是一回事。<br>
+    <span class="dim">把第二、第三个问题塞进第一个问题的树里，是分类系统最常见的塌方方式。</span></p>
+  </div>
+</section>
+
+<section id="事实">
+  <h2>Facts</h2>
+  <div class="sectitle">三个先于设计的事实</div>
+  <p class="secnote">这三条都是跑数据跑出来的，其中第三条是我在做 POC 时踩到才发现的。</p>
+
+  <h3>① 区块维度是正交的 —— 数据说得很清楚</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:40%">一条词条命中几个区块</th><th style="width:15%">条数</th><th style="width:12%">占比</th><th>含义</th></tr></thead>
+    <tbody>
+      <tr><td><b>0 个</b>（不属于任何区块）</td><td>158</td><td>41%</td><td>通用手法：缓动曲线、噪点、金属虹彩、玻璃模糊。<b>它们本来就不该被逼着选一个区块</b></td></tr>
+      <tr><td><b>1 个</b></td><td>108</td><td>28%</td><td>做成树也没问题的那部分</td></tr>
+      <tr><td><b>2 个及以上</b></td><td><b>115</b></td><td><b>30%</b></td><td class="ro"><b>做成树就在这里崩</b> —— 要么在多个分类下重复出现，要么被迫二选一丢信息</td></tr>
+    </tbody>
+  </table></div>
+  <p>平均每条命中 <b>1.09 个</b>区块。这个数字本身就在说：它是标签的分布，不是层级的分布。</p>
+
+  <h3>② 「后端」那一支现在是空的</h3>
+  <p>用后端关键词（接口 / 数据库 / 鉴权 / 限流 / 队列 / 事务 / 幂等 / 网关…）扫全库，命中 38 条。
+  但逐条看下来，<b>它们全是前端的数据获取手法</b> —— 乐观更新、游标分页、指数退避重试、SSE、请求去重。
+  这些属于「前端 · 数据」，不属于后端。</p>
+  <div class="dissent">
+    <div class="vlabel">要如实说的</div>
+    <p style="margin:0">「一级分前端 / 后端」不是<b>重新分类</b>，是<b>开一个空货架</b>。
+    改完之后点进「后端 · 服务」会是 0 条。<br>
+    这不是不能做，但它的成本是<b>写 40 条新词条 + 一套新的提示词模板</b>（见后面「要补什么」），
+    不是改个分类表就完事。所以我在 MVP 里把它单独拆成一期。</p>
+  </div>
+
+  <h3>③ 自动打标必须切掉【坑】段 —— 那里写的是反话</h3>
+  <p>词条的 <code>prompt</code> 结尾有一个【坑】段，写的是「<b>别用在哪</b>」。用正则全文扫会把它当成「适用于哪」，
+  打出来的标签意思正好相反。这不是理论担心，是我跑 POC 时撞到的：</p>
+  <pre><code><span class="dim"># 被误打上「首屏 Banner」标签的词条，看它们的【坑】段写的是什么：</span>
+粒子      →【坑】<span class="ro">想要首屏强冲击力时不够看</span>，它刻意很安静。
+淡入      →【坑】<span class="ro">首屏主标题套上会让用户先看到一片空白。</span>
+入场动画  →【坑】长列表逐项套用会显得拖沓，<span class="ro">首屏关键信息别靠它延迟露出。</span>
+网格      →【坑】<span class="ro">想要视觉冲击的 Hero 别指望它</span>，静止时几乎看不见。</code></pre>
+  <p>切掉【坑】段重跑，效果立刻可量：</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:34%">指标</th><th style="width:22%">全文扫（错的）</th><th style="width:22%">切掉【坑】段</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>「首屏 Banner」候选数</td><td>26</td><td><b>20</b></td><td>6 条是反话</td></tr>
+      <tr><td>「页脚」候选数</td><td>1</td><td class="ro"><b>0</b></td><td>唯一那条也是反话 —— 页脚其实<b>一条都没有</b></td></tr>
+      <tr><td>有区块标签的词条</td><td>239 (63%)</td><td><b>223 (59%)</b></td><td>覆盖率降了，但降下来的是假的</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">
+    <div class="vlabel">这条要写进实现里</div>
+    <p style="margin:0">任何拿词条文本做自动判断的地方（打标、搜索排序、蓝图推荐），
+    <b>都要先按【坑】切一刀</b>。这个坑很隐蔽：不切也能跑出结果，只是有一部分结果的意思是反的。</p>
+  </div>
+</section>
+
+<section id="模型">
+  <h2>Model</h2>
+  <div class="sectitle">目标模型：两级树 + 三个分面 + 一个蓝图实体</div>
+  <p class="secnote">深度和现在一样（两级），信息量多了两个维度。UI 上不需要多一层点击。</p>
+
+  <h3>主树：一级 = 场景，二级 = 手法</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:16%">新一级</th><th style="width:9%">条数</th><th style="width:32%">从哪来（现有一级）</th><th>二级（原样保留）</th></tr></thead>
+    <tbody>
+      <tr><td><b>前端 · 组件</b></td><td>89</td><td>输入与表单 · 列表与滚动 · 反馈与提示</td><td class="dim">14 个：输入与补全 · 提交与撤销 · 键盘与焦点 · 控件形态 · 长列表性能 · 分页与加载 · 吸附与锁定 · 滚动驱动动效 · 图集与画廊 · 跑马灯与循环 · 浮层与提示 · 点击反馈 · 悬停高光 · 磁吸与倾斜</td></tr>
+      <tr><td><b>前端 · 视觉</b></td><td>143</td><td>材质与质感 · 版式与风格</td><td class="dim">15 个：玻璃与模糊 · 阴影与浮雕 · 金属与虹彩 · 渐变与光雾 · 光束与辉光 · 点阵与网格 · 噪点与故障 · 流体与粒子 · 布局系统 · 定位与层级 · 裁剪与适配 · 排版与字效 · 配色与令牌 · 风格流派 · 样式工程</td></tr>
+      <tr><td><b>前端 · 动效</b></td><td>114</td><td>转场与入场 · 运动规律 · 手势与拖拽</td><td class="dim">14 个：视图转场 · 进出场与显现 · 错峰与编排 · 文本变换 · 菜单展开 · 缓动曲线 · 弹簧与物理 · 关键帧控制 · 变换与形变 · 性能与流畅度 · 拖放与排序 · 触摸手势 · 跟手与惯性 · 光标跟随</td></tr>
+      <tr><td><b>前端 · 数据</b></td><td>35</td><td>加载与等待</td><td class="dim">5 个：骨架与指示 · 占位与懒加载 · 请求与重试 · 缓存与预取 · 分块与水合</td></tr>
+      <tr><td><b>后端 · 服务</b></td><td class="ro"><b>0</b></td><td class="ro">新建，无来源</td><td class="dim">建议 4 个：接口与契约 · 存储与查询 · 可靠性与重试 · 性能与容量</td></tr>
+    </tbody>
+  </table></div>
+  <p><span class="dim">「前端 · 数据」单独立一支，是因为它是前后端的接缝 —— 塞进组件或视觉都别扭，而它恰好是「后端 · 服务」将来最自然的邻居。</span></p>
+
+  <h3>分面：横切三维，可多选，可为空</h3>
+  <div class="grid g3">
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-am">区块</span> block</h4>
+      <p style="font-size:13.5px;margin:0">16 个：导航栏 · 标签栏 · 金刚区 · 首屏 Banner · 轮播 · 列表/信息流 · 卡片 · 表单 · 弹层/浮层 · 侧边栏 · 表格 · 空状态/骨架 · 搜索 · 页脚 · 详情/图集 · 按钮<br>
+      <span class="dim">可为空 —— 41% 的词条本来就不属于任何区块</span></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-sk">端</span> platform</h4>
+      <p style="font-size:13.5px;margin:0">桌面 / 移动 / 通用<br>
+      <span class="dim"><b>MVP 建议不做。</b>正则只能捞出明确写了「触摸」「悬停」的，实测 245 条落进「通用」——
+      那是规则的局限不是事实。要么人工过一遍 381 条，要么先空着。</span></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-gy">领域</span> <span class="dim">（已被一级吸收）</span></h4>
+      <p style="font-size:13.5px;margin:0">前端 / 后端这一维已经在一级里了，不用重复做成标签。<br>
+      <span class="dim">留着这一格是提醒：别把同一个维度既做成树又做成标签，两边会漂。</span></p>
+    </div>
+  </div>
+
+  <h3>蓝图：原型图预设（新实体）</h3>
+  <p>它不是词条，也不是分类。一张蓝图 = <b>一个端 + 一串区块的顺序 + 每个区块的说明</b>。
+  词条不写在蓝图里 —— 蓝图只引用<b>区块名</b>，界面上点区块时再去词库里按标签实时捞。
+  这样新增词条会自动出现在所有相关蓝图里，<b>不用回头改蓝图</b>。</p>
+  <pre><code>{
+  "id": "m-home",
+  "name": "移动端 · 首页",
+  "platform": "移动",
+  "slots": [
+    { "block": "导航栏",       "note": "沉浸式，向下滚动时渐显底色" },
+    { "block": "搜索",         "note": "常驻 or 点击展开，二选一" },
+    { "block": "首屏 Banner",  "note": "首屏唯一视觉重心" },
+    { "block": "金刚区",       "note": "4 或 5 列，别超两行" },
+    { "block": "列表 / 信息流", "note": "无限滚动，注意长列表性能" },
+    { "block": "标签栏",       "note": "固定底部，注意安全区" }
+  ]
+}</code></pre>
+  <div class="card">
+    <h4 style="margin-top:0">为什么蓝图里不直接列词条 id</h4>
+    <p style="margin:0">列了就得维护。381 条词库还在长，每加一条动效都要回头想「哪几张蓝图该加上它」——
+    那是必然会烂掉的活。<b>蓝图只声明结构，词条由标签动态匹配</b>，加词条零维护成本。<br>
+    <span class="dim">代价：某个区块标签打错，会在所有蓝图里同时错。所以打标质量比蓝图本身更要紧。</span></p>
+  </div>
+</section>
+
+<section id="poc">
+  <h2>POC</h2>
+  <div class="sectitle">在真实 381 条上跑过了，这是结果</div>
+  <p class="secnote">POC 脚本做三件事：① 按规则表把 9 个一级重映射到 5 个 ② 用正则给每条打区块标签 ③ 搭 4 张蓝图，看每个格子能不能填满。下面全是它的输出。</p>
+
+  <h3>① 一级重映射：满射，零掉队</h3>
+  <pre><code>前端 · 视觉    143 条  38%
+前端 · 动效    114 条  30%
+前端 · 组件     89 条  23%
+前端 · 数据     35 条   9%
+后端 · 服务      0 条   0%   <span class="ro">← 空货架</span>
+<span class="flow">→ 全部 381 条都落到了新一级，不需要人工兜底</span></code></pre>
+  <p><b>这一步几乎零成本</b> —— 一张 9 行的映射表，写进 <code>dictTaxonomy.ts</code> 就完事，不用碰任何一条词条。</p>
+
+  <h3>② 区块存量：哪些格子填得满</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:22%">区块</th><th style="width:12%">词条数</th><th style="width:14%">状态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>表单</td><td>87</td><td><span class="b b-em">充足</span></td><td rowspan="3" class="dim">这三个是词库的富矿 —— 反过来说，正则可能打得太宽（「按钮」把所有提到点击反馈的都算了进去），<b>这是要人工收一遍的地方</b></td></tr>
+      <tr><td>按钮</td><td>79</td><td><span class="b b-em">充足</span></td></tr>
+      <tr><td>卡片</td><td>73</td><td><span class="b b-em">充足</span></td></tr>
+      <tr><td>弹层 / 浮层</td><td>31</td><td><span class="b b-em">充足</span></td><td>pop up 这一格是满的</td></tr>
+      <tr><td>空状态 / 骨架</td><td>25</td><td><span class="b b-em">充足</span></td><td>—</td></tr>
+      <tr><td>首屏 Banner</td><td>20</td><td><span class="b b-em">充足</span></td><td>切掉【坑】段后从 26 降到 20</td></tr>
+      <tr><td>列表 / 信息流</td><td>19</td><td><span class="b b-em">充足</span></td><td>—</td></tr>
+      <tr><td>轮播</td><td>16</td><td><span class="b b-em">充足</span></td><td>—</td></tr>
+      <tr><td>搜索</td><td>11</td><td><span class="b b-em">够用</span></td><td>—</td></tr>
+      <tr><td>详情 / 图集</td><td>9</td><td><span class="b b-em">够用</span></td><td>—</td></tr>
+      <tr><td>导航栏</td><td>7</td><td><span class="b b-am">偏薄</span></td><td>每张蓝图都用得上它，7 条撑不住</td></tr>
+      <tr><td>表格</td><td>6</td><td><span class="b b-am">偏薄</span></td><td>桌面端控制台类蓝图的主角</td></tr>
+      <tr><td>标签栏</td><td>4</td><td><span class="b b-ro">太薄</span></td><td rowspan="4" class="ro">这四格<b>撑不起蓝图</b>，点进去只有 1~2 个候选，用户会觉得功能是坏的</td></tr>
+      <tr><td>金刚区</td><td>3</td><td><span class="b b-ro">太薄</span></td></tr>
+      <tr><td>侧边栏</td><td>2</td><td><span class="b b-ro">太薄</span></td></tr>
+      <tr><td>页脚</td><td>0</td><td><span class="b b-ro">空的</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>③ 四张蓝图试搭：哪些格子是空的</h3>
+  <pre><code><span class="flow">▸ 移动端 · 首页</span>
+   ✓ 导航栏          7 条   例：毛玻璃 / 跳过链接 / 滚动吸附
+   ✓ 搜索           11 条   例：防抖 / 输入法组合事件 / 请求取消
+   ✓ 首屏 Banner    20 条   例：骨架屏 / 交错动画 / 渐进式图片加载
+   <span class="hi">⚠ 金刚区           3 条   例：程序坞 / 图标组 / 宫格</span>
+   ✓ 轮播           16 条   例：轮播 / 滚动吸附 / 跑马灯
+   ✓ 列表 / 信息流   19 条   例：虚拟列表 / 交错动画 / 游标分页
+   <span class="hi">⚠ 标签栏           4 条   例：标签页 / 淡入淡出过渡 / 程序坞</span>
+
+<span class="flow">▸ 移动端 · 详情页</span>          全部 ✓（导航栏 / 详情图集 / 卡片 / 弹层 / 按钮）
+
+<span class="flow">▸ 桌面端 · 控制台</span>
+   ✓ 导航栏 · 表格 · 弹层 · 空状态 · 表单
+   <span class="ro">✗ 侧边栏           2 条   例：抽屉 / 侧边栏</span>
+
+<span class="flow">▸ 桌面端 · 落地页</span>
+   ✓ 导航栏 · 首屏 Banner · 卡片 · 按钮
+   <span class="ro">✗ 页脚             0 条   ——</span></code></pre>
+
+  <div class="verdict">
+    <div class="vlabel">POC 的结论</div>
+    <p style="margin:0">模型跑得通，<b>16 个区块里 12 个能直接用</b>。
+    缺的 4 个（页脚 / 侧边栏 / 金刚区 / 标签栏）加起来只差 <b>约 20 条词条</b> —— 这是个明确、有限、能一次补完的缺口，
+    不是「词库还得再长一年」那种。</p>
+  </div>
+</section>
+
+<section id="mvp">
+  <h2>MVP</h2>
+  <div class="sectitle">三期，第一期两天内能见效</div>
+  <p class="secnote">按「改完立刻有用」排序，不按「模型完整」排序。每期都能单独停下。</p>
+
+  <div class="tl">
+    <div class="it on">
+      <div class="tm">第一期 · 骨架</div>
+      <div class="tt">一级换成场景，二级原样挂过去</div>
+      <div class="td">改 <code>dictTaxonomy.ts</code> 的分类表 + <code>dictionary-bundle.json</code> 里每条的 <code>cat1</code> 批量重写（脚本，一次跑完）。
+      UI 一行不用改 —— 现在的导航就是「一级按钮 + 二级 chip」，换了内容照样跑。<br>
+      <b>产出</b>：点开词典，一级变成「前端 · 组件 / 视觉 / 动效 / 数据」。<b>零风险，可回滚</b>（映射表是纯数据）。</div>
+    </div>
+    <div class="it on">
+      <div class="tm">第二期 · 分面</div>
+      <div class="tt">区块标签：脚本打初稿 + 人工过一遍</div>
+      <div class="td">给词条加 <code>blocks: string[]</code>。<b>正则只当初稿</b>（POC 里已经看到「按钮」打得过宽），
+      381 条我过一遍收敛，重点收「表单 / 按钮 / 卡片」这三个过宽的格子。<br>
+      UI 加一排区块 chip（和现有二级 chip 同一个组件，多选）。<br>
+      <b>产出</b>：能按「我在做弹层」筛词条。</div>
+    </div>
+    <div class="it">
+      <div class="tm">第三期 · 蓝图</div>
+      <div class="tt">原型图预设：10 张（移动 5 + 桌面 5）</div>
+      <div class="td">新增 <code>blueprints.json</code> + 一个蓝图视图：左边选蓝图，中间画区块顺序（简单的竖排方块，<b>不做真实渲染的原型图</b>），
+      点区块 → 右边出该区块的词条。<br>
+      <b>前置</b>：第二期的标签质量。标签不准，蓝图里推的词条就不对。</div>
+    </div>
+    <div class="it">
+      <div class="tm">单独一期 · 可以不做</div>
+      <div class="tt">后端 · 服务</div>
+      <div class="td">从 0 条开始，要写 ~40 条新词条 + 一套新的提示词模板（见下节）。
+      <b>它和前三期没有依赖关系</b>，想做随时能加，不想做前三期照样完整。</div>
+    </div>
+  </div>
+
+  <h3>MVP 明确不做的</h3>
+  <ul class="clean">
+    <li><b>端分面（桌面/移动）</b> —— 正则判不准，人工过一遍 381 条的收益不如先把区块做对。蓝图自己带 <code>platform</code> 字段，够用了。</li>
+    <li><b>真实渲染的原型图</b> —— 你说的是「展现页面的关系」，竖排方块 + 顺序 + 说明就够。画成像素级的原型图是另一个量级的活，而且会立刻过时。</li>
+    <li><b>删掉旧的 <code>category</code> 字段</b> —— 它是 <code>'interaction'|'motion'|'visual'</code>，<b>用户机器上已装的 skill 还在按它写</b>（<code>types.ts</code> 里明确注了）。只能加不能改。</li>
+  </ul>
+</section>
+
+<section id="补什么">
+  <h2>Gaps</h2>
+  <div class="sectitle">要补的预设知识与提示词</div>
+  <p class="secnote">这是你问的最后一件事。分四块，加起来约 70 条内容 + 1 套新模板。</p>
+
+  <h3>① 区块缺口词条 ≈ 22 条</h3>
+  <p>补齐后每个区块至少 8 条候选，蓝图才不会有空格子。</p>
+  <div class="tw"><table>
+    <thead><tr><th style="width:14%">区块</th><th style="width:8%">现有</th><th style="width:8%">补</th><th>补什么（具体条目建议）</th></tr></thead>
+    <tbody>
+      <tr><td><b>页脚</b></td><td class="ro">0</td><td>6</td><td>巨型页脚 · 页脚折叠分组 · 回到顶部 · 页脚吸底与不吸底的判据 · 站点地图式页脚 · 页脚订阅表单</td></tr>
+      <tr><td><b>侧边栏</b></td><td class="ro">2</td><td>6</td><td>可折叠侧边栏 · 图标态 / 展开态切换 · 多级菜单展开 · 侧边栏宽度拖拽 · 当前项高亮与滚动跟随 · 移动端抽屉化降级</td></tr>
+      <tr><td><b>金刚区</b></td><td class="ro">3</td><td>5</td><td>宫格换页 · 图标微动效 · 长按编辑排序 · 更多入口的折叠 · 红点与角标</td></tr>
+      <tr><td><b>标签栏</b></td><td class="ro">4</td><td>5</td><td>标签栏切换动效 · 中间凸起按钮 · 标签栏隐藏/显现（滚动联动）· 徽标数字 · 安全区适配</td></tr>
+    </tbody>
+  </table></div>
+  <p class="dim">导航栏（7）和表格（6）偏薄但能用，第一轮可以先不补。</p>
+
+  <h3>② 蓝图预设 10 张</h3>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-sk">移动端 5 张</span></h4>
+      <ul style="margin:0;font-size:13.5px">
+        <li><b>首页</b> —— 导航栏 → 搜索 → 首屏 Banner → 金刚区 → 信息流 → 标签栏</li>
+        <li><b>列表 / 分类页</b> —— 导航栏 → 筛选条 → 列表 → 空状态 → 标签栏</li>
+        <li><b>详情页</b> —— 导航栏 → 图集 → 信息卡片 → 弹层 → 底部操作条</li>
+        <li><b>表单 / 提交页</b> —— 导航栏 → 分组表单 → 校验反馈 → 提交按钮</li>
+        <li><b>我的 / 设置页</b> —— 头部卡片 → 分组列表 → 弹层确认 → 标签栏</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0"><span class="b b-vi">桌面端 5 张</span></h4>
+      <ul style="margin:0;font-size:13.5px">
+        <li><b>落地页</b> —— 导航栏 → 首屏 → 特性卡片 → 价格表 → 页脚</li>
+        <li><b>控制台 / 后台</b> —— 顶栏 → 侧边栏 → 表格 → 弹层 → 空状态</li>
+        <li><b>详情 / 编辑页</b> —— 面包屑 → 双栏（表单 + 预览）→ 底部操作条</li>
+        <li><b>数据看板</b> —— 顶栏 → 筛选条 → 卡片网格 → 图表区 → 骨架</li>
+        <li><b>文档 / 知识页</b> —— 顶栏 → 侧边目录 → 正文 → 右侧锚点 → 页脚</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>③ 后端 · 服务 ≈ 40 条（可选一期）</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:20%">二级</th><th style="width:8%">条数</th><th>建议条目</th></tr></thead>
+    <tbody>
+      <tr><td><b>接口与契约</b></td><td>10</td><td>幂等键 · 游标 vs 偏移分页 · 版本化策略 · 错误码分层 · 批量接口的部分失败 · 长任务的 202 + 轮询 · Webhook 重投 · 限流响应头 · 字段裁剪 · 契约测试</td></tr>
+      <tr><td><b>存储与查询</b></td><td>10</td><td>复合索引的列序 · 软删除的代价 · 乐观锁版本号 · 分页深翻页 · 读写分离的延迟 · 事务边界 · 唯一约束兜底 · JSON 列的取舍 · 归档分表 · 慢查询定位</td></tr>
+      <tr><td><b>可靠性与重试</b></td><td>10</td><td>指数退避 + 抖动 · 熔断 · 舱壁隔离 · 超时分层 · 死信队列 · 至少一次 vs 恰好一次 · 补偿事务 · 优雅停机 · 健康检查的真假 · 灰度回滚</td></tr>
+      <tr><td><b>性能与容量</b></td><td>10</td><td>缓存穿透/击穿/雪崩 · 多级缓存 · 连接池打满 · N+1 查询 · 批处理合并 · 预热 · 背压 · 冷热分离 · 压测基线 · 容量水位线</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>④ 一套新的提示词模板（后端那期的前置）</h3>
+  <p>现在这套模板是<b>给前端视觉/动效量身定的</b>，后端词条套不上：</p>
+  <div class="grid g2">
+    <div class="card">
+      <h4 style="margin-top:0">现有模板（前端）</h4>
+      <pre style="margin:0;font-size:12px"><code>帮我实现一个「<span class="hi">X</span>」效果。
+【外观】…
+【动感】…（强度 subtle）
+【触发】click / hover / ambient
+【实现】Framer Motion，依赖 motion
+【关键参数】speed=0.1（…）
+【坑】…</code></pre>
+      <p style="margin:10px 0 0;font-size:13px" class="dim">「外观」「动感」「触发」对后端毫无意义。</p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">建议的后端模板</h4>
+      <pre style="margin:0;font-size:12px"><code>帮我实现「<span class="hi">X</span>」。
+【解决什么】症状 + 触发条件
+【做法】核心机制，3 句话内
+【放哪一层】网关 / 服务 / 存储
+【关键参数】重试 3 次，退避 200ms×2^n
+【怎么验证】能观察到什么才算生效
+【坑】…</code></pre>
+      <p style="margin:10px 0 0;font-size:13px" class="dim">【怎么验证】是后端特有的 —— 后端改动往往肉眼看不见。</p>
+    </div>
+  </div>
+  <div class="warn">
+    <div class="vlabel">两套模板要各自成规格</div>
+    <p style="margin:0">两套模板都要保留<b>【坑】放在最后一段</b>这个约定 ——
+    前面说过，所有自动打标都靠「按【坑】切一刀」来避开反话。<b>模板一变，那一刀就切不准了。</b></p>
+  </div>
+</section>
+
+<section id="落地">
+  <h2>Where</h2>
+  <div class="sectitle">落地位置，以及三个会咬人的地方</div>
+  <p class="secnote">这块的信息来自图纸 13 的所有权矩阵与跨文件同步清单 —— 都是这个仓库以前真被咬过的地方。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th style="width:36%">文件</th><th style="width:14%">改什么</th><th>注意</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/shared/dictTaxonomy.ts</code></td><td>分类表</td><td>主进程用它校验 <code>dict_add</code>。<b>它和 bundle 里那份必须逐字相同</b>，<code>dictTaxonomy.test.ts</code> 钉着</td></tr>
+      <tr><td><code>…/features/dict/dictionary-bundle.json</code></td><td><b>正本</b>：cat1 重写 + 加 blocks</td><td><code>scripts/dict-svg/apply.mjs</code> 只写它</td></tr>
+      <tr><td><code>src/shared/dictTaxonomy.test.ts</code></td><td>跟着改</td><td>它是防两份分类表分叉的唯一防线</td></tr>
+      <tr><td><code>…/features/dict/DictView.tsx</code></td><td>加区块 chip 行</td><td>一级/二级导航结构不变，多一排多选 chip</td></tr>
+      <tr><td><code>src/main/dict.ts</code></td><td><code>readUser()</code> 白名单 + <code>dict:add</code> 校验</td><td class="ro"><b>见下面坑 ①</b></td></tr>
+      <tr><td><code>src/shared/types.ts</code></td><td><code>UserTerm</code> 加 <code>blocks?</code></td><td>必须 optional —— 老 skill 不会给</td></tr>
+      <tr><td><code>…/features/dict/blueprints.json</code>（新）</td><td>10 张蓝图</td><td>纯数据，没有生成脚本</td></tr>
+      <tr><td><code>docs/architecture/10-模块领地图.md</code><br><code>docs/architecture/13-所有权矩阵.md</code></td><td>同 commit 更新</td><td><code>hooks/arch-guard.mjs</code> 会拦</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>三个会咬人的地方</h3>
+  <div class="dissent">
+    <div class="vlabel">坑 ① · 加字段只改一半，会把已有数据洗掉</div>
+    <p style="margin:0"><code>dict.ts</code> 的 <code>dict:add</code> 开头就 <code>readUser()</code>，然后把结果<b>整个写回去</b>。
+    <code>readUser()</code> 有字段白名单 —— 给 <code>UserTerm</code> 加了 <code>blocks</code> 却忘了往白名单里加，
+    结果不是「读不到」这么简单：<b>此后每加一条新词，就把已有条目的 <code>blocks</code> 洗掉一遍</b>。<br>
+    <span class="dim">2026-08-31 加 <code>cat1/cat2/prompt</code> 时正是这么踩的，<code>dict.ts</code> 第 84 行还留着当时的注释。</span></p>
+  </div>
+  <div class="dissent">
+    <div class="vlabel">坑 ② · 有两份 bundle，没有脚本同步</div>
+    <p style="margin:0"><code>hooks/dictionary-bundle.json</code> 是提交钩子自带的<b>手工副本</b>，
+    <b>没有任何脚本会生成或同步它</b>，而且现在已经漂了（条目数比正本少）。<br>
+    好消息：这次加的 <code>blocks</code> 字段钩子用不上（它只按 <code>zh</code>/<code>keywords</code> 匹配），
+    <b>所以这次可以不同步</b>。但如果顺手改了词条的 <code>zh</code> 或 <code>keywords</code>，就必须手工同步过去。</p>
+  </div>
+  <div class="dissent">
+    <div class="vlabel">坑 ③ · 一级改名会让已装的 skill 写入失败</div>
+    <p style="margin:0"><code>dict_add</code> 校验 <code>isValidCat(cat1, cat2)</code>，一级名一改，
+    <b>用户机器上已装的旧 skill 传的老一级名会当场被拒</b>。<br>
+    两个办法：<b>(a)</b> 在 <code>isValidCat</code> 里留一张老名 → 新名的别名表（推荐，几行代码）；
+    <b>(b)</b> 校验放宽成「二级有效即可」。<br>
+    <span class="dim">注意 <code>category</code>（<code>interaction|motion|visual</code>）那个老字段无论如何都别动 —— <code>types.ts</code> 里明确写了老 skill 还在按它写。</span></p>
+  </div>
+</section>
+
+<section id="定">
+  <h2>Next</h2>
+  <div class="sectitle">要你定的三件事</div>
+
+  <div class="grid g3">
+    <div class="card">
+      <h4 style="margin-top:0">① 一级到底几个</h4>
+      <p style="font-size:13.5px;margin:0">我给的是 5 个（组件 / 视觉 / 动效 / 数据 / 后端）。<br>
+      <b>要不要把「前端 · 数据」并进「后端 · 服务」</b>叫「数据与服务」？
+      好处是少一个空货架，坏处是「骨架屏」这类纯前端的东西会被归到听起来像后端的地方。<br>
+      <span class="dim">我倾向保持 5 个。</span></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">② 后端那期做不做</h4>
+      <p style="font-size:13.5px;margin:0">它是<b>约 40 条新词条 + 一套新模板</b>，跟前三期零依赖。<br>
+      不做的话，一级就是 4 个纯前端的，「按后端还是前端分」这句话落不到实处。<br>
+      <span class="dim">我倾向先做前三期，后端那期看你之后有没有真在写后端。</span></p>
+    </div>
+    <div class="card">
+      <h4 style="margin-top:0">③ 蓝图视图长什么样</h4>
+      <p style="font-size:13.5px;margin:0">我建议<b>竖排方块 + 顺序 + 点击出词条</b>，不做真实渲染的原型图。<br>
+      如果你要的是「能看出页面长什么样」的那种，那是另一个量级的活，得单独评估。<br>
+      <span class="dim">你说的是「展现页面的关系」，我按关系图理解的。</span></p>
+    </div>
+  </div>
+
+  <hr>
+  <p><b>只要你说「第一期开始」，我就能直接动手</b> —— 映射表是现成的（POC 里那张 9 行的表已经验证过满射），
+  改完当天就能在词典里看到新的一级。</p>
+</section>
+
+<footer>
+  <p>Eas-Term · 词典分类改造方案 · 2026-09-03<br>
+  POC 脚本在真实 <code>dictionary-bundle.json</code>（381 条）上跑过，本页所有数字均为实测输出，非估算。<br>
+  相关：<code>docs/辞典改造方案.html</code>（2026-08-31，本方案会替换它定的一级分类，二级保留）·
+  <code>docs/architecture/13-所有权矩阵.md</code>（跨文件同步清单）</p>
+</footer>
+
+</main>
+</body>
+</html>
