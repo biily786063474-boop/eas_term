@@ -11,6 +11,7 @@ import { collectLeaves } from '../../layout'
 import type { PaneState } from '../../layout'
 import { FileTree } from '../files/FileTree'
 import { paneForFile, isHtmlPath } from './media'
+import { insertPointInFrame } from './dropPoint'
 import { CANVAS_COMPONENTS } from './components/registry'
 import type { CanvasComponentDef } from './components/registry'
 import { PlusIcon, ChevronRightIcon, FilePlusIcon, FolderPlusIcon } from '../../ui/Icons'
@@ -404,18 +405,18 @@ export function CanvasDrawer(): JSX.Element {
       const frame = frames.find((f) => f.id === frameId)
       if (!frame) return
       if (comp.needsProject && !frame.projectId) return
-      // 插到离松手鼠标点最近的空位（换算成相对 Frame 的落点，以组件中心对齐光标）
-      const vpEl = document.querySelector('.canvas-viewport')
-      const r = vpEl?.getBoundingClientRect()
-      const vp = useStore.getState().canvas.viewport
-      let px = 0
-      let py = 0
-      if (r) {
-        const wx = (ev.clientX - r.left - vp.x) / vp.scale
-        const wy = (ev.clientY - r.top - vp.y) / vp.scale
-        px = wx - frame.x - comp.defaultSize.w / 2
-        py = wy - frame.y - 14
-      }
+      // 插到离松手鼠标点最近的空位。**换算走 dropPoint.ts 那一份** ——
+      // 右键插入组件走的是同一个函数，两条路必须落在同一个地方。
+      const r = document.querySelector('.canvas-viewport')?.getBoundingClientRect()
+      const { px, py } = r
+        ? insertPointInFrame(
+            { x: ev.clientX, y: ev.clientY },
+            r,
+            useStore.getState().canvas.viewport,
+            frame,
+            comp.defaultSize.w
+          )
+        : { px: 0, py: 0 }
       addComponentNode(frame.id, comp.id, px, py, comp.defaultSize.w, comp.defaultSize.h)
     }
     document.addEventListener('mousemove', onMove)

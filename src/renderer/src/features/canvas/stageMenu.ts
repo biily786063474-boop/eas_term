@@ -10,6 +10,8 @@ import { collectLeaves } from '../../layout'
 import type { CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { boardColumnsNow, statusOfFrame } from './frameStatus'
 import { menuOwnerOf } from './menuOwnership'
+import { insertPointInFrame } from './dropPoint'
+import { CANVAS_COMPONENTS } from './components/registry'
 
 /** 「关闭终端」这一项。只有直接右键终端时才给 —— 理由见下面 shapeEl 分支的注释。 */
 function closeTerminalItem(leafId: string): CanvasMenuItem {
@@ -126,7 +128,35 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
         sub: [
           { label: 'AI 对话', onClick: () => void st.addAgentNode(fid) },
           { label: '终端', onClick: () => void st.addTerminalNode(fid) },
-          { label: '浏览器', onClick: () => st.addBrowserNode(fid) }
+          { label: '浏览器', onClick: () => st.addBrowserNode(fid) },
+          { sep: true, label: '', onClick: () => {} },
+          // 组件**从注册表来，不另抄一份清单** —— 注册表的契约是
+          // 「新增组件只改 registry.tsx 一个文件」，抄一份这里必然漏掉新组件。
+          ...CANVAS_COMPONENTS.map((c) => {
+            const blocked = !!c.needsProject && !frame?.projectId
+            return {
+              label: c.name,
+              // 需要项目却没绑：**置灰并说明为什么**，而不是让它点了没反应
+              // （抽屉那条路是"拖进去被静默拒绝"，那个坏法这里不要重复）
+              disabled: blocked,
+              ...(blocked ? { hint: '需绑定项目' } : {}),
+              onClick: () => {
+                // 状态在点的那一刻现取：菜单开着的时候画布还能被滚动/缩放
+                const now = useStore.getState()
+                const f = now.canvas.frames.find((x) => x.id === fid)
+                const r = viewportEl?.getBoundingClientRect()
+                if (!f || !r) return
+                const { px, py } = insertPointInFrame(
+                  { x: e.clientX, y: e.clientY },
+                  r,
+                  now.canvas.viewport,
+                  f,
+                  c.defaultSize.w
+                )
+                now.addComponentNode(fid, c.id, px, py, c.defaultSize.w, c.defaultSize.h)
+              }
+            }
+          })
         ]
       },
       {
