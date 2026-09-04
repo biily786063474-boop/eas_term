@@ -33,7 +33,7 @@ test('normalizeBlocks：滤掉名单外的、去重、封顶', () => {
   assert.deepEqual(normalizeBlocks(['卡片', '弹层']), ['卡片', '弹层'])
   assert.deepEqual(normalizeBlocks(['卡片', '卡片']), ['卡片'], '去重')
   assert.deepEqual(normalizeBlocks(['卡片', '不存在的区块']), ['卡片'], '滤掉名单外的')
-  assert.deepEqual(normalizeBlocks(['导航栏', '标签栏', '侧边栏', '卡片']).length, BLOCKS_MAX, '封顶')
+  assert.equal(normalizeBlocks(['导航栏', '标签栏', '侧边栏', '卡片'])?.length, BLOCKS_MAX, '封顶')
 })
 
 test('normalizeBlocks：一个都不合法时返回 null，不是空数组', () => {

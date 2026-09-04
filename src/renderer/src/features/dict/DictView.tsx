@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { DICT_BLOCKS } from '../../../../shared/dictBlocks'
+import bp from './blueprints.json'
+import { BlueprintPanel } from './BlueprintPanel'
 import { searchTerms } from './search.ts'
 import { collectLeaves } from '../../layout'
 import { DictIcon } from '../../ui/Icons'
@@ -62,6 +64,22 @@ const TAX = dict.taxonomy ?? {}
 const CAT1_KEYS = Object.keys(TAX)
 /** 自建词条没有 cat1，落到这里。**不是一个真分类**，只是不让它们从界面上消失 */
 const UNSORTED = '未分类'
+interface Slot {
+  block: string
+  note: string
+}
+interface Blueprint {
+  id: string
+  name: string
+  platform: string
+  intent: string
+  slots: Slot[]
+}
+/** 原型图预设。**只声明「一张页面由哪些区块按什么顺序组成」，不写死词条 id** ——
+ *  词条由区块标签动态匹配，所以新增词条会自动出现在所有相关蓝图里，蓝图零维护。
+ *  代价：某个区块标签打错，会在所有蓝图里同时错，所以打标质量比蓝图本身更要紧。 */
+const BLUEPRINTS: Blueprint[] = (bp as { blueprints: Blueprint[] }).blueprints
+
 /** 分类表里有、但一条词条都还没有的一级 —— **是故意留的空货架，不是 bug**。
  *  给它一句自己的空态，否则用户点进去看到「没有匹配的词条」会以为功能坏了。 */
 const EMPTY_SHELF: Record<string, string> = {
@@ -125,6 +143,11 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
   const [cat2, setCat2] = useState<string | null>(null)
   /** 选中的区块（多选）。**空 = 不筛**，不是「筛出没有区块的」 */
   const [blocks, setBlocks] = useState<string[]>([])
+  /** 视图：词条列表 or 原型图预设 */
+  const [view, setView] = useState<'terms' | 'blueprint'>('terms')
+  const [bpId, setBpId] = useState<string | null>(null)
+  /** 蓝图里展开的那个槽位（一次只开一个 —— 同时开几个就又变成一张长列表了） */
+  const [openSlot, setOpenSlot] = useState<string | null>(null)
   // 「只看自建」：和分类正交的一个筛子，不是第四个分类
   const [onlyUser, setOnlyUser] = useState(false)
   const [hover, setHover] = useState<HoverState | null>(null)
@@ -339,6 +362,22 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           {/* 嵌入时标题被收掉了，光一串数字没有着落，补个单位它才是句话 */}
           {embedded ? ' 条' : ''}
         </span>
+        {/* 视图切换。**蓝图态下搜索框留着** —— 搜索是跨视图的，
+            在蓝图里想起来要找某个词，不该被逼着先切回去 */}
+        <div className="dict-seg">
+          <button
+            className={view === 'terms' ? 'active' : ''}
+            onClick={() => setView('terms')}
+          >
+            词条
+          </button>
+          <button
+            className={view === 'blueprint' ? 'active' : ''}
+            onClick={() => setView('blueprint')}
+          >
+            蓝图
+          </button>
+        </div>
         <span className="pane-spacer" />
         <input
           className="dict-search"
@@ -349,6 +388,20 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
         />
       </div>
 
+      {view === 'blueprint' ? (
+        <BlueprintPanel
+          blueprints={BLUEPRINTS}
+          terms={allTerms}
+          bpId={bpId}
+          setBpId={setBpId}
+          openSlot={openSlot}
+          setOpenSlot={setOpenSlot}
+          onHover={(term, anchor) => setHover({ term, anchor })}
+          onLeave={() => setHover(null)}
+          onPick={insert}
+        />
+      ) : (
+        <>
       {/* 一级：九个场景。**横着滚不换行** —— 面板只有 320px 宽，九个 chip 铺开要三行，
           再加二级就把词条挤没了。滚动条藏起来，两边用渐隐告诉你还有 */}
       <div className="dict-cats" ref={catsRef}>
@@ -473,6 +526,8 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           </button>
         ))}
       </div>
+        </>
+      )}
 
       {notice && <div className="dict-notice">{notice}</div>}
 
