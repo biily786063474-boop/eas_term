@@ -2,7 +2,7 @@ import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
 import type { SymbolGraphResult } from '../shared/symbolGraph.ts'
-import type { Neighborhood, SymbolRef } from '../shared/symbolProvider.ts'
+import type { Neighborhood, ProviderInfo, SymbolRef } from '../shared/symbolProvider.ts'
 import type {
   Project,
   DirEntry,
@@ -248,7 +248,12 @@ const api = {
       root: string,
       ref: SymbolRef
     ): Promise<{ ok: true; neighborhood: Neighborhood } | { ok: false; error: string }> =>
-      ipcRenderer.invoke('codeGraph:neighborhood', { root, ref })
+      ipcRenderer.invoke('codeGraph:neighborhood', { root, ref }),
+    /** 各语言服务器装没装。**界面上要如实列** —— 没装就说清楚，别静默降级 */
+    providers: (
+      root: string
+    ): Promise<{ ok: true; providers: ProviderInfo[] } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('codeGraph:providers', root)
   },
   projects: {
     list: (): Promise<Project[]> => ipcRenderer.invoke('projects:list'),

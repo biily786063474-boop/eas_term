@@ -55,7 +55,32 @@ export function registerCodeGraphHandlers(): void {
       // 只清一处的话「重新解析」之后邻域仍然是旧的**，而界面上看不出来
       const { dropTsCache } = await import('./tsProvider.ts')
       dropTsCache(root)
+      // 语言服务器那侧也要清 —— **三处各存一份状态，只清一处的话**
+      // 「重新解析」之后邻域仍然是旧的，而界面上看不出来
+      const { dropLspClients } = await import('./lspProvider.ts')
+      dropLspClients(root)
       return { ok: true as const, graph: analyzeSymbols(root) }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  // 各语言服务器装没装、要不要项目配置。**界面上如实列出来** ——
+  // 没装就说「装了 X 才能画 Y」，不静默降级。
+  ipcMain.handle('codeGraph:providers', async (_e, raw: unknown) => {
+    const root = typeof raw === 'string' ? raw : ''
+    const gate = checkRoot(root)
+    if (gate) return gate
+    try {
+      const { lspProviders } = await import('./lspProvider.ts')
+      const { TS_EXTENSIONS } = await import('./tsProvider.ts')
+      return {
+        ok: true as const,
+        providers: [
+          { name: 'TypeScript（内置）', extensions: TS_EXTENSIONS, status: 'ready' as const },
+          ...lspProviders(root)
+        ]
+      }
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }
@@ -82,18 +107,20 @@ export function registerCodeGraphHandlers(): void {
       return { ok: false as const, error: '符号定位参数不完整' }
     }
     try {
+      // ── 挑 provider：TS 走内置，其余走语言服务器 ────────────────────────
+      // **这段就是第二期把抽象按 LSP 形状定死换来的** ——
+      // 两条路的入参出参一模一样，这里只是按扩展名分流。
       const { tsNeighborhood, TS_EXTENSIONS } = await import('./tsProvider.ts')
       const ext = r.file.slice(r.file.lastIndexOf('.')).toLowerCase()
-      if (!TS_EXTENSIONS.includes(ext)) {
-        // **如实说，不静默降级。** 第三期接了 LSP 之后这里换成挑 provider
-        return {
-          ok: false as const,
-          error: `邻域视图现在只支持 TS/TSX（${ext} 要等接上语言服务器那一期）`
-        }
+      const ref = { file: r.file, line: r.line, character: r.character, name: r.name }
+      if (TS_EXTENSIONS.includes(ext)) {
+        // TS 不走 LSP：已经在依赖里的 typescript 包更快更准，且不用起进程
+        const n = tsNeighborhood(root, ref)
+        if (!n) return { ok: false as const, error: '在那个位置找不到符号 —— 文件可能改过了，试试重新解析' }
+        return { ok: true as const, neighborhood: n }
       }
-      const n = tsNeighborhood(root, { file: r.file, line: r.line, character: r.character, name: r.name })
-      if (!n) return { ok: false as const, error: '在那个位置找不到符号 —— 文件可能改过了，试试重新解析' }
-      return { ok: true as const, neighborhood: n }
+      const { lspNeighborhood } = await import('./lspProvider.ts')
+      return await lspNeighborhood(root, ref)
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }

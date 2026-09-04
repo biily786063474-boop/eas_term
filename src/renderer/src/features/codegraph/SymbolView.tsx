@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SymbolGraphResult, SymbolNode } from '../../../../shared/symbolGraph.ts'
-import { refOf, type Neighborhood } from '../../../../shared/symbolProvider.ts'
+import { refOf, type Neighborhood, type ProviderInfo } from '../../../../shared/symbolProvider.ts'
 import { RefreshIcon } from '../../ui/Icons'
 import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
 
@@ -42,6 +42,8 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
   const [nb, setNb] = useState<Neighborhood | null>(null)
   const [nbErr, setNbErr] = useState<string | null>(null)
   const [nbBusy, setNbBusy] = useState(false)
+  /** 各语言服务器装没装。**要如实列** —— 没装就说清楚，别让用户以为是坏了 */
+  const [provs, setProvs] = useState<ProviderInfo[]>([])
   const alive = useRef(true)
 
   const scan = (): void => {
@@ -54,6 +56,12 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
       else setErr(r.error)
     })
   }
+  useEffect(() => {
+    void window.api.codeGraph.providers(root).then((r) => {
+      if (alive.current && r.ok) setProvs(r.providers)
+    })
+  }, [root])
+
   useEffect(() => {
     alive.current = true
     scan()
@@ -98,13 +106,42 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
     }
   }, [g, openFile])
 
+  /** 语言服务器清单。**装没装、缺什么配置都写出来** ——
+   *  「查不了」和「查出来是空的」在界面上长得一样，而下一步完全不同。 */
+  const provList =
+    provs.length > 0 ? (
+      <div className="cg-provs">
+        <div className="cg-links-hd">语言服务器</div>
+        {provs.map((p) => (
+          <div key={p.name} className={`cg-prov${p.status === 'ready' ? ' ok' : ''}`}>
+            <span className="cg-prov-n">{p.name}</span>
+            <span className="cg-prov-e">{p.extensions.slice(0, 4).join(' ')}</span>
+            <span className={`cg-prov-s${p.status === 'ready' ? '' : ' miss'}`}>
+              {p.status === 'ready' ? '就绪' : '未安装'}
+            </span>
+            {p.detail && <div className="cg-prov-d">{p.detail}</div>}
+          </div>
+        ))}
+      </div>
+    ) : null
+
   if (err) {
     return (
-      <div className="cg-wrap cg-msg">
-        <div className="cg-err">{err}</div>
-        <button type="button" className="cg-btn" onClick={scan}>
-          重新扫描
-        </button>
+      <div className="cg-wrap">
+        <div className="cg-body">
+          <div className="cg-err">{err}</div>
+          <button type="button" className="cg-btn" onClick={scan}>
+            重新扫描
+          </button>
+          {/* 非 TS 项目会走到这儿：**文件结构与死代码清单目前只支持 TS**，
+              但邻域查询靠语言服务器 —— 把它们的状态列出来，
+              用户才知道「这个项目能做到哪一步」 */}
+          <div className="cg-note" style={{ marginTop: 14 }}>
+            文件结构与「没人用」清单目前只支持 TS/TSX；
+            邻域查询（谁调用了这个）靠下面这些语言服务器。
+          </div>
+          {provList}
+        </div>
       </div>
     )
   }
@@ -245,6 +282,7 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
                 </div>
               </>
             )}
+            {provList}
             <div className="cg-links-hd">符号最多的文件（点开看结构）</div>
             <div className="cg-terr">
               {g.files.slice(0, 24).map((f) => (
