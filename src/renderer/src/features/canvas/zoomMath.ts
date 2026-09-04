@@ -39,6 +39,13 @@ export const CONTENT_MIN = 0.5
 export const CONTENT_MAX = 3
 
 /** 最大化的模块被捏合一次之后，显示比例该是多少。
+ *
+ *  ⚠️ **测这条路时别用 CDP 的 `Input.dispatchMouseEvent`。** 它发的滚轮走渲染进程
+ *  路由，落在 `<webview>` 上会被 guest 截走，测出来是「宿主一个事件都收不到」——
+ *  据此会得出「双指对 HTML 节点无效」的错误结论（2026-09-03 我就是这么错了一次）。
+ *  真实触控板捏合是 Chromium 在**合成器层**转成 ctrl+wheel 发给顶层页面的，
+ *  不进 webview。要测就用 `Input.synthesizePinchGesture`。
+ *
  *  **不带锚点**：内容是铺满的，按光标锚定会让文字往边上跑，而这里要的是「放大来读」。 */
 export function zoomContent(cur: number, e: WheelEvent): number {
   return clamp(cur * wheelZoomFactor(e), CONTENT_MIN, CONTENT_MAX)

@@ -595,11 +595,19 @@ export function CanvasStage(): JSX.Element {
     }
     // ── 最大化时的显示比例：⌘+ / ⌘- / ⌘0 ────────────────────────────────
     //
-    // **为什么除了双指还要有键盘这条。** 双指（macOS 合成为 ctrl+wheel）在普通
-    // DOM 节点上验过是通的，但 HTML 节点是 `<webview>` —— 它是独立进程，
-    // 滚轮落在上面时宿主页面**一个事件都收不到**（隔离实例实测：宿主在 webview
-    // 元素上挂 wheel 监听，捏 5 次收到 0 次）。
-    // 键盘这条不经过那一层，所有节点类型都吃得到，是可靠的那一条。
+    // **双指在 webview 上是通的，这里曾经写着相反的结论 —— 那是测错了。**
+    //
+    // 当时用 CDP 的 `Input.dispatchMouseEvent`（mouseWheel + ctrl）去测，
+    // 宿主收到 0 次，于是判定「webview 是独立进程、滚轮被 guest 吃掉了」。
+    // 改用 `Input.synthesizePinchGesture` 发**真的捏合手势**之后：
+    // 最大化的 HTML 节点上 zoom 1 → 1.6 → 2.56，宿主收到 6 次 ctrl+wheel。
+    //
+    // 原因：macOS 的触控板捏合是 Chromium 在**合成器层**转成 ctrl+wheel 发给
+    // 顶层页面的，压根不进 webview 的渲染进程；而 dispatchMouseEvent 发的滚轮
+    // 走的是渲染进程路由，会被 guest 截走。**两者路由不同，不能互相代替**。
+    //
+    // 键盘这条留着不是因为双指不行，是因为它有独立价值：
+    // 精确回到 100%（⌘0）、没有触控板的鼠标用户、以及可发现性（菜单里能列出来）。
     const onZoomKey = (e: KeyboardEvent): void => {
       if (!(e.metaKey || e.ctrlKey)) return
       const st = useStore.getState()
