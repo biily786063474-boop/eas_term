@@ -17,6 +17,12 @@ export interface GraphNode {
   inDegree: number
   /** 自己依赖多少个（扇出） */
   outDegree: number
+  /** 这个节点代表几个文件。**默认 1（就是它自己）。**
+   *
+   *  只有**模块级**的节点会填别的值：Swift 的一个 target 是一个节点，
+   *  但装着好几个 `.swift`。不填的话卡片上每个 target 都写「1 个文件」，
+   *  图上的点也一样大 —— 而大小本该表达规模（2026-09-03 真机看出来的）。 */
+  weight?: number
 }
 
 export interface GraphEdge {
@@ -195,7 +201,7 @@ export function aggregateByTerritory(
       crossOut: 0,
       crossIn: 0
     }
-    s.files += 1
+    s.files += n.weight ?? 1
     // 同一块地里风险等级理论上一致；万一不一致取更严的那个（宁可标红）
     if (RISK_ORDER[n.risk] > RISK_ORDER[s.risk]) s.risk = n.risk
     stats.set(n.territory, s)
@@ -353,4 +359,11 @@ export interface CodeGraphResult {
    *  · `derived` —— 按项目自己的目录结构现推，颜色表示**耦合轻重**
    *  **图例文案必须跟着换** —— 对陌生项目写「安全边界」是编造。 */
   territoryMode: 'mapped' | 'derived'
+  /** 这个项目里认出了哪几种技术栈。`js` 走 dependency-cruiser，其余走 `multiLang.ts`。 */
+  stacks: string[]
+  /** 每种栈画出来的是什么粒度。
+   *  **Swift 只有 `module`** —— 同一个 module 内的文件互相可见、不需要 import，
+   *  文件级依赖图在 Swift 里根本不存在（实测 159 个文件 0 条跨文件 import）。
+   *  界面必须说清楚，否则会被读成「这个项目耦合很低」。 */
+  granularity: Record<string, 'file' | 'module'>
 }

@@ -210,3 +210,26 @@ describe('riskByCoupling', () => {
     assert.equal(s[0].risk, 'green')
   })
 })
+
+describe('aggregateByTerritory · 节点自带权重', () => {
+  const n = (id: string, territory: string, weight?: number): GraphNode => ({
+    id, territory, risk: 'green', inDegree: 0, outDegree: 0, ...(weight === undefined ? {} : { weight })
+  })
+
+  it('没有 weight 时一个节点算一个文件（原来的行为）', () => {
+    const r = aggregateByTerritory([n('a.ts', 'X'), n('b.ts', 'X')], [])
+    assert.equal(r.stats[0].files, 2)
+  })
+
+  it('**有 weight 就用 weight** —— Swift 的 target 是一个节点、但装着好几个文件', () => {
+    const r = aggregateByTerritory([n('Sources/Core', 'Sources/Core', 6)], [])
+    assert.equal(r.stats[0].files, 6, '写成 1 的话卡片上每个 target 都是「1 个文件」')
+  })
+
+  it('混合时各算各的', () => {
+    const r = aggregateByTerritory([n('Core', 'Core', 5), n('a.py', 'lib'), n('b.py', 'lib')], [])
+    const by = new Map(r.stats.map((s) => [s.name, s.files]))
+    assert.equal(by.get('Core'), 5)
+    assert.equal(by.get('lib'), 2)
+  })
+})

@@ -199,6 +199,25 @@ export function CodeGraphView({ root }: { root: string }): JSX.Element {
           {graph.strategy === 'entries' ? '按入口' : '按目录'} ·{' '}
           {graph.territoryMode === 'derived' ? '目录分组' : '领地图'}
         </span>
+        {/* **技术栈与粒度要写出来。** Swift 画的是 target 之间的关系，
+            和 JS 那张「文件之间」不是同一种东西 —— 不说明的话，
+            一个 159 个文件、图上只有 5 个点的 Swift 项目会被读成「耦合很低」。 */}
+        {graph.stacks.length > 0 && (
+          <span
+            className="cg-stat dim"
+            title={
+              graph.stacks.map((s) => STACK_LABEL[s] ?? s).join(' ＋ ') +
+              (graph.granularity.swift === 'module'
+                ? '\n\n⚠️ Swift 画的是 target（模块）之间的关系，不是文件之间。' +
+                  'Swift 同一个 module 内的文件互相可见、不需要 import —— ' +
+                  '文件级依赖图在这门语言里不存在，不是这个项目没有依赖。'
+                : '')
+            }
+          >
+            {graph.stacks.map((s) => STACK_LABEL[s] ?? s).join('+')}
+            {graph.granularity.swift === 'module' && <b className="cg-warn-dot"> ·模块级</b>}
+          </span>
+        )}
         <span className="cg-ms">{graph.ms}ms</span>
         <button type="button" className="cg-btn icon" onClick={scan} disabled={busy} title="重新扫描">
           <RefreshIcon size={12} />
@@ -322,6 +341,14 @@ export function CodeGraphView({ root }: { root: string }): JSX.Element {
 }
 
 const short = (p: string): string => p.split('/').slice(-2).join('/')
+
+/** 技术栈的显示名。 */
+const STACK_LABEL: Record<string, string> = {
+  js: 'JS/TS',
+  python: 'Python',
+  c: 'C/C++',
+  swift: 'Swift'
+}
 
 /** 环上的分组顺序：安全边界的排在一起，绿的排一起 ——
  *  于是「红区之间的连线」在图上是一段集中的弦，一眼认得出。 */

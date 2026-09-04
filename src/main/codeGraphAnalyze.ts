@@ -23,6 +23,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { analyzeLangs, detectStacks, type Stack } from './multiLang.ts'
+import { gitignoreDirMatcher } from '../shared/gitignore.ts'
+
 import {
   aggregateByTerritory,
   cycleSeverity,
@@ -178,11 +181,20 @@ export function entriesFromDirs(root: string): string[] {
   } catch {
     return []
   }
+  // 项目自己的 .gitignore 也算数 —— 硬编名单永远列不全（见 `shared/gitignore.ts`）
+  let giText = ''
+  try {
+    giText = fs.readFileSync(path.join(root, '.gitignore'), 'utf8')
+  } catch {
+    /* 没有就只靠 NOT_SOURCE */
+  }
+  const ignored = gitignoreDirMatcher(giText)
+
   const out: string[] = []
   for (const e of ents) {
     if (e.name.startsWith('.')) continue
     if (e.isDirectory()) {
-      if (NOT_SOURCE.has(e.name)) continue
+      if (NOT_SOURCE.has(e.name) || ignored(e.name)) continue
       if (hasSource(path.join(root, e.name))) out.push(e.name)
     } else if (e.isFile() && SRC_EXT.has(path.extname(e.name))) {
       // 根目录下散着的脚本（build.js / 服务.js 这类「一堆脚本」的项目）
@@ -226,7 +238,11 @@ function makeReader(root: string): (rel: string) => string | null {
 }
 
 /** 常见扩展名 → 人话。**只列常见的**；认不出的直接把扩展名报出去，
- *  别硬编一个猜的名字（"`.xyz` 项目" 比 "未知项目" 有用得多）。 */
+ *  别硬编一个猜的名字（"`.xyz` 项目" 比 "未知项目" 有用得多）。
+ *
+ *  ⚠️ 这张表里有几种**现在已经支持了**（Python / C / C++ / Swift）——
+ *  它们留在表里是因为「主要是 Swift 但一个 .swift 都没扫到」这种情形仍然要说清楚。
+ *  走到 `describeNonJs` 说明那种栈一个文件都没解析出来，报出来比沉默有用。 */
 const LANG: Record<string, string> = {
   '.py': 'Python', '.swift': 'Swift', '.cpp': 'C++', '.c': 'C', '.h': 'C/C++ 头文件',
   '.rs': 'Rust', '.go': 'Go', '.java': 'Java', '.kt': 'Kotlin', '.rb': 'Ruby',
@@ -271,7 +287,38 @@ export function describeNonJs(root: string): string {
     .slice(0, 3)
   if (!top.length) return '这个目录里没有代码文件'
   const named = top.map(([e, n]) => `${LANG[e] ?? e} ${n} 个`).join('、')
-  return `这个项目主要是 ${named} —— 代码地图画的是 JS/TS 模块之间的 import 关系，画不了这些`
+  return `这个项目主要是 ${named} —— 代码地图现在认 JS/TS、Python、C/C++、Swift 四种，画不了这些`
+}
+
+interface CruiseModule {
+  source: string
+  dependencies: { resolved: string; module: string; circular?: boolean; couldNotResolve?: boolean }[]
+}
+
+/** 跑 dependency-cruiser。抽出来是为了让「没有 JS 入口就不加载它」这件事一目了然。 */
+async function cruiseJs(root: string, entries: string[]): Promise<{ modules: CruiseModule[] }> {
+  // 动态 import：dependency-cruiser 是纯 ESM，而且只有点开这个面板才需要它。
+  // 静态 import 会让它在每次启动时都被加载进主进程。
+  const { cruise } = await import('dependency-cruiser')
+  // ⚠️ **入口必须传相对 baseDir 的路径，绝不能传绝对路径。**
+  // dep-cruiser 会把绝对入口先按 `process.cwd()` 折成相对，再拿 baseDir 去 join。
+  // app 的 cwd 永远不是被分析的项目，于是路径被折坏：
+  //   cwd=/…/Projects/vibe coding/terminal，root=/…/Projects/taptv pad
+  //   → relative 得到 "../../taptv pad/…"，join 回去变成 "/Users/biily/Biily/taptv pad/…"
+  //   （少了 Projects 那一段）→ ENOENT。
+  // 2026-09-03 实测：用户 29 个项目只有 1 个能扫，就是「cwd 恰好等于项目根」的那个。
+  const res = await cruise(entries, {
+    baseDir: root,
+    doNotFollow: { path: 'node_modules' },
+    exclude: { path: '(node_modules|\\.test\\.|\\.spec\\.|__fixtures__|__mocks__)' },
+    // 带上类型引用（否则 `import type` 的边整个不出现）。
+    // 它**不会**因此把这些边标成 type-only —— 那一步由调用方自己做。
+    tsPreCompilationDeps: true,
+    enhancedResolveOptions: {
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']
+    }
+  })
+  return res.output as { modules: CruiseModule[] }
 }
 
 export async function analyzeProject(root: string): Promise<CodeGraphResult> {
@@ -287,39 +334,24 @@ export async function analyzeProject(root: string): Promise<CodeGraphResult> {
   ]
   const dirs = entriesFromDirs(root)
   const entries = [...new Set([...named, ...dirs])]
-  if (!entries.length) {
+
+  // 另外三种栈（Python / C·C++ / Swift）。**和 JS/TS 那条完全并行** ——
+  // 它走 dependency-cruiser，这条走 `multiLang.ts`，两边互不认识。
+  // 混合项目（比如 Electron 壳 + Python 脚本）两边都会出结果，最后合并成一张图。
+  const stacks = detectStacks(root)
+  const lang = stacks.length ? analyzeLangs(root, stacks) : null
+
+  if (!entries.length && !lang?.nodes.length) {
     throw new Error(describeNonJs(root))
   }
   // 口径：有具名入口就说「按入口 + 目录」，否则纯目录扫。界面照这个如实说明。
   const strategy: 'entries' | 'dirs' = named.length ? 'entries' : 'dirs'
 
-  // 动态 import：dependency-cruiser 是纯 ESM，而且只有点开这个面板才需要它。
-  // 静态 import 会让它在每次启动时都被加载进主进程。
-  const { cruise } = await import('dependency-cruiser')
-  // ⚠️ **入口必须传相对 baseDir 的路径，绝不能传绝对路径。**
-  // dep-cruiser 会把绝对入口先按 `process.cwd()` 折成相对，再拿 baseDir 去 join。
-  // app 的 cwd 永远不是被分析的项目，于是路径被折坏：
-  //   cwd=/…/Projects/vibe coding/terminal，root=/…/Projects/taptv pad
-  //   → relative 得到 "../../taptv pad/…"，join 回去变成 "/Users/biily/Biily/taptv pad/…"
-  //   （少了 Projects 那一段）→ ENOENT。
-  // 2026-09-03 实测：用户 29 个项目只有 1 个能扫，就是「cwd 恰好等于项目根」的那个。
-  const res = await cruise(entries, {
-      baseDir: root,
-      doNotFollow: { path: 'node_modules' },
-      exclude: { path: '(node_modules|\\.test\\.|\\.spec\\.|__fixtures__|__mocks__)' },
-      // 带上类型引用（否则 `import type` 的边整个不出现）。
-      // 它**不会**因此把这些边标成 type-only —— 那一步由下面自己做。
-      tsPreCompilationDeps: true,
-      enhancedResolveOptions: {
-        extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json']
-      }
-  })
-  const out = res.output as {
-    modules: {
-      source: string
-      dependencies: { resolved: string; module: string; circular?: boolean; couldNotResolve?: boolean }[]
-    }[]
-  }
+  // 没有 JS 入口就整段跳过 —— 纯 Swift / 纯 Python 的项目不该为此加载
+  // dependency-cruiser（几 MB 的纯 ESM 包，加载本身就要时间）
+  const out: { modules: CruiseModule[] } = entries.length
+    ? await cruiseJs(root, entries)
+    : { modules: [] }
 
   const read = makeReader(root)
   const unresolved: string[] = []
@@ -366,7 +398,24 @@ export async function analyzeProject(root: string): Promise<CodeGraphResult> {
     outDeg.set(m.source, outN)
   }
 
-  const sources = out.modules.filter((m) => isLocal(m.source)).map((m) => m.source)
+  // ── 把另外三种栈的结果并进来 ─────────────────────────────────────────────
+  // 它们的边**一律 typeOnly:false**：Python/C/Swift 没有「只在类型层面存在」的
+  // import，那个概念是 TypeScript 独有的。写 undefined 会让 `cycleSeverity`
+  // 把这些环判成 unknown —— 而它们其实是确凿的运行时环。
+  for (const n of lang?.nodes ?? []) {
+    if (!inDeg.has(n.id)) inDeg.set(n.id, 0)
+    if (!outDeg.has(n.id)) outDeg.set(n.id, 0)
+  }
+  for (const e of lang?.edges ?? []) {
+    edges.push({ from: e.from, to: e.to, typeOnly: false, circular: false })
+    inDeg.set(e.to, (inDeg.get(e.to) ?? 0) + 1)
+    outDeg.set(e.from, (outDeg.get(e.from) ?? 0) + 1)
+  }
+
+  const sources = [
+    ...out.modules.filter((m) => isLocal(m.source)).map((m) => m.source),
+    ...(lang?.nodes ?? []).map((n) => n.id)
+  ]
 
   // 内置领地表是**本仓库专用**的。命中率低就说明这是别人的项目 ——
   // 那时候按目录结构现推，而不是把整个项目塞进「未登记」
@@ -379,18 +428,39 @@ export async function analyzeProject(root: string): Promise<CodeGraphResult> {
   // 于是一个跟本仓库毫无关系的项目被当成「命中了领地表」，图例写着「安全边界」。
   const territoryMode: 'mapped' | 'derived' =
     mappedShare >= 0.5 && sources.length >= 10 ? 'mapped' : 'derived'
-  const derived = territoryMode === 'derived' ? deriveTerritories(sources) : null
+  // 推导只针对**文件级**节点；模块级的自成一块地（见下面 moduleNodes）
+  const derived =
+    territoryMode === 'derived'
+      ? deriveTerritories(
+          sources.filter(
+            (p) => !(lang?.nodes ?? []).some((n) => n.id === p && lang?.granularity[n.lang] === 'module')
+          )
+        )
+      : null
 
+  const langWeight = new Map((lang?.nodes ?? []).map((n) => [n.id, n.weight]))
+  // **模块级的节点不能再折一次。** Swift 的节点 id 是 target 目录
+  //（`Sources/GestureCore`），它本身就是聚合单位 —— 再按第一段分组的话，
+  // 8 个 target 会并成一个「Sources」，图上只剩两个点
+  //（2026-09-03 真机撞到：数据里 8 节点 10 边，画出来 2 个点）。
+  const moduleNodes = new Set(
+    (lang?.nodes ?? []).filter((n) => lang?.granularity[n.lang] === 'module').map((n) => n.id)
+  )
   const nodes: GraphNode[] = sources.map((src) => {
-    const t = derived
-      ? { name: derived.get(src) ?? '根目录', risk: 'green' as const }
-      : territoryOf(src)
+    const t = moduleNodes.has(src)
+      ? { name: src, risk: 'green' as const }
+      : derived
+        ? { name: derived.get(src) ?? '根目录', risk: 'green' as const }
+        : territoryOf(src)
+    const w = langWeight.get(src)
     return {
       id: src,
       territory: t.name,
       risk: t.risk,
       inDegree: inDeg.get(src) ?? 0,
-      outDegree: outDeg.get(src) ?? 0
+      outDegree: outDeg.get(src) ?? 0,
+      // 模块级节点带着它的真实文件数（Swift 的 target）；文件级节点就是 1
+      ...(w !== undefined && w !== 1 ? { weight: w } : {})
     }
   })
 
@@ -412,7 +482,9 @@ export async function analyzeProject(root: string): Promise<CodeGraphResult> {
     unresolved: [...new Set(unresolved)],
     strategy,
     scanned: entries,
-    territoryMode
+    territoryMode,
+    stacks: [...(entries.length ? ['js' as const] : []), ...stacks],
+    granularity: lang?.granularity ?? {}
   }
 }
 

@@ -285,3 +285,10 @@
   color: var(--text-3);
   font-weight: 400;
 }
+
+/* 「模块级」那个标记。**要显眼一点** —— 它说的是「这张图和别的图不是同一种东西」，
+   被忽略的后果是把 Swift 项目的稀疏图读成「耦合很低」。 */
+.cg-warn-dot {
+  color: #fcd34d;
+  font-weight: 500;
+}
