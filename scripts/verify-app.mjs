@@ -37,8 +37,23 @@ const SEED_WHITELIST = [
   'gantt.json',
   'board.json',
   'wiki.json',
-  'quota.json'    // 额度条：没有它 QuotaBar 直接 return null（没数据不占位），验不了 hover
+  'quota.json',   // 额度条：没有它 QuotaBar 直接 return null（没数据不占位），验不了 hover
+  // ↓ 2026-09-04 补：验收时「开发版的呈现要等于正式版」，缺了这几个对不上
+  'skills.json',        // skill 面板的内容
+  'mcp-optout.json',
+  'cli-contracts.json'
 ]
+
+/** 同样走白名单的**目录**。`agent-history` 在下面单独处理（只挑 .json）。 */
+const SEED_DIRS = ['role-prompts']
+
+// ⚠️ **下面这些永远不进白名单，别"顺手"加**：
+//   secrets.json / secrets.json.bak*  —— 密钥柜
+//   mcp-endpoint.json / mcp-config.json / agent-mcp.json —— 本地服务的访问令牌
+//   phone-identity.json               —— 手机配对的私钥
+//   omp/                              —— omp 自己的凭证存放处
+//   Cookies / cli-auth.log            —— 登录态与登录日志
+// 隔离实例是用来看界面的，不需要能真的调用谁。多一处副本就多一处泄漏面。
 
 const realUserData = path.join(os.homedir(), 'Library', 'Application Support', 'Eas-Term')
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-verify-'))
@@ -48,6 +63,15 @@ if (includes('--seed')) {
   for (const f of SEED_WHITELIST) {
     try {
       fs.copyFileSync(path.join(realUserData, f), path.join(dir, f))
+      n++
+    } catch { /* 没有就跳过 */ }
+  }
+  for (const d of SEED_DIRS) {
+    try {
+      const src = path.join(realUserData, d)
+      const dst = path.join(dir, d)
+      fs.mkdirSync(dst, { recursive: true })
+      for (const f of fs.readdirSync(src)) fs.copyFileSync(path.join(src, f), path.join(dst, f))
       n++
     } catch { /* 没有就跳过 */ }
   }
