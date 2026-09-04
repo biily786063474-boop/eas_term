@@ -18,11 +18,39 @@ import { SymbolView } from './SymbolView.tsx'
 import './codegraph.css'
 
 /** 风险等级 → 颜色。**直接对着图纸 10 的 🟢🟡🔴⛔**，别在这儿另立一套。 */
+/** 风险等级 → **令牌**（不是写死的十六进制）。
+ *  写死的在亮色主题下是错的 —— `--sem-*` 在两个主题里各有一套，
+ *  暗底调的粉压白底上对比度只有 1.4（图纸 15 规矩 ③）。
+ *
+ *  ⚠️ **`frozen` 不给独立色相。** 图纸 15 规矩 ④：强调靠明度不靠色相，
+ *  一屏里色相越少越好；「分发产物」用弱文字色退到后面就够了。 */
 const RISK_COLOR: Record<Risk, string> = {
-  green: '#6ee7b7',
-  amber: '#fcd34d',
-  red: '#fda4af',
-  frozen: '#7dd3fc'
+  // **「常规 / 耦合轻」不给色相。** 它表达的是「这里没事」——
+  // 而一屏 26 个节点里它占大多数，给了色相就等于让「没事」占掉最大的一块彩色面积。
+  // 色相要留给真正需要被看见的那两档（图纸 15 规矩 ④：强调靠明度不靠色相）。
+  green: 'color-mix(in srgb, var(--t-3) 52%, transparent)',
+  // 中间档再压一档：它是「留意」，不是「警报」
+  amber: 'color-mix(in srgb, var(--sem-warn) 40%, var(--s-2))',
+  red: 'color-mix(in srgb, var(--sem-danger) 52%, var(--s-2))',
+  frozen: 'color-mix(in srgb, var(--t-3) 28%, transparent)'
+}
+/** 标签文字的颜色。**和节点填充分开一套** ——
+ *  节点是半透明的色块（可以很淡），文字要读得清，不能直接套那个值。
+ *  但同一条纪律：「常规」是「这里没事」，**不给色相**。 */
+const RISK_TEXT: Record<Risk, string> = {
+  green: 'var(--t-3)',
+  amber: 'var(--sem-warn)',
+  red: 'var(--sem-danger)',
+  frozen: 'var(--t-3)'
+}
+
+/** 同一套色的 rgb 分量，给卡片的渐变用（`--tint`）。中性档给白，
+ *  于是渐变退化成一层极淡的高光，不引入任何色相。 */
+const RISK_TINT: Record<Risk, string> = {
+  green: 'var(--sem-ok-rgb)',
+  amber: 'var(--sem-warn-rgb)',
+  red: 'var(--sem-danger-rgb)',
+  frozen: '255, 255, 255'
 }
 /** 图例文案**跟着领地口径变**。
  *  · `mapped`  —— 命中本仓库的领地表，颜色说的是风险等级（图纸 10 那套）
@@ -332,11 +360,11 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
                 type="button"
                 className="cg-tcard"
                 onClick={() => setDrill(t.name)}
-                style={{ borderLeftColor: RISK_COLOR[t.risk] }}
+                style={{ ['--tint' as string]: RISK_TINT[t.risk] } as React.CSSProperties}
               >
                 <div className="cg-tname">
                   {t.name}
-                  <span className="cg-trisk" style={{ color: RISK_COLOR[t.risk] }}>
+                  <span className="cg-trisk" style={{ color: RISK_TEXT[t.risk] }}>
                     {RISK_LABEL[graph.territoryMode][t.risk]}
                   </span>
                 </div>

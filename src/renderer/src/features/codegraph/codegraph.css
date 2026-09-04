@@ -46,10 +46,10 @@
   font-size: 13.5px;
 }
 /* 运行时环有就标红、没有就标绿 —— 它是这个面板唯一需要「一眼看结论」的数字 */
-.cg-stat.bad b { color: #fda4af; }
-.cg-stat.ok b { color: #6ee7b7; }
+.cg-stat.bad b { color: var(--sem-danger); }
+.cg-stat.ok b { color: var(--sem-ok); }
 .cg-stat.dim { color: var(--t-3); opacity: 0.7; }
-.cg-stat.warn { color: #fcd34d; }
+.cg-stat.warn { color: var(--sem-warn); }
 
 .cg-sep { width: 1px; height: 14px; background: var(--stroke-input); }
 .cg-spacer { flex: 1; }
@@ -61,7 +61,7 @@
   gap: 5px;
   padding: 4px 10px;
   border: 1px solid var(--stroke-input);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--lift-1);
   color: var(--t-2);
   font-size: 12px;
@@ -76,13 +76,21 @@
 
 /* 运行时循环依赖 —— 放最前面，它是要修的 */
 .cg-cycles {
-  border-left: 2px solid #fb7185;
-  background: rgba(244, 63, 94, 0.05);
+  /* 图纸 15 规矩 ②：**描边不用来表达分类**。这里原来是 2px 的粉色左边，
+     改成一道从左往右淡出的渐变 —— 同样点出「这是要修的」，
+     但没有一条硬边把它从版面里切出来。 */
+  /* **渐变要短。** 横跨整屏的话，那点淡色乘以整行宽度仍然是一大块彩色面积；
+     收到左边 1/4 之内，既点得出「这里要注意」，又不占版面。 */
+  background: linear-gradient(
+    to right,
+    rgba(var(--sem-danger-rgb), 0.10),
+    transparent 22%
+  );
   border-radius: 0 12px 12px 0;
   padding: 12px 16px;
   margin-bottom: 16px;
 }
-.cg-cycles-hd { color: #fda4af; font-size: 12px; margin-bottom: 8px; }
+.cg-cycles-hd { color: var(--sem-danger); font-size: 12px; margin-bottom: 8px; }
 .cg-cycle {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11.5px;
@@ -98,17 +106,39 @@
   gap: 10px;
   margin-bottom: 20px;
 }
+/* 卡片：**渐变色块，不描边**（用户 2026-09-03 + 图纸 15 规矩 ①②）。
+ *
+ * 层级靠明度不靠边框；分类靠**一小块渐变**而不是一条彩色粗边。
+ * `--tint` 由 JSX 按分类填进来（默认中性），渐变从左上角淡出到无 ——
+ * 这样一屏几十张卡片时，非中性色的**总面积**仍然很小，
+ * 而单张卡上那一点色又足够点出它是哪一类。 */
 .cg-tcard {
+  position: relative;
   text-align: left;
-  border: 1px solid var(--stroke-input);
-  border-left-width: 3px;
-  border-radius: 12px;
-  background: var(--lift-1);
-  padding: 11px 13px;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.12s ease;
+  overflow: hidden;
+  color: inherit;
+  /* 两层叠：底是中性的「浮一档」，上面盖一层几乎看不见的分类色渐变 */
+  background:
+    linear-gradient(
+      135deg,
+      rgba(var(--tint, 255, 255, 255), 0.055),
+      transparent 46%
+    ),
+    var(--lift-1);
+  transition:
+    background-color 0.15s ease,
+    transform 0.12s ease;
 }
-.cg-tcard:hover { background: var(--lift-2); transform: translateY(-1px); }
+.cg-tcard:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(135deg, rgba(var(--tint, 255, 255, 255), 0.085), transparent 46%),
+    var(--lift-2);
+}
 .cg-tname {
   display: flex;
   align-items: baseline;
@@ -131,7 +161,7 @@
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--lift-1);
   font-size: 12px;
 }
@@ -158,7 +188,7 @@
   align-items: center;
   gap: 10px;
   padding: 5px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--lift-1);
   font-size: 12px;
 }
@@ -193,13 +223,15 @@
    悬停某个节点时它相关的那些才亮起来。 */
 .cg-edge {
   stroke: var(--t-3);
-  opacity: 0.22;
+  /* 密集图上几百条线会叠出一片灰雾 —— 单条压到几乎看不见，
+     叠加之后的密度才是想要的那种「有结构感但不吵」 */
+  opacity: 0.16;
   transition: opacity 0.15s ease, stroke 0.15s ease;
 }
 
 /* 参与运行时循环的边单独标红 —— 它是这张图上唯一「要修」的东西 */
 .cg-edge.cyc {
-  stroke: #fb7185;
+  stroke: var(--sem-danger);
   opacity: 0.55;
 }
 
@@ -212,6 +244,19 @@
 .cg-node {
   cursor: pointer;
   transition: opacity 0.15s ease;
+}
+
+/* 节点读起来要像**染了色的玻璃**，不是涂满的颜料 ——
+   26 个实心圆的总面积不小，哪怕单个已经压过混色，
+   叠加起来仍然是一大块彩色。降一点不透明度，让底透上来。
+   悬停时恢复实心 —— 那时候只有一个节点被强调，色是「有用」的。 */
+.cg-dot {
+  fill-opacity: 0.78;
+  transition: fill-opacity 0.15s ease;
+}
+.cg-node:hover .cg-dot,
+.cg-node.hot .cg-dot {
+  fill-opacity: 1;
 }
 
 .cg-node.dim {
@@ -266,7 +311,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #fda4af;
+  color: var(--sem-danger);
   font-size: 12px;
   font-weight: 500;
   text-align: left;
@@ -282,14 +327,14 @@
 /* 条数**留在折叠头上** —— 收起细节可以，藏起「有多少」不行 */
 .cg-cycles-n {
   margin-left: auto;
-  color: var(--text-3);
+  color: var(--t-3);
   font-weight: 400;
 }
 
 /* 「模块级」那个标记。**要显眼一点** —— 它说的是「这张图和别的图不是同一种东西」，
    被忽略的后果是把 Swift 项目的稀疏图读成「耦合很低」。 */
 .cg-warn-dot {
-  color: #fcd34d;
+  color: var(--sem-warn);
   font-weight: 500;
 }
 
@@ -312,7 +357,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: none;
-  color: var(--text-3);
+  color: var(--t-3);
   font-size: 12px;
   cursor: pointer;
   transition:
@@ -320,12 +365,12 @@
     background-color var(--dur-fast);
 }
 .cg-mode:hover {
-  color: var(--text-1);
+  color: var(--t-1);
   background: var(--lift-1);
 }
 .cg-mode.on {
   background: var(--lift-2);
-  color: var(--text-1);
+  color: var(--t-1);
 }
 /* 清单里的每一行也能点（点开那个文件的结构图） */
 .cg-link.as-btn {
@@ -343,9 +388,10 @@
 /* 邻域面板：谁调用了这个 / 这个调用了谁。 */
 .cg-nb {
   margin: 14px 0;
-  border: 1px solid var(--border);
+  /* 图纸 15 规矩 ①：**层级靠 surface 的明度，不靠描边**。
+     这里原来是一圈 1px 边框 —— 面板浮起来靠的是它比底亮一档，不是那条线。 */
   border-radius: var(--radius-md);
-  background: var(--lift-1);
+  background: var(--s-2);
   overflow: hidden;
 }
 .cg-nb-hd {
@@ -353,12 +399,12 @@
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--lift-2);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--lift-1);
   font-size: 13px;
 }
 .cg-nb-hd b {
-  color: var(--text-1);
+  color: var(--t-1);
 }
 .cg-nb-hd .cg-btn {
   margin-left: auto;
@@ -374,11 +420,11 @@
   min-width: 0;
 }
 .cg-nb-cols > div:first-child {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--glass-border);
 }
 .cg-nb-col-hd {
   font-size: 11.5px;
-  color: var(--text-3);
+  color: var(--t-3);
   margin-bottom: 7px;
 }
 .cg-nb-item {
@@ -390,7 +436,7 @@
   min-width: 0;
 }
 .cg-nb-name {
-  color: var(--text-1);
+  color: var(--t-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -401,7 +447,7 @@
 }
 .cg-nb-msg {
   padding: 12px;
-  color: var(--text-3);
+  color: var(--t-3);
   font-size: 12.5px;
 }
 /* 符号列表的每一行也能点 */
@@ -422,7 +468,7 @@
   }
   .cg-nb-cols > div:first-child {
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--glass-border);
   }
 }
 
@@ -437,35 +483,38 @@
   gap: 10px;
   flex-wrap: wrap;
   padding: 6px 10px;
-  border-left: 2px solid var(--text-3);
+  /* 同上：不用描边表达状态，用一道极淡的渐变 */
+  background: linear-gradient(to right, var(--lift-2), transparent 60%);
   background: var(--lift-1);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   margin-bottom: 4px;
   font-size: 12.5px;
 }
 .cg-prov.ok {
-  border-left-color: #6ee7b7;
+  border-left-color: var(--sem-ok);
 }
 .cg-prov-n {
-  color: var(--text-1);
+  color: var(--t-1);
 }
 .cg-prov-e {
-  color: var(--text-3);
+  color: var(--t-3);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11.5px;
 }
 .cg-prov-s {
   margin-left: auto;
-  color: #6ee7b7;
+  color: var(--sem-ok);
 }
 .cg-prov-s.miss {
-  color: var(--text-3);
+  color: var(--t-3);
 }
 /* 「缺什么配置」占整行 —— 它比状态本身重要：服务器装了但答不出东西，
    十有八九是这一条没满足 */
 .cg-prov-d {
   flex-basis: 100%;
-  color: #fcd34d;
+  color: var(--sem-warn);
   font-size: 11.5px;
   line-height: 1.5;
 }
+
+.cg-dim { color: var(--t-3); }

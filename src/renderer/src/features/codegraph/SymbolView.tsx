@@ -17,12 +17,16 @@ import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
 
 /** 符号种类 → 颜色。和模块级那套风险色**刻意不同** ——
  *  这里表达的是「它是什么」，不是「它有多危险」，共用一套色会让人读串。 */
+/** 符号种类 → 颜色。**只用两个色相 ＋ 中性**（图纸 15 规矩 ④：色相越少越好）。
+ *  原来四个种类各一个色相（蓝/紫/黄/绿），一屏几十个点就是一盘杂色 ——
+ *  而「函数还是方法」这个区分远没有重要到值一个色相。
+ *  现在：类＝暖色（它是结构）、箭头函数＝弱一档、其余＝中性。 */
 const KIND_COLOR: Record<SymbolNode['kind'], string> = {
-  function: '#7dd3fc',
-  method: '#c4b5fd',
-  class: '#fcd34d',
-  arrow: '#6ee7b7',
-  other: '#737373'
+  function: 'var(--t-2)',
+  method: 'var(--t-2)',
+  class: 'var(--sem-warn)',
+  arrow: 'var(--t-3)',
+  other: 'var(--t-3)'
 }
 const KIND_LABEL: Record<SymbolNode['kind'], string> = {
   function: '函数',
@@ -291,11 +295,13 @@ export function SymbolView({ root }: { root: string }): JSX.Element {
                   type="button"
                   className="cg-tcard"
                   onClick={() => setOpenFile(f.file)}
-                  style={{ borderLeftColor: f.trustworthy ? '#7dd3fc' : '#525252' }}
+                  style={
+                    { ['--tint' as string]: f.trustworthy ? '255, 255, 255' : 'var(--sem-warn-rgb)' } as React.CSSProperties
+                  }
                 >
                   <div className="cg-tname">
                     {f.file.split('/').slice(-2).join('/')}
-                    {!f.trustworthy && <span className="cg-trisk" style={{ color: '#737373' }}>不可信</span>}
+                    {!f.trustworthy && <span className="cg-trisk cg-dim">不可信</span>}
                   </div>
                   <div className="cg-tnum">{f.symbols.length} 个符号</div>
                   <div className="cg-tcross">内部调用 <b>{f.edges.length}</b></div>
