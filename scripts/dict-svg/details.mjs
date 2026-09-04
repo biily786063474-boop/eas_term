@@ -231,7 +231,7 @@ export const DETAILS = {
   'sidebar-to-drawer': (r, C) => {
     const [x, y, w, h] = r
     return `<rect x="${x}" y="${y}" width="${w * 2.4}" height="${h}" fill="#000" opacity="0">${anim('opacity', ['0', '.45', '.45'], [.25, .45, 1])}</rect>`
-      + `<g><animateTransform attributeName="transform" type="translate" values="0,0;0,0;${(-w).toFixed(0)},0;${(-w).toFixed(0)},0;0,0" keyTimes="0;0.34;0.45;0.7;0.85" dur="${D}" repeatCount="indefinite"/>`
+      + `<g><animateTransform attributeName="transform" type="translate" values="0,0;0,0;${(-w).toFixed(0)},0;${(-w).toFixed(0)},0;0,0" keyTimes="0;0.34;0.45;0.7;1" dur="${D}" repeatCount="indefinite"/>`
       + `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" fill="${C.block2}" stroke="${C.hi}" stroke-width="__SW__"/>`
       + Array.from({ length: 5 }, (_, i) => `<rect x="${x + 4}" y="${y + 6 + i * 13}" width="22" height="2.6" rx=".6" fill="${C.block}"/>`).join('') + '</g>'
   },
@@ -261,7 +261,7 @@ export const DETAILS = {
   },
   'auto-hide-bar': (r, C) => {
     const [x, y, w, h] = r
-    return `<g><animateTransform attributeName="transform" type="translate" values="0,0;0,0;0,${h};0,${h};0,0" keyTimes="0;0.4;0.58;0.76;0.9" dur="${D}" repeatCount="indefinite"/>`
+    return `<g><animateTransform attributeName="transform" type="translate" values="0,0;0,0;0,${h};0,${h};0,0" keyTimes="0;0.4;0.58;0.76;1" dur="${D}" repeatCount="indefinite"/>`
       + `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${C.block2}"/>`
       + Array.from({ length: 4 }, (_, i) => `<rect x="${(x + w * (i + .5) / 4 - 2).toFixed(1)}" y="${y + 4}" width="4" height="4" rx="1" fill="${i === 0 ? C.hi : C.block}"/>`).join('')
       + '</g>'

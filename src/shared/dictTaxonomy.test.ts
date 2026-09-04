@@ -155,6 +155,13 @@ test('svg 里每条动画的 keyTimes 与 values 个数相等', () => {
       const kt = (m[1] ?? m[4]).split(';').length
       const vs = (m[2] ?? m[3]).split(';').length
       if (kt !== vs) bad.push(`${t.id}: keyTimes=${kt} values=${vs}`)
+      // **还必须以 0 开头、以 1 结尾**，否则同样是整条动画被忽略且不报错。
+      // 2026-09-04 后端那批图第一版写了 `…;0.96` 收尾，熔断的断口和幂等键的
+      // 「已处理过」标签因此全是死的。
+      const ts = (m[1] ?? m[4]).split(';')
+      if (Number(ts[0]) !== 0 || Number(ts[ts.length - 1]) !== 1) {
+        bad.push(`${t.id}: keyTimes 不是 0…1（${ts[0]}…${ts[ts.length - 1]}）`)
+      }
     }
   }
   assert.deepEqual(bad, [])
