@@ -72,7 +72,15 @@
 .cg-btn:disabled { opacity: 0.5; cursor: default; }
 .cg-btn.icon { padding: 4px 6px; }
 
-.cg-body { flex: 1; overflow-y: auto; padding: 14px; }
+/* **必须是 flex 列**：图那块要吃掉剩余高度（见 `.cg-canvas-box`）。
+   改回 block 的话图会退回固定高度，最大化后下半屏全空。 */
+.cg-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
 
 /* 运行时循环依赖 —— 放最前面，它是要修的 */
 .cg-cycles {
@@ -208,18 +216,21 @@
    高度写死而不是 auto：auto 在 flex 里会被压扁（实测被压成 182px，
    图缩在中间只占一小块）。 */
 .cg-canvas-box {
-  /* **flex: none 是必须的。** `.cg-body` 是 flex 列容器，
-     不写的话这个盒子会被 shrink 掉（实测从 390px 被压到 170px，
-     于是 `preserveAspectRatio="meet"` 按高度适配，图缩在中间一小块）。 */
-  flex: none;
+  /* **吃掉 `.cg-body` 的剩余高度**，基准写 0 不写 auto ——
+     写 auto 会拿「内容高度」当基准，而这个盒子的内容是个 100% 的 svg，循环。
+     `min-height` 保证内容溢出、没有剩余空间可分时它仍然可用。 */
+  flex: 1 1 0;
+  min-height: 300px;
+  /* **千万别用 vh。** 这个模块会被最大化进画布节点，而画布整层挂着
+     `transform: scale()` —— `vh` 相对的是**真实视口**，不是这个被放大的盒子。
+     实测：视口 673px 高，而 `.cg-body` 实际有 1362px，
+     `min(56vh,520px)` 只给出 377px，于是下半屏 712px 全是空的。
+     同一类错误上一轮刚在 `GraphCanvas` 的 `getBoundingClientRect` 上踩过：
+     **凡是「相对视口」的量法，在这个模块里都是错的。** */
   /* **给一个合理的宽高比并居中。** 模块最大化后容器能有 2600px 宽，
      而环形图按 `min(w,h)` 定半径 —— 6.7:1 的窄条里会缩成中间一个小圈，
      两边全是空。1.9:1 是「够宽能摊开、又不至于把图挤扁」的比例。 */
-  /* **宽度跟着高度走**（不是反过来）：高度由视口定，宽度按 1.9:1 推出来，
-     再被容器宽度封顶。这样任何面板宽度下图都是同一个比例，不会时扁时方。 */
   aspect-ratio: 1.9 / 1;
-  height: min(56vh, 520px);
-  min-height: 300px;
   width: auto;
   max-width: 100%;
   margin: 0 auto;
