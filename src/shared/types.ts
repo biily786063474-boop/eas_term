@@ -336,9 +336,12 @@ export interface UserTerm {
   id: string
   en: string
   zh: string
-  /** 必须落在内置三类里，自建词条不另开分类。
-   *  **老字段，保留** —— 用户机器上已装的 skill 还在按它写 */
-  category: 'interaction' | 'motion' | 'visual'
+  /** 必须落在内置四类里，自建词条不另开分类。
+   *  **老字段，保留** —— 用户机器上已装的 skill 还在按它写（它们只会写前三个，
+   *  加第四个不影响它们：校验是白名单，只放宽不收紧）。
+   *  `backend` 是 2026-09-04 加的：后端词条硬塞进 interaction/motion/visual
+   *  任何一个都是假话，而这个值会显示在胶囊的色点上。 */
+  category: 'interaction' | 'motion' | 'visual' | 'backend'
   /** 二级分类（2026-08-31）。**可选** —— 强制必填会让已装的老 skill 一调就被拒。
    *  给了就必须是 shared/dictTaxonomy.ts 里真实存在的一对；没给就落到界面的「未分类」。 */
   cat1?: string

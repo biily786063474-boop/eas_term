@@ -80,11 +80,6 @@ interface Blueprint {
  *  代价：某个区块标签打错，会在所有蓝图里同时错，所以打标质量比蓝图本身更要紧。 */
 const BLUEPRINTS: Blueprint[] = (bp as { blueprints: Blueprint[] }).blueprints
 
-/** 分类表里有、但一条词条都还没有的一级 —— **是故意留的空货架，不是 bug**。
- *  给它一句自己的空态，否则用户点进去看到「没有匹配的词条」会以为功能坏了。 */
-const EMPTY_SHELF: Record<string, string> = {
-  '后端 · 服务': '这一格还是空的 —— 词库目前全是前端的手法。要往里加，用 dict_add 或让 AI 直接写。'
-}
 
 const POP_W = 320
 const MARGIN = 10 // 浮层贴软件边缘时的内边距
@@ -455,6 +450,11 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           放在二级上面是因为它常用 —— 「我在做弹层」比「我在找某个具体手法」先发生。
           每个 chip 后面带条数：0 条的格子（表格 / 页脚）如实显示 0 而不是藏起来，
           藏起来的话用户不知道那是「没有」还是「不支持」。 */}
+      {/* **当前一级里一条带区块的词条都没有时，整排收起来。**
+          「后端 · 服务」就是这种情况 —— 区块是页面上的位置，后端没有页面。
+          留着的话每个 chip 点下去都是 0 条，像坏的。
+          判据用数据不用写死分类名，以后再加别的非页面类目也不用改这里。 */}
+      {allTerms.some((t) => (t.cat1 ?? UNSORTED) === cat || cat === 'all' ? t.blocks?.length : false) && (
       <div className="dict-cats dict-cats-blk">
         {DICT_BLOCKS.map((b) => {
           const n = allTerms.filter((t) => t.blocks?.includes(b)).length
@@ -476,6 +476,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           </button>
         )}
       </div>
+      )}
 
       {/* 二级：只在选了一级之后出现。没选一级时摆 48 个二级出来等于没分类 */}
       {subCats.length > 0 && (
@@ -496,13 +497,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
       <DictHookBar />
 
       <div className="dict-list" onMouseLeave={() => setHover(null)}>
-        {filtered.length === 0 && (
-          <div className="git-empty">
-            {/* 空货架只在「没搜、没筛二级、就是点了这个一级」时才算空货架；
-                搜了半天没结果时还说「这格是空的」会答非所问 */}
-            {!query && !cat2 && EMPTY_SHELF[cat] ? EMPTY_SHELF[cat] : '没有匹配的词条'}
-          </div>
-        )}
+        {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}
         {filtered.map(({ item: term, hit, excerpt }) => (
           <button
             key={term.id}

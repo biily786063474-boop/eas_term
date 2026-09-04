@@ -81,3 +81,51 @@ test('每个老一级名都映射到一个真实存在的新一级', () => {
     assert.ok(hit, `老一级「${old}」没有映射，已装的 skill 会被拒`)
   }
 })
+
+// ── 空货架防护 ──────────────────────────────────────────────────────────
+// 2026-09-04 之前「后端 · 服务」是个 0 条的空货架，界面上靠一句专门的文案兜着。
+// 40 条补上之后那句文案撤掉了 —— 于是「某个一级没有词条」重新变成一种**没有兜底
+// 也没有报错**的坏法：用户点进去看到「没有匹配的词条」，以为功能坏了。这条钉住它。
+test('每个一级都必须有词条 —— 不许有空货架', () => {
+  const bundle = JSON.parse(
+    fs.readFileSync('src/renderer/src/features/dict/dictionary-bundle.json', 'utf8')
+  ) as { terms: { cat1?: string }[] }
+  const empty = DICT_CAT1.filter((c) => !bundle.terms.some((t) => t.cat1 === c))
+  assert.deepEqual(empty, [])
+})
+
+// ── 两套提示词模板 ──────────────────────────────────────────────────────
+// 前端那套是【外观】【动感】【触发】…，后端套不上（「外观」对一条索引策略毫无意义）。
+// 后端另起一套【解决什么】【做法】【放哪一层】【关键参数】【怎么验证】【坑】。
+// **两套都把【坑】放最后一段**：所有拿词条文本做自动判断的地方都靠「按【坑】切一刀」
+// 避开反话（见 docs/词典区块打标-脚本.mjs），模板一变那一刀就切不准了。
+test('后端词条用后端模板，且不混用前端模板的段落', () => {
+  const bundle = JSON.parse(
+    fs.readFileSync('src/renderer/src/features/dict/dictionary-bundle.json', 'utf8')
+  ) as { terms: { id: string; cat1?: string; category?: string; prompt?: string }[] }
+  const be = bundle.terms.filter((t) => t.cat1 === '后端 · 服务')
+  assert.ok(be.length > 0, '后端一级不该是空的')
+  const bad: string[] = []
+  for (const t of be) {
+    if (t.category !== 'backend') bad.push(`${t.id} 的 category 不是 backend`)
+    for (const seg of ['【解决什么】', '【做法】', '【放哪一层】', '【关键参数】', '【怎么验证】', '【坑】']) {
+      if (!t.prompt?.includes(seg)) bad.push(`${t.id} 缺 ${seg}`)
+    }
+    if (t.prompt?.includes('【外观】')) bad.push(`${t.id} 混用了前端模板`)
+  }
+  assert.deepEqual(bad, [])
+})
+
+test('【坑】一律是提示词的最后一段 —— 自动打标靠它切一刀', () => {
+  const bundle = JSON.parse(
+    fs.readFileSync('src/renderer/src/features/dict/dictionary-bundle.json', 'utf8')
+  ) as { terms: { id: string; cat1?: string; prompt?: string }[] }
+  // 前端那套【坑】后面还有一段【依赖】，所以只对后端这套断言「最后一段」
+  const bad = bundle.terms
+    .filter((t) => t.cat1 === '后端 · 服务' && t.prompt)
+    .filter((t) => {
+      const i = t.prompt!.indexOf('【坑】')
+      return i < 0 || t.prompt!.slice(i + 3).includes('【')
+    })
+  assert.deepEqual(bad.map((t) => t.id), [])
+})

@@ -20,7 +20,8 @@ const userFile = (): string => path.join(os.homedir(), '.eas', 'dict-user.json')
 // ~/.eas/dict-pending.json 与 dict-sink.json 不再读写（自动沉淀已拆，见文件头）。
 // **已有文件不删** —— 删掉等于动用户的数据，而留着没有任何代价。
 
-const CATS = new Set(['interaction', 'motion', 'visual'])
+// `backend` 是 2026-09-04 加的第四类。**只放宽不收紧** —— 已装的老 skill 只写前三个，不受影响。
+const CATS = new Set(['interaction', 'motion', 'visual', 'backend'])
 
 /**
  * 清洗模型生成的 SVG。
@@ -179,7 +180,7 @@ export function registerDictHandlers(): void {
           continue
         }
         if (!CATS.has(cat)) {
-          rejected.push({ name, why: 'category 必须是 interaction / motion / visual 之一' })
+          rejected.push({ name, why: 'category 必须是 interaction / motion / visual / backend 之一' })
           continue
         }
         // 二级分类：**可选，但给了就必须对**。

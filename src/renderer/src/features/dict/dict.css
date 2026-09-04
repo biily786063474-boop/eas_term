@@ -707,3 +707,19 @@
   gap: 5px;
   padding: 6px 8px 10px 22px;
 }
+
+/* 第四类：后端。和 interaction(蓝) / motion(橙) / visual(紫) 都拉开的青绿。
+   **分类色不参与主题**（图纸 15 第 ⑤ 条：表达身份的元素整套不参与）——
+   换了色相就分不出类了，这正是那条规矩要保护的情况。 */
+.dict-dot.cat-backend {
+  background: #5ec9a8;
+}
+.dict-chip.cat-backend.active {
+  color: #c8f0e4;
+  border-color: rgba(94, 201, 168, 0.55);
+  background: rgba(94, 201, 168, 0.18);
+}
+.dict-tag.cat-backend {
+  color: #c8f0e4;
+  background: rgba(94, 201, 168, 0.18);
+}

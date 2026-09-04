@@ -119,6 +119,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
     <a href="#补什么">要补的知识与提示词</a>
     <a href="#落地">落地位置与三个坑</a>
     <a href="#定">要你定的</a>
+    <a href="#落地">落地结果</a>
   </div>
 </nav>
 
@@ -596,6 +597,55 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
   <hr>
   <p><b>只要你说「第一期开始」，我就能直接动手</b> —— 映射表是现成的（POC 里那张 9 行的表已经验证过满射），
   改完当天就能在词典里看到新的一级。</p>
+</section>
+
+
+<section id="落地">
+  <h2>Shipped</h2>
+  <div class="sectitle">落地结果 —— 四期全部做完（2026-09-04）</div>
+  <p class="secnote">这一节是事后补的。<b>本页上面那些数字是方案阶段的估算，有几个和落地后的实际出入很大</b>，以这一节为准。</p>
+
+  <div class="grid g4" style="margin-bottom:22px">
+    <div class="stat"><div class="num n-em">455 条</div><div class="lab">词库总量（改造前 <b>381</b>，新写 <b>74</b> 条）</div></div>
+    <div class="stat"><div class="num n-em">5 / 48</div><div class="lab">场景一级 / 二级手法，<b>没有空货架</b></div></div>
+    <div class="stat"><div class="num n-sk">16 / 0</div><div class="lab">区块全部有词条，<b>0 个空格子</b></div></div>
+    <div class="stat"><div class="num n-vi">10 张</div><div class="lab">原型图预设，49 个槽位</div></div>
+  </div>
+
+  <div class="warn">
+    <div class="vlabel">要更正的估算</div>
+    <p style="margin:0"><b>区块存量的估计全部偏高</b>，因为方案阶段用的是宽正则（当时已标注「这是要人工收一遍的地方」）。
+    精确打标后：卡片 <b>73 → 25</b>、按钮 <b>79 → 18</b>、表单 <b>87 → 21</b>。
+    缺口因此从「约 20 条」变成实际补了 <b>34 条</b>。</p>
+  </div>
+
+  <h3>四期分别做了什么</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:12%">期</th><th style="width:26%">内容</th><th>关键决定与实测</th></tr></thead>
+    <tbody>
+      <tr><td><span class="b b-em">一</span></td><td>一级改场景</td>
+        <td>9 个手法族 → 5 个场景，<b>40 个二级一个字没改</b>只换父节点。<b>老一级名留了别名表</b> —— 不留的话不只是已装的 skill 被拒，<code>readUser()</code> 还会把已存自建词条的分类判为无效，而 <code>dict:add</code> 是「整个读出来再整个写回去」，于是下次加词就洗掉一批数据。</td></tr>
+      <tr><td><span class="b b-em">二</span></td><td>区块标签</td>
+        <td>打标规则<b>迭代四轮</b>才可用。根因一句话：<b>通用手法的说明里几乎必然拿区块举例，而举例 ≠ 适用</b>。最终主力信号是<b>二级分类映射</b>（「浮层与提示」整支属于弹层，无一例外），不是关键词。另外 <code>keywords</code> 是给搜索用的、故意放宽的，拿它打标必然过匹配。</td></tr>
+      <tr><td><span class="b b-am">补</span></td><td>34 条缺口词条</td>
+        <td>页脚 0→6 · 表格 0→8 · 侧边栏 2→8 · 标签栏 2→7 · 金刚区 3→8 · 导航栏 4→10。打标脚本因此拆成 <code>MANUAL</code>(并集) 与 <code>AUTHORED</code>(权威) 两张表 —— 手写的区块不该被规则覆盖，否则脚本重跑就和词库差 7 条，<b>而对不上的脚本比没有脚本更坏</b>。</td></tr>
+      <tr><td><span class="b b-vi">三</span></td><td>10 张原型图预设</td>
+        <td>蓝图<b>只写区块名不写词条 id</b>，词条按标签实时匹配 → 加词条零维护。测试钉了两条对称保证，第二条<b>当场逮到「轮播」17 条词条没有任何蓝图引用</b>。按确认的方向没做真实渲染的原型图。</td></tr>
+      <tr><td><span class="b b-sk">四</span></td><td>后端 · 服务 40 条</td>
+        <td>四个二级各 10 条。<b>另起了一套提示词模板</b>（【解决什么】【做法】【放哪一层】【关键参数】【怎么验证】【坑】）—— 前端那套的【外观】【动感】对一条索引策略毫无意义。<code>category</code> 加了第四个值 <code>backend</code>（白名单只放宽不收紧，老 skill 不受影响）。</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>两套模板都把【坑】放最后一段</h3>
+  <p>这不是格式洁癖：<b>所有拿词条文本做自动判断的地方都靠「按【坑】切一刀」来避开反话</b>
+  （【坑】写的是「别用在哪」——「粒子」的坑写着「想要首屏强冲击力时不够看」，全文扫会把它当成「适用于首屏」）。
+  模板一变那一刀就切不准了，所以有一条测试专门钉住它。</p>
+
+  <div class="verdict">
+    <div class="vlabel">现在的状态</div>
+    <p style="margin:0">五个一级都有词条，16 个区块都有词条，10 张蓝图没有空格子 —— 这三件事各有一条测试钉着，
+    退回去会当场变红。测试总数 2020 全绿。</p>
+  </div>
 </section>
 
 <footer>
