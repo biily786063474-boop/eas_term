@@ -110,10 +110,55 @@ const MANUAL = {
   'safe-area-inset': ['标签栏'],
   'fx-SnapSections': ['首屏']
 }
+/** ④ **手写区块的词条**（2026-09-04 为补缺口新写的 34 条）。
+ *  和 `MANUAL` 不同：这里是**权威值，不与规则求并集**。
+ *  它们的区块是写词条时逐条判断出来的，规则反而会添乱 ——
+ *  比如「列排序」的二级是「控件形态」，规则会给它补一个「表单」，
+ *  而列排序不是表单。不这么分的话，脚本重跑一次就和词库对不上
+ *  （实测差 7 条），而对不上的脚本比没有脚本更坏。 */
+const AUTHORED = {
+'mega-footer': ['页脚'],
+  'back-to-top': ['页脚'],
+  'footer-groups': ['页脚'],
+  'sticky-footer': ['页脚'],
+  'footer-subscribe': ['页脚', '表单'],
+  'sitemap-footer': ['页脚'],
+  'sticky-table-header': ['表格'],
+  'frozen-columns': ['表格'],
+  'table-sort': ['表格'],
+  'column-resize': ['表格'],
+  'row-selection': ['表格'],
+  'table-density': ['表格'],
+  'responsive-table': ['表格', '卡片'],
+  'cell-truncate': ['表格'],
+  'collapsible-sidebar': ['侧边栏'],
+  'sidebar-icon-mode': ['侧边栏'],
+  'sidebar-resize': ['侧边栏'],
+  'nested-nav': ['侧边栏'],
+  'active-nav-indicator': ['侧边栏', '导航栏'],
+  'sidebar-to-drawer': ['侧边栏', '弹层'],
+  'bottom-tab-bar': ['标签栏'],
+  'tab-badge': ['标签栏', '按钮'],
+  'auto-hide-bar': ['标签栏', '导航栏'],
+  'center-fab': ['标签栏', '按钮'],
+  'tab-switch-transition': ['标签栏'],
+  'entry-grid': ['金刚区'],
+  'grid-paging': ['金刚区', '轮播'],
+  'grid-edit-sort': ['金刚区'],
+  'more-entry': ['金刚区', '弹层'],
+  'icon-micro-motion': ['金刚区', '按钮'],
+  'mega-menu': ['导航栏', '弹层'],
+  'breadcrumb': ['导航栏'],
+  'nav-search-expand': ['导航栏', '搜索'],
+  'nav-shrink-on-scroll': ['导航栏']
+}
+
 export const BLOCK_NAMES = Object.keys(NAME_RE)
 const MAX = 3
 
 export function tagsOf(t) {
+  // 手写的直接返回，**不过规则**
+  if (AUTHORED[t.id]) return AUTHORED[t.id]
   const out = new Set(CAT2_BLOCKS[t.cat2] ?? [])
   const name = `${t.zh} ${t.en}`
   for (const [k, re] of Object.entries(NAME_RE)) if (re.test(name)) out.add(k)
