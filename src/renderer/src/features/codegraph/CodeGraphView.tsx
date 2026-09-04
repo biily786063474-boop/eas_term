@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeGraphResult, Risk } from '../../../../shared/codeGraph.ts'
 import { RefreshIcon } from '../../ui/Icons'
-import { GraphCanvas, type GraphItem, type GraphLink } from './GraphCanvas.tsx'
+import { GraphCanvas, type GraphItem, type GraphLink, type LayoutKind } from './GraphCanvas.tsx'
 import { SymbolView } from './SymbolView.tsx'
 import './codegraph.css'
 
@@ -100,6 +100,9 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
   const [drill, setDrill] = useState<string | null>(null)
   /** 循环依赖那块**默认收起** —— 见下面渲染处的注释 */
   const [cyclesOpen, setCyclesOpen] = useState(false)
+  /** 排布方式。**默认环形** —— 它确定、不掉帧，且任意两点之间的弦一眼可见；
+   *  力导向答的是另一个问题（哪几块抱团），并列给出让用户自己挑。 */
+  const [layout, setLayout] = useState<LayoutKind>('ring')
   const aliveRef = useRef(true)
 
   const scan = (): void => {
@@ -240,6 +243,25 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
           </span>
         )}
         <span className="cg-spacer" />
+        {/* 排布切换。做成两个小字而不是下拉：只有两个选项，
+            下拉多一次点击且藏住了另一个的存在 */}
+        <span className="cg-layouts">
+          {(['ring', 'force'] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              className={`cg-layout${layout === k ? ' on' : ''}`}
+              onClick={() => setLayout(k)}
+              title={
+                k === 'ring'
+                  ? '环形：同一份数据每次一样，任意两点之间的弦一眼可见'
+                  : '力导向：连得紧的自然抱团。也是确定性的 —— 同一份数据每次算出同一张图'
+              }
+            >
+              {k === 'ring' ? '环形' : '聚类'}
+            </button>
+          ))}
+        </span>
         {/* **口径要如实写出来。**「按目录扫」和「从入口走」回答的不是同一个问题
             （前者含没人 import 的死代码），不说明的话两张图混着看会得出错结论。
             领地是不是现推的同理 —— 决定了颜色是「风险」还是「耦合」。 */}
@@ -297,6 +319,7 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
             items={drillGraph.items}
             links={drillGraph.links}
             groupOrder={RISK_ORDER}
+            layout={layout}
             onPick={() => undefined}
           />
           <div className="cg-files">
@@ -349,6 +372,7 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
             items={terrGraph.items}
             links={terrGraph.links}
             groupOrder={RISK_ORDER}
+            layout={layout}
             onPick={setDrill}
           />
 

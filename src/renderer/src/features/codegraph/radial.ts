@@ -116,3 +116,32 @@ export function linkWidth(count: number, max: number): number {
   if (max <= 1) return 1
   return 0.6 + (Math.log(count + 1) / Math.log(max + 1)) * 3.4
 }
+
+// ── 磁吸 ────────────────────────────────────────────────────────────────────
+//
+// 悬停时节点朝指针**轻微**靠过去，像 macOS 里那种磁吸按钮。
+// 纯几何，抽出来是因为它有两个一写就错的地方：
+//   · 没有上限的话，指针停在圆边缘时节点会被拽出老远（位移和距离成正比）
+//   · 没有衰减的话，指针刚进命中区节点就跳一下 —— 命中区比圆大一圈，
+//     那一跳发生在指针还没碰到圆的时候，看着像图在抖
+
+/** 磁吸的最大位移（px）。**很小** —— 它是「这个能点」的暗示，不是一个动画。 */
+export const MAGNET_MAX = 5
+/** 超过这个距离就不再吸（px）。和命中区半径同量级。 */
+const MAGNET_RANGE = 26
+
+/**
+ * 节点该朝指针偏多少。
+ *
+ * @param dx/dy 指针相对节点中心的偏移
+ * @returns 位移向量，**长度不超过 `MAGNET_MAX`**
+ */
+export function magnetOffset(dx: number, dy: number): { x: number; y: number } {
+  const d = Math.hypot(dx, dy)
+  if (d < 0.001) return { x: 0, y: 0 }
+  // 距离越远吸得越弱，出了范围就是 0 —— 线性衰减读起来最自然，
+  // 用平方衰减的话靠近时会「粘住」，反而像卡了一下
+  const strength = Math.max(0, 1 - d / MAGNET_RANGE)
+  const k = (Math.min(d, MAGNET_MAX) * strength) / d
+  return { x: dx * k, y: dy * k }
+}

@@ -1,6 +1,6 @@
-import { test } from 'node:test'
+import { describe, it, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chordPath, labelAt, linkWidth, radialLayout, type RadialNode } from './radial.ts'
+import { MAGNET_MAX, chordPath, labelAt, linkWidth, magnetOffset, radialLayout, type RadialNode } from './radial.ts'
 
 const n = (id: string, weight = 1, group = 'a'): RadialNode => ({ id, weight, group })
 
@@ -105,4 +105,29 @@ test('标签落在节点外侧，不压在节点上', () => {
   const [a] = radialLayout([n('a', 100), n('b')], 400, 400)
   const l = labelAt(a, 200, 200)
   assert.ok(Math.hypot(l.x - 200, l.y - 200) > Math.hypot(a.x - 200, a.y - 200), '标签跑到圆内了')
+})
+
+describe('磁吸', () => {
+  it('指针在中心时不偏', () => {
+    assert.deepEqual(magnetOffset(0, 0), { x: 0, y: 0 })
+  })
+  it('**位移有上限** —— 没有的话指针停在边缘时节点会被拽出老远', () => {
+    for (const [dx, dy] of [[3, 0], [10, 0], [0, 14], [8, 8]]) {
+      const o = magnetOffset(dx, dy)
+      assert.ok(Math.hypot(o.x, o.y) <= MAGNET_MAX + 1e-9, `(${dx},${dy}) → ${JSON.stringify(o)}`)
+    }
+  })
+  it('方向跟着指针走', () => {
+    const o = magnetOffset(6, 0)
+    assert.ok(o.x > 0 && Math.abs(o.y) < 1e-9)
+    assert.ok(magnetOffset(-6, 0).x < 0)
+  })
+  it('**出了范围就不吸** —— 命中区比圆大一圈，不衰减的话指针刚进区节点就跳一下', () => {
+    assert.deepEqual(magnetOffset(200, 0), { x: 0, y: 0 })
+  })
+  it('越远吸得越弱（单调）', () => {
+    const near = Math.hypot(...Object.values(magnetOffset(4, 0)))
+    const far = Math.hypot(...Object.values(magnetOffset(18, 0)))
+    assert.ok(near > far, `近 ${near} 应大于远 ${far}`)
+  })
 })
