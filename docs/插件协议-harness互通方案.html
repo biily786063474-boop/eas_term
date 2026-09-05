@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>插件 ↔ Harness 互通协议 · 方案报告</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+@media (max-width:640px){h1{font-size:29px}header.hero{padding:48px 0 34px}main{padding:0 18px 80px}.navwrap{padding:10px 18px}.card{padding:20px}section{margin-bottom:56px}}
+</style>
+</head>
+<body>
+<nav><div class="navwrap">
+  <span class="navbrand">EAS-TERM · 插件协议</span>
+  <a href="#verdict">结论</a><a href="#now">现状</a><a href="#why">为什么是 MCP</a><a href="#protocol">协议设计</a><a href="#host">Eas-Term 做宿主</a><a href="#plan">落地清单</a><a href="#risk">风险</a><a href="#next">下一步</a>
+</div></nav>
+<main>
+<header class="hero">
+  <div class="eyebrow">方案报告 · v1 · 2026-09-05</div>
+  <h1>插件 ↔ Harness 互通协议：<br>让你写的插件在任何 harness 里都能用，且带界面</h1>
+  <p class="lede">回答三个问题：现在插件是怎么和 harness 通信的；要让「我这里的插件」和任意 harness 互通该定什么协议；插件自带的前端面板怎样被读到并渲染进画布上的插件模块里。</p>
+  <div class="meta"><span>依据 <b>src/main/plugins.ts · mcpBridge.ts · mcp/eas-mcp.mjs · omp/launch.ts</b></span><span>前文 <b>docs/插件兼容性-需求分析.html（2026-08-24，L1+L2 已实施）</b></span><span>已接 harness <b>Claude Code · Codex · omp</b></span></div>
+</header>
+
+<section id="verdict">
+  <h2>Verdict</h2>
+  <div class="sectitle">结论：插件与 harness 之间只有一种通用语言，界面走 MCP Apps，Eas-Term 做宿主</div>
+  <p class="secnote">四个数字先把盘子说清楚，再给裁决。</p>
+  <div class="grid g4">
+    <div class="stat"><div class="num n-sk">3</div><div class="lab">已接入的 harness（Claude Code / Codex / omp），三家配置格式各不相同</div></div>
+    <div class="stat"><div class="num n-em">1</div><div class="lab">三家的交集：MCP。skills / hooks / 清单格式都不通用</div></div>
+    <div class="stat"><div class="num n-ro">0</div><div class="lab">现有生态里带可渲染 UI 的插件数（2026-08-24 实测，两家都是 0）</div></div>
+    <div class="stat"><div class="num n-am">34</div><div class="lab">Eas-Term 自己已通过 MCP 暴露的工具数——它本身就是一个「插件」的样板</div></div>
+  </div>
+  <div class="verdict"><div class="vlabel">核心裁决</div>
+    <p><b>① 插件 ↔ harness 的通信协议就是 MCP，不要另起一套。</b>三个 harness 唯一都认的东西就是 MCP server（stdio / http）。你写的插件只要是一个标准 MCP server，Claude Code、Codex、omp、以及任何未来的 harness 都能连——Eas-Term 已经在替你把它写进三家各自的配置格式里。</p>
+    <p><b>② 界面协议采用 MCP Apps（MCP 的官方 UI 扩展）：工具声明一个 <code>ui://</code> 资源，宿主取出 HTML 放进沙箱 iframe，双方用 postMessage 上的 JSON-RPC 对话。</b>这样你的插件前端不只在 Eas-Term 里能显示，在任何实现了 MCP Apps 的宿主里都能显示；反过来，Eas-Term 实现了宿主侧，别人按这个标准写的插件面板也能渲染进我们的画布。</p>
+    <p><b>③ Eas-Term 的角色：宿主 + 枢纽。</b>画布上的「插件模块」= 一个新的画布组件 <code>plugin-panel</code>，内容是插件的 UI 资源；面板通过宿主拿到 Frame 上下文（cwd / 项目 / 节点）并可调用插件自己的工具与画布工具；harness 侧的工具调用结果通过宿主推给面板。<b>面板永远不直接碰 harness</b>——harness 只说 MCP，这条边界不破。</p>
+  </div>
+  <div class="dissent"><div class="vlabel">保留的分歧 · 先说清楚</div>
+    <p><b>第三方现成插件（Linear / GitHub 这类）不会因此长出界面。</b>它们没有 UI 资源，Codex 连接器型插件甚至本地一个字节都没有，指向的是 ChatGPT 托管的界面。这套协议解决的是「<b>你自己写的插件</b>带界面并跨 harness」，以及「别人按 MCP Apps 写的插件进我们画布」。对存量第三方插件维持 L1+L2（会话预设 + 工具面）。</p>
+    <p><b>OpenAI Apps SDK（<code>window.openai</code>）是另一套，与 MCP Apps 不兼容。</b>ChatGPT 里的插件界面走它。要不要再做一个兼容层是第二期的事，本报告不建议一期就做。</p>
+  </div>
+</section>
+
+<section id="now">
+  <h2>Current State</h2>
+  <div class="sectitle">现状：插件现在是怎么和 harness 通信的</div>
+  <p class="secnote">两条链路。一条是 Eas-Term 自己作为「插件」被 harness 调用，一条是第三方插件的工具被合并进会话。都是 MCP。</p>
+  <h3>链路 A · harness → Eas-Term（画布 34 个工具是这么暴露的）</h3>
+<pre><span class="dim">// 每个会话一个轻量 shim 进程，共享同一个 HTTP 网关（每 App 实例一个）</span>
+Claude Code / Codex / omp
+  │ <span class="flow">stdio · JSON-RPC 一行一条</span>
+  ▼
+mcp/eas-mcp.mjs            <span class="dim">← 零依赖手写 MCP server，tools/list 返回 34 个工具</span>
+  │ <span class="flow">POST /invoke · 127.0.0.1:随机端口 · x-eas-token</span>   <span class="dim">token 由 PTY 环境变量 EAS_TERM_PORT/TOKEN 注入</span>
+  ▼
+src/main/mcpBridge.ts      <span class="dim">← 网关。三道锁：只听本机 / 随机 token / 路径白名单</span>
+  │ <span class="flow">IPC mcp:invoke → mcp:result</span>
+  ▼
+渲染层 mcpHandler.ts       <span class="dim">← 工具的真正执行体（开文件 / 截图 / 派活 / 查知识库 …）</span></pre>
+  <p>关键事实：<b>工具调用天然知道「我在哪个终端 → 哪个 Frame → 哪个项目」</b>，靠的是 PTY 注入的 <code>EAS_PTY_ID / EAS_PROJECT</code>，不需要模型自报。这个「上下文随进程环境走」的设计，后面协议里会原样沿用给插件面板。</p>
+
+  <h3>链路 B · 第三方插件的工具 → 会话（L2，2026-08-24 实施）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>步骤</th><th>在哪</th><th>做了什么</th></tr></thead>
+    <tbody>
+      <tr><td>扫插件</td><td><code>src/main/plugins.ts</code></td><td>只读文件、绝不写。Codex 读 <code>~/.codex/plugins/cache/…/.codex-plugin/plugin.json</code>，Claude 读 <code>~/.claude/plugins/cache/…/.claude-plugin/plugin.json</code> + <code>installed_plugins.json</code>。归一成 <code>PluginInfo</code>（含 <code>mcpServers</code> 原样、<code>root</code> 用来替换 <code>${CLAUDE_PLUGIN_ROOT}</code>）</td></tr>
+      <tr><td>用户点选</td><td><code>CanvasFilePicker</code> → <code>CanvasStage</code></td><td>Frame 双击菜单「插件」tab 点一个 → 开一个<b>绑定它</b>的 AI 对话节点：<code>cli</code> 用插件所属的那家、<code>pluginId</code>、<code>initialMessage</code> = 它的 defaultPrompt</td></tr>
+      <tr><td>合并工具面</td><td><code>mcpBridge.agentMcpConfigPath(pluginId)</code></td><td>生成 <code>userData/agent-mcp.json</code>：<code>eas-term</code> + <code>bizone-canvas</code> + <b>用户点选的那一个插件</b>的 mcpServers。同名撞车加前缀不覆盖</td></tr>
+      <tr><td>交给 harness</td><td>三个 adapter</td><td>Claude：<code>--mcp-config agent-mcp.json --strict-mcp-config</code>；Codex：读用户全局 toml（插件本来就能用）；omp：<code>readMcpServers()</code> 把同一份 json 转成 ACP <code>session/new</code> 的名单——<b>只取有 command 的（http 型会让 session/new 整个失败）、env 一律给数组</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><div class="vlabel">现状的天花板</div>
+    <p>插件在画布上<b>没有自己的模块</b>——「插进画布」实际是开了一个带着它工具的对话节点。原因不是我们没做，是<b>插件里一行 UI 代码都没有</b>。带 Web 界面的（如 ChatCut）走的是 <code>canvas_open_url</code> 开成网页节点，那是一个完整的外部网页，不是插件面板，和 Eas-Term 之间没有任何通信。</p>
+  </div>
+</section>
+
+<section id="why">
+  <h2>Why MCP</h2>
+  <div class="sectitle">为什么「任意 harness 互通」只能建立在 MCP 上</div>
+  <p class="secnote">把三家的扩展点摆在一起，交集一眼可见。</p>
+  <div class="tw"><table>
+    <thead><tr><th>扩展点</th><th>Claude Code</th><th>Codex</th><th>omp（ACP）</th><th>通用？</th></tr></thead>
+    <tbody>
+      <tr><td><b>工具</b></td><td>MCP（<code>~/.claude.json</code> / <code>--mcp-config</code>）</td><td>MCP（<code>config.toml</code> <code>[mcp_servers.*]</code>）</td><td>MCP（<code>session/new</code> 传名单，仅 stdio）</td><td><span class="b b-em">是</span></td></tr>
+      <tr><td>提示词 / skill</td><td><code>skills/</code> <code>commands/</code> <code>agents/</code></td><td><code>skills/</code>、AGENTS.md</td><td>无对应</td><td><span class="b b-ro">否</span></td></tr>
+      <tr><td>行为钩子</td><td><code>hooks/</code>（Pre/PostToolUse）</td><td><code>hooks.json</code>（形状不同）</td><td>无</td><td><span class="b b-ro">否</span></td></tr>
+      <tr><td>插件清单</td><td><code>.claude-plugin/plugin.json</code>（只有 name/description/author）</td><td><code>.codex-plugin/plugin.json</code>（有 interface 块：图标/品牌色/默认提示词）</td><td>无插件概念</td><td><span class="b b-ro">否</span></td></tr>
+      <tr><td>界面</td><td>无</td><td><code>.app.json</code> 远程 app id（ChatGPT 托管）</td><td>无</td><td><span class="b b-ro">否</span></td></tr>
+      <tr><td>会话上下文（cwd / 项目）</td><td>PTY 环境变量（我们注入）</td><td>同左</td><td>同左（omp 由我们起进程）</td><td><span class="b b-am">我们能保证</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>所以协议分两层：<b>工具层用 MCP</b>（三家都认，零适配）；<b>界面层不能指望 harness</b>——harness 根本不渲染任何东西，界面只能由<b>宿主</b>（Eas-Term、Claude.ai、VS Code 这类有屏幕的程序）来画。而宿主之间要通用，就需要一个宿主侧的标准——这正是 MCP Apps 的定位。</p>
+  <div class="card">
+    <h4>MCP Apps 一句话</h4>
+    <p>MCP 的官方扩展（SEP-1865，spec 2025-11 起，SDK 包 <code>@modelcontextprotocol/ext-apps</code>）：<b>MCP server 的工具在 <code>_meta.ui.resourceUri</code> 里指向一个 <code>ui://</code> 资源；宿主通过 <code>resources/read</code> 取到 HTML，放进沙箱 iframe；iframe 与宿主之间用 postMessage 承载 JSON-RPC</b>——面板可以反过来 <code>tools/call</code> 自己 server 的工具，宿主把工具结果通过 <code>ui/notifications/tool-result</code> 推给面板。Claude.ai、VS Code Copilot、Goose 等已按它做宿主。</p>
+    <p class="dim" style="font-size:12.5px;color:#737373">按我掌握的资料（截至 2026 年中）写；动手前核一遍当前 spec 版本号与方法名，把最终版钉进图纸 11。</p>
+  </div>
+</section>
+
+<section id="protocol">
+  <h2>Protocol</h2>
+  <div class="sectitle">协议设计：三层，两层是标准，一层是我们的可选扩展</div>
+  <p class="secnote">原则：标准能覆盖的一律用标准，Eas-Term 特有的能力放在 <code>_meta.eas.*</code> 命名空间里，别的宿主看不懂就忽略，不影响插件在那里运行。</p>
+
+  <h3>层 1 · 工具层（MCP，标准）</h3>
+  <p>插件 = 一个 MCP server。stdio 优先（三家都吃；omp 只吃 stdio）。这一层<b>今天已经通</b>：写好 server，放进 Eas-Term 的插件目录，<code>agentMcpConfigPath</code> 就会把它合并进三家的会话。</p>
+
+  <h3>层 2 · 界面层（MCP Apps，标准）</h3>
+<pre><span class="dim">// tools/list 里的一个工具</span>
+{
+  "name": "board_show",
+  "description": "打开看板面板",
+  "inputSchema": { "type": "object", "properties": { "projectId": { "type": "string" } } },
+  "_meta": { "ui": { "resourceUri": "ui://my-plugin/board.html" } }   <span class="hi">← 面板入口</span>
+}
+
+<span class="dim">// resources/read ui://my-plugin/board.html → 一份 standalone HTML（内联 JS/CSS）</span>
+<span class="dim">// 宿主把它放进 sandbox iframe，之后双方用 postMessage 上的 JSON-RPC：</span>
+面板 → 宿主   ui/initialize                 <span class="dim">握手，宿主回能力集与主题</span>
+面板 → 宿主   tools/call { name, arguments } <span class="dim">面板调自己 server 的工具（宿主代转，可拒）</span>
+宿主 → 面板   ui/notifications/tool-result  <span class="dim">模型那边调了工具，结果推给面板刷新</span>
+宿主 → 面板   ui/notifications/theme        <span class="dim">明暗 / 尺寸变化</span></pre>
+  <p>这一层让面板<b>不需要知道自己在哪个宿主里</b>。同一份 <code>board.html</code> 在 Eas-Term 画布里、在 Claude.ai 里、在 VS Code 里都能显示。</p>
+
+  <h3>层 3 · 宿主扩展（Eas-Term 特有，可选）</h3>
+  <p>标准没有「画布」的概念。Eas-Term 在握手时多给一份上下文，并多开几条方法——全部挂在 <code>eas/*</code> 前缀，插件按需用：</p>
+  <div class="tw"><table>
+    <thead><tr><th>方法 / 字段</th><th>方向</th><th>给什么</th><th>为什么要有</th></tr></thead>
+    <tbody>
+      <tr><td><code>ui/initialize</code> 返回值里的 <code>_meta.eas.context</code></td><td>宿主 → 面板</td><td><code>{ frameId, nodeId, projectId, cwd }</code></td><td>和现在 <code>CanvasComponentCtx</code> 一模一样的形状。画布是多项目并置的，面板必须知道自己挂在哪个 Frame——<b>不许自己去猜「当前项目」</b>（组件协议已定的纪律）</td></tr>
+      <tr><td><code>eas/canvas.call</code></td><td>面板 → 宿主</td><td>透传画布工具：<code>canvas_open_file</code> / <code>open_url</code> / <code>add_note</code> …</td><td>面板里点一条结果 → 在旁边开文件。走现有 <code>mcpHandler</code>，<b>同一套路径白名单</b>，不新开口子</td></tr>
+      <tr><td><code>eas/session.events</code>（订阅）</td><td>宿主 → 面板</td><td>绑定会话的 turn 开始/结束、工具调用</td><td>面板可以跟着对话进度刷新，而不是靠轮询</td></tr>
+      <tr><td><code>eas/panel.resize</code></td><td>面板 → 宿主</td><td>请求节点尺寸</td><td>画布节点有默认尺寸，面板知道自己需要多大</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>插件包的形状（Eas-Term 插件目录）</h3>
+<pre>~/.eas/plugins/&lt;name&gt;/
+  plugin.json          <span class="dim">← 我们的清单（超集：兼容 Codex interface 块的字段名，好复用现有 UI）</span>
+  .mcp.json            <span class="dim">← 和 Claude / Codex 插件同形，写法不用学新的</span>
+  server/              <span class="dim">← MCP server 本体（node / python / 任意，能 stdio 就行）</span>
+  ui/board.html        <span class="dim">← ui:// 资源；也可由 server 动态生成</span>
+
+<span class="dim">// plugin.json</span>
+{
+  "name": "my-board",
+  "displayName": "看板", "brandColor": "#5E6AD2", "composerIcon": "./ui/icon.svg",   <span class="dim">← 借 Codex 的字段名</span>
+  "defaultPrompt": "看看这个项目的待办",
+  "panels": [ { "id": "board", "tool": "board_show", "defaultSize": { "w": 420, "h": 320 } } ],   <span class="hi">← 哪个工具开哪个面板</span>
+  "permissions": { "canvas": ["open_file","add_note"], "fs": "project" }   <span class="dim">← 层 3 的权限声明，宿主按此放行</span>
+}</pre>
+  <p><b>跨 harness 怎么发布：</b>同一个包，Eas-Term 一键「导出为 Claude 插件 / Codex 插件」——各生成对应的 <code>.claude-plugin/plugin.json</code> 或 <code>.codex-plugin/plugin.json</code>，<code>.mcp.json</code> 原样带走，<code>ui/</code> 一并打包（那两家不渲染它，但也不碍事；到了 Claude.ai 这类 MCP Apps 宿主就能显示）。<b>不写「一份清单三家通吃」</b>——三家格式不同，导出是最不撒谎的做法。</p>
+</section>
+
+<section id="host">
+  <h2>Host Side</h2>
+  <div class="sectitle">Eas-Term 做宿主：面板怎样被读到、渲染进画布上的插件模块</div>
+  <p class="secnote">复用三样现成的东西：画布组件协议（外壳）、mcpBridge 网关（通信）、webview/iframe（渲染）。新增的只有一个组件和一条转发路径。</p>
+<pre>用户在 Frame 双击菜单点「看板」插件
+  │
+  ▼
+addComponentNode(frameId, { type: 'plugin-panel', props: { pluginId, panelId } })   <span class="dim">← 复用组件节点，不新造节点类型</span>
+  │
+  ▼
+PluginPanel（新画布组件，render(ctx) 里）
+  1. 主进程 <span class="flow">plugin:openPanel</span> → 起/复用该插件的 MCP server（stdio，同 shim 的方式）
+  2. <span class="flow">resources/read ui://…</span> 取 HTML                       <span class="dim">主进程做，渲染层不直接碰插件进程</span>
+  3. 放进 <span class="hi">sandbox iframe</span>（srcdoc，sandbox="allow-scripts"，<b>不给 allow-same-origin</b>）
+  4. postMessage 桥：iframe ⇄ PluginPanel ⇄ IPC ⇄ 主进程 ⇄ 插件 server
+     · ui/initialize 回 { capabilities, theme, _meta.eas.context: ctx }       <span class="dim">ctx 就是 CanvasComponentCtx</span>
+     · tools/call 经主进程转给插件 server；eas/canvas.call 转给 mcpHandler（同一套白名单）
+  5. 绑定会话里模型调了该插件的工具 → 主进程收到结果 → 推 ui/notifications/tool-result 给面板</pre>
+  <div class="grid g2">
+    <div class="card"><h4>为什么用 iframe 而不是 &lt;webview&gt;</h4><p>网页节点用的是 Electron <code>&lt;webview&gt;</code>（独立进程、完整导航），它的代价是「永远浮在普通 DOM 之上、压不住」（<code>CanvasFileNode.tsx</code> 有记录）。插件面板是一份我们自己取来的 HTML，不需要导航，<b>sandbox iframe 够用且能被画布正常叠放</b>。第三方 HTML 进渲染层的安全靠 sandbox 属性 + CSP，不靠进程隔离。</p></div>
+    <div class="card"><h4>为什么 resources/read 在主进程做</h4><p>插件 server 是子进程，渲染层本来就不该直接持有子进程句柄（现有 shim 也是主进程管）。而且 HTML 落到渲染层前可以在主进程<b>过一遍 CSP 注入和尺寸上限</b>，跟 <code>dict.ts</code> 的 SVG sanitize 是同一个思路：能在进渲染层之前做的检查，就在之前做。</p></div>
+  </div>
+  <div class="warn"><div class="vlabel">复用组件协议时的一处必要改动</div>
+    <p><code>CANVAS_COMPONENTS</code> 是编译期数组，插件是运行时发现的。<b>不要把插件 push 进那个数组</b>——只注册<b>一个</b> <code>plugin-panel</code> 组件，插件身份放在 <code>props</code> 里。这样组件协议一个字不改，旧画布里的节点也不受影响（<code>component.type</code> 一旦发布不能改名的纪律仍然成立）。</p>
+  </div>
+</section>
+
+<section id="plan">
+  <h2>Plan</h2>
+  <div class="sectitle">落地清单：改哪里、分几期</div>
+  <p class="secnote">按「先让自己的插件跑起来」排序。一期做完就能在画布上看到第一块插件面板。</p>
+  <div class="tw"><table>
+    <thead><tr><th>期</th><th>做什么</th><th>改哪里</th><th>验收</th></tr></thead>
+    <tbody>
+      <tr><td><b>一期</b><br><span class="b b-em">宿主最小闭环</span></td><td>① <code>~/.eas/plugins/</code> 扫描并入 <code>PluginInfo</code>（新增 <code>cli:'eas'</code>，<code>panels</code> 字段）<br>② 主进程 <code>pluginHost.ts</code>：起 server、<code>resources/read</code>、postMessage↔JSON-RPC 转发、<code>tool-result</code> 推送<br>③ 渲染层 <code>PluginPanel</code> 组件 + 沙箱 iframe + 桥<br>④ 一个示例插件（看板）当样板</td><td><code>src/main/plugins.ts</code>、新 <code>src/main/pluginHost.ts</code>、<code>components/registry.tsx</code> 加一项、新 <code>PluginPanel.tsx</code>、<code>CanvasFilePicker</code> 插件 tab 多一种来源</td><td>画布上出现看板面板；面板里点一条 → 旁边开文件；对话里让模型调 <code>board_add</code> → 面板自动刷新</td></tr>
+      <tr><td><b>二期</b><br><span class="b b-sk">跨 harness 导出</span></td><td>「导出为 Claude / Codex 插件」：生成两家清单，<code>.mcp.json</code> 原样，ui/ 一并打包；导出前用现有 <code>plugins.ts</code> 的读取逻辑<b>反读一遍</b>自证格式正确</td><td>新 <code>src/main/pluginExport.ts</code>；设置面板加入口</td><td>导出的目录被 <code>claude plugin install</code> / <code>codex plugin add</code> 接受；工具在三家会话里都能调</td></tr>
+      <tr><td><b>三期</b><br><span class="b b-vi">吃别人的</span></td><td>宿主支持任意 MCP Apps server（不只我们目录里的）：agent-mcp.json 里任何 server 的工具带 <code>_meta.ui</code> 就能开面板</td><td><code>pluginHost.ts</code> 泛化；<code>PluginPanel</code> 的 props 从 pluginId 改为 serverName+toolName</td><td>接一个社区的 MCP Apps server，面板能渲染</td></tr>
+      <tr><td>可选</td><td>OpenAI Apps SDK 兼容层（<code>window.openai</code> shim）</td><td>独立模块</td><td>另开方案，不并入本报告</td></tr>
+    </tbody>
+  </table></div>
+  <h3>与现有纪律的对齐</h3>
+  <ul class="clean">
+    <li><b>只读用户的插件目录、绝不代装</b>——延续 <code>plugins.ts</code> 的规矩；<code>~/.eas/plugins/</code> 是我们自己的目录，写入只发生在「导出」那一步且目标由用户选</li>
+    <li><b>一次会话只带一个点选的插件</b>——面板打开不改变这条；面板和会话是两回事，面板可以独立存在</li>
+    <li><b>图纸同 commit 更新</b>：11（MCP 网络图加 pluginHost 一支）、13（所有权矩阵加 pluginHost / PluginPanel）、10（模块领地图）</li>
+    <li><b>eas-term 自己的 34 个工具也可以带 <code>_meta.ui</code></b>——比如 <code>team_status</code> 开一块团队面板。这意味着 Eas-Term 的能力也能以面板形式出现在别的宿主里，但那是顺带的好处，不是一期目标</li>
+  </ul>
+</section>
+
+<section id="risk">
+  <h2>Risks</h2>
+  <div class="sectitle">风险与未决问题</div>
+  <p class="secnote">前两条影响方案形状，动手前定；后面的是实现期处理。</p>
+  <div class="dissent"><div class="vlabel">安全 · 第三方 HTML 进渲染层</div>
+    <p>这是本方案唯一新增的攻击面。硬规矩：iframe <code>sandbox="allow-scripts"</code> 且<b>不给 <code>allow-same-origin</code></b>（否则它能读父页面）；主进程注入 CSP（<code>default-src 'none'; script-src 'unsafe-inline'; img-src data:</code>，不许外连）；postMessage 桥只接受白名单方法，<code>eas/canvas.call</code> 只透传<b>已在 mcpHandler 白名单里的</b>工具与路径；HTML 尺寸上限（同 SVG 的 8000 字符思路，面板可放宽到 512KB）。<b>这些不是可选项，是一期验收项。</b></p>
+  </div>
+  <div class="dissent"><div class="vlabel">标准仍在演进</div>
+    <p>MCP Apps 的方法名与 <code>_meta</code> 键在 2025-11 后仍可能调整。做法：桥的方法名集中在<b>一个</b>纯函数模块（<code>appsProtocol.ts</code>，有单测）里映射，spec 变了改一处；不要把方法名散在组件和主进程两边——这是 <code>LONG_WAITS</code> 两处必须一致那类坑的翻版，提前避开。</p>
+  </div>
+  <div class="warn"><div class="vlabel">进程与内存</div>
+    <p>每个插件 server 是一个进程；面板打开与会话绑定分别会起它——要<b>按插件复用同一个进程</b>（主进程持有句柄，引用计数），否则一个插件在画布上放三块面板再加一个会话就是四个进程。bizone-canvas 每会话 93MB 的教训在前。</p>
+  </div>
+  <div class="warn"><div class="vlabel">要你定的</div>
+    <ul>
+      <li>一期只做「我们目录里的插件」还是直接做三期的泛化（任何 MCP Apps server）？<b>建议一期收窄</b>，先把沙箱和桥打磨对。</li>
+      <li>面板与会话的关系：面板能否<b>不绑会话</b>独立存在？<b>建议能</b>——看板本来就不该依赖一次对话。</li>
+      <li>示例插件做什么：看板 / 项目待办 / 甘特图里程碑详情？选一个你天天会用的，样板才有人维护。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="next">
+  <h2>Next</h2>
+  <div class="sectitle">下一步</div>
+  <p class="secnote">报告到此没有动任何代码。定了下面三件事就出实现方案（数据结构、改动清单、验收方式），然后动手。</p>
+  <div class="tl">
+    <div class="it on"><div class="tm">现在</div><div class="tt">拍板三件事</div><div class="td">一期范围（收窄 / 泛化）· 面板可否独立于会话 · 示例插件选题</div></div>
+    <div class="it"><div class="tm">然后</div><div class="tt">核对 MCP Apps 当前 spec</div><div class="td">方法名、<code>_meta.ui</code> 键、SDK 版本，钉进图纸 11 与 <code>appsProtocol.ts</code></div></div>
+    <div class="it"><div class="tm">一期</div><div class="tt">宿主最小闭环 + 示例插件</div><div class="td">沙箱与桥是验收重点；真机看到面板、点条目开文件、模型调工具面板刷新</div></div>
+    <div class="it"><div class="tm">二期</div><div class="tt">导出为 Claude / Codex 插件</div><div class="td">同一个包三家能用</div></div>
+  </div>
+  <div class="dcode">
+    <div class="dlabel">复制这条粘回对话（按需改）</div>
+    <div class="dcmd"><span id="cmd">一期收窄只做自家插件；面板可独立于会话；示例插件做看板；出实现方案</span><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button></div>
+  </div>
+</section>
+
+<footer>
+  Eas-Term · 插件 ↔ Harness 互通协议方案 · 2026-09-05<br>
+  依据代码：<code>src/main/plugins.ts</code> · <code>src/main/mcpBridge.ts</code>（<code>agentMcpConfigPath</code>）· <code>mcp/eas-mcp.mjs</code> · <code>src/main/agentChat/omp/launch.ts</code>（<code>readMcpServers</code>）· <code>features/canvas/components/registry.tsx</code> · <code>features/web/WebView.tsx</code><br>
+  前文：<code>docs/插件兼容性-需求分析.html</code>（2026-08-24）· 图纸：<code>docs/architecture/11-MCP工具网络.md</code> · <code>12-skill与hook流程.md</code> · <code>docs/画布组件协议.html</code><br>
+  本文档只做分析与方案，未修改任何代码。
+</footer>
+</main>
+</body>
+</html>
