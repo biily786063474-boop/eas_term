@@ -217,5 +217,13 @@
 </footer>
 
 </div>
+
+<section id="plugin-panel" style="margin-top:56px">
+<h2 style="font-size:12px;letter-spacing:.15em;color:#737373;text-transform:uppercase">Addendum · 2026-09-05</h2>
+<div style="font-size:22px;font-weight:600;margin:0 0 12px">插件面板：唯一带运行时身份的组件</div>
+<p><code>plugin-panel</code>（<code>features/plugins/PluginPanel.tsx</code>）是注册表里<b>唯一一个</b>身份在运行时决定的组件：它的 <code>node.component.props</code> 记着 <code>{ pluginId, panelId }</code>，渲染时按此向主进程要插件的 <code>ui://</code> HTML，放进 <code>sandbox="allow-scripts"</code> 的 iframe（地址 <code>eas-plugin://&lt;panelSession&gt;/</code>）。</p>
+<p><b>为什么不是「一个插件一个组件」</b>：注册表是编译期数组，插件是运行时扫盘发现的，两者不能合并；而 <code>component.type</code> 一经发布不能改名，一个类型 + props 让老画布里的节点永远不受影响。入口在 Frame 双击菜单的「插件」tab（自家插件 <code>cli==='eas'</code> 且带 <code>panels</code> 的，主动作是「打开面板」，右侧小按钮才是「对话」）；从抽屉「组件」分区拖出来的是没有 props 的空壳，会提示去插件 tab 打开。</p>
+<p><code>addComponentNode</code> 为此多了可选的第 7 参 <code>props</code>；旧调用不传即原行为。协议细节见 <code>docs/superpowers/specs/2026-09-05-插件面板宿主-design.md</code>。</p>
+</section>
 </body>
 </html>

@@ -528,11 +528,11 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
     }),
 
-  addComponentNode: (frameId, type, x, y, w, h) =>
+  addComponentNode: (frameId, type, x, y, w, h, props) =>
     set((s) => {
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId
-          ? placeNodeAtPoint(f, { id: uid('cnode'), component: { type }, x, y, w, h }, x, y)
+          ? placeNodeAtPoint(f, { id: uid('cnode'), component: props ? { type, props } : { type }, x, y, w, h }, x, y)
           : f
       )
       return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }

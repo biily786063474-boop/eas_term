@@ -142,7 +142,7 @@ async function readEntry(h: Hosted, info: PluginInfo, entry: string): Promise<st
 
 // ── 渲染层 IPC：面板 ────────────────────────────────────────────────────────
 type PanelOpenResult =
-  | { ok: true; panelSession: string; url: string; tools: McpToolDef[]; canvasAllow: string[]; title: string }
+  | { ok: true; panelSession: string; url: string; tools: McpToolDef[]; canvasAllow: string[]; title: string; version: string }
   | { ok: false; error: string }
 
 async function panelOpen(wcId: number, args: { pluginId: string; panelId: string; ctx: PanelCtx }): Promise<PanelOpenResult> {
@@ -161,7 +161,7 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
       return { ok: false, error: prep.why }
     }
     panels.set(session, { session, pluginName: info.name, panelId: panel.id, ctx: args.ctx, webContentsId: wcId, html: prep.html, headers: prep.headers })
-    return { ok: true, panelSession: session, url: `${PLUGIN_SCHEME}://${session}/`, tools: h.tools, canvasAllow: info.permissions?.canvas ?? [], title: panel.title }
+    return { ok: true, panelSession: session, url: `${PLUGIN_SCHEME}://${session}/`, tools: h.tools, canvasAllow: info.permissions?.canvas ?? [], title: panel.title, version: app.getVersion() }
   } catch (e) {
     registry.release(info.name, ref)
     return { ok: false, error: e instanceof Error ? e.message : String(e) }

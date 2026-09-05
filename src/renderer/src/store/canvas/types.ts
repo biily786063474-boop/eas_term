@@ -221,7 +221,9 @@ export interface CanvasSlice {
     x: number,
     y: number,
     w: number,
-    h: number
+    h: number,
+    /** 组件的运行时参数（存进 node.component.props）。插件面板靠它记 pluginId / panelId */
+    props?: Record<string, unknown>
   ) => void
   /** 删画布节点；节点是终端（带 leafId）时连带关掉对应的 leaf，两个视图同时消失 */
   /** 把会话 id 写回一个**自带 pane 的** AI 对话节点。

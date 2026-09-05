@@ -9,6 +9,8 @@ import { DesignNode, type SavedBlob } from '../../design/DesignNode'
 import { GitBranchIcon, DesignIcon, ChipIcon } from '../../../ui/Icons'
 import { TeamPanel } from '../../team/TeamPanel'
 import { CodeGraphView } from '../../codegraph/CodeGraphView'
+import { PluginPanel } from '../../plugins/PluginPanel'
+import { PlugIcon } from '../../../ui/Icons'
 
 /** 组件渲染时拿到的上下文（由所属 Frame 注入） */
 export interface CanvasComponentCtx {
@@ -109,11 +111,25 @@ const codeGraphComponent: CanvasComponentDef = {
   render: (ctx) => <CodeGraphView root={ctx.cwd} />
 }
 
+/** 插件面板（设计稿 2026-09-05 决定 #5）：**只注册这一个**，插件身份放 `node.component.props`
+ *  （`{ pluginId, panelId }`）。插件是运行时发现的、注册表是编译期数组，两者不能合并；
+ *  一个类型 + props 让旧画布节点不受影响。入口在 Frame 双击菜单的「插件」tab。 */
+const pluginPanelComponent: CanvasComponentDef = {
+  id: 'plugin-panel',
+  name: '插件面板',
+  Icon: PlugIcon,
+  description: '自家插件的界面。从 Frame 双击菜单的「插件」里打开，这里拖出来的是空壳',
+  defaultSize: { w: 460, h: 340 },
+  needsProject: true,
+  render: (ctx) => <PluginPanel ctx={ctx} />
+}
+
 export const CANVAS_COMPONENTS: CanvasComponentDef[] = [
   gitComponent,
   designComponent,
   teamComponent,
-  codeGraphComponent
+  codeGraphComponent,
+  pluginPanelComponent
 ]
 
 export const getCanvasComponent = (id: string): CanvasComponentDef | undefined =>

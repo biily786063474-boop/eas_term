@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>看板</title>
+<style>
+  :root { --bg: transparent; --fg: #e5e5e5; --dim: #8a8a8a; --card: rgba(255,255,255,.06); --line: rgba(255,255,255,.1); --accent: #a2b9e0; }
+  html[data-theme="light"] { --fg: #1a1a1a; --dim: #6b6b6b; --card: rgba(0,0,0,.04); --line: rgba(0,0,0,.1); --accent: #3b5bdb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 12px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  .add { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--line); }
+  .add input { flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; outline: none; }
+  .add input:focus { border-color: var(--accent); }
+  .add button, .card button { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; cursor: pointer; }
+  .add button:hover, .card button:hover { border-color: var(--accent); }
+  .cols { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; overflow: auto; }
+  .col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .col h3 { margin: 0 0 2px; font-size: 11px; font-weight: 600; color: var(--dim); letter-spacing: .04em; display: flex; justify-content: space-between; }
+  .col.over { outline: 1px dashed var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .card { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); cursor: grab; }
+  .card:active { cursor: grabbing; }
+  .card .t { word-break: break-word; }
+  .card .f { display: block; margin-top: 3px; color: var(--accent); font-size: 11px; cursor: pointer; text-decoration: underline dotted; word-break: break-all; }
+  .card .ops { display: flex; gap: 4px; margin-top: 5px; }
+  .card .ops button { padding: 1px 6px; font-size: 11px; }
+  .empty { color: var(--dim); font-size: 11px; padding: 6px 2px; }
+  .err { color: #fda4af; padding: 8px; font-size: 11px; }
+  .foot { padding: 4px 8px; color: var(--dim); font-size: 10.5px; border-top: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<div class="add" id="add"><input id="title" placeholder="加一张卡…（回车）" autocomplete="off"><button type="button" id="addBtn">加</button></div>
+<div class="cols" id="cols"></div>
+<div class="foot" id="foot">连接宿主…</div>
+<script>
+// ── 最小的 MCP Apps 面板桥：postMessage 上跑 JSON-RPC ─────────────────────
+// 只依赖标准方法（ui/initialize、tools/call、通知）；eas/* 是 Eas-Term 扩展，
+// 别的宿主回 -32601 时静默不做 —— 这份面板拿到任何 MCP Apps 宿主里都能跑。
+const pending = new Map(); let seq = 0; let host = { cwd: '', theme: 'dark', canEas: false };
+function rpc(method, params) {
+  return new Promise((resolve, reject) => {
+    const id = ++seq; pending.set(id, { resolve, reject });
+    parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+    setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error(method + ' 超时')) } }, 30000);
+  });
+}
+window.addEventListener('message', (e) => {
+  if (e.source !== parent) return;
+  const m = e.data; if (!m || m.jsonrpc !== '2.0') return;
+  if (m.id !== undefined && pending.has(m.id)) {
+    const p = pending.get(m.id); pending.delete(m.id);
+    m.error ? p.reject(Object.assign(new Error(m.error.message), { code: m.error.code })) : p.resolve(m.result);
+    return;
+  }
+  if (m.method === 'ui/notifications/tool-result') { refresh(); }
+  if (m.method === 'ui/notifications/host-context-changed') { applyContext(m.params); refresh(); }
+  if (m.method === 'ui/resource-teardown') { foot('宿主已断开'); }
+});
+function applyContext(hc) {
+  if (!hc) return;
+  if (hc.theme) { host.theme = hc.theme; document.documentElement.setAttribute('data-theme', hc.theme); }
+  const eas = hc._meta && hc._meta.eas && hc._meta.eas.context;
+  if (eas && typeof eas.cwd === 'string') host.cwd = eas.cwd;
+}
+function foot(s) { document.getElementById('foot').textContent = s; }
+
+// ── 工具调用（结果在 structuredContent；老宿主只给 content[0].text 就解析它）──
+async function tool(name, args) {
+  const r = await rpc('tools/call', { name, arguments: args || {} });
+  if (r && r.isError) throw new Error((r.content && r.content[0] && r.content[0].text) || '工具报错');
+  if (r && r.structuredContent) return r.structuredContent;
+  try { return JSON.parse(r.content[0].text); } catch { return r; }
+}
+
+const COLS = [['todo', '待办'], ['doing', '进行中'], ['done', '完成']];
+let cards = [];
+async function refresh() {
+  try { cards = (await tool('board_list')).cards || []; render(); foot((host.cwd ? host.cwd.split('/').pop() + ' · ' : '') + cards.length + ' 张卡'); }
+  catch (e) { document.getElementById('cols').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function render() {
+  const root = document.getElementById('cols'); root.innerHTML = '';
+  for (const [key, label] of COLS) {
+    const col = document.createElement('div'); col.className = 'col'; col.dataset.col = key;
+    const list = cards.filter((c) => c.col === key);
+    col.innerHTML = '<h3><span>' + label + '</span><span>' + list.length + '</span></h3>';
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', async (e) => { e.preventDefault(); col.classList.remove('over'); const id = e.dataTransfer.getData('text/plain'); if (id) { await tool('board_move', { id, col: key }).catch(() => {}); refresh(); } });
+    if (!list.length) col.insertAdjacentHTML('beforeend', '<div class="empty">空</div>');
+    for (const c of list) {
+      const el = document.createElement('div'); el.className = 'card'; el.draggable = true;
+      el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', c.id));
+      const i = COLS.findIndex(([k]) => k === key);
+      el.innerHTML = '<div class="t">' + esc(c.title) + '</div>' +
+        (c.file ? '<span class="f" data-file="' + esc(c.file) + '">' + esc(c.file) + '</span>' : '') +
+        '<div class="ops">' +
+        (i < COLS.length - 1 ? '<button data-act="next">→ ' + COLS[i + 1][1] + '</button>' : '') +
+        '<button data-act="rm">删</button></div>';
+      el.querySelector('[data-act="next"]')?.addEventListener('click', async () => { await tool('board_move', { id: c.id, col: COLS[i + 1][0] }); refresh(); });
+      el.querySelector('[data-act="rm"]').addEventListener('click', async () => { await tool('board_remove', { id: c.id }); refresh(); });
+      el.querySelector('.f')?.addEventListener('click', async (e) => {
+        // Eas-Term 扩展：在旁边开这个文件。别的宿主回 -32601，静默。
+        try { await rpc('eas/canvas.call', { tool: 'canvas_open_file', args: { path: e.target.dataset.file } }); } catch { }
+      });
+      col.appendChild(el);
+    }
+    root.appendChild(col);
+  }
+}
+// ⚠️ **不用 <form>**：宿主的 sandbox 只给 allow-scripts、没有 allow-forms，表单提交会被静默拦掉
+// （2026-09-05 真机撞到：requestSubmit() 什么都不发生）。回车 / 点按钮直接处理。
+async function addCard() {
+  const inp = document.getElementById('title'); const title = inp.value.trim(); if (!title) return;
+  inp.value = '';
+  try { await tool('board_add', { title }); refresh(); } catch (err) { foot(err.message); }
+}
+document.getElementById('addBtn').addEventListener('click', addCard);
+document.getElementById('title').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) addCard(); });
+
+// ── 握手 ──────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await rpc('ui/initialize', { appInfo: { name: 'board', version: '1.0.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' });
+    applyContext(r && r.hostContext);
+    host.canEas = !!(r && r.hostCapabilities && r.hostCapabilities.experimental && r.hostCapabilities.experimental.eas);
+    parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized' }, '*');
+    await refresh();
+  } catch (e) { foot('握手失败：' + e.message); }
+})();
+</script>
+</body>
+</html>

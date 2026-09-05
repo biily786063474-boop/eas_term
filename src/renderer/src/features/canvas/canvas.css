@@ -5914,3 +5914,53 @@
 .cfile-node.is-max .cfile-body:has(.web-view) {
   zoom: 1;
 }
+
+/* ── 插件面板（features/plugins/PluginPanel.tsx）────────────────────────────
+   iframe 铺满节点 body；sandbox 只给 allow-scripts。加载/出错态用节点里已有的弱层级文字。 */
+.plg-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.plg-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  padding: 16px;
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+}
+.plg-err {
+  color: var(--sem-danger);
+}
+.plg-retry {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--lift-2);
+  color: var(--text-1);
+  font-size: 12px;
+  cursor: pointer;
+}
+.plg-retry:hover {
+  border-color: rgba(var(--accent-rgb), 0.4);
+}
+/* picker 里自家插件行右侧的「对话」小按钮 */
+.cpk-plug-chat {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  color: var(--text-2);
+  font-size: 10.5px;
+}
+.cpk-plug-chat:hover {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.5);
+}

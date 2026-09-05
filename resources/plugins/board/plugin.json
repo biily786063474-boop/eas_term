@@ -1,0 +1,14 @@
+{
+  "name": "board",
+  "displayName": "看板",
+  "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+  "category": "Productivity",
+  "brandColor": "#5E6AD2",
+  "composerIcon": "./ui/icon.svg",
+  "defaultPrompt": "看看这个项目的看板，有什么该推进的？需要的话直接往看板加卡。",
+  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "panels": [
+    { "id": "main", "title": "看板", "tool": "board_show", "entry": "ui://board/panel", "defaultSize": { "w": 520, "h": 360 } }
+  ],
+  "permissions": { "canvas": ["canvas_open_file"] }
+}

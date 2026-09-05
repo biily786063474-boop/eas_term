@@ -1020,7 +1020,7 @@ const api = {
       panelId: string
       ctx: { nodeId: string; frameId: string; projectId: string | null; cwd: string }
     }): Promise<
-      | { ok: true; panelSession: string; url: string; tools: { name: string; description?: string; _meta?: Record<string, unknown> }[]; canvasAllow: string[]; title: string }
+      | { ok: true; panelSession: string; url: string; tools: { name: string; description?: string; _meta?: Record<string, unknown> }[]; canvasAllow: string[]; title: string; version: string }
       | { ok: false; error: string }
     > => ipcRenderer.invoke('plugin:panelOpen', args),
     panelClose: (panelSession: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('plugin:panelClose', panelSession),

@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { DirEntry, PluginInfo, RecentFile } from '../../../../shared/types'
+import type { DirEntry, PluginInfo, PluginPanelDef, RecentFile } from '../../../../shared/types'
 import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
 import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, PlugIcon, FilesIcon } from '../../ui/Icons'
@@ -48,6 +48,7 @@ export function CanvasFilePicker({
   rootName,
   onPick,
   onPickPlugin,
+  onOpenPanel,
   onClose
 }: {
   x: number
@@ -58,6 +59,8 @@ export function CanvasFilePicker({
   onPick: (filePath: string) => void
   /** 选了一个插件：调用方据此在这个 Frame 里开一个绑定该插件的 AI 对话节点 */
   onPickPlugin: (p: PluginInfo) => void
+  /** 自家插件（cli==='eas'）有面板时：打开面板（面板独立于会话，设计稿决定 #6） */
+  onOpenPanel?: (p: PluginInfo, panel: PluginPanelDef) => void
   onClose: () => void
 }): JSX.Element {
   const [mode, setMode] = useState<'tree' | 'recent' | 'plugin'>('tree')
@@ -296,12 +299,16 @@ export function CanvasFilePicker({
         {mode === 'plugin' && (
           <>
             {plugins === null && <div className="cpk-empty">读取中…</div>}
-            {plugins?.map((p) => (
+            {plugins?.map((p) => {
+              const panel = p.cli === 'eas' && onOpenPanel ? p.panels?.[0] : undefined
+              return (
               <button
                 key={p.id}
                 className="cpk-row"
                 onClick={() => {
-                  onPickPlugin(p)
+                  // 有面板的自家插件：主动作是打开面板；「对话」在右边的小按钮里
+                  if (panel) onOpenPanel!(p, panel)
+                  else onPickPlugin(p)
                   onClose()
                 }}
               >
@@ -313,9 +320,25 @@ export function CanvasFilePicker({
                   aria-hidden="true"
                 />
                 <span className="cpk-name">{p.displayName}</span>
-                <span className="cpk-time">{p.category ?? p.cli}</span>
+                {panel ? (
+                  <span
+                    role="button"
+                    className="cpk-plug-chat"
+                    data-tip="带着这个插件的工具开一个 AI 对话"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onPickPlugin(p)
+                      onClose()
+                    }}
+                  >
+                    对话
+                  </span>
+                ) : (
+                  <span className="cpk-time">{p.category ?? (p.cli === 'eas' ? '自家' : p.cli)}</span>
+                )}
               </button>
-            ))}
+              )
+            })}
             {plugins && !plugins.length && (
               <div className="cpk-empty">
                 还没装任何插件 —— 在终端里跑 <code>codex plugin add …</code> 或{' '}

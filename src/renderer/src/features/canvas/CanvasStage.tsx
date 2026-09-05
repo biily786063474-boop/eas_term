@@ -1729,6 +1729,22 @@ export function CanvasStage(): JSX.Element {
           root={picker.root}
           rootName={picker.rootName}
           onClose={() => setPicker(null)}
+          onOpenPanel={(plug, panel) => {
+            // 面板 = 组件节点 plugin-panel，身份在 props（设计稿决定 #5/#6）。不起会话。
+            const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
+            if (!frame) return
+            useStore
+              .getState()
+              .addComponentNode(
+                picker.frameId,
+                'plugin-panel',
+                picker.wx - frame.x - panel.defaultSize.w / 2,
+                picker.wy - frame.y - 15,
+                panel.defaultSize.w,
+                panel.defaultSize.h,
+                { pluginId: plug.id, panelId: panel.id }
+              )
+          }}
           onPickPlugin={(plug) => {
             // 插件插进画布 = 开一个**绑定了它**的 AI 对话节点。
             // 插件本身没有界面可渲染（两个生态的插件都不含 UI 代码，2026-08-24 实测），
@@ -1745,7 +1761,8 @@ export function CanvasStage(): JSX.Element {
               {
                 kind: 'agent',
                 cwd: picker.root,
-                cli: plug.cli,
+                // 自家插件（eas）harness 无关：cli 不钉死，走默认挑选（设计稿决定 #7）
+                ...(plug.cli === 'eas' ? {} : { cli: plug.cli }),
                 pluginId: plug.id,
                 ...(plug.defaultPrompt ? { initialMessage: plug.defaultPrompt } : {})
               },
