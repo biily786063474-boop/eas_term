@@ -3345,6 +3345,9 @@
   vertical-align: top;
   padding: 4px 6px;
   border-top: 1px solid var(--glass-border);
+  /* table-layout: fixed 下长参数名（mcp__*stable*diffusion* / --disable image_generation）
+     会撑破格子，允许任意位置断行 */
+  overflow-wrap: anywhere;
 }
 .re-matrix thead th {
   border-top: none;
