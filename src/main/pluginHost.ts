@@ -19,6 +19,7 @@ import path from 'node:path'
 import { HostRegistry } from './hostRegistry.ts'
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
+import { recipients } from './panelFanout.ts'
 import { findPlugin } from './plugins'
 import { CANVAS_CALL_ALLOWLIST, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND } from '../shared/pluginProtocol.ts'
 import type { PluginInfo } from '../shared/types'
@@ -115,9 +116,10 @@ function notifyPanel(p: Panel, method: string, params: unknown): void {
   wc.send('plugin:panelNotify', { panelSession: p.session, method, params })
 }
 
-/** 一次 tools/call 完成（不管谁调的）→ 这个插件的所有面板都收到 tool-result */
-function broadcastToolResult(pluginName: string, name: string, args: unknown, result: unknown): void {
-  for (const p of panels.values()) if (p.pluginName === pluginName) notifyPanel(p, 'ui/notifications/tool-result', { name, arguments: args, result })
+/** 一次 tools/call 完成 → 这个插件的面板收到 tool-result。**调用者面板自己不收**（panelFanout.ts：
+ *  否则 refresh → tools/call → 广播 → refresh 无限循环，2026-09-05 真机撞到）。模型那边调的传 null。 */
+function broadcastToolResult(pluginName: string, name: string, args: unknown, result: unknown, excludeSession: string | null): void {
+  for (const p of recipients(panels.values(), pluginName, excludeSession)) notifyPanel(p, 'ui/notifications/tool-result', { name, arguments: args, result })
 }
 
 function withEasMeta(params: unknown, ctx: { cwd: string; frameId?: string; nodeId?: string; projectId?: string | null }): Record<string, unknown> {
@@ -192,7 +194,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
         const full = withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
         const result = await h.client.request('tools/call', full, 10 * 60 * 1000)
-        broadcastToolResult(p.pluginName, name, params.arguments ?? {}, result)
+        broadcastToolResult(p.pluginName, name, params.arguments ?? {}, result, p.session)
         return { ok: true, result }
       }
       case 'resources/read': {
@@ -262,7 +264,7 @@ export async function pluginRpcFromShim(body: {
       case 'tools/call': {
         const toolName = String(params.name ?? '')
         const result = await h.client.request('tools/call', params, 10 * 60 * 1000)
-        broadcastToolResult(name, toolName, params.arguments ?? {}, result)
+        broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }
       case 'resources/read':

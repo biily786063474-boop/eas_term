@@ -52,7 +52,11 @@ window.addEventListener('message', (e) => {
     m.error ? p.reject(Object.assign(new Error(m.error.message), { code: m.error.code })) : p.resolve(m.result);
     return;
   }
-  if (m.method === 'ui/notifications/tool-result') { refresh(); }
+  if (m.method === 'ui/notifications/tool-result') {
+    // 只对**写类**工具刷新；board_list 的结果本身就是刷新，跟着它再刷会和宿主的广播互相喂成循环
+    const n = m.params && m.params.name;
+    if (n === 'board_add' || n === 'board_move' || n === 'board_remove') refresh();
+  }
   if (m.method === 'ui/notifications/host-context-changed') { applyContext(m.params); refresh(); }
   if (m.method === 'ui/resource-teardown') { foot('宿主已断开'); }
 });
