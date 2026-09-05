@@ -89,9 +89,7 @@ export interface SessionRecord {
   askFirst?: boolean
   /** 角色契约原文。**只在 spawn 时用一次**（拼进系统提示） */
   roleContract?: string
-  /** 角色的工具边界。**每次 spawn 都要用**（包括恢复会话） */
-  roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
-  /** 角色的能力意图（v2）。**每次 spawn 都要用**（包括恢复会话） */
+  /** 角色的能力意图。**每次 spawn 都要用**（包括恢复会话） */
   roleBounds?: RoleBounds
   /** 本机 MCP server 名清单，起会话时算一次，restart 沿用 */
   knownMcpServers?: string[]
@@ -288,7 +286,6 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     skipApprovalHook: s.skipApprovalHook,
     askFirst: s.askFirst,
     roleContract: s.roleContract,
-    roleTools: s.roleTools,
     roleBounds: s.roleBounds,
     knownMcpServers: s.knownMcpServers
   }

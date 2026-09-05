@@ -244,59 +244,30 @@ export interface StartOpts {
    *  「换角色 = 结束当前会话重开」（用户 2026-09-03 在 (a)(b)(c) 里选了 b）。
    *  别在这里加「中途生效」的错觉。 */
   roleContract?: string
-  /** 角色的工具边界（`AgentRole.tools`）。
+  /** 角色的能力意图 + 原始逃生口。由 `shared/roleBinding.ts` 的 `bindRole` 翻成各家参数。
    *
    *  ⚠️ **和 roleContract 有一条关键区别：它回溯时也要拼。**
    *  契约走系统提示，而 `--resume` 不重放系统提示，加了也是白加；
-   *  工具边界是 **CLI 层的强制规则**，每次启动都重新生效 ——
+   *  能力边界是 **CLI 层的强制规则**，每次启动都重新生效 ——
    *  恢复会话时不拼，等于把护栏卸了。（这条结论来自终端那条路，
    *  `CanvasAgentBar.buildClaudeCmd` 里有同样的注释。）
    *
-   *  三个 CLI 能力不对等，各自的落法见各 adapter：
+   *  三个 CLI 能力不对等，各自的落法见 `bindRole`：
    *    · Claude —— `--allowedTools` / `--disallowedTools`，支持工具名与通配
-   *    · Codex  —— **没有工具级开关**（实测 tools.deny / allowed_tools 都是
-   *                unknown field），只能整个关掉某个 MCP server
+   *    · Codex  —— `--disable` 关内置能力、`-s read-only` 挡写、按 server 名整个关掉
    *    · omp    —— `--tools` 是**白名单**，与这里的黑名单语义相反，要做减法 */
-  roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
-  /** 角色的能力意图 + 原始逃生口（v2）。由 `shared/roleBinding.ts` 的 `bindRole` 翻成各家参数。
-   *  **恢复会话时也要拼**（同 roleTools 那条理由：它是 CLI 层的强制规则，不是系统提示）。 */
   roleBounds?: RoleBounds
   /** 本机实际配置的 MCP server 名（Codex 用：名字不存在会拒绝启动，下发前按它过滤；
    *  通配 → server 名的降级匹配也靠它）。由 session.ts 起会话时算好。 */
   knownMcpServers?: string[]
 }
 
-/** 把 IPC 传来的 `roleTools` 洗成可信的形状。
+/** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**
+ *  params 来自 `unknown`（渲染进程可以传任何东西）。三条规矩：不是对象当没给；
+ *  清单混进非字符串整条丢（不做「过滤掉坏元素、留下好的」那种部分接受——
+ *  调用方会以为限制生效了，实际上少了几条，而没有任何报错）；空的当没有。caps 只认 `false`。
  *
- *  **它直接决定安全边界，所以不猜、不修补、不部分接受。**
- *  params 来自 `unknown`（渲染进程可以传任何东西）。三条规矩：
- *
- *  1. 不是对象、或三个字段都不是字符串数组 → 一律 `undefined`（当没给）。
- *  2. **数组里混进非字符串就把那一条整个丢掉**，不做「过滤掉坏元素、留下好的」——
- *     那种「部分接受」在安全边界上最危险：调用方以为限制生效了，
- *     实际上少了几条，而没有任何报错。
- *  3. 空数组等于没有那一条。
- *
- *  放在 shared 而不是 session.ts：这里零依赖、进得了 `node --test`，
- *  而 session.ts 拖着 electron。 */
-export function safeRoleTools(raw: unknown): StartOpts['roleTools'] {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
-  const r = raw as Record<string, unknown>
-  const list = (v: unknown): string[] | undefined => {
-    if (!Array.isArray(v) || !v.length) return undefined
-    // 混进非字符串 → 整条丢掉（见上面第 2 条）
-    return v.every((x) => typeof x === 'string' && x) ? (v as string[]) : undefined
-  }
-  const out = {
-    allow: list(r.allow),
-    deny: list(r.deny),
-    denyServers: list(r.denyServers)
-  }
-  return out.allow || out.deny || out.denyServers ? out : undefined
-}
-
-/** `roleBounds` 的 IPC 清洗。三条规矩与 safeRoleTools 相同：不是对象当没给；
- *  清单混进非字符串整条丢（不部分接受）；空的当没有。caps 只认 `false`。 */
+ *  放在 shared 而不是 session.ts：这里零依赖、进得了 `node --test`，而 session.ts 拖着 electron。 */
 export function safeRoleBounds(raw: unknown): RoleBounds | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const r = raw as { caps?: unknown; raw?: unknown }

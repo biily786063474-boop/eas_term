@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
-import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleTools, safeRoleBounds } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleBounds } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -618,29 +618,7 @@ test('Codex：denyServers 按 knownMcpServers 过滤后才下发 enabled=false �
   assert.ok(!args.some((a) => a.includes('手误')))
 })
 
-// ── safeRoleTools：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────
-
-test('不是对象 → undefined（当没给）', () => {
-  for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleTools(v), undefined)
-})
-
-test('**数组里混进非字符串 → 那一条整个丢掉**，不做部分接受', () => {
-  // 「过滤掉坏元素、留下好的」在安全边界上最危险：调用方以为限制生效了，
-  // 实际上少了几条，而没有任何报错。
-  assert.equal(safeRoleTools({ deny: ['Bash', 123] }), undefined)
-  assert.deepEqual(safeRoleTools({ deny: ['Bash'], denyServers: [null] })?.denyServers, undefined)
-})
-
-test('正常形状原样通过', () => {
-  const got = safeRoleTools({ deny: ['Bash'], denyServers: ['x'], allow: ['Read'] })
-  assert.deepEqual(got, { allow: ['Read'], deny: ['Bash'], denyServers: ['x'] })
-})
-
-test('空数组等于没有那一条；三条都空 → undefined', () => {
-  assert.equal(safeRoleTools({ deny: [], denyServers: [], allow: [] }), undefined)
-})
-
-// ── safeRoleBounds：v2 的 IPC 清洗，规矩与 safeRoleTools 相同 ──────────────────
+// ── safeRoleBounds：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────
 test('safeRoleBounds：不是对象 → undefined', () => {
   for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleBounds(v), undefined)
 })

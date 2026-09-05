@@ -30,6 +30,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
 import type { AgentProbe, AgentRole, AgentKind } from '../../../../shared/types'
+import { bindRole } from '../../../../shared/roleBinding'
 import {
   SparkleIcon,
   UndoIcon,
@@ -84,7 +85,8 @@ function buildClaudeCmd(
   cont?: boolean,
   sessionId?: string,
   contractFile?: string | null,
-  tools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
+  /** `bindRole(...).claude.deny` */
+  deny: string[] = []
 ): string {
   const p = ['claude']
   if (cont) p.push(...(sessionId ? ['--resume', sessionId] : ['-c']))
@@ -94,38 +96,32 @@ function buildClaudeCmd(
   // 角色契约走文件而不是内联：内联会让命令变成难读的一长条，且契约里的换行/引号都要转义。
   // 回溯时不拼——--resume 不重放 system prompt，加了也是白加，反而让人误以为改角色生效了。
   if (!cont && contractFile) p.push('--append-system-prompt-file', shq(contractFile))
-  // 工具边界：回溯时也要拼 —— 它是 CLI 层的强制规则，和 system prompt 不同，
-  // 每次启动都重新生效，不拼等于恢复会话时把护栏卸了
-  const deny = [...(tools?.deny ?? []), ...(tools?.denyServers ?? []).map((n) => `mcp__${n}__*`)]
-  // 变长参数（<tools...>）放最后：夹在中间会把后面的选项一起吞掉，
-  // --mcp-config 那次已经栽过一回。通配符必须引起来，否则 zsh 会先替我们展开成文件名
-  if (tools?.allow?.length) p.push('--allowedTools', ...tools.allow.map(shq))
+  // 能力边界：回溯时也要拼 —— 它是 CLI 层的强制规则，每次启动都重新生效。
+  // 变长参数（<tools...>）放最后：夹在中间会把后面的选项一起吞掉。通配符必须引起来，否则 zsh 会先展开成文件名
   if (deny.length) p.push('--disallowedTools', ...deny.map(shq))
   return p.join(' ')
 }
 
-/** 拼 Codex 启动命令。回溯 = `codex resume --last`（沿用原会话配置）；
- *  全新 = `codex -m <model> -c model_reasoning_effort=<effort>`（本机 codex 0.145 核对，权限已取消不拼 sandbox/approval）。 */
+/** 拼 Codex 启动命令。回溯 = `codex resume`（沿用原会话配置）；
+ *  全新 = `codex -m <model> -c model_reasoning_effort=<effort>` 加角色边界。 */
 function buildCodexCmd(
   model?: string,
   effort?: string,
   cont?: boolean,
   sessionId?: string,
   contract?: string,
-  denyServers?: string[]
+  /** `bindRole(...).codex`（denyServers 已按本机清单过滤） */
+  codex: { disable: string[]; disableServers: string[]; sandbox: 'read-only' | undefined } = { disable: [], disableServers: [], sandbox: undefined }
 ): string {
-  // 回溯：有绑定就精确恢复这个终端自己的会话，没有才回落「最近一个」
   if (cont) return sessionId ? `codex resume ${sessionId}` : 'codex resume --last'
   const p = ['codex']
   if (model) p.push('-m', model)
   if (effort) p.push('-c', `model_reasoning_effort=${effort}`)
-  // Codex 没有 --append-system-prompt-file 这种文件参数（experimental_instructions_file
-  // 在 0.145 里已被移除，实测报 unknown configuration field），只能内联 -c instructions=。
-  // 因此压成单行并去掉双引号，避免把 -c 的取值解析弄乱。
+  // 用户此前取消了终端的权限档位，所以这里**只在角色要求只读时**才拼 -s，其余照旧不拼
+  if (codex.sandbox) p.push('-s', codex.sandbox)
   if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
-  // Codex 没有工具级 allow/deny（实测 tools.deny / allowed_tools 都是 unknown field），
-  // 能做的只有整个关掉某个 MCP server。粒度比 Claude 粗，UI 里要如实说明
-  for (const n of denyServers ?? []) p.push('-c', `mcp_servers.${n}.enabled=false`)
+  for (const f of codex.disable) p.push('--disable', f)
+  for (const n of codex.disableServers) p.push('-c', `mcp_servers.${n}.enabled=false`)
   return p.join(' ')
 }
 
@@ -352,16 +348,15 @@ export function CanvasAgentBar({
     }
     // 角色契约只在**全新启动**时拼进去：resume 不重放系统提示词，回溯时加了也是白加
     const contract = !cont && role?.contract.trim() ? role.contract : ''
+    const bounds = role && (role.caps || role.raw) ? { caps: role.caps, raw: role.raw } : undefined
     let cmd: string
     if (kind === 'claude') {
       const f = contract ? await window.api.roles.contractFile(role!.id) : null
-      cmd = buildClaudeCmd(model, effort, cont, cont ? sessionId : sid, f, role?.tools)
+      cmd = buildClaudeCmd(model, effort, cont, cont ? sessionId : sid, f, bindRole(bounds, 'claude').claude.deny)
     } else {
-      // 只对**真实配置过**的 server 下发禁用：名字不存在时 codex 会直接拒绝启动
-      // （报 invalid transport），一个笔误就能让终端起不来
-      const want = role?.tools?.denyServers ?? []
-      const have = want.length ? await window.api.agent.codexServers() : []
-      cmd = buildCodexCmd(model, effort, cont, sessionId, contract, want.filter((n) => have.includes(n)))
+      // 名字不存在时 codex 会直接拒绝启动（invalid transport），先读真实清单再交给 bindRole 过滤
+      const have = bounds ? await window.api.agent.codexServers() : []
+      cmd = buildCodexCmd(model, effort, cont, sessionId, contract, bindRole(bounds, 'codex', { knownMcpServers: have }).codex)
     }
     // 「启动」也是一次发送 —— 麦克风开着的话同样要收掉，
     // 否则起完 agent 麦还在录，下一句话被接到输入框里

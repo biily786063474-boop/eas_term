@@ -55,7 +55,7 @@ import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
-import { AGENT_CHAT_EVENT_CHANNEL, safeRoleTools, safeRoleBounds } from '../../shared/agentChat.ts'
+import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers } from '../agent.ts'
 import { agentMcpConfigPath } from '../mcpBridge.ts'
@@ -1220,10 +1220,8 @@ export function registerAgentChatHandlers(): void {
       // 非字符串一律当没给 —— 不猜、不转换。
       roleContract:
         typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined,
-      // 工具边界。**只收字符串数组**，任何别的形状一律当没给 ——
+      // 角色能力意图。**只收清洗过的形状**，任何别的形状一律当没给 ——
       // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
-      roleTools: safeRoleTools(p.roleTools),
-      // 角色能力意图（v2）。同 roleTools：只收清洗过的形状，不猜。
       roleBounds: safeRoleBounds(p.roleBounds),
       // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
       // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
