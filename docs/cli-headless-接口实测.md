@@ -182,3 +182,23 @@ codex app-server generate-ts                        # 直接生成 TypeScript �
 
 **要重新接的前提**：DeepSeek 官方给出流式或结构化输出。到那时按
 `.claude/skills/agent-onboarding` 的手册走一遍即可，adapter 契约那套是现成的。
+
+---
+
+## 三、Codex 0.147.0 补测（2026-09-05，为角色卡片绑定层设计做的探针）
+
+全部 `codex exec --ephemeral --skip-git-repo-check -s read-only` 在 `/tmp` 下跑；
+macOS 没有 `timeout`，用 `perl -e 'alarm N; exec @ARGV' --` 代替。
+
+| 探针 | 结果 |
+|---|---|
+| `-c bogus_field_xyz=1` | **不报错，照常起会话** —— `-c` 不校验未知键，写错键名静默无效（旧注释「unknown configuration field」已不成立） |
+| `-c developer_instructions="…PINEAPPLE…"` | 生效，回 PINEAPPLE |
+| `-c instructions="…MANGO…"`（现用） | 生效，回 MANGO |
+| `-c model_instructions_file=<文件>` | 生效，回 KIWI；**整份替换**基础指令，不能放契约 |
+| `--disable shell_tool` | **shell 工具真的消失**（回 NO_SHELL_TOOL；对照组回 EAS_SHELL_OK） |
+| `-c mcp_servers.x.disabled_tools=["a"]` | 键被解析接受（配合缺失指令文件早退验证），过滤效果未验 |
+| `codex features list` | `image_generation` stable **默认开**、`hooks` stable 开、`shell_tool` stable 开 |
+| 二进制 strings | hooks 事件名 PreToolUse / PermissionRequest / PostToolUse / SessionStart / UserPromptSubmit / SubagentStart / SubagentStop；读 `hooks.json`；有 `--dangerously-bypass-hook-trust` 说明带信任机制 |
+
+结论落在 `docs/superpowers/specs/2026-09-05-角色卡片三harness绑定层-design.md`。

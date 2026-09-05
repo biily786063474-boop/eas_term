@@ -855,12 +855,19 @@
   transition: transform 0.12s;
 }
 
-.gantt-dia.ask {
-  top: 1px;
+/* 一枚一个 commit，居中在带子里 */
+.gantt-dia.commit {
+  top: 5px;
+  background: var(--fg-dim);
+  box-shadow: 0 0 0 1.5px var(--pane-solid);
 }
-
-.gantt-dia.reply {
-  top: 9px;
+/* 打了 tag 的版本点：大一号、强调色。**没 tag 的项目就没有这一档**，这是默认情况。 */
+.gantt-dia.version {
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+  top: 3.5px;
+  background: var(--accent);
 }
 
 .gantt-dia:hover {
@@ -868,15 +875,19 @@
   z-index: 3;
 }
 
-/* 蓝＝你发的，绿＝回完。两种一定要能一眼分开，否则这个模式没有意义 */
-.gantt-dia.ask {
-  background: #7dd3fc;
-  box-shadow: 0 0 0 1.5px var(--pane-solid);
+/* 浮层里的 tag 与元信息 */
+.gantt-pop-tag {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.16);
+  color: var(--accent);
+  font-size: 10px;
 }
-
-.gantt-dia.reply {
-  background: #34d399;
-  box-shadow: 0 0 0 1.5px var(--pane-solid);
+.gantt-pop-meta {
+  margin-top: 4px;
+  color: var(--fg-dim);
+  font-size: 10.5px;
 }
 
 /* 阶段浮层里的摘要行与前三条 */

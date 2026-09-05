@@ -94,6 +94,8 @@ import {
 } from './GanttNavigator'
 import { GanttJumpMenu } from './GanttJumpMenu'
 import type { Phase } from './phases'
+import { commitMarks, type CommitMark } from './commitMarks'
+import type { GitCommit } from '../../../../shared/types'
 import { fmtDur, groupPhases } from './phases'
 import './gantt.css'
 
@@ -111,7 +113,7 @@ const SPAN_OPTIONS = [
 const VIEW_OPTIONS: { key: GanttViewMode; label: string; tip: string }[] = [
   { key: 'session', label: '会话', tip: '一根条 = 一次「你发出去的话 → agent 干完」' },
   { key: 'project', label: '项目', tip: '一个项目一行，一根条 = 一个工作阶段' },
-  { key: 'milestone', label: '里程碑', tip: '每次发送 / 每次返回各插一枚菱形' }
+  { key: 'milestone', label: '里程碑', tip: '每个 commit 插一枚菱形，打了 tag 的大一号' }
 ] as const
 
 /** 连续缩放的两端硬边界：最细一小时一屏，最粗跟"3 天"预设看齐——用户要求就是
@@ -348,6 +350,8 @@ function findCanvasNodeByLeaf(
 
 export function GanttStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
+  /** 里程碑模式：每个项目的 git 提交，按 projectId 索引。没仓库 / 读失败 = 空数组，那一行就没菱形。 */
+  const [commitsByProject, setCommitsByProject] = useState<Map<string, GitCommit[]>>(new Map())
   const setViewMode = useStore((s) => s.setViewMode)
   const setBoardFullscreen = useStore((s) => s.setBoardFullscreen)
   // 三种跳转模式各自要用的 store 能力（Task 22 新增）——setActiveLeaf 切到分屏
@@ -405,6 +409,8 @@ export function GanttStage(): JSX.Element {
   const [hover, setHover] = useState<{
     t?: GanttTask
     ph?: Phase
+    /** 里程碑模式的一枚 commit */
+    c?: CommitMark
     x: number
     top: number
     bottom: number
@@ -782,6 +788,27 @@ export function GanttStage(): JSX.Element {
 
   const phaseMode = ganttViewMode !== 'session'
   const rows = projects.filter((p) => (phaseMode ? visiblePhases : byProject).has(p.id))
+
+  // 里程碑模式才拉提交（别的模式用不上，白跑 git）。按行里的项目集合触发，
+  // 不按每次渲染——rows 是每次新算的数组，直接进依赖会无限重拉。
+  const rowKey = rows.map((p) => p.id + '\n' + p.path).join('\x1f')
+  useEffect(() => {
+    if (ganttViewMode !== 'milestone' || !rowKey) return
+    let live = true
+    const entries = rowKey.split('\x1f').map((x) => x.split('\n') as [string, string])
+    void Promise.all(
+      entries.map(async ([id, path]) => {
+        // 400 条足够盖住一个月的跨度；再多就是在读整个仓库史了
+        const list = await window.api.git.log(path, 400).catch(() => [] as GitCommit[])
+        return [id, list] as const
+      })
+    ).then((pairs) => {
+      if (live) setCommitsByProject(new Map(pairs))
+    })
+    return () => {
+      live = false
+    }
+  }, [ganttViewMode, rowKey])
 
   // 提交视图后（拖拽松手 / 点导航带跳转 / 切跨度），把预览阶段留下的临时 transform
   // 清掉。用 layout 版本的 effect：赶在浏览器绘制前，跟"React 已经按新 t0 重排好
@@ -1301,15 +1328,13 @@ export function GanttStage(): JSX.Element {
     </div>
   )
 
-  /** 里程碑（里程碑模式）：阶段画成淡带，每条记录在它的**开始**和**结束**
-   *  各插一枚菱形 —— 蓝＝你发的，绿＝回完。
+  /** 里程碑（里程碑模式）：阶段画成淡带，**每个 commit 插一枚菱形**，打了 tag 的大一号。
    *
-   *  **只画时间点，不画回复内容。** 回复文本甘特图从来没存过：终端那半
-   *  压根没有（输出只在 xterm 的 scrollback 里，从不落盘），AI 对话那半
-   *  虽然 agent-history/ 里有 turns，但 Turn 结构没有时间戳（见
-   *  features/agentChat/reduce.ts），对不到具体是哪一条的回复。
-   *  硬对只能靠数序号，而两边的条数会因为各自的裁剪/TTL 而对不齐。 */
-  const renderMilestoneLanes = (phases: Phase[]): JSX.Element => (
+   *  2026-09-05 之前是每次发送/返回各插一枚——但回复内容从来没存过（终端输出不落盘，
+   *  AI 对话的 Turn 没时间戳），那些菱形只有时间点没有意义。commit 天然是「功能落地」
+   *  的时间点，还自带 subject。**版本号不是每个项目都有**：按纯 commit 画，有 tag 才加粗，
+   *  没仓库的项目这一行就只有淡带、没菱形，如实空着。判断层在 commitMarks.ts。 */
+  const renderMilestoneLanes = (projectId: string, phases: Phase[]): JSX.Element => (
     <div className="gantt-lanes">
       {ticks.map((t) => (
         <div key={t} className="gantt-vline" style={{ left: pct(t) + '%' }} />
@@ -1332,33 +1357,20 @@ export function GanttStage(): JSX.Element {
             />
           )
         })}
-        {phases.flatMap((ph) =>
-          ph.tasks.flatMap((t) => {
-            const marks: JSX.Element[] = []
-            const put = (at: number, kind: 'ask' | 'reply'): void => {
-              if (at < t0 || at > t1) return
-              marks.push(
-                <div
-                  key={t.id + kind}
-                  className={`gantt-dia ${kind}`}
-                  style={{ left: pct(at) + '%' }}
-                  onMouseEnter={(ev) => {
-                    cancelHide()
-                    const r = ev.currentTarget.getBoundingClientRect()
-                    setHover({ t, x: ev.clientX, top: r.top, bottom: r.bottom })
-                  }}
-                  onMouseLeave={scheduleHide}
-                  onClick={() => jump(t)}
-                />
-              )
-            }
-            put(t.startAt, 'ask')
-            // 没正常结束的不插「回完」那一枚 —— 它还没回完，或者结束时间不可知。
-            // 插一枚在 now 上等于宣称「刚回完」，那是编的。
-            if (t.endAt !== null) put(t.endAt, 'reply')
-            return marks
-          })
-        )}
+        {commitMarks(commitsByProject.get(projectId) ?? [], t0, t1).map((c) => (
+          <div
+            key={c.hash}
+            className={`gantt-dia commit${c.isVersion ? ' version' : ''}`}
+            style={{ left: pct(c.at) + '%' }}
+            title={c.tags.length ? c.tags.join(' · ') : undefined}
+            onMouseEnter={(ev) => {
+              cancelHide()
+              const r = ev.currentTarget.getBoundingClientRect()
+              setHover({ c, x: ev.clientX, top: r.top, bottom: r.bottom })
+            }}
+            onMouseLeave={scheduleHide}
+          />
+        ))}
       </div>
     </div>
   )
@@ -1369,7 +1381,7 @@ export function GanttStage(): JSX.Element {
   const renderPhaseRow = (projectId: string): JSX.Element => {
     const phases = visiblePhases.get(projectId) ?? []
     return ganttViewMode === 'milestone'
-      ? renderMilestoneLanes(phases)
+      ? renderMilestoneLanes(projectId, phases)
       : renderPhaseLanes(phases)
   }
 
@@ -1382,7 +1394,7 @@ export function GanttStage(): JSX.Element {
             ? '每根条是一次「你发出去的话 → agent 干完」'
             : ganttViewMode === 'project'
               ? '每根条是一个工作阶段（静默满 30 分钟就算一段结束）'
-              : '菱形：蓝＝你发的，绿＝回完；淡带是一个工作阶段'}
+              : '菱形：一枚一个 commit（打了 tag 的大一号）；淡带是一个工作阶段'}
         </div>
         <div className="gantt-head-tools">
           {/* 主区画什么。跟跨度切换用同一套 .gantt-span-toggle 外观 ——
@@ -1548,6 +1560,18 @@ export function GanttStage(): JSX.Element {
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
         >
+          {hover.c && (
+            <>
+              <div className="gantt-pop-time">
+                {hhmm(hover.c.at)}
+                {hover.c.tags.length > 0 && <span className="gantt-pop-tag">{hover.c.tags.join(' · ')}</span>}
+              </div>
+              <div className="gantt-pop-text">{hover.c.subject}</div>
+              <div className="gantt-pop-meta">
+                {hover.c.author} · 改动 {hover.c.files} 个文件 · {hover.c.hash.slice(0, 7)}
+              </div>
+            </>
+          )}
           {hover.t && (
           <>
           <div className="gantt-pop-hd">
