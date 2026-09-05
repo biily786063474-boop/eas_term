@@ -104,7 +104,11 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       codexDisable.push('image_generation')
       const hit = matchKnown(IMAGE_MCP_PATTERNS)
       codexServers.push(...hit)
-      line('imageGen', 'degraded', `--disable image_generation（内置生图，效果未验）；按名关掉 MCP server：${hit.join(', ') || '无匹配'}`)
+      line(
+        'imageGen',
+        'degraded',
+        `--disable image_generation（2026-09-05 实测未摘掉内置生图，模型仍自称有 imagegen 工具，仅按名关 MCP server）：${hit.join(', ') || '无匹配'}`
+      )
     } else {
       ompPatterns.push(...IMAGE_MCP_PATTERNS)
       line('imageGen', 'degraded', '无内置生图；图像类 MCP server 按名整个不连')

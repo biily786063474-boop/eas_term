@@ -253,7 +253,7 @@ export interface StartOpts {
    *  `CanvasAgentBar.buildClaudeCmd` 里有同样的注释。）
    *
    *  三个 CLI 能力不对等，各自的落法见 `bindRole`：
-   *    · Claude —— `--allowedTools` / `--disallowedTools`，支持工具名与通配
+   *    · Claude —— `--disallowedTools`，支持工具名与通配
    *    · Codex  —— `--disable` 关内置能力、`-s read-only` 挡写、按 server 名整个关掉
    *    · omp    —— `--tools` 是**白名单**，与这里的黑名单语义相反，要做减法 */
   roleBounds?: RoleBounds
@@ -275,6 +275,16 @@ export function safeRoleBounds(raw: unknown): RoleBounds | undefined {
     if (!Array.isArray(v) || !v.length) return undefined
     return v.every((x) => typeof x === 'string' && x) ? (v as string[]) : undefined
   }
+  // `raw` 逃生口的条目被 bindRole 原样拼进 CLI 参数（见 roleBinding.ts 的 raw.* 分支）——
+  // 一个 `-` 开头的条目不是「一个要 deny 的名字」，是一个新的 flag：`raw.claude.deny`
+  // 里混进一条 `--foo` 会变成 `--disallowedTools Bash --foo`，被 CLI 解析成我们没打算
+  // 传的选项。这里丢弃这类条目；过滤完空了就当没给这条（不做「静默变成半份限制」的部分接受）。
+  const rawList = (v: unknown): string[] | undefined => {
+    const l = list(v)
+    if (!l) return undefined
+    const filtered = l.filter((x) => !x.startsWith('-'))
+    return filtered.length ? filtered : undefined
+  }
   const out: RoleBounds = {}
   if (r.caps && typeof r.caps === 'object' && !Array.isArray(r.caps)) {
     const c = r.caps as Record<string, unknown>
@@ -291,9 +301,9 @@ export function safeRoleBounds(raw: unknown): RoleBounds | undefined {
   if (r.raw && typeof r.raw === 'object' && !Array.isArray(r.raw)) {
     const x = r.raw as Record<string, Record<string, unknown> | undefined>
     const rawOut: RoleRaw = {}
-    const cd = list(x.claude?.deny)
-    const xd = list(x.codex?.disable)
-    const od = list(x.omp?.removeTools)
+    const cd = rawList(x.claude?.deny)
+    const xd = rawList(x.codex?.disable)
+    const od = rawList(x.omp?.removeTools)
     if (cd) rawOut.claude = { deny: cd }
     if (xd) rawOut.codex = { disable: xd }
     if (od) rawOut.omp = { removeTools: od }

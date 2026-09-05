@@ -305,7 +305,7 @@ export function CanvasRoleEditor({
                   {
                     k: 'imageGen',
                     label: '不许生图',
-                    how: 'Claude 按通配禁图像类 MCP · Codex 关内置生图（效果待验）并按名关 MCP server · 默认 harness 按名不连'
+                    how: 'Claude 按通配禁图像类 MCP · Codex 的内置生图开关实测未生效，只按名关 MCP server · 默认 harness 按名不连'
                   }
                 ] as const
               ).map((it) => {

@@ -11,6 +11,7 @@ import {
   applyParamChange,
   type SessionRecord
 } from './sessionState.ts'
+import type { RoleBounds } from '../../shared/roleBinding.ts'
 
 const base = (over: Partial<SessionRecord> = {}): SessionRecord => ({
   id: 's1',
@@ -198,6 +199,26 @@ test('[补] 改 model/effort 触发的 restart（决定 3 那条路径）同样�
   const plan = planSend(s, 2_000_000)
   assert.equal(plan.action, 'restart')
   assert.equal(plan.opts.skipApprovalHook, true, '不能因为这次 restart 是"改模型"触发的，就把用户拒绝过的选择弄丢')
+})
+
+// ---- 补：roleBounds / knownMcpServers 字段——跟 sandbox / skipApprovalHook 同一个理由
+// 必须原样存在 SessionRecord 上并被 effectiveOpts 带过 restart：Codex 的 exec 每条消息
+// 都会触发 restart，这两个字段若不随着走，角色的能力边界（caps）与 MCP 白名单就会从
+// 第二条消息起悄悄消失——界面上角色卡片看起来还选着，实际护栏已经不在了。 ----
+
+test('[补] restart 时 opts 带上 roleBounds——丢了等于角色的 caps 从第二条消息起静默失效', () => {
+  const bounds: RoleBounds = { caps: { write: false } }
+  const s = base({ alive: false, resumeId: 'sess-abc', roleBounds: bounds })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.deepEqual(plan.opts.roleBounds, bounds)
+})
+
+test('[补] restart 时 opts 带上 knownMcpServers——丢了会让 Codex 的 MCP 白名单从第二条消息起静默消失', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', knownMcpServers: ['eas-term', 'bizone-canvas'] })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.deepEqual(plan.opts.knownMcpServers, ['eas-term', 'bizone-canvas'])
 })
 
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────

@@ -12,6 +12,9 @@
 // 存档 version 2（2026-09-05）：tools 字段换成 caps/raw，读到 v1 时逐条迁移并在下次 save 时写回。
 // 读的时候逐条 sanitize —— 这文件用户和外部工具都能改，一条坏数据不该让整个角色系统失效
 // （同 canvasSlice 里 sanitizeCanvas 的思路，那个教训已经付过学费）。
+// ⚠️ **反向不兼容**：v2 存档被 0.4.78 及更早版本读到会把 caps 整份丢掉（那版按 v1 清洗且不看
+// version）。表现是勘探员/验官的写保护、画师的生图限制静默解除而界面一切正常——回滚旧版前
+// 先从 .eas-backup 取回那份存档。
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import os from 'os'

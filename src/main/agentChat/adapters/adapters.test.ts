@@ -250,6 +250,16 @@ test('[补充] Codex 不传 sandbox 时默认 workspace-write；传了就原样�
   assert.equal(withSandbox[i2 + 1], 'read-only')
 })
 
+test('[补] 角色的 caps.write:false 永远压过显式传的 sandbox——不许角色的写保护被调用方的沙箱参数覆盖掉', () => {
+  const args = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    sandbox: 'danger-full-access',
+    roleBounds: { caps: { write: false } }
+  }).args
+  const i = args.indexOf('--sandbox')
+  assert.equal(args[i + 1], 'read-only', '角色 caps.write:false 必须赢过显式传入的 danger-full-access')
+})
+
 test('[补充] Codex 的 model 用 -m 传，且带上实际取值', () => {
   const args = getAdapter('codex')!.buildArgs({ cwd: '/x', model: 'gpt-5-codex' }).args
   const i = args.indexOf('-m')
@@ -631,6 +641,11 @@ test('safeRoleBounds：caps 只认 false；混进非字符串的清单整条丢'
 test('safeRoleBounds：raw 按家收', () => {
   const got = safeRoleBounds({ raw: { claude: { deny: ['A'] }, codex: { disable: [] }, omp: { removeTools: ['bash'] } } })
   assert.deepEqual(got, { raw: { claude: { deny: ['A'] }, omp: { removeTools: ['bash'] } } })
+})
+
+test('safeRoleBounds：raw 逃生口丢弃 - 开头的条目——bindRole 原样把它拼进 CLI 参数，"--foo" 会变成一个意外的 flag，不是一个要 deny 的名字', () => {
+  const got = safeRoleBounds({ raw: { claude: { deny: ['Bash', '--foo'] }, omp: { removeTools: ['--danger'] } } })
+  assert.deepEqual(got, { raw: { claude: { deny: ['Bash'] } } }, 'omp.removeTools 过滤完是空的，整条当没给，不是留一个空数组')
 })
 
 test('safeRoleBounds：什么都没剩 → undefined', () => {

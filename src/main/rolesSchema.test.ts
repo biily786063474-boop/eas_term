@@ -57,6 +57,13 @@ test('sanitizeRoles：v1 记录（有 tools 无 caps）自动迁移；v2 记录�
   assert.deepEqual(out[1].raw, { codex: { disable: ['web_search'] } })
 })
 
+test('sanitizeRoles：raw 逃生口丢弃 - 开头的条目——bindRole 原样把它拼进 CLI 参数，"--foo" 会变成一个意外的 flag，不是一个要 deny 的名字', () => {
+  const [r] = sanitizeRoles({
+    roles: [{ id: 'a', name: 'A', raw: { claude: { deny: ['Bash', '--foo'] }, omp: { removeTools: ['--danger'] } } }]
+  })
+  assert.deepEqual(r.raw, { claude: { deny: ['Bash'] } }, 'omp.removeTools 过滤完是空的，整条当没给，不是留一个空数组')
+})
+
 test('sanitizeRoles：caps 里只认 false，true / 字符串一律当没写', () => {
   const [r] = sanitizeRoles({ roles: [{ id: 'a', name: 'A', caps: { write: true, shell: 'no', imageGen: false } }] })
   assert.deepEqual(r.caps, { imageGen: false })

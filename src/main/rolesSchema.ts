@@ -24,6 +24,18 @@ function strList(v: unknown): string[] | undefined {
   return v.every((x) => typeof x === 'string' && x) ? (v as string[]) : undefined
 }
 
+/** `raw` 逃生口专用：条目被 `bindRole`（roleBinding.ts）原样拼进 CLI 参数列表——
+ *  一个 `-` 开头的条目不是「一个要 deny 的名字」，是一个新的 flag：`raw.claude.deny`
+ *  里混进一条 `--foo` 会变成 `--disallowedTools Bash --foo`，被 CLI 解析成我们没打算
+ *  传的选项。这里丢弃这类条目；过滤完空了就当没给这条，跟 strList 的「不部分接受」
+ *  同一个理由——静默变成半份限制比明确报错更危险。 */
+function strListNoFlags(v: unknown): string[] | undefined {
+  const l = strList(v)
+  if (!l) return undefined
+  const filtered = l.filter((x) => !x.startsWith('-'))
+  return filtered.length ? filtered : undefined
+}
+
 /** v1 的 `tools` → v2 的 `caps` + `raw`。规则见 spec 6.6。 */
 export function migrateToolsV1(tools: { allow?: unknown; deny?: unknown; denyServers?: unknown } | undefined): {
   caps?: RoleCaps
@@ -77,9 +89,9 @@ function sanitizeRaw(v: unknown): RoleRaw | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined
   const o = v as Record<string, Record<string, unknown> | undefined>
   const raw: RoleRaw = {}
-  const cd = strList(o.claude?.deny)
-  const xd = strList(o.codex?.disable)
-  const od = strList(o.omp?.removeTools)
+  const cd = strListNoFlags(o.claude?.deny)
+  const xd = strListNoFlags(o.codex?.disable)
+  const od = strListNoFlags(o.omp?.removeTools)
   if (cd) raw.claude = { deny: cd }
   if (xd) raw.codex = { disable: xd }
   if (od) raw.omp = { removeTools: od }

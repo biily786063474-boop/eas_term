@@ -387,7 +387,15 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       deps.emit({ k: 'session.ready', sessionId, model: currentModel ?? '', cwd })
     }
     // 握手期排队的改动与首次下发合并成一次发出去（见 applyParams 的注释）
-    await applyParams()
+    //
+    // **角色带来的 model/effort 不合法时 `session/set_config_option` 会被服务端拒掉而抛** ——
+    // 这时 session/new 已经成功、sessionId 也拿到了，会话是活的，不该被这一步打死。
+    // 对齐 setParams() 里「切换没生效」那条处理：非致命地报一句，握手照样算完、会话继续。
+    try {
+      await applyParams()
+    } catch (e) {
+      deps.emit({ k: 'error', fatal: false, message: `切换没生效：${(e as Error).message}` })
+    }
   }
 
   /** 把待下发的模型 / 强度真正发给服务端。

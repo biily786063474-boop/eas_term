@@ -15,11 +15,16 @@
 （`hard` / `soft` / `degraded` / `unsupported`）。
 `contract` 经 `--append-system-prompt-file`（Claude）或内联单行（Codex，无对应文件参数）下发。
 
+> ⚠️ **存档 version 2 反向不兼容**：被 0.4.78 及更早版本读到会把 `caps` 整份丢掉（那版按 v1
+> 清洗且不看 `version`），勘探员/验官的写保护、画师的生图限制会静默解除而界面看着一切正常 ——
+> 回滚旧版前先从 `.eas-backup` 取回（细节见 `src/main/roles.ts` 文件头）。
+
 > **写权限只由 `caps.write` 决定，跟角色名没关系。** 有代码兜底的只有两处：
 > `scout` / `inspector`：`caps.write=false`（Claude 去 `Write`/`Edit`/`NotebookEdit`；
 > Codex `-s read-only`，OS 沙箱连命令行写入一起挡；omp `--tools` 去 `write`/`edit`/`ast_edit`）；
 > `illustrator`：`caps.imageGen=false`（Claude 通配 deny；Codex `--disable image_generation`
-> 效果未验 + 按名关 server；omp 按名不连）。其余角色的"不碰生产代码"（`prototyper`）、
+> **2026-09-05 实测未摘掉内置生图**（模型仍自称有 `imagegen` 工具）+ 按名关 server；
+> omp 按名不连）。其余角色的"不碰生产代码"（`prototyper`）、
 > "不污染代码项目"（`writer`）**只是 contract 里的提示，不是强制**；角色还落盘在用户可改的
 > `~/.eas/roles.json` —— 所以"某某角色是唯一能写码的"这句话在任何时刻都不成立。
 >
