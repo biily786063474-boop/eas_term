@@ -54,6 +54,18 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.78">0.4.78</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>AI 对话更新之后接着聊，弹「Internal error」而且怎么都好不了</strong>。一段本来在 Claude Code 上的对话，重新打开时可能被错认成另一个底座（omp），于是拿着只有 Claude 认得的会话号去别处续，接不上——报一句看不懂的「Internal error」，而且每发一条都一样，那段对话就彻底卡死了。现在<strong>每段对话记住自己是谁开的</strong>（Claude / Codex / 自带底座），重开时认准原来那个，绝不换人。已经被认错的老对话，装上这版重新打开会<strong>自动纠正回来</strong></li>
+          <li>顺带：万一还是遇到底座报错，现在会<strong>把真正的原因显示出来</strong>，而不是笼统一句「Internal error」</li>
+          <li><strong>更新提示框里文字和按钮贴着边框</strong>，看着挤——补回了四边留白</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.77">0.4.77</h2>
           <time datetime="2026-09-04">2026-09-04</time>
         </div>
