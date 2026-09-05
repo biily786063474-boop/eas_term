@@ -592,14 +592,30 @@ test('Claude：没有角色边界时，一个相关参数都不加', () => {
   assert.ok(!args.includes('--allowedTools'))
 })
 
-test('Codex：只能整个关 MCP server（它没有工具级开关）', () => {
+test('Codex：write:false → --sandbox read-only（OS 沙箱，三家里唯一封得住命令行写入的）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { write: false } } })
+  assert.equal(args[args.indexOf('--sandbox') + 1], 'read-only')
+})
+
+test('Codex：没有 write:false 时沙箱维持默认 workspace-write', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { shell: false } } })
+  assert.equal(args[args.indexOf('--sandbox') + 1], 'workspace-write')
+})
+
+test('Codex：shell:false → --disable shell_tool；imageGen:false → --disable image_generation（键名字面断言，-c 不校验）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { shell: false, imageGen: false } } })
+  const pairs = args.map((a, i) => (a === '--disable' ? args[i + 1] : null)).filter(Boolean)
+  assert.deepEqual(pairs, ['shell_tool', 'image_generation'])
+})
+
+test('Codex：denyServers 按 knownMcpServers 过滤后才下发 enabled=false —— 名字不存在会拒绝启动', () => {
   const { args } = getAdapter('codex')!.buildArgs({
     cwd: '/p',
-    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+    knownMcpServers: ['bizone-canvas'],
+    roleBounds: { caps: { mcp: { denyServers: ['bizone-canvas', '手误'] } } }
   })
   assert.ok(args.includes('mcp_servers.bizone-canvas.enabled=false'))
-  // deny 的工具名在 Codex 上**无处可去**，不能假装接了
-  assert.ok(!args.some((a) => a.includes('Bash')), 'Codex 没有工具级 deny，别硬塞')
+  assert.ok(!args.some((a) => a.includes('手误')))
 })
 
 // ── safeRoleTools：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────

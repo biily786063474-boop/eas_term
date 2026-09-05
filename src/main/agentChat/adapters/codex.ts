@@ -18,6 +18,7 @@
 // 把 approval 改回非空——UI 一行都不用改。
 
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
+import { bindRole } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { createCodexTranslator } from '../codexEvents.ts'
 
@@ -58,30 +59,28 @@ export const codexAdapter: CliAdapter = {
   createTranslator: createCodexTranslator,
 
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
+    const b = bindRole(opts.roleBounds, 'codex', { knownMcpServers: opts.knownMcpServers })
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`
     const args: string[] = opts.resumeId ? ['exec', 'resume', opts.resumeId] : ['exec']
-    args.push('--json', '--sandbox', opts.sandbox ?? DEFAULT_SANDBOX)
+    // 角色的 write:false 是沙箱的唯一来源；其余维持默认（UI 上沙箱只展示不可选）
+    args.push('--json', '--sandbox', b.codex.sandbox ?? opts.sandbox ?? DEFAULT_SANDBOX)
     if (opts.model) args.push('-m', opts.model)
     if (opts.effort) args.push('-c', `model_reasoning_effort=${opts.effort}`)
-    // 角色契约。**Codex 没有 `--append-system-prompt`**（Claude 那条走的是那个），
-    // 也没有 `--append-system-prompt-file` 这类文件参数
-    // —— `experimental_instructions_file` 在 0.145 里已被移除，实测报 unknown
-    // configuration field。能用的只有内联 `-c instructions=`。
-    //
-    // **必须压成单行**：`-c` 的取值里带换行会把解析弄乱。
-    // 这一段与终端那条路（CanvasAgentBar 的 buildCodexCmd）是同一个结论，
+    // 角色契约。Codex 没有 --append-system-prompt，能用的是 -c instructions=
+    //（2026-09-05 实测 instructions / developer_instructions / model_instructions_file 三个都生效，
+    // 最后那个是整份替换不能用；维持 instructions）。**必须压成单行**：`-c` 的取值里带换行
+    // 会把解析弄乱。这一段与终端那条路（CanvasAgentBar 的 buildCodexCmd）是同一个结论，
     // 那边多做一步去双引号是因为它还要再过一次 shell；这里是 execFile 的 argv，
     // 不经 shell，引号原样传反而更准。
+    // ⚠️ -c 不校验键名（实测 bogus 键照常起会话）—— 键名写错静默无效，测试逐字断言。
     const contract = opts.roleContract?.trim().replace(/\s*\n\s*/g, ' ')
     if (contract) args.push('-c', `instructions=${contract}`)
-    // 角色的工具边界。**Codex 只能整个关掉某个 MCP server** ——
-    // 实测 `tools.deny` / `allowed_tools` 都是 unknown configuration field，
-    // 它没有工具级开关。所以 `roleTools.deny` 里那些**裸工具名在这里无处可去**：
-    // 不硬塞、不假装接了 —— UI 那侧要如实说明这个粒度差异，
-    // 而不是让用户以为选了「验官」Codex 就真的改不了代码。
-    for (const n of opts.roleTools?.denyServers ?? []) {
-      args.push('-c', `mcp_servers.${n}.enabled=false`)
-    }
+    // 内置工具走 --disable <feature>，MCP 走 mcp_servers.<名>.enabled=false；
+    // 工具级的 disabled_tools 键已被 0.147 接受但效果未验，阶段三再接。
+    // --disable shell_tool 实测真能摘掉 shell；MCP server 名字必须真实存在
+    //（bindRole 已按 knownMcpServers 过滤，不存在的名字 Codex 会拒绝启动）。
+    for (const f of b.codex.disable) args.push('--disable', f)
+    for (const n of b.codex.disableServers) args.push('-c', `mcp_servers.${n}.enabled=false`)
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }
