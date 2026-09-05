@@ -244,7 +244,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                   // 症状是界面摆着历史而模型一个字不记得（2026-08-20 实测）。
                   // cli 漏读的症状同类但更隐蔽：节点看着正常，只是 CLI 换了个人。
                   ...(agentPane?.cli ? { cli: agentPane.cli } : {}),
-                  ...(agentPane?.roleId ? { roleId: agentPane.roleId } : {})
+                  ...(agentPane?.roleId ? { roleId: agentPane.roleId } : {}),
+                  // **插件与首条消息也要带上**（2026-09-05 正式版事故）：picker 点「对话」是
+                  // 先 addFileNode 一个带 pane 的节点、再由这里重建成 leaf —— 这两项不传，
+                  // 开出来的就是一个不带插件工具、也不会自动发首条的空对话。
+                  ...(agentPane?.pluginId ? { pluginId: agentPane.pluginId } : {}),
+                  ...(agentPane?.initialMessage ? { initialMessage: agentPane.initialMessage } : {})
                 })
               else await get().openTerminal({ projectId: f.projectId })
               const newLeaf = get()

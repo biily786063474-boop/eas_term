@@ -45,6 +45,10 @@ export interface TabsSlice {
     role?: string
     /** 挂载后自动发出去的首条消息（派活） */
     initialMessage?: string
+    /** 这次会话带哪个插件（主进程据此往 agent-mcp.json 合并它的工具面）。
+     *  画布重建 leaf 时必须带回来 —— 2026-09-05 正式版事故：picker 的「对话」开出来的
+     *  节点被重建成不带插件、不发首条的空对话，用户看到的是「对话起不来」 */
+    pluginId?: string
   
     /** 接管一个已经在跑的会话（团队面板点进来） */
     sessionId?: string
@@ -238,6 +242,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         owner: opts?.owner,
         role: opts?.role,
         initialMessage: opts?.initialMessage,
+        pluginId: opts?.pluginId,
         // **接管一个已经在跑的会话**（从团队面板点进来时用）。
         // 有它的话 AgentChatView 挂载时直接订阅这个 id，而不是等用户发第一条消息 ——
         // 「关了节点、进程还在跑」的那些 agent，唯一的回去入口就是这条。

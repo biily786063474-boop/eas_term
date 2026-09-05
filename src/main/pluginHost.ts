@@ -21,6 +21,8 @@ import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
 import { recipients } from './panelFanout.ts'
 import { findPlugin } from './plugins'
+import { resolveCommand } from './nodeBin.ts'
+import { PROBE_ENV } from './probeEnv'
 import { CANVAS_CALL_ALLOWLIST, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND } from '../shared/pluginProtocol.ts'
 import type { PluginInfo } from '../shared/types'
 
@@ -78,13 +80,17 @@ const shims = new Map<string, Shim>()
 
 function spawnHosted(info: PluginInfo): Hosted {
   if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
+  // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
+  // 解析走 nodeBin.ts（和 MCP shim 同一份规则）；PATH 用探过登录 shell 的 PROBE_ENV。
+  const run = resolveCommand(info.mcp.command, info.mcp.args)
   const env: Record<string, string> = {
-    PATH: process.env.PATH ?? '',
+    PATH: PROBE_ENV.PATH ?? process.env.PATH ?? '',
     HOME: process.env.HOME ?? '',
     ...(process.platform === 'win32' && process.env.SYSTEMROOT ? { SYSTEMROOT: process.env.SYSTEMROOT } : {}),
+    ...(run.env ?? {}),
     ...info.mcp.env
   }
-  const client = new McpClient({ name: info.name, command: info.mcp.command, args: info.mcp.args, env, cwd: info.mcp.cwd })
+  const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
   const hosted: Hosted = { name: info.name, info, client, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())

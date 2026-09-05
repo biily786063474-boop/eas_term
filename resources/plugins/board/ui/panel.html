@@ -80,7 +80,7 @@ const COLS = [['todo', '待办'], ['doing', '进行中'], ['done', '完成']];
 let cards = [];
 async function refresh() {
   try { cards = (await tool('board_list')).cards || []; render(); foot((host.cwd ? host.cwd.split('/').pop() + ' · ' : '') + cards.length + ' 张卡'); }
-  catch (e) { document.getElementById('cols').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; }
+  catch (e) { document.getElementById('cols').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; foot('出错：' + e.message.slice(0, 60)); }
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 function render() {

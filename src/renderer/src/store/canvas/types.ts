@@ -321,6 +321,8 @@ export interface CanvasSlice {
       owner?: 'team'
       role?: string
       initialMessage?: string
+      /** 这次会话带哪个插件 —— 对齐 openAgentPane（2026-09-05 加，picker 的「对话」靠它） */
+      pluginId?: string
       cwd?: string
       sessionId?: string
       /** 钉死用哪个 CLI（空造梦空间那三颗引导按钮靠它送值） */

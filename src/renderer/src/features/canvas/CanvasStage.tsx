@@ -1762,21 +1762,17 @@ export function CanvasStage(): JSX.Element {
             //   cli        —— 插件属于谁就用谁起会话，不能让它挑默认的那个
             //   pluginId   —— 主进程据此决定往 agent-mcp.json 里合并谁（一次只带一个）
             //   initialMessage —— 插件自带的 defaultPrompt，Claude 插件没有就不填
-            const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
-            if (!frame) return
-            addFileNode(
-              picker.frameId,
-              {
-                kind: 'agent',
-                cwd: picker.root,
-                // 自家插件（eas）harness 无关：cli 不钉死，走默认挑选（设计稿决定 #7）
-                ...(plug.cli === 'eas' ? {} : { cli: plug.cli }),
-                pluginId: plug.id,
-                ...(plug.defaultPrompt ? { initialMessage: plug.defaultPrompt } : {})
-              },
-              picker.wx - frame.x - 90,
-              picker.wy - frame.y - 15
-            )
+            // **走 addAgentNode，不走 addFileNode**（2026-09-05 正式版事故）：addFileNode 只放一个
+            // 带 pane 的节点、不建 leaf；把它重建成 leaf 的逻辑只在启动加载时跑，当场它落到
+            // CanvasFileNode 渲染成空白框 —— 用户看到的就是「对话起不来」。addAgentNode 是空 Frame
+            // 引导按钮走的那条路：先 openAgentPane 建真 leaf，再把节点摆进 Frame。
+            void useStore.getState().addAgentNode(picker.frameId, {
+              cwd: picker.root,
+              // 自家插件（eas）harness 无关：cli 不钉死，走默认挑选（设计稿决定 #7）
+              ...(plug.cli === 'eas' ? {} : { cli: plug.cli }),
+              pluginId: plug.id,
+              ...(plug.defaultPrompt ? { initialMessage: plug.defaultPrompt } : {})
+            })
           }}
           onPick={(filePath) => {
             const place = (pane: PaneState): void => {

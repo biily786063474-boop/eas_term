@@ -22,6 +22,7 @@ import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/appr
 import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 import { ingestStatusline } from './quotaStore'
 import { pluginBye, pluginHeartbeat, pluginRpcFromShim } from './pluginHost.ts'
+import { nodeRunner } from './nodeBin.ts'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -148,18 +149,8 @@ function pluginShimPath(): string {
  *  找不到就用 app 自带的 Electron 以 node 模式跑，保证任何机器上都能启动。
  *  注意主进程在 GUI 启动时 PATH 很贫瘠（/usr/bin:/bin:...），所以是探路径而不是 which。 */
 function runnerFor(scriptArgs: string[]): { command: string; args: string[]; env?: Record<string, string> } {
-  const candidates =
-    process.platform === 'win32'
-      ? []
-      : ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/usr/bin/node']
-  for (const c of candidates) {
-    try {
-      if (fs.existsSync(c)) return { command: c, args: scriptArgs }
-    } catch {
-      /* 探测失败就试下一个 */
-    }
-  }
-  return { command: process.execPath, args: scriptArgs, env: { ELECTRON_RUN_AS_NODE: '1' } }
+  // 规则本体在 nodeBin.ts（插件宿主也用它，两边一致）
+  return nodeRunner(scriptArgs, { electron: process.execPath })
 }
 
 /** 开发时跑的实例**不许改用户的全局 CLI 配置**。
