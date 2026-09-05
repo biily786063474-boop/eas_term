@@ -1103,7 +1103,8 @@ const SHELL_TRAP =
               ...(isolationOf(a.isolation) === 'worktree'
                 ? { worktree: worktreePath(batchId, a.role) ?? undefined }
                 : {}),
-              // 重派时要原样带上 roleId，不然重派出来的 agent 会丢掉契约与能力边界
+              // 重派时要原样带上 roleId，不然重派出来的 agent 会丢掉契约与能力边界；
+              // 存下来也不是只写不读 —— teamRoster.ts 的 recentSummary() 会把它带出来
               ...(a.roleId ? { roleId: a.roleId } : {})
             }))
           })

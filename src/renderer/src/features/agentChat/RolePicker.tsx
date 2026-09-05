@@ -162,7 +162,9 @@ export function RolePicker({
         ref={btnRef}
         type="button"
         className={`ac-ctxbar-item as-btn rolepick-btn${current ? ' on' : ''}`}
-        aria-label={current ? `角色：${current.name}` : '角色'}
+        aria-label={
+          current ? `角色：${current.name}${warn.length ? '（部分限制在当前 CLI 上打了折扣）' : ''}` : '角色'
+        }
         data-tip={
           current
             ? `角色：${current.name} —— ${current.desc}`
@@ -175,7 +177,6 @@ export function RolePicker({
         {warn.length > 0 && (
           <span
             className="rolepick-warn"
-            aria-label="部分限制在当前 CLI 上打了折扣"
             data-tip={warn.map((l) => `${CAP_LABEL[l.cap]}：${l.how}`).join('\n')}
           >
             {LEVEL_LABEL[warn[0].level]}

@@ -20,7 +20,8 @@ export interface RosterAgent {
   task: string
   /** 起它时用的 CLI；重派时优先用同一个 */
   cli?: string
-  /** 套的角色卡 id（`AgentRole.id`）。重派时要原样带上 —— 不然重派出来的 agent 会丢掉契约与能力边界 */
+  /** 套的角色卡 id（`AgentRole.id`）。重派时要原样带上 —— 不然重派出来的 agent 会丢掉契约与能力边界；
+   *  `recentSummary()` 也会把它带出来（`role[roleId]`），不是只写不读 */
   roleId?: string
 }
 
@@ -75,7 +76,7 @@ export function recentSummary(r: Roster, now: number): string {
   if (!b) return ''
   const mins = Math.max(0, Math.round((now - b.at) / 60000))
   const when = mins < 60 ? `${mins} 分钟前` : mins < 1440 ? `${Math.round(mins / 60)} 小时前` : `${Math.round(mins / 1440)} 天前`
-  const who = b.agents.map((a) => a.role).join('、')
+  const who = b.agents.map((a) => (a.roleId ? `${a.role}[${a.roleId}]` : a.role)).join('、')
   return (
     `这个项目 ${when}派过一批：「${b.goal}」——${who}。` +
     `进程已经不在了，**产出在 .plans/<role>/findings.md**，要收活就去读那些文件。` +

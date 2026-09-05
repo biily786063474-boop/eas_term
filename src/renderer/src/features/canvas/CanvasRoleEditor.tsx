@@ -373,7 +373,7 @@ export function CanvasRoleEditor({
               spellCheck={false}
             />
             <span className="re-hint">
-              Claude 按工具名通配禁；Codex 与默认 harness 没有工具级开关，<b>降级为按 server 名匹配后整个关掉</b>。
+              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。
             </span>
           </div>
 
@@ -404,10 +404,10 @@ export function CanvasRoleEditor({
               </div>
             )}
             <span className="re-hint">
-              三家都生效：Claude 展开成 <code>mcp__&lt;名&gt;__*</code>；Codex <code>-c mcp_servers.&lt;名&gt;.enabled=false</code>；默认 harness 建会话时不连它。
+              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。
             </span>
             <span className="re-hint warn">
-              名字必须和 <code>~/.codex/config.toml</code> 里的完全一致 —— 写错的话 Codex 会<b>直接拒绝启动</b>，所以下发前会按本机清单过滤。
+              名字必须和 Codex 的 <code>config.toml</code>（<code>CODEX_HOME</code> 或 <code>~/.codex</code>）里的完全一致 —— 写错的话 Codex 会<b>直接拒绝启动</b>，所以下发前会按本机清单过滤。
             </span>
           </div>
         </div>
