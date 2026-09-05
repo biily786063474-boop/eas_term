@@ -542,32 +542,26 @@ test('Codex 没角色时 args 与今天逐字节相同', () => {
 // 通配符挡图像类 MCP）。把它接进对话会话 = 把一条现有的安全边界搬到新链路上，
 // 所以断言写得比别处密。
 
-test('Claude：deny 走 --disallowedTools，denyServers 展开成 mcp__<名>__*', () => {
+test('Claude：caps 走 --disallowedTools，denyServers 展开成 mcp__<名>__*', () => {
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
-    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+    roleBounds: { caps: { shell: false, mcp: { denyServers: ['bizone-canvas'] } } }
   })
   const i = args.indexOf('--disallowedTools')
   assert.ok(i >= 0)
   const rest = args.slice(i + 1)
   assert.ok(rest.includes('Bash'))
   assert.ok(rest.includes('mcp__bizone-canvas__*'), 'server 名没展开成通配')
-})
-
-test('Claude：allow 走 --allowedTools', () => {
-  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { allow: ['Read', 'Grep'] } })
-  const i = args.indexOf('--allowedTools')
-  assert.ok(i >= 0 && args.slice(i + 1, i + 3).join(',') === 'Read,Grep')
+  assert.ok(!args.includes('--allowedTools'), 'allow 已删，不该再出现')
 })
 
 test('**变长参数必须排在最后** —— 夹在中间会把后面的选项一起吞掉', () => {
-  // --mcp-config 那次已经栽过一回（见 buildClaudeCmd 的注释）
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
     model: 'opus',
     resumeId: 'r1',
     mcpConfigPath: '/tmp/m.json',
-    roleTools: { deny: ['Bash'] }
+    roleBounds: { caps: { shell: false } }
   })
   const i = args.indexOf('--disallowedTools')
   const after = args.slice(i + 1)
@@ -576,20 +570,24 @@ test('**变长参数必须排在最后** —— 夹在中间会把后面的选�
   }
 })
 
-test('**工具边界在恢复会话时也要拼** —— 它是 CLI 强制规则，不是系统提示', () => {
-  // 契约走 --append-system-prompt，--resume 不重放它；工具边界每次都要重新生效，
-  // 不拼等于恢复会话时把护栏卸了。
+test('**能力边界在恢复会话时也要拼** —— 它是 CLI 强制规则，不是系统提示', () => {
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
     resumeId: 'r1',
-    roleTools: { denyServers: ['bizone-canvas'] }
+    roleBounds: { caps: { mcp: { denyServers: ['bizone-canvas'] } } }
   })
   assert.ok(args.includes('--disallowedTools'))
   assert.ok(args.includes('mcp__bizone-canvas__*'))
 })
 
-test('Claude：没有角色工具时，一个相关参数都不加', () => {
-  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { deny: [], denyServers: [] } })
+test('Claude：write:false → Write Edit NotebookEdit 三个都进 deny', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleBounds: { caps: { write: false } } })
+  const rest = args.slice(args.indexOf('--disallowedTools') + 1)
+  assert.deepEqual(rest, ['Write', 'Edit', 'NotebookEdit'])
+})
+
+test('Claude：没有角色边界时，一个相关参数都不加', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleBounds: undefined })
   assert.ok(!args.includes('--disallowedTools'))
   assert.ok(!args.includes('--allowedTools'))
 })

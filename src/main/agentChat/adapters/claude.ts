@@ -16,6 +16,7 @@
 
 import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
+import { bindRole } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { createClaudeTranslator } from '../claudeEvents.ts'
 
@@ -122,7 +123,7 @@ export const claudeAdapter: CliAdapter = {
     if (opts.resumeId) args.push('--resume', opts.resumeId)
     // ── 角色的工具边界。**必须排在所有参数最后** ───────────────────────────
     //
-    // `--allowedTools` / `--disallowedTools` 是**变长参数**（`<tools...>`）：
+    // `--disallowedTools` 是**变长参数**（`<tools...>`）：
     // 夹在中间会把后面的选项一起吞掉 —— `--mcp-config` 那次已经栽过一回
     // （见 CanvasAgentBar.buildClaudeCmd 里同一条注释）。有测试钉着这个顺序。
     //
@@ -132,14 +133,10 @@ export const claudeAdapter: CliAdapter = {
     //
     // **不做 shell 引用**：这是 execFile 的 argv，不经 shell，
     // 通配符 `*` 原样传过去才对。终端那条路要 `shq()` 是因为它还要再过一次 zsh。
-    const allow = opts.roleTools?.allow ?? []
-    if (allow.length) args.push('--allowedTools', ...allow)
-    const deny = [
-      ...(opts.roleTools?.deny ?? []),
-      // MCP server 名 → 该 server 下的所有工具。裸工具名 deny 会让那个工具
-      // 从模型上下文里整个消失，由 CLI 强制，不靠模型自觉。
-      ...(opts.roleTools?.denyServers ?? []).map((n) => `mcp__${n}__*`)
-    ]
+    //
+    // 能力意图 → deny 清单，翻译逻辑只在 shared/roleBinding.ts 一处。
+    // `--allowedTools` 不再拼：它在 Claude 里是「免审批清单」而非白名单，角色不该碰审批。
+    const deny = bindRole(opts.roleBounds, 'claude').claude.deny
     if (deny.length) args.push('--disallowedTools', ...deny)
 
     // stdin 是送消息的活跃通道：--input-format stream-json 靠它逐行写用户消息，
