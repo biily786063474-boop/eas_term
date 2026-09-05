@@ -57,3 +57,59 @@ export function writeLastCli(id: string): void {
     // 同上，记不住不是错误
   }
 }
+
+// ── 已有对话归谁：**从签发者推，不猜** ─────────────────────────────────────
+//
+// 2026-09-04 事故：一段 Claude Code 的对话（40 轮）重挂载时被 `pickDefaultCli`
+// 的推测链（`lastUsed` = 用户刚在别处用过的 omp）挑成了 omp，Claude 的 resumeId
+// 被递给 omp → "ACP session not found" → 那条对话永久报废。更糟的是 `setAgentCli`
+// 把这个**猜出来的** omp 钉进了 `pane.cli`，错误从此固定。
+//
+// 根子：`lastUsed` 是给**新建对话**的偏好，拿它决定一段**已经存在**的对话归谁，
+// 就是「软件在跟用户较劲」。而一个 resumeId 只属于签发它的那个 harness ——
+// 所以已有对话的归属必须从 `resumeCli`（谁报回的 id 就记谁）推出来，
+// 推测链只有在**没有 resumeId** 时才轮得到。
+
+export interface ConversationPick {
+  /** 应该用哪个；一个都不能用时 null */
+  cli: CliInfo | null
+  /** 手里的 resumeId **不属于**选出来的这个 cli —— 调用方必须把它丢掉并告知用户，
+   *  绝不能递给一个认不得它的 harness（那正是事故的样子）。 */
+  dropResume: boolean
+  /** 为什么选了它（给日志/排障看，不给用户看） */
+  why: 'resumeCli' | 'pinned' | 'guess' | 'none'
+}
+
+/**
+ * 决定一段对话用哪个 CLI。
+ *
+ * 优先级（越前越硬）：
+ *  1. `resumeCli`（resumeId 的签发者）在 usable 里 → 用它。**压过 pinned** ——
+ *     pinned 可能是 bug 版本用猜的写进去的（事故里那两条就是），而签发者是事实。
+ *  2. `resumeCli` 不在 usable 里（卸载了）→ 退回 pinned / 推测，**但要 dropResume**：
+ *     换了 harness 就接不回上下文，id 不能跟过去。
+ *  3. 没有 resumeId 的对话（全新）→ pinned，再 `pickDefaultCli` 的推测链。
+ *
+ * @param resumeCli  resumeId 的签发者；`undefined` = 没有 resumeId 或不知道签发者
+ * @param hasResume  手里到底有没有 resumeId（签发者未知但 id 在，也算有）
+ */
+export function resolveConversationCli(
+  usable: CliInfo[],
+  o: { pinned?: string; resumeCli?: string; hasResume: boolean; lastUsed?: string }
+): ConversationPick {
+  const find = (id?: string): CliInfo | undefined => (id ? usable.find((c) => c.id === id) : undefined)
+
+  const owner = find(o.resumeCli)
+  if (owner) return { cli: owner, dropResume: false, why: 'resumeCli' }
+
+  const pinned = find(o.pinned)
+  const guessed = pinned ?? pickDefaultCli(usable, undefined, o.lastUsed)
+  if (!guessed) return { cli: null, dropResume: false, why: 'none' }
+
+  // 有 resumeId 但选出来的不是签发者：
+  //  · 签发者已知且不可用 → 一定要丢
+  //  · 签发者未知（老数据、磁盘也查不到）→ 也丢：拿一个来路不明的 id 去 resume，
+  //    赌对了是运气，赌错了就是事故。丢掉最多损失一次上下文，用户会被告知。
+  const dropResume = o.hasResume && guessed.id !== o.resumeCli
+  return { cli: guessed, dropResume, why: pinned ? 'pinned' : 'guess' }
+}

@@ -48,6 +48,12 @@ export type PaneState =
       cwd: string
       sessionId?: string
       resumeId?: string
+      /** 这个 resumeId 是**哪个 harness 签发的**（`CliInfo.id`）。
+       *  一个 resumeId 只有签发它的那个 harness 认得 —— 重挂载时靠它决定归属，
+       *  而不是拿 `lastUsed` 去猜（2026-09-04 事故：Claude 的对话被猜成 omp，
+       *  id 递过去 "session not found"，对话永久报废）。
+       *  老数据没有它 → `resumeOwnerOf` 查磁盘补上。 */
+      resumeCli?: string
       /**
        * 这个会话是谁开的。缺省 = 用户自己开的。
        *

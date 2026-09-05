@@ -1034,10 +1034,14 @@ const api = {
       ipcRenderer.invoke('agentChat:send', sessionId, message),
     /** 聊天记录按画布节点存取。**leafId 不是 sessionId** —— 后者每次 start 都变，
      *  前者随 canvas.json 落盘、跨重启稳定，对应用户心里的「这个对话框」。 */
-    loadHistory: (leafId: string): Promise<{ turns: unknown[]; resumeId: string | null }> =>
+    loadHistory: (leafId: string): Promise<{ turns: unknown[]; resumeId: string | null; resumeCli: string | null }> =>
       ipcRenderer.invoke('agentHistory:load', leafId),
-    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null, cwd: string): Promise<boolean> =>
-      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId, cwd),
+    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null, cwd: string, resumeCli?: string | null): Promise<boolean> =>
+      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId, cwd, resumeCli ?? null),
+    /** 这个 resumeId 是哪个 harness 签发的（查磁盘）。老对话没记签发者时靠它补；
+     *  null = 三处都没找到（会话被清了 / 换了机器）。 */
+    resumeOwner: (resumeId: string, cwd: string): Promise<'claude' | 'codex' | 'omp' | null> =>
+      ipcRenderer.invoke('agentChat:resumeOwner', resumeId, cwd),
     /** 这个项目下的历史记录清单（只有元信息）。用来在空态给出「接上上次的对话」入口 */
     listHistory: (
       cwd: string

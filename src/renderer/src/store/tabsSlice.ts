@@ -55,6 +55,8 @@ export interface TabsSlice {
     /** 跨重启接回上下文用的 CLI 会话 id。**画布恢复时必须带上** ——
      *  它是 canvas.json 里唯一为「续上次对话」存的东西，不传等于白存。 */
     resumeId?: string
+    /** resumeId 的签发者（`CliInfo.id`）。画布恢复时和 resumeId 一起带回来 —— 见 layout.ts 的 pane.resumeCli */
+    resumeCli?: string
     /** 钉死用哪个 CLI（`CliInfo.id`）。空 Frame 上那三颗引导按钮靠它把用户的
      *  选择送进新面板 —— `AgentChatView` 读 `pane.cli` 当 `pickDefaultCli` 的
      *  `pinned`，而那一档压过一切。
@@ -94,7 +96,9 @@ export interface TabsSlice {
   /** 把 CLI 自己的会话 id 写回这个 leaf 的 PaneState。**与 sessionId 是两回事**：
    *  这个会随 canvas.json 落盘，下次打开这个节点靠它续上上次的上下文
    *  （Claude `--resume` / Codex `exec resume`）。 */
-  setAgentResumeId: (tabId: string, leafId: string, resumeId: string) => void
+  /** 会话 id **连同它的签发者**一起写。签发者就是当前跑着的 cli ——
+   *  谁报回的 id 就记谁，这样重挂载时不用再猜归属（2026-09-04 事故的正解）。 */
+  setAgentResumeId: (tabId: string, leafId: string, resumeId: string, resumeCli?: string) => void
   /** 把这次会话真正用的 CLI 钉进面板。**会话一建立就调。**
    *
    *  用户 2026-09-03：「AI 对话中的已经绑定的对话要用对应的 harness，
@@ -241,6 +245,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         // 画布恢复时带回来的 CLI 会话 id —— 有它，重启后发的第一条消息
         // 会带 --resume 接回原来的上下文，而不是开一个什么都不记得的新会话
         resumeId: opts?.resumeId,
+        resumeCli: opts?.resumeCli,
         // 用户在空 Frame 上点了哪颗（Claude / Codex / 默认 harness）
         cli: opts?.cli,
         roleId: opts?.roleId
@@ -568,14 +573,16 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
 
   // 与 setAgentSessionId 同构，但存的是**另一个 id**：CLI 自己的会话 id。
   // 它会随 canvas.json 落盘，是「关掉再打开还接得上上次的上下文」的全部依据。
-  setAgentResumeId: (tabId, leafId, resumeId) => {
+  setAgentResumeId: (tabId, leafId, resumeId, resumeCli) => {
     set((st) => ({
       tabs: st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
-        if (leaf.pane.resumeId === resumeId) return t // 同一个值不必制造新对象
-        const pane: PaneState = { ...leaf.pane, resumeId }
+        // 清空 id 时签发者一起清；写 id 时给了签发者就换、没给就沿用（老数据补签发者也走这）
+        const nextCli = resumeId ? (resumeCli || leaf.pane.resumeCli) : undefined
+        if (leaf.pane.resumeId === resumeId && leaf.pane.resumeCli === nextCli) return t
+        const pane: PaneState = { ...leaf.pane, resumeId, resumeCli: nextCli }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))

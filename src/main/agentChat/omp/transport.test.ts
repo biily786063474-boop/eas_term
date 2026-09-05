@@ -295,7 +295,7 @@ test('resume 撞到别的错误 → 不兜底，且报出来的话里要有真�
   await tick()
   assert.equal(h.f.last('session/new'), undefined, '别的错误不该退回 session/new')
   const fatal = h.events.find((e) => e.k === 'error' && e.fatal)
-  assert.ok(fatal, '要报出来')
+  assert.ok(fatal && fatal.k === 'error', '要报出来')
   // **判据是「话里有真正的原因」** —— 只说 "Internal error" 等于什么都没说
   assert.ok(/disk is full/.test(fatal.message), `报错要带上 details，实际是：${fatal.message}`)
 })

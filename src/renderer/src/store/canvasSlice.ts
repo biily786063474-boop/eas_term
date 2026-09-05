@@ -238,6 +238,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                   // 收窄一次再取字段：PaneState 是联合类型，terminal 分支没有这两个
                   ...(agentPane?.cwd ? { cwd: agentPane.cwd } : {}),
                   ...(agentPane?.resumeId ? { resumeId: agentPane.resumeId } : {}),
+                  ...(agentPane?.resumeCli ? { resumeCli: agentPane.resumeCli } : {}),
                   // **存了就要用。** resumeId 当年就是「特意存了、恢复时却不读」，
                   // 症状是界面摆着历史而模型一个字不记得（2026-08-20 实测）。
                   // cli 漏读的症状同类但更隐蔽：节点看着正常，只是 CLI 换了个人。

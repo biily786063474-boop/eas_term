@@ -108,17 +108,18 @@ export function registerTeamFindings(): void {
 export function registerAgentHistory(): void {
   ipcMain.handle(
     'agentHistory:load',
-    (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null } => {
-      const empty = { turns: [], resumeId: null }
+    (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null; resumeCli: string | null } => {
+      const empty = { turns: [], resumeId: null, resumeCli: null }
       const f = typeof leafId === 'string' ? fileOf(leafId) : null
       if (!f) return empty
       try {
-        const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { turns?: unknown; resumeId?: unknown }
+        const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { turns?: unknown; resumeId?: unknown; resumeCli?: unknown }
         return {
           turns: Array.isArray(raw.turns) ? raw.turns : [],
           // 写这份记录时 CLI 那边的会话 id。**读回来必须跟当前 pane.resumeId 比一次** ——
           // 对不上就说明模型接不回这段上下文了，界面得说清楚，见 AgentChatView。
-          resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null
+          resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null,
+          resumeCli: typeof raw.resumeCli === 'string' ? raw.resumeCli : null
         }
       } catch {
         // 文件不存在 / 坏了 —— 一律当成「没有历史」。
@@ -177,7 +178,7 @@ export function registerAgentHistory(): void {
 
   // 返回**真的写成了没有**。调用方里至少有一条路（adoptOrphan）要靠它决定
   // 敢不敢删掉旧的那一份 —— 先删后存、而存又失败了的话，那段对话就永久没了。
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown): boolean => {
+  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown, resumeCli: unknown): boolean => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return false
     try {
@@ -195,6 +196,8 @@ export function registerAgentHistory(): void {
           v: 1,
           savedAt: Date.now(),
           resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
+          // 签发者和 id 一起存：历史文件是老对话「接上上次」的入口，缺了签发者又得回去猜
+          resumeCli: typeof resumeCli === 'string' && resumeCli ? resumeCli : null,
           // 项目路径：`agentHistory:list` 靠它把记录归到项目下。
           // 没有它就只能把所有项目的历史混在一起给用户挑，那不可用
           cwd: typeof cwd === 'string' ? cwd : null,

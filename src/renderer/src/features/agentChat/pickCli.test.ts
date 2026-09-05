@@ -101,3 +101,68 @@ test('没绑定时才轮到 lastUsed（这条是既有行为，别改坏）', ()
   const usable = [cli('claude'), cli('codex')]
   assert.equal(pickDefaultCli(usable, undefined, 'codex')?.id, 'codex')
 })
+
+// ── 2026-09-04：已有对话归谁，从签发者推，不猜 ──────────────────────────────
+//
+// 事故：一段 Claude Code 的对话重挂载时被 lastUsed（= 用户刚在别处用过的 omp）挑成 omp，
+// Claude 的 resumeId 递给 omp → "ACP session not found" → 对话永久报废，
+// 而 setAgentCli 还把这个猜出来的 omp 钉死了。下面每一条都对着那条链路。
+import { resolveConversationCli } from './pickCli.ts'
+
+test('**resumeId 的签发者压过一切**：lastUsed 是 omp 也不许换掉 Claude 的对话', () => {
+  const r = resolveConversationCli([boxed, claude, codex], { resumeCli: 'claude', hasResume: true, lastUsed: 'omp' })
+  assert.equal(r.cli?.id, 'claude')
+  assert.equal(r.dropResume, false)
+  assert.equal(r.why, 'resumeCli')
+})
+
+test('**签发者压过 pinned** —— pinned 可能是 bug 版本用猜的写进去的（事故里那两条就是）', () => {
+  // pane.cli 被错误钉成 omp，但磁盘证明 resumeId 是 Claude 签发的
+  const r = resolveConversationCli([boxed, claude], { pinned: 'omp', resumeCli: 'claude', hasResume: true })
+  assert.equal(r.cli?.id, 'claude', '钉错的 pinned 不能赢过签发者')
+  assert.equal(r.dropResume, false)
+})
+
+test('签发者卸载了 → 退回 pinned/推测，**但 resumeId 必须丢掉**（换了 harness 接不回）', () => {
+  const r = resolveConversationCli([boxed, claude], { resumeCli: 'codex', hasResume: true, lastUsed: 'claude' })
+  assert.equal(r.cli?.id, 'claude')
+  assert.equal(r.dropResume, true, 'Codex 的 id 不能递给 Claude')
+})
+
+test('签发者未知（老数据、磁盘也查不到）且有 resumeId → 照样丢，别拿来路不明的 id 去赌', () => {
+  const r = resolveConversationCli([boxed, claude, codex], { hasResume: true, lastUsed: 'omp' })
+  assert.equal(r.cli?.id, 'omp', '没签发者就走推测')
+  assert.equal(r.dropResume, true)
+})
+
+test('全新对话（没有 resumeId）→ pinned，再推测链；不丢任何东西', () => {
+  const a = resolveConversationCli([boxed, claude, codex], { pinned: 'codex', hasResume: false, lastUsed: 'claude' })
+  assert.equal(a.cli?.id, 'codex')
+  assert.equal(a.why, 'pinned')
+  const b = resolveConversationCli([boxed, claude, codex], { hasResume: false, lastUsed: 'claude' })
+  assert.equal(b.cli?.id, 'claude')
+  assert.equal(b.why, 'guess')
+  assert.equal(b.dropResume, false)
+})
+
+test('一个可用的都没有 → null，且不 dropResume（没起会话，id 留着下次再说）', () => {
+  const r = resolveConversationCli([], { resumeCli: 'claude', hasResume: true })
+  assert.equal(r.cli, null)
+  assert.equal(r.dropResume, false)
+})
+
+test('**事故的真实数据形状**：pane.cli=omp（钉错的）＋ resumeCli=claude（磁盘补的）→ 选 claude', () => {
+  // 这就是用户 Ipad延伸 那条对话在 canvas.json 里的样子：
+  //   pane.cli='omp'（0.4.77 的 bug 版本用 lastUsed 猜出来钉死的）
+  //   pane.resumeCli='claude'（新逻辑查磁盘/历史文件补上的签发者）
+  // 三个 harness 都可用时，签发者必须赢，且不 dropResume（Claude 的 id 给 Claude，接得回）。
+  const r = resolveConversationCli([boxed, claude, codex], {
+    pinned: 'omp',
+    resumeCli: 'claude',
+    hasResume: true,
+    lastUsed: 'omp'
+  })
+  assert.equal(r.cli?.id, 'claude', '钉错的 omp 和 lastUsed 的 omp 都不能赢过签发者 claude')
+  assert.equal(r.dropResume, false, 'Claude 的 id 给回 Claude，上下文接得回')
+  assert.equal(r.why, 'resumeCli')
+})

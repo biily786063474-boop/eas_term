@@ -91,6 +91,8 @@ export function serializeCanvas(
               kind: 'agent',
               cwd: pane.cwd,
               resumeId: pane.resumeId,
+              // 签发者要一起存 —— 只存 resumeId 不存签发者，重启后又得回去猜（事故的根）
+              resumeCli: pane.resumeCli,
               cli: pane.cli,
               roleId: pane.roleId
             }

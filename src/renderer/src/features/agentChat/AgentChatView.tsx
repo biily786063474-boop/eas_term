@@ -20,7 +20,7 @@ import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { startupPhaseOf } from './startupPhase.ts'
-import { pickDefaultCli, readLastCli, writeLastCli } from './pickCli.ts'
+import { readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
@@ -158,12 +158,20 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.resumeId : undefined
   })
+  /** resumeId 的签发者。**归属从它推，不从 lastUsed 猜**（2026-09-04 事故的正解）。
+   *  老数据没有 → 下面挑 CLI 的 effect 会查磁盘补上。 */
+  const savedResumeCli = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.resumeCli : undefined
+  })
   useEffect(() => {
     let alive = true
     void window.api.agentChat
       .loadHistory(histKey)
       .then((h) => {
-        if (alive) setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId })
+        if (alive) setRestored({ turns: settleOnLoad(h.turns as Turn[]), resumeId: h.resumeId, resumeCli: h.resumeCli })
       })
       // 读不到就当没有历史。**不能让它挡住对话框起来** —— 这只是个锦上添花的功能
       .catch(() => undefined)
@@ -432,9 +440,10 @@ export function AgentChatView({
    *  **`resumeId` 让模型记得，这个让你看得见** —— 两者缺一不可：只有 resumeId 时，
    *  重启后界面是空的、一发消息模型却接着上次说，人会以为它在乱答。
    *  存取见 main/agentHistory.ts，裁剪与「卡在 running 的命令落到 failed」见 ./history.ts。 */
-  const [restored, setRestored] = useState<{ turns: Turn[]; resumeId: string | null }>({
+  const [restored, setRestored] = useState<{ turns: Turn[]; resumeId: string | null; resumeCli: string | null }>({
     turns: [],
-    resumeId: null
+    resumeId: null,
+    resumeCli: null
   })
   // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
@@ -506,7 +515,8 @@ export function AgentChatView({
       histKey,
       trimForSave([...restored.turns, ...merged]),
       savedResumeId || null,
-      cwd
+      cwd,
+      savedResumeCli || null
     ] as Parameters<typeof window.api.agentChat.saveHistory>
     pendingSaveRef.current = args
     const save = (): void => {
@@ -560,11 +570,38 @@ export function AgentChatView({
         // claude-mem 是 Claude 的），挑错家伙 = 那个插件的工具在会话里根本不存在。
         // 指定的那个没装 / 不支持会话时退回既有逻辑，不是硬失败——
         // 用户至少还能看到界面并自己换一个。
-        const pinned = pinnedCli ? usable.find((c) => c.id === pinnedCli) : undefined
-        // 规矩连同 5 条单测在 `pickCli.ts`：随包那个排最后，但**别人都没装时就用它**。
-        // 摘出去是因为它决定用户打开软件看到的第一个 agent，写反了每个人都撞得上，
-        // 而写在 effect 里测不到。
-        setSelected((cur) => cur ?? pickDefaultCli(usable, pinned, readLastCli()))
+        // ── 已有对话：按 resumeId 的**签发者**定归属，不猜 ────────────────────
+        // 2026-09-04 事故：一段 Claude 的对话重挂载时被 lastUsed（刚在别处用过的 omp）
+        // 挑成 omp，Claude 的 id 递给 omp → "session not found" → 对话永久报废。
+        // 老数据（2026-09-03 之前）只有 resumeId 没记签发者 → 查磁盘补上（三个 harness
+        // 的会话都落在固定位置，按 id 找一下就知道是谁的）。
+        void (async () => {
+          let resumeCli = savedResumeCli
+          if (savedResumeId && !resumeCli) {
+            const owner = await window.api.agentChat.resumeOwner(savedResumeId, cwd).catch(() => null)
+            if (cancelled) return
+            if (owner) {
+              resumeCli = owner
+              setAgentResumeId(tabId, leafId, savedResumeId, owner) // 补签发者，下次不用再查
+            }
+          }
+          const pick = resolveConversationCli(usable, {
+            pinned: pinnedCli,
+            resumeCli,
+            hasResume: !!savedResumeId,
+            lastUsed: readLastCli()
+          })
+          if (pick.dropResume && savedResumeId) {
+            // 选出来的不是签发者：**id 不能跟过去**，递给一个认不得它的 harness 就是事故
+            setAgentResumeId(tabId, leafId, '')
+            setSendError(
+              resumeCli
+                ? `这段对话是 ${resumeCli} 开的，它现在不可用；已换成 ${pick.cli?.id ?? '别的'}，接不回之前的上下文。`
+                : '这段对话的来源认不出来了（会话可能已被清理），已开成新的一段。'
+            )
+          }
+          setSelected((cur) => cur ?? pick.cli)
+        })()
       })
       .catch(() => {
         if (!cancelled) setClis([])
@@ -610,7 +647,8 @@ export function AgentChatView({
       // session.ready 带的是 **CLI 自己的**会话 id（session.ts 拿它填 SessionRecord.resumeId）。
       // 写回 PaneState → 随 canvas.json 落盘 → 下次打开这个节点接得上上下文。
       // 每轮都会来一次，setAgentResumeId 里对相同值直接返回原对象，不会白白制造新状态。
-      if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId)
+      // 签发者 = 此刻跑着的这个 cli。**谁报回的 id 就记谁**，重挂载时不再猜归属。
+      if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId, selected?.id)
       const v = reducerRef.current.view()
       setView(v)
       // ── 接进全局的通知系统 ──────────────────────────────────────
@@ -702,7 +740,7 @@ export function AgentChatView({
     adoptedRef.current = false
     setSessionId(null)
     setView(null)
-    setRestored({ turns: [], resumeId: null })
+    setRestored({ turns: [], resumeId: null, resumeCli: null })
     setSentMessages([])
     setSendError(null)
     setText('')
@@ -949,12 +987,12 @@ export function AgentChatView({
     const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
     if (!got) return
     const turns = settleOnLoad(got.turns as Turn[])
-    setRestored({ turns, resumeId: got.resumeId })
-    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId)
+    setRestored({ turns, resumeId: got.resumeId, resumeCli: got.resumeCli })
+    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId, got.resumeCli ?? undefined)
     setOrphans([])
     // 立刻把它写到新 leafId 名下 —— 不等 view，那要等用户发消息才有。
     const saved = await window.api.agentChat
-      .saveHistory(histKey, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd)
+      .saveHistory(histKey, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd, got.resumeCli)
       .catch(() => false)
     if (!saved) {
       // **存不成就不删。** 界面上内容已经接过来了，旧文件留着无非是多一份，

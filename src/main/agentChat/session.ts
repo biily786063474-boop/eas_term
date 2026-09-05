@@ -41,6 +41,7 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
 import { openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
 import { hostPaths } from './omp/host.ts'
+import { resumeOwnerOf, type ResumeOwner } from './resumeOwner.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
 import { planHookInstall, planHookUninstall, hookInstallStatusOf } from './hookInstall.ts'
@@ -1055,6 +1056,20 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
   )
 }
 
+/** 查 resumeId 的签发者。pastPaths 从 projects.json 读（项目改过名时 Claude 的目录名跟着变）。 */
+function ownerOfResume(resumeId: string, cwd: string): ResumeOwner | null {
+  const host = hostPaths()
+  let pastPaths: string[] = []
+  try {
+    const raw = fs.readFileSync(path.join(host.userData, 'projects.json'), 'utf8')
+    const list = JSON.parse(raw) as { path?: string; pastPaths?: string[] }[]
+    pastPaths = (Array.isArray(list) ? list.find((x) => x?.path === cwd)?.pastPaths : undefined) ?? []
+  } catch {
+    /* 读不到就只查当前路径 */
+  }
+  return resumeOwnerOf(resumeId, cwd, { home: host.home, userData: host.userData, pastPaths })
+}
+
 export function registerAgentChatHandlers(): void {
   setInterval(reapIdleSessions, 60_000)
   // 恢复要跟得上退避节奏（最短 20 秒），不能挂在上面那个 60 秒的轮子上
@@ -1223,8 +1238,30 @@ export function registerAgentChatHandlers(): void {
     // 进程杀掉重启、上下文归零 —— 正是「不重启改模型」这条要避免的。
     if (adapter.transport === 'acp') live.acp = makeAcpLive(live, adapter)
     sessions.set(id, live)
+    // ── 最后一道闸：resumeId 不许跨 harness ─────────────────────────────────
+    // 渲染层已经按签发者选 cli 了，这里是兜底：万一还是把别家的 id 递了进来
+    // （老版本渲染层 / 别的调用方），**宁可丢上下文也不递** —— 递过去的结果是
+    // "session not found" → fatal → 对话永久报废（2026-09-04 事故）。
+    if (rec.resumeId) {
+      const owner = ownerOfResume(rec.resumeId, rec.cwd)
+      if (owner && owner !== rec.cli) {
+        rec.resumeId = undefined
+        handleEvent(live, {
+          k: 'error',
+          fatal: false,
+          message: `这段对话是 ${owner} 开的，换成 ${rec.cli} 接不回之前的上下文，已经开了新的一段。`
+        })
+      }
+    }
     deliverMessage(live, p.message) // 首次投递等价于「进程不活 → restart」，spawn 失败经 error 事件异步通知
     return { ok: true, sessionId: id }
+  })
+
+  /** 这个 resumeId 是谁签发的 —— 查磁盘（`resumeOwner.ts`）。渲染层重挂载老对话时
+   *  靠它补上签发者，`start` 靠它兜底。cwd 改过名的项目要连旧路径一起找。 */
+  ipcMain.handle('agentChat:resumeOwner', (_e, resumeId: unknown, cwd: unknown): ResumeOwner | null => {
+    if (typeof resumeId !== 'string' || typeof cwd !== 'string' || !resumeId || !cwd) return null
+    return ownerOfResume(resumeId, cwd)
   })
 
   ipcMain.handle('agentChat:send', (_e, sessionId: unknown, message: unknown): AgentChatSendResult => {
