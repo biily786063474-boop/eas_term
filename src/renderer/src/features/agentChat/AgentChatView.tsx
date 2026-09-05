@@ -29,7 +29,7 @@ import { RolePicker } from './RolePicker'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
-import type { CliAuthState } from '../../../../shared/types'
+import type { CliAuthState, HarnessId } from '../../../../shared/types'
 import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
@@ -221,10 +221,9 @@ export function AgentChatView({
    *  拿一个不存在的 id 去起会话不该硬失败。 */
   const role = roles.find((r) => r.id === roleId)
   const roleContract = role?.contract?.trim() || undefined
-  /** 角色的工具边界。**和契约不同，它恢复会话时也要带** ——
-   *  契约走系统提示（`--resume` 不重放），而工具边界是 CLI 层的强制规则，
-   *  每次启动都要重新生效，不带等于恢复会话时把护栏卸了。 */
-  const roleTools = role?.tools
+  /** 角色的能力意图。**和契约不同，它恢复会话时也要带** ——
+   *  契约走系统提示（`--resume` 不重放），而能力边界是 CLI 层的强制规则。 */
+  const roleBounds = role && (role.caps || role.raw) ? { caps: role.caps, raw: role.raw } : undefined
 
   const pinnedCli = useStore((s) => {
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -805,6 +804,9 @@ export function AgentChatView({
       // 身份跟着会话走，不跟着节点走。两处 start 都要带 —— 漏掉哪条路径，
       // 走那条路起来的团队 agent 就成了面板认不出的匿名会话。
       const identity = isTeamOwned ? { owner: 'team' as const, role: teamRole } : {}
+      // 角色的默认模型 / 档位按 harness 取；没填就交给 CLI 默认。会话起来后工具栏改的以那次为准。
+      const roleModel = role?.model?.[selected.id as HarnessId]
+      const roleEffort = role?.effort?.[selected.id as HarnessId]
       result = await window.api.agentChat.start({
         cli: selected.id,
         cwd,
@@ -814,7 +816,9 @@ export function AgentChatView({
         // 角色契约。**两处 start 都要带** —— 漏掉哪条路径，
         // 走那条路开出来的会话就没有角色（同 identity 那条注释的理由）。
         ...(roleContract ? { roleContract } : {}),
-        ...(roleTools ? { roleTools } : {}),
+        ...(roleBounds ? { roleBounds } : {}),
+        ...(roleModel ? { model: roleModel } : {}),
+        ...(roleEffort ? { effort: roleEffort } : {}),
         ...identity,
         // 这次会话带哪个插件。**两处 start 都要带** —— 漏掉哪条路径，
         // 走那条路开出来的会话就没有插件的工具（同 identity 那条注释的理由）。
@@ -835,7 +839,9 @@ export function AgentChatView({
           // **角色同样要带** —— 漏掉的话，撞上一次重试就悄悄丢了角色，
           // 而用户什么都看不出来（界面上角色还显示着）。
           ...(roleContract ? { roleContract } : {}),
-          ...(roleTools ? { roleTools } : {}),
+          ...(roleBounds ? { roleBounds } : {}),
+          ...(roleModel ? { model: roleModel } : {}),
+          ...(roleEffort ? { effort: roleEffort } : {}),
           ...identity
         })
       }
