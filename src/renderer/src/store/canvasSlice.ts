@@ -47,6 +47,7 @@ import {
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import { fitScale } from './canvas/fitScale'
 import { tidyOrder } from './canvas/tidyOrder'
+import { gridPlace } from './canvas/tidyGrid'
 import {
   TODO_BOARD_DEFAULT_H,
   TODO_BOARD_DEFAULT_W,
@@ -1284,22 +1285,10 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       // 规则本身连同「怎么认出终端」都在 canvas/tidyOrder.ts，那边有 9 个测试锁着 ——
       // 写错了不会崩、只会表现成「整理完终端不在第一行」，是要靠测试才抓得住的那类。
       const order = tidyOrder(frame.nodes)
-      // 行宽：至少放得下最宽的模块，默认沿用 Frame 当前内容宽度
-      const maxW = Math.max(frame.w - PAD * 2, ...order.map((n) => n.w))
-      let x = PAD
-      let y = startY
-      let rowH = 0
-      const placed = new Map<string, { x: number; y: number }>()
-      for (const n of order) {
-        if (x > PAD && x + n.w > PAD + maxW) {
-          x = PAD
-          y += rowH + GAP
-          rowH = 0
-        }
-        placed.set(n.id, { x, y })
-        x += n.w + GAP
-        rowH = Math.max(rowH, n.h)
-      }
+      // **摆成宫格，不是一整列**（用户 2026-09-05）。列数按 √n 求接近正方形，
+      // 行宽由「排成几列」决定，**不再跟着 frame.w 走** —— 那是老逻辑越整越窄的根。
+      // 算法连同 8 个测试都在 canvas/tidyGrid.ts。
+      const placed = gridPlace(order, { gap: GAP, startX: PAD, startY })
       // 按原数组顺序写回（数组下标即 z 序，不要因排序改变层级）
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId
