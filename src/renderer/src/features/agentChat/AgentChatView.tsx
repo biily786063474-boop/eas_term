@@ -448,7 +448,7 @@ export function AgentChatView({
   // 用户自己发出去的消息——归约器从不产出它们（见文件头注释），渲染前要自己合并回去。
   const [sentMessages, setSentMessages] = useState<SentMessage[]>([])
   // 后续消息（send()）失败时的原因——展示交给 ChatToolbar，这里只持有（它拿着 sessionId）。
-  const [sendError, setSendError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<{ text: string; fatal: boolean } | null>(null)
 
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
@@ -594,11 +594,14 @@ export function AgentChatView({
           if (pick.dropResume && savedResumeId) {
             // 选出来的不是签发者：**id 不能跟过去**，递给一个认不得它的 harness 就是事故
             setAgentResumeId(tabId, leafId, '')
-            setSendError(
-              resumeCli
+            // 这是**告知**不是崩溃：会话已经开成新的了，只是接不回上下文。
+            // 按 2026-09-05 的规矩归为警告 —— 5s 没 hover 自动消失，也能手动关。
+            setSendError({
+              fatal: false,
+              text: resumeCli
                 ? `这段对话是 ${resumeCli} 开的，它现在不可用；已换成 ${pick.cli?.id ?? '别的'}，接不回之前的上下文。`
                 : '这段对话的来源认不出来了（会话可能已被清理），已开成新的一段。'
-            )
+            })
           }
           setSelected((cur) => cur ?? pick.cli)
         })()
@@ -1071,7 +1074,7 @@ export function AgentChatView({
         return true
       }
       setSentMessages((prev) => prev.filter((m) => m !== entry))
-      if (aliveRef.current) setSendError(r.error)
+      if (aliveRef.current) setSendError({ text: r.error, fatal: true })
       return false
     }
     return (
@@ -1109,6 +1112,7 @@ export function AgentChatView({
           // 那两件事本来就是同一类：都是「这次对话开起来之前要定的」。
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
+          onDismissSendError={() => setSendError(null)}
           onLogin={() => selected && setSetupFor({ cli: selected, from: 'login' })}
         />
         {/* 会话跑到一半掉线（token 过期）时的登录面板。

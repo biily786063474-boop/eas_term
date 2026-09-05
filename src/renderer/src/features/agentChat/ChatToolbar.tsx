@@ -19,7 +19,7 @@
 // （preload/index.ts 与 session.ts 的 IPC handler 都明确只读这两个字段），没有能中途
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
-import { useEffect, useRef, useState, useMemo} from 'react'
+import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
@@ -29,6 +29,7 @@ import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
 import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
+import { autoDismisses, NOTICE_AUTO_MS } from './noticeDismiss.ts'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
@@ -42,6 +43,62 @@ function autoGrow(el: HTMLTextAreaElement): void {
   el.style.height = Math.min(el.scrollHeight, LINE_H * MAX_ROWS) + 'px'
 }
 
+/** 一条飘在对话上方的提示。规矩见 `noticeDismiss.ts`：
+ *  · 永远有关闭按钮（× 手动关）
+ *  · **警告**（fatal=false）：挂载后 5s 自动关；hover 时暂停、移开重新计时
+ *  · **红色报错**（fatal=true）：不自动关，只能手动关
+ *
+ *  自动关这件事有意做在**这个组件里**、按 `fatal` 分支，而不是在数据层给每条
+ *  notice 塞一个「过期时间」—— hover 暂停必须贴着 DOM 事件，塞进数据反而绕。 */
+function Notice({
+  fatal,
+  onClose,
+  action,
+  children
+}: {
+  fatal: boolean
+  onClose: () => void
+  action?: ReactNode
+  children: ReactNode
+}): JSX.Element {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clear = (): void => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+  }
+  const arm = (): void => {
+    clear()
+    if (autoDismisses(fatal)) timer.current = setTimeout(onClose, NOTICE_AUTO_MS)
+  }
+  // 挂载即起计时；fatal 变化或卸载时清掉。onClose 每帧新建不该重排定时器，故不入依赖。
+  useEffect(() => {
+    arm()
+    return clear
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fatal])
+  return (
+    <div
+      className={`ac-notice${fatal ? ' ac-notice-fatal' : ' ac-notice-warn'}`}
+      onMouseEnter={clear}
+      onMouseLeave={arm}
+    >
+      <span className="ac-notice-text">{children}</span>
+      {action}
+      <button
+        type="button"
+        className="ac-notice-close"
+        aria-label="关闭"
+        title="关闭"
+        onClick={onClose}
+      >
+        <CloseIcon size={10} />
+      </button>
+    </div>
+  )
+}
+
 export function ChatToolbar({
   caps,
   approvalHook,
@@ -52,7 +109,8 @@ export function ChatToolbar({
   onSetParams,
   onLogin,
   onNewChat,
-  sendError
+  sendError,
+  onDismissSendError
 }: {
   caps: CliCapabilities
   /** 这个 CLI 的逐次审批用哪种机制（原样来自 CliInfo.approvalHook）。**决定了工具栏
@@ -91,7 +149,10 @@ export function ChatToolbar({
   // 那两件事是同一类：都在 spawn 那一刻生效、之后改不了。
   /** 上一次 send() 失败的原因（会话已关闭/消息为空/正在处理上一条等)——AgentChatView
    *  持有 sessionId、由它 await window.api.agentChat.send() 的结果,这里只负责显示。 */
-  sendError?: string | null
+  /** 上一次发送/起会话的即时错误。fatal 决定红条还是警告条（后者 5s 自动关）。 */
+  sendError?: { text: string; fatal: boolean } | null
+  /** 手动关掉 sendError。**必须给** —— 「关不掉」那个 bug 就是当时没有它。 */
+  onDismissSendError?: () => void
   /** 点了 notice 上那颗「去登录」。不传就不显示那颗按钮（空态那侧另有入口） */
   onLogin?: () => void
 }): JSX.Element {
@@ -243,45 +304,28 @@ export function ChatToolbar({
       {(visibleNotices.length > 0 || sendError) && (
         <div className="ac-notices">
           {visibleNotices.map((n) => (
-            <div key={n.id} className={`ac-notice${n.fatal ? ' ac-notice-fatal' : ''}`}>
-              <span className="ac-notice-text">
-                {n.text}
-                {n.count > 1 && <span className="ac-notice-count">×{n.count}</span>}
-              </span>
-              {/* 没登录 / 登录失效 / 还没配好：给一个当场能处理的入口。
-                  **按 kind 分支，不匹配 n.text 里的中文** —— 文案随时会改，
-                  而匹配文案的代码坏掉时不会有任何报错（shared/agentChat.ts 那条注释）。
-                  会话跑到一半 token 过期就走这条路，不用回空态。
-
-                  **`'setup'` 也要给按钮**：它在对话态几乎必然发生 —— 密钥柜 15 分钟
-                  自动上锁、会话 2 小时空闲回收，人走开一会儿回来发一句就正好撞上。
-                  而 `.ac-authgate`（另一个出口）**只存在于空态**，对话态根本没有它；
-                  不扩这一支的话，用户看到的是一条没有任何出口的红字。
-
-                  判的仍然是 kind 不是 CLI 名字：Claude / Codex 的 adapter 不产
-                  `'setup'`，这一支对它们恒假，行为一个字节都不变。 */}
-              {(n.kind === 'auth' || n.kind === 'setup') && onLogin && (
-                <button type="button" className="ac-notice-login" onClick={onLogin}>
-                  {n.kind === 'auth' ? '去登录' : '去设置'}
-                </button>
-              )}
-              <button
-                type="button"
-                className="ac-notice-close"
-                aria-label="关闭这条提醒"
-                title="关闭这条提醒"
-                onClick={() => setDismissed((prev) => ({ ...prev, [n.id]: n.count }))}
-              >
-                <CloseIcon size={10} />
-              </button>
-            </div>
+            <Notice
+              key={n.id}
+              fatal={n.fatal}
+              onClose={() => setDismissed((prev) => ({ ...prev, [n.id]: n.count }))}
+              action={
+                (n.kind === 'auth' || n.kind === 'setup') && onLogin ? (
+                  <button type="button" className="ac-notice-login" onClick={onLogin}>
+                    {n.kind === 'auth' ? '去登录' : '去设置'}
+                  </button>
+                ) : null
+              }
+            >
+              {n.text}
+              {n.count > 1 && <span className="ac-notice-count">×{n.count}</span>}
+            </Notice>
           ))}
-          {/* sendError 不给关闭按钮：它不是累积的 notice，是"上一次发送"的即时状态，
-              下一次发送时 AgentChatView 会自己清掉（setSendError(null)）。 */}
+          {/* sendError 也走同一个 Notice —— 之前它没关闭按钮、还写着「下次发送时
+              自己清掉」，可**这次发送就失败了**，于是它永远关不掉（2026-09-05 用户截图）。 */}
           {sendError && (
-            <div className="ac-notice ac-notice-fatal">
-              <span className="ac-notice-text">{sendError}</span>
-            </div>
+            <Notice fatal={sendError.fatal} onClose={() => onDismissSendError?.()}>
+              {sendError.text}
+            </Notice>
           )}
         </div>
       )}

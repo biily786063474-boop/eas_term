@@ -824,6 +824,12 @@
   opacity: 1;
   background: var(--lift-2);
 }
+/* 警告条：橙色（就是 `.ac-notice` 的基色）。显式写出来是为了和 fatal 成对、
+   也让「这是会自动消失的那一类」在代码里一眼看得出。5s 自动关的行为在 ChatToolbar
+   的 <Notice> 组件里（noticeDismiss.ts 是判据）。 */
+.ac-notice-warn {
+  /* 基色已是橙，这里不改颜色，只作标记类；将来要调警告色改这里 */
+}
 .ac-notice-fatal {
   color: var(--sem-danger);
   background: rgba(var(--sem-danger-rgb), 0.1);
