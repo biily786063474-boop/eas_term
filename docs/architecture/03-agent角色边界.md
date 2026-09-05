@@ -37,11 +37,22 @@
 > **对话节点调 `bindRole`**（`StartOpts.roleBounds`，IPC 边界过 `safeRoleBounds`）；
 > 终端命令条 `CanvasAgentBar` 2026-09-03（commit `5734a00`）起**无 UI 入口**，
 > 其 `buildClaudeCmd` / `buildCodexCmd` 仅与绑定层保持同步以便回滚。
-> `team_spawn` 派的会话仍不带角色（阶段二加 `roleId`）。
+> `team_spawn` 派的会话**也能套角色卡**（2026-09-05）：`agents[].role_id` 经 `checkBatch` 校验后
+> 走 `openAgentPane({ roleId })` 落到 `pane.roleId` —— **和用户在工具栏手选角色是同一条路**，
+> 之后的绑定与契约下发完全一致，没有第二套逻辑。
 > Codex 的 MCP 名下发前按 `knownMcpServers` 过滤（`session.ts` 起会话时读 `~/.codex/config.toml` 一次）
 > —— Codex 对不存在的 server 名会拒绝启动。
 > 对话节点的 MCP 工具面另由 `--strict-mcp-config` + `--mcp-config`（只含自家 server）决定，
 > 与 `caps` 是两层，不是同一层。
+
+> **界面文案一律从 `bindRole()` 的报告派生，不许在组件里手写落法。** 编辑器的能力矩阵
+> （`CanvasRoleEditor` 的 `.re-matrix`，每行一个能力 × 每列一家 harness）来自
+> `capMatrix(bounds, ctx)`；对话工具栏角色名旁的降级标记（`RolePicker` 的 `.rolepick-warn`
+> 与它的 tooltip）来自 `degradedLines(bounds, kind, ctx)`。两个函数都在 `shared/roleBinding.ts`，
+> 档位与能力名走同文件的 `LEVEL_LABEL` / `CAP_LABEL` / `HARNESS_LABEL`。
+> 要改措辞就改那张表 —— **手写的文案会和真正下发的参数悄悄分家**，界面写着"已禁用"而参数没带上，
+> 谁都看不出来（阶段一就分过一次）。`team_spawn` 的确认弹窗是例外中的例外：它只显示套的
+> 角色卡**名字**（`TeamBatchModal` 拿 `roleId` 去 `roles` 里查），不展开落法。
 
 ## 多 agent 编排的闸门（`team_spawn` · `teamWorktree.ts` / `batchSpec.ts`）
 
@@ -56,8 +67,9 @@
   判断这个角色写不写代码** —— `roles.ts` 那套角色是 AI 对话工具栏上的角色轮播
   （`agentChat/RolePicker.tsx`，判断层在 `agentChat/carousel.ts`）用的，
   `team_spawn` 的 `role` 只是自由的 kebab-case 标签（同时是 `.plans/<role>/` 的目录名），
-  两者没有任何代码关联。**派写码 agent 忘填 `isolation:'worktree'` = 直接落进 E-07 那个
-  静默覆盖，而且不会报错。**
+  **`role` 本身和那套角色卡没有任何代码关联** —— 要给派出去的 agent 套卡得另填 `role_id`（见 3A 角色段），
+  而 `role_id` 也只决定契约与能力边界，**不决定 `isolation`**。
+  **派写码 agent 忘填 `isolation:'worktree'` = 直接落进 E-07 那个静默覆盖，而且不会报错。**
 - **限流闸是现算的**（读真实会话表看有没有活的 `owner:'team'` agent），**不用持久状态位**
   —— 教训写在注释里：存过状态导致永久锁死过一个 Frame。
 - **删 worktree 前检查 `git status --porcelain`，有未提交改动一律拒删**；`team_dissolve`

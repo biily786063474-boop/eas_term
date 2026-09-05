@@ -87,7 +87,7 @@ graph LR
 
 | 工具 | 反直觉处 |
 |---|---|
-| `team_spawn` ⏳ | **五道闸**见 [03](03-agent角色边界.md) |
+| `team_spawn` ⏳ | **五道闸**见 [03](03-agent角色边界.md)。`agents[].role_id` 可选 —— `checkBatch` 拿**当前角色卡的 id 列表**校验，对不上号**整批拒**（不是忽略），填了就走 `openAgentPane({ roleId })` |
 | `team_dissolve` | 停整批、报产出，但**不清理 worktree**（读 `.plans/<role>/findings.md`）|
 | `secret_check` | **只回有无，不回值**（`src/main/secrets.ts`）|
 | `skill_categorize` | 只写分类配置，**不碰 skill 文件本身** |
