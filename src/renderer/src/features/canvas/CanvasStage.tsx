@@ -1733,6 +1733,7 @@ export function CanvasStage(): JSX.Element {
             // 面板 = 组件节点 plugin-panel，身份在 props（设计稿决定 #5/#6）。不起会话。
             const frame = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
             if (!frame) return
+            const before = new Set(frame.nodes.map((n) => n.id))
             useStore
               .getState()
               .addComponentNode(
@@ -1744,6 +1745,13 @@ export function CanvasStage(): JSX.Element {
                 panel.defaultSize.h,
                 { pluginId: plug.id, panelId: panel.id }
               )
+            // 节点标题显示**插件名**而不是「插件面板」（用户 2026-09-05）。多面板的插件带上面板名。
+            const after = useStore.getState().canvas.frames.find((f) => f.id === picker.frameId)
+            const fresh = after?.nodes.find((n) => !before.has(n.id) && n.component?.type === 'plugin-panel')
+            if (fresh) {
+              const name = (plug.panels?.length ?? 0) > 1 ? `${plug.displayName} · ${panel.title}` : plug.displayName
+              useStore.getState().renameNode(picker.frameId, fresh.id, name)
+            }
           }}
           onPickPlugin={(plug) => {
             // 插件插进画布 = 开一个**绑定了它**的 AI 对话节点。

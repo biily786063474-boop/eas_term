@@ -12,7 +12,7 @@
 // allow-same-origin，origin 是 opaque（"null"），**不能拿 origin 当判据**（2026-09-05 核对 §八.3）。
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
-import type { CanvasComponentCtx } from '../canvas/components/registry'
+import { getCanvasComponent, type CanvasComponentCtx } from '../canvas/components/registry'
 import {
   clampPanelSize,
   errorResponse,
@@ -36,6 +36,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
   const pluginId = typeof ctx.props?.pluginId === 'string' ? ctx.props.pluginId : ''
   const panelId = typeof ctx.props?.panelId === 'string' ? ctx.props.panelId : 'main'
   const resizeNode = useStore((s) => s.resizeNode)
+  const renameNode = useStore((s) => s.renameNode)
+  const nodeName = useStore((s) => s.canvas.frames.find((x) => x.id === ctx.frameId)?.nodes.find((x) => x.id === ctx.nodeId)?.name)
   // ⚠️ **两个原始值 selector，不返回对象。** 返回 `{w,h}` 会让 zustand 每次都判「变了」→
   // 无限重渲染 → React #185（Maximum update depth）→ 整个界面进错误边界。2026-09-05 真机撞到：
   // 症状是「节点挂上就卸掉、30s 后插件进程被回收」，第一眼完全看不出是 selector 的锅。
@@ -66,6 +68,9 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
       if (r.ok) {
         sessionRef.current = r.panelSession
         setState({ k: 'ready', session: r.panelSession, url: r.url, canvasAllow: r.canvasAllow, title: r.title, version: r.version })
+        // 老节点（建的时候还没命名）补上面板标题，别顶着「插件面板」四个字
+        // 没名字、或还顶着组件的默认名「插件面板」（节点创建时可能已被填上默认名）都补
+        if (!nodeName || nodeName === getCanvasComponent('plugin-panel')?.name) renameNode(ctx.frameId, ctx.nodeId, r.title)
       } else setState({ k: 'error', msg: r.error })
     })
     return () => {
