@@ -2766,24 +2766,85 @@
   border-radius: var(--radius-md);
 }
 
-/* 卡片本体。
-   **「弹簧」和「回弹带倾斜」都出自下面这条曲线** ——
-   cubic-bezier 的第二个控制点 y 大于 1，回正时会冲过 0 再荡回来，
-   而 rotate 和 translateX 在同一个 transform 里，于是倾斜跟着一起过冲。
-   强度按规格是 subtle：1.28 已经能看出来，再大就开始晃眼。 */
-.rp-slide {
-  padding: 11px 12px 10px;
-  border-radius: var(--radius-md);
-  background: var(--lift-1);
+/* **一条横轨，所有卡片并排。** 平移它就切换角色。
+   点箭头 / 点圆点 / 拖拽——三条路都改这一个 transform，动感因此完全一致
+   （用户 2026-09-05：点击切换也要完整的拖拽动画）。
+   曲线第二控制点 y>1，回正时冲过头再荡回来，就是那点「弹」。 */
+.rp-track {
+  display: flex;
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
   transition: transform 0.42s cubic-bezier(0.22, 1.28, 0.36, 1);
+  align-items: flex-start; /* hover 长高的那张不把矮卡拉高 */
 }
-.rp-slide.dragging {
+.rp-track.dragging {
   cursor: grabbing;
   /* 跟手：拖的时候必须**没有** transition，否则每一帧都在追一个旧目标 */
   transition: none;
+}
+
+/* 每张卡占满窗口宽度（轨道靠 translateX(-idx*100%) 定位，所以必须整宽） */
+.rp-card {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  padding: 11px 12px 10px;
+  border-radius: var(--radius-md);
+  background: var(--lift-1);
+}
+
+/* 右上角编辑钮：打开详细设定弹窗。常驻但很淡，hover 卡片时提亮 —— 让人知道能改，
+   又不跟名字抢注意力。 */
+.rp-edit {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity var(--dur-fast), color var(--dur-fast), background var(--dur-fast);
+}
+.rp-card:hover .rp-edit {
+  opacity: 0.85;
+}
+.rp-edit:hover {
+  opacity: 1;
+  color: var(--text-1);
+  background: var(--lift-2);
+}
+
+/* ＋新建卡：整卡是一个按钮 */
+.rp-card-new {
+  display: flex;
+}
+.rp-new-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 76px;
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast), color var(--dur-fast), background var(--dur-fast);
+}
+.rp-new-btn:hover {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 
 .rp-name {
@@ -2822,16 +2883,26 @@
    于是每张卡中间空掉两行（2026-09-03 实测截图）。
    两行起把常见情况的空档砍掉一半，而高度最多只在落到那一张时跳一行（约 17px），
    比「张张都空着」划算。 */
+/* 职能简述：**正面收起，hover 展开**（用户 2026-09-05：hover 时才看到简述）。
+   用 max-height 过渡而不是切 display —— 后者不能动画，会「啪」地出现。
+   收起时 margin 也归零，否则空着一条缝。 */
 .rp-desc {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-  min-height: 2.9em;
+  max-height: 0;
   overflow: hidden;
-  margin: 5px 0 10px;
+  margin: 0;
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.45;
+  opacity: 0;
+  transition: max-height 0.22s ease, margin 0.22s ease, opacity 0.22s ease;
+}
+.rp-card:hover .rp-desc {
+  max-height: 4.4em;
+  margin: 5px 0 10px;
+  opacity: 1;
 }
 
 .rp-use {
@@ -2913,6 +2984,12 @@
 .rp-dot.cur {
   background: var(--accent);
   opacity: 0.85;
+}
+/* 「＋新建」那一颗做成小加号形状（方块），和圆点区分——它不是一个「第 N 个角色」 */
+.rp-dot.add {
+  border-radius: 1.5px;
+  width: 5px;
+  height: 5px;
 }
 
 /* 角色生效时，工具栏上那枚 icon 亮起来 */
