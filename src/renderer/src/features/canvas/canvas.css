@@ -4722,18 +4722,20 @@
 /* ── 来源分段的段头 ────────────────────────────────────────────────────
    选中项目 Frame 时，项目级与全局的 skill 上下并存（skillSections.ts）。
    段头只在两段同时存在时出现——只有一段的话，工具栏那个目录按钮已经说明了来源。 */
-/* 折叠的段只占段头那点高度；展开的段之间**平分**剩下的空间。
-   原来两个都是 `flex: 0 1 auto`，于是 skill 多的那段按内容把空间抢光，
-   另一段被压到十几像素 —— 项目目录不存在时那条错误提示 122px 高，
-   却只分到 19px 的可视区，得在里面滚动才读得完（实测）。 */
+/* **一个滚动区，段按内容高度顺着排**（用户 2026-09-05：全局段要紧接项目段底部）。
+   之前是每段各自滚、展开的段 `flex: 1 1 0` 平分抽屉高度 —— 项目段只有两个 skill
+   也占一半，下面空一大块。再往前一版是 `flex: 0 1 auto`，skill 多的段把空间抢光、
+   另一段被压到 19px。现在段不参与分配（flex:none、按内容高），整列在 .skl-scroll
+   里滚：那条 122px 的错误提示也只是占它该占的高度，不再需要在里面滚。 */
+.skl-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
 .skl-sec {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   flex: none;
-}
-.skl-sec:has(.skl-list) {
-  flex: 1 1 0;
 }
 /* 段头不参与压缩：它被挤扁的话，标签和计数会糊在一起 */
 .skl-sec-head {
@@ -4855,9 +4857,8 @@
 }
 
 .skl-list {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
+  /* 不再自己滚：滚动归外层 .skl-scroll */
+  flex: none;
   margin-top: 6px;
   padding-bottom: 6px;
 }
@@ -5295,6 +5296,44 @@
   background: var(--glass-2);
   border-color: var(--glass-border-strong);
   color: var(--fg);
+}
+/* 搜索行：常驻在工具栏下面。中性边框（不像 newcat 那样用强调色——它不是「正在
+   进行的一次操作」，是个一直在的入口），聚焦才亮。 */
+.skl-search {
+  position: relative;
+  padding: 6px 8px 0;
+}
+.skl-search-input {
+  width: 100%;
+  padding: 5px 26px 5px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--lift-2);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+.skl-search-input:focus {
+  border-color: rgba(var(--accent-rgb), 0.5);
+}
+.skl-search-x {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  margin-top: 3px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  padding: 3px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.skl-search-x:hover {
+  color: var(--fg);
+  background: var(--lift-2);
 }
 .skl-newcat {
   padding: 6px 8px 0;

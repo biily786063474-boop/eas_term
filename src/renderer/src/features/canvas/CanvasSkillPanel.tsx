@@ -22,6 +22,7 @@ import type { SkillDirEntry, SkillInfo, SkillListResult } from '../../../../shar
 import { FileTree } from '../files/FileTree'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { planSkillSections, type SkillSection } from './skillSections'
+import { rankSkills } from './skillSearch'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import { FileLightbox } from './FileLightbox'
 import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon, CloseIcon } from '../../ui/Icons'
@@ -68,6 +69,9 @@ export function CanvasSkillPanel(): JSX.Element {
   /** 正在建新分类（工具栏那个 +）。分类是全局的，不属于某一段。 */
   const [newCat, setNewCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
+  /** 搜索串。规则（description 优先、多词全命中）在 skillSearch.ts，可单测。 */
+  const [q, setQ] = useState('')
+  const searching = q.trim().length > 0
 
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [dirs, setDirs] = useState<SkillDirEntry[]>([])
@@ -371,11 +375,21 @@ export function CanvasSkillPanel(): JSX.Element {
         </div>
       )
     }
+    if (searching && rankSkills(result.skills, q).length === 0) {
+      return <div className="wk-dim wk-tiny wk-pad">这一段没有匹配「{q.trim()}」的 skill</div>
+    }
     return (
       <>
         {result.categories.map((cat) => {
           const catKey = `${sec.key}\n${cat.name}`
-          const collapsed = collapsedCats.has(catKey)
+          // 搜索时：命中的按 description 优先排（skillSearch.ts）；没命中的分类整个不画；
+          // 折叠状态也不管——用户在找东西，藏起来的正是他要看的。
+          const catSkills = cat.skillPaths
+            .map((p) => result.skills.find((sk) => sk.path === p))
+            .filter((sk): sk is SkillInfo => !!sk)
+          const shown = rankSkills(catSkills, q)
+          if (searching && shown.length === 0) return null
+          const collapsed = !searching && collapsedCats.has(catKey)
           return (
             <div
               className={`skl-cat${dropCat === catKey ? ' dropping' : ''}`}
@@ -409,7 +423,7 @@ export function CanvasSkillPanel(): JSX.Element {
                     <ChevronRightIcon size={10} />
                   </span>
                   <span className="skl-cat-name">{cat.name}</span>
-                  <span className="skl-cat-count">{cat.skillPaths.length}</span>
+                  <span className="skl-cat-count">{shown.length}</span>
                 </button>
                 {/* 「未分类」是兜底的桶，不是用户建的分类，删不得 */}
                 {cat.name !== UNCATEGORIZED && (
@@ -424,9 +438,7 @@ export function CanvasSkillPanel(): JSX.Element {
               </div>
               {!collapsed && (
                 <div className="skl-cat-body">
-                  {cat.skillPaths.map((p) => {
-                    const sk = result.skills.find((s) => s.path === p)
-                    if (!sk) return null
+                  {shown.map((sk) => {
                     const expanded = expandedSkill === sk.path
                     const off = disabledSet.has(sk.path)
                     return (
@@ -531,6 +543,22 @@ export function CanvasSkillPanel(): JSX.Element {
           <PlusIcon size={12} />
         </button>
       </div>
+      <div className="skl-search">
+        <input
+          className="skl-search-input"
+          value={q}
+          placeholder="搜索 skill（先匹配说明，再匹配名字）"
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setQ('')
+          }}
+        />
+        {searching && (
+          <button className="skl-search-x" data-tip="清空" onClick={() => setQ('')}>
+            <CloseIcon size={10} />
+          </button>
+        )}
+      </div>
       {newCat && (
         <div className="skl-newcat">
           <input
@@ -585,6 +613,10 @@ export function CanvasSkillPanel(): JSX.Element {
         </div>
       )}
 
+      {/* **一个滚动区、段按内容高度顺着排**：全局段紧接项目段底部（用户 2026-09-05）。
+          之前每段各自滚、展开的段平分抽屉高度——项目段只有两个 skill 也占一半，
+          下面空一大块，全局段被顶到中间。 */}
+      <div className="skl-scroll">
       {!loading &&
         sections.map((sec) => {
           const collapsed = collapsedSecs.has(sec.key)
@@ -609,7 +641,9 @@ export function CanvasSkillPanel(): JSX.Element {
                   </span>
                   <span className={`skl-sec-tag ${sec.scope}`}>{sec.tag}</span>
                   <span className="skl-sec-name">{sec.label}</span>
-                  {!!r?.ok && <span className="skl-sec-count">{r.skills.length}</span>}
+                  {!!r?.ok && (
+                    <span className="skl-sec-count">{searching ? rankSkills(r.skills, q).length : r.skills.length}</span>
+                  )}
                 </button>
               )}
               {/* 滚动容器包住**全部四种状态**（加载中 / 错误 / 空态 / 列表）。
@@ -628,6 +662,7 @@ export function CanvasSkillPanel(): JSX.Element {
       {!loading && sections.length > 0 && totalSkills === 0 && sections.length > 1 && (
         <div className="wk-dim wk-tiny wk-pad">这两处都还没有 skill</div>
       )}
+      </div>
       {htmlChoice}
       {!!lightbox && (
         <FileLightbox
