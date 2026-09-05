@@ -119,6 +119,9 @@ graph LR
   **开发环境（`!app.isPackaged`）默认跳过**写全局配置，避免污染用户日常使用的打包版配置。
 - opt-out 记在 `userData/mcp-optout.json`，`removeMcpConfig()` 一键移除并记 opt-out；
   `purgeLegacyDshMcp()` 清 0.4.27–0.4.30 误写进 DeepSeek Harness 的配置。
+- **角色边界在 Codex 上**：内置工具走 `--disable <feature>`（`shell_tool` / `image_generation`，
+  2026-09-05 实测前者生效），MCP 走 `-c mcp_servers.<名>.enabled=false`（名字必须存在）；
+  `-c` 不校验键名，**写错静默无效**。
 
 ## 契约红线
 

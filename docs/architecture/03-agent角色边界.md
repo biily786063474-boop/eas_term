@@ -10,12 +10,16 @@
 
 ## 角色（`src/main/roles.ts` 的 `BUILTIN_ROLES`，落盘 `~/.eas/roles.json`，用户可改）
 
-每个角色是**可执行配置**（模型 / effort / 工具 allow-deny / contract 文本），不是人设文案。
+每个角色是**可执行配置**（模型 / effort 按 harness 分键、能力意图 `caps`、原始逃生口 `raw`、contract 文本），
+不是人设文案。翻译逻辑只在 `shared/roleBinding.ts` 一处：`bindRole(bounds, kind)` → 各家参数 + 报告行
+（`hard` / `soft` / `degraded` / `unsupported`）。
 `contract` 经 `--append-system-prompt-file`（Claude）或内联单行（Codex，无对应文件参数）下发。
 
-> **写权限只由 `tools.deny` 决定，跟角色名没关系。** 有代码兜底的只有两处：`scout` 与
-> `inspector` deny 了 `Write`/`Edit`/`NotebookEdit`；`illustrator` deny 了生图类 `mcp__*image*`
-> 等通配符（对应生图红线，**文件照样能写**）。其余角色的"不碰生产代码"（`prototyper`）、
+> **写权限只由 `caps.write` 决定，跟角色名没关系。** 有代码兜底的只有两处：
+> `scout` / `inspector`：`caps.write=false`（Claude 去 `Write`/`Edit`/`NotebookEdit`；
+> Codex `-s read-only`，OS 沙箱连命令行写入一起挡；omp `--tools` 去 `write`/`edit`/`ast_edit`）；
+> `illustrator`：`caps.imageGen=false`（Claude 通配 deny；Codex `--disable image_generation`
+> 效果未验 + 按名关 server；omp 按名不连）。其余角色的"不碰生产代码"（`prototyper`）、
 > "不污染代码项目"（`writer`）**只是 contract 里的提示，不是强制**；角色还落盘在用户可改的
 > `~/.eas/roles.json` —— 所以"某某角色是唯一能写码的"这句话在任何时刻都不成立。
 >
@@ -25,12 +29,14 @@
 > 另：`roles.ts` 里 `builder` 的 `desc` 至今写着"唯一有写代码权限的角色"，那是 app 里用户
 > 可见的一句错话（会让人以为"没选工匠 = 代码安全"），**别拿它当依据**。
 
-> 工具权限（`tools.allow/deny/denyServers`）**只作用于终端节点拼出来的 CLI 启动命令**
-> （`CanvasAgentBar.tsx` 的 `buildClaudeCmd` / `buildCodexCmd`）。那条命令**不带**
-> `--strict-mcp-config` / `--mcp-config`，MCP 工具面就是用户全局配置的全集。
-> **AI 对话节点 / `team_spawn` 起的 agentChat 会话不套用角色 tools** —— `StartOpts`
-> （`shared/agentChat.ts`）里根本没这个字段，工具面完全由 `--strict-mcp-config` +
-> `--mcp-config`（只含自家 server）决定。**两条互不相干的启动路径，不是同一次启动的两层。**
+> **对话节点调 `bindRole`**（`StartOpts.roleBounds`，IPC 边界过 `safeRoleBounds`）；
+> 终端命令条 `CanvasAgentBar` 2026-09-03（commit `5734a00`）起**无 UI 入口**，
+> 其 `buildClaudeCmd` / `buildCodexCmd` 仅与绑定层保持同步以便回滚。
+> `team_spawn` 派的会话仍不带角色（阶段二加 `roleId`）。
+> Codex 的 MCP 名下发前按 `knownMcpServers` 过滤（`session.ts` 起会话时读 `~/.codex/config.toml` 一次）
+> —— Codex 对不存在的 server 名会拒绝启动。
+> 对话节点的 MCP 工具面另由 `--strict-mcp-config` + `--mcp-config`（只含自家 server）决定，
+> 与 `caps` 是两层，不是同一层。
 
 ## 多 agent 编排的闸门（`team_spawn` · `teamWorktree.ts` / `batchSpec.ts`）
 
