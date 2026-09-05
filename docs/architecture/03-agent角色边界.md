@@ -31,8 +31,6 @@
 > ⛔ **别为了让这句话成立去给其余角色补 deny**：`e2e` 必须能写码（它就是一条会话跑完 TDD
 > 的角色）、`prototyper` 要写 `docs/prototype/` 下的 HTML、`writer` 要写成稿、`runner` 是
 > **刻意无限制**的逃生口（`roles.ts` 注释原话："不给逃生口的系统会被绕过"）。要收紧先问用户。
-> 另：`roles.ts` 里 `builder` 的 `desc` 至今写着"唯一有写代码权限的角色"，那是 app 里用户
-> 可见的一句错话（会让人以为"没选工匠 = 代码安全"），**别拿它当依据**。
 
 > **对话节点调 `bindRole`**（`StartOpts.roleBounds`，IPC 边界过 `safeRoleBounds`）；
 > 终端命令条 `CanvasAgentBar` 2026-09-03（commit `5734a00`）起**无 UI 入口**，
@@ -148,7 +146,7 @@ Write·Edit·NotebookEdit→patch / 其余→tool）→ 渲染层弹审批卡 �
 | `src/main/agentHistoryKey.ts` | 专门抽出来的路径穿越防线 |
 | `src/main/phone/server.ts` 的绑定地址 | 绝不能绑 `0.0.0.0` |
 | `src/tunnel/hub.ts` 的"不终止 TLS"架构 | 任何"中间解密再转发"的改动都是红线违反，`hub.test.ts` 会红 |
-| `src/main/roles.ts` 的 `illustrator` deny 通配符 | 改动等于打开生图红线 |
+| `src/main/builtinRoles.ts` 的 `illustrator.caps.imageGen`（经 `shared/roleBinding.ts` 翻成三家参数）| 改动等于打开生图红线 |
 
 > **写边界不止 fsGuard 一条，是几条各管一摊 + 一片无守卫区**（已知有下面这些，不保证穷尽；
 > 加写入口前自己再查一遍），不要"统一"它们：
