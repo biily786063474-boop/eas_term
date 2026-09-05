@@ -10,6 +10,9 @@
 // 新增字段一律可选，且**缺省即老行为** —— 判据写成 `!== '新值'` 走老路，
 // 而不是 `=== '老值'`（后者对不声明该字段的旧 adapter 恒假，会把它们的老路整个跳过）。
 
+import type { RoleBounds } from './roleBinding'
+import type { RoleCaps, RoleRaw } from './types'
+
 export interface Usage {
   inputTokens: number
   outputTokens: number
@@ -255,6 +258,12 @@ export interface StartOpts {
    *                unknown field），只能整个关掉某个 MCP server
    *    · omp    —— `--tools` 是**白名单**，与这里的黑名单语义相反，要做减法 */
   roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
+  /** 角色的能力意图 + 原始逃生口（v2）。由 `shared/roleBinding.ts` 的 `bindRole` 翻成各家参数。
+   *  **恢复会话时也要拼**（同 roleTools 那条理由：它是 CLI 层的强制规则，不是系统提示）。 */
+  roleBounds?: RoleBounds
+  /** 本机实际配置的 MCP server 名（Codex 用：名字不存在会拒绝启动，下发前按它过滤；
+   *  通配 → server 名的降级匹配也靠它）。由 session.ts 起会话时算好。 */
+  knownMcpServers?: string[]
 }
 
 /** 把 IPC 传来的 `roleTools` 洗成可信的形状。
@@ -284,6 +293,42 @@ export function safeRoleTools(raw: unknown): StartOpts['roleTools'] {
     denyServers: list(r.denyServers)
   }
   return out.allow || out.deny || out.denyServers ? out : undefined
+}
+
+/** `roleBounds` 的 IPC 清洗。三条规矩与 safeRoleTools 相同：不是对象当没给；
+ *  清单混进非字符串整条丢（不部分接受）；空的当没有。caps 只认 `false`。 */
+export function safeRoleBounds(raw: unknown): RoleBounds | undefined {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const r = raw as { caps?: unknown; raw?: unknown }
+  const list = (v: unknown): string[] | undefined => {
+    if (!Array.isArray(v) || !v.length) return undefined
+    return v.every((x) => typeof x === 'string' && x) ? (v as string[]) : undefined
+  }
+  const out: RoleBounds = {}
+  if (r.caps && typeof r.caps === 'object' && !Array.isArray(r.caps)) {
+    const c = r.caps as Record<string, unknown>
+    const caps: RoleCaps = {}
+    if (c.write === false) caps.write = false
+    if (c.shell === false) caps.shell = false
+    if (c.imageGen === false) caps.imageGen = false
+    const m = (c.mcp ?? {}) as Record<string, unknown>
+    const denyServers = list(m.denyServers)
+    const denyTools = list(m.denyTools)
+    if (denyServers || denyTools) caps.mcp = { ...(denyServers ? { denyServers } : {}), ...(denyTools ? { denyTools } : {}) }
+    if (Object.keys(caps).length) out.caps = caps
+  }
+  if (r.raw && typeof r.raw === 'object' && !Array.isArray(r.raw)) {
+    const x = r.raw as Record<string, Record<string, unknown> | undefined>
+    const rawOut: RoleRaw = {}
+    const cd = list(x.claude?.deny)
+    const xd = list(x.codex?.disable)
+    const od = list(x.omp?.removeTools)
+    if (cd) rawOut.claude = { deny: cd }
+    if (xd) rawOut.codex = { disable: xd }
+    if (od) rawOut.omp = { removeTools: od }
+    if (Object.keys(rawOut).length) out.raw = rawOut
+  }
+  return out.caps || out.raw ? out : undefined
 }
 
 /** 把一个 CLI 的原生输出行翻译成 ChatEvent 的最小契约。claudeEvents.ts / codexEvents.ts

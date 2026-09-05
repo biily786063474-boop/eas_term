@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
-import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleTools } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleTools, safeRoleBounds } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -624,4 +624,23 @@ test('正常形状原样通过', () => {
 
 test('空数组等于没有那一条；三条都空 → undefined', () => {
   assert.equal(safeRoleTools({ deny: [], denyServers: [], allow: [] }), undefined)
+})
+
+// ── safeRoleBounds：v2 的 IPC 清洗，规矩与 safeRoleTools 相同 ──────────────────
+test('safeRoleBounds：不是对象 → undefined', () => {
+  for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleBounds(v), undefined)
+})
+
+test('safeRoleBounds：caps 只认 false；混进非字符串的清单整条丢', () => {
+  const got = safeRoleBounds({ caps: { write: false, shell: true, mcp: { denyServers: ['s', 1], denyTools: ['*x*'] } } })
+  assert.deepEqual(got, { caps: { write: false, mcp: { denyTools: ['*x*'] } } })
+})
+
+test('safeRoleBounds：raw 按家收', () => {
+  const got = safeRoleBounds({ raw: { claude: { deny: ['A'] }, codex: { disable: [] }, omp: { removeTools: ['bash'] } } })
+  assert.deepEqual(got, { raw: { claude: { deny: ['A'] }, omp: { removeTools: ['bash'] } } })
+})
+
+test('safeRoleBounds：什么都没剩 → undefined', () => {
+  assert.equal(safeRoleBounds({ caps: { write: true }, raw: {} }), undefined)
 })
