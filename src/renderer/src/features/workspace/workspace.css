@@ -2561,15 +2561,36 @@ body.dragging-row * {
   50% { opacity: 0.4; }
 }
 
+/* ── 更新弹窗的内边距要自己补 ────────────────────────────────────────────
+   `.cset-box` 的内边距是**下放到子元素**的（`padding: 16px 0 0`，理由见那条规则），
+   设置面板由 `.cset-tabs` / `.cset-pane` 补回来 —— 而更新弹窗没有那两层，
+   内容是直接挂在 `.cset-box` 下的。不补的话按钮、进度条、正文全贴着边框
+   （2026-09-04 用户截图指出）。
+   所以下面每一块都显式给 20px 的左右边距，和 `.cset-head` 对齐。 */
 .upd-box {
   max-width: 460px;
+  /* 框本身只有上内边距，底部要补，否则进度条压在圆角上 */
+  padding-bottom: 18px;
 }
 
 .upd-notes {
   margin: 4px 0 0;
-  padding-left: 19px;
+  /* 39 = 20（框的左边距）+ 19（项目符号自己的缩进）。
+     **只写 19 的话正文会贴住左边框** —— 那 19 是给圆点用的，不是边距。 */
+  padding-left: 39px;
+  padding-right: 20px;
   max-height: 320px;
   overflow-y: auto;
+}
+
+/* 正文之外的每一块：说明、错误、动作条、进度条 */
+.upd-box > .upd-empty,
+.upd-ok,
+.upd-err,
+.upd-actions,
+.upd-bar {
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 .upd-notes li {
