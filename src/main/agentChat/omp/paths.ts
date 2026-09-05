@@ -339,10 +339,11 @@ export function ompBaseEnv(host: HostPaths): Record<string, string> {
 export function ompAcpArgs(
   host: HostPaths,
   roleContract?: string,
-  roleTools?: { deny?: string[]; denyServers?: string[] }
+  /** 要从白名单里减掉的工具名（`bindRole().omp.removeTools`） */
+  removeTools?: readonly string[]
 ): string[] {
   const mode = safeApprovalMode(readOmpSetup(host.userData).approvalMode)
-  const args = ['acp', `--approval-mode=${mode}`, `--tools=${ompToolsFor(roleTools?.deny).join(',')}`]
+  const args = ['acp', `--approval-mode=${mode}`, `--tools=${ompToolsFor(removeTools).join(',')}`]
   const contract = roleContract?.trim()
   if (contract) args.push(`--append-system-prompt=${contract}`)
   return args

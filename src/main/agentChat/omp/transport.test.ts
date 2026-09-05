@@ -198,6 +198,21 @@ test('模型与服务端当前值相同就不必多发一次', async () => {
   assert.equal(h.f.last('session/set_config_option'), undefined)
 })
 
+test('**角色的 model/effort 不合法、被服务端拒掉 → 非致命地报一句，会话不许被打死**', async () => {
+  // session/new 已经成功、sessionId 也拿到了，会话是活的 —— applyParams 这一步失败
+  // 不该等同于「握手失败」（那条路会清队列、onGone，把已经建好的会话也带走）。
+  const h = harness({ model: 'bad-model' })
+  await open(h)
+  h.f.replyError('session/set_config_option', { message: 'invalid config value: bad-model' })
+  await tick()
+  const ready = h.events.find((e) => e.k === 'session.ready')
+  assert.ok(ready, '会话该还是 ready 的 —— 不该被 applyParams 的失败打死')
+  const err = h.events.find((e) => e.k === 'error')
+  assert.ok(err && err.k === 'error' && err.fatal === false, '角色参数不合法只该非致命地报一句，不能是 fatal')
+  assert.match(err.message, /切换没生效/)
+  assert.ok(h.f.last('session/prompt'), '会话没被打死：握手前排队的那条消息应该照常送达')
+})
+
 test('**恢复走 session/resume 不走 session/load**（后者按协议要重放整段历史）', async () => {
   const h = harness({ resumeId: 's-old' })
   h.live.deliver('接着说')

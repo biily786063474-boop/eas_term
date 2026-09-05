@@ -17,6 +17,34 @@
  */
 export type AgentKind = 'claude' | 'codex'
 
+/** 三个 harness 的标识。**只用于角色卡**（model / effort / raw 按它分键，绑定层按它选列）。
+ *  `AgentKind` 仍是 'claude' | 'codex' —— pty 进程识别、探测表、画布节点都靠它穷举，扩它会牵一大片。 */
+export type HarnessId = AgentKind | 'omp'
+
+/** 角色的能力意图。**只能收紧，不能放开**：值域是 `false`，缺省即允许。
+ *  这样「一张空卡 = 杂役」在类型上成立，也不会出现角色把 CLI 默认关掉的东西打开。 */
+export interface RoleCaps {
+  /** 不许改文件 */
+  write?: false
+  /** 不许跑命令 */
+  shell?: false
+  /** 不许生图（红线） */
+  imageGen?: false
+  mcp?: {
+    /** 精确的 MCP server 名 */
+    denyServers?: string[]
+    /** 工具名或通配（`*image*`），**不带** `mcp__` 前缀 */
+    denyTools?: string[]
+  }
+}
+
+/** 逃生口：某家独有、意图模型表达不了的原始参数。只在对应 harness 生效。 */
+export interface RoleRaw {
+  claude?: { deny?: string[] }
+  codex?: { disable?: string[] }
+  omp?: { removeTools?: string[] }
+}
+
 export type ProjectStatus = string
 
 /** 看板的一列。全局定义，存在 board.json；项目只记自己在哪一列的 id */
@@ -223,17 +251,15 @@ export interface AgentRole {
   color: string
   /** 用哪个 CLI。auto = 装了哪个用哪个，两个都装则用上次用的 */
   kind: AgentKind | 'auto'
-  /** 模型 / 思考档位按 kind 各存一套，切 agent 互不覆盖（沿用 NodeAgent 的结构） */
-  model?: Partial<Record<AgentKind, string>>
-  effort?: Partial<Record<AgentKind, string>>
+  /** 模型 / 思考档位按 harness 各存一套，切 CLI 互不覆盖。omp 的 model 填 selector（`provider/model`），effort 填 thinking 档位 */
+  model?: Partial<Record<HarnessId, string>>
+  effort?: Partial<Record<HarnessId, string>>
   /** 职责契约：产出什么、落在哪、什么算做完。启动时拼进命令 */
   contract: string
-  /** 工具边界。两边能力不对等，如实分开：
-   *   allow/deny  —— Claude 的工具名/通配（--allowedTools / --disallowedTools）。
-   *                  裸工具名 deny = 该工具从模型上下文里整个消失，由 CLI 强制，不靠模型自觉。
-   *   denyServers —— MCP server 名字。Claude 侧展开成 mcp__<名>__* 加进 deny；
-   *                  Codex 侧走 -c mcp_servers.<名>.enabled=false（它没有工具级开关，只能整个 server 关）。 */
-  tools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
+  /** 能力意图，由 `shared/roleBinding.ts` 翻成各家参数 */
+  caps?: RoleCaps
+  /** 各家独有的原始参数（逃生口） */
+  raw?: RoleRaw
   /** 内置角色：可改可删，删了能一键恢复 */
   builtin?: boolean
 }

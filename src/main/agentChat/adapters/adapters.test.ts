@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { listAdapters, getAdapter } from './index.ts'
-import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleTools } from '../../../shared/agentChat.ts'
+import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT, safeRoleBounds } from '../../../shared/agentChat.ts'
 
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-5-brief.md —— 不许改动断言内容。
@@ -248,6 +248,16 @@ test('[补充] Codex 不传 sandbox 时默认 workspace-write；传了就原样�
   const withSandbox = getAdapter('codex')!.buildArgs({ cwd: '/x', sandbox: 'read-only' }).args
   const i2 = withSandbox.indexOf('--sandbox')
   assert.equal(withSandbox[i2 + 1], 'read-only')
+})
+
+test('[补] 角色的 caps.write:false 永远压过显式传的 sandbox——不许角色的写保护被调用方的沙箱参数覆盖掉', () => {
+  const args = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    sandbox: 'danger-full-access',
+    roleBounds: { caps: { write: false } }
+  }).args
+  const i = args.indexOf('--sandbox')
+  assert.equal(args[i + 1], 'read-only', '角色 caps.write:false 必须赢过显式传入的 danger-full-access')
 })
 
 test('[补充] Codex 的 model 用 -m 传，且带上实际取值', () => {
@@ -542,32 +552,26 @@ test('Codex 没角色时 args 与今天逐字节相同', () => {
 // 通配符挡图像类 MCP）。把它接进对话会话 = 把一条现有的安全边界搬到新链路上，
 // 所以断言写得比别处密。
 
-test('Claude：deny 走 --disallowedTools，denyServers 展开成 mcp__<名>__*', () => {
+test('Claude：caps 走 --disallowedTools，denyServers 展开成 mcp__<名>__*', () => {
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
-    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+    roleBounds: { caps: { shell: false, mcp: { denyServers: ['bizone-canvas'] } } }
   })
   const i = args.indexOf('--disallowedTools')
   assert.ok(i >= 0)
   const rest = args.slice(i + 1)
   assert.ok(rest.includes('Bash'))
   assert.ok(rest.includes('mcp__bizone-canvas__*'), 'server 名没展开成通配')
-})
-
-test('Claude：allow 走 --allowedTools', () => {
-  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { allow: ['Read', 'Grep'] } })
-  const i = args.indexOf('--allowedTools')
-  assert.ok(i >= 0 && args.slice(i + 1, i + 3).join(',') === 'Read,Grep')
+  assert.ok(!args.includes('--allowedTools'), 'allow 已删，不该再出现')
 })
 
 test('**变长参数必须排在最后** —— 夹在中间会把后面的选项一起吞掉', () => {
-  // --mcp-config 那次已经栽过一回（见 buildClaudeCmd 的注释）
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
     model: 'opus',
     resumeId: 'r1',
     mcpConfigPath: '/tmp/m.json',
-    roleTools: { deny: ['Bash'] }
+    roleBounds: { caps: { shell: false } }
   })
   const i = args.indexOf('--disallowedTools')
   const after = args.slice(i + 1)
@@ -576,52 +580,74 @@ test('**变长参数必须排在最后** —— 夹在中间会把后面的选�
   }
 })
 
-test('**工具边界在恢复会话时也要拼** —— 它是 CLI 强制规则，不是系统提示', () => {
-  // 契约走 --append-system-prompt，--resume 不重放它；工具边界每次都要重新生效，
-  // 不拼等于恢复会话时把护栏卸了。
+test('**能力边界在恢复会话时也要拼** —— 它是 CLI 强制规则，不是系统提示', () => {
   const { args } = getAdapter('claude')!.buildArgs({
     cwd: '/p',
     resumeId: 'r1',
-    roleTools: { denyServers: ['bizone-canvas'] }
+    roleBounds: { caps: { mcp: { denyServers: ['bizone-canvas'] } } }
   })
   assert.ok(args.includes('--disallowedTools'))
   assert.ok(args.includes('mcp__bizone-canvas__*'))
 })
 
-test('Claude：没有角色工具时，一个相关参数都不加', () => {
-  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleTools: { deny: [], denyServers: [] } })
+test('Claude：write:false → Write Edit NotebookEdit 三个都进 deny', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleBounds: { caps: { write: false } } })
+  const rest = args.slice(args.indexOf('--disallowedTools') + 1)
+  assert.deepEqual(rest, ['Write', 'Edit', 'NotebookEdit'])
+})
+
+test('Claude：没有角色边界时，一个相关参数都不加', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleBounds: undefined })
   assert.ok(!args.includes('--disallowedTools'))
   assert.ok(!args.includes('--allowedTools'))
 })
 
-test('Codex：只能整个关 MCP server（它没有工具级开关）', () => {
+test('Codex：write:false → --sandbox read-only（OS 沙箱，三家里唯一封得住命令行写入的）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { write: false } } })
+  assert.equal(args[args.indexOf('--sandbox') + 1], 'read-only')
+})
+
+test('Codex：没有 write:false 时沙箱维持默认 workspace-write', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { shell: false } } })
+  assert.equal(args[args.indexOf('--sandbox') + 1], 'workspace-write')
+})
+
+test('Codex：shell:false → --disable shell_tool；imageGen:false → --disable image_generation（键名字面断言，-c 不校验）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleBounds: { caps: { shell: false, imageGen: false } } })
+  const pairs = args.map((a, i) => (a === '--disable' ? args[i + 1] : null)).filter(Boolean)
+  assert.deepEqual(pairs, ['shell_tool', 'image_generation'])
+})
+
+test('Codex：denyServers 按 knownMcpServers 过滤后才下发 enabled=false —— 名字不存在会拒绝启动', () => {
   const { args } = getAdapter('codex')!.buildArgs({
     cwd: '/p',
-    roleTools: { deny: ['Bash'], denyServers: ['bizone-canvas'] }
+    knownMcpServers: ['bizone-canvas'],
+    roleBounds: { caps: { mcp: { denyServers: ['bizone-canvas', '手误'] } } }
   })
   assert.ok(args.includes('mcp_servers.bizone-canvas.enabled=false'))
-  // deny 的工具名在 Codex 上**无处可去**，不能假装接了
-  assert.ok(!args.some((a) => a.includes('Bash')), 'Codex 没有工具级 deny，别硬塞')
+  assert.ok(!args.some((a) => a.includes('手误')))
 })
 
-// ── safeRoleTools：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────
-
-test('不是对象 → undefined（当没给）', () => {
-  for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleTools(v), undefined)
+// ── safeRoleBounds：IPC 边界上的清洗。**它直接决定安全边界** ──────────────────
+test('safeRoleBounds：不是对象 → undefined', () => {
+  for (const v of [null, undefined, 'x', 42, ['a']]) assert.equal(safeRoleBounds(v), undefined)
 })
 
-test('**数组里混进非字符串 → 那一条整个丢掉**，不做部分接受', () => {
-  // 「过滤掉坏元素、留下好的」在安全边界上最危险：调用方以为限制生效了，
-  // 实际上少了几条，而没有任何报错。
-  assert.equal(safeRoleTools({ deny: ['Bash', 123] }), undefined)
-  assert.deepEqual(safeRoleTools({ deny: ['Bash'], denyServers: [null] })?.denyServers, undefined)
+test('safeRoleBounds：caps 只认 false；混进非字符串的清单整条丢', () => {
+  const got = safeRoleBounds({ caps: { write: false, shell: true, mcp: { denyServers: ['s', 1], denyTools: ['*x*'] } } })
+  assert.deepEqual(got, { caps: { write: false, mcp: { denyTools: ['*x*'] } } })
 })
 
-test('正常形状原样通过', () => {
-  const got = safeRoleTools({ deny: ['Bash'], denyServers: ['x'], allow: ['Read'] })
-  assert.deepEqual(got, { allow: ['Read'], deny: ['Bash'], denyServers: ['x'] })
+test('safeRoleBounds：raw 按家收', () => {
+  const got = safeRoleBounds({ raw: { claude: { deny: ['A'] }, codex: { disable: [] }, omp: { removeTools: ['bash'] } } })
+  assert.deepEqual(got, { raw: { claude: { deny: ['A'] }, omp: { removeTools: ['bash'] } } })
 })
 
-test('空数组等于没有那一条；三条都空 → undefined', () => {
-  assert.equal(safeRoleTools({ deny: [], denyServers: [], allow: [] }), undefined)
+test('safeRoleBounds：raw 逃生口丢弃 - 开头的条目——bindRole 原样把它拼进 CLI 参数，"--foo" 会变成一个意外的 flag，不是一个要 deny 的名字', () => {
+  const got = safeRoleBounds({ raw: { claude: { deny: ['Bash', '--foo'] }, omp: { removeTools: ['--danger'] } } })
+  assert.deepEqual(got, { raw: { claude: { deny: ['Bash'] } } }, 'omp.removeTools 过滤完是空的，整条当没给，不是留一个空数组')
+})
+
+test('safeRoleBounds：什么都没剩 → undefined', () => {
+  assert.equal(safeRoleBounds({ caps: { write: true }, raw: {} }), undefined)
 })

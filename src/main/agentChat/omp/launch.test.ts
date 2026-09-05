@@ -85,6 +85,13 @@ describe('readMcpServers · 角色禁用的 server', () => {
     const p = mcpConfig(stdio('eas-term'))
     assert.ok(Array.isArray(readMcpServers(p).servers[0].env))
   })
+
+  it('通配也能按名不连（imageGen 在 omp 上的降级路径）', () => {
+    const p = mcpConfig({ ...stdio('eas-term'), ...stdio('flux-local') })
+    const { servers, dropped } = readMcpServers(p, [], ['*flux*'])
+    assert.deepEqual(servers.map((s) => s.name), ['eas-term'])
+    assert.deepEqual(dropped, [], '有意不连的不该报成坏配置')
+  })
 })
 
 /** 造一个能过「随包二进制」那道闸的 host。

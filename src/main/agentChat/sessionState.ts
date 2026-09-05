@@ -10,6 +10,7 @@
 import type { CostTally } from '../../shared/teamCost'
 
 import type { StartOpts } from '../../shared/agentChat.ts'
+import type { RoleBounds } from '../../shared/roleBinding'
 
 /** 空闲多久回收进程。**2026-08-20 从 15 分钟改成 2 小时**（用户要求）。
  *
@@ -88,8 +89,10 @@ export interface SessionRecord {
   askFirst?: boolean
   /** 角色契约原文。**只在 spawn 时用一次**（拼进系统提示） */
   roleContract?: string
-  /** 角色的工具边界。**每次 spawn 都要用**（包括恢复会话） */
-  roleTools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
+  /** 角色的能力意图。**每次 spawn 都要用**（包括恢复会话） */
+  roleBounds?: RoleBounds
+  /** 本机 MCP server 名清单，起会话时算一次，restart 沿用 */
+  knownMcpServers?: string[]
   /** 谁开的 / 叫什么。**身份必须存在这里，不能只留在渲染层的 pane 上。**
    *
    *  「关节点不杀进程」把节点和进程的生命周期拆开了：pane 随节点关闭消失，进程还在跑。
@@ -283,6 +286,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     skipApprovalHook: s.skipApprovalHook,
     askFirst: s.askFirst,
     roleContract: s.roleContract,
-    roleTools: s.roleTools
+    roleBounds: s.roleBounds,
+    knownMcpServers: s.knownMcpServers
   }
 }

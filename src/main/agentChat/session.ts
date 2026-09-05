@@ -55,7 +55,9 @@ import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
 import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
-import { AGENT_CHAT_EVENT_CHANNEL, safeRoleTools } from '../../shared/agentChat.ts'
+import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
+import { bindRole } from '../../shared/roleBinding.ts'
+import { codexServers } from '../agent.ts'
 import { agentMcpConfigPath } from '../mcpBridge.ts'
 import type {
   ChatEvent,
@@ -1016,16 +1018,18 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
           roleContract: live.rec.roleContract,
-          roleTools: live.rec.roleTools
+          roleTools: bindRole(live.rec.roleBounds, 'omp').omp
         })
       },
       emit: (e) => handleEvent(live, e),
       log: (m) => logSession(m),
       clientVersion: app.getVersion(),
       mcpServers() {
+        const ob = bindRole(live.rec.roleBounds, 'omp').omp
         const { servers, dropped } = readMcpServers(
           agentMcpConfigPath(live.rec.pluginId),
-          live.rec.roleTools?.denyServers
+          ob.dropServers,
+          ob.dropServerPatterns
         )
         // 丢掉的那些要说一声：ACP 只收 stdio 型，插件里的 http/sse 型带进去会让
         // **整个 session/new 失败**（上游对认不出的 transport 直接 throw），
@@ -1216,9 +1220,12 @@ export function registerAgentChatHandlers(): void {
       // 非字符串一律当没给 —— 不猜、不转换。
       roleContract:
         typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined,
-      // 工具边界。**只收字符串数组**，任何别的形状一律当没给 ——
+      // 角色能力意图。**只收清洗过的形状**，任何别的形状一律当没给 ——
       // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
-      roleTools: safeRoleTools(p.roleTools)
+      roleBounds: safeRoleBounds(p.roleBounds),
+      // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
+      // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
+      knownMcpServers: p.cli === 'codex' ? codexServers() : undefined
     }
     const live: Live = {
       rec,

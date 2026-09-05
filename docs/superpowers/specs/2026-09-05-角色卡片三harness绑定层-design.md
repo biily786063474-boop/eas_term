@@ -1,6 +1,6 @@
 # 角色卡片 × 三个 harness 的绑定层
 
-> 状态：**设计稿，未动代码。** 等用户批准后再走 writing-plans 出实施计划。
+> 状态：**阶段一已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）；阶段二、三未动。
 > 读之前先读 [10 模块领地图](../../architecture/10-模块领地图.md) 与
 > [03-3A 产品内 agent 角色边界](../../architecture/03-agent角色边界.md#3a--产品内-agent-角色边界)。
 > 本稿里标「**今日实测**」的结论来自 2026-09-05 在本机对 Codex 0.147.0 / omp v18.0.11 /
@@ -232,7 +232,7 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 | 对话 · Claude | `claude.ts buildArgs` 自己拼 deny | 调 `bindRole(...).claude.args` 追加到末尾 |
 | 对话 · Codex | `codex.ts buildArgs` 只接 denyServers | 调 `bindRole(...).codex`，`sandbox` 由它给 |
 | 对话 · omp | `paths.ts ompAcpArgs` + `launch.ts readMcpServers(denyServers)` | `ompAcpArgs` 收 `binding.omp.tools`；`readMcpServers` 收 `binding.omp.dropServers` |
-| 终端 · Claude/Codex | `CanvasAgentBar` 两个 build 函数各自拼 | 调同一个 `bindRole(..., {surface:'terminal'})`，只在最外层做 `shq()` |
+| 终端 · Claude/Codex | `CanvasAgentBar` 两个 build 函数各自拼 | 调同一个 `bindRole(...)`，只在最外层做 `shq()`。**`CanvasAgentBar` 2026-09-03（commit `5734a00`）起无 UI 入口**，这两个 build 函数仅与绑定层保持同步以便回滚 |
 | 手机端 `phone/provider.ts` | 不带角色 | 不变（非目标），但它走同一个 `StartOpts`，将来接上零成本 |
 | `team_spawn` | `role` 是自由标签 | 加可选 `roleId`，命中则把该角色的 caps/contract 塞进 `StartOpts` |
 
@@ -368,3 +368,35 @@ codex exec ... -c 'mcp_servers.x.command="echo"' -c 'mcp_servers.x.disabled_tool
 # feature 清单（image_generation / hooks / shell_tool 都在）
 codex features list
 ```
+---
+
+## 十二、阶段一真机验证（2026-09-05）
+
+隔离实例：`npm run build` + `node scripts/verify-app.mjs --seed`（临时 `--user-data-dir`，CDP 9333），
+跑 JS 用 `node scripts/eval-in-app.mjs`。会话一律经 `window.api.agentChat.start({cli, cwd, message,
+skipApprovalHook:true, roleBounds})` 起（走的就是对话节点那条 IPC），cwd 是 `/tmp/eas-rolecheck`
+（临时 git 仓库，Codex 不吃非 git 目录）。进程参数靠 0.15s 轮询 `ps -ww -eo pid,command` 抓，
+因为短会话的进程活不过一次手敲。**没有让任何 CLI 生成图片**（红线），第 6 条改成问它有没有那个工具。
+
+| # | 场景 | 结果 | 看到了什么 |
+|---|---|---|---|
+| 1 | 首启读旧 `roles.json` | ⚠️ 前提不成立，其余通过 | **用户机器上 `~/.eas/roles.json` 本来就不存在**（`~/.eas/` 里只有 `dict-*.json` 与 `agent/`），没有 v1 存档可迁、也无从备份；按裁定不造夹具。改核「内置角色 → 界面 → 落盘」这条链：`roles:list` 回 8 个角色，**没有一个带 `tools`**，`scout`/`inspector` 是 `caps:{write:false}`、`illustrator` 是 `caps:{imageGen:false}`；角色编辑器里勘探员的三枚开关读出「不许改文件 = 亮 / 不许跑命令 = 灭 / 不许生图 = 灭」；点保存后 `~/.eas/roles.json` 落成 `version: 2`、8 个角色无一带 `tools`。验证后已把它挪成 `~/.eas/roles.json.verify-2026-09-05`，恢复成验证前「没有这个文件」的状态 —— 正式版 0.4.78 还跑着，它那套 v1 清洗读到 v2 会把 `caps` 整个丢掉，等于把勘探员的写限制卸了。**v1→v2 迁移本身真机没验到**，只有 `rolesSchema.test.ts` 的单测钉着 |
+| 2 | 勘探员 · Claude 对话节点 | ✅ | 进程参数末尾 `--disallowedTools Write Edit NotebookEdit`；问「你的工具清单里有没有 Write 工具」→「**没有**。我当前的工具清单里没有 Write 工具（有 Read、Bash、Agent 等，Write 和 Edit 目前不在其中）。」<br>**另有一条要记的**：先前让它「把 hello 写进 `/tmp/eas-rolecheck/out.txt`」，它**用 Bash 写成功了**（事件是 `exec.start`/`exec.done`，文件真出现）—— 正是 `bindRole` 那句「Bash 未禁，模型仍可用命令改文件」的真机复现，也正是编辑器那条橙色提示要说的事 |
+| 3 | 勘探员 · Codex 对话节点 | ✅ | 参数 `codex exec --json --sandbox read-only …`；让它用 shell 写文件 → 回「失败。报错原话：`zsh:1: operation not permitted: /tmp/eas-rolecheck/out2.txt`」，文件确实没被创建。**不是简报预期的 `writing is blocked by read-only sandbox` 那句** —— macOS 上拦下来的是 seatbelt，报的是 OS 的话；判据（写不进去）成立 |
+| 4 | 勘探员 · 默认 harness | ❌ 未验证 | 隔离实例里 omp 起不来：先报「这个版本的安装包里没有随附 omp 可执行文件」（把二进制拷进 `resources/omp/mac-arm64/` 后过了这关），再报「还没配好模型服务商」。`userData/omp` 是 `verify-app.mjs` 的**禁复制**项（凭证），补种 `omp-setup.json` 只过得了第一道 `ompLaunchGate`，第二道要 omp 自己列得出模型。**进程压根没 spawn，`--tools=` 无从观察**；那条减法目前只有 `launch.test.ts` 的单测钉着 |
+| 5 | 自建角色勾「不许跑命令」· Codex | ✅ | 参数 `codex exec --json --sandbox workspace-write --disable shell_tool …`；让它 `echo EAS_SHELL_OK` → 回 `NO_SHELL_TOOL` |
+| 6 | 画师 · Codex | ✅（结论：**维持 `degraded`**）| 参数含 `--disable image_generation`。**没让它生成任何图片**，只问「你有没有图像生成类工具？只回答有或没有，不要调用任何工具」→ **「有」**；追问工具名 → **`imagegen`**。也就是说 `--disable image_generation` 没把内置生图摘掉（或至少模型仍认为它在），`roleBinding.ts` 里 `imageGen` × codex 那格**维持 `degraded`**，本任务不动档位（升档属阶段三）|
+| 7 | 恢复会话 · Claude 勘探员 | ✅ | 同一条 `ps` 行里同时有 `--resume 737de5ef-0b53-4438-8b78-a98d1091796c` 与 `--disallowedTools Write Edit NotebookEdit`；`session.ready` 回的是同一个 CLI 会话 id；再问「有没有 Write」→「没有（当前直接可用的工具清单里没有 Write，延迟加载列表里也没有）。」—— 「回溯也要拼」那条注释成立 |
+| 8 | 终端节点 ▶ 勘探员 · Codex | **N/A** | `CanvasAgentBar` 2026-09-03（commit `5734a00`）已下线：全仓库对它的 import 只剩 `CanvasRoleEditor.tsx` 取 `getProbe`，`<CanvasAgentBar` 只出现在 `PaneView.tsx` 的注释里；跑起来的实例里 `.agentbar` 与 `.ab-*` 各 0 个。**没有 UI 入口，就没有「终端里出现的命令」可看** |
+| 9 | 编辑器 omp 列 | 一半 ✅ 一半未验证 | 前半通过：在勘探员的「默认 harness」输入框填 `anthropic/claude-sonnet-4-5` → 保存 → 落盘文件里 `scout.model = {"claude":"opus","omp":"anthropic/claude-sonnet-4-5"}` → 关掉重开编辑器，值还在。后半未验证：同第 4 条，omp 会话起不来，`session.ready` 的 model 无从核对 |
+
+**验证过程里踩到、值得留下的两条**
+
+- **先确认连的是哪个实例。** 机器上残留着上一轮任务的孤儿 `verify-app.mjs`（ppid=1）占着 9333，
+  第一次连上去验的其实是**主仓库的旧代码** —— `roles:list` 回的是 v1 的 `tools`，
+  看起来像「caps 根本没生效」。判据有两条，都要落在 worktree 上：`/json/list` 里那个 page 的 url、
+  以及 electron 进程的 cwd（`lsof -a -p <pid> -d cwd`）。
+- **`~/.eas/` 不跟随隔离目录**（`roles.ts` 用 `os.homedir()`，`--user-data-dir` 管不着它）。
+  所以在隔离实例里点「保存角色」写的是**用户真实的** `~/.eas/roles.json`，
+  而用户的正式版正读着同一个文件。要验落盘就得连带把文件恢复回去。
+

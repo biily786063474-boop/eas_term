@@ -27,6 +27,7 @@ import path from 'node:path'
 
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
+import { globMatch } from '../../../shared/roleBinding.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
 import { ompAcpArgs, ompAgentDir, ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { readOmpSetup } from './store.ts'
@@ -84,9 +85,9 @@ export interface OmpLaunchInput {
    *  **只在 spawn 时传一次** —— 会话跑起来之后换角色改不了，
    *  界面那侧因此规定「换角色 = 结束当前会话重开」。 */
   roleContract?: string
-  /** 角色的工具边界。`deny` 作用到 `--tools` 白名单（做减法，见 `ompToolsFor`），
-   *  `denyServers` 作用到交给 `session/new` 的 MCP 名单（见 `readMcpServers`）。 */
-  roleTools?: { deny?: string[]; denyServers?: string[] }
+  /** 角色边界在 omp 上的落法（`bindRole(bounds, 'omp').omp`，由 session.ts 算好传进来）。
+   *  `removeTools` 从 `--tools` 白名单里减；server 相关的两项在 `readMcpServers` 里用。 */
+  roleTools?: { removeTools?: string[] }
 }
 
 /** 组装 spawn 需要的一切，并在起进程**之前**把不该起的挡下来。
@@ -123,7 +124,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
       bin,
       cwd: input.cwd,
       env,
-      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract, input.roleTools)
+      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract, input.roleTools?.removeTools)
     }
   }
 }
@@ -277,7 +278,9 @@ export function readMcpServers(
    *  Claude 那侧是把它展开成 `mcp__<名>__*` 加进 deny，Codex 是
    *  `mcp_servers.<名>.enabled=false`；三条路各不相同，但结论一致：
    *  选了「画师」，图像类 MCP 的工具在会话里就不该存在。 */
-  denyServers?: readonly string[]
+  denyServers?: readonly string[],
+  /** 通配（`*flux*`）：工具级限制在 omp 上降级为按 server 名整个不连 */
+  denyPatterns?: readonly string[]
 ): { servers: AcpMcpServer[]; dropped: string[] } {
   const p = configPath
   if (!p) return { servers: [], dropped: [] }
@@ -286,10 +289,11 @@ export function readMcpServers(
     const servers: AcpMcpServer[] = []
     const dropped: string[] = []
     const banned = new Set(denyServers ?? [])
+    const patterns = denyPatterns ?? []
     for (const [name, cfgRaw] of Object.entries(raw.mcpServers ?? {})) {
       // 角色禁掉的：**不进 servers，也不记进 dropped** ——
       // dropped 是给用户看的「这几个配置坏了」，而这是有意不连的，不是故障。
-      if (banned.has(name)) continue
+      if (banned.has(name) || patterns.some((pat) => globMatch(pat, name))) continue
       const cfg = (cfgRaw ?? {}) as { command?: unknown; args?: unknown; env?: Record<string, string> }
       if (typeof cfg.command !== 'string' || !cfg.command) {
         dropped.push(name)

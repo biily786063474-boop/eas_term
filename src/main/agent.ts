@@ -65,7 +65,7 @@ async function probeCodex(): Promise<AgentProbe['codex']> {
  * 逐行扫描找 [mcp_servers.<名>] 段头，不用正则整文件匹配 —— 上次用正则改这个文件
  * 把用户真实配置截断过，教训还热着。
  */
-function codexServers(): string[] {
+export function codexServers(): string[] {
   try {
     const raw = fs.readFileSync(path.join(os.homedir(), '.codex', 'config.toml'), 'utf8')
     const out: string[] = []
