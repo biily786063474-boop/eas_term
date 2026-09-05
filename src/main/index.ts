@@ -26,8 +26,9 @@ import { registerStatuslineHandlers } from './statuslineRuntime'
 import { registerQuotaHandlers } from './quotaStore'
 import { registerSttHandlers } from './stt'
 import { registerDesignHandlers } from './design'
-import { registerMcpBridge } from './mcpBridge'
+import { registerMcpBridge, invokeRenderer } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
+import { registerPluginHostHandlers, registerPluginScheme } from './pluginHost.ts'
 import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
@@ -111,6 +112,8 @@ function reloadWindowThrottled(win: BrowserWindow): void {
 }
 
 registerBizoneScheme()
+// 插件面板的私有协议（eas-plugin://）。同样必须在 ready 之前注册
+registerPluginScheme()
 // 词典动效短片的私有协议。**和 bizone 一样必须在 ready 之前注册**
 registerDictClipScheme()
 registerMediaScheme()
@@ -354,6 +357,8 @@ app.whenReady().then(() => {
 
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPluginHandlers()
+  // 插件面板宿主：画布透传走 mcpBridge 的 invokeRenderer，在这里注入（pluginHost 不 import mcpBridge，避免成环）
+  registerPluginHostHandlers((tool, args, ctx) => invokeRenderer(tool, args, ctx))
   // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
   // MCP 那一半在 mcpBridge 的 setupAgents 里。装过的人升级即清，不必去点卸载。
   purgeLegacyDsh()

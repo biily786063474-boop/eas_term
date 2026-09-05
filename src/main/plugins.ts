@@ -34,6 +34,8 @@ import os from 'node:os'
 import { ipcMain } from 'electron'
 
 import type { PluginInfo } from '../shared/types'
+import { parseManifest } from './pluginManifest.ts'
+import { app } from 'electron'
 
 const rd = (p: string): unknown => {
   try {
@@ -174,11 +176,46 @@ function claudePlugins(): PluginInfo[] {
   return out
 }
 
+// ── 自家插件（cli === 'eas'）──────────────────────────────────────────────
+// 设计稿 docs/superpowers/specs/2026-09-05-插件面板宿主-design.md §M。
+// 两个来源：随包的样板（resources/plugins/，内置）+ 用户自己的 ~/.eas/plugins/；
+// **同名用户覆盖内置**。清单校验在 pluginManifest.ts（纯函数，有测试）。
+/** 随包分发的样板目录（同 agent-hooks 的定位方式） */
+export function builtinPluginsDir(): string {
+  return app.isPackaged ? path.join(process.resourcesPath, 'plugins') : path.join(app.getAppPath(), 'resources', 'plugins')
+}
+export function userPluginsDir(): string {
+  return path.join(os.homedir(), '.eas', 'plugins')
+}
+function easPluginsIn(root: string, builtin: boolean): PluginInfo[] {
+  const out: PluginInfo[] = []
+  for (const name of subdirs(root)) {
+    const dir = path.join(root, name)
+    const raw = rd(path.join(dir, 'plugin.json'))
+    if (raw === undefined) continue // 没有清单的目录不是插件，静默跳过
+    const r = parseManifest(raw, dir, { builtin, exists: (p) => fs.existsSync(p) })
+    if (!r.ok) {
+      console.warn(`[plugin] 跳过 ${dir}：${r.errors.join('；')}`)
+      continue
+    }
+    for (const w of r.warnings) console.warn(`[plugin] ${name}：${w}`)
+    out.push(r.info)
+  }
+  return out
+}
+function easPlugins(): PluginInfo[] {
+  const user = easPluginsIn(userPluginsDir(), false)
+  const taken = new Set(user.map((p) => p.name))
+  const builtin = easPluginsIn(builtinPluginsDir(), true).filter((p) => !taken.has(p.name))
+  return [...user, ...builtin]
+}
+
 /** 已装插件全表。**每次都当场扫盘**，不缓存 —— 用户可能刚在终端里装了一个，
- *  缓存会让他看不到，而扫两个目录的代价可以忽略。 */
+ *  缓存会让他看不到，而扫几个目录的代价可以忽略。
+ *  顺序：自家插件在前（它们有面板，是画布上真正能「插」的东西），两家的按名排后。 */
 export function listPlugins(): PluginInfo[] {
-  const all = [...codexPlugins(), ...claudePlugins()]
-  return all.sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh'))
+  const others = [...codexPlugins(), ...claudePlugins()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh'))
+  return [...easPlugins(), ...others]
 }
 
 /** 按 id 取一个。给「这次会话带哪个插件」那条路用。 */

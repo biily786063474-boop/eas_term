@@ -32,6 +32,9 @@ graph LR
     BZ -->|"import() · 每会话 +93MB"| BZAPP
     GW <-->|"IPC mcp:invoke / mcp:result"| RD
     HK["eas-pretooluse.mjs<br/>（PreToolUse hook 进程）"] -->|"POST 阻塞等待"| AR
+    PS["eas-plugin-shim.mjs<br/>（自家插件在会话里的转发 shim，每会话一个）"] -->|"POST /plugin/rpc · 心跳"| PH["pluginHost.ts<br/>一个插件一个进程（面板与会话共用）"]
+    PH -->|"stdio · mcpClient.ts"| PP["插件 MCP server<br/>（~/.eas/plugins/ 或随包样板）"]
+    PN["渲染层 PluginPanel<br/>sandbox iframe · eas-plugin://"] <-->|"IPC plugin:panelRpc / panelNotify"| PH
     ES["eas-secret run<br/>（shell 命令，非 MCP）"] --> SE
     classDef gw fill:#1d3a4a,stroke:#3498db,color:#fff
     class GW gw
@@ -105,6 +108,7 @@ graph LR
 |---|---|
 | `mcp/eas-mcp.mjs` | 真正的 MCP server，本项目自身能力（零依赖手写 JSON-RPC，stdio 换行分隔）|
 | `mcp/bizone-mcp.mjs` | **启动包装器，不是工具实现**：确保笔纵画板 App 在跑（没开则 `open -g -a`，最多等 12s），然后 `import()` 画板包内的 `mcpServer.js` 把 stdio 交给它。那些工具属于画板自己的代码，本项目不拥有 |
+| `mcp/eas-plugin-shim.mjs` | **自家插件的转发 shim**（设计稿 2026-09-05 决定 #2）：harness 起的是它、不是插件本体；`initialize / tools/list / tools/call / resources/read` 原样 POST 到网关 `/plugin/rpc`，网关转给 `pluginHost.ts` 里**唯一**的插件进程。同一把 `x-eas-token`，缺 `EAS_TERM_PORT/TOKEN` 时 `tools/list` 回空（同 eas-mcp.mjs 纪律）。`EAS_PLUGIN` 由 `agent-mcp.json` 写死，`EAS_PROJECT` 塞进 `tools/call` 的 `_meta.eas.context.cwd` |
 | `mcp/eas-secret.mjs` | **不是 MCP server，是 shell 命令**：`eas-secret run --group/--vars -- <cmd>` 向 `/secret-env` 取密钥注入子进程 env 后 exec，定位是「给运行中的终端补发凭证」，与 MCP stdio 协议无关。鉴权是在全局 `x-eas-token` **之上再加**一张每个 PTY 独有的 `x-eas-secret-token`（spawn 时下发），**两张都要过** —— 全局 token 每个终端都一样、还明文落在 `mcp-endpoint.json` 里，单靠它等于没门 |
 
 ## MCP server 怎么注册进用户的 CLI
@@ -123,6 +127,8 @@ graph LR
 ## 契约红线
 
 - `mcp/*.mjs` 的字段格式 —— 改了，用户 `~/.claude.json` 里已注册的旧配置连不上
+- **插件面板协议的方法名只在 `src/shared/pluginProtocol.ts`**（以 `@modelcontextprotocol/ext-apps` 1.7.5 核对：协议 `2026-01-26`、`_meta["ui/resourceUri"]`、`text/html;profile=mcp-app`）；渲染层 `appsProtocol.ts` 与主进程 `pluginHost.ts` 都从它 import，规范再变只改那一处
+- `/plugin/rpc` 只接受 `initialize / tools/list / tools/call / resources/read|list`；面板桥的 `eas/canvas.call` 只透传 `CANVAS_CALL_ALLOWLIST` ∩ 清单声明的工具，执行仍走 `invokeRenderer`（同一路径白名单）—— **不许绕过它直接给插件网关 token**
 - `LONG_WAITS` 两处必须一致；四道超时闸的不等式不能破（③ 是两个独立常量，别只改一个）
 - `approvalRoute.ts` 的 `hookResponseBody()` ↔ `resources/agent-hooks/responseBody.mjs`：
   跨进程无法 import，**两处注释互相钉死，改一处必须改另一处**；

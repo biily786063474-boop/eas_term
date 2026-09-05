@@ -19,7 +19,12 @@ interface Entry<T> {
 
 export class HostRegistry<T> {
   private map = new Map<string, Entry<T>>()
-  constructor(private opts: RegistryOpts<T>) {}
+  private opts: RegistryOpts<T>
+  // ⚠️ 不用 `constructor(private opts)` 参数属性 —— `node --test` 的类型剥离不认它，
+  // tsx 单跑能过、全量跑整文件加载失败（仓库已知坑，见 memory）
+  constructor(opts: RegistryOpts<T>) {
+    this.opts = opts
+  }
 
   /** 没有就 create()；有就复用。ref 是持有方的身份（panelSession / 会话 id），同一 ref 重复 acquire 幂等 */
   acquire(key: string, ref: string, create: () => T): T {

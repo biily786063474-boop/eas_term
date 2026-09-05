@@ -1013,7 +1013,28 @@ const api = {
   plugins: {
     /** 已装的 CLI 插件全表。**每次都当场扫盘**（见 main/plugins.ts），
      *  用户刚在终端里装完一个，回画布就能看到，不用重开软件。 */
-    list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list')
+    list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list'),
+    // ── 自家插件的面板（设计稿 2026-09-05 §P）。主进程半边在 pluginHost.ts ──
+    panelOpen: (args: {
+      pluginId: string
+      panelId: string
+      ctx: { nodeId: string; frameId: string; projectId: string | null; cwd: string }
+    }): Promise<
+      | { ok: true; panelSession: string; url: string; tools: { name: string; description?: string; _meta?: Record<string, unknown> }[]; canvasAllow: string[]; title: string }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke('plugin:panelOpen', args),
+    panelClose: (panelSession: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('plugin:panelClose', panelSession),
+    panelRpc: (
+      panelSession: string,
+      method: string,
+      params: unknown
+    ): Promise<{ ok: true; result: unknown } | { ok: false; code: number; error: string }> =>
+      ipcRenderer.invoke('plugin:panelRpc', { panelSession, method, params }),
+    onPanelNotify: (cb: (p: { panelSession: string; method: string; params: unknown }) => void): (() => void) => {
+      const h = (_e: unknown, p: { panelSession: string; method: string; params: unknown }): void => cb(p)
+      ipcRenderer.on('plugin:panelNotify', h)
+      return () => ipcRenderer.removeListener('plugin:panelNotify', h)
+    }
   },
   agentChat: {
     /** 有哪些 CLI 可用、各自会什么——渲染层的 CLI 选择器（空态）和工具栏（模型/effort/

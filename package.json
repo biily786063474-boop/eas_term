@@ -123,6 +123,10 @@
         "to": "agent-hooks"
       },
       {
+        "from": "resources/plugins",
+        "to": "plugins"
+      },
+      {
         "from": "resources/dict-clips",
         "to": "dict-clips"
       },

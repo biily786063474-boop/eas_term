@@ -21,6 +21,7 @@ import { mainWindow } from './island'
 import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
 import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 import { ingestStatusline } from './quotaStore'
+import { pluginBye, pluginHeartbeat, pluginRpcFromShim } from './pluginHost.ts'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -66,7 +67,7 @@ export function mcpEnv(ctx: Ctx): Record<string, string> {
 }
 
 // 把一次工具调用转给渲染进程执行（store action 都在那边），等它回结果
-function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
+export function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<InvokeResult> {
   // 必须是主窗口，不能随便挑一扇。灵动岛也是一个 BrowserWindow，但它是独立的精简
   // preload，没有注册 mcp:invoke 的监听——挑到它，这次调用只会一直等到下面的超时。
   // 灵动岛的建出条件是「有终端在跑」，也就是本函数最常被调用的时候恰恰最容易挑错。
@@ -135,6 +136,12 @@ function serverScriptPath(): string {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'mcp', 'eas-mcp.mjs')
     : path.join(app.getAppPath(), 'mcp', 'eas-mcp.mjs')
+}
+/** 自家插件在会话里的转发 shim（设计稿 2026-09-05 决定 #2），和 eas-mcp.mjs 同目录分发 */
+function pluginShimPath(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'mcp', 'eas-plugin-shim.mjs')
+    : path.join(app.getAppPath(), 'mcp', 'eas-plugin-shim.mjs')
 }
 
 /** MCP server 的运行方式：优先用系统 node（纯脚本零依赖，进程轻）；
@@ -651,7 +658,14 @@ export function agentMcpConfigPath(pluginId?: string): string | null {
     // 不显式合并的话，claude-mem / figma 这类插件的 MCP 在 AI 对话里根本不存在。
     if (pluginId) {
       const plug = findPlugin(pluginId)
-      if (plug?.mcpServers) {
+      if (plug?.cli === 'eas' && plug.mcp) {
+        // 自家插件：**不让 harness 直接 spawn 它**，而是一个转发 shim 走网关到宿主里唯一的
+        // 插件进程（面板与会话共用；模型调了工具面板才看得见）。EAS_TERM_PORT/TOKEN
+        // 由会话 spawn env 注入、harness 传给子进程；EAS_PLUGIN 在这里写死。
+        const key = plug.name in servers ? `plugin-${plug.name}` : plug.name
+        const r = runnerFor([pluginShimPath()])
+        servers[key] = { type: 'stdio', command: r.command, args: r.args, env: { ...(r.env ?? {}), EAS_PLUGIN: plug.name } }
+      } else if (plug?.mcpServers) {
         for (const [name, cfg] of Object.entries(plug.mcpServers)) {
           // 插件自己的 server 名可能跟我们的撞（都叫 "figma" 之类）。
           // 加前缀而不是覆盖 —— 覆盖会把 eas-term 顶掉，画布能力当场消失。
@@ -798,6 +812,22 @@ export function registerMcpBridge(): void {
         return send(200, decision)
       }
 
+      // ── 自家插件的转发 shim（mcp/eas-plugin-shim.mjs）→ 宿主里的插件进程 ──
+      // 同一把 token；RPC 本体在 pluginHost.ts。心跳/告别用来释放对进程的引用。
+      if (req.method === 'POST' && req.url === '/plugin/rpc') {
+        const body = JSON.parse((await readBody(req)) || '{}') as Parameters<typeof pluginRpcFromShim>[0]
+        return send(200, await pluginRpcFromShim(body))
+      }
+      if (req.method === 'POST' && req.url === '/plugin/heartbeat') {
+        const body = JSON.parse((await readBody(req)) || '{}') as { shimId?: string }
+        pluginHeartbeat(String(body.shimId ?? ''))
+        return send(200, { ok: true })
+      }
+      if (req.method === 'POST' && req.url === '/plugin/bye') {
+        const body = JSON.parse((await readBody(req)) || '{}') as { shimId?: string }
+        pluginBye(String(body.shimId ?? ''))
+        return send(200, { ok: true })
+      }
       if (req.method === 'POST' && req.url === '/agent-approval/resolve') {
         const raw = await readBody(req)
         let body: { approvalId?: unknown; decision?: unknown; reason?: unknown }
