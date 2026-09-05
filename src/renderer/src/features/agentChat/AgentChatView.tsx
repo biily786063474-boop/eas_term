@@ -1271,6 +1271,7 @@ export function AgentChatView({
               默认没有角色（轮播第一张就是「无角色」）。 */}
           <RolePicker
             roleId={roleId}
+            cli={selected?.id as HarnessId}
             onPick={(next) => setAgentRole(tabId, leafId, next)}
           />
         </div>

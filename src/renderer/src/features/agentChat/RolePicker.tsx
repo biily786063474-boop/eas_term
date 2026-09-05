@@ -28,15 +28,20 @@ import {
 } from '../../ui/Icons'
 import { DRAG_MIN, clampIndex, dragOffset, settleIndex } from './carousel.ts'
 import { CanvasRoleEditor } from '../canvas/CanvasRoleEditor'
+import { degradedLines, CAP_LABEL, LEVEL_LABEL } from '../../../../shared/roleBinding'
+import type { HarnessId } from '../../../../shared/types'
 
 /** 末尾那张「＋新建」卡的哨兵 id —— 真实角色 id 不会是这个 */
 const NEW_CARD = '__new__'
 
 export function RolePicker({
   roleId,
+  cli,
   onPick
 }: {
   roleId?: string
+  /** 这次对话选的 harness。有了它才知道这张卡在这家上哪些限制打了折扣 */
+  cli?: HarnessId
   onPick: (roleId: string) => void
 }): JSX.Element {
   const roles = useStore((s) => s.roles)
@@ -61,6 +66,8 @@ export function RolePicker({
   const armed = useRef(false)
 
   const current = roles.find((r) => r.id === roleId)
+  // 只在有降级 / 不支持时出现，不常驻 —— 常驻的标记等于没有标记
+  const warn = current && cli ? degradedLines({ caps: current.caps, raw: current.raw }, cli) : []
 
   // 打开时把轨道定位到当前角色那一张 —— 而不是从头翻
   useEffect(() => {
@@ -165,6 +172,15 @@ export function RolePicker({
       >
         <PlanIcon size={12} />
         <span className="ac-ctxbar-name">{current?.name ?? '无角色'}</span>
+        {warn.length > 0 && (
+          <span
+            className="rolepick-warn"
+            aria-label="部分限制在当前 CLI 上打了折扣"
+            data-tip={warn.map((l) => `${CAP_LABEL[l.cap]}：${l.how}`).join('\n')}
+          >
+            {LEVEL_LABEL[warn[0].level]}
+          </span>
+        )}
         <ChevronDownIcon size={10} />
       </button>
 
