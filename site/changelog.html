@@ -54,6 +54,18 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.80">0.4.80</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>插件面板在正式版里起不来，报「spawn node ENOENT」</strong>。从 Dock 启动的应用拿到的是系统精简的 PATH，找不到 node；现在按固定位置找，找不到就用应用自带的运行时跑，任何机器都能起</li>
+          <li><strong>插件的「对话」开出来是个空对话</strong>：不带插件的工具、也不会自动发首条。根因是画布上这条入口没把插件信息带进真正的会话里，已改走和空 Frame 引导按钮相同的那条路</li>
+          <li>看板面板出错时页脚显示原因，不再一直停在「连接宿主…」</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.79">0.4.79</h2>
           <time datetime="2026-09-05">2026-09-05</time>
         </div>
