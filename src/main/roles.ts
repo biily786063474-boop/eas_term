@@ -9,6 +9,7 @@
 //
 // 落点：~/.eas/roles.json。内置角色见下方 BUILTIN_ROLES（数量以那个数组为准，别在注释里写死
 // —— 这里原先写「7 个」，加了一个之后就一直骗人）。用户可改可加可删（删了内置的能一键恢复）。
+// 存档 version 2（2026-09-05）：tools 字段换成 caps/raw，读到 v1 时逐条迁移并在下次 save 时写回。
 // 读的时候逐条 sanitize —— 这文件用户和外部工具都能改，一条坏数据不该让整个角色系统失效
 // （同 canvasSlice 里 sanitizeCanvas 的思路，那个教训已经付过学费）。
 import { app, ipcMain } from 'electron'
@@ -16,7 +17,8 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-import type { AgentRole, AgentKind } from '../shared/types'
+import type { AgentRole } from '../shared/types'
+import { ROLES_FILE_VERSION, sanitizeRoles } from './rolesSchema'
 
 const file = (): string => path.join(os.homedir(), '.eas', 'roles.json')
 
@@ -42,7 +44,6 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
-    tools: {},
     contract: [
       '你这一轮的职责是把一个想法从 0 做到 1，做成生产级应用——不是「调研」「实现」「审查」分三次会话，',
       '是你一个人在这一条会话里从头走到尾，但纪律不能因为省了交接就松。',
@@ -67,7 +68,7 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
-    tools: { deny: ['Write', 'Edit', 'NotebookEdit'] },
+    caps: { write: false },
     contract: [
       '你这一轮的职责是调研与架构设计，不是实现。',
       '产出：一份 Markdown 或 HTML 文档，放在项目的 docs/ 下。',
@@ -78,13 +79,12 @@ export const BUILTIN_ROLES: AgentRole[] = [
   {
     id: 'builder',
     name: '工匠',
-    desc: '实现。唯一有写代码权限的角色',
+    desc: '实现。改代码的主力',
     group: 'main',
     color: '#6ee7b7',
     kind: 'auto',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
-    tools: {},
     contract: [
       '你这一轮的职责是实现。',
       '完成判据：改完代码必须构建通过，并且**亲眼验证过效果**才能说「已修复」——',
@@ -102,7 +102,7 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
-    tools: { deny: ['Write', 'Edit', 'NotebookEdit'] },
+    caps: { write: false },
     contract: [
       '你这一轮的职责是审查，不是修复。自己改自己审等于没审。',
       '产出：一份风险清单，放在项目的 docs/ 下。',
@@ -120,7 +120,6 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
-    tools: {},
     contract: [
       '你这一轮的职责是出界面原型。',
       '产出：完整 standalone 的 HTML（含 doctype/head/body，内联样式，零外部依赖，断网可开），',
@@ -138,7 +137,6 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
-    tools: {},
     contract: [
       '你这一轮的职责是写文字：文案、脚本、选题、复盘。',
       '如果本机装了 media-pipeline 之类的自媒体流程 skill，按它的 SOP 走，不要自创流程。',
@@ -155,21 +153,10 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
-    // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」变成
-    // 「工具在模型上下文里根本不存在」。Claude 的 deny 支持通配且必须匹配完整工具名，
-    // 所以这里写 mcp__*xxx* 形态。这是**黑名单**，挡的是已知的那几类生图 MCP；
-    // 用户装了没被覆盖到的，得自己把 server 名字填进 denyServers。
-    tools: {
-      deny: [
-        'mcp__*image*',
-        'mcp__*dalle*',
-        'mcp__*imagen*',
-        'mcp__*flux*',
-        'mcp__*banana*',
-        'mcp__*midjourney*',
-        'mcp__*stable*diffusion*'
-      ]
-    },
+    // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」变成能力意图，
+    // 由 shared/roleBinding.ts 翻成各家参数（Claude 通配 deny；Codex --disable image_generation
+    // ＋按名关 server；omp 按名不连）。通配那组黑名单在 IMAGE_MCP_PATTERNS。
+    caps: { imageGen: false },
     contract: [
       '你这一轮的职责是产出视觉素材。',
       '生图只允许走用户指定的生成路径。**不要**调用任何其他图像生成工具，',
@@ -187,61 +174,11 @@ export const BUILTIN_ROLES: AgentRole[] = [
     kind: 'auto',
     model: {},
     effort: {},
-    tools: {},
     // 故意留空：不给逃生口的系统会被绕过。想随手干点什么的时候，
     // 用户需要一个「不用选角色」的选项，否则他会干脆不用这套东西。
     contract: ''
   }
 ]
-
-function str(v: unknown, dflt = ''): string {
-  return typeof v === 'string' ? v : dflt
-}
-function strMap(v: unknown): Partial<Record<AgentKind, string>> {
-  const o = (v ?? {}) as Record<string, unknown>
-  const out: Partial<Record<AgentKind, string>> = {}
-  if (typeof o.claude === 'string') out.claude = o.claude
-  if (typeof o.codex === 'string') out.codex = o.codex
-  return out
-}
-function strList(v: unknown): string[] | undefined {
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : undefined
-}
-
-/** 逐条规范化。坏的那条丢掉而不是整份失败；全坏就回落内置。 */
-function sanitize(raw: unknown): AgentRole[] {
-  const list = (raw as { roles?: unknown })?.roles
-  if (!Array.isArray(list)) return []
-  const out: AgentRole[] = []
-  const seen = new Set<string>()
-  for (const it of list) {
-    const r = (it ?? {}) as Record<string, unknown>
-    const id = str(r.id).trim()
-    const name = str(r.name).trim()
-    if (!id || !name || seen.has(id)) continue // 没 id/名字，或重复 id → 丢
-    seen.add(id)
-    const k = str(r.kind, 'auto')
-    const tools = (r.tools ?? {}) as Record<string, unknown>
-    out.push({
-      id,
-      name,
-      desc: str(r.desc),
-      group: r.group === 'main' ? 'main' : 'output',
-      color: str(r.color, '#a3a3a3'),
-      kind: k === 'claude' || k === 'codex' ? k : 'auto',
-      model: strMap(r.model),
-      effort: strMap(r.effort),
-      contract: str(r.contract),
-      tools: {
-        allow: strList(tools.allow),
-        deny: strList(tools.deny),
-        denyServers: strList(tools.denyServers)
-      },
-      builtin: r.builtin === true
-    })
-  }
-  return out
-}
 
 /**
  * 把「存档里没有、但当前版本内置」的角色补进来。
@@ -270,7 +207,7 @@ function reconcileBuiltins(saved: AgentRole[]): AgentRole[] {
 
 function load(): AgentRole[] {
   try {
-    const parsed = sanitize(JSON.parse(fs.readFileSync(file(), 'utf8')))
+    const parsed = sanitizeRoles(JSON.parse(fs.readFileSync(file(), 'utf8')))
     if (parsed.length) return reconcileBuiltins(parsed)
   } catch {
     /* 没这个文件（第一次用）或读坏了 */
@@ -288,7 +225,7 @@ function save(roles: AgentRole[]): void {
       /* 备份失败不阻断 */
     }
   }
-  fs.writeFileSync(f, JSON.stringify({ version: 1, roles }, null, 2) + '\n')
+  fs.writeFileSync(f, JSON.stringify({ version: ROLES_FILE_VERSION, roles }, null, 2) + '\n')
 }
 
 export function registerRoleHandlers(): void {
@@ -317,7 +254,7 @@ export function registerRoleHandlers(): void {
   })
 
   ipcMain.handle('roles:save', (_e, roles: unknown) => {
-    const clean = sanitize({ roles })
+    const clean = sanitizeRoles({ roles })
     if (!clean.length) return { ok: false, error: '没有有效角色，拒绝写入' }
     try {
       save(clean)
