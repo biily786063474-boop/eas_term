@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { AgentRole, AgentProbe, AgentKind, HarnessId, RoleCaps } from '../../../../shared/types'
+import { capMatrix, HARNESSES, HARNESS_LABEL, CAP_LABEL, LEVEL_LABEL } from '../../../../shared/roleBinding'
 import { getProbe } from './CanvasAgentBar'
 import { CloseIcon, TrashIcon, UndoIcon } from '../../ui/Icons'
 import { BUILTIN_HINT } from './roleDefaults'
@@ -148,6 +149,7 @@ export function CanvasRoleEditor({
   const rawDeny = draft.raw?.claude?.deny ?? []
   const denyServers = draft.caps?.mcp?.denyServers ?? []
   const denyTools = draft.caps?.mcp?.denyTools ?? []
+  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers })
 
   const kinds: { k: AgentKind | 'auto'; label: string; note: string }[] = [
     { k: 'auto', label: '跟随', note: '装了哪个用哪个' },
@@ -292,42 +294,58 @@ export function CanvasRoleEditor({
             <div className="re-caps">
               {(
                 [
-                  {
-                    k: 'write',
-                    label: '不许改文件',
-                    how: 'Claude 去掉 Write/Edit/NotebookEdit · Codex 只读沙箱（连命令行写入一起挡）· 默认 harness 去掉 write/edit/ast_edit'
-                  },
-                  {
-                    k: 'shell',
-                    label: '不许跑命令',
-                    how: 'Claude 去掉 Bash · Codex 关掉 shell 工具 · 默认 harness 去掉 bash'
-                  },
-                  {
-                    k: 'imageGen',
-                    label: '不许生图',
-                    how: 'Claude 按通配禁图像类 MCP · Codex 的内置生图开关实测未生效，只按名关 MCP server · 默认 harness 按名不连'
-                  }
+                  { k: 'write', label: CAP_LABEL.write },
+                  { k: 'shell', label: CAP_LABEL.shell },
+                  { k: 'imageGen', label: CAP_LABEL.imageGen }
                 ] as const
               ).map((it) => {
                 const on = draft.caps?.[it.k] === false
                 return (
-                  <button
-                    key={it.k}
-                    className={`re-chip re-cap${on ? ' on' : ''}`}
-                    data-tip={it.how}
-                    onClick={() => setCap(it.k, !on)}
-                  >
+                  <button key={it.k} className={`re-chip re-cap${on ? ' on' : ''}`} onClick={() => setCap(it.k, !on)}>
                     {it.label}
                   </button>
                 )
               })}
             </div>
+            {/* 各家怎么落：**全部由绑定层现算**，这里一句落法都不手写。
+                未点亮的行按「假设点亮」预览并压暗，用户不用先点再看。 */}
+            <table className="re-matrix">
+              <thead>
+                <tr>
+                  <th />
+                  {HARNESSES.map((h) => (
+                    <th key={h}>{HARNESS_LABEL[h]}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((row) => (
+                  <tr key={row.cap} className={row.active ? '' : 'off'}>
+                    <th>{CAP_LABEL[row.cap]}</th>
+                    {HARNESSES.map((h) => {
+                      const c = row.cells[h]
+                      return (
+                        <td key={h}>
+                          {c ? (
+                            <>
+                              <span className={`re-lv re-lv-${c.level}`}>{LEVEL_LABEL[c.level]}</span>
+                              <span className="re-how">{c.how}</span>
+                            </>
+                          ) : (
+                            <span className="re-lv re-lv-none">—</span>
+                          )}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             <span className="re-hint">
-              三家都生效，硬度不同 —— 鼠标停在开关上看各家怎么落。<b>只能收紧</b>：没点的就是允许。
+              <b>只能收紧</b>：没点的就是允许。下表是每家实际落成什么，由绑定层现算，压暗的行是「点亮后会这样」。
             </span>
             <span className="re-hint warn">
-              「不许改文件」在 Claude 与默认 harness 上留着命令行就仍能 <code>echo &gt; 文件</code>；
-              要封死连「不许跑命令」一起点。Codex 的只读沙箱没有这个漏洞。
+              「不许改文件」在 Claude 与默认 harness 上留着命令行就仍能 <code>echo &gt; 文件</code>；要封死连「不许跑命令」一起点。
             </span>
 
             <button className="re-raw-toggle" onClick={() => setShowRaw((v) => !v)}>

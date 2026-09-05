@@ -3330,6 +3330,54 @@
 .re-cap {
   padding: 4px 10px;
 }
+/* 三列矩阵：每行一个能力、每列一家 harness，格子内容全部来自 capMatrix（绑定层现算）。
+   颜色全部借用 .re-chip / .re-chip.on / .re-hint.warn 已经在用的 token —— 不新造颜色值。 */
+.re-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 11.5px;
+  table-layout: fixed;
+}
+.re-matrix th,
+.re-matrix td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 6px;
+  border-top: 1px solid var(--glass-border);
+}
+.re-matrix thead th {
+  border-top: none;
+  font-weight: 500;
+  color: var(--fg-dim);
+}
+.re-matrix tbody th {
+  width: 88px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.re-matrix tr.off {
+  opacity: 0.45;
+}
+.re-lv {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 16px;
+  background: none;
+}
+.re-lv-hard {
+  background: rgba(var(--sem-danger-rgb), 0.16);
+}
+.re-lv-degraded,
+.re-lv-unsupported {
+  background: rgba(var(--sem-warn-rgb), 0.16);
+}
+.re-how {
+  color: var(--fg-dim);
+}
 /* 手写框的开关。左边是动作，右边一句话说明现在禁了几项 —— 收起状态下也看得见 */
 .re-raw-toggle {
   display: flex;
