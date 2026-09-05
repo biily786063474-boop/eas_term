@@ -721,8 +721,10 @@ export interface IslandAction {
 export interface PluginInfo {
   /** `<cli>:<name>`，唯一。用于 UI key 和「这次会话带哪个插件」的引用 */
   id: string
-  /** 属于哪个 CLI —— **决定用哪个 adapter 起会话**，不能猜 */
-  cli: 'claude' | 'codex'
+  /** 属于哪个 CLI —— **决定用哪个 adapter 起会话**，不能猜。
+   *  `'eas'` = 自家插件（`~/.eas/plugins/` 或随包的样板），harness 无关：
+   *  带它开对话时 CLI 走默认挑选，不像两家的插件那样钉死 */
+  cli: 'claude' | 'codex' | 'eas'
   /** 插件自己的名字（codex plugin remove / claude plugin disable 用的那个） */
   name: string
   /** 界面上显示的名字。Codex 取 interface.displayName，Claude 只能退回 name */
@@ -742,6 +744,26 @@ export interface PluginInfo {
   mcpServers?: Record<string, unknown>
   /** 插件目录的绝对路径。`${CLAUDE_PLUGIN_ROOT}` 这类变量靠它替换 */
   root: string
+  // ── 以下只有自家插件（cli === 'eas'）才有；两家的插件一律 undefined ──
+  // 设计稿：docs/superpowers/specs/2026-09-05-插件面板宿主-design.md §M
+  /** 面板：每个是一份 `ui://` HTML 资源，渲染成画布上的 `plugin-panel` 组件节点 */
+  panels?: PluginPanelDef[]
+  /** 面板桥 `eas/canvas.call` 的允许集（已经和宿主全局白名单取过交集） */
+  permissions?: { canvas?: string[] }
+  /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
+  mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
+  /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */
+  builtin?: boolean
+}
+
+export interface PluginPanelDef {
+  id: string
+  title: string
+  /** 带 `_meta["ui/resourceUri"]` 的那个工具名（可选，仅作展示/跳转） */
+  tool?: string
+  /** `ui://…`（经 server 的 resources/read 取）或插件目录内相对路径（主进程直接读盘） */
+  entry: string
+  defaultSize: { w: number; h: number }
 }
 
 export interface GanttTask {
