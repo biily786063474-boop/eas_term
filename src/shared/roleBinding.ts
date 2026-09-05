@@ -48,6 +48,14 @@ export function globMatch(pattern: string, name: string): boolean {
   return re.test(name)
 }
 
+/** Codex 关掉某个 MCP server 的 `-c` 取值字面量：`mcp_servers.<名>.enabled=false`。
+ *  收口成一个函数是因为它原来在两处各手写一份（`adapters/codex.ts` 的无头启动路径、
+ *  `CanvasAgentBar.tsx` 拼终端命令那条路径）——两处都要拼 `-c`，值只此一种写法，
+ *  改一处忘了另一处的话，终端里跑起来的角色护栏会比无头模式松一截，且没有测试能拦。 */
+export function codexDisableServerArg(name: string): string {
+  return `mcp_servers.${name}.enabled=false`
+}
+
 const uniq = (xs: string[]): string[] => [...new Set(xs)]
 
 export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): RoleBinding {

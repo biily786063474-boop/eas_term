@@ -27,7 +27,7 @@ import path from 'node:path'
 
 import type { HostPaths } from '../../../shared/agentChat'
 import type { AcpMcpServer, AcpProcess } from './transport.ts'
-import { globMatch } from '../../../shared/roleBinding.ts'
+import { globMatch, type RoleBinding } from '../../../shared/roleBinding.ts'
 import { ompLaunchGate } from '../../../shared/ompSetup.ts'
 import { ompAcpArgs, ompAgentDir, ompBaseEnv, ompBinPathOrNull } from './paths.ts'
 import { readOmpSetup } from './store.ts'
@@ -86,8 +86,10 @@ export interface OmpLaunchInput {
    *  界面那侧因此规定「换角色 = 结束当前会话重开」。 */
   roleContract?: string
   /** 角色边界在 omp 上的落法（`bindRole(bounds, 'omp').omp`，由 session.ts 算好传进来）。
-   *  `removeTools` 从 `--tools` 白名单里减；server 相关的两项在 `readMcpServers` 里用。 */
-  roleTools?: { removeTools?: string[] }
+   *  这里只收 `removeTools`（从 `--tools` 白名单里减）——`dropServers` / `dropServerPatterns`
+   *  两项是 `readMcpServers` 的参数，不经这个结构，`Pick` 钉住这一点：
+   *  加宽这个类型不该是「顺手把整个 `omp` 形状搬过来」。 */
+  roleOmp?: Pick<RoleBinding['omp'], 'removeTools'>
 }
 
 /** 组装 spawn 需要的一切，并在起进程**之前**把不该起的挡下来。
@@ -124,7 +126,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
       bin,
       cwd: input.cwd,
       env,
-      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract, input.roleTools?.removeTools)
+      args: input.extraArgs ?? ompAcpArgs(input.host, input.roleContract, input.roleOmp?.removeTools)
     }
   }
 }

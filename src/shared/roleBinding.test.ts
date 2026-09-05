@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { bindRole, globMatch, IMAGE_MCP_PATTERNS, CLAUDE_WRITE_TOOLS, OMP_WRITE_TOOLS } from './roleBinding.ts'
+import { bindRole, codexDisableServerArg, globMatch, IMAGE_MCP_PATTERNS, CLAUDE_WRITE_TOOLS, OMP_WRITE_TOOLS } from './roleBinding.ts'
 
 test('globMatch：只认 *，大小写不敏感，其余字符字面匹配', () => {
   assert.ok(globMatch('*image*', 'my-Image-gen'))
   assert.ok(globMatch('bizone-canvas', 'bizone-canvas'))
   assert.ok(!globMatch('bizone-canvas', 'bizone-canvas-2'))
   assert.ok(!globMatch('a.b', 'aXb'), '. 不能当正则用')
+})
+
+test('codexDisableServerArg：字面量收口在一处，adapters/codex.ts 与 CanvasAgentBar 都调它', () => {
+  assert.equal(codexDisableServerArg('bizone-canvas'), 'mcp_servers.bizone-canvas.enabled=false')
 })
 
 test('空卡 = 什么都不加，三家都没有报告行', () => {

@@ -3200,8 +3200,7 @@
   color: var(--sem-warn);
   opacity: 0.9;
 }
-.re-hint code,
-.re-tools code {
+.re-hint code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10.5px;
   background: var(--lift-2);
@@ -3250,12 +3249,6 @@
   flex: 1;
   min-width: 0;
 }
-/* `.re-tools` 的样式在下方「工具点选」那一段，只此一处。
-   这里原本有一份早期定义（`flex-wrap: wrap` + `gap: 5px`），2026-08-19 删掉：
-   下面那份改成了 `flex-direction: column` 却没有重新声明 `flex-wrap`，
-   于是 `wrap` 残留在一个纵向容器上 —— 换行方向变成跨轴分列。
-   眼下不炸只是因为这个容器没有确定高度；哪天祖先加了 height/max-height，
-   工具 chip 会毫无征兆地裂成两列。 */
 .re-err {
   margin: 0 18px;
   padding: 8px 10px;
@@ -3327,30 +3320,6 @@
 }
 .re-list-sm {
   min-height: 54px;
-}
-/* 工具点选：左边一列组名，右边一排 chip。
-   组名用固定宽度对齐 —— 长短不一会让每行的 chip 起点错开，扫一眼就乱 */
-.re-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 9px 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--lift-1);
-}
-.re-tools-row {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-}
-.re-tools-g {
-  flex: none;
-  width: 40px;
-  text-align: right;
-  font-size: 10.5px;
-  color: var(--fg-dim);
-  opacity: 0.62;
 }
 /* 三个能力开关（改文件/跑命令/生图），复用 .re-chip 的底色 —— 只是横排、留点空隙 */
 .re-caps {

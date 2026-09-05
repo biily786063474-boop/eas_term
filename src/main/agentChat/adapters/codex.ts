@@ -18,7 +18,7 @@
 // 把 approval 改回非空——UI 一行都不用改。
 
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
-import { bindRole } from '../../../shared/roleBinding.ts'
+import { bindRole, codexDisableServerArg } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { createCodexTranslator } from '../codexEvents.ts'
 
@@ -80,7 +80,7 @@ export const codexAdapter: CliAdapter = {
     // --disable shell_tool 实测真能摘掉 shell；MCP server 名字必须真实存在
     //（bindRole 已按 knownMcpServers 过滤，不存在的名字 Codex 会拒绝启动）。
     for (const f of b.codex.disable) args.push('--disable', f)
-    for (const n of b.codex.disableServers) args.push('-c', `mcp_servers.${n}.enabled=false`)
+    for (const n of b.codex.disableServers) args.push('-c', codexDisableServerArg(n))
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }
