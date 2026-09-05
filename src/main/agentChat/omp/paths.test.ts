@@ -238,7 +238,7 @@ test('角色契约进 `--append-system-prompt`；没有角色就不加这个参�
 
 test('**deny 从白名单里减掉**，不是加进去', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
-  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: ['bash', 'write'] })
+  const args = ompAcpArgs({ userData: dir } as never, undefined, ['bash', 'write'])
   const tools = (args.find((a) => a.startsWith('--tools=')) ?? '').slice('--tools='.length).split(',')
   assert.ok(!tools.includes('bash'), 'bash 还在白名单里')
   assert.ok(!tools.includes('write'), 'write 还在白名单里')
@@ -247,14 +247,14 @@ test('**deny 从白名单里减掉**，不是加进去', () => {
 
 test('**减到空也要留至少一个** —— 空的 --tools 会让 session/new 失败', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
-  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: [...OMP_TOOLS] })
+  const args = ompAcpArgs({ userData: dir } as never, undefined, [...OMP_TOOLS])
   const v = args.find((a) => a.startsWith('--tools='))
   assert.ok(v && v !== '--tools=', `减成了 ${v}`)
 })
 
 test('deny 里有 omp 根本没有的工具名 → 忽略，不许污染白名单', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
-  const args = ompAcpArgs({ userData: dir } as never, undefined, { deny: ['不存在的工具'] })
+  const args = ompAcpArgs({ userData: dir } as never, undefined, ['不存在的工具'])
   const tools = (args.find((a) => a.startsWith('--tools=')) ?? '').slice('--tools='.length).split(',')
   assert.deepEqual(tools, [...OMP_TOOLS], '白名单被动了')
 })
@@ -262,7 +262,7 @@ test('deny 里有 omp 根本没有的工具名 → 忽略，不许污染白名�
 test('没有角色工具时 --tools 与今天逐字相同', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompd-'))
   assert.equal(
-    ompAcpArgs({ userData: dir } as never, undefined, {}).find((a) => a.startsWith('--tools=')),
+    ompAcpArgs({ userData: dir } as never, undefined, []).find((a) => a.startsWith('--tools=')),
     ompAcpArgs({ userData: dir } as never).find((a) => a.startsWith('--tools='))
   )
 })
