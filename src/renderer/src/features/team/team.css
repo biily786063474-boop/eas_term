@@ -239,6 +239,15 @@
   font-weight: 600;
   color: var(--fg);
 }
+/* role_id 套了角色卡时的小标签。这一行本身已经在 --lift-1（.tbm-row）上，
+   再浮一档到 --lift-2 让它从 role 名旁边跳出来 —— 不新造颜色值（15 号图纸规矩③） */
+.tbm-card {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  background: var(--lift-2);
+}
 .tbm-task {
   flex: 1;
   min-width: 0;

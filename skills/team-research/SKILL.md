@@ -42,6 +42,10 @@ description: >
 **`needs` 声明能力，不绑 CLI 名字。** 绑了的话那个 CLI 没装就整批起不来。
 `prefer` 是软偏好，可以不填。
 
+`role_id` 可选：套一张角色卡（内置 `scout` 勘探员 / `inspector` 验官，用户自建的也行）。
+填了就把那张卡的职责契约、能力边界（只读）、默认模型套到这个 agent 上 ——
+本场景包里的角色都是只读的，配 `scout` 或 `inspector` 最合适。id 不存在整批会被拒。
+
 自定义角色照这张表的字段写：`role` 用 kebab-case（它同时是 `.plans/<role>/` 的目录名）。
 
 ## 怎么拆

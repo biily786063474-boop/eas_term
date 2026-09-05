@@ -83,3 +83,30 @@ test('不隔离时字段干脆不出现，而不是塞一个 undefined', () => {
   assert.ok(r.ok)
   assert.equal('isolation' in r.spec.agents[0], false)
 })
+
+// ── role_id（套角色卡） ─────────────────────────────────────────────
+
+const base = { goal: 'g', agents: [{ role: 'researcher', task: 't' }] }
+
+test('role_id 可选：没给就没有 roleId 字段', () => {
+  const r = checkBatch(base)
+  assert.ok(r.ok && !('roleId' in r.spec.agents[0]))
+})
+
+test('role_id 收 snake_case（MCP 入参）也收 roleId（内部）', () => {
+  const a = checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't', role_id: 'scout' }] }, { knownRoleIds: ['scout'] })
+  assert.ok(a.ok && a.spec.agents[0].roleId === 'scout')
+  const b = checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't', roleId: 'scout' }] }, { knownRoleIds: ['scout'] })
+  assert.ok(b.ok && b.spec.agents[0].roleId === 'scout')
+})
+
+test('role_id 不在已知角色卡里 → 整批拒绝，错误里列出可用的 id', () => {
+  const r = checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't', role_id: 'nope' }] }, { knownRoleIds: ['scout', 'builder'] })
+  assert.ok(!r.ok)
+  assert.ok(!r.ok && r.error.includes('nope') && r.error.includes('scout') && r.error.includes('builder'))
+})
+
+test('没给 knownRoleIds 时不校验存在性（纯函数不猜环境）', () => {
+  const r = checkBatch({ goal: 'g', agents: [{ role: 'r', task: 't', role_id: 'whatever' }] })
+  assert.ok(r.ok && r.spec.agents[0].roleId === 'whatever')
+})

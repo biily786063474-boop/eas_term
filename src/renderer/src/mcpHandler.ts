@@ -988,11 +988,15 @@ const SHELL_TRAP =
     }
 
     // ② 批次校验。一条不合格整批拒绝，别让用户看到一张荒唐的清单
-    const checked = checkBatch({
-      goal: args.goal,
-      agents: args.agents,
-      estimateTokens: args.estimate_tokens
-    })
+    // knownRoleIds 传实际的角色卡列表 —— role_id 填了但对不上号，整批拒绝
+    const checked = checkBatch(
+      {
+        goal: args.goal,
+        agents: args.agents,
+        estimateTokens: args.estimate_tokens
+      },
+      { knownRoleIds: st.roles.map((r) => r.id) }
+    )
     if (!checked.ok) throw new Error(checked.error)
     const spec = checked.spec
 
@@ -1070,6 +1074,8 @@ const SHELL_TRAP =
           background: true,
           owner: 'team',
           role: a.role,
+          // 填了 role_id 就套那张角色卡的契约 / 能力边界 / 默认模型（对话视图按这个字段找卡）
+          roleId: a.roleId,
           // 隔离的 agent 的 cwd 指向它自己那棵工作树，不是项目根
           cwd: agentCwd,
           // 首条消息是**唯一一次**能给它交代工作约定的机会 —— 跨进程之后没有
@@ -1096,7 +1102,9 @@ const SHELL_TRAP =
               task: a.task,
               ...(isolationOf(a.isolation) === 'worktree'
                 ? { worktree: worktreePath(batchId, a.role) ?? undefined }
-                : {})
+                : {}),
+              // 重派时要原样带上 roleId，不然重派出来的 agent 会丢掉契约与能力边界
+              ...(a.roleId ? { roleId: a.roleId } : {})
             }))
           })
           await window.api.agentChat

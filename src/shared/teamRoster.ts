@@ -20,6 +20,8 @@ export interface RosterAgent {
   task: string
   /** 起它时用的 CLI；重派时优先用同一个 */
   cli?: string
+  /** 套的角色卡 id（`AgentRole.id`）。重派时要原样带上 —— 不然重派出来的 agent 会丢掉契约与能力边界 */
+  roleId?: string
 }
 
 export interface RosterBatch {

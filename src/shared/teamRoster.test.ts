@@ -47,3 +47,11 @@ test('时间跨度用合适的单位', () => {
   assert.match(recentSummary(addBatch(EMPTY_ROSTER, { ...mk('a'), at: now - 3 * 3600_000 }), now), /3 小时前/)
   assert.match(recentSummary(addBatch(EMPTY_ROSTER, { ...mk('a'), at: now - 2 * 86400_000 }), now), /2 天前/)
 })
+
+test('roleId 原样round-trip：重派要靠它找回套的是哪张角色卡', () => {
+  const raw = JSON.stringify({
+    v: 1,
+    batches: [{ id: 'a', at: 0, goal: 'g', agents: [{ role: 'r', task: 't', roleId: 'scout' }] }]
+  })
+  assert.equal(parseRoster(raw).batches[0].agents[0].roleId, 'scout')
+})

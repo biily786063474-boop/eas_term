@@ -11,6 +11,7 @@
 //   3. 预估**标明是 AI 估的**，别让它冒充精确值
 import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
+import { useStore } from '../../store'
 import { ChipIcon } from '../../ui/Icons'
 import {
   currentBatchRequest,
@@ -28,6 +29,7 @@ function roughCost(tokens: number): string {
 
 export function TeamBatchHost(): JSX.Element | null {
   const req = useSyncExternalStore(subscribeBatchRequest, currentBatchRequest)
+  const roles = useStore((s) => s.roles)
   if (!req) return null
   const { spec, cwd } = req
 
@@ -49,6 +51,11 @@ export function TeamBatchHost(): JSX.Element | null {
           {spec.agents.map((a) => (
             <div className="tbm-row" key={a.role}>
               <span className="tbm-role">{a.role}</span>
+              {a.roleId && (
+                <span className="tbm-card" title="套的角色卡">
+                  {roles.find((r) => r.id === a.roleId)?.name ?? a.roleId}
+                </span>
+              )}
               <span className="tbm-task">{a.task}</span>
             </div>
           ))}
