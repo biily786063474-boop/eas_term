@@ -244,9 +244,28 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     return e.k === 'approval.request' || e.k === 'approval.resolved' || e.k === 'error'
   }
 
+  /** 把 JSON-RPC 的 error 对象变成一个 Error。
+   *
+   *  ⚠️ **真正的原因常常在 `data` 里，不在 `message` 里。** JSON-RPC 的 `message`
+   *  多半只是错误码的通用名 —— omp 的 `-32603` 一律是字面量 `"Internal error"`，
+   *  具体原因放在 `data.details`。只取 `message` 会同时坏两件事：
+   *
+   *    ① **界面上弹一句「Internal error」**，用户和排障的人都什么也看不出来；
+   *    ② **所有按 message 做的判据永远匹配不上** —— 下面 `session/resume` 那条
+   *       `/not found/` 兜底就是这么失效的：omp 返回
+   *       `message:"Internal error"` ＋ `data.details:"ACP session not found: <id>"`，
+   *       判据看不见 details → 不兜底 → rethrow → 握手失败 → fatal 红条，
+   *       而且**每次重发都一样，那条对话就永久废了**（2026-09-04 用户报的
+   *       「更新之后接着聊就 Internal error」，真机复现确认）。
+   *
+   *  所以这里把 details 拼进 message。判据和给用户看的文案一起受益。 */
   function rpcError(method: string, err: unknown): Error {
-    const o = (err ?? {}) as { message?: string; code?: number }
-    return Object.assign(new Error(o.message || `${method} 失败`), { rpc: o })
+    const o = (err ?? {}) as { message?: string; code?: number; data?: unknown }
+    const d = o.data as { details?: unknown } | undefined
+    const detail = typeof d?.details === 'string' ? d.details.trim() : ''
+    const base = o.message || `${method} 失败`
+    const text = detail && !base.includes(detail) ? `${base}：${detail}` : base
+    return Object.assign(new Error(text), { rpc: o })
   }
 
   // ── 起进程与握手 ──────────────────────────────────────────────────────────
@@ -331,6 +350,8 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
         // 上游在内存与磁盘都找不到那个会话时直接抛（`acp-agent.ts:1258-1270`）。
         // 这时不能让会话卡死 —— 清掉 resumeId 重开一个，并**明说上下文丢了**：
         // 用户按停之后接着聊，最坏情况是那一轮没落盘，他有权知道。
+        // 匹配得上是因为 `rpcError` 把 `data.details` 拼进了 message ——
+        // omp 那边 message 只是 "Internal error"（见 rpcError 的注释）。
         if (!/not found/i.test(String((e as Error).message))) throw e
         deps.emit({ k: 'error', fatal: false, message: '接不回上一段对话（它没能存下来），已经开了新的一段。' })
         sessionId = undefined

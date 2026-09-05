@@ -20,7 +20,7 @@ interface Fake {
   last(method: string): Record<string, unknown> | undefined
   /** 喂一条响应给我们某个请求 */
   reply(method: string, result: unknown): void
-  replyError(method: string, error: { code?: number; message?: string }): void
+  replyError(method: string, error: { code?: number; message?: string; data?: unknown }): void
   /** 喂一条服务端通知 / 请求 */
   push(obj: Record<string, unknown>): void
   exit(code?: number | null): void
@@ -223,7 +223,9 @@ test('resume 的响应没有 sessionId —— 要沿用请求里那个，否则 
   assert.equal(ready.sessionId, 's-old')
 })
 
-test('resume 撞到「找不到会话」→ 退回 session/new 并明说上下文丢了，不能卡死', async () => {
+// 这条测的是「原因直接写在 message 里」那种形状。
+// **它单独存在是不够的** —— omp 真实返回的不是这个形状，见下面那条。
+test('resume 撞到「找不到会话」（原因在 message 里）→ 退回 session/new 并明说上下文丢了', async () => {
   const h = harness({ resumeId: 's-gone' })
   h.live.deliver('接着说')
   await tick()
@@ -237,6 +239,65 @@ test('resume 撞到「找不到会话」→ 退回 session/new 并明说上下�
   const notice = h.events.find((e) => e.k === 'error' && !e.fatal)
   assert.ok(notice, '上下文丢了要告诉用户')
   assert.equal(h.live.phase(), 'prompting')
+})
+
+// ⚠️ **这条是照 omp 真实返回的形状写的，不是照我们以为的形状。**
+//
+// 2026-09-04 用户报「更新之后接着聊就弹 Internal error，而且一直弹」。
+// 真机拿打包的 omp 复现，`session/resume` 一个不存在的会话返回的是：
+//
+//   code=-32603  message="Internal error"
+//   data={"details":"ACP session not found: <id>"}
+//
+// 也就是说**原因不在 message 里，在 data.details 里**。上面那条老测试造的是
+// `{ message: 'ACP session not found' }` —— 我们以为的形状 —— 所以它一直是绿的，
+// 而线上那条兜底路径从来没被走到过：`/not found/` 匹配 "Internal error" 匹配不上
+// → rethrow → 握手失败 → fatal 红条，且每次重发都一样，那条对话永久报废。
+//
+// 修在 `rpcError`：把 data.details 拼进 message。**别把这条测试改回只给 message** ——
+// 那样就又变成「我们对协议的理解在自己跟自己对答」了。
+test('resume 撞到「找不到会话」（omp 真实形状：原因在 data.details 里）→ 照样要退回 session/new', async () => {
+  const h = harness({ resumeId: 's-gone' })
+  h.live.deliver('接着说')
+  await tick()
+  h.f.reply('initialize', {})
+  await tick()
+  h.f.replyError('session/resume', {
+    code: -32603,
+    message: 'Internal error',
+    data: { details: 'ACP session not found: s-gone' }
+  })
+  await tick()
+  assert.ok(h.f.last('session/new'), '应该改发 session/new，而不是把整个握手判失败')
+  h.f.reply('session/new', NEW_OK('s-new'))
+  await tick()
+  const fatal = h.events.find((e) => e.k === 'error' && e.fatal)
+  assert.equal(fatal, undefined, '不该弹 fatal —— 这是能自愈的情况')
+  const notice = h.events.find((e) => e.k === 'error' && !e.fatal)
+  assert.ok(notice, '上下文丢了要告诉用户')
+  assert.equal(h.live.phase(), 'prompting')
+})
+
+// 反过来也要钉：**不是「找不到会话」的错误不许被静默吞掉**。
+// 兜底只该覆盖「会话没了」这一种，其余必须如实报出来，
+// 否则用户会在毫不知情的情况下开了一段新对话。
+test('resume 撞到别的错误 → 不兜底，且报出来的话里要有真正的原因', async () => {
+  const h = harness({ resumeId: 's-x' })
+  h.live.deliver('接着说')
+  await tick()
+  h.f.reply('initialize', {})
+  await tick()
+  h.f.replyError('session/resume', {
+    code: -32603,
+    message: 'Internal error',
+    data: { details: 'disk is full' }
+  })
+  await tick()
+  assert.equal(h.f.last('session/new'), undefined, '别的错误不该退回 session/new')
+  const fatal = h.events.find((e) => e.k === 'error' && e.fatal)
+  assert.ok(fatal, '要报出来')
+  // **判据是「话里有真正的原因」** —— 只说 "Internal error" 等于什么都没说
+  assert.ok(/disk is full/.test(fatal.message), `报错要带上 details，实际是：${fatal.message}`)
 })
 
 test('握手期到达的服务端更新一律不产事件（万一哪天换回会重放的那条路，这是兜底）', async () => {
