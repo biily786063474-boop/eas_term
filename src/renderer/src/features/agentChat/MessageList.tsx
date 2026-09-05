@@ -46,12 +46,25 @@ export function MessageList({
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
   // 手动往上翻了历史，不打断他——判据是「滚动前离底部够不够近」，不是「有新内容就强制滚」。
   const stickToBottomRef = useRef(true)
+  /** 是否离底部够近。**这是 stickToBottomRef 的 state 镜像**，专门给「回到最新」按钮
+   *  用——ref 变了不会触发渲染，按钮的出现/消失得靠 state。判据与 ref 同一条（<80px），
+   *  两边不一致的话会出现「已经贴底了按钮还在」或反过来。 */
+  const [atBottom, setAtBottom] = useState(true)
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el || !stickToBottomRef.current) return
     el.scrollTop = el.scrollHeight
   }, [view])
+
+  /** 「回到最新」：平滑滚到底，并恢复贴底跟随（用户翻上去过，跟随被关了）。 */
+  const jumpToLatest = (): void => {
+    const el = scrollRef.current
+    if (!el) return
+    stickToBottomRef.current = true
+    setAtBottom(true)
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
 
   // 代码块的复制按钮：渲染器生成 .md-copy，行为要单独绑一次（同 WikiView / CodeView）
   useEffect(() => bindCodeCopy(scrollRef.current), [])
@@ -73,7 +86,9 @@ export function MessageList({
   function handleScroll(): void {
     const el = scrollRef.current
     if (!el) return
-    stickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    stickToBottomRef.current = near
+    setAtBottom(near)
   }
 
   const lastIdx = view.turns.length - 1
@@ -119,6 +134,19 @@ export function MessageList({
         <div className="ac-busy-hint">
           <ThinkingOrb />
           正在处理…
+        </div>
+      )}
+      {/* 「回到最新」（用户 2026-09-05）：往上翻了历史时，底部浮一个小箭头＋小字。
+          **sticky bottom 放在列表最后一个子元素上**——这样它贴在滚动视口底沿，翻到底时
+          自然回到内容末尾；零高度的外壳保证它不占版面（不然列表底下会多一截空白）。
+          必须是最后一个布局子元素：sticky 只在「自然位置低于视口底」时才吸住，
+          放在前面它的自然位置在上方，就永远不会吸。 */}
+      {!atBottom && (
+        <div className="ac-jump-wrap">
+          <button type="button" className="ac-jump" onClick={jumpToLatest} aria-label="回到最新消息">
+            <ChevronDownIcon size={12} />
+            <span>回到最新</span>
+          </button>
         </div>
       )}
       {ctxMenu && (
@@ -357,9 +385,13 @@ function MessageTurn({
           {visible.map((item) => (
             <ExecRow key={item.execId} item={item} expanded={expanded} />
           ))}
+          {/* 展开后「收起」钉在工具调用区**底端**（用户 2026-09-05）：详情很长时往上翻，
+              收起钮不该跟着滚出视口。sticky bottom 恰好是这个语义——只在它的自然位置
+              低于视口底时吸在底沿，往下滚到真正的底部时它就待在原位（「向下滚动不影响」）。
+              只在 expanded 时加类：没展开时它就是一行普通按钮。 */}
           <button
             type="button"
-            className="ac-execs-toggle"
+            className={`ac-execs-toggle${expanded ? ' pinned' : ''}`}
             onClick={() => setExpanded((v) => !v)}
           >
             <ChevronDownIcon size={11} className={expanded ? 'expanded' : ''} />

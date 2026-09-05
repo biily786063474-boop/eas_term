@@ -559,6 +559,80 @@
 .ac-execs-toggle svg.expanded {
   transform: rotate(180deg);
 }
+/* 展开后钉在工具调用区底端（MessageList 那段注释）。要一层底色：吸住时下面还在滚
+   内容，透明的话字会和执行输出叠在一起。border-radius 让它像一枚小胶囊贴在底沿。 */
+.ac-execs-toggle.pinned {
+  position: sticky;
+  bottom: 4px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--lift-2);
+  border: 1px solid var(--glass-border);
+  opacity: 0.95;
+}
+
+/* ── 回到最新 ──────────────────────────────────────────────────────────
+   零高度外壳 + sticky bottom：贴滚动视口底沿、不占版面。按钮用 translateY(-100%)
+   从零高度里「长」上去。pointer-events 在外壳上关掉、按钮上打开——外壳横跨整行，
+   不关的话会挡住底下最后一条消息的点击。 */
+.ac-jump-wrap {
+  position: sticky;
+  bottom: 10px;
+  z-index: 3;
+  height: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.ac-jump {
+  pointer-events: auto;
+  transform: translateY(-100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--lift-2);
+  backdrop-filter: var(--blur);
+  color: var(--fg-dim);
+  font-size: 10px;
+  cursor: pointer;
+  animation: ac-jump-breathe 2.4s ease-in-out infinite;
+}
+.ac-jump:hover {
+  color: var(--fg);
+  border-color: rgba(var(--accent-rgb), 0.4);
+}
+/* 箭头向下轻微往复：幅度 2px，别做成在跳 */
+.ac-jump svg {
+  animation: ac-jump-bob 1.6s ease-in-out infinite;
+}
+@keyframes ac-jump-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes ac-jump-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-jump,
+  .ac-jump svg {
+    animation: none;
+  }
+}
 
 /* busy 但没有正在跑的 exec 的空档期——见 reduce.ts 里 sawExecStartSinceTurnDone 那段
    注释：一个 exec 跑完到 turn.done 之间，agent 仍可能继续说话或再发起下一个 exec。 */
