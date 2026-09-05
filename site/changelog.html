@@ -54,6 +54,25 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.79">0.4.79</h2>
+          <time datetime="2026-09-05">2026-09-05</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>插件面板（一期）</strong>：自己写的插件现在可以带界面，直接画在画布上。一个插件 = 一个标准 MCP server + 一份清单 + HTML 面板，Claude Code / Codex / 自带底座都能调它的工具，面板在画布上独立于对话存在；模型在对话里改了数据，面板会自己刷新。随包带了一个样板「看板」（Frame 双击菜单 → 插件 → 看板），数据落在项目内 <code>.eas/board.json</code>。面板跑在沙箱里：不能外连、不能摸主界面、只能调本插件的工具和白名单内的画布能力</li>
+          <li><strong>角色卡片</strong>：hover 展开职能简述、右上角编辑钮打开详细设定、末尾「＋新建自定义角色」、左右切换改成完整的滑动动画</li>
+          <li><strong>技能库搜索</strong>：抽屉里加了搜索框，先匹配说明再匹配名字；全局段现在紧接着项目段，中间不再空一大块</li>
+          <li><strong>对话「回到最新」</strong>：往上翻历史后底部浮出小箭头，点一下回到最新；展开的工具调用详情，「收起」钮会钉在区块底端不随滚动跑掉</li>
+          <li><strong>甘特图里程碑</strong>：菱形改成一枚一个 commit（打了 tag 的大一号），不再是每次发送/返回；没仓库的项目就没菱形</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li>对话上方的报错/警告统一成能关的：警告 5 秒没碰自动消失，红色报错手动关</li>
+          <li>「整理排列」改成宫格，不再把模块排成一整列</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.78">0.4.78</h2>
           <time datetime="2026-09-05">2026-09-05</time>
         </div>
