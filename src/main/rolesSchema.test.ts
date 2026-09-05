@@ -50,7 +50,9 @@ test('sanitizeRoles：v1 记录（有 tools 无 caps）自动迁移；v2 记录�
   })
   assert.deepEqual(out.map((r) => r.id), ['a', 'b'])
   assert.deepEqual(out[0].caps, { write: false })
-  assert.equal(out[0].tools, undefined, '迁移后不该再带 tools')
+  // `AgentRole` 已经不再有 `tools` 字段（Task 11 删掉了），这里转成 unknown 记录来读，
+  // 断言的仍是运行时输出——sanitizeRoles 组装 out 时没有任何一处会带上这个键。
+  assert.equal((out[0] as unknown as Record<string, unknown>).tools, undefined, '迁移后不该再带 tools')
   assert.deepEqual(out[1].caps, { shell: false, mcp: { denyServers: ['s'] } })
   assert.deepEqual(out[1].raw, { codex: { disable: ['web_search'] } })
 })

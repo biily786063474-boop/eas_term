@@ -3352,6 +3352,15 @@
   color: var(--fg-dim);
   opacity: 0.62;
 }
+/* 三个能力开关（改文件/跑命令/生图），复用 .re-chip 的底色 —— 只是横排、留点空隙 */
+.re-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.re-cap {
+  padding: 4px 10px;
+}
 /* 手写框的开关。左边是动作，右边一句话说明现在禁了几项 —— 收起状态下也看得见 */
 .re-raw-toggle {
   display: flex;

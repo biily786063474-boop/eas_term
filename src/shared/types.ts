@@ -260,8 +260,6 @@ export interface AgentRole {
   caps?: RoleCaps
   /** 各家独有的原始参数（逃生口） */
   raw?: RoleRaw
-  /** @deprecated v1 字段。只在 `rolesSchema.migrateToolsV1` 里读；最后一个任务删掉 */
-  tools?: { allow?: string[]; deny?: string[]; denyServers?: string[] }
   /** 内置角色：可改可删，删了能一键恢复 */
   builtin?: boolean
 }
