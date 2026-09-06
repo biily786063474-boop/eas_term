@@ -651,3 +651,12 @@ test('safeRoleBounds：raw 逃生口丢弃 - 开头的条目——bindRole 原�
 test('safeRoleBounds：什么都没剩 → undefined', () => {
   assert.equal(safeRoleBounds({ caps: { write: true }, raw: {} }), undefined)
 })
+
+// 2026-09-05 正式版事故：Codex 在非 git 目录一起就退出码 1（Not inside a trusted directory）。
+// 用户的资料夹没有一个是 git 仓库。这条钉住开关永远在。
+test('codex：永远带 --skip-git-repo-check（非 git 目录否则直接退出码 1）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/WORK/notes' })
+  assert.ok(args.includes('--skip-git-repo-check'))
+  const resumed = getAdapter('codex')!.buildArgs({ cwd: '/WORK/notes', resumeId: 'abc' }).args
+  assert.ok(resumed.includes('--skip-git-repo-check'), 'resume 那条路也要带')
+})

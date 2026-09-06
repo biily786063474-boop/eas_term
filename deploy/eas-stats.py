@@ -9,7 +9,8 @@ cron 每 10 分钟跑一次，跑完即退，**不常驻任何进程**。
 
 下载数为什么不用埋点算：点了按钮不等于下完了，中途取消、断流、重复点都会虚高。
 访问日志里 /download/vX.Y.Z/xxx 的请求是服务器真的把字节发出去了，这个数才作数。
-（206 断点续传会被算成一次下载的多段，所以按 IP+文件+小时去重。）
+（206 断点续传会被算成一次下载的多段，所以先按 IP+文件+小时去掉分段；
+  对外的下载数再按 IP 去重 —— 报的是**下载人数**，同一个人下几次都算一个。）
 
 隐私前提（改这个脚本时别破坏，隐私页里逐条写着）：
   · 埋点里没有任何持久用户标识，UV 靠「当天的 IP+UA 哈希」现算，隔天就对不上
@@ -19,6 +20,8 @@ cron 每 10 分钟跑一次，跑完即退，**不常驻任何进程**。
 服务器环境注意：Python 是 3.6.8 —— 没有 datetime.fromisoformat，也别用 f-string 的
 `=` 语法和 dict 的 `|` 合并。
 """
+import glob
+import gzip
 import hashlib
 import json
 import os
@@ -36,6 +39,34 @@ TZ = timezone(timedelta(hours=8))
 TREND_DAYS = 30
 
 # 明显的扫描器/爬虫，不计入统计。宁可漏掉几个真人，也不要让扫描器把曲线顶起来
+# ── 「我自己」的识别 ──────────────────────────────────────────────
+# 两条取并集：
+#   ① 访问过 /dashboard/ 且拿到 200 的 IP —— 只有我有那个 Basic Auth 口令
+#   ② 家宽网段前缀 —— 实测我的 IP 在 116.148.76.x / 116.148.77.x 之间漂移，
+#      而只有其中一个进过后台，光靠 ① 会漏掉大半
+# ⚠️ 这是**识别自己**，不是识别爬虫池。用网段去判爬虫池是错的
+#    （spb-stats.py 的文件头记着那次教训），但用来圈自己家的出口 IP 正合适。
+# ⚠️ 只做**单列**不做剔除：完全剔掉就看不出「数据里有多少是自己」了。
+OWNER_PREFIXES = [x.strip() for x in os.environ.get("EAS_OWNER_IPS", "116.148.").split(",") if x.strip()]
+_owner_ips = set()
+
+
+def is_owner(ip):
+    return ip in _owner_ips or any(ip.startswith(p) for p in OWNER_PREFIXES)
+
+
+def scan_owner_ips():
+    """先扫一遍访问日志，把进过 /dashboard/ 的 IP 收进来。
+    放在所有统计之前跑，这样后面判 mine 时名单已经齐了。"""
+    for line in read_lines(ACCESS_LOG):
+        m = ACCESS_RE.match(line)
+        if not m:
+            continue
+        ip, _t, _me, path, status, _s, _r, _ua = m.groups()
+        if status == "200" and path.startswith("/dashboard/"):
+            _owner_ips.add(ip)
+
+
 BOT = re.compile(
     r"bot|spider|crawl|curl|wget|python-requests|scanner|censys|zgrab|headless|monitor|uptime",
     re.I,
@@ -87,6 +118,26 @@ def visitor_id(day, ip, ua):
 
 
 def read_lines(path):
+    """当前日志 + logrotate 切出来的历史归档，按时间顺序吐行。
+
+    ⚠️ **只读当前那一份是不够的**：logrotate 每天凌晨把日志切成
+    `<name>.log-YYYYMMDD.gz` 然后清空当前文件。只读当前文件的话，
+    30 天的 trend 里除了今天以外**全是 0** —— 「桌面端使用曲线只剩当天」
+    就是这么来的（2026-09-06 修，当时 eas 已经积了 31 个 .gz 归档）。
+    归档按文件名排序即时间序（日期戳是定长的），当前文件放最后。
+    归档与当前文件的内容不重叠（切完就清空），所以不会重复计数。
+    """
+    for arc in sorted(glob.glob(path + "-*.gz")):
+        try:
+            with gzip.open(arc, "rt", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.rstrip("\n")
+                    if line:
+                        yield line
+        except (IOError, OSError, EOFError):
+            # 某个归档损坏（切割中断之类）不该让整份统计挂掉，跳过它继续
+            continue
+
     if not os.path.exists(path):
         return
     # errors="replace"：日志里可能有乱码/半个多字节字符，不能因为一行坏掉整个统计
@@ -122,6 +173,7 @@ def load_events():
                 "dt": dt,
                 "day": day_key(dt),
                 "vid": visitor_id(day_key(dt), ip, ua),
+                "mine": is_owner(ip),
                 "t": one("t"),
                 "p": unquote(one("p", "/")),
                 "k": one("k"),
@@ -194,7 +246,12 @@ def load_downloads():
             if rx.search(fname):
                 plat = name
                 break
-        rows.append({"day": day_key(dt), "file": fname, "ver": ver, "plat": plat})
+        # 应用内更新走的是**和官网下载完全相同的路径**（latest.json 里就指向 /download/vX/…），
+        # 唯一能分开的是 UA：更新请求带 `Eas-Term/x.y.z Electron/…`，官网下载是浏览器 UA
+        via = "update" if "Eas-Term/" in ua else "web"
+        rows.append({"day": day_key(dt), "file": fname, "ver": ver, "plat": plat, "via": via,
+                     "mine": is_owner(ip),
+                     "who": hashlib.sha1(ip.encode("utf-8", "replace")).hexdigest()[:16]})
     return rows
 
 
@@ -204,8 +261,11 @@ def top(counter, n=10, key_name="k"):
 
 
 def main():
+    scan_owner_ips()          # 必须最先跑：下面判 mine 要用这份名单
     events = load_events()
     downloads = load_downloads()
+    # 一个 IP 无论下几次、下几个文件，都只算一个人
+    dl_people = {r["who"] for r in downloads}
     now = datetime.now(TZ)
     today = now.strftime("%Y-%m-%d")
 
@@ -214,7 +274,7 @@ def main():
 
     pv_by_day = defaultdict(int)
     uv_by_day = defaultdict(set)
-    dl_by_day = defaultdict(int)
+    dl_by_day = defaultdict(set)
     pages = defaultdict(int)
     page_uv = defaultdict(set)
     refs = defaultdict(int)
@@ -283,7 +343,7 @@ def main():
                         app_feat[fk] += int(fn)
 
     for r in downloads:
-        dl_by_day[r["day"]] += 1
+        dl_by_day[r["day"]].add(r["who"])
 
     def uv_in(days_back):
         s = set()
@@ -292,20 +352,46 @@ def main():
             s |= uv_by_day.get(k, set())
         return len(s)
 
-    dl_files = defaultdict(int)
-    dl_plat = defaultdict(int)
-    dl_ver = defaultdict(int)
+    dl_files = defaultdict(set)
+    dl_plat = defaultdict(set)
+    dl_ver = defaultdict(set)
     for r in downloads:
-        dl_files[r["file"]] += 1
-        dl_plat[r["plat"]] += 1
+        dl_files[r["file"]].add(r["who"])
+        dl_plat[r["plat"]].add(r["who"])
         if r["ver"]:
-            dl_ver[r["ver"]] += 1
+            dl_ver[r["ver"]].add(r["who"])
+    # top() 收的是 {key: 计数}，这里把人集合换算成人数
+    dl_files = {k: len(v) for k, v in dl_files.items()}
+    dl_plat = {k: len(v) for k, v in dl_plat.items()}
+    dl_ver = {k: len(v) for k, v in dl_ver.items()}
 
     # 漏斗：每一层都用**独立可信的口径**，不互相推算
     visit_uv = len(all_vids)
     dlpage_uv = len(page_uv.get("下载页", set()))
     click_n = sum(v for k, v in clicks.items() if k.startswith("dl-"))
-    done_n = len(downloads)
+    done_n = len(dl_people)
+
+    # ── 其中我自己 ──────────────────────────────────────────────
+    # 单列不剔除：主口径保持原样，另给一行「其中我自己」，
+    # 这样既看得见真实总量，也一眼知道里面有多少是自家产生的。
+    mine_events = [e for e in events if e.get("mine")]
+    # ⚠️ 日期字段是 "day"；"d" 是查询参数里的另一个东西（app 事件根本不带），
+    #    一开始写成 e["d"]，结果 appDays 恒等于 1
+    mine_app_days = {e["day"] for e in mine_events if e["t"] == "app"}
+    mine_sec = 0
+    for e in mine_events:
+        if e["t"] == "app":
+            try:
+                v = int(e.get("sec") or 0)
+            except ValueError:
+                v = 0
+            if 0 < v <= 3600:
+                mine_sec += v
+    mine_dl = {r["who"] for r in downloads if r.get("mine")}
+
+    # 下载来源：应用内更新和官网下载路径相同，只能靠 UA 分
+    dl_web = {r["who"] for r in downloads if r.get("via") == "web"}
+    dl_update = [r for r in downloads if r.get("via") == "update"]
 
     # 功能计数的中文名。看板上直接显示英文 key 没人看得懂
     FEAT_NAME = {
@@ -342,6 +428,17 @@ def main():
                 for k, v in sorted(app_feat.items(), key=lambda kv: -kv[1])
             ],
         },
+        "mine": {
+            "events": len(mine_events),
+            "appDays": len(mine_app_days),
+            "hours": round(mine_sec / 3600, 1),
+            "downloads": len(mine_dl),
+            "ips": len(_owner_ips),
+        },
+        "downloadSplit": {
+            "web": len(dl_web),
+            "update": len(dl_update),
+        },
         "totals": {
             "pv": sum(pv_by_day.values()),
             "uv": visit_uv,
@@ -352,15 +449,15 @@ def main():
             "mau": uv_in(30),
             "sessions": len(sessions),
             "avgStaySec": int(stay_total / stay_n) if stay_n else 0,
-            "downloads": len(downloads),
-            "todayDownloads": dl_by_day.get(today, 0),
+            "downloads": len(dl_people),
+            "todayDownloads": len(dl_by_day.get(today, ())),
         },
         "trend": [
             {
                 "d": d,
                 "uv": len(uv_by_day.get(d, set())),
                 "pv": pv_by_day.get(d, 0),
-                "dl": dl_by_day.get(d, 0),
+                "dl": len(dl_by_day.get(d, ())),
             }
             for d in days
         ],

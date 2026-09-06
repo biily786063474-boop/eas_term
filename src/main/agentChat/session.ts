@@ -20,6 +20,7 @@
 //   （见 docs/cli-headless-接口实测.md），resume 分支与多 flag 组合未被真实跑过，
 //   照 clap 系 CLI 的通用行为推断——若 Task 9 或后续实测发现不成立，这里要跟着改。
 import { spawn, type ChildProcess } from 'child_process'
+import { exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
@@ -443,6 +444,8 @@ function wireProc(live: Live, proc: ChildProcess): void {
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
   // 也不会连累下一个进程的判定。
   live.killing = false
+  /** stderr 的尾巴：非零退出时从里面挑一句原因给用户看（stderrReason.ts）。只留最后 600 字 */
+  let stderrTail = ''
   proc.stdout?.setEncoding('utf8')
   proc.stdout?.on('data', (chunk: string) => {
     // 收到输出＝还活着，不是空闲——15 分钟空闲回收判的是「没交互」，一轮长任务
@@ -454,6 +457,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   proc.stderr?.on('data', (chunk: string) => {
     // stderr 不做任何解读——那是"判定"，这一层不该猜它是不是致命。只留痕迹方便排障。
     console.error(`[agentChat:${live.rec.id}] stderr`, chunk)
+    stderrTail = (stderrTail + chunk).slice(-600)
   })
   proc.on('error', (err) => {
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
@@ -506,7 +510,9 @@ function wireProc(live: Live, proc: ChildProcess): void {
     // 「CLI 进程退出（code 143）」。用户 2026-08-20 的原话：「有点多余，有点吓人」。
     // 他自己按的停，那不是故障。空闲回收和 restart 同理。
     if (!selfKilled && code !== 0 && code !== null) {
-      handleEvent(live, { k: 'error', message: `CLI 进程退出（code ${code}）`, fatal: true })
+      // 带上 stderr 里最后一句原因（2026-09-05：Codex 非 git 目录秒退，原因就在 stderr 里，
+      // 界面却只有退出码，用户和我都得靠手动跑命令才知道）
+      handleEvent(live, { k: 'error', message: exitMessage(code, stderrTail), fatal: true })
     }
   })
 }

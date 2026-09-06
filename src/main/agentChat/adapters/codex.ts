@@ -64,6 +64,12 @@ export const codexAdapter: CliAdapter = {
     const args: string[] = opts.resumeId ? ['exec', 'resume', opts.resumeId] : ['exec']
     // 角色的 write:false 是沙箱的唯一来源；其余维持默认（UI 上沙箱只展示不可选）
     args.push('--json', '--sandbox', b.codex.sandbox ?? opts.sandbox ?? DEFAULT_SANDBOX)
+    // **必须带 --skip-git-repo-check**（2026-09-05 正式版事故：「codex 侧完全是坏的」）。
+    // Codex 拒绝在非 git 目录里跑：`Not inside a trusted directory and --skip-git-repo-check
+    // was not specified`，退出码 1、什么都不回 —— 用户的资料夹（自媒体/工作流程…）没有一个是
+    // git 仓库，于是每条消息都是「CLI 进程退出（code 1）」。这个检查是 Codex 防「在错误目录里
+    // 写文件」的护栏，而这里的 cwd 是用户在画布上明确选的项目，且已经套了 --sandbox。
+    args.push('--skip-git-repo-check')
     if (opts.model) args.push('-m', opts.model)
     if (opts.effort) args.push('-c', `model_reasoning_effort=${opts.effort}`)
     // 角色契约。Codex 没有 --append-system-prompt，能用的是 -c instructions=
