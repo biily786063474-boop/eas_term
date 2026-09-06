@@ -27,8 +27,10 @@
 > （`--disable image_generation` 前后 tools 清单完全一致），模型嘴上说的「imagegen 工具」
 > 其实是系统 skill `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；现在**关 feature（保留）
 > + 按 SKILL.md 完整路径摘掉这个系统 skill（`skills.config` 的 `-c`）+ 按名关 MCP server**，
-> 拿得到 `codexHome`（session.ts 起会话时算好）就是 **hard**，拿不到（比如已下线的
-> `CanvasAgentBar` 那条渲染层路径）就退回 **degraded**。残余逃生口：子进程环境若带
+> 拿得到 `codexHome` 就是 **hard**：对话节点由 `session.ts` 起会话时算好塞进 `StartOpts`，
+> 渲染层的 `RolePicker`（对话工具栏降级徽章）与 `CanvasRoleEditor`（能力矩阵）2026-09-06
+> 起也经新增 IPC `agent:codexHome` 各取一份。拿不到——现在只剩终端命令条 `CanvasAgentBar`
+> 那条已下线路径（它自己的注释写明故意不传 codexHome）——就退回 **degraded**。残余逃生口：子进程环境若带
 > `OPENAI_API_KEY`，skill 的 CLI 兜底仍可被手动跑——与「write:false 留着 Bash 仍能改文件」
 > 同一类逃生口，只在报告里如实注明，不因此改判定档位。其余角色的"不碰生产代码"（`prototyper`）、
 > "不污染代码项目"（`writer`）**只是 contract 里的提示，不是强制**；角色还落盘在用户可改的

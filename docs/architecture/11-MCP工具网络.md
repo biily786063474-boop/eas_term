@@ -131,6 +131,8 @@ graph LR
   `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；真正摘掉它要走
   `-c 'skills.config=[{path="<SKILL.md 完整路径>",enabled=false}]'` ——
   **路径必须是 `SKILL.md` 文件的完整路径，写目录无效**（实测过）。
+  ⚠️ **这个 `-c` 是整体覆盖用户 `~/.codex/config.toml` 里的 `skills.config`，不是追加** ——
+  用户自己手写的 skills.config 会被这条一并冲掉，Eas-Term 没有做读用户配置合并。
 
 ## 契约红线
 

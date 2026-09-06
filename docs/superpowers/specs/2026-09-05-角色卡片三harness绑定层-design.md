@@ -63,6 +63,7 @@ AI 对话节点走 `agentChat/adapters/{claude,codex}.ts` 与 `agentChat/omp/pat
 4. **Codex 0.147 自带 `image_generation` 内置工具（feature stable、默认开）**，
    与 `hooks`（事件名 PreToolUse / PermissionRequest / PostToolUse…，读 `hooks.json`，
    带信任机制）。前者直接顶到生图红线上：现在选「画师」用 Codex，内置生图**完全没被拦**。
+   → 2026-09-06 十四节推翻：那是 feature flag，内置工具从未进工具清单。
 
 ---
 
@@ -461,10 +462,13 @@ page url 指向该 worktree 的 `out/renderer/`。
 
 ### 1. 内置 `image_gen` 工具在本机从未进入模型的工具清单
 
-三种鉴权模式都验了，结论一致：
+三种鉴权模式都验了，结论一致。下面每条命令都带着公共基底 flags
+（`--ephemeral --skip-git-repo-check -s read-only`——一次性会话、跳过 git 仓库检查、
+全程只读沙箱，纯探针不需要写权限），照抄能逐字复跑：
 
 ```bash
-# 自定义 provider：假端点记录请求体，对照有无 --disable image_generation
+# 自定义 provider：起一个记录请求体的本地 HTTP 服务当假端点（脚本本身不进仓库），
+# 对照有无 --disable image_generation
 codex exec --ephemeral --skip-git-repo-check -s read-only \
   -c 'model_provider="fake"' -c 'model_providers.fake.name="fake"' \
   -c 'model_providers.fake.base_url="http://127.0.0.1:<port>/v1"' \
@@ -474,17 +478,23 @@ codex exec --ephemeral --skip-git-repo-check -s read-only \
 # exec_command, write_stdin, list_mcp_*, update_plan, request_user_input,
 # request_plugin_install, apply_patch, view_image, tool_search, web_search
 
-# API key 模式：-c openai_base_url 指同一个假端点，--disable enable_request_compression
-# 方便直接读明文请求体 —— tools 清单同上，仍然没有 image_gen
+# API key 模式：同一个假端点，换成 apikey 鉴权 + 关掉请求压缩方便直接读明文请求体
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c preferred_auth_method="apikey" \
+  -c openai_base_url="http://127.0.0.1:<port>/v1" \
+  --disable enable_request_compression \
+  "hi" >/tmp/codex-trace-2.log 2>&1
+# tools 清单同上，仍然没有 image_gen
 
 # ChatGPT 登录模式（真实后端）：RUST_LOG=trace 打出服务端回显的 response.tools，
 # 同样没有 image_gen；再让模型自己 tool_search 一次
-codex exec ... "搜索 'image_gen built-in image generation gpt-image'，tool_search limit 20，
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  "搜索 'image_gen built-in image generation gpt-image'，tool_search limit 20，
 只列出返回的工具名，不要调用任何工具"
 # 返回的全是 MCP / codex_apps 工具，没有内置生图
 
 # 对照组：--disable shell_tool 时 exec_command / write_stdin 确实从清单消失，判据有效
-codex exec ... --disable shell_tool "..."
+codex exec --ephemeral --skip-git-repo-check -s read-only --disable shell_tool "..."
 ```
 
 ### 2. `--disable image_generation` 确实生效——只是生效的东西本来就不在清单里
@@ -507,7 +517,9 @@ turn 日志里的 feature 集合同步少了 `ImageGeneration`。**这条 --disa
 ### 4. 按路径禁用系统 skill——路径必须精确到 `SKILL.md` 文件
 
 ```bash
-codex exec ... -c 'skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]' "..."
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c 'skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]' \
+  "..."
 # 请求体里 imagegen 的提及次数：2 → 0，`### Available skills` 段不再列它
 ```
 **写目录无效**（实测过，`path` 指到 `.../imagegen/` 这一层不生效，必须是 `SKILL.md` 本身
@@ -530,8 +542,29 @@ Bash 没被禁）。这与「`write:false` 留着 Bash 仍能改文件」是同�
 `--disable image_generation`（保留，理由见第 2 条）+ 有 `codexHome` 时按 `SKILL.md`
 完整路径摘掉 imagegen 系统 skill（`-c 'skills.config=[...]'`，导出为
 `codexSkillsConfigArg()`）+ 按名关匹配到的 MCP server；有 `codexHome` 时档位升级为
-**hard**，没有（比如已下线的 `CanvasAgentBar` 那条渲染层路径，主进程的 `os.homedir()`/
-`CODEX_HOME` 摸不到）时维持 **degraded** 并在 `how` 里如实写「未摘 skill（调用方未给
-codexHome）」。`codexHome` 由 `main/agent.ts` 新导出的 `codexHome()` 算（`CODEX_HOME` 或
-`~/.codex`，`codexServers()` 复用同一个函数），`session.ts` 起 Codex 会话时算好塞进
+**hard**，没有时维持 **degraded** 并在 `how` 里如实写人话「未摘掉 imagegen 系统 skill
+（这条路径拿不到 Codex 配置目录）」，不再是「调用方未给 codexHome」这种内部黑话。
+`codexHome` 由 `main/agent.ts` 新导出的 `codexHome()` 算（`CODEX_HOME` 或 `~/.codex`，
+`codexServers()` 复用同一个函数），`session.ts` 起 Codex 会话时算好塞进
 `StartOpts`/`SessionRecord`，跟 `knownMcpServers` 一样要原样带过 restart。
+
+**评审修复（2026-09-06）**：初版只有对话节点（`session.ts`）会算 `codexHome` 塞进
+`StartOpts`，渲染层的 `RolePicker`（对话工具栏降级徽章）与 `CanvasRoleEditor`
+（能力矩阵）拿不到——于是「画师 × Codex」真实会话已经是 hard，界面却照旧显示成
+degraded。修法：`main/agent.ts` 新增 IPC `agent:codexHome`（返回 `codexHome()`），
+`preload/index.ts` 的 `agent` 命名空间照 `codexServers` 的写法加 `codexHome()`；
+两个组件各用一个 `useState<string | undefined>` + `useEffect` 取一次，传进
+`degradedLines` / `capMatrix` 的 ctx。现在拿不到 codexHome、因此仍是 degraded 的
+只剩终端命令条 `CanvasAgentBar` 那条**已下线**路径——它的 `buildCodexCmd` 故意不传
+`codexHome`（见该文件内注释：无 UI 入口，只求类型跟 `roleBinding` 同步，不求真的
+摘掉过 skill）。
+
+**已知副作用**：`-c skills.config=[...]` 是**整体覆盖**用户 `~/.codex/config.toml`
+里的 `skills.config`，不是追加——如果用户自己也手写了这个键，会被这条整个覆盖掉。
+未做「读用户配置再合并」，属于阶段三的已知取舍，不是遗漏。
+
+**Windows 路径未实测**：`codexHome` 若形如 `C:\Users\x\.codex`（含反斜杠），拼
+`SKILL.md` 路径时跟着 `codexHome` 自己出现的分隔符走（`codexHome.includes('\\')
+? '\\' : '/'`），测试里断言过 `C:\Users\x\.codex` → `C:\Users\x\.codex\skills\.system\
+imagegen\SKILL.md`（经 `codexSkillsConfigArg` 转义后是合法 TOML），但没有在真实
+Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
