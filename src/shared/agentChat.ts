@@ -260,6 +260,11 @@ export interface StartOpts {
   /** 本机实际配置的 MCP server 名（Codex 用：名字不存在会拒绝启动，下发前按它过滤；
    *  通配 → server 名的降级匹配也靠它）。由 session.ts 起会话时算好。 */
   knownMcpServers?: string[]
+  /** Codex 的配置目录（`CODEX_HOME` 或 `~/.codex`）。角色 `imageGen:false` 摘系统 skill
+   *  要拼它的绝对路径（见 `roleBinding.ts` 的 `BindingContext.codexHome`）——同
+   *  `knownMcpServers` 一个理由：adapter 是纯函数不读环境，得由 session.ts 起会话时算好传入；
+   *  拿不到就摘不掉 skill，档位退回 degraded。 */
+  codexHome?: string
 }
 
 /** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**

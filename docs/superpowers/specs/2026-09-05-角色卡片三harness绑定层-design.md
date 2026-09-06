@@ -1,6 +1,6 @@
 # 角色卡片 × 三个 harness 的绑定层
 
-> 状态：**阶段一、二已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）；阶段三未动。
+> 状态：**阶段一、二已实现；阶段三第一项已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）。
 > 读之前先读 [10 模块领地图](../../architecture/10-模块领地图.md) 与
 > [03-3A 产品内 agent 角色边界](../../architecture/03-agent角色边界.md#3a--产品内-agent-角色边界)。
 > 本稿里标「**今日实测**」的结论来自 2026-09-05 在本机对 Codex 0.147.0 / omp v18.0.11 /
@@ -63,6 +63,7 @@ AI 对话节点走 `agentChat/adapters/{claude,codex}.ts` 与 `agentChat/omp/pat
 4. **Codex 0.147 自带 `image_generation` 内置工具（feature stable、默认开）**，
    与 `hooks`（事件名 PreToolUse / PermissionRequest / PostToolUse…，读 `hooks.json`，
    带信任机制）。前者直接顶到生图红线上：现在选「画师」用 Codex，内置生图**完全没被拦**。
+   → 2026-09-06 十四节推翻：那是 feature flag，内置工具从未进工具清单。
 
 ---
 
@@ -189,7 +190,9 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 
 `BindingContext` 只带绑定时才知道的事实：`resume: boolean`（契约不重放）、
 `knownMcpServers: string[]`（做通配到 server 名的降级匹配）、`surface: 'chat' | 'terminal'`
-（终端契约走文件、要 shell 引用）。
+（终端契约走文件、要 shell 引用）。阶段三加了 `codexHome?: string`（Codex 的配置目录，
+`CODEX_HOME` 或 `~/.codex`，由调用方算好传入）——`imageGen:false` 摘 Codex 的 imagegen
+系统 skill 要拼它的绝对路径，见第十四节。
 
 **一条硬规矩：报告是绑定的副产物，不是另写的说明。** 每条 `args` 都由某个 `BindingLine`
 产生，测试断言两者一一对应。这样编辑器里那段「粒度差异」永远与真实参数一致。
@@ -200,7 +203,7 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 |---|---|---|---|
 | `write:false` | `--disallowedTools Write Edit NotebookEdit` · **hard**；报告附注「shell 未禁时 Bash 仍能写」 | `-s read-only` · **hard**（OS 沙箱，连 shell 写一起挡） | `--tools` 去掉 `write edit ast_edit` · **hard**；附注同 Claude |
 | `shell:false` | `--disallowedTools Bash` · **hard** | `--disable shell_tool` · **hard**（今日实测） | `--tools` 去掉 `bash` · **hard** |
-| `imageGen:false` | `--disallowedTools mcp__*image* mcp__*dalle* …`（沿用 roles.ts 那组通配） · **hard** | `--disable image_generation`（**待验**，验前标 degraded）＋ 通配匹配到的 server 整个 `enabled=false` | 无内置生图；通配匹配到的 server 从 `session/new` 剔除 · **degraded** |
+| `imageGen:false` | `--disallowedTools mcp__*image* mcp__*dalle* …`（沿用 roles.ts 那组通配） · **hard** | 有 `codexHome`：`--disable image_generation`（feature 生效但内置本就不在工具清单）＋ 按 SKILL.md 完整路径摘掉 `imagegen` 系统 skill（`skills.config`）＋ 通配匹配到的 server 整个 `enabled=false` · **hard**（阶段三，2026-09-06 探针）；没有 `codexHome`：同上但不摘 skill · **degraded** | 无内置生图；通配匹配到的 server 从 `session/new` 剔除 · **degraded** |
 | `mcp.denyServers` | `mcp__<名>__*` · hard | `mcp_servers.<名>.enabled=false` · hard | 名单剔除 · hard |
 | `mcp.denyTools` | `mcp__<pattern>` 通配 · hard | 首批：pattern 与 server 名匹配则整关 · **degraded**；后续 `disabled_tools` 精确过滤（待验） | 同 Codex 首批 · degraded |
 | `contract` | 对话 `--append-system-prompt`（三段拼一条，规矩不变）；终端 `--append-system-prompt-file` | `-c instructions=` 单行（维持现状；`developer_instructions` 已验可用，作为备选） | `--append-system-prompt=` |
@@ -444,3 +447,145 @@ page url 指向该 worktree 的 `out/renderer/`。
 「不许生图」一项降级（1 行）。多行那条路（`warn.map(...).join('\n')` + `.app-tooltip`
 的 `white-space: pre-line`，两处都已确认在）**代码在、真机没触发**；要触发得自建一个同时踩中
 两项降级的角色，而那要写用户真实的 `~/.eas/roles.json`，本轮不做。
+
+---
+
+## 十四、阶段三探针（2026-09-06）
+
+第十二节判据 6 当时只结论到「模型自称有 `imagegen` 工具，`--disable image_generation`
+没能让它松口」，把档位维持在 `degraded`、升档留给阶段三。这一节把「为什么松不了口」
+摸清楚，并据此把 Codex 的 `imageGen:false` 从 degraded 升到 hard。
+
+**实测环境**：本机 Codex 0.147.0。证据日志在 `/tmp/codex-trace-*.log`、`/tmp/codex-ts-*.log`、
+`/tmp/fake-openai-*.json`（探针脚本本身不进仓库，按下面的命令现场复跑）。**没有让任何一次
+探针真的生成图片** —— 全部只问模型「有没有这个工具」或直接读请求体/事件日志。
+
+### 1. 内置 `image_gen` 工具在本机从未进入模型的工具清单
+
+三种鉴权模式都验了，结论一致。下面每条命令都带着公共基底 flags
+（`--ephemeral --skip-git-repo-check -s read-only`——一次性会话、跳过 git 仓库检查、
+全程只读沙箱，纯探针不需要写权限），照抄能逐字复跑：
+
+```bash
+# 自定义 provider：起一个记录请求体的本地 HTTP 服务当假端点（脚本本身不进仓库），
+# 对照有无 --disable image_generation
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c 'model_provider="fake"' -c 'model_providers.fake.name="fake"' \
+  -c 'model_providers.fake.base_url="http://127.0.0.1:<port>/v1"' \
+  -c 'model_providers.fake.wire_api="responses"' \
+  "hi" >/tmp/codex-trace-1.log 2>&1
+# 加一次 --disable image_generation 再跑一遍，diff 请求体里的 tools 数组 —— 完全一致：
+# exec_command, write_stdin, list_mcp_*, update_plan, request_user_input,
+# request_plugin_install, apply_patch, view_image, tool_search, web_search
+
+# API key 模式：同一个假端点，换成 apikey 鉴权 + 关掉请求压缩方便直接读明文请求体
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c preferred_auth_method="apikey" \
+  -c openai_base_url="http://127.0.0.1:<port>/v1" \
+  --disable enable_request_compression \
+  "hi" >/tmp/codex-trace-2.log 2>&1
+# tools 清单同上，仍然没有 image_gen
+
+# ChatGPT 登录模式（真实后端）：RUST_LOG=trace 打出服务端回显的 response.tools，
+# 同样没有 image_gen；再让模型自己 tool_search 一次
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  "搜索 'image_gen built-in image generation gpt-image'，tool_search limit 20，
+只列出返回的工具名，不要调用任何工具"
+# 返回的全是 MCP / codex_apps 工具，没有内置生图
+
+# 对照组：--disable shell_tool 时 exec_command / write_stdin 确实从清单消失，判据有效
+codex exec --ephemeral --skip-git-repo-check -s read-only --disable shell_tool "..."
+```
+
+### 2. `--disable image_generation` 确实生效——只是生效的东西本来就不在清单里
+
+```bash
+codex features list --disable image_generation
+# image_generation 的 effective state：true → false
+```
+turn 日志里的 feature 集合同步少了 `ImageGeneration`。**这条 --disable 因此仍然保留**：
+它把 feature 的 effective state 真的扳成了 false，只是本机这个内置能力从未进过工具清单，
+所以摘不摘它，模型能不能生图这件事本身不受影响。
+
+### 3. 模型嘴上说的「imagegen 工具」是系统 skill，不是内置工具
+
+请求体的 `### Available skills` 段里列着 `$CODEX_HOME/skills/.system/imagegen/SKILL.md`。
+读它的内容：教模型优先调用内置 `image_gen`，若不可用则兜底跑 `scripts/image_gen.py`
+（脚本内部读 `OPENAI_API_KEY` 直接调 OpenAI 的图片接口）。第十二节判据 6 里模型答的
+「有，工具名 imagegen」，指的就是这个 skill 声称自己会做的事，不是一个真实存在的工具。
+
+### 4. 按路径禁用系统 skill——路径必须精确到 `SKILL.md` 文件
+
+```bash
+codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c 'skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]' \
+  "..."
+# 请求体里 imagegen 的提及次数：2 → 0，`### Available skills` 段不再列它
+```
+**写目录无效**（实测过，`path` 指到 `.../imagegen/` 这一层不生效，必须是 `SKILL.md` 本身
+的完整路径）。这是本次升级到 hard 的真正依据：feature 开关摘不掉内置能力（因为它本来
+就没上桌），系统 skill 才是模型嘴里那个「imagegen 工具」的来源，摘掉它才是真的把
+「模型自认为会生图」这件事掐掉。
+
+### 5. 残余：环境里的 `OPENAI_API_KEY`
+
+若子进程环境里带 `OPENAI_API_KEY`（Eas-Term 的 `PROBE_ENV` 是展开的 `process.env`，
+从终端起 app 会继承外部 shell 的环境变量），即便 skill 被摘掉、模型手上没有现成的
+「叫我生图」的指令，它仍可能自己手搓一条命令去跑 `image_gen.py`（脚本还在磁盘上，
+Bash 没被禁）。这与「`write:false` 留着 Bash 仍能改文件」是同一类逃生口——只在
+`bindRole` 的报告行里如实注明（`若环境有 OPENAI_API_KEY，skill 的 CLI 兜底仍可被手动跑`），
+**不因此把判定档位往下调**。
+
+### 落地
+
+按上面 1–5 条，`shared/roleBinding.ts` 的 `imageGen:false` × Codex 分支改为：
+`--disable image_generation`（保留，理由见第 2 条）+ 有 `codexHome` 时按 `SKILL.md`
+完整路径摘掉 imagegen 系统 skill（`-c 'skills.config=[...]'`，导出为
+`codexSkillsConfigArg()`）+ 按名关匹配到的 MCP server；有 `codexHome` 时档位升级为
+**hard**，没有时维持 **degraded** 并在 `how` 里如实写人话「未摘掉 imagegen 系统 skill
+（这条路径拿不到 Codex 配置目录）」，不再是「调用方未给 codexHome」这种内部黑话。
+`codexHome` 由 `main/agent.ts` 新导出的 `codexHome()` 算（`CODEX_HOME` 或 `~/.codex`，
+`codexServers()` 复用同一个函数），`session.ts` 起 Codex 会话时算好塞进
+`StartOpts`/`SessionRecord`，跟 `knownMcpServers` 一样要原样带过 restart。
+
+**评审修复（2026-09-06）**：初版只有对话节点（`session.ts`）会算 `codexHome` 塞进
+`StartOpts`，渲染层的 `RolePicker`（对话工具栏降级徽章）与 `CanvasRoleEditor`
+（能力矩阵）拿不到——于是「画师 × Codex」真实会话已经是 hard，界面却照旧显示成
+degraded。修法：`main/agent.ts` 新增 IPC `agent:codexHome`（返回 `codexHome()`），
+`preload/index.ts` 的 `agent` 命名空间照 `codexServers` 的写法加 `codexHome()`；
+两个组件各用一个 `useState<string | undefined>` + `useEffect` 取一次，传进
+`degradedLines` / `capMatrix` 的 ctx。现在拿不到 codexHome、因此仍是 degraded 的
+只剩终端命令条 `CanvasAgentBar` 那条**已下线**路径——它的 `buildCodexCmd` 故意不传
+`codexHome`（见该文件内注释：无 UI 入口，只求类型跟 `roleBinding` 同步，不求真的
+摘掉过 skill）。
+
+**已知副作用**：`-c skills.config=[...]` 是**整体覆盖**用户 `~/.codex/config.toml`
+里的 `skills.config`，不是追加——如果用户自己也手写了这个键，会被这条整个覆盖掉。
+未做「读用户配置再合并」，属于阶段三的已知取舍，不是遗漏。
+
+**Windows 路径未实测**：`codexHome` 若形如 `C:\Users\x\.codex`（含反斜杠），拼
+`SKILL.md` 路径时跟着 `codexHome` 自己出现的分隔符走（`codexHome.includes('\\')
+? '\\' : '/'`），测试里断言过 `C:\Users\x\.codex` → `C:\Users\x\.codex\skills\.system\
+imagegen\SKILL.md`（经 `codexSkillsConfigArg` 转义后是合法 TOML），但没有在真实
+Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
+
+### 十四·附 · 真机核对（2026-09-06，隔离实例 CDP，代码 b44a3ce）
+
+| 核对项 | 看到了什么 |
+|---|---|
+| `window.api.agent.codexHome()` | 返回 `/Users/biily/.codex`，IPC 通 |
+| 画师的编辑器矩阵「不许生图」行 | Claude 格「硬」；**Codex 格「硬」**，how 以「--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）+ 摘掉 imagegen 系统 skill…」开头；默认 harness 格「降级」 |
+| 画师 + Codex 的对话节点 | 角色按钮 aria-label「角色：画师」，**无** `.rolepick-warn` 徽章 |
+| 画师 + 默认 harness 的对话节点（对照） | aria-label「角色：画师（部分限制在当前 CLI 上打了折扣）」，徽章「降级」，tooltip「不许生图：无内置生图；图像类 MCP server 按名整个不连」—— 证明徽章机制活着，Codex 上消失是档位真的升了 |
+| adapter 生成的 `-c skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]` 实跑 | Codex 接受；假端点抓到的模型请求里 `imagegen` 提及 0；`codex features list --disable image_generation` 该项 effective=false |
+
+未验：`team_spawn role_id` 仍无真实 MCP 调用；Windows 路径分隔符只有单测。
+
+### 十四·附二 · 用户决定（2026-09-06）
+
+> 用户原话：「画师也不关：把画师卡的『不许生图』默认取消，Codex 的 imagegen 在所有角色下都在，红线只靠契约文字兜着。」
+
+- `builtinRoles.ts` 的 `illustrator` 删掉 `caps: { imageGen: false }`，desc 改「视觉产出。生图走用户指定路径」；契约文字不变。
+- `caps.imageGen` 开关与上面探针得出的 Codex 落法（关 feature ＋ 摘系统 skill ＋ 按名关 server，hard）**全部保留**，只是内置角色不再默认用它；自建角色勾了照常生效。
+- 老 v1 存档里画师若带着七个 `mcp__*image*` 通配，迁移仍忠实落成 `imageGen=false`（文件里明写的），要放开得在编辑器里手动灭掉。
+- 快照测试 `builtinRoles.test.ts` 改为断言画师**无 caps**，并单独钉一条「imageGen 开关对自建角色仍有效」。

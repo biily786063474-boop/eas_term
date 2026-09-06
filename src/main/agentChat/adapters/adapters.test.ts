@@ -618,6 +618,27 @@ test('Codex：shell:false → --disable shell_tool；imageGen:false → --disabl
   assert.deepEqual(pairs, ['shell_tool', 'image_generation'])
 })
 
+test('Codex：imageGen:false + codexHome —— 按 SKILL.md 完整路径摘掉 imagegen 系统 skill（阶段三，逐字断言）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    codexHome: '/h',
+    roleBounds: { caps: { imageGen: false } }
+  })
+  const i = args.indexOf('image_generation')
+  assert.ok(i > 0 && args[i - 1] === '--disable', '内置 --disable 仍然要拼')
+  const j = args.indexOf('skills.config=[{path="/h/skills/.system/imagegen/SKILL.md",enabled=false}]')
+  assert.ok(j >= 0, '没找到摘 skill 的 -c 取值')
+  assert.equal(args[j - 1], '-c')
+})
+
+test('Codex：imageGen:false 但没给 codexHome —— 不拼 skills.config（摘不掉，adapter 不该凭空造路径）', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    roleBounds: { caps: { imageGen: false } }
+  })
+  assert.ok(!args.some((a) => a.startsWith('skills.config=')))
+})
+
 test('Codex：denyServers 按 knownMcpServers 过滤后才下发 enabled=false —— 名字不存在会拒绝启动', () => {
   const { args } = getAdapter('codex')!.buildArgs({
     cwd: '/p',

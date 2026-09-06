@@ -452,7 +452,11 @@ const api = {
     captureCodexSession: (cwd: string, sinceMs: number): Promise<{ id: string | null }> =>
       ipcRenderer.invoke('codex:captureSession', cwd, sinceMs),
     // 用户配了哪些 Codex MCP server（禁用清单要按它过滤：名字不存在 codex 会拒绝启动）
-    codexServers: (): Promise<string[]> => ipcRenderer.invoke('agent:codexServers')
+    codexServers: (): Promise<string[]> => ipcRenderer.invoke('agent:codexServers'),
+    // Codex 的配置目录（`CODEX_HOME` 或 `~/.codex`）——渲染层算角色的 imageGen 档位
+    // （RolePicker 的降级徽章、CanvasRoleEditor 的能力矩阵）要靠它判断摘不摘得掉
+    // imagegen 系统 skill，同 main/agent.ts 的 codexHome()
+    codexHome: (): Promise<string> => ipcRenderer.invoke('agent:codexHome')
   },
   browser: {
     // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)

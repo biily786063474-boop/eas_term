@@ -64,10 +64,21 @@ export function RolePicker({
   const [dragging, setDragging] = useState(false)
   const startX = useRef(0)
   const armed = useRef(false)
+  /** Codex 的配置目录，经 IPC 取一次。没有它 imageGen 在 Codex 上永远算不出 hard——
+   *  真实会话（session.ts 起会话时同样调 codexHome()）明明摘得掉 imagegen 系统 skill，
+   *  这里拿不到就会把徽章误判成「降级」，tooltip 里还会带出「未给 codexHome」这种黑话。 */
+  const [codexHome, setCodexHome] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    let live = true
+    void window.api.agent.codexHome().then((v) => live && setCodexHome(v))
+    return () => {
+      live = false
+    }
+  }, [])
 
   const current = roles.find((r) => r.id === roleId)
   // 只在有降级 / 不支持时出现，不常驻 —— 常驻的标记等于没有标记
-  const warn = current && cli ? degradedLines({ caps: current.caps, raw: current.raw }, cli) : []
+  const warn = current && cli ? degradedLines({ caps: current.caps, raw: current.raw }, cli, { codexHome }) : []
 
   // 打开时把轨道定位到当前角色那一张 —— 而不是从头翻
   useEffect(() => {

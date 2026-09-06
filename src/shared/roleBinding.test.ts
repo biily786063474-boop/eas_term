@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import {
   bindRole,
   codexDisableServerArg,
+  codexSkillsConfigArg,
   globMatch,
   IMAGE_MCP_PATTERNS,
   CLAUDE_WRITE_TOOLS,
@@ -31,7 +32,7 @@ test('空卡 = 什么都不加，三家都没有报告行', () => {
   for (const k of ['claude', 'codex', 'omp'] as const) {
     const b = bindRole(undefined, k)
     assert.deepEqual(b.claude.deny, [])
-    assert.deepEqual(b.codex, { disable: [], disableServers: [], sandbox: undefined })
+    assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined })
     assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] })
     assert.deepEqual(b.report, [])
   }
@@ -63,17 +64,58 @@ test('shell:false —— Claude 去 Bash，Codex --disable shell_tool，omp 去 
   assert.deepEqual(bindRole(bounds, 'omp').omp.removeTools, ['bash'])
 })
 
-test('imageGen:false —— Claude 通配 deny；Codex 关内置生图（degraded）并按名关 server；omp 只按名关 server', () => {
+test('imageGen:false —— Claude 通配 deny；Codex 无 codexHome 时关内置生图（degraded，未摘 skill）并按名关 server；omp 只按名关 server', () => {
   const bounds = { caps: { imageGen: false as const } }
   const c = bindRole(bounds, 'claude')
   assert.deepEqual(c.claude.deny, IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`))
   const x = bindRole(bounds, 'codex', { knownMcpServers: ['eas-term', 'flux-server'] })
   assert.deepEqual(x.codex.disable, ['image_generation'])
   assert.deepEqual(x.codex.disableServers, ['flux-server'])
+  assert.deepEqual(x.codex.skillsOff, [], '没给 codexHome，摘不掉 skill')
   assert.ok(x.report.every((l) => l.level === 'degraded'))
+  assert.ok(x.report[0].how.includes('未摘掉 imagegen 系统 skill（这条路径拿不到 Codex 配置目录）'), 'how 要说人话，不能是内部黑话')
   const o = bindRole(bounds, 'omp')
   assert.deepEqual(o.omp.dropServerPatterns, IMAGE_MCP_PATTERNS)
   assert.equal(o.report[0].level, 'degraded')
+})
+
+test('imageGen:false × Codex 有 codexHome —— 升级为 hard：摘掉 imagegen 系统 skill，按 SKILL.md 完整路径', () => {
+  const bounds = { caps: { imageGen: false as const } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['flux-server'], codexHome: '/Users/x/.codex' })
+  assert.deepEqual(x.codex.disable, ['image_generation'], '内置 --disable 仍然保留')
+  assert.deepEqual(x.codex.disableServers, ['flux-server'])
+  assert.deepEqual(x.codex.skillsOff, ['/Users/x/.codex/skills/.system/imagegen/SKILL.md'])
+  assert.equal(x.report.length, 1)
+  assert.equal(x.report[0].level, 'hard')
+  assert.ok(x.report[0].how.includes('摘掉'), 'how 里要说清楚摘了 skill')
+  assert.ok(x.report[0].how.includes('整体覆盖你 config.toml 里自己写的 skills.config'), 'how 要提醒这是整体覆盖不是追加')
+})
+
+test('imageGen:false × Codex 有 codexHome（Windows 反斜杠路径）—— 按 codexHome 自己的分隔符拼，不写死 /', () => {
+  const bounds = { caps: { imageGen: false as const } }
+  const x = bindRole(bounds, 'codex', { codexHome: 'C:\\Users\\x\\.codex' })
+  assert.deepEqual(x.codex.skillsOff, ['C:\\Users\\x\\.codex\\skills\\.system\\imagegen\\SKILL.md'])
+  // 经 codexSkillsConfigArg 转义后要是一段合法的 TOML：反斜杠先转义成两个
+  assert.equal(
+    codexSkillsConfigArg(x.codex.skillsOff),
+    'skills.config=[{path="C:\\\\Users\\\\x\\\\.codex\\\\skills\\\\.system\\\\imagegen\\\\SKILL.md",enabled=false}]'
+  )
+})
+
+test('codexSkillsConfigArg：TOML 内联表数组，路径含引号与反斜杠要转义', () => {
+  assert.equal(
+    codexSkillsConfigArg(['/Users/x/.codex/skills/.system/imagegen/SKILL.md']),
+    'skills.config=[{path="/Users/x/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]'
+  )
+  assert.equal(
+    codexSkillsConfigArg(['/a/SKILL.md', '/b/SKILL.md']),
+    'skills.config=[{path="/a/SKILL.md",enabled=false},{path="/b/SKILL.md",enabled=false}]'
+  )
+  assert.equal(
+    codexSkillsConfigArg(["C:\\Users\\x\\\"weird\"\\SKILL.md"]),
+    "skills.config=[{path=\"C:\\\\Users\\\\x\\\\\\\"weird\\\"\\\\SKILL.md\",enabled=false}]"
+  )
+  assert.equal(codexSkillsConfigArg([]), '', '空数组不该生成清空用户全部 skills.config 的合法参数')
 })
 
 test('mcp.denyServers —— Codex 按 knownMcpServers 过滤，名字不存在会让它拒绝启动', () => {
