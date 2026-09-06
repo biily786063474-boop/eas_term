@@ -71,6 +71,10 @@ export interface TabsSlice {
     cli?: string
     /** 用哪个角色（`AgentRole.id`）。空 = 无角色 */
     roleId?: string
+    /** 这个会话之前落在哪棵 worktree。**画布恢复时必须带回来** ——
+     *  它随 canvas.json 落盘了，不传的话重启后节点退回主工作区，
+     *  而 resumeId 还在：对话接着跑，改的却是主工作区（隔离静默失效）。 */
+    worktree?: { relPath: string; branch: string }
   }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
@@ -263,7 +267,9 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         resumeCli: opts?.resumeCli,
         // 用户在空 Frame 上点了哪颗（Claude / Codex / 默认 harness）
         cli: opts?.cli,
-        roleId: opts?.roleId
+        roleId: opts?.roleId,
+        // 画布恢复时带回来的 worktree（存了就要用，同 resumeId 那条）
+        worktree: opts?.worktree
       }
     }
     const tab: TermTab = {

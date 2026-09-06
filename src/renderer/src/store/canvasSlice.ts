@@ -256,6 +256,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                   // cli 漏读的症状同类但更隐蔽：节点看着正常，只是 CLI 换了个人。
                   ...(agentPane?.cli ? { cli: agentPane.cli } : {}),
                   ...(agentPane?.roleId ? { roleId: agentPane.roleId } : {}),
+                  // **worktree 同理**：不带回来的话，重启后这个节点带着 resumeId
+                  // 接着聊，但改的是主工作区 —— 徽标消失、隔离静默失效，用户看不出来。
+                  ...(agentPane?.worktree ? { worktree: agentPane.worktree } : {}),
                   // **插件与首条消息也要带上**（2026-09-05 正式版事故）：picker 点「对话」是
                   // 先 addFileNode 一个带 pane 的节点、再由这里重建成 leaf —— 这两项不传，
                   // 开出来的就是一个不带插件工具、也不会自动发首条的空对话。
