@@ -213,8 +213,19 @@ export function AgentChatView({
     const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.roleId : undefined
   })
+  /** 这个面板的会话落在哪棵 worktree。**同样订阅** —— 第一次起会话时才建出来，
+   *  建完工具栏的目录/徽标要立刻跟着变。
+   *  （对象引用来自 pane，值不变时 setAgentWorktree 不造新对象，不会白重渲染。） */
+  const worktree = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.worktree : undefined
+  })
   const roles = useStore((s) => s.roles)
   const setAgentRole = useStore((s) => s.setAgentRole)
+  const setAgentWorktree = useStore((s) => s.setAgentWorktree)
+  /** 真正起会话的目录：有 worktree 就是它，否则项目目录 */
+  const effectiveCwd = worktree ? `${cwd}/${worktree.relPath}` : cwd
   const setAgentCli = useStore((s) => s.setAgentCli)
   const requestConfirm = useStore((s) => s.requestConfirm)
   /** 角色契约原文。**找不到那个 id 就当没角色** —— 用户可能把它删了，
@@ -794,6 +805,34 @@ export function AgentChatView({
 
     let result: AgentChatStartResult
     try {
+      // 写码角色第一次起会话前先把 worktree 建好，cwd 直接指过去 —— 模型没有「不开分支」的选项。
+      // 只在**全新**会话且还没有 worktree 时建；恢复会话沿用 pane 上记的那棵。
+      let startCwd = effectiveCwd
+      if (role?.isolation === 'worktree' && !worktree && !savedResumeId) {
+        const r = await window.api.roles.worktreeAdd(cwd, role.id)
+        if (r.ok) {
+          setAgentWorktree(tabId, leafId, { relPath: r.relPath, branch: r.branch })
+          startCwd = r.absPath
+        } else if (r.reason === 'not-git') {
+          // 不静默降级：告诉用户会直接改主工作区，点「继续」才起
+          const go = await new Promise<boolean>((resolve) =>
+            requestConfirm({
+              message: `这个目录不是 git 仓库，「${role.name}」会直接改主工作区。\n\n要继续吗？`,
+              confirmLabel: '继续',
+              onConfirm: () => resolve(true),
+              onCancel: () => resolve(false)
+            })
+          )
+          if (!go) {
+            setStarting(false)
+            return
+          }
+        } else {
+          setStarting(false)
+          setStartError(`建不了分支：${r.error}`)
+          return
+        }
+      }
       // message 必填直接带上，不留到之后再 send()——Codex 的 exec 要靠它作为启动时的
       // 位置参数，没法「先开会话、再补第一条」；Claude 那边 start() 内部也已经把它
       // 当第一条写进 stdin 了，这里不需要（也不能）再调一次 send() 重复投递同一条消息。
@@ -809,7 +848,9 @@ export function AgentChatView({
       const roleEffort = role?.effort?.[selected.id as HarnessId]
       result = await window.api.agentChat.start({
         cli: selected.id,
-        cwd,
+        // **不是 cwd 是 startCwd** —— 有 worktree 的会话必须起在那棵树里，
+        // 否则它照样在改主工作区，隔离白做
+        cwd: startCwd,
         message,
         skipApprovalHook,
         askFirst,
@@ -819,6 +860,8 @@ export function AgentChatView({
         ...(roleBounds ? { roleBounds } : {}),
         ...(roleModel ? { model: roleModel } : {}),
         ...(roleEffort ? { effort: roleEffort } : {}),
+        // 角色 id 也要过去 —— 协同板按它查角色名，不带就是板上一行匿名分支
+        ...(role?.id ? { roleId: role.id } : {}),
         ...identity,
         // 这次会话带哪个插件。**两处 start 都要带** —— 漏掉哪条路径，
         // 走那条路开出来的会话就没有插件的工具（同 identity 那条注释的理由）。
@@ -831,7 +874,8 @@ export function AgentChatView({
         setAgentResumeId(tabId, leafId, '')
         result = await window.api.agentChat.start({
           cli: selected.id,
-          cwd,
+          // 重试路径同样走 startCwd（漏掉的话，一次重试就把会话搬回主工作区）
+          cwd: startCwd,
           message,
           skipApprovalHook,
           askFirst,
@@ -842,6 +886,7 @@ export function AgentChatView({
           ...(roleBounds ? { roleBounds } : {}),
           ...(roleModel ? { model: roleModel } : {}),
           ...(roleEffort ? { effort: roleEffort } : {}),
+          ...(role?.id ? { roleId: role.id } : {}),
           ...identity
         })
       }
@@ -1249,9 +1294,12 @@ export function AgentChatView({
             照 DeepSeek Harness 那套布局来（用户 2026-08-19 指定）——「这次对话的前提」
             排在输入框上面，「这条消息怎么发」排在输入框里面，两类东西不再混在一起。 */}
         <div className="ac-ctxbar">
-          <span className="ac-ctxbar-item" data-tip={cwd}>
+          {/* 显示的是**真正跑在哪** —— 有 worktree 时它是那棵树，不是项目根 */}
+          <span className="ac-ctxbar-item" data-tip={effectiveCwd}>
             <FolderIcon size={12} />
-            <span className="ac-ctxbar-name">{cwd.split('/').filter(Boolean).pop() ?? cwd}</span>
+            <span className="ac-ctxbar-name">
+              {effectiveCwd.split('/').filter(Boolean).pop() ?? effectiveCwd}
+            </span>
           </span>
           <button
             type="button"

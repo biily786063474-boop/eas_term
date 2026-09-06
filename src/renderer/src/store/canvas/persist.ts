@@ -87,6 +87,9 @@ export function serializeCanvas(
             //   而不是悄悄退回 pickDefaultCli 的推测值。
             //   老存档里没有这个字段 → 读回来是 undefined → 正好退回原来的行为。
             // · cli / roleId **都要存**：用户选的 CLI 和角色重启后还得是那个
+            // · worktree（这个会话落在哪棵树 / 哪条分支）**要存**：不存的话重启后
+            //   这个节点会退回主工作区继续改 —— 隔离白做了，而且用户看不出来
+            //   （徽标消失，但对话接着 resume 跑）。
             copy.pane = {
               kind: 'agent',
               cwd: pane.cwd,
@@ -94,7 +97,8 @@ export function serializeCanvas(
               // 签发者要一起存 —— 只存 resumeId 不存签发者，重启后又得回去猜（事故的根）
               resumeCli: pane.resumeCli,
               cli: pane.cli,
-              roleId: pane.roleId
+              roleId: pane.roleId,
+              worktree: pane.worktree
             }
           }
         }
@@ -171,6 +175,19 @@ export function sanitizeNode(raw: unknown): CanvasNode | null {
     h: finiteOr(n.h, NODE_H)
   }
   if (n.agent) node.agent = migrateAgent(n.agent)
+  // agent pane 上唯一「带结构」的持久字段，读回来要校形状：半个对象（只有 branch
+  // 没有 relPath）会被下游直接拼进 cwd，变成把会话起在一个不存在的目录里。
+  // 不合格就当没有 —— 退回主工作区，比起在错的地方安全。
+  if (node.pane?.kind === 'agent') {
+    const wt = node.pane.worktree as { relPath?: unknown; branch?: unknown } | undefined
+    node.pane = {
+      ...node.pane,
+      worktree:
+        wt && typeof wt.relPath === 'string' && typeof wt.branch === 'string'
+          ? { relPath: wt.relPath, branch: wt.branch }
+          : undefined
+    }
+  }
   return node
 }
 

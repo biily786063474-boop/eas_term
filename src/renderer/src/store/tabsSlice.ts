@@ -122,6 +122,16 @@ export interface TabsSlice {
    *  传一次 —— 会话跑着的时候改这个字段，界面会显示新角色而模型还是旧的那个人。
    *  用户 2026-09-03 定的规矩：换角色 = 弹确认 + 结束当前会话重开。 */
   setAgentRole: (tabId: string, leafId: string, roleId: string) => void
+  /** 记下这个面板的会话落在哪棵 worktree（`undefined` = 回到主工作区，删 worktree 时用）。
+   *
+   *  **由 app 写，不由模型写**：`isolation:'worktree'` 的角色第一次起会话前，
+   *  AgentChatView 先调 `roles.worktreeAdd` 建好树再把结果记在这里，
+   *  之后每次起会话（含 `--resume` 恢复）cwd 都指过去。 */
+  setAgentWorktree: (
+    tabId: string,
+    leafId: string,
+    wt: { relPath: string; branch: string } | undefined
+  ) => void
   /** 派活的首条消息发出去之后清掉它。**必须清** —— 不清的话组件重新挂载
    *  （切视图、面板重排）会把同一条任务再发一遍，等于白烧一次。 */
   clearAgentInitialMessage: (tabId: string, leafId: string) => void
@@ -615,6 +625,22 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         const next = roleId || undefined
         if (leaf.pane.roleId === next) return t // 同一个值不必制造新对象
         const pane: PaneState = { ...leaf.pane, roleId: next }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  setAgentWorktree: (tabId, leafId, wt) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        const cur = leaf.pane.worktree
+        // 同一个值不必制造新对象 —— 这个字段被 AgentChatView 直接订阅，
+        // 每次给个新对象就是每次都重渲染整块对话
+        if (cur?.relPath === wt?.relPath && cur?.branch === wt?.branch) return t
+        const pane: PaneState = { ...leaf.pane, worktree: wt }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))
