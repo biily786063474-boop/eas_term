@@ -137,7 +137,8 @@ export const BUILTIN_ROLES: AgentRole[] = [
     effort: { claude: 'medium', codex: 'medium' },
     // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」变成能力意图，
     // 由 shared/roleBinding.ts 翻成各家参数（Claude 通配 deny；Codex --disable image_generation
-    // ＋按名关 server；omp 按名不连）。通配那组黑名单在 IMAGE_MCP_PATTERNS。
+    // ＋（拿得到 codexHome 时）按 SKILL.md 路径摘掉 imagegen 系统 skill ＋按名关 server；
+    // omp 按名不连）。通配那组黑名单在 IMAGE_MCP_PATTERNS。
     caps: { imageGen: false },
     contract: [
       '你这一轮的职责是产出视觉素材。',

@@ -221,6 +221,16 @@ test('[补] restart 时 opts 带上 knownMcpServers——丢了会让 Codex 的 
   assert.deepEqual(plan.opts.knownMcpServers, ['eas-term', 'bizone-canvas'])
 })
 
+// 阶段三：codexHome 跟 knownMcpServers 同一个理由必须原样带过 restart —— 丢了的话角色
+// imageGen:false 在 Codex 上摘 imagegen 系统 skill 那一步（skills.config）算不出来，
+// 会从第二条消息起悄悄退回 degraded，而界面上角色卡片看起来还是「已摘掉」。
+test('[补] restart 时 opts 带上 codexHome——丢了会让 Codex 的 imageGen 摘 skill 从第二条消息起悄悄退回 degraded', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', codexHome: '/Users/x/.codex' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.codexHome, '/Users/x/.codex')
+})
+
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
 
 test('团队 agent **交活之后** 3 分钟就回收', () => {

@@ -24,11 +24,15 @@ export interface BindingContext {
   /** 本机实际配置的 MCP server 名。Codex 对不存在的名字会拒绝启动，所以有清单就按它过滤；
    *  通配 → server 名的降级匹配也靠它。不给 = 不过滤（调用方自己负责）。 */
   knownMcpServers?: readonly string[]
+  /** Codex 的配置目录（`CODEX_HOME` 或 `~/.codex`），由调用方算好传入 ——
+   *  纯函数不读环境变量、不摸文件系统。摘系统 skill 要拼它的绝对路径（见 imageGen 分支）；
+   *  不给就摘不掉，档位维持 degraded（调用方多半是没有主进程环境的路径，比如渲染层）。 */
+  codexHome?: string
 }
 
 export interface RoleBinding {
   claude: { deny: string[] }
-  codex: { disable: string[]; disableServers: string[]; sandbox: 'read-only' | undefined }
+  codex: { disable: string[]; disableServers: string[]; skillsOff: string[]; sandbox: 'read-only' | undefined }
   omp: { removeTools: string[]; dropServers: string[]; dropServerPatterns: string[] }
   /** 只含 `kind` 那一家的行 */
   report: BindingLine[]
@@ -56,6 +60,14 @@ export function codexDisableServerArg(name: string): string {
   return `mcp_servers.${name}.enabled=false`
 }
 
+/** Codex 按路径禁用系统 skill 的 `-c` 取值：TOML 内联表数组，逐字实测过 —— 路径必须是
+ *  `SKILL.md` 文件的完整路径，写目录无效。路径里的 `\` 与 `"` 要转义（先转 `\`，
+ *  否则会把转义 `"` 新加的反斜杠自己又转义一遍）。零依赖：不引任何 TOML 库。 */
+export function codexSkillsConfigArg(paths: string[]): string {
+  const esc = (p: string): string => p.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `skills.config=[${paths.map((p) => `{path="${esc(p)}",enabled=false}`).join(',')}]`
+}
+
 const uniq = (xs: string[]): string[] => [...new Set(xs)]
 
 export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): RoleBinding {
@@ -65,6 +77,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
   const claudeDeny: string[] = []
   const codexDisable: string[] = []
   const codexServers: string[] = []
+  const codexSkillsOff: string[] = []
   let codexSandbox: 'read-only' | undefined
   const ompRemove: string[] = []
   const ompDrop: string[] = []
@@ -109,14 +122,40 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       claudeDeny.push(...IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`))
       line('imageGen', 'hard', `--disallowedTools ${IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`).join(' ')}`)
     } else if (kind === 'codex') {
+      // 2026-09-06 阶段三探针（本机 Codex 0.147.0，三种鉴权模式都测过）：内置 `image_gen`
+      // 工具从未进过模型的工具清单，`--disable image_generation` 前后 tools 清单完全一致；
+      // 这条 --disable 仍然保留，因为 feature 的 effective state 确实被它扳成了 false
+      // （`codex features list` 可核），万一未来版本真的接了内置生图，这条不会白留。
+      // 模型嘴上说的「imagegen 工具」，实测是系统 skill
+      // `$CODEX_HOME/skills/.system/imagegen/SKILL.md`（请求体 `### Available skills` 段列着它，
+      // 教模型优先用内置 image_gen、兜底跑 `scripts/image_gen.py`）。按 SKILL.md 的完整路径
+      // 禁用它（`skills.config=[{path=...,enabled=false}]`，写目录无效，实测过）才是真正摘掉
+      // 生图能力的那一步，档位因此升到 hard。调用方给不出 codexHome（比如渲染层的终端命令条）
+      // 时摘不掉 skill，档位退回 degraded，如实告知而不是假装摘了。
+      // 残余逃生口：子进程环境若带 OPENAI_API_KEY（终端起的 app 会继承外部 shell 的环境变量），
+      // 模型仍可能手动跑 image_gen.py ——这与「write:false 留着 Bash 仍能改文件」同一类逃生口，
+      // 只在报告里如实注明，不因此改判定档位。
       codexDisable.push('image_generation')
       const hit = matchKnown(IMAGE_MCP_PATTERNS)
       codexServers.push(...hit)
-      line(
-        'imageGen',
-        'degraded',
-        `--disable image_generation（2026-09-05 实测未摘掉内置生图，模型仍自称有 imagegen 工具，仅按名关 MCP server）：${hit.join(', ') || '无匹配'}`
-      )
+      const serverNote = `按名关掉 MCP server：${hit.join(', ') || '无匹配'}`
+      const residualNote = '若环境有 OPENAI_API_KEY，skill 的 CLI 兜底仍可被手动跑'
+      if (ctx.codexHome) {
+        codexSkillsOff.push(`${ctx.codexHome}/skills/.system/imagegen/SKILL.md`)
+        line(
+          'imageGen',
+          'hard',
+          `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）` +
+            `+ 摘掉 imagegen 系统 skill（skills.config 按 SKILL.md 路径禁用）；${serverNote}；${residualNote}`
+        )
+      } else {
+        line(
+          'imageGen',
+          'degraded',
+          `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）；` +
+            `${serverNote}；未摘 skill（调用方未给 codexHome）；${residualNote}`
+        )
+      }
     } else {
       ompPatterns.push(...IMAGE_MCP_PATTERNS)
       line('imageGen', 'degraded', '无内置生图；图像类 MCP server 按名整个不连')
@@ -168,7 +207,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
 
   return {
     claude: { deny: uniq(claudeDeny) },
-    codex: { disable: uniq(codexDisable), disableServers: uniq(codexServers), sandbox: codexSandbox },
+    codex: { disable: uniq(codexDisable), disableServers: uniq(codexServers), skillsOff: uniq(codexSkillsOff), sandbox: codexSandbox },
     omp: { removeTools: uniq(ompRemove), dropServers: uniq(ompDrop), dropServerPatterns: uniq(ompPatterns) },
     report
   }

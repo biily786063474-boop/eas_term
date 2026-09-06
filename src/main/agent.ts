@@ -76,12 +76,20 @@ async function probeCodex(): Promise<AgentProbe['codex']> {
  * 所以宁可这里读少了（用户自己看不出角色少了一条护栏），也不要为了"读全"去解析 TOML
  * 的内联表语法而冒改坏用户真实配置的风险（教训见上一段）。
  */
+/** Codex 的配置目录：`CODEX_HOME` 覆盖默认的 `~/.codex`。抽成导出函数是因为
+ *  `codexServers()`（读 MCP server 清单）与 session.ts 起 Codex 会话时（角色 imageGen
+ *  摘系统 skill 要拼它的绝对路径）现在有两处要用同一条判定逻辑——之前只在这里内联，
+ *  第二处要用就得复制一份，改了 CODEX_HOME 的读取方式很容易只改一处。 */
+export function codexHome(): string {
+  return process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
+}
+
 export function codexServers(): string[] {
   try {
     // Codex 认 `CODEX_HOME` 覆盖默认的 `~/.codex`；这里跟着优先读它，
     // 否则设了 CODEX_HOME 的用户会被判定成「没配任何 MCP server」，
     // 角色的 denyServers 清单被清空，护栏跟着静默消失（上面那段的具体案例）。
-    const home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
+    const home = codexHome()
     const raw = fs.readFileSync(path.join(home, 'config.toml'), 'utf8')
     const out: string[] = []
     for (const line of raw.split('\n')) {

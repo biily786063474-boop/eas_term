@@ -48,7 +48,7 @@ test('勘探员 / 验官：三家都落到写保护，没有别的报告行', ()
   }
 })
 
-test('画师：三家都落到生图限制，Codex / omp 是 degraded，Claude 是 hard', () => {
+test('画师：三家都落到生图限制，Claude 是 hard，omp 是 degraded，Codex 视 codexHome 而定', () => {
   const role = BUILTIN_ROLES.find((r) => r.id === 'illustrator')!
   const claude = bindRole({ caps: role.caps, raw: role.raw }, 'claude')
   assert.equal(claude.report.length, 1)
@@ -56,10 +56,19 @@ test('画师：三家都落到生图限制，Codex / omp 是 degraded，Claude �
   assert.equal(claude.report[0].level, 'hard')
   assert.deepEqual(claude.claude.deny, IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`))
 
-  const codex = bindRole({ caps: role.caps, raw: role.raw }, 'codex')
+  // 没有 codexHome（调用方给不出，比如渲染层）：feature 关但摘不掉系统 skill，维持 degraded
+  const codexNoHome = bindRole({ caps: role.caps, raw: role.raw }, 'codex')
+  assert.equal(codexNoHome.report.length, 1)
+  assert.equal(codexNoHome.report[0].level, 'degraded', '没给 codexHome，摘不掉 imagegen 系统 skill')
+  assert.deepEqual(codexNoHome.codex.disable, ['image_generation'])
+  assert.deepEqual(codexNoHome.codex.skillsOff, [])
+
+  // 有 codexHome（session.ts 起会话时算好传入）：阶段三升级为 hard —— 摘掉系统 skill
+  const codex = bindRole({ caps: role.caps, raw: role.raw }, 'codex', { codexHome: '/Users/x/.codex' })
   assert.equal(codex.report.length, 1)
-  assert.equal(codex.report[0].level, 'degraded', 'Codex 关不掉内置生图，只能按名关 server')
+  assert.equal(codex.report[0].level, 'hard', '给了 codexHome，摘掉了 imagegen 系统 skill，升级为 hard')
   assert.deepEqual(codex.codex.disable, ['image_generation'])
+  assert.deepEqual(codex.codex.skillsOff, ['/Users/x/.codex/skills/.system/imagegen/SKILL.md'])
 
   const omp = bindRole({ caps: role.caps, raw: role.raw }, 'omp')
   assert.equal(omp.report.length, 1)
@@ -77,7 +86,7 @@ test('其余内置角色（全流程/工匠/原型师/笔杆子/杂役）：三�
     for (const kind of KINDS) {
       const b = bindRole({ caps: role.caps, raw: role.raw }, kind)
       assert.deepEqual(b.claude.deny, [], `${role.id}/${kind}`)
-      assert.deepEqual(b.codex, { disable: [], disableServers: [], sandbox: undefined }, `${role.id}/${kind}`)
+      assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined }, `${role.id}/${kind}`)
       assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] }, `${role.id}/${kind}`)
       assert.deepEqual(b.report, [], `${role.id}/${kind}`)
     }

@@ -18,7 +18,7 @@
 // 把 approval 改回非空——UI 一行都不用改。
 
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
-import { bindRole, codexDisableServerArg } from '../../../shared/roleBinding.ts'
+import { bindRole, codexDisableServerArg, codexSkillsConfigArg } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { createCodexTranslator } from '../codexEvents.ts'
 
@@ -59,7 +59,7 @@ export const codexAdapter: CliAdapter = {
   createTranslator: createCodexTranslator,
 
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
-    const b = bindRole(opts.roleBounds, 'codex', { knownMcpServers: opts.knownMcpServers })
+    const b = bindRole(opts.roleBounds, 'codex', { knownMcpServers: opts.knownMcpServers, codexHome: opts.codexHome })
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`
     const args: string[] = opts.resumeId ? ['exec', 'resume', opts.resumeId] : ['exec']
     // 角色的 write:false 是沙箱的唯一来源；其余维持默认（UI 上沙箱只展示不可选）
@@ -81,6 +81,8 @@ export const codexAdapter: CliAdapter = {
     //（bindRole 已按 knownMcpServers 过滤，不存在的名字 Codex 会拒绝启动）。
     for (const f of b.codex.disable) args.push('--disable', f)
     for (const n of b.codex.disableServers) args.push('-c', codexDisableServerArg(n))
+    // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容
+    if (b.codex.skillsOff.length) args.push('-c', codexSkillsConfigArg(b.codex.skillsOff))
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }

@@ -57,7 +57,7 @@ import { mcpEnv } from '../mcpBridge.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
-import { codexServers } from '../agent.ts'
+import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath } from '../mcpBridge.ts'
 import type {
   ChatEvent,
@@ -1225,7 +1225,10 @@ export function registerAgentChatHandlers(): void {
       roleBounds: safeRoleBounds(p.roleBounds),
       // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
       // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
-      knownMcpServers: p.cli === 'codex' ? codexServers() : undefined
+      knownMcpServers: p.cli === 'codex' ? codexServers() : undefined,
+      // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
+      // 只在 Codex 时算，adapter 是纯函数不读环境变量。
+      codexHome: p.cli === 'codex' ? codexHome() : undefined
     }
     const live: Live = {
       rec,
