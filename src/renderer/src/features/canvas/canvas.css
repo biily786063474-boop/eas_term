@@ -172,6 +172,15 @@
   font-weight: 700;
   color: var(--fg);
   white-space: nowrap;
+  /* **头部里唯一可压缩的就是名字。** 这排别的东西（色点、多 agent、名额角标、
+     六颗按钮）全是 `flex: none`，窄 Frame 里挤不下时溢出只能落到按钮上 ——
+     它们会整颗跑到虚线框外面（用户 2026-09-06 实拍）。
+     `min-width: 0` 是关键：flex 子元素默认 `min-width: auto`，也就是「不小于内容」，
+     光写 overflow:hidden 它照样不肯缩。 */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cframe-count {
@@ -2147,6 +2156,10 @@
   font-family: inherit;
   padding: 1px 6px;
   outline: none;
+  /* 跟 .cframe-name 同一个道理：150px 是想要的宽度不是硬要的宽度，
+     窄 Frame 里得让它缩，否则改名时按钮又被顶出去 */
+  flex: 0 1 150px;
+  min-width: 0;
   width: 150px;
 }
 
