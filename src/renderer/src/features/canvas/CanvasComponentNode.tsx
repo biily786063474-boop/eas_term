@@ -126,7 +126,9 @@ export function CanvasComponentNode({
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
-        <def.Icon size={11} />
+        <span className="cfile-badge">
+          <def.Icon size={13} />
+        </span>
         {editing ? (
           <input
             className="cfile-rename"

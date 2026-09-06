@@ -162,7 +162,9 @@ export function CanvasFreeFileNode({
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
-        <Icon size={11} />
+        <span className="cfile-badge">
+          <Icon size={13} />
+        </span>
         {editing ? (
           <input
             className="cfile-rename"

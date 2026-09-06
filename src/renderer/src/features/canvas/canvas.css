@@ -861,7 +861,9 @@
   background: var(--glass-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  /* **这里不能 `overflow: hidden`** —— 类型角标要露出左上角（用户 2026-09-06 给的参考图）。
+     圆角裁剪改由上下两段各自负责：头部裁上面两个角、`.cfile-body` 裁下面两个角。
+     内容照样不会溢出：body 本来就有自己的 `overflow: hidden`。 */
   box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
 }
 
@@ -882,6 +884,8 @@
   border-bottom: 1px solid var(--glass-border);
   background: var(--lift-1);
   color: var(--accent);
+  /* 节点整体不再裁剪（见 .cfile-node），上面两个角由这条自己收 */
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .cfile-title {
@@ -997,6 +1001,8 @@
   position: relative;
   overflow: hidden;
   min-height: 0;
+  /* 节点整体不再裁剪（见 .cfile-node），下面两个角由这条自己收 */
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 /* ---------- 辞典面板（2026-08-31：悬浮球取消，改标题栏触发）----------
@@ -6040,4 +6046,99 @@
   color: var(--sem-warn);
   background: rgba(var(--sem-warn-rgb), 0.14);
   opacity: 1;
+}
+
+/* ── 类型角标：悬在模块左上角，压着圆角探出去一点（用户 2026-09-06 给的参考图）──
+   适用于**除终端和 AI 对话之外的所有模块** —— 文件预览、画布组件、自由节点
+   三者共用 `.cfile-head`，所以这一条同时管住它们。终端和 AI 对话不走这套头部。
+
+   为什么用实心 accent 而不是参考图里那块白：参考图是白底黑图标，在我们的暗色里
+   accent(#dfe3e8) 本来就接近那块白，而亮色主题下 accent 转深、图标走 --on-accent
+   自动反过来 —— 写死白色的话亮色主题上就是白底白图标。
+   （--on-accent 是项目里专管这件事的令牌，check-accent-contrast.mjs 会拦写死值。）
+
+   **留在 flex 流里而不是 absolute**：它要占住标题左边那段位置，标题接着它排；
+   absolute 的话标题会钻到角标底下去。露出头部上沿靠 align-self + 负 margin，
+   不靠 align-items:center 去算 —— 那个算法把负 margin 也计进可用空间，结果不直观。 */
+.cfile-badge {
+  flex: none;
+  align-self: flex-start;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px;
+  margin-left: -18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 6px var(--ink-2);
+  /* 烟雾裁在角标里（`inset` 是负的，不裁就漫出去糊住标题） */
+  position: relative;
+  overflow: hidden;
+  /* 抬起与落下用不同的曲线：起要利落（回弹感的 ease-out），落要绵一点。
+     **只动 transform** —— 顺手加个 box-shadow 过渡会让每帧重新绘制阴影，
+     那正是 check-animations.mjs 拦的那类事（这条是 hover 触发不是 infinite，
+     拦不到，但代价一样真实：一屏几十个节点，鼠标扫过去就是几十次重绘）。 */
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cfile-badge:hover {
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translate(-3px, -3px);
+}
+
+/* 一过性的彩色渐变烟雾：hover 那一下转着扩散开、随即散掉，**不循环**。
+   ── 「渲染资源不要重复」这条在这里具体是四件事 ──────────────────────────
+   ① 一个伪元素，不是一层 DOM。渐变是静态背景，只在第一次绘制时光栅化一次，
+      之后 transform 拿的是同一张纹理。
+   ② **只动 transform 和 opacity**，两者都走合成层，不碰主线程的样式重算。
+      不动 filter: blur —— 模糊跟着 transform 变就得每帧重新光栅化，
+      柔和感改用渐变本身的透明度分布做，视觉差不多而代价差一个量级。
+   ③ **不写 will-change**。一屏几十个节点，常驻的合成层提升就是几十份显存，
+      而它们 99% 的时间根本没在动。让浏览器在动画开始时临时提升就够了。
+   ④ 不 hover 时这个伪元素 opacity: 0 且没有任何 animation ——
+      静置的画布上它一分钱不花。 */
+.cfile-badge::after {
+  content: '';
+  position: absolute;
+  /* 比角标大一圈，转起来边缘才不会露出空档 */
+  inset: -45%;
+  border-radius: 50%;
+  background: var(--badge-smoke);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 图标压在烟雾上面。烟雾是它的底不是它的罩子 ——
+   `::after` 是定位元素，默认就画在静态的 svg 之上，不抬这一手图标会被糊住。 */
+.cfile-badge > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.cfile-badge:hover::after {
+  /* **linear，不是 ease 系列。** 多关键帧动画的缓动函数是**逐段**生效的，
+     原来写 cubic-bezier(0.16,1,0.3,1)（easeOutExpo）等于每一段都往前挤，
+     实测 130ms 还在、320ms 已经散完 —— 一过性变成了看不见。
+     节奏改由关键帧的位置表达：~190ms 升起、亮着到 ~620ms、再化开。 */
+  animation: cfile-badge-smoke 950ms linear;
+}
+
+@keyframes cfile-badge-smoke {
+  0% {
+    opacity: 0;
+    transform: rotate(-30deg) scale(0.45);
+  }
+  20% {
+    opacity: 0.72;
+  }
+  65% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(160deg) scale(1.6);
+  }
 }
