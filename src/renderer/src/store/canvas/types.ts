@@ -51,6 +51,9 @@ export interface CanvasNode {
   component?: { type: string; props?: Record<string, unknown> }
   /** 自定义名称（可重命名）；未设则用默认标题 */
   name?: string
+  /** **钉在画板上**：不占内容模块限额、也不会被自动清理（用户 2026-09-06）。
+   *  规则与判据在 `canvas/nodeCap.ts`，那里有测试。 */
+  pinned?: boolean
   /** **这个 AI 对话节点当前挂着哪一段对话。**
    *
    *  聊天记录按它存（AgentChatView 的 histKey）。不设 = 用节点 id 本身，
@@ -213,7 +216,16 @@ export interface CanvasSlice {
    *  和 settleNode 不同——那个是让**自己**找空位，这个是让**别人**给自己让路。 */
   settleResize: (frameId: string, nodeId: string) => void
   /** 拖文件入 Frame：新增一个画布自带的文件预览节点（不进分屏） */
-  addFileNode: (frameId: string, pane: PaneState, x: number, y: number) => void
+  /** 往 Frame 里放一个内容模块（文件预览 / 网页）。
+   *  `opts` 给「从抽屉拖进来」那条路用：知识库内容只读、skill 走自己的写通道。
+   *  超过内容上限会自动清掉最早的（见 `canvas/nodeCap.ts`）。 */
+  addFileNode: (
+    frameId: string,
+    pane: PaneState,
+    x: number,
+    y: number,
+    opts?: { readOnly?: boolean; writeVia?: 'skill' }
+  ) => void
   /** 拖组件入 Frame：新增一个画布组件节点（尺寸由调用方从 registry 取，避免循环依赖） */
   addComponentNode: (
     frameId: string,
@@ -360,6 +372,8 @@ export interface CanvasSlice {
   startNewChat: (frameId: string, nodeId: string) => string | undefined
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
+  /** 钉住 / 取消钉住一个内容模块。钉住的不受 5 个上限约束，也不会被自动清理。 */
+  togglePinNode: (frameId: string, nodeId: string) => void
   /** 设置终端节点的 Agent 控制台配置（传 null 清除=回到纯终端） */
   setNodeAgent: (frameId: string, nodeId: string, agent: NodeAgent | null) => void
   /** 更新画布组件节点的 props（如设计模块把 designState 存回节点，随 canvas.json 持久化） */

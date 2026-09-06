@@ -7,7 +7,7 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
@@ -30,6 +30,7 @@ export function CanvasFileNode({
   const resizeNode = useStore((s) => s.resizeNode)
   const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
+  const togglePinNode = useStore((s) => s.togglePinNode)
   const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
@@ -227,6 +228,16 @@ export function CanvasFileNode({
           onClick={() => setMaximizedNode(isMax ? null : { frameId, nodeId: node.id })}
         >
           {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
+        </button>
+        {/* 钉在画板上：钉住的不占「一个 Frame 最多 5 个内容模块」的名额，也不会被自动清理
+            （用户 2026-09-06；规则在 store/canvas/nodeCap.ts）。只有内容模块才有这颗钉子 ——
+            终端和 AI 对话本来就不受限额约束，给它们钉子只会让人以为「不钉就会被删」。 */}
+        <button
+          className={`cfile-btn cfile-pin${node.pinned ? ' on' : ''}`}
+          data-tip={node.pinned ? '已钉在画板（不会被自动清理）· 点击取消' : '钉在画板：不占 5 个上限，也不会被自动清理'}
+          onClick={() => togglePinNode(frameId, node.id)}
+        >
+          <PinIcon size={11} />
         </button>
         <button className="cfile-x" data-tip="删除节点" onClick={() => removeNode(frameId, node.id)}>
           ×

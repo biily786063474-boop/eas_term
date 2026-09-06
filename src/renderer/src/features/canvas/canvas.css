@@ -5993,3 +5993,38 @@
   color: var(--accent);
   border-color: rgba(var(--accent-rgb), 0.5);
 }
+
+/* 钉在画板上。
+   没钉住时跟别的头部按钮一样 —— 平时收着，hover 节点才浮出来（.cfile-btn 那条规则）。
+   **钉住之后必须常亮**：那一颗钉子是「这个不会被自动清理」的唯一凭据，
+   藏在 hover 里等于让用户挨个去摸，才知道哪些是安全的。
+   `!important` 是冲着 `.cfile-node:hover .cfile-btn{opacity:.7}` 去的 ——
+   那条规则的选择器权重更高，不压过它，鼠标一进节点钉住的反而变淡。 */
+.cfile-pin.on {
+  color: var(--accent);
+  opacity: 1 !important;
+}
+
+/* Frame 头上的「内容名额」角标：默认极淡（它只是背景信息），
+   顶到上限才提一档亮度 —— 那一刻它才需要被看见。 */
+.cframe-slots {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 0 5px;
+  height: 15px;
+  line-height: 15px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  /* --t-3 = 「退后」那一级（时间戳、行号那类），正是这个角标平时该有的分量。
+     底用 --s-2（卡片面），不描边 —— 规矩②：描边只留给输入框、状态色边和 Frame 那条虚线 */
+  color: var(--t-3);
+  background: var(--s-2);
+  opacity: 0.75;
+}
+/* 顶到上限：换 --sem-warn。这一刻它确实是个警告 ——「下一个开出来就要删东西了」 */
+.cframe-slots.full {
+  color: var(--sem-warn);
+  background: rgba(var(--sem-warn-rgb), 0.14);
+  opacity: 1;
+}
