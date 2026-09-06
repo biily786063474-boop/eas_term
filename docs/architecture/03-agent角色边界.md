@@ -102,6 +102,55 @@
 > 谁都看不出来（阶段一就分过一次）。`team_spawn` 的确认弹窗是例外中的例外：它只显示套的
 > 角色卡**名字**（`TeamBatchModal` 拿 `roleId` 去 `roles` 里查），不展开落法。
 
+## 角色隔离与协同板（`isolation` · 角色 worktree · `.eas/board.md`，P1 已实现）
+
+角色卡新增字段 `AgentRole.isolation?: 'worktree' | 'none'`（`src/shared/types.ts`），**不推断**——
+和下面 `team_spawn` 的 `agents[].isolation` 是同一条纪律的两处独立实现，互不 import。内置角色里
+`e2e` / `builder` / `prototyper` 默认 `'worktree'`，其余默认 `'none'`；`CanvasRoleEditor` 编辑器
+「起会话时」给出两档开关，用户可改，改了写回 `~/.eas/roles.json`。
+
+**建树时机与命名**：不在主进程 `agentChat:start` 里建（spec 原计划如此），改到**渲染层首发消息前**
+——`AgentChatView` 先调 IPC `role:worktreeAdd(projectPath, roleId)`（实现在
+`src/main/teamWorktreeOps.ts`，与 `team_spawn` 那套建树逻辑共文件不共前缀），因为 pane 要先知道
+分支名才能画徽标、才能落 persist。目录与分支命名判断层在 `src/shared/roleWorktree.ts`（纯函数）：
+`.worktrees/<roleId>-<6 位短 id>`，分支 `eas/<roleId>/<id>`——与团队派活的 `eas-team/…` 前缀区分开，
+`git branch` 一眼分得清哪条是角色会话自己开的。cwd 不是 git 仓库时不静默降级：弹「这个目录不是
+git 仓库，「<角色名>」会直接改主工作区，要继续吗？」确认，取消则不起会话，继续则落在主工作区
+（`effectiveCwd` 退回原 cwd）。
+
+**协同板**：主进程模块 `src/main/collabBoard.ts`（`registerCollabBoardHandlers`——**别与看板插件的
+`src/main/board.ts` 搞混**，两者同名字段但毫不相干）。它要知道会话表却不 `import session.ts`，
+改经 `setSessionSource()` 注入一个取会话列表的函数，避免主进程模块间循环依赖。跑 git、解析
+`git status --porcelain` 的封装在 `src/main/gitExec.ts`（`parsePorcelain`，electron-free，
+`collabBoard.ts` 与 `teamWorktreeOps.ts` 共用同一份，别各自摞一份判断逻辑）：固定带
+`GIT_OPTIONAL_LOCKS=0`（避免和 agent 自己正在 commit 抢 `.git/index.lock`）与
+`-c core.quotePath=false`（避免中文路径被转义成八进制、板上乱码且 overlap 判不出来）。
+
+渲染纯函数在 `src/shared/board.ts`（`renderBoard` / `findOverlaps` / `clipForPrompt`，零依赖可
+`node --test`），落盘常量 `BOARD_REL = '.eas/board.md'`（**写在被管理项目的项目根下，不是本仓库
+目录**）。IPC `board:refresh` / `board:read` 都先把传入路径 `projectRootOf()` 归一到项目根
+（worktree 里的 cwd 会被剥到 `.worktrees/` 之前，防止在工作树底下又长出一份）。
+
+**刷新时机四处**：会话 spawn 之后、每次 `turn.done`、进程 exit、用户手动 stop —— 都过 500ms
+防抖 + 同一项目内的 in-flight 请求合并；`writeBoard` 只在有行、或文件已存在时才落盘（没起过写码
+角色的项目不会凭空长出 `.eas/`）；`.eas/` 目录被写进目标项目的 `.git/info/exclude`（幂等，不改
+用户自己的 `.gitignore`）。
+
+**注入**：起会话那一刻，`StartOpts.boardText`（截断 ≤20 行）拼进三家系统提示末尾的
+`## 协同板（起会话时的快照）` 一段；会话中途变化不推送（三家 CLI 都没有中途注入系统提示的通道），
+靠 MCP 工具 `board_read`（先 `refresh` 再 `read`，返回 `{ board, note?, path }`）随时查最新的一份，
+见 [11](11-MCP工具网络.md)。
+
+**界面**：`BranchBadge.tsx` 在空态 `ac-ctxbar` 与对话态 `ChatToolbar` 都渲染；菜单三项——
+「开终端」（`effectiveCwd`）、「合并到主干」（P2 占位，禁用）、「删除 worktree」（有活会话禁用；
+有未提交改动先拒、写清数量，二次确认走 force）。徽标变色的判据来自 `board.read().overlaps`
+（两条活跃分支触及同一文件）。pane 的 `worktree?: { relPath, branch }`（`layout.ts` 的
+`PaneState`）随 `persist.ts` 存读、画布恢复时 `canvasSlice.ts` 重建节点传给 `openAgentPane`，
+重启实例后徽标还在。
+
+> **只读角色**（`scout` / `inspector`）不建 worktree、不上徽标；主工作区里**有角色**的会话才上
+> 协同板（没有角色的普通会话不上板，有角色但落在主工作区的显示「主工作区」）。
+
 ## 多 agent 编排的闸门（`team_spawn` · `teamWorktree.ts` / `batchSpec.ts`）
 
 **闸0** 调用者本身是团队成员 → 硬拒（成员不得再派活）· **闸1** Frame 多 agent 开关关着 → 拒

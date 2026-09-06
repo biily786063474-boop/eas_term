@@ -80,7 +80,7 @@ graph LR
 ## 工具清单
 
 以 `mcp/eas-mcp.mjs` 的 `TOOLS` 为准（前缀即分类：wiki · canvas · team · secret · skill · dict，
-另有 `notify` / `todo_list`），真正的执行体在渲染层 `mcpHandler.ts`。
+另有 `notify` / `todo_list` / `board_read`），真正的执行体在渲染层 `mcpHandler.ts`。
 `tools/list` 不做任何过滤 —— 缺 `EAS_TERM_PORT`/`TOKEN` 时整份返回空，否则全量对外可见。
 
 已知这几条从名字推不出来（不保证穷尽，改工具时自己再看一眼 `TOOLS`）：
@@ -94,6 +94,7 @@ graph LR
 | `dict_add` | 逐条校验，可拒收 |
 | `wiki_archive_plan` ⏳ | **阻塞等用户**在弹窗里确认 |
 | `canvas_snapshot` | 截图落盘到项目 `screenshot/` |
+| `board_read`（角色工作流 P1）| **先 `refresh` 再 `read`**（`main/collabBoard.ts` 现算 + 落盘 `.eas/board.md`），不是查缓存；返回 `{ board, note?, path }`，数据来源与刷新时机见 [03](03-agent角色边界.md) 协同板段 |
 
 ⏳ = 在 `LONG_WAITS` 名单里。
 
