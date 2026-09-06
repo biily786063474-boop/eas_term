@@ -64,6 +64,10 @@ export function codexDisableServerArg(name: string): string {
  *  `SKILL.md` 文件的完整路径，写目录无效。路径里的 `\` 与 `"` 要转义（先转 `\`，
  *  否则会把转义 `"` 新加的反斜杠自己又转义一遍）。零依赖：不引任何 TOML 库。 */
 export function codexSkillsConfigArg(paths: string[]): string {
+  // 空数组不该生成 `skills.config=[]`——那是一句合法的 TOML，含义是「清空用户 config.toml
+  // 里已经写的全部 skills.config」，跟「这个角色没有要摘的 skill」完全是两回事。调用方靠
+  // 空串判断要不要拼这个 `-c`（见 adapters/codex.ts、CanvasAgentBar.tsx 的 `if (arg)` 守卫）。
+  if (!paths.length) return ''
   const esc = (p: string): string => p.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
   return `skills.config=[${paths.map((p) => `{path="${esc(p)}",enabled=false}`).join(',')}]`
 }
@@ -130,8 +134,10 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       // `$CODEX_HOME/skills/.system/imagegen/SKILL.md`（请求体 `### Available skills` 段列着它，
       // 教模型优先用内置 image_gen、兜底跑 `scripts/image_gen.py`）。按 SKILL.md 的完整路径
       // 禁用它（`skills.config=[{path=...,enabled=false}]`，写目录无效，实测过）才是真正摘掉
-      // 生图能力的那一步，档位因此升到 hard。调用方给不出 codexHome（比如渲染层的终端命令条）
-      // 时摘不掉 skill，档位退回 degraded，如实告知而不是假装摘了。
+      // 生图能力的那一步，档位因此升到 hard。调用方给不出 codexHome（现在只剩终端命令条
+      // `CanvasAgentBar` 那条已下线路径——它自己的注释写明故意不传 codexHome；对话节点与
+      // 渲染层的 RolePicker / CanvasRoleEditor 都已能经 IPC 拿到）时摘不掉 skill，
+      // 档位退回 degraded，如实告知而不是假装摘了。
       // 残余逃生口：子进程环境若带 OPENAI_API_KEY（终端起的 app 会继承外部 shell 的环境变量），
       // 模型仍可能手动跑 image_gen.py ——这与「write:false 留着 Bash 仍能改文件」同一类逃生口，
       // 只在报告里如实注明，不因此改判定档位。
@@ -141,19 +147,27 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       const serverNote = `按名关掉 MCP server：${hit.join(', ') || '无匹配'}`
       const residualNote = '若环境有 OPENAI_API_KEY，skill 的 CLI 兜底仍可被手动跑'
       if (ctx.codexHome) {
-        codexSkillsOff.push(`${ctx.codexHome}/skills/.system/imagegen/SKILL.md`)
+        // `-c skills.config=[...]` 是整体覆盖用户 config.toml 里的 skills.config，不是追加——
+        // 如果用户自己也手写了这个键，这条会把它整个盖掉。没做读用户配置合并（会引入 TOML
+        // 解析与合并冲突的复杂度，阶段三不做），如实在 how 里告知。
+        // Windows 上 codexHome 可能是反斜杠路径（如 `C:\Users\x\.codex`），拼路径时跟着
+        // codexHome 自己用的分隔符走，不写死 `/`——两种分隔符混用在 Windows 上未实测过
+        // codex 是否照样能读。
+        const sep = ctx.codexHome.includes('\\') ? '\\' : '/'
+        codexSkillsOff.push([ctx.codexHome, 'skills', '.system', 'imagegen', 'SKILL.md'].join(sep))
         line(
           'imageGen',
           'hard',
           `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）` +
-            `+ 摘掉 imagegen 系统 skill（skills.config 按 SKILL.md 路径禁用）；${serverNote}；${residualNote}`
+            `+ 摘掉 imagegen 系统 skill（skills.config 按 SKILL.md 路径禁用）；${serverNote}；${residualNote}` +
+            `；注意这会整体覆盖你 config.toml 里自己写的 skills.config`
         )
       } else {
         line(
           'imageGen',
           'degraded',
           `--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）；` +
-            `${serverNote}；未摘 skill（调用方未给 codexHome）；${residualNote}`
+            `${serverNote}；未摘掉 imagegen 系统 skill（这条路径拿不到 Codex 配置目录）；${residualNote}`
         )
       }
     } else {

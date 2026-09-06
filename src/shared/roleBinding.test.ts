@@ -73,7 +73,7 @@ test('imageGen:false —— Claude 通配 deny；Codex 无 codexHome 时关内�
   assert.deepEqual(x.codex.disableServers, ['flux-server'])
   assert.deepEqual(x.codex.skillsOff, [], '没给 codexHome，摘不掉 skill')
   assert.ok(x.report.every((l) => l.level === 'degraded'))
-  assert.ok(x.report[0].how.includes('未摘 skill（调用方未给 codexHome）'))
+  assert.ok(x.report[0].how.includes('未摘掉 imagegen 系统 skill（这条路径拿不到 Codex 配置目录）'), 'how 要说人话，不能是内部黑话')
   const o = bindRole(bounds, 'omp')
   assert.deepEqual(o.omp.dropServerPatterns, IMAGE_MCP_PATTERNS)
   assert.equal(o.report[0].level, 'degraded')
@@ -88,6 +88,18 @@ test('imageGen:false × Codex 有 codexHome —— 升级为 hard：摘掉 image
   assert.equal(x.report.length, 1)
   assert.equal(x.report[0].level, 'hard')
   assert.ok(x.report[0].how.includes('摘掉'), 'how 里要说清楚摘了 skill')
+  assert.ok(x.report[0].how.includes('整体覆盖你 config.toml 里自己写的 skills.config'), 'how 要提醒这是整体覆盖不是追加')
+})
+
+test('imageGen:false × Codex 有 codexHome（Windows 反斜杠路径）—— 按 codexHome 自己的分隔符拼，不写死 /', () => {
+  const bounds = { caps: { imageGen: false as const } }
+  const x = bindRole(bounds, 'codex', { codexHome: 'C:\\Users\\x\\.codex' })
+  assert.deepEqual(x.codex.skillsOff, ['C:\\Users\\x\\.codex\\skills\\.system\\imagegen\\SKILL.md'])
+  // 经 codexSkillsConfigArg 转义后要是一段合法的 TOML：反斜杠先转义成两个
+  assert.equal(
+    codexSkillsConfigArg(x.codex.skillsOff),
+    'skills.config=[{path="C:\\\\Users\\\\x\\\\.codex\\\\skills\\\\.system\\\\imagegen\\\\SKILL.md",enabled=false}]'
+  )
 })
 
 test('codexSkillsConfigArg：TOML 内联表数组，路径含引号与反斜杠要转义', () => {
@@ -103,7 +115,7 @@ test('codexSkillsConfigArg：TOML 内联表数组，路径含引号与反斜杠�
     codexSkillsConfigArg(["C:\\Users\\x\\\"weird\"\\SKILL.md"]),
     "skills.config=[{path=\"C:\\\\Users\\\\x\\\\\\\"weird\\\"\\\\SKILL.md\",enabled=false}]"
   )
-  assert.equal(codexSkillsConfigArg([]), 'skills.config=[]')
+  assert.equal(codexSkillsConfigArg([]), '', '空数组不该生成清空用户全部 skills.config 的合法参数')
 })
 
 test('mcp.denyServers —— Codex 按 knownMcpServers 过滤，名字不存在会让它拒绝启动', () => {

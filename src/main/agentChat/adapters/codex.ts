@@ -81,8 +81,11 @@ export const codexAdapter: CliAdapter = {
     //（bindRole 已按 knownMcpServers 过滤，不存在的名字 Codex 会拒绝启动）。
     for (const f of b.codex.disable) args.push('--disable', f)
     for (const n of b.codex.disableServers) args.push('-c', codexDisableServerArg(n))
-    // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容
-    if (b.codex.skillsOff.length) args.push('-c', codexSkillsConfigArg(b.codex.skillsOff))
+    // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容。
+    // 守卫看 codexSkillsConfigArg 的返回值而不是 skillsOff.length——它内部对空数组
+    // 返回空串（避免拼出「清空用户全部 skills.config」的合法参数），这里跟着它的约定走。
+    const skillsArg = codexSkillsConfigArg(b.codex.skillsOff)
+    if (skillsArg) args.push('-c', skillsArg)
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }

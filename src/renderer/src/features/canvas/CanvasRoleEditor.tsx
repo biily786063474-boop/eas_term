@@ -42,6 +42,9 @@ export function CanvasRoleEditor({
   const [probe, setProbe] = useState<AgentProbe | null>(null)
   // 本机实际配了哪些 Codex MCP server —— 摆出来让用户点，别让他手打
   const [servers, setServers] = useState<string[]>([])
+  // Codex 的配置目录，经 IPC 取一次——能力矩阵靠它判断 imageGen 在 Codex 上能不能升到 hard
+  // （摘得掉 imagegen 系统 skill），拿不到就只能显示成 degraded
+  const [codexHome, setCodexHome] = useState<string | undefined>(undefined)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   // 手写框默认收着 —— 点选够用了。已经写过自定义规则的角色打开就展开，否则那些规则藏着看不见
@@ -78,6 +81,7 @@ export function CanvasRoleEditor({
     let live = true
     void getProbe().then((p) => live && setProbe(p))
     void window.api.agent.codexServers().then((v) => live && setServers(v))
+    void window.api.agent.codexHome().then((v) => live && setCodexHome(v))
     return () => {
       live = false
     }
@@ -149,7 +153,7 @@ export function CanvasRoleEditor({
   const rawDeny = draft.raw?.claude?.deny ?? []
   const denyServers = draft.caps?.mcp?.denyServers ?? []
   const denyTools = draft.caps?.mcp?.denyTools ?? []
-  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers })
+  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome })
 
   const kinds: { k: AgentKind | 'auto'; label: string; note: string }[] = [
     { k: 'auto', label: '跟随', note: '装了哪个用哪个' },

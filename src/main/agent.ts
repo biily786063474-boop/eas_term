@@ -108,6 +108,10 @@ export function codexServers(): string[] {
 
 export function registerAgentHandlers(): void {
   ipcMain.handle('agent:codexServers', () => codexServers())
+  // 渲染层（RolePicker 的降级徽章、CanvasRoleEditor 的能力矩阵）算 imageGen 的 hard/degraded
+  // 档位要用到 codexHome——不给的话这两处只能假设拿不到，把真实会话已经是 hard 的角色
+  // 显示成 degraded，tooltip 里还会露出「调用方未给 codexHome」这种内部黑话。
+  ipcMain.handle('agent:codexHome', () => codexHome())
 
   ipcMain.handle('agent:probe', async (): Promise<AgentProbe> => {
     const [claude, codex] = await Promise.all([probeClaude(), probeCodex()])

@@ -130,7 +130,9 @@ function buildCodexCmd(
   if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
   for (const f of codex.disable) p.push('--disable', f)
   for (const n of codex.disableServers) p.push('-c', codexDisableServerArg(n))
-  if (codex.skillsOff.length) p.push('-c', shq(codexSkillsConfigArg(codex.skillsOff)))
+  // 守卫看返回值而不是 skillsOff.length——空数组时函数自己返回空串（同 adapters/codex.ts 的约定）
+  const skillsArg = codexSkillsConfigArg(codex.skillsOff)
+  if (skillsArg) p.push('-c', shq(skillsArg))
   return p.join(' ')
 }
 
