@@ -24,15 +24,32 @@
 > Codex `-s read-only`，OS 沙箱连命令行写入一起挡；omp `--tools` 去 `write`/`edit`/`ast_edit`）；
 > **Claude 上现在是两道闸（阶段三第三项，2026-09-06）**：第一道 deny 三个内置写工具；
 > 第二道是 `--settings` 附一条 PreToolUse hook（`resources/agent-hooks/eas-write-guard.mjs`），
-> 按命令模式拦 Bash 里的写操作（重定向、`tee`、`sed -i`、`rm`/`mv`/`cp`/`mkdir`/`touch` 等、
-> git 写子命令、包管理安装，2026-09-06 评审后再加上换行/单个 `&` 分段、`sudo`/`env`/
-> `nohup`/`xargs`/`(...)`/`bash -c "…"` 这类包装词与子 shell 绕过）——补的正是
-> "Bash 未禁时模型仍可用命令改文件"这个逃生口。只在 `shell` 没有一起禁掉时才附这道闸
-> （`shell:false` 时 `--disallowedTools Bash` 已经挡死，守卫是死重量）。这道闸按字符串
-> 模式匹配，不是 Codex 那种内核级沙箱——**外部脚本文件**里的写操作（`bash foo.sh`）、
-> heredoc 之外的花样组合或变量拼出来的重定向目标、用引号/转义把写意图藏起来的命令、
-> `nice -n 10 rm x` 这类包装词自己还带参数的写法（包装词清单只处理简报点名的那几个，
-> 不穷举它们的参数形态）都拦不住，详见该脚本文件头与 spec 十四·附四的完整清单。
+> 按命令模式拦 Bash 里的写操作（重定向、`tee`、`sed -i`/`--in-place`/`perl -pi`、
+> `rm`/`mv`/`cp`/`mkdir`/`touch` 等、git 写子命令、包管理安装、`find -delete`/`-exec`、
+> `curl -o`/`wget`/`tar -x`/`unzip` 这类会落文件的命令，2026-09-06 评审后再加上
+> 换行/单个 `&` 分段、`sudo`/`env`/`nohup`/`xargs`/`nice`/`timeout`/`(...)`/`bash -c "…"`/
+> `eval "…"` 这类包装词与子 shell 绕过；**最终复审又补上**：包装词自己带的选项
+> （`sudo -u x rm y`、`nice -n 10 rm x`、`timeout 5 rm x`）、段首裸赋值（`FOO=1 rm x`）、
+> 引号感知的分段器）——补的正是"Bash 未禁时模型仍可用命令改文件"这个逃生口。
+> 只在 `shell` 没有一起禁掉时才附这道闸（`shell:false` 时 `--disallowedTools Bash`
+> 已经挡死，守卫是死重量）。
+>
+> 这道闸按字符串模式匹配，不是 Codex 那种内核级沙箱。**已知漏网清单**（如实记录，
+> 不是遗漏；与 `resources/agent-hooks/eas-write-guard.mjs` 文件头、spec 十四·附四
+> **逐字同口径**，改一处要三处一起改）：
+>
+> - 写操作藏在**外部脚本文件**里（`bash foo.sh`、`python3 script.py`）——这里只看得到调用它的那一行命令，看不到脚本内容；
+> - `cat <<EOF > file` 这类 heredoc 之外的花样组合，或者用变量拼出来的重定向目标；
+> - **heredoc 喂解释器 stdin**（`python3 - <<EOF`）——要写的内容在后面几行里，命令行这一行看不出写意图；
+> - 任何用引号/转义把写意图藏起来、让字符串匹配失焦的命令；
+> - **引号里的 awk/perl 重定向**（`awk '{print > "out"}' f`）——判重定向前先剥掉成对引号里的内容（为的是不误拦 `grep -c ">" f`），真的重定向被一起剥掉了；
+> - **间接/远端执行**：`ssh host rm x`、`docker run … rm`、`osascript`、`defaults write`——真正落盘的不是本机这一条命令，命令词是 ssh/docker/osascript；
+> - **`apt-get install` / `npx create-*`**：装包与脚手架会落一堆文件，不在 `npm|pnpm|yarn|bun|pip|brew|cargo` 那份安装子命令清单里；
+> - `rmdir`、`git branch <name>`（创建/列出分支，不含 `-d`/`-D`）等不在简报列出的写命令词清单里，按简报字面执行，不额外扩大匹配范围；
+> - `sh|bash|zsh -c "…"` / `eval "…"` 的递归判断只剥一层「整段被一对引号包住」的最外层引号，嵌套引号或转义（`bash -c "echo \"x\" > f"`）按字面切，取出来的可能不是原本想递归判断的那条命令；
+> - 包装词的选项表（`WRAPPER_OPTS_WITH_ARG`）只列到常用的那几个，遇到没列进去的「吃一个独立参数」的冷门选项会在参数上停错位置，那一条仍会放行；
+> - **hook 起不来 = 静默放行**：node 兜底路径找不到可执行文件、脚本自己抛异常、Windows 上的兜底路径——Claude Code 的 PreToolUse hook 只有明确输出 deny 才拦，跑不起来 / 报错 / 没输出一律当「本 hook 无意见」放行，且没有任何用户可见的信号（**Windows 未实测**）。
+>
 > **omp 仍只有第一道**（`--tools` 去写工具，Bash 未禁的话同样能绕）。
 > `illustrator`：**2026-09-06 起不再默认勾 `caps.imageGen`**（用户原话「我不要去缩减 Codex 的原生能力」，
 > Codex 自带的 imagegen 系统 skill 在所有角色下保留），生图红线只靠契约文字兜着。
