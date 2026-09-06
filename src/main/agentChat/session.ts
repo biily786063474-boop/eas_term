@@ -60,7 +60,7 @@ import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
-import { agentMcpConfigPath } from '../mcpBridge.ts'
+import { agentMcpConfigPath, easPluginMcpServer } from '../mcpBridge.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -741,7 +741,13 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
   // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
   // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
-  const built = adapter.buildArgs({ ...opts, mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined })
+  // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
+  // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
+  const built = adapter.buildArgs({
+    ...opts,
+    mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined,
+    pluginMcp: easPluginMcpServer(live.rec.pluginId) ?? undefined
+  })
   // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
   // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
   const args = built.stdin === 'ignore' ? [...built.args, message] : built.args

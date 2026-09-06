@@ -760,3 +760,29 @@ test('codex：永远带 --skip-git-repo-check（非 git 目录否则直接退出
   const resumed = getAdapter('codex')!.buildArgs({ cwd: '/WORK/notes', resumeId: 'abc' }).args
   assert.ok(resumed.includes('--skip-git-repo-check'), 'resume 那条路也要带')
 })
+
+// ── 自家插件在三家底座上都要真的到得了模型手里 ─────────────────────────────
+// 2026-09-06 用户问「computer use 是所有 harness 都能用吗」，查出来**不是**：
+// Claude 靠 --mcp-config、omp 靠 ACP 握手，Codex 两条都不走，于是自家插件
+// 在 Codex 上是「面板开着、模型手里一个工具都没有」。这几条钉住修复后的状态。
+const PLUG = { name: 'computer', command: 'node', args: ['/app/shim.mjs'], env: { EAS_PLUGIN: 'computer' } }
+
+test('Codex：选了自家插件就要拼出 -c mcp_servers.<名>.command', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/x', pluginMcp: PLUG })
+  const i = args.indexOf('mcp_servers.computer.command="node"')
+  assert.ok(i > 0, `没拼出 command：${JSON.stringify(args)}`)
+  assert.equal(args[i - 1], '-c', 'command 那条前面必须紧跟 -c')
+  assert.ok(args.includes('mcp_servers.computer.args=["/app/shim.mjs"]'), '缺 args')
+  assert.ok(args.includes('mcp_servers.computer.env={EAS_PLUGIN="computer"}'), '缺 env')
+})
+
+test('Codex：没选插件时不凭空长出 mcp_servers 参数', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/x' })
+  assert.ok(!args.some((a) => a.startsWith('mcp_servers.')), JSON.stringify(args))
+})
+
+test('Claude 不吃 pluginMcp —— 它走 --mcp-config 那份 JSON，同一个来源', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/x', pluginMcp: PLUG, mcpConfigPath: '/tmp/a.json' })
+  assert.ok(args.includes('--mcp-config') && args.includes('/tmp/a.json'))
+  assert.ok(!args.some((a) => a.startsWith('mcp_servers.')), 'Claude 不该拼 Codex 的 -c 形状')
+})

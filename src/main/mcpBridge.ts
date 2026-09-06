@@ -592,6 +592,31 @@ function substPluginVars(v: unknown, root: string): unknown {
   return v
 }
 
+/**
+ * 「自家插件」（`cli === 'eas'`）在这个会话里要连的那一个 MCP server。
+ *
+ * **不让 harness 直接 spawn 插件**，而是给一个转发 shim，走网关到宿主里唯一的那个插件
+ * 进程（面板与会话共用同一个；模型调了工具，面板才看得见）。`EAS_TERM_PORT/TOKEN`
+ * 由会话的 spawn env 注入、harness 再传给子进程；`EAS_PLUGIN` 在这里写死。
+ *
+ * 抽成函数是因为**有两个消费者，且两边必须完全一致**：
+ *   · `agentMcpConfigPath()` 写进 JSON → Claude 的 `--mcp-config`、omp 的 ACP 握手
+ *   · `session.ts` 直接取它 → Codex 的 `-c mcp_servers.<名>.…`（Codex 两条都不走）
+ * 各写一份的话，症状是「同一个插件在 Claude 上有工具、在 Codex 上没有」——
+ * 而这正是 2026-09-06 之前的实际状态。
+ *
+ * 返回 null = 没选插件，或选的是连接器型（那种 Codex 读用户全局 toml 本来就拿得到）。
+ */
+export function easPluginMcpServer(
+  pluginId?: string
+): { name: string; command: string; args: string[]; env: Record<string, string> } | null {
+  if (!pluginId) return null
+  const plug = findPlugin(pluginId)
+  if (plug?.cli !== 'eas' || !plug.mcp) return null
+  const r = runnerFor([pluginShimPath()])
+  return { name: plug.name, command: r.command, args: r.args, env: { ...(r.env ?? {}), EAS_PLUGIN: plug.name } }
+}
+
 export function agentMcpConfigPath(pluginId?: string): string | null {
   try {
     const serverPath = serverScriptPath()
@@ -649,13 +674,10 @@ export function agentMcpConfigPath(pluginId?: string): string | null {
     // 不显式合并的话，claude-mem / figma 这类插件的 MCP 在 AI 对话里根本不存在。
     if (pluginId) {
       const plug = findPlugin(pluginId)
-      if (plug?.cli === 'eas' && plug.mcp) {
-        // 自家插件：**不让 harness 直接 spawn 它**，而是一个转发 shim 走网关到宿主里唯一的
-        // 插件进程（面板与会话共用；模型调了工具面板才看得见）。EAS_TERM_PORT/TOKEN
-        // 由会话 spawn env 注入、harness 传给子进程；EAS_PLUGIN 在这里写死。
-        const key = plug.name in servers ? `plugin-${plug.name}` : plug.name
-        const r = runnerFor([pluginShimPath()])
-        servers[key] = { type: 'stdio', command: r.command, args: r.args, env: { ...(r.env ?? {}), EAS_PLUGIN: plug.name } }
+      const own = easPluginMcpServer(pluginId)
+      if (own) {
+        const key = own.name in servers ? `plugin-${own.name}` : own.name
+        servers[key] = { type: 'stdio', command: own.command, args: own.args, env: own.env }
       } else if (plug?.mcpServers) {
         for (const [name, cfg] of Object.entries(plug.mcpServers)) {
           // 插件自己的 server 名可能跟我们的撞（都叫 "figma" 之类）。

@@ -118,6 +118,39 @@ export function codexDisabledToolsArg(server: string, tools: string[]): string {
   return `mcp_servers.${tomlKeySegment(server)}.disabled_tools=[${tools.map((t) => `"${esc(t)}"`).join(',')}]`
 }
 
+/** 给 Codex **加**一个 MCP server 的 `-c` 取值（复数，调用方逐个拼 `-c`）。
+ *
+ *  ── 为什么需要它 ──────────────────────────────────────────────────────
+ *  Claude 靠 `--mcp-config` 吃我们生成的那份 JSON，omp 靠 ACP 握手的 `mcpServers`，
+ *  **只有 Codex 两条都不走** —— 它只读 `~/.codex/config.toml`，而那份是
+ *  `mcpBridge.writeCodexConfig` 写的，里面只有 eas-term 与 bizone-canvas 两个自家
+ *  server，**用户选的插件不在里面**。`mcpBridge.agentMcpConfigPath` 里那段合并插件的
+ *  代码，注释自己写着「这段实际只在救 Claude 那半」。
+ *
+ *  于是「自家插件」（`cli === 'eas'`，如电脑视野 / 看板）在 Codex 底座上**完全用不了**：
+ *  用户在插件面板里选了它、面板也开出来了，模型手上却一个工具都没有。
+ *  连接器型插件不受影响（Codex 读用户全局 toml，本来就拿得到）。
+ *
+ *  ── 为什么只补这一个、不把整份配置搬过来 ──────────────────────────────
+ *  eas-term 与 bizone-canvas **已经在 config.toml 里了**，再用 `-c` 铺一遍是重复定义。
+ *
+ *  ⚠️ `env` 必须给成 TOML 内联表；漏了它，shim 拿不到 `EAS_TERM_PORT/TOKEN/EAS_PLUGIN`，
+ *  连得上但认不出自己是哪个插件。转义规则同上（先转 `\` 再转 `"`）。 */
+export function codexAddServerArgs(server: {
+  name: string
+  command: string
+  args?: readonly string[]
+  env?: Readonly<Record<string, string>>
+}): string[] {
+  const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const k = `mcp_servers.${tomlKeySegment(server.name)}`
+  const out = [`${k}.command="${esc(server.command)}"`]
+  if (server.args?.length) out.push(`${k}.args=[${server.args.map((a) => `"${esc(a)}"`).join(',')}]`)
+  const env = Object.entries(server.env ?? {})
+  if (env.length) out.push(`${k}.env={${env.map(([n, v]) => `${tomlKeySegment(n)}="${esc(v)}"`).join(',')}}`)
+  return out
+}
+
 /** `caps.mcp.denyTools` 里能升成 Codex 精确 `disabled_tools` 的条目形状：`<server>__<tool>`
  *  ——不含 `*`、正好一个 `__` 分隔、两段都非空。其余形状（含 `*`，或不是这个形状）
  *  维持原样，走通配降级为按 server 名整个关那条老路（见 bindRole 里 mcp.denyTools 分支）。

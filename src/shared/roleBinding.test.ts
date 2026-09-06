@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import {
+import { codexAddServerArgs,
   bindRole,
   codexDisableServerArg,
   codexDisabledToolsArg,
@@ -409,4 +409,41 @@ test('degradedLines：只回 degraded / unsupported 的行', () => {
   assert.equal(codex.length, 1)
   assert.equal(codex[0].cap, 'imageGen')
   assert.equal(degradedLines(undefined, 'omp').length, 0)
+})
+
+// ── Codex 加 MCP server 的 -c 取值 ─────────────────────────────────────────
+// 存在的理由：Claude 吃 --mcp-config、omp 吃 ACP 握手，**只有 Codex 两条都不走**。
+// 不补这一段，自家插件在 Codex 底座上就是「面板开着、模型手里一个工具都没有」。
+test('codexAddServerArgs：command / args / env 三段都要有，env 是 TOML 内联表', () => {
+  const out = codexAddServerArgs({
+    name: 'computer',
+    command: '/usr/local/bin/node',
+    args: ['/app/shim.mjs'],
+    env: { EAS_PLUGIN: 'computer', EAS_TERM_PORT: '13141' }
+  })
+  assert.deepEqual(out, [
+    'mcp_servers.computer.command="/usr/local/bin/node"',
+    'mcp_servers.computer.args=["/app/shim.mjs"]',
+    'mcp_servers.computer.env={EAS_PLUGIN="computer",EAS_TERM_PORT="13141"}'
+  ])
+})
+
+test('codexAddServerArgs：**env 不能省** —— 省了 shim 认不出自己是哪个插件', () => {
+  const out = codexAddServerArgs({ name: 'x', command: 'node', args: ['a'], env: { EAS_PLUGIN: 'x' } })
+  assert.ok(out.some((a) => a.includes('.env={')), `env 那条不见了：${JSON.stringify(out)}`)
+})
+
+test('codexAddServerArgs：没有 args / env 时不凭空拼出空数组或空表', () => {
+  assert.deepEqual(codexAddServerArgs({ name: 'x', command: 'node' }), ['mcp_servers.x.command="node"'])
+  assert.deepEqual(codexAddServerArgs({ name: 'x', command: 'node', args: [], env: {} }), ['mcp_servers.x.command="node"'])
+})
+
+test('codexAddServerArgs：路径里的引号与反斜杠要转义（先转 \\ 再转 "）', () => {
+  const out = codexAddServerArgs({ name: 'x', command: 'C:\\a b\\node "x"' })
+  assert.equal(out[0], 'mcp_servers.x.command="C:\\\\a b\\\\node \\"x\\""')
+})
+
+test('codexAddServerArgs：server 名带点号要包引号，否则 TOML 会解析成多一层嵌套', () => {
+  const out = codexAddServerArgs({ name: 'my.plugin', command: 'node' })
+  assert.equal(out[0], 'mcp_servers."my.plugin".command="node"')
 })

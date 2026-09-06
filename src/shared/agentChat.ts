@@ -230,6 +230,16 @@ export interface StartOpts {
    *  **由上层（session.ts）注入而不是 adapter 自己去算**：adapter 有独立单测，
    *  跑在纯 node 环境里，import 主进程那套会把 electron 一起拉进去。 */
   mcpConfigPath?: string
+  /** 这个会话选中的**自家插件**（`cli === 'eas'`）的 MCP server —— 只给 Codex 用。
+   *
+   *  Claude 与 omp 都从 `mcpConfigPath` 那份 JSON 里拿到它，**Codex 两条都不走**
+   *  （它只读 `~/.codex/config.toml`，那里没有插件），所以要单独把这一个递进来，
+   *  由 adapter 拼成 `-c mcp_servers.<名>.command=…`。见 `codexAddServerArgs`。
+   *
+   *  未给 = 这个会话没选自家插件（或选的是连接器型 —— 那种 Codex 读全局 toml
+   *  本来就拿得到）。**同 mcpConfigPath 的做法：由 session.ts 注入，不让 adapter
+   *  自己去算** —— adapter 有独立单测，跑在纯 node 里，不能拉进 electron。 */
+  pluginMcp?: { name: string; command: string; args?: readonly string[]; env?: Readonly<Record<string, string>> }
   /** 「先问再做」模式（伪无头审批）。开了就把 ASK_FIRST_PROMPT 附进系统提示，
    *  让模型在动手前先说明并等回复 —— 不装 hook、不阻塞进程。
    *  与 skipApprovalHook 是两条独立的路：那条管硬拦截，这条管软约定。 */

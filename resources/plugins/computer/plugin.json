@@ -1,13 +1,31 @@
 {
   "name": "computer",
   "displayName": "电脑视野",
-  "description": "让 AI 看见你的屏幕（只读）。截图会给敏感窗口打码，落盘不进对话上下文。点击与键盘是另一档，尚未开放。",
+  "description": "让 AI 看见你的屏幕并代你操作。截图会给敏感窗口打码、落盘不进对话上下文；点击与键盘要你在面板上单独授权，有时限，越界坐标与自家窗口一律拒绝。",
   "category": "System",
   "brandColor": "#7dd3fc",
-  "defaultPrompt": "看一下我现在屏幕上是什么，用 screen_list 和 screen_shot。",
-  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "defaultPrompt": "看一下我现在屏幕上是什么。要动鼠标键盘的话先跟我说，我在面板上给你授权。",
+  "mcp": {
+    "command": "node",
+    "args": [
+      "./server.mjs"
+    ]
+  },
   "panels": [
-    { "id": "view", "title": "电脑视野", "tool": "screen_shot", "entry": "ui://computer/view", "defaultSize": { "w": 560, "h": 420 } }
+    {
+      "id": "view",
+      "title": "电脑视野",
+      "tool": "screen_shot",
+      "entry": "ui://computer/view",
+      "defaultSize": {
+        "w": 560,
+        "h": 420
+      }
+    }
   ],
-  "permissions": { "canvas": ["canvas_open_file"] }
+  "permissions": {
+    "canvas": [
+      "canvas_open_file"
+    ]
+  }
 }
