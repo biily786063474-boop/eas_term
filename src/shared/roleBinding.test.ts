@@ -29,6 +29,16 @@ test('codexDisableServerArg：字面量收口在一处，adapters/codex.ts 与 C
   assert.equal(codexDisableServerArg('bizone-canvas'), 'mcp_servers.bizone-canvas.enabled=false')
 })
 
+// Minor #9：server 名含 . 或 " 时，TOML 点路径必须给这一段加引号——裸写的话 . 会被解析
+// 成多一层嵌套、" 直接破坏语法。codexDisableServerArg 与 codexDisabledToolsArg 共用同一个
+// 转义辅助，这里各测一次。
+test('codexDisableServerArg / codexDisabledToolsArg：server 名含 . 或 " 时 TOML 键要加引号', () => {
+  assert.equal(codexDisableServerArg('a.b'), 'mcp_servers."a.b".enabled=false')
+  assert.equal(codexDisabledToolsArg('a.b', ['x']), 'mcp_servers."a.b".disabled_tools=["x"]')
+  assert.equal(codexDisableServerArg('a"b'), 'mcp_servers."a\\"b".enabled=false', '" 要转义成 \\"')
+  assert.equal(codexDisableServerArg('bizone-canvas'), 'mcp_servers.bizone-canvas.enabled=false', '纯 [A-Za-z0-9_-] 仍然裸写，不加引号')
+})
+
 test('空卡 = 什么都不加，三家都没有报告行', () => {
   for (const k of ['claude', 'codex', 'omp'] as const) {
     const b = bindRole(undefined, k)
@@ -194,14 +204,70 @@ test('mcp.denyTools 精确写法 —— 只有精确条目、没有通配时只�
   assert.equal(x.report.find((l) => l.cap === 'mcpTools')!.level, 'hard')
 })
 
-test('mcp.denyTools 精确写法 —— server 不在 knownMcpServers 清单时不进 disabledTools（Codex 对不存在的 server 名会拒绝启动），how 里说明', () => {
+// 2026-09-06 评审修复 Important #2：精确条目全被 knownMcpServers 过滤掉时，
+// 退回通配路径（见下面 Important #3 的测试），不再单独报一行 hard——没有精确条目
+// 留下就不该有 hard 行，此时应该只剩通配降级的那一行。
+test('mcp.denyTools 精确写法 —— server 不在 knownMcpServers 清单时退回通配路径（Codex 对不存在的 server 名会拒绝启动），不生成 hard 行', () => {
   const bounds = { caps: { mcp: { denyTools: ['ghost__foo'] } } }
   const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
   assert.deepEqual(x.codex.disabledTools, {})
+  const mcpToolsLines = x.report.filter((l) => l.cap === 'mcpTools')
+  assert.equal(mcpToolsLines.length, 1, '退回通配路径后仍只应有一行报告')
+  assert.equal(mcpToolsLines[0].level, 'degraded', '没有精确条目留下就不该报 hard')
+  assert.ok(mcpToolsLines[0].how.includes('无匹配'), '字面匹配不上任何已知 server')
+})
+
+// 2026-09-06 评审修复 Important #3：server 名自带 __（比如真实 server 就叫 a__b）时，
+// parsePreciseTool 会把它误判成 <server>__<tool> 精确形状（server=a, tool=b）；这个
+// server 不在清单里就退回原始字符串 'a__b' 走通配路径，字面匹配照旧能命中真正叫
+// a__b 的 server——不会「既不整关也不报告」。
+test('mcp.denyTools 精确写法 —— server 名字面自带 __ 时不会被拆错，退回通配路径后字面匹配照旧命中同名 server', () => {
+  const bounds = { caps: { mcp: { denyTools: ['a__b'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['a__b'] })
+  assert.deepEqual(x.codex.disabledTools, {}, '不该被错误拆成 server=a tool=b 精确摘工具')
+  assert.deepEqual(x.codex.disableServers, ['a__b'])
   const line = x.report.find((l) => l.cap === 'mcpTools')
-  assert.ok(line, '即便被跳过也要有报告行说明')
-  assert.equal(line!.level, 'hard')
-  assert.ok(line!.how.includes('ghost'), 'how 要点名被跳过的 server')
+  assert.ok(line)
+  assert.equal(line!.level, 'degraded')
+})
+
+// Minor #7：工具名含 __（不是 <server>__<tool> 这个形状，是三段）不算精确，同样退回通配路径。
+test('mcp.denyTools —— 形状不是 <server>__<tool>（比如带两个 __）不算精确，退回通配路径', () => {
+  const bounds = { caps: { mcp: { denyTools: ['mini__foo__bar'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['mini__foo__bar'] })
+  assert.deepEqual(x.codex.disabledTools, {})
+  assert.deepEqual(x.codex.disableServers, ['mini__foo__bar'], '字面匹配整串，命中同名 server')
+})
+
+// Minor #8：同一个 server 已经被 mcp.denyServers 整个关掉时，精确工具条目是死重量，
+// 跳过——不该在报告里出现「这家 server 一边整关一边又被精确摘工具」的自相矛盾两行。
+test('mcp.denyTools 精确写法 —— 同一个 server 已经在 mcp.denyServers 里整关时，跳过对它的精确工具条目', () => {
+  const bounds = { caps: { mcp: { denyServers: ['bizone-canvas'], denyTools: ['bizone-canvas__generate'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  assert.deepEqual(x.codex.disableServers, ['bizone-canvas'])
+  assert.deepEqual(x.codex.disabledTools, {}, 'server 已整关，精确工具条目应被跳过')
+  assert.equal(x.report.filter((l) => l.cap === 'mcpTools').length, 0, '被跳过时不该再多出一行 mcpTools 报告')
+})
+
+// Minor #10：disabledTools 有多个 server 时按名字排序遍历，与「排序去重」的描述一致，
+// 也让 -c 拼接顺序和 how 摘要顺序不随 JS 对象键插入顺序漂移。
+test('mcp.denyTools 精确写法 —— 多个 server 时按名字排序遍历', () => {
+  const bounds = { caps: { mcp: { denyTools: ['zserver__t1', 'aserver__t2'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['zserver', 'aserver'] })
+  const line = x.report.find((l) => l.cap === 'mcpTools')!
+  const posA = line.how.indexOf('aserver')
+  const posZ = line.how.indexOf('zserver')
+  assert.ok(posA >= 0 && posZ >= 0 && posA < posZ, 'aserver 应排在 zserver 前面')
+})
+
+// Important #4：hard 那行 how 末尾要点名这条 -c 是整键覆盖，不是追加（同 imageGen 摘 skill
+// 那条 -c 的性质一样，用户容易以为是在已有的 disabled_tools 上追加）。
+test('mcp.denyTools 精确写法 —— hard 那行 how 末尾提醒这条 -c 整键覆盖 config.toml 里同 server 的 disabled_tools', () => {
+  const bounds = { caps: { mcp: { denyTools: ['bizone-canvas__generate'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  const line = x.report.find((l) => l.cap === 'mcpTools')!
+  assert.ok(line.how.includes('整键覆盖'), 'how 要提醒这是整键覆盖不是追加')
+  assert.ok(line.how.includes('disabled_tools'))
 })
 
 test('mcp.denyTools 精确写法 —— 没给 knownMcpServers 清单时直通不过滤（与 denyServers 同规矩）', () => {
@@ -278,6 +344,20 @@ test('capMatrix：有 mcp / raw 时追加对应行，只在有内容时出现', 
   const raw = rows[4]
   assert.equal(raw.cells.claude, undefined, 'raw.codex 不该出现在 Claude 格')
   assert.equal(raw.cells.codex?.cap, 'raw')
+})
+
+// 2026-09-06 评审修复 Important #1（控制者裁定）：同一 cap 在 bindRole().report 里两行
+// （Codex 的 mcp.denyTools 精确+通配混合）时，capMatrix 一格只画一条——不改
+// MatrixRow.cells 的结构，合并成一条：level 取最弱，how 用「；」拼接，别把第二行吞掉。
+test('capMatrix：同一 cap 两行（Codex 的 denyTools 精确+通配混合）合并成一条，level 取最弱，how 含两段', () => {
+  const bounds = { caps: { mcp: { denyTools: ['bizone-canvas__generate', '*image*'] } } }
+  const rows = capMatrix(bounds, { knownMcpServers: ['bizone-canvas'] })
+  const row = rows.find((r) => r.cap === 'mcpTools')!
+  const cell = row.cells.codex!
+  assert.equal(cell.level, 'degraded', '两行合并要取最弱档位（degraded 比 hard 弱）')
+  assert.ok(cell.how.includes('disabled_tools'), 'how 里要看到精确条目那段')
+  assert.ok(cell.how.includes('通配'), 'how 里要看到通配条目那段')
+  assert.ok(cell.how.includes('；'), 'how 用；把两段拼起来')
 })
 
 test('degradedLines：只回 degraded / unsupported 的行', () => {

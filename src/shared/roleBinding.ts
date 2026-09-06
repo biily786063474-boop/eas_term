@@ -75,12 +75,23 @@ export function globMatch(pattern: string, name: string): boolean {
   return re.test(name)
 }
 
+/** TOML 点路径里的一段 key：纯 `[A-Za-z0-9_-]` 才能裸写，否则（比如 server 名自带
+ *  `.` 或 `"`）必须用带引号的 key 包起来——裸写的话 `.` 会被 TOML 解析成多一层嵌套、
+ *  `"` 直接破坏语法。2026-09-06 评审修复：`mcp_servers.<名>.enabled=false` /
+ *  `.disabled_tools=` 都是把 server 名接在点路径中间，此前没做这层转义。转义规则同
+ *  `codexSkillsConfigArg`（先转 `\` 再转 `"`）。 */
+function tomlKeySegment(name: string): string {
+  if (/^[A-Za-z0-9_-]+$/.test(name)) return name
+  const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `"${esc(name)}"`
+}
+
 /** Codex 关掉某个 MCP server 的 `-c` 取值字面量：`mcp_servers.<名>.enabled=false`。
  *  收口成一个函数是因为它原来在两处各手写一份（`adapters/codex.ts` 的无头启动路径、
  *  `CanvasAgentBar.tsx` 拼终端命令那条路径）——两处都要拼 `-c`，值只此一种写法，
  *  改一处忘了另一处的话，终端里跑起来的角色护栏会比无头模式松一截，且没有测试能拦。 */
 export function codexDisableServerArg(name: string): string {
-  return `mcp_servers.${name}.enabled=false`
+  return `mcp_servers.${tomlKeySegment(name)}.enabled=false`
 }
 
 /** Codex 按路径禁用系统 skill 的 `-c` 取值：TOML 内联表数组，逐字实测过 —— 路径必须是
@@ -104,7 +115,7 @@ export function codexSkillsConfigArg(paths: string[]): string {
 export function codexDisabledToolsArg(server: string, tools: string[]): string {
   if (!tools.length) return ''
   const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  return `mcp_servers.${server}.disabled_tools=[${tools.map((t) => `"${esc(t)}"`).join(',')}]`
+  return `mcp_servers.${tomlKeySegment(server)}.disabled_tools=[${tools.map((t) => `"${esc(t)}"`).join(',')}]`
 }
 
 /** `caps.mcp.denyTools` 里能升成 Codex 精确 `disabled_tools` 的条目形状：`<server>__<tool>`
@@ -255,36 +266,45 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       claudeDeny.push(...tools.map((p) => `mcp__${p}`))
       line('mcpTools', 'hard', tools.map((p) => `mcp__${p}`).join(' '))
     } else if (kind === 'codex') {
-      // 阶段三第二项（2026-09-06 探针）：先把「写得出确切工具名」的条目（形如
-      // `<server>__<tool>`，不含 `*`）分出来，能升 hard；剩下的（含 `*`，或不是这个
-      // 形状）维持原样走通配降级。两类都有内容时各出一条报告行——这正是下面这份测试
-      // 计数要跟着这次改动调整的原因（roleBinding.test.ts 有专门的两行报告断言）。
-      const precise: Array<{ server: string; tool: string }> = []
+      // 阶段三第二项（2026-09-06 探针）＋ 评审修复（2026-09-06）：先把「写得出确切工具名」
+      // 的条目（形如 `<server>__<tool>`，不含 `*`）挑出来，且 server 在 knownMcpServers
+      // 清单里（没给清单时不过滤，与 mcp.denyServers 同规矩）——同时满足才能升 hard；
+      // 不满足的（含 `*`、不是这个形状、或 server 不在清单）一律退回 rest，走通配降级为
+      // 按 server 名整个关的老路。这样即便 server 名字本身自带 `__`（比如真实 server 就叫
+      // `a__b`），parsePreciseTool 把它误判成 `<server>__<tool>` 精确形状、又查无此 server
+      // 时，也不会「既不生效也不报告」——退回原始字符串后，matchKnown 的字面匹配照旧能
+      // 兜住它（整串当 pattern，字面匹配上真实叫 `a__b` 的 server）。
+      // `mcp.denyTools —— Claude 直接通配；Codex/omp 降级为按 server 名匹配` 与
+      // 「每条参数都有报告行」两条既有测试用的都是纯通配 bounds（`['*canvas*']` /
+      // `['*t*']`），不触发本分支，故未受这次改动影响、也未去改它们。
       const rest: string[] = []
       for (const t of tools) {
         const p = parsePreciseTool(t)
-        if (p) precise.push(p)
-        else rest.push(t)
-      }
-      if (precise.length) {
-        const dropped = new Set<string>()
-        for (const { server, tool } of precise) {
-          if (known && !known.includes(server)) {
-            dropped.add(server)
-            continue
-          }
-          ;(codexDisabledTools[server] ??= []).push(tool)
+        if (p && (!known || known.includes(p.server))) {
+          ;(codexDisabledTools[p.server] ??= []).push(p.tool)
+        } else {
+          rest.push(t)
         }
+      }
+      // 同一个 server 如果已经被 mcp.denyServers 整个关掉（此刻已经填进 codexServers），
+      // 精确工具条目对它就是死重量——server 都不启动了，逐个工具再摘一遍毫无意义，报告里
+      // 也不该出现「这家 server 一边被整关、一边又被精确摘工具」这种自相矛盾的两行。
+      for (const s of Object.keys(codexDisabledTools)) {
+        if (codexServers.includes(s)) delete codexDisabledTools[s]
+      }
+      if (Object.keys(codexDisabledTools).length) {
         for (const s of Object.keys(codexDisabledTools)) codexDisabledTools[s] = uniq(codexDisabledTools[s]).sort()
-        const argsList = Object.entries(codexDisabledTools).map(([s, ts]) => codexDisabledToolsArg(s, ts))
-        const summary = Object.entries(codexDisabledTools)
-          .map(([s, ts]) => `${s}: ${ts.map((t) => `mcp__${s}.${t}`).join(', ')}`)
-          .join('；')
-        const droppedNote = dropped.size ? `；本机没有这些 server，跳过：${[...dropped].join(', ')}` : ''
-        const how = argsList.length
-          ? `-c ${argsList.join(' -c ')}（按工具名精确摘掉；Codex 里叫 mcp__<server>.<tool>）：${summary}${droppedNote}`
-          : `本机没有这些 server，跳过：${[...dropped].join(', ')}`
-        line('mcpTools', 'hard', how)
+        // 排序遍历（Minor #10）：与 disabledTools 本身「排序去重」的描述保持一致，
+        // 也让 -c 的拼接顺序和 how 里的摘要顺序不随 JS 对象键的插入顺序漂移。
+        const servers = Object.keys(codexDisabledTools).sort()
+        const argsList = servers.map((s) => codexDisabledToolsArg(s, codexDisabledTools[s]))
+        const summary = servers.map((s) => `${s}: ${codexDisabledTools[s].map((t) => `mcp__${s}.${t}`).join(', ')}`).join('；')
+        line(
+          'mcpTools',
+          'hard',
+          `-c ${argsList.join(' -c ')}（按工具名精确摘掉；Codex 里叫 mcp__<server>.<tool>）：${summary}` +
+            `（这条 -c 整键覆盖你 config.toml 里同一个 server 的 disabled_tools，不是追加）`
+        )
       }
       if (rest.length) {
         const hit = matchKnown(rest)
@@ -349,6 +369,26 @@ export interface MatrixRow {
 
 const INTENTS = ['write', 'shell', 'imageGen'] as const
 
+/** 档位从强到弱的次序，数字越大越弱。用于合并同一 cap 的多条 BindingLine 时
+ *  取「最弱」的那个——弱档位意味着还有话没做完，不能被更强的那条盖住。 */
+const ENFORCEMENT_WEAKNESS: Record<Enforcement, number> = { hard: 0, soft: 1, degraded: 2, unsupported: 3 }
+
+/** 2026-09-06 评审修复（Important #1，控制者裁定）：同一个 cap 在同一家 harness 上
+ *  可能有两条 BindingLine（比如 Codex 上 mcp.denyTools 精确条目升 hard、通配条目仍
+ *  degraded，cap 都是 mcpTools）。`MatrixRow.cells` 一格只放一条，`bindRole` 之前用
+ *  `.find()` 只取第一条，第二条被静默吞掉——用户会看不到"这家其实还整个关了 server"。
+ *  不改 `MatrixRow.cells` 的结构，在这里把多条合并成一条：level 取最弱的那个（hard 最强、
+ *  unsupported 最弱），how 用「；」把几条拼起来，让用户至少能读到全部信息。 */
+function mergeCapLines(lines: BindingLine[]): BindingLine | undefined {
+  if (!lines.length) return undefined
+  if (lines.length === 1) return lines[0]
+  const level = lines.reduce<Enforcement>(
+    (worst, l) => (ENFORCEMENT_WEAKNESS[l.level] > ENFORCEMENT_WEAKNESS[worst] ? l.level : worst),
+    lines[0].level
+  )
+  return { cap: lines[0].cap, level, how: lines.map((l) => l.how).join('；') }
+}
+
 /** 编辑器三列矩阵的数据。三个意图行永远在（未点亮的按「假设点亮」预览）；
  *  mcpServers / mcpTools / raw 只在草稿里真有内容时追加。 */
 export function capMatrix(bounds: RoleBounds | undefined, ctx: BindingContext = {}): MatrixRow[] {
@@ -359,16 +399,16 @@ export function capMatrix(bounds: RoleBounds | undefined, ctx: BindingContext = 
     const preview: RoleBounds = active ? (bounds ?? {}) : { ...bounds, caps: { ...caps, [k]: false } }
     const cells: MatrixRow['cells'] = {}
     for (const h of HARNESSES) {
-      const line = bindRole(preview, h, ctx).report.find((l) => l.cap === k)
-      if (line) cells[h] = line
+      const merged = mergeCapLines(bindRole(preview, h, ctx).report.filter((l) => l.cap === k))
+      if (merged) cells[h] = merged
     }
     rows.push({ cap: k, active, cells })
   }
   for (const k of ['mcpServers', 'mcpTools', 'raw'] as const) {
     const cells: MatrixRow['cells'] = {}
     for (const h of HARNESSES) {
-      const line = bindRole(bounds, h, ctx).report.find((l) => l.cap === k)
-      if (line) cells[h] = line
+      const merged = mergeCapLines(bindRole(bounds, h, ctx).report.filter((l) => l.cap === k))
+      if (merged) cells[h] = merged
     }
     if (Object.keys(cells).length) rows.push({ cap: k, active: true, cells })
   }
