@@ -134,6 +134,8 @@ graph LR
   `codexDisabledToolsArg()`）。**命名差异要注意**：Codex 给 MCP 工具的名字是
   `mcp__<server>.<tool>`（点号分隔），Claude 是 `mcp__<server>__<tool>`（双下划线）——
   两边的 deny 写法字面上长得像但分隔符不同，抄错会静默不匹配。
+  ⚠️ 同 `skills.config` 一样，这条 `-c` 是**整键覆盖**用户 `~/.codex/config.toml` 里同一个
+  server 已有的 `disabled_tools`，不是追加。
 - **系统 skill 按路径禁用**（2026-09-06 阶段三探针）：Codex 内置 `image_gen` 本机实测从未
   进过工具清单，模型自称有的「imagegen 工具」其实是系统 skill
   `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；真正摘掉它要走

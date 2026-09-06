@@ -746,3 +746,16 @@ server 名会拒绝启动，同 `mcp.denyServers` 的规矩）；其余形状维
 一致），因此没有改动那条测试，只是新增测试专门覆盖精确分支的两行场景。
 `adapters/codex.ts` 与 `CanvasAgentBar.tsx` 两处接线都在 `disableServers` 那行之后追加
 `for (const [server, tools] of Object.entries(b.codex.disabledTools))`。
+
+**2026-09-06 评审修复**：精确条目的 server 不在 `knownMcpServers` 清单时，不再单独报一行
+hard 后静默丢弃——退回 `rest` 走通配路径（`matchKnown` 的字面匹配），这样即便 server 名字
+本身自带 `__`（比如真实 server 就叫 `a__b`，被 `parsePreciseTool` 误判成精确形状 `server=a,
+tool=b`）也不会「既不生效也不报告」，字面匹配照旧能兜住真正叫 `a__b` 的 server。同一个
+server 如果已经被 `mcp.denyServers` 整关，跳过它的精确工具条目（server 都不启动了，逐个摘
+工具是死重量）。`disabled_tools` 那行 how 末尾补一句「这条 -c 整键覆盖你 config.toml 里同一
+个 server 的 disabled_tools，不是追加」（同 `skills.config` 那条一样的整键覆盖语义）。
+`codexDisableServerArg` / `codexDisabledToolsArg` 补上 TOML key 转义——server 名含 `.` 或
+`"` 时这一段要加引号，否则裸写会被解析成多一层嵌套或破坏语法。另外，编辑器矩阵
+`capMatrix()` 原来对同一 cap 的多行报告用 `.find()` 只取第一条，第二条被静默吞掉（用户看
+不到"这家其实还整个关了 server"）——改为同一 cap 多行时合并成一条：level 取最弱、how 用
+「；」拼接，`MatrixRow.cells` 的结构不变，只改 `capMatrix()` 内部的合并逻辑。

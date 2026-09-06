@@ -371,7 +371,9 @@ export function CanvasRoleEditor({
           </div>
 
           <div className="re-field">
-            <span className="re-label">禁用的 MCP 工具（通配）</span>
+            <span className="re-label">
+              禁用的 MCP 工具（通配或 <code>&lt;server&gt;__&lt;tool&gt;</code>）
+            </span>
             <textarea
               className="re-list re-list-sm"
               value={denyTools.join('\n')}
@@ -380,8 +382,8 @@ export function CanvasRoleEditor({
               spellCheck={false}
             />
             <span className="re-hint">
-              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。写成 <code>&lt;server&gt;__&lt;tool&gt;</code>
-              的精确条目在 Codex 上也能按工具名硬摘（不必牺牲整个 server），其余通配写法仍是降级整关。
+              一行一条；写成 <code>&lt;server&gt;__&lt;tool&gt;</code> 的精确条目会按工具名处理，
+              各家怎么落看上面的矩阵。
             </span>
           </div>
 
