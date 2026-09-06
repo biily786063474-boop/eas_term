@@ -25,11 +25,15 @@
 > **Claude 上现在是两道闸（阶段三第三项，2026-09-06）**：第一道 deny 三个内置写工具；
 > 第二道是 `--settings` 附一条 PreToolUse hook（`resources/agent-hooks/eas-write-guard.mjs`），
 > 按命令模式拦 Bash 里的写操作（重定向、`tee`、`sed -i`、`rm`/`mv`/`cp`/`mkdir`/`touch` 等、
-> git 写子命令、包管理安装）——补的正是"Bash 未禁时模型仍可用命令改文件"这个逃生口。
-> 只在 `shell` 没有一起禁掉时才附这道闸（`shell:false` 时 `--disallowedTools Bash` 已经
-> 挡死，守卫是死重量）。这道闸按字符串模式匹配，不是 Codex 那种内核级沙箱——写在
-> **外部脚本文件**里的写操作（`bash foo.sh`）拦不住，详见该脚本文件头。**omp 仍只有
-> 第一道**（`--tools` 去写工具，Bash 未禁的话同样能绕）。
+> git 写子命令、包管理安装，2026-09-06 评审后再加上换行/单个 `&` 分段、`sudo`/`env`/
+> `nohup`/`xargs`/`(...)`/`bash -c "…"` 这类包装词与子 shell 绕过）——补的正是
+> "Bash 未禁时模型仍可用命令改文件"这个逃生口。只在 `shell` 没有一起禁掉时才附这道闸
+> （`shell:false` 时 `--disallowedTools Bash` 已经挡死，守卫是死重量）。这道闸按字符串
+> 模式匹配，不是 Codex 那种内核级沙箱——**外部脚本文件**里的写操作（`bash foo.sh`）、
+> heredoc 之外的花样组合或变量拼出来的重定向目标、用引号/转义把写意图藏起来的命令、
+> `nice -n 10 rm x` 这类包装词自己还带参数的写法（包装词清单只处理简报点名的那几个，
+> 不穷举它们的参数形态）都拦不住，详见该脚本文件头与 spec 十四·附四的完整清单。
+> **omp 仍只有第一道**（`--tools` 去写工具，Bash 未禁的话同样能绕）。
 > `illustrator`：**2026-09-06 起不再默认勾 `caps.imageGen`**（用户原话「我不要去缩减 Codex 的原生能力」，
 > Codex 自带的 imagegen 系统 skill 在所有角色下保留），生图红线只靠契约文字兜着。
 > `caps.imageGen` 开关本身保留给自建角色，落法：Claude 通配 deny，**hard**；omp 按名不连，degraded；
