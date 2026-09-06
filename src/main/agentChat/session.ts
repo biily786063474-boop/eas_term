@@ -1183,9 +1183,19 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // MCP 桥的凭证由这里算好传进去 —— launch.ts 不再认识 mcpBridge
           //（那条 import 既是循环依赖的一环，也让整个模块没法单测，见它的文件头）
           mcpEnv: mcpEnv({ project: cwd }),
-          // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
+          // 角色契约 + 协同板快照。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
-          roleContract: live.rec.roleContract,
+          // `ompAcpArgs` 只收一段文本（`--append-system-prompt=`），板文（Task 3 的
+          // `StartOpts.boardText` 同源，起会话那一刻的快照）要在这里先拼进去再传下去——
+          // `paths.ts` 不改，拼接的活归调用方。两段各自 trim 再拼，避免留空行；
+          // 都没有时整体是 undefined，不凭空造出一个空字符串的契约。
+          roleContract:
+            [
+              live.rec.roleContract?.trim(),
+              live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : ''
+            ]
+              .filter(Boolean)
+              .join('\n\n') || undefined,
           roleOmp: bindRole(live.rec.roleBounds, 'omp').omp
         })
       },

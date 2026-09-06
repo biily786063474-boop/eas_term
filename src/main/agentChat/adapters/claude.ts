@@ -110,13 +110,18 @@ export const claudeAdapter: CliAdapter = {
       // 没实测过，拼字符串是确定的。
       // 三段拼成一条，**绝不传两次这个 flag**（传两次的行为没实测过，
       // 拼字符串是确定的 —— 这是加「先问再做」时定下的规矩，角色契约照办）。
-      // 顺序：输出规范 → 先问再做 → 角色契约。角色放最后是有意的：
-      // 它是最具体的一层（「你现在是工匠」），压在通用规范之上更符合直觉。
+      // 顺序：输出规范 → 先问再做 → 角色契约 → 协同板快照。角色放在契约后面、
+      // 协同板放最后是有意的：一层比一层具体（通用规范 → 「你现在是工匠」→
+      // 「起会话这一刻画布上正发生什么」），越具体的信息压在越上层更符合直觉。
       [
         OUTPUT_STYLE_PROMPT,
         opts.askFirst ? ASK_FIRST_PROMPT : '',
         // 全空白的契约当没有 —— 拼进去只会在系统提示里留一段空行
-        opts.roleContract?.trim() ?? ''
+        opts.roleContract?.trim() ?? '',
+        // 板文是起会话那一刻的快照（Task 3 的 StartOpts.boardText，session.ts 截断好
+        // 传进来）——别人这会儿可能已经动了同一处，`board_read` 工具能拿到实时的那份。
+        // 全空白同样当没有，理由与上面契约那行一致。
+        opts.boardText?.trim() ? `## 协同板（起会话时的快照）\n${opts.boardText.trim()}` : ''
       ]
         .filter(Boolean)
         .join('\n\n')

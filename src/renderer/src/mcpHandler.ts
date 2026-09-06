@@ -485,6 +485,18 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     }
   }
 
+  if (tool === 'board_read') {
+    // 协同板（main/collabBoard.ts 现算、落在项目的 .eas/board.md）——起会话时系统提示
+    // 里附的是那一刻的快照，这里读的是当前最新的一份，所以**先刷新再读**：别人这会儿
+    // 可能已经动了同一处文件，模型改文件前应该拿到这份实时的，而不是启动时那张旧照片。
+    const where = resolveFrame(ctx)
+    const projectPath = where?.projectPath || ctx.project || ''
+    if (!projectPath) throw new Error('找不到你所在的项目，读不了协同板')
+    await window.api.board.refresh(projectPath)
+    const { text } = await window.api.board.read(projectPath)
+    return { content: [{ type: 'text', text: text || '协同板是空的：这个项目现在没有活跃分支。' }] }
+  }
+
   if (tool === 'canvas_list_frames') {
     return {
       frames: s.canvas.frames.map((f) => ({

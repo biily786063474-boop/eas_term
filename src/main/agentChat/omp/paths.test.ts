@@ -229,6 +229,16 @@ test('角色契约进 `--append-system-prompt`；没有角色就不加这个参�
   assert.ok(!ompAcpArgs({ userData: dir } as never, '   ').some((a) => a.startsWith('--append-system-prompt')))
 })
 
+// Task 4：契约与协同板由 session.ts 拼成一段传进来（`ompAcpArgs` 本身不改）。
+// 这里钉住「多行文本原样进 `--append-system-prompt=`，不压成单行」—— 现有行为，
+// 防止有人为了接协同板顺手把它改成跟 Codex 那边一样的单行压缩。
+test('**多行文本原样进 `--append-system-prompt=`，不压成单行**（现有行为，接协同板时别改掉）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ompargs-'))
+  const contract = '你是工匠\n\n## 协同板（起会话时的快照）\n# 协同板\n| a |'
+  const args = ompAcpArgs({ userData: dir } as never, contract)
+  assert.ok(args.includes(`--append-system-prompt=${contract}`), '多行文本应原样拼进这一个参数，不做单行压缩')
+})
+
 // ── D4 · omp 的工具边界：**白名单减 deny**，不是塞黑名单 ────────────────────
 //
 // omp 的 `--tools` 是白名单，而角色给的是黑名单，两者语义相反。
