@@ -20,6 +20,7 @@
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
 import { bindRole, codexDisableServerArg, codexSkillsConfigArg } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
+import { listCodexModels } from '../codexModels.ts'
 import { createCodexTranslator } from '../codexEvents.ts'
 
 const DEFAULT_SANDBOX = 'workspace-write'
@@ -55,6 +56,10 @@ export const codexAdapter: CliAdapter = {
   // 与 approvalHook 是两件不同的事，混成一个布尔正是 C1 那个 Critical 的根）。
 
   detect: detectByWhich('codex'),
+
+  /** 模型清单问 `codex app-server` 的 `model/list` 要（codexModels.ts 有原因）。
+   *  探测失败返回 undefined —— 工具栏那时就没有下拉，和这个钩子上线前一样。 */
+  probeModels: () => listCodexModels(),
 
   createTranslator: createCodexTranslator,
 

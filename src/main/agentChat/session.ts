@@ -664,6 +664,18 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   )
   wireProc(live, proc)
 
+  // 模型清单：声明了 probeModels 的 CLI（今天只有 Codex）问它自己要一次，广播给工具栏。
+  // **不 await** —— 探测要起一个短命进程，不能让第一条消息等它；结果到了再更新下拉。
+  // 失败一律沉默（钩子自己保证返回 undefined），绝不影响这次会话。
+  if (adapter.probeModels) {
+    void adapter
+      .probeModels(hostPaths())
+      .then((models) => {
+        if (models?.length && live.rec.alive) handleEvent(live, { k: 'capabilities', models })
+      })
+      .catch(() => {})
+  }
+
   // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
   // 'ignore' 的已经在上面把消息塞进了位置参数，这里不用再写。
   if (built.stdin === 'pipe') writeStdin(live, message)

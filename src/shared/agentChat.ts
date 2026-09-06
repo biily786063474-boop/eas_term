@@ -355,6 +355,12 @@ export interface CliAdapter {
   bundled?: true
   /** 额度从哪来。不声明 = 现状（Claude 走直连接口、Codex 读它自己的日志）。 */
   quotaSource?: 'omp-usage'
+  /** 这个 CLI 的可用模型要**问它自己**，不能写死。
+   *  声明了的话，会话起来后 session.ts 会调一次并广播 `capabilities` 事件更新工具栏下拉。
+   *  返回 undefined = 问不到，工具栏退回「没有下拉」（跟不声明这个钩子一样）。
+   *  只声明给「模型名随版本/账号变」的 CLI：Codex 的 gpt-5.6-sol/terra/luna 每个账号都不同，
+   *  硬编码等于隔三差五给一个选了就报错的选项（2026-09-06）。 */
+  probeModels?: (host?: HostPaths) => Promise<{ id: string; label: string }[] | undefined>
   /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn。
    *  stdin 必填（不给可选，是怕下一个 CLI 接入时又忘记声明）——每个 CLI 怎么用 stdin
    *  是它自己的怪癖，adapter 知道，下游不该替它记：
