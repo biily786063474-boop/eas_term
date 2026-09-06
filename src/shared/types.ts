@@ -260,6 +260,9 @@ export interface AgentRole {
   caps?: RoleCaps
   /** 各家独有的原始参数（逃生口） */
   raw?: RoleRaw
+  /** 起会话时是否隔离到自己的 worktree。**缺省 none，不推断**（沿用 team_spawn 的纪律：
+   *  系统不会替你判断这个角色写不写代码）。写码角色选 worktree，主工作区就不被动。 */
+  isolation?: 'worktree' | 'none'
   /** 内置角色：可改可删，删了能一键恢复 */
   builtin?: boolean
 }

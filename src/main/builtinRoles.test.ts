@@ -86,3 +86,11 @@ test('其余内置角色（全流程/工匠/原型师/笔杆子/画师/杂役）
     }
   }
 })
+
+test('内置角色的隔离默认：e2e / builder / prototyper 进 worktree，其余不隔离 —— 系统不替角色猜写不写码', () => {
+  const iso = Object.fromEntries(BUILTIN_ROLES.map((r) => [r.id, r.isolation ?? 'none']))
+  assert.deepEqual(iso, {
+    e2e: 'worktree', scout: 'none', builder: 'worktree', inspector: 'none',
+    prototyper: 'worktree', writer: 'none', illustrator: 'none', runner: 'none'
+  })
+})

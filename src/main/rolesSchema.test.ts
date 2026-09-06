@@ -79,3 +79,14 @@ test('sanitizeRoles：不是数组 → 空', () => {
   assert.deepEqual(sanitizeRoles({ roles: 'x' }), [])
   assert.deepEqual(sanitizeRoles(null), [])
 })
+
+test('sanitizeRoles：isolation 只认 worktree，其余当没写', () => {
+  const out = sanitizeRoles({ roles: [
+    { id: 'a', name: 'A', isolation: 'worktree' },
+    { id: 'b', name: 'B', isolation: 'none' },
+    { id: 'c', name: 'C', isolation: 'yes' }
+  ] })
+  assert.equal(out[0].isolation, 'worktree')
+  assert.equal(out[1].isolation, undefined)
+  assert.equal(out[2].isolation, undefined)
+})

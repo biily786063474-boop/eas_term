@@ -131,6 +131,7 @@ export function sanitizeRoles(raw: unknown): AgentRole[] {
       contract: str(r.contract),
       ...(caps ? { caps } : {}),
       ...(rawArgs ? { raw: rawArgs } : {}),
+      ...(r.isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
       builtin: r.builtin === true
     })
   }
