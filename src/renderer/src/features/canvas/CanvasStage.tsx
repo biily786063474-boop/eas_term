@@ -3,6 +3,7 @@
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { startGlobalRecorder, watchCanvasWorld } from '../diagnostics/flickerRecorder'
 import { teamModeOf } from './teamMode'
 import { zoomViewport, zoomContent, clampContent, SCALE_MIN, SCALE_MAX } from './wheelPassthrough'
 import { shortcutHit } from '../../shortcutHit'
@@ -120,6 +121,21 @@ export function CanvasStage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
   const addAgentNode = useStore((s) => s.addAgentNode)
+
+  // 闪烁黑匣子：看世界层的直接子级（Frame）与每个 Frame 的直接子级（节点）的增删。
+  // 挂在 mount 后的下一帧（世界层此时才在 DOM 里）；视图切走时 unmount 摘掉。
+  useEffect(() => {
+    startGlobalRecorder()
+    let off: (() => void) | null = null
+    let tries = 0
+    const tryHook = (): void => {
+      const world = document.querySelector('.canvas-world')
+      if (world) off = watchCanvasWorld(world)
+      else if (++tries < 60) requestAnimationFrame(tryHook)
+    }
+    tryHook()
+    return () => off?.()
+  }, [])
   const addBrowserNode = useStore((s) => s.addBrowserNode)
   const tidyFrame = useStore((s) => s.tidyFrame)
   const clearPhoneNode = useStore((s) => s.clearPhoneNode)

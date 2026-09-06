@@ -1010,6 +1010,12 @@ const api = {
   // 通用 AI CLI 对话前端的会话内核（src/main/agentChat/session.ts）。
   // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
   // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
+  /** 闪烁黑匣子（main/diagLog.ts）。event 是单向通知，不等回。 */
+  diag: {
+    event: (e: { kind: string; what: string }): void => ipcRenderer.send('diag:event', e),
+    recent: (): Promise<string[]> => ipcRenderer.invoke('diag:recent'),
+    showLog: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('diag:showLog')
+  },
   plugins: {
     /** 已装的 CLI 插件全表。**每次都当场扫盘**（见 main/plugins.ts），
      *  用户刚在终端里装完一个，回画布就能看到，不用重开软件。 */

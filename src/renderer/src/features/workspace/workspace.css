@@ -3135,3 +3135,9 @@ body.dragging-row * {
   line-height: 1.5;
   color: var(--sem-danger);
 }
+
+/* 设置 · 诊断段 */
+.cset-actions { display: flex; gap: 8px; margin: 8px 0; }
+.cset-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--lift-2); color: var(--text-1); font-size: 12px; cursor: pointer; }
+.cset-btn:hover { border-color: rgba(var(--accent-rgb), 0.4); }
+.cset-pre { max-height: 260px; overflow: auto; margin: 6px 0 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--lift-1); color: var(--text-2); font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }

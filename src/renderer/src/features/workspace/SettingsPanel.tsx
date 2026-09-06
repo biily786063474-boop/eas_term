@@ -167,6 +167,8 @@ export function SettingsPanel(): JSX.Element {
     }
   }
 
+  const [diagLines, setDiagLines] = useState<string[] | null>(null)
+
   const toggleApprovalHook = async (on: boolean): Promise<void> => {
     setHookMsg(null)
     // 开：只改意愿。新会话起来时会把「先问再做」附进系统提示，不写任何文件
@@ -659,6 +661,29 @@ export function SettingsPanel(): JSX.Element {
                     这个软件在你机器上写过的全部位置，可以逐个卸掉。
                   </div>
                   <FootprintPanel mode="inline" />
+                </div>
+              )}
+              {tab === 'privacy' && (
+                <div className="cset-sec">
+                  <div className="cset-label">诊断 · 闪烁黑匣子</div>
+                  <div className="cset-note">
+                    界面偶尔闪一下又抓不到瞬间时，这里记着最近发生的事：组件整段卸载重挂、超过 100ms 的长任务、
+                    GPU / 渲染进程重启。没有轮询，只有事件发生才写一行。
+                  </div>
+                  <div className="cset-actions">
+                    <button
+                      className="cset-btn"
+                      onClick={() => void window.api.diag.recent().then((lines) => setDiagLines(lines.slice(-80).reverse()))}
+                    >
+                      查看最近事件
+                    </button>
+                    <button className="cset-btn" onClick={() => void window.api.diag.showLog()}>
+                      在访达中显示日志
+                    </button>
+                  </div>
+                  {diagLines && (
+                    <pre className="cset-pre">{diagLines.length ? diagLines.join('\n') : '（还没有记录）'}</pre>
+                  )}
                 </div>
               )}
                 </div>

@@ -10,6 +10,7 @@
 // xterm 实例与滚动缓冲全程保留。
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { watchChildren } from '../diagnostics/flickerRecorder'
 import { useStore } from '../../store'
 import { computeLayout, collectLeaves, LeafRect, DividerRect, Rect } from '../../layout'
 import { PaneView, CanvasPlacement } from './PaneView'
@@ -300,6 +301,12 @@ export function PaneLayer(): JSX.Element {
     document.addEventListener('mouseup', onUp)
     document.body.classList.add(isRow ? 'dragging-col' : 'dragging-row')
   }
+
+  // 闪烁黑匣子：活内容层的直接子级（每个面板）被卸载/重挂时记一笔（flickerRecorder.ts）
+  useEffect(() => {
+    const el = document.querySelector('.pane-layer')
+    return el ? watchChildren(el, 'pane-layer') : undefined
+  }, [])
 
   return (
     <div

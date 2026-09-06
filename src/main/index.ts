@@ -29,6 +29,7 @@ import { registerDesignHandlers } from './design'
 import { registerMcpBridge, invokeRenderer } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
 import { registerPluginHostHandlers, registerPluginScheme } from './pluginHost.ts'
+import { registerDiagHandlers } from './diagLog.ts'
 import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
@@ -359,6 +360,7 @@ app.whenReady().then(() => {
   registerPluginHandlers()
   // 插件面板宿主：画布透传走 mcpBridge 的 invokeRenderer，在这里注入（pluginHost 不 import mcpBridge，避免成环）
   registerPluginHostHandlers((tool, args, ctx) => invokeRenderer(tool, args, ctx))
+  registerDiagHandlers()
   // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
   // MCP 那一半在 mcpBridge 的 setupAgents 里。装过的人升级即清，不必去点卸载。
   purgeLegacyDsh()
