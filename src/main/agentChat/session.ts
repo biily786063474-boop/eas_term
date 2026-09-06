@@ -269,10 +269,16 @@ function writeGuardSettingsPath(): string {
  *
  *  **每次起会话都重写一遍**——内容完全由 `nodeBin` 决定，是幂等的纯覆盖，不像
  *  `installApprovalHook` 那样要保留用户自己已有的其它配置（这是我们自己的文件，
- *  不是用户项目里的），所以不需要 `planHookInstall` 那套合并规划，直接整份写出。 */
+ *  不是用户项目里的），所以不需要 `planHookInstall` 那套合并规划，直接整份写出。
+ *
+ *  **失败必须抛出人话，不能悄悄返回一个没写成的路径**（2026-09-06 评审 Minor）：
+ *  这份文件写不出去（磁盘满、userData 目录权限问题……）意味着 `caps.write=false`
+ *  的第二道闸压根不存在，而调用方（`agentChat:start` 的 handler）会拿这个返回值
+ *  去拼 `--settings <path>`——路径指向一个不存在的文件，Claude Code 大概率直接
+ *  忽略这个 flag，静默退化成只有第一道闸。**fail-closed 不变**：调用方捕获这个
+ *  异常后要让这次会话直接起不来，而不是退化着起、把用户以为的"写保护"变成假的。 */
 function ensureWriteGuardSettings(nodeBin: string): string {
   const target = writeGuardSettingsPath()
-  fs.mkdirSync(path.dirname(target), { recursive: true })
   const settings = {
     hooks: {
       PreToolUse: [
@@ -283,7 +289,13 @@ function ensureWriteGuardSettings(nodeBin: string): string {
       ]
     }
   }
-  fs.writeFileSync(target, JSON.stringify(settings, null, 2), 'utf8')
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.writeFileSync(target, JSON.stringify(settings, null, 2), 'utf8')
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
+    throw new Error(`守卫文件写不进 ${target}，这次会话不起：${reason}`)
+  }
   return target
 }
 
@@ -692,6 +704,29 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
           message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
         })
       }
+    }
+  }
+
+  // 写守卫的 `--settings` 文件在 `agentChat:start` 起会话那一刻生成过一次，用的是
+  // **那时**算出的 nodeBin；这里的 `hookNodeBin` 是**这次 spawn**重新探测的结果
+  // （2026-09-06 评审 Important）：两者理论上可能不一致——比如上次探测到系统 node、
+  // 这次那个路径被卸载/改名，兜底成了本 app 的 Electron 二进制——不一致时文件里的
+  // `command` 还指着旧的 nodeBin，跟这次 spawn 到底有没有注入 `ELECTRON_RUN_AS_NODE`
+  // 对不上，守卫子进程可能用错误的方式被拉起（轻则报错、重则静默不产出任何响应，
+  // 等价于空转）。跟 `installApprovalHook` 每次 spawn 都重写命令一致，这里也每次
+  // spawn 都用当次的 `hookNodeBin` 整份重写——`ensureWriteGuardSettings` 是幂等的
+  // 纯覆盖，重写一次的开销可以忽略。写失败按非致命通知处理而不是让整个 restart
+  // 失败：这份文件在起会话时已经写成功过一次（`opts.writeGuardSettings` 才会有值），
+  // 这里失败只表示"可能用着上一次的 nodeBin"，不是"完全没有第二道闸"。
+  if (opts.writeGuardSettings) {
+    try {
+      ensureWriteGuardSettings(hookNodeBin)
+    } catch (e) {
+      handleEvent(live, {
+        k: 'error',
+        fatal: false,
+        message: `写守卫文件更新失败，这次会话可能仍在用旧的 node 路径：${e instanceof Error ? e.message : String(e)}`
+      })
     }
   }
 
@@ -1306,6 +1341,22 @@ export function registerAgentChatHandlers(): void {
     // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
     // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
     const roleBounds = safeRoleBounds(p.roleBounds)
+    // 阶段三第三项：Claude 上 caps.write=false 的第二道闸。开闸条件三个都要满足
+    // （字面意思见下面 rec.writeGuardSettings 的注释）。**提到 rec 字面量之外单独算**
+    // ——`ensureWriteGuardSettings` 现在会在写不出文件时抛错（2026-09-06 评审 Minor：
+    // 失败要有人话，不能悄悄返回一个没写成的路径），得在这里 try/catch 住，让整个
+    // `agentChat:start` 直接回 `{ok:false}`（fail-closed：宁可这次会话起不来，
+    // 也不能退化成"用户以为有写保护、实际上 --settings 指了个不存在的文件"）。
+    const needsWriteGuard =
+      p.cli === 'claude' && roleBounds?.caps?.write === false && roleBounds?.caps?.shell !== false
+    let writeGuardSettings: string | undefined
+    if (needsWriteGuard) {
+      try {
+        writeGuardSettings = ensureWriteGuardSettings(nodeBinForHook())
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
     const rec: SessionRecord = {
       id,
       cli: p.cli,
@@ -1347,12 +1398,11 @@ export function registerAgentChatHandlers(): void {
       //   · 角色确实要求 write:false —— 没这个意图就没必要附任何东西
       //   · shell 没有一起禁掉——shell:false 时 Claude 侧已经 --disallowedTools Bash，
       //     模型压根调不到 Bash 工具，附这条守卫是无意义的死重量
-      // 只在这里算一次（不进 effectiveOpts 之外的路径重算）：跟 knownMcpServers /
-      // codexHome 同一个理由，落进 SessionRecord 让 restart 也带得上。
-      writeGuardSettings:
-        p.cli === 'claude' && roleBounds?.caps?.write === false && roleBounds?.caps?.shell !== false
-          ? ensureWriteGuardSettings(nodeBinForHook())
-          : undefined
+      // 只算一次（不进 effectiveOpts 之外的路径重算）：跟 knownMcpServers / codexHome
+      // 同一个理由，落进 SessionRecord 让 restart 也带得上。实际计算挪到上面
+      // `needsWriteGuard`/`writeGuardSettings` 那两行，好让写文件失败时能在拼 rec
+      // 之前就 return（fail-closed，见上面的注释）。
+      writeGuardSettings
     }
     const live: Live = {
       rec,

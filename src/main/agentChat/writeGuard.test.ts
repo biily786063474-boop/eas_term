@@ -65,6 +65,44 @@ test('拦：python3 -c 内联脚本里含 open(...,\'w\')', () => {
   assert.equal(isWriteCommand('python3 -c "open(\'a\',\'w\').write(\'x\')"'), true)
 })
 
+// ── 评审 Critical：分段正则原来不切换行，多行命令整段被当成一段来判 ──────────
+test('拦：换行分隔，写命令排在第二行（ls\\nrm -rf x）', () => {
+  assert.equal(isWriteCommand('ls\nrm -rf x'), true)
+})
+
+test('拦：单个 & 后台执行也要切段（ls & rm x）', () => {
+  assert.equal(isWriteCommand('ls & rm x'), true)
+})
+
+test('拦：换行 + 只读段在前（cd /tmp\\ngit commit -m x）', () => {
+  assert.equal(isWriteCommand('cd /tmp\ngit commit -m x'), true)
+})
+
+// ── 评审 Important：包装词/子 shell/内联 shell 绕过 ──────────────────────
+test('拦：sudo 包装（sudo rm -rf x）', () => {
+  assert.equal(isWriteCommand('sudo rm -rf x'), true)
+})
+
+test('拦：env 赋值包装（env FOO=1 rm x）', () => {
+  assert.equal(isWriteCommand('env FOO=1 rm x'), true)
+})
+
+test('拦：nohup 包装（nohup rm x）', () => {
+  assert.equal(isWriteCommand('nohup rm x'), true)
+})
+
+test('拦：xargs 包装（xargs rm < list）', () => {
+  assert.equal(isWriteCommand('xargs rm < list'), true)
+})
+
+test('拦：子 shell 分组（(rm x)）', () => {
+  assert.equal(isWriteCommand('(rm x)'), true)
+})
+
+test('拦：bash -c 内联 shell 命令（bash -c "rm x"）', () => {
+  assert.equal(isWriteCommand('bash -c "rm x"'), true)
+})
+
 // ── 放：只读命令，不该被拦 ──────────────────────────────────────────────
 test('放：ls -la', () => {
   assert.equal(isWriteCommand('ls -la'), false)
@@ -114,11 +152,34 @@ test('放：2>&1 不算写', () => {
   assert.equal(isWriteCommand('ps aux 2>&1 | head'), false)
 })
 
+// ── 评审 Minor：引号里的 > 不是重定向 ────────────────────────────────────
+test('放：引号里的 >（grep -c ">" f）', () => {
+  assert.equal(isWriteCommand('grep -c ">" f'), false)
+})
+
+test('放：引号里的 >（awk \'$1 > 5\'）', () => {
+  assert.equal(isWriteCommand("awk '$1 > 5'"), false)
+})
+
+// ── 评审 Minor：补三条边界写法的拦截测试 ──────────────────────────────────
+test('拦：echo x >a（无空格重定向）', () => {
+  assert.equal(isWriteCommand('echo x >a'), true)
+})
+
+test('拦：ls&&rm x（无空格 &&）', () => {
+  assert.equal(isWriteCommand('ls&&rm x'), true)
+})
+
+test('拦：sed -i.bak（备份后缀粘在 -i 上）', () => {
+  assert.equal(isWriteCommand("sed -i.bak 's/a/b/' f"), true)
+})
+
 // ── 脚本能被 import 而不执行主逻辑 ──────────────────────────────────────
 // 判据：上面 import 已经成功（没有卡在读 stdin、没有抛异常），且 isWriteCommand
-// 真是一个函数——这足以证明 `process.argv[1] === fileURLToPath(import.meta.url)`
-// 的守卫生效了：被 import 时 argv[1] 是测试文件自己的路径，不等于这份 .mjs 的路径，
-// 主逻辑（读 stdin、写 stdout）不会跑，否则这个测试进程会挂住等 stdin，永远跑不完。
+// 真是一个函数——这足以证明 `isRunAsScript()`（两边 `fs.realpathSync` 再比，
+// 2026-09-06 评审 Important 修的软链坑）的守卫生效了：被 import 时 argv[1] 是
+// 测试文件自己的路径，realpath 之后仍不等于这份 .mjs 的真实路径，主逻辑
+// （读 stdin、写 stdout）不会跑，否则这个测试进程会挂住等 stdin，永远跑不完。
 test('脚本能被 import 而不执行主逻辑（只导出函数）', () => {
   assert.equal(typeof isWriteCommand, 'function')
 })

@@ -122,8 +122,26 @@ test('给了 writeGuardSettings 就带上 --settings <path>，且排在 --disall
 })
 
 test('没给 writeGuardSettings 时参数逐字与今天相同——不凭空多出 --settings', () => {
-  const withoutGuard = getAdapter('claude')!.buildArgs({ cwd: '/p', resumeId: 'r1' }).args
-  assert.ok(!withoutGuard.includes('--settings'))
+  // 2026-09-06 评审 Minor：这条标题一直写着「参数逐字相同」，但原来的断言只
+  // 查了 `!includes('--settings')`——`--settings` 前后夹了别的参数、或者顺序被
+  // 挪动，这条断言完全测不出来。改成对整个 args 数组做全量快照，标题说的
+  // 「逐字相同」才名副其实。
+  const args = getAdapter('claude')!.buildArgs({ cwd: '/p', resumeId: 'r1' }).args
+  assert.deepEqual(args, [
+    '-p',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
+    '--verbose',
+    '--strict-mcp-config',
+    '--include-hook-events',
+    '--include-partial-messages',
+    '--append-system-prompt',
+    OUTPUT_STYLE_PROMPT,
+    '--resume',
+    'r1'
+  ])
 })
 
 test('Claude 支持逐次审批；Codex 在 exec 模式下不支持，必须报空数组', () => {
