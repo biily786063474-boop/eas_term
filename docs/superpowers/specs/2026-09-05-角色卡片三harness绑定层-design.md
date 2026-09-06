@@ -589,3 +589,12 @@ Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
 - `caps.imageGen` 开关与上面探针得出的 Codex 落法（关 feature ＋ 摘系统 skill ＋ 按名关 server，hard）**全部保留**，只是内置角色不再默认用它；自建角色勾了照常生效。
 - 老 v1 存档里画师若带着七个 `mcp__*image*` 通配，迁移仍忠实落成 `imageGen=false`（文件里明写的），要放开得在编辑器里手动灭掉。
 - 快照测试 `builtinRoles.test.ts` 改为断言画师**无 caps**，并单独钉一条「imageGen 开关对自建角色仍有效」。
+
+### 十四·附三 · 发版后补验（2026-09-05 晚，0.4.81 已发布）
+
+| 项 | 方法 | 看到了什么 |
+|---|---|---|
+| 默认 harness（omp）勘探员的 `--tools` | 拿 adapter 为勘探员算出的 `--tools=read,bash,grep,glob,todo,web_search,lsp,inspect_image` 起随包的 omp 18.1.2 真二进制做 ACP `initialize` + `session/new`（临时 HOME，不碰 `~/.omp`） | **accepted**；对照 `--tools=read,bash,grep,nosuchtool` → `session/new` 被拒「Unknown tool in --tools: nosuchtool」；全量白名单 accepted。结论：二进制真校验白名单，勘探员的清单里没有 write/edit/ast_edit。模型侧的工具可见性仍未在真实 omp 会话里看过（隔离实例无 omp 凭证） |
+| `team_spawn` 带 `role_id`（阶段二 #6） | 隔离实例：对「terminal」Frame 打开多 agent 开关，开一个 Claude 对话让它调 `team_spawn`（agents=[{role:"probe", task:…, role_id:"scout"}]）| 确认弹窗一行 `probe`，角色卡列显示**「勘探员」**；点开工后 store 里出现 `owner=team, role=probe, roleId=scout, cli=claude` 的 pane，会话 `ac-3` 起来；`ps` 里最新的 `claude -p` 进程带 **`--disallowedTools Write Edit NotebookEdit`**。链路 `role_id → checkBatch → openAgentPane({roleId}) → AgentChatView → roleBounds → adapter` 真机打通 |
+
+冒烟时踩的一个坑：第一次把指令发进了画布上正好可见的另一个 pane（它续着一条真实的历史会话），因为发送键是 ⌘/Ctrl+Enter 且 `find` 挑了第一个可见输入框；已用 `agentChat.stop` 停掉。驱动特定 pane 要用 `[data-leaf-id="…"] textarea.ac-input`。
