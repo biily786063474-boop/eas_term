@@ -3101,7 +3101,7 @@
    就定了的前提」：会话跑在哪棵 worktree、哪条分支上。
    分支名用等宽：它是个标识符，跟目录名一样要能一眼看清有没有多一位。 */
 .ac-branch .ac-ctxbar-name {
-  font-family: var(--mono, ui-monospace, monospace);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 /* 有别的分支在改同一个文件时染成告警底（同 .rolepick-warn 那档透明度）。
    只染底不加感叹号：这不是错误，是「动手前先看一眼板」。 */

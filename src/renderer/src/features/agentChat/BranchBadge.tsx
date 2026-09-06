@@ -35,7 +35,7 @@ export function BranchBadge({
     <button
       type="button"
       className={`${className} ac-branch${overlap ? ' warn' : ''}`}
-      data-tip={`${effectiveCwd}${overlap ? '\n⚠ 有别的分支在改同一个文件，改前先 board_read' : ''}`}
+      data-tip={`${effectiveCwd}${overlap ? '\n⚠ 有别的分支在改同一个文件，改前先看一眼协同板' : ''}`}
       onClick={onOpenMenu}
     >
       <GitBranchIcon size={12} />

@@ -390,6 +390,64 @@ export function AgentChatView({
       live = false
     }
   }, [branchMenuAt, worktree, cwd])
+  /** 删掉这棵 worktree。**先确认 → 试删 → 只有「还有未提交的改动」才再确认一次带 force。**
+   *
+   *  ── 为什么第一次也要确认 ──
+   *  没有未提交改动不等于「删了没事」：删完这个节点就回到主工作区，
+   *  下面 done() 会把 resumeId 一起清掉，**这段对话接不回来了**。
+   *  那是个不可撤销的后果，不该在点一下菜单之后静默发生。
+   *
+   *  ── 为什么成功时要清 resumeId ──
+   *  handleSend 的首发守卫是 `role?.isolation === 'worktree' && !worktree && !savedResumeId`。
+   *  只清 worktree 不清 resumeId 的话，守卫认为「这是在恢复一段旧会话」而不再建树，
+   *  这个 pane 从此**静默地**跑在主工作区上，隔离白做。
+   *  而且留着它也没有意义：Claude 的会话记录按 cwd 存，树都没了，那个 id 本来也续不上。
+   *
+   *  ── 为什么只有 `changed` 有值才引导 force ──
+   *  `changed` 是主进程「因为还有 N 处未提交所以没删」的信号，只有这一种失败
+   *  再删一次是有出路的。参数错、git 上着锁那类失败，把 force 摆出来只会让人
+   *  以为那是条出路，点下去还是同样的错。 */
+  const removeWorktree = (wt: { relPath: string; branch: string }): void => {
+    // 失败一律说出来。**两次调用都要 .catch** —— IPC 本身 reject（主进程没起、
+    // handler 抛了）走的不是 `{ ok: false }` 那条路，不接住就是一条 unhandled
+    // rejection：菜单关掉、树还在、界面上什么都没发生。
+    const fail = (msg: string): void =>
+      requestConfirm({ message: `删不掉：${msg}`, confirmLabel: '知道了', onConfirm: () => {} })
+    const oops = (e: unknown): void => fail(e instanceof Error ? e.message : String(e))
+    const done = (): void => {
+      setAgentWorktree(tabId, leafId, undefined)
+      setAgentResumeId(tabId, leafId, '')
+      // 树没了，「有别的分支在改同一个文件」这条告警也就无从谈起，
+      // 不复位的话徽标消失前会闪一下黄色，下次建树还会带着上一棵的判断。
+      setBranchOverlap(false)
+    }
+    const run = (force: boolean): Promise<{ ok: boolean; error?: string; changed?: number }> =>
+      window.api.agentChat.worktreeRemove(cwd, wt.relPath, wt.branch, force)
+    requestConfirm({
+      message: '删掉这棵 worktree？分支保留；这个节点的对话会重新开始。',
+      confirmLabel: '删除',
+      onConfirm: () => {
+        void run(false)
+          .then((r) => {
+            if (r.ok) return done()
+            if (r.changed === undefined) return fail(r.error ?? '主进程没说原因。')
+            // 有未提交改动 —— 主进程会把「还剩几处、去哪看」说清楚，
+            // 那是 agent 这一趟的全部成果，不能默默抹掉
+            //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
+            requestConfirm({
+              message: `${r.error ?? ''}\n\n仍要删？未提交的改动会丢，分支保留；这个节点的对话会重新开始。`,
+              confirmLabel: '删除',
+              onConfirm: () => {
+                void run(true)
+                  .then((r2) => (r2.ok ? done() : fail(r2.error ?? '主进程没说原因。')))
+                  .catch(oops)
+              }
+            })
+          })
+          .catch(oops)
+      }
+    })
+  }
   const branchMenuItems: CanvasMenuItem[] = worktree
     ? [
         {
@@ -404,30 +462,7 @@ export function AgentChatView({
           // 会话跑着的时候删不得 —— 那棵树就是它此刻的 cwd。
           // 置 disabled 而不是藏起来：藏了用户会以为这个菜单本来就没这条。
           ...(sessionId ? { disabled: true, hint: '先结束会话' } : {}),
-          // **先不带 force 试一次。** 有未提交改动时主进程会拒绝，并把「还剩几处、
-          // 去哪看」说清楚——那是 agent 这一趟的全部成果，不能默默抹掉
-          //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
-          // 拿它那句话弹二次确认，用户点过才带 force 再删一次。
-          onClick: () => {
-            void window.api.agentChat
-              .worktreeRemove(cwd, worktree.relPath, worktree.branch, false)
-              .then((r) => {
-                if (r.ok) {
-                  setAgentWorktree(tabId, leafId, undefined)
-                  return
-                }
-                requestConfirm({
-                  message: `${r.error ?? '这棵 worktree 删不掉。'}\n\n仍要删？未提交的改动会丢，分支保留。`,
-                  confirmLabel: '删除',
-                  onConfirm: () =>
-                    void window.api.agentChat
-                      .worktreeRemove(cwd, worktree.relPath, worktree.branch, true)
-                      .then((r2) => {
-                        if (r2.ok) setAgentWorktree(tabId, leafId, undefined)
-                      })
-                })
-              })
-          }
+          onClick: () => removeWorktree(worktree)
         }
       ]
     : []
@@ -834,6 +869,9 @@ export function AgentChatView({
     unsubRef.current = null
     setAgentSessionId(tabId, leafId, '')
     setAgentResumeId(tabId, leafId, '')
+    // 交集告警跟着这一段对话一起清 —— 它是上一段跑出来的判断，
+    // 留到新的一段上就是在拿旧事实染新徽标（下一轮 turn.done 才会重算）。
+    setBranchOverlap(false)
     useStore.getState().startNewChat(fid, nid)
     // 本地状态全部回到「这个节点刚建出来」的样子。
     // **reducer 也要换新的** —— 不换的话上一段的轮次还留在里面，
