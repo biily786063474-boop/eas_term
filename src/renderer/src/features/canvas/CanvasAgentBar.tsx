@@ -30,7 +30,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
 import type { AgentProbe, AgentRole, AgentKind } from '../../../../shared/types'
-import { bindRole, codexDisableServerArg, codexSkillsConfigArg } from '../../../../shared/roleBinding'
+import { bindRole, codexDisableServerArg, codexDisabledToolsArg, codexSkillsConfigArg } from '../../../../shared/roleBinding'
 import {
   SparkleIcon,
   UndoIcon,
@@ -114,9 +114,16 @@ function buildCodexCmd(
    *  渲染层拿不到 Codex 的配置目录（那是主进程 `os.homedir()`/`CODEX_HOME` 才摸得到的东西），
    *  所以这条路上 imageGen 摘 skill 永远算不出来，`skillsOff` 恒为空、档位维持 degraded。
    *  这与本文件已下线（无渲染点）一致：只求类型跟 roleBinding 同步，不求真的摘掉过 skill。 */
-  codex: { disable: string[]; disableServers: string[]; skillsOff: string[]; sandbox: 'read-only' | undefined } = {
+  codex: {
+    disable: string[]
+    disableServers: string[]
+    disabledTools: Record<string, string[]>
+    skillsOff: string[]
+    sandbox: 'read-only' | undefined
+  } = {
     disable: [],
     disableServers: [],
+    disabledTools: {},
     skillsOff: [],
     sandbox: undefined
   }
@@ -130,6 +137,12 @@ function buildCodexCmd(
   if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
   for (const f of codex.disable) p.push('--disable', f)
   for (const n of codex.disableServers) p.push('-c', codexDisableServerArg(n))
+  // 阶段三第二项：denyTools 精确条目（同 adapters/codex.ts 那半）——这条路是给用户在终端
+  // 里跑的裸命令，要过一次 shell，所以取值也要 shq() 一下（同 skillsArg 那行）。
+  for (const [server, toolsForServer] of Object.entries(codex.disabledTools)) {
+    const arg = codexDisabledToolsArg(server, toolsForServer)
+    if (arg) p.push('-c', shq(arg))
+  }
   // 守卫看返回值而不是 skillsOff.length——空数组时函数自己返回空串（同 adapters/codex.ts 的约定）
   const skillsArg = codexSkillsConfigArg(codex.skillsOff)
   if (skillsArg) p.push('-c', shq(skillsArg))

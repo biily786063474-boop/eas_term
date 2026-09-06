@@ -46,7 +46,16 @@ export interface BindingContext {
 
 export interface RoleBinding {
   claude: { deny: string[] }
-  codex: { disable: string[]; disableServers: string[]; skillsOff: string[]; sandbox: 'read-only' | undefined }
+  codex: {
+    disable: string[]
+    disableServers: string[]
+    /** 阶段三第二项：server → 工具名数组（已排序去重），落成 `-c mcp_servers.<名>.disabled_tools=[…]`。
+     *  只收 `caps.mcp.denyTools` 里形如 `<server>__<tool>` 的精确条目——通配条目仍走
+     *  `disableServers` 那条按 server 名整个关的降级老路（见 bindRole 里 mcp.denyTools 分支）。 */
+    disabledTools: Record<string, string[]>
+    skillsOff: string[]
+    sandbox: 'read-only' | undefined
+  }
   omp: { removeTools: string[]; dropServers: string[]; dropServerPatterns: string[] }
   /** 只含 `kind` 那一家的行 */
   report: BindingLine[]
@@ -86,6 +95,30 @@ export function codexSkillsConfigArg(paths: string[]): string {
   return `skills.config=[${paths.map((p) => `{path="${esc(p)}",enabled=false}`).join(',')}]`
 }
 
+/** Codex 按工具名精确摘掉 MCP 工具的 `-c` 取值：`mcp_servers.<名>.disabled_tools=[…]`
+ *  （TOML 数组）。2026-09-06 阶段三第二项探针实测：这个键真把指定工具从模型的工具搜索
+ *  结果里拿掉（判据是延迟工具搜索，不是问模型），Codex 给它的名字是 `mcp__<server>.<tool>`
+ *  （点号分隔，不是 Claude 那种双下划线）。转义规则同 `codexSkillsConfigArg`（先转 `\`
+ *  再转 `"`，否则会把转义 `"` 新加的反斜杠自己又转义一遍）；空数组返回空串，
+ *  同 `codexSkillsConfigArg` 的约定——调用方靠这个决定要不要拼这个 `-c`。 */
+export function codexDisabledToolsArg(server: string, tools: string[]): string {
+  if (!tools.length) return ''
+  const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `mcp_servers.${server}.disabled_tools=[${tools.map((t) => `"${esc(t)}"`).join(',')}]`
+}
+
+/** `caps.mcp.denyTools` 里能升成 Codex 精确 `disabled_tools` 的条目形状：`<server>__<tool>`
+ *  ——不含 `*`、正好一个 `__` 分隔、两段都非空。其余形状（含 `*`，或不是这个形状）
+ *  维持原样，走通配降级为按 server 名整个关那条老路（见 bindRole 里 mcp.denyTools 分支）。 */
+function parsePreciseTool(entry: string): { server: string; tool: string } | null {
+  if (entry.includes('*')) return null
+  const parts = entry.split('__')
+  if (parts.length !== 2) return null
+  const [server, tool] = parts
+  if (!server || !tool) return null
+  return { server, tool }
+}
+
 const uniq = (xs: string[]): string[] => [...new Set(xs)]
 
 export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): RoleBinding {
@@ -95,6 +128,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
   const claudeDeny: string[] = []
   const codexDisable: string[] = []
   const codexServers: string[] = []
+  const codexDisabledTools: Record<string, string[]> = {}
   const codexSkillsOff: string[] = []
   let codexSandbox: 'read-only' | undefined
   const ompRemove: string[] = []
@@ -221,9 +255,42 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       claudeDeny.push(...tools.map((p) => `mcp__${p}`))
       line('mcpTools', 'hard', tools.map((p) => `mcp__${p}`).join(' '))
     } else if (kind === 'codex') {
-      const hit = matchKnown(tools)
-      codexServers.push(...hit)
-      line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+      // 阶段三第二项（2026-09-06 探针）：先把「写得出确切工具名」的条目（形如
+      // `<server>__<tool>`，不含 `*`）分出来，能升 hard；剩下的（含 `*`，或不是这个
+      // 形状）维持原样走通配降级。两类都有内容时各出一条报告行——这正是下面这份测试
+      // 计数要跟着这次改动调整的原因（roleBinding.test.ts 有专门的两行报告断言）。
+      const precise: Array<{ server: string; tool: string }> = []
+      const rest: string[] = []
+      for (const t of tools) {
+        const p = parsePreciseTool(t)
+        if (p) precise.push(p)
+        else rest.push(t)
+      }
+      if (precise.length) {
+        const dropped = new Set<string>()
+        for (const { server, tool } of precise) {
+          if (known && !known.includes(server)) {
+            dropped.add(server)
+            continue
+          }
+          ;(codexDisabledTools[server] ??= []).push(tool)
+        }
+        for (const s of Object.keys(codexDisabledTools)) codexDisabledTools[s] = uniq(codexDisabledTools[s]).sort()
+        const argsList = Object.entries(codexDisabledTools).map(([s, ts]) => codexDisabledToolsArg(s, ts))
+        const summary = Object.entries(codexDisabledTools)
+          .map(([s, ts]) => `${s}: ${ts.map((t) => `mcp__${s}.${t}`).join(', ')}`)
+          .join('；')
+        const droppedNote = dropped.size ? `；本机没有这些 server，跳过：${[...dropped].join(', ')}` : ''
+        const how = argsList.length
+          ? `-c ${argsList.join(' -c ')}（按工具名精确摘掉；Codex 里叫 mcp__<server>.<tool>）：${summary}${droppedNote}`
+          : `本机没有这些 server，跳过：${[...dropped].join(', ')}`
+        line('mcpTools', 'hard', how)
+      }
+      if (rest.length) {
+        const hit = matchKnown(rest)
+        codexServers.push(...hit)
+        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+      }
     } else {
       ompPatterns.push(...tools)
       line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连')
@@ -245,7 +312,13 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
 
   return {
     claude: { deny: uniq(claudeDeny) },
-    codex: { disable: uniq(codexDisable), disableServers: uniq(codexServers), skillsOff: uniq(codexSkillsOff), sandbox: codexSandbox },
+    codex: {
+      disable: uniq(codexDisable),
+      disableServers: uniq(codexServers),
+      disabledTools: codexDisabledTools,
+      skillsOff: uniq(codexSkillsOff),
+      sandbox: codexSandbox
+    },
     omp: { removeTools: uniq(ompRemove), dropServers: uniq(ompDrop), dropServerPatterns: uniq(ompPatterns) },
     report
   }

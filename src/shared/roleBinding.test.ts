@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import {
   bindRole,
   codexDisableServerArg,
+  codexDisabledToolsArg,
   codexSkillsConfigArg,
   globMatch,
   IMAGE_MCP_PATTERNS,
@@ -32,7 +33,7 @@ test('空卡 = 什么都不加，三家都没有报告行', () => {
   for (const k of ['claude', 'codex', 'omp'] as const) {
     const b = bindRole(undefined, k)
     assert.deepEqual(b.claude.deny, [])
-    assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined })
+    assert.deepEqual(b.codex, { disable: [], disableServers: [], disabledTools: {}, skillsOff: [], sandbox: undefined })
     assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] })
     assert.deepEqual(b.report, [])
   }
@@ -156,6 +157,69 @@ test('mcp.denyTools —— Claude 直接通配；Codex/omp 降级为按 server �
   assert.deepEqual(x.codex.disableServers, ['bizone-canvas'])
   assert.equal(x.report[0].level, 'degraded')
   assert.deepEqual(bindRole(bounds, 'omp').omp.dropServerPatterns, ['*canvas*'])
+})
+
+// 阶段三第二项：探针确认 `-c mcp_servers.<名>.disabled_tools=[…]` 真把指定工具从模型面前
+// 摘掉（判据是延迟工具搜索结果，不是问模型）。denyTools 里形如 `<server>__<tool>`
+// （无 `*`、正好一个 `__`、两段都非空）的条目现在能精确摘工具，不必再牺牲整个 server；
+// 其余形状（含 `*`、或不是这个形状）维持原样：通配降级为按 server 名整个关。
+test('mcp.denyTools 精确写法（<server>__<tool>）在 Codex 上升级为 hard 的 disabled_tools；通配条目仍降级；Claude 侧不变', () => {
+  const bounds = {
+    caps: { mcp: { denyTools: ['bizone-canvas__generate', 'bizone-canvas__upscale', '*image*'] } }
+  }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  assert.deepEqual(x.codex.disabledTools, { 'bizone-canvas': ['generate', 'upscale'] })
+  // 精确条目不该顺带把整个 server 也塞进 disableServers —— 那是通配条目才走的降级路径
+  assert.deepEqual(x.codex.disableServers, [])
+  const mcpToolsLines = x.report.filter((l) => l.cap === 'mcpTools')
+  assert.equal(mcpToolsLines.length, 2, '两类都有内容时报告两行')
+  const hard = mcpToolsLines.find((l) => l.level === 'hard')
+  const degraded = mcpToolsLines.find((l) => l.level === 'degraded')
+  assert.ok(hard, '精确条目要有一条 hard 报告行')
+  assert.ok(hard!.how.includes('disabled_tools'))
+  assert.ok(hard!.how.includes('mcp__bizone-canvas.generate') || hard!.how.includes('mcp__<server>.<tool>'), 'how 里要点出 Codex 的命名差异')
+  assert.ok(degraded, '通配条目仍要降级')
+  assert.ok(degraded!.how.includes('*image*') || degraded!.how.includes('无匹配'), 'degraded 那行仍是旧口径')
+
+  // Claude 侧对同一份输入仍是逐字通配 deny，不受这次改动影响
+  const c = bindRole(bounds, 'claude')
+  assert.deepEqual(c.claude.deny, ['mcp__bizone-canvas__generate', 'mcp__bizone-canvas__upscale', 'mcp__*image*'])
+})
+
+test('mcp.denyTools 精确写法 —— 只有精确条目、没有通配时只报一行 hard，disabledTools 已排序去重', () => {
+  const bounds = { caps: { mcp: { denyTools: ['a__z', 'a__y', 'a__z'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['a'] })
+  assert.deepEqual(x.codex.disabledTools, { a: ['y', 'z'] }, '去重且排序')
+  assert.equal(x.report.filter((l) => l.cap === 'mcpTools').length, 1)
+  assert.equal(x.report.find((l) => l.cap === 'mcpTools')!.level, 'hard')
+})
+
+test('mcp.denyTools 精确写法 —— server 不在 knownMcpServers 清单时不进 disabledTools（Codex 对不存在的 server 名会拒绝启动），how 里说明', () => {
+  const bounds = { caps: { mcp: { denyTools: ['ghost__foo'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  assert.deepEqual(x.codex.disabledTools, {})
+  const line = x.report.find((l) => l.cap === 'mcpTools')
+  assert.ok(line, '即便被跳过也要有报告行说明')
+  assert.equal(line!.level, 'hard')
+  assert.ok(line!.how.includes('ghost'), 'how 要点名被跳过的 server')
+})
+
+test('mcp.denyTools 精确写法 —— 没给 knownMcpServers 清单时直通不过滤（与 denyServers 同规矩）', () => {
+  const bounds = { caps: { mcp: { denyTools: ['ghost__foo'] } } }
+  const x = bindRole(bounds, 'codex')
+  assert.deepEqual(x.codex.disabledTools, { ghost: ['foo'] })
+})
+
+test('codexDisabledToolsArg：字面量收口成一处，转义规则同 codexSkillsConfigArg，空数组返回空串', () => {
+  assert.equal(
+    codexDisabledToolsArg('bizone-canvas', ['generate', 'upscale']),
+    'mcp_servers.bizone-canvas.disabled_tools=["generate","upscale"]'
+  )
+  assert.equal(
+    codexDisabledToolsArg('s', ['a"b\\c']),
+    'mcp_servers.s.disabled_tools=["a\\"b\\\\c"]'
+  )
+  assert.equal(codexDisabledToolsArg('s', []), '', '空数组返回空串，调用方靠这个决定要不要拼这个 -c')
 })
 
 test('raw 只落到自己那家，报告标 raw', () => {

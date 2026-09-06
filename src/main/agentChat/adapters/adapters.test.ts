@@ -283,6 +283,30 @@ test('[补] 角色的 caps.write:false 永远压过显式传的 sandbox——不
   assert.equal(args[i + 1], 'read-only', '角色 caps.write:false 必须赢过显式传入的 danger-full-access')
 })
 
+// 阶段三第二项：denyTools 里形如 `<server>__<tool>` 的精确条目现在能升级为
+// `-c mcp_servers.<名>.disabled_tools=[...]`，逐字断言这条参数确实出现在 argv 里
+// （而不是只测 roleBinding.ts 算出的中间值——两处都要看，纯函数算对了不代表接线也对）。
+test('[追加] Codex：denyTools 精确条目落成 -c mcp_servers.<名>.disabled_tools=[...]，逐字比对', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['mini'],
+    roleBounds: { caps: { mcp: { denyTools: ['mini__beta'] } } }
+  })
+  const i = args.indexOf('mcp_servers.mini.disabled_tools=["beta"]')
+  assert.ok(i > 0, '缺 disabled_tools 参数')
+  assert.equal(args[i - 1], '-c', 'disabled_tools 的取值前面必须紧跟 -c')
+})
+
+test('[追加] Codex：denyTools 通配条目不产生 disabled_tools，仍走整关 server 那条老路', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['mini'],
+    roleBounds: { caps: { mcp: { denyTools: ['*ini*'] } } }
+  })
+  assert.ok(!args.some((a) => a.includes('disabled_tools')), '通配条目不该出现 disabled_tools')
+  assert.ok(args.includes('mcp_servers.mini.enabled=false'), '通配条目仍应整个关掉命中的 server')
+})
+
 test('[补充] Codex 的 model 用 -m 传，且带上实际取值', () => {
   const args = getAdapter('codex')!.buildArgs({ cwd: '/x', model: 'gpt-5-codex' }).args
   const i = args.indexOf('-m')
