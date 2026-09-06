@@ -29,6 +29,19 @@ export interface BindingContext {
    *  不给就摘不掉，档位维持 degraded。渲染层的 RolePicker / CanvasRoleEditor 现在经 IPC
    *  `agent:codexHome` 也拿得到；拿不到的只剩终端命令条 `CanvasAgentBar` 那条已下线路径。 */
   codexHome?: string
+  /** 阶段三第三项：**这条路径会附 Claude 的 PreToolUse 写守卫**（`--settings` 附
+   *  `eas-write-guard.mjs`，补 `--disallowedTools` 挡不住 Bash 的洞）。由调用方声明，
+   *  纯函数自己判断不了「这次真的会不会附」——那要看 `session.ts` 起会话时算出的
+   *  `writeGuardSettings` 是否非空，`bindRole` 拿不到、也不该拿到那个决定过程。
+   *
+   *  两条路径的取值不同：对话会话（`AgentChatView` 经 `adapters/claude.ts`）传
+   *  `!!opts.writeGuardSettings`，与这次真实拼出来的 `--settings` 是否存在保持一致；
+   *  休眠的终端命令条（`CanvasAgentBar`，2026-09-03 起已下线 UI 入口）从不走
+   *  `--settings` 这条机制，固定传 `false`（或不传，效果一样）——它拼命令是给用户在
+   *  终端里自己跑的裸 `claude` 调用，没有任何东西会给它生成/附加这份 `--settings` 文件。
+   *  渲染层的 `RolePicker` / `CanvasRoleEditor` 展示的是"如果开对话会话会怎样"的预览，
+   *  按对话会话的口径传 `true`。 */
+  claudeWriteGuard?: boolean
 }
 
 export interface RoleBinding {
@@ -99,7 +112,17 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
     const bashNote = caps.shell === false ? '' : '；Bash 未禁，模型仍可用命令改文件'
     if (kind === 'claude') {
       claudeDeny.push(...CLAUDE_WRITE_TOOLS)
-      line('write', 'hard', `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}${bashNote}`)
+      // 阶段三第三项：这条路径附没附 PreToolUse 写守卫（--settings 补的第二道闸），
+      // 由调用方经 ctx.claudeWriteGuard 声明——纯函数自己判断不了「这次真的会不会附」。
+      // 额外守一手 `caps.shell !== false`：shell 已经整个禁掉时 --disallowedTools Bash
+      // 已经挡死了命令行，守卫是死重量，不该在报告里说「附了」误导人以为多了一层保护——
+      // 真实的 session.ts 起会话时本就不会在这个组合下生成 writeGuardSettings（同一个判据），
+      // 这里再判一次是为了让 bindRole 自己也自洽，不依赖调用方传值精确。
+      const guardActive = ctx.claudeWriteGuard === true && caps.shell !== false
+      const how = guardActive
+        ? `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')} + PreToolUse 守卫拦 Bash 里的写命令（按命令模式：重定向、tee、sed -i、rm/mv/cp/mkdir/touch、git 写操作、包管理安装；脚本文件里的写操作拦不住）`
+        : `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}${bashNote}`
+      line('write', 'hard', how)
     } else if (kind === 'codex') {
       codexSandbox = 'read-only'
       line('write', 'hard', '-s read-only（OS 沙箱，连命令行写入一起挡）')

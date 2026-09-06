@@ -231,6 +231,17 @@ test('[补] restart 时 opts 带上 codexHome——丢了会让 Codex 的 imageG
   assert.equal(plan.opts.codexHome, '/Users/x/.codex')
 })
 
+// 阶段三第三项：writeGuardSettings 跟 knownMcpServers / codexHome 同一个理由必须原样带过
+// restart —— 丢了的话 Claude 上 caps.write=false 的第二道闸（--settings 附 PreToolUse
+// 写守卫）会从第二条消息起悄悄不见，只剩 --disallowedTools 那一道，而界面上角色卡片
+// 看起来护栏没变。
+test('[补] restart 时 opts 带上 writeGuardSettings——丢了会让 Claude 的写守卫第二道闸从第二条消息起悄悄消失', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', writeGuardSettings: '/Users/x/Library/.../write-guard.json' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.writeGuardSettings, '/Users/x/Library/.../write-guard.json')
+})
+
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
 
 test('团队 agent **交活之后** 3 分钟就回收', () => {

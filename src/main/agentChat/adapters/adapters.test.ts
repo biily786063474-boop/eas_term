@@ -103,6 +103,29 @@ test('传了 resumeId 才出现 --resume', () => {
   assert.ok(withResume.includes('sess-1'))
 })
 
+// ── 阶段三第三项：caps.write=false 在 Claude 上的第二道闸（--settings 附 PreToolUse
+// 写守卫，补 --disallowedTools 挡不住 Bash 的洞）─────────────────────────────
+
+test('给了 writeGuardSettings 就带上 --settings <path>，且排在 --disallowedTools 之前', () => {
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    resumeId: 'r1',
+    writeGuardSettings: '/tmp/eas-guard.json',
+    roleBounds: { caps: { write: false } }
+  })
+  const settingsIdx = args.indexOf('--settings')
+  assert.ok(settingsIdx >= 0, '缺 --settings')
+  assert.equal(args[settingsIdx + 1], '/tmp/eas-guard.json')
+  const denyIdx = args.indexOf('--disallowedTools')
+  assert.ok(denyIdx >= 0, '缺 --disallowedTools')
+  assert.ok(settingsIdx < denyIdx, '--settings 必须排在变长参数 --disallowedTools 之前，否则会被吞掉')
+})
+
+test('没给 writeGuardSettings 时参数逐字与今天相同——不凭空多出 --settings', () => {
+  const withoutGuard = getAdapter('claude')!.buildArgs({ cwd: '/p', resumeId: 'r1' }).args
+  assert.ok(!withoutGuard.includes('--settings'))
+})
+
 test('Claude 支持逐次审批；Codex 在 exec 模式下不支持，必须报空数组', () => {
   // 空数组不是"忘了填"，是明确表示"这个 CLI 做不了逐次审批"。
   // UI 据此退回沙箱级别选择——不写任何按 CLI 名字的分支。

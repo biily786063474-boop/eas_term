@@ -78,7 +78,12 @@ export function RolePicker({
 
   const current = roles.find((r) => r.id === roleId)
   // 只在有降级 / 不支持时出现，不常驻 —— 常驻的标记等于没有标记
-  const warn = current && cli ? degradedLines({ caps: current.caps, raw: current.raw }, cli, { codexHome }) : []
+  // claudeWriteGuard: true —— 这里预览的是「开一个对话会话会怎样」，对话会话调
+  // adapters/claude.ts 时 writeGuardSettings 总是按 caps.write=false 算出来的
+  // （阶段三第三项），跟这里的口径一致。休眠的终端命令条 CanvasAgentBar 走的是
+  // 另一条早已下线 UI 入口的路径，不受这个预览影响。
+  const warn =
+    current && cli ? degradedLines({ caps: current.caps, raw: current.raw }, cli, { codexHome, claudeWriteGuard: true }) : []
 
   // 打开时把轨道定位到当前角色那一张 —— 而不是从头翻
   useEffect(() => {

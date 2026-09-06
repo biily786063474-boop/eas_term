@@ -188,6 +188,17 @@ function hookScriptPath(): string {
     : path.join(app.getAppPath(), 'resources', 'agent-hooks', 'eas-pretooluse.mjs')
 }
 
+/** 同上，换成写守卫脚本（阶段三第三项）：`caps.write=false` 在 Claude 上的第二道闸，
+ *  按命令模式识别 Bash 里的写操作，见 `resources/agent-hooks/eas-write-guard.mjs` 文件头
+ *  （它是 --disallowedTools 挡不住 Bash 之后补的那道闸）。路径规则与 hookScriptPath()
+ *  逐字相同，照抄一份而不是传参数——两者未来各自可能独立演化（比如某天审批 hook 要挪
+ *  目录，写守卫不必跟着动）。 */
+function guardScriptPath(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'agent-hooks', 'eas-write-guard.mjs')
+    : path.join(app.getAppPath(), 'resources', 'agent-hooks', 'eas-write-guard.mjs')
+}
+
 /** hook 脚本要用哪个 node 跑。镜像 mcpBridge.ts 的 runnerFor()：GUI 启动的 app PATH
  *  很贫瘠（常只有 /usr/bin:/bin），bare 'node' 未必解析得到。这里只需要单个可执行文件
  *  路径去拼 shell 命令字符串，不需要 runnerFor 完整的 spawn 语义（它返回给 MCP server
@@ -228,13 +239,52 @@ function nodeBinForHook(): string {
  *  避免在空格处被 shell 切成多个 token。nodeBin 由调用方传入（restartAndDeliver 里的
  *  hookNodeBin，或 approvalHookStatus 里现算的一份）——不在这里重复调 nodeBinForHook()
  *  （2026-08-14 全分支评审 I3：算一次、按需复用）。 */
-function hookCommand(nodeBin: string): string {
+/** `"node" "脚本"` 这种带引号的命令字符串——两处 hook（审批、写守卫）拼命令的方式
+ *  完全相同，只是脚本路径不同，收口成一个函数避免两处各写一份引号逻辑走散。 */
+function quotedNodeCommand(nodeBin: string, scriptPath: string): string {
   const quote = (s: string): string => `"${s}"`
-  return `${quote(nodeBin)} ${quote(hookScriptPath())}`
+  return `${quote(nodeBin)} ${quote(scriptPath)}`
+}
+
+function hookCommand(nodeBin: string): string {
+  return quotedNodeCommand(nodeBin, hookScriptPath())
 }
 
 function hookConfigPath(cwd: string): string {
   return path.join(cwd, '.claude', 'settings.json')
+}
+
+/** 写守卫的 `--settings` 文件写到哪：**app 自己的 userData 目录**，不是用户项目文件——
+ *  跟审批 hook 要装进 `<cwd>/.claude/settings.json` 不是一回事，不需要过 fsGuard、
+ *  也不需要处理与用户手改内容的合并（这份文件完全由我们自己生成/消费，用户不会去改它，
+ *  探针只验证过"`--settings` 能按进程附加设置、不用碰用户项目文件"这一点——它跟用户
+ *  项目里已有的 `.claude/settings.json` 之间具体怎么叠加/取舍，没有另外验证，
+ *  也不影响这里的写法：我们只管生成自己这一份，不去读、不去猜用户那份长什么样）。 */
+function writeGuardSettingsPath(): string {
+  return path.join(app.getPath('userData'), 'agent-hooks', 'write-guard.json')
+}
+
+/** 生成/重写「附一条 PreToolUse 写守卫」的 `--settings` 文件，返回它的路径给
+ *  claude.ts 的 `--settings <path>` 用。
+ *
+ *  **每次起会话都重写一遍**——内容完全由 `nodeBin` 决定，是幂等的纯覆盖，不像
+ *  `installApprovalHook` 那样要保留用户自己已有的其它配置（这是我们自己的文件，
+ *  不是用户项目里的），所以不需要 `planHookInstall` 那套合并规划，直接整份写出。 */
+function ensureWriteGuardSettings(nodeBin: string): string {
+  const target = writeGuardSettingsPath()
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  const settings = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Bash',
+          hooks: [{ type: 'command', command: quotedNodeCommand(nodeBin, guardScriptPath()) }]
+        }
+      ]
+    }
+  }
+  fs.writeFileSync(target, JSON.stringify(settings, null, 2), 'utf8')
+  return target
 }
 
 function readHookConfig(file: string): unknown {
@@ -1253,6 +1303,9 @@ export function registerAgentChatHandlers(): void {
     if (!adapter) return { ok: false, error: `未知 CLI：${p.cli}` }
 
     const id = `ac-${nextId++}`
+    // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
+    // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
+    const roleBounds = safeRoleBounds(p.roleBounds)
     const rec: SessionRecord = {
       id,
       cli: p.cli,
@@ -1281,13 +1334,25 @@ export function registerAgentChatHandlers(): void {
         typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined,
       // 角色能力意图。**只收清洗过的形状**，任何别的形状一律当没给 ——
       // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
-      roleBounds: safeRoleBounds(p.roleBounds),
+      roleBounds,
       // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
       // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
       knownMcpServers: p.cli === 'codex' ? codexServers() : undefined,
       // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
       // 只在 Codex 时算，adapter 是纯函数不读环境变量。
-      codexHome: p.cli === 'codex' ? codexHome() : undefined
+      codexHome: p.cli === 'codex' ? codexHome() : undefined,
+      // 阶段三第三项：Claude 上 caps.write=false 的第二道闸（--settings 附 PreToolUse
+      // 写守卫，补 --disallowedTools 挡不住 Bash 的逃生口）。开闸条件三个都要满足：
+      //   · 只有 Claude 用得到这条 --settings（Codex/omp 走各自的落法，见 roleBinding.ts）
+      //   · 角色确实要求 write:false —— 没这个意图就没必要附任何东西
+      //   · shell 没有一起禁掉——shell:false 时 Claude 侧已经 --disallowedTools Bash，
+      //     模型压根调不到 Bash 工具，附这条守卫是无意义的死重量
+      // 只在这里算一次（不进 effectiveOpts 之外的路径重算）：跟 knownMcpServers /
+      // codexHome 同一个理由，落进 SessionRecord 让 restart 也带得上。
+      writeGuardSettings:
+        p.cli === 'claude' && roleBounds?.caps?.write === false && roleBounds?.caps?.shell !== false
+          ? ensureWriteGuardSettings(nodeBinForHook())
+          : undefined
     }
     const live: Live = {
       rec,

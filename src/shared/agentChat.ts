@@ -267,6 +267,21 @@ export interface StartOpts {
    *  `knownMcpServers` 一个理由：adapter 是纯函数不读环境，得由 session.ts 起会话时算好传入；
    *  拿不到就摘不掉 skill，档位退回 degraded。 */
   codexHome?: string
+  /** 阶段三第三项：Claude 上 `caps.write=false` 的第二道闸——一份 `--settings` 文件的
+   *  绝对路径，里面附了一条 PreToolUse hook（matcher `Bash`），跑
+   *  `resources/agent-hooks/eas-write-guard.mjs` 按命令模式识别 Bash 里的写操作并 deny。
+   *
+   *  补的是哪个逃生口：`--disallowedTools Write Edit NotebookEdit` 挡住了模型的内置写
+   *  工具，但挡不住 Bash——只要 `caps.shell` 没有一起禁掉，模型仍能开终端跑
+   *  `echo x > file` / `sed -i` / `rm` 之类的命令改文件。这份 `--settings` 就是补那个洞。
+   *
+   *  由 `session.ts` 的 `ensureWriteGuardSettings()` 在起会话时算好（同 `knownMcpServers` /
+   *  `codexHome` 一个理由：adapter 是纯函数，不该自己决定写不写文件；且它要落进
+   *  `SessionRecord` 并被 `effectiveOpts` 带过 restart——Claude 每次 restart 都要重新拼
+   *  `--settings`，丢了这个字段等于第二道闸从第二条消息起悄悄消失）。
+   *  undefined = 不附这条 `--settings`（角色没勾 `write:false`，或 `shell:false` 已经把
+   *  Bash 整个挡掉、这道闸没有意义）。 */
+  writeGuardSettings?: string
 }
 
 /** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**

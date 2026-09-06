@@ -57,6 +57,29 @@ test('write:false + shell:false 时 Claude 的提醒不再提 Bash', () => {
   assert.ok(!line.how.includes('Bash'))
 })
 
+// 阶段三第三项：ctx.claudeWriteGuard 声明「这条路径会附 PreToolUse 写守卫」时，
+// write:false 在 Claude 上的 how 要改成两道闸的说明，档位仍是 hard。
+test('write:false + claudeWriteGuard:true —— Claude 的 how 变成两道闸的说明，档位仍是 hard', () => {
+  const bounds = { caps: { write: false as const } }
+  const b = bindRole(bounds, 'claude', { claudeWriteGuard: true })
+  const line = b.report.find((l) => l.cap === 'write')!
+  assert.equal(line.level, 'hard')
+  assert.ok(line.how.includes('--disallowedTools Write Edit NotebookEdit'), '第一道闸不能丢')
+  assert.ok(line.how.includes('PreToolUse 守卫'), '缺第二道闸的说明')
+  assert.ok(line.how.includes('脚本文件里的写操作拦不住'), '漏网要如实说，不能让人以为守卫是万能的')
+})
+
+// claudeWriteGuard:true 但 shell 也整个禁掉时，守卫是死重量（Bash 已经被
+// --disallowedTools Bash 挡死），how 不该说「附了」误导人——这是 bindRole 自己
+// 的自洽检查，不依赖调用方传值精确（真实的 session.ts 也不会在这个组合下生成
+// writeGuardSettings，这里只是让纯函数自己也守住同一条判据）。
+test('write:false + shell:false + claudeWriteGuard:true —— shell 已禁时守卫是死重量，how 退回不提 Bash 的版本', () => {
+  const b = bindRole({ caps: { write: false, shell: false } }, 'claude', { claudeWriteGuard: true })
+  const line = b.report.find((l) => l.cap === 'write')!
+  assert.ok(!line.how.includes('PreToolUse 守卫'), 'shell 已禁时守卫没有意义，不该在 how 里声称附了')
+  assert.equal(line.how, `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}`)
+})
+
 test('shell:false —— Claude 去 Bash，Codex --disable shell_tool，omp 去 bash', () => {
   const bounds = { caps: { shell: false as const } }
   assert.deepEqual(bindRole(bounds, 'claude').claude.deny, ['Bash'])

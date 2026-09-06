@@ -153,7 +153,10 @@ export function CanvasRoleEditor({
   const rawDeny = draft.raw?.claude?.deny ?? []
   const denyServers = draft.caps?.mcp?.denyServers ?? []
   const denyTools = draft.caps?.mcp?.denyTools ?? []
-  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome })
+  // claudeWriteGuard: true —— 同 RolePicker 的口径：这里预览的是「开一个对话会话会怎样」，
+  // 对话会话总会按 caps.write=false 算出 writeGuardSettings（阶段三第三项），矩阵里
+  // write 行的 Claude 格因此要展示两道闸的说明，不是只有 --disallowedTools 那一道。
+  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome, claudeWriteGuard: true })
 
   const kinds: { k: AgentKind | 'auto'; label: string; note: string }[] = [
     { k: 'auto', label: '跟随', note: '装了哪个用哪个' },
