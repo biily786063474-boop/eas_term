@@ -437,7 +437,18 @@ export interface AgentChatStartParams extends StartOpts {
   /** 团队派生的会话在这里自报身份。**不放进 StartOpts** —— StartOpts 是「这个进程
    *  怎么起」（cwd/model/sandbox…，effectiveOpts 会拿它重算 buildArgs），而身份不影响
    *  进程怎么跑，它只是记在会话上的元数据。混进去会让 restart 路径去关心一件与它无关
-   *  的事。 */
+   *  的事。
+   *
+   *  ⚠️ **`roleId` 看着像身份，却放进了 StartOpts**（见上面那个字段），这里说清为什么，
+   *  免得下次有人照这段注释把它挪走。
+   *
+   *  **不是因为 buildArgs 要读它** —— 查过了，到今天为止没有任何 adapter 的 buildArgs
+   *  碰 `roleId`，角色对启动参数的影响全走 `roleContract`（系统提示）和 `roleBounds`
+   *  （能力边界）那两个字段。它在 StartOpts 里是为了搭 `effectiveOpts` 那趟车：
+   *  协同板按 `roleId` 查角色名，而 Codex 每条消息都会 restart，不带过去的话板上这条
+   *  会话就从第二条消息起退回 CLI 名（同 knownMcpServers / codexHome 那几条的理由）。
+   *
+   *  `owner`/`role` 不需要这趟车：它们只是团队面板的标签，restart 路径一个都不读。 */
   owner?: 'team'
   role?: string
   /** 这次会话要带的插件（PluginInfo.id，如 `claude:figma`）。

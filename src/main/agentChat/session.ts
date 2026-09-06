@@ -61,9 +61,9 @@ import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath } from '../mcpBridge.ts'
-import { readBoard, refreshBoard, setSessionSource } from '../collabBoard'
-import { clipForPrompt } from '../../shared/board'
-import { projectRootOf } from '../../shared/roleWorktree'
+import { readBoard, refreshBoard, setSessionSource } from '../collabBoard.ts'
+import { clipForPrompt } from '../../shared/board.ts'
+import { projectRootOf } from '../../shared/roleWorktree.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -483,7 +483,9 @@ function handleEvent(live: Live, e: ChatEvent): void {
     // 分头写迟早有一边漏掉。
     if (getAdapter(live.rec.cli)?.quotaSource === 'omp-usage') scheduleOmpRefresh()
     else scheduleApiRefresh()
-    // 刷板 ②：一轮跑完 = 它多半刚改过文件，板上的「触及」该重算了
+    // 刷板 ②：一轮跑完 = 它多半刚改过文件，板上的「触及」该重算了。
+    // 位置在 live.rec 更新之前，但**没关系**：refreshBoard 是 500ms 防抖 + 现算，
+    // 真正读会话表是在那之后，读到的一定是更新过的 rec（③ 那处同理）。
     refreshBoard(projectRootOf(live.rec.cwd))
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
@@ -633,7 +635,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
       ended: interrupted ? 'interrupted' : 'ok'
     }
     // 刷板 ③：进程没了，板上那行的状态要从「活跃」变成「已停」。
-    // **必须在 live.rec 改完之后** —— 板是照着会话表现算的，早一步刷出来的还是旧状态。
+    // 同 ②：防抖 + 现算，所以挂在 rec 更新前后都一样 —— 真正读会话表是 500ms 之后。
     refreshBoard(projectRootOf(live.rec.cwd))
     // code === 0 或 null（被我们自己 kill）都不算错——Codex 的 exec 正常跑完一轮后
     // 本来就会退出，那是预期行为，不是故障。

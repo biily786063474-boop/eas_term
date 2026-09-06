@@ -9,21 +9,18 @@
 //     不解释成人话的话，用户只会看到派活失败而不知道为什么
 //   · 目标目录已存在 → 同上，且可能是上一批留下的残骸
 
-import { execFile } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { ipcMain } from 'electron'
 
 import { newShortId, roleWorktreeBranch, roleWorktreeName } from '../shared/roleWorktree'
 import { refreshBoard } from './collabBoard'
+import { gitExec } from './gitExec.ts'
 
-function git(cwd: string, args: string[]): Promise<{ ok: boolean; out: string }> {
-  return new Promise((resolve) => {
-    execFile('git', args, { cwd, timeout: 30_000 }, (err, stdout, stderr) => {
-      resolve({ ok: !err, out: (err ? stderr || stdout : stdout).toString().trim() })
-    })
-  })
-}
+/** 建树这几条比刷板那边慢得多（`worktree add` 要铺一整棵工作树），给 30 秒。
+ *  helper 本身与 collabBoard 共用一份，别再抄第二份出来（`gitExec.ts`）。 */
+const git = (cwd: string, args: string[]): Promise<{ ok: boolean; out: string }> =>
+  gitExec(cwd, args, { timeoutMs: 30_000 })
 
 export interface WorktreeResult {
   ok: boolean
