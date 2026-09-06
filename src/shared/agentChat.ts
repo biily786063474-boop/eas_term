@@ -42,7 +42,9 @@ export type ChatEvent =
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
   | { k: 'exec.start'; execId: string; label: string; detail: string }
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string }
+  /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
+   *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string }
   | {
       k: 'approval.request'
       approvalId: string

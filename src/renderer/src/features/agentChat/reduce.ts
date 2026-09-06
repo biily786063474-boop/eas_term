@@ -284,6 +284,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         }
         if (!item) break
         item.state = e.ok ? 'ok' : 'failed'
+        // 完成时才知道标签的（Codex web_search）在这儿补上
+        if (e.label) item.label = e.label
         // **进内存就截。** 源头一处都没截（见 MAX_LIVE_OUTPUT 的说明），
         // 不在这里挡的话一次 build 的日志会整份留在内存里直到关掉这个节点。
         item.output =

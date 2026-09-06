@@ -894,7 +894,11 @@ export function CanvasStage(): JSX.Element {
         h: Math.abs(p.wy - start.wy)
       }
       if (rect.w + rect.h > 3) moved = true
-      setBand(rect)
+      // **只有真的在拖才画选框。**（用户 2026-09-06 报「界面偶尔闪一下」，黑匣子日志里
+      // 一小时内 11 次 canvas-band 挂载后 40~120ms 就卸载 —— 那是空白处普通点一下、
+      // 手抖 1 像素也会 setBand，闪出一个强调色小方块。moved 一旦为真就一直为真，
+      // 真拖拽期间照常跟手。）
+      if (moved) setBand(rect)
       const cv = useStore.getState().canvas
       const next = new Set(base)
       cv.shapes.forEach((sh) => {
