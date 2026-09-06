@@ -242,6 +242,25 @@ test('[补] restart 时 opts 带上 writeGuardSettings——丢了会让 Claude 
   assert.equal(plan.opts.writeGuardSettings, '/Users/x/Library/.../write-guard.json')
 })
 
+// 角色工作流 P1：roleId / boardText 跟上面几个字段同一个理由必须原样带过 restart。
+// roleId 丢了，协同板上这条会话的角色名会退回 CLI 名（板是按 roleId 查名字的），
+// 而它其实还在按角色契约干活；boardText 丢了，restart 出来的会话就不知道旁边还有谁
+// 在改哪些文件——契约里「改文件前先看板」那句话失去了起点。
+test('[补] restart 时 opts 带上 roleId——丢了协同板会认不出这条会话是哪个角色', () => {
+  const s = base({ alive: false, resumeId: 'sess-abc', roleId: 'builder' })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.roleId, 'builder')
+})
+
+test('[补] restart 时 opts 带上 boardText——丢了 restart 出来的会话就不知道旁边还有谁在改哪些文件', () => {
+  const text = '# 协同板\n\n| 分支 | 角色 |\n|---|---|\n| eas/builder/ab12cd | 工匠 |'
+  const s = base({ alive: false, resumeId: 'sess-abc', boardText: text })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.boardText, text)
+})
+
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
 
 test('团队 agent **交活之后** 3 分钟就回收', () => {

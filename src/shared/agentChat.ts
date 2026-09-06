@@ -282,6 +282,11 @@ export interface StartOpts {
    *  undefined = 不附这条 `--settings`（角色没勾 `write:false`，或 `shell:false` 已经把
    *  Bash 整个挡掉、这道闸没有意义）。 */
   writeGuardSettings?: string
+  /** 角色卡 id（协同板按它显示角色名；契约与边界另有字段） */
+  roleId?: string
+  /** 起会话那一刻的协同板文本（已按 clipForPrompt 截断）。**只在 spawn 时附进系统提示**，
+   *  会话中途变化不推送 —— 三家 CLI 都没有中途注入系统提示的通道，契约要求改文件前先 board_read。 */
+  boardText?: string
 }
 
 /** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**

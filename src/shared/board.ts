@@ -1,4 +1,5 @@
-// 协同板的纯渲染。**数据从哪来不归这里管**（main/board.ts 从会话表 + git 算），
+// 协同板的纯渲染。**数据从哪来不归这里管**（main/collabBoard.ts 从会话表 + git 算；
+// 注意**不是** main/board.ts —— 那个是项目看板的列，跟这块板毫不相干），
 // 这里只负责把 rows 排成人和模型都读得懂的一张表。零依赖，node --test 裸跑。
 export const BOARD_REL = '.eas/board.md'
 

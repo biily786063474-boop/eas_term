@@ -33,6 +33,7 @@ import { registerDiagHandlers } from './diagLog.ts'
 import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
+import { registerCollabBoardHandlers } from './collabBoard'
 import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
 import { registerRoleHandlers } from './roles'
@@ -426,6 +427,7 @@ app.whenReady().then(() => {
   registerTeamFindings()
   registerTeamRoster()
   registerTeamWorktree()
+  registerCollabBoardHandlers()
   buildMenu()
   createWindow()
 
