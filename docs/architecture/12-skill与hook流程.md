@@ -3,7 +3,7 @@
 > **更新触发**：新增注入面 · 改 skill 内容 · 改 hook 时机 · 改托管区围栏格式。
 > 这张图管的是**本 app 往用户机器上写什么**——写错了症状是"agent 忽然不听话"，且极难查。
 
-## 六个注入面
+## 七个注入面
 
 每个面都有明确的**托管区机制**，保证只动自己那部分、不碰用户内容。
 
@@ -15,6 +15,7 @@
 | 4 | **审批钩子** | `<cwd>/.claude/settings.json` PreToolUse —— **项目级，一个项目一份，不在 `~/.claude/`**（`hookConfigPath()`）| `agentChat/session.ts`（装/卸，写前过 `guardPath`）+ `agentChat/hookInstall.ts`（合并规划，纯函数不落盘）+ `resources/agent-hooks/eas-pretooluse.mjs`（脚本本体）| 见下节 —— 桌面对话已经不装，手机端起的会话仍会装 | 只往 matcher `*` 的分组里放自己那条；`guardPath` 拦住不在已注册项目/知识库内的 cwd；靠 `EAS_AGENT_CHAT_SESSION` 环境变量认领归属，**没有这个变量的会话一律无声放行** |
 | 5 | **statusline** | `~/.claude/settings.json` statusLine | `statuslineInstall.ts` + `eas-statusline.mjs` | 开启额度显示时 | `_easTerm`/`_easWrapped` 标记，**卸载时把原命令原样放回** |
 | 6 | **知识库约定** | 知识库根 `CLAUDE.md`/`AGENTS.md`、`.eas-wiki.json` | `wiki/schema.ts`（`initWiki` / `upgradeSchemaFile`）| 建库/升级时 | `<!-- eas-term:wiki-schema:begin v4 -->` 围栏，围栏外用户随便写 |
+| 7 | **写守卫**（阶段三第三项，2026-09-06）| **app 自己的 userData**（`<userData>/agent-hooks/write-guard.json`）——**不落用户项目文件**，走 `--settings <path>` 当进程级参数传给 Claude，跟第 4 行的审批钩子（装进 `<cwd>/.claude/settings.json`）是两条完全独立的机制 | `agentChat/session.ts`（`ensureWriteGuardSettings`）+ `resources/agent-hooks/eas-write-guard.mjs`（脚本本体，按命令模式拦 Bash 写操作）| 起 Claude 会话时，角色 `caps.write=false` 且 `caps.shell!==false` 才生成 | 每次起会话整份重写（内容确定，不用合并规划）；不是用户可见/可改的文件，不需要 `guardPath`/`.eas-backup` 那套 |
 
 > **遗留清理**：`agentRules.ts` 仍保留对 0.4.27–0.4.30 版 DeepSeek Harness（`~/.dsh/AGENTS.md`）
 > 与旧 `eas-wiki` skill 目录的清理逻辑 —— **只删不写**。
