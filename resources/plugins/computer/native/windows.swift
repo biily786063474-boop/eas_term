@@ -234,10 +234,46 @@ case "key":
     }
     guard let k = key else { fail("认不出主键：\(args[1])。支持 a-z 0-9 与 return/tab/space/delete/esc/方向键") }
     guard let src = CGEventSource(stateID: .hidSystemState) else { fail("建不出事件源") }
+
+    // **修饰键像真人那样按下去：按下修饰 → 主键 → 松开修饰。**
+    // 理由：系统级热键读的是**真实的修饰键状态**，不看单个按键事件上挂的 flags。
+    //
+    // ⚠️ 证据边界，别把这段读成比实际更强的结论（2026-09-06）：
+    //   · **已证实**：这么写之后 ⌘Space 能弹出聚焦搜索（截图为证），
+    //     ⌘C 这类应用级快捷键照常好使。
+    //   · **未证实**：改之前那种「只在按键事件上挂 flags」的写法到底能不能驱动
+    //     系统热键 —— A/B 回测两次都被打断，用户决定不再追，直接用这版。
+    //     所以这里**不能**写成「修好了原本坏的东西」。
+    //
+    // ⚠️ 另一个踩过的坑：判断「热键有没有生效」时**别用 listWindows 去找窗口** ——
+    // 它只留 `layer == 0` 的普通窗口，聚焦搜索是浮层面板，天生被滤掉，
+    // 于是会得到「热键无效」的假结论（我照这个假结论改了一轮代码）。
+    // 可靠的判据是截图看，或者找一个会**留下副作用**的热键（比如存文件）。
+    let modKeys: [(CGEventFlags, CGKeyCode)] = [
+        (.maskCommand, 55), (.maskShift, 56), (.maskAlternate, 58), (.maskControl, 59)
+    ]
+    let used = modKeys.filter { flags.contains($0.0) }
+    var cur: CGEventFlags = []
+    // ⚠️ 按下与松开之间**不许有任何提前退出**（fail/out 都不行）——
+    // 修饰键卡在按下状态会让用户整台机器没法用。
+    for (f, vk) in used {
+        cur.insert(f)
+        let e = CGEvent(keyboardEventSource: src, virtualKey: vk, keyDown: true)
+        e?.flags = cur
+        e?.post(tap: .cghidEventTap)
+        usleep(12_000)
+    }
     let d = CGEvent(keyboardEventSource: src, virtualKey: k, keyDown: true)
-    d?.flags = flags; d?.post(tap: .cghidEventTap); usleep(30_000)
+    d?.flags = cur; d?.post(tap: .cghidEventTap); usleep(30_000)
     let u = CGEvent(keyboardEventSource: src, virtualKey: k, keyDown: false)
-    u?.flags = flags; u?.post(tap: .cghidEventTap)
+    u?.flags = cur; u?.post(tap: .cghidEventTap); usleep(12_000)
+    for (f, vk) in used.reversed() {
+        cur.remove(f)
+        let e = CGEvent(keyboardEventSource: src, virtualKey: vk, keyDown: false)
+        e?.flags = cur
+        e?.post(tap: .cghidEventTap)
+        usleep(12_000)
+    }
     out(["ok": true, "keys": args[1]])
 
 default: fail("未知子命令：\(cmd)")
