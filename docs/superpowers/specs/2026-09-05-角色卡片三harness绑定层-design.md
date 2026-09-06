@@ -1,6 +1,6 @@
 # 角色卡片 × 三个 harness 的绑定层
 
-> 状态：**阶段一已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）；阶段二、三未动。
+> 状态：**阶段一、二已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）；阶段三未动。
 > 读之前先读 [10 模块领地图](../../architecture/10-模块领地图.md) 与
 > [03-3A 产品内 agent 角色边界](../../architecture/03-agent角色边界.md#3a--产品内-agent-角色边界)。
 > 本稿里标「**今日实测**」的结论来自 2026-09-05 在本机对 Codex 0.147.0 / omp v18.0.11 /
@@ -219,9 +219,10 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 
 - **角色编辑器**（`CanvasRoleEditor`）：把现在手写的两段「粒度不同」说明换成三列矩阵，
   每行一个意图，每格显示 `level` 图标 + `how`。数据来自 `bindRole(role, kind, {resume:false, …})`，
-  不再手写。
+  不再手写。**已实现（2026-09-05）** —— `.re-matrix` 由 `capMatrix()` 渲染，手写落法已全删。
 - **对话工具栏**：起会话前若该角色在当前 CLI 上有 `degraded` / `unsupported` 行，
   角色名旁加一个可 hover 的小标记，展开列出那几行。**只在有降级时出现**，不常驻。
+  **已实现（2026-09-05）** —— `RolePicker` 的 `.rolepick-warn`，内容由 `degradedLines()` 给。
 - 文案按 [[eas-term-失败要说人话]]：一句原因，不堆术语。例：「Codex 上生图限制降级为
   按 MCP server 名整个关闭；内置生图开关尚未验证。」
 
@@ -400,3 +401,46 @@ skipApprovalHook:true, roleBounds})` 起（走的就是对话节点那条 IPC）
   所以在隔离实例里点「保存角色」写的是**用户真实的** `~/.eas/roles.json`，
   而用户的正式版正读着同一个文件。要验落盘就得连带把文件恢复回去。
 
+
+---
+
+## 十三、阶段二真机验证（2026-09-05）
+
+隔离实例：`npm run build` + `node scripts/verify-app.mjs --seed`（临时 `--user-data-dir`，CDP 9333），
+跑 JS 用 `node scripts/eval-in-app.mjs`，hover 与截图另用 CDP `Input.dispatchMouseEvent` /
+`Page.captureScreenshot`（一次性脚本，没进仓库）。开始前先杀掉上一轮留下的孤儿实例
+（`lsof -i :9333` 抓到一个 ppid 已飘走的 Electron，临时目录 `eas-verify-XIyNWd`），
+并按第十二节那条判据确认连的是 worktree：进程 cwd = `…/terminal-wt/roles-phase2`、
+page url 指向该 worktree 的 `out/renderer/`。
+
+**全程没有点保存**，`~/.eas/roles.json` 自始至终不存在（只有第十二节挪走的
+`roles.json.verify-2026-09-05`），验完复查过一次。**没有起任何真实 CLI 会话**
+（只建对话节点、不发消息），也**没有碰多 agent 开关**。
+验证用的对话节点建在 `工作流程skill组合规范` 这个空 Frame 上（`addAgentNode`）。
+
+| # | 场景 | 结果 | 看到了什么 |
+|---|---|---|---|
+| 1 | 打开画师的编辑器 | ✅ | `.re-matrix tbody tr` **3 行**（不许改文件 / 不许跑命令 / 不许生图），表头是 `Claude` `Codex` `默认 harness`。「不许生图」行 Claude 格 `.re-lv` = **「硬」**（`--disallowedTools mcp__*image* … mcp__*stable*diffusion*`），Codex 格 = **「降级」**（`--disable image_generation（2026-09-05 实测未摘掉内置生图…）：无匹配`），omp 格 = 「降级」。画师只点亮了 imageGen，所以另两行带 `tr.off`（压暗预览），生图行不带 —— 与 `capMatrix` 的「未点亮按假设点亮预览」一致。截图 `/tmp/verify1-matrix.png` |
+| 2 | 点亮「不许改文件」→ 再点亮「不许跑命令」 | ✅ | 点亮前 write 行 `off=true`；点亮「不许改文件」后 **`tr.off` 消失**（`off=false`），Claude 格 how = `--disallowedTools Write Edit NotebookEdit；Bash 未禁，模型仍可用命令改文件`（**含 Bash**）；再点亮「不许跑命令」后同一格变成 `--disallowedTools Write Edit NotebookEdit`（**不再含 Bash**）。那句橙色提示要说的事，矩阵自己就说清楚了。改完点「取消」退出，没落盘 |
+| 3 | 对话节点选画师 + Codex | ✅（「换行」那半未触发，见下） | 工具栏 CLI 从下拉里换成 `Codex` 后，角色名「画师」右边**出现 `.rolepick-warn`**，徽章文字「降级」，可见（`rect` 在视口内）。用真实指针 `mouseMoved` 悬上去 → `.app-tooltip` 出现，文本 = `不许生图：--disable image_generation（2026-09-05 实测未摘掉内置生图，模型仍自称有 imagegen 工具，仅按名关 MCP server）：无匹配`，**含「不许生图」**。截图 `/tmp/verify3-warn.png` |
+| 4 | 同一节点切回 Claude | ✅ | 只动 CLI 下拉、角色仍是画师：`.rolepick-warn` 数量 **1 → 0**。工具栏读回「Claude Code」+「画师」，标记消失 |
+| 5 | 选勘探员 + 任意 CLI | ✅ | Claude 下 `.rolepick-warn` = 0；Codex 下把 8 个内置角色逐个套一遍，**只有画师有标记**，勘探员等 7 个都是 `null`。原因也核到了：勘探员矩阵里点亮的「不许改文件」行三家都是**「硬」**，而它那行「不许生图」虽然 Codex/omp 显示「降级」却带 `tr.off`（没点亮）—— `degradedLines` 只数**真点亮**的能力，不数预览行 |
+| 6 | `team_spawn` 带 `role_id: 'scout'` | ❌ **未验证（需真实 MCP 调用）** | 按裁定**没有**去打开用户项目的多 agent 开关、也没有调真实 `team_spawn`。弹窗那条路也走不通：`TeamBatchHost` 的数据源 `batchRequest.ts` 是模块级 store，`askForBatch` / `__resetBatchState` 都**没有挂到 `window`**，页面上下文里没有合法入口塞一份 spec 进去。这条目前靠 Task 4 的单测钉着：`batchSpec.test.ts` 四条（不填就没有 `roleId` 字段 / `role_id` 与 `roleId` 两种键都收 / 不在已知角色卡里整批拒并列出可用 id / 不传 `knownRoleIds` 时只透传不校验）+ `teamRoster.test.ts` 一条（`roleId` round-trip，重派找得回那张卡）|
+
+**这一轮新踩到、值得留下的三条**
+
+- **`.ac-ctxbar-name` 一查 51 个，能看见的只有 3 个。** 所有 tab 的所有 leaf 都渲染在同一个容器里
+  （PaneLayer 那条老规矩），没被 Frame 引用的只是 `display:none`。按 `getBoundingClientRect()`
+  真比视口筛过再动手，否则点到的是别的项目的工具栏。
+- **`addAgentNode(frameId)` 会静默返回 `undefined`** —— 如果那个 Frame 的 `projectId` 已经不在
+  `projects` 里（画布上有 23 个 Frame，只有 21 个的项目还在）。它拿 `projectId` 去反查新建的 leaf，
+  项目不存在时 `tab.projectId` 落成 `null`，反查落空。**先确认 Frame 的项目还在**，别对着空列表怀疑自己。
+- **工具栏那个 CLI 是组件内 `useState`，不是 store。** `setAgentCli(...)` 写的是 `pane.cli`，
+  而 `RolePicker` 收的 `cli` 来自组件里的 `selected` —— 直接调 store 会看到「`pane.cli` 已经是 codex，
+  界面还写着 Claude Code，标记也不出来」。要换 CLI 只能点那个下拉（`.canvas-ctxmenu`）。
+
+**一处如实记下的落差**：判据 3 原本还要求 tooltip「有换行」。真机上**没有任何一对（内置角色 × CLI）
+能凑出两行** —— 逐个扫过：Claude 上三个意图全是「硬」（0 行降级），Codex / omp 上只有画师的
+「不许生图」一项降级（1 行）。多行那条路（`warn.map(...).join('\n')` + `.app-tooltip`
+的 `white-space: pre-line`，两处都已确认在）**代码在、真机没触发**；要触发得自建一个同时踩中
+两项降级的角色，而那要写用户真实的 `~/.eas/roles.json`，本轮不做。

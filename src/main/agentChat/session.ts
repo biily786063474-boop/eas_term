@@ -1018,7 +1018,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
           roleContract: live.rec.roleContract,
-          roleTools: bindRole(live.rec.roleBounds, 'omp').omp
+          roleOmp: bindRole(live.rec.roleBounds, 'omp').omp
         })
       },
       emit: (e) => handleEvent(live, e),

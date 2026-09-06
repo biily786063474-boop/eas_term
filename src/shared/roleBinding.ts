@@ -48,6 +48,14 @@ export function globMatch(pattern: string, name: string): boolean {
   return re.test(name)
 }
 
+/** Codex 关掉某个 MCP server 的 `-c` 取值字面量：`mcp_servers.<名>.enabled=false`。
+ *  收口成一个函数是因为它原来在两处各手写一份（`adapters/codex.ts` 的无头启动路径、
+ *  `CanvasAgentBar.tsx` 拼终端命令那条路径）——两处都要拼 `-c`，值只此一种写法，
+ *  改一处忘了另一处的话，终端里跑起来的角色护栏会比无头模式松一截，且没有测试能拦。 */
+export function codexDisableServerArg(name: string): string {
+  return `mcp_servers.${name}.enabled=false`
+}
+
 const uniq = (xs: string[]): string[] => [...new Set(xs)]
 
 export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): RoleBinding {
@@ -164,4 +172,60 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
     omp: { removeTools: uniq(ompRemove), dropServers: uniq(ompDrop), dropServerPatterns: uniq(ompPatterns) },
     report
   }
+}
+
+// ── 给界面用的标签与派生 ─────────────────────────────────────────────────────
+// 这里只有**名词**（cap 叫什么、harness 叫什么、档位叫什么）。
+// 「各家怎么落」那些句子仍然只由 bindRole 生成 —— 界面不许再手写它们。
+
+export const HARNESSES: readonly HarnessId[] = ['claude', 'codex', 'omp']
+export const HARNESS_LABEL: Record<HarnessId, string> = { claude: 'Claude', codex: 'Codex', omp: '默认 harness' }
+export const CAP_LABEL: Record<CapKey, string> = {
+  write: '不许改文件',
+  shell: '不许跑命令',
+  imageGen: '不许生图',
+  mcpServers: '禁用的 MCP server',
+  mcpTools: '禁用的 MCP 工具',
+  raw: '手写参数'
+}
+export const LEVEL_LABEL: Record<Enforcement, string> = { hard: '硬', soft: '软', degraded: '降级', unsupported: '不支持' }
+
+export interface MatrixRow {
+  cap: CapKey
+  /** 这一行在当前草稿里是否点亮。没点亮的三个意图行仍给出「点亮后会怎样」的预览 */
+  active: boolean
+  cells: Partial<Record<HarnessId, BindingLine>>
+}
+
+const INTENTS = ['write', 'shell', 'imageGen'] as const
+
+/** 编辑器三列矩阵的数据。三个意图行永远在（未点亮的按「假设点亮」预览）；
+ *  mcpServers / mcpTools / raw 只在草稿里真有内容时追加。 */
+export function capMatrix(bounds: RoleBounds | undefined, ctx: BindingContext = {}): MatrixRow[] {
+  const caps = bounds?.caps ?? {}
+  const rows: MatrixRow[] = []
+  for (const k of INTENTS) {
+    const active = caps[k] === false
+    const preview: RoleBounds = active ? (bounds ?? {}) : { ...bounds, caps: { ...caps, [k]: false } }
+    const cells: MatrixRow['cells'] = {}
+    for (const h of HARNESSES) {
+      const line = bindRole(preview, h, ctx).report.find((l) => l.cap === k)
+      if (line) cells[h] = line
+    }
+    rows.push({ cap: k, active, cells })
+  }
+  for (const k of ['mcpServers', 'mcpTools', 'raw'] as const) {
+    const cells: MatrixRow['cells'] = {}
+    for (const h of HARNESSES) {
+      const line = bindRole(bounds, h, ctx).report.find((l) => l.cap === k)
+      if (line) cells[h] = line
+    }
+    if (Object.keys(cells).length) rows.push({ cap: k, active: true, cells })
+  }
+  return rows
+}
+
+/** 工具栏降级标记用：这张卡在这家上哪些限制打了折扣 */
+export function degradedLines(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): BindingLine[] {
+  return bindRole(bounds, kind, ctx).report.filter((l) => l.level === 'degraded' || l.level === 'unsupported')
 }

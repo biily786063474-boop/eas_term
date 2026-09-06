@@ -3200,8 +3200,7 @@
   color: var(--sem-warn);
   opacity: 0.9;
 }
-.re-hint code,
-.re-tools code {
+.re-hint code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10.5px;
   background: var(--lift-2);
@@ -3250,12 +3249,6 @@
   flex: 1;
   min-width: 0;
 }
-/* `.re-tools` 的样式在下方「工具点选」那一段，只此一处。
-   这里原本有一份早期定义（`flex-wrap: wrap` + `gap: 5px`），2026-08-19 删掉：
-   下面那份改成了 `flex-direction: column` 却没有重新声明 `flex-wrap`，
-   于是 `wrap` 残留在一个纵向容器上 —— 换行方向变成跨轴分列。
-   眼下不炸只是因为这个容器没有确定高度；哪天祖先加了 height/max-height，
-   工具 chip 会毫无征兆地裂成两列。 */
 .re-err {
   margin: 0 18px;
   padding: 8px 10px;
@@ -3328,30 +3321,6 @@
 .re-list-sm {
   min-height: 54px;
 }
-/* 工具点选：左边一列组名，右边一排 chip。
-   组名用固定宽度对齐 —— 长短不一会让每行的 chip 起点错开，扫一眼就乱 */
-.re-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 9px 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--lift-1);
-}
-.re-tools-row {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-}
-.re-tools-g {
-  flex: none;
-  width: 40px;
-  text-align: right;
-  font-size: 10.5px;
-  color: var(--fg-dim);
-  opacity: 0.62;
-}
 /* 三个能力开关（改文件/跑命令/生图），复用 .re-chip 的底色 —— 只是横排、留点空隙 */
 .re-caps {
   display: flex;
@@ -3360,6 +3329,57 @@
 }
 .re-cap {
   padding: 4px 10px;
+}
+/* 三列矩阵：每行一个能力、每列一家 harness，格子内容全部来自 capMatrix（绑定层现算）。
+   颜色全部借用 .re-chip / .re-chip.on / .re-hint.warn 已经在用的 token —— 不新造颜色值。 */
+.re-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 11.5px;
+  table-layout: fixed;
+}
+.re-matrix th,
+.re-matrix td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 6px;
+  border-top: 1px solid var(--glass-border);
+  /* table-layout: fixed 下长参数名（mcp__*stable*diffusion* / --disable image_generation）
+     会撑破格子，允许任意位置断行 */
+  overflow-wrap: anywhere;
+}
+.re-matrix thead th {
+  border-top: none;
+  font-weight: 500;
+  color: var(--fg-dim);
+}
+.re-matrix tbody th {
+  width: 88px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.re-matrix tr.off {
+  opacity: 0.45;
+}
+.re-lv {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 16px;
+  background: var(--lift-2);
+}
+.re-lv-hard {
+  background: rgba(var(--sem-danger-rgb), 0.16);
+}
+.re-lv-degraded,
+.re-lv-unsupported {
+  background: rgba(var(--sem-warn-rgb), 0.16);
+}
+.re-how {
+  color: var(--fg-dim);
 }
 /* 手写框的开关。左边是动作，右边一句话说明现在禁了几项 —— 收起状态下也看得见 */
 .re-raw-toggle {

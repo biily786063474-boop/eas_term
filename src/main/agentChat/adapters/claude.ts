@@ -121,7 +121,7 @@ export const claudeAdapter: CliAdapter = {
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
     if (opts.resumeId) args.push('--resume', opts.resumeId)
-    // ── 角色的工具边界。**必须排在所有参数最后** ───────────────────────────
+    // ── 角色的能力边界。**必须排在所有参数最后** ───────────────────────────
     //
     // `--disallowedTools` 是**变长参数**（`<tools...>`）：
     // 夹在中间会把后面的选项一起吞掉 —— `--mcp-config` 那次已经栽过一回

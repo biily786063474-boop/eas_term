@@ -64,10 +64,25 @@ async function probeCodex(): Promise<AgentProbe['codex']> {
  *
  * 逐行扫描找 [mcp_servers.<名>] 段头，不用正则整文件匹配 —— 上次用正则改这个文件
  * 把用户真实配置截断过，教训还热着。
+ *
+ * **这个函数只会漏读，不会读多**（fail-open，方向很重要）：
+ *   · 只认 `[mcp_servers.<名>]` 这种表段头，认不出内联表写法
+ *     （`mcp_servers = { foo = { command = "..." } }`）——这种配法下 `foo` 不会出现在结果里；
+ *   · 只看 `~/.codex/config.toml`（下面已加 `CODEX_HOME` 优先），认不出的路径同样返回空。
+ * 漏读的后果不是「启动失败」，是**护栏变少**：`bindRole` 按这份清单过滤 `denyServers`，
+ * 清单里没有的名字会被判定成「本机没有这个 server」而**静默丢弃**（见 roleBinding.ts 那条
+ * `mcp.denyServers` 分支的 `keep = known ? servers.filter(...) : servers`）——角色以为自己
+ * 挡住了某个 MCP，实际那条 `-c mcp_servers.<名>.enabled=false` 根本没拼进命令行。
+ * 所以宁可这里读少了（用户自己看不出角色少了一条护栏），也不要为了"读全"去解析 TOML
+ * 的内联表语法而冒改坏用户真实配置的风险（教训见上一段）。
  */
 export function codexServers(): string[] {
   try {
-    const raw = fs.readFileSync(path.join(os.homedir(), '.codex', 'config.toml'), 'utf8')
+    // Codex 认 `CODEX_HOME` 覆盖默认的 `~/.codex`；这里跟着优先读它，
+    // 否则设了 CODEX_HOME 的用户会被判定成「没配任何 MCP server」，
+    // 角色的 denyServers 清单被清空，护栏跟着静默消失（上面那段的具体案例）。
+    const home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
+    const raw = fs.readFileSync(path.join(home, 'config.toml'), 'utf8')
     const out: string[] = []
     for (const line of raw.split('\n')) {
       const t = line.trim()

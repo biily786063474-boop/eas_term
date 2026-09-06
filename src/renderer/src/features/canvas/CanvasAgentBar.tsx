@@ -30,7 +30,7 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import type { NodeAgent } from '../../store'
 import type { AgentProbe, AgentRole, AgentKind } from '../../../../shared/types'
-import { bindRole } from '../../../../shared/roleBinding'
+import { bindRole, codexDisableServerArg } from '../../../../shared/roleBinding'
 import {
   SparkleIcon,
   UndoIcon,
@@ -121,7 +121,7 @@ function buildCodexCmd(
   if (codex.sandbox) p.push('-s', codex.sandbox)
   if (contract) p.push('-c', shq('instructions=' + contract.replace(/\s*\n\s*/g, ' ').replace(/"/g, '')))
   for (const f of codex.disable) p.push('--disable', f)
-  for (const n of codex.disableServers) p.push('-c', `mcp_servers.${n}.enabled=false`)
+  for (const n of codex.disableServers) p.push('-c', codexDisableServerArg(n))
   return p.join(' ')
 }
 

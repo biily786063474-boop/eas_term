@@ -33,6 +33,9 @@ export interface AgentSpec {
    *
    *  **默认 none**：隔离要一份磁盘、一条分支、收活时还要合，只读角色白拿这些代价。 */
   isolation?: 'worktree' | 'none'
+  /** 套哪张角色卡（`AgentRole.id`）。填了就把那张卡的契约 / 能力边界 / 默认模型套到这个 agent 上。
+   *  MCP 入参叫 `role_id`（与 `estimate_tokens` 同风格），内部叫 `roleId`。 */
+  roleId?: string
 }
 
 export interface BatchSpec {
@@ -49,8 +52,11 @@ export type BatchCheck = { ok: true; spec: BatchSpec } | { ok: false; error: str
 const ROLE_RE = /^[a-z][a-z0-9-]*$/
 
 /** 校验一批。**一条不合格就整批拒绝**，不做部分放行 ——
- *  半个团队比没有团队更糟（方案 E-03）。 */
-export function checkBatch(raw: unknown): BatchCheck {
+ *  半个团队比没有团队更糟（方案 E-03）。
+ *
+ *  `opts.knownRoleIds` **可选** —— 纯函数不猜环境：调用方（mcpHandler）手上有角色卡列表就传，
+ *  没传就不校验 `roleId` 是否存在，只做格式层面的透传。 */
+export function checkBatch(raw: unknown, opts: { knownRoleIds?: readonly string[] } = {}): BatchCheck {
   if (!raw || typeof raw !== 'object') return { ok: false, error: 'batch 必须是一个对象' }
   const b = raw as Record<string, unknown>
 
@@ -91,7 +97,16 @@ export function checkBatch(raw: unknown): BatchCheck {
     // **不猜**：猜错的方向是给只读角色白建一棵工作树，或者更糟 ——
     // 把写码 agent 当成只读放进主工作区，那就是 E-07 那个静默覆盖
     const isolation = a.isolation === 'worktree' ? ('worktree' as const) : undefined
-    agents.push({ role, task, needs, prefer, ...(isolation ? { isolation } : {}) })
+    // role_id 是 MCP 入参（与 estimate_tokens 同风格），roleId 是内部字段，两个都收
+    const roleIdRaw = typeof a.role_id === 'string' ? a.role_id : typeof a.roleId === 'string' ? a.roleId : ''
+    const roleId = roleIdRaw.trim() || undefined
+    if (roleId && opts.knownRoleIds && !opts.knownRoleIds.includes(roleId)) {
+      return {
+        ok: false,
+        error: `「${role}」的 role_id「${roleId}」不存在。可用的角色卡：${opts.knownRoleIds.join(', ')}（不填 = 无角色）`
+      }
+    }
+    agents.push({ role, task, needs, prefer, ...(isolation ? { isolation } : {}), ...(roleId ? { roleId } : {}) })
   }
 
   const est = typeof b.estimateTokens === 'number' && b.estimateTokens > 0 ? b.estimateTokens : undefined

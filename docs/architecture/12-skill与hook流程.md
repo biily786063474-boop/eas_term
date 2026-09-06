@@ -115,6 +115,9 @@ sequenceDiagram
 
 触发闸门是 **Frame 标题栏的多 agent 开关**：关着就完全不读。
 只含**只读角色**（researcher / reviewer / cross-checker）—— 改代码的活不归它管，避免并发写覆盖。
+`agents[].role_id` 可选（SKILL.md 里有一段）：套一张角色卡，把契约 / 能力边界 / 默认模型带给派出去的
+agent。本场景包的角色都是只读的，配 `scout` / `inspector` 最合适。**它不决定 `isolation`**，
+id 对不上号整批拒。
 
 ### `src/main/skillLibrary/` —— 管理用户机器上的 skill
 

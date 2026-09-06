@@ -1,13 +1,30 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { bindRole, globMatch, IMAGE_MCP_PATTERNS, CLAUDE_WRITE_TOOLS, OMP_WRITE_TOOLS } from './roleBinding.ts'
+import {
+  bindRole,
+  codexDisableServerArg,
+  globMatch,
+  IMAGE_MCP_PATTERNS,
+  CLAUDE_WRITE_TOOLS,
+  OMP_WRITE_TOOLS,
+  capMatrix,
+  degradedLines,
+  CAP_LABEL,
+  HARNESS_LABEL,
+  HARNESSES,
+  LEVEL_LABEL
+} from './roleBinding.ts'
 
 test('globMatch：只认 *，大小写不敏感，其余字符字面匹配', () => {
   assert.ok(globMatch('*image*', 'my-Image-gen'))
   assert.ok(globMatch('bizone-canvas', 'bizone-canvas'))
   assert.ok(!globMatch('bizone-canvas', 'bizone-canvas-2'))
   assert.ok(!globMatch('a.b', 'aXb'), '. 不能当正则用')
+})
+
+test('codexDisableServerArg：字面量收口在一处，adapters/codex.ts 与 CanvasAgentBar 都调它', () => {
+  assert.equal(codexDisableServerArg('bizone-canvas'), 'mcp_servers.bizone-canvas.enabled=false')
 })
 
 test('空卡 = 什么都不加，三家都没有报告行', () => {
@@ -97,4 +114,48 @@ test('**每条参数都有对应报告行** —— 报告是绑定的副产物�
   assert.equal(x.report.length, 5) // raw.claude 不在 codex 上
   const o = bindRole(bounds, 'omp')
   assert.equal(o.report.length, 5)
+})
+
+test('标签表齐全：六个 cap、三家、四档都有中文名', () => {
+  for (const k of ['write', 'shell', 'imageGen', 'mcpServers', 'mcpTools', 'raw'] as const) assert.ok(CAP_LABEL[k])
+  assert.deepEqual(HARNESSES, ['claude', 'codex', 'omp'])
+  assert.equal(HARNESS_LABEL.omp, '默认 harness')
+  for (const l of ['hard', 'soft', 'degraded', 'unsupported'] as const) assert.ok(LEVEL_LABEL[l])
+})
+
+test('capMatrix：空卡也给三行预览（write/shell/imageGen），全部 active=false，格子里是「点亮后会怎样」', () => {
+  const rows = capMatrix(undefined)
+  assert.deepEqual(rows.map((r) => r.cap), ['write', 'shell', 'imageGen'])
+  assert.ok(rows.every((r) => !r.active))
+  assert.equal(rows[0].cells.codex?.level, 'hard')
+  assert.ok(rows[0].cells.codex?.how.includes('read-only'))
+  assert.equal(rows[2].cells.omp?.level, 'degraded')
+})
+
+test('capMatrix：点亮的意图 active=true，且 write 的 Claude 附注随 shell 变化', () => {
+  const a = capMatrix({ caps: { write: false } })
+  assert.ok(a[0].active && !a[1].active)
+  assert.ok(a[0].cells.claude?.how.includes('Bash'))
+  const b = capMatrix({ caps: { write: false, shell: false } })
+  assert.ok(!b[0].cells.claude?.how.includes('Bash'))
+})
+
+test('capMatrix：有 mcp / raw 时追加对应行，只在有内容时出现', () => {
+  const rows = capMatrix({ caps: { mcp: { denyServers: ['s'] } }, raw: { codex: { disable: ['web_search'] } } }, { knownMcpServers: ['s'] })
+  assert.deepEqual(rows.map((r) => r.cap), ['write', 'shell', 'imageGen', 'mcpServers', 'raw'])
+  const srv = rows[3]
+  assert.ok(srv.active)
+  assert.ok(srv.cells.codex?.how.includes('s'))
+  const raw = rows[4]
+  assert.equal(raw.cells.claude, undefined, 'raw.codex 不该出现在 Claude 格')
+  assert.equal(raw.cells.codex?.cap, 'raw')
+})
+
+test('degradedLines：只回 degraded / unsupported 的行', () => {
+  const bounds = { caps: { write: false as const, imageGen: false as const } }
+  assert.deepEqual(degradedLines(bounds, 'claude'), [])
+  const codex = degradedLines(bounds, 'codex')
+  assert.equal(codex.length, 1)
+  assert.equal(codex[0].cap, 'imageGen')
+  assert.equal(degradedLines(undefined, 'omp').length, 0)
 })
