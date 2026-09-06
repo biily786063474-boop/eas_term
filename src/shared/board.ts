@@ -1,0 +1,77 @@
+// 协同板的纯渲染。**数据从哪来不归这里管**（main/board.ts 从会话表 + git 算），
+// 这里只负责把 rows 排成人和模型都读得懂的一张表。零依赖，node --test 裸跑。
+export const BOARD_REL = '.eas/board.md'
+
+export interface BoardRow {
+  branch: string
+  roleName: string
+  roleId?: string
+  alive: boolean
+  idleMs: number
+  startedAt: number
+  /** 相对项目根，已排序去重 */
+  files: string[]
+  cwd: string
+}
+
+export interface Overlap {
+  file: string
+  branches: string[]
+}
+
+const pad = (n: number): string => String(n).padStart(2, '0')
+const hhmm = (t: number): string => {
+  const d = new Date(t)
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
+}
+const stamp = (t: number): string => {
+  const d = new Date(t)
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${hhmm(t)}`
+}
+
+function status(r: BoardRow): string {
+  if (!r.alive) return '已停'
+  const min = Math.floor(r.idleMs / 60_000)
+  return min >= 5 ? `闲置 ${min} 分钟` : '活跃'
+}
+
+/** ≤3 个文件全列；多了按最深公共目录归并成 `dir/**（N 文件）` */
+function touched(files: string[]): string {
+  if (!files.length) return '—'
+  if (files.length <= 3) return files.join(', ')
+  const parts = files.map((f) => f.split('/').slice(0, -1))
+  let common = parts[0]
+  for (const p of parts.slice(1)) {
+    let i = 0
+    while (i < common.length && i < p.length && common[i] === p[i]) i++
+    common = common.slice(0, i)
+  }
+  const dir = common.length ? common.join('/') + '/' : ''
+  return `${dir}**（${files.length} 文件）`
+}
+
+export function findOverlaps(rows: BoardRow[]): Overlap[] {
+  const byFile = new Map<string, string[]>()
+  for (const r of rows) {
+    if (!r.alive) continue
+    for (const f of r.files) byFile.set(f, [...(byFile.get(f) ?? []), r.branch])
+  }
+  return [...byFile.entries()].filter(([, b]) => b.length >= 2).map(([file, branches]) => ({ file, branches }))
+}
+
+export function renderBoard(rows: BoardRow[], now: number, overlaps: Overlap[] = findOverlaps(rows)): string {
+  const head = `# 协同板 · ${stamp(now)} 自动生成，勿手改`
+  if (!rows.length) return `${head}\n\n没有活跃分支。\n`
+  const lines = [head, '', '| 分支 | 角色 | 状态 | 起于 | 触及 |', '|---|---|---|---|---|']
+  for (const r of rows) lines.push(`| ${r.branch} | ${r.roleName} | ${status(r)} | ${hhmm(r.startedAt)} | ${touched(r.files)} |`)
+  for (const o of overlaps) lines.push(`| ⚠ 两条分支都改了 ${o.file}（${o.branches.join(', ')}） |`)
+  return lines.join('\n') + '\n'
+}
+
+/** 注入系统提示用：几行以内全文；超过 maxLines 截断并指路 */
+export function clipForPrompt(text: string, maxLines = 20): string {
+  const lines = text.replace(/\n$/, '').split('\n')
+  if (lines.length <= maxLines) return lines.join('\n')
+  const rest = lines.length - maxLines
+  return [...lines.slice(0, maxLines), `…（还有 ${rest} 行，完整内容见 ${BOARD_REL}，用 board_read 读）`].join('\n')
+}
