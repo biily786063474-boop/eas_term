@@ -26,7 +26,8 @@ export interface BindingContext {
   knownMcpServers?: readonly string[]
   /** Codex 的配置目录（`CODEX_HOME` 或 `~/.codex`），由调用方算好传入 ——
    *  纯函数不读环境变量、不摸文件系统。摘系统 skill 要拼它的绝对路径（见 imageGen 分支）；
-   *  不给就摘不掉，档位维持 degraded（调用方多半是没有主进程环境的路径，比如渲染层）。 */
+   *  不给就摘不掉，档位维持 degraded。渲染层的 RolePicker / CanvasRoleEditor 现在经 IPC
+   *  `agent:codexHome` 也拿得到；拿不到的只剩终端命令条 `CanvasAgentBar` 那条已下线路径。 */
   codexHome?: string
 }
 
