@@ -26,7 +26,7 @@ import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
-import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon, GitBranchIcon } from '../../ui/Icons'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState, HarnessId } from '../../../../shared/types'
@@ -331,6 +331,72 @@ export function AgentChatView({
       onClick: () => setSetupFor({ cli: selected, from: 'login' })
     })
   }
+  // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
+  //
+  // 只在 `worktree` 存在时出现（角色声明了 isolation:'worktree'，且树已经建好）。
+  // 徽标本身就是按钮，点开菜单做三件事：开个终端过去、合并（P2 接合并官）、删掉这棵树。
+  const openTerminal = useStore((s) => s.openTerminal)
+  const [branchMenuAt, setBranchMenuAt] = useState<{ x: number; y: number } | null>(null)
+  /** 协同板上有没有别的分支在改同一个文件。只影响徽标的底色和 tooltip 里那一句。 */
+  const [branchOverlap, setBranchOverlap] = useState(false)
+  const openBranchMenu = (e: React.MouseEvent): void => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setBranchMenuAt({ x: r.left, y: r.bottom + 4 })
+  }
+  // 交集告警：打开菜单时刷一次板，读自己这条分支在不在 ⚠ 里。
+  // **两处都要刷**——另一处挂在 turn.done 上（板每轮重算，徽标得跟着变），
+  // 只留菜单那一处的话，不点开就永远看不到告警。
+  useEffect(() => {
+    if (!worktree || !branchMenuAt) return
+    let live = true
+    void window.api.board
+      .read(cwd)
+      .then((b) => {
+        if (live) setBranchOverlap(b.overlaps.some((o) => o.branches.includes(worktree.branch)))
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [branchMenuAt, worktree, cwd])
+  const branchMenuItems: CanvasMenuItem[] = worktree
+    ? [
+        {
+          label: '打开终端到这个 worktree',
+          onClick: () => void openTerminal({ cwd: effectiveCwd })
+        },
+        { label: '合并到主干', hint: 'P2 接合并官', disabled: true, onClick: () => {} },
+        { sep: true, label: '', onClick: () => {} },
+        {
+          label: '删除 worktree',
+          danger: true,
+          // **先不带 force 试一次。** 有未提交改动时主进程会拒绝，并把「还剩几处、
+          // 去哪看」说清楚——那是 agent 这一趟的全部成果，不能默默抹掉
+          //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
+          // 拿它那句话弹二次确认，用户点过才带 force 再删一次。
+          onClick: () => {
+            void window.api.agentChat
+              .worktreeRemove(cwd, worktree.relPath, worktree.branch, false)
+              .then((r) => {
+                if (r.ok) {
+                  setAgentWorktree(tabId, leafId, undefined)
+                  return
+                }
+                requestConfirm({
+                  message: `${r.error ?? '这棵 worktree 删不掉。'}\n\n仍要删？未提交的改动会丢，分支保留。`,
+                  confirmLabel: '删除',
+                  onConfirm: () =>
+                    void window.api.agentChat
+                      .worktreeRemove(cwd, worktree.relPath, worktree.branch, true)
+                      .then((r2) => {
+                        if (r2.ok) setAgentWorktree(tabId, leafId, undefined)
+                      })
+                })
+              })
+          }
+        }
+      ]
+    : []
   const [text, setText] = useState('')
   /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
@@ -673,6 +739,24 @@ export function AgentChatView({
       // **这两个 action 的参数名叫 ptyId 是历史包袱**，它们要的其实是「任务 id」；
       // 这里传会话 id，machine.locate 已经认得（见那边的说明）。
       const st = useStore.getState()
+      // 协同板的交集告警：板在每轮结束后重算，徽标要跟着变。
+      // **worktree 从 store 现读，不用闭包里那个**——这个回调在 attach 那一刻
+      // 就定型了，而 worktree 是第一次发消息时才建出来的，闭包里那个值永远是
+      // undefined，告警会静默地永不出现。
+      // 不跟 isTeamOwned 走：团队派生的 agent 恰恰是最需要看交集的那批。
+      if (e.k === 'turn.done') {
+        const wtTab = st.tabs.find((t) => t.id === tabId)
+        const wtLeaf = wtTab && collectLeaves(wtTab.root).find((l) => l.id === leafId)
+        const wt = wtLeaf?.pane.kind === 'agent' ? wtLeaf.pane.worktree : undefined
+        if (wt)
+          void window.api.board
+            .read(cwd)
+            .then((b) => {
+              if (aliveRef.current)
+                setBranchOverlap(b.overlaps.some((o) => o.branches.includes(wt.branch)))
+            })
+            .catch(() => {})
+      }
       // **团队派生的 agent 不进状态系统。**（用户 2026-08-19 拍板，真机截图确认）
       //
       // 上面那段说明对**用户自己开的**会话完全成立 —— 那是他在跟进的一件事，
@@ -1322,6 +1406,19 @@ export function AgentChatView({
             cli={selected?.id as HarnessId}
             onPick={(next) => setAgentRole(tabId, leafId, next)}
           />
+          {/* 分支徽标。**只写事实**——路径、分支名、以及「有别人在改同一个文件」
+              这一句告警，不写各家怎么落地。没有 worktree 就整个不出现。 */}
+          {worktree && (
+            <button
+              type="button"
+              className={`ac-ctxbar-item as-btn ac-branch${branchOverlap ? ' warn' : ''}`}
+              data-tip={`${effectiveCwd}${branchOverlap ? '\n⚠ 有别的分支在改同一个文件，改前先 board_read' : ''}`}
+              onClick={(e) => openBranchMenu(e)}
+            >
+              <GitBranchIcon size={12} />
+              <span className="ac-ctxbar-name">{worktree.branch}</span>
+            </button>
+          )}
         </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
@@ -1513,6 +1610,14 @@ export function AgentChatView({
             y={cliMenuAt.y}
             items={cliMenuItems}
             onClose={() => setCliMenuAt(null)}
+          />
+        )}
+        {branchMenuAt && (
+          <CanvasContextMenu
+            x={branchMenuAt.x}
+            y={branchMenuAt.y}
+            items={branchMenuItems}
+            onClose={() => setBranchMenuAt(null)}
           />
         )}
         {cliNote && (

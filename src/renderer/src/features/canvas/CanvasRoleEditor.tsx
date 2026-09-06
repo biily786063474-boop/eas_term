@@ -267,6 +267,35 @@ export function CanvasRoleEditor({
             </div>
           </div>
 
+          {/* 起会话时隔离到哪。**只有两档，而且不推断** —— 沿用 team_spawn 的纪律：
+              系统不替你判断这个角色写不写代码，不选就是主工作区。
+              存的值只有 'worktree' 与 undefined；老配置里的 'none' 按主工作区显示。 */}
+          <div className="re-field">
+            <span className="re-label">起会话时</span>
+            <div className="re-seg">
+              {([
+                { v: undefined, label: '在主工作区', note: '直接改项目目录' },
+                {
+                  v: 'worktree',
+                  label: '独立分支',
+                  note: '建 .worktrees/<角色>-<id>，分支 eas/<角色>/<id>，主工作区不被动'
+                }
+              ] as const).map((x) => (
+                <button
+                  key={String(x.v)}
+                  className={(draft.isolation === 'worktree' ? 'worktree' : undefined) === x.v ? 'on' : ''}
+                  onClick={() => set({ isolation: x.v })}
+                  data-tip={x.note}
+                >
+                  {x.label}
+                </button>
+              ))}
+            </div>
+            <span className="re-hint">
+              写代码的角色选「独立分支」。系统不替你猜这个角色写不写码 —— 不选就是主工作区。不是 git 仓库时会先问你。
+            </span>
+          </div>
+
           <div className="re-field">
             <span className="re-label">模型 / 思考档位</span>
             <div className="re-kinds">
