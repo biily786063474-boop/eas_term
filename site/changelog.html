@@ -54,6 +54,24 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.82">0.4.82</h2>
+          <time datetime="2026-09-06">2026-09-06</time>
+        </div>
+        <h3 class="grp">新增</h3>
+        <ul>
+          <li><strong>让 AI 看见你的屏幕</strong>：随包带了一个「电脑视野」插件（Frame 双击菜单 → 插件）。它能截图给 AI 看，默认只拍最前面那个窗口，密码管理器、终端这类窗口一律拒绝拍摄，也不拍 Eas-Term 自己。图存到本地、不塞进对话里，在插件面板上能看到</li>
+          <li><strong>它也能替你点鼠标和打字，但要单独授权</strong>：在面板上点「允许 5 / 10 / 30 分钟」才生效，有倒计时，随时能「立即收回」，<strong>没有永久授权这个选项</strong>。授权按钮只在面板上，AI 自己够不到。另外它绝不会点 Eas-Term 自己和笔纵画板，<code>cmd+Q</code>、<code>cmd+W</code>、<code>cmd+Delete</code> 这类撤不回的组合键一律拒绝。首次使用要去 系统设置 → 隐私与安全性 → 辅助功能 勾上 Eas-Term 并重启软件</li>
+          <li><strong>Codex 现在能选模型了</strong>：下拉里是你账号真正能用的那几个，问 Codex 自己要的，不写死。拿不到就用上次成功的那份，再不行才用内置清单</li>
+          <li><strong>Codex 联网搜索时能看见了</strong>：以前它在搜什么完全不显示，只有一句「正在处理」；现在会像执行命令那样列出来。它调别的新工具（生图、子 agent 协作）也不再是空白</li>
+        </ul>
+        <h3 class="grp">修复</h3>
+        <ul>
+          <li><strong>界面偶尔闪一下</strong>：在空白画布上点一下、手稍微抖一像素，就会闪出一个小方块。现在只有真的拖动才画选框</li>
+          <li>出问题时的诊断记录更全：卡顿发生时会一并记下当时是哪个进程在占 CPU</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.81">0.4.81</h2>
           <time datetime="2026-09-05">2026-09-05</time>
         </div>
