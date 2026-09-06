@@ -3108,3 +3108,18 @@
 .ac-branch.warn {
   background: rgba(var(--sem-warn-rgb), 0.16);
 }
+/* 对话态那份挂在 `.ac-bar-btn` 上（胶囊、10.5px），跟旁边的模型/强度是一套。
+   分支名可以很长（`eas/<角色>/<id>`），不封顶会把控件行整条挤换行 —— 那条行
+   是 flex-wrap，挤了不会溢出，但会白占一层高度。 */
+.ac-bar-btn.ac-branch {
+  max-width: 34%;
+  min-width: 0;
+}
+.ac-bar-btn.ac-branch .ac-ctxbar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-bar-btn.ac-branch.warn {
+  border-color: rgba(var(--sem-warn-rgb), 0.45);
+}

@@ -26,7 +26,8 @@ import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
-import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon, GitBranchIcon } from '../../ui/Icons'
+import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { BranchBadge } from './BranchBadge'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState, HarnessId } from '../../../../shared/types'
@@ -331,6 +332,36 @@ export function AgentChatView({
       onClick: () => setSetupFor({ cli: selected, from: 'login' })
     })
   }
+  const [text, setText] = useState('')
+  /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
+   *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
+  const [chips, setChips] = useState<DictChip[]>([])
+  /** 正文里**这一刻**引用到了哪些 chip。
+   *  拿它把 chip 行分成两种样子 —— 不显形的话，「预加载了但没 @、所以不会发」
+   *  这件事用户完全看不出来。 */
+  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
+
+  // ── 点了 agent 给的某个选项 → **直接发出去** ────────────────────────────
+  //
+  // 用户 2026-09-02：「返回的选项卡无法点击、发送对应选项内容，需要打通这一层。」
+  //
+  // 原来是「填进输入框、等用户自己按发送」，理由是「识别是启发式的，
+  // 不自动发 = 误点零代价」。**那个顾虑现在由识别本身兜住了**：
+  // options.ts 的判据拿本机 748 条真实回复回归过，8 命中 / 0 误判，
+  // 而且每一条都人工判过是真在问你选哪个（测试里逐条钉着）。
+  //
+  // **输入框里已经打的字不动。** 选项是独立的一句话，直接发它；
+  // 用户正打到一半的内容留在原地，他自己决定要不要接着发 ——
+  // 清掉它等于替他把话吃了。
+  //
+  // 发送口有两个，**不能在这里统一**：会话已经起来了要走
+  // `handleFollowupSend`（它管乐观插入与失败回滚），还没起来要走 `handleSend`
+  // （它负责起进程）。所以下面两处 MessageList 各接各的，这里不留中间层 ——
+  // 中间层要么得用 ref 兜住闭包，要么就会在某一侧悄悄发错通道。
+  const [starting, setStarting] = useState(false)
+  const [startError, setStartError] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
   // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
   //
   // 只在 `worktree` 存在时出现（角色声明了 isolation:'worktree'，且树已经建好）。
@@ -370,6 +401,9 @@ export function AgentChatView({
         {
           label: '删除 worktree',
           danger: true,
+          // 会话跑着的时候删不得 —— 那棵树就是它此刻的 cwd。
+          // 置 disabled 而不是藏起来：藏了用户会以为这个菜单本来就没这条。
+          ...(sessionId ? { disabled: true, hint: '先结束会话' } : {}),
           // **先不带 force 试一次。** 有未提交改动时主进程会拒绝，并把「还剩几处、
           // 去哪看」说清楚——那是 agent 这一趟的全部成果，不能默默抹掉
           //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
@@ -397,35 +431,6 @@ export function AgentChatView({
         }
       ]
     : []
-  const [text, setText] = useState('')
-  /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
-   *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
-  const [chips, setChips] = useState<DictChip[]>([])
-  /** 正文里**这一刻**引用到了哪些 chip。
-   *  拿它把 chip 行分成两种样子 —— 不显形的话，「预加载了但没 @、所以不会发」
-   *  这件事用户完全看不出来。 */
-  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
-
-  // ── 点了 agent 给的某个选项 → **直接发出去** ────────────────────────────
-  //
-  // 用户 2026-09-02：「返回的选项卡无法点击、发送对应选项内容，需要打通这一层。」
-  //
-  // 原来是「填进输入框、等用户自己按发送」，理由是「识别是启发式的，
-  // 不自动发 = 误点零代价」。**那个顾虑现在由识别本身兜住了**：
-  // options.ts 的判据拿本机 748 条真实回复回归过，8 命中 / 0 误判，
-  // 而且每一条都人工判过是真在问你选哪个（测试里逐条钉着）。
-  //
-  // **输入框里已经打的字不动。** 选项是独立的一句话，直接发它；
-  // 用户正打到一半的内容留在原地，他自己决定要不要接着发 ——
-  // 清掉它等于替他把话吃了。
-  //
-  // 发送口有两个，**不能在这里统一**：会话已经起来了要走
-  // `handleFollowupSend`（它管乐观插入与失败回滚），还没起来要走 `handleSend`
-  // （它负责起进程）。所以下面两处 MessageList 各接各的，这里不留中间层 ——
-  // 中间层要么得用 ref 兜住闭包，要么就会在某一侧悄悄发错通道。
-  const [starting, setStarting] = useState(false)
-  const [startError, setStartError] = useState<string | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
 
   // 这个 leaf 的 pane 上挂着的会话 id。**订阅它，不是读一次快照。**
   //
@@ -1238,6 +1243,10 @@ export function AgentChatView({
           onNewChat={handleNewChat}
           sessionId={sessionId}
           onSend={handleFollowupSend}
+          // 分支徽标（空态那份在下面的上下文条上，同一个组件）。
+          // **会话跑着的时候正是最该看到分支的时候** —— 菜单里「删除 worktree」
+          // 会因为 sessionId 有值而置灰，看和开终端不受影响。
+          {...(worktree ? { worktree, effectiveCwd, branchOverlap, onOpenBranchMenu: openBranchMenu } : {})}
           // ── 角色入口**不在这里**（用户 2026-09-03）───────────────────────────
           // 角色契约走系统提示，`roleContract` 只在 `agentChat:start` 读一次 ——
           // **会话跑起来之后改它一点效果都没有**。摆在对话态工具栏上，
@@ -1289,6 +1298,16 @@ export function AgentChatView({
               }}
             />
           ))}
+        {/* 分支菜单。**两条 return 各渲染一次** —— 菜单本身走 portal 挂到 body，
+            但 `branchMenuAt` 是同一份 state，哪条树在渲染就由哪条树摆出来。 */}
+        {branchMenuAt && (
+          <CanvasContextMenu
+            x={branchMenuAt.x}
+            y={branchMenuAt.y}
+            items={branchMenuItems}
+            onClose={() => setBranchMenuAt(null)}
+          />
+        )}
       </div>
     )
   }
@@ -1406,18 +1425,14 @@ export function AgentChatView({
             cli={selected?.id as HarnessId}
             onPick={(next) => setAgentRole(tabId, leafId, next)}
           />
-          {/* 分支徽标。**只写事实**——路径、分支名、以及「有别人在改同一个文件」
-              这一句告警，不写各家怎么落地。没有 worktree 就整个不出现。 */}
+          {/* 分支徽标。对话态那份在 ChatToolbar 的控件行上，同一个组件。 */}
           {worktree && (
-            <button
-              type="button"
-              className={`ac-ctxbar-item as-btn ac-branch${branchOverlap ? ' warn' : ''}`}
-              data-tip={`${effectiveCwd}${branchOverlap ? '\n⚠ 有别的分支在改同一个文件，改前先 board_read' : ''}`}
-              onClick={(e) => openBranchMenu(e)}
-            >
-              <GitBranchIcon size={12} />
-              <span className="ac-ctxbar-name">{worktree.branch}</span>
-            </button>
+            <BranchBadge
+              worktree={worktree}
+              effectiveCwd={effectiveCwd}
+              overlap={branchOverlap}
+              onOpenMenu={openBranchMenu}
+            />
           )}
         </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
