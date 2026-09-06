@@ -22,9 +22,15 @@
 > **写权限只由 `caps.write` 决定，跟角色名没关系。** 有代码兜底的只有两处：
 > `scout` / `inspector`：`caps.write=false`（Claude 去 `Write`/`Edit`/`NotebookEdit`；
 > Codex `-s read-only`，OS 沙箱连命令行写入一起挡；omp `--tools` 去 `write`/`edit`/`ast_edit`）；
-> `illustrator`：`caps.imageGen=false`（Claude 通配 deny；Codex `--disable image_generation`
-> **2026-09-05 实测未摘掉内置生图**（模型仍自称有 `imagegen` 工具）+ 按名关 server；
-> omp 按名不连）。其余角色的"不碰生产代码"（`prototyper`）、
+> `illustrator`：`caps.imageGen=false`（Claude 通配 deny，**hard**；omp 按名不连，degraded）。
+> Codex 侧 2026-09-06 阶段三探针升级：内置 `image_gen` 本机实测**从未进过工具清单**
+> （`--disable image_generation` 前后 tools 清单完全一致），模型嘴上说的「imagegen 工具」
+> 其实是系统 skill `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；现在**关 feature（保留）
+> + 按 SKILL.md 完整路径摘掉这个系统 skill（`skills.config` 的 `-c`）+ 按名关 MCP server**，
+> 拿得到 `codexHome`（session.ts 起会话时算好）就是 **hard**，拿不到（比如已下线的
+> `CanvasAgentBar` 那条渲染层路径）就退回 **degraded**。残余逃生口：子进程环境若带
+> `OPENAI_API_KEY`，skill 的 CLI 兜底仍可被手动跑——与「write:false 留着 Bash 仍能改文件」
+> 同一类逃生口，只在报告里如实注明，不因此改判定档位。其余角色的"不碰生产代码"（`prototyper`）、
 > "不污染代码项目"（`writer`）**只是 contract 里的提示，不是强制**；角色还落盘在用户可改的
 > `~/.eas/roles.json` —— 所以"某某角色是唯一能写码的"这句话在任何时刻都不成立。
 >
@@ -39,7 +45,11 @@
 > 走 `openAgentPane({ roleId })` 落到 `pane.roleId` —— **和用户在工具栏手选角色是同一条路**，
 > 之后的绑定与契约下发完全一致，没有第二套逻辑。
 > Codex 的 MCP 名下发前按 `knownMcpServers` 过滤（`session.ts` 起会话时读 `~/.codex/config.toml` 一次）
-> —— Codex 对不存在的 server 名会拒绝启动。
+> —— Codex 对不存在的 server 名会拒绝启动。同一处 `session.ts` 也算好 `codexHome`
+> （`CODEX_HOME` 或 `~/.codex`，`agent.ts` 的导出函数 `codexHome()`）随 `StartOpts` 传给
+> `bindRole`，两个字段都要**原样带过 restart**——Codex 的 exec 每条消息都会触发 restart，
+> `SessionRecord` 上都各存一份，`effectiveOpts` 都要回填，理由完全一致（丢了就从第二条
+> 消息起悄悄退回未过滤 / 未摘 skill 的状态）。
 > 对话节点的 MCP 工具面另由 `--strict-mcp-config` + `--mcp-config`（只含自家 server）决定，
 > 与 `caps` 是两层，不是同一层。
 

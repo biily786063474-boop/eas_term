@@ -126,6 +126,11 @@ graph LR
 - **角色边界在 Codex 上**：内置工具走 `--disable <feature>`（`shell_tool` / `image_generation`，
   2026-09-05 实测前者生效），MCP 走 `-c mcp_servers.<名>.enabled=false`（名字必须存在）；
   `-c` 不校验键名，**写错静默无效**。
+- **系统 skill 按路径禁用**（2026-09-06 阶段三探针）：Codex 内置 `image_gen` 本机实测从未
+  进过工具清单，模型自称有的「imagegen 工具」其实是系统 skill
+  `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；真正摘掉它要走
+  `-c 'skills.config=[{path="<SKILL.md 完整路径>",enabled=false}]'` ——
+  **路径必须是 `SKILL.md` 文件的完整路径，写目录无效**（实测过）。
 
 ## 契约红线
 
