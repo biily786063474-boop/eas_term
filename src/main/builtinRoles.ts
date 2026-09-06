@@ -129,17 +129,19 @@ export const BUILTIN_ROLES: AgentRole[] = [
   {
     id: 'illustrator',
     name: '画师',
-    desc: '视觉产出。生图路径受限',
+    desc: '视觉产出。生图走用户指定路径',
     group: 'output',
     color: '#fda4af',
     kind: 'auto',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
-    // 这一条是整个角色系统里最值钱的地方：把生图红线从「靠提示词提醒」变成能力意图，
-    // 由 shared/roleBinding.ts 翻成各家参数（Claude 通配 deny；Codex --disable image_generation
-    // ＋（拿得到 codexHome 时）按 SKILL.md 路径摘掉 imagegen 系统 skill ＋按名关 server；
-    // omp 按名不连）。通配那组黑名单在 IMAGE_MCP_PATTERNS。
-    caps: { imageGen: false },
+    // **2026-09-06 用户决定：画师不再默认勾 `imageGen`。** 此前这张卡靠 `caps.imageGen=false`
+    // 把生图红线落成各家参数（Claude 通配 deny；Codex 关 feature ＋摘 imagegen 系统 skill；
+    // omp 按名不连）—— 用户原话「我不要去缩减 Codex 的原生能力」，Codex 自带的 imagegen
+    // 系统 skill 在所有角色下都保留，生图红线只靠下面的契约文字兜着。
+    // `caps.imageGen` 这个开关本身还在（自建角色可勾），翻译逻辑在 shared/roleBinding.ts。
+    // 注意：老的 v1 存档若画师带着那七个 mcp__*image* 通配，迁移仍会忠实落成 imageGen=false
+    //（那是文件里明写的），要放开得在编辑器里手动灭掉。
     contract: [
       '你这一轮的职责是产出视觉素材。',
       '生图只允许走用户指定的生成路径。**不要**调用任何其他图像生成工具，',

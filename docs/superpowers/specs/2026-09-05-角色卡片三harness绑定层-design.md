@@ -580,3 +580,12 @@ Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
 | adapter 生成的 `-c skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]` 实跑 | Codex 接受；假端点抓到的模型请求里 `imagegen` 提及 0；`codex features list --disable image_generation` 该项 effective=false |
 
 未验：`team_spawn role_id` 仍无真实 MCP 调用；Windows 路径分隔符只有单测。
+
+### 十四·附二 · 用户决定（2026-09-06）
+
+> 用户原话：「画师也不关：把画师卡的『不许生图』默认取消，Codex 的 imagegen 在所有角色下都在，红线只靠契约文字兜着。」
+
+- `builtinRoles.ts` 的 `illustrator` 删掉 `caps: { imageGen: false }`，desc 改「视觉产出。生图走用户指定路径」；契约文字不变。
+- `caps.imageGen` 开关与上面探针得出的 Codex 落法（关 feature ＋ 摘系统 skill ＋ 按名关 server，hard）**全部保留**，只是内置角色不再默认用它；自建角色勾了照常生效。
+- 老 v1 存档里画师若带着七个 `mcp__*image*` 通配，迁移仍忠实落成 `imageGen=false`（文件里明写的），要放开得在编辑器里手动灭掉。
+- 快照测试 `builtinRoles.test.ts` 改为断言画师**无 caps**，并单独钉一条「imageGen 开关对自建角色仍有效」。

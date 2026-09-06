@@ -16,13 +16,15 @@
 `contract` 经 `--append-system-prompt-file`（Claude）或内联单行（Codex，无对应文件参数）下发。
 
 > ⚠️ **存档 version 2 反向不兼容**：被 0.4.78 及更早版本读到会把 `caps` 整份丢掉（那版按 v1
-> 清洗且不看 `version`），勘探员/验官的写保护、画师的生图限制会静默解除而界面看着一切正常 ——
+> 清洗且不看 `version`），勘探员/验官的写保护（以及自建角色勾的任何能力边界）会静默解除而界面看着一切正常 ——
 > 回滚旧版前先从 `.eas-backup` 取回（细节见 `src/main/roles.ts` 文件头）。
 
-> **写权限只由 `caps.write` 决定，跟角色名没关系。** 有代码兜底的只有两处：
+> **写权限只由 `caps.write` 决定，跟角色名没关系。** 内置角色里有代码兜底的只剩一处：
 > `scout` / `inspector`：`caps.write=false`（Claude 去 `Write`/`Edit`/`NotebookEdit`；
 > Codex `-s read-only`，OS 沙箱连命令行写入一起挡；omp `--tools` 去 `write`/`edit`/`ast_edit`）；
-> `illustrator`：`caps.imageGen=false`（Claude 通配 deny，**hard**；omp 按名不连，degraded）。
+> `illustrator`：**2026-09-06 起不再默认勾 `caps.imageGen`**（用户原话「我不要去缩减 Codex 的原生能力」，
+> Codex 自带的 imagegen 系统 skill 在所有角色下保留），生图红线只靠契约文字兜着。
+> `caps.imageGen` 开关本身保留给自建角色，落法：Claude 通配 deny，**hard**；omp 按名不连，degraded；
 > Codex 侧 2026-09-06 阶段三探针升级：内置 `image_gen` 本机实测**从未进过工具清单**
 > （`--disable image_generation` 前后 tools 清单完全一致），模型嘴上说的「imagegen 工具」
 > 其实是系统 skill `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；现在**关 feature（保留）
@@ -158,7 +160,7 @@ Write·Edit·NotebookEdit→patch / 其余→tool）→ 渲染层弹审批卡 �
 | `src/main/agentHistoryKey.ts` | 专门抽出来的路径穿越防线 |
 | `src/main/phone/server.ts` 的绑定地址 | 绝不能绑 `0.0.0.0` |
 | `src/tunnel/hub.ts` 的"不终止 TLS"架构 | 任何"中间解密再转发"的改动都是红线违反，`hub.test.ts` 会红 |
-| `src/main/builtinRoles.ts` 的 `illustrator.caps.imageGen`（经 `shared/roleBinding.ts` 翻成三家参数）| 改动等于打开生图红线 |
+| `src/main/builtinRoles.ts` 里 `illustrator` **不带** `caps`（2026-09-06 用户决定）与 `shared/roleBinding.ts` 的 `imageGen` 翻译逻辑 | 前者往回加 `imageGen` 要先问用户；后者改动影响所有勾了「不许生图」的自建角色 |
 
 > **写边界不止 fsGuard 一条，是几条各管一摊 + 一片无守卫区**（已知有下面这些，不保证穷尽；
 > 加写入口前自己再查一遍），不要"统一"它们：

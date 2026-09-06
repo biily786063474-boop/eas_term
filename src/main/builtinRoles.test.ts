@@ -1,7 +1,7 @@
 // 内置角色 × 三家 harness 的绑定矩阵快照。
 //
 // roleBinding.test.ts 只测了「每个 cap 单独 × 三家」，没有一条测试钉住
-// BUILTIN_ROLES 里**实际**摆的那些角色——万一 illustrator 手滑把 `caps.imageGen: false`
+// BUILTIN_ROLES 里**实际**摆的那些角色——万一 scout 手滑把 `caps.write: false`
 // 删掉，或者哪个内置角色不小心多带了个 `caps`，编译器和那份测试都不会红。
 //
 // 这里显式断言每个内置角色在三家上的落点，写死角色 id 而不是从 role.caps 反推期望值：
@@ -18,8 +18,9 @@ const KINDS: readonly HarnessId[] = ['claude', 'codex', 'omp']
 
 /** 写保护落点：勘探员 / 验官（caps.write === false） */
 const WRITE_PROTECTED = new Set(['scout', 'inspector'])
-/** 生图落点：画师（caps.imageGen === false） */
-const IMAGE_LIMITED = new Set(['illustrator'])
+/** 生图落点：**没有**。2026-09-06 用户决定画师不再默认勾 imageGen（保留 Codex 原生 imagegen），
+ *  红线只靠契约文字；这个 Set 留空是刻意的 —— 有人把它填回去要先问用户 */
+const IMAGE_LIMITED = new Set<string>([])
 
 test('内置角色数组没有静默增减 —— 加/删一个角色要顺手改这份快照', () => {
   assert.deepEqual(
@@ -48,39 +49,32 @@ test('勘探员 / 验官：三家都落到写保护，没有别的报告行', ()
   }
 })
 
-test('画师：三家都落到生图限制，Claude 是 hard，omp 是 degraded，Codex 视 codexHome 而定', () => {
+test('画师：**不带任何 caps**（2026-09-06 用户决定保留 Codex 原生 imagegen），三家参数全空，只有契约', () => {
   const role = BUILTIN_ROLES.find((r) => r.id === 'illustrator')!
-  const claude = bindRole({ caps: role.caps, raw: role.raw }, 'claude')
-  assert.equal(claude.report.length, 1)
-  assert.equal(claude.report[0].cap, 'imageGen')
-  assert.equal(claude.report[0].level, 'hard')
-  assert.deepEqual(claude.claude.deny, IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`))
-
-  // 没有 codexHome（调用方给不出，比如渲染层）：feature 关但摘不掉系统 skill，维持 degraded
-  const codexNoHome = bindRole({ caps: role.caps, raw: role.raw }, 'codex')
-  assert.equal(codexNoHome.report.length, 1)
-  assert.equal(codexNoHome.report[0].level, 'degraded', '没给 codexHome，摘不掉 imagegen 系统 skill')
-  assert.deepEqual(codexNoHome.codex.disable, ['image_generation'])
-  assert.deepEqual(codexNoHome.codex.skillsOff, [])
-
-  // 有 codexHome（session.ts 起会话时算好传入）：阶段三升级为 hard —— 摘掉系统 skill
-  const codex = bindRole({ caps: role.caps, raw: role.raw }, 'codex', { codexHome: '/Users/x/.codex' })
-  assert.equal(codex.report.length, 1)
-  assert.equal(codex.report[0].level, 'hard', '给了 codexHome，摘掉了 imagegen 系统 skill，升级为 hard')
-  assert.deepEqual(codex.codex.disable, ['image_generation'])
-  assert.deepEqual(codex.codex.skillsOff, ['/Users/x/.codex/skills/.system/imagegen/SKILL.md'])
-
-  const omp = bindRole({ caps: role.caps, raw: role.raw }, 'omp')
-  assert.equal(omp.report.length, 1)
-  assert.equal(omp.report[0].level, 'degraded', 'omp 没有内置生图开关，只能按名不连 server')
-  assert.deepEqual(omp.omp.dropServerPatterns, [...IMAGE_MCP_PATTERNS])
+  assert.equal(role.caps, undefined, '画师不该再默认勾 imageGen —— 要改先问用户')
+  assert.ok(role.contract.includes('生图只允许走用户指定的生成路径'), '红线现在只靠这句契约兜着，不能丢')
+  for (const kind of KINDS) {
+    const b = bindRole({ caps: role.caps, raw: role.raw }, kind, { codexHome: '/Users/x/.codex' })
+    assert.deepEqual(b.claude.deny, [], kind)
+    assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined }, kind)
+    assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] }, kind)
+    assert.deepEqual(b.report, [], kind)
+  }
 })
 
-test('其余内置角色（全流程/工匠/原型师/笔杆子/杂役）：三家参数全空，没有护栏也没有报告行', () => {
+test('imageGen 开关本身仍可用于自建角色：Claude 通配 deny 是 hard，Codex 给了 codexHome 就摘系统 skill', () => {
+  const bounds = { caps: { imageGen: false as const } }
+  assert.deepEqual(bindRole(bounds, 'claude').claude.deny, IMAGE_MCP_PATTERNS.map((p) => `mcp__${p}`))
+  const codex = bindRole(bounds, 'codex', { codexHome: '/Users/x/.codex' })
+  assert.equal(codex.report[0].level, 'hard')
+  assert.deepEqual(codex.codex.skillsOff, ['/Users/x/.codex/skills/.system/imagegen/SKILL.md'])
+})
+
+test('其余内置角色（全流程/工匠/原型师/笔杆子/画师/杂役）：三家参数全空，没有护栏也没有报告行', () => {
   const rest = BUILTIN_ROLES.filter((r) => !WRITE_PROTECTED.has(r.id) && !IMAGE_LIMITED.has(r.id))
   assert.deepEqual(
     rest.map((r) => r.id),
-    ['e2e', 'builder', 'prototyper', 'writer', 'runner']
+    ['e2e', 'builder', 'prototyper', 'writer', 'illustrator', 'runner']
   )
   for (const role of rest) {
     for (const kind of KINDS) {
