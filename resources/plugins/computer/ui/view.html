@@ -33,7 +33,16 @@
   <span class="grow"></span>
   <span id="mode" style="color:var(--dim)"></span>
 </div>
-<div class="shot" id="stage"><div class="empty">还没有截图。<br>点「拍一张」，或者让 AI 调 <code>screen_shot</code>。<br><br>只读：这个插件不能点击、不能打字。</div></div>
+<div class="bar" id="actbar">
+  <b style="font-size:11px">操作授权</b>
+  <span id="gstate" style="color:var(--dim)">未授权</span>
+  <span class="grow"></span>
+  <button class="g" data-min="5">允许 5 分钟</button>
+  <button class="g" data-min="10">10 分钟</button>
+  <button class="g" data-min="30">30 分钟</button>
+  <button id="revoke" hidden>立即收回</button>
+</div>
+<div class="shot" id="stage"><div class="empty">还没有截图。<br>点「拍一张」，或者让 AI 调 <code>screen_shot</code>。<br><br>点击与键盘需要单独授权，见下面那一行。</div></div>
 <div id="wins" class="wins" hidden></div>
 <div class="foot" id="foot">连接宿主…</div>
 <script>
@@ -90,11 +99,38 @@ document.getElementById('perm').onclick=async()=>{
       '<br>看得到 '+d.windowsVisible+' 个窗口<br><br>'+esc(d.hint)+'</div>';
     foot(d.ok?'一切正常':'需要处理');
   }catch(e){foot(e.message)}};
+// ── 操作授权（点击/键盘那一档）────────────────────────────────────────────
+// **授权只能在这里点** —— 它不是 MCP 工具，模型够不到，给自己授权是不可能的。
+let gtimer=null;
+function renderGrant(d){
+  const el=document.getElementById('gstate'), rv=document.getElementById('revoke');
+  if(gtimer){clearInterval(gtimer);gtimer=null}
+  if(!d){el.textContent='—';return}
+  if(!d.systemPermission){
+    el.innerHTML='<span style="color:var(--bad)">系统权限没给</span>：系统设置 → 隐私与安全性 → 辅助功能，勾上 Eas-Term 后重启软件';
+    rv.hidden=true;return}
+  if(!d.granted){el.textContent='未授权（截图不受影响）';rv.hidden=true;return}
+  rv.hidden=false;
+  let left=d.remainingSeconds;
+  const tick=()=>{
+    if(left<=0){el.textContent='已到期';rv.hidden=true;clearInterval(gtimer);gtimer=null;return}
+    const m=Math.floor(left/60), s=String(left%60).padStart(2,'0');
+    el.innerHTML='<span style="color:var(--ok)">可操作</span> · 剩 '+m+':'+s;
+    left--};
+  tick(); gtimer=setInterval(tick,1000);
+}
+async function grantState(method,params){
+  try{renderGrant(await rpc(method,params||{}))}catch(e){document.getElementById('gstate').textContent='拿不到授权状态：'+e.message}
+}
+document.querySelectorAll('button.g').forEach(b=>b.onclick=()=>grantState('panel/grant',{minutes:+b.dataset.min}));
+document.getElementById('revoke').onclick=()=>grantState('panel/revoke');
+
 (async()=>{try{
   const r=await rpc('ui/initialize',{appInfo:{name:'computer-view',version:'1.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'});
   applyCtx(r&&r.hostContext);
   parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized'},'*');
-  foot('就绪 · 只读，不能点击或打字');
+  foot('就绪');
+  await grantState('panel/state');
 }catch(e){foot('握手失败：'+e.message)}})();
 </script>
 </body>

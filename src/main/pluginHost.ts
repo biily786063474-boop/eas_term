@@ -210,6 +210,13 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
     switch (args.method) {
       case 'ping':
         return { ok: true, result: {} }
+      // 插件的**面板私有方法**（`panel/` 前缀）：只有面板走得到，会话里的转发 shim 那条路
+      // 不认这个前缀（见 pluginRpcFromShim 的 switch）。用途是「只有用户真手点才能做的事」——
+      // 电脑操作的授权就是这样：工具面里根本没有 grant，模型给自己授权是不可能的。
+      case 'panel/grant':
+      case 'panel/revoke':
+      case 'panel/state':
+        return { ok: true, result: await h.client.request(args.method, { ...params, by: p.session }, 30_000) }
       case 'tools/call': {
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
