@@ -1,0 +1,13 @@
+{
+  "name": "computer",
+  "displayName": "电脑视野",
+  "description": "让 AI 看见你的屏幕（只读）。截图会给敏感窗口打码，落盘不进对话上下文。点击与键盘是另一档，尚未开放。",
+  "category": "System",
+  "brandColor": "#7dd3fc",
+  "defaultPrompt": "看一下我现在屏幕上是什么，用 screen_list 和 screen_shot。",
+  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "panels": [
+    { "id": "view", "title": "电脑视野", "tool": "screen_shot", "entry": "ui://computer/view", "defaultSize": { "w": 560, "h": 420 } }
+  ],
+  "permissions": { "canvas": ["canvas_open_file"] }
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>电脑视野</title>
+<style>
+  :root { --fg:#e5e5e5; --dim:#8a8a8a; --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.1); --accent:#7dd3fc; --bad:#fda4af; --ok:#6ee7b7; }
+  html[data-theme="light"] { --fg:#1a1a1a; --dim:#6b6b6b; --card:rgba(0,0,0,.04); --line:rgba(0,0,0,.1); --accent:#0369a1; }
+  * { box-sizing:border-box }
+  body { margin:0; color:var(--fg); font:12px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif; height:100vh; display:flex; flex-direction:column; background:transparent }
+  .bar { display:flex; gap:6px; align-items:center; padding:8px; border-bottom:1px solid var(--line); flex-wrap:wrap }
+  button { padding:4px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--fg); font:inherit; cursor:pointer }
+  button:hover { border-color:var(--accent) }
+  button:disabled { opacity:.5; cursor:default }
+  .grow { flex:1 }
+  .shot { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:8px; overflow:auto }
+  .shot img { max-width:100%; max-height:100%; border-radius:8px; border:1px solid var(--line) }
+  .empty { color:var(--dim); text-align:center; padding:20px; line-height:1.8 }
+  .err { color:var(--bad); padding:10px 12px; white-space:pre-wrap; word-break:break-word }
+  .foot { padding:5px 9px; border-top:1px solid var(--line); color:var(--dim); font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .wins { padding:6px 9px; max-height:120px; overflow:auto; border-top:1px solid var(--line) }
+  .w { display:flex; gap:6px; padding:2px 0; align-items:baseline }
+  .w b { font-weight:600 }
+  .w .t { color:var(--dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .tag { font-size:10px; padding:0 5px; border-radius:4px; background:rgba(244,63,94,.16); color:var(--bad) }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button id="shot">拍一张</button>
+  <button id="list">看有哪些窗口</button>
+  <button id="perm">权限自检</button>
+  <span class="grow"></span>
+  <span id="mode" style="color:var(--dim)"></span>
+</div>
+<div class="shot" id="stage"><div class="empty">还没有截图。<br>点「拍一张」，或者让 AI 调 <code>screen_shot</code>。<br><br>只读：这个插件不能点击、不能打字。</div></div>
+<div id="wins" class="wins" hidden></div>
+<div class="foot" id="foot">连接宿主…</div>
+<script>
+const pending=new Map(); let seq=0; let ctx={cwd:''};
+function rpc(method,params){return new Promise((res,rej)=>{const id=++seq;pending.set(id,{res,rej});
+  parent.postMessage({jsonrpc:'2.0',id,method,params},'*');
+  setTimeout(()=>{if(pending.has(id)){pending.delete(id);rej(new Error(method+' 超时'))}},60000)})}
+window.addEventListener('message',e=>{
+  if(e.source!==parent)return; const m=e.data; if(!m||m.jsonrpc!=='2.0')return;
+  if(m.id!==undefined&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);
+    m.error?p.rej(Object.assign(new Error(m.error.message),{code:m.error.code})):p.res(m.result);return}
+  if(m.method==='ui/notifications/tool-result'){const n=m.params&&m.params.name;
+    if(n==='screen_shot')render(m.params.result);}
+  if(m.method==='ui/notifications/host-context-changed'){applyCtx(m.params)}
+});
+function applyCtx(hc){if(!hc)return;if(hc.theme)document.documentElement.setAttribute('data-theme',hc.theme);
+  const e=hc._meta&&hc._meta.eas&&hc._meta.eas.context; if(e)ctx=e}
+function foot(s){document.getElementById('foot').textContent=s}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c])}
+async function tool(name,args){const r=await rpc('tools/call',{name,arguments:args||{}});
+  if(r&&r.isError)throw new Error((r.content&&r.content[0]&&r.content[0].text)||'工具报错');
+  if(r&&r.structuredContent)return r.structuredContent;
+  try{return JSON.parse(r.content[0].text)}catch{return r}}
+function render(d){
+  const st=document.getElementById('stage');
+  if(!d||!d.file){st.innerHTML='<div class="empty">没有拿到截图</div>';return}
+  // 面板 CSP 只允许 data:/blob:，读不了本地文件 —— 所以显示路径与摘要，
+  // 点一下用宿主的 canvas_open_file 在画布上打开这张图（那边不受 CSP 限制）
+  const kb=Math.round((d.bytes||0)/1024);
+  st.innerHTML='<div class="empty">已拍到 '+esc(d.kind==='window'?('窗口「'+((d.window&&d.window.owner)||'')+'」'):'整个屏幕')+
+    '<br><span style="color:var(--ok)">'+kb+' KB</span><br><br><button id="open">在画布上打开这张图</button>'+
+    '<br><br><span style="font-size:10.5px">'+esc(d.file)+'</span></div>';
+  document.getElementById('open').onclick=async()=>{
+    try{await rpc('eas/canvas.call',{tool:'canvas_open_file',args:{path:d.file}})}catch(e){foot('打不开：'+e.message)}};
+  document.getElementById('mode').textContent=d.kind==='window'?'窗口':'整屏';
+  foot((d.redactedSkipped&&d.redactedSkipped.length)?('已避开敏感窗口：'+d.redactedSkipped.join('、')):'没有敏感窗口');
+}
+document.getElementById('shot').onclick=async()=>{
+  const b=document.getElementById('shot'); b.disabled=true; foot('拍摄中…');
+  try{render(await tool('screen_shot'))}catch(e){document.getElementById('stage').innerHTML='<div class="err">'+esc(e.message)+'</div>';foot('失败')}
+  finally{b.disabled=false}};
+document.getElementById('list').onclick=async()=>{
+  const el=document.getElementById('wins');
+  try{const d=await tool('screen_list');
+    if(!d.windows){el.hidden=false;el.innerHTML='<div class="err">'+esc(d.hint||'拿不到窗口列表')+'</div>';return}
+    el.hidden=false;
+    el.innerHTML=d.windows.map(w=>'<div class="w"><b>'+esc(w.owner)+'</b><span class="t">'+esc(w.title||'')+'</span>'+
+      (w.sensitive?'<span class="tag">敏感·不拍</span>':'')+'</div>').join('');
+    foot(d.windows.length+' 个窗口');
+  }catch(e){el.hidden=false;el.innerHTML='<div class="err">'+esc(e.message)+'</div>'}};
+document.getElementById('perm').onclick=async()=>{
+  try{const d=await tool('screen_permission');
+    document.getElementById('stage').innerHTML='<div class="empty">窗口助手：'+(d.helper?'<span style="color:var(--ok)">在</span>':'<span style="color:var(--bad)">缺失</span>')+
+      '<br>看得到 '+d.windowsVisible+' 个窗口<br><br>'+esc(d.hint)+'</div>';
+    foot(d.ok?'一切正常':'需要处理');
+  }catch(e){foot(e.message)}};
+(async()=>{try{
+  const r=await rpc('ui/initialize',{appInfo:{name:'computer-view',version:'1.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'});
+  applyCtx(r&&r.hostContext);
+  parent.postMessage({jsonrpc:'2.0',method:'ui/notifications/initialized'},'*');
+  foot('就绪 · 只读，不能点击或打字');
+}catch(e){foot('握手失败：'+e.message)}})();
+</script>
+</body>
+</html>

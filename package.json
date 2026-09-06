@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "node scripts/build-computer-helper.mjs && electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "node --test 'src/**/*.test.ts' 'src/**/*.test.mjs' 'hooks/*.test.mjs' 'resources/plugins/*/lib/*.test.ts'",

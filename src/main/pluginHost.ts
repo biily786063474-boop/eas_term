@@ -78,6 +78,17 @@ const registry = new HostRegistry<Hosted>({
 const panels = new Map<string, Panel>()
 const shims = new Map<string, Shim>()
 
+/** 某个插件的数据目录（userData/plugin-data/<名>/）。宿主负责建，插件只管用。 */
+function pluginDataDir(name: string): string {
+  const d = path.join(app.getPath('userData'), 'plugin-data', name)
+  try {
+    fs.mkdirSync(d, { recursive: true })
+  } catch {
+    /* 建不出来插件那边会自己退回临时目录 */
+  }
+  return d
+}
+
 function spawnHosted(info: PluginInfo): Hosted {
   if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
   // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
@@ -88,6 +99,10 @@ function spawnHosted(info: PluginInfo): Hosted {
     HOME: process.env.HOME ?? '',
     ...(process.platform === 'win32' && process.env.SYSTEMROOT ? { SYSTEMROOT: process.env.SYSTEMROOT } : {}),
     ...(run.env ?? {}),
+    // 插件要往 userData 下写东西时的落点（今天只有「电脑视野」的截图用）。
+    // 由宿主给，插件自己不该去猜 userData 在哪。
+    EAS_PLUGIN_DATA: pluginDataDir(info.name),
+    EAS_COMPUTER_SHOTS: path.join(pluginDataDir(info.name), 'shots'),
     ...info.mcp.env
   }
   const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })

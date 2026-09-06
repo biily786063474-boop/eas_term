@@ -132,6 +132,35 @@
 10. 角色卡里把 `computer-act` 加进 denyServers → 那个角色的会话里这几个工具不存在
 11. 三家底座（Claude / Codex / omp）各跑一次 `screen_shot`
 
+## 六 · view 档实施回填（2026-09-06）
+
+已实施：四个纯函数（`coords` / `grant` / `redact` / `guard`，28 测试）＋ `windows.ts`（7 测试）＋
+插件本体（`plugin.json` · `server.mjs` · `ui/view.html`）＋ Swift 窗口助手与构建脚本。
+
+**动手前核对的结果**（§八）：
+
+| # | 结论 |
+|---|---|
+| 1 | `screencapture` 有 `-l<windowid>` `-R` `-x`（静音）`-t jpg`。**`-R` 收逻辑点、输出物理像素**：本机 1147×745 点 ↔ 2294×1490 像素（scale 2），coords.ts 据此建模 |
+| 2 | **窗口列表只能靠编译产物**：`CGWindowListCopyWindowInfo` 是 C API，JXA 的 ObjC 桥返回 function（调不到），系统 python3 无 Quartz 模块，`osascript` 取 `AXPosition` 需要辅助访问（错误 -1719）。改为 40 行 Swift 编成**通用二进制**（arm64+x86_64，149KB），随 `resources/plugins` 打包；`scripts/build-computer-helper.mjs` 挂在 `npm run build` 前面，没有 Xcode 命令行工具就跳过并走降级 |
+| 3 | 屏幕录制权限：拿不到窗口列表时**不猜**，`screen_permission` 工具直接报「看不到任何窗口，多半是没给屏幕录制权限，勾完要重启软件」 |
+| 5 | 缩图用系统自带 `sips`（`-Z 1280` + jpeg q80），零依赖。实测一张窗口图 64–120KB |
+
+**一期把「打码」实现成「拒绝」**（比设计稿更严）：像素级涂黑要引入图像库，而
+「宁可不给也不泄漏」不需要它 —— 屏幕上开着敏感窗口时整屏截图直接拒绝并列出是哪些，
+指名截敏感窗口也拒绝。按窗口截时天生不会拍到别的窗口，本来就不需要涂黑。
+
+**真机撞到并修掉的一处**：`frontWindow` 跳过了 Eas-Term 自己，但**显式传
+`windowTitle:'Eas-Term'` 照样截到了**。我们自己的界面里有密钥柜、有别的对话，
+截了还会形成「截自己再喂回自己」的回环 —— 现在 `isBlocked` 把自己也算进去，
+`screen_list` 里也标成 sensitive。
+
+真机验收（隔离实例，面板里真点）：面板挂载 → 点「拍一张」→ 截到前台窗口（自动跳过
+Eas-Term）→ 64KB 落在宿主注入的 `userData/plugin-data/computer/shots/` → 页脚报
+「没有敏感窗口」。`screen_permission` 报「一切正常，看得到 13 个窗口」。
+
+**view 档到此可用。act 档（点击/键盘）仍未开始**，它要辅助访问权限，且必须先有授权窗口 UI。
+
 ## 七、明确不做
 
 远程控制别人的机器 · 无人值守长时间自动化 · 绕过任何应用自己的确认弹窗 · 在锁屏状态下工作 · 记录/回放宏 · Windows 与 Linux（一期）
