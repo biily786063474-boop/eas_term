@@ -120,10 +120,16 @@ export function codexDisabledToolsArg(server: string, tools: string[]): string {
 
 /** `caps.mcp.denyTools` 里能升成 Codex 精确 `disabled_tools` 的条目形状：`<server>__<tool>`
  *  ——不含 `*`、正好一个 `__` 分隔、两段都非空。其余形状（含 `*`，或不是这个形状）
- *  维持原样，走通配降级为按 server 名整个关那条老路（见 bindRole 里 mcp.denyTools 分支）。 */
+ *  维持原样，走通配降级为按 server 名整个关那条老路（见 bindRole 里 mcp.denyTools 分支）。
+ *
+ *  2026-09-06 最终评审 Minor 5：条目按 Claude 的全名形状写成 `mcp__<server>__<tool>` 时
+ *  先把 `mcp__` 前缀剥掉再解析——不剥的话 `split('__')` 会切出三段、判成"不是精确形状"，
+ *  白白退回通配降级。**只收紧不放松**：剥完仍要满足上面全部条件才升 hard，剥不出
+ *  精确形状的照旧退回 rest。（Claude 分支不受影响，它仍按原字符串拼 `mcp__${p}`。） */
 function parsePreciseTool(entry: string): { server: string; tool: string } | null {
   if (entry.includes('*')) return null
-  const parts = entry.split('__')
+  const body = entry.startsWith('mcp__') ? entry.slice('mcp__'.length) : entry
+  const parts = body.split('__')
   if (parts.length !== 2) return null
   const [server, tool] = parts
   if (!server || !tool) return null
@@ -286,7 +292,17 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
           rest.push(t)
         }
       }
-      // 同一个 server 如果已经被 mcp.denyServers 整个关掉（此刻已经填进 codexServers），
+      // **通配条目先落地**（2026-09-06 最终评审 Minor 4）：`rest` 走 matchKnown 可能把某个
+      // server 整个关掉（`denyTools: ['x__gen', '*x*']` 里的 `*x*`），而下面那轮去重要看得见
+      // 这一批才判得准。原来的顺序是「先去重、再算 rest」——去重时 codexServers 里还只有
+      // mcp.denyServers 那批，通配刚关掉的 server 上的精确条目躲过了去重，于是同一家 server
+      // 一边被整关、一边又下发 disabled_tools，报告里也多出一条自相矛盾的 hard 行。
+      if (rest.length) {
+        const hit = matchKnown(rest)
+        codexServers.push(...hit)
+        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+      }
+      // 同一个 server 如果已经被整个关掉（mcp.denyServers 那批，或上面通配刚匹配上的），
       // 精确工具条目对它就是死重量——server 都不启动了，逐个工具再摘一遍毫无意义，报告里
       // 也不该出现「这家 server 一边被整关、一边又被精确摘工具」这种自相矛盾的两行。
       for (const s of Object.keys(codexDisabledTools)) {
@@ -306,14 +322,11 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
             `（这条 -c 整键覆盖你 config.toml 里同一个 server 的 disabled_tools，不是追加）`
         )
       }
-      if (rest.length) {
-        const hit = matchKnown(rest)
-        codexServers.push(...hit)
-        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
-      }
     } else {
       ompPatterns.push(...tools)
-      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连')
+      // M7：omp 侧连「精确摘一个工具」这条路都没有——它的粒度只到 server 名，
+      // 所以精确形状在这里也只能按 server 名整个不连，如实说出来。
+      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连；`<server>__<tool>` 形状在 omp 上无对应落法')
     }
   }
 

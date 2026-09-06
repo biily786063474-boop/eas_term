@@ -139,8 +139,10 @@ function buildCodexCmd(
   for (const n of codex.disableServers) p.push('-c', codexDisableServerArg(n))
   // 阶段三第二项：denyTools 精确条目（同 adapters/codex.ts 那半）——这条路是给用户在终端
   // 里跑的裸命令，要过一次 shell，所以取值也要 shq() 一下（同 skillsArg 那行）。
-  for (const [server, toolsForServer] of Object.entries(codex.disabledTools)) {
-    const arg = codexDisabledToolsArg(server, toolsForServer)
+  // 按 server 名排序遍历（同 adapters/codex.ts 那半，2026-09-06 最终评审 Minor 6）：
+  // 与 bindRole 报告行里 `.sort()` 过的顺序保持一致，不随对象键插入顺序漂移。
+  for (const server of Object.keys(codex.disabledTools).sort()) {
+    const arg = codexDisabledToolsArg(server, codex.disabledTools[server])
     if (arg) p.push('-c', shq(arg))
   }
   // 守卫看返回值而不是 skillsOff.length——空数组时函数自己返回空串（同 adapters/codex.ts 的约定）

@@ -174,6 +174,226 @@ test('拦：sed -i.bak（备份后缀粘在 -i 上）', () => {
   assert.equal(isWriteCommand("sed -i.bak 's/a/b/' f"), true)
 })
 
+// ── 最终评审 Critical 1：包装词自己带的选项，原来会被误当成「真正的命令词」 ──────
+// 下面每一条改动前都**放行**（选项不在任何写命令清单里，整条就过了）。
+test('拦：sudo 带选项（sudo -u x rm y）', () => {
+  assert.equal(isWriteCommand('sudo -u x rm y'), true)
+})
+
+test('拦：sudo 长选项带等号（sudo --user=x rm y）', () => {
+  assert.equal(isWriteCommand('sudo --user=x rm y'), true)
+})
+
+test('拦：sudo 纯开关选项（sudo -i rm x）', () => {
+  assert.equal(isWriteCommand('sudo -i rm x'), true)
+})
+
+test('拦：sudo 显式选项终止符（sudo -- rm x）', () => {
+  assert.equal(isWriteCommand('sudo -- rm x'), true)
+})
+
+test('拦：env 带选项（env -i rm x）', () => {
+  assert.equal(isWriteCommand('env -i rm x'), true)
+})
+
+test('拦：nice 带独立参数的选项（nice -n 10 rm x）', () => {
+  assert.equal(isWriteCommand('nice -n 10 rm x'), true)
+})
+
+test('拦：time 带选项（time -p rm x）', () => {
+  assert.equal(isWriteCommand('time -p rm x'), true)
+})
+
+test('拦：xargs 短选项（xargs -0 rm < list）', () => {
+  assert.equal(isWriteCommand('xargs -0 rm < list'), true)
+})
+
+test('拦：xargs 带独立参数的选项（xargs -n 1 rm）', () => {
+  assert.equal(isWriteCommand('xargs -n 1 rm'), true)
+})
+
+test('拦：timeout 包装 + 时长位置参数（timeout 5 rm x）', () => {
+  assert.equal(isWriteCommand('timeout 5 rm x'), true)
+})
+
+test('拦：连着套多个包装词（sudo -u x env FOO=1 rm y）', () => {
+  assert.equal(isWriteCommand('sudo -u x env FOO=1 rm y'), true)
+})
+
+// 给包装词补选项跳过之后，`command -v rm` 这条只读探测会落到 rm 上——WRAPPER_OPTS_WITH_ARG
+// 里把 `command -v/-V` 算成「吃一个参数」正是为了不误拦它，这条钉住那个决定。
+test('放：command -v rm（只问命令在不在，不跑它）', () => {
+  assert.equal(isWriteCommand('command -v rm'), false)
+})
+
+// ── 最终评审 Critical 2：分段不认引号，两个方向都错 ────────────────────────────
+test('拦：bash -c 里用 ; 串两条（bash -c "rm x; ls"）', () => {
+  assert.equal(isWriteCommand('bash -c "rm x; ls"'), true)
+})
+
+test('拦：bash -c 里用 && 串两条（bash -c "rm x && ls"）', () => {
+  assert.equal(isWriteCommand('bash -c "rm x && ls"'), true)
+})
+
+test('放：引号里的 ;（echo "a;rm b"）', () => {
+  assert.equal(isWriteCommand('echo "a;rm b"'), false)
+})
+
+test('放：引号里的 |（grep -E "x|rm x" f）', () => {
+  assert.equal(isWriteCommand('grep -E "x|rm x" f'), false)
+})
+
+// ── 最终评审 Important 1：段首裸赋值 ─────────────────────────────────────────
+test('拦：段首裸赋值包装（FOO=1 rm x）', () => {
+  assert.equal(isWriteCommand('FOO=1 rm x'), true)
+})
+
+// ── 最终评审 Important 2：git 写子命令补齐 ───────────────────────────────────
+test('拦：git pull', () => {
+  assert.equal(isWriteCommand('git pull'), true)
+})
+
+test('拦：git clone x y', () => {
+  assert.equal(isWriteCommand('git clone x y'), true)
+})
+
+test('拦：git worktree add', () => {
+  assert.equal(isWriteCommand('git worktree add ../wt br'), true)
+})
+
+test('拦：git fetch（写 .git/objects 与远端引用）', () => {
+  assert.equal(isWriteCommand('git fetch origin'), true)
+})
+
+test('放：git show（纯读）', () => {
+  assert.equal(isWriteCommand('git show HEAD'), false)
+})
+
+// ── 最终评审 Important 3：会落文件的网络/归档命令 ─────────────────────────────
+test('拦：curl -o 落文件', () => {
+  assert.equal(isWriteCommand('curl -o f https://x'), true)
+})
+
+test('拦：curl -O 落文件', () => {
+  assert.equal(isWriteCommand('curl -O https://x'), true)
+})
+
+test('拦：curl --output 落文件', () => {
+  assert.equal(isWriteCommand('curl --output f https://x'), true)
+})
+
+test('拦：curl --remote-name 落文件', () => {
+  assert.equal(isWriteCommand('curl --remote-name https://x'), true)
+})
+
+test('拦：curl 的 o 挤在短选项簇里（curl -sLo f url）', () => {
+  assert.equal(isWriteCommand('curl -sLo f https://x'), true)
+})
+
+test('放：curl 不带 -o（只打印到 stdout）', () => {
+  assert.equal(isWriteCommand('curl https://x'), false)
+})
+
+test('拦：wget（默认就是存文件）', () => {
+  assert.equal(isWriteCommand('wget https://x'), true)
+})
+
+test('放：wget -O - 吐到 stdout', () => {
+  assert.equal(isWriteCommand('wget -O - https://x'), false)
+})
+
+test('放：wget -qO- 吐到 stdout', () => {
+  assert.equal(isWriteCommand('wget -qO- https://x'), false)
+})
+
+test('拦：tar 解包（tar -xzf a.tgz）', () => {
+  assert.equal(isWriteCommand('tar -xzf a.tgz'), true)
+})
+
+test('拦：tar 经典无横线写法（tar xzf a.tgz）', () => {
+  assert.equal(isWriteCommand('tar xzf a.tgz'), true)
+})
+
+test('放：tar 只列内容（tar -tf a.tar）', () => {
+  assert.equal(isWriteCommand('tar -tf a.tar'), false)
+})
+
+test('拦：unzip', () => {
+  assert.equal(isWriteCommand('unzip a.zip'), true)
+})
+
+test('拦：zip', () => {
+  assert.equal(isWriteCommand('zip -r a.zip d'), true)
+})
+
+test('拦：gunzip', () => {
+  assert.equal(isWriteCommand('gunzip a.gz'), true)
+})
+
+test('拦：bsdtar', () => {
+  assert.equal(isWriteCommand('bsdtar -xf a.tar'), true)
+})
+
+// ── 最终评审 Important 4：find 的写动作 ──────────────────────────────────────
+test('拦：find -delete', () => {
+  assert.equal(isWriteCommand('find . -name x -delete'), true)
+})
+
+test('拦：find -exec', () => {
+  assert.equal(isWriteCommand('find . -type f -exec rm {} \\;'), true)
+})
+
+test('拦：find -execdir', () => {
+  assert.equal(isWriteCommand('find . -execdir rm {} +'), true)
+})
+
+test('拦：find -ok', () => {
+  assert.equal(isWriteCommand('find . -ok rm {} \\;'), true)
+})
+
+test('放：find 纯查询（find . -name x）', () => {
+  assert.equal(isWriteCommand('find . -name x'), false)
+})
+
+// ── 最终评审 Important 5：eval 递归 + `-c` 挤在短选项簇末尾 ────────────────────
+test('拦：eval "rm x"（与 bash -c 同一条递归判据）', () => {
+  assert.equal(isWriteCommand('eval "rm x"'), true)
+})
+
+test('放：eval ls', () => {
+  assert.equal(isWriteCommand('eval ls'), false)
+})
+
+test('拦：bash -lc "rm x"（-c 挤在簇末尾）', () => {
+  assert.equal(isWriteCommand('bash -lc "rm x"'), true)
+})
+
+test('放：sh -lc "ls"', () => {
+  assert.equal(isWriteCommand('sh -lc "ls"'), false)
+})
+
+// ── 最终评审 Minor 1：tee 只在命令词位置算写 ─────────────────────────────────
+test('放：grep tee src（只是提到 tee）', () => {
+  assert.equal(isWriteCommand('grep tee src'), false)
+})
+
+test('放：man tee（只是提到 tee）', () => {
+  assert.equal(isWriteCommand('man tee'), false)
+})
+
+// ── 最终评审 Minor 3：sed --in-place / perl -pi ──────────────────────────────
+test('拦：sed --in-place', () => {
+  assert.equal(isWriteCommand("sed --in-place 's/a/b/' f"), true)
+})
+
+test('拦：perl -pi -e（i 挤在短选项簇里）', () => {
+  assert.equal(isWriteCommand("perl -pi -e 's/a/b/' f"), true)
+})
+
+test('放：sed -n（没有 -i 不算写）', () => {
+  assert.equal(isWriteCommand("sed -n '1,5p' f"), false)
+})
+
 // ── 脚本能被 import 而不执行主逻辑 ──────────────────────────────────────
 // 判据：上面 import 已经成功（没有卡在读 stdin、没有抛异常），且 isWriteCommand
 // 真是一个函数——这足以证明 `isRunAsScript()`（两边 `fs.realpathSync` 再比，

@@ -249,6 +249,48 @@ test('mcp.denyTools 精确写法 —— 同一个 server 已经在 mcp.denyServe
   assert.equal(x.report.filter((l) => l.cap === 'mcpTools').length, 0, '被跳过时不该再多出一行 mcpTools 报告')
 })
 
+// 2026-09-06 最终评审 Minor 4：整关的判据里也要算上「通配条目刚刚关掉的那批 server」。
+// 改动前去重排在 rest 分支**之前**跑，codexServers 里还只有 mcp.denyServers 那批，于是
+// 同一家 server 既被 `*canvas*` 整关、又下发了 disabled_tools，报告里多出一条自相矛盾的
+// hard 行。现在去重挪到 rest 之后，这条钉住新顺序。
+test('mcp.denyTools 精确写法 —— 通配把 server 整关时，同一 server 的精确条目也要一并跳过（去重排在 rest 之后）', () => {
+  const bounds = { caps: { mcp: { denyTools: ['bizone-canvas__generate', '*canvas*'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  assert.deepEqual(x.codex.disableServers, ['bizone-canvas'], '通配条目仍把整个 server 关掉')
+  assert.deepEqual(x.codex.disabledTools, {}, 'server 已整关，精确工具条目应被跳过')
+  const mcpToolsLines = x.report.filter((l) => l.cap === 'mcpTools')
+  assert.equal(mcpToolsLines.length, 1, '只该剩通配那一行，不该再多一条 hard')
+  assert.equal(mcpToolsLines[0].level, 'degraded')
+})
+
+// 2026-09-06 最终评审 Minor 5：条目按 Claude 的全名形状写（`mcp__<server>__<tool>`）时，
+// 剥掉 `mcp__` 前缀再解析——不剥的话 split('__') 切出三段、判成"不是精确形状"，白白退回
+// 通配降级。**只收紧**：剥完仍要满足精确形状的全部条件。
+test('mcp.denyTools 精确写法 —— 条目带 mcp__ 前缀时先剥掉再解析', () => {
+  const bounds = { caps: { mcp: { denyTools: ['mcp__bizone-canvas__generate'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['bizone-canvas'] })
+  assert.deepEqual(x.codex.disabledTools, { 'bizone-canvas': ['generate'] }, '剥掉 mcp__ 前缀后应升 hard')
+  const line = x.report.find((l) => l.cap === 'mcpTools')!
+  assert.equal(line.level, 'hard')
+})
+
+test('mcp.denyTools —— 剥掉 mcp__ 前缀后仍不是精确形状的（mcp__ghost），照旧退回通配路径', () => {
+  const bounds = { caps: { mcp: { denyTools: ['mcp__ghost'] } } }
+  const x = bindRole(bounds, 'codex', { knownMcpServers: ['ghost'] })
+  assert.deepEqual(x.codex.disabledTools, {}, '只剩一段，不构成 <server>__<tool>')
+  assert.equal(x.report.find((l) => l.cap === 'mcpTools')!.level, 'degraded')
+})
+
+// 2026-09-06 最终评审 Minor 7：omp 侧连「精确摘一个工具」这条路都没有，degraded 那行的
+// how 要把这句说出来，不能只说「通配降级」让人以为精确形状在 omp 上另有落法。
+test('mcp.denyTools —— omp 的 degraded 行要说明 <server>__<tool> 形状在 omp 上无对应落法', () => {
+  const bounds = { caps: { mcp: { denyTools: ['bizone-canvas__generate'] } } }
+  const o = bindRole(bounds, 'omp')
+  const line = o.report.find((l) => l.cap === 'mcpTools')!
+  assert.equal(line.level, 'degraded')
+  assert.ok(line.how.includes('无对应落法'), 'how 要点明 omp 上没有精确摘工具的落法')
+})
+
 // Minor #10：disabledTools 有多个 server 时按名字排序遍历，与「排序去重」的描述一致，
 // 也让 -c 拼接顺序和 how 摘要顺序不随 JS 对象键插入顺序漂移。
 test('mcp.denyTools 精确写法 —— 多个 server 时按名字排序遍历', () => {

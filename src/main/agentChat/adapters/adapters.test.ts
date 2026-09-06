@@ -325,6 +325,20 @@ test('[追加] Codex：denyTools 通配条目不产生 disabled_tools，仍走�
   assert.ok(args.includes('mcp_servers.mini.enabled=false'), '通配条目仍应整个关掉命中的 server')
 })
 
+// 2026-09-06 最终评审 Minor 6：多个 server 时按 server 名排序拼 `-c`，与 bindRole 报告行里
+// `.sort()` 过的顺序一致——不排的话 argv 顺序跟着 JS 对象键的插入顺序走，跟报告对不上。
+test('[追加] Codex：多个 server 的 disabled_tools 按 server 名排序拼 -c', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['zserver', 'aserver'],
+    roleBounds: { caps: { mcp: { denyTools: ['zserver__t1', 'aserver__t2'] } } }
+  })
+  const posA = args.indexOf('mcp_servers.aserver.disabled_tools=["t2"]')
+  const posZ = args.indexOf('mcp_servers.zserver.disabled_tools=["t1"]')
+  assert.ok(posA > 0 && posZ > 0, '两条 disabled_tools 都要在 argv 里')
+  assert.ok(posA < posZ, 'aserver 应排在 zserver 前面')
+})
+
 test('[补充] Codex 的 model 用 -m 传，且带上实际取值', () => {
   const args = getAdapter('codex')!.buildArgs({ cwd: '/x', model: 'gpt-5-codex' }).args
   const i = args.indexOf('-m')

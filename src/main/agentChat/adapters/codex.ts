@@ -94,8 +94,11 @@ export const codexAdapter: CliAdapter = {
     // 阶段三第二项（2026-09-06 探针实测）：denyTools 里写得出确切工具名的条目
     //（`<server>__<tool>`，bindRole 已经分好类）落成 `mcp_servers.<名>.disabled_tools=[…]`，
     // 按工具名精确摘掉，不必再牺牲整个 server；通配条目仍走上面 disableServers 那条老路。
-    for (const [server, toolsForServer] of Object.entries(b.codex.disabledTools)) {
-      const arg = codexDisabledToolsArg(server, toolsForServer)
+    // **按 server 名排序遍历**（2026-09-06 最终评审 Minor 6）：`bindRole` 生成报告那行
+    // 已经 `.sort()` 过，这里若跟着 JS 对象键的插入顺序走，`-c` 的实际顺序会跟报告里
+    // 念的顺序对不上——参数不会因此失效，但排查时两边一比就自相矛盾。
+    for (const server of Object.keys(b.codex.disabledTools).sort()) {
+      const arg = codexDisabledToolsArg(server, b.codex.disabledTools[server])
       if (arg) args.push('-c', arg)
     }
     // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容。

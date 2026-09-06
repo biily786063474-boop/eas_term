@@ -291,7 +291,15 @@ function ensureWriteGuardSettings(nodeBin: string): string {
   }
   try {
     fs.mkdirSync(path.dirname(target), { recursive: true })
-    fs.writeFileSync(target, JSON.stringify(settings, null, 2), 'utf8')
+    // **先写 .tmp 再 rename**（2026-09-06 最终评审 Important 7）：直接 writeFileSync 会先
+    // 把目标文件截断成 0 字节再往里写，中途失败（磁盘满、进程被杀）就留下一份半截 JSON。
+    // 而这份文件的消费方是**另一个进程**——Claude Code 读它、解析失败就当没有这条 hook，
+    // 于是第二道闸静默消失。restart 每次都重写，撞上这个窗口的概率不是零。rename 在同一
+    // 个文件系统内是原子的：要么还是上一份完整的旧文件，要么已经是完整的新文件，
+    // 不存在"读到半截"的中间态。做法与本文件 writeHookConfig() 一致。
+    const tmp = target + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), 'utf8')
+    fs.renameSync(tmp, target)
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e)
     throw new Error(`守卫文件写不进 ${target}，这次会话不起：${reason}`)
