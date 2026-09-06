@@ -25,6 +25,12 @@ export const claudeAdapter: CliAdapter = {
   displayName: 'Claude Code',
 
   capabilities: {
+    // **兜底清单**（modelCatalog.ts 的第三级）。Claude Code 2.1.263 确实没有任何列模型的
+    // 接口 —— 无 `models` 子命令、`doctor` 不报、二进制里的 catalog 没有可靠结构、
+    // 非法模型名的报错也只说「不在本版本的 model catalog 里」不给清单（2026-09-06 逐个试过）。
+    // 所以这里写死的是**别名**（不是具体版本号），别名比模型 id 稳定得多：
+    // `--model` 的说明里明写「Provide an alias for the latest model (e.g. 'fable', 'opus')」。
+    // 哪天 Claude 给出列模型的接口，加 probeModels 钩子即可，这份自动退居兜底。
     models: [
       { id: 'fable', label: 'Fable' },
       { id: 'opus', label: 'Opus' },

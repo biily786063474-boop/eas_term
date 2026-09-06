@@ -42,6 +42,7 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
 import { openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
 import { hostPaths } from './omp/host.ts'
+import { parseCatalog, resolveModels, shouldPersist, type CatalogFile } from './modelCatalog.ts'
 import { resumeOwnerOf, type ResumeOwner } from './resumeOwner.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
@@ -439,6 +440,53 @@ function writeStdin(live: Live, message: string): void {
   }
 }
 
+/** 模型清单落盘的位置。**不是硬编码的清单**，是这台机器上真实探测成功过的那份。 */
+function catalogPath(): string {
+  return path.join(app.getPath('userData'), 'model-catalog.json')
+}
+
+function readCatalog(): CatalogFile {
+  try {
+    return parseCatalog(JSON.parse(fs.readFileSync(catalogPath(), 'utf8')))
+  } catch {
+    return {}
+  }
+}
+
+function writeCatalog(cliId: string, models: { id: string; label: string }[]): void {
+  try {
+    const all = readCatalog()
+    all[cliId] = { at: Date.now(), models }
+    fs.writeFileSync(catalogPath(), JSON.stringify(all, null, 2))
+  } catch (e) {
+    console.warn('[agentChat] 模型清单写不下去（不影响会话）', e)
+  }
+}
+
+/**
+ * 先用「缓存或兜底」把下拉填上，再异步探测、拿到就覆盖。
+ * 探测失败一律沉默降级 —— 拉不到清单绝不能影响开会话（用户 2026-09-06 定的兜底要求）。
+ */
+async function resolveAndBroadcastModels(live: Live, adapter: CliAdapter): Promise<void> {
+  const cached = readCatalog()[adapter.id]
+  const first = resolveModels({ cached: cached?.models, fallback: adapter.capabilities.models, cachedAt: cached?.at })
+  if (first.models.length && live.rec.alive) handleEvent(live, { k: 'capabilities', models: first.models })
+  if (first.note) console.log(`[agentChat] ${adapter.id} 模型清单：${first.note}`)
+  if (!adapter.probeModels) return
+  try {
+    const probed = await adapter.probeModels(hostPaths())
+    const r = resolveModels({ probed, cached: cached?.models, fallback: adapter.capabilities.models })
+    if (r.source !== 'probe') {
+      console.log(`[agentChat] ${adapter.id} 模型探测没成功，继续用${r.source === 'cache' ? '上次那份' : '内置清单'}`)
+      return
+    }
+    if (shouldPersist(cached?.models, r.models)) writeCatalog(adapter.id, r.models)
+    if (live.rec.alive) handleEvent(live, { k: 'capabilities', models: r.models })
+  } catch (e) {
+    console.log(`[agentChat] ${adapter.id} 模型探测出错，已降级`, e)
+  }
+}
+
 function wireProc(live: Live, proc: ChildProcess): void {
   // 新进程接上了 —— 上一轮的「是我们杀的」到此为止。
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
@@ -664,17 +712,10 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   )
   wireProc(live, proc)
 
-  // 模型清单：声明了 probeModels 的 CLI（今天只有 Codex）问它自己要一次，广播给工具栏。
-  // **不 await** —— 探测要起一个短命进程，不能让第一条消息等它；结果到了再更新下拉。
-  // 失败一律沉默（钩子自己保证返回 undefined），绝不影响这次会话。
-  if (adapter.probeModels) {
-    void adapter
-      .probeModels(hostPaths())
-      .then((models) => {
-        if (models?.length && live.rec.alive) handleEvent(live, { k: 'capabilities', models })
-      })
-      .catch(() => {})
-  }
+  // 模型清单：三级取值（modelCatalog.ts）——探测 → 上次成功的那份 → adapter 兜底。
+  // **不 await** 探测：它要起一个短命进程，不能让第一条消息等它。
+  // 先用「缓存或兜底」立刻把下拉填上，探测回来了再覆盖一次。
+  void resolveAndBroadcastModels(live, adapter)
 
   // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
   // 'ignore' 的已经在上面把消息塞进了位置参数，这里不用再写。

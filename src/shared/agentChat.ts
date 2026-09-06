@@ -355,7 +355,12 @@ export interface CliAdapter {
   bundled?: true
   /** 额度从哪来。不声明 = 现状（Claude 走直连接口、Codex 读它自己的日志）。 */
   quotaSource?: 'omp-usage'
-  /** 这个 CLI 的可用模型要**问它自己**，不能写死。
+  /** ⚠️ `capabilities.models` 是**兜底清单，不是主数据源**（用户 2026-09-06：所有模型列表
+   *  都不要硬编码）。取值顺序在 `main/agentChat/modelCatalog.ts`：
+   *  探测 → 上次探测成功的结果（落盘）→ 这份兜底。只在从没探测成功过时才会用到它，
+   *  而且界面会标注「内置清单，可能与你的账号不一致」。
+   *
+   *  这个 CLI 的可用模型要**问它自己**，不能写死。
    *  声明了的话，会话起来后 session.ts 会调一次并广播 `capabilities` 事件更新工具栏下拉。
    *  返回 undefined = 问不到，工具栏退回「没有下拉」（跟不声明这个钩子一样）。
    *  只声明给「模型名随版本/账号变」的 CLI：Codex 的 gpt-5.6-sol/terra/luna 每个账号都不同，
