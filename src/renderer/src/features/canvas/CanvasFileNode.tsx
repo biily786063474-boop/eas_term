@@ -159,6 +159,9 @@ export function CanvasFileNode({
       className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frameId}
+      /* 类型角标的色相按这个选（canvas.css 的 --smoke-h）。
+         只用来选颜色，不参与任何逻辑 —— 别拿它当类型判据，那个在 store 里。 */
+      data-kind={pane.kind}
       // 点模块任意部分即选中（捕获阶段，早于内容；不 preventDefault 故内容交互照常）
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
