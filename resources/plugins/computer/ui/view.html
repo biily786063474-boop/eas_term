@@ -107,7 +107,10 @@ function renderGrant(d){
   if(gtimer){clearInterval(gtimer);gtimer=null}
   if(!d){el.textContent='—';return}
   if(!d.systemPermission){
-    el.innerHTML='<span style="color:var(--bad)">系统权限没给</span>：系统设置 → 隐私与安全性 → 辅助功能，勾上 Eas-Term 后重启软件';
+    // 「勾上后重启软件」是错的（2026-09-06 实测：拨一下开关，同一个进程立刻生效）。
+    // 更要紧的是**界面上勾着 ≠ 真的生效** —— 换过包之后那条授权会失效而勾照样显示着，
+    // 所以这句要引导「拨一下开关」，不能只说「去勾上」。
+    el.innerHTML='<span style="color:var(--bad)">系统权限没生效</span>：系统设置 → 隐私与安全性 → 辅助功能，找到 Eas-Term —— 没有就用 ＋ 加上，<b>已经勾着的话把开关拨关再拨开</b>（软件更新后授权会失效，但勾仍显示着）。一般拨完立刻生效。';
     rv.hidden=true;return}
   if(!d.granted){el.textContent='未授权（截图不受影响）';rv.hidden=true;return}
   rv.hidden=false;

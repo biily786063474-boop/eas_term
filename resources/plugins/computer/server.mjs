@@ -308,7 +308,7 @@ async function call(name, args) {
       systemPermission: ax,
       canAct: st.active && ax,
       hint: !ax
-        ? '系统「辅助功能」权限没给：系统设置 → 隐私与安全性 → 辅助功能，勾上 Eas-Term，然后重启软件。（没有它，鼠标键盘事件会被静默丢弃）'
+        ? '系统「辅助功能」权限没生效：系统设置 → 隐私与安全性 → 辅助功能，找到 Eas-Term —— 没有就用 ＋ 加上，已经勾着的话把开关拨关再拨开（软件更新过之后那条授权会失效，但界面上仍显示勾着）。一般拨完立刻生效，不生效再重启软件。（没有它，鼠标键盘事件会被静默丢弃）'
         : st.active
           ? '可以操作'
           : denyMessage(st),
@@ -320,13 +320,10 @@ async function call(name, args) {
     const x = Number(args.x)
     const y = Number(args.y)
     if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('坐标不是数字')
-    // 坐标要落在某个显示器里 —— 越界报错而不是钳到边缘（钳制会把「算错」变成「点到别的东西」）
-    const disp = helper(['displays']).displays || []
-    const inside = disp.find((d) => x >= d.x && x < d.x + d.width && y >= d.y && y < d.y + d.height)
-    if (!inside)
-      throw new Error(
-        `坐标 (${x}, ${y}) 不在任何显示器内。当前：` + disp.map((d) => `#${d.id} ${d.x},${d.y} ${d.width}×${d.height}`).join('；')
-      )
+    // 「坐标要落在某个显示器里」**这道闸在原生助手里**（native/windows.swift 的 insideAnyDisplay），
+    // 不在这儿再写一份。2026-09-06 之前两边各有一份等价实现 —— 那是 13 图纸点名的漂移形状，
+    // 而且更要紧的是：**闸放在这里挡不住裸二进制**，而助手是所有路径的最后一米。
+    // 助手的报错已经把当前显示器列出来了，这里原样透出去即可。
     // 目标窗口的拒绝名单：绝不点自己、绝不戳画板
     const wins = listWindows()
     if (wins.ok) {
@@ -404,7 +401,7 @@ async function call(name, args) {
         ? '窗口助手没编译出来：在开发机上跑 node scripts/build-computer-helper.mjs（需要 Xcode 命令行工具）'
         : w.ok
           ? '一切正常'
-          : '看不到任何窗口 —— 多半是没给「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕录制，勾上 Eas-Term，然后**重启软件**（这个权限不能由程序申请）'
+          : '看不到任何窗口 —— 多半是没给「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕录制，勾上 Eas-Term（已经勾着就拨关再拨开）。这个权限不能由程序申请，勾完一般立刻生效，不生效再重启软件'
     }
   }
   // ⚠️ **授权与收回故意不是 MCP 工具** —— 工具面里没有它们，模型给自己授权是不可能的。
