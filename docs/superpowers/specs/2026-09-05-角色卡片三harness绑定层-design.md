@@ -568,3 +568,15 @@ degraded。修法：`main/agent.ts` 新增 IPC `agent:codexHome`（返回 `codex
 ? '\\' : '/'`），测试里断言过 `C:\Users\x\.codex` → `C:\Users\x\.codex\skills\.system\
 imagegen\SKILL.md`（经 `codexSkillsConfigArg` 转义后是合法 TOML），但没有在真实
 Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
+
+### 十四·附 · 真机核对（2026-09-06，隔离实例 CDP，代码 b44a3ce）
+
+| 核对项 | 看到了什么 |
+|---|---|
+| `window.api.agent.codexHome()` | 返回 `/Users/biily/.codex`，IPC 通 |
+| 画师的编辑器矩阵「不许生图」行 | Claude 格「硬」；**Codex 格「硬」**，how 以「--disable image_generation（feature 生效状态实测为 false；本机内置 image_gen 本就不在工具清单）+ 摘掉 imagegen 系统 skill…」开头；默认 harness 格「降级」 |
+| 画师 + Codex 的对话节点 | 角色按钮 aria-label「角色：画师」，**无** `.rolepick-warn` 徽章 |
+| 画师 + 默认 harness 的对话节点（对照） | aria-label「角色：画师（部分限制在当前 CLI 上打了折扣）」，徽章「降级」，tooltip「不许生图：无内置生图；图像类 MCP server 按名整个不连」—— 证明徽章机制活着，Codex 上消失是档位真的升了 |
+| adapter 生成的 `-c skills.config=[{path="/Users/biily/.codex/skills/.system/imagegen/SKILL.md",enabled=false}]` 实跑 | Codex 接受；假端点抓到的模型请求里 `imagegen` 提及 0；`codex features list --disable image_generation` 该项 effective=false |
+
+未验：`team_spawn role_id` 仍无真实 MCP 调用；Windows 路径分隔符只有单测。
