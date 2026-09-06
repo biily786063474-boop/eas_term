@@ -126,6 +126,16 @@ graph LR
 - **角色边界在 Codex 上**：内置工具走 `--disable <feature>`（`shell_tool` / `image_generation`，
   2026-09-05 实测前者生效），MCP 走 `-c mcp_servers.<名>.enabled=false`（名字必须存在）；
   `-c` 不校验键名，**写错静默无效**。
+- **工具级精确禁用**（2026-09-06 阶段三第二项探针实测）：`-c mcp_servers.<名>.disabled_tools=[…]`
+  能把指定工具从模型的工具面前摘掉（判据是延迟工具搜索结果，加了这条之后指定工具名不再
+  出现，不是问模型"你还有这个工具吗"）。**只认精确工具名的数组，不认通配**——
+  `caps.mcp.denyTools` 里写得出确切工具名的条目（`<server>__<tool>`）才会落成这条 `-c`，
+  通配条目仍走上面那条按 server 名整个 `enabled=false` 的老路（`roleBinding.ts` 的
+  `codexDisabledToolsArg()`）。**命名差异要注意**：Codex 给 MCP 工具的名字是
+  `mcp__<server>.<tool>`（点号分隔），Claude 是 `mcp__<server>__<tool>`（双下划线）——
+  两边的 deny 写法字面上长得像但分隔符不同，抄错会静默不匹配。
+  ⚠️ 同 `skills.config` 一样，这条 `-c` 是**整键覆盖**用户 `~/.codex/config.toml` 里同一个
+  server 已有的 `disabled_tools`，不是追加。
 - **系统 skill 按路径禁用**（2026-09-06 阶段三探针）：Codex 内置 `image_gen` 本机实测从未
   进过工具清单，模型自称有的「imagegen 工具」其实是系统 skill
   `$CODEX_HOME/skills/.system/imagegen/SKILL.md`；真正摘掉它要走

@@ -172,6 +172,15 @@
   font-weight: 700;
   color: var(--fg);
   white-space: nowrap;
+  /* **头部里唯一可压缩的就是名字。** 这排别的东西（色点、多 agent、名额角标、
+     六颗按钮）全是 `flex: none`，窄 Frame 里挤不下时溢出只能落到按钮上 ——
+     它们会整颗跑到虚线框外面（用户 2026-09-06 实拍）。
+     `min-width: 0` 是关键：flex 子元素默认 `min-width: auto`，也就是「不小于内容」，
+     光写 overflow:hidden 它照样不肯缩。 */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cframe-count {
@@ -852,7 +861,9 @@
   background: var(--glass-2);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  /* **这里不能 `overflow: hidden`** —— 类型角标要露出左上角（用户 2026-09-06 给的参考图）。
+     圆角裁剪改由上下两段各自负责：头部裁上面两个角、`.cfile-body` 裁下面两个角。
+     内容照样不会溢出：body 本来就有自己的 `overflow: hidden`。 */
   box-shadow: var(--glass-highlight), 0 8px 24px var(--ink-2);
 }
 
@@ -873,6 +884,8 @@
   border-bottom: 1px solid var(--glass-border);
   background: var(--lift-1);
   color: var(--accent);
+  /* 节点整体不再裁剪（见 .cfile-node），上面两个角由这条自己收 */
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .cfile-title {
@@ -988,6 +1001,8 @@
   position: relative;
   overflow: hidden;
   min-height: 0;
+  /* 节点整体不再裁剪（见 .cfile-node），下面两个角由这条自己收 */
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 /* ---------- 辞典面板（2026-08-31：悬浮球取消，改标题栏触发）----------
@@ -2147,6 +2162,10 @@
   font-family: inherit;
   padding: 1px 6px;
   outline: none;
+  /* 跟 .cframe-name 同一个道理：150px 是想要的宽度不是硬要的宽度，
+     窄 Frame 里得让它缩，否则改名时按钮又被顶出去 */
+  flex: 0 1 150px;
+  min-width: 0;
   width: 150px;
 }
 
@@ -5992,4 +6011,184 @@
 .cpk-plug-chat:hover {
   color: var(--accent);
   border-color: rgba(var(--accent-rgb), 0.5);
+}
+
+/* 钉在画板上。
+   没钉住时跟别的头部按钮一样 —— 平时收着，hover 节点才浮出来（.cfile-btn 那条规则）。
+   **钉住之后必须常亮**：那一颗钉子是「这个不会被自动清理」的唯一凭据，
+   藏在 hover 里等于让用户挨个去摸，才知道哪些是安全的。
+   `!important` 是冲着 `.cfile-node:hover .cfile-btn{opacity:.7}` 去的 ——
+   那条规则的选择器权重更高，不压过它，鼠标一进节点钉住的反而变淡。 */
+.cfile-pin.on {
+  color: var(--accent);
+  opacity: 1 !important;
+}
+
+/* Frame 头上的「内容名额」角标：默认极淡（它只是背景信息），
+   顶到上限才提一档亮度 —— 那一刻它才需要被看见。 */
+.cframe-slots {
+  flex: 0 0 auto;
+  margin-left: 6px;
+  padding: 0 5px;
+  height: 15px;
+  line-height: 15px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  /* --t-3 = 「退后」那一级（时间戳、行号那类），正是这个角标平时该有的分量。
+     底用 --s-2（卡片面），不描边 —— 规矩②：描边只留给输入框、状态色边和 Frame 那条虚线 */
+  color: var(--t-3);
+  background: var(--s-2);
+  opacity: 0.75;
+}
+/* 顶到上限：换 --sem-warn。这一刻它确实是个警告 ——「下一个开出来就要删东西了」 */
+.cframe-slots.full {
+  color: var(--sem-warn);
+  background: rgba(var(--sem-warn-rgb), 0.14);
+  opacity: 1;
+}
+
+/* ── 类型角标：悬在模块左上角，压着圆角探出去一点（用户 2026-09-06 给的参考图）──
+   适用于**除终端和 AI 对话之外的所有模块** —— 文件预览、画布组件、自由节点
+   三者共用 `.cfile-head`，所以这一条同时管住它们。终端和 AI 对话不走这套头部。
+
+   为什么用实心 accent 而不是参考图里那块白：参考图是白底黑图标，在我们的暗色里
+   accent(#dfe3e8) 本来就接近那块白，而亮色主题下 accent 转深、图标走 --on-accent
+   自动反过来 —— 写死白色的话亮色主题上就是白底白图标。
+   （--on-accent 是项目里专管这件事的令牌，check-accent-contrast.mjs 会拦写死值。）
+
+   **留在 flex 流里而不是 absolute**：它要占住标题左边那段位置，标题接着它排；
+   absolute 的话标题会钻到角标底下去。露出头部上沿靠 align-self + 负 margin，
+   不靠 align-items:center 去算 —— 那个算法把负 margin 也计进可用空间，结果不直观。 */
+.cfile-badge {
+  flex: none;
+  align-self: flex-start;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px;
+  margin-left: -18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 2px 6px var(--ink-2);
+  /* 烟雾裁在角标里（`inset` 是负的，不裁就漫出去糊住标题） */
+  position: relative;
+  overflow: hidden;
+  /* 抬起与落下用不同的曲线：起要利落（回弹感的 ease-out），落要绵一点。
+     **只动 transform** —— 顺手加个 box-shadow 过渡会让每帧重新绘制阴影，
+     那正是 check-animations.mjs 拦的那类事（这条是 hover 触发不是 infinite，
+     拦不到，但代价一样真实：一屏几十个节点，鼠标扫过去就是几十次重绘）。 */
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* **触发区是整个模块，不是角标那 26px**（用户 2026-09-06）——
+   角标太小，鼠标扫过模块时十有八九碰不到它，效果等于不存在。
+   跟头部那排按钮的显形用的是同一个判据（`.cfile-node:hover .cfile-btn`），
+   两者一起亮起来，读作「这个模块醒了」而不是两个各自为政的小动效。 */
+.cfile-node:hover .cfile-badge {
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: translate(-3px, -3px);
+}
+
+/* 一过性的彩色渐变烟雾：hover 那一下转着扩散开、随即散掉，**不循环**。
+   ── 「渲染资源不要重复」这条在这里具体是四件事 ──────────────────────────
+   ① 一个伪元素，不是一层 DOM。渐变是静态背景，只在第一次绘制时光栅化一次，
+      之后 transform 拿的是同一张纹理。
+   ② **只动 transform 和 opacity**，两者都走合成层，不碰主线程的样式重算。
+      不动 filter: blur —— 模糊跟着 transform 变就得每帧重新光栅化，
+      柔和感改用渐变本身的透明度分布做，视觉差不多而代价差一个量级。
+   ③ **不写 will-change**。一屏几十个节点，常驻的合成层提升就是几十份显存，
+      而它们 99% 的时间根本没在动。让浏览器在动画开始时临时提升就够了。
+   ④ 不 hover 时这个伪元素 opacity: 0 且没有任何 animation ——
+      静置的画布上它一分钱不花。
+   触发区放大到整个模块之后，鼠标扫过画布会连着点着好几团 —— 正因为上面四条，
+   代价还是「几个小合成层各播一次 950ms」，不是「几十个节点一直烧」。 */
+/* 按模块类型派色相。**这里只写「用哪个令牌」，色相角本身在 base.css** ——
+   加一种新模块类型就在这里加一行，色值仍然只在令牌层改一处。
+   认不出的类型不写规则，落到 :root 的 --smoke-h 兜底。 */
+.cfile-node[data-kind='code'] {
+  --smoke-h: var(--smoke-h-code);
+}
+.cfile-node[data-kind='web'] {
+  --smoke-h: var(--smoke-h-web);
+}
+.cfile-node[data-kind='image'] {
+  --smoke-h: var(--smoke-h-image);
+}
+.cfile-node[data-kind='c-git'] {
+  --smoke-h: var(--smoke-h-git);
+}
+.cfile-node[data-kind='c-design'] {
+  --smoke-h: var(--smoke-h-design);
+}
+.cfile-node[data-kind='c-team'] {
+  --smoke-h: var(--smoke-h-team);
+}
+.cfile-node[data-kind='c-codegraph'] {
+  --smoke-h: var(--smoke-h-codegraph);
+}
+.cfile-node[data-kind='c-plugin-panel'] {
+  --smoke-h: var(--smoke-h-plugin);
+}
+
+/* 渐变配方。**必须声明在这里，不能挪回 :root** —— 理由写在 base.css 的
+   色相表旁边（var() 在声明处替换，放 :root 会把色相烤成兜底那一个）。
+   −15° 到 +15°，共 30°（用户 2026-09-06 定的跨度）。首尾同色，conic 转起来
+   接缝才看不出；饱和度与明度在段间起伏，光靠 30° 色相差撑不起「烟雾」的层次。
+   色相角本身仍然只在 base.css 有一份。 */
+.cfile-badge {
+  --badge-smoke: conic-gradient(
+    from 0deg,
+    hsl(calc(var(--smoke-h) - 15) 88% 64% / 0.92),
+    hsl(calc(var(--smoke-h) - 5) 96% 73% / 0.86),
+    hsl(calc(var(--smoke-h) + 6) 90% 61% / 0.92),
+    hsl(calc(var(--smoke-h) + 15) 80% 54% / 0.9),
+    hsl(calc(var(--smoke-h) - 15) 88% 64% / 0.92)
+  );
+}
+
+.cfile-badge::after {
+  content: '';
+  position: absolute;
+  /* 比角标大一圈，转起来边缘才不会露出空档 */
+  inset: -45%;
+  border-radius: 50%;
+  background: var(--badge-smoke);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 图标压在烟雾上面。烟雾是它的底不是它的罩子 ——
+   `::after` 是定位元素，默认就画在静态的 svg 之上，不抬这一手图标会被糊住。 */
+.cfile-badge > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.cfile-node:hover .cfile-badge::after {
+  /* **linear，不是 ease 系列。** 多关键帧动画的缓动函数是**逐段**生效的，
+     原来写 cubic-bezier(0.16,1,0.3,1)（easeOutExpo）等于每一段都往前挤，
+     实测 130ms 还在、320ms 已经散完 —— 一过性变成了看不见。
+     节奏改由关键帧的位置表达：~190ms 升起、亮着到 ~620ms、再化开。 */
+  animation: cfile-badge-smoke 950ms linear;
+}
+
+@keyframes cfile-badge-smoke {
+  0% {
+    opacity: 0;
+    transform: rotate(-30deg) scale(0.45);
+  }
+  20% {
+    opacity: 0.72;
+  }
+  65% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(160deg) scale(1.6);
+  }
 }

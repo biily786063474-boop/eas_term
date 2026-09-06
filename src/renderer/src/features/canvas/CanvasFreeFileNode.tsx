@@ -152,6 +152,8 @@ export function CanvasFreeFileNode({
     <div
       className={`cfile-node cfile-node-free${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
+      /* 同 CanvasFileNode：只给角标选色相用 */
+      data-kind={pane.kind}
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
@@ -162,7 +164,9 @@ export function CanvasFreeFileNode({
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
-        <Icon size={11} />
+        <span className="cfile-badge">
+          <Icon size={13} />
+        </span>
         {editing ? (
           <input
             className="cfile-rename"

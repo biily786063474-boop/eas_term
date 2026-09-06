@@ -25,6 +25,12 @@ export const claudeAdapter: CliAdapter = {
   displayName: 'Claude Code',
 
   capabilities: {
+    // **兜底清单**（modelCatalog.ts 的第三级）。Claude Code 2.1.263 确实没有任何列模型的
+    // 接口 —— 无 `models` 子命令、`doctor` 不报、二进制里的 catalog 没有可靠结构、
+    // 非法模型名的报错也只说「不在本版本的 model catalog 里」不给清单（2026-09-06 逐个试过）。
+    // 所以这里写死的是**别名**（不是具体版本号），别名比模型 id 稳定得多：
+    // `--model` 的说明里明写「Provide an alias for the latest model (e.g. 'fable', 'opus')」。
+    // 哪天 Claude 给出列模型的接口，加 probeModels 钩子即可，这份自动退居兜底。
     models: [
       { id: 'fable', label: 'Fable' },
       { id: 'opus', label: 'Opus' },
@@ -121,6 +127,13 @@ export const claudeAdapter: CliAdapter = {
     if (opts.model) args.push('--model', opts.model)
     if (opts.effort) args.push('--effort', opts.effort)
     if (opts.resumeId) args.push('--resume', opts.resumeId)
+    // 阶段三第三项：caps.write=false 的第二道闸。这份 `--settings` 文件（session.ts 的
+    // `ensureWriteGuardSettings` 生成）里附了一条 PreToolUse hook，拦 Bash 里的写命令——
+    // 补 `--disallowedTools` 挡不住 Bash 的那个洞。**必须排在 `--disallowedTools` 之前**：
+    // 后者是变长参数，夹在它跟前面参数中间没关系，但绝不能反过来让变长参数吞掉
+    // `--settings` 后面这个路径参数（同下面那条"变长参数必须排在最后"的理由）。
+    // 未给（undefined）= 这道闸不适用，不凭空长出这个 flag（同 mcpConfigPath 的做法）。
+    if (opts.writeGuardSettings) args.push('--settings', opts.writeGuardSettings)
     // ── 角色的能力边界。**必须排在所有参数最后** ───────────────────────────
     //
     // `--disallowedTools` 是**变长参数**（`<tools...>`）：
@@ -136,7 +149,10 @@ export const claudeAdapter: CliAdapter = {
     //
     // 能力意图 → deny 清单，翻译逻辑只在 shared/roleBinding.ts 一处。
     // `--allowedTools` 不再拼：它在 Claude 里是「免审批清单」而非白名单，角色不该碰审批。
-    const deny = bindRole(opts.roleBounds, 'claude').claude.deny
+    // ctx.claudeWriteGuard 只影响 bindRole 报告里 write:false 那行的措辞（有没有第二道闸），
+    // **不影响 deny 数组本身**——报告不进 argv，传它只是为了让报告与这次真实拼出来的
+    // args 保持一致（这次到底附没附 --settings，就看 opts.writeGuardSettings 是否给了）。
+    const deny = bindRole(opts.roleBounds, 'claude', { claudeWriteGuard: !!opts.writeGuardSettings }).claude.deny
     if (deny.length) args.push('--disallowedTools', ...deny)
 
     // stdin 是送消息的活跃通道：--input-format stream-json 靠它逐行写用户消息，

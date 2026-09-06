@@ -78,6 +78,17 @@ const registry = new HostRegistry<Hosted>({
 const panels = new Map<string, Panel>()
 const shims = new Map<string, Shim>()
 
+/** 某个插件的数据目录（userData/plugin-data/<名>/）。宿主负责建，插件只管用。 */
+function pluginDataDir(name: string): string {
+  const d = path.join(app.getPath('userData'), 'plugin-data', name)
+  try {
+    fs.mkdirSync(d, { recursive: true })
+  } catch {
+    /* 建不出来插件那边会自己退回临时目录 */
+  }
+  return d
+}
+
 function spawnHosted(info: PluginInfo): Hosted {
   if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
   // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
@@ -88,6 +99,10 @@ function spawnHosted(info: PluginInfo): Hosted {
     HOME: process.env.HOME ?? '',
     ...(process.platform === 'win32' && process.env.SYSTEMROOT ? { SYSTEMROOT: process.env.SYSTEMROOT } : {}),
     ...(run.env ?? {}),
+    // 插件要往 userData 下写东西时的落点（今天只有「电脑视野」的截图用）。
+    // 由宿主给，插件自己不该去猜 userData 在哪。
+    EAS_PLUGIN_DATA: pluginDataDir(info.name),
+    EAS_COMPUTER_SHOTS: path.join(pluginDataDir(info.name), 'shots'),
     ...info.mcp.env
   }
   const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
@@ -195,6 +210,13 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
     switch (args.method) {
       case 'ping':
         return { ok: true, result: {} }
+      // 插件的**面板私有方法**（`panel/` 前缀）：只有面板走得到，会话里的转发 shim 那条路
+      // 不认这个前缀（见 pluginRpcFromShim 的 switch）。用途是「只有用户真手点才能做的事」——
+      // 电脑操作的授权就是这样：工具面里根本没有 grant，模型给自己授权是不可能的。
+      case 'panel/grant':
+      case 'panel/revoke':
+      case 'panel/state':
+        return { ok: true, result: await h.client.request(args.method, { ...params, by: p.session }, 30_000) }
       case 'tools/call': {
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }

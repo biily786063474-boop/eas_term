@@ -110,6 +110,8 @@ export function CanvasComponentNode({
       className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frame.id}
+      /* 同 CanvasFileNode：只给角标选色相用 */
+      data-kind={`c-${node.component?.type ?? ''}`}
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
       }}
@@ -126,7 +128,9 @@ export function CanvasComponentNode({
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
-        <def.Icon size={11} />
+        <span className="cfile-badge">
+          <def.Icon size={13} />
+        </span>
         {editing ? (
           <input
             className="cfile-rename"

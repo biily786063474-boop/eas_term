@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react'
 import { useStore } from '../../store'
 import { paneForFile, isHtmlPath } from './media'
+import { dropIntoFrame } from '../../store/canvas/dropTarget'
 import { HtmlOpenChoice } from './HtmlOpenChoice'
 import type { PaneState } from '../../layout'
 
@@ -31,6 +32,15 @@ export function viewportCenter(): { wx: number; wy: number } {
   return { wx: (cw / 2 - vp.x) / vp.scale, wy: (ch / 2 - vp.y) / vp.scale }
 }
 
+/** 节点尺寸：**与 canvasSlice 的 addFileNode 用同一套判据**，
+ *  这里要它只是为了把落点夹进 Frame 内框（夹不准会把 Frame 撑变形）。 */
+function sizeOf(pane: PaneState): { w: number; h: number } {
+  return {
+    w: pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300,
+    h: pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
+  }
+}
+
 export function useOpenInCanvas(opts: OpenInCanvasOpts = {}): {
   openInCanvas: (path: string, wx: number, wy: number) => void
   /** 从抽屉里的文件树条目起手拖拽。5px 阈值内当普通点击（交给 onPlainClick） */
@@ -47,11 +57,20 @@ export function useOpenInCanvas(opts: OpenInCanvasOpts = {}): {
     place: (pane: PaneState) => void
   } | null>(null)
 
-  // 文件 → 画布任意位置：统一走自由节点（不用 Frame，不判断落点在不在 Frame 上）。
+  // 文件 → 画布：**一律落进某个 Frame**（用户 2026-09-06）。
+  //
+  // 这里原来走的是自由节点（不属于任何 Frame）。问题是「一个 Frame 最多 5 个内容模块」
+  // 那条上限按 Frame 数，自由节点绕开它 —— 从知识库/skill 抽屉拖，画布照样能堆到几十个。
+  // 现在先用 dropIntoFrame 定 Frame 再 addFileNode，自动清理就一起生效了。
+  // 只有**一个 Frame 都没有**时才退回自由节点：那时确实没地方可放。
   const openInCanvas = useCallback(
     (path: string, wx: number, wy: number): void => {
       const place = (pane: PaneState): void => {
-        useStore.getState().addFreeFileNode(pane, wx, wy, { readOnly, writeVia })
+        const st = useStore.getState()
+        const size = sizeOf(pane)
+        const hit = dropIntoFrame(st.canvas.frames, wx, wy, size)
+        if (hit) st.addFileNode(hit.frameId, pane, hit.x, hit.y, { readOnly, writeVia })
+        else st.addFreeFileNode(pane, wx, wy, { readOnly, writeVia })
       }
       // .html 两种看法都合理（渲染 / 源码），不替用户定。
       // 弹窗要屏幕坐标，而这里拿到的是世界坐标 —— 反算回去，

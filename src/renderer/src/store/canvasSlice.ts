@@ -47,6 +47,7 @@ import {
 import { clampScale, finiteOr, initialScene, sanitizeCanvas, serializeCanvas } from './canvas/persist'
 import { fitScale } from './canvas/fitScale'
 import { tidyOrder } from './canvas/tidyOrder'
+import { nodesToEvict } from './canvas/nodeCap'
 import { gridPlace } from './canvas/tidyGrid'
 import {
   TODO_BOARD_DEFAULT_H,
@@ -98,6 +99,16 @@ let commitScaleTimer: ReturnType<typeof setTimeout> | null = null
  *    · ⇧⌘[ / ⇧⌘] 翻标签按 activeProjectId 过滤会得到空数组，整个静默失效
  *      （App.tsx 里为此专门改成「按当前标签所属的项目」取）
  *  这次把根因补上：两处用同一个 pickActiveTab，不变量只有一份。 */
+/** 某个 Frame 的内容模块超过上限时，把最早的几个摘掉（nodeCap.ts 定规则，那里有测试）。
+ *  **只摘文件预览类**：终端和 AI 对话带着活进程、画布组件是用户摆的工具，一个都不碰。 */
+function capContent(frames: CanvasFrame[], frameId: string): CanvasFrame[] {
+  const f = frames.find((x) => x.id === frameId)
+  if (!f) return frames
+  const evict = new Set(nodesToEvict(f.nodes))
+  if (!evict.size) return frames
+  return frames.map((x) => (x.id === frameId ? { ...x, nodes: x.nodes.filter((n) => !evict.has(n.id)) } : x))
+}
+
 function followSel(s: AppState, keys: string[]): { activeProjectId?: string; activeTabId?: string | null } {
   // 「选中的东西在哪个 Frame 里」——选中 Frame 本身、或选中它里面的节点，都算。
   // 判据在 store/canvas/selKey.ts，skill 面板用的是同一份。
@@ -522,16 +533,31 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
       }
     })),
 
-  addFileNode: (frameId, pane, x, y) =>
+  addFileNode: (frameId, pane, x, y, opts) =>
     set((s) => {
       const w = pane.kind === 'image' ? 260 : pane.kind === 'web' ? 320 : 300
       const h = pane.kind === 'web' ? 260 : pane.kind === 'image' ? 200 : 220
       // 插到离松手鼠标点最近的空位（x,y 已是相对 Frame 的落点），避开已有模块重叠
-      const frames = s.canvas.frames.map((f) =>
-        f.id === frameId ? placeNodeAtPoint(f, { id: uid('cnode'), pane, x, y, w, h }, x, y) : f
-      )
-      return { canvas: { ...s.canvas, frames: reflowSeparate(frames) } }
+      const node: CanvasNode = { id: uid('cnode'), pane, x, y, w, h }
+      if (opts?.readOnly) node.readOnly = true
+      if (opts?.writeVia) node.writeVia = opts.writeVia
+      const frames = s.canvas.frames.map((f) => (f.id === frameId ? placeNodeAtPoint(f, node, x, y) : f))
+      // **内容模块超过上限就清掉最早的**（用户 2026-09-06）。规则在 canvas/nodeCap.ts：
+      // 只数文件预览类，钉住的不占名额也不被清；终端 / AI 对话 / 组件永远不动。
+      return { canvas: { ...s.canvas, frames: reflowSeparate(capContent(frames, frameId)) } }
     }),
+
+  togglePinNode: (frameId, nodeId) =>
+    set((s) => ({
+      canvas: {
+        ...s.canvas,
+        frames: s.canvas.frames.map((f) =>
+          f.id !== frameId
+            ? f
+            : { ...f, nodes: f.nodes.map((n) => (n.id === nodeId ? { ...n, pinned: !n.pinned } : n)) }
+        )
+      }
+    })),
 
   addComponentNode: (frameId, type, x, y, w, h, props) =>
     set((s) => {
@@ -1205,11 +1231,15 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     set((s) => ({
       canvas: {
         ...s.canvas,
+        // 同 addFileNode：内容模块超上限就清最早的（nodeCap.ts）
         frames: reflowSeparate(
-          s.canvas.frames.map((f) =>
-            f.id === frameId
-              ? placeNodeInFrame(f, { id, pane: { kind: 'web', url }, x: 0, y: 0, w: 480, h: 340 }, s.canvas.frames)
-              : f
+          capContent(
+            s.canvas.frames.map((f) =>
+              f.id === frameId
+                ? placeNodeInFrame(f, { id, pane: { kind: 'web', url }, x: 0, y: 0, w: 480, h: 340 }, s.canvas.frames)
+                : f
+            ),
+            frameId
           )
         )
       }

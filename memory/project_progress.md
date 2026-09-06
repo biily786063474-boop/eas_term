@@ -309,3 +309,26 @@
 `docs/手机端-第二步进度.md` 的「第三步隧道整个没开始」（服务端已上线、主进程客户端已接，
 差的是界面）、`13-所有权矩阵` 里会漂移的快捷键条数。
 
+
+## 2026-09-05 → 09-06：角色卡三 harness 绑定层（三阶段，已发版）+ 角色工作流 P1（进行中，挂起）
+
+**已完成并在 main 上**（0.4.81 已发布，`chore: 0.4.81` = `544442f`，站点回填 `4d2c088`，补验记录 `82f3e32`）：
+
+- 角色卡改 `caps`（write / shell / imageGen / mcp）+ `raw` 逃生口，`shared/roleBinding.ts` 一处翻译三家参数并出报告；`roles.json` v1→v2 自动迁移（**v2 被 0.4.80 及更早读到会静默丢 caps**）。
+- Codex 接上只读沙箱、`--disable shell_tool`、MCP 名按本机清单过滤；omp 白名单减法 + MCP 通配不连。
+- 阶段二：编辑器三列矩阵（文案全部从报告派生）、工具栏降级徽标、`team_spawn` 加 `role_id`（真机打通）。
+- 阶段三第一项：Codex 内置生图 **实测从未进过工具清单**，模型说的「imagegen」是系统 skill，可用 `-c 'skills.config=[{path="<CODEX_HOME>/skills/.system/imagegen/SKILL.md",enabled=false}]'` 摘掉（路径必须是 SKILL.md）。**用户当日决定画师不再默认勾「不许生图」**（保留 Codex 原生能力），开关只给自建角色。
+- spec：`docs/superpowers/specs/2026-09-05-角色卡片三harness绑定层-design.md`（十一至十四节有全部探针与真机记录）。
+
+**进行中 · 角色工作流 P1（分支隔离 + 协同板）**，spec `docs/superpowers/specs/2026-09-05-角色工作流-分支合并官协同板-design.md` 第六、八节：
+
+- worktree：`/Users/biily/Biily/Projects/vibe coding/terminal-wt/roles-workflow-p1`，分支 `feat/roles-workflow-p1`，自 main `82f3e32` 分出，**尚未合并**。
+- 计划：`docs/superpowers/plans/2026-09-05-角色工作流-P1-分支隔离与协同板.md`（在该分支上，7 个任务）。SDD 台账与简报在 worktree 的 `.superpowers/sdd/2026-09-05-角色工作流-P1-分支隔离与协同板/progress.md`（git-ignored）。
+- 做到哪：Task 1（`AgentRole.isolation`、三个写码角色默认 worktree、`shared/roleWorktree.ts` 命名纯函数）`be08a85` ✅ 评审通过；Task 2（`shared/board.ts` 协同板纯渲染）`4011f36` ✅ 评审通过；**Task 3（`main/board.ts`、`role:worktreeAdd` IPC、session.ts 注入与刷板、preload）未开始** —— 派过两次 agent 都在读代码阶段停摆，worktree 干净在 `4011f36`。
+- 下一步：重派 Task 3（简报 `task-3-brief.md` 完整可直接用；注意 `board.ts` 与 `session.ts` 用 `setSessionSource` 注入，别互相 import）→ Task 4 三家系统提示附板文 + `board_read` → Task 5 渲染层首发前建树/非 git 确认 → Task 6 分支徽标 + 编辑器隔离开关 → Task 7 图纸 + 隔离实例真机验证（用 /tmp 临时 git 项目）。
+- 挂起原因：用户 2026-09-06 说「暂停」。
+
+**这轮的方法论教训**（已写进 ~/.claude 项目记忆 `eas-term-角色绑定层.md` / `eas-term-cdp-验证方法.md`）：
+- 判断 CLI 有没有某个工具，看**发给模型的请求体**（假端点或 trace 回显），别问模型。
+- 隔离实例里给对话 pane 发消息要用 `[data-leaf-id=…] textarea.ac-input` + ⌘Enter，挑「第一个可见输入框」会把指令发进用户真实的历史会话。
+- 清临时目录别用 `ps` 抓路径做排除，路径带空格会抓错，正在跑的实例目录会被一起删。

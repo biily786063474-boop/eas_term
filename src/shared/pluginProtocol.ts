@@ -21,7 +21,13 @@ export const VIEW_REQUESTS = [
   'ui/request-display-mode',
   // ── Eas-Term 扩展（别的宿主不认就回 -32601，面板要能承受）──
   'eas/canvas.call',
-  'eas/panel.resize'
+  'eas/panel.resize',
+  // 插件的**面板私有方法**（`panel/` 前缀）：只有面板发得出，会话里的转发 shim 不认这个前缀。
+  // 用途是「只有用户真手点才能做的事」—— 电脑操作的授权就是这样，
+  // 工具面里根本没有 grant，模型给自己授权是不可能的（2026-09-06）。
+  'panel/grant',
+  'panel/revoke',
+  'panel/state'
 ] as const
 /** 面板 → 宿主 的通知（不回） */
 export const VIEW_NOTIFICATIONS = ['ui/notifications/initialized', 'ui/notifications/size-changed'] as const

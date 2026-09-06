@@ -200,8 +200,33 @@ function checkPackagedHookPath() {
   const usesScriptLiteral = fnBody.includes("'eas-pretooluse.mjs'")
   const foundFn = fnBody.length > 0
 
+  // 阶段三第三项（2026-09-06 评审 Minor）：写守卫脚本 `eas-write-guard.mjs` 走的是
+  // 同一份 extraResources 条目（同一个 `resources/agent-hooks` 目录整个打包），
+  // 但它自己的路径拼法在 `guardScriptPath()`——原来这个静态检查只顾了
+  // `hookScriptPath()`/`eas-pretooluse.mjs`，`guardScriptPath()` 打包后路径拼错、
+  // 或者源文件被误删，这里都测不出来，得等真机装包才炸。补一份同构的检查。
+  const guardSrc = path.join(PROJECT_ROOT, 'resources', 'agent-hooks', 'eas-write-guard.mjs')
+  const guardSrcExists = fs.existsSync(guardSrc)
+  const guardFnMatch = sessionTs.match(/function guardScriptPath\(\)[^{]*\{[\s\S]*?\n\}/)
+  const guardFnBody = guardFnMatch ? guardFnMatch[0] : ''
+  const guardUsesResourcesPath = guardFnBody.includes('process.resourcesPath')
+  const guardUsesAgentHooksLiteral = guardFnBody.includes("'agent-hooks'")
+  const guardUsesScriptLiteral = guardFnBody.includes("'eas-write-guard.mjs'")
+  const guardFoundFn = guardFnBody.length > 0
+
   const ok =
-    hasEntry && hookSrcExists && respSrcExists && foundFn && usesResourcesPath && usesAgentHooksLiteral && usesScriptLiteral
+    hasEntry &&
+    hookSrcExists &&
+    respSrcExists &&
+    foundFn &&
+    usesResourcesPath &&
+    usesAgentHooksLiteral &&
+    usesScriptLiteral &&
+    guardSrcExists &&
+    guardFoundFn &&
+    guardUsesResourcesPath &&
+    guardUsesAgentHooksLiteral &&
+    guardUsesScriptLiteral
 
   return {
     ok,
@@ -213,7 +238,13 @@ function checkPackagedHookPath() {
     usesResourcesPath,
     usesAgentHooksLiteral,
     usesScriptLiteral,
-    fnBody
+    fnBody,
+    guardSrcExists,
+    guardFoundFn,
+    guardUsesResourcesPath,
+    guardUsesAgentHooksLiteral,
+    guardUsesScriptLiteral,
+    guardFnBody
   }
 }
 
@@ -226,6 +257,11 @@ function printConcernB(r) {
   log('  打包分支用 process.resourcesPath：', r.usesResourcesPath)
   log("  打包分支拼 'agent-hooks' 字面量（与 extraResources.to 对得上）：", r.usesAgentHooksLiteral)
   log("  打包分支拼 'eas-pretooluse.mjs' 字面量：", r.usesScriptLiteral)
+  log('  源目录下 eas-write-guard.mjs 存在：', r.guardSrcExists)
+  log('  guardScriptPath() 找到函数体：', r.guardFoundFn)
+  log('  guardScriptPath() 打包分支用 process.resourcesPath：', r.guardUsesResourcesPath)
+  log("  guardScriptPath() 打包分支拼 'agent-hooks' 字面量：", r.guardUsesAgentHooksLiteral)
+  log("  guardScriptPath() 打包分支拼 'eas-write-guard.mjs' 字面量：", r.guardUsesScriptLiteral)
   log('  静态验证结论：', r.ok ? '通过（路径算术能对上）' : '不通过——见上面各项')
   log('  注：这是静态验证，不是真跑一次 electron-builder 打包再核实产物；见任务报告的附加说明。')
 }

@@ -58,6 +58,7 @@ function dotTint(hex?: string): Record<string, string> {
   return { '--dot-rgb': `${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}` }
 }
 import { collectLeaves } from '../../layout'
+import { contentStat, CONTENT_CAP } from '../../store/canvas/nodeCap'
 import './canvas.css'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
@@ -894,7 +895,11 @@ export function CanvasStage(): JSX.Element {
         h: Math.abs(p.wy - start.wy)
       }
       if (rect.w + rect.h > 3) moved = true
-      setBand(rect)
+      // **只有真的在拖才画选框。**（用户 2026-09-06 报「界面偶尔闪一下」，黑匣子日志里
+      // 一小时内 11 次 canvas-band 挂载后 40~120ms 就卸载 —— 那是空白处普通点一下、
+      // 手抖 1 像素也会 setBand，闪出一个强调色小方块。moved 一旦为真就一直为真，
+      // 真拖拽期间照常跟手。）
+      if (moved) setBand(rect)
       const cv = useStore.getState().canvas
       const next = new Set(base)
       cv.shapes.forEach((sh) => {
@@ -1431,6 +1436,23 @@ export function CanvasStage(): JSX.Element {
                   data-tip={`手机在这里做了 ${phoneMarks(f)} 件事，你还没看过`}
                 >
                   {phoneMarks(f)}
+                </span>
+              )}
+              {/* 内容模块的名额（web/code/image）。**做成「事前看得见」而不是「事后弹一句」**：
+                  自动清理删掉的是用户眼睛正看着的东西，等它没了再提示，读起来就是「软件把我的图弄丢了」。
+                  摆在这里，第 5 个开出来时数字就顶到上限，下一个要挤掉谁是可预期的。
+                  只在有内容模块时出现 —— 一个终端 Frame 不该多一个永远是 0/5 的角标。
+                  跟手机角标同类：信息不是按钮，所以折叠时也留着（那时更看不见里面）。 */}
+              {contentStat(f.nodes).used > 0 && (
+                <span
+                  className={`cframe-slots${contentStat(f.nodes).used >= CONTENT_CAP ? ' full' : ''}`}
+                  data-tip={
+                    `画布内容 ${contentStat(f.nodes).used}/${CONTENT_CAP}` +
+                    (contentStat(f.nodes).pinned ? `，另有 ${contentStat(f.nodes).pinned} 个已钉住不占名额` : '') +
+                    '。再开就会自动关掉最早的那个；想留住某个，点它右上角的图钉'
+                  }
+                >
+                  {contentStat(f.nodes).used}/{CONTENT_CAP}
                 </span>
               )}
               <span className="cframe-spacer" />

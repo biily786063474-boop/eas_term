@@ -21,6 +21,7 @@ import type { ArchiveItem, DirEntry } from '../../shared/types'
 import type { SessionBrief } from '../../shared/agentChat'
 import { askForSecret } from './features/workspace/secretRequest'
 import { liveMaximizedNode } from './store/canvas/selectors'
+import { contentStat } from './store/canvas/nodeCap'
 import { runCanvasSnapshot, snapshotBlockedReason } from './features/canvas/snapshotRun'
 
 interface Ctx {
@@ -161,6 +162,12 @@ function paneOfLeaf(leafId: string): PaneState | undefined {
 }
 
 // 给 AI 看的节点描述：类型 + 可读标题（它据此决定聚焦/关闭谁）
+/** 某个 Frame 当前的节点 id 集合（用来算「这次开完挤掉了谁」） */
+function idsOfFrame(frameId: string): Set<string> {
+  const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
+  return new Set(f?.nodes.map((n) => n.id) ?? [])
+}
+
 function describeNode(n: CanvasNode): Record<string, unknown> {
   let kind = 'unknown'
   let title = n.name ?? ''
@@ -1357,6 +1364,20 @@ const SHELL_TRAP =
     }
   }
 
+  // 开完内容模块后，把「限额还剩几个 / 这次挤掉了谁」一起回给 AI。
+  // 不回报的话，AI 开第 6 个时会以为一切正常，实际上自己前面开的那个已经没了。
+  const capReport = (frameId: string, before: Set<string>): Record<string, unknown> => {
+    const f = useStore.getState().canvas.frames.find((x) => x.id === frameId)
+    if (!f) return {}
+    const stat = contentStat(f.nodes)
+    const gone = [...before].filter((id) => !f.nodes.some((n) => n.id === id))
+    const out: Record<string, unknown> = { content_slots: `${stat.used}/${stat.cap}` }
+    if (stat.pinned) out.pinned = stat.pinned
+    if (gone.length)
+      out.evicted = `超过上限，自动关掉了最早的 ${gone.length} 个内容模块。要留住某个，让用户点它右上角的图钉`
+    return out
+  }
+
   // 以下工具都要落到某个 Frame
   const loc = resolveFrame(ctx)
   if (!loc) throw new Error('画布里还没有 Frame，无法打开预览')
@@ -1365,8 +1386,9 @@ const SHELL_TRAP =
     const url = String(args.url ?? '')
     if (!/^https?:\/\//i.test(url)) throw new Error('只接受 http(s) 网址')
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    const before = idsOfFrame(loc.frameId)
     s.addWebNode(loc.frameId, url)
-    return { opened: url, frameId: loc.frameId }
+    return { opened: url, frameId: loc.frameId, ...capReport(loc.frameId, before) }
   }
 
   if (tool === 'canvas_open_html' || tool === 'canvas_open_file') {
@@ -1378,9 +1400,10 @@ const SHELL_TRAP =
     if (!probe[0]) throw new Error(`文件不存在：${abs}`)
     if (probe[0].isDir) throw new Error(`这是目录不是文件：${abs}`)
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    const before = idsOfFrame(loc.frameId)
     if (tool === 'canvas_open_html' || isWebFile(abs)) {
       s.addWebNode(loc.frameId, fileUrlOf(abs))
-      return { opened: abs, as: 'browser', frameId: loc.frameId }
+      return { opened: abs, as: 'browser', frameId: loc.frameId, ...capReport(loc.frameId, before) }
     }
     // 其它文件：按扩展名给出预览节点（图片/视频走 image，其余走 code）
     const ext = abs.split('.').pop()?.toLowerCase() ?? ''
@@ -1389,7 +1412,7 @@ const SHELL_TRAP =
       ? ({ kind: 'image', filePath: abs } as const)
       : ({ kind: 'code', filePath: abs } as const)
     s.addFileNode(loc.frameId, pane, 0, 0)
-    return { opened: abs, as: pane.kind, frameId: loc.frameId }
+    return { opened: abs, as: pane.kind, frameId: loc.frameId, ...capReport(loc.frameId, before) }
   }
 
   throw new Error(`未知工具：${tool}`)

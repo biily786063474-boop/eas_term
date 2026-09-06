@@ -42,6 +42,7 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
 import { openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
 import { hostPaths } from './omp/host.ts'
+import { parseCatalog, resolveModels, shouldPersist, type CatalogFile } from './modelCatalog.ts'
 import { resumeOwnerOf, type ResumeOwner } from './resumeOwner.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
@@ -187,6 +188,17 @@ function hookScriptPath(): string {
     : path.join(app.getAppPath(), 'resources', 'agent-hooks', 'eas-pretooluse.mjs')
 }
 
+/** 同上，换成写守卫脚本（阶段三第三项）：`caps.write=false` 在 Claude 上的第二道闸，
+ *  按命令模式识别 Bash 里的写操作，见 `resources/agent-hooks/eas-write-guard.mjs` 文件头
+ *  （它是 --disallowedTools 挡不住 Bash 之后补的那道闸）。路径规则与 hookScriptPath()
+ *  逐字相同，照抄一份而不是传参数——两者未来各自可能独立演化（比如某天审批 hook 要挪
+ *  目录，写守卫不必跟着动）。 */
+function guardScriptPath(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'agent-hooks', 'eas-write-guard.mjs')
+    : path.join(app.getAppPath(), 'resources', 'agent-hooks', 'eas-write-guard.mjs')
+}
+
 /** hook 脚本要用哪个 node 跑。镜像 mcpBridge.ts 的 runnerFor()：GUI 启动的 app PATH
  *  很贫瘠（常只有 /usr/bin:/bin），bare 'node' 未必解析得到。这里只需要单个可执行文件
  *  路径去拼 shell 命令字符串，不需要 runnerFor 完整的 spawn 语义（它返回给 MCP server
@@ -227,13 +239,72 @@ function nodeBinForHook(): string {
  *  避免在空格处被 shell 切成多个 token。nodeBin 由调用方传入（restartAndDeliver 里的
  *  hookNodeBin，或 approvalHookStatus 里现算的一份）——不在这里重复调 nodeBinForHook()
  *  （2026-08-14 全分支评审 I3：算一次、按需复用）。 */
-function hookCommand(nodeBin: string): string {
+/** `"node" "脚本"` 这种带引号的命令字符串——两处 hook（审批、写守卫）拼命令的方式
+ *  完全相同，只是脚本路径不同，收口成一个函数避免两处各写一份引号逻辑走散。 */
+function quotedNodeCommand(nodeBin: string, scriptPath: string): string {
   const quote = (s: string): string => `"${s}"`
-  return `${quote(nodeBin)} ${quote(hookScriptPath())}`
+  return `${quote(nodeBin)} ${quote(scriptPath)}`
+}
+
+function hookCommand(nodeBin: string): string {
+  return quotedNodeCommand(nodeBin, hookScriptPath())
 }
 
 function hookConfigPath(cwd: string): string {
   return path.join(cwd, '.claude', 'settings.json')
+}
+
+/** 写守卫的 `--settings` 文件写到哪：**app 自己的 userData 目录**，不是用户项目文件——
+ *  跟审批 hook 要装进 `<cwd>/.claude/settings.json` 不是一回事，不需要过 fsGuard、
+ *  也不需要处理与用户手改内容的合并（这份文件完全由我们自己生成/消费，用户不会去改它，
+ *  探针只验证过"`--settings` 能按进程附加设置、不用碰用户项目文件"这一点——它跟用户
+ *  项目里已有的 `.claude/settings.json` 之间具体怎么叠加/取舍，没有另外验证，
+ *  也不影响这里的写法：我们只管生成自己这一份，不去读、不去猜用户那份长什么样）。 */
+function writeGuardSettingsPath(): string {
+  return path.join(app.getPath('userData'), 'agent-hooks', 'write-guard.json')
+}
+
+/** 生成/重写「附一条 PreToolUse 写守卫」的 `--settings` 文件，返回它的路径给
+ *  claude.ts 的 `--settings <path>` 用。
+ *
+ *  **每次起会话都重写一遍**——内容完全由 `nodeBin` 决定，是幂等的纯覆盖，不像
+ *  `installApprovalHook` 那样要保留用户自己已有的其它配置（这是我们自己的文件，
+ *  不是用户项目里的），所以不需要 `planHookInstall` 那套合并规划，直接整份写出。
+ *
+ *  **失败必须抛出人话，不能悄悄返回一个没写成的路径**（2026-09-06 评审 Minor）：
+ *  这份文件写不出去（磁盘满、userData 目录权限问题……）意味着 `caps.write=false`
+ *  的第二道闸压根不存在，而调用方（`agentChat:start` 的 handler）会拿这个返回值
+ *  去拼 `--settings <path>`——路径指向一个不存在的文件，Claude Code 大概率直接
+ *  忽略这个 flag，静默退化成只有第一道闸。**fail-closed 不变**：调用方捕获这个
+ *  异常后要让这次会话直接起不来，而不是退化着起、把用户以为的"写保护"变成假的。 */
+function ensureWriteGuardSettings(nodeBin: string): string {
+  const target = writeGuardSettingsPath()
+  const settings = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: 'Bash',
+          hooks: [{ type: 'command', command: quotedNodeCommand(nodeBin, guardScriptPath()) }]
+        }
+      ]
+    }
+  }
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    // **先写 .tmp 再 rename**（2026-09-06 最终评审 Important 7）：直接 writeFileSync 会先
+    // 把目标文件截断成 0 字节再往里写，中途失败（磁盘满、进程被杀）就留下一份半截 JSON。
+    // 而这份文件的消费方是**另一个进程**——Claude Code 读它、解析失败就当没有这条 hook，
+    // 于是第二道闸静默消失。restart 每次都重写，撞上这个窗口的概率不是零。rename 在同一
+    // 个文件系统内是原子的：要么还是上一份完整的旧文件，要么已经是完整的新文件，
+    // 不存在"读到半截"的中间态。做法与本文件 writeHookConfig() 一致。
+    const tmp = target + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), 'utf8')
+    fs.renameSync(tmp, target)
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e)
+    throw new Error(`守卫文件写不进 ${target}，这次会话不起：${reason}`)
+  }
+  return target
 }
 
 function readHookConfig(file: string): unknown {
@@ -439,6 +510,53 @@ function writeStdin(live: Live, message: string): void {
   }
 }
 
+/** 模型清单落盘的位置。**不是硬编码的清单**，是这台机器上真实探测成功过的那份。 */
+function catalogPath(): string {
+  return path.join(app.getPath('userData'), 'model-catalog.json')
+}
+
+function readCatalog(): CatalogFile {
+  try {
+    return parseCatalog(JSON.parse(fs.readFileSync(catalogPath(), 'utf8')))
+  } catch {
+    return {}
+  }
+}
+
+function writeCatalog(cliId: string, models: { id: string; label: string }[]): void {
+  try {
+    const all = readCatalog()
+    all[cliId] = { at: Date.now(), models }
+    fs.writeFileSync(catalogPath(), JSON.stringify(all, null, 2))
+  } catch (e) {
+    console.warn('[agentChat] 模型清单写不下去（不影响会话）', e)
+  }
+}
+
+/**
+ * 先用「缓存或兜底」把下拉填上，再异步探测、拿到就覆盖。
+ * 探测失败一律沉默降级 —— 拉不到清单绝不能影响开会话（用户 2026-09-06 定的兜底要求）。
+ */
+async function resolveAndBroadcastModels(live: Live, adapter: CliAdapter): Promise<void> {
+  const cached = readCatalog()[adapter.id]
+  const first = resolveModels({ cached: cached?.models, fallback: adapter.capabilities.models, cachedAt: cached?.at })
+  if (first.models.length && live.rec.alive) handleEvent(live, { k: 'capabilities', models: first.models })
+  if (first.note) console.log(`[agentChat] ${adapter.id} 模型清单：${first.note}`)
+  if (!adapter.probeModels) return
+  try {
+    const probed = await adapter.probeModels(hostPaths())
+    const r = resolveModels({ probed, cached: cached?.models, fallback: adapter.capabilities.models })
+    if (r.source !== 'probe') {
+      console.log(`[agentChat] ${adapter.id} 模型探测没成功，继续用${r.source === 'cache' ? '上次那份' : '内置清单'}`)
+      return
+    }
+    if (shouldPersist(cached?.models, r.models)) writeCatalog(adapter.id, r.models)
+    if (live.rec.alive) handleEvent(live, { k: 'capabilities', models: r.models })
+  } catch (e) {
+    console.log(`[agentChat] ${adapter.id} 模型探测出错，已降级`, e)
+  }
+}
+
 function wireProc(live: Live, proc: ChildProcess): void {
   // 新进程接上了 —— 上一轮的「是我们杀的」到此为止。
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
@@ -597,6 +715,29 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
     }
   }
 
+  // 写守卫的 `--settings` 文件在 `agentChat:start` 起会话那一刻生成过一次，用的是
+  // **那时**算出的 nodeBin；这里的 `hookNodeBin` 是**这次 spawn**重新探测的结果
+  // （2026-09-06 评审 Important）：两者理论上可能不一致——比如上次探测到系统 node、
+  // 这次那个路径被卸载/改名，兜底成了本 app 的 Electron 二进制——不一致时文件里的
+  // `command` 还指着旧的 nodeBin，跟这次 spawn 到底有没有注入 `ELECTRON_RUN_AS_NODE`
+  // 对不上，守卫子进程可能用错误的方式被拉起（轻则报错、重则静默不产出任何响应，
+  // 等价于空转）。跟 `installApprovalHook` 每次 spawn 都重写命令一致，这里也每次
+  // spawn 都用当次的 `hookNodeBin` 整份重写——`ensureWriteGuardSettings` 是幂等的
+  // 纯覆盖，重写一次的开销可以忽略。写失败按非致命通知处理而不是让整个 restart
+  // 失败：这份文件在起会话时已经写成功过一次（`opts.writeGuardSettings` 才会有值），
+  // 这里失败只表示"可能用着上一次的 nodeBin"，不是"完全没有第二道闸"。
+  if (opts.writeGuardSettings) {
+    try {
+      ensureWriteGuardSettings(hookNodeBin)
+    } catch (e) {
+      handleEvent(live, {
+        k: 'error',
+        fatal: false,
+        message: `写守卫文件更新失败，这次会话可能仍在用旧的 node 路径：${e instanceof Error ? e.message : String(e)}`
+      })
+    }
+  }
+
   // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
   // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
   // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
@@ -663,6 +804,11 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
       `${live.rec.resumeId ? ' resume' : ''}${live.rec.owner === 'team' ? ' team' : ''}）`
   )
   wireProc(live, proc)
+
+  // 模型清单：三级取值（modelCatalog.ts）——探测 → 上次成功的那份 → adapter 兜底。
+  // **不 await** 探测：它要起一个短命进程，不能让第一条消息等它。
+  // 先用「缓存或兜底」立刻把下拉填上，探测回来了再覆盖一次。
+  void resolveAndBroadcastModels(live, adapter)
 
   // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
   // 'ignore' 的已经在上面把消息塞进了位置参数，这里不用再写。
@@ -1200,6 +1346,25 @@ export function registerAgentChatHandlers(): void {
     if (!adapter) return { ok: false, error: `未知 CLI：${p.cli}` }
 
     const id = `ac-${nextId++}`
+    // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
+    // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
+    const roleBounds = safeRoleBounds(p.roleBounds)
+    // 阶段三第三项：Claude 上 caps.write=false 的第二道闸。开闸条件三个都要满足
+    // （字面意思见下面 rec.writeGuardSettings 的注释）。**提到 rec 字面量之外单独算**
+    // ——`ensureWriteGuardSettings` 现在会在写不出文件时抛错（2026-09-06 评审 Minor：
+    // 失败要有人话，不能悄悄返回一个没写成的路径），得在这里 try/catch 住，让整个
+    // `agentChat:start` 直接回 `{ok:false}`（fail-closed：宁可这次会话起不来，
+    // 也不能退化成"用户以为有写保护、实际上 --settings 指了个不存在的文件"）。
+    const needsWriteGuard =
+      p.cli === 'claude' && roleBounds?.caps?.write === false && roleBounds?.caps?.shell !== false
+    let writeGuardSettings: string | undefined
+    if (needsWriteGuard) {
+      try {
+        writeGuardSettings = ensureWriteGuardSettings(nodeBinForHook())
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
     const rec: SessionRecord = {
       id,
       cli: p.cli,
@@ -1228,13 +1393,24 @@ export function registerAgentChatHandlers(): void {
         typeof p.roleContract === 'string' && p.roleContract.trim() ? p.roleContract : undefined,
       // 角色能力意图。**只收清洗过的形状**，任何别的形状一律当没给 ——
       // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
-      roleBounds: safeRoleBounds(p.roleBounds),
+      roleBounds,
       // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
       // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
       knownMcpServers: p.cli === 'codex' ? codexServers() : undefined,
       // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
       // 只在 Codex 时算，adapter 是纯函数不读环境变量。
-      codexHome: p.cli === 'codex' ? codexHome() : undefined
+      codexHome: p.cli === 'codex' ? codexHome() : undefined,
+      // 阶段三第三项：Claude 上 caps.write=false 的第二道闸（--settings 附 PreToolUse
+      // 写守卫，补 --disallowedTools 挡不住 Bash 的逃生口）。开闸条件三个都要满足：
+      //   · 只有 Claude 用得到这条 --settings（Codex/omp 走各自的落法，见 roleBinding.ts）
+      //   · 角色确实要求 write:false —— 没这个意图就没必要附任何东西
+      //   · shell 没有一起禁掉——shell:false 时 Claude 侧已经 --disallowedTools Bash，
+      //     模型压根调不到 Bash 工具，附这条守卫是无意义的死重量
+      // 只算一次（不进 effectiveOpts 之外的路径重算）：跟 knownMcpServers / codexHome
+      // 同一个理由，落进 SessionRecord 让 restart 也带得上。实际计算挪到上面
+      // `needsWriteGuard`/`writeGuardSettings` 那两行，好让写文件失败时能在拼 rec
+      // 之前就 return（fail-closed，见上面的注释）。
+      writeGuardSettings
     }
     const live: Live = {
       rec,

@@ -27,3 +27,19 @@ test('**宽度要够三个名字都不被截断** —— 这是空 Frame 的默�
 test('有内容的 Frame 照旧走老下限 —— 空态那条不该外溢', () => {
   assert.deepEqual(frameMinSize(false), FRAME_MIN)
 })
+
+// 用户 2026-09-06 实拍：单列节点的 Frame 只有 332 宽，标题栏最后两颗按钮
+// 整个跑到虚线框外面。名字已经改成可压缩带省略号，但**按钮那一段压不动**
+// （全是 flex:none），所以下限必须自己装得下它们。
+test('**下限要装得下标题栏那一排按钮** —— 名字压到只剩一截也得够', () => {
+  // 对着 .cframe-head 量的（scale=1 的 CSS px），账在 frameSize.ts 的注释里。
+  const 色点 = 9
+  const 多agent = 20
+  const 名额角标 = 26
+  const 按钮 = 22 * 6
+  const 间距 = 8 * 10
+  const padding = 20 + 16
+  const 名字留一截 = 40
+  const 需要 = 色点 + 多agent + 名额角标 + 按钮 + 间距 + padding + 名字留一截
+  assert.ok(FRAME_MIN.w >= 需要, `${FRAME_MIN.w} 装不下标题栏（需要 ${需要}）—— 按钮会跑到框外面`)
+})

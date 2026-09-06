@@ -42,7 +42,9 @@ export type ChatEvent =
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
   | { k: 'exec.start'; execId: string; label: string; detail: string }
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string }
+  /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
+   *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string }
   | {
       k: 'approval.request'
       approvalId: string
@@ -265,6 +267,21 @@ export interface StartOpts {
    *  `knownMcpServers` 一个理由：adapter 是纯函数不读环境，得由 session.ts 起会话时算好传入；
    *  拿不到就摘不掉 skill，档位退回 degraded。 */
   codexHome?: string
+  /** 阶段三第三项：Claude 上 `caps.write=false` 的第二道闸——一份 `--settings` 文件的
+   *  绝对路径，里面附了一条 PreToolUse hook（matcher `Bash`），跑
+   *  `resources/agent-hooks/eas-write-guard.mjs` 按命令模式识别 Bash 里的写操作并 deny。
+   *
+   *  补的是哪个逃生口：`--disallowedTools Write Edit NotebookEdit` 挡住了模型的内置写
+   *  工具，但挡不住 Bash——只要 `caps.shell` 没有一起禁掉，模型仍能开终端跑
+   *  `echo x > file` / `sed -i` / `rm` 之类的命令改文件。这份 `--settings` 就是补那个洞。
+   *
+   *  由 `session.ts` 的 `ensureWriteGuardSettings()` 在起会话时算好（同 `knownMcpServers` /
+   *  `codexHome` 一个理由：adapter 是纯函数，不该自己决定写不写文件；且它要落进
+   *  `SessionRecord` 并被 `effectiveOpts` 带过 restart——Claude 每次 restart 都要重新拼
+   *  `--settings`，丢了这个字段等于第二道闸从第二条消息起悄悄消失）。
+   *  undefined = 不附这条 `--settings`（角色没勾 `write:false`，或 `shell:false` 已经把
+   *  Bash 整个挡掉、这道闸没有意义）。 */
+  writeGuardSettings?: string
 }
 
 /** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**
@@ -353,6 +370,17 @@ export interface CliAdapter {
   bundled?: true
   /** 额度从哪来。不声明 = 现状（Claude 走直连接口、Codex 读它自己的日志）。 */
   quotaSource?: 'omp-usage'
+  /** ⚠️ `capabilities.models` 是**兜底清单，不是主数据源**（用户 2026-09-06：所有模型列表
+   *  都不要硬编码）。取值顺序在 `main/agentChat/modelCatalog.ts`：
+   *  探测 → 上次探测成功的结果（落盘）→ 这份兜底。只在从没探测成功过时才会用到它，
+   *  而且界面会标注「内置清单，可能与你的账号不一致」。
+   *
+   *  这个 CLI 的可用模型要**问它自己**，不能写死。
+   *  声明了的话，会话起来后 session.ts 会调一次并广播 `capabilities` 事件更新工具栏下拉。
+   *  返回 undefined = 问不到，工具栏退回「没有下拉」（跟不声明这个钩子一样）。
+   *  只声明给「模型名随版本/账号变」的 CLI：Codex 的 gpt-5.6-sol/terra/luna 每个账号都不同，
+   *  硬编码等于隔三差五给一个选了就报错的选项（2026-09-06）。 */
+  probeModels?: (host?: HostPaths) => Promise<{ id: string; label: string }[] | undefined>
   /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn。
    *  stdin 必填（不给可选，是怕下一个 CLI 接入时又忘记声明）——每个 CLI 怎么用 stdin
    *  是它自己的怪癖，adapter 知道，下游不该替它记：

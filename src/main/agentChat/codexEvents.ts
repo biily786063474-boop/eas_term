@@ -30,8 +30,13 @@ export interface CodexTranslator {
   push(line: string): ChatEvent[]
 }
 
-/** item.started 只有这些类型才当作「正在执行」产出 exec.start——其余（如 agent_message）没有 item.started 语义。 */
-const EXEC_LIKE_ITEM_TYPES = new Set(['command_execution', 'file_change'])
+/** 明确认识、有专门标签的 item 类型。**其余带 id 的一律走兜底**（见 translateItemStarted）——
+ *  2026-09-06 的教训：只放行这两个的时候，Codex 联网搜索（`web_search`，实测一次问答能出 19 条）
+ *  在界面上**完全不可见**，用户几十秒只看到「正在处理…」。宁可多显示一行陌生类型，
+ *  也不要静默丢弃：以后 Codex 加新类型（生图、子 agent 协作）自动就有痕迹。 */
+const KNOWN_ITEM_TYPES = new Set(['command_execution', 'file_change', 'web_search'])
+/** 这些没有「执行」语义，不产出执行行 */
+const NON_EXEC_ITEM_TYPES = new Set(['agent_message', 'reasoning'])
 
 export function createCodexTranslator(): CodexTranslator {
   function push(line: string): ChatEvent[] {
@@ -86,7 +91,7 @@ function translateItemStarted(j: Record<string, unknown>): ChatEvent[] {
   if (!item) return []
   const id = item.id
   if (typeof id !== 'string' || !id) return []
-  if (typeof item.type !== 'string' || !EXEC_LIKE_ITEM_TYPES.has(item.type)) return []
+  if (typeof item.type !== 'string' || NON_EXEC_ITEM_TYPES.has(item.type)) return []
   return [{ k: 'exec.start', execId: id, label: labelFor(item), detail: safeStringify(item) }]
 }
 
@@ -105,7 +110,9 @@ function translateItemCompleted(j: Record<string, unknown>): ChatEvent[] {
   // 判据是 status，不是 error 字段——见文件头「教训」。command_execution 失败时
   // status:"failed" 且没有 error 字段，按 error 判会把失败误判成 ok:true。
   const ok = item.status !== 'failed'
-  return [{ k: 'exec.done', execId: id, ok, output: outputTextOf(item) }]
+  // web_search 这类「完成才知道干了什么」的，把标签一起带上（agentChat.ts 的 exec.done.label）
+  const label = item.type === 'web_search' ? labelFor(item) : undefined
+  return [{ k: 'exec.done', execId: id, ok, output: outputTextOf(item), ...(label ? { label } : {}) }]
 }
 
 // ---- turn.completed ----
@@ -166,6 +173,12 @@ function labelFor(item: Record<string, unknown>): string {
   if (item.type === 'command_execution') {
     return `运行 ${commandPreview(item.command)}`
   }
+  if (item.type === 'web_search') {
+    // started 时 query 是空的，完成时才有；空的就先给一句「联网搜索」
+    const q = typeof item.query === 'string' ? item.query.trim() : ''
+    return q ? `联网搜索 ${q.length > 60 ? q.slice(0, 59) + '…' : q}` : '联网搜索'
+  }
+  // 陌生类型：把类型名原样显示，好过静默丢弃（KNOWN_ITEM_TYPES 的注释）
   return typeof item.type === 'string' ? item.type : ''
 }
 

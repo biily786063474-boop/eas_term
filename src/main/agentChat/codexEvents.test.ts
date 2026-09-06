@@ -98,3 +98,42 @@ test('item.started 只产出 exec.start，不产出 exec.done', () => {
   assert.ok(starts.length >= 1)
   assert.ok(starts[0].k === 'exec.start' && starts[0].label.includes('ls'), 'label 该是那条命令')
 })
+
+// ── 2026-09-06：Codex 联网搜索在界面上完全不可见 ────────────────────────────
+// 实测一次问答能出 19 条 web_search，而翻译器只放行 command_execution / file_change，
+// 用户几十秒只看到「正在处理…」。
+test('web_search：started 产出执行行（此时还没有 query）', () => {
+  const t = createCodexTranslator()
+  const out = t.push(
+    JSON.stringify({ type: 'item.started', item: { id: 'ws_1', type: 'web_search', query: '', action: { type: 'other' } } })
+  )
+  assert.equal(out.length, 1)
+  assert.equal(out[0].k, 'exec.start')
+  if (out[0].k === 'exec.start') assert.equal(out[0].label, '联网搜索')
+})
+
+test('web_search：completed 带上 query 当标签（started 时是空的，只能这时补）', () => {
+  const t = createCodexTranslator()
+  const out = t.push(
+    JSON.stringify({
+      type: 'item.completed',
+      item: { id: 'ws_1', type: 'web_search', query: 'Codex CLI latest version', action: { type: 'search' } }
+    })
+  )
+  assert.equal(out.length, 1)
+  assert.equal(out[0].k, 'exec.done')
+  if (out[0].k === 'exec.done') assert.equal(out[0].label, '联网搜索 Codex CLI latest version')
+})
+
+test('**陌生 item 类型不再静默丢弃**：以类型名显示，好过界面上什么都没有', () => {
+  const t = createCodexTranslator()
+  const out = t.push(JSON.stringify({ type: 'item.started', item: { id: 'x1', type: 'image_generation_call' } }))
+  assert.equal(out.length, 1)
+  if (out[0].k === 'exec.start') assert.equal(out[0].label, 'image_generation_call')
+})
+
+test('agent_message / reasoning 没有执行语义，不产执行行', () => {
+  const t = createCodexTranslator()
+  assert.deepEqual(t.push(JSON.stringify({ type: 'item.started', item: { id: 'a1', type: 'agent_message' } })), [])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'item.started', item: { id: 'r1', type: 'reasoning' } })), [])
+})

@@ -29,11 +29,33 @@ export interface BindingContext {
    *  不给就摘不掉，档位维持 degraded。渲染层的 RolePicker / CanvasRoleEditor 现在经 IPC
    *  `agent:codexHome` 也拿得到；拿不到的只剩终端命令条 `CanvasAgentBar` 那条已下线路径。 */
   codexHome?: string
+  /** 阶段三第三项：**这条路径会附 Claude 的 PreToolUse 写守卫**（`--settings` 附
+   *  `eas-write-guard.mjs`，补 `--disallowedTools` 挡不住 Bash 的洞）。由调用方声明，
+   *  纯函数自己判断不了「这次真的会不会附」——那要看 `session.ts` 起会话时算出的
+   *  `writeGuardSettings` 是否非空，`bindRole` 拿不到、也不该拿到那个决定过程。
+   *
+   *  两条路径的取值不同：对话会话（`AgentChatView` 经 `adapters/claude.ts`）传
+   *  `!!opts.writeGuardSettings`，与这次真实拼出来的 `--settings` 是否存在保持一致；
+   *  休眠的终端命令条（`CanvasAgentBar`，2026-09-03 起已下线 UI 入口）从不走
+   *  `--settings` 这条机制，固定传 `false`（或不传，效果一样）——它拼命令是给用户在
+   *  终端里自己跑的裸 `claude` 调用，没有任何东西会给它生成/附加这份 `--settings` 文件。
+   *  渲染层的 `RolePicker` / `CanvasRoleEditor` 展示的是"如果开对话会话会怎样"的预览，
+   *  按对话会话的口径传 `true`。 */
+  claudeWriteGuard?: boolean
 }
 
 export interface RoleBinding {
   claude: { deny: string[] }
-  codex: { disable: string[]; disableServers: string[]; skillsOff: string[]; sandbox: 'read-only' | undefined }
+  codex: {
+    disable: string[]
+    disableServers: string[]
+    /** 阶段三第二项：server → 工具名数组（已排序去重），落成 `-c mcp_servers.<名>.disabled_tools=[…]`。
+     *  只收 `caps.mcp.denyTools` 里形如 `<server>__<tool>` 的精确条目——通配条目仍走
+     *  `disableServers` 那条按 server 名整个关的降级老路（见 bindRole 里 mcp.denyTools 分支）。 */
+    disabledTools: Record<string, string[]>
+    skillsOff: string[]
+    sandbox: 'read-only' | undefined
+  }
   omp: { removeTools: string[]; dropServers: string[]; dropServerPatterns: string[] }
   /** 只含 `kind` 那一家的行 */
   report: BindingLine[]
@@ -53,12 +75,23 @@ export function globMatch(pattern: string, name: string): boolean {
   return re.test(name)
 }
 
+/** TOML 点路径里的一段 key：纯 `[A-Za-z0-9_-]` 才能裸写，否则（比如 server 名自带
+ *  `.` 或 `"`）必须用带引号的 key 包起来——裸写的话 `.` 会被 TOML 解析成多一层嵌套、
+ *  `"` 直接破坏语法。2026-09-06 评审修复：`mcp_servers.<名>.enabled=false` /
+ *  `.disabled_tools=` 都是把 server 名接在点路径中间，此前没做这层转义。转义规则同
+ *  `codexSkillsConfigArg`（先转 `\` 再转 `"`）。 */
+function tomlKeySegment(name: string): string {
+  if (/^[A-Za-z0-9_-]+$/.test(name)) return name
+  const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `"${esc(name)}"`
+}
+
 /** Codex 关掉某个 MCP server 的 `-c` 取值字面量：`mcp_servers.<名>.enabled=false`。
  *  收口成一个函数是因为它原来在两处各手写一份（`adapters/codex.ts` 的无头启动路径、
  *  `CanvasAgentBar.tsx` 拼终端命令那条路径）——两处都要拼 `-c`，值只此一种写法，
  *  改一处忘了另一处的话，终端里跑起来的角色护栏会比无头模式松一截，且没有测试能拦。 */
 export function codexDisableServerArg(name: string): string {
-  return `mcp_servers.${name}.enabled=false`
+  return `mcp_servers.${tomlKeySegment(name)}.enabled=false`
 }
 
 /** Codex 按路径禁用系统 skill 的 `-c` 取值：TOML 内联表数组，逐字实测过 —— 路径必须是
@@ -73,6 +106,36 @@ export function codexSkillsConfigArg(paths: string[]): string {
   return `skills.config=[${paths.map((p) => `{path="${esc(p)}",enabled=false}`).join(',')}]`
 }
 
+/** Codex 按工具名精确摘掉 MCP 工具的 `-c` 取值：`mcp_servers.<名>.disabled_tools=[…]`
+ *  （TOML 数组）。2026-09-06 阶段三第二项探针实测：这个键真把指定工具从模型的工具搜索
+ *  结果里拿掉（判据是延迟工具搜索，不是问模型），Codex 给它的名字是 `mcp__<server>.<tool>`
+ *  （点号分隔，不是 Claude 那种双下划线）。转义规则同 `codexSkillsConfigArg`（先转 `\`
+ *  再转 `"`，否则会把转义 `"` 新加的反斜杠自己又转义一遍）；空数组返回空串，
+ *  同 `codexSkillsConfigArg` 的约定——调用方靠这个决定要不要拼这个 `-c`。 */
+export function codexDisabledToolsArg(server: string, tools: string[]): string {
+  if (!tools.length) return ''
+  const esc = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `mcp_servers.${tomlKeySegment(server)}.disabled_tools=[${tools.map((t) => `"${esc(t)}"`).join(',')}]`
+}
+
+/** `caps.mcp.denyTools` 里能升成 Codex 精确 `disabled_tools` 的条目形状：`<server>__<tool>`
+ *  ——不含 `*`、正好一个 `__` 分隔、两段都非空。其余形状（含 `*`，或不是这个形状）
+ *  维持原样，走通配降级为按 server 名整个关那条老路（见 bindRole 里 mcp.denyTools 分支）。
+ *
+ *  2026-09-06 最终评审 Minor 5：条目按 Claude 的全名形状写成 `mcp__<server>__<tool>` 时
+ *  先把 `mcp__` 前缀剥掉再解析——不剥的话 `split('__')` 会切出三段、判成"不是精确形状"，
+ *  白白退回通配降级。**只收紧不放松**：剥完仍要满足上面全部条件才升 hard，剥不出
+ *  精确形状的照旧退回 rest。（Claude 分支不受影响，它仍按原字符串拼 `mcp__${p}`。） */
+function parsePreciseTool(entry: string): { server: string; tool: string } | null {
+  if (entry.includes('*')) return null
+  const body = entry.startsWith('mcp__') ? entry.slice('mcp__'.length) : entry
+  const parts = body.split('__')
+  if (parts.length !== 2) return null
+  const [server, tool] = parts
+  if (!server || !tool) return null
+  return { server, tool }
+}
+
 const uniq = (xs: string[]): string[] => [...new Set(xs)]
 
 export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext = {}): RoleBinding {
@@ -82,6 +145,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
   const claudeDeny: string[] = []
   const codexDisable: string[] = []
   const codexServers: string[] = []
+  const codexDisabledTools: Record<string, string[]> = {}
   const codexSkillsOff: string[] = []
   let codexSandbox: 'read-only' | undefined
   const ompRemove: string[] = []
@@ -99,7 +163,17 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
     const bashNote = caps.shell === false ? '' : '；Bash 未禁，模型仍可用命令改文件'
     if (kind === 'claude') {
       claudeDeny.push(...CLAUDE_WRITE_TOOLS)
-      line('write', 'hard', `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}${bashNote}`)
+      // 阶段三第三项：这条路径附没附 PreToolUse 写守卫（--settings 补的第二道闸），
+      // 由调用方经 ctx.claudeWriteGuard 声明——纯函数自己判断不了「这次真的会不会附」。
+      // 额外守一手 `caps.shell !== false`：shell 已经整个禁掉时 --disallowedTools Bash
+      // 已经挡死了命令行，守卫是死重量，不该在报告里说「附了」误导人以为多了一层保护——
+      // 真实的 session.ts 起会话时本就不会在这个组合下生成 writeGuardSettings（同一个判据），
+      // 这里再判一次是为了让 bindRole 自己也自洽，不依赖调用方传值精确。
+      const guardActive = ctx.claudeWriteGuard === true && caps.shell !== false
+      const how = guardActive
+        ? `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')} + PreToolUse 守卫拦 Bash 里的写命令（按命令模式：重定向、tee、sed -i、rm/mv/cp/mkdir/touch、git 写操作、包管理安装；脚本文件里的写操作拦不住）`
+        : `--disallowedTools ${CLAUDE_WRITE_TOOLS.join(' ')}${bashNote}`
+      line('write', 'hard', how)
     } else if (kind === 'codex') {
       codexSandbox = 'read-only'
       line('write', 'hard', '-s read-only（OS 沙箱，连命令行写入一起挡）')
@@ -198,12 +272,61 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
       claudeDeny.push(...tools.map((p) => `mcp__${p}`))
       line('mcpTools', 'hard', tools.map((p) => `mcp__${p}`).join(' '))
     } else if (kind === 'codex') {
-      const hit = matchKnown(tools)
-      codexServers.push(...hit)
-      line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+      // 阶段三第二项（2026-09-06 探针）＋ 评审修复（2026-09-06）：先把「写得出确切工具名」
+      // 的条目（形如 `<server>__<tool>`，不含 `*`）挑出来，且 server 在 knownMcpServers
+      // 清单里（没给清单时不过滤，与 mcp.denyServers 同规矩）——同时满足才能升 hard；
+      // 不满足的（含 `*`、不是这个形状、或 server 不在清单）一律退回 rest，走通配降级为
+      // 按 server 名整个关的老路。这样即便 server 名字本身自带 `__`（比如真实 server 就叫
+      // `a__b`），parsePreciseTool 把它误判成 `<server>__<tool>` 精确形状、又查无此 server
+      // 时，也不会「既不生效也不报告」——退回原始字符串后，matchKnown 的字面匹配照旧能
+      // 兜住它（整串当 pattern，字面匹配上真实叫 `a__b` 的 server）。
+      // `mcp.denyTools —— Claude 直接通配；Codex/omp 降级为按 server 名匹配` 与
+      // 「每条参数都有报告行」两条既有测试用的都是纯通配 bounds（`['*canvas*']` /
+      // `['*t*']`），不触发本分支，故未受这次改动影响、也未去改它们。
+      const rest: string[] = []
+      for (const t of tools) {
+        const p = parsePreciseTool(t)
+        if (p && (!known || known.includes(p.server))) {
+          ;(codexDisabledTools[p.server] ??= []).push(p.tool)
+        } else {
+          rest.push(t)
+        }
+      }
+      // **通配条目先落地**（2026-09-06 最终评审 Minor 4）：`rest` 走 matchKnown 可能把某个
+      // server 整个关掉（`denyTools: ['x__gen', '*x*']` 里的 `*x*`），而下面那轮去重要看得见
+      // 这一批才判得准。原来的顺序是「先去重、再算 rest」——去重时 codexServers 里还只有
+      // mcp.denyServers 那批，通配刚关掉的 server 上的精确条目躲过了去重，于是同一家 server
+      // 一边被整关、一边又下发 disabled_tools，报告里也多出一条自相矛盾的 hard 行。
+      if (rest.length) {
+        const hit = matchKnown(rest)
+        codexServers.push(...hit)
+        line('mcpTools', 'degraded', `工具级通配降级为按 server 名整个关：${hit.join(', ') || '无匹配'}`)
+      }
+      // 同一个 server 如果已经被整个关掉（mcp.denyServers 那批，或上面通配刚匹配上的），
+      // 精确工具条目对它就是死重量——server 都不启动了，逐个工具再摘一遍毫无意义，报告里
+      // 也不该出现「这家 server 一边被整关、一边又被精确摘工具」这种自相矛盾的两行。
+      for (const s of Object.keys(codexDisabledTools)) {
+        if (codexServers.includes(s)) delete codexDisabledTools[s]
+      }
+      if (Object.keys(codexDisabledTools).length) {
+        for (const s of Object.keys(codexDisabledTools)) codexDisabledTools[s] = uniq(codexDisabledTools[s]).sort()
+        // 排序遍历（Minor #10）：与 disabledTools 本身「排序去重」的描述保持一致，
+        // 也让 -c 的拼接顺序和 how 里的摘要顺序不随 JS 对象键的插入顺序漂移。
+        const servers = Object.keys(codexDisabledTools).sort()
+        const argsList = servers.map((s) => codexDisabledToolsArg(s, codexDisabledTools[s]))
+        const summary = servers.map((s) => `${s}: ${codexDisabledTools[s].map((t) => `mcp__${s}.${t}`).join(', ')}`).join('；')
+        line(
+          'mcpTools',
+          'hard',
+          `-c ${argsList.join(' -c ')}（按工具名精确摘掉；Codex 里叫 mcp__<server>.<tool>）：${summary}` +
+            `（这条 -c 整键覆盖你 config.toml 里同一个 server 的 disabled_tools，不是追加）`
+        )
+      }
     } else {
       ompPatterns.push(...tools)
-      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连')
+      // M7：omp 侧连「精确摘一个工具」这条路都没有——它的粒度只到 server 名，
+      // 所以精确形状在这里也只能按 server 名整个不连，如实说出来。
+      line('mcpTools', 'degraded', '工具级通配降级为按 server 名整个不连；`<server>__<tool>` 形状在 omp 上无对应落法')
     }
   }
 
@@ -222,7 +345,13 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
 
   return {
     claude: { deny: uniq(claudeDeny) },
-    codex: { disable: uniq(codexDisable), disableServers: uniq(codexServers), skillsOff: uniq(codexSkillsOff), sandbox: codexSandbox },
+    codex: {
+      disable: uniq(codexDisable),
+      disableServers: uniq(codexServers),
+      disabledTools: codexDisabledTools,
+      skillsOff: uniq(codexSkillsOff),
+      sandbox: codexSandbox
+    },
     omp: { removeTools: uniq(ompRemove), dropServers: uniq(ompDrop), dropServerPatterns: uniq(ompPatterns) },
     report
   }
@@ -253,6 +382,26 @@ export interface MatrixRow {
 
 const INTENTS = ['write', 'shell', 'imageGen'] as const
 
+/** 档位从强到弱的次序，数字越大越弱。用于合并同一 cap 的多条 BindingLine 时
+ *  取「最弱」的那个——弱档位意味着还有话没做完，不能被更强的那条盖住。 */
+const ENFORCEMENT_WEAKNESS: Record<Enforcement, number> = { hard: 0, soft: 1, degraded: 2, unsupported: 3 }
+
+/** 2026-09-06 评审修复（Important #1，控制者裁定）：同一个 cap 在同一家 harness 上
+ *  可能有两条 BindingLine（比如 Codex 上 mcp.denyTools 精确条目升 hard、通配条目仍
+ *  degraded，cap 都是 mcpTools）。`MatrixRow.cells` 一格只放一条，`bindRole` 之前用
+ *  `.find()` 只取第一条，第二条被静默吞掉——用户会看不到"这家其实还整个关了 server"。
+ *  不改 `MatrixRow.cells` 的结构，在这里把多条合并成一条：level 取最弱的那个（hard 最强、
+ *  unsupported 最弱），how 用「；」把几条拼起来，让用户至少能读到全部信息。 */
+function mergeCapLines(lines: BindingLine[]): BindingLine | undefined {
+  if (!lines.length) return undefined
+  if (lines.length === 1) return lines[0]
+  const level = lines.reduce<Enforcement>(
+    (worst, l) => (ENFORCEMENT_WEAKNESS[l.level] > ENFORCEMENT_WEAKNESS[worst] ? l.level : worst),
+    lines[0].level
+  )
+  return { cap: lines[0].cap, level, how: lines.map((l) => l.how).join('；') }
+}
+
 /** 编辑器三列矩阵的数据。三个意图行永远在（未点亮的按「假设点亮」预览）；
  *  mcpServers / mcpTools / raw 只在草稿里真有内容时追加。 */
 export function capMatrix(bounds: RoleBounds | undefined, ctx: BindingContext = {}): MatrixRow[] {
@@ -263,16 +412,16 @@ export function capMatrix(bounds: RoleBounds | undefined, ctx: BindingContext = 
     const preview: RoleBounds = active ? (bounds ?? {}) : { ...bounds, caps: { ...caps, [k]: false } }
     const cells: MatrixRow['cells'] = {}
     for (const h of HARNESSES) {
-      const line = bindRole(preview, h, ctx).report.find((l) => l.cap === k)
-      if (line) cells[h] = line
+      const merged = mergeCapLines(bindRole(preview, h, ctx).report.filter((l) => l.cap === k))
+      if (merged) cells[h] = merged
     }
     rows.push({ cap: k, active, cells })
   }
   for (const k of ['mcpServers', 'mcpTools', 'raw'] as const) {
     const cells: MatrixRow['cells'] = {}
     for (const h of HARNESSES) {
-      const line = bindRole(bounds, h, ctx).report.find((l) => l.cap === k)
-      if (line) cells[h] = line
+      const merged = mergeCapLines(bindRole(bounds, h, ctx).report.filter((l) => l.cap === k))
+      if (merged) cells[h] = merged
     }
     if (Object.keys(cells).length) rows.push({ cap: k, active: true, cells })
   }

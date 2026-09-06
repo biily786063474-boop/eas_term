@@ -7,7 +7,7 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon } from '../../ui/Icons'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { easfileUrl, isVideoPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
@@ -30,6 +30,7 @@ export function CanvasFileNode({
   const resizeNode = useStore((s) => s.resizeNode)
   const settleResize = useStore((s) => s.settleResize)
   const removeNode = useStore((s) => s.removeNode)
+  const togglePinNode = useStore((s) => s.togglePinNode)
   const maximizedNode = useStore(liveMaximizedNode)
   const setMaximizedNode = useStore((s) => s.setMaximizedNode)
   /** 最大化后的显示比例（双指捏合调）。**只有最大化的那个用得上** */
@@ -158,6 +159,9 @@ export function CanvasFileNode({
       className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frameId}
+      /* 类型角标的色相按这个选（canvas.css 的 --smoke-h）。
+         只用来选颜色，不参与任何逻辑 —— 别拿它当类型判据，那个在 store 里。 */
+      data-kind={pane.kind}
       // 点模块任意部分即选中（捕获阶段，早于内容；不 preventDefault 故内容交互照常）
       onMouseDownCapture={(e) => {
         if (!(e.target as HTMLElement).closest('button, input')) onSelect?.(e.shiftKey)
@@ -175,7 +179,9 @@ export function CanvasFileNode({
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
-        <Icon size={11} />
+        <span className="cfile-badge">
+          <Icon size={13} />
+        </span>
         {editing ? (
           <input
             className="cfile-rename"
@@ -227,6 +233,16 @@ export function CanvasFileNode({
           onClick={() => setMaximizedNode(isMax ? null : { frameId, nodeId: node.id })}
         >
           {isMax ? <RestoreIcon size={11} /> : <MaximizeIcon size={11} />}
+        </button>
+        {/* 钉在画板上：钉住的不占「一个 Frame 最多 5 个内容模块」的名额，也不会被自动清理
+            （用户 2026-09-06；规则在 store/canvas/nodeCap.ts）。只有内容模块才有这颗钉子 ——
+            终端和 AI 对话本来就不受限额约束，给它们钉子只会让人以为「不钉就会被删」。 */}
+        <button
+          className={`cfile-btn cfile-pin${node.pinned ? ' on' : ''}`}
+          data-tip={node.pinned ? '已钉在画板（不会被自动清理）· 点击取消' : '钉在画板：不占 5 个上限，也不会被自动清理'}
+          onClick={() => togglePinNode(frameId, node.id)}
+        >
+          <PinIcon size={11} />
         </button>
         <button className="cfile-x" data-tip="删除节点" onClick={() => removeNode(frameId, node.id)}>
           ×

@@ -56,7 +56,7 @@ test('画师：**不带任何 caps**（2026-09-06 用户决定保留 Codex 原�
   for (const kind of KINDS) {
     const b = bindRole({ caps: role.caps, raw: role.raw }, kind, { codexHome: '/Users/x/.codex' })
     assert.deepEqual(b.claude.deny, [], kind)
-    assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined }, kind)
+    assert.deepEqual(b.codex, { disable: [], disableServers: [], disabledTools: {}, skillsOff: [], sandbox: undefined }, kind)
     assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] }, kind)
     assert.deepEqual(b.report, [], kind)
   }
@@ -80,7 +80,7 @@ test('其余内置角色（全流程/工匠/原型师/笔杆子/画师/杂役）
     for (const kind of KINDS) {
       const b = bindRole({ caps: role.caps, raw: role.raw }, kind)
       assert.deepEqual(b.claude.deny, [], `${role.id}/${kind}`)
-      assert.deepEqual(b.codex, { disable: [], disableServers: [], skillsOff: [], sandbox: undefined }, `${role.id}/${kind}`)
+      assert.deepEqual(b.codex, { disable: [], disableServers: [], disabledTools: {}, skillsOff: [], sandbox: undefined }, `${role.id}/${kind}`)
       assert.deepEqual(b.omp, { removeTools: [], dropServers: [], dropServerPatterns: [] }, `${role.id}/${kind}`)
       assert.deepEqual(b.report, [], `${role.id}/${kind}`)
     }
