@@ -64,6 +64,13 @@
 > 消息起悄悄退回未过滤 / 未摘 skill 的状态）。
 > 对话节点的 MCP 工具面另由 `--strict-mcp-config` + `--mcp-config`（只含自家 server）决定，
 > 与 `caps` 是两层，不是同一层。
+> **`caps.mcp.denyTools`（mcpTools 那格）在 Codex 上 2026-09-06 阶段三第二项起分两类**：
+> 写得出确切工具名的条目（形如 `<server>__<tool>`，不含 `*`）落成
+> `-c mcp_servers.<名>.disabled_tools=[…]`，按工具名精确摘掉、不牺牲整个 server，档位 **hard**
+> （探针实测：延迟工具搜索结果里指定工具真的消失，判据不是问模型）；其余形状（含 `*`，
+> 或不是这个形状）维持原状，通配降级为按 server 名整个 `enabled=false` 关掉，档位 **degraded**。
+> 两类同时出现时报告各出一行。精确条目同样按 `knownMcpServers` 过滤——server 不在清单就不
+> 下发（Codex 对不存在的 server 名会拒绝启动），不是"下发了但没效果"。
 
 > **界面文案一律从 `bindRole()` 的报告派生，不许在组件里手写落法。** 编辑器的能力矩阵
 > （`CanvasRoleEditor` 的 `.re-matrix`，每行一个能力 × 每列一家 harness）来自

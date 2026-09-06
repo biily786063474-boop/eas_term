@@ -1,6 +1,6 @@
 # 角色卡片 × 三个 harness 的绑定层
 
-> 状态：**阶段一、二已实现；阶段三第一项、第三项已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）。
+> 状态：**阶段一、二已实现；阶段三第一项、第二项、第三项已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）。
 > 读之前先读 [10 模块领地图](../../architecture/10-模块领地图.md) 与
 > [03-3A 产品内 agent 角色边界](../../architecture/03-agent角色边界.md#3a--产品内-agent-角色边界)。
 > 本稿里标「**今日实测**」的结论来自 2026-09-05 在本机对 Codex 0.147.0 / omp v18.0.11 /
@@ -205,7 +205,7 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 | `shell:false` | `--disallowedTools Bash` · **hard** | `--disable shell_tool` · **hard**（今日实测） | `--tools` 去掉 `bash` · **hard** |
 | `imageGen:false` | `--disallowedTools mcp__*image* mcp__*dalle* …`（沿用 roles.ts 那组通配） · **hard** | 有 `codexHome`：`--disable image_generation`（feature 生效但内置本就不在工具清单）＋ 按 SKILL.md 完整路径摘掉 `imagegen` 系统 skill（`skills.config`）＋ 通配匹配到的 server 整个 `enabled=false` · **hard**（阶段三，2026-09-06 探针）；没有 `codexHome`：同上但不摘 skill · **degraded** | 无内置生图；通配匹配到的 server 从 `session/new` 剔除 · **degraded** |
 | `mcp.denyServers` | `mcp__<名>__*` · hard | `mcp_servers.<名>.enabled=false` · hard | 名单剔除 · hard |
-| `mcp.denyTools` | `mcp__<pattern>` 通配 · hard | 首批：pattern 与 server 名匹配则整关 · **degraded**；后续 `disabled_tools` 精确过滤（待验） | 同 Codex 首批 · degraded |
+| `mcp.denyTools` | `mcp__<pattern>` 通配 · hard | **阶段三第二项（2026-09-06 探针已验）分两类**：形如 `<server>__<tool>` 的精确条目 → `-c mcp_servers.<名>.disabled_tools=[…]` 按工具名精确摘掉 · **hard**；其余（含 `*`、或不是这个形状）→ pattern 与 server 名匹配则整关 · **degraded**；两类都有内容时各出一条报告行 | 同 Codex 首批（通配整关）· degraded |
 | `contract` | 对话 `--append-system-prompt`（三段拼一条，规矩不变）；终端 `--append-system-prompt-file` | `-c instructions=` 单行（维持现状；`developer_instructions` 已验可用，作为备选） | `--append-system-prompt=` |
 | `model` / `effort` | `--model` / `--effort` | `-m` / `-c model_reasoning_effort=` | 建会话后 `session/set_config_option`（`model` / `thinking`），走已有的 `paramChange:'acp-config'` 通道 |
 | `raw.<kind>.deny` | 原样追加 `--disallowedTools` | 原样追加 `-c`？**不接** —— Codex 没有工具名 deny，raw 对它只能是 `--disable <feature>` 列表 | 原样从 `--tools` 减去 |
@@ -678,3 +678,58 @@ echo "Run exactly this shell command with the Bash tool: echo hi > ./probe.txt .
 **判据 2（只读放行）**：另跑一次 `ls -la .`，Bash 正常执行、原样回显目录内容，未被拦截。
 
 两条判据都成立：写守卫在真实 `claude -p` 进程里生效，只读命令不受影响。
+
+### 十四·附六 · 阶段三第二项（Codex `disabled_tools`，2026-09-06）
+
+**探针命令**（自建最小 stdio MCP server，两个工具 `alpha` / `beta`，`/tmp/mini-mcp.mjs`，
+不进仓库）：
+
+```bash
+# 基线：不加 disabled_tools
+cd /tmp && codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c mcp_servers.mini.command="node" \
+  -c mcp_servers.mini.args='["/tmp/mini-mcp.mjs"]' \
+  "请调用 tool_search 工具，搜索关键词 'mini alpha beta'，limit 20，然后只列出返回结果里的工具名，不要调用其它任何工具"
+# → mcp__mini.alpha
+#   mcp__mini.beta
+
+# 加一条 disabled_tools（与 codexAdapter.buildArgs() 对同一份 roleBounds 实际生成的
+# 字面参数逐字一致：cwd:'/tmp', knownMcpServers:['mini'],
+# roleBounds:{caps:{mcp:{denyTools:['mini__beta']}}} → -c mcp_servers.mini.disabled_tools=["beta"]）
+cd /tmp && codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c mcp_servers.mini.command="node" \
+  -c mcp_servers.mini.args='["/tmp/mini-mcp.mjs"]' \
+  -c 'mcp_servers.mini.disabled_tools=["beta"]' \
+  "请调用 tool_search 工具，搜索关键词 'mini alpha beta'，limit 20，然后只列出返回结果里的工具名，不要调用其它任何工具"
+# → alpha（beta 从工具搜索结果里消失）
+```
+
+**结果**：判据是延迟工具搜索（`tool_search`）返回的工具名列表，不是问模型"你还有没有这个
+工具"——基线两个工具都在，加了 `disabled_tools` 之后 `beta` 从列表里消失，只剩 `alpha`。
+`codex-cli 0.147.0` 实测确认。
+
+**命名差异**：Codex 给 MCP 工具的名字是 `mcp__<server>.<tool>`（点号分隔），Claude 是
+`mcp__<server>__<tool>`（双下划线）——两边看起来像但分隔符不同，`caps.mcp.denyTools` 里
+写 `<server>__<tool>` 这个精确形状是 Eas-Term 自己的 DSL 约定，转译到 Codex 时要在
+`disabled_tools` 数组里还原成纯工具名（不带 `mcp__` 前缀、不带 server 名），转译到 Claude
+时才是拼 `mcp__<server>__<tool>` 整串当 deny 项——两条转译各自在 `roleBinding.ts` 里，
+不是同一段代码抄两遍。
+
+**为什么本机画板 / eas-term 两个真实 MCP 验不了**：`codex exec --ephemeral` 起的是一次性
+临时会话，画板 `bizone-canvas` 与本项目 `eas-term` 这两个 MCP server 各自依赖对应的 app
+在线（画板要 Electron 进程活着、eas-term 要 `mcpBridge.ts` 的 HTTP 网关活着）才能连上，
+临时会话默认不接这两个真实 server（不在 `~/.codex/config.toml` 里现场声明的话），所以
+延迟工具搜索清单里当前不会出现它们——验证必须用自建的最小 server，拿它们当判据会得到
+"什么改动都没生效"的假阴性。
+
+**落地**：`roleBinding.ts` 的 `RoleBinding.codex.disabledTools`（`server → 工具名数组`，
+已排序去重）+ `codexDisabledToolsArg()`；`caps.mcp.denyTools` 分两类处理：形如
+`<server>__<tool>` 的精确条目（不含 `*`，正好一个 `__`，两段都非空）升级为 `disabled_tools`
+（**hard**，按 `knownMcpServers` 过滤，server 不在清单就跳过不下发——Codex 对不存在的
+server 名会拒绝启动，同 `mcp.denyServers` 的规矩）；其余形状维持原状，通配降级为按 server
+名整个 `enabled=false` 关掉（**degraded**）。两类同时有内容时报告各出一行——
+`roleBinding.test.ts` 里那条「每条参数都有对应报告行」的计数测试实测没受影响
+（它用的 bounds 是 `denyTools:['*t*']`，纯通配、不触发精确分支，只产出一行，行为与改动前
+一致），因此没有改动那条测试，只是新增测试专门覆盖精确分支的两行场景。
+`adapters/codex.ts` 与 `CanvasAgentBar.tsx` 两处接线都在 `disableServers` 那行之后追加
+`for (const [server, tools] of Object.entries(b.codex.disabledTools))`。

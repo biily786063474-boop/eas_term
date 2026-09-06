@@ -376,11 +376,12 @@ export function CanvasRoleEditor({
               className="re-list re-list-sm"
               value={denyTools.join('\n')}
               onChange={(e) => setMcp('denyTools', lines(e.target.value))}
-              placeholder={'一行一条，不带 mcp__ 前缀，例如\n*canvas*'}
+              placeholder={'一行一条，不带 mcp__ 前缀，例如\n*canvas*\nbizone-canvas__generate'}
               spellCheck={false}
             />
             <span className="re-hint">
-              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。
+              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。写成 <code>&lt;server&gt;__&lt;tool&gt;</code>
+              的精确条目在 Codex 上也能按工具名硬摘（不必牺牲整个 server），其余通配写法仍是降级整关。
             </span>
           </div>
 
