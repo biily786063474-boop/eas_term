@@ -39,6 +39,31 @@ export function diag(src: 'r' | 'm', kind: string, what: string): void {
   }
 }
 
+/** 各进程的 CPU 快照。**只在事件发生时取**（`app.getAppMetrics()` 是同步的、几毫秒），
+ *  绝不轮询 —— 承诺过空闲零开销。
+ *
+ *  2026-09-06 的教训：用户报「疯狂闪烁」，日志里却只有几条 longtask、零 mount/unmount。
+ *  外面 `ps` 看到 GPU 助手 145% / 渲染 112% / WindowServer 107%，但那是我用命令行现查的，
+ *  **日志里没有留下任何痕迹**，事后完全对不上。所以现在长任务发生时顺带记一次谁在烧。 */
+function cpuSnapshot(): string {
+  try {
+    // ⚠️ `percentCPUUsage` 是**距上次调用以来**的平均值，**第一次调用恒为 0**
+    // （2026-09-06 实测：不预热的话每条 longtask 后面都是空的）。所以启动时先调一次预热，
+    // 之后每次取到的就是「从上一个事件到现在」这段的平均 —— 连着几条 longtask 时窗口很短、
+    // 正是我们要的「此刻谁在烧」；久违的第一条则是一段长平均，也够看出「一直在烧」。
+    const rows = app
+      .getAppMetrics()
+      .map((m) => ({ t: m.type === 'Tab' ? 'renderer' : m.type, cpu: m.cpu?.percentCPUUsage ?? 0 }))
+      .filter((r) => r.cpu >= 3)
+      .sort((a, b) => b.cpu - a.cpu)
+      .slice(0, 4)
+      .map((r) => `${r.t} ${r.cpu.toFixed(0)}%`)
+    return rows.length ? ` | ${rows.join(' · ')}` : ''
+  } catch {
+    return ''
+  }
+}
+
 function fromRenderer(e: Partial<DiagEvent>): void {
   const now = Date.now()
   if (now - windowStart > 1000) {
@@ -51,7 +76,10 @@ function fromRenderer(e: Partial<DiagEvent>): void {
     dropped++
     return
   }
-  diag('r', String(e.kind ?? '?').slice(0, 24), String(e.what ?? '').slice(0, 300))
+  const kind = String(e.kind ?? '?').slice(0, 24)
+  // 长任务是「这一刻卡了」的信号，正好把「谁在烧 CPU」一起记下来
+  const extra = kind === 'longtask' ? cpuSnapshot() : ''
+  diag('r', kind, String(e.what ?? '').slice(0, 300) + extra)
 }
 
 function hookWindow(win: BrowserWindow): void {
@@ -72,6 +100,13 @@ export function registerDiagHandlers(): void {
   })
   // GPU / 工具进程崩溃重启——「其他软件共同作用」那类闪烁多半只在这里留痕
   app.on('child-process-gone', (_e, d) => diag('m', 'child-gone', `${d.type}${d.name ? ' ' + d.name : ''}：${d.reason} exit=${d.exitCode}`))
-  app.on('browser-window-created', (_e, win) => hookWindow(win))
+  // 窗口的生灭也记一笔：灵动岛历史上有过「自激振荡」（反复创建销毁），
+  // 那种情况会把 WindowServer 拖满而看起来就是满屏闪（memory: eas-term-灵动岛窗口坑）
+  app.on('browser-window-created', (_e, win) => {
+    diag('m', 'win-open', `窗口 #${win.id}${cpuSnapshot()}`)
+    win.on('closed', () => diag('m', 'win-close', `窗口 #${win.id}`))
+    hookWindow(win)
+  })
+  cpuSnapshot() // 预热：第一次调用恒为 0，不预热的话后面每次都取不到值
   diag('m', 'start', `app ${app.getVersion()} 启动`)
 }
