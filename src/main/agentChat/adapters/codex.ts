@@ -18,7 +18,7 @@
 // 把 approval 改回非空——UI 一行都不用改。
 
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
-import { bindRole, codexDisableServerArg, codexSkillsConfigArg } from '../../../shared/roleBinding.ts'
+import { bindRole, codexDisableServerArg, codexDisabledToolsArg, codexSkillsConfigArg } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
 import { listCodexModels } from '../codexModels.ts'
 import { createCodexTranslator } from '../codexEvents.ts'
@@ -87,11 +87,20 @@ export const codexAdapter: CliAdapter = {
     const contract = opts.roleContract?.trim().replace(/\s*\n\s*/g, ' ')
     if (contract) args.push('-c', `instructions=${contract}`)
     // 内置工具走 --disable <feature>，MCP 走 mcp_servers.<名>.enabled=false；
-    // 工具级的 disabled_tools 键已被 0.147 接受但效果未验，阶段三再接。
     // --disable shell_tool 实测真能摘掉 shell；MCP server 名字必须真实存在
     //（bindRole 已按 knownMcpServers 过滤，不存在的名字 Codex 会拒绝启动）。
     for (const f of b.codex.disable) args.push('--disable', f)
     for (const n of b.codex.disableServers) args.push('-c', codexDisableServerArg(n))
+    // 阶段三第二项（2026-09-06 探针实测）：denyTools 里写得出确切工具名的条目
+    //（`<server>__<tool>`，bindRole 已经分好类）落成 `mcp_servers.<名>.disabled_tools=[…]`，
+    // 按工具名精确摘掉，不必再牺牲整个 server；通配条目仍走上面 disableServers 那条老路。
+    // **按 server 名排序遍历**（2026-09-06 最终评审 Minor 6）：`bindRole` 生成报告那行
+    // 已经 `.sort()` 过，这里若跟着 JS 对象键的插入顺序走，`-c` 的实际顺序会跟报告里
+    // 念的顺序对不上——参数不会因此失效，但排查时两边一比就自相矛盾。
+    for (const server of Object.keys(b.codex.disabledTools).sort()) {
+      const arg = codexDisabledToolsArg(server, b.codex.disabledTools[server])
+      if (arg) args.push('-c', arg)
+    }
     // 摘系统 skill（如 imagegen）：只有 bindRole 判定 hard（拿到了 codexHome）才会有内容。
     // 守卫看 codexSkillsConfigArg 的返回值而不是 skillsOff.length——它内部对空数组
     // 返回空串（避免拼出「清空用户全部 skills.config」的合法参数），这里跟着它的约定走。

@@ -33,7 +33,8 @@ export interface RoleCaps {
   mcp?: {
     /** 精确的 MCP server 名 */
     denyServers?: string[]
-    /** 工具名或通配（`*image*`），**不带** `mcp__` 前缀 */
+    /** 工具名或通配（`*image*`），**不带** `mcp__` 前缀；也认精确形状
+     *  `<server>__<tool>`（Codex 上会按工具名硬摘，不必牺牲整个 server） */
     denyTools?: string[]
   }
 }

@@ -153,7 +153,10 @@ export function CanvasRoleEditor({
   const rawDeny = draft.raw?.claude?.deny ?? []
   const denyServers = draft.caps?.mcp?.denyServers ?? []
   const denyTools = draft.caps?.mcp?.denyTools ?? []
-  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome })
+  // claudeWriteGuard: true —— 同 RolePicker 的口径：这里预览的是「开一个对话会话会怎样」，
+  // 对话会话总会按 caps.write=false 算出 writeGuardSettings（阶段三第三项），矩阵里
+  // write 行的 Claude 格因此要展示两道闸的说明，不是只有 --disallowedTools 那一道。
+  const matrix = capMatrix({ caps: draft.caps, raw: draft.raw }, { knownMcpServers: servers, codexHome, claudeWriteGuard: true })
 
   const kinds: { k: AgentKind | 'auto'; label: string; note: string }[] = [
     { k: 'auto', label: '跟随', note: '装了哪个用哪个' },
@@ -368,16 +371,19 @@ export function CanvasRoleEditor({
           </div>
 
           <div className="re-field">
-            <span className="re-label">禁用的 MCP 工具（通配）</span>
+            <span className="re-label">
+              禁用的 MCP 工具（通配或 <code>&lt;server&gt;__&lt;tool&gt;</code>）
+            </span>
             <textarea
               className="re-list re-list-sm"
               value={denyTools.join('\n')}
               onChange={(e) => setMcp('denyTools', lines(e.target.value))}
-              placeholder={'一行一条，不带 mcp__ 前缀，例如\n*canvas*'}
+              placeholder={'一行一条，不带 mcp__ 前缀，例如\n*canvas*\nbizone-canvas__generate'}
               spellCheck={false}
             />
             <span className="re-hint">
-              填了之后上面的矩阵会多出对应的一行，各家怎么落看那里。
+              一行一条；写成 <code>&lt;server&gt;__&lt;tool&gt;</code> 的精确条目会按工具名处理，
+              各家怎么落看上面的矩阵。
             </span>
           </div>
 

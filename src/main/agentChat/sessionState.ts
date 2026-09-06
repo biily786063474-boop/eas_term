@@ -97,6 +97,13 @@ export interface SessionRecord {
    *  带过 restart——Codex 的 exec 每条消息都会触发 restart，丢了它角色的 imageGen 摘 skill
    *  就会从第二条消息起悄悄退回 degraded（skillsOff 算不出来，见 roleBinding.ts）。 */
   codexHome?: string
+  /** 阶段三第三项：Claude 上 `caps.write=false` 的第二道闸——`--settings` 文件路径，跟
+   *  knownMcpServers / codexHome 同一个理由必须原样存在这里并被 effectiveOpts 带过
+   *  restart：起会话时算一次（`session.ts` 的 `agentChat:start` handler），restart 沿用，
+   *  不重算——丢了的话第二条消息起 `--settings` 就悄悄不见了，界面上角色卡片仍显示
+   *  「已加两道闸」，实际只剩 `--disallowedTools` 那一道。undefined = 这道闸不适用
+   *  （非 Claude / 角色没勾 write:false / shell:false 已经把 Bash 整个挡掉）。 */
+  writeGuardSettings?: string
   /** 谁开的 / 叫什么。**身份必须存在这里，不能只留在渲染层的 pane 上。**
    *
    *  「关节点不杀进程」把节点和进程的生命周期拆开了：pane 随节点关闭消失，进程还在跑。
@@ -292,6 +299,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     roleContract: s.roleContract,
     roleBounds: s.roleBounds,
     knownMcpServers: s.knownMcpServers,
-    codexHome: s.codexHome
+    codexHome: s.codexHome,
+    writeGuardSettings: s.writeGuardSettings
   }
 }

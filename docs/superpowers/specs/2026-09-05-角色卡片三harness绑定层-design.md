@@ -1,6 +1,6 @@
 # 角色卡片 × 三个 harness 的绑定层
 
-> 状态：**阶段一、二已实现；阶段三第一项已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）。
+> 状态：**阶段一、二已实现；阶段三第一项、第二项、第三项已实现**（见 [plans/2026-09-05-角色卡片三harness绑定层.md](../plans/2026-09-05-角色卡片三harness绑定层.md)）。
 > 读之前先读 [10 模块领地图](../../architecture/10-模块领地图.md) 与
 > [03-3A 产品内 agent 角色边界](../../architecture/03-agent角色边界.md#3a--产品内-agent-角色边界)。
 > 本稿里标「**今日实测**」的结论来自 2026-09-05 在本机对 Codex 0.147.0 / omp v18.0.11 /
@@ -201,11 +201,11 @@ export function bindRole(role: AgentRole, kind: AgentKind, ctx: BindingContext):
 
 | 意图 | Claude | Codex | omp |
 |---|---|---|---|
-| `write:false` | `--disallowedTools Write Edit NotebookEdit` · **hard**；报告附注「shell 未禁时 Bash 仍能写」 | `-s read-only` · **hard**（OS 沙箱，连 shell 写一起挡） | `--tools` 去掉 `write edit ast_edit` · **hard**；附注同 Claude |
+| `write:false` | **阶段三第三项（2026-09-06）起两道闸**：`--disallowedTools Write Edit NotebookEdit` ＋ `--settings` 附 PreToolUse 写守卫拦 Bash 写命令（按命令模式：重定向、`tee`、`sed -i`、`rm`/`mv`/`cp`/`mkdir`/`touch` 等、git 写子命令、包管理安装；**脚本文件里的写操作拦不住**）· **hard**；`shell:false` 时守卫不生成（Bash 已被 `--disallowedTools Bash` 挡死），报告退回不提 Bash 的版本 | `-s read-only` · **hard**（OS 沙箱，连 shell 写一起挡） | `--tools` 去掉 `write edit ast_edit` · **hard**；附注同 Claude（omp 未加第二道闸，仍是「Bash 未禁，模型仍可用命令改文件」）|
 | `shell:false` | `--disallowedTools Bash` · **hard** | `--disable shell_tool` · **hard**（今日实测） | `--tools` 去掉 `bash` · **hard** |
 | `imageGen:false` | `--disallowedTools mcp__*image* mcp__*dalle* …`（沿用 roles.ts 那组通配） · **hard** | 有 `codexHome`：`--disable image_generation`（feature 生效但内置本就不在工具清单）＋ 按 SKILL.md 完整路径摘掉 `imagegen` 系统 skill（`skills.config`）＋ 通配匹配到的 server 整个 `enabled=false` · **hard**（阶段三，2026-09-06 探针）；没有 `codexHome`：同上但不摘 skill · **degraded** | 无内置生图；通配匹配到的 server 从 `session/new` 剔除 · **degraded** |
 | `mcp.denyServers` | `mcp__<名>__*` · hard | `mcp_servers.<名>.enabled=false` · hard | 名单剔除 · hard |
-| `mcp.denyTools` | `mcp__<pattern>` 通配 · hard | 首批：pattern 与 server 名匹配则整关 · **degraded**；后续 `disabled_tools` 精确过滤（待验） | 同 Codex 首批 · degraded |
+| `mcp.denyTools` | `mcp__<pattern>` 通配 · hard | **阶段三第二项（2026-09-06 探针已验）分两类**：形如 `<server>__<tool>` 的精确条目 → `-c mcp_servers.<名>.disabled_tools=[…]` 按工具名精确摘掉 · **hard**；其余（含 `*`、或不是这个形状）→ pattern 与 server 名匹配则整关 · **degraded**；两类都有内容时各出一条报告行 | 同 Codex 首批（通配整关）· degraded |
 | `contract` | 对话 `--append-system-prompt`（三段拼一条，规矩不变）；终端 `--append-system-prompt-file` | `-c instructions=` 单行（维持现状；`developer_instructions` 已验可用，作为备选） | `--append-system-prompt=` |
 | `model` / `effort` | `--model` / `--effort` | `-m` / `-c model_reasoning_effort=` | 建会话后 `session/set_config_option`（`model` / `thinking`），走已有的 `paramChange:'acp-config'` 通道 |
 | `raw.<kind>.deny` | 原样追加 `--disallowedTools` | 原样追加 `-c`？**不接** —— Codex 没有工具名 deny，raw 对它只能是 `--disable <feature>` 列表 | 原样从 `--tools` 减去 |
@@ -598,3 +598,180 @@ Windows 机器上跑过 `codex` 验证这条路径真的能被读到。
 | `team_spawn` 带 `role_id`（阶段二 #6） | 隔离实例：对「terminal」Frame 打开多 agent 开关，开一个 Claude 对话让它调 `team_spawn`（agents=[{role:"probe", task:…, role_id:"scout"}]）| 确认弹窗一行 `probe`，角色卡列显示**「勘探员」**；点开工后 store 里出现 `owner=team, role=probe, roleId=scout, cli=claude` 的 pane，会话 `ac-3` 起来；`ps` 里最新的 `claude -p` 进程带 **`--disallowedTools Write Edit NotebookEdit`**。链路 `role_id → checkBatch → openAgentPane({roleId}) → AgentChatView → roleBounds → adapter` 真机打通 |
 
 冒烟时踩的一个坑：第一次把指令发进了画布上正好可见的另一个 pane（它续着一条真实的历史会话），因为发送键是 ⌘/Ctrl+Enter 且 `find` 挑了第一个可见输入框；已用 `agentChat.stop` 停掉。驱动特定 pane 要用 `[data-leaf-id="…"] textarea.ac-input`。
+
+### 十四·附四 · 阶段三第三项（Claude 写守卫，2026-09-06）
+
+**探针 B（先于实现）**：`claude --settings <json 文件>` 能按进程附加设置（含 `hooks`），
+**不用碰用户项目的 `.claude/settings.json`**——这是本项能绕开"审批钩子那条又要往用户
+项目里写文件"的老路的前提。附一条 `PreToolUse`（matcher `Bash`）hook，脚本读 stdin JSON，
+命令含写操作时输出
+`{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"…"}}`：
+实测 `claude -p … "用 Bash 跑 echo hi > /tmp/x"` 被拦，文件没生成，模型把拦截原因原样转述。
+
+**要补的逃生口**：`--disallowedTools Write Edit NotebookEdit` 只挡得住模型的内置写工具，
+挡不住 Bash——`caps.shell` 没有一起禁掉时，模型仍能开终端跑写命令。这就是 `bindRole` 报告
+里那句「Bash 未禁，模型仍可用命令改文件」一直如实写着的洞。第二道闸就是补这个洞，
+不是新增能力，是把已知的漏洞堵上一部分（"一部分"是因为按命令模式匹配、不做真正的
+shell 解析，仍有已知漏网，见下）。
+
+**实现**：新脚本 `resources/agent-hooks/eas-write-guard.mjs` 导出 `isWriteCommand(cmd)`，
+纯字符串模式匹配（重定向 `>`/`>>` 但豁免 `/dev/null` 与 `2>&1` 这类不改内容的形态、
+`tee`（只在命令词位置）、`sed`/`perl` 的 `-i`/`-i.bak`/`--in-place`/`-pi`、
+`rm mv cp mkdir touch chmod chown ln truncate dd install rsync`、git 写子命令、
+`npm|pnpm|yarn|bun` 的安装子命令、`pip|brew|cargo install`、`find` 的
+`-delete`/`-exec`/`-execdir`/`-ok`、会落文件的网络与归档命令（`curl -o/-O/--output/
+--remote-name`、`wget` 除非 `-O -`/`-qO-`、`tar -x`/`--extract`、`unzip`/`zip`/`gunzip`/
+`bsdtar`）、`python|node|ruby|perl -c/-e` 内联脚本里含明显写文件调用、
+`sh|bash|zsh -c/-lc "…"` 与 `eval "…"` 的递归判断），**92 条单测**覆盖拦/放两侧
+（`src/main/agentChat/writeGuard.test.ts`，2026-09-06 最终复审后重新数过）。
+
+分段与命令词提取这两件事在最终复审时又各修了一处 Critical：分段器改成**引号感知**的
+扫描器（原来是正则 split，`bash -c "rm x; ls"` 与 `bash -c "rm x && ls"` 被从引号中间劈开
+后**两条都放行**——台账里写「`&&` 形式被抓住」是错的；反方向 `echo "a;rm b"`、
+`grep -E "x|rm x" f` 被误拦）；`realCommandIndex` 改成会**跳过包装词自己带的选项**
+（`sudo -u x rm y`、`sudo --user=x rm y`、`sudo -i rm x`、`env -i rm x`、`nice -n 10 rm x`、
+`time -p rm x`、`xargs -0 rm < list`、`xargs -n 1 rm`、`timeout 5 rm x` 改动前全部放行），
+认 `--`，允许连着套多层（`sudo -u x env FOO=1 rm y`），`timeout` 一并进包装词表，
+段首裸赋值（`FOO=1 rm x`）也跳。`command -v rm` 这条只读探测在补了选项跳过之后会落到
+`rm` 上，所以把 `command` 的 `-v`/`-V` 登记成「吃一个参数」，避免新引入误拦。`session.ts` 新增 `ensureWriteGuardSettings()`
+把这条 hook 包成 `--settings` 文件写到 app 自己的 `userData/agent-hooks/write-guard.json`
+（每次起会话整份重写，不落用户项目），在 `agentChat:start` 构造 `rec` 时按
+`p.cli==='claude' && roleBounds?.caps?.write===false && roleBounds?.caps?.shell!==false`
+算一次并存进 `SessionRecord.writeGuardSettings`，随 `effectiveOpts` 带过 restart。
+`claude.ts` adapter 在 `--resume` 之后、`--disallowedTools` 之前拼 `--settings <path>`
+（变长参数必须排在最后这条纪律，`--settings` 也要遵守）。`roleBinding.ts` 加
+`BindingContext.claudeWriteGuard`，`write:false` × Claude 的 `how` 按它改写成两道闸的
+说明；`shell:false` 同时成立时 `bindRole` 自己也会把 `how` 退回不提 Bash 的版本（不完全
+依赖调用方传值精确）。`RolePicker.tsx` / `CanvasRoleEditor.tsx` 预览按对话会话的口径传
+`claudeWriteGuard: true`；已下线 UI 入口的终端命令条 `CanvasAgentBar.tsx` 不传（等价于
+`false`）——它拼的是给用户在终端里跑的裸 `claude` 命令，没有任何机制会为它生成
+`--settings` 文件。
+
+**`--settings` 与用户项目 `.claude/settings.json` 的关系**：探针只验证过「`--settings`
+能按进程附加设置（含 hooks）、不用碰用户项目的 `.claude/settings.json`」这一点本身——
+两者具体怎么叠加/取舍在当时**没有另外验证过**。**2026-09-06 补验（评审 Important 3）**：
+控制者在一个临时项目里放了一条只记日志的 PreToolUse hook（项目级
+`.claude/settings.json`），再带 `--settings <写守卫文件>` 跑同一个会话，分别执行
+`ls -la` 与 `echo hi > ./probe.txt`——结果是**叠加，不是互斥**：项目那条记日志的 hook
+两次调用都记了日志（说明它没有被 `--settings` 顶掉）；写守卫拦下了 `echo hi > ./probe.txt`
+（`probe.txt` 没有生成）；`ls -la` 两条 hook 都放行、正常执行。结论改写成「落点独立，
+hooks 叠加（2026-09-06 实测）」——不再是"两条完全独立的机制"这种可能被读成"互不影响"
+的措辞，实际是**两条 PreToolUse hook 都会被 Claude Code 调用**，任意一条 deny 就整体
+deny。我们仍然只生成、只消费自己这一份 `--settings` 文件，不读、不猜用户项目里那份
+长什么样——这个决定本身没变，变的只是对"叠加关系"这句话有没有实测背书。
+
+**已知漏网清单**（如实记录，不是遗漏；与 `resources/agent-hooks/eas-write-guard.mjs`
+文件头、`docs/architecture/03-agent角色边界.md` **逐字同口径**，改一处要三处一起改）：
+
+- 写操作藏在**外部脚本文件**里（`bash foo.sh`、`python3 script.py`）——这里只看得到调用它的那一行命令，看不到脚本内容；
+- `cat <<EOF > file` 这类 heredoc 之外的花样组合，或者用变量拼出来的重定向目标；
+- **heredoc 喂解释器 stdin**（`python3 - <<EOF`）——要写的内容在后面几行里，命令行这一行看不出写意图；
+- 任何用引号/转义把写意图藏起来、让字符串匹配失焦的命令；
+- **引号里的 awk/perl 重定向**（`awk '{print > "out"}' f`）——判重定向前先剥掉成对引号里的内容（为的是不误拦 `grep -c ">" f`），真的重定向被一起剥掉了；
+- **间接/远端执行**：`ssh host rm x`、`docker run … rm`、`osascript`、`defaults write`——真正落盘的不是本机这一条命令，命令词是 ssh/docker/osascript；
+- **`apt-get install` / `npx create-*`**：装包与脚手架会落一堆文件，不在 `npm|pnpm|yarn|bun|pip|brew|cargo` 那份安装子命令清单里；
+- `rmdir`、`git branch <name>`（创建/列出分支，不含 `-d`/`-D`）等不在简报列出的写命令词清单里，按简报字面执行，不额外扩大匹配范围；
+- `sh|bash|zsh -c "…"` / `eval "…"` 的递归判断只剥一层「整段被一对引号包住」的最外层引号，嵌套引号或转义（`bash -c "echo \"x\" > f"`）按字面切，取出来的可能不是原本想递归判断的那条命令；
+- 包装词的选项表（`WRAPPER_OPTS_WITH_ARG`）只列到常用的那几个，遇到没列进去的「吃一个独立参数」的冷门选项会在参数上停错位置，那一条仍会放行；
+- **hook 起不来 = 静默放行**：node 兜底路径找不到可执行文件、脚本自己抛异常、Windows 上的兜底路径——Claude Code 的 PreToolUse hook 只有明确输出 deny 才拦，跑不起来 / 报错 / 没输出一律当「本 hook 无意见」放行，且没有任何用户可见的信号（**Windows 未实测**）。
+
+**这道闸的硬度定位**：按字符串模式识别，**不是** Codex `-s read-only` 那种内核级沙箱
+——命令怎么拼都躲不掉的是后者，前者是"挡住最常见的老实写法"。`eas-write-guard.mjs`
+文件头、`docs/architecture/03-agent角色边界.md`、`roleBinding.ts` 的报告文案三处口径
+一致，都不把它包装成跟 Codex 沙箱一样硬。
+
+### 十四·附五 · 真机核对（2026-09-06，`claude -p` 隔离目录，命令附在 brief 第 G 步）
+
+按简报格式手工生成 `--settings` 文件（`hooks.PreToolUse[0]` = `{matcher:'Bash', hooks:[{type:'command', command:'"/opt/homebrew/bin/node" "<repo>/resources/agent-hooks/eas-write-guard.mjs"'}]}`），
+在 `/tmp/eas-guard-probe`（全新空目录）跑：
+
+```bash
+echo "Run exactly this shell command with the Bash tool: echo hi > ./probe.txt . Then run: cat ./probe.txt . Report both results verbatim." \
+  | claude -p --settings /tmp/eas-guard-real.json --disallowedTools Write Edit NotebookEdit
+```
+
+> 注：简报原句把 prompt 当位置参数直接跟在 `--disallowedTools Write Edit NotebookEdit`
+> 后面，实测会被这个变长参数吞掉（`claude.ts` 文件头警告过的同一个坑："变长参数必须
+> 排在最后，夹在中间会把后面的选项一起吞掉"——只是这里吞的是 shell 侧的位置参数，不是
+> `buildArgs` 内部的 argv）。改成把 prompt 从 stdin 喂进去（`echo "…" | claude -p …`），
+> 语义不变，`--print` 模式本就接受 stdin 输入。
+
+**判据 1（写被拦）**：回复原样（下面是**当前**的文案，2026-09-06 复审时按 Minor #5
+改过措辞——真机核对那天模型转述的是改词前的旧句「命令里有写操作」，判据本身没变）：
+
+> 这个角色不许改文件：命令里看起来有写操作，已被 Eas-Term 拦下。只读的命令可以照常跑。
+
+第二条 `cat ./probe.txt` 报 `No such tool` 级别错误——`cat: ./probe.txt: No such file or directory`。
+随后 `ls -la /tmp/eas-guard-probe/` 确认目录仍是空的（只有 `.`/`..`），`probe.txt` 没有生成。
+
+**判据 2（只读放行）**：另跑一次 `ls -la .`，Bash 正常执行、原样回显目录内容，未被拦截。
+
+两条判据都成立：写守卫在真实 `claude -p` 进程里生效，只读命令不受影响。
+
+### 十四·附六 · 阶段三第二项（Codex `disabled_tools`，2026-09-06）
+
+**探针命令**（自建最小 stdio MCP server，两个工具 `alpha` / `beta`，`/tmp/mini-mcp.mjs`，
+不进仓库）：
+
+```bash
+# 基线：不加 disabled_tools
+cd /tmp && codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c mcp_servers.mini.command="node" \
+  -c mcp_servers.mini.args='["/tmp/mini-mcp.mjs"]' \
+  "请调用 tool_search 工具，搜索关键词 'mini alpha beta'，limit 20，然后只列出返回结果里的工具名，不要调用其它任何工具"
+# → mcp__mini.alpha
+#   mcp__mini.beta
+
+# 加一条 disabled_tools（与 codexAdapter.buildArgs() 对同一份 roleBounds 实际生成的
+# 字面参数逐字一致：cwd:'/tmp', knownMcpServers:['mini'],
+# roleBounds:{caps:{mcp:{denyTools:['mini__beta']}}} → -c mcp_servers.mini.disabled_tools=["beta"]）
+cd /tmp && codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -c mcp_servers.mini.command="node" \
+  -c mcp_servers.mini.args='["/tmp/mini-mcp.mjs"]' \
+  -c 'mcp_servers.mini.disabled_tools=["beta"]' \
+  "请调用 tool_search 工具，搜索关键词 'mini alpha beta'，limit 20，然后只列出返回结果里的工具名，不要调用其它任何工具"
+# → alpha（beta 从工具搜索结果里消失）
+```
+
+**结果**：判据是延迟工具搜索（`tool_search`）返回的工具名列表，不是问模型"你还有没有这个
+工具"——基线两个工具都在，加了 `disabled_tools` 之后 `beta` 从列表里消失，只剩 `alpha`。
+`codex-cli 0.147.0` 实测确认。
+
+**命名差异**：Codex 给 MCP 工具的名字是 `mcp__<server>.<tool>`（点号分隔），Claude 是
+`mcp__<server>__<tool>`（双下划线）——两边看起来像但分隔符不同，`caps.mcp.denyTools` 里
+写 `<server>__<tool>` 这个精确形状是 Eas-Term 自己的 DSL 约定，转译到 Codex 时要在
+`disabled_tools` 数组里还原成纯工具名（不带 `mcp__` 前缀、不带 server 名），转译到 Claude
+时才是拼 `mcp__<server>__<tool>` 整串当 deny 项——两条转译各自在 `roleBinding.ts` 里，
+不是同一段代码抄两遍。
+
+**为什么本机画板 / eas-term 两个真实 MCP 验不了**：`codex exec --ephemeral` 起的是一次性
+临时会话，画板 `bizone-canvas` 与本项目 `eas-term` 这两个 MCP server 各自依赖对应的 app
+在线（画板要 Electron 进程活着、eas-term 要 `mcpBridge.ts` 的 HTTP 网关活着）才能连上，
+临时会话默认不接这两个真实 server（不在 `~/.codex/config.toml` 里现场声明的话），所以
+延迟工具搜索清单里当前不会出现它们——验证必须用自建的最小 server，拿它们当判据会得到
+"什么改动都没生效"的假阴性。
+
+**落地**：`roleBinding.ts` 的 `RoleBinding.codex.disabledTools`（`server → 工具名数组`，
+已排序去重）+ `codexDisabledToolsArg()`；`caps.mcp.denyTools` 分两类处理：形如
+`<server>__<tool>` 的精确条目（不含 `*`，正好一个 `__`，两段都非空）升级为 `disabled_tools`
+（**hard**，按 `knownMcpServers` 过滤，server 不在清单就跳过不下发——Codex 对不存在的
+server 名会拒绝启动，同 `mcp.denyServers` 的规矩）；其余形状维持原状，通配降级为按 server
+名整个 `enabled=false` 关掉（**degraded**）。两类同时有内容时报告各出一行——
+`roleBinding.test.ts` 里那条「每条参数都有对应报告行」的计数测试实测没受影响
+（它用的 bounds 是 `denyTools:['*t*']`，纯通配、不触发精确分支，只产出一行，行为与改动前
+一致），因此没有改动那条测试，只是新增测试专门覆盖精确分支的两行场景。
+`adapters/codex.ts` 与 `CanvasAgentBar.tsx` 两处接线都在 `disableServers` 那行之后追加
+`for (const [server, tools] of Object.entries(b.codex.disabledTools))`。
+
+**2026-09-06 评审修复**：精确条目的 server 不在 `knownMcpServers` 清单时，不再单独报一行
+hard 后静默丢弃——退回 `rest` 走通配路径（`matchKnown` 的字面匹配），这样即便 server 名字
+本身自带 `__`（比如真实 server 就叫 `a__b`，被 `parsePreciseTool` 误判成精确形状 `server=a,
+tool=b`）也不会「既不生效也不报告」，字面匹配照旧能兜住真正叫 `a__b` 的 server。同一个
+server 如果已经被 `mcp.denyServers` 整关，跳过它的精确工具条目（server 都不启动了，逐个摘
+工具是死重量）。`disabled_tools` 那行 how 末尾补一句「这条 -c 整键覆盖你 config.toml 里同一
+个 server 的 disabled_tools，不是追加」（同 `skills.config` 那条一样的整键覆盖语义）。
+`codexDisableServerArg` / `codexDisabledToolsArg` 补上 TOML key 转义——server 名含 `.` 或
+`"` 时这一段要加引号，否则裸写会被解析成多一层嵌套或破坏语法。另外，编辑器矩阵
+`capMatrix()` 原来对同一 cap 的多行报告用 `.find()` 只取第一条，第二条被静默吞掉（用户看
+不到"这家其实还整个关了 server"）——改为同一 cap 多行时合并成一条：level 取最弱、how 用
+「；」拼接，`MatrixRow.cells` 的结构不变，只改 `capMatrix()` 内部的合并逻辑。

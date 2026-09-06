@@ -103,6 +103,47 @@ test('传了 resumeId 才出现 --resume', () => {
   assert.ok(withResume.includes('sess-1'))
 })
 
+// ── 阶段三第三项：caps.write=false 在 Claude 上的第二道闸（--settings 附 PreToolUse
+// 写守卫，补 --disallowedTools 挡不住 Bash 的洞）─────────────────────────────
+
+test('给了 writeGuardSettings 就带上 --settings <path>，且排在 --disallowedTools 之前', () => {
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p',
+    resumeId: 'r1',
+    writeGuardSettings: '/tmp/eas-guard.json',
+    roleBounds: { caps: { write: false } }
+  })
+  const settingsIdx = args.indexOf('--settings')
+  assert.ok(settingsIdx >= 0, '缺 --settings')
+  assert.equal(args[settingsIdx + 1], '/tmp/eas-guard.json')
+  const denyIdx = args.indexOf('--disallowedTools')
+  assert.ok(denyIdx >= 0, '缺 --disallowedTools')
+  assert.ok(settingsIdx < denyIdx, '--settings 必须排在变长参数 --disallowedTools 之前，否则会被吞掉')
+})
+
+test('没给 writeGuardSettings 时参数逐字与今天相同——不凭空多出 --settings', () => {
+  // 2026-09-06 评审 Minor：这条标题一直写着「参数逐字相同」，但原来的断言只
+  // 查了 `!includes('--settings')`——`--settings` 前后夹了别的参数、或者顺序被
+  // 挪动，这条断言完全测不出来。改成对整个 args 数组做全量快照，标题说的
+  // 「逐字相同」才名副其实。
+  const args = getAdapter('claude')!.buildArgs({ cwd: '/p', resumeId: 'r1' }).args
+  assert.deepEqual(args, [
+    '-p',
+    '--input-format',
+    'stream-json',
+    '--output-format',
+    'stream-json',
+    '--verbose',
+    '--strict-mcp-config',
+    '--include-hook-events',
+    '--include-partial-messages',
+    '--append-system-prompt',
+    OUTPUT_STYLE_PROMPT,
+    '--resume',
+    'r1'
+  ])
+})
+
 test('Claude 支持逐次审批；Codex 在 exec 模式下不支持，必须报空数组', () => {
   // 空数组不是"忘了填"，是明确表示"这个 CLI 做不了逐次审批"。
   // UI 据此退回沙箱级别选择——不写任何按 CLI 名字的分支。
@@ -258,6 +299,44 @@ test('[补] 角色的 caps.write:false 永远压过显式传的 sandbox——不
   }).args
   const i = args.indexOf('--sandbox')
   assert.equal(args[i + 1], 'read-only', '角色 caps.write:false 必须赢过显式传入的 danger-full-access')
+})
+
+// 阶段三第二项：denyTools 里形如 `<server>__<tool>` 的精确条目现在能升级为
+// `-c mcp_servers.<名>.disabled_tools=[...]`，逐字断言这条参数确实出现在 argv 里
+// （而不是只测 roleBinding.ts 算出的中间值——两处都要看，纯函数算对了不代表接线也对）。
+test('[追加] Codex：denyTools 精确条目落成 -c mcp_servers.<名>.disabled_tools=[...]，逐字比对', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['mini'],
+    roleBounds: { caps: { mcp: { denyTools: ['mini__beta'] } } }
+  })
+  const i = args.indexOf('mcp_servers.mini.disabled_tools=["beta"]')
+  assert.ok(i > 0, '缺 disabled_tools 参数')
+  assert.equal(args[i - 1], '-c', 'disabled_tools 的取值前面必须紧跟 -c')
+})
+
+test('[追加] Codex：denyTools 通配条目不产生 disabled_tools，仍走整关 server 那条老路', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['mini'],
+    roleBounds: { caps: { mcp: { denyTools: ['*ini*'] } } }
+  })
+  assert.ok(!args.some((a) => a.includes('disabled_tools')), '通配条目不该出现 disabled_tools')
+  assert.ok(args.includes('mcp_servers.mini.enabled=false'), '通配条目仍应整个关掉命中的 server')
+})
+
+// 2026-09-06 最终评审 Minor 6：多个 server 时按 server 名排序拼 `-c`，与 bindRole 报告行里
+// `.sort()` 过的顺序一致——不排的话 argv 顺序跟着 JS 对象键的插入顺序走，跟报告对不上。
+test('[追加] Codex：多个 server 的 disabled_tools 按 server 名排序拼 -c', () => {
+  const { args } = getAdapter('codex')!.buildArgs({
+    cwd: '/p',
+    knownMcpServers: ['zserver', 'aserver'],
+    roleBounds: { caps: { mcp: { denyTools: ['zserver__t1', 'aserver__t2'] } } }
+  })
+  const posA = args.indexOf('mcp_servers.aserver.disabled_tools=["t2"]')
+  const posZ = args.indexOf('mcp_servers.zserver.disabled_tools=["t1"]')
+  assert.ok(posA > 0 && posZ > 0, '两条 disabled_tools 都要在 argv 里')
+  assert.ok(posA < posZ, 'aserver 应排在 zserver 前面')
 })
 
 test('[补充] Codex 的 model 用 -m 传，且带上实际取值', () => {
