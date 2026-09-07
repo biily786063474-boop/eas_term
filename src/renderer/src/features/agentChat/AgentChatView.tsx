@@ -469,13 +469,24 @@ export function AgentChatView({
           // 用户得看一眼分支名、按一下发送才算下令。CLI 沿用本节点的（合并官 kind:'auto'）。
           onClick: () => {
             const S = useStore.getState()
-            const frame = S.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
-            if (!frame) return
-            void S.addAgentNode(frame.id, {
+            const opts = {
               cli: selected?.id,
               roleId: 'merger',
               draft: `把 ${worktree.branch} 合进主干。先 merge_preflight，再 repo_impact，回归前后各一次。`
-            })
+            }
+            const frame = S.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
+            // 分屏模式下这个 leaf 没有画布节点 —— 那就按普通 pane 开在同一项目里，
+            // 别静默吞掉：用户点了菜单却什么都没发生，是最难查的那种。
+            const p: Promise<unknown> = frame
+              ? S.addAgentNode(frame.id, opts)
+              : S.openAgentPane({ projectId: S.tabs.find((t) => t.id === tabId)?.projectId, ...opts })
+            void p.catch((e: unknown) =>
+              requestConfirm({
+                message: `起不了合并官会话：${e instanceof Error ? e.message : String(e)}`,
+                confirmLabel: '知道了',
+                onConfirm: () => {}
+              })
+            )
           }
         },
         { sep: true, label: '', onClick: () => {} },
