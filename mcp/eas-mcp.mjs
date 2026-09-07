@@ -224,7 +224,8 @@ const TOOLS = [
       '依赖波及（只读）：给一组文件（相对项目根），返回谁 import 了它们（直接与再上一层）、它们卷入的循环依赖、' +
       '以及建议的回归范围（同目录同名的 *.test 文件）。图来自代码地图的分析，第一次要几秒。' +
       '拿 merge_preflight 的 changed 喂给它，就知道这次合并会波及到哪。' +
-      '图取自主干工作区（不是你所在的 worktree），结果按项目缓存 5 分钟 —— 分支上刚新增的文件图上没有，会落在 unknown 里。' +
+      '图取自主干工作区（不是你所在的 worktree），结果按项目缓存 5 分钟（每次 merge_preflight 会清掉重算），返回带 cachedAt（图算出来的时刻）' +
+      ' —— 分支上刚新增的文件图上没有，会落在 unknown 里。' +
       '返回 JSON：files（图上找得到的；模块级图如 Swift 项目时回的是所属模块节点 id）/ ' +
       'unknown（图上没有的：非源码、未扫到、或分支新增/已删的文件）/ ' +
       'dependents{file, direct, indirect}（indirect 只到第二层，不是闭包）/ cycles（循环分量）/ suggestedTests（同目录同名 *.test）。',
