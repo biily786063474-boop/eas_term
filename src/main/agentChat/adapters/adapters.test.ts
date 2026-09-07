@@ -845,3 +845,15 @@ test('Codex：只有 roleDocs 没有契约也要拼 instructions', () => {
   const v = args.find((a) => a.startsWith('instructions=')) ?? ''
   assert.equal(v, 'instructions=你的角色文档：- 章程：`docs/roles/builder.md`')
 })
+
+// 真实的指针段是两行（章程 + 台账）。`replace(/\n/, '：')` 没带 g —— 只有标题后面那个换行变冒号，
+// 第二项前面的换行留给整段压单行时变空格。带了 g 会写成「…builder.md`：- 台账…」，钉住整串。
+test('Codex：两行 roleDocs（章程 + 台账）只有首个换行变冒号，其余压成空格', () => {
+  const two = '## 你的角色文档\n- 章程：`/p/docs/roles/builder.md`\n- 台账：`/p/.eas/board/feat--x.md`'
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '你是工匠', roleDocs: two })
+  const v = args.find((a) => a.startsWith('instructions=')) ?? ''
+  assert.equal(
+    v,
+    'instructions=你是工匠 你的角色文档：- 章程：`/p/docs/roles/builder.md` - 台账：`/p/.eas/board/feat--x.md`'
+  )
+})

@@ -7,7 +7,7 @@ import path from 'node:path'
 import { test } from 'node:test'
 
 import type { BoardRow } from '../shared/board.ts'
-import { appendNote, readLedgers, upsertLedgers } from './branchLedger.ts'
+import { appendNote, ledgerFiles, ledgerIdle, readLedgers, upsertLedgers } from './branchLedger.ts'
 
 function row(root: string, branch: string, extra: Partial<BoardRow> = {}): BoardRow {
   return {
@@ -58,6 +58,16 @@ test('主工作区那行不造台账；rows 为空什么都不写', async () => 
   assert.equal(fs.existsSync(path.join(root, '.eas')), false)
 })
 
+test('分支名 ? / HEAD（git 失败、detached）不造台账、不追加、不读', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  await upsertLedgers(root, [row(root, '?'), row(root, 'HEAD')])
+  assert.equal(fs.existsSync(path.join(root, '.eas')), false)
+  const r = await appendNote(root, '?', 'hi', '实现者')
+  assert.equal(r.ok, false)
+  assert.deepEqual(readLedgers(root, ['?', 'HEAD']), {})
+  assert.equal(fs.existsSync(path.join(root, '.eas')), false)
+})
+
 test('appendNote：空 note 与坏分支名都拒收，不落文件', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
   const empty = await appendNote(root, 'feat/x', '   \n', '实现者')
@@ -67,16 +77,66 @@ test('appendNote：空 note 与坏分支名都拒收，不落文件', async () =
   assert.equal(fs.existsSync(path.join(root, '.eas')), false)
 })
 
-test('同一项目并发 upsert 与 append 排成一条链：谁都不把对方写丢', async () => {
+test('同一项目并发 upsert 与 append 排成一条链：谁都不把对方写丢；ledgerIdle 等到链空', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
-  await Promise.all([
+  const all = Promise.all([
     upsertLedgers(root, [row(root, 'feat/y')]),
     appendNote(root, 'feat/y', '第一条', '实现者'),
     upsertLedgers(root, [row(root, 'feat/y', { files: [] })]),
     appendNote(root, 'feat/y', '第二条', '实现者')
   ])
+  // 不 await all，直接等链空：读到的必须已经是四步全落完的样子
+  await ledgerIdle(root)
   const text = fs.readFileSync(path.join(root, '.eas/board/feat--y.md'), 'utf8')
   assert.match(text, /- 触及：（无）\n/)
   assert.match(text, /\[实现者\] 第一条\n/)
   assert.match(text, /\[实现者\] 第二条\n/)
+  await all
+  await ledgerIdle(root) // 链空时也能 await，不挂
+})
+
+test('readLedgers 走 clipTail：超过 maxLines 只留尾部并标明前面还有几行', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  await upsertLedgers(root, [row(root, 'feat/z')])
+  for (let i = 1; i <= 12; i++) await appendNote(root, 'feat/z', `第 ${i} 条`, '实现者')
+  const full = fs.readFileSync(path.join(root, '.eas/board/feat--z.md'), 'utf8')
+  const clipped = readLedgers(root, ['feat/z'], 5)['feat/z'] ?? ''
+  assert.notEqual(clipped, full)
+  assert.match(clipped, /^…（前面还有 \d+ 行）\n/)
+  assert.equal(clipped.split('\n').filter(Boolean).length, 6, '一行提示 + 5 行尾部')
+  assert.ok(clipped.endsWith('第 12 条\n'))
+  assert.ok(!clipped.includes('第 1 条\n'))
+  // 不超时原样返回
+  assert.equal(readLedgers(root, ['feat/z'], 1000)['feat/z'], full)
+})
+
+test('readLedgers 扫目录：板上已经没有的分支（会话回收了）台账照样读得到，key 是首行的分支名', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  await upsertLedgers(root, [row(root, 'eas/工匠/ab12'), row(root, 'feat/gone')])
+  await appendNote(root, 'feat/gone', '走之前留的话', '实现者')
+  // 现在板上只剩一条；另一条的会话已经没了
+  const got = readLedgers(root, ['eas/工匠/ab12'])
+  assert.deepEqual(Object.keys(got).sort(), ['eas/工匠/ab12', 'feat/gone'])
+  assert.match(got['feat/gone'] ?? '', /走之前留的话/)
+  assert.deepEqual([...ledgerFiles(root).keys()].sort(), ['eas/工匠/ab12', 'feat/gone'])
+  // 半截的临时文件与首行不是台账标题的文件都不算
+  fs.writeFileSync(path.join(root, '.eas/board/feat--gone.md.999.tmp'), '# 台账 · junk\n')
+  fs.writeFileSync(path.join(root, '.eas/board/notes.md'), '随手记\n')
+  assert.deepEqual([...ledgerFiles(root).keys()].sort(), ['eas/工匠/ab12', 'feat/gone'])
+})
+
+test('旧文没有「## 记录」标题（found=false）：upsert 把整份旧文接回记录段，不丢字', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  const abs = path.join(root, '.eas/board/feat--old.md')
+  fs.mkdirSync(path.dirname(abs), { recursive: true })
+  fs.writeFileSync(abs, '手改的旧台账\n- 一条别人写的\n')
+  await upsertLedgers(root, [row(root, 'feat/old')])
+  const text = fs.readFileSync(abs, 'utf8')
+  assert.match(text, /^# 台账 · feat\/old\n/)
+  assert.ok(text.endsWith('## 记录\n手改的旧台账\n- 一条别人写的\n'), text)
+  // 再追加一条，仍然只有一个记录段标题
+  await appendNote(root, 'feat/old', '新的', '实现者')
+  const again = fs.readFileSync(abs, 'utf8')
+  assert.equal(again.split('## 记录').length, 2)
+  assert.match(again, /- 一条别人写的\n- \d\d:\d\d \[实现者\] 新的\n$/)
 })

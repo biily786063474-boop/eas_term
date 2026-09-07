@@ -1400,27 +1400,7 @@ export function registerAgentChatHandlers(): void {
     // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
     // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
     const roleBounds = safeRoleBounds(p.roleBounds)
-    // 角色文档指针（P3）：章程首次生成 + 台账路径。只对带 roleId 的会话；主工作区会话
-    // 没有自己的台账（cwd === 项目根 → 不读分支）。章程落在项目根的 docs/roles/ 下，
-    // worktree 里的 cwd 要先剥回根。ensureCharter 返回 null 只有 roleId 不合法一种情况。
-    let roleDocs: string | undefined
-    let charterCreated: string | undefined
     const roleId = typeof p.roleId === 'string' && p.roleId ? p.roleId : undefined
-    if (roleId) {
-      const root = projectRootOf(p.cwd)
-      const ch = ensureCharter(root, {
-        roleId,
-        roleName: roleNameOf(roleId) ?? roleId,
-        contract: typeof p.roleContract === 'string' ? p.roleContract : '',
-        bounds: roleBounds
-      })
-      if (ch) {
-        if (ch.created) charterCreated = ch.rel
-        const branch = p.cwd !== root ? branchFromGitFiles(p.cwd, readIfFile) : null
-        // 传 root：指针要给绝对路径，角色的 cwd 在 worktree 里，相对路径打不开（评审必改）
-        roleDocs = roleDocsPrompt({ root, charterRel: ch.rel, ledgerRel: branch ? ledgerRel(branch) : null })
-      }
-    }
     // 阶段三第三项：Claude 上 caps.write=false 的第二道闸。开闸条件三个都要满足
     // （字面意思见下面 rec.writeGuardSettings 的注释）。**提到 rec 字面量之外单独算**
     // ——`ensureWriteGuardSettings` 现在会在写不出文件时抛错（2026-09-06 评审 Minor：
@@ -1435,6 +1415,44 @@ export function registerAgentChatHandlers(): void {
         writeGuardSettings = ensureWriteGuardSettings(nodeBinForHook())
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) }
+      }
+    }
+    // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
+    // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
+    const knownMcpServers = p.cli === 'codex' ? codexServers() : undefined
+    // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
+    // 只在 Codex 时算，adapter 是纯函数不读环境变量。
+    const codexHomeDir = p.cli === 'codex' ? codexHome() : undefined
+    // 角色文档指针（P3）：章程首次生成 + 台账路径。只对带 roleId 的会话；主工作区会话
+    // 没有自己的台账（cwd === 项目根 → 不读分支）。章程落在项目根的 docs/roles/ 下，
+    // worktree 里的 cwd 要先剥回根。ensureCharter 返回 null：roleId 不合法，或 root 下没有 .git。
+    //
+    // **放在写守卫之后**：写守卫落盘失败整个 start 会 return，若章程已经先生成了，
+    // `charterCreated` 那一声「首次生成」就丢了 —— 下次再起，文件已存在，永远没人告诉用户。
+    //
+    // 章程里「硬约束」几句由 bindRole 算，喂的 ctx 必须与这次真实起会话的一致：
+    // knownMcpServers / codexHome 就是下面 rec 里那两个字段，claudeWriteGuard 与
+    // adapters/claude.ts 里 `!!opts.writeGuardSettings` 同一判据。章程只生成一次、永不重写，
+    // 拿默认 ctx 算出来的「降级」措辞会和真实绑定对不上。
+    let roleDocs: string | undefined
+    let charterCreated: string | undefined
+    if (roleId) {
+      const root = projectRootOf(p.cwd)
+      const ch = ensureCharter(
+        root,
+        {
+          roleId,
+          roleName: roleNameOf(roleId) ?? roleId,
+          contract: typeof p.roleContract === 'string' ? p.roleContract : '',
+          bounds: roleBounds
+        },
+        { knownMcpServers, codexHome: codexHomeDir, claudeWriteGuard: !!writeGuardSettings }
+      )
+      if (ch) {
+        if (ch.created) charterCreated = ch.rel
+        const branch = p.cwd !== root ? branchFromGitFiles(p.cwd, readIfFile) : null
+        // 传 root：指针要给绝对路径，角色的 cwd 在 worktree 里，相对路径打不开（评审必改）
+        roleDocs = roleDocsPrompt({ root, charterRel: ch.rel, ledgerRel: branch ? ledgerRel(branch) : null })
       }
     }
     const rec: SessionRecord = {
@@ -1466,12 +1484,9 @@ export function registerAgentChatHandlers(): void {
       // 角色能力意图。**只收清洗过的形状**，任何别的形状一律当没给 ——
       // params 来自 unknown，而这一份直接决定安全边界，不猜、不修补。
       roleBounds,
-      // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
-      // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
-      knownMcpServers: p.cli === 'codex' ? codexServers() : undefined,
-      // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
-      // 只在 Codex 时算，adapter 是纯函数不读环境变量。
-      codexHome: p.cli === 'codex' ? codexHome() : undefined,
+      // 两个都在上面算好（章程的硬约束句要用同一份），理由见那里的注释
+      knownMcpServers,
+      codexHome: codexHomeDir,
       // 阶段三第三项：Claude 上 caps.write=false 的第二道闸（--settings 附 PreToolUse
       // 写守卫，补 --disallowedTools 挡不住 Bash 的逃生口）。开闸条件三个都要满足：
       //   · 只有 Claude 用得到这条 --settings（Codex/omp 走各自的落法，见 roleBinding.ts）
