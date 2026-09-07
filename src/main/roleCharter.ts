@@ -17,19 +17,20 @@ import {
 import { charterRel, renderCharter } from '../shared/roleDocs.ts'
 import type { HarnessId } from '../shared/types'
 
-/** 绑定层「硬约束」几行：点亮的 cap × 三家各自的落法。
+/** 绑定层「硬约束」几行：点亮的 cap × **当前这家** harness 的落法（`row.cells[kind]`）。
+ *  三家都列会把「Claude hook 拦」「Codex 摘 skill」并排写进一份只生成一次的文件，读的人分不清
+ *  哪条是此刻真在执行的；只写起会话那家，另加一行说明换 CLI 时以角色卡为准。
  *  `capMatrix` 未点亮的意图行也会给「假设点亮」的预览，这里只取 active 的 —— 章程写的是
  *  这张卡**真的**限制了什么，不是它能限制什么。
  *  `ctx` 必须是起会话时喂给 `bindRole` 的那一份：章程只生成一次、永不重写，
  *  拿默认 ctx 算出来的「降级」措辞会和真实绑定（比如 Codex 拿到 codexHome 后升 hard）对不上。 */
-function hardLines(bounds: RoleBounds | undefined, ctx: BindingContext | undefined): string[] {
+function hardLines(bounds: RoleBounds | undefined, kind: HarnessId, ctx: BindingContext | undefined): string[] {
   const out: string[] = []
   for (const row of capMatrix(bounds, ctx)) {
     if (!row.active) continue
-    for (const [h, cell] of Object.entries(row.cells)) {
-      if (!cell) continue
-      out.push(`${CAP_LABEL[row.cap]} · ${HARNESS_LABEL[h as HarnessId]}：${cell.how}（${LEVEL_LABEL[cell.level]}）`)
-    }
+    const cell = row.cells[kind]
+    if (!cell) continue
+    out.push(`${CAP_LABEL[row.cap]} · ${HARNESS_LABEL[kind]}：${cell.how}（${LEVEL_LABEL[cell.level]}）`)
   }
   return out
 }
@@ -43,6 +44,7 @@ function hardLines(bounds: RoleBounds | undefined, ctx: BindingContext | undefin
 export function ensureCharter(
   root: string,
   role: { roleId: string; roleName: string; contract: string; bounds?: RoleBounds },
+  kind: HarnessId,
   ctx?: BindingContext
 ): { created: boolean; rel: string } | null {
   const rel = charterRel(role.roleId)
@@ -59,7 +61,8 @@ export function ensureCharter(
         roleId: role.roleId,
         roleName: role.roleName,
         contract: role.contract,
-        hardLines: hardLines(role.bounds, ctx)
+        hardLines: hardLines(role.bounds, kind, ctx),
+        hardNote: `（按首次起会话的 ${HARNESS_LABEL[kind]} 算；换别家 CLI 时落法可能不同，以角色卡为准）`
       })
     )
     fs.renameSync(tmp, abs)

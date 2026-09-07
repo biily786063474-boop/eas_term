@@ -1,5 +1,9 @@
 // 角色章程（docs/roles/<roleId>.md，进 git）与分支台账（.eas/board/<branch>.md，不进 git）的
 // 纯文本逻辑：模板、渲染、解析、追加、路径、指针段。**零依赖、裸测。** fs 与 git 在 main/ 那两个模块。
+// 本地时间，直接用 shared/board.ts 那份（台账和板一样是给坐在这台机器前的人看的；
+// 两份各写一遍迟早对不上）。带 `.ts` 后缀：两边都在 shared/，裸 `node --test` 也解析得了。
+import { hhmm, stamp } from './board.ts'
+
 export const CHARTER_DIR = 'docs/roles'
 export const LEDGER_DIR = '.eas/board'
 
@@ -48,7 +52,11 @@ function extractJudge(contract: string): string[] {
   return out
 }
 
-export interface CharterInput { roleId: string; roleName: string; contract: string; hardLines: string[] }
+export interface CharterInput {
+  roleId: string; roleName: string; contract: string; hardLines: string[]
+  /** 硬约束列表上方的一行说明（比如「按首次起会话的 Codex 算；换别家 CLI 时落法可能不同」）。没有就不出这一行。 */
+  hardNote?: string
+}
 
 /** 首次在某项目用某角色时的初稿。边界段留空给用户填；其余从角色卡来。 */
 export function renderCharter(i: CharterInput): string {
@@ -69,6 +77,7 @@ export function renderCharter(i: CharterInput): string {
     '- 不要碰：',
     '',
     '### 硬约束（绑定层执行，改角色卡才会变）',
+    ...(i.hardNote ? [i.hardNote] : []),
     hard,
     '',
     '## 产出与落点',
@@ -93,11 +102,6 @@ export interface LedgerHeader {
   branch: string; roleName: string; worktree: string | null
   startedAt: number; lastActiveAt: number; alive: boolean; files: string[]
 }
-
-// 本地时间，与 shared/board.ts 一致 —— 台账是给坐在这台机器前的人看的
-const pad = (n: number): string => String(n).padStart(2, '0')
-const hhmm = (t: number): string => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}` }
-const stamp = (t: number): string => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hhmm(t)}` }
 
 const NOTES_HEAD = '## 记录'
 /** 记录段标题：独占一行（文件开头也算），容忍尾空白与 CRLF。匹配到的是「标题行 + 换行」，
@@ -156,7 +160,7 @@ export function roleDocsPrompt(o: { root: string; charterRel: string; ledgerRel:
   const root = o.root.replace(/[\\/]+$/, '')
   const lines = [
     '## 你的角色文档',
-    `- 本项目对你这个角色的章程：\`${root}/${o.charterRel}\`，动手前先读（项目对你的要求；工具/权限限制由系统另行执行，不在这份里）`
+    `- 本项目对你这个角色的章程：\`${root}/${o.charterRel}\`，动手前先读（项目对你的要求；里面列的硬约束只是说明，执行在系统这边）`
   ]
   if (o.ledgerRel)
     lines.push(`- 你这条分支的台账：\`${root}/${o.ledgerRel}\`。每完成一个可交付的小步用 board_note 记一条（决定 / 未完成 / 给合并官 / 怎么验）`)

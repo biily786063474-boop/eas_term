@@ -501,8 +501,8 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     if (!projectPath) throw new Error('找不到你所在的项目，读不了协同板')
     await window.api.board.refresh(projectPath)
     const { text, ledgers } = await window.api.board.read(projectPath)
-    // 各分支台账的尾部（分支名 → 文本；板上每条分支各一份，头部由 app 维护，看「## 记录」
-    // 段有没有内容）。**只在 `ledgers === true` 时带回** —— 合并官合并前靠它看目标分支的
+    // 各分支台账的尾部（分支名 → 文本；板上有的和磁盘上留着的（会话已停的分支也在，合并官
+    // 要的正是它们），头部由 app 维护，看「## 记录」段有没有内容）。**只在 `ledgers === true` 时带回** —— 合并官合并前靠它看目标分支的
     // 「给合并官」条目；写码角色每次读板不该为合并官付这份 token。
     const wantLedgers = args.ledgers === true
     return {

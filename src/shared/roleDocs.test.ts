@@ -88,7 +88,7 @@ test('roleDocsPrompt：有台账两行，没有一行；都是指针不是全文
   assert.match(p, /台账：`\/p\/\.eas\/board\/eas--builder--ab12ef\.md`.*board_note/)
   assert.ok(!p.includes('`docs/roles/builder.md`'), '不能再给相对路径 —— 角色的 cwd 在 worktree 里，相对路径打不开')
   assert.ok(!p.includes('绑定层'), '不给模型看内部黑话')
-  assert.match(p, /项目对你的要求；工具\/权限限制由系统另行执行/)
+  assert.match(p, /项目对你的要求；里面列的硬约束只是说明，执行在系统这边/)
   const q = roleDocsPrompt({ root: '/p', charterRel: 'docs/roles/scout.md', ledgerRel: null })
   assert.ok(!q.includes('台账'))
   assert.ok(q.split('\n').length <= 4)
@@ -120,6 +120,15 @@ test('ledgerRel：中文分支名保留字母数字（\\p{L}\\p{N}），不同�
   assert.equal(a, '.eas/board/eas--工匠--ab12ef.md')
   assert.equal(b, '.eas/board/eas--侦察--ab12ef.md')
   assert.notEqual(a, b)
+})
+
+test('renderCharter：hardNote 落在硬约束标题与列表之间；不传就没有这一行', () => {
+  const note = '（按首次起会话的 Codex 算；换别家 CLI 时落法可能不同，以角色卡为准）'
+  const t = renderCharter({ roleId: 'x', roleName: 'X', contract: '', hardLines: ['不许生图 · Codex：skills.config 摘掉 imagegen（硬）'], hardNote: note })
+  assert.ok(t.includes(`### 硬约束（绑定层执行，改角色卡才会变）\n${note}\n- 不许生图 · Codex：skills.config 摘掉 imagegen（硬）\n`))
+  const u = renderCharter({ roleId: 'x', roleName: 'X', contract: '', hardLines: ['a'] })
+  assert.ok(u.includes('### 硬约束（绑定层执行，改角色卡才会变）\n- a\n'))
+  assert.ok(!u.includes('以角色卡为准'))
 })
 
 test('renderCharter：硬约束为空时说明白「写在这里不算数」', () => {

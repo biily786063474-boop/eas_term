@@ -1129,7 +1129,7 @@ export function AgentChatView({
     // 不会同时弹别的。
     if (result.charterCreated)
       useStore.getState().requestConfirm({
-        message: `第一次在这个项目用「${role?.name ?? '这个角色'}」，已生成一份它的项目说明：${result.charterCreated}。里面「可以改 / 不要碰」两段是空的，想给它划边界就填进去；这个文件以后不会被自动改。`,
+        message: `第一次在这个项目用「${role?.name ?? '这个角色'}」，已生成一份它的项目章程：${result.charterCreated}。里面「可以改 / 不要碰」两段是空的，想给它划边界就填进去；这个文件以后不会被自动改。`,
         confirmLabel: '知道了',
         onConfirm: () => {}
       })

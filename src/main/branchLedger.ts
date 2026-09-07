@@ -176,8 +176,10 @@ export function ledgerFiles(root: string): Map<string, string> {
 }
 
 /** 给 board_read 带回去的台账：**磁盘上有的 ∪ 板上有的**，每份只留尾部
- * （合并官要的是最近的决定与提醒）。板上有但文件还没落的分支不出现在结果里。 */
-export function readLedgers(root: string, branches: string[], maxLines = 30): Record<string, string> {
+ * （合并官要的是最近的决定与提醒）。板上有但文件还没落的分支不出现在结果里。
+ *  默认 60 行：头部（标题、注释、角色、分支、worktree、起于、状态、触及、空行、「## 记录」）占 10 行，
+ *  记录段要留够 —— 30 行时几条多行交接就把头部挤没了。 */
+export function readLedgers(root: string, branches: string[], maxLines = 60): Record<string, string> {
   const files = ledgerFiles(root)
   for (const b of branches) {
     if (files.has(b) || NOT_A_BRANCH.has(b)) continue

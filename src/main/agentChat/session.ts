@@ -63,6 +63,7 @@ import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, easPluginMcpServer } from '../mcpBridge.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
+import type { HarnessId } from '../../shared/types'
 import { branchFromGitFiles, ledgerRel, roleDocsPrompt } from '../../shared/roleDocs.ts'
 import { clipForPrompt } from '../../shared/board.ts'
 import { projectRootOf } from '../../shared/roleWorktree.ts'
@@ -1446,6 +1447,9 @@ export function registerAgentChatHandlers(): void {
           contract: typeof p.roleContract === 'string' ? p.roleContract : '',
           bounds: roleBounds
         },
+        // p.cli 上面已过 getAdapter 筛（ADAPTERS 与 HARNESSES 是同一组三家），到这里就是 HarnessId；
+        // 章程「硬约束」只写这家的落法，换 CLI 时以角色卡为准（章程只生成一次）。
+        p.cli as HarnessId,
         { knownMcpServers, codexHome: codexHomeDir, claudeWriteGuard: !!writeGuardSettings }
       )
       if (ch) {
