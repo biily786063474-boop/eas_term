@@ -169,9 +169,22 @@ export function writeBoard(projectPath: string): Promise<void> {
   return next
 }
 
+/** 最近一次 `doWriteBoard` 算出的 rows，给 `board:read` 省一趟 git 用。
+ *
+ *  `board_read` 走的是「先 refresh 再 read」：refresh 刚跑完一整套 git
+ *  （每条会话 3 个往返 —— fork 点、status、diff），read 紧接着又原样跑一遍。
+ *  而这一切发生在模型动手改文件之前、用户正等着下一句话的时刻。
+ *  1 秒内的快照直接复用 —— 它和磁盘上那份板文本来就是同一次算出来的，
+ *  比重算一遍更一致。过期就老实重算：这段时间里别的分支可能已经动过了。 */
+const rowsSnapshot = new Map<string, { at: number; rows: BoardRow[] }>()
+const SNAPSHOT_FRESH_MS = 1000
+
 async function doWriteBoard(projectPath: string): Promise<void> {
   try {
     const rows = await collectRows(projectPath, roleNameLookup())
+    // 先记快照再谈写不写文件 —— 下面「一条 row 都没有就不造文件」那条会提前 return，
+    // 但那时的 rows（空数组）同样是刚算出来的事实，read 照样该复用。
+    rowsSnapshot.set(projectPath, { at: Date.now(), rows })
     const f = path.join(projectPath, BOARD_REL)
     // **一条都收不到时，不要凭空造出一个文件。**
     // 板是给「几条分支各自在改什么」用的。一个普通 AI 对话（没角色、就在项目根）
@@ -216,7 +229,11 @@ export function registerCollabBoardHandlers(): void {
     async (_e, projectPath: unknown): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[] }> => {
       if (typeof projectPath !== 'string') return { text: '', rows: [], overlaps: [] }
       const root = projectRootOf(projectPath)
-      const rows = await collectRows(root, roleNameLookup())
+      const snap = rowsSnapshot.get(root)
+      const rows =
+        snap && Date.now() - snap.at <= SNAPSHOT_FRESH_MS
+          ? snap.rows
+          : await collectRows(root, roleNameLookup())
       return { text: readBoard(root), rows, overlaps: findOverlaps(rows) }
     }
   )

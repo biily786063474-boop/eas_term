@@ -21,13 +21,16 @@ export interface Overlap {
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
+// **本地时间，不是 UTC。** 板是给坐在这台机器前的人读的：他看到「起于 12:35」
+// 会拿自己的表去对。原来这里用 getUTC*，差多少小时看时区
+// （2026-09-06 真机那份板上，本地 12:35 起的会话写成了 19:35，那台机器 UTC-7）。
 const hhmm = (t: number): string => {
   const d = new Date(t)
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 const stamp = (t: number): string => {
   const d = new Date(t)
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${hhmm(t)}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hhmm(t)}`
 }
 
 function status(r: BoardRow): string {
@@ -52,12 +55,22 @@ function touched(files: string[]): string {
 }
 
 export function findOverlaps(rows: BoardRow[]): Overlap[] {
-  const byFile = new Map<string, string[]>()
+  // 分支去重后才数 —— 同一条分支上开着两个活会话（换了个节点接着聊）改同一个文件，
+  // 那是同一个人在改自己的树，不是「两条分支撞车」。不去重的话板上会挂一条
+  // 「⚠ 两条分支都改了 x（eas/builder/ab12ef, eas/builder/ab12ef）」，
+  // 而两个徽标都会变黄，指着一个并不存在的冲突。
+  const byFile = new Map<string, Set<string>>()
   for (const r of rows) {
     if (!r.alive) continue
-    for (const f of r.files) byFile.set(f, [...(byFile.get(f) ?? []), r.branch])
+    for (const f of r.files) {
+      const set = byFile.get(f) ?? new Set<string>()
+      set.add(r.branch)
+      byFile.set(f, set)
+    }
   }
-  return [...byFile.entries()].filter(([, b]) => b.length >= 2).map(([file, branches]) => ({ file, branches }))
+  return [...byFile.entries()]
+    .filter(([, b]) => b.size >= 2)
+    .map(([file, branches]) => ({ file, branches: [...branches] }))
 }
 
 export function renderBoard(rows: BoardRow[], now: number, overlaps: Overlap[] = findOverlaps(rows)): string {

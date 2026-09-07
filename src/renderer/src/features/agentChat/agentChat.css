@@ -1605,6 +1605,15 @@
   font-family: inherit;
   font-size: 12px;
   max-width: 46%;
+  /* flex 子项默认 min-width:auto，撑到内容宽就不肯再缩 —— 于是这条上下文行
+     一超宽就整体溢出，最右边那个（有 worktree 时是分支徽标）被硬切掉，
+     `.ac-ctxbar-name` 的省略号一次也用不上（2026-09-06 真机：clientWidth 390 / scrollWidth 502）。
+     min-width:0 让四项都能缩，省略号才生效。 */
+  min-width: 0;
+}
+/* 图标不参与收缩：它只有 12px，跟着缩就成了一条竖线，而省略号本来就该出在文字上 */
+.ac-ctxbar-item > svg {
+  flex: none;
 }
 .ac-ctxbar-item.as-btn {
   cursor: pointer;

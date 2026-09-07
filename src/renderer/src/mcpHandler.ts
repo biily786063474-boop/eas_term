@@ -11,6 +11,8 @@ import { deliveredOf, deliveredHint } from '../../shared/teamFindings'
 import { fmtCost, fmtTokens } from '../../shared/teamCost'
 import { addBatch, parseRoster, recentSummary } from '../../shared/teamRoster'
 import { isolationOf, worktreePath, worktreeBranch, worktreeHint, belongsToProject } from '../../shared/teamWorktree'
+import { BOARD_REL } from '../../shared/board'
+import { projectRootOf } from '../../shared/roleWorktree'
 import { todosOfFrame } from '../../shared/todoOwner'
 import { briefFor } from './features/team/brief'
 import { collectLeaves } from './layout'
@@ -502,7 +504,11 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     return {
       board: text || '',
       note: text ? undefined : '协同板是空的：这个项目现在没有活跃分支。',
-      path: `${projectPath}/.eas/board.md`
+      // **归一到项目根，且路径常量从 shared/board 来。** 板只有一份，在项目根的
+      // `.eas/` 下（两个 handler 自己也都 projectRootOf 过一遍）。这里若原样回
+      // `projectPath`，角色会话拿到的是它那棵 worktree 底下一个并不存在的路径 ——
+      // 模型照着去 cat 就是 ENOENT，而它读到的板内容其实是对的。
+      path: `${projectRootOf(projectPath)}/${BOARD_REL}`
     }
   }
 

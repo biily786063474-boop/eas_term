@@ -694,7 +694,14 @@ export function AgentChatView({
         void (async () => {
           let resumeCli = savedResumeCli
           if (savedResumeId && !resumeCli) {
-            const owner = await window.api.agentChat.resumeOwner(savedResumeId, cwd).catch(() => null)
+            // **effectiveCwd 不是 cwd** —— Claude 的会话记录按 cwd 编码成目录名存
+            // （`~/.claude/projects/<编码后的 cwd>/<id>.jsonl`，见 main/agentChat/resumeOwner.ts），
+            // 而角色会话跑在 `.worktrees/<角色>-<id>/` 里。拿项目根去查，那段就在别的目录下，
+            // 认不出来 = owner 为 null = 签发者补不上，resolveConversationCli 少一条依据，
+            // 可能挑成别家 → dropResume，用户看到「这段对话的来源认不出来了」。
+            const owner = await window.api.agentChat
+              .resumeOwner(savedResumeId, effectiveCwd)
+              .catch(() => null)
             if (cancelled) return
             if (owner) {
               resumeCli = owner
@@ -884,6 +891,30 @@ export function AgentChatView({
     setSentMessages([])
     setSendError(null)
     setText('')
+  }
+
+  /** 换角色。**写码角色 + 已经有 resumeId + 还没有 worktree** 时先问一句。
+   *
+   *  handleSend 的首发守卫是 `role?.isolation === 'worktree' && !worktree && !savedResumeId`
+   *  —— 带着旧 resumeId 换过去，守卫会认为「这是在恢复一段旧会话」而不建树，
+   *  这个 pane 从此**静默地**跑在主工作区上，隔离白做。
+   *  所以只有两条路：要么不换，要么把 resumeId 清掉当全新会话起（代价是接不回上下文）。
+   *  取哪条由用户定，不替他选。和删 worktree 成功后 `done()` 里一并清 resumeId 是同一条处理。 */
+  const handlePickRole = (next: string): void => {
+    const nextRole = roles.find((r) => r.id === next)
+    if (nextRole?.isolation !== 'worktree' || !savedResumeId || worktree) {
+      setAgentRole(tabId, leafId, next)
+      return
+    }
+    requestConfirm({
+      message: `换成「${nextRole.name}」会在独立分支上重新开始这段对话（之前的上下文接不过去）。\n\n继续？`,
+      confirmLabel: '继续',
+      // 取消 = 角色不换。不清 resumeId、不动 pane，界面上那张卡回到原来那个角色。
+      onConfirm: () => {
+        setAgentResumeId(tabId, leafId, '')
+        setAgentRole(tabId, leafId, next)
+      }
+    })
   }
 
   const handleSend = async (override?: string): Promise<void> => {
@@ -1461,7 +1492,7 @@ export function AgentChatView({
           <RolePicker
             roleId={roleId}
             cli={selected?.id as HarnessId}
-            onPick={(next) => setAgentRole(tabId, leafId, next)}
+            onPick={handlePickRole}
           />
           {/* 分支徽标。对话态那份在 ChatToolbar 的控件行上，同一个组件。 */}
           {worktree && (

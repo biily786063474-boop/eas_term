@@ -31,6 +31,13 @@ export interface TabsSlice {
   activeTabId: string | null
   /** 每个项目上次激活的标签，切换项目时据此恢复 */
   activeTabByProject: Record<string, string | null>
+  /** agent pane 上要落 canvas.json 的字段变了就 +1，因为画布保存订阅只认 canvas/viewMode。
+   *
+   *  `App.tsx` 那条订阅是 `if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return`
+   *  —— `worktree` / `resumeId` / `cli` / `roleId` 只住在 `tabs` 里，改了它们不触发保存。
+   *  症状（2026-09-06 真机撞到）：删完 worktree 不再动画布就退出 → 重启后徽标复活，
+   *  指向一个已经不存在的目录。这个计数器就是让那四个 setter 能把订阅叫醒的那根线。 */
+  paneSaveTick: number
 
   openTerminal: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
   /** 开一个 AI 对话面板（空态，用户选完 CLI 发第一条消息才真正起会话）。
@@ -215,6 +222,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   tabs: [],
   activeTabId: null,
   activeTabByProject: {},
+  paneSaveTick: 0,
 
   openTerminal: async (opts) => {
     track('term')
@@ -595,50 +603,61 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   // 与 setAgentSessionId 同构，但存的是**另一个 id**：CLI 自己的会话 id。
   // 它会随 canvas.json 落盘，是「关掉再打开还接得上上次的上下文」的全部依据。
   setAgentResumeId: (tabId, leafId, resumeId, resumeCli) => {
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      // 真改了才 +1 —— 每轮 session.ready 都会拿同一个 id 调进来，无脑 +1 等于每轮存一次盘
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         // 清空 id 时签发者一起清；写 id 时给了签发者就换、没给就沿用（老数据补签发者也走这）
         const nextCli = resumeId ? (resumeCli || leaf.pane.resumeCli) : undefined
         if (leaf.pane.resumeId === resumeId && leaf.pane.resumeCli === nextCli) return t
+        changed = true
         const pane: PaneState = { ...leaf.pane, resumeId, resumeCli: nextCli }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setAgentCli: (tabId, leafId, cli) => {
     if (!cli) return
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         if (leaf.pane.cli === cli) return t // 同一个值不必制造新对象
+        changed = true
         return { ...t, root: updatePane(t.root, leafId, { ...leaf.pane, cli }) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setAgentRole: (tabId, leafId, roleId) => {
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         const next = roleId || undefined
         if (leaf.pane.roleId === next) return t // 同一个值不必制造新对象
+        changed = true
         const pane: PaneState = { ...leaf.pane, roleId: next }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setAgentWorktree: (tabId, leafId, wt) => {
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
@@ -646,10 +665,12 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         // 同一个值不必制造新对象 —— 这个字段被 AgentChatView 直接订阅，
         // 每次给个新对象就是每次都重渲染整块对话
         if (cur?.relPath === wt?.relPath && cur?.branch === wt?.branch) return t
+        changed = true
         const pane: PaneState = { ...leaf.pane, worktree: wt }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setActiveLeaf: (tabId, leafId) =>

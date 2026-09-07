@@ -35,6 +35,28 @@ test('进程没了但记录还在 → 状态「已停」', () => {
   assert.ok(s.includes('| 已停 |'))
 })
 
+// 时间列是给坐在这台机器前的人读的，所以是**本地**时间。断言用本地构造 +
+// 本地 getter 回读，任何时区跑都成立（原来这里是 getUTC*，差几小时看机器在哪个时区）。
+test('时间用本地时区，不是 UTC', () => {
+  const started = new Date(2026, 8, 5, 13, 10).getTime()
+  const now = new Date(2026, 8, 5, 14, 2).getTime()
+  const d = new Date(now)
+  const p = (n: number): string => String(n).padStart(2, '0')
+  const s = renderBoard([row({ startedAt: started })], now)
+  assert.ok(
+    s.startsWith(`# 协同板 · ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} `)
+  )
+  assert.ok(s.includes(`| ${p(new Date(started).getHours())}:${p(new Date(started).getMinutes())} |`))
+})
+
+test('同一条分支上两个活会话改同一文件不算交集（分支先去重）', () => {
+  const rows = [
+    row({ cwd: '/p/.worktrees/builder-ab12ef', files: ['src/a.ts'] }),
+    row({ cwd: '/p/.worktrees/builder-ab12ef', files: ['src/a.ts'] })
+  ]
+  assert.deepEqual(findOverlaps(rows), [])
+})
+
 test('findOverlaps：两条分支碰同一文件才算，且只报活跃的', () => {
   const rows = [
     row({ files: ['src/shared/types.ts', 'src/a.ts'] }),
