@@ -500,9 +500,12 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     const projectPath = where?.projectPath || ctx.project || ''
     if (!projectPath) throw new Error('找不到你所在的项目，读不了协同板')
     await window.api.board.refresh(projectPath)
-    const { text } = await window.api.board.read(projectPath)
+    const { text, ledgers } = await window.api.board.read(projectPath)
     return {
       board: text || '',
+      // 各分支台账的尾部（分支名 → 文本；没记过东西的分支不出现）。合并官合并前
+      // 靠它看目标分支的「给合并官」条目，不用自己去 cat .eas/board/<分支>.md。
+      ledgers,
       note: text ? undefined : '协同板是空的：这个项目现在没有活跃分支。',
       // **归一到项目根，且路径常量从 shared/board 来。** 板只有一份，在项目根的
       // `.eas/` 下（两个 handler 自己也都 projectRootOf 过一遍）。这里若原样回
@@ -510,6 +513,20 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       // 模型照着去 cat 就是 ENOENT，而它读到的板内容其实是对的。
       path: `${projectRootOf(projectPath)}/${BOARD_REL}`
     }
+  }
+
+  if (tool === 'board_note') {
+    // 台账按**调用方的 cwd** 定位（ctx.project 是起会话时注进 MCP 环境的 cwd —— session.ts
+    // 里 `mcpEnv({ project: opts.cwd })`，角色会话跑在 worktree 里时就是 worktree 路径）。
+    // 不能用 resolveFrame 的 projectPath —— 那是项目根，会把每条分支的记录都写到「主工作区」去。
+    const cwd = ctx.project || resolveFrame(ctx)?.projectPath || ''
+    if (!cwd) throw new Error('找不到你所在的目录，写不了台账')
+    const note = String(args.note ?? '').trim()
+    if (!note) throw new Error('缺少 note')
+    const branch = typeof args.branch === 'string' && args.branch.trim() ? args.branch.trim() : undefined
+    const r = await window.api.board.note(cwd, note, branch)
+    if (!r.ok) throw new Error(r.error)
+    return { rel: r.rel }
   }
 
   if (tool === 'merge_preflight' || tool === 'repo_impact') {
