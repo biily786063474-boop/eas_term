@@ -121,7 +121,11 @@ export const claudeAdapter: CliAdapter = {
         // 板文是起会话那一刻的快照（Task 3 的 StartOpts.boardText，session.ts 截断好
         // 传进来）——别人这会儿可能已经动了同一处，`board_read` 工具能拿到实时的那份。
         // 全空白同样当没有，理由与上面契约那行一致。
-        opts.boardText?.trim() ? `## 协同板（起会话时的快照）\n${opts.boardText.trim()}` : ''
+        opts.boardText?.trim() ? `## 协同板（起会话时的快照）\n${opts.boardText.trim()}` : '',
+        // 角色文档指针段（P3 的 StartOpts.roleDocs，session.ts 算好传进来：章程 + 台账路径，
+        // 只有指针不含全文）。放在最末：比板文还具体 —— 「你这个角色在这个项目、这条分支
+        // 的文件在哪」。全空白同样当没有。
+        opts.roleDocs?.trim() ?? ''
       ]
         .filter(Boolean)
         .join('\n\n')

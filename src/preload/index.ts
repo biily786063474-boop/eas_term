@@ -300,9 +300,15 @@ const api = {
      *  这里是给「读之前要最新的」那种场景用的（如 MCP 的 board_read）。 */
     refresh: (projectPath: string): Promise<{ ok: boolean }> =>
       ipcRenderer.invoke('board:refresh', projectPath),
-    /** `text` 是磁盘上那份（可能略旧），`rows` / `overlaps` 是现算的。 */
-    read: (projectPath: string): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[] }> =>
-      ipcRenderer.invoke('board:read', projectPath)
+    /** `text` 是磁盘上那份（可能略旧），`rows` / `overlaps` 是现算的；
+     *  `ledgers` 是各分支台账（`.eas/board/<branch>.md`）的尾部，按分支名索引，没台账的分支不出现。 */
+    read: (
+      projectPath: string
+    ): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[]; ledgers: Record<string, string> }> =>
+      ipcRenderer.invoke('board:read', projectPath),
+    /** 往某条分支的台账「记录」段追加一条。cwd 在 worktree 里时默认写自己那条；主工作区必须带 branch */
+    note: (cwd: string, note: string, branch?: string): Promise<{ ok: true; rel: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('board:note', cwd, note, branch)
   },
   todos: {
     // 终端输入框右键插入的待办清单。key 由渲染层决定（画布节点 id 优先，

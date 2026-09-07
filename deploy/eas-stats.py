@@ -187,6 +187,9 @@ def load_events():
                 "os": one("os"),
                 "arch": one("arch"),
                 "f": one("f"),
+                # 使用龄桶（d1 / d2_3 / d4_7 / d8_30 / d30p）。
+                # 客户端本地算好只报桶，服务端拿不到天数、更拿不到 ID
+                "age": one("age"),
             }
         )
     return out
@@ -371,6 +374,26 @@ def main():
     click_n = sum(v for k, v in clicks.items() if k.startswith("dl-"))
     done_n = len(dl_people)
 
+    # ── 使用龄分布（客户端本地算、只报桶，见 telemetry.ts 文件头）────────
+    # 这是在**不引入任何跨天标识符**的前提下能拿到的留存信息：
+    # 看得见「今天活跃的人里有几个是老用户」，但认不出具体是谁、也对不上昨天的谁。
+    AGE_LABEL = [
+        ("d1", "首日"), ("d2_3", "2–3 天"), ("d4_7", "4–7 天"),
+        ("d8_30", "8–30 天"), ("d30p", "30 天以上"),
+    ]
+    age_today, age_window = defaultdict(set), defaultdict(set)
+    for e in events:
+        if e["t"] != "app" or not e.get("age"):
+            continue
+        age_window[e["age"]].add(e["vid"])
+        if e["day"] == today:
+            age_today[e["age"]].add(e["vid"])
+
+    def age_rows(src):
+        return [{"k": k, "label": lab, "n": len(src.get(k, ()))} for k, lab in AGE_LABEL]
+
+    has_age = bool(age_window)
+
     # ── 其中我自己 ──────────────────────────────────────────────
     # 单列不剔除：主口径保持原样，另给一行「其中我自己」，
     # 这样既看得见真实总量，也一眼知道里面有多少是自家产生的。
@@ -427,6 +450,12 @@ def main():
                 {"k": FEAT_NAME.get(k, k), "n": v}
                 for k, v in sorted(app_feat.items(), key=lambda kv: -kv[1])
             ],
+        },
+        # 客户端发版前这里全是 0：老版本不带 age 参数。has=False 时前端提示等发版
+        "retention": {
+            "has": has_age,
+            "today": age_rows(age_today),
+            "window": age_rows(age_window),
         },
         "mine": {
             "events": len(mine_events),

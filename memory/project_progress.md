@@ -330,7 +330,10 @@
 - 留下的：`uiSlice.requestConfirm` 单槽覆盖（另立任务）；对话态工具栏 455px 以下换行；Windows 恢复路径拼接未实测；P2（合并官 + 两个工具 + testCmd）与 P3（章程 + 台账）未开始。
 - 阶段三第二三项（Codex disabled_tools、Claude 写守卫）同日合入 main（`da5e121`）。0.4.81 不含这些，要下一版。
 - **2026-09-06 P2 已完成并合入 main（`02ce65e`，16 个提交，无冲突，合后 2426 测试全过）**：内置 `merger` 合并官卡；只读工具 `merge_preflight`（`src/main/mergeTools.ts` + `src/shared/mergePreflight.ts`，merge-tree 算冲突、协同板交集、`main{branch,dirty}`、testCmd 三级来源）与 `repo_impact`（`src/shared/repoImpact.ts`，二级反向依赖 + 循环分量 + 同目录测试建议，图缓存 5 分钟且 preflight 清缓存）；`Project.testCmd` + 侧栏「回归命令…」；pane `draft` 预填（不落盘、不自动发）+ 徽标菜单「合并到主干」。真机 8 场景记录在 spec 第十五节。`gitExecCode` 归到 `gitExec.ts`（带退出码）。两个工具进了 `LONG_WAITS`（mcpBridge + eas-mcp 两处）。
-- P2 留下的：没真跑一整轮合并（含解冲突与回滚）；Windows 未测；P3（章程 + 台账）未开始。**0.4.81 不含阶段三、P1、P2，要下一版。**
+- P2 留下的：没真跑一整轮合并（含解冲突与回滚）；Windows 未测。
+- **2026-09-07 P3 已完成并合入 main（`d5edf2c`，12 个提交，无冲突）**：章程 `docs/roles/<roleId>.md`（`src/shared/roleDocs.ts` 模板 + `src/main/roleCharter.ts` 首次生成、透传绑定 ctx、只写当前 harness 的硬约束、项目根无 `.git` 不写）；台账 `.eas/board/<branch>.md`（`src/main/branchLedger.ts` 一条链，头部随协同板刷新 upsert，会话被移除后 `markGoneAsStopped` 标已停，`readLedgers` 扫目录靠首行反推分支）；MCP `board_note`（按 cwd 向上找仓库根，主工作区必须带 branch）、`board_read` 可选 `ledgers`；起会话附「你的角色文档」绝对路径指针段（`StartOpts.roleDocs` 三家同步，放在写守卫之后）；首次生成章程 `requestConfirm` 提示。真机 8 场景记录在 spec 第十六节。
+- P3 留下的：Codex / omp 指针段只有单测；`team_spawn` 多角色同时首次生成时提示只剩最后一条（requestConfirm 单槽老留项）。**0.4.81 不含阶段三、P1、P2、P3，要下一版。**
+- 同期另一个 agent 在 `codex/agent-chat-codex` 分支（worktree `/private/tmp/eas-agent-chat-codex`）干活，主树里有它的未跟踪文件（`.agents/`、`.codex/`、`docs/AGENT_ACTIVITY_LOG.md`、一份 09-07 计划）与 `AGENTS.md` 改动，未合。
 
 **这轮的方法论教训**（已写进 ~/.claude 项目记忆 `eas-term-角色绑定层.md` / `eas-term-cdp-验证方法.md`）：
 - 判断 CLI 有没有某个工具，看**发给模型的请求体**（假端点或 trace 回显），别问模型。

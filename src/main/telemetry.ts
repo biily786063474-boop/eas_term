@@ -12,10 +12,20 @@
 //   · 任何能跨天认出同一个人的标识符
 //
 // 没有客户端 ID 是刻意的：活跃数由服务端按「当日 IP+UA 哈希」估算，隔天就对不上，
-// 因此算不出留存——这是为隐私付的代价，不是漏做。
+// 因此算不出**个体**留存——这是为隐私付的代价，不是漏做。
+//
+// 2026-09-07 补充：留存分布现在能算了，但**上面那条禁令一个字没改**。
+// 做法是「本地算、只报桶」：使用龄的账本（首个使用日 / 活跃过多少天）留在本机
+// userData 里，**永远不上报**；上报的只有一个粗分桶 age=d1|d2_3|d4_7|d8_30|d30p。
+// 桶不是标识符 —— 同一个桶里有很多人，服务端拿它认不出任何个体，
+// 也无法把今天的某人和昨天的某人对上。
+// ⚠️ **不要改成上报天数**（age=137 那样）：在个位数用户量下，
+//    「用了 137 天」几乎就是一个唯一标识，那才是真的越线。
 //
 // 上报走官网那个 /e 端点（nginx 直接 return 204 写日志，服务端零常驻进程），
 // 用 t=app 和网页访问区分开。
+import { readFileSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import { app, ipcMain, net } from 'electron'
 import { getPrefs } from './prefs'
 
@@ -47,6 +57,60 @@ let startedAt = Date.now()
 let reportedUntil = Date.now()
 let timer: ReturnType<typeof setInterval> | null = null
 
+/** 使用龄的本地账本。**这个文件永远不上报**，只用来算「今天是第几个使用日」。
+ *  刻意不存日期列表，只存三个值 —— 存了列表就等于在本机留了一份作息记录，没必要。 */
+type AgeBook = { first: string; days: number; last: string }
+
+function agePath(): string {
+  return join(app.getPath('userData'), 'telemetry-age.json')
+}
+
+function todayStr(): string {
+  const d = new Date()
+  const p2 = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+}
+
+/** 今天第一次调用时把活跃天数 +1 并落盘，返回累计活跃天数。 */
+function bumpAge(): number {
+  const today = todayStr()
+  let book: AgeBook
+  try {
+    book = JSON.parse(readFileSync(agePath(), 'utf8')) as AgeBook
+  } catch {
+    book = { first: today, days: 0, last: '' }
+  }
+  if (book.last !== today) {
+    book.days = (book.days || 0) + 1
+    book.last = today
+    // 写不进去就算了：统计不该影响启动，更不该因为磁盘满就崩
+    try {
+      writeFileSync(agePath(), JSON.stringify(book))
+    } catch {
+      /* 忽略 */
+    }
+  }
+  return book.days
+}
+
+/** 使用龄分桶。**只报桶不报天数**，理由见文件头。 */
+function ageBucket(days: number): string {
+  if (days <= 1) return 'd1'
+  if (days <= 3) return 'd2_3'
+  if (days <= 7) return 'd4_7'
+  if (days <= 30) return 'd8_30'
+  return 'd30p'
+}
+
+let ageCache = ''
+
+/** 懒加载：只有真要发上报时才去动账本。
+ *  这样天然尊重开关 —— send() 的两个调用点都先检查过 getPrefs().telemetry。 */
+function currentAge(): string {
+  if (!ageCache) ageCache = ageBucket(bumpAge())
+  return ageCache
+}
+
 function osName(): string {
   if (process.platform === 'darwin') return 'macOS'
   if (process.platform === 'win32') return 'Windows'
@@ -64,7 +128,9 @@ function packCounts(): string {
 /** 发一发就算了，不重试、不看响应。统计数据丢几条无所谓，
  *  为它做重试队列反而会在网络不好时反复占用带宽。 */
 function send(params: Record<string, string | number>): void {
-  const q = Object.entries(params)
+  // 所有 app 上报统一带使用龄桶。放在这里而不是各调用点，免得日后新增上报忘了带
+  const withAge = params.t === 'app' ? { ...params, age: currentAge() } : params
+  const q = Object.entries(withAge)
     .filter(([, v]) => v !== '' && v !== 0)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
     .join('&')

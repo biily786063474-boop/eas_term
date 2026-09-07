@@ -261,6 +261,16 @@ test('[补] restart 时 opts 带上 boardText——丢了 restart 出来的会�
   assert.equal(plan.opts.boardText, text)
 })
 
+// 角色工作流 P3：roleDocs（章程 + 台账的指针段）同 boardText 的理由。丢了，restart 出来的
+// 会话不知道自己的章程在哪、该往哪条台账写交接 —— 契约里「用 board_note 记一条」就没了落点。
+test('[补] restart 时 opts 带上 roleDocs——丢了 restart 出来的会话找不到自己的章程与台账', () => {
+  const docs = '## 你的角色文档\n- 本项目对你这个角色的章程：`/p/docs/roles/builder.md`\n- 你这条分支的台账：`/p/.eas/board/feat--x.md`'
+  const s = base({ alive: false, resumeId: 'sess-abc', roleDocs: docs })
+  const plan = planSend(s, 2_000_000)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.roleDocs, docs)
+})
+
 // ── 团队 agent 交活之后走更短的回收窗口 ───────────────────────────────
 
 test('团队 agent **交活之后** 3 分钟就回收', () => {
