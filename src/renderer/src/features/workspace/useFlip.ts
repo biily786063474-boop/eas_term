@@ -37,11 +37,63 @@ export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRe
     // 那些本来就是连续的，再叠一层补间会拖泥带水。判据是「面积变了一大截」。
     const ratio = (rect.w * rect.h) / Math.max(1, prev.w * prev.h)
     if (ratio > 0.6 && ratio < 1.7) return
-    const anim = el.animate(
-      [{ transform: invertTransform(prev, rect) }, { transform: 'none' }],
-      { duration: ratio > 1 ? FLIP_MS.grow : FLIP_MS.shrink, easing: FLIP_EASING }
-    )
-    return () => anim.cancel()
+    // ⚠️ **`transform-origin` 必须自己给。**
+    // `invertTransform` 的公式是按「原点在左上角」推的（`flip.ts` 的注释写着这条），
+    // 但**没有任何 CSS 真的设过它** —— 2026-09-07 运行时实测 `.pane` 是 `50% 50%`、
+    // `.cfile-node` 是 `150px 110px`（都是默认的中心）。于是缩放绕中心发生、
+    // 平移却按左上角算，动画起点落不回原位 —— 用户实拍：「有些不是从原位到全屏的」。
+    // 这条从 FLIP 上线那天就错着，只是终端块头大、偏移相对小才没被发现。
+    //
+    // ⚠️ **动画要等一帧再启动。**
+    // 还原时 `maximizedNode` 变 null，画布上**所有**被 `display:none` 藏起来的节点
+    // 同一帧全部恢复显示 —— 2026-09-07 实测 55 个元素，那一帧要 175~191ms
+    //（放大时最长 16.7ms，空转基线 9.3ms，都在同一台机器上量的）。
+    // WAAPI 的动画是**按时间走的**：卡住的那 175ms 里动画时钟照走，卡完直接跳到
+    // 约 67% 再收尾 —— 观感就是「收回过程明显卡顿」。
+    //
+    // 所以先用内联样式把元素**按在起点**（这一步在 paint 之前，那一帧无论多长
+    // 都只是静止不动），等下一帧那笔昂贵布局做完了再真正启动动画。
+    // 动画一开始就把内联样式撤掉 —— 留着的话动画结束（fill 默认 none）会弹回起点。
+    el.style.transformOrigin = '0 0'
+    el.style.transform = invertTransform(prev, rect)
+    const clear = (): void => {
+      el.style.transform = ''
+      el.style.transformOrigin = ''
+    }
+    // **等到一帧不再昂贵才启动动画。** 只等一帧不够 —— 实测那笔布局风暴跨了两帧
+    // （79.5ms + 49.7ms），只延一帧的话动画刚跑到 0ms 就被第二帧吃掉 42ms，
+    // 观感仍然是「一上来先跳一截」。所以判据不是「等几帧」而是「上一帧贵不贵」。
+    //
+    // 上限 4 帧是安全阀：万一机器一直很忙，宁可动画晚开始也不能永远不动。
+    // 等待期间元素被上面那两行内联样式按在起点，所以看起来只是「晚一点开始」，
+    // 不会跳 —— 这正是把内联按住和延迟启动做成一对的理由。
+    const CHEAP_MS = 20 // 120Hz 下一帧 8.3ms，20ms 已经是明显掉帧
+    let anim: Animation | null = null
+    let raf = 0
+    let waited = 0
+    let prevTs = performance.now()
+    const tick = (ts: number): void => {
+      const delta = ts - prevTs
+      prevTs = ts
+      if (delta > CHEAP_MS && waited++ < 4) {
+        raf = requestAnimationFrame(tick)
+        return
+      }
+      clear()
+      anim = el.animate(
+        [
+          { transformOrigin: '0 0', transform: invertTransform(prev, rect) },
+          { transformOrigin: '0 0', transform: 'none' }
+        ],
+        { duration: ratio > 1 ? FLIP_MS.grow : FLIP_MS.shrink, easing: FLIP_EASING }
+      )
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      clear()
+      anim?.cancel()
+    }
     // 依赖逐字段列，不能只依赖 rect 对象 —— 调用方每次渲染都会新建一个对象字面量，
     // 那样每渲染一次都会重跑一遍 effect
   }, [ref, rect?.left, rect?.top, rect?.w, rect?.h])
