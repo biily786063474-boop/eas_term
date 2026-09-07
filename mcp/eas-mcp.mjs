@@ -201,9 +201,15 @@ const TOOLS = [
       '读这个项目的**协同板**：现在有哪些会话在哪条分支上改了哪些文件、谁闲置了、哪两条分支碰了同一个文件。' +
       '由 app 从会话表和 git 现算，不是谁写的。**改文件前先读一遍** —— 起会话时看到的那份是快照，' +
       '别人这会儿可能已经动了同一处。只读，没有参数。' +
-      '返回 JSON：`board` 是协同板的 Markdown 原文；`ledgers` 是各分支台账的尾部（分支名 → 文本，只有记过东西的分支才有）' +
+      '返回 JSON：`board` 是协同板的 Markdown 原文；传 ledgers=true 时另带 `ledgers`：各分支台账的尾部' +
+      '（分支名 → 文本；板上每条分支各一份，头部由 app 维护，看「## 记录」段有没有内容）' +
       '——合并官合并前先看目标分支的「给合并官」条目。',
-    inputSchema: { type: 'object', properties: {} }
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ledgers: { type: 'boolean', description: '带上各分支台账的尾部；合并前才需要' }
+      }
+    }
   },
   {
     name: 'board_note',
@@ -215,7 +221,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        note: { type: 'string', description: '要追加的内容，可多行' },
+        note: { type: 'string', description: '要追加的内容，可多行；超过 4000 字会截断' },
         branch: { type: 'string', description: '写到哪条分支的台账；不给 = 自己所在的分支' }
       },
       required: ['note']

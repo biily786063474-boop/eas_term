@@ -1121,7 +1121,7 @@ export function AgentChatView({
     // 不钉的话，重挂载时 `pickDefaultCli` 会重挑，推测链里的 `readLastCli()`
     // 会随用户在别处切换 harness 而变，于是这段对话会悄悄换底座、且接不回上下文。
     setAgentCli(tabId, leafId, selected.id)
-    // 首次为这个角色生成了项目章程（`.eas/roles/<角色>.md`，Task 3 的 `charterCreated`）：
+    // 首次为这个角色生成了项目章程（`docs/roles/<roleId>.md`，Task 3 的 `charterCreated`）：
     // 提示一句让用户去填边界段。两条 start 路径（首起 / 清掉失效 resumeId 重试）都汇到
     // 这里，所以只需写一处。走 store 而不是组件里的 hook 值：放在 aliveRef 判断之前，
     // 面板已被切走时也照样提示 —— 章程文件已经真实落盘了。
@@ -1129,7 +1129,7 @@ export function AgentChatView({
     // 不会同时弹别的。
     if (result.charterCreated)
       useStore.getState().requestConfirm({
-        message: `已为这个角色生成本项目章程：${result.charterCreated}\n边界段（可以改 / 不要碰）留给你填，其余从角色卡来。之后不会再覆盖。`,
+        message: `第一次在这个项目用「${role?.name ?? '这个角色'}」，已生成一份它的项目说明：${result.charterCreated}。里面「可以改 / 不要碰」两段是空的，想给它划边界就填进去；这个文件以后不会被自动改。`,
         confirmLabel: '知道了',
         onConfirm: () => {}
       })
