@@ -1,4 +1,5 @@
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
+import type { BoardRow, Overlap } from '../shared/board'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
 import type { SymbolGraphResult } from '../shared/symbolGraph.ts'
@@ -274,7 +275,18 @@ const api = {
     list: (): Promise<BoardColumn[]> => ipcRenderer.invoke('board:list'),
     /** 整表落盘：增删改序都走它，「顺序」这种跨条目的改动没法拆成单条 */
     save: (list: BoardColumn[]): Promise<BoardColumn[]> => ipcRenderer.invoke('board:save', list),
-    newId: (): Promise<string> => ipcRenderer.invoke('board:newId')
+    newId: (): Promise<string> => ipcRenderer.invoke('board:newId'),
+
+    // ── 下面两条是**另一块板**：角色会话的协同板（哪条分支上有谁在改哪些文件）。
+    // 跟上面的看板列毫不相干，只是中文都叫「板」。主进程实现在 `main/collabBoard.ts`
+    // （`main/board.ts` 归看板列），从会话表 + git 现算，落在项目的 `.eas/board.md`。
+    /** 现算一遍并写盘。会话起 / 每轮结束时主进程自己会刷（防抖 500ms），
+     *  这里是给「读之前要最新的」那种场景用的（如 MCP 的 board_read）。 */
+    refresh: (projectPath: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('board:refresh', projectPath),
+    /** `text` 是磁盘上那份（可能略旧），`rows` / `overlaps` 是现算的。 */
+    read: (projectPath: string): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[] }> =>
+      ipcRenderer.invoke('board:read', projectPath)
   },
   todos: {
     // 终端输入框右键插入的待办清单。key 由渲染层决定（画布节点 id 优先，
@@ -680,7 +692,15 @@ const api = {
       ipcRenderer.invoke('roles:reset'),
     // 角色契约落成文件，供 claude --append-system-prompt-file 引用
     contractFile: (roleId: string): Promise<string | null> =>
-      ipcRenderer.invoke('roles:contractFile', roleId)
+      ipcRenderer.invoke('roles:contractFile', roleId),
+    /** 给角色会话建 worktree（isolation='worktree' 的角色第一次发消息前调）。 */
+    worktreeAdd: (
+      projectPath: string,
+      roleId: string
+    ): Promise<
+      | { ok: true; absPath: string; relPath: string; branch: string }
+      | { ok: false; reason: 'not-git' | 'other'; error: string }
+    > => ipcRenderer.invoke('role:worktreeAdd', projectPath, roleId)
   },
   statusline: {
     status: (): Promise<{ installed: boolean; wrapped: string | null }> =>

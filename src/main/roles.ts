@@ -23,6 +23,7 @@ import path from 'path'
 import type { AgentRole } from '../shared/types'
 import { BUILTIN_ROLES } from './builtinRoles.ts'
 import { ROLES_FILE_VERSION, sanitizeRoles } from './rolesSchema'
+import { setRoleNameLookup } from './collabBoard'
 
 // 内置角色数组本体搬去了 builtinRoles.ts（electron-free，供 builtinRoles.test.ts 裸跑）；
 // 这里继续 re-export，别处 import { BUILTIN_ROLES } from './roles' 不用改。
@@ -79,6 +80,11 @@ function save(roles: AgentRole[]): void {
 }
 
 export function registerRoleHandlers(): void {
+  // 协同板要显示角色名，而 collabBoard.ts 只兜得住内置角色（它 import 的是 builtinRoles）。
+  // 把「含用户自建角色」的查询装进去，自建角色在板上才不会退回裸 id。
+  // 每次现查而不是快照一份：角色可以在运行期改名/新增（roles:save）。
+  setRoleNameLookup(() => Object.fromEntries(load().map((r) => [r.id, r.name])))
+
   ipcMain.handle('roles:list', () => load())
 
   /**

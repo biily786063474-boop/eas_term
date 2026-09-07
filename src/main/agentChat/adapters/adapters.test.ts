@@ -786,3 +786,30 @@ test('Claude 不吃 pluginMcp —— 它走 --mcp-config 那份 JSON，同一个
   assert.ok(args.includes('--mcp-config') && args.includes('/tmp/a.json'))
   assert.ok(!args.some((a) => a.startsWith('mcp_servers.')), 'Claude 不该拼 Codex 的 -c 形状')
 })
+
+// ── Task 4：板文附进系统提示（起会话时的快照，Consumes StartOpts.boardText）───────
+
+test('Claude：boardText 附在系统提示末尾，带标题', () => {
+  const { args } = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '契约', boardText: '# 协同板\n| a |' })
+  const sp = args[args.indexOf('--append-system-prompt') + 1]
+  assert.ok(sp.includes('契约'))
+  assert.ok(sp.includes('## 协同板（起会话时的快照）\n# 协同板\n| a |'))
+})
+
+test('Claude：没有 boardText 时系统提示与今天逐字相同', () => {
+  const a = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '契约' }).args
+  const b = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '契约', boardText: '' }).args
+  assert.deepEqual(a, b)
+})
+
+test('Codex：boardText 压成单行接在 instructions 后面', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '契约', boardText: '# 协同板\n| a |' })
+  const v = args.find((a) => a.startsWith('instructions=')) ?? ''
+  assert.ok(!v.includes('\n'))
+  assert.ok(v.includes('契约') && v.includes('协同板') && v.includes('| a |'))
+})
+
+test('Codex：只有 boardText 没有契约也要拼 instructions', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', boardText: '# 协同板' })
+  assert.ok(args.some((a) => a.startsWith('instructions=') && a.includes('协同板')))
+})

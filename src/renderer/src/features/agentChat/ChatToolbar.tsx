@@ -30,6 +30,7 @@ import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
 import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { autoDismisses, NOTICE_AUTO_MS } from './noticeDismiss.ts'
+import { BranchBadge } from './BranchBadge'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
@@ -110,7 +111,11 @@ export function ChatToolbar({
   onLogin,
   onNewChat,
   sendError,
-  onDismissSendError
+  onDismissSendError,
+  worktree,
+  effectiveCwd,
+  branchOverlap,
+  onOpenBranchMenu
 }: {
   caps: CliCapabilities
   /** 这个 CLI 的逐次审批用哪种机制（原样来自 CliInfo.approvalHook）。**决定了工具栏
@@ -155,6 +160,18 @@ export function ChatToolbar({
   onDismissSendError?: () => void
   /** 点了 notice 上那颗「去登录」。不传就不显示那颗按钮（空态那侧另有入口） */
   onLogin?: () => void
+  // ── 分支徽标 ────────────────────────────────────────────────────
+  // 上面那条「角色入口别再加回来」的禁令**不适用于它**，两者的性质相反：
+  // 角色契约只在 spawn 时读一次，摆在对话态是个改了也不生效的开关；
+  // 分支是**这一刻的事实**，会话跑着的时候读它永远是对的，而且那正是最该看见
+  // 「我在哪条分支上」的时候。四个字段一起给或一起不给（没 worktree 就不给）。
+  /** 这次会话落在哪棵 worktree。没有就不渲染徽标 */
+  worktree?: { relPath: string; branch: string }
+  /** 真正跑在哪（项目根 + relPath） */
+  effectiveCwd?: string
+  /** 协同板上有没有别的分支在改同一个文件 */
+  branchOverlap?: boolean
+  onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
   const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
@@ -467,6 +484,17 @@ export function ChatToolbar({
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">
+          {/* 分支徽标排在控件行最前面 —— 它和模型/强度同类：都是「这次对话怎么跑」。
+              菜单由 AgentChatView 摆（它持有 worktree 的增删和 sessionId）。 */}
+          {worktree && effectiveCwd && onOpenBranchMenu && (
+            <BranchBadge
+              worktree={worktree}
+              effectiveCwd={effectiveCwd}
+              overlap={branchOverlap === true}
+              onOpenMenu={onOpenBranchMenu}
+              className="ac-bar-btn"
+            />
+          )}
           {model.showModel && (
             <div
               className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}

@@ -196,6 +196,15 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'board_read',
+    description:
+      '读这个项目的**协同板**：现在有哪些会话在哪条分支上改了哪些文件、谁闲置了、哪两条分支碰了同一个文件。' +
+      '由 app 从会话表和 git 现算，不是谁写的。**改文件前先读一遍** —— 起会话时看到的那份是快照，' +
+      '别人这会儿可能已经动了同一处。只读，没有参数。' +
+      '返回 JSON：`board` 是协同板的 Markdown 原文。',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'canvas_list_frames',
     description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。' +
       '**Frame 就是用户口中的「造梦空间」，也叫「项目区」** —— 一个 Frame 绑一个项目，'  +

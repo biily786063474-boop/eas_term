@@ -9,18 +9,18 @@
 //     不解释成人话的话，用户只会看到派活失败而不知道为什么
 //   · 目标目录已存在 → 同上，且可能是上一批留下的残骸
 
-import { execFile } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import { ipcMain } from 'electron'
 
-function git(cwd: string, args: string[]): Promise<{ ok: boolean; out: string }> {
-  return new Promise((resolve) => {
-    execFile('git', args, { cwd, timeout: 30_000 }, (err, stdout, stderr) => {
-      resolve({ ok: !err, out: (err ? stderr || stdout : stdout).toString().trim() })
-    })
-  })
-}
+import { newShortId, roleWorktreeBranch, roleWorktreeName } from '../shared/roleWorktree'
+import { refreshBoard } from './collabBoard'
+import { gitExec } from './gitExec.ts'
+
+/** 建树这几条比刷板那边慢得多（`worktree add` 要铺一整棵工作树），给 30 秒。
+ *  helper 本身与 collabBoard 共用一份，别再抄第二份出来（`gitExec.ts`）。 */
+const git = (cwd: string, args: string[]): Promise<{ ok: boolean; out: string }> =>
+  gitExec(cwd, args, { timeoutMs: 30_000 })
 
 export interface WorktreeResult {
   ok: boolean
@@ -30,36 +30,77 @@ export interface WorktreeResult {
   error?: string
 }
 
+/** 建一棵工作树。**团队派活和角色会话共用这一份** —— 两条路都要那三条前置检查
+ *  （见文件头），各写一份迟早只有一边跟上修复。
+ *
+ *  多出来的 `reason` 是给调用方分流用的：`not-git` 无论换多少个名字都不会成功，
+ *  `other` 里的「已存在」换个名字就能过。返回形状对 `team:worktreeAdd` 兼容
+ *  （多一个字段无害），老调用方一个字都不用改。 */
+export async function addWorktree(
+  projectPath: string,
+  relPath: string,
+  branch: string
+): Promise<WorktreeResult & { reason?: 'not-git' | 'other' }> {
+  const inside = await git(projectPath, ['rev-parse', '--is-inside-work-tree'])
+  if (!inside.ok || inside.out !== 'true')
+    return {
+      ok: false,
+      reason: 'not-git',
+      // 说清楚**为什么**不行、以及怎么绕过去 —— 光说「不是 git 仓库」的话，
+      // 主 agent 多半会直接放弃整个任务，而它其实可以退回不隔离的方式派
+      error:
+        '这个项目不是 git 仓库，起不了 worktree。写码 agent 必须隔离（并发写会静默覆盖），' +
+        '所以要么先 git init，要么这一批改成只读角色。'
+    }
+
+  const abs = path.join(projectPath, relPath)
+  if (fs.existsSync(abs))
+    return { ok: false, reason: 'other', error: `${relPath} 已经存在 —— 可能是上一批留下的，先删掉再派` }
+
+  const exists = await git(projectPath, ['rev-parse', '--verify', branch])
+  if (exists.ok) return { ok: false, reason: 'other', error: `分支 ${branch} 已存在，先删掉再派` }
+
+  const r = await git(projectPath, ['worktree', 'add', '-b', branch, relPath])
+  if (!r.ok) return { ok: false, reason: 'other', error: `git worktree add 失败：${r.out.slice(0, 200)}` }
+  return { ok: true, absPath: abs, branch }
+}
+
 export function registerTeamWorktree(): void {
   ipcMain.handle(
     'team:worktreeAdd',
     async (_e, projectPath: unknown, relPath: unknown, branch: unknown): Promise<WorktreeResult> => {
       if (typeof projectPath !== 'string' || typeof relPath !== 'string' || typeof branch !== 'string')
         return { ok: false, error: '参数不对' }
-
-      const inside = await git(projectPath, ['rev-parse', '--is-inside-work-tree'])
-      if (!inside.ok || inside.out !== 'true')
-        return {
-          ok: false,
-          // 说清楚**为什么**不行、以及怎么绕过去 —— 光说「不是 git 仓库」的话，
-          // 主 agent 多半会直接放弃整个任务，而它其实可以退回不隔离的方式派
-          error:
-            '这个项目不是 git 仓库，起不了 worktree。写码 agent 必须隔离（并发写会静默覆盖），' +
-            '所以要么先 git init，要么这一批改成只读角色。'
-        }
-
-      const abs = path.join(projectPath, relPath)
-      if (fs.existsSync(abs))
-        return { ok: false, error: `${relPath} 已经存在 —— 可能是上一批留下的，先删掉再派` }
-
-      const exists = await git(projectPath, ['rev-parse', '--verify', branch])
-      if (exists.ok) return { ok: false, error: `分支 ${branch} 已存在，先删掉再派` }
-
-      const r = await git(projectPath, ['worktree', 'add', '-b', branch, relPath])
-      if (!r.ok) return { ok: false, error: `git worktree add 失败：${r.out.slice(0, 200)}` }
-      return { ok: true, absPath: abs, branch }
+      return addWorktree(projectPath, relPath, branch)
     }
   )
+
+  // 角色会话自己开的 worktree：命名在 shared/roleWorktree.ts。**只有 isolation='worktree' 的角色会走到这**。
+  ipcMain.handle('role:worktreeAdd', async (_e, projectPath: unknown, roleId: unknown) => {
+    if (typeof projectPath !== 'string' || typeof roleId !== 'string')
+      return { ok: false, reason: 'other', error: '参数不对' }
+    // 短 id 撞车的概率极低，但撞了就换一个再试；三次都撞说明不是运气问题
+    for (let i = 0; i < 3; i++) {
+      const id = newShortId()
+      const rel = roleWorktreeName(roleId, id)
+      const br = roleWorktreeBranch(roleId, id)
+      if (!rel || !br) return { ok: false, reason: 'other', error: `角色 id「${roleId}」没法拿来做工作树路径` }
+      const r = await addWorktree(projectPath, rel, br)
+      if (r.ok) {
+        void refreshBoard(projectPath)
+        return { ok: true, absPath: r.absPath, relPath: rel, branch: br }
+      }
+      // 「换个 id 还有救」的只有名字撞车这一类，其余（不是 git 仓库、git 自己失败）
+      // 重试多少次都一样，直接把原因交出去。
+      //
+      // **两条都要匹配**：addWorktree 是先查目录、后查分支，而目录那条的文案是
+      // 「已**经**存在」，分支那条才是「已存在」。只写 `/已存在/` 的话，
+      // 真撞上短 id 时**必然**先命中目录那条 → 匹配不上 → 当场 return，
+      // 整个重试循环变成死代码（目录和分支是同一个 id 生成的，撞就一起撞）。
+      if (r.reason === 'not-git' || !/已存在|已经存在/.test(r.error ?? '')) return r
+    }
+    return { ok: false, reason: 'other', error: '连续三次撞上已存在的名字，先清理 .worktrees/' }
+  })
 
   ipcMain.handle(
     'team:worktreeRemove',
@@ -101,6 +142,7 @@ export function registerTeamWorktree(): void {
       // 分支留着 —— **删工作树不等于扔掉成果**（提交过的话）。
       // 想清干净用 `git branch -D <branch>`，那是人的决定不是我们的。
       void branch
+      void refreshBoard(projectPath)
       return { ok: true }
     }
   )

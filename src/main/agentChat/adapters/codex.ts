@@ -77,14 +77,25 @@ export const codexAdapter: CliAdapter = {
     args.push('--skip-git-repo-check')
     if (opts.model) args.push('-m', opts.model)
     if (opts.effort) args.push('-c', `model_reasoning_effort=${opts.effort}`)
-    // 角色契约。Codex 没有 --append-system-prompt，能用的是 -c instructions=
+    // 角色契约 + 协同板快照。Codex 没有 --append-system-prompt，能用的是 -c instructions=
     //（2026-09-05 实测 instructions / developer_instructions / model_instructions_file 三个都生效，
     // 最后那个是整份替换不能用；维持 instructions）。**必须压成单行**：`-c` 的取值里带换行
     // 会把解析弄乱。这一段与终端那条路（CanvasAgentBar 的 buildCodexCmd）是同一个结论，
     // 那边多做一步去双引号是因为它还要再过一次 shell；这里是 execFile 的 argv，
     // 不经 shell，引号原样传反而更准。
     // ⚠️ -c 不校验键名（实测 bogus 键照常起会话）—— 键名写错静默无效，测试逐字断言。
-    const contract = opts.roleContract?.trim().replace(/\s*\n\s*/g, ' ')
+    //
+    // 板文（Task 3 的 StartOpts.boardText，起会话那一刻的快照）与契约拼进同一段——
+    // Codex 只有这一个系统提示式的入口，没有第二条 flag 可用。**只有板没契约也要拼**：
+    // 没角色不代表用户不想让模型看到协同板。两段先各自 trim 再拼，整段再压成单行，
+    // 顺序与 filter(Boolean) 保证「只有一段」时不会留多余空格。
+    const contract = [
+      opts.roleContract?.trim(),
+      opts.boardText?.trim() ? `协同板（起会话时的快照）：${opts.boardText.trim()}` : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s*\n\s*/g, ' ')
     if (contract) args.push('-c', `instructions=${contract}`)
     // 内置工具走 --disable <feature>，MCP 走 mcp_servers.<名>.enabled=false；
     // --disable shell_tool 实测真能摘掉 shell；MCP server 名字必须真实存在

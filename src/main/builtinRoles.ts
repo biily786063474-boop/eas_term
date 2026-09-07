@@ -24,6 +24,7 @@ export const BUILTIN_ROLES: AgentRole[] = [
     group: 'main',
     color: '#fb923c',
     kind: 'auto',
+    isolation: 'worktree',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
     contract: [
@@ -65,6 +66,8 @@ export const BUILTIN_ROLES: AgentRole[] = [
     group: 'main',
     color: '#6ee7b7',
     kind: 'auto',
+    // isolation: 写码的角色进自己的 worktree（P1）。scout / inspector 只读，writer / illustrator 产出不在代码里，runner 是逃生口 —— 都不隔离。
+    isolation: 'worktree',
     model: { claude: 'opus' },
     effort: { claude: 'high', codex: 'high' },
     contract: [
@@ -100,6 +103,7 @@ export const BUILTIN_ROLES: AgentRole[] = [
     group: 'main',
     color: '#c4b5fd',
     kind: 'auto',
+    isolation: 'worktree',
     model: { claude: 'sonnet' },
     effort: { claude: 'medium', codex: 'medium' },
     contract: [

@@ -31,6 +31,13 @@ export interface TabsSlice {
   activeTabId: string | null
   /** 每个项目上次激活的标签，切换项目时据此恢复 */
   activeTabByProject: Record<string, string | null>
+  /** agent pane 上要落 canvas.json 的字段变了就 +1，因为画布保存订阅只认 canvas/viewMode。
+   *
+   *  `App.tsx` 那条订阅是 `if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return`
+   *  —— `worktree` / `resumeId` / `cli` / `roleId` 只住在 `tabs` 里，改了它们不触发保存。
+   *  症状（2026-09-06 真机撞到）：删完 worktree 不再动画布就退出 → 重启后徽标复活，
+   *  指向一个已经不存在的目录。这个计数器就是让那四个 setter 能把订阅叫醒的那根线。 */
+  paneSaveTick: number
 
   openTerminal: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
   /** 开一个 AI 对话面板（空态，用户选完 CLI 发第一条消息才真正起会话）。
@@ -71,6 +78,10 @@ export interface TabsSlice {
     cli?: string
     /** 用哪个角色（`AgentRole.id`）。空 = 无角色 */
     roleId?: string
+    /** 这个会话之前落在哪棵 worktree。**画布恢复时必须带回来** ——
+     *  它随 canvas.json 落盘了，不传的话重启后节点退回主工作区，
+     *  而 resumeId 还在：对话接着跑，改的却是主工作区（隔离静默失效）。 */
+    worktree?: { relPath: string; branch: string }
   }) => Promise<string | undefined>
   openFile: (filePath: string) => Promise<void>
   openDiff: (spec: DiffSpec) => void
@@ -122,6 +133,16 @@ export interface TabsSlice {
    *  传一次 —— 会话跑着的时候改这个字段，界面会显示新角色而模型还是旧的那个人。
    *  用户 2026-09-03 定的规矩：换角色 = 弹确认 + 结束当前会话重开。 */
   setAgentRole: (tabId: string, leafId: string, roleId: string) => void
+  /** 记下这个面板的会话落在哪棵 worktree（`undefined` = 回到主工作区，删 worktree 时用）。
+   *
+   *  **由 app 写，不由模型写**：`isolation:'worktree'` 的角色第一次起会话前，
+   *  AgentChatView 先调 `roles.worktreeAdd` 建好树再把结果记在这里，
+   *  之后每次起会话（含 `--resume` 恢复）cwd 都指过去。 */
+  setAgentWorktree: (
+    tabId: string,
+    leafId: string,
+    wt: { relPath: string; branch: string } | undefined
+  ) => void
   /** 派活的首条消息发出去之后清掉它。**必须清** —— 不清的话组件重新挂载
    *  （切视图、面板重排）会把同一条任务再发一遍，等于白烧一次。 */
   clearAgentInitialMessage: (tabId: string, leafId: string) => void
@@ -201,6 +222,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   tabs: [],
   activeTabId: null,
   activeTabByProject: {},
+  paneSaveTick: 0,
 
   openTerminal: async (opts) => {
     track('term')
@@ -253,7 +275,9 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         resumeCli: opts?.resumeCli,
         // 用户在空 Frame 上点了哪颗（Claude / Codex / 默认 harness）
         cli: opts?.cli,
-        roleId: opts?.roleId
+        roleId: opts?.roleId,
+        // 画布恢复时带回来的 worktree（存了就要用，同 resumeId 那条）
+        worktree: opts?.worktree
       }
     }
     const tab: TermTab = {
@@ -579,45 +603,74 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
   // 与 setAgentSessionId 同构，但存的是**另一个 id**：CLI 自己的会话 id。
   // 它会随 canvas.json 落盘，是「关掉再打开还接得上上次的上下文」的全部依据。
   setAgentResumeId: (tabId, leafId, resumeId, resumeCli) => {
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      // 真改了才 +1 —— 每轮 session.ready 都会拿同一个 id 调进来，无脑 +1 等于每轮存一次盘
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         // 清空 id 时签发者一起清；写 id 时给了签发者就换、没给就沿用（老数据补签发者也走这）
         const nextCli = resumeId ? (resumeCli || leaf.pane.resumeCli) : undefined
         if (leaf.pane.resumeId === resumeId && leaf.pane.resumeCli === nextCli) return t
+        changed = true
         const pane: PaneState = { ...leaf.pane, resumeId, resumeCli: nextCli }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setAgentCli: (tabId, leafId, cli) => {
     if (!cli) return
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         if (leaf.pane.cli === cli) return t // 同一个值不必制造新对象
+        changed = true
         return { ...t, root: updatePane(t.root, leafId, { ...leaf.pane, cli }) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setAgentRole: (tabId, leafId, roleId) => {
-    set((st) => ({
-      tabs: st.tabs.map((t) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
         if (t.id !== tabId) return t
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent') return t
         const next = roleId || undefined
         if (leaf.pane.roleId === next) return t // 同一个值不必制造新对象
+        changed = true
         const pane: PaneState = { ...leaf.pane, roleId: next }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
-    }))
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
+  },
+
+  setAgentWorktree: (tabId, leafId, wt) => {
+    set((st) => {
+      let changed = false
+      const tabs = st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent') return t
+        const cur = leaf.pane.worktree
+        // 同一个值不必制造新对象 —— 这个字段被 AgentChatView 直接订阅，
+        // 每次给个新对象就是每次都重渲染整块对话
+        if (cur?.relPath === wt?.relPath && cur?.branch === wt?.branch) return t
+        changed = true
+        const pane: PaneState = { ...leaf.pane, worktree: wt }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+      return changed ? { tabs, paneSaveTick: st.paneSaveTick + 1 } : { tabs }
+    })
   },
 
   setActiveLeaf: (tabId, leafId) =>

@@ -61,6 +61,9 @@ import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, easPluginMcpServer } from '../mcpBridge.ts'
+import { readBoard, refreshBoard, setSessionSource } from '../collabBoard.ts'
+import { clipForPrompt } from '../../shared/board.ts'
+import { projectRootOf } from '../../shared/roleWorktree.ts'
 import type {
   ChatEvent,
   StartOpts,
@@ -142,6 +145,14 @@ export function readPartial(sessionId: string): string {
  *  **判据应该是「它还在干活吗」，不是「我等够久了吗」。** */
 export function isSessionBusy(sessionId: string): boolean {
   return sessions.get(sessionId)?.rec.busy === true
+}
+
+/** 起会话那一刻的协同板，截断后拼进系统提示。
+ *  **只在 spawn 时取一次** —— 三家 CLI 都没有中途注入系统提示的通道，
+ *  所以契约里要求「改文件前先 board_read」，那才是拿到最新一版的办法。 */
+function readBoardForPrompt(cwd: string): string | undefined {
+  const text = readBoard(projectRootOf(cwd)).trim()
+  return text ? clipForPrompt(text) : undefined
 }
 
 const sessions = new Map<string, Live>()
@@ -472,6 +483,10 @@ function handleEvent(live: Live, e: ChatEvent): void {
     // 分头写迟早有一边漏掉。
     if (getAdapter(live.rec.cli)?.quotaSource === 'omp-usage') scheduleOmpRefresh()
     else scheduleApiRefresh()
+    // 刷板 ②：一轮跑完 = 它多半刚改过文件，板上的「触及」该重算了。
+    // 位置在 live.rec 更新之前，但**没关系**：refreshBoard 是 500ms 防抖 + 现算，
+    // 真正读会话表是在那之后，读到的一定是更新过的 rec（③ 那处同理）。
+    refreshBoard(projectRootOf(live.rec.cwd))
     // 用量在这里收 —— **CLI 只在 turn.done 报一次**，错过就补不回来。
     // 累加规则（token 加、花费取最新）见 shared/teamCost.ts，那是实测出来的
     live.rec = {
@@ -619,6 +634,9 @@ function wireProc(live: Live, proc: ChildProcess): void {
       busy: false,
       ended: interrupted ? 'interrupted' : 'ok'
     }
+    // 刷板 ③：进程没了，板上那行的状态要从「活跃」变成「已停」。
+    // 同 ②：防抖 + 现算，所以挂在 rec 更新前后都一样 —— 真正读会话表是 500ms 之后。
+    refreshBoard(projectRootOf(live.rec.cwd))
     // code === 0 或 null（被我们自己 kill）都不算错——Codex 的 exec 正常跑完一轮后
     // 本来就会退出，那是预期行为，不是故障。
     //
@@ -1173,9 +1191,19 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // MCP 桥的凭证由这里算好传进去 —— launch.ts 不再认识 mcpBridge
           //（那条 import 既是循环依赖的一环，也让整个模块没法单测，见它的文件头）
           mcpEnv: mcpEnv({ project: cwd }),
-          // 角色契约。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
+          // 角色契约 + 协同板快照。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
-          roleContract: live.rec.roleContract,
+          // `ompAcpArgs` 只收一段文本（`--append-system-prompt=`），板文（Task 3 的
+          // `StartOpts.boardText` 同源，起会话那一刻的快照）要在这里先拼进去再传下去——
+          // `paths.ts` 不改，拼接的活归调用方。两段各自 trim 再拼，避免留空行；
+          // 都没有时整体是 undefined，不凭空造出一个空字符串的契约。
+          roleContract:
+            [
+              live.rec.roleContract?.trim(),
+              live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : ''
+            ]
+              .filter(Boolean)
+              .join('\n\n') || undefined,
           roleOmp: bindRole(live.rec.roleBounds, 'omp').omp
         })
       },
@@ -1233,6 +1261,9 @@ function ownerOfResume(resumeId: string, cwd: string): ResumeOwner | null {
 }
 
 export function registerAgentChatHandlers(): void {
+  // 把会话表注进协同板。**注入而不是让 collabBoard.ts 来 import 这里** ——
+  // 这个文件要 import 它的 refreshBoard 刷板，反向再 import 就成环了。
+  setSessionSource(() => [...sessions.values()].map((l) => l.rec))
   setInterval(reapIdleSessions, 60_000)
   // 恢复要跟得上退避节奏（最短 20 秒），不能挂在上面那个 60 秒的轮子上
   setInterval(recoverInterrupted, 10_000)
@@ -1416,7 +1447,13 @@ export function registerAgentChatHandlers(): void {
       // 同一个理由，落进 SessionRecord 让 restart 也带得上。实际计算挪到上面
       // `needsWriteGuard`/`writeGuardSettings` 那两行，好让写文件失败时能在拼 rec
       // 之前就 return（fail-closed，见上面的注释）。
-      writeGuardSettings
+      writeGuardSettings,
+      // 角色卡 id。同 roleContract 的理由，params 来自 unknown，非字符串一律当没给。
+      // 协同板按它查角色名（roleContract 是给模型看的原文，两者不能互相顶替）。
+      roleId: typeof p.roleId === 'string' && p.roleId ? p.roleId : undefined,
+      // 起会话那一刻的协同板。**读的是项目根**（worktree 里的 cwd 要先剥回去），
+      // 板只有一份、放在项目根的 .eas/ 下。
+      boardText: readBoardForPrompt(p.cwd)
     }
     const live: Live = {
       rec,
@@ -1436,6 +1473,8 @@ export function registerAgentChatHandlers(): void {
     // 进程杀掉重启、上下文归零 —— 正是「不重启改模型」这条要避免的。
     if (adapter.transport === 'acp') live.acp = makeAcpLive(live, adapter)
     sessions.set(id, live)
+    // 刷板 ①：多了一条会话 —— 板上要立刻看得见它（防抖 500ms，见 collabBoard.ts）
+    refreshBoard(projectRootOf(live.rec.cwd))
     // ── 最后一道闸：resumeId 不许跨 harness ─────────────────────────────────
     // 渲染层已经按签发者选 cli 了，这里是兜底：万一还是把别家的 id 递了进来
     // （老版本渲染层 / 别的调用方），**宁可丢上下文也不递** —— 递过去的结果是
@@ -1654,6 +1693,9 @@ export function registerAgentChatHandlers(): void {
     const live = sessions.get(id)
     if (!live) return
     sessions.delete(id)
+    // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，
+    // 先刷的话这条已经不要了的会话还会留在板上，下一次刷新才消失。
+    refreshBoard(projectRootOf(live.rec.cwd))
     transcripts.drop(id) // 同上：删会话就删摘要，两处都要，漏一处就是慢性泄漏
     live.killing = true // 用户点了「停」——他要它停，不许自己爬起来
     // ACP：先打个招呼让它把会话收干净（通知，不等回话），随后照旧 kill。

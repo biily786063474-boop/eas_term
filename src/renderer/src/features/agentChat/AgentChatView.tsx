@@ -27,6 +27,7 @@ import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
 import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { BranchBadge } from './BranchBadge'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
 import type { CliAuthState, HarnessId } from '../../../../shared/types'
@@ -213,8 +214,19 @@ export function AgentChatView({
     const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.roleId : undefined
   })
+  /** 这个面板的会话落在哪棵 worktree。**同样订阅** —— 第一次起会话时才建出来，
+   *  建完工具栏的目录/徽标要立刻跟着变。
+   *  （对象引用来自 pane，值不变时 setAgentWorktree 不造新对象，不会白重渲染。） */
+  const worktree = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    const leaf = tab && collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.worktree : undefined
+  })
   const roles = useStore((s) => s.roles)
   const setAgentRole = useStore((s) => s.setAgentRole)
+  const setAgentWorktree = useStore((s) => s.setAgentWorktree)
+  /** 真正起会话的目录：有 worktree 就是它，否则项目目录 */
+  const effectiveCwd = worktree ? `${cwd}/${worktree.relPath}` : cwd
   const setAgentCli = useStore((s) => s.setAgentCli)
   const requestConfirm = useStore((s) => s.requestConfirm)
   /** 角色契约原文。**找不到那个 id 就当没角色** —— 用户可能把它删了，
@@ -349,6 +361,111 @@ export function AgentChatView({
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
+  //
+  // 只在 `worktree` 存在时出现（角色声明了 isolation:'worktree'，且树已经建好）。
+  // 徽标本身就是按钮，点开菜单做三件事：开个终端过去、合并（P2 接合并官）、删掉这棵树。
+  const openTerminal = useStore((s) => s.openTerminal)
+  const [branchMenuAt, setBranchMenuAt] = useState<{ x: number; y: number } | null>(null)
+  /** 协同板上有没有别的分支在改同一个文件。只影响徽标的底色和 tooltip 里那一句。 */
+  const [branchOverlap, setBranchOverlap] = useState(false)
+  const openBranchMenu = (e: React.MouseEvent): void => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setBranchMenuAt({ x: r.left, y: r.bottom + 4 })
+  }
+  // 交集告警：打开菜单时刷一次板，读自己这条分支在不在 ⚠ 里。
+  // **两处都要刷**——另一处挂在 turn.done 上（板每轮重算，徽标得跟着变），
+  // 只留菜单那一处的话，不点开就永远看不到告警。
+  useEffect(() => {
+    if (!worktree || !branchMenuAt) return
+    let live = true
+    void window.api.board
+      .read(cwd)
+      .then((b) => {
+        if (live) setBranchOverlap(b.overlaps.some((o) => o.branches.includes(worktree.branch)))
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [branchMenuAt, worktree, cwd])
+  /** 删掉这棵 worktree。**先确认 → 试删 → 只有「还有未提交的改动」才再确认一次带 force。**
+   *
+   *  ── 为什么第一次也要确认 ──
+   *  没有未提交改动不等于「删了没事」：删完这个节点就回到主工作区，
+   *  下面 done() 会把 resumeId 一起清掉，**这段对话接不回来了**。
+   *  那是个不可撤销的后果，不该在点一下菜单之后静默发生。
+   *
+   *  ── 为什么成功时要清 resumeId ──
+   *  handleSend 的首发守卫是 `role?.isolation === 'worktree' && !worktree && !savedResumeId`。
+   *  只清 worktree 不清 resumeId 的话，守卫认为「这是在恢复一段旧会话」而不再建树，
+   *  这个 pane 从此**静默地**跑在主工作区上，隔离白做。
+   *  而且留着它也没有意义：Claude 的会话记录按 cwd 存，树都没了，那个 id 本来也续不上。
+   *
+   *  ── 为什么只有 `changed` 有值才引导 force ──
+   *  `changed` 是主进程「因为还有 N 处未提交所以没删」的信号，只有这一种失败
+   *  再删一次是有出路的。参数错、git 上着锁那类失败，把 force 摆出来只会让人
+   *  以为那是条出路，点下去还是同样的错。 */
+  const removeWorktree = (wt: { relPath: string; branch: string }): void => {
+    // 失败一律说出来。**两次调用都要 .catch** —— IPC 本身 reject（主进程没起、
+    // handler 抛了）走的不是 `{ ok: false }` 那条路，不接住就是一条 unhandled
+    // rejection：菜单关掉、树还在、界面上什么都没发生。
+    const fail = (msg: string): void =>
+      requestConfirm({ message: `删不掉：${msg}`, confirmLabel: '知道了', onConfirm: () => {} })
+    const oops = (e: unknown): void => fail(e instanceof Error ? e.message : String(e))
+    const done = (): void => {
+      setAgentWorktree(tabId, leafId, undefined)
+      setAgentResumeId(tabId, leafId, '')
+      // 树没了，「有别的分支在改同一个文件」这条告警也就无从谈起，
+      // 不复位的话徽标消失前会闪一下黄色，下次建树还会带着上一棵的判断。
+      setBranchOverlap(false)
+    }
+    const run = (force: boolean): Promise<{ ok: boolean; error?: string; changed?: number }> =>
+      window.api.agentChat.worktreeRemove(cwd, wt.relPath, wt.branch, force)
+    requestConfirm({
+      message: '删掉这棵 worktree？分支保留；这个节点的对话会重新开始。',
+      confirmLabel: '删除',
+      onConfirm: () => {
+        void run(false)
+          .then((r) => {
+            if (r.ok) return done()
+            if (r.changed === undefined) return fail(r.error ?? '主进程没说原因。')
+            // 有未提交改动 —— 主进程会把「还剩几处、去哪看」说清楚，
+            // 那是 agent 这一趟的全部成果，不能默默抹掉
+            //（teamWorktreeOps.ts 里那段注释记着当初 --force 抹掉成果的事故）。
+            requestConfirm({
+              message: `${r.error ?? ''}\n\n仍要删？未提交的改动会丢，分支保留；这个节点的对话会重新开始。`,
+              confirmLabel: '删除',
+              onConfirm: () => {
+                void run(true)
+                  .then((r2) => (r2.ok ? done() : fail(r2.error ?? '主进程没说原因。')))
+                  .catch(oops)
+              }
+            })
+          })
+          .catch(oops)
+      }
+    })
+  }
+  const branchMenuItems: CanvasMenuItem[] = worktree
+    ? [
+        {
+          label: '打开终端到这个 worktree',
+          onClick: () => void openTerminal({ cwd: effectiveCwd })
+        },
+        { label: '合并到主干', hint: 'P2 接合并官', disabled: true, onClick: () => {} },
+        { sep: true, label: '', onClick: () => {} },
+        {
+          label: '删除 worktree',
+          danger: true,
+          // 会话跑着的时候删不得 —— 那棵树就是它此刻的 cwd。
+          // 置 disabled 而不是藏起来：藏了用户会以为这个菜单本来就没这条。
+          ...(sessionId ? { disabled: true, hint: '先结束会话' } : {}),
+          onClick: () => removeWorktree(worktree)
+        }
+      ]
+    : []
 
   // 这个 leaf 的 pane 上挂着的会话 id。**订阅它，不是读一次快照。**
   //
@@ -577,7 +694,14 @@ export function AgentChatView({
         void (async () => {
           let resumeCli = savedResumeCli
           if (savedResumeId && !resumeCli) {
-            const owner = await window.api.agentChat.resumeOwner(savedResumeId, cwd).catch(() => null)
+            // **effectiveCwd 不是 cwd** —— Claude 的会话记录按 cwd 编码成目录名存
+            // （`~/.claude/projects/<编码后的 cwd>/<id>.jsonl`，见 main/agentChat/resumeOwner.ts），
+            // 而角色会话跑在 `.worktrees/<角色>-<id>/` 里。拿项目根去查，那段就在别的目录下，
+            // 认不出来 = owner 为 null = 签发者补不上，resolveConversationCli 少一条依据，
+            // 可能挑成别家 → dropResume，用户看到「这段对话的来源认不出来了」。
+            const owner = await window.api.agentChat
+              .resumeOwner(savedResumeId, effectiveCwd)
+              .catch(() => null)
             if (cancelled) return
             if (owner) {
               resumeCli = owner
@@ -662,6 +786,24 @@ export function AgentChatView({
       // **这两个 action 的参数名叫 ptyId 是历史包袱**，它们要的其实是「任务 id」；
       // 这里传会话 id，machine.locate 已经认得（见那边的说明）。
       const st = useStore.getState()
+      // 协同板的交集告警：板在每轮结束后重算，徽标要跟着变。
+      // **worktree 从 store 现读，不用闭包里那个**——这个回调在 attach 那一刻
+      // 就定型了，而 worktree 是第一次发消息时才建出来的，闭包里那个值永远是
+      // undefined，告警会静默地永不出现。
+      // 不跟 isTeamOwned 走：团队派生的 agent 恰恰是最需要看交集的那批。
+      if (e.k === 'turn.done') {
+        const wtTab = st.tabs.find((t) => t.id === tabId)
+        const wtLeaf = wtTab && collectLeaves(wtTab.root).find((l) => l.id === leafId)
+        const wt = wtLeaf?.pane.kind === 'agent' ? wtLeaf.pane.worktree : undefined
+        if (wt)
+          void window.api.board
+            .read(cwd)
+            .then((b) => {
+              if (aliveRef.current)
+                setBranchOverlap(b.overlaps.some((o) => o.branches.includes(wt.branch)))
+            })
+            .catch(() => {})
+      }
       // **团队派生的 agent 不进状态系统。**（用户 2026-08-19 拍板，真机截图确认）
       //
       // 上面那段说明对**用户自己开的**会话完全成立 —— 那是他在跟进的一件事，
@@ -734,6 +876,9 @@ export function AgentChatView({
     unsubRef.current = null
     setAgentSessionId(tabId, leafId, '')
     setAgentResumeId(tabId, leafId, '')
+    // 交集告警跟着这一段对话一起清 —— 它是上一段跑出来的判断，
+    // 留到新的一段上就是在拿旧事实染新徽标（下一轮 turn.done 才会重算）。
+    setBranchOverlap(false)
     useStore.getState().startNewChat(fid, nid)
     // 本地状态全部回到「这个节点刚建出来」的样子。
     // **reducer 也要换新的** —— 不换的话上一段的轮次还留在里面，
@@ -746,6 +891,30 @@ export function AgentChatView({
     setSentMessages([])
     setSendError(null)
     setText('')
+  }
+
+  /** 换角色。**写码角色 + 已经有 resumeId + 还没有 worktree** 时先问一句。
+   *
+   *  handleSend 的首发守卫是 `role?.isolation === 'worktree' && !worktree && !savedResumeId`
+   *  —— 带着旧 resumeId 换过去，守卫会认为「这是在恢复一段旧会话」而不建树，
+   *  这个 pane 从此**静默地**跑在主工作区上，隔离白做。
+   *  所以只有两条路：要么不换，要么把 resumeId 清掉当全新会话起（代价是接不回上下文）。
+   *  取哪条由用户定，不替他选。和删 worktree 成功后 `done()` 里一并清 resumeId 是同一条处理。 */
+  const handlePickRole = (next: string): void => {
+    const nextRole = roles.find((r) => r.id === next)
+    if (nextRole?.isolation !== 'worktree' || !savedResumeId || worktree) {
+      setAgentRole(tabId, leafId, next)
+      return
+    }
+    requestConfirm({
+      message: `换成「${nextRole.name}」会在独立分支上重新开始这段对话（之前的上下文接不过去）。\n\n继续？`,
+      confirmLabel: '继续',
+      // 取消 = 角色不换。不清 resumeId、不动 pane，界面上那张卡回到原来那个角色。
+      onConfirm: () => {
+        setAgentResumeId(tabId, leafId, '')
+        setAgentRole(tabId, leafId, next)
+      }
+    })
   }
 
   const handleSend = async (override?: string): Promise<void> => {
@@ -794,6 +963,34 @@ export function AgentChatView({
 
     let result: AgentChatStartResult
     try {
+      // 写码角色第一次起会话前先把 worktree 建好，cwd 直接指过去 —— 模型没有「不开分支」的选项。
+      // 只在**全新**会话且还没有 worktree 时建；恢复会话沿用 pane 上记的那棵。
+      let startCwd = effectiveCwd
+      if (role?.isolation === 'worktree' && !worktree && !savedResumeId) {
+        const r = await window.api.roles.worktreeAdd(cwd, role.id)
+        if (r.ok) {
+          setAgentWorktree(tabId, leafId, { relPath: r.relPath, branch: r.branch })
+          startCwd = r.absPath
+        } else if (r.reason === 'not-git') {
+          // 不静默降级：告诉用户会直接改主工作区，点「继续」才起
+          const go = await new Promise<boolean>((resolve) =>
+            requestConfirm({
+              message: `这个目录不是 git 仓库，「${role.name}」会直接改主工作区。\n\n要继续吗？`,
+              confirmLabel: '继续',
+              onConfirm: () => resolve(true),
+              onCancel: () => resolve(false)
+            })
+          )
+          if (!go) {
+            setStarting(false)
+            return
+          }
+        } else {
+          setStarting(false)
+          setStartError(`建不了分支：${r.error}`)
+          return
+        }
+      }
       // message 必填直接带上，不留到之后再 send()——Codex 的 exec 要靠它作为启动时的
       // 位置参数，没法「先开会话、再补第一条」；Claude 那边 start() 内部也已经把它
       // 当第一条写进 stdin 了，这里不需要（也不能）再调一次 send() 重复投递同一条消息。
@@ -809,7 +1006,9 @@ export function AgentChatView({
       const roleEffort = role?.effort?.[selected.id as HarnessId]
       result = await window.api.agentChat.start({
         cli: selected.id,
-        cwd,
+        // **不是 cwd 是 startCwd** —— 有 worktree 的会话必须起在那棵树里，
+        // 否则它照样在改主工作区，隔离白做
+        cwd: startCwd,
         message,
         skipApprovalHook,
         askFirst,
@@ -819,6 +1018,8 @@ export function AgentChatView({
         ...(roleBounds ? { roleBounds } : {}),
         ...(roleModel ? { model: roleModel } : {}),
         ...(roleEffort ? { effort: roleEffort } : {}),
+        // 角色 id 也要过去 —— 协同板按它查角色名，不带就是板上一行匿名分支
+        ...(role?.id ? { roleId: role.id } : {}),
         ...identity,
         // 这次会话带哪个插件。**两处 start 都要带** —— 漏掉哪条路径，
         // 走那条路开出来的会话就没有插件的工具（同 identity 那条注释的理由）。
@@ -831,7 +1032,8 @@ export function AgentChatView({
         setAgentResumeId(tabId, leafId, '')
         result = await window.api.agentChat.start({
           cli: selected.id,
-          cwd,
+          // 重试路径同样走 startCwd（漏掉的话，一次重试就把会话搬回主工作区）
+          cwd: startCwd,
           message,
           skipApprovalHook,
           askFirst,
@@ -842,6 +1044,7 @@ export function AgentChatView({
           ...(roleBounds ? { roleBounds } : {}),
           ...(roleModel ? { model: roleModel } : {}),
           ...(roleEffort ? { effort: roleEffort } : {}),
+          ...(role?.id ? { roleId: role.id } : {}),
           ...identity
         })
       }
@@ -1109,6 +1312,10 @@ export function AgentChatView({
           onNewChat={handleNewChat}
           sessionId={sessionId}
           onSend={handleFollowupSend}
+          // 分支徽标（空态那份在下面的上下文条上，同一个组件）。
+          // **会话跑着的时候正是最该看到分支的时候** —— 菜单里「删除 worktree」
+          // 会因为 sessionId 有值而置灰，看和开终端不受影响。
+          {...(worktree ? { worktree, effectiveCwd, branchOverlap, onOpenBranchMenu: openBranchMenu } : {})}
           // ── 角色入口**不在这里**（用户 2026-09-03）───────────────────────────
           // 角色契约走系统提示，`roleContract` 只在 `agentChat:start` 读一次 ——
           // **会话跑起来之后改它一点效果都没有**。摆在对话态工具栏上，
@@ -1160,6 +1367,16 @@ export function AgentChatView({
               }}
             />
           ))}
+        {/* 分支菜单。**两条 return 各渲染一次** —— 菜单本身走 portal 挂到 body，
+            但 `branchMenuAt` 是同一份 state，哪条树在渲染就由哪条树摆出来。 */}
+        {branchMenuAt && (
+          <CanvasContextMenu
+            x={branchMenuAt.x}
+            y={branchMenuAt.y}
+            items={branchMenuItems}
+            onClose={() => setBranchMenuAt(null)}
+          />
+        )}
       </div>
     )
   }
@@ -1249,9 +1466,12 @@ export function AgentChatView({
             照 DeepSeek Harness 那套布局来（用户 2026-08-19 指定）——「这次对话的前提」
             排在输入框上面，「这条消息怎么发」排在输入框里面，两类东西不再混在一起。 */}
         <div className="ac-ctxbar">
-          <span className="ac-ctxbar-item" data-tip={cwd}>
+          {/* 显示的是**真正跑在哪** —— 有 worktree 时它是那棵树，不是项目根 */}
+          <span className="ac-ctxbar-item" data-tip={effectiveCwd}>
             <FolderIcon size={12} />
-            <span className="ac-ctxbar-name">{cwd.split('/').filter(Boolean).pop() ?? cwd}</span>
+            <span className="ac-ctxbar-name">
+              {effectiveCwd.split('/').filter(Boolean).pop() ?? effectiveCwd}
+            </span>
           </span>
           <button
             type="button"
@@ -1272,8 +1492,17 @@ export function AgentChatView({
           <RolePicker
             roleId={roleId}
             cli={selected?.id as HarnessId}
-            onPick={(next) => setAgentRole(tabId, leafId, next)}
+            onPick={handlePickRole}
           />
+          {/* 分支徽标。对话态那份在 ChatToolbar 的控件行上，同一个组件。 */}
+          {worktree && (
+            <BranchBadge
+              worktree={worktree}
+              effectiveCwd={effectiveCwd}
+              overlap={branchOverlap}
+              onOpenMenu={openBranchMenu}
+            />
+          )}
         </div>
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
@@ -1465,6 +1694,14 @@ export function AgentChatView({
             y={cliMenuAt.y}
             items={cliMenuItems}
             onClose={() => setCliMenuAt(null)}
+          />
+        )}
+        {branchMenuAt && (
+          <CanvasContextMenu
+            x={branchMenuAt.x}
+            y={branchMenuAt.y}
+            items={branchMenuItems}
+            onClose={() => setBranchMenuAt(null)}
           />
         )}
         {cliNote && (

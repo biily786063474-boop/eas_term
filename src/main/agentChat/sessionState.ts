@@ -91,6 +91,13 @@ export interface SessionRecord {
   roleContract?: string
   /** 角色的能力意图。**每次 spawn 都要用**（包括恢复会话） */
   roleBounds?: RoleBounds
+  /** 角色卡 id。**跟 roleBounds 一样必须带过 restart** —— 协同板是按它查角色名的，
+   *  丢了这条会话在板上就退回 CLI 名，而它其实还在按角色契约干活。 */
+  roleId?: string
+  /** 起会话那一刻的协同板文本（已截断）。restart 时原样带上 ——
+   *  丢了的话恢复出来的会话不知道旁边还有谁在改哪些文件，
+   *  契约里「改文件前先看板」那句就没有起点了。 */
+  boardText?: string
   /** 本机 MCP server 名清单，起会话时算一次，restart 沿用 */
   knownMcpServers?: string[]
   /** Codex 的配置目录。跟 knownMcpServers 同一个理由必须原样存在这里并被 effectiveOpts
@@ -300,6 +307,8 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     roleBounds: s.roleBounds,
     knownMcpServers: s.knownMcpServers,
     codexHome: s.codexHome,
-    writeGuardSettings: s.writeGuardSettings
+    writeGuardSettings: s.writeGuardSettings,
+    roleId: s.roleId,
+    boardText: s.boardText
   }
 }

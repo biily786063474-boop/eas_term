@@ -107,6 +107,9 @@ export type PaneState =
        *  ⚠️ **角色只在 spawn 时生效**（契约走系统提示，那条 flag 只传一次）。
        *  所以换角色 = 结束当前会话重开，界面那侧会弹确认（用户 2026-09-03 选的 b）。 */
       roleId?: string
+      /** 这个节点的会话落在哪棵 worktree（相对项目根）与分支。**由 app 在第一次起会话前建**，
+       *  之后每次起会话（含恢复）cwd 都指过去。删 worktree 时清掉。 */
+      worktree?: { relPath: string; branch: string }
       /** 这次会话带哪个插件（PluginInfo.id）。**一次只带一个**（用户 2026-08-24 定死）——
        *  180 个插件全带会把系统提示词撑爆。主进程据此决定往 agent-mcp.json 里合并谁。 */
       pluginId?: string

@@ -115,7 +115,15 @@ export function App(): JSX.Element {
         console.error('[App:startup] 加载项目/画布失败', e)
       }
       unsub = useStore.subscribe((s, prev) => {
-        if (s.canvas === prev.canvas && s.viewMode === prev.viewMode) return
+        // paneSaveTick：agent pane 上要落盘的字段（worktree / resumeId / cli / roleId）
+        // 只住在 `tabs` 里，不碰 canvas —— 不看这个计数器的话，删完 worktree 直接退出
+        // 就丢了这次改动，重启后徽标复活指向一个已经不存在的目录（2026-09-06 真机撞到）。
+        if (
+          s.canvas === prev.canvas &&
+          s.viewMode === prev.viewMode &&
+          s.paneSaveTick === prev.paneSaveTick
+        )
+          return
         dirty = true
         clearTimeout(timer)
         timer = window.setTimeout(() => flush(false), 500)

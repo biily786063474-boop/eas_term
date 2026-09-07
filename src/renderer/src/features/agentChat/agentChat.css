@@ -1605,6 +1605,15 @@
   font-family: inherit;
   font-size: 12px;
   max-width: 46%;
+  /* flex 子项默认 min-width:auto，撑到内容宽就不肯再缩 —— 于是这条上下文行
+     一超宽就整体溢出，最右边那个（有 worktree 时是分支徽标）被硬切掉，
+     `.ac-ctxbar-name` 的省略号一次也用不上（2026-09-06 真机：clientWidth 390 / scrollWidth 502）。
+     min-width:0 让四项都能缩，省略号才生效。 */
+  min-width: 0;
+}
+/* 图标不参与收缩：它只有 12px，跟着缩就成了一条竖线，而省略号本来就该出在文字上 */
+.ac-ctxbar-item > svg {
+  flex: none;
 }
 .ac-ctxbar-item.as-btn {
   cursor: pointer;
@@ -3095,4 +3104,39 @@
   font-size: 10px;
   line-height: 14px;
   background: rgba(var(--sem-warn-rgb), 0.16);
+}
+
+/* 分支徽标。和角色、CLI 并排在上下文条上 —— 它同样是「这次对话开起来之前
+   就定了的前提」：会话跑在哪棵 worktree、哪条分支上。
+   分支名用等宽：它是个标识符，跟目录名一样要能一眼看清有没有多一位。 */
+.ac-branch .ac-ctxbar-name {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+/* 有别的分支在改同一个文件时染成告警底（同 .rolepick-warn 那档透明度）。
+   只染底不加感叹号：这不是错误，是「动手前先看一眼板」。 */
+.ac-branch.warn {
+  background: rgba(var(--sem-warn-rgb), 0.16);
+}
+/* 空态那条上下文条的通用 hover（`.ac-ctxbar-item.as-btn:hover:not(:disabled)`，0-4-0）
+   特指度压过 `.ac-branch.warn`（0-2-0），于是鼠标一放上去告警底就被 `var(--lift-2)`
+   整个盖掉 —— 而那正是用户要点开菜单看协同板的那一刻。
+   2026-09-06 真机量到：hover 前 rgba(252,211,77,.16)，hover 中 rgba(255,255,255,.07)。
+   对话态那份不用补：`.ac-bar-btn:hover` 只改 border-color 和 color，不动 background。 */
+.ac-ctxbar-item.as-btn.ac-branch.warn:hover:not(:disabled) {
+  background: rgba(var(--sem-warn-rgb), 0.24);
+}
+/* 对话态那份挂在 `.ac-bar-btn` 上（胶囊、10.5px），跟旁边的模型/强度是一套。
+   分支名可以很长（`eas/<角色>/<id>`），不封顶会把控件行整条挤换行 —— 那条行
+   是 flex-wrap，挤了不会溢出，但会白占一层高度。 */
+.ac-bar-btn.ac-branch {
+  max-width: 34%;
+  min-width: 0;
+}
+.ac-bar-btn.ac-branch .ac-ctxbar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-bar-btn.ac-branch.warn {
+  border-color: rgba(var(--sem-warn-rgb), 0.45);
 }
