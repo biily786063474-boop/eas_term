@@ -1,5 +1,10 @@
 /* ========== 设计令牌 / 主题 / reset / 标题栏 ========== */
 :root {
+  --semantic-icon-blue: #86b7e8;
+  --semantic-icon-teal: #7dc5b7;
+  --semantic-icon-purple: #b9a4e3;
+  --semantic-icon-amber: #d9b478;
+  --semantic-icon-neutral: #a6a6a6;
   /* 液态玻璃设计令牌（背景暗度对齐黑粉主题，仅保留中性偏蓝色相） */
   --glass-1: rgba(15, 17, 23, 0.5); /* 最轻的玻璃：侧边栏、标题栏 */
   --glass-2: rgba(11, 13, 19, 0.62); /* 面板玻璃 */
@@ -274,6 +279,11 @@
    （#fff → #f7f7f8 只差一点点），光靠明度分不开浮层，所以浮层给投影。
    暗色反过来：投影在暗底上几乎看不见，靠明度差就够。 */
 :root[data-theme='light'] {
+  --semantic-icon-blue: #346b9f;
+  --semantic-icon-teal: #28776b;
+  --semantic-icon-purple: #7655a6;
+  --semantic-icon-amber: #896120;
+  --semantic-icon-neutral: #62656a;
   --bg: #ffffff;
   --s-1: #f7f7f8;
   --s-2: #ffffff;
@@ -1098,6 +1108,22 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.cctx-leading {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.semantic-icon-blue { color: var(--semantic-icon-blue); }
+.semantic-icon-teal { color: var(--semantic-icon-teal); }
+.semantic-icon-purple { color: var(--semantic-icon-purple); }
+.semantic-icon-amber { color: var(--semantic-icon-amber); }
+.semantic-icon-neutral { stroke: var(--semantic-icon-neutral); }
+.semantic-icon-accent { opacity: 0.72; }
 
 .cctx-kbd,
 .cctx-hint {

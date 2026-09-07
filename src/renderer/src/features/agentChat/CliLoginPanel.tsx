@@ -144,7 +144,7 @@ export function CliLoginPanel(props: {
               {/* **左键打开、右键复制** —— 右键那条是用户专门要的：
                   他要用自己信任的浏览器，而不是系统默认的那个。
                   提示写在按钮下面，因为右键功能不写出来没人会去试。 */}
-              <button
+              <div className="ac-login-browser-actions"><button
                 type="button"
                 className="ac-login-go"
                 onClick={() => openUrl(phase.url!)}
@@ -156,6 +156,9 @@ export function CliLoginPanel(props: {
                 {copied ? <CheckIcon size={13} /> : <GlobeIcon size={13} />}
                 {copied ? '链接已复制' : '点我去登录'}
               </button>
+              <button type="button" className="ac-icon-button" aria-label="复制登录链接" data-tip={copied ? '已复制' : '复制登录链接'} onClick={() => copyUrl(phase.url!)}>
+                {copied ? <CheckIcon size={18} /> : <CopyIcon size={18} />}
+              </button></div>
               <div className="ac-login-hint">
                 <CopyIcon size={10} />
                 右键这个按钮可以<b>复制登录链接</b>，换一个浏览器打开也行

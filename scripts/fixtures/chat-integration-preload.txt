@@ -1,0 +1,45 @@
+// Test-only setup transport, injected and restored by verify-agent-chat-ui.mjs.
+if (AGENT_CHAT_TEST_MODE) {
+  let fixture: { clis: CliInfo[]; delay?: number; loggedIn?: boolean } | null = null
+  const installListeners = new Set<(s: InstallState) => void>()
+  const loginListeners = new Set<(s: LoginState) => void>()
+  const realList = api.agentChat.listClis, realCheck = api.cliAuth.check
+  const realInstall = api.cliAuth.startInstall, realLogin = api.cliAuth.startLogin
+  const realOnInstall = api.cliAuth.onInstall, realOnLogin = api.cliAuth.onLogin
+  const realCancelInstall = api.cliAuth.cancelInstall, realCancelLogin = api.cliAuth.cancelLogin
+  const calls: string[] = []
+  api.agentChat.listClis = async () => {
+    if (!fixture) return realList()
+    const snapshot = structuredClone(fixture)
+    await new Promise(r => setTimeout(r, snapshot.delay ?? 0))
+    calls.push('list')
+    return snapshot.clis
+  }
+  api.cliAuth.check = async cli => {
+    if (!fixture) return realCheck(cli)
+    const snapshot = structuredClone(fixture)
+    await new Promise(r => setTimeout(r, snapshot.delay ?? 0))
+    calls.push('check:' + cli)
+    return { cli, installed: !!snapshot.clis.find(c => c.id === cli)?.available, status: { loggedIn: snapshot.loggedIn !== false } }
+  }
+  api.cliAuth.onInstall = cb => { if (!fixture) return realOnInstall(cb); installListeners.add(cb); return () => { installListeners.delete(cb) } }
+  api.cliAuth.onLogin = cb => { if (!fixture) return realOnLogin(cb); loginListeners.add(cb); return () => { loginListeners.delete(cb) } }
+  api.cliAuth.startInstall = async (cli, cmd) => {
+    if (!fixture) return realInstall(cli, cmd)
+    calls.push('install:' + cli)
+    installListeners.forEach(cb => cb({ cli, phase: 'running', output: ['正在准备安装…'] }))
+    return { ok: true }
+  }
+  api.cliAuth.startLogin = async cli => {
+    if (!fixture) return realLogin(cli)
+    calls.push('login:' + cli)
+    loginListeners.forEach(cb => cb({ cli, phase: 'waiting', prompt: { url: 'https://example.com/test-only-login' } }))
+    return { ok: true }
+  }
+  api.cliAuth.cancelInstall = async () => fixture ? { ok: true } : realCancelInstall()
+  api.cliAuth.cancelLogin = async () => fixture ? { ok: true } : realCancelLogin()
+  contextBridge.exposeInMainWorld('__agentChatTestSetup', (next: typeof fixture) => { fixture = next })
+  contextBridge.exposeInMainWorld('__agentChatTestSetupCalls', () => [...calls])
+  contextBridge.exposeInMainWorld('__agentChatTestInstallEvent', (state: InstallState) => installListeners.forEach(cb => cb(state)))
+  contextBridge.exposeInMainWorld('__agentChatTestLoginEvent', (state: LoginState) => loginListeners.forEach(cb => cb(state)))
+}

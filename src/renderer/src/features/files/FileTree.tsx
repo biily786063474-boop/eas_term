@@ -17,7 +17,9 @@ import { collectLeaves } from '../../layout'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { shellQuote } from '../canvas/shellQuote'
 import './files.css'
-import { FileIcon, FolderIcon, FolderOpenIcon, ChevronRightIcon } from '../../ui/Icons'
+import { ChevronRightIcon } from '../../ui/Icons'
+import { SemanticIcon } from '../../ui/SemanticIcons'
+import { fileIconKind } from '../../ui/semanticIconKinds'
 
 const parentDir = (p: string): string => p.slice(0, p.lastIndexOf('/')) || '/'
 
@@ -611,7 +613,7 @@ function CreateInput({
     <div className="tree-item creating" style={{ paddingLeft: 10 + depth * 14 }}>
       <span className="tree-arrow" />
       <span className={`tree-icon${kind === 'dir' ? ' folder' : ''}`}>
-        {kind === 'dir' ? <FolderIcon size={13} /> : <FileIcon size={13} />}
+        <SemanticIcon kind={kind === 'dir' ? 'folder' : 'generic'} size={13} />
       </span>
       <input
         ref={inputRef}
@@ -720,7 +722,7 @@ function DirChildren({ dirPath, depth, ...s }: DirChildrenProps): JSX.Element {
           >
             <span className="tree-arrow" />
             <span className="tree-icon">
-              <FileIcon size={13} />
+              <SemanticIcon kind={fileIconKind(entry.name)} size={13} />
             </span>
             {s.renamingPath === entry.path ? (
               <RenameInput entry={entry} onDone={s.onRenameDone} onFail={s.onRenameFail} />
@@ -777,7 +779,7 @@ function DirNode({ entry, depth, ...s }: { entry: DirEntry; depth: number } & Sh
           <ChevronRightIcon size={11} />
         </span>
         <span className="tree-icon folder">
-          {expanded ? <FolderOpenIcon size={13} /> : <FolderIcon size={13} />}
+          <SemanticIcon kind={expanded ? 'folderopen' : 'folder'} size={13} />
         </span>
         {s.renamingPath === entry.path ? (
           <RenameInput entry={entry} onDone={s.onRenameDone} onFail={s.onRenameFail} />

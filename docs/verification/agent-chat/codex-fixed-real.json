@@ -1,0 +1,248 @@
+{
+  "date": "2026-09-07T13:11:08.492Z",
+  "cliVersion": "0.153.4",
+  "events": [
+    {
+      "k": "turn.start"
+    },
+    {
+      "k": "capabilities",
+      "models": [],
+      "modelCatalog": {
+        "status": "loading",
+        "source": "none"
+      }
+    },
+    {
+      "k": "capabilities",
+      "models": [
+        {
+          "id": "gpt-6-astra",
+          "label": "GPT-6-Astra",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "id": "max",
+              "label": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "id": "ultra",
+              "label": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultEffort": "medium"
+        },
+        {
+          "id": "gpt-5.6-sol",
+          "label": "GPT-5.6-Sol",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "id": "max",
+              "label": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "id": "ultra",
+              "label": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultEffort": "low"
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "label": "GPT-5.6-Terra",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "id": "max",
+              "label": "Maximum reasoning depth for the hardest problems"
+            },
+            {
+              "id": "ultra",
+              "label": "Maximum reasoning with automatic task delegation"
+            }
+          ],
+          "defaultEffort": "medium"
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "label": "GPT-5.6-Luna",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            },
+            {
+              "id": "max",
+              "label": "Maximum reasoning depth for the hardest problems"
+            }
+          ],
+          "defaultEffort": "medium"
+        },
+        {
+          "id": "gpt-5.5",
+          "label": "GPT-5.5",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            }
+          ],
+          "defaultEffort": "medium"
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "label": "GPT-5.4-Mini",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            }
+          ],
+          "defaultEffort": "medium"
+        },
+        {
+          "id": "gpt-5.3-codex-spark",
+          "label": "GPT-5.3-Codex-Spark",
+          "effortLevels": [
+            {
+              "id": "low",
+              "label": "Fast responses with lighter reasoning"
+            },
+            {
+              "id": "medium",
+              "label": "Balances speed and reasoning depth for everyday tasks"
+            },
+            {
+              "id": "high",
+              "label": "Greater reasoning depth for complex problems"
+            },
+            {
+              "id": "xhigh",
+              "label": "Extra high reasoning depth for complex problems"
+            }
+          ],
+          "defaultEffort": "high"
+        }
+      ],
+      "modelCatalog": {
+        "status": "ready",
+        "source": "probe",
+        "updatedAt": 1788786355391
+      }
+    },
+    {
+      "k": "session.ready",
+      "sessionId": "01a07bf9-acc3-75d0-919b-f4976efa2424",
+      "model": "",
+      "cwd": "/private/tmp/eas-agent-chat-codex"
+    },
+    {
+      "k": "exec.done",
+      "execId": "item_0",
+      "ok": true,
+      "kind": "generic",
+      "output": "{\"id\":\"item_0\",\"type\":\"error\",\"message\":\"Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest.\"}"
+    },
+    {
+      "k": "text.done",
+      "text": "EAS_OK"
+    },
+    {
+      "k": "turn.done",
+      "usage": {
+        "inputTokens": 22342,
+        "outputTokens": 7,
+        "cachedInputTokens": 12928
+      }
+    },
+    {
+      "k": "error",
+      "message": "部分 MCP 工具连接失败，相关工具暂不可用。",
+      "fatal": false
+    }
+  ],
+  "badge": "Codex",
+  "slider": true
+}

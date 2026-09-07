@@ -1,0 +1,126 @@
+{
+  "resized": 640,
+  "canvas": [
+    {
+      "width": 640,
+      "controls": [
+        {
+          "label": "启动模型",
+          "left": 67,
+          "right": 287,
+          "cy": 430.546875
+        },
+        {
+          "label": "启动思考强度",
+          "left": 295,
+          "right": 435,
+          "cy": 430.546875
+        },
+        {
+          "label": "刷新启动模型清单",
+          "left": 443,
+          "right": 479,
+          "cy": 430.546875
+        },
+        {
+          "label": "语音输入",
+          "left": 539,
+          "right": 575,
+          "cy": 430.546875
+        },
+        {
+          "label": "发送消息",
+          "left": 583,
+          "right": 619,
+          "cy": 430.546875
+        }
+      ],
+      "sameRow": true,
+      "inside": true
+    }
+  ],
+  "splitGeometry": [
+    {
+      "width": 640,
+      "controls": [
+        {
+          "label": "启动模型",
+          "left": 306,
+          "right": 526,
+          "cy": 470.046875
+        },
+        {
+          "label": "启动思考强度",
+          "left": 534,
+          "right": 674,
+          "cy": 470.046875
+        },
+        {
+          "label": "刷新启动模型清单",
+          "left": 682,
+          "right": 718,
+          "cy": 470.046875
+        },
+        {
+          "label": "语音输入",
+          "left": 778,
+          "right": 814,
+          "cy": 470.046875
+        },
+        {
+          "label": "发送消息",
+          "left": 822,
+          "right": 858,
+          "cy": 470.046875
+        }
+      ],
+      "sameRow": true,
+      "inside": true
+    },
+    {
+      "width": 640,
+      "controls": [
+        {
+          "label": "启动模型",
+          "left": 952,
+          "right": 1172,
+          "cy": 379.0703125
+        },
+        {
+          "label": "启动思考强度",
+          "left": 1180,
+          "right": 1320,
+          "cy": 379.0703125
+        },
+        {
+          "label": "刷新启动模型清单",
+          "left": 1328,
+          "right": 1364,
+          "cy": 379.0703125
+        },
+        {
+          "label": "语音输入",
+          "left": 1424,
+          "right": 1460,
+          "cy": 379.0703125
+        },
+        {
+          "label": "发送消息",
+          "left": 1468,
+          "right": 1504,
+          "cy": 379.0703125
+        }
+      ],
+      "sameRow": true,
+      "inside": true
+    }
+  ],
+  "splitState": {
+    "samePane": true,
+    "scrollWidth": 1292,
+    "width": 834,
+    "scrollLeft": 458,
+    "noOverlap": true
+  },
+  "consoleErrors": []
+}

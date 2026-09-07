@@ -18,7 +18,8 @@ import { useStore } from '../../store'
 import type { CliInfo } from '../../../../shared/agentChat'
 import type { OmpStatus } from '../../../../shared/ompSetup'
 import { startChoices } from './startChoices.ts'
-import { ClaudeIcon, CodexIcon, SparkleIcon, TerminalIcon } from '../../ui/Icons'
+import { TerminalIcon } from '../../ui/Icons'
+import { CliBrandIcon } from '../../ui/CliBrandIcon'
 
 /** CLI 清单**整个应用只拉一次**：每个空造梦空间都拉一遍等于开一堆重复 IPC，
  *  而这个清单在一次运行里基本不变（装完 CLI 那条路会自己刷新面板）。
@@ -27,12 +28,6 @@ let clisCache: Promise<CliInfo[]> | null = null
 function loadClis(): Promise<CliInfo[]> {
   if (!clisCache) clisCache = window.api.agentChat.listClis().catch(() => [])
   return clisCache
-}
-
-function iconOf(id: string): JSX.Element {
-  if (id === 'claude') return <ClaudeIcon size={16} />
-  if (id === 'codex') return <CodexIcon size={16} />
-  return <SparkleIcon size={16} />
 }
 
 export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null {
@@ -94,7 +89,7 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
             disabled={busy}
             onClick={() => start(cli.id)}
           >
-            {iconOf(cli.id)}
+            <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
             <span className="cframe-start-name">{cli.displayName}</span>
           </button>
         ))}

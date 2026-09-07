@@ -1,9 +1,14 @@
+(node:21675) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///private/tmp/eas-agent-chat-codex/src/main/agentChat/adapters/codex.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /private/tmp/eas-agent-chat-codex/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
 {
+  "root": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-resume-contract-domkAn",
   "results": [
     {
       "turn": 1,
       "code": 0,
-      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "session": "01a07b4a-b1ba-7901-896e-aac8338d181a",
       "types": [
         "thread.started",
         "item.completed",
@@ -15,7 +20,7 @@
     {
       "turn": 2,
       "code": 0,
-      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "session": "01a07b4a-b1ba-7901-896e-aac8338d181a",
       "types": [
         "thread.started",
         "item.completed",
@@ -27,7 +32,7 @@
     {
       "turn": 3,
       "code": 0,
-      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "session": "01a07b4a-b1ba-7901-896e-aac8338d181a",
       "types": [
         "thread.started",
         "item.completed",
@@ -53,11 +58,5 @@
       "hasFirst": true,
       "hasPriorReply": true
     }
-  ],
-  "cliVersion": "0.147.0",
-  "sandboxPolicies": [
-    "read-only",
-    "read-only",
-    "read-only"
   ]
 }

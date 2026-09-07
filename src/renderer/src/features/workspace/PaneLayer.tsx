@@ -1,3 +1,4 @@
+import { constrainPaneWidths, minimumTreeWidth } from '../../paneSizing'
 // 全局「活内容层」：所有 tab 的所有 leaf 都渲染在这一个容器里，永不换父。
 // 无限画布不断连的地基（实现规划 §5-A）：
 //   · split 模式：仅激活 tab 的 leaf 按 computeLayout 显示，其余 display:none（保挂载）。
@@ -44,14 +45,33 @@ export function PaneLayer(): JSX.Element {
 
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? null
 
+  const [splitWidth, setSplitWidth] = useState(0)
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!el || viewMode !== 'split') return
+    const measure = (): void => setSplitWidth(el.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [viewMode])
+  const virtualWidth = activeTab && viewMode === 'split'
+    ? Math.max(splitWidth, minimumTreeWidth(activeTab.root)) : splitWidth
+  useLayoutEffect(() => {
+    if (containerRef.current) containerRef.current.scrollLeft = 0
+  }, [viewMode, activeTabId])
+
   // 只对激活 tab 计算分屏布局（其余 tab 的 leaf 一律隐藏）
   const { leaves, dividers } = useMemo(() => {
     const leaves: LeafRect[] = []
     const dividers: DividerRect[] = []
-    if (activeTab) computeLayout(activeTab.root, { x: 0, y: 0, w: 1, h: 1 }, leaves, dividers)
+    if (activeTab) {
+      const root = viewMode === 'split' && splitWidth > 0 ? constrainPaneWidths(activeTab.root, virtualWidth) : activeTab.root
+      computeLayout(root, { x: 0, y: 0, w: splitWidth > 0 && viewMode === 'split' ? virtualWidth / splitWidth : 1, h: 1 }, leaves, dividers)
+    }
     return { leaves, dividers }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab?.root])
+  }, [activeTab?.root, splitWidth, virtualWidth, viewMode])
 
   const rectByLeaf = useMemo(() => {
     const m = new Map<string, Rect>()
@@ -282,10 +302,10 @@ export function PaneLayer(): JSX.Element {
 
     const onMove = (ev: MouseEvent): void => {
       const regionStart = isRow
-        ? cRect.left + divider.region.x * cRect.width
+        ? cRect.left - container.scrollLeft + divider.region.x * container.clientWidth
         : cRect.top + divider.region.y * cRect.height
       const regionSize = isRow
-        ? divider.region.w * cRect.width
+        ? divider.region.w * container.clientWidth
         : divider.region.h * cRect.height
       if (regionSize <= 0) return
       const pos = (isRow ? ev.clientX : ev.clientY) - regionStart
@@ -311,8 +331,9 @@ export function PaneLayer(): JSX.Element {
   return (
     <div
       ref={containerRef}
-      className={`pane-layer${viewMode === 'canvas' ? ' canvas-mode' : ''}${viewMode === 'board' ? ' board-mode' : ''}`}
+      className={`pane-layer${viewMode === 'canvas' ? ' canvas-mode' : ''}${viewMode === 'board' ? ' board-mode' : ''}${splitActive ? ' split-mode' : ''}`}
     >
+      {splitActive && <div aria-hidden="true" style={{width: virtualWidth, height: 1, pointerEvents: 'none'}} />}
       {allLeaves.map(({ leaf, tabId, activeLeafId }) => {
         if (viewMode === 'board') {
           const bp = boardByLeaf.get(leaf.id)

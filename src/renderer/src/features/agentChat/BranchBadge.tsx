@@ -11,7 +11,7 @@
 //
 // tooltip 只写事实：真正的目录、以及「有别的分支在改同一个文件」这一句。
 // 不写各家怎么落地。
-import { GitBranchIcon } from '../../ui/Icons'
+import { SemanticIcon } from '../../ui/SemanticIcons'
 
 export function BranchBadge({
   worktree,
@@ -38,7 +38,7 @@ export function BranchBadge({
       data-tip={`${effectiveCwd}${overlap ? '\n⚠ 有别的分支在改同一个文件，改前先看一眼协同板' : ''}`}
       onClick={onOpenMenu}
     >
-      <GitBranchIcon size={12} />
+      <SemanticIcon kind={overlap ? 'warning' : 'worktree'} size={13} />
       <span className="ac-ctxbar-name">{worktree.branch}</span>
     </button>
   )

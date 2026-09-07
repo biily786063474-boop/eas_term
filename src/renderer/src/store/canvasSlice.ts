@@ -12,6 +12,7 @@ import { teamModeTargetId } from '../features/canvas/teamMode'
 import { collectLeaves, LeafNode, PaneState } from '../layout'
 import { pickActiveTab, uid } from './shared'
 import type { AppState } from './types'
+import { paneMinimumWidth } from '../paneSizing'
 
 import type {
   CanvasFrame,
@@ -424,12 +425,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   resizeNode: (frameId, nodeId, w, h) =>
     set((s) => {
+      const kinds = new Map(s.tabs.flatMap(t => collectLeaves(t.root).map(l => [l.id, l.pane.kind] as const)))
       const frames = s.canvas.frames.map((f) =>
         f.id === frameId
           ? {
               ...f,
               nodes: f.nodes.map((n) =>
-                n.id === nodeId ? { ...n, w: Math.max(120, w), h: Math.max(80, h) } : n
+                n.id === nodeId ? { ...n, w: Math.max(paneMinimumWidth(n.leafId ? kinds.get(n.leafId) : n.pane?.kind), w), h: Math.max(80, h) } : n
               )
             }
           : f

@@ -1,0 +1,16 @@
+/* Normal navigation stays below drawers (45); maximized panes supply a raised layer. */
+.ac-question-nav { position: fixed; z-index: 40; width: 26px; display: flex; align-items: center; pointer-events: none; }
+.ac-question-ticks { max-height: 100%; overflow: auto; scrollbar-width: none; pointer-events: auto; padding: 4px 0; }
+.ac-question-ticks > button { display: flex; align-items: center; justify-content: flex-start; width: 26px; height: 20px; padding: 0 4px; border: 0; background: transparent; cursor: pointer; }
+.ac-question-ticks > button > span { width: 8px; height: 2px; border-radius: 2px; background: var(--t-3); opacity: .65; transition: width 140ms ease-out, opacity 140ms ease-out; }
+.ac-question-ticks > button[aria-current] > span { width: 18px; background: var(--t-1); opacity: 1; }
+.ac-question-ticks > button:hover > span, .ac-question-ticks > button:focus-visible > span { width: 18px; opacity: 1; }
+.ac-question-ticks > button:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; border-radius: 5px; }
+.ac-question-nav.inside .ac-question-ticks { background: var(--bg); border-radius: 8px; }
+.ac-messages[data-question-rail="inside"] { padding-left: max(40px, calc((100% - var(--ac-reading-width)) / 2)); }
+.ac-question-preview { position: fixed; pointer-events: auto; border: 1px solid var(--stroke-input); border-radius: 13px; padding: 14px 16px; text-align: left; background: var(--s-2); color: var(--t-1); box-shadow: var(--shadow-pop); cursor: pointer; animation: ac-question-enter 120ms ease-out; }
+.ac-question-preview strong, .ac-question-preview > span { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ac-question-preview strong { -webkit-line-clamp: 2; line-height: 1.5; font-size: 13px; font-weight: 600; }
+.ac-question-preview > span { -webkit-line-clamp: 3; line-height: 1.6; margin-top: 7px; font-size: 12px; color: var(--t-2); }
+@keyframes ac-question-enter { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .ac-question-preview { animation: none; } .ac-question-ticks > button > span { transition: none; } }

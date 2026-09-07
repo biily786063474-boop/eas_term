@@ -1,3 +1,4 @@
+import { AGENT_CHAT_MIN_WIDTH } from '../../paneSizing'
 import { lazy, Suspense, useEffect, useRef, useState, useLayoutEffect} from 'react'
 import { invertTransform, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from './flip.ts'
 import type { CSSProperties } from 'react'
@@ -254,6 +255,15 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   )
 
   const pane = leaf.pane
+  // Restore/create/tidy may bring an older undersized node back. Repair its stored
+  // geometry so the Frame, hit testing and resize handle agree with the visible width.
+  useLayoutEffect(() => {
+    if (pane.kind !== 'agent' || !canvasRect || canvasRect.maximized || canvasRect.board) return
+    if (canvasRect.w < AGENT_CHAT_MIN_WIDTH) {
+      resizeNode(canvasRect.frameId, canvasRect.nodeId, AGENT_CHAT_MIN_WIDTH, canvasRect.h)
+      useStore.getState().settleResize(canvasRect.frameId, canvasRect.nodeId)
+    }
+  }, [pane.kind, canvasRect?.frameId, canvasRect?.nodeId, canvasRect?.w, canvasRect?.h, canvasRect?.maximized, canvasRect?.board, resizeNode])
   const hasFile = pane.kind === 'code' || pane.kind === 'image'
   const fileName = hasFile && pane.filePath ? pane.filePath.split('/').pop() : null
 

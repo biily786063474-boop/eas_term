@@ -1,3 +1,7 @@
+import { CliBrandIcon } from '../../ui/CliBrandIcon'
+import { EffortSlider } from './EffortSlider'
+import { ChatStatusIcon } from './ChatStatusIcon'
+import { SemanticIcon } from '../../ui/SemanticIcons'
 // 对话态底部工具栏：继续对话的常驻入口 + 模型/effort 选择 + 系统提示。
 //
 // 常驻四件（用户明确指定）：语音输入按钮、模型选择、effort 选择、发送 CTA。
@@ -28,7 +32,7 @@ import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
+import { RefreshIcon, ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { autoDismisses, NOTICE_AUTO_MS } from './noticeDismiss.ts'
 import { BranchBadge } from './BranchBadge'
 import { usePastedImages } from '../terminal/usePastedImages'
@@ -84,7 +88,9 @@ function Notice({
       className={`ac-notice${fatal ? ' ac-notice-fatal' : ' ac-notice-warn'}`}
       onMouseEnter={clear}
       onMouseLeave={arm}
+      role={fatal ? 'alert' : 'status'}
     >
+      <ChatStatusIcon fatal={fatal} />
       <span className="ac-notice-text">{children}</span>
       {action}
       <button
@@ -101,6 +107,7 @@ function Notice({
 }
 
 export function ChatToolbar({
+  cli,
   caps,
   approvalHook,
   view,
@@ -118,6 +125,7 @@ export function ChatToolbar({
   branchOverlap,
   onOpenBranchMenu
 }: {
+  cli: Pick<CliInfo, 'id' | 'displayName' | 'bundled'>
   caps: CliCapabilities
   /** 这个 CLI 的逐次审批用哪种机制（原样来自 CliInfo.approvalHook）。**决定了工具栏
    *  那个「审批保护」chip 与「卸载」按钮出不出现**——它们读写的是
@@ -196,6 +204,13 @@ export function ChatToolbar({
   const [modelSel, setModelSel] = useState('')
   const [effortSel, setEffortSel] = useState('')
   const model = toolbarModel(caps, approvalHook, modelSel || view.model || undefined)
+  // 目录更新移除当前档位时，撤销旧覆盖，不能把不存在的档位显示成“默认”却继续发送它。
+  useEffect(() => {
+    if (effortSel && !model.effortLevels.some(level => level.id === effortSel)) {
+      setEffortSel('')
+      onSetParams({ effort: '' })
+    }
+  }, [model.effortLevels, effortSel, onSetParams])
   // 粘贴/拖入图片、带入画布快照——**与终端输入框共用同一份实现**（用户要求两边一致）。
   // 复用连同那几条踩过坑的规则一起继承：拖进来的原地引用不复制、剪贴板位图先落盘、
   // 缩略图不能用 blob URL（file:// 页面下 origin 是 null，<img> 会静默失败）。
@@ -486,17 +501,6 @@ export function ChatToolbar({
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">
-          {/* 分支徽标排在控件行最前面 —— 它和模型/强度同类：都是「这次对话怎么跑」。
-              菜单由 AgentChatView 摆（它持有 worktree 的增删和 sessionId）。 */}
-          {worktree && effectiveCwd && onOpenBranchMenu && (
-            <BranchBadge
-              worktree={worktree}
-              effectiveCwd={effectiveCwd}
-              overlap={branchOverlap === true}
-              onOpenMenu={onOpenBranchMenu}
-              className="ac-bar-btn"
-            />
-          )}
           {model.showModel && (
             <div
               className={`ac-param-control${modelSel !== '' ? ' pending' : ''}`}
@@ -516,6 +520,7 @@ export function ChatToolbar({
               <ChipIcon size={11} />
               <select
                 className="ac-param-select"
+                aria-label="对话模型"
                 value={modelSel}
                 onChange={(e) => {
                   setModelSel(e.target.value)
@@ -537,124 +542,118 @@ export function ChatToolbar({
             </div>
           )}
 
-          {view.plugin && <span className="ac-model-catalog" title={view.plugin.note}>{view.plugin.name} · {view.plugin.status === 'missing' ? '未找到' : '本会话插件'}</span>}
-          {caps.modelCatalog && (
-            <span className="ac-model-catalog" role="status" title={caps.modelCatalog.note}>
-              {caps.modelCatalog.status === 'loading' ? '读取中' : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? '读取失败 · 缓存清单' : caps.modelCatalog.source === 'fallback' ? '读取失败 · 内置清单' : '读取失败') : caps.modelCatalog.source === 'cache' ? '缓存清单' : caps.modelCatalog.source === 'fallback' ? '内置清单' : ''}
-              {onRefreshModels && <button className="ac-bar-btn" type="button" disabled={caps.modelCatalog.status === 'loading'} onClick={onRefreshModels} aria-label="刷新模型清单" title={caps.modelCatalog.note ?? '刷新模型清单'}>刷新</button>}
-            </span>
+          {onRefreshModels && caps.modelCatalog && (
+            <button
+              className="ac-icon-button"
+              type="button"
+              disabled={caps.modelCatalog.status === 'loading'}
+              onClick={onRefreshModels}
+              aria-label="刷新模型清单"
+              data-tip="刷新模型清单"
+            >
+              <RefreshIcon size={18} />
+            </button>
           )}
 
-          {/* 强度用滑块而不是下拉：这几档是**有序的**（低→最高），滑块能一眼看出
-              「现在在哪一档、还能往上多少」，下拉只能看到一个孤立的值。
-              第 0 格是「默认」（不覆盖 CLI 自己的设置），所以格数是档位数 + 1。
-              档位优先取所选模型的能力，未提供时使用 harness 的公共默认。 */}
+          {/* 参数由公共能力决定；首轮与对话态使用同一类紧凑下拉。 */}
           {model.showEffort && (
-            <div
-              className={`ac-effort${effortSel !== '' ? ' pending' : ''}`}
+            <EffortSlider levels={model.effortLevels} value={effortSel}
+              onChange={effort => { setEffortSel(effort); onSetParams({ effort }) }} />
+          )}
+
+          <div className="ac-message-actions">
+            <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
+            <button
+              type="button"
+              aria-label={view.busy ? '停止生成' : '发送消息'}
+              className={`ac-bar-send${view.busy ? ' stop' : ''}`}
               data-tip={
-                effortSel === ''
-                  ? '思考强度：跟随 CLI 默认。拖动可指定'
-                  : `思考强度：${model.effortLevels.find((l) => l.id === effortSel)?.label ?? effortSel}（下条消息起生效）`
+                view.busy ? '停下这一轮（上下文留着，接着说就行）' : `发送（${SEND_HINT.split('，')[0]}）`
               }
+              // **跑着的时候这颗键是「停」，不是禁用的 spinner。**
+              // 终端里按 ESC 就能停下正在跑的回答，这个窗口以前只能干等 ——
+              // 一次答偏了得等它说完（.plans/cli-gap 里排第一的缺口）。
+              // 停 ≠ 结束会话：kill 掉当前进程但会话记录留着，
+              // 下一条消息会带 --resume 接回上下文。
+              onClick={view.busy ? () => window.api.agentChat.interrupt(sessionId) : submit}
+              // 跑着的时候不禁用输入：可以先写下一条
+              disabled={view.busy ? false : !text.trim() && !pics.imgs.length && !chips.length}
             >
-              <input
-                className="ac-effort-range"
-                type="range"
-                min={0}
-                max={model.effortLevels.length}
-                step={1}
-                value={effortSel === '' ? 0 : model.effortLevels.findIndex((l) => l.id === effortSel) + 1}
-                aria-label="思考强度"
-                onChange={(e) => {
-                  const i = Number(e.target.value)
-                  const id = i === 0 ? '' : (model.effortLevels[i - 1]?.id ?? '')
-                  setEffortSel(id)
-                  onSetParams({ effort: id })
-                }}
-              />
-              <span className="ac-effort-label">
-                {effortSel === ''
-                  ? '默认'
-                  : (model.effortLevels.find((l) => l.id === effortSel)?.label ?? effortSel)}
-              </span>
-            </div>
-          )}
-
-          {onNewChat && (
-            <button
-              type="button"
-              className="ac-bar-btn icon-only"
-              aria-label="新对话"
-              // **名字进 tip，第一句就是功能名**（用户 2026-09-02：「hover 的时候再
-              // 显示功能名」）。后半句说明留着是有意的 —— 这两个按钮都不可撤销，
-              // 只报个名字等于把「会发生什么」藏起来。
-              data-tip="新对话 —— 结束这一段，开一段新的（旧记录还在，能从空态找回来）"
-              onClick={() => {
-                void stopVoiceOnSend()
-                // 会结束当前会话，上下文接不回来了 —— 照「压缩」那条的规矩弹确认
-                requestConfirm({
-                  message:
-                    '开一段新对话会结束当前会话，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？',
-                  confirmLabel: '开新对话',
-                  onConfirm: onNewChat
-                })
-              }}
-            >
-              <MessageIcon size={11} />
+              {view.busy ? <StopIcon size={18} /> : <SendIcon size={18} />}
             </button>
-          )}
+          </div>
+        </div>
+      </div>
+      <div className="ac-toolbar-context">
+        <span className="ac-session-cli" aria-label={`当前 CLI：${cli.displayName}`} data-tip={`当前对话使用 ${cli.displayName}`}>
+          <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
+          <span>{cli.displayName}</span>
+        </span>
+        {worktree && effectiveCwd && onOpenBranchMenu ? <BranchBadge worktree={worktree} effectiveCwd={effectiveCwd} overlap={branchOverlap === true} onOpenMenu={onOpenBranchMenu} className="ac-bar-btn" />
+          : <span className="ac-toolbar-location" data-tip={cwd}><SemanticIcon kind="folder" size={16} /><span>{cwd.split('/').filter(Boolean).pop() ?? cwd}</span></span>}
 
-          {model.showCompact && (
-            <button
-              type="button"
-              className="ac-bar-btn icon-only"
-              aria-label="压缩"
-              data-tip="压缩 —— 把之前的对话换成一份摘要"
-              onClick={() => {
-                void stopVoiceOnSend()
-                requestConfirm({
-                  message:
-                    '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
-                  confirmLabel: '压缩',
-                  onConfirm: () => onSend('/compact')
-                })
-              }}
-            >
-              <CompressIcon size={11} />
-            </button>
-          )}
+        {view.plugin && <span className="ac-model-catalog" title={view.plugin.note}>{view.plugin.name} · {view.plugin.status === 'missing' ? '未找到' : '本会话插件'}</span>}
+        {caps.modelCatalog && (
+          <span className="ac-model-catalog" role="status" title={caps.modelCatalog.note}>
+            {caps.modelCatalog.status === 'loading' ? '读取中' : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? '读取失败 · 缓存清单' : caps.modelCatalog.source === 'fallback' ? '读取失败 · 内置清单' : '读取失败') : caps.modelCatalog.source === 'cache' ? '缓存清单' : caps.modelCatalog.source === 'fallback' ? '内置清单' : ''}
 
+          </span>
+        )}
 
-          {model.showSandbox && model.sandboxLevels.length > 0 && (
-            <span
-              className="ac-bar-note"
-              data-tip="沙箱级别在启动会话时就定下了，当前版本暂不支持中途切换"
-            >
-              沙箱：{model.sandboxLevels.map((s) => s.label).join(' / ')}
-            </span>
-          )}
-
-          <span className="ac-bar-spacer" />
-          <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
+        {onNewChat && (
           <button
             type="button"
-            className={`ac-bar-send${view.busy ? ' stop' : ''}`}
-            data-tip={
-              view.busy ? '停下这一轮（上下文留着，接着说就行）' : `发送（${SEND_HINT.split('，')[0]}）`
-            }
-            // **跑着的时候这颗键是「停」，不是禁用的 spinner。**
-            // 终端里按 ESC 就能停下正在跑的回答，这个窗口以前只能干等 ——
-            // 一次答偏了得等它说完（.plans/cli-gap 里排第一的缺口）。
-            // 停 ≠ 结束会话：kill 掉当前进程但会话记录留着，
-            // 下一条消息会带 --resume 接回上下文。
-            onClick={view.busy ? () => window.api.agentChat.interrupt(sessionId) : submit}
-            // 跑着的时候不禁用输入：可以先写下一条
-            disabled={view.busy ? false : !text.trim() && !pics.imgs.length && !chips.length}
+            className="ac-bar-btn icon-only"
+            aria-label="新对话"
+            // **名字进 tip，第一句就是功能名**（用户 2026-09-02：「hover 的时候再
+            // 显示功能名」）。后半句说明留着是有意的 —— 这两个按钮都不可撤销，
+            // 只报个名字等于把「会发生什么」藏起来。
+            data-tip="新对话 —— 结束这一段，开一段新的（旧记录还在，能从空态找回来）"
+            onClick={() => {
+              void stopVoiceOnSend()
+              // 会结束当前会话，上下文接不回来了 —— 照「压缩」那条的规矩弹确认
+              requestConfirm({
+                message:
+                  '开一段新对话会结束当前会话，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？',
+                confirmLabel: '开新对话',
+                onConfirm: onNewChat
+              })
+            }}
           >
-            {view.busy ? <StopIcon size={13} /> : <SendIcon size={15} />}
+            <MessageIcon size={11} />
           </button>
-        </div>
+        )}
+
+        {model.showCompact && (
+          <button
+            type="button"
+            className="ac-bar-btn icon-only"
+            aria-label="压缩"
+            data-tip="压缩 —— 把之前的对话换成一份摘要"
+            onClick={() => {
+              void stopVoiceOnSend()
+              requestConfirm({
+                message:
+                  '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
+                confirmLabel: '压缩',
+                onConfirm: () => onSend('/compact')
+              })
+            }}
+          >
+            <CompressIcon size={11} />
+          </button>
+        )}
+
+
+        {model.showSandbox && model.sandboxLevels.length > 0 && (
+          <span
+            className="ac-bar-note"
+            data-tip="沙箱级别在启动会话时就定下了，当前版本暂不支持中途切换"
+          >
+            沙箱：{model.sandboxLevels.map((s) => s.label).join(' / ')}
+          </span>
+        )}
+
       </div>
 
       {/* 输入框下方那行统计。**只放有准确来源的数** —— 组装逻辑和「哪些不编」的

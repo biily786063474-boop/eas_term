@@ -377,7 +377,7 @@ export function App(): JSX.Element {
 
   return (
     <div
-      className={`app${viewMode === 'canvas' ? ' canvas' : ''}${viewMode === 'board' ? ' board-mode' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}${fullscreen ? ' fs' : ''}`}
+      className={`app${viewMode === 'split' ? ' split-mode' : ''}${viewMode === 'canvas' ? ' canvas' : ''}${viewMode === 'board' ? ' board-mode' : ''}${wikiDrawerOpen ? ' wiki-open' : ''}${resDrawerOpen ? ' res-open' : ''}${fullscreen ? ' fs' : ''}`}
     >
       <div className="titlebar">
         {viewMode === 'split' && activeProject ? (

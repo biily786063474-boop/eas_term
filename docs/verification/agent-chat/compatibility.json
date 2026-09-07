@@ -9,8 +9,78 @@
       "resource": "查看报告 ↗",
       "font": "14px",
       "narrow": {
-        "width": 331,
-        "scroll": 331
+        "width": 631,
+        "scroll": 633
+      },
+      "composer": {
+        "width": 640,
+        "boxes": [
+          {
+            "label": "对话模型",
+            "left": 33,
+            "right": 165.2578125,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 132.2578125,
+            "height": 32
+          },
+          {
+            "label": "刷新模型清单",
+            "left": 172.2578125,
+            "right": 208.2578125,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": null,
+            "left": 215.2578125,
+            "right": 369.2578125,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 154,
+            "height": 32
+          },
+          {
+            "label": "语音输入",
+            "left": 523,
+            "right": 559,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": "发送消息",
+            "left": 567,
+            "right": 603,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          }
+        ],
+        "outside": [],
+        "overlaps": [],
+        "icons": [
+          {
+            "label": "刷新模型清单",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "语音输入",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "发送消息",
+            "icon": true,
+            "text": ""
+          }
+        ],
+        "sameRow": true
       }
     },
     {
@@ -22,8 +92,78 @@
       "resource": "查看报告 ↗",
       "font": "14px",
       "narrow": {
-        "width": 331,
-        "scroll": 331
+        "width": 631,
+        "scroll": 633
+      },
+      "composer": {
+        "width": 640,
+        "boxes": [
+          {
+            "label": "对话模型",
+            "left": 33,
+            "right": 168.7734375,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 135.7734375,
+            "height": 32
+          },
+          {
+            "label": "刷新模型清单",
+            "left": 175.7734375,
+            "right": 211.7734375,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": null,
+            "left": 218.7734375,
+            "right": 372.7734375,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 154,
+            "height": 32
+          },
+          {
+            "label": "语音输入",
+            "left": 523,
+            "right": 559,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": "发送消息",
+            "left": 567,
+            "right": 603,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          }
+        ],
+        "outside": [],
+        "overlaps": [],
+        "icons": [
+          {
+            "label": "刷新模型清单",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "语音输入",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "发送消息",
+            "icon": true,
+            "text": ""
+          }
+        ],
+        "sameRow": true
       }
     },
     {
@@ -35,8 +175,78 @@
       "resource": "查看报告 ↗",
       "font": "14px",
       "narrow": {
-        "width": 331,
-        "scroll": 331
+        "width": 631,
+        "scroll": 633
+      },
+      "composer": {
+        "width": 640,
+        "boxes": [
+          {
+            "label": "对话模型",
+            "left": 33,
+            "right": 156.0234375,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 123.0234375,
+            "height": 32
+          },
+          {
+            "label": "刷新模型清单",
+            "left": 163.0234375,
+            "right": 199.0234375,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": null,
+            "left": 206.0234375,
+            "right": 360.0234375,
+            "top": 541.5,
+            "bottom": 573.5,
+            "width": 154,
+            "height": 32
+          },
+          {
+            "label": "语音输入",
+            "left": 523,
+            "right": 559,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          },
+          {
+            "label": "发送消息",
+            "left": 567,
+            "right": 603,
+            "top": 539.5,
+            "bottom": 575.5,
+            "width": 36,
+            "height": 36
+          }
+        ],
+        "outside": [],
+        "overlaps": [],
+        "icons": [
+          {
+            "label": "刷新模型清单",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "语音输入",
+            "icon": true,
+            "text": ""
+          },
+          {
+            "label": "发送消息",
+            "icon": true,
+            "text": ""
+          }
+        ],
+        "sameRow": true
       }
     }
   ],

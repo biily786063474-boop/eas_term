@@ -11,6 +11,16 @@ const cli = (id: string): CliInfo => ({
 })
 const base = { clis: null as CliInfo[] | null, selected: null as CliInfo | null, starting: false, startError: null as string | null }
 
+test('未安装或仅终端的当前选择不能发送；切到可用 CLI 立即恢复 ready', () => {
+  const missing = { ...cli('claude'), available: false }
+  const terminal = { ...cli('other'), chatSupported: false }
+  const installed = cli('codex')
+  const clis = [missing, terminal, installed]
+  assert.equal(startupPhaseOf({ ...base, clis, selected: missing }).k, 'setup')
+  assert.equal(startupPhaseOf({ ...base, clis, selected: terminal }).k, 'setup')
+  assert.equal(startupPhaseOf({ ...base, clis, selected: installed }).k, 'ready')
+})
+
 test('还没拉回来 → detecting（不是「拉回来了但是空的」）', () => {
   assert.equal(startupPhaseOf(base).k, 'detecting')
 })

@@ -67,7 +67,7 @@ export const codexAdapter: CliAdapter = {
     const b = bindRole(opts.roleBounds, 'codex', { knownMcpServers: opts.knownMcpServers, codexHome: opts.codexHome })
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`
     const args: string[] = ['exec']
-    // 角色的 write:false 是沙箱的唯一来源；其余维持默认（UI 上沙箱只展示不可选）
+    // 角色 write:false 优先；其余使用启动页显式选择或工作区默认。
     // --sandbox 属于 exec，必须放在 resume 子命令之前（0.147.0 实测）。
     args.push('--sandbox', b.codex.sandbox ?? opts.sandbox ?? DEFAULT_SANDBOX)
     if (opts.resumeId) args.push('resume', opts.resumeId)

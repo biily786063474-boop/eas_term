@@ -17,6 +17,7 @@ export type StartupPhase =
   | { k: 'detecting' }
   /** 探测完了，一个可用的都没有 */
   | { k: 'none' }
+  | { k: 'setup'; clis: CliInfo[]; selected: CliInfo }
   /** 可以开始了。selected 一定在 clis 里（选项就是从它渲染的） */
   | { k: 'ready'; clis: CliInfo[]; selected: CliInfo }
   /** 正在起会话（spawn + 装 hook），这段没有事件可依据，只有前端知道 */
@@ -43,6 +44,7 @@ export function startupPhaseOf(sig: {
   // 的那次 setState 之间）。这时候按 detecting 处理：界面上是"正在检测"而不是
   // 一个选不了 CLI 的空壳。
   if (!selected) return { k: 'detecting' }
+  if (!selected.available || !selected.chatSupported) return { k: 'setup', clis, selected }
   if (starting) return { k: 'starting', clis, selected }
   if (startError) return { k: 'failed', clis, selected, error: startError }
   return { k: 'ready', clis, selected }

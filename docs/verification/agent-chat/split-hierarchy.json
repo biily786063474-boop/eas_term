@@ -1,0 +1,90 @@
+{
+  "hierarchy": [
+    {
+      "theme": "dark",
+      "state": {
+        "project": [
+          59,
+          59,
+          59,
+          255
+        ],
+        "tab": [
+          40,
+          40,
+          40,
+          255
+        ],
+        "header": [
+          29,
+          29,
+          29,
+          255
+        ],
+        "kind": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "kindImage": "none",
+        "paneShadow": "none",
+        "scope": true
+      },
+      "steps": [
+        59,
+        40,
+        29
+      ],
+      "focused": {
+        "leaf": "width-b",
+        "active": 1
+      }
+    },
+    {
+      "theme": "light",
+      "state": {
+        "project": [
+          207,
+          207,
+          208,
+          255
+        ],
+        "tab": [
+          228,
+          228,
+          229,
+          255
+        ],
+        "header": [
+          240,
+          240,
+          241,
+          255
+        ],
+        "kind": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "kindImage": "none",
+        "paneShadow": "none",
+        "scope": true
+      },
+      "steps": [
+        207.33333333333334,
+        228.33333333333334,
+        240.33333333333334
+      ],
+      "focused": {
+        "leaf": "width-b",
+        "active": 1
+      }
+    }
+  ],
+  "canvasStyle": {
+    "scope": false,
+    "kindBackground": "rgb(200, 202, 208)"
+  }
+}

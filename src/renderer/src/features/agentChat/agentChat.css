@@ -5,7 +5,40 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  container-type: inline-size;
+  container-name: agent-chat;
+  --ac-reading-width: 760px;
 }
+
+.ac-setup-card {
+  width: min(100%, 720px);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 18px 20px;
+  border: 1px solid var(--stroke-input);
+  border-radius: 16px;
+  background: var(--lift-2);
+  color: var(--t-1);
+  text-align: left;
+}
+.ac-setup-heading { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.ac-setup-heading > svg { flex: none; }
+.ac-setup-card p { margin: 10px 0 14px; line-height: 1.65; font-size: 13px; color: var(--t-2); }
+.ac-setup-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ac-setup-actions button { min-height: 36px; border-radius: 9px; cursor: pointer; }
+.ac-setup-primary { padding: 8px 14px; background: var(--accent); color: var(--on-accent); border: 0; }
+.ac-setup-alternative { padding: 8px 12px; background: transparent; color: var(--t-1); border: 1px solid var(--stroke-input); }
+.ac-setup-card small { display: block; margin-top: 12px; color: var(--t-3); line-height: 1.5; font-size: 12px; }
+.ac-setup-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ac-setup-card .ac-setup-primary { flex: none; min-width: 120px; }
+.ac-model-unavailable { margin-right: auto; font-size: 13px; color: var(--t-3); }
+.ac-login-browser-actions { display: flex; gap: 10px; align-items: center; }
+.ac-login-browser-actions .ac-icon-button { flex: none; }
+.ac-toolbar-location { display: inline-flex; align-items: center; gap: 7px; min-width: 0; max-width: 240px; color: var(--t-2); font-size: 12px; }
+.ac-toolbar-location > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-exec-row-head > .semantic-icon { flex-shrink: 0; }
+.ac-exec-status { font-size: 11px; margin-left: 6px; }
+.ac-compact-txt > .semantic-icon { vertical-align: -3px; margin-right: 6px; }
 
 /* ---------- 空态：居中 logo + 多行输入框 + CLI 选择器 ---------- */
 .ac-empty {
@@ -13,9 +46,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 24px;
+  justify-content: safe center;
+  gap: 20px;
+  padding: 32px 24px;
   overflow: auto;
 }
 /* 恢复出上次聊天时，这一屏就不是「空态」了 —— 内容从上往下排，
@@ -61,20 +94,20 @@
    用户 2026-09-02：「加大加粗，最好是 bold 字号。」
    字号提到 24px、字重 700、颜色从次级提到主级 —— 三样一起往前站才立得住。 */
 .ac-slogan {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.55;
   color: var(--t-1);
   letter-spacing: 0.01em;
-  text-align: center;
-  max-width: min(560px, 100%);
+  text-align: left;
+  width: min(720px, 100%);
   user-select: none;
 }
 
 /* 输入框现在是「一个框，里面上半是文本域、下半是工具条」——照 DeepSeek 那套布局。
    边框画在**外层容器**上，文本域自己不再有边框，否则会看到框中框。 */
 .ac-input-wrap {
-  width: min(560px, 100%);
+  width: min(720px, 100%);
   display: flex;
   flex-direction: column;
   /* 斜杠候选浮在它上方（.ac-slash 用 bottom:100%），这里是那个定位上下文。
@@ -82,7 +115,7 @@
   position: relative;
   background: var(--lift-2);
   border: 1px solid var(--stroke-input);
-  border-radius: 18px;
+  border-radius: 20px;
   transition: border-color 0.15s ease;
 }
 .ac-input-wrap:focus-within {
@@ -93,7 +126,9 @@
    视觉本来就同一套，这里只对齐尺寸 —— 居中的大框传达的是「从零开始」，
    而这一屏上面明明摆着满屏对话，那个信号是错的。 */
 .ac-input-wrap.resumed {
-  width: 100%;
+  width: min(var(--ac-reading-width), calc(100% - 32px));
+  margin: 12px 16px 0;
+  flex-shrink: 0;
 }
 .ac-input-wrap.resumed .ac-input {
   padding: 10px 12px 4px;
@@ -276,19 +311,26 @@
   opacity: 0.5;
 }
 
-/* 照抄 workspace.css .ws-inline-error 的配色——本模块没有单独定义错误色的必要，
-   跟改名失败提示条用同一套，界面上「出错了」的视觉语言才是统一的 */
+/* 通知统一中性底色，级别只落在细边线和图标上。 */
 .ac-error {
+  --ac-status-accent: var(--sem-danger);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   width: min(480px, 100%);
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-inline-start: 2px solid var(--ac-status-accent);
+  border-radius: 10px;
   font-size: 12px;
-  line-height: 1.5;
-  text-align: center;
-  color: var(--sem-danger);
-  background: rgba(var(--sem-danger-rgb), 0.1);
-  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
+  line-height: 1.6;
+  text-align: left;
+  color: var(--t-2);
+  background: var(--s-2);
+  overflow-wrap: anywhere;
 }
+.ac-error > span { min-width: 0; }
+.ac-status-icon { flex: none; margin-top: 2px; color: var(--ac-status-accent); }
 
 /* ---------- 对话态：消息列表（Task 4） ---------- */
 .ac-messages {
@@ -297,11 +339,11 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 24px;
   /* **padding-top 必须是 0**：Chrome 把 sticky 的 top:0 停在 content box 顶部，
      容器只要有 padding-top，吸顶的提问就会被顶下来那么多，跟标题栏之间露出一条缝。
      顶部留白改由第一个子元素承担，视觉一样，但吸顶时能真正贴住。 */
-  padding: 0 18px 22px;
+  padding: 0 max(16px, calc((100% - var(--ac-reading-width)) / 2)) 24px;
 }
 .ac-messages > *:first-child {
   margin-top: 16px;
@@ -315,8 +357,8 @@
 
 .ac-turn-text {
   color: var(--fg);
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -433,6 +475,18 @@
   padding-left: 2px;
 }
 
+.ac-execs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: var(--ac-tool-region-height, 240px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  min-width: 0;
+}
+.ac-execs-list:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+
 /* 工具调用行。**它是伴奏不是主旋律** —— 用户要它「行间距再窄一点、字号小一点、
    颜色层级低一点」。这三样是同一件事的三个面：让眼睛滑过去，而不是停下来读。
    所以用 `--t-3`（三级文字，那一档就是「弱到几乎不参与阅读」）。 */
@@ -445,6 +499,15 @@
 }
 
 .ac-exec-row-head {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -453,7 +516,22 @@
   line-height: 1.35;
 }
 
+.ac-exec-row-head:hover:not(:disabled) { background: var(--wash-1); }
+.ac-exec-row-head:disabled { cursor: default; }
+.ac-exec-row-head[aria-expanded="true"],
+.ac-exec-row-head[aria-expanded="true"]:hover {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--s-2);
+}
+.ac-exec-row-head:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.ac-exec-chevron { flex: none; margin-left: auto; transition: transform 150ms ease; }
+.ac-exec-chevron.expanded { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .ac-exec-chevron { transition: none; } }
+
 .ac-exec-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -479,15 +557,14 @@
   opacity: 0.85;
 }
 
-/* failed：唯一不弱化的执行行——不能和 ok/running 长得像，否则「失败项常驻可见」
-   在视觉上等于没发生（task-4-brief.md 规则③，来自实测：Claude 在 Write 被拒后
-   仍说「已创建完成」，用户必须一眼看出这行是失败的）。配色照抄 .ac-error 那一套，
-   跟改名失败提示条用同一套红，界面上「出错了」的视觉语言统一。 */
+/* 失败行用细边线和明确状态保留辨识度，不给工具正文铺红底。 */
 .ac-exec-row.ac-exec-failed {
-  color: var(--sem-danger);
-  background: rgba(var(--sem-danger-rgb), 0.1);
-  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
+  color: var(--t-2);
+  background: var(--s-2);
+  border: 1px solid var(--border);
+  border-inline-start: 2px solid var(--sem-danger);
 }
+.ac-exec-failed .ac-exec-status { color: var(--sem-danger); }
 .ac-exec-row.ac-exec-failed .ac-exec-row-head {
   padding: 3px 6px;
 }
@@ -522,8 +599,7 @@
 .ac-exec-pre {
   margin: 0;
   padding: 7px 9px;
-  max-height: 220px;
-  overflow: auto;
+  overflow-wrap: anywhere;
   background: var(--wash-1);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
@@ -559,18 +635,7 @@
 .ac-execs-toggle svg.expanded {
   transform: rotate(180deg);
 }
-/* 展开后钉在工具调用区底端（MessageList 那段注释）。要一层底色：吸住时下面还在滚
-   内容，透明的话字会和执行输出叠在一起。border-radius 让它像一枚小胶囊贴在底沿。 */
-.ac-execs-toggle.pinned {
-  position: sticky;
-  bottom: 4px;
-  z-index: 2;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--lift-2);
-  border: 1px solid var(--glass-border);
-  opacity: 0.95;
-}
+/* 收起按钮位于限高列表外，输出滚动时始终可见。 */
 
 /* ── 回到最新 ──────────────────────────────────────────────────────────
    零高度外壳 + sticky bottom：贴滚动视口底沿、不占版面。按钮用 translateY(-100%)
@@ -834,14 +899,12 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  padding: 9px 14px 11px;
-  border-top: 1px solid var(--glass-border);
-  background: var(--lift-1);
+  padding: 12px max(16px, calc((100% - var(--ac-reading-width)) / 2)) 14px;
+  border-top: none;
+  background: transparent;
 }
 
-/* notices：硬验收项，view.notices 里的每一条都要能被看见（task-6-brief.md Step 2）。
-   fatal:false 的典型内容是"审批保护没开成"，用跟 .ac-approval 同一色系的琥珀色——
-   这不是错误，是告知；fatal 的才用 .ac-error 那套红色。 */
+/* notices：中性背景，警告和错误用不同图标及细边线区分；保持可见、去重和关闭。 */
 .ac-notices {
   display: flex;
   flex-direction: column;
@@ -859,20 +922,23 @@
   flex-shrink: 0;
 }
 .ac-notice {
+  --ac-status-accent: var(--sem-warn);
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--sem-path);
-  background: rgba(var(--sem-orange-dim-rgb), 0.1);
-  border: 1px solid rgba(var(--sem-orange-dim-rgb), 0.3);
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--t-2);
+  background: var(--s-2);
+  border: 1px solid var(--border);
+  border-inline-start: 2px solid var(--ac-status-accent);
 }
 .ac-notice-text {
   flex: 1;
   min-width: 0; /* 不给的话长文本会把关闭按钮挤出边界 */
+  overflow-wrap: anywhere;
 }
 /* 同一条 notice 重复发生的次数（Claude 每次 restart 重推、Codex 每条消息一个新进程）。
    跟正文同色但更淡：它是次要信息，不该抢正文的注意力。 */
@@ -902,17 +968,10 @@
   opacity: 1;
   background: var(--lift-2);
 }
-/* 警告条：橙色（就是 `.ac-notice` 的基色）。显式写出来是为了和 fatal 成对、
-   也让「这是会自动消失的那一类」在代码里一眼看得出。5s 自动关的行为在 ChatToolbar
-   的 <Notice> 组件里（noticeDismiss.ts 是判据）。 */
-.ac-notice-warn {
-  /* 基色已是橙，这里不改颜色，只作标记类；将来要调警告色改这里 */
-}
-.ac-notice-fatal {
-  color: var(--sem-danger);
-  background: rgba(var(--sem-danger-rgb), 0.1);
-  border: 1px solid rgba(var(--sem-danger-rgb), 0.25);
-}
+/* 自动关闭仍由 noticeDismiss.ts 决定，样式不改变通知生命周期。 */
+.ac-notice-warn { --ac-status-accent: var(--sem-warn); }
+.ac-notice-fatal { --ac-status-accent: var(--sem-danger); }
+.ac-notice-close:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 /* 次级信息行：用量 / 审批 hook 状态 / 压缩 / 沙箱只读展示。始终可见、弱视觉层级
    （task-6-brief.md「用量...次级视觉层级」——次级指小字弱层级，不是点了才看到，
@@ -965,11 +1024,11 @@
 .ac-composer-box {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 12px;
   /* 斜杠候选浮在它上方（.ac-slash 用 bottom:100% 定位），这里是那个定位上下文 */
   position: relative;
-  padding: 10px 12px 8px;
-  border-radius: 18px;
+  padding: 16px 18px 12px;
+  border-radius: 20px;
   border: 1px solid var(--stroke-input);
   background: var(--lift-2);
   transition: border-color 0.12s ease;
@@ -995,7 +1054,7 @@
   padding: 0;
   color: var(--fg);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.55;
   resize: none;
   outline: none;
@@ -1170,31 +1229,42 @@
 /* 参数下拉：现在住在控件行里 */
 .ac-param-control {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 4px;
   color: var(--fg-dim);
 }
 .ac-param-select {
-  max-width: 116px;
-  padding: 3px 6px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--lift-1);
-  color: var(--fg-dim);
+  appearance: none;
+  field-sizing: content;
+  height: 32px;
+  max-width: 200px;
+  padding: 0 29px 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background-color: var(--wash-1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='m3 4.5 3 3 3-3' stroke='%23888888' stroke-width='1.35' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  color: var(--t-2);
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: 12px;
   cursor: pointer;
-  outline: none;
+  min-width: 64px;
+  transition: background-color 120ms ease, border-color 120ms ease;
 }
-.ac-param-select:hover {
-  border-color: var(--glass-border-strong);
-  color: var(--fg);
+.ac-param-select option { background: var(--s-2); color: var(--t-1); }
+.ac-param-control:has(> svg) { position: relative; }
+.ac-param-control > svg { position: absolute; left: 11px; pointer-events: none; z-index: 1; }
+.ac-param-control:has(> svg) .ac-param-select { padding-left: 29px; }
+.ac-param-select:hover:not(:disabled) {
+  border-color: var(--border);
+  background-color: var(--lift-2);
+  color: var(--t-1);
 }
-/* 选了非默认值时给个待生效的高亮（配 data-tip 说明），不再占一行小字 */
-.ac-param-control.pending .ac-param-select {
-  border-color: rgba(var(--accent-rgb), 0.55);
-  color: var(--fg);
-}
+/* 待生效仍由 tooltip 说明，只提亮文字，不绘制强对比描边。 */
+.ac-param-control.pending .ac-param-select { color: var(--t-1); }
 
 /* ---------- 模型回答的 Markdown ----------
    容器带 **md-view**（editor.css 那整套样式的前缀，少了它全部落空）+ ac-md（本文件的收紧）。
@@ -1423,66 +1493,6 @@
   padding-bottom: 20px;
 }
 
-/* 思考强度滑块。原生 range 在暗色下几乎不可见（默认是亮灰轨道 + 系统色滑块），
-   整条重画：轨道压到 3px 跟上下文进度条同粗，滑块 10px 的圆点。
-   Chromium 的 range 伪元素必须分开写 —— 合并成一条选择器的话整条规则会被丢掉。 */
-.ac-effort {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px 3px 8px;
-  border: 1px solid var(--glass-border);
-  border-radius: 999px;
-  color: var(--fg-dim);
-  font-size: 10.5px;
-  cursor: default;
-  flex-shrink: 0;
-}
-.ac-effort.pending {
-  border-color: rgba(var(--accent-rgb), 0.55);
-  color: var(--fg);
-}
-.ac-effort-label {
-  min-width: 20px; /* 「默认」两字与「低」一字宽度不同，定宽免得滑动时整行跳 */
-  text-align: right;
-}
-.ac-effort-range {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 54px;
-  height: 12px; /* 给滑块留出可抓的高度，轨道本身用伪元素画细 */
-  background: none;
-  cursor: pointer;
-  outline: none;
-}
-.ac-effort-range::-webkit-slider-runnable-track {
-  height: 3px;
-  border-radius: 999px;
-  background: var(--lift-3);
-}
-.ac-effort-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 10px;
-  height: 10px;
-  margin-top: -3.5px; /* (3 - 10) / 2，把圆点压回轨道中线 */
-  border-radius: 50%;
-  background: var(--fg-dim);
-  transition: background 0.12s ease;
-}
-.ac-effort-range:hover::-webkit-slider-thumb,
-.ac-effort.pending .ac-effort-range::-webkit-slider-thumb {
-  background: var(--hl-bg);
-}
-.ac-effort-range:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.28);
-}
-@media (prefers-reduced-motion: reduce) {
-  .ac-effort-range::-webkit-slider-thumb {
-    transition: none;
-  }
-}
-
 /* Frame 里的 AI 对话节点不画自己的边框。
    实测（画布上量的）：.cframe 边框 1.5px、.pane 边框 1px，两者右/底各留 19px 间隙 ——
    两条平行的线夹着一条缝。终端节点也是这个结构，只是它满屏文字盖住了；
@@ -1585,10 +1595,11 @@
    跟输入框同宽、左对齐 —— 它标的是「这次对话的前提」，和框里那条
    「这条消息怎么发」分开。照 DeepSeek Harness 的布局（2026-08-19）。 */
 .ac-ctxbar {
-  width: min(560px, 100%);
+  width: min(720px, 100%);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px 12px;
+  flex-wrap: wrap;
   padding: 0 4px;
 }
 .ac-ctxbar-item {
@@ -1635,13 +1646,13 @@
    禁用时不整个变透明（那样看着像坏了），只降饱和 */
 .ac-input-send {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 50%;
+  border-radius: 9px;
   background: rgba(var(--accent-rgb), 0.9);
   color: var(--on-accent);
   cursor: pointer;
@@ -1655,7 +1666,7 @@
   /* 空框时仍然要看得见 —— 原来用 rgba(255,255,255,.1)，在暗底上几乎消失，
      真机截图里那颗按钮整个不见了。照参考 UI：空框时是一颗淡的强调色圆。 */
   background: rgba(var(--accent-rgb), 0.28);
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--on-accent);
   cursor: default;
   transform: none;
 }
@@ -1668,18 +1679,16 @@
 }
 
 
-/* 聊天态的发送键：跟空态那颗同款圆形。busy 时换成转圈（**不是停止按钮** ——
-   我们只有 `agentChat:stop`，那是杀掉整个会话，不是中断这一轮，
-   摆一颗名不副实的停止键比没有更糟）。 */
+/* 聊天态的主操作键：生成中显示停止图标，调用 interrupt 保留会话。 */
 .ac-bar-send {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 50%;
+  border-radius: 9px;
   background: rgba(var(--accent-rgb), 0.9);
   color: var(--on-accent);
   cursor: pointer;
@@ -1691,7 +1700,7 @@
 }
 .ac-bar-send:disabled {
   background: rgba(var(--accent-rgb), 0.28);
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--on-accent);
   cursor: default;
   transform: none;
 }
@@ -1843,16 +1852,11 @@
 }
 
 
-/* 跑着的时候那颗键是「停」。**给它一个明确不同于发送的样子** ——
-   同一个位置上的两种动作，长得像就会误点：一个是「再说一句」，
-   另一个是「把正在跑的这轮掐掉」。 */
-.ac-bar-send.stop {
-  background: rgba(var(--sem-orange-rgb), 0.16);
-  border-color: rgba(var(--sem-orange-rgb), 0.45);
-  color: var(--sem-orange);
-}
-.ac-bar-send.stop:hover {
-  background: rgba(var(--sem-orange-rgb), 0.26);
+/* 停止按钮在明暗主题及悬停时均保持白底黑图标。 */
+.ac-bar-send.stop,
+.ac-bar-send.stop:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
 }
 
 /* ---------- 压缩分隔线（2026-08-28）----------
@@ -3141,15 +3145,74 @@
 
 /* 能力驱动的目录/资源 UI，适用于所有 harness。 */
 .ac-turn { min-width: 0; }
-.ac-turn-assistant { width: 100%; max-width: 78ch; align-self: center; }
+.ac-turn-assistant { width: 100%; min-width: 0; }
 .ac-model-catalog, .ac-resource-links { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--fg-muted); font-size: 11px; }
 .ac-resource-link { color: var(--accent); background: var(--wash-1); border: 1px solid var(--glass-border); border-radius: 6px; padding: 4px 8px; cursor: pointer; overflow-wrap: anywhere; }
 .ac-resource-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.ac-param-select { max-width: min(240px, 45vw); text-overflow: ellipsis; }
+.ac-param-select { text-overflow: ellipsis; }
 
-/* 与 CLI 选择并列的首轮参数；不依赖会话是否已经创建。 */
-.ac-startup-models { width: min(560px, 100%); align-self: center; padding: 0 12px 10px; box-sizing: border-box; }
-.ac-startup-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.ac-startup-controls label { display: flex; align-items: center; gap: 6px; color: var(--fg-muted); font-size: 12px; min-width: 0; }
-.ac-startup-controls select { min-width: 0; max-width: min(240px, 50vw); }
-.ac-startup-summary { color: var(--fg-muted); font-size: 11px; line-height: 1.6; margin-top: 6px; overflow-wrap: anywhere; }
+/* 首轮与运行中共用输入卡片语言。能力、选择及刷新请求仍由各自数据层管理。 */
+.ac-startup-models { min-width: 0; padding: 0 18px 14px; }
+.ac-startup-controls, .ac-toolbar-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ac-startup-controls label { display: flex; min-width: 0; max-width: 100%; }
+.ac-startup-controls select { max-width: 200px; }
+.ac-startup-summary { color: color-mix(in srgb, var(--fg-dim) 85%, transparent); font-size: 11px; font-weight: 400; line-height: 1.5; margin-top: 8px; overflow-wrap: anywhere; }
+.ac-message-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; margin-left: auto; }
+.ac-message-actions .voice-ctl.inline .voice-btn, .ac-icon-button { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--t-2); flex-shrink: 0; cursor: pointer; }
+.ac-message-actions .voice-btn svg { width: 18px; height: 18px; }
+.ac-icon-button:hover:not(:disabled) { background: var(--lift-2); color: var(--t-1); }
+.ac-icon-button:disabled { opacity: .45; cursor: default; }
+.ac-toolbar-context { color: var(--t-2); font-size: 11px; padding: 0 4px; }
+.ac-effort-select { max-width: 140px; }
+.ac-param-select:focus-visible, .ac-icon-button:focus-visible, .ac-message-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ac-input-wrap, .ac-composer-box { animation: ac-composer-enter 180ms ease-out; }
+@keyframes ac-composer-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@container agent-chat (max-width: 540px) {
+  .ac-empty { padding: 24px 16px; gap: 16px; }
+  .ac-empty:has(.ac-restored) { padding: 0; gap: 0; }
+  .ac-slogan { font-size: 24px; }
+  .ac-startup-controls select, .ac-composer-bar .ac-param-select { max-width: 180px; }
+  .ac-input-wrap, .ac-composer-box { border-radius: 16px; }
+  .ac-input { padding: 14px 12px 8px; }
+  .ac-startup-models { padding: 0 12px 12px; }
+  .ac-composer-box { padding: 12px; }
+}
+@container agent-chat (max-width: 360px) {
+  .ac-startup-controls select, .ac-composer-bar .ac-param-select { max-width: 148px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-input-wrap, .ac-composer-box { animation: none; }
+  .ac-input-send, .ac-bar-send, .ac-icon-button { transition: none; }
+  .ac-input-send:hover:not(:disabled), .ac-bar-send:hover:not(:disabled) { transform: none; }
+}
+
+/* Keep primary actions on one line. The host enforces a 640px pane minimum;
+   labels may shrink with ellipsis, while action hit areas retain their size. */
+.ac-startup-controls, .ac-composer-bar { flex-wrap: nowrap; }
+.ac-startup-controls label, .ac-composer-bar .ac-param-control { min-width: 0; flex: 0 1 auto; }
+.ac-startup-controls select, .ac-composer-bar .ac-param-select { width: auto; max-width: 200px; }
+.ac-startup-controls select[aria-label="启动思考强度"], .ac-composer-bar .ac-effort-select { max-width: 136px; }
+@media (prefers-reduced-motion: reduce) { .ac-param-select { transition: none; } }
+
+/* 权限作为启动操作行的单个图标，气泡 portal 避免被 Frame 裁切。 */
+.ac-sandbox-button[aria-disabled="true"] { opacity: .55; cursor: default; }
+.ac-sandbox-bubble { max-width: min(260px, calc(100vw - 16px)); padding: 9px 12px; text-align: left; }
+.ac-sandbox-bubble strong { display: block; font-weight: 550; }
+.ac-sandbox-bubble span { display: block; margin-top: 3px; opacity: .8; }
+@media (prefers-reduced-motion: reduce) { .ac-sandbox-bubble { animation: none; } }
+
+/* 对话推理强度：短轨道 + 离散刻度，能力目录决定档数，0 为 CLI 默认。 */
+.ac-effort-slider { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 10px; width: 154px; flex: 0 0 auto; border-radius: 999px; background: var(--wash-1); color: var(--t-2); }
+.ac-effort-track { position: relative; display: flex; align-items: center; width: 80px; height: 28px; flex: none; }
+.ac-effort-track input { appearance: none; width: 100%; height: 28px; margin: 0; background: transparent; cursor: pointer; position: relative; z-index: 1; }
+.ac-effort-track input::-webkit-slider-runnable-track { height: 3px; border-radius: 999px; background: linear-gradient(to right, var(--t-2) var(--effort-progress), var(--lift-3) var(--effort-progress)); }
+.ac-effort-track input::-webkit-slider-thumb { appearance: none; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%; background: var(--t-1); border: 1px solid var(--s-2); box-shadow: 0 1px 3px var(--ink-2); }
+.ac-effort-track input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.ac-effort-ticks { position: absolute; display: flex; justify-content: space-between; align-items: center; inset: 0 5.5px; pointer-events: none; }
+.ac-effort-ticks i { width: 3px; height: 7px; border-radius: 999px; background: var(--t-3); opacity: .4; }
+.ac-effort-ticks i.filled { opacity: .9; }
+.ac-effort-value { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; cursor: pointer; }
+.ac-effort-slider.pending .ac-effort-value { color: var(--t-1); }
+
+.ac-session-cli { display: inline-flex; align-items: center; gap: 6px; max-width: 160px; min-width: 0; padding: 3px 0; color: var(--t-2); flex: 0 1 auto; }
+.ac-session-cli > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

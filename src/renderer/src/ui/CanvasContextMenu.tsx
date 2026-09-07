@@ -33,6 +33,8 @@ export interface CanvasMenuItem {
   hint?: string
   /** 右侧的状态 icon。和 hint 二选一——两个都给时 icon 优先。 */
   icon?: JSX.Element
+  /** 标签左侧的动作图标；独立于右侧 hint/icon。 */
+  leadingIcon?: JSX.Element
   /** 分隔线：忽略其余字段 */
   sep?: boolean
   disabled?: boolean
@@ -129,6 +131,7 @@ function Row({
       // 点一下就把菜单关掉的话，用户会以为自己误触了什么
       onClick={it.sub ? undefined : onPick}
     >
+      {it.leadingIcon && <span className="cctx-leading">{it.leadingIcon}</span>}
       <span className="cctx-label">{it.label}</span>
       {it.kbd && <span className="cctx-kbd">{it.kbd}</span>}
       {it.icon ?? (it.hint ? <span className="cctx-hint">{it.hint}</span> : null)}

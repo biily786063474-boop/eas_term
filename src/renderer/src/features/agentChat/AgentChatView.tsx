@@ -1,5 +1,10 @@
+import { ChatStatusIcon } from './ChatStatusIcon'
+import { StartupSetupCard } from './StartupSetupCard'
+import { SemanticIcon } from '../../ui/SemanticIcons'
 import { StartupModelPicker } from './StartupModelPicker'
 import { startupParams, type StartupChoice } from './startupParams'
+import { StartupSandboxButton } from './StartupSandboxButton'
+import { DEFAULT_STARTUP_SANDBOX, startupSandboxParams } from './startupSandbox'
 // 通用 AI CLI 对话节点：空态起会话 + 对话态。
 //
 // 空态与对话态是**同一个组件的两个阶段**，不是两个组件——sessionId 一拿到就切阶段，
@@ -28,7 +33,8 @@ import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
-import { SendIcon, FolderIcon, SparkleIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { CliBrandIcon } from '../../ui/CliBrandIcon'
+import { SendIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { BranchBadge } from './BranchBadge'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
@@ -263,38 +269,12 @@ export function AgentChatView({
   const clearAgentDraft = useStore((s) => s.clearAgentDraft)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
-  /** 点了一个不能直接用的 CLI（没装 / 仅终端）时，下面显示的说明 */
-  const [cliNote, setCliNote] = useState<CliInfo | null>(null)
-
-  /** 点未安装的 CLI → 弹确认框问装不装，点了「安装」就**开个终端把它跑起来**。
-   *
-   *  和原来的区别只在「谁按回车」：以前填进终端等用户自己敲，现在弹窗里点过就替他敲。
-   *  **弹窗里必须原样列出要执行的命令** —— 用户得看得见自己在同意什么。
-   *
-   *  为什么仍然送进终端、而不是后台静默执行（agentInstall.ts 开头那三条，
-   *  后两条和「是否静默」无关，所以保留）：
-   *    · 装完还要 `claude login` 用自己的账号，那步永远绕不过去，藏后台没有意义
-   *    · 公司网络 / 代理 / 权限失败时，报错摆在终端里用户能自己查，
-   *      比一句「安装失败」有用得多
-   *  第一条（静默装全局 CLI 是恶意软件行为特征）在这里不成立：这是用户在界面上
-   *  主动点确认触发的，不是 agent 背着他装。 */
-  //
-  // **2026-08-30 改：不再弹确认框把命令甩进终端**（用户要求「AI 对话模式下的安装
-  // 行为也不要去显示终端，要用安装进度条」）。改成就地打开 CliSetupPanel：
-  // 先摆出命令原文让他看清 → 进度条 → 装完自动接上登录，全程不离开这个面板。
-  // 上面那三条理由里只有第三条还成立（失败要能看到报错），CliSetupPanel 把它接住了：
-  // 失败时展开输出尾部，并保留「把命令填进终端，我自己来」这条退路。
-  //
-  // **这是第三个会置 setupFor 的入口**（另两个是空态闸门与工具栏那条 notice）。
-  // 它不用自己判断「该开哪张面板」—— 分支放在**渲染那一侧**（按 setupFor.cli.auth），
-  // 三个入口于是自动都覆盖到了。判断写在这里的话，每加一个入口就要记得再判一次。
-  const installCli = (c: CliInfo): void => {
-    setCliNote(null)
-    setSetupFor({ cli: c, from: c.available ? 'login' : 'install' })
-  }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
   const [startupChoices, setStartupChoices] = useState<Record<string, StartupChoice>>({})
+  const [sandboxChoice, setSandboxChoice] = useState<string>(DEFAULT_STARTUP_SANDBOX)
+  const readOnlyRole = role?.caps?.write === false
+  const sandboxParams = startupSandboxParams(selected?.id, sandboxChoice, readOnlyRole)
 
 
   // CLI 选择改成下拉（原来是一排芯片）。**三种状态仍然都列出来** —— 没装的、
@@ -304,27 +284,63 @@ export function AgentChatView({
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
     setCliMenuAt({ x: r.left, y: r.bottom + 4 })
   }
-  const cliMenuItems: CanvasMenuItem[] = (clis ?? []).map((c) => {
-    const usable = c.available && c.chatSupported
-    const tag = !c.available ? '未安装' : !c.chatSupported ? '仅终端' : null
-    return {
-      label: c.displayName,
-      hint: tag ?? (c.id === selected?.id ? '当前' : undefined),
-      // 不用 disabled：点不动的话就没法给出安装入口了（同芯片那版的理由）
-      // 未安装且有安装命令的**直接弹确认框**，不再先给一张提示卡让用户再点一次；
-      // 没有安装命令的（要去官网装）仍然给提示卡说明。
-      onClick: () =>
-        usable
-          ? // **记下他的选择。** 下次新建会话就默认这个 ——
-            // 用户 2026-09-02：「我上次用了 cc 下次新建还是 cc。」
-            // 只在**手动切换**这一处记，不在自动挑选那处记：否则第一次的推测
-            // 会被写成「他的选择」，从此再也回不到推测逻辑上去。
-            (writeLastCli(c.id), setSelected(c))
-          : !c.available && c.installCmd
-            ? installCli(c)
-            : setCliNote(c)
+  // Selection is the owner of every startup notice; never keep a second stale CLI note.
+  const selectionEpoch = useRef(0)
+  const selectedIdRef = useRef(selected?.id)
+  selectedIdRef.current = selected?.id
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null)
+  const [refreshingClis, setRefreshingClis] = useState(false)
+  const [authRevision, setAuthRevision] = useState(0)
+  const pickCli = (c: CliInfo): void => {
+    selectionEpoch.current++
+    selectedIdRef.current = c.id
+    setSelected(c)
+    writeLastCli(c.id)
+    setSetupFor(null)
+    setAuth(null)
+    setAuthChecking(false)
+    setAuthRevision(v => v + 1)
+    setStartError(null)
+    setDiscoveryError(null)
+    setRefreshingClis(false)
+  }
+  const installCli = (c: CliInfo): void => {
+    setSetupFor({ cli: c, from: c.available ? 'login' : 'install' })
+  }
+  const refreshClis = async (cliId = selectedIdRef.current): Promise<void> => {
+    const epoch = ++selectionEpoch.current
+    setRefreshingClis(true)
+    setDiscoveryError(null)
+    try {
+      const list = await window.api.agentChat.listClis()
+      if (!aliveRef.current || epoch !== selectionEpoch.current) return
+      setClis(list)
+      const next = cliId ? list.find(c => c.id === cliId) : list.find(c => c.available && c.chatSupported) ?? list.find(c => c.chatSupported) ?? list[0]
+      if (next) setSelected(next)
+      else if (cliId) {
+        setSelected(cur => cur ? { ...cur, available: false } : cur)
+        setDiscoveryError('没有检测到当前 CLI，请检查安装后重试。')
+      }
+      setAuthRevision(v => v + 1)
+    } catch {
+      if (aliveRef.current && epoch === selectionEpoch.current)
+        setDiscoveryError('检测未完成，请稍后重试。')
+    } finally {
+      if (aliveRef.current && epoch === selectionEpoch.current) setRefreshingClis(false)
     }
-  })
+  }
+  const completeSetup = (cliId: string): void => {
+    if (selectedIdRef.current !== cliId) return
+    setSetupFor(null)
+    setAuth(null)
+    void refreshClis(cliId)
+  }
+  const cliMenuItems: CanvasMenuItem[] = (clis ?? []).map((c) => ({
+    label: c.displayName,
+    leadingIcon: <CliBrandIcon cliId={c.id} bundled={c.bundled} />,
+    hint: !c.available ? (c.bundled ? '运行文件缺失' : '未安装') : !c.chatSupported ? '仅终端' : c.id === selected?.id ? '当前' : undefined,
+    onClick: () => pickCli(c)
+  }))
   // **配好之后也要有路回设置面板。**
   //
   // 原来三个入口全是「出事了才出现」：空态闸门（没配好时）、工具栏那条
@@ -463,10 +479,12 @@ export function AgentChatView({
     ? [
         {
           label: '打开终端到这个 worktree',
+          leadingIcon: <SemanticIcon kind="terminal" size={16} />,
           onClick: () => void openTerminal({ cwd: effectiveCwd })
         },
         {
           label: '合并到主干',
+          leadingIcon: <SemanticIcon kind="merge" size={16} />,
           hint: '起一个合并官会话，首条消息已预填',
           // 在**同一个 Frame** 里起一个合并官节点，首条消息只预填不发 —— 合并是不可逆的，
           // 用户得看一眼分支名、按一下发送才算下令。CLI 沿用本节点的（合并官 kind:'auto'）。
@@ -495,6 +513,7 @@ export function AgentChatView({
         { sep: true, label: '', onClick: () => {} },
         {
           label: '删除 worktree',
+          leadingIcon: <SemanticIcon kind="worktree" size={16} />,
           danger: true,
           // 会话跑着的时候删不得 —— 那棵树就是它此刻的 cwd。
           // 置 disabled 而不是藏起来：藏了用户会以为这个菜单本来就没这条。
@@ -547,12 +566,14 @@ export function AgentChatView({
   const [orphansOpen, setOrphansOpen] = useState(false)
   useEffect(() => {
     // 没选、没装、或者这个 CLI 不支持会话，都不用查 —— 那些有各自的提示路径
+    setAuth(null)
+    setAuthChecking(false)
     if (!selected || !selected.available || !selected.chatSupported) {
       setAuth(null)
       return
     }
     // 已经在跑的会话不查：它显然是能用的，查一次纯属白花几百毫秒
-    if (sessionId) return
+    if (sessionId && authRevision === 0) return
     let cancelled = false
     setAuthChecking(true)
     // **判据是能力位，而且必须写成排除式。**
@@ -571,7 +592,7 @@ export function AgentChatView({
     void probe
       .then((st) => {
         if (cancelled) return
-        setAuth(st)
+        setAuth(st ? { ...st, cli: selected.id } : null)
         setAuthChecking(false)
       })
       .catch(() => {
@@ -583,10 +604,10 @@ export function AgentChatView({
     return () => {
       cancelled = true
     }
-  }, [selected, sessionId])
+  }, [selected, sessionId, authRevision])
 
   /** **只有明确知道「没登录」时才拦。** 读不到（status 为 null）一律放行 */
-  const blockedByAuth = !!auth && auth.installed && auth.status?.loggedIn === false
+  const blockedByAuth = !!auth && auth.cli === selected?.id && auth.installed && auth.status?.loggedIn === false
   const [view, setView] = useState<ChatView | null>(null)
   /** 上次退出时留在这个节点里的聊天记录。
    *
@@ -716,6 +737,10 @@ export function AgentChatView({
         // （一个 CLI 都没装）看到的是一句干巴巴的「没有探测到可用的 CLI」，
         // 连有哪些可选都不知道。现在没装的也列出来、标出来、点一下能装。
         setClis(list)
+        // 活跃会话已有确定归属，发现 CLI 暂不可用也不能把身份/能力换成另一家。
+        const activeCli = paneSessionId && list.find(c => c.id === pinnedCli)
+        if (activeCli) { setSelected(cur => cur ?? activeCli); return }
+
         // 默认只选**现在就能用**的：装了 + 支持会话。没有就不预选，
         // 让用户自己点（点到没装的会给安装入口）
         const usable = list.filter((c) => c.available && c.chatSupported)
@@ -763,7 +788,7 @@ export function AgentChatView({
                 : '这段对话的来源认不出来了（会话可能已被清理），已开成新的一段。'
             })
           }
-          setSelected((cur) => cur ?? pick.cli)
+          setSelected((cur) => cur ?? pick.cli ?? list.find(c => c.chatSupported) ?? list[0] ?? null)
         })()
       })
       .catch(() => {
@@ -970,7 +995,7 @@ export function AgentChatView({
     // 用户自己按发送才展开挂着的提示词
     const expanded = override !== undefined ? null : expandChips(text, chips)
     const message = override !== undefined ? override.trim() : expanded!.text
-    if (!message || !selected || starting || sessionId) return
+    if (!message || !selected || !selected.available || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
     // **没登录就别起进程。** 起了也是撞 401 死掉，还白花一次冷启动，
     // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
     // 打的字**留在输入框里** —— 登录完回来就能直接发，不用重打
@@ -1065,6 +1090,7 @@ export function AgentChatView({
         ...(roleContract ? { roleContract } : {}),
         ...(roleBounds ? { roleBounds } : {}),
         ...startupParams(startupChoices[selected.id], roleModel, roleEffort),
+        ...sandboxParams,
         // 角色 id 也要过去 —— 协同板按它查角色名，不带就是板上一行匿名分支
         ...(role?.id ? { roleId: role.id } : {}),
         ...identity,
@@ -1090,6 +1116,7 @@ export function AgentChatView({
           ...(roleContract ? { roleContract } : {}),
           ...(roleBounds ? { roleBounds } : {}),
           ...startupParams(startupChoices[selected.id], roleModel, roleEffort),
+          ...sandboxParams,
           ...(role?.id ? { roleId: role.id } : {}),
           ...identity
         })
@@ -1352,6 +1379,7 @@ export function AgentChatView({
           caps={
             view?.capabilities ? { ...selected!.capabilities, ...view.capabilities } : selected!.capabilities
           }
+          cli={selected!}
           approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
@@ -1385,20 +1413,14 @@ export function AgentChatView({
           // 走到那儿的必然是 cliAuth 认识的那两个，断言仍然成立。
           (setupFor.cli.auth === 'provider-key' ? (
             <OmpSetupPanel
+              key={setupFor.cli.id}
               cli={setupFor.cli}
               onCancel={() => setSetupFor(null)}
-              onDone={() => {
-                setSetupFor(null)
-                // **重新问主进程，不在这里自己拼一个 `loggedIn: true`。**
-                // omp 那边的「就绪」是「选了模型 ＋ 冒烟通过」合起来算出来的，
-                // 渲染层臆造一个 true 会跟它对不上（面板说好了、闸门还拦着，或反过来）。
-                void probeOmp().then((st) => {
-                  if (aliveRef.current) setAuth(st)
-                })
-              }}
+              onDone={() => completeSetup(setupFor.cli.id)}
             />
           ) : (
             <CliSetupPanel
+              key={setupFor.cli.id}
               cliId={setupFor.cli.id as 'claude' | 'codex'}
               displayName={setupFor.cli.displayName}
               installCmd={setupFor.cli.installCmd}
@@ -1408,10 +1430,7 @@ export function AgentChatView({
               autoStart={setupFor.from === 'install'}
               from={setupFor.from}
               onCancel={() => setSetupFor(null)}
-              onDone={(status) => {
-                setAuth((cur) => (cur ? { ...cur, status } : cur))
-                setSetupFor(null)
-              }}
+              onDone={() => completeSetup(setupFor.cli.id)}
             />
           ))}
         {/* 分支菜单。**两条 return 各渲染一次** —— 菜单本身走 portal 挂到 body，
@@ -1436,6 +1455,26 @@ export function AgentChatView({
   const contextLost = restored.turns.length > 0 && contextLostOf(restored.resumeId, savedResumeId)
 
   const phase = startupPhaseOf({ clis, selected, starting, startError })
+  const startupActions = (
+    <div className="ac-message-actions">
+      <VoiceButton ptyId={`agent-empty-${leafId}`} inline onText={(t) => setText((v) => (v ? v + t : t))} />
+      <button
+        type="button"
+        className="ac-input-send"
+        aria-label="发送消息"
+        data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
+        onClick={() => void handleSend()}
+        disabled={(!text.trim() && !chips.length) || phase.k !== 'ready' || refreshingClis || authChecking || blockedByAuth}
+      >
+        {phase.k === 'starting' ? (
+          <span className="ac-dot" aria-hidden="true" />
+        ) : (
+          <SendIcon size={18} />
+        )}
+      </button>
+    </div>
+  )
+
   return (
     <div className="agent-chat-view">
       <div className="ac-empty">
@@ -1471,100 +1510,14 @@ export function AgentChatView({
             {/* 空态这里原来是个 sparkle 图标。图标在这个位置只是"有个东西"，
                 一句话能把这个软件是干什么的说清楚，还顺带告诉人下一步该做什么。 */}
             <div className="ac-slogan">伟大的产品始于一句“你好”</div>
-            {/* 这个项目里还留着、但节点已经关掉的对话。**不自动带进来** ——
-                那是别的对话框的内容，替用户决定接上哪一段是越权；给入口、他自己挑。
-                只列最近 3 条，再多就成了历史管理界面，不是这里该干的事。 */}
-            {orphans.length > 0 && (
-              <div className="ac-orphans">
-                {/* **默认折叠**（用户 2026-09-03：「中间这个部分应该默认折叠，
-                    现在这种状态看起来太满了」）。
-                    空态第一屏该只有一句 slogan 和输入框 —— 三条历史摊开会把它填满，
-                    而那是「可能要接回去」的东西，不是「现在要做」的事。
-                    条数写在标题上：不展开也知道有没有、有几条。 */}
-                <button
-                  type="button"
-                  className={`ac-orphans-t${orphansOpen ? ' on' : ''}`}
-                  onClick={() => setOrphansOpen((v) => !v)}
-                >
-                  <ChevronRightIcon size={11} />
-                  这个项目里还有 {orphans.length} 段关掉的对话
-                </button>
-                {orphansOpen &&
-                  orphans.slice(0, 3).map((h) => (
-                  <button
-                    key={h.leafId}
-                    type="button"
-                    className="ac-orphan"
-                    onClick={() => void adoptOrphan(h)}
-                    title={h.preview}
-                  >
-                    <span className="ac-orphan-p">{h.preview || '（没有文字内容）'}</span>
-                    <span className="ac-orphan-m">
-                      {h.turns} 轮 · {fmtWhen(h.savedAt)}
-                    </span>
-                  </button>
-                  ))}
-              </div>
-            )}
           </>
         )}
 
-        {/* 输入框**上方**的一行上下文：在哪个目录跑、用哪个 CLI。
-            照 DeepSeek Harness 那套布局来（用户 2026-08-19 指定）——「这次对话的前提」
-            排在输入框上面，「这条消息怎么发」排在输入框里面，两类东西不再混在一起。 */}
-        <div className="ac-ctxbar">
-          {/* 显示的是**真正跑在哪** —— 有 worktree 时它是那棵树，不是项目根 */}
-          <span className="ac-ctxbar-item" data-tip={effectiveCwd}>
-            <FolderIcon size={12} />
-            <span className="ac-ctxbar-name">
-              {effectiveCwd.split('/').filter(Boolean).pop() ?? effectiveCwd}
-            </span>
-          </span>
-          <button
-            type="button"
-            className="ac-ctxbar-item as-btn"
-            onClick={(e) => openCliMenu(e)}
-            disabled={phase.k === 'starting' || !clis?.length}
-            data-tip="换一个 CLI"
-          >
-            <SparkleIcon size={12} />
-            <span className="ac-ctxbar-name">
-              {selected?.displayName ?? (phase.k === 'detecting' ? '检测中…' : '选一个 CLI')}
-            </span>
-            <ChevronDownIcon size={10} />
-          </button>
-          {/* 角色。**和「选哪个 CLI」并排是有意的** —— 两者都是「这次对话
-              开起来之前要定的」，而且都在 spawn 那一刻生效、之后改不了。
-              默认没有角色（轮播第一张就是「无角色」）。 */}
-          <RolePicker
-            roleId={roleId}
-            cli={selected?.id as HarnessId}
-            onPick={handlePickRole}
-          />
-          {/* 分支徽标。对话态那份在 ChatToolbar 的控件行上，同一个组件。 */}
-          {worktree && (
-            <BranchBadge
-              worktree={worktree}
-              effectiveCwd={effectiveCwd}
-              overlap={branchOverlap}
-              onOpenMenu={openBranchMenu}
-            />
-          )}
-        </div>
-        {selected?.available && selected.chatSupported && <StartupModelPicker
-          key={selected.id}
-          cli={selected}
-          choice={startupChoices[selected.id]}
-          roleModel={role?.model?.[selected.id as HarnessId]}
-          roleEffort={role?.effort?.[selected.id as HarnessId]}
-          disabled={starting}
-          onChange={choice => setStartupChoices(current => ({...current,[selected.id]:choice}))}
-        />}
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         {/* **有历史时用对话态的输入框尺寸。**
             两者的视觉（圆角/边/底）本来就是同一套，差的是**宽度与留白**：
-            空态是 `min(560px)` 居中的高框 —— 那是「从零开始」该有的样子，
+            空态是 `min(720px)` 居中的高框 —— 那是「从零开始」该有的样子，
             大而居中，请你说第一句话。
             但有历史时上面已经摆着满屏对话了，再来一个居中大框，
             看着像是「另起一个新会话」而不是「接着上面聊」。
@@ -1627,27 +1580,105 @@ export function AgentChatView({
             autoFocus
             disabled={phase.k === 'starting'}
           />
-          {/* 输入框**内部底边**的一条：这次消息怎么发。照 DeepSeek 那套布局，
-              「前提」（目录 / CLI）在框上方，「这条怎么发」在框里面。
-              麦克风保留（用户 2026-08-19 特别交代），跟发送并排在右下角。 */}
-          <div className="ac-input-bar">
-            <span className="ac-input-bar-spacer" />
-            <VoiceButton ptyId={`agent-empty-${leafId}`} inline onText={(t) => setText((v) => (v ? v + t : t))} />
+          {/* 首轮参数与消息动作共用输入卡片，CLI 切换仍由 key 隔离目录请求。 */}
+          {selected?.available && selected.chatSupported ? (
+            <StartupModelPicker
+              key={selected.id}
+              cli={selected}
+              choice={startupChoices[selected.id]}
+              roleModel={role?.model?.[selected.id as HarnessId]}
+              roleEffort={role?.effort?.[selected.id as HarnessId]}
+              disabled={starting}
+              actions={<>
+                {selected.id === 'codex' && <StartupSandboxButton
+                  value={sandboxParams.sandbox!} disabled={starting} readOnlyRole={readOnlyRole}
+                  onChange={setSandboxChoice} />}
+                {startupActions}
+              </>}
+              onChange={(choice) => setStartupChoices((current) => ({ ...current, [selected.id]: choice }))}
+            />
+          ) : (
+            <div className="ac-input-bar"><span className="ac-model-unavailable">完成设置后选择模型</span>{startupActions}</div>
+          )}
+
+        </div>
+        <div className="ac-ctxbar">
+          {/* 显示的是**真正跑在哪** —— 有 worktree 时它是那棵树，不是项目根 */}
+          <span className="ac-ctxbar-item" data-tip={effectiveCwd}>
+            <SemanticIcon kind={worktree ? 'worktree' : 'folder'} size={16} />
+            <span className="ac-ctxbar-name">
+              {effectiveCwd.split('/').filter(Boolean).pop() ?? effectiveCwd}
+            </span>
+          </span>
+          <button
+            type="button"
+            className="ac-ctxbar-item as-btn"
+            onClick={(e) => openCliMenu(e)}
+            disabled={phase.k === 'starting' || !clis?.length}
+            data-tip="换一个 CLI"
+          >
+            <CliBrandIcon cliId={selected?.id} bundled={selected?.bundled} />
+            <span className="ac-ctxbar-name">
+              {selected?.displayName ?? (phase.k === 'detecting' ? '检测中…' : '选一个 CLI')}
+            </span>
+            <ChevronDownIcon size={10} />
+          </button>
+          {/* 角色。**和「选哪个 CLI」并排是有意的** —— 两者都是「这次对话
+              开起来之前要定的」，而且都在 spawn 那一刻生效、之后改不了。
+              默认没有角色（轮播第一张就是「无角色」）。 */}
+          <RolePicker
+            roleId={roleId}
+            cli={selected?.id as HarnessId}
+            onPick={handlePickRole}
+          />
+          {/* 分支徽标。对话态那份在 ChatToolbar 的控件行上，同一个组件。 */}
+          {worktree && (
+            <BranchBadge
+              worktree={worktree}
+              effectiveCwd={effectiveCwd}
+              overlap={branchOverlap}
+              onOpenMenu={openBranchMenu}
+            />
+          )}
+          {!worktree && !savedResumeId && role?.isolation === 'worktree' && <span className="ac-ctxbar-item" data-tip="发送首条消息时创建独立工作区">
+            <SemanticIcon kind="worktree" size={16} /><span className="ac-ctxbar-name">Worktree · 待创建</span>
+          </span>}
+        </div>
+        {/* 这个项目里还留着、但节点已经关掉的对话。**不自动带进来** ——
+            那是别的对话框的内容，替用户决定接上哪一段是越权；给入口、他自己挑。
+            只列最近 3 条，再多就成了历史管理界面，不是这里该干的事。 */}
+        {restored.turns.length === 0 && orphans.length > 0 && (
+          <div className="ac-orphans">
+            {/* **默认折叠**（用户 2026-09-03：「中间这个部分应该默认折叠，
+                现在这种状态看起来太满了」）。
+                空态第一屏该只有一句 slogan 和输入框 —— 三条历史摊开会把它填满，
+                而那是「可能要接回去」的东西，不是「现在要做」的事。
+                条数写在标题上：不展开也知道有没有、有几条。 */}
             <button
               type="button"
-              className="ac-input-send"
-              data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
-              onClick={() => void handleSend()}
-              disabled={(!text.trim() && !chips.length) || phase.k !== 'ready'}
+              className={`ac-orphans-t${orphansOpen ? ' on' : ''}`}
+              onClick={() => setOrphansOpen((v) => !v)}
             >
-              {phase.k === 'starting' ? (
-                <span className="ac-dot" aria-hidden="true" />
-              ) : (
-                <SendIcon size={15} />
-              )}
+              <ChevronRightIcon size={11} />
+              这个项目里还有 {orphans.length} 段关掉的对话
             </button>
+            {orphansOpen &&
+              orphans.slice(0, 3).map((h) => (
+              <button
+                key={h.leafId}
+                type="button"
+                className="ac-orphan"
+                onClick={() => void adoptOrphan(h)}
+                title={h.preview}
+              >
+                <span className="ac-orphan-p">{h.preview || '（没有文字内容）'}</span>
+                <span className="ac-orphan-m">
+                  {h.turns} 轮 · {fmtWhen(h.savedAt)}
+                </span>
+              </button>
+              ))}
           </div>
-        </div>
+        )}
         {/* 有 resumeId = 这个节点之前聊过，上下文在 CLI 那边留着，发第一条就续上。
             不说的话用户会以为记录丢了。
             **但上面已经摆着历史时不要说这句** —— 它的原文是「上面的对话记录不保留」，
@@ -1658,74 +1689,29 @@ export function AgentChatView({
         {savedResumeId && !restored.turns.length && (
           <div className="ac-resume-hint">接着上次的上下文继续（上面的对话记录不保留）</div>
         )}
-        {(phase.k === 'detecting' || phase.k === 'none') && (
-          <div className="ac-clis-hint">
-            {phase.k === 'detecting' ? '正在检测可用的 CLI…' : '没有可用的 CLI'}
-          </div>
-        )}
-        {/* ── 登录闸门 ────────────────────────────────────────────────
-            **摆在输入框下面而不是替换掉它**：用户可能已经打了半屏字，
-            把输入框换掉等于把那些字藏起来（回来还得重打）。
-            让他照常打、照常按发送，handleSend 拦一下把这块展开就够了。 */}
-        {/* **闸门和灯箱不再是二选一。** 灯箱现在 portal 到 body、盖在整个窗口上，
-            闸门留在原地就好 —— 关掉灯箱时它还在，用户知道自己回到了哪儿。
-            （改成灯箱之前这里是三元表达式，灯箱一开闸门就消失，
-            关掉灯箱那一瞬间闸门又跳回来，闪一下） */}
-        {blockedByAuth && (
-          <div className="ac-authgate">
-            {/* **两支文案按 `auth` 能力位分，不按 CLI 名字。**
-                omp 这一支说的是完全不同的一件事：它没有账号、没有浏览器授权，
-                拦住人的是「还没选服务商 / 还没填 key」。照搬「还没登录」的原文案
-                会把人推去找一个根本不存在的登录入口。
-                原文案原样留给 `cli-login`（也留给所有不声明这个字段的老 adapter）。 */}
-            {selected?.auth === 'provider-key' ? (
-              <span>
-                <b>{selected.displayName}</b> 还没配好。选一家模型服务商，用你已经买的
-                订阅登录、或者填一把 API key —— 两条都行，全程在这里完成。
-              </span>
-            ) : (
-              <span>
-                <b>{selected?.displayName}</b> 还没登录。登录之后才能开始对话 ——
-                整个过程在这里完成，不用去终端。
-              </span>
-            )}
-            <button
-              type="button"
-              className="ac-authgate-go"
-              onClick={() => selected && setSetupFor({ cli: selected, from: 'login' })}
-            >
-              {selected?.auth === 'provider-key' ? '去设置' : '点我去登录'}
-            </button>
-          </div>
-        )}
-        {/* 正在查登录状态时给一句 —— 冷启的 CLI 要一两秒，没有这句会像卡住了。
-            omp 那支查的是「配好了没有」而不是「登没登录」，措辞跟着 `auth` 走。 */}
-        {authChecking && !setupFor && !blockedByAuth && (
-          <div className="ac-clis-hint">
-            正在确认 {selected?.displayName} 的
-            {selected?.auth === 'provider-key' ? '配置状态' : '登录状态'}…
-          </div>
-        )}
+        <StartupSetupCard
+          cli={selected}
+          detecting={phase.k === 'detecting' || refreshingClis || authChecking}
+          blockedByAuth={blockedByAuth}
+          error={discoveryError}
+          alternatives={(clis ?? []).filter(c => c.available && c.chatSupported && c.id !== selected?.id)}
+          onPick={pickCli}
+          onSetup={() => selected && installCli(selected)}
+          onRefresh={() => void refreshClis()}
+        />
         {setupFor &&
           // 分支理由同对话态那处：**排除式**，只有 `provider-key` 走 omp，
           // 其余一切（含所有不声明这个字段的老 adapter）原样走 CliSetupPanel。
           (setupFor.cli.auth === 'provider-key' ? (
             <OmpSetupPanel
+              key={setupFor.cli.id}
               cli={setupFor.cli}
               onCancel={() => setSetupFor(null)}
-              onDone={() => {
-                setSetupFor(null)
-                // 和登录那支一样：**就地重查一次**，不等下一次 effect ——
-                // 那个 effect 依赖 [selected, sessionId]，配完 key 这两个都没变，
-                // 不主动更新的话闸门会一直挂着，人配完了还被挡着发不出去。
-                // 用重查而不是自己拼 true 的理由见对话态那处的注释。
-                void probeOmp().then((st) => {
-                  if (aliveRef.current) setAuth(st)
-                })
-              }}
+              onDone={() => completeSetup(setupFor.cli.id)}
             />
           ) : (
             <CliSetupPanel
+              key={setupFor.cli.id}
               cliId={setupFor.cli.id as 'claude' | 'codex'}
               displayName={setupFor.cli.displayName}
               installCmd={setupFor.cli.installCmd}
@@ -1735,13 +1721,7 @@ export function AgentChatView({
               autoStart={setupFor.from === 'install'}
               from={setupFor.from}
               onCancel={() => setSetupFor(null)}
-              onDone={(status) => {
-                // 登录成功：把闸门放下，并**就地更新 auth**，不等下一次 effect ——
-                // 那个 effect 依赖 [selected, sessionId]，登录并不改变这两个，
-                // 不手动更新的话闸门会一直挂着，用户登完了还被挡着发不出去
-                setAuth((cur) => (cur ? { ...cur, status } : cur))
-                setSetupFor(null)
-              }}
+              onDone={() => completeSetup(setupFor.cli.id)}
             />
           ))}
         {cliMenuAt && (
@@ -1760,35 +1740,7 @@ export function AgentChatView({
             onClose={() => setBranchMenuAt(null)}
           />
         )}
-        {cliNote && (
-          <div className="ac-cli-note">
-            {!cliNote.available ? (
-              <>
-                <b>{cliNote.displayName}</b> 还没装。
-                {cliNote.installCmd ? (
-                  <>
-                    {' '}
-                    点下面这行会问你要不要现在装。
-                    <button className="ac-cli-cmd" onClick={() => installCli(cliNote)}>
-                      <code>{cliNote.installCmd}</code>
-                    </button>
-                  </>
-                ) : (
-                  ' 请到它的官网安装。'
-                )}
-              </>
-            ) : (
-              <>
-                <b>{cliNote.displayName}</b> 已安装，但{cliNote.scopeNote ?? '不能用于 AI 对话'}。
-                在终端里直接敲 <code>{cliNote.id}</code> 就能用。
-              </>
-            )}
-            <button className="ac-cli-note-x" onClick={() => setCliNote(null)}>
-              ×
-            </button>
-          </div>
-        )}
-        {phase.k === 'failed' && <div className="ac-error">{phase.error}</div>}
+        {phase.k === 'failed' && <div className="ac-error" role="alert"><ChatStatusIcon fatal /><span>{phase.error}</span></div>}
       </div>
     </div>
   )

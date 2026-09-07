@@ -179,6 +179,7 @@ export function VoiceButton({
       {err && <div className="voice-err">{err}</div>}
       <button
         className={`voice-btn${rec ? ' rec' : ''}${downloading ? ' dl' : ''}`}
+        aria-label={rec ? '停止语音输入' : '语音输入'}
         data-tip={downloading ? '正在下载语音模型…' : rec ? '停止语音输入' : '语音输入'}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={onClick}

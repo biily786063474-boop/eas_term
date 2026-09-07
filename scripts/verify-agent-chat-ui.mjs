@@ -83,6 +83,7 @@ import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { verifyChatIntegration } from './verify-agent-chat-integration.mjs'
 
 if (typeof WebSocket === 'undefined') {
   console.error(`✗ 需要 Node 22+（当前 ${process.version}）——本脚本用原生 WebSocket 连 CDP`)
@@ -319,7 +320,17 @@ const PRELOAD_RESOLVEAPPROVAL_PATCHED = `    resolveApproval: AGENT_CHAT_TEST_MO
         ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),`
 
 const PRELOAD_EXPOSE_ANCHOR = `contextBridge.exposeInMainWorld('api', api)`
-const PRELOAD_EXPOSE_PATCHED = `contextBridge.exposeInMainWorld('api', api)
+const PRELOAD_EXPOSE_PATCHED = fs.readFileSync(new URL('./fixtures/chat-integration-preload.txt', import.meta.url), 'utf8') + `
+if (AGENT_CHAT_TEST_MODE) {
+  const paramCalls: {sessionId: string; patch: {model?: string; effort?: string}}[] = []
+  const setParams = api.agentChat.setParams
+  api.agentChat.setParams = (sessionId, patch) => {
+    paramCalls.push({sessionId,patch:{...patch}})
+    return setParams(sessionId,patch)
+  }
+  contextBridge.exposeInMainWorld('__agentChatTestParamCalls', () => paramCalls)
+}
+contextBridge.exposeInMainWorld('api', api)
 
 // TEMP(task-8 e2e)：测试模式下额外暴露两个自省入口——
 //   __agentChatTestPush(sessionId, event)：把假 ChatEvent 直接推给已注册监听器；
@@ -442,13 +453,22 @@ class Cdp {
   /** 用一段「返回元素」的 JS 表达式定位目标，滚入视口、取真实屏幕坐标，再真实点击它的中心点。
    *  返回点击到的坐标，供调用方需要时复用（比如 elementFromPoint 断言）。 */
   async clickElement(findExpr, desc) {
-    const rectJson = await this.eval(`(function(){
+    // 等布局与命中目标稳定后再点，避免模型目录/历史异步加载移动控件。
+    let previousRect = null
+    const rectJson = await waitFor(async () => {
+      const current = await this.eval(`(function(){
       const el = (${findExpr})
       if (!el) return null
       el.scrollIntoView({ block: 'center', inline: 'center' })
       const r = el.getBoundingClientRect()
+      const hit = document.elementFromPoint(r.left+r.width/2, r.top+r.height/2)
+      if (!hit || !el.contains(hit)) return null
       return JSON.stringify({ x: r.left + r.width/2, y: r.top + r.height/2, w: r.width, h: r.height })
     })()`)
+      const stable = current && current === previousRect
+      previousRect = current
+      return stable ? current : null
+    }, {timeout:8000,interval:150,desc:'可点击且位置稳定：'+desc})
     if (!rectJson) throw new Error(`clickElement: 找不到元素 —— ${desc}`)
     const { x, y, w, h } = JSON.parse(rectJson)
     if (w <= 0 || h <= 0) throw new Error(`clickElement: 元素尺寸为 0（不可能真实点击到）—— ${desc}`)
@@ -477,7 +497,7 @@ async function waitFor(fn, { timeout = 8000, interval = 200, desc = '' } = {}) {
 // ════════════════════════════ 第三部分：断言记录 ════════════════════════════
 
 const ASSERTION_NAMES = {
-  1: '画布上建出 agent 节点，空态可见（logo + 输入框 + CLI 选择器）',
+  1: '画布上建出 agent 节点，空态可见（引导语 + 输入框 + CLI 选择器）',
   2: '真实坐标点击输入框能聚焦、能输入',
   3: '发送后切到对话态',
   4: '模型文字显示、执行区默认三行、点击展开显示全部',
@@ -507,6 +527,44 @@ function skip(id, detail) {
 
 // ════════════════════════════ 第四部分：主流程 ════════════════════════════
 
+/** 验证窄 Frame 下可见操作没有溢出或互相覆盖；记录亮色截图供眼验。 */
+async function verifyComposerLayout(cdp, outDir, name) {
+  const originalTheme = await cdp.eval(`document.documentElement.dataset.theme ?? ''`)
+  await cdp.eval(`document.querySelector('.agent-chat-view').style.width='640px'`)
+  await sleep(150)
+  const geometry = await cdp.eval(`(() => {
+    const root=document.querySelector('.agent-chat-view'), bound=root.getBoundingClientRect();
+    const controls=[...root.querySelectorAll('.ac-startup-controls select, .ac-composer-bar select, .ac-effort-slider, .ac-icon-button, .ac-message-actions button')];
+    const boxes=controls.map(el=>{const r=el.getBoundingClientRect();return {label:el.getAttribute('aria-label'),left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}});
+    const outside=boxes.filter(r=>r.left<bound.left-1||r.right>bound.right+1||r.top<bound.top||r.bottom>bound.bottom+1);
+    const overlaps=boxes.flatMap((a,i)=>boxes.slice(i+1).filter(b=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1).map(b=>[a.label,b.label]));
+    const icons=[...root.querySelectorAll('.ac-icon-button, .ac-message-actions button')].map(el=>({label:el.getAttribute('aria-label'),icon:!!el.querySelector('svg'),text:el.textContent.trim()}));
+    return {width:root.clientWidth,boxes,outside,overlaps,icons,sameRow:Math.max(...boxes.map(b=>(b.top+b.bottom)/2))-Math.min(...boxes.map(b=>(b.top+b.bottom)/2))<2};
+  })()`)
+  if(!geometry.sameRow||geometry.outside.length||geometry.overlaps.length||geometry.icons.some(i=>!i.label||!i.icon||i.text)) throw new Error(name+' 输入操作布局错误: '+JSON.stringify(geometry))
+  const pills = await cdp.eval(`Array.from(document.querySelectorAll('.ac-startup-controls select,.ac-composer-bar select')).map(s=>({label:s.getAttribute('aria-label'),width:s.getBoundingClientRect().width,height:s.getBoundingClientRect().height,radius:getComputedStyle(s).borderRadius,fieldSizing:getComputedStyle(s).fieldSizing}))`)
+  if(pills.some(p=>p.width>201||p.height!==32||parseFloat(p.radius)<16||p.fieldSizing!=='content')) throw new Error(name+' 胶囊尺寸未生效 '+JSON.stringify(pills))
+  log(name+' 紧凑选择框 '+JSON.stringify(pills))
+  const sandboxAnchor = await cdp.eval(`(() => {
+    const bubble=document.querySelector('.ac-sandbox-bubble'),button=document.querySelector('.ac-sandbox-button');
+    if(!bubble||!button)return null;
+    const r=bubble.getBoundingClientRect(),b=button.getBoundingClientRect();
+    const expected=Math.max(8+r.width/2,Math.min(innerWidth-8-r.width/2,b.left+b.width/2));
+    return {actual:r.left+r.width/2,expected};
+  })()`)
+  if(sandboxAnchor && Math.abs(sandboxAnchor.actual-sandboxAnchor.expected)>1) throw new Error('输入区缩放后沙箱气泡未跟随按钮 '+JSON.stringify(sandboxAnchor))
+
+
+  for(const theme of ['dark','light']) {
+    await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+    await sleep(100)
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+    fs.writeFileSync(path.join(outDir,name+'-narrow-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))
+  }
+  await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(originalTheme)};document.querySelector('.agent-chat-view').style.width=''`)
+  return geometry
+}
+
 /** 公共事件回放：实际组件与样式，传输使用上述可还原测试钩子。 */
 async function verifyCompatibility(cdp, projectDir) {
   const outDir = path.join(PROJECT_ROOT, 'docs', 'verification', 'agent-chat')
@@ -522,6 +580,8 @@ async function verifyCompatibility(cdp, projectDir) {
     })()`)
     await waitFor(() => cdp.eval(`!!document.querySelector('.ac-toolbar')`), { timeout: 12000, desc: cli + ' 工具栏' })
     const push = e => cdp.eval(`window.__agentChatTestPush(${JSON.stringify(sid)},${JSON.stringify(e)})`)
+    const effortIds=cli==='codex'?['low','medium','high','xhigh']:cli==='claude'?['low','high','max']:['low','high']
+    const levels=effortIds.map(id=>({id,label:id}))
     await push({k:'session.ready',sessionId:sid,model:cli+'-fixture',cwd:projectDir})
     await push({k:'capabilities',models:[],modelCatalog:{status:'loading',source:'none'}})
     await sleep(100)
@@ -529,9 +589,14 @@ async function verifyCompatibility(cdp, projectDir) {
     await push({k:'capabilities',models:[],modelCatalog:{status:'error',source:'none',note:'测试离线'}})
     await sleep(100)
     const failed = await cdp.eval(`document.querySelector('.ac-model-catalog')?.textContent.includes('读取失败')`)
-    await push({k:'capabilities',models:[{id:cli+'-fixture',label:cli+' model',effortLevels:[{id:'low',label:'低'},{id:'high',label:'高'}]}],modelCatalog:{status:'ready',source:'probe'}})
+    await push({k:'capabilities',models:[{id:cli+'-fixture',label:cli+' model',effortLevels:levels}],modelCatalog:{status:'ready',source:'probe'}})
     await push({k:'user.message',text:'请检查多轮对话、模型菜单与报告链接。'})
     await push({k:'turn.start'})
+    await push({k:'error',message:'部分 MCP 工具连接失败，相关工具暂不可用。',fatal:false})
+    await waitFor(()=>cdp.eval(`!!document.querySelector('.ac-bar-send.stop')`),{desc:cli+' MCP 警告不停止对话'})
+    const brand=await cdp.eval(`(()=>{const b=document.querySelector('.ac-session-cli');return {text:b?.textContent,brand:b?.querySelector('img')?.dataset.cliBrand,loaded:b?.querySelector('img')?.naturalWidth>0}})()`)
+    if(!brand.loaded||brand.brand!==(cli==='codex'?'openai':cli==='claude'?'claude':'eas-term'))throw new Error('运行中 CLI 身份错误 '+JSON.stringify(brand))
+
     await push({k:'text.done',text:'已检查对话流程。\n\n### 验证结果\n\n正文保留清晰的段落间距，工具结果可单独展开。\n\n| 项目 | 状态 |\n|---|---|\n| 模型目录 | 动态读取 |\n| 多轮对话 | 保留上下文 |\n\n```ts\nconst result = await session.send("继续检查较长的代码行能否独立滚动，而不会撑宽整个对话窗口");\n```\n\n[查看参考文档](https://example.com/docs)'} )
     await push({k:'exec.start',execId:'report',label:'读取报告',detail:'报告资源',tool:{server:'reports',name:'read'}})
     await push({k:'exec.done',execId:'report',ok:true,output:'报告已读取',resources:[{uri:'https://example.com/report',name:'查看报告'}]})
@@ -545,18 +610,48 @@ async function verifyCompatibility(cdp, projectDir) {
       return {hasText:root.textContent.includes('验证结果'),model:model?.textContent,resource:root.querySelector('.ac-resource-link')?.textContent,failed:!!root.querySelector('.ac-exec-failed'),font:getComputedStyle(root.querySelector('.ac-md')).fontSize}
     })()`)
     if (!loading || !failed || !state.hasText || !state.model?.includes(cli+' model') || !state.resource || !state.failed) throw new Error(cli + ': ' + JSON.stringify({loading,failed,...state}))
+    const range=`document.querySelector('.ac-effort-track input')`
+    await waitFor(()=>cdp.eval(`${range}?.max===${JSON.stringify(String(effortIds.length))}`),{desc:cli+' 动态强度刻度'})
+    if(await cdp.eval(`${range}.value!=='0'`))throw new Error('默认强度被覆盖')
+    const r=await cdp.eval(`(()=>{const r=${range}.getBoundingClientRect();return {x:r.x+5.5,y:r.y+r.height/2,right:r.right-5.5}})()`)
+    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,x:r.x,y:r.y})
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',button:'left',buttons:1,x:r.right,y:r.y})
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,x:r.right,y:r.y})
+    await waitFor(()=>cdp.eval(`window.__agentChatTestParamCalls().at(-1)?.patch.effort===${JSON.stringify(effortIds.at(-1))}`),{desc:cli+' 拖动映射真实档位'})
+    const key=async(k,code)=>{
+      await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:k,code:k,windowsVirtualKeyCode:code})
+      await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:k,code:k,windowsVirtualKeyCode:code})
+      await sleep(80)
+    }
+    await key('Home',36)
+    if(await cdp.eval(`window.__agentChatTestParamCalls().at(-1)?.patch.effort!==''`)) throw new Error('Home 未恢复默认')
+    await key('ArrowRight',39)
+    if(await cdp.eval(`window.__agentChatTestParamCalls().at(-1)?.patch.effort!==${JSON.stringify(effortIds[0])}`)) throw new Error('方向键未按单档调整')
+    // 模型切换重置覆盖，随后目录移除档位也必须清除失效值。
+    await cdp.eval(`(()=>{const s=document.querySelector('select[aria-label="对话模型"]');s.value=${JSON.stringify(cli+'-fixture')};s.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+    await sleep(100)
+    if(await cdp.eval(`${range}.value!=='0'||window.__agentChatTestParamCalls().at(-1)?.patch.effort!==''`))throw new Error('换模型未清空旧强度')
+    await cdp.eval(`${range}.focus()`)
+    await key('End',35)
+    await push({k:'capabilities',models:[{id:cli+'-fixture',label:cli+' model',effortLevels:[]}]})
+    await waitFor(()=>cdp.eval(`!document.querySelector('.ac-effort-slider') && window.__agentChatTestParamCalls().at(-1)?.patch.effort===''`),{desc:cli+' 无强度能力隐藏并清除旧值'})
+    await push({k:'capabilities',models:[{id:cli+'-fixture',label:cli+' model',effortLevels:levels}]})
+    await waitFor(()=>cdp.eval(`!!${range}`),{desc:cli+' 恢复能力'})
+    await cdp.eval(`${range}.focus()`)
+    await key('ArrowRight',39)
+    log(cli+' 强度滑块：拖动、键盘、默认、换模型、能力变化通过')
     await cdp.send('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
     await cdp.send('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
     await cdp.eval(`window.__store.getState().setMaximizedNode({frameId:'compat-frame',nodeId:'compat-node'})`)
     await sleep(150)
     const shot = await cdp.send('Page.captureScreenshot', { format:'png' })
     fs.writeFileSync(path.join(outDir, cli+'.png'), Buffer.from(shot.result.data, 'base64'))
-    await cdp.eval(`document.querySelector('.agent-chat-view').style.width='340px'`)
+    await cdp.eval(`document.querySelector('.agent-chat-view').style.width='640px'`)
     await sleep(100)
     const narrow = await cdp.eval(`(() => {const el=document.querySelector('.ac-messages'); return {width:el.clientWidth,scroll:el.scrollWidth}})()`)
     if (narrow.scroll > narrow.width + 2) throw new Error(cli+' 窄栏溢出 '+JSON.stringify(narrow))
-    await cdp.eval(`document.querySelector('.agent-chat-view').style.width=''`)
-    checks.push({cli,loading,failed,...state,narrow})
+    const composer = await verifyComposerLayout(cdp, outDir, cli)
+    checks.push({cli,loading,failed,...state,narrow,composer})
   }
   fs.writeFileSync(path.join(outDir,'compatibility.json'),JSON.stringify({checks,consoleErrors:cdp.consoleErrors},null,2)+'\n')
   if(cdp.consoleErrors.length) throw new Error('渲染异常: '+cdp.consoleErrors.join('\n'))
@@ -570,24 +665,159 @@ async function verifyStartup(cdp, projectDir) {
   await waitFor(() => cdp.eval(`document.querySelector('select[aria-label="启动模型"]')?.options.length > 1`), {timeout:25000,desc:'发送前真实模型目录'})
   const before = await cdp.eval(`({starts:window.__agentChatTestStartCalls().length,summary:document.querySelector('.ac-startup-summary').textContent})`)
   if (before.starts !== 0) throw new Error('读取模型不应启动对话')
+  const sandboxSelector = 'button.ac-sandbox-button'
+  const sandboxButton = `document.querySelector(${JSON.stringify(sandboxSelector)})`
+  const initialSandbox = await cdp.eval(`(() => { const b=${sandboxButton}; return {value:b?.dataset.sandbox,text:b?.textContent.trim(),icon:!!b?.querySelector('svg')} })()`)
+  if(initialSandbox.value!=='danger-full-access'||initialSandbox.text||!initialSandbox.icon) throw new Error('沙箱默认或图标不正确 '+JSON.stringify(initialSandbox))
+  const hoverPoint=await cdp.eval(`(() => {const r=${sandboxButton}.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+  await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',...hoverPoint})
+  await waitFor(()=>cdp.eval(`document.querySelector('.ac-sandbox-bubble')?.textContent.includes('调整沙箱状态')`),{desc:'权限悬停提示'})
+  const sandboxCycle=[]
+  for(const [state,label] of [['workspace-write','可改工作区'],['read-only','只读'],['danger-full-access','完全放开']]) {
+    await cdp.clickElement(sandboxButton,'切换沙箱 '+label)
+    await waitFor(()=>cdp.eval(`${sandboxButton}?.dataset.sandbox===${JSON.stringify(state)} && document.querySelector('.ac-sandbox-bubble[role="status"]')?.textContent.includes(${JSON.stringify(label)})`),{desc:'状态与气泡同步 '+label})
+    sandboxCycle.push(await cdp.eval(`({value:${sandboxButton}.dataset.sandbox,message:document.querySelector('.ac-sandbox-bubble').textContent})`))
+  }
+  // 640px 下气泡不裁切，操作行不额外占一整块区域。
+  await cdp.eval(`document.querySelector('.agent-chat-view').style.width='640px'`)
+  for(const theme of ['dark','light']) {
+    await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+    await cdp.clickElement(sandboxButton,'权限窄栏气泡')
+    const bubbleBox=await cdp.eval(`(() => {const r=document.querySelector('.ac-sandbox-bubble').getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,w:innerWidth,h:innerHeight}})()`)
+    if(bubbleBox.left<0||bubbleBox.right>bubbleBox.w||bubbleBox.top<0||bubbleBox.bottom>bubbleBox.h) throw new Error('气泡溢出 '+JSON.stringify(bubbleBox))
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+    fs.writeFileSync(path.join(PROJECT_ROOT,'docs/verification/agent-chat/sandbox-icon-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))
+  }
+  await sleep(3400)
+  if(await cdp.eval(`!!document.querySelector('.ac-sandbox-bubble')`)) throw new Error('切换气泡未自动消失')
+  await cdp.eval(`document.documentElement.dataset.theme='dark';document.querySelector('.agent-chat-view').style.width=''`)
+  await cdp.clickElement(sandboxButton,'恢复完全放开')
+  await cdp.eval(`(() => {const st=window.__store.getState();window.__store.setState({roles:[...st.roles,{id:'sandbox-readonly',name:'只读验证角色',contract:'',caps:{write:false}}]});window.__store.getState().setAgentRole('startup-tab','startup-leaf','sandbox-readonly')})()`)
+  await sleep(100)
+  await cdp.clickElement(sandboxButton,'只读角色权限限制')
+  const roleLock = await cdp.eval(`(() => {const b=${sandboxButton};return {value:b.dataset.sandbox,disabled:b.getAttribute('aria-disabled')==='true',hint:document.querySelector('.ac-sandbox-bubble')?.textContent}})()`)
+  if(roleLock.value!=='read-only'||!roleLock.disabled||!roleLock.hint?.includes('角色限制')) throw new Error('只读角色未锁定 '+JSON.stringify(roleLock))
+  await cdp.eval(`window.__store.getState().setAgentRole('startup-tab','startup-leaf',undefined)`)
+  await sleep(100)
+  for(const name of ['Claude Code','默认 harness','Codex']) {
+    await cdp.clickElement(`document.querySelector('.ac-ctxbar button[data-tip="换一个 CLI"]')`, 'CLI 菜单')
+    const menuBrands = await cdp.eval(`Array.from(document.querySelectorAll('.cctx-item img[data-cli-brand]')).map(i=>({brand:i.dataset.cliBrand,loaded:i.complete&&i.naturalWidth>0}))`)
+    if(menuBrands.length!==3 || menuBrands.some(i=>!i.loaded) || new Set(menuBrands.map(i=>i.brand)).size!==3) throw new Error('CLI 菜单品牌图标缺失 '+JSON.stringify(menuBrands))
+    if(name==='Claude Code') {
+      const logoShot=await cdp.send('Page.captureScreenshot',{format:'png'})
+      fs.writeFileSync(path.join(PROJECT_ROOT,'docs/verification/agent-chat/cli-brand-menu.png'),Buffer.from(logoShot.result.data,'base64'))
+    }
+    await cdp.clickElement(`Array.from(document.querySelectorAll('.cctx-item')).find(b=>b.querySelector('.cctx-label')?.textContent===${JSON.stringify(name)})`, name)
+    await sleep(150)
+    const selectedBrand=await cdp.eval(`(() => {const i=document.querySelector('.ac-ctxbar button[data-tip="换一个 CLI"] img');return i?.complete&&i.naturalWidth>0?i.dataset.cliBrand:null})()`)
+    const expectedBrand=name==='Claude Code'?'claude':name==='Codex'?'openai':'eas-term'
+    if(selectedBrand!==expectedBrand) throw new Error('CLI 切换后图标不匹配 '+name+': '+selectedBrand)
+    const value=await cdp.eval(`document.querySelector(${JSON.stringify(sandboxSelector)})?.dataset.sandbox ?? null`)
+    if(value!==(name==='Codex'?'danger-full-access':null)) throw new Error('沙箱随 CLI 切换错误 '+name+': '+value)
+  }
+  await cdp.clickElement(sandboxButton,'选择工作区权限')
+  await cdp.clickElement(sandboxButton,'选择只读权限')
+  const sandbox = await cdp.eval(`${sandboxButton}.dataset.sandbox`)
+  if(sandbox!=='read-only') throw new Error('点击未选中只读')
+  await sleep(100)
+
   const model = await cdp.eval(`(() => {const s=document.querySelector('select[aria-label="启动模型"]');s.value=s.options[1].value;s.dispatchEvent(new Event('change',{bubbles:true}));return s.value})()`)
   await sleep(100)
   const effort = await cdp.eval(`(() => {const s=document.querySelector('select[aria-label="启动思考强度"]');if(!s || s.options.length<2)return '';s.value=s.options[1].value;s.dispatchEvent(new Event('change',{bubbles:true}));return s.value})()`)
   await sleep(100)
+  if(cdp.consoleErrors.length) throw new Error('启动参数调整后渲染异常：'+cdp.consoleErrors.join('\n'))
   const summary = await cdp.eval(`document.querySelector('.ac-startup-summary').textContent`)
   const outDir=path.join(PROJECT_ROOT,'docs','verification','agent-chat')
   const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
   fs.writeFileSync(path.join(outDir,'startup-model.png'),Buffer.from(shot.result.data,'base64'))
+  const composer = await verifyComposerLayout(cdp, outDir, 'startup')
   await cdp.clickElement(`document.querySelector('textarea.ac-input')`, '首轮输入框')
   await cdp.send('Input.insertText',{text:'首轮模型参数测试，不发送真实推理请求'})
   await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
   await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
   await waitFor(() => cdp.eval(`window.__agentChatTestStartCalls().length >= 2`), {timeout:12000,desc:'首轮与恢复失败重试'})
-  const calls = await cdp.eval(`window.__agentChatTestStartCalls().map(p=>({cli:p.cli,model:p.model,effort:p.effort,resumeId:p.resumeId}))`)
-  if (calls.length!==2 || calls.some(p=>p.cli!=='codex' || p.model!==model || (p.effort??'')!==effort)) throw new Error('启动参数未遵循选择: '+JSON.stringify(calls))
-  fs.writeFileSync(path.join(outDir,'startup-model.json'),JSON.stringify({before,model,effort,summary,calls,consoleErrors:cdp.consoleErrors},null,2)+'\n')
+  const calls = await cdp.eval(`window.__agentChatTestStartCalls().map(p=>({cli:p.cli,model:p.model,effort:p.effort,sandbox:p.sandbox,resumeId:p.resumeId}))`)
+  if (calls.length!==2 || calls.some(p=>p.cli!=='codex' || p.model!==model || p.sandbox!==sandbox || (p.effort??'')!==effort)) throw new Error('启动参数未遵循选择: '+JSON.stringify(calls))
+  fs.writeFileSync(path.join(outDir,'startup-model.json'),JSON.stringify({before,model,effort,sandbox,initialSandbox,sandboxCycle,roleLock,summary,calls,composer,consoleErrors:cdp.consoleErrors},null,2)+'\n')
   if(cdp.consoleErrors.length) throw new Error(cdp.consoleErrors.join('\n'))
   log('首轮前模型目录与启动/重试参数验证通过')
+}
+
+async function verifyMinimumWidth(cdp, projectDir) {
+  const outDir = path.join(PROJECT_ROOT, 'docs', 'verification', 'agent-chat')
+  await cdp.send('Emulation.setDeviceMetricsOverride', {width:1100,height:850,deviceScaleFactor:1,mobile:false})
+  const leaf = id => ({type:'leaf',id,pane:{kind:'agent',cli:'codex',cwd:projectDir}})
+  const tab = {id:'width-tab',title:'最小宽度验证',projectId:'t8-verify-project',cwd:projectDir,activeLeafId:'width-a',root:leaf('width-a')}
+  await cdp.eval(`(() => {const s=window.__store.getState();window.__store.setState({viewMode:'canvas',tabs:[${JSON.stringify(tab)}],activeTabId:'width-tab',canvas:{...s.canvas,viewport:{x:10,y:10,scale:1},frames:[{id:'width-frame',projectId:'t8-verify-project',name:'最小宽度验证',x:0,y:0,w:360,h:730,collapsed:false,nodes:[{id:'width-node',leafId:'width-a',x:16,y:50,w:280,h:650}]}]}});window.__store.getState().setMaximizedNode(null)})()`)
+  await waitFor(()=>cdp.eval(`document.querySelector('select[aria-label="启动模型"]') && window.__store.getState().canvas.frames[0].nodes[0].w===640`),{timeout:15000,desc:'旧窄节点自动扩到640'})
+  const handle=await cdp.eval(`(()=>{const r=document.querySelector('[data-leaf-id="width-a"] .pane-rz').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+  await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...handle})
+  await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',button:'left',buttons:1,x:handle.x-400,y:handle.y})
+  await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,x:handle.x-400,y:handle.y})
+  await sleep(250)
+  const resized=await cdp.eval(`window.__store.getState().canvas.frames[0].nodes[0].w`)
+  if(resized!==640) throw new Error('拖动突破最小宽度：'+resized)
+  async function geometry() {
+    return await cdp.eval(`Array.from(document.querySelectorAll('.agent-chat-view')).map(root=>{const pane=root.closest('.pane'),p=pane.getBoundingClientRect();const controls=[...root.querySelectorAll('.ac-startup-controls select,.ac-startup-controls button')].map(el=>{const r=el.getBoundingClientRect();return {label:el.getAttribute('aria-label'),left:r.left,right:r.right,cy:r.y+r.height/2}});return {width:p.width,controls,sameRow:Math.max(...controls.map(c=>c.cy))-Math.min(...controls.map(c=>c.cy))<2,inside:controls.every(c=>c.left>=p.left&&c.right<=p.right)}})`)
+  }
+  const canvas=await geometry()
+  if(!canvas.every(x=>x.width>=639&&x.sameRow&&x.inside))throw new Error('画布操作换行/溢出：'+JSON.stringify(canvas))
+  for(const theme of ['dark','light']) {
+    await cdp.eval(`document.documentElement.dataset.theme='${theme}'`)
+    await sleep(150)
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+    fs.writeFileSync(path.join(outDir,`minimum-canvas-${theme}.png`),Buffer.from(shot.result.data,'base64'))
+  }
+  const split={type:'split',id:'width-split',dir:'row',ratio:.1,children:[leaf('width-a'),leaf('width-b')]}
+  await cdp.eval(`(() => {
+    const s = window.__store.getState();
+    window.__widthOriginalPane = document.querySelector('[data-leaf-id="width-a"]');
+    window.__store.setState({viewMode:'split',tabs:s.tabs.map(t=>({...t,root:${JSON.stringify(split)}}))});
+  })()`)
+  await waitFor(()=>cdp.eval(`document.querySelectorAll('.agent-chat-view').length===2 && Array.from(document.querySelectorAll('.pane')).filter(p=>p.querySelector('.agent-chat-view')).every(p=>p.getBoundingClientRect().width>=639)`),{timeout:15000,desc:'两侧分屏均保留640'})
+  const splitGeometry=await geometry()
+  const splitState=await cdp.eval(`(()=>{const layer=document.querySelector('.pane-layer');layer.scrollLeft=layer.scrollWidth;const a=document.querySelector('[data-leaf-id="width-a"]');const b=document.querySelector('[data-leaf-id="width-b"]');const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();return {samePane:a===window.__widthOriginalPane,scrollWidth:layer.scrollWidth,width:layer.clientWidth,scrollLeft:layer.scrollLeft,noOverlap:ar.right<=br.left}})()`)
+  if(!splitGeometry.every(x=>x.width>=639&&x.sameRow&&x.inside)||!splitState.samePane||!splitState.noOverlap||splitState.scrollLeft<=0)throw new Error('分屏最小宽度验证失败：'+JSON.stringify({splitGeometry,splitState}))
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+  fs.writeFileSync(path.join(outDir,'minimum-split.png'),Buffer.from(shot.result.data,'base64'))
+  // 分屏层级：项目、标签页、面板标题的背景强调逐级降低。
+  await cdp.send('Emulation.setDeviceMetricsOverride', {width:1700,height:1000,deviceScaleFactor:1,mobile:false})
+  await cdp.eval(`window.__store.setState({activeProjectId:'t8-verify-project'});document.querySelector('.pane-layer').scrollLeft=0`)
+  await sleep(250)
+  const hierarchy = []
+  for(const theme of ['dark','light']) {
+    await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:5,y:5})
+    await sleep(200)
+    const state = await cdp.eval(`(() => {
+      const rgb = color => {const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data]};
+      const project=document.querySelector('.project-item.active'),tab=document.querySelector('.tab.active'),pane=document.querySelector('.pane.active'),kind=pane?.querySelector('.pane-kind-btn');
+      if(!project||!tab||!kind) return null;
+      return {project:rgb(getComputedStyle(project).backgroundColor),tab:rgb(getComputedStyle(tab).backgroundColor),header:rgb(getComputedStyle(pane.querySelector('.pane-header')).backgroundColor),kind:rgb(getComputedStyle(kind).backgroundColor),kindImage:getComputedStyle(kind).backgroundImage,paneShadow:getComputedStyle(pane).boxShadow,scope:document.querySelector('.app').classList.contains('split-mode')}
+    })()`)
+    if(!state) throw new Error('分屏选中层级元素缺失')
+    const avg = rgb => (rgb[0]+rgb[1]+rgb[2])/3
+    const steps=[avg(state.project),avg(state.tab),avg(state.header)]
+    const descending=theme==='dark'?steps[0]>steps[1]&&steps[1]>steps[2]:steps[0]<steps[1]&&steps[1]<steps[2]
+    if(!descending||state.kind[3]!==0||state.kindImage!=='none'||state.paneShadow!=='none'||!state.scope) throw new Error('分屏高亮没有逐级递减 '+JSON.stringify({theme,state,steps}))
+    await cdp.clickElement(`document.querySelector('[data-leaf-id="width-b"] .pane-header')`, '切换到右侧面板')
+    await sleep(100)
+    const focused = await cdp.eval(`({leaf:window.__store.getState().tabs.find(t=>t.id==='width-tab').activeLeafId,active:document.querySelectorAll('.pane.active').length})`)
+    if(focused.leaf!=='width-b'||focused.active!==1)throw new Error('面板焦点不唯一 '+JSON.stringify(focused))
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+    fs.writeFileSync(path.join(outDir,'split-hierarchy-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))
+    hierarchy.push({theme,state,steps,focused})
+  }
+  await cdp.eval(`window.__store.setState({viewMode:'canvas'});document.documentElement.dataset.theme='dark'`)
+  await sleep(250)
+  const canvasStyle = await cdp.eval(`({scope:document.querySelector('.app').classList.contains('split-mode'),kindBackground:getComputedStyle(document.querySelector('[data-leaf-id="width-a"] .pane-kind-btn')).backgroundColor})`)
+  if(canvasStyle.scope||canvasStyle.kindBackground==='rgba(0, 0, 0, 0)')throw new Error('分屏样式泄漏到画板 '+JSON.stringify(canvasStyle))
+  fs.writeFileSync(path.join(outDir,'split-hierarchy.json'),JSON.stringify({hierarchy,canvasStyle},null,2)+'\n')
+  log('分屏递减高亮、唯一面板焦点和画板隔离验证通过')
+
+  fs.writeFileSync(path.join(outDir,'minimum-width.json'),JSON.stringify({resized,canvas,splitGeometry,splitState,consoleErrors:cdp.consoleErrors},null,2)+'\n')
+  if(cdp.consoleErrors.length)throw new Error(cdp.consoleErrors.join('\n'))
+  log('最小宽度通过：旧节点修复、真实缩小拖动、单行操作、分屏640px/横向滚动、Pane未重挂')
 }
 
 async function main() {
@@ -729,6 +959,8 @@ async function main() {
     const hasTestPush = await cdp.eval(`typeof window.__agentChatTestPush !== 'undefined'`)
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
+    if (process.argv.includes('--integration')) { await verifyChatIntegration({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
+    if (process.argv.includes('--width')) { await verifyMinimumWidth(cdp, projectDir); return }
     if (process.argv.includes('--startup')) { await verifyStartup(cdp, projectDir); return }
     if (process.argv.includes('--compat')) { await verifyCompatibility(cdp, projectDir); return }
 
@@ -770,14 +1002,14 @@ async function main() {
         const j = await cdp.eval(`(function(){
           const root = document.querySelector('.agent-chat-view .ac-empty')
           if (!root) return null
-          const logo = root.querySelector('.ac-logo svg')
+          const logo = root.querySelector('.ac-slogan')
           const input = root.querySelector('textarea.ac-input')
           return JSON.stringify({
             hasLogo: !!logo,
             logoVisible: window.__t8Visible(logo),
             hasInput: !!input,
             inputVisible: window.__t8Visible(input),
-            cliCount: root.querySelectorAll('.ac-clis .ac-cli-chip').length,
+            cliCount: root.querySelectorAll('button[data-tip="换一个 CLI"]:not(:disabled)').length,
             hint: root.querySelector('.ac-clis-hint')?.textContent || null
           })
         })()`)
@@ -785,21 +1017,27 @@ async function main() {
         const parsed = JSON.parse(j)
         return parsed.cliCount > 0 || parsed.hint ? parsed : null
       },
-      { timeout: 8000, desc: '空态渲染（logo/输入框/CLI 选择器）' }
+      { timeout: 8000, desc: '空态渲染（引导语/输入框/CLI 选择器）' }
     )
     if (emptyState.hasLogo && emptyState.logoVisible && emptyState.hasInput && emptyState.inputVisible && emptyState.cliCount > 0) {
       pass(
         1,
-        `logo=存在且可见 input=存在且可见 CLI 选项=${emptyState.cliCount} 个（可见性判据：尺寸+display+visibility+opacity 四件套，非仅 DOM 存在性）`
+        `引导语=存在且可见 input=存在且可见 CLI 选择入口=${emptyState.cliCount} 个（可见性判据：尺寸+display+visibility+opacity 四件套，非仅 DOM 存在性）`
       )
     } else {
       fail(1, `详情=${JSON.stringify(emptyState)}`)
       throw new Error('空态没有完整渲染，后续步骤依赖它，中止')
     }
 
-    // 显式点第一个 CLI 芯片（真实坐标）——让 selected 确定下来，不依赖默认值猜测
-    await cdp.clickElement(`document.querySelector('.ac-clis .ac-cli-chip')`, '第一个 CLI 选择芯片')
-    const selectedName = await cdp.eval(`document.querySelector('.ac-cli-chip.selected')?.textContent || null`)
+    // 通过当前上下文菜单选择明确的 harness，不依赖安装顺序。
+    async function selectCli(label) {
+      await cdp.clickElement(`document.querySelector('button[data-tip="换一个 CLI"]')`, 'CLI 菜单')
+      await waitFor(() => cdp.eval(`Array.from(document.querySelectorAll('.cctx-item')).some(el => el.querySelector('.cctx-label')?.textContent === ${JSON.stringify(label)})`), {desc:'CLI 菜单项 '+label})
+      await cdp.clickElement(`Array.from(document.querySelectorAll('.cctx-item')).find(el => el.querySelector('.cctx-label')?.textContent === ${JSON.stringify(label)})`, label)
+      await waitFor(() => cdp.eval(`document.querySelector('button[data-tip="换一个 CLI"]')?.textContent.includes(${JSON.stringify(label)})`), {desc:'选中 '+label})
+      return label
+    }
+    const selectedName = await selectCli('Claude Code')
     log(`  · 已选中 CLI：${selectedName}`)
 
     // ── 断言 2：真实坐标点击输入框，聚焦 + 输入 ─────────────────────────────────
@@ -819,7 +1057,7 @@ async function main() {
     }
 
     // ── 断言 3：点发送，切到对话态（中间可能先经过 hook 安装询问卡片）──────────────
-    await cdp.clickElement(`document.querySelector('button.ac-send')`, '「发送」按钮')
+    await cdp.clickElement(`document.querySelector('button[aria-label="发送消息"]')`, '「发送」按钮')
 
     const afterSend = await waitFor(
       async () => {
@@ -954,6 +1192,38 @@ async function main() {
     await sleep(150)
     const turnAExpanded = await cdp.eval(`(${TURN_A_FIND})?.querySelectorAll('.ac-exec-row').length ?? 0`)
     log(`  · Turn A 展开后可见 ${turnAExpanded}/5 行`)
+    const groupBodies = await cdp.eval(`(${TURN_A_FIND})?.querySelectorAll('.ac-exec-body').length ?? 0`)
+    if(groupBodies!==0) throw new Error('展开列表不应自动打开全部输出')
+    await cdp.clickElement(`(${TURN_A_FIND})?.querySelector('button.ac-exec-row-head')`, '只展开第一条工具详情')
+    await sleep(150)
+    const oneBody = await cdp.eval(`(${TURN_A_FIND})?.querySelectorAll('.ac-exec-body').length ?? 0`)
+    if(oneBody!==1) throw new Error('单条详情必须独立展开: '+oneBody)
+    await push({k:'exec.done',execId:'e1',ok:false,output:('长输出验证：工具详情在自己的区域滚动，不撑满聊天。\n').repeat(80)})
+    await sleep(100)
+
+    const toolRegion = await cdp.eval(`(() => {const t=${TURN_A_FIND};const r=t.querySelector('.ac-execs-list');const m=t.closest('.ac-messages');return {height:r.clientHeight,limit:parseFloat(getComputedStyle(r).maxHeight),messageHeight:m.clientHeight,overflow:getComputedStyle(r).overflowY}})()`)
+    if(toolRegion.overflow!=='auto'||toolRegion.height>toolRegion.limit+1||toolRegion.limit>Math.max(96,toolRegion.messageHeight/3)+1) throw new Error('工具区域限高未生效 '+JSON.stringify(toolRegion))
+    const scrollBefore = await cdp.eval(`(() => {const t=${TURN_A_FIND};const r=t.querySelector('.ac-execs-list');const b=r.getBoundingClientRect();return {root:t.closest('.ac-messages').scrollTop,scroll:r.scrollHeight,client:r.clientHeight,x:b.x+b.width/2,y:b.y+b.height/2}})()`)
+    if(scrollBefore.scroll<=scrollBefore.client) throw new Error('长输出应产生区域内滚动')
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:scrollBefore.x,y:scrollBefore.y,deltaX:0,deltaY:180})
+    await sleep(150)
+    const scrollAfter = await cdp.eval(`(() => {const t=${TURN_A_FIND};return {root:t.closest('.ac-messages').scrollTop,inner:t.querySelector('.ac-execs-list').scrollTop}})()`)
+    if(scrollAfter.inner<=0||Math.abs(scrollAfter.root-scrollBefore.root)>1) throw new Error('工具滚动影响了正文 '+JSON.stringify({scrollBefore,scrollAfter}))
+    const headPinned = await cdp.eval(`(() => {const t=${TURN_A_FIND};const head=t.querySelector('button.ac-exec-row-head[aria-expanded="true"]');const h=head.getBoundingClientRect(),r=t.querySelector('.ac-execs-list').getBoundingClientRect();return Math.abs(h.top-r.top)<2 && head.contains(document.elementFromPoint(h.x+h.width/2,h.y+h.height/2))})()`)
+    if(!headPinned) throw new Error('长输出滚动时单条收起入口不可见或无法点击')
+
+    for(const theme of ['dark','light']) {
+      await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+      await sleep(100)
+      const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+      fs.writeFileSync(path.join(PROJECT_ROOT,'docs','verification','agent-chat','tool-region-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))
+    }
+    await cdp.eval("document.documentElement.dataset.theme='dark'")
+    log('工具区独立展开/限高/真实滚轮检查通过 '+JSON.stringify({toolRegion,scrollBefore,scrollAfter}))
+    await cdp.clickElement(`(${TURN_A_FIND})?.querySelector('button.ac-exec-row-head')`, '收起单条详情')
+    await sleep(100)
+    if(await cdp.eval(`(${TURN_A_FIND})?.querySelectorAll('.ac-exec-body').length ?? 0`)) throw new Error('单条详情未收起')
+
 
     // Turn B：4 个全部成功的工具调用——验证「默认三行」这个基准形态（无失败项干扰）。
     await push({ k: 'text.done', text: '第二步：又跑了 4 个只读检查，都通过。' })
@@ -1224,6 +1494,18 @@ async function main() {
     await sleep(200)
     const fatalClassSeen = await cdp.eval(`!!document.querySelector('.ac-toolbar .ac-notices .ac-notice-fatal')`)
     log(`  · fatal:true 的 notice 带上了 .ac-notice-fatal：${fatalClassSeen}`)
+    for(const theme of ['dark','light']) {
+      await cdp.eval(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`)
+      await sleep(100)
+      const notices = await cdp.eval(`Array.from(document.querySelectorAll('.ac-notice')).map(n=>({background:getComputedStyle(n).backgroundColor,text:getComputedStyle(n).color,icon:n.querySelector('.ac-status-icon')?getComputedStyle(n.querySelector('.ac-status-icon')).color:null,border:getComputedStyle(n).borderInlineStartColor,role:n.getAttribute('role')}))`)
+      const neutral = value => {const rgb=value.match(/[\d.]+/g)?.slice(0,3).map(Number);return rgb?.length===3 && Math.max(...rgb)-Math.min(...rgb)<2}
+      if(notices.length<2 || notices.some(n=>!neutral(n.background)||!neutral(n.text)||!n.icon||n.icon!==n.border)||new Set(notices.map(n=>n.icon)).size<2) throw new Error('通知中性底/状态图标验证失败 '+JSON.stringify({theme,notices}))
+      const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+      fs.writeFileSync(path.join(PROJECT_ROOT,'docs','verification','agent-chat','alerts-'+theme+'.png'),Buffer.from(shot.result.data,'base64'))
+      log('通知视觉检查 '+JSON.stringify({theme,notices}))
+    }
+    await cdp.eval("document.documentElement.dataset.theme='dark'")
+
 
     // ── 附加检查（2026-08-17 最终评审 I5，收尾复审后改为真正计入 allPass）────────────
     // 这三条不占用 1-11 的编号（那十一条已经固定），但都是这轮新加的行为，
@@ -1368,33 +1650,14 @@ async function main() {
       if (!injectB) throw new Error('Node B 注入失败')
       await sleep(400)
 
-      const emptyStateB = await waitFor(
-        async () => {
-          const j = await cdp.eval(`(function(){
-            const root = document.querySelector('.agent-chat-view .ac-empty')
-            if (!root) return null
-            const chips = root.querySelectorAll('.ac-clis .ac-cli-chip')
-            return JSON.stringify({ count: chips.length, labels: Array.from(chips).map(c => c.textContent) })
-          })()`)
-          if (!j) return null
-          const p = JSON.parse(j)
-          return p.count >= 2 ? p : null
-        },
-        { timeout: 8000, desc: 'Node B 空态且至少 2 个 CLI 选项' }
-      )
-      log(`  · Node B CLI 选项：${emptyStateB.labels.join(' / ')}`)
-
-      await cdp.clickElement(
-        `document.querySelectorAll('.ac-clis .ac-cli-chip')[1]`,
-        'Node B 第二个 CLI 选择芯片（预期 approval 为空，如 Codex）'
-      )
-      const selectedB = await cdp.eval(`document.querySelector('.ac-cli-chip.selected')?.textContent || null`)
+      await waitFor(() => cdp.eval(`!!document.querySelector('.ac-empty button[data-tip="换一个 CLI"]:not(:disabled)')`), {desc:'Node B CLI 菜单入口'})
+      const selectedB = await selectCli('Codex')
       log(`  · Node B 已选中：${selectedB}`)
 
       await cdp.clickElement(`document.querySelector('textarea.ac-input')`, 'Node B 空态输入框')
       await cdp.send('Input.insertText', { text: 'ping（P2-1 验证脚本发送）' })
       await sleep(100)
-      await cdp.clickElement(`document.querySelector('button.ac-send')`, 'Node B「发送」按钮')
+      await cdp.clickElement(`document.querySelector('button[aria-label="发送消息"]')`, 'Node B「发送」按钮')
 
       // approval 为空的 CLI 不该走 hookStatus() 查询那个分支——立刻查一次，
       // 不该看到 hook 询问卡片（不是等它超时不出现，是确认这条分支真的没走到）。
@@ -1409,13 +1672,13 @@ async function main() {
       const sandboxCheck = await waitFor(
         async () => {
           const j = await cdp.eval(`(function(){
-            const el = document.querySelector('.ac-toolbar .ac-sandbox-note')
+            const el = document.querySelector('.ac-toolbar .ac-bar-note[data-tip*="沙箱级别"]')
             if (!el) return null
             return JSON.stringify({ text: el.textContent, visible: window.__t8Visible(el) })
           })()`)
           return j ? JSON.parse(j) : null
         },
-        { timeout: 5000, desc: 'Node B 工具栏应显示 .ac-sandbox-note' }
+        { timeout: 5000, desc: 'Node B 工具栏应显示 .ac-bar-note[data-tip*=沙箱级别]' }
       ).catch((e) => ({ text: null, visible: false, error: e.message }))
 
       const ok = conversationUpB && !hookAskAppearedB && sandboxCheck?.visible && !!sandboxCheck.text
@@ -1425,38 +1688,19 @@ async function main() {
       }
       log(`  ${ok ? '✓' : '✗'} [P2-1] approval 为空的 CLI 路径（不问 hook + 显示 sandboxLevels）—— ${extra.p21.detail}`)
 
-      // ── I2（2026-08-17 最终评审）：审批 hook 的 chip 与卸载按钮只该出现在声明了
-      // approvalHook 的 CLI 上。这一条正好能在这里差分验证：此刻画布上同时活着
-      // Node A（Claude，approvalHook='claude-pretooluse'）与 Node B（Codex，没有），
-      // 两个 pane 各自带 data-leaf-id，可以精确定位到各自的工具栏，不会互相串。
-      // 修复前 chip 是无条件渲染的，Codex 节点上会显示「审批保护 已开启/未开启」——
-      // 那读的是 Claude 的 <cwd>/.claude/settings.json，是错的信息，而工具栏另一侧
-      // 同时还在显示沙箱级别，两条信息互相矛盾。
-      const chipScan = await cdp.eval(`(function(){
+      // 审批保护入口已在 2026-08-17 迁到设置。当前契约是两边工具栏都不再
+      // 出现旧 chip/卸载操作，且沙箱提示只显示在无 approval 的 Codex 一侧。
+      const chipScan = await cdp.eval(`(() => {
         const scan = (leafId) => {
-          const pane = document.querySelector('[data-leaf-id="' + leafId + '"]')
-          if (!pane) return null
-          const tb = pane.querySelector('.ac-toolbar')
+          const tb = document.querySelector('[data-leaf-id="'+leafId+'"] .ac-toolbar')
           if (!tb) return null
-          const items = Array.from(tb.querySelectorAll('.ac-toolbar-meta .ac-meta-item'))
-          return {
-            hasChip: items.some(el => (el.textContent || '').includes('审批保护')),
-            hasUninstallBtn: Array.from(tb.querySelectorAll('.ac-meta-btn')).some(b => (b.textContent || '').includes('卸载')),
-            meta: items.map(el => (el.textContent || '').trim()).join(' ｜ ')
-          }
+          return {hasChip:tb.textContent.includes('审批保护'),hasUninstallBtn:Array.from(tb.querySelectorAll('button')).some(b=>b.textContent.includes('卸载')),hasSandbox:!!tb.querySelector('.ac-bar-note[data-tip*="沙箱级别"]')}
         }
-        return JSON.stringify({
-          claudeNode: scan(${JSON.stringify(IDS.leafId)}),
-          codexNode: scan(${JSON.stringify(IDS_B.leafId)})
-        })
+        return {claude:scan(${JSON.stringify(IDS.leafId)}),codex:scan(${JSON.stringify(IDS_B.leafId)})}
       })()`)
-      const cs = chipScan ? JSON.parse(chipScan) : null
-      const i2ok = !!cs && cs.claudeNode?.hasChip === true && cs.codexNode?.hasChip === false
-      extra.i2 = {
-        status: i2ok ? 'PASS' : 'FAIL',
-        detail: `Claude 节点 chip=${cs?.claudeNode?.hasChip}（预期 true，meta="${cs?.claudeNode?.meta}"）；Codex 节点 chip=${cs?.codexNode?.hasChip} 卸载按钮=${cs?.codexNode?.hasUninstallBtn}（都预期 false，meta="${cs?.codexNode?.meta}"）`
-      }
-      log(`  ${i2ok ? '✓' : '✗'} [I2] 审批 hook 的 chip/卸载按钮只出现在声明了 approvalHook 的 CLI 上 —— ${extra.i2.detail}`)
+      const i2ok = chipScan.claude && chipScan.codex && !chipScan.claude.hasChip && !chipScan.codex.hasChip && !chipScan.claude.hasUninstallBtn && !chipScan.codex.hasUninstallBtn && !chipScan.claude.hasSandbox && chipScan.codex.hasSandbox
+      extra.i2 = {status:i2ok?'PASS':'FAIL',detail:JSON.stringify(chipScan)}
+      log(`  ${i2ok?'✓':'✗'} [I2] 当前工具栏能力差异与旧入口移除：${extra.i2.detail}`)
     } catch (e) {
       extra.p21 = { status: 'FAIL', detail: '异常：' + e.message }
       log(`  ✗ [P2-1] 异常：${e.message}`)
@@ -1472,6 +1716,11 @@ async function main() {
     }
 
     results.__consoleErrors = cdp.consoleErrors
+    const outDir = path.join(PROJECT_ROOT, 'docs', 'verification', 'agent-chat')
+    fs.writeFileSync(path.join(outDir, 'interaction.json'), JSON.stringify({mode:'Electron UI with fixture start/events; real approval IPC',results}, null, 2)+'\n')
+    const shot = await cdp.send('Page.captureScreenshot', {format:'png'})
+    fs.writeFileSync(path.join(outDir, 'interaction.png'), Buffer.from(shot.result.data, 'base64'))
+    if (cdp.consoleErrors.length) throw new Error('渲染控制台异常：'+cdp.consoleErrors.join('\n'))
   } finally {
     // ── 收尾：只杀自己起的这个 PID；把源码还原；重新构建；清理临时目录 ────────────
     if (ws) {
@@ -1515,7 +1764,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes("--compat") || process.argv.includes("--startup")) return
+    if (process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')
     let allPass = true
@@ -1554,7 +1803,7 @@ main()
         if (p21.status !== 'PASS') allPass = false
       }
       if (i2) {
-        log(`  [${i2.status.padEnd(7)}] I2：审批 hook 的 chip/卸载按钮只出现在声明了 approvalHook 的 CLI 上 —— ${i2.detail}`)
+        log(`  [${i2.status.padEnd(7)}] I2：当前工具栏能力差异与旧入口移除 —— ${i2.detail}`)
         if (i2.status !== 'PASS') allPass = false
       }
     }

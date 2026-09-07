@@ -1,0 +1,80 @@
+{
+  "boundary": "真实 Electron UI；安装/登录/start/事件使用可还原模拟 transport，无真实安装/认证/远端推理",
+  "checks": [
+    {
+      "name": "未安装选择与引导归属一致，禁止启动"
+    },
+    {
+      "name": "切到已安装项清除旧提示并保留草稿"
+    },
+    {
+      "name": "重复选择当前 CLI 不绕过登录"
+    },
+    {
+      "name": "旧认证响应不能写入新 CLI"
+    },
+    {
+      "name": "安装登录后重查就绪，保持 CLI/草稿，不自动发送"
+    },
+    {
+      "name": "内置缺失不会调用外部 CLI 安装"
+    },
+    {
+      "name": "最大化面板不会遮挡提问刻度"
+    },
+    {
+      "name": "点击定位真实提问且吸顶零 padding 保持",
+      "data": {
+        "offset": 54.4296875,
+        "scrollTop": 689,
+        "paddingTop": "0px"
+      }
+    },
+    {
+      "name": "工具语义图标及旧聊天动作入口保留"
+    },
+    {
+      "name": "最大化还原和画布缩放后导航贴合 Frame 外侧"
+    },
+    {
+      "name": "普通画布导航层级低于文件抽屉"
+    },
+    {
+      "name": "左侧抽屉真实文件按 JS / 图片 / SVG / plist / Agent 规则分类"
+    },
+    {
+      "name": "分屏保留聊天 DOM，并使用各自 Worktree 路径",
+      "data": {
+        "samePane": true,
+        "paths": [
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-wvwFEA/.worktrees/main",
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-wvwFEA/.worktrees/peer"
+        ]
+      }
+    },
+    {
+      "name": "渲染控制台无异常",
+      "data": []
+    }
+  ],
+  "count": 11,
+  "setupCalls": [
+    "list",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "install:claude",
+    "install:claude",
+    "login:claude",
+    "check:claude",
+    "list",
+    "check:claude",
+    "check:codex",
+    "check:codex",
+    "list",
+    "check:codex"
+  ],
+  "consoleErrors": []
+}

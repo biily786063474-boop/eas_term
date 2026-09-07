@@ -5,19 +5,130 @@
   },
   "model": "gpt-5.6-sol",
   "effort": "low",
-  "summary": "首条消息使用 GPT-5.6-Sol",
+  "sandbox": "read-only",
+  "initialSandbox": {
+    "value": "danger-full-access",
+    "text": "",
+    "icon": true
+  },
+  "sandboxCycle": [
+    {
+      "value": "workspace-write",
+      "message": "已切换：可改工作区允许修改当前工作区内的文件。"
+    },
+    {
+      "value": "read-only",
+      "message": "已切换：只读可读取文件，不可修改。"
+    },
+    {
+      "value": "danger-full-access",
+      "message": "已切换：完全放开可访问和修改工作区外的文件。"
+    }
+  ],
+  "roleLock": {
+    "value": "read-only",
+    "disabled": true,
+    "hint": "调整沙箱状态当前角色限制为只读，不能调整。"
+  },
+  "summary": "首条消息使用 GPT-5.6-Sol · low",
   "calls": [
     {
       "cli": "codex",
       "model": "gpt-5.6-sol",
       "effort": "low",
+      "sandbox": "read-only",
       "resumeId": "e2e-stale"
     },
     {
       "cli": "codex",
       "model": "gpt-5.6-sol",
-      "effort": "low"
+      "effort": "low",
+      "sandbox": "read-only"
     }
   ],
+  "composer": {
+    "width": 640,
+    "boxes": [
+      {
+        "label": "启动模型",
+        "left": 41,
+        "right": 154.1484375,
+        "top": 362.890625,
+        "bottom": 394.890625,
+        "width": 113.1484375,
+        "height": 32
+      },
+      {
+        "label": "启动思考强度",
+        "left": 162.1484375,
+        "right": 226.1484375,
+        "top": 362.890625,
+        "bottom": 394.890625,
+        "width": 64,
+        "height": 32
+      },
+      {
+        "label": "刷新启动模型清单",
+        "left": 234.1484375,
+        "right": 270.1484375,
+        "top": 360.890625,
+        "bottom": 396.890625,
+        "width": 36,
+        "height": 36
+      },
+      {
+        "label": "调整沙箱状态，当前只读",
+        "left": 278.1484375,
+        "right": 314.1484375,
+        "top": 360.890625,
+        "bottom": 396.890625,
+        "width": 36,
+        "height": 36
+      },
+      {
+        "label": "语音输入",
+        "left": 515,
+        "right": 551,
+        "top": 359.890625,
+        "bottom": 395.890625,
+        "width": 36,
+        "height": 36
+      },
+      {
+        "label": "发送消息",
+        "left": 559,
+        "right": 595,
+        "top": 360.890625,
+        "bottom": 396.890625,
+        "width": 36,
+        "height": 36
+      }
+    ],
+    "outside": [],
+    "overlaps": [],
+    "icons": [
+      {
+        "label": "刷新启动模型清单",
+        "icon": true,
+        "text": ""
+      },
+      {
+        "label": "调整沙箱状态，当前只读",
+        "icon": true,
+        "text": ""
+      },
+      {
+        "label": "语音输入",
+        "icon": true,
+        "text": ""
+      },
+      {
+        "label": "发送消息",
+        "icon": true,
+        "text": ""
+      }
+    ],
+    "sameRow": true
+  },
   "consoleErrors": []
 }

@@ -16,7 +16,9 @@
 // 审批卡片（Task 5）挂在这里：view.pending 非空时插在「当前最后一个轮次」的执行区
 // 上方——它是唯一不弱化的例外（ApprovalCard.tsx 头部注释），别的都遵守规则①。
 import { ResourceLink } from './ToolResourceLink'
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { QuestionNavigator } from './QuestionNavigator'
+import { SemanticIcon } from '../../ui/SemanticIcons'
+import { useEffect, useRef, useState, useMemo, useId } from 'react'
 import { optionsOf } from './options'
 import type { ChatView, ExecItem, Turn } from './reduce.ts'
 import { visibleExecs } from './reduce.ts'
@@ -51,6 +53,18 @@ export function MessageList({
    *  用——ref 变了不会触发渲染，按钮的出现/消失得靠 state。判据与 ref 同一条（<80px），
    *  两边不一致的话会出现「已经贴底了按钮还在」或反过来。 */
   const [atBottom, setAtBottom] = useState(true)
+
+  // 工具列表按所属聊天视口限高，分屏和缩放时不借用整窗高度。
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = (): void => { el.style.setProperty('--ac-tool-region-height', `${Math.min(320, Math.max(96, Math.floor(el.clientHeight / 3)))}px`) }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
 
   useEffect(() => {
     const el = scrollRef.current
@@ -101,7 +115,7 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <div className="ac-messages" ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
+    <><div className="ac-messages" ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
       {view.turns.map((turn, i) =>
         // 压缩标记不是一条消息，走另一条渲染路径。**在这里分流而不是在
         // MessageTurn 里提前返回**：那个组件顶上有一串 hook，条件返回会违反
@@ -112,6 +126,7 @@ export function MessageList({
           <MessageTurn
             key={i}
             turn={turn}
+            turnIndex={i}
             pluginId={view.plugin?.id}
             approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
             onApprovalDecide={onApprovalDecide}
@@ -164,7 +179,7 @@ export function MessageList({
           ]}
         />
       )}
-    </div>
+    </div><QuestionNavigator turns={view.turns} scrollRef={scrollRef} leafId={leafId} onNavigate={() => { stickToBottomRef.current = false; setAtBottom(false) }} /></>
   )
 }
 
@@ -184,6 +199,7 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
     <div className="ac-compact" role="separator">
       <span className="ac-compact-line" />
       <span className="ac-compact-txt">
+        <SemanticIcon kind="compact" size={16} />
         {/* **不知道就说中性的话。** stream 里多数时候不带 trigger，
             默认说成「自动」会把手动压缩说成「上下文满了」—— 编一件没发生的事 */}
         {c.trigger === 'auto'
@@ -202,6 +218,7 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
 
 function MessageTurn({
   turn,
+  turnIndex,
   pluginId,
   approval,
   onApprovalDecide,
@@ -209,6 +226,7 @@ function MessageTurn({
   onPickOption
 }: {
   turn: Turn
+  turnIndex: number
   pluginId?: string
   approval: ChatView['pending']
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
@@ -216,6 +234,7 @@ function MessageTurn({
   onPickOption?: (text: string) => void
 }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const execListId = useId()
   // 正文里的网址/本地路径 → Ctrl+点击可跳。**依赖 turn.text**：流式输出时正文每帧
   // 都在变，不跟着重做的话只有第一帧那部分是可点的
   const mdRef = useRef<HTMLDivElement>(null)
@@ -314,7 +333,7 @@ function MessageTurn({
           </div>
         </div>
       )}
-      <div className={`ac-turn ac-turn-${turn.role}`}>
+      <div className={`ac-turn ac-turn-${turn.role}`} data-question-index={isUser ? turnIndex : undefined}>
       {/* 模型的回答按 Markdown 渲染 —— 它本来就是拿 Markdown 写的（标题、列表、代码块、
           粗体），当纯文本铺开就丢掉了全部层级，长回答会糊成一片。
           复用仓库里那个零依赖渲染器（WikiView / CodeView 同一个）：它**先把所有文本
@@ -386,21 +405,21 @@ function MessageTurn({
       )}
       {turn.role === 'assistant' && turn.execs.length > 0 && (
         <div className="ac-execs">
-          {visible.map((item) => (
-            <ExecRow key={item.execId} item={item} expanded={expanded} leafId={leafId} pluginId={pluginId} />
-          ))}
-          {/* 展开后「收起」钉在工具调用区**底端**（用户 2026-09-05）：详情很长时往上翻，
-              收起钮不该跟着滚出视口。sticky bottom 恰好是这个语义——只在它的自然位置
-              低于视口底时吸在底沿，往下滚到真正的底部时它就待在原位（「向下滚动不影响」）。
-              只在 expanded 时加类：没展开时它就是一行普通按钮。 */}
-          <button
+          <div className="ac-execs-list" id={execListId} role="region" aria-label="工具调用记录" tabIndex={0}>
+            {visible.map((item) => (
+              <ExecRow key={item.execId} item={item} leafId={leafId} pluginId={pluginId} />
+            ))}
+          </div>
+          {(hasHidden || expanded) && <button
             type="button"
-            className={`ac-execs-toggle${expanded ? ' pinned' : ''}`}
+            className="ac-execs-toggle"
+            aria-expanded={expanded}
+            aria-controls={execListId}
             onClick={() => setExpanded((v) => !v)}
           >
             <ChevronDownIcon size={11} className={expanded ? 'expanded' : ''} />
-            {expanded ? '收起' : hasHidden ? `展开全部 ${turn.execs.length} 项` : '展开详情'}
-          </button>
+            {expanded ? '收起列表' : `展开全部 ${turn.execs.length} 项`}
+          </button>}
         </div>
         )}
       </div>
@@ -408,23 +427,27 @@ function MessageTurn({
   )
 }
 
-/** 单条执行行。state 决定样式（running 轻微脉动 / failed 错误色常驻可见 / ok 弱层级），
- *  expanded 时额外露出 detail 与 output（点击「展开详情」时统一打开，不是逐行单独展开），
- *  两者都过一遍 prettyJson——detail/output 常是 JSON.stringify 出来的一坨，原样甩给
- *  用户不算「展开完整执行历史」。head（圆点+label）单独一层 flex row，body 作为下一行——
- *  不能让 body 和 head 挤在同一个 align-items:center 的行里，那会把展开的文本挤成一团。 */
-function ExecRow({ item, expanded, leafId, pluginId }: { item: ExecItem; expanded: boolean; leafId?: string; pluginId?: string }): JSX.Element {
+/** 列表展开只控制条目数量；每条调用独立展开输入和输出，保留资源入口。 */
+function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; pluginId?: string }): JSX.Element {
+  const [expanded, setExpanded] = useState(false)
+  const detailId = useId()
+  const hasDetails = !!(item.detail || item.output)
   return (
     <div className={`ac-exec-row ac-exec-${item.state}`}>
-      <div className="ac-exec-row-head">
+      <button type="button" className="ac-exec-row-head" disabled={!hasDetails}
+        aria-expanded={hasDetails ? expanded : undefined} aria-controls={hasDetails ? detailId : undefined}
+        onClick={() => setExpanded(v => !v)}>
+        <SemanticIcon kind={item.kind ?? 'generic'} size={16} />
         <span className="ac-dot" aria-hidden="true" />
         <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : item.label}</span>
-      </div>
+        {item.state === 'failed' && <span className="ac-exec-status">失败</span>}
+        {hasDetails && <ChevronDownIcon size={12} className={`ac-exec-chevron${expanded ? ' expanded' : ''}`} />}
+      </button>
       {!!item.resources?.length && <div className="ac-resource-links">
         {item.resources.map((resource) => <ResourceLink key={resource.uri} resource={resource} leafId={leafId} pluginId={pluginId} />)}
       </div>}
       {expanded && (item.detail || item.output) && (
-        <div className="ac-exec-body">
+        <div className="ac-exec-body" id={detailId}>
           {item.detail && <pre className="ac-exec-pre">{prettyJson(item.detail)}</pre>}
           {item.output && <pre className="ac-exec-pre">{prettyJson(item.output)}</pre>}
         </div>

@@ -39,11 +39,10 @@ import {
   PencilIcon,
   PlusIcon,
   GearIcon,
-  ClaudeIcon,
-  CodexIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '../../ui/Icons'
+import { CliBrandIcon } from '../../ui/CliBrandIcon'
 import { useMenuAnchor } from '../../ui/CanvasContextMenu'
 import { CanvasRoleEditor } from './CanvasRoleEditor'
 import { CanvasRoleManager } from './CanvasRoleManager'
@@ -434,7 +433,7 @@ export function CanvasAgentBar({
           }
         >
           <SparkleIcon size={9} className="ab-brand-spark" />
-          {kind === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
+          <CliBrandIcon cliId={kind} size={15} />
         </button>
 
         {/* 角色胶囊：决定模型/档位的默认值和职责契约。空 = 裸终端 */}
@@ -513,7 +512,7 @@ export function CanvasAgentBar({
                     onClick={() => setKind(k)}
                   >
                     <span className="ab-kind-mark">
-                      {k === 'claude' ? <ClaudeIcon size={15} /> : <CodexIcon size={15} />}
+                      <CliBrandIcon cliId={k} size={15} />
                     </span>
                     <span>{kindName(k)}</span>
                     {!ready && <span className="ab-kind-no">未安装</span>}
