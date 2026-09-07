@@ -7,6 +7,7 @@ import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions, AgentKind } from '../shared/types'
 import { mcpEnv } from './mcpBridge'
 import { createTermTailStore } from './termTail'
+import { getManagedCliPaths } from './probeEnv'
 import {
   secretsEnv,
   noteInjected,
@@ -115,10 +116,10 @@ ${extra}`,
     write(
       '.zshrc',
       `# path_helper 已经在 /etc/zprofile 里重排过 PATH 了，所以前置要放在最后一步。
-export PATH=${q(shimDir)}:"$PATH"
+export PATH=${[shimDir, ...getManagedCliPaths()].map(q).join(':')}:"$PATH"
 `
     )
-    write('.zlogin', '')
+    write('.zlogin', getManagedCliPaths().length ? `export PATH=${getManagedCliPaths().map(q).join(':')}:"$PATH"\n` : '')
     return dir
   } catch (e) {
     console.error('[pty] 准备 ZDOTDIR 失败（open shim 会被系统 open 抢先）', e)
@@ -435,6 +436,8 @@ export function registerPtyHandlers(): void {
           ...(process.env as Record<string, string>),
           TERM_PROGRAM: 'Eas-Term'
         }
+        for (const dir of getManagedCliPaths().reverse()) prependPath(env, dir)
+        env.DISABLE_AUTOUPDATER = '1'
         // open shim 目录塞到 PATH 最前 → CLI 的 `open <url>` 命中我们的劫持，落到画板浏览器
         const shimDir = ensureOpenShim()
         if (shimDir) {

@@ -930,6 +930,17 @@ const api = {
   },
   /** 主进程侧的偏好（检查更新、匿名统计、画板行为）。这些开关有的在窗口出现之前
    *  就要生效，有的要主进程独立维护状态，所以不放渲染层的 localStorage —— 见 main/prefs.ts */
+  cliUpdates: {
+    get: (): Promise<import('../shared/cliUpdates').CliUpdateSnapshot> => ipcRenderer.invoke('cliUpdates:get'),
+    setEnabled: (id: import('../shared/cliUpdates').UpdatableCli, enabled: boolean): Promise<import('../shared/cliUpdates').CliUpdateSnapshot> => ipcRenderer.invoke('cliUpdates:setEnabled', id, enabled),
+    retry: (id: import('../shared/cliUpdates').UpdatableCli): Promise<import('../shared/cliUpdates').CliUpdateSnapshot> => ipcRenderer.invoke('cliUpdates:retry', id),
+    rollback: (id: import('../shared/cliUpdates').UpdatableCli): Promise<import('../shared/cliUpdates').CliUpdateSnapshot> => ipcRenderer.invoke('cliUpdates:rollback', id),
+    onChange: (fn: (state: import('../shared/cliUpdates').CliUpdateSnapshot) => void): (() => void) => {
+      const h = (_e: Electron.IpcRendererEvent, state: import('../shared/cliUpdates').CliUpdateSnapshot): void => fn(state)
+      ipcRenderer.on('cliUpdates:changed', h)
+      return () => ipcRenderer.removeListener('cliUpdates:changed', h)
+    }
+  },
   prefs: {
     get: (): Promise<PrefsSnapshot> => ipcRenderer.invoke('prefs:get'),
     set: <K extends keyof PrefsSnapshot>(key: K, value: PrefsSnapshot[K]): Promise<PrefsSnapshot> =>

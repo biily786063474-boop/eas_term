@@ -43,6 +43,7 @@ import { registerSkillLibraryHandlers } from './skillLibrary'
 import { registerDictHandlers } from './dict'
 import { registerRulesHandlers, purgeLegacyDsh, refreshInstalledRules } from './agentRules'
 import { registerAgentInstallHandlers } from './agentInstall'
+import { registerCliUpdateHandlers } from './cliUpdates'
 import { registerBizoneScheme, registerBizoneHandlers } from './bizone'
 import { registerSecretHandlers } from './secrets'
 import { registerIslandHandlers, nudgeIsland, isIslandWindow, destroyIsland, mainWindow } from './island'
@@ -372,6 +373,7 @@ app.whenReady().then(() => {
   registerSecretHandlers()
   registerSkillHandlers()
   registerAgentInstallHandlers()
+  registerCliUpdateHandlers()
   registerHookHandlers(hasCli)
   registerRoleHandlers()
   registerWikiHandlers()

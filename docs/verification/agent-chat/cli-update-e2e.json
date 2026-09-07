@@ -1,0 +1,38 @@
+{
+  "defaults": [
+    {
+      "id": "codex",
+      "enabled": false,
+      "current": "0.153.4",
+      "phase": "idle"
+    },
+    {
+      "id": "claude",
+      "enabled": false,
+      "current": "2.1.263",
+      "phase": "idle"
+    }
+  ],
+  "togglePersistence": true,
+  "geometry": {
+    "w": 30,
+    "h": 18,
+    "overflow": false
+  },
+  "reboot": [
+    {
+      "id": "codex",
+      "enabled": false,
+      "current": "99.0.1",
+      "phase": "idle"
+    },
+    {
+      "id": "claude",
+      "enabled": false,
+      "current": "2.1.263",
+      "phase": "idle"
+    }
+  ],
+  "probeUsesManagedBinary": true,
+  "fixture": true
+}

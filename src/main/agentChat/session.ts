@@ -804,6 +804,8 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
         // probeEnv.ts，**这处漏了** —— 表现最阴险：探测说「装着」，UI 让你选，
         // 一点就 ENOENT。
         ...PROBE_ENV,
+        DISABLE_AUTOUPDATER: '1',
+        DISABLE_UPDATES: '1',
         // 团队派生的会话把角色名带进环境，让 MCP 那侧能**准确**判出「调用方是成员」，
         // 不用再靠 cwd 反推（那个猜测会误伤主 agent，见 mcpBridge 的 mcpEnv 注释）
         ...mcpEnv({ project: opts.cwd, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }),

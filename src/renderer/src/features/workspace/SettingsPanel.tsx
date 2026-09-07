@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
 import { FootprintPanel } from './FootprintPanel'
 import { GpuPanel } from './GpuPanel'
+import { CliUpdatesPanel } from './CliUpdatesPanel'
 import { McpBody } from './McpIndicator'
 import { useStore } from '../../store'
 import {
@@ -524,6 +525,7 @@ export function SettingsPanel(): JSX.Element {
               )}
 
               {tab === 'update' && (
+              <>
               <div className="cset-sec">
                 <div className="cset-row">
                   <span className="cset-rowname">
@@ -541,9 +543,11 @@ export function SettingsPanel(): JSX.Element {
                     checked={prefs.autoUpdateCheck}
                     onChange={(e) => void setPref('autoUpdateCheck', e.target.checked)}
                   />
-                  <span className="cset-rowname">启动后自动检查新版本</span>
+                  <span className="cset-rowname">启动后自动检查 Eas-Term 新版本</span>
                 </label>
               </div>
+              <CliUpdatesPanel />
+              </>
               )}
 
               {tab === 'board' && (

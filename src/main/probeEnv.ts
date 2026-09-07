@@ -123,6 +123,16 @@ export const PROBE_ENV: NodeJS.ProcessEnv = {
 
 let applied = false
 
+// 本次应用启动选定的托管版本。后台下载不能调用此函数或改变这些路径。
+let managedCliPaths: string[] = []
+export function getManagedCliPaths(): string[] { return [...managedCliPaths] }
+export function setManagedCliPaths(dirs: string[]): void {
+  managedCliPaths = [...dirs]
+  PROBE_ENV.PATH = buildProbePath(managedCliPaths, null, PROBE_ENV.PATH ?? '')
+  // Eas-Term 自己管理更新时间；不让 Claude 的后台更新绕过重启生效语义。
+  PROBE_ENV.DISABLE_AUTOUPDATER = '1'
+}
+
 /**
  * 问登录 shell 要一次真实的 `$PATH`，合并进 `PROBE_ENV`。
  *
@@ -170,7 +180,7 @@ export function applyLoginShellPath(timeoutMs = 4000): Promise<boolean> {
       const login = parseLoginPath(out)
       if (!login) return finish(false)
       PROBE_ENV.PATH = buildProbePath(
-        userBinDirs(HOME, process.platform, process.env),
+        [...managedCliPaths, ...userBinDirs(HOME, process.platform, process.env)],
         login,
         process.env.PATH ?? ''
       )
