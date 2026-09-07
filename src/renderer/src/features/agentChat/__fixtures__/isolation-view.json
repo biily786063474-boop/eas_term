@@ -19,6 +19,7 @@
       "label": "编辑 a.txt",
       "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}",
       "state": "ok",
+      "kind": "edit",
       "output": "File created successfully at: /WORK/proj/a.txt (file state is current in your context — no need to Read it back)"
      }
     ]
@@ -61,6 +62,7 @@
       "label": "编辑 a.txt",
       "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}",
       "state": "failed",
+      "kind": "edit",
       "output": "Claude requested permissions to write to /WORK/proj/a.txt, but you haven't granted it yet."
      }
     ]
@@ -111,6 +113,7 @@
       "label": "运行 /bin/zsh -lc 'ls /这个目录一定不存在xyz123'",
       "detail": "{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc 'ls /这个目录一定不存在xyz123'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}",
       "state": "failed",
+      "kind": "terminal",
       "output": "ls: /这个目录一定不存在xyz123: No such file or directory\n\n(exit code 1)"
      }
     ]
@@ -144,6 +147,7 @@
       "label": "创建 b.txt",
       "detail": "{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"/WORK/proj/b.txt\",\"kind\":\"add\"}],\"status\":\"in_progress\"}",
       "state": "ok",
+      "kind": "edit",
       "output": "{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"/WORK/proj/b.txt\",\"kind\":\"add\"}],\"status\":\"completed\"}"
      }
     ]
@@ -169,7 +173,26 @@
   "quotas": [],
   "turns": [],
   "pending": null,
-  "notices": [],
+  "notices": [
+   {
+    "id": "notice-1",
+    "text": "Reconnecting... 2/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: a330d310f991bf9e-LAX)",
+    "fatal": false,
+    "count": 1
+   },
+   {
+    "id": "notice-2",
+    "text": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a330d3fe49f77eb9-LAX, request id: req_dcccb2736f9c45ffb7986aaad0aa99af",
+    "fatal": false,
+    "count": 1
+   },
+   {
+    "id": "notice-3",
+    "text": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a330d3fe49f77eb9-LAX, request id: req_dcccb2736f9c45ffb7986aaad0aa99af",
+    "fatal": true,
+    "count": 1
+   }
+  ],
   "usage": null,
   "busy": false,
   "trimmedFromHead": 0

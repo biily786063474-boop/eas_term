@@ -103,9 +103,10 @@ export function createIdentity(deviceId: string, now: number, extraNames: string
   const cert = forge.pki.createCertificate()
   cert.publicKey = forge.pki.publicKeyFromPem(pubPem)
   cert.version = 2 // v3
-  // 序列号必须是正数：首字节 >= 0x80 会被解析成负数，有些 TLS 栈会拒。
-  // 前面补一个 00 是标准做法
-  cert.serialNumber = '00' + crypto.randomBytes(16).toString('hex')
+  // DER INTEGER 必须最短编码且为正：先去掉随机前导零，只在符号位为 1 时补 00。
+  // 无条件补零遇到随机值以 00 开头，会让 OpenSSL 报 illegal padding。
+  const serial = crypto.randomBytes(16).toString('hex').replace(/^(00)+/, '') || '01'
+  cert.serialNumber = parseInt(serial.slice(0, 2), 16) >= 0x80 ? '00' + serial : serial
   cert.validity.notBefore = new Date(now - BACKDATE_MS)
   cert.validity.notAfter = new Date(now + VALID_DAYS * 24 * 3600 * 1000)
 

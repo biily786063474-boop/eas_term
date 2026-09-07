@@ -10,6 +10,17 @@ import { createIdentity, formatPin, pinOf, pinOfCert, validIdentity } from './id
 
 const NOW = 1_756_000_000_000 // 2025-08-24 前后，固定值，测试不依赖当前时间
 
+for (const serial of [Buffer.alloc(16), Buffer.from('00001212121212121212121212121212', 'hex'), Buffer.alloc(16, 0x7f), Buffer.alloc(16, 0x80), Buffer.alloc(16, 0xff)]) {
+  test(`序列号 ${serial.toString('hex')} 仍能被 OpenSSL 解析并建立 TLS 身份`, (t) => {
+    t.mock.method(crypto, 'randomBytes', () => Buffer.from(serial))
+    const id = createIdentity('serial-edge', NOW)
+    const cert = new crypto.X509Certificate(id.cert)
+    assert.ok(BigInt(`0x${cert.serialNumber}`) > 0n, '序列号必须为正且非零')
+    assert.equal(pinOfCert(id.cert), id.pin)
+    assert.doesNotThrow(() => tls.createSecureContext({ key: id.key, cert: id.cert }))
+  })
+}
+
 test('**真的握一次手** —— 证明这张证书 TLS 栈认，不只是字段看着对', async () => {
   const id = createIdentity('dev123', NOW)
   const server = tls.createServer({ key: id.key, cert: id.cert }, (s) => s.end('ok'))

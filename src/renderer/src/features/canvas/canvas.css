@@ -5817,24 +5817,30 @@
    为什么不是 webgl-ogl：用户自己给的坑「每个按钮吃一个 WebGL 上下文，
    一屏里放好几个会明显掉帧」，而这里正是并排三颗。conic-gradient 上下文 0 个。
    参数在 `ui/motion/sweep.ts`。 */
-@property --sweep {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
-/* ── 平时：两道对角高光绕边巡游 ─────────────────────────────────────────── */
-.cframe-start-btn::before {
-  content: '';
+/* 固定环形裁剪 + 旋转已绘制的光层：保留绕边效果，不逐帧重算渐变。 */
+.cframe-start-ring {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1px; /* 环的粗细：**细** —— 粗了就从「镜面高光」变成「发光边框」 */
-  /* 两道，相隔 180°（用户：「对角去进行高光的设计」）。
-     第二道暗一档：完全等亮会读成「一个环缺了两块」，
-     有主次才像一束光扫过圆角矩形的两条对边。 */
+  padding: 1px;
+  overflow: hidden;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.cframe-start-ring::before {
+  content: '';
+  position: absolute;
+  /* 正方形光层始终覆盖按钮，环形遮罩本身保持不动。 */
+  width: 300%;
+  aspect-ratio: 1;
+  left: 50%;
+  top: 50%;
   background: conic-gradient(
-    from var(--sweep),
     transparent 0deg,
     var(--sweep-hl) 16deg,
     transparent 34deg,
@@ -5843,23 +5849,12 @@
     transparent 214deg,
     transparent 360deg
   );
-  /* 只留边框那一圈：外层 border-box 减去内层 content-box */
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.55;
-  /* 周期对应规格里的 speed=0.35（2000/0.35 ≈ 5714ms），见 sweep.ts */
+  transform: translate(-50%, -50%) rotate(0deg);
   animation: cframe-sweep 5714ms linear infinite;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
 }
 
 @keyframes cframe-sweep {
-  to {
-    --sweep: 360deg;
-  }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* ── hover：高光收掉，换成一道扫光 ──────────────────────────────────────── */
@@ -5869,12 +5864,12 @@
    停的是转动 —— 其余那几颗的高光**留在原地不动**，不是一起消失：
    全消失会让整排在鼠标进出时忽明忽暗，比转着还吵。
    注意力集中在被 hover 的那颗，其余保持安静，这是「停止」该有的样子。 */
-.cframe-start-row:hover .cframe-start-btn::before {
+.cframe-start-row:hover .cframe-start-ring::before {
   animation-play-state: paused;
 }
 
 /* 被 hover 的那颗：高光整个收掉，位置让给下面那道扫光 */
-.cframe-start-btn:hover::before {
+.cframe-start-btn:hover .cframe-start-ring {
   opacity: 0;
 }
 
@@ -5943,7 +5938,7 @@
 
 /* 尊重「减少动效」：高光留住那一圈静态的，转动和扫光都停 */
 @media (prefers-reduced-motion: reduce) {
-  .cframe-start-btn::before {
+  .cframe-start-ring::before {
     animation: none;
   }
   .cframe-start-btn:hover::after {

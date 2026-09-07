@@ -89,6 +89,7 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
             disabled={busy}
             onClick={() => start(cli.id)}
           >
+            <span className="cframe-start-ring" aria-hidden="true" />
             <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
             <span className="cframe-start-name">{cli.displayName}</span>
           </button>

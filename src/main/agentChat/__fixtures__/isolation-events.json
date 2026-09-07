@@ -84,7 +84,8 @@
     "k": "exec.start",
     "execId": "toolu_01VgvCVaesM6HLQqK9Xmn68a",
     "label": "编辑 a.txt",
-    "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}"
+    "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}",
+    "kind": "edit"
    },
    {
     "k": "quota",
@@ -228,7 +229,8 @@
     "k": "exec.start",
     "execId": "toolu_01RaoZ6c8XgSai8YX69PEtCL",
     "label": "编辑 a.txt",
-    "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}"
+    "detail": "{\"file_path\":\"/WORK/proj/a.txt\",\"content\":\"hi\"}",
+    "kind": "edit"
    },
    {
     "k": "exec.done",
@@ -312,12 +314,14 @@
     "k": "exec.start",
     "execId": "item_1",
     "label": "创建 b.txt",
-    "detail": "{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"/WORK/proj/b.txt\",\"kind\":\"add\"}],\"status\":\"in_progress\"}"
+    "detail": "{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"/WORK/proj/b.txt\",\"kind\":\"add\"}],\"status\":\"in_progress\"}",
+    "kind": "edit"
    },
    {
     "k": "exec.done",
     "execId": "item_1",
     "ok": true,
+    "kind": "edit",
     "output": "{\"id\":\"item_1\",\"type\":\"file_change\",\"changes\":[{\"path\":\"/WORK/proj/b.txt\",\"kind\":\"add\"}],\"status\":\"completed\"}"
    },
    {
@@ -351,12 +355,14 @@
     "k": "exec.start",
     "execId": "item_1",
     "label": "运行 /bin/zsh -lc 'ls /这个目录一定不存在xyz123'",
-    "detail": "{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc 'ls /这个目录一定不存在xyz123'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}"
+    "detail": "{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc 'ls /这个目录一定不存在xyz123'\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}",
+    "kind": "terminal"
    },
    {
     "k": "exec.done",
     "execId": "item_1",
     "ok": false,
+    "kind": "terminal",
     "output": "ls: /这个目录一定不存在xyz123: No such file or directory\n\n(exit code 1)"
    },
    {
@@ -374,13 +380,28 @@
   ]
  },
  "codex-unauthed": {
-  "kinds": "session.ready",
+  "kinds": "session.ready error error error",
   "events": [
    {
     "k": "session.ready",
     "sessionId": "01a050c9-0cf5-75d3-9229-149576806a68",
     "model": "",
     "cwd": ""
+   },
+   {
+    "k": "error",
+    "message": "Reconnecting... 2/5 (unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: wss://api.openai.com/v1/responses, cf-ray: a330d310f991bf9e-LAX)",
+    "fatal": false
+   },
+   {
+    "k": "error",
+    "message": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a330d3fe49f77eb9-LAX, request id: req_dcccb2736f9c45ffb7986aaad0aa99af",
+    "fatal": false
+   },
+   {
+    "k": "error",
+    "message": "unexpected status 401 Unauthorized: Missing bearer or basic authentication in header, url: https://api.openai.com/v1/responses, cf-ray: a330d3fe49f77eb9-LAX, request id: req_dcccb2736f9c45ffb7986aaad0aa99af",
+    "fatal": true
    }
   ]
  }
