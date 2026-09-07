@@ -34,6 +34,7 @@ import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
 import { registerCollabBoardHandlers } from './collabBoard'
+import { registerMergeHandlers } from './mergeTools'
 import { registerSkillHandlers, hasCli } from './agentSkill'
 import { registerHookHandlers } from './agentHook'
 import { registerRoleHandlers } from './roles'
@@ -428,6 +429,8 @@ app.whenReady().then(() => {
   registerTeamRoster()
   registerTeamWorktree()
   registerCollabBoardHandlers()
+  // 合并官的两个只读工具（预检冲突 / 依赖波及）。要读协同板与项目表，放在两者之后
+  registerMergeHandlers()
   buildMenu()
   createWindow()
 

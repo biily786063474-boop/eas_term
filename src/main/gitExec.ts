@@ -28,14 +28,45 @@ export interface GitOut {
  *   更要命的是 overlap 判定按字符串比对，转义过的和没转义的对不上，**中文路径的
  *   撞车永远判不出来**。本仓库 `docs/architecture/*.md` 必中这条。
  */
-export function gitExec(cwd: string, args: string[], opts: { timeoutMs?: number } = {}): Promise<GitOut> {
+export async function gitExec(cwd: string, args: string[], opts: { timeoutMs?: number } = {}): Promise<GitOut> {
+  const r = await gitExecCode(cwd, args, { timeoutMs: opts.timeoutMs ?? 15_000 })
+  const ok = r.code === 0
+  return { ok, out: (ok ? r.stdout : r.stderr || r.stdout).trim() }
+}
+
+export interface GitCode {
+  code: number
+  stdout: string
+  stderr: string
+  /** 被超时掐掉的（execFile 的 killed） */
+  killed: boolean
+}
+
+/**
+ * 带退出码的 git，**上面 `gitExec` 是它的薄包装** —— 环境参数（可选锁不取、路径不转义）只在这一处写。
+ *
+ * 要退出码的场合：`merge-tree --write-tree` 用退出码区分「0 无冲突 / 1 有冲突 / ≥2 git 自己失败」，
+ * 有冲突时 stdout 才是正文，光看 ok 分不清 1 和 2。`rev-parse` 也走它：code 128 且 stderr 为空
+ * 是「根本没有 git 命令」，与「不是仓库」要分开说。
+ *
+ * 超时默认 15s（与 gitExec 一致）；mergeTools 那些可能跑得久的调用自己传 30s。
+ * `maxBuffer` 放宽到 16M：merge-tree / diff --name-only 在大仓库上会超过 execFile 默认的 1M。
+ */
+export function gitExecCode(cwd: string, args: string[], opts: { timeoutMs?: number } = {}): Promise<GitCode> {
   return new Promise((resolve) => {
     execFile(
       'git',
       ['-c', 'core.quotePath=false', ...args],
-      { cwd, timeout: opts.timeoutMs ?? 15_000, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } },
+      {
+        cwd,
+        timeout: opts.timeoutMs ?? 15_000,
+        maxBuffer: 16 * 1024 * 1024,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' }
+      },
       (err, stdout, stderr) => {
-        resolve({ ok: !err, out: (err ? stderr || stdout : stdout).toString().trim() })
+        const e = err as (Error & { code?: unknown; killed?: boolean }) | null
+        const code = e ? (typeof e.code === 'number' ? e.code : 128) : 0
+        resolve({ code, stdout: stdout.toString(), stderr: stderr.toString(), killed: !!e?.killed })
       }
     )
   })

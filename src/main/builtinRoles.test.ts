@@ -25,7 +25,7 @@ const IMAGE_LIMITED = new Set<string>([])
 test('内置角色数组没有静默增减 —— 加/删一个角色要顺手改这份快照', () => {
   assert.deepEqual(
     BUILTIN_ROLES.map((r) => r.id),
-    ['e2e', 'scout', 'builder', 'inspector', 'prototyper', 'writer', 'illustrator', 'runner']
+    ['e2e', 'scout', 'builder', 'inspector', 'merger', 'prototyper', 'writer', 'illustrator', 'runner']
   )
 })
 
@@ -70,11 +70,11 @@ test('imageGen 开关本身仍可用于自建角色：Claude 通配 deny 是 har
   assert.deepEqual(codex.codex.skillsOff, ['/Users/x/.codex/skills/.system/imagegen/SKILL.md'])
 })
 
-test('其余内置角色（全流程/工匠/原型师/笔杆子/画师/杂役）：三家参数全空，没有护栏也没有报告行', () => {
+test('其余内置角色（全流程/工匠/合并官/原型师/笔杆子/画师/杂役）：三家参数全空，没有护栏也没有报告行', () => {
   const rest = BUILTIN_ROLES.filter((r) => !WRITE_PROTECTED.has(r.id) && !IMAGE_LIMITED.has(r.id))
   assert.deepEqual(
     rest.map((r) => r.id),
-    ['e2e', 'builder', 'prototyper', 'writer', 'illustrator', 'runner']
+    ['e2e', 'builder', 'merger', 'prototyper', 'writer', 'illustrator', 'runner']
   )
   for (const role of rest) {
     for (const kind of KINDS) {
@@ -87,10 +87,10 @@ test('其余内置角色（全流程/工匠/原型师/笔杆子/画师/杂役）
   }
 })
 
-test('内置角色的隔离默认：e2e / builder / prototyper 进 worktree，其余不隔离 —— 系统不替角色猜写不写码', () => {
+test('内置角色的隔离默认：e2e / builder / prototyper 进 worktree，其余（含合并官：merge 落在主干）不隔离 —— 系统不替角色猜写不写码', () => {
   const iso = Object.fromEntries(BUILTIN_ROLES.map((r) => [r.id, r.isolation ?? 'none']))
   assert.deepEqual(iso, {
-    e2e: 'worktree', scout: 'none', builder: 'worktree', inspector: 'none',
+    e2e: 'worktree', scout: 'none', builder: 'worktree', inspector: 'none', merger: 'none',
     prototyper: 'worktree', writer: 'none', illustrator: 'none', runner: 'none'
   })
 })

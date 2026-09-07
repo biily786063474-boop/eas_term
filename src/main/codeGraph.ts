@@ -9,7 +9,7 @@ import { analyzeProject } from './codeGraphAnalyze.ts'
 /** 「这个路径能不能扫」。**两个 handler 共用一份** ——
  *  各写一遍的话，以后收紧了其中一处，另一处会一直松着。
  *  返回 null = 过了；返回对象 = 直接把它回给渲染层。 */
-function checkRoot(root: string): { ok: false; error: string } | null {
+export function checkRoot(root: string): { ok: false; error: string } | null {
   if (!root) return { ok: false, error: '没有指定项目目录' }
   let stat: fs.Stats
   try {

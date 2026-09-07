@@ -205,6 +205,13 @@ export function AgentChatView({
     const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
     return leaf?.pane.kind === 'agent' ? leaf.pane.initialMessage : undefined
   })
+  /** 首条消息预填（只进输入框，不发）。同样从 store 现读。 */
+  const draft = useStore((s) => {
+    const tab = s.tabs.find((t) => t.id === tabId)
+    if (!tab) return undefined
+    const leaf = collectLeaves(tab.root).find((l) => l.id === leafId)
+    return leaf?.pane.kind === 'agent' ? leaf.pane.draft : undefined
+  })
   /** 这个节点指定了用哪个 CLI 吗（从「插件」选项卡开出来的会指定）。
    *  缺省 undefined = 沿用既有行为，自己挑第一个可用的。 */
   /** 这个面板选的角色。**订阅它**（不是读一次快照）—— 换角色要立刻反映到
@@ -251,6 +258,7 @@ export function AgentChatView({
     return leaf?.pane.kind === 'agent' ? leaf.pane.pluginId : undefined
   })
   const clearInitialMessage = useStore((s) => s.clearAgentInitialMessage)
+  const clearAgentDraft = useStore((s) => s.clearAgentDraft)
   // null = 还没拉回来（探测中）；[] = 拉回来了但一个可用的都没有
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   /** 点了一个不能直接用的 CLI（没装 / 仅终端）时，下面显示的说明 */
@@ -365,7 +373,7 @@ export function AgentChatView({
   // ── 分支徽标：这次会话到底跑在哪棵 worktree / 哪条分支 ──────────────
   //
   // 只在 `worktree` 存在时出现（角色声明了 isolation:'worktree'，且树已经建好）。
-  // 徽标本身就是按钮，点开菜单做三件事：开个终端过去、合并（P2 接合并官）、删掉这棵树。
+  // 徽标本身就是按钮，点开菜单做三件事：开个终端过去、起一个合并官把它合进主干、删掉这棵树。
   const openTerminal = useStore((s) => s.openTerminal)
   const [branchMenuAt, setBranchMenuAt] = useState<{ x: number; y: number } | null>(null)
   /** 协同板上有没有别的分支在改同一个文件。只影响徽标的底色和 tooltip 里那一句。 */
@@ -454,7 +462,33 @@ export function AgentChatView({
           label: '打开终端到这个 worktree',
           onClick: () => void openTerminal({ cwd: effectiveCwd })
         },
-        { label: '合并到主干', hint: 'P2 接合并官', disabled: true, onClick: () => {} },
+        {
+          label: '合并到主干',
+          hint: '起一个合并官会话，首条消息已预填',
+          // 在**同一个 Frame** 里起一个合并官节点，首条消息只预填不发 —— 合并是不可逆的，
+          // 用户得看一眼分支名、按一下发送才算下令。CLI 沿用本节点的（合并官 kind:'auto'）。
+          onClick: () => {
+            const S = useStore.getState()
+            const opts = {
+              cli: selected?.id,
+              roleId: 'merger',
+              draft: `把 ${worktree.branch} 合进主干。先 merge_preflight，再 repo_impact，回归前后各一次。`
+            }
+            const frame = S.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId))
+            // 分屏模式下这个 leaf 没有画布节点 —— 那就按普通 pane 开在同一项目里，
+            // 别静默吞掉：用户点了菜单却什么都没发生，是最难查的那种。
+            const p: Promise<unknown> = frame
+              ? S.addAgentNode(frame.id, opts)
+              : S.openAgentPane({ projectId: S.tabs.find((t) => t.id === tabId)?.projectId, ...opts })
+            void p.catch((e: unknown) =>
+              requestConfirm({
+                message: `起不了合并官会话：${e instanceof Error ? e.message : String(e)}`,
+                confirmLabel: '知道了',
+                onConfirm: () => {}
+              })
+            )
+          }
+        },
         { sep: true, label: '', onClick: () => {} },
         {
           label: '删除 worktree',
@@ -756,6 +790,17 @@ export function AgentChatView({
     // handleSend 不进依赖：它每次渲染都是新函数，进依赖会变成死循环
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMessage, selected, sessionId, starting, clearInitialMessage, tabId, leafId])
+
+  // 预填：pane 里带了 draft 就摆进输入框，**不发送**（徽标菜单「合并到主干」）。
+  // 不等 selected —— 它不起会话，没什么好等的；用 ref 保证只填一次，
+  // 否则清 store 落地前的那次重渲染会把用户已经开始改的输入框覆盖回去。
+  const draftFiredRef = useRef(false)
+  useEffect(() => {
+    if (draftFiredRef.current || !draft) return
+    draftFiredRef.current = true
+    setText(draft)
+    clearAgentDraft(tabId, leafId)
+  }, [draft, tabId, leafId, clearAgentDraft])
 
   /** override：派活时直接把任务传进来 —— 不走 state，因为同一帧里 setText 还没生效 */
   /** 把这个视图接到一个会话的事件流上。

@@ -80,7 +80,7 @@ graph LR
 ## 工具清单
 
 以 `mcp/eas-mcp.mjs` 的 `TOOLS` 为准（前缀即分类：wiki · canvas · team · secret · skill · dict，
-另有 `notify` / `todo_list` / `board_read`），真正的执行体在渲染层 `mcpHandler.ts`。
+另有 `notify` / `todo_list` / `board_read` / `merge_preflight` / `repo_impact`），真正的执行体在渲染层 `mcpHandler.ts`。
 `tools/list` 不做任何过滤 —— 缺 `EAS_TERM_PORT`/`TOKEN` 时整份返回空，否则全量对外可见。
 
 已知这几条从名字推不出来（不保证穷尽，改工具时自己再看一眼 `TOOLS`）：
@@ -95,8 +95,10 @@ graph LR
 | `wiki_archive_plan` ⏳ | **阻塞等用户**在弹窗里确认 |
 | `canvas_snapshot` | 截图落盘到项目 `screenshot/` |
 | `board_read`（角色工作流 P1）| **先 `refresh` 再 `read`**（`main/collabBoard.ts` 现算 + 落盘 `.eas/board.md`），拿到的板文永远是这一次算出来的；返回 `{ board, note?, path }`，`path` 已 `projectRootOf()` 归一到项目根 + `BOARD_REL`（不归一的话角色会话拿到的是它那棵 worktree 底下一个不存在的路径）。`read` 只在 1 秒内复用刚才那次 `refresh` 算出的 rows（省掉重复跑一整套 git），过期照常重算。数据来源与刷新时机见 [03](03-agent角色边界.md) 协同板段 |
+| `merge_preflight` ⏳（角色工作流 P2）| **只读，不动工作区**。执行体 `mcpHandler.ts`（定位项目与 `board_read` 同一手法），事实来源 `main/mergeTools.ts`：冲突用 `git merge-tree --write-tree` 算，git < 2.38 时 `conflicts` 为 null 并附 `conflictNote`；撞车清单从协同板反查；`testCmd` 是对象 `{ value, source }` **永不为 null**，`source: 'none'` 才是「没有回归命令」。传入路径经 `projectRootOf()` 归一到项目根 —— 角色会话在 worktree 里调它，算的仍是整个仓库。`changed` 相对**仓库根**；项目注册在仓库子目录时附 `note` |
+| `repo_impact` ⏳（角色工作流 P2）| **只读**。执行体 `mcpHandler.ts`，事实来源 `main/mergeTools.ts` 调代码地图的 `analyzeProject` 建图（**取自主干工作区**，不是调用方的 worktree，分支新增文件会落在 `unknown`），**图按项目缓存 5 分钟**（`graphCache`，每次 `preflight` 清掉重算），返回带 `cachedAt`。`dependents.indirect` 只到第二层不是闭包；`suggestedTests` 只认同目录同名 `*.test.*`。路径同样 `projectRootOf()` 归一；项目注册在仓库子目录时（`rev-parse --show-toplevel` ≠ 项目根）**自动剥掉子目录前缀**再查图，所以 `preflight.changed` 可以原样喂进来。渲染层只收非空字符串的 `files`，全滤掉了才报「files 不能为空」 |
 
-⏳ = 在 `LONG_WAITS` 名单里。
+⏳ = 在 `LONG_WAITS` 名单里（`merge_preflight` / `repo_impact` 进名单不是因为等人，是**慢**：merge-tree 给了 30s、`analyzeProject` 大仓库几十秒，都超过普通 15s 那道闸）。
 
 > 增删工具时，[README](README.md) 索引表里的「N 个工具」也得手抄一遍，没有校验。
 >

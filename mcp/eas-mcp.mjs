@@ -205,6 +205,41 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'merge_preflight',
+    description:
+      '合并前的**只读预检**：给一条角色分支（如 eas/builder/ab12ef），返回主干名、合并基点、这条分支改了哪些文件、' +
+      '直接合并会冲突的文件（git merge-tree 算的，不动工作区）、协同板上其他活跃分支与它碰到的同一文件、' +
+      '以及该项目的回归命令 `testCmd`：`testCmd.value` 为 null（`source` 为 `none`）时你必须在报告里写「未跑回归」；' +
+      '`source` 是 `project`（用户设的）或 `package.json`（推断的）。' +
+      '合并官动手前先调它。`conflicts` 为 null = 无法预检（多半是 git < 2.38），看 `conflictNote`。' +
+      '返回里的 `main` 是主工作区现状：`main.dirty` 为 true（有未提交改动）或 `main.branch` 不是 `defaultBranch` 时**不许合并，先报告**。' +
+      '返回 JSON：branch / defaultBranch / base（合并基点 sha）/ worktree（这条分支的 worktree 目录，可能为 null）/ ' +
+      'changed（相对仓库根）/ conflicts（null = 无法预检，看 conflictNote）/ overlaps{file, branches} / ' +
+      'main{branch, dirty} / testCmd{value, source} / note（项目注册在仓库子目录时才有）。',
+    inputSchema: {
+      type: 'object',
+      properties: { branch: { type: 'string', description: '要合进主干的分支名' } },
+      required: ['branch']
+    }
+  },
+  {
+    name: 'repo_impact',
+    description:
+      '依赖波及（只读）：给一组文件（相对项目根），返回谁 import 了它们（直接与再上一层）、它们卷入的循环依赖、' +
+      '以及建议的回归范围（同目录同名的 *.test 文件）。图来自代码地图的分析，第一次要几秒。' +
+      '拿 merge_preflight 的 changed 喂给它，就知道这次合并会波及到哪。' +
+      '图取自主干工作区（不是你所在的 worktree），结果按项目缓存 5 分钟（每次 merge_preflight 会清掉重算），返回带 cachedAt（图算出来的时刻）' +
+      ' —— 分支上刚新增的文件图上没有，会落在 unknown 里。' +
+      '返回 JSON：files（图上找得到的；模块级图如 Swift 项目时回的是所属模块节点 id）/ ' +
+      'unknown（图上没有的：非源码、未扫到、或分支新增/已删的文件）/ ' +
+      'dependents{file, direct, indirect}（indirect 只到第二层，不是闭包）/ cycles（循环分量）/ suggestedTests（同目录同名 *.test）。',
+    inputSchema: {
+      type: 'object',
+      properties: { files: { type: 'array', items: { type: 'string' }, description: '相对项目根的文件路径' } },
+      required: ['files']
+    }
+  },
+  {
     name: 'canvas_list_frames',
     description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。' +
       '**Frame 就是用户口中的「造梦空间」，也叫「项目区」** —— 一个 Frame 绑一个项目，'  +
@@ -591,8 +626,10 @@ const TOOLS = [
  *
  *  等的不一定是人：`wiki_archive_plan` / `team_spawn` 等用户点确认，
  *  而 `team_status` 的等待模式是挂着等某个子 agent 交活（渲染层 8 分钟）。
- *  判据是「会不会阻塞着等」，不是「等的是谁」。 */
-const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status'])
+ *  判据是「会不会阻塞着等」，不是「等的是谁」。
+ *  `merge_preflight` / `repo_impact` 则是**慢**（merge-tree 30s、analyzeProject 大仓库几十秒），
+ *  同样超过普通那道闸，一并放进来。 */
+const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
 
 /** 普通工具 30 秒足够（主进程那侧 15 秒就会先返回错误）；
  *  长等待的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，

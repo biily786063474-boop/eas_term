@@ -52,6 +52,8 @@ export interface TabsSlice {
     role?: string
     /** 挂载后自动发出去的首条消息（派活） */
     initialMessage?: string
+    /** 首条消息预填：只填进输入框，不发送、不落盘（徽标菜单「合并到主干」用） */
+    draft?: string
     /** 这次会话带哪个插件（主进程据此往 agent-mcp.json 合并它的工具面）。
      *  画布重建 leaf 时必须带回来 —— 2026-09-05 正式版事故：picker 的「对话」开出来的
      *  节点被重建成不带插件、不发首条的空对话，用户看到的是「对话起不来」 */
@@ -146,6 +148,9 @@ export interface TabsSlice {
   /** 派活的首条消息发出去之后清掉它。**必须清** —— 不清的话组件重新挂载
    *  （切视图、面板重排）会把同一条任务再发一遍，等于白烧一次。 */
   clearAgentInitialMessage: (tabId: string, leafId: string) => void
+  /** 预填填进输入框之后清掉它。**必须清** —— 理由同 clearAgentInitialMessage：
+   *  组件重挂载会再填一次，把用户已经改过的输入框覆盖回去。 */
+  clearAgentDraft: (tabId: string, leafId: string) => void
   setActiveLeaf: (tabId: string, leafId: string) => void
   setSplitRatio: (tabId: string, splitId: string, ratio: number) => void
 }
@@ -264,6 +269,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         owner: opts?.owner,
         role: opts?.role,
         initialMessage: opts?.initialMessage,
+        draft: opts?.draft,
         pluginId: opts?.pluginId,
         // **接管一个已经在跑的会话**（从团队面板点进来时用）。
         // 有它的话 AgentChatView 挂载时直接订阅这个 id，而不是等用户发第一条消息 ——
@@ -595,6 +601,18 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
         const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
         if (!leaf || leaf.pane.kind !== 'agent' || !leaf.pane.initialMessage) return t
         const pane: PaneState = { ...leaf.pane, initialMessage: undefined }
+        return { ...t, root: updatePane(t.root, leafId, pane) }
+      })
+    }))
+  },
+
+  clearAgentDraft: (tabId, leafId) => {
+    set((st) => ({
+      tabs: st.tabs.map((t) => {
+        if (t.id !== tabId) return t
+        const leaf = collectLeaves(t.root).find((l) => l.id === leafId)
+        if (!leaf || leaf.pane.kind !== 'agent' || !leaf.pane.draft) return t
+        const pane: PaneState = { ...leaf.pane, draft: undefined }
         return { ...t, root: updatePane(t.root, leafId, pane) }
       })
     }))

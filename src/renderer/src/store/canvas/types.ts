@@ -333,6 +333,8 @@ export interface CanvasSlice {
       owner?: 'team'
       role?: string
       initialMessage?: string
+      /** 首条消息预填（填进输入框不发送）—— 对齐 openAgentPane（徽标菜单「合并到主干」靠它） */
+      draft?: string
       /** 这次会话带哪个插件 —— 对齐 openAgentPane（2026-09-05 加，picker 的「对话」靠它） */
       pluginId?: string
       cwd?: string

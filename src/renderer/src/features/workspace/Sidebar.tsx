@@ -97,12 +97,13 @@ export function Sidebar(): JSX.Element {
   const removeProject = useStore((s) => s.requestRemoveProject)
   const openTerminal = useStore((s) => s.openTerminal)
   const renameProject = useStore((s) => s.renameProject)
+  const setProjectTestCmd = useStore((s) => s.setProjectTestCmd)
   /** 项目行右键菜单的落点 */
   const [projMenu, setProjMenu] = useState<{ x: number; y: number; id: string } | null>(null)
-  /** 正在内联改名的项目（双击/菜单进入）。mode 区分改的是显示名还是文件夹 */
+  /** 正在内联编辑的项目（双击/菜单进入）。mode 区分改的是显示名、文件夹，还是回归命令 */
   const [editingProject, setEditingProject] = useState<{
     id: string
-    mode: 'name' | 'folder'
+    mode: 'name' | 'folder' | 'testCmd'
   } | null>(null)
   const [renameError, setRenameError] = useState<string | null>(null)
   const renameProjectFolder = useStore((s) => s.renameProjectFolder)
@@ -256,10 +257,21 @@ export function Sidebar(): JSX.Element {
               {editingProject?.id === p.id ? (
                 <input
                   className="project-rename"
-                  // 改显示名时预填显示名；改文件夹时预填**目录名**（那才是要改的东西）
+                  // 改显示名时预填显示名；改文件夹时预填**目录名**（那才是要改的东西）；
+                  // 回归命令预填已设的那条（没设就是空，留空提交 = 回落到 package.json 推断）
                   defaultValue={
-                    editingProject.mode === 'folder' ? (p.path.split('/').pop() ?? '') : p.name
+                    editingProject.mode === 'folder'
+                      ? (p.path.split('/').pop() ?? '')
+                      : editingProject.mode === 'testCmd'
+                        ? (p.testCmd ?? '')
+                        : p.name
                   }
+                  placeholder={
+                    editingProject.mode === 'testCmd' ? '回归命令，留空则从 package.json 推断' : undefined
+                  }
+                  // 回归命令是要落进 preflight 返回、再交给合并官敲的一行命令，200 字够写任何 npm/pnpm/make 组合；
+                  // 没上限的话一段粘错的日志也会被存成「命令」
+                  maxLength={editingProject.mode === 'testCmd' ? 200 : undefined}
                   autoFocus
                   // SwipeRow 用 pointer 事件做横滑删除，不挡住就会一边打字一边把行滑走
                   onMouseDown={(e) => e.stopPropagation()}
@@ -272,6 +284,10 @@ export function Sidebar(): JSX.Element {
                     setEditingProject(null)
                     if (mode === 'name') {
                       void renameProject(p.id, val)
+                      return
+                    }
+                    if (mode === 'testCmd') {
+                      void setProjectTestCmd(p.id, val)
                       return
                     }
                     const cur = p.path.split('/').pop() ?? ''
