@@ -55,7 +55,11 @@ export function upsertLedgers(root: string, rows: BoardRow[], now = Date.now()):
       const rel = ledgerRel(r.branch)
       if (!rel) continue
       const abs = path.join(root, rel)
-      const { notes } = splitLedger(readText(abs))
+      // 旧文里找不到「## 记录」标题（手改过 / 被别的东西写过）时，整份旧文当 notes 接回，
+      // 不能当空 —— 头部我们重算，但别人写进去的字一个都不能丢。
+      const old = readText(abs)
+      const split = splitLedger(old)
+      const notes = split.found ? split.notes : old
       const worktree = path.relative(root, r.cwd).split(path.sep).join('/') || null
       try {
         writeAtomic(

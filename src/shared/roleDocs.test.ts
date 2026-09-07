@@ -81,14 +81,22 @@ test('clipTail：不超不动，超出保留尾部并加提示行', () => {
   assert.equal(c, '…（前面还有 3 行）\n4\n5\n')
 })
 
-test('roleDocsPrompt：有台账两行，没有一行；都是指针不是全文', () => {
-  const p = roleDocsPrompt({ charterRel: 'docs/roles/builder.md', ledgerRel: '.eas/board/eas--builder--ab12ef.md' })
+test('roleDocsPrompt：有台账两行，没有一行；都是指针不是全文；路径是从 root 起的绝对路径', () => {
+  const p = roleDocsPrompt({ root: '/p', charterRel: 'docs/roles/builder.md', ledgerRel: '.eas/board/eas--builder--ab12ef.md' })
   assert.ok(p.startsWith('## 你的角色文档\n'))
-  assert.match(p, /章程：`docs\/roles\/builder\.md`.*动手前先读/)
-  assert.match(p, /台账：`\.eas\/board\/eas--builder--ab12ef\.md`.*board_note/)
-  const q = roleDocsPrompt({ charterRel: 'docs/roles/scout.md', ledgerRel: null })
+  assert.match(p, /章程：`\/p\/docs\/roles\/builder\.md`.*动手前先读/)
+  assert.match(p, /台账：`\/p\/\.eas\/board\/eas--builder--ab12ef\.md`.*board_note/)
+  assert.ok(!p.includes('`docs/roles/builder.md`'), '不能再给相对路径 —— 角色的 cwd 在 worktree 里，相对路径打不开')
+  assert.ok(!p.includes('绑定层'), '不给模型看内部黑话')
+  assert.match(p, /项目对你的要求；工具\/权限限制由系统另行执行/)
+  const q = roleDocsPrompt({ root: '/p', charterRel: 'docs/roles/scout.md', ledgerRel: null })
   assert.ok(!q.includes('台账'))
   assert.ok(q.split('\n').length <= 4)
+})
+
+test('roleDocsPrompt：root 带尾斜杠不会拼出双斜杠', () => {
+  const p = roleDocsPrompt({ root: '/p/', charterRel: 'docs/roles/x.md', ledgerRel: null })
+  assert.ok(p.includes('`/p/docs/roles/x.md`'))
 })
 
 test('branchFromGitFiles：worktree 的 .git 是文件，主工作区是目录，detached 为 null', () => {
@@ -104,4 +112,77 @@ test('branchFromGitFiles：worktree 的 .git 是文件，主工作区是目录�
   assert.equal(branchFromGitFiles('/p', read), 'main')
   assert.equal(branchFromGitFiles('/q', read), null)
   assert.equal(branchFromGitFiles('/nope', read), null)
+})
+
+test('ledgerRel：中文分支名保留字母数字（\\p{L}\\p{N}），不同角色不塌成同一个文件', () => {
+  const a = ledgerRel('eas/工匠/ab12ef')
+  const b = ledgerRel('eas/侦察/ab12ef')
+  assert.equal(a, '.eas/board/eas--工匠--ab12ef.md')
+  assert.equal(b, '.eas/board/eas--侦察--ab12ef.md')
+  assert.notEqual(a, b)
+})
+
+test('renderCharter：硬约束为空时说明白「写在这里不算数」', () => {
+  const t = renderCharter({ roleId: 'x', roleName: 'X', contract: '', hardLines: [] })
+  assert.ok(t.includes('- 无（角色卡没点亮任何能力开关；要加硬限制去角色卡改，写在这里不算数）'))
+})
+
+test('renderCharter：完成判据抽取 —— 剥列表符与「完成判据：」前缀；连接符结尾的行并入下一行', () => {
+  const t = renderCharter({
+    roleId: 'b', roleName: 'B',
+    contract: [
+      '你是工匠。',
+      '- 完成判据：测试全绿。',
+      '算做完的条件是 ——',
+      '构建通过且没有 lint 报错。',
+      '别的话。'
+    ].join('\n'),
+    hardLines: []
+  })
+  const judge = t.slice(t.indexOf('## 完成判据'), t.indexOf('## 交接格式'))
+  assert.ok(judge.includes('\n- 测试全绿。\n'), judge)
+  assert.ok(judge.includes('\n- 算做完的条件是 ——构建通过且没有 lint 报错。\n'), judge)
+  assert.ok(!judge.includes('别的话'))
+  assert.ok(!judge.includes('- - '), '列表符不能叠两层')
+})
+
+test('renderCharter：完成判据行的前一行以连接符结尾时，把它并进来', () => {
+  const t = renderCharter({
+    roleId: 'b', roleName: 'B',
+    contract: '交付前要做到，\n完成判据是全绿。',
+    hardLines: []
+  })
+  const judge = t.slice(t.indexOf('## 完成判据'), t.indexOf('## 交接格式'))
+  assert.ok(judge.includes('\n- 交付前要做到，完成判据是全绿。\n'), judge)
+})
+
+test('splitLedger：found 标志；认 CRLF 与标题尾空白；认文件开头', () => {
+  assert.deepEqual(splitLedger('没有记录段的文本'), { notes: '', found: false })
+  assert.deepEqual(splitLedger(''), { notes: '', found: false })
+  assert.deepEqual(splitLedger('## 记录\n- a\n'), { notes: '- a\n', found: true })
+  assert.deepEqual(splitLedger('# 头\r\n- x\r\n\r\n## 记录 \r\n- a\r\n- b\r\n'), { notes: '- a\r\n- b\r\n', found: true })
+  assert.deepEqual(splitLedger('# 头\n## 记录\t\n'), { notes: '', found: true })
+  assert.equal(splitLedger('# 头\n## 记录x\n- a\n').found, false, '「## 记录x」不是记录段标题')
+})
+
+test('renderLedger ↔ splitLedger 往返无损：note 里有「## 记录」「# 标题」与空行也不串', () => {
+  const notes = '- 10:00 [工匠] 决定：\n  ## 记录\n  # 标题\n\n- 10:01 [工匠] 第二条\n## 记录\n# 标题\n\n'
+  const now = Date.UTC(2026, 8, 6, 6, 31)
+  const t = renderLedger(H, notes, now)
+  const s = splitLedger(t)
+  assert.equal(s.found, true)
+  assert.equal(s.notes, notes)
+  assert.equal(renderLedger(H, s.notes, now), t)
+})
+
+test('branchFromGitFiles：gitdir 相对路径按 cwd 拼；盘符路径 + CRLF', () => {
+  const files: Record<string, string> = {
+    '/m/sub/.git': 'gitdir: ../.git/modules/sub\n',
+    '/m/sub/../.git/modules/sub/HEAD': 'ref: refs/heads/feat/sub\n',
+    'C:/w/.worktrees/a/.git': 'gitdir: C:/w/.git/worktrees/a\r\n',
+    'C:/w/.git/worktrees/a/HEAD': 'ref: refs/heads/feat/win\r\n'
+  }
+  const read = (p: string): string | null => files[p] ?? null
+  assert.equal(branchFromGitFiles('/m/sub', read), 'feat/sub')
+  assert.equal(branchFromGitFiles('C:/w/.worktrees/a', read), 'feat/win')
 })

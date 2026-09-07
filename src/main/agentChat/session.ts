@@ -1417,7 +1417,8 @@ export function registerAgentChatHandlers(): void {
       if (ch) {
         if (ch.created) charterCreated = ch.rel
         const branch = p.cwd !== root ? branchFromGitFiles(p.cwd, readIfFile) : null
-        roleDocs = roleDocsPrompt({ charterRel: ch.rel, ledgerRel: branch ? ledgerRel(branch) : null })
+        // 传 root：指针要给绝对路径，角色的 cwd 在 worktree 里，相对路径打不开（评审必改）
+        roleDocs = roleDocsPrompt({ root, charterRel: ch.rel, ledgerRel: branch ? ledgerRel(branch) : null })
       }
     }
     // 阶段三第三项：Claude 上 caps.write=false 的第二道闸。开闸条件三个都要满足
