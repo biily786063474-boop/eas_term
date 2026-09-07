@@ -15,6 +15,7 @@ import { useStore } from '../../store'
 import { computeLayout, collectLeaves, LeafRect, DividerRect, Rect } from '../../layout'
 import { PaneView, CanvasPlacement } from './PaneView'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
+import { useHidingHolder } from './useFlip.ts'
 
 const HIDDEN_RECT: Rect = { x: 0, y: 0, w: 0, h: 0 }
 
@@ -38,6 +39,12 @@ export function PaneLayer(): JSX.Element {
   // 走 liveMaximizedNode 而不是直接读 —— 它指向的节点可能已经被关掉了，
   // 那时候直接读会让下面的 `maximizedNode && !isMax` 把**所有**节点都隐藏掉
   const maximizedNode = useStore(liveMaximizedNode)
+  // 「因为谁而藏着」—— **比 maximizedNode 晚一个收回动画的时长才清空**。
+  // 还原时所有被藏起来的节点同一帧全部恢复显示（实测 55 个元素、一帧 50~120ms），
+  // 那笔开销正好压在收回动画上（用户 2026-09-07：「回收动画会掉帧」）。
+  // ⚠️ 只有下面那句「其它节点隐藏」用它；**几何与 isMax 仍走实时的 maximizedNode**，
+  // 否则被还原的节点会晚 260ms 才开始缩。
+  const hidingHolder = useHidingHolder(maximizedNode ?? null)
   // 看板全屏进/出时必须重挂观察器 —— 见下面 measure effect 依赖里的说明。
   // 这个 leafId 本身在这里用不上，要的是「它变了」这个事实。
   const boardFull = useStore((s) => s.boardFullscreen)
@@ -76,11 +83,12 @@ export function PaneLayer(): JSX.Element {
     const cw = vpEl?.clientWidth ?? window.innerWidth
     const ch = vpEl?.clientHeight ?? window.innerHeight
     canvas.frames.forEach((f) => {
-      if (f.collapsed && !(maximizedNode && maximizedNode.frameId === f.id)) return
+      if (f.collapsed && !(hidingHolder && hidingHolder.frameId === f.id)) return
       f.nodes.forEach((n) => {
         if (!n.leafId) return
         const isMax = !!maximizedNode && maximizedNode.frameId === f.id && maximizedNode.nodeId === n.id
-        if (maximizedNode && !isMax) return // 其它节点隐藏
+        // 用滞后的 holder：还原后这一句还会再拦 260ms，等收回动画放完再放它们出来
+        if (hidingHolder && !(hidingHolder.frameId === f.id && hidingHolder.nodeId === n.id)) return
         if (isMax) {
           m.set(n.leafId, {
             left: 0,
@@ -127,7 +135,7 @@ export function PaneLayer(): JSX.Element {
     // left/top/w/h 全部来自 `canvas.viewport.scale`，从来没读过 committedScale。
     // 它当初在这儿是为了「缩放落定时强制重算一次」，而真缩放之后没有落定这一步了。
     // `canvas` 本身已经涵盖 viewport 的变化。
-  }, [viewMode, canvas, titleByLeaf, maximizedNode])
+  }, [viewMode, canvas, titleByLeaf, maximizedNode, hidingHolder])
 
   // board 模式：量每张卡片里那个空槽位，把终端浮到它上面。
   //

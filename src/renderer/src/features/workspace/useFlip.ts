@@ -10,7 +10,7 @@
 //
 // 加第五个可最大化的模块时用这个 hook，别再抄一份 —— 抄出来的第一天是一样的，
 // 改过一次曲线或阈值之后就不一样了，而症状只是「有的窗口手感不对」，极难查。
-import { useLayoutEffect, useRef, type RefObject } from 'react'
+import { useLayoutEffect, useRef, type RefObject, useEffect, useState } from 'react'
 import { invertTransform, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from './flip.ts'
 
 /**
@@ -95,4 +95,43 @@ export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRe
     // 依赖逐字段列，不能只依赖 rect 对象 —— 调用方每次渲染都会新建一个对象字面量，
     // 那样每渲染一次都会重跑一遍 effect
   }, [ref, rect?.left, rect?.top, rect?.w, rect?.h])
+}
+
+/**
+ * 「因为谁而藏着」—— 最大化时其它节点要 `display:none`，**但还原时要晚一点再放出来**。
+ *
+ * ── 为什么 ────────────────────────────────────────────────────────────────
+ * 还原那一刻画布上所有被藏起来的节点同一帧全部恢复显示，2026-09-07 实测 55 个元素、
+ * 一帧 50~120ms（冷启动更贵）。这笔开销落在收回动画的头上，用户看到的就是
+ * 「回收动画会掉帧」。`useMaximizeFlip` 那边只能绕（等一帧不贵的再启动），
+ * 绕的代价是动画晚开始 —— 眼睛看到的还是「点完先顿一下」。
+ *
+ * 所以这里治根：**把恢复显示推迟到收回动画放完之后**。反正它们在最大化期间本来就
+ * 一直看不见，晚 260ms 出现不改变任何语义，而收回那段就没有别的活跟它抢帧了。
+ *
+ * ── 用法 ──────────────────────────────────────────────────────────────────
+ * 调用方拿它算 `hiddenByMax`，**不要拿它算 `isMax` / 最大化的几何** —— 那两个必须
+ * 用实时值，否则被还原的那个节点会晚 260ms 才开始缩，动画就没了。
+ *
+ * 正在被还原的那个节点自己**不会**被藏：它就是 `holder` 指的那个。
+ */
+export function useHidingHolder(live: MaxRef | null): MaxRef | null {
+  const [holder, setHolder] = useState<MaxRef | null>(live)
+  useEffect(() => {
+    // 有人最大化了：**立刻**藏起其它节点，一帧都不能等（等了会看见它们压在上面）
+    if (live) {
+      setHolder(live)
+      return
+    }
+    // 还原：多留一个收回动画的时长再放出来
+    const t = setTimeout(() => setHolder(null), FLIP_MS.shrink)
+    return () => clearTimeout(t)
+  }, [live?.frameId, live?.nodeId])
+  return live ?? holder
+}
+
+/** 最大化的那个节点的身份。跟 store 里 `maximizedNode` 同形，这里只取用得上的两个字段。 */
+export interface MaxRef {
+  frameId?: string
+  nodeId: string
 }

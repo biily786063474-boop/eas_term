@@ -3,7 +3,7 @@
 
 import { useState, useRef } from 'react'
 import { useStore } from '../../store'
-import { useMaximizeFlip } from '../workspace/useFlip.ts'
+import { useHidingHolder, useMaximizeFlip } from '../workspace/useFlip.ts'
 import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
 import { makeSubframeDrop } from './subframeDrop'
@@ -34,7 +34,13 @@ export function CanvasComponentNode({
   const vp = useStore((s) => s.canvas.viewport)
   const isMax = maximizedNode?.frameId === frame.id && maximizedNode?.nodeId === node.id
   // 最大化：撑成「当前可视区」在世界坐标下的矩形（节点坐标相对 Frame）
-  const hiddenByMax = !!maximizedNode && !isMax
+  // **藏起来这件事要滞后**：还原时 55 个元素同一帧全部恢复显示，那一帧 50~120ms，
+  // 正好压在收回动画头上（用户 2026-09-07：「回收动画会掉帧」）。推迟到动画放完再放出来
+  // —— 它们在最大化期间本来就一直看不见，晚 260ms 出现不改变任何语义。
+  // ⚠️ **只有它能用滞后值**；`isMax` 和最大化的几何必须用实时的 `maximizedNode`，
+  // 否则被还原的那个节点会晚 260ms 才开始缩，动画就没了。
+  const hold = useHidingHolder(maximizedNode ?? null)
+  const hiddenByMax = !!hold && !(hold.frameId === frame.id && hold.nodeId === node.id)
   const maxStyle = ((): React.CSSProperties | null => {
     if (!isMax) return null
     const el = document.querySelector('.canvas-viewport') as HTMLElement | null
