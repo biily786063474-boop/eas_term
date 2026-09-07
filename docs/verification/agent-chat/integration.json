@@ -34,7 +34,13 @@
       "name": "工具语义图标及旧聊天动作入口保留"
     },
     {
-      "name": "最大化还原和画布缩放后导航贴合 Frame 外侧"
+      "name": "最大化还原和画布缩放后导航贴合 AI 对话模块外侧"
+    },
+    {
+      "name": "Frame 独立移位时导航仍固定在对话模块外 12px"
+    },
+    {
+      "name": "模块独立移动后导航同步移动，缩放下仍保持 12px 间距"
     },
     {
       "name": "普通画布导航层级低于文件抽屉"
@@ -47,8 +53,8 @@
       "data": {
         "samePane": true,
         "paths": [
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-73ES7B/.worktrees/main",
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-73ES7B/.worktrees/peer"
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-9C4dMW/.worktrees/main",
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-9C4dMW/.worktrees/peer"
         ]
       }
     },

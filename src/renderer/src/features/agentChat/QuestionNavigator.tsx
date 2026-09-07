@@ -36,17 +36,11 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
         if (pane && getComputedStyle(pane).display !== 'none' && pane.getAnimations().some(animation => animation.playState === 'running')) raf = requestAnimationFrame(measure)
         return
       }
-      const paneRect = pane?.getBoundingClientRect() ?? r
-      let left = Math.max(paneRect.left, clipped.left)
+      const paneRect = pane.getBoundingClientRect()
+      // The rail belongs to this chat module: 26px rail + 12px screen-space gap.
+      // A frame can contain independently positioned modules; its bounds are not an anchor.
+      const left = paneRect.left
       let outside = true
-      const state = useStore.getState()
-      if (state.viewMode === 'canvas' && !state.maximizedNode && leafId) {
-        const frame = state.canvas.frames.find(f => f.nodes.some(n => n.leafId === leafId))
-        const frameEl = frame && document.querySelector<HTMLElement>('.cframe[data-fid="' + CSS.escape(frame.id) + '"]')
-        const fr = frameEl?.getBoundingClientRect()
-        if (fr && paneRect.left - fr.left < 90) left = fr.left
-        else outside = false
-      }
       if (left - 38 < (layer?.left ?? 0)) outside = false
       const candidate = railPlacement({ ...clipped, left }, innerWidth, innerHeight, outside)
       if (candidate?.outside) {

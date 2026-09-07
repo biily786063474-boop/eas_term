@@ -84,11 +84,23 @@ export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) 
   await shot('integration-navigation-dark')
   await cdp.eval(`document.documentElement.dataset.theme='light'`); await shot('integration-navigation-light')
   check(await cdp.eval(`!!document.querySelector('.ac-exec-row [data-icon-kind="read"]') && !!document.querySelector('[aria-label="新对话"]') && !!document.querySelector('[aria-label="语音输入"]')`), '工具语义图标及旧聊天动作入口保留')
-  // Restore through the real FLIP path, then verify the portal follows the final frame.
+  // Restore through the real FLIP path, then verify the portal follows the chat module, independently of its containing frame.
   await cdp.eval(`window.__store.getState().setMaximizedNode(null);window.__store.getState().setViewport({x:100,y:10,scale:.8})`)
-  await waitFor(() => cdp.eval(`(()=>{const pane=document.querySelector('[data-leaf-id="integration-leaf"]');const nav=document.querySelector('.ac-question-nav');const frame=document.querySelector('.cframe[data-fid="integration-frame"]');return pane&&!pane.getAnimations().some(a=>a.playState==='running')&&nav?.classList.contains('outside')&&Math.abs(nav.getBoundingClientRect().left-(frame.getBoundingClientRect().left-38))<2})()`), { timeout:8000, desc:'还原缩放后导航跟随 Frame 外侧' })
+  await waitFor(() => cdp.eval(`(()=>{const pane=document.querySelector('[data-leaf-id="integration-leaf"]');const nav=document.querySelector('.ac-question-nav');return pane&&!pane.getAnimations().some(a=>a.playState==='running')&&nav?.classList.contains('outside')&&Math.abs(nav.getBoundingClientRect().left-(pane.getBoundingClientRect().left-38))<2})()`), { timeout:8000, desc:'还原缩放后导航跟随 AI 对话模块外侧' })
   await shot('integration-navigation-canvas')
-  check(true,'最大化还原和画布缩放后导航贴合 Frame 外侧')
+  check(true,'最大化还原和画布缩放后导航贴合 AI 对话模块外侧')
+  const railGap = () => cdp.eval(`(()=>{const p=document.querySelector('[data-leaf-id="integration-leaf"]').getBoundingClientRect();const n=document.querySelector('.ac-question-nav').getBoundingClientRect();return {pane:p.left,nav:n.left,gap:p.left-n.right}})()`)
+  const beforeFrameMove=await railGap()
+  // Move the frame's boundary while keeping the chat module at the same world position.
+  await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({canvas:{...s.canvas,frames:s.canvas.frames.map(f=>f.id==='integration-frame'?{...f,x:f.x-120,w:f.w+120,nodes:f.nodes.map(n=>({...n,x:n.x+120}))}:f)}})})()`)
+  await waitFor(async()=>{const r=await railGap();return Math.abs(r.pane-beforeFrameMove.pane)<2&&Math.abs(r.nav-beforeFrameMove.nav)<2&&Math.abs(r.gap-12)<2},{timeout:8000,desc:'Frame 边界改变不能牵动提问导航'})
+  check(true,'Frame 独立移位时导航仍固定在对话模块外 12px')
+  // Moving just the chat module must move its rail by the same screen distance.
+  await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({canvas:{...s.canvas,frames:s.canvas.frames.map(f=>f.id==='integration-frame'?{...f,w:f.w+120,nodes:f.nodes.map(n=>({...n,x:n.x+100}))}:f)}})})()`)
+  await waitFor(async()=>{const r=await railGap();return Math.abs((r.pane-beforeFrameMove.pane)-80)<2&&Math.abs((r.nav-beforeFrameMove.nav)-80)<2&&Math.abs(r.gap-12)<2},{timeout:8000,desc:'移动对话模块后导航保持固定间距'})
+  check(true,'模块独立移动后导航同步移动，缩放下仍保持 12px 间距')
+  await shot('integration-navigation-module-anchor')
+
   check(await cdp.eval(`Number(getComputedStyle(document.querySelector('.ac-question-nav')).zIndex)<Number(getComputedStyle(document.querySelector('.canvas-drawer')).zIndex)`),'普通画布导航层级低于文件抽屉')
   // Real file reads from the isolated registered project; never touch user files.
   for (const name of ['afterPack.js','icon.png','icon.svg','entitlements.mac.plist','AGENTS.md']) fs.writeFileSync(path.join(projectDir,name),'')
