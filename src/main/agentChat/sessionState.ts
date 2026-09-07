@@ -98,6 +98,9 @@ export interface SessionRecord {
    *  丢了的话恢复出来的会话不知道旁边还有谁在改哪些文件，
    *  契约里「改文件前先看板」那句就没有起点了。 */
   boardText?: string
+  /** 「角色文档」指针段（章程 + 台账路径）。同 boardText：起会话时算一次，restart 原样带上 ——
+   *  丢了的话恢复出来的会话就不知道章程在哪、该往哪条台账记 board_note。 */
+  roleDocs?: string
   /** 本机 MCP server 名清单，起会话时算一次，restart 沿用 */
   knownMcpServers?: string[]
   /** Codex 的配置目录。跟 knownMcpServers 同一个理由必须原样存在这里并被 effectiveOpts
@@ -309,6 +312,7 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     codexHome: s.codexHome,
     writeGuardSettings: s.writeGuardSettings,
     roleId: s.roleId,
-    boardText: s.boardText
+    boardText: s.boardText,
+    roleDocs: s.roleDocs
   }
 }

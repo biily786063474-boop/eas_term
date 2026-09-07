@@ -297,6 +297,10 @@ export interface StartOpts {
   /** 起会话那一刻的协同板文本（已按 clipForPrompt 截断）。**只在 spawn 时附进系统提示**，
    *  会话中途变化不推送 —— 三家 CLI 都没有中途注入系统提示的通道，契约要求改文件前先 board_read。 */
   boardText?: string
+  /** 起会话时附进系统提示的「角色文档」指针段（章程 + 台账路径，**只有指针不含全文** ——
+   *  全文注入违反托管区纪律，见 shared/roleDocs.ts 的 roleDocsPrompt）。
+   *  与 boardText 一样只在 spawn 时附；restart 由 effectiveOpts 带上。 */
+  roleDocs?: string
 }
 
 /** `roleBounds` 的 IPC 清洗。**它直接决定安全边界，所以不猜、不修补、不部分接受。**
@@ -492,7 +496,11 @@ export interface AgentChatEventEnvelope {
   event: ChatEvent
 }
 
-export type AgentChatStartResult = { ok: true; sessionId: string } | { ok: false; error: string }
+/** ok 分支的 `charterCreated`：这次 start **首次**生成了角色章程时带上它的项目内相对路径
+ *  （`docs/roles/<roleId>.md`），渲染层据此提示用户去填边界段；章程已存在时没有这个字段。 */
+export type AgentChatStartResult =
+  | { ok: true; sessionId: string; charterCreated?: string }
+  | { ok: false; error: string }
 
 export type AgentChatSendResult = { ok: true } | { ok: false; error: string }
 

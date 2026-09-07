@@ -813,3 +813,35 @@ test('Codex：只有 boardText 没有契约也要拼 instructions', () => {
   const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', boardText: '# 协同板' })
   assert.ok(args.some((a) => a.startsWith('instructions=') && a.includes('协同板')))
 })
+
+// ── P3 Task 3：角色文档指针段附进系统提示（Consumes StartOpts.roleDocs）────────────
+
+const ROLE_DOCS = '## 你的角色文档\n- 章程：`docs/roles/builder.md`'
+
+test('Claude：roleDocs 指针段附在协同板之后', () => {
+  const { args } = getAdapter('claude')!.buildArgs({
+    cwd: '/p', roleContract: '你是工匠', boardText: '# 板', roleDocs: ROLE_DOCS
+  })
+  const sp = args[args.indexOf('--append-system-prompt') + 1]
+  assert.ok(sp.indexOf('## 协同板') < sp.indexOf('## 你的角色文档'))
+  assert.ok(sp.endsWith('- 章程：`docs/roles/builder.md`'))
+})
+
+test('Claude：没有 roleDocs 时系统提示不多一段', () => {
+  const a = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '你是工匠' }).args
+  const b = getAdapter('claude')!.buildArgs({ cwd: '/p', roleContract: '你是工匠', roleDocs: '' }).args
+  assert.ok(!a[a.indexOf('--append-system-prompt') + 1].includes('角色文档'))
+  assert.deepEqual(a, b)
+})
+
+test('Codex：roleDocs 压成单行拼进 instructions', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleContract: '你是工匠', roleDocs: ROLE_DOCS })
+  const v = args.find((a) => a.startsWith('instructions=')) ?? ''
+  assert.match(v, /^instructions=你是工匠 你的角色文档：- 章程：`docs\/roles\/builder\.md`$/)
+})
+
+test('Codex：只有 roleDocs 没有契约也要拼 instructions', () => {
+  const { args } = getAdapter('codex')!.buildArgs({ cwd: '/p', roleDocs: ROLE_DOCS })
+  const v = args.find((a) => a.startsWith('instructions=')) ?? ''
+  assert.equal(v, 'instructions=你的角色文档：- 章程：`docs/roles/builder.md`')
+})

@@ -61,7 +61,9 @@ import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
 import { agentMcpConfigPath, easPluginMcpServer } from '../mcpBridge.ts'
-import { readBoard, refreshBoard, setSessionSource } from '../collabBoard.ts'
+import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
+import { ensureCharter } from '../roleCharter.ts'
+import { branchFromGitFiles, ledgerRel, roleDocsPrompt } from '../../shared/roleDocs.ts'
 import { clipForPrompt } from '../../shared/board.ts'
 import { projectRootOf } from '../../shared/roleWorktree.ts'
 import type {
@@ -153,6 +155,16 @@ export function isSessionBusy(sessionId: string): boolean {
 function readBoardForPrompt(cwd: string): string | undefined {
   const text = readBoard(projectRootOf(cwd)).trim()
   return text ? clipForPrompt(text) : undefined
+}
+
+/** `branchFromGitFiles` 的读函数：只认文件，目录（主工作区的 .git）与读不到都返回 null。
+ *  与 collabBoard.ts 里那份逐字相同（它是私有的，这里不为了共用一个 6 行函数去改它的导出面）。 */
+function readIfFile(p: string): string | null {
+  try {
+    return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : null
+  } catch {
+    return null
+  }
 }
 
 const sessions = new Map<string, Live>()
@@ -1200,7 +1212,9 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           roleContract:
             [
               live.rec.roleContract?.trim(),
-              live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : ''
+              live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : '',
+              // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末
+              live.rec.roleDocs?.trim()
             ]
               .filter(Boolean)
               .join('\n\n') || undefined,
@@ -1386,6 +1400,26 @@ export function registerAgentChatHandlers(): void {
     // 提前算好，供下面 roleBounds 字段与 writeGuardSettings 的开闸条件共用——
     // 不能在 rec 字面量内部写 `rec.roleBounds`，那时 rec 还没构造完。
     const roleBounds = safeRoleBounds(p.roleBounds)
+    // 角色文档指针（P3）：章程首次生成 + 台账路径。只对带 roleId 的会话；主工作区会话
+    // 没有自己的台账（cwd === 项目根 → 不读分支）。章程落在项目根的 docs/roles/ 下，
+    // worktree 里的 cwd 要先剥回根。ensureCharter 返回 null 只有 roleId 不合法一种情况。
+    let roleDocs: string | undefined
+    let charterCreated: string | undefined
+    const roleId = typeof p.roleId === 'string' && p.roleId ? p.roleId : undefined
+    if (roleId) {
+      const root = projectRootOf(p.cwd)
+      const ch = ensureCharter(root, {
+        roleId,
+        roleName: roleNameOf(roleId) ?? roleId,
+        contract: typeof p.roleContract === 'string' ? p.roleContract : '',
+        bounds: roleBounds
+      })
+      if (ch) {
+        if (ch.created) charterCreated = ch.rel
+        const branch = p.cwd !== root ? branchFromGitFiles(p.cwd, readIfFile) : null
+        roleDocs = roleDocsPrompt({ charterRel: ch.rel, ledgerRel: branch ? ledgerRel(branch) : null })
+      }
+    }
     // 阶段三第三项：Claude 上 caps.write=false 的第二道闸。开闸条件三个都要满足
     // （字面意思见下面 rec.writeGuardSettings 的注释）。**提到 rec 字面量之外单独算**
     // ——`ensureWriteGuardSettings` 现在会在写不出文件时抛错（2026-09-06 评审 Minor：
@@ -1450,10 +1484,12 @@ export function registerAgentChatHandlers(): void {
       writeGuardSettings,
       // 角色卡 id。同 roleContract 的理由，params 来自 unknown，非字符串一律当没给。
       // 协同板按它查角色名（roleContract 是给模型看的原文，两者不能互相顶替）。
-      roleId: typeof p.roleId === 'string' && p.roleId ? p.roleId : undefined,
+      roleId,
       // 起会话那一刻的协同板。**读的是项目根**（worktree 里的 cwd 要先剥回去），
       // 板只有一份、放在项目根的 .eas/ 下。
-      boardText: readBoardForPrompt(p.cwd)
+      boardText: readBoardForPrompt(p.cwd),
+      // 角色文档指针段（上面算好的；没角色时 undefined）
+      roleDocs
     }
     const live: Live = {
       rec,
@@ -1491,7 +1527,8 @@ export function registerAgentChatHandlers(): void {
       }
     }
     deliverMessage(live, p.message) // 首次投递等价于「进程不活 → restart」，spawn 失败经 error 事件异步通知
-    return { ok: true, sessionId: id }
+    // 首次生成了章程才带 charterCreated（渲染层据此提示用户去填边界段）；已存在时不带字段
+    return { ok: true, sessionId: id, ...(charterCreated ? { charterCreated } : {}) }
   })
 
   /** 这个 resumeId 是谁签发的 —— 查磁盘（`resumeOwner.ts`）。渲染层重挂载老对话时
