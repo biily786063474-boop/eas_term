@@ -312,3 +312,7 @@ Write·Edit·NotebookEdit→patch / 其余→tool）→ 渲染层弹审批卡 �
 > 把它 gitignore 掉，钩子会因 `loadDict()` 返回 null 而**静默 `exit(0)`**，词典提示从此不再出现
 > 且没有任何报错。它与 `src/renderer/src/features/dict/dictionary-bundle.json`（界面 `import`，
 > `scripts/dict-svg/*` 只改那一份）是两条独立链路且**内容已经分叉**，动前先确认要改哪一条。
+
+## 2026-09-07：对话恢复与能力更新补充
+
+Codex exec 的 --sandbox 必须放在 resume 子命令之前，禁止为修恢复错误删去沙箱或改 stdin ignore。模型目录晚于进程退出返回仍可更新，但只能更新相同会话对象与请求代次。capabilities 缺席字段不清空其他能力，session.ready 未报模型不得从待应用选择填造实际模型。资源面板仅使用当前插件声明，不绕过宿主权限；详见 [16 号图纸](16-AI对话公共协议.md)。

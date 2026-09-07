@@ -13,7 +13,7 @@
 //    所以 done 必须**覆盖** delta 攒出来的那个轮次，不能再 push 一个——否则同一段话
 //    在界面上出现两次。这是这个文件里最容易改错的一条。
 
-import type { ChatEvent, Usage } from '../../../../shared/agentChat.ts'
+import type { ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource } from '../../../../shared/agentChat.ts'
 
 export interface ExecItem {
   execId: string
@@ -21,6 +21,8 @@ export interface ExecItem {
   detail: string
   state: 'running' | 'ok' | 'failed'
   output?: string
+  tool?: ChatToolInfo
+  resources?: ChatResource[]
 }
 
 export interface Turn {
@@ -117,6 +119,7 @@ export interface Quota {
 }
 
 export interface ChatView {
+  plugin?: import('../../../../shared/chatPlugin').ChatPluginState
   /** CLI **自己报告**的当前模型（session.ready 带的那个）。
    *  发 /model 切换之后 CLI 会重推一次 init，这个值跟着变 —— 所以界面显示的是
    *  「它实际在用什么」，不是「我们以为选了什么」。拿不到就是 null（别猜）。 */
@@ -146,7 +149,7 @@ export interface ChatView {
    *  对 Claude / Codex 够用，但装不下「换个 provider 整份模型都不一样」那种 ——
    *  而那件事只有会话真的建立起来之后才知道。工具栏拿到它就覆盖静态清单，
    *  判据是「报过没有」，不是 CLI 的名字。 */
-  capabilities?: { models?: { id: string; label: string }[]; effortLevels?: { id: string; label: string }[] }
+  capabilities?: Pick<CliCapabilities, 'models' | 'effortLevels' | 'modelCatalog'>
 }
 
 export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatView } {
@@ -158,7 +161,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   let noticeSeq = 0
   /** CLI 在会话建立时报的能力（能选哪些模型 / 强度档）。
    *  `null` = 它没报过 —— 那就用 adapter 的静态清单，判据是「有没有报过」，不是 CLI 名字。
-   *  **整份覆盖不合并**：报的这份就是它当前 provider 下的全集，合并会留下上一份的残渣。 */
+   *  按字段更新；列表字段整份替换，缺省字段保留，避免模型探测覆盖独立的强度能力。 */
+  let plugin: ChatView['plugin']
   let capabilities: ChatView['capabilities'] = undefined
   // busy 的第二支：「收到过 exec.start 但还没 turn.done」。独立于「execs 里还有没有
   // running 项」，是因为一个 exec 全部跑完之后、turn.done 到达之前，agent 仍可能继续
@@ -232,7 +236,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     // 不产生任何视图内容，走 default 忽略仍然是对的。
     if (e.k === 'turn.start') turnActive = true
     // CLI 报的当前模型。/model 切换后它会重推 init，这里跟着更新 —— 不自己记选择。
-    if (e.k === 'session.ready' && e.model) model = e.model
+    if (e.k === 'session.ready') model = e.model || null
     // 额度：同一个窗口只留最新一条（就地更新，不堆历史——界面只关心"现在怎么样"）
     if (e.k === 'quota') {
       const i = quotas.findIndex((q) => q.window === e.window)
@@ -271,7 +275,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       }
       case 'exec.start': {
         const turn = ensureAssistantTurn()
-        turn.execs.push({ execId: e.execId, label: e.label, detail: e.detail, state: 'running' })
+        turn.execs.push({ execId: e.execId, label: e.label, detail: e.detail, state: 'running', ...(e.tool ? { tool: e.tool } : {}) })
         sawExecStartSinceTurnDone = true
         break
       }
@@ -284,6 +288,8 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         }
         if (!item) break
         item.state = e.ok ? 'ok' : 'failed'
+        if (e.tool) item.tool = e.tool
+        if (e.resources) item.resources = e.resources.slice(0, 50)
         // 完成时才知道标签的（Codex web_search）在这儿补上
         if (e.label) item.label = e.label
         // **进内存就截。** 源头一处都没截（见 MAX_LIVE_OUTPUT 的说明），
@@ -406,8 +412,17 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         if (e.fatal) turnActive = false
         break
       }
+      case 'plugin.status': {
+        plugin = e.plugin
+        break
+      }
       case 'capabilities': {
-        capabilities = { models: e.models, effortLevels: e.effortLevels }
+        capabilities = {
+          ...capabilities,
+          ...(e.models !== undefined ? { models: e.models } : {}),
+          ...(e.effortLevels !== undefined ? { effortLevels: e.effortLevels } : {}),
+          ...(e.modelCatalog !== undefined ? { modelCatalog: e.modelCatalog } : {})
+        }
         break
       }
       // session.ready / thinking / turn.start，以及任何未来新增但这一层还没接的事件类型：
@@ -422,6 +437,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     const anyRunning = turns.some((t) => t.execs.some((x) => x.state === 'running'))
     return {
       model,
+      plugin,
       quotas,
       turns,
       pending,

@@ -377,6 +377,22 @@
   "busy": false,
   "trimmedFromHead": 0
  },
+ "synth-plugin": {
+  "model": null,
+  "plugin": {
+   "id": "fixture",
+   "name": "测试插件",
+   "status": "selected",
+   "note": "连接状态未知"
+  },
+  "quotas": [],
+  "turns": [],
+  "pending": null,
+  "notices": [],
+  "usage": null,
+  "busy": false,
+  "trimmedFromHead": 0
+ },
  "synth-trim": {
   "model": "test-model",
   "quotas": [],

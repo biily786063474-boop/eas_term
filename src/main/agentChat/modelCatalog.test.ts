@@ -35,6 +35,9 @@ test('三级都没有 → 空清单，工具栏自己不显示下拉', () => {
 })
 
 test('isValidList：挡住坏数据', () => {
+  assert.equal(isValidList([{ id: 'x', label: 'X', effortLevels: 'high' }]), false)
+  assert.equal(isValidList([{ id: 'x', label: 'X', effortLevels: [null] }]), false)
+  assert.equal(isValidList([{ id: 'x', label: 'X', defaultEffort: {} }]), false)
   assert.equal(isValidList([{ id: '', label: 'x' }]), false)
   assert.equal(isValidList([]), false)
   assert.equal(isValidList('x'), false)
@@ -49,6 +52,7 @@ test('shouldPersist：内容没变就不写盘', () => {
 })
 
 test('parseCatalog：坏条目丢掉，不抛', () => {
+  assert.equal(parseCatalog({ x: { at: Infinity, models: A } }).x.at, 0)
   const got = parseCatalog({ codex: { at: 1, models: A }, bad: { models: 'x' }, worse: null })
   assert.deepEqual(Object.keys(got), ['codex'])
   assert.deepEqual(parseCatalog('不是对象'), {})

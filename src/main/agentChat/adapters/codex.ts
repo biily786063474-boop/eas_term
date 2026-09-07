@@ -31,7 +31,7 @@ export const codexAdapter: CliAdapter = {
 
   capabilities: {
     models: [], // 由 -m 传任意模型名，不预设列表——不是没填，是设计如此
-    // Codex 通过 -c model_reasoning_effort=<值> 传，只有三档（Claude 有五档）
+    // 未探到每模型档位时保留旧默认；动态 model/list 的 effortLevels 优先。
     effortLevels: [
       { id: 'low', label: '低' },
       { id: 'medium', label: '中' },
@@ -58,17 +58,20 @@ export const codexAdapter: CliAdapter = {
   detect: detectByWhich('codex'),
 
   /** 模型清单问 `codex app-server` 的 `model/list` 要（codexModels.ts 有原因）。
-   *  探测失败返回 undefined —— 工具栏那时就没有下拉，和这个钩子上线前一样。 */
-  probeModels: () => listCodexModels(),
+   *  探测失败返回 undefined；会话层保留缓存与可重试的目录状态。 */
+  probeModels: (_host, options) => listCodexModels({ force: options?.force }),
 
   createTranslator: createCodexTranslator,
 
   buildArgs(opts: StartOpts): { bin: string; args: string[]; stdin: 'pipe' | 'ignore' } {
     const b = bindRole(opts.roleBounds, 'codex', { knownMcpServers: opts.knownMcpServers, codexHome: opts.codexHome })
     // resumeId 存在时子命令是 `exec resume <id>`，否则是普通 `exec`
-    const args: string[] = opts.resumeId ? ['exec', 'resume', opts.resumeId] : ['exec']
+    const args: string[] = ['exec']
     // 角色的 write:false 是沙箱的唯一来源；其余维持默认（UI 上沙箱只展示不可选）
-    args.push('--json', '--sandbox', b.codex.sandbox ?? opts.sandbox ?? DEFAULT_SANDBOX)
+    // --sandbox 属于 exec，必须放在 resume 子命令之前（0.147.0 实测）。
+    args.push('--sandbox', b.codex.sandbox ?? opts.sandbox ?? DEFAULT_SANDBOX)
+    if (opts.resumeId) args.push('resume', opts.resumeId)
+    args.push('--json')
     // **必须带 --skip-git-repo-check**（2026-09-05 正式版事故：「codex 侧完全是坏的」）。
     // Codex 拒绝在非 git 目录里跑：`Not inside a trusted directory and --skip-git-repo-check
     // was not specified`，退出码 1、什么都不回 —— 用户的资料夹（自媒体/工作流程…）没有一个是

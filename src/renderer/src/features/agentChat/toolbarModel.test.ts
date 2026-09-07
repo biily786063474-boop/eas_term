@@ -245,3 +245,16 @@ test('[补充] 两份能力声明互不干扰——claudeLike 和 codexLike 交�
   assert.deepEqual(first, firstAgain)
   assert.notEqual(first.showSandbox, second.showSandbox)
 })
+
+test('目录首次探测失败仍展示模型入口，不编造选项', () => {
+  const base = { models: [], effortLevels: [], approval: [], contextUsage: false }
+  const v = toolbarModel({ ...base, modelCatalog: { status: 'error', source: 'none' } })
+  assert.equal(v.showModel, true)
+  assert.deepEqual(v.models, [])
+})
+
+test('推理档位来自选中模型，未提供模型级能力的旧 harness 保持原行为', () => {
+  const caps = { approval: [], contextUsage: false, effortLevels: [{ id: 'old', label: '旧' }], models: [{ id: 'a', label: 'A', effortLevels: [{ id: 'new', label: '新' }] }] }
+  assert.deepEqual(toolbarModel(caps, undefined, 'a').effortLevels, [{ id: 'new', label: '新' }])
+  assert.deepEqual(toolbarModel(caps).effortLevels, [{ id: 'old', label: '旧' }])
+})

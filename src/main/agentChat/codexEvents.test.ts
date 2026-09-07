@@ -137,3 +137,30 @@ test('agent_message / reasoning 没有执行语义，不产执行行', () => {
   assert.deepEqual(t.push(JSON.stringify({ type: 'item.started', item: { id: 'a1', type: 'agent_message' } })), [])
   assert.deepEqual(t.push(JSON.stringify({ type: 'item.started', item: { id: 'r1', type: 'reasoning' } })), [])
 })
+
+test('MCP 调用携带通用身份、可读结果与资源，并识别结果层错误', () => {
+  const t = createCodexTranslator()
+  const item = { id: 'm1', type: 'mcp_tool_call', server: 'demo', tool: 'show', status: 'completed', result: { isError: true, content: [
+    { type: 'text', text: 'failed to render' },
+    { type: 'resource_link', uri: 'https://example.com/report', name: 'Report' },
+    { type: 'resource', resource: { uri: 'ui://demo/view', mimeType: 'text/html', text: 'Preview' } },
+    { type: 'resource_link', uri: 'javascript:alert(1)', name: 'Bad' }
+  ] } }
+  const start = t.push(JSON.stringify({ type: 'item.started', item }))[0]
+  assert.ok(start.k === 'exec.start')
+  assert.deepEqual(start.tool, { server: 'demo', name: 'show' })
+  const done = t.push(JSON.stringify({ type: 'item.completed', item }))[0]
+  assert.ok(done.k === 'exec.done')
+  assert.equal(done.ok, false)
+  assert.match(done.output, /failed to render/)
+  assert.ok(!done.output.startsWith('{'))
+  assert.deepEqual(done.resources, [
+    { uri: 'https://example.com/report', name: 'Report' },
+    { uri: 'ui://demo/view', name: 'ui://demo/view', mimeType: 'text/html' }
+  ])
+  item.status = 'failed'
+  item.result.isError = false
+  const failed = t.push(JSON.stringify({ type: 'item.completed', item }))[0]
+  assert.ok(failed.k === 'exec.done')
+  assert.equal(failed.ok, false)
+})

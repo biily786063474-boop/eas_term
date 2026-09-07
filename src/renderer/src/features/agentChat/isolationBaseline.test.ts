@@ -133,7 +133,8 @@ const SYNTH: Record<string, ChatEvent[]> = {
   'synth-notices': NOTICES,
   'synth-notice-overflow': NOTICE_OVERFLOW,
   'synth-approval': APPROVAL,
-  'synth-trim': TRIM
+  'synth-trim': TRIM,
+  'synth-plugin': [{ k: 'plugin.status', plugin: { id: 'fixture', name: '测试插件', status: 'selected', note: '连接状态未知' } }]
 }
 
 // ── 跑与断言 ──────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ try {
 test('两组用例都在，且与快照覆盖同一批', () => {
   const fx = CASES.filter((c) => c.name.startsWith('fx-'))
   assert.ok(fx.length > 0, `读不到上半场的事件基线：${EVENTS}`)
-  assert.equal(Object.keys(SYNTH).length, 5, '手写组少了用例')
+  assert.equal(Object.keys(SYNTH).length, 6, '手写组少了用例')
   assert.deepEqual(Object.keys(snap).sort(), CASES.map((c) => c.name).sort())
 })
 
@@ -183,7 +184,7 @@ const ALL_KINDS: Record<ChatEvent['k'], true> = {
   'session.ready': true, 'turn.start': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,
-  'user.message': true, error: true, capabilities: true
+  'user.message': true, error: true, capabilities: true, 'plugin.status': true
 }
 
 test('两组合起来必须盖到 ChatEvent 的每一个变体', () => {

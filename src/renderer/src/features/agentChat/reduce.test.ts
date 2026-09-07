@@ -582,9 +582,9 @@ test('**重推的 session.ready 会更新 model**（/model 切换后 CLI 就是�
   assert.equal(v.model, 'claude-haiku-4-5-20251001')
 })
 
-test('session.ready 的 model 为空串时不覆盖已有值（宁可显示旧的也不显示空白）', () => {
+test('恢复会话未报告实际模型时显示未知，不能冒充旧值仍生效', () => {
   const v = run([ready, { k: 'session.ready', sessionId: 's1', model: '', cwd: '/x' }])
-  assert.equal(v.model, 'sonnet')
+  assert.equal(v.model, null)
 })
 
 test('quota 事件按窗口去重，同一个窗口只留最新（五小时和周各一条）', () => {
@@ -731,4 +731,23 @@ test('**压缩：分隔标记占了头部一格，偏移量要把它抵掉**', (
 test('没发生裁剪时偏移量是 0（别让修正逻辑平白挪动位置）', () => {
   const v = run([ready, { k: 'text.done', text: 'a' }, done])
   assert.equal(v.trimmedFromHead ?? 0, 0)
+})
+
+test('模型目录状态不会擦掉上一份推理能力，退出后仍接受探测结果', () => {
+  const v = run([
+    { k: 'capabilities', effortLevels: [{ id: 'high', label: '高' }] },
+    { k: 'capabilities', models: [], modelCatalog: { status: 'loading', source: 'none' } },
+    { k: 'capabilities', models: [{ id: 'dynamic', label: 'Dynamic' }], modelCatalog: { status: 'ready', source: 'probe' } }
+  ])
+  assert.equal(v.capabilities?.modelCatalog?.status, 'ready')
+  assert.deepEqual(v.capabilities?.effortLevels, [{ id: 'high', label: '高' }])
+})
+
+test('工具结果的公共元数据跨事件保留，未知实际模型不沿用旧值', () => {
+  const v = run([ready, { k: 'session.ready', sessionId: 's1', model: '', cwd: '/x' },
+    { k: 'exec.start', execId: 'tool1', label: '读取报告', detail: '', tool: { name: 'read', server: 'reports' } },
+    { k: 'exec.done', execId: 'tool1', ok: true, output: '已读', resources: [{ uri: 'https://example.com', name: '报告' }] }])
+  assert.equal(v.model, null)
+  assert.equal(v.turns[0].execs[0].tool?.server, 'reports')
+  assert.equal(v.turns[0].execs[0].resources?.[0].name, '报告')
 })

@@ -23,6 +23,7 @@
 // `aggregated_output`（+ `exit_code` 辅助信息），`error` 字段只作兜底，不再是主判据。
 
 import path from 'node:path'
+import { normalizeToolContent } from './toolResult.ts'
 import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
 
 export interface CodexTranslator {
@@ -92,7 +93,7 @@ function translateItemStarted(j: Record<string, unknown>): ChatEvent[] {
   const id = item.id
   if (typeof id !== 'string' || !id) return []
   if (typeof item.type !== 'string' || NON_EXEC_ITEM_TYPES.has(item.type)) return []
-  return [{ k: 'exec.start', execId: id, label: labelFor(item), detail: safeStringify(item) }]
+  return [{ k: 'exec.start', execId: id, label: labelFor(item), detail: safeStringify(item), ...toolOf(item) }]
 }
 
 // ---- item.completed ----
@@ -109,10 +110,11 @@ function translateItemCompleted(j: Record<string, unknown>): ChatEvent[] {
   if (typeof id !== 'string' || !id) return []
   // 判据是 status，不是 error 字段——见文件头「教训」。command_execution 失败时
   // status:"failed" 且没有 error 字段，按 error 判会把失败误判成 ok:true。
-  const ok = item.status !== 'failed'
+  const result = item.type === 'mcp_tool_call' ? asRecord(item.result) : undefined
+  const ok = item.status !== 'failed' && result?.isError !== true
   // web_search 这类「完成才知道干了什么」的，把标签一起带上（agentChat.ts 的 exec.done.label）
   const label = item.type === 'web_search' ? labelFor(item) : undefined
-  return [{ k: 'exec.done', execId: id, ok, output: outputTextOf(item), ...(label ? { label } : {}) }]
+  return [{ k: 'exec.done', execId: id, ok, ...normalizeToolContent(result?.content, outputTextOf(item)), ...toolOf(item), ...(label ? { label } : {}) }]
 }
 
 // ---- turn.completed ----
@@ -201,4 +203,9 @@ function kindVerb(kind: unknown): string {
 
 function baseNameOf(filePath: unknown): string {
   return typeof filePath === 'string' && filePath.length > 0 ? path.basename(filePath) : ''
+}
+
+function toolOf(item: Record<string, unknown>): { tool?: { server?: string; name: string } } {
+  if (item.type !== 'mcp_tool_call' || typeof item.tool !== 'string' || !item.tool) return {}
+  return { tool: { name: item.tool, ...(typeof item.server === 'string' ? { server: item.server } : {}) } }
 }

@@ -1368,6 +1368,7 @@ export function AgentChatView({
           // 兜着，那是在为一个放错位置的入口打补丁。
           // 现在它在**空态的上下文条**上，和「选哪个 CLI」并排 ——
           // 那两件事本来就是同一类：都是「这次对话开起来之前要定的」。
+          onRefreshModels={() => void window.api.agentChat.refreshModels(sessionId)}
           onSetParams={(patch) => void window.api.agentChat.setParams(sessionId, patch)}
           sendError={sendError}
           onDismissSendError={() => setSendError(null)}

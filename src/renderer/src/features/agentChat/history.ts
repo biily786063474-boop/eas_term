@@ -76,6 +76,8 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
       label: e.label,
       detail: e.detail,
       state: e.state,
+      ...(e.tool ? { tool: e.tool } : {}),
+      ...(e.resources?.length ? { resources: e.resources.slice(0, 50) } : {}),
       ...(e.output === undefined
         ? {}
         : {

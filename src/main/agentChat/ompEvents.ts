@@ -41,6 +41,7 @@
 // 拒绝之后内层压根不会执行：`session-tools.ts:837-839` 在 reject 分支直接 throw ToolError，
 // 第二条通道再也不来。把「两条都回」当完成判据，界面上那张卡片会永远挂着。
 
+import { normalizeToolContent } from './toolResult.ts'
 import type { ChatEvent, SessionStats } from '../../shared/agentChat.ts'
 
 /** 这一行要求我们往 stdin 回一个 JSON-RPC 响应。null = 不用回。 */
@@ -464,7 +465,7 @@ export function createOmpTranslator(
             k: 'exec.done',
             execId: id,
             ok: status === 'completed',
-            output: detailOf(u)
+            ...normalizeToolContent(Array.isArray(u.content) ? u.content.map((c: { content?: unknown }) => c?.content).filter(Boolean) : undefined, detailOf(u))
           })
           execTitles.delete(id)
           break

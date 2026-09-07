@@ -14,10 +14,8 @@
 //            （Claude Code 2.1.263 确实没有任何列模型的接口：无 models 子命令、doctor 不报、
 //             二进制里的目录没有可靠结构。查过了才写死这几个别名。）
 
-export interface ModelOption {
-  id: string
-  label: string
-}
+import type { ChatModelOption } from '../../shared/agentChat.ts'
+export type ModelOption = ChatModelOption
 
 export type ModelSource = 'probe' | 'cache' | 'fallback' | 'none'
 
@@ -37,7 +35,13 @@ export function isValidList(v: unknown): v is ModelOption[] {
   return (
     Array.isArray(v) &&
     v.length > 0 &&
-    v.every((m) => !!m && typeof m === 'object' && typeof (m as ModelOption).id === 'string' && (m as ModelOption).id.length > 0)
+    v.every((m) => !!m && typeof m === 'object' && typeof m.id === 'string' && m.id.length > 0 &&
+      typeof m.label === 'string' &&
+      (m.defaultEffort === undefined || typeof m.defaultEffort === 'string') &&
+      (m.effortLevels === undefined || (Array.isArray(m.effortLevels) && m.effortLevels.every(
+        (e: unknown) => !!e && typeof e === 'object' && 'id' in e && typeof e.id === 'string' &&
+          'label' in e && typeof e.label === 'string'
+      ))))
   )
 }
 
@@ -65,7 +69,7 @@ export function resolveModels(input: {
 export function shouldPersist(prev: ModelOption[] | undefined, next: ModelOption[]): boolean {
   if (!prev) return true
   if (prev.length !== next.length) return true
-  return prev.some((m, i) => m.id !== next[i].id || m.label !== next[i].label)
+  return prev.some((m, i) => m.id !== next[i].id || m.label !== next[i].label || m.defaultEffort !== next[i].defaultEffort || JSON.stringify(m.effortLevels) !== JSON.stringify(next[i].effortLevels))
 }
 
 /** 解析磁盘上那份，坏了当没有 —— 绝不因为缓存文件损坏影响开会话 */
@@ -74,7 +78,7 @@ export function parseCatalog(raw: unknown): CatalogFile {
   const out: CatalogFile = {}
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
     const e = v as { at?: unknown; models?: unknown }
-    if (isValidList(e?.models)) out[k] = { at: typeof e.at === 'number' ? e.at : 0, models: e.models }
+    if (isValidList(e?.models)) out[k] = { at: typeof e.at === 'number' && Number.isFinite(e.at) && Math.abs(e.at) <= 8.64e15 ? e.at : 0, models: e.models }
   }
   return out
 }

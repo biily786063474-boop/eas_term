@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "cli": "codex",
+      "loading": true,
+      "failed": true,
+      "hasText": true,
+      "model": "默认codex model",
+      "resource": "查看报告 ↗",
+      "font": "14px",
+      "narrow": {
+        "width": 331,
+        "scroll": 331
+      }
+    },
+    {
+      "cli": "claude",
+      "loading": true,
+      "failed": true,
+      "hasText": true,
+      "model": "默认claude model",
+      "resource": "查看报告 ↗",
+      "font": "14px",
+      "narrow": {
+        "width": 331,
+        "scroll": 331
+      }
+    },
+    {
+      "cli": "omp",
+      "loading": true,
+      "failed": true,
+      "hasText": true,
+      "model": "默认omp model",
+      "resource": "查看报告 ↗",
+      "font": "14px",
+      "narrow": {
+        "width": 331,
+        "scroll": 331
+      }
+    }
+  ],
+  "consoleErrors": []
+}

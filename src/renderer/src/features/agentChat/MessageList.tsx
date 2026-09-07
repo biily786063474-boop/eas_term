@@ -15,6 +15,7 @@
 //
 // 审批卡片（Task 5）挂在这里：view.pending 非空时插在「当前最后一个轮次」的执行区
 // 上方——它是唯一不弱化的例外（ApprovalCard.tsx 头部注释），别的都遵守规则①。
+import { ResourceLink } from './ToolResourceLink'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { optionsOf } from './options'
 import type { ChatView, ExecItem, Turn } from './reduce.ts'
@@ -111,6 +112,7 @@ export function MessageList({
           <MessageTurn
             key={i}
             turn={turn}
+            pluginId={view.plugin?.id}
             approval={i === lastIdx && pendingOnLastTurn ? view.pending : null}
             onApprovalDecide={onApprovalDecide}
             leafId={leafId}
@@ -200,12 +202,14 @@ function CompactDivider({ c }: { c: NonNullable<Turn['compact']> }): JSX.Element
 
 function MessageTurn({
   turn,
+  pluginId,
   approval,
   onApprovalDecide,
   leafId,
   onPickOption
 }: {
   turn: Turn
+  pluginId?: string
   approval: ChatView['pending']
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
   leafId?: string
@@ -383,7 +387,7 @@ function MessageTurn({
       {turn.role === 'assistant' && turn.execs.length > 0 && (
         <div className="ac-execs">
           {visible.map((item) => (
-            <ExecRow key={item.execId} item={item} expanded={expanded} />
+            <ExecRow key={item.execId} item={item} expanded={expanded} leafId={leafId} pluginId={pluginId} />
           ))}
           {/* 展开后「收起」钉在工具调用区**底端**（用户 2026-09-05）：详情很长时往上翻，
               收起钮不该跟着滚出视口。sticky bottom 恰好是这个语义——只在它的自然位置
@@ -409,13 +413,16 @@ function MessageTurn({
  *  两者都过一遍 prettyJson——detail/output 常是 JSON.stringify 出来的一坨，原样甩给
  *  用户不算「展开完整执行历史」。head（圆点+label）单独一层 flex row，body 作为下一行——
  *  不能让 body 和 head 挤在同一个 align-items:center 的行里，那会把展开的文本挤成一团。 */
-function ExecRow({ item, expanded }: { item: ExecItem; expanded: boolean }): JSX.Element {
+function ExecRow({ item, expanded, leafId, pluginId }: { item: ExecItem; expanded: boolean; leafId?: string; pluginId?: string }): JSX.Element {
   return (
     <div className={`ac-exec-row ac-exec-${item.state}`}>
       <div className="ac-exec-row-head">
         <span className="ac-dot" aria-hidden="true" />
-        <span className="ac-exec-label">{item.label}</span>
+        <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : item.label}</span>
       </div>
+      {!!item.resources?.length && <div className="ac-resource-links">
+        {item.resources.map((resource) => <ResourceLink key={resource.uri} resource={resource} leafId={leafId} pluginId={pluginId} />)}
+      </div>}
       {expanded && (item.detail || item.output) && (
         <div className="ac-exec-body">
           {item.detail && <pre className="ac-exec-pre">{prettyJson(item.detail)}</pre>}

@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "turn": 1,
+      "code": 0,
+      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    },
+    {
+      "turn": 2,
+      "code": 0,
+      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    },
+    {
+      "turn": 3,
+      "code": 0,
+      "session": "01a07ad1-dbd0-7903-9b95-eea3fa6d1696",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "inputCount": 3,
+      "hasFirst": true,
+      "hasPriorReply": false
+    },
+    {
+      "inputCount": 5,
+      "hasFirst": true,
+      "hasPriorReply": true
+    },
+    {
+      "inputCount": 7,
+      "hasFirst": true,
+      "hasPriorReply": true
+    }
+  ],
+  "cliVersion": "0.147.0",
+  "sandboxPolicies": [
+    "read-only",
+    "read-only",
+    "read-only"
+  ]
+}

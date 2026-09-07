@@ -108,6 +108,7 @@ export function ChatToolbar({
   sessionId,
   onSend,
   onSetParams,
+  onRefreshModels,
   onLogin,
   onNewChat,
   sendError,
@@ -143,6 +144,7 @@ export function ChatToolbar({
     meta?: { text: string; images: { path: string; url: string }[] }
   ) => Promise<boolean> | void
   onSetParams: (patch: { model?: string; effort?: string }) => void
+  onRefreshModels?: () => void
   /** 「新对话」：结束当前这段，给这个窗口挂一段新的。旧记录不删。 */
   onNewChat?: () => void
   // ⚠️ **这里曾经有 `roleId` / `onPickRole`，别再加回来。**
@@ -173,7 +175,6 @@ export function ChatToolbar({
   branchOverlap?: boolean
   onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
-  const model = toolbarModel(caps, approvalHook)
   const [text, setText] = useState('')
   /** 挂在输入框上的辞典提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useState<DictChip[]>([])
@@ -194,6 +195,7 @@ export function ChatToolbar({
   // "跟随 CLI 默认"，选了才有覆盖，而且每一个真实选项都点得动。
   const [modelSel, setModelSel] = useState('')
   const [effortSel, setEffortSel] = useState('')
+  const model = toolbarModel(caps, approvalHook, modelSel || view.model || undefined)
   // 粘贴/拖入图片、带入画布快照——**与终端输入框共用同一份实现**（用户要求两边一致）。
   // 复用连同那几条踩过坑的规则一起继承：拖进来的原地引用不复制、剪贴板位图先落盘、
   // 缩略图不能用 blob URL（file:// 页面下 origin 是 null，<img> 会静默失败）。
@@ -517,14 +519,15 @@ export function ChatToolbar({
                 value={modelSel}
                 onChange={(e) => {
                   setModelSel(e.target.value)
-                  onSetParams({ model: e.target.value })
+                  setEffortSel('')
+                  onSetParams({ model: e.target.value, effort: '' })
                 }}
               >
                 {/* **只放模型名，不加「模型：」前缀。** 用户 2026-09-02：
                     「仅显示模型名称不要加前缀，这样缩短一个前缀的空间。」
                     左边那枚 ChipIcon 已经说明了这是什么，前缀是重复信息，
                     而这条控件行是全应用最挤的地方之一。 */}
-                <option value="">默认</option>
+                <option value="">{caps.modelCatalog?.status === 'loading' && !model.models.length ? '读取模型中…' : '默认'}</option>
                 {model.models.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
@@ -534,10 +537,18 @@ export function ChatToolbar({
             </div>
           )}
 
+          {view.plugin && <span className="ac-model-catalog" title={view.plugin.note}>{view.plugin.name} · {view.plugin.status === 'missing' ? '未找到' : '本会话插件'}</span>}
+          {caps.modelCatalog && (
+            <span className="ac-model-catalog" role="status" title={caps.modelCatalog.note}>
+              {caps.modelCatalog.status === 'loading' ? '读取中' : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? '读取失败 · 缓存清单' : caps.modelCatalog.source === 'fallback' ? '读取失败 · 内置清单' : '读取失败') : caps.modelCatalog.source === 'cache' ? '缓存清单' : caps.modelCatalog.source === 'fallback' ? '内置清单' : ''}
+              {onRefreshModels && <button className="ac-bar-btn" type="button" disabled={caps.modelCatalog.status === 'loading'} onClick={onRefreshModels} aria-label="刷新模型清单" title={caps.modelCatalog.note ?? '刷新模型清单'}>刷新</button>}
+            </span>
+          )}
+
           {/* 强度用滑块而不是下拉：这几档是**有序的**（低→最高），滑块能一眼看出
               「现在在哪一档、还能往上多少」，下拉只能看到一个孤立的值。
               第 0 格是「默认」（不覆盖 CLI 自己的设置），所以格数是档位数 + 1。
-              档位数按 capabilities 来，不写死 —— Codex 只有三档。 */}
+              档位优先取所选模型的能力，未提供时使用 harness 的公共默认。 */}
           {model.showEffort && (
             <div
               className={`ac-effort${effortSel !== '' ? ' pending' : ''}`}

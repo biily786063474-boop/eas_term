@@ -23,7 +23,7 @@ import { collectLeaves } from '../../layout'
  * Frame，退而求其次找同项目的顶层 Frame，再退到任意顶层 Frame）。两处行为必须一致：
  * 同一个用户在终端里点和在对话里点，落点不该不一样。
  */
-function openUrl(url: string, leafId?: string): void {
+export function openUrl(url: string, leafId?: string): void {
   const st = useStore.getState()
   let frame = leafId ? st.canvas.frames.find((f) => f.nodes.some((n) => n.leafId === leafId)) : undefined
   if (!frame) {

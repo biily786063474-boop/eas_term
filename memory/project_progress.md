@@ -336,3 +336,7 @@
 - 判断 CLI 有没有某个工具，看**发给模型的请求体**（假端点或 trace 回显），别问模型。
 - 隔离实例里给对话 pane 发消息要用 `[data-leaf-id=…] textarea.ac-input` + ⌘Enter，挑「第一个可见输入框」会把指令发进用户真实的历史会话。
 - 清临时目录别用 `ps` 抓路径做排除，路径带空格会抓错，正在跑的实例目录会被一起删。
+
+## 2026-09-07：AI 对话 Codex 修复分支
+
+实现位于 `/private/tmp/eas-agent-chat-codex` 的 `codex/agent-chat-codex`。用户要求不同 CLI/harness 兼容，前端新增行为按公共能力/事件处理。续聊参数、模型目录与每模型档位、资源/插件展示和局部排版已实现；全量 2452 通过/1 跳过，隔离三种事件回放通过。check 的既有 cframe-sweep 规则失败未改。审查入口 docs/architecture/16-AI对话公共协议.md、docs/verification/agent-chat/README.md；真实服务验证边界见后者。尚未合并/发布。

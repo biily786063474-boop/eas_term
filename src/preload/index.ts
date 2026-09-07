@@ -1087,6 +1087,7 @@ const api = {
      *  沙箱选项）唯一的数据源，靠每项的 capabilities 决定渲染哪些控件。这是加第三个
      *  CLI 时「UI 一行不改」这条机制的输入（Task 0：A 的 8 个 IPC 里没有能力查询接口，
      *  listAdapters()/getAdapter() 此前只活在主进程，渲染层够不着）。 */
+    refreshModels: (sessionId: string): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('agentChat:refreshModels', sessionId),
     listClis: (): Promise<CliInfo[]> => ipcRenderer.invoke('agentChat:listClis'),
     /** 当前这个页面名下所有会话的只读快照（团队面板用）。多窗口时不会串台。 */
     listSessions: (): Promise<SessionBrief[]> => ipcRenderer.invoke('agentChat:listSessions'),

@@ -45,12 +45,12 @@ export function usesApprovalHookFile(approvalHook: CliInfo['approvalHook']): boo
  *  照旧只传 caps（那时 showApprovalHook 为 false——"没告诉我们用哪种审批机制"当作
  *  "不用那份 hook 文件"处理，跟 showCompact 对 undefined 的态度一致：宁可不显示，
  *  也不要显示一个跟这个 CLI 毫无关系的开关）。 */
-export function toolbarModel(caps: CliCapabilities, approvalHook?: CliInfo['approvalHook']): ToolbarModel {
+export function toolbarModel(caps: CliCapabilities, approvalHook?: CliInfo['approvalHook'], selectedModel?: string): ToolbarModel {
   const models = caps.models ?? []
-  const effortLevels = caps.effortLevels ?? []
+  const effortLevels = models.find((m) => m.id === selectedModel)?.effortLevels ?? caps.effortLevels ?? []
   const sandboxLevels = caps.sandboxLevels ?? []
   return {
-    showModel: models.length > 0,
+    showModel: models.length > 0 || caps.modelCatalog !== undefined,
     models,
     showEffort: effortLevels.length > 0,
     effortLevels,

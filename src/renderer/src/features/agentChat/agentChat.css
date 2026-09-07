@@ -1209,17 +1209,15 @@
    background 叠一层黑压住底下的画布、padding 22/26/60 给长文阅读留白。
    套到一条对话气泡上，结果是每条回复外面罩一个直角黑框、底部空 60px，
    而且 height/overflow 会跟消息列表自己的滚动打架。
-   黑底本身留着 —— 模型回复有个底、用户消息是 accent 气泡，两边对称；
-   但要按气泡的尺度来：圆角、收紧内边距、高度交给内容。 */
+   对话正文使用透明底与阅读宽度；代码块、表格保留各自边界，高度交给内容。 */
 .ac-md.md-view {
   height: auto;
   overflow: visible;
-  padding: 9px 12px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
-  background: var(--wash-1);
-  font-size: 13.5px;
-  line-height: 1.65;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1.8;
 }
 .ac-md.md-view > :first-child {
   margin-top: 0;
@@ -1257,7 +1255,7 @@
 
 /* 段落与列表：文档里段落下边距 1em（≈13px），聊天里太散 */
 .ac-md.md-view .md-p {
-  margin: 0 0 7px;
+  margin: 0 0 12px;
 }
 .ac-md.md-view .md-ul,
 .ac-md.md-view .md-ol {
@@ -3140,3 +3138,11 @@
 .ac-bar-btn.ac-branch.warn {
   border-color: rgba(var(--sem-warn-rgb), 0.45);
 }
+
+/* 能力驱动的目录/资源 UI，适用于所有 harness。 */
+.ac-turn { min-width: 0; }
+.ac-turn-assistant { width: 100%; max-width: 78ch; align-self: center; }
+.ac-model-catalog, .ac-resource-links { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--fg-muted); font-size: 11px; }
+.ac-resource-link { color: var(--accent); background: var(--wash-1); border: 1px solid var(--glass-border); border-radius: 6px; padding: 4px 8px; cursor: pointer; overflow-wrap: anywhere; }
+.ac-resource-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ac-param-select { max-width: min(240px, 45vw); text-overflow: ellipsis; }

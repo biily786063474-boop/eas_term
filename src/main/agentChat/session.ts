@@ -15,10 +15,9 @@
 //   不经 stdin（codex.ts 文件头已经写明）。这里的处理是通用规则「stdin 是 ignore 时，
 //   把消息追加进 buildArgs() 返回的 args 末尾」——不是 `if (cli==='codex')`，是照 adapter
 //   自己声明的 stdin 能力位来决定，第三个 CLI 只要照这个约定填 stdin 字段就能直接工作。
-//   代价：`codex exec resume <id> --json --sandbox X -m M -c K=V "<prompt>"` 这个位置参数
-//   跟在全部 flag 后面是否总能被正确解析，spike 只验证过不带 resume/-m/-c 的最简形态
-//   （见 docs/cli-headless-接口实测.md），resume 分支与多 flag 组合未被真实跑过，
-//   照 clap 系 CLI 的通用行为推断——若 Task 9 或后续实测发现不成立，这里要跟着改。
+//   恢复轮的 --sandbox 必须位于 exec 与 resume 之间；CLI 契约及隔离三轮探针验证此顺序。
+import { findPlugin } from '../plugins.ts'
+import { chatPluginState } from '../../shared/chatPlugin.ts'
 import { spawn, type ChildProcess } from 'child_process'
 import { exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
@@ -42,7 +41,7 @@ import { createApprovalRegistry } from './approvalRegistry.ts'
 import { createAcpLive, type AcpLive } from './omp/transport.ts'
 import { openOmpProcess, readMcpServers, writeManagedConfig } from './omp/launch.ts'
 import { hostPaths } from './omp/host.ts'
-import { parseCatalog, resolveModels, shouldPersist, type CatalogFile } from './modelCatalog.ts'
+import { parseCatalog, resolveModels, type CatalogFile } from './modelCatalog.ts'
 import { resumeOwnerOf, type ResumeOwner } from './resumeOwner.ts'
 import { readOmpSetup } from './omp/store.ts'
 import { onApprovalRequest, onApprovalSettled, resolveApproval as resolveApprovalGlobal } from './approvalRoute.ts'
@@ -101,6 +100,7 @@ interface Live {
    *
    *  跟着进程走、不跟着会话走：restart 之后是新一次尝试，该重新报。 */
   authNoticed?: boolean
+  modelRequest?: number
   /** 这个会话的事件只推给创建它的那个 webContents——不是全窗口广播。
    *  和 pty.ts 的 `wc.send(pty:data:${id}, ...)` 同一个道理。 */
   wc: WebContents
@@ -506,7 +506,7 @@ function handleEvent(live: Live, e: ChatEvent): void {
   if (e.k === 'quota') ingestChatQuota(e)
   if (e.k === 'session.ready') {
     live.rec = { ...live.rec, resumeId: e.sessionId, alive: true, lastActiveAt: Date.now() }
-    emitEvent(live, { ...e, model: e.model || live.rec.model || '', cwd: e.cwd || live.rec.cwd })
+    emitEvent(live, { ...e, model: e.model, cwd: e.cwd || live.rec.cwd })
     return
   }
   emitEvent(live, e)
@@ -552,23 +552,29 @@ function writeCatalog(cliId: string, models: { id: string; label: string }[]): v
  * 先用「缓存或兜底」把下拉填上，再异步探测、拿到就覆盖。
  * 探测失败一律沉默降级 —— 拉不到清单绝不能影响开会话（用户 2026-09-06 定的兜底要求）。
  */
-async function resolveAndBroadcastModels(live: Live, adapter: CliAdapter): Promise<void> {
+async function resolveAndBroadcastModels(live: Live, adapter: CliAdapter, force = false): Promise<void> {
+  const request = (live.modelRequest ?? 0) + 1
+  live.modelRequest = request
+  const current = (): boolean => sessions.get(live.rec.id) === live && live.modelRequest === request
   const cached = readCatalog()[adapter.id]
   const first = resolveModels({ cached: cached?.models, fallback: adapter.capabilities.models, cachedAt: cached?.at })
-  if (first.models.length && live.rec.alive) handleEvent(live, { k: 'capabilities', models: first.models })
-  if (first.note) console.log(`[agentChat] ${adapter.id} 模型清单：${first.note}`)
+  const publish = (models: typeof first.models, state: NonNullable<import('../../shared/agentChat').CliCapabilities['modelCatalog']>): void => {
+    if (current()) handleEvent(live, { k: 'capabilities', models, modelCatalog: state })
+  }
+  publish(first.models, { status: adapter.probeModels ? 'loading' : 'ready', source: first.source, note: first.note, updatedAt: cached?.at })
   if (!adapter.probeModels) return
   try {
-    const probed = await adapter.probeModels(hostPaths())
-    const r = resolveModels({ probed, cached: cached?.models, fallback: adapter.capabilities.models })
-    if (r.source !== 'probe') {
-      console.log(`[agentChat] ${adapter.id} 模型探测没成功，继续用${r.source === 'cache' ? '上次那份' : '内置清单'}`)
-      return
+    const probed = await adapter.probeModels(hostPaths(), { force })
+    if (!current()) return
+    const r = resolveModels({ probed, cached: cached?.models, fallback: adapter.capabilities.models, cachedAt: cached?.at })
+    if (r.source === 'probe') {
+      writeCatalog(adapter.id, r.models)
+      publish(r.models, { status: 'ready', source: 'probe', updatedAt: Date.now() })
+    } else {
+      publish(r.models, { status: 'error', source: r.source, updatedAt: cached?.at, note: r.note ?? '暂时无法读取模型，请刷新重试' })
     }
-    if (shouldPersist(cached?.models, r.models)) writeCatalog(adapter.id, r.models)
-    if (live.rec.alive) handleEvent(live, { k: 'capabilities', models: r.models })
-  } catch (e) {
-    console.log(`[agentChat] ${adapter.id} 模型探测出错，已降级`, e)
+  } catch {
+    publish(first.models, { status: 'error', source: first.source, updatedAt: cached?.at, note: first.note ?? '暂时无法读取模型，请刷新重试' })
   }
 }
 
@@ -849,6 +855,7 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
   live.silence = endSilence()
+  if (live.rec.pluginId) handleEvent(live, { k: 'plugin.status', plugin: chatPluginState(live.rec.pluginId, findPlugin(live.rec.pluginId)) })
   // **ACP 那条路整个从这里截走。** 这是三条消息入口（start / send / 手机端
   // deliverExternalMessage）的汇合点，一行 if-return 就够，下面那套一个字节不动。
   // 不截的话，第二条消息会被 :648 的 writeStdin 按 Claude 的 `{type:'user'}` 格式
@@ -1510,6 +1517,15 @@ export function registerAgentChatHandlers(): void {
 
   // 中途改模型/effort：只记为待生效，不打断当前任务（决定 3）。下一次 send 触发的
   // planSend 会因为 pending 存在而走 restart，effectiveOpts 会把这里 patch 的值带上。
+  ipcMain.handle('agentChat:refreshModels', async (e, sessionId: unknown) => {
+    const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
+    if (!live || live.wcId !== e.sender.id) return { ok: false, error: '会话不存在' }
+    const adapter = getAdapter(live.rec.cli)
+    if (!adapter) return { ok: false, error: '会话不可用' }
+    await resolveAndBroadcastModels(live, adapter, true)
+    return { ok: true }
+  })
+
   ipcMain.handle('agentChat:setParams', (_e, sessionId: unknown, patch: unknown): { ok: boolean; error?: string } => {
     const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
     if (!live) return { ok: false, error: '会话不存在' }

@@ -503,6 +503,62 @@ function skip(id, detail) {
 
 // ════════════════════════════ 第四部分：主流程 ════════════════════════════
 
+/** 公共事件回放：实际组件与样式，传输使用上述可还原测试钩子。 */
+async function verifyCompatibility(cdp, projectDir) {
+  const outDir = path.join(PROJECT_ROOT, 'docs', 'verification', 'agent-chat')
+  fs.mkdirSync(outDir, { recursive: true })
+  const checks = []
+  for (const cli of ['codex', 'claude', 'omp']) {
+    const sid = 'compat-' + cli
+    const tabs = [{id:'compat-tab',title:'Compatibility',projectId:null,cwd:projectDir,activeLeafId:sid,root:{type:'leaf',id:sid,pane:{kind:'agent',cli,cwd:projectDir,sessionId:sid}}}]
+    await cdp.eval(`(() => {
+      const s = window.__store.getState()
+      window.__store.setState({viewMode:'canvas', tabs:${JSON.stringify(tabs)},activeTabId:'compat-tab',canvas:{...s.canvas,frames:[{id:'compat-frame',projectId:null,name:'Compatibility',x:0,y:0,w:900,h:760,collapsed:false,nodes:[{id:'compat-node',leafId:${JSON.stringify(sid)},x:20,y:50,w:850,h:680}]}]}})
+      window.__store.getState().setMaximizedNode({frameId:'compat-frame',nodeId:'compat-node'})
+    })()`)
+    await waitFor(() => cdp.eval(`!!document.querySelector('.ac-toolbar')`), { timeout: 12000, desc: cli + ' 工具栏' })
+    const push = e => cdp.eval(`window.__agentChatTestPush(${JSON.stringify(sid)},${JSON.stringify(e)})`)
+    await push({k:'session.ready',sessionId:sid,model:cli+'-fixture',cwd:projectDir})
+    await push({k:'capabilities',models:[],modelCatalog:{status:'loading',source:'none'}})
+    await sleep(100)
+    const loading = await cdp.eval(`document.querySelector('.ac-param-select')?.textContent.includes('读取模型中')`)
+    await push({k:'capabilities',models:[],modelCatalog:{status:'error',source:'none',note:'测试离线'}})
+    await sleep(100)
+    const failed = await cdp.eval(`document.querySelector('.ac-model-catalog')?.textContent.includes('读取失败')`)
+    await push({k:'capabilities',models:[{id:cli+'-fixture',label:cli+' model',effortLevels:[{id:'low',label:'低'},{id:'high',label:'高'}]}],modelCatalog:{status:'ready',source:'probe'}})
+    await push({k:'user.message',text:'请检查多轮对话、模型菜单与报告链接。'})
+    await push({k:'turn.start'})
+    await push({k:'text.done',text:'已检查对话流程。\n\n### 验证结果\n\n正文保留清晰的段落间距，工具结果可单独展开。\n\n| 项目 | 状态 |\n|---|---|\n| 模型目录 | 动态读取 |\n| 多轮对话 | 保留上下文 |\n\n```ts\nconst result = await session.send("继续检查较长的代码行能否独立滚动，而不会撑宽整个对话窗口");\n```\n\n[查看参考文档](https://example.com/docs)'} )
+    await push({k:'exec.start',execId:'report',label:'读取报告',detail:'报告资源',tool:{server:'reports',name:'read'}})
+    await push({k:'exec.done',execId:'report',ok:true,output:'报告已读取',resources:[{uri:'https://example.com/report',name:'查看报告'}]})
+    await push({k:'exec.start',execId:'failed',label:'离线插件',detail:'网络不可达'})
+    await push({k:'exec.done',execId:'failed',ok:false,output:'连接失败，保留错误信息'})
+    await push({k:'plugin.status',plugin:{id:'fixture',name:'报告插件',status:'selected',note:'实际连接状态以工具调用为准'}})
+    await push({k:'turn.done',usage:{inputTokens:20,outputTokens:40}})
+    await sleep(200)
+    const state = await cdp.eval(`(() => {
+      const root=document.querySelector('.agent-chat-view'); const model=root.querySelector('.ac-param-select');
+      return {hasText:root.textContent.includes('验证结果'),model:model?.textContent,resource:root.querySelector('.ac-resource-link')?.textContent,failed:!!root.querySelector('.ac-exec-failed'),font:getComputedStyle(root.querySelector('.ac-md')).fontSize}
+    })()`)
+    if (!loading || !failed || !state.hasText || !state.model?.includes(cli+' model') || !state.resource || !state.failed) throw new Error(cli + ': ' + JSON.stringify({loading,failed,...state}))
+    await cdp.send('Input.dispatchKeyEvent', {type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+    await cdp.send('Input.dispatchKeyEvent', {type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+    await cdp.eval(`window.__store.getState().setMaximizedNode({frameId:'compat-frame',nodeId:'compat-node'})`)
+    await sleep(150)
+    const shot = await cdp.send('Page.captureScreenshot', { format:'png' })
+    fs.writeFileSync(path.join(outDir, cli+'.png'), Buffer.from(shot.result.data, 'base64'))
+    await cdp.eval(`document.querySelector('.agent-chat-view').style.width='340px'`)
+    await sleep(100)
+    const narrow = await cdp.eval(`(() => {const el=document.querySelector('.ac-messages'); return {width:el.clientWidth,scroll:el.scrollWidth}})()`)
+    if (narrow.scroll > narrow.width + 2) throw new Error(cli+' 窄栏溢出 '+JSON.stringify(narrow))
+    await cdp.eval(`document.querySelector('.agent-chat-view').style.width=''`)
+    checks.push({cli,loading,failed,...state,narrow})
+  }
+  fs.writeFileSync(path.join(outDir,'compatibility.json'),JSON.stringify({checks,consoleErrors:cdp.consoleErrors},null,2)+'\n')
+  if(cdp.consoleErrors.length) throw new Error('渲染异常: '+cdp.consoleErrors.join('\n'))
+  log('跨 harness 事件回放与窄栏验证通过：'+checks.map(c=>c.cli).join(', '))
+}
+
 async function main() {
   log('=== Task 8：agent 对话 UI 真机验证 ===')
   log('项目根：', PROJECT_ROOT)
@@ -575,7 +631,7 @@ async function main() {
       try {
         const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()
         target = list.find(
-          (t) => t.type === 'page' && t.url.includes('out/renderer') && !t.url.includes('island')
+          (t) => t.type === 'page' && t.title === 'Eas-Term' && t.url.includes('out/renderer')
         )
         if (target) break
       } catch {
@@ -641,6 +697,8 @@ async function main() {
     if (!hasStore) throw new Error('window.__store 不存在——main.tsx 的临时补丁没生效？')
     const hasTestPush = await cdp.eval(`typeof window.__agentChatTestPush !== 'undefined'`)
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
+
+    if (process.argv.includes('--compat')) { await verifyCompatibility(cdp, projectDir); return }
 
     const IDS = { tabId: 't8-tab', leafId: 't8-leaf', frameId: 't8-frame', nodeId: 't8-node' }
     const injectExpr = `(function(){
@@ -1425,6 +1483,7 @@ async function main() {
 
 main()
   .then(() => {
+    if (process.argv.includes("--compat")) return
     log('')
     log('=== 十一条断言结果 ===')
     let allPass = true

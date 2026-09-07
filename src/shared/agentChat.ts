@@ -13,6 +13,23 @@
 import type { RoleBounds } from './roleBinding'
 import type { RoleCaps, RoleRaw } from './types'
 
+export interface ChatToolInfo { server?: string; name: string }
+export interface ChatResource { uri: string; name: string; mimeType?: string }
+
+export interface ChatModelOption {
+  id: string
+  label: string
+  effortLevels?: { id: string; label: string }[]
+  defaultEffort?: string
+}
+
+export interface ModelCatalogState {
+  status: 'loading' | 'ready' | 'error'
+  source: 'probe' | 'cache' | 'fallback' | 'none'
+  updatedAt?: number
+  note?: string
+}
+
 export interface Usage {
   inputTokens: number
   outputTokens: number
@@ -26,6 +43,7 @@ export interface Usage {
 }
 
 export type ChatEvent =
+  | { k: 'plugin.status'; plugin: import('./chatPlugin').ChatPluginState }
   | { k: 'session.ready'; sessionId: string; model: string; cwd: string }
   /** 一轮开始了：消息已经投递给 CLI，接下来会有回答。
    *
@@ -41,10 +59,10 @@ export type ChatEvent =
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
-  | { k: 'exec.start'; execId: string; label: string; detail: string }
+  | { k: 'exec.start'; execId: string; label: string; detail: string; tool?: ChatToolInfo }
   /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
    *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string }
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; tool?: ChatToolInfo; resources?: ChatResource[] }
   | {
       k: 'approval.request'
       approvalId: string
@@ -158,7 +176,8 @@ export type ChatEvent =
    */
   | {
       k: 'capabilities'
-      models?: { id: string; label: string }[]
+      models?: ChatModelOption[]
+      modelCatalog?: ModelCatalogState
       effortLevels?: { id: string; label: string }[]
     }
 
@@ -200,7 +219,8 @@ export interface SessionStats {
 }
 
 export interface CliCapabilities {
-  models?: { id: string; label: string }[]
+  models?: ChatModelOption[]
+  modelCatalog?: ModelCatalogState
   effortLevels?: { id: string; label: string }[]
   compact?: 'slash' | 'native' | false
   contextUsage: boolean
@@ -395,7 +415,7 @@ export interface CliAdapter {
    *  返回 undefined = 问不到，工具栏退回「没有下拉」（跟不声明这个钩子一样）。
    *  只声明给「模型名随版本/账号变」的 CLI：Codex 的 gpt-5.6-sol/terra/luna 每个账号都不同，
    *  硬编码等于隔三差五给一个选了就报错的选项（2026-09-06）。 */
-  probeModels?: (host?: HostPaths) => Promise<{ id: string; label: string }[] | undefined>
+  probeModels?: (host?: HostPaths, options?: { force?: boolean }) => Promise<ChatModelOption[] | undefined>
   /** 拼装启动这个 CLI 的命令行。进程由 session.ts 统一 spawn。
    *  stdin 必填（不给可选，是怕下一个 CLI 接入时又忘记声明）——每个 CLI 怎么用 stdin
    *  是它自己的怪癖，adapter 知道，下游不该替它记：

@@ -11,6 +11,7 @@
 //   流里的 hook_started / hook_response 不管 hook_event 是什么、也不管是不是真的 PreToolUse，
 //   一律当噪音丢弃——和 SessionStart 那批噪音同等对待，不作任何特殊识别。
 
+import { normalizeToolContent } from './toolResult.ts'
 import path from 'node:path'
 import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
 
@@ -222,7 +223,8 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
           k: 'exec.start',
           execId: b.id,
           label: toLabel(b.name, b.input),
-          detail: safeStringify(b.input)
+          detail: safeStringify(b.input),
+          ...(typeof b.name === 'string' && b.name.startsWith('mcp__') ? { tool: { name: b.name } } : {})
         })
       }
       // thinking block：忽略。thinking 的量走 system:thinking_tokens，不走这里，
@@ -305,7 +307,7 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
     if (typeof execId !== 'string' || !execId) return []
     if (resolvedExecIds.has(execId)) return []
     resolvedExecIds.add(execId)
-    return [{ k: 'exec.done', execId, ok, output: toOutputText(output) }]
+    return [{ k: 'exec.done', execId, ok, ...normalizeToolContent(output, toOutputText(output)) }]
   }
 
   return { push }
