@@ -527,7 +527,10 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
       if (!r.ok) throw new Error(r.error)
       return r
     }
-    const files = Array.isArray(args.files) ? (args.files as unknown[]).map(String) : []
+    // 只收非空字符串：模型偶尔会塞 null / 数字 / 空串进数组，全滤掉了才算「空」
+    const files = Array.isArray(args.files)
+      ? (args.files as unknown[]).filter((f): f is string => typeof f === 'string' && !!f.trim())
+      : []
     if (!files.length) throw new Error('files 不能为空')
     const r = await window.api.merge.impact(projectPath, files)
     if (!r.ok) throw new Error(r.error)

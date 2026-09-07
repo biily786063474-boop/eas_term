@@ -60,7 +60,12 @@ export function projectMenuItems(
           } as CanvasMenuItem,
           {
             label: '回归命令…',
-            hint: p.testCmd ? p.testCmd : '未设，合并官会从 package.json 推断',
+            // 命令太长会把菜单撑宽，40 字截断 —— 完整的进编辑框就看得到
+            hint: p.testCmd
+              ? p.testCmd.length > 40
+                ? p.testCmd.slice(0, 40) + '…'
+                : p.testCmd
+              : '未设，合并官会从 package.json 推断',
             onClick: () => onStartRename(projectId, 'testCmd')
           } as CanvasMenuItem
         ]
