@@ -30,6 +30,12 @@ export interface ModelCatalogState {
   note?: string
 }
 
+/** 会话启动前也可以读取；不创建会话或发送消息。 */
+export interface AgentChatModelCatalog {
+  models: ChatModelOption[]
+  modelCatalog: ModelCatalogState
+}
+
 export interface Usage {
   inputTokens: number
   outputTokens: number

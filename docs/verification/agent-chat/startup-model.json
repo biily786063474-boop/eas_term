@@ -1,0 +1,23 @@
+{
+  "before": {
+    "starts": 0,
+    "summary": "首条消息跟随 CLI 配置，实际模型由 CLI 启动时确认"
+  },
+  "model": "gpt-5.6-sol",
+  "effort": "low",
+  "summary": "首条消息使用 GPT-5.6-Sol",
+  "calls": [
+    {
+      "cli": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "low",
+      "resumeId": "e2e-stale"
+    },
+    {
+      "cli": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "low"
+    }
+  ],
+  "consoleErrors": []
+}

@@ -556,11 +556,20 @@ async function resolveAndBroadcastModels(live: Live, adapter: CliAdapter, force 
   const request = (live.modelRequest ?? 0) + 1
   live.modelRequest = request
   const current = (): boolean => sessions.get(live.rec.id) === live && live.modelRequest === request
+  await resolveAdapterModels(adapter, (models, modelCatalog) => {
+    if (current()) handleEvent(live, { k: 'capabilities', models, modelCatalog })
+  }, force, current)
+}
+
+/** 空态与活跃会话共用探测、缓存、降级；空态不会 spawn 对话进程。 */
+async function resolveAdapterModels(
+  adapter: CliAdapter,
+  publish: (models: import('../../shared/agentChat').ChatModelOption[], state: import('../../shared/agentChat').ModelCatalogState) => void,
+  force = false,
+  current: () => boolean = () => true
+): Promise<void> {
   const cached = readCatalog()[adapter.id]
   const first = resolveModels({ cached: cached?.models, fallback: adapter.capabilities.models, cachedAt: cached?.at })
-  const publish = (models: typeof first.models, state: NonNullable<import('../../shared/agentChat').CliCapabilities['modelCatalog']>): void => {
-    if (current()) handleEvent(live, { k: 'capabilities', models, modelCatalog: state })
-  }
   publish(first.models, { status: adapter.probeModels ? 'loading' : 'ready', source: first.source, note: first.note, updatedAt: cached?.at })
   if (!adapter.probeModels) return
   try {
@@ -1336,6 +1345,14 @@ export function registerAgentChatHandlers(): void {
   invalidateCliCache = (): void => {
     cliCache = null
   }
+
+  ipcMain.handle('agentChat:modelCatalog', async (_e, cli: unknown, force: unknown): Promise<import('../../shared/agentChat').AgentChatModelCatalog> => {
+    let result: import('../../shared/agentChat').AgentChatModelCatalog = { models: [], modelCatalog: { status: 'error', source: 'none', note: 'CLI 不可用' } }
+    const adapter = typeof cli === 'string' ? getAdapter(cli) : undefined
+    if (!adapter) return result
+    await resolveAdapterModels(adapter, (models, modelCatalog) => { result = { models, modelCatalog } }, force === true)
+    return result
+  })
 
   ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
     if (cliCache && Date.now() - cliCache.at < CLI_CACHE_MS) return cliCache.data

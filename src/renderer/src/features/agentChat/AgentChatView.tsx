@@ -1,3 +1,5 @@
+import { StartupModelPicker } from './StartupModelPicker'
+import { startupParams, type StartupChoice } from './startupParams'
 // 通用 AI CLI 对话节点：空态起会话 + 对话态。
 //
 // 空态与对话态是**同一个组件的两个阶段**，不是两个组件——sessionId 一拿到就切阶段，
@@ -292,6 +294,7 @@ export function AgentChatView({
   }
   // 选中的整条 CliInfo（不只是 id）——capabilities 跟着一起存下来，供工具栏用（Task 6）
   const [selected, setSelected] = useState<CliInfo | null>(null)
+  const [startupChoices, setStartupChoices] = useState<Record<string, StartupChoice>>({})
 
 
   // CLI 选择改成下拉（原来是一排芯片）。**三种状态仍然都列出来** —— 没装的、
@@ -1061,8 +1064,7 @@ export function AgentChatView({
         // 走那条路开出来的会话就没有角色（同 identity 那条注释的理由）。
         ...(roleContract ? { roleContract } : {}),
         ...(roleBounds ? { roleBounds } : {}),
-        ...(roleModel ? { model: roleModel } : {}),
-        ...(roleEffort ? { effort: roleEffort } : {}),
+        ...startupParams(startupChoices[selected.id], roleModel, roleEffort),
         // 角色 id 也要过去 —— 协同板按它查角色名，不带就是板上一行匿名分支
         ...(role?.id ? { roleId: role.id } : {}),
         ...identity,
@@ -1087,8 +1089,7 @@ export function AgentChatView({
           // 而用户什么都看不出来（界面上角色还显示着）。
           ...(roleContract ? { roleContract } : {}),
           ...(roleBounds ? { roleBounds } : {}),
-          ...(roleModel ? { model: roleModel } : {}),
-          ...(roleEffort ? { effort: roleEffort } : {}),
+          ...startupParams(startupChoices[selected.id], roleModel, roleEffort),
           ...(role?.id ? { roleId: role.id } : {}),
           ...identity
         })
@@ -1550,6 +1551,15 @@ export function AgentChatView({
             />
           )}
         </div>
+        {selected?.available && selected.chatSupported && <StartupModelPicker
+          key={selected.id}
+          cli={selected}
+          choice={startupChoices[selected.id]}
+          roleModel={role?.model?.[selected.id as HarnessId]}
+          roleEffort={role?.effort?.[selected.id as HarnessId]}
+          disabled={starting}
+          onChange={choice => setStartupChoices(current => ({...current,[selected.id]:choice}))}
+        />}
         {/* 发送做成输入框右下角的图标，不再是底下那个独立的文字按钮：
             它就该长在输入框上，视线不用离开正在打字的地方。 */}
         {/* **有历史时用对话态的输入框尺寸。**

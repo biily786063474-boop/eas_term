@@ -340,3 +340,5 @@
 ## 2026-09-07：AI 对话 Codex 修复分支
 
 实现位于 `/private/tmp/eas-agent-chat-codex` 的 `codex/agent-chat-codex`。用户要求不同 CLI/harness 兼容，前端新增行为按公共能力/事件处理。续聊参数、模型目录与每模型档位、资源/插件展示和局部排版已实现；全量 2452 通过/1 跳过，隔离三种事件回放通过。check 的既有 cframe-sweep 规则失败未改。审查入口 docs/architecture/16-AI对话公共协议.md、docs/verification/agent-chat/README.md；真实服务验证边界见后者。尚未合并/发布。
+
+2026-09-07 补充：用户要求模型读取与选择放在正式对话开始前。新增 StartupModelPicker 与无 session 的 modelCatalog IPC，共用原探测/缓存；首轮和 resume 重试都带用户选择。全量 2454 通过/1 跳过，真实目录与启动参数 UI 验证通过。

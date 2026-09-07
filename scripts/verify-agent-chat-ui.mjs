@@ -230,6 +230,7 @@ const PRELOAD_CONST_PATCHED = `// TEMP(task-8 e2e，见 scripts/verify-agent-cha
 // 保持真实调用。验证脚本负责在跑完后把这处改动还原、重新构建，不是永久生产逻辑。
 const AGENT_CHAT_TEST_MODE = process.env.EAS_AGENT_CHAT_TEST === '1'
 const fakeAgentChatListeners = new Map<string, (e: ChatEvent) => void>()
+const testStartCalls: AgentChatStartParams[] = []
 const testResolveApprovalCalls: { sessionId: string; approvalId: string; decision: string }[] = []
 
 const api = {\n  platform: process.platform,`
@@ -241,6 +242,8 @@ const PRELOAD_START_ANCHOR = `    start: (params: AgentChatStartParams): Promise
       ipcRenderer.invoke('agentChat:start', params),`
 const PRELOAD_START_PATCHED = `    start: AGENT_CHAT_TEST_MODE
       ? async (_params: AgentChatStartParams): Promise<AgentChatStartResult> => {
+          testStartCalls.push(_params)
+          if (_params.resumeId === 'e2e-stale') return { ok: false, error: 'fixture: expired resume' }
           return { ok: true, sessionId: 'e2e-fake-session' }
         }
       : (params: AgentChatStartParams): Promise<AgentChatStartResult> =>
@@ -325,6 +328,7 @@ const PRELOAD_EXPOSE_PATCHED = `contextBridge.exposeInMainWorld('api', api)
 //     push 的新元素没有文档承诺的保证，函数调用每次都会拿到当下最新的真实数据）。
 // 见上面 AGENT_CHAT_TEST_MODE 的说明，验完自动还原。
 if (AGENT_CHAT_TEST_MODE) {
+  contextBridge.exposeInMainWorld('__agentChatTestStartCalls', () => testStartCalls)
   contextBridge.exposeInMainWorld('__agentChatTestPush', (sessionId: string, e: ChatEvent) => {
     fakeAgentChatListeners.get(sessionId)?.(e)
   })
@@ -559,6 +563,33 @@ async function verifyCompatibility(cdp, projectDir) {
   log('跨 harness 事件回放与窄栏验证通过：'+checks.map(c=>c.cli).join(', '))
 }
 
+async function verifyStartup(cdp, projectDir) {
+  const tabs = [{id:'startup-tab',title:'首轮模型验证',projectId:'t8-verify-project',cwd:projectDir,activeLeafId:'startup-leaf',root:{type:'leaf',id:'startup-leaf',pane:{kind:'agent',cli:'codex',cwd:projectDir,resumeId:'e2e-stale',resumeCli:'codex'}}}]
+  await cdp.eval(`(() => {const s=window.__store.getState(); window.__store.setState({viewMode:'canvas',tabs:${JSON.stringify(tabs)},activeTabId:'startup-tab',canvas:{...s.canvas,frames:[{id:'startup-frame',projectId:'t8-verify-project',name:'首轮模型验证',x:0,y:0,w:900,h:760,collapsed:false,nodes:[{id:'startup-node',leafId:'startup-leaf',x:20,y:50,w:850,h:680}]}]}});s.setMaximizedNode({frameId:'startup-frame',nodeId:'startup-node'})})()`)
+  await waitFor(() => cdp.eval(`!!document.querySelector('select[aria-label="启动模型"]')`), {timeout:15000,desc:'首轮模型控件'})
+  await waitFor(() => cdp.eval(`document.querySelector('select[aria-label="启动模型"]')?.options.length > 1`), {timeout:25000,desc:'发送前真实模型目录'})
+  const before = await cdp.eval(`({starts:window.__agentChatTestStartCalls().length,summary:document.querySelector('.ac-startup-summary').textContent})`)
+  if (before.starts !== 0) throw new Error('读取模型不应启动对话')
+  const model = await cdp.eval(`(() => {const s=document.querySelector('select[aria-label="启动模型"]');s.value=s.options[1].value;s.dispatchEvent(new Event('change',{bubbles:true}));return s.value})()`)
+  await sleep(100)
+  const effort = await cdp.eval(`(() => {const s=document.querySelector('select[aria-label="启动思考强度"]');if(!s || s.options.length<2)return '';s.value=s.options[1].value;s.dispatchEvent(new Event('change',{bubbles:true}));return s.value})()`)
+  await sleep(100)
+  const summary = await cdp.eval(`document.querySelector('.ac-startup-summary').textContent`)
+  const outDir=path.join(PROJECT_ROOT,'docs','verification','agent-chat')
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
+  fs.writeFileSync(path.join(outDir,'startup-model.png'),Buffer.from(shot.result.data,'base64'))
+  await cdp.clickElement(`document.querySelector('textarea.ac-input')`, '首轮输入框')
+  await cdp.send('Input.insertText',{text:'首轮模型参数测试，不发送真实推理请求'})
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
+  await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
+  await waitFor(() => cdp.eval(`window.__agentChatTestStartCalls().length >= 2`), {timeout:12000,desc:'首轮与恢复失败重试'})
+  const calls = await cdp.eval(`window.__agentChatTestStartCalls().map(p=>({cli:p.cli,model:p.model,effort:p.effort,resumeId:p.resumeId}))`)
+  if (calls.length!==2 || calls.some(p=>p.cli!=='codex' || p.model!==model || (p.effort??'')!==effort)) throw new Error('启动参数未遵循选择: '+JSON.stringify(calls))
+  fs.writeFileSync(path.join(outDir,'startup-model.json'),JSON.stringify({before,model,effort,summary,calls,consoleErrors:cdp.consoleErrors},null,2)+'\n')
+  if(cdp.consoleErrors.length) throw new Error(cdp.consoleErrors.join('\n'))
+  log('首轮前模型目录与启动/重试参数验证通过')
+}
+
 async function main() {
   log('=== Task 8：agent 对话 UI 真机验证 ===')
   log('项目根：', PROJECT_ROOT)
@@ -698,6 +729,7 @@ async function main() {
     const hasTestPush = await cdp.eval(`typeof window.__agentChatTestPush !== 'undefined'`)
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
+    if (process.argv.includes('--startup')) { await verifyStartup(cdp, projectDir); return }
     if (process.argv.includes('--compat')) { await verifyCompatibility(cdp, projectDir); return }
 
     const IDS = { tabId: 't8-tab', leafId: 't8-leaf', frameId: 't8-frame', nodeId: 't8-node' }
@@ -1483,7 +1515,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes("--compat")) return
+    if (process.argv.includes("--compat") || process.argv.includes("--startup")) return
     log('')
     log('=== 十一条断言结果 ===')
     let allPass = true
