@@ -1,8 +1,9 @@
 // 画布组件节点（画布独有）：按 node.component.type 查注册表渲染，Frame 注入 projectId/cwd。
 // 外壳（头部/拖动/resize）复用文件预览节点的 .cfile-* 样式。
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useStore } from '../../store'
+import { useMaximizeFlip } from '../workspace/useFlip.ts'
 import type { CanvasNode, CanvasFrame } from '../../store'
 import { getCanvasComponent } from './components/registry'
 import { makeSubframeDrop } from './subframeDrop'
@@ -50,6 +51,21 @@ export function CanvasComponentNode({
       ['--max-scale' as string]: maxScale
     } as React.CSSProperties
   })()
+
+  // ── 最大化 / 还原的丝滑动画 ──────────────────────────────────────────────
+  // 用户 2026-09-07：「frame 中所有可以最大化窗口都要统一的放大缩小过度动效。」
+  // 在这之前只有 PaneView（终端 / AI 对话）有，画布上的节点是瞬移。
+  // **判据与曲线都在 `workspace/useFlip.ts`，四个模块共用一份**，别在这儿另写。
+  // 被别人最大化盖住时传 null —— 那时 display:none，量出来是 0，倒推会得到 Infinity。
+  const rootRef = useRef<HTMLDivElement>(null)
+  useMaximizeFlip(
+    rootRef,
+    hiddenByMax
+      ? null
+      : maxStyle
+        ? { left: maxStyle.left as number, top: maxStyle.top as number, w: maxStyle.width as number, h: maxStyle.height as number }
+        : { left: node.x, top: node.y, w: node.w, h: node.h }
+  )
   const renameNode = useStore((s) => s.renameNode)
   const [editing, setEditing] = useState(false)
   const project = useStore((s) => s.projects.find((p) => p.id === frame.projectId))
@@ -107,6 +123,7 @@ export function CanvasComponentNode({
 
   return (
     <div
+      ref={rootRef}
       className={`cfile-node${selected ? ' sel' : ''}${isMax ? ' is-max' : ''}`}
       data-node-id={node.id}
       data-frame-id={frame.id}
