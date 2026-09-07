@@ -144,7 +144,9 @@ git 仓库，「<角色名>」会直接改主工作区，要继续吗？」确�
 项目根 + `BOARD_REL`）随时查最新的一份，见 [11](11-MCP工具网络.md)。
 
 **界面**：`BranchBadge.tsx` 在空态 `ac-ctxbar` 与对话态 `ChatToolbar` 都渲染；菜单三项——
-「开终端」（`effectiveCwd`）、「合并到主干」（P2 占位，禁用）、「删除 worktree」（有活会话禁用；
+「开终端」（`effectiveCwd`）、「合并到主干」（P2：在**同一 Frame** `addAgentNode` 起一个 `roleId:'merger'` 的合并官节点，
+CLI 沿用本节点的；首条消息经 pane 的 `draft` **只预填不发送** —— 合并不可逆，得用户看一眼分支名再按发送；
+`draft` 与 `initialMessage` 同构：`openAgentPane` 写入、`AgentChatView` 读后 `clearAgentDraft`，`persist.ts` 白名单不含它）、「删除 worktree」（有活会话禁用；
 有未提交改动先拒、写清数量，二次确认走 force）。徽标变色的判据来自 `board.read().overlaps`
 （两条**不同**活跃分支触及同一文件）。pane 的 `worktree?: { relPath, branch }`（`layout.ts` 的
 `PaneState`）随 `persist.ts` 存读、画布恢复时 `canvasSlice.ts` 重建节点传给 `openAgentPane`，

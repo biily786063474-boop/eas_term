@@ -82,6 +82,15 @@ export type PaneState =
        */
       initialMessage?: string
       /**
+       * 首条消息**预填**（只填进输入框，不发送；不持久化）。徽标菜单「合并到主干」用：
+       * 起一个合并官会话，把「把 <分支> 合进主干…」摆在输入框里，用户看一眼、改一改再按发送。
+       *
+       * 和 initialMessage 的差别只有「按不按发送」；同样走 pane、由 AgentChatView 读取，
+       * 填进去之后**必须清掉**（clearAgentDraft），否则组件重挂载会把用户改过的输入框覆盖回去。
+       * persist.ts 的 serializeCanvas 对 agent pane 是显式白名单，这个字段不在里面 —— 别加。
+       */
+      draft?: string
+      /**
        * 用哪个 CLI 起这个会话。缺省 = 让 AgentChatView 自己挑第一个可用的（既有行为）。
        *
        * **为插件而加**：插件属于哪个 CLI 是确定的（GitHub 是 Codex 的、

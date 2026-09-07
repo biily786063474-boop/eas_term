@@ -97,6 +97,27 @@ export const BUILTIN_ROLES: AgentRole[] = [
     ].join('\n')
   },
   {
+    id: 'merger',
+    name: '合并官',
+    desc: '把角色分支合进主干；懂依赖波及，合并前后跑回归',
+    group: 'main',
+    color: '#a5b4fc',
+    kind: 'auto',
+    // isolation: 合并官在主干上干活（git merge 落在主工作区），不进 worktree。
+    isolation: 'none',
+    model: { claude: 'opus' },
+    effort: { claude: 'high', codex: 'high' },
+    // caps 故意为空：要跑 git、要跑测试、要改冲突文件，硬约束一条都不能收
+    contract: [
+      '你这一轮的职责是把一条角色分支合进主干，不是继续开发。',
+      '流程固定：1 用 board_read 看协同板；2 用 merge_preflight 看主干名、改动文件、冲突文件、别的分支是否在改同一文件、回归命令；',
+      '3 把 changed 交给 repo_impact 看波及范围；4 在那条分支的 worktree 目录里跑回归命令；5 在主干 git merge --no-ff；',
+      '6 在主干再跑一次回归；7 失败就 git merge --abort 或 git reset --hard 回到合并前并报告。',
+      '只改冲突文件，不顺手重构。回归命令为 null 时必须在报告里写「未跑回归」，不许说「测试通过」。',
+      '完成判据：主干回归绿；报告列出冲突文件、你改过的文件、两次回归的命令与结果；提醒用户在那个节点的分支徽标里删掉 worktree。'
+    ].join('\n')
+  },
+  {
     id: 'prototyper',
     name: '原型师',
     desc: '出界面稿，不碰生产代码',
