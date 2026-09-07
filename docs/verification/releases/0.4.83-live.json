@@ -1,0 +1,90 @@
+{
+  "version": "0.4.83",
+  "published": "2026-09-07T16:19:23Z",
+  "notes": 11,
+  "checks": [
+    {
+      "url": "https://eas.biily.top/",
+      "bytes": 28217,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/download.html",
+      "bytes": 12898,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/privacy.html",
+      "bytes": 33584,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/changelog.html",
+      "bytes": 85715,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/style.css",
+      "bytes": 19521,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/analytics.js",
+      "bytes": 4611,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/proto.css",
+      "bytes": 15186,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/proto.js",
+      "bytes": 3152,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/vendor/spb-design/tokens-core.css",
+      "bytes": 4454,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/download/latest.json",
+      "bytes": 1906,
+      "status": "ok"
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.83/Eas-Term-0.4.83-arm64.dmg",
+      "status": 200,
+      "bytes": 204408860,
+      "sha256": "3bedebacd4da8749b25574ed5946439ccc7702c0c7cf7f7aafce26f966d4898f",
+      "sha256Verification": "full remote file via SSH before activation"
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.83/Eas-Term-0.4.83-arm64.zip",
+      "status": 200,
+      "bytes": 202561894,
+      "sha256": "ff55afae3f0f5d12be22957da73850df4580a69ec73c254404057d52d4816c08",
+      "sha256Verification": "full remote file via SSH before activation"
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.83/Eas-Term-0.4.83-x64.dmg",
+      "status": 200,
+      "bytes": 216401813,
+      "sha256": "b355176d962a9ed5c53e1e9cfc1ff5c16f3abcbd1781f9d43710dd67ed6acf36",
+      "sha256Verification": "full remote file via SSH before activation"
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.83/Eas-Term-0.4.83-x64.zip",
+      "status": 200,
+      "bytes": 214660317,
+      "sha256": "40ca2e1290fa2cbed9d39b53d4c5504d72400bd618c79c570a9d23fd9bb8f326",
+      "sha256Verification": "full remote file via SSH before activation"
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.82/Eas-Term-0.4.82-x64-setup.exe",
+      "status": 200,
+      "note": "previous Windows release retained"
+    }
+  ]
+}
