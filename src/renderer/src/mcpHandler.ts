@@ -512,6 +512,28 @@ async function runTool(tool: string, args: Args, ctx: Ctx): Promise<unknown> {
     }
   }
 
+  if (tool === 'merge_preflight' || tool === 'repo_impact') {
+    // 合并官的两个只读工具（主进程 main/mergeTools.ts 现算，不动工作区）。
+    // 项目定位与 board_read 同一手法：先按调用方终端所在 Frame，再回落到 ctx.project。
+    // 主进程那边会自己 projectRootOf —— 角色会话跑在 worktree 里时传上去的是 worktree 路径，
+    // 预检算的仍是整个仓库的主干与分支。返回普通对象，交给 eas-mcp.mjs 统一 JSON.stringify。
+    const where = resolveFrame(ctx)
+    const projectPath = where?.projectPath || ctx.project || ''
+    if (!projectPath) throw new Error('找不到你所在的项目')
+    if (tool === 'merge_preflight') {
+      const branch = String(args.branch ?? '').trim()
+      if (!branch) throw new Error('缺少 branch')
+      const r = await window.api.merge.preflight(projectPath, branch)
+      if (!r.ok) throw new Error(r.error)
+      return r
+    }
+    const files = Array.isArray(args.files) ? (args.files as unknown[]).map(String) : []
+    if (!files.length) throw new Error('files 不能为空')
+    const r = await window.api.merge.impact(projectPath, files)
+    if (!r.ok) throw new Error(r.error)
+    return r
+  }
+
   if (tool === 'canvas_list_frames') {
     return {
       frames: s.canvas.frames.map((f) => ({

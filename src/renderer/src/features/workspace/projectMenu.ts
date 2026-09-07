@@ -8,9 +8,10 @@ import { boardColumnsNow } from '../canvas/frameStatus'
 export function projectMenuItems(
   projectId: string,
   /** 让调用方接管「进入内联改名态」。mode 区分改的是哪一个：
-   *  'name' = 只改应用内显示名，'folder' = 真改盘上的目录名。
-   *  画布抽屉没有内联输入框，不传 —— 两项都不显示，和今天「重命名」的处理一致 */
-  onStartRename?: (projectId: string, mode: 'name' | 'folder') => void
+   *  'name' = 只改应用内显示名，'folder' = 真改盘上的目录名，
+   *  'testCmd' = 设回归命令（合并官合并前后跑的那条）。
+   *  画布抽屉没有内联输入框，不传 —— 三项都不显示，和今天「重命名」的处理一致 */
+  onStartRename?: (projectId: string, mode: 'name' | 'folder' | 'testCmd') => void
 ): CanvasMenuItem[] {
   const s = useStore.getState()
   const p = s.projects.find((x) => x.id === projectId)
@@ -56,6 +57,11 @@ export function projectMenuItems(
             label: '改显示名',
             hint: '只改应用内的显示，不动文件夹',
             onClick: () => onStartRename(projectId, 'name')
+          } as CanvasMenuItem,
+          {
+            label: '回归命令…',
+            hint: p.testCmd ? p.testCmd : '未设，合并官会从 package.json 推断',
+            onClick: () => onStartRename(projectId, 'testCmd')
           } as CanvasMenuItem
         ]
       : []),

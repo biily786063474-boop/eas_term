@@ -20,6 +20,8 @@ export interface ProjectsSlice {
    *  画布 Frame 和标签标题 —— 它们的名字本来就是创建时从项目名拷过来的快照。 */
   renameProject: (id: string, name: string) => Promise<void>
   renameProjectFolder: (id: string, newName: string) => Promise<string | null>
+  /** 设/清回归命令（合并官合并前后各跑一次）。空串 = 清掉，回落到 package.json 推断 */
+  setProjectTestCmd: (id: string, cmd: string) => Promise<void>
   /** 切到某个项目（侧栏点项目、看板点卡片……）。**只切项目，不碰任何提醒。**
    *
    *  它原来还会顺手把该项目**全部**终端的 attentionPtys 清掉，语义写的是
@@ -174,6 +176,11 @@ export const createProjectsSlice: StateCreator<AppState, [], [], ProjectsSlice> 
       // 标签标题有 customTitle 明确标记「用户改过」，直接照它判断
       tabs: s.tabs.map((t) => (t.projectId === id && !t.customTitle ? { ...t, title: next } : t))
     }))
+  },
+
+  setProjectTestCmd: async (id, cmd) => {
+    const projects = await window.api.projects.setTestCmd(id, cmd)
+    set({ projects })
   },
 
   /** 真改盘上的目录名。返回错误文案，成功返回 null。

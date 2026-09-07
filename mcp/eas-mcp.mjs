@@ -205,6 +205,31 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'merge_preflight',
+    description:
+      '合并前的**只读预检**：给一条角色分支（如 eas/builder/ab12ef），返回主干名、合并基点、这条分支改了哪些文件、' +
+      '直接合并会冲突的文件（git merge-tree 算的，不动工作区）、协同板上其他活跃分支与它碰到的同一文件、' +
+      '以及该项目的回归命令（用户设的或从 package.json 推断，都没有就 null —— 那时你必须在报告里写「未跑回归」）。' +
+      '合并官动手前先调它。conflicts 为 null 表示这台机器的 git 太老无法预检。',
+    inputSchema: {
+      type: 'object',
+      properties: { branch: { type: 'string', description: '要合进主干的分支名' } },
+      required: ['branch']
+    }
+  },
+  {
+    name: 'repo_impact',
+    description:
+      '依赖波及（只读）：给一组文件（相对项目根），返回谁 import 了它们（直接与再上一层）、它们卷入的循环依赖、' +
+      '以及建议的回归范围（同目录同名的 *.test 文件）。图来自代码地图的分析，第一次要几秒。' +
+      '拿 merge_preflight 的 changed 喂给它，就知道这次合并会波及到哪。',
+    inputSchema: {
+      type: 'object',
+      properties: { files: { type: 'array', items: { type: 'string' }, description: '相对项目根的文件路径' } },
+      required: ['files']
+    }
+  },
+  {
     name: 'canvas_list_frames',
     description: '列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。' +
       '**Frame 就是用户口中的「造梦空间」，也叫「项目区」** —— 一个 Frame 绑一个项目，'  +
