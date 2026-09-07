@@ -326,7 +326,11 @@
 - 计划：`docs/superpowers/plans/2026-09-05-角色工作流-P1-分支隔离与协同板.md`（在该分支上，7 个任务）。SDD 台账与简报在 worktree 的 `.superpowers/sdd/2026-09-05-角色工作流-P1-分支隔离与协同板/progress.md`（git-ignored）。
 - 做到哪：Task 1（`AgentRole.isolation`、三个写码角色默认 worktree、`shared/roleWorktree.ts` 命名纯函数）`be08a85` ✅ 评审通过；Task 2（`shared/board.ts` 协同板纯渲染）`4011f36` ✅ 评审通过；**Task 3（`main/board.ts`、`role:worktreeAdd` IPC、session.ts 注入与刷板、preload）未开始** —— 派过两次 agent 都在读代码阶段停摆，worktree 干净在 `4011f36`。
 - 下一步：重派 Task 3（简报 `task-3-brief.md` 完整可直接用；注意 `board.ts` 与 `session.ts` 用 `setSessionSource` 注入，别互相 import）→ Task 4 三家系统提示附板文 + `board_read` → Task 5 渲染层首发前建树/非 git 确认 → Task 6 分支徽标 + 编辑器隔离开关 → Task 7 图纸 + 隔离实例真机验证（用 /tmp 临时 git 项目）。
-- 挂起原因：用户 2026-09-06 说「暂停」。
+- **2026-09-06 已完成并合入 main（`af3ee16`）**：Task 3-7 全部做完，整分支评审 1C 4I 修完复审通过，隔离实例真机 8 条过 7 条（删 worktree「删不掉」失败弹窗没造出来）。冲突两处（session.ts import、adapters.test.ts 末尾测试）已解，合并后 2403 测试全过。
+- 留下的：`uiSlice.requestConfirm` 单槽覆盖（另立任务）；对话态工具栏 455px 以下换行；Windows 恢复路径拼接未实测；P2（合并官 + 两个工具 + testCmd）与 P3（章程 + 台账）未开始。
+- 阶段三第二三项（Codex disabled_tools、Claude 写守卫）同日合入 main（`da5e121`）。0.4.81 不含这些，要下一版。
+- **2026-09-06 P2 已完成并合入 main（`02ce65e`，16 个提交，无冲突，合后 2426 测试全过）**：内置 `merger` 合并官卡；只读工具 `merge_preflight`（`src/main/mergeTools.ts` + `src/shared/mergePreflight.ts`，merge-tree 算冲突、协同板交集、`main{branch,dirty}`、testCmd 三级来源）与 `repo_impact`（`src/shared/repoImpact.ts`，二级反向依赖 + 循环分量 + 同目录测试建议，图缓存 5 分钟且 preflight 清缓存）；`Project.testCmd` + 侧栏「回归命令…」；pane `draft` 预填（不落盘、不自动发）+ 徽标菜单「合并到主干」。真机 8 场景记录在 spec 第十五节。`gitExecCode` 归到 `gitExec.ts`（带退出码）。两个工具进了 `LONG_WAITS`（mcpBridge + eas-mcp 两处）。
+- P2 留下的：没真跑一整轮合并（含解冲突与回滚）；Windows 未测；P3（章程 + 台账）未开始。**0.4.81 不含阶段三、P1、P2，要下一版。**
 
 **这轮的方法论教训**（已写进 ~/.claude 项目记忆 `eas-term-角色绑定层.md` / `eas-term-cdp-验证方法.md`）：
 - 判断 CLI 有没有某个工具，看**发给模型的请求体**（假端点或 trace 回显），别问模型。
