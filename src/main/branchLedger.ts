@@ -58,15 +58,42 @@ function writeAtomic(abs: string, text: string): void {
   fs.renameSync(tmp, abs)
 }
 
-/** 协同板每次刷新时调：板上每条**分支**都 upsert 一次头部，记录段原样接回。
+const ALIVE_LINE = /^- 状态：活跃[ \t]*$/m
+
+/** 会话被**移除**（用户点「停止」→ `agentChat.stop` 把它从会话表删掉，不是 alive=false 留着）
+ *  之后，板上就没有这条分支了，上面的循环再也不会碰它的台账 —— 头部会永远停在
+ *  「状态：活跃 · 最后活动：00:40」，合并官读了会以为工匠还在干活（2026-09-07 真机撞到）。
+ *  所以每次 upsert 完 rows，再扫一遍磁盘：不在 rows 里、头部还写着「活跃」的，只把那一行
+ *  改成「已停」，其余头部行与记录段一字不动。已经是「已停」的不重写（不动 mtime）。 */
+function markGoneAsStopped(root: string, present: Set<string>): void {
+  for (const [branch, abs] of ledgerFiles(root)) {
+    if (present.has(branch)) continue
+    const old = readText(abs)
+    const split = splitLedger(old)
+    // 只在头部区里找「活跃」那行：记录段是角色写的，里面出现同样的字不算
+    const headEnd = split.found ? old.length - split.notes.length : old.length
+    const head = old.slice(0, headEnd)
+    if (!ALIVE_LINE.test(head)) continue
+    try {
+      writeAtomic(abs, head.replace(ALIVE_LINE, '- 状态：已停') + old.slice(headEnd))
+    } catch {
+      /* 台账写不出不影响板 */
+    }
+  }
+}
+
+/** 协同板每次刷新时调：板上每条**分支**都 upsert 一次头部，记录段原样接回；
+ *  板上已经没有的分支，台账头部标「已停」（见 markGoneAsStopped）。
  *  主工作区那行（`cwd === root`）没有自己的台账 —— 它的 branch 是「主工作区（main）」这种
  *  展示串，不是分支名。 */
 export function upsertLedgers(root: string, rows: BoardRow[], now = Date.now()): Promise<void> {
   return enqueue(root, () => {
+    const present = new Set<string>()
     for (const r of rows) {
       if (r.cwd === root || NOT_A_BRANCH.has(r.branch)) continue
       const rel = ledgerRel(r.branch)
       if (!rel) continue
+      present.add(r.branch)
       const abs = path.join(root, rel)
       // 旧文里找不到「## 记录」标题（手改过 / 被别的东西写过）时，整份旧文当 notes 接回，
       // 不能当空 —— 头部我们重算，但别人写进去的字一个都不能丢。
@@ -95,6 +122,7 @@ export function upsertLedgers(root: string, rows: BoardRow[], now = Date.now()):
         /* 台账写不出不影响板 */
       }
     }
+    markGoneAsStopped(root, present)
   })
 }
 

@@ -140,3 +140,39 @@ test('旧文没有「## 记录」标题（found=false）：upsert 把整份旧�
   assert.equal(again.split('## 记录').length, 2)
   assert.match(again, /- 一条别人写的\n- \d\d:\d\d \[实现者\] 新的\n$/)
 })
+
+// 用户点「停止」→ 会话从会话表**删掉**（不是 alive=false 留着）→ 板上没了这条分支 →
+// 只 upsert rows 的话它的台账头部永远停在「活跃」。2026-09-07 真机撞到。
+test('会话被移除后（rows 里没有它）：台账头部标「已停」，其余头部行与记录段一字不动', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  const absB = path.join(root, '.eas/board/feat--b.md')
+  await upsertLedgers(root, [row(root, 'feat/a'), row(root, 'feat/b', { cwd: path.join(root, '.worktrees', 'b') })])
+  await appendNote(root, 'feat/b', '决定：走之前留的', '实现者')
+  const before = fs.readFileSync(absB, 'utf8')
+  assert.match(before, /\n- 状态：活跃\n/)
+
+  // feat/b 的会话没了：板上只剩 feat/a
+  await upsertLedgers(root, [row(root, 'feat/a')])
+  const after = fs.readFileSync(absB, 'utf8')
+  assert.equal(after, before.replace('\n- 状态：活跃\n', '\n- 状态：已停\n'), '只有状态那一行变了')
+  assert.match(after, /- worktree：\.worktrees\/b\n/)
+  assert.match(after, /\[实现者\] 决定：走之前留的\n$/)
+  // 还在板上的那条不受影响
+  assert.match(fs.readFileSync(path.join(root, '.eas/board/feat--a.md'), 'utf8'), /\n- 状态：活跃\n/)
+})
+
+test('已经是「已停」的台账不重写：内容与 mtime 都不变', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ledger-'))
+  const absB = path.join(root, '.eas/board/feat--b.md')
+  await upsertLedgers(root, [row(root, 'feat/b')])
+  await upsertLedgers(root, []) // 第一次：标已停
+  const text = fs.readFileSync(absB, 'utf8')
+  assert.match(text, /\n- 状态：已停\n/)
+  const old = new Date(Date.now() - 60_000)
+  fs.utimesSync(absB, old, old)
+  const mtime = fs.statSync(absB).mtimeMs
+  await upsertLedgers(root, []) // 第二次：什么都不该动
+  await upsertLedgers(root, [row(root, 'feat/a')])
+  assert.equal(fs.readFileSync(absB, 'utf8'), text)
+  assert.equal(fs.statSync(absB).mtimeMs, mtime)
+})
