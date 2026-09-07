@@ -26,7 +26,7 @@
       "name": "点击定位真实提问且吸顶零 padding 保持",
       "data": {
         "offset": 54.4296875,
-        "scrollTop": 689,
+        "scrollTop": 668.5,
         "paddingTop": "0px"
       }
     },
@@ -47,8 +47,8 @@
       "data": {
         "samePane": true,
         "paths": [
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-wvwFEA/.worktrees/main",
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-wvwFEA/.worktrees/peer"
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-73ES7B/.worktrees/main",
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-73ES7B/.worktrees/peer"
         ]
       }
     },

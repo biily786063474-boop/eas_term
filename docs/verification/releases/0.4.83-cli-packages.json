@@ -1,0 +1,20 @@
+[
+  {
+    "id": "codex",
+    "version": "0.153.4",
+    "platform": "darwin",
+    "arch": "arm64",
+    "bin": "package/vendor/aarch64-apple-darwin/bin/codex",
+    "integrity": "sha512-B1qhN3fa1ay0R0wGziXqgwSkB5icpYChNKHhtBHff/0UtSTC7z+l8aTtvMlGjH3E8HEvY3+njIJelM9CAAoVWg==",
+    "downloadAndProbePassed": true
+  },
+  {
+    "id": "claude",
+    "version": "2.1.263",
+    "platform": "darwin",
+    "arch": "arm64",
+    "bin": "package/claude",
+    "integrity": "sha512-yLv8MtgulGMGCWTwDUSmlEL0+94sxKP3vJm0SAXZX+0qVQ09PrjVSRC0ibtVeW7xymyhvP1JaUimOyp+t2wO5g==",
+    "downloadAndProbePassed": true
+  }
+]
