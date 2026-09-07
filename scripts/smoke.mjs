@@ -7,7 +7,7 @@
 //
 // 不需要为此改生产代码：--remote-debugging-port 是 Chromium 自带开关，Electron 直接认。
 import { execFileSync, spawn } from 'child_process'
-import { existsSync, writeFileSync, mkdirSync, rmSync } from 'fs'
+import { existsSync, writeFileSync, mkdirSync, rmSync, realpathSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
 import { setTimeout as sleep } from 'timers/promises'
@@ -127,6 +127,22 @@ try {
   })()`)
   ok('IPC 往返', has)
 } catch (e) { bad('IPC 往返', e.message) }
+
+// 懒加载依赖不在启动路径上：必须真的扫描一个项目，才能发现安装包漏依赖。
+try {
+  const graphDir = join(USERDATA, 'codegraph-fixture')
+  mkdirSync(graphDir, { recursive: true })
+  // macOS 的 /var 是 /private/var 的别名；固定真实根，断言只测打包后的分析能力。
+  const graphRoot = realpathSync(graphDir)
+  writeFileSync(join(graphRoot, 'index.js'), "import { value } from './value.js'; console.log(value)\n")
+  writeFileSync(join(graphRoot, 'value.js'), 'export const value = 42\n')
+  const result = await ev(`window.api.codeGraph.analyze(${JSON.stringify(graphRoot)})`)
+  if (!result?.ok) throw new Error(result?.error || '分析未返回成功')
+  if (!result.graph.nodes.some(n => n.id === 'index.js') ||
+      !result.graph.edges.some(e => e.from === 'index.js' && e.to === 'value.js'))
+    throw new Error('两文件项目没有产出预期依赖边：' + JSON.stringify(result.graph))
+  ok('代码图谱懒加载 + 实际依赖分析', 'index.js → value.js')
+} catch (e) { bad('代码图谱', e.message) }
 
 // ── 5. 渲染层没有抛错 ────────────────────────────────────────────
 if (logs.length === 0) ok('无 JS 报错')
