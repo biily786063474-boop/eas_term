@@ -1,5 +1,7 @@
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import type { BoardRow, Overlap } from '../shared/board'
+import type { PreflightResult } from '../shared/mergePreflight'
+import type { ImpactResult } from '../shared/repoImpact'
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron'
 import type { OmpStatus } from '../shared/ompSetup.ts'
 import type { SymbolGraphResult } from '../shared/symbolGraph.ts'
@@ -268,7 +270,20 @@ const api = {
       ipcRenderer.invoke('projects:renameFolder', id, newName),
     /** 打/清状态标签（null = 回到未分类）。看板、画布、分屏三处共用 */
     setStatus: (id: string, status: ProjectStatus | null): Promise<Project[]> =>
-      ipcRenderer.invoke('projects:setStatus', id, status)
+      ipcRenderer.invoke('projects:setStatus', id, status),
+    /** 设/清回归测试命令（合并官合并前后各跑一次）。空 = 回落到 package.json 推断 */
+    setTestCmd: (id: string, cmd: string): Promise<Project[]> =>
+      ipcRenderer.invoke('projects:setTestCmd', id, cmd)
+  },
+  // ── 合并官的两个只读工具。主进程在 `main/mergeTools.ts`：**不改工作区**，
+  // 冲突用 `git merge-tree --write-tree` 算，依赖波及用代码地图的 analyzeProject 反查。
+  merge: {
+    /** 预检：合并基点、改动文件、冲突清单（git < 2.38 时为 null）、与协同板上其他活分支的撞车、测试命令 */
+    preflight: (projectPath: string, branch: string): Promise<PreflightResult | { ok: false; error: string }> =>
+      ipcRenderer.invoke('merge:preflight', projectPath, branch),
+    /** 这些文件动了会波及谁（反向依赖两层 + 涉及的环 + 建议回归测试） */
+    impact: (projectPath: string, files: string[]): Promise<({ ok: true } & ImpactResult) | { ok: false; error: string }> =>
+      ipcRenderer.invoke('merge:impact', projectPath, files)
   },
   board: {
     /** 看板列定义（叫什么、什么颜色、排第几）。全局，和项目分开存 */

@@ -7,6 +7,7 @@ import { planRename } from './projectPaths'
 import { wikiPath } from './wiki/paths'
 import { realResolve } from './fsGuard'
 import type { RenameFolderResult } from '../shared/types'
+import { setProjectsSource } from './mergeTools'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'projects.json')
 
@@ -26,6 +27,8 @@ function saveProjects(list: Project[]): void {
 }
 
 export function registerProjectHandlers(): void {
+  // 合并官预检要读 Project.testCmd；mergeTools 不直接 import 本模块（同 collabBoard 的注入手法）
+  setProjectsSource(loadProjects)
   ipcMain.handle('projects:list', () => loadProjects())
 
   ipcMain.handle('projects:addViaDialog', async (e) => {
@@ -65,6 +68,19 @@ export function registerProjectHandlers(): void {
     if (p) {
       if (status) p.status = status
       else delete p.status
+    }
+    saveProjects(list)
+    return list
+  })
+
+  /** 设/清项目的回归测试命令（合并官合并前后各跑一次）。清空 = 删掉字段，回落到 package.json 推断 */
+  ipcMain.handle('projects:setTestCmd', (_e, id: string, cmd: string) => {
+    const trimmed = String(cmd ?? '').trim().slice(0, 200)
+    const list = loadProjects()
+    const p = list.find((x) => x.id === id)
+    if (p) {
+      if (trimmed) p.testCmd = trimmed
+      else delete p.testCmd
     }
     saveProjects(list)
     return list

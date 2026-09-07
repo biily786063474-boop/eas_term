@@ -68,6 +68,8 @@ export interface Project {
    *  （Claude Code 按 cwd 编码存 transcript，改名后老会话留在老编码目录里）。
    *  上限 5 条，超了丢最老的——它不是审计日志。 */
   pastPaths?: string[]
+  /** 回归测试命令（合并官合并前后各跑一次）。空 = 从 package.json 推断 */
+  testCmd?: string
 }
 
 export interface DirEntry {
