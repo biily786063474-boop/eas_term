@@ -140,7 +140,7 @@ git 仓库，「<角色名>」会直接改主工作区，要继续吗？」确�
 
 **注入**：起会话那一刻，`StartOpts.boardText`（截断 ≤20 行）拼进三家系统提示末尾的
 `## 协同板（起会话时的快照）` 一段；会话中途变化不推送（三家 CLI 都没有中途注入系统提示的通道），
-靠 MCP 工具 `board_read`（先 `refresh` 再 `read`，返回 `{ board, note?, path }`，`path` 归一到
+靠 MCP 工具 `board_read`（先 `refresh` 再 `read`，返回 `{ board, note?, path, ledgers? }`，`ledgers` 只在传 `ledgers: true` 时带，`path` 归一到
 项目根 + `BOARD_REL`）随时查最新的一份，见 [11](11-MCP工具网络.md)。
 
 **界面**：`BranchBadge.tsx` 在空态 `ac-ctxbar` 与对话态 `ChatToolbar` 都渲染；菜单三项——

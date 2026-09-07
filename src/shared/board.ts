@@ -20,15 +20,15 @@ export interface Overlap {
   branches: string[]
 }
 
-const pad = (n: number): string => String(n).padStart(2, '0')
+export const pad = (n: number): string => String(n).padStart(2, '0')
 // **本地时间，不是 UTC。** 板是给坐在这台机器前的人读的：他看到「起于 12:35」
 // 会拿自己的表去对。原来这里用 getUTC*，差多少小时看时区
 // （2026-09-06 真机那份板上，本地 12:35 起的会话写成了 19:35，那台机器 UTC-7）。
-const hhmm = (t: number): string => {
+export const hhmm = (t: number): string => {
   const d = new Date(t)
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
-const stamp = (t: number): string => {
+export const stamp = (t: number): string => {
   const d = new Date(t)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${hhmm(t)}`
 }

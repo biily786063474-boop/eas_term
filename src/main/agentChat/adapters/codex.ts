@@ -89,9 +89,14 @@ export const codexAdapter: CliAdapter = {
     // Codex 只有这一个系统提示式的入口，没有第二条 flag 可用。**只有板没契约也要拼**：
     // 没角色不代表用户不想让模型看到协同板。两段先各自 trim 再拼，整段再压成单行，
     // 顺序与 filter(Boolean) 保证「只有一段」时不会留多余空格。
+    //
+    // 角色文档指针段（P3 的 StartOpts.roleDocs）是第三段：把「## 你的角色文档\n- …」的标题
+    // 压成「你的角色文档：- …」（去掉 markdown 标题记号、首个换行变冒号），随后跟着整段
+    // 一起压单行 —— 与板文同一个理由，Codex 的 instructions 只有一行。
     const contract = [
       opts.roleContract?.trim(),
-      opts.boardText?.trim() ? `协同板（起会话时的快照）：${opts.boardText.trim()}` : ''
+      opts.boardText?.trim() ? `协同板（起会话时的快照）：${opts.boardText.trim()}` : '',
+      opts.roleDocs?.trim() ? opts.roleDocs.trim().replace(/^## /, '').replace(/\n/, '：') : ''
     ]
       .filter(Boolean)
       .join(' ')
