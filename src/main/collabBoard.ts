@@ -3,10 +3,13 @@
 // ⚠️ **不要并进 `main/board.ts`** —— 那个 board 是项目看板的列（待执行/进行中/已完结），
 // 跟这里的「哪条分支上有谁在改哪些文件」是两件毫不相干的事，只是中文都叫「板」。
 // 它已经占了 `registerBoardHandlers` 和 `board:list` / `board:save` / `board:newId`；
-// 本文件走 `board:refresh` / `board:read`，渲染层同挂在 `window.api.board` 下。
+// 本文件走 `board:refresh` / `board:read` / `board:note`，渲染层同挂在 `window.api.board` 下。
 //
 // 写文件用临时文件 + rename：多条会话同时触发刷新时不会写出半截。
 // `.eas/` 写进项目的 .git/info/exclude 而不是 .gitignore —— 不动用户提交的文件。
+//
+// 每条分支还有一份台账 `.eas/board/<branch>.md`（main/branchLedger.ts）：头部随板一起
+// upsert，「记录」段由角色经 `board:note` 追加，`board:read` 把各份尾部一并带回。
 import fs from 'fs'
 import path from 'path'
 import { ipcMain } from 'electron'
@@ -14,7 +17,9 @@ import { ipcMain } from 'electron'
 import { BOARD_REL, findOverlaps, renderBoard, type BoardRow, type Overlap } from '../shared/board'
 import { belongsToProject } from '../shared/teamWorktree'
 import { projectRootOf } from '../shared/roleWorktree'
+import { branchFromGitFiles } from '../shared/roleDocs'
 import { BUILTIN_ROLES } from './builtinRoles'
+import { appendNote, readLedgers, upsertLedgers } from './branchLedger.ts'
 import { gitExec, parseNameOnly, parsePorcelain } from './gitExec.ts'
 import type { SessionRecord } from './agentChat/sessionState'
 
@@ -128,6 +133,19 @@ let roleNameLookup: () => Record<string, string> = () =>
 export function setRoleNameLookup(fn: () => Record<string, string>): void {
   roleNameLookup = fn
 }
+/** 角色卡 id → 显示名（含用户自建角色）。查不到或没传返回 undefined，调用方自己兜底。 */
+export function roleNameOf(roleId: string | undefined): string | undefined {
+  return roleId ? roleNameLookup()[roleId] : undefined
+}
+
+/** `branchFromGitFiles` 的读函数：只认文件，目录（主工作区的 .git）与读不到都返回 null */
+function readIfFile(p: string): string | null {
+  try {
+    return fs.statSync(p).isFile() ? fs.readFileSync(p, 'utf8') : null
+  } catch {
+    return null
+  }
+}
 
 /** 每个项目一条串行链：在飞的那次跑完，排队的那次才开始。 */
 const chain = new Map<string, Promise<void>>()
@@ -199,6 +217,10 @@ async function doWriteBoard(projectPath: string): Promise<void> {
     const tmp = `${f}.${process.pid}.tmp`
     fs.writeFileSync(tmp, text)
     fs.renameSync(tmp, f)
+    // 板落盘后顺手把各分支台账的头部刷一遍。放在上面那条「一条都没有就不造文件」之后：
+    // 没有会话的目录不该被造出 `.eas/`。rows 为空时它什么都不做；写台账自己兜错，
+    // 不必 await —— 板已经写完，台账慢一拍没关系。
+    void upsertLedgers(projectPath, rows)
   } catch {
     /* 板写不出来不影响会话 */
   }
@@ -226,15 +248,45 @@ export function registerCollabBoardHandlers(): void {
   })
   ipcMain.handle(
     'board:read',
-    async (_e, projectPath: unknown): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[] }> => {
-      if (typeof projectPath !== 'string') return { text: '', rows: [], overlaps: [] }
+    async (
+      _e,
+      projectPath: unknown
+    ): Promise<{ text: string; rows: BoardRow[]; overlaps: Overlap[]; ledgers: Record<string, string> }> => {
+      if (typeof projectPath !== 'string') return { text: '', rows: [], overlaps: [], ledgers: {} }
       const root = projectRootOf(projectPath)
       const snap = rowsSnapshot.get(root)
       const rows =
         snap && Date.now() - snap.at <= SNAPSHOT_FRESH_MS
           ? snap.rows
           : await collectRows(root, roleNameLookup())
-      return { text: readBoard(root), rows, overlaps: findOverlaps(rows) }
+      // 主工作区那行没有台账（它的 branch 是展示串），只按真分支去读
+      const ledgers = readLedgers(
+        root,
+        rows.filter((r) => r.cwd !== root).map((r) => r.branch)
+      )
+      return { text: readBoard(root), rows, overlaps: findOverlaps(rows), ledgers }
+    }
+  )
+  // 往某条分支的台账「记录」段追加一条。cwd 在 worktree 里时默认写自己那条分支；
+  // 主工作区没有自己的台账，必须带 branch 指名写给谁（合并官给某条分支留话就是这个用法）。
+  ipcMain.handle(
+    'board:note',
+    async (
+      _e,
+      cwd: unknown,
+      note: unknown,
+      branch?: unknown
+    ): Promise<{ ok: true; rel: string } | { ok: false; error: string }> => {
+      if (typeof cwd !== 'string' || typeof note !== 'string') return { ok: false, error: '参数不对' }
+      const root = projectRootOf(cwd)
+      // 自己这条分支：从会话表找 cwd 相同的那条拿角色名；分支名不起 git 进程，现读 .git 文件
+      //（worktree 的 .git 是文件）。没有会话（比如用户在终端里手动调）也照样写得进去。
+      const rec = sessionSource().find((r) => r.cwd === cwd)
+      const own = cwd !== root ? branchFromGitFiles(cwd, readIfFile) : null
+      const target = typeof branch === 'string' && branch.trim() ? branch.trim() : own
+      if (!target) return { ok: false, error: '主工作区没有自己的台账。要写到某条分支的台账，带上 branch 参数' }
+      const roleName = roleNameOf(rec?.roleId) ?? rec?.roleId ?? (cwd === root ? '主工作区' : '无角色')
+      return appendNote(root, target, note, roleName)
     }
   )
 }
