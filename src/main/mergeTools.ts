@@ -4,10 +4,9 @@
 // 读文件、拼结果并挂 IPC。
 import fs from 'fs'
 import path from 'path'
-import { execFile } from 'child_process'
 import { ipcMain } from 'electron'
 
-import { gitExec, parseNameOnly, parsePorcelain } from './gitExec.ts'
+import { gitExec, gitExecCode, parseNameOnly, parsePorcelain } from './gitExec.ts'
 import { analyzeProject, type CodeGraphResult } from './codeGraphAnalyze.ts'
 import { checkRoot } from './codeGraph'
 import { collectRows } from './collabBoard'
@@ -31,34 +30,9 @@ export function setProjectsSource(fn: () => Project[]): void {
   projectsSource = fn
 }
 
-interface GitCode {
-  code: number
-  stdout: string
-  stderr: string
-  /** 被超时掐掉的（execFile 的 killed） */
-  killed: boolean
-}
-
-/**
- * 带退出码的 git。`gitExec` 只回 `{ ok, out }`，而 `merge-tree --write-tree` 用退出码区分
- * 「0 无冲突 / 1 有冲突 / ≥2 git 自己失败」—— 有冲突时 stdout 才是正文，光看 ok 分不清 1 和 2。
- * `rev-parse` 也走它：code 128 且 stderr 为空是「根本没有 git 命令」，与「不是仓库」要分开说。
- * 环境参数与 gitExec 保持一致（可选锁不取、路径不转义），理由见 gitExec.ts 顶部。
- */
-function gitExecCode(cwd: string, args: string[], timeoutMs = 30_000): Promise<GitCode> {
-  return new Promise((resolve) => {
-    execFile(
-      'git',
-      ['-c', 'core.quotePath=false', ...args],
-      { cwd, timeout: timeoutMs, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } },
-      (err, stdout, stderr) => {
-        const e = err as (Error & { code?: unknown; killed?: boolean }) | null
-        const code = e ? (typeof e.code === 'number' ? e.code : 128) : 0
-        resolve({ code, stdout: stdout.toString(), stderr: stderr.toString(), killed: !!e?.killed })
-      }
-    )
-  })
-}
+// 要退出码的 git 走 gitExec.ts 的 `gitExecCode`（merge-tree 用退出码分「1 有冲突 / ≥2 git 失败」，
+// rev-parse 用 code 128 且 stderr 为空分「没有 git 命令 / 不是仓库」）。这里可能跑得久的调用传 30s。
+const SLOW_GIT = { timeoutMs: 30_000 } as const
 
 async function refExists(cwd: string, ref: string): Promise<boolean> {
   return (await gitExec(cwd, ['rev-parse', '--verify', '-q', `refs/heads/${ref}`])).ok
@@ -91,13 +65,15 @@ async function preflightInner(projectPathRaw: string, branch: string): Promise<P
   graphCache.delete(projectPath)
   if (!isSafeRef(branch)) return { ok: false, error: `分支名「${branch}」不合法` }
 
-  const top = await gitExecCode(projectPath, ['rev-parse', '--show-toplevel'])
+  const top = await gitExecCode(projectPath, ['rev-parse', '--show-toplevel'], SLOW_GIT)
   if (top.code !== 0) {
     if (top.code === 128 && !top.stderr.trim() && !top.stdout.trim()) return { ok: false, error: '找不到 git 命令' }
     return { ok: false, error: '这个目录不是 git 仓库' }
   }
   const note =
-    realOrSelf(top.stdout.trim()) !== realOrSelf(projectPath) ? '项目注册在仓库子目录，路径以仓库根为准' : undefined
+    realOrSelf(top.stdout.trim()) !== realOrSelf(projectPath)
+      ? '项目注册在仓库子目录，changed 以仓库根为准；repo_impact 会自动剥掉子目录前缀'
+      : undefined
 
   if (!(await refExists(projectPath, branch))) return { ok: false, error: `分支 ${branch} 不存在` }
 
@@ -124,7 +100,7 @@ async function preflightInner(projectPathRaw: string, branch: string): Promise<P
 
   const [changedR, mt, wl, rows, headR, stR] = await Promise.all([
     gitExec(projectPath, ['diff', '--name-only', `${base}..${branchRef}`]),
-    gitExecCode(projectPath, ['merge-tree', '--write-tree', '--name-only', '--no-messages', defaultRef, branchRef]),
+    gitExecCode(projectPath, ['merge-tree', '--write-tree', '--name-only', '--no-messages', defaultRef, branchRef], SLOW_GIT),
     gitExec(projectPath, ['worktree', 'list', '--porcelain']),
     collectRows(projectPath, {}),
     // 主工作区的现状：合并官靠它判断「不许合并」（不在主干上 / 有未提交改动）。
@@ -228,10 +204,20 @@ export async function impact(
   const root = projectRootOf(projectPathRaw)
   const bad = checkRoot(root)
   if (bad) return bad
-  const clean = files
+  let clean = files
     .filter((f): f is string => typeof f === 'string' && !!f && !f.startsWith('/') && !f.includes('..'))
     .map((f) => f.replace(/\\/g, '/'))
   try {
+    // 项目注册在仓库子目录时，preflight 的 changed 是相对**仓库根**的，而图按项目目录建（相对项目根）
+    // —— 直接查会全落进 unknown。把子目录前缀剥掉再查；本来就不带前缀的照旧。
+    const top = await gitExecCode(root, ['rev-parse', '--show-toplevel'], SLOW_GIT)
+    if (top.code === 0) {
+      const sub = path.relative(realOrSelf(top.stdout.trim()), realOrSelf(root)).split(path.sep).join('/')
+      if (sub && !sub.startsWith('..')) {
+        const prefix = sub + '/'
+        clean = clean.map((f) => (f.startsWith(prefix) ? f.slice(prefix.length) : f))
+      }
+    }
     const { graph, cachedAt } = await graphFor(root)
     return { ok: true, cachedAt, ...impactFrom(graph, clean, listTestFiles(root)) }
   } catch (e) {

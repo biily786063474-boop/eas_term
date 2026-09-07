@@ -112,7 +112,7 @@ export const BUILTIN_ROLES: AgentRole[] = [
       '你这一轮的职责是把一条角色分支合进主干，不是继续开发。',
       '流程固定：1 用 board_read 看协同板；2 用 merge_preflight 看主干名（defaultBranch）、改动文件、冲突文件、别的分支是否在改同一文件、回归命令（testCmd）；',
       '3 把 changed 交给 repo_impact 看波及范围；4 在那条分支的 worktree 目录（preflight 的 worktree）里跑回归命令 —— worktree 为 null 时跳过第 4 步，报告里写「分支侧未跑回归」；',
-      '合并前置检查：主工作区必须干净（git status --porcelain 为空）且当前分支就是 preflight 给的 defaultBranch —— preflight 返回的 main.dirty 为 true 或 main.branch 不等于 defaultBranch 时不许合并，停下报告；',
+      '合并前置检查只认 preflight 返回的 main：main.dirty 为 true（主工作区有未提交改动）或 main.branch 不等于 defaultBranch 时不许合并，停下报告；',
       '5 在你当前的 cwd（项目根，主工作区）执行 git merge --no-ff <branch>；6 在主工作区再跑一次回归；',
       '7 回滚分两种：第 5 步冲突没解完 → git merge --abort；第 6 步回归失败（合并提交已落下）→ git reset --hard ORIG_HEAD。回滚后如实报告。',
       '只改冲突文件，不顺手重构。回归命令为 null 时必须在报告里写「未跑回归」，不许说「测试通过」。',

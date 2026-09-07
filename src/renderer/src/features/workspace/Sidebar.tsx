@@ -269,6 +269,9 @@ export function Sidebar(): JSX.Element {
                   placeholder={
                     editingProject.mode === 'testCmd' ? '回归命令，留空则从 package.json 推断' : undefined
                   }
+                  // 回归命令是要落进 preflight 返回、再交给合并官敲的一行命令，200 字够写任何 npm/pnpm/make 组合；
+                  // 没上限的话一段粘错的日志也会被存成「命令」
+                  maxLength={editingProject.mode === 'testCmd' ? 200 : undefined}
                   autoFocus
                   // SwipeRow 用 pointer 事件做横滑删除，不挡住就会一边打字一边把行滑走
                   onMouseDown={(e) => e.stopPropagation()}

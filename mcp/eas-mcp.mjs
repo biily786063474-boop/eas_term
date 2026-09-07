@@ -212,7 +212,10 @@ const TOOLS = [
       '以及该项目的回归命令 `testCmd`：`testCmd.value` 为 null（`source` 为 `none`）时你必须在报告里写「未跑回归」；' +
       '`source` 是 `project`（用户设的）或 `package.json`（推断的）。' +
       '合并官动手前先调它。`conflicts` 为 null = 无法预检（多半是 git < 2.38），看 `conflictNote`。' +
-      '返回里的 `main` 是主工作区现状：`main.dirty` 为 true（有未提交改动）或 `main.branch` 不是 `defaultBranch` 时**不许合并，先报告**。',
+      '返回里的 `main` 是主工作区现状：`main.dirty` 为 true（有未提交改动）或 `main.branch` 不是 `defaultBranch` 时**不许合并，先报告**。' +
+      '返回 JSON：branch / defaultBranch / base（合并基点 sha）/ worktree（这条分支的 worktree 目录，可能为 null）/ ' +
+      'changed（相对仓库根）/ conflicts（null = 无法预检，看 conflictNote）/ overlaps{file, branches} / ' +
+      'main{branch, dirty} / testCmd{value, source} / note（项目注册在仓库子目录时才有）。',
     inputSchema: {
       type: 'object',
       properties: { branch: { type: 'string', description: '要合进主干的分支名' } },
@@ -623,8 +626,10 @@ const TOOLS = [
  *
  *  等的不一定是人：`wiki_archive_plan` / `team_spawn` 等用户点确认，
  *  而 `team_status` 的等待模式是挂着等某个子 agent 交活（渲染层 8 分钟）。
- *  判据是「会不会阻塞着等」，不是「等的是谁」。 */
-const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status'])
+ *  判据是「会不会阻塞着等」，不是「等的是谁」。
+ *  `merge_preflight` / `repo_impact` 则是**慢**（merge-tree 30s、analyzeProject 大仓库几十秒），
+ *  同样超过普通那道闸，一并放进来。 */
+const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
 
 /** 普通工具 30 秒足够（主进程那侧 15 秒就会先返回错误）；
  *  长等待的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，
