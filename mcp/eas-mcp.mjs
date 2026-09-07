@@ -211,7 +211,8 @@ const TOOLS = [
       '直接合并会冲突的文件（git merge-tree 算的，不动工作区）、协同板上其他活跃分支与它碰到的同一文件、' +
       '以及该项目的回归命令 `testCmd`：`testCmd.value` 为 null（`source` 为 `none`）时你必须在报告里写「未跑回归」；' +
       '`source` 是 `project`（用户设的）或 `package.json`（推断的）。' +
-      '合并官动手前先调它。`conflicts` 为 null = 无法预检（多半是 git < 2.38），看 `conflictNote`。',
+      '合并官动手前先调它。`conflicts` 为 null = 无法预检（多半是 git < 2.38），看 `conflictNote`。' +
+      '返回里的 `main` 是主工作区现状：`main.dirty` 为 true（有未提交改动）或 `main.branch` 不是 `defaultBranch` 时**不许合并，先报告**。',
     inputSchema: {
       type: 'object',
       properties: { branch: { type: 'string', description: '要合进主干的分支名' } },

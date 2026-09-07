@@ -7,7 +7,7 @@ import path from 'path'
 import { execFile } from 'child_process'
 import { ipcMain } from 'electron'
 
-import { gitExec, parseNameOnly } from './gitExec.ts'
+import { gitExec, parseNameOnly, parsePorcelain } from './gitExec.ts'
 import { analyzeProject, type CodeGraphResult } from './codeGraphAnalyze.ts'
 import { checkRoot } from './codeGraph'
 import { collectRows } from './collabBoard'
@@ -122,12 +122,21 @@ async function preflightInner(projectPathRaw: string, branch: string): Promise<P
   }
   const base = baseR.out.trim()
 
-  const [changedR, mt, wl, rows] = await Promise.all([
+  const [changedR, mt, wl, rows, headR, stR] = await Promise.all([
     gitExec(projectPath, ['diff', '--name-only', `${base}..${branchRef}`]),
     gitExecCode(projectPath, ['merge-tree', '--write-tree', '--name-only', '--no-messages', defaultRef, branchRef]),
     gitExec(projectPath, ['worktree', 'list', '--porcelain']),
-    collectRows(projectPath, {})
+    collectRows(projectPath, {}),
+    // 主工作区的现状：合并官靠它判断「不许合并」（不在主干上 / 有未提交改动）。
+    // gitExec 自带 GIT_OPTIONAL_LOCKS=0，不会跟别人的 git 抢 index.lock
+    gitExec(projectPath, ['rev-parse', '--abbrev-ref', 'HEAD']),
+    gitExec(projectPath, ['status', '--porcelain', '--untracked-files=all'])
   ])
+  const main: PreflightResult['main'] = {
+    branch: headR.ok ? headR.out.trim() : '?',
+    // .eas/ 与 .worktrees/ 本来就在 .git/info/exclude 里；万一哪个项目没排除到，这里也不算 dirty
+    dirty: stR.ok ? parsePorcelain(stR.out).some((f) => !f.startsWith('.eas/') && !f.startsWith('.worktrees/')) : false
+  }
   const changed = changedR.ok ? parseNameOnly(changedR.out) : []
   const parsed = parseMergeTreeNameOnly(mt.stdout, mt.code)
   let conflictNote: string | undefined
@@ -177,6 +186,7 @@ async function preflightInner(projectPathRaw: string, branch: string): Promise<P
     ...(conflictNote ? { conflictNote } : {}),
     ...(note ? { note } : {}),
     overlaps,
+    main,
     testCmd
   }
 }

@@ -81,5 +81,9 @@ export interface PreflightResult {
   /** 项目注册路径不是仓库根（在子目录）时的提示；其余情况没有这个字段 */
   note?: string
   overlaps: { file: string; branches: string[] }[]
+  /** 主工作区（项目根）现在的样子：站在哪条分支、有没有未提交改动。
+   *  合并官契约：`dirty` 为 true 或 `branch` 不是 `defaultBranch` 时不许合并，先报告。
+   *  `.eas/` 与 `.worktrees/` 不算 dirty（它们本来就被排除在 git 之外）。 */
+  main: { branch: string; dirty: boolean }
   testCmd: { value: string | null; source: 'project' | 'package.json' | 'none' }
 }
