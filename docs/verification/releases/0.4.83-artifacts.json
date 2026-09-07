@@ -1,22 +1,22 @@
 [
   {
     "name": "Eas-Term-0.4.83-arm64.dmg",
-    "bytes": 204304360,
-    "sha256": "518571ae1f755e7cb92d179938a9a5f063b01c3979ad7775bccebdc6d10b4ee2"
+    "bytes": 204408860,
+    "sha256": "3bedebacd4da8749b25574ed5946439ccc7702c0c7cf7f7aafce26f966d4898f"
   },
   {
     "name": "Eas-Term-0.4.83-arm64.zip",
-    "bytes": 202475577,
-    "sha256": "938aa3febc2c711f424171191bdaa0c96727d725ef90c91027629199a9b5086a"
+    "bytes": 202561894,
+    "sha256": "ff55afae3f0f5d12be22957da73850df4580a69ec73c254404057d52d4816c08"
   },
   {
     "name": "Eas-Term-0.4.83-x64.dmg",
-    "bytes": 216326735,
-    "sha256": "288b36cac2b8f8db54d836fbd8ec85d4783f30397c4505b2f6aa82c1a8b60840"
+    "bytes": 216401813,
+    "sha256": "b355176d962a9ed5c53e1e9cfc1ff5c16f3abcbd1781f9d43710dd67ed6acf36"
   },
   {
     "name": "Eas-Term-0.4.83-x64.zip",
-    "bytes": 214573985,
-    "sha256": "604869757319d744045b7ca7b55456213f1a16eb6df8ff4f87d98957d89ee366"
+    "bytes": 214660317,
+    "sha256": "40ca2e1290fa2cbed9d39b53d4c5504d72400bd618c79c570a9d23fd9bb8f326"
   }
 ]

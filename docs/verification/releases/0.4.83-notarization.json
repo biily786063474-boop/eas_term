@@ -1,0 +1,46 @@
+{
+  "version": "0.4.83",
+  "sourceCommit": "bce6e4e",
+  "records": [
+    {
+      "arch": "arm64",
+      "submission": {
+        "id": "030b0dd9-d78d-467e-8fb1-1d02f486417c",
+        "name": "Eas-Term.zip",
+        "status": "Accepted",
+        "createdDate": "2026-09-07T15:53:14.154Z"
+      },
+      "codesign": "passed",
+      "stapler": "passed",
+      "gatekeeper": "accepted: Notarized Developer ID",
+      "archives": "DMG and ZIP integrity passed",
+      "packagedOutput": {
+        "arch": "arm64",
+        "version": "0.4.83",
+        "sourceCommit": "bce6e4e",
+        "outputFilesMatched": 138,
+        "testTransportAbsent": true
+      }
+    },
+    {
+      "arch": "x64",
+      "submission": {
+        "createdDate": "2026-09-07T15:57:22.534Z",
+        "id": "59cadfca-bed2-4783-9d0f-906cc1b40e1d",
+        "name": "Eas-Term.zip",
+        "status": "Accepted"
+      },
+      "codesign": "passed",
+      "stapler": "passed",
+      "gatekeeper": "accepted: Notarized Developer ID",
+      "archives": "DMG and ZIP integrity passed",
+      "packagedOutput": {
+        "arch": "x64",
+        "version": "0.4.83",
+        "sourceCommit": "bce6e4e",
+        "outputFilesMatched": 138,
+        "testTransportAbsent": true
+      }
+    }
+  ]
+}

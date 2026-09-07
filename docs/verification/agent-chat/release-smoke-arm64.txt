@@ -1,5 +1,5 @@
 ▸ 启动 /Users/biily/Eas-Term-release/0.4.83-prep/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term
-  userData: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-smoke-1788794851189（独立，测完删）
+  userData: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-smoke-1788796493646（独立，测完删）
   ✓ app 启动  页面: file:///Users/biily/Eas-Term-release/0.4.83-prep/mac-arm64/E
   ✓ 界面渲染  正文 367 字
   ✓ preload 桥  47 个命名空间
