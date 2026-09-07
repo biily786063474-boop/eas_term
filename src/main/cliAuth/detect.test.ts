@@ -146,3 +146,9 @@ test('行版：解析不了的行不会抛', () => {
   assert.equal(unauthedInLine(''), null)
   assert.equal(unauthedInLine('普通日志行'), null)
 })
+
+test('可选 MCP 的 401 不应触发 CLI 主账号重新登录', () => {
+  assert.equal(unauthedInLine(JSON.stringify({type:'error',message:'MCP client for figma failed to start: HTTP 401 Unauthorized'})), null)
+  assert.equal(unauthedInLine(JSON.stringify({type:'error',message:'MCP startup failed: handshaking with MCP server failed: 401 Unauthorized'})), null)
+  assert.ok(unauthedInLine(JSON.stringify({type:'turn.failed',error:{message:'unexpected status 401 Unauthorized from model API'}})))
+})

@@ -15,6 +15,8 @@ import type { RoleCaps, RoleRaw } from './types'
 
 export interface ChatToolInfo { server?: string; name: string }
 export interface ChatResource { uri: string; name: string; mimeType?: string }
+/** 执行的语义类型。可选以兼容旧历史；未知来源使用 generic。 */
+export type ExecKind = 'terminal' | 'search' | 'read' | 'edit' | 'integration' | 'generic'
 
 export interface ChatModelOption {
   id: string
@@ -65,10 +67,10 @@ export type ChatEvent =
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
-  | { k: 'exec.start'; execId: string; label: string; detail: string; tool?: ChatToolInfo }
+  | { k: 'exec.start'; execId: string; label: string; detail: string; kind?: ExecKind; tool?: ChatToolInfo }
   /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
    *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; tool?: ChatToolInfo; resources?: ChatResource[] }
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; kind?: ExecKind; tool?: ChatToolInfo; resources?: ChatResource[] }
   | {
       k: 'approval.request'
       approvalId: string

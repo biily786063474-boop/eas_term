@@ -23,6 +23,7 @@
 // `aggregated_output`（+ `exit_code` 辅助信息），`error` 字段只作兜底，不再是主判据。
 
 import path from 'node:path'
+import { friendlyCliError } from './stderrReason.ts'
 import { normalizeToolContent } from './toolResult.ts'
 import type { ChatEvent, Usage } from '../../shared/agentChat.ts'
 
@@ -68,6 +69,14 @@ export function createCodexTranslator(): CodexTranslator {
         return translateItemCompleted(j)
       case 'turn.completed':
         return translateTurnCompleted(j)
+      case 'error':
+      case 'turn.failed': {
+        const error = asRecord(j.error)
+        const message = typeof error?.message === 'string' ? error.message : typeof j.message === 'string' ? j.message : ''
+        if (!message) return []
+        // 顶层 error 可以是重连/可选工具失败；只有 turn.failed 表示本轮终止。
+        return [{ k: 'error', message: friendlyCliError(message), fatal: j.type === 'turn.failed' }]
+      }
       default:
         return []
     }
@@ -93,7 +102,7 @@ function translateItemStarted(j: Record<string, unknown>): ChatEvent[] {
   const id = item.id
   if (typeof id !== 'string' || !id) return []
   if (typeof item.type !== 'string' || NON_EXEC_ITEM_TYPES.has(item.type)) return []
-  return [{ k: 'exec.start', execId: id, label: labelFor(item), detail: safeStringify(item), ...toolOf(item) }]
+  return [{ k: 'exec.start', execId: id, label: labelFor(item), detail: safeStringify(item), kind: execKindOf(item), ...toolOf(item) }]
 }
 
 // ---- item.completed ----
@@ -114,7 +123,7 @@ function translateItemCompleted(j: Record<string, unknown>): ChatEvent[] {
   const ok = item.status !== 'failed' && result?.isError !== true
   // web_search 这类「完成才知道干了什么」的，把标签一起带上（agentChat.ts 的 exec.done.label）
   const label = item.type === 'web_search' ? labelFor(item) : undefined
-  return [{ k: 'exec.done', execId: id, ok, ...normalizeToolContent(result?.content, outputTextOf(item)), ...toolOf(item), ...(label ? { label } : {}) }]
+  return [{ k: 'exec.done', execId: id, ok, kind: execKindOf(item), ...normalizeToolContent(result?.content, outputTextOf(item)), ...toolOf(item), ...(label ? { label } : {}) }]
 }
 
 // ---- turn.completed ----
@@ -208,4 +217,14 @@ function baseNameOf(filePath: unknown): string {
 function toolOf(item: Record<string, unknown>): { tool?: { server?: string; name: string } } {
   if (item.type !== 'mcp_tool_call' || typeof item.tool !== 'string' || !item.tool) return {}
   return { tool: { name: item.tool, ...(typeof item.server === 'string' ? { server: item.server } : {}) } }
+}
+
+function execKindOf(item: Record<string, unknown>): import('../../shared/agentChat.ts').ExecKind {
+  switch (item.type) {
+    case 'command_execution': return 'terminal'
+    case 'file_change': return 'edit'
+    case 'web_search': return 'search'
+    case 'mcp_tool_call': return 'integration'
+    default: return 'generic'
+  }
 }

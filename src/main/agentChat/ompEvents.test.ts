@@ -141,6 +141,7 @@ test('工具调用：exec.start / exec.done 配得上对', () => {
   assert.ok(start && start.k === 'exec.start' && done && done.k === 'exec.done')
   assert.equal(done.execId, start.execId, 'execId 必须配对，否则界面上那张卡片永远转不完')
   assert.equal(done.ok, true)
+  assert.equal(start.kind, 'terminal', 'ACP 的结构化 kind=execute 才能分类为终端')
 })
 
 test('**in_progress 不算完成** —— 实测一次 bash 来了两条，每条都当完成会让卡片来回跳', () => {

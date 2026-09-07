@@ -224,6 +224,7 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
           execId: b.id,
           label: toLabel(b.name, b.input),
           detail: safeStringify(b.input),
+          kind: execKindOf(b.name),
           ...(typeof b.name === 'string' && b.name.startsWith('mcp__') ? { tool: { name: b.name } } : {})
         })
       }
@@ -362,4 +363,14 @@ function baseNameOf(filePath: unknown): string {
 
 function commandPreview(command: unknown): string {
   return typeof command === 'string' ? command.slice(0, 40) : ''
+}
+
+function execKindOf(name: unknown): import('../../shared/agentChat.ts').ExecKind {
+  if (typeof name !== 'string') return 'generic'
+  if (name.startsWith('mcp__')) return 'integration'
+  if (name === 'Bash') return 'terminal'
+  if (name === 'Read') return 'read'
+  if (name === 'Write' || name === 'Edit' || name === 'NotebookEdit') return 'edit'
+  if (name === 'Glob' || name === 'Grep' || name === 'WebSearch' || name === 'WebFetch') return 'search'
+  return 'generic'
 }

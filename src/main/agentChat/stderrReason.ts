@@ -1,25 +1,57 @@
-// CLI 非零退出时，从 stderr 尾巴里挑一句**能给人看的原因**。纯函数，有测试。
-//
-// 2026-09-05 正式版：Codex 在非 git 目录秒退，界面只有「CLI 进程退出（code 1）」——
-// 原因（`Not inside a trusted directory and --skip-git-repo-check was not specified`）
-// 其实就躺在 stderr 里，用户看不到，我得手动跑命令才找到。「失败要说人话」：
-// 分类 + 一句原因，这里补的是那一句原因。
+// 非零退出原因优先使用结构化服务端错误；MCP 的收尾警告不覆盖真正失败原因。
+const NOISE = [/^Reading additional input from stdin/i, /^\s*$/, /failed to initialize MCP client during shutdown/i]
+const MCP_FAILURE = /MCP startup failed|handshaking with MCP server failed|MCP client for .+ failed to start/i
 
-/** 这些是噪声不是原因：每次都会出现，或者是没有信息量的进度行 */
-const NOISE = [/^Reading additional input from stdin/i, /^\s*$/]
-
-export function stderrReason(tail: string, max = 160): string {
-  const lines = tail
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l && !NOISE.some((re) => re.test(l)))
-  if (!lines.length) return ''
-  // 去掉日志前缀的时间戳 / 级别（`2026-09-06T02:12:52Z ERROR mod::x: msg` → `msg`）
-  const last = lines[lines.length - 1].replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?\s+(ERROR|WARN|INFO)\s+[\w:]+:\s*/i, '')
-  return last.length > max ? last.slice(0, max - 1) + '…' : last
+export function friendlyCliError(message: string): string {
+  const model = message.match(/The '([^']+)' model requires a newer version of Codex/i)?.[1]
+  return model ? `当前 Codex CLI 版本过旧，无法使用 ${model}。请升级 Codex CLI 后重试。` : message
 }
 
-/** 退出通知的正文：有原因就带上，没有就只报退出码 */
+function candidate(line: string): { score: number; text: string } | undefined {
+  if (NOISE.some(re => re.test(line))) return undefined
+  const text = line.trim().replace(/^(?:\d{4}-\d{2}-\d{2}T[\d:.]+Z?\s+)?(?:ERROR|WARN|INFO)\s+[\w:]+:\s*/i, '')
+  // Codex prewarm 把服务端错误 JSON 嵌在日志前缀后；message 才是操作原因。
+  const start = text.indexOf('{')
+  if (start >= 0) {
+    try {
+      const data = JSON.parse(text.slice(start))
+      const message = data?.error?.message
+      if (typeof message === 'string' && message) return { score: 4, text: friendlyCliError(message) }
+    } catch { /* 普通文本仍按日志级别处理 */ }
+  }
+  return { score: /\bERROR\b/.test(line) ? 3 : /\b(?:WARN|INFO)\b/.test(line) ? 1 : 2, text: friendlyCliError(text) }
+}
+
+/** 流式诊断有界缓存；保存最佳原因，避免后续长日志把它挤出 stderr 尾巴。 */
+export function createStderrDiagnostics(): { push: (chunk: string) => boolean; reason: () => string } {
+  let pending = ''
+  let best: { score: number; text: string } | undefined
+  let mcpNoticed = false
+  const accept = (line: string): void => {
+    const next = candidate(line)
+    if (next && (!best || next.score >= best.score)) best = { ...next, text: next.text.slice(0, 2000) }
+  }
+  return {
+    push(chunk) {
+      const combined = pending + chunk
+      const warn = !mcpNoticed && MCP_FAILURE.test(combined)
+      if (warn) mcpNoticed = true
+      const lines = combined.split(/\r?\n/)
+      pending = (lines.pop() ?? '').slice(-16384)
+      for (const line of lines) accept(line)
+      return warn
+    },
+    reason() { accept(pending); return best?.text ?? '' }
+  }
+}
+
+export function stderrReason(tail: string, max = 160): string {
+  const diagnostics = createStderrDiagnostics()
+  diagnostics.push(tail)
+  const why = diagnostics.reason()
+  return why.length > max ? why.slice(0, max - 1) + '…' : why
+}
+
 export function exitMessage(code: number, tail: string): string {
   const why = stderrReason(tail)
   return why ? `CLI 进程退出（code ${code}）：${why}` : `CLI 进程退出（code ${code}）`

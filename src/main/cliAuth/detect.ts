@@ -56,6 +56,8 @@ const PATTERNS: RegExp[] = [
 /** 一段文本看起来像不像「没登录」。**不导出给外面直接用** ——
  *  外面该用下面那个吃事件的版本，那个才带着「只看错误通道」的保护。 */
 function textLooksUnauthed(s: string): boolean {
+  // 工具的凭证与模型账号分开；不能因可选 MCP 握手 401 把整个聊天送去登录。
+  if (/MCP client for .+ failed to start|handshaking with MCP server failed|MCP startup failed/i.test(s)) return false
   return PATTERNS.some((re) => re.test(s))
 }
 

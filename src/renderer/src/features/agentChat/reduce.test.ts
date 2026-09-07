@@ -12,6 +12,13 @@ function run(events: ChatEvent[]) {
 
 const ready: ChatEvent = { k: 'session.ready', sessionId: 's1', model: 'sonnet', cwd: '/WORK/proj' }
 
+test('exec kind is optional for old events and preserved when present', () => {
+  const old = run([ready, { k: 'exec.start', execId: 'old', label: 'old', detail: '' }])
+  assert.equal(old.turns[0].execs[0].kind, undefined)
+  const current = run([ready, { k: 'exec.start', execId: 'new', label: 'new', detail: '', kind: 'read' }])
+  assert.equal(current.turns[0].execs[0].kind, 'read')
+})
+
 // ============================================================
 // 以下到分隔线为止，逐字来自 task-1-brief.md —— 不许改动断言内容。
 // ============================================================

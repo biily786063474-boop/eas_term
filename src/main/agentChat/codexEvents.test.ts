@@ -99,6 +99,16 @@ test('item.started 只产出 exec.start，不产出 exec.done', () => {
   assert.ok(starts[0].k === 'exec.start' && starts[0].label.includes('ls'), 'label 该是那条命令')
 })
 
+test('exec kind comes from Codex item type and unknown types fall back to generic', () => {
+  const t = createCodexTranslator()
+  const kinds = [['command_execution', 'terminal'], ['file_change', 'edit'], ['web_search', 'search'], ['mcp_tool_call', 'integration'], ['future_tool', 'generic']] as const
+  for (const [type, expected] of kinds) {
+    const [event] = t.push(JSON.stringify({ type: 'item.started', item: { id: `id-${type}`, type, tool: 'x' } }))
+    assert.equal(event?.k, 'exec.start')
+    if (event?.k === 'exec.start') assert.equal(event.kind, expected)
+  }
+})
+
 // ── 2026-09-06：Codex 联网搜索在界面上完全不可见 ────────────────────────────
 // 实测一次问答能出 19 条 web_search，而翻译器只放行 command_execution / file_change，
 // 用户几十秒只看到「正在处理…」。
@@ -163,4 +173,19 @@ test('MCP 调用携带通用身份、可读结果与资源，并识别结果层�
   const failed = t.push(JSON.stringify({ type: 'item.completed', item }))[0]
   assert.ok(failed.k === 'exec.done')
   assert.equal(failed.ok, false)
+})
+
+test('turn.failed 保留真正的模型版本错误并结束当前轮', () => {
+  const t = createCodexTranslator()
+  const events = t.push(JSON.stringify({type:'turn.failed',error:{message:"The 'gpt-6-astra' model requires a newer version of Codex. Please upgrade to the latest app or CLI and try again."}}))
+  assert.equal(events.length, 1)
+  assert.ok(events[0].k === 'error' && events[0].fatal && /Codex CLI 版本过旧/.test(events[0].message))
+})
+
+test('可恢复 error（如 MCP）不能打断后续正文和完成事件', () => {
+  const t = createCodexTranslator()
+  const warning=t.push(JSON.stringify({type:'error',message:'MCP client for figma failed to start: Auth required'}))
+  assert.ok(warning[0]?.k==='error' && !warning[0].fatal)
+  assert.ok(t.push(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'仍然可以回答'}})).some(e=>e.k==='text.done'))
+  assert.ok(t.push(JSON.stringify({type:'turn.completed',usage:{input_tokens:1,output_tokens:2}})).some(e=>e.k==='turn.done'))
 })

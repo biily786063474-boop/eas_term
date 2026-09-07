@@ -19,7 +19,7 @@
 import { findPlugin } from '../plugins.ts'
 import { chatPluginState } from '../../shared/chatPlugin.ts'
 import { spawn, type ChildProcess } from 'child_process'
-import { exitMessage } from './stderrReason.ts'
+import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, ipcMain, type WebContents } from 'electron'
@@ -168,7 +168,7 @@ function feed(live: Live, chunk: string, emit: (e: ChatEvent) => void): void {
     // **登录失效的判定要在翻译之前做。** 翻译层拿不到证据：
     // claude 把「没登录」放在 result.result 这个字符串里，而 translateResult
     // 只取 usage / cost，那句话翻译完就没了；codex 的 401 是顶层 error 和
-    // turn.failed，它的翻译器压根没有这两个分支（落进 default 被丢掉）。
+    // turn.failed；这里在通用错误翻译前保留专门的登录入口。
     // 所以修复前的界面上，未登录只剩一句「CLI 进程退出（code 1）」——
     // 用户描述的「一输入就自动关闭 CLI 进程」就是这么来的（2026-08-30 实测复现）。
     //
@@ -592,20 +592,25 @@ function wireProc(live: Live, proc: ChildProcess): void {
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
   // 也不会连累下一个进程的判定。
   live.killing = false
-  /** stderr 的尾巴：非零退出时从里面挑一句原因给用户看（stderrReason.ts）。只留最后 600 字 */
-  let stderrTail = ''
+  const diagnostics = createStderrDiagnostics()
+  let reportedFatal = false
   proc.stdout?.setEncoding('utf8')
   proc.stdout?.on('data', (chunk: string) => {
     // 收到输出＝还活着，不是空闲——15 分钟空闲回收判的是「没交互」，一轮长任务
     // 跑再久也不该被当成空闲杀掉，所以每收到一块输出就续一次 lastActiveAt。
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
-    feed(live, chunk, (e) => handleEvent(live, e))
+    feed(live, chunk, (e) => {
+      if (e.k === 'error' && e.fatal) reportedFatal = true
+      handleEvent(live, e)
+    })
   })
   proc.stderr?.setEncoding('utf8')
   proc.stderr?.on('data', (chunk: string) => {
-    // stderr 不做任何解读——那是"判定"，这一层不该猜它是不是致命。只留痕迹方便排障。
+    // 原始 stderr 留日志；仅可选 MCP 诊断发非致命提示，不停止/重启进程。
     console.error(`[agentChat:${live.rec.id}] stderr`, chunk)
-    stderrTail = (stderrTail + chunk).slice(-600)
+    if (diagnostics.push(chunk) && !live.killing && !reportedFatal) {
+      handleEvent(live, { k: 'error', message: '部分 MCP 工具连接失败，相关工具暂不可用。', fatal: false })
+    }
   })
   proc.on('error', (err) => {
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
@@ -660,10 +665,10 @@ function wireProc(live: Live, proc: ChildProcess): void {
     // 除了那句温和的「已停下这一轮」，还会收到一条红色的
     // 「CLI 进程退出（code 143）」。用户 2026-08-20 的原话：「有点多余，有点吓人」。
     // 他自己按的停，那不是故障。空闲回收和 restart 同理。
-    if (!selfKilled && code !== 0 && code !== null) {
+    if (!selfKilled && code !== 0 && code !== null && !reportedFatal) {
       // 带上 stderr 里最后一句原因（2026-09-05：Codex 非 git 目录秒退，原因就在 stderr 里，
       // 界面却只有退出码，用户和我都得靠手动跑命令才知道）
-      handleEvent(live, { k: 'error', message: exitMessage(code, stderrTail), fatal: true })
+      handleEvent(live, { k: 'error', message: exitMessage(code, diagnostics.reason()), fatal: true })
     }
   })
 }

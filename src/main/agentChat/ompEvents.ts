@@ -452,7 +452,7 @@ export function createOmpTranslator(
           const id = String(u.toolCallId ?? '')
           const title = typeof u.title === 'string' ? u.title : ''
           execTitles.set(id, title)
-          out.push({ k: 'exec.start', execId: id, label: title, detail: detailOf(u) })
+          out.push({ k: 'exec.start', execId: id, label: title, detail: detailOf(u), kind: u.kind === 'execute' ? 'terminal' : 'generic' })
           break
         }
         case 'tool_call_update': {

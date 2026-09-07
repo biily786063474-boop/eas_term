@@ -31,6 +31,15 @@ test('超长命令输出被截断，并说明原长', () => {
   assert.ok(o.includes(String(big.length)), '要带上原长')
 })
 
+test('exec kind survives history trimming while old entries remain compatible', () => {
+  const out = trimForSave([turn('a', { execs: [
+    { execId: 'new', label: 'read', detail: '', state: 'ok', kind: 'read' },
+    { execId: 'old', label: 'legacy', detail: '', state: 'ok' }
+  ] })])
+  assert.equal(out[0].execs[0].kind, 'read')
+  assert.equal(out[0].execs[1].kind, undefined)
+})
+
 test('没有 output 的 exec 不会凭空长出一个 output 字段', () => {
   const out = trimForSave([turn('a', { execs: [{ execId: '1', label: 'l', detail: 'd', state: 'running' }] })])
   assert.equal('output' in out[0].execs[0], false)

@@ -75,6 +75,13 @@ test('tool_use 产出 exec.start，label 是一句人话', () => {
   assert.ok(starts[0].k === 'exec.start' && !starts[0].label.includes('{'), 'label 不该是裸 JSON')
 })
 
+test('exec kind comes from Claude tool name', () => {
+  const tr = createClaudeTranslator({ thinkingThrottleMs: 0 })
+  const content = ['Bash', 'Read', 'Edit', 'Grep', 'mcp__files__read', 'FutureTool'].map((name, i) => ({ type: 'tool_use', id: String(i), name, input: {} }))
+  const events = tr.push(JSON.stringify({ type: 'assistant', message: { content } })).filter((e) => e.k === 'exec.start')
+  assert.deepEqual(events.map((e) => e.k === 'exec.start' ? e.kind : null), ['terminal', 'read', 'edit', 'search', 'integration', 'generic'])
+})
+
 test('tool_result 产出 exec.done，与 exec.start 用同一个 execId 配对', () => {
   const evs = runAll('claude-hook-approved.jsonl')
   const start = evs.find((e) => e.k === 'exec.start')
@@ -268,4 +275,3 @@ test('utilization 是坏值时夹回合法区间或丢弃（别让进度条冲�
   assert.equal(mk(NaN), undefined)
   assert.equal(mk('0.5'), undefined)
 })
-

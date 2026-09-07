@@ -13,12 +13,13 @@
 //    所以 done 必须**覆盖** delta 攒出来的那个轮次，不能再 push 一个——否则同一段话
 //    在界面上出现两次。这是这个文件里最容易改错的一条。
 
-import type { ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource } from '../../../../shared/agentChat.ts'
+import type { ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource, ExecKind } from '../../../../shared/agentChat.ts'
 
 export interface ExecItem {
   execId: string
   label: string
   detail: string
+  kind?: ExecKind
   state: 'running' | 'ok' | 'failed'
   output?: string
   tool?: ChatToolInfo
@@ -275,7 +276,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
       }
       case 'exec.start': {
         const turn = ensureAssistantTurn()
-        turn.execs.push({ execId: e.execId, label: e.label, detail: e.detail, state: 'running', ...(e.tool ? { tool: e.tool } : {}) })
+        turn.execs.push({ execId: e.execId, label: e.label, detail: e.detail, state: 'running', ...(e.kind ? { kind: e.kind } : {}), ...(e.tool ? { tool: e.tool } : {}) })
         sawExecStartSinceTurnDone = true
         break
       }
@@ -289,6 +290,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         if (!item) break
         item.state = e.ok ? 'ok' : 'failed'
         if (e.tool) item.tool = e.tool
+        if (e.kind) item.kind = e.kind
         if (e.resources) item.resources = e.resources.slice(0, 50)
         // 完成时才知道标签的（Codex web_search）在这儿补上
         if (e.label) item.label = e.label
