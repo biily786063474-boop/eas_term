@@ -78,6 +78,8 @@ export interface PreflightResult {
   changed: string[]
   conflicts: string[] | null           // null = 无法预检
   conflictNote?: string
+  /** 项目注册路径不是仓库根（在子目录）时的提示；其余情况没有这个字段 */
+  note?: string
   overlaps: { file: string; branches: string[] }[]
   testCmd: { value: string | null; source: 'project' | 'package.json' | 'none' }
 }

@@ -281,8 +281,9 @@ const api = {
     /** 预检：合并基点、改动文件、冲突清单（git < 2.38 时为 null）、与协同板上其他活分支的撞车、测试命令 */
     preflight: (projectPath: string, branch: string): Promise<PreflightResult | { ok: false; error: string }> =>
       ipcRenderer.invoke('merge:preflight', projectPath, branch),
-    /** 这些文件动了会波及谁（反向依赖两层 + 涉及的环 + 建议回归测试） */
-    impact: (projectPath: string, files: string[]): Promise<({ ok: true } & ImpactResult) | { ok: false; error: string }> =>
+    /** 这些文件动了会波及谁（反向依赖两层 + 涉及的环 + 建议回归测试）。
+     *  `cachedAt` 是图算出来的时刻：按项目缓存 5 分钟，每次 preflight 会清掉重算 */
+    impact: (projectPath: string, files: string[]): Promise<({ ok: true; cachedAt: number } & ImpactResult) | { ok: false; error: string }> =>
       ipcRenderer.invoke('merge:impact', projectPath, files)
   },
   board: {
