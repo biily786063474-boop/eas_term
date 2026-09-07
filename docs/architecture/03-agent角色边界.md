@@ -127,7 +127,9 @@ git 仓库，「<角色名>」会直接改主工作区，要继续吗？」确�
 `-c core.quotePath=false`（避免中文路径被转义成八进制、板上乱码且 overlap 判不出来）。
 
 渲染纯函数在 `src/shared/board.ts`（`renderBoard` / `findOverlaps` / `clipForPrompt`，零依赖可
-`node --test`），落盘常量 `BOARD_REL = '.eas/board.md'`（**写在被管理项目的项目根下，不是本仓库
+`node --test`；时间列用**本地**时区 —— 板是给坐在这台机器前的人读的，别改回 `getUTC*`。
+`findOverlaps` 先按分支去重再判「≥2」：同一条分支上开着两个活会话不算撞车），
+落盘常量 `BOARD_REL = '.eas/board.md'`（**写在被管理项目的项目根下，不是本仓库
 目录**）。IPC `board:refresh` / `board:read` 都先把传入路径 `projectRootOf()` 归一到项目根
 （worktree 里的 cwd 会被剥到 `.worktrees/` 之前，防止在工作树底下又长出一份）。
 
@@ -138,15 +140,21 @@ git 仓库，「<角色名>」会直接改主工作区，要继续吗？」确�
 
 **注入**：起会话那一刻，`StartOpts.boardText`（截断 ≤20 行）拼进三家系统提示末尾的
 `## 协同板（起会话时的快照）` 一段；会话中途变化不推送（三家 CLI 都没有中途注入系统提示的通道），
-靠 MCP 工具 `board_read`（先 `refresh` 再 `read`，返回 `{ board, note?, path }`）随时查最新的一份，
-见 [11](11-MCP工具网络.md)。
+靠 MCP 工具 `board_read`（先 `refresh` 再 `read`，返回 `{ board, note?, path }`，`path` 归一到
+项目根 + `BOARD_REL`）随时查最新的一份，见 [11](11-MCP工具网络.md)。
 
 **界面**：`BranchBadge.tsx` 在空态 `ac-ctxbar` 与对话态 `ChatToolbar` 都渲染；菜单三项——
 「开终端」（`effectiveCwd`）、「合并到主干」（P2 占位，禁用）、「删除 worktree」（有活会话禁用；
 有未提交改动先拒、写清数量，二次确认走 force）。徽标变色的判据来自 `board.read().overlaps`
-（两条活跃分支触及同一文件）。pane 的 `worktree?: { relPath, branch }`（`layout.ts` 的
+（两条**不同**活跃分支触及同一文件）。pane 的 `worktree?: { relPath, branch }`（`layout.ts` 的
 `PaneState`）随 `persist.ts` 存读、画布恢复时 `canvasSlice.ts` 重建节点传给 `openAgentPane`，
-重启实例后徽标还在。
+重启实例后徽标还在 —— 前提是 `setAgentWorktree` 会 `paneSaveTick + 1` 把画布保存订阅叫醒，
+见 [13](13-所有权矩阵.md) 的跨文件同步清单。
+
+**换角色的闸门**：已有 `resumeId` 的节点换成 `isolation:'worktree'` 的角色时，
+`AgentChatView` 的 `handlePickRole` 先弹确认，确认才清 `resumeId` 再换。
+不清的话首发守卫（`!savedResumeId`）会当成「恢复旧会话」而不建树，这个 pane
+从此静默跑在主工作区上 —— 与删 worktree 成功后一并清 `resumeId` 是同一条理由。
 
 > **只读角色**（`scout` / `inspector`）不建 worktree、不上徽标；主工作区里**有角色**的会话才上
 > 协同板（没有角色的普通会话不上板，有角色但落在主工作区的显示「主工作区」）。

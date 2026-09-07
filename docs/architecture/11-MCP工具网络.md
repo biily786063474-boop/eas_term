@@ -94,7 +94,7 @@ graph LR
 | `dict_add` | 逐条校验，可拒收 |
 | `wiki_archive_plan` ⏳ | **阻塞等用户**在弹窗里确认 |
 | `canvas_snapshot` | 截图落盘到项目 `screenshot/` |
-| `board_read`（角色工作流 P1）| **先 `refresh` 再 `read`**（`main/collabBoard.ts` 现算 + 落盘 `.eas/board.md`），不是查缓存；返回 `{ board, note?, path }`，数据来源与刷新时机见 [03](03-agent角色边界.md) 协同板段 |
+| `board_read`（角色工作流 P1）| **先 `refresh` 再 `read`**（`main/collabBoard.ts` 现算 + 落盘 `.eas/board.md`），拿到的板文永远是这一次算出来的；返回 `{ board, note?, path }`，`path` 已 `projectRootOf()` 归一到项目根 + `BOARD_REL`（不归一的话角色会话拿到的是它那棵 worktree 底下一个不存在的路径）。`read` 只在 1 秒内复用刚才那次 `refresh` 算出的 rows（省掉重复跑一整套 git），过期照常重算。数据来源与刷新时机见 [03](03-agent角色边界.md) 协同板段 |
 
 ⏳ = 在 `LONG_WAITS` 名单里。
 
