@@ -33,7 +33,7 @@ Mac arm64，Claude Code 2.1.263、Codex 0.153.4、omp 18.1.2。六份报告共�
 
 ## 仍未完成
 
-- 实服务生成响应丢失后的原任务认领与无重复扣费：已取得 Z-Image Turbo 1K 单图 4 墨水报价，等待明确批准；未发起付费生成。协议和模拟测试不能替代实际计费证据。
+- 实服务付费测试已获批准并执行一次：[本轮证据](paid-recovery-9510ff2/README.md)。真实响应丢失后认领原请求、重建 guard 无第二次提交，账本一笔 -4 与对应 +4 退款；生成服务 error，无图片，不能算成功产图验收。该次为生产 guard 源码宿主与正式 Bizone 包，非 Eas GUI 付费端到端。
 - Windows 已登录 CLI 实机模型调用条件仍缺；不以 CI 夹具冒充三端真实 Windows 模型验收。
 - 外部 Computer Use 指针生命周期仍开放，详见 [发布约束](../releases/computer-use-lifecycle.md)。本次不宣称修复。
 

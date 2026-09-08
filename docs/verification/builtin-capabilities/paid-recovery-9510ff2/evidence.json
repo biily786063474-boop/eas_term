@@ -1,0 +1,292 @@
+{
+  "passed": false,
+  "approvedCredits": 4,
+  "formalBizoneVersion": "1.21.31",
+  "executable": "/Users/biily/Bizone-release/1.21.31-prep/source/dist-electron/笔纵画板.app/Contents/MacOS/笔纵画板",
+  "sourceCommit": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/bizone-paid-recovery-urFBqx",
+  "easGuardExecution": "Production source guard/connector in Node harness; not Eas-Term GUI process",
+  "fault": "Real localhost HTTP response connection destroyed after upstream acknowledgment; no fabricated backend responses",
+  "steps": [
+    {
+      "name": "quote",
+      "at": "2026-09-08T14:35:31.767Z",
+      "quote": {
+        "estimate": {
+          "credits": 4,
+          "model": "z-image-turbo"
+        },
+        "media_ref_warn": null,
+        "message": "已写入节点参数,**还没扣费、还没开始生成**。**不要为了\"重试\"对同一节点连续调 generate**;要改提示词或参数:update_node 传 prompt(推荐),或对该节点再调一次 generate 覆盖 —— 都不会重复扣费。\n接下来:把 estimate.credits 的价格连同模型/提示词摘要用自然语言告诉用户,等用户回复确认,然后**你自己调 generate_now(nodeId) 直接生成** —— 用户不需要切回画板点任何按钮。多个节点就逐个 generate_now。\n(想让用户在画板里看着确认时,才用 confirm_batch_generate 弹 modal;完全无人值守时,generate 直接传 autoConfirm=true 一步到位。两者都会真实扣费。)",
+        "mode_compat_warn": null,
+        "mode_was_fallback": false,
+        "ok": true,
+        "prompt_lang_warn": "⚠️ prompt 不含中文字符 — 规范要求 LLM 写入 prompt 时必须用中文(用户体验 + 模型对中文优化更好)。本次允许通过,下次请用中文重写。",
+        "resolved_mode": null,
+        "status": "awaiting_chat_confirm",
+        "_request": {
+          "requestId": "eas-quote-3db3ddb0-6959-4d06-a8e1-c5119722277b",
+          "tool": "generate",
+          "argumentsDigest": "6e8e2f25f609b9f6ef22f5acc276a1095dff9385eec6344bd8eb388d9ad6c733",
+          "state": "acknowledged"
+        },
+        "easOperationId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9"
+      }
+    },
+    {
+      "name": "response-connection-dropped",
+      "at": "2026-09-08T14:35:31.800Z",
+      "httpStatus": 200,
+      "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9"
+    },
+    {
+      "name": "recovered-after-response-loss",
+      "at": "2026-09-08T14:35:31.932Z",
+      "result": {
+        "estimated_credits": 4,
+        "message": "已直接发起生成(跳过 BGC 确认,**会真实扣费**)。用 get_generation_status 轮询 node_1788878131526_01w523。",
+        "model": "z-image-turbo",
+        "nodeId": "node_1788878131526_01w523",
+        "ok": true,
+        "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+        "status": "generating",
+        "_request": {
+          "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+          "tool": "generate_now",
+          "argumentsDigest": "aca37e16dabe58bafbfc96414659689c41c6c15fc84acd32cccd2f9846ea1487",
+          "state": "acknowledged"
+        }
+      }
+    },
+    {
+      "name": "guard-restarted-reconciled",
+      "at": "2026-09-08T14:35:32.056Z",
+      "result": {
+        "estimated_credits": 4,
+        "message": "已直接发起生成(跳过 BGC 确认,**会真实扣费**)。用 get_generation_status 轮询 node_1788878131526_01w523。",
+        "model": "z-image-turbo",
+        "nodeId": "node_1788878131526_01w523",
+        "ok": true,
+        "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+        "status": "generating",
+        "_request": {
+          "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+          "tool": "generate_now",
+          "argumentsDigest": "aca37e16dabe58bafbfc96414659689c41c6c15fc84acd32cccd2f9846ea1487",
+          "state": "acknowledged"
+        }
+      }
+    },
+    {
+      "name": "generation-finished",
+      "at": "2026-09-08T14:35:34.063Z",
+      "status": "error",
+      "error": "生成服务返回异常，本次墨水已退回，请重试（若反复出现请换个模型，我们已收到告警）"
+    }
+  ],
+  "requests": [
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:26.492Z"
+    },
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:27.502Z"
+    },
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:28.507Z"
+    },
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:29.511Z"
+    },
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:30.514Z"
+    },
+    {
+      "name": "get_user_billing_tier",
+      "requestId": null,
+      "at": "2026-09-08T14:35:31.518Z"
+    },
+    {
+      "name": "create_project",
+      "requestId": null,
+      "at": "2026-09-08T14:35:31.520Z"
+    },
+    {
+      "name": "add_node",
+      "requestId": null,
+      "at": "2026-09-08T14:35:31.525Z"
+    },
+    {
+      "name": "list_models",
+      "requestId": null,
+      "at": "2026-09-08T14:35:31.527Z"
+    },
+    {
+      "name": "generate",
+      "requestId": "eas-quote-3db3ddb0-6959-4d06-a8e1-c5119722277b",
+      "at": "2026-09-08T14:35:31.547Z"
+    },
+    {
+      "name": "generate_now",
+      "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+      "at": "2026-09-08T14:35:31.782Z"
+    },
+    {
+      "name": "get_generation_request",
+      "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+      "at": "2026-09-08T14:35:31.921Z"
+    },
+    {
+      "name": "get_generation_request",
+      "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+      "at": "2026-09-08T14:35:32.046Z"
+    },
+    {
+      "name": "get_generation_status",
+      "requestId": null,
+      "at": "2026-09-08T14:35:32.058Z"
+    },
+    {
+      "name": "get_generation_status",
+      "requestId": null,
+      "at": "2026-09-08T14:35:34.061Z"
+    }
+  ],
+  "balanceBefore": 399412,
+  "project": {
+    "projectId": "proj_1788878131520_bzjj1r"
+  },
+  "node": {
+    "nodeId": "node_1788878131526_01w523"
+  },
+  "executionId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+  "error": "Expected values to be strictly equal:\n\n'error' !== 'done'\n",
+  "ownedAppLeftRunningForRecovery": false,
+  "balanceAfterResult": {
+    "tier": "pro_max",
+    "isPaid": true,
+    "creditsSubscription": 0,
+    "creditsTopup": 399412,
+    "totalCredits": 399412,
+    "subscriptionActive": true,
+    "periodEnd": "2026-08-17T08:18:51.982335+00:00",
+    "shouldUseBzone": true
+  },
+  "balanceAfter": 399412,
+  "balanceDelta": 0,
+  "upstreamReceipt": {
+    "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+    "tool": "generate_now",
+    "argumentsDigest": "aca37e16dabe58bafbfc96414659689c41c6c15fc84acd32cccd2f9846ea1487",
+    "state": "acknowledged",
+    "result": {
+      "estimated_credits": 4,
+      "message": "已直接发起生成(跳过 BGC 确认,**会真实扣费**)。用 get_generation_status 轮询 node_1788878131526_01w523。",
+      "model": "z-image-turbo",
+      "nodeId": "node_1788878131526_01w523",
+      "ok": true,
+      "requestId": "e1c99cc6-0bcf-4f65-a758-662dbc3debe9",
+      "status": "generating"
+    }
+  },
+  "finalNode": {
+    "id": "node_1788878131526_01w523",
+    "type": "image",
+    "title": "4墨水·单次请求断线验收",
+    "content": "",
+    "x": 440,
+    "y": 260,
+    "status": "error",
+    "error": "生成服务返回异常，本次墨水已退回，请重试（若反复出现请换个模型，我们已收到告警）",
+    "mediaUrl": null,
+    "mediaFsPath": null,
+    "hasMedia": false,
+    "upstream": [],
+    "downstream": [],
+    "mediaRefs": [],
+    "semanticRole": null,
+    "prompt": "A single blue square centered on a plain white background. Minimal test image, no text.",
+    "modelId": "z-image-turbo",
+    "genParams": {
+      "ratio": "1:1",
+      "quality": "1k",
+      "duration": null,
+      "imageCount": null,
+      "mode": null,
+      "awaitingConfirm": false
+    }
+  },
+  "paidHttpSubmissions": 1,
+  "reconciliationPassed": true,
+  "billingLedger": {
+    "rows": [
+      {
+        "id": 1466,
+        "delta": -4,
+        "source": "consume_image",
+        "model_id": "z-image-turbo",
+        "idempotency_key": "gforn_z-image-turbo_1788878131792_n30x4e",
+        "balance_sub_after": 0,
+        "balance_top_after": 399408,
+        "created_at": "2026-09-08T14:35:33.611354+00:00"
+      },
+      {
+        "id": 1467,
+        "delta": 4,
+        "source": "refund_generate_image_failed",
+        "model_id": null,
+        "idempotency_key": "gforn_z-image-turbo_1788878131792_n30x4e_refund",
+        "balance_sub_after": 0,
+        "balance_top_after": 399412,
+        "created_at": "2026-09-08T14:35:34.985885+00:00"
+      }
+    ]
+  },
+  "verifiedSourceFiles": [
+    {
+      "file": "src/main/bizoneGenerationGuard.ts",
+      "sha256": "3aeb4db45f10ae978c5e12cc616166caca25b48171bf7bc909bd723e57f5971e",
+      "matches9510ff2": true
+    },
+    {
+      "file": "src/main/bizoneConnector.ts",
+      "sha256": "0d4cb3c6a1354a8e8bf9818360a1c4be6d72745226d2f0a3c9f9f054a6ef58cb",
+      "matches9510ff2": true
+    },
+    {
+      "file": "src/main/mcpClient.ts",
+      "sha256": "c1d8a46370033a7c232916a9173f79e8c1b6169f9992ce6a41d72facf4baed6b",
+      "matches9510ff2": true
+    }
+  ],
+  "formalPackageFiles": [
+    {
+      "file": "Info.plist",
+      "sha256": "6844288d8463e3067bfc9b71586f4a84e3c9dc3e211627b0ae9f9355c0e27d7e"
+    },
+    {
+      "file": "Resources/app/electron/mcpServer.js",
+      "sha256": "8fd4abc860992ccbf7e7ac3a3410e3cf670673ecd68902a1a914f9d58098abdf"
+    },
+    {
+      "file": "Resources/app/electron/apiServer.js",
+      "sha256": "07190082f70b30d760a68a00c9352ee35199f171c0fd3e576b58046800f2923e"
+    }
+  ],
+  "formalPackageCodesignStrictPassed": true,
+  "providerGenerationPassed": false,
+  "billingEvidence": "Authenticated read-only credit_transactions query, same app account, rows after test quote; no tokens exported",
+  "singleChargeAndMatchingRefundVerified": true,
+  "ownedAppExitConfirmed": true,
+  "copiedEncryptedAuthRemovedAfterExit": true,
+  "screenshotLimitation": "First-run onboarding overlay covers canvas; screenshot is not evidence of generated image or error node."
+}
