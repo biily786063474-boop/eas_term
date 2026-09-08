@@ -6,9 +6,11 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import http from 'node:http'
+import { finished } from 'node:stream/promises'
 import {spawn,execFileSync} from 'node:child_process'
 import {fileURLToPath} from 'node:url'
 import {resolveCliInvocation,cliInvocationEnv} from '../../mcp/cli-entry.mjs'
+import {ownCodexLauncher,stopAgentProcess} from '../../mcp/owned-launcher-control.mjs'
 import {readAndMergeCodexConfig} from '../../mcp/codex-capability-config.mjs'
 // Compile a small native PE fixture using the Windows runner's existing .NET
 // compiler. It is a protocol fixture, never a downloaded CLI or model acceptance.
@@ -27,7 +29,7 @@ class Fixture {
     object result=new {}; if((string)m["method"]=="config/read")result=new {config=new {instructions="USER",mcp_servers=new {},skills=new {config=new object[0]}}};
     Console.WriteLine(json.Serialize(new {id=m["id"],result=result}));
    }
-  } else Console.WriteLine(json.Serialize(new {args=args,root=Environment.GetEnvironmentVariable("CODEX_MANAGED_PACKAGE_ROOT"),npm=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_NPM"),bun=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_BUN"),pnpm=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_PNPM"),vite=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_VITE_PLUS")}));
+  } else { if(Environment.GetEnvironmentVariable("FIXTURE_HANG_EXEC")=="1") {Thread.Sleep(Timeout.Infinite);return;} Console.WriteLine(json.Serialize(new {args=args,root=Environment.GetEnvironmentVariable("CODEX_MANAGED_PACKAGE_ROOT"),npm=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_NPM"),bun=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_BUN"),pnpm=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_PNPM"),vite=Environment.GetEnvironmentVariable("CODEX_MANAGED_BY_VITE_PLUS"),firstPath=Environment.GetEnvironmentVariable("PATH").Split(';')[0]})); }
  }
 }`)
  fs.mkdirSync(path.dirname(output),{recursive:true})
@@ -42,18 +44,30 @@ function fixture(t,kind){
  fs.writeFileSync(path.join(pkg,bin),source);const shim=path.join(root,kind+'.cmd');fs.writeFileSync(shim,'@echo SHIM MUST NOT EXECUTE\nexit /b 99')
  let native
  if(kind==='codex'){
-  native=path.join(pkg,'vendor','x86_64-pc-windows-msvc','codex','codex.exe');nativeFixture(root,native)
+  native=path.join(pkg,'vendor','x86_64-pc-windows-msvc','codex','codex.exe');nativeFixture(root,native);fs.mkdirSync(path.join(pkg,'vendor','x86_64-pc-windows-msvc','path'))
   // Actual dispatcher topology if mistakenly executed: Node -> native child.
   fs.writeFileSync(path.join(pkg,bin),`require('fs').writeFileSync(${JSON.stringify(path.join(root,'dispatcher-ran'))},'BAD');const c=require('child_process').spawn(${JSON.stringify(native)},process.argv.slice(2),{stdio:'inherit'});c.on('exit',code=>process.exit(code));`)
  }
  return {root,pkg,native,shim,log:path.join(root,'log')}
 }
-function run(script,args,env,cwd){const p=spawn(process.execPath,[script,...args],{cwd,env:{...process.env,...env},stdio:['ignore','pipe','pipe']});let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);return new Promise((resolve,reject)=>{p.on('error',reject);p.on('close',code=>resolve({code,out,err}))})}
+const interpreter=process.env.EAS_TEST_NODE_RUNNER||process.execPath
+const interpreterEnv=process.env.EAS_TEST_NODE_RUNNER?{ELECTRON_RUN_AS_NODE:'1',EAS_CAPABILITY_NODE_FALLBACK:'1'}:{}
+function start(script,args,env,cwd,controlled=false){
+ const p=spawn(interpreter,[script,...args],{cwd,env:{...process.env,...env,...interpreterEnv},stdio:controlled?['ignore','pipe','pipe','ipc']:['ignore','pipe','pipe']})
+ if(controlled)ownCodexLauncher(p)
+ let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x)
+ // Node can omit ChildProcess close after parent.disconnect(); wait for exit and
+ // both pipes explicitly, so cancellation tests still prove complete stream cleanup.
+ const exited=new Promise((resolve,reject)=>{p.on('error',reject);p.once('exit',(code,signal)=>resolve({code,signal}))})
+ const done=Promise.all([exited,finished(p.stdout),finished(p.stderr)]).then(([result])=>({...result,out,err}))
+ return {p,done}
+}
+function run(script,args,env,cwd,controlled=false){return start(script,args,env,cwd,controlled).done}
 const args=['exec','--','中文 空格','a"b','&','|','^','%PATH%','!','line\nbreak']
 test('Windows Codex owned launcher uses npm entry for both config reads and final exact argv', {skip:process.platform!=='win32'},async t=>{
  const f=fixture(t,'codex'),script=fileURLToPath(new URL('../../mcp/eas-codex-launcher.mjs',import.meta.url))
- const r=await run(script,[JSON.stringify({binary:f.shim,args,managedAssignments:[]})],{FIXTURE_LOG:f.log,CODEX_MANAGED_PACKAGE_ROOT:'stale-root',CODEX_MANAGED_BY_BUN:'1',CODEX_MANAGED_BY_PNPM:'1',CODEX_MANAGED_BY_VITE_PLUS:'1'},f.root)
- assert.equal(r.code,0,r.err);assert.deepEqual(JSON.parse(r.out),{args,root:fs.realpathSync(f.pkg),npm:'1',bun:null,pnpm:null,vite:null});assert.equal(fs.existsSync(path.join(f.root,'dispatcher-ran')),false)
+ const r=await run(script,[JSON.stringify({binary:f.shim,args,managedAssignments:[]})],{FIXTURE_LOG:f.log,CODEX_MANAGED_PACKAGE_ROOT:'stale-root',CODEX_MANAGED_BY_BUN:'1',CODEX_MANAGED_BY_PNPM:'1',CODEX_MANAGED_BY_VITE_PLUS:'1'},f.root,true)
+ assert.equal(r.code,0,r.err);assert.deepEqual(JSON.parse(r.out),{args,root:fs.realpathSync(f.pkg),npm:'1',bun:null,pnpm:null,vite:null,firstPath:fs.realpathSync(path.join(f.pkg,'vendor','x86_64-pc-windows-msvc','path'))});assert.equal(fs.existsSync(path.join(f.root,'dispatcher-ran')),false)
  const rows=fs.readFileSync(f.log,'utf8').trim().split('\n').map(JSON.parse);assert.equal(rows.length,3);assert.equal(rows.filter(r=>r.args[0]==='app-server').length,2)
  for(const row of rows)assert.throws(()=>process.kill(row.pid,0))
 })
@@ -73,4 +87,34 @@ test('Windows cancellation aborts the owned npm config child before model invoca
  const deadline=Date.now()+5000;while(!fs.existsSync(f.log)&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10))
  assert.ok(fs.existsSync(f.log));controller.abort();await rejection
  const rows=fs.readFileSync(f.log,'utf8').trim().split('\n').map(JSON.parse);assert.equal(rows.length,1);assert.equal(fs.existsSync(path.join(f.root,'dispatcher-ran')),false);assert.throws(()=>process.kill(rows[0].pid,0))
+})
+
+for(const phase of ['config','exec']) for(const action of ['cancel','disconnect']) test(`Windows outer launcher ${action} during ${phase} removes its owned native child`,{skip:process.platform!=='win32',timeout:15000},async t=>{
+ const f=fixture(t,'codex'),script=fileURLToPath(new URL('../../mcp/eas-codex-launcher.mjs',import.meta.url))
+ const {p,done}=start(script,[JSON.stringify({binary:f.shim,args:['exec','fixture'],managedAssignments:[]})],{FIXTURE_LOG:f.log,...(phase==='config'?{FIXTURE_HANG:'1'}:{FIXTURE_HANG_EXEC:'1'})},f.root,true)
+ const read=()=>fs.existsSync(f.log)?fs.readFileSync(f.log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[]
+ try{
+  const deadline=Date.now()+5000
+  while(!read().some(r=>phase==='config'?r.args[0]==='app-server':r.args[0]==='exec')&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10))
+  assert.ok(read().some(r=>phase==='config'?r.args[0]==='app-server':r.args[0]==='exec'))
+  if(action==='cancel'){stopAgentProcess(p);stopAgentProcess(p,'SIGKILL')}else p.disconnect()
+  const result=await done;assert.notEqual(result.code,0)
+  for(const row of read())assert.throws(()=>process.kill(row.pid,0))
+  assert.equal(read().filter(r=>r.args[0]==='exec').length,phase==='config'?0:1)
+  assert.equal(fs.existsSync(path.join(f.root,'dispatcher-ran')),false)
+ }finally{if(p.exitCode===null&&p.signalCode===null){stopAgentProcess(p,'SIGKILL');if(p.connected)p.disconnect();await done}}
+})
+test('Windows parent disconnect before launcher preflight cannot invoke a model', {skip:process.platform!=='win32',timeout:15000},async t=>{
+ const f=fixture(t,'codex'),script=fileURLToPath(new URL('../../mcp/eas-codex-launcher.mjs',import.meta.url))
+ const {p,done}=start(script,[JSON.stringify({binary:f.shim,args:['exec','fixture'],managedAssignments:[]})],{FIXTURE_LOG:f.log,FIXTURE_HANG:'1'},f.root,true)
+ p.disconnect();const result=await done;assert.notEqual(result.code,0)
+ const rows=fs.existsSync(f.log)?fs.readFileSync(f.log,'utf8').trim().split('\n').map(JSON.parse):[]
+ assert.equal(rows.some(r=>r.args[0]==='exec'),false);for(const row of rows)assert.throws(()=>process.kill(row.pid,0))
+})
+
+test('Windows owned IPC launcher exits on invalid installation without starting native', {skip:process.platform!=='win32',timeout:15000},async t=>{
+ const f=fixture(t,'codex'),script=fileURLToPath(new URL('../../mcp/eas-codex-launcher.mjs',import.meta.url))
+ fs.writeFileSync(path.join(f.pkg,'package.json'),JSON.stringify({name:'unknown',version:'1.2.3',bin:{codex:'bin/codex.js'}}))
+ const {p,done}=start(script,[JSON.stringify({binary:f.shim,args:['exec','fixture']})],{FIXTURE_LOG:f.log},f.root,true)
+ const result=await done;assert.notEqual(result.code,0);assert.equal(p.connected,false);assert.equal(fs.existsSync(f.log),false)
 })

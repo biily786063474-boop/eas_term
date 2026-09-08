@@ -25,6 +25,17 @@ process.on('SIGINT', () => {
   stop('SIGINT')
 })
 process.on('SIGTERM', () => stop('SIGTERM'))
+// Node IPC belongs only to the spawning application; no public port or PID input.
+// Parent app exit closes this channel even when JS signal handlers cannot run on Windows.
+const onControl = message => {
+  if (message?.type === 'eas:codex:cancel' && ['SIGTERM', 'SIGKILL'].includes(message.signal)) stop(message.signal)
+}
+const onDisconnect = () => stop('SIGKILL')
+if (typeof process.send === 'function') {
+  process.on('message', onControl)
+  process.on('disconnect', onDisconnect)
+  if (!process.connected) onDisconnect()
+}
 
 try {
   const input = JSON.parse(process.argv[2] ?? '')
@@ -81,4 +92,10 @@ try {
 } catch {
   if (!terminating) process.stderr.write('Eas-Term：无法安全合并 Codex 用户配置，本轮尚未执行。请检查 Codex 配置或修复官方 CLI 安装（不支持未知 Windows 包装脚本）后重试。\n')
   process.exitCode = terminating ? 130 : 1
+} finally {
+  // A message listener references Node's IPC channel. Always release it on normal
+  // completion, failed preflight and cancellation, after the owned child has exited.
+  process.off('message', onControl)
+  process.off('disconnect', onDisconnect)
+  if (process.connected) process.disconnect()
 }

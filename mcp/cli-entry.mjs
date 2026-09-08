@@ -113,7 +113,18 @@ export function resolveNpmEntry(kind, shim, arch = process.arch) {
       const candidates = [`vendor/${triple}/bin/codex.exe`, `vendor/${triple}/codex/codex.exe`]
       const relative = candidates.find(p => fs.existsSync(path.join(nativeRoot, p)))
       if (!relative) throw invalid()
-      return { command: nativeEntry(contained(nativeRoot, relative), arch), args: [],
+      const helperPath = path.join(nativeRoot, 'vendor', triple, 'path')
+      let pathPrepend
+      // Older official wrappers prepend this directory (e.g. bundled ripgrep).
+      // An existing escape/non-directory is corruption, not a reason to silently omit it.
+      let hasHelper = true
+      try { fs.lstatSync(helperPath) } catch (error) { if (error.code !== 'ENOENT') throw error; hasHelper = false }
+      if (hasHelper) {
+        const real = fs.realpathSync(helperPath), rel = path.relative(fs.realpathSync(nativeRoot), real)
+        if (!rel || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel) || !fs.statSync(real).isDirectory()) throw invalid()
+        pathPrepend = [real]
+      }
+      return { command: nativeEntry(contained(nativeRoot, relative), arch), args: [], ...(pathPrepend ? { pathPrepend } : {}),
         env: { CODEX_MANAGED_BY_NPM: '1', CODEX_MANAGED_PACKAGE_ROOT: fs.realpathSync(root) },
         unsetEnv: ['CODEX_MANAGED_BY_NPM', 'CODEX_MANAGED_BY_BUN', 'CODEX_MANAGED_BY_PNPM', 'CODEX_MANAGED_BY_VITE_PLUS', 'CODEX_MANAGED_PACKAGE_ROOT'] }
     }
@@ -145,5 +156,10 @@ export function resolveCliInvocation(kind, binary, args, env, runner, platform =
 export function cliInvocationEnv(env, invocation) {
   const out = { ...env }, removed = new Set((invocation.unsetEnv ?? []).map(k => k.toUpperCase()))
   for (const key of Object.keys(out)) if (removed.has(key.toUpperCase())) delete out[key]
+  if (invocation.pathPrepend?.length) {
+    const oldPath = out.PATH ?? Object.entries(out).find(([key]) => key.toUpperCase() === 'PATH')?.[1] ?? ''
+    for (const key of Object.keys(out)) if (key.toUpperCase() === 'PATH') delete out[key]
+    out.PATH = [...invocation.pathPrepend, oldPath].filter(Boolean).join(';')
+  }
   return { ...out, ...invocation.env }
 }

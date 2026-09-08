@@ -112,3 +112,14 @@ test('npm native environment replaces stale root and mutually exclusive package-
  assert.deepEqual(cliInvocationEnv(inherited,invocation),{KeepSecret:'preserved',CODEX_MANAGED_BY_NPM:'1',CODEX_MANAGED_PACKAGE_ROOT:'validated-root'})
  assert.equal(inherited.CODEX_MANAGED_PACKAGE_ROOT,'other-package')
 })
+
+test('legacy vendor path helper directory is validated and prepended before inherited Windows PATH',t=>{
+ const f=fixture(t,'codex','bin/codex.js'),triple=process.arch==='arm64'?'aarch64':'x86_64',vendor=path.join(f.pkg,'vendor',triple+'-pc-windows-msvc')
+ fs.mkdirSync(path.join(vendor,'codex'),{recursive:true});fs.writeFileSync(path.join(vendor,'codex','codex.exe'),peFixture())
+ const helper=path.join(vendor,'path');fs.mkdirSync(helper)
+ const launch=resolveNpmEntry('codex',f.shim)
+ assert.deepEqual(launch.pathPrepend,[fs.realpathSync(helper)])
+ assert.equal(cliInvocationEnv({Path:'C:\\user;C:\\system'},launch).PATH,fs.realpathSync(helper)+';C:\\user;C:\\system')
+ fs.rmdirSync(helper);const outside=path.join(f.root,'outside');fs.mkdirSync(outside);fs.symlinkSync(outside,helper,'junction')
+ assert.throws(()=>resolveNpmEntry('codex',f.shim),/Unsupported/)
+})

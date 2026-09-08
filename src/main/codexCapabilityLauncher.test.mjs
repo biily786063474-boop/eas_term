@@ -25,15 +25,15 @@ if(args[0]==='app-server'){
  process.stdout.write(JSON.stringify({id:m.id,result:{config}})+'\\n');
  }
  })}
-}else record({executed:true,args,fallback:process.env.EAS_CAPABILITY_NODE_FALLBACK,electronMode:process.env.ELECTRON_RUN_AS_NODE});
+}else {record({executed:true,args,fallback:process.env.EAS_CAPABILITY_NODE_FALLBACK,electronMode:process.env.ELECTRON_RUN_AS_NODE});if(process.env.FIXTURE_HANG_EXEC==='1')setInterval(()=>{},1000)}
 `,{mode:0o700})
  const read=()=>fs.existsSync(log)?fs.readFileSync(log,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse):[]
  return {root,binary,log,read,cleanup:()=>fs.rmSync(root,{recursive:true,force:true})}
 }
-function start(f,args,extraEnv={}){
- const p=spawn(process.execPath,[launcher,JSON.stringify({binary:f.binary,args,managedAssignments:['instructions="MANAGED"','mcp_servers.audit.disabled_tools=["role"]']})],{cwd:f.root,env:{...process.env,FIXTURE_LOG:f.log,...extraEnv},stdio:['ignore','pipe','pipe']})
+function start(f,args,extraEnv={},ipc=false){
+ const p=spawn(process.execPath,[launcher,JSON.stringify({binary:f.binary,args,managedAssignments:['instructions="MANAGED"','mcp_servers.audit.disabled_tools=["role"]']})],{cwd:f.root,env:{...process.env,FIXTURE_LOG:f.log,...extraEnv},stdio:ipc?['ignore','pipe','pipe','ipc']:['ignore','pipe','pipe']})
  let stderr='';p.stderr.on('data',x=>stderr+=x)
- const done=new Promise(resolve=>p.on('close',(code,signal)=>resolve({code,signal,stderr})))
+ const done=new Promise(resolve=>p.on(ipc?'exit':'close',(code,signal)=>resolve({code,signal,stderr})))
  return {p,done}
 }
 test('actual owned launcher separates user CLI overrides, preserves prompt after --, and forwards effective cwd',async()=>{
@@ -65,4 +65,17 @@ test('SIGTERM during actual launcher config probe kills only its owned probe and
   const rows=f.read();assert.equal(rows.filter(r=>r.executed).length,0)
   for(const row of rows.filter(r=>r.pid))assert.throws(()=>process.kill(row.pid,0))
  }finally{f.cleanup()}
+})
+
+for(const phase of ['config','exec']) for(const action of ['cancel','disconnect']) test(`owned IPC ${action} during ${phase} waits for the actual child to exit`,{skip:process.platform==='win32'},async()=>{
+ const f=fixture(), {p,done}=start(f,['exec','not sent'],phase==='config'?{FIXTURE_HANG:'1'}:{FIXTURE_HANG_EXEC:'1'},true)
+ try{
+  const deadline=Date.now()+5000
+  while(!f.read().some(r=>phase==='config'?r.pid:r.executed)&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10))
+  assert.ok(f.read().some(r=>phase==='config'?r.pid:r.executed))
+  if(action==='cancel')p.send({type:'eas:codex:cancel',signal:'SIGTERM'});else p.disconnect()
+  const result=await Promise.race([done,new Promise(resolve=>setTimeout(()=>resolve(null),1500))])
+  assert.ok(result,'outer launcher ignored owned cancellation channel')
+  for(const row of f.read().filter(r=>r.pid))assert.throws(()=>process.kill(row.pid,0))
+ }finally{if(p.exitCode===null&&p.signalCode===null){p.kill('SIGTERM');await done}f.cleanup()}
 })

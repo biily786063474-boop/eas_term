@@ -48,7 +48,9 @@ jobs:
         run: node --experimental-strip-types --test src/main/bizoneWindowsDiscovery.test.ts src/shared/builtinCapabilities.test.ts
 
       - name: Windows CLI resolver and real fixture processes
-        run: node --test src/main/cliEntry.test.mjs src/main/windowsCliLaunch.test.mjs
+        env:
+          EAS_TEST_NODE_RUNNER: ${{ github.workspace }}\release\win-unpacked\Eas-Term.exe
+        run: node --test src/main/cliEntry.test.mjs src/main/ownedLauncherControl.test.mjs src/main/windowsCliLaunch.test.mjs
 
       - name: Packaged builtin capability settings
         run: node scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"

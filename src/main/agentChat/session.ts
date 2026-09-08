@@ -1,3 +1,4 @@
+import { ownCodexLauncher, stopAgentProcess } from '../../../mcp/owned-launcher-control.mjs'
 import { cliInvocation } from '../cliInvocation.ts'
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
 // 「什么时候该回收」「该直接发还是重启 resume」「hook 请求怎么转成审批事件」
@@ -722,7 +723,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
   live.processGeneration = {} // retire old callbacks even if the replacement fails to spawn
   if (live.proc) {
     live.killing = true
-    live.proc.kill()
+    stopAgentProcess(live.proc)
   }
   live.proc = undefined
 
@@ -731,7 +732,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     live.processGeneration = {}
     const failedProc = live.proc
     live.proc = undefined
-    failedProc?.kill()
+    stopAgentProcess(failedProc)
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message, fatal: true })
     return { ok: false, error: message }
@@ -838,6 +839,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     const launch = live.rec.cli === 'codex'
       ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
       : cliInvocation(live.rec.cli, built.bin, args)
+    const controlledCodex = process.platform === 'win32' && live.rec.cli === 'codex'
     const proc = spawn(launch.command, launch.args, {
       cwd: opts.cwd,
       env: {
@@ -872,8 +874,9 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
         ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
         ...launch.env
       },
-      stdio: [built.stdin, 'pipe', 'pipe']
+      stdio: controlledCodex ? [built.stdin, 'pipe', 'pipe', 'ipc'] : [built.stdin, 'pipe', 'pipe']
     })
+    if (controlledCodex) ownCodexLauncher(proc)
 
     live.proc = proc
     live.stdoutBuf = ''
@@ -1091,7 +1094,7 @@ function reapIdleSessions(): void {
         `（${idleSec}s 没动静，busy=${String(live.rec.busy)}，交活=${delivered ? '是' : '否'}）`
     )
     live.killing = true // 空闲回收是预期内的，别让它触发自动恢复
-    live.proc?.kill()
+    stopAgentProcess(live.proc)
     live.proc = undefined
     live.rec = { ...live.rec, alive: false } // resumeId 保留，下次发送时接上
   }
@@ -1196,11 +1199,11 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
 }
 
 /** app 退出时收掉全部会话进程，避免留下孤儿（和 pty.ts 的 killAllPtys 同一个道理）。
- *  hard=true 用 SIGKILL，配合 index.ts 里"先软杀、300ms 后硬杀"的两拍节奏。 */
+ *  hard=true 对直接进程用 SIGKILL；Windows owned Codex 经 IPC 让 launcher 清理 native。配合 index.ts 里"先软杀、300ms 后硬杀"的两拍节奏。 */
 export function killAllAgentChatSessions(hard = false): void {
   for (const live of sessions.values()) {
     revokeCapabilitySession(live.rec.id)
-    live.proc?.kill(hard ? 'SIGKILL' : 'SIGTERM')
+    stopAgentProcess(live.proc, hard ? 'SIGKILL' : 'SIGTERM')
   }
 }
 
@@ -1225,10 +1228,10 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
     const proc = live.proc
     live.proc = undefined
     if (!proc) continue
-    proc.kill('SIGTERM')
+    stopAgentProcess(proc, 'SIGTERM')
     setTimeout(() => {
-      // killed 已经为真说明信号送达过；仍在跑的（exitCode/signalCode 都是 null）再补一刀
-      if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL')
+      // 仍在跑的再请求硬停止；owned Codex 仍通过控制通道，不强杀外层 launcher。
+      if (proc.exitCode === null && proc.signalCode === null) stopAgentProcess(proc, 'SIGKILL')
     }, 300).unref?.()
   }
 }
@@ -1813,7 +1816,7 @@ export function registerAgentChatHandlers(): void {
     revokeCapabilitySession(id)
     live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
     live.killing = true
-    live.proc.kill()
+    stopAgentProcess(live.proc)
     live.proc = undefined
     // **必须推 turn.done，光推一条提醒是不够的。**
     //
@@ -1849,6 +1852,6 @@ export function registerAgentChatHandlers(): void {
     // 与 interrupt 不同 —— 那边是「这一轮不要了、会话留着」，这边是整个会话都不要了。
     live.acp?.close()
     live.acp?.onProcessGone()
-    live.proc?.kill()
+    stopAgentProcess(live.proc)
   })
 }
