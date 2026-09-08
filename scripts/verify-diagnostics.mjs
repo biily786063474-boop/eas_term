@@ -24,7 +24,7 @@ async function connect(port, filter) {
         const ws = new WebSocket(target.webSocketDebuggerUrl)
         await new Promise((res, rej) => { ws.addEventListener('open', res, { once: true }); ws.addEventListener('error', rej, { once: true }) })
         let id = 0; const pending = new Map(); const pauses = []
-        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); if (d.method === 'NodeWorker.attachedToWorker') { console.log('WORKER', d.params.workerInfo?.title, 'waiting=', d.params.waitingForDebugger); ws.send(JSON.stringify({ id: ++id, method: 'NodeWorker.sendMessageToWorker', params: { sessionId: d.params.sessionId, message: JSON.stringify({ id: 1, method: 'Runtime.runIfWaitingForDebugger' }) } })) }; pending.get(d.id)?.(d) })
+        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); pending.get(d.id)?.(d) })
         const call = (method, params) => new Promise((res, rej) => {
           if (method === 'Runtime.evaluate') console.log('EVAL', port, params.expression.slice(0, 160))
           const n = ++id; const timer = setTimeout(() => { pending.delete(n); rej(new Error('CDP timeout port=' + port + ' ' + method + ' ' + (params?.expression ?? '').slice(0,160))) }, 15000)
@@ -68,10 +68,6 @@ async function launch(unclean = false) {
     await main.call('Debugger.resume')
   }
   assert.ok(injected, 'must reach packaged application entry before test instrumentation')
-  // ConPTY reads its pipe on a real Worker. The parent --inspect-brk flag must not leave
-  // that Worker waiting for a debugger while pty.spawn synchronously waits for its pipe.
-  const workers = await main.call('NodeWorker.enable', { waitForDebuggerOnStart: false })
-  assert.equal(workers.error, undefined, 'NodeWorker debugger domain must be available')
   renderer = await connect(ports.renderer, t => t.type === 'page' && !t.url.includes('island.html'))
   for (let i = 0; i < 100; i++) { if (await renderer.ev("!!window.api?.diagnostics && !!document.querySelector('.app')")) break; await sleep(100) }
   assert.equal(await renderer.ev('window.api.diagnostics.enabled()'), true)
@@ -82,24 +78,46 @@ async function launch(unclean = false) {
     assert.ok((await main.ev('__diagPrompts.map(p => p.message)')).some(m => m.includes('上次未正常退出')))
   }
 }
+async function nativePtyPhase() {
+  const args = [...(process.argv.includes('--dev') ? ['.'] : []), '--remote-debugging-port=' + ports.renderer, '--user-data-dir=' + data, '--no-sandbox']
+  proc = spawn(executable, args, { env: { ...process.env, EAS_VERIFY: '1', EAS_SMOKE: '1' }, stdio: ['ignore', 'pipe', 'pipe'] })
+  proc.stderr.on('data', d => { stderr = (stderr + d).slice(-50000) })
+  renderer = await connect(ports.renderer, t => t.type === 'page' && !t.url.includes('island.html'))
+  for (let i = 0; i < 100; i++) { if (await renderer.ev('!!window.api?.pty')) break; await sleep(100) }
+  const pty = await renderer.ev('window.api.pty.create({ cwd: ' + JSON.stringify(root) + ', cols: 80, rows: 24 })')
+  const result = await renderer.ev(`new Promise(resolve => {
+    let output = ''; let timer;
+    const off = window.api.pty.onData(${JSON.stringify(pty.id)}, chunk => {
+      output += chunk;
+      if (output.includes('EAS_DIAG_READY')) { clearTimeout(timer); off(); resolve(true) }
+    });
+    timer = setTimeout(() => { off(); resolve(false) }, 8000);
+    window.api.pty.write(${JSON.stringify(pty.id)}, 'echo EAS_DIAG_READY\\r\\n');
+  })`)
+  assert.equal(result, true, 'real shell must echo before closing')
+  await renderer.ev('window.api.pty.kill(' + JSON.stringify(pty.id) + ')')
+  await renderer.ev('window.api.diagnostics.enabled()') // prove kill did not block the main process
+  const events = fs.readFileSync(join(data, 'diagnostics/events.jsonl'), 'utf8')
+  assert.ok(events.includes('pty-started'))
+  evidence.checks.push('no-main-debugger actual PTY start, echo, kill and on-disk diagnostic event')
+  await stop(true)
+}
 async function stop(abnormal = false) {
   const p = proc
   const exited = new Promise(r => p.once('exit', r))
   if (abnormal) p.kill('SIGKILL')
   else void main.ev('__electron.app.quit()').catch(() => {})
-  renderer.ws.close(); main.ws.close()
+  renderer.ws.close(); main?.ws.close()
   let timeout
   await Promise.race([exited, new Promise((_, reject) => { timeout = setTimeout(() => { p.kill(); reject(new Error('exit timeout')) }, 10000) })]).finally(() => clearTimeout(timeout))
   await sleep(400)
 }
 try {
-  await launch()
+  await nativePtyPhase()
+  await launch(true)
   evidence.checks.push('independent identity/userData, bridge and real renderer')
   assert.equal(await renderer.ev('window.api.update.check()').then(r => r.info), null)
   await renderer.ev('window.api.diagnostics.chatOpen()')
-  assert.equal(await main.ev("new Promise((resolve, reject) => { const w = new (process.getBuiltinModule('worker_threads').Worker)(\"require('worker_threads').parentPort.postMessage('ready')\", { eval: true }); w.on('message', resolve); w.on('error', reject) })"), 'ready')
-  const pty = await renderer.ev('window.api.pty.create({ cwd: ' + JSON.stringify(root) + ', cols: 80, rows: 24 })')
-  await renderer.ev('window.api.pty.kill(' + JSON.stringify(pty.id) + ')')
   await renderer.ev('window.api.diagnostics.open()')
   assert.equal(await main.ev('__diagPrompts.at(-1).defaultId'), 0)
   evidence.checks.push('cancel default, production update disabled, PTY actual launch')

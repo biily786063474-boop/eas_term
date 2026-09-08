@@ -31,3 +31,7 @@ d5e70cb 的类型检查、NSIS构建、9项诊断单测及实际启动/PTY/OMP�
 ## 第三次 Windows CI（34254123277）与工作假设
 
 逐步跟踪已确认超时发生在 `pty.create`，不是回传请求或同意弹窗；同一个包在无主进程调试器的普通冒烟中正常开终端和回显。node-pty 的 Windows ConPTY 会创建真实 Worker 来读取管道；测试启动带 --inspect-brk，工作假设是 Worker 等待调试器导致同步创建等待管道。下一轮在验收脚本启用 NodeWorker 调试协议并明确释放 waiting debugger 的 Worker，增加真实 Worker ready 断言，不改应用和PTY实现。Mac 同脚本再次通过；Windows结果待核实。此假设不等同于用户原始闪退根因。
+
+## 验收拆成两个真实运行阶段（第四轮34255072126后）
+
+NodeWorker协议下独立Worker能ready，但ConPTY仍在pty.create超时，没有pty-started；不能把Worker等待假设写成已定位根因。移除该实验性调试干预。改用同一exe、同一userData、同一cwd分阶段验证：先不带主进程调试器真实起PTY、等回显、关闭并确认IPC可用；SIGKILL该测试实例后，再通过主进程调试器只代答原生确认，报告必须含前一阶段实际PTY日志。原有PTY/导出/回传/异常退出/正常退出断言全部保留，并新增真实回显断言；应用源码不变。Mac新流程已通过，Windows待复核。带调试器下的ConPTY阻塞作为测试环境限制保留，不等于用户闪退原因。
