@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import http from 'node:http'
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -179,6 +180,7 @@ test('real bundled OMP answers with missing Bizone through actual shim and gatew
       PATH: process.env.PATH ?? '', PI_CODING_AGENT_DIR: agent,
       PI_CONFIG_DIR: '.pi', OMP_SKIP_SETUP: '1' }
   })
+  const exited = new Promise<void>(resolve => { client.onExit = () => resolve() })
   let answer = ''
   client.onNotification = (method, params) => {
     const event = params as { update?: { sessionUpdate?: string; content?: { type?: string; text?: string } } }
@@ -206,7 +208,9 @@ test('real bundled OMP answers with missing Bizone through actual shim and gatew
     await f.close()
     model.closeAllConnections()
     await new Promise<void>(resolve => model.close(() => resolve()))
-    rmSync(profile, { recursive: true, force: true })
+    // Windows retains cwd/SQLite handles until the owned process actually exits.
+    await Promise.race([exited, new Promise<void>(resolve => setTimeout(resolve, 3000))])
+    await rm(profile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 })
   }
 })
 
