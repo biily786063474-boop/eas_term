@@ -189,7 +189,7 @@ Selected native stdio servers now share the same base-plus-selected snapshot acr
 
 旧 `canvas_open_file` / `canvas_open_html` 能加载可执行网页，且内容限额会驱逐旧节点，仍标 `destructiveHint:true, openWorldHint:true`。不能为绕过 Codex `approval_policy=never` 拒绝而伪造安全元数据。
 
-新增 `canvas_open_image` 是受限替代：仅项目内 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG/HTML/视频/外部网址。`fs:validateRasterImage` → `main/rasterImage.ts` 校验 guardPath/guardDir、真实路径属于当前会话项目、大小与文件头（不是完整图片解码保证）；renderer 在 IO 后重新确认租约 Frame 和当前容量，然后同步新增图片节点，满额拒绝且不驱逐。它明确是画布写操作：`readOnlyHint:false, destructiveHint:false, openWorldHint:false`，未声称幂等。普通业务插件 canvas 白名单不扩大。
+新增 `canvas_open_image` 是受限替代：仅项目内 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG/HTML/视频/外部网址。`fs:validateRasterImage` → `main/rasterImage.ts` 校验 guardPath/guardDir、真实路径属于当前会话项目、大小与文件头（不是完整图片解码保证）；renderer 在 IO 后重新确认租约 Frame 和当前容量，然后同步新增图片节点并沿用 nodeCap FIFO：超额关闭当前 Frame 最早的未固定内容预览，不删除源文件。它明确是画布写操作：`readOnlyHint:false, destructiveHint:true, openWorldHint:false`，未声称幂等。普通业务插件 canvas 白名单不扩大。
 
 回归：`workbenchSchema.test.ts` 通过实际 stdio initialize/tools/list 验证公共目录和注解；`rasterImage.test.ts` 验证真实文件、跨项目软链与格式；`canvasOpenImage.test.ts` 执行生产 handler 分支，覆盖异步验证后的容量/身份变化。正式包 CLI 调用证据由发布验收另行记录。
 
@@ -210,3 +210,6 @@ Selected native stdio servers now share the same base-plus-selected snapshot acr
 真实 OMP 18.1.2 + stdio shim + 实际 HTTP 路由回归入口：
 EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capabilityTransport.test.ts
 测试模型仅 loopback 固定响应，不读取真实账号、不请求付费服务。
+
+### 当前内置链路可视化（2026-09-08）
+见 `docs/prototype/2026-09-08-mcp-injection.html`。顶部旧 bizone-mcp 每会话进程图仅描述遗留全局配置，受管内置链路以本文“内置笔纵连接器生产装配”为准。图片FIFO改动待下一版本发布，0.4.86仍满额拒绝。

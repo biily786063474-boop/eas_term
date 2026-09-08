@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
-const { contentStat } = await import(new URL('../renderer/src/store/canvas/nodeCap.ts', import.meta.url).href)
+const { contentStat, nodesToEvict } = await import(new URL('../renderer/src/store/canvas/nodeCap.ts', import.meta.url).href)
 const source = ts.createSourceFile('mcpHandler.ts', fs.readFileSync(new URL('../renderer/src/mcpHandler.ts', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
 let branch: ts.IfStatement | undefined
 function visit(n: ts.Node) { if (ts.isIfStatement(n) && n.expression.getText(source) === "tool === 'canvas_open_image'") branch = n; ts.forEachChild(n, visit) }
@@ -13,7 +13,7 @@ function setup(count: number) {
   const nodes = Array.from({ length: count }, (_, i) => ({ id: 'existing-' + i, pane: { kind: 'image', filePath: '/project/old.png' } }))
   let valid = true
   const frame = { id: 'owned-frame', nodes }
-  const state = { viewMode: 'canvas', canvas: { frames: [frame] }, setViewMode() {}, addFileNode(frameId: string, pane: unknown) { assert.equal(frameId, 'owned-frame'); frame.nodes.push({ id: 'new', pane } as any) } }
+  const state = { viewMode: 'canvas', canvas: { frames: [frame] }, setViewMode() {}, addFileNode(frameId: string, pane: unknown) { assert.equal(frameId, 'owned-frame'); frame.nodes.push({ id: 'new', pane } as any); const gone=new Set(nodesToEvict(frame.nodes as any)); for(let i=frame.nodes.length-1;i>=0;i--) if(gone.has(frame.nodes[i].id))frame.nodes.splice(i,1) } }
   let afterValidation = () => {}
   const invoke = runInNewContext(code, { useStore: { getState: () => state }, resolveFrame: () => valid ? { frameId: frame.id, projectPath: '/project' } : null,
     contentStat, window: { api: { fs: { validateRasterImage: async () => { afterValidation(); return { path: '/project/ok.png' } } } } } })
@@ -24,11 +24,15 @@ test('real renderer branch appends to owned Frame without removing existing cont
   assert.equal(result.frameId, 'owned-frame'); assert.equal(result.nodeId, 'new')
   assert.deepEqual(f.nodes.slice(0, 4).map(n => n.id), before)
 })
-test('capacity is rechecked after async validation; full Frame rejects instead of eviction', async () => {
-  const f = setup(4)
-  f.after(() => f.nodes.push({ id: 'concurrent', pane: { kind: 'image', filePath: '/project/other.png' } }))
-  await assert.rejects(f.invoke(), /名额已满/)
-  assert.deepEqual(f.nodes.map(n => n.id), ['existing-0', 'existing-1', 'existing-2', 'existing-3', 'concurrent'])
+test('capacity after async validation evicts oldest content and reports it', async () => {
+  const f=setup(4);f.after(()=>f.nodes.push({id:'concurrent',pane:{kind:'image',filePath:'/project/other.png'}}))
+  const r=await f.invoke()
+  assert.deepEqual(f.nodes.map(n=>n.id),['existing-1','existing-2','existing-3','concurrent','new'])
+  assert.equal(r.content_slots,'5/5');assert.deepEqual(Array.from(r.evicted_node_ids),['existing-0'])
+})
+test('pinned content and live nodes are never evicted',async()=>{
+ const f=setup(6);Object.assign(f.nodes[0],{pinned:true});f.nodes.unshift({id:'live',leafId:'leaf',pane:{kind:'agent'}} as any)
+ const r=await f.invoke();assert.ok(f.nodes.some(n=>n.id==='existing-0'));assert.ok(f.nodes.some(n=>n.id==='live'));assert.deepEqual(Array.from(r.evicted_node_ids),['existing-1'])
 })
 test('Frame identity is rechecked after async validation', async () => {
   const f = setup(0); f.after(f.revoke)

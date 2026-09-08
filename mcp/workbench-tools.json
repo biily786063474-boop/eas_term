@@ -191,7 +191,7 @@
   },
   {
     "name": "canvas_open_image",
-    "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 内容名额满时明确拒绝，绝不关闭已有模块。展示图片优先使用此工具；它会新增画布节点，不是只读操作。",
+    "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 名额满时自动关闭最早的未固定内容预览；不关闭终端、AI 对话、固定模块或其他 Frame，不删除源文件。展示图片优先使用此工具；它会新增画布节点，不是只读操作。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -206,7 +206,7 @@
     },
     "annotations": {
       "readOnlyHint": false,
-      "destructiveHint": false,
+      "destructiveHint": true,
       "openWorldHint": false
     }
   },

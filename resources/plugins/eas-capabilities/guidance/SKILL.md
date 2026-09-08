@@ -48,7 +48,7 @@ description: >
 | 你正要说 | 改成这样做 |
 |---|---|
 | 「已生成 report.html，你可以打开看」 | `canvas_open_html` 开出来，然后再说一句「已经开在画板上了」 |
-| 「截图/示意图保存在 xxx.png」 | `canvas_open_image`（满额拒绝，不驱逐已有内容） |
+| 「截图/示意图保存在 xxx.png」 | `canvas_open_image`（满额自动关闭最早的未固定内容预览） |
 | 「你可以去 xxx 网址看文档」 | `canvas_open_url` |
 | 「部署好了，地址是 http://localhost:3000」 | `canvas_open_url` 直接开 |
 | 「跑完了」（用户可能已经切走了） | `notify` 点亮铃铛 |

@@ -1491,21 +1491,22 @@ const SHELL_TRAP =
     if (typeof args.path !== 'string') throw new Error('缺少图片路径')
     const roots = [...new Set([ctx.project, loc.projectPath].filter((root): root is string => !!root))]
     const image = await window.api.fs.validateRasterImage(args.path, roots)
-    // Validation awaits IO. Re-resolve identity and capacity afterwards; no await
-    // may separate this check from the synchronous insertion (no eviction race).
+    // Re-resolve ownership after IO. Insertion and existing FIFO cap run synchronously.
     const currentLoc = resolveFrame(ctx)
     if (!currentLoc || currentLoc.frameId !== loc.frameId) throw new Error('图片验证期间会话 Frame 已变化')
     const current = useStore.getState()
     const frame = current.canvas.frames.find(f => f.id === currentLoc.frameId)
     if (!frame) throw new Error('目标 Frame 已关闭')
-    const stat = contentStat(frame.nodes)
-    if (stat.used >= stat.cap) throw new Error('Frame 内容名额已满；请用户先整理，不会自动关闭已有模块')
     const before = new Set(frame.nodes.map(node => node.id))
     if (current.viewMode !== 'canvas') current.setViewMode('canvas')
     current.addFileNode(frame.id, { kind: 'image', filePath: image.path }, 0, 0)
     const after = useStore.getState().canvas.frames.find(f => f.id === frame.id)
     const node = after?.nodes.find(candidate => !before.has(candidate.id))
-    return { opened: image.path, as: 'image', frameId: frame.id, nodeId: node?.id, content_slots: `${stat.used + 1}/${stat.cap}` }
+    if (!node || !after) throw new Error('图片未能添加到目标 Frame')
+    const stat = contentStat(after.nodes)
+    const remaining = new Set(after.nodes.map(n => n.id))
+    const evicted = [...before].filter(id => !remaining.has(id))
+    return { opened: image.path, as: 'image', frameId: frame.id, nodeId: node.id, content_slots: `${stat.used}/${stat.cap}`, evicted_node_ids: evicted }
   }
 
   if (tool === 'canvas_open_url') {

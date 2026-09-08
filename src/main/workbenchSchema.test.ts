@@ -28,9 +28,10 @@ test('catalog annotations distinguish read-only inspection, additive local actio
   for (const name of ['canvas_get_state', 'canvas_list_frames', 'todo_list', 'secret_check', 'wiki_query', 'team_status']) {
     assert.deepEqual(byName.get(name), { readOnlyHint: true, destructiveHint: false, openWorldHint: false }, name)
   }
-  for (const name of ['canvas_open_image', 'canvas_focus_node', 'canvas_maximize_node', 'canvas_add_note', 'notify', 'wiki_log']) {
+  for (const name of ['canvas_focus_node', 'canvas_maximize_node', 'canvas_add_note', 'notify', 'wiki_log']) {
     assert.deepEqual(byName.get(name), { readOnlyHint: false, destructiveHint: false, openWorldHint: false }, name)
   }
+  assert.deepEqual(byName.get('canvas_open_image'), { readOnlyHint: false, destructiveHint: true, openWorldHint: false })
   // File previews also accept executable HTML and may evict old content nodes.
   for (const name of ['canvas_open_file', 'canvas_open_html', 'canvas_open_url', 'team_spawn', 'team_send', 'canvas_new_terminal']) {
     assert.deepEqual(byName.get(name), { readOnlyHint: false, destructiveHint: true, openWorldHint: true }, name)

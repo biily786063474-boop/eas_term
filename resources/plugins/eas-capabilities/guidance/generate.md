@@ -314,7 +314,7 @@ get_node(nodeId)  →  mediaFsPath      ← 磁盘上的真实文件
 
 拿到真实路径之后，**把结果摆到用户眼前**，别只回一句「生成好了」——
 用户在 Eas-Term 里，不一定看着画板。用 `canvas.md` 里的那些工具
-（本地光栅图片优先 `canvas_open_image`，其他媒体仍用 `canvas_open_file`）把产出开成预览节点。图片名额满时请用户先整理，不用会驱逐已有内容的工具绕过错误。
+（本地光栅图片优先 `canvas_open_image`，其他媒体仍用 `canvas_open_file`）把产出开成预览节点。图片名额满时自动关闭当前 Frame 最早的未固定内容预览，不删除源文件。
 
 ### 分寸
 

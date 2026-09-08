@@ -49,7 +49,7 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 → `canvas_open_url` 把页面开出来，用户能立刻看到效果，不用自己切浏览器。
 
 **生成了图片 / 图表 / 视频**
-→ 本地 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF 优先用 `canvas_open_image`，添加到当前会话所属 Frame；名额满时拒绝，不会关闭已有模块。SVG、视频等仍用 `canvas_open_file`，后者可能需要审批。
+→ 本地 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF 优先用 `canvas_open_image`，添加到当前会话所属 Frame；名额满时自动关闭最早的未固定内容预览，不删除源文件。SVG、视频等仍用 `canvas_open_file`，后者可能需要审批。
 
 **长任务跑完（构建、测试、批处理）**
 → `notify`。用户很可能已经切到别的项目去了，铃铛能把他叫回来。
@@ -71,7 +71,7 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 | 工具 | 参数 | 干什么 |
 |---|---|---|
 | `canvas_open_html` | `path` | 本地 HTML → 浏览器节点 |
-| `canvas_open_image` | `path` | 本地光栅图片 → 当前会话 Frame；名额满拒绝、不驱逐旧模块；不接受 SVG/HTML/视频/网址 |
+| `canvas_open_image` | `path` | 本地光栅图片 → 当前会话 Frame；名额满自动关闭最早的未固定内容预览；不接受 SVG/HTML/视频/网址 |
 | `canvas_open_file` | `path` | 文件预览（代码/Markdown 走代码视图，图片视频走媒体视图） |
 | `canvas_open_url` | `url` | 开网址 |
 | `notify` | `message` | 点亮标题栏铃铛 + 项目徽标 |
@@ -101,4 +101,4 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 那是正常的，这些工具只在 Eas-Term 自己的终端里生效。
 用户如果坚持要用，让他在 Eas-Term 里重开一个终端。
 
-`canvas_open_image` 同样占一个内容名额，但与旧通用预览不同：满额直接报错，请用户先整理，不自动关闭或替换旧模块。不要为了绕过满额错误换用会驱逐内容的工具。
+`canvas_open_image` 与其他预览统一：先校验图片，新增时同步关闭最早的未固定内容预览。固定内容不占名额；终端、AI 对话、组件和其他 Frame 不参与清理。不删除源文件，返回 evicted_node_ids 供核对。
