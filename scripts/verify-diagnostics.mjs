@@ -104,12 +104,19 @@ async function nativePtyPhase() {
 }
 async function stop(abnormal = false) {
   const p = proc
-  const exited = new Promise(r => p.once('exit', r))
+  const exited = new Promise(r => p.once('exit', (code, signal) => r({ code, signal })))
   if (abnormal) p.kill('SIGKILL')
-  else void main.ev('__electron.app.quit()').catch(() => {})
+  else {
+    // Acknowledge the inspector command before disconnecting. Do not tear down
+    // its socket while Electron is executing quit inside Runtime.evaluate.
+    assert.equal(await main.ev("setTimeout(() => __electron.app.quit(), 100); true"), true)
+  }
   renderer.ws.close(); main?.ws.close()
   let timeout
-  await Promise.race([exited, new Promise((_, reject) => { timeout = setTimeout(() => { p.kill(); reject(new Error('exit timeout')) }, 10000) })]).finally(() => clearTimeout(timeout))
+  const result = await Promise.race([exited, new Promise((_, reject) => { timeout = setTimeout(() => { p.kill(); reject(new Error('exit timeout')) }, 10000) })]).finally(() => clearTimeout(timeout))
+  evidence.exits ??= []
+  evidence.exits.push({ abnormal, ...result })
+  if (!abnormal) assert.equal(result.code, 0, 'normal exit must not be an OS crash or forced termination')
   await sleep(400)
 }
 try {
