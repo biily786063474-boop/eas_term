@@ -1,0 +1,194 @@
+{
+  "createdAt": "2026-09-08T14:19:46.627Z",
+  "sourceCommit": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "sourceBuild": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "version": "0.4.85",
+  "published": false,
+  "apps": [
+    {
+      "arch": "arm64",
+      "app": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app",
+      "asarSha256": "e74f36a35762efd2b7ba70f83a093c9f26fa747ba42abec28faaf6d0ccd39373",
+      "checks": {
+        "codesign": {
+          "command": "codesign",
+          "args": [
+            "--verify",
+            "--deep",
+            "--strict",
+            "--verbose=2",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "",
+          "stderr": "--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.\n/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app: valid on disk\n/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app: satisfies its Designated Requirement"
+        },
+        "spctl": {
+          "command": "spctl",
+          "args": [
+            "--assess",
+            "--type",
+            "execute",
+            "--verbose=4",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "",
+          "stderr": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app: accepted\nsource=Notarized Developer ID"
+        },
+        "stapler": {
+          "command": "xcrun",
+          "args": [
+            "stapler",
+            "validate",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "Processing: /Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app\nThe validate action worked!",
+          "stderr": ""
+        }
+      },
+      "passed": true
+    },
+    {
+      "arch": "x64",
+      "app": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app",
+      "asarSha256": "e74f36a35762efd2b7ba70f83a093c9f26fa747ba42abec28faaf6d0ccd39373",
+      "checks": {
+        "codesign": {
+          "command": "codesign",
+          "args": [
+            "--verify",
+            "--deep",
+            "--strict",
+            "--verbose=2",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "",
+          "stderr": "--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Plugin).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper.app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Squirrel.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (Renderer).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Eas-Term Helper (GPU).app\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Mantle.framework/Versions/Current/.\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/ReactiveObjC.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.\n--prepared:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/Helpers/chrome_crashpad_handler\n--validated:/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Frameworks/Electron Framework.framework/Versions/Current/.\n/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app: valid on disk\n/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app: satisfies its Designated Requirement"
+        },
+        "spctl": {
+          "command": "spctl",
+          "args": [
+            "--assess",
+            "--type",
+            "execute",
+            "--verbose=4",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "",
+          "stderr": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app: accepted\nsource=Notarized Developer ID"
+        },
+        "stapler": {
+          "command": "xcrun",
+          "args": [
+            "stapler",
+            "validate",
+            "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app"
+          ],
+          "passed": true,
+          "exitCode": 0,
+          "signal": null,
+          "stdout": "Processing: /Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app\nThe validate action worked!",
+          "stderr": ""
+        }
+      },
+      "passed": true
+    }
+  ],
+  "artifacts": [
+    {
+      "arch": "arm64",
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.dmg",
+      "name": "Eas-Term-0.4.85-arm64.dmg",
+      "bytes": 204465706,
+      "sha256": "0b4f27e042189b48677e313cdf5e59e52b85882e4fbc9bf02a338edf815901c1",
+      "check": {
+        "command": "hdiutil",
+        "args": [
+          "verify",
+          "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.dmg"
+        ],
+        "passed": true,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "正在检查“Protective Master Boot Record（MBR：0）”的校验和…\nProtective Master Boot Record（MBR：0）：已验证CRC32 $0C3388C7\n正在检查“GPT Header（Primary GPT Header：1）”的校验和…\n    GPT Header（Primary GPT Header：1）：已验证CRC32 $2D638CD3\n正在检查“GPT Partition Data（Primary GPT Table：2）”的校验和…\nGPT Partition Data（Primary GPT Table：已验证CRC32 $B01EB1B7\n正在检查“（Apple_Free：3）”的校验和…\n                      （Apple_Free：3）：已验证CRC32 $00000000\n正在检查“disk image（Apple_HFS：4）”的校验和…\n             disk image（Apple_HFS：4）：已验证CRC32 $7DA32A22\n正在检查“（Apple_Free：5）”的校验和…\n                      （Apple_Free：5）：已验证CRC32 $00000000\n正在检查“GPT Partition Data（Backup GPT Table：6）”的校验和…\nGPT Partition Data（Backup GPT Table：：已验证CRC32 $B01EB1B7\n正在检查“GPT Header（Backup GPT Header：7）”的校验和…\n     GPT Header（Backup GPT Header：7）：已验证CRC32 $0FFCE3B6\n已验证CRC32 $E41FA3C3",
+        "stderr": "hdiutil: verify: checksum of \"/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.dmg\" is VALID"
+      },
+      "passed": true
+    },
+    {
+      "arch": "arm64",
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.zip",
+      "name": "Eas-Term-0.4.85-arm64.zip",
+      "bytes": 202613921,
+      "sha256": "dd21e90dae9afa4944b71aea925d7476e64adb351f1f76f347ff369911351357",
+      "check": {
+        "command": "unzip",
+        "args": [
+          "-tq",
+          "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.zip"
+        ],
+        "passed": true,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "No errors detected in compressed data of /Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.zip.",
+        "stderr": ""
+      },
+      "passed": true
+    },
+    {
+      "arch": "x64",
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.dmg",
+      "name": "Eas-Term-0.4.85-x64.dmg",
+      "bytes": 216488460,
+      "sha256": "b1eed590b3ec12b13a67382109135152a8de96994c8fa3ab624c648615b6a3a8",
+      "check": {
+        "command": "hdiutil",
+        "args": [
+          "verify",
+          "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.dmg"
+        ],
+        "passed": true,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "正在检查“Protective Master Boot Record（MBR：0）”的校验和…\nProtective Master Boot Record（MBR：0）：已验证CRC32 $07E6D1C9\n正在检查“GPT Header（Primary GPT Header：1）”的校验和…\n    GPT Header（Primary GPT Header：1）：已验证CRC32 $C4253E19\n正在检查“GPT Partition Data（Primary GPT Table：2）”的校验和…\nGPT Partition Data（Primary GPT Table：已验证CRC32 $90742CA8\n正在检查“（Apple_Free：3）”的校验和…\n                      （Apple_Free：3）：已验证CRC32 $00000000\n正在检查“disk image（Apple_HFS：4）”的校验和…\n             disk image（Apple_HFS：4）：已验证CRC32 $2A7EA647\n正在检查“（Apple_Free：5）”的校验和…\n                      （Apple_Free：5）：已验证CRC32 $00000000\n正在检查“GPT Partition Data（Backup GPT Table：6）”的校验和…\nGPT Partition Data（Backup GPT Table：：已验证CRC32 $90742CA8\n正在检查“GPT Header（Backup GPT Header：7）”的校验和…\n     GPT Header（Backup GPT Header：7）：已验证CRC32 $2CE53379\n已验证CRC32 $06764771",
+        "stderr": "hdiutil: verify: checksum of \"/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.dmg\" is VALID"
+      },
+      "passed": true
+    },
+    {
+      "arch": "x64",
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.zip",
+      "name": "Eas-Term-0.4.85-x64.zip",
+      "bytes": 214723919,
+      "sha256": "6d3d9721449a5d7a899212d3812f317717250683ed4a470ca3446ec1b62fc6b8",
+      "check": {
+        "command": "unzip",
+        "args": [
+          "-tq",
+          "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.zip"
+        ],
+        "passed": true,
+        "exitCode": 0,
+        "signal": null,
+        "stdout": "No errors detected in compressed data of /Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.zip.",
+        "stderr": ""
+      },
+      "passed": true
+    }
+  ],
+  "passed": true
+}

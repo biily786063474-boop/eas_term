@@ -1,0 +1,231 @@
+{
+  "cli": "claude",
+  "requestedTool": "canvas_open_image",
+  "globalWriteProtectionEnforced": true,
+  "globalWriteProtectionProbe": [
+    {
+      "file": "/Users/biily/.codex/config.toml",
+      "denied": true,
+      "code": "EPERM"
+    },
+    {
+      "file": "/Users/biily/.codex/AGENTS.md",
+      "denied": true,
+      "code": "EPERM"
+    },
+    {
+      "file": "/Users/biily/.claude.json",
+      "denied": true,
+      "code": "EPERM"
+    },
+    {
+      "file": "/Users/biily/.claude/settings.json",
+      "denied": true,
+      "code": "EPERM"
+    },
+    {
+      "file": "/Users/biily/.claude/CLAUDE.md",
+      "denied": true,
+      "code": "EPERM"
+    }
+  ],
+  "executable": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term",
+  "executableSha256": "012f3487f2fe38d19a9da39ca6867f6867dc0c0382c0c40ade2f76f832de9bbc",
+  "appAsarSha256": "e74f36a35762efd2b7ba70f83a093c9f26fa747ba42abec28faaf6d0ccd39373",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O",
+  "project": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces",
+  "realModelCalls": true,
+  "transport": "native PTY shell PATH launcher",
+  "simulatedTransport": false,
+  "phases": [
+    {
+      "name": "new",
+      "file": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-new-1788876116204.png",
+      "ptyId": "1",
+      "requestedResumeId": null,
+      "exitCode": 0,
+      "launcherPath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/capability-pty-bin/d889219d17f0282c189fbe2e/claude",
+      "resumeId": "4d434fe7-061a-4716-844d-fe582ff30458",
+      "receipts": [
+        {
+          "id": "toolu_011y7bLqkDZWo5tKZNFgkxsj",
+          "tool": "mcp__eas-term__canvas_open_image",
+          "path": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-new-1788876116204.png",
+          "result": {
+            "opened": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-new-1788876116204.png",
+            "frameId": "target-frame",
+            "as": "image",
+            "nodeId": "cnode-1-63ops"
+          }
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-1-63ops",
+              "filePath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-new-1788876116204.png"
+            }
+          ]
+        }
+      ],
+      "imageDecoded": {
+        "naturalWidth": 1,
+        "naturalHeight": 1
+      },
+      "passed": true
+    },
+    {
+      "name": "resume",
+      "file": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-resume-1788876116205.png",
+      "ptyId": "2",
+      "requestedResumeId": "4d434fe7-061a-4716-844d-fe582ff30458",
+      "exitCode": 0,
+      "launcherPath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/capability-pty-bin/d889219d17f0282c189fbe2e/claude",
+      "resumeId": "4d434fe7-061a-4716-844d-fe582ff30458",
+      "receipts": [
+        {
+          "id": "toolu_01MgHZDgQAVLf5KgddXmBMNk",
+          "tool": "mcp__eas-term__canvas_open_image",
+          "path": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-resume-1788876116205.png",
+          "result": {
+            "opened": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-resume-1788876116205.png",
+            "frameId": "target-frame",
+            "as": "image",
+            "nodeId": "cnode-2-aos5v"
+          }
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-2-aos5v",
+              "filePath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-resume-1788876116205.png"
+            }
+          ]
+        }
+      ],
+      "imageDecoded": {
+        "naturalWidth": 1,
+        "naturalHeight": 1
+      },
+      "passed": true
+    },
+    {
+      "name": "app-restart-resume",
+      "file": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-restart-1788876116205.png",
+      "ptyId": "2",
+      "requestedResumeId": "4d434fe7-061a-4716-844d-fe582ff30458",
+      "exitCode": 0,
+      "launcherPath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/capability-pty-bin/d889219d17f0282c189fbe2e/claude",
+      "resumeId": "4d434fe7-061a-4716-844d-fe582ff30458",
+      "receipts": [
+        {
+          "id": "toolu_01N5wMrhR6TQFz8KC4Znjuvr",
+          "tool": "mcp__eas-term__canvas_open_image",
+          "path": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-restart-1788876116205.png",
+          "result": {
+            "opened": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-restart-1788876116205.png",
+            "frameId": "target-frame",
+            "as": "image",
+            "nodeId": "cnode-3-tgil8"
+          }
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-3-tgil8",
+              "filePath": "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-pty-package-GEKK4O/测试项目 with spaces/claude-restart-1788876116205.png"
+            }
+          ]
+        }
+      ],
+      "imageDecoded": {
+        "naturalWidth": 1,
+        "naturalHeight": 1
+      },
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "bundle": {
+    "id": "eas-capabilities",
+    "version": "1.0.0",
+    "displayName": "Eas-Term 扩展能力",
+    "modules": {
+      "workbench": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "bizone": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "guidance": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      }
+    }
+  },
+  "globalRuleFileHashes": [
+    {
+      "file": "/Users/biily/.codex/config.toml",
+      "before": "df90eeb923b1854649cd80c74ad3aed2a97e3a64c680a7489f206573d31f9a5c",
+      "after": "df90eeb923b1854649cd80c74ad3aed2a97e3a64c680a7489f206573d31f9a5c"
+    },
+    {
+      "file": "/Users/biily/.codex/AGENTS.md",
+      "before": "d42ee3b7d4c9c856ca50dfeb374ee0cae319c9ec4ba37103c506d19ebc829da9",
+      "after": "d42ee3b7d4c9c856ca50dfeb374ee0cae319c9ec4ba37103c506d19ebc829da9"
+    },
+    {
+      "file": "/Users/biily/.claude.json",
+      "before": "fed8ec7a813fae43590244566c05d1906a60e567d7669c886c28fa3375ce3967",
+      "after": "3e21821d83c395f820eb2dcba60f14be8769a9af89940087499b7622693193af"
+    },
+    {
+      "file": "/Users/biily/.claude/settings.json",
+      "before": "5b7f7a5de2b57119aae1fae7975c67c1f47ce0f0174bcb5f2aa06b01a43f6ff9",
+      "after": "5b7f7a5de2b57119aae1fae7975c67c1f47ce0f0174bcb5f2aa06b01a43f6ff9"
+    },
+    {
+      "file": "/Users/biily/.claude/CLAUDE.md",
+      "before": "10099ffd22c94629da3b5db7bebebf7956de01938df2f1b44da7d05489049dad",
+      "after": "10099ffd22c94629da3b5db7bebebf7956de01938df2f1b44da7d05489049dad"
+    },
+    {
+      "file": "/Users/biily/.eas/agent",
+      "before": "directory",
+      "after": "directory"
+    },
+    {
+      "file": "/Users/biily/.dsh",
+      "before": "directory",
+      "after": "directory"
+    }
+  ],
+  "globalRuleFilesUnchanged": false,
+  "globalConcurrencyDetected": true,
+  "globalRuleObservation": "Protected global file hashes changed during the run. The same OS sandbox denied write-open for this process tree; writer attribution is unknown. Do not claim these global files were unchanged."
+}

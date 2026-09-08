@@ -1,0 +1,203 @@
+{
+  "repository": "biily786063474-boop/eas_term",
+  "runId": 34235219068,
+  "runUrl": "https://github.com/biily786063474-boop/eas_term/actions/runs/34235219068",
+  "headSha": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "branch": "feat/builtin-capabilities",
+  "jobId": 102091069545,
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 102091069545,
+      "name": "build-win",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 34235219068,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Build & package",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Smoke test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Builtin capability Windows contracts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Windows CLI resolver and real fixture processes",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Packaged builtin capability settings",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Upload builtin capability evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Upload smoke result",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12
+        },
+        {
+          "name": "Upload artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Publish to Release",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 29
+        }
+      ]
+    }
+  ],
+  "testSuites": [
+    {
+      "tests": [
+        "registered native handler supports portable Chinese paths and spaces without parsing a command",
+        "rejects command strings, quotes, traversal, relative and network executables",
+        "unregistered protocol, unrelated package and incomplete installation remain missing",
+        "基础能力与单个业务插件组合，禁用不回装",
+        "冲突必须显式失败，不能覆盖第三方同名配置",
+        "会话快照不共享可变参数或环境，保留中文空格路径",
+        "文档存在不能当成工具就绪，禁用优先于历史连接状态"
+      ],
+      "count": 7,
+      "pass": 7,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    {
+      "tests": [
+        "claude official JS bin preserves argv through real child (Windows resolution)",
+        "native Claude npm placeholder must fail before a model can launch",
+        "identity, bin traversal/type and symlink escapes fail closed",
+        "first unsupported PATH wrapper never falls through to a second version",
+        "owned JS process remains cancellable without a shell process",
+        "native package entries keep native execution and never acquire interpreter environment",
+        "Codex selects only matching declared official platform alias and rejects incomplete installs",
+        "Windows actual PATH case, native-only and mixed ordering follow first entry",
+        "canonical probe PATH wins over an inherited Windows Path",
+        "legacy Codex JS dispatcher cannot launch without a contained native vendor executable",
+        "npm native environment replaces stale root and mutually exclusive package-manager markers",
+        "legacy vendor path helper directory is validated and prepended before inherited Windows PATH",
+        "owned launcher receives soft and hard controls without an outer process kill",
+        "unowned Claude/POSIX/OMP process retains direct signal semantics",
+        "failed owned IPC write disconnects channel, never force kills outer process",
+        "production app shutdown and window cleanup route both soft/hard passes through owned control",
+        "Windows Codex owned launcher uses npm entry for both config reads and final exact argv",
+        "Windows Claude PTY resolves npm before lease, preserves argv and closes lease",
+        "Windows cancellation aborts the owned npm config child before model invocation",
+        "Windows outer launcher cancel during config removes its owned native child",
+        "Windows outer launcher disconnect during config removes its owned native child",
+        "Windows outer launcher cancel during exec removes its owned native child",
+        "Windows outer launcher disconnect during exec removes its owned native child",
+        "Windows parent disconnect before launcher preflight cannot invoke a model",
+        "Windows owned IPC launcher exits on invalid installation without starting native"
+      ],
+      "count": 25,
+      "pass": 25,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    }
+  ],
+  "packagedNodeRunner": "release/win-unpacked/Eas-Term.exe (Electron Node mode)",
+  "smokeChecks": [
+    "✓ app 启动  页面: file:///D:/a/eas_term/eas_term/release/win-unpacked/resource",
+    "✓ 界面渲染  正文 375 字",
+    "✓ preload 桥  48 个命名空间",
+    "✓ node-pty 开终端 + 回显  收到 476 字节",
+    "✓ IPC 往返  probe-ok",
+    "✓ 代码图谱懒加载 + 实际依赖分析  index.js → value.js",
+    "✓ 无 JS 报错",
+    "✓ 随包 omp  omp/18.1.2",
+    "✓ 冒烟测试全部通过"
+  ],
+  "packagedSettingsChecks": 6,
+  "realNativeFixtures": true,
+  "realLoggedInCliModelAcceptance": false,
+  "paidModelCalls": false,
+  "publishToRelease": "skipped",
+  "limitations": [
+    "Windows CLI process tests use representative official npm-layout fixtures and a compiled native PE protocol fixture; these are not real Codex/Claude model acceptance.",
+    "The Windows runner has no installed/logged-in Codex or Claude; settings logs report both missing. Bundled OMP 18.1.2 --version passed, without model authentication.",
+    "Artifact ZIP SHA-256 matching establishes downloaded artifact integrity and run provenance, not Windows Authenticode trust or interactive installer execution."
+  ]
+}

@@ -1,0 +1,61 @@
+[
+  {
+    "name": "eas-term-win",
+    "artifactId": 10059830221,
+    "source": "https://api.github.com/repos/biily786063474-boop/eas_term/actions/artifacts/10059830221",
+    "headSha": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+    "zipBytes": 190040299,
+    "zipSha256": "87790106ec8c359f4d710438296d2ec6610421d2fa4e1b35d0952b7a077f7004",
+    "githubDigest": "sha256:87790106ec8c359f4d710438296d2ec6610421d2fa4e1b35d0952b7a077f7004",
+    "githubDigestMatched": true,
+    "safeExtractionVerified": true,
+    "files": [
+      {
+        "path": "eas-term-win/Eas-Term-0.4.85-x64-setup.exe",
+        "bytes": 190055572,
+        "sha256": "eac9790f4491cee13d581bdf73ed559c91b52680420bb86fa80e2cd822706870"
+      }
+    ]
+  },
+  {
+    "name": "smoke-win",
+    "artifactId": 10059825123,
+    "source": "https://api.github.com/repos/biily786063474-boop/eas_term/actions/artifacts/10059825123",
+    "headSha": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+    "zipBytes": 67079,
+    "zipSha256": "4e89f4c79e0e76ccf39f27700f5f9340f0654dbf37dc2c5bc1cc7fd709de221a",
+    "githubDigest": "sha256:4e89f4c79e0e76ccf39f27700f5f9340f0654dbf37dc2c5bc1cc7fd709de221a",
+    "githubDigestMatched": true,
+    "safeExtractionVerified": true,
+    "files": [
+      {
+        "path": "smoke-win/screen.png",
+        "bytes": 67563,
+        "sha256": "1aeb7c99cee9aef787b698594e9c999b9da4ca1ddf6886deed1562aa3737bdfd"
+      }
+    ]
+  },
+  {
+    "name": "builtin-capabilities-win",
+    "artifactId": 10059824511,
+    "source": "https://api.github.com/repos/biily786063474-boop/eas_term/actions/artifacts/10059824511",
+    "headSha": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+    "zipBytes": 92832,
+    "zipSha256": "93674d53c04d897a433c222a7b2c26f3fdc7093554c3cef66e8fa734e3b63060",
+    "githubDigest": "sha256:93674d53c04d897a433c222a7b2c26f3fdc7093554c3cef66e8fa734e3b63060",
+    "githubDigestMatched": true,
+    "safeExtractionVerified": true,
+    "files": [
+      {
+        "path": "builtin-capabilities-win/settings-ui.png",
+        "bytes": 93152,
+        "sha256": "ffcfc1c2c841928df27774378ea071a4218c2bb0b6f9e2487e0e76102e7865aa"
+      },
+      {
+        "path": "builtin-capabilities-win/settings-ui.json",
+        "bytes": 429,
+        "sha256": "a4930a1261c947d18543566a3a9428642d7ff8ac236a263b26171ba7d134f5f8"
+      }
+    ]
+  }
+]

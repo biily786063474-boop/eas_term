@@ -35,3 +35,21 @@
 - Windows run 34216597763 构建、实际启动及内置设置六项检查通过，安装 artifact 摘要核对一致；没有真实登录模型调用。
 - 独立审查确认 Windows npm-only CLI 被 .cmd 启动拒绝，且检测显示已安装；默认关闭的自动更新不能补救。该问题阻断 Eas-Term 发布，补充计划 2026-09-08-windows-cli-launch.md 正在执行。修复后必须重新冻结包。
 - Eas-Term 线上仍未切换；笔纵发布完成不受此 Windows Eas-Term 启动器问题影响。
+
+## Windows 启动补丁及取消复核
+
+- b6f71a6 共享 Windows CLI 解析器：官方 npm 元数据与 native/JS 入口校验，AI/PTY/探测同源；a49643a 提交候选包实际证据和迁移验证器。Windows run 34221294425（a49643a）构建、正式包冒烟、Windows resolver 实际 fixture 子进程、设置检查全部成功，未执行 Publish to Release。
+- 独立评审发现 Codex dispatcher 进程树取消与包来源环境问题；ace9020 修正 native 选择、来源根与互斥标记，本机2733通过/4Windows跳过/0失败。该提交首推发生 GitHub TLS 连接失败，后续须重推核实。
+- 复核继续发现 Eas-Term 自有外层 launcher 在 Windows 取消时的 native 清理缺口，以及旧 vendor helper PATH 丢失；正在补明确所属的控制通道及旧布局资源路径，不采用全局杀服务。尚未满足发布门禁。
+- b6f71a6 的另一次 arm64 包公证遇到 Apple HTTPClientError.connectTimeout，保留诊断；它本来也不是经过最终审查的包，不作发布产物。
+
+## 9510ff2 独立复核与正式包重验
+
+- ace9020 与 9510ff2 已成功推送；Windows Codex 直连原生入口、包来源与旧 vendor PATH、所属 launcher IPC 取消/断连清理经过两轮独立复核，无剩余重要审查项。
+- 本机完整套件总计 2752：2742 通过、10 个 Windows 专用项跳过、0 失败；build/typecheck/renderer entry/computer helper/omp bundle 均通过，验证器另 6/6。
+- 最新 Windows run 34235219068（9510ff2）成功；Mac arm64/x64 均完成 Developer ID 签名、公证及 staple。产物完整性及三个 Windows artifact ZIP 摘要均独立核对通过，安装 EXE 已安全提取并另算 SHA256。
+- Claude 与 omp 的 AI/PTY 各三阶段全部通过；Codex AI 三阶段及迁移、重启幂等、确认应用退出后的离线回退通过。Codex PTY 随后三阶段也通过，最终 AI + PTY 共 18/18 阶段。
+- Intel 包首次设置检查未取得调试端口，保留 /tmp/eas-reviewed-settings-x64.log；同包重新运行六项设置检查通过，并已人工查看截图。未修改产品或降低校验以得到通过。
+- Eas-Term 尚未发布；真实付费断线防重测试的 4 墨水报价批准，以及 Windows 已登录 CLI 实机条件仍待用户回复。
+
+- 9510ff2 完整证据已汇总至 reviewed-9510ff2-acceptance.md 与 releases/0.4.85.md；独立证据复核仅发现迁移文档旧待完成措辞，已改正。2026-09-08 再次只读核对线上：Bizone 1.21.31、Eas-Term 0.4.84。

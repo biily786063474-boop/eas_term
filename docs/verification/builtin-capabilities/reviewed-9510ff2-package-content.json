@@ -1,0 +1,2032 @@
+{
+  "createdAt": "2026-09-08T14:19:46.627Z",
+  "sourceCommit": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "sourceBuild": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "comparison": "Read-only per-file SHA-256 and complete file-list comparison against current source build out/, source mcp/, source resources/plugins/eas-capabilities/. No rebuild or package mutation performed. Source-only out/.DS_Store is retained in the full inventory as an explicitly verified default packaging exclusion; rawExactMatch remains false. All 139 distributed out files match exactly.",
+  "apps": [
+    {
+      "arch": "arm64",
+      "app": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app",
+      "asarSha256": "e74f36a35762efd2b7ba70f83a093c9f26fa747ba42abec28faaf6d0ccd39373",
+      "out": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/out",
+        "archive": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Resources/app.asar",
+        "sourceCount": 140,
+        "packageCount": 139,
+        "passed": true,
+        "files": [
+          {
+            "file": "out/.DS_Store",
+            "sourceHash": "ec5dbfd17d3587eea72c444d3c80d5f4ebccdf9b5ab9cb511f5e656962bf07de",
+            "packageHash": null,
+            "match": false,
+            "expectedExcluded": true
+          },
+          {
+            "file": "out/main/index.js",
+            "sourceHash": "747ab01e03985a98c16806250cbb7b70c84df2e2c610ce2ebd79523e7dfa9e31",
+            "packageHash": "747ab01e03985a98c16806250cbb7b70c84df2e2c610ce2ebd79523e7dfa9e31",
+            "match": true
+          },
+          {
+            "file": "out/main/lspProvider-fHf1xYeu.js",
+            "sourceHash": "ced05dd2c6cc0476a1ea117ea51b9335ac7ac98cc7b9fa422b0cb5853d9122d3",
+            "packageHash": "ced05dd2c6cc0476a1ea117ea51b9335ac7ac98cc7b9fa422b0cb5853d9122d3",
+            "match": true
+          },
+          {
+            "file": "out/main/symbolProvider-BiHNXmL9.js",
+            "sourceHash": "bd5e61e416d20e6bf73c5402fb34d688a8510de069609501f932f2e480d71910",
+            "packageHash": "bd5e61e416d20e6bf73c5402fb34d688a8510de069609501f932f2e480d71910",
+            "match": true
+          },
+          {
+            "file": "out/main/tsAst-CIp__rW4.js",
+            "sourceHash": "b224cf3b2b06a57b1b535f4e78cdb55b67894a6923b35072009c80b04ee786e2",
+            "packageHash": "b224cf3b2b06a57b1b535f4e78cdb55b67894a6923b35072009c80b04ee786e2",
+            "match": true
+          },
+          {
+            "file": "out/main/tsProvider-Dy3mgxD0.js",
+            "sourceHash": "d9038eb94dfac14f36a8ee9e887210295137ebea4ead96dfca0abe7904ddcef1",
+            "packageHash": "d9038eb94dfac14f36a8ee9e887210295137ebea4ead96dfca0abe7904ddcef1",
+            "match": true
+          },
+          {
+            "file": "out/main/tsSymbols-DfoclHJx.js",
+            "sourceHash": "5c0e29f19c9a7bd62e64003692851a7c406ece8962cb809e85bd07fc897c40ac",
+            "packageHash": "5c0e29f19c9a7bd62e64003692851a7c406ece8962cb809e85bd07fc897c40ac",
+            "match": true
+          },
+          {
+            "file": "out/preload/index.js",
+            "sourceHash": "d0c4cb7211c0828c20903a03f4d628b3aac07c77a4ef3a0aee66a74d81129d34",
+            "packageHash": "d0c4cb7211c0828c20903a03f4d628b3aac07c77a4ef3a0aee66a74d81129d34",
+            "match": true
+          },
+          {
+            "file": "out/preload/island.js",
+            "sourceHash": "25b919f959b0530df3e536e4cc6fff03a52651b4ac5ebb0ec6ad47fe75964102",
+            "packageHash": "25b919f959b0530df3e536e4cc6fff03a52651b4ac5ebb0ec6ad47fe75964102",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/DictView-BdlUqcON.js",
+            "sourceHash": "65c7dfb61b1e638d09784930a6748e8182b1f1fe8fa6b3573b706d75662ea9e3",
+            "packageHash": "65c7dfb61b1e638d09784930a6748e8182b1f1fe8fa6b3573b706d75662ea9e3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/DictView-C-nlTaDN.css",
+            "sourceHash": "5d02c3c97bb6b97aed2b9266cbed88d6b3e2c6f2b6dd10a7025ed20c04ba5f68",
+            "packageHash": "5d02c3c97bb6b97aed2b9266cbed88d6b3e2c6f2b6dd10a7025ed20c04ba5f68",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/WikiView-BAksd7Ml.css",
+            "sourceHash": "c252b4de898c2a05d59139ee0986b4f427176ee304251203923cfe587944fad7",
+            "packageHash": "c252b4de898c2a05d59139ee0986b4f427176ee304251203923cfe587944fad7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/WikiView-CnFLRAx0.js",
+            "sourceHash": "3b4a04c79af02d59986251791e0df58dbb3654eeee964e8ba615d0dcec4919d6",
+            "packageHash": "3b4a04c79af02d59986251791e0df58dbb3654eeee964e8ba615d0dcec4919d6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/apl-fqmucPXA.js",
+            "sourceHash": "5be3458b72027a2151b231faa2e30eaf16e1e29067222e232694f25418c2a140",
+            "packageHash": "5be3458b72027a2151b231faa2e30eaf16e1e29067222e232694f25418c2a140",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asciiarmor-DucZyvP0.js",
+            "sourceHash": "01c94e79d596371ae8d7fb8f8e9d7f7c136b9c9cbd1f7f1124949ee0216d4816",
+            "packageHash": "01c94e79d596371ae8d7fb8f8e9d7f7c136b9c9cbd1f7f1124949ee0216d4816",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asn1-BnOEsgAm.js",
+            "sourceHash": "bb17319ceb5860451c6822bfadacfcedd6f972cfafbe016b36dfe6ac23f73551",
+            "packageHash": "bb17319ceb5860451c6822bfadacfcedd6f972cfafbe016b36dfe6ac23f73551",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asterisk-QAlztEwS.js",
+            "sourceHash": "6df194920c95ba624a8fda9ecc6fb9bb3e8c608635a2d0b0f4b2610cce4e6fc3",
+            "packageHash": "6df194920c95ba624a8fda9ecc6fb9bb3e8c608635a2d0b0f4b2610cce4e6fc3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/brainfuck-DZVCuF_t.js",
+            "sourceHash": "71ae5a627c032ec5f0333e28a4fc02da543a8faf15f2705c0e1f69f7df69c812",
+            "packageHash": "71ae5a627c032ec5f0333e28a4fc02da543a8faf15f2705c0e1f69f7df69c812",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/clike-xqXYL6ge.js",
+            "sourceHash": "1acda985c43e1ca1c234bc64cd7b495850069c0c10cd1a433d89c2005dcb503a",
+            "packageHash": "1acda985c43e1ca1c234bc64cd7b495850069c0c10cd1a433d89c2005dcb503a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/clojure-BhXMqnxz.js",
+            "sourceHash": "e6c5a1b8eead561531a1fe6afc42ebd3541913ac87645794bee5b2e42222ff2e",
+            "packageHash": "e6c5a1b8eead561531a1fe6afc42ebd3541913ac87645794bee5b2e42222ff2e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cmake-BGaNd9E7.js",
+            "sourceHash": "319d4983f4e2c2934fdbf67a567ad183211c15a618df3d9e7ad270a188f63c1a",
+            "packageHash": "319d4983f4e2c2934fdbf67a567ad183211c15a618df3d9e7ad270a188f63c1a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cobol-4yqQntpt.js",
+            "sourceHash": "f541e17f367fb16b84f1c4585dc6b96436fab9b9984351746b8d6b7e4be77533",
+            "packageHash": "f541e17f367fb16b84f1c4585dc6b96436fab9b9984351746b8d6b7e4be77533",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/coffeescript-D2dXvhEc.js",
+            "sourceHash": "fd8b8081e6c6d0b3a5a1d5159ea923fa92de6b16498672ac8ffb3a85d0f074ff",
+            "packageHash": "fd8b8081e6c6d0b3a5a1d5159ea923fa92de6b16498672ac8ffb3a85d0f074ff",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/commonlisp-CF_VNHQR.js",
+            "sourceHash": "f0e48e905937a107e453a06c0eb54a8f1e536fc0fc63c5b58b9551c8f7fe49cb",
+            "packageHash": "f0e48e905937a107e453a06c0eb54a8f1e536fc0fc63c5b58b9551c8f7fe49cb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/crystal-DyuLTqLs.js",
+            "sourceHash": "c1628558768374a78a1fa71c26feaf44bfc6c5161bf81d964490416d1af1f38f",
+            "packageHash": "c1628558768374a78a1fa71c26feaf44bfc6c5161bf81d964490416d1af1f38f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/css-c-jst79C.js",
+            "sourceHash": "41425a19b41f83ae573be2f495236cd1161392d1ef66eb2d23d2784510746818",
+            "packageHash": "41425a19b41f83ae573be2f495236cd1161392d1ef66eb2d23d2784510746818",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cypher-Dlu_3r4V.js",
+            "sourceHash": "80cff481ed4632ecfbe5952d4c60f15227c66f04dfea646c32852a2b090d19ca",
+            "packageHash": "80cff481ed4632ecfbe5952d4c60f15227c66f04dfea646c32852a2b090d19ca",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/d-UURgV0Ux.js",
+            "sourceHash": "df60654c2550e460276b5522896ee99ab6516252a0016a0fafa21875641b72b9",
+            "packageHash": "df60654c2550e460276b5522896ee99ab6516252a0016a0fafa21875641b72b9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dictionary-bundle-ZdkIBe8W.js",
+            "sourceHash": "9f27d1834f0d922e4c3840882c76d65cfff0b9d99acbc0f8d2ce32ef4ca3d0dd",
+            "packageHash": "9f27d1834f0d922e4c3840882c76d65cfff0b9d99acbc0f8d2ce32ef4ca3d0dd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/diff-B_Bi2Crb.js",
+            "sourceHash": "efa42a61215071dc4d677dab004a6f77c34b41825d87a7dc42303302c35b4b4a",
+            "packageHash": "efa42a61215071dc4d677dab004a6f77c34b41825d87a7dc42303302c35b4b4a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dockerfile-Bvk733Ga.js",
+            "sourceHash": "31f1f2e8d8f9f2eeeb29f6d4b56e4632654d2f2a5b352a4febc9bf2f1984d29c",
+            "packageHash": "31f1f2e8d8f9f2eeeb29f6d4b56e4632654d2f2a5b352a4febc9bf2f1984d29c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dtd-Dy74G54E.js",
+            "sourceHash": "cfaec369fbea7351fc6a8fb7c990f2fbc5a0d1730467e51935deb1965fccaa2a",
+            "packageHash": "cfaec369fbea7351fc6a8fb7c990f2fbc5a0d1730467e51935deb1965fccaa2a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dylan-TSb-Nfix.js",
+            "sourceHash": "b0c2026d9bb4917eccab491f63e56d95ceb4a8e01e42062a843c35ea29121607",
+            "packageHash": "b0c2026d9bb4917eccab491f63e56d95ceb4a8e01e42062a843c35ea29121607",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ebnf-4fKAGW3a.js",
+            "sourceHash": "b21fa7b0323bdc0ab31713d74038dfef58b32305d3775c98547a3a23f143e16a",
+            "packageHash": "b21fa7b0323bdc0ab31713d74038dfef58b32305d3775c98547a3a23f143e16a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ecl-B59qGGVg.js",
+            "sourceHash": "4f1c8ae6eaddfd15d73523014b684fc2ae7160b0c10d0680812497b4f1254192",
+            "packageHash": "4f1c8ae6eaddfd15d73523014b684fc2ae7160b0c10d0680812497b4f1254192",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/eiffel-Dze7nlu3.js",
+            "sourceHash": "a0fc308a8415ecaf7e5ffe28d9192c23f5b6e81d995eb7df35894a1b307a6606",
+            "packageHash": "a0fc308a8415ecaf7e5ffe28d9192c23f5b6e81d995eb7df35894a1b307a6606",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/elm-DG7jkhNZ.js",
+            "sourceHash": "c077dc7257d0e460440d911f88d5783e18ca8c58146fd9126e9e13a0897bcb5b",
+            "packageHash": "c077dc7257d0e460440d911f88d5783e18ca8c58146fd9126e9e13a0897bcb5b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/erlang-BO6gOnGA.js",
+            "sourceHash": "a7ff36cb6624f8cb2eedd1f201678c122f7d861f901c2b4465532dc9b10fb48e",
+            "packageHash": "a7ff36cb6624f8cb2eedd1f201678c122f7d861f901c2b4465532dc9b10fb48e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/factor-CMxFHDqz.js",
+            "sourceHash": "b249da83526bbefb5f5c5621c3cd3410f0f26edc9368cec95a585dbf5c6d0fd7",
+            "packageHash": "b249da83526bbefb5f5c5621c3cd3410f0f26edc9368cec95a585dbf5c6d0fd7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/fcl-CDDUNjTj.js",
+            "sourceHash": "223f8c7838620a68cbcb74e4e40d10c5eb20fdd2fbe6d32e44bce2d1d2c28ed2",
+            "packageHash": "223f8c7838620a68cbcb74e4e40d10c5eb20fdd2fbe6d32e44bce2d1d2c28ed2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/forth-B9D2JCeE.js",
+            "sourceHash": "2db6c4dd8f293410bd0de0a25f1dad21a1ee1990ddb816a4c783e86213e1e302",
+            "packageHash": "2db6c4dd8f293410bd0de0a25f1dad21a1ee1990ddb816a4c783e86213e1e302",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/fortran-CAG2BFbe.js",
+            "sourceHash": "df8788d58683ac6188c9038802b9cc8483344dc447ff9854b818c5171c006401",
+            "packageHash": "df8788d58683ac6188c9038802b9cc8483344dc447ff9854b818c5171c006401",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/gas-d3KEcW3x.js",
+            "sourceHash": "a699545574b2f6e9d0d502fe4536ef23b977a8f03ef284520247350ac240ab33",
+            "packageHash": "a699545574b2f6e9d0d502fe4536ef23b977a8f03ef284520247350ac240ab33",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/gherkin-DhZlEZiy.js",
+            "sourceHash": "86e76fdd8bbec4e37db05eebadde43a0761cddc0786f28f42befef6addaaefcb",
+            "packageHash": "86e76fdd8bbec4e37db05eebadde43a0761cddc0786f28f42befef6addaaefcb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/groovy-CpwJiBl7.js",
+            "sourceHash": "6b1705ee26bb3827a73e657f0b58a16c84004135a5e237501d919b9cb868ca0e",
+            "packageHash": "6b1705ee26bb3827a73e657f0b58a16c84004135a5e237501d919b9cb868ca0e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/haskell-ySd-OUo8.js",
+            "sourceHash": "ff8a9df8c8df8f199ad3b7000aff670c061d0c760ba213d94f52a6f92024e0f8",
+            "packageHash": "ff8a9df8c8df8f199ad3b7000aff670c061d0c760ba213d94f52a6f92024e0f8",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/haxe-7MlzfeYV.js",
+            "sourceHash": "df08c4d4f5bf41a8e63335fa1650e2d5dd4de28c5760ebd6ab47ee0c3fbdb606",
+            "packageHash": "df08c4d4f5bf41a8e63335fa1650e2d5dd4de28c5760ebd6ab47ee0c3fbdb606",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/http-BqypyemW.js",
+            "sourceHash": "552d89ffbe4662e2a8a6ef42b9608509b6654b7de1f836e6c05c2b7ebc81e0f6",
+            "packageHash": "552d89ffbe4662e2a8a6ef42b9608509b6654b7de1f836e6c05c2b7ebc81e0f6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/icon-C1BBXoGp.png",
+            "sourceHash": "802472242c923dbb57412e63831da8470ad138cb16f2f656c77e6854543ed6b9",
+            "packageHash": "802472242c923dbb57412e63831da8470ad138cb16f2f656c77e6854543ed6b9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/idl-4HIGJlDI.js",
+            "sourceHash": "0ec3441d716383be06d8b9abe052499551a470877e9fb3701ebc09ab590c70b1",
+            "packageHash": "0ec3441d716383be06d8b9abe052499551a470877e9fb3701ebc09ab590c70b1",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BB3QUhjc.js",
+            "sourceHash": "08af7370de1a317e773e15b6c908236dd46debd8125140f656d1debeb5f9b0e4",
+            "packageHash": "08af7370de1a317e773e15b6c908236dd46debd8125140f656d1debeb5f9b0e4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BU3tBWwc.js",
+            "sourceHash": "00e9278c3751d6ab1c7777e4ffbb33d8d412ad27ff13a197f4ce1e447049b8de",
+            "packageHash": "00e9278c3751d6ab1c7777e4ffbb33d8d412ad27ff13a197f4ce1e447049b8de",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BjVh4jIP.js",
+            "sourceHash": "03c45fce9c485befe56045b65d45c40a32bebe55fac07e646aa426462c5f18a6",
+            "packageHash": "03c45fce9c485befe56045b65d45c40a32bebe55fac07e646aa426462c5f18a6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C13gGQf-.js",
+            "sourceHash": "4714b3492d7b78a6864c1e9afc73c304b4c047285349a933fdb17dd30facd788",
+            "packageHash": "4714b3492d7b78a6864c1e9afc73c304b4c047285349a933fdb17dd30facd788",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C4udKwyM.js",
+            "sourceHash": "ff58ba9d91cd271c60ceed897775f40f8602e8457e9275d28692ffea0e90d4a7",
+            "packageHash": "ff58ba9d91cd271c60ceed897775f40f8602e8457e9275d28692ffea0e90d4a7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C9CoK0bU.js",
+            "sourceHash": "680cedb55446dd26f6f02158820b7a2a636eb77d00489aeafb9c7b65b19ca249",
+            "packageHash": "680cedb55446dd26f6f02158820b7a2a636eb77d00489aeafb9c7b65b19ca249",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CBOZ2e_I.js",
+            "sourceHash": "f67cb92a2a052440014b1d52c4a69b4036942d21fd4f8fe9548c29c317756476",
+            "packageHash": "f67cb92a2a052440014b1d52c4a69b4036942d21fd4f8fe9548c29c317756476",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CI8Wten8.js",
+            "sourceHash": "22e355a49003048471099692de32bcb31f9433e6bac28802a9a0a39d7d88ea46",
+            "packageHash": "22e355a49003048471099692de32bcb31f9433e6bac28802a9a0a39d7d88ea46",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CIFIn7M8.js",
+            "sourceHash": "a4ea86fd5c107fcba57666d2caa7d087f90976b9180073aa7df0bd271ffc1bfb",
+            "packageHash": "a4ea86fd5c107fcba57666d2caa7d087f90976b9180073aa7df0bd271ffc1bfb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cecnu1A8.js",
+            "sourceHash": "8b8e4891a6909005faabef21839e158382b86708c0a9a30ffb00690fbb867962",
+            "packageHash": "8b8e4891a6909005faabef21839e158382b86708c0a9a30ffb00690fbb867962",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Ch9p8Hix.js",
+            "sourceHash": "24e12fff5986a91a0f09fc98165142ed78ad3fd0c71507b5c3c0dc16c5c5f3fc",
+            "packageHash": "24e12fff5986a91a0f09fc98165142ed78ad3fd0c71507b5c3c0dc16c5c5f3fc",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CqF0IuxN.js",
+            "sourceHash": "6d5dcc4e6b31751d9b7ad77cc29d04dd66e834901aad9a1b2c22bc34084c31bd",
+            "packageHash": "6d5dcc4e6b31751d9b7ad77cc29d04dd66e834901aad9a1b2c22bc34084c31bd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cs8I7NMw.css",
+            "sourceHash": "c633abeaeb90681dd45499bdfc7a6ec78cd009e91a4ea1cbd652505c189a49e9",
+            "packageHash": "c633abeaeb90681dd45499bdfc7a6ec78cd009e91a4ea1cbd652505c189a49e9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cv7Us6YZ.js",
+            "sourceHash": "f0f8ef027df516b03327825a4ed1795c3d78e8909044326e08f0936313f93078",
+            "packageHash": "f0f8ef027df516b03327825a4ed1795c3d78e8909044326e08f0936313f93078",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cwth1I1U.js",
+            "sourceHash": "99e0d91b33a8ed591f2a6fd9622fb67d66f2918c09834db1caa89b2b252dbed3",
+            "packageHash": "99e0d91b33a8ed591f2a6fd9622fb67d66f2918c09834db1caa89b2b252dbed3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-D3SBHdLy.js",
+            "sourceHash": "5e865ae33a14e57dab09715be485fc21b75aba58d4130d96e84e217c5f3e2315",
+            "packageHash": "5e865ae33a14e57dab09715be485fc21b75aba58d4130d96e84e217c5f3e2315",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DD-IH58s.js",
+            "sourceHash": "f309b31c1449895d1e4fbe1c2f20556ed21ee2b62defe9f12401cd1bf38dd518",
+            "packageHash": "f309b31c1449895d1e4fbe1c2f20556ed21ee2b62defe9f12401cd1bf38dd518",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DIhVo7hV.js",
+            "sourceHash": "ccbd9a15146799d89bb1550e1889d1b0acfa051b1160a3e7731003ce2cd5dc14",
+            "packageHash": "ccbd9a15146799d89bb1550e1889d1b0acfa051b1160a3e7731003ce2cd5dc14",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-D_Kn54-I.js",
+            "sourceHash": "a6cc7b8748753db452c49fe77e7f2c17244a0a2ba6aa05ac85434efc6e45cfae",
+            "packageHash": "a6cc7b8748753db452c49fe77e7f2c17244a0a2ba6aa05ac85434efc6e45cfae",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DpZVt1fW.js",
+            "sourceHash": "61d7e569857aaa3300adcbe89e7f5334bb5f3688a88d4c13e10718b8139b605a",
+            "packageHash": "61d7e569857aaa3300adcbe89e7f5334bb5f3688a88d4c13e10718b8139b605a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Drj9DM6U.js",
+            "sourceHash": "dc6ed1818d930bc6c772bf25344285f578ab35045e4f911cb630c961d11d7ec0",
+            "packageHash": "dc6ed1818d930bc6c772bf25344285f578ab35045e4f911cb630c961d11d7ec0",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-GsJw4evm.js",
+            "sourceHash": "ea319bd1dc528bec78a3e1d0a600cf26451b0090113b0a61237099257507f301",
+            "packageHash": "ea319bd1dc528bec78a3e1d0a600cf26451b0090113b0a61237099257507f301",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-IluSGWfs.js",
+            "sourceHash": "3291cac1bc849c1e2e7019af1013960c4dcbe706f38b4baffe4480af58d0e842",
+            "packageHash": "3291cac1bc849c1e2e7019af1013960c4dcbe706f38b4baffe4480af58d0e842",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Kq7PDX9y.js",
+            "sourceHash": "c5503e3d1a1518d21c471165ed1b83b6fa69f8e859c20eb06605164efd4ddb33",
+            "packageHash": "c5503e3d1a1518d21c471165ed1b83b6fa69f8e859c20eb06605164efd4ddb33",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-gW_WEuCk.js",
+            "sourceHash": "8dc4fe449b56821af33bd3a27e93a7ce16aa3b34cf087aac02ef7cccb8073bb5",
+            "packageHash": "8dc4fe449b56821af33bd3a27e93a7ce16aa3b34cf087aac02ef7cccb8073bb5",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/island-C9lMkl4K.js",
+            "sourceHash": "847a7340c4cc217d9892213be6232676fe861ab11cc91c21eedfed9fae3eeb4c",
+            "packageHash": "847a7340c4cc217d9892213be6232676fe861ab11cc91c21eedfed9fae3eeb4c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/island-De7vXV_u.css",
+            "sourceHash": "7eb7db0d568a9a44fe7ba53fefa3cfc59a2614a41a3d2dd23f337e5eb901af5a",
+            "packageHash": "7eb7db0d568a9a44fe7ba53fefa3cfc59a2614a41a3d2dd23f337e5eb901af5a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/javascript-C_OHM9hj.js",
+            "sourceHash": "95b09f0b3fb5fdd9b2d10f6984118bbea38a78a51286f4d862b86a01094ddd8f",
+            "packageHash": "95b09f0b3fb5fdd9b2d10f6984118bbea38a78a51286f4d862b86a01094ddd8f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/julia-Bs6JJhYG.js",
+            "sourceHash": "0d8127c7275ab1371ec839ec976879685017db1cf04c55095e651e48fe103196",
+            "packageHash": "0d8127c7275ab1371ec839ec976879685017db1cf04c55095e651e48fe103196",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/livescript-DmzgM3Yt.js",
+            "sourceHash": "253527ea5df953288b76e55aa2e55f9c5f771cb2fc0498cb8917fee0369211e9",
+            "packageHash": "253527ea5df953288b76e55aa2e55f9c5f771cb2fc0498cb8917fee0369211e9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/lua-Cvg8VrAA.js",
+            "sourceHash": "165c413653092708d81ff649b3d4a63df2eedc0b50c8f249b9667b4e75fe959d",
+            "packageHash": "165c413653092708d81ff649b3d4a63df2eedc0b50c8f249b9667b4e75fe959d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mathematica-DNLOL9PQ.js",
+            "sourceHash": "acc57c8c8a74626a6b9423988f92155410b79196d13c9c6a78047d51ae130c68",
+            "packageHash": "acc57c8c8a74626a6b9423988f92155410b79196d13c9c6a78047d51ae130c68",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mbox-Ga7d4MMN.js",
+            "sourceHash": "fc425b9a3a312399b3ff6adfec040828ff7c8789f0d31b96e73bde2dce902355",
+            "packageHash": "fc425b9a3a312399b3ff6adfec040828ff7c8789f0d31b96e73bde2dce902355",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mirc-Dma3B8rS.js",
+            "sourceHash": "0ddcb9e79952a15f12935311af85affb24054773404adfdd1d437cc0080a21e2",
+            "packageHash": "0ddcb9e79952a15f12935311af85affb24054773404adfdd1d437cc0080a21e2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mllike-DHn7xckP.js",
+            "sourceHash": "adc3b1b7f8aa916812cd4d8bdf8cc1bce352786e3df54c560c5b9067b4fe6d5b",
+            "packageHash": "adc3b1b7f8aa916812cd4d8bdf8cc1bce352786e3df54c560c5b9067b4fe6d5b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/modelica-0d55jYY0.js",
+            "sourceHash": "53c8da4f56d1dd592c1710d4b2735aa9904eb2306f365b56aa7074837c59526b",
+            "packageHash": "53c8da4f56d1dd592c1710d4b2735aa9904eb2306f365b56aa7074837c59526b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mscgen-DdqZYINH.js",
+            "sourceHash": "7e91513474f40739574f20f1b1f38659a476b68b39ee260c7e13132e20d66fc6",
+            "packageHash": "7e91513474f40739574f20f1b1f38659a476b68b39ee260c7e13132e20d66fc6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mumps-Btr8VblO.js",
+            "sourceHash": "aea5f291cf40bcc124e9ff104dedf8df38d630d3112f62d1051118f1ce16b80b",
+            "packageHash": "aea5f291cf40bcc124e9ff104dedf8df38d630d3112f62d1051118f1ce16b80b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/nginx-DTDtBDVN.js",
+            "sourceHash": "715cac7cfdb61a1efd09d43ec2c5e6d8e1bd491be679ac56df795a913e6eaf21",
+            "packageHash": "715cac7cfdb61a1efd09d43ec2c5e6d8e1bd491be679ac56df795a913e6eaf21",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/nsis-3zG7tgur.js",
+            "sourceHash": "7462e8fee0cd65c4eda55d7ef1e9d4bb37a0c2e60a4d52907585593b22eeb984",
+            "packageHash": "7462e8fee0cd65c4eda55d7ef1e9d4bb37a0c2e60a4d52907585593b22eeb984",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ntriples-CvgOYMpL.js",
+            "sourceHash": "239581b9922c933f3427296d14f18a1febb1db49283e6e4aa3331f4e2b9bc3a9",
+            "packageHash": "239581b9922c933f3427296d14f18a1febb1db49283e6e4aa3331f4e2b9bc3a9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/octave-DYBj3-tl.js",
+            "sourceHash": "57d7b87692fe3ab14a413456a3ea0fb201a3052057b77a55604863fa5064c495",
+            "packageHash": "57d7b87692fe3ab14a413456a3ea0fb201a3052057b77a55604863fa5064c495",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/oz-R_e8WMIi.js",
+            "sourceHash": "a19a6ffdf1e6eb10fe9c4937cfb31303c9ec5bb723c73df1a71ef43c82cdd020",
+            "packageHash": "a19a6ffdf1e6eb10fe9c4937cfb31303c9ec5bb723c73df1a71ef43c82cdd020",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pascal-GD8iposT.js",
+            "sourceHash": "e5a1f91525017a8bf777f9c04f990c65a6a876b26e9b803ba4fddbcc6a68ccac",
+            "packageHash": "e5a1f91525017a8bf777f9c04f990c65a6a876b26e9b803ba4fddbcc6a68ccac",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/perl-DL9mHpoi.js",
+            "sourceHash": "8c4df1964a2fe9a690f2493217ed9f70d1f7e2f026ea515f3b226b3b39370b17",
+            "packageHash": "8c4df1964a2fe9a690f2493217ed9f70d1f7e2f026ea515f3b226b3b39370b17",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pig-C_4T4YIV.js",
+            "sourceHash": "82df721874d4623ebcfa10b27ea6eb9e3992ff4c28e2d838f8d166ab73abb91d",
+            "packageHash": "82df721874d4623ebcfa10b27ea6eb9e3992ff4c28e2d838f8d166ab73abb91d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/powershell-B0suO7Vd.js",
+            "sourceHash": "3de01d37e183594d3bb94dc474f6324219cb209d162b202f82b12c77d2370410",
+            "packageHash": "3de01d37e183594d3bb94dc474f6324219cb209d162b202f82b12c77d2370410",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/properties-BR-vP1aU.js",
+            "sourceHash": "b758d2ccb06eaaf23dbbc110988e64a57e55a5923a262c60432397feeef0c9c3",
+            "packageHash": "b758d2ccb06eaaf23dbbc110988e64a57e55a5923a262c60432397feeef0c9c3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/protobuf-BxgpyhoW.js",
+            "sourceHash": "ed0b3d7fbe3b079db99443170bd20dba78ba27f42043ad6efebd4b714ef4a364",
+            "packageHash": "ed0b3d7fbe3b079db99443170bd20dba78ba27f42043ad6efebd4b714ef4a364",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pug-CTXt1f8z.js",
+            "sourceHash": "48c244b81b114de6a5e5adefc5c7715f6eba241d58edd162713fd21007afdb2c",
+            "packageHash": "48c244b81b114de6a5e5adefc5c7715f6eba241d58edd162713fd21007afdb2c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/puppet-Bdao66PW.js",
+            "sourceHash": "7985d1f812327008fe34d375ab1849a12e903d3e9507b7fa14253ba17dbdd596",
+            "packageHash": "7985d1f812327008fe34d375ab1849a12e903d3e9507b7fa14253ba17dbdd596",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/python-CvWbmiX4.js",
+            "sourceHash": "219d8f4b9588956ac747cc56503e568fbf3aff3ab5e34e400a6cd21c86e2273f",
+            "packageHash": "219d8f4b9588956ac747cc56503e568fbf3aff3ab5e34e400a6cd21c86e2273f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/q-CrbCVq4a.js",
+            "sourceHash": "ded6c3f92101aee3b6214667f489d691936350d01b61e69fdb2b8e2104afcacd",
+            "packageHash": "ded6c3f92101aee3b6214667f489d691936350d01b61e69fdb2b8e2104afcacd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/r-V7nswm59.js",
+            "sourceHash": "78772777dc6085a89ba3ed5f6fcd5fe46c7ff6cdb849c3c967ce0c1273b4f4a2",
+            "packageHash": "78772777dc6085a89ba3ed5f6fcd5fe46c7ff6cdb849c3c967ce0c1273b4f4a2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/rpm-C-DLY-If.js",
+            "sourceHash": "e39a41ec2ab1ba47f2ef4ac46afda8ab6157df5f4388c70b332e2ebf154e1997",
+            "packageHash": "e39a41ec2ab1ba47f2ef4ac46afda8ab6157df5f4388c70b332e2ebf154e1997",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ruby-JDKLJNK0.js",
+            "sourceHash": "3e1b46886cdefe2497ed6177e95d34cdd51938cf0da90e4997cf11a8bb45b5ee",
+            "packageHash": "3e1b46886cdefe2497ed6177e95d34cdd51938cf0da90e4997cf11a8bb45b5ee",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sas-D2UG-yhZ.js",
+            "sourceHash": "015ef33927a3a7749cad183ad9e96b0dbf9df616080054b9e581486effc05bef",
+            "packageHash": "015ef33927a3a7749cad183ad9e96b0dbf9df616080054b9e581486effc05bef",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/scheme-BKzrkGJD.js",
+            "sourceHash": "f0e7bc170c1987a1a0734b905eee725b83cca6aa8fa597457fec67670a555cc9",
+            "packageHash": "f0e7bc170c1987a1a0734b905eee725b83cca6aa8fa597457fec67670a555cc9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/shell-BlsXDxCn.js",
+            "sourceHash": "476e685b723e32c63fec792d4266c65b3facfe8feb349b6a2dff9b6c749d9fde",
+            "packageHash": "476e685b723e32c63fec792d4266c65b3facfe8feb349b6a2dff9b6c749d9fde",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sieve-CjwBwOY5.js",
+            "sourceHash": "084c9f5e19ccf7382ebe97bc97676ba143d9a36fad9b096cb4b3f99cf3c81df6",
+            "packageHash": "084c9f5e19ccf7382ebe97bc97676ba143d9a36fad9b096cb4b3f99cf3c81df6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/simple-mode-DMneyfDu.js",
+            "sourceHash": "bf2199ce2b8baa53cef87a5bc3a72c68817223b26167c168c645fe78be9280f4",
+            "packageHash": "bf2199ce2b8baa53cef87a5bc3a72c68817223b26167c168c645fe78be9280f4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/smalltalk-BOIGQuhN.js",
+            "sourceHash": "7d696f35a8e402a8b6c2ac1db57c92af865ec665cd63d827689c46e58b9b295d",
+            "packageHash": "7d696f35a8e402a8b6c2ac1db57c92af865ec665cd63d827689c46e58b9b295d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/solr-CwD7U71z.js",
+            "sourceHash": "9e9b3bf9c4c0a208effcc6283428b25a30e935eeefa58fc34629947c040beb7e",
+            "packageHash": "9e9b3bf9c4c0a208effcc6283428b25a30e935eeefa58fc34629947c040beb7e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sparql-DYskk2vE.js",
+            "sourceHash": "0573590f5173a33d2c988a89048fccb66706d9d2b1d1e01c42dd864c7b664422",
+            "packageHash": "0573590f5173a33d2c988a89048fccb66706d9d2b1d1e01c42dd864c7b664422",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/spreadsheet-Bgtt3oLP.js",
+            "sourceHash": "453eff194470639d89a69e4cdf76b8e58773b5ab307554feed6d826b20a058c4",
+            "packageHash": "453eff194470639d89a69e4cdf76b8e58773b5ab307554feed6d826b20a058c4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sql-BSrOzCRI.js",
+            "sourceHash": "dc7e3ba15d3123633b1a12391213fafb05a5abdcc9829498793b3d467a1d3fbd",
+            "packageHash": "dc7e3ba15d3123633b1a12391213fafb05a5abdcc9829498793b3d467a1d3fbd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/stex-B6LNC55o.js",
+            "sourceHash": "350838050b62d1c5f9821e86a9bb0ee45f0c61628eadc676c126359a41a5f2a5",
+            "packageHash": "350838050b62d1c5f9821e86a9bb0ee45f0c61628eadc676c126359a41a5f2a5",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/stylus-BkS-boTH.js",
+            "sourceHash": "2d50cfa755d2ad2fc7302164938caf2b4421003f3c3fb9eb02314a230a514cd9",
+            "packageHash": "2d50cfa755d2ad2fc7302164938caf2b4421003f3c3fb9eb02314a230a514cd9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/swift-FRZi1uvB.js",
+            "sourceHash": "526e30f380c612526c4f06a3085c392bda84ede2673fff42b1d2dd7a205377d4",
+            "packageHash": "526e30f380c612526c4f06a3085c392bda84ede2673fff42b1d2dd7a205377d4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tcl-CUcaCdmq.js",
+            "sourceHash": "aa90d12c1490ebb77e68e6ce90fd35b0b312e5510f9753f1072c629c43e9c05c",
+            "packageHash": "aa90d12c1490ebb77e68e6ce90fd35b0b312e5510f9753f1072c629c43e9c05c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/textile-BnFpjsrl.js",
+            "sourceHash": "de9336373ae050e5a1ff954d462dd129d09f31c02951e27ede260fba1c054bad",
+            "packageHash": "de9336373ae050e5a1ff954d462dd129d09f31c02951e27ede260fba1c054bad",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tiddlywiki-CjprD-Qp.js",
+            "sourceHash": "5a80d8ec11cdad4503ab1462ed24e2bd7a1b09b787e815fbdfd4b7a454242fce",
+            "packageHash": "5a80d8ec11cdad4503ab1462ed24e2bd7a1b09b787e815fbdfd4b7a454242fce",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tiki-DK9DOeWn.js",
+            "sourceHash": "d307359b562484e7c25803b60349d4aa86e6351400f9612a3b78048f8451b847",
+            "packageHash": "d307359b562484e7c25803b60349d4aa86e6351400f9612a3b78048f8451b847",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/toml-BOuWGMcf.js",
+            "sourceHash": "fddf8a802721005715a22746b28e0b87ac56a8f77caa41075f9142150e588fb3",
+            "packageHash": "fddf8a802721005715a22746b28e0b87ac56a8f77caa41075f9142150e588fb3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/transcribe-D_48OyGs.js",
+            "sourceHash": "6a267f26bc3f591575cffcf6fa40c67fc7b5da88ac033ed74e209ad337e9fbfc",
+            "packageHash": "6a267f26bc3f591575cffcf6fa40c67fc7b5da88ac033ed74e209ad337e9fbfc",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/troff-E1bJ0PPL.js",
+            "sourceHash": "ea32a0126878e2cd1198e94abcee48cbcd2131de1d80195e1267ad5b0cab82bf",
+            "packageHash": "ea32a0126878e2cd1198e94abcee48cbcd2131de1d80195e1267ad5b0cab82bf",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ttcn-cfg-Dc39-fIP.js",
+            "sourceHash": "743ddd5c09b350d33149497d4177895083f584712019a20e88a3c9ded8b62fb9",
+            "packageHash": "743ddd5c09b350d33149497d4177895083f584712019a20e88a3c9ded8b62fb9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ttcn-tKd4HLu4.js",
+            "sourceHash": "b9af59a0022981562d7482bf0125dc1b6bfdbb40ea1214807db4abbcb783059b",
+            "packageHash": "b9af59a0022981562d7482bf0125dc1b6bfdbb40ea1214807db4abbcb783059b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/turtle-Dq7-1WAf.js",
+            "sourceHash": "7e505e9051b7e3c8ecebea47e4fd43b1e6b2b6ccd7334fd25fc267dc82ee0e4d",
+            "packageHash": "7e505e9051b7e3c8ecebea47e4fd43b1e6b2b6ccd7334fd25fc267dc82ee0e4d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vb-Dp90gtsv.js",
+            "sourceHash": "049ed5cc9eb5958257497e1c018cd8aa6ff558760d7d9bca5d0d84db8573e19f",
+            "packageHash": "049ed5cc9eb5958257497e1c018cd8aa6ff558760d7d9bca5d0d84db8573e19f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vbscript-CI6_mxxU.js",
+            "sourceHash": "61890fbc79e2fa6eed6ec2f556916d57712d58fa394f140b09af6c50fece5855",
+            "packageHash": "61890fbc79e2fa6eed6ec2f556916d57712d58fa394f140b09af6c50fece5855",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/velocity-BwIZK1TH.js",
+            "sourceHash": "630eef603fbca377c8e48679bf30198dce1f27d1a72123bdd72f1eada28f4bbd",
+            "packageHash": "630eef603fbca377c8e48679bf30198dce1f27d1a72123bdd72f1eada28f4bbd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/verilog-DDCYnHN8.js",
+            "sourceHash": "a38956f338156db5f9b6fd4644f88cd1f81d7dc726a78b882b1ee62f0e70f45a",
+            "packageHash": "a38956f338156db5f9b6fd4644f88cd1f81d7dc726a78b882b1ee62f0e70f45a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vhdl-DCkMIyT9.js",
+            "sourceHash": "b0e803173743715af902fa2508c4da88a2e97f9b4782f33c6064a17db505bc05",
+            "packageHash": "b0e803173743715af902fa2508c4da88a2e97f9b4782f33c6064a17db505bc05",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/webidl-BTLTThCm.js",
+            "sourceHash": "07aaaed4cf1b1adc2d5f705b656e0e3a4b0d4bddaf4ad998e488d3ca3450a290",
+            "packageHash": "07aaaed4cf1b1adc2d5f705b656e0e3a4b0d4bddaf4ad998e488d3ca3450a290",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/xquery-BrBUuxMR.js",
+            "sourceHash": "96459fe2892ccdce0b57439307eeeaa9d82fd2663f2a0f4364a849dba3374e74",
+            "packageHash": "96459fe2892ccdce0b57439307eeeaa9d82fd2663f2a0f4364a849dba3374e74",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/yacas-b5lAVEIl.js",
+            "sourceHash": "95c453f73dd9a218385c018b692c4af134b02d5131bea8dd957ca887a5cdd8bd",
+            "packageHash": "95c453f73dd9a218385c018b692c4af134b02d5131bea8dd957ca887a5cdd8bd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/z80-BZV19vqv.js",
+            "sourceHash": "51594b00905d1522d2f64113beae4943577338f0ff5af4503dd9ee49dc3957eb",
+            "packageHash": "51594b00905d1522d2f64113beae4943577338f0ff5af4503dd9ee49dc3957eb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/index.html",
+            "sourceHash": "7b048d8809d50b7d3605767226ebebcdb7d75f343e2f0a1eea53195159582f2f",
+            "packageHash": "7b048d8809d50b7d3605767226ebebcdb7d75f343e2f0a1eea53195159582f2f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/island.html",
+            "sourceHash": "e7522a6ce3be7a52c43f91afc36ec8341fbb615911c80766afabf7f6b2edd85b",
+            "packageHash": "e7522a6ce3be7a52c43f91afc36ec8341fbb615911c80766afabf7f6b2edd85b",
+            "match": true
+          }
+        ],
+        "rawExactMatch": false,
+        "comparedRuntimeCount": 139
+      },
+      "mcp": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/mcp",
+        "packaged": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Resources/mcp",
+        "sourceCount": 14,
+        "packageCount": 14,
+        "passed": true,
+        "files": [
+          {
+            "file": "bizone-mcp.mjs",
+            "sourceHash": "bf2b600ac93ab2f887efe1729479b36ad3366f02b1a78aa282b574fda1be4ff7",
+            "packageHash": "bf2b600ac93ab2f887efe1729479b36ad3366f02b1a78aa282b574fda1be4ff7",
+            "match": true
+          },
+          {
+            "file": "cli-entry.d.mts",
+            "sourceHash": "276434a72176efec50ccd9db4bab42b3c5425b00fdba01acbe2728125be9cb05",
+            "packageHash": "276434a72176efec50ccd9db4bab42b3c5425b00fdba01acbe2728125be9cb05",
+            "match": true
+          },
+          {
+            "file": "cli-entry.mjs",
+            "sourceHash": "7f584c5b59f98bf5573efb6d170b488d78981398269114c096a6423094cb2bfa",
+            "packageHash": "7f584c5b59f98bf5573efb6d170b488d78981398269114c096a6423094cb2bfa",
+            "match": true
+          },
+          {
+            "file": "codex-capability-config.mjs",
+            "sourceHash": "17bb33936f652c855ea477c997cd93569ed8781875bc08e43a459041ca4b507a",
+            "packageHash": "17bb33936f652c855ea477c997cd93569ed8781875bc08e43a459041ca4b507a",
+            "match": true
+          },
+          {
+            "file": "eas-capability-shim.mjs",
+            "sourceHash": "78445bd770c787f65d4899e1b59b1d8fc744189672ad9ef1239a7f1ee18f6e99",
+            "packageHash": "78445bd770c787f65d4899e1b59b1d8fc744189672ad9ef1239a7f1ee18f6e99",
+            "match": true
+          },
+          {
+            "file": "eas-codex-launcher.mjs",
+            "sourceHash": "bb5348da31b5ad1617c225602f50f47a31803e660564a411a25dbd2654d69db7",
+            "packageHash": "bb5348da31b5ad1617c225602f50f47a31803e660564a411a25dbd2654d69db7",
+            "match": true
+          },
+          {
+            "file": "eas-mcp.mjs",
+            "sourceHash": "25b0a70b2820d8718f5b547b8691cff90ffd83f33aee6114acb763b7b460fc34",
+            "packageHash": "25b0a70b2820d8718f5b547b8691cff90ffd83f33aee6114acb763b7b460fc34",
+            "match": true
+          },
+          {
+            "file": "eas-plugin-shim.mjs",
+            "sourceHash": "45a1b99da773da3bdcb9b373a2a8e91eb628fb7898f75e5c52ada1158ad32af6",
+            "packageHash": "45a1b99da773da3bdcb9b373a2a8e91eb628fb7898f75e5c52ada1158ad32af6",
+            "match": true
+          },
+          {
+            "file": "eas-pty-launcher.mjs",
+            "sourceHash": "2271c484583434ae3ebaf6d202e336b11f98408b8c5f411c316b4a8c95b803fa",
+            "packageHash": "2271c484583434ae3ebaf6d202e336b11f98408b8c5f411c316b4a8c95b803fa",
+            "match": true
+          },
+          {
+            "file": "eas-secret.mjs",
+            "sourceHash": "23571965d549718bd4ebc25696f635149864ab6e1614920eaa048f3ff5825b95",
+            "packageHash": "23571965d549718bd4ebc25696f635149864ab6e1614920eaa048f3ff5825b95",
+            "match": true
+          },
+          {
+            "file": "eas-selected-mcp-launcher.mjs",
+            "sourceHash": "de54764fa5fb564f5c53c08a4a512d35c11d4d8adf7bd84fe4b7fc1c2773904b",
+            "packageHash": "de54764fa5fb564f5c53c08a4a512d35c11d4d8adf7bd84fe4b7fc1c2773904b",
+            "match": true
+          },
+          {
+            "file": "owned-launcher-control.d.mts",
+            "sourceHash": "a42eeaa2951c61bc53aa427e0f9ca6d7151ca7852f0c6fc809dc98ca028cbe52",
+            "packageHash": "a42eeaa2951c61bc53aa427e0f9ca6d7151ca7852f0c6fc809dc98ca028cbe52",
+            "match": true
+          },
+          {
+            "file": "owned-launcher-control.mjs",
+            "sourceHash": "ce89e392fc2ffdf236b0ca45f9069b9f58e205f0cd7dfc0380654078cdf0ebae",
+            "packageHash": "ce89e392fc2ffdf236b0ca45f9069b9f58e205f0cd7dfc0380654078cdf0ebae",
+            "match": true
+          },
+          {
+            "file": "workbench-tools.json",
+            "sourceHash": "6f16e627d63da502ae45c94f361051b97636e2b6daef4b8ebc12fc19f5047b43",
+            "packageHash": "6f16e627d63da502ae45c94f361051b97636e2b6daef4b8ebc12fc19f5047b43",
+            "match": true
+          }
+        ]
+      },
+      "builtinBundle": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/resources/plugins/eas-capabilities",
+        "packaged": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/mac-arm64/Eas-Term.app/Contents/Resources/plugins/eas-capabilities",
+        "sourceCount": 8,
+        "packageCount": 8,
+        "passed": true,
+        "files": [
+          {
+            "file": "bundle.json",
+            "sourceHash": "8e3414eb439d08569dd114aedee2b1093b6f1ef5305a58a65a107eba7dfe683a",
+            "packageHash": "8e3414eb439d08569dd114aedee2b1093b6f1ef5305a58a65a107eba7dfe683a",
+            "match": true
+          },
+          {
+            "file": "guidance/SKILL.md",
+            "sourceHash": "8f53afcc6b7c8922e32d686f6c7edc89890cc0fe042c2546c680c124bf187fef",
+            "packageHash": "8f53afcc6b7c8922e32d686f6c7edc89890cc0fe042c2546c680c124bf187fef",
+            "match": true
+          },
+          {
+            "file": "guidance/canvas.md",
+            "sourceHash": "4c7e725de2bd25580c80676feabafc89fbe04681a0f28fe60fde7926a7476c58",
+            "packageHash": "4c7e725de2bd25580c80676feabafc89fbe04681a0f28fe60fde7926a7476c58",
+            "match": true
+          },
+          {
+            "file": "guidance/dict.md",
+            "sourceHash": "e9310c097308bb09085b973882f5732d9e51d2cbbfce34367892ca8a5c1066f7",
+            "packageHash": "e9310c097308bb09085b973882f5732d9e51d2cbbfce34367892ca8a5c1066f7",
+            "match": true
+          },
+          {
+            "file": "guidance/generate.md",
+            "sourceHash": "b5db00a1f223a2c1f71a7bfdaff56cdc665e6d6f088946721698935128130c85",
+            "packageHash": "b5db00a1f223a2c1f71a7bfdaff56cdc665e6d6f088946721698935128130c85",
+            "match": true
+          },
+          {
+            "file": "guidance/plugins.md",
+            "sourceHash": "a1e8a1562eb052d94e1d1b101c249ab0d9c919a134d8b5c7c9121945e9100f41",
+            "packageHash": "a1e8a1562eb052d94e1d1b101c249ab0d9c919a134d8b5c7c9121945e9100f41",
+            "match": true
+          },
+          {
+            "file": "guidance/secrets.md",
+            "sourceHash": "1ee03647ffce207d7d645e4a216a4c0030b5213c063bcc93a6ad8ae982cf7c86",
+            "packageHash": "1ee03647ffce207d7d645e4a216a4c0030b5213c063bcc93a6ad8ae982cf7c86",
+            "match": true
+          },
+          {
+            "file": "guidance/wiki-architect.md",
+            "sourceHash": "75a9cb035049f0d20b7c86e4e9529590b056210868bea0eb4986f11612b35ad9",
+            "packageHash": "75a9cb035049f0d20b7c86e4e9529590b056210868bea0eb4986f11612b35ad9",
+            "match": true
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "arch": "x64",
+      "app": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app",
+      "asarSha256": "e74f36a35762efd2b7ba70f83a093c9f26fa747ba42abec28faaf6d0ccd39373",
+      "out": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/out",
+        "archive": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Resources/app.asar",
+        "sourceCount": 140,
+        "packageCount": 139,
+        "passed": true,
+        "files": [
+          {
+            "file": "out/.DS_Store",
+            "sourceHash": "ec5dbfd17d3587eea72c444d3c80d5f4ebccdf9b5ab9cb511f5e656962bf07de",
+            "packageHash": null,
+            "match": false,
+            "expectedExcluded": true
+          },
+          {
+            "file": "out/main/index.js",
+            "sourceHash": "747ab01e03985a98c16806250cbb7b70c84df2e2c610ce2ebd79523e7dfa9e31",
+            "packageHash": "747ab01e03985a98c16806250cbb7b70c84df2e2c610ce2ebd79523e7dfa9e31",
+            "match": true
+          },
+          {
+            "file": "out/main/lspProvider-fHf1xYeu.js",
+            "sourceHash": "ced05dd2c6cc0476a1ea117ea51b9335ac7ac98cc7b9fa422b0cb5853d9122d3",
+            "packageHash": "ced05dd2c6cc0476a1ea117ea51b9335ac7ac98cc7b9fa422b0cb5853d9122d3",
+            "match": true
+          },
+          {
+            "file": "out/main/symbolProvider-BiHNXmL9.js",
+            "sourceHash": "bd5e61e416d20e6bf73c5402fb34d688a8510de069609501f932f2e480d71910",
+            "packageHash": "bd5e61e416d20e6bf73c5402fb34d688a8510de069609501f932f2e480d71910",
+            "match": true
+          },
+          {
+            "file": "out/main/tsAst-CIp__rW4.js",
+            "sourceHash": "b224cf3b2b06a57b1b535f4e78cdb55b67894a6923b35072009c80b04ee786e2",
+            "packageHash": "b224cf3b2b06a57b1b535f4e78cdb55b67894a6923b35072009c80b04ee786e2",
+            "match": true
+          },
+          {
+            "file": "out/main/tsProvider-Dy3mgxD0.js",
+            "sourceHash": "d9038eb94dfac14f36a8ee9e887210295137ebea4ead96dfca0abe7904ddcef1",
+            "packageHash": "d9038eb94dfac14f36a8ee9e887210295137ebea4ead96dfca0abe7904ddcef1",
+            "match": true
+          },
+          {
+            "file": "out/main/tsSymbols-DfoclHJx.js",
+            "sourceHash": "5c0e29f19c9a7bd62e64003692851a7c406ece8962cb809e85bd07fc897c40ac",
+            "packageHash": "5c0e29f19c9a7bd62e64003692851a7c406ece8962cb809e85bd07fc897c40ac",
+            "match": true
+          },
+          {
+            "file": "out/preload/index.js",
+            "sourceHash": "d0c4cb7211c0828c20903a03f4d628b3aac07c77a4ef3a0aee66a74d81129d34",
+            "packageHash": "d0c4cb7211c0828c20903a03f4d628b3aac07c77a4ef3a0aee66a74d81129d34",
+            "match": true
+          },
+          {
+            "file": "out/preload/island.js",
+            "sourceHash": "25b919f959b0530df3e536e4cc6fff03a52651b4ac5ebb0ec6ad47fe75964102",
+            "packageHash": "25b919f959b0530df3e536e4cc6fff03a52651b4ac5ebb0ec6ad47fe75964102",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/DictView-BdlUqcON.js",
+            "sourceHash": "65c7dfb61b1e638d09784930a6748e8182b1f1fe8fa6b3573b706d75662ea9e3",
+            "packageHash": "65c7dfb61b1e638d09784930a6748e8182b1f1fe8fa6b3573b706d75662ea9e3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/DictView-C-nlTaDN.css",
+            "sourceHash": "5d02c3c97bb6b97aed2b9266cbed88d6b3e2c6f2b6dd10a7025ed20c04ba5f68",
+            "packageHash": "5d02c3c97bb6b97aed2b9266cbed88d6b3e2c6f2b6dd10a7025ed20c04ba5f68",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/WikiView-BAksd7Ml.css",
+            "sourceHash": "c252b4de898c2a05d59139ee0986b4f427176ee304251203923cfe587944fad7",
+            "packageHash": "c252b4de898c2a05d59139ee0986b4f427176ee304251203923cfe587944fad7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/WikiView-CnFLRAx0.js",
+            "sourceHash": "3b4a04c79af02d59986251791e0df58dbb3654eeee964e8ba615d0dcec4919d6",
+            "packageHash": "3b4a04c79af02d59986251791e0df58dbb3654eeee964e8ba615d0dcec4919d6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/apl-fqmucPXA.js",
+            "sourceHash": "5be3458b72027a2151b231faa2e30eaf16e1e29067222e232694f25418c2a140",
+            "packageHash": "5be3458b72027a2151b231faa2e30eaf16e1e29067222e232694f25418c2a140",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asciiarmor-DucZyvP0.js",
+            "sourceHash": "01c94e79d596371ae8d7fb8f8e9d7f7c136b9c9cbd1f7f1124949ee0216d4816",
+            "packageHash": "01c94e79d596371ae8d7fb8f8e9d7f7c136b9c9cbd1f7f1124949ee0216d4816",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asn1-BnOEsgAm.js",
+            "sourceHash": "bb17319ceb5860451c6822bfadacfcedd6f972cfafbe016b36dfe6ac23f73551",
+            "packageHash": "bb17319ceb5860451c6822bfadacfcedd6f972cfafbe016b36dfe6ac23f73551",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/asterisk-QAlztEwS.js",
+            "sourceHash": "6df194920c95ba624a8fda9ecc6fb9bb3e8c608635a2d0b0f4b2610cce4e6fc3",
+            "packageHash": "6df194920c95ba624a8fda9ecc6fb9bb3e8c608635a2d0b0f4b2610cce4e6fc3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/brainfuck-DZVCuF_t.js",
+            "sourceHash": "71ae5a627c032ec5f0333e28a4fc02da543a8faf15f2705c0e1f69f7df69c812",
+            "packageHash": "71ae5a627c032ec5f0333e28a4fc02da543a8faf15f2705c0e1f69f7df69c812",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/clike-xqXYL6ge.js",
+            "sourceHash": "1acda985c43e1ca1c234bc64cd7b495850069c0c10cd1a433d89c2005dcb503a",
+            "packageHash": "1acda985c43e1ca1c234bc64cd7b495850069c0c10cd1a433d89c2005dcb503a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/clojure-BhXMqnxz.js",
+            "sourceHash": "e6c5a1b8eead561531a1fe6afc42ebd3541913ac87645794bee5b2e42222ff2e",
+            "packageHash": "e6c5a1b8eead561531a1fe6afc42ebd3541913ac87645794bee5b2e42222ff2e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cmake-BGaNd9E7.js",
+            "sourceHash": "319d4983f4e2c2934fdbf67a567ad183211c15a618df3d9e7ad270a188f63c1a",
+            "packageHash": "319d4983f4e2c2934fdbf67a567ad183211c15a618df3d9e7ad270a188f63c1a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cobol-4yqQntpt.js",
+            "sourceHash": "f541e17f367fb16b84f1c4585dc6b96436fab9b9984351746b8d6b7e4be77533",
+            "packageHash": "f541e17f367fb16b84f1c4585dc6b96436fab9b9984351746b8d6b7e4be77533",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/coffeescript-D2dXvhEc.js",
+            "sourceHash": "fd8b8081e6c6d0b3a5a1d5159ea923fa92de6b16498672ac8ffb3a85d0f074ff",
+            "packageHash": "fd8b8081e6c6d0b3a5a1d5159ea923fa92de6b16498672ac8ffb3a85d0f074ff",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/commonlisp-CF_VNHQR.js",
+            "sourceHash": "f0e48e905937a107e453a06c0eb54a8f1e536fc0fc63c5b58b9551c8f7fe49cb",
+            "packageHash": "f0e48e905937a107e453a06c0eb54a8f1e536fc0fc63c5b58b9551c8f7fe49cb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/crystal-DyuLTqLs.js",
+            "sourceHash": "c1628558768374a78a1fa71c26feaf44bfc6c5161bf81d964490416d1af1f38f",
+            "packageHash": "c1628558768374a78a1fa71c26feaf44bfc6c5161bf81d964490416d1af1f38f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/css-c-jst79C.js",
+            "sourceHash": "41425a19b41f83ae573be2f495236cd1161392d1ef66eb2d23d2784510746818",
+            "packageHash": "41425a19b41f83ae573be2f495236cd1161392d1ef66eb2d23d2784510746818",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/cypher-Dlu_3r4V.js",
+            "sourceHash": "80cff481ed4632ecfbe5952d4c60f15227c66f04dfea646c32852a2b090d19ca",
+            "packageHash": "80cff481ed4632ecfbe5952d4c60f15227c66f04dfea646c32852a2b090d19ca",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/d-UURgV0Ux.js",
+            "sourceHash": "df60654c2550e460276b5522896ee99ab6516252a0016a0fafa21875641b72b9",
+            "packageHash": "df60654c2550e460276b5522896ee99ab6516252a0016a0fafa21875641b72b9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dictionary-bundle-ZdkIBe8W.js",
+            "sourceHash": "9f27d1834f0d922e4c3840882c76d65cfff0b9d99acbc0f8d2ce32ef4ca3d0dd",
+            "packageHash": "9f27d1834f0d922e4c3840882c76d65cfff0b9d99acbc0f8d2ce32ef4ca3d0dd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/diff-B_Bi2Crb.js",
+            "sourceHash": "efa42a61215071dc4d677dab004a6f77c34b41825d87a7dc42303302c35b4b4a",
+            "packageHash": "efa42a61215071dc4d677dab004a6f77c34b41825d87a7dc42303302c35b4b4a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dockerfile-Bvk733Ga.js",
+            "sourceHash": "31f1f2e8d8f9f2eeeb29f6d4b56e4632654d2f2a5b352a4febc9bf2f1984d29c",
+            "packageHash": "31f1f2e8d8f9f2eeeb29f6d4b56e4632654d2f2a5b352a4febc9bf2f1984d29c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dtd-Dy74G54E.js",
+            "sourceHash": "cfaec369fbea7351fc6a8fb7c990f2fbc5a0d1730467e51935deb1965fccaa2a",
+            "packageHash": "cfaec369fbea7351fc6a8fb7c990f2fbc5a0d1730467e51935deb1965fccaa2a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/dylan-TSb-Nfix.js",
+            "sourceHash": "b0c2026d9bb4917eccab491f63e56d95ceb4a8e01e42062a843c35ea29121607",
+            "packageHash": "b0c2026d9bb4917eccab491f63e56d95ceb4a8e01e42062a843c35ea29121607",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ebnf-4fKAGW3a.js",
+            "sourceHash": "b21fa7b0323bdc0ab31713d74038dfef58b32305d3775c98547a3a23f143e16a",
+            "packageHash": "b21fa7b0323bdc0ab31713d74038dfef58b32305d3775c98547a3a23f143e16a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ecl-B59qGGVg.js",
+            "sourceHash": "4f1c8ae6eaddfd15d73523014b684fc2ae7160b0c10d0680812497b4f1254192",
+            "packageHash": "4f1c8ae6eaddfd15d73523014b684fc2ae7160b0c10d0680812497b4f1254192",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/eiffel-Dze7nlu3.js",
+            "sourceHash": "a0fc308a8415ecaf7e5ffe28d9192c23f5b6e81d995eb7df35894a1b307a6606",
+            "packageHash": "a0fc308a8415ecaf7e5ffe28d9192c23f5b6e81d995eb7df35894a1b307a6606",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/elm-DG7jkhNZ.js",
+            "sourceHash": "c077dc7257d0e460440d911f88d5783e18ca8c58146fd9126e9e13a0897bcb5b",
+            "packageHash": "c077dc7257d0e460440d911f88d5783e18ca8c58146fd9126e9e13a0897bcb5b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/erlang-BO6gOnGA.js",
+            "sourceHash": "a7ff36cb6624f8cb2eedd1f201678c122f7d861f901c2b4465532dc9b10fb48e",
+            "packageHash": "a7ff36cb6624f8cb2eedd1f201678c122f7d861f901c2b4465532dc9b10fb48e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/factor-CMxFHDqz.js",
+            "sourceHash": "b249da83526bbefb5f5c5621c3cd3410f0f26edc9368cec95a585dbf5c6d0fd7",
+            "packageHash": "b249da83526bbefb5f5c5621c3cd3410f0f26edc9368cec95a585dbf5c6d0fd7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/fcl-CDDUNjTj.js",
+            "sourceHash": "223f8c7838620a68cbcb74e4e40d10c5eb20fdd2fbe6d32e44bce2d1d2c28ed2",
+            "packageHash": "223f8c7838620a68cbcb74e4e40d10c5eb20fdd2fbe6d32e44bce2d1d2c28ed2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/forth-B9D2JCeE.js",
+            "sourceHash": "2db6c4dd8f293410bd0de0a25f1dad21a1ee1990ddb816a4c783e86213e1e302",
+            "packageHash": "2db6c4dd8f293410bd0de0a25f1dad21a1ee1990ddb816a4c783e86213e1e302",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/fortran-CAG2BFbe.js",
+            "sourceHash": "df8788d58683ac6188c9038802b9cc8483344dc447ff9854b818c5171c006401",
+            "packageHash": "df8788d58683ac6188c9038802b9cc8483344dc447ff9854b818c5171c006401",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/gas-d3KEcW3x.js",
+            "sourceHash": "a699545574b2f6e9d0d502fe4536ef23b977a8f03ef284520247350ac240ab33",
+            "packageHash": "a699545574b2f6e9d0d502fe4536ef23b977a8f03ef284520247350ac240ab33",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/gherkin-DhZlEZiy.js",
+            "sourceHash": "86e76fdd8bbec4e37db05eebadde43a0761cddc0786f28f42befef6addaaefcb",
+            "packageHash": "86e76fdd8bbec4e37db05eebadde43a0761cddc0786f28f42befef6addaaefcb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/groovy-CpwJiBl7.js",
+            "sourceHash": "6b1705ee26bb3827a73e657f0b58a16c84004135a5e237501d919b9cb868ca0e",
+            "packageHash": "6b1705ee26bb3827a73e657f0b58a16c84004135a5e237501d919b9cb868ca0e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/haskell-ySd-OUo8.js",
+            "sourceHash": "ff8a9df8c8df8f199ad3b7000aff670c061d0c760ba213d94f52a6f92024e0f8",
+            "packageHash": "ff8a9df8c8df8f199ad3b7000aff670c061d0c760ba213d94f52a6f92024e0f8",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/haxe-7MlzfeYV.js",
+            "sourceHash": "df08c4d4f5bf41a8e63335fa1650e2d5dd4de28c5760ebd6ab47ee0c3fbdb606",
+            "packageHash": "df08c4d4f5bf41a8e63335fa1650e2d5dd4de28c5760ebd6ab47ee0c3fbdb606",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/http-BqypyemW.js",
+            "sourceHash": "552d89ffbe4662e2a8a6ef42b9608509b6654b7de1f836e6c05c2b7ebc81e0f6",
+            "packageHash": "552d89ffbe4662e2a8a6ef42b9608509b6654b7de1f836e6c05c2b7ebc81e0f6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/icon-C1BBXoGp.png",
+            "sourceHash": "802472242c923dbb57412e63831da8470ad138cb16f2f656c77e6854543ed6b9",
+            "packageHash": "802472242c923dbb57412e63831da8470ad138cb16f2f656c77e6854543ed6b9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/idl-4HIGJlDI.js",
+            "sourceHash": "0ec3441d716383be06d8b9abe052499551a470877e9fb3701ebc09ab590c70b1",
+            "packageHash": "0ec3441d716383be06d8b9abe052499551a470877e9fb3701ebc09ab590c70b1",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BB3QUhjc.js",
+            "sourceHash": "08af7370de1a317e773e15b6c908236dd46debd8125140f656d1debeb5f9b0e4",
+            "packageHash": "08af7370de1a317e773e15b6c908236dd46debd8125140f656d1debeb5f9b0e4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BU3tBWwc.js",
+            "sourceHash": "00e9278c3751d6ab1c7777e4ffbb33d8d412ad27ff13a197f4ce1e447049b8de",
+            "packageHash": "00e9278c3751d6ab1c7777e4ffbb33d8d412ad27ff13a197f4ce1e447049b8de",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-BjVh4jIP.js",
+            "sourceHash": "03c45fce9c485befe56045b65d45c40a32bebe55fac07e646aa426462c5f18a6",
+            "packageHash": "03c45fce9c485befe56045b65d45c40a32bebe55fac07e646aa426462c5f18a6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C13gGQf-.js",
+            "sourceHash": "4714b3492d7b78a6864c1e9afc73c304b4c047285349a933fdb17dd30facd788",
+            "packageHash": "4714b3492d7b78a6864c1e9afc73c304b4c047285349a933fdb17dd30facd788",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C4udKwyM.js",
+            "sourceHash": "ff58ba9d91cd271c60ceed897775f40f8602e8457e9275d28692ffea0e90d4a7",
+            "packageHash": "ff58ba9d91cd271c60ceed897775f40f8602e8457e9275d28692ffea0e90d4a7",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-C9CoK0bU.js",
+            "sourceHash": "680cedb55446dd26f6f02158820b7a2a636eb77d00489aeafb9c7b65b19ca249",
+            "packageHash": "680cedb55446dd26f6f02158820b7a2a636eb77d00489aeafb9c7b65b19ca249",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CBOZ2e_I.js",
+            "sourceHash": "f67cb92a2a052440014b1d52c4a69b4036942d21fd4f8fe9548c29c317756476",
+            "packageHash": "f67cb92a2a052440014b1d52c4a69b4036942d21fd4f8fe9548c29c317756476",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CI8Wten8.js",
+            "sourceHash": "22e355a49003048471099692de32bcb31f9433e6bac28802a9a0a39d7d88ea46",
+            "packageHash": "22e355a49003048471099692de32bcb31f9433e6bac28802a9a0a39d7d88ea46",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CIFIn7M8.js",
+            "sourceHash": "a4ea86fd5c107fcba57666d2caa7d087f90976b9180073aa7df0bd271ffc1bfb",
+            "packageHash": "a4ea86fd5c107fcba57666d2caa7d087f90976b9180073aa7df0bd271ffc1bfb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cecnu1A8.js",
+            "sourceHash": "8b8e4891a6909005faabef21839e158382b86708c0a9a30ffb00690fbb867962",
+            "packageHash": "8b8e4891a6909005faabef21839e158382b86708c0a9a30ffb00690fbb867962",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Ch9p8Hix.js",
+            "sourceHash": "24e12fff5986a91a0f09fc98165142ed78ad3fd0c71507b5c3c0dc16c5c5f3fc",
+            "packageHash": "24e12fff5986a91a0f09fc98165142ed78ad3fd0c71507b5c3c0dc16c5c5f3fc",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-CqF0IuxN.js",
+            "sourceHash": "6d5dcc4e6b31751d9b7ad77cc29d04dd66e834901aad9a1b2c22bc34084c31bd",
+            "packageHash": "6d5dcc4e6b31751d9b7ad77cc29d04dd66e834901aad9a1b2c22bc34084c31bd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cs8I7NMw.css",
+            "sourceHash": "c633abeaeb90681dd45499bdfc7a6ec78cd009e91a4ea1cbd652505c189a49e9",
+            "packageHash": "c633abeaeb90681dd45499bdfc7a6ec78cd009e91a4ea1cbd652505c189a49e9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cv7Us6YZ.js",
+            "sourceHash": "f0f8ef027df516b03327825a4ed1795c3d78e8909044326e08f0936313f93078",
+            "packageHash": "f0f8ef027df516b03327825a4ed1795c3d78e8909044326e08f0936313f93078",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Cwth1I1U.js",
+            "sourceHash": "99e0d91b33a8ed591f2a6fd9622fb67d66f2918c09834db1caa89b2b252dbed3",
+            "packageHash": "99e0d91b33a8ed591f2a6fd9622fb67d66f2918c09834db1caa89b2b252dbed3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-D3SBHdLy.js",
+            "sourceHash": "5e865ae33a14e57dab09715be485fc21b75aba58d4130d96e84e217c5f3e2315",
+            "packageHash": "5e865ae33a14e57dab09715be485fc21b75aba58d4130d96e84e217c5f3e2315",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DD-IH58s.js",
+            "sourceHash": "f309b31c1449895d1e4fbe1c2f20556ed21ee2b62defe9f12401cd1bf38dd518",
+            "packageHash": "f309b31c1449895d1e4fbe1c2f20556ed21ee2b62defe9f12401cd1bf38dd518",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DIhVo7hV.js",
+            "sourceHash": "ccbd9a15146799d89bb1550e1889d1b0acfa051b1160a3e7731003ce2cd5dc14",
+            "packageHash": "ccbd9a15146799d89bb1550e1889d1b0acfa051b1160a3e7731003ce2cd5dc14",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-D_Kn54-I.js",
+            "sourceHash": "a6cc7b8748753db452c49fe77e7f2c17244a0a2ba6aa05ac85434efc6e45cfae",
+            "packageHash": "a6cc7b8748753db452c49fe77e7f2c17244a0a2ba6aa05ac85434efc6e45cfae",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-DpZVt1fW.js",
+            "sourceHash": "61d7e569857aaa3300adcbe89e7f5334bb5f3688a88d4c13e10718b8139b605a",
+            "packageHash": "61d7e569857aaa3300adcbe89e7f5334bb5f3688a88d4c13e10718b8139b605a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Drj9DM6U.js",
+            "sourceHash": "dc6ed1818d930bc6c772bf25344285f578ab35045e4f911cb630c961d11d7ec0",
+            "packageHash": "dc6ed1818d930bc6c772bf25344285f578ab35045e4f911cb630c961d11d7ec0",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-GsJw4evm.js",
+            "sourceHash": "ea319bd1dc528bec78a3e1d0a600cf26451b0090113b0a61237099257507f301",
+            "packageHash": "ea319bd1dc528bec78a3e1d0a600cf26451b0090113b0a61237099257507f301",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-IluSGWfs.js",
+            "sourceHash": "3291cac1bc849c1e2e7019af1013960c4dcbe706f38b4baffe4480af58d0e842",
+            "packageHash": "3291cac1bc849c1e2e7019af1013960c4dcbe706f38b4baffe4480af58d0e842",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-Kq7PDX9y.js",
+            "sourceHash": "c5503e3d1a1518d21c471165ed1b83b6fa69f8e859c20eb06605164efd4ddb33",
+            "packageHash": "c5503e3d1a1518d21c471165ed1b83b6fa69f8e859c20eb06605164efd4ddb33",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/index-gW_WEuCk.js",
+            "sourceHash": "8dc4fe449b56821af33bd3a27e93a7ce16aa3b34cf087aac02ef7cccb8073bb5",
+            "packageHash": "8dc4fe449b56821af33bd3a27e93a7ce16aa3b34cf087aac02ef7cccb8073bb5",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/island-C9lMkl4K.js",
+            "sourceHash": "847a7340c4cc217d9892213be6232676fe861ab11cc91c21eedfed9fae3eeb4c",
+            "packageHash": "847a7340c4cc217d9892213be6232676fe861ab11cc91c21eedfed9fae3eeb4c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/island-De7vXV_u.css",
+            "sourceHash": "7eb7db0d568a9a44fe7ba53fefa3cfc59a2614a41a3d2dd23f337e5eb901af5a",
+            "packageHash": "7eb7db0d568a9a44fe7ba53fefa3cfc59a2614a41a3d2dd23f337e5eb901af5a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/javascript-C_OHM9hj.js",
+            "sourceHash": "95b09f0b3fb5fdd9b2d10f6984118bbea38a78a51286f4d862b86a01094ddd8f",
+            "packageHash": "95b09f0b3fb5fdd9b2d10f6984118bbea38a78a51286f4d862b86a01094ddd8f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/julia-Bs6JJhYG.js",
+            "sourceHash": "0d8127c7275ab1371ec839ec976879685017db1cf04c55095e651e48fe103196",
+            "packageHash": "0d8127c7275ab1371ec839ec976879685017db1cf04c55095e651e48fe103196",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/livescript-DmzgM3Yt.js",
+            "sourceHash": "253527ea5df953288b76e55aa2e55f9c5f771cb2fc0498cb8917fee0369211e9",
+            "packageHash": "253527ea5df953288b76e55aa2e55f9c5f771cb2fc0498cb8917fee0369211e9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/lua-Cvg8VrAA.js",
+            "sourceHash": "165c413653092708d81ff649b3d4a63df2eedc0b50c8f249b9667b4e75fe959d",
+            "packageHash": "165c413653092708d81ff649b3d4a63df2eedc0b50c8f249b9667b4e75fe959d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mathematica-DNLOL9PQ.js",
+            "sourceHash": "acc57c8c8a74626a6b9423988f92155410b79196d13c9c6a78047d51ae130c68",
+            "packageHash": "acc57c8c8a74626a6b9423988f92155410b79196d13c9c6a78047d51ae130c68",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mbox-Ga7d4MMN.js",
+            "sourceHash": "fc425b9a3a312399b3ff6adfec040828ff7c8789f0d31b96e73bde2dce902355",
+            "packageHash": "fc425b9a3a312399b3ff6adfec040828ff7c8789f0d31b96e73bde2dce902355",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mirc-Dma3B8rS.js",
+            "sourceHash": "0ddcb9e79952a15f12935311af85affb24054773404adfdd1d437cc0080a21e2",
+            "packageHash": "0ddcb9e79952a15f12935311af85affb24054773404adfdd1d437cc0080a21e2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mllike-DHn7xckP.js",
+            "sourceHash": "adc3b1b7f8aa916812cd4d8bdf8cc1bce352786e3df54c560c5b9067b4fe6d5b",
+            "packageHash": "adc3b1b7f8aa916812cd4d8bdf8cc1bce352786e3df54c560c5b9067b4fe6d5b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/modelica-0d55jYY0.js",
+            "sourceHash": "53c8da4f56d1dd592c1710d4b2735aa9904eb2306f365b56aa7074837c59526b",
+            "packageHash": "53c8da4f56d1dd592c1710d4b2735aa9904eb2306f365b56aa7074837c59526b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mscgen-DdqZYINH.js",
+            "sourceHash": "7e91513474f40739574f20f1b1f38659a476b68b39ee260c7e13132e20d66fc6",
+            "packageHash": "7e91513474f40739574f20f1b1f38659a476b68b39ee260c7e13132e20d66fc6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/mumps-Btr8VblO.js",
+            "sourceHash": "aea5f291cf40bcc124e9ff104dedf8df38d630d3112f62d1051118f1ce16b80b",
+            "packageHash": "aea5f291cf40bcc124e9ff104dedf8df38d630d3112f62d1051118f1ce16b80b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/nginx-DTDtBDVN.js",
+            "sourceHash": "715cac7cfdb61a1efd09d43ec2c5e6d8e1bd491be679ac56df795a913e6eaf21",
+            "packageHash": "715cac7cfdb61a1efd09d43ec2c5e6d8e1bd491be679ac56df795a913e6eaf21",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/nsis-3zG7tgur.js",
+            "sourceHash": "7462e8fee0cd65c4eda55d7ef1e9d4bb37a0c2e60a4d52907585593b22eeb984",
+            "packageHash": "7462e8fee0cd65c4eda55d7ef1e9d4bb37a0c2e60a4d52907585593b22eeb984",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ntriples-CvgOYMpL.js",
+            "sourceHash": "239581b9922c933f3427296d14f18a1febb1db49283e6e4aa3331f4e2b9bc3a9",
+            "packageHash": "239581b9922c933f3427296d14f18a1febb1db49283e6e4aa3331f4e2b9bc3a9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/octave-DYBj3-tl.js",
+            "sourceHash": "57d7b87692fe3ab14a413456a3ea0fb201a3052057b77a55604863fa5064c495",
+            "packageHash": "57d7b87692fe3ab14a413456a3ea0fb201a3052057b77a55604863fa5064c495",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/oz-R_e8WMIi.js",
+            "sourceHash": "a19a6ffdf1e6eb10fe9c4937cfb31303c9ec5bb723c73df1a71ef43c82cdd020",
+            "packageHash": "a19a6ffdf1e6eb10fe9c4937cfb31303c9ec5bb723c73df1a71ef43c82cdd020",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pascal-GD8iposT.js",
+            "sourceHash": "e5a1f91525017a8bf777f9c04f990c65a6a876b26e9b803ba4fddbcc6a68ccac",
+            "packageHash": "e5a1f91525017a8bf777f9c04f990c65a6a876b26e9b803ba4fddbcc6a68ccac",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/perl-DL9mHpoi.js",
+            "sourceHash": "8c4df1964a2fe9a690f2493217ed9f70d1f7e2f026ea515f3b226b3b39370b17",
+            "packageHash": "8c4df1964a2fe9a690f2493217ed9f70d1f7e2f026ea515f3b226b3b39370b17",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pig-C_4T4YIV.js",
+            "sourceHash": "82df721874d4623ebcfa10b27ea6eb9e3992ff4c28e2d838f8d166ab73abb91d",
+            "packageHash": "82df721874d4623ebcfa10b27ea6eb9e3992ff4c28e2d838f8d166ab73abb91d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/powershell-B0suO7Vd.js",
+            "sourceHash": "3de01d37e183594d3bb94dc474f6324219cb209d162b202f82b12c77d2370410",
+            "packageHash": "3de01d37e183594d3bb94dc474f6324219cb209d162b202f82b12c77d2370410",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/properties-BR-vP1aU.js",
+            "sourceHash": "b758d2ccb06eaaf23dbbc110988e64a57e55a5923a262c60432397feeef0c9c3",
+            "packageHash": "b758d2ccb06eaaf23dbbc110988e64a57e55a5923a262c60432397feeef0c9c3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/protobuf-BxgpyhoW.js",
+            "sourceHash": "ed0b3d7fbe3b079db99443170bd20dba78ba27f42043ad6efebd4b714ef4a364",
+            "packageHash": "ed0b3d7fbe3b079db99443170bd20dba78ba27f42043ad6efebd4b714ef4a364",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/pug-CTXt1f8z.js",
+            "sourceHash": "48c244b81b114de6a5e5adefc5c7715f6eba241d58edd162713fd21007afdb2c",
+            "packageHash": "48c244b81b114de6a5e5adefc5c7715f6eba241d58edd162713fd21007afdb2c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/puppet-Bdao66PW.js",
+            "sourceHash": "7985d1f812327008fe34d375ab1849a12e903d3e9507b7fa14253ba17dbdd596",
+            "packageHash": "7985d1f812327008fe34d375ab1849a12e903d3e9507b7fa14253ba17dbdd596",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/python-CvWbmiX4.js",
+            "sourceHash": "219d8f4b9588956ac747cc56503e568fbf3aff3ab5e34e400a6cd21c86e2273f",
+            "packageHash": "219d8f4b9588956ac747cc56503e568fbf3aff3ab5e34e400a6cd21c86e2273f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/q-CrbCVq4a.js",
+            "sourceHash": "ded6c3f92101aee3b6214667f489d691936350d01b61e69fdb2b8e2104afcacd",
+            "packageHash": "ded6c3f92101aee3b6214667f489d691936350d01b61e69fdb2b8e2104afcacd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/r-V7nswm59.js",
+            "sourceHash": "78772777dc6085a89ba3ed5f6fcd5fe46c7ff6cdb849c3c967ce0c1273b4f4a2",
+            "packageHash": "78772777dc6085a89ba3ed5f6fcd5fe46c7ff6cdb849c3c967ce0c1273b4f4a2",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/rpm-C-DLY-If.js",
+            "sourceHash": "e39a41ec2ab1ba47f2ef4ac46afda8ab6157df5f4388c70b332e2ebf154e1997",
+            "packageHash": "e39a41ec2ab1ba47f2ef4ac46afda8ab6157df5f4388c70b332e2ebf154e1997",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ruby-JDKLJNK0.js",
+            "sourceHash": "3e1b46886cdefe2497ed6177e95d34cdd51938cf0da90e4997cf11a8bb45b5ee",
+            "packageHash": "3e1b46886cdefe2497ed6177e95d34cdd51938cf0da90e4997cf11a8bb45b5ee",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sas-D2UG-yhZ.js",
+            "sourceHash": "015ef33927a3a7749cad183ad9e96b0dbf9df616080054b9e581486effc05bef",
+            "packageHash": "015ef33927a3a7749cad183ad9e96b0dbf9df616080054b9e581486effc05bef",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/scheme-BKzrkGJD.js",
+            "sourceHash": "f0e7bc170c1987a1a0734b905eee725b83cca6aa8fa597457fec67670a555cc9",
+            "packageHash": "f0e7bc170c1987a1a0734b905eee725b83cca6aa8fa597457fec67670a555cc9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/shell-BlsXDxCn.js",
+            "sourceHash": "476e685b723e32c63fec792d4266c65b3facfe8feb349b6a2dff9b6c749d9fde",
+            "packageHash": "476e685b723e32c63fec792d4266c65b3facfe8feb349b6a2dff9b6c749d9fde",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sieve-CjwBwOY5.js",
+            "sourceHash": "084c9f5e19ccf7382ebe97bc97676ba143d9a36fad9b096cb4b3f99cf3c81df6",
+            "packageHash": "084c9f5e19ccf7382ebe97bc97676ba143d9a36fad9b096cb4b3f99cf3c81df6",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/simple-mode-DMneyfDu.js",
+            "sourceHash": "bf2199ce2b8baa53cef87a5bc3a72c68817223b26167c168c645fe78be9280f4",
+            "packageHash": "bf2199ce2b8baa53cef87a5bc3a72c68817223b26167c168c645fe78be9280f4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/smalltalk-BOIGQuhN.js",
+            "sourceHash": "7d696f35a8e402a8b6c2ac1db57c92af865ec665cd63d827689c46e58b9b295d",
+            "packageHash": "7d696f35a8e402a8b6c2ac1db57c92af865ec665cd63d827689c46e58b9b295d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/solr-CwD7U71z.js",
+            "sourceHash": "9e9b3bf9c4c0a208effcc6283428b25a30e935eeefa58fc34629947c040beb7e",
+            "packageHash": "9e9b3bf9c4c0a208effcc6283428b25a30e935eeefa58fc34629947c040beb7e",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sparql-DYskk2vE.js",
+            "sourceHash": "0573590f5173a33d2c988a89048fccb66706d9d2b1d1e01c42dd864c7b664422",
+            "packageHash": "0573590f5173a33d2c988a89048fccb66706d9d2b1d1e01c42dd864c7b664422",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/spreadsheet-Bgtt3oLP.js",
+            "sourceHash": "453eff194470639d89a69e4cdf76b8e58773b5ab307554feed6d826b20a058c4",
+            "packageHash": "453eff194470639d89a69e4cdf76b8e58773b5ab307554feed6d826b20a058c4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/sql-BSrOzCRI.js",
+            "sourceHash": "dc7e3ba15d3123633b1a12391213fafb05a5abdcc9829498793b3d467a1d3fbd",
+            "packageHash": "dc7e3ba15d3123633b1a12391213fafb05a5abdcc9829498793b3d467a1d3fbd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/stex-B6LNC55o.js",
+            "sourceHash": "350838050b62d1c5f9821e86a9bb0ee45f0c61628eadc676c126359a41a5f2a5",
+            "packageHash": "350838050b62d1c5f9821e86a9bb0ee45f0c61628eadc676c126359a41a5f2a5",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/stylus-BkS-boTH.js",
+            "sourceHash": "2d50cfa755d2ad2fc7302164938caf2b4421003f3c3fb9eb02314a230a514cd9",
+            "packageHash": "2d50cfa755d2ad2fc7302164938caf2b4421003f3c3fb9eb02314a230a514cd9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/swift-FRZi1uvB.js",
+            "sourceHash": "526e30f380c612526c4f06a3085c392bda84ede2673fff42b1d2dd7a205377d4",
+            "packageHash": "526e30f380c612526c4f06a3085c392bda84ede2673fff42b1d2dd7a205377d4",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tcl-CUcaCdmq.js",
+            "sourceHash": "aa90d12c1490ebb77e68e6ce90fd35b0b312e5510f9753f1072c629c43e9c05c",
+            "packageHash": "aa90d12c1490ebb77e68e6ce90fd35b0b312e5510f9753f1072c629c43e9c05c",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/textile-BnFpjsrl.js",
+            "sourceHash": "de9336373ae050e5a1ff954d462dd129d09f31c02951e27ede260fba1c054bad",
+            "packageHash": "de9336373ae050e5a1ff954d462dd129d09f31c02951e27ede260fba1c054bad",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tiddlywiki-CjprD-Qp.js",
+            "sourceHash": "5a80d8ec11cdad4503ab1462ed24e2bd7a1b09b787e815fbdfd4b7a454242fce",
+            "packageHash": "5a80d8ec11cdad4503ab1462ed24e2bd7a1b09b787e815fbdfd4b7a454242fce",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/tiki-DK9DOeWn.js",
+            "sourceHash": "d307359b562484e7c25803b60349d4aa86e6351400f9612a3b78048f8451b847",
+            "packageHash": "d307359b562484e7c25803b60349d4aa86e6351400f9612a3b78048f8451b847",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/toml-BOuWGMcf.js",
+            "sourceHash": "fddf8a802721005715a22746b28e0b87ac56a8f77caa41075f9142150e588fb3",
+            "packageHash": "fddf8a802721005715a22746b28e0b87ac56a8f77caa41075f9142150e588fb3",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/transcribe-D_48OyGs.js",
+            "sourceHash": "6a267f26bc3f591575cffcf6fa40c67fc7b5da88ac033ed74e209ad337e9fbfc",
+            "packageHash": "6a267f26bc3f591575cffcf6fa40c67fc7b5da88ac033ed74e209ad337e9fbfc",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/troff-E1bJ0PPL.js",
+            "sourceHash": "ea32a0126878e2cd1198e94abcee48cbcd2131de1d80195e1267ad5b0cab82bf",
+            "packageHash": "ea32a0126878e2cd1198e94abcee48cbcd2131de1d80195e1267ad5b0cab82bf",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ttcn-cfg-Dc39-fIP.js",
+            "sourceHash": "743ddd5c09b350d33149497d4177895083f584712019a20e88a3c9ded8b62fb9",
+            "packageHash": "743ddd5c09b350d33149497d4177895083f584712019a20e88a3c9ded8b62fb9",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/ttcn-tKd4HLu4.js",
+            "sourceHash": "b9af59a0022981562d7482bf0125dc1b6bfdbb40ea1214807db4abbcb783059b",
+            "packageHash": "b9af59a0022981562d7482bf0125dc1b6bfdbb40ea1214807db4abbcb783059b",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/turtle-Dq7-1WAf.js",
+            "sourceHash": "7e505e9051b7e3c8ecebea47e4fd43b1e6b2b6ccd7334fd25fc267dc82ee0e4d",
+            "packageHash": "7e505e9051b7e3c8ecebea47e4fd43b1e6b2b6ccd7334fd25fc267dc82ee0e4d",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vb-Dp90gtsv.js",
+            "sourceHash": "049ed5cc9eb5958257497e1c018cd8aa6ff558760d7d9bca5d0d84db8573e19f",
+            "packageHash": "049ed5cc9eb5958257497e1c018cd8aa6ff558760d7d9bca5d0d84db8573e19f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vbscript-CI6_mxxU.js",
+            "sourceHash": "61890fbc79e2fa6eed6ec2f556916d57712d58fa394f140b09af6c50fece5855",
+            "packageHash": "61890fbc79e2fa6eed6ec2f556916d57712d58fa394f140b09af6c50fece5855",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/velocity-BwIZK1TH.js",
+            "sourceHash": "630eef603fbca377c8e48679bf30198dce1f27d1a72123bdd72f1eada28f4bbd",
+            "packageHash": "630eef603fbca377c8e48679bf30198dce1f27d1a72123bdd72f1eada28f4bbd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/verilog-DDCYnHN8.js",
+            "sourceHash": "a38956f338156db5f9b6fd4644f88cd1f81d7dc726a78b882b1ee62f0e70f45a",
+            "packageHash": "a38956f338156db5f9b6fd4644f88cd1f81d7dc726a78b882b1ee62f0e70f45a",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/vhdl-DCkMIyT9.js",
+            "sourceHash": "b0e803173743715af902fa2508c4da88a2e97f9b4782f33c6064a17db505bc05",
+            "packageHash": "b0e803173743715af902fa2508c4da88a2e97f9b4782f33c6064a17db505bc05",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/webidl-BTLTThCm.js",
+            "sourceHash": "07aaaed4cf1b1adc2d5f705b656e0e3a4b0d4bddaf4ad998e488d3ca3450a290",
+            "packageHash": "07aaaed4cf1b1adc2d5f705b656e0e3a4b0d4bddaf4ad998e488d3ca3450a290",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/xquery-BrBUuxMR.js",
+            "sourceHash": "96459fe2892ccdce0b57439307eeeaa9d82fd2663f2a0f4364a849dba3374e74",
+            "packageHash": "96459fe2892ccdce0b57439307eeeaa9d82fd2663f2a0f4364a849dba3374e74",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/yacas-b5lAVEIl.js",
+            "sourceHash": "95c453f73dd9a218385c018b692c4af134b02d5131bea8dd957ca887a5cdd8bd",
+            "packageHash": "95c453f73dd9a218385c018b692c4af134b02d5131bea8dd957ca887a5cdd8bd",
+            "match": true
+          },
+          {
+            "file": "out/renderer/assets/z80-BZV19vqv.js",
+            "sourceHash": "51594b00905d1522d2f64113beae4943577338f0ff5af4503dd9ee49dc3957eb",
+            "packageHash": "51594b00905d1522d2f64113beae4943577338f0ff5af4503dd9ee49dc3957eb",
+            "match": true
+          },
+          {
+            "file": "out/renderer/index.html",
+            "sourceHash": "7b048d8809d50b7d3605767226ebebcdb7d75f343e2f0a1eea53195159582f2f",
+            "packageHash": "7b048d8809d50b7d3605767226ebebcdb7d75f343e2f0a1eea53195159582f2f",
+            "match": true
+          },
+          {
+            "file": "out/renderer/island.html",
+            "sourceHash": "e7522a6ce3be7a52c43f91afc36ec8341fbb615911c80766afabf7f6b2edd85b",
+            "packageHash": "e7522a6ce3be7a52c43f91afc36ec8341fbb615911c80766afabf7f6b2edd85b",
+            "match": true
+          }
+        ],
+        "rawExactMatch": false,
+        "comparedRuntimeCount": 139
+      },
+      "mcp": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/mcp",
+        "packaged": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Resources/mcp",
+        "sourceCount": 14,
+        "packageCount": 14,
+        "passed": true,
+        "files": [
+          {
+            "file": "bizone-mcp.mjs",
+            "sourceHash": "bf2b600ac93ab2f887efe1729479b36ad3366f02b1a78aa282b574fda1be4ff7",
+            "packageHash": "bf2b600ac93ab2f887efe1729479b36ad3366f02b1a78aa282b574fda1be4ff7",
+            "match": true
+          },
+          {
+            "file": "cli-entry.d.mts",
+            "sourceHash": "276434a72176efec50ccd9db4bab42b3c5425b00fdba01acbe2728125be9cb05",
+            "packageHash": "276434a72176efec50ccd9db4bab42b3c5425b00fdba01acbe2728125be9cb05",
+            "match": true
+          },
+          {
+            "file": "cli-entry.mjs",
+            "sourceHash": "7f584c5b59f98bf5573efb6d170b488d78981398269114c096a6423094cb2bfa",
+            "packageHash": "7f584c5b59f98bf5573efb6d170b488d78981398269114c096a6423094cb2bfa",
+            "match": true
+          },
+          {
+            "file": "codex-capability-config.mjs",
+            "sourceHash": "17bb33936f652c855ea477c997cd93569ed8781875bc08e43a459041ca4b507a",
+            "packageHash": "17bb33936f652c855ea477c997cd93569ed8781875bc08e43a459041ca4b507a",
+            "match": true
+          },
+          {
+            "file": "eas-capability-shim.mjs",
+            "sourceHash": "78445bd770c787f65d4899e1b59b1d8fc744189672ad9ef1239a7f1ee18f6e99",
+            "packageHash": "78445bd770c787f65d4899e1b59b1d8fc744189672ad9ef1239a7f1ee18f6e99",
+            "match": true
+          },
+          {
+            "file": "eas-codex-launcher.mjs",
+            "sourceHash": "bb5348da31b5ad1617c225602f50f47a31803e660564a411a25dbd2654d69db7",
+            "packageHash": "bb5348da31b5ad1617c225602f50f47a31803e660564a411a25dbd2654d69db7",
+            "match": true
+          },
+          {
+            "file": "eas-mcp.mjs",
+            "sourceHash": "25b0a70b2820d8718f5b547b8691cff90ffd83f33aee6114acb763b7b460fc34",
+            "packageHash": "25b0a70b2820d8718f5b547b8691cff90ffd83f33aee6114acb763b7b460fc34",
+            "match": true
+          },
+          {
+            "file": "eas-plugin-shim.mjs",
+            "sourceHash": "45a1b99da773da3bdcb9b373a2a8e91eb628fb7898f75e5c52ada1158ad32af6",
+            "packageHash": "45a1b99da773da3bdcb9b373a2a8e91eb628fb7898f75e5c52ada1158ad32af6",
+            "match": true
+          },
+          {
+            "file": "eas-pty-launcher.mjs",
+            "sourceHash": "2271c484583434ae3ebaf6d202e336b11f98408b8c5f411c316b4a8c95b803fa",
+            "packageHash": "2271c484583434ae3ebaf6d202e336b11f98408b8c5f411c316b4a8c95b803fa",
+            "match": true
+          },
+          {
+            "file": "eas-secret.mjs",
+            "sourceHash": "23571965d549718bd4ebc25696f635149864ab6e1614920eaa048f3ff5825b95",
+            "packageHash": "23571965d549718bd4ebc25696f635149864ab6e1614920eaa048f3ff5825b95",
+            "match": true
+          },
+          {
+            "file": "eas-selected-mcp-launcher.mjs",
+            "sourceHash": "de54764fa5fb564f5c53c08a4a512d35c11d4d8adf7bd84fe4b7fc1c2773904b",
+            "packageHash": "de54764fa5fb564f5c53c08a4a512d35c11d4d8adf7bd84fe4b7fc1c2773904b",
+            "match": true
+          },
+          {
+            "file": "owned-launcher-control.d.mts",
+            "sourceHash": "a42eeaa2951c61bc53aa427e0f9ca6d7151ca7852f0c6fc809dc98ca028cbe52",
+            "packageHash": "a42eeaa2951c61bc53aa427e0f9ca6d7151ca7852f0c6fc809dc98ca028cbe52",
+            "match": true
+          },
+          {
+            "file": "owned-launcher-control.mjs",
+            "sourceHash": "ce89e392fc2ffdf236b0ca45f9069b9f58e205f0cd7dfc0380654078cdf0ebae",
+            "packageHash": "ce89e392fc2ffdf236b0ca45f9069b9f58e205f0cd7dfc0380654078cdf0ebae",
+            "match": true
+          },
+          {
+            "file": "workbench-tools.json",
+            "sourceHash": "6f16e627d63da502ae45c94f361051b97636e2b6daef4b8ebc12fc19f5047b43",
+            "packageHash": "6f16e627d63da502ae45c94f361051b97636e2b6daef4b8ebc12fc19f5047b43",
+            "match": true
+          }
+        ]
+      },
+      "builtinBundle": {
+        "source": "/Users/biily/Biily/Projects/vibe coding/terminal/resources/plugins/eas-capabilities",
+        "packaged": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/mac/Eas-Term.app/Contents/Resources/plugins/eas-capabilities",
+        "sourceCount": 8,
+        "packageCount": 8,
+        "passed": true,
+        "files": [
+          {
+            "file": "bundle.json",
+            "sourceHash": "8e3414eb439d08569dd114aedee2b1093b6f1ef5305a58a65a107eba7dfe683a",
+            "packageHash": "8e3414eb439d08569dd114aedee2b1093b6f1ef5305a58a65a107eba7dfe683a",
+            "match": true
+          },
+          {
+            "file": "guidance/SKILL.md",
+            "sourceHash": "8f53afcc6b7c8922e32d686f6c7edc89890cc0fe042c2546c680c124bf187fef",
+            "packageHash": "8f53afcc6b7c8922e32d686f6c7edc89890cc0fe042c2546c680c124bf187fef",
+            "match": true
+          },
+          {
+            "file": "guidance/canvas.md",
+            "sourceHash": "4c7e725de2bd25580c80676feabafc89fbe04681a0f28fe60fde7926a7476c58",
+            "packageHash": "4c7e725de2bd25580c80676feabafc89fbe04681a0f28fe60fde7926a7476c58",
+            "match": true
+          },
+          {
+            "file": "guidance/dict.md",
+            "sourceHash": "e9310c097308bb09085b973882f5732d9e51d2cbbfce34367892ca8a5c1066f7",
+            "packageHash": "e9310c097308bb09085b973882f5732d9e51d2cbbfce34367892ca8a5c1066f7",
+            "match": true
+          },
+          {
+            "file": "guidance/generate.md",
+            "sourceHash": "b5db00a1f223a2c1f71a7bfdaff56cdc665e6d6f088946721698935128130c85",
+            "packageHash": "b5db00a1f223a2c1f71a7bfdaff56cdc665e6d6f088946721698935128130c85",
+            "match": true
+          },
+          {
+            "file": "guidance/plugins.md",
+            "sourceHash": "a1e8a1562eb052d94e1d1b101c249ab0d9c919a134d8b5c7c9121945e9100f41",
+            "packageHash": "a1e8a1562eb052d94e1d1b101c249ab0d9c919a134d8b5c7c9121945e9100f41",
+            "match": true
+          },
+          {
+            "file": "guidance/secrets.md",
+            "sourceHash": "1ee03647ffce207d7d645e4a216a4c0030b5213c063bcc93a6ad8ae982cf7c86",
+            "packageHash": "1ee03647ffce207d7d645e4a216a4c0030b5213c063bcc93a6ad8ae982cf7c86",
+            "match": true
+          },
+          {
+            "file": "guidance/wiki-architect.md",
+            "sourceHash": "75a9cb035049f0d20b7c86e4e9529590b056210868bea0eb4986f11612b35ad9",
+            "packageHash": "75a9cb035049f0d20b7c86e4e9529590b056210868bea0eb4986f11612b35ad9",
+            "match": true
+          }
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "expectedExclusions": [
+    {
+      "file": "out/.DS_Store",
+      "reason": "Finder directory metadata; electron-builder default fileMatcher excludes .DS_Store. Verified enabled default ignores in package.json.",
+      "authority": "node_modules/app-builder-lib/out/fileMatcher.js:17 and :160"
+    }
+  ]
+}

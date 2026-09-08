@@ -15,18 +15,18 @@
 
 | 范围 | 证据 | 仍待完成或不支持 |
 | --- | --- | --- |
-| 回归 | 冻结 a17772d 完整套件 2722/2722、0 跳过；脚本证据解析另 4/4 | Windows npm 修复后重新运行 |
-| Claude Code / Codex / omp AI | 签名公证正式候选包三端各三轮正确 Frame 与 PNG 解码 | 新源码构建后复核 |
+| 回归 | 9510ff2：2752 项中 2742 通过、10 Windows 专用项本机跳过、0 失败；证据助手另 6/6 | Windows 专用启动与 IPC 夹具在 CI 25/25 通过、0 跳过 |
+| Claude Code / Codex / omp AI | reviewed-9510ff2 签名公证正式候选包三端各三轮正确 Frame 与 PNG 解码 | Mac arm64 实际模型；不扩大为 Windows 模型验收 |
 | 配置隔离 | 系统沙箱拒绝全局规则写入；保留各文件前后哈希 | `.claude.json` 并发变化归属不明，不声称所有全局文件未变 |
-| PTY | 签名公证正式候选包三端各三轮实际模型调用通过 | Windows npm `.cmd` 确认阻断，正在修复 |
-| Windows | CI 34216597763 正式包构建/启动/设置六项通过，artifact 哈希一致 | npm 启动修复与已登录 CLI 真实验收 |
+| PTY | 同一包三端各三轮实际模型调用通过 | 共 AI + PTY 18 阶段；Windows 官方 npm 启动问题已修复并审查 |
+| Windows | CI 34235219068 构建、正式包启动、设置六项、contracts 7/7、CLI/control 25/25 通过 | 已登录 CLI 实际模型调用环境仍缺 |
 | 笔纵 | 1.21.31 已发布；协议 19/19，Mac 包启动/旧接口/重启查询 3/3，Windows CI 成功 | 4 墨水实生成批准待回复；未扣费 |
 
-完整冻结候选矩阵、失败保留、签名/公证/安装包哈希见 [a17772d 验收](frozen-a17772d-acceptance.md)。该候选因 Windows 启动问题不发布。
+最新矩阵见 [9510ff2 验收](reviewed-9510ff2-acceptance.md)。旧 [a17772d 验收](frozen-a17772d-acceptance.md) 保留为历史，不能用于本次最终产物签收。
 
 ## 兼容限制
 
-- Codex profile-v2 无可靠原生 config/read 接口时明确停止；不伪造合并成功。绝对 CLI/alias 绕过 PATH 不由受管入口保证；Windows `.cmd`/`.bat` 原生启动仍 fail closed。
+- Codex profile-v2 无可靠原生 config/read 接口时明确停止；不伪造合并成功。绝对 CLI/alias 绕过 PATH 不由受管入口保证；Windows 官方 npm shim 通过校验后的 native/JS 入口启动；未知自定义 `.cmd`/`.bat`、无可靠元数据或越界入口仍 fail closed。
 - 远程业务插件保留原生降级路径：Claude 接收受支持配置，Codex 保留已有原生注册，OMP 明确报告不支持 HTTP/SSE；不能声称三端统一支持远程第三方插件。
 - 旧版或用户修改过的托管段无可靠归属时保留；第三方全局 MCP 注册不批量删除。迁移记录与备份位于 app-owned `capability-migrations`。
 - 外部 Computer Use 指针生命周期问题保持开放。

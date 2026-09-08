@@ -1,0 +1,19 @@
+{
+  "sourceCommit": "a49643a5c9f27d06d810444985803d9f4631a429",
+  "workflowRun": 34221294425,
+  "conclusion": "success",
+  "contracts": {
+    "pass": 7,
+    "fail": 0
+  },
+  "cliResolverAndFixtureProcesses": {
+    "pass": 13,
+    "fail": 0
+  },
+  "packagedSmoke": "passed",
+  "packagedSettingsChecks": 6,
+  "modelCalls": false,
+  "publishToRelease": "skipped",
+  "finalAcceptance": false,
+  "reason": "Independent review requires owned outer launcher cancellation and legacy helper PATH fixes."
+}

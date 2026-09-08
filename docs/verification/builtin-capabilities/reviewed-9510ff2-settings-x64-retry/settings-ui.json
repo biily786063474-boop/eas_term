@@ -1,0 +1,12 @@
+{
+  "mode": "supplied executable",
+  "modelCalls": false,
+  "checks": [
+    "Real preload/main IPC returns packaged bundle identity",
+    "Three independently controlled modules are present",
+    "Settings visibly renders all three module switches",
+    "Real pointer click updates workbench preference through IPC",
+    "Switch preserves the other two modules",
+    "Confirmed state is durably written to isolated profile"
+  ]
+}
