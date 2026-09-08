@@ -34,3 +34,10 @@ test('missing Google project shows configuration guidance and qualified retry',(
  assert.ok(html.includes('尚未保存凭证'))
  assert.ok(html.includes('已配置项目，重新登录'))
 })
+test('native verification progress is visible and cannot be mistaken for saved credentials',()=>{
+ const html=render({...base,phase:'working',progress:'正在获取账号信息…'})
+ assert.ok(html.includes('正在获取账号信息…'))
+ assert.ok(html.includes('只有 OMP 确认凭证保存成功'))
+ assert.equal(html.includes('✓ 凭证已保存'),false)
+ assert.equal(html.includes('等待浏览器授权结果'),false)
+})

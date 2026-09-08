@@ -84,7 +84,9 @@ export function createOmpLoginParser(): OmpLoginParser {
   let lastPrompt = ''
 
   function line(raw: string, out: OmpLoginEvent[]): void {
-    const s = raw.trim()
+    let s = raw.trim()
+    // Native manual fallback has no newline; callback progress can follow it directly.
+    if (lastPrompt && s.startsWith(lastPrompt)) s = s.slice(lastPrompt.length).trim()
     if (!s) { instructions = false; return }
 
     if (s === URL_BANNER) {

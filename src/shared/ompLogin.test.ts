@@ -10,3 +10,12 @@ test('输入类型来自原生提示而非供应商名单；未知提示保持�
  assert.equal(ompPromptKind('Paste the authorization code (or full redirect URL):'),'code')
  assert.equal(ompPromptKind('Choose account:'),'text')
 })
+test('active OMP login ignores passive dismiss and confirms explicit close',async()=>{
+ const {ompLoginDismiss}=await import('./ompLogin.ts')
+ for(const phase of ['starting','browser','input','working'] as const){
+  assert.equal(ompLoginDismiss(phase,false,false),'ignore')
+  assert.equal(ompLoginDismiss(phase,false,true),'confirm')
+ }
+ for(const phase of [undefined,'done','failed','cancelled'] as const)assert.equal(ompLoginDismiss(phase,false,false),'close')
+ assert.equal(ompLoginDismiss('done',true,true),'ignore')
+})

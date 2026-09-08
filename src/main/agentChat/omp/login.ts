@@ -47,6 +47,15 @@ export function createOmpLoginController(spawnLogin: SpawnLogin = spawn) {
             else if (e.k === 'instructions')
                 emit(r, { instructions: ((r.state.instructions ? r.state.instructions + '\n' : '') + e.text).slice(-4000) });
             else if (e.k === 'progress') {
+                const progress = ({
+                    'Exchanging authorization code for tokens...': '正在验证授权…',
+                    'Getting user info...': '正在获取账号信息…',
+                    'Checking for existing Cloud Code Assist project...': '正在检查账号项目…',
+                    'Provisioning Cloud Code Assist project (this may take a moment)...': '正在配置账号项目，可能需要一些时间…'
+                } as Record<string, string>)[e.text];
+                if (progress) {
+                    emit(r, { phase: 'working', progress, prompt: undefined, url: undefined, launchUrl: undefined, instructions: undefined });
+                }
                 // Keep diagnostic categories, never arbitrary raw codes / URLs / keys.
                 const category = e.text === 'GOOGLE_CLOUD_PROJECT_REQUIRED' ? e.text : /EADDRINUSE|address already in use/i.test(e.text) ? 'EADDRINUSE' : /timed? ?out|timeout/i.test(e.text) ? 'timeout' : /401|unauthorized/i.test(e.text) ? 'HTTP 401' : /403|forbidden|access_denied/i.test(e.text) ? 'HTTP 403' : /ENOTFOUND|ECONNRESET|ECONNREFUSED|fetch failed/i.test(e.text) ? 'network error' : undefined;
                 if (category)

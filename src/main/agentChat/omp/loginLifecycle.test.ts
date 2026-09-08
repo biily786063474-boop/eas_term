@@ -54,3 +54,12 @@ test('project configuration error survives native stderr and terminal event with
  assert.deepEqual(seen.at(-1)?.lines,['GOOGLE_CLOUD_PROJECT_REQUIRED'])
  assert.equal(JSON.stringify(seen).includes('SECRET'),false)
 })
+test('native token exchange and account progress advances UI without reporting success',()=>{
+ const {c,procs}=fixture();const seen:OmpLoginState[]=[];c.start(host,'google-antigravity',s=>seen.push(s))
+ procs[0].stdout.write('Paste the authorization code (or full redirect URL): ')
+ procs[0].stdout.write('Exchanging authorization code for tokens...\n')
+ assert.equal(c.inFlight()?.phase,'working');assert.equal(c.inFlight()?.progress,'正在验证授权…');assert.equal(c.inFlight()?.prompt,undefined)
+ procs[0].stdout.write('Getting user info...\n');assert.equal(c.inFlight()?.progress,'正在获取账号信息…')
+ assert.equal(seen.some(s=>s.phase==='done'),false)
+ procs[0].emit('close',1);assert.equal(seen.at(-1)?.phase,'failed');assert.equal(seen.at(-1)?.progress,undefined)
+})

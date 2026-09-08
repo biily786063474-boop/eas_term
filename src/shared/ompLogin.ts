@@ -27,3 +27,10 @@ export function ompPromptKind(prompt?: string): 'secret' | 'code' | 'text' {
   if (/authorization code|redirect|callback|auth code/i.test(prompt ?? '')) return 'code'
   return 'text'
 }
+
+/** Never let incidental dismissal cancel an active native authorization. */
+export function ompLoginDismiss(phase: OmpLoginState['phase'] | undefined, busy: boolean, explicit: boolean): 'ignore' | 'confirm' | 'close' {
+  if (busy) return 'ignore'
+  if (phase && ['starting', 'browser', 'input', 'working'].includes(phase)) return explicit ? 'confirm' : 'ignore'
+  return 'close'
+}

@@ -95,7 +95,7 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
   <div className="ac-native-status" role="status">
    {!state && <><h4>使用现有账号或订阅</h4><p>OMP 会提供该供应商支持的登录方式，无需提前准备不需要的 API 密钥。</p><button type="button" className="ac-native-primary" onClick={onStart}>开始登录</button></>}
    {waiting && <><h4><span className="ac-native-spinner"/>等待浏览器授权结果</h4><p>在浏览器中选择账号并按页面提示授权。无需把回调地址发到对话。</p></>}
-   {(phase === 'starting' || phase === 'working') && <><h4><span className="ac-native-spinner"/>{phase === 'starting' ? '正在启动原生登录…' : '正在等待 OMP 完成验证…'}</h4><p>只有 OMP 确认凭证保存成功，才会显示已连接。</p></>}
+   {(phase === 'starting' || phase === 'working') && <><h4><span className="ac-native-spinner"/>{phase === 'starting' ? '正在启动原生登录…' : state?.progress || '正在等待 OMP 完成验证…'}</h4><p>只有 OMP 确认凭证保存成功，才会显示已连接。</p></>}
    {state?.instructions && !terminal && <p className="ac-native-instructions">{state.instructions}</p>}
    {url && !terminal && <div className="ac-native-actions"><button type="button" className="ac-native-primary" onClick={() => void open()}>打开授权页面 ↗</button><button type="button" onClick={() => void copy()}>复制登录链接</button></div>}
    {phase === 'input' && <details className="ac-native-fallback" open={waiting ? undefined : true}><summary>{waiting ? '未自动返回？手动补充' : '填写 OMP 请求的内容'}</summary><form onSubmit={e => { e.preventDefault(); void submit(); }}>

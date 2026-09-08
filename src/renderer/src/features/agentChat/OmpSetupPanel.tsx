@@ -29,7 +29,7 @@ import { createPortal } from 'react-dom'
 import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
 import { OmpLoginPanel } from './OmpLoginPanel'
-import type { OmpLoginState as OmpLoginWire } from '../../../../shared/ompLogin'
+import { ompLoginDismiss, type OmpLoginState as OmpLoginWire } from '../../../../shared/ompLogin'
 import { CtxScrollRail } from '../../ui/CtxScrollRail'
 import {
   authFailureInTail,
@@ -98,6 +98,12 @@ export function OmpSetupPanel(props: {
   // 回来时状态被打回「先解锁」，但他已经粘进去的那半截 key 必须还在 ——
   // 把草稿并进事实里刷新一次就没了，那是最气人的一种「白填一遍」。
   const [query, setQuery] = useState('')
+
+  const [login, setLogin] = useState<OmpLoginWire | null>(null)
+  const loginRef = useRef(login)
+  loginRef.current = login
+  const [confirmClose, setConfirmClose] = useState(false)
+  useEffect(() => { if (ompLoginDismiss(login?.phase, false, true) !== 'confirm') setConfirmClose(false) }, [login?.phase])
 
   const [busy, setBusy] = useState<Busy>({ k: 'idle' })
   const [editing, setEditing] = useState<Editing>(null)
@@ -184,8 +190,9 @@ export function OmpSetupPanel(props: {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Escape') return
-      if (busyRef.current.k === 'busy' || busyRef.current.k === 'smoke') return
       e.stopPropagation()
+      e.preventDefault()
+      if (ompLoginDismiss(loginRef.current?.phase, busyRef.current.k === 'busy' || busyRef.current.k === 'smoke', false) !== 'close') return
       onCancelRef.current()
     }
     // 捕获阶段：画布那侧也听 Esc（退出最大化），不抢在前面的话两个会一起响应
@@ -231,8 +238,6 @@ export function OmpSetupPanel(props: {
       if (aliveRef.current) setAuthProviders(l)
     }).catch(() => { if(aliveRef.current) { setAuthProviders([]); setErr('供应商列表未能加载，请关闭面板后重试') } })
   }, [needProviders, authProviders])
-  /** 正在跑的那次订阅登录。null = 没在跑 */
-  const [login, setLogin] = useState<OmpLoginWire | null>(null)
 
   const startLogin = async (id: string): Promise<void> => {
     setErr('')
@@ -447,7 +452,9 @@ export function OmpSetupPanel(props: {
   }
 
   const close = (): void => {
-    if (busy.k === 'busy' || busy.k === 'smoke') return
+    const decision = ompLoginDismiss(login?.phase, busy.k === 'busy' || busy.k === 'smoke', true)
+    if (decision === 'ignore') return
+    if (decision === 'confirm') { setConfirmClose(true); return }
     onCancel()
   }
 
@@ -531,7 +538,7 @@ export function OmpSetupPanel(props: {
       onMouseDown={(e) => {
         // **忙的时候点遮罩不关。** 那一下会取消一次已经在跑的冒烟，而点空白处
         // 通常是无意的。要放弃就点右上角那个 ×（那是明确动作）
-        if (e.target === e.currentTarget && !working) close()
+        if (e.target === e.currentTarget && ompLoginDismiss(login?.phase, working, false) === 'close') close()
       }}
     >
       {rails}
@@ -545,6 +552,14 @@ export function OmpSetupPanel(props: {
           </span>
         </div>
 
+        {confirmClose && <div className="ac-native-login ac-native-status ac-native-close-confirm" role="alert" aria-label="确认取消授权">
+          <h4>关闭并取消本次授权？</h4>
+          <p>OMP 仍在处理登录。关闭会取消本次授权，已有账号配置不受影响。</p>
+          <div className="ac-native-actions">
+            <button type="button" className="ac-native-primary" autoFocus onClick={() => setConfirmClose(false)}>继续等待</button>
+            <button type="button" onClick={() => { setConfirmClose(false); onCancel() }}>关闭并取消授权</button>
+          </div>
+        </div>}
         {/* 一条链，不是四个各自弹一次的面板 —— 约束 ① */}
         {step && step.k !== 'blocked' && (
           <div className="ac-omp-chain">

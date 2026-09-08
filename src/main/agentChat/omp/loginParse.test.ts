@@ -165,3 +165,12 @@ test('Google project requirement becomes a safe category, including long native 
  const raw='OAuthError: This account requires setting the GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_PROJECT_ID environment variable. See https://example.test/?code=SECRET\n'
  assert.deepEqual(run(raw),[{k:'progress',text:'GOOGLE_CLOUD_PROJECT_REQUIRED'}])
 })
+test('callback progress following a non-newline fallback prompt survives every chunk split',()=>{
+ // The prompt is emitted before callback progress begins in the native stream.
+ for(let i=0;i<'Exchanging authorization code for tokens...\n'.length;i++){
+  const p=createOmpLoginParser();p.push('Paste the authorization code (or full redirect URL): ')
+  const rest='Exchanging authorization code for tokens...\n'
+  const e=[...p.push(rest.slice(0,i)),...p.push(rest.slice(i))]
+  assert.ok(e.some(e=>e.k==='progress'&&e.text==='Exchanging authorization code for tokens...'))
+ }
+})
