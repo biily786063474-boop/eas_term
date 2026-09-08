@@ -24,7 +24,7 @@ async function connect(port, filter) {
         const ws = new WebSocket(target.webSocketDebuggerUrl)
         await new Promise((res, rej) => { ws.addEventListener('open', res, { once: true }); ws.addEventListener('error', rej, { once: true }) })
         let id = 0; const pending = new Map(); const pauses = []
-        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); pending.get(d.id)?.(d) })
+        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); if (d.method === 'NodeWorker.attachedToWorker') { console.log('WORKER', d.params.workerInfo?.title, 'waiting=', d.params.waitingForDebugger); ws.send(JSON.stringify({ id: ++id, method: 'NodeWorker.sendMessageToWorker', params: { sessionId: d.params.sessionId, message: JSON.stringify({ id: 1, method: 'Runtime.runIfWaitingForDebugger' }) } })) }; pending.get(d.id)?.(d) })
         const call = (method, params) => new Promise((res, rej) => {
           if (method === 'Runtime.evaluate') console.log('EVAL', port, params.expression.slice(0, 160))
           const n = ++id; const timer = setTimeout(() => { pending.delete(n); rej(new Error('CDP timeout port=' + port + ' ' + method + ' ' + (params?.expression ?? '').slice(0,160))) }, 15000)
@@ -68,6 +68,10 @@ async function launch(unclean = false) {
     await main.call('Debugger.resume')
   }
   assert.ok(injected, 'must reach packaged application entry before test instrumentation')
+  // ConPTY reads its pipe on a real Worker. The parent --inspect-brk flag must not leave
+  // that Worker waiting for a debugger while pty.spawn synchronously waits for its pipe.
+  const workers = await main.call('NodeWorker.enable', { waitForDebuggerOnStart: false })
+  assert.equal(workers.error, undefined, 'NodeWorker debugger domain must be available')
   renderer = await connect(ports.renderer, t => t.type === 'page' && !t.url.includes('island.html'))
   for (let i = 0; i < 100; i++) { if (await renderer.ev("!!window.api?.diagnostics && !!document.querySelector('.app')")) break; await sleep(100) }
   assert.equal(await renderer.ev('window.api.diagnostics.enabled()'), true)
@@ -93,6 +97,7 @@ try {
   evidence.checks.push('independent identity/userData, bridge and real renderer')
   assert.equal(await renderer.ev('window.api.update.check()').then(r => r.info), null)
   await renderer.ev('window.api.diagnostics.chatOpen()')
+  assert.equal(await main.ev("new Promise((resolve, reject) => { const w = new (process.getBuiltinModule('worker_threads').Worker)(\"require('worker_threads').parentPort.postMessage('ready')\", { eval: true }); w.on('message', resolve); w.on('error', reject) })"), 'ready')
   const pty = await renderer.ev('window.api.pty.create({ cwd: ' + JSON.stringify(root) + ', cols: 80, rows: 24 })')
   await renderer.ev('window.api.pty.kill(' + JSON.stringify(pty.id) + ')')
   await renderer.ev('window.api.diagnostics.open()')

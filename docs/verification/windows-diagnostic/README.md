@@ -27,3 +27,7 @@ d5e70cb 的类型检查、NSIS构建、9项诊断单测及实际启动/PTY/OMP�
 ## 第二次 Windows CI（34253167577）
 
 应用入口断点已工作：独立身份、数据目录及桥接检查通过；随后仍有 Runtime.evaluate 超时。构建/单测/普通冒烟继续全通过。为区分具体IPC/原生对话步骤，下一次只增加验证脚本逐步EVAL跟踪与失败时最后30条结构化事件，不改应用、不延长超时、不跳过断言。
+
+## 第三次 Windows CI（34254123277）与工作假设
+
+逐步跟踪已确认超时发生在 `pty.create`，不是回传请求或同意弹窗；同一个包在无主进程调试器的普通冒烟中正常开终端和回显。node-pty 的 Windows ConPTY 会创建真实 Worker 来读取管道；测试启动带 --inspect-brk，工作假设是 Worker 等待调试器导致同步创建等待管道。下一轮在验收脚本启用 NodeWorker 调试协议并明确释放 waiting debugger 的 Worker，增加真实 Worker ready 断言，不改应用和PTY实现。Mac 同脚本再次通过；Windows结果待核实。此假设不等同于用户原始闪退根因。
