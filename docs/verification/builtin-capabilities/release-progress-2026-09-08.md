@@ -64,4 +64,4 @@
 
 ## 0.4.85 生产已切换
 
-发布提交0cec8d9已快进合并main并打v0.4.85标签；产品源码与9510ff2冻结包无差异。五包远端SHA256一致后才切换三个页面和latest.json；公网页面逐字节、包HEAD/Range验证通过，七站301保持，未reload/删旧包/替换用户本地实例。备份 /www/wwwroot/eas-release-backups/0.4.85-20260908T145135Z；完整证据 ../releases/0.4.85-live.json。GitHub五包备份正在进行。
+发布提交0cec8d9已快进合并main并打v0.4.85标签；产品源码与9510ff2冻结包无差异。五包远端SHA256一致后才切换三个页面和latest.json；公网页面逐字节、包HEAD/Range验证通过，七站301保持，未reload/删旧包/替换用户本地实例。备份 /www/wwwroot/eas-release-backups/0.4.85-20260908T145135Z；完整证据 ../releases/0.4.85-live.json。GitHub五包备份已完成，全部asset digest匹配，Release v0.4.85已公开。

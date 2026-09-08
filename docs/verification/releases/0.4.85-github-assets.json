@@ -1,0 +1,46 @@
+{
+  "files": [
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.dmg",
+      "name": "Eas-Term-0.4.85-arm64.dmg",
+      "bytes": 204465706,
+      "sha256": "0b4f27e042189b48677e313cdf5e59e52b85882e4fbc9bf02a338edf815901c1",
+      "remoteSha256Verified": true,
+      "githubDigestVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.zip",
+      "name": "Eas-Term-0.4.85-arm64.zip",
+      "bytes": 202613921,
+      "sha256": "dd21e90dae9afa4944b71aea925d7476e64adb351f1f76f347ff369911351357",
+      "remoteSha256Verified": true,
+      "githubDigestVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.dmg",
+      "name": "Eas-Term-0.4.85-x64.dmg",
+      "bytes": 216488460,
+      "sha256": "b1eed590b3ec12b13a67382109135152a8de96994c8fa3ab624c648615b6a3a8",
+      "remoteSha256Verified": true,
+      "githubDigestVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.zip",
+      "name": "Eas-Term-0.4.85-x64.zip",
+      "bytes": 214723919,
+      "sha256": "6d3d9721449a5d7a899212d3812f317717250683ed4a470ca3446ec1b62fc6b8",
+      "remoteSha256Verified": true,
+      "githubDigestVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-windows/eas-term-win/Eas-Term-0.4.85-x64-setup.exe",
+      "name": "Eas-Term-0.4.85-x64-setup.exe",
+      "bytes": 190055572,
+      "sha256": "eac9790f4491cee13d581bdf73ed559c91b52680420bb86fa80e2cd822706870",
+      "remoteSha256Verified": true,
+      "githubDigestVerified": true
+    }
+  ],
+  "releaseId": 384824957,
+  "passed": true
+}

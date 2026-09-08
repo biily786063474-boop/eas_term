@@ -108,5 +108,7 @@
     "mini.biily.top": "301",
     "eas.biily.top": "301"
   },
-  "passed": true
+  "passed": true,
+  "githubReleaseUrl": "https://github.com/biily786063474-boop/eas_term/releases/tag/v0.4.85",
+  "githubFiveAssetDigestsVerified": true
 }
