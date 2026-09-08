@@ -124,6 +124,7 @@ export function AgentChatView({
   tabId: string
   leafId: string
 }): JSX.Element {
+  useEffect(() => { void window.api.diagnostics.chatOpen().catch(() => {}) }, [])
   // 会话建立后把 sessionId 写回这个 leaf 的 PaneState——killPanePty（store/shared.ts）
   // 关闭节点时只认 store 里的这份，组件本地的 useState 它够不着（2026-08-15 审查
   // Important：不写回的话，关掉一个正在跑的 agent 节点不会停底层 CLI 进程，会话会在

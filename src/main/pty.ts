@@ -1,3 +1,4 @@
+import { recordDiagnostic } from './diagnostics/record.ts'
 import { app, ipcMain, BrowserWindow } from 'electron'
 import * as pty from 'node-pty'
 import os from 'os'
@@ -420,6 +421,7 @@ export function readTermTail(ptyId: string, maxLines?: number): string[] {
 export function registerPtyHandlers(): void {
   watchUrlQueue() // 监听 CLI 经 open shim 投递的网址 → 通知渲染层在画板浏览器打开
   ipcMain.handle('pty:create', (e, opts: PtyCreateOptions) => {
+    recordDiagnostic('pty-create')
     const id = String(nextId++)
     let cwd = opts.cwd || os.homedir()
     try {
@@ -489,10 +491,13 @@ export function registerPtyHandlers(): void {
       })()
     })
     } catch (error) {
+      recordDiagnostic('pty-error', { error })
       revokeCapabilitySession('pty:' + id)
       forgetPty(id)
       throw error
     }
+    recordDiagnostic('pty-started')
+    proc.onExit(({ exitCode }) => recordDiagnostic('pty-exit', { code: exitCode }))
     const wc = e.sender
     // 输出合批背压:高吞吐(cat 大文件 / 刷屏 / 构建日志)时逐块 wc.send 会用海量小 IPC 消息
     // 灌满通道、拖垮渲染主线程(卡死甚至 OOM 崩溃→白屏)。这里按 pty 累积,~16ms 或积到 64KB

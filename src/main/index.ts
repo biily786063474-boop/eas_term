@@ -1,3 +1,4 @@
+import { initializeDiagnostics, registerDiagnosticHandlers } from './diagnostics/index.ts'
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs'
@@ -314,6 +315,7 @@ function buildMenu(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
+  initializeDiagnostics()
   app.on('second-instance', () => {
     // 不能随便挑一扇——灵动岛也是一个 BrowserWindow，但它 focusable:false，
     // 挑到它的话 restore()/focus() 全部落空，用户会觉得「叫了半天，应用没反应」。
@@ -364,6 +366,7 @@ app.whenReady().then(() => {
   // 插件面板宿主：画布透传走 mcpBridge 的 invokeRenderer，在这里注入（pluginHost 不 import mcpBridge，避免成环）
   registerPluginHostHandlers((tool, args, ctx) => invokeRenderer(tool, args, ctx))
   registerDiagHandlers()
+  registerDiagnosticHandlers()
   // 清掉 0.4.27–0.4.30 装过的 DeepSeek Harness 残留（AGENTS.md 常驻区 + skill 目录）。
   // MCP 那一半在 mcpBridge 的 setupAgents 里。装过的人升级即清，不必去点卸载。
   purgeLegacyDsh()

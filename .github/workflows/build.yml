@@ -1,87 +1,53 @@
-name: Build Windows
+name: Private Windows Diagnostic
 
-# Windows 版在云端构建（node-pty 原生模块需在 Windows 上编译）。
-# macOS 版在本地用 `npm run dist` 构建，不占用 GitHub 的 macOS runner 额度。
+# This branch is a private test build. No push/tag trigger, no Release permissions.
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
   workflow_dispatch:
-
 permissions:
-  contents: write
-
+  contents: read
 jobs:
   build-win:
-    # 固定 windows-2022（VS 2022 / v17）：windows-latest 已升级到 VS 2026 (v18)，
-    # 当前 Electron 配套的 node-gyp 还识别不了，会导致 node-pty 编译失败
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      # npm install 会触发 postinstall（electron-rebuild），在 Windows 上编译 node-pty
       - name: Install dependencies
-        run: npm install
-
-      - name: Build & package
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build diagnostic installer only
         run: npm run dist:ci
-
-      # 冒烟测试：把打好的包真的启动一次。只验「能构建」等于没验——
-      # 白屏、渲染进程崩、原生模块加载失败，这些构建阶段全看不出来。
-      # 走 CDP 直接问渲染层，重点验 node-pty（Windows 走 conpty，最可能挂的地方）。
-      # 冒烟脚本用原生 WebSocket 连 CDP，那是 Node 22+ 才有的。
-      # 只给这一步换新 node——构建和 node-pty 编译仍然用上面的 20，不动那套已验证的环境。
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-
-      - name: Smoke test
-        run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
-
-      - name: Builtin capability Windows contracts
-        run: node --experimental-strip-types --test src/main/bizoneWindowsDiscovery.test.ts src/shared/builtinCapabilities.test.ts
-
-      - name: Windows CLI resolver and real fixture processes
-        env:
-          EAS_TEST_NODE_RUNNER: ${{ github.workspace }}\release\win-unpacked\Eas-Term.exe
-        run: node --test src/main/cliEntry.test.mjs src/main/ownedLauncherControl.test.mjs src/main/windowsCliLaunch.test.mjs
-
-      - name: Packaged builtin capability settings
-        run: node scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"
-
-      - name: Upload builtin capability evidence
+      - name: Diagnostic unit tests
+        run: node --test src/main/diagnostics/core.test.ts src/main/diagnostics/transport.test.ts src/main/diagnostics/pending.test.ts src/main/diagnostics/wiring.test.mjs
+      - name: Packaged smoke test
+        run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term Diagnostic.exe"
+      - name: Diagnostic runtime verification
+        run: node scripts/verify-diagnostics.mjs "release/win-unpacked/Eas-Term Diagnostic.exe" --upload
+      - name: Installer digest
+        shell: pwsh
+        run: |
+          Get-ChildItem release/*setup.exe | ForEach-Object {
+            $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$h  $($_.Name)" | Out-File -FilePath release/SHA256SUMS.txt -Encoding ascii
+          }
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: builtin-capabilities-win
-          path: docs/verification/builtin-capabilities/settings-*
+          name: diagnostic-verification-win
+          path: |
+            smoke-out/
+            docs/verification/windows-diagnostic/runtime/
           if-no-files-found: warn
-
-      - name: Upload smoke result
-        if: always()          # 失败时更需要看截图和 stderr
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: smoke-win
-          path: smoke-out/
-          if-no-files-found: warn
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: eas-term-win
-          path: release/*.exe
+          name: eas-term-windows-diagnostic-private
+          path: |
+            release/*setup.exe
+            release/SHA256SUMS.txt
           if-no-files-found: error
-
-      # 打 tag 时把安装包发布到 GitHub Release，方便直接下载
-      - name: Publish to Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.exe
-          fail_on_unmatched_files: false
+          retention-days: 14

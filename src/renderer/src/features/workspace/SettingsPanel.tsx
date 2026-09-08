@@ -168,6 +168,8 @@ export function SettingsPanel(): JSX.Element {
     }
   }
 
+  const [diagnosticBuild, setDiagnosticBuild] = useState(false)
+  useEffect(() => { void window.api.diagnostics.enabled().then(setDiagnosticBuild).catch(() => {}) }, [])
   const [diagLines, setDiagLines] = useState<string[] | null>(null)
 
   const toggleApprovalHook = async (on: boolean): Promise<void> => {
@@ -665,6 +667,15 @@ export function SettingsPanel(): JSX.Element {
                     这个软件在你机器上写过的全部位置，可以逐个卸掉。
                   </div>
                   <FootprintPanel mode="inline" />
+                </div>
+              )}
+              {tab === 'privacy' && diagnosticBuild && (
+                <div className="cset-sec">
+                  <div className="cset-label">Windows 诊断测试版 · 不参与正式更新</div>
+                  <div className="cset-note">日志仅保存在本机；发送前会说明内容和大小，并请你确认。不含聊天、命令或密钥。服务器保留 14 天。</div>
+                  <div className="cset-actions">
+                    <button className="cset-btn" onClick={() => void window.api.diagnostics.open()}>发送或导出诊断报告…</button>
+                  </div>
                 </div>
               )}
               {tab === 'privacy' && (

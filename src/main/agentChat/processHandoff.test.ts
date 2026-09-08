@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../diagnostics/record.ts'
 import { stopAgentProcess, ownCodexLauncher } from '../../../mcp/owned-launcher-control.mjs'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -29,7 +30,7 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const interrupt = runInNewContext(compiled + '\ninterrupt', {
-    stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
+    recordDiagnostic, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
     handleEvent() {}
   })
@@ -43,7 +44,7 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
 function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
-    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {},
+    recordDiagnostic, stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {},
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
@@ -85,7 +86,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const compiled = ts.transpileModule(deliverNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: unknown[] = []
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
-    stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
+    recordDiagnostic, stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
     restartAndDeliver: (_live: unknown, opts: unknown, message: string) => { calls.push({ opts, message }); return { ok: true } },
     writeStdin: () => { throw new Error('Codex must not use stdin') }
@@ -106,7 +107,7 @@ test('启动同步失败后恢复空闲并返回失败，下一次可以直接�
   const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   let attempts = 0
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
-    stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+    recordDiagnostic, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
@@ -136,7 +137,7 @@ for (const [label, mcp, expected] of [
     let enabled = false, snapshots = 0
     const launches: string[][] = []
     const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
-      stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+      recordDiagnostic, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],

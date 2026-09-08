@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../diagnostics/record.ts'
 import { ownCodexLauncher, stopAgentProcess } from '../../../mcp/owned-launcher-control.mjs'
 import { cliInvocation } from '../cliInvocation.ts'
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
@@ -637,6 +638,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   })
   proc.on('error', (err) => {
     if (!isCurrent()) return
+    recordDiagnostic('cli-error', { cli: live.rec.cli, error: err })
     revokeCapabilitySession(live.rec.id)
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
@@ -644,6 +646,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   })
   proc.on('exit', (code, signal) => {
     if (!isCurrent()) return
+    recordDiagnostic('cli-exit', { cli: live.rec.cli, code, signal })
     revokeCapabilitySession(live.rec.id)
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
@@ -840,6 +843,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
       ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
       : cliInvocation(live.rec.cli, built.bin, args)
     const controlledCodex = process.platform === 'win32' && live.rec.cli === 'codex'
+    recordDiagnostic('cli-spawn', { cli: live.rec.cli })
     const proc = spawn(launch.command, launch.args, {
       cwd: opts.cwd,
       env: {
@@ -876,6 +880,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
       },
       stdio: controlledCodex ? [built.stdin, 'pipe', 'pipe', 'ipc'] : [built.stdin, 'pipe', 'pipe']
     })
+    proc.once('spawn', () => recordDiagnostic('cli-started', { cli: live.rec.cli }))
     if (controlledCodex) ownCodexLauncher(proc)
 
     live.proc = proc
@@ -908,6 +913,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     if (built.stdin === 'pipe') writeStdin(live, message)
     return { ok: true }
   } catch (e) {
+    recordDiagnostic('cli-error', { cli: live.rec.cli, error: e })
     return failStart(e instanceof Error ? e.message : String(e))
   }
 }
@@ -1465,6 +1471,7 @@ export function registerAgentChatHandlers(): void {
   }
 
   ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
+    recordDiagnostic('chat-start')
     const p = params as Partial<AgentChatStartParams> | null
     if (!p || typeof p.cli !== 'string' || typeof p.cwd !== 'string' || typeof p.message !== 'string' || !p.message) {
       return { ok: false, error: '缺少必需参数（cli / cwd / message）' }
@@ -1638,6 +1645,7 @@ export function registerAgentChatHandlers(): void {
   })
 
   ipcMain.handle('agentChat:send', (_e, sessionId: unknown, message: unknown): AgentChatSendResult => {
+    recordDiagnostic('chat-send')
     const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
     if (!live) return { ok: false, error: '会话不存在（可能已被关闭）' }
     if (typeof message !== 'string' || !message) return { ok: false, error: '消息不能为空' }

@@ -1,0 +1,23 @@
+[Unit]
+Description=Eas-Term private diagnostic receiver
+After=network.target
+[Service]
+Type=simple
+User=eas-diagnostics
+Group=eas-diagnostics
+WorkingDirectory=/opt/eas-diagnostics
+ExecStart=/usr/bin/python3 /opt/eas-diagnostics/receiver.py
+Environment=EAS_DIAGNOSTIC_DIR=/var/lib/eas-diagnostics
+Environment=EAS_DIAGNOSTIC_PORT=4187
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/eas-diagnostics
+MemoryMax=64M
+TasksMax=16
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "independent identity/userData, bridge and real renderer",
+    "cancel default, production update disabled, PTY actual launch",
+    "actual export, chat and PTY events, no private path",
+    "abrupt main exit persists and prompts next startup",
+    "privacy settings diagnostic entry rendered",
+    "normal quit clears marker"
+  ],
+  "platform": "darwin"
+}

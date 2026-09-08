@@ -1,7 +1,7 @@
 {
-  "name": "eas-term",
-  "productName": "Eas-Term",
-  "version": "0.4.85",
+  "name": "eas-term-diagnostic",
+  "productName": "Eas-Term Diagnostic",
+  "version": "0.4.85-diag.1",
   "description": "多终端 + 项目文件浏览的桌面终端应用",
   "main": "out/main/index.js",
   "private": true,
@@ -19,8 +19,8 @@
     "omp:fetch": "node scripts/fetch-omp.mjs"
   },
   "build": {
-    "appId": "com.biily.easterm",
-    "productName": "Eas-Term",
+    "appId": "com.biily.easterm.diagnostic",
+    "productName": "Eas-Term Diagnostic",
     "afterPack": "build/afterPack.js",
     "directories": {
       "buildResources": "build",
@@ -102,7 +102,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Eas-Term",
+      "shortcutName": "Eas-Term Diagnostic",
       "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
     },
     "extraResources": [

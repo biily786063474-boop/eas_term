@@ -1,3 +1,4 @@
+import { recordDiagnostic } from '../../diagnostics/record.ts'
 import { capabilityGuidanceDir } from '../../capabilityBundlePaths.ts'
 // 起一个 omp 进程之前要准备的全部东西：**受管配置落盘** ＋ **spawn 参数组装**。
 //
@@ -202,8 +203,10 @@ function copySkill(host: HostPaths, agentDir: string): void {
 export function openOmpProcess(
   input: OmpLaunchInput
 ): { ok: true; proc: AcpProcess } | { ok: false; message: string; setup: boolean } {
+  recordDiagnostic('cli-spawn', { cli: 'omp' })
   const plan = planOmpLaunch(input)
   if (!plan.ok) {
+    recordDiagnostic('cli-error', { cli: 'omp' })
     // 'no-binary' 是「这个包坏了」，另外三类都是「你还没配好」——
     // 界面据此决定摆的是普通错误还是「去设置」入口。
     return { ok: false, message: plan.message, setup: plan.reason !== 'no-binary' }
@@ -216,9 +219,13 @@ export function openOmpProcess(
       stdio: ['pipe', 'pipe', 'pipe']
     })
   } catch (e) {
+    recordDiagnostic('cli-error', { cli: 'omp', error: e })
     return { ok: false, message: e instanceof Error ? e.message : String(e), setup: false }
   }
 
+  child.once('spawn', () => recordDiagnostic('cli-started', { cli: 'omp' }))
+  child.on('error', error => recordDiagnostic('cli-error', { cli: 'omp', error }))
+  child.on('exit', (code, signal) => recordDiagnostic('cli-exit', { cli: 'omp', code, signal }))
   let buf = ''
   return {
     ok: true,

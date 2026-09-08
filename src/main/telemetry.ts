@@ -1,3 +1,4 @@
+import { isDiagnosticBuild } from './diagnostics/identity.ts'
 // 匿名使用统计。
 //
 // ============================ 采集边界 ============================
@@ -128,6 +129,7 @@ function packCounts(): string {
 /** 发一发就算了，不重试、不看响应。统计数据丢几条无所谓，
  *  为它做重试队列反而会在网络不好时反复占用带宽。 */
 function send(params: Record<string, string | number>): void {
+  if (isDiagnosticBuild()) return
   // 所有 app 上报统一带使用龄桶。放在这里而不是各调用点，免得日后新增上报忘了带
   const withAge = params.t === 'app' ? { ...params, age: currentAge() } : params
   const q = Object.entries(withAge)
