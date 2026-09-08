@@ -1,0 +1,112 @@
+{
+  "version": "0.4.85",
+  "sourceCommit": "9510ff29e94b143015691715f3e0bfbe16b1caa7",
+  "releaseCommit": "0cec8d96d20ba8d474f794eac5bc1680f7e26a97",
+  "published": "2026-09-08T14:51:35.049610+00:00",
+  "backup": "/www/wwwroot/eas-release-backups/0.4.85-20260908T145135Z",
+  "files": [
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.dmg",
+      "name": "Eas-Term-0.4.85-arm64.dmg",
+      "bytes": 204465706,
+      "sha256": "0b4f27e042189b48677e313cdf5e59e52b85882e4fbc9bf02a338edf815901c1",
+      "remoteSha256Verified": true,
+      "publicHeadAndRangeVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-arm64/Eas-Term-0.4.85-arm64.zip",
+      "name": "Eas-Term-0.4.85-arm64.zip",
+      "bytes": 202613921,
+      "sha256": "dd21e90dae9afa4944b71aea925d7476e64adb351f1f76f347ff369911351357",
+      "remoteSha256Verified": true,
+      "publicHeadAndRangeVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.dmg",
+      "name": "Eas-Term-0.4.85-x64.dmg",
+      "bytes": 216488460,
+      "sha256": "b1eed590b3ec12b13a67382109135152a8de96994c8fa3ab624c648615b6a3a8",
+      "remoteSha256Verified": true,
+      "publicHeadAndRangeVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-x64/Eas-Term-0.4.85-x64.zip",
+      "name": "Eas-Term-0.4.85-x64.zip",
+      "bytes": 214723919,
+      "sha256": "6d3d9721449a5d7a899212d3812f317717250683ed4a470ca3446ec1b62fc6b8",
+      "remoteSha256Verified": true,
+      "publicHeadAndRangeVerified": true
+    },
+    {
+      "file": "/Users/biily/Eas-Term-release/0.4.85-prep/reviewed-9510ff2-windows/eas-term-win/Eas-Term-0.4.85-x64-setup.exe",
+      "name": "Eas-Term-0.4.85-x64-setup.exe",
+      "bytes": 190055572,
+      "sha256": "eac9790f4491cee13d581bdf73ed559c91b52680420bb86fa80e2cd822706870",
+      "remoteSha256Verified": true,
+      "publicHeadAndRangeVerified": true
+    }
+  ],
+  "sitesBefore": {
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "eas.biily.top": "301"
+  },
+  "pages": [
+    {
+      "file": "changelog.html",
+      "remote": "/www/wwwroot/eas/changelog.html",
+      "url": "/changelog.html",
+      "beforeSha256": "b3ae9c261e952967d46c5a529e80e39f6c938cc017739c3af84ec3295c973c1e",
+      "sha256": "e408b08cfb5eff3ba89fbf354aa70e1b5c3b6b15a8bde24acdaf921bd8122de8",
+      "bytes": 89232,
+      "publicBytesVerified": true,
+      "backupSha256Verified": true
+    },
+    {
+      "file": "download.html",
+      "remote": "/www/wwwroot/eas/download.html",
+      "url": "/download.html",
+      "beforeSha256": "697fb525bd7d32feea727e1d9e64a6f87899175ce9a816cc3d1f4132617a4a19",
+      "sha256": "e1c009324553d5361217c05e214f659276558b302659d7c1249685debd6f2f34",
+      "bytes": 12898,
+      "publicBytesVerified": true,
+      "backupSha256Verified": true
+    },
+    {
+      "file": "index.html",
+      "remote": "/www/wwwroot/eas/index.html",
+      "url": "/index.html",
+      "beforeSha256": "df1ea377291cfefc82b76527c80067241f31cfd001d005c727d61824133f0dcf",
+      "sha256": "92edfccc1ead74cdb959ee5813da3d61440692d51547436a53cdb5644c4a921d",
+      "bytes": 28217,
+      "publicBytesVerified": true,
+      "backupSha256Verified": true
+    },
+    {
+      "file": "latest.json",
+      "remote": "/www/wwwroot/eas-dl/latest.json",
+      "url": "/download/latest.json",
+      "beforeSha256": "450dbb0aea6232e66b2476f35f0d152533f8f9a272f657e2ffae0da137ddb951",
+      "sha256": "512235157534c4cb31f0653bbfcb97ae5af78b07921b3f3df7b8a91307584f0f",
+      "bytes": 1872,
+      "publicBytesVerified": true,
+      "backupSha256Verified": true
+    }
+  ],
+  "userAuthorizedKnownLimits": true,
+  "previousVersionRetained": "0.4.84",
+  "sitesAfter": {
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "eas.biily.top": "301"
+  },
+  "passed": true
+}
