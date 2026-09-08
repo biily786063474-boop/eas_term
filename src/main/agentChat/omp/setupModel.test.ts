@@ -241,3 +241,10 @@ test('压根没存模型 → false（那本来就该去选）', () => {
   assert.equal(ompModelUsable(M('a/b'), undefined), false)
 })
 
+test('Google project requirement explains configuration instead of retrying authorization',()=>{
+ const r=login(['GOOGLE_CLOUD_PROJECT_REQUIRED'])
+ assert.match(r.title,/项目/)
+ assert.match(r.hint??'',/GOOGLE_CLOUD_PROJECT/)
+ assert.match(r.hint??'',/尚未保存/)
+ assert.equal(r.retry,'input')
+})

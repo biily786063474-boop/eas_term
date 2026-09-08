@@ -45,3 +45,12 @@ test('stdin 异步错误给明确失败，不崩溃；不接收多行注入', ()
  assert.equal(c.submit('one\ntwo').ok,false)
  procs[0].stdin.emit('error',new Error('EPIPE'));assert.equal(seen.at(-1)?.phase,'failed')
 })
+test('project configuration error survives native stderr and terminal event without secrets',()=>{
+ const {c,procs}=fixture();const seen: OmpLoginState[]=[]
+ c.start(host,'google-gemini-cli',s=>seen.push(s))
+ procs[0].stderr.write('OAuthError: This account requires setting the GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_PROJECT_ID environment variable. See https://example.test/?code=SECRET\n')
+ procs[0].emit('close',1)
+ assert.equal(seen.at(-1)?.phase,'failed')
+ assert.deepEqual(seen.at(-1)?.lines,['GOOGLE_CLOUD_PROJECT_REQUIRED'])
+ assert.equal(JSON.stringify(seen).includes('SECRET'),false)
+})

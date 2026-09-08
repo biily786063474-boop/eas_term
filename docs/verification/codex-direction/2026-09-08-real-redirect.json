@@ -1,0 +1,29 @@
+{
+  "test": "real Codex UI redirect while shell sleeping, then two read-only calls",
+  "port": 9447,
+  "execs": [
+    {
+      "execId": "item_1",
+      "state": "failed",
+      "label": "运行 /bin/zsh -lc \"printf \\\"STEER_BEFORE\\\\n\\\"; sleep 40; printf \\",
+      "output": null
+    },
+    {
+      "execId": "codex-resume-1:item_0",
+      "state": "ok",
+      "label": "运行 /bin/zsh -lc 'printf \"STEER_AFTER_ONE\"'",
+      "output": "STEER_AFTER_ONE\n(exit code 0)"
+    },
+    {
+      "execId": "codex-resume-1:item_1",
+      "state": "ok",
+      "label": "运行 /bin/zsh -lc pwd",
+      "output": "/Users/biily/Biily/Projects/vibe coding/terminal\n\n(exit code 0)"
+    }
+  ],
+  "checks": {
+    "oldInterrupted": true,
+    "newResultsCorrect": true,
+    "uniqueIds": true
+  }
+}

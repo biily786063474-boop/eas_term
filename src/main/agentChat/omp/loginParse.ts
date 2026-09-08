@@ -115,6 +115,10 @@ export function createOmpLoginParser(): OmpLoginParser {
       out.push({ k: 'done' })
       return
     }
+    if (/requires setting the GOOGLE_CLOUD_PROJECT(?: or GOOGLE_CLOUD_PROJECT_ID)? environment variable/i.test(s)) {
+      out.push({ k: 'progress', text: 'GOOGLE_CLOUD_PROJECT_REQUIRED' })
+      return
+    }
     // Surface only safe diagnostic categories from native error headings.
     if (/error|exception/i.test(s)) {
       const category = /EADDRINUSE|address already in use/i.test(s) ? 'EADDRINUSE'

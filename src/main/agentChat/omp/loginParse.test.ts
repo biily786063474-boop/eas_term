@@ -161,3 +161,7 @@ test('授权输出每个切分点都保留完整快捷入口和设备指令',()=
   const e=run(data.slice(0,i),data.slice(i));assert.equal(e.filter(x=>x.k==='url').at(-1)?.launchUrl,'http://127.0.0.1:8085/launch');assert.equal(e.some(x=>x.k==='prompt'),false)
  }
 })
+test('Google project requirement becomes a safe category, including long native errors',()=>{
+ const raw='OAuthError: This account requires setting the GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_PROJECT_ID environment variable. See https://example.test/?code=SECRET\n'
+ assert.deepEqual(run(raw),[{k:'progress',text:'GOOGLE_CLOUD_PROJECT_REQUIRED'}])
+})

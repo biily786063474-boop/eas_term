@@ -189,3 +189,17 @@ test('可恢复 error（如 MCP）不能打断后续正文和完成事件', () =
   assert.ok(t.push(JSON.stringify({type:'item.completed',item:{type:'agent_message',text:'仍然可以回答'}})).some(e=>e.k==='text.done'))
   assert.ok(t.push(JSON.stringify({type:'turn.completed',usage:{input_tokens:1,output_tokens:2}})).some(e=>e.k==='turn.done'))
 })
+test('resume after redirect namespaces repeated tool ids within the live translator',()=>{
+ const t=createCodexTranslator()
+ const send=(v:unknown)=>t.push(JSON.stringify(v))
+ send({type:'thread.started',thread_id:'same-thread'})
+ const first=send({type:'item.started',item:{id:'item_0',type:'command_execution',command:'first'}})[0]
+ send({type:'thread.started',thread_id:'same-thread'})
+ const second=send({type:'item.started',item:{id:'item_0',type:'command_execution',command:'second'}})[0]
+ const done=send({type:'item.completed',item:{id:'item_0',type:'command_execution',status:'completed',aggregated_output:'second result'}})[0]
+ assert.equal(first.k,'exec.start');assert.equal(second.k,'exec.start');assert.equal(done.k,'exec.done')
+ if(first.k==='exec.start'&&second.k==='exec.start'&&done.k==='exec.done'){
+  assert.notEqual(first.execId,second.execId)
+  assert.equal(second.execId,done.execId)
+ }
+})

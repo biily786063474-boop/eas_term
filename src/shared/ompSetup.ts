@@ -277,6 +277,13 @@ export function explainOmpFailure(i: {
   }
   const hay = [...lines, error ?? ''].join('\n')
   const detail = humanReasonIn([...lines, ...(error ? [error] : [])])
+  if (lines.includes('GOOGLE_CLOUD_PROJECT_REQUIRED')) {
+    return {
+      title: '账号还需要 Google Cloud 项目配置',
+      hint: '浏览器授权已返回，但 OMP 尚未保存凭证。请向项目管理员确认可用的 Google Cloud 项目 ID，并为 Eas-Term 启动的 OMP 配置 GOOGLE_CLOUD_PROJECT 或 GOOGLE_CLOUD_PROJECT_ID 后重新登录。不是项目名称或项目编号；只重复浏览器授权无法解决。也可以更换其他账号或供应商。',
+      retry: 'input'
+    }
+  }
   if (AUTH_RE.test(hay)) {
     return {
       title: ctx === 'login' ? '这把密钥不对' : '模型服务商拒绝了这把密钥',

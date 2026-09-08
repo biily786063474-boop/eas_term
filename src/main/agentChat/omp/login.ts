@@ -48,7 +48,7 @@ export function createOmpLoginController(spawnLogin: SpawnLogin = spawn) {
                 emit(r, { instructions: ((r.state.instructions ? r.state.instructions + '\n' : '') + e.text).slice(-4000) });
             else if (e.k === 'progress') {
                 // Keep diagnostic categories, never arbitrary raw codes / URLs / keys.
-                const category = /EADDRINUSE|address already in use/i.test(e.text) ? 'EADDRINUSE' : /timed? ?out|timeout/i.test(e.text) ? 'timeout' : /401|unauthorized/i.test(e.text) ? 'HTTP 401' : /403|forbidden|access_denied/i.test(e.text) ? 'HTTP 403' : /ENOTFOUND|ECONNRESET|ECONNREFUSED|fetch failed/i.test(e.text) ? 'network error' : undefined;
+                const category = e.text === 'GOOGLE_CLOUD_PROJECT_REQUIRED' ? e.text : /EADDRINUSE|address already in use/i.test(e.text) ? 'EADDRINUSE' : /timed? ?out|timeout/i.test(e.text) ? 'timeout' : /401|unauthorized/i.test(e.text) ? 'HTTP 401' : /403|forbidden|access_denied/i.test(e.text) ? 'HTTP 403' : /ENOTFOUND|ECONNRESET|ECONNREFUSED|fetch failed/i.test(e.text) ? 'network error' : undefined;
                 if (category)
                     emit(r, { lines: [...r.state.lines, category].slice(-10) });
             }

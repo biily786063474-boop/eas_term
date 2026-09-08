@@ -25,6 +25,7 @@
 // 而 omp 自己内部也排队（上游 `acp-agent.ts:175` 的 promptQueue），
 // 我们在这一层排是为了守住「同一时刻只有一个 prompt 在飞」——
 // `turn.done` 的配对与 `reduce.ts` 的单槽 pending 都建立在这个不变量上。
+import path from 'node:path'
 import type { ChatEvent } from '../../../shared/agentChat'
 import {
   createOmpTranslator,
@@ -271,6 +272,10 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
   // ── 起进程与握手 ──────────────────────────────────────────────────────────
 
   function open(): boolean {
+    if (!path.isAbsolute(cwd)) {
+      deps.emit({ k: 'error', fatal: true, kind: 'setup', message: 'OMP 对话未关联有效的项目目录。请在已绑定项目的 Frame 中新建对话；账号登录状态不受影响。' })
+      return false
+    }
     const got = deps.open(cwd)
     if (!got.ok) {
       deps.emit({ k: 'error', fatal: true, message: got.message, ...(got.setup ? { kind: 'setup' as const } : {}) })

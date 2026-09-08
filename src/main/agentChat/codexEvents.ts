@@ -41,6 +41,12 @@ const KNOWN_ITEM_TYPES = new Set(['command_execution', 'file_change', 'web_searc
 const NON_EXEC_ITEM_TYPES = new Set(['agent_message', 'reasoning'])
 
 export function createCodexTranslator(): CodexTranslator {
+  // exec resume restarts native item numbering; one Live retains this translator.
+  let generation = -1
+  const scoped = (events: ChatEvent[]): ChatEvent[] => events.map(e =>
+    generation > 0 && (e.k === 'exec.start' || e.k === 'exec.done')
+      ? { ...e, execId: `codex-resume-${generation}:${e.execId}` } : e
+  )
   function push(line: string): ChatEvent[] {
     if (!line || !line.trim()) return []
     let j: unknown
@@ -59,14 +65,15 @@ export function createCodexTranslator(): CodexTranslator {
   function translate(j: Record<string, unknown>): ChatEvent[] {
     switch (j.type) {
       case 'thread.started':
+        generation++
         return translateThreadStarted(j)
       case 'turn.started':
         // 一轮开始，本身不携带任何值得展示的信息，不产出事件
         return []
       case 'item.started':
-        return translateItemStarted(j)
+        return scoped(translateItemStarted(j))
       case 'item.completed':
-        return translateItemCompleted(j)
+        return scoped(translateItemCompleted(j))
       case 'turn.completed':
         return translateTurnCompleted(j)
       case 'error':

@@ -28,3 +28,9 @@ test('终态不展示旧授权地址或原始诊断，成功明确送到模型�
  }
  assert.ok(render({...base,phase:'done'}).includes('选择模型'))
 })
+test('missing Google project shows configuration guidance and qualified retry',()=>{
+ const html=render({...base,phase:'failed',lines:['GOOGLE_CLOUD_PROJECT_REQUIRED']})
+ assert.ok(html.includes('账号还需要 Google Cloud 项目配置'))
+ assert.ok(html.includes('尚未保存凭证'))
+ assert.ok(html.includes('已配置项目，重新登录'))
+})

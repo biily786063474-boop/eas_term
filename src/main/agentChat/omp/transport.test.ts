@@ -97,6 +97,7 @@ function harness(
     effort?: string
     resumeId?: string
     mcpServers?: AcpDeps extends { mcpServers(): infer R } ? R : never
+    cwd?: string
     openFails?: { message: string; setup: boolean }
   } = {}
 ): Harness {
@@ -115,7 +116,7 @@ function harness(
     mcpServers: () => o.mcpServers ?? [],
     now: () => 1_000_000
   }
-  h.live = createAcpLive(deps, '/w', {
+  h.live = createAcpLive(deps, o.cwd ?? '/w', {
     idPrefix: 'ac-1:',
     model: o.model,
     effort: o.effort,
@@ -613,4 +614,12 @@ test('首轮参数设置中调整方向必须等配置完成，旧任务不发�
   const prompts = h.f.sent.filter(m => m.method === 'session/prompt')
   assert.equal(prompts.length, 1)
   assert.deepEqual((prompts[0].params as { prompt: unknown }).prompt, [{ type: 'text', text: '新方向' }])
+})
+test('OMP refuses missing or relative cwd before spawning or sending ACP',async()=>{
+ for(const cwd of ['', 'relative/project']){
+  const h=harness({cwd});h.live.deliver('hello');await tick()
+  assert.equal(h.opened,0)
+  assert.ok(h.events.some(e=>e.k==='error'&&e.fatal&&e.message.includes('项目目录')))
+  assert.equal(h.f.sent.length,0)
+ }
 })

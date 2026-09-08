@@ -106,7 +106,7 @@ export function OmpLoginPanel({ state, provider, onStart, onCancel, onSwitch, on
     <button type="submit" className="ac-native-primary" disabled={sending || !input.trim()}>{sending ? '正在提交…' : '交给 OMP 验证'}</button>
    </form></details>}
    {phase === 'done' && <><h4>✓ 凭证已保存</h4><p>接下来从账号实际可用的模型中选择。账号已连接不代表所有模型都可用。</p><button type="button" className="ac-native-primary" onClick={onContinue}>选择模型 →</button></>}
-   {phase === 'failed' && <><h4>{failure?.title}</h4><p>{state?.lines.includes('EADDRINUSE') ? '本机授权端口被占用，请先结束另一笔登录再重试。' : state?.lines.includes('timeout') ? '未在有效期内收到授权结果，请重新登录。' : failure?.hint || 'OMP 未能完成本次登录，请检查网络或供应商授权页面后重试。'}</p><button type="button" className="ac-native-primary" onClick={onStart}>重新登录</button></>}
+   {phase === 'failed' && <><h4>{failure?.title}</h4><p>{state?.lines.includes('EADDRINUSE') ? '本机授权端口被占用，请先结束另一笔登录再重试。' : state?.lines.includes('timeout') ? '未在有效期内收到授权结果，请重新登录。' : failure?.hint || 'OMP 未能完成本次登录，请检查网络或供应商授权页面后重试。'}</p><button type="button" className="ac-native-primary" onClick={onStart}>{state?.lines.includes('GOOGLE_CLOUD_PROJECT_REQUIRED') ? '已配置项目，重新登录' : '重新登录'}</button></>}
    {phase === 'cancelled' && <><h4>本次授权已停止</h4><p>旧页面返回的结果不会覆盖新的登录。已有账号配置不受影响。</p><button type="button" className="ac-native-primary" onClick={onStart}>重新开始</button></>}
   </div>
   {error && <p className="ac-login-err" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
