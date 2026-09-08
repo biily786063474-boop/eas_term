@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "no-main-debugger actual PTY start, echo, kill and on-disk diagnostic event",
+    "independent identity/userData, bridge and real renderer",
+    "cancel default, production update disabled, PTY actual launch",
+    "actual export, chat and PTY events, no private path",
+    "explicit consent path uploads to HTTPS receiver and verifies receipt",
+    "abrupt main exit persists and prompts next startup",
+    "privacy settings diagnostic entry rendered",
+    "normal quit clears marker"
+  ],
+  "platform": "win32",
+  "receipt": "3e7e3631-0d9f-46fa-9907-9453a6ddca22"
+}
