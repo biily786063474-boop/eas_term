@@ -844,7 +844,18 @@ export function registerMcpBridge(): void {
           return send(200, { ok: true, result: {} })
         }
         if (body.method === 'initialize' || body.method === 'tools/list') {
-          const tools = await builtinCapabilityHost.list(module, lease.id, connectionId)
+          // Bizone is optional: discovery failure must not abort an OMP conversation.
+          // The host retains its failed status; only discovery becomes an empty catalog.
+          // Never apply this fallback to authorization or tools/call (no generation retry).
+          let tools: Awaited<ReturnType<typeof builtinCapabilityHost.list>>
+          try {
+            tools = await builtinCapabilityHost.list(module, lease.id, connectionId)
+          } catch (error) {
+            if (module !== 'bizone') throw error
+            tools = []
+          }
+          capabilitySessions.authenticate(lease)
+          if (!mcpEnabled || !capabilityPreferences().preferences[module as 'workbench' | 'bizone']) return send(403, { ok: false, error: '内置能力已禁用' })
           const result = body.method === 'tools/list' ? { tools } : {
             protocolVersion: params.protocolVersion || '2025-06-18', capabilities: { tools: {} },
             serverInfo: { name: `eas-capabilities-${module}`, version: app.getVersion() }

@@ -200,3 +200,13 @@ Selected native stdio servers now share the same base-plus-selected snapshot acr
 `eas-pty-launcher` 仅对 OMP 清除继承的 profile / XDG / 旧目录覆盖，再叠加上述四项；保留终端原有用户 secrets。显式 `--profile` / `--session-dir` 会脱离受管认证/会话目录，目前明确拒绝。自定义 OMP 执行体不能获得受管目录配置。`ompBaseEnv` 顺序必须是先删继承配置、后写受管绝对目录；反过来会把刚设的 `PI_CODING_AGENT_DIR` 删除。
 
 验证包含真实 launcher 子进程环境、生产 HTTP route 分支、完整 OMP paths/launch 回归、应用保存的 always-ask 档位保持及用户 `.omp` 文件未变；真实正式包 PTY 模型/恢复测试另由发布 runner 提供证据。
+
+
+## 2026-09-08：可选笔纵发现失败不阻塞对话
+受管 /capability/rpc 的 initialize/tools/list 在完成会话授权、模块开关检查之后才加载工具目录。
+仅 bizone 的目录异常降级为空 tools；BuiltinCapabilityHost 仍记录 failed，设置不显示假 ready。
+异步加载后再次校验 lease 与开关。授权失效/模块禁用不走降级，tools/call 保持报错且不自动重试（尤其付费生成）。
+工作台及第三方 MCP 不受这条定向修复影响。显式再次查询目录可恢复；不持久关闭用户模块偏好。
+真实 OMP 18.1.2 + stdio shim + 实际 HTTP 路由回归入口：
+EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capabilityTransport.test.ts
+测试模型仅 loopback 固定响应，不读取真实账号、不请求付费服务。
