@@ -23,13 +23,13 @@ async function connect(port, filter) {
       if (target) {
         const ws = new WebSocket(target.webSocketDebuggerUrl)
         await new Promise((res, rej) => { ws.addEventListener('open', res, { once: true }); ws.addEventListener('error', rej, { once: true }) })
-        let id = 0; const pending = new Map()
-        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') ws.send(JSON.stringify({ id: ++id, method: 'Debugger.resume' })); pending.get(d.id)?.(d) })
+        let id = 0; const pending = new Map(); const pauses = []
+        ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); pending.get(d.id)?.(d) })
         const call = (method, params) => new Promise((res, rej) => {
           const n = ++id; const timer = setTimeout(() => { pending.delete(n); rej(new Error('CDP timeout ' + method)) }, 15000)
           pending.set(n, d => { clearTimeout(timer); pending.delete(n); res(d) }); ws.send(JSON.stringify({ id: n, method, params }))
         })
-        return { ws, call, ev: async expression => { const d = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (d.result?.exceptionDetails) throw new Error(d.result.exceptionDetails.exception?.description ?? 'evaluate failed'); return d.result?.result?.value } }
+        return { ws, call, pauses, ev: async expression => { const d = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (d.result?.exceptionDetails) throw new Error(d.result.exceptionDetails.exception?.description ?? 'evaluate failed'); return d.result?.result?.value } }
       }
     } catch { /* starting */ }
     await sleep(250)
@@ -43,13 +43,30 @@ async function launch(unclean = false) {
   main = await connect(ports.main, () => true)
   await main.call('Runtime.enable')
   await main.call('Debugger.enable')
+  // Do not evaluate in Electron's bootstrap realm: Windows can block before Node globals exist.
+  // Pause in our actual CommonJS entry, whose local require is initialized.
+  const breakpoint = await main.call('Debugger.setBreakpointByUrl', { urlRegex: 'out/main/index\\.js$', lineNumber: 0 })
+  const breakpointId = breakpoint.result.breakpointId
   await main.call('Runtime.runIfWaitingForDebugger')
-  await main.call('Debugger.resume').catch(() => {})
-  for (let i = 0; i < 100; i++) {
-    if (await main.ev("typeof process !== 'undefined' && typeof process.getBuiltinModule === 'function'")) break
-    await sleep(50)
+  let injected = false
+  const deadline = Date.now() + 30000
+  while (Date.now() < deadline) {
+    const pause = main.pauses.shift()
+    if (!pause) { await sleep(50); continue }
+    if (pause.hitBreakpoints?.includes(breakpointId)) {
+      const patch = await main.call('Debugger.evaluateOnCallFrame', {
+        callFrameId: pause.callFrames[0].callFrameId,
+        expression: "globalThis.__diagPrompts = []; globalThis.__diagAnswer = 0; globalThis.__electron = require('electron'); __electron.dialog.showMessageBox = async (...args) => { __diagPrompts.push(args.at(-1)); return { response: __diagAnswer, checkboxChecked: false } }; __electron.shell.showItemInFolder = () => {}; true",
+        returnByValue: true
+      })
+      if (patch.result?.exceptionDetails) throw new Error('Native response injection failed: ' + JSON.stringify(patch.result.exceptionDetails))
+      await main.call('Debugger.removeBreakpoint', { breakpointId })
+      await main.call('Debugger.resume')
+      injected = true; break
+    }
+    await main.call('Debugger.resume')
   }
-  await main.ev("globalThis.__diagPrompts = []; globalThis.__diagAnswer = 0; globalThis.__electron = process.getBuiltinModule('module').createRequire(process.cwd() + '/package.json')('electron'); __electron.dialog.showMessageBox = async (...args) => { __diagPrompts.push(args.at(-1)); return { response: __diagAnswer, checkboxChecked: false } }; __electron.shell.showItemInFolder = () => {}; true")
+  assert.ok(injected, 'must reach packaged application entry before test instrumentation')
   renderer = await connect(ports.renderer, t => t.type === 'page' && !t.url.includes('island.html'))
   for (let i = 0; i < 100; i++) { if (await renderer.ev("!!window.api?.diagnostics && !!document.querySelector('.app')")) break; await sleep(100) }
   assert.equal(await renderer.ev('window.api.diagnostics.enabled()'), true)
