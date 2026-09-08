@@ -1,4 +1,4 @@
-import { cliInvocation } from './cliInvocation.ts'
+import { cliInvocation, cliInvocationEnv } from './cliInvocation.ts'
 // 契约自检的副作用那一半：跑 --help / --version、读写指纹、决定要不要出声。
 // 判定逻辑全在 cliContract.ts（纯函数、可测），这里只负责「去撞」和「记住撞的结果」。
 //
@@ -24,7 +24,7 @@ import {
 const pExecFile = promisify(execFile)
 function probeCli(bin: string, args: string[], timeout: number) {
   const launch = cliInvocation(bin, bin, args)
-  return pExecFile(launch.command, launch.args, { timeout, env: { ...PROBE_ENV, ...launch.env } })
+  return pExecFile(launch.command, launch.args, { timeout, env: cliInvocationEnv(PROBE_ENV, launch) })
 }
 
 

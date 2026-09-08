@@ -2,7 +2,7 @@
 // Owned by one Eas-Term process generation. Never edits user config or retries a turn.
 import { spawn } from 'node:child_process'
 import path from 'node:path'
-import { resolveCliInvocation } from './cli-entry.mjs'
+import { resolveCliInvocation, cliInvocationEnv } from './cli-entry.mjs'
 import { readAndMergeCodexConfig } from './codex-capability-config.mjs'
 
 const abort = new AbortController()
@@ -58,7 +58,7 @@ try {
   if (env.EAS_CAPABILITY_NODE_FALLBACK === '1') delete env.ELECTRON_RUN_AS_NODE
   delete env.EAS_CAPABILITY_NODE_FALLBACK
   const invocation = resolveCliInvocation('codex', input.binary, [], env, { command: process.execPath, args: [], ...(process.versions.electron ? { env: { ELECTRON_RUN_AS_NODE: '1' } } : {}) })
-  const cliEnv = { ...env, ...invocation.env }
+  const cliEnv = cliInvocationEnv(env, invocation)
   let configCwd = process.cwd()
   for (let index = 0; index < args.length; index++) {
     if (args[index] === '--') break

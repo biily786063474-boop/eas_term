@@ -1,4 +1,4 @@
-import { cliInvocation } from '../cliInvocation.ts'
+import { cliInvocation, cliInvocationEnv } from '../cliInvocation.ts'
 // 只读取官方 npm registry 的已发布原生平台包；不执行安装脚本、不改全局 CLI。
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
@@ -109,7 +109,7 @@ export async function systemVersion(id: UpdatableCli): Promise<string | undefine
   try {
     const env = managedEnv()
     const launch = cliInvocation(id, id, ['--version'], env)
-    const { stdout } = await run(launch.command, launch.args, { env: { ...env, ...launch.env }, timeout: 8000 })
+    const { stdout } = await run(launch.command, launch.args, { env: cliInvocationEnv(env, launch), timeout: 8000 })
     return stdout.match(/\b\d+\.\d+\.\d+\b/)?.[0]
   } catch { return undefined }
 }

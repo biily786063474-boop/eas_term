@@ -1,4 +1,4 @@
-import { cliInvocation } from '../cliInvocation.ts'
+import { cliInvocation, cliInvocationEnv } from '../cliInvocation.ts'
 // 问 Codex 要**这个账号真正能用的模型清单**。零 electron。
 //
 // 2026-09-06：用户报「codex 进对话之后无法下拉选择模型」。原因是 adapter 的
@@ -96,7 +96,7 @@ function probe(bin: string, env: NodeJS.ProcessEnv, timeoutMs: number): Promise<
         p.stdin.write(JSON.stringify(message) + '\n', error => { if (error) finish(undefined) })
       } catch { finish(undefined) }
     }
-    try { const launch = cliInvocation('codex', bin, ['app-server'], env); p = spawn(launch.command, launch.args, { stdio: ['pipe', 'pipe', 'ignore'], env: { ...env, ...launch.env } }) }
+    try { const launch = cliInvocation('codex', bin, ['app-server'], env); p = spawn(launch.command, launch.args, { stdio: ['pipe', 'pipe', 'ignore'], env: cliInvocationEnv(env, launch) }) }
     catch { finish(undefined); return }
     p.on('error', () => finish(undefined))
     p.on('close', () => { clearTimeout(killTimer); finish(undefined) })

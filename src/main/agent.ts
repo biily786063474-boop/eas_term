@@ -1,4 +1,4 @@
-import { cliInvocation } from './cliInvocation.ts'
+import { cliInvocation, cliInvocationEnv } from './cliInvocation.ts'
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -12,7 +12,7 @@ import { PROBE_ENV } from './probeEnv'
 const pExecFile = promisify(execFile)
 function probeCli(bin: string, args: string[], timeout: number) {
   const launch = cliInvocation(bin, bin, args)
-  return pExecFile(launch.command, launch.args, { timeout, env: { ...PROBE_ENV, ...launch.env } })
+  return pExecFile(launch.command, launch.args, { timeout, env: cliInvocationEnv(PROBE_ENV, launch) })
 }
 
 // 探测环境统一在 probeEnv.ts —— 它原来只在这个文件里，

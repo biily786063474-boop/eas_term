@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
-import { resolveCliInvocation, resolveNpmEntry, resolveCapabilityCli } from '../../mcp/cli-entry.mjs'
+import { resolveCliInvocation, resolveNpmEntry, resolveCapabilityCli, cliInvocationEnv } from '../../mcp/cli-entry.mjs'
 function fixture(t, kind = 'claude', bin = 'cli.js') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'CLI 中文 空格-'))
   t.after(() => fs.rmSync(root, {recursive:true, force:true}))
@@ -24,7 +24,7 @@ function run(command,args,env=process.env) {
   return {child,done:new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',(code,signal)=>resolve({code,signal,stdout,stderr}))})}
 }
 const argv=['','中文 空格','a"b','&','|','^','%PATH%','!','line\nbreak']
-for(const kind of ['codex','claude']) test(`${kind} official JS bin preserves argv through real child (Windows resolution)`,async t=>{
+for(const kind of ['claude']) test(`${kind} official JS bin preserves argv through real child (Windows resolution)`,async t=>{
   const f=fixture(t,kind,kind==='codex'?'bin/codex.js':'cli.js')
   const launch=resolveCliInvocation(kind,f.shim,argv,process.env,{command:process.execPath,args:[]},'win32')
   const result=await run(launch.command,launch.args,{...process.env,...launch.env}).done
@@ -76,6 +76,7 @@ test('Codex selects only matching declared official platform alias and rejects i
  const meta={name:'@openai/codex',version:`1.2.3-win32-${process.arch}`,os:['win32'],cpu:[process.arch]}
  fs.writeFileSync(path.join(native,'package.json'),JSON.stringify(meta))
  assert.equal(resolveNpmEntry('codex',f.shim).command,fs.realpathSync(bin))
+ assert.equal(resolveNpmEntry('codex',f.shim).env.CODEX_MANAGED_PACKAGE_ROOT,fs.realpathSync(f.pkg))
  fs.writeFileSync(path.join(native,'package.json'),JSON.stringify({...meta,version:'9.9.9'}))
  assert.throws(()=>resolveNpmEntry('codex',f.shim),/Unsupported/)
 })
@@ -93,4 +94,21 @@ test('canonical probe PATH wins over an inherited Windows Path',()=>{
  const seen=[]
  assert.throws(()=>resolveCapabilityCli('claude',{Path:'C:\\stale',PATH:'C:\\chosen',PATHEXT:'.CMD'},'win32',p=>{seen.push(p);return p}),/Unsupported/)
  assert.deepEqual(seen,['C:\\chosen\\claude.CMD'])
+})
+test('legacy Codex JS dispatcher cannot launch without a contained native vendor executable',t=>{
+ const f=fixture(t,'codex','bin/codex.js')
+ assert.throws(()=>resolveNpmEntry('codex',f.shim),/Unsupported/)
+ const triple=process.arch==='arm64'?'aarch64':'x86_64',bin=path.join(f.pkg,'vendor',triple+'-pc-windows-msvc','codex','codex.exe')
+ fs.mkdirSync(path.dirname(bin),{recursive:true});fs.writeFileSync(bin,peFixture())
+ const result=resolveNpmEntry('codex',f.shim)
+ assert.equal(result.command,fs.realpathSync(bin));assert.equal(result.script,undefined)
+ assert.equal(result.env.CODEX_MANAGED_PACKAGE_ROOT,fs.realpathSync(f.pkg))
+ assert.deepEqual(result.unsetEnv,['CODEX_MANAGED_BY_NPM','CODEX_MANAGED_BY_BUN','CODEX_MANAGED_BY_PNPM','CODEX_MANAGED_BY_VITE_PLUS','CODEX_MANAGED_PACKAGE_ROOT'])
+})
+
+test('npm native environment replaces stale root and mutually exclusive package-manager markers',()=>{
+ const inherited={KeepSecret:'preserved',CODEX_MANAGED_BY_NPM:'0',CODEX_MANAGED_BY_BUN:'1',codex_managed_by_pnpm:'1',CODEX_MANAGED_BY_VITE_PLUS:'1',CODEX_MANAGED_PACKAGE_ROOT:'other-package'}
+ const invocation={env:{CODEX_MANAGED_BY_NPM:'1',CODEX_MANAGED_PACKAGE_ROOT:'validated-root'},unsetEnv:['CODEX_MANAGED_BY_NPM','CODEX_MANAGED_BY_BUN','CODEX_MANAGED_BY_PNPM','CODEX_MANAGED_BY_VITE_PLUS','CODEX_MANAGED_PACKAGE_ROOT']}
+ assert.deepEqual(cliInvocationEnv(inherited,invocation),{KeepSecret:'preserved',CODEX_MANAGED_BY_NPM:'1',CODEX_MANAGED_PACKAGE_ROOT:'validated-root'})
+ assert.equal(inherited.CODEX_MANAGED_PACKAGE_ROOT,'other-package')
 })

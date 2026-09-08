@@ -93,7 +93,9 @@ export function resolveNpmEntry(kind, shim, arch = process.arch) {
     if (!supported.includes(bin)) throw invalid()
     const entry = contained(root, bin)
     if (bin.endsWith('.exe')) return { command: nativeEntry(entry, arch), args: [] }
-    if (kind === 'codex' && ['x64', 'arm64'].includes(arch)) {
+    if (kind === 'codex') {
+      if (!['x64', 'arm64'].includes(arch)) throw invalid()
+      let nativeRoot = root
       const name = `@openai/codex-win32-${arch}`
       const dependency = meta.optionalDependencies?.[name]
       if (dependency !== undefined) {
@@ -101,15 +103,19 @@ export function resolveNpmEntry(kind, shim, arch = process.arch) {
         const version = `${meta.version}-win32-${arch}`
         if (dependency !== `npm:@openai/codex@${version}`) throw invalid()
         const nested = path.join(root, 'node_modules', name), sibling = path.join(modules, name)
-        const nativeRoot = fs.existsSync(nested) ? nested : sibling
+        nativeRoot = fs.existsSync(nested) ? nested : sibling
         const nativeMeta = metadata(nativeRoot, PACKAGES.codex)
         if (nativeMeta.version !== version || !Array.isArray(nativeMeta.os) || !nativeMeta.os.includes('win32') || !Array.isArray(nativeMeta.cpu) || !nativeMeta.cpu.includes(arch)) throw invalid()
-        const triple = arch === 'x64' ? 'x86_64-pc-windows-msvc' : 'aarch64-pc-windows-msvc'
-        const candidates = [`vendor/${triple}/bin/codex.exe`, `vendor/${triple}/codex/codex.exe`]
-        const relative = candidates.find(p => fs.existsSync(path.join(nativeRoot, p)))
-        if (!relative) throw invalid()
-        return { command: nativeEntry(contained(nativeRoot, relative), arch), args: [], env: { CODEX_MANAGED_BY_NPM: '1' } }
       }
+      // Older npm packages keep vendor in the main package. Never run the JS
+      // dispatcher: on Windows killing Node would leave its native child alive.
+      const triple = arch === 'x64' ? 'x86_64-pc-windows-msvc' : 'aarch64-pc-windows-msvc'
+      const candidates = [`vendor/${triple}/bin/codex.exe`, `vendor/${triple}/codex/codex.exe`]
+      const relative = candidates.find(p => fs.existsSync(path.join(nativeRoot, p)))
+      if (!relative) throw invalid()
+      return { command: nativeEntry(contained(nativeRoot, relative), arch), args: [],
+        env: { CODEX_MANAGED_BY_NPM: '1', CODEX_MANAGED_PACKAGE_ROOT: fs.realpathSync(root) },
+        unsetEnv: ['CODEX_MANAGED_BY_NPM', 'CODEX_MANAGED_BY_BUN', 'CODEX_MANAGED_BY_PNPM', 'CODEX_MANAGED_BY_VITE_PLUS', 'CODEX_MANAGED_PACKAGE_ROOT'] }
     }
     return { script: entry }
   } catch { throw invalid() }
@@ -132,4 +138,12 @@ export function resolveCliInvocation(kind, binary, args, env, runner, platform =
     return { command: runner.command, args: [...runner.args, resolved.script, ...args], ...(runner.env ? { env: { ...runner.env } } : {}) }
   }
   return { ...resolved, args: [...resolved.args, ...args] }
+}
+
+/** Match the official npm dispatcher's source environment. Windows names are
+ * case-insensitive; remove stale roots/other package-manager markers before overlay. */
+export function cliInvocationEnv(env, invocation) {
+  const out = { ...env }, removed = new Set((invocation.unsetEnv ?? []).map(k => k.toUpperCase()))
+  for (const key of Object.keys(out)) if (removed.has(key.toUpperCase())) delete out[key]
+  return { ...out, ...invocation.env }
 }
