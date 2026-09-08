@@ -1,0 +1,18 @@
+[
+  {
+    "resource": "/Users/biily/Eas-Term-release/0.4.85-prep/final/mac-arm64/Eas-Term.app/Contents/Resources",
+    "appAsarSha256": "fe1e9dc93d210e33e4c5e6af8d950250703431c47a6537f4b26a8001b488466b",
+    "outFiles": 139,
+    "resourceFiles": 18,
+    "mismatches": [],
+    "passed": true
+  },
+  {
+    "resource": "/Users/biily/Eas-Term-release/0.4.85-prep/final-x64/mac/Eas-Term.app/Contents/Resources",
+    "appAsarSha256": "fe1e9dc93d210e33e4c5e6af8d950250703431c47a6537f4b26a8001b488466b",
+    "outFiles": 139,
+    "resourceFiles": 18,
+    "mismatches": [],
+    "passed": true
+  }
+]

@@ -6,7 +6,10 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
-const output = path.join(root, 'docs/verification/builtin-capabilities')
+const outputIndex = process.argv.indexOf('--output')
+const output = outputIndex >= 0
+  ? path.resolve(process.argv[outputIndex + 1])
+  : path.join(root, 'docs/verification/builtin-capabilities')
 fs.mkdirSync(output, { recursive: true })
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-builtin-ui-'))
 fs.writeFileSync(path.join(profile, 'skill-prefs.json'), JSON.stringify({ muted: true }))

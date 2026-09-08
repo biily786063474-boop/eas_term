@@ -1,0 +1,7 @@
+{
+  "sourceCommit": "a17772d8c2dc211a6fc02ef586f787ce21f6a321",
+  "workflowRun": 34216597763,
+  "conclusion": "success",
+  "scope": "Windows CI packaged launch and settings checks; no logged-in model calls",
+  "installerArtifactSha256": "b8f326390d7d4c2848789cdbee4051fd7abba5b63b61fc45ccfd3d11424964f2"
+}

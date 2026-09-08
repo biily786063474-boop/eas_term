@@ -105,16 +105,22 @@ async function close() {
   }
 }
 async function phase(name, file, resumeId) {
+  // Restored terminal components own cleanup for their old PTYs. Unmount them before
+  // allocating a fresh PTY, so stale leaf cleanup cannot kill a newly reused ID.
+  await evaluate(`(()=>{const s=window.__store.getState();window.__ptyDataUnsubscribe?.();window.__ptyExitUnsubscribe?.();window.__store.setState({tabs:[],activeTabId:null,canvas:{...s.canvas,frames:[]}})})()`)
+  await wait(700)
   const pty = await evaluate(`window.api.pty.create({cwd:${JSON.stringify(project)},cols:120,rows:36})`)
+  await evaluate(`window.__ptyStatus={bytes:0,exitCode:null};window.__ptyDataUnsubscribe=window.api.pty.onData(${JSON.stringify(pty.id)},data=>{window.__ptyStatus.bytes+=data.length});window.__ptyExitUnsubscribe=window.api.pty.onExit(${JSON.stringify(pty.id)},code=>{window.__ptyStatus.exitCode=code})`)
   await evaluate(`(() => { const s=window.__store.getState(); const pane={kind:'terminal',cwd:${JSON.stringify(project)},ptyId:${JSON.stringify(pty.id)}};
     const frame=(id,leaf,node,x)=>({id,name:id,projectId:'verification-project',x,y:0,w:900,h:800,collapsed:false,nodes:[{id:node,leafId:leaf,x:30,y:40,w:700,h:650}]});
     window.__store.setState({viewMode:'canvas',projects:[{id:'verification-project',name:'PTY 验证',path:${JSON.stringify(project)}}],activeProjectId:'verification-project',tabs:[{id:'decoy-tab',title:'Decoy',cwd:${JSON.stringify(project)},activeLeafId:'decoy-leaf',root:{type:'leaf',id:'decoy-leaf',pane:{kind:'code',filePath:${JSON.stringify(file)}}}}, {id:'target-tab',title:'Target',cwd:${JSON.stringify(project)},activeLeafId:'target-leaf',root:{type:'leaf',id:'target-leaf',pane}}],activeTabId:'decoy-tab',canvas:{...s.canvas,frames:[frame('decoy-frame','decoy-leaf','decoy-node',0),frame('target-frame','target-leaf','target-node',1000)]}});
     window.__packagePty=${JSON.stringify(pty.id)}; })()`)
-  const prompt = `Authorized packaged PTY MCP test: call the Eas-Term ${requestedTool} tool exactly once with path ${file}. No Frame argument: use your current managed terminal context. Do not run shell commands, edit files, generate images, use external services or perform other mutations. Reply DONE after the real MCP call succeeds.`
+  const prompt = `Authorized packaged PTY MCP test: call the Eas-Term ${requestedTool} tool exactly once with path ${file}. No Frame argument: use your current managed terminal context. Do not run shell commands, edit files, generate images, use external services or perform other mutations. Native tool discovery is permitted. If MCP tools are exposed through node_repl or another native bridge, inspect that bridge's documented catalog and invoke the requested MCP tool through it; do not invent API names or assume the wrapper is the only capability. Reply DONE after the real MCP call succeeds.`
   const stdoutFile=path.join(profile,name+'-native.jsonl'), stderrFile=path.join(profile,name+'-native.stderr'), exitFile=path.join(profile,name+'-exit'), resolvedFile=path.join(profile,name+'-launcher')
   for(const old of [stdoutFile,stderrFile,exitFile,resolvedFile])try{fs.unlinkSync(old)}catch{}
   const command = `command -v ${cli} > ${shellQuote(resolvedFile)}; command ${[cli,...nativePtyArgs(cli,prompt,resumeId,option('--model'))].map(shellQuote).join(' ')} > ${shellQuote(stdoutFile)} 2> ${shellQuote(stderrFile)}; printf '%s' "$?" > ${shellQuote(exitFile)}\r`
   const item={name,file,ptyId:pty.id,requestedResumeId:resumeId??null};report.phases.push(item)
+  await bounded(()=>evaluate('window.__ptyStatus.bytes>0'),15000,'Fresh PTY produced no shell output')
   await evaluate(`window.api.pty.write(${JSON.stringify(pty.id)},${JSON.stringify(command)})`)
   await bounded(()=>fs.existsSync(exitFile),timeout,'Native PTY CLI did not exit; no tool receipt claimed')
   item.exitCode=Number(fs.readFileSync(exitFile,'utf8').trim())
@@ -147,7 +153,7 @@ try {
   report.passed = true
 } catch (error) {
   if (ws?.readyState === WebSocket.OPEN) try {
-    report.failureDiagnostics = await evaluate(`(() => { const events=window.__packageEvents??[]; return { eventCounts:events.reduce((counts,e)=>{counts[e.k]=(counts[e.k]??0)+1;return counts},{}), executions:events.filter(e=>e.k==='exec.start'||e.k==='exec.done').map(e=>({k:e.k,execId:e.execId,tool:e.tool,ok:e.ok})), fatalErrors:events.filter(e=>e.k==='error').map(e=>({fatal:e.fatal})), bundle:null } })()`)
+    report.failureDiagnostics = await evaluate(`(() => { const events=window.__packageEvents??[]; return { ptyStatus:window.__ptyStatus, eventCounts:events.reduce((counts,e)=>{counts[e.k]=(counts[e.k]??0)+1;return counts},{}), executions:events.filter(e=>e.k==='exec.start'||e.k==='exec.done').map(e=>({k:e.k,execId:e.execId,tool:e.tool,ok:e.ok})), fatalErrors:events.filter(e=>e.k==='error').map(e=>({fatal:e.fatal})), bundle:null } })()`)
     report.failureDiagnostics.bundle = await evaluate('window.api.capabilities.status()')
   } catch { /* Preserve the original failure if renderer has exited. */ }
   report.error = String(error.message).slice(0, 2000)

@@ -8,6 +8,7 @@ import crypto from 'node:crypto'
 import { spawn, execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { ompCanvasProof } from './builtin-cli-evidence.mjs'
+import { prepareMigrationFixture, checkMigrationFixture, restoreMigrationFixtureOffline } from './builtin-migration-evidence.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const args = process.argv.slice(2)
 const option = name => { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1] }
@@ -16,6 +17,7 @@ if (args.includes('--help')) {
   process.exit(0)
 }
 if (!args.includes('--allow-real-model-calls')) throw new Error('Refusing model calls: explicitly pass --allow-real-model-calls')
+if (option('--migration-fixture') && !args.includes('--restart')) throw new Error('Migration acceptance requires --restart; no restart evidence will be inferred')
 const executable = option('--executable'), cli = option('--cli')
 const requestedTool = option('--tool') ?? 'canvas_open_image'
 if (!['canvas_open_image', 'canvas_open_file'].includes(requestedTool)) throw new Error('Unsupported verification tool')
@@ -33,6 +35,7 @@ fs.writeFileSync(marker, JSON.stringify({ cli, purpose: 'isolated packaged real 
 const projectDirectory = path.join(profile, '测试项目 with spaces')
 fs.mkdirSync(projectDirectory, { recursive: true })
 const project = fs.realpathSync(projectDirectory)
+const migrationFixture = option('--migration-fixture') ? prepareMigrationFixture(project, option('--migration-fixture')) : undefined
 fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id:'verification-project', name:'CLI 验证', path:project }]), { mode:0o600 })
 const output = path.resolve(option('--output') ?? path.join(root, 'docs/verification/builtin-capabilities', `actual-${cli}-${Date.now()}`))
 fs.mkdirSync(output, { recursive: true })
@@ -101,7 +104,10 @@ async function close() {
   if (app && app.exitCode === null && app.signalCode === null) {
     app.kill('SIGTERM')
     await Promise.race([new Promise(resolve => app.once('exit', resolve)), wait(3000)])
-    if (app.exitCode === null && app.signalCode === null) app.kill('SIGKILL')
+    if (app.exitCode === null && app.signalCode === null) {
+      app.kill('SIGKILL')
+      await bounded(() => app.exitCode !== null || app.signalCode !== null, 3000, 'Owned verification app did not exit; offline restoration is refused')
+    }
   }
 }
 async function phase(name, file, resumeId) {
@@ -153,8 +159,15 @@ async function phase(name, file, resumeId) {
 try {
   await launch()
   const first = await phase('new', files[0])
+  if (migrationFixture) report.migrationAfterFirstCall = checkMigrationFixture(profile, migrationFixture)
   const resumed = await phase('resume', files[1], first)
   if (args.includes('--restart')) { await close(); await launch(); await phase('app-restart-resume', files[2], resumed) }
+  if (migrationFixture) {
+    report.migrationAfterRestart = checkMigrationFixture(profile, migrationFixture)
+    await close()
+    report.applicationExitBeforeOfflineRollback = { confirmed: app.exitCode !== null || app.signalCode !== null, exitCode: app.exitCode, signalCode: app.signalCode }
+    report.migrationOfflineRollback = restoreMigrationFixtureOffline(profile, migrationFixture)
+  }
   report.passed = true
 } catch (error) {
   if (ws?.readyState === WebSocket.OPEN) try {
@@ -164,7 +177,8 @@ try {
   report.error = String(error.message).slice(0, 2000)
   process.exitCode = 1
 } finally {
-  await close()
+  try { await close() }
+  catch (error) { report.cleanupError = String(error.message); report.passed = false; process.exitCode = 1 }
   report.globalRuleFileHashes = globalRules.map((file,i) => ({ file, before:before[i], after:digestFile(file) }))
   report.globalRuleFilesUnchanged = report.globalRuleFileHashes.every(file => file.before === file.after)
   report.globalConcurrencyDetected = !report.globalRuleFilesUnchanged

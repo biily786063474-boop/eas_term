@@ -1,0 +1,39 @@
+{
+  "sourceCommit": "a17772d8c2dc211a6fc02ef586f787ce21f6a321",
+  "version": "0.4.85",
+  "published": false,
+  "windowsRun": 34216597763,
+  "artifacts": [
+    {
+      "file": "Eas-Term-0.4.85-arm64.dmg",
+      "bytes": 204462756,
+      "sha256": "08ec2e6005cc433677639559e84538013ebb4ccaa11146a0aceef427d08e8f96"
+    },
+    {
+      "file": "Eas-Term-0.4.85-arm64.zip",
+      "bytes": 202603821,
+      "sha256": "dc4c0086d73a549b88aed77377fd045ca76241b554c0ab30ddf3073bb63f80ba"
+    },
+    {
+      "file": "Eas-Term-0.4.85-x64.dmg",
+      "bytes": 216464755,
+      "sha256": "e54881e261ae26f1d0d81cbd041ab537fbaaedbe7e3c7f5bdd34437a89d210e7"
+    },
+    {
+      "file": "Eas-Term-0.4.85-x64.zip",
+      "bytes": 214713859,
+      "sha256": "2865dfc74f572cd543574325c74819093ed3b91b86319762b8d1eb9852a41da4"
+    },
+    {
+      "file": "Eas-Term-0.4.85-x64-setup.exe",
+      "bytes": 190049511,
+      "sha256": "74472cbdb4659e74e80f3ad90e7fd70a5a105ce6af39d3ee945f142a2b5df6bb"
+    }
+  ],
+  "publicationHold": "Windows npm CLI launch compatibility fix required; this frozen candidate is not published",
+  "cliVersionsObserved": {
+    "codex": "0.153.4",
+    "claude": "2.1.263",
+    "ompBundledManifest": "18.1.2"
+  }
+}
