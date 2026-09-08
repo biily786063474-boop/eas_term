@@ -1,0 +1,31 @@
+{
+  "checks": [
+    "no-main-debugger actual PTY start, echo, kill and on-disk diagnostic event",
+    "independent identity/userData, bridge and real renderer",
+    "cancel default, production update disabled, PTY actual launch",
+    "actual export, chat and PTY events, no private path",
+    "explicit consent path uploads to HTTPS receiver and verifies receipt",
+    "abrupt main exit persists and prompts next startup",
+    "privacy settings diagnostic entry rendered",
+    "normal quit clears marker"
+  ],
+  "platform": "win32",
+  "exits": [
+    {
+      "abnormal": true,
+      "code": null,
+      "signal": "SIGKILL"
+    },
+    {
+      "abnormal": true,
+      "code": null,
+      "signal": "SIGKILL"
+    },
+    {
+      "abnormal": false,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "receipt": "1fdc5d07-c1ac-4a46-a169-63bd64c0b42c"
+}
