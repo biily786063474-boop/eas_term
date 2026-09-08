@@ -28,6 +28,8 @@ import { createPortal } from 'react-dom'
 
 import { CheckIcon, KeyIcon, LockIcon } from '../../ui/Icons'
 import { useStore } from '../../store'
+import { OmpLoginPanel } from './OmpLoginPanel'
+import type { OmpLoginState as OmpLoginWire } from '../../../../shared/ompLogin'
 import { CtxScrollRail } from '../../ui/CtxScrollRail'
 import {
   authFailureInTail,
@@ -48,23 +50,6 @@ const SMOKE_MSG = '请只回复两个字：你好'
  *  比 Claude/Codex 那条路慢得多。设短了会把「慢」误报成「坏」，
  *  而用户下一步的动作（去换一把好好的 key）完全是白费。 */
 const SMOKE_TIMEOUT_MS = 60_000
-
-/** `omp:login` 推回来的形状。同上，重新声明一份而不是跨层 import。 */
-interface OmpLoginWire {
-  provider: string
-  phase: 'starting' | 'browser' | 'input' | 'working' | 'done' | 'failed'
-  /** omp 最新说的那一句进度。**只显示这一行，不倒日志** */
-  progress?: string
-  /** 要用户去浏览器打开的地址 */
-  url?: string
-  /** 本机快捷入口（同机点它更省事；SSH 场景下只有 url 有意义） */
-  launchUrl?: string
-  /** omp 正在问什么。**原样显示它的原话** —— 不同服务商问的不一样
-   *  （贴授权码 / 填 key / 选账号），我们改写就等于替它做分类 */
-  prompt?: string
-  lines: string[]
-  error?: string
-}
 
 /** `omp:status` 的返回形状。**这里重新声明一份，不从 `main/agentChat/omp/setup.ts` import** ——
  *  `tsconfig.web.json` 只 include `src/renderer/src` 与 `src/shared`，composite 工程
@@ -244,46 +229,19 @@ export function OmpSetupPanel(props: {
     if (!needProviders || authProviders !== null) return
     void window.api.omp.listAuthProviders().then((l) => {
       if (aliveRef.current) setAuthProviders(l)
-    })
+    }).catch(() => { if(aliveRef.current) { setAuthProviders([]); setErr('供应商列表未能加载，请关闭面板后重试') } })
   }, [needProviders, authProviders])
   /** 正在跑的那次订阅登录。null = 没在跑 */
   const [login, setLogin] = useState<OmpLoginWire | null>(null)
 
-  /** 把用户贴的东西交给正在跑的那个登录进程。
-   *
-   *  **结果必须接住。** 原来两处都是 `void window.api.omp.submitLogin(...)` ——
-   *  `void` 把失败整个扔了：那个登录要是已经不在了（被取消、自己退了、
-   *  另一个窗口抢了那把锁），用户点「提交」什么也不会发生，也不会有任何提示。
-   *  2026-09-02 真机：贴完 key 点提交，界面就停在那儿再也不动。
-   *
-   *  失败时**造一个 failed 态**而不是只弹一行红字 —— 那样他能看到
-   *  「登录没有完成」那一屏，上面有「再试一次」，是条走得出去的路。 */
-  const sendLoginInput = (text: string): void => {
-    const v = text.trim()
-    if (!v) return
-    setLoginInput('')
-    void window.api.omp.submitLogin(v).then((r) => {
-      if (!aliveRef.current || r.ok) return
-      setLogin((cur) =>
-        cur ? { ...cur, phase: 'failed', prompt: undefined, error: r.error ?? '提交没送到' } : cur
-      )
-    })
-  }
-  /** 用户往登录提问里贴的东西（授权码 / key / 它问的任何东西） */
-  const [loginInput, setLoginInput] = useState('')
-
-  /** 起一次订阅登录。**订阅它的实时状态要在 invoke 之前挂上** ——
-   *  第一条状态是主进程在 `startOmpLogin` 里同步推的，晚挂就丢了，
-   *  界面会停在「正在启动」而它其实早就把网址给出来了。 */
   const startLogin = async (id: string): Promise<void> => {
     setErr('')
-    setLoginInput('')
     setLogin({ provider: id, phase: 'starting', lines: [] })
-    const r = await window.api.omp.startLogin(id)
-    if (!aliveRef.current) return
-    if (!r.ok) {
-      setLogin(null)
-      setErr(r.error ?? '起不来登录流程')
+    try {
+      const r = await window.api.omp.startLogin(id)
+      if (aliveRef.current && !r.ok) setLogin({provider:id,phase:'failed',lines:[],error:r.error ?? '无法启动登录'})
+    } catch {
+      if (aliveRef.current) setLogin({provider:id,phase:'failed',lines:[],error:'无法连接登录程序，请重试'})
     }
   }
 
@@ -294,18 +252,8 @@ export function OmpSetupPanel(props: {
       if (!aliveRef.current) return
       const st = raw as OmpLoginWire
       setLogin(st)
-      // **登完了自动往下一步走，不把用户留在这一屏。**
-      // 两件事都要做，缺一个都会卡住：
-      // · `refresh()` 重新拉事实 —— 「登过没有」的判据在主进程那侧；
-      // · **清掉 `editing`** —— 它是覆盖位，压过状态机；不清的话屏幕永远停在登录页，
-      //   哪怕状态机早就说该去选模型了。
-      if (st.phase === 'done') {
-        void refresh().then(() => {
-          if (!aliveRef.current) return
-          setLogin(null)
-          setEditing(null)
-        })
-      }
+      // Show native success explicitly; model selection continues only after user confirmation.
+      if (st.phase === 'done') { setEditing('login'); void refresh() }
     })
     return () => {
       off()
@@ -587,7 +535,7 @@ export function OmpSetupPanel(props: {
       }}
     >
       {rails}
-      <div className="ac-setup" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="ac-setup ac-omp-setup" onMouseDown={(e) => e.stopPropagation()}>
         <div className="ac-login-head">
           <span className="ac-login-title">设置 {cli.displayName}</span>
           <span className="ac-setup-head-r">
@@ -640,27 +588,25 @@ export function OmpSetupPanel(props: {
             写死的会随上游更新过期，而且「哪家能登录」本来就该它说了算。 */}
         {(shown === 'provider' || shown === 'mode') && (
           <>
-            <div className="ac-setup-say">
-              挑一家你<b>已经有账号或订阅</b>的。接下来用 <b>{cli.displayName} 自己的登录流程</b>
-              走一遍，凭证存在这台机器上，由它保管并续期。
-            </div>
+            <h3 className="ac-native-choice-title">连接你的 AI 账号</h3>
+            <p className="ac-native-intro">选择你使用的供应商，接下来由 OMP 引导登录。已有账号或订阅，无需重复申请 API 密钥。</p>
             {authProviders === null ? (
               <div className="ac-omp-empty">正在问 {cli.displayName} 支持哪些…</div>
             ) : (
               <>
                 <input
                   className="ac-omp-search"
-                  placeholder="搜一下（claude / chatgpt / 智谱 / kimi / minimax / deepseek…）"
+                  placeholder="搜索供应商…"
+                  aria-label="搜索供应商"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
-                <div className="ac-omp-list" ref={provListRef}>
+                <div className="ac-omp-list ac-native-providers" ref={provListRef}>
                   {authProviders
                     .filter((p) => {
                       const q = query.trim().toLowerCase()
                       return !q || p.id.includes(q) || p.name.toLowerCase().includes(q)
                     })
-                    .slice(0, 60)
                     .map((p) => (
                       <button
                         key={p.id}
@@ -668,11 +614,12 @@ export function OmpSetupPanel(props: {
                         className={`ac-omp-item${p.id === omp?.provider ? ' on' : ''}`}
                         onClick={() => void pickProvider(p.id)}
                       >
-                        <span className="ac-omp-item-l">{p.name}</span>
+                        <span className="ac-native-logo" aria-hidden="true">{p.name.slice(0,1)}</span><span className="ac-omp-item-l">{p.name}</span>
                         {p.id === omp?.provider && <CheckIcon size={12} />}
                       </button>
                     ))}
                 </div>
+                {!authProviders.some(p => !query.trim() || p.id.includes(query.trim().toLowerCase()) || p.name.toLowerCase().includes(query.trim().toLowerCase())) && <p className="ac-native-intro">没有匹配的供应商，请尝试其他名称。</p>}
               </>
             )}
             {editing === 'provider' && (
@@ -685,148 +632,14 @@ export function OmpSetupPanel(props: {
           </>
         )}
 
-        {/* ── 订阅：跑登录 ─────────────────────────────────────────────────
-            **这一屏由我们接管，不把 omp 的终端输出倒给用户看。**
-
-            第一版就是那样做的（`<pre>` 摆一整段日志），用户的原话是
-            「不知道他在干什么、下面这一行他在干什么」。日志里那几句
-            （`Validating API key...` / `Credentials saved to …`）对写代码的人是信息，
-            对用户是噪音 —— 他要的是「现在轮到我做什么」和「好了没有」。
-
-            所以这里只有三种画面：**去拿** → **贴进来** → **正在验证**，
-            成功了自动进下一步，一个字的日志都不显示。
-            原始输出只在**失败**时才放出来（折叠着），那时它才是有用的。 */}
-        {shown === 'login' && (
-          <>
-            {!login && (
-              <>
-                <div className="ac-setup-say">
-                  接下来会打开 <b>{omp?.provider}</b> 的页面让你登录。
-                  <b>登好之后这里会自动继续</b>，你不用回来点什么。
-                </div>
-                <div className="ac-setup-row">
-                  <button
-                    type="button"
-                    className="ac-login-submit"
-                    onClick={() => void startLogin(omp?.provider ?? '')}
-                  >
-                    开始登录
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* ① 去浏览器拿东西。**只有这一步需要用户离开软件**，所以给足提示 */}
-            {login?.url && login.phase !== 'done' && (
-              <div className="ac-omp-stage">
-                <div className="ac-omp-stage-n">1</div>
-                <div className="ac-omp-stage-b">
-                  <div className="ac-setup-say">在浏览器里打开这个页面，按它说的做。</div>
-                  <button
-                    type="button"
-                    className="ac-login-submit"
-                    onClick={() => void window.api.shell.openExternal(login.launchUrl ?? login.url ?? '')}
-                  >
-                    打开页面
-                  </button>
-                  <div className="ac-omp-meta">{login.url}</div>
-                </div>
-              </div>
-            )}
-
-            {/* ② 它要你贴点东西。**问句用 omp 的原话** —— 69 家问的不一样
-                （贴授权码 / 贴 key / 选账号），我们改写就等于替它做分类、迟早说错 */}
-            {login?.phase === 'input' && (
-              <div className="ac-omp-stage">
-                <div className="ac-omp-stage-n">2</div>
-                <div className="ac-omp-stage-b">
-                  <div className="ac-setup-say">{login.prompt ?? '把它要的东西贴进来。'}</div>
-                  <div className="ac-login-paste-row">
-                    <input
-                      className="ac-login-input"
-                      value={loginInput}
-                      autoFocus
-                      spellCheck={false}
-                      onChange={(e) => setLoginInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') sendLoginInput(loginInput)
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="ac-login-submit"
-                      disabled={!loginInput.trim()}
-                      onClick={() => sendLoginInput(loginInput)}
-                    >
-                      提交
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ③ 等待态。**这里不需要用户读任何东西** ——
-                一句话说清在等什么，加上 omp 自己那句进度（一行，不是一段）。
-                进度条是不确定态：我们不知道要多久，编一个百分比是撒谎（约束 ②） */}
-            {(login?.phase === 'starting' || login?.phase === 'working') && (
-              <div className="ac-omp-stage">
-                <div className="ac-omp-stage-n">
-                  <span className="ac-omp-dot" />
-                </div>
-                <div className="ac-omp-stage-b">
-                  <div className="ac-setup-say">
-                    {login.phase === 'working' ? '正在验证，稍等…' : '正在启动登录…'}
-                  </div>
-                  {login.progress && <div className="ac-omp-meta">{login.progress}</div>}
-                  <div className="ac-setup-bar" />
-                </div>
-              </div>
-            )}
-
-            {/* 失败：**一句人话 + 一个明确的下一步，不给用户看日志。**
-                分类在 `loginFailureOf`（纯函数、有单测）；原始输出只进控制台，
-                那是给我们排障用的。折叠起来让用户自己展开也不行 ——
-                那还是把终端输出摆在了他面前，而且「要不要展开」这个选择
-                本身就是在让他替我们做分类。 */}
-            {login?.phase === 'failed' &&
-              (() => {
-                const f = explainOmpFailure({ ctx: 'login', lines: login.lines, error: login.error })
-                return (
-                  <div className="ac-omp-fail">
-                    <div className="ac-login-err">{f.title}</div>
-                    {/* 对方自己那句原因。**这不是日志** —— 日志是堆栈和 JSON，
-                        这是一句「为什么不行」。用户 2026-09-02：「登录未完成的时候
-                        用户并不知道是什么原因。」摘不到就不显示，宁可不说不胡说。 */}
-                    {f.detail && <div className="ac-omp-why">{f.detail}</div>}
-                    {f.hint && <div className="ac-omp-meta">{f.hint}</div>}
-                    <div className="ac-setup-row">
-                      <button
-                        type="button"
-                        className="ac-login-submit"
-                        onClick={() => void startLogin(omp?.provider ?? '')}
-                      >
-                        {f.retry === 'input' ? '重新填一次' : '再试一次'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })()}
-
-            <div className="ac-setup-row">
-              <button
-                type="button"
-                className="ac-login-retry"
-                onClick={() => {
-                  void window.api.omp.cancelLogin()
-                  setLogin(null)
-                  setEditing('mode')
-                }}
-              >
-                换一家
-              </button>
-            </div>
-          </>
-        )}
+        {shown === 'login' && <OmpLoginPanel
+          state={login}
+          provider={authProviders?.find(p => p.id === omp?.provider)?.name ?? omp?.provider ?? 'OMP'}
+          onStart={() => void startLogin(omp?.provider ?? '')}
+          onCancel={() => window.api.omp.cancelLogin()}
+          onSwitch={async () => { const r = await window.api.omp.cancelLogin(); if(!r.ok) throw new Error('登录不属于当前窗口'); if(aliveRef.current) { setLogin(null); setEditing('mode') } }}
+          onContinue={() => { setLogin(null); setEditing('model') }}
+        />}
 
         {/* **「填 key」那一屏删了** —— 见上面柜子那条注释。
             需要 API key 的服务商（比如 MiniMax Token Plan），omp 的登录流程

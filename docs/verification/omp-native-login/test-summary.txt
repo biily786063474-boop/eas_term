@@ -1,0 +1,22 @@
+2026-09-08 · macOS arm64 · Eas-Term 0.4.85 source changes, not released
+npm run typecheck: PASS (node + web)
+npm test: 2771 total, 2760 pass, 11 skip, 0 fail
+Skipped: 10 Windows-native tests on macOS; 1 opt-in native Codex config test unrelated to this change.
+npm run build: PASS
+node scripts/check-css-balance.mjs: PASS (27 files)
+node scripts/check-accent-contrast.mjs: PASS
+node scripts/check-animations.mjs: PASS (26 CSS files)
+git diff --check: PASS
+
+Manual/automated app checks: actual isolated Eas-Term renderer, CDP 9446
+- dynamic provider list displayed
+- Google native broker launch, browser waiting, manual fallback collapsed/expandable
+- explicit cancellation
+- IME composition + Chinese text commit
+- @ dictionary candidates
+- theme switch preserves input; computed caret width 2px
+- dark rgb(245,245,245), light rgb(23,23,25)
+
+Native callback probes: 2 Google variants, local loopback only, no real account/token exchange.
+Negative state probes returned native HTTP 500; no state-specific explanation in page.
+This is not complete Google OAuth acceptance, and not all-provider account acceptance.

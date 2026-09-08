@@ -1,0 +1,39 @@
+{
+  "omp": "18.1.2",
+  "scope": "Native local callback and invalid state rejection only; no account authorization or token exchange",
+  "results": [
+    {
+      "provider": "google-gemini-cli",
+      "phases": [
+        "starting",
+        "browser",
+        "input"
+      ],
+      "authorizationHost": "accounts.google.com",
+      "callbackHost": "127.0.0.1",
+      "callbackPath": "/oauth2callback",
+      "nativeInvalidStateStatus": 500,
+      "manualInputOffered": true,
+      "launchShortcutReceived": true,
+      "processClosed": true,
+      "stateSpecificErrorTextDetected": false
+    },
+    {
+      "provider": "google-antigravity",
+      "phases": [
+        "starting",
+        "browser",
+        "input"
+      ],
+      "authorizationHost": "accounts.google.com",
+      "callbackHost": "127.0.0.1",
+      "callbackPath": "/oauth-callback",
+      "nativeInvalidStateStatus": 500,
+      "manualInputOffered": true,
+      "launchShortcutReceived": true,
+      "processClosed": true,
+      "stateSpecificErrorTextDetected": false
+    }
+  ],
+  "limitations": "The signed native binary returns an HTTP 500 auth page for the deliberately invalid state. Page text contains no state-specific explanation. This is NOT a completed OAuth login or a full state-validation acceptance."
+}

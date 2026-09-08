@@ -1,3 +1,4 @@
+import { ompLoginUrl } from '../../../shared/ompLogin.ts'
 // 把 `omp auth-broker login <provider>` 的输出读成界面能用的几种状态。
 //
 // ── 为什么要有这个文件 ──────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ export type OmpLoginEvent =
   | { k: 'prompt'; message: string }
   /** 一句进度，原样显示 */
   | { k: 'progress'; text: string }
+  | { k: 'instructions'; text: string }
   /** 凭证已经存下了 */
   | { k: 'done' }
 
@@ -66,12 +68,15 @@ export interface OmpLoginParser {
    *  留在缓冲里，一次成功的登录会被报成失败 —— 而用户明明看到了那句话。
    *  「按行处理」这条契约对一个会结束的流本来就不完整。 */
   end(): OmpLoginEvent[]
+  /** Consume the readline question after an accepted answer; allow repeated questions. */
+  answered(): void
 }
 
 export function createOmpLoginParser(): OmpLoginParser {
   let buf = ''
   /** 上一行是那句提示语 —— 下一行非空行就是网址 */
   let expectUrl = false
+  let instructions = false
   /** 已经报出去的那个网址，等它的本机快捷入口 */
   let pendingUrl: { k: 'url'; url: string; launchUrl?: string } | null = null
   /** 已经报过的提问原文。同一句不重复报 —— stdout 可能分好几块到达，
@@ -80,7 +85,7 @@ export function createOmpLoginParser(): OmpLoginParser {
 
   function line(raw: string, out: OmpLoginEvent[]): void {
     const s = raw.trim()
-    if (!s) return
+    if (!s) { instructions = false; return }
 
     if (s === URL_BANNER) {
       // 提示语本身不往外报 —— 它只是给下一行做铺垫，报出去就是一句没有信息的进度
@@ -89,24 +94,40 @@ export function createOmpLoginParser(): OmpLoginParser {
     }
     if (expectUrl) {
       expectUrl = false
-      pendingUrl = { k: 'url', url: s }
-      out.push(pendingUrl)
+      const url = ompLoginUrl(s)
+      if (url) { instructions = true; pendingUrl = { k: 'url', url }; out.push(pendingUrl) }
       return
     }
     if (s.startsWith(SHORTCUT_PREFIX)) {
       const launchUrl = s.slice(SHORTCUT_PREFIX.length).trim()
-      // **就地补进已经报出去的那个事件对象**：界面拿到的是同一个引用，
-      // 不用为「先报网址、再补快捷入口」这件事额外设计一种事件。
-      if (pendingUrl && launchUrl) pendingUrl.launchUrl = launchUrl
+      // A prior chunk has already crossed IPC; mutating its object cannot update the UI.
+      const safe = ompLoginUrl(launchUrl)
+      if (pendingUrl && safe && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(safe).hostname)) {
+        const previous = pendingUrl
+        pendingUrl = { ...previous, launchUrl: safe }
+        const index = out.indexOf(previous)
+        if (index >= 0) out[index] = pendingUrl
+        else out.push(pendingUrl)
+      }
       return
     }
     if (s.startsWith(DONE_PREFIX)) {
       out.push({ k: 'done' })
       return
     }
+    // Surface only safe diagnostic categories from native error headings.
+    if (/error|exception/i.test(s)) {
+      const category = /EADDRINUSE|address already in use/i.test(s) ? 'EADDRINUSE'
+        : /timeout|timed? ?out/i.test(s) ? 'timeout'
+        : /401|unauthorized/i.test(s) ? 'HTTP 401'
+        : /403|forbidden|access_denied/i.test(s) ? 'HTTP 403'
+        : /ENOTFOUND|ECONNRESET|ECONNREFUSED|fetch failed/i.test(s) ? 'network error' : undefined
+      if (category) { out.push({ k: 'progress', text: category }); return }
+    }
     // 长得不像说给人听的就不往外报。原文没丢：`login.ts` 攒着全文，
     // 失败时进控制台、并交给 `loginFailureOf` 归类。
-    if (isHumanProgress(s)) out.push({ k: 'progress', text: s })
+    if (instructions) out.push({ k: 'instructions', text: s.slice(0, 4000) })
+    else if (isHumanProgress(s)) out.push({ k: 'progress', text: s })
   }
 
   return {
@@ -123,12 +144,13 @@ export function createOmpLoginParser(): OmpLoginParser {
       // 判据用「以冒号结尾」而不是匹配具体文案：omp 对不同 provider 问的话不一样
       // （贴授权码 / 填 API key / 选账号…），匹配文案等于把分类又揽回自己身上。
       const tail = buf.trim()
-      if (tail.endsWith(':') && tail !== URL_BANNER && tail !== lastPrompt) {
+      if (!expectUrl && !instructions && !tail.startsWith(SHORTCUT_PREFIX) && tail.endsWith(':') && tail !== URL_BANNER && tail !== lastPrompt) {
         lastPrompt = tail
         out.push({ k: 'prompt', message: tail })
       }
       return out
     },
+    answered(): void { if (lastPrompt) buf = ''; lastPrompt = '' },
     end(): OmpLoginEvent[] {
       const out: OmpLoginEvent[] = []
       const tail = buf

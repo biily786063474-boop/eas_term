@@ -258,7 +258,10 @@ export function registerOmpSetupHandlers(): void {
     const provider = typeof raw === 'string' && /^[a-z0-9.-]+$/.test(raw) ? raw : null
     if (!provider) return { ok: false, error: '不认识这个服务商' }
     const wc = e.sender
-    return startOmpLogin(hostPaths(), provider, (st: OmpLoginState) => {
+    const onDestroyed = (): void => { cancelOmpLogin(wc.id) }
+    wc.once('destroyed', onDestroyed)
+    const result = startOmpLogin(hostPaths(), provider, (st: OmpLoginState) => {
+      if (['done', 'failed', 'cancelled'].includes(st.phase)) wc.removeListener('destroyed', onDestroyed)
       // **成功的那一刻就落盘。** 由这边记而不是让渲染层回头调一次 IPC：
       // 观察到这件事的是主进程，让它自己记，中间少一个可能丢的往返。
       if (st.phase === 'done') {
@@ -276,16 +279,18 @@ export function registerOmpSetupHandlers(): void {
       }
       // 只推给发起的那个窗口 —— 与 agentChat 的事件同一条纪律，不全窗口广播
       if (!wc.isDestroyed()) wc.send('omp:login', st)
-    })
+    }, wc.id)
+    if (!result.ok) wc.removeListener('destroyed', onDestroyed)
+    return result
   })
 
-  ipcMain.handle('omp:submitLogin', (_e, raw: unknown): { ok: boolean; error?: string } =>
-    typeof raw === 'string' ? submitOmpLogin(raw) : { ok: false, error: '要提交的内容不能为空' }
+  ipcMain.handle('omp:submitLogin', (e, raw: unknown): { ok: boolean; error?: string } =>
+    typeof raw === 'string' ? submitOmpLogin(raw, e.sender.id) : { ok: false, error: '要提交的内容不能为空' }
   )
 
-  ipcMain.handle('omp:cancelLogin', (): { ok: boolean } => cancelOmpLogin())
+  ipcMain.handle('omp:cancelLogin', (e): { ok: boolean } => cancelOmpLogin(e.sender.id))
 
-  ipcMain.handle('omp:loginInFlight', (): OmpLoginState | null => ompLoginInFlight())
+  ipcMain.handle('omp:loginInFlight', (e): OmpLoginState | null => ompLoginInFlight(e.sender.id))
 
   /** 订阅额度的原始数据（数据层用）。**不做任何裁剪之外的加工** ——
    *  额度条那条路走 `quotaStore`，这里是给「看一眼原始输出」用的。 */

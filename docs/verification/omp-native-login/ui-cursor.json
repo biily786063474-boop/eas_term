@@ -1,0 +1,16 @@
+[
+  {
+    "theme": "dark",
+    "text": "你好 @",
+    "width": "2px",
+    "color": "rgb(245, 245, 245)",
+    "candidates": "全部辞典\n▤\n防抖\nDebounce\n辞典\n▤\n节流\nThrottle\n辞典\n▤\n骨架屏\nSkeleton Screen\n辞典\n▤\n虚拟列表\nVirtual List\n辞典\n▤\n缓动曲线\nEasing"
+  },
+  {
+    "theme": "light",
+    "text": "你好 @",
+    "width": "2px",
+    "color": "rgb(23, 23, 25)",
+    "candidates": "全部辞典\n▤\n防抖\nDebounce\n辞典\n▤\n节流\nThrottle\n辞典\n▤\n骨架屏\nSkeleton Screen\n辞典\n▤\n虚拟列表\nVirtual List\n辞典\n▤\n缓动曲线\nEasing"
+  }
+]

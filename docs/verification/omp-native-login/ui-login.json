@@ -1,0 +1,9 @@
+{
+  "title": "在浏览器中完成授权",
+  "fallbackCollapsed": true,
+  "inputType": "text",
+  "manualCanExpand": true,
+  "cancelled": true,
+  "inputHasLayoutBoxWhenCollapsed": true,
+  "visibilityNote": "Closed details can retain a layout box in Chromium; screenshot and details.open show the fallback is collapsed."
+}

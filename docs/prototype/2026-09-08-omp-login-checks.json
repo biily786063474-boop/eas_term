@@ -1,0 +1,151 @@
+{
+  "scope": "UI prototype only, no real auth",
+  "results": [
+    {
+      "theme": "dark",
+      "scene": "providers",
+      "h1": "连接你的 AI 账号",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "browser",
+      "h1": "在浏览器中登录 Google",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "verify",
+      "h1": "正在确认连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "done",
+      "h1": "账号已连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "manual",
+      "h1": "还需要补充一步",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "device",
+      "h1": "在浏览器中输入设备码",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "key",
+      "h1": "使用 API 密钥连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "failed",
+      "h1": "这次登录没有完成",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "cancelled",
+      "h1": "登录已取消",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "dark",
+      "scene": "cursor",
+      "h1": "一眼知道，正在这里输入",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "providers",
+      "h1": "连接你的 AI 账号",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "browser",
+      "h1": "在浏览器中登录 Google",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "verify",
+      "h1": "正在确认连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "done",
+      "h1": "账号已连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "manual",
+      "h1": "还需要补充一步",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "device",
+      "h1": "在浏览器中输入设备码",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "key",
+      "h1": "使用 API 密钥连接",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "failed",
+      "h1": "这次登录没有完成",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "cancelled",
+      "h1": "登录已取消",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "theme": "light",
+      "scene": "cursor",
+      "h1": "一眼知道，正在这里输入",
+      "overflow": false,
+      "buttons": 0
+    },
+    {
+      "width": 480,
+      "overflow": false
+    }
+  ],
+  "manualNonUrlSubmit": true,
+  "secretVisibilityToggle": true
+}

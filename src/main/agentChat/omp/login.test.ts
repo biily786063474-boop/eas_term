@@ -64,7 +64,7 @@ test(
     assert.ok(seen.length > before, '取消之后一个事件都没推 —— 界面永远不知道自己死了')
     const last = seen[seen.length - 1]
     assert.ok(
-      last.phase === 'failed' || last.phase === 'done',
+      last.phase === 'cancelled' || last.phase === 'failed' || last.phase === 'done',
       `取消后停在 ${last.phase} —— 那不是个终态，界面会一直等下去`
     )
     assert.equal(ompLoginInFlight(), null, '取消之后不该还认为有登录在跑')

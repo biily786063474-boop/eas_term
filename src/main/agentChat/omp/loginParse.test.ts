@@ -126,3 +126,38 @@ test('end() 之后再 end() 不会重复报', () => {
   p.end()
   assert.deepEqual(p.end(), [])
 })
+
+test('本机快捷入口跨 chunk 到达时重新发事件，不能只改旧对象', () => {
+  const p = createOmpLoginParser()
+  p.push('Open this URL in your browser:\nhttps://auth.example.com/x\n')
+  assert.deepEqual(p.push('Local shortcut (this machine only): http://127.0.0.1:8085/launch\n'), [
+    { k: 'url', url: 'https://auth.example.com/x', launchUrl: 'http://127.0.0.1:8085/launch' }
+  ])
+})
+test('授权 URL 恰好在 https: 处分块不能误报输入请求', () => {
+  assert.deepEqual(run('Open this URL in your browser:\nhttps:', '//auth.example.com/x\n').filter(e => e.k === 'prompt'), [])
+})
+test('下一次相同提问仍然可见，消费输入时清理上一次问句', () => {
+  const p = createOmpLoginParser()
+  p.push('Enter your API key: ')
+  p.answered()
+  assert.deepEqual(p.push('Enter your API key: '), [{ k: 'prompt', message: 'Enter your API key:' }])
+})
+test('浏览器入口不接受脚本协议，但手动输入不在这里作 URL 校验', () => {
+  assert.equal(run('Open this URL in your browser:\njavascript:alert(1)\n').some(e => e.k === 'url'), false)
+})
+test('设备授权指令独立于进度保留，浏览器等待态不制造输入框',()=>{
+ const e=run('Open this URL in your browser:\nhttps://github.com/login/device\nEnter code: DEMO-1234\n\n')
+ assert.ok(e.some(x=>x.k==='instructions'&&x.text.includes('DEMO-1234')))
+ assert.equal(e.some(x=>x.k==='prompt'),false)
+})
+test('原生错误堆栈只提取诊断类别，不泄漏 URL/token',()=>{
+ const e=run('OAuthError: EADDRINUSE https://example.test/?code=SECRET\n')
+ assert.deepEqual(e,[{k:'progress',text:'EADDRINUSE'}])
+})
+test('授权输出每个切分点都保留完整快捷入口和设备指令',()=>{
+ const data='Open this URL in your browser:\nhttps://auth.example.com/authorize\nLocal shortcut (this machine only): http://127.0.0.1:8085/launch\nEnter code: DEMO-1234\n\n'
+ for(let i=0;i<data.length;i++){
+  const e=run(data.slice(0,i),data.slice(i));assert.equal(e.filter(x=>x.k==='url').at(-1)?.launchUrl,'http://127.0.0.1:8085/launch');assert.equal(e.some(x=>x.k==='prompt'),false)
+ }
+})

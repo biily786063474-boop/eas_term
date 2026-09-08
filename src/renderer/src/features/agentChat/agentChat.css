@@ -3310,3 +3310,52 @@
 .ac-message-queue button, .ac-redirect-button { border: 1px solid var(--stroke-input); border-radius: 7px; padding: 5px 8px; background: var(--lift-1); color: var(--t-2); font: inherit; font-size: 12px; cursor: pointer; flex-shrink: 0; }
 .ac-message-queue button:disabled, .ac-redirect-button:disabled { opacity: .45; cursor: default; }
 .ac-message-queue button:hover:not(:disabled), .ac-redirect-button:hover:not(:disabled) { background: var(--wash-1); color: var(--t-1); }
+
+/* Native OMP authorization: presentation only, no duplicated provider/OAuth logic. */
+.ac-native-login { padding: 4px 0 8px; }
+.ac-native-login h3 { font-size: 23px; font-weight: 580; letter-spacing: -.5px; margin: 4px 0 9px; }
+.ac-native-intro { font-size: 12px; color: var(--fg-dim); line-height: 1.8; margin: 0; }
+.ac-native-provider { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-top: 24px; border-radius: 12px; background: var(--lift-2); }
+.ac-native-logo { display: grid; place-items: center; height: 35px; width: 35px; border-radius: 9px; background: var(--lift-1); font-size: 18px; }
+.ac-native-provider strong { font-size: 13px; font-weight: 550; }
+.ac-native-provider small { display: block; color: var(--fg-dim); font-size: 11px; margin-top: 2px; }
+.ac-native-provider button { margin-left: auto; }
+.ac-native-login button { border: 0; background: var(--wash-1); color: var(--fg); font: inherit; font-size: 12px; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+.ac-native-login button:hover:not(:disabled) { background: var(--wash-2); }
+.ac-native-login button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ac-native-login button:disabled { opacity: .4; cursor: default; }
+.ac-native-steps { display: flex; justify-content: space-between; gap: 8px; list-style: none; padding: 0; margin: 24px 0; color: var(--fg-dim); font-size: 11px; }
+.ac-native-steps [aria-current] { color: var(--fg); font-weight: 600; }
+.ac-native-status { background: var(--lift-2); padding: 22px; border-radius: 14px; min-height: 168px; }
+.ac-native-status h4 { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 550; margin: 0 0 9px; }
+.ac-native-status p { color: var(--fg-dim); font-size: 12px; line-height: 1.8; margin: 8px 0; }
+.ac-native-login .ac-native-primary { background: var(--accent); color: var(--on-accent); font-weight: 550; margin-top: 15px; }
+.ac-native-login .ac-native-primary:hover:not(:disabled) { background: var(--accent); filter: brightness(.94); }
+.ac-native-actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+.ac-native-actions .ac-native-primary { margin-top: 0; }
+.ac-native-instructions { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ac-native-status label { display: block; font-size: 12px; margin: 18px 0 7px; }
+.ac-native-input-row { display: flex; gap: 6px; }
+.ac-native-input-row input { flex: 1; min-width: 0; border: 1px solid var(--stroke-input); border-radius: 8px; padding: 11px 12px; font: inherit; background: var(--lift-1); color: var(--fg); caret-color: var(--fg); outline: none; }
+.ac-native-input-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.ac-native-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 25px; color: var(--fg-dim); font-size: 11px; }
+.ac-native-spinner { height: 15px; width: 15px; border: 1.5px solid var(--stroke-input); border-top-color: var(--fg); border-radius: 50%; animation: ac-native-spin 1.2s linear infinite; }
+@keyframes ac-native-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ac-native-spinner { animation: none; } }
+
+/* CodeMirror minimalSetup draws its own cursor and hides the native caret.
+   CSS variables switch live without remounting the editor or losing IME/selection. */
+.ac-rich-input { --ac-caret: #f5f5f5; }
+[data-theme='light'] .ac-rich-input { --ac-caret: #171719; }
+.ac-rich-input .cm-editor .cm-cursor, .ac-rich-input .cm-editor .cm-dropCursor { border-left: 2px solid var(--ac-caret); margin-left: -1px; }
+.ac-rich-input .cm-editor .cm-content { caret-color: var(--ac-caret); }
+.ac-rich-input .cm-editor .cm-selectionBackground { background: var(--accent-soft); }
+.ac-input-wrap:focus-within, .ac-composer-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.ac-native-fallback { margin-top: 18px; }
+.ac-native-fallback summary { cursor: pointer; color: var(--fg-dim); font-size: 12px; }
+.ac-omp-setup { width: 580px; background: var(--popover-solid); }
+.ac-native-choice-title { font-size: 23px; font-weight: 580; letter-spacing: -.5px; margin: 4px 0 9px; }
+.ac-native-providers { gap: 7px; padding: 6px 3px; }
+.ac-native-providers .ac-omp-item { gap: 12px; border: 0; border-radius: 11px; background: var(--lift-2); min-height: 60px; padding: 10px 12px; }
+.ac-native-providers .ac-omp-item:hover { background: var(--wash-2); }
+.ac-native-providers .ac-native-logo { flex: none; }
