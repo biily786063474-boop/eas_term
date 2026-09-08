@@ -26,7 +26,8 @@ async function connect(port, filter) {
         let id = 0; const pending = new Map(); const pauses = []
         ws.addEventListener('message', msg => { const d = JSON.parse(msg.data); if (d.method === 'Debugger.paused') pauses.push(d.params); pending.get(d.id)?.(d) })
         const call = (method, params) => new Promise((res, rej) => {
-          const n = ++id; const timer = setTimeout(() => { pending.delete(n); rej(new Error('CDP timeout ' + method)) }, 15000)
+          if (method === 'Runtime.evaluate') console.log('EVAL', port, params.expression.slice(0, 160))
+          const n = ++id; const timer = setTimeout(() => { pending.delete(n); rej(new Error('CDP timeout port=' + port + ' ' + method + ' ' + (params?.expression ?? '').slice(0,160))) }, 15000)
           pending.set(n, d => { clearTimeout(timer); pending.delete(n); res(d) }); ws.send(JSON.stringify({ id: n, method, params }))
         })
         return { ws, call, pauses, ev: async expression => { const d = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (d.result?.exceptionDetails) throw new Error(d.result.exceptionDetails.exception?.description ?? 'evaluate failed'); return d.result?.result?.value } }
@@ -130,6 +131,7 @@ try {
   console.log(JSON.stringify(evidence, null, 2))
 } catch (e) {
   evidence.error = String(e); process.exitCode = 1; console.error(e)
+  try { evidence.lastEvents = fs.readFileSync(join(data, 'diagnostics/events.jsonl'), 'utf8').trim().split('\n').slice(-30).map(JSON.parse) } catch {}
 } finally {
   renderer?.ws.close(); main?.ws.close()
   if (proc && proc.exitCode === null) proc.kill()

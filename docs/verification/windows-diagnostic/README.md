@@ -23,3 +23,7 @@ Computer Use生命周期问题仍开放，不作为本测试包已修复项。
 ## 首次 Windows CI（34252378073）
 
 d5e70cb 的类型检查、NSIS构建、9项诊断单测及实际启动/PTY/OMP冒烟均通过。诊断扩展验收在首个 Runtime.evaluate 超时，checks为空、未进入业务断言，不能算验收通过。调整仅在测试脚本：不在Electron bootstrap realm求值，改在真实out/main/index.js入口断点的CommonJS call frame中注入原生按钮返回值；应用代码和验收断言不删不改。修订脚本在Mac实跑再次全通过，待Windows复跑。
+
+## 第二次 Windows CI（34253167577）
+
+应用入口断点已工作：独立身份、数据目录及桥接检查通过；随后仍有 Runtime.evaluate 超时。构建/单测/普通冒烟继续全通过。为区分具体IPC/原生对话步骤，下一次只增加验证脚本逐步EVAL跟踪与失败时最后30条结构化事件，不改应用、不延长超时、不跳过断言。
