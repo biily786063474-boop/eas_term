@@ -30,3 +30,11 @@ No previous sessions found.
 
 ## 改了代码要顺手更新对应图纸，同一个 commit 提交。
 <!-- eas-term:arch:end -->
+
+## Computer Use 发布约束
+
+指针残留已确认与外部 Codex Computer Use 服务有关；本机退出服务只算临时恢复。后续涉及 Computer Use 接入或发版前，必须阅读 `docs/verification/releases/computer-use-lifecycle.md`。清理由软件按所属会话自动执行，不依赖 agent 自觉收尾；禁止在任务结束时全局杀服务。相关生命周期验收未完成，不得标记为已修复。
+
+## 软件操作工具优先级（用户硬性规则）
+
+提到的软件若有可用且适合当前任务的 MCP，必须优先使用 MCP；先检查已安装/可发现的工具能力。仅当 MCP 不覆盖所需操作、不可用，或用户明确要求 Computer Use 时，才使用 Computer Use，避免不必要的 token 消耗。
