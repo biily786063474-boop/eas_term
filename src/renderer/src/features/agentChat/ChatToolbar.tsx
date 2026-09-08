@@ -24,6 +24,7 @@ import { SemanticIcon } from '../../ui/SemanticIcons'
 // 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
 // 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
 import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
+import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import type { CliCapabilities, CliInfo } from '../../../../shared/agentChat.ts'
 import type { ChatView } from './reduce.ts'
@@ -187,7 +188,7 @@ export function ChatToolbar({
   /** 挂在输入框上的辞典提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useState<DictChip[]>([])
   /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */
-  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
+  const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
   // 初始选中必须是空串——那是下面下拉里的「（默认）」占位项，代表"我们不覆盖 CLI 自己的
   // 默认值"（2026-08-17 全分支最终评审 I7）。
   //
@@ -243,15 +244,19 @@ export function ChatToolbar({
   const slash = useSlashPicker(
     text,
     setText,
-    () => requestAnimationFrame(() => taRef.current?.focus()),
-    cwd,
+    undefined,
+    effectiveCwd ?? cwd,
     // 浮层贴着输入框弹（它渲染在 body 上，需要一个锚点）
     taRef,
     // 预加载的 chip 也进 `@` 候选，且排在文件前面
-    chips
+    chips,
+    { cli: cli.id, boundPluginId: view.plugin?.status === 'missing' ? undefined : view.plugin?.id, nativeSlash: caps.nativeSlash, model: model.showModel, effort: model.effortLevels.length > 0,
+      compact: model.showCompact ? () => taRef.current?.parentElement?.querySelector<HTMLButtonElement>('[aria-label="压缩"]')?.click() : undefined,
+      onAddChip: c => setChips(cur => addChip(cur, c)) }
   )
 
   const submit = (): void => {
+    if (slash.consumeCommand()) return
     const t = text.trim()
     // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
     // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
@@ -399,7 +404,7 @@ export function ChatToolbar({
                   data-tip={c.text}
                 >
                 <DictIcon size={11} />
-                <span className="ac-chip-label">{c.label}</span>
+                <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
                 <button
                   type="button"
                   className="ac-chip-x"
@@ -460,6 +465,7 @@ export function ChatToolbar({
         {slash.open && <SlashList {...slash} />}
 
         <textarea
+          {...slash.inputProps}
           ref={taRef}
           className="ac-composer"
           rows={1}
@@ -470,6 +476,7 @@ export function ChatToolbar({
           // 直接复用 appendVoice：它已经处理了空格分隔与 autoGrow，
           // 词典插入和语音插入本来就是同一件事。
           onFocus={() => {
+            slash.syncSelection()
             const st = useStore.getState()
             st.setComposerAppend(appendVoice)
             st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
@@ -498,6 +505,7 @@ export function ChatToolbar({
           }}
         />
 
+        <ComposerActions picker={slash} text={text} chips={chips} imagePrefix={pics.pathPrefix()} />
         {/* 控件行在框内底部。模型/强度与压缩、用量同级——它们都是「这次对话怎么跑」，
             跟输入框是一体的，不该是上面另起的一条带子。 */}
         <div className="ac-composer-bar">

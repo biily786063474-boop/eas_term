@@ -1,0 +1,72 @@
+{
+  "mode": "Electron UI with fixture start/events; real approval IPC",
+  "results": {
+    "1": {
+      "status": "PASS",
+      "detail": "引导语=存在且可见 input=存在且可见 CLI 选择入口=1 个（可见性判据：尺寸+display+visibility+opacity 四件套，非仅 DOM 存在性）"
+    },
+    "2": {
+      "status": "PASS",
+      "detail": "真实坐标点击后 document.activeElement 命中输入框；Input.insertText 后 value 与预期完全一致"
+    },
+    "3": {
+      "status": "PASS",
+      "detail": "真实 handleSend() → hookStatus() 真实 IPC → 假 start() 秒回 sessionId → .ac-messages 出现"
+    },
+    "4": {
+      "status": "PASS",
+      "detail": "模型文字=\"第二步：又跑了 4 个只读检查，都通过。\"；折叠态默认 3 行（按钮「展开全部 4 项」）；点击展开后 4/4 行全部可见"
+    },
+    "5": {
+      "status": "PASS",
+      "detail": "折叠时精确可见 4/5 行（3 条最近 + 1 条失败项 e1，它不在\"最近三条\"窗口内也依然真实可见）；折叠按钮文案「展开全部 5 项」"
+    },
+    "6": {
+      "status": "PASS",
+      "detail": "卡片出现，title=\"执行命令：rm -rf /tmp/e2e-danger\"，含允许/拒绝按钮，且真实可见（尺寸/display/visibility/opacity 四件套）"
+    },
+    "7": {
+      "status": "PASS",
+      "detail": "点击「允许」后 .ac-approval 立即消失（乐观隐藏）；且 resolveApproval 确实被真实调用，记录到 (e2e-fake-session, appr-1, allow)——决定真的离开了渲染层，不是只有本地 state 变了"
+    },
+    "8": {
+      "status": "PASS",
+      "detail": "notice 文本原样出现在 .ac-toolbar .ac-notices 里，非 fatal 样式（无 .ac-notice-fatal），尺寸/display/visibility/opacity 均确认真实可见"
+    },
+    "9": {
+      "status": "PASS",
+      "detail": "最大化态命中 DIV.ac-approval；非最大化态命中 DIV.ac-approval——最大化与普通画布节点两种形态下都命中卡片本身，未被穿透"
+    },
+    "10": {
+      "status": "PASS",
+      "detail": "computed style 差异字段：background-color/color/border-color（失败行 bg=rgb(28, 28, 28) color=rgb(180, 180, 180) border=rgba(255, 255, 255, 0.035) rgba(255, 255, 255, 0.035) rgba(255, 255, 255, 0.035) rgb(253, 164, 175)；成功行 bg=rgba(0, 0, 0, 0) color=rgb(143, 143, 143) border=rgb(143, 143, 143)）；elementFromPoint 命中失败行本身"
+    },
+    "11": {
+      "status": "PASS",
+      "detail": "用户消息出现在第 1 个轮次（原文完整匹配，且真实可见——尺寸/display/visibility/opacity 四件套），首个 assistant 轮次在第 2 个——顺序正确；完整轮次序列：user → assistant → assistant"
+    },
+    "__extra": {
+      "i5Dedup": {
+        "status": "PASS",
+        "detail": "同一条 notice 推第二次后 —— {\"rows\":2,\"sameTextRows\":1,\"countBadge\":\"×2\"}（预期 sameTextRows=1、countBadge=\"×2\"）"
+      },
+      "i5Overflow": {
+        "status": "PASS",
+        "detail": ".ac-notices 的 {\"maxHeight\":\"96px\",\"overflowY\":\"auto\"}（预期 max-height 非 none、overflow-y 为 auto/scroll）"
+      },
+      "i5Close": {
+        "status": "PASS",
+        "detail": "真实鼠标点关闭后 —— {\"rows\":1,\"targetGone\":true,\"otherStillVisible\":true}（预期 targetGone=true 且 otherStillVisible=true，即其余 notice 不受影响）"
+      },
+      "p21": {
+        "status": "PASS",
+        "detail": "CLI=Codex；hookAsk 出现=false（预期 false）；对话态=true；沙箱提示=\"沙箱：只读 / 可改工作区 / 完全放开\" 可见=true"
+      },
+      "i2": {
+        "status": "PASS",
+        "detail": "{\"claude\":{\"hasChip\":false,\"hasUninstallBtn\":false,\"hasSandbox\":false},\"codex\":{\"hasChip\":false,\"hasUninstallBtn\":false,\"hasSandbox\":true}}"
+      }
+    },
+    "__consoleErrors": []
+  }
+}

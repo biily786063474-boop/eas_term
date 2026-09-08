@@ -227,6 +227,8 @@ export interface SessionStats {
 }
 
 export interface CliCapabilities {
+  /** Headless commands verified by this adapter. Absent means none, never infer from CLI name. */
+  nativeSlash?: { name: string; description: string }[]
   models?: ChatModelOption[]
   modelCatalog?: ModelCatalogState
   effortLevels?: { id: string; label: string }[]

@@ -15,6 +15,7 @@
 // 不经过 buildArgs：StartOpts 里没有 prompt 字段，写 stdin 是上层（会话胶水层）的职责。
 
 import { ASK_FIRST_PROMPT, OUTPUT_STYLE_PROMPT } from '../../../shared/agentChat.ts'
+import { BUILTIN_SLASH } from '../../../shared/slashCommands.ts'
 import type { CliAdapter, StartOpts } from '../../../shared/agentChat.ts'
 import { bindRole } from '../../../shared/roleBinding.ts'
 import { detectByWhich } from './detect.ts'
@@ -25,6 +26,9 @@ export const claudeAdapter: CliAdapter = {
   displayName: 'Claude Code',
 
   capabilities: {
+    // Preserve the previously verified stream-json commands. Common controls are handled by UI.
+    nativeSlash: BUILTIN_SLASH.filter(c => ['context', 'cost', 'usage', 'mcp', 'clear'].includes(c.name))
+      .map(c => ({ name: c.name, description: c.desc })),
     // **兜底清单**（modelCatalog.ts 的第三级）。Claude Code 2.1.263 确实没有任何列模型的
     // 接口 —— 无 `models` 子命令、`doctor` 不报、二进制里的 catalog 没有可靠结构、
     // 非法模型名的报错也只说「不在本版本的 model catalog 里」不给清单（2026-09-06 逐个试过）。

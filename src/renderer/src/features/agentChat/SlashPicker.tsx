@@ -1,269 +1,148 @@
-// 斜杠命令候选：**两个输入框共用**（空态那个在 AgentChatView，对话态那个在 ChatToolbar）。
-//
-// 抽出来的理由很实在：两处各写一遍的话，「哪些命令能用」这件事就有了两个说法，
-// 而它是靠实测维护的（见 shared/slashCommands.ts 与 .plans/slash-probe/findings.md）。
-
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type RefObject
-} from 'react'
+// Both composers share this controller. Only the focused textarea owns its portal.
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useId, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  BUILTIN_SLASH,
-  matchSlash,
-  skillsToCmds,
-  slashQuery,
-  atQuery,
-  applyAtPick,
-  filesToCmds,
-  chipsToCmds,
-  type SlashCmd
-} from '../../../../shared/slashCommands'
-import type { DictChip } from './chips.ts'
+import type { DictChip } from './chips'
+import { CATEGORY_LABELS, commandCandidates, dictCandidates, filterCandidates, insertCandidate, popupPosition, triggerAt, type Candidate, type Category, type DictEntry } from './composerCandidates'
+import { browserCandidates, loadDictionary, loadUserDictionary, loadFiles, loadPlugins, loadSkills } from './composerSources'
 
-/** 已装 skill 的候选。**整个应用只扫一次**：两个输入框、每个 agent 节点都要用，
- *  各扫各的等于开一堆重复 IPC。第一次调用时发起，之后共享同一个 promise。 */
-let skillCache: Promise<SlashCmd[]> | null = null
-function loadSkillCmds(): Promise<SlashCmd[]> {
-  if (!skillCache) {
-    skillCache = (async () => {
-      const dirs = await window.api.skillLibrary.listDirs().catch(() => [])
-      const acc: SlashCmd[] = []
-      for (const d of dirs) {
-        const r = await window.api.skillLibrary.list(d.path).catch(() => null)
-        if (!r?.ok) continue
-        acc.push(...skillsToCmds(r.skills, r.disabled))
-      }
-      return acc
-    })().catch(() => [])
-  }
-  return skillCache
-}
-
-export interface SlashPickerState {
-  open: boolean
-  hits: SlashCmd[]
-  idx: number
-  /** 在 textarea 的 onKeyDown 里最先调它；返回 true 表示这一下已经被候选消费掉了 */
-  handleKey: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => boolean
-  setIdx: (i: number) => void
-  pick: (i: number) => void
-  /** 候选浮层贴着谁定位。**必须给** —— 浮层渲染在 body 上（见 SlashList），
-   *  没有锚点就不知道该出现在哪个输入框旁边。 */
-  anchorRef?: RefObject<HTMLElement | null>
-}
-
-/** 候选的全部状态与键盘逻辑。UI 用 <SlashList>，两者配套但分开 ——
- *  空态和对话态的输入框长得不一样，共用状态、各自摆位置。 */
-export function useSlashPicker(
-  text: string,
-  setText: (v: string) => void,
-  onPicked?: () => void,
-  /** 项目根路径。给了才有 `@` 文件引用 —— 没有它不知道去哪找文件。 */
-  cwd?: string,
-  /** 浮层贴着哪个元素弹（一般就是那个 textarea） */
-  anchorRef?: RefObject<HTMLElement | null>,
-  /** 输入框上方预加载着的 chip。**给了才能用 `@` 引用它们。**
-   *
-   *  2026-09-02 补：`expandChips` 早就认得 `@词条名`，但 `@` 这个键
-   *  一直被「引用文件」独占 —— 用户打 `@` 弹出的是文件名，
-   *  预加载的 chip 一个都看不见，只能手敲那个 200 字提示词的中文标题。
-   *  功能其实在，缺的是入口。 */
-  chips?: readonly DictChip[]
-): SlashPickerState {
-  const [skills, setSkills] = useState<SlashCmd[]>([])
-  const [idx, setIdx] = useState(0)
+interface PickerOptions { boundPluginId?: string; nativeSlash?: {name:string;description:string}[]; cli?: string; onAddChip?: (c: DictChip) => void; model?: boolean; effort?: boolean; compact?: () => void }
+type Source = 'dict' | 'userDict' | 'files' | 'skills' | 'plugins'
+type SourceState = { status: 'loading' | 'ready' | 'error'; rows: Candidate[]; terms?: DictEntry[] }
+export function useSlashPicker(text: string, setText: (v: string) => void, onPicked?: () => void, cwd?: string, anchorRef?: RefObject<HTMLTextAreaElement | null>, chips: readonly DictChip[] = [], options: PickerOptions = {}) {
+  const [selection, setSelection] = useState<[number, number]>([text.length, text.length])
+  const [focused, setFocused] = useState(false)
   const [off, setOff] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    void loadSkillCmds().then((list) => {
-      if (alive) setSkills(list)
-    })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  // `@` 文件引用：数据源是**最近改过的文件**，不是全量索引 ——
-  // 想引用的多半就是刚动过的那几个，全量索引在大仓库上既慢又会把它们淹掉。
-  const [files, setFiles] = useState<SlashCmd[]>([])
-  const aq = atQuery(text)
-  useEffect(() => {
-    // 只在真的打了 `@` 之后才去读盘，别在每个节点挂载时都扫一遍
-    if (aq === null || files.length) return
-    let alive = true
-    void window.api.fs
-      .recentFiles(cwd ?? '', 60, false)
-      .then((list) => {
-        if (alive) setFiles(filesToCmds(list))
-      })
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [aq, cwd, files.length])
-
-  const q = slashQuery(text)
-  // 两者不会同时命中：slash 只认开头且不含空格，@ 只认末尾那一段
-  // `@` 的候选 = 预加载的 chip + 最近文件。**chip 排前面**（`FROM_ORDER`）——
-  // 那是用户为这条消息专门挂的，排在几十个文件后面等于没有。
-  const atPool = useMemo(
-    () => [...chipsToCmds(chips ?? []), ...files],
-    [chips, files]
-  )
-  const hits =
-    q !== null
-      ? matchSlash(q, [...BUILTIN_SLASH, ...skills])
-      : aq !== null
-        ? matchSlash(aq, atPool)
-        : []
-  const open = !off && (q !== null || aq !== null) && hits.length > 0
-
-  // 换了 query 就回到第一条 —— 停在上一次的下标上，看起来像随机选中
-  useEffect(() => {
-    setIdx(0)
-  }, [q, aq])
-  // 打字就取消「按过 Esc」，否则关掉一次之后这个节点里再也弹不出来
-  useEffect(() => {
-    setOff(false)
-  }, [text])
-
-  const pick = (i: number): void => {
-    const c = hits[i]
-    if (!c) return
-    if (c.from === 'file' || c.from === 'chip') {
-      // 只替换末尾那段 `@xxx`，前面写的字一个不动。
-      // **chip 插的是 label** —— `expandChips` 正是按它匹配的（契约有测试钉着）。
-      setText(applyAtPick(text, c.name))
-      onPicked?.()
-      return
-    }
-    // 补到输入框而**不直接发送**：有的命令要带参数（/model opus），
-    // 而且直接发出去意味着一次误选就消耗一轮对话。
-    // 末尾留空格 → slashQuery 随即返回 null → 候选自然收起。
-    setText(`/${c.name} `)
-    onPicked?.()
+  const [category, setCategory] = useState<Category>('all')
+  const [idx, setIdx] = useState(0)
+  const [retry, setRetry] = useState(0)
+  const [sources, setSources] = useState<Partial<Record<Source, SourceState>>>({})
+  const [browsers, setBrowsers] = useState<Candidate[]>([])
+  const focusFrame = useRef(0)
+  useEffect(() => () => cancelAnimationFrame(focusFrame.current), [])
+  const deferFocus = (fn: () => void): void => {
+    cancelAnimationFrame(focusFrame.current)
+    focusFrame.current = requestAnimationFrame(fn)
   }
-
+  const id = useId()
+  const trigger = triggerAt(text, ...selection)
+  const mode = trigger?.mode
+  const active = focused && !off && !!trigger
+  const syncSelection = (): void => {
+    const el = anchorRef?.current
+    if (el) { setSelection([el.selectionStart, el.selectionEnd]); setFocused(document.activeElement === el) }
+  }
+  useLayoutEffect(syncSelection, [text, anchorRef])
+  useEffect(() => { setOff(false); setIdx(0) }, [text, selection[0], selection[1]])
+  useEffect(() => { setCategory('all'); setIdx(0) }, [mode, options.cli, cwd])
+  useEffect(() => {
+    if (!active) return
+    let alive = true
+    setSources({})
+    setBrowsers(browserCandidates())
+    const load = (key: Source, run: () => Promise<Candidate[] | DictEntry[]>): void => {
+      setSources(s => ({ ...s, [key]: { status: 'loading', rows: [] } }))
+      void run().then(rows => {
+        if (alive) setSources(s => ({ ...s, [key]: key === 'dict' || key === 'userDict' ? { status: 'ready', rows: [], terms: rows as DictEntry[] } : { status: 'ready', rows: rows as Candidate[] } }))
+      }).catch(() => { if (alive) setSources(s => ({ ...s, [key]: { status: 'error', rows: [] } })) })
+    }
+    load('skills', loadSkills)
+    if (mode === '@') { load('dict', loadDictionary); load('userDict', loadUserDictionary); load('files', () => loadFiles(cwd ?? '')); load('plugins', () => loadPlugins(options.cli ?? '', options.boundPluginId)) }
+    return () => { alive = false }
+  }, [active, mode, cwd, options.cli, options.boundPluginId, retry])
+  const commands = useMemo(() => commandCandidates({ model: !!options.model, effort: !!options.effort, compact: !!options.compact }), [options.model, options.effort, !!options.compact])
+  const pool = useMemo(() => mode === '/' ? [...commands, ...(options.nativeSlash ?? []).map(c => ({id:'native:'+c.name, category:'native' as const, name:c.name, description:c.description, insert:'/'+c.name})), ...(sources.skills?.rows ?? [])] : [...dictCandidates(chips, [...(sources.dict?.terms ?? []), ...(sources.userDict?.terms ?? [])]), ...(sources.files?.rows ?? []), ...(sources.skills?.rows ?? []), ...(sources.plugins?.rows ?? []), ...browsers], [mode, commands, sources, chips, browsers, options.nativeSlash])
+  const matched = useMemo(() => filterCandidates(pool, trigger?.query ?? '', category), [pool, trigger?.query, category])
+  const hits = matched.slice(0, 200)
+  const safeIdx = Math.min(idx, Math.max(0, hits.length - 1))
+  const categories: Category[] = mode === '/' ? ['all', 'common', ...(options.nativeSlash?.length ? ['native' as const] : []), 'skill'] : ['all', 'dict', 'file', 'folder', 'skill', 'plugin', 'app', 'browser']
+  const relevant: Source[] = category === 'dict' ? ['dict', 'userDict'] : category === 'file' || category === 'folder' ? ['files'] : category === 'skill' ? ['skills'] : category === 'plugin' || category === 'app' ? ['plugins'] : category === 'browser' || category === 'common' || category === 'native' ? [] : mode === '/' ? ['skills'] : ['dict', 'userDict', 'files', 'skills', 'plugins']
+  const loading = relevant.some(k => sources[k]?.status === 'loading')
+  const errors = relevant.filter(k => sources[k]?.status === 'error')
+  const insert = (c: Candidate | undefined): void => {
+    if (!trigger || !c || c.disabled) return
+    if (c.chip) options.onAddChip?.(c.chip)
+    const next = insertCandidate(text, trigger, c)
+    setText(next.text); setOff(true); onPicked?.()
+    deferFocus(() => { anchorRef?.current?.focus(); anchorRef?.current?.setSelectionRange(next.caret, next.caret) })
+  }
+  const activate = (marker: '@' | '/'): void => {
+    const el = anchorRef?.current
+    const start = el?.selectionStart ?? text.length, end = el?.selectionEnd ?? start
+    if (marker === '/' && text.trim()) { el?.focus(); return }
+    const lead = marker === '@' && start > 0 && !/[\s（(，,。:：]/.test(text[start - 1]) ? ' ' : ''
+    setText(text.slice(0, start) + lead + marker + text.slice(end)); setOff(false); setFocused(true)
+    const caret = start + lead.length + 1
+    deferFocus(() => { el?.focus(); el?.setSelectionRange(caret, caret); setSelection([caret, caret]) })
+  }
+  // Selection only fills. An explicit send invokes the existing control without a model call.
+  const consumeCommand = (): boolean => {
+    const match = /^\/(mention|model|effort|compact)\s*$/.exec(text)
+    if (!match || !commands.some(c => c.name === match[1])) return false
+    cancelAnimationFrame(focusFrame.current)
+    const cmd = match[1]
+    if (cmd === 'mention') {
+      setText('@')
+      deferFocus(() => { anchorRef?.current?.focus(); anchorRef?.current?.setSelectionRange(1, 1); setSelection([1, 1]); setOff(false) })
+      return true
+    }
+    const root = anchorRef?.current?.closest('.ac-input-wrap, .ac-composer-box') ?? anchorRef?.current?.parentElement
+    const labels = cmd === 'model' ? ['启动模型', '对话模型'] : ['启动思考强度', '思考强度']
+    if (cmd === 'compact') options.compact?.()
+    else {
+      const control = labels.map(label => root?.querySelector<HTMLElement>('[aria-label="' + label + '"]')).find(Boolean)
+      if (!control) return true
+      control.focus()
+    }
+    setText(''); return true
+  }
   const handleKey = (e: ReactKeyboardEvent<HTMLTextAreaElement>): boolean => {
-    // **isComposing 要一并判**：中文输入法选词时按上下键是在翻候选词，
-    // 抢过来会把人正在选的字弄乱。
-    if (!open || e.nativeEvent.isComposing) return false
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setIdx((idx + 1) % hits.length)
-      return true
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setIdx((idx - 1 + hits.length) % hits.length)
-      return true
-    }
-    if (e.key === 'Tab' || e.key === 'Enter') {
-      e.preventDefault()
-      pick(idx)
-      return true
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      setOff(true)
-      return true
-    }
+    if (!active || e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return false
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOff(true); return true }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); setIdx(hits.length ? (safeIdx + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length : 0); return true }
+    if ((e.key === 'Enter' || e.key === 'Tab') && hits.length) { e.preventDefault(); insert(hits[safeIdx]); return true }
     return false
   }
-
-  return { open, hits, idx, handleKey, setIdx, pick, anchorRef }
+  const inputProps = { 'aria-expanded': active, 'aria-controls': active ? id : undefined, 'aria-activedescendant': active && hits.length ? id + '-' + safeIdx : undefined, 'aria-autocomplete': 'list' as const, onSelect: syncSelection, onBlur: () => setFocused(false), onClick: syncSelection, onKeyUp: syncSelection }
+  return { open: active, total: matched.length, hits, idx: safeIdx, setIdx, pick: (i: number) => insert(hits[i]), anchorRef, handleKey, category, setCategory: (c: Category) => { setCategory(c); setIdx(0) }, categories, mode, loading, errors, retry: () => setRetry(n => n + 1), close: () => setOff(true), id, inputProps, activate, consumeCommand, syncSelection }
 }
-
-/** 候选列表本体。最多显示 8 条，多的让人接着打字缩小范围。
- *
- *  **渲染到 body 上、fixed 定位**：原本是 absolute 在输入框容器里，
- *  超出 pane 就被裁掉 —— 画布上节点不高时，列表顶部会被节点头部切掉一半
- *  （用户 2026-08-20 截图：「@和/的窗口应该在 top bar 上面」）。
- *  浮到 body 之后它盖得住节点头部、工具条和画布上的一切。 */
-export function SlashList({ hits, idx, setIdx, pick, anchorRef }: SlashPickerState): JSX.Element | null {
-  const [pos, setPos] = useState<React.CSSProperties | null>(null)
-
-  // 用 layout effect：要在浏览器绘制之前把位置定好，否则会看到它先在 (0,0) 闪一下
+export type SlashPickerState = ReturnType<typeof useSlashPicker>
+export function SlashList(s: SlashPickerState): JSX.Element | null {
+  const [pos, setPos] = useState<ReturnType<typeof popupPosition>>(null)
+  const [detail, setDetail] = useState(false)
+  const listRef = useRef<HTMLDivElement>(null)
+  useEffect(() => setDetail(false), [s.category, s.idx])
   useLayoutEffect(() => {
-    const el = anchorRef?.current
-    if (!el) {
-      setPos(null)
-      return
+    let frame = 0, last = ''
+    const update = (): void => {
+      const el = s.anchorRef?.current
+      const next = el && document.activeElement === el ? popupPosition(el.getBoundingClientRect(), innerWidth, innerHeight) : null
+      const key = JSON.stringify(next)
+      if (key !== last) { last = key; setPos(next) }
+      frame = requestAnimationFrame(update)
     }
-    const r = el.getBoundingClientRect()
-    // **锚点不可见就不要弹。**
-    //
-    // 浮层渲染在 body 上（portal），已经不受输入框那个容器的 display:none 约束了 ——
-    // 画布模式下所有 tab 的所有 leaf 都挂载着、只是隐藏（PaneLayer 的设计），
-    // 不判这一下的话，隐藏节点里那个还留着 `@` 的输入框会把自己的候选浮到屏幕上，
-    // 用户看到的是一个不知道从哪冒出来、点了也没用的列表（2026-08-20 验证时
-    // 一次看到两个列表叠着，就是这么来的）。
-    //
-    // 两条都要判：尺寸为 0 = 容器被隐藏；完全在视口外 = 那个节点被滚走了。
-    const hidden = r.width < 10 || r.height < 5
-    const offscreen = r.bottom < 0 || r.top > window.innerHeight
-    if (hidden || offscreen) {
-      setPos(null)
-      return
-    }
-    const rows = Math.min(hits.length, 8)
-    // 一行约 30px，加上「还有 N 个」那行和内边距
-    const wanted = rows * 30 + (hits.length > 8 ? 24 : 0) + 10
-    const above = r.top - 10
-    const below = window.innerHeight - r.bottom - 10
-    // **优先往上弹**：输入框基本都在底部，往下弹多半会顶出屏幕。
-    // 上面实在放不下（比下面还窄）才往下。
-    const up = above >= Math.min(wanted, MAX_H) || above > below
-    const room = up ? above : below
-    setPos({
-      position: 'fixed',
-      // 贴着输入框左边，但不许溢出屏幕
-      left: Math.max(8, Math.min(r.left, window.innerWidth - Math.max(240, r.width) - 8)),
-      width: Math.max(240, r.width),
-      ...(up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
-      maxHeight: Math.max(90, Math.min(MAX_H, wanted, room))
-    })
-  }, [anchorRef, hits.length])
-
+    update(); return () => cancelAnimationFrame(frame)
+  }, [s.anchorRef])
+  useLayoutEffect(() => { listRef.current?.querySelector('[data-index="' + s.idx + '"]')?.scrollIntoView({ block: 'nearest' }) }, [s.idx])
   if (!pos) return null
-
-  return createPortal(
-    <div className="ac-slash" style={pos} role="listbox" aria-label="命令与文件候选">
-      {hits.slice(0, 8).map((c, i) => (
-        <div
-          key={`${c.from}:${c.name}`}
-          className={`ac-slash-row${i === idx ? ' on' : ''}`}
-          role="option"
-          aria-selected={i === idx}
-          // 用 mousedown 不用 click：click 之前 textarea 已经失焦，
-          // 候选会先被别的逻辑收起来，那一下就点空了
-          onMouseDown={(ev) => {
-            ev.preventDefault()
-            pick(i)
-          }}
-          onMouseEnter={() => setIdx(i)}
-        >
-          <span className="ac-slash-name">
-            {c.from === 'file' || c.from === 'chip' ? '@' : '/'}
-            {c.name}
-          </span>
-          <span className="ac-slash-desc">{c.desc}</span>
-          {c.from === 'skill' && <span className="ac-slash-tag">skill</span>}
-        </div>
-      ))}
-      {hits.length > 8 && (
-        <div className="ac-slash-more">还有 {hits.length - 8} 个，接着打字缩小范围</div>
-      )}
-    </div>,
-    document.body
-  )
+  const selected = s.hits[s.idx]
+  return createPortal(<div className="ac-mentions" style={{ ...pos, position: 'fixed' }} onMouseDown={e => e.preventDefault()}>
+    <div className="ac-mentions-head"><strong>{s.mode === '@' ? '@ 引用上下文' : '/ 命令与技能'}</strong><button type="button" aria-label="关闭候选" onClick={s.close}>×</button></div>
+    <div className="ac-mentions-body"><nav aria-label="候选分类">{s.categories.map(c => <button type="button" key={c} aria-pressed={s.category === c} onClick={() => s.setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</nav>
+      <div className="ac-mentions-results" ref={listRef}>
+        {(s.loading || s.errors.length > 0) && <div className="ac-mentions-status" role="status">
+          <span>{s.errors.length ? s.errors.map(k => ({dict:'内置辞典',userDict:'用户辞典',files:'项目文件',skills:'技能',plugins:'插件与应用'}[k])).join('、') + '读取失败' : '正在读取候选…'}{s.errors.length > 0 && s.loading ? ' · 部分来源仍在读取' : ''}</span>
+          {s.errors.length > 0 && <button type="button" onClick={s.retry}>重试</button>}
+        </div>}
+        {!s.loading && !s.hits.length && <div className="ac-mentions-empty">没有匹配结果<small>{s.category === 'browser' ? '仅列出 Eas-Term 中已打开的网页' : s.category === 'file' || s.category === 'folder' ? '搜索项目文件（跳过隐藏、依赖与构建目录）' : '换一个名称或关键词试试'}</small></div>}
+        <div role="listbox" id={s.id} aria-label="引用与命令候选">{s.hits.map((c, i) => <div key={c.id}>
+          {c.category === 'dict' && (i === 0 || s.hits[i - 1].preloaded !== c.preloaded) && <div className="ac-mentions-group">{c.preloaded ? '已加入候选' : '全部辞典'}</div>}
+          <div role="option" id={s.id + '-' + i} data-index={i} aria-selected={s.idx === i} aria-disabled={!!c.disabled} className={'ac-mentions-row' + (s.idx === i ? ' on' : '')} onMouseEnter={() => s.setIdx(i)} onClick={() => s.pick(i)} title={c.disabled || c.description}>
+            <span className="ac-mentions-glyph">{c.category === 'dict' ? '▤' : c.category === 'common' ? '/' : c.category === 'skill' ? '✧' : '@'}</span><span className="ac-mentions-copy"><strong>{c.name}</strong><small>{c.disabled || c.description}</small></span><span className="ac-mentions-kind">{c.preloaded ? '备选' : CATEGORY_LABELS[c.category]}</span>
+          </div>
+        </div>)}</div>
+      </div>
+    </div>
+    {detail && selected?.chip && <div className="ac-mentions-detail"><strong>{selected.name}</strong><p>{selected.chip.text}</p><button type="button" onClick={() => s.pick(s.idx)}>插入引用</button></div>}
+    <div className="ac-mentions-foot"><span>↑↓ 选择 · Enter / Tab 插入 · Esc 关闭</span>{selected?.chip && <button type="button" onClick={() => setDetail(v => !v)}>{detail ? '收起预览' : '预览词条'}</button>}<span>{s.total > 200 ? '前 200 项，继续输入筛选' : s.total + ' 个候选'}</span></div>
+  </div>, document.body)
 }
-
-/** 浮层最高多少。再高就把画布挡掉大半，反而不好用 */
-const MAX_H = 244

@@ -857,3 +857,10 @@ test('Codex：两行 roleDocs（章程 + 台账）只有首个换行变冒号，
     'instructions=你是工匠 你的角色文档：- 章程：`/p/docs/roles/builder.md` - 台账：`/p/.eas/board/feat--x.md`'
   )
 })
+
+test('native slash candidates are declared by their adapter, not shared across transports', () => {
+  const native = getAdapter('claude')!.capabilities.nativeSlash ?? []
+  assert.deepEqual(native.map(c => c.name), ['context','cost','usage','mcp','clear'])
+  assert.equal(getAdapter('codex')!.capabilities.nativeSlash, undefined)
+  assert.equal(getAdapter('omp')!.capabilities.nativeSlash, undefined)
+})

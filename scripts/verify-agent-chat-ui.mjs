@@ -83,6 +83,7 @@ import net from 'node:net'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { verifyComposer } from './verify-composer.mjs'
 import { verifyChatIntegration } from './verify-agent-chat-integration.mjs'
 
 if (typeof WebSocket === 'undefined') {
@@ -959,6 +960,7 @@ async function main() {
     const hasTestPush = await cdp.eval(`typeof window.__agentChatTestPush !== 'undefined'`)
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
+    if (process.argv.includes('--composer')) { await verifyComposer({cdp,projectDir,root:PROJECT_ROOT,waitFor}); return }
     if (process.argv.includes('--integration')) { await verifyChatIntegration({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
     if (process.argv.includes('--width')) { await verifyMinimumWidth(cdp, projectDir); return }
     if (process.argv.includes('--startup')) { await verifyStartup(cdp, projectDir); return }
@@ -1764,7 +1766,7 @@ async function main() {
 
 main()
   .then(() => {
-    if (process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
+    if (process.argv.includes("--composer") || process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')
     let allPass = true

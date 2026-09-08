@@ -1,0 +1,31 @@
+{
+  "boundary": "真实 Electron/React/字典数据；发送与文件故障使用测试夹具，无真实推理",
+  "checks": [
+    "omp active 八分类和真实辞典数据",
+    "omp active 完整词条预览",
+    "omp active 选择加载 chip 并插入引用",
+    "omp active 预览为展开全文",
+    "omp active 未引用保留旧附带语义且文案正确",
+    "omp active 光标处替换保留后缀",
+    "omp active 邮箱不触发",
+    "omp active Escape 关闭",
+    "omp active 关闭候选不退出画布最大化",
+    "omp active 无候选时 Escape 仍退出最大化",
+    "omp active 空结果仍显示面板",
+    "omp active 第十三项键盘选中仍可见",
+    "omp active IME 确认不插入不发送",
+    "omp active light 预览展开时发送按钮仍在视口内",
+    "omp active dark 预览展开时发送按钮仍在视口内",
+    "omp active 仅显示 adapter 声明的原生命令",
+    "omp active 斜杠先填入不发送",
+    "omp active 发送通用命令聚焦既有控件",
+    "omp 失败恢复草稿与辞典，传输收到全文",
+    "omp 成功发送仅清理已用词条",
+    "文件和用户辞典读取失败不影响内置辞典",
+    "多个来源完成时重试按钮在按下和松开之间不移位",
+    "重试恢复候选",
+    "失焦关闭 portal 不泄漏到其他面板",
+    "自建词条沿用辞典预加载身份且英文名正常插入",
+    "自建词条不会向文件引用误展开提示词"
+  ]
+}

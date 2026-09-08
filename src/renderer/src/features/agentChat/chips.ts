@@ -61,8 +61,9 @@ function refStart(text: string, i: number): boolean {
  *
  * 只有空文本没有 chip 时才返回空串 —— 调用方拿它判断「能不能发」，
  * 所以**挂了 chip 没打字也必须能发**（用户就想让模型照着这条提示词做）。
+ * fallback=false 仅供界面标注正文引用；发送始终使用默认的兼容附带规则。
  */
-export function expandChips(text: string, chips: readonly DictChip[]): ExpandedChips {
+export function expandChips(text: string, chips: readonly DictChip[], fallback = true): ExpandedChips {
   const body = text.trim()
 
   // 长名字优先：`@代码规范` 不能被 `@代码` 截胡
@@ -84,7 +85,7 @@ export function expandChips(text: string, chips: readonly DictChip[]): ExpandedC
     i += 1
   }
 
-  if (used.length > 0) return { text: out, usedIds: used }
+  if (used.length > 0 || !fallback) return { text: out, usedIds: used }
 
   // 兜底：一个都没引用 → 老行为，末尾拼全部
   const prompts = chips.map((c) => c.text.trim()).filter(Boolean)

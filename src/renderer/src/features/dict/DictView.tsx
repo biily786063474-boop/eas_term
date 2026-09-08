@@ -5,6 +5,7 @@ import { DICT_BLOCKS } from '../../../../shared/dictBlocks'
 import bp from './blueprints.json'
 import { BlueprintPanel } from './BlueprintPanel'
 import { searchTerms } from './search.ts'
+import { userTermIdentity } from './userTermIdentity'
 import { collectLeaves } from '../../layout'
 import { DictIcon } from '../../ui/Icons'
 import { DictHookBar } from './DictHookBar'
@@ -160,8 +161,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
     void window.api.fs.userTerms().then((list) => {
       setUserTerms(
         list.map((u) => ({
-          id: 'user:' + u.id, // 加前缀，避免和内置词条 id 撞车
-          zh: u.zh || u.en,
+          ...userTermIdentity(u),
           en: u.en,
           category: u.category,
           // 归了类的自建词条要能跟内置的一起被二级导航筛到；没归类的落「未分类」

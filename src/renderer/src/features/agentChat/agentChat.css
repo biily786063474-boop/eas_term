@@ -2521,7 +2521,7 @@
    虚线在这里是有意的（跟 Frame 那条同一个道理）：它读作「候选」，
    而实线读作「已定」。 */
 .ac-chip.idle {
-  opacity: 0.45;
+  color: var(--fg-dim);
   border-style: dashed;
 }
 .ac-chip.idle > svg {
@@ -3216,3 +3216,47 @@
 
 .ac-session-cli { display: inline-flex; align-items: center; gap: 6px; max-width: 160px; min-width: 0; padding: 3px 0; color: var(--t-2); flex: 0 1 auto; }
 .ac-session-cli > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Review 02 composer: scoped to the shared picker; no canvas or global token changes. */
+.ac-mentions { z-index: 9999; display: flex; flex-direction: column; overflow: hidden; background: var(--popover-solid); color: var(--fg); border: 1px solid var(--glass-border-strong); border-radius: 14px; box-shadow: 0 12px 32px var(--ink-3); font-size: 12px; }
+.ac-mentions button, .ac-composer-extras button { color: inherit; background: transparent; border: 0; font: inherit; cursor: pointer; border-radius: 6px; }
+.ac-mentions button:hover, .ac-composer-extras button:hover:not(:disabled) { background: var(--glass-3); }
+.ac-mentions button:focus-visible, .ac-composer-extras button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ac-mentions-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--glass-border); flex: none; }
+.ac-mentions-head strong { font-weight: 600; }
+.ac-mentions-head button { font-size: 18px; padding: 0 6px; }
+.ac-mentions-body { display: flex; min-height: 0; flex: 1; overflow: hidden; }
+.ac-mentions-body nav { width: 108px; flex: none; overflow: auto; padding: 7px; border-right: 1px solid var(--glass-border); }
+.ac-mentions-body nav button { display: block; width: 100%; padding: 7px 9px; text-align: left; white-space: nowrap; }
+.ac-mentions-body nav button[aria-pressed=true] { background: color-mix(in srgb, var(--fg) 9%, transparent); font-weight: 600; }
+.ac-mentions-results { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px; }
+.ac-mentions-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; min-height: 46px; }
+.ac-mentions-row.on { background: color-mix(in srgb, var(--fg) 9%, transparent); }
+.ac-mentions-row[aria-disabled=true] { cursor: not-allowed; }
+.ac-mentions-glyph { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid var(--glass-border); border-radius: 6px; color: var(--fg-dim); }
+.ac-mentions-copy { flex: 1; min-width: 0; }
+.ac-mentions-copy strong, .ac-mentions-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-mentions-copy strong { font-weight: 500; font-size: 12px; }
+.ac-mentions-copy small { font-size: 11px; color: var(--fg-dim); margin-top: 3px; }
+.ac-mentions-kind { flex: none; font-size: 10px; color: var(--fg-dim); }
+.ac-mentions-group { font-size: 10px; padding: 8px; color: var(--fg-dim); }
+.ac-mentions-foot { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--glass-border); color: var(--fg-dim); font-size: 10px; flex: none; }
+.ac-mentions-foot > span:last-child { margin-left: auto; white-space: nowrap; }
+.ac-mentions-status { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; color: var(--fg-dim); }
+.ac-mentions-status > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-mentions-status > button { flex: none; padding: 4px 8px; }
+.ac-mentions-empty { padding: 34px 14px; text-align: center; }
+.ac-mentions-empty small { display: block; color: var(--fg-dim); margin-top: 8px; line-height: 1.6; }
+.ac-mentions-detail { flex: 0 1 170px; min-height: 60px; overflow: auto; padding: 12px; border-top: 1px solid var(--glass-border); }
+.ac-mentions-detail p { white-space: pre-wrap; font-size: 12px; line-height: 1.7; }
+.ac-mentions-detail button { border: 1px solid var(--glass-border); padding: 5px 10px; }
+.ac-composer-extras { padding: 2px 12px 6px; }
+.ac-composer-shortcuts { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--fg-dim); font-size: 10px; }
+.ac-composer-shortcuts > button { padding: 5px; flex: none; }
+.ac-composer-shortcuts > button:disabled { opacity: .4; cursor: default; }
+.ac-composer-shortcuts > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.ac-chip-state { font-size: 9px; color: var(--fg-dim); white-space: nowrap; }
+.ac-send-preview { position: fixed; z-index: 9980; display: flex; flex-direction: column; box-sizing: border-box; padding: 12px; border: 1px solid var(--glass-border); border-radius: 14px; background: var(--popover-solid); color: var(--fg); box-shadow: 0 16px 48px #0004; }
+.ac-send-preview-head { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.ac-send-preview-head button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 20px; }
+.ac-send-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 0; max-height: 240px; overflow: auto; font: inherit; line-height: 1.7; user-select: text; }

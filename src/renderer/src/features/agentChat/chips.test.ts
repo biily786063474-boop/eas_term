@@ -145,3 +145,11 @@ test('选中 chip 后插进去的形状，expandChips 认得出来', () => {
   assert.equal(inserted, '帮我按 @文案风格 ')
   assert.deepEqual(expandChips(inserted, [chip]).usedIds, ['d1'])
 })
+
+test('preview badges distinguish explicit references from legacy fallback without changing send output', () => {
+  const chips = [c('a', 'A'), c('b', 'B')]
+  assert.deepEqual(expandChips('普通消息', chips, false).usedIds, [])
+  assert.deepEqual(expandChips('普通消息', chips).usedIds, ['a', 'b'])
+  assert.deepEqual(expandChips('@a', chips, false).usedIds, ['a'])
+  assert.equal(expandChips('普通消息', chips).text, '普通消息\n\n---\nA\n\nB')
+})

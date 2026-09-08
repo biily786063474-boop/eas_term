@@ -43,6 +43,7 @@ import type { OmpStatus } from '../../../../shared/ompSetup'
 import { CanvasContextMenu, type CanvasMenuItem } from '../../ui/CanvasContextMenu'
 import { VoiceButton } from '../voice/VoiceButton'
 import { useStore } from '../../store'
+import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
 import { belongsToProject } from '../../../../shared/teamWorktree'
 import { noteSubmitted, noteRunning, drainFollow, forgetPty } from '../gantt/collector'
@@ -364,9 +365,8 @@ export function AgentChatView({
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
   const [chips, setChips] = useState<DictChip[]>([])
   /** 正文里**这一刻**引用到了哪些 chip。
-   *  拿它把 chip 行分成两种样子 —— 不显形的话，「预加载了但没 @、所以不会发」
-   *  这件事用户完全看不出来。 */
-  const refIds = useMemo(() => expandChips(text, chips).usedIds, [text, chips])
+   *  拿它区分正文引用和备选；没有正文引用时的兼容附带规则由 ComposerActions 提示。 */
+  const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
 
   // ── 点了 agent 给的某个选项 → **直接发出去** ────────────────────────────
   //
@@ -991,6 +991,7 @@ export function AgentChatView({
   }
 
   const handleSend = async (override?: string): Promise<void> => {
+    if (override === undefined && emptySlash.consumeCommand()) return
     // override 是程序性发送（空态卡片上的「接上上次的对话」那种），不该带上 chip；
     // 用户自己按发送才展开挂着的提示词
     const expanded = override !== undefined ? null : expandChips(text, chips)
@@ -1224,11 +1225,12 @@ export function AgentChatView({
   const emptySlash = useSlashPicker(
     text,
     setText,
-    () => requestAnimationFrame(() => emptyTaRef.current?.focus()),
-    cwd,
+    undefined,
+    effectiveCwd,
     emptyTaRef,
     // 预加载的 chip 也进 `@` 候选，且排在文件前面
-    chips
+    chips,
+    { cli: selected?.id, nativeSlash: selected?.capabilities.nativeSlash, boundPluginId: pluginId, model: !!selected?.available, effort: !!selected?.capabilities.effortLevels?.length, onAddChip: c => setChips(cur => addChip(cur, c)) }
   )
 
   // ⚠️ **下面这些 hook 必须待在所有条件 return 的上游。**
@@ -1545,7 +1547,7 @@ export function AgentChatView({
                   data-tip={c.text}
                 >
                   <DictIcon size={11} />
-                  <span className="ac-chip-label">{c.label}</span>
+                  <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
                   <button
                     type="button"
                     className="ac-chip-x"
@@ -1562,6 +1564,7 @@ export function AgentChatView({
             </div>
           )}
           <textarea
+            {...emptySlash.inputProps}
             ref={emptyTaRef}
             className="ac-input"
             value={text}
@@ -1570,6 +1573,7 @@ export function AgentChatView({
             // 在 onFocus 里注册而不是 mount 时：拿到的一定是当前这次渲染的 setText，
             // 也天然表达了「最后聚焦的是我」。
             onFocus={() => {
+              emptySlash.syncSelection()
               const st = useStore.getState()
               st.setComposerAppend((t) =>
                 setText((v) => (v && !/\s$/.test(v) ? v + ' ' : v) + t)
@@ -1592,6 +1596,7 @@ export function AgentChatView({
             autoFocus
             disabled={phase.k === 'starting'}
           />
+          <ComposerActions picker={emptySlash} text={text} chips={chips} />
           {/* 首轮参数与消息动作共用输入卡片，CLI 切换仍由 key 隔离目录请求。 */}
           {selected?.available && selected.chatSupported ? (
             <StartupModelPicker
