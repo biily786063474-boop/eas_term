@@ -1,3 +1,4 @@
+import { cliInvocation } from './cliInvocation.ts'
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -9,6 +10,10 @@ import type { AgentProbe } from '../shared/types'
 import { PROBE_ENV } from './probeEnv'
 
 const pExecFile = promisify(execFile)
+function probeCli(bin: string, args: string[], timeout: number) {
+  const launch = cliInvocation(bin, bin, args)
+  return pExecFile(launch.command, launch.args, { timeout, env: { ...PROBE_ENV, ...launch.env } })
+}
 
 // 探测环境统一在 probeEnv.ts —— 它原来只在这个文件里，
 // 结果 adapters/detect.ts 漏了同一个补丁，从 Dock 启动就报「没有探测到可用的 CLI」
@@ -18,7 +23,7 @@ const pExecFile = promisify(execFile)
 // 绝不能跑会启动交互会话的子命令（曾误用 `claude config list` 启动了真实会话）。
 async function probeClaude(): Promise<AgentProbe['claude']> {
   try {
-    const { stdout } = await pExecFile('claude', ['--help'], { timeout: 8000, env: PROBE_ENV })
+    const { stdout } = await probeCli('claude', ['--help'], 8000)
     // effort：抓 `--effort <level> ... (low, medium, high, xhigh, max)` 括号内容
     let efforts: string[] = []
     const em = stdout.match(/--effort[\s\S]{0,240}?\(([a-z][a-z,\s]+)\)/)
@@ -47,7 +52,7 @@ const CODEX_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh']
 
 async function probeCodex(): Promise<AgentProbe['codex']> {
   try {
-    await pExecFile('codex', ['--version'], { timeout: 5000, env: PROBE_ENV })
+    await probeCli('codex', ['--version'], 5000)
     return { installed: true, models: CODEX_MODELS, efforts: CODEX_EFFORTS }
   } catch {
     return { installed: false, models: [], efforts: [] }

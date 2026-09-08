@@ -7,55 +7,9 @@ import http from 'node:http'
 import { spawn } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const KINDS = new Set(['claude', 'codex', 'omp'])
-const HERE = fileURLToPath(import.meta.url)
-function managedPath(p, platform) {
-  const parts = p.split(/[\\/]/)
-  return parts.some(part => (platform === 'win32' ? part.toLowerCase() : part) === 'capability-pty-bin') || p === HERE
-}
-function realExecutable(p, platform) {
-  try {
-    const real = fs.realpathSync(p)
-    if (!fs.statSync(real).isFile()) return undefined
-    if (platform !== 'win32') fs.accessSync(real, fs.constants.X_OK)
-    return real
-  } catch { return undefined }
-}
-/** Probe injection only isolates Windows PATH parsing in host-independent tests. */
-export function resolveCapabilityCli(kind, env, platform = process.platform, probe = p => realExecutable(p, platform)) {
-  if (!KINDS.has(kind)) throw new Error('Unsupported managed CLI')
-  const flavor = platform === 'win32' ? path.win32 : path.posix
-  const checked = p => {
-    if (managedPath(p, platform)) return undefined
-    const real = probe(p)
-    if (!real || managedPath(real, platform)) return undefined
-    if (platform === 'win32' && /\.(?:cmd|bat)$/i.test(real)) throw new Error('Windows .cmd/.bat CLI entry is unsupported; use a native executable')
-    return real
-  }
-  if (kind === 'omp') {
-    const bin = env.EAS_OMP_BINARY
-    if (!bin || !flavor.isAbsolute(bin)) throw new Error('Managed OMP binary is unavailable')
-    const real = checked(bin)
-    if (!real) throw new Error('Managed OMP binary is unavailable')
-    return real
-  }
-  const pathKey = Object.keys(env).find(k => k.toLowerCase() === 'path') ?? 'PATH'
-  const extKey = Object.keys(env).find(k => k.toLowerCase() === 'pathext') ?? 'PATHEXT'
-  const extensions = platform === 'win32'
-    ? (env[extKey] || '.COM;.EXE;.BAT;.CMD').split(';').filter(e => /^\.[a-z0-9]+$/i.test(e))
-    : ['']
-  for (let dir of (env[pathKey] || '').split(platform === 'win32' ? ';' : ':')) {
-    if (dir.startsWith('"') && dir.endsWith('"')) dir = dir.slice(1, -1)
-    // Empty PATH segments have the shell's normal current-directory meaning.
-    dir = flavor.resolve(dir || '.')
-    if (managedPath(dir, platform)) continue
-    for (const ext of extensions) {
-      const real = checked(flavor.join(dir, kind + ext))
-      if (real) return real
-    }
-  }
-  throw new Error('Real managed CLI executable was not found')
-}
+import { resolveCapabilityCli } from './cli-entry.mjs'
+export { resolveCapabilityCli } from './cli-entry.mjs'
+
 function post(port, route, body, timeoutMs) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify(body)

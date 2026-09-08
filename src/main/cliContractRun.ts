@@ -1,3 +1,4 @@
+import { cliInvocation } from './cliInvocation.ts'
 // 契约自检的副作用那一半：跑 --help / --version、读写指纹、决定要不要出声。
 // 判定逻辑全在 cliContract.ts（纯函数、可测），这里只负责「去撞」和「记住撞的结果」。
 //
@@ -21,6 +22,10 @@ import {
 } from './cliContract'
 
 const pExecFile = promisify(execFile)
+function probeCli(bin: string, args: string[], timeout: number) {
+  const launch = cliInvocation(bin, bin, args)
+  return pExecFile(launch.command, launch.args, { timeout, env: { ...PROBE_ENV, ...launch.env } })
+}
 
 
 
@@ -83,7 +88,7 @@ async function probe(bin: string): Promise<{ help: string | null; version: strin
   let help: string | null = null
   let version = ''
   try {
-    const r = await pExecFile(bin, ['--help'], { timeout: 8000, env: PROBE_ENV })
+    const r = await probeCli(bin, ['--help'], 8000)
     help = r.stdout + r.stderr // 有些 CLI 把 help 写 stderr
   } catch (e) {
     // 跑不起来分两种：命令不存在（没装）vs 跑了但退非零（装了、help 可能仍在 stderr）
@@ -92,7 +97,7 @@ async function probe(bin: string): Promise<{ help: string | null; version: strin
     help = out.trim() ? out : null
   }
   try {
-    const r = await pExecFile(bin, ['--version'], { timeout: 5000, env: PROBE_ENV })
+    const r = await probeCli(bin, ['--version'], 5000)
     version = (r.stdout || r.stderr).trim().split('\n')[0] ?? ''
   } catch {
     version = ''

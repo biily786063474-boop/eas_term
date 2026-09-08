@@ -2,6 +2,7 @@
 // Owned by one Eas-Term process generation. Never edits user config or retries a turn.
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import { resolveCliInvocation } from './cli-entry.mjs'
 import { readAndMergeCodexConfig } from './codex-capability-config.mjs'
 
 const abort = new AbortController()
@@ -56,6 +57,8 @@ try {
   const env = { ...process.env }
   if (env.EAS_CAPABILITY_NODE_FALLBACK === '1') delete env.ELECTRON_RUN_AS_NODE
   delete env.EAS_CAPABILITY_NODE_FALLBACK
+  const invocation = resolveCliInvocation('codex', input.binary, [], env, { command: process.execPath, args: [], ...(process.versions.electron ? { env: { ELECTRON_RUN_AS_NODE: '1' } } : {}) })
+  const cliEnv = { ...env, ...invocation.env }
   let configCwd = process.cwd()
   for (let index = 0; index < args.length; index++) {
     if (args[index] === '--') break
@@ -63,11 +66,11 @@ try {
     else if (args[index].startsWith('-C') && args[index].length > 2) configCwd = path.resolve(process.cwd(), args[index].slice(2))
     else if (args[index].startsWith('--cd=')) configCwd = path.resolve(process.cwd(), args[index].slice(5))
   }
-  const merged = await readAndMergeCodexConfig({ binary: input.binary, cwd: configCwd, env, userConfigArgs, managedAssignments: assignments, signal: abort.signal })
+  const merged = await readAndMergeCodexConfig({ binary: invocation.command, prefixArgs: invocation.args, cwd: configCwd, env: cliEnv, userConfigArgs, managedAssignments: assignments, signal: abort.signal })
   if (terminating) process.exitCode = 130
   else {
     // Global config options precede the exec subcommand, preserving positional prompts.
-    child = spawn(input.binary, [...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...args], { cwd: process.cwd(), env, stdio: 'inherit', windowsHide: true })
+    child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...args], { cwd: process.cwd(), env: cliEnv, stdio: 'inherit', windowsHide: true })
     const code = await new Promise(resolve => {
       child.once('error', () => resolve(1))
       child.once('exit', (status, signal) => resolve(status ?? (signal === 'SIGINT' ? 130 : 143)))
@@ -76,6 +79,6 @@ try {
     process.exitCode = code
   }
 } catch {
-  if (!terminating) process.stderr.write('Eas-Term：无法安全合并 Codex 用户配置，本轮尚未执行。请检查 Codex 配置后重试。\n')
+  if (!terminating) process.stderr.write('Eas-Term：无法安全合并 Codex 用户配置，本轮尚未执行。请检查 Codex 配置或修复官方 CLI 安装（不支持未知 Windows 包装脚本）后重试。\n')
   process.exitCode = terminating ? 130 : 1
 }

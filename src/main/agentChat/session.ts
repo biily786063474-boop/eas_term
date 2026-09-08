@@ -1,3 +1,4 @@
+import { cliInvocation } from '../cliInvocation.ts'
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
 // 「什么时候该回收」「该直接发还是重启 resume」「hook 请求怎么转成审批事件」
 // 全部由 sessionState.ts 与 approvalRegistry.ts / approvalRoute.ts 的纯函数回答——
@@ -836,7 +837,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
 
     const launch = live.rec.cli === 'codex'
       ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
-      : { command: built.bin, args }
+      : cliInvocation(live.rec.cli, built.bin, args)
     const proc = spawn(launch.command, launch.args, {
       cwd: opts.cwd,
       env: {

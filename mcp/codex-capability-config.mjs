@@ -35,7 +35,7 @@ function userArgs(args) {
 }
 
 /** Only initialize/config/read, never a model or tool. Settles after the owned probe exits. */
-async function readConfig({ binary, cwd, env, timeoutMs, signal }, args) {
+async function readConfig({ binary, prefixArgs, cwd, env, timeoutMs, signal }, args) {
   if (signal?.aborted) throw fail('已取消')
   return new Promise((resolve, reject) => {
     let child, outcome, finished = false, buffer = '', bytes = 0, killTimer
@@ -57,7 +57,7 @@ async function readConfig({ binary, cwd, env, timeoutMs, signal }, args) {
       if (finished) return
       child.stdin.write(JSON.stringify(message) + '\n', error => { if (error) finish(fail('请求写入失败')) })
     }
-    try { child = spawn(binary, ['app-server', ...args], { cwd, env, stdio: ['pipe', 'pipe', 'ignore'] }) }
+    try { child = spawn(binary, [...prefixArgs, 'app-server', ...args], { cwd, env, stdio: ['pipe', 'pipe', 'ignore'] }) }
     catch { finish(fail('无法启动配置探针')); return }
     signal?.addEventListener('abort', abort, { once: true })
     child.once('error', () => finish(fail('无法启动配置探针')))
@@ -111,12 +111,12 @@ function skillList(config) {
   return items
 }
 
-/** Caller preserves original user flags and appends this result last. binary is the native CLI.
+/** Caller preserves original user flags and appends this result last. binary/prefixArgs are the resolved CLI invocation.
  * Native config/read parses both snapshots; no partial TOML parser or config logging here. */
-export async function readAndMergeCodexConfig({ binary, cwd, env = process.env, userConfigArgs = [], managedAssignments = [], timeoutMs = 10000, signal }) {
+export async function readAndMergeCodexConfig({ binary, prefixArgs = [], cwd, env = process.env, userConfigArgs = [], managedAssignments = [], timeoutMs = 10000, signal }) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw fail('读取超时配置无效')
   if (!Array.isArray(managedAssignments) || managedAssignments.some(v => typeof v !== 'string')) throw fail('受管配置参数无效')
-  const options = { binary, cwd, env, timeoutMs, signal }
+  const options = { binary, prefixArgs, cwd, env, timeoutMs, signal }
   const originalArgs = userArgs(userConfigArgs)
   const base = await readConfig(options, originalArgs)
   const candidate = await readConfig(options, [...originalArgs, ...managedAssignments.flatMap(v => ['-c', v])])

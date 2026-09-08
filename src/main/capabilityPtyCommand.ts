@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { cliInvocation } from './cliInvocation.ts'
 import { codexAddServerArgs } from '../shared/roleBinding.ts'
 import type { SessionMcpServer } from '../shared/builtinCapabilities.ts'
 import { codexCapabilityLaunch } from './codexCapabilityLaunch.ts'
@@ -56,5 +57,5 @@ export function buildPtyCapabilityCommand(invocation: PtyCapabilityInvocation, c
       throw new Error('此 Claude 启动参数需要合并指引文件后才能启用内置能力')
     } else flags.push('--append-system-prompt', capabilities.guidance)
   }
-  return { command: invocation.binary, args: [...flags, ...args] }
+  return cliInvocation('claude', invocation.binary, [...flags, ...args])
 }

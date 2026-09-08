@@ -194,3 +194,14 @@ test('actual OMP PTY launcher removes conflicting profiles while preserving call
   for (const key of ['OMP_PROFILE','PI_PROFILE','XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_STATE_HOME','XDG_CACHE_HOME','ELECTRON_RUN_AS_NODE']) assert.equal(body[key], undefined, key)
   assert.equal(f.calls[0].body.kind, 'omp')
 })
+
+test('official npm Windows shim resolves before a PTY lease is requested', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'npm 中文 空格-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  const pkg = path.join(root, 'node_modules', '@openai', 'codex')
+  fs.mkdirSync(path.join(pkg, 'bin'), { recursive: true })
+  fs.writeFileSync(path.join(pkg, 'package.json'), JSON.stringify({ name: '@openai/codex', version: '0.1.0', bin: { codex: 'bin/codex.js' } }))
+  fs.writeFileSync(path.join(pkg, 'bin', 'codex.js'), 'console.log("fixture")')
+  const shim = path.join(root, 'codex.cmd'); fs.writeFileSync(shim, 'DO NOT EXECUTE SHIM TEXT')
+  assert.equal(resolveCapabilityCli('codex', { PATH: 'C:\\npm', PATHEXT: '.CMD' }, 'win32', () => shim), shim)
+})
