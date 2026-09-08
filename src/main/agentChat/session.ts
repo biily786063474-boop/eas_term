@@ -1783,6 +1783,7 @@ export function registerAgentChatHandlers(): void {
       return
     }
     if (!live?.proc) return
+    live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
     live.killing = true
     live.proc.kill()
     live.proc = undefined

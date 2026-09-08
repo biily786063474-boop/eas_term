@@ -1,3 +1,5 @@
+import { useMessageQueue } from './useMessageQueue'
+import type { QueuedMessage } from './messageQueue'
 import { ComposerInput, type ComposerInputElement } from './ComposerInput'
 import { ReferenceHover } from './ReferencePreview'
 import { ChatStatusIcon } from './ChatStatusIcon'
@@ -840,6 +842,11 @@ export function AgentChatView({
    *
    *  preload 从模块加载期就按 sessionId 缓冲事件，这里订阅时会先回放攒下的再转实时，
    *  所以接管一个跑到一半的会话不会只看到「从现在开始」的半截输出。 */
+  const followupRef = useRef<(item: QueuedMessage) => Promise<boolean>>(async () => false)
+  const messageQueue = useMessageQueue(sessionId, () => reducerRef.current.view().busy, item => followupRef.current(item))
+  const messageQueueRef = useRef(messageQueue)
+  messageQueueRef.current = messageQueue
+
   const attachTo = (sid: string): void => {
     unsubRef.current?.()
     unsubRef.current = window.api.agentChat.onEvent(sid, (e: ChatEvent) => {
@@ -852,6 +859,11 @@ export function AgentChatView({
       if (e.k === 'session.ready' && e.sessionId) setAgentResumeId(tabId, leafId, e.sessionId, selected?.id)
       const v = reducerRef.current.view()
       setView(v)
+      const queue = messageQueueRef.current
+      if (queue.sessionId === sid) {
+        if (e.k === 'turn.start' || e.k === 'turn.done') queue.controller.event(e.k)
+        else if (e.k === 'error' && e.fatal) queue.controller.event('fatal')
+      }
       // ── 接进全局的通知系统 ──────────────────────────────────────
       // 运行监视 / 待处理列表 / 灵动岛 / 提示音 / 侧栏与抽屉的项目状态点，
       // 全都读 runningPtys + attentionPtys 这两份信号（machine.ts 的 statusOf）。
@@ -942,10 +954,18 @@ export function AgentChatView({
    *
    *  为什么连会话一起停：用户要的是「重启一个任务」。留着旧进程的话，
    *  新对话的第一条消息会带着旧 resumeId 续上去，那就不是新的了。 */
-  const handleNewChat = (): void => {
+  const handleNewChat = (discardQueue = false): void => {
     if (!nodeRef) return
+    const queued = messageQueueRef.current.controller.snapshot().items
+    if (queued.length && !discardQueue) {
+      useStore.getState().requestConfirm({ message: '还有 ' + queued.length + ' 条消息未发送。放弃这些排队消息并新建对话？', confirmLabel: '放弃并新建', onConfirm: () => {
+        handleNewChat(true)
+      } })
+      return
+    }
     const [fid, nid] = nodeRef.split('|')
     if (!fid || !nid) return
+    messageQueueRef.current.controller.dispose()
     if (sessionId) window.api.agentChat.stop(sessionId)
     unsubRef.current?.()
     unsubRef.current = null
@@ -1305,6 +1325,61 @@ export function AgentChatView({
   }
 
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
+  const handleFollowupSend = async (
+    message: string,
+    meta?: { text: string; images: { path: string; url: string }[] }
+  ): Promise<boolean> => {
+    const trimmed = message.trim()
+    if (!trimmed || !sessionId) return false
+    setSendError(null)
+    // **turnCursor 不是 turns.length。** 后者到 MAX_LIVE_TURNS 就不再增长，
+    // 于是第三问之后每条都记成同一个 60，减去 trimmedFromHead 后一起塌到 0
+    // ——所有提问叠在开头，答案里一条吸顶路标都没有（turnCursor 注释里有实测）。
+    const beforeTurnCount = turnCursor(reducerRef.current.view())
+    // 乐观插入：先让这条消息出现在对话流里，界面才跟得上手速。但它是**乐观**的，
+    // 失败时必须撤回——留着就是在骗人（那句话从来没有离开过这台机器）。
+    // 按对象引用撤回，不按下标：撤回时数组里可能已经又多了别的消息。
+    // 对话流里显示的是**你打的字 + 图本身**，不是拼给 CLI 的那串路径。
+    // 没有 meta（别的调用方，比如 /compact）时退回原样显示整条。
+    const entry: SentMessage = {
+      text: meta ? meta.text : trimmed,
+      images: meta?.images?.length ? meta.images : undefined,
+      beforeTurnCount
+    }
+    setSentMessages((prev) => [...prev, entry])
+    const r = await window.api.agentChat
+      .send(sessionId, trimmed)
+      .catch((e): { ok: false; error: string } => ({
+        // IPC 本身 reject（会话不存在之外的意外）以前是一条 unhandled rejection，
+        // 界面上什么都不会发生、消息却已经显示在对话流里——跟 I4 是同一个失败面，
+        // 顺手在这条路径上接住。
+        ok: false,
+        error: e instanceof Error ? e.message : String(e)
+      }))
+    if (r.ok) {
+      // 甘特图。**只在真的送出去之后记** —— 失败那条已经从对话流里撤回了，
+      // 记进图里等于留下一条从未发生过的任务。
+      //
+      // 记的是 entry.text（你打的字），不是 trimmed（拼了图片路径给 CLI 的那串）：
+      // 图上要看的是"我当时问了什么"，不是那串本机路径。
+      //
+      // 两种情形分开：
+      //   · 上一轮还在跑 → 这是补发，附到当前那条记录的 follow 上，不另开一根条
+      //     （它没有自己的起止，硬拆只会让图上多出零长度的条——同 collector 的取舍）
+      //   · 已经跑完了 → 挂成候选，等下一次 turn.start 转成新记录
+      if (!isTeamOwned) {
+        noteSubmitted(sessionId, entry.text)
+        if (reducerRef.current.view().busy) drainFollow(sessionId)
+      }
+      return true
+    }
+    setSentMessages((prev) => prev.filter((m) => m !== entry))
+    if (aliveRef.current) setSendError({ text: r.error, fatal: true })
+    return false
+  }
+  followupRef.current = item => handleFollowupSend(item.text, item.meta)
+  const enqueueFollowup = (text: string, meta?: QueuedMessage['meta'], mode: 'queue' | 'redirect' = 'queue') => messageQueue.controller.submit({ text, meta }, mode)
+
   if (sessionId) {
     // resolveApproval 需要 sessionId——ApprovalCard/MessageList 都不持有它（各自的
     // 声明式 props 只有 pending/onDecide、view/onApprovalDecide），IPC 调用统一收在
@@ -1323,58 +1398,7 @@ export function AgentChatView({
     // turns 只增不减，所以在这里现读它的长度、跟 mergeUserMessages 的插入位置对齐，
     // 不会因为这是「第 N 条」而需要不同的公式（上一轮审查点名过这条不变量，见任务交底）。
     // 返回「这条真的送出去了吗」——工具栏据此决定要不要把文字放回输入框（评审 I4）。
-    const handleFollowupSend = async (
-      message: string,
-      meta?: { text: string; images: { path: string; url: string }[] }
-    ): Promise<boolean> => {
-      const trimmed = message.trim()
-      if (!trimmed) return false
-      setSendError(null)
-      // **turnCursor 不是 turns.length。** 后者到 MAX_LIVE_TURNS 就不再增长，
-      // 于是第三问之后每条都记成同一个 60，减去 trimmedFromHead 后一起塌到 0
-      // ——所有提问叠在开头，答案里一条吸顶路标都没有（turnCursor 注释里有实测）。
-      const beforeTurnCount = turnCursor(reducerRef.current.view())
-      // 乐观插入：先让这条消息出现在对话流里，界面才跟得上手速。但它是**乐观**的，
-      // 失败时必须撤回——留着就是在骗人（那句话从来没有离开过这台机器）。
-      // 按对象引用撤回，不按下标：撤回时数组里可能已经又多了别的消息。
-      // 对话流里显示的是**你打的字 + 图本身**，不是拼给 CLI 的那串路径。
-      // 没有 meta（别的调用方，比如 /compact）时退回原样显示整条。
-      const entry: SentMessage = {
-        text: meta ? meta.text : trimmed,
-        images: meta?.images?.length ? meta.images : undefined,
-        beforeTurnCount
-      }
-      setSentMessages((prev) => [...prev, entry])
-      const r = await window.api.agentChat
-        .send(sessionId, trimmed)
-        .catch((e): { ok: false; error: string } => ({
-          // IPC 本身 reject（会话不存在之外的意外）以前是一条 unhandled rejection，
-          // 界面上什么都不会发生、消息却已经显示在对话流里——跟 I4 是同一个失败面，
-          // 顺手在这条路径上接住。
-          ok: false,
-          error: e instanceof Error ? e.message : String(e)
-        }))
-      if (r.ok) {
-        // 甘特图。**只在真的送出去之后记** —— 失败那条已经从对话流里撤回了，
-        // 记进图里等于留下一条从未发生过的任务。
-        //
-        // 记的是 entry.text（你打的字），不是 trimmed（拼了图片路径给 CLI 的那串）：
-        // 图上要看的是"我当时问了什么"，不是那串本机路径。
-        //
-        // 两种情形分开：
-        //   · 上一轮还在跑 → 这是补发，附到当前那条记录的 follow 上，不另开一根条
-        //     （它没有自己的起止，硬拆只会让图上多出零长度的条——同 collector 的取舍）
-        //   · 已经跑完了 → 挂成候选，等下一次 turn.start 转成新记录
-        if (!isTeamOwned) {
-          noteSubmitted(sessionId, entry.text)
-          if (reducerRef.current.view().busy) drainFollow(sessionId)
-        }
-        return true
-      }
-      setSentMessages((prev) => prev.filter((m) => m !== entry))
-      if (aliveRef.current) setSendError({ text: r.error, fatal: true })
-      return false
-    }
+
     return (
       <div className="agent-chat-view">
         <MessageList
@@ -1382,7 +1406,7 @@ export function AgentChatView({
           onApprovalDecide={handleApprovalDecide}
           leafId={leafId}
           // 会话在跑：走追问那条路（乐观插入 + 失败把字放回输入框）
-          onPickOption={(t) => void handleFollowupSend(t)}
+          onPickOption={(t) => void enqueueFollowup(t)}
         />
         {/* selected 在这里必然非空：走到 sessionId 有值这一步，start() 必然已经过了
             handleSend 顶部 `!selected` 的门槛，且 selected 之后没有任何路径会被清空。 */}
@@ -1399,9 +1423,14 @@ export function AgentChatView({
           approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
-          onNewChat={handleNewChat}
+          onNewChat={() => handleNewChat()}
           sessionId={sessionId}
-          onSend={handleFollowupSend}
+          onSend={enqueueFollowup}
+          queue={messageQueue}
+          onRemoveQueued={id => messageQueue.controller.remove(id)}
+          onSteerQueued={id => messageQueue.controller.steer(id)}
+          onRetryQueue={() => messageQueue.controller.retry()}
+          onStop={() => { messageQueue.controller.pause(); window.api.agentChat.interrupt(sessionId) }}
           // 分支徽标（空态那份在下面的上下文条上，同一个组件）。
           // **会话跑着的时候正是最该看到分支的时候** —— 菜单里「删除 worktree」
           // 会因为 sessionId 有值而置灰，看和开终端不受影响。

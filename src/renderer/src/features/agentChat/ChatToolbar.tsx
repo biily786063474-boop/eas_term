@@ -1,3 +1,4 @@
+import type { QueueSnapshot } from './messageQueue'
 import { ComposerInput, type ComposerInputElement } from './ComposerInput'
 import { ReferenceHover } from './ReferencePreview'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
@@ -108,6 +109,7 @@ export function ChatToolbar({
   cwd,
   sessionId,
   onSend,
+  queue, onRemoveQueued, onSteerQueued, onRetryQueue, onStop,
   onSetParams,
   onRefreshModels,
   onLogin,
@@ -141,9 +143,15 @@ export function ChatToolbar({
    *  返回 void 也允许（比如将来某个调用方不关心结果），那时按"不知道"处理、不回填。 */
   /** 第一个参数是**真正发给 CLI 的内容**（图片路径拼在文字前面）。
    *  第二个是给界面用的：纯文字 + 缩略图，让对话流显示图本身而不是一串路径。 */
+  queue: QueueSnapshot
+  onRemoveQueued: (id: number) => void
+  onSteerQueued: (id: number) => void
+  onRetryQueue: () => void
+  onStop: () => void
   onSend: (
     text: string,
-    meta?: { text: string; images: { path: string; url: string }[] }
+    meta?: { text: string; images: { path: string; url: string }[] },
+    mode?: 'queue' | 'redirect'
   ) => Promise<boolean> | void
   onSetParams: (patch: { model?: string; effort?: string }) => void
   onRefreshModels?: () => void
@@ -257,10 +265,8 @@ export function ChatToolbar({
       onAddChip: c => setChips(cur => addChip(cur, c)) }
   )
 
-  const submit = (): void => {
-    if (slash.consumeCommand()) return
-    // Match the one-shot transport: keyboard send must not bypass the visible stop state.
-    if (cli.id === 'codex' && view.busy) return
+  const submit = (mode: 'queue' | 'redirect' = 'queue'): void => {
+    if (mode === 'queue' && slash.consumeCommand()) return
     const t = text.trim()
     // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
     // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
@@ -289,11 +295,8 @@ export function ChatToolbar({
       taRef.current.focus()
     }
     // 发送失败要把用户打的字放回输入框（2026-08-17 全分支最终评审 I4）。
-    // 对 Codex 这是**常态路径而非边缘**：它的 stdin 是 'ignore'，上一轮还在跑时
-    // deliverMessage 直接返回「当前会话正在处理上一条消息，请稍候再发送」。修复前
-    // 用户看到的是：自己那句话已经出现在对话流里（看起来发出去了）、输入框空了、
-    // 底下一行小字——想重发只能重新打一遍，长消息就是白打。
-    void Promise.resolve(onSend(payload, { text: body, images: shots })).then((ok) => {
+    // 忙时入队由队列保留内容；空闲时直接投递失败才在这里恢复草稿。
+    void Promise.resolve(onSend(payload, { text: body, images: shots }, mode)).then((ok) => {
       if (ok !== false || !aliveRef.current) return
       // 这几十毫秒里用户可能已经开始打下一句：那就把失败的这条接在前面，
       // 绝不覆盖他新打的内容——"不丢用户打的字"是这条修复的全部意义。
@@ -367,6 +370,19 @@ export function ChatToolbar({
           )}
         </div>
       )}
+
+      {queue.items.length > 0 && <div className="ac-message-queue" aria-label="待发送消息队列">
+        <div className="ac-queue-heading"><span>{queue.interrupting ? '正在停止当前任务…' : queue.paused ? '队列已暂停' : '待发送'} · {queue.items.length}</span>
+          {queue.paused && <button type="button" onClick={onRetryQueue}>重试队列</button>}
+        </div>
+        {queue.items.map((item, index) => <div className="ac-queue-item" key={item.id}>
+          <span className="ac-queue-number">{index + 1}</span>
+          <span className="ac-queue-text" title={item.meta?.text || item.text}>{item.meta?.text || item.text}</span>
+          {item.meta?.images.length ? <small>{item.meta.images.length} 张图片</small> : null}
+          <button type="button" disabled={queue.sendingId === item.id || queue.interrupting} onClick={() => onSteerQueued(item.id)}>调整方向</button>
+          <button type="button" aria-label={'取消第 ' + (index + 1) + ' 条排队消息'} disabled={queue.sendingId === item.id} onClick={() => onRemoveQueued(item.id)}>取消</button>
+        </div>)}
+      </div>}
 
       {/* **输入区是一个容器，不是几条横带。**
           之前图片缩略图、快照提示、控制行、输入行各占一条，加上 notices 能叠到五层，
@@ -568,23 +584,17 @@ export function ChatToolbar({
 
           <div className="ac-message-actions">
             <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
-            <button
-              type="button"
-              aria-label={view.busy ? '停止生成' : '发送消息'}
-              className={`ac-bar-send${view.busy ? ' stop' : ''}`}
-              data-tip={
-                view.busy ? '停下这一轮（上下文留着，接着说就行）' : `发送（${SEND_HINT.split('，')[0]}）`
-              }
-              // **跑着的时候这颗键是「停」，不是禁用的 spinner。**
-              // 终端里按 ESC 就能停下正在跑的回答，这个窗口以前只能干等 ——
-              // 一次答偏了得等它说完（.plans/cli-gap 里排第一的缺口）。
-              // 停 ≠ 结束会话：kill 掉当前进程但会话记录留着，
-              // 下一条消息会带 --resume 接回上下文。
-              onClick={view.busy ? () => window.api.agentChat.interrupt(sessionId) : submit}
-              // 跑着的时候不禁用输入：可以先写下一条
-              disabled={view.busy ? false : !text.trim() && !pics.imgs.length && !chips.length}
-            >
-              {view.busy ? <StopIcon size={18} /> : <SendIcon size={18} />}
+            {view.busy && <>
+              <button type="button" className="ac-icon-button" aria-label="停止生成" data-tip="停止当前任务" onClick={onStop}><StopIcon size={18} /></button>
+              <button type="button" className="ac-redirect-button" disabled={queue.interrupting || (!text.trim() && !pics.imgs.length && !chips.length)} onClick={() => submit('redirect')}>调整方向</button>
+            </>}
+            <button type="button"
+              aria-label={view.busy || queue.items.length ? '加入队列' : '发送消息'}
+              className="ac-bar-send"
+              data-tip={view.busy || queue.items.length ? '加入队列，当前任务结束后发送' : '发送（' + SEND_HINT.split('，')[0] + '）'}
+              onClick={() => submit()}
+              disabled={!text.trim() && !pics.imgs.length && !chips.length}>
+              <SendIcon size={18} />
             </button>
           </div>
         </div>

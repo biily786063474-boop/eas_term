@@ -1,0 +1,192 @@
+{
+  "boundary": "真实 Electron UI；安装/登录/start/事件使用可还原模拟 transport，无真实安装/认证/远端推理",
+  "checks": [
+    {
+      "name": "未安装选择与引导归属一致，禁止启动"
+    },
+    {
+      "name": "切到已安装项清除旧提示并保留草稿"
+    },
+    {
+      "name": "重复选择当前 CLI 不绕过登录"
+    },
+    {
+      "name": "旧认证响应不能写入新 CLI"
+    },
+    {
+      "name": "安装登录后重查就绪，保持 CLI/草稿，不自动发送"
+    },
+    {
+      "name": "内置缺失不会调用外部 CLI 安装"
+    },
+    {
+      "name": "Codex 生成中快捷键入队，不提前投递"
+    },
+    {
+      "name": "Codex 完成后立即续发成功，按钮状态无需刷新"
+    },
+    {
+      "name": "最大化面板不会遮挡提问刻度"
+    },
+    {
+      "name": "点击定位真实提问且吸顶零 padding 保持",
+      "data": {
+        "offset": 55.4296875,
+        "scrollTop": 667.5,
+        "paddingTop": "0px"
+      }
+    },
+    {
+      "name": "工具语义图标及旧聊天动作入口保留"
+    },
+    {
+      "name": "最大化还原和画布缩放后导航贴合 AI 对话模块外侧"
+    },
+    {
+      "name": "Frame 独立移位时导航仍固定在对话模块外 12px"
+    },
+    {
+      "name": "模块独立移动后导航同步移动，缩放下仍保持 12px 间距"
+    },
+    {
+      "name": "连续平移缩放每次位置提交时导航与模块保持 12px 间距",
+      "data": {
+        "samples": [
+          {
+            "gap": 12,
+            "pane": 220.6953125,
+            "nav": 182.6953125
+          },
+          {
+            "gap": 12,
+            "pane": 225.984375,
+            "nav": 187.984375
+          },
+          {
+            "gap": 12,
+            "pane": 231.28125,
+            "nav": 193.28125
+          },
+          {
+            "gap": 12,
+            "pane": 236.578125,
+            "nav": 198.578125
+          },
+          {
+            "gap": 12,
+            "pane": 241.875,
+            "nav": 203.875
+          },
+          {
+            "gap": 12,
+            "pane": 247.171875,
+            "nav": 209.171875
+          },
+          {
+            "gap": 12,
+            "pane": 252.46875,
+            "nav": 214.46875
+          },
+          {
+            "gap": 12,
+            "pane": 257.765625,
+            "nav": 219.765625
+          },
+          {
+            "gap": 12,
+            "pane": 263.0625,
+            "nav": 225.0625
+          },
+          {
+            "gap": 12,
+            "pane": 268.359375,
+            "nav": 230.359375
+          },
+          {
+            "gap": 12,
+            "pane": 273.6484375,
+            "nav": 235.6484375
+          },
+          {
+            "gap": 12,
+            "pane": 278.9453125,
+            "nav": 240.9453125
+          },
+          {
+            "gap": 12,
+            "pane": 284.2421875,
+            "nav": 246.2421875
+          },
+          {
+            "gap": 12,
+            "pane": 289.5390625,
+            "nav": 251.5390625
+          },
+          {
+            "gap": 12,
+            "pane": 294.8359375,
+            "nav": 256.8359375
+          },
+          {
+            "gap": 12,
+            "pane": 300.1328125,
+            "nav": 262.1328125
+          }
+        ],
+        "maxGapError": 0
+      }
+    },
+    {
+      "name": "取消选中隐藏导航、悬停预览并释放正文留白"
+    },
+    {
+      "name": "只选中 Frame 不显示对话导航"
+    },
+    {
+      "name": "重新选中恢复导航，不恢复旧悬停预览"
+    },
+    {
+      "name": "普通画布导航层级低于文件抽屉"
+    },
+    {
+      "name": "左侧抽屉真实文件按 JS / 图片 / SVG / plist / Agent 规则分类"
+    },
+    {
+      "name": "分屏导航只跟随当前激活对话"
+    },
+    {
+      "name": "分屏保留聊天 DOM，并使用各自 Worktree 路径",
+      "data": {
+        "samePane": true,
+        "paths": [
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-q2MCDg/.worktrees/main",
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-q2MCDg/.worktrees/peer"
+        ]
+      }
+    },
+    {
+      "name": "渲染控制台无异常",
+      "data": []
+    }
+  ],
+  "count": 12,
+  "setupCalls": [
+    "list",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "check:codex",
+    "install:claude",
+    "install:claude",
+    "login:claude",
+    "check:claude",
+    "list",
+    "check:claude",
+    "check:codex",
+    "check:codex",
+    "list",
+    "check:codex"
+  ],
+  "consoleErrors": []
+}

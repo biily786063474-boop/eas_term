@@ -1,0 +1,58 @@
+import fs from 'node:fs'
+import path from 'node:path'
+export async function verifyMessageQueue({cdp,projectDir,root,waitFor}) {
+  const out=path.join(root,'docs/verification/message-queue');fs.mkdirSync(out,{recursive:true})
+  const checks=[]
+  const ready=expression=>waitFor(()=>cdp.eval(expression),{timeout:8000,desc:expression})
+  const check=async(expression,name)=>{if(!await cdp.eval(expression))throw new Error(name);checks.push(name);console.log('[queue] ✓',name)}
+  const caps={contextUsage:true,approval:[],models:[],effortLevels:[]}
+  await cdp.eval('window.__agentChatTestSetup('+JSON.stringify({clis:['codex','claude','omp'].map(id=>({id,displayName:id,available:true,chatSupported:true,capabilities:caps}))})+')')
+  const config=extra=>cdp.eval('window.__composerTestSetup('+JSON.stringify({sendEvents:true,interruptHold:true,...extra})+')')
+  const type=async text=>{await cdp.eval('(()=>{const e=document.querySelector("[data-composer-input]");e.value='+JSON.stringify(text)+';e.focus()})()');await ready('document.querySelector("[data-composer-input]").value==='+JSON.stringify(text))}
+  const key=async()=>{await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})}
+  for(const cli of ['codex','claude','omp']) {
+    await config({})
+    const sid='queue-'+cli
+    await cdp.eval('(()=>{const s=window.__store.getState();window.__store.setState({viewMode:"canvas",tabs:[{id:"q-tab",cwd:'+JSON.stringify(projectDir)+',title:"队列验证",activeLeafId:'+JSON.stringify(sid)+',root:{type:"leaf",id:'+JSON.stringify(sid)+',pane:{kind:"agent",cwd:'+JSON.stringify(projectDir)+',cli:'+JSON.stringify(cli)+',sessionId:'+JSON.stringify(sid)+'}}}],activeTabId:"q-tab",canvas:{...s.canvas,frames:[{id:"q-frame",name:"队列验证",projectId:null,x:0,y:0,w:1000,h:800,collapsed:false,nodes:[{id:"q-node",leafId:'+JSON.stringify(sid)+',x:40,y:60,w:850,h:700}]}]}});s.setMaximizedNode({frameId:"q-frame",nodeId:"q-node"})})()')
+    await ready('!!document.querySelector(".ac-toolbar")')
+    const push=event=>cdp.eval('window.__agentChatTestPush('+JSON.stringify(sid)+','+JSON.stringify(event)+')')
+    const end=()=>push({k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    await push({k:'session.ready',sessionId:sid,cwd:projectDir,model:'fixture'});await push({k:'turn.start'})
+    const count=await cdp.eval('window.__composerTestSends().length')
+    await type('普通排队 A');await key();await ready('document.querySelectorAll(".ac-queue-item").length===1')
+    await type('普通排队 B');await cdp.clickElement('document.querySelector("[aria-label=加入队列]")','加入队列')
+    await ready('document.querySelectorAll(".ac-queue-item").length===2')
+    await check('window.__composerTestSends().length==='+count+' && document.querySelector("[data-composer-input]").value===""',cli+' 忙时按钮和快捷键均入队，不提前发送')
+    await check('!document.querySelector(".ac-messages").textContent.includes("普通排队 A")',cli+' 排队不冒充已发送消息')
+    const shot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,cli+'-queued.png'),Buffer.from(shot.result.data,'base64'))
+    await end();await ready('window.__composerTestSends().length==='+ (count+1))
+    await check('window.__composerTestSends().at(-1).message==="普通排队 A" && document.querySelectorAll(".ac-queue-item").length===1',cli+' 完成后仅发送队首')
+    await end();await ready('window.__composerTestSends().length==='+ (count+2))
+    await check('window.__composerTestSends().at(-1).message==="普通排队 B"',cli+' 第二轮结束继续 FIFO')
+    await type('后续保留 C');await key();await ready('document.querySelectorAll(".ac-queue-item").length===1')
+    const interrupts=await cdp.eval('window.__queueTestInterrupts().length')
+    await type('立即调整 D');await cdp.clickElement('document.querySelector(".ac-redirect-button")','调整方向')
+    await ready('window.__queueTestInterrupts().length==='+ (interrupts+1))
+    await check('window.__composerTestSends().length==='+ (count+2)+' && document.querySelector(".ac-queue-heading").textContent.includes("正在停止")',cli+' 调整方向先停止，确认结束前不发送')
+    await end();await ready('window.__composerTestSends().length==='+ (count+3))
+    await check('window.__composerTestSends().at(-1).message==="立即调整 D" && document.querySelector(".ac-queue-text").textContent==="后续保留 C"',cli+' 调整消息优先，原队列保留')
+    await cdp.clickElement('document.querySelector(".ac-queue-item button:last-child")','取消排队')
+    await ready('!document.querySelector(".ac-queue-item")')
+    await type('失败仍保留 E');await key();await ready('!!document.querySelector(".ac-queue-item")')
+    await config({sendFail:true});await end();await ready('document.querySelector(".ac-queue-heading").textContent.includes("暂停")')
+    await check('document.querySelector(".ac-queue-text").textContent==="失败仍保留 E"',cli+' 投递失败保留消息并暂停')
+    await config({});await cdp.clickElement('document.querySelector(".ac-queue-heading button")','重试队列');await ready('!document.querySelector(".ac-queue-item")')
+    await check('window.__composerTestSends().at(-1).message==="失败仍保留 E"',cli+' 明确重试可恢复')
+    await type('手动停止保留 F');await key();await ready('!!document.querySelector(".ac-queue-item")')
+    const beforeStop=await cdp.eval('window.__composerTestSends().length')
+    await cdp.clickElement('document.querySelector("[aria-label=停止生成]")','手动停止');await end()
+    await ready('document.querySelector(".ac-queue-heading").textContent.includes("暂停")')
+    await check('window.__composerTestSends().length==='+beforeStop,cli+' 手动停止暂停队列不误发')
+    await cdp.clickElement('document.querySelector(".ac-queue-item button:first-of-type")','排队消息调整方向')
+    await ready('window.__composerTestSends().length==='+ (beforeStop+1))
+    await check('window.__composerTestSends().at(-1).message==="手动停止保留 F"',cli+' 队列内调整方向恢复发送')
+    await end()
+  }
+  fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({boundary:'真实 Electron UI，CLI 发送/停止及轮次事件由隔离夹具控制，无真实模型',checks,consoleErrors:cdp.consoleErrors},null,2))
+  console.log('[queue]',checks.length,'checks passed')
+}

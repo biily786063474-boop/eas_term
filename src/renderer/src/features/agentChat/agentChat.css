@@ -3300,3 +3300,13 @@
 .ac-image-chip img { width: 26px; height: 26px; border-radius: 4px; }
 .ac-image-chip-label { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .ac-image-chip .ac-attach-x { top: 9px; right: 5px; }
+
+/* Pending messages are visibly separate from the sent transcript. */
+.ac-message-queue { border: 1px solid var(--stroke-input); border-radius: 12px; background: var(--lift-2); padding: 10px 12px; margin-bottom: 10px; max-height: 160px; overflow: auto; }
+.ac-queue-heading { display: flex; align-items: center; justify-content: space-between; color: var(--t-2); font-size: 12px; margin-bottom: 6px; }
+.ac-queue-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; min-width: 0; }
+.ac-queue-number, .ac-queue-item small { color: var(--t-3); flex-shrink: 0; }
+.ac-queue-text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ac-message-queue button, .ac-redirect-button { border: 1px solid var(--stroke-input); border-radius: 7px; padding: 5px 8px; background: var(--lift-1); color: var(--t-2); font: inherit; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+.ac-message-queue button:disabled, .ac-redirect-button:disabled { opacity: .45; cursor: default; }
+.ac-message-queue button:hover:not(:disabled), .ac-redirect-button:hover:not(:disabled) { background: var(--wash-1); color: var(--t-1); }

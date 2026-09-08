@@ -46,7 +46,7 @@ if (AGENT_CHAT_TEST_MODE) {
 
 // Composer regression faults are injected only by the isolated --composer runner.
 if (AGENT_CHAT_TEST_MODE) {
-  let config: {userTerms?:UserTerm[];filesError?:boolean;userDictError?:boolean;filesDelay?:number;sendFail?:boolean;plugins?:PluginInfo[];files?:Awaited<ReturnType<typeof api.fs.recentFiles>>} | null = null
+  let config: {userTerms?:UserTerm[];filesError?:boolean;userDictError?:boolean;filesDelay?:number;sendFail?:boolean;sendEvents?:boolean;interruptHold?:boolean;plugins?:PluginInfo[];files?:Awaited<ReturnType<typeof api.fs.recentFiles>>} | null = null
   const pluginList = api.plugins.list
   api.plugins.list = async () => config?.plugins ?? pluginList()
   const userTerms = api.fs.userTerms
@@ -67,8 +67,17 @@ if (AGENT_CHAT_TEST_MODE) {
   api.agentChat.send = async (sessionId,message) => {
     if (!config) return send(sessionId,message)
     sends.push({sessionId,message})
+    if (config.sendEvents && !config.sendFail) fakeAgentChatListeners.get(sessionId)?.({k:'turn.start'})
     return config.sendFail ? {ok:false,error:'composer test: send failed'} : {ok:true}
   }
+  const interrupts: string[] = []
+  const interrupt = api.agentChat.interrupt
+  api.agentChat.interrupt = sessionId => {
+    if (config?.interruptHold === undefined) return interrupt(sessionId)
+    interrupts.push(sessionId)
+    if (!config.interruptHold) setTimeout(() => fakeAgentChatListeners.get(sessionId)?.({k:'turn.done',usage:{inputTokens:0,outputTokens:0}}), 0)
+  }
+  contextBridge.exposeInMainWorld('__queueTestInterrupts', () => [...interrupts])
   contextBridge.exposeInMainWorld('__composerTestSetup', (next: typeof config) => {config=next})
   contextBridge.exposeInMainWorld('__composerTestSends', () => [...sends])
 }
