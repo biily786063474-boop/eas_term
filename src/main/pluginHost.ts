@@ -17,6 +17,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { HostRegistry } from './hostRegistry.ts'
+import { BuiltinCapabilityHost, type BuiltinHosted } from './builtinCapabilityHost.ts'
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
 import { recipients } from './panelFanout.ts'
@@ -29,6 +30,7 @@ import type { PluginInfo } from '../shared/types'
 export const PLUGIN_SCHEME = 'eas-plugin'
 
 interface Hosted {
+  kind: 'plugin'
   name: string
   info: PluginInfo
   client: McpClient
@@ -66,15 +68,19 @@ const GRACE_MS = 30_000
  *  这里不 import mcpBridge，否则和它 import 本模块成环 */
 let invokeCanvas: ((tool: string, args: unknown, ctx: { project?: string }) => Promise<{ ok: boolean; data?: unknown; error?: string }>) | null = null
 
-const registry = new HostRegistry<Hosted>({
+const registry = new HostRegistry<Hosted | BuiltinHosted>({
   graceMs: GRACE_MS,
   setTimer: (fn, ms) => setTimeout(fn, ms),
   clearTimer: (h) => clearTimeout(h as NodeJS.Timeout),
   onIdle: (name, h) => {
     console.log(`[plugin] ${name} 没人用了，回收进程`)
-    h.client.close()
+    if (h.kind === 'builtin') h.close()
+    else h.client.close()
   }
 })
+/** Main-only binding API, not exposed through plugin RPC or renderer IPC. */
+export const builtinCapabilityHost = new BuiltinCapabilityHost<Hosted>(registry)
+
 const panels = new Map<string, Panel>()
 const shims = new Map<string, Shim>()
 
@@ -106,7 +112,7 @@ function spawnHosted(info: PluginInfo): Hosted {
     ...info.mcp.env
   }
   const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
-  const hosted: Hosted = { name: info.name, info, client, tools: [], ready: Promise.resolve() }
+  const hosted: Hosted = { kind: 'plugin', name: info.name, info, client, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())
     hosted.tools = await client.listTools()
@@ -126,6 +132,7 @@ function spawnHosted(info: PluginInfo): Hosted {
 
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
   const h = registry.acquire(info.name, ref, () => spawnHosted(info))
+  if (h.kind !== 'plugin') throw new Error('插件身份冲突')
   await h.ready
   if (!h.client.alive) throw new Error(`插件 ${info.name} 的进程起不来或已退出`)
   return h
@@ -204,7 +211,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
   const p = panels.get(args.panelSession)
   if (!p) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '面板会话不存在' }
   const h = registry.get(p.pluginName)
-  if (!h || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在' }
+  if (!h || h.kind !== 'plugin' || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在' }
   const params = (args.params ?? {}) as Record<string, unknown>
   try {
     switch (args.method) {
@@ -284,7 +291,7 @@ export async function pluginRpcFromShim(body: {
       }
     }
     const h = registry.get(name)
-    if (!h || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在（先 initialize）' }
+    if (!h || h.kind !== 'plugin' || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在（先 initialize）' }
     if (shims.has(shimId)) shims.get(shimId)!.lastBeat = Date.now()
     switch (body.method) {
       case 'tools/list':
@@ -320,6 +327,7 @@ export function pluginBye(shimId: string): void {
 }
 
 function sweepShims(): void {
+  builtinCapabilityHost.sweep()
   const now = Date.now()
   for (const [id, s] of [...shims]) if (now - s.lastBeat > SHIM_STALE_MS) pluginBye(id)
 }
@@ -353,6 +361,10 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
   const t = setInterval(sweepShims, 15_000)
   t.unref()
   app.on('before-quit', () => {
-    for (const name of registry.keys()) registry.drop(name)?.client.close()
+    for (const name of registry.keys()) {
+      const h = registry.drop(name)
+      if (h?.kind === 'builtin') h.close()
+      else h?.client.close()
+    }
   })
 }

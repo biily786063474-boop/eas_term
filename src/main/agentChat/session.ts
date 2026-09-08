@@ -54,12 +54,13 @@ import { installPlan } from '../agentInstall.ts'
 import { guardPath } from '../fsGuard.ts'
 import { WORKTREE_DIR } from '../../shared/teamWorktree.ts'
 import { THIN_BYTES } from '../../shared/teamFindings.ts'
-import { mcpEnv } from '../mcpBridge.ts'
+import { mcpEnv, capabilitySessionEnv, revokeCapabilitySession, sessionCapabilityGuidance, capabilityGuidanceEnabled } from '../mcpBridge.ts'
+import { codexCapabilityLaunch } from '../codexCapabilityLaunch.ts'
 import { PROBE_ENV } from '../probeEnv.ts'
 import { AGENT_CHAT_EVENT_CHANNEL, safeRoleBounds } from '../../shared/agentChat.ts'
 import { bindRole } from '../../shared/roleBinding.ts'
 import { codexServers, codexHome } from '../agent.ts'
-import { agentMcpConfigPath, easPluginMcpServer } from '../mcpBridge.ts'
+import { agentMcpConfigPath, sessionMcpServers } from '../mcpBridge.ts'
 import { readBoard, refreshBoard, roleNameOf, setSessionSource } from '../collabBoard.ts'
 import { ensureCharter } from '../roleCharter.ts'
 import type { HarnessId } from '../../shared/types'
@@ -634,12 +635,14 @@ function wireProc(live: Live, proc: ChildProcess): void {
   })
   proc.on('error', (err) => {
     if (!isCurrent()) return
+    revokeCapabilitySession(live.rec.id)
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
   })
   proc.on('exit', (code, signal) => {
     if (!isCurrent()) return
+    revokeCapabilitySession(live.rec.id)
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
     // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
@@ -723,6 +726,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
   live.proc = undefined
 
   const failStart = (message: string): AgentChatSendResult => {
+    revokeCapabilitySession(live.rec.id)
     live.processGeneration = {}
     const failedProc = live.proc
     live.proc = undefined
@@ -813,16 +817,27 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
     // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
     // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
+    const sessionMcp = sessionMcpServers(live.rec.pluginId)
+    // 续发时模块可能刚被启用：角色过滤必须认识本次实际装配的服务器，
+    // 不能沿用首轮的 known 清单，否则新增服务的 deny 会被当作不存在而丢弃。
+    const knownMcpServers = live.rec.cli === 'codex'
+      ? [...new Set([...codexServers(), ...sessionMcp.filter(s => !s.nativeRemote).map(s => s.name)])]
+      : opts.knownMcpServers
     const built = adapter.buildArgs({
       ...opts,
-      mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined,
-      pluginMcp: easPluginMcpServer(live.rec.pluginId) ?? undefined
+      knownMcpServers,
+      mcpConfigPath: agentMcpConfigPath(live.rec.pluginId, live.rec.id, sessionMcp),
+      sessionMcp,
+      capabilityGuidance: sessionCapabilityGuidance()
     })
     // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
     // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
     const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
 
-    const proc = spawn(built.bin, args, {
+    const launch = live.rec.cli === 'codex'
+      ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
+      : { command: built.bin, args }
+    const proc = spawn(launch.command, launch.args, {
       cwd: opts.cwd,
       env: {
         // **PROBE_ENV 而不是 process.env。** 从 Dock 启动的 Electron，PATH 是
@@ -839,6 +854,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
         // 团队派生的会话把角色名带进环境，让 MCP 那侧能**准确**判出「调用方是成员」，
         // 不用再靠 cwd 反推（那个猜测会误伤主 agent，见 mcpBridge 的 mcpEnv 注释）
         ...mcpEnv({ project: opts.cwd, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }),
+        ...capabilitySessionEnv(live.rec.id, { project: opts.cwd, agentSessionId: live.rec.id, agentLeafId: live.rec.agentLeafId, agentNodeId: live.rec.agentNodeId, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }),
         // 这个会话专属的标记——resources/agent-hooks/eas-pretooluse.mjs 靠它判断"这次工具
         // 调用是不是 agent-chat 起的这个会话"，不是用户在 Eas-Term 终端里自己敲的 claude、
         // 也不是 app 外面跑的 claude（两者都会继承上面 mcpEnv() 注入的 EAS_TERM_PORT/
@@ -852,7 +868,8 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
         // 关掉它对这条 hook 毫无作用。判据和取舍都在 approvalEnv.ts。
         ...approvalEnv(live.rec.id, live.rec.skipApprovalHook),
         // 只有真的命中兜底分支才注入——见上面 hookNodeBin 的注释（I3）。
-        ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {})
+        ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+        ...launch.env
       },
       stdio: [built.stdin, 'pipe', 'pipe']
     })
@@ -1181,6 +1198,7 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
  *  hard=true 用 SIGKILL，配合 index.ts 里"先软杀、300ms 后硬杀"的两拍节奏。 */
 export function killAllAgentChatSessions(hard = false): void {
   for (const live of sessions.values()) {
+    revokeCapabilitySession(live.rec.id)
     live.proc?.kill(hard ? 'SIGKILL' : 'SIGTERM')
   }
 }
@@ -1201,6 +1219,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
   for (const [id, live] of sessions) {
     if (live.wcId !== wcId) continue
     sessions.delete(id)
+    revokeCapabilitySession(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
     const proc = live.proc
     live.proc = undefined
@@ -1235,7 +1254,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           // **`models.yml` 恒为 `providers: {}`。** 上游明写 `apiKey` 会
           // 「wins over OAuth tokens from the broker」，我们写任何一条进去，
           // 都等于顶掉 omp 自己存好的凭证 —— 症状是登录成功却 401（2026-09-02）。
-          writeManagedConfig(host)
+          writeManagedConfig(host, { guidanceEnabled: capabilityGuidanceEnabled() })
         } catch (e) {
           return { ok: false, message: `写不进 omp 的配置目录：${e instanceof Error ? e.message : String(e)}`, setup: false }
         }
@@ -1246,7 +1265,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           provider: setup.provider?.id,
           // MCP 桥的凭证由这里算好传进去 —— launch.ts 不再认识 mcpBridge
           //（那条 import 既是循环依赖的一环，也让整个模块没法单测，见它的文件头）
-          mcpEnv: mcpEnv({ project: cwd }),
+          mcpEnv: { ...mcpEnv({ project: cwd }), ...capabilitySessionEnv(live.rec.id, { project: cwd, agentSessionId: live.rec.id, agentLeafId: live.rec.agentLeafId, agentNodeId: live.rec.agentNodeId, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }) },
           // 角色契约 + 协同板快照。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
           // `ompAcpArgs` 只收一段文本（`--append-system-prompt=`），板文（Task 3 的
@@ -1258,7 +1277,8 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
               live.rec.roleContract?.trim(),
               live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : '',
               // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末
-              live.rec.roleDocs?.trim()
+              live.rec.roleDocs?.trim(),
+              sessionCapabilityGuidance()
             ]
               .filter(Boolean)
               .join('\n\n') || undefined,
@@ -1271,7 +1291,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
       mcpServers() {
         const ob = bindRole(live.rec.roleBounds, 'omp').omp
         const { servers, dropped } = readMcpServers(
-          agentMcpConfigPath(live.rec.pluginId),
+          agentMcpConfigPath(live.rec.pluginId, live.rec.id),
           ob.dropServers,
           ob.dropServerPatterns
         )
@@ -1471,7 +1491,9 @@ export function registerAgentChatHandlers(): void {
     }
     // Codex 对不存在的 MCP server 名会拒绝启动，起会话时读一次真实清单交给 adapter 过滤。
     // 只在 Codex 时读：Claude/omp 不需要，而读 ~/.codex/config.toml 是一次同步 IO。
-    const knownMcpServers = p.cli === 'codex' ? codexServers() : undefined
+    const knownMcpServers = p.cli === 'codex'
+      ? [...new Set([...codexServers(), ...sessionMcpServers(p.pluginId).filter(s => !s.nativeRemote).map(s => s.name)])]
+      : undefined
     // 角色 imageGen:false 摘系统 skill 要拼它的绝对路径（阶段三）；同 knownMcpServers 的理由，
     // 只在 Codex 时算，adapter 是纯函数不读环境变量。
     const codexHomeDir = p.cli === 'codex' ? codexHome() : undefined
@@ -1522,6 +1544,8 @@ export function registerAgentChatHandlers(): void {
       owner: p.owner === 'team' ? 'team' : undefined,
       role: typeof p.role === 'string' && p.role ? p.role : undefined,
       // 同上，params 来自 unknown，非字符串一律当没给
+      agentLeafId: typeof p.agentLeafId === 'string' && p.agentLeafId ? p.agentLeafId : undefined,
+      agentNodeId: typeof p.agentNodeId === 'string' && p.agentNodeId ? p.agentNodeId : undefined,
       pluginId: typeof p.pluginId === 'string' && p.pluginId ? p.pluginId : undefined,
       model: typeof p.model === 'string' ? p.model : undefined,
       effort: typeof p.effort === 'string' ? p.effort : undefined,
@@ -1783,6 +1807,9 @@ export function registerAgentChatHandlers(): void {
       return
     }
     if (!live?.proc) return
+    // Retiring the generation suppresses its exit handler, so revoke here first.
+    // A surviving MCP child must not retain authority after an explicit stop.
+    revokeCapabilitySession(id)
     live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
     live.killing = true
     live.proc.kill()
@@ -1811,6 +1838,7 @@ export function registerAgentChatHandlers(): void {
     const live = sessions.get(id)
     if (!live) return
     sessions.delete(id)
+    revokeCapabilitySession(id)
     // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，
     // 先刷的话这条已经不要了的会话还会留在板上，下一次刷新才消失。
     refreshBoard(projectRootOf(live.rec.cwd))

@@ -447,3 +447,9 @@ test('codexAddServerArgs：server 名带点号要包引号，否则 TOML 会解�
   const out = codexAddServerArgs({ name: 'my.plugin', command: 'node' })
   assert.equal(out[0], 'mcp_servers."my.plugin".command="node"')
 })
+
+test('Codex managed MCP forwards only named environment variables without credential argv', () => {
+ const args=codexAddServerArgs({name:'eas-term',command:'node',envVars:['EAS_CAPABILITY_LEASE','EAS_PROJECT']})
+ assert.ok(args.includes('mcp_servers.eas-term.env_vars=["EAS_CAPABILITY_LEASE","EAS_PROJECT"]'))
+ assert.ok(!args.some(a=>a.includes('.env=')))
+})

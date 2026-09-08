@@ -864,3 +864,12 @@ test('native slash candidates are declared by their adapter, not shared across t
   assert.equal(getAdapter('codex')!.capabilities.nativeSlash, undefined)
   assert.equal(getAdapter('omp')!.capabilities.nativeSlash, undefined)
 })
+
+test('Codex 显式装配基础和业务 MCP，并转发受管环境变量名',()=>{
+ const {args}=getAdapter('codex')!.buildArgs({cwd:'/中文 项目',sessionMcp:[
+  {name:'eas-term',command:'node',args:['/内置 插件/server.mjs'],envVars:['EAS_TERM_PORT','EAS_TERM_TOKEN']},
+  {name:'business',command:'node',args:['/business.mjs']}
+ ]})
+ assert.ok(args.includes('mcp_servers.eas-term.env_vars=["EAS_TERM_PORT","EAS_TERM_TOKEN"]'))
+ assert.ok(args.includes('mcp_servers.business.command="node"'))
+})

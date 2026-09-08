@@ -5,7 +5,10 @@ import fs from 'fs'
 import path from 'path'
 import { execFile, execFileSync } from 'child_process'
 import type { PtyCreateOptions, AgentKind } from '../shared/types'
-import { mcpEnv } from './mcpBridge'
+import { mcpEnv, capabilityPtyEnv, revokeCapabilitySession } from './mcpBridge'
+import { ensureCapabilityPtyShims } from './capabilityPtyShims.ts'
+import { ompBinPathOrNull } from './agentChat/omp/paths.ts'
+import { hostPaths } from './agentChat/omp/host.ts'
 import { createTermTailStore } from './termTail'
 import { getManagedCliPaths } from './probeEnv'
 import {
@@ -86,7 +89,7 @@ exec /usr/bin/open "$@"
  *  而这种消失极难联想到是终端这边改的。
  *
  *  只对 zsh 做。别的 shell 不读 /etc/zprofile 里那段 path_helper，PATH 顺序本来就是对的。 */
-function ensureZdotdir(shimDir: string): string | null {
+function ensureZdotdir(shimDir: string, capabilityDir: string): string | null {
   try {
     const dir = path.join(app.getPath('userData'), 'zdotdir')
     fs.mkdirSync(dir, { recursive: true })
@@ -116,10 +119,10 @@ ${extra}`,
     write(
       '.zshrc',
       `# path_helper 已经在 /etc/zprofile 里重排过 PATH 了，所以前置要放在最后一步。
-export PATH=${[shimDir, ...getManagedCliPaths()].map(q).join(':')}:"$PATH"
+export PATH=${[capabilityDir, shimDir, ...getManagedCliPaths()].map(q).join(':')}:"$PATH"
 `
     )
-    write('.zlogin', getManagedCliPaths().length ? `export PATH=${getManagedCliPaths().map(q).join(':')}:"$PATH"\n` : '')
+    write('.zlogin', `export PATH=${[capabilityDir, shimDir, ...getManagedCliPaths()].map(q).join(':')}:"$PATH"\n`)
     return dir
   } catch (e) {
     console.error('[pty] 准备 ZDOTDIR 失败（open shim 会被系统 open 抢先）', e)
@@ -426,7 +429,9 @@ export function registerPtyHandlers(): void {
     }
     // PowerShell 不认 Unix 的 -l 登录参数，仅在非 Windows 传 -l
     const shellArgs = process.platform === 'win32' ? [] : ['-l']
-    const proc = pty.spawn(defaultShell(), shellArgs, {
+    let proc: pty.IPty
+    try {
+      proc = pty.spawn(defaultShell(), shellArgs, {
       name: 'xterm-256color',
       cols: opts.cols ?? 80,
       rows: opts.rows ?? 24,
@@ -438,6 +443,7 @@ export function registerPtyHandlers(): void {
         }
         for (const dir of getManagedCliPaths().reverse()) prependPath(env, dir)
         env.DISABLE_AUTOUPDATER = '1'
+        const capabilityDir = ensureCapabilityPtyShims({ userData: app.getPath('userData'), appPath: app.getAppPath(), resourcesPath: process.resourcesPath, isPackaged: app.isPackaged })
         // open shim 目录塞到 PATH 最前 → CLI 的 `open <url>` 命中我们的劫持，落到画板浏览器
         const shimDir = ensureOpenShim()
         if (shimDir) {
@@ -446,7 +452,7 @@ export function registerPtyHandlers(): void {
           // 上面这行赢不了 login shell 里的 path_helper（详见 ensureZdotdir 顶部说明），
           // zsh 得再接管一次启动文件链。别的 shell 没这个问题，不动。
           if (process.platform !== 'win32' && /zsh$/.test(defaultShell())) {
-            const zdot = ensureZdotdir(shimDir)
+            const zdot = ensureZdotdir(shimDir, capabilityDir)
             if (zdot) {
               // 把用户原来的 ZDOTDIR 留给转发脚本，否则 oh-my-zsh 这类会去错地方找配置
               if (env.ZDOTDIR) env.USER_ZDOTDIR = env.ZDOTDIR
@@ -457,6 +463,9 @@ export function registerPtyHandlers(): void {
         // MCP 上下文：跑在这个终端里的 AI 据此知道「我是哪个终端」→ 反查所属 Frame，
         // 于是 open_html 之类的工具不用问就能开在正确的 Frame 里
         Object.assign(env, mcpEnv({ ptyId: id, project: cwd }))
+        Object.assign(env, capabilityPtyEnv(id, cwd))
+        const ompBinary = ompBinPathOrNull(hostPaths())
+        if (ompBinary) env.EAS_OMP_BINARY = ompBinary
         // 密钥柜：渲染层只给变量名，值在主进程解密后直接进 env，不回传渲染层。
         // 和上面那行的 EAS_TERM_TOKEN 是同一条路 —— 这样密钥就不会进入和 AI 的对话。
         const secrets = secretsEnv(opts.secretNames)
@@ -475,9 +484,15 @@ export function registerPtyHandlers(): void {
         // （命令行里只有组名）。见 ensureSecretShim 的注释。
         const secDir = ensureSecretShim()
         if (secDir) prependPath(env, secDir)
+        prependPath(env, capabilityDir)
         return env
       })()
     })
+    } catch (error) {
+      revokeCapabilitySession('pty:' + id)
+      forgetPty(id)
+      throw error
+    }
     const wc = e.sender
     // 输出合批背压:高吞吐(cat 大文件 / 刷屏 / 构建日志)时逐块 wc.send 会用海量小 IPC 消息
     // 灌满通道、拖垮渲染主线程(卡死甚至 OOM 崩溃→白屏)。这里按 pty 累积,~16ms 或积到 64KB
@@ -509,6 +524,7 @@ export function registerPtyHandlers(): void {
     proc.onExit(({ exitCode }) => {
       flushOut() // 把残留输出先发完再发 exit,避免丢尾巴
       ptys.delete(id)
+      revokeCapabilitySession('pty:' + id)
       termTail.drop(id) // 终端没了，留存的输出也别赖着
       forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
@@ -540,6 +556,7 @@ export function registerPtyHandlers(): void {
     const entry = ptys.get(id)
     if (entry) {
       ptys.delete(id)
+      revokeCapabilitySession('pty:' + id)
       forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       killTree(entry) // 连里面跑的 claude / 构建进程一起收掉，别留孤儿
     }
@@ -674,6 +691,7 @@ export function killPtysForWebContents(wcId: number): void {
   for (const [id, entry] of ptys) {
     if (entry.wcId === wcId) {
       ptys.delete(id)
+      revokeCapabilitySession('pty:' + id)
       forgetPty(id) // 终端没了，它那张取密钥凭证立刻作废
       killTree(entry)
     }
@@ -683,7 +701,10 @@ export function killPtysForWebContents(wcId: number): void {
 /** 退出时清场。分两拍：先 SIGTERM 给 CLI 存会话的机会，没走的再 SIGKILL。
  *  `hard` 由调用方控制节奏（before-quit 先软的，等一小会儿再硬的）。 */
 export function killAllPtys(hard = false): void {
-  for (const [, entry] of ptys) killTree(entry, hard ? 'SIGKILL' : 'SIGTERM')
+  for (const [id, entry] of ptys) {
+    revokeCapabilitySession('pty:' + id)
+    killTree(entry, hard ? 'SIGKILL' : 'SIGTERM')
+  }
   if (hard) ptys.clear()
 }
 

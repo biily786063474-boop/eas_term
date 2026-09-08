@@ -44,6 +44,20 @@ jobs:
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 
+      - name: Builtin capability Windows contracts
+        run: node --experimental-strip-types --test src/main/bizoneWindowsDiscovery.test.ts src/shared/builtinCapabilities.test.ts
+
+      - name: Packaged builtin capability settings
+        run: node scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"
+
+      - name: Upload builtin capability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: builtin-capabilities-win
+          path: docs/verification/builtin-capabilities/settings-*
+          if-no-files-found: warn
+
       - name: Upload smoke result
         if: always()          # 失败时更需要看截图和 stderr
         uses: actions/upload-artifact@v4

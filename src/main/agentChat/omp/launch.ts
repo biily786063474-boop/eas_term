@@ -1,3 +1,4 @@
+import { capabilityGuidanceDir } from '../../capabilityBundlePaths.ts'
 // 起一个 omp 进程之前要准备的全部东西：**受管配置落盘** ＋ **spawn 参数组装**。
 //
 // ── 为什么这两件事在同一个文件里 ────────────────────────────────────────────
@@ -148,7 +149,7 @@ export function planOmpLaunch(input: OmpLaunchInput): OmpLaunchPlan {
  *  **每次 spawn 前都读一遍用户的档位**，所以设置面板改完不用重启 ——
  *  下一次起会话自然带上。（判据挂在「起会话」这个必经之路上，
  *  不挂在某次点击的回调里 —— 那个形状在 omp 这条链路上已经错过三次。） */
-export function writeManagedConfig(host: HostPaths): void {
+export function writeManagedConfig(host: HostPaths, options: { guidanceEnabled?: boolean } = {}): void {
   const agentDir = ompAgentDir(host.userData)
   fs.mkdirSync(agentDir, { recursive: true })
   const approvalMode = readOmpSetup(host.userData).approvalMode
@@ -166,7 +167,8 @@ export function writeManagedConfig(host: HostPaths): void {
   // 删它纯粹是别让排障的人对着一个永不生效的文件想半天。
   const stale = path.join(agentDir, 'config.yaml')
   if (fs.existsSync(stale)) fs.rmSync(stale, { force: true })
-  copySkill(host, agentDir)
+  if (options.guidanceEnabled !== false) copySkill(host, agentDir)
+  else fs.rmSync(ompEasTermSkillDir(agentDir), { recursive: true, force: true })
 }
 
 /** 把随包的 `skills/eas-term/` 整个拷过去，只在 SKILL.md 末尾追加一段围栏说明。
@@ -179,9 +181,7 @@ export function writeManagedConfig(host: HostPaths): void {
  *  所以这里吞掉异常、只留日志。 */
 function copySkill(host: HostPaths, agentDir: string): void {
   try {
-    const src = host.isPackaged
-      ? path.join(host.resourcesPath, 'skills', 'eas-term')
-      : path.join(host.appPath, 'skills', 'eas-term')
+    const src = capabilityGuidanceDir(host)
     if (!fs.existsSync(src)) return
     const dst = ompEasTermSkillDir(agentDir)
     fs.mkdirSync(ompSkillsDir(agentDir), { recursive: true })

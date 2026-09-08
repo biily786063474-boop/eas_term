@@ -1,4 +1,4 @@
-// 「扩展能力」总账：Eas-Term 在这台机器上写过的**全部**位置，一处看全、逐个卸。
+// 「扩展能力」总账：内置能力开关与旧版配置足迹；旧 rules/MCP 只读待迁移。
 //
 // 为什么要有这个：之前技能包的开关在标题栏、知识钩子的开关在词典里、
 // 知识库规则的开关在知识库抽屉里，MCP 条目干脆没有开关（静默写入）。
@@ -6,10 +6,10 @@
 //
 // 这份清单同时是写隐私策略的依据：策略里写什么，就以这里显示什么为准，
 // 不要写一份和实际行为脱节的模板。
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import type { Footprint, SkillStatus } from '../../../../shared/types'
+import { useCallback, useEffect, useState } from 'react'
+import type { Footprint } from '../../../../shared/types'
 import { CheckIcon, FolderOpenIcon } from '../../ui/Icons'
+import { BuiltinCapabilitiesCard } from './BuiltinCapabilitiesCard'
 
 /** 绝对路径缩成 ~/… ，全路径太长而且含用户名 */
 function short(p: string): string {
@@ -19,13 +19,11 @@ function short(p: string): string {
   return j > 0 ? '…' + p.slice(j) : p
 }
 
-/** @param mode `inline` = 长在设置的分区里（只渲染内容体）；
- *               默认 = 常驻标题栏那个实例，**只负责一次性的启动提示**。 */
+/** 当前构建随包提供 BuiltinCapabilitiesCard 对应的内置能力插件。
+ * 旧 rules/MCP 只展示已存在的待迁移足迹；不再提供全局注入入口。
+ * 默认的历史标题栏实例保持空，不再读取状态或弹旧安装提示。 */
 export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element | null {
-  const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Footprint[] | null>(null)
-  const [skill, setSkill] = useState<SkillStatus | null>(null)
-  const [prompt, setPrompt] = useState(false)
   const [busy, setBusy] = useState('')
   /** 哪几张卡片展开了。**默认全收起** —— 这个面板一共四条，每条都把「写了哪些文件」
    *  和整段说明铺开的话，一屏塞满，人反而找不到自己要看的那一条。
@@ -38,32 +36,13 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
       else next.add(id)
       return next
     })
-  const btnRef = useRef<HTMLButtonElement>(null)
-  const popRef = useRef<HTMLDivElement>(null)
-
   const refresh = useCallback(async (): Promise<void> => {
     setItems(await window.api.footprint.list())
-    setSkill(await window.api.skill.status())
   }, [])
 
   useEffect(() => {
-    void (async () => {
-      await refresh()
-      const s = await window.api.skill.status()
-      if (s.needsAttention && !s.muted) setPrompt(true)
-    })()
-  }, [refresh])
-
-  useEffect(() => {
-    if (!open) return
-    const h = (e: MouseEvent): void => {
-      const t = e.target as Node
-      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [open])
+    if (mode === 'inline') void refresh()
+  }, [mode, refresh])
 
   const act = async (fn: () => Promise<unknown>, label: string): Promise<void> => {
     setBusy(label)
@@ -72,14 +51,9 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
     setBusy('')
   }
 
-  const install = async (): Promise<void> => {
-    await window.api.rules.sync()
-    await refresh()
-    setPrompt(false)
-  }
-
-  if (!items) return null
-  const pending = items.filter((x) => !x.installed && x.id === 'rules').length
+  if (mode !== 'inline' || !items) return null
+  const legacy = (id: string): boolean => id === 'mcp' || id === 'rules'
+  const visibleItems = items.filter(it => !legacy(it.id) || it.installed)
 
   const body = (
     <>
@@ -88,10 +62,12 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
               <em>这个软件在你机器上写过的全部位置</em>
             </div>
 
-            {items.map((it) => (
+            {mode === 'inline' && <BuiltinCapabilitiesCard />}
+
+            {visibleItems.map((it) => (
               <div
                 key={it.id}
-                className={`fp-row${it.installed ? ' on' : ''}${expanded.has(it.id) ? ' open' : ''}`}
+                className={`fp-row${it.installed && !legacy(it.id) ? ' on' : ''}${expanded.has(it.id) ? ' open' : ''}`}
               >
                 {/* 头部整块可点展开。按钮在它里面，靠 stopPropagation 各管各的 ——
                     做成独立的展开箭头也行，但那样点击目标只有 11px 宽，
@@ -116,50 +92,11 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                   }}
                 >
                   <span className="fp-chev" aria-hidden />
-                  <span className="fp-name">{it.name}</span>
-                  <span className={`fp-tag ${it.installed ? 'ok' : 'off'}`}>
-                    {it.installed ? <CheckIcon size={10} /> : null}
-                    {it.installed ? '已启用' : '未启用'}
+                  <span className="fp-name">{legacy(it.id) ? `${it.name}（旧版配置）` : it.name}</span>
+                  <span className={`fp-tag ${it.installed && !legacy(it.id) ? 'ok' : 'off'}`}>
+                    {it.installed && !legacy(it.id) ? <CheckIcon size={10} /> : null}
+                    {legacy(it.id) ? '待迁移' : it.installed ? '已启用' : '未启用'}
                   </span>
-                  {it.id === 'rules' && (
-                    <button
-                      className="fp-mini"
-                      disabled={!!busy}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void act(
-                          it.installed ? window.api.rules.remove : window.api.rules.sync,
-                          it.installed ? '卸载中…' : '安装中…'
-                        )
-                      }}
-                    >
-                      {it.installed ? '卸载' : '安装'}
-                    </button>
-                  )}
-                  {it.id === 'mcp' && !it.installed && (
-                    <button
-                      className="fp-act"
-                      disabled={!!busy}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void act(window.api.mcp.installConfig, '安装中…')
-                      }}
-                    >
-                      安装
-                    </button>
-                  )}
-                  {it.id === 'mcp' && it.installed && (
-                    <button
-                      className="fp-mini"
-                      disabled={!!busy}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void act(window.api.mcp.removeConfig, '移除中…')
-                      }}
-                    >
-                      移除
-                    </button>
-                  )}
                   {it.id === 'hook' && (
                     <button
                       className="fp-mini"
@@ -192,7 +129,7 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                 </div>
                 {/* desc 是「这一条是什么」，留在默认层 —— 收起来的话卡片就只剩一个名字，
                     人得逐个点开才知道哪条是哪条，那不是渐进式披露，是把信息藏起来 */}
-                <div className="fp-desc">{it.desc}</div>
+                <div className="fp-desc">{legacy(it.id) ? '旧版全局配置仍存在，待安全迁移；当前能力请使用上方内置模块开关。' : it.desc}</div>
                 {expanded.has(it.id) && (
                   <div className="fp-more">
                     {!!it.files.length && (
@@ -204,7 +141,7 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
                         ))}
                       </div>
                     )}
-                    {!!it.note && <div className="fp-note">{it.note}</div>}
+                    {!legacy(it.id) && !!it.note && <div className="fp-note">{it.note}</div>}
                   </div>
                 )}
               </div>
@@ -213,65 +150,10 @@ export function FootprintPanel({ mode }: { mode?: 'inline' } = {}): JSX.Element 
             <div className="fp-foot">
               改动这些文件前都会留一份 <code>.eas-backup</code>；卸载只摘我们自己写的那部分，
               你自己的配置一个字不动。
-              {skill?.muted && (
-                <button
-                  className="fp-link"
-                  onClick={() => void window.api.skill.mute(false).then(setSkill)}
-                >
-                  恢复启动提醒
-                </button>
-              )}
             </div>
       {!!busy && <div className="fp-busy">{busy}</div>}
     </>
   )
 
-  if (mode === 'inline') return <div className="fp-inline">{body}</div>
-
-  // 标题栏那个按钮**没有了** —— 整块搬进了设置 →「隐私」（2026-08-31）。
-  // 这个实例只剩一件事：那个一次性的启动提示。
-  // 它不能跟着搬 —— 它的意义就是在你还没想到要去设置里翻的时候拦你一下。
-  return (
-    <>
-      {/* 启动提示：只在装了 CLI 但指引没装、且用户没静音时出现一次 */}
-      {prompt &&
-        createPortal(
-          <div className="skill-mask">
-            <div className="skill-modal">
-              <div className="skill-modal-title">让 AI 学会用这块画布</div>
-              <p className="skill-modal-body">
-                装上使用指引后，agent 会知道<b>什么时候</b>该把产出开成预览、什么时候整理画布、
-                什么时候通知你 —— 而不是只丢给你一句「文件已生成」。
-                <br />
-                <span className="skill-modal-note">
-                  它是纯文本，装到 <code>~/.claude/skills/</code> 和 <code>~/.codex/AGENTS.md</code>，
-                  随时能在「扩展能力」里一键卸掉。
-                </span>
-              </p>
-              <div className="skill-modal-actions">
-                <button
-                  className="skill-ghost"
-                  onClick={() => {
-                    void window.api.skill.mute(true).then(setSkill)
-                    setPrompt(false)
-                  }}
-                >
-                  永远不要提醒我
-                </button>
-                <span className="skill-spacer" />
-                <button className="skill-ghost" onClick={() => setPrompt(false)}>
-                  以后再说
-                </button>
-                <button className="skill-primary" onClick={() => void install()}>
-                  安装
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-
-
-    </>
-  )
+  return <div className="fp-inline">{body}</div>
 }

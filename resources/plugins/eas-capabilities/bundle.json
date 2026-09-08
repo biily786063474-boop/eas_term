@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "eas-capabilities",
+  "version": "1.0.0",
+  "displayName": "Eas-Term 扩展能力",
+  "modules": [
+    { "id": "workbench", "serverName": "eas-term", "binding": "workbench-gateway" },
+    { "id": "bizone", "serverName": "bizone-canvas", "binding": "bizone-connector" },
+    { "id": "guidance", "binding": "managed-session-instructions" }
+  ]
+}

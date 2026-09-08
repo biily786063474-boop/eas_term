@@ -1,0 +1,44 @@
+{
+  "cli": "omp",
+  "executable": "/Users/biily/Eas-Term-release/0.4.85-prep/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term",
+  "executableSha256": "d732ba546654c72a7d3dc0488fdc95aee7b79dffc2035856dd42722dc5a028e4",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-ulJ2ey",
+  "project": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-ulJ2ey/测试项目 with spaces",
+  "realModelCalls": true,
+  "simulatedTransport": false,
+  "phases": [
+    {
+      "name": "new",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-ulJ2ey/测试项目 with spaces/omp-new-1788861092628.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": null,
+      "resumeId": "01a0806e-17fa-7456-95db-f9a6f808281f",
+      "executions": []
+    }
+  ],
+  "passed": false,
+  "bundle": {
+    "id": "eas-capabilities",
+    "version": "1.0.0",
+    "displayName": "Eas-Term 扩展能力",
+    "modules": {
+      "workbench": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "bizone": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "guidance": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      }
+    }
+  },
+  "error": "No paired real successful canvas_open_file execution events",
+  "globalRuleFilesUnchanged": true
+}

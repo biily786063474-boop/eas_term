@@ -1,0 +1,280 @@
+{
+  "cli": "omp",
+  "executable": "/Users/biily/Eas-Term-release/0.4.85-prep/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term",
+  "executableSha256": "d732ba546654c72a7d3dc0488fdc95aee7b79dffc2035856dd42722dc5a028e4",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn",
+  "project": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces",
+  "realModelCalls": true,
+  "simulatedTransport": false,
+  "phases": [
+    {
+      "name": "new",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-new-1788861316648.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": null,
+      "resumeId": "01a08071-82a9-767c-a204-f07e8dc97255",
+      "nativeToolProof": [
+        {
+          "execId": "call_01a080718b8e7c21b84c148c",
+          "tool": "mcp__eas_term_canvas_open_file",
+          "path": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-new-1788861316648.png",
+          "sessionFile": "omp/agent/sessions/-tmp-eas-cli-package-lrJNPn-测试项目 with spaces/2026-09-08T09-55-17-801Z_01a08071-82a9-767c-a204-f07e8dc97255.jsonl"
+        }
+      ],
+      "diagnostics": {
+        "eventCounts": {
+          "turn.start": 1,
+          "capabilities": 1,
+          "session.ready": 1,
+          "thinking": 9,
+          "text.delta": 2,
+          "exec.start": 1,
+          "exec.done": 1,
+          "text.done": 2,
+          "turn.done": 1
+        },
+        "executionIds": [
+          {
+            "k": "exec.start",
+            "execId": "call_01a080718b8e7c21b84c148c"
+          },
+          {
+            "k": "exec.done",
+            "execId": "call_01a080718b8e7c21b84c148c",
+            "ok": true
+          }
+        ],
+        "errors": []
+      },
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "call_01a080718b8e7c21b84c148c",
+          "label": "Opening acceptance check PNG",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-new-1788861316648.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "call_01a080718b8e7c21b84c148c",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-new-1788861316648.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-1-h5cvf",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-new-1788861316648.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "resume",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-resume-1788861316648.png",
+      "sessionId": "ac-2",
+      "requestedResumeId": "01a08071-82a9-767c-a204-f07e8dc97255",
+      "resumeId": "01a08071-82a9-767c-a204-f07e8dc97255",
+      "nativeToolProof": [
+        {
+          "execId": "chatcmpl-tool-a5fd81d49e455986",
+          "tool": "mcp__eas_term_canvas_open_file",
+          "path": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-resume-1788861316648.png",
+          "sessionFile": "omp/agent/sessions/-tmp-eas-cli-package-lrJNPn-测试项目 with spaces/2026-09-08T09-55-17-801Z_01a08071-82a9-767c-a204-f07e8dc97255.jsonl"
+        }
+      ],
+      "diagnostics": {
+        "eventCounts": {
+          "turn.start": 1,
+          "capabilities": 1,
+          "session.ready": 1,
+          "exec.start": 1,
+          "exec.done": 1,
+          "text.delta": 2,
+          "text.done": 1,
+          "turn.done": 1
+        },
+        "executionIds": [
+          {
+            "k": "exec.start",
+            "execId": "chatcmpl-tool-a5fd81d49e455986"
+          },
+          {
+            "k": "exec.done",
+            "execId": "chatcmpl-tool-a5fd81d49e455986",
+            "ok": true
+          }
+        ],
+        "errors": []
+      },
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "chatcmpl-tool-a5fd81d49e455986",
+          "label": "Opening acceptance check PNG",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-resume-1788861316648.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "chatcmpl-tool-a5fd81d49e455986",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-resume-1788861316648.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-2-8l1vs",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-resume-1788861316648.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "app-restart-resume",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-restart-1788861316648.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": "01a08071-82a9-767c-a204-f07e8dc97255",
+      "resumeId": "01a08071-82a9-767c-a204-f07e8dc97255",
+      "nativeToolProof": [
+        {
+          "execId": "chatcmpl-tool-83e3ccd816d6c333",
+          "tool": "mcp__eas_term_canvas_open_file",
+          "path": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-restart-1788861316648.png",
+          "sessionFile": "omp/agent/sessions/-tmp-eas-cli-package-lrJNPn-测试项目 with spaces/2026-09-08T09-55-17-801Z_01a08071-82a9-767c-a204-f07e8dc97255.jsonl"
+        }
+      ],
+      "diagnostics": {
+        "eventCounts": {
+          "turn.start": 1,
+          "capabilities": 1,
+          "session.ready": 1,
+          "exec.start": 1,
+          "exec.done": 1,
+          "text.delta": 2,
+          "text.done": 1,
+          "turn.done": 1
+        },
+        "executionIds": [
+          {
+            "k": "exec.start",
+            "execId": "chatcmpl-tool-83e3ccd816d6c333"
+          },
+          {
+            "k": "exec.done",
+            "execId": "chatcmpl-tool-83e3ccd816d6c333",
+            "ok": true
+          }
+        ],
+        "errors": []
+      },
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "chatcmpl-tool-83e3ccd816d6c333",
+          "label": "Opening acceptance check PNG",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-restart-1788861316648.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "chatcmpl-tool-83e3ccd816d6c333",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-restart-1788861316648.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-5-qnjxd",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-lrJNPn/测试项目 with spaces/omp-restart-1788861316648.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": false,
+  "bundle": {
+    "id": "eas-capabilities",
+    "version": "1.0.0",
+    "displayName": "Eas-Term 扩展能力",
+    "modules": {
+      "workbench": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "bizone": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "guidance": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      }
+    }
+  },
+  "globalRuleFileHashes": [
+    {
+      "file": "/Users/biily/.codex/config.toml",
+      "before": "df90eeb923b1854649cd80c74ad3aed2a97e3a64c680a7489f206573d31f9a5c",
+      "after": "df90eeb923b1854649cd80c74ad3aed2a97e3a64c680a7489f206573d31f9a5c"
+    },
+    {
+      "file": "/Users/biily/.codex/AGENTS.md",
+      "before": "d42ee3b7d4c9c856ca50dfeb374ee0cae319c9ec4ba37103c506d19ebc829da9",
+      "after": "d42ee3b7d4c9c856ca50dfeb374ee0cae319c9ec4ba37103c506d19ebc829da9"
+    },
+    {
+      "file": "/Users/biily/.claude.json",
+      "before": "b85f3984fe479867d28d29e11d6fe440023b81cf34f105768b7b1a7fc4f92998",
+      "after": "e4db55f8004b6ac0f86e1f8eafd60e678715442d59e7df997b994a0788262902"
+    },
+    {
+      "file": "/Users/biily/.claude/settings.json",
+      "before": "5b7f7a5de2b57119aae1fae7975c67c1f47ce0f0174bcb5f2aa06b01a43f6ff9",
+      "after": "5b7f7a5de2b57119aae1fae7975c67c1f47ce0f0174bcb5f2aa06b01a43f6ff9"
+    },
+    {
+      "file": "/Users/biily/.claude/CLAUDE.md",
+      "before": "10099ffd22c94629da3b5db7bebebf7956de01938df2f1b44da7d05489049dad",
+      "after": "10099ffd22c94629da3b5db7bebebf7956de01938df2f1b44da7d05489049dad"
+    },
+    {
+      "file": "/Users/biily/.eas/agent",
+      "before": "directory",
+      "after": "directory"
+    },
+    {
+      "file": "/Users/biily/.dsh",
+      "before": "directory",
+      "after": "directory"
+    }
+  ],
+  "globalRuleFilesUnchanged": false
+}

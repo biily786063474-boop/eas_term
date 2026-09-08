@@ -10,6 +10,7 @@
 // 新增字段一律可选，且**缺省即老行为** —— 判据写成 `!== '新值'` 走老路，
 // 而不是 `=== '老值'`（后者对不声明该字段的旧 adapter 恒假，会把它们的老路整个跳过）。
 
+import type { SessionMcpServer } from './builtinCapabilities'
 import type { RoleBounds } from './roleBinding'
 import type { RoleCaps, RoleRaw } from './types'
 
@@ -241,6 +242,10 @@ export interface CliCapabilities {
 }
 
 export interface StartOpts {
+  /** Existing agent pane identity, for exact Frame binding before the first reply. */
+  agentLeafId?: string
+  /** Existing canvas agent node; independent of split-pane leaf identity. */
+  agentNodeId?: string
   cwd: string
   model?: string
   effort?: string
@@ -260,6 +265,10 @@ export interface StartOpts {
    *  **由上层（session.ts）注入而不是 adapter 自己去算**：adapter 有独立单测，
    *  跑在纯 node 环境里，import 主进程那套会把 electron 一起拉进去。 */
   mcpConfigPath?: string
+  /** Current managed-session server snapshot, explicitly compiled for Codex. */
+  sessionMcp?: SessionMcpServer[]
+  /** Short, conditional instructions from the bundled capability source. */
+  capabilityGuidance?: string
   /** 这个会话选中的**自家插件**（`cli === 'eas'`）的 MCP server —— 只给 Codex 用。
    *
    *  Claude 与 omp 都从 `mcpConfigPath` 那份 JSON 里拿到它，**Codex 两条都不走**

@@ -1,0 +1,926 @@
+[
+  {
+    "name": "wiki_query",
+    "description": "查用户的个人知识库(他自建的 markdown 笔记库)。**这个工具只在 Eas-Term 的终端里存在**——你能看到它，本身就说明这条会话是在 Eas-Term 里起的，不用另外确认。触发时机：用户问\"怎么做\"这类方法问题、提到某个博主/作者/人名、问过去做过的决定或踩过的坑、要你产出带他个人风格的东西(简介/简历/自我介绍/选题/对外文案)、或者他问\"我该怎么做\"\"我适合什么\"这类关于他自己的问题时，先调这个工具。也在他明说\"查知识库\"\"wiki 里有没有\"\"整理收件箱\"\"归档\"\"做个体检\"时调用。返回全库索引(index.md 原文，每页一行摘要)、各分区在盘上的实际目录名(dirs)，以及**可能有的** library 字段。**返回里如果有 library 字段，说明用户自己定义了分类**：按它每一项的 name/purpose 判断东西该往哪放，这种情况下**忽略 dirs**——dirs 固定是内置八目录的形状，自定义库里那些名字对应的目录根本不存在，照着 dirs 写会凭空建出配置外的目录。library 里 role 为 \"inbox\" 或 \"raw\" 的目录放的是原件，只读不改。**返回里如果是 taxonomyBroken:true**：这个库有自定义分类配置但读不出来（格式错/校验不过），这时候**没有 dirs 也没有 library**——别按内置分类猜、更别照内置形状写笔记建目录，那会把这个自定义库的结构写乱且不可逆。这个状态下不归档、不新建笔记、不建目录，用户问起就告诉他去把.eas-wiki.json 改好；跟\"用户压根没配置过库\"是两回事，别当成同一种情况处理。拿到后：自己从索引挑 1-3 篇相关的用 Read 读那几篇原文，回答时说明参考了哪几篇；答完调一次 wiki_log(action=query)记一笔——这是判断这东西有没有真被用起来的唯一数据来源，不记的话查询数永远是 0。**以下两条只在没有 library 字段时（内置分类的库）适用**：dirs.me 是\"关于用户本人\"的分区(画像/工作习惯/方法论/决策偏好)，dirs.people 是\"他研究的别人\"，两者别混——产出要带他个人风格、或他问关于自己的问题时，先看 dirs.me；dirs.me 是空的就直说还没建，别瞎猜他是谁。索引里没有相关内容就直说没有，不要编。整理收件箱走 wiki_inbox→wiki_transcript→想清楚归哪→wiki_archive_plan(等用户确认)→wiki_archive_exec→写笔记→wiki_log(action=ingest)，别跳步。体检先调 wiki_lint 拿结构问题，再补读懂内容才能发现的那半边，只出报告不擅自改，完事 wiki_log(action=lint)。返回里 dirs.sources 和 dirs.inbox(没有 library 字段时)指向的目录、或 library 里 role 为 \"raw\"/\"inbox\" 的目录(有 library 字段时)，里面的原始文件只读：可以移动改名，绝不改内容删除。每篇笔记要有 front-matter 的 summary 和 tags，笔记间用 [[双链]] 互指。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_inbox",
+    "description": "列出用户知识库收件箱里待整理的文件（名字/大小/放进来多久）。要整理收件箱时先调它，别去 shell 里 ls。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_lint",
+    "description": "给知识库做**结构体检**：死链、孤儿页、缺 summary/tags、index.md 漏收、长期没动过、内容过薄。这些是免费瞬时算出来的，你不用自己扫全库。拿到结果后再去做需要读懂内容的那半边——页面之间的矛盾、被新素材推翻的旧结论、反复被提到却没有独立页面的概念。**只出报告，改什么由用户点头。**",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_log",
+    "description": "往知识库的 log.md 追加一条记录。**每次你依据知识库回答完问题，都调一次 query**；归档完调 ingest；体检完调 lint。这既是知识库的时间线，也是判断「这东西有没有真被用起来」的唯一数据来源——只往里放不去查，说明它没长成工具。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "ingest",
+            "query",
+            "lint"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "description": "一句话说清这次干了什么／问了什么"
+        }
+      },
+      "required": [
+        "action",
+        "title"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_transcript",
+    "description": "读收件箱里某个视频/音频已经转好的逐字稿（本机离线转的，不花 token）。整理这类素材时先调它拿内容，再决定归到哪、写成什么笔记。返回 null 表示还没转完或转不出来（比如那个文件里没有音轨）。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "收件箱里的文件名"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_archive_plan",
+    "description": "提交归档计划给用户过目，**等他在界面上确认**后返回他批准的条目。这个调用会阻塞几十秒到几分钟（要等人点），是正常的。规矩：先调 wiki_inbox 看有什么，再为每个文件想清楚归到哪、写成哪篇笔记，一次提交整批。返回 approved 后：先把批准的文件用 wiki_archive_exec 搬到素材目录，再写笔记、更新 index.md 和 log.md。用户没批准的条目不要动。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "每个文件一条",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "收件箱里的文件名"
+              },
+              "rename": {
+                "type": "string",
+                "description": "归档后改成什么名字（可选）"
+              },
+              "note": {
+                "type": "string",
+                "description": "打算写成哪篇笔记，如 方法/三秒法则.md"
+              },
+              "reason": {
+                "type": "string",
+                "description": "一句话说明为什么这么归"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "wiki_archive_exec",
+    "description": "把用户批准的文件从收件箱搬到 素材/<年月>/。只移动不删除、重名自动加后缀。**只搬文件，笔记要你自己写。** 返回每个文件的新路径，写 front-matter 的 source 字段时用它。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "rename": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_open_html",
+    "description": "把一个本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦。产出报告/预览页后调它，用户抬头就能看到。路径可用相对项目根的路径。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "HTML 文件路径（相对项目根或绝对路径）"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "canvas_open_image",
+    "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 内容名额满时明确拒绝，绝不关闭已有模块。展示图片优先使用此工具；它会新增画布节点，不是只读操作。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "项目内的绝对路径或相对当前项目的路径"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_open_file",
+    "description": "在画板里打开一个文件的预览节点：代码/Markdown 走代码预览，图片/视频走媒体预览，HTML 走浏览器。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "文件路径（相对项目根或绝对路径）"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "canvas_open_url",
+    "description": "在画板里打开一个网址（内嵌 Chromium 浏览器节点），用于查文档或看部署结果。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "http(s) 网址"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "notify",
+    "description": "给用户发一条「需要处理」提醒（标题栏铃铛 + 项目徽标）。任务跑完或需要用户确认时调用，用户在别处干活也能看到。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "提醒内容"
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "todo_list",
+    "description": "读用户画板上、**你所在这个 Frame 里**的待办清单（含它的子 Frame）。归属按位置算：清单摆在哪个 Frame 里就属于哪个 —— 别的 Frame 的清单你看不到，那是有意的。**只读。** 你不能勾掉、改写或新增任何一条 —— 那是用户自己的任务清单，「你以为做完了」和「他验收标准里的做完了」经常不是一回事。做完某条之后就在回答里说清楚做了哪条，由他自己去勾。什么时候用：他让你「看看还有什么没做」「按待办清单往下做」，或者你想确认这次的活对应清单上哪一条。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "board_read",
+    "description": "读这个项目的**协同板**：现在有哪些会话在哪条分支上改了哪些文件、谁闲置了、哪两条分支碰了同一个文件。由 app 从会话表和 git 现算，不是谁写的。**改文件前先读一遍** —— 起会话时看到的那份是快照，别人这会儿可能已经动了同一处。只读，没有参数。返回 JSON：`board` 是协同板的 Markdown 原文；传 ledgers=true 时另带 `ledgers`：各分支台账的尾部（分支名 → 文本；板上有的和磁盘上留着的（会话已停的分支也在，合并官要的正是它们），头部由 app 维护，看「## 记录」段有没有内容）——合并官合并前先看目标分支的「给合并官」条目。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ledgers": {
+          "type": "boolean",
+          "description": "带上各分支台账的尾部；合并前才需要"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "board_note",
+    "description": "往你这条分支的**台账**（.eas/board/<分支>.md 的「记录」段）追加一条。只追加，不改写。每完成一个可交付的小步记一条，按需带：决定 / 未完成 / 给合并官 / 怎么验。在主工作区（没有自己的分支）时必须带 branch —— 合并官合并完写「已合并进 <主干>（<sha>）」就是这么用的。返回 JSON：`rel` 是台账相对项目根的路径。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "description": "要追加的内容，可多行；超过 4000 字会截断"
+        },
+        "branch": {
+          "type": "string",
+          "description": "写到哪条分支的台账；不给 = 自己所在的分支"
+        }
+      },
+      "required": [
+        "note"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "merge_preflight",
+    "description": "合并前的**只读预检**：给一条角色分支（如 eas/builder/ab12ef），返回主干名、合并基点、这条分支改了哪些文件、直接合并会冲突的文件（git merge-tree 算的，不动工作区）、协同板上其他活跃分支与它碰到的同一文件、以及该项目的回归命令 `testCmd`：`testCmd.value` 为 null（`source` 为 `none`）时你必须在报告里写「未跑回归」；`source` 是 `project`（用户设的）或 `package.json`（推断的）。合并官动手前先调它。`conflicts` 为 null = 无法预检（多半是 git < 2.38），看 `conflictNote`。返回里的 `main` 是主工作区现状：`main.dirty` 为 true（有未提交改动）或 `main.branch` 不是 `defaultBranch` 时**不许合并，先报告**。返回 JSON：branch / defaultBranch / base（合并基点 sha）/ worktree（这条分支的 worktree 目录，可能为 null）/ changed（相对仓库根）/ conflicts（null = 无法预检，看 conflictNote）/ overlaps{file, branches} / main{branch, dirty} / testCmd{value, source} / note（项目注册在仓库子目录时才有）。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string",
+          "description": "要合进主干的分支名"
+        }
+      },
+      "required": [
+        "branch"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "repo_impact",
+    "description": "依赖波及（只读）：给一组文件（相对项目根），返回谁 import 了它们（直接与再上一层）、它们卷入的循环依赖、以及建议的回归范围（同目录同名的 *.test 文件）。图来自代码地图的分析，第一次要几秒。拿 merge_preflight 的 changed 喂给它，就知道这次合并会波及到哪。图取自主干工作区（不是你所在的 worktree），结果按项目缓存 5 分钟（每次 merge_preflight 会清掉重算），返回带 cachedAt（图算出来的时刻） —— 分支上刚新增的文件图上没有，会落在 unknown 里。返回 JSON：files（图上找得到的；模块级图如 Swift 项目时回的是所属模块节点 id）/ unknown（图上没有的：非源码、未扫到、或分支新增/已删的文件）/ dependents{file, direct, indirect}（indirect 只到第二层，不是闭包）/ cycles（循环分量）/ suggestedTests（同目录同名 *.test）。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "相对项目根的文件路径"
+        }
+      },
+      "required": [
+        "files"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_list_frames",
+    "description": "列出画板上的所有 Frame（id / 名称 / 所属项目 / 模块数），并标出当前终端所在的 Frame。**Frame 就是用户口中的「造梦空间」，也叫「项目区」** —— 一个 Frame 绑一个项目，装着它的终端、AI 对话、文件预览。用户说「造梦空间」「项目区」「我那个框」，指的都是它。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_get_state",
+    "description": "读取画板完整状态：每个 Frame 下所有模块的 node_id / 类型 / 标题 / 位置大小，以及当前终端所在的 Frame 和节点。另有 freeNodes：不属于任何 Frame 的自由模块（用户从知识库拖出来的只读预览），同样有 node_id，聚焦/最大化/关闭/重命名对它们一样生效。要操作某个模块之前先调它拿 node_id。用户问的是「画板现在**看起来**什么样」时，先用 canvas_latest_snapshot 取图看 —— 这个工具只给结构。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_focus_node",
+    "description": "把画板视口移到某个模块并选中它（用户注意力引过去）。node_id 来自 canvas_get_state。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "模块 id"
+        }
+      },
+      "required": [
+        "node_id"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_maximize_node",
+    "description": "把某个模块最大化成沉浸视图（铺满画布），适合让用户仔细看某个预览；传 restore=true 则还原回画布。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "要最大化的模块 id"
+        },
+        "restore": {
+          "type": "boolean",
+          "description": "传 true 表示还原（此时不用给 node_id）"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_close_node",
+    "description": "关掉一个模块（清理自己开出来的预览/浏览器节点）。注意：终端节点不允许关，会被拒绝。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "模块 id"
+        }
+      },
+      "required": [
+        "node_id"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_rename_node",
+    "description": "给模块改个有意义的名字（比如把浏览器节点改成「性能报告」），方便用户在缩略图里认出来。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "模块 id"
+        },
+        "name": {
+          "type": "string",
+          "description": "新名称"
+        }
+      },
+      "required": [
+        "node_id",
+        "name"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_tidy_frame",
+    "description": "一键整理 Frame 内的模块：按各自大小从左上角起流式重排，消除重叠和空隙。开了一堆预览之后调它收拾干净。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "frame_id": {
+          "type": "string",
+          "description": "不传则整理当前终端所在的 Frame"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "team_spawn",
+    "description": "把一件事拆给多个 agent 并行做。**只在这个项目的多 agent 开关打开时可用** —— 关着就说明用户不想用多 agent，这时不要调它、也不要提议组队，按单会话正常做事。\n调用后会给用户弹一张清单（谁、干什么、预估烧多少），**他点开工才真的起进程**。返回里会说清起了哪几个、各自的 node_id。\n每个 agent 是一个独立的 CLI 进程，有自己完整的上下文 —— 所以适合「几块互不依赖、各自都要读不少东西」的活（并行调研、多角度审查）。一件线性的小事不要用它：起进程的开销和确认打扰都不划算。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "goal": {
+          "type": "string",
+          "description": "这一批要达成什么，一句话。**用户靠这句话决定要不要开工**，写清楚点"
+        },
+        "agents": {
+          "type": "array",
+          "description": "最多 6 个。role 用 kebab-case（它同时是 .plans/ 下的目录名），不许重名",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "string",
+                "description": "kebab-case，如 researcher / api-reviewer"
+              },
+              "task": {
+                "type": "string",
+                "description": "派给它的任务，一句话说清干什么（会作为首条消息投递过去）"
+              },
+              "needs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "需要的 CLI 能力，如 ['stream','usage']。**不要绑 CLI 名字**"
+              },
+              "prefer": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "有得选时的偏好 CLI，软的，如 ['claude','codex']"
+              },
+              "isolation": {
+                "type": "string",
+                "enum": [
+                  "worktree",
+                  "none"
+                ],
+                "description": "**要写代码的角色填 `worktree`**，会给它单开一棵 git 工作树，cwd 直接指过去。不隔离的话几个人同时改一个仓库是**静默覆盖**：他读了你也读了，他写回去你也写回去，他那份就没了，而且谁都收不到报错。只读角色（调研、审查）不用填 —— 白建一棵树只是浪费磁盘和一条分支。"
+              },
+              "role_id": {
+                "type": "string",
+                "description": "套一张角色卡（内置有 scout 勘探员 / inspector 验官 / builder 工匠 / writer 笔杆子 …，用户自建的也行）。填了就把那张卡的职责契约、能力边界（比如只读）、默认模型套到这个 agent 上。只读的调研 / 审查角色配 scout 或 inspector 最合适；不填 = 无角色。id 不存在整批会被拒。"
+              }
+            },
+            "required": [
+              "role",
+              "task"
+            ]
+          }
+        },
+        "estimate_tokens": {
+          "type": "number",
+          "description": "你对这一批总用量的估计。估不准不要紧，用户看得见真实累计；不确定就别填"
+        },
+        "frame_id": {
+          "type": "string",
+          "description": "不传则用当前终端所在的 Frame"
+        }
+      },
+      "required": [
+        "goal",
+        "agents"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "team_status",
+    "description": "看你派出去的那批 agent 现在什么状况：谁在跑、谁交活了、谁多久没动静了。\n**不要反复调它轮询**（那是白烧 token）。派完活先去做别的；手上确实没别的事了，就带 `wait:true` 调一次 —— 它会一直挂着，直到有 agent 交活才返回，最多挂 8 分钟。一次调用一次返回，这不是轮询。\n它报得出「这一轮跑完了没」（agent 的 turn 结束就算），但**报不出「做得对不对、做完没有」** —— 那个只有读 .plans/<role>/findings.md 才知道。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "wait": {
+          "type": "boolean",
+          "description": "挂起等待，直到有 agent 交活（最多 8 分钟）。只在你手上没有别的事可做时用；已经有人交活了会立刻返回，不会白等。"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "team_send",
+    "description": "给某个已经派出去的 agent **追加一条指令** —— 它跑偏了要纠回来、或者它停在半路要推它继续。\n**它当前这一轮还没跑完的话，要等这轮结束才会读到**（CLI 从 stdin 收，自己排队），所以送完别重复发。\n注意会话交活后闲置 3 分钟就会被回收，**回收之后就送不进去了**，那时只能重新派一批。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "派活时定的角色名（team_status 里能看到）"
+        },
+        "message": {
+          "type": "string",
+          "description": "要追加的指令，一句话说清让它接下来做什么"
+        }
+      },
+      "required": [
+        "role",
+        "message"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "team_dissolve",
+    "description": "这一批活收尾了：**停掉全部团队 agent**，并在停之前报一次每个人的产出状况。\n它会告诉你谁**根本没写 findings.md**、谁只写了个标题 —— 那正是解散前最该看的一眼，停完就再也查不了了。\n产出文件不会被删，都在 .plans/<role>/ 下。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_new_terminal",
+    "description": "在 Frame 里新开一个终端模块（只开，不代替用户输入命令）。适合「这步需要你亲自跑一下」的场景。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "frame_id": {
+          "type": "string",
+          "description": "不传则开在当前终端所在的 Frame"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": true
+    }
+  },
+  {
+    "name": "canvas_add_note",
+    "description": "在 Frame 旁边贴一张批注（写结论/待办/提醒，留在画板上不会随对话滚走）。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "批注内容"
+        },
+        "frame_id": {
+          "type": "string",
+          "description": "不传则贴在当前终端所在的 Frame 右侧"
+        },
+        "color": {
+          "type": "string",
+          "description": "可选颜色（CSS 色值）"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_snapshot",
+    "description": "拍一张当前画板的快照，存进选中工作区所属项目的 screenshot/ 下，返回图片路径。**要求用户已经在画板上选中一个工作区** —— 没选中时会返回提示，这时候要让用户先去画板上点一个工作区，不要自己猜一个项目。返回里的 shapesCleared 是这次顺带清掉的标记数（用户设过「拍完清掉」才 >0），不为 0 要告诉用户一声。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "canvas_latest_snapshot",
+    "description": "取最新一张画板快照的路径。**用户问「画板现在什么样」「看看画布」这类问题时先用它** —— canvas_get_state 返回的是节点树（谁在哪、叫什么），回答不了「看起来怎么样」。拿到路径后用 Read 看图。没有任何快照时会明说没有，那时候可以建议用户拍一张。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "项目路径；不给就用当前活动项目"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "secret_check",
+    "description": "开跑之前查这些环境变量有没有（缺 key 时先问它，别直接向用户要）。只回有/没有，不回值。**不确定该用哪个变量名就先不带参数调一次**，会列出柜里存了什么（名字/备注/变量名，不含值）。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vars": {
+          "type": "array",
+          "description": "要查的环境变量名。留空 = 列出柜里有什么",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "request_secret",
+    "description": "缺 API key / 凭证时调它，弹 GUI 让用户自己填。**不要让用户把密钥贴进对话。**",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "这组凭证叫什么，给人看的（例：AWS 生产账号）"
+        },
+        "vars": {
+          "type": "array",
+          "description": "要哪些环境变量名。成对的凭证（AK/SK、user/password）一次全写上",
+          "items": {
+            "type": "string"
+          }
+        },
+        "purpose": {
+          "type": "string",
+          "description": "要来干什么，一句人话。会原样显示给用户"
+        },
+        "docs_url": {
+          "type": "string",
+          "description": "去哪申请（可选，只接受 http/https）"
+        }
+      },
+      "required": [
+        "name",
+        "vars",
+        "purpose"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "report_secret_invalid",
+    "description": "用了密钥柜里的凭证但服务说它无效（401/403）时调它，让用户去改。**别向用户要明文核对。**",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "vars": {
+          "type": "array",
+          "description": "哪些变量看起来不对",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detail": {
+          "type": "string",
+          "description": "服务返回的原话，让用户好判断（别编）"
+        }
+      },
+      "required": [
+        "vars",
+        "detail"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "skill_list",
+    "description": "列出用户在 Eas-Term 的 skill 面板里能看到的全部 skill（各 CLI 的全局目录 + 各项目的 .claude/skills），带每个 skill 的绝对路径、简介、当前分类、是否被临时禁用。用户说「整理一下 skill 分类」「我的 skill 太乱了」「给 skill 分个类」时先调它拿全量，再调 skill_categorize 写回。只读，不改任何东西。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "skill_categorize",
+    "description": "把一批 skill 归到分类里，结果显示在 Eas-Term 的 skill 面板上（每个分类一个可折叠的头）。**分类只写 Eas-Term 自己的配置，不碰用户的 skill 文件，也不影响 CLI 怎么加载它们。**硬规矩：分类是**扁平一层**、不能嵌套；一个 skill 只能属于一个分类；skill 必须用 skill_list 返回的 path 原样引用——**报了一个不存在的 skill，整批都会被拒绝**（不是丢掉那一条）。这批没提到的 skill 保持原样，所以可以分几次提交；重新分类同一个 skill 直接再提交一次即可。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "assignments": {
+          "type": "array",
+          "description": "一次提交整批，别一条一条调",
+          "items": {
+            "type": "object",
+            "properties": {
+              "skill": {
+                "type": "string",
+                "description": "skill 目录的绝对路径，原样抄 skill_list 返回的 path，不要自己拼"
+              },
+              "category": {
+                "type": "string",
+                "description": "分类名：非空、不超过 40 个字、不能含换行。用中文短词（如「设计」「影像」「知识库」）。不能叫「未分类」——那是没分类时的默认显示，不是一个可以主动分进去的类"
+              }
+            },
+            "required": [
+              "skill",
+              "category"
+            ]
+          }
+        }
+      },
+      "required": [
+        "assignments"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "dict_add",
+    "description": "往用户的辞典里添加词条。**格式必须和内置的 381 条完全一致**，缺字段会被拒收——半截词条（只有英文名、没解释没图）混进去既帮不上忙又稀释整本辞典的可信度。每条必填:zh 中文名 + en 英文名 + category(interaction/motion/visual) + logic(80-140 字讲清是什么、怎么实现) + svg(240x120 极简示意图)。强烈建议同时给:cat1/cat2(二级分类，必须是真实存在的一对，写错当场拒) + prompt(点击后挂进对话的完整提示词，没有它这条词点下去只能插解释)。**先读 eas-term skill 的 dict.md**——那里有分类表、SVG 的四条硬约束(比如 <style> 会被整个删掉)、提示词的六段式规格。别凭印象写。拿不准的词直接跳过，宁缺毋滥。返回的 rejected 里会说明哪些被拒、为什么——ok:true 不代表全进去了，逐条看。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "terms": {
+          "type": "array",
+          "description": "一次提交整批，别一个一个调",
+          "items": {
+            "type": "object",
+            "properties": {
+              "en": {
+                "type": "string",
+                "description": "英文原名，如 scroll-snap-type"
+              },
+              "zh": {
+                "type": "string",
+                "description": "中文名，如「滚动吸附」"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "interaction",
+                  "motion",
+                  "visual"
+                ],
+                "description": "interaction=交互行为，motion=动效，visual=UI视觉。不另开分类"
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "检索词，中英文都放，用户搜哪个都能命中"
+              },
+              "logic": {
+                "type": "string",
+                "description": "80-140 字中文单行：它是什么、怎么实现的。写给「知道这个效果但不知道叫什么」的人看，不要同义反复"
+              },
+              "svg": {
+                "type": "string",
+                "description": "示意图，一个完整的 <svg> 元素：viewBox=\"0 0 240 120\"，font-family=\"sans-serif\"，标注文字 #8a8f99、强调 #e0a45e、输出/结果 #6ea8fe。禁止 script / 事件属性 / 外链 / foreignObject（会被清洗掉）"
+              }
+            },
+            "required": [
+              "en",
+              "zh",
+              "category",
+              "logic"
+            ]
+          }
+        }
+      },
+      "required": [
+        "terms"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  }
+]

@@ -7,13 +7,14 @@
 // 两边的装法不同：
 //   · Claude Code → ~/.claude/skills/eas-term/ 整个目录（原生 skill 机制，SKILL.md 是入口，
 //     其余 .md 按渐进式披露按需读，见下面 skillSrcDir/skillFiles）
-//   · Codex       → ~/.codex/AGENTS.md 里插一段（Codex 没有 skill，全局指令走 AGENTS.md）
+//   · Codex       → ~/.codex/AGENTS.md 里插一段（旧版分发使用全局 AGENTS.md；新版受管会话使用内置包短指引）
 import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
 import type { AgentStatus, SkillStatus } from '../shared/types'
 import { expectedCodexRegion } from './agentRules'
+import { capabilityGuidanceDir } from './capabilityBundlePaths.ts'
 import { userBinDirs } from './probeEnv'
 
 const CODEX_BEGIN = '<!-- eas-term:begin 由 Eas-Term 自动维护，勿手改；删掉整段即可移除 -->'
@@ -39,10 +40,7 @@ function writePrefs(p: { muted?: boolean }): void {
 /** 技能包源目录（打包后在 Resources/skills）。**是目录不是文件** ——
  *  技能拆成渐进式披露之后目录里有多个 .md，按单个文件处理会把细节文件全漏掉，
  *  症状是「触发了但 agent 找不到流程」。 */
-const skillSrcDir = (): string =>
-  app.isPackaged
-    ? path.join(process.resourcesPath, 'skills', 'eas-term')
-    : path.join(app.getAppPath(), 'skills', 'eas-term')
+const skillSrcDir = (): string => capabilityGuidanceDir({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() })
 
 /** 目录里的所有 .md。排序是为了让「装了哪些」这件事可复现，便于比对。 */
 const skillFiles = (dir: string): string[] => {

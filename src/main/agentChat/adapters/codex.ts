@@ -99,7 +99,8 @@ export const codexAdapter: CliAdapter = {
     const contract = [
       opts.roleContract?.trim(),
       opts.boardText?.trim() ? `协同板（起会话时的快照）：${opts.boardText.trim()}` : '',
-      opts.roleDocs?.trim() ? opts.roleDocs.trim().replace(/^## /, '').replace(/\n/, '：') : ''
+      opts.roleDocs?.trim() ? opts.roleDocs.trim().replace(/^## /, '').replace(/\n/, '：') : '',
+      opts.capabilityGuidance?.trim()
     ]
       .filter(Boolean)
       .join(' ')
@@ -125,12 +126,11 @@ export const codexAdapter: CliAdapter = {
     // 返回空串（避免拼出「清空用户全部 skills.config」的合法参数），这里跟着它的约定走。
     const skillsArg = codexSkillsConfigArg(b.codex.skillsOff)
     if (skillsArg) args.push('-c', skillsArg)
-    // 用户选的**自家插件**（电脑视野 / 看板…）。Claude 走 `--mcp-config`、omp 走 ACP 握手，
-    // 只有 Codex 两条都不走 —— 它只读 `~/.codex/config.toml`，而那份里没有插件。
-    // 不补这一段，插件在 Codex 底座上就是「面板开着、模型手里一个工具都没有」。
-    // **排在角色那几条 `-c` 后面**：角色的 enabled=false / disabled_tools 是限制，
-    // 顺序上后于「有哪些 server」更好读；Codex 的 `-c` 之间没有先后依赖，两种都能跑。
-    if (opts.pluginMcp) for (const c of codexAddServerArgs(opts.pluginMcp)) args.push('-c', c)
+    // 基础能力与所选业务插件显式装配；不写 enabled，保留用户和角色的限制。
+    // env_vars 让 Codex 将受管环境传到 MCP 子进程；只有父进程有变量还不够。
+    for (const server of opts.sessionMcp ?? (opts.pluginMcp ? [opts.pluginMcp] : [])) {
+      for (const c of codexAddServerArgs(server)) args.push('-c', c)
+    }
     // exec 模式的 prompt 是位置参数，不经 stdin 收——不关掉 stdin 会卡在
     // "Reading additional input from stdin..."（实测），必须是 'ignore'。
     return { bin: 'codex', args, stdin: 'ignore' }

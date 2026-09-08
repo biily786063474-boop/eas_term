@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const doc = readFileSync(
-  fileURLToPath(new URL('../../skills/eas-term/generate.md', import.meta.url)),
+  fileURLToPath(new URL('../../resources/plugins/eas-capabilities/guidance/generate.md', import.meta.url)),
   'utf8'
 )
 

@@ -21,8 +21,24 @@ import { mainWindow } from './island'
 import { approvalIdOf, waitForApproval, resolveApproval } from './agentChat/approvalRoute.ts'
 import { shouldAutoInstall, optOutPayload } from './mcpOptOut'
 import { ingestStatusline } from './quotaStore'
-import { pluginBye, pluginHeartbeat, pluginRpcFromShim } from './pluginHost.ts'
+import { builtinCapabilityHost, pluginBye, pluginHeartbeat, pluginRpcFromShim } from './pluginHost.ts'
+import { writeCapabilitySnapshot } from './capabilitySnapshot.ts'
+import { selectedNativeServers, capabilityMcpConfig } from './selectedCapabilityServers.ts'
+import { assembleCapabilityServers, type SessionMcpServer } from '../shared/builtinCapabilities.ts'
+import { CapabilitySessions, type CapabilityLease } from './capabilitySessions.ts'
+import { capabilityBundleRoot, capabilityGuidanceDir } from './capabilityBundlePaths.ts'
+import { CapabilityPreferenceStore, readCapabilityBundle } from './capabilityPreferences.ts'
+import { buildCapabilityGuidance } from './capabilityGuidance.ts'
+import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
 import { nodeRunner } from './nodeBin.ts'
+import { buildPtyCapabilityCommand, capabilityInvocationCwd, type PtyCapabilityInvocation } from './capabilityPtyCommand.ts'
+import { createBizoneRuntime } from './bizoneRuntime.ts'
+import { discoverBizoneWindowsInstallation } from './bizoneWindowsDiscovery.ts'
+import { createBizoneHosted } from './bizoneHosted.ts'
+import { CapabilityMigrationService } from './capabilityMigrationService.ts'
+import { expectedCodexRegion } from './agentRules.ts'
+import { guardDir } from './fsGuard.ts'
+import { createOmpCapabilityPlugin } from './ompCapabilityPlugin.ts'
 
 /** 标题栏「MCP 接入」开关在主进程的影子。
  *  渲染层那份只挡得住 /invoke（它是在 onInvoke 回调里查的），
@@ -36,6 +52,10 @@ interface Ctx {
   /** 调用方所在终端的 ptyId：渲染层据此反查「我在哪个 Frame / 哪个节点」
    *  （终端是先创建 pty、之后才挂到 Frame 节点上的，spawn 时还不知道 frameId，所以注入 ptyId 更可靠） */
   ptyId?: string
+  agentSessionId?: string
+  agentLeafId?: string
+  /** Existing canvas agent node; independent of split-pane leaf identity. */
+  agentNodeId?: string
   project?: string
 }
 interface InvokeResult {
@@ -48,6 +68,78 @@ let server: http.Server | null = null
 let port = 0
 let token = ''
 let seq = 1
+const capabilitySessions = new CapabilitySessions(crypto.randomUUID(), crypto.randomUUID())
+const capabilityLeases = new Map<string, { lease: CapabilityLease; context: string }>()
+
+const bizoneRuntime = createBizoneRuntime({ ...(process.platform === 'win32' ? {
+  discover: () => discoverBizoneWindowsInstallation(url => app.getApplicationInfoForProtocol(url))
+} : {}) })
+let capabilityPreferenceStore: CapabilityPreferenceStore | undefined
+let migrationService: CapabilityMigrationService | undefined
+function capabilityMigrationService(): CapabilityMigrationService {
+  migrationService ??= new CapabilityMigrationService({
+    appOwnedRoot: app.getPath('userData'), homeDirectory: app.getPath('home'),
+    expectedRegion: expectedCodexRegion,
+    isEnabled: () => mcpEnabled && capabilityPreferences().preferences.workbench && capabilityPreferences().preferences.guidance,
+    isTrustedProject: project => guardDir(project).ok
+  })
+  return migrationService
+}
+/** Trusted main callers pass an app-issued identity; target paths come from the manifest. */
+export function rollbackBuiltinCapabilityMigration(migrationId: string) {
+  return capabilityMigrationService().rollback(migrationId)
+}
+const bundlePaths = () => ({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() })
+function capabilityPreferences() {
+  capabilityPreferenceStore ??= new CapabilityPreferenceStore(app.getPath('userData'), { legacyMcpOptOut: !shouldAutoInstall(readOptOut()) })
+  return capabilityPreferenceStore.read()
+}
+export function capabilityGuidanceEnabled(): boolean { return capabilityPreferences().preferences.guidance }
+export function sessionCapabilityGuidance(): string {
+  const bundle = readCapabilityBundle(path.join(capabilityBundleRoot(bundlePaths()), 'bundle.json'))
+  const preferences = capabilityPreferences().preferences
+  return buildCapabilityGuidance({ preferences, directory: capabilityGuidanceDir(bundlePaths()), version: bundle.version, bizoneInstalled: !!bizoneRuntime.installed() })
+}
+function capabilityStatus(): CapabilityBundleStatus {
+  const bundle = readCapabilityBundle(path.join(capabilityBundleRoot(bundlePaths()), 'bundle.json'))
+  const preferences = capabilityPreferences()
+  return { id: bundle.id, version: bundle.version, displayName: bundle.displayName,
+    ...(preferences.error ? { error: '能力设置无法读取，已停止启用；请保留配置文件以便恢复。' } : {}),
+    modules: {
+      workbench: { enabled: preferences.preferences.workbench, dependency: 'available', ...builtinCapabilityHost.status('workbench') },
+      bizone: { enabled: preferences.preferences.bizone, dependency: bizoneRuntime.installed() ? 'available' : 'missing', ...builtinCapabilityHost.status('bizone') },
+      guidance: { enabled: preferences.preferences.guidance, dependency: 'available', session: 'not-requested' }
+    }
+  }
+}
+
+/** Called only by a managed session owner, never an IPC payload or an external MCP caller. */
+export function capabilitySessionEnv(sessionKey: string, ctx: Ctx): Record<string, string> {
+  if (!port || !token) throw new Error('内置能力网关尚未就绪')
+  // Each owned process gets a fresh generation; a retired process cannot keep using its lease.
+  revokeCapabilitySession(sessionKey)
+  const entry = { lease: capabilitySessions.issue(ctx), context: JSON.stringify(ctx) }
+  capabilityLeases.set(sessionKey, entry)
+  return { EAS_TERM_PORT: String(port), EAS_CAPABILITY_LEASE: JSON.stringify(entry.lease) }
+}
+
+/** One parent belongs to the PTY shell; each CLI launch exchanges it for a child. */
+export function capabilityPtyEnv(ptyId: string, project: string): Record<string, string> {
+  if (!port || !token) throw new Error('内置能力网关尚未就绪')
+  const key = 'pty:' + ptyId
+  revokeCapabilitySession(key)
+  const context = { ptyId, project }
+  const lease = capabilitySessions.issue(context, 'launcher')
+  capabilityLeases.set(key, { lease, context: JSON.stringify(context) })
+  return { EAS_TERM_PORT: String(port), EAS_CAPABILITY_PARENT: JSON.stringify(lease) }
+}
+
+export function revokeCapabilitySession(sessionKey: string): void {
+  const entry = capabilityLeases.get(sessionKey)
+  if (!entry) return
+  for (const id of capabilitySessions.revoke(entry.lease.id)) builtinCapabilityHost.releaseSession(id)
+  capabilityLeases.delete(sessionKey)
+}
 const pending = new Map<number, (r: InvokeResult) => void>()
 
 export function mcpEnv(ctx: Ctx): Record<string, string> {
@@ -559,56 +651,8 @@ export function mcpOptedOut(): boolean {
   return !shouldAutoInstall(readOptOut())
 }
 
-/** 给 **AI 对话节点**里跑的 CLI 用的 MCP 配置文件路径。用户关过 MCP 接入时返回 null。
- *
- *  为什么要单独一份，而不是让它读 `~/.claude.json`：Claude 侧带着 `--strict-mcp-config`
- *  （「只用 --mcp-config 给的，忽略其它一切 MCP 配置」）。给它这一份 = 工具面**恰好**是
- *  只有 eas-term（**不含 bizone-canvas**，理由见下面那段：它每会话拉一个 Electron），
- *  不会把用户全局装的其它 MCP server 一并塞进来。
- *  去掉 --strict-mcp-config 也能连上，但那样工具面就是用户全局的全集，不可控。
- *
- *  在这之前 agentChat 里的 Claude 是**零 MCP 工具**（有 --strict-mcp-config 却没有
- *  --mcp-config），canvas_* / notify / wiki_* 一个都调不到；而 Codex 那侧读全局 toml，
- *  能力面大得多。同一个软件里选哪个 CLI 决定了 AI 能干什么 —— 那不是设计，是遗留。
- *
- *  **尊重 opt-out**：用户在「扩展能力」里关掉 MCP 接入之后，这里同样返回 null。
- *  只关一半（终端里没有、AI 对话里还有）比不关更让人困惑。 */
-/** 把插件 MCP 配置里的路径变量换成真实目录。
- *
- *  Claude 插件的 `.mcp.json` 里写的是 `${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.cjs`
- *  这种形式（实测 claude-mem 就是）。**不替换的话 CLI 起不来那个 server**，
- *  而失败是安静的：工具列表少几个，没有任何报错。
- *
- *  深拷贝加替换，不改原对象 —— plugins.ts 每次都当场扫盘返回新对象，
- *  但别指望调用方也这么想。 */
-function substPluginVars(v: unknown, root: string): unknown {
-  if (typeof v === 'string') {
-    return v.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, root).replace(/\$\{CODEX_PLUGIN_ROOT\}/g, root)
-  }
-  if (Array.isArray(v)) return v.map((x) => substPluginVars(x, root))
-  if (v && typeof v === 'object') {
-    const o: Record<string, unknown> = {}
-    for (const [k, vv] of Object.entries(v as Record<string, unknown>)) o[k] = substPluginVars(vv, root)
-    return o
-  }
-  return v
-}
-
-/**
- * 「自家插件」（`cli === 'eas'`）在这个会话里要连的那一个 MCP server。
- *
- * **不让 harness 直接 spawn 插件**，而是给一个转发 shim，走网关到宿主里唯一的那个插件
- * 进程（面板与会话共用同一个；模型调了工具，面板才看得见）。`EAS_TERM_PORT/TOKEN`
- * 由会话的 spawn env 注入、harness 再传给子进程；`EAS_PLUGIN` 在这里写死。
- *
- * 抽成函数是因为**有两个消费者，且两边必须完全一致**：
- *   · `agentMcpConfigPath()` 写进 JSON → Claude 的 `--mcp-config`、omp 的 ACP 握手
- *   · `session.ts` 直接取它 → Codex 的 `-c mcp_servers.<名>.…`（Codex 两条都不走）
- * 各写一份的话，症状是「同一个插件在 Claude 上有工具、在 Codex 上没有」——
- * 而这正是 2026-09-06 之前的实际状态。
- *
- * 返回 null = 没选插件，或选的是连接器型（那种 Codex 读用户全局 toml 本来就拿得到）。
- */
+/** Eas business plugins keep the shared host shim. Native selected plugins are
+ * normalized separately and never gain the global gateway token. */
 export function easPluginMcpServer(
   pluginId?: string
 ): { name: string; command: string; args: string[]; env: Record<string, string> } | null {
@@ -619,84 +663,42 @@ export function easPluginMcpServer(
   return { name: plug.name, command: r.command, args: r.args, env: { ...(r.env ?? {}), EAS_PLUGIN: plug.name } }
 }
 
-export function agentMcpConfigPath(pluginId?: string): string | null {
-  try {
-    const serverPath = serverScriptPath()
-    if (!fs.existsSync(serverPath)) return null
-    if (!shouldAutoInstall(readOptOut())) return null
-    const servers: Record<string, unknown> = {}
-    // **eas-term 和 bizone-canvas 都给**（2026-08-23 用户拍板加回画板）。
-    //
-    // ── 为什么曾经把 bizone-canvas 排除掉，以及为什么那个理由站不住 ──────
-    // 原注释说「每起一个会话就多一个**完整的 Electron 实例**」，2026-08-23 实测
-    // 不是这样。bizoneRunner 用的是 `ELECTRON_RUN_AS_NODE: '1'`，**是 node 模式
-    // 不是 GUI 实例**；包装器只在画板没开着时把它拉起来一次，之后所有客户端共享：
-    //
-    //   231MB  画板自己的 Helper  ┐
-    //   230MB  画板本体          ├─ 一次性，多客户端共享
-    //   134MB  画板自己的 Helper  ┘
-    //    93MB  ← 每个 MCP 客户端一个（这才是真正的增量）
-    //
-    // 所以真实代价是**每个活着的会话 ~93MB**，不是每会话 730MB。当初那次
-    // 「非常卡顿」很可能主要来自首次把画板本体拉起来。
-    //
-    // ── 为什么不能「用到的时候再连」 ──────────────────────────────────
-    // 模型要**先在上下文里看到工具列表**才可能决定用它，而 tools/list 要求
-    // stdio 进程已经起来。「没用到就不连」等于「模型永远不知道有生图这回事」——
-    // 那正是这个 bug 的另一面。2026-08-23 实测佐证：三个 `claude -c` 会话各挂着
-    // 一个 93MB 的画板 MCP server，而那些会话**一张图都没生成过**。
-    //
-    // ── 为什么必须加回来 ──────────────────────────────────────────────
-    // skills/eas-term/SKILL.md 对每个会话都说「**你在这台机器上具备生图生视频
-    // 能力**，禁止回『我不能生图』」，并指定「只能走 bizone-canvas」。工具却不在，
-    // 于是模型只能回一句「画板 MCP 没连接」—— 它没说错，是我们既拿走了工具、
-    // 又留着那句话。用户为此报了**两次**（2026-08-20、2026-08-23）：上一次只接了
-    // eas-term 那半，画板留在外面，所以症状没真正消失。
-    //
-    // 真要省掉那 93MB，正解是让 eas-mcp.mjs 直接转发到画板本体的 HTTP 接口
-    // （127.0.0.1:13140，端口与 token 在画板的 api-token.json 里），
-    // 每会话零额外进程 —— 但那要把画板的工具定义镜像一份，是另一件事。
-    for (const { name, run: r } of mcpEntries(serverPath)) {
-      servers[name] = {
-        type: 'stdio',
-        command: r.command,
-        args: r.args,
-        ...(r.env ? { env: r.env } : {})
-      }
-    }
-    // ── 用户点选的那一个插件 ────────────────────────────────────────────
-    // **只合并这一个，不是「装了的全带上」**（用户 2026-08-24 定死）：
-    // 已装插件可以有几十个，全进工具面会把系统提示词撑爆。
-    //
-    // 只有**本地型**插件走这条路。连接器型（清单里只有远程 app id、没有
-    // mcpServers，如已装的 GitHub）本地没有任何东西可合并 —— 而它在 Codex 那边
-    // **本来就能用**：codex exec 不带任何 MCP 限制，读的是用户全局 toml
-    // （2026-08-24 实测拿到 mcp__codex_apps__github._get_profile）。
-    // 所以这段实际只在救 Claude 那半：它带着 --strict-mcp-config，
-    // 不显式合并的话，claude-mem / figma 这类插件的 MCP 在 AI 对话里根本不存在。
-    if (pluginId) {
-      const plug = findPlugin(pluginId)
-      const own = easPluginMcpServer(pluginId)
-      if (own) {
-        const key = own.name in servers ? `plugin-${own.name}` : own.name
-        servers[key] = { type: 'stdio', command: own.command, args: own.args, env: own.env }
-      } else if (plug?.mcpServers) {
-        for (const [name, cfg] of Object.entries(plug.mcpServers)) {
-          // 插件自己的 server 名可能跟我们的撞（都叫 "figma" 之类）。
-          // 加前缀而不是覆盖 —— 覆盖会把 eas-term 顶掉，画布能力当场消失。
-          const key = name in servers ? `plugin-${plug.name}-${name}` : name
-          servers[key] = substPluginVars(cfg, plug.root)
-        }
-      }
-    }
+/** Explicit base + selected business servers. Native configuration values stay in
+ * an app-owned 0600 snapshot instead of Codex command-line arguments. */
+export function sessionMcpServers(pluginId?: string): SessionMcpServer[] {
+  const preferences = capabilityPreferences().preferences
+  const envVars = ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT', 'EAS_TEAM_ROLE', 'EAS_CAPABILITY_LEASE']
+  const scoped = runnerFor([path.join(path.dirname(serverScriptPath()), 'eas-capability-shim.mjs')])
+  const base = (['workbench', 'bizone'] as const).map(module => ({
+    enabled: preferences[module] && (module !== 'bizone' || process.platform === 'win32' || !!bizoneRuntime.installed()),
+    server: { name: module === 'workbench' ? 'eas-term' : 'bizone-canvas', ...scoped,
+      env: { ...scoped.env, EAS_CAPABILITY_MODULE: module },
+      envVars: ['EAS_TERM_PORT', 'EAS_CAPABILITY_LEASE'] }
+  }))
+  const plugin = pluginId ? findPlugin(pluginId) : undefined
+  if (pluginId && !plugin) throw new Error('所选业务插件不可用，请重新选择')
+  const selected = easPluginMcpServer(pluginId)
+  const native = plugin && !selected ? selectedNativeServers(plugin) : []
+  // Validate collisions before persisting a selected plugin snapshot.
+  assembleCapabilityServers(base, selected ? [{ ...selected, envVars }] : native)
+  const snapshotPath = native.length ? writeCapabilitySnapshot(path.join(app.getPath('userData'), 'capability-snapshots'),
+    `selected:${plugin!.id}`, capabilityMcpConfig(native)) : undefined
+  const protectedNative = native.map(server => {
+    if (server.nativeRemote) return server
+    const runner = runnerFor([path.join(path.dirname(serverScriptPath()), 'eas-selected-mcp-launcher.mjs'), snapshotPath!, server.name])
+    return { name: server.name, ...runner, ...(server.envVars ? { envVars: server.envVars } : {}) }
+  })
+  return assembleCapabilityServers(base, selected ? [{ ...selected, envVars }] : protectedNative)
+}
 
-    const p = path.join(app.getPath('userData'), 'agent-mcp.json')
-    fs.writeFileSync(p, JSON.stringify({ mcpServers: servers }, null, 2))
-    return p
-  } catch (e) {
-    // 写不出来就退回「没有 MCP」——那是这个功能上线前的状态，不会更糟
-    console.error('[mcp] 生成 AI 对话用的 MCP 配置失败', e)
-    return null
+export function agentMcpConfigPath(pluginId?: string, sessionKey = 'preview', snapshot?: readonly SessionMcpServer[]): string {
+  if (!fs.existsSync(serverScriptPath())) throw new Error('内置 MCP 执行文件缺失，无法启动能力会话')
+  try {
+    return writeCapabilitySnapshot(path.join(app.getPath('userData'), 'capability-snapshots'), sessionKey,
+      capabilityMcpConfig(snapshot ?? sessionMcpServers(pluginId)))
+  } catch {
+    // Never fall back to a strict Claude/ACP session with a silently empty tool list.
+    throw new Error('会话 MCP 配置无法装配或保存；请检查所选插件和应用数据目录')
   }
 }
 
@@ -704,6 +706,10 @@ export function agentMcpConfigPath(pluginId?: string): string | null {
  * @param force 用户刚在界面上点了「安装」—— 这时无视 opt-out 标记（他正在收回那个决定）
  */
 function setupAgents(force = false): void {
+  // Builtin capabilities are injected per managed invocation. Startup must not
+  // replace global server tables (which may contain user deny/allow lists).
+  // Legacy removal is a separate, backed-up migration after the new link passes.
+  if (!force) return
   const serverPath = serverScriptPath()
   if (!fs.existsSync(serverPath)) return
   // **用户明确关过就不自动装回来。** 判定在 mcpOptOut.ts，那里写了为什么任何异常
@@ -730,6 +736,13 @@ export function installMcpConfig(): void {
 }
 
 export function registerMcpBridge(): void {
+  void bizoneRuntime.refreshInstallation()
+  ipcMain.handle('capabilities:status', async () => { await bizoneRuntime.refreshInstallation(); return capabilityStatus() })
+  ipcMain.handle('capabilities:setModule', (_event, module: CapabilityModule, enabled: boolean) => {
+    capabilityPreferences()
+    capabilityPreferenceStore!.set(module, enabled)
+    return capabilityStatus()
+  })
   ipcMain.handle('mcp:removeConfig', () => removeMcpConfig())
   ipcMain.handle('mcp:installConfig', () => installMcpConfig())
   // 渲染层的开关同步一份过来，好让 /secret-env 也能被它关掉
@@ -745,6 +758,23 @@ export function registerMcpBridge(): void {
     }
   })
 
+  builtinCapabilityHost.register('bizone', () => createBizoneHosted({ appOwnedDataDir: app.getPath('userData'), version: app.getVersion(), runtime: bizoneRuntime }))
+  builtinCapabilityHost.register('workbench', () => {
+    const tools = JSON.parse(fs.readFileSync(path.join(path.dirname(serverScriptPath()), 'workbench-tools.json'), 'utf8'))
+    return {
+      kind: 'builtin',
+      tools: async () => tools,
+      call: async (name, args, ctx) => {
+        const result = await invokeRenderer(name, args, ctx)
+        return { content: [{ type: 'text', text: JSON.stringify(result.ok ? result.data ?? null : result.error) }], ...(!result.ok ? { isError: true } : {}) }
+      },
+      close() {}
+    }
+  })
+  app.on('before-quit', () => {
+    capabilitySessions.revokeAll()
+    capabilityLeases.clear()
+  })
   token = crypto.randomBytes(24).toString('hex')
   server = http.createServer(async (req, res) => {
     const send = (code: number, obj: unknown): void => {
@@ -755,6 +785,87 @@ export function registerMcpBridge(): void {
     try {
       // token 校验（health 除外，方便排查）
       if (req.url === '/health') return send(200, { ok: true, port })
+      if (req.method === 'POST' && (req.url === '/capability/launch' || req.url === '/capability/launch/close')) {
+        const body = JSON.parse(await readBody(req)) as PtyCapabilityInvocation & { parent: CapabilityLease; leaseId?: string }
+        try { capabilitySessions.authenticateLauncher(body.parent) }
+        catch { return send(401, { ok: false, error: '终端能力授权无效或已撤销' }) }
+        if (req.url === '/capability/launch/close') {
+          for (const id of capabilitySessions.revokeChild(body.parent, String(body.leaseId ?? ''))) builtinCapabilityHost.releaseSession(id)
+          return send(200, { ok: true, result: {} })
+        }
+        if (!['claude', 'codex', 'omp'].includes(body.kind) || typeof body.binary !== 'string' || !path.isAbsolute(body.binary) ||
+            typeof body.cwd !== 'string' || !path.isAbsolute(body.cwd) || !Array.isArray(body.args) || body.args.some(arg => typeof arg !== 'string' || arg.includes('\0'))) {
+          return send(400, { ok: false, error: 'CLI 启动参数无效' })
+        }
+        const cwd = capabilityInvocationCwd(body)
+        if (!fs.statSync(cwd).isDirectory() || !fs.statSync(body.binary).isFile()) return send(400, { ok: false, error: 'CLI 或工作目录不可用' })
+        // issueChild authenticates after reading the entire request body.
+        const child = capabilitySessions.issueChild(body.parent, { project: cwd })
+        try {
+          const servers = sessionMcpServers()
+          const configPath = agentMcpConfigPath(undefined, child.id) ?? writeCapabilitySnapshot(path.join(app.getPath('userData'), 'capability-snapshots'), child.id, {})
+          const host = { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath }
+          const preferences = capabilityPreferences().preferences
+          const ompExtension = body.kind === 'omp' ? createOmpCapabilityPlugin({
+            appOwnedRoot: app.getPath('userData'),
+            runner: runnerFor([path.join(path.dirname(serverScriptPath()), 'eas-capability-shim.mjs')]),
+            enabled: { workbench: preferences.workbench, bizone: preferences.bizone },
+            version: '1.0.0'
+          })?.root : undefined
+          const launch = buildPtyCapabilityCommand(body, { servers, configPath, guidance: sessionCapabilityGuidance(), ompExtension }, host)
+          return send(200, { ok: true, result: { leaseId: child.id, command: launch.command, args: launch.args,
+            env: { ...launch.env, EAS_TERM_PORT: String(port), EAS_CAPABILITY_LEASE: JSON.stringify(child) } } })
+        } catch (error) {
+          for (const id of capabilitySessions.revoke(child.id)) builtinCapabilityHost.releaseSession(id)
+          throw error
+        }
+      }
+      // Scoped route has its own authority. A legacy gateway token cannot authorize it.
+      if (req.method === 'POST' && req.url === '/capability/rpc') {
+        let lease: CapabilityLease
+        let ctx: Ctx
+        try {
+          lease = JSON.parse(String(req.headers['x-eas-capability'] ?? '')) as CapabilityLease
+          ctx = capabilitySessions.authenticate(lease)
+        } catch { return send(401, { ok: false, error: '能力会话授权无效或已撤销' }) }
+        if (!mcpEnabled) return send(403, { ok: false, error: '内置能力已禁用' })
+        const body = JSON.parse(await readBody(req)) as { module?: string; connectionId?: string; method?: string; params?: { name?: string; arguments?: unknown; protocolVersion?: string } }
+        const module = String(body.module ?? '')
+        const params = body.params ?? {}
+        const connectionId = String(body.connectionId ?? '')
+        if (!connectionId || !['workbench', 'bizone'].includes(module)) return send(400, { ok: false, error: '能力连接身份无效' })
+        ctx = capabilitySessions.authenticate(lease)
+        if (!capabilityPreferences().preferences[module as 'workbench' | 'bizone']) return send(403, { ok: false, error: '内置模块已禁用' })
+        if (body.method === 'close') {
+          builtinCapabilityHost.releaseModule(lease.id, module, connectionId)
+          return send(200, { ok: true, result: {} })
+        }
+        if (body.method === 'initialize' || body.method === 'tools/list') {
+          const tools = await builtinCapabilityHost.list(module, lease.id, connectionId)
+          const result = body.method === 'tools/list' ? { tools } : {
+            protocolVersion: params.protocolVersion || '2025-06-18', capabilities: { tools: {} },
+            serverInfo: { name: `eas-capabilities-${module}`, version: app.getVersion() }
+          }
+          return send(200, { ok: true, result })
+        }
+        if (body.method === 'tools/call') {
+          // Context is resolved above from the lease. Ignore all caller-supplied context/_meta.
+          const result = await builtinCapabilityHost.call(module, lease.id, connectionId, String(params.name ?? ''), params.arguments ?? {}, ctx, () => {
+            capabilitySessions.authenticate(lease)
+            if (!mcpEnabled || !capabilityPreferences().preferences[module as 'workbench' | 'bizone']) throw new Error('内置能力已禁用')
+          })
+          if (module === 'workbench' && !(result as { isError?: boolean })?.isError) {
+            try { capabilityMigrationService().onSuccessfulWorkbenchCall(ctx.project) }
+            catch { console.warn('[capabilities] legacy rule migration deferred; tool result preserved') }
+          }
+          return send(200, { ok: true, result })
+        }
+        if (body.method === 'ping') {
+          const connected = builtinCapabilityHost.heartbeat(module, lease.id, connectionId)
+          return send(connected ? 200 : 409, { ok: connected, ...(connected ? { result: {} } : { error: '能力连接已释放，请重新握手' }) })
+        }
+        return send(400, { ok: false, error: '不支持的内置能力方法' })
+      }
       if (req.headers['x-eas-token'] !== token) return send(401, { ok: false, error: 'token 无效' })
 
       // eas-secret 包装命令取值。**这是明文离开主进程的第二条路**（第一条是 PTY env 注入），

@@ -9,8 +9,8 @@
 
 | # | 注入面 | 写到哪 | 负责文件 | 何时写 | 托管区机制 |
 |---|---|---|---|---|---|
-| 1 | **MCP 注册** | `~/.claude.json` / `~/.codex/config.toml` | `mcpBridge.ts`（`writeClaudeConfig` / `writeCodexConfig`）| 检测到 CLI 就自动配 | 按 server 名整段替换，不动其余 server |
-| 2 | **使用指引** | Claude → `~/.claude/skills/eas-term/*.md`（整目录）<br/>Codex → `~/.codex/AGENTS.md` 内一段 | `agentRules.ts`（`syncRules` / `writeDistributed`）| 面板点安装/同步；**启动时自动 refresh 已装的**（`rulesRefresh.ts`，只更新不新装）| Claude 侧写完 `chmod 444`（分发产物）<br/>Codex 侧 `<!-- eas-term:begin -->…end -->` 围栏 |
+| 1 | **MCP 装配（改造中）** | AI 会话快照 / PTY 每次 CLI 子租约 | `mcpBridge.ts` / `capabilityPtyCommand.ts` | 随受管会话装配；启动不再重写全局表 | 旧全局配置先保留；有归属证据且新链路健康后才备份迁移 |
+| 2 | **使用指引（改造中）** | 唯一源 `resources/plugins/eas-capabilities/guidance/` | `capabilityGuidance.ts`、三端适配器 | 短规则随会话追加，详细正文按需读取 | `refreshInstalledRules` 启动钩子保留但不写旧全局规则；旧安装段待迁移 |
 | 3 | **提交钩子** | `~/.claude/settings.json` PostToolUse / `~/.codex/hooks.json` | `agentHook.ts` | **用户显式点安装**（侵入性最高，需显式同意）| `_easTerm` 字段认领自己那条；写前备份 `.eas-backup`；`findForeign()` 识别用户手配的同款避免重复 |
 | 4 | **审批钩子** | `<cwd>/.claude/settings.json` PreToolUse —— **项目级，一个项目一份，不在 `~/.claude/`**（`hookConfigPath()`）| `agentChat/session.ts`（装/卸，写前过 `guardPath`）+ `agentChat/hookInstall.ts`（合并规划，纯函数不落盘）+ `resources/agent-hooks/eas-pretooluse.mjs`（脚本本体）| 见下节 —— 桌面对话已经不装，手机端起的会话仍会装 | 只往 matcher `*` 的分组里放自己那条；`guardPath` 拦住不在已注册项目/知识库内的 cwd；靠 `EAS_AGENT_CHAT_SESSION` 环境变量认领归属，**没有这个变量的会话一律无声放行** |
 | 5 | **statusline** | `~/.claude/settings.json` statusLine | `statuslineInstall.ts` + `eas-statusline.mjs` | 开启额度显示时 | `_easTerm`/`_easWrapped` 标记，**卸载时把原命令原样放回** |
@@ -98,7 +98,7 @@ sequenceDiagram
 
 ## Skill 体系
 
-### 本项目分发给用户的：`skills/eas-term/`
+### 本项目分发给用户的：`resources/plugins/eas-capabilities/guidance/`
 
 渐进式披露 —— `SKILL.md` 是入口（触发情境写在 frontmatter description 里），细节按需读盘：
 
@@ -181,3 +181,9 @@ id 对不上号整批拒。
 
 > `~/.claude/settings.json`、`~/.claude.json`、`~/.codex/config.toml` 是**部分托管**——
 > 靠 `_easTerm` 标记只认领自己那一条，用户文件其余部分完全不受影响，也不设只读。
+
+内置 Bizone 注入使用与实际连接器相同的安装验证（官方脚本、应用可执行文件、SDK），缺失时不宣称可生成。三个 CLI 的托管基础 MCP 快照均使用租约 `eas-capability-shim.mjs`，不再将旧启动包装器作为会话内置服务；旧用户全局配置保留在显式兼容路径。说明注入本身不是握手、模型登录或生成完成证据。
+
+规则迁移入口为 `capabilityMigrationService.ts`：可信主进程在受管 workbench 工具实际成功且禁用策略允许后调用，仅移除与 `agentRules.expectedCodexRegion()` 精确匹配的固定全局/可信项目规则段。备份、清单与执行结果位于 `userData/capability-migrations/`。回退仅接受 migrationId，重新验证目标与哈希，并持久阻止自动再次迁移。禁止把 renderer/MCP 参数直接用于路径、归属文本或信任判断；第三方和归属不明的旧 MCP 配置原样保留。
+
+所选原生 MCP 的 stdio `cwd` 经插件根变量替换及当前平台绝对路径校验后，只保存在私有快照，由 `eas-selected-mcp-launcher.mjs` 在 spawn 时执行；不能丢掉 cwd 后在项目目录解析同名脚本。跨 CLI 无法可靠转换的权限、必需服务、超时或未知配置字段明确拒绝，不静默丢弃。remote 当前只保留兼容配置：Claude 接收原配置，Codex 保留已有原生注册而不创建 URL 覆盖，omp 提示不支持；不宣称三端 remote 已统一可用。

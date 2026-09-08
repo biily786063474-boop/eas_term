@@ -1,3 +1,4 @@
+import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import type { BoardRow, Overlap } from '../shared/board'
 import type { PreflightResult } from '../shared/mergePreflight'
@@ -701,6 +702,10 @@ const api = {
       ipcRenderer.invoke('rules:sync'),
     remove: (): Promise<RulesStatus> => ipcRenderer.invoke('rules:remove')
   },
+  capabilities: {
+    status: (): Promise<CapabilityBundleStatus> => ipcRenderer.invoke('capabilities:status'),
+    setModule: (module: CapabilityModule, enabled: boolean): Promise<CapabilityBundleStatus> => ipcRenderer.invoke('capabilities:setModule', module, enabled)
+  },
   footprint: {
     // 一处总账：这个软件在用户机器上写过的全部位置（隐私策略以此为准）
     list: (): Promise<Footprint[]> => ipcRenderer.invoke('footprint:list')
@@ -844,6 +849,7 @@ const api = {
     /** 原始字节（给 WebAudio 解码音频用） */
     readBinary: (filePath: string): Promise<{ ok: boolean; data: ArrayBuffer; error?: string }> =>
       ipcRenderer.invoke('fs:readBinary', filePath),
+    validateRasterImage: (filePath: string, roots: string[]): Promise<{ path: string }> => ipcRenderer.invoke('fs:validateRasterImage', filePath, roots),
     readImageFile: (filePath: string): Promise<ImageFileResult> =>
       ipcRenderer.invoke('fs:readImageFile', filePath),
     openPath: (target: string): Promise<string> => ipcRenderer.invoke('fs:openPath', target),

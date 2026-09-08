@@ -157,3 +157,38 @@ graph LR
 - `approvalRoute.ts` 的 `hookResponseBody()` ↔ `resources/agent-hooks/responseBody.mjs`：
   跨进程无法 import，**两处注释互相钉死，改一处必须改另一处**；
   `APPROVAL_TIMEOUT_MS` ↔ hook 脚本里的 `FETCH_TIMEOUT_MS` 同理
+
+## 内置能力装配改造进行中
+
+AI 对话工作台：会话 owner → `capabilitySessionEnv` → CLI 显式配置 → `eas-capability-shim.mjs` → `/capability/rpc`（独立租约鉴权）→ 现有 pluginHost 内置绑定 → `invokeRenderer`。旧全局 token 不授权新路由；工具调用体的 ctx/_meta 不参与权限定位。`EAS_TERM_PORT`、`EAS_CAPABILITY_LEASE` 按变量名转发，不把凭证写进 argv/配置。旧业务插件暂仍转发 `EAS_TERM_TOKEN`、`EAS_PTY_ID`、`EAS_PROJECT`、`EAS_TEAM_ROLE`。
+
+PTY：`capabilityPtyEnv` 给 shell 父租约；app-owned PATH 入口 → `eas-pty-launcher` → `/capability/launch` 按实际 cwd 发子租约。启动 CLI 前清除父租约和旧全局工作台授权；CLI 退出仅关闭自己的子租约，PTY 退出递归撤销全部所属租约。zsh 的 zshrc/zlogin 都保持入口优先。任意绝对路径/用户 alias 绕过 PATH、Windows cmd 原生 CLI、profile-v2 等尚有未完成边界，不能宣称验收通过。
+
+工具 schema 从 `mcp/workbench-tools.json` 读取，旧 stdio 入口保持外部终端零工具的行为。基础/业务服务器在 Codex 的每次 restart 前重新合并 knownMcpServers，保留 enabled=false/disabled_tools。Claude/omp JSON 使用不可变会话快照。
+
+内置服务共享同一个 HostRegistry；保留 key 不能被普通清单占用。每个 shim 有独立 connectionId，每个在飞工具有内部独立引用；close 只释放该连接，撤销 owner 释放其连接但不杀已发出的任务。读取请求体、等待目录及笔纵后端就绪之后重新认证，避免撤销后才开始执行。
+
+轻量 shim 每 15 秒心跳，宿主借已有 sweep 回收超过 45 秒失联的连接引用；在飞调用引用等 finally 才释放。心跳不重放工具。Codex 的受管启动器用原生 app-server config/read 合并用户指引/禁用数组，探针失败不执行模型；PTY 用户参数与受管参数分开传递。omp PTY 用原生 `-e` 标准插件入口，MCP 名带 `eas-capabilities:` 前缀，实际 Frame 仍从租约解析。
+
+验证：`capabilityTransport.test.ts` 执行真实网关路由、Node HTTP 与 stdio shim（执行体为隔离夹具）；不等于正式包三 CLI 模型调用。正式验收和剩余迁移见 builtin-capabilities 计划。
+
+### 内置笔纵连接器生产装配（2026-09-08）
+
+托管会话的 `bizone-canvas` 与 workbench 共用 `eas-capability-shim.mjs`，仅传当前租约和网关端口，由 `EAS_CAPABILITY_MODULE=bizone` 选择模块。`mcpBridge` 在既有 `builtinCapabilityHost` 注册 `createBizoneHosted`；底层仍是 pluginHost 的同一个 HostRegistry，不增加独立插件宿主。旧 `bizone-mcp.mjs` 仅保留给显式全局配置兼容路径。
+
+`bizoneHosted.ts` 将 `createBizoneRuntime`、官方包内 MCP 的 `McpClient`、`createBizoneConnector`、持久化 `createBizoneGenerationGuard` 串接起来。目录握手不启动 GUI；真正调用前才检查本地服务，端口/令牌 revision 改变后重建官方客户端。NodeRunner 支持 Dock 精简 PATH 和内置 Electron 回退；子进程只继承环境白名单及本地认证文件路径，不传 Eas 租约、模型密钥。MCP 就绪仅代表工具目录握手成功，不代表已登录模型账户或完成生成。
+
+Mac 只接受 `/Applications` 和用户 `Applications` 下验证了官方脚本、可执行文件及 SDK 依赖的安装。Windows 通过 Electron `getApplicationInfoForProtocol('bzone://')` 只读发现已注册处理器的可执行文件路径，严格验证邻接 `resources/app/package.json` 的 name/main/type 及正式 server/main/SDK，不执行注册命令串、不猜便携 ZIP 解压位置。启动时异步预读；首次工具目录握手和调用都等待发现，避免首会话因缓存未就绪漏工具。无注册或验证失败显示缺失。模块偏好及租约授权继续由网关统一执行，生成防重复由持久化 guard 执行，不会因 reconnect 自动重放调用。
+
+Selected native stdio servers now share the same base-plus-selected snapshot across AI adapters; credentials stay in app-owned 0600 snapshots rather than argv. Remote business servers preserve existing native behavior: Claude receives the original config, Codex retains native/global registration, and OMP reports unsupported remote entries. This is compatibility preservation, not a new three-CLI remote transport.
+
+
+## 2026-09-08 · 工具行为注解与安全图片预览
+
+共享目录 `mcp/workbench-tools.json` 现为 38 项，旧 stdio 与受管宿主均保留 MCP annotations。注解描述执行体实际行为，不覆盖 CLI 审批策略、用户禁用或权限：查询工具标只读；本地追加/视口操作标非只读、非破坏、closed-world；删改、团队执行和外部浏览保持限制。`canvas_snapshot` 可能按已存偏好不可撤销清标记，不能标为非破坏；`board_read` 会刷新派生台账，不标只读。
+
+旧 `canvas_open_file` / `canvas_open_html` 能加载可执行网页，且内容限额会驱逐旧节点，仍标 `destructiveHint:true, openWorldHint:true`。不能为绕过 Codex `approval_policy=never` 拒绝而伪造安全元数据。
+
+新增 `canvas_open_image` 是受限替代：仅项目内 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG/HTML/视频/外部网址。`fs:validateRasterImage` → `main/rasterImage.ts` 校验 guardPath/guardDir、真实路径属于当前会话项目、大小与文件头（不是完整图片解码保证）；renderer 在 IO 后重新确认租约 Frame 和当前容量，然后同步新增图片节点，满额拒绝且不驱逐。它明确是画布写操作：`readOnlyHint:false, destructiveHint:false, openWorldHint:false`，未声称幂等。普通业务插件 canvas 白名单不扩大。
+
+回归：`workbenchSchema.test.ts` 通过实际 stdio initialize/tools/list 验证公共目录和注解；`rasterImage.test.ts` 验证真实文件、跨项目软链与格式；`canvasOpenImage.test.ts` 执行生产 handler 分支，覆盖异步验证后的容量/身份变化。正式包 CLI 调用证据由发布验收另行记录。

@@ -30,6 +30,12 @@ interface Ctx {
   /** 团队派生的会话自报的角色名。有值 = 调用方确实是成员（不是猜的） */
   teamRole?: string
   ptyId?: string
+  /** 主进程受管会话租约提供的内部身份，不是 CLI resumeId */
+  agentSessionId?: string
+  /** 启动前已存在的 agent leaf，覆盖首轮 sessionId 尚未写回的窗口 */
+  agentLeafId?: string
+  /** Existing canvas agent node; independent of split-pane leaf identity. */
+  agentNodeId?: string
   project?: string
 }
 
@@ -54,23 +60,47 @@ function isTeamOwnedCaller(ctx: Ctx): boolean {
   return !!ctx.teamRole
 }
 
-// ptyId → 它所属的画布 Frame / 节点；找不到就回落到「当前项目的顶层 Frame」
+// 显式调用身份必须定位到真实节点；失效身份不能借同项目/活动 Frame 兜底。
 function resolveFrame(ctx: Ctx): { frameId: string; nodeId?: string; projectPath: string } | null {
   const s = useStore.getState()
-  if (ctx.ptyId) {
-    for (const t of s.tabs) {
-      const leaf = collectLeaves(t.root).find(
-        (l) => l.pane.kind === 'terminal' && l.pane.ptyId === ctx.ptyId
-      )
-      if (!leaf) continue
-      for (const f of s.canvas.frames) {
-        const n = f.nodes.find((x) => x.leafId === leaf.id)
-        if (n) {
-          const proj = s.projects.find((p) => p.id === f.projectId)
-          return { frameId: f.id, nodeId: n.id, projectPath: proj?.path ?? ctx.project ?? '' }
-        }
+  if (ctx.agentNodeId) {
+    // Phone-created nodes carry their own pane before materialization. An explicit
+    // node is authoritative: never search another node by session or project.
+    const leaves = s.tabs.flatMap((t) => collectLeaves(t.root))
+    for (const frame of s.canvas.frames) {
+      const node = frame.nodes.find((candidate) => candidate.id === ctx.agentNodeId)
+      if (!node) continue
+      if (ctx.agentLeafId && node.leafId !== ctx.agentLeafId) return null
+      const pane = node.leafId ? leaves.find((leaf) => leaf.id === node.leafId)?.pane : node.pane
+      if (pane?.kind !== 'agent' || (pane.sessionId && pane.sessionId !== ctx.agentSessionId)) return null
+      const project = s.projects.find((candidate) => candidate.id === frame.projectId)
+      return { frameId: frame.id, nodeId: node.id, projectPath: project?.path ?? ctx.project ?? '' }
+    }
+    return null
+  }
+  if (ctx.agentLeafId || ctx.agentSessionId || ctx.ptyId) {
+    const leaves = s.tabs.flatMap((t) => collectLeaves(t.root))
+    const leaf = ctx.agentLeafId
+      ? leaves.find((l) => l.id === ctx.agentLeafId && l.pane.kind === 'agent' &&
+          (!l.pane.sessionId || l.pane.sessionId === ctx.agentSessionId))
+      : leaves.find((l) => ctx.agentSessionId
+          ? l.pane.kind === 'agent' && l.pane.sessionId === ctx.agentSessionId
+          : l.pane.kind === 'terminal' && l.pane.ptyId === ctx.ptyId)
+    // 显式启动 leaf 已移除/换会话时，绝不转认其他节点。
+    if (ctx.agentLeafId && !leaf) return null
+    for (const f of s.canvas.frames) {
+      const n = f.nodes.find((x) => leaf
+        ? x.leafId === leaf.id
+        // 自带 pane 的内存节点可能尚未 materialize；有 leafId 时只认 live leaf。
+        // 磁盘存档不保留内部 sessionId，resumeId 不能作为调用身份。
+        : !ctx.agentLeafId && !!ctx.agentSessionId && !x.leafId &&
+          x.pane?.kind === 'agent' && x.pane.sessionId === ctx.agentSessionId)
+      if (n) {
+        const proj = s.projects.find((p) => p.id === f.projectId)
+        return { frameId: f.id, nodeId: n.id, projectPath: proj?.path ?? ctx.project ?? '' }
       }
     }
+    return null
   }
   // **调用方说了自己在哪个项目，就信它。**
   //
@@ -1456,6 +1486,27 @@ const SHELL_TRAP =
   // 以下工具都要落到某个 Frame
   const loc = resolveFrame(ctx)
   if (!loc) throw new Error('画布里还没有 Frame，无法打开预览')
+
+  if (tool === 'canvas_open_image') {
+    if (typeof args.path !== 'string') throw new Error('缺少图片路径')
+    const roots = [...new Set([ctx.project, loc.projectPath].filter((root): root is string => !!root))]
+    const image = await window.api.fs.validateRasterImage(args.path, roots)
+    // Validation awaits IO. Re-resolve identity and capacity afterwards; no await
+    // may separate this check from the synchronous insertion (no eviction race).
+    const currentLoc = resolveFrame(ctx)
+    if (!currentLoc || currentLoc.frameId !== loc.frameId) throw new Error('图片验证期间会话 Frame 已变化')
+    const current = useStore.getState()
+    const frame = current.canvas.frames.find(f => f.id === currentLoc.frameId)
+    if (!frame) throw new Error('目标 Frame 已关闭')
+    const stat = contentStat(frame.nodes)
+    if (stat.used >= stat.cap) throw new Error('Frame 内容名额已满；请用户先整理，不会自动关闭已有模块')
+    const before = new Set(frame.nodes.map(node => node.id))
+    if (current.viewMode !== 'canvas') current.setViewMode('canvas')
+    current.addFileNode(frame.id, { kind: 'image', filePath: image.path }, 0, 0)
+    const after = useStore.getState().canvas.frames.find(f => f.id === frame.id)
+    const node = after?.nodes.find(candidate => !before.has(candidate.id))
+    return { opened: image.path, as: 'image', frameId: frame.id, nodeId: node?.id, content_slots: `${stat.used + 1}/${stat.cap}` }
+  }
 
   if (tool === 'canvas_open_url') {
     const url = String(args.url ?? '')

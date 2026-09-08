@@ -25,6 +25,9 @@ import type { RoleBounds } from '../../shared/roleBinding'
 export const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000
 
 export interface SessionRecord {
+  agentLeafId?: string
+  /** Existing canvas agent node; independent of split-pane leaf identity. */
+  agentNodeId?: string
   id: string
   cli: string
   cwd: string
@@ -312,6 +315,8 @@ function effectiveOpts(s: SessionRecord): StartOpts {
     roleContract: s.roleContract,
     roleBounds: s.roleBounds,
     knownMcpServers: s.knownMcpServers,
+    agentLeafId: s.agentLeafId,
+    agentNodeId: s.agentNodeId,
     codexHome: s.codexHome,
     writeGuardSettings: s.writeGuardSettings,
     roleId: s.roleId,

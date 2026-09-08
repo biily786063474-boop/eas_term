@@ -129,7 +129,8 @@ export const claudeAdapter: CliAdapter = {
         // 角色文档指针段（P3 的 StartOpts.roleDocs，session.ts 算好传进来：章程 + 台账路径，
         // 只有指针不含全文）。放在最末：比板文还具体 —— 「你这个角色在这个项目、这条分支
         // 的文件在哪」。全空白同样当没有。
-        opts.roleDocs?.trim() ?? ''
+        opts.roleDocs?.trim() ?? '',
+        opts.capabilityGuidance?.trim() ?? ''
       ]
         .filter(Boolean)
         .join('\n\n')

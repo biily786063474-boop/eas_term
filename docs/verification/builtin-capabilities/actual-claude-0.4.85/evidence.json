@@ -1,0 +1,167 @@
+{
+  "cli": "claude",
+  "executable": "/Users/biily/Eas-Term-release/0.4.85-prep/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term",
+  "executableSha256": "d732ba546654c72a7d3dc0488fdc95aee7b79dffc2035856dd42722dc5a028e4",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm",
+  "project": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces",
+  "realModelCalls": true,
+  "simulatedTransport": false,
+  "phases": [
+    {
+      "name": "new",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-new-1788861076694.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": null,
+      "resumeId": "d31c9778-7696-4134-a1e4-3f7dae91d914",
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "toolu_01J9mProcvRkKjbHmZK3VKkh",
+          "label": "ToolSearch",
+          "detail": "{\"query\":\"select:mcp__eas-term__canvas_open_file\",\"max_results\":1}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "toolu_01J9mProcvRkKjbHmZK3VKkh",
+          "ok": true,
+          "output": "[{\"type\":\"tool_reference\",\"tool_name\":\"mcp__eas-term__canvas_open_file\"}]"
+        },
+        {
+          "k": "exec.start",
+          "execId": "toolu_011wSWAym96Bsv7HxTvy8xDm",
+          "tool": {
+            "name": "mcp__eas-term__canvas_open_file"
+          },
+          "label": "mcp__eas-term__canvas_open_file",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-new-1788861076694.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "toolu_011wSWAym96Bsv7HxTvy8xDm",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-new-1788861076694.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-1-sochh",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-new-1788861076694.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "resume",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-resume-1788861076694.png",
+      "sessionId": "ac-2",
+      "requestedResumeId": "d31c9778-7696-4134-a1e4-3f7dae91d914",
+      "resumeId": "d31c9778-7696-4134-a1e4-3f7dae91d914",
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "toolu_01J8eM2dBGbuAQ24KjKFdWow",
+          "tool": {
+            "name": "mcp__eas-term__canvas_open_file"
+          },
+          "label": "mcp__eas-term__canvas_open_file",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-resume-1788861076694.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "toolu_01J8eM2dBGbuAQ24KjKFdWow",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-resume-1788861076694.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-2-uzeie",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-resume-1788861076694.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "app-restart-resume",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-restart-1788861076694.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": "d31c9778-7696-4134-a1e4-3f7dae91d914",
+      "resumeId": "d31c9778-7696-4134-a1e4-3f7dae91d914",
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "toolu_019Tyf7XqBXpSygSZ3bWKdDc",
+          "tool": {
+            "name": "mcp__eas-term__canvas_open_file"
+          },
+          "label": "mcp__eas-term__canvas_open_file",
+          "detail": "{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-restart-1788861076694.png\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "toolu_019Tyf7XqBXpSygSZ3bWKdDc",
+          "ok": true,
+          "output": "{\"opened\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-restart-1788861076694.png\",\"as\":\"image\",\"frameId\":\"target-frame\",\"content_slots\":\"1/5\"}"
+        }
+      ],
+      "canvas": [
+        {
+          "id": "decoy-frame",
+          "nodes": []
+        },
+        {
+          "id": "target-frame",
+          "nodes": [
+            {
+              "id": "cnode-5-jp4oz",
+              "filePath": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-e6wntm/测试项目 with spaces/claude-restart-1788861076694.png"
+            }
+          ]
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": false,
+  "bundle": {
+    "id": "eas-capabilities",
+    "version": "1.0.0",
+    "displayName": "Eas-Term 扩展能力",
+    "modules": {
+      "workbench": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "bizone": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "guidance": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      }
+    }
+  },
+  "globalRuleFilesUnchanged": false
+}

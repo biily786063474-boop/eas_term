@@ -1103,6 +1103,7 @@ export function AgentChatView({
       const roleModel = role?.model?.[selected.id as HarnessId]
       const roleEffort = role?.effort?.[selected.id as HarnessId]
       result = await window.api.agentChat.start({
+        agentLeafId: leafId,
         cli: selected.id,
         // **不是 cwd 是 startCwd** —— 有 worktree 的会话必须起在那棵树里，
         // 否则它照样在改主工作区，隔离白做
@@ -1129,6 +1130,7 @@ export function AgentChatView({
         // 清掉它重来一次，代价只是这次接不上上下文，总好过节点永久报废。
         setAgentResumeId(tabId, leafId, '')
         result = await window.api.agentChat.start({
+        agentLeafId: leafId,
           cli: selected.id,
           // 重试路径同样走 startCwd（漏掉的话，一次重试就把会话搬回主工作区）
           cwd: startCwd,

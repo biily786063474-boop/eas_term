@@ -5,19 +5,44 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
 import { planSend } from './sessionState.ts'
+import { codexAdapter } from './adapters/codex.ts'
 
 // Exercise the actual wireProc callbacks without starting Electron or a model.
 const source = ts.createSourceFile('session.ts', readFileSync(new URL('./session.ts', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true)
 const node = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'wireProc')!
 const code = ts.transpileModule(node.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
 class FakeProcess extends EventEmitter {
+  kill() {}
   stdout = Object.assign(new EventEmitter(), { setEncoding() {} })
   stderr = Object.assign(new EventEmitter(), { setEncoding() {} })
 }
+test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保留连接', () => {
+  let handler: ts.CallExpression | undefined
+  const visit = (n: ts.Node): void => {
+    if (ts.isCallExpression(n) && n.arguments[0]?.getText(source) === "'agentChat:interrupt'") handler = n
+    ts.forEachChild(n, visit)
+  }
+  visit(source)
+  assert.ok(handler)
+  const calls: string[] = []
+  const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean } }
+  const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  const interrupt = runInNewContext(compiled + '\ninterrupt', {
+    sessions: new Map([['s', live]]),
+    revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
+    handleEvent() {}
+  })
+  interrupt({}, 's')
+  assert.deepEqual(calls, ['revoke:s', 'kill'])
+  calls.length = 0
+  live.acp = { interrupt: () => { calls.push('cancel'); return true } }
+  interrupt({}, 's')
+  assert.deepEqual(calls, ['cancel'])
+})
 function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
-    Date, console: { error() {} },
+    Date, console: { error() {} }, revokeCapabilitySession() {},
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
@@ -80,10 +105,11 @@ test('启动同步失败后恢复空闲并返回失败，下一次可以直接�
   const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   let attempts = 0
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
-    Date, process: { execPath: '/fixture/node' }, console: { error() {} }, planSend,
+    Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+    codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
-    agentMcpConfigPath() {}, easPluginMcpServer() {}, mcpEnv: () => ({}), approvalEnv: () => ({}), PROBE_ENV: {},
+    agentMcpConfigPath() {}, sessionMcpServers: () => [], codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, approvalEnv: () => ({}), PROBE_ENV: {},
     spawn: () => { if (++attempts === 1) throw new Error('fixture spawn failure'); return new FakeProcess() },
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { if (e.k === 'turn.start') live.rec.busy = true },
     logSession() {}, resolveAndBroadcastModels() {},
@@ -98,3 +124,34 @@ test('启动同步失败后恢复空闲并返回失败，下一次可以直接�
   assert.equal(attempts, 2)
   assert.equal(live.rec.busy, true)
 })
+
+for (const [label, mcp, expected] of [
+  ['整服务', { denyServers: ['eas-term'] }, 'mcp_servers.eas-term.enabled=false'],
+  ['单工具', { denyTools: ['eas-term__canvas_open_file'] }, 'mcp_servers.eas-term.disabled_tools=["canvas_open_file"]']
+] as const) {
+  test('MCP 关闭时启动、开启后续发仍保留角色' + label + '禁用', () => {
+    const restartNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'restartAndDeliver')!
+    const compiled = ts.transpileModule(restartNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+    let enabled = false, snapshots = 0
+    const launches: string[][] = []
+    const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
+      Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+      codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
+      getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
+      agentMcpConfigPath() {}, codexServers: () => [],
+      sessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
+      mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, approvalEnv: () => ({}), PROBE_ENV: {},
+      spawn: (_bin: string, args: string[]) => { launches.push(args); return new FakeProcess() },
+      handleEvent() {}, logSession() {}, wireProc() {}, resolveAndBroadcastModels() {}
+    })
+    const live = { rec: { id: 's', cli: 'codex', cwd: '/fixture', knownMcpServers: [], alive: false } }
+    const opts = { cwd: '/fixture', knownMcpServers: [], roleBounds: { caps: { mcp } } }
+    assert.equal(restart(live, opts, 'first').ok, true)
+    assert.equal(launches[0].includes(expected), false, '不存在的 server 不得产生禁用参数')
+    enabled = true
+    assert.equal(restart(live, opts, 'follow-up').ok, true)
+    assert.ok(launches[1].includes('mcp_servers.eas-term.command="node"'))
+    assert.ok(launches[1].includes(expected), '新装配的 server 必须立即受到原角色限制')
+    assert.equal(snapshots, 2, '每次启动只读取一次用于 Codex 的服务快照')
+  })
+}

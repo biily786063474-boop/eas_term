@@ -1,0 +1,65 @@
+{
+  "cli": "codex",
+  "executable": "/Users/biily/Eas-Term-release/0.4.85-prep/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term",
+  "executableSha256": "d732ba546654c72a7d3dc0488fdc95aee7b79dffc2035856dd42722dc5a028e4",
+  "profile": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-AGPE1h",
+  "project": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-AGPE1h/测试项目 with spaces",
+  "realModelCalls": true,
+  "simulatedTransport": false,
+  "phases": [
+    {
+      "name": "new",
+      "file": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-AGPE1h/测试项目 with spaces/codex-new-1788860708903.png",
+      "sessionId": "ac-1",
+      "requestedResumeId": null,
+      "resumeId": "01a08068-4c19-7832-9fcc-d2fbe903a93d",
+      "executions": [
+        {
+          "k": "exec.start",
+          "execId": "item_1",
+          "tool": {
+            "name": "canvas_open_file",
+            "server": "eas-term"
+          },
+          "label": "mcp_tool_call",
+          "detail": "{\"id\":\"item_1\",\"type\":\"mcp_tool_call\",\"server\":\"eas-term\",\"tool\":\"canvas_open_file\",\"arguments\":{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-AGPE1h/测试项目 with spaces/codex-new-1788860708903.png\"},\"result\":null,\"error\":null,\"status\":\"in_progress\"}"
+        },
+        {
+          "k": "exec.done",
+          "execId": "item_1",
+          "tool": {
+            "name": "canvas_open_file",
+            "server": "eas-term"
+          },
+          "ok": false,
+          "output": "{\"id\":\"item_1\",\"type\":\"mcp_tool_call\",\"server\":\"eas-term\",\"tool\":\"canvas_open_file\",\"arguments\":{\"path\":\"/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-AGPE1h/测试项目 with spaces/codex-new-1788860708903.png\"},\"result\":null,\"error\":{\"message\":\"MCP tool call requires approval, but approval policy is never\"},\"status\":\"failed\"}"
+        }
+      ]
+    }
+  ],
+  "passed": false,
+  "bundle": {
+    "id": "eas-capabilities",
+    "version": "1.0.0",
+    "displayName": "Eas-Term 扩展能力",
+    "modules": {
+      "workbench": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "bizone": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      },
+      "guidance": {
+        "enabled": true,
+        "dependency": "available",
+        "session": "not-requested"
+      }
+    }
+  },
+  "error": "No paired real successful canvas_open_file execution events",
+  "globalRuleFilesUnchanged": true
+}

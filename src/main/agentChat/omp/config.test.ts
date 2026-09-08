@@ -222,7 +222,7 @@ test('拿真的 skills/eas-term/SKILL.md 跑：frontmatter 与正文原样，尾
   // 副本的 description 必须原样——skills.ts 的 scanSkillsFromDir 是 requireDescription: true，
   // 而触发词就写在 description 里，动了它 = 换了触发条件。
   const real = fs.readFileSync(
-    path.join(import.meta.dirname, '..', '..', '..', '..', 'skills', 'eas-term', 'SKILL.md'),
+    path.join(import.meta.dirname, '..', '..', '..', '..', 'resources', 'plugins', 'eas-capabilities', 'guidance', 'SKILL.md'),
     'utf8',
   )
   const out = ompSkillMarkdown(real)

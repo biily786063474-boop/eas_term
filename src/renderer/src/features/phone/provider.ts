@@ -179,7 +179,7 @@ async function startSession(
   const usable = clis.find((c) => c.available && c.chatSupported)
   if (!usable) return { ok: false, error: '这台电脑上没有可用的 CLI' }
 
-  const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message })
+  const r = await window.api.agentChat.start({ cli: usable.id, cwd: proj.path, message, agentNodeId: nodeId, agentLeafId: node.leafId })
   if (!r.ok) return { ok: false, error: r.error }
 
   // **把 sessionId 写回画布**，否则电脑上打开这个节点时接不回这个会话，

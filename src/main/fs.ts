@@ -18,6 +18,7 @@ import type {
   PathProbe
 } from '../shared/types'
 import { guardDir, guardPath, invalidNameReason } from './fsGuard'
+import { validateRasterImage } from './rasterImage.ts'
 
 // 在访达中选中文件：macOS 上 shell.showItemInFolder 有时不把 Finder 带到前台，
 // 改用 `open -R` 既能定位文件又能激活 Finder；失败再回退到原 API。
@@ -215,6 +216,8 @@ export function registerFsHandlers(): void {
       }
     }
   })
+
+  ipcMain.handle('fs:validateRasterImage', (_e, input: string, roots: string[]) => validateRasterImage(input, roots, { path: guardPath, directory: guardDir }))
 
   ipcMain.handle('fs:readImageFile', async (_e, filePath: string): Promise<ImageFileResult> => {
     try {

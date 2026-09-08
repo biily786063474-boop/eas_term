@@ -425,3 +425,10 @@ test('Codex 尚在生成不能被完成后的续聊规则重启；Claude 完成�
   assert.equal(planSend(base({cli: 'codex', busy: true}), 1_000_100).action, 'send')
   assert.equal(planSend(base({cli: 'claude', busy: false}), 1_000_100).action, 'send')
 })
+test('phone startup node identity and optional leaf survive restart', () => {
+  const s = base({ alive: false, agentNodeId: 'phone-node', agentLeafId: 'desktop-leaf' })
+  const next = planSend(s, 1_000_001)
+  assert.equal(next.action, 'restart')
+  assert.equal(next.opts.agentNodeId, 'phone-node')
+  assert.equal(next.opts.agentLeafId, 'desktop-leaf')
+})
