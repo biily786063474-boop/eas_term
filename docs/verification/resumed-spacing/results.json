@@ -1,0 +1,19 @@
+{
+  "boundary": "未注入测试夹具的真实 Electron；隔离目录内保存待续历史，未调用模型",
+  "checks": [
+    {
+      "viewport": 1100,
+      "gap": 12,
+      "bottom": 16,
+      "width": 760,
+      "inputWidth": 760
+    },
+    {
+      "viewport": 480,
+      "gap": 12,
+      "bottom": 16,
+      "width": 446,
+      "inputWidth": 446
+    }
+  ]
+}
