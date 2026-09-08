@@ -5,7 +5,7 @@ export async function verifyMessageQueue({cdp,projectDir,root,waitFor}) {
   const checks=[]
   const ready=expression=>waitFor(()=>cdp.eval(expression),{timeout:8000,desc:expression})
   const check=async(expression,name)=>{if(!await cdp.eval(expression))throw new Error(name);checks.push(name);console.log('[queue] ✓',name)}
-  const caps={contextUsage:true,approval:[],models:[],effortLevels:[]}
+  const caps={contextUsage:true,approval:[],models:[],effortLevels:[],compact:"slash"}
   await cdp.eval('window.__agentChatTestSetup('+JSON.stringify({clis:['codex','claude','omp'].map(id=>({id,displayName:id,available:true,chatSupported:true,capabilities:caps}))})+')')
   const config=extra=>cdp.eval('window.__composerTestSetup('+JSON.stringify({sendEvents:true,interruptHold:true,...extra})+')')
   const type=async text=>{await cdp.eval('(()=>{const e=document.querySelector("[data-composer-input]");e.value='+JSON.stringify(text)+';e.focus()})()');await ready('document.querySelector("[data-composer-input]").value==='+JSON.stringify(text))}
@@ -51,7 +51,18 @@ export async function verifyMessageQueue({cdp,projectDir,root,waitFor}) {
     await cdp.clickElement('document.querySelector(".ac-queue-item button:first-of-type")','排队消息调整方向')
     await ready('window.__composerTestSends().length==='+ (beforeStop+1))
     await check('window.__composerTestSends().at(-1).message==="手动停止保留 F"',cli+' 队列内调整方向恢复发送')
-    await end()
+    await push({k:'error',fatal:true,message:'异步投递失败'})
+    await ready('document.querySelector(".ac-queue-heading")?.textContent.includes("暂停")')
+    await check('document.querySelector(".ac-queue-text").textContent==="手动停止保留 F"',cli+' IPC成功之后异步失败仍恢复消息')
+    await cdp.clickElement('document.querySelector(".ac-queue-heading button")','重试异步失败')
+    await ready('!document.querySelector(".ac-queue-item")');await end()
+    await check('[...document.querySelectorAll(".ac-messages [data-question-index]")].filter(e=>e.textContent.includes("手动停止保留 F")).length===1',cli+' 异步失败重试不重复显示提问')
+    await push({k:'turn.start'});await type('/compact')
+    const compactSends=await cdp.eval('window.__composerTestSends().length')
+    await cdp.clickElement('document.querySelector(".ac-redirect-button")','调整方向仍需压缩确认')
+    await ready('document.querySelector(".confirm-message")?.textContent.includes("压缩")')
+    await check('window.__composerTestSends().length==='+compactSends,cli+' 调整方向不能绕过压缩确认')
+    await cdp.clickElement('[...document.querySelectorAll(".confirm-actions button")].find(b=>b.textContent.includes("取消"))','取消压缩');await end()
   }
   fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({boundary:'真实 Electron UI，CLI 发送/停止及轮次事件由隔离夹具控制，无真实模型',checks,consoleErrors:cdp.consoleErrors},null,2))
   console.log('[queue]',checks.length,'checks passed')

@@ -101,7 +101,7 @@ export interface AcpLive {
   /** 用户按了「停」。发 cancel、等响应、**进程留着**。
    *
    *  **返回「我有没有接手这一轮的收尾」**：
-   *  `true`  —— cancel 已发出，`turn.done` 由这边在拿到 cancelled 响应时产出；
+   *  `true`  —— 已接手：prompt 等 cancelled 响应；握手期撤销待发消息并立即产 turn.done；
    *  `false` —— 这一刻根本没有在飞的轮次（最常见的是**进程已经死了**），
    *             调用方必须**自己补 `turn.done`**。
    *
@@ -382,7 +382,6 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     currentModel = caps.model
     deps.emit({ k: 'capabilities', models: caps.models, effortLevels: caps.effortLevels })
 
-    phase = 'ready'
     if (sessionId) {
       deps.emit({ k: 'session.ready', sessionId, model: currentModel ?? '', cwd })
     }
@@ -396,6 +395,8 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     } catch (e) {
       deps.emit({ k: 'error', fatal: false, message: `切换没生效：${(e as Error).message}` })
     }
+    // 首轮配置也是握手的一部分；结束前新消息不能绕过配置直接 pump。
+    if (phase === 'opening') phase = 'ready'
   }
 
   /** 把待下发的模型 / 强度真正发给服务端。
@@ -507,6 +508,13 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     },
 
     interrupt(): boolean {
+      // 还没发 session/prompt 就没有可 cancel 的 RPC。撤掉待发送的旧方向，
+      // 保留握手和会话；确认后收到的新方向继续等同一握手完成。
+      if (phase === 'opening' && queue.length > 0) {
+        queue.length = 0
+        deps.emit({ k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+        return true
+      }
       // 没有在飞的轮次就**如实说没接手**，让调用方补 turn.done。
       // 进程已死（phase === 'dead'）走的正是这条 —— 那是用户撞到的那次。
       if (phase !== 'prompting' || !sessionId) return false

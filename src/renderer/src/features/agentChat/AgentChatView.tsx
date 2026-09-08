@@ -842,6 +842,7 @@ export function AgentChatView({
    *
    *  preload 从模块加载期就按 sessionId 缓冲事件，这里订阅时会先回放攒下的再转实时，
    *  所以接管一个跑到一半的会话不会只看到「从现在开始」的半截输出。 */
+  const queuedEntriesRef = useRef(new Map<number, SentMessage>())
   const followupRef = useRef<(item: QueuedMessage) => Promise<boolean>>(async () => false)
   const messageQueue = useMessageQueue(sessionId, () => reducerRef.current.view().busy, item => followupRef.current(item))
   const messageQueueRef = useRef(messageQueue)
@@ -966,6 +967,7 @@ export function AgentChatView({
     const [fid, nid] = nodeRef.split('|')
     if (!fid || !nid) return
     messageQueueRef.current.controller.dispose()
+    queuedEntriesRef.current.clear()
     if (sessionId) window.api.agentChat.stop(sessionId)
     unsubRef.current?.()
     unsubRef.current = null
@@ -1327,7 +1329,8 @@ export function AgentChatView({
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
   const handleFollowupSend = async (
     message: string,
-    meta?: { text: string; images: { path: string; url: string }[] }
+    meta?: { text: string; images: { path: string; url: string }[] },
+    queueId?: number
   ): Promise<boolean> => {
     const trimmed = message.trim()
     if (!trimmed || !sessionId) return false
@@ -1346,7 +1349,10 @@ export function AgentChatView({
       images: meta?.images?.length ? meta.images : undefined,
       beforeTurnCount
     }
-    setSentMessages((prev) => [...prev, entry])
+    const previous = queueId === undefined ? undefined : queuedEntriesRef.current.get(queueId)
+    if (queueId !== undefined) queuedEntriesRef.current.set(queueId, entry)
+    // Retrying the same queued request replaces its failed optimistic entry.
+    setSentMessages((prev) => [...prev.filter(m => m !== previous), entry])
     const r = await window.api.agentChat
       .send(sessionId, trimmed)
       .catch((e): { ok: false; error: string } => ({
@@ -1356,6 +1362,7 @@ export function AgentChatView({
         ok: false,
         error: e instanceof Error ? e.message : String(e)
       }))
+    if (!aliveRef.current || messageQueueRef.current.sessionId !== sessionId) return r.ok
     if (r.ok) {
       // 甘特图。**只在真的送出去之后记** —— 失败那条已经从对话流里撤回了，
       // 记进图里等于留下一条从未发生过的任务。
@@ -1377,7 +1384,7 @@ export function AgentChatView({
     if (aliveRef.current) setSendError({ text: r.error, fatal: true })
     return false
   }
-  followupRef.current = item => handleFollowupSend(item.text, item.meta)
+  followupRef.current = item => handleFollowupSend(item.text, item.meta, item.id)
   const enqueueFollowup = (text: string, meta?: QueuedMessage['meta'], mode: 'queue' | 'redirect' = 'queue') => messageQueue.controller.submit({ text, meta }, mode)
 
   if (sessionId) {

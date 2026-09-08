@@ -1,5 +1,7 @@
 /** Per-chat pending messages. The transport's terminal event, not rendered text or a timer, releases the next message. */
 export interface QueuedMessage {
+  /** Assigned by the per-session queue, stable across explicit retries. */
+  id?: number
   text: string
   meta?: { text: string; images: { path: string; url: string }[] }
 }
@@ -13,16 +15,19 @@ export function createMessageQueue(deps: {
 }) {
   let items: QueueItem[] = [], serial = 0, disposed = false, waiting = false
   let paused = false, redirect = false, interrupting = false, inFlight = false, sendingId: number | null = null
+  let active: { item: QueueItem; queued: boolean; failed: boolean } | null = null
   const changed = (): void => { if (!disposed) deps.changed() }
   const schedule = (): void => { queueMicrotask(() => { if (!disposed) pump() }) }
   const snapshot = (): QueueSnapshot => ({ items: [...items], paused, interrupting, sendingId })
   const dispatch = async (item: QueueItem, queued: boolean): Promise<boolean> => {
+    const attempt = { item, queued, failed: false }
+    active = attempt
     inFlight = true; waiting = true; sendingId = item.id; changed()
     let ok = false
     try { ok = await deps.send(item) } catch { /* Retain the message; the owner reports the transport error. */ }
     if (disposed) return ok
     inFlight = false; sendingId = null
-    if (ok) { if (queued) items = items.filter(i => i.id !== item.id); if (!items.length) paused = false }
+    if (ok && !attempt.failed) { if (queued) items = items.filter(i => i.id !== item.id); if (!items.length) paused = false }
     else { waiting = false; if (queued || items.length) paused = true }
     changed(); schedule()
     return ok
@@ -53,7 +58,15 @@ export function createMessageQueue(deps: {
       if (kind === 'turn.start') waiting = true
       else {
         waiting = false; interrupting = false
-        if (kind === 'fatal') paused = items.length > 0
+        if (kind === 'fatal') {
+          if (active) {
+            active.failed = true
+            const failedItem = active.item
+            if (active.queued && !items.some(i => i.id === failedItem.id)) items.unshift(failedItem)
+            active = null
+          }
+          paused = items.length > 0
+        } else active = null
         changed(); schedule()
       }
     },
@@ -70,6 +83,6 @@ export function createMessageQueue(deps: {
     },
     pause(): void { paused = true; redirect = false; changed() },
     retry(): void { paused = false; changed(); schedule() },
-    dispose(): void { disposed = true; items = [] }
+    dispose(): void { disposed = true; items = []; active = null }
   }
 }

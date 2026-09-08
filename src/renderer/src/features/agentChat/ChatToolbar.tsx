@@ -266,7 +266,7 @@ export function ChatToolbar({
   )
 
   const submit = (mode: 'queue' | 'redirect' = 'queue'): void => {
-    if (mode === 'queue' && slash.consumeCommand()) return
+    if (slash.consumeCommand()) return
     const t = text.trim()
     // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
     // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
