@@ -1,0 +1,93 @@
+{
+  "version": "0.4.86",
+  "backup": "/www/wwwroot/eas-release-backups/0.4.86-20260908T173905Z",
+  "before": {
+    "index.html": "92edfccc1ead74cdb959ee5813da3d61440692d51547436a53cdb5644c4a921d",
+    "download.html": "e1c009324553d5361217c05e214f659276558b302659d7c1249685debd6f2f34",
+    "changelog.html": "e408b08cfb5eff3ba89fbf354aa70e1b5c3b6b15a8bde24acdaf921bd8122de8",
+    "latest.json": "512235157534c4cb31f0653bbfcb97ae5af78b07921b3f3df7b8a91307584f0f"
+  },
+  "healthBefore": {
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "eas.biily.top": "301",
+    "rove.biily.top": "301",
+    "siming.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301"
+  },
+  "artifacts": [
+    {
+      "name": "Eas-Term-0.4.86-arm64.dmg",
+      "sha256": "5139029cc1bb72ed54571ac7eeadb32bb58f826f3e3070a8e0ab6e4b18274675",
+      "size": 204384222
+    },
+    {
+      "name": "Eas-Term-0.4.86-arm64.zip",
+      "sha256": "0006e0a979051c1422e5ba2ffd917fd6e31a20075f0b36d80c53f1e38e37503a",
+      "size": 202543803
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64.dmg",
+      "sha256": "16f644455f0c8dd931787e53b7874ad63e1c986e7efad39e7f872f26d7f3477a",
+      "size": 216415875
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64.zip",
+      "sha256": "f95f7c51606cd5b9758a0d6fe0b81eb57fc2c573d6eefc16b64e1ae61a796712",
+      "size": 214642193
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64-setup.exe",
+      "sha256": "776f1a12e166c84227f77e57a2b5ed48eeb7848752512b91f7e91edb4421aef3",
+      "size": 190065899
+    }
+  ],
+  "after": {
+    "index.html": "94fbad92304c5983189a16b89aa9166534758fcab117026f894beae43d51b434",
+    "download.html": "942c35156b3d79150ca4ccddeb5a655227889f5569ccf6f6fe7355166caa5a81",
+    "changelog.html": "1e4e5425f3614062f81fc7b5b6d8026452b6c32cd71bd1960aa7f538ee899874",
+    "latest.json": "e104930dac973c3ee593b18f59209ce7a65efa29d26433411fe426542ad21c74"
+  },
+  "healthAfter": {
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "eas.biily.top": "301",
+    "rove.biily.top": "301",
+    "siming.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301"
+  },
+  "publicArtifactChecks": [
+    {
+      "name": "Eas-Term-0.4.86-arm64.dmg",
+      "head": 200,
+      "range": 206,
+      "bytesMatched": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.86-arm64.zip",
+      "head": 200,
+      "range": 206,
+      "bytesMatched": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64.dmg",
+      "head": 200,
+      "range": 206,
+      "bytesMatched": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64.zip",
+      "head": 200,
+      "range": 206,
+      "bytesMatched": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.86-x64-setup.exe",
+      "head": 200,
+      "range": 206,
+      "bytesMatched": 1024
+    }
+  ]
+}
