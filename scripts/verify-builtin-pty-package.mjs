@@ -7,12 +7,12 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { spawn, execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { ompCanvasProof } from './builtin-cli-evidence.mjs'
+import { shellQuote, nativePtyArgs, nativePtyEvidence } from './builtin-pty-evidence.mjs'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const args = process.argv.slice(2)
 const option = name => { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1] }
 if (args.includes('--help')) {
-  console.log('node scripts/verify-builtin-cli-package.mjs --executable <packaged executable> --cli claude|codex|omp --allow-real-model-calls [--tool canvas_open_image|canvas_open_file] [--model <id>] [--profile <owned verification profile>] [--omp-source-profile <Eas userData>] [--restart] [--timeout-ms 240000] [--output <directory>]\nMac sandbox prevents writes to real global rules/config while allowing CLI authentication and native session persistence. --restart additionally relaunches this exact package/profile and resumes again. Profile is retained (0600 marker) for recovery and contains copied credentials. Windows requires a separate isolated OS user; this runner currently fails closed there.')
+  console.log('node scripts/verify-builtin-pty-package.mjs --executable <packaged executable> --cli claude|codex|omp --allow-real-model-calls [--tool canvas_open_image|canvas_open_file] [--model <id>] [--profile <owned verification profile>] [--omp-source-profile <Eas userData>] [--restart] [--timeout-ms 240000] [--output <directory>]\nMac sandbox prevents writes to real global rules/config while allowing CLI authentication and native session persistence. --restart additionally relaunches this exact package/profile and resumes again. Profile is retained (0600 marker) for recovery and contains copied credentials. Windows requires a separate isolated OS user; this runner currently fails closed there.')
   process.exit(0)
 }
 if (!args.includes('--allow-real-model-calls')) throw new Error('Refusing model calls: explicitly pass --allow-real-model-calls')
@@ -24,8 +24,8 @@ if (!['claude', 'codex', 'omp'].includes(cli)) throw new Error('Select --cli cla
 if (process.platform !== 'darwin') throw new Error('This runner requires macOS sandbox protection; Windows acceptance needs an isolated OS-user runner')
 const timeout = Number(option('--timeout-ms') ?? 240000)
 if (!Number.isFinite(timeout) || timeout < 1000 || timeout > 1800000) throw new Error('Invalid timeout')
-const profile = path.resolve(option('--profile') ?? fs.mkdtempSync(path.join(os.tmpdir(), 'eas-cli-package-')))
-const marker = path.join(profile, '.builtin-cli-verification.json')
+const profile = path.resolve(option('--profile') ?? fs.mkdtempSync(path.join(os.tmpdir(), 'eas-pty-package-')))
+const marker = path.join(profile, '.builtin-pty-verification.json')
 if (fs.existsSync(profile) && fs.readdirSync(profile).length && !fs.existsSync(marker)) throw new Error('Refusing non-verification profile')
 fs.mkdirSync(profile, { recursive: true, mode: 0o700 })
 fs.chmodSync(profile, 0o700)
@@ -34,7 +34,7 @@ const projectDirectory = path.join(profile, '测试项目 with spaces')
 fs.mkdirSync(projectDirectory, { recursive: true })
 const project = fs.realpathSync(projectDirectory)
 fs.writeFileSync(path.join(profile, 'projects.json'), JSON.stringify([{ id:'verification-project', name:'CLI 验证', path:project }]), { mode:0o600 })
-const output = path.resolve(option('--output') ?? path.join(root, 'docs/verification/builtin-capabilities', `actual-${cli}-${Date.now()}`))
+const output = path.resolve(option('--output') ?? path.join(root, 'docs/verification/builtin-capabilities', `actual-pty-${cli}-${Date.now()}`))
 fs.mkdirSync(output, { recursive: true })
 fs.writeFileSync(path.join(profile, 'skill-prefs.json'), JSON.stringify({ muted: true }))
 fs.writeFileSync(path.join(profile, 'prefs.json'), JSON.stringify({ autoUpdateCheck: false, telemetry: false, island: false }))
@@ -72,7 +72,7 @@ const globalWriteProtectionEnforced = globalWriteProtectionProbe.length > 0 && g
 if (!globalWriteProtectionEnforced) throw new Error('OS global-rule write protection could not be verified; app not launched')
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 let app, ws, evaluate, send
-const report = { cli, requestedTool, globalWriteProtectionEnforced, globalWriteProtectionProbe, executable, executableSha256: digestFile(executable), appAsarSha256: digestFile(path.resolve(path.dirname(executable), '../Resources/app.asar')), profile, project, realModelCalls: true, simulatedTransport: false, phases: [], passed: false }
+const report = { cli, requestedTool, globalWriteProtectionEnforced, globalWriteProtectionProbe, executable, executableSha256: digestFile(executable), appAsarSha256: digestFile(path.resolve(path.dirname(executable), '../Resources/app.asar')), profile, project, realModelCalls: true, transport: 'native PTY shell PATH launcher', simulatedTransport: false, phases: [], passed: false }
 const bounded = async (fn, duration, description) => { const deadline = Date.now() + duration; while (Date.now() < deadline) { const value = await fn(); if (value) return value; await wait(150) } throw new Error(description) }
 async function launch() {
   try { fs.unlinkSync(path.join(profile, 'DevToolsActivePort')) } catch {}
@@ -91,12 +91,12 @@ async function launch() {
   ws.addEventListener('message', event => { const data = JSON.parse(event.data), call = pending.get(data.id); if (call) { pending.delete(data.id); clearTimeout(call.timer); data.error ? call.reject(new Error('CDP failed')) : call.resolve(data.result) } })
   send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq; const timer = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: ' + method)) }, 30000); pending.set(id, { resolve, reject, timer }); ws.send(JSON.stringify({ id, method, params })) })
   evaluate = async expression => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text); return r.result?.value }
-  await bounded(() => evaluate('!!window.__store && !!window.api?.agentChat'), 30000, 'Verification renderer store/preload unavailable')
+  await bounded(() => evaluate('!!window.__store && !!window.api?.pty'), 30000, 'Verification renderer store/preload unavailable')
   await evaluate(`window.api.capabilities.setModule('workbench', true)`)
   report.bundle = await evaluate('window.api.capabilities.status()')
 }
 async function close() {
-  if (ws?.readyState === WebSocket.OPEN) { try { await evaluate('window.__packageUnsubscribe?.(); if(window.__packageSession) window.api.agentChat.stop(window.__packageSession)') } catch {} }
+  if (ws?.readyState === WebSocket.OPEN) { try { await evaluate('window.__packageUnsubscribe?.(); if(window.__packagePty) window.api.pty.kill(window.__packagePty)') } catch {} }
   ws?.close(); ws = undefined
   if (app && app.exitCode === null && app.signalCode === null) {
     app.kill('SIGTERM')
@@ -105,51 +105,40 @@ async function close() {
   }
 }
 async function phase(name, file, resumeId) {
-  // The decoy Frame is first and active. Correct placement must use the managed lease's leaf/node.
-  await evaluate(`(() => { const s=window.__store.getState(); const pane={kind:'agent',cwd:${JSON.stringify(project)},cli:${JSON.stringify(cli)}};
+  const pty = await evaluate(`window.api.pty.create({cwd:${JSON.stringify(project)},cols:120,rows:36})`)
+  await evaluate(`(() => { const s=window.__store.getState(); const pane={kind:'terminal',cwd:${JSON.stringify(project)},ptyId:${JSON.stringify(pty.id)}};
     const frame=(id,leaf,node,x)=>({id,name:id,projectId:'verification-project',x,y:0,w:900,h:800,collapsed:false,nodes:[{id:node,leafId:leaf,x:30,y:40,w:700,h:650}]});
-    window.__store.setState({viewMode:'canvas',projects:[{id:'verification-project',name:'CLI 验证',path:${JSON.stringify(project)}}],activeProjectId:'verification-project',tabs:[{id:'decoy-tab',title:'Decoy',cwd:${JSON.stringify(project)},activeLeafId:'decoy-leaf',root:{type:'leaf',id:'decoy-leaf',pane}}, {id:'target-tab',title:'Target',cwd:${JSON.stringify(project)},activeLeafId:'target-leaf',root:{type:'leaf',id:'target-leaf',pane}}],activeTabId:'decoy-tab',canvas:{...s.canvas,frames:[frame('decoy-frame','decoy-leaf','decoy-node',0),frame('target-frame','target-leaf','target-node',1000)]}});
-    window.__packageEvents=[]; window.__packageUnsubscribe?.(); })()`)
-  const message = `This is an authorized packaged MCP acceptance check. Use the Eas-Term ${requestedTool} MCP tool exactly once to open this existing local PNG: ${file}. Do not use bash, code, file editing, image generation, external services, or any other mutation. Discover the MCP tool if needed. Pass only path; do not specify a Frame. After the tool succeeds reply DONE. A text claim without the real MCP call does not pass.`
-  const params = { cli, cwd: project, message, agentLeafId: 'target-leaf', agentNodeId: 'target-node', skipApprovalHook: true, ...(resumeId ? { resumeId } : {}), ...(option('--model') ? { model: option('--model') } : {}) }
-  const started = await evaluate(`(async()=>{const result=await window.api.agentChat.start(${JSON.stringify(params)});if(result.ok){window.__packageSession=result.sessionId;window.__packageUnsubscribe=window.api.agentChat.onEvent(result.sessionId,event=>window.__packageEvents.push(event));}return result})()`)
-  if (!started.ok) throw new Error('Native session start rejected: ' + started.error)
-  const item = { name, file, sessionId: started.sessionId, requestedResumeId: resumeId ?? null }
-  report.phases.push(item)
-  await bounded(async () => {
-    const events = await evaluate('window.__packageEvents')
-    // Never automatically approve arbitrary native commands even if a model ignores the narrow prompt.
-    if (events.some(e => e.k === 'approval.request')) throw new Error('Native approval requested; inspect the user-visible request')
-    if (events.some(e => e.k === 'error' && e.fatal)) throw new Error('Fatal native CLI event')
-    return events.some(e => e.k === 'turn.done')
-  }, timeout, 'Native model turn did not finish')
-  const events = await evaluate('window.__packageEvents')
-  item.resumeId = events.filter(e => e.k === 'session.ready').at(-1)?.sessionId
-  const executions = events.filter(e => e.k === 'exec.start' || e.k === 'exec.done')
-  // Retain only tool receipts, never model text, environment, auth files or stderr.
-  item.nativeToolProof = cli === 'omp' ? ompCanvasProof(profile, file, requestedTool) : []
-  const canvasIds = new Set([...executions.filter(e => JSON.stringify(e).includes(requestedTool)).map(e => e.execId), ...item.nativeToolProof.map(e => e.execId)])
-  item.diagnostics = { eventCounts: events.reduce((counts, e) => { counts[e.k] = (counts[e.k] ?? 0) + 1; return counts }, {}), executionIds: executions.map(e => ({ k:e.k, execId:e.execId, ok:e.ok, tool:e.tool })), errors: events.filter(e => e.k === 'error').map(e => ({ fatal:e.fatal, message:String(e.message ?? '').replace(/(?:sk-|Bearer )[A-Za-z0-9._-]+/g,'[REDACTED]').slice(0,500) })) }
-  item.executions = executions.filter(e => canvasIds.has(e.execId)).map(e => ({ k:e.k, execId:e.execId, tool:e.tool, label:e.label, detail:e.detail, ok:e.ok, output:e.output }))
-  const startIds = new Set(item.executions.filter(e => e.k === 'exec.start').map(e => e.execId))
-  if (!item.executions.some(e => e.k === 'exec.done' && e.ok && startIds.has(e.execId))) throw new Error('No paired real successful ' + requestedTool + ' execution events')
-  item.canvas = await evaluate(`(() => { const s=window.__store.getState(); const leaves=n=>n.type==='leaf'?[n]:n.children.flatMap(leaves); const all=s.tabs.flatMap(t=>leaves(t.root)); return s.canvas.frames.map(f=>({id:f.id,nodes:f.nodes.map(n=>({id:n.id,leafId:n.leafId,pane:n.pane??all.find(l=>l.id===n.leafId)?.pane})).filter(n=>n.pane?.kind==='image').map(n=>({id:n.id,filePath:n.pane.filePath}))})) })()`)
-  const matches = item.canvas.flatMap(f => f.nodes.filter(n => n.filePath === file).map(n => ({ frameId:f.id,nodeId:n.id })))
-  if (matches.length !== 1 || matches[0].frameId !== 'target-frame') throw new Error('PNG did not appear exactly once in the lease-bound target Frame')
-  if (!item.resumeId) throw new Error('Native CLI supplied no resumable identity')
-  if (resumeId && item.resumeId !== resumeId) throw new Error('CLI resumed a different identity')
-  // Placement was checked while the decoy was active. Only now center the actual
-  // destination for a useful screenshot, then verify the real renderer decoded its PNG.
-  await evaluate(`(() => { const s=window.__store.getState(), f=s.canvas.frames.find(f=>f.id==='target-frame'); const scale=Math.min(.8,(innerWidth-100)/f.w,(innerHeight-150)/f.h); s.setMaximizedNode(null); s.setViewport({x:(innerWidth-f.w*scale)/2-f.x*scale,y:70-f.y*scale,scale}) })()`)
-  item.imageDecoded = await bounded(() => evaluate(`(() => { const node=document.querySelector('.cfile-node[data-node-id="'+${JSON.stringify(matches[0].nodeId)}+'"]'); const img=node?.querySelector('img'); return img?.complete && img.naturalWidth>0 && img.naturalHeight>0 ? {nodeId:${JSON.stringify(matches[0].nodeId)},naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}:null })()`),15000,'Placed PNG did not decode in the actual target image pane')
-  await wait(300)
-  item.passed = true
-  const shot = await send('Page.captureScreenshot', { format:'png' })
-  fs.writeFileSync(path.join(output, `${name}.png`), Buffer.from(shot.data,'base64'))
-  await evaluate('window.__packageUnsubscribe?.(); window.api.agentChat.stop(window.__packageSession); window.__packageSession=null')
+    window.__store.setState({viewMode:'canvas',projects:[{id:'verification-project',name:'PTY 验证',path:${JSON.stringify(project)}}],activeProjectId:'verification-project',tabs:[{id:'decoy-tab',title:'Decoy',cwd:${JSON.stringify(project)},activeLeafId:'decoy-leaf',root:{type:'leaf',id:'decoy-leaf',pane:{kind:'code',filePath:${JSON.stringify(file)}}}}, {id:'target-tab',title:'Target',cwd:${JSON.stringify(project)},activeLeafId:'target-leaf',root:{type:'leaf',id:'target-leaf',pane}}],activeTabId:'decoy-tab',canvas:{...s.canvas,frames:[frame('decoy-frame','decoy-leaf','decoy-node',0),frame('target-frame','target-leaf','target-node',1000)]}});
+    window.__packagePty=${JSON.stringify(pty.id)}; })()`)
+  const prompt = `Authorized packaged PTY MCP test: call the Eas-Term ${requestedTool} tool exactly once with path ${file}. No Frame argument: use your current managed terminal context. Do not run shell commands, edit files, generate images, use external services or perform other mutations. Reply DONE after the real MCP call succeeds.`
+  const stdoutFile=path.join(profile,name+'-native.jsonl'), stderrFile=path.join(profile,name+'-native.stderr'), exitFile=path.join(profile,name+'-exit'), resolvedFile=path.join(profile,name+'-launcher')
+  for(const old of [stdoutFile,stderrFile,exitFile,resolvedFile])try{fs.unlinkSync(old)}catch{}
+  const command = `command -v ${cli} > ${shellQuote(resolvedFile)}; command ${[cli,...nativePtyArgs(cli,prompt,resumeId,option('--model'))].map(shellQuote).join(' ')} > ${shellQuote(stdoutFile)} 2> ${shellQuote(stderrFile)}; printf '%s' "$?" > ${shellQuote(exitFile)}\r`
+  const item={name,file,ptyId:pty.id,requestedResumeId:resumeId??null};report.phases.push(item)
+  await evaluate(`window.api.pty.write(${JSON.stringify(pty.id)},${JSON.stringify(command)})`)
+  await bounded(()=>fs.existsSync(exitFile),timeout,'Native PTY CLI did not exit; no tool receipt claimed')
+  item.exitCode=Number(fs.readFileSync(exitFile,'utf8').trim())
+  item.launcherPath=fs.readFileSync(resolvedFile,'utf8').trim()
+  if(!item.launcherPath.includes('capability-pty-bin'))throw new Error('Shell did not resolve managed capability PATH launcher')
+  if(item.exitCode!==0)throw new Error('Native PTY CLI failed (stderr retained only in private profile)')
+  const raw=fs.readFileSync(stdoutFile,'utf8')
+  const evidence=nativePtyEvidence(cli,raw,file,requestedTool)
+  item.resumeId=evidence.resumeId;item.receipts=evidence.receipts
+  if(!item.receipts.some(receipt=>receipt.result.frameId==='target-frame'))throw new Error('No native structured MCP receipt for the target Frame')
+  if(!item.resumeId)throw new Error('No native resumable identity in structured PTY output')
+  if(resumeId&&item.resumeId!==resumeId)throw new Error('Native CLI resumed a different identity')
+  item.canvas=await evaluate(`(()=>{const s=window.__store.getState();const leaves=n=>n.type==='leaf'?[n]:n.children.flatMap(leaves);const all=s.tabs.flatMap(t=>leaves(t.root));return s.canvas.frames.map(f=>({id:f.id,nodes:f.nodes.map(n=>({id:n.id,pane:n.pane??all.find(l=>l.id===n.leafId)?.pane})).filter(n=>n.pane?.kind==='image').map(n=>({id:n.id,filePath:n.pane.filePath}))}))})()`)
+  const matches=item.canvas.flatMap(f=>f.nodes.filter(n=>n.filePath===file).map(n=>({frameId:f.id,nodeId:n.id})))
+  if(matches.length!==1||matches[0].frameId!=='target-frame')throw new Error('PTY PNG not placed exactly once in the bound Frame')
+  await evaluate(`(()=>{const s=window.__store.getState(),f=s.canvas.frames.find(f=>f.id==='target-frame');const scale=Math.min(.8,(innerWidth-100)/f.w,(innerHeight-150)/f.h);s.setMaximizedNode(null);s.setViewport({x:(innerWidth-f.w*scale)/2-f.x*scale,y:70-f.y*scale,scale})})()`)
+  item.imageDecoded=await bounded(()=>evaluate(`(()=>{const img=document.querySelector('.cfile-node[data-node-id="'+${JSON.stringify(matches[0].nodeId)}+'"] img');return img?.complete&&img.naturalWidth>0?{naturalWidth:img.naturalWidth,naturalHeight:img.naturalHeight}:null})()`),15000,'PTY PNG failed actual renderer decode')
+  await wait(300);const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,name+'.png'),Buffer.from(shot.data,'base64'))
+  item.passed=true
+  await evaluate('window.api.pty.kill(window.__packagePty);window.__packagePty=null')
   await wait(500)
   return item.resumeId
 }
+
 try {
   await launch()
   const first = await phase('new', files[0])

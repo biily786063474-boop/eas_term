@@ -34,7 +34,10 @@ async function fixture(){
  const sandbox={capabilitySessions:sessions,capabilityLeases:new Map(),builtinCapabilityHost:{releaseSession:(id:string)=>released.push(id)},port:1,token:'test-only',
   path,fs,process:{execPath:process.execPath,resourcesPath:root},app:{getPath:()=>root,getAppPath:()=>root,isPackaged:false},
   capabilityInvocationCwd,sessionMcpServers:()=>[],agentMcpConfigPath:()=>path.join(root,'test-config.json'),
-  capabilityPreferences:()=>({preferences:{workbench:true,bizone:false}}),sessionCapabilityGuidance:()=>'',
+  capabilityPreferences:()=>({preferences:{workbench:true,bizone:false,guidance:true}}),sessionCapabilityGuidance:()=>'',
+  ompHostPaths:()=>({userData:root,home:root}),
+  prepareOmpPtyConfig:(host:{userData:string},binary:string,args:string[],guidance:boolean)=>{assert.equal(host.userData,root);assert.equal(binary,process.execPath);assert.equal(args.length,0);assert.equal(guidance,true);return {HOME:root,PI_CONFIG_DIR:'omp',PI_CODING_AGENT_DIR:path.join(root,'omp/agent'),OMP_SKIP_SETUP:'1'}},
+  runnerFor:()=>({command:process.execPath,args:[]}),serverScriptPath:()=>path.join(root,'mcp/server.mjs'),createOmpCapabilityPlugin:()=>null,
   buildPtyCapabilityCommand:(body:{binary:string;args:string[]})=>({command:body.binary,args:body.args}),
   readBody:(req:http.IncomingMessage)=>new Promise<string>((resolve,reject)=>{bodyStarted?.();let text='';req.on('data',chunk=>text+=chunk);req.on('end',()=>resolve(text));req.on('error',reject)})}
  const runtime=runInNewContext(code+'\n({handle,capabilityPtyEnv,revokeCapabilitySession})',sandbox)
@@ -109,5 +112,15 @@ test('actual PTY onExit callback revokes parent and all children, releasing only
   for(const child of children)assert.throws(()=>f.sessions.authenticate(JSON.parse(child.result!.env.EAS_CAPABILITY_LEASE)))
   assert.equal(f.sessions.authenticate(JSON.parse(survivor.env.EAS_CAPABILITY_LEASE)).ptyId,'pty-b')
   assert.deepEqual(new Set(f.released),new Set([parent.id,...children.map(c=>c.result!.leaseId)]))
+ }finally{await f.close()}
+})
+test('actual OMP launch route prepares managed config and returns only explicit root overlay plus child lease',async()=>{
+ const f=await fixture()
+ try{
+  const result=await f.post('/capability/launch',{...f.payload(f.parent()),kind:'omp',args:[]})
+  assert.equal(result.status,200)
+  assert.equal(result.result!.env.PI_CODING_AGENT_DIR,path.join(f.root,'omp/agent'))
+  assert.equal(result.result!.env.HOME,f.root)
+  assert.deepEqual(Object.keys(result.result!.env).sort(),['EAS_CAPABILITY_LEASE','EAS_TERM_PORT','HOME','OMP_SKIP_SETUP','PI_CODING_AGENT_DIR','PI_CONFIG_DIR'])
  }finally{await f.close()}
 })

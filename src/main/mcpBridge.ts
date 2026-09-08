@@ -24,6 +24,8 @@ import { ingestStatusline } from './quotaStore'
 import { builtinCapabilityHost, pluginBye, pluginHeartbeat, pluginRpcFromShim } from './pluginHost.ts'
 import { writeCapabilitySnapshot } from './capabilitySnapshot.ts'
 import { selectedNativeServers, capabilityMcpConfig } from './selectedCapabilityServers.ts'
+import { prepareOmpPtyConfig } from './ompPtyConfig.ts'
+import { hostPaths as ompHostPaths } from './agentChat/omp/host.ts'
 import { assembleCapabilityServers, type SessionMcpServer } from '../shared/builtinCapabilities.ts'
 import { CapabilitySessions, type CapabilityLease } from './capabilitySessions.ts'
 import { capabilityBundleRoot, capabilityGuidanceDir } from './capabilityBundlePaths.ts'
@@ -806,6 +808,7 @@ export function registerMcpBridge(): void {
           const configPath = agentMcpConfigPath(undefined, child.id) ?? writeCapabilitySnapshot(path.join(app.getPath('userData'), 'capability-snapshots'), child.id, {})
           const host = { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath }
           const preferences = capabilityPreferences().preferences
+          const ompEnv = body.kind === 'omp' ? prepareOmpPtyConfig(ompHostPaths(), body.binary, body.args, preferences.guidance) : {}
           const ompExtension = body.kind === 'omp' ? createOmpCapabilityPlugin({
             appOwnedRoot: app.getPath('userData'),
             runner: runnerFor([path.join(path.dirname(serverScriptPath()), 'eas-capability-shim.mjs')]),
@@ -814,7 +817,7 @@ export function registerMcpBridge(): void {
           })?.root : undefined
           const launch = buildPtyCapabilityCommand(body, { servers, configPath, guidance: sessionCapabilityGuidance(), ompExtension }, host)
           return send(200, { ok: true, result: { leaseId: child.id, command: launch.command, args: launch.args,
-            env: { ...launch.env, EAS_TERM_PORT: String(port), EAS_CAPABILITY_LEASE: JSON.stringify(child) } } })
+            env: { ...launch.env, ...ompEnv, EAS_TERM_PORT: String(port), EAS_CAPABILITY_LEASE: JSON.stringify(child) } } })
         } catch (error) {
           for (const id of capabilitySessions.revoke(child.id)) builtinCapabilityHost.releaseSession(id)
           throw error

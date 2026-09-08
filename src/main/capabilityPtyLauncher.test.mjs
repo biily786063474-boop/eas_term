@@ -178,3 +178,19 @@ test('non-TTY SIGINT is forwarded to the owned child and closes its lease', { sk
   assert.equal((await result).code,44)
   assert.equal(f.calls.filter(c=>c.url.endsWith('/close')).length,1)
 })
+test('actual OMP PTY launcher removes conflicting profiles while preserving caller secrets and managed directory routing', { skip: process.platform === 'win32' }, async t => {
+  const f = await fixture(t, `console.log(JSON.stringify(Object.fromEntries(['HOME','PI_CONFIG_DIR','PI_CODING_AGENT_DIR','OMP_PROFILE','PI_PROFILE','XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_STATE_HOME','XDG_CACHE_HOME','USER_TEST_SECRET','EAS_SECRET_TOKEN','ELECTRON_RUN_AS_NODE'].map(k=>[k,process.env[k]]))))`)
+  const managed = path.join(f.root, 'app-owned', 'omp', 'agent')
+  f.setResponder((body, res) => res.end(JSON.stringify({ ok: true, result: { leaseId: 'omp-lease', command: path.join(f.bin, 'codex'), args: body.args,
+    env: { HOME: f.root, PI_CONFIG_DIR: 'app-owned/omp', PI_CODING_AGENT_DIR: managed, OMP_SKIP_SETUP: '1' } } })))
+  const env = { ...f.env, EAS_OMP_BINARY: path.join(f.bin, 'codex'), HOME: '/wrong-home', PI_CONFIG_DIR: '/wrong-config', PI_CODING_AGENT_DIR: '/wrong-agent',
+    OMP_PROFILE: 'wrong-profile', PI_PROFILE: 'wrong-profile', XDG_CONFIG_HOME: '/wrong-xdg', XDG_DATA_HOME: '/wrong-xdg', XDG_STATE_HOME: '/wrong-xdg', XDG_CACHE_HOME: '/wrong-xdg', USER_TEST_SECRET: 'caller-secret-retained' }
+  const result = await completed(spawn(process.execPath, [launcher, 'omp', '--print'], { cwd: f.root, env, stdio: ['ignore','pipe','pipe'] }))
+  assert.equal(result.code, 0, result.err)
+  const body = JSON.parse(result.out)
+  assert.equal(body.PI_CODING_AGENT_DIR, managed); assert.equal(body.HOME, f.root)
+  assert.equal(body.PI_CONFIG_DIR, 'app-owned/omp'); assert.equal(body.USER_TEST_SECRET, 'caller-secret-retained')
+  assert.equal(body.EAS_SECRET_TOKEN, 'KEEP-SECRET-BOUNDARY')
+  for (const key of ['OMP_PROFILE','PI_PROFILE','XDG_CONFIG_HOME','XDG_DATA_HOME','XDG_STATE_HOME','XDG_CACHE_HOME','ELECTRON_RUN_AS_NODE']) assert.equal(body[key], undefined, key)
+  assert.equal(f.calls[0].body.kind, 'omp')
+})

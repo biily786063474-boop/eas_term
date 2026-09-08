@@ -127,6 +127,16 @@ export async function runCapabilityPtyLauncher(argv = process.argv.slice(2), env
     delete baseEnv.EAS_CAPABILITY_PARENT
     if (baseEnv.EAS_CAPABILITY_NODE_FALLBACK === '1') delete baseEnv.ELECTRON_RUN_AS_NODE
     delete baseEnv.EAS_CAPABILITY_NODE_FALLBACK
+    if (kind === 'omp') {
+      // Keep caller secrets/PATH, but remove all conflicting native profile roots
+      // before applying the main process's small directory-only managed overlay.
+      const roots = new Set(['HOME', 'PI_CONFIG_DIR', 'PI_CODING_AGENT_DIR', 'OMP_PROFILE', 'PI_PROFILE',
+        'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME'])
+      for (const key of Object.keys(baseEnv)) if (roots.has(key.toUpperCase())) delete baseEnv[key]
+      if (!result.env.PI_CODING_AGENT_DIR || !path.isAbsolute(result.env.PI_CODING_AGENT_DIR) || !result.env.HOME || !result.env.PI_CONFIG_DIR) {
+        throw new Error('Managed OMP directory configuration is missing')
+      }
+    }
     const childEnv = { ...baseEnv, ...result.env }
     // Main may intentionally provide Electron's mode for its returned command,
     // but the parent capability and launcher marker never belong to the CLI.

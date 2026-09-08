@@ -267,6 +267,7 @@ const SCRUB_KEYS = [
   'PI_CODING_AGENT_DIR',
   'OMP_PROFILE',
   'PI_PROFILE',
+  'XDG_CONFIG_HOME',
   'XDG_DATA_HOME',
   'XDG_STATE_HOME',
   'XDG_CACHE_HOME',
@@ -306,8 +307,10 @@ const SCRUB_KEYS = [
  *  那条命令读的是用户**真实的 `~/.omp`**（凭证、会话记录、额度全是别人的那套），
  *  而且不报错。所以抽出来，四个调用点都从这里拿。 */
 export function ompBaseEnv(host: HostPaths): Record<string, string> {
+  const inherited = { ...(PROBE_ENV as Record<string, string>) }
+  for (const k of SCRUB_KEYS) delete inherited[k]
   const env: Record<string, string> = {
-    ...(PROBE_ENV as Record<string, string>),
+    ...inherited,
     // **HOME 必须与算相对路径用的那个同源**。`agentRules.ts:41-43` 记着一次实测事故：
     // `os.homedir()` 跟随 `$HOME`、`app.getPath('home')` 不跟随，两者分叉过。
     // omp 那边用的是 `os.homedir()`，所以显式把 HOME 钉成我们算路径时用的那一个，
@@ -322,7 +325,6 @@ export function ompBaseEnv(host: HostPaths): Record<string, string> {
     // 不设的话首次起会话会挂在等输入，界面上看到的是「超时」而看不出原因。
     OMP_SKIP_SETUP: '1'
   }
-  for (const k of SCRUB_KEYS) delete env[k]
   return env
 }
 

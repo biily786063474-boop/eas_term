@@ -192,3 +192,11 @@ Selected native stdio servers now share the same base-plus-selected snapshot acr
 新增 `canvas_open_image` 是受限替代：仅项目内 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG/HTML/视频/外部网址。`fs:validateRasterImage` → `main/rasterImage.ts` 校验 guardPath/guardDir、真实路径属于当前会话项目、大小与文件头（不是完整图片解码保证）；renderer 在 IO 后重新确认租约 Frame 和当前容量，然后同步新增图片节点，满额拒绝且不驱逐。它明确是画布写操作：`readOnlyHint:false, destructiveHint:false, openWorldHint:false`，未声称幂等。普通业务插件 canvas 白名单不扩大。
 
 回归：`workbenchSchema.test.ts` 通过实际 stdio initialize/tools/list 验证公共目录和注解；`rasterImage.test.ts` 验证真实文件、跨项目软链与格式；`canvasOpenImage.test.ts` 执行生产 handler 分支，覆盖异步验证后的容量/身份变化。正式包 CLI 调用证据由发布验收另行记录。
+
+## OMP PTY 配置与账号目录（2026-09-08）
+
+`/capability/launch` 的 OMP 分支先经 `prepareOmpPtyConfig` 核对执行体真实路径等于随包 OMP，再复用 `writeManagedConfig` 写 app-owned 配置。返回给 PTY 的仅是 `HOME / PI_CONFIG_DIR / PI_CODING_AGENT_DIR / OMP_SKIP_SETUP` 四个路由值和该次能力租约，不返回主进程完整环境或 API key。认证仍由 OMP 在同一 `<userData>/omp/agent` 读取，审批档位仍取应用设置，未重置用户 `~/.omp`。
+
+`eas-pty-launcher` 仅对 OMP 清除继承的 profile / XDG / 旧目录覆盖，再叠加上述四项；保留终端原有用户 secrets。显式 `--profile` / `--session-dir` 会脱离受管认证/会话目录，目前明确拒绝。自定义 OMP 执行体不能获得受管目录配置。`ompBaseEnv` 顺序必须是先删继承配置、后写受管绝对目录；反过来会把刚设的 `PI_CODING_AGENT_DIR` 删除。
+
+验证包含真实 launcher 子进程环境、生产 HTTP route 分支、完整 OMP paths/launch 回归、应用保存的 always-ask 档位保持及用户 `.omp` 文件未变；真实正式包 PTY 模型/恢复测试另由发布 runner 提供证据。
