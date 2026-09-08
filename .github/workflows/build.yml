@@ -24,6 +24,11 @@ jobs:
           node-version: 22
       - name: Diagnostic unit tests
         run: node --test src/main/diagnostics/core.test.ts src/main/diagnostics/transport.test.ts src/main/diagnostics/pending.test.ts src/main/diagnostics/wiring.test.mjs
+      - name: Optional Bizone and real OMP regression
+        shell: pwsh
+        run: |
+          $env:EAS_VERIFY_REAL_OMP = (Resolve-Path "release/win-unpacked/resources/omp/omp.exe").Path
+          node --test src/main/capabilityTransport.test.ts src/main/builtinCapabilityHost.test.ts src/main/bizoneRuntime.test.ts src/main/bizoneWindowsDiscovery.test.ts
       - name: Packaged smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term Diagnostic.exe"
       - name: Diagnostic runtime verification

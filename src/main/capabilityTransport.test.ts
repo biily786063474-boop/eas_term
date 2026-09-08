@@ -173,7 +173,10 @@ test('real bundled OMP answers with missing Bizone through actual shim and gatew
   const lease = f.sessions.issue({ agentSessionId: 'real-omp', project: profile })
   const client = new McpClient({
     name: 'real-omp-optional', command: path.resolve(process.env.EAS_VERIFY_REAL_OMP!), args: ['acp', '--tools=read'],
-    cwd: profile, env: { HOME: profile, PATH: process.env.PATH ?? '', PI_CODING_AGENT_DIR: agent,
+    cwd: profile, env: { HOME: profile, USERPROFILE: profile, APPDATA: profile, LOCALAPPDATA: profile,
+      TEMP: profile, TMP: profile, ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+      ...(process.env.WINDIR ? { WINDIR: process.env.WINDIR } : {}),
+      PATH: process.env.PATH ?? '', PI_CODING_AGENT_DIR: agent,
       PI_CONFIG_DIR: '.pi', OMP_SKIP_SETUP: '1' }
   })
   let answer = ''
