@@ -29,3 +29,5 @@
 [交互报告](index.html) · [三端检查](results.json) · [故障专项](faults-results.json) · [既有兼容](compatibility.json) · [既有集成](integration.json) · [既有对话](interaction.json)
 
 [Codex 启动 · 浅色](codex-startup-light.png) · [Claude 对话 · 深色](claude-active-dark.png) · [omp 对话 · 深色](omp-active-dark.png)
+
+补充生产构建实测：从主目录启动隔离实例，确认 `__composerTestSetup` 不存在；真实 @防抖 搜索返回辞典候选，无加载错误。见 [生产构建截图](production.png)。未发送消息。
