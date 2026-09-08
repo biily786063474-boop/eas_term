@@ -259,6 +259,8 @@ export function ChatToolbar({
 
   const submit = (): void => {
     if (slash.consumeCommand()) return
+    // Match the one-shot transport: keyboard send must not bypass the visible stop state.
+    if (cli.id === 'codex' && view.busy) return
     const t = text.trim()
     // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
     // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做

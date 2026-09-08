@@ -80,6 +80,8 @@ import type {
 } from '../../shared/agentChat.ts'
 
 interface Live {
+  /** Only the latest spawn may mutate this session; keep ownership through stdio drain after exit. */
+  processGeneration?: object
   rec: SessionRecord
   proc?: ChildProcess
   /** **这次进程消失是我们自己动的手。**
@@ -601,6 +603,9 @@ async function resolveAdapterModels(
 }
 
 function wireProc(live: Live, proc: ChildProcess): void {
+  const generation = {}
+  live.processGeneration = generation
+  const isCurrent = (): boolean => live.processGeneration === generation
   // 新进程接上了 —— 上一轮的「是我们杀的」到此为止。
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
   // 也不会连累下一个进程的判定。
@@ -609,6 +614,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   let reportedFatal = false
   proc.stdout?.setEncoding('utf8')
   proc.stdout?.on('data', (chunk: string) => {
+    if (!isCurrent()) return
     // 收到输出＝还活着，不是空闲——15 分钟空闲回收判的是「没交互」，一轮长任务
     // 跑再久也不该被当成空闲杀掉，所以每收到一块输出就续一次 lastActiveAt。
     live.rec = { ...live.rec, lastActiveAt: Date.now() }
@@ -619,6 +625,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   })
   proc.stderr?.setEncoding('utf8')
   proc.stderr?.on('data', (chunk: string) => {
+    if (!isCurrent()) return
     // 原始 stderr 留日志；仅可选 MCP 诊断发非致命提示，不停止/重启进程。
     console.error(`[agentChat:${live.rec.id}] stderr`, chunk)
     if (diagnostics.push(chunk) && !live.killing && !reportedFatal) {
@@ -626,11 +633,13 @@ function wireProc(live: Live, proc: ChildProcess): void {
     }
   })
   proc.on('error', (err) => {
+    if (!isCurrent()) return
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
   })
   proc.on('exit', (code, signal) => {
+    if (!isCurrent()) return
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
     // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
@@ -690,7 +699,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
  *  若 alive 因系统休眠等原因滞后，不先 kill 就 spawn 会造成两个进程同时存活、
  *  stdout 都灌进同一个 translator。kill 是幂等的（已经死的进程再 kill 一次没有副作用），
  *  无脑调即可。 */
-function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
+function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentChatSendResult {
   // **必须在下面那句 kill 之前**：ACP 那条路自己决定怎么收尾旧进程
   // （先发 session/close 再 kill），被这里裸 SIGTERM 掉的话 close 永远没机会发，
   // omp 那一轮可能没写进会话文件，resume 接回来就缺一段。
@@ -698,7 +707,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // 实际不触发；留着是保险，且它是 if-return，Claude 的装 hook / spawn / writeStdin 全在它之后。
   if (live.acp) {
     live.acp.deliver(message)
-    return
+    return { ok: true }
   }
   // **只有真的有进程要杀时才立这个标记。**
   // 写成无条件 `live.killing = true` 会留下一个永久为真的标记：
@@ -706,106 +715,114 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
   // 也就没有 exit 事件来清它 —— 于是**之后那个进程无论怎么没的，都会被当成
   // 「我们自己杀的」**，自动恢复永远不触发。2026-08-20 端到端验证时抓到：
   // kill -9 掉 agent 的进程，面板照样记成 ended:'ok'。
+  live.processGeneration = {} // retire old callbacks even if the replacement fails to spawn
   if (live.proc) {
     live.killing = true
     live.proc.kill()
   }
   live.proc = undefined
 
-  const adapter = getAdapter(live.rec.cli)
-  if (!adapter) {
-    handleEvent(live, { k: 'error', message: `未知 CLI：${live.rec.cli}`, fatal: true })
-    return
+  const failStart = (message: string): AgentChatSendResult => {
+    live.processGeneration = {}
+    const failedProc = live.proc
+    live.proc = undefined
+    failedProc?.kill()
+    live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
+    handleEvent(live, { k: 'error', message, fatal: true })
+    return { ok: false, error: message }
   }
+  try {
+    const adapter = getAdapter(live.rec.cli)
+    if (!adapter) {
+      return failStart(`未知 CLI：${live.rec.cli}`)
+    }
 
-  // hook 脚本万一要靠兜底（本 app 自带的 Electron 二进制）跑，才需要 ELECTRON_RUN_AS_NODE。
-  // 算一次，装 hook 用的 hookCommand() 和下面 spawn 的 env 共用同一个值——不重复探测
-  // fs.existsSync，也不会出现"装 hook 时判定用了兜底、spawn 时却没注入"这种不一致
-  // （2026-08-14 全分支评审 I3：这里原来无条件注入，会经 CLI 进程一路"传染"给 agent 在
-  // 这个会话里跑的每一条 Bash——包括这个仓库自己的 `npm run dev`，会被静默拉成纯 Node
-  // 模式，永远不开窗口。照抄 mcpBridge.ts 的 runnerFor()：只在真的命中兜底分支时才注入）。
-  const hookNodeBin = nodeBinForHook()
+    // hook 脚本万一要靠兜底（本 app 自带的 Electron 二进制）跑，才需要 ELECTRON_RUN_AS_NODE。
+    // 算一次，装 hook 用的 hookCommand() 和下面 spawn 的 env 共用同一个值——不重复探测
+    // fs.existsSync，也不会出现"装 hook 时判定用了兜底、spawn 时却没注入"这种不一致
+    // （2026-08-14 全分支评审 I3：这里原来无条件注入，会经 CLI 进程一路"传染"给 agent 在
+    // 这个会话里跑的每一条 Bash——包括这个仓库自己的 `npm run dev`，会被静默拉成纯 Node
+    // 模式，永远不开窗口。照抄 mcpBridge.ts 的 runnerFor()：只在真的命中兜底分支时才注入）。
+    const hookNodeBin = nodeBinForHook()
 
-  // 要不要装 PreToolUse hook，由 adapter 自己声明用哪种审批机制决定——不是拿
-  // capabilities.approval.length>0 当"装 Claude 的 hook"的开关（2026-08-14 全分支评审
-  // I6 第 2 点：那把"能不能逐次审批"和"用不用 Claude 的 hook 机制"混成了一个布尔。
-  // 以后 Codex app-server 落地会声明 approval:['exec']，但它的审批握手走自己的协议，
-  // 不该被这个判据误当成"要装 Claude 的 hook"）。装不上不阻断会话启动，但必须让用户
-  // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
-  if (adapter.approvalHook === 'claude-pretooluse') {
-    if (opts.skipApprovalHook) {
-      // 用户明确表达过"这个会话不要这条 hook"，不是装不上——但对他来说结果是一样的：
-      // "这次会话没有审批保护"，所以复用装不上时的同一条事件路径通知他，不新造机制
-      // （Ruling 14"告知而非阻断"同样适用：哪怕是他自己选的，也不能因此就默不作声，
-      // notice 该出现的地方还是要出现）。
-      //
-      // 措辞要同时对得上两条来路，别再写死"你选择了这次不安装"：
-      //   ① 起会话时在询问卡片上点了「这次不装，直接开始」（Ruling 15 划给 B 的那条）；
-      //   ② 会话中途点了工具栏的「卸载」——2026-08-17 最终评审 I1 之后，卸载会把该 cwd
-      //      下的活会话一并置为 skipApprovalHook，于是也会走到这里。
-      // 末句也不再承诺"随时可以在工具栏重新开启"：工具栏在未安装状态下并没有开启入口，
-      // 那是一句用户照做不了的话（这条 hook 的安装入口目前只有节点第一条消息的询问卡片）。
-      // **不推 notice。** 2026-08-17：审批保护改成设置里的一个开关、默认关闭，
-      // 于是 skipApprovalHook 从「用户明确拒绝过」变成了「这个功能本来就没开」——
-      // 那是默认状态，不是需要每次会话都通报一次的事件。原来这里会推一条
-      // 「本次会话未开启审批保护」，默认关之后每起一次会话就冒一条，正是用户
-      // 要求「不要出现在对话框中」的那类噪音。开关本身在设置面板里写明了含义。
-      //
-      // **下面那条 notice 保留**，两者语义完全不同：这里是"没开这个功能"，
-      // 下面是"你开了、但没装上"——后者是"你以为受保护、其实没有"，
-      // 必须让人看见（Ruling 14「告知而非阻断」针对的正是那种情况）。
-    } else {
-      const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
-      if (!hook.ok) {
+    // 要不要装 PreToolUse hook，由 adapter 自己声明用哪种审批机制决定——不是拿
+    // capabilities.approval.length>0 当"装 Claude 的 hook"的开关（2026-08-14 全分支评审
+    // I6 第 2 点：那把"能不能逐次审批"和"用不用 Claude 的 hook 机制"混成了一个布尔。
+    // 以后 Codex app-server 落地会声明 approval:['exec']，但它的审批握手走自己的协议，
+    // 不该被这个判据误当成"要装 Claude 的 hook"）。装不上不阻断会话启动，但必须让用户
+    // 看见"这次没有保护"——fail open 不能是静默的，见 installApprovalHook 文件头。
+    if (adapter.approvalHook === 'claude-pretooluse') {
+      if (opts.skipApprovalHook) {
+        // 用户明确表达过"这个会话不要这条 hook"，不是装不上——但对他来说结果是一样的：
+        // "这次会话没有审批保护"，所以复用装不上时的同一条事件路径通知他，不新造机制
+        // （Ruling 14"告知而非阻断"同样适用：哪怕是他自己选的，也不能因此就默不作声，
+        // notice 该出现的地方还是要出现）。
+        //
+        // 措辞要同时对得上两条来路，别再写死"你选择了这次不安装"：
+        //   ① 起会话时在询问卡片上点了「这次不装，直接开始」（Ruling 15 划给 B 的那条）；
+        //   ② 会话中途点了工具栏的「卸载」——2026-08-17 最终评审 I1 之后，卸载会把该 cwd
+        //      下的活会话一并置为 skipApprovalHook，于是也会走到这里。
+        // 末句也不再承诺"随时可以在工具栏重新开启"：工具栏在未安装状态下并没有开启入口，
+        // 那是一句用户照做不了的话（这条 hook 的安装入口目前只有节点第一条消息的询问卡片）。
+        // **不推 notice。** 2026-08-17：审批保护改成设置里的一个开关、默认关闭，
+        // 于是 skipApprovalHook 从「用户明确拒绝过」变成了「这个功能本来就没开」——
+        // 那是默认状态，不是需要每次会话都通报一次的事件。原来这里会推一条
+        // 「本次会话未开启审批保护」，默认关之后每起一次会话就冒一条，正是用户
+        // 要求「不要出现在对话框中」的那类噪音。开关本身在设置面板里写明了含义。
+        //
+        // **下面那条 notice 保留**，两者语义完全不同：这里是"没开这个功能"，
+        // 下面是"你开了、但没装上"——后者是"你以为受保护、其实没有"，
+        // 必须让人看见（Ruling 14「告知而非阻断」针对的正是那种情况）。
+      } else {
+        const hook = installApprovalHook(live.rec.cwd, hookNodeBin)
+        if (!hook.ok) {
+          handleEvent(live, {
+            k: 'error',
+            fatal: false,
+            message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+          })
+        }
+      }
+    }
+
+    // 写守卫的 `--settings` 文件在 `agentChat:start` 起会话那一刻生成过一次，用的是
+    // **那时**算出的 nodeBin；这里的 `hookNodeBin` 是**这次 spawn**重新探测的结果
+    // （2026-09-06 评审 Important）：两者理论上可能不一致——比如上次探测到系统 node、
+    // 这次那个路径被卸载/改名，兜底成了本 app 的 Electron 二进制——不一致时文件里的
+    // `command` 还指着旧的 nodeBin，跟这次 spawn 到底有没有注入 `ELECTRON_RUN_AS_NODE`
+    // 对不上，守卫子进程可能用错误的方式被拉起（轻则报错、重则静默不产出任何响应，
+    // 等价于空转）。跟 `installApprovalHook` 每次 spawn 都重写命令一致，这里也每次
+    // spawn 都用当次的 `hookNodeBin` 整份重写——`ensureWriteGuardSettings` 是幂等的
+    // 纯覆盖，重写一次的开销可以忽略。写失败按非致命通知处理而不是让整个 restart
+    // 失败：这份文件在起会话时已经写成功过一次（`opts.writeGuardSettings` 才会有值），
+    // 这里失败只表示"可能用着上一次的 nodeBin"，不是"完全没有第二道闸"。
+    if (opts.writeGuardSettings) {
+      try {
+        ensureWriteGuardSettings(hookNodeBin)
+      } catch (e) {
         handleEvent(live, {
           k: 'error',
           fatal: false,
-          message: `本次会话未能开启审批保护：工具调用将不再等待你的确认、按默认权限直接执行（${hook.reason ?? '未知原因'}）`
+          message: `写守卫文件更新失败，这次会话可能仍在用旧的 node 路径：${e instanceof Error ? e.message : String(e)}`
         })
       }
     }
-  }
 
-  // 写守卫的 `--settings` 文件在 `agentChat:start` 起会话那一刻生成过一次，用的是
-  // **那时**算出的 nodeBin；这里的 `hookNodeBin` 是**这次 spawn**重新探测的结果
-  // （2026-09-06 评审 Important）：两者理论上可能不一致——比如上次探测到系统 node、
-  // 这次那个路径被卸载/改名，兜底成了本 app 的 Electron 二进制——不一致时文件里的
-  // `command` 还指着旧的 nodeBin，跟这次 spawn 到底有没有注入 `ELECTRON_RUN_AS_NODE`
-  // 对不上，守卫子进程可能用错误的方式被拉起（轻则报错、重则静默不产出任何响应，
-  // 等价于空转）。跟 `installApprovalHook` 每次 spawn 都重写命令一致，这里也每次
-  // spawn 都用当次的 `hookNodeBin` 整份重写——`ensureWriteGuardSettings` 是幂等的
-  // 纯覆盖，重写一次的开销可以忽略。写失败按非致命通知处理而不是让整个 restart
-  // 失败：这份文件在起会话时已经写成功过一次（`opts.writeGuardSettings` 才会有值），
-  // 这里失败只表示"可能用着上一次的 nodeBin"，不是"完全没有第二道闸"。
-  if (opts.writeGuardSettings) {
-    try {
-      ensureWriteGuardSettings(hookNodeBin)
-    } catch (e) {
-      handleEvent(live, {
-        k: 'error',
-        fatal: false,
-        message: `写守卫文件更新失败，这次会话可能仍在用旧的 node 路径：${e instanceof Error ? e.message : String(e)}`
-      })
-    }
-  }
+    // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
+    // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
+    // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
+    // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
+    // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
+    const built = adapter.buildArgs({
+      ...opts,
+      mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined,
+      pluginMcp: easPluginMcpServer(live.rec.pluginId) ?? undefined
+    })
+    // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
+    // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
+    const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
 
-  // MCP 配置**在这里现算**，不进 SessionRecord：它不是「这个会话选的」，
-  // 是「这台机器此刻装没装、用户关没关」。restart 也走这一句，所以用户在
-  // 「扩展能力」里关掉 MCP 之后，下一条消息触发的 restart 就跟着不带工具了。
-  // `pluginMcp` 只有 Codex 会用（它不吃 mcpConfigPath 那份 JSON，见 codexAddServerArgs）。
-  // 另外两家照旧从那份 JSON 里拿同一个 server —— **同一个来源函数**，不会两边不一致。
-  const built = adapter.buildArgs({
-    ...opts,
-    mcpConfigPath: agentMcpConfigPath(live.rec.pluginId) ?? undefined,
-    pluginMcp: easPluginMcpServer(live.rec.pluginId) ?? undefined
-  })
-  // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
-  // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
-  const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
-
-  let proc: ChildProcess
-  try {
-    proc = spawn(built.bin, args, {
+    const proc = spawn(built.bin, args, {
       cwd: opts.cwd,
       env: {
         // **PROBE_ENV 而不是 process.env。** 从 Dock 启动的 Electron，PATH 是
@@ -839,47 +856,51 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): void {
       },
       stdio: [built.stdin, 'pipe', 'pipe']
     })
+
+    live.proc = proc
+    live.stdoutBuf = ''
+    live.rec = {
+      ...live.rec,
+      model: opts.model,
+      effort: opts.effort,
+      sandbox: opts.sandbox,
+      pending: undefined, // 待生效参数这一刻已经生效，清掉——不清的话 UI 的「下条起生效」标注永远摘不掉
+      alive: true,
+      lastActiveAt: Date.now()
+    }
+
+    // 生命周期的另一端。**有生才看得懂死** —— 只记结束的话，
+    // 日志里全是「进程结束」，看不出它活了多久、这是第几次起
+    logSession(
+      `进程启动 ${live.rec.role ?? live.rec.id}（cli=${live.rec.cli}` +
+        `${live.rec.resumeId ? ' resume' : ''}${live.rec.owner === 'team' ? ' team' : ''}）`
+    )
+    wireProc(live, proc)
+
+    // 模型清单：三级取值（modelCatalog.ts）——探测 → 上次成功的那份 → adapter 兜底。
+    // **不 await** 探测：它要起一个短命进程，不能让第一条消息等它。
+    // 先用「缓存或兜底」立刻把下拉填上，探测回来了再覆盖一次。
+    void resolveAndBroadcastModels(live, adapter)
+
+    // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
+    // 'ignore' 的已经在上面把消息塞进了位置参数，这里不用再写。
+    if (built.stdin === 'pipe') writeStdin(live, message)
+    return { ok: true }
   } catch (e) {
-    handleEvent(live, { k: 'error', message: e instanceof Error ? e.message : String(e), fatal: true })
-    return
+    return failStart(e instanceof Error ? e.message : String(e))
   }
-
-  live.proc = proc
-  live.stdoutBuf = ''
-  live.rec = {
-    ...live.rec,
-    model: opts.model,
-    effort: opts.effort,
-    sandbox: opts.sandbox,
-    pending: undefined, // 待生效参数这一刻已经生效，清掉——不清的话 UI 的「下条起生效」标注永远摘不掉
-    alive: true,
-    lastActiveAt: Date.now()
-  }
-
-  // 生命周期的另一端。**有生才看得懂死** —— 只记结束的话，
-  // 日志里全是「进程结束」，看不出它活了多久、这是第几次起
-  logSession(
-    `进程启动 ${live.rec.role ?? live.rec.id}（cli=${live.rec.cli}` +
-      `${live.rec.resumeId ? ' resume' : ''}${live.rec.owner === 'team' ? ' team' : ''}）`
-  )
-  wireProc(live, proc)
-
-  // 模型清单：三级取值（modelCatalog.ts）——探测 → 上次成功的那份 → adapter 兜底。
-  // **不 await** 探测：它要起一个短命进程，不能让第一条消息等它。
-  // 先用「缓存或兜底」立刻把下拉填上，探测回来了再覆盖一次。
-  void resolveAndBroadcastModels(live, adapter)
-
-  // stdin:'pipe' 的 CLI（目前是 Claude）：进程起来后把这条消息按它的 wire format 写进去。
-  // 'ignore' 的已经在上面把消息塞进了位置参数，这里不用再写。
-  if (built.stdin === 'pipe') writeStdin(live, message)
 }
 
 /** 送一条消息该怎么送，全部问 planSend——这里只负责照做。
- *  唯一的自主判断是「action 是 send，但进程当下其实没有可写的 stdin」这种不可能通过
- *  纯函数判出来的运行时状态（比如 Codex 的上一轮还没退出、stdin 本来就是 ignore），
+ *  Codex 生成中先拒绝；完成后由 planSend 选择 resume。
+ *  action=send 仍需检查进程实际存在可写 stdin，不能把进程存活当作可投递。
+ *  其余运行时异常（如 stdin 不可用），
  *  这不是业务判定，是"我有没有能力执行这个动作"的机械检查，答不了就如实报错，
  *  不能假装写成功了却悄悄把消息丢了。 */
 function deliverMessage(live: Live, message: string): AgentChatSendResult {
+  if (live.rec.cli === 'codex' && live.rec.busy === true) {
+    return { ok: false, error: '当前回复尚未结束，请等待完成或先停止生成；草稿已保留' }
+  }
   // **用户开口，静默期立刻结束。** slash 回执的静默是按 turn 计数的，万一某条
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
@@ -919,8 +940,7 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   // 那里面要 spawn 进程、装 hook，耗时更长，界面更不该在这段时间里显示成空闲。
   // spawn 失败会推 { k:'error', fatal:true }，归约器收到它会结束这一轮。
   handleEvent(live, { k: 'turn.start' })
-  restartAndDeliver(live, plan.opts, message) // 失败会经 error ChatEvent 异步通知，这里不等
-  return { ok: true }
+  return restartAndDeliver(live, plan.opts, message) // 同步失败回传给输入框恢复草稿；异步错误仍走事件
 }
 
 /** 清掉 CLI 探测缓存的钩子。真正的实现在 registerAgentChatHandlers 里赋值 ——

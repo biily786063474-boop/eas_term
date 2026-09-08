@@ -412,3 +412,16 @@ test('没派后台任务的普通空闲照旧', () => {
   const s = base({ busy: false, bgTask: false, lastActiveAt: 0 })
   assert.equal(shouldReap(s, IDLE_TIMEOUT_MS + 1), true)
 })
+
+
+test('Codex turn.done 后旧进程仍存活时立即续聊必须 restart/resume', () => {
+  const plan = planSend(base({ cli: 'codex', alive: true, busy: false, resumeId: 'thread-finished', sandbox: 'read-only' }), 1_000_100)
+  assert.equal(plan.action, 'restart')
+  assert.equal(plan.opts.resumeId, 'thread-finished')
+  assert.equal(plan.opts.sandbox, 'read-only')
+})
+
+test('Codex 尚在生成不能被完成后的续聊规则重启；Claude 完成后仍复用 stdin', () => {
+  assert.equal(planSend(base({cli: 'codex', busy: true}), 1_000_100).action, 'send')
+  assert.equal(planSend(base({cli: 'claude', busy: false}), 1_000_100).action, 'send')
+})

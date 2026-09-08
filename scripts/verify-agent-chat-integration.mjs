@@ -3,7 +3,8 @@ import path from 'node:path'
 
 /** Real renderer and mouse interactions; setup transports are explicitly simulated. */
 export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) {
-  const out = path.join(root, 'docs/verification/agent-chat')
+  const out = path.join(root, 'docs/verification/question-rail-motion')
+  fs.mkdirSync(out, { recursive: true })
   const checks = []
   const check = (ok, name, data) => { if (!ok) throw new Error(name + ': ' + JSON.stringify(data)); checks.push({ name, data }); console.log('[integration] ✓',name) }
   const shot = async name => { await new Promise(r=>setTimeout(r,200)); const r = await cdp.send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(out, name + '.png'), Buffer.from(r.result.data, 'base64')) }
@@ -17,15 +18,15 @@ export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) 
   const ready = () => waitFor(() => cdp.eval(`!document.querySelector('.ac-setup-card')`), { timeout:12000, desc:'检测完成，没有旧提示' })
   await fixture()
   await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({viewMode:'canvas',tabs:[{id:'integration-tab',title:'UI 验证',cwd:${JSON.stringify(projectDir)},activeLeafId:'integration-leaf',root:{type:'leaf',id:'integration-leaf',pane:{kind:'agent',cwd:${JSON.stringify(projectDir)},cli:'codex'}}}],activeTabId:'integration-tab',canvas:{...s.canvas,frames:[{id:'integration-frame',name:'UI 验证',projectId:null,x:0,y:0,w:1000,h:800,collapsed:false,nodes:[{id:'integration-node',leafId:'integration-leaf',x:48,y:60,w:850,h:700}]}]}});s.setMaximizedNode({frameId:'integration-frame',nodeId:'integration-node'})})()`)
-  await waitFor(() => cdp.eval(`!!document.querySelector('textarea.ac-input')`), { timeout:12000, desc:'启动界面' })
+  await waitFor(() => cdp.eval(`!!document.querySelector('[data-composer-input].ac-input')`), { timeout:12000, desc:'启动界面' })
   await ready()
-  await cdp.clickElement(`document.querySelector('textarea.ac-input')`, '草稿')
+  await cdp.clickElement(`document.querySelector('[data-composer-input].ac-input')`, '草稿')
   await cdp.send('Input.insertText', { text:'这条草稿在切换和安装后必须保留' })
   await choose('Claude Code')
   check(await cdp.eval(`document.querySelector('.ac-setup-card')?.textContent.includes('安装并继续') && document.querySelector('.ac-ctxbar').textContent.includes('Claude Code') && document.querySelector('[aria-label="发送消息"]').disabled`), '未安装选择与引导归属一致，禁止启动')
   await shot('integration-missing')
   await choose('Codex'); await ready()
-  check(await cdp.eval(`document.querySelector('textarea.ac-input').value.includes('必须保留') && !document.querySelector('.ac-cli-note')`), '切到已安装项清除旧提示并保留草稿')
+  check(await cdp.eval(`document.querySelector('[data-composer-input].ac-input').value.includes('必须保留') && !document.querySelector('.ac-cli-note')`), '切到已安装项清除旧提示并保留草稿')
   // Same-object selection must still recheck auth, never bypass the logged-out gate.
   await fixture({ loggedIn:false }); await choose('Codex')
   await waitFor(() => cdp.eval(`document.querySelector('.ac-setup-card')?.textContent.includes('登录并继续')`), { timeout:12000, desc:'登录闸门' })
@@ -50,7 +51,7 @@ export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) 
   await cdp.eval(`window.__agentChatTestLoginEvent({cli:'claude',phase:'done'})`)
   await waitFor(() => cdp.eval(`!document.querySelector('.ac-setup-mask')`), { timeout:8000, desc:'登录完成关闭面板' })
   await ready()
-  check(await cdp.eval(`document.querySelector('.ac-ctxbar').textContent.includes('Claude Code') && document.querySelector('textarea.ac-input').value.includes('必须保留') && window.__agentChatTestStartCalls().length===0`), '安装登录后重查就绪，保持 CLI/草稿，不自动发送')
+  check(await cdp.eval(`document.querySelector('.ac-ctxbar').textContent.includes('Claude Code') && document.querySelector('[data-composer-input].ac-input').value.includes('必须保留') && window.__agentChatTestStartCalls().length===0`), '安装登录后重查就绪，保持 CLI/草稿，不自动发送')
   await choose('默认 harness')
   check(await cdp.eval(`document.querySelector('.ac-setup-card').textContent.includes('运行文件缺失') && !document.querySelector('.ac-setup-card .ac-setup-primary')`), '内置缺失不会调用外部 CLI 安装')
   await choose('Codex'); await ready()
@@ -65,6 +66,20 @@ export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) 
     await push({k:'exec.done',execId:'read-'+i,ok:true,output:'读取完成'})
     await push({k:'turn.done',usage:{inputTokens:100,outputTokens:100}})
   }
+  // The visible stop state and keyboard send must agree for one-shot Codex.
+  await cdp.eval(`window.__composerTestSetup({sendFail:false})`)
+  await push({k:'turn.start'})
+  await waitFor(()=>cdp.eval(`!!document.querySelector('[aria-label="停止生成"]')`),{timeout:8000,desc:'Codex 生成态'})
+  await cdp.eval(`(()=>{const e=document.querySelector('[data-composer-input]');e.value='完成后立即续发';e.focus()})()`)
+  const sendsBefore=await cdp.eval(`window.__composerTestSends().length`)
+  const sendKey=async()=>{await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4});await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})}
+  await sendKey()
+  check(await cdp.eval(`window.__composerTestSends().length===${sendsBefore} && document.querySelector('[data-composer-input]').value==='完成后立即续发'`),'Codex 生成中快捷键与停止按钮一致，保留草稿不误投递')
+  await push({k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+  await waitFor(()=>cdp.eval(`!!document.querySelector('[aria-label="发送消息"]:not(:disabled)')`),{timeout:8000,desc:'结束后可发'})
+  await sendKey()
+  await waitFor(()=>cdp.eval(`window.__composerTestSends().length===${sendsBefore+1}`),{timeout:8000,desc:'无需刷新即可续发'})
+  check(await cdp.eval(`document.querySelector('[data-composer-input]').value===''`),'Codex 完成后立即续发成功，按钮状态无需刷新')
   await waitFor(() => cdp.eval(`document.querySelectorAll('.ac-question-ticks > button').length>=10`), { timeout:8000, desc:'真实提问目录' })
   const count = await cdp.eval(`document.querySelectorAll('.ac-question-ticks > button').length`)
   await shot('integration-navigation-before-click')
@@ -99,6 +114,25 @@ export async function verifyChatIntegration({ cdp, projectDir, root, waitFor }) 
   await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({canvas:{...s.canvas,frames:s.canvas.frames.map(f=>f.id==='integration-frame'?{...f,w:f.w+120,nodes:f.nodes.map(n=>({...n,x:n.x+100}))}:f)}})})()`)
   await waitFor(async()=>{const r=await railGap();return Math.abs((r.pane-beforeFrameMove.pane)-80)<2&&Math.abs((r.nav-beforeFrameMove.nav)-80)<2&&Math.abs(r.gap-12)<2},{timeout:8000,desc:'移动对话模块后导航保持固定间距'})
   check(true,'模块独立移动后导航同步移动，缩放下仍保持 12px 间距')
+  // Sample geometry at each committed pane position, not just after motion settles.
+  const motion = await cdp.eval(`(async()=>{
+    const pane=document.querySelector('[data-leaf-id="integration-leaf"]');
+    const samples=[];
+    const observer=new MutationObserver(()=>{
+      const nav=document.querySelector('.ac-question-nav');
+      if(nav){const p=pane.getBoundingClientRect(),n=nav.getBoundingClientRect();samples.push({gap:p.left-n.right,pane:p.left,nav:n.left});}
+    });
+    observer.observe(pane,{attributes:true,attributeFilter:['style']});
+    const base={...window.__store.getState().canvas.viewport};
+    for(let i=1;i<=16;i++){
+      await new Promise(requestAnimationFrame);
+      window.__store.getState().setViewport({x:base.x+i*5,y:base.y+i*2,scale:base.scale+i*.002});
+    }
+    await new Promise(requestAnimationFrame);
+    observer.disconnect();
+    return {samples,maxGapError:Math.max(...samples.map(s=>Math.abs(s.gap-12)))};
+  })()`)
+  check(motion.samples.length>=12 && motion.maxGapError<2,'连续平移缩放每次位置提交时导航与模块保持 12px 间距',motion)
   await shot('integration-navigation-module-anchor')
 
   // Selection owns visibility, including any preview that was open when selection changed.

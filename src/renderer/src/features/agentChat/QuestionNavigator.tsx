@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { useStore } from '../../store'
 import { activeQuestion, questionEntries, railPlacement, QUESTION_SCROLL_INSET } from './questionIndex'
 import type { Turn } from './reduce'
@@ -73,12 +73,21 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     const mutations = new MutationObserver(schedule)
     mutations.observe(root, { subtree: true, childList: true, characterData: true })
     const pane = root.closest<HTMLElement>('.pane')
-    if (pane) mutations.observe(pane, { attributes: true, attributeFilter: ['class'] })
+    // Store notifications happen before React commits pane geometry. Waiting for
+    // another RAF after that leaves the body portal one/two frames behind a pan.
+    // Observe the committed anchor chain and update before the browser paints.
+    const geometry = new MutationObserver(() => {
+      cancelAnimationFrame(raf)
+      flushSync(measure)
+    })
+    for (let anchor: HTMLElement | null = pane; anchor && anchor !== document.body; anchor = anchor.parentElement) {
+      geometry.observe(anchor, { attributes: true, attributeFilter: ['style', 'class'] })
+    }
     const unsubscribe = useStore.subscribe(schedule)
     measure()
     window.addEventListener('resize', schedule)
     document.addEventListener('scroll', schedule, true)
-    return () => { cancelAnimationFrame(raf); resize.disconnect(); mutations.disconnect(); unsubscribe(); window.removeEventListener('resize', schedule); document.removeEventListener('scroll', schedule, true); delete root.dataset.questionRail }
+    return () => { cancelAnimationFrame(raf); resize.disconnect(); mutations.disconnect(); geometry.disconnect(); unsubscribe(); window.removeEventListener('resize', schedule); document.removeEventListener('scroll', schedule, true); delete root.dataset.questionRail }
   }, [scrollRef, leafId, entries.length])
 
   const jump = (index: number): void => {

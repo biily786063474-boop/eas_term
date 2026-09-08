@@ -1,0 +1,58 @@
+{
+  "root": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-resume-contract-pXy6do",
+  "results": [
+    {
+      "turn": 1,
+      "code": 0,
+      "session": "01a07f94-2f96-7992-97f9-2a02c16480ad",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    },
+    {
+      "turn": 2,
+      "code": 0,
+      "session": "01a07f94-2f96-7992-97f9-2a02c16480ad",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    },
+    {
+      "turn": 3,
+      "code": 0,
+      "session": "01a07f94-2f96-7992-97f9-2a02c16480ad",
+      "types": [
+        "thread.started",
+        "item.completed",
+        "turn.started",
+        "item.completed",
+        "turn.completed"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "inputCount": 3,
+      "hasFirst": true,
+      "hasPriorReply": false
+    },
+    {
+      "inputCount": 5,
+      "hasFirst": true,
+      "hasPriorReply": true
+    },
+    {
+      "inputCount": 7,
+      "hasFirst": true,
+      "hasPriorReply": true
+    }
+  ]
+}

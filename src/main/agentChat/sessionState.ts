@@ -278,6 +278,9 @@ export function planSend(
   const opts = effectiveOpts(s)
   if (!s.alive) return { action: 'restart', opts }
   if (s.pending) return { action: 'restart', opts }
+  // Codex exec has no writable stdin. turn.done makes the next turn ready
+  // even while its one-shot process is finishing MCP/stdio cleanup.
+  if (s.cli === 'codex' && s.busy === false) return { action: 'restart', opts }
   return { action: 'send', opts }
 }
 
