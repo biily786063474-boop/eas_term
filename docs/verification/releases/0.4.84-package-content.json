@@ -1,0 +1,14 @@
+[
+  {
+    "version": "0.4.84",
+    "arch": "arm64",
+    "matchedOutFiles": 139,
+    "noTestFixture": true
+  },
+  {
+    "version": "0.4.84",
+    "arch": "x64",
+    "matchedOutFiles": 139,
+    "noTestFixture": true
+  }
+]
