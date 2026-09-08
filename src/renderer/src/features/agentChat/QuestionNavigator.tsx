@@ -30,7 +30,8 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
       const r = root.getBoundingClientRect()
       const layer = pane?.closest<HTMLElement>('.pane-layer')?.getBoundingClientRect()
       const clipped = { left: Math.max(r.left, layer?.left ?? 0), right: Math.min(r.right, layer?.right ?? innerWidth), top: Math.max(r.top, layer?.top ?? 0), bottom: Math.min(r.bottom, layer?.bottom ?? innerHeight) }
-      if (!pane || getComputedStyle(pane).display === 'none' || clipped.right - clipped.left < 80 || clipped.bottom - clipped.top < 100) {
+      // PaneView owns selection: .sel in canvas, .active in split mode.
+      if (!pane || !pane.matches('.sel, .active') || getComputedStyle(pane).display === 'none' || clipped.right - clipped.left < 80 || clipped.bottom - clipped.top < 100) {
         if (last !== 'hidden') { last = 'hidden'; setPlacement(null); setHover(null) }
         delete root.dataset.questionRail
         if (pane && getComputedStyle(pane).display !== 'none' && pane.getAnimations().some(animation => animation.playState === 'running')) raf = requestAnimationFrame(measure)
@@ -71,6 +72,8 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     resize.observe(root)
     const mutations = new MutationObserver(schedule)
     mutations.observe(root, { subtree: true, childList: true, characterData: true })
+    const pane = root.closest<HTMLElement>('.pane')
+    if (pane) mutations.observe(pane, { attributes: true, attributeFilter: ['class'] })
     const unsubscribe = useStore.subscribe(schedule)
     measure()
     window.addEventListener('resize', schedule)

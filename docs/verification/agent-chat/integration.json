@@ -43,18 +43,30 @@
       "name": "模块独立移动后导航同步移动，缩放下仍保持 12px 间距"
     },
     {
+      "name": "取消选中隐藏导航、悬停预览并释放正文留白"
+    },
+    {
+      "name": "只选中 Frame 不显示对话导航"
+    },
+    {
+      "name": "重新选中恢复导航，不恢复旧悬停预览"
+    },
+    {
       "name": "普通画布导航层级低于文件抽屉"
     },
     {
       "name": "左侧抽屉真实文件按 JS / 图片 / SVG / plist / Agent 规则分类"
     },
     {
+      "name": "分屏导航只跟随当前激活对话"
+    },
+    {
       "name": "分屏保留聊天 DOM，并使用各自 Worktree 路径",
       "data": {
         "samePane": true,
         "paths": [
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-9C4dMW/.worktrees/main",
-          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-9C4dMW/.worktrees/peer"
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-gTm8Ww/.worktrees/main",
+          "/private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-t8-project-gTm8Ww/.worktrees/peer"
         ]
       }
     },
@@ -70,6 +82,8 @@
     "check:codex",
     "check:codex",
     "check:codex",
+    "check:codex",
+    "check:claude",
     "check:codex",
     "install:claude",
     "install:claude",
