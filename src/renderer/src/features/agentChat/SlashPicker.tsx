@@ -1,14 +1,19 @@
 // Both composers share this controller. Only the focused textarea owns its portal.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useId, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useId, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { DictChip } from './chips'
+import type { ComposerInputElement } from './ComposerInput'
+import { referenceFromCandidate, type ComposerReference } from './composerReferences'
 import { CATEGORY_LABELS, commandCandidates, dictCandidates, filterCandidates, insertCandidate, popupPosition, triggerAt, type Candidate, type Category, type DictEntry } from './composerCandidates'
 import { browserCandidates, loadDictionary, loadUserDictionary, loadFiles, loadPlugins, loadSkills } from './composerSources'
 
 interface PickerOptions { boundPluginId?: string; nativeSlash?: {name:string;description:string}[]; cli?: string; onAddChip?: (c: DictChip) => void; model?: boolean; effort?: boolean; compact?: () => void }
 type Source = 'dict' | 'userDict' | 'files' | 'skills' | 'plugins'
 type SourceState = { status: 'loading' | 'ready' | 'error'; rows: Candidate[]; terms?: DictEntry[] }
-export function useSlashPicker(text: string, setText: (v: string) => void, onPicked?: () => void, cwd?: string, anchorRef?: RefObject<HTMLTextAreaElement | null>, chips: readonly DictChip[] = [], options: PickerOptions = {}) {
+export function useSlashPicker(text: string, setText: (v: string) => void, onPicked?: () => void, cwd?: string, anchorRef?: RefObject<HTMLTextAreaElement | ComposerInputElement | null>, chips: readonly DictChip[] = [], options: PickerOptions = {}) {
+  const [pickedReferences, setPickedReferences] = useState<ComposerReference[]>([])
+  useEffect(() => setPickedReferences([]), [cwd, options.cli, options.boundPluginId])
+  const references = useMemo(() => [...pickedReferences.filter(r => r.kind !== 'dict'), ...chips.map(c => referenceFromCandidate({id:c.id,category:'dict',name:c.label,description:'辞典提示词',insert:'@'+c.label,chip:c}))], [pickedReferences, chips])
   const [selection, setSelection] = useState<[number, number]>([text.length, text.length])
   const [focused, setFocused] = useState(false)
   const [off, setOff] = useState(false)
@@ -61,6 +66,7 @@ export function useSlashPicker(text: string, setText: (v: string) => void, onPic
   const insert = (c: Candidate | undefined): void => {
     if (!trigger || !c || c.disabled) return
     if (c.chip) options.onAddChip?.(c.chip)
+    if (c.category !== 'common' && c.category !== 'native') setPickedReferences(cur => [...cur.filter(r => r.id !== c.id), referenceFromCandidate(c)])
     const next = insertCandidate(text, trigger, c)
     setText(next.text); setOff(true); onPicked?.()
     deferFocus(() => { anchorRef?.current?.focus(); anchorRef?.current?.setSelectionRange(next.caret, next.caret) })
@@ -95,15 +101,15 @@ export function useSlashPicker(text: string, setText: (v: string) => void, onPic
     }
     setText(''); return true
   }
-  const handleKey = (e: ReactKeyboardEvent<HTMLTextAreaElement>): boolean => {
-    if (!active || e.nativeEvent.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return false
+  const handleKey = (e: KeyboardEvent): boolean => {
+    if (!active || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return false
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setOff(true); return true }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); setIdx(hits.length ? (safeIdx + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length : 0); return true }
     if ((e.key === 'Enter' || e.key === 'Tab') && hits.length) { e.preventDefault(); insert(hits[safeIdx]); return true }
     return false
   }
   const inputProps = { 'aria-expanded': active, 'aria-controls': active ? id : undefined, 'aria-activedescendant': active && hits.length ? id + '-' + safeIdx : undefined, 'aria-autocomplete': 'list' as const, onSelect: syncSelection, onBlur: () => setFocused(false), onClick: syncSelection, onKeyUp: syncSelection }
-  return { open: active, total: matched.length, hits, idx: safeIdx, setIdx, pick: (i: number) => insert(hits[i]), anchorRef, handleKey, category, setCategory: (c: Category) => { setCategory(c); setIdx(0) }, categories, mode, loading, errors, retry: () => setRetry(n => n + 1), close: () => setOff(true), id, inputProps, activate, consumeCommand, syncSelection }
+  return { references, open: active, total: matched.length, hits, idx: safeIdx, setIdx, pick: (i: number) => insert(hits[i]), anchorRef, handleKey, category, setCategory: (c: Category) => { setCategory(c); setIdx(0) }, categories, mode, loading, errors, retry: () => setRetry(n => n + 1), close: () => setOff(true), id, inputProps, activate, consumeCommand, syncSelection }
 }
 export type SlashPickerState = ReturnType<typeof useSlashPicker>
 export function SlashList(s: SlashPickerState): JSX.Element | null {
@@ -115,7 +121,7 @@ export function SlashList(s: SlashPickerState): JSX.Element | null {
     let frame = 0, last = ''
     const update = (): void => {
       const el = s.anchorRef?.current
-      const next = el && document.activeElement === el ? popupPosition(el.getBoundingClientRect(), innerWidth, innerHeight) : null
+      const next = el && document.activeElement === el ? popupPosition((el.closest('.cm-scroller') ?? el).getBoundingClientRect(), innerWidth, innerHeight) : null
       const key = JSON.stringify(next)
       if (key !== last) { last = key; setPos(next) }
       frame = requestAnimationFrame(update)

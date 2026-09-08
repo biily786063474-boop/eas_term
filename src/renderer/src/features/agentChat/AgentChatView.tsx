@@ -1,3 +1,5 @@
+import { ComposerInput, type ComposerInputElement } from './ComposerInput'
+import { ReferenceHover } from './ReferencePreview'
 import { ChatStatusIcon } from './ChatStatusIcon'
 import { StartupSetupCard } from './StartupSetupCard'
 import { SemanticIcon } from '../../ui/SemanticIcons'
@@ -627,7 +629,7 @@ export function AgentChatView({
   const reducerRef = useRef(createChatReducer())
   const unsubRef = useRef<(() => void) | null>(null)
   /** 空态那个输入框 —— 选完斜杠候选要把焦点还回去 */
-  const emptyTaRef = useRef<HTMLTextAreaElement>(null)
+  const emptyTaRef = useRef<ComposerInputElement>(null)
   // 防止「起会话」这次 await 还没回来、面板已经被切走/关掉——回来后不再 setState，
   // 也不再订阅一个已经没人看的会话（会话本身照样在主进程活着，不受这里影响）
   const aliveRef = useRef(true)
@@ -1541,10 +1543,10 @@ export function AgentChatView({
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
               {chips.map((c) => (
-                <span
+                <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"辞典提示词"}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
-                  data-tip={c.text}
+                  data-kind="dict"
                 >
                   <DictIcon size={11} />
                   <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
@@ -1559,16 +1561,17 @@ export function AgentChatView({
                   >
                     <CloseIcon size={9} />
                   </button>
-                </span>
+                </span></ReferenceHover>
               ))}
             </div>
           )}
-          <textarea
+          <ComposerInput
             {...emptySlash.inputProps}
+          references={emptySlash.references}
             ref={emptyTaRef}
             className="ac-input"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={setText}
             // 聚焦时把「往这儿追加」登记到 store，名词词典点条目就插进这里而不是终端。
             // 在 onFocus 里注册而不是 mount 时：拿到的一定是当前这次渲染的 setText，
             // 也天然表达了「最后聚焦的是我」。
@@ -1586,7 +1589,7 @@ export function AgentChatView({
               // isComposing 只在**原生事件**上，React 的合成事件没有这个字段 ——
               // 取错了等于没做输入法保护（判据见 sendKey.ts）
               const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
-                isComposing: e.nativeEvent.isComposing }
+                isComposing: e.isComposing }
               if (!isSendKey(k)) return
               if (shouldPreventDefault(k)) e.preventDefault()
               void handleSend()

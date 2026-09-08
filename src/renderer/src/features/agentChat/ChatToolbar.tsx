@@ -1,3 +1,5 @@
+import { ComposerInput, type ComposerInputElement } from './ComposerInput'
+import { ReferenceHover } from './ReferencePreview'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
 import { EffortSlider } from './EffortSlider'
 import { ChatStatusIcon } from './ChatStatusIcon'
@@ -39,15 +41,6 @@ import { BranchBadge } from './BranchBadge'
 import { usePastedImages } from '../terminal/usePastedImages'
 import { isSendKey, shouldPreventDefault, SEND_HINT } from './sendKey'
 import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
-
-const MAX_ROWS = 4
-const LINE_H = 19
-/** 用量仪表盘的展开状态。**默认收起** —— 想知道的时候才看，常驻会把要用的控件挤走 */
-
-function autoGrow(el: HTMLTextAreaElement): void {
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, LINE_H * MAX_ROWS) + 'px'
-}
 
 /** 一条飘在对话上方的提示。规矩见 `noticeDismiss.ts`：
  *  · 永远有关闭按钮（× 手动关）
@@ -227,7 +220,7 @@ export function ChatToolbar({
   const snapHere = lastSnapshot && myProjectId && lastSnapshot.projectId === myProjectId
   /** noticeId → 关闭那一刻它的 count（见下面 visibleNotices 的注释） */
   const [dismissed, setDismissed] = useState<Record<string, number>>({})
-  const taRef = useRef<HTMLTextAreaElement>(null)
+  const taRef = useRef<ComposerInputElement>(null)
   const requestConfirm = useStore((s) => s.requestConfirm)
   const aliveRef = useRef(true)
   useEffect(() => () => {
@@ -238,6 +231,15 @@ export function ChatToolbar({
   // 工具栏这里原来有一个「审批保护 已开启/未开启」chip 加一个「卸载」按钮 ——
   // 它们占着每天都要看的那一行，说的却是一件装完就基本不动的事。
   // 内核那侧一个字没动（隔离标记 / 写前备份 / 一键卸载都还在），只是入口换了地方。
+
+  const confirmCompact = (): void => {
+    void stopVoiceOnSend()
+    requestConfirm({
+      message: '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
+      confirmLabel: '压缩',
+      onConfirm: () => onSend('/compact')
+    })
+  }
 
   // 斜杠候选：状态与键盘逻辑都在 useSlashPicker 里（跟空态那个输入框共用一套，
   // 免得「哪些命令能用」有两个说法 —— 那件事是靠实测维护的）
@@ -251,7 +253,7 @@ export function ChatToolbar({
     // 预加载的 chip 也进 `@` 候选，且排在文件前面
     chips,
     { cli: cli.id, boundPluginId: view.plugin?.status === 'missing' ? undefined : view.plugin?.id, nativeSlash: caps.nativeSlash, model: model.showModel, effort: model.effortLevels.length > 0,
-      compact: model.showCompact ? () => taRef.current?.parentElement?.querySelector<HTMLButtonElement>('[aria-label="压缩"]')?.click() : undefined,
+      compact: model.showCompact ? confirmCompact : undefined,
       onAddChip: c => setChips(cur => addChip(cur, c)) }
   )
 
@@ -282,7 +284,6 @@ export function ChatToolbar({
     void stopVoiceOnSend()
     setText('')
     if (taRef.current) {
-      taRef.current.style.height = 'auto'
       taRef.current.focus()
     }
     // 发送失败要把用户打的字放回输入框（2026-08-17 全分支最终评审 I4）。
@@ -300,7 +301,6 @@ export function ChatToolbar({
       setChips((cur) => sentChips.reduce((acc, c) => addChip(acc, c), cur))
       requestAnimationFrame(() => {
         if (!taRef.current) return
-        autoGrow(taRef.current)
         taRef.current.focus()
       })
     })
@@ -308,9 +308,6 @@ export function ChatToolbar({
 
   const appendVoice = (t: string): void => {
     setText((prev) => (prev && !/\s$/.test(prev) ? prev + ' ' : prev) + t)
-    requestAnimationFrame(() => {
-      if (taRef.current) autoGrow(taRef.current)
-    })
   }
 
   // 【2026-08-18 摘掉】仪表盘（用量数字 + 两个额度条）与上下文占用条。
@@ -398,10 +395,10 @@ export function ChatToolbar({
         {(pics.imgs.length > 0 || snapHere || chips.length > 0) && (
           <div className="ac-attach-row">
             {chips.map((c) => (
-              <span
+              <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"辞典提示词"}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
-                  data-tip={c.text}
+                  data-kind="dict"
                 >
                 <DictIcon size={11} />
                 <span className="ac-chip-label">{c.label}</span><span className="ac-chip-state">{refIds.includes(c.id) ? '本次引用' : '备选'}</span>
@@ -418,7 +415,7 @@ export function ChatToolbar({
                 >
                   <CloseIcon size={9} />
                 </button>
-              </span>
+              </span></ReferenceHover>
             ))}
             {snapHere && (
               <span className="ac-attach-snap-wrap">
@@ -444,8 +441,8 @@ export function ChatToolbar({
               </span>
             )}
             {pics.imgs.map((im) => (
-              <div className="ac-attach" key={im.path} data-tip={im.path}>
-                <img src={im.url} alt={im.name} />
+              <ReferenceHover key={im.path} reference={{id:im.path,kind:"image",label:im.name,raw:im.path,payload:/\s/.test(im.path) ? `"${im.path}"` : im.path,detail:"图片附件",imagePath:im.path,imageUrl:im.url}}><div className="ac-attach ac-image-chip" data-kind="image">
+                <img src={im.url} alt={im.name} /><span className="ac-image-chip-label">{im.name}</span>
                 <button
                   type="button"
                   className="ac-attach-x"
@@ -457,15 +454,16 @@ export function ChatToolbar({
                 >
                   <CloseIcon size={9} />
                 </button>
-              </div>
+              </div></ReferenceHover>
             ))}
           </div>
         )}
 
         {slash.open && <SlashList {...slash} />}
 
-        <textarea
+        <ComposerInput
           {...slash.inputProps}
+          references={slash.references}
           ref={taRef}
           className="ac-composer"
           rows={1}
@@ -473,7 +471,7 @@ export function ChatToolbar({
           // 对话态的登记口。**空态那个在 AgentChatView，两个都要登记** ——
           // 只改一个的话，对话一旦开始，词典就又插回终端去了（SlashPicker 开头
           // 那句「两个输入框共用」说的就是这两个）。
-          // 直接复用 appendVoice：它已经处理了空格分隔与 autoGrow，
+          // 直接复用 appendVoice 的空格分隔，编辑器自行处理内容高度，
           // 词典插入和语音插入本来就是同一件事。
           onFocus={() => {
             slash.syncSelection()
@@ -482,23 +480,20 @@ export function ChatToolbar({
             st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
           }}
           placeholder="继续和它说…（可粘贴或拖入图片）"
-          onChange={(e) => {
-            setText(e.target.value)
-            autoGrow(e.target)
-          }}
+          onChange={setText}
           onKeyDown={(e) => {
             // 候选开着时先归它管 —— 这几个键在这一刻的意思跟平时不一样
             if (slash.handleKey(e)) return
             // isComposing 只在原生事件上（见 sendKey.ts）—— 中文输入法选候选词时
             // 按回车是「确认」不是「发送」，取错字段就会把没打完的句子发出去
             const k = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey,
-              isComposing: e.nativeEvent.isComposing }
+              isComposing: e.isComposing }
             if (!isSendKey(k)) return
             if (shouldPreventDefault(k)) e.preventDefault()
             submit()
           }}
           onPaste={(e) => {
-            const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
+            const files = [...e.clipboardData!.files].filter((f) => f.type.startsWith('image/'))
             if (!files.length) return // 纯文本粘贴走默认行为
             e.preventDefault()
             void pics.takeFiles(files)
@@ -638,15 +633,7 @@ export function ChatToolbar({
             className="ac-bar-btn icon-only"
             aria-label="压缩"
             data-tip="压缩 —— 把之前的对话换成一份摘要"
-            onClick={() => {
-              void stopVoiceOnSend()
-              requestConfirm({
-                message:
-                  '压缩会把之前的对话换成一份摘要，细节不可恢复（agent 之后只记得摘要里的内容）。继续吗？',
-                confirmLabel: '压缩',
-                onConfirm: () => onSend('/compact')
-              })
-            }}
+            onClick={confirmCompact}
           >
             <CompressIcon size={11} />
           </button>

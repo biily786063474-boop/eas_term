@@ -732,7 +732,7 @@ async function verifyStartup(cdp, projectDir) {
   const shot=await cdp.send('Page.captureScreenshot',{format:'png'})
   fs.writeFileSync(path.join(outDir,'startup-model.png'),Buffer.from(shot.result.data,'base64'))
   const composer = await verifyComposerLayout(cdp, outDir, 'startup')
-  await cdp.clickElement(`document.querySelector('textarea.ac-input')`, '首轮输入框')
+  await cdp.clickElement(`document.querySelector('[data-composer-input].ac-input')`, '首轮输入框')
   await cdp.send('Input.insertText',{text:'首轮模型参数测试，不发送真实推理请求'})
   await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
   await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,modifiers:4})
@@ -1005,7 +1005,7 @@ async function main() {
           const root = document.querySelector('.agent-chat-view .ac-empty')
           if (!root) return null
           const logo = root.querySelector('.ac-slogan')
-          const input = root.querySelector('textarea.ac-input')
+          const input = root.querySelector('[data-composer-input].ac-input')
           return JSON.stringify({
             hasLogo: !!logo,
             logoVisible: window.__t8Visible(logo),
@@ -1044,13 +1044,13 @@ async function main() {
 
     // ── 断言 2：真实坐标点击输入框，聚焦 + 输入 ─────────────────────────────────
     const TEST_MESSAGE = '帮我看一下这个目录里都有什么（task-8 e2e 验证脚本发送）'
-    await cdp.clickElement(`document.querySelector('textarea.ac-input')`, '空态输入框')
+    await cdp.clickElement(`document.querySelector('[data-composer-input].ac-input')`, '空态输入框')
     const focusedAfterClick = await cdp.eval(
       `document.activeElement && document.activeElement.classList.contains('ac-input')`
     )
     await cdp.send('Input.insertText', { text: TEST_MESSAGE })
     await sleep(150)
-    const typedValue = await cdp.eval(`document.querySelector('textarea.ac-input')?.value || ''`)
+    const typedValue = await cdp.eval(`document.querySelector('[data-composer-input].ac-input')?.value || ''`)
     if (focusedAfterClick && typedValue === TEST_MESSAGE) {
       pass(2, `真实坐标点击后 document.activeElement 命中输入框；Input.insertText 后 value 与预期完全一致`)
     } else {
@@ -1656,7 +1656,7 @@ async function main() {
       const selectedB = await selectCli('Codex')
       log(`  · Node B 已选中：${selectedB}`)
 
-      await cdp.clickElement(`document.querySelector('textarea.ac-input')`, 'Node B 空态输入框')
+      await cdp.clickElement(`document.querySelector('[data-composer-input].ac-input')`, 'Node B 空态输入框')
       await cdp.send('Input.insertText', { text: 'ping（P2-1 验证脚本发送）' })
       await sleep(100)
       await cdp.clickElement(`document.querySelector('button[aria-label="发送消息"]')`, 'Node B「发送」按钮')

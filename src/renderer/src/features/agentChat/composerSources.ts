@@ -19,7 +19,7 @@ export async function loadFiles(cwd: string): Promise<Candidate[]> {
   const rows: Candidate[] = files.map(f => {
     const parts = f.rel.replaceAll('\\', '/').split('/')
     for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join('/') + '/')
-    return { id: `file:${f.rel}`, category: 'file', name: f.rel, description: f.name, insert: `@${quote(f.rel)}` }
+    return { id: `file:${f.rel}`, category: 'file', name: f.rel, description: f.name, insert: `@${quote(f.rel)}`, imagePath: /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(f.rel) ? f.path : undefined }
   })
   return [...rows, ...[...folders].map(name => ({ id: `folder:${name}`, category: 'folder' as const, name, description: '项目目录', insert: `@${quote(name)}` }))]
 }

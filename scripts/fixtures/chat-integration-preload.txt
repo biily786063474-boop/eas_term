@@ -46,7 +46,9 @@ if (AGENT_CHAT_TEST_MODE) {
 
 // Composer regression faults are injected only by the isolated --composer runner.
 if (AGENT_CHAT_TEST_MODE) {
-  let config: {userTerms?:UserTerm[];filesError?:boolean;userDictError?:boolean;filesDelay?:number;sendFail?:boolean} | null = null
+  let config: {userTerms?:UserTerm[];filesError?:boolean;userDictError?:boolean;filesDelay?:number;sendFail?:boolean;plugins?:PluginInfo[];files?:Awaited<ReturnType<typeof api.fs.recentFiles>>} | null = null
+  const pluginList = api.plugins.list
+  api.plugins.list = async () => config?.plugins ?? pluginList()
   const userTerms = api.fs.userTerms
   api.fs.userTerms = async () => {
     if (config?.userDictError) throw new Error('composer test: user dictionary unavailable')
@@ -59,6 +61,7 @@ if (AGENT_CHAT_TEST_MODE) {
     const snapshot = {...config}
     await new Promise(r => setTimeout(r, snapshot.filesDelay ?? 0))
     if (snapshot.filesError) throw new Error('composer test: file source unavailable')
+    if (snapshot.files) return snapshot.files
     return Array.from({length:35},(_,i)=>({name:'file-'+i+'.ts',path:args[0]+'/src/file-'+i+'.ts',rel:'src/file-'+i+'.ts',time:0}))
   }
   api.agentChat.send = async (sessionId,message) => {

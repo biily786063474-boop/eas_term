@@ -424,7 +424,7 @@ export function CanvasStage(): JSX.Element {
       if (overlayHasKeyboard()) return // 设计模块自己也认 Esc，别两边一起响应
       // 捕获阶段先让出已展开输入候选的 Esc；React 的冒泡拦截晚于这里。
       const target = e.target
-      if ((target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) && target.getAttribute('aria-expanded') === 'true') return
+      if ((target instanceof HTMLElement && (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement)) && target.getAttribute('aria-expanded') === 'true') return
       if (liveMaximizedNode(useStore.getState())) {
         e.preventDefault()
         useStore.getState().setMaximizedNode(null)
