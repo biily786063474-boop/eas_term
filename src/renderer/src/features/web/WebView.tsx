@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
 import { ChevronLeftIcon, ChevronRightIcon, RefreshIcon, CloseIcon, GlobeIcon } from '../../ui/Icons'
 import './web.css'
+import {FavoritesPanel} from './FavoritesPanel'
+import {parseFavoriteRoute} from '../../../../shared/browserFavorites'
 
 // <webview> 元素最小接口（只列我们用到的方法）
 interface WebviewEl extends HTMLElement {
@@ -72,6 +74,15 @@ export function WebView({
    *  字会糊、点击命中也会错位。webview 的 zoomFactor 是让页面**按新比例重新排版**。 */
   zoom?: number
 }): JSX.Element {
+  const initialRoute = (()=>{try{return parseFavoriteRoute(initialUrl||'')}catch{return null}})()
+  const [home,setHome]=useState(!initialUrl||!!initialRoute)
+  const [folder,setFolder]=useState(initialRoute?.folder||'')
+  const [bookmark,setBookmark]=useState<{name:string;url:string;guestId?:number}|null>(initialRoute?.save?{name:initialRoute.name,url:initialRoute.url}:null)
+  const titleRef=useRef('')
+  const homeRef=useRef(home)
+  homeRef.current=home
+  const persist=(url:string):void=>{if(free&&nodeId)useStore.getState().setFreeNodeUrl(nodeId,url);else if(frameId&&nodeId)useStore.getState().setNodeUrl(frameId,nodeId,url)}
+  const showFolder=(id:string):void=>{setFolder(id);setHome(true);persist('eas-favorites://home'+(id?'?folder='+encodeURIComponent(id):''))}
   const hostRef = useRef<HTMLDivElement>(null)
   const wvRef = useRef<WebviewEl | null>(null)
   const [addr, setAddr] = useState(initialUrl ?? '') // 地址栏输入
@@ -82,7 +93,7 @@ export function WebView({
   const [error, setError] = useState<string | null>(null)
   const [menu, setMenu] = useState<DOMRect | null>(null) // ⋯ 溢出菜单锚点
   /** 最后停留的地址。离屏回收后重建要用它 —— 用 initialUrl 会把人送回节点刚建时那一页 */
-  const lastUrlRef = useRef(initialUrl ?? '')
+  const lastUrlRef = useRef(initialRoute?'':initialUrl ?? '')
 
   // 显示比例。**只在真的变了时调** —— setZoomFactor 会触发页面重排，
   // 每次渲染都调一次的话滚动位置会被反复重置。
@@ -134,8 +145,7 @@ export function WebView({
         setAddr(url)
         lastUrlRef.current = url // 离屏回收后重建要从这儿续上
         // 回写节点 url → 随 canvas.json 持久化，重开还原到上次页面
-        if (free && nodeId) useStore.getState().setFreeNodeUrl(nodeId, url)
-        else if (frameId && nodeId) useStore.getState().setNodeUrl(frameId, nodeId, url)
+        if(!homeRef.current)persist(url)
       }
       syncNav()
     }
@@ -157,6 +167,7 @@ export function WebView({
     const onTitle = (e: Event): void => {
       // 页面标题回写节点(存 pane.title；节点头部手动 name 优先，其次标题)
       const t = (e as unknown as { title?: string }).title
+      if(t)titleRef.current=t
       if (t && nodeId) {
         if (free) useStore.getState().setFreeNodeTitle(nodeId, t)
         else if (frameId) useStore.getState().setWebNodeTitle(frameId, nodeId, t)
@@ -172,6 +183,10 @@ export function WebView({
       })
     }
 
+    const stopRoute=window.api.browser.onRoute(({guestId:id,url})=>{
+      if(id!==guestId)return
+      try{const route=parseFavoriteRoute(url);if(route){showFolder(route.folder);if(route.save)setBookmark({name:route.name,url:route.url})}}catch(e){setError(String(e))}
+    })
     // 懒挂载：节点首次进入视口才创建 webview。离屏的浏览器节点（如恢复一堆书签）不建 Chromium 进程，省内存。
     const create = (): void => {
       if (wv) return
@@ -198,7 +213,7 @@ export function WebView({
       // 而不是让所有网页节点一起陪着醒。
       // 用记下的地址而不是 initialUrl：回收前你可能已经点进了别的页面
       const start = lastUrlRef.current || initialUrl
-      if (start) wv.setAttribute('src', start)
+      if (start && !start.startsWith('eas-favorites:')) wv.setAttribute('src', start)
       host.appendChild(wv)
       wvRef.current = wv
       wv.addEventListener('did-start-loading', onStart)
@@ -256,6 +271,7 @@ export function WebView({
     io.observe(host)
 
     return () => {
+      stopRoute()
       io.disconnect()
       clearTimeout(idleTimer)
       destroy()
@@ -264,15 +280,19 @@ export function WebView({
   }, [])
 
   const go = (raw: string): void => {
+    try{const route=parseFavoriteRoute(raw);if(route){showFolder(route.folder);if(route.save)setBookmark({name:route.name,url:route.url});return}}catch(e){setError(String(e));return}
     const u = normalizeUrl(raw)
     if (!u) return
     const wv = wvRef.current
-    if (!wv) return
+    lastUrlRef.current=u
+    setHome(false)
     setError(null)
     setAddr(u)
+    persist(u)
+    if(!wv)return
     // dom-ready 前 loadURL 会抛 → 回退到设 src（初始导航同样生效）
     try {
-      void wv.loadURL(u)
+      void wv.loadURL(u).catch(e=>setError(String(e)))
     } catch {
       wv.setAttribute('src', u)
     }
@@ -281,10 +301,12 @@ export function WebView({
   return (
     <div className="web-view">
       <div className="web-bar">
-        <button className="web-nav" data-tip="后退" disabled={!canBack} onClick={() => wvRef.current?.goBack()}>
+        <button className="web-nav" aria-label="收藏夹首页" data-tip="收藏夹" onClick={()=>showFolder('')}>⌂</button>
+        <button className="web-nav" aria-label="收藏当前网站" data-tip="收藏当前网站" onClick={()=>{const w=wvRef.current;let url='',guestId:number|undefined;try{url=w?.getURL()||'';guestId=w?.getWebContentsId()}catch{};setBookmark({name:titleRef.current,url,guestId})}}>☆</button>
+        <button className="web-nav" data-tip="后退" disabled={home?!folder&&!lastUrlRef.current:!canBack} onClick={() => {if(home){if(folder)showFolder('');else{setHome(false);persist(lastUrlRef.current)}}else wvRef.current?.goBack()}}>
           <ChevronLeftIcon size={14} />
         </button>
-        <button className="web-nav" data-tip="前进" disabled={!canFwd} onClick={() => wvRef.current?.goForward()}>
+        <button className="web-nav" data-tip="前进" disabled={home||!canFwd} onClick={() => wvRef.current?.goForward()}>
           <ChevronRightIcon size={14} />
         </button>
         <button
@@ -301,10 +323,10 @@ export function WebView({
             <GlobeIcon size={11} />
           )}
           <input
-            value={addr}
+            value={home?'eas-favorites://home'+(folder?'?folder='+folder:''):addr}
             spellCheck={false}
             placeholder="输入网址或搜索…"
-            onChange={(e) => setAddr(e.target.value)}
+            onChange={(e) => {setHome(false);setAddr(e.target.value)}}
             onKeyDown={(e) => {
               if (e.key === 'Enter') go((e.target as HTMLInputElement).value)
             }}
@@ -320,14 +342,8 @@ export function WebView({
           ⋯
         </button>
       </div>
-      <div className="web-body" ref={hostRef}>
-        {!initialUrl && !addr && (
-          <div className="web-empty">
-            <GlobeIcon size={22} />
-            <span>输入网址开始浏览</span>
-          </div>
-        )}
-        {error && (
+      <div className={'web-body'+(home?' favorites-showing':'')} ref={hostRef}>
+        {error && !home && (
           <div className="web-error">
             <div className="web-error-t">打不开这个页面</div>
             <div className="web-error-d">{error}</div>
@@ -336,6 +352,7 @@ export function WebView({
         )}
         {/* 未选中：透明遮罩盖住 webview，双指手势打在遮罩上 → 冒泡给画布 pan；点击经节点捕获选中。
             选中(true)/分屏(undefined) 不盖，网页正常内部滚动与交互。 */}
+        <FavoritesPanel active={selected!==false} visible={home} folder={folder} onFolder={showFolder} onOpen={go} bookmark={bookmark} onCloseBookmark={()=>setBookmark(null)}/>
         {selected === false && <div className="web-shield" />}
       </div>
       {menu &&

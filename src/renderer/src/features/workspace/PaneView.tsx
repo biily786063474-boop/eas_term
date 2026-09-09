@@ -145,6 +145,8 @@ function PaneKindSelect({
 
 /** 画布模式下节点的屏幕像素定位（世界坐标 × 视口换算的结果 + 拖动所需上下文） */
 export interface CanvasPlacement {
+  /** Maximized sibling: keep geometry, suppress painting and interaction. */
+  concealed?: boolean
   left: number
   top: number
   w: number
@@ -196,7 +198,8 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   // 这里原来是内联的，画布上那三个节点想用只能抄，于是 2026-09-07 抽了出去。
   useMaximizeFlip(
     paneRef,
-    canvasRect ? { left: canvasRect.left, top: canvasRect.top, w: canvasRect.w, h: canvasRect.h } : null
+    canvasRect && !canvasRect.concealed ? { left: canvasRect.left, top: canvasRect.top, w: canvasRect.w * canvasRect.scale, h: canvasRect.h * canvasRect.scale } : null,
+    !!canvasRect?.maximized
   )
   // 画布模式下本终端节点的选中 key，供高亮 + 点选
   const selKey = canvasRect && !canvasRect.board ? 'n:' + canvasRect.frameId + ':' + canvasRect.nodeId : ''
@@ -271,6 +274,8 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           // 代价是缩小时字会跟着变小 —— 那正是「缩略图」该有的样子，
           // 想读内容就放大或最大化。
           display: hidden ? 'none' : undefined,
+          visibility: canvasRect.concealed ? 'hidden' : undefined,
+          pointerEvents: canvasRect.concealed ? 'none' : undefined,
           left: canvasRect.left,
           top: canvasRect.top,
           width: canvasRect.w,
@@ -281,6 +286,8 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         }
       : {
           display: hidden ? 'none' : undefined,
+          visibility: canvasRect.concealed ? 'hidden' : undefined,
+          pointerEvents: canvasRect.concealed ? 'none' : undefined,
           left: canvasRect.left,
           top: canvasRect.top,
           width: canvasRect.w,

@@ -1,0 +1,12 @@
+# Exploratory local traces; authoritative before/after evidence is curated in README.
+baseline/
+geometry-after/
+layer-after/
+layout-after/
+no-blur/
+stress-before/
+workflow/
+restart-first/
+**/app.log
+**/trace.json
+acceptance/

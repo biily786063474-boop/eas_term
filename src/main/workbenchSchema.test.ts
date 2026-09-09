@@ -6,7 +6,8 @@ import { McpClient } from './mcpClient.ts'
 
 test('legacy entry serves exactly the shared packaged catalog, and remains empty outside Eas-Term', async () => {
   const schema = JSON.parse(readFileSync(new URL('../../mcp/workbench-tools.json', import.meta.url), 'utf8'))
-  assert.equal(schema.length, 38)
+  assert.equal(schema.length, 39)
+  assert.ok(schema.some((tool: {name:string}) => tool.name === 'browser_routes'))
   assert.equal(new Set(schema.map((tool: { name: string }) => tool.name)).size, schema.length)
   for (const managed of [false, true]) {
     const client = new McpClient({ name: 'schema-test', command: process.execPath, args: [fileURLToPath(new URL('../../mcp/eas-mcp.mjs', import.meta.url))], env: managed ? { EAS_TERM_PORT: '1', EAS_TERM_TOKEN: 'test-only' } : {}, cwd: process.cwd() })

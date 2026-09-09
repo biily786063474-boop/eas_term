@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "persistent browser login fixture survives full app restart",
+    "website guest has no privileged preload or Node access",
+    "custom folders survive full app restart"
+  ],
+  "passed": true
+}

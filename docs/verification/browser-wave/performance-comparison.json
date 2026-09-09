@@ -1,0 +1,35 @@
+{
+  "geometry-before": {
+    "maxFrameGapsMs": [
+      175,
+      9.7,
+      10,
+      9.8,
+      9.9
+    ],
+    "layoutMs": [
+      5.234,
+      1.897,
+      2.026,
+      2.196,
+      1.998
+    ]
+  },
+  "final": {
+    "maxFrameGapsMs": [
+      58.4,
+      10.3,
+      10.2,
+      10.1,
+      10.3
+    ],
+    "layoutMs": [
+      2.814,
+      1.089,
+      1.102,
+      1.079,
+      1.114
+    ]
+  },
+  "limits": "Mac fixture, cold completion paint remains; Windows/real CLI loads not benchmarked."
+}

@@ -77,7 +77,8 @@ export function CanvasFreeFileNode({
       ? null
       : maxStyle
         ? { left: maxStyle.left as number, top: maxStyle.top as number, w: maxStyle.width as number, h: maxStyle.height as number }
-        : { left: node.x, top: node.y, w: node.w, h: node.h }
+        : { left: node.x, top: node.y, w: node.w, h: node.h },
+    isMax
   )
   const [editing, setEditing] = useState(false)
   // skill 面板拖出来的文件走自己的写入口：那些文件在 `~/.claude/skills` 这类位置，
@@ -183,7 +184,7 @@ export function CanvasFreeFileNode({
       onMouseDown={(e) => e.stopPropagation()}
       style={
         maxStyle ??
-        (hiddenByMax ? { display: 'none' } : { left: node.x, top: node.y, width: node.w, height: node.h })
+        (hiddenByMax ? { left: node.x, top: node.y, width: node.w, height: node.h, visibility: 'hidden', pointerEvents: 'none' } : { left: node.x, top: node.y, width: node.w, height: node.h, ...(hold ? { visibility: 'visible', pointerEvents: 'auto' } as const : {}) })
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>

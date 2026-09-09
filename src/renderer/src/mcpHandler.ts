@@ -1,3 +1,4 @@
+import {parseFavoriteRoute} from '../../shared/browserFavorites'
 // MCP 工具执行器（渲染层）：主进程把 AI 的调用转过来，这里落到 store action 再回结果。
 //
 // 上下文自动解析：调用方终端的 ptyId（PTY env 注入）→ 反查它挂在哪个 Frame / 哪个节点，
@@ -1483,6 +1484,8 @@ const SHELL_TRAP =
     return out
   }
 
+  if (tool === 'browser_routes') return window.api.browser.routes()
+
   // 以下工具都要落到某个 Frame
   const loc = resolveFrame(ctx)
   if (!loc) throw new Error('画布里还没有 Frame，无法打开预览')
@@ -1511,7 +1514,7 @@ const SHELL_TRAP =
 
   if (tool === 'canvas_open_url') {
     const url = String(args.url ?? '')
-    if (!/^https?:\/\//i.test(url)) throw new Error('只接受 http(s) 网址')
+    if (!/^https?:\/\//i.test(url) && !parseFavoriteRoute(url)) throw new Error('只接受 http(s) 或收藏入口网址')
     if (s.viewMode !== 'canvas') s.setViewMode('canvas')
     const before = idsOfFrame(loc.frameId)
     s.addWebNode(loc.frameId, url)

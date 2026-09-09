@@ -12,6 +12,7 @@ import { registerTodoHandlers } from './todos'
 import { registerProjectHandlers } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
+import { registerBrowserFavorites, registerFavoritePreviewScheme } from './browserFavorites'
 import { registerPrefsHandlers } from './prefs'
 import { registerSnapshotHandlers } from './snapshot'
 import { registerUpdaterHandlers, schedule as scheduleUpdateCheck } from './updater'
@@ -80,7 +81,16 @@ process.on('unhandledRejection', (reason) => {
 // 用 web-contents-created 捕获所有 webview guest(比 did-attach-webview 对命令式创建的 webview 更可靠)。
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
+  // Internal routes only open UI. No website can silently create a bookmark or publish.
+  const routeFavorites = (url: string): boolean => {
+    if (!url.startsWith('eas-favorites:')) return false
+    const host = contents.hostWebContents
+    if (host && !host.isDestroyed()) host.send('browser:route', { guestId: contents.id, url })
+    return true
+  }
+  contents.on('will-navigate', (event, url) => { if (routeFavorites(url)) event.preventDefault() })
   contents.setWindowOpenHandler(({ url }) => {
+    if (routeFavorites(url)) return { action: 'deny' }
     // 在 handler 里同步 loadURL 会被 Electron 忽略 → setImmediate 延迟到 handler 返回后导航
     setImmediate(() => {
       if (contents.isDestroyed()) return
@@ -121,6 +131,7 @@ registerPluginScheme()
 // 词典动效短片的私有协议。**和 bizone 一样必须在 ready 之前注册**
 registerDictClipScheme()
 registerMediaScheme()
+registerFavoritePreviewScheme()
 
 function createWindow(): void {
   const isMac = process.platform === 'darwin'
@@ -404,6 +415,7 @@ app.whenReady().then(() => {
   // 上次留下的粘贴图，过 24 小时的在这里清掉（见 pasteImages.ts 里为什么不发送后就删）
   sweepPasteImages()
   registerPrefsHandlers()
+  registerBrowserFavorites()
   registerSnapshotHandlers()
   registerUpdaterHandlers()
   // 检查更新：启动 12 秒后查第一次，之后每 6 小时。用户关掉开关就完全不发请求

@@ -6,13 +6,13 @@
   "main": "out/main/index.js",
   "private": true,
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "node scripts/build-computer-helper.mjs && electron-vite build",
+    "dev": "node scripts/build-browser-routes.mjs && electron-vite dev",
+    "build": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "node --test 'src/**/*.test.ts' 'src/**/*.test.mjs' 'hooks/*.test.mjs' 'resources/plugins/*/lib/*.test.ts'",
-    "dist": "node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
-    "dist:ci": "node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && electron-builder --publish never",
+    "dist": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && COPYFILE_DISABLE=1 electron-builder --mac -c.directories.output=\"$HOME/Eas-Term-release\"",
+    "dist:ci": "node scripts/build-browser-routes.mjs && node scripts/build-computer-helper.mjs && electron-vite build && node scripts/check-renderer-entries.mjs && npm run omp:fetch && node scripts/check-omp-bundle.mjs && node scripts/check-computer-helper.mjs && electron-builder --publish never",
     "postinstall": "electron-rebuild -f -w node-pty",
     "check": "npm run typecheck && node scripts/check-hooks.mjs && node scripts/check-accent-contrast.mjs && node scripts/check-css-balance.mjs && node scripts/check-animations.mjs && npm test",
     "verify": "npm run build && npm run omp:fetch && node scripts/verify-app.mjs --seed",
@@ -141,6 +141,10 @@
       {
         "from": "resources/omp/THIRD-PARTY-NOTICES.txt",
         "to": "omp/THIRD-PARTY-NOTICES.txt"
+      },
+      {
+        "from": "resources/browser",
+        "to": "browser"
       }
     ],
     "afterSign": "build/notarize.js"

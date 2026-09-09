@@ -108,7 +108,7 @@ export function PaneLayer(): JSX.Element {
         if (!n.leafId) return
         const isMax = !!maximizedNode && maximizedNode.frameId === f.id && maximizedNode.nodeId === n.id
         // 用滞后的 holder：还原后这一句还会再拦 260ms，等收回动画放完再放它们出来
-        if (hidingHolder && !(hidingHolder.frameId === f.id && hidingHolder.nodeId === n.id)) return
+        const concealed = !!hidingHolder && !(hidingHolder.frameId === f.id && hidingHolder.nodeId === n.id)
         if (isMax) {
           m.set(n.leafId, {
             left: 0,
@@ -137,6 +137,7 @@ export function PaneLayer(): JSX.Element {
         if (left + w < -VIEW_MARGIN || left > cw + VIEW_MARGIN) return
         if (top + h < -VIEW_MARGIN || top > ch + VIEW_MARGIN) return
         m.set(n.leafId, {
+          concealed,
           left,
           top,
           w: n.w,

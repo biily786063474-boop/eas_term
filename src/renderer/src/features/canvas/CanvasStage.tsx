@@ -1,3 +1,4 @@
+import { useHidingHolder } from '../workspace/useFlip'
 // 画布装饰层：viewport（点阵背景 + 平移缩放捕获）→ world（transform 变换）→ Frame 卡片。
 // 这一层只画「死内容」（Frame 边框/标题/点阵/缩放条），可随意位图缩放。
 // 活终端由 PaneLayer 渲染、浮在此层之上按同一视口变换对齐（实现规划 §5-A 双层渲染）。
@@ -148,7 +149,9 @@ export function CanvasStage(): JSX.Element {
   const updateShape = useStore((s) => s.updateShape)
   // 有模块在「最大化沉浸」时，右下角那两条要让位（见下面 .on-max 的注释）。
   // 用 liveMaximizedNode 而不是直接读 store：它指的节点可能已经被关掉了。
-  const maximized = !!useStore(liveMaximizedNode)
+  const liveMax = useStore(liveMaximizedNode)
+  const maximized = !!liveMax
+  const worldHidden = !!useHidingHolder(liveMax ?? null)
   /** 双击迸发。**只在这一处触发** —— 用户给规格时一并给了坑：
    *  「全站包裹会让每次点击都放烟花，严肃的后台界面容易显吵。」
    *  所以组件本身不监听事件，由这里在「双击空白」那一下手动放。 */
@@ -1345,7 +1348,7 @@ export function CanvasStage(): JSX.Element {
           重新布局（xterm 尤其怕这个，见图纸 10「xterm 绝不能重挂载」），
           而 visibility 只是不画。 */}
       <div
-        className={`canvas-world${maximized ? ' hidden-by-max' : ''}`}
+        className={`canvas-world${worldHidden ? ' hidden-by-max' : ''}`}
         style={{ transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.scale})` }}
       >
         {draft && renderShape(draft, true)}

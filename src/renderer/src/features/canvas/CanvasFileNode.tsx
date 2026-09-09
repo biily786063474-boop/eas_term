@@ -80,7 +80,8 @@ export function CanvasFileNode({
       ? null
       : maxStyle
         ? { left: maxStyle.left as number, top: maxStyle.top as number, w: maxStyle.width as number, h: maxStyle.height as number }
-        : { left: node.x, top: node.y, w: node.w, h: node.h }
+        : { left: node.x, top: node.y, w: node.w, h: node.h },
+    isMax
   )
   const renameNode = useStore((s) => s.renameNode)
   const projectPath = useStore((s) => {
@@ -195,10 +196,10 @@ export function CanvasFileNode({
         maxStyle ??
         // 有别的节点最大化时把自己藏起来。不能只靠最大化节点的 z-index：
         // 浏览器节点是 <webview>（跨进程合成），永远浮在普通 DOM 之上，压不住。
-        // 用 display:none 而不是不渲染，webview 的页面状态才不会丢。
+        // 保留几何，只隐藏绘制；display:none 会把 guest/编辑器尺寸压为 0，恢复时触发重排风暴。
         (hiddenByMax
-          ? { display: 'none' }
-          : { left: node.x, top: node.y, width: node.w, height: node.h })
+          ? { left: node.x, top: node.y, width: node.w, height: node.h, visibility: 'hidden', pointerEvents: 'none' }
+          : { left: node.x, top: node.y, width: node.w, height: node.h, ...(hold ? { visibility: 'visible', pointerEvents: 'auto' } as const : {}) })
       }
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>

@@ -233,13 +233,13 @@
   },
   {
     "name": "canvas_open_url",
-    "description": "在画板里打开一个网址（内嵌 Chromium 浏览器节点），用于查文档或看部署结果。",
+    "description": "在画板里打开一个网址（内嵌 Chromium 浏览器节点），用于查文档或看部署结果。 也接受 eas-favorites://home?folder=media 或 eas-favorites://save?url=...&name=...&folder=...，仅打开收藏界面/表单，不自动保存。",
     "inputSchema": {
       "type": "object",
       "properties": {
         "url": {
           "type": "string",
-          "description": "http(s) 网址"
+          "description": "http(s) 或 eas-favorites 收藏入口网址"
         }
       },
       "required": [
@@ -919,6 +919,19 @@
     },
     "annotations": {
       "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "browser_routes",
+    "description": "查询内置收藏网站路由（含发布小红书笔记等意图）、本地离线 HTML 入口及收藏表单深链接。只读，不会发布或读取登录凭证。",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
       "destructiveHint": false,
       "openWorldHint": false
     }

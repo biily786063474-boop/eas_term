@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "five default folders rendered",
+    "large horizontal cards",
+    "overflow hint exists only with more content",
+    "hint disappears at end",
+    "favorite persists through IPC read",
+    "packaged route HTML exists",
+    "agent route maps Xiaohongshu creator"
+  ],
+  "passed": true
+}

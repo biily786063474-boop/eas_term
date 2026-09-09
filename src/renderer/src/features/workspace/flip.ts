@@ -59,3 +59,13 @@ export const FLIP_EASING = 'cubic-bezier(0.32, 0.72, 0, 1)'
 /** 时长。**放大比缩小略长**：放大是「展开给你看」，值得多一点时间；
  *  缩小是「收回去」，拖沓反而碍事。 */
 export const FLIP_MS = { grow: 320, shrink: 260 }
+
+/** Constant-layout shrink prevents cold rasterization at an enlarged inverse scale. */
+export function maximizeKeyframes(from: FlipRect, to: FlipRect, restoring = to.w*to.h < from.w*from.h): Array<{transformOrigin:string;transform:string;width?:string;height?:string}> {
+ return restoring
+   ? [
+       {width:`${from.w}px`,height:`${from.h}px`,transformOrigin:'0 0',transform:`translate(${from.left-to.left}px, ${from.top-to.top}px)`},
+       {width:`${from.w}px`,height:`${from.h}px`,transformOrigin:'0 0',transform:`scale(${to.w/from.w}, ${to.h/from.h})`}
+     ]
+   : [{transformOrigin:'0 0',transform:invertTransform(from,to)},{transformOrigin:'0 0',transform:'none'}]
+}

@@ -1,3 +1,4 @@
+import type {Favorites,FavoriteChange} from '../shared/browserFavorites'
 import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import type { BoardRow, Overlap } from '../shared/board'
@@ -494,6 +495,12 @@ const api = {
     codexHome: (): Promise<string> => ipcRenderer.invoke('agent:codexHome')
   },
   browser: {
+    onRoute: (cb: (data: {guestId:number;url:string}) => void): (() => void) => { const handler = (_e: Electron.IpcRendererEvent, data: {guestId:number;url:string}): void => cb(data); ipcRenderer.on('browser:route', handler); return () => { ipcRenderer.removeListener('browser:route', handler) } },
+    favorites: (): Promise<Favorites> => ipcRenderer.invoke('browser:favorites'),
+    change: (op: FavoriteChange): Promise<{data:Favorites;warning?:string}> => ipcRenderer.invoke('browser:favoriteChange',op),
+    routes: (): Promise<{catalog:typeof import('../shared/browserRoutes.json');entryUrl:string;htmlPath:string}> => ipcRenderer.invoke('browser:routes'),
+    onFavorites: (cb:(data:Favorites)=>void): (()=>void) => {const h=(_e:unknown,data:Favorites):void=>cb(data);ipcRenderer.on('browser:favoritesChanged',h);return ()=>ipcRenderer.removeListener('browser:favoritesChanged',h)},
+
     // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)
     onFocus: (cb: (guestId: number) => void): (() => void) => {
       const h = (_e: unknown, guestId: number): void => cb(guestId)

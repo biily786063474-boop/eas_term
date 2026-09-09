@@ -3,7 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0a0810;
+  background: var(--bg);
 }
 
 .web-bar {
@@ -114,7 +114,7 @@
   width: 100%;
   height: 100%;
   border: none;
-  background: #0a0810;
+  background: var(--bg);
 }
 
 /* 未选中态透明遮罩：盖在 webview 之上（z-index 高于 .web-frame），拦住网页，
@@ -149,7 +149,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #0a0810;
+  background: var(--bg);
   color: var(--fg-dim);
   padding: 24px;
   text-align: center;
@@ -180,3 +180,8 @@
 .web-error button:hover {
   filter: brightness(1.08);
 }
+
+.web-body.favorites-showing>.web-frame{visibility:hidden;pointer-events:none}
+
+/* Keep the category strip available without covering or remounting guest content. */
+.web-body > .web-frame { margin-top:43px; height:calc(100% - 43px); }

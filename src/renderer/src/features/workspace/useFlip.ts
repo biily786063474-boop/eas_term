@@ -11,7 +11,7 @@
 // 加第五个可最大化的模块时用这个 hook，别再抄一份 —— 抄出来的第一天是一样的，
 // 改过一次曲线或阈值之后就不一样了，而症状只是「有的窗口手感不对」，极难查。
 import { useLayoutEffect, useRef, type RefObject, useEffect, useState } from 'react'
-import { invertTransform, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from './flip.ts'
+import { maximizeKeyframes, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from './flip.ts'
 
 /**
  * 元素的矩形一变就跑 FLIP（布局已到终态，只用 transform 把视觉倒推回起点再跑回去）。
@@ -20,10 +20,13 @@ import { invertTransform, sameRect, FLIP_EASING, FLIP_MS, type FlipRect } from '
  * @param rect 元素此刻的矩形；`null` = 这一轮不参与（比如被别人最大化盖住而 display:none，
  *             那时量出来的是 0，倒推会得到 Infinity，浏览器判整条 transform 无效）。
  */
-export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRect | null): void {
+export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRect | null, maximized: boolean): void {
   const last = useRef<FlipRect | null>(null)
+  const lastMax = useRef(maximized)
   useLayoutEffect(() => {
     const el = ref.current
+    const previousMax = lastMax.current
+    lastMax.current = maximized
     // rect 为 null 时**把记忆一起清掉**：藏起来再出现，中间那段不该被当成一次跳变
     if (!el || !rect) {
       last.current = null
@@ -31,12 +34,11 @@ export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRe
     }
     const prev = last.current
     last.current = rect
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
     // 第一次挂载没有起点可倒推；几乎没变的也别动画（硬跑一遍只会闪一下）
-    if (!prev || sameRect(prev, rect)) return
-    // **只给最大化/还原这一类跳变做动画。** 平移和缩放画布时矩形也在变，
-    // 那些本来就是连续的，再叠一层补间会拖泥带水。判据是「面积变了一大截」。
-    const ratio = (rect.w * rect.h) / Math.max(1, prev.w * prev.h)
-    if (ratio > 0.6 && ratio < 1.7) return
+    if (!prev || previousMax === maximized || sameRect(prev, rect)) return
+    // The explicit mode edge distinguishes maximize/restore from normal canvas
+    // zoom or node resizing, even when visual rectangles change by a large ratio.
     // ⚠️ **`transform-origin` 由动画自己给，不能指望元素上有。**
     // `invertTransform` 的公式是按「原点在左上角」推的（`flip.ts` 的注释写着这条）。
     // `PaneView` **自己设了** `transformOrigin: '0 0'`（给它的位图缩放用），所以终端那条
@@ -66,12 +68,15 @@ export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRe
     // 0ms 就被第二帧吃掉 42ms。判据是「上一帧贵不贵」，不是「等几帧」；
     // 上限 4 帧是安全阀 —— 机器一直忙时宁可晚开始，也不能永远不动。
     const CHEAP_MS = 20 // 120Hz 下一帧 8.3ms，20ms 已经是明显掉帧
-    const anim = el.animate(
-      [
-        { transformOrigin: '0 0', transform: invertTransform(prev, rect) },
-        { transformOrigin: '0 0', transform: 'none' }
-      ],
-      { duration: ratio > 1 ? FLIP_MS.grow : FLIP_MS.shrink, easing: FLIP_EASING }
+    // Shrink keeps the old content layout during the compositor animation.
+    // Reflowing rich content to its small target first causes cold glyph/image
+    // rasterization at the enlarged FLIP scale (trace: ~115ms RasterDecoder).
+    // Width/height stay CONSTANT, not interpolated; release to React's target
+    // geometry once the transform finishes. No remount, cloned DOM or IPC capture.
+    const shrinking = !maximized
+    const keyframes = maximizeKeyframes(prev, rect, shrinking)
+    const anim = el.animate(keyframes,
+      { duration: shrinking ? FLIP_MS.shrink : FLIP_MS.grow, easing: FLIP_EASING }
     )
     anim.pause()
     anim.currentTime = 0
@@ -94,7 +99,7 @@ export function useMaximizeFlip(ref: RefObject<HTMLElement | null>, rect: FlipRe
     }
     // 依赖逐字段列，不能只依赖 rect 对象 —— 调用方每次渲染都会新建一个对象字面量，
     // 那样每渲染一次都会重跑一遍 effect
-  }, [ref, rect?.left, rect?.top, rect?.w, rect?.h])
+  }, [ref, rect?.left, rect?.top, rect?.w, rect?.h, maximized])
 }
 
 /**
@@ -124,7 +129,7 @@ export function useHidingHolder(live: MaxRef | null): MaxRef | null {
       return
     }
     // 还原：多留一个收回动画的时长再放出来
-    const t = setTimeout(() => setHolder(null), FLIP_MS.shrink)
+    const t = setTimeout(() => setHolder(null), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : FLIP_MS.shrink)
     return () => clearTimeout(t)
   }, [live?.frameId, live?.nodeId])
   return live ?? holder

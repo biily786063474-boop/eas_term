@@ -323,3 +323,8 @@ Codex exec 的 --sandbox 必须放在 resume 子命令之前，禁止为修恢�
 
 ### 蓝图hover历史修复（2026-09-08）
 BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave会让用户离开词条但仍在蓝图内部时弹窗残留。与普通词条行为一致。不要恢复成只监听面板离开。
+
+### 2026-09-09 最大化恢复补充（历史修复区）
+已用真实应用证实：兄弟模块 display:none 使几何归零；仅保留延时会在恢复时重新布局。CanvasFileNode/ComponentNode/FreeFileNode 改成保留尺寸 + visibility:hidden，PaneLayer 的 CanvasPlacement.concealed 保留视口内 sibling 布局（视口外裁剪与分屏 display:none 不改）。CanvasStage 使用既有 useHidingHolder 同步世界层的恢复时点，被恢复节点显式 visible，不搬父节点、不销毁 guest/PTY。
+另有 GPU trace 的 ~115ms RasterDecoder 冷光栅化：共享 maximizeKeyframes 在收回期间锁定旧 width/height（两帧相等，非逐帧尺寸插值），只插值 transform，结束释放回 React 目标尺寸。放大仍用既有 FLIP。禁止改回“先把内容排成小尺寸再逆向放大”，也禁止写 el.style.transform 覆盖画布缩放。reduced-motion 跳过动画；持续 will-change 与去掉 Frame 毛玻璃的实验无收益，未保留。
+复审补充：PaneView的布局尺寸还要乘canvasRect.scale才是动画视觉终点；否则50%/150%画布会在释放WAAPI后跳尺寸。仅PaneView传视觉w/h，画布世界内三个节点仍传世界坐标。useMaximizeFlip由四宿主显式maximized状态边界触发（不再用面积阈值猜），避免普通画布缩放/节点调整误启动动画；恒定布局只用于还原方向，与面积大小无关。zoom-endpoints.json验证动画末帧与释放后的边界误差<2px。
