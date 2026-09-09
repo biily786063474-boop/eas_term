@@ -29,6 +29,7 @@ export function clearVoiceStopper(fn: () => Promise<void>): void {
 /** 正在录就收掉。任何「把用户的话发出去」的路径都该调一次。
  *  没在录时是空转，可以随便调；也不 await 得到任何返回值，调用方不需要关心结果。 */
 export async function stopVoiceOnSend(): Promise<void> {
+  if (typeof document !== 'undefined') document.dispatchEvent(new Event('voice:discard'))
   const fn = stopper
   if (!fn) return
   // 先清再调：收麦本身是异步的，中间如果又有一次发送进来，
