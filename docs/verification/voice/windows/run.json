@@ -1,0 +1,9 @@
+{
+  "runId": 34385658937,
+  "commit": "c10017235020ec1b329cda441b4badf55e0b9e98",
+  "artifactId": 10117785405,
+  "conclusion": "success",
+  "platform": "windows-2022",
+  "node": "22",
+  "physicalMicrophoneTested": false
+}

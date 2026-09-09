@@ -1,3 +1,4 @@
+import { insertVoiceAtSelection } from '../voice/voiceTarget'
 // 终端底部的文字输入框。
 //
 // 存在的理由是三件在 xterm 里很别扭的事：
@@ -145,36 +146,7 @@ export function TerminalInput({
    *
    *  没聚焦输入框时（比如刚点完麦克风、焦点还在按钮上）没有可信的光标位置，退回追加到末尾。 */
   const appendVoice = (text: string): void => {
-    const el = taRef.current
-    const focused = !!el && document.activeElement === el
-    const at = focused ? (el.selectionStart ?? el.value.length) : null
-    const end = focused ? (el.selectionEnd ?? at!) : null
-
-    setValue((prev) => {
-      if (at === null || end === null) {
-        // 末尾追加：和前一句之间补个空格，除非本来就以空白结尾
-        return (prev && !/\s$/.test(prev) ? prev + ' ' : prev) + text
-      }
-      const before = prev.slice(0, at)
-      const after = prev.slice(end)
-      // 插在词中间时两侧各补一个空格，否则会和原有的字黏成一坨
-      const lead = before && !/\s$/.test(before) ? ' ' : ''
-      const tail = after && !/^\s/.test(after) ? ' ' : ''
-      return before + lead + text + tail + after
-    })
-
-    requestAnimationFrame(() => {
-      const e2 = taRef.current
-      if (!e2) return
-      autoGrow(e2)
-      if (at === null) return
-      // 光标推到刚插入这段之后，接着说下一句才会顺着排
-      const before = e2.value.slice(0, at)
-      const lead = before && !/\s$/.test(before) ? 1 : 0
-      const pos = at + lead + text.length
-      e2.focus()
-      e2.setSelectionRange(pos, pos)
-    })
+    insertVoiceAtSelection(taRef.current, text, setValue)
   }
 
   return (
@@ -283,7 +255,7 @@ export function TerminalInput({
             }
           }}
         />
-        <VoiceButton ptyId={ptyId} inline onText={appendVoice} />
+        <VoiceButton editorRef={taRef} ptyId={ptyId} inline onText={appendVoice} />
         <button
           className="term-input-send"
           // 用 mousedown + preventDefault：click 会先让 textarea 失焦，

@@ -1,0 +1,53 @@
+name: Voice regression (no release)
+on:
+  push:
+    branches: ['verify/voice-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install
+      - name: Typecheck and voice contracts
+        run: |
+          npm run typecheck
+          node --test src/main/voiceGate.test.ts src/renderer/src/features/voice/voiceRouter.test.ts src/renderer/src/features/voice/voiceRun.test.ts src/renderer/src/features/voice/voiceControl.test.ts src/renderer/src/features/voice/voiceTarget.test.ts
+      - name: Build and real Electron voice UI
+        run: node scripts/verify-agent-chat-ui.mjs --voice
+      - name: Fetch fixed public audio test assets
+        shell: pwsh
+        run: |
+          $vad = 'resources/models/sherpa-onnx-silero-vad'
+          $sense = 'resources/models/sherpa-onnx-sense-voice'
+          $stream = 'sherpa-onnx-streaming-zipformer-multi-zh-hans-int8-2023-12-13'
+          $waves = "resources/models/$stream/test_wavs"
+          New-Item -ItemType Directory -Force $vad,$sense,$waves | Out-Null
+          curl.exe -fL --retry 3 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx' -o "$vad/silero_vad.onnx"
+          if ($LASTEXITCODE -ne 0) { throw 'VAD download failed' }
+          if ((Get-FileHash "$vad/silero_vad.onnx" -Algorithm SHA256).Hash.ToLower() -ne '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6') { throw 'VAD hash mismatch' }
+          foreach ($file in @('model.int8.onnx','tokens.txt')) {
+            curl.exe -fL --retry 3 "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/$file" -o "$sense/$file"
+            if ($LASTEXITCODE -ne 0) { throw 'ASR asset download failed' }
+          }
+          foreach ($id in @('DEV_T0000000000','DEV_T0000000001','DEV_T0000000002')) {
+            curl.exe -fL --retry 3 "https://huggingface.co/csukuangfj/$stream/resolve/main/test_wavs/$id.wav" -o "$waves/$id.wav"
+            if ($LASTEXITCODE -ne 0) { throw 'Speech sample download failed' }
+          }
+      - name: Real local VAD and ASR audio regression
+        run: |
+          node scripts/verify-voice-vad.mjs
+          node scripts/verify-voice-audio.mjs
+          node scripts/verify-voice-audio.mjs --strong
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: voice-windows-evidence
+          path: docs/verification/voice/

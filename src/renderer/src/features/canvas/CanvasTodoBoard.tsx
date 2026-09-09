@@ -1,3 +1,4 @@
+import { insertVoiceAtSelection } from '../voice/voiceTarget'
 // 待办清单模块：一个模块装多条待办，自由存在（不属于任何 Frame），世界坐标。
 //
 // 渲染层级共享 CanvasShapeLayer（矩形/箭头/批注同一个 z-index 15 层，压在活终端之上、
@@ -384,14 +385,16 @@ function TodoLightbox({
               说完直接关掉灯箱就丢了。 */}
           <div className="ctodo-lightbox-voice">
             <VoiceButton
+              editorRef={bodyRef}
               ptyId={`todo-${item.id}`}
               inline
               onText={(t) => {
                 const el = bodyRef.current
                 if (!el) return
-                el.value = el.value ? `${el.value}${/\s$/.test(el.value) ? '' : ' '}${t}` : t
-                updateTodoItem(boardId, item.id, { body: el.value })
-                el.focus()
+                insertVoiceAtSelection(el, t, (value) => {
+                  el.value = value
+                  updateTodoItem(boardId, item.id, { body: value })
+                })
               }}
             />
           </div>

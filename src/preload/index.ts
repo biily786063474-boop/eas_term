@@ -510,20 +510,25 @@ const api = {
   },
   stt: {
     // 离线语音转文字(sherpa-onnx 流式)。渲染进程采麦送 16kHz Int16 PCM,主进程回传 partial/final。
-    start: (): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> =>
-      ipcRenderer.invoke('stt:start'),
-    sendAudio: (buf: ArrayBuffer): void => ipcRenderer.send('stt:audio', buf),
-    stop: (): Promise<{ text: string }> => ipcRenderer.invoke('stt:stop'),
+    start: (mode: 'standard' | 'strong' | 'basic' = 'standard'): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> =>
+      ipcRenderer.invoke('stt:start', mode),
+    sendAudio: (buf: ArrayBuffer, targetId = ''): void => ipcRenderer.send('stt:audio', buf, targetId),
+    stop: (): Promise<{ text: string; segments?: {text: string; targetId: string; segmentId: string}[] }> => ipcRenderer.invoke('stt:stop'),
     /** 识别一段 16kHz 单声道 Float32 音频（文件转录用） */
     transcribeChunk: (buf: ArrayBuffer): Promise<string> =>
       ipcRenderer.invoke('stt:transcribeChunk', buf),
+    onError: (cb: (message: string) => void): (() => void) => {
+      const h = (_e: unknown, message: string): void => cb(message)
+      ipcRenderer.on('stt:error', h)
+      return () => ipcRenderer.removeListener('stt:error', h)
+    },
     onPartial: (cb: (text: string) => void): (() => void) => {
       const h = (_e: unknown, t: string): void => cb(t)
       ipcRenderer.on('stt:partial', h)
       return () => ipcRenderer.removeListener('stt:partial', h)
     },
-    onFinal: (cb: (text: string) => void): (() => void) => {
-      const h = (_e: unknown, t: string): void => cb(t)
+    onFinal: (cb: (text: string, targetId?: string, segmentId?: string) => void): (() => void) => {
+      const h = (_e: unknown, t: string, targetId?: string, segmentId?: string): void => cb(t, targetId, segmentId)
       ipcRenderer.on('stt:final', h)
       return () => ipcRenderer.removeListener('stt:final', h)
     },

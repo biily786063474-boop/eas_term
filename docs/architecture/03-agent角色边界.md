@@ -328,3 +328,8 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 已用真实应用证实：兄弟模块 display:none 使几何归零；仅保留延时会在恢复时重新布局。CanvasFileNode/ComponentNode/FreeFileNode 改成保留尺寸 + visibility:hidden，PaneLayer 的 CanvasPlacement.concealed 保留视口内 sibling 布局（视口外裁剪与分屏 display:none 不改）。CanvasStage 使用既有 useHidingHolder 同步世界层的恢复时点，被恢复节点显式 visible，不搬父节点、不销毁 guest/PTY。
 另有 GPU trace 的 ~115ms RasterDecoder 冷光栅化：共享 maximizeKeyframes 在收回期间锁定旧 width/height（两帧相等，非逐帧尺寸插值），只插值 transform，结束释放回 React 目标尺寸。放大仍用既有 FLIP。禁止改回“先把内容排成小尺寸再逆向放大”，也禁止写 el.style.transform 覆盖画布缩放。reduced-motion 跳过动画；持续 will-change 与去掉 Frame 毛玻璃的实验无收益，未保留。
 复审补充：PaneView的布局尺寸还要乘canvasRect.scale才是动画视觉终点；否则50%/150%画布会在释放WAAPI后跳尺寸。仅PaneView传视觉w/h，画布世界内三个节点仍传世界坐标。useMaximizeFlip由四宿主显式maximized状态边界触发（不再用面积阈值猜），避免普通画布缩放/节点调整误启动动画；恒定布局只用于还原方向，与面积大小无关。zoom-endpoints.json验证动画末帧与释放后的边界误差<2px。
+
+### 语音输入保护（2026-09-09）
+语音文本写入只能经编辑器适配接口；不得恢复“失焦随便追加末尾”、不得把跨框迟到结果写给新目标、不得自动回车执行。主进程 `stt:audio/stop` 校验录音所属 sender，VAD 在 Worker 中运行、队列有上限。切换录音或停止时失效旧异步定稿；采麦失败、卸载、处理错误均需释放设备。不得把 VAD 当成本人声纹识别；Windows 和实际噪声效果需分别验收。
+
+发送必须在无录音时也触发 voice:discard，否则 native 撤销可能跨草稿。临时 UI 测试补丁必须 finally 还原源码并重构建；Windows CRLF 仅在临时匹配时归一化，备份保留原始字节。设置浮层必须锚定按钮而非整张启动卡片，避免上缘裁切。

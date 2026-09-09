@@ -1,3 +1,4 @@
+import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
 import { ComposerInput, type ComposerInputElement } from './ComposerInput'
@@ -1511,7 +1512,7 @@ export function AgentChatView({
   const phase = startupPhaseOf({ clis, selected, starting, startError })
   const startupActions = (
     <div className="ac-message-actions">
-      <VoiceButton ptyId={`agent-empty-${leafId}`} inline onText={(t) => setText((v) => (v ? v + t : t))} />
+      <VoiceButton editorRef={emptyTaRef} ptyId={`agent-empty-${leafId}`} inline onText={(t) => { insertVoiceAtSelection(emptyTaRef.current, t, setText) }} />
       <button
         type="button"
         className="ac-input-send"

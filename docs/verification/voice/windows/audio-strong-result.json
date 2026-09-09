@@ -1,0 +1,114 @@
+{
+  "mode": "strong",
+  "scope": "Real fixture audio; baseline versus VAD-filtered SenseVoice, not ground-truth CER or live microphone validation",
+  "results": [
+    {
+      "name": "silence",
+      "seconds": 4,
+      "baseline": "그.",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1250
+    },
+    {
+      "name": "white-noise",
+      "seconds": 4,
+      "baseline": "그.",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1130
+    },
+    {
+      "name": "silence-to-noise",
+      "seconds": 6,
+      "baseline": ".",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1603
+    },
+    {
+      "name": "fan",
+      "seconds": 4,
+      "baseline": "그.",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1114
+    },
+    {
+      "name": "keyboard",
+      "seconds": 4,
+      "baseline": "I.",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1152
+    },
+    {
+      "name": "tones",
+      "seconds": 4,
+      "baseline": "The.",
+      "enhanced": "",
+      "speechFrames": 0,
+      "keptSeconds": 0,
+      "elapsedMs": 1114
+    },
+    {
+      "name": "DEV_T0000000000.wav",
+      "seconds": 5.6115,
+      "baseline": "对我做了介绍啊，那么我想说的是呢，大家如果对我的研究感兴趣呢。",
+      "enhanced": "对我做了介绍啊，那么我想说的是呢，大家如果对我的研究感兴趣呢。",
+      "speechFrames": 33,
+      "keptSeconds": 5.76,
+      "elapsedMs": 2386
+    },
+    {
+      "name": "DEV_T0000000000.wav+noise",
+      "seconds": 5.6115,
+      "baseline": "对我做了介绍啊，那么我想说的是呢，大家如果对我的研究感兴趣呢嗯。",
+      "enhanced": "对我做了介绍啊，那么我想说的是呢，大家如果对我的研究感兴趣呢。",
+      "speechFrames": 35,
+      "keptSeconds": 5.888,
+      "elapsedMs": 2401
+    },
+    {
+      "name": "DEV_T0000000001.wav",
+      "seconds": 5.1530625,
+      "baseline": "重点呢想谈三个问题。首先呢就是这一轮全球金融动荡的表现。",
+      "enhanced": "重点呢想谈三个问题。首先呢就是这一轮全球金融动荡的表现。",
+      "speechFrames": 33,
+      "keptSeconds": 5.76,
+      "elapsedMs": 2284
+    },
+    {
+      "name": "DEV_T0000000001.wav+noise",
+      "seconds": 5.1530625,
+      "baseline": "重点呢想谈三个问题。首先呢就是这一轮全球金融动荡的表现。",
+      "enhanced": "重点呢想谈三个问题。首先呢就是这一轮全球金融动荡的表现。",
+      "speechFrames": 36,
+      "keptSeconds": 6.016,
+      "elapsedMs": 2314
+    },
+    {
+      "name": "DEV_T0000000002.wav",
+      "seconds": 4.5243125,
+      "baseline": "深度的分析这一次全球金融动荡背后的根源。",
+      "enhanced": "深度的分析这一次全球金融动荡背后的根源。",
+      "speechFrames": 28,
+      "keptSeconds": 4.864,
+      "elapsedMs": 2027
+    },
+    {
+      "name": "DEV_T0000000002.wav+noise",
+      "seconds": 4.5243125,
+      "baseline": "深度的分析这一次全球金融动荡背后的根源。",
+      "enhanced": "深度的分析这一次全球金融动荡背后的根源。",
+      "speechFrames": 28,
+      "keptSeconds": 4.864,
+      "elapsedMs": 2017
+    }
+  ]
+}
