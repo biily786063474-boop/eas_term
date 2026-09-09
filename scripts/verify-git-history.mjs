@@ -67,12 +67,16 @@ try {
   for (let attempt = 0; attempt < 100; attempt++) { if (await evaluate('!!window.__store && !!window.api?.capabilities')) break; await wait(100) }
 
 
+  const until = async (expression, label) => {
+    for (let i=0;i<150;i++) { if(await evaluate(expression)) return; await wait(100) }
+    throw new Error('Timed out: '+label)
+  }
   await evaluate("window.__store.getState().setViewMode('split')");
   await evaluate("window.__store.getState().openHistory("+JSON.stringify(fixture)+")");
   for(let i=0;i<60;i++){if(await evaluate("document.querySelectorAll('.history-row').length===2"))break;await wait(100)}
   check(await evaluate("document.querySelectorAll('.history-row').length===2"),'Real history renders fixture commits');
   await evaluate("document.querySelector('.history-row').click()");
-  await wait(600);
+  await until("document.querySelectorAll('.history-files .git-row').length===3",'file list');
   check(await evaluate("document.querySelectorAll('.history-files .git-row').length===3"),'Added/deleted/modified files rendered');
   check(await evaluate("!!document.querySelector('.history-status-A') && !!document.querySelector('.history-status-D')"),'Semantic file colors and counts rendered');
   const shot = async name => fs.writeFileSync(path.join(output,name+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
@@ -81,20 +85,22 @@ try {
   await wait(250); await shot('menu');
   check(await evaluate("document.querySelector('.canvas-ctxmenu').innerText.includes('检出此提交')"),'Real context menu has checkout');
   await evaluate("[...document.querySelectorAll('.canvas-ctxmenu button')].find(b=>b.textContent.includes('检出此提交')).click()");
-  await wait(150); await shot('checkout');
+  await until("!!document.querySelector('.history-action')",'checkout dialog'); await shot('checkout');
   check(await evaluate("!!document.querySelector('.history-action')"),'Checkout confirmation rendered');
 
   fs.writeFileSync(path.join(fixture,'ui-dirty.txt'),'keep');
   await evaluate("document.querySelector('.history-action').requestSubmit()");
-  await wait(500);
+  await until("!!document.querySelector('.history-action [role=alert]') && document.querySelector('.history-action button[type=button]')?.disabled===false",'dirty result');
   check(await evaluate("document.querySelector('.history-action').textContent.includes('未提交')"),'Confirmation surfaces dirty-worktree rejection');
   fs.unlinkSync(path.join(fixture,'ui-dirty.txt'));
   await evaluate("document.querySelector('.history-action').requestSubmit()");
-  await wait(650);
+  await until("!document.querySelector('.history-action')",'Git action result');
   check(g('rev-parse','HEAD')===first && await evaluate("!document.querySelector('.history-action')"),'UI confirmation performs checkout');
+  await until("[...document.querySelectorAll('.history-feedback button')].some(b=>b.textContent.includes('返回 main')&&!b.disabled)",'return button ready');
   await evaluate("[...document.querySelectorAll('.history-feedback button')].find(b=>b.textContent.includes('返回 main')).click()");
+  await until("!!document.querySelector('.history-action')",'return dialog');
   await evaluate("document.querySelector('.history-action').requestSubmit()");
-  await wait(650);
+  await until("!document.querySelector('.history-action')",'Git action result');
   check(g('branch','--show-current')==='main','UI return button restores branch');
   await evaluate("document.querySelector('.history-row').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:450,clientY:240}))");
   await wait(100);
@@ -117,12 +123,18 @@ try {
   check(!outside.ok,'Unauthorized project write rejected');
   fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({checks,passed:true},null,2));
   console.log(JSON.stringify({checks,passed:true,output}));
+} catch (error) {
+  console.error('Git UI verification failed:', error)
+  fs.writeFileSync(path.join(output,'failure.json'), JSON.stringify({checks,error:String(error)},null,2))
+  throw error
 } finally {
   ws?.close()
-  app.kill('SIGTERM')
+  if (process.platform==='win32' && app.exitCode===null && app.signalCode===null) {
+    try { execFileSync('taskkill',['/PID',String(app.pid),'/T','/F'],{stdio:'ignore',timeout:10000,windowsHide:true}) } catch {}
+  } else app.kill('SIGTERM')
   await Promise.race([new Promise(resolve=>app.once('exit',resolve)),wait(2000)])
   if(app.exitCode===null && app.signalCode===null) app.kill('SIGKILL')
   fs.writeFileSync(path.join(output,'app.log'),logs)
-  fs.rmSync(profile,{recursive:true,force:true})
-  fs.rmSync(fixture,{recursive:true,force:true})
+  await fs.promises.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:200})
+  await fs.promises.rm(fixture,{recursive:true,force:true,maxRetries:20,retryDelay:200})
 }
