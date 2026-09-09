@@ -59,7 +59,12 @@ try {
   await evaluate("window.__store.getState().addProjectFrame(null, 100, 100)")
   await evaluate("(() => { const s=window.__store.getState(); s.addComponentNode(s.canvas.frames[0].id, 'git', 30, 60, 350, 250); })()")
   for (let i=0;i<100;i++) { if(await evaluate("!!document.querySelector('.cfile-badge')")) break; await wait(100) }
+  const dom = await send('DOM.getDocument')
+  const target = await send('DOM.querySelector', {nodeId:dom.root.nodeId,selector:'.cfile-node'})
+  await send('DOM.enable')
+  await send('CSS.enable')
   for (const theme of ['dark','light']) {
+    await send('CSS.forcePseudoState', {nodeId:target.nodeId,forcedPseudoClasses:[]})
     await evaluate("document.documentElement.dataset.theme = " + JSON.stringify(theme))
     await send('Input.dispatchMouseEvent', { type:'mouseMoved', x:10, y:10 })
     await wait(300)
@@ -69,6 +74,7 @@ try {
     fs.writeFileSync(path.join(output, theme+'-before.png'), Buffer.from(before.data,'base64'))
     const node = await evaluate("(() => { const r=document.querySelector('.cfile-node').getBoundingClientRect(); return {x:r.x+80,y:r.y+40} })()")
     await send('Input.dispatchMouseEvent', {type:'mouseMoved', ...node})
+    await send('CSS.forcePseudoState', {nodeId:target.nodeId,forcedPseudoClasses:['hover']})
     await wait(250)
     await evaluate("document.getAnimations().filter(a=>a.animationName==='cfile-badge-smoke').forEach(a=>{a.pause();a.currentTime=300})")
     const style = await evaluate("(() => { const s=getComputedStyle(document.querySelector('.cfile-badge'),'::after');return {mask:s.maskComposite,opacity:s.opacity,transform:s.transform,padding:s.padding} })()")
