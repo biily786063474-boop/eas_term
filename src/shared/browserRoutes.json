@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "policy": {
+    "openingIsPublishingConsent": false,
+    "credentials": "Never include cookies, tokens or passwords in routes",
+    "pending": "Ask for exact URL; never guess"
+  },
+  "categories": [
+    {
+      "id": "motion",
+      "name": "动效"
+    },
+    {
+      "id": "design",
+      "name": "设计"
+    },
+    {
+      "id": "office",
+      "name": "办公"
+    },
+    {
+      "id": "servers",
+      "name": "服务器网站"
+    },
+    {
+      "id": "media",
+      "name": "自媒体平台"
+    }
+  ],
+  "sites": [
+    {
+      "id": "motion-sites",
+      "category": "motion",
+      "name": "Motion Sites",
+      "url": null,
+      "status": "pending",
+      "intents": [
+        "Motion Sites"
+      ],
+      "description": "AI 动效网站提示词 · 同名站点待确认"
+    },
+    {
+      "id": "react-bits",
+      "category": "motion",
+      "name": "React Bits",
+      "url": "https://reactbits.dev/",
+      "status": "ready",
+      "intents": [
+        "React Bits"
+      ],
+      "description": "React 动效组件与交互背景"
+    },
+    {
+      "id": "uiverse",
+      "category": "motion",
+      "name": "Uiverse",
+      "url": "https://uiverse.io/",
+      "status": "ready",
+      "intents": [
+        "Uiverse"
+      ],
+      "description": "社区开源 UI 元素与可复制代码"
+    },
+    {
+      "id": "animejs",
+      "category": "motion",
+      "name": "Anime.js",
+      "url": "https://animejs.com/",
+      "status": "ready",
+      "intents": [
+        "Anime.js"
+      ],
+      "description": "JavaScript 动画引擎与交互示例"
+    },
+    {
+      "id": "aceternity",
+      "category": "motion",
+      "name": "Aceternity UI",
+      "url": "https://ui.aceternity.com/",
+      "status": "ready",
+      "intents": [
+        "Aceternity UI"
+      ],
+      "description": "React 与 Tailwind 视觉组件"
+    },
+    {
+      "id": "pinterest",
+      "category": "design",
+      "name": "Pinterest",
+      "url": "https://www.pinterest.com/",
+      "status": "ready",
+      "intents": [
+        "Pinterest"
+      ],
+      "description": "视觉灵感与主题画板"
+    },
+    {
+      "id": "behance",
+      "category": "design",
+      "name": "Behance",
+      "url": "https://www.behance.net/",
+      "status": "ready",
+      "intents": [
+        "Behance"
+      ],
+      "description": "创意作品与完整项目案例"
+    },
+    {
+      "id": "dribbble",
+      "category": "design",
+      "name": "Dribbble",
+      "url": "https://dribbble.com/",
+      "status": "ready",
+      "intents": [
+        "Dribbble"
+      ],
+      "description": "界面设计与视觉参考"
+    },
+    {
+      "id": "notion",
+      "category": "office",
+      "name": "Notion",
+      "url": "https://www.notion.com/",
+      "status": "ready",
+      "intents": [
+        "Notion"
+      ],
+      "description": "文档、知识库与项目工作空间"
+    },
+    {
+      "id": "feishu",
+      "category": "office",
+      "name": "飞书",
+      "url": "https://www.feishu.cn/",
+      "status": "ready",
+      "intents": [
+        "飞书"
+      ],
+      "description": "团队沟通与文档协作"
+    },
+    {
+      "id": "cloudflare",
+      "category": "servers",
+      "name": "Cloudflare",
+      "url": "https://www.cloudflare.com/",
+      "status": "ready",
+      "intents": [
+        "Cloudflare"
+      ],
+      "description": "网络、安全与开发者服务"
+    },
+    {
+      "id": "vercel",
+      "category": "servers",
+      "name": "Vercel",
+      "url": "https://vercel.com/",
+      "status": "ready",
+      "intents": [
+        "Vercel"
+      ],
+      "description": "Web 应用部署与项目管理"
+    },
+    {
+      "id": "xiaohongshu",
+      "category": "media",
+      "name": "小红书创作服务",
+      "url": "https://creator.xiaohongshu.com/",
+      "status": "ready",
+      "intents": [
+        "小红书创作服务",
+        "发布小红书笔记",
+        "小红书创作",
+        "管理小红书内容"
+      ],
+      "description": "创作平台入口 · 本次自动抓取未成功"
+    },
+    {
+      "id": "douyin",
+      "category": "media",
+      "name": "抖音创作者中心",
+      "url": "https://creator.douyin.com/",
+      "status": "ready",
+      "intents": [
+        "抖音创作者中心",
+        "发布抖音视频"
+      ],
+      "description": "创作者管理与内容发布入口"
+    },
+    {
+      "id": "bilibili",
+      "category": "media",
+      "name": "哔哩哔哩",
+      "url": "https://www.bilibili.com/",
+      "status": "ready",
+      "intents": [
+        "哔哩哔哩",
+        "浏览哔哩哔哩视频"
+      ],
+      "description": "视频与创作平台"
+    },
+    {
+      "id": "short-video-assistant",
+      "category": "media",
+      "name": "短视频助手",
+      "url": null,
+      "status": "pending",
+      "intents": [
+        "短视频助手"
+      ],
+      "description": "待确认具体网站地址"
+    }
+  ]
+}

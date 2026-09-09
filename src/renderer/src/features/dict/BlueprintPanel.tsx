@@ -126,6 +126,7 @@ export function BlueprintPanel<T extends Term>({
                       key={t.id}
                       className="dict-pill"
                       onMouseEnter={(e) => onHover(t, e.currentTarget.getBoundingClientRect())}
+                      onMouseLeave={onLeave}
                       onClick={() => onPick(t)}
                     >
                       <span className="dict-pill-zh">{t.zh}</span>
