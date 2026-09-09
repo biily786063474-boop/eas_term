@@ -41,6 +41,11 @@ jobs:
         with:
           node-version: 22
 
+      - name: Optional Bizone and real OMP regression
+        shell: pwsh
+        run: |
+          $env:EAS_VERIFY_REAL_OMP = (Resolve-Path "release/win-unpacked/resources/omp/omp.exe").Path
+          node --test src/main/capabilityTransport.test.ts src/main/builtinCapabilityHost.test.ts
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 

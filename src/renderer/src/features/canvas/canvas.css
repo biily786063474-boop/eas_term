@@ -6069,7 +6069,7 @@
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: 0 2px 6px var(--ink-2);
-  /* 烟雾裁在角标里（`inset` 是负的，不裁就漫出去糊住标题） */
+  /* 光效限制在角标边缘，不外溢到标题。 */
   position: relative;
   overflow: hidden;
   /* 抬起与落下用不同的曲线：起要利落（回弹感的 ease-out），落要绵一点。
@@ -6088,19 +6088,9 @@
   transform: translate(-3px, -3px);
 }
 
-/* 一过性的彩色渐变烟雾：hover 那一下转着扩散开、随即散掉，**不循环**。
-   ── 「渲染资源不要重复」这条在这里具体是四件事 ──────────────────────────
-   ① 一个伪元素，不是一层 DOM。渐变是静态背景，只在第一次绘制时光栅化一次，
-      之后 transform 拿的是同一张纹理。
-   ② **只动 transform 和 opacity**，两者都走合成层，不碰主线程的样式重算。
-      不动 filter: blur —— 模糊跟着 transform 变就得每帧重新光栅化，
-      柔和感改用渐变本身的透明度分布做，视觉差不多而代价差一个量级。
-   ③ **不写 will-change**。一屏几十个节点，常驻的合成层提升就是几十份显存，
-      而它们 99% 的时间根本没在动。让浏览器在动画开始时临时提升就够了。
-   ④ 不 hover 时这个伪元素 opacity: 0 且没有任何 animation ——
-      静置的画布上它一分钱不花。
-   触发区放大到整个模块之后，鼠标扫过画布会连着点着好几团 —— 正因为上面四条，
-   代价还是「几个小合成层各播一次 950ms」，不是「几十个节点一直烧」。 */
+/* 一过性的渐变边光：950ms 渐现/渐隐，不循环。
+   固定的圆角环形遮罩镂空中心，只动 opacity；不能旋转/缩放遮罩，
+   否则边光会扫过 Logo 内部。无 DOM 新增、无常驻 will-change。 */
 /* 按模块类型派色相。**这里只写「用哪个令牌」，色相角本身在 base.css** ——
    加一种新模块类型就在这里加一行，色值仍然只在令牌层改一处。
    认不出的类型不写规则，落到 :root 的 --smoke-h 兜底。 */
@@ -6148,15 +6138,20 @@
 .cfile-badge::after {
   content: '';
   position: absolute;
-  /* 比角标大一圈，转起来边缘才不会露出空档 */
-  inset: -45%;
-  border-radius: 50%;
+  /* 固定 1.5px 圆角边环，中间完全透明，保留 Logo 原底色。 */
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
   background: var(--badge-smoke);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
   opacity: 0;
   pointer-events: none;
 }
 
-/* 图标压在烟雾上面。烟雾是它的底不是它的罩子 ——
+/* 图标保持在边光之上，中心由遮罩镂空 ——
    `::after` 是定位元素，默认就画在静态的 svg 之上，不抬这一手图标会被糊住。 */
 .cfile-badge > svg {
   position: relative;
@@ -6174,7 +6169,6 @@
 @keyframes cfile-badge-smoke {
   0% {
     opacity: 0;
-    transform: rotate(-30deg) scale(0.45);
   }
   20% {
     opacity: 0.72;
@@ -6184,6 +6178,5 @@
   }
   100% {
     opacity: 0;
-    transform: rotate(160deg) scale(1.6);
   }
 }
