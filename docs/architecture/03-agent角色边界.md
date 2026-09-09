@@ -232,6 +232,8 @@ Write·Edit·NotebookEdit→patch / 其余→tool）→ 渲染层弹审批卡 �
 
 # 3B · 开发期 agent（你）的边界
 
+Windows 路径补正（2026-09-08）：真实 windows-2022 探针证实 `fs.realpathSync` 保留 `RUNNER~1` 而 Git 输出 `runneradmin`，导致同一目录被拒。`fsGuard.realResolve` 仅 Windows 改用 `fs.realpathSync.native` 统一长短名，继续解析 junction/symlink 和现存祖先，不降低 guardPath/guardDir 授权范围。回归 `fsGuard.test.mjs` 必须保留短长名相等、根删除拒绝、兄弟目录与 junction 越界拒绝。
+
 ## 🔪 危险操作 —— 会打到用户正在用的东西
 
 | 别做 | 为什么 / 改做什么 |

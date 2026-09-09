@@ -56,7 +56,7 @@ jobs:
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 
       - name: Git history and fresh AI split regression
-        run: node --test src/main/gitHistory.test.ts src/renderer/src/store/splitLeaf.test.mjs
+        run: node --test src/main/fsGuard.test.mjs src/main/gitHistory.test.ts src/renderer/src/store/splitLeaf.test.mjs
 
       - name: Packaged Git history UI and guarded operations
         run: node scripts/verify-git-history.mjs --executable "release/win-unpacked/Eas-Term.exe" --output "git-history-win"

@@ -39,7 +39,10 @@ export function realResolve(target: string): string {
   const tail: string[] = []
   for (;;) {
     try {
-      return tail.length ? path.join(fs.realpathSync(cur), ...tail) : fs.realpathSync(cur)
+      // Windows 的 JS realpath 保留 8.3 短名，Git 却返回长名；native 才将两者
+      // 归一为同一真实路径（仍解析 junction/symlink，不放宽任何授权范围）。
+      const real = process.platform === 'win32' ? fs.realpathSync.native(cur) : fs.realpathSync(cur)
+      return tail.length ? path.join(real, ...tail) : real
     } catch {
       const parent = path.dirname(cur)
       if (parent === cur) return abs // 一路到根都不存在，原样返回（随后会被拒）
