@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "Real canvas module badge is visible: dark",
+    "Hover is a visible fixed hollow ring: dark",
+    "Real canvas module badge is visible: light",
+    "Hover is a visible fixed hollow ring: light"
+  ],
+  "passed": true
+}

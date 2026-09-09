@@ -1,0 +1,14 @@
+{
+  "arm64": {
+    "codesign": "verified deep strict",
+    "stapler": "validate action worked",
+    "spctl": "accepted; Notarized Developer ID"
+  },
+  "x64": {
+    "codesign": "verified deep strict",
+    "stapler": "validate action worked",
+    "spctl": "accepted; Notarized Developer ID"
+  },
+  "productSource": "9e3af6bbb16d30ae95305b471986b649d6ea2ca4",
+  "privateDiagnostics": false
+}

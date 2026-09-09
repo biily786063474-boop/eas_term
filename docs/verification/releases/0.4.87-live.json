@@ -1,0 +1,110 @@
+{
+  "version": "0.4.87",
+  "productSource": "9e3af6bbb16d30ae95305b471986b649d6ea2ca4",
+  "backup": "/www/wwwroot/eas-release-backups/0.4.87-20260909T044342Z",
+  "before": {
+    "index.html": "94fbad92304c5983189a16b89aa9166534758fcab117026f894beae43d51b434",
+    "download.html": "942c35156b3d79150ca4ccddeb5a655227889f5569ccf6f6fe7355166caa5a81",
+    "changelog.html": "1e4e5425f3614062f81fc7b5b6d8026452b6c32cd71bd1960aa7f538ee899874",
+    "latest.json": "e104930dac973c3ee593b18f59209ce7a65efa29d26433411fe426542ad21c74"
+  },
+  "after": {
+    "index.html": "b954641822e0f8263561abf2e8f898be7901200fe5ff0b30d997934632ddbfc9",
+    "download.html": "60e2fdbc43be8337d7cfdc02fdf5a1de42898e466650ea4adaed36ef047233ee",
+    "changelog.html": "ae79160b1a47d2fc4d5f321e6c698204e952daf2f4144619842630fb63589a6f",
+    "latest.json": "8363452c60ff3e0dd13f319b9733ed16fa4bf2536ea02990507c78e62144cf80"
+  },
+  "healthBefore": {
+    "eas.biily.top": "301",
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "siming.biily.top": "301"
+  },
+  "healthAfter": {
+    "eas.biily.top": "301",
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "siming.biily.top": "301"
+  },
+  "artifacts": [
+    {
+      "name": "Eas-Term-0.4.87-arm64.dmg",
+      "size": 204368926,
+      "sha256": "cc13f8fd1eb03d24b6fe52a24f865a24680f2dcbda39d8185f35aa3f1e9999e5"
+    },
+    {
+      "name": "Eas-Term-0.4.87-arm64.zip",
+      "size": 202546746,
+      "sha256": "db82075f0e25f59fb8b989712d5ecc5f50c56ae44008f1f2d37f01086aac92d4"
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64-setup.exe",
+      "size": 190057542,
+      "sha256": "2619d8b23a0c827f9e52cc543776ffb5c5d829112319dfad8abda9429bf32e6e"
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64.dmg",
+      "size": 216412243,
+      "sha256": "46ea9e625a77e633472d466c36f61265a8af78c16eafce725f4a4d46f1f849fc"
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64.zip",
+      "size": 214645100,
+      "sha256": "527089b2aaa8cabe59c7523bf2bdeea2ce239d737d7a56e79ba25559366b3c97"
+    }
+  ],
+  "publicPages": [
+    {
+      "path": "/",
+      "sha256": "b954641822e0f8263561abf2e8f898be7901200fe5ff0b30d997934632ddbfc9"
+    },
+    {
+      "path": "/download.html",
+      "sha256": "60e2fdbc43be8337d7cfdc02fdf5a1de42898e466650ea4adaed36ef047233ee"
+    },
+    {
+      "path": "/changelog.html",
+      "sha256": "ae79160b1a47d2fc4d5f321e6c698204e952daf2f4144619842630fb63589a6f"
+    },
+    {
+      "path": "/download/latest.json",
+      "sha256": "8363452c60ff3e0dd13f319b9733ed16fa4bf2536ea02990507c78e62144cf80"
+    }
+  ],
+  "publicArtifactChecks": [
+    {
+      "name": "Eas-Term-0.4.87-arm64.dmg",
+      "headSize": 204368926,
+      "rangeBytes": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.87-arm64.zip",
+      "headSize": 202546746,
+      "rangeBytes": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64-setup.exe",
+      "headSize": 190057542,
+      "rangeBytes": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64.dmg",
+      "headSize": 216412243,
+      "rangeBytes": 1024
+    },
+    {
+      "name": "Eas-Term-0.4.87-x64.zip",
+      "headSize": 214645100,
+      "rangeBytes": 1024
+    }
+  ],
+  "publicVerifiedAt": "2026-09-09T04:47:08.265877+00:00"
+}
