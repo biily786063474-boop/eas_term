@@ -69,7 +69,7 @@ try {
 
   const until = async (expression, label) => {
     for (let i=0;i<150;i++) { if(await evaluate(expression)) return; await wait(100) }
-    throw new Error('Timed out: '+label)
+    throw new Error('Timed out: '+label+'; UI='+await evaluate("document.querySelector('.history-action')?.innerText")+'; status='+g('status','--porcelain')+'; root='+g('rev-parse','--show-toplevel'))
   }
   await evaluate("window.__store.getState().setViewMode('split')");
   await evaluate("window.__store.getState().openHistory("+JSON.stringify(fixture)+")");
@@ -79,6 +79,7 @@ try {
   await until("document.querySelectorAll('.history-files .git-row').length===3",'file list');
   check(await evaluate("document.querySelectorAll('.history-files .git-row').length===3"),'Added/deleted/modified files rendered');
   check(await evaluate("!!document.querySelector('.history-status-A') && !!document.querySelector('.history-status-D')"),'Semantic file colors and counts rendered');
+  await until("!!document.querySelector('.history-filediff .cm-editor')",'diff editor');
   const shot = async name => fs.writeFileSync(path.join(output,name+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'));
   await shot('files');
   await evaluate("[...document.querySelectorAll('.history-row')].at(-1).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:450,clientY:240}))");
@@ -91,7 +92,7 @@ try {
   fs.writeFileSync(path.join(fixture,'ui-dirty.txt'),'keep');
   await evaluate("document.querySelector('.history-action').requestSubmit()");
   await until("!!document.querySelector('.history-action [role=alert]') && document.querySelector('.history-action button[type=button]')?.disabled===false",'dirty result');
-  check(await evaluate("document.querySelector('.history-action').textContent.includes('未提交')"),'Confirmation surfaces dirty-worktree rejection');
+  check(await evaluate("document.querySelector('.history-action [role=alert]')?.textContent.includes('未提交')"),'Confirmation surfaces dirty-worktree rejection');
   fs.unlinkSync(path.join(fixture,'ui-dirty.txt'));
   await evaluate("document.querySelector('.history-action').requestSubmit()");
   await until("!document.querySelector('.history-action')",'Git action result');
