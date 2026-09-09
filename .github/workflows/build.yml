@@ -9,12 +9,18 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      path_probe:
+        description: Read-only Windows path diagnostic (skip package build)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build-win:
+    if: ${{ !inputs.path_probe }}
     # 固定 windows-2022（VS 2022 / v17）：windows-latest 已升级到 VS 2026 (v18)，
     # 当前 Electron 配套的 node-gyp 还识别不了，会导致 node-pty 编译失败
     runs-on: windows-2022
@@ -104,3 +110,23 @@ jobs:
         with:
           files: release/*.exe
           fail_on_unmatched_files: false
+
+  probe:
+    if: ${{ inputs.path_probe }}
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Read canonical path behavior in temporary repository
+        shell: pwsh
+        run: |
+          @'
+          const fs=require('fs'),os=require('os'),path=require('path'),cp=require('child_process');
+          const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eas-path-probe-'));
+          cp.execFileSync('git',['init'],{cwd:dir,stdio:'ignore'});
+          const root=cp.execFileSync('git',['rev-parse','--show-toplevel'],{cwd:dir,encoding:'utf8'}).trim();
+          console.log(JSON.stringify({dir,root,realDir:fs.realpathSync(dir),realRoot:fs.realpathSync(root),nativeDir:fs.realpathSync.native(dir),nativeRoot:fs.realpathSync.native(root),equal:fs.realpathSync(dir)===fs.realpathSync(root)},null,2));
+          fs.rmSync(dir,{recursive:true,force:true,maxRetries:10});
+          '@ | node
