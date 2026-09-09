@@ -3,8 +3,8 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { spawn, execFileSync } from 'node:child_process'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const outputIndex = process.argv.indexOf('--output')
 const output = outputIndex >= 0
@@ -143,9 +143,11 @@ try {
   console.log(JSON.stringify({checks,passed:true,output}))
 } finally {
   ws?.close()
-  app.kill('SIGTERM')
+  if(process.platform==='win32' && app.exitCode===null && app.signalCode===null) {
+    try { execFileSync('taskkill',['/PID',String(app.pid),'/T','/F'],{stdio:'ignore',timeout:10000,windowsHide:true}) } catch {}
+  } else app.kill('SIGTERM')
   await Promise.race([new Promise(resolve=>app.once('exit',resolve)),wait(2000)])
   if(app.exitCode===null && app.signalCode===null) app.kill('SIGKILL')
   fs.writeFileSync(path.join(output,'app.log'),logs)
-  fs.rmSync(profile,{recursive:true,force:true})
+  await fs.promises.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:200})
 }

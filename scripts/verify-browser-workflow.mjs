@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { spawn, execFileSync } from 'node:child_process'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const outputIndex = process.argv.indexOf('--output')
 const output = outputIndex >= 0
@@ -112,7 +112,7 @@ try {
     const fallback=await evaluate(`window.api.browser.change({type:'save',folderId:${JSON.stringify(favorite.folderId)},name:'捕获失败仍保存',url:'https://example.net/',capture:true,guestId:-1})`)
     check(!!fallback.warning&&fallback.data.sites.some(s=>s.name==='捕获失败仍保存'),'failed capture does not discard bookmark')
     const route=await evaluate('window.api.browser.routes()')
-    await evaluate('window.fixtureWebview().loadURL('+JSON.stringify('file://'+route.htmlPath)+')');await wait(300)
+    await evaluate('window.fixtureWebview().loadURL('+JSON.stringify(pathToFileURL(route.htmlPath).href)+')');await wait(300)
     await guestEval(`(()=>{const f=document.querySelector('#bookmark-form');f.elements.name.value='离线HTML表单';f.elements.url.value='https://example.edu/';f.requestSubmit()})()`);await wait(250)
     check(await evaluate("document.querySelector('[aria-label=收藏网站] input').value==='离线HTML表单'"),'generated standalone HTML form routes to real bookmark UI')
     await click('取消')
@@ -123,10 +123,12 @@ try {
   console.log(JSON.stringify({checks,passed:true,output}))
 } finally {
   ws?.close()
-  app.kill('SIGTERM')
+  if(process.platform==='win32' && app.exitCode===null && app.signalCode===null) {
+    try { execFileSync('taskkill',['/PID',String(app.pid),'/T','/F'],{stdio:'ignore',timeout:10000,windowsHide:true}) } catch {}
+  } else app.kill('SIGTERM')
   await Promise.race([new Promise(resolve=>app.once('exit',resolve)),wait(2000)])
   if(app.exitCode===null && app.signalCode===null) app.kill('SIGKILL')
   fs.writeFileSync(path.join(output,'app.log'),logs)
-  if(suppliedProfile<0)fs.rmSync(profile,{recursive:true,force:true})
+  if(suppliedProfile<0)await fs.promises.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:200})
   server.close()
 }

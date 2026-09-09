@@ -96,6 +96,22 @@ jobs:
           path: smoke-out/
           if-no-files-found: warn
 
+      - name: Packaged browser gallery regression
+        run: node scripts/verify-browser-wave.mjs --executable "release/win-unpacked/Eas-Term.exe" --output "browser-wave-win"
+
+      - name: Packaged browser bookmark workflow
+        run: node scripts/verify-browser-workflow.mjs --executable "release/win-unpacked/Eas-Term.exe" --output "browser-workflow-win"
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-win
+          path: |
+            browser-wave-win/
+            browser-workflow-win/
+          if-no-files-found: warn
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
