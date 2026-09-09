@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 export async function verifyVoice(cdp,projectDir,root,waitFor){
  const out=path.join(root,'docs/verification/voice');fs.mkdirSync(out,{recursive:true});const checks=[]
- await cdp.eval(`(()=>{window.__voiceSilence=new AudioContext();const stream=window.__voiceSilence.createMediaStreamDestination().stream;navigator.mediaDevices.getUserMedia=async()=>stream.clone()})()`)
+ await cdp.eval(`(()=>{window.__voiceStreams=[];window.__voiceSilence=new AudioContext();const stream=window.__voiceSilence.createMediaStreamDestination().stream;navigator.mediaDevices.getUserMedia=async()=>{const clone=stream.clone();window.__voiceStreams.push(clone);return clone}})()`)
  for(const cli of ['codex','claude','omp']){
   const sid='voice-fixture-'+cli,tabs=[{id:'voice-tab',title:'Voice verification',cwd:projectDir,activeLeafId:sid,root:{type:'leaf',id:sid,pane:{kind:'agent',cli,cwd:projectDir,sessionId:sid}}}]
   await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({viewMode:'canvas',tabs:${JSON.stringify(tabs)},activeTabId:'voice-tab',canvas:{...s.canvas,frames:[{id:'voice-frame',name:'语音光标 · 隔离回放',projectId:null,x:0,y:0,w:900,h:760,collapsed:false,nodes:[{id:'voice-node',leafId:${JSON.stringify(sid)},x:20,y:50,w:850,h:680}]}]}});s.setMaximizedNode({frameId:'voice-frame',nodeId:'voice-node'})})()`)
@@ -34,7 +34,33 @@ export async function verifyVoice(cdp,projectDir,root,waitFor){
  console.log('CROSS diagnostic',await cdp.eval(`({editors:Array.from(document.querySelectorAll('[data-composer-input]')).map(e=>({text:e.value,target:e.dataset.voiceTarget,active:e===document.activeElement})),recordings:document.querySelectorAll('.voice-btn.rec').length})`))
  await waitFor(()=>cdp.eval(`(()=>{const [a,b]=document.querySelectorAll('[data-composer-input]');return a.value==='甲旧句'&&b.value==='乙新句'&&document.activeElement===b&&!!document.querySelector('.voice-btn.rec')})()`),{timeout:4000,desc:'cross target and duplicate guard'})
  checks.push('cross editor continuous recording; late old text returns only to old editor; duplicate ignored; no focus theft')
- await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
+ await cdp.eval(`(()=>{const b=document.querySelectorAll('[data-composer-input]')[1];const old=b.dataset.voiceTarget;b.value='人工修改';b.setSelectionRange(0,4);window.__voiceTestFinal('不得覆盖',old,'conflict')})()`)
+ await waitFor(()=>cdp.eval(`document.querySelectorAll('[data-composer-input]')[1].value==='人工修改'&&document.body.textContent.includes('原输入已修改或关闭')`),{desc:'changed document becomes candidate'})
+ checks.push('manual document changes reject late final and retain candidate')
+ const starts=await cdp.eval(`window.__voiceTestCalls().starts`)
+ await cdp.eval(`document.querySelectorAll('.voice-btn')[1].click()`)
+ if(await cdp.eval(`window.__voiceTestCalls().starts`)!==starts)throw Error('second microphone stole recording ownership')
+ checks.push('second microphone cannot steal recording or stop handler')
+ await cdp.eval(`window.__voiceTestConfigure({stopMs:800,text:'旧尾不得写入'});document.querySelector('.voice-btn.rec').click()`)
+ await cdp.eval(`document.querySelectorAll('.ac-bar-send')[1].click()`)
+ await new Promise(r=>setTimeout(r,1000))
+ if(await cdp.eval(`Array.from(document.querySelectorAll('[data-composer-input]')).some(e=>e.value.includes('旧尾不得写入'))`))throw Error('stop then send polluted draft')
+ checks.push('send during pending manual-stop discards late tail')
+ await cdp.eval(`(()=>{window.__voiceTestConfigure({startMs:800,stopMs:0,text:''});const a=document.querySelector('[data-composer-input]');a.value='初始化期间发送';a.focus();document.querySelector('.voice-btn').click()})()`)
+ await new Promise(r=>setTimeout(r,50))
+ await cdp.eval(`document.querySelector('.ac-bar-send').click()`)
+ await new Promise(r=>setTimeout(r,1000))
+ if(await cdp.eval(`!!document.querySelector('.voice-btn.rec')||window.__voiceStreams.some(s=>s.getTracks().some(t=>t.readyState!=='ended'))`))throw Error('capture survived send during initialization')
+ checks.push('send during initialization cancels deferred microphone acquisition')
+ await cdp.eval(`window.__voiceTestConfigure({startMs:0,stopMs:0,text:''})`)
+ for(let i=0;i<5;i++){
+  await cdp.eval(`document.querySelector('.voice-btn').click()`)
+  await waitFor(()=>cdp.eval(`!!document.querySelector('.voice-btn.rec')`),{desc:'repeat capture start'})
+  await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
+  await waitFor(()=>cdp.eval(`!document.querySelector('.voice-btn.rec')&&window.__voiceStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended'))`),{desc:'all microphone tracks released'})
+  await new Promise(r=>setTimeout(r,50))
+ }
+ checks.push('five start/stop cycles release every MediaStream track')
  await cdp.eval(`window.__voiceSilence.close()`)
  fs.writeFileSync(path.join(out,'ui-result.json'),JSON.stringify({passed:true,checks,scope:'Mock ASR final events and silent capture; not microphone/noise recognition validation'},null,2));console.log(checks)
 }

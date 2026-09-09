@@ -327,11 +327,15 @@ const PRELOAD_EXPOSE_ANCHOR = `contextBridge.exposeInMainWorld('api', api)`
 const PRELOAD_EXPOSE_PATCHED = (process.argv.includes('--voice') ? `
 if (AGENT_CHAT_TEST_MODE) {
   const finals = new Set<(text: string, targetId?: string, segmentId?: string) => void>()
-  api.stt.start = async () => ({ok:true})
-  api.stt.stop = async () => ({text:''})
+  let voiceTest = {startMs:0,stopMs:0,text:''}
+  let voiceStarts=0,voiceStops=0
+  api.stt.start = async () => { voiceStarts++; await new Promise(r=>setTimeout(r,voiceTest.startMs)); return {ok:true} }
+  api.stt.stop = async () => { voiceStops++; const text=voiceTest.text; await new Promise(r=>setTimeout(r,voiceTest.stopMs)); return {text} }
   api.stt.sendAudio = () => {}
   api.stt.onFinal = cb => { finals.add(cb); return () => { finals.delete(cb) } }
   contextBridge.exposeInMainWorld('__voiceTestFinal', (text: string, targetId?: string, segmentId?: string) => finals.forEach(fn => fn(text, targetId, segmentId)))
+  contextBridge.exposeInMainWorld('__voiceTestConfigure', (options: Partial<typeof voiceTest>) => { voiceTest={...voiceTest,...options} })
+  contextBridge.exposeInMainWorld('__voiceTestCalls', () => ({starts:voiceStarts,stops:voiceStops}))
 }
 ` : '') + fs.readFileSync(new URL('./fixtures/chat-integration-preload.txt', import.meta.url), 'utf8') + `
 if (AGENT_CHAT_TEST_MODE) {
@@ -362,7 +366,8 @@ if (AGENT_CHAT_TEST_MODE) {
 }`
 
 function applyPatch(file, replacements, label) {
-  let src = fs.readFileSync(file, 'utf8')
+  // Windows checkout may use CRLF. ORIGINALS retains exact bytes for restoration.
+  let src = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
   for (const [anchor, patched] of replacements) {
     if (!src.includes(anchor)) {
       throw new Error(`补丁锚点在 ${file} 里没找到（源码可能已变化，需要更新脚本）：\n${anchor.slice(0, 120)}...`)

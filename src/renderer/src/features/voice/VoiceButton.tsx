@@ -33,6 +33,7 @@ export function VoiceButton({
   onText?: (text: string) => void
 }): JSX.Element {
   const [rec, setRec] = useState(false)
+  const [initializing, setInitializing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [held, setHeld] = useState<{text:string; id:string}[]>([])
   const [mode, setMode] = useState<'standard' | 'strong' | 'basic'>(() => {
@@ -72,6 +73,7 @@ export function VoiceButton({
   useEffect(() => {
     if (!rec) return
     const offE = window.api.stt.onError((message) => {
+      run.cancel(); clearVoiceStopper(stopOwner)
       capRef.current?.stop(); capRef.current = null
       setRec(false); setInterim(''); setErr(message)
     })
@@ -176,7 +178,7 @@ export function VoiceButton({
   const start = async (): Promise<void> => {
     if (starting.current || stopping.current || capRef.current) return
     if (!claimVoiceStopper(stopOwner)) { flash('另一个输入框正在录音或收尾，请先停止'); return }
-    starting.current = true
+    starting.current = true; setInitializing(true)
     const token = run.begin()
     // Claimed before permissions/model download; a second button cannot steal it.
     const valid = (): boolean => aliveRef.current && run.valid(token)
@@ -207,7 +209,7 @@ export function VoiceButton({
       if (valid()) flash(String(error))
       capRef.current?.stop(); capRef.current = null
     } finally {
-      starting.current = false
+      starting.current = false; if (aliveRef.current) setInitializing(false)
       if (!valid() || !capRef.current) {
         capRef.current?.stop(); capRef.current = null
         if (ownsMain) await window.api.stt.stop().catch(() => ({text:''}))
@@ -239,6 +241,7 @@ export function VoiceButton({
 
   const downloading = dlMb !== null
   const onClick = (): void => {
+    if (initializing) { void stop(false); return }
     if (downloading) return
     if (rec) void stop()
     else void start()
@@ -272,7 +275,7 @@ export function VoiceButton({
         <button type="button" onClick={() => setHeld([])}>丢弃候选</button>
       </div>}
       {settingsOpen && <div className="voice-settings" role="group" aria-label="语音过滤设置">
-        <label>声音过滤<select aria-label="声音过滤模式" value={mode} disabled={rec} onChange={e => {
+        <label>声音过滤<select aria-label="声音过滤模式" value={mode} disabled={rec || initializing} onChange={e => {
           const next = e.target.value as 'standard' | 'strong' | 'basic'
           setMode(next); localStorage.setItem('voice-filter-mode', next)
         }}>
@@ -286,7 +289,7 @@ export function VoiceButton({
       <button type="button" className="voice-settings-button" aria-label="语音过滤设置" aria-expanded={settingsOpen} onMouseDown={e => e.preventDefault()} onClick={() => setSettingsOpen(v => !v)}>⋯</button>
       <button
         className={`voice-btn${rec ? ' rec' : ''}${downloading ? ' dl' : ''}`}
-        aria-label={rec ? '停止语音输入' : '语音输入'}
+        aria-label={initializing ? '取消语音初始化' : rec ? '停止语音输入' : '语音输入'}
         data-tip={downloading ? '正在下载语音模型…' : rec ? '停止语音输入' : '语音输入'}
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation() }}
         onClick={onClick}
