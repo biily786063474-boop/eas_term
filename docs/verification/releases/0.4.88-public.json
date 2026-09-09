@@ -1,0 +1,52 @@
+{
+  "pages": {
+    "index.html": {
+      "sha256": "4627e00fdc03e9a67b64d71224009a39f38da80143bbcaec4586df5d09550d9e",
+      "status": 200
+    },
+    "download.html": {
+      "sha256": "0e20ba840ebe1095f9390798cd107debdeb942d8bf9ebab981e1767935a4d05f",
+      "status": 200
+    },
+    "changelog.html": {
+      "sha256": "c7a6919181a6295d4e1bbf599351469a58ae02391abc4c52dc1e6119a92e7261",
+      "status": 200
+    },
+    "latest.json": {
+      "sha256": "294044f42f075b1627615bdbab41a0a717d4125efd6355e2045b415a4dabedc0",
+      "status": 200
+    }
+  },
+  "packages": [
+    {
+      "name": "Eas-Term-0.4.88-arm64.dmg",
+      "head": 200,
+      "range": 206,
+      "size": 204405254
+    },
+    {
+      "name": "Eas-Term-0.4.88-arm64.zip",
+      "head": 200,
+      "range": 206,
+      "size": 202562218
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64.dmg",
+      "head": 200,
+      "range": 206,
+      "size": 216363180
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64.zip",
+      "head": 200,
+      "range": 206,
+      "size": 214660601
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64-setup.exe",
+      "head": 200,
+      "range": 206,
+      "size": 190079712
+    }
+  ]
+}

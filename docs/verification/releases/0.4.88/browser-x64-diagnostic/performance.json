@@ -1,0 +1,166 @@
+[
+  {
+    "gaps": [
+      569.6100000000006,
+      266.6899999999987
+    ],
+    "max": 569.6100000000006,
+    "metrics": [
+      {
+        "name": "LayoutCount",
+        "value": 1
+      },
+      {
+        "name": "RecalcStyleCount",
+        "value": 4
+      },
+      {
+        "name": "LayoutDuration",
+        "value": 0.014444
+      },
+      {
+        "name": "RecalcStyleDuration",
+        "value": 0.067908
+      },
+      {
+        "name": "TaskDuration",
+        "value": 0.8899539999999999
+      }
+    ]
+  },
+  {
+    "gaps": [
+      294.13800000596166,
+      98.56199999999808,
+      18.100000000002183,
+      16.599999999998545,
+      15.200000000000728,
+      34.89999999999782,
+      16.600000000002183,
+      16.700000000000728,
+      16.599999999998545,
+      16.799999999999272,
+      16.600000000002183,
+      165.1999999999971,
+      16.200000000000728,
+      18.600000000002183,
+      83.29999999999927
+    ],
+    "max": 294.13800000596166,
+    "metrics": [
+      {
+        "name": "LayoutCount",
+        "value": 3
+      },
+      {
+        "name": "RecalcStyleCount",
+        "value": 16
+      },
+      {
+        "name": "LayoutDuration",
+        "value": 0.016215
+      },
+      {
+        "name": "RecalcStyleDuration",
+        "value": 0.010088000000000041
+      },
+      {
+        "name": "TaskDuration",
+        "value": 0.7770389999999998
+      }
+    ]
+  },
+  {
+    "gaps": [
+      1918.055999997021
+    ],
+    "max": 1918.055999997021,
+    "metrics": [
+      {
+        "name": "LayoutCount",
+        "value": 3
+      },
+      {
+        "name": "RecalcStyleCount",
+        "value": 4
+      },
+      {
+        "name": "LayoutDuration",
+        "value": 0.052836
+      },
+      {
+        "name": "RecalcStyleDuration",
+        "value": 0.030666000000000027
+      },
+      {
+        "name": "TaskDuration",
+        "value": 2.1344749999999997
+      }
+    ]
+  },
+  {
+    "gaps": [
+      38.99600000297869,
+      616.604000000003,
+      33.29999999999927,
+      16.700000000000728,
+      15.19999999999709,
+      16.600000000002183,
+      17.799999999999272,
+      15.200000000000728,
+      135.20000000000073
+    ],
+    "max": 616.604000000003,
+    "metrics": [
+      {
+        "name": "LayoutCount",
+        "value": 1
+      },
+      {
+        "name": "RecalcStyleCount",
+        "value": 10
+      },
+      {
+        "name": "LayoutDuration",
+        "value": 0.001369000000000009
+      },
+      {
+        "name": "RecalcStyleDuration",
+        "value": 0.004944000000000004
+      },
+      {
+        "name": "TaskDuration",
+        "value": 0.6868590000000001
+      }
+    ]
+  },
+  {
+    "gaps": [
+      3.9999999970204954,
+      865.7999999999993
+    ],
+    "max": 865.7999999999993,
+    "metrics": [
+      {
+        "name": "LayoutCount",
+        "value": 1
+      },
+      {
+        "name": "RecalcStyleCount",
+        "value": 3
+      },
+      {
+        "name": "LayoutDuration",
+        "value": 0.0014009999999999995
+      },
+      {
+        "name": "RecalcStyleDuration",
+        "value": 0.0033320000000000016
+      },
+      {
+        "name": "TaskDuration",
+        "value": 0.8898869999999999
+      }
+    ]
+  }
+]

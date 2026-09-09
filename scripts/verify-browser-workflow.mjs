@@ -96,6 +96,7 @@ try {
     await evaluate("document.querySelector('[data-tip=后退]').click()");await wait(100)
     check(await evaluate('window.fixtureWebview().getWebContentsId()')===guestId,'home/back preserves guest identity')
     await guestEval("document.querySelector('a').click()");await wait(250)
+    for(let i=0;i<100;i++){if(await evaluate("document.querySelector('[aria-label=收藏网站] input')?.value==='来自HTML'"))break;await wait(100)}
     check(await evaluate("document.querySelector('[aria-label=收藏网站] input').value==='来自HTML'"),'local HTML deep link opens prefilled form without saving')
     await click('取消')
     const before=await evaluate('window.api.browser.favorites()')
@@ -113,7 +114,9 @@ try {
     check(!!fallback.warning&&fallback.data.sites.some(s=>s.name==='捕获失败仍保存'),'failed capture does not discard bookmark')
     const route=await evaluate('window.api.browser.routes()')
     await evaluate('window.fixtureWebview().loadURL('+JSON.stringify(pathToFileURL(route.htmlPath).href)+')');await wait(300)
+    for(let i=0;i<100;i++){if(await guestEval("!!document.querySelector('#bookmark-form')"))break;await wait(100)}
     await guestEval(`(()=>{const f=document.querySelector('#bookmark-form');f.elements.name.value='离线HTML表单';f.elements.url.value='https://example.edu/';f.requestSubmit()})()`);await wait(250)
+    for(let i=0;i<100;i++){if(await evaluate("document.querySelector('[aria-label=收藏网站] input')?.value==='离线HTML表单'"))break;await wait(100)}
     check(await evaluate("document.querySelector('[aria-label=收藏网站] input').value==='离线HTML表单'"),'generated standalone HTML form routes to real bookmark UI')
     await click('取消')
   }else{

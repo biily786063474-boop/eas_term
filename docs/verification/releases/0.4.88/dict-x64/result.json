@@ -1,0 +1,7 @@
+{
+  "checks": [
+    "real app blueprint hover opens",
+    "leave term within same blueprint closes preview"
+  ],
+  "passed": true
+}

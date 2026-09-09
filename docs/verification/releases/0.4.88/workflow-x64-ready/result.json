@@ -1,0 +1,24 @@
+{
+  "checks": [
+    "persistent browser login fixture created",
+    "website guest has no privileged preload or Node access",
+    "bookmark form prefills page title",
+    "create folder within bookmark auto-selects destination",
+    "confirmed bookmark closes form",
+    "explicit opt-in captures current guest preview",
+    "preview exists only in local app cache",
+    "success toast enters selected custom folder",
+    "saved local preview renders",
+    "home/back preserves guest identity",
+    "local HTML deep link opens prefilled form without saving",
+    "cancelled deep link never silently saves",
+    "corrupt store errors instead of overwrite",
+    "corrupt original preserved",
+    "symlink cache file rejected",
+    "dangling symlink rejected",
+    "remove preview cleans cached file",
+    "failed capture does not discard bookmark",
+    "generated standalone HTML form routes to real bookmark UI"
+  ],
+  "passed": true
+}

@@ -1,0 +1,64 @@
+{
+  "version": "0.4.88",
+  "productSource": "05b0ac5",
+  "backup": "/www/wwwroot/eas-release-backups/0.4.88-20260909T080021Z",
+  "before": {
+    "index.html": "b954641822e0f8263561abf2e8f898be7901200fe5ff0b30d997934632ddbfc9",
+    "download.html": "60e2fdbc43be8337d7cfdc02fdf5a1de42898e466650ea4adaed36ef047233ee",
+    "changelog.html": "ae79160b1a47d2fc4d5f321e6c698204e952daf2f4144619842630fb63589a6f",
+    "latest.json": "8363452c60ff3e0dd13f319b9733ed16fa4bf2536ea02990507c78e62144cf80"
+  },
+  "after": {
+    "index.html": "4627e00fdc03e9a67b64d71224009a39f38da80143bbcaec4586df5d09550d9e",
+    "download.html": "0e20ba840ebe1095f9390798cd107debdeb942d8bf9ebab981e1767935a4d05f",
+    "changelog.html": "c7a6919181a6295d4e1bbf599351469a58ae02391abc4c52dc1e6119a92e7261",
+    "latest.json": "294044f42f075b1627615bdbab41a0a717d4125efd6355e2045b415a4dabedc0"
+  },
+  "healthBefore": {
+    "eas.biily.top": "301",
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "siming.biily.top": "301"
+  },
+  "healthAfter": {
+    "eas.biily.top": "301",
+    "www.biily.top": "301",
+    "aurora.biily.top": "301",
+    "rove.biily.top": "301",
+    "bzone.biily.top": "301",
+    "spb.biily.top": "301",
+    "mini.biily.top": "301",
+    "siming.biily.top": "301"
+  },
+  "artifacts": [
+    {
+      "name": "Eas-Term-0.4.88-arm64.dmg",
+      "size": 204405254,
+      "sha256": "313e2b231607f6b6084cc7a19f3f4062e5ede2cff2a6a00c8858e22b20c7a0d0"
+    },
+    {
+      "name": "Eas-Term-0.4.88-arm64.zip",
+      "size": 202562218,
+      "sha256": "87b69926785810b71d54bf603592bfb76a3d66f7458e952770eebfd1f6ba110e"
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64.dmg",
+      "size": 216363180,
+      "sha256": "53caaf8b49a298872ea9c3eb0f09c8bf54204cee2a25641c9e902998199e0b95"
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64.zip",
+      "size": 214660601,
+      "sha256": "83d9227d2a6614c4f18d927240502f5b90a3fd3538977e3aa3df76e95e20f3db"
+    },
+    {
+      "name": "Eas-Term-0.4.88-x64-setup.exe",
+      "size": 190079712,
+      "sha256": "99a95098ff1e7bb7fa753a42710142af8822f71483bd20476563ff4bf4da58c6"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "text": "Eas-Term\n额度\n辞典\n密钥\n画布\n设置\nhome\n×\n⌂\n☆\n⋯\n☆ 全部收藏\n⚡ 动效\n✿ 设计\n▤ 办公\n☁ 服务器网站\n▶ 自媒体平台\n收藏夹\n你的常用网站，井然有序。\n↗\nMo\n✦\n⚡\n✦\n动效\n5 个网站 · 固定\n↗\nPi\n✦\n✿\n✦\n设计\n3 个网站 · 固定\n↗\nNo\n✦\n▤\n✦\n办公\n2 个网站 · 固定\n↗\nCl\n✦\n☁\n✦\n服务器网站\n2 个网站 · 固定\n↗\n小红\n✦\n▶\n✦\n自媒体平台\n4 个网站 · 固定\n＋ 新建文件夹\n● 登录状态默认保存在本机 · 网站会话到期仍需登录\n文件夹右键可编辑名称与贴纸\n100%\n⤢",
+  "frames": [
+    {
+      "id": "frame-1-6t6ba",
+      "projectId": null,
+      "name": "未命名",
+      "x": 100,
+      "y": 100,
+      "w": 512,
+      "h": 406,
+      "collapsed": false,
+      "nodes": [
+        {
+          "id": "cnode-2-08aus",
+          "pane": {
+            "kind": "web",
+            "url": "eas-favorites://home"
+          },
+          "x": 16,
+          "y": 50,
+          "w": 480,
+          "h": 340
+        }
+      ]
+    }
+  ]
+}
