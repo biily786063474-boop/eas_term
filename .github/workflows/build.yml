@@ -49,6 +49,20 @@ jobs:
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 
+      - name: Git history and fresh AI split regression
+        run: node --test src/main/gitHistory.test.ts src/renderer/src/store/splitLeaf.test.mjs
+
+      - name: Packaged Git history UI and guarded operations
+        run: node scripts/verify-git-history.mjs --executable "release/win-unpacked/Eas-Term.exe" --output "git-history-win"
+
+      - name: Upload Git history evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-history-win
+          path: git-history-win/
+          if-no-files-found: warn
+
       - name: Builtin capability Windows contracts
         run: node --experimental-strip-types --test src/main/bizoneWindowsDiscovery.test.ts src/shared/builtinCapabilities.test.ts
 
