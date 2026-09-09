@@ -437,7 +437,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       }
     }),
 
-  // Blender 风格：分屏克隆当前面板的类型与内容（终端则新开一个 shell）
+  // 分屏：预览克隆内容；终端新开 shell；AI 新开启动页，不复制会话/自动派活状态。
   splitLeaf: async (tabId, leafId, dir) => {
     const s = get()
     const tab = s.tabs.find((t) => t.id === tabId)
@@ -448,6 +448,9 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     if (target.pane.kind === 'terminal') {
       const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
       pane = { kind: 'terminal', ptyId }
+    } else if (target.pane.kind === 'agent') {
+      // 显式白名单，避免 sessionId/resumeId/initialMessage 等把新面板接进旧流程。
+      pane = { kind: 'agent', cwd: target.pane.cwd }
     } else {
       pane = { ...target.pane }
     }

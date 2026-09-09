@@ -1,0 +1,20 @@
+{
+  "checks": [
+    "Real history renders fixture commits",
+    "Added/deleted/modified files rendered",
+    "Semantic file colors and counts rendered",
+    "Real context menu has checkout",
+    "Checkout confirmation rendered",
+    "Confirmation surfaces dirty-worktree rejection",
+    "UI confirmation performs checkout",
+    "UI return button restores branch",
+    "UI shows explicit compare direction",
+    "IPC blocks dirty checkout",
+    "IPC checks out clean fixture",
+    "IPC returns to main",
+    "IPC creates branch",
+    "IPC creates tag",
+    "Unauthorized project write rejected"
+  ],
+  "passed": true
+}

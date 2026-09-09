@@ -3,6 +3,8 @@ import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { guardDir } from './fsGuard'
+import { historyAction, historyFiles, type HistoryAction } from './gitHistory'
 import type {
   GitStatus,
   GitFileEntry,
@@ -170,6 +172,29 @@ function clampBinary(text: string): { text: string; binary: boolean; truncated: 
 }
 
 export function registerGitHandlers(): void {
+  ipcMain.handle('git:historyFiles', async (_e, cwd: string, target: string, base?: string) => {
+    try { return { ok: true, files: await historyFiles(cwd, base, target) } }
+    catch (error) { return { ok: false, files: [], error: String(error) } }
+  })
+  ipcMain.handle('git:historyAction', async (_e, cwd: string, action: HistoryAction, target: string, name?: string): Promise<OpResult> => {
+    try {
+      const allowed = guardDir(cwd)
+      if (!allowed.ok) return allowed
+      const root = await repoRoot(allowed.path)
+      if (!root) throw new Error('不是 Git 仓库')
+      const rootGuard = guardDir(root)
+      if (!rootGuard.ok) return rootGuard
+      // linked worktree 的共享元数据也必须在授权目录中，不只检查工作树。
+      for (const flag of ['--git-dir', '--git-common-dir']) {
+        const meta = await git(root, ['rev-parse', flag])
+        if (!meta.ok) throw new Error(meta.stderr)
+        const safe = guardDir(path.resolve(root, meta.stdout.trim()))
+        if (!safe.ok) return safe
+      }
+      await historyAction(root, action, target, name)
+      return { ok: true }
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) } }
+  })
   ipcMain.handle('git:status', async (_e, cwd: string): Promise<GitStatus> => {
     const root = await repoRoot(cwd)
     if (!root) return { isRepo: false, files: [] }
@@ -354,9 +379,10 @@ export function registerGitHandlers(): void {
   // 某次提交里某文件的 diff（父版本 ↔ 本提交版本）
   ipcMain.handle(
     'git:commitDiff',
-    async (_e, cwd: string, hash: string, relPath: string): Promise<GitDiffResult> => {
+    async (_e, cwd: string, hash: string, relPath: string, base?: string, origPath?: string): Promise<GitDiffResult> => {
       try {
-        const originalRaw = (await showContent(cwd, `${hash}^`, relPath)) ?? ''
+        if (!/^(HEAD|[a-fA-F0-9]{7,64})$/.test(hash) || (base && !/^(HEAD|[a-fA-F0-9]{7,64})$/.test(base))) throw new Error('非法提交编号')
+        const originalRaw = (await showContent(cwd, base ?? `${hash}^`, origPath ?? relPath)) ?? ''
         const modifiedRaw = (await showContent(cwd, hash, relPath)) ?? ''
         const o = clampBinary(originalRaw)
         const m = clampBinary(modifiedRaw)

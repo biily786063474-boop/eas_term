@@ -44,11 +44,39 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
   const [files, setFiles] = useState<GitCommitFile[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
   const [topRatio, setTopRatio] = useState(0.58)
+  const [error, setError] = useState('')
+  const [compareBase, setCompareBase] = useState<string | undefined>()
+  const [comparePick, setComparePick] = useState<string | null>(null)
+  const [returnBranch, setReturnBranch] = useState('')
+  const [operation, setOperation] = useState<{ action: 'checkout' | 'branch' | 'tag' | 'switch'; target: string } | null>(null)
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [revision, setRevision] = useState(0)
   const [menu, setMenu] = useState<{ x: number; y: number; hash: string; subject: string } | null>(
     null
   )
   const wrapRef = useRef<HTMLDivElement>(null)
   const requestConfirm = useStore((s) => s.requestConfirm)
+  const begin = (action: 'checkout' | 'branch' | 'tag' | 'switch', target: string): void => {
+    setName(''); setError(''); setOperation({ action, target })
+  }
+  const execute = async (): Promise<void> => {
+    if (!operation || busy) return
+    setBusy(true); setError('')
+    try {
+      const result = await window.api.git.historyAction(cwd, operation.action, operation.target, name)
+      if (!result.ok) { setError(result.error ?? '操作失败'); return }
+      if (operation.action === 'checkout' && branch && branch !== '(detached)') setReturnBranch(branch)
+      if (operation.action === 'switch') setReturnBranch('')
+      setOperation(null); setCompareBase(undefined); setRevision(v => v + 1)
+      await refresh()
+    } catch (e) { setError(String(e)) } finally { setBusy(false) }
+  }
+  const copy = (text: string): void => { void navigator.clipboard.writeText(text).catch(e => setError(String(e))) }
+
+  useEffect(() => {
+    setSelected(null); setCompareBase(undefined); setComparePick(null); setReturnBranch(''); setOperation(null); setError('')
+  }, [cwd])
 
   // 右键「回退到该版本」→ 弹确认 → git reset --hard 到该提交（破坏性，故先确认），成功后刷新历史
   const askReset = (hash: string, subject: string): void => {
@@ -58,6 +86,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
       onConfirm: () => {
         void window.api.git.resetHard(cwd, hash).then((r) => {
           if (r.ok) void refresh()
+          else setError(r.error ?? '回退失败')
         })
       }
     })
@@ -86,15 +115,18 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
       return
     }
     let cancelled = false
-    void window.api.git.commitFiles(cwd, selected).then((fs) => {
+    setFiles([]); setActiveFile(null)
+    void window.api.git.historyFiles(cwd, selected, compareBase).then((result) => {
       if (cancelled) return
+      if (!result.ok) { setError(result.error ?? '读取差异失败'); return }
+      const fs = result.files
       setFiles(fs)
       setActiveFile(fs[0]?.path ?? null)
-    })
+    }).catch(e => { if (!cancelled) setError(String(e)) })
     return () => {
       cancelled = true
     }
-  }, [selected, cwd])
+  }, [selected, cwd, compareBase, revision])
 
   const startDrag = (e: React.MouseEvent): void => {
     e.preventDefault()
@@ -141,10 +173,13 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
 
   return (
     <div className="history-view" ref={wrapRef}>
+      {error && <div className="history-feedback" role="alert">{error}<button onClick={() => setError('')}>关闭</button></div>}
+      {returnBranch && <div className="history-feedback">检出后可返回原分支<button disabled={busy} onClick={() => begin('switch', returnBranch)}>返回 {returnBranch}</button></div>}
+      {comparePick && <div className="history-feedback">已选择 {comparePick.slice(0, 8)}，右键另一提交进行比较<button onClick={() => setComparePick(null)}>取消</button></div>}
       <div className="history-top" style={{ height: `${topRatio * 100}%` }}>
         <div className="history-head">
           <GitBranchIcon size={13} />
-          <span className="history-branch">{branch || '历史'}</span>
+          <span className="history-branch">{branch || (log.length ? '分离 HEAD' : '历史')}</span>
           <span className="history-count">{log.length} 个提交</span>
           <span className="pane-spacer" />
           <button className="icon-btn" data-tip="刷新" onClick={() => void refresh()}>
@@ -165,11 +200,12 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
                 key={c.hash}
                 className={`history-row${selected === c.hash ? ' active' : ''}`}
                 style={{ height: ROW_H }}
-                onClick={() => setSelected(c.hash)}
+                onClick={() => { setSelected(c.hash); setCompareBase(undefined) }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   e.stopPropagation() // 别冒泡到画布节点的右键菜单（复制/删除节点）
                   setSelected(c.hash)
+                  setCompareBase(undefined)
                   setMenu({ x: e.clientX, y: e.clientY, hash: c.hash, subject: c.subject })
                 }}
               >
@@ -202,6 +238,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
         {sel ? (
           <>
             <div className="history-detail-head">
+              {compareBase && <button onClick={() => setCompareBase(undefined)}>退出比较：{compareBase.slice(0, 8)} →</button>}
               <span className="history-detail-hash">{sel.hash.slice(0, 8)}</span>
               <span className="history-detail-subject">{sel.subject}</span>
               <span className="history-detail-meta">
@@ -220,11 +257,12 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
                     <div
                       key={f.path}
                       className={`git-row${activeFile === f.path ? ' active' : ''}`}
-                      data-tip={f.path}
+                      data-tip={f.origPath ? `${f.origPath} → ${f.path}` : f.path}
                       onClick={() => setActiveFile(f.path)}
                     >
                       <span className={`git-badge ${statusInfo(f.status).cls}`}>{f.status}</span>
-                      <span className="git-file-name">{base}</span>
+                      <span className={`git-file-name history-status-${f.status}`}>{f.origPath ? `${f.origPath} → ${f.path}` : base}</span>
+                      <span className="history-numstat">{f.added === null ? '二进制' : <><span className="history-status-A">{f.added !== undefined ? `+${f.added}` : ''}</span> <span className="history-status-D">{f.deleted !== undefined ? `−${f.deleted}` : ''}</span></>}</span>
                     </div>
                   )
                 })}
@@ -232,7 +270,7 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
               </div>
               <div className="history-filediff">
                 {activeFile ? (
-                  <DiffView key={`${sel.hash}:${activeFile}`} cwd={cwd} relPath={activeFile} commit={sel.hash} />
+                  <DiffView key={`${sel.hash}:${activeFile}:${compareBase}:${revision}`} cwd={cwd} relPath={activeFile} commit={sel.hash} base={compareBase} origPath={files.find(f => f.path === activeFile)?.origPath} />
                 ) : (
                   <div className="git-diff-hint">选择左侧文件查看改动</div>
                 )}
@@ -248,6 +286,16 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           x={menu.x}
           y={menu.y}
           items={[
+            { label: '检出此提交…', hint: 'Checkout', disabled: busy, onClick: () => begin('checkout', menu.hash) },
+            { label: '从此提交创建分支…', disabled: busy, onClick: () => begin('branch', menu.hash) },
+            { label: '与当前 HEAD 比较', onClick: () => { setSelected(menu.hash); setCompareBase(log.find(c => /(^|, )HEAD(?: ->|,|$)/.test(c.refs))?.hash ?? 'HEAD') } },
+            { label: comparePick ? `与 ${comparePick.slice(0, 8)} 比较` : '选择以比较', onClick: () => {
+              if (comparePick) { setSelected(menu.hash); setCompareBase(comparePick); setComparePick(null) }
+              else setComparePick(menu.hash)
+            } },
+            { label: '添加标签…', disabled: busy, onClick: () => begin('tag', menu.hash) },
+            { label: '复制提交编号', onClick: () => copy(menu.hash) },
+            { label: '复制提交说明', onClick: () => copy(menu.subject) },
             {
               label: '回退到该版本',
               danger: true,
@@ -257,6 +305,22 @@ function HistoryViewInner({ cwd }: { cwd: string }): JSX.Element {
           onClose={() => setMenu(null)}
         />
       )}
+      {operation && <div className="history-action-veil"><form className="history-action" role="dialog" aria-modal="true" aria-label="确认 Git 操作" onKeyDown={e => {
+        if (e.key === 'Escape') { e.stopPropagation(); if (!busy) setOperation(null) }
+        if (e.key === 'Tab') {
+          const controls = [...e.currentTarget.querySelectorAll<HTMLElement>('input:not(:disabled),button:not(:disabled)')]
+          if (e.shiftKey && document.activeElement === controls[0]) { e.preventDefault(); controls.at(-1)?.focus() }
+          if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus() }
+        }
+      }} onSubmit={e => { e.preventDefault(); void execute() }}>
+        <h3>{({ checkout: '检出此提交', branch: '创建并切换分支', tag: '添加标签', switch: '返回原分支' })[operation.action]}</h3>
+        <code>{operation.target}</code>
+        {operation.action === 'checkout' && <p>将切换项目文件并进入「分离 HEAD」，不会删除后续提交。如果要继续开发，建议从此提交创建分支。</p>}
+        {operation.action !== 'tag' && <p>有未提交改动时会拦截。请先停止此项目正在运行或修改文件的 AI 任务，避免切换代码影响任务。</p>}
+        {(operation.action === 'branch' || operation.action === 'tag') && <label>名称<input autoFocus value={name} disabled={busy} required onChange={e => setName(e.target.value)} /></label>}
+        {error && <p role="alert" className="history-status-D">{error}</p>}
+        <div className="history-action-buttons"><button autoFocus={operation.action === 'checkout' || operation.action === 'switch'} type="button" disabled={busy} onClick={() => setOperation(null)}>取消</button><button disabled={busy}>{busy ? '执行中…' : '确认'}</button></div>
+      </form></div>}
     </div>
   )
 }
