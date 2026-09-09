@@ -14,12 +14,21 @@ type VoiceEditor = HTMLElement & {
 }
 
 type NativeEdit = {before: string; after: string; start: number; end: number; caret: number}
-const histories = new WeakMap<VoiceEditor, {past: NativeEdit[]; future: NativeEdit[]; set: (value:string)=>void}>()
+let discardRevision = 0
+if (typeof document !== 'undefined') document.addEventListener('voice:discard', () => { discardRevision++ })
+const histories = new WeakMap<VoiceEditor, {past: NativeEdit[]; future: NativeEdit[]; revision: number; set: (value:string)=>void}>()
 function rememberVoice(el: VoiceEditor, edit: NativeEdit, setValue: (value:string)=>void): void {
   let history = histories.get(el)
   if (!history) {
-    history = {past:[],future:[],set:setValue}; histories.set(el,history)
+    history = {past:[],future:[],revision:discardRevision,set:setValue}; histories.set(el,history)
+    // Native typing owns its own undo stack, even if it returns to identical text.
+    const invalidate = (): void => {
+      const h = histories.get(el)!
+      h.past = []; h.future = []
+    }
+    el.addEventListener('input', invalidate)
     el.addEventListener('keydown', event => {
+      if (histories.get(el)!.revision !== discardRevision) { invalidate(); histories.get(el)!.revision = discardRevision }
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return
       const key = event.key.toLowerCase(), redo = (key === 'z' && event.shiftKey) || key === 'y'
       if (key !== 'z' && key !== 'y') return
@@ -32,6 +41,7 @@ function rememberVoice(el: VoiceEditor, edit: NativeEdit, setValue: (value:strin
       el.dispatchEvent(new Event('voice:document-edit', {bubbles:true}))
     })
   }
+  if (history.revision !== discardRevision) { history.past = []; history.future = []; history.revision = discardRevision }
   history.set = setValue; history.past.push(edit); history.future = []
   if (history.past.length > 20) history.past.shift()
 }

@@ -61,6 +61,43 @@ export async function verifyVoice(cdp,projectDir,root,waitFor){
   await new Promise(r=>setTimeout(r,50))
  }
  checks.push('five start/stop cycles release every MediaStream track')
+ // Native textarea has a different insertion/undo path from CodeMirror.
+ for (const kind of ['startup','terminal']) {
+  const pane=kind==='startup'?{kind:'agent',cwd:projectDir}:{kind:'terminal',ptyId:'voice-dummy-pty'}
+  await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({tabs:[{id:'extra-tab',title:'Voice extra',cwd:${JSON.stringify(projectDir)},activeLeafId:'extra-leaf',root:{type:'leaf',id:'extra-leaf',pane:${JSON.stringify(pane)}}}],activeTabId:'extra-tab',canvas:{...s.canvas,frames:[{id:'extra-frame',name:'语音输入回归',x:0,y:0,w:900,h:760,collapsed:false,nodes:[{id:'extra-node',leafId:'extra-leaf',x:20,y:50,w:850,h:680}]}]}});s.setMaximizedNode({frameId:'extra-frame',nodeId:'extra-node'})})()`)
+  const selector=kind==='startup'?'[data-composer-input]':'.term-input textarea'
+  await waitFor(()=>cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});return !!e&&getComputedStyle(e).visibility==='visible'})()`),{timeout:12000,desc:kind+' input'})
+  await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.focus();e.setSelectionRange(0,0);document.querySelector('.voice-btn').click()})()`)
+  await waitFor(()=>cdp.eval(`!!document.querySelector('.voice-btn.rec')`),{desc:kind+' recording'})
+  await cdp.eval(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});window.__voiceTestFinal('第一',e.dataset.voiceTarget,'${kind}-1');window.__voiceTestFinal('第二',e.dataset.voiceTarget,'${kind}-2')})()`)
+  await waitFor(()=>cdp.eval(`document.querySelector(${JSON.stringify(selector)}).value==='第一第二'`),{desc:kind+' batch insertion'})
+  checks.push(kind+': actual editor receives ordered batch finals')
+  await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
+  await waitFor(()=>cdp.eval(`!document.querySelector('.voice-btn.rec')`),{desc:kind+' stop'})
+ }
+ await cdp.eval(`(()=>{const s=window.__store.getState();s.setMaximizedNode(null);window.__store.setState({canvas:{...s.canvas,frames:[],todos:[{id:'voice-todo',x:100,y:100,w:400,h:300,title:'语音回归',items:[{id:'voice-item',title:'原生输入框',body:'甲乙',done:false}]}]}})})()`)
+ await waitFor(()=>cdp.eval(`!!document.querySelector('.ctodo-item')`),{desc:'todo card'})
+ await cdp.eval(`document.querySelector('.ctodo-item').click()`)
+ await waitFor(()=>cdp.eval(`!!document.querySelector('.ctodo-lightbox-body')`),{desc:'native todo textarea'})
+ await cdp.eval(`(()=>{const e=document.querySelector('.ctodo-lightbox-body');e.focus();e.setSelectionRange(1,1);document.querySelector('.ctodo-lightbox .voice-btn').click()})()`)
+ await waitFor(()=>cdp.eval(`!!document.querySelector('.voice-btn.rec')`),{desc:'native recording'})
+ await cdp.eval(`(()=>{const e=document.querySelector('.ctodo-lightbox-body');window.__voiceTestFinal('一',e.dataset.voiceTarget,'native-1');window.__voiceTestFinal('二',e.dataset.voiceTarget,'native-2')})()`)
+ await waitFor(()=>cdp.eval(`document.querySelector('.ctodo-lightbox-body').value==='甲一二乙'&&window.__store.getState().canvas.todos[0].items[0].body==='甲一二乙'`),{desc:'native batch insertion and persistence'})
+ const undo=`document.querySelector('.ctodo-lightbox-body').dispatchEvent(new KeyboardEvent('keydown',{key:'z',code:'KeyZ',metaKey:${process.platform!=='win32'},ctrlKey:${process.platform==='win32'},bubbles:true,cancelable:true}))`
+ await cdp.eval(undo)
+ await waitFor(()=>cdp.eval(`document.querySelector('.ctodo-lightbox-body').value==='甲一乙'`),{desc:'native one final undo'})
+ await cdp.eval(`(()=>{const e=document.querySelector('.ctodo-lightbox-body');e.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:'X'}));e.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'deleteContentBackward'}))})()`)
+ await cdp.eval(undo)
+ if(await cdp.eval(`document.querySelector('.ctodo-lightbox-body').value`)!=='甲一乙')throw Error('voice undo stole ordinary edit history')
+ checks.push('native textarea batch finals preserve order, persist immediately, undo individually; ordinary input invalidates voice undo')
+ await cdp.eval(`(()=>{const e=document.querySelector('.ctodo-lightbox-body');e.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));window.__voiceTestFinal('待定',e.dataset.voiceTarget,'ime-1')})()`)
+ if(await cdp.eval(`document.querySelector('.ctodo-lightbox-body').value.includes('待定')`))throw Error('voice overwrote active IME')
+ await cdp.eval(`document.querySelector('.ctodo-lightbox-body').dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}))`)
+ await waitFor(()=>cdp.eval(`document.querySelector('.ctodo-lightbox-body').value.includes('待定')`),{desc:'IME deferred voice insertion'})
+ checks.push('IME active composition defers voice final until compositionend')
+ await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
+ await waitFor(()=>cdp.eval(`!document.querySelector('.voice-btn.rec')`),{desc:'native stop'})
+ const nativeShot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'todo-native.png'),Buffer.from(nativeShot.result.data,'base64'))
  await cdp.eval(`window.__voiceSilence.close()`)
  fs.writeFileSync(path.join(out,'ui-result.json'),JSON.stringify({passed:true,checks,scope:'Mock ASR final events and silent capture; not microphone/noise recognition validation'},null,2));console.log(checks)
 }
