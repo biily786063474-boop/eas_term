@@ -54,11 +54,15 @@ try {
   ws.addEventListener('message', event => { const data = JSON.parse(event.data); const call = pending.get(data.id); if (call) { pending.delete(data.id); clearTimeout(call.timer); data.error ? call.reject(new Error(JSON.stringify(data.error))) : call.resolve(data.result) } })
   const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq; const timer = setTimeout(() => { pending.delete(id); reject(new Error('CDP timeout: ' + method)) }, 15000); pending.set(id, { resolve, reject, timer }); ws.send(JSON.stringify({ id, method, params })) })
   const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result?.value }
+  console.log('host reduced motion',await evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches"))
+  // Exercise animated and reduced-motion branches explicitly; CI hosts may disable animations.
+  await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
   for (let attempt = 0; attempt < 100; attempt++) { if (await evaluate('!!window.__store && !!window.api?.capabilities')) break; await wait(100) }
 
 
   await evaluate(`(()=>{const s=window.__store.getState();s.addProjectFrame(null,100,100);const f=window.__store.getState().canvas.frames.at(-1);s.addWebNode(f.id,'eas-favorites://home');window.fixture={frameId:f.id,nodeId:window.__store.getState().canvas.frames.at(-1).nodes.at(-1).id};s.setMaximizedNode(window.fixture)})()`)
-  await wait(900)
+  for(let i=0;i<100;i++){if(await evaluate("document.querySelectorAll('.favorite-folder').length===5"))break;await wait(100)}
+  fs.writeFileSync(path.join(output,'startup.json'),JSON.stringify(await evaluate("({text:document.body.innerText,frames:window.__store.getState().canvas.frames})"),null,2))
   check(await evaluate("document.querySelectorAll('.favorite-folder').length===5"),'five default folders rendered')
   let shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'folders.png'),Buffer.from(shot.data,'base64'))
   await evaluate("Array.from(document.querySelectorAll('.favorites-nav button')).find(b=>b.textContent.includes('自媒体')).click()")
@@ -113,6 +117,7 @@ try {
   for(let round=0;round<5;round++){
     for(const m of mixed){
       await evaluate(`window.__store.getState().setMaximizedNode(${JSON.stringify(m)})`);await wait(400)
+      for(let i=0;i<100;i++){if(await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(m.selector)});return !!el&&getComputedStyle(el).visibility==='visible'&&el.getBoundingClientRect().width>800})()`))break;await wait(100)}
       check(await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(m.selector)});return !!el&&getComputedStyle(el).visibility==='visible'&&el.getBoundingClientRect().width>800})()`),'maximized module visible '+m.nodeId+' round '+round)
       await evaluate('window.__store.getState().setMaximizedNode(null)');await wait(420)
     }
