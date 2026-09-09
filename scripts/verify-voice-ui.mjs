@@ -74,6 +74,15 @@ export async function verifyVoice(cdp,projectDir,root,waitFor){
   checks.push(kind+': actual editor receives ordered batch finals')
   await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
   await waitFor(()=>cdp.eval(`!document.querySelector('.voice-btn.rec')`),{desc:kind+' stop'})
+  if(kind==='startup') {
+   await cdp.eval(`document.querySelector('.voice-settings-button').click()`)
+   const visible=await cdp.eval(`(()=>{const r=document.querySelector('.voice-settings').getBoundingClientRect();return r.top>=0&&r.left>=0&&r.bottom<=innerHeight&&r.right<=innerWidth})()`)
+   if(!visible)throw Error('voice settings outside viewport')
+   await cdp.eval(`(()=>{const e=document.querySelector('[aria-label="声音过滤模式"]');e.value='strong';e.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+   if(await cdp.eval(`localStorage.getItem('voice-filter-mode')`)!=='strong')throw Error('voice mode not persisted')
+   await cdp.eval(`document.querySelector('.voice-settings-button').click()`)
+   checks.push('startup settings fully inside viewport; strong mode persisted')
+  }
  }
  await cdp.eval(`(()=>{const s=window.__store.getState();s.setMaximizedNode(null);window.__store.setState({canvas:{...s.canvas,frames:[],todos:[{id:'voice-todo',x:100,y:100,w:400,h:300,title:'语音回归',items:[{id:'voice-item',title:'原生输入框',body:'甲乙',done:false}]}]}})})()`)
  await waitFor(()=>cdp.eval(`!!document.querySelector('.ctodo-item')`),{desc:'todo card'})

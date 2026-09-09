@@ -45,6 +45,7 @@ jobs:
         run: |
           node scripts/verify-voice-vad.mjs
           node scripts/verify-voice-audio.mjs
+          node scripts/verify-voice-audio.mjs --strong
       - uses: actions/upload-artifact@v4
         if: always()
         with:

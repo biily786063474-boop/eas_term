@@ -151,7 +151,7 @@
   padding: 12px;
   border: 1px solid var(--glass-border-strong);
   border-radius: 12px;
-  background: var(--glass-3);
+  background: var(--bg-1);
   color: var(--fg);
   display: grid;
   gap: 10px;
