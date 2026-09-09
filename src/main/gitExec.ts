@@ -59,6 +59,7 @@ export function gitExecCode(cwd: string, args: string[], opts: { timeoutMs?: num
       ['-c', 'core.quotePath=false', ...args],
       {
         cwd,
+        windowsHide: true,
         timeout: opts.timeoutMs ?? 15_000,
         maxBuffer: 16 * 1024 * 1024,
         env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' }

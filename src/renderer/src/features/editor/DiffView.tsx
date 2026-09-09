@@ -24,11 +24,13 @@ interface Props {
   mode?: 'worktree' | 'staged'
   /** 若提供，展示该提交内该文件的 diff（父版本↔本提交），忽略 mode */
   commit?: string
+  base?: string
+  origPath?: string
 }
 
 // 用 @codemirror/merge 的 unifiedMergeView：以「修改后」为正文，行内标出新增（绿）/删除（红）。
 // diff 由前端根据 original/modified 两段文本计算，主进程不解析 unified diff。
-export function DiffView({ cwd, relPath, mode, commit }: Props): JSX.Element {
+export function DiffView({ cwd, relPath, mode, commit, base, origPath }: Props): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<string | null>('加载中…')
 
@@ -40,7 +42,7 @@ export function DiffView({ cwd, relPath, mode, commit }: Props): JSX.Element {
 
     const load = async (): Promise<void> => {
       const res = commit
-        ? await window.api.git.commitDiff(cwd, commit, relPath)
+        ? await window.api.git.commitDiff(cwd, commit, relPath, base, origPath)
         : await window.api.git.diff(cwd, relPath, mode ?? 'worktree')
       if (cancelled) return
       if (!res.ok) {
@@ -77,7 +79,7 @@ export function DiffView({ cwd, relPath, mode, commit }: Props): JSX.Element {
       cancelled = true
       view?.destroy()
     }
-  }, [cwd, relPath, mode, commit])
+  }, [cwd, relPath, mode, commit, base, origPath])
 
   return (
     <div className="diff-view">

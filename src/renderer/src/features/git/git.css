@@ -651,3 +651,24 @@
   min-width: 0;
   position: relative;
 }
+
+/* History actions follow existing semantic colors; no changes to shared menus. */
+.history-status-A { color: #6cc98c; }
+.history-status-D { color: var(--sem-danger); }
+.history-status-M { color: #e0af68; }
+.history-status-R, .history-status-C { color: #8aafe5; }
+.history-numstat { font: 10px monospace; white-space: nowrap; margin-left: 6px; }
+.history-feedback { padding: 8px 12px; font-size: 12px; background: var(--lift-1); flex-shrink: 0; }
+.history-feedback button { margin-left: 12px; }
+.history-action-veil { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: #0008; padding: 16px; }
+.history-action { max-width: 460px; width: 100%; max-height: 100%; overflow: auto; padding: 22px; border: 1px solid #626978; border-radius: 12px; background: var(--bg); color: var(--fg); box-shadow: 0 15px 40px #0006; }
+.history-action code { overflow-wrap: anywhere; }
+.history-action p { font-size: 12px; line-height: 1.8; }
+.history-action input { display: block; width: 100%; margin-top: 8px; padding: 8px; }
+.history-action-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.history-action button, .history-feedback button, .history-detail-head button { padding: 7px 12px; border: 1px solid var(--glass-border); border-radius: 6px; background: var(--lift-1); color: var(--fg); font: inherit; cursor: pointer; }
+.history-action input { background: var(--lift-1); color: var(--fg); border: 1px solid var(--glass-border); border-radius: 6px; font: inherit; }
+.history-action button:disabled { opacity: .5; cursor: wait; }
+html[data-theme='light'] .history-status-A { color: #237347; }
+html[data-theme='light'] .history-status-M { color: #805700; }
+html[data-theme='light'] .history-status-R, html[data-theme='light'] .history-status-C { color: #315b9f; }

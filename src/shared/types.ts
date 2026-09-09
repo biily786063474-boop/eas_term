@@ -523,6 +523,8 @@ export interface GitCommit {
 
 // 某次提交里改动的单个文件（用于「点提交看这次改了啥」）
 export interface GitCommitFile {
+  added?: number | null // null = 二进制，不伪造行数
+  deleted?: number | null
   path: string
   origPath?: string // 重命名的原路径
   status: string // A/M/D/R/C…（首字母）

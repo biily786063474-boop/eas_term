@@ -870,6 +870,10 @@ const api = {
       ipcRenderer.invoke('fs:probePaths', inputs, baseCwd)
   },
   git: {
+    historyFiles: (cwd: string, target: string, base?: string): Promise<{ ok: boolean; files: GitCommitFile[]; error?: string }> =>
+      ipcRenderer.invoke('git:historyFiles', cwd, target, base),
+    historyAction: (cwd: string, action: 'checkout' | 'switch' | 'branch' | 'tag', target: string, name?: string): Promise<OpResult> =>
+      ipcRenderer.invoke('git:historyAction', cwd, action, target, name),
     status: (cwd: string): Promise<GitStatus> => ipcRenderer.invoke('git:status', cwd),
     diff: (cwd: string, relPath: string, mode: 'worktree' | 'staged'): Promise<GitDiffResult> =>
       ipcRenderer.invoke('git:diff', cwd, relPath, mode),
@@ -885,8 +889,8 @@ const api = {
       ipcRenderer.invoke('git:log', cwd, limit),
     commitFiles: (cwd: string, hash: string): Promise<GitCommitFile[]> =>
       ipcRenderer.invoke('git:commitFiles', cwd, hash),
-    commitDiff: (cwd: string, hash: string, relPath: string): Promise<GitDiffResult> =>
-      ipcRenderer.invoke('git:commitDiff', cwd, hash, relPath),
+    commitDiff: (cwd: string, hash: string, relPath: string, base?: string, origPath?: string): Promise<GitDiffResult> =>
+      ipcRenderer.invoke('git:commitDiff', cwd, hash, relPath, base, origPath),
     describe: (cwd: string, hash: string): Promise<AiResult> =>
       ipcRenderer.invoke('git:describe', cwd, hash),
     resetHard: (cwd: string, hash: string): Promise<OpResult> =>
