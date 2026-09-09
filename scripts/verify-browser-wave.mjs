@@ -127,8 +127,9 @@ try {
     await evaluate(`window.__store.getState().setMaximizedNode(${JSON.stringify(pane)})`);await wait(400)
     await evaluate('window.__store.getState().setMaximizedNode(null)');await wait(45)
     const pair=await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(pane.selector)}),a=el.getAnimations()[0];if(!a)return {missing:true};a.pause();a.currentTime=Number(a.effect.getTiming().duration)-.01;const before=el.getBoundingClientRect();const value={before:{x:before.x,y:before.y,w:before.width,h:before.height}};a.finish();const after=el.getBoundingClientRect();value.after={x:after.x,y:after.y,w:after.width,h:after.height};return value})()`)
+    zoomChecks.push({scale,...pair});fs.writeFileSync(path.join(output,'zoom-endpoints.json'),JSON.stringify(zoomChecks,null,2));console.log('zoom endpoint',JSON.stringify({scale,...pair}))
     check(!pair.missing&&['x','y','w','h'].every(k=>Math.abs(pair.before[k]-pair.after[k])<2),'PaneView restore endpoint matches canvas scale '+scale)
-    zoomChecks.push({scale,...pair});await wait(350)
+    await wait(350)
   }
   fs.writeFileSync(path.join(output,'zoom-endpoints.json'),JSON.stringify(zoomChecks,null,2))
   await evaluate('window.__store.getState().setViewport({scale:1});window.__store.getState().setMaximizedNode(window.fixture)');await wait(400)
