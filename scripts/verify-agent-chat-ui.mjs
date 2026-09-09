@@ -966,12 +966,13 @@ async function main() {
       log('  · 检测到首启引导弹窗，点「以后再说」关掉（绝不点安装）')
       if (process.argv.includes('--voice')) {
         // Voice fixtures do not test onboarding hit-testing (small Windows runner desktop).
-        await cdp.eval(`Array.from(document.querySelectorAll('.onb-actions .onb-ghost')).find(b => b.textContent.includes('以后再说'))?.click()`)
+        await cdp.eval(`(()=>{const b=document.querySelector('.onb-actions .onb-ghost');if(!b)throw Error('Missing onboarding skip button');b.click()})()`)
       } else await cdp.clickElement(
         `Array.from(document.querySelectorAll('.onb-actions .onb-ghost')).find(b => b.textContent.includes('以后再说'))`,
         '首启引导「以后再说」按钮'
       )
       await sleep(300)
+      await waitFor(()=>cdp.eval(`!document.querySelector('.onb-mask')`),{timeout:4000,desc:'onboarding actually dismissed'})
     }
 
     // ── 断言 1：注入 agent 节点，空态可见 ─────────────────────────────────────
