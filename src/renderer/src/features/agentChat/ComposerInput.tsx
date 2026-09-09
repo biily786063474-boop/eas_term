@@ -1,3 +1,4 @@
+import { isolateHistory } from '@codemirror/commands'
 import { flushSync } from 'react-dom'
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from 'react'
 import { Compartment, EditorState, Prec, StateEffect, Transaction } from '@codemirror/state'
@@ -7,7 +8,7 @@ import { REFERENCE_GLYPHS, REFERENCE_LABELS, referenceRanges, type ComposerRefer
 import { useReferenceHover } from './ReferencePreview'
 
 /** The composer boundary remains plain text plus text offsets, never rendered labels/HTML. */
-export type ComposerInputElement = HTMLDivElement & Pick<HTMLTextAreaElement, 'value' | 'selectionStart' | 'selectionEnd' | 'setSelectionRange'>
+export type ComposerInputElement = HTMLDivElement & Pick<HTMLTextAreaElement, 'value' | 'selectionStart' | 'selectionEnd' | 'setSelectionRange'> & { insertVoiceText(text: string): void }
 interface Props {
   value: string
   onChange: (text: string) => void
@@ -90,6 +91,9 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
         focusin(event) { showReference(event.target) }
       })),
       EditorView.updateListener.of(update => {
+        if (update.docChanged && !update.transactions.filter(t => t.docChanged).every(t => t.isUserEvent('input.voice'))) {
+          update.view.contentDOM.dispatchEvent(new Event('voice:document-edit', {bubbles:true}))
+        }
         if (update.docChanged && !syncing.current) {
           const value = update.state.doc.toString()
           // Commit controlled React state before the next key event, but outside
@@ -107,6 +111,11 @@ export const ComposerInput = forwardRef<ComposerInputElement, Props>(function Co
     input.dataset.composerInput = 'true'
     // A small textarea-compatible adapter keeps focus/caret ownership at the existing callers.
     Object.defineProperties(input, {
+      insertVoiceText: { configurable: true, value: (text: string) => {
+        if (view.state.readOnly) return
+        const {from, to} = view.state.selection.main
+        view.dispatch({changes:{from,to,insert:text},selection:{anchor:from+text.length},annotations:[Transaction.userEvent.of('input.voice'),isolateHistory.of('full')]})
+      } },
       value: { configurable: true, get: () => view.state.doc.toString(), set: (value: string) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value }, selection: { anchor: value.length }, annotations: Transaction.userEvent.of('input') }) },
       selectionStart: { configurable: true, get: () => view.state.selection.main.from },
       selectionEnd: { configurable: true, get: () => view.state.selection.main.to },

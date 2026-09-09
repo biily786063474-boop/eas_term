@@ -1,0 +1,40 @@
+import fs from 'node:fs'
+import path from 'node:path'
+export async function verifyVoice(cdp,projectDir,root,waitFor){
+ const out=path.join(root,'docs/verification/voice');fs.mkdirSync(out,{recursive:true});const checks=[]
+ await cdp.eval(`(()=>{window.__voiceSilence=new AudioContext();const stream=window.__voiceSilence.createMediaStreamDestination().stream;navigator.mediaDevices.getUserMedia=async()=>stream.clone()})()`)
+ for(const cli of ['codex','claude','omp']){
+  const sid='voice-fixture-'+cli,tabs=[{id:'voice-tab',title:'Voice verification',cwd:projectDir,activeLeafId:sid,root:{type:'leaf',id:sid,pane:{kind:'agent',cli,cwd:projectDir,sessionId:sid}}}]
+  await cdp.eval(`(()=>{const s=window.__store.getState();window.__store.setState({viewMode:'canvas',tabs:${JSON.stringify(tabs)},activeTabId:'voice-tab',canvas:{...s.canvas,frames:[{id:'voice-frame',name:'语音光标 · 隔离回放',projectId:null,x:0,y:0,w:900,h:760,collapsed:false,nodes:[{id:'voice-node',leafId:${JSON.stringify(sid)},x:20,y:50,w:850,h:680}]}]}});s.setMaximizedNode({frameId:'voice-frame',nodeId:'voice-node'})})()`)
+  await waitFor(()=>cdp.eval(`(()=>{const e=document.querySelector('.ac-toolbar [data-composer-input]');return !!e&&getComputedStyle(e).visibility==='visible'&&e.getBoundingClientRect().width>0})()`),{timeout:12000,desc:'visible voice composer'})
+  await cdp.eval(`(()=>{const e=document.querySelector('.ac-toolbar [data-composer-input]');e.value='你好世界';e.focus();e.setSelectionRange(2,2)})()`)
+  await cdp.eval(`(()=>{const b=document.querySelector('.ac-toolbar .voice-btn');b.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));b.click()})()`)
+  await waitFor(()=>cdp.eval(`!!document.querySelector('.voice-btn.rec')`),{timeout:4000,desc:'mock recording started'})
+  await cdp.eval(`window.__voiceTestFinal('美丽的',document.querySelector('[data-composer-input]').dataset.voiceTarget,'${cli}-1')`)
+  await new Promise(r=>setTimeout(r,300))
+  console.log('VOICE diagnostic',await cdp.eval(`(()=>{const e=document.querySelector('[data-composer-input]');return {value:e.value,start:e.selectionStart,end:e.selectionEnd,active:document.activeElement?.className,recording:!!document.querySelector('.voice-btn.rec')}})()`))
+  await waitFor(()=>cdp.eval(`document.querySelector('[data-composer-input]').value==='你好美丽的世界'&&document.querySelector('[data-composer-input]').selectionStart===5`),{timeout:4000,desc:cli+' caret middle'})
+  await cdp.eval(`(()=>{const e=document.querySelector('[data-composer-input]');e.setSelectionRange(2,5);window.__voiceTestFinal('新的',e.dataset.voiceTarget,'${cli}-2')})()`)
+  await waitFor(()=>cdp.eval(`document.querySelector('[data-composer-input]').value==='你好新的世界'`),{timeout:4000,desc:cli+' selection replacement'})
+  checks.push(cli+': middle insertion + selection replacement')
+  await cdp.eval(`(()=>{const e=document.querySelector('[data-composer-input]');e.dispatchEvent(new KeyboardEvent('keydown',{key:'z',code:'KeyZ',metaKey:${process.platform!=='win32'},ctrlKey:${process.platform==='win32'},bubbles:true,cancelable:true}))})()`)
+  await waitFor(()=>cdp.eval(`document.querySelector('[data-composer-input]').value==='你好美丽的世界'`),{timeout:4000,desc:'voice undo'})
+  checks.push(cli+': one final = one undo')
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,cli+'-caret.png'),Buffer.from(shot.result.data,'base64'))
+  await cdp.eval(`document.querySelector('.voice-btn').click()`)
+  await waitFor(()=>cdp.eval(`!document.querySelector('.voice-btn.rec')`),{desc:'stop'})
+ }
+ const leaves=['a','b'].map(id=>({type:'leaf',id:'cross-'+id,pane:{kind:'agent',cli:'codex',cwd:projectDir,sessionId:'cross-'+id}}))
+ await cdp.eval(`(()=>{const s=window.__store.getState();s.setMaximizedNode(null);window.__store.setState({tabs:[{id:'cross-tab',title:'Cross target',cwd:${JSON.stringify(projectDir)},root:{type:'split',id:'split',dir:'row',ratio:0.5,children:${JSON.stringify(leaves)}},activeLeafId:'cross-a'}],activeTabId:'cross-tab',canvas:{...s.canvas,frames:[{id:'cross-frame',name:'Cross target',projectId:null,x:0,y:0,w:1850,h:850,collapsed:false,nodes:[{id:'cross-node-a',leafId:'cross-a',x:20,y:50,w:850,h:720},{id:'cross-node-b',leafId:'cross-b',x:900,y:50,w:850,h:720}]}]}})})()`)
+ await waitFor(()=>cdp.eval(`(()=>{const es=Array.from(document.querySelectorAll('[data-composer-input]'));return es.length===2&&es.every(e=>getComputedStyle(e).visibility==='visible'&&e.getBoundingClientRect().width>0)})()`),{timeout:12000,desc:'two visible editors after maximize exit'})
+ await cdp.eval(`(()=>{const [a,b]=document.querySelectorAll('[data-composer-input]');a.value='甲';b.value='乙';a.focus();a.setSelectionRange(1,1);document.querySelector('.voice-btn').click()})()`)
+ await waitFor(()=>cdp.eval(`!!document.querySelector('.voice-btn.rec')`),{desc:'cross target recording'})
+  await cdp.eval(`(()=>{const [a,b]=document.querySelectorAll('[data-composer-input]');b.focus();b.setSelectionRange(1,1);window.__voiceTestFinal('旧句',a.dataset.voiceTarget,'cross-old');window.__voiceTestFinal('新句',b.dataset.voiceTarget,'cross-new');window.__voiceTestFinal('新句',b.dataset.voiceTarget,'cross-new')})()`)
+ await new Promise(r=>setTimeout(r,300))
+ console.log('CROSS diagnostic',await cdp.eval(`({editors:Array.from(document.querySelectorAll('[data-composer-input]')).map(e=>({text:e.value,target:e.dataset.voiceTarget,active:e===document.activeElement})),recordings:document.querySelectorAll('.voice-btn.rec').length})`))
+ await waitFor(()=>cdp.eval(`(()=>{const [a,b]=document.querySelectorAll('[data-composer-input]');return a.value==='甲旧句'&&b.value==='乙新句'&&document.activeElement===b&&!!document.querySelector('.voice-btn.rec')})()`),{timeout:4000,desc:'cross target and duplicate guard'})
+ checks.push('cross editor continuous recording; late old text returns only to old editor; duplicate ignored; no focus theft')
+ await cdp.eval(`document.querySelector('.voice-btn.rec').click()`)
+ await cdp.eval(`window.__voiceSilence.close()`)
+ fs.writeFileSync(path.join(out,'ui-result.json'),JSON.stringify({passed:true,checks,scope:'Mock ASR final events and silent capture; not microphone/noise recognition validation'},null,2));console.log(checks)
+}

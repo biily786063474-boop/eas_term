@@ -97,7 +97,7 @@ const PROJECT_ROOT = path.resolve(path.dirname(__filename), '..')
 
 // 本终端跑在真实 Eas-Term 里，shell 环境带着它的 EAS_TERM_PORT/TOKEN/PTY_ID/PROJECT。
 // 自己起的隔离子进程必须清掉这四个，否则会把审批请求之类的东西发给用户正在用的那个实例。
-const ENV_SCRUB_KEYS = ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT']
+const ENV_SCRUB_KEYS = ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT', 'ELECTRON_RUN_AS_NODE']
 function envFor(extra = {}) {
   const env = { ...process.env }
   for (const k of ENV_SCRUB_KEYS) delete env[k]
@@ -137,6 +137,7 @@ let emergencyHandled = false
  *  SIGKILL 也能正确送达每一个进程。 */
 function killIsolatedInstance(childProc, signal) {
   if (!childProc || !childProc.pid) return
+  if (process.platform === 'win32') { spawnSync('taskkill', ['/PID', String(childProc.pid), '/T', '/F'], {stdio:'ignore'}); return }
   try {
     process.kill(-childProc.pid, signal) // 负号：发给整个进程组，不只是包装脚本自己
   } catch {
@@ -207,6 +208,7 @@ function runBuild(label) {
   log(`▸ ${label}：npm run build（electron-vite build）…`)
   const t0 = Date.now()
   const r = spawnSync('npm', ['run', 'build'], {
+    shell: process.platform === 'win32',
     cwd: PROJECT_ROOT,
     env: envFor(),
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -322,7 +324,16 @@ const PRELOAD_RESOLVEAPPROVAL_PATCHED = `    resolveApproval: AGENT_CHAT_TEST_MO
         ): Promise<{ ok: boolean }> => ipcRenderer.invoke('agentChat:resolveApproval', sessionId, approvalId, decision),`
 
 const PRELOAD_EXPOSE_ANCHOR = `contextBridge.exposeInMainWorld('api', api)`
-const PRELOAD_EXPOSE_PATCHED = fs.readFileSync(new URL('./fixtures/chat-integration-preload.txt', import.meta.url), 'utf8') + `
+const PRELOAD_EXPOSE_PATCHED = (process.argv.includes('--voice') ? `
+if (AGENT_CHAT_TEST_MODE) {
+  const finals = new Set<(text: string, targetId?: string, segmentId?: string) => void>()
+  api.stt.start = async () => ({ok:true})
+  api.stt.stop = async () => ({text:''})
+  api.stt.sendAudio = () => {}
+  api.stt.onFinal = cb => { finals.add(cb); return () => { finals.delete(cb) } }
+  contextBridge.exposeInMainWorld('__voiceTestFinal', (text: string, targetId?: string, segmentId?: string) => finals.forEach(fn => fn(text, targetId, segmentId)))
+}
+` : '') + fs.readFileSync(new URL('./fixtures/chat-integration-preload.txt', import.meta.url), 'utf8') + `
 if (AGENT_CHAT_TEST_MODE) {
   const paramCalls: {sessionId: string; patch: {model?: string; effort?: string}}[] = []
   const setParams = api.agentChat.setParams
@@ -856,7 +867,7 @@ async function main() {
     )
 
     const port = await freePort()
-    const electronBin = path.join(PROJECT_ROOT, 'node_modules', '.bin', 'electron')
+    const electronBin = process.platform === 'win32' ? path.join(PROJECT_ROOT, 'node_modules/electron/dist/electron.exe') : path.join(PROJECT_ROOT, 'node_modules', '.bin', 'electron')
     log(`▸ 启动隔离 Electron 实例（只会杀这一个自己起的 PID）`)
     log(`  userDataDir = ${userDataDir}`)
     log(`  projectDir  = ${projectDir}`)
@@ -961,6 +972,7 @@ async function main() {
     const hasTestPush = await cdp.eval(`typeof window.__agentChatTestPush !== 'undefined'`)
     if (!hasTestPush) throw new Error('window.__agentChatTestPush 不存在——preload 的临时补丁没生效？')
 
+    if (process.argv.includes('--voice')) { const {verifyVoice}=await import('./verify-voice-ui.mjs'); await verifyVoice(cdp,projectDir,PROJECT_ROOT,waitFor); return }
     if (process.argv.includes('--composer')) { await verifyComposer({cdp,projectDir,root:PROJECT_ROOT,waitFor}); return }
     if (process.argv.includes('--queue')) { await verifyMessageQueue({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
     if (process.argv.includes('--integration')) { await verifyChatIntegration({cdp, projectDir, root:PROJECT_ROOT, waitFor}); return }
@@ -1768,6 +1780,7 @@ async function main() {
 
 main()
   .then(() => {
+    if (process.argv.includes('--voice')) { log('✓ 所选专项检查通过（未运行通用十一条）'); process.exitCode=0; return }
     if (process.argv.includes('--queue') || process.argv.includes("--composer") || process.argv.includes("--compat") || process.argv.includes("--startup") || process.argv.includes("--width") || process.argv.includes('--integration')) return
     log('')
     log('=== 十一条断言结果 ===')

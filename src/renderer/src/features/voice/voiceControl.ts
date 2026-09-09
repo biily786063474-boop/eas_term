@@ -41,3 +41,10 @@ export async function stopVoiceOnSend(): Promise<void> {
     console.error('[voice] 发送时收麦失败', e)
   }
 }
+
+/** Claim without stealing another recording or its pending-finalization stopper. */
+export function claimVoiceStopper(fn: () => Promise<void>): boolean {
+  if (stopper && stopper !== fn) return false
+  stopper = fn
+  return true
+}

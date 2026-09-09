@@ -1,3 +1,4 @@
+import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import type { QueueSnapshot } from './messageQueue'
 import { ComposerInput, type ComposerInputElement } from './ComposerInput'
 import { ReferenceHover } from './ReferencePreview'
@@ -312,7 +313,7 @@ export function ChatToolbar({
   }
 
   const appendVoice = (t: string): void => {
-    setText((prev) => (prev && !/\s$/.test(prev) ? prev + ' ' : prev) + t)
+    insertVoiceAtSelection(taRef.current, t, setText)
   }
 
   // 【2026-08-18 摘掉】仪表盘（用量数字 + 两个额度条）与上下文占用条。
@@ -583,7 +584,7 @@ export function ChatToolbar({
           )}
 
           <div className="ac-message-actions">
-            <VoiceButton ptyId={sessionId} inline onText={appendVoice} />
+            <VoiceButton editorRef={taRef} ptyId={sessionId} inline onText={appendVoice} />
             {view.busy && <>
               <button type="button" className="ac-icon-button" aria-label="停止生成" data-tip="停止当前任务" onClick={onStop}><StopIcon size={18} /></button>
               <button type="button" className="ac-redirect-button" disabled={queue.interrupting || (!text.trim() && !pics.imgs.length && !chips.length)} onClick={() => submit('redirect')}>调整方向</button>
