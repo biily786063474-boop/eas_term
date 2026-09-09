@@ -964,7 +964,10 @@ async function main() {
     const onboardingSeen = await cdp.eval(`!!document.querySelector('.onb-mask')`)
     if (onboardingSeen) {
       log('  · 检测到首启引导弹窗，点「以后再说」关掉（绝不点安装）')
-      await cdp.clickElement(
+      if (process.argv.includes('--voice')) {
+        // Voice fixtures do not test onboarding hit-testing (small Windows runner desktop).
+        await cdp.eval(`Array.from(document.querySelectorAll('.onb-actions .onb-ghost')).find(b => b.textContent.includes('以后再说'))?.click()`)
+      } else await cdp.clickElement(
         `Array.from(document.querySelectorAll('.onb-actions .onb-ghost')).find(b => b.textContent.includes('以后再说'))`,
         '首启引导「以后再说」按钮'
       )
