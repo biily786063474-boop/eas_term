@@ -3807,12 +3807,16 @@
   left: 254px;
 }
 
-/* 右侧知识库抽屉展开 → 贴着右边的基本操作条 + 缩放条整体左移，避开抽屉。
-   用 transform 而不是各改各的 right：两条栏是并排的，只要挪同样的距离
-   相对关系就还在，位移与更多抽屉的响应式 426px 宽度同步。
-   逻辑同左边的 .app.res-open 之于缩略图。 */
+/* 右侧更多抽屉展开时，底部比例与快捷工具暂时退场，不随抽屉左移。
+   visibility 同时移出键盘焦点序列；关闭后恢复原样，on-max 隐藏仍独立生效。 */
 .app.wiki-open .canvas-zoombar,
-.app.wiki-open .ctoolbar-mini,
+.app.wiki-open .ctoolbar-mini {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 错误提示与待处理气泡仍避让抽屉，不隐藏重要状态。 */
 .app.wiki-open .csnap-err,
 /* 待处理气泡也得让 —— 它在 right:16px、z-index 31，而知识库抽屉是
    right:8px / 宽 250px / z-index 45，气泡整个落在抽屉盒子里且层级更低，会被盖住。

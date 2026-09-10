@@ -13,3 +13,8 @@ test('original drawer glass material remains unchanged',()=>{
  const material=css.match(/\.wiki-drawer\s*\{([^}]+)\}/)[1]
  for(const declaration of ['background: var(--glass-1);','backdrop-filter: var(--blur);','border: 1px solid var(--glass-border);','border-radius: var(--radius-lg);','box-shadow: var(--glass-highlight), 0 10px 36px var(--ink-1);'])assert.ok(material.includes(declaration),declaration)
 })
+test('right drawer hides bottom tools rather than moving them',()=>{
+ const rule=css.match(/\.app\.wiki-open \.canvas-zoombar,\s*\.app\.wiki-open \.ctoolbar-mini\s*\{([^}]+)\}/)?.[1]??''
+ for(const declaration of ['visibility: hidden;','opacity: 0;','pointer-events: none;'])assert.ok(rule.includes(declaration),declaration)
+ assert.ok(!rule.includes('translateX'))
+})
