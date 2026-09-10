@@ -1,0 +1,14 @@
+build-win	Packaged builtin capability settings	﻿2026-09-10T17:30:00.9884297Z ##[group]Run node scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"
+build-win	Packaged builtin capability settings	2026-09-10T17:30:00.9886258Z ^[[36;1mnode scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"^[[0m
+build-win	Packaged builtin capability settings	2026-09-10T17:30:00.9936521Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-win	Packaged builtin capability settings	2026-09-10T17:30:00.9937066Z ##[endgroup]
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4547634Z file:///D:/a/eas_term/eas_term/scripts/verify-builtin-capabilities.mjs:66
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4550589Z     if (!rect) throw new Error('Missing click target: ' + expression)
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4551679Z                      ^
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4551885Z 
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4552986Z Error: Missing click target: [...document.querySelectorAll('button')].find(e => e.textContent.trim() === '隐私')
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4554038Z     at click (file:///D:/a/eas_term/eas_term/scripts/verify-builtin-capabilities.mjs:66:22)
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4554938Z     at async file:///D:/a/eas_term/eas_term/scripts/verify-builtin-capabilities.mjs:70:3
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4555473Z 
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.4555608Z Node.js v22.23.2
+build-win	Packaged builtin capability settings	2026-09-10T17:30:02.5705078Z ##[error]Process completed with exit code 1.

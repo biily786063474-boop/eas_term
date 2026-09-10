@@ -1,0 +1,39 @@
+[
+  {
+    "page": "index.html",
+    "verified": true
+  },
+  {
+    "page": "download.html",
+    "verified": true
+  },
+  {
+    "page": "changelog.html",
+    "verified": true
+  },
+  {
+    "name": "Eas-Term-0.4.92-arm64.dmg",
+    "head": 200,
+    "rangeBytes": 16
+  },
+  {
+    "name": "Eas-Term-0.4.92-arm64.zip",
+    "head": 200,
+    "rangeBytes": 16
+  },
+  {
+    "name": "Eas-Term-0.4.92-x64.dmg",
+    "head": 200,
+    "rangeBytes": 16
+  },
+  {
+    "name": "Eas-Term-0.4.92-x64.zip",
+    "head": 200,
+    "rangeBytes": 16
+  },
+  {
+    "name": "Eas-Term-0.4.92-x64-setup.exe",
+    "head": 200,
+    "rangeBytes": 16
+  }
+]

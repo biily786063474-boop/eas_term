@@ -1,5 +1,5 @@
 {
-  "mode": "development executable with production build",
+  "mode": "supplied executable",
   "modelCalls": false,
   "checks": [
     "Real preload/main IPC returns packaged bundle identity",

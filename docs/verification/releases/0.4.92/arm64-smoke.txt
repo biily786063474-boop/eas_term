@@ -1,0 +1,13 @@
+▸ 启动 /Users/biily/Eas-Term-release/mac-arm64/Eas-Term.app/Contents/MacOS/Eas-Term
+  userData: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-smoke-1789061526962（独立，测完删）
+  ✓ app 启动  页面: file:///Users/biily/Eas-Term-release/mac-arm64/Eas-Term.app/
+  ✓ 界面渲染  正文 211 字
+  ✓ preload 桥  49 个命名空间
+  ✓ node-pty 开终端 + 回显  收到 607 字节
+  ✓ IPC 往返  probe-ok
+  ✓ 代码图谱懒加载 + 实际依赖分析  index.js → value.js
+  ✓ 无 JS 报错
+  ✓ 截图  smoke-out/screen.png
+  ✓ 随包 omp  omp/18.1.2
+
+✓ 冒烟测试全部通过

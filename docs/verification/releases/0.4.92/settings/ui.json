@@ -1,0 +1,106 @@
+{
+  "results": [
+    {
+      "key": "theme",
+      "title": "外观",
+      "overflow": false,
+      "groups": [
+        "界面主题",
+        "界面元素"
+      ],
+      "text": 35
+    },
+    {
+      "key": "board",
+      "title": "画板",
+      "overflow": false,
+      "groups": [
+        "快照与标记"
+      ],
+      "text": 28
+    },
+    {
+      "key": "sound",
+      "title": "声音与提醒",
+      "overflow": false,
+      "groups": [
+        "任务提醒"
+      ],
+      "text": 43
+    },
+    {
+      "key": "keys",
+      "title": "快捷键",
+      "overflow": false,
+      "groups": [],
+      "text": 1064
+    },
+    {
+      "key": "ai",
+      "title": "AI 对话",
+      "overflow": false,
+      "groups": [
+        "协作方式",
+        "执行权限",
+        "额度与上下文"
+      ],
+      "text": 271
+    },
+    {
+      "key": "mcp",
+      "title": "MCP 接入",
+      "overflow": false,
+      "groups": [
+        "工具接入与调用记录"
+      ],
+      "text": 85
+    },
+    {
+      "key": "phone",
+      "title": "手机连接",
+      "overflow": false,
+      "groups": [
+        "连接与配对"
+      ],
+      "text": 64
+    },
+    {
+      "key": "update",
+      "title": "更新",
+      "overflow": false,
+      "groups": [
+        "Eas-Term",
+        "CLI 更新"
+      ],
+      "text": 225
+    },
+    {
+      "key": "perf",
+      "title": "性能与诊断",
+      "overflow": false,
+      "groups": [
+        "图形加速",
+        "诊断日志"
+      ],
+      "text": 267
+    },
+    {
+      "key": "privacy",
+      "title": "隐私与扩展",
+      "overflow": false,
+      "groups": [
+        "匿名使用统计",
+        "本机扩展与写入"
+      ],
+      "text": 496
+    }
+  ],
+  "search": [
+    "性能与诊断"
+  ],
+  "detail": true,
+  "toggle": {
+    "appearance": "none",
+    "thumb": "rgb(150, 154, 168)"
+  }
+}

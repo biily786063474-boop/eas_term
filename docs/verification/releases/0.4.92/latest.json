@@ -1,0 +1,15 @@
+{
+  "version": "0.4.92",
+  "mac_arm64": "/download/v0.4.92/Eas-Term-0.4.92-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.92/Eas-Term-0.4.92-arm64.zip",
+  "mac_x64": "/download/v0.4.92/Eas-Term-0.4.92-x64.dmg",
+  "macZip_x64": "/download/v0.4.92/Eas-Term-0.4.92-x64.zip",
+  "mac": "/download/v0.4.92/Eas-Term-0.4.92-arm64.dmg",
+  "win": "/download/v0.4.92/Eas-Term-0.4.92-x64-setup.exe",
+  "notes": [
+    "设置按工作体验、AI与连接、系统管理分组，新增搜索、卡片层级和折叠说明，保留原玻璃质感。",
+    "MCP接入独立成页，诊断日志移入性能；AI对话区分提示词约定与OMP强制审批。",
+    "外观主题预览卡片适配亮暗色和窄窗口，原有设置行为及安全规则保持不变。"
+  ],
+  "published": "2026-09-10T17:44:23.345350+00:00"
+}
