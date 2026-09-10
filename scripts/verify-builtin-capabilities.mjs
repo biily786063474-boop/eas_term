@@ -67,7 +67,7 @@ try {
     await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...rect })
     await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...rect })
   }
-  await click("[...document.querySelectorAll('button')].find(e => e.textContent.trim() === '隐私')")
+  await click("[...document.querySelectorAll('button')].find(e => e.textContent.trim() === '隐私与扩展')")
   for (let attempt = 0; attempt < 100; attempt++) { if (await evaluate('document.querySelectorAll("section[aria-label=随包内置能力] input[role=switch]").length === 3')) break; await wait(100) }
   check(await evaluate('document.querySelectorAll("section[aria-label=随包内置能力] input[role=switch]").length === 3'), 'Settings visibly renders all three module switches')
   await click('document.querySelector("input[aria-label=启用工作台]")')
