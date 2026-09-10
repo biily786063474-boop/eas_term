@@ -1,0 +1,22 @@
+2026-09-10T03:22:28.8260572Z [36;1mnode --test src/main/capabilityTransport.test.ts src/main/builtinCapabilityHost.test.ts src/main/agentChat/omp/transport.test.ts src/main/agentChat/omp/redirect.real.test.ts[0m
+2026-09-10T03:22:30.6112225Z # (node:5968) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///D:/a/eas_term/eas_term/src/main/agentChat/omp/redirect.real.test.ts is not specified and it doesn't parse as CommonJS.
+2026-09-10T03:22:40.3680447Z # Subtest: real OMP redirect survives old cancellation deadline and completes new direction
+2026-09-10T03:22:40.3688208Z ok 1 - real OMP redirect survives old cancellation deadline and completes new direction
+2026-09-10T03:22:41.8532684Z # Subtest: real bundled OMP answers with missing Bizone through actual shim and gateway (local fixture model)
+2026-09-10T03:22:41.8533969Z ok 51 - real bundled OMP answers with missing Bizone through actual shim and gateway (local fixture model)
+2026-09-10T03:22:41.8538946Z # tests 52
+2026-09-10T03:22:41.8541075Z # pass 52
+2026-09-10T03:22:41.8542023Z # fail 0
+2026-09-10T03:22:42.5832565Z # tests 38
+2026-09-10T03:22:42.5834468Z # pass 38
+2026-09-10T03:22:42.5835447Z # fail 0
+2026-09-10T03:22:56.3768467Z ✓ 冒烟测试全部通过
+2026-09-10T03:22:58.8892049Z # tests 7
+2026-09-10T03:22:58.8895234Z # pass 6
+2026-09-10T03:22:58.8895435Z # fail 0
+2026-09-10T03:23:09.3850935Z # tests 7
+2026-09-10T03:23:09.3851358Z # pass 7
+2026-09-10T03:23:09.3851646Z # fail 0
+2026-09-10T03:23:16.8191938Z # tests 25
+2026-09-10T03:23:16.8193535Z # pass 25
+2026-09-10T03:23:16.8194386Z # fail 0

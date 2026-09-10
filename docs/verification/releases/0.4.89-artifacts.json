@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Eas-Term-0.4.89-arm64.dmg",
+    "size": 204394242,
+    "sha256": "c8ebebc9db5804d893043a2fb95c82daea58dae48d9b9b93bbf1a28070550d19"
+  },
+  {
+    "name": "Eas-Term-0.4.89-arm64.zip",
+    "size": 202570287,
+    "sha256": "fd95baa595cab1af22edd07879d2ca9c67960c93bc317808261acc0c23c93c83"
+  },
+  {
+    "name": "Eas-Term-0.4.89-x64.dmg",
+    "size": 216403607,
+    "sha256": "a053242f6d1e940e5a05b4b822bfb9c6124d8efe16630bda41fcedb51bfeb4f2"
+  },
+  {
+    "name": "Eas-Term-0.4.89-x64.zip",
+    "size": 214668702,
+    "sha256": "7930dc8c74e0876c1463bcaea1834e95a99675e5f328f89bb7a5d9385f686f17"
+  },
+  {
+    "name": "Eas-Term-0.4.89-x64-setup.exe",
+    "size": 190085172,
+    "sha256": "4d24c6554e0740b196b3548ed8441dde919ce22c64fd764c1436fb721f43ffd2"
+  }
+]

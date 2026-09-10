@@ -1,0 +1,45 @@
+{
+  "index.html": "16d1158e522e1a9dc47000acb0b2b56aeb8f1f627e3c4f64223742888bd342dd",
+  "download.html": "2f52dc9514b32c0fe566c489239b59f395cede476efd683d271ece054bc48c81",
+  "changelog.html": "86394665256dafb60c80f3e68463069b7f272060e0403a7f52e2ec0965c7775d",
+  "latest": {
+    "version": "0.4.89",
+    "mac_arm64": "/download/v0.4.89/Eas-Term-0.4.89-arm64.dmg",
+    "macZip_arm64": "/download/v0.4.89/Eas-Term-0.4.89-arm64.zip",
+    "mac_x64": "/download/v0.4.89/Eas-Term-0.4.89-x64.dmg",
+    "macZip_x64": "/download/v0.4.89/Eas-Term-0.4.89-x64.zip",
+    "mac": "/download/v0.4.89/Eas-Term-0.4.89-arm64.dmg",
+    "win": "/download/v0.4.89/Eas-Term-0.4.89-x64-setup.exe",
+    "notes": [
+      "OMP 额度支持 Gemini 按模型展示，悬停查看剩余与重置时间；未获取数据时明确提示，不显示虚假零额度。",
+      "语音输入新增本地人声过滤，提供标准、强过滤及基础设备降噪三档；识别仍在本机完成，不上传录音。",
+      "AI 对话、启动页、终端输入和待办详情按当前光标插入，支持替换选区、跨输入框持续听写与定稿撤销。",
+      "修复 OMP 工作中点击“调整方向”后，旧取消计时器误杀新一轮进程、出现 SIGTERM 退出的问题。",
+      "修复切换输入框、发送或停止期间迟到语音串入新草稿的问题；手动编辑冲突时保留候选，不覆盖新内容。",
+      "修复输入法组合期间语音干扰、重复定稿，以及初始化取消后麦克风继续启动的问题。",
+      "人声过滤不是本人声纹识别，不能保证排除电视或旁人讲话；现场麦克风与轻声效果因设备环境而异。",
+      "外部 Codex Computer Use 指针生命周期问题仍在跟踪，本版不宣称已解决。"
+    ],
+    "published": "2026-09-10T03:33:00.240549+00:00"
+  },
+  "Eas-Term-0.4.89-arm64.dmg": {
+    "size": 204394242,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.89-arm64.zip": {
+    "size": 202570287,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.89-x64.dmg": {
+    "size": 216403607,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.89-x64.zip": {
+    "size": 214668702,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.89-x64-setup.exe": {
+    "size": 190085172,
+    "rangeBytes": 32
+  }
+}
