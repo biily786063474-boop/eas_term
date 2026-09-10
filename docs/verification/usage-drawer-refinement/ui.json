@@ -1,0 +1,37 @@
+{
+ "tabsOutside": true,
+ "tabsLeft": true,
+ "tabsVertical": true,
+ "rows": [
+  {
+   "label": "用量",
+   "top": 62,
+   "left": 1159,
+   "writingMode": "vertical-rl"
+  },
+  {
+   "label": "技能库",
+   "top": 120,
+   "left": 1159,
+   "writingMode": "vertical-rl"
+  },
+  {
+   "label": "知识库",
+   "top": 178,
+   "left": 1159,
+   "writingMode": "vertical-rl"
+  }
+ ],
+ "material": {
+  "background": "rgba(15, 17, 23, 0.5)",
+  "blur": "blur(28px) saturate(1.6)",
+  "border": "rgba(255, 255, 255, 0.035)"
+ },
+ "curves": 3,
+ "hasCubic": true,
+ "unknown": 4,
+ "skillSwitchKeptOpen": true,
+ "wikiSwitchKeptOpen": true,
+ "error": null,
+ "overflow": false
+}

@@ -1,3 +1,4 @@
+import { smoothTrendPath } from './usageTrend'
 import { useEffect, useMemo, useState } from 'react'
 import type { UsageSnapshot, UsageQuery, UsageRow } from '../../../../shared/usage'
 import './usageDashboard.css'
@@ -44,9 +45,10 @@ export function UsageDashboard({active}:{active:boolean}):JSX.Element {
    <section className="ud-card"><div className="ud-heading"><b>{project?'项目':'整体'}用量趋势</b><span>峰值 {s?.known?fmt(Math.max(0,...data.buckets.map(b=>b.summary.tokens))):'—'} Token / 区间</span></div>
     <svg viewBox="0 0 340 128" className="ud-chart" aria-label="用量时间趋势，使用 Tab 查看各时间区间">
      {[22,65,108].map(v=><line key={v} x1="12" y1={v} x2="328" y2={v} className="ud-grid"/>)}
+     <path className="ud-line" d={smoothTrendPath(data.buckets.map((b,i)=>(b.summary.known>0||(b.summary.rounds===0&&b.at>=data.retainedFrom))?{x:x(i),y:y(b.summary.tokens)}:null))}/>
      {data.buckets.map((b,i)=>{
-      const prev=data.buckets[i-1], known=b.summary.known>0||(b.summary.rounds===0&&b.at>=data.retainedFrom)
-      return <g key={i}>{i>0&&known&&(prev.summary.known>0||(prev.summary.rounds===0&&prev.at>=data.retainedFrom))&&<line x1={x(i-1)} y1={y(prev.summary.tokens)} x2={x(i)} y2={y(b.summary.tokens)} className="ud-line"/>}
+      const known=b.summary.known>0||(b.summary.rounds===0&&b.at>=data.retainedFrom)
+      return <g key={i}>
        <circle cx={x(i)} cy={known?y(b.summary.tokens):118} r={point===i?5:3} className={known?'ud-dot':'ud-unknown'} tabIndex={0} role="button" aria-label={time(b.at)+'，'+(known?b.summary.tokens+' Token':'计量未知')} onFocus={()=>setPoint(i)} onBlur={()=>setPoint(null)} onMouseEnter={()=>setPoint(i)} onMouseLeave={()=>setPoint(null)} onClick={()=>setPoint(i)}><title>{time(b.at)} · {known?fmt(b.summary.tokens):'未知'} Token</title></circle>
       </g>
      })}
@@ -54,7 +56,7 @@ export function UsageDashboard({active}:{active:boolean}):JSX.Element {
     <p className="ud-chart-caption">{selected?time(selected.at)+' 起 · '+selected.summary.rounds+' 轮 · '+(selected.summary.known?fmt(selected.summary.tokens)+' Token（已知部分）':selected.summary.rounds?'用量未上报':selected.at<data.retainedFrom?'未采集区间':'无请求'):'24 个等时区间；圆点可悬停/聚焦，未知区间断线，不补零。'}</p>
    </section>
    <section className="ud-card"><div className="ud-heading"><b>项目用量</b><button onClick={()=>select('')} className={!project?'on':''}>全部</button></div>
-    {data.projects.map(p=><button key={p.path} title={p.path} className={'ud-project'+(project===p.path?' selected':'')} onClick={()=>select(p.path)}><span>{p.name}<small>{p.summary.rounds} 轮 · {p.summary.known} 轮有计量</small></span><b>{p.summary.known?fmt(p.summary.tokens):'未知'}</b><svg viewBox="0 0 316 40" className="ud-project-trend" aria-label={p.name+'时间趋势，点击查看大图'}>{p.trend.map((v,i)=>i>0&&v!==null&&p.trend[i-1]!==null?<line key={i} x1={(i-1)*316/23} y1={36-p.trend[i-1]!/Math.max(1,...p.trend.map(v=>v??0))*30} x2={i*316/23} y2={36-v/Math.max(1,...p.trend.map(v=>v??0))*30} className="ud-line"/>:null)}</svg><i style={{width:(s!.tokens?Math.min(100,p.summary.tokens/Math.max(...data.projects.map(p=>p.summary.tokens),1)*100):0)+'%'}}/></button>)}
+    {data.projects.map(p=><button key={p.path} title={p.path} className={'ud-project'+(project===p.path?' selected':'')} onClick={()=>select(p.path)}><span>{p.name}<small>{p.summary.rounds} 轮 · {p.summary.known} 轮有计量</small></span><b>{p.summary.known?fmt(p.summary.tokens):'未知'}</b><svg viewBox="0 0 316 40" className="ud-project-trend" aria-label={p.name+'时间趋势，点击查看大图'}><path className="ud-line" d={smoothTrendPath(p.trend.map((v,i)=>v===null?null:{x:i*316/23,y:36-v/Math.max(1,...p.trend.map(v=>v??0))*30}))}/></svg><i style={{width:(s!.tokens?Math.min(100,p.summary.tokens/Math.max(...data.projects.map(p=>p.summary.tokens),1)*100):0)+'%'}}/></button>)}
    </section>
    <section className="ud-card"><div className="ud-heading"><b>消耗分布</b><span>当前筛选范围</span></div>{data.cli.map(c=><div className="ud-stat" key={c.name}><span>{c.name}</span><b>{c.summary.known?fmt(c.summary.tokens):'未知'} Token</b></div>)}<div className="ud-stat"><span>平均每轮 · 仅有计量</span><b>{s!.known?fmt(s!.tokens/s!.known):'—'}</b></div><div className="ud-stat"><span>单轮峰值</span><b>{s!.known?fmt(s!.maxTokens):'—'}</b></div><div className="ud-stat"><span>已中断请求</span><b>{s!.interrupted} 轮</b></div><div className="ud-stat"><span>Token 计量覆盖率</span><b>{s!.rounds?Math.round(s!.known/s!.rounds*100)+'%':'—'}</b></div><div className="ud-stat"><span>费用可归属</span><b>{s!.costKnown} / {s!.rounds} 轮</b></div></section>
    <section className="ud-card"><div className="ud-heading"><b>任务阶段</b><span>仅使用手动标签</span></div>{data.stages.map(c=><div className="ud-stat" key={c.name}><span>{c.name}</span><b>{c.summary.known?fmt(c.summary.tokens):'未知'} Token</b></div>)}</section>

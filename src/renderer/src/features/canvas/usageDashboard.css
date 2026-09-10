@@ -17,3 +17,5 @@
 .ud-session{padding:8px 0}.ud-session>summary{cursor:pointer;overflow-wrap:anywhere}.ud-session small{margin-left:8px}.ud-round{border-top:1px solid var(--glass-border);margin-top:10px;padding:10px 0}.ud-round summary{cursor:pointer;font-size:10px}.ud-round summary b{white-space:nowrap}.ud-round form{display:flex;gap:5px;margin-top:8px}.ud-round input{width:0;flex:1;min-width:0}.ud-pagination{margin-top:12px;font-size:10px}.ud-error{color:#ef9999;line-height:1.6;overflow-wrap:anywhere}.ud-export{padding:10px!important}.ud-foot{font-size:10px;opacity:.5;padding-bottom:12px}
 
 .ud-project{flex-wrap:wrap}.ud-project-trend{width:100%;height:40px;display:block;flex-basis:100%}
+
+.ud-line{stroke-linecap:round;stroke-linejoin:round}

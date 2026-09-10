@@ -31,7 +31,7 @@ import { CanvasSkillPanel } from './CanvasSkillPanel'
 type DrawerMode = 'usage' | 'wiki' | 'skill'
 
 const MODES: { id: DrawerMode; label: string; tip: string }[] = [
-  { id: 'usage', label: '用量仪表盘', tip: '项目、会话与每轮请求的真实用量' },
+  { id: 'usage', label: '用量', tip: '项目、会话与每轮请求的真实用量' },
   { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' },
   { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' }
 ]
@@ -230,8 +230,21 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         </div>
       )}
       <div className={`wk-shell${open ? ' open' : ''}`}>
-        {/* 横向页签仍归 .wk-shell 所有：切页不能触发 outside-click 收起。 */}
+        {/* 左侧竖排页签归 .wk-shell 所有：切页不能触发 outside-click 收起。 */}
 
+        <div className="wk-seg">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
+              onClick={() => setMode(m.id)}
+              data-tip={m.tip}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
     <aside
       className={`wiki-drawer${open ? ' open' : ' closed'}${dropping ? ' dropping' : ''}`}
       onDragOver={(e) => {
@@ -267,19 +280,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         )}
       </div>
 
-        <div className="wk-seg">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
-              onClick={() => setMode(m.id)}
-              data-tip={m.tip}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
       {mode === 'usage' ? (
         <UsageDashboard active={open} />
       ) : mode === 'skill' ? (
