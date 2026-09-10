@@ -1098,7 +1098,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             f.id === frame.id
               ? placeNodeInFrame(
                   f,
-                  { id: nodeId, leafId: leafId as string, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  { id: nodeId, leafId: leafId as string, x: 0, y: 0, w: Math.max(NODE_W, paneMinimumWidth('agent')), h: NODE_H },
                   s.canvas.frames
                 )
               : f
@@ -1175,7 +1175,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
             f.id === frameId
               ? placeNodeInFrame(
                   f,
-                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: NODE_W, h: NODE_H },
+                  { id: uid('cnode'), leafId: newLeaf.id, x: 0, y: 0, w: Math.max(NODE_W, paneMinimumWidth('agent')), h: NODE_H },
                   s.canvas.frames
                 )
               : f

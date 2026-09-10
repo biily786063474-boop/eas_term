@@ -6,6 +6,7 @@
 import type { CanvasFrame, CanvasNode } from './types'
 import type { LeafNode, PaneState } from '../../layout'
 import { uid } from '../shared'
+import { compactPlacement } from './compactPlacement.ts'
 import { frameMinSize } from './frameSize.ts'
 
 // 节点网格布局参数（终端节点默认高度保证 ≥20 行：body≈NODE_H-30，行高 fontSize13×1.25≈16.25px）
@@ -161,14 +162,13 @@ export function collectDescendants(frames: CanvasFrame[], id: string): Set<strin
   return out
 }
 
-/** 把新节点放进 Frame：纵向堆叠到现有节点/子 Frame 下方（避免重叠）。尺寸交给 reflowFrames。 */
+/** 新建模块优先补空位、再趋近方形；保留已有模块，子 Frame 同样作为障碍。 */
 export function placeNodeInFrame(frame: CanvasFrame, node: CanvasNode, allFrames: CanvasFrame[]): CanvasFrame {
-  const nodeBottom = frame.nodes.length ? Math.max(...frame.nodes.map((n) => n.y + n.h)) : HEAD
-  const childBottom = allFrames
-    .filter((c) => c.parentId === frame.id)
-    .reduce((m, c) => Math.max(m, c.y - frame.y + (c.collapsed ? HEAD : c.h)), HEAD)
-  const bottom = Math.max(nodeBottom, childBottom, HEAD) + (frame.nodes.length ? GAP : PAD)
-  return { ...frame, nodes: [...frame.nodes, { ...node, x: PAD, y: bottom }] }
+  const obstacles = [...frame.nodes, ...allFrames.filter(c => c.parentId === frame.id).map(c => ({
+    x: c.x - frame.x, y: c.y - frame.y, w: c.w, h: c.collapsed ? HEAD : c.h
+  }))]
+  const pos = compactPlacement(obstacles, node.w, node.h, { gap: GAP, startX: PAD, startY: HEAD + PAD })
+  return { ...frame, nodes: [...frame.nodes, { ...node, ...pos }] }
 }
 
 interface Box {
