@@ -1,3 +1,4 @@
+import { createWriteScheduler } from './writeScheduler'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Terminal, type ILink } from '@xterm/xterm'
@@ -416,30 +417,17 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
     window.api.pty.resize(ptyId, term.cols, term.rows)
 
     const store = useStore.getState()
-    // PTY 高吞吐时逐块直写会让渲染与缓冲错位（撕裂/掉帧型花屏）。这里把一帧内到达的多块
-    // 累积起来，用 rAF 合并成一次 term.write：一帧一写、对齐刷新节奏，消除撕裂并降 CPU。
-    let pendingWrites: string[] = []
-    let writeRaf = 0
-    let lastFlush = 0
-    // 最快每 16ms 写一次（≈60Hz）。原来是「每一帧写一次」，在 ProMotion 屏上
-    // rAF 实测跑 120.6fps —— 于是 agent 刷屏时 xterm 每秒被写 120 次、跟着重排重绘 120 次。
-    // 文字终端 60Hz 和 120Hz 人眼分不出来，但工作量差一倍，
-    // 而「让 agent 跑几小时」恰好是这个应用最常见、也最该省电的状态。
-    const MIN_FLUSH_MS = 16
-    const flushWrites = (): void => {
-      writeRaf = 0
-      if (!pendingWrites.length) return
-      const now = performance.now()
-      if (now - lastFlush < MIN_FLUSH_MS) {
-        // 离上次写太近 → 这一帧不写，攒着，下一帧再来（数据不丢，只是晚一帧）
-        writeRaf = requestAnimationFrame(flushWrites)
-        return
-      }
-      lastFlush = now
-      const chunk = pendingWrites.join('')
-      pendingWrites = []
-      term.write(chunk)
-    }
+    // 前台合帧，后台由数据到达/解析完成驱动，不因绘制暂停积压输出。
+    const writes = createWriteScheduler({
+      background: () => document.hidden || !document.hasFocus(),
+      frame: cb => requestAnimationFrame(cb),
+      cancelFrame: id => cancelAnimationFrame(id),
+      write: (data, done) => term.write(data, done)
+    })
+    const onWriteVisibility = (): void => writes.visibilityChanged()
+    document.addEventListener('visibilitychange', onWriteVisibility)
+    window.addEventListener('blur', onWriteVisibility)
+    window.addEventListener('focus', onWriteVisibility)
     let disposed = false
     // 「这个终端里跑的是哪个 AI CLI」——问主进程查 controlling terminal 上的进程名。
     // 挂在标题变化和输出上，不轮询：状态一变才该重查。spinner 每帧都会触发标题事件，
@@ -465,8 +453,7 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       // 接不住；而输入框发送走的是 pty.write、根本不经过 term.onData，那条也接不住。
       // agent 一退，shell 打印提示符必然产生输出 —— 这里才拦得到。
       probeAgent(10000)
-      pendingWrites.push(data)
-      if (!writeRaf) writeRaf = requestAnimationFrame(flushWrites)
+      writes.push(data)
     })
     const unsubExit = window.api.pty.onExit(ptyId, () => {
       // 带 ptyId 校验：面板若已被切换成其他功能则忽略这次退出
@@ -697,7 +684,10 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
       el.removeEventListener('wheel', onWheelAmplify, { capture: true } as EventListenerOptions)
       scrollbar.remove()
       if (fitTimer) clearTimeout(fitTimer)
-      if (writeRaf) cancelAnimationFrame(writeRaf)
+      writes.dispose()
+      document.removeEventListener('visibilitychange', onWriteVisibility)
+      window.removeEventListener('blur', onWriteVisibility)
+      window.removeEventListener('focus', onWriteVisibility)
       unsubData()
       unsubExit()
       dataDisp.dispose()

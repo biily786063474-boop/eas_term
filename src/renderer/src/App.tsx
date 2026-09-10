@@ -1,3 +1,4 @@
+import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
 import { useEffect, useState } from 'react'
 
 import { bindPhoneProvider } from './features/phone/provider'
@@ -39,6 +40,7 @@ import { BuildStamp } from './ui/BuildStamp'
 import { FolderIcon } from './ui/Icons'
 
 export function App(): JSX.Element {
+  useBackgroundVisuals()
   // 灵动岛：把运行/待处理状态推给屏幕顶部那个独立窗口。
   // 放在 App 顶层而不是某个视图里——它跟分屏/画布哪个视图开着无关，两种模式都要报。
   useIslandFeed()

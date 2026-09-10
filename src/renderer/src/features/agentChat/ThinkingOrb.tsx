@@ -93,11 +93,19 @@ export function ThinkingOrb({ size = 28 }: { size?: number }): JSX.Element {
       cancelAnimationFrame(raf)
       raf = 0
     }
-    const onVis = (): void => (document.hidden ? stop() : start())
+    let visible = true
+    const onVis = (): void => (document.hidden || !document.hasFocus() || !visible ? stop() : start())
+    const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; onVis() })
+    observer.observe(cv)
     document.addEventListener('visibilitychange', onVis)
-    start()
+    window.addEventListener('blur', onVis)
+    window.addEventListener('focus', onVis)
+    onVis()
     return () => {
       document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('blur', onVis)
+      window.removeEventListener('focus', onVis)
+      observer.disconnect()
       stop()
     }
   }, [size])

@@ -55,7 +55,7 @@ export function Starfield(): JSX.Element {
     let ty = 0
     let cxOff = 0
     let cyOff = 0
-    let running = true
+    let running = false
 
     /** 用坐标当种子的伪随机 —— **同一块地方每次刷新星图一样**，
      *  不然每次重渲染星星都换位置，读起来像画面在闪。 */
@@ -124,27 +124,16 @@ export function Starfield(): JSX.Element {
     }
 
     build()
-    frame()
     const ro = new ResizeObserver(build)
     ro.observe(cv)
     const parent = cv.parentElement
     parent?.addEventListener('mousemove', onMove)
     parent?.addEventListener('mouseleave', onLeave)
 
-    // **看不见就停。** 模块被盖住、滚出视口、或整个窗口进后台时不该继续烧帧
-    const io = new IntersectionObserver((es) => {
-      const vis = es.some((x) => x.isIntersecting)
-      if (vis && !running) {
-        running = true
-        frame()
-      } else if (!vis) {
-        running = false
-        cancelAnimationFrame(raf)
-      }
-    })
-    io.observe(cv)
+    // 视口和窗口共用一道门，不能相互覆盖暂停状态。
+    let visible = false
     const onVis = (): void => {
-      if (document.hidden) {
+      if (document.hidden || !document.hasFocus() || !visible) {
         running = false
         cancelAnimationFrame(raf)
       } else if (!running) {
@@ -152,7 +141,14 @@ export function Starfield(): JSX.Element {
         frame()
       }
     }
+    const io = new IntersectionObserver((es) => {
+      visible = es.some((x) => x.isIntersecting)
+      onVis()
+    })
+    io.observe(cv)
     document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('blur', onVis)
+    window.addEventListener('focus', onVis)
 
     return () => {
       running = false
@@ -162,6 +158,8 @@ export function Starfield(): JSX.Element {
       parent?.removeEventListener('mousemove', onMove)
       parent?.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('blur', onVis)
+      window.removeEventListener('focus', onVis)
     }
   }, [])
 

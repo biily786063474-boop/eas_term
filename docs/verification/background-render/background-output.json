@@ -1,0 +1,15 @@
+{
+ "focus": false,
+ "paused": true,
+ "receivedLines": 6000,
+ "ordered": true,
+ "endReceived": true,
+ "parserTail": [
+  "EAS_STREAM_005997_测测测测测测测测测测测测测测测测测测测测",
+  "EAS_STREAM_005998_测测测测测测测测测测测测测测测测测测测测",
+  "EAS_STREAM_005999_测测测测测测测测测测测测测测测测测测测测",
+  "EAS_BACKGROUND_END",
+  "biily@BiilydeMacBook-Pro /tmp % "
+ ],
+ "rows": 5024
+}

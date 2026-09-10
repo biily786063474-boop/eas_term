@@ -1,0 +1,7 @@
+/* 后台只停止绘制，不卸载任务组件、不改状态；恢复焦点继续当前动画。 */
+html[data-visual-paused] *,
+html[data-visual-paused] *::before,
+html[data-visual-paused] *::after {
+  animation-play-state: paused !important;
+  transition-duration: 0s !important;
+}

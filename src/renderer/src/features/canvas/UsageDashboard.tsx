@@ -26,7 +26,18 @@ export function UsageDashboard({active}:{active:boolean}):JSX.Element {
   void window.api.usage.query(query).then(d=>{if(live){setData(d);setError('')}}).catch(e=>{if(live)setError(String(e))})
   return ()=>{live=false}
  },[query,active])
- useEffect(()=>{if(!active)return;const id=setInterval(()=>setTick(v=>v+1),15000);return ()=>clearInterval(id)},[active])
+ useEffect(()=>{
+  if(!active)return
+  let id:ReturnType<typeof setInterval>|undefined
+  const sync=():void=>{
+   if(id!==undefined){clearInterval(id);id=undefined}
+   if(document.hidden||!document.hasFocus())return
+   setTick(v=>v+1)
+   id=setInterval(()=>setTick(v=>v+1),15000)
+  }
+  sync();document.addEventListener('visibilitychange',sync);window.addEventListener('focus',sync);window.addEventListener('blur',sync)
+  return ()=>{if(id!==undefined)clearInterval(id);document.removeEventListener('visibilitychange',sync);window.removeEventListener('focus',sync);window.removeEventListener('blur',sync)}
+ },[active])
  const select=(p:string):void=>{setProject(p);setPage(0);setPoint(null)}
  const s=data?.summary
  const sessions=new Map<string,UsageRow[]>()

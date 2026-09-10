@@ -343,3 +343,6 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 - 不能用 session 去重请求：Claude 同会话可能连续投递，账本必须 FIFO。明确退休/杀进程必须排空记账队列（旧 exit 已被代次守卫拦截）；不能删除代次守卫。
 - 原事件快照仅新增 meter/interrupted 元数据；渲染层隔离快照未变化。更新基线的理由是新增旁路计量契约，不是放松对话行为红线。
 - 损坏账本必须保留并提示，不得静默覆盖；缺失历史和未覆盖时间区间不是 0。账本中不得写入提示词、工具参数或密钥。
+
+### 2026-09-10 后台输出历史修复
+终端后台解析不能等待requestAnimationFrame，否则最小化时输出积压。writeScheduler前台合帧、后台事件/解析回调驱动；禁止通过丢弃文本或取消IPC订阅“省电”。移除的是全局禁节流开关，主工作台backgroundThrottling:false暂保留。document.hidden在此配置下可能一直false，视觉暂停必须同时检查document.hasFocus()；视口与窗口状态要共同判定，避免IntersectionObserver把后台动画重新唤醒。
