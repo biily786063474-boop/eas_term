@@ -1,0 +1,44 @@
+{
+ "id": "compact-verify",
+ "name": "新建模块 · 紧凑布局验收",
+ "projectId": null,
+ "x": 40,
+ "y": 40,
+ "w": 1334,
+ "h": 848,
+ "collapsed": false,
+ "nodes": [
+  {
+   "id": "cnode-3-fllnz",
+   "leafId": "leaf-1-cdvt5",
+   "x": 16,
+   "y": 50,
+   "w": 640,
+   "h": 380
+  },
+  {
+   "id": "cnode-6-yq07h",
+   "leafId": "leaf-4-qv97s",
+   "x": 16,
+   "y": 452,
+   "w": 640,
+   "h": 380
+  },
+  {
+   "id": "cnode-9-m9ydr",
+   "leafId": "leaf-7-8xudv",
+   "x": 678,
+   "y": 50,
+   "w": 640,
+   "h": 380
+  },
+  {
+   "id": "cnode-12-qrvne",
+   "leafId": "leaf-10-d795a",
+   "x": 678,
+   "y": 452,
+   "w": 640,
+   "h": 380
+  }
+ ]
+}

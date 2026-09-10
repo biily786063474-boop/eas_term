@@ -1,0 +1,38 @@
+{
+  "index.html": "89de7de71f84901710697d0dbafef42c8365dc79439449757f58b46a31617c9b",
+  "download.html": "c0ea76a3dc9153d16846b0924892f7917fec35db27a484416cbe1d40ab63b331",
+  "changelog.html": "b65c9c1366e2657c90e129465a536cee4c4ffad1cb52b009ccd1fe02d7af6b39",
+  "latest": {
+    "version": "0.4.90",
+    "mac_arm64": "/download/v0.4.90/Eas-Term-0.4.90-arm64.dmg",
+    "macZip_arm64": "/download/v0.4.90/Eas-Term-0.4.90-arm64.zip",
+    "mac_x64": "/download/v0.4.90/Eas-Term-0.4.90-x64.dmg",
+    "macZip_x64": "/download/v0.4.90/Eas-Term-0.4.90-x64.zip",
+    "mac": "/download/v0.4.90/Eas-Term-0.4.90-arm64.dmg",
+    "win": "/download/v0.4.90/Eas-Term-0.4.90-x64-setup.exe",
+    "notes": [
+      "Frame 内新建模块自动寻找空位，按实际尺寸向紧凑方形布局扩展，不再固定向下堆成一列；保留已有模块与手动拖放位置。"
+    ],
+    "published": "2026-09-10T07:09:11.713936+00:00"
+  },
+  "Eas-Term-0.4.90-arm64.dmg": {
+    "size": 204396257,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.90-arm64.zip": {
+    "size": 202570973,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.90-x64.dmg": {
+    "size": 216402855,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.90-x64.zip": {
+    "size": 214669337,
+    "rangeBytes": 32
+  },
+  "Eas-Term-0.4.90-x64-setup.exe": {
+    "size": 190084342,
+    "rangeBytes": 32
+  }
+}
