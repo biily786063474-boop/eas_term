@@ -3536,7 +3536,7 @@
      这里只保留自己的外观和 overflow:hidden（那条是给圆角裁内容用的，
      只裁抽屉自己的内容，裁不到壳里的胶囊）。 */
   position: relative;
-  width: 250px;
+  width: min(426px, calc(100vw - 32px));
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -3560,10 +3560,10 @@
   /* 右边缘目前没有别的常驻件，45 是跟资源抽屉保持一致（见那边的注释） */
   z-index: 45;
   /* 收起时整个壳移出画面右侧。**位移量必须把胶囊突出的那截算进去**：
-     抽屉宽 250 + 余量 20 + 胶囊探出的 32 = 302。
+     更多抽屉改为 426px，使用自身宽度 + 24px，避免硬编码位移漂移。
      只算 270 的话胶囊还露在画面里（实测左边缘停在 1115，窗口宽 1147），
      而且正好压住右边缘那条展开触发条 —— 点「展开」会点到胶囊上，抽屉再也打不开。 */
-  transform: translateX(302px);
+  transform: translateX(calc(100% + 24px));
   transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
   /* 收起时整个壳不接事件：位移之外再加一道保险，免得将来有人调宽度又把它送回画面里 */
@@ -3809,7 +3809,7 @@
 
 /* 右侧知识库抽屉展开 → 贴着右边的基本操作条 + 缩放条整体左移，避开抽屉。
    用 transform 而不是各改各的 right：两条栏是并排的，只要挪同样的距离
-   相对关系就还在，只需维护一个数字（抽屉 250 宽，让开它就够）。
+   相对关系就还在，位移与更多抽屉的响应式 426px 宽度同步。
    逻辑同左边的 .app.res-open 之于缩略图。 */
 .app.wiki-open .canvas-zoombar,
 .app.wiki-open .ctoolbar-mini,
@@ -3820,7 +3820,7 @@
    是日常可达的组合（一边挂着待处理终端、一边开着知识库找资料）。
    这跟它先前在**左**边被运行监视盖住是同一类问题，只是换了一侧。 */
 .app.wiki-open .cd-attn-bubble {
-  transform: translateX(-250px);
+  transform: translateX(calc(-1 * min(426px, calc(100vw - 32px))));
 }
 
 /* 模块「最大化沉浸」时这两条要退场。
@@ -6180,3 +6180,7 @@
     opacity: 0;
   }
 }
+
+/* More drawer: in-panel tabs stay inside outside-click ownership. */
+.wiki-drawer > .wk-seg {position:static;display:flex;flex-direction:row;transform:none;width:auto;gap:4px;padding:6px 12px;border:0;background:none;flex-shrink:0;}
+.wiki-drawer > .wk-seg .wk-seg-btn {writing-mode:horizontal-tb;flex:1;width:auto;height:auto;padding:8px 4px;white-space:nowrap;}

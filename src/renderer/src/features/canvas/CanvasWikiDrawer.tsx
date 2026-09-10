@@ -1,3 +1,4 @@
+import { UsageDashboard } from './UsageDashboard'
 // 画布**右侧**抽屉：个人知识库。（原来这里是「基本操作」四个画笔工具，已收成右下角的紧凑图标栏。）
 // （2026-08-13 左右对调过：这个抽屉从左挪到了右，资源抽屉从右挪到了左。
 //  实际定位见 canvas.css 的 `.wiki-drawer { right: 8px }` 与 `.canvas-drawer { left: 8px }`。）
@@ -26,15 +27,13 @@ import {
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { CanvasSkillPanel } from './CanvasSkillPanel'
 
-/** 抽屉左上角名称下拉切换的两档：知识库 / Skill。整个内容换掉，不是上下分区
- *  （抽屉只有 250px 宽，两块并存太挤——design 文档 §六 第 5 条）。 */
-type DrawerMode = 'wiki' | 'skill'
+/** 更多抽屉三页共用外壳，保留 Skill 与知识库的既有功能和点击边界。 */
+type DrawerMode = 'usage' | 'wiki' | 'skill'
 
-/** 两个书签。**全中文**——「Skill」在一堆中文界面里是唯一的英文词，
- *  而它指的东西（可复用的做事套路）本来就有中文说法。 */
 const MODES: { id: DrawerMode; label: string; tip: string }[] = [
-  { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' },
-  { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' }
+  { id: 'usage', label: '用量仪表盘', tip: '项目、会话与每轮请求的真实用量' },
+  { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' },
+  { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' }
 ]
 
 export function CanvasWikiDrawer(): JSX.Element | null {
@@ -42,7 +41,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
   const [open, setOpen] = useState(false)
   const setWikiDrawerOpen = useStore((s) => s.setWikiDrawerOpen)
   const [hover, setHover] = useState(false)
-  const [mode, setMode] = useState<DrawerMode>('wiki')
+  const [mode, setMode] = useState<DrawerMode>('usage')
 
   const [st, setSt] = useState<WikiStatus | null>(null)
   const [busy, setBusy] = useState('')
@@ -213,7 +212,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
           <span
             className="wk-edge-guide"
             ref={edgeRef}
-            data-tip={st?.configured ? '展开知识库' : '还没建知识库，点开看看'}
+            data-tip="展开更多：用量、技能与知识库"
             onMouseEnter={() => setHover(true)}
             onMouseMove={onEdgeMove}
             onMouseLeave={() => {
@@ -225,46 +224,26 @@ export function CanvasWikiDrawer(): JSX.Element | null {
               setOpen(true)
             }}
           >
-            <span className="wk-edge-label">知识库</span>
+            <span className="wk-edge-label">更多</span>
             {!!st?.inbox && <span className="wk-edge-dot">{st.inbox}</span>}
           </span>
         </div>
       )}
       <div className={`wk-shell${open ? ' open' : ''}`}>
-        {/* 模式切换：竖排胶囊，挂在抽屉左侧。
-            经过记在这儿免得再绕：
-              一版 标题上的下拉 —— 切换是这里最高频的动作，藏在下拉里每次要两步。
-              二版 左侧外挂的书签 —— 被抽屉自己的 overflow:hidden 整个裁掉；而且即使
-                   显示出来，点它会命中「点击外部 → 收起抽屉」，表现成"点了不切换"。
-              三版 外面套一层 .wk-shell，胶囊和抽屉都住在里面 —— 于是它**真的是抽屉的
-                   一部分**：开合跟着壳一起动（不用两套 transform）、outside-click 判壳
-                   就自然包含它（不用豁免名单）、overflow:hidden 留在抽屉本体上只裁自己的
-                   内容，裁不到壳里的胶囊。位置问题和点击问题一次解决。 */}
-        <div className="wk-seg">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
-              onClick={() => setMode(m.id)}
-              data-tip={m.tip}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        {/* 横向页签仍归 .wk-shell 所有：切页不能触发 outside-click 收起。 */}
+
     <aside
       className={`wiki-drawer${open ? ' open' : ' closed'}${dropping ? ' dropping' : ''}`}
       onDragOver={(e) => {
-        if (!st?.exists) return
+        if (mode !== 'wiki' || !st?.exists) return
         e.preventDefault()
         setDropping(true)
       }}
       onDragLeave={() => setDropping(false)}
-      onDrop={onDrop}
+      onDrop={mode === 'wiki' ? onDrop : undefined}
     >
       <div className="wk-head">
-        <span className="wk-title">知识资产</span>
+        <span className="wk-title">更多</span>
         {mode === 'wiki' && !!st?.exists && (
           <>
             <button className="wk-icon" data-tip="在访达里打开" onClick={() => void window.api.wiki.reveal()}>
@@ -288,7 +267,22 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         )}
       </div>
 
-      {mode === 'skill' ? (
+        <div className="wk-seg">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className={`wk-seg-btn${mode === m.id ? ' on' : ''}`}
+              onClick={() => setMode(m.id)}
+              data-tip={m.tip}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      {mode === 'usage' ? (
+        <UsageDashboard active={open} />
+      ) : mode === 'skill' ? (
         <CanvasSkillPanel />
       ) : (
         <>

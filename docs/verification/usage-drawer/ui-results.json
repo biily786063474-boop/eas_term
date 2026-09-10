@@ -1,0 +1,23 @@
+{
+ "tabs": [
+  "用量仪表盘",
+  "技能库",
+  "知识库"
+ ],
+ "total": "全部项目 · 已记录 Token\n945.41万\n\n235 轮请求 · 213 轮有计量 · 22 轮未知或进行中\n\n输入\n910.9万\n输出\n34.51万\n缓存读取\n127.8万\n缓存写入\n42.6万\n已知费用 · USD\n$0.948",
+ "projectCharts": 2,
+ "uncoveredPoints": 4,
+ "keyboardTooltip": "24 个等时区间；圆点可悬停/聚焦，未知区间断线，不补零。",
+ "tooltipDismissed": true,
+ "project": "用量验收 · 测试项目 B · 已记录 Token",
+ "page": "上一页2 / 2下一页",
+ "stageSaved": true,
+ "sessionSummary": "会话 fixture-sess 本页 2 轮 / 全期 6 轮 · 31.11万 Token（已知部分）",
+ "today": "用量验收 · 测试项目 B · 已记录 Token\n3.56万\n\n2 轮请求 · 2 轮有计量 · 0 轮未知或进行中\n\n输入\n3.4万\n输出\n1628\n缓存读取\n1.2万\n缓存写入\n4000\n已知费用 · USD\n$0.012",
+ "monthUncovered": 19,
+ "skillsOpen": true,
+ "skillsText": "更多\n用量仪表盘\n技能库\n知识库\nClaude\n未分类\n19\nCCteam-creator-cn\nSet up a complete agent team with file-based planning for complex multi",
+ "wikiText": "更多\n用量仪表盘\n技能库\n知识库\n把杂东西丢进去，AI 帮你归位\n\n一个放在你自己电脑上的 markdown 文件夹。你负责丢素材和提问题， agent 负责整理、归档、连交叉引用。\n它不是搜索引擎，是一个会自己长大的笔",
+ "overflow": false,
+ "error": null
+}

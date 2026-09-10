@@ -336,3 +336,10 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 
 ### 2026-09-09 OMP 调整方向的取消轮次边界
 `agentChat/omp/transport.ts` 的 cancel 超时只属于发起取消的 prompt 身份及进程；RPC 成功/失败、prompt finally、进程退出、close 均清理计时器。禁止只按 phase=prompting 杀当前进程：旧轮取消后新方向会马上 prompting，3 秒后就被旧计时器误杀。重复取消幂等；真正无响应仍保留所属进程超时兜底。`redirect.real.test.ts` 用 bundled OMP + 隔离 localhost 模型让第二轮运行超过 3 秒，断言新方向完成且未 kill。
+
+### 用量账本边界（2026-09-10）
+- 计量只能由主进程真实 CLI 事件旁路采集；renderer 只能查询、手动标记阶段、受 guardPath 保护导出，不能提交 token/费用数字。
+- 不能把兼容 UI 的合成 turn.done 零值当计量；新的 `meter` 才表示真实上报。不可改原 tally 来凑仪表盘总额。
+- 不能用 session 去重请求：Claude 同会话可能连续投递，账本必须 FIFO。明确退休/杀进程必须排空记账队列（旧 exit 已被代次守卫拦截）；不能删除代次守卫。
+- 原事件快照仅新增 meter/interrupted 元数据；渲染层隔离快照未变化。更新基线的理由是新增旁路计量契约，不是放松对话行为红线。
+- 损坏账本必须保留并提示，不得静默覆盖；缺失历史和未覆盖时间区间不是 0。账本中不得写入提示词、工具参数或密钥。

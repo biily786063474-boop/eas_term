@@ -31,11 +31,11 @@ test('production app shutdown and window cleanup route both soft/hard passes thr
  const source=ts.createSourceFile('session.ts',readFileSync(new URL('./agentChat/session.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
  const names=new Set(['killAllAgentChatSessions','killAgentChatSessionsForWebContents'])
  const code=ts.transpileModule(source.statements.filter(n=>ts.isFunctionDeclaration(n)&&names.has(n.name?.text)).map(n=>n.getText(source).replace(/^export /,'')).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
- const messages=[],timers=[]
+ const messages=[],timers=[],accounted=[]
  const proc={connected:true,exitCode:null,signalCode:null,send(m,cb){messages.push(m);cb(null)},disconnect(){},kill(){throw new Error('unsafe outer kill')}}
  ownCodexLauncher(proc)
  const sessions=new Map([['s',{wcId:7,rec:{id:'s'},proc}]])
- const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{sessions,stopAgentProcess,revokeCapabilitySession(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
+ const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{sessions,stopAgentProcess,interruptUsage(rec){accounted.push(rec.id)},revokeCapabilitySession(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
  api.killAllAgentChatSessions();api.killAllAgentChatSessions(true);api.killAgentChatSessionsForWebContents(7);timers.forEach(fn=>fn())
- assert.deepEqual(messages.map(m=>m.signal),['SIGTERM','SIGKILL','SIGTERM','SIGKILL']);assert.equal(sessions.size,0)
+ assert.deepEqual(messages.map(m=>m.signal),['SIGTERM','SIGKILL','SIGTERM','SIGKILL']);assert.equal(sessions.size,0);assert.deepEqual(accounted,['s','s','s'])
 })

@@ -1,3 +1,4 @@
+import { measure } from '../usage/core.ts'
 // oh-my-pi（omp）的 ACP 输出行 → ChatEvent。
 //
 // fixture 是真跑出来的（`__fixtures__/omp-acp-bash.jsonl`，omp 18.0.11 + 智谱 glm-5.3-flash，
@@ -511,7 +512,7 @@ export function createOmpTranslator(
           fatal: false,
           message: typeof msg === 'string' && msg ? msg : 'omp 这一轮失败了（没给原因）'
         })
-        out.push(turnDoneOf({}, acc))
+        out.push({...turnDoneOf({}, acc), interrupted: true})
       } else {
         out.push(turnDoneOf(end.result ?? {}, acc))
       }
@@ -561,6 +562,8 @@ export function turnDoneOf(
       : undefined
   return {
     k: 'turn.done',
+    meter: measure('omp', usage),
+    interrupted: promptResult.stopReason === 'cancelled',
     usage: {
       inputTokens: usage.inputTokens ?? 0,
       outputTokens: usage.outputTokens ?? 0,

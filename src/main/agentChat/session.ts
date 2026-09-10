@@ -1,3 +1,4 @@
+import { captureUsage, interruptUsage, markUsageInterrupted, resetUsageCost } from '../usage/index.ts'
 import { ownCodexLauncher, stopAgentProcess } from '../../../mcp/owned-launcher-control.mjs'
 import { cliInvocation } from '../cliInvocation.ts'
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
@@ -462,6 +463,9 @@ function isSilenced(live: Live, e: ChatEvent): boolean {
  *  带真实值，不会被覆盖。 */
 function handleEvent(live: Live, e: ChatEvent): void {
   if (isSilenced(live, e)) return
+  // A dead ACP's UI-only repair receipt does not consume its retained send queue.
+  const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
+  if (!repairOnly) captureUsage(live.rec, e)
   // 对话摘要：**只挂在「一轮一次」的事件上**（text.done / user.message），
   // 不挂 text.delta —— 那个每几十毫秒一次，挂上去这份旁支记录就成了事件流上的热点。
   // 静默期（切模型/切强度的 slash 回执）已经在上面被 return 掉了，不会混进来。
@@ -606,6 +610,7 @@ async function resolveAdapterModels(
 }
 
 function wireProc(live: Live, proc: ChildProcess): void {
+  resetUsageCost(live.rec.id)
   const generation = {}
   live.processGeneration = generation
   const isCurrent = (): boolean => live.processGeneration === generation
@@ -644,6 +649,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   })
   proc.on('exit', (code, signal) => {
     if (!isCurrent()) return
+    interruptUsage(live.rec)
     revokeCapabilitySession(live.rec.id)
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
@@ -1202,6 +1208,7 @@ export function listSessionBriefs(wcId: number): SessionBrief[] {
  *  hard=true 对直接进程用 SIGKILL；Windows owned Codex 经 IPC 让 launcher 清理 native。配合 index.ts 里"先软杀、300ms 后硬杀"的两拍节奏。 */
 export function killAllAgentChatSessions(hard = false): void {
   for (const live of sessions.values()) {
+    interruptUsage(live.rec)
     revokeCapabilitySession(live.rec.id)
     stopAgentProcess(live.proc, hard ? 'SIGKILL' : 'SIGTERM')
   }
@@ -1222,6 +1229,7 @@ export function killAllAgentChatSessions(hard = false): void {
 export function killAgentChatSessionsForWebContents(wcId: number): void {
   for (const [id, live] of sessions) {
     if (live.wcId !== wcId) continue
+    interruptUsage(live.rec)
     sessions.delete(id)
     revokeCapabilitySession(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
@@ -1782,6 +1790,8 @@ export function registerAgentChatHandlers(): void {
   ipcMain.on('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
+    if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
+    if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
     // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
     // 回掉在飞的那条 prompt（后台再跑最多 5 秒收尾），进程与会话都留着。
     // kill 会打断那段收尾，而收尾没做完的话下一条消息 resume 会「找不到会话」——
@@ -1814,6 +1824,7 @@ export function registerAgentChatHandlers(): void {
     // Retiring the generation suppresses its exit handler, so revoke here first.
     // A surviving MCP child must not retain authority after an explicit stop.
     revokeCapabilitySession(id)
+    interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
     live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
     live.killing = true
     stopAgentProcess(live.proc)
@@ -1841,6 +1852,7 @@ export function registerAgentChatHandlers(): void {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
     if (!live) return
+    interruptUsage(live.rec)
     sessions.delete(id)
     revokeCapabilitySession(id)
     // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，

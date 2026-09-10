@@ -1,3 +1,4 @@
+import type { UsageQuery, UsageSnapshot } from '../shared/usage.ts'
 import type {Favorites,FavoriteChange} from '../shared/browserFavorites'
 import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
@@ -218,6 +219,11 @@ interface PrefsSnapshot {
 }
 
 const api = {
+  usage: {
+    query: (q: UsageQuery): Promise<UsageSnapshot> => ipcRenderer.invoke('usage:query', q),
+    stage: (id: string, stage: string): Promise<void> => ipcRenderer.invoke('usage:stage', id, stage),
+    export: (q: UsageQuery): Promise<{ok: boolean; cancelled?: boolean; path?: string; error?: string}> => ipcRenderer.invoke('usage:export', q)
+  },
   platform: process.platform,
   /** GPU 加速有没有生效。**排障用** —— Windows 上退回软件合成时，
    *  毛玻璃/圆角/阴影全由 CPU 画，界面会卡到「未响应」 */

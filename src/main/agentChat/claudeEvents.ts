@@ -1,3 +1,4 @@
+import { measure } from '../usage/core.ts'
 // 把 Claude Code 的原生 stream-json 行翻译成与 CLI 无关的中间事件（ChatEvent）。
 // 只做翻译，不做展示判断——label/detail 怎么拼是这里的事，怎么渲染是 UI 的事。
 //
@@ -261,7 +262,7 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
       contextRatio: contextRatioOf(j, u)
     }
     const costUsd = typeof j.total_cost_usd === 'number' ? j.total_cost_usd : undefined
-    return [{ k: 'turn.done', usage, costUsd }]
+    return [{ k: 'turn.done', usage, costUsd, meter: measure('claude', u), interrupted: j.is_error === true }]
   }
 
   /** 上下文占用比例。

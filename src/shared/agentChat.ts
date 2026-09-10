@@ -1,3 +1,4 @@
+import type { Meter } from './usage.ts'
 // 通用 AI CLI 对话前端的中间事件模型。
 // **这里不允许出现任何 CLI 特有的概念** —— 不能有 hookEventName / thread_id /
 // tool_use_id 这类只有一边存在的字段。它们只属于 adapter 内部。
@@ -81,7 +82,7 @@ export type ChatEvent =
       cwd: string
     }
   | { k: 'approval.resolved'; approvalId: string; decision: 'allow' | 'deny' }
-  | { k: 'turn.done'; usage: Usage; costUsd?: number }
+  | { k: 'turn.done'; usage: Usage; costUsd?: number; meter?: Meter; interrupted?: boolean }
   /** 订阅额度窗口的状态。**这是 CLI 主动报的，不是我们算的。**
    *
    *  实测的 payload（2026-08-17，Claude 的 rate_limit_event）：

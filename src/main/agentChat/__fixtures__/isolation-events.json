@@ -152,7 +152,14 @@
      "cachedInputTokens": 56252,
      "contextRatio": 0.38432
     },
-    "costUsd": 0.0495862
+    "costUsd": 0.0495862,
+    "meter": {
+     "input": 76864,
+     "output": 551,
+     "cacheRead": 56252,
+     "cacheWrite": 20594
+    },
+    "interrupted": false
    }
   ]
  },
@@ -273,7 +280,14 @@
      "cachedInputTokens": 56223,
      "contextRatio": 0.38402
     },
-    "costUsd": 0.0495513
+    "costUsd": 0.0495513,
+    "meter": {
+     "input": 76804,
+     "output": 557,
+     "cacheRead": 56223,
+     "cacheWrite": 20563
+    },
+    "interrupted": false
    }
   ]
  },
@@ -293,7 +307,14 @@
      "outputTokens": 0,
      "cachedInputTokens": 0
     },
-    "costUsd": 0
+    "costUsd": 0,
+    "meter": {
+     "input": 0,
+     "output": 0,
+     "cacheRead": 0,
+     "cacheWrite": 0
+    },
+    "interrupted": true
    }
   ]
  },
@@ -334,6 +355,11 @@
      "inputTokens": 22907,
      "outputTokens": 171,
      "cachedInputTokens": 15616
+    },
+    "meter": {
+     "input": 22907,
+     "output": 171,
+     "cacheRead": 15616
     }
    }
   ]
@@ -375,6 +401,11 @@
      "inputTokens": 24142,
      "outputTokens": 285,
      "cachedInputTokens": 16128
+    },
+    "meter": {
+     "input": 24142,
+     "output": 285,
+     "cacheRead": 16128
     }
    }
   ]

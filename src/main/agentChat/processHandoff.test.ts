@@ -26,9 +26,10 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   visit(source)
   assert.ok(handler)
   const calls: string[] = []
-  const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean } }
+  const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const interrupt = runInNewContext(compiled + '\ninterrupt', {
+    resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
     handleEvent() {}
@@ -36,13 +37,14 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   interrupt({}, 's')
   assert.deepEqual(calls, ['revoke:s', 'kill'])
   calls.length = 0
-  live.acp = { interrupt: () => { calls.push('cancel'); return true } }
+  live.acp = { phase: () => 'prompting', interrupt: () => { calls.push('cancel'); return true } }
   interrupt({}, 's')
   assert.deepEqual(calls, ['cancel'])
 })
 function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
+    resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {},
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
@@ -85,6 +87,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const compiled = ts.transpileModule(deliverNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: unknown[] = []
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
+    resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
     restartAndDeliver: (_live: unknown, opts: unknown, message: string) => { calls.push({ opts, message }); return { ok: true } },
@@ -106,6 +109,7 @@ test('启动同步失败后恢复空闲并返回失败，下一次可以直接�
   const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   let attempts = 0
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
+    resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
@@ -136,7 +140,8 @@ for (const [label, mcp, expected] of [
     let enabled = false, snapshots = 0
     const launches: string[][] = []
     const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
-      stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+      resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
+    stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],

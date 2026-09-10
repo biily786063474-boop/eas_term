@@ -1,3 +1,4 @@
+import { measure } from '../usage/core.ts'
 // 把 Codex 的原生 `codex exec --json` 事件行翻译成与 CLI 无关的中间事件（ChatEvent）。
 // 只做翻译，不做展示判断——和 claudeEvents.ts 同样的分工。
 //
@@ -144,7 +145,7 @@ function translateTurnCompleted(j: Record<string, unknown>): ChatEvent[] {
     // contextRatio 不填——没有窗口上限，见文件头
   }
   // costUsd 明确留空（Codex 不报花费），不是 0——见文件头
-  return [{ k: 'turn.done', usage, costUsd: undefined }]
+  return [{ k: 'turn.done', usage, costUsd: undefined, meter: measure('codex', u) }]
 }
 
 // ---- 纯函数小工具 ----
