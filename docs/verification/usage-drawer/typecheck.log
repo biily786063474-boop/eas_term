@@ -1,0 +1,4 @@
+
+> eas-term@0.4.90 typecheck
+> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json
+

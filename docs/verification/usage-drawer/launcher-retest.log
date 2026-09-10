@@ -1,0 +1,14 @@
+✔ actual owned launcher separates user CLI overrides, preserves prompt after --, and forwards effective cwd (561.136417ms)
+✔ SIGTERM during actual launcher config probe kills only its owned probe and never executes native turn (751.804333ms)
+✔ owned IPC cancel during config waits for the actual child to exit (741.727959ms)
+✔ owned IPC disconnect during config waits for the actual child to exit (760.093667ms)
+✔ owned IPC cancel during exec waits for the actual child to exit (561.876667ms)
+✔ owned IPC disconnect during exec waits for the actual child to exit (560.4115ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5478.66725
