@@ -13,9 +13,14 @@ export function compactPlacement(others: readonly Box[], w: number, h: number,
  let best = { x: startX, y: bottom+gap }; let bestScore = [Infinity]
  for (const x of xs) for (const y of ys) {
   if (x < startX || y < startY || others.some(b => x < b.x+b.w+gap && x+w+gap > b.x && y < b.y+b.h+gap && y+h+gap > b.y)) continue
+  const hole = x+w<=right && y+h<=bottom
+  // Never grow diagonally just to manufacture a square around empty space.
+  if (!hole && others.length && !others.some(b =>
+    ((x === b.x+b.w+gap || x+w+gap === b.x) && y < b.y+b.h && y+h > b.y) ||
+    ((y === b.y+b.h+gap || y+h+gap === b.y) && x < b.x+b.w && x+w > b.x))) continue
   const width = Math.max(right,x+w)-startX, height = Math.max(bottom,y+h)-startY
-  // Existing holes win; expansion minimizes enclosing square, then area. Row-major ties.
-  const score = [x+w<=right && y+h<=bottom ? 0 : 1, Math.max(width,height), width*height, y, x]
+  // Existing holes win; expansion prefers a square aspect ratio, then area. Row-major ties.
+  const score = [hole ? 0 : 1, Math.max(width,height)/Math.min(width,height), width*height, y, x]
   const differing = score.findIndex((v,i) => v !== bestScore[i])
   if (differing >= 0 && (bestScore[differing] === undefined || score[differing] < bestScore[differing])) { best={x,y}; bestScore=score }
  }

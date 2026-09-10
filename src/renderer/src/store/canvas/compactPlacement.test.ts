@@ -23,3 +23,9 @@ test('agent actual 640px minimum does not select a 440px-only hole', () => {
  for(const b of boxes) assert.ok(p.x+640+22<=b.x || b.x+b.w+22<=p.x || p.y+380+22<=b.y || b.y+b.h+22<=p.y)
  assert.equal(JSON.stringify(boxes),before)
 })
+test('four actual agent panes form two rows and two columns', () => {
+ const boxes: {x:number;y:number;w:number;h:number}[]=[]
+ for(let i=0;i<4;i++)boxes.push({...compactPlacement(boxes,640,380,opts),w:640,h:380})
+ assert.equal(new Set(boxes.map(b=>b.x)).size,2)
+ assert.equal(new Set(boxes.map(b=>b.y)).size,2)
+})
