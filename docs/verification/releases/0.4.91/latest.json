@@ -1,0 +1,15 @@
+{
+  "version": "0.4.91",
+  "mac_arm64": "/download/v0.4.91/Eas-Term-0.4.91-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.91/Eas-Term-0.4.91-arm64.zip",
+  "mac_x64": "/download/v0.4.91/Eas-Term-0.4.91-x64.dmg",
+  "macZip_x64": "/download/v0.4.91/Eas-Term-0.4.91-x64.zip",
+  "mac": "/download/v0.4.91/Eas-Term-0.4.91-arm64.dmg",
+  "win": "/download/v0.4.91/Eas-Term-0.4.91-x64-setup.exe",
+  "notes": [
+    "更多抽屉新增项目用量仪表盘：真实时间趋势、项目/CLI/阶段拆解、会话与单轮明细、CSV导出。保留技能库和知识库。",
+    "曲线轻微圆滑，标签左侧纵排、原玻璃质感不变；展开抽屉时隐藏底部比例与快捷工具，关闭恢复。",
+    "仅记录采集后的新请求，未知用量和费用明确标记，不回扫旧对话，不作为厂商账单。"
+  ],
+  "published": "2026-09-10T11:10:46.509714+00:00"
+}

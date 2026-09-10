@@ -1,0 +1,50 @@
+{
+ "closed": [
+  {
+   "class": "ctoolbar-mini",
+   "visibility": "visible",
+   "opacity": "1",
+   "transform": "none",
+   "pointer": "auto"
+  },
+  {
+   "class": "canvas-zoombar",
+   "visibility": "visible",
+   "opacity": "1",
+   "transform": "none",
+   "pointer": "auto"
+  }
+ ],
+ "open": [
+  {
+   "class": "ctoolbar-mini",
+   "visibility": "hidden",
+   "opacity": "0",
+   "transform": "none",
+   "pointer": "none"
+  },
+  {
+   "class": "canvas-zoombar",
+   "visibility": "hidden",
+   "opacity": "0",
+   "transform": "none",
+   "pointer": "none"
+  }
+ ],
+ "restored": [
+  {
+   "class": "ctoolbar-mini",
+   "visibility": "visible",
+   "opacity": "1",
+   "transform": "none",
+   "pointer": "auto"
+  },
+  {
+   "class": "canvas-zoombar",
+   "visibility": "visible",
+   "opacity": "1",
+   "transform": "none",
+   "pointer": "auto"
+  }
+ ]
+}

@@ -1,0 +1,28 @@
+build-win	Packaged builtin capability settings	﻿2026-09-10T10:57:50.9067756Z ##[group]Run node scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"
+build-win	Packaged builtin capability settings	2026-09-10T10:57:50.9068913Z ^[[36;1mnode scripts/verify-builtin-capabilities.mjs --executable "release/win-unpacked/Eas-Term.exe"^[[0m
+build-win	Packaged builtin capability settings	2026-09-10T10:57:50.9106134Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+build-win	Packaged builtin capability settings	2026-09-10T10:57:50.9106601Z ##[endgroup]
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8155970Z {"checks":6,"passed":true,"output":"D:\\a\\eas_term\\eas_term\\docs\\verification\\builtin-capabilities"}
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8476235Z node:fs:1948
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8477606Z   binding.unlink(getValidatedPath(path));
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8478651Z           ^
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8478809Z 
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8479547Z Error: EBUSY: resource busy or locked, unlink 'C:\Users\RUNNER~1\AppData\Local\Temp\eas-builtin-ui-nVO9I3\Network\Trust Tokens'
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8480340Z     at unlinkSync (node:fs:1948:11)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8480778Z     at _unlinkSync (node:internal/fs/rimraf:215:14)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8481353Z     at rimrafSync (node:internal/fs/rimraf:196:7)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8481792Z     at node:internal/fs/rimraf:254:9
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8482459Z     at Array.forEach (<anonymous>)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8482894Z     at _rmdirSync (node:internal/fs/rimraf:251:7)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8483342Z     at rimrafSync (node:internal/fs/rimraf:194:7)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8483769Z     at node:internal/fs/rimraf:254:9
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8484172Z     at Array.forEach (<anonymous>)
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8484589Z     at _rmdirSync (node:internal/fs/rimraf:251:7) {
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8484990Z   errno: -4082,
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8485260Z   code: 'EBUSY',
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8485512Z   syscall: 'unlink',
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8486068Z   path: 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\eas-builtin-ui-nVO9I3\\Network\\Trust Tokens'
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8486714Z }
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8486836Z 
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.8486951Z Node.js v22.23.2
+build-win	Packaged builtin capability settings	2026-09-10T10:57:52.9428416Z ##[error]Process completed with exit code 1.
