@@ -13,11 +13,12 @@ import { isWindowExpired, type CliQuota, type QuotaSnapshot, type QuotaWindow } 
  *  tooltip 里的「X 月 X 日重置」指的还是已经过去的时刻。 */
 export function liveCells(q: CliQuota | undefined, now: number): QuotaWindow[] {
   if (!q) return []
-  return [q.primary, q.secondary].filter((w): w is QuotaWindow => !!w && !isWindowExpired(w, now))
+  return [q.primary, q.secondary, ...(q.models ?? [])].filter((w): w is QuotaWindow => !!w && !isWindowExpired(w, now))
 }
 
 export interface QuotaSegment {
   name: string
+  unavailable?: boolean
   q: CliQuota
 }
 
@@ -39,5 +40,11 @@ export function quotaSegments(q: QuotaSnapshot, now: number): QuotaSegment[] {
     { name: 'Claude Code', q: q.claude },
     { name: q.omp?.label ?? 'omp', q: q.omp }
   ]
-  return all.filter((s): s is QuotaSegment => !!s.q && liveCells(s.q, now).length > 0)
+  const parts = all.filter((s): s is QuotaSegment => !!s.q && liveCells(s.q, now).length > 0)
+  if (q.ompStatus && (!q.omp || q.omp.label !== `omp · ${q.ompStatus.provider}` || liveCells(q.omp, now).length === 0 || q.ompStatus.state === 'unavailable')) {
+    const existing = parts.findIndex(s => s.q === q.omp)
+    if (existing >= 0) parts.splice(existing, 1)
+    parts.push({ name: `omp · ${q.ompStatus.provider}`, q: { updatedAt: q.ompStatus.at }, unavailable: true })
+  }
+  return parts
 }

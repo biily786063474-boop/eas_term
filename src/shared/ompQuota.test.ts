@@ -239,3 +239,32 @@ test('第一次拿到数据（之前是空的）→ 写进去', () => {
   assert.equal(next?.omp?.primary?.percent, 42)
   assert.equal(next?.ompAccountKey, 'k')
 })
+
+test('Gemini model buckets retain model identity without inventing duration', () => {
+  const q = ompQuotaFromUsageJson({ reports: [{ provider: 'google-gemini-cli', limits: [
+    { scope: { modelId: 'gemini-pro', tier: 'pro' }, window: { resetsAt: RESET_MS }, amount: { remainingFraction: 0.7, unit: 'percent' } },
+    { scope: { modelId: 'gemini-flash' }, window: { resetsAt: RESET_MS }, amount: { remainingFraction: 0.9, unit: 'percent' } }
+  ] }] }, 'google-gemini-cli', NOW)
+  assert.deepEqual(q?.models?.map(w => [w.modelId, w.percent, w.windowMinutes]), [['gemini-flash', 10, undefined], ['gemini-pro', 30, undefined]])
+  assert.equal(q?.primary, undefined)
+})
+
+test('model changes and provider changes invalidate identical numeric snapshots', () => {
+  const prev = { omp: { updatedAt: NOW, label: 'omp · a', models: [{ modelId: 'a', percent: 20, src: 'omp' as const, at: NOW }] } }
+  assert.ok(nextOmpSnapshot(prev, { ...prev.omp, label: 'omp · b' }, undefined))
+  assert.ok(nextOmpSnapshot(prev, { ...prev.omp, models: [{ ...prev.omp.models[0], percent: 40 }] }, undefined))
+})
+
+test('multiple provider accounts are ambiguous, never silently select the first', () => {
+  const report = { provider: 'google-gemini-cli', limits: [{ scope: { modelId: 'pro' }, amount: { unit: 'percent', remainingFraction: 0.5 } }] }
+  assert.equal(ompQuotaFromUsageJson({ reports: [report, report] }, 'google-gemini-cli', NOW), null)
+})
+
+test('Gemini scope account identity is hashed and changes across accounts', () => {
+  const payload = (accountId: string) => ({ reports: [{ provider: 'google-gemini-cli', limits: [{ scope: { accountId, projectId: 'p' } }] }] })
+  const a = ompAccountKeyOf(payload('private-a'), 'google-gemini-cli')
+  const b = ompAccountKeyOf(payload('private-b'), 'google-gemini-cli')
+  assert.ok(a)
+  assert.notEqual(a, b)
+  assert.ok(!a.includes('private'))
+})

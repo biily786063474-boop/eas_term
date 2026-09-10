@@ -52,6 +52,8 @@ jobs:
         run: |
           $env:EAS_VERIFY_REAL_OMP = (Resolve-Path "release/win-unpacked/resources/omp/omp.exe").Path
           node --test src/main/capabilityTransport.test.ts src/main/builtinCapabilityHost.test.ts src/main/agentChat/omp/transport.test.ts src/main/agentChat/omp/redirect.real.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test src/shared/ompQuota.test.ts src/renderer/src/features/quota/segments.test.ts
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 

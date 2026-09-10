@@ -22,7 +22,7 @@ import { clampPercent } from './quota.ts'
  *  形状来自上游 `packages/ai/src/usage.ts` 的 `UsageLimit`。 */
 interface OmpLimit {
   id?: unknown
-  scope?: { tier?: unknown; shared?: unknown }
+  scope?: { tier?: unknown; shared?: unknown; modelId?: unknown }
   window?: { durationMs?: unknown; resetsAt?: unknown }
   amount?: {
     used?: unknown
@@ -121,10 +121,22 @@ function windowOf(l: OmpLimit, now: number): QuotaWindow | null {
 export function ompQuotaFromUsageJson(payload: unknown, provider: string, now: number): CliQuota | null {
   const p = (payload ?? {}) as { reports?: unknown }
   const reports = Array.isArray(p.reports) ? (p.reports as Record<string, unknown>[]) : []
-  const report = reports.find((r) => r && typeof r === 'object' && r.provider === provider)
+  const matches = reports.filter((r) => r && typeof r === 'object' && r.provider === provider)
+  // Without an active-account identifier, selecting reports[0] can show another account.
+  if (matches.length !== 1) return null
+  const report = matches[0]
   if (!report) return null
 
   const limits = Array.isArray(report.limits) ? (report.limits as OmpLimit[]) : []
+  // Gemini exposes model buckets with reset timestamps, without window duration.
+  if (provider === 'google-gemini-cli') {
+    const models = limits.flatMap((l) => {
+      if (!l || typeof l.scope?.modelId !== 'string' || !l.scope.modelId.trim() || l.amount?.unit !== 'percent') return []
+      const w = windowOf(l, now)
+      return w ? [{ ...w, modelId: l.scope.modelId }] : []
+    }).sort((a, b) => a.modelId.localeCompare(b.modelId))
+    if (models.length) return { models, updatedAt: now, label: `omp · ${provider}` }
+  }
   const rows = limits
     .filter((l) => l && typeof l === 'object' && usable(l))
     .map((l) => ({ durationMs: num(l.window?.durationMs) ?? 0, w: windowOf(l, now) }))
@@ -169,6 +181,13 @@ export function ompAccountKeyOf(payload: unknown, provider: string): string | un
   const parts = ['accountId', 'email', 'orgId']
     .map((k) => (typeof meta[k] === 'string' ? (meta[k] as string) : ''))
     .filter(Boolean)
+  const scopes = Array.isArray(report?.limits) ? report.limits : []
+  for (const l of scopes) {
+    for (const k of ['accountId', 'projectId', 'orgId']) {
+      const value = l?.scope?.[k]
+      if (typeof value === 'string' && value && !parts.includes(`${k}:${value}`)) parts.push(`${k}:${value}`)
+    }
+  }
   if (parts.length === 0) return undefined
   return shortHash(`${provider}|${parts.join('|')}`)
 }
@@ -203,6 +222,9 @@ export function nextOmpSnapshot(
   if (
     !switched &&
     prev.omp &&
+    prev.omp.label === incoming.label &&
+    (prev.omp.models ?? []).length === (incoming.models ?? []).length &&
+    (prev.omp.models ?? []).every((w, i) => w.modelId === incoming.models?.[i]?.modelId && sameWindow(w, incoming.models?.[i])) &&
     sameWindow(prev.omp.primary, incoming.primary) &&
     sameWindow(prev.omp.secondary, incoming.secondary)
   ) {

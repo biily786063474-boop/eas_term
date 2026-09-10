@@ -42,7 +42,7 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
   const cells = liveCells(q, now)
   if (!cells.length) return null
   return (
-    <span className="qb-cli">
+    <span className={`qb-cli${q?.models?.length ? ' qb-models' : ''}`}>
       <span className="qb-name">{name}</span>
       {cells.map((w, i) => (
         <span
@@ -68,11 +68,11 @@ function CliPart({ name, q }: { name: string; q?: CliQuota }): JSX.Element | nul
           // 恰恰是「我还能用多久」。相对量直接回答那个问题。
           // untilReset 已过重置时刻会返回 null —— 那种情况一个字都不显示，
           // 别写「0 小时后刷新」（时钟偏差和过期事件都会走到这里）。
-          data-tip={`${name} · ${windowLabel(w.windowMinutes)}限额 · 已用 ${w.percent}%${
+          data-tip={`${name} · ${'modelId' in w ? String(w.modelId) : windowLabel(w.windowMinutes)}限额 · 已用 ${w.percent}% · 剩余 ${100 - w.percent}%${
             untilReset(w.resetsAt, now) ? ` · ${untilReset(w.resetsAt, now)}后刷新` : ''
           } · ${agoLabel(w.at, now)}采到`}
         >
-          {w.percent}%
+          {'modelId' in w ? `${String(w.modelId)} ` : ''}{w.percent}%
         </span>
       ))}
     </span>
@@ -138,7 +138,7 @@ export function QuotaBar({ variant = 'float' }: { variant?: 'float' | 'inline' }
       {parts.map((p, i) => (
         <Fragment key={p.name}>
           {i > 0 && <span className="qb-sep">|</span>}
-          <CliPart name={p.name} q={p.q} />
+          {p.unavailable ? <span className="qb-cli"><span className="qb-name">{p.name}</span><span className="qb-pct" data-tip="服务商未返回可用额度，或查询失败；不代表额度为零。查询不会阻塞对话。">暂未获取额度</span></span> : <CliPart name={p.name} q={p.q} />}
         </Fragment>
       ))}
     </div>

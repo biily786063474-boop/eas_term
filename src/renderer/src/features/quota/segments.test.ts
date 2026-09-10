@@ -46,3 +46,18 @@ test('数据过期的那家不出段（窗口已经重置了，那个数字不�
   const segs = quotaSegments({ claude: stale(90), omp: live(5) }, NOW)
   assert.deepEqual(segs.map((s) => s.name), ['omp'])
 })
+
+test('OMP unavailable status is explicit without fabricated zero', () => {
+  const segs = quotaSegments({ ompStatus: { provider: 'google-gemini-cli', state: 'unavailable', at: NOW } }, NOW)
+  assert.equal(segs.length, 1)
+  assert.equal(segs[0].unavailable, true)
+  assert.equal(segs[0].q.primary, undefined)
+})
+
+test('OMP unavailable hides old values, ready recovers and provider switches cannot show old values', () => {
+  const omp = live(30, 'omp · google-gemini-cli')
+  const state = (provider: string, state: 'ready' | 'unavailable') => ({ provider, state, at: NOW })
+  assert.equal(quotaSegments({ omp, ompStatus: state('google-gemini-cli', 'unavailable') }, NOW)[0].unavailable, true)
+  assert.equal(quotaSegments({ omp, ompStatus: state('google-gemini-cli', 'ready') }, NOW)[0].q.primary?.percent, 30)
+  assert.equal(quotaSegments({ omp, ompStatus: state('anthropic', 'ready') }, NOW)[0].unavailable, true)
+})

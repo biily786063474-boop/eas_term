@@ -108,6 +108,8 @@ export function isWindowExpired(w: QuotaWindow | undefined, now: number): boolea
 
 /** 一个 CLI 的额度快照。两个窗口都可能缺 —— 缺了就不显示那一格。 */
 export interface CliQuota {
+  /** OMP provider-reported per-model quotas, not account-wide windows. */
+  models?: (QuotaWindow & { modelId: string })[]
   /** 短窗口：Claude 是 5 小时，Codex 是 primary（付费计划通常也是 5 小时） */
   primary?: QuotaWindow
   /** 长窗口：Claude 是 7 天，Codex 是 secondary（free 计划为 null） */
@@ -122,6 +124,7 @@ export interface CliQuota {
 }
 
 export interface QuotaSnapshot {
+  ompStatus?: { provider: string; state: 'ready' | 'unavailable'; at: number }
   claude?: CliQuota
   codex?: CliQuota
   /** 落盘的这份 Claude 额度属于哪个账号（`~/.claude.json` 的 oauthAccount.accountUuid）。

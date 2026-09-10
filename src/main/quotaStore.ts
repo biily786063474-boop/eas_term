@@ -299,9 +299,13 @@ async function refreshOmp(): Promise<void> {
   ompInFlight = true
   try {
     const payload = await readOmpUsage(hostPaths())
+    if (readOmpSetup(app.getPath('userData')).provider?.id !== provider) return
     ompLastAt = Date.now()
     const q = ompQuotaFromUsageJson(payload, provider, ompLastAt)
+    snapshot = { ...snapshot, ompStatus: { provider, state: q ? 'ready' : 'unavailable', at: ompLastAt } }
     if (!q) {
+      save()
+      broadcast()
       // 读到了但没数据（API key 模式的常态）→ 累计空次数。
       // **读失败（payload 为 null）不算**：那是一次性故障，不该让它把定时器关掉。
       if (payload !== null && ++ompEmptyStreak >= OMP_EMPTY_GIVE_UP && ompTimer) {
@@ -312,7 +316,7 @@ async function refreshOmp(): Promise<void> {
     }
     ompEmptyStreak = 0
     const next = nextOmpSnapshot(snapshot, q, ompAccountKeyOf(payload, provider))
-    if (!next) return
+    if (!next) { broadcast(); return }
     snapshot = { ...snapshot, ...next }
     save()
     broadcast()

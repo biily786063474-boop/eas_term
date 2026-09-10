@@ -51,6 +51,13 @@
 .qb-name {
   opacity: 0.62;
 }
+.qb-models {
+  max-width: min(520px, 45vw);
+  overflow-x: auto;
+  white-space: nowrap;
+  pointer-events: auto;
+  padding-block: 5px;
+}
 .qb-pct {
   font-variant-numeric: tabular-nums;
   color: var(--fg);
