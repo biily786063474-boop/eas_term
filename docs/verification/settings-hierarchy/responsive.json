@@ -1,0 +1,40 @@
+[
+  {
+    "theme": "light",
+    "bg": "rgba(255, 255, 255, 0.94)"
+  },
+  {
+    "key": "ai",
+    "overflow": false,
+    "width": 489
+  },
+  {
+    "key": "perf",
+    "overflow": false,
+    "width": 498
+  },
+  {
+    "key": "privacy",
+    "overflow": false,
+    "width": 489
+  },
+  {
+    "key": "update",
+    "overflow": false,
+    "width": 489
+  },
+  {
+    "key": "phone",
+    "overflow": false,
+    "width": 498
+  },
+  {
+    "key": "keys",
+    "overflow": false,
+    "width": 489
+  },
+  {
+    "escapeClosed": true
+  },
+  {}
+]

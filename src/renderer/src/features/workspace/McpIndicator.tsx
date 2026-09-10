@@ -43,7 +43,7 @@ export function McpIndicator(): JSX.Element | null {
       className={`tb-item mcp-ind${flash ? ' flash' : ''}${mcpEnabled ? '' : ' off'}`}
       data-tip={mcpEnabled ? 'AI 正在通过 MCP 操作画板，点击查看记录' : 'MCP 已关闭，点击查看'}
       onClick={() =>
-        window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'ai' } }))
+        window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'mcp' } }))
       }
     >
       MCP

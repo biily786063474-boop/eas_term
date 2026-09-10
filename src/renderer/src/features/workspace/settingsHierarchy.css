@@ -1,0 +1,73 @@
+/* 已确认设置视觉稿。仅限定设置外壳，不影响复用 cset-box 的更新等弹层。
+   基底沿用 workspace.css 的 glass-3 / blur / glass-border-strong。 */
+.cset-settings { width: 1060px; height: 740px; max-height: calc(100vh - 48px); padding: 0; }
+.cset-settings .cset-body { height: 100%; }
+.cset-sidebar { width: 214px; flex: none; display: flex; flex-direction: column; min-height: 0; padding: 24px 14px 14px; border-right: 1px solid var(--glass-border); background: var(--lift-1); }
+.cset-sidebar h1 { margin: 0 12px 18px; font-size: 21px; font-weight: 600; color: var(--fg); }
+.cset-search { width: calc(100% - 12px); margin: 0 6px 8px; padding: 9px 10px; border: 1px solid var(--glass-border); background: var(--lift-1); color: var(--fg); border-radius: 8px; font: inherit; font-size: 12px; }
+.cset-settings .cset-tabs { overflow-y: auto; flex: 1; width: auto; padding: 0; border: 0; display: block; }
+.cset-navgroup { margin: 18px 12px 7px; font-size: 10px; color: var(--fg-dim); letter-spacing: 1px; }
+.cset-settings .cset-tab { width: 100%; height: 37px; display: flex; align-items: center; gap: 11px; padding: 0 12px; margin: 2px 0; border: 1px solid transparent; font-size: 12px; }
+.cset-settings .cset-tab svg { flex: none; }
+.cset-settings .cset-tab.on { background: var(--lift-3); border-color: var(--glass-border); color: var(--fg); box-shadow: inset 2px 0 var(--fg-dim); }
+.cset-version { margin-top: 14px; padding: 12px 12px 0; border-top: 1px solid var(--glass-border); display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-dim); }
+.cset-main { min-width: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.cset-pagehead { position: relative; flex: none; padding: 25px 32px 20px; border-bottom: 1px solid var(--glass-border); }
+.cset-crumb { color: var(--fg-dim); font-size: 10px; letter-spacing: 1px; margin-bottom: 8px; }
+.cset-pagehead h2 { margin: 0 30px 5px 0; font-size: 23px; font-weight: 600; color: var(--fg); }
+.cset-pagehead p { margin: 0; font-size: 12px; color: var(--fg-dim); }
+.cset-pagehead .cset-close { position: absolute; right: 22px; top: 22px; }
+.cset-settings .cset-pane { padding: 24px 32px; }
+.cset-group { margin: 0 0 22px; }
+.cset-group h3 { margin: 0 0 10px; color: var(--fg); font-size: 12px; font-weight: 600; }
+.cset-card { padding: 16px 18px; border: 1px solid var(--glass-border); border-radius: 11px; background: var(--lift-1); }
+.cset-settings .cset-pane > .cset-sec { border: 1px solid var(--glass-border); border-radius: 11px; padding: 16px 18px; margin-bottom: 22px; background: var(--lift-1); }
+.cset-settings .cset-label { font-weight: 600; color: var(--fg); }
+.cset-settings .cset-row { min-height: 35px; }
+.cset-settings .cset-rowname { white-space: normal; color: var(--fg); }
+.cset-settings label.cset-row > input[type='checkbox'] { order: 2; margin-left: auto; flex: none; appearance: none; width: 34px; height: 20px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--lift-3); position: relative; transition: background-color .16s; }
+.cset-settings label.cset-row > input[type='checkbox']::before { content: ''; width: 14px; height: 14px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--fg-dim); transition: transform .16s; }
+.cset-settings label.cset-row > input[type='checkbox']:checked { background: var(--fg); }
+.cset-settings label.cset-row > input[type='checkbox']:checked::before { background: var(--bg); transform: translateX(13px); }
+.cset-settings input:disabled { opacity: .45; cursor: not-allowed; }
+.cset-settings .cset-sub { padding-left: 0; color: var(--fg-dim); font-size: 11px; line-height: 1.8; }
+.cset-settings .cset-note { color: var(--fg-dim); font-size: 11px; line-height: 1.8; }
+.cset-details { border-top: 1px solid var(--glass-border); margin-top: 12px; padding-top: 10px; font-size: 11px; line-height: 1.8; color: var(--fg-dim); }
+.cset-details summary { cursor: pointer; }
+.cset-details > div { margin-top: 9px; }
+.cset-badge { font-size: 9px; font-weight: 400; color: var(--fg-dim); padding: 1px 5px; border: 1px solid var(--glass-border-strong); border-radius: 4px; margin-left: 8px; white-space: nowrap; }
+.cset-optionhead { display: flex; align-items: center; font-size: 13px; }
+.cset-optionhead b { font-weight: 500; }
+.cset-approval { display: flex; gap: 4px; border: 1px solid var(--glass-border); border-radius: 9px; padding: 4px; }
+.cset-approval button { flex: 1; padding: 9px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--fg-dim); font: inherit; font-size: 11px; cursor: pointer; }
+.cset-approval button:hover { background: var(--lift-2); }
+.cset-approval button.on { background: var(--lift-3); color: var(--fg); }
+.cset-approval button:disabled { opacity: .5; cursor: wait; }
+.cset-warning { border-left: 2px solid var(--fg-dim); padding-left: 10px; color: var(--fg-dim); font-size: 11px; line-height: 1.8; margin: 12px 0 0; }
+.cset-footer { padding: 12px 32px; border-top: 1px solid var(--glass-border); font-size: 10px; color: var(--fg-dim); flex: none; }
+.cset-settings .cset-themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.cset-settings .cset-theme { display: flex; flex-wrap: wrap; padding: 7px; gap: 8px; border-radius: 10px; min-width: 0; }
+.cset-settings .cset-theme.on { border-color: var(--fg-dim); }
+.cset-settings .cset-swatch { width: 100%; height: 77px; border-radius: 5px; display: flex; padding: 7px; gap: 6px; }
+.cset-swatch i:first-child { width: 24%; border-radius: 3px; background: rgba(140,145,160,.2); }
+.cset-swatch i:last-child { flex: 1; border-radius: 3px; background: repeating-linear-gradient(0deg,rgba(140,145,160,.2) 0 7px,transparent 7px 14px); }
+.cset-settings .cset-themename { padding: 0 3px 2px; font-size: 12px; }
+.cset-settings :is(button,input,select,summary):focus-visible { outline: 2px solid var(--fg-dim); outline-offset: 3px; }
+@media (max-width: 850px) {
+ .cset-sidebar { width: 180px; }
+ .cset-pagehead, .cset-settings .cset-pane { padding: 20px; }
+ .cset-settings .cset-badge { white-space: normal; }
+}
+@media (max-width: 580px) {
+ .cset-settings { max-width: calc(100vw - 20px); }
+ .cset-sidebar { width: 132px; padding: 18px 7px 10px; }
+ .cset-settings .cset-tab { font-size: 11px; gap: 6px; padding: 0 5px; }
+ .cset-pagehead, .cset-settings .cset-pane { padding: 14px; }
+ .cset-pagehead h2 { font-size: 19px; }
+ .cset-card { padding: 12px; }
+ .cset-settings .cset-themes { grid-template-columns: 1fr; }
+ .cset-approval { flex-wrap: wrap; }
+ .cset-approval button { flex-basis: 100%; }
+ .cset-footer { padding: 12px; }
+ .cset-settings .cset-row { flex-wrap: wrap; }
+}

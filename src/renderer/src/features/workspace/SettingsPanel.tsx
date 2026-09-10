@@ -4,7 +4,7 @@
 //
 // 位置换过一次：先放在画布右上角，结果和右侧抽屉头部的「添加项目」按钮
 // 叠在了一起。标题栏最右是这类全局设置的常规去处，两种视图模式下都在。
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
 import { FootprintPanel } from './FootprintPanel'
@@ -30,6 +30,8 @@ import {
   setVolume
 } from '../notify/sound'
 import './workspace.css'
+import './settingsHierarchy.css'
+import { SETTINGS_PAGES, findSettingsPages, settingsPage, type SettingsPageKey } from './settingsNavigation'
 
 /** 跟 window.api.prefs 的返回值保持同一个类型来源（preload/index.ts 的 PrefsSnapshot），
  *  不在这再手抄一份形状——那样迟早跟主进程的 Prefs 字段脱节 */
@@ -57,24 +59,30 @@ const SCOPE_LABEL: Record<string, string> = {
 /** 设置的分区（数量以下面这个数组为准，别在注释里写死 —— 早先写「六个」，
  *  加到第七个之后就一直在骗人）。原来全堆在一个滚动框里，翻到「隐私」要滚过主题、
  *  AI、提示音、更新、画板 —— 找一个开关比想起它叫什么还费劲。改成左侧标签页。 */
-const TABS = [
-  { key: 'theme', label: '主题' },
-  { key: 'ai', label: 'AI 对话' },
-  { key: 'sound', label: '提示音' },
-  { key: 'update', label: '更新' },
-  { key: 'board', label: '画板' },
-  { key: 'phone', label: '手机端' },
-  { key: 'perf', label: '性能' },
-  { key: 'privacy', label: '隐私' },
-  { key: 'keys', label: '快捷键' }
-] as const
-type TabKey = (typeof TABS)[number]['key']
-
+type TabKey = SettingsPageKey
+function SettingGroup({title, children}: {title:string; children:ReactNode}): JSX.Element {
+  return <section className="cset-group"><h3>{title}</h3><div className="cset-card">{children}</div></section>
+}
+function SettingDetails({title, children}: {title:string; children:ReactNode}): JSX.Element {
+  return <details className="cset-details"><summary>{title}</summary><div>{children}</div></details>
+}
+const SETTINGS_ICON_PATHS = [
+ 'M4 4h16v16H4z M4 9h16 M9 9v11','M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z',
+ 'M9 5L5 9H2v6h3l4 4z M14 8q6 4 0 8','M3 6h18v12H3z M6 10h1m3 0h1m3 0h1m3 0h1M7 14h10',
+ 'M8 4h8v3h4v12H4V7h4z M8 11h1m6 0h1M9 15h6','M8 3v6m8-6v6M5 9h14v3a7 7 0 01-14 0zM12 19v3',
+ 'M7 2h10v20H7z M11 18h2','M4 10a8 8 0 0114-5l2 3M20 3v5h-5M20 14a8 8 0 01-14 5l-2-3M4 21v-5h5',
+ 'M3 16l5-7 4 4 4-9 5 7','M12 2l8 4v7c0 4-8 9-8 9s-8-5-8-9V6z M9 11l2 2 4-4'
+]
 export function SettingsPanel(): JSX.Element {
   const [open, setOpen] = useState(false)
   // 每次打开都回到「主题」。设置不是工作面板，记住上次停在哪反而让人找不着北 ——
   // 打开发现停在「隐私」，会以为自己点错了地方。
   const [tab, setTab] = useState<TabKey>('theme')
+  const [search, setSearch] = useState('')
+  const paneRef = useRef<HTMLDivElement>(null)
+  const page = settingsPage(tab)
+  const matches = findSettingsPages(search)
+  useEffect(() => { paneRef.current?.scrollTo(0, 0) }, [tab])
   const isMac = window.api.platform === 'darwin'
   const shortcutOverrides = useStore((s) => s.shortcutOverrides)
   const setShortcutOverride = useStore((s) => s.setShortcutOverride)
@@ -285,7 +293,8 @@ export function SettingsPanel(): JSX.Element {
   useEffect(() => {
     const h = (e: Event): void => {
       const t = (e as CustomEvent<{ tab?: TabKey }>).detail?.tab
-      if (t) setTab(t)
+      setTab(settingsPage(t).key)
+      setSearch('')
       setOpen(true)
     }
     window.addEventListener('eas:open-settings', h)
@@ -300,6 +309,7 @@ export function SettingsPanel(): JSX.Element {
         onMouseDown={(e) => e.stopPropagation()}
         onClick={() => {
           setTab('theme')
+          setSearch('')
           setOpen(true)
         }}
       >
@@ -309,29 +319,33 @@ export function SettingsPanel(): JSX.Element {
       {open &&
         createPortal(
           <div className="cset-overlay" onMouseDown={() => setOpen(false)}>
-            <div className="cset-box" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="cset-head">
-                <span className="cset-title">设置</span>
-                <button className="cset-close" onClick={() => setOpen(false)} data-tip="关闭 (Esc)">
-                  ✕
-                </button>
-              </div>
-
+            <div className="cset-box cset-settings" role="dialog" aria-modal="true" aria-label="设置" onMouseDown={(e) => e.stopPropagation()}>
               <div className="cset-body">
-                <nav className="cset-tabs">
-                  {TABS.map((t) => (
-                    <button
-                      key={t.key}
-                      className={`cset-tab${tab === t.key ? ' on' : ''}`}
-                      onClick={() => setTab(t.key)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </nav>
-                <div className="cset-pane">
+                <aside className="cset-sidebar">
+                  <h1>设置</h1>
+                  <input className="cset-search" aria-label="搜索设置" placeholder="搜索设置…" value={search} onChange={e=>setSearch(e.target.value)} />
+                  <nav className="cset-tabs" aria-label="设置分类">
+                    {['工作体验','AI 与连接','系统管理'].map(group=>{
+                      const items=matches.filter(t=>t.group===group)
+                      return items.length ? <div key={group}><div className="cset-navgroup">{group}</div>{items.map(t=>
+                        <button key={t.key} className={`cset-tab${tab===t.key?' on':''}`} aria-current={tab===t.key?'page':undefined} onClick={()=>{setTab(t.key);setRecording(null)}}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={SETTINGS_ICON_PATHS[SETTINGS_PAGES.findIndex(p=>p.key===t.key)]}/></svg>
+                          {t.label}
+                        </button>)}</div> : null
+                    })}
+                    {!matches.length && <p className="cset-note">没有匹配的设置</p>}
+                  </nav>
+                  <div className="cset-version"><span>Eas-Term</span><span>{window.api.build.version}</span></div>
+                </aside>
+                <div className="cset-main">
+                  <header className="cset-pagehead">
+                    <div className="cset-crumb">设置 / {page.group}</div>
+                    <h2>{page.label}</h2><p>{page.description}</p>
+                    <button className="cset-close" aria-label="关闭设置" onClick={()=>setOpen(false)} data-tip="关闭 (Esc)">✕</button>
+                  </header>
+                  <div className="cset-pane" ref={paneRef} key={tab}>
               {tab === 'theme' && (
-              <div className="cset-sec">
+              <SettingGroup title="界面主题">
                 <div className="cset-themes">
                   {THEMES.map((t) => (
                     <button
@@ -339,19 +353,19 @@ export function SettingsPanel(): JSX.Element {
                       className={`cset-theme${t.id === theme ? ' on' : ''}`}
                       onClick={() => setTheme(t.id)}
                     >
-                      <span className="cset-swatch" style={{ background: t.swatch }} />
+                      <span className={`cset-swatch cset-preview-${t.id}`} style={{ background: t.swatch }}><i/><i/></span>
                       <span className="cset-themename">{t.label}</span>
                       {t.id === theme && <CheckIcon size={12} />}
                     </button>
                   ))}
                 </div>
-              </div>
+              </SettingGroup>
               )}
 
               {/* 灵动岛开关。**放主题这一栏** —— 它讲的是「界面上出现什么」，
                   跟配色、字号同类，不是某个功能的行为设置。 */}
               {tab === 'theme' && (
-                <div className="cset-sec">
+                <SettingGroup title="界面元素">
                   <label className="cset-row">
                     <input
                       type="checkbox"
@@ -360,17 +374,18 @@ export function SettingsPanel(): JSX.Element {
                     />
                     <span className="cset-rowname">显示灵动岛</span>
                   </label>
-                  <div className="cset-sub">
+                  <SettingDetails title="灵动岛何时出现？">
                     屏幕顶部那个状态胶囊：有终端在跑、或者有事等你处理时冒出来。
                     <b>你在这个软件里的时候它会自己让位</b>，不占主界面 ——
                     那时候铃铛和抽屉上的提示是同一件事的更好去处。
                     关掉之后那扇窗口根本不建。
-                  </div>
-                </div>
+                  </SettingDetails>
+                </SettingGroup>
               )}
 
               {tab === 'ai' && (
-              <div className="cset-sec">
+              <>
+              <SettingGroup title="协作方式">
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -379,63 +394,43 @@ export function SettingsPanel(): JSX.Element {
                     onChange={(e) => void toggleApprovalHook(e.target.checked)}
                   />
                   <span className="cset-rowname">
-                    先问再做：动手前先说明意图，等你回复
+                    先问再做 <span className="cset-badge">提示词约定</span>
                   </span>
                 </label>
-                <div className="cset-sub">
+                <p className="cset-note">修改文件或执行命令前，先说明意图并等待你回复。只读操作照常执行。</p>
+                <SettingDetails title="工作方式与限制">
                   {hookBusy
                     ? '处理中…'
                     : approvalHook
                       ? '通过系统提示让模型在改文件/执行命令前先说明打算、等你回一句。不打断进程、不写任何配置文件，只读操作照常直接做。这是软约定——靠模型遵守，不是强制拦截。'
                       : '关着时模型按 CLI 自己的默认权限直接执行，不会先征求同意。'}
-                </div>
+                </SettingDetails>
                 {hookMsg && <div className="cset-sub">{hookMsg}</div>}
 
+              </SettingGroup>
                 {/* 默认 harness 的硬审批。**和上面那条是两种东西**，所以分开写：
                     上面是系统提示（软约定，模型可以不听），这条是进程级的闸。
                     默认关着 —— 用户 2026-09-02：「approvalMode 默认应该是 yolo，
                     审批要用户去点设置。」omp 没装时读不到档位，整段不出现，
                     免得给一个点了不会有任何效果的开关。 */}
                 {omMode !== null && (
-                  <>
-                    <label className="cset-row">
-                      <input
-                        type="checkbox"
-                        checked={omMode !== 'yolo'}
-                        disabled={omBusy}
-                        onChange={(e) => void setApproval(e.target.checked ? 'always-ask' : 'yolo')}
-                      />
-                      <span className="cset-rowname">
-                        默认 harness：动手前停下来等你批准
-                      </span>
-                    </label>
-                    <div className="cset-sub">
-                      {omMode === 'yolo'
-                        ? '关着时不打断，工具直接执行。生成图片、控制浏览器、控制电脑、语音合成这四类无论开关如何都始终禁止。'
-                        : '开着时会弹出审批卡片，你点了才继续。这是进程级的闸，不是提示词约定。'}
+                  <SettingGroup title="执行权限">
+                    <div className="cset-optionhead"><b>OMP 工具审批</b><span className="cset-badge">强制审批</span></div>
+                    <p className="cset-note">选择哪些操作必须停下来，由你批准后继续。</p>
+                    <div className="cset-approval" role="group" aria-label="OMP 工具审批">
+                      {([{value:'yolo',label:'直接执行'},{value:'always-ask',label:'全部审批'},{value:'write',label:'仅命令审批'}] as const).map(mode=>
+                        <button key={mode.value} disabled={omBusy} aria-pressed={omMode===mode.value} className={omMode===mode.value?'on':''} onClick={()=>void setApproval(mode.value)}>{mode.label}</button>)}
                     </div>
-                    {omMode !== 'yolo' && (
-                      <div className="cset-sub">
-                        <label className="cset-row">
-                          <input
-                            type="checkbox"
-                            checked={omMode === 'write'}
-                            disabled={omBusy}
-                            onChange={(e) => void setApproval(e.target.checked ? 'write' : 'always-ask')}
-                          />
-                          <span className="cset-rowname">
-                            改文件不用批，只批执行命令
-                          </span>
-                        </label>
-                      </div>
-                    )}
-                  </>
+                    <p className="cset-warning">审批关闭不等于取消安全限制。生成图片、控制浏览器、控制电脑与语音合成仍受既有禁用规则约束。</p>
+                    <SettingDetails title="三个档位分别控制什么？">直接执行：工具执行不打断。全部审批：执行前等待批准。仅命令审批：改文件不用批准，只审批执行命令。</SettingDetails>
+                  </SettingGroup>
                 )}
 
                 {/* 真实额度与准确的上下文占用只在 statusline 那条通道里
                     （2026-08-18 实测：headless 事件流里五小时额度没有百分比，
                     上下文口径也和 /context 不同）。这个开关把一个转发脚本
                     **包在**用户原有 statusline 外面 —— 不替换、可一键还原。 */}
+                <SettingGroup title="额度与上下文">
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -443,9 +438,10 @@ export function SettingsPanel(): JSX.Element {
                     disabled={slBusy}
                     onChange={(e) => void toggleStatusline(e.target.checked)}
                   />
-                  <span className="cset-rowname">读取订阅额度与上下文占用</span>
+                  <span className="cset-rowname">读取订阅额度与上下文占用 <span className="cset-badge">Claude</span></span>
                 </label>
-                <div className="cset-sub">
+                <p className="cset-note">读取 Claude 状态栏；与项目用量账本是不同口径。开启会修改 statusLine，写入前备份，关闭还原。</p>
+                <SettingDetails title="配置变更与读取状态">
                   {slBusy
                     ? '处理中…'
                     : slOn
@@ -453,23 +449,24 @@ export function SettingsPanel(): JSX.Element {
                           slWrapped ? '你原有的状态栏被包在里面、照常工作，关掉即原样还原。' : ''
                         }`
                       : '关着时额度拿不到百分比（CLI 的事件流里五小时那条只有倒计时），上下文占用是估算值、比 /context 偏小。打开会修改 ~/.claude/settings.json 的 statusLine（写前自动备份，且只包一层、不替换你原有的配置）。'}
-                </div>
+                </SettingDetails>
                 {slMsg && <div className="cset-sub">{slMsg}</div>}
-              </div>
+                </SettingGroup>
+              </>
               )}
 
-              {/* MCP：AI 通过它动你的画板。**放 AI 对话这一栏** ——
+              {/* MCP：AI 通过它动你的画板。独立放 MCP 接入页 ——
                   它讲的是「AI 能对你做什么、做过什么」。
                   标题栏只留了一盏会闪的灯（点它跳到这里），
                   那盏灯不能一起搬走：它存在的理由就是「看得见」。 */}
-              {tab === 'ai' && (
-                <div className="cset-sec">
+              {tab === 'mcp' && (
+                <SettingGroup title="工具接入与调用记录">
                   <McpBody />
-                </div>
+                </SettingGroup>
               )}
 
               {tab === 'sound' && (
-              <div className="cset-sec">
+              <SettingGroup title="任务提醒">
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -521,12 +518,12 @@ export function SettingsPanel(): JSX.Element {
                     </button>
                   </div>
                 </div>
-              </div>
+              </SettingGroup>
               )}
 
               {tab === 'update' && (
               <>
-              <div className="cset-sec">
+              <SettingGroup title="Eas-Term">
                 <div className="cset-row">
                   <span className="cset-rowname">
                     当前版本 {window.api.build.version}
@@ -545,13 +542,13 @@ export function SettingsPanel(): JSX.Element {
                   />
                   <span className="cset-rowname">启动后自动检查 Eas-Term 新版本</span>
                 </label>
-              </div>
+              </SettingGroup>
               <CliUpdatesPanel />
               </>
               )}
 
               {tab === 'board' && (
-              <div className="cset-sec">
+              <SettingGroup title="快照与标记">
                 <div className="cset-row">
                   <span className="cset-rowname">快照后清空标记</span>
                   <select
@@ -568,10 +565,10 @@ export function SettingsPanel(): JSX.Element {
                     <option value="clear">总是清空</option>
                   </select>
                 </div>
-              </div>
+              </SettingGroup>
               )}
 
-              {tab === 'phone' && <PhonePanel />}
+              {tab === 'phone' && <SettingGroup title="连接与配对"><PhonePanel /></SettingGroup>}
               {tab === 'keys' && (
                 <div className="cset-sec">
                   <p className="cset-keyintro">
@@ -620,11 +617,11 @@ export function SettingsPanel(): JSX.Element {
                 </div>
               )}
 
-              {tab === 'perf' && <GpuPanel />}
+              {tab === 'perf' && <SettingGroup title="图形加速"><GpuPanel /></SettingGroup>}
 
 
               {tab === 'privacy' && (
-              <div className="cset-sec">
+              <SettingGroup title="匿名使用统计">
                 <label className="cset-row">
                   <input
                     type="checkbox"
@@ -638,7 +635,7 @@ export function SettingsPanel(): JSX.Element {
                 <div className="cset-sub">
                   只有使用时长、启动次数、版本与系统大类、各功能的使用次数。
                   <br />
-                  终端内容、命令、文件路径、项目名、与 AI 的对话、密钥 —— 一个字节都不会离开这台电脑。
+                  这项匿名统计不采集终端内容、命令、文件路径、项目名、AI 对话或密钥。
                   <br />
                   <a
                     className="cset-link"
@@ -651,7 +648,7 @@ export function SettingsPanel(): JSX.Element {
                     完整隐私说明
                   </a>
                 </div>
-              </div>
+              </SettingGroup>
               )}
 
               {/* 扩展能力：这软件在你机器上写过什么，逐个可卸。
@@ -659,17 +656,15 @@ export function SettingsPanel(): JSX.Element {
                   FootprintPanel 自己的注释写着「这份清单同时是写隐私策略的依据」。
                   2026-08-31 从标题栏搬过来的。 */}
               {tab === 'privacy' && (
-                <div className="cset-sec">
-                  <div className="cset-label">扩展能力</div>
+                <SettingGroup title="本机扩展与写入">
                   <div className="cset-note">
                     这个软件在你机器上写过的全部位置，可以逐个卸掉。
                   </div>
                   <FootprintPanel mode="inline" />
-                </div>
+                </SettingGroup>
               )}
-              {tab === 'privacy' && (
-                <div className="cset-sec">
-                  <div className="cset-label">诊断 · 闪烁黑匣子</div>
+              {tab === 'perf' && (
+                <SettingGroup title="诊断日志">
                   <div className="cset-note">
                     界面偶尔闪一下又抓不到瞬间时，这里记着最近发生的事：组件整段卸载重挂、超过 100ms 的长任务、
                     GPU / 渲染进程重启。没有轮询，只有事件发生才写一行。
@@ -688,8 +683,10 @@ export function SettingsPanel(): JSX.Element {
                   {diagLines && (
                     <pre className="cset-pre">{diagLines.length ? diagLines.join('\n') : '（还没有记录）'}</pre>
                   )}
-                </div>
+                </SettingGroup>
               )}
+                  </div>
+                  <footer className="cset-footer">设置按各项即时生效 · 需要确认的操作会单独提示</footer>
                 </div>
               </div>
             </div>
