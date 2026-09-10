@@ -396,6 +396,50 @@ test('握手期改模型不产生 pending 重启，握手完合并成一次发�
 
 // ── 中断 ──────────────────────────────────────────────────────────────────
 
+test('调整方向后旧 cancel 超时不得杀掉正在处理新方向的进程', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const h = harness(); await open(h)
+  h.live.interrupt()
+  h.f.reply('session/prompt', { stopReason: 'cancelled' }); await tick()
+  h.live.deliver('优先处理新方向'); await tick()
+  assert.equal(h.live.phase(), 'prompting')
+  t.mock.timers.tick(3001); await tick()
+  assert.equal(h.f.killed, false, '旧轮次的3秒timer误杀新轮次')
+  h.f.reply('session/prompt', { stopReason: 'end_turn' }); await tick()
+  assert.equal(h.live.phase(), 'ready')
+})
+
+test('同一轮重复中断只发一次 cancel，但真正无响应仍要超时结束所属进程', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const h = harness(); await open(h)
+  h.live.interrupt(); h.live.interrupt()
+  assert.equal(h.f.sent.filter(m => m.method === 'session/cancel').length, 1)
+  t.mock.timers.tick(3001)
+  assert.equal(h.f.killed, true)
+})
+
+test('取消返回 RPC error 后也清除旧计时器，后续轮次不受影响', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const h = harness(); await open(h)
+  h.live.interrupt(); h.f.replyError('session/prompt', {code:-32603,message:'cancelled'}); await tick()
+  h.live.deliver('恢复后新方向'); await tick()
+  assert.equal(h.live.phase(), 'prompting')
+  t.mock.timers.tick(3001)
+  assert.equal(h.f.killed, false)
+})
+
+test('已结束的 cancel 不得影响重新握手后的新轮次', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const h = harness(); await open(h)
+  h.live.interrupt(); h.f.exit(); await tick()
+  h.live.deliver('重启后新方向'); await tick()
+  h.f.reply('initialize', { protocolVersion: 1 }); await tick()
+  h.f.reply('session/resume', NEW_OK()); await tick()
+  assert.equal(h.live.phase(), 'prompting')
+  t.mock.timers.tick(3001); await tick()
+  assert.equal(h.f.killed, false)
+})
+
 test('**按停发 session/cancel、不 kill 进程**', async () => {
   // kill 会打断 omp 后台那 5 秒收尾；收尾没做完，下一条消息 resume 会「找不到会话」，
   // 用户看到的是「只是停了一下，整段对话没了」。

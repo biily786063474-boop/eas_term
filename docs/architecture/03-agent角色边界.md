@@ -333,3 +333,6 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 语音文本写入只能经编辑器适配接口；不得恢复“失焦随便追加末尾”、不得把跨框迟到结果写给新目标、不得自动回车执行。主进程 `stt:audio/stop` 校验录音所属 sender，VAD 在 Worker 中运行、队列有上限。切换录音或停止时失效旧异步定稿；采麦失败、卸载、处理错误均需释放设备。不得把 VAD 当成本人声纹识别；Windows 和实际噪声效果需分别验收。
 
 发送必须在无录音时也触发 voice:discard，否则 native 撤销可能跨草稿。临时 UI 测试补丁必须 finally 还原源码并重构建；Windows CRLF 仅在临时匹配时归一化，备份保留原始字节。设置浮层必须锚定按钮而非整张启动卡片，避免上缘裁切。
+
+### 2026-09-09 OMP 调整方向的取消轮次边界
+`agentChat/omp/transport.ts` 的 cancel 超时只属于发起取消的 prompt 身份及进程；RPC 成功/失败、prompt finally、进程退出、close 均清理计时器。禁止只按 phase=prompting 杀当前进程：旧轮取消后新方向会马上 prompting，3 秒后就被旧计时器误杀。重复取消幂等；真正无响应仍保留所属进程超时兜底。`redirect.real.test.ts` 用 bundled OMP + 隔离 localhost 模型让第二轮运行超过 3 秒，断言新方向完成且未 kill。

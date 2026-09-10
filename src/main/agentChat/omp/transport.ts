@@ -158,6 +158,12 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
   let stderrTail: string[] = []
   let nextId = 0
   let waiters = new Map<number, Waiter>()
+  let activePrompt: object | null = null
+  let cancelTimer: ReturnType<typeof setTimeout> | undefined
+  function clearCancel(): void {
+    if (cancelTimer) clearTimeout(cancelTimer)
+    cancelTimer = undefined
+  }
   const queue: string[] = []
   /** 待下发的模型/强度。握手期改的排到这里，握手完与首次下发合并成一次 */
   let pendingParams: { model?: string; effort?: string } = {
@@ -213,6 +219,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       if (!w) return
       waiters.delete(m.id as number)
       if (w.timer) clearTimeout(w.timer)
+      if (w.method === 'session/prompt') clearCancel()
       if (m.error) w.reject(rpcError(w.method, m.error))
       else w.resolve((m.result ?? {}) as Record<string, unknown>)
       return
@@ -307,6 +314,8 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
 
   /** 进程没了：把在飞的请求全 reject、审批全 deny 落地、状态回 dead。**幂等**。 */
   function onGone(why: string): void {
+    clearCancel()
+    activePrompt = null
     const wasPrompting = phase === 'prompting'
     proc = null
     phase = 'dead'
@@ -433,6 +442,8 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
   }
 
   async function prompt(message: string): Promise<void> {
+    const turn = {}
+    activePrompt = turn
     phase = 'prompting'
     try {
       const res = await call('session/prompt', { sessionId, prompt: [{ type: 'text', text: message }] })
@@ -443,6 +454,10 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       const err = e as Error & { rpc?: { code?: number; message?: string } }
       if (phase === 'prompting') for (const ev of translator.endTurn({ error: err.rpc ?? { message: err.message } })) deps.emit(ev)
     } finally {
+      if (activePrompt === turn) {
+        clearCancel()
+        activePrompt = null
+      }
       if (phase === 'prompting') phase = 'ready'
       pump()
     }
@@ -523,23 +538,29 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       // 没有在飞的轮次就**如实说没接手**，让调用方补 turn.done。
       // 进程已死（phase === 'dead'）走的正是这条 —— 那是用户撞到的那次。
       if (phase !== 'prompting' || !sessionId) return false
+      if (cancelTimer) return true // 同一轮重复点击不叠加取消和计时器
+      const cancelledPrompt = activePrompt
+      const cancelledProcess = proc
       // `session/cancel` 是**通知**（上游没有对应的响应），收到后它会立刻用
       // `stopReason:'cancelled'` 回掉在飞的那条 prompt。所以这里发完就等那条响应，
       // **不 kill 进程**：kill 会打断它后台那 5 秒的收尾，而收尾没做完的话
       // 下一条消息 `session/resume` 会以「找不到会话」失败 —— 用户看到的是
       // 「我只是停了一下，整段对话没了」，比 Claude 那边的表现还差一档。
       notify('session/cancel', { sessionId })
-      const t = setTimeout(() => {
-        if (phase !== 'prompting') return
+      cancelTimer = setTimeout(() => {
+        cancelTimer = undefined
+        // 只准结束当初取消的轮次/进程，不准误杀新方向或重启后的进程。
+        if (phase !== 'prompting' || activePrompt !== cancelledPrompt || proc !== cancelledProcess) return
         // 等不到就退回硬手段：这时 turn.done 由 onGone 补
         deps.log('[omp] cancel 之后没等到 prompt 响应，改为结束进程')
-        proc?.kill()
+        cancelledProcess?.kill()
       }, CANCEL_WAIT_MS)
-      t.unref?.()
+      cancelTimer.unref?.()
       return true
     },
 
     close(): void {
+      clearCancel()
       if (sessionId && proc) notify('session/close', { sessionId })
     },
 
