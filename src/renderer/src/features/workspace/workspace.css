@@ -2203,6 +2203,7 @@ body.dragging-row * {
   color:var(--fg);word-break:break-all}
 /* 文件型密钥的标签：和文本型区分开 —— 用法完全不同（给路径 vs 给值） */
 .sec-var.isfile{background:rgba(139,92,246,.14);color:#c4b5fd}
+:root[data-theme='light'] .sec-var.isfile{background:rgba(118,85,166,.10);color:var(--semantic-icon-purple)}
 
 
 .cset-overlay {
@@ -3260,4 +3261,12 @@ body.dragging-row * {
   .sec-detail .sec-row-name { padding-right: 0; }
   .sec-detail .sec-row-acts { position: static; margin: 16px 0; }
   .sec-detail .sec-var-row { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Shared canvas shell stays open for badges; cfile-body clips contents. */
+.pane.cfile-node {
+  overflow: visible;
+}
+.pane.cfile-node > .cfile-head > .cfile-title {
+  flex: 0 1 auto;
 }

@@ -1,0 +1,67 @@
+{
+  "baseline": "ae8392d",
+  "kind": "Defect reproductions, NOT acceptance tests",
+  "isolation": "Mock Electron + temporary fake store + loopback fake endpoint; no production keys, no model calls.",
+  "observations": [
+    {
+      "id": "missing-session-token",
+      "reproduced": true,
+      "result": "Grant without PTY identity is a silent no-op; retrieval is denied."
+    },
+    {
+      "id": "existing-secret-create-conflict",
+      "reproduced": true,
+      "result": "The create payload used by request_secret is rejected for an existing variable."
+    },
+    {
+      "id": "rename-breaks-grant",
+      "reproduced": true,
+      "result": "Renaming the same stored ID breaks its existing name-based grant."
+    },
+    {
+      "id": "old-name-inherits-grant",
+      "reproduced": true,
+      "result": "A newly created group using the old name inherits access without a new grant."
+    },
+    {
+      "id": "duplicate-name-widens-grant",
+      "reproduced": true,
+      "result": "Different IDs can share a name; existing name grant covers the new ID."
+    },
+    {
+      "id": "delete-recreate-inherits-grant",
+      "reproduced": true,
+      "result": "Deleting a group does not revoke its name; replacement is accessible."
+    },
+    {
+      "id": "partial-selection-success",
+      "reproduced": true,
+      "result": "One present plus one missing variable yields ok:true with an incomplete environment."
+    },
+    {
+      "id": "file-kind-lost-on-save",
+      "reproduced": true,
+      "result": "Generic save loses the file marker even when preserving ciphertext; auto injection then exposes it as text env."
+    },
+    {
+      "id": "lock-does-not-revoke-env",
+      "reproduced": true,
+      "result": "Lock blocks new wrapper retrieval but injected-name readiness stays true."
+    },
+    {
+      "id": "existing-pty-revocation-control",
+      "reproduced": true,
+      "result": "Control: explicit forgetPty does revoke the token."
+    },
+    {
+      "id": "corrupt-store-treated-as-empty",
+      "reproduced": true,
+      "result": "Corrupt JSON is reported as unconfigured; setup overwrites it with an empty store."
+    },
+    {
+      "id": "wrapper-output-not-confined",
+      "reproduced": true,
+      "result": "The actual wrapper forwards a child printing its injected value to stdout. Output captured only in fixture memory."
+    }
+  ]
+}

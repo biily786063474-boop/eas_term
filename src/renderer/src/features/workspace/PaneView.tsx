@@ -100,6 +100,17 @@ function PaneKindSelect({
 
   const current = KIND_LABEL[kind]
 
+  // Canvas nodes have a fixed identity, matching the file/web node header.
+  // Keep the switcher for split panes only; never convert a running canvas session here.
+  if (canvasMode && (kind === 'terminal' || kind === 'agent')) {
+    return (
+      <>
+        <span className="cfile-badge"><current.Icon size={13} /></span>
+        <span className="cfile-title">{current.label}</span>
+      </>
+    )
+  }
+
   return (
     <>
       <button
@@ -304,6 +315,8 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         height: `calc(${rect.h * 100}% - ${PANE_GAP * 2}px)`
       }
 
+  const canvasSession = !!canvasRect && !canvasRect.board && (pane.kind === 'terminal' || pane.kind === 'agent')
+
   // 画布模式下拖动节点头部 → 改节点相对坐标（moveNode）
   const onCanvasHeadDown = (e: React.MouseEvent): void => {
     if (!canvasRect || canvasRect.board || e.button !== 0) return
@@ -352,7 +365,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
   return (
     <div
       ref={paneRef}
-      className={`pane${isActive ? ' active' : ''}${selected ? ' sel' : ''}`}
+      className={`pane${canvasSession ? ' cfile-node' : ''}${isActive ? ' active' : ''}${selected ? ' sel' : ''}`}
       data-leaf-id={leaf.id}
       style={paneStyle}
       onMouseDown={canvasRect ? undefined : () => setActiveLeaf(tabId, leaf.id)}
@@ -369,7 +382,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
       {/* 看板里卡片自己有头（项目名 + 状态点 + 终端下拉），终端再来一个头就是重复，
           而卡片本来就矮，省下这 28px 全给终端内容 */}
       <div
-        className="pane-header"
+        className={canvasSession ? 'cfile-head' : 'pane-header'}
         hidden={!!canvasRect?.board}
         style={
           canvasRect
@@ -495,7 +508,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           ⚠️ **终端里手敲 `claude` 的一切照常** —— 状态机、甘特采集、审批解析、
           终端待办、密钥徽章、MCP 桥全由终端 I/O 驱动，与这条控制条零引用关系
           （改动前 grep 实证）。这里拆掉的只是 UI 入口。 */}
-      <div className="pane-body">
+      <div className={canvasSession ? 'pane-body cfile-body' : 'pane-body'}>
         {pane.kind === 'terminal' && (
           <TerminalView
             key={pane.ptyId}

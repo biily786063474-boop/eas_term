@@ -284,13 +284,13 @@
   --semantic-icon-purple: #7655a6;
   --semantic-icon-amber: #896120;
   --semantic-icon-neutral: #62656a;
-  --bg: #ffffff;
-  --s-1: #f7f7f8;
+  --bg: #fafafa;
+  --s-1: #f3f3f3;
   --s-2: #ffffff;
   --s-3: #ffffff;
   --t-1: #0d0d0d;
   --t-2: #5d5d5d;
-  --t-3: #8f8f8f;
+  --t-3: #737373;
   --stroke-input: rgba(0, 0, 0, 0.16);
   --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.12);
   /* 亮色下「沉一档」= 压出浅灰，不是加黑 */
@@ -333,11 +333,11 @@
   --pane-solid: #ffffff;
   --popover-solid: #ffffff;
   --glass-3: rgba(255, 255, 255, 0.94);
-  --glass-border: rgba(0, 0, 0, 0.045);
-  --glass-border-strong: rgba(0, 0, 0, 0.07);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-border-strong: rgba(0, 0, 0, 0.08);
   --glass-highlight: none;
-  --bg-grad-1: rgba(255, 255, 255, 0.86);
-  --bg-grad-2: rgba(247, 247, 248, 0.94);
+  --bg-grad-1: rgba(250, 250, 250, 0.86);
+  --bg-grad-2: rgba(243, 243, 243, 0.94);
   --tooltip-bg: rgba(28, 28, 28, 0.96);
   --tooltip-fg: #ececec;
   /* ── 亮色下**不用蓝**（2026-09-02 用户：「还有蓝色」）───────────────────
