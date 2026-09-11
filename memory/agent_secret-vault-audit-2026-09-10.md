@@ -62,3 +62,5 @@
 
 ## 2026-09-11 0.4.93 官网已发布，镜像待收尾
 产品b67eabd；main快进c32fabc，tag v0.4.93。五包目录~/Eas-Term-release/0.4.93-prep；Mac签名公证/stapler/Gatekeeper/双架构smoke通过，Windows34573939599成功。服务器五包与页面/latest已完成并核验，八站未变化。GitHub draft五包上传仍运行exec74141（functions cell34等待），uploads.github.com经过Clash但字节仍增长，未擅改代理。上传完核对资产digest再gh release edit v0.4.93 --draft=false --latest，然后记录。不要重复上传已有资产，不要提前称GitHub完成。
+
+0.4.93发布收尾完成：GitHub五包上传完成，逐个size/digest与本地和官网一致，Release正式发布并设latest。没有遗留上传任务。官网/latest、Windows、Mac双架构均完成发布。密钥柜功能修复仍未实现，不因发版而变为完成。
