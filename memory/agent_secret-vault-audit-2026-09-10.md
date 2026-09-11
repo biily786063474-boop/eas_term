@@ -59,3 +59,6 @@
 
 ## 2026-09-11 发布测试修复
 全量默认并发失败、单文件12/12通过；并发4对照全量通过。package.json test固化--test-concurrency=4，不修改断言/超时/产品运行逻辑。修改后npm run check再次完整通过2873/2860pass/13skip/0fail。证据docs/verification/releases/2026-09-11-test-concurrency.md。公开发版尚未执行。
+
+## 2026-09-11 0.4.93 官网已发布，镜像待收尾
+产品b67eabd；main快进c32fabc，tag v0.4.93。五包目录~/Eas-Term-release/0.4.93-prep；Mac签名公证/stapler/Gatekeeper/双架构smoke通过，Windows34573939599成功。服务器五包与页面/latest已完成并核验，八站未变化。GitHub draft五包上传仍运行exec74141（functions cell34等待），uploads.github.com经过Clash但字节仍增长，未擅改代理。上传完核对资产digest再gh release edit v0.4.93 --draft=false --latest，然后记录。不要重复上传已有资产，不要提前称GitHub完成。
