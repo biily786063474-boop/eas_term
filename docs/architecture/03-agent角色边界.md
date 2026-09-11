@@ -346,3 +346,6 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 
 ### 2026-09-10 后台输出历史修复
 终端后台解析不能等待requestAnimationFrame，否则最小化时输出积压。writeScheduler前台合帧、后台事件/解析回调驱动；禁止通过丢弃文本或取消IPC订阅“省电”。移除的是全局禁节流开关，主工作台backgroundThrottling:false暂保留。document.hidden在此配置下可能一直false，视觉暂停必须同时检查document.hasFocus()；视口与窗口状态要共同判定，避免IntersectionObserver把后台动画重新唤醒。
+
+### 密钥柜视觉调整的契约（2026-09-10）
+不能把列表元数据替换成reveal结果；查找/选择不解密，查看只显示mask结果，复制才交完整值。编辑varName时必须保留from且空value仍表示沿用原密文。文件密钥导入保留主进程持有内容的独立接口，不以普通文本表单代替；自动上锁、退避、删除确认和终端授权边界保持。

@@ -1566,32 +1566,31 @@ body.dragging-row * {
 /* 弹层：同 .fp-pop 的玻璃配方，窄一号 */
 .sec-pop {
   position: fixed;
-  right: 14px;
-  top: 46px; /* 46 = titlebar 42 + 4 */
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
   z-index: 3000;
-  /* 540 而不是 380：变量名动辄 20~30 字符（ALIBABA_CLOUD_ACCESS_KEY_SECRET），
-     380 的时候减去右侧按钮区，正文只剩 ~230px —— 一行只放得下一个名字，
-     于是内容全堆在左边、右边空一大片。加宽之后才够排成两列。 */
-  width: 540px;
-  max-height: calc(100vh - 70px);
+  width: min(940px, calc(100vw - 40px));
+  max-height: calc(100vh - 90px);
   overflow-y: auto;
-  padding: 12px;
-  border-radius: var(--radius-lg);
+  padding: 0;
+  border-radius: 18px;
   border: 1px solid var(--glass-border-strong);
   background: var(--glass-3);
   backdrop-filter: var(--blur);
-  box-shadow: var(--glass-highlight), 0 20px 60px var(--ink-3);
+  box-shadow: var(--glass-highlight), 0 24px 70px var(--ink-3);
   color: var(--fg);
 }
-
 .sec-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 600;
-  margin-bottom: 6px;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--glass-border);
 }
+
 .sec-head-acts {
   display: flex;
   align-items: center;
@@ -1599,7 +1598,7 @@ body.dragging-row * {
 }
 
 .sec-note {
-  margin: 0 0 12px;
+  margin: 16px 26px;
   font-size: 11.5px;
   line-height: 1.6;
   color: var(--fg-dim);
@@ -1622,10 +1621,14 @@ body.dragging-row * {
 
 /* ── 锁屏 ── */
 .sec-lock {
-  padding: 6px 2px 2px;
+  padding: 38px 24px 46px;
+  max-width: 430px;
+  margin: auto;
+  min-height: 350px;
+  text-align: center;
 }
 .sec-lock-t {
-  font-size: 12.5px;
+  font-size: 23px;
   margin-bottom: 4px;
 }
 .sec-lock-d {
@@ -1855,7 +1858,7 @@ body.dragging-row * {
   min-width: 0;
 }
 .sec-row-name {
-  font-size: 13px;
+  font-size: 24px;
   font-weight: 600;
   /* 原来是 3px，标题几乎贴在变量名上。标题是这一条的「名字」，
      和下面那串变量得有一口气的距离，扫视时才分得开层次 */
@@ -3221,3 +3224,40 @@ body.dragging-row * {
 .cset-cli-actions { display: flex; gap: 8px; margin-top: 8px; }
 .cset-cli-bundled { margin: 16px 0 10px; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .cset-cli-toggle input::after { transition: none; } }
+
+/* 密钥柜管理布局：仅消费SecretMeta，不在导航里读取值。 */
+.sec-state { margin-left: 12px; padding: 5px 9px; border-radius: 16px; font-size: 11px; font-weight: 400; color: var(--fg-dim); background: var(--lift-2); }
+.sec-workspace { display: grid; grid-template-columns: 260px minmax(0, 1fr); border-top: 1px solid var(--glass-border); min-height: 460px; }
+.sec-sidebar { padding: 20px 14px; border-right: 1px solid var(--glass-border); background: var(--wash-1); min-width: 0; }
+.sec-nav-label { display: flex; justify-content: space-between; margin: 22px 8px 12px; font-size: 11px; color: var(--fg-dim); }
+.sec-navigation { max-height: 330px; overflow: auto; margin-bottom: 20px; }
+.sec-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 10px; margin: 4px 0; border: 1px solid transparent; border-radius: 9px; text-align: left; background: transparent; color: var(--fg); cursor: pointer; }
+.sec-nav-item:hover:not(:disabled) { background: var(--lift-1); }
+.sec-nav-item.selected { background: var(--accent-soft); border-color: var(--glass-border-strong); }
+.sec-nav-item:disabled { opacity: .55; cursor: default; }
+.sec-nav-item > span:last-child { min-width: 0; }
+.sec-nav-item strong { display: block; font-size: 12.5px; font-weight: 500; overflow-wrap: anywhere; }
+.sec-nav-item small { display: block; margin-top: 6px; font-size: 10.5px; color: var(--fg-dim); }
+.sec-nav-icon { display: grid; place-items: center; flex-shrink: 0; width: 33px; height: 35px; border-radius: 8px; background: var(--lift-2); font: 10px ui-monospace, monospace; color: var(--fg-dim); }
+.sec-nav-hint { margin: 15px 4px 0; font-size: 10.5px; line-height: 1.8; color: var(--fg-dim); }
+.sec-detail { min-width: 0; padding: 26px; }
+.sec-detail .sec-row { position: relative; display: block; border: none; background: transparent; padding: 0; }
+.sec-detail .sec-row-name { padding-right: 125px; overflow-wrap: anywhere; margin-bottom: 26px; }
+.sec-detail .sec-row-acts { position: absolute; top: 0; right: 0; }
+.sec-detail-label { display: block; font-size: 11px; font-weight: 400; color: var(--fg-dim); margin: 10px 0; }
+.sec-detail .sec-vars { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.sec-detail .sec-var { padding: 14px; font-size: 12px; border: 1px solid var(--glass-border); border-radius: 9px; white-space: normal; overflow-wrap: anywhere; }
+.sec-detail .sec-row-note { font-size: 12px; margin-top: 22px; overflow-wrap: anywhere; }
+.sec-usage-hint { margin-top: 22px; padding: 14px; border: 1px solid var(--glass-border); border-radius: 9px; background: var(--wash-1); color: var(--fg-dim); font-size: 11.5px; line-height: 1.8; }
+.sec-form-title { font-size: 23px; font-weight: 550; margin: 0 0 22px; }
+.sec-detail .sec-form { margin: 0; padding: 0; border: 0; background: transparent; }
+.sec-detail .sec-input { padding: 10px 12px; min-width: 0; }
+.sec-pop > .sec-auto-sum, .sec-pop > .sec-warn, .sec-pop > .sec-err { margin: 12px 26px; }
+.sec-pop button:focus-visible, .sec-pop input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 700px) {
+  .sec-workspace { grid-template-columns: 195px minmax(0, 1fr); }
+  .sec-detail { padding: 18px; }
+  .sec-detail .sec-row-name { padding-right: 0; }
+  .sec-detail .sec-row-acts { position: static; margin: 16px 0; }
+  .sec-detail .sec-var-row { grid-template-columns: minmax(0, 1fr); }
+}

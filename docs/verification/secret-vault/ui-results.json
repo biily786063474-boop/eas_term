@@ -1,0 +1,10 @@
+{
+  "passed": [
+    "Search selects matching metadata without reveal",
+    "UI edit preserves note, autoInject and old encrypted value through from rename",
+    "Reveal remains masked",
+    "UI save matches backend fields and actual autoInject success message",
+    "Lock clears detail; real unlock restores metadata",
+    "Duplicate variable backend error displayed; no extra item saved"
+  ]
+}

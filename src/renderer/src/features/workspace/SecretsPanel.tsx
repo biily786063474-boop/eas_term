@@ -18,6 +18,7 @@ import type { SecretMeta, SecretsStatus } from '../../../../shared/types'
 import { useStore } from '../../store'
 import { PencilIcon, TrashIcon, CopyIcon, PlusIcon, CloseIcon } from '../../ui/Icons'
 import './workspace.css'
+import { secretNavigation } from './secretNavigation'
 
 /** 表单里的一行。from = 这行原来叫什么（编辑态才有），
  *  留着是为了「改名但不改值」时后端能找到旧密文 */
@@ -114,6 +115,8 @@ function parseEnv(text: string): DraftVar[] {
 
 export function SecretsPanel(): JSX.Element | null {
   const [open, setOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
   const [st, setSt] = useState<SecretsStatus | null>(null)
   const [items, setItems] = useState<SecretMeta[]>([])
   const [code, setCode] = useState('')
@@ -140,6 +143,7 @@ export function SecretsPanel(): JSX.Element | null {
   /** 刚存完一条，给一句「接下来会怎样」—— 不说的话用户会回到旧终端里发现用不了 */
   const [justSaved, setJustSaved] = useState<{
     name: string
+    autoInject: boolean
     vars: string[]
     conflicts: { varName: string; file: string }[]
   } | null>(null)
@@ -223,6 +227,8 @@ export function SecretsPanel(): JSX.Element | null {
 
   if (!st) return null
 
+  const { filtered, selected } = secretNavigation(items, query, selectedId)
+
   const autoCount = items.filter((x) => x.autoInject).length
   // 会进每个新终端的**变量个数**（不是条数）—— 用户关心的是环境里多了几个东西
   const autoVars = items.filter((x) => x.autoInject).reduce((n, x) => n + x.vars.length, 0)
@@ -277,7 +283,7 @@ export function SecretsPanel(): JSX.Element | null {
     setSt(r.status)
     setItems(await window.api.secrets.list())
     const conflicts = await window.api.secrets.rcConflicts([...importing.picked])
-    setJustSaved({ name: importing.name, vars: [...importing.picked], conflicts })
+    setJustSaved({ name: importing.name, autoInject: true, vars: [...importing.picked], conflicts })
     setImporting(null)
   }
 
@@ -342,14 +348,17 @@ export function SecretsPanel(): JSX.Element | null {
       return
     }
     setSt(r.status)
-    setItems(await window.api.secrets.list())
+    const updated = await window.api.secrets.list()
+    setItems(updated)
+    setSelectedId(draft.id ?? updated.find(it => it.vars.some(v => v.varName === draft.vars[0]?.varName.trim()))?.id ?? null)
+    setQuery('')
     // 存完给一句「接下来会怎样」。不说的话最常见的下一步是：用户回到已经开着的终端里
     // 让 AI 用这个 key，AI 读到空值，双方都以为密钥柜没生效。
     const names = draft.vars.map((v) => v.varName)
     // shell 配置里如果也设了同名变量，它会**覆盖**我们注入的值（rc 在 PTY 起来之后才执行）。
     // 不当场说，用户就会遇到「明明存了新 key，终端里还是旧的」而完全查不到原因。
     const conflicts = await window.api.secrets.rcConflicts(names)
-    setJustSaved(draft.id ? null : { name: draft.name, vars: names, conflicts })
+    setJustSaved(draft.id ? null : { name: draft.name, autoInject: draft.autoInject, vars: names, conflicts })
     setDraft(null)
     setPaste(null)
   }
@@ -446,7 +455,7 @@ export function SecretsPanel(): JSX.Element | null {
         createPortal(
           // portal 到 body：标题栏是 overflow:hidden 会裁掉它，
           // 画布里的 webview 也会盖住标题栏内的绝对定位元素
-          <div className="sec-pop" ref={popRef}>
+          <div className="sec-pop" ref={popRef} role="dialog" aria-label="密钥柜">
             {/* 变量名补全候选。放在弹层里而不是表单里：表单会反复挂载卸载，
                 datalist 每次重建没必要，而且 id 要全局唯一 */}
             <datalist id="eas-known-vars">
@@ -455,7 +464,7 @@ export function SecretsPanel(): JSX.Element | null {
               ))}
             </datalist>
             <div className="sec-head">
-              <span>密钥柜</span>
+              <span>密钥柜 <small className="sec-state">{!st.configured ? '未启用' : st.locked ? '已锁定' : '已解锁'}</small></span>
               <div className="sec-head-acts">
                 {st.configured && !st.locked && (
                   <button className="sec-mini" onClick={() => void lockNow()}>
@@ -597,17 +606,32 @@ export function SecretsPanel(): JSX.Element | null {
               </div>
               )
             ) : (
-              <>
+              <div className="sec-workspace">
+                <aside className="sec-sidebar">
+                  <input className="sec-input sec-search" aria-label="搜索密钥" placeholder="搜索名称、变量或备注" value={query} onChange={e => { setQuery(e.target.value); setRevealed(null) }} />
+                  <div className="sec-nav-label">密钥分组 <span>{filtered.length} / {items.length}</span></div>
+                  <nav className="sec-navigation" aria-label="密钥分组">
+                    {filtered.map(it => <button key={it.id} className={'sec-nav-item' + (selected?.id === it.id ? ' selected' : '')} aria-current={selected?.id === it.id ? 'true' : undefined} disabled={editingSecret} onClick={() => { setSelectedId(it.id); setRevealed(null) }}>
+                      <span className="sec-nav-icon">{it.vars.some(v => v.file) ? 'FILE' : 'KEY'}</span>
+                      <span><strong>{it.name}</strong><small>{it.vars.length} 个变量 · {it.vars.some(v => !v.readable) ? '需重新录入' : it.autoInject ? '自动注入' : '手动授权'}</small></span>
+                    </button>)}
+                    {!filtered.length && <div className="sec-empty">{items.length ? '没有匹配的密钥' : '还没有密钥分组'}</div>}
+                  </nav>
+                  <button className="sec-primary" disabled={editingSecret} onClick={() => { setJustSaved(null); setRevealed(null); setDraft(emptyDraft()) }}>＋ 新增密钥</button>
+                  <p className="sec-nav-hint">一组密钥可以包含多个变量。<br />搜索只使用名称、变量名和备注。</p>
+                </aside>
+                <section className="sec-detail" aria-label="密钥详情">
                 <div className="sec-list">
                   {items.length === 0 && !draft && (
                     <div className="sec-empty">还没有密钥。加一条，之后开终端时就能勾选注入。</div>
                   )}
-                  {items.map((it) => {
+                  {(!editingSecret && selected ? [selected] : []).map((it) => {
                     const broken = it.vars.some((v) => !v.readable)
                     return (
                       <div key={it.id} className={`sec-row${broken ? ' broken' : ''}`}>
                         <div className="sec-row-main">
                           <div className="sec-row-name">{it.name}</div>
+                          <div className="sec-detail-label">环境变量 · {it.vars.length} 项</div>
                           <div className="sec-vars">
                             {it.vars.map((v) => (
                               <code
@@ -644,7 +668,8 @@ export function SecretsPanel(): JSX.Element | null {
                             <span className="sec-auto-dot" />
                             {it.autoInject ? '自动注入' : '不注入'}
                           </button>
-                          {it.note && <div className="sec-row-note">{it.note}</div>}
+                          {it.note && <div className="sec-row-note"><span className="sec-detail-label">备注 · AI 可读取</span>{it.note}</div>}
+                          <div className="sec-usage-hint">{it.autoInject ? '新开的终端会自动带上这一组，已有终端不会自动更新。' : '未开启自动注入，使用时需手动选择或授权。'}</div>
                           {broken && (
                             <div className="sec-row-note bad">这台机器上解不开，需要重新录入</div>
                           )}
@@ -720,9 +745,12 @@ export function SecretsPanel(): JSX.Element | null {
 
                 {draft ? (
                   <div className="sec-form">
+                    <h2 className="sec-form-title">{draft.id ? '编辑密钥' : '新增密钥'}</h2>
+                    <div className="sec-detail-label">名称</div>
                     <input
                       className="sec-input"
                       placeholder="名字（阿里云 主账号）"
+                      aria-label="密钥名称"
                       value={draft.name}
                       autoFocus
                       onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -767,6 +795,7 @@ export function SecretsPanel(): JSX.Element | null {
                                 // 名字打错是这个功能最隐蔽的失败方式，给补全比让他自己记靠谱
                                 list="eas-known-vars"
                                 placeholder="变量名（输入几个字母有提示）"
+                                aria-label="环境变量名"
                                 value={v.varName}
                                 onChange={(e) => patchVar(i, { varName: e.target.value })}
                               />
@@ -775,6 +804,7 @@ export function SecretsPanel(): JSX.Element | null {
                                 type="password"
                                 autoComplete="off"
                                 placeholder={v.from ? '值（留空 = 不改）' : '值'}
+                                aria-label="密钥值"
                                 value={v.value}
                                 onChange={(e) => patchVar(i, { value: e.target.value })}
                               />
@@ -847,6 +877,7 @@ export function SecretsPanel(): JSX.Element | null {
                     <input
                       className="sec-input"
                       placeholder="备注：什么场景用这条（AI 会读，别写值）"
+                      aria-label="备注（AI 可读取）"
                       value={draft.note}
                       onChange={(e) => setDraft({ ...draft, note: e.target.value })}
                     />
@@ -963,7 +994,7 @@ export function SecretsPanel(): JSX.Element | null {
                       <div className={`sec-saved${justSaved.conflicts.length ? ' warn' : ''}`}>
                         <b>「{justSaved.name}」已存好</b>
                         <span>
-                          之后<b>新开的终端</b>会自动带上它。
+                          {justSaved.autoInject ? <>之后<b>新开的终端</b>会自动带上它。</> : <>未开启自动注入，使用时需手动选择或授权。</>}
                           <br />
                           现在已经开着的终端读不到 —— 进程的环境变量在启动那一刻就定死了。
                           在那些终端里让 AI 用的话，它会自己走 <code>eas-secret</code> 现取。
@@ -1025,7 +1056,8 @@ export function SecretsPanel(): JSX.Element | null {
                     </div>
                   </>
                 )}
-              </>
+                </section>
+              </div>
             )}
 
             {err && (
