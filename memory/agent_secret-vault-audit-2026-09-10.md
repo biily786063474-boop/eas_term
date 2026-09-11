@@ -53,3 +53,6 @@
 
 ## 2026-09-10 23:30 真正共用画布外壳
 用户要求交互也相同并开始改。已撤销角标内缩补丁，PaneView画布非看板terminal/agent接cfile-node/cfile-head/cfile-body；直接命中canvas.css的整节点hover角标抬起、950ms边光，不另写动效。pane.cfile-node只开放外壳，body继续裁剪。测试更新先失败后2项通过，build通过，diff检查通过。CUA Cmd+R刷新正确测试实例，截图确认AI/终端角标外悬且不截断；点击AI内容空白，截图确认角标向左上抬起及边光。尚未完整验证拖动/缩放/暗色/减弱动效以及右侧按钮显隐；不能笼统声称所有交互全完成。未提交发版。
+
+## 发布请求
+用户要求提交发版。53700d0已commit并push origin fix/background-render-budget。未发布：全量check2873/2859通过/13跳过/1失败，真实POSIX Ctrl-C报native CLI not ready；定向重查日志/tmp/eas-release-pty-recheck.log。官网版本仍0.4.92，未改version/tag/latest或上传包。服务器只读df确认可用12GB，之前1.9GB记录过时。下一步排查测试并完成节点交互回归，再继续0.4.93准备，注意不要覆盖main其它工作。
