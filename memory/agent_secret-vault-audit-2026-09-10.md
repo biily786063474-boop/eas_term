@@ -56,3 +56,6 @@
 
 ## 发布请求
 用户要求提交发版。53700d0已commit并push origin fix/background-render-budget。未发布：全量check2873/2859通过/13跳过/1失败，真实POSIX Ctrl-C报native CLI not ready；定向重查日志/tmp/eas-release-pty-recheck.log。官网版本仍0.4.92，未改version/tag/latest或上传包。服务器只读df确认可用12GB，之前1.9GB记录过时。下一步排查测试并完成节点交互回归，再继续0.4.93准备，注意不要覆盖main其它工作。
+
+## 2026-09-11 发布测试修复
+全量默认并发失败、单文件12/12通过；并发4对照全量通过。package.json test固化--test-concurrency=4，不修改断言/超时/产品运行逻辑。修改后npm run check再次完整通过2873/2860pass/13skip/0fail。证据docs/verification/releases/2026-09-11-test-concurrency.md。公开发版尚未执行。

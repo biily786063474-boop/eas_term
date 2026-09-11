@@ -51,3 +51,6 @@
 
 ### 2026-09-10 发布前检查
 提交53700d0已推送fix/background-render-budget，未合并main/未打tag。npm run check：2873项，2859pass、13skip、1fail；capabilityPtyLauncher.test.mjs 的真实POSIX Ctrl-C测试报 RuntimeError: native CLI not ready。暂缓公开发布，不跳过失败项。原始日志 /tmp/eas-release-check.log。
+
+### 2026-09-11 修复发布测试资源竞争
+固定测试文件并发4；对照全量与修改后完整check均2860通过/13跳过/0失败。未放宽Ctrl-C断言或超时，不影响产品会话并行；未发安装包。
