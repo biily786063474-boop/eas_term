@@ -194,7 +194,7 @@ export function invokeRenderer(tool: string, args: unknown, ctx: Ctx): Promise<I
   // 不管等的是人还是别的进程 —— 按「等人」命名会让下一个加长等待工具的人以为不适用。
   // merge_preflight / repo_impact 不等人也不等进程，是**慢**：merge-tree 给了 30s、
   // analyzeProject 大仓库要几秒到几十秒，都超过普通的 15s 闸。名单与 mcp/eas-mcp.mjs 同改。
-  const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
+  const LONG_WAITS = new Set(['secret_check', 'request_secret', 'report_secret_invalid', 'wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
   const ms = LONG_WAITS.has(tool) ? 10 * 60 * 1000 : 15000
   return new Promise((resolve) => {
     const timer = setTimeout(() => {

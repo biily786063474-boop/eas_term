@@ -1,3 +1,4 @@
+import { openArtifact } from './features/canvas/openArtifact'
 import {parseFavoriteRoute} from '../../shared/browserFavorites'
 // MCP 工具执行器（渲染层）：主进程把 AI 的调用转过来，这里落到 store action 再回结果。
 //
@@ -684,6 +685,12 @@ const SHELL_TRAP =
   // 返回值只有真的走到密钥场景才付。所以那边只留一句触发条件，
   // 「怎么做、红线是什么、下一步」这些字全部放在这儿按需给。
   if (tool === 'secret_check') {
+    const initial = await window.api.secrets.status()
+    if (!initial.configured || initial.locked) {
+      const unlocked = await askForSecret({ name: '解锁密钥柜', vars: [], purpose: '继续检查本次任务所需的密钥；解锁不会授权额外的密钥组。', mode: 'unlock' }, ctx.agentSessionId ?? ctx.ptyId)
+      if (!unlocked.saved) return { ready: false, locked: true, next: unlocked.reason ?? '用户取消解锁，请停止索要密钥。' }
+    }
+
     const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
 
     // ── 不带参数 = 列出柜里有什么 ────────────────────────────────────────
@@ -710,11 +717,12 @@ const SHELL_TRAP =
           locked: true,
           entries: [],
           next:
-            '密钥柜锁着，现在看不到里面存了什么。让用户点标题栏的钥匙图标解锁。\n' +
+            '密钥柜锁着，现在看不到里面存了什么。请再调用 secret_check 唤起解锁弹窗。\n' +
             '**不要因为这里是空的就断定柜里没有**，更不要去 request_secret 弹窗要 —— ' +
             '他很可能早就存好了。'
         }
       }
+      const credential = await window.api.secrets.has([], ctx.agentSessionId ?? ctx.ptyId)
       const list = await window.api.secrets.list()
       const entries = list.map((it) => ({
         name: it.name,
@@ -728,14 +736,15 @@ const SHELL_TRAP =
       return {
         locked: false,
         entries,
-        next: entries.length
+        hasCredential: credential.hasCredential,
+        next: !credential.hasCredential ? '这个节点没有取密钥的凭证，请重新打开节点。' : entries.length
           ? '按备注挑出对得上你这次场景的那条，再 secret_check({vars:[...]}) 确认这个终端能不能直接用。' +
             '**柜里确实没有对得上的，才用 request_secret。**'
           : '柜子是空的。需要凭证就用 request_secret 弹 GUI 让用户填，别让他把密钥贴进对话。'
       }
     }
 
-    const r = await window.api.secrets.has(vars, ctx.ptyId)
+    const r = await window.api.secrets.has(vars, ctx.agentSessionId ?? ctx.ptyId)
     const ready = r.vars.filter((v) => v.inThisTerminal).map((v) => v.varName)
     const inVaultOnly = r.vars.filter((v) => v.inVault && !v.inThisTerminal)
     const missing = r.vars.filter((v) => !v.inVault).map((v) => v.varName)
@@ -743,7 +752,9 @@ const SHELL_TRAP =
 
     // 指引按情况给，能不给就不给 —— 全都齐了的时候只回一个字段
     let next: string
-    if (missing.length) {
+    if (!r.hasCredential) {
+      next = '这个节点没有取密钥的凭证，请重新打开节点后重试。'
+    } else if (missing.length) {
       next =
         `密钥柜里没有 ${missing.join('、')}。\n` +
         // 存量用户绝大多数把 key export 在 .zshrc 里，那种情况密钥柜是空的但终端里其实有。
@@ -762,7 +773,7 @@ const SHELL_TRAP =
         `不用开新终端，用包装命令直接跑：\n` +
         `  eas-secret run --vars ${inVaultOnly.map((v) => v.varName).join(',')} -- <你原本要跑的命令>\n` +
         SHELL_TRAP +
-        (r.locked ? '\n另外密钥柜现在锁着，让用户点标题栏的钥匙图标解锁后再跑。' : '')
+        (r.locked ? '\n另外密钥柜现在锁着，请再调用 secret_check 唤起解锁弹窗后再跑。' : '')
     } else {
       next = '都能直接用，照常跑。'
     }
@@ -773,6 +784,7 @@ const SHELL_TRAP =
       ready: r.vars.length > 0 && r.vars.every((v) => v.inThisTerminal),
       inVault: !missing.length && !broken.length,
       inThisTerminal: ready,
+      hasCredential: r.hasCredential,
       needsWrapper: inVaultOnly.map((v) => v.varName),
       missing,
       next
@@ -780,6 +792,8 @@ const SHELL_TRAP =
   }
 
   if (tool === 'report_secret_invalid') {
+    const credential = await window.api.secrets.has([], ctx.agentSessionId ?? ctx.ptyId)
+    if (!credential.hasCredential) throw new Error('这个节点没有取密钥凭证，请重新打开节点')
     const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
     const detail = String(args.detail ?? '').trim()
     if (!vars.length) throw new Error('vars 必填：哪些变量看起来不对')
@@ -791,10 +805,10 @@ const SHELL_TRAP =
         purpose: detail,
         mode: 'fix'
       },
-      ctx.ptyId
+      ctx.agentSessionId ?? ctx.ptyId
     )
     if (!r.saved) return { updated: false, reason: r.reason ?? '用户没有修改' }
-    if (r.group) await window.api.secrets.grantToPty(ctx.ptyId, r.group)
+    for (const group of r.groups ?? (r.group ? [r.group] : [])) await window.api.secrets.grantToPty(ctx.agentSessionId ?? ctx.ptyId, group, credential.credentialEpoch)
     return {
       updated: true,
       vars: r.vars,
@@ -1254,6 +1268,8 @@ const SHELL_TRAP =
   }
 
   if (tool === 'request_secret') {
+    const credential = await window.api.secrets.has([], ctx.agentSessionId ?? ctx.ptyId)
+    if (!credential.hasCredential) throw new Error('这个节点没有取密钥凭证，请重新打开节点')
     const name = String(args.name ?? '').trim()
     const purpose = String(args.purpose ?? '').trim()
     const rawVars = Array.isArray(args.vars) ? args.vars : []
@@ -1268,11 +1284,11 @@ const SHELL_TRAP =
     const docsUrl = /^https?:\/\//i.test(String(args.docs_url ?? '')) ? String(args.docs_url) : undefined
 
     // askForSecret 抛异常 = 压根没弹（限流/已有一个在等），要让 AI 明确知道而不是干等
-    const r = await askForSecret({ name, vars, purpose, docsUrl }, ctx.ptyId)
+    const r = await askForSecret({ name, vars, purpose, docsUrl }, ctx.agentSessionId ?? ctx.ptyId)
     if (!r.saved) return { saved: false, reason: r.reason ?? '用户没有提供' }
     // 用户当场把这组给了这个终端 → 授权它用 eas-secret 取。
     // 少了这一步最荒唐：刚填的密钥反而是唯一取不到的（新组不在任何终端的默认授权里）
-    await window.api.secrets.grantToPty(ctx.ptyId, name)
+    for (const group of r.groups ?? [name]) await window.api.secrets.grantToPty(ctx.agentSessionId ?? ctx.ptyId, group, credential.credentialEpoch)
     return {
       saved: true,
       vars: r.vars,
@@ -1502,14 +1518,14 @@ const SHELL_TRAP =
     if (!frame) throw new Error('目标 Frame 已关闭')
     const before = new Set(frame.nodes.map(node => node.id))
     if (current.viewMode !== 'canvas') current.setViewMode('canvas')
-    current.addFileNode(frame.id, { kind: 'image', filePath: image.path }, 0, 0)
+    const opened = openArtifact(frame.id, { kind: 'image', filePath: image.path })
     const after = useStore.getState().canvas.frames.find(f => f.id === frame.id)
-    const node = after?.nodes.find(candidate => !before.has(candidate.id))
+    const node = after?.nodes.find(candidate => candidate.id === opened.nodeId)
     if (!node || !after) throw new Error('图片未能添加到目标 Frame')
     const stat = contentStat(after.nodes)
     const remaining = new Set(after.nodes.map(n => n.id))
     const evicted = [...before].filter(id => !remaining.has(id))
-    return { opened: image.path, as: 'image', frameId: frame.id, nodeId: node.id, content_slots: `${stat.used}/${stat.cap}`, evicted_node_ids: evicted }
+    return { opened: image.path, as: 'image', frameId: frame.id, nodeId: node.id, reused: opened.reused, content_slots: `${stat.used}/${stat.cap}`, evicted_node_ids: evicted }
   }
 
   if (tool === 'canvas_open_url') {
@@ -1529,11 +1545,12 @@ const SHELL_TRAP =
     const probe = await window.api.fs.probePaths([abs], loc.projectPath || ctx.project || '/')
     if (!probe[0]) throw new Error(`文件不存在：${abs}`)
     if (probe[0].isDir) throw new Error(`这是目录不是文件：${abs}`)
-    if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+    const currentLoc = resolveFrame(ctx)
+    if (!currentLoc || currentLoc.frameId !== loc.frameId) throw new Error('文件验证期间会话 Frame 已变化')
     const before = idsOfFrame(loc.frameId)
     if (tool === 'canvas_open_html' || isWebFile(abs)) {
-      s.addWebNode(loc.frameId, fileUrlOf(abs))
-      return { opened: abs, as: 'browser', frameId: loc.frameId, ...capReport(loc.frameId, before) }
+      const result = openArtifact(loc.frameId, { kind: 'web', url: fileUrlOf(abs) })
+      return { opened: abs, as: 'browser', frameId: loc.frameId, ...result, ...capReport(loc.frameId, before) }
     }
     // 其它文件：按扩展名给出预览节点（图片/视频走 image，其余走 code）
     const ext = abs.split('.').pop()?.toLowerCase() ?? ''
@@ -1541,8 +1558,8 @@ const SHELL_TRAP =
     const pane = media.includes(ext)
       ? ({ kind: 'image', filePath: abs } as const)
       : ({ kind: 'code', filePath: abs } as const)
-    s.addFileNode(loc.frameId, pane, 0, 0)
-    return { opened: abs, as: pane.kind, frameId: loc.frameId, ...capReport(loc.frameId, before) }
+    const result = openArtifact(loc.frameId, pane)
+    return { opened: abs, as: pane.kind, frameId: loc.frameId, ...result, ...capReport(loc.frameId, before) }
   }
 
   throw new Error(`未知工具：${tool}`)

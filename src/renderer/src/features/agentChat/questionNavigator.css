@@ -14,3 +14,6 @@
 .ac-question-preview > span { -webkit-line-clamp: 3; line-height: 1.6; margin-top: 7px; font-size: 12px; color: var(--t-2); }
 @keyframes ac-question-enter { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .ac-question-preview { animation: none; } .ac-question-ticks > button > span { transition: none; } }
+
+/* Fade only when older questions are above the visible rail. */
+.ac-question-ticks.has-history { mask-image: linear-gradient(to bottom, transparent, #000 24px); }

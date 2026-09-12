@@ -1,0 +1,69 @@
+.dsp-root{min-height:0;flex:1;display:grid;grid-template-columns:minmax(220px,1fr) 250px;position:relative;overflow:auto;container-type:inline-size}.dsp-catalog{padding:12px;min-width:0;overflow:auto}.dsp-catalog h2{font-size:17px;letter-spacing:-.5px;margin:0 0 5px}.dsp-root p,.dsp-dialog p{color:var(--fg-dim);font-size:12px;line-height:1.7}.dsp-root small,.dsp-dialog small{color:var(--fg-dim);font-size:10px}.dsp-filters{display:flex;gap:5px;margin:16px 0}.dsp-filters button,.dsp-scope button{border:1px solid transparent;border-radius:var(--radius-sm);padding:5px 9px;color:var(--fg-dim);background:none;font:inherit;font-size:11px;cursor:pointer}.dsp-filters button.active,.dsp-scope button.active{background:var(--lift-2);border-color:var(--glass-border);color:var(--fg)}.dsp-filters small{margin-left:auto;align-self:center}.dsp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}.dsp-card{border:1px solid var(--glass-border);border-radius:var(--radius-md);overflow:hidden;background:var(--lift-1);color:var(--fg);padding:0;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s}.dsp-card:hover{box-shadow:0 5px 15px #00000014}.dsp-card.active{outline:2px solid var(--fg-dim);outline-offset:2px}.dsp-card:focus-visible,.dsp-root button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}.dsp-card-info{padding:11px}.dsp-card-info b{font-size:12px;display:block}.dsp-card-info small{display:block;margin-top:4px}.dsp-sample{height:90px;padding:13px;display:flex;gap:12px;overflow:hidden}.dsp-rail{width:25px;background:#80808015;padding:5px;border-radius:4px}.dsp-rail i,.dsp-mock>i{display:block;height:4px;background:currentColor;opacity:.15;border-radius:3px;margin:7px 0}.dsp-mock{flex:1;min-width:0}.dsp-mock small{color:inherit;font-size:8px;opacity:.5}.dsp-mock b{display:block;font-size:11px;margin-top:8px}.dsp-mock>i:last-of-type{width:55%}.dsp-mock span{display:block;font-size:9px;opacity:.5;border:1px solid #8884;border-radius:6px;padding:5px;margin-top:10px}.dsp-detail{padding:12px;border-left:1px solid var(--glass-border);background:var(--lift-1);overflow:auto;min-width:0}.dsp-detail h3{font-size:18px;margin:5px 0}.dsp-detail>.dsp-sample{border-radius:var(--radius-md);margin:14px 0;border:1px solid var(--glass-border)}.dsp-detail summary{cursor:pointer;font-size:11px;margin:14px 0 8px}.dsp-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg-dim)}.dsp-swatches{display:grid;grid-template-columns:1fr 1fr;gap:6px}.dsp-swatches span{font-size:9px;overflow-wrap:anywhere;display:flex;align-items:center;gap:5px}.dsp-swatches i{display:block;flex:none;width:18px;height:18px;border-radius:5px;border:1px solid #8884}.dsp-use{margin-top:20px}.dsp-use>b{font-size:12px}.dsp-scope{display:flex;border:1px solid var(--glass-border);border-radius:var(--radius-md);padding:3px;margin-top:8px}.dsp-scope button{flex:1;padding:5px 2px}.dsp-primary{border:0;border-radius:var(--radius-md);padding:10px 14px;background:var(--fg);color:var(--bg);cursor:pointer;font:inherit;font-size:12px}.dsp-primary:disabled{opacity:.4;cursor:default}.dsp-use>.dsp-primary{width:100%}.dsp-use>small{display:block;margin-top:8px;line-height:1.7}.dsp-footnote,.dsp-empty{padding-top:12px}.dsp-notice{position:absolute;bottom:12px;left:12px;right:12px;background:var(--fg);color:var(--bg);padding:10px;border-radius:var(--radius-md);font-size:12px;pointer-events:none}.dsp-dialog{width:min(560px,90vw);max-height:85vh;overflow:auto;padding:24px;color:var(--fg);background:var(--bg);border:1px solid var(--glass-border);border-radius:var(--radius-lg);box-shadow:0 25px 80px #0005}.dsp-dialog::backdrop{background:#16181c66;backdrop-filter:blur(4px)}.dsp-dialog h2{font-size:17px;margin:0 0 10px}.dsp-target{padding:10px;border:1px solid var(--glass-border);border-radius:var(--radius-md)}.dsp-dialog textarea{width:100%;min-height:210px;resize:vertical;box-sizing:border-box;padding:13px;background:var(--lift-1);color:var(--fg);border:1px solid var(--glass-border);border-radius:var(--radius-md);font:12px/1.8 inherit}.dsp-dialog-actions{display:flex;justify-content:space-between;margin:16px 0;align-items:center}.dsp-dialog-actions>button:not(.dsp-primary){background:none;color:var(--fg);border:0;cursor:pointer}.dsp-dialog small{display:block}.dict-view:has(.dsp-root) .dict-head{flex-wrap:wrap}.dict-view:has(.dsp-root) .dict-count{display:none}@container (max-width:560px){.dsp-catalog{overflow:visible}.dsp-detail{border-left:0;border-top:1px solid var(--glass-border);overflow:visible}}@media(max-width:600px){.dsp-root{display:flex;flex-direction:column}.dsp-catalog,.dsp-detail{overflow:visible}}
+/* 面板按容器而不是整扇窗口响应；分屏与浮动辞典共用。 */
+.dict-view:has(.dsp-root){container-type:inline-size}
+.dsp-root{container-type:normal}
+.dsp-detail pre,.dsp-dialog textarea{font-family:inherit;font-size:11px;line-height:1.8}
+@container(max-width:560px){.dsp-root{display:flex;flex-direction:column}.dsp-catalog,.dsp-detail{overflow:visible}.dsp-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dsp-sample{height:90px}.dsp-rail{display:none}}
+
+/* Native dialog is in the top layer, but the global reset removes UA centering. */
+.dsp-dialog{position:fixed;inset:0;margin:auto}
+@container(max-width:560px){.dsp-root{overflow:hidden}.dsp-catalog,.dsp-detail{flex:1;min-height:0;overflow:auto}}
+
+/* Details scroll independently; the action area is never part of that scroll. */
+.dsp-detail{display:flex;flex-direction:column;overflow:hidden;padding:0;min-height:0}
+.dsp-detail-scroll{flex:1;min-height:0;overflow:auto;padding:12px}
+.dsp-detail-scroll>.dsp-sample{margin:10px 0;border-radius:var(--radius-md)}
+.dsp-use{flex:none;margin:0;padding:10px 12px;border-top:1px solid var(--glass-border);background:var(--bg)}
+.dsp-use>p,.dsp-use>small:last-child{display:none}
+.dsp-use>.dsp-primary{margin-top:8px;padding:8px}
+.dsp-use>b{display:block}.dsp-origin{float:right;background:none;color:var(--fg);border:0;font-size:11px;cursor:pointer;padding:0 0 5px 8px}
+.dsp-use>small:first-child{margin:0 0 5px}
+.dsp-dialog{display:flex;flex-direction:column;overflow:hidden;max-height:calc(100dvh - 40px);box-sizing:border-box}
+.dsp-dialog:not([open]){display:none}
+.dsp-dialog textarea{flex:1;min-height:60px;resize:none;overflow:auto}
+.dsp-dialog-actions{flex:none}
+@container(max-width:560px){.dsp-detail{overflow:hidden;flex:1.5}.dsp-detail-scroll{overflow:auto}.dsp-use{padding:8px}}
+.dsp-dialog{height:min(480px,calc(100dvh - 40px))}
+
+.dsp-cover{display:block;width:100%;aspect-ratio:3/2;object-fit:cover;object-position:top;background:var(--lift-1)}
+.dsp-detail-scroll>.dsp-cover{border-radius:var(--radius-md);margin:10px 0}
+.dsp-cover-missing{display:flex;align-items:center;justify-content:center;color:var(--fg-dim);font-size:11px}
+
+/* Independent interface taxonomy; does not increase bubble dimensions. */
+.dsp-type-label{color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsp-spec-dialog{position:fixed;inset:0;margin:auto;width:min(960px,calc(100vw - 40px));height:min(720px,calc(100dvh - 40px));padding:0;border:1px solid var(--glass-border);border-radius:12px;background:var(--bg);color:var(--fg)}
+.dsp-spec-dialog[open]{display:flex;flex-direction:column}
+.dsp-spec-dialog::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
+.dsp-spec-dialog header{display:flex;justify-content:space-between;align-items:center;padding:12px;flex:none}
+.dsp-spec-dialog iframe{width:100%;flex:1;min-height:0;border:0;background:white}
+/* The documentation dialog is outside .dsp-root's normal button scope. */
+.dsp-spec-dialog header button{
+  appearance:none;display:inline-flex;align-items:center;justify-content:center;
+  flex:none;min-height:30px;padding:5px 10px;margin:0;
+  border:1px solid var(--glass-border);border-radius:7px;
+  background:var(--bg);color:var(--fg);font:inherit;font-size:12px;line-height:18px;
+  white-space:nowrap;cursor:pointer;transition:background 120ms,border-color 120ms;
+}
+.dsp-spec-dialog header button:hover{background:var(--bg-hover,rgba(128,128,128,.14))}
+.dsp-spec-dialog header button:active{background:var(--bg-active,rgba(128,128,128,.22))}
+.dsp-spec-dialog header button:focus{outline:none}
+.dsp-spec-dialog header button:focus-visible{outline:2px solid var(--accent,#a0a0a0);outline-offset:2px}
+
+.dsp-type-tabs{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:thin;margin-bottom:6px}.dsp-type-tabs button{flex:0 0 auto;white-space:nowrap;word-break:keep-all}
+
+/* Detail cover and explicit action share the same read-only specification entry. */
+.dsp-root .dsp-spec-preview{position:relative;display:block;width:100%;padding:0;border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;cursor:pointer;background:var(--bg);text-align:left}
+.dsp-spec-preview .dsp-cover{display:block;width:100%}
+.dsp-spec-preview-caption{position:absolute;right:8px;bottom:8px;background:rgba(20,20,24,.88);color:#fff;padding:5px 8px;border-radius:6px;font-size:11px;pointer-events:none}
+.dsp-root .dsp-spec-preview:hover,.dsp-root .dsp-spec-preview:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.dsp-spec-hint{position:fixed;z-index:10000;pointer-events:none;background:#242428;color:#fff;border:1px solid rgba(255,255,255,.15);border-radius:7px;padding:7px 10px;font-size:12px;white-space:nowrap;box-shadow:0 4px 16px #0003}
+
+.dsp-preview-block{border:1px solid var(--glass-border);border-radius:10px;overflow:hidden;margin-bottom:12px;background:var(--lift-1)}
+.dsp-root .dsp-preview-block .dsp-spec-preview{border:0;border-radius:0}
+.dsp-preview-actions{display:flex;border-top:1px solid var(--glass-border)}
+.dsp-preview-actions button{flex:1;background:transparent;color:var(--fg);border:0;padding:8px;font:inherit;font-size:12px;cursor:pointer}
+.dsp-preview-actions button+button{border-left:1px solid var(--glass-border)}
+.dsp-preview-actions button:hover{background:var(--lift-2)}
+.dsp-preview-actions button:disabled{opacity:.4;cursor:default}
+
+.dsp-browser-popup{flex:1;min-height:0;display:flex;overflow:hidden;border-radius:0 0 12px 12px}.dsp-browser-popup>div{flex:1;min-width:0;min-height:0}

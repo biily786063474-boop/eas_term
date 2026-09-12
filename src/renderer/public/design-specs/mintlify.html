@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mintlify 设计系统 Design Kit — Warm Neutral Layout</title>
+<style>
+/* ═══════════════════════════════════════════════════════
+   CLAUDE.AI DESIGN KIT  ·  Warm neutral design-md layout
+   Tokens & assets: claude.ai (real)
+   Shell: Claude brand bg-100/200/300 + subtle accent washes
+   ═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ─── Claude real tokens ─── */
+  --aqua-0:#fff; --aqua-10:hsl(150,50%,98%); --aqua-50:hsl(157,45%,92%); --aqua-100:hsl(158,52%,84%);
+  --aqua-200:hsl(157,54%,66%); --aqua-300:hsl(157,52%,49%); --aqua-400:hsl(159,73%,36%); --aqua-500:hsl(162,79%,28%);
+  --aqua-600:hsl(165,88%,20%); --aqua-700:hsl(168,91%,14%); --aqua-800:hsl(169,90%,8%); --aqua-900:hsl(0,0%,4%);
+  --blue-0:#fff; --blue-10:hsl(216,100%,99%); --blue-50:hsl(210,71%,95%); --blue-100:hsl(213,85%,89%);
+  --blue-200:hsl(213,80%,79%); --blue-300:hsl(213,77%,68%); --blue-400:hsl(213,77%,56%); --blue-500:hsl(213,68%,45%);
+  --blue-600:hsl(214,72%,34%); --blue-700:hsl(214,78%,24%); --blue-800:hsl(212,91%,14%); --blue-900:hsl(212,93%,8%);
+  /* @build:surface-start */
+  --bg-100:#fafaf9; --bg-200:#ffffff; --bg-300:#f5f5f4;
+  --text-100:#0c0a09; --text-200:#57534e; --text-300:#78716c; --text-400:#d6d3d1;
+  --border-100:rgba(0,0,0,.04); --border-200:var(--border-gray-default); --border-300:rgba(0,0,0,.1);
+  --k-on-accent:#fff;
+  --accent-main:#16a34a; --accent-hover:#E61E4D;
+  /* @build:surface-end */
+  --font-sans:"PingFang SC","PingFang TC",-apple-system,BlinkMacSystemFont,"Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-serif:"PingFang SC","PingFang TC",-apple-system,BlinkMacSystemFont,"Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-brand:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:ui-monospace, monospace;
+  --fw-regular:400; --fw-medium:430; --fw-semibold:560; --fw-bold:700;
+  --fs-xs:11px; --fs-sm:12px; --fs-base:14px; --fs-md:16px; --fs-lg:20px; --fs-xl:24px; --fs-2xl:32px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+  --radius-sm:4px; --radius-md:6px; --radius-lg:8px; --radius-xl:12px; --radius-2xl:16px; --radius-full:9999px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04); --shadow-md:0 2px 8px rgba(0,0,0,.06); --shadow-lg:0 4px 16px rgba(0,0,0,.08);
+  /* @build:motion-start */
+  --motion-hover:150ms; --motion-enter:280ms;
+  --motion-ease:cubic-bezier(.165,.85,.45,1);
+  --motion-focus:0 0 0 3px rgba(11,11,11,.08);
+  /* @build:motion-end */
+
+  /* ─── Kit shell — Claude warm neutral surfaces ─── */
+  --k-bg:var(--bg-100);
+  --k-bg-grad:var(--bg-200);
+  --k-card:#ffffff;
+  --k-card-2:var(--bg-100);
+  --k-card-3:var(--bg-200);
+  --k-inset:var(--bg-200);
+  --k-line:var(--border-100);
+  --k-line-2:var(--border-200);
+  --k-text:var(--text-100);
+  --k-dim:var(--text-300);
+  --k-faint:var(--text-400);
+  --k-accent:var(--accent-main);
+}
+
+html { background:var(--k-bg); }
+body {
+  font-family:var(--font-sans);
+  background:
+    radial-gradient(1200px 600px at 82% -8%, hsla(24,80%,52%,.07), transparent 58%),
+    radial-gradient(900px 520px at -8% 12%, hsla(162,52%,49%,.05), transparent 54%),
+    radial-gradient(700px 400px at 50% 100%, hsla(213,68%,45%,.03), transparent 50%),
+    var(--k-bg);
+  color:var(--k-text);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+  min-height:100vh;
+}
+
+.kit { max-width:1120px; margin:0 auto; padding:64px 28px 120px; }
+
+/* ─── Eyebrow / labels ─── */
+.eyebrow { font-size:10.5px; font-weight:var(--fw-semibold); letter-spacing:.18em; text-transform:uppercase; color:var(--k-faint); }
+.label-dim { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--k-dim); font-weight:var(--fw-medium); }
+
+/* ─── Header ─── */
+.kit-head { margin-bottom:40px; }
+.brand-row { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+.brand-mark { width:34px; height:34px; display:grid; place-items:center; background:var(--k-accent); border-radius:9px; color:var(--k-on-accent, #1a0e04); }
+.brand-mark svg { width:22px; height:22px; }
+.brand-word svg { height:21px; fill:var(--k-text); display:block; }
+.kit-h1 { font-family:var(--font-sans); font-size:46px; font-weight:var(--fw-bold); letter-spacing:-.03em; line-height:1.02; margin-bottom:14px; }
+.kit-h1 em { font-family:inherit; font-style:normal; font-weight:inherit; color:inherit; }
+.kit-sub { font-size:15px; color:var(--k-dim); max-width:560px; line-height:1.55; }
+.kit-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
+.meta-chip { font-size:11.5px; color:var(--k-dim); padding:5px 11px; border:1px solid var(--k-line); border-radius:999px; background:var(--k-card); }
+.meta-chip b { color:var(--k-text); font-weight:var(--fw-semibold); }
+
+/* ─── Section scaffold ─── */
+.sec { margin-top:18px; }
+.sec-head { display:flex; align-items:baseline; justify-content:space-between; margin:0 4px 16px; }
+.sec-title { font-size:13px; font-weight:var(--fw-semibold); letter-spacing:.02em; color:var(--k-text); }
+.sec-note { font-size:11.5px; color:var(--k-faint); }
+
+/* ─── Bento grid base ─── */
+.bento { display:grid; gap:14px; }
+.card-k {
+  background:linear-gradient(180deg, var(--k-card) 0%, var(--bg-100) 100%);
+  border:1px solid var(--k-line);
+  border-radius:20px;
+  padding:24px;
+  position:relative;
+  box-shadow:var(--shadow-sm);
+}
+.card-k.tight { padding:20px; }
+
+/* ═══ TYPOGRAPHY HERO ═══ */
+.type-hero { grid-template-columns:1.35fr 1fr; }
+@media(max-width:820px){ .type-hero{ grid-template-columns:1fr; } }
+
+.type-left { display:flex; flex-direction:column; min-height:330px; }
+.type-dots { display:grid; grid-template-columns:repeat(2,12px); gap:6px; margin-bottom:26px; }
+.type-dots i { width:12px; height:12px; border-radius:50%; background:var(--k-card-3); }
+.type-left h3 { font-size:24px; font-weight:var(--fw-semibold); letter-spacing:-.02em; margin-bottom:20px; }
+.type-systems { display:flex; gap:48px; margin-bottom:auto; }
+.type-sys .label-dim { display:block; color:var(--k-text); font-size:11px; letter-spacing:.04em; text-transform:none; font-weight:var(--fw-semibold); margin-bottom:6px; }
+.type-sys p { font-size:12.5px; color:var(--k-dim); line-height:1.6; }
+.type-hero,.type-hero .letters,.type-hero .nums,.type-hero .type-sys p,.type-hero .type-specimen,.type-hero .type-specimen .serif,.dd-do .d-serif{font-family:var(--font-brand);}
+.type-specimen .serif{font-style:normal;font-weight:var(--fw-medium);color:var(--k-dim);}
+.type-specimen { font-size:62px; font-weight:var(--fw-semibold); letter-spacing:-.03em; line-height:1; margin-top:40px; }
+.type-specimen .serif { font-family:var(--font-brand); font-style:normal; font-weight:var(--fw-medium); color:var(--k-dim); }
+
+.type-right { display:flex; flex-direction:column; }
+.type-right .label-dim { align-self:flex-end; margin-bottom:18px; }
+.letters { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:24px; font-weight:var(--fw-medium); color:var(--k-text); letter-spacing:-.01em; line-height:1.25; }
+.letters span { color:var(--k-faint); }
+.nums-label { align-self:flex-end; margin:22px 0 14px; }
+.nums { display:flex; flex-wrap:wrap; gap:8px 18px; font-size:22px; font-weight:var(--fw-medium); }
+.nums b { font-weight:var(--fw-semibold); }
+
+/* ═══ COLORS ═══ */
+.color-bento { grid-template-columns:1fr 1fr; }
+@media(max-width:680px){ .color-bento{ grid-template-columns:1fr; } }
+.color-card { padding:0; overflow:hidden; border-radius:18px; }
+.color-face { height:118px; padding:18px 20px; display:flex; flex-direction:column; justify-content:space-between; }
+.color-face .cf-top { display:flex; justify-content:space-between; align-items:flex-start; }
+.color-face .cf-name { font-size:13.5px; font-weight:var(--fw-semibold); }
+.color-face .cf-hex { font-size:11.5px; font-family:var(--font-mono); opacity:.85; }
+.color-scale { display:flex; height:46px; }
+.color-scale i { flex:1; }
+.color-card .cf-meta { padding:11px 20px 16px; background:var(--k-card); }
+.color-card .cf-meta .label-dim { font-size:10px; }
+
+/* semantic token chips */
+.sem-grid { grid-template-columns:repeat(4,1fr); }
+@media(max-width:680px){ .sem-grid{ grid-template-columns:repeat(2,1fr);} }
+.sem { display:flex; align-items:center; gap:11px; padding:13px 14px; background:var(--k-card); border:1px solid var(--k-line); border-radius:13px; }
+.sem .dot { width:26px; height:26px; border-radius:7px; border:1px solid var(--k-line-2); flex-shrink:0; }
+.sem .sn { font-size:12px; font-weight:var(--fw-medium); color:var(--k-text); }
+.sem .sv { font-size:10.5px; font-family:var(--font-mono); color:var(--k-faint); }
+
+/* background style swatches */
+.bg-style-grid { grid-template-columns:repeat(4,1fr); }
+@media(max-width:900px){ .bg-style-grid{ grid-template-columns:repeat(2,1fr);} }
+@media(max-width:520px){ .bg-style-grid{ grid-template-columns:1fr;} }
+.bg-swatch {
+  border-radius:16px; border:1px solid var(--k-line);
+  padding:26px 18px 20px; min-height:118px;
+  display:flex; flex-direction:column; justify-content:flex-end; gap:3px;
+  cursor:pointer; transition:transform .15s, box-shadow .15s;
+}
+.bg-swatch:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.bg-swatch-base { background:var(--bg-100); }
+.bg-swatch-soft { background:var(--bg-200); }
+.bg-swatch-muted { background:var(--bg-300); }
+.bg-swatch-page {
+  background:
+    radial-gradient(120px 80px at 85% 15%, hsla(24,80%,52%,.12), transparent 70%),
+    radial-gradient(100px 70px at 10% 80%, hsla(162,52%,49%,.08), transparent 65%),
+    var(--bg-100);
+}
+.bg-swatch-label { font-size:12px; font-weight:var(--fw-semibold); color:var(--text-100); }
+.bg-swatch-hex { font-size:10.5px; font-family:var(--font-mono); color:var(--text-400); }
+.bg-recipe .recipe-title { font-size:13px; font-weight:var(--fw-semibold); margin-bottom:8px; }
+.bg-recipe p { font-size:12px; color:var(--k-dim); line-height:1.6; margin-bottom:12px; }
+.bg-recipe pre { font-size:11px; font-family:var(--font-mono); color:var(--k-dim); background:var(--k-inset); border:1px solid var(--k-line); border-radius:12px; padding:14px; line-height:1.65; white-space:pre-wrap; }
+
+/* ═══ OVERVIEW (spec bento) ═══ */
+.spec-card .spec-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.spec-top-left { display:flex; align-items:center; gap:10px; }
+.spec-ico { width:30px; height:30px; border-radius:8px; background:var(--k-card-3); display:grid; place-items:center; color:var(--k-dim); }
+.spec-ico svg { width:17px; height:17px; }
+.spec-card h4 { font-size:14px; font-weight:var(--fw-semibold); }
+.spec-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.spec-item { background:var(--k-card-2); border:1px solid var(--k-line); border-radius:13px; padding:14px 16px; }
+.spec-item .label-dim { font-size:9.5px; display:block; margin-bottom:7px; }
+.spec-item .sval { font-size:16px; font-weight:var(--fw-semibold); color:var(--k-text); letter-spacing:-.01em; }
+
+/* ═══ SPACING — neuform measured spec ═══ */
+.ruler-card { padding-bottom:28px; }
+.ruler-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.ruler-head .rh-left { display:flex; align-items:center; gap:11px; }
+.ruler-head .rh-ico { width:30px; height:30px; border-radius:8px; background:var(--k-card-3); display:grid; place-items:center; color:var(--k-dim); }
+.ruler-head .rh-ico svg { width:17px; height:17px; }
+.ruler-head h4 { font-size:14px; font-weight:var(--fw-semibold); }
+
+/* measured live demo on a grid */
+.measure {
+  position:relative;
+  border:1px solid var(--k-line);
+  border-radius:14px;
+  overflow:hidden;
+  background:
+    linear-gradient(var(--k-line) 1px, transparent 1px) 0 0 / 100% 38px,
+    linear-gradient(90deg, var(--k-line) 1px, transparent 1px) 0 0 / 64px 100%,
+    var(--bg-100);
+  padding:26px 26px 30px 78px;
+}
+.measure-ai { position:absolute; top:20px; right:20px; width:44px; height:44px; border-radius:50%; background:var(--k-card-3); border:1px solid var(--k-line-2); display:grid; place-items:center; color:var(--k-dim); }
+.measure-ai svg { width:20px; height:20px; }
+.m-eyebrow { font-size:13px; font-weight:var(--fw-semibold); letter-spacing:.16em; text-transform:uppercase; color:var(--k-faint); }
+.m-title { font-size:46px; font-weight:var(--fw-bold); letter-spacing:-.03em; line-height:1.02; color:var(--k-text); margin-top:6px; }
+.m-desc { font-size:19px; line-height:1.45; color:var(--k-dim); margin-top:8px; max-width:560px; }
+.m-cta { margin-top:8px; display:inline-flex; align-items:center; gap:10px; padding:15px 26px; border-radius:999px; background:#c8c6bf; color:#1a1a18; font-size:19px; font-weight:var(--fw-semibold); }
+.m-cta svg { width:20px; height:20px; }
+
+/* dimension bracket pill pinned to the left gutter */
+.dim {
+  position:absolute; left:14px;
+  display:flex; align-items:center; gap:0;
+  transform:translateY(-50%);
+}
+.dim-pill { font-size:13px; font-weight:var(--fw-bold); color:var(--k-text); background:var(--bg-300); border:1px solid var(--k-line-2); border-radius:999px; padding:3px 10px; white-space:nowrap; }
+.dim-bracket { position:relative; width:16px; align-self:stretch; }
+.dim-bracket::before { content:''; position:absolute; left:7px; top:0; bottom:0; width:1px; background:var(--k-dim); }
+.dim-bracket::after { content:''; position:absolute; left:2px; right:0; top:50%; height:1px; background:var(--k-dim); }
+.dim-cap-t, .dim-cap-b { position:absolute; left:2px; width:11px; height:1px; background:var(--k-dim); }
+.dim-cap-t { top:0; } .dim-cap-b { bottom:0; }
+
+/* labeled ruler-chip rows */
+.sp-block { margin-top:24px; }
+.sp-block > .label-dim { display:block; margin-bottom:11px; }
+.sp-chips { display:grid; gap:12px; }
+.chip-card { background:var(--bg-100); border:1px solid var(--k-line); border-radius:13px; padding:15px 18px 18px; position:relative; overflow:hidden; }
+.chip-card::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, var(--k-line) 1px, transparent 1px) 0 0 / 40px 100%; opacity:.6; pointer-events:none; }
+.chip-card .cc-val { font-size:18px; font-weight:var(--fw-semibold); color:var(--k-text); letter-spacing:-.01em; position:relative; z-index:1; }
+.chip-ruler { position:relative; height:14px; margin-top:14px; z-index:1; }
+
+/* ═══ RADIUS — solid card + corner arc highlight ═══ */
+.radius-row { display:flex; flex-wrap:wrap; gap:26px; }
+.radius-it { display:flex; flex-direction:column; align-items:center; gap:11px; }
+.radius-box { position:relative; width:64px; height:64px; background:var(--bg-200); border:1px solid var(--k-line); }
+.radius-box .corner { position:absolute; top:0; left:0; border-top:2.5px solid var(--k-accent); border-left:2.5px solid var(--k-accent); }
+.radius-it span { font-size:10.5px; font-family:var(--font-mono); color:var(--k-faint); }
+
+/* ═══ MOTION ═══ */
+.motion-grid { display:grid; grid-template-columns:1.1fr .9fr; gap:14px; }
+@media(max-width:820px){ .motion-grid{ grid-template-columns:1fr; } }
+.motion-demo-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:16px; }
+.motion-btn {
+  padding:10px 18px; border-radius:999px; border:1px solid var(--k-line);
+  background:var(--k-card); color:var(--k-text); font-family:var(--font-sans);
+  font-size:13px; font-weight:var(--fw-medium); cursor:pointer;
+}
+.motion-btn.claude {
+  transition:background var(--motion-hover) var(--motion-ease), border-color var(--motion-hover) var(--motion-ease), transform var(--motion-hover) var(--motion-ease);
+}
+.motion-btn.claude:hover { background:var(--bg-200); border-color:var(--k-line-2); transform:translateY(-1px); }
+.motion-btn.slow { transition:all 400ms ease; }
+.motion-btn.slow:hover { background:var(--bg-200); }
+.motion-focus-wrap { margin-top:16px; padding:16px; border:1px solid var(--k-line); border-radius:12px; background:var(--bg-100); }
+.motion-focus-wrap label { display:block; font-size:11px; color:var(--k-faint); margin-bottom:10px; }
+.motion-focus-input {
+  width:100%; max-width:280px; height:40px; padding:0 14px; border-radius:var(--radius-md);
+  border:1px solid var(--border-300); font-family:var(--font-sans); font-size:var(--fs-base);
+  color:var(--text-100); background:#fff; outline:none;
+  transition:border-color var(--motion-hover) var(--motion-ease), box-shadow var(--motion-hover) var(--motion-ease);
+}
+.motion-focus-input:focus { border-color:var(--text-300); box-shadow:var(--motion-focus); }
+.motion-spec-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:14px; }
+.motion-spec-item { padding:12px 14px; background:var(--k-inset); border:1px solid var(--k-line); border-radius:12px; }
+.motion-spec-item .mk { font-size:10px; font-family:var(--font-mono); color:var(--k-faint); text-transform:uppercase; letter-spacing:.08em; }
+.motion-spec-item .mv { font-size:12.5px; font-weight:var(--fw-semibold); color:var(--k-text); margin-top:4px; font-family:var(--font-mono); }
+.motion-copy pre { white-space:pre-wrap; font-family:var(--font-mono); font-size:11px; line-height:1.65; color:var(--k-dim); background:var(--k-inset); border:1px solid var(--k-line); border-radius:12px; padding:14px; margin-top:12px; max-height:200px; overflow:auto; }
+
+/* ═══ LOGO ═══ */
+.logo-grid { grid-template-columns:repeat(4,1fr); }
+@media(max-width:680px){ .logo-grid{ grid-template-columns:repeat(2,1fr);} }
+.logo-cell { display:flex; flex-direction:column; align-items:center; gap:14px; padding:30px 16px; background:var(--k-card); border:1px solid var(--k-line); border-radius:16px; }
+.logo-cell.light { background:var(--bg-200); }
+.logo-cell .lc-name { font-size:11.5px; font-weight:var(--fw-medium); }
+.logo-cell .lc-meta { font-size:10px; font-family:var(--font-mono); color:var(--k-faint); text-align:center; }
+.logo-cell.light .lc-name { color:var(--text-100); }
+.logo-cell.light .lc-meta { color:var(--text-400); }
+
+/* logo construction / brand-spec showcase */
+.logo-build { grid-template-columns:1.5fr 1fr; gap:14px; margin-bottom:14px; }
+@media(max-width:820px){ .logo-build{ grid-template-columns:1fr; } }
+.build-stage { position:relative; padding:0; overflow:hidden; border-radius:18px; background:var(--bg-200); }
+.build-stage .bs-head { position:absolute; top:16px; left:18px; z-index:3; }
+.build-stage .bs-head .label-dim { font-size:9.5px; }
+.build-stage .bs-tag { position:absolute; top:16px; right:18px; z-index:3; font-size:10px; font-family:var(--font-mono); color:var(--k-faint); }
+.build-svg { display:block; width:100%; height:auto; }
+.build-svg .grid-ln { stroke:rgba(11,11,11,.06); stroke-width:1; }
+.build-svg .axis { stroke:rgba(11,11,11,.12); stroke-width:1; }
+.build-svg .guide { stroke:var(--k-accent); stroke-width:1; stroke-dasharray:5 4; opacity:.75; fill:none; }
+.build-svg .guide-soft { stroke:rgba(11,11,11,.18); stroke-width:1; fill:none; }
+.build-svg .dim-txt { fill:var(--k-accent); font:600 11px var(--font-mono); }
+.build-svg .dim-soft { fill:var(--k-faint); font:400 10px var(--font-mono); }
+.build-svg .dim-tick { stroke:var(--k-accent); stroke-width:1; }
+
+.build-side { display:flex; flex-direction:column; gap:14px; }
+.spec-line { display:flex; align-items:center; justify-content:space-between; background:var(--k-card); border:1px solid var(--k-line); border-radius:13px; padding:13px 16px; }
+.spec-line .sl-k { font-size:11px; color:var(--k-dim); }
+.spec-line .sl-v { font-size:12px; font-weight:var(--fw-semibold); font-family:var(--font-mono); color:var(--k-text); }
+.clearspace-cell { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:var(--k-card); border:1px solid var(--k-line); border-radius:13px; padding:18px; }
+.cs-box { position:relative; width:104px; height:104px; }
+.cs-box .cs-pad { position:absolute; inset:0; border:1px dashed var(--k-accent); border-radius:10px; opacity:.6; }
+.cs-box .cs-logo { position:absolute; inset:26px; display:grid; place-items:center; }
+.cs-box .cs-logo svg { width:100%; height:100%; }
+.cs-box .cs-lbl { position:absolute; font-size:9px; font-family:var(--font-mono); color:var(--k-accent); }
+.cs-box .cs-lbl.t { top:-16px; left:50%; transform:translateX(-50%); }
+.cs-box .cs-lbl.l { left:-22px; top:50%; transform:translateY(-50%); }
+.clearspace-cell .cs-cap { font-size:10px; font-family:var(--font-mono); color:var(--k-faint); text-align:center; }
+
+/* ═══ DO'S & DON'TS ═══ */
+.dd-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:680px){ .dd-grid{ grid-template-columns:1fr; } }
+.dd-col { display:flex; flex-direction:column; gap:12px; }
+.dd-head { display:flex; align-items:center; gap:10px; margin-bottom:2px; }
+.dd-badge { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; flex-shrink:0; }
+.dd-badge svg { width:15px; height:15px; }
+.dd-do .dd-badge { background:rgba(45,170,120,.16); color:#3ccf94; }
+.dd-dont .dd-badge { background:rgba(220,80,70,.16); color:#e8736a; }
+.dd-head h4 { font-size:14px; font-weight:var(--fw-semibold); }
+.dd-head .dd-sub { font-size:11px; color:var(--k-faint); margin-left:auto; }
+.dd-item { display:flex; gap:13px; align-items:center; background:var(--k-card); border:1px solid var(--k-line); border-radius:14px; padding:14px; }
+.dd-do .dd-item { border-left:2px solid #3ccf94; }
+.dd-dont .dd-item { border-left:2px solid #e8736a; }
+.dd-demo { width:64px; height:64px; border-radius:10px; background:var(--bg-100); border:1px solid var(--k-line); display:grid; place-items:center; flex-shrink:0; overflow:hidden; position:relative; }
+.dd-demo svg { width:34px; height:34px; }
+.dd-cat { font-size:9px; font-family:var(--font-mono); letter-spacing:.1em; text-transform:uppercase; color:var(--k-faint); display:block; margin-bottom:5px; }
+.dd-txt .dd-t { font-size:12.5px; font-weight:var(--fw-medium); color:var(--k-text); margin-bottom:3px; }
+.dd-txt .dd-d { font-size:11.5px; color:var(--k-dim); line-height:1.45; }
+/* demo helpers */
+.dd-demo .d-swatches { display:flex; width:100%; height:100%; }
+.dd-demo .d-swatches i { flex:1; }
+.dd-demo .d-btn { font-size:9px; padding:5px 9px; border-radius:999px; background:var(--accent-main); color:#fff; font-weight:600; white-space:nowrap; }
+.dd-demo .d-btn.sq { border-radius:2px; }
+.dd-demo .d-serif { font-family:var(--font-serif); font-size:24px; color:var(--k-text); }
+.dd-demo .d-serif.wrong { font-family:Impact,Haettenschweiler,sans-serif; font-weight:700; }
+.dd-demo .d-stack { display:flex; flex-direction:column; gap:5px; width:60%; }
+.dd-demo .d-stack.tight { gap:1px; }
+.dd-demo .d-stack span { height:5px; border-radius:2px; background:var(--k-dim); }
+.dd-demo .d-card { width:62%; height:62%; background:var(--k-card-3); border:1px solid var(--k-line-2); }
+.dd-demo .d-card.r12 { border-radius:12px; }
+.dd-demo .d-card.r0 { border-radius:0; }
+/* misuse visuals */
+.mis-stretch { transform:scaleX(1.6); }
+.mis-rotate { transform:rotate(22deg); }
+.mis-shadow { filter:drop-shadow(0 3px 5px rgba(232,133,47,.9)); }
+.dd-demo.mis-bg { background:linear-gradient(135deg,#3a5,#37c); }
+
+/* ═══ COMPONENTS — warm neutral board, gridded cells ═══ */
+.comp-board { padding:20px; }
+.comp-bento { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+.comp-bento .span2 { grid-column:1 / -1; }
+@media(max-width:680px){ .comp-bento{ grid-template-columns:1fr; } .comp-bento .span2{ grid-column:auto; } }
+
+.comp-cell {
+  background:var(--k-card-2);
+  border:1px solid var(--k-line);
+  border-radius:14px;
+  padding:16px;
+  display:flex; flex-direction:column;
+}
+.comp-cell > .cc-cap { font-size:10px; font-family:var(--font-mono); letter-spacing:.04em; color:var(--k-faint); margin-bottom:12px; }
+
+/* light surface that the Claude (light-UI) components sit on */
+.comp-surface {
+  background:var(--bg-100);
+  border:1px solid var(--border-200);
+  border-radius:10px;
+  padding:18px;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  color:var(--text-100);
+  flex:1;
+}
+.comp-surface.col { flex-direction:column; align-items:stretch; }
+.comp-surface.center { justify-content:center; }
+.comp-surface.plain { background:#fff; }
+
+/* legacy stage kept for any standalone use */
+.comp-group { margin-bottom:14px; }
+.comp-stage {
+  background:var(--bg-100);
+  border:1px solid var(--border-200);
+  border-radius:16px;
+  padding:24px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  color:var(--text-100);
+}
+.comp-stage.dark { background:var(--aqua-900); border-color:rgba(255,255,255,.08); }
+.comp-stage.col { flex-direction:column; align-items:stretch; }
+.comp-cap { font-size:11px; font-family:var(--font-mono); color:var(--k-faint); margin-bottom:9px; padding-left:4px; }
+
+/* Claude component primitives (light) */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-full);font-family:var(--font-sans);font-weight:var(--fw-medium);font-size:var(--fs-base);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);border:1px solid transparent;text-decoration:none;white-space:nowrap;line-height:1;}
+.btn-sm{height:32px;padding:0 14px;font-size:var(--fs-sm);}
+.btn-md{height:36px;padding:0 18px;}
+.btn-lg{height:44px;padding:0 24px;font-size:var(--fs-md);}
+.btn-primary{background:var(--accent-main);color:#fff;border-color:var(--accent-main);}
+.btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);}
+.btn-secondary{background:var(--text-100);color:#fff;border-color:var(--text-100);}
+.btn-secondary:hover{background:#000;}
+.btn-outline{background:transparent;color:var(--text-100);border-color:var(--border-300);}
+.btn-outline:hover{background:var(--bg-100);border-color:var(--text-300);}
+.btn-ghost{background:transparent;color:var(--text-200);border-color:transparent;}
+.btn-ghost:hover{background:var(--bg-200);color:var(--text-100);}
+.btn-danger{background:hsl(0,72%,51%);color:#fff;border-color:hsl(0,72%,51%);}
+.btn-danger:hover{background:hsl(0,72%,44%);}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-md);border:none;background:transparent;color:var(--text-400);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);}
+.icon-btn:hover{background:var(--bg-200);color:var(--text-100);}
+.icon-btn svg{width:16px;height:16px;fill:currentColor;}
+.composer{display:flex;align-items:flex-end;gap:8px;padding:12px 16px;background:#fff;border:1px solid var(--border-300);border-radius:var(--radius-2xl);box-shadow:var(--shadow-sm);min-height:52px;max-width:560px;width:100%;}
+.composer:focus-within{border-color:var(--text-300);box-shadow:var(--shadow-md);}
+.composer-input{flex:1;border:none;outline:none;font-family:var(--font-sans);font-size:var(--fs-base);color:var(--text-100);resize:none;line-height:1.5;background:transparent;}
+.composer-input::placeholder{color:var(--text-400);}
+.composer-send{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--text-100);color:#fff;border:none;cursor:pointer;flex-shrink:0;}
+.composer-send:hover{background:#000;}
+.composer-send svg{width:16px;height:16px;fill:currentColor;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-full);font-size:var(--fs-sm);font-weight:var(--fw-medium);border:1px solid var(--border-300);background:#fff;color:var(--text-200);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);}
+.chip:hover{background:var(--bg-100);border-color:var(--text-300);}
+.chip-active{background:var(--text-100);color:#fff;border-color:var(--text-100);}
+.chip svg{width:14px;height:14px;fill:currentColor;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:6px 16px;border-radius:var(--radius-lg);font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--text-200);text-decoration:none;cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);width:100%;}
+.nav-item:hover{background:var(--bg-200);color:var(--text-100);}
+.nav-item-active{background:var(--bg-300);color:var(--text-100);}
+.nav-item svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
+.heading-1{font-size:var(--fs-2xl);font-weight:var(--fw-bold);letter-spacing:-.02em;line-height:1.2;}
+.heading-2{font-size:var(--fs-xl);font-weight:var(--fw-semibold);letter-spacing:-.015em;line-height:1.3;}
+.heading-3{font-size:var(--fs-lg);font-weight:var(--fw-semibold);letter-spacing:-.01em;line-height:1.4;}
+.heading-4{font-size:var(--fs-md);font-weight:var(--fw-medium);line-height:1.4;}
+.input{height:40px;padding:0 14px;border-radius:var(--radius-md);border:1px solid var(--border-300);font-family:var(--font-sans);font-size:var(--fs-base);color:var(--text-100);background:#fff;outline:none;width:100%;max-width:320px;}
+.input:focus{border-color:var(--text-300);box-shadow:var(--motion-focus);}
+.input::placeholder{color:var(--text-400);}
+.card{padding:20px;border-radius:var(--radius-xl);border:1px solid var(--border-200);background:#fff;}
+.toggle{position:relative;display:inline-flex;align-items:center;width:40px;height:22px;border-radius:var(--radius-full);background:var(--bg-300);cursor:pointer;transition:background var(--motion-hover) var(--motion-ease);border:none;}
+.toggle.active{background:var(--accent-main);}
+.toggle::after{content:'';position:absolute;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform var(--motion-hover) var(--motion-ease);}
+.toggle.active::after{transform:translateX(18px);}
+.avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent-main);color:#fff;font-size:12px;font-weight:var(--fw-semibold);flex-shrink:0;}
+.avatar-lg{width:36px;height:36px;font-size:14px;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--radius-full);font-size:11px;font-weight:var(--fw-medium);line-height:1.5;}
+.badge-default{background:var(--bg-200);color:var(--text-300);}
+.badge-accent{background:#FFF1F3;color:#E61E4D;}
+.badge-success{background:hsl(158,52%,92%);color:hsl(162,79%,28%);}
+.dropdown{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-full);border:none;background:transparent;font-family:var(--font-sans);font-size:var(--fs-base);font-weight:var(--fw-medium);color:var(--text-100);cursor:pointer;transition:background var(--motion-hover) var(--motion-ease);}
+.dropdown:hover{background:var(--bg-200);}
+.dropdown svg{width:16px;height:16px;fill:currentColor;}
+.menu-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-md);font-size:var(--fs-base);color:var(--text-200);cursor:pointer;transition:background var(--motion-hover) var(--motion-ease);width:100%;}
+.menu-item:hover{background:var(--bg-100);}
+.menu-item svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
+.menu-item-danger{color:hsl(0,72%,51%);}
+.menu-item-danger:hover{background:hsl(0,72%,97%);}
+.banner{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-radius:var(--radius-lg);border:1px solid var(--border-200);background:var(--bg-100);font-size:var(--fs-sm);color:var(--text-200);}
+.banner-action{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--radius-full);background:var(--text-100);color:#fff;font-size:var(--fs-sm);font-weight:var(--fw-medium);border:none;cursor:pointer;}
+.message{max-width:640px;padding:16px 0;}
+.message-user{background:var(--bg-100);border-radius:var(--radius-2xl);padding:12px 16px;margin-left:auto;max-width:480px;width:fit-content;}
+.message-assistant{padding:0;}
+.message-actions{display:flex;gap:4px;margin-top:8px;}
+.suggestion{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-xl);border:1px solid var(--border-200);font-size:var(--fs-sm);color:var(--text-200);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);}
+.suggestion:hover{border-color:var(--text-300);background:var(--bg-100);}
+
+/* ═══ ICONS ═══ */
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;}
+.icon-cell{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 8px;border-radius:13px;border:1px solid var(--k-line);background:var(--k-card);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);position:relative;}
+.icon-cell:hover{background:var(--k-card-2);border-color:var(--k-line-2);}
+.icon-cell:active{transform:scale(.96);}
+.icon-cell svg{width:20px;height:20px;color:var(--k-text);}
+.icon-cell .ic--lucide{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-cell .ic--stroke{fill:none;stroke:currentColor}
+.icon-cell .ic--fill{fill:currentColor;stroke:none}
+.icon-cell-label{font-size:10px;color:var(--k-faint);text-align:center;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.icon-cell-copied{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--k-accent);color:var(--k-on-accent, #180d03);font-size:10px;font-weight:600;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.icon-cell.copied .icon-cell-copied{opacity:1;}
+
+
+
+/* ═══ AI CODING CONTEXT — design.md / skills / guardrails ═══ */
+.context-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;}
+@media(max-width:900px){.context-grid{grid-template-columns:1fr;}}
+.context-card{overflow:hidden;}
+.context-card .ctx-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;}
+.context-card .ctx-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:var(--fw-semibold);}
+.context-card .ctx-pill{font-size:10.5px;font-family:var(--font-mono);color:var(--k-dim);border:1px solid var(--k-line);border-radius:999px;padding:4px 9px;background:var(--k-inset);white-space:nowrap;}
+.context-card pre{white-space:pre-wrap;font-family:var(--font-mono);font-size:11.5px;line-height:1.72;color:var(--k-dim);background:var(--k-inset);border:1px solid var(--k-line);border-radius:14px;padding:18px;max-height:520px;overflow:auto;}
+.context-card pre b,.context-card pre .hot{color:var(--k-text);font-weight:var(--fw-semibold);}
+.ctx-list{display:grid;gap:11px;}
+.ctx-item{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:start;padding:14px 16px;background:var(--k-card-2);border:1px solid var(--k-line);border-radius:14px;}
+@media(max-width:620px){.ctx-item{grid-template-columns:1fr;gap:6px;}}
+.ctx-item .k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--k-faint);font-weight:var(--fw-semibold);}
+.ctx-item .v{font-size:12.5px;color:var(--k-dim);line-height:1.55;}
+.ctx-item .v b{color:var(--k-text);font-weight:var(--fw-semibold);}
+.skill-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;}
+@media(max-width:900px){.skill-grid{grid-template-columns:1fr;}}
+.skill-card{background:var(--k-card);border:1px solid var(--k-line);border-radius:16px;padding:18px;}
+.skill-card h4{font-size:13.5px;font-weight:var(--fw-semibold);margin-bottom:10px;}
+.skill-card p{font-size:12px;color:var(--k-dim);line-height:1.55;margin-bottom:14px;}
+.skill-card ul{list-style:none;display:grid;gap:7px;}
+.skill-card li{font-size:11.5px;color:var(--k-dim);position:relative;padding-left:14px;line-height:1.45;}
+.skill-card li::before{content:'';position:absolute;left:0;top:.62em;width:5px;height:5px;border-radius:50%;background:var(--k-accent);opacity:.9;}
+.guard-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:720px){.guard-grid{grid-template-columns:1fr;}}
+.guard-card{border-radius:16px;border:1px solid var(--k-line);background:var(--k-card);padding:18px;}
+.guard-card.good{border-left:2px solid #3ccf94;}.guard-card.bad{border-left:2px solid #e8736a;}
+.guard-card h4{font-size:13.5px;font-weight:var(--fw-semibold);margin-bottom:12px;}
+.guard-card ul{list-style:none;display:grid;gap:9px;}
+.guard-card li{font-size:12px;color:var(--k-dim);line-height:1.5;}
+.token-alias{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+@media(max-width:620px){.token-alias{grid-template-columns:1fr;}}
+.alias{padding:12px 14px;background:var(--k-inset);border:1px solid var(--k-line);border-radius:13px;font-family:var(--font-mono);font-size:11px;color:var(--k-dim);}
+.alias span{color:var(--k-text);}
+
+/* ═══ COMPONENT STATES matrix ═══ */
+.state-grid{display:grid;grid-template-columns:120px repeat(5,1fr);gap:0;border:1px solid var(--k-line);border-radius:14px;overflow:hidden;}
+@media(max-width:760px){.state-grid{grid-template-columns:90px repeat(5,1fr);}}
+.state-grid .sh{background:var(--k-inset);padding:11px 10px;font-size:10px;font-family:var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--k-faint);border-bottom:1px solid var(--k-line);}
+.state-grid .rk{background:var(--k-inset);padding:13px 12px;font-size:11.5px;font-weight:var(--fw-medium);color:var(--k-text);display:flex;align-items:center;border-right:1px solid var(--k-line);}
+.state-grid .sc{padding:13px 10px;display:flex;align-items:center;justify-content:center;background:var(--bg-100);border-bottom:1px solid var(--border-200);border-right:1px solid var(--border-200);min-height:58px;}
+.state-grid .sc:nth-child(6n){border-right:none;}
+.state-grid .sh:last-child{border-right:none;}
+/* state renderings */
+.st-btn{height:34px;padding:0 16px;border-radius:999px;font-size:12px;font-weight:var(--fw-medium);border:1px solid var(--accent-main);background:var(--accent-main);color:#fff;display:inline-flex;align-items:center;gap:6px;}
+.st-btn.hover{background:var(--accent-hover);border-color:var(--accent-hover);}
+.st-btn.focus{box-shadow:0 0 0 3px rgba(232,133,47,.32);}
+.st-btn.active{background:#E61E4D;transform:translateY(1px);}
+.st-btn.disabled{opacity:.4;}
+.st-inp{height:32px;width:100%;max-width:120px;padding:0 10px;border-radius:6px;border:1px solid var(--border-300);background:#fff;font-size:11.5px;color:var(--text-100);display:flex;align-items:center;}
+.st-inp.hover{border-color:var(--text-300);}
+.st-inp.focus{border-color:var(--text-300);box-shadow:0 0 0 3px rgba(11,11,11,.06);}
+.st-inp.active{border-color:var(--accent-main);}
+.st-inp.disabled{background:var(--bg-200);color:var(--text-400);opacity:.6;}
+
+/* ═══ DARK MODE mapping ═══ */
+.dm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:760px){.dm-grid{grid-template-columns:1fr;}}
+.dm-card{border-radius:16px;border:1px solid var(--k-line);overflow:hidden;}
+.dm-head{padding:12px 16px;font-size:12px;font-weight:var(--fw-semibold);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--k-line);}
+.dm-body{padding:18px;}
+.dm-card.light .dm-head{background:#ffffff;color:#0c0a09;}
+.dm-card.light .dm-body{background:#ffffff;}
+.dm-card.dark .dm-head{background:#1a1a1c;color:#f5f5f3;}
+.dm-card.dark .dm-body{background:#141416;}
+.dm-mini{border-radius:12px;padding:16px;border:1px solid;}
+.dm-card.light .dm-mini{background:#fff;border-color:rgba(11,11,11,.08);}
+.dm-card.dark .dm-mini{background:#1f1f22;border-color:rgba(255,255,255,.08);}
+.dm-mini .dm-t{font-size:14px;font-weight:var(--fw-semibold);margin-bottom:5px;}
+.dm-card.light .dm-mini .dm-t{color:#0c0a09;}.dm-card.dark .dm-mini .dm-t{color:#f5f5f3;}
+.dm-mini .dm-p{font-size:11.5px;line-height:1.5;margin-bottom:12px;}
+.dm-card.light .dm-mini .dm-p{color:#5d5d5a;}.dm-card.dark .dm-mini .dm-p{color:#9b9b9f;}
+.dm-mini .dm-cta{display:inline-flex;height:28px;padding:0 14px;border-radius:999px;background:var(--accent-main);color:#fff;font-size:11px;font-weight:600;align-items:center;}
+.dm-map{display:grid;gap:8px;margin-top:14px;}
+.dm-row{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;align-items:center;font-family:var(--font-mono);font-size:10.5px;}
+.dm-row .mk{color:var(--k-dim);}
+.dm-row .mv{display:flex;align-items:center;gap:6px;color:var(--k-text);}
+.dm-row .sw{width:14px;height:14px;border-radius:4px;border:1px solid var(--k-line-2);flex-shrink:0;}
+.dm-row.hd{color:var(--k-faint);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;}
+
+/* ═══ TOKENS.json ═══ */
+.tok-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;}
+.tok-copy{font-size:11px;font-family:var(--font-mono);color:var(--k-text);background:var(--k-inset);border:1px solid var(--k-line-2);border-radius:999px;padding:6px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all var(--motion-hover) var(--motion-ease);}
+.tok-copy:hover{background:var(--k-accent);color:var(--k-on-accent, #180d03);border-color:var(--k-accent);}
+.tok-copy svg{width:13px;height:13px;fill:currentColor;}
+.tok-card pre{white-space:pre;font-family:var(--font-mono);font-size:11.5px;line-height:1.7;color:var(--k-dim);background:var(--k-inset);border:1px solid var(--k-line);border-radius:14px;padding:18px;max-height:460px;overflow:auto;}
+.tok-card pre .tk{color:#7fb2e8;}
+.tok-card pre .tv{color:var(--k-accent);}
+.tok-card pre .tc{color:var(--k-faint);}
+
+/* ═══ CSS VAR reference ═══ */
+.var-card pre{white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;line-height:1.85;color:var(--k-dim);max-height:380px;overflow-y:auto;}
+.var-card pre .c{color:var(--k-faint);}
+.var-card pre .v{color:var(--k-accent);}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--k-accent);color:var(--k-on-accent, #180d03);padding:9px 18px;border-radius:999px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s ease;z-index:1000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+
+/* ═══ AI-READY DESIGN KIT UX — quick context / pattern prompts ═══ */
+.copy-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--k-line-2);background:var(--k-card);color:var(--k-text);border-radius:999px;padding:9px 14px;font-size:12px;font-weight:var(--fw-semibold);font-family:var(--font-sans);cursor:pointer;transition:all var(--motion-hover) var(--motion-ease);}
+.copy-btn:hover{background:var(--k-accent);border-color:var(--k-accent);color:var(--k-on-accent, #1a0e04);transform:translateY(-1px);}
+.copy-btn svg{width:14px;height:14px;fill:currentColor;}
+.ai-quick{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;}
+@media(max-width:900px){.ai-quick{grid-template-columns:1fr;}}
+.quick-card{overflow:hidden;}
+.quick-card .quick-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+.quick-card h3{font-size:15px;font-weight:var(--fw-semibold);letter-spacing:-.01em;}
+.quick-card p{font-size:12.5px;color:var(--k-dim);line-height:1.6;margin-bottom:14px;}
+.ai-context-preview{white-space:pre-wrap;font-family:var(--font-mono);font-size:11.5px;line-height:1.72;color:var(--k-dim);background:var(--k-inset);border:1px solid var(--k-line);border-radius:14px;padding:18px;max-height:430px;overflow:auto;}
+.ai-context-preview b{color:var(--k-text);font-weight:var(--fw-semibold);}
+.context-flow{display:grid;gap:10px;}
+.flow-step{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start;background:var(--k-card-2);border:1px solid var(--k-line);border-radius:14px;padding:14px;}
+.flow-step .num{width:32px;height:32px;border-radius:999px;background:var(--k-card-3);display:grid;place-items:center;font-family:var(--font-mono);font-size:11px;color:var(--k-text);}
+.flow-step b{display:block;font-size:12.5px;margin-bottom:3px;color:var(--k-text);}
+.flow-step span{font-size:11.5px;color:var(--k-dim);line-height:1.5;}
+.pattern-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media(max-width:960px){.pattern-grid{grid-template-columns:1fr;}}
+.pattern-card{background:var(--k-card);border:1px solid var(--k-line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.pattern-card h4{font-size:14px;font-weight:var(--fw-semibold);letter-spacing:-.01em;}
+.pattern-card .pattern-desc{font-size:12px;color:var(--k-dim);line-height:1.55;min-height:38px;}
+.pattern-card .mini-spec{display:grid;gap:7px;background:var(--k-inset);border:1px solid var(--k-line);border-radius:13px;padding:13px 14px;}
+.pattern-card .mini-spec span{font-size:11.5px;color:var(--k-dim);line-height:1.45;}
+.pattern-card .mini-spec b{color:var(--k-text);font-weight:var(--fw-semibold);}
+.pattern-card pre{white-space:pre-wrap;font-family:var(--font-mono);font-size:10.8px;line-height:1.62;color:var(--k-dim);background:var(--k-inset);border:1px solid var(--k-line);border-radius:13px;padding:13px;max-height:180px;overflow:auto;}
+.pattern-actions{display:flex;justify-content:flex-start;margin-top:auto;}
+.component-usage{margin-top:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+@media(max-width:760px){.component-usage{grid-template-columns:1fr;}}
+.usage-card{background:var(--k-inset);border:1px solid var(--k-line);border-radius:13px;padding:13px 14px;}
+.usage-card .u-k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--k-faint);font-weight:var(--fw-semibold);margin-bottom:6px;}
+.usage-card .u-v{font-size:11.5px;color:var(--k-dim);line-height:1.5;}
+
+.foot { margin-top:60px; text-align:center; font-size:11.5px; color:var(--k-faint); }
+/* @build:brand-kit-components-start */
+.nf-panel.nf-components .ml-kit{
+  --brand:22 163 74;--brand-fg:21 128 61;--brand-subtle:240 253 244;--brand-border:220 252 231;
+  --brand-accent:#26bd6c;
+  --bg:255 255 255;--bg-subtle:250 250 249;--bg-muted:245 245 244;--bg-inverted:28 25 23;
+  --fg-default:12 10 9;--fg-subtle:87 83 78;--fg-muted:120 113 108;--fg-inverted:255 255 255;--fg-disabled:168 162 158;
+  --border-default:231 229 228;--border-emphasis:214 211 209;--border-3:#0a0a0a14;
+  --error:220 38 38;--error-fg:185 28 28;--error-subtle:254 242 242;--error-border:254 226 226;
+  --info:37 99 235;--info-fg:29 78 216;--info-subtle:239 246 255;--info-border:219 234 254;
+  --feature:147 51 234;--feature-fg:126 34 206;--feature-subtle:250 245 255;--feature-border:243 232 255;
+  --warning:234 88 12;--warning-fg:194 65 12;--warning-subtle:255 247 237;--warning-border:255 237 213;
+  --success:22 163 74;--success-fg:21 128 61;--success-subtle:240 253 244;--success-border:220 252 231;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:rgb(var(--fg-subtle));
+}
+.nf-panel.nf-components .ml-kit.kimi-comp-board{background:rgb(var(--bg));border:1px solid rgb(var(--border-default));border-radius:16px;overflow:hidden}
+.nf-panel.nf-components .ml-kit .kimi-comp-group{padding:20px 24px;border-bottom:1px solid rgb(var(--border-default))}
+.nf-panel.nf-components .ml-kit .kimi-comp-group:last-child{border-bottom:none}
+.nf-panel.nf-components .ml-kit .kimi-comp-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border-bottom:1px solid rgb(var(--border-default));align-items:stretch}
+.nf-panel.nf-components .ml-kit .kimi-comp-split .kimi-comp-group{display:flex;flex-direction:column;border-bottom:none;border-right:1px solid rgb(var(--border-default));min-width:0}
+.nf-panel.nf-components .ml-kit .kimi-comp-split .kimi-comp-group:last-child{border-right:none}
+@media(max-width:760px){
+  .nf-panel.nf-components .ml-kit .kimi-comp-split{grid-template-columns:1fr}
+  .nf-panel.nf-components .ml-kit .kimi-comp-split .kimi-comp-group{border-right:none;border-bottom:1px solid rgb(var(--border-default))}
+  .nf-panel.nf-components .ml-kit .kimi-comp-split .kimi-comp-group:last-child{border-bottom:none}
+}
+.nf-panel.nf-components .ml-kit .kimi-comp-label{font-size:10px;font-family:var(--font-mono);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgb(var(--fg-muted));margin-bottom:14px}
+.nf-panel.nf-components .ml-kit .kimi-comp-body{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;width:100%;min-width:0}
+.nf-panel.nf-components .ml-kit .kimi-comp-split .kimi-comp-body{flex:1}
+.nf-panel.nf-components .ml-kit .kimi-comp-body:has(.ml-btn-grid){display:block}
+.nf-panel.nf-components .ml-kit .kimi-comp-body:has(.composer){display:block;width:100%}
+.nf-panel.nf-components .ml-kit .kimi-comp-body:has(.ml-nav-shell){display:block;width:100%}
+.nf-panel.nf-components .ml-kit .kimi-comp-body:has(.ml-project-shell){display:block;width:100%}
+.nf-panel.nf-components .ml-kit .kimi-comp-body:has(.ml-table-shell){display:block;width:100%}
+.nf-panel.nf-components .ml-kit .ml-btn-grid{display:flex;flex-direction:column;gap:14px;width:100%}
+.nf-panel.nf-components .ml-kit .ml-btn-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px 20px;align-items:center}
+.nf-panel.nf-components .ml-kit .ml-btn-label{font-size:11px;font-family:var(--font-mono);font-weight:600;color:rgb(var(--fg-muted))}
+.nf-panel.nf-components .ml-kit .ml-btn-sizes{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+.nf-panel.nf-components .ml-kit .ml-icon-row,.nf-panel.nf-components .ml-kit .ml-chip-row,.nf-panel.nf-components .ml-kit .ml-avatar-row,.nf-panel.nf-components .ml-kit .ml-toast-stack{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.nf-panel.nf-components .ml-kit .ml-nav-shell{max-width:280px;width:100%}
+.nf-panel.nf-components .ml-kit .ml-project-shell,.nf-panel.nf-components .ml-kit .ml-table-shell,.nf-panel.nf-components .ml-kit .composer,.nf-panel.nf-components .ml-kit .input{max-width:100%;width:100%;box-sizing:border-box}
+.nf-panel.nf-components .ml-kit .nav-mock{width:100%}
+.nf-panel.nf-components .ml-kit .ml-btn svg,.nf-panel.nf-components .ml-kit .icon-btn svg,.nf-panel.nf-components .ml-kit .chip svg,.nf-panel.nf-components .ml-kit .input svg,.nf-panel.nf-components .ml-kit .nav-item svg,.nf-panel.nf-components .ml-kit .toast svg{width:16px;height:16px;flex-shrink:0}
+.nf-panel.nf-components .ml-kit .t-display{font-size:36px; font-weight:600; letter-spacing:-0.025em; line-height:1.15}.nf-panel.nf-components .ml-kit .t-h1{font-size:28px; font-weight:600; letter-spacing:-0.02em; line-height:1.2}.nf-panel.nf-components .ml-kit .t-h2{font-size:22px; font-weight:600; letter-spacing:-0.02em; line-height:1.3}.nf-panel.nf-components .ml-kit .t-h3{font-size:18px; font-weight:600; letter-spacing:-0.015em; line-height:1.35}.nf-panel.nf-components .ml-kit .t-body{font-size:14px; font-weight:400; line-height:1.55}.nf-panel.nf-components .ml-kit .t-body-strong{font-size:14px; font-weight:500}.nf-panel.nf-components .ml-kit .t-small{font-size:13px; color:rgb(var(--fg-subtle))}.nf-panel.nf-components .ml-kit .t-caption{font-size:12px; color:rgb(var(--fg-muted)); letter-spacing:.01em}
+
+/* ====== Radius ====== */.nf-panel.nf-components .ml-kit .ml-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:6px; height:32px; padding:0 12px;
+  border-radius:10px;
+  font-family:inherit; font-size:13px; font-weight:500;
+  line-height:1;
+  border:1px solid transparent;
+  cursor:pointer; outline:none;
+  transition: background-color .12s, border-color .12s, color .12s, box-shadow .12s;
+  white-space:nowrap;
+}.nf-panel.nf-components .ml-kit .ml-btn:focus-visible{box-shadow:var(--focus-ring)}.nf-panel.nf-components .ml-kit .ml-btn svg{width:14px; height:14px; flex-shrink:0}.nf-panel.nf-components .ml-kit .ml-btn-primary{
+  background:rgb(var(--bg-inverted));
+  color:rgb(var(--fg-inverted));
+  border-color:rgb(var(--bg-inverted));
+}.nf-panel.nf-components .ml-kit .ml-btn-primary:hover{background:#000; border-color:#000}.nf-panel.nf-components .ml-kit .ml-btn-brand{
+  background:rgb(var(--brand));
+  color:#fff;
+  border-color:rgb(var(--brand));
+}.nf-panel.nf-components .ml-kit .ml-btn-brand:hover{background:rgb(var(--brand-fg)); border-color:rgb(var(--brand-fg))}.nf-panel.nf-components .ml-kit .ml-btn-outline{
+  background:rgb(var(--bg));
+  color:rgb(var(--fg-subtle));
+  border-color:rgb(var(--border-default));
+}.nf-panel.nf-components .ml-kit .ml-btn-outline:hover{
+  background:rgb(var(--bg-muted));
+  border-color:rgb(var(--border-emphasis));
+  color:rgb(var(--fg-default));
+}.nf-panel.nf-components .ml-kit .ml-btn-ghost{
+  background:transparent;
+  color:rgb(var(--fg-subtle));
+  border-color:transparent;
+}.nf-panel.nf-components .ml-kit .ml-btn-ghost:hover{background:rgb(var(--bg-muted)); color:rgb(var(--fg-default))}.nf-panel.nf-components .ml-kit .ml-btn-danger{
+  background:rgb(var(--error));
+  color:#fff;
+  border-color:rgb(var(--error));
+}.nf-panel.nf-components .ml-kit .ml-btn-danger:hover{background:rgb(var(--error-fg)); border-color:rgb(var(--error-fg))}.nf-panel.nf-components .ml-kit .ml-btn-link{
+  background:transparent; color:rgb(var(--brand-fg));
+  border-color:transparent;
+  text-decoration:underline; text-underline-offset:3px;
+  text-decoration-color:rgba(22,163,74,.4);
+}.nf-panel.nf-components .ml-kit .ml-btn-link:hover{text-decoration-color:rgba(22,163,74,1)}.nf-panel.nf-components .ml-kit .ml-btn[disabled], .nf-panel.nf-components .ml-kit .ml-btn[data-disabled="true"]{
+  background:rgb(var(--bg-disabled));
+  color:rgb(var(--fg-disabled));
+  border-color:rgb(var(--border-default));
+  cursor:not-allowed;
+}.nf-panel.nf-components .ml-kit .ml-btn-sm{height:28px; padding:0 10px; font-size:12px; border-radius:8px}.nf-panel.nf-components .ml-kit .ml-btn-lg{height:38px; padding:0 16px; font-size:14px; border-radius:10px}.nf-panel.nf-components .ml-kit .icon-btn{
+  width:32px; height:32px; padding:0;
+  border-radius:10px;
+  border:1px solid rgb(var(--border-default));
+  background:rgb(var(--bg));
+  color:rgb(var(--fg-subtle));
+  display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all .12s;
+}.nf-panel.nf-components .ml-kit .icon-btn:hover{
+  background:rgb(var(--bg-emphasis));
+  border-color:rgb(var(--border-emphasis));
+  color:rgb(var(--fg-default));
+}.nf-panel.nf-components .ml-kit .icon-btn svg{width:16px; height:16px}
+
+/* ====== Chip / Badge ====== */.nf-panel.nf-components .ml-kit .chip{
+  display:inline-flex; align-items:center; gap:6px;
+  height:24px; padding:0 10px;
+  border-radius:9999px;
+  font-size:12px; font-weight:500;
+  line-height:1;
+  border:1px solid transparent;
+}.nf-panel.nf-components .ml-kit .chip-gray{background:rgb(var(--bg-muted)); color:rgb(var(--fg-subtle)); border-color:rgb(var(--border-default))}.nf-panel.nf-components .ml-kit .chip-brand{background:rgb(var(--brand-subtle)); color:rgb(var(--brand-fg)); border-color:rgb(var(--brand-border))}.nf-panel.nf-components .ml-kit .chip-info{background:rgb(var(--info-subtle)); color:rgb(var(--info-fg)); border-color:rgb(var(--info-border))}.nf-panel.nf-components .ml-kit .chip-feature{background:rgb(var(--feature-subtle)); color:rgb(var(--feature-fg)); border-color:rgb(var(--feature-border))}.nf-panel.nf-components .ml-kit .chip-warning{background:rgb(var(--warning-subtle)); color:rgb(var(--warning-fg)); border-color:rgb(var(--warning-border))}.nf-panel.nf-components .ml-kit .chip-error{background:rgb(var(--error-subtle)); color:rgb(var(--error-fg)); border-color:rgb(var(--error-border))}.nf-panel.nf-components .ml-kit .chip-success{background:rgb(var(--success-subtle)); color:rgb(var(--success-fg)); border-color:rgb(var(--success-border))}.nf-panel.nf-components .ml-kit .chip-dot{width:6px; height:6px; border-radius:50%; background:currentColor}
+
+/* ====== Input / Composer ====== */.nf-panel.nf-components .ml-kit .input{
+  display:flex; align-items:center; gap:8px;
+  height:36px; padding:0 12px;
+  background:rgb(var(--bg));
+  border:1px solid rgb(var(--border-default));
+  border-radius:10px;
+  font-size:13px; color:rgb(var(--fg-default));
+  outline:none;
+  transition:border-color .12s, box-shadow .12s;
+  width:100%;
+}.nf-panel.nf-components .ml-kit .input:hover{border-color:rgb(var(--border-emphasis))}.nf-panel.nf-components .ml-kit .input:focus-within{
+  border-color:rgb(var(--border-solid));
+  box-shadow:var(--focus-light);
+}.nf-panel.nf-components .ml-kit .input input{
+  flex:1; min-width:0; border:none; outline:none;
+  background:transparent; font:inherit; color:inherit;
+}.nf-panel.nf-components .ml-kit .input input::placeholder{color:rgb(var(--fg-muted))}.nf-panel.nf-components .ml-kit .input svg{width:14px; height:14px; color:rgb(var(--fg-muted)); flex-shrink:0}.nf-panel.nf-components .ml-kit .composer{
+  background:rgb(var(--bg));
+  border:1px solid rgb(var(--border-default));
+  border-radius:14px;
+  padding:14px 16px 12px;
+  box-shadow:var(--shadow-sm);
+  transition:border-color .12s, box-shadow .12s;
+}.nf-panel.nf-components .ml-kit .composer:focus-within{
+  border-color:rgb(var(--border-strong));
+  box-shadow:var(--shadow-md);
+}.nf-panel.nf-components .ml-kit .composer-input{
+  width:100%; border:none; outline:none; background:transparent;
+  font:inherit; font-size:14px; color:rgb(var(--fg-default));
+  resize:none; min-height:48px; padding:0; margin-bottom:8px;
+}.nf-panel.nf-components .ml-kit .composer-input::placeholder{color:rgb(var(--fg-muted))}.nf-panel.nf-components .ml-kit .composer-actions{
+  display:flex; align-items:center; gap:6px;
+  padding-top:8px;
+  border-top:1px dashed rgb(var(--border-muted));
+}.nf-panel.nf-components .ml-kit .composer-actions .spacer{flex:1}
+
+/* ====== Nav Item (sidebar) ====== */.nf-panel.nf-components .ml-kit .nav-mock{
+  background:rgb(var(--sidebar-bg));
+  border:1px solid rgb(var(--border-default));
+  border-radius:12px;
+  padding:12px 8px;
+  max-width:280px;
+}.nf-panel.nf-components .ml-kit .nav-section-title{
+  font-size:11px; font-weight:600;
+  color:rgb(var(--fg-muted));
+  text-transform:uppercase; letter-spacing:.06em;
+  padding:6px 12px 6px;
+}.nf-panel.nf-components .ml-kit .nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:7px 10px; margin:1px 0;
+  border-radius:8px;
+  font-size:13px; color:rgb(var(--fg-subtle));
+  cursor:pointer; transition:background .1s, color .1s;
+}.nf-panel.nf-components .ml-kit .nav-item:hover{background:rgb(var(--bg-muted)); color:rgb(var(--fg-default))}.nf-panel.nf-components .ml-kit .nav-item.active{background:rgb(var(--bg-emphasis)); color:rgb(var(--fg-default)); font-weight:500}.nf-panel.nf-components .ml-kit .nav-item svg{width:16px; height:16px; color:rgb(var(--fg-muted)); flex-shrink:0}.nf-panel.nf-components .ml-kit .nav-item.active svg{color:rgb(var(--fg-default))}.nf-panel.nf-components .ml-kit .nav-item .count{
+  margin-left:auto; font-family:'JetBrains Mono', monospace;
+  font-size:11px; color:rgb(var(--fg-muted));
+}
+
+/* ====== Icon Library ====== */.nf-panel.nf-components .ml-kit .icon-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(96px,1fr));
+  gap:8px;
+}.nf-panel.nf-components .ml-kit .sc-avatar{
+  width:28px;height:28px;border-radius:9999px;
+  background:linear-gradient(135deg,#a78bfa,#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;
+}
+/* Content */.nf-panel.nf-components .ml-kit .sc-content{flex:1;padding:48px 32px 64px;max-width:1100px;width:100%;margin:0 auto}.nf-panel.nf-components .ml-kit .sc-greeting{font-size:28px;font-weight:600;text-align:center;margin:0 0 32px;letter-spacing:-.01em}
+/* Project */.nf-panel.nf-components .ml-kit .sc-project{
+  display:grid;grid-template-columns:280px 1fr;gap:24px;
+  border:1px solid var(--border-5);border-radius:14px;
+  background:#fff;padding:16px;margin-bottom:32px;
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+}.nf-panel.nf-components .ml-kit .sc-preview{
+  background:rgb(var(--bg-muted));
+  border:1px solid var(--border-3);
+  border-radius:12px;height:160px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgb(var(--fg-disabled));font-size:12px;font-weight:500;
+}.nf-panel.nf-components .ml-kit .sc-info{display:flex;flex-direction:column;gap:14px;min-width:0;padding:4px 4px 4px 0}.nf-panel.nf-components .ml-kit .sc-info-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.nf-panel.nf-components .ml-kit .sc-proj-title{font-size:18px;font-weight:600;margin:0;letter-spacing:-.005em}.nf-panel.nf-components .ml-kit .sc-live{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-weight:600;padding:2px 8px;border-radius:9999px;
+  background:rgb(var(--brand-subtle));color:rgb(var(--brand-fg));
+  border:1px solid rgb(var(--brand-border));
+}.nf-panel.nf-components .ml-kit .sc-live-dot{width:6px;height:6px;border-radius:9999px;background:rgb(var(--brand));box-shadow:0 0 0 2px rgba(22,163,74,.18)}.nf-panel.nf-components .ml-kit .sc-status{display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--fg-muted))}.nf-panel.nf-components .ml-kit .sc-status svg{width:13px;height:13px;color:rgb(var(--warning))}.nf-panel.nf-components .ml-kit .sc-time{color:rgb(var(--fg-disabled))}.nf-panel.nf-components .ml-kit .sc-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.nf-panel.nf-components .ml-kit .sc-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:8px;
+  font-size:13px;font-weight:500;font-family:inherit;
+  border:1px solid var(--border-10);background:#fff;color:rgb(var(--fg-subtle));
+  cursor:pointer;transition:all .12s;
+}.nf-panel.nf-components .ml-kit .sc-btn:hover{background:rgb(var(--bg-emphasis));border-color:var(--border-15);color:rgb(var(--fg-default))}.nf-panel.nf-components .ml-kit .sc-btn svg{width:13px;height:13px}.nf-panel.nf-components .ml-kit .sc-btn-icon{
+  width:30px;height:30px;border-radius:8px;
+  background:#fff;border:1px solid var(--border-10);
+  color:rgb(var(--fg-subtle));cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+}.nf-panel.nf-components .ml-kit .sc-btn-icon:hover{background:rgb(var(--bg-emphasis));border-color:var(--border-15);color:rgb(var(--fg-default))}.nf-panel.nf-components .ml-kit .sc-btn-icon svg{width:13px;height:13px}.nf-panel.nf-components .ml-kit .sc-domain{display:flex;align-items:center;gap:6px;font-size:12px;color:rgb(var(--fg-muted));flex-wrap:wrap}.nf-panel.nf-components .ml-kit .sc-domain-label{font-weight:500;color:rgb(var(--fg-default));margin-right:4px}.nf-panel.nf-components .ml-kit .sc-domain-url{font-family:'JetBrains Mono',monospace;font-size:12px}.nf-panel.nf-components .ml-kit .sc-domain-sep{color:rgb(var(--fg-disabled))}.nf-panel.nf-components .ml-kit .sc-domain-add{color:rgb(var(--brand-fg));font-weight:500;display:inline-flex;align-items:center;gap:2px;cursor:pointer}.nf-panel.nf-components .ml-kit .sc-domain-add svg{width:11px;height:11px}
+/* Activity */.nf-panel.nf-components .ml-kit .sc-activity-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.nf-panel.nf-components .ml-kit .sc-activity-title{font-size:18px;font-weight:600;margin:0;letter-spacing:-.005em}.nf-panel.nf-components .ml-kit .sc-seg{display:inline-flex;background:rgb(var(--bg-muted));border:1px solid var(--border-3);border-radius:8px;padding:2px;gap:1px}.nf-panel.nf-components .ml-kit .sc-seg-item{padding:4px 10px;font-size:12px;font-weight:500;color:rgb(var(--fg-muted));border-radius:6px;cursor:pointer}.nf-panel.nf-components .ml-kit .sc-seg-item.active{background:#fff;color:rgb(var(--fg-default));box-shadow:0 1px 2px rgba(0,0,0,.05)}.nf-panel.nf-components .ml-kit .sc-table{
+  width:100%;border:1px solid var(--border-5);border-radius:12px;
+  background:#fff;overflow:hidden;border-collapse:separate;border-spacing:0;
+}.nf-panel.nf-components .ml-kit .sc-table th{
+  text-align:left;font-size:11px;font-weight:500;color:rgb(var(--fg-muted));
+  padding:10px 16px;background:rgb(var(--bg-subtle));border-bottom:1px solid var(--border-3);
+  letter-spacing:.02em;
+}.nf-panel.nf-components .ml-kit .sc-table td{padding:14px 16px;font-size:13px;color:rgb(var(--fg-default));border-bottom:1px solid var(--border-3)}.nf-panel.nf-components .ml-kit .sc-table tr:last-child td{border-bottom:none}.nf-panel.nf-components .ml-kit .sc-update{display:flex;flex-direction:column;gap:2px}.nf-panel.nf-components .ml-kit .sc-update-name{font-weight:500}.nf-panel.nf-components .ml-kit .sc-update-time{font-size:11px;color:rgb(var(--fg-disabled))}.nf-panel.nf-components .ml-kit .sc-status-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:500;padding:2px 8px;border-radius:9999px;
+  background:rgb(var(--success-subtle));color:rgb(var(--success-fg));
+  border:1px solid rgb(var(--success-border));
+}.nf-panel.nf-components .ml-kit .sc-status-chip svg{width:12px;height:12px}.nf-panel.nf-components .ml-kit .sc-changes{color:rgb(var(--fg-muted));font-size:13px}.nf-panel.nf-components .ml-kit .sc-nav::-webkit-scrollbar{width:0}
+
+/* ====== Toast ====== */.nf-panel.nf-components .ml-kit .toast-stack{display:flex; flex-direction:column; gap:8px}.nf-panel.nf-components .ml-kit .toast{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:12px 14px;
+  background:rgb(var(--bg));
+  border:1px solid rgb(var(--border-default));
+  border-radius:12px;
+  box-shadow:var(--shadow-md);
+  font-size:13px;
+  min-width:320px;
+}.nf-panel.nf-components .ml-kit .toast-icon{
+  width:18px; height:18px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:50%;
+}.nf-panel.nf-components .ml-kit .toast-icon svg{width:12px; height:12px}.nf-panel.nf-components .ml-kit .toast-success .toast-icon{background:rgb(var(--success-subtle)); color:rgb(var(--success-fg))}.nf-panel.nf-components .ml-kit .toast-info .toast-icon{background:rgb(var(--info-subtle)); color:rgb(var(--info-fg))}.nf-panel.nf-components .ml-kit .toast-warning .toast-icon{background:rgb(var(--warning-subtle)); color:rgb(var(--warning-fg))}.nf-panel.nf-components .ml-kit .toast-error .toast-icon{background:rgb(var(--error-subtle)); color:rgb(var(--error-fg))}.nf-panel.nf-components .ml-kit .toast-body{flex:1}.nf-panel.nf-components .ml-kit .toast-title{font-weight:500; color:rgb(var(--fg-default)); margin-bottom:2px}.nf-panel.nf-components .ml-kit .toast-desc{font-size:12px; color:rgb(var(--fg-muted))}
+
+/* ====== Topbar mock ====== */
+/* @build:brand-kit-components-end */
+/* @build:neuform-display-start */
+.kit.nf-display{
+  --nf-page:#090909;--nf-card:#fff;--nf-muted:#f2f2f0;--nf-line:rgba(0,0,0,.06);
+  --nf-radius:28px;--nf-text:#111;--nf-dim:#6b6b6b;
+}
+.kit.nf-display{
+  background:var(--nf-page)!important;
+  padding-top:48px;
+}
+.kit.nf-display body,.kit.nf-display{
+  color:var(--nf-text);
+}
+html:has(.kit.nf-display),
+body:has(.kit.nf-display){
+  --nf-page:#090909;
+  background:var(--nf-page)!important;
+}
+body:has(.kit.nf-display){
+  color:#eee;
+}
+html:has(.kit.nf-display.nf-light),
+body:has(.kit.nf-display.nf-light){
+  --nf-page:#f3f2f0;
+}
+body:has(.kit.nf-display.nf-light){
+  color:#111;
+}
+.kit.nf-display .sec{ margin-bottom:18px; }
+.kit.nf-display .sec-head{ display:none; }
+.kit.nf-display .card-k.nf-panel{
+  background:var(--nf-card);
+  border:1px solid var(--nf-line);
+  border-radius:var(--nf-radius);
+  padding:28px 28px 24px;
+  box-shadow:0 1px 0 rgba(255,255,255,.04);
+}
+.kit.nf-display .nf-panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:22px;
+}
+.kit.nf-display .nf-panel-head-left{
+  display:flex;align-items:center;gap:12px;
+}
+.kit.nf-display .nf-panel-ico{
+  width:34px;height:34px;border-radius:10px;background:var(--nf-muted);
+  display:grid;place-items:center;color:#888;
+}
+.kit.nf-display .nf-panel-ico svg{width:18px;height:18px}
+.kit.nf-display .nf-panel-head h3{
+  font-family:var(--font-brand);font-size:22px;font-weight:600;
+  letter-spacing:-.02em;color:var(--nf-text);
+}
+.kit.nf-display .nf-badge{
+  font-size:11px;font-weight:600;color:var(--nf-dim);
+  background:var(--nf-muted);border-radius:999px;padding:6px 12px;
+}
+.kit.nf-display .nf-type-split{
+  display:grid;grid-template-columns:1.35fr 1fr;border-radius:20px;overflow:hidden;
+  border:1px solid var(--nf-line);min-height:320px;
+}
+.kit.nf-display .nf-type-left{
+  padding:26px 28px 28px;background:#fff;display:flex;flex-direction:column;
+}
+.kit.nf-display .nf-type-right{
+  padding:26px 28px 28px;background:var(--nf-muted);display:flex;flex-direction:column;
+}
+.kit.nf-display .nf-type-dots{
+  display:grid;grid-template-columns:repeat(2,11px);gap:6px;margin-bottom:24px;
+}
+.kit.nf-display .nf-type-dots i{width:11px;height:11px;border-radius:50%;background:#e5e5e3}
+.kit.nf-display .nf-type-systems{display:flex;gap:40px;margin-bottom:auto;flex-wrap:wrap}
+.kit.nf-display .nf-type-sys .nf-lbl{
+  display:block;font-size:11px;font-weight:600;color:var(--nf-text);margin-bottom:6px;
+}
+.kit.nf-display .nf-type-sys p{font-size:12px;color:var(--nf-dim);line-height:1.55}
+.kit.nf-display .nf-type-specimen{
+  font-family:var(--font-brand);font-size:clamp(36px,5vw,56px);font-weight:600;
+  letter-spacing:-.03em;line-height:1.05;margin-top:36px;color:var(--nf-text);
+}
+.kit.nf-display .nf-type-specimen .sub{font-weight:500;color:var(--nf-dim)}
+.kit.nf-display .nf-type-right .nf-lbl{align-self:flex-end;margin-bottom:16px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--nf-dim)}
+.kit.nf-display .nf-letters{
+  display:flex;flex-wrap:wrap;gap:6px 12px;font-family:var(--font-brand);
+  font-size:22px;font-weight:500;color:#bbb;line-height:1.3;
+}
+.kit.nf-display .nf-letters span{color:#c8c8c4}
+.kit.nf-display .nf-nums{
+  display:flex;flex-wrap:wrap;gap:8px 16px;font-family:var(--font-brand);
+  font-size:20px;font-weight:600;color:var(--nf-text);margin-top:8px;
+}
+.kit.nf-display .nf-color-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+@media(max-width:720px){.kit.nf-display .nf-color-grid{grid-template-columns:1fr}}
+.kit.nf-display .nf-color-block{
+  border-radius:18px;overflow:hidden;border:1px solid var(--nf-line);background:#fff;
+}
+.kit.nf-display .nf-color-block .nf-face{
+  min-height:132px;padding:18px 20px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.kit.nf-display .nf-color-block .nf-face-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+}
+.kit.nf-display .nf-color-block .nf-name{font-size:14px;font-weight:600}
+.kit.nf-display .nf-color-block .nf-hex{font-size:11px;font-family:var(--font-mono);opacity:.9}
+.kit.nf-display .nf-color-block .color-scale{height:44px}
+.kit.nf-display .nf-overview-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+.kit.nf-display .nf-overview-chip{
+  background:var(--nf-muted);border-radius:16px;padding:18px 20px;border:1px solid var(--nf-line);
+}
+.kit.nf-display .nf-overview-chip .nf-lbl{
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--nf-dim);margin-bottom:8px;
+}
+.kit.nf-display .nf-overview-chip .nf-val{
+  font-family:var(--font-brand);font-size:18px;font-weight:600;color:var(--nf-text);letter-spacing:-.01em;
+}
+.kit.nf-display .comp-board.nf-comp-panel{
+  background:var(--nf-card)!important;border-radius:var(--nf-radius)!important;
+  border:1px solid var(--nf-line)!important;padding:28px!important;
+}
+.kit.nf-display .comp-board .ae-kit.kimi-comp-board,
+.kit.nf-display .comp-board .iv-kit.kimi-comp-board{
+  background:#fafafa;border-radius:16px;border:1px solid var(--nf-line);
+}
+.kit.nf-display.nf-light .nf-panel.nf-components .iv-kit.kimi-comp-board{
+  background:#fafafa;border-radius:16px;border:1px solid var(--nf-line);overflow:hidden;
+}
+.kit.nf-display.nf-light .nf-panel.nf-components .iv-kit .kimi-comp-label{color:rgba(0,0,0,.45)}
+.kit.nf-display.nf-light .nf-panel.nf-components .iv-kit .iv-btn-label{color:rgba(0,0,0,.55)}
+.kit.nf-display.nf-light .nf-panel.nf-components .el-kit.kimi-comp-board{
+  background:#fff;border-radius:16px;border:1px solid var(--nf-line);overflow:hidden;
+}
+.kit.nf-display.nf-light .nf-panel.nf-components .el-kit .kimi-comp-label{color:rgba(0,0,0,.45)}
+.kit.nf-display.nf-light .nf-panel.nf-components .el-kit .el-btn-label{color:rgba(0,0,0,.55)}
+.kit.nf-display.nf-light .nf-panel.nf-components .ve-kit.kimi-comp-board{
+  background:#fff;border-radius:16px;border:1px solid var(--nf-line);overflow:hidden;
+}
+.kit.nf-display.nf-light .nf-panel.nf-components .ve-kit .kimi-comp-label{color:rgba(0,0,0,.45)}
+.kit.nf-display.nf-light .nf-panel.nf-components .ve-kit .ve-btn-label{color:rgba(0,0,0,.55)}
+.kit.nf-display.nf-light .nf-panel.nf-components .v0-kit.kimi-comp-board{
+  background:#fff;border-radius:16px;border:1px solid var(--nf-line);overflow:hidden;
+}
+.kit.nf-display.nf-light .nf-panel.nf-components .v0-kit .kimi-comp-label{color:rgba(0,0,0,.45)}
+.kit.nf-display.nf-light .comp-board.nf-comp-panel{
+  background:var(--nf-card)!important;border-radius:var(--nf-radius)!important;
+  border:1px solid var(--nf-line)!important;padding:0!important;overflow:hidden;
+}
+.kit.nf-display.nf-light .comp-board .component-usage{
+  margin:0;padding:18px 24px 22px;border-top:1px solid var(--nf-line);background:#fff;
+}
+.kit.nf-display.nf-light .comp-board .iv-kit .kimi-comp-label{color:rgba(0,0,0,.45)}
+.kit.nf-display.nf-light .comp-board .iv-kit .iv-btn-label{color:rgba(0,0,0,.55)}
+.kit.nf-display:not(.nf-light) .bg-recipe{
+  display:block;margin-top:14px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px 22px;
+}
+.kit.nf-display:not(.nf-light) .bg-recipe .recipe-title{
+  font-size:13px;font-weight:600;margin-bottom:8px;color:#f2f2f0;
+}
+.kit.nf-display:not(.nf-light) .bg-recipe p{
+  font-size:12px;color:rgba(255,255,255,.55);line-height:1.6;margin-bottom:12px;
+}
+.kit.nf-display:not(.nf-light) .bg-recipe pre{
+  font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.55);
+  background:#080808;border:1px solid rgba(255,255,255,.08);border-radius:12px;
+  padding:14px;line-height:1.65;white-space:pre-wrap;
+}
+.kit.nf-display:not(.nf-light) .nf-panel.nf-components .ae-kit.kimi-comp-board{
+  background:#080808;border-radius:16px;border:1px solid rgba(255,255,255,.1);overflow:hidden;
+}
+.kit.nf-display:not(.nf-light) .nf-panel.nf-components .ae-kit .kimi-comp-label{color:rgba(255,255,255,.4)}
+.kit.nf-display:not(.nf-light) .nf-panel.nf-components .ae-kit .ae-btn-label{color:rgba(255,255,255,.45)}
+.kit.nf-display:not(.nf-light) .sec .component-usage{
+  margin-top:14px;padding:0;
+}
+.kit.nf-display:not(.nf-light) .component-usage .usage-card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;
+}
+.kit.nf-display .sem-grid{ display:none; }
+.kit.nf-display.nf-light .bg-recipe{
+  display:block;margin-top:14px;background:var(--nf-muted);
+  border:1px solid var(--nf-line);border-radius:16px;padding:20px 22px;
+}
+.kit.nf-display.nf-light .bg-recipe .recipe-title{
+  font-size:13px;font-weight:600;margin-bottom:8px;color:var(--nf-text);
+}
+.kit.nf-display.nf-light .bg-recipe p{
+  font-size:12px;color:var(--nf-dim);line-height:1.6;margin-bottom:12px;
+}
+.kit.nf-display.nf-light .bg-recipe pre{
+  font-size:11px;font-family:var(--font-mono);color:var(--nf-dim);
+  background:#fff;border:1px solid var(--nf-line);border-radius:12px;
+  padding:14px;line-height:1.65;white-space:pre-wrap;
+}
+.kit.nf-display .bg-style-grid .bg-swatch{
+  border-radius:16px;min-height:100px;
+}
+.kit.nf-display.nf-light .ruler-head .rh-left h4{ display:none; }
+.kit.nf-display.nf-light .measure{
+  padding:20px 20px 24px 62px;border-radius:16px;
+}
+.kit.nf-display.nf-light .m-eyebrow{ font-size:11px;letter-spacing:.14em; }
+.kit.nf-display.nf-light .m-title{ font-size:28px;margin-top:4px; }
+.kit.nf-display.nf-light .m-desc{ font-size:14px;margin-top:6px;max-width:420px; }
+.kit.nf-display.nf-light .m-cta{ font-size:14px;padding:10px 18px;margin-top:12px; }
+.kit.nf-display.nf-light .sp-chips{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px;
+}
+.kit.nf-display.nf-light .chip-card{ padding:12px 14px 14px; }
+.kit.nf-display.nf-light .chip-card .cc-val{
+  font-size:11px;font-family:var(--font-mono);font-weight:600;
+  letter-spacing:0;line-height:1.35;
+}
+.kit.nf-display.nf-light .chip-ruler{ height:10px;margin-top:10px; }
+.kit.nf-display.nf-light .sp-chips.iv-pad-chips,
+.kit.nf-display.nf-light .sp-chips.el-pad-chips{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+.kit.nf-display.nf-light .ruler-card{ padding:22px 22px 24px; }
+.kit.nf-display.nf-light .bg-swatch-page{
+  background:radial-gradient(120px 80px at 85% 15%, rgba(97,92,237,.12), transparent 70%),var(--bg-100);
+}
+.kit.nf-display .kit-head .kit-h1{
+  color:#f2f2f0;font-family:var(--font-brand);letter-spacing:-.03em;
+}
+.kit.nf-display .kit-head .kit-sub{color:rgba(255,255,255,.55)}
+.kit.nf-display .kit-head .brand-word{color:#f2f2f0!important}
+.kit.nf-display .meta-chip{
+  background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.65);
+}
+.kit.nf-display .meta-chip b{color:#fff}
+.kit.nf-display .copy-btn{
+  background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#eee;
+}
+.kit.nf-display .copy-btn svg{fill:currentColor}
+.kit.nf-display .copy-btn:hover{
+  background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2);color:#fff;
+}
+.kit.nf-display.no-brand-logo .logo-build,.kit.nf-display.no-brand-logo .logo-grid{display:none}
+.kit.nf-display.nf-light{
+  --nf-page:#f3f2f0;--nf-card:#fff;--nf-muted:#f5f5f4;--nf-line:rgba(0,0,0,.06);
+  --nf-radius:28px;--nf-text:#111;--nf-dim:#6b6b6b;
+}
+.kit.nf-display.nf-light .kit-head .kit-h1,.kit.nf-display.nf-light .kit-head .kit-sub{color:#111}
+.kit.nf-display.nf-light .kit-head .brand-word{color:#111!important}
+.kit.nf-display.nf-light .kit-head .brand-mark{color:#111}
+.kit.nf-display.nf-light .kit-head .brand-mark svg{color:#111}
+.kit.nf-display.nf-light .meta-chip{
+  background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08);color:rgba(0,0,0,.55);
+}
+.kit.nf-display.nf-light .meta-chip b{color:#111}
+.kit.nf-display.nf-light .copy-btn{
+  background:#fff;border-color:rgba(0,0,0,.1);color:#111;
+}
+/* @build:neuform-display-end */
+</style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="vechol-no-hscroll">
+/* 防横滑，同时保持内容最大宽度居中（对齐原 .kit max-width:1000px） */
+html{
+  width:100%;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+body{
+  width:100%;
+  margin:0;
+  overflow-x:hidden;
+}
+.kit{
+  width:100% !important;
+  max-width:1000px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  box-sizing:border-box !important;
+  overflow-x:hidden !important;
+  padding-left:max(28px, env(safe-area-inset-left)) !important;
+  padding-right:max(28px, env(safe-area-inset-right)) !important;
+}
+.kit-sidebar-only,
+.expanded,
+.expanded__surface,
+.expanded__content,
+.expanded__sidebar,
+.expanded__sidebar-scroll,
+.expanded__sidebar-stack{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+.expanded__sidebar-stack,
+.expanded__sidebar-card,
+.expanded__typography-card,
+.expanded__typography-card-layout,
+.expanded__typography-card-main,
+.expanded__color-system,
+.expanded__material-card,
+.kit-logo-mark,
+.kit-logo-mark__grid,
+.kit-logo-mark__stage,
+.kit-logo-mark__aside{
+  min-width:0 !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+img,svg,video,canvas,iframe{
+  max-width:100%;
+  height:auto;
+}
+pre,code{
+  max-width:100%;
+  overflow-x:auto;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+/* 桌面也避免被 minmax(220px+) 撑破窄容器 */
+.expanded__typography-card-layout,
+.expanded__sidebar-loading-typography-layout{
+  grid-template-columns:minmax(0,1fr) minmax(0,0.34fr) !important;
+}
+.kit-logo-mark__grid{
+  grid-template-columns:minmax(0,1.35fr) minmax(0,0.85fr) !important;
+}
+@media (max-width:820px){
+  .kit{
+    max-width:1000px !important;
+    padding-top:24px !important;
+    padding-bottom:64px !important;
+    padding-left:max(14px, env(safe-area-inset-left)) !important;
+    padding-right:max(14px, env(safe-area-inset-right)) !important;
+  }
+  .kit-h1{
+    overflow-wrap:anywhere;
+  }
+  .kit-sub{
+    max-width:100% !important;
+  }
+  .expanded__content,
+  .expanded__typography-card-layout,
+  .expanded__sidebar-loading-typography-layout,
+  .kit-logo-mark__grid,
+  .expanded__color-system,
+  .expanded__sidebar-loading-color-grid,
+  .expanded__sidebar-loading-copy-grid{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+  .expanded__sidebar-card,
+  .expanded__typography-card,
+  .expanded__material-card{
+    width:100% !important;
+  }
+  .brand-word,
+  .expanded__title-text,
+  .meta-chip{
+    white-space:normal !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="brand-logo" viewBox="0 0 502 502"><path d="M501.413 185.636V30.2677C501.413 13.5952 487.887 0.305481 471.463 0.305481H316.167C291.774 0.305481 267.622 5.13791 245.161 14.3199C222.699 23.7435 202.17 37.2749 185.023 54.6723L183.815 55.8805C161.112 78.8354 144.93 107.348 136.719 138.76C151.451 134.893 166.666 132.96 181.882 132.719C222.457 132.236 262.308 145.284 294.672 169.688C323.896 191.435 346.115 221.397 358.191 255.95C370.75 290.987 372.199 329.165 362.78 365.167C393.936 356.952 422.677 340.763 445.621 318.05L446.829 316.841C463.977 299.686 477.743 279.147 487.162 256.675C496.581 234.204 501.171 210.041 501.171 185.636H501.413Z" fill="#18E299"/><path d="M132.082 183.012C132.323 135.349 151.331 89.6123 184.775 55.4301L55.5676 184.697C55.0864 185.178 54.6049 185.419 54.1237 185.9C22.6039 217.194 3.59626 259.079 0.468338 303.372C-2.41897 344.776 8.40821 385.698 31.5067 419.88C33.7099 423.141 39.6881 424.213 43.0566 421.084L122.217 342.128C147 317.333 154.699 280.503 142.909 247.525C135.451 227.063 131.841 205.158 132.082 183.012Z" fill="#0C8C5E"/><path d="M446.078 316.852C421.295 341.165 390.256 358.015 356.571 365.478C322.645 372.94 287.516 370.774 254.793 359.219C254.793 359.219 254.552 359.219 254.312 359.219C221.348 347.424 184.536 355.127 159.753 379.68L80.5915 458.637C77.223 462.007 77.7042 467.543 81.7946 470.191C115.961 493.059 156.866 504.133 198.25 501.244C242.522 498.115 284.147 479.098 315.667 447.563L316.87 446.36L446.078 317.093V316.852Z" fill="#0C8C5E"/></symbol>
+  <!-- 1. Sidebar (panel) -->
+  <symbol id="icon-sidebar" viewBox="0 0 20 20">
+    <path d="M16.5 4A1.5 1.5 0 0 1 18 5.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 2 14.5v-9A1.5 1.5 0 0 1 3.5 4zM7 15h9.5a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H7zM3.5 5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5H6V5z"></path>
+  </symbol>
+  <!-- 2. Sidebar expand -->
+  <symbol id="icon-sidebar-expand" viewBox="0 0 20 20">
+    <path d="M16.5 3a.5.5 0 0 1 .5.5v13l-.01.1a.5.5 0 0 1-.98 0l-.01-.1v-13a.5.5 0 0 1 .5-.5M8.128 5.165a.5.5 0 0 1 .625-.097l.082.06 5 4.5a.5.5 0 0 1 .07.666l-.07.078-5 4.5a.501.501 0 0 1-.67-.744l4.031-3.628H3.5a.5.5 0 0 1 0-1h8.696L8.165 5.872l-.067-.075a.5.5 0 0 1 .03-.632"></path>
+  </symbol>
+  <!-- 3. Plus / New chat -->
+  <symbol id="icon-plus" viewBox="0 0 20 20">
+    <path d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 .077 1.496l-.077.004h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3"></path>
+  </symbol>
+  <!-- 4. Search -->
+  <symbol id="icon-search" viewBox="0 0 20 20">
+    <path d="M8.5 2a6.5 6.5 0 0 1 4.935 10.728l4.419 4.419.064.078a.5.5 0 0 1-.693.693l-.079-.064-4.419-4.42A6.5 6.5 0 1 1 8.5 2m0 1a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11"></path>
+  </symbol>
+  <!-- 5. Chats -->
+  <symbol id="icon-chats" viewBox="0 0 20 20">
+    <path d="M8.99962 2C12.3133 2 14.9996 4.68629 14.9996 8C14.9996 11.3137 12.3133 14 8.99962 14H2.49962C2.30105 13.9998 2.12113 13.8821 2.04161 13.7002C1.96224 13.5181 1.99835 13.3058 2.1334 13.1602L3.93516 11.2178C3.34317 10.2878 2.99962 9.18343 2.99962 8C2.99962 4.68643 5.68609 2.00022 8.99962 2ZM8.99962 3C6.23838 3.00022 3.99961 5.23871 3.99961 8C3.99961 9.11212 4.36265 10.1386 4.97618 10.9688C5.11884 11.1621 5.1035 11.4293 4.94004 11.6055L3.64512 13H8.99962C11.761 13 13.9996 10.7614 13.9996 8C13.9996 5.23858 11.761 3 8.99962 3Z"></path>
+    <path d="M16.5445 9.72754C16.4182 9.53266 16.1678 9.44648 15.943 9.53418C15.7183 9.62215 15.5932 9.85502 15.6324 10.084L15.7369 10.3955C15.9073 10.8986 16.0006 11.438 16.0006 12C16.0006 13.1123 15.6376 14.1386 15.024 14.9687C14.8811 15.1621 14.8956 15.4302 15.0592 15.6064L16.3531 17H11.0006C9.54519 17 8.23527 16.3782 7.32091 15.3848L7.07091 15.1103C6.88996 14.9645 6.62535 14.9606 6.43907 15.1143C6.25267 15.2682 6.20668 15.529 6.31603 15.7344L6.58458 16.0625C7.68048 17.253 9.25377 18 11.0006 18H17.5006C17.6991 17.9998 17.8791 17.8822 17.9586 17.7002C18.038 17.5181 18.0018 17.3058 17.8668 17.1602L16.0631 15.2178C16.6554 14.2876 17.0006 13.1837 17.0006 12C17.0006 11.3271 16.8891 10.6792 16.6842 10.0742L16.5445 9.72754Z"></path>
+  </symbol>
+  <!-- 6. Projects -->
+  <symbol id="icon-projects" viewBox="0 0 20 20">
+    <path d="M15.8198 7C16.6885 7.00025 17.3624 7.73158 17.3178 8.57617L17.2993 8.74707L16.1332 15.7471C16.0126 16.4699 15.3865 16.9996 14.6538 17H5.34711C4.6142 16.9998 3.98833 16.47 3.86762 15.7471L2.7016 8.74707C2.54922 7.83277 3.25418 7 4.18109 7H15.8198ZM4.18109 8C3.87216 8 3.63722 8.27731 3.68793 8.58203L4.85394 15.582C4.89413 15.8229 5.10291 15.9998 5.34711 16H14.6538C14.8978 15.9996 15.1068 15.8228 15.1469 15.582L16.3129 8.58203L16.3188 8.46973C16.3036 8.21259 16.0899 8.00023 15.8198 8H4.18109Z"></path>
+    <path d="M16.0004 5.5C16.0004 5.224 15.7764 5.00024 15.5004 5H4.50043C4.22428 5 4.00043 5.22386 4.00043 5.5C4.00043 5.77614 4.22428 6 4.50043 6H15.5004C15.7764 5.99976 16.0004 5.776 16.0004 5.5Z"></path>
+    <path d="M14.5004 3.5C14.5004 3.224 14.2764 3.00024 14.0004 3H6.00043C5.72428 3 5.50043 3.22386 5.50043 3.5C5.50043 3.77614 5.72428 4 6.00043 4H14.0004C14.2764 3.99976 14.5004 3.776 14.5004 3.5Z"></path>
+  </symbol>
+  <!-- 7. Artifacts -->
+  <symbol id="icon-artifacts" viewBox="0 0 20 20">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M6.35352 3.1464L9.35352 6.14642C9.43935 6.25103 9.5 6.36003 9.5 6.50091C9.4998 6.6332 9.44704 6.75988 9.35352 6.85346L6.35352 9.85347C6.14584 10.0609 5.85611 10.0243 5.64648 9.85347L2.64648 6.85346C2.55296 6.75988 2.5002 6.6332 2.5 6.50091C2.5 6.36841 2.55285 6.24017 2.64648 6.14642L5.64648 3.1464C5.8552 2.97421 6.14635 2.93936 6.35352 3.1464ZM6 8.79194L3.70703 6.49994L6 4.20696L8.29297 6.49994L6 8.79194Z"></path>
+    <path d="M16.8984 3.7509C16.9875 3.90632 16.986 4.09826 16.8955 4.25286L15.5791 6.49994L16.8955 8.74702C16.986 8.90159 16.9874 9.09354 16.8984 9.24898C16.8093 9.40436 16.643 9.49996 16.4638 9.49996H11.5C11.3198 9.49996 11.1532 9.4028 11.0644 9.24605C10.976 9.08949 10.9789 8.89736 11.0713 8.74312L12.417 6.49994L11.0713 4.25676C10.9789 4.1025 10.976 3.91037 11.0644 3.75383C11.1532 3.59717 11.3199 3.49992 11.5 3.49992H16.4638C16.6429 3.51309 16.8055 3.58909 16.8984 3.7509ZM13.4287 6.2431C13.5152 6.4107 13.5166 6.58638 13.4287 6.75678L12.3828 8.49995H15.5918L14.5683 6.75287C14.477 6.59683 14.477 6.40303 14.5683 6.24701L15.5918 4.49993H12.3828L13.4287 6.2431Z"></path>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.25293 10.9668C7.40708 10.8793 7.59647 10.8801 7.75 10.9687C7.90356 11.0574 7.99869 11.2211 8 11.3984L8.01074 12.8388L9.30762 13.6054C9.42811 13.6994 9.49994 13.8448 9.5 14C9.5 14.1773 9.40587 14.3418 9.25293 14.4316L8.01074 15.1601L7.99512 16.667C7.97406 16.8184 7.88446 16.9536 7.75 17.0312C7.59642 17.1199 7.40713 17.1207 7.25293 17.0332L6 16.3203L4.74707 17.0332C4.59287 17.1207 4.40358 17.1199 4.25 17.0312C4.09643 16.9425 4.00124 16.7789 4 16.6015L3.99023 15.1601L2.74707 14.4316C2.59413 14.3418 2.5 14.1773 2.5 14C2.50006 13.8448 2.57188 13.6994 2.69238 13.6054L3.99023 12.8388L4 11.3984C4.00131 11.2211 4.09644 11.0574 4.25 10.9687C4.40353 10.8801 4.59292 10.8793 4.74707 10.9668L6 11.6787L7.25293 10.9668ZM4.99512 12.2568L5.75293 12.6884C5.90608 12.7754 6.09392 12.7754 6.24707 12.6884L7.00586 12.2568L7.01172 13.1308C7.01308 13.3068 7.10706 13.4695 7.25879 13.5586L8.01172 14L7.25879 14.4414C7.10706 14.5304 7.01315 14.6932 7.01172 14.8691L7.00586 15.7422L6.24707 15.3115C6.09397 15.2246 5.90603 15.2246 5.75293 15.3115L4.99512 15.7422L4.98828 14.8691C4.98703 14.7152 4.91459 14.5716 4.79492 14.4785L3.98926 14L4.74121 13.5586C4.87421 13.4805 4.96267 13.3457 4.9834 13.1953L4.99512 12.2568Z"></path>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M14 11C15.6568 11 16.9999 12.3432 17 14C17 15.6568 15.6569 17 14 17C12.3431 17 11 15.6568 11 14C11.0001 12.3432 12.3432 11 14 11ZM12 14C12.0001 12.8955 12.8955 12 14 12C15.1045 12 15.9999 12.8955 16 14C16 15.1045 15.1046 16 14 16C12.8954 16 12 15.1045 12 14Z"></path>
+  </symbol>
+  <!-- 8. Code -->
+  <symbol id="icon-code" viewBox="0 0 20 20">
+    <path d="M11.6318 4.01757C11.898 4.09032 12.055 4.36555 11.9824 4.63183L8.98242 15.6318C8.90966 15.8981 8.63449 16.0551 8.36816 15.9824C8.10193 15.9097 7.94495 15.6345 8.01758 15.3682L11.0176 4.36816C11.0904 4.102 11.3656 3.94497 11.6318 4.01757Z"></path>
+    <path d="M13.124 6.17089C13.3059 5.96325 13.6213 5.9423 13.8291 6.12402L17.8291 9.62402L17.9014 9.70215C17.9647 9.78754 18 9.89182 18 10C18 10.1441 17.9375 10.281 17.8291 10.376L13.8291 13.876L13.7471 13.9346C13.5449 14.0498 13.2833 14.011 13.124 13.8291C12.9649 13.6472 12.9606 13.3824 13.1016 13.1973L13.1709 13.124L16.7412 10L13.1709 6.87597C12.9632 6.69411 12.9422 6.37866 13.124 6.17089Z"></path>
+    <path d="M6.25293 6.06542C6.45509 5.95025 6.71675 5.98908 6.87598 6.17089C7.03513 6.35279 7.03933 6.6176 6.89844 6.80273L6.8291 6.87597L3.25879 10L6.8291 13.124C7.03682 13.3059 7.05771 13.6213 6.87598 13.8291C6.69413 14.0369 6.37869 14.0578 6.1709 13.876L2.1709 10.376L2.09863 10.2979C2.03528 10.2124 2 10.1082 2 10C2.00005 9.85591 2.06247 9.71893 2.1709 9.62402L6.1709 6.12402L6.25293 6.06542Z"></path>
+  </symbol>
+  <!-- 9. Customize -->
+  <symbol id="icon-customize" viewBox="0 0 20 20">
+    <path d="M12.5 3A1.5 1.5 0 0 1 14 4.5V6h.5A3.5 3.5 0 0 1 18 9.5v6a1.5 1.5 0 0 1-1.5 1.5h-13a1.5 1.5 0 0 1-1.492-1.347L2 15.5v-6A3.5 3.5 0 0 1 5.5 6H6V4.5A1.5 1.5 0 0 1 7.5 3zM3 15.5l.01.1a.5.5 0 0 0 .49.4h13a.5.5 0 0 0 .5-.5V12h-4v.5a.5.5 0 0 1-1 0V12H8v.5a.5.5 0 0 1-1 0V12H3zM5.5 7A2.5 2.5 0 0 0 3 9.5V11h4v-.5a.5.5 0 0 1 1 0v.5h4v-.5a.5.5 0 0 1 1 0v.5h4V9.5A2.5 2.5 0 0 0 14.5 7zm2-3a.5.5 0 0 0-.5.5V6h6V4.5a.5.5 0 0 0-.5-.5z"></path>
+  </symbol>
+  <!-- 10. More (vertical dots) -->
+  <symbol id="icon-more" viewBox="0 0 20 20">
+    <path d="M10 14a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m0-5.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3M10 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"></path>
+  </symbol>
+  <!-- 11. Download / Get apps -->
+  <symbol id="icon-download" viewBox="0 0 20 20">
+    <path d="M10 3C10.2761 3 10.5 3.22386 10.5 3.5V12.1855L13.626 8.66797C13.8094 8.46166 14.1256 8.44275 14.332 8.62598C14.5383 8.80936 14.5573 9.12563 14.374 9.33203L10.374 13.832L10.2949 13.9033C10.21 13.9654 10.107 14 10 14C9.85718 14 9.72086 13.9388 9.62598 13.832L5.62598 9.33203L5.56738 9.25C5.45079 9.04872 5.48735 8.78653 5.66797 8.62598C5.84854 8.46567 6.1127 8.46039 6.29883 8.59961L6.37402 8.66797L9.5 12.1855V3.5C9.5 3.22386 9.72386 3 10 3Z"></path>
+    <path d="M3.5 13C3.22386 13 3 13.2239 3 13.5V15.5C3 16.3284 3.67157 17 4.5 17H10V16H4.5C4.22386 16 4 15.7761 4 15.5V13.5C4 13.2239 3.77614 13 3.5 13Z"></path>
+    <path d="M16.5 13C16.7761 13 17 13.2239 17 13.5V15.5C17 16.3284 16.3284 17 15.5 17H10V16H15.5C15.7761 16 16 15.7761 16 15.5V13.5C16 13.2239 16.2239 13 16.5 13Z"></path>
+  </symbol>
+  <!-- 12. Chevron down -->
+  <symbol id="icon-chevron-down" viewBox="0 0 20 20">
+    <path d="M14.128 7.165a.502.502 0 0 1 .744.67l-4.5 5-.078.07a.5.5 0 0 1-.666-.07l-4.5-5-.06-.082a.501.501 0 0 1 .729-.656l.075.068L10 11.752z"></path>
+  </symbol>
+  <!-- 13. Close / Dismiss -->
+  <symbol id="icon-close" viewBox="0 0 20 20">
+    <path d="M15.147 4.146a.5.5 0 0 1 .707.707L10.707 10l5.147 5.147a.5.5 0 0 1-.63.771l-.078-.064L10 10.707l-5.146 5.147a.5.5 0 0 1-.708-.707L9.293 10 4.146 4.853a.5.5 0 0 1 .708-.707L10 9.293z"></path>
+  </symbol>
+  <!-- 14. Retry / Refresh -->
+  <symbol id="icon-retry" viewBox="0 0 20 20">
+    <path d="M10.386 2.51A7.5 7.5 0 1 1 5.499 4H3a.5.5 0 0 1 0-1h3.5a.5.5 0 0 1 .49.402L7 3.5V7a.5.5 0 0 1-1 0V4.879a6.5 6.5 0 1 0 4.335-1.37L10 3.5l-.1-.01a.5.5 0 0 1 .1-.99z"></path>
+  </symbol>
+  <!-- 15. Edit / Pencil -->
+  <symbol id="icon-edit" viewBox="0 0 20 20">
+    <path d="M9.728 2.88a1.5 1.5 0 0 1 1.946-.847l2.792 1.1a1.5 1.5 0 0 1 .845 1.945l-3.92 9.953a1.5 1.5 0 0 1-.452.615l-.088.066-3.143 2.186a.75.75 0 0 1-1.135-.362l-.026-.095-.81-3.742a1.5 1.5 0 0 1 .071-.867zm-2.99 10.319a.5.5 0 0 0-.023.288l.73 3.376 2.835-1.971.058-.047a.5.5 0 0 0 .122-.18l2.637-6.698-3.721-1.466zm4.57-10.236a.5.5 0 0 0-.65.283L9.743 5.57l3.722 1.467.917-2.327a.5.5 0 0 0-.283-.648z"></path>
+  </symbol>
+  <!-- 16. Copy -->
+  <symbol id="icon-copy" viewBox="0 0 20 20">
+    <path d="M12.5 3A1.5 1.5 0 0 1 14 4.5V6h1.5A1.5 1.5 0 0 1 17 7.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 6 15.5V14H4.5A1.5 1.5 0 0 1 3 12.5v-8A1.5 1.5 0 0 1 4.5 3zm1.5 9.5a1.5 1.5 0 0 1-1.5 1.5H7v1.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5H14zM4.5 4a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-8a.5.5 0 0 0-.5-.5z"></path>
+  </symbol>
+  <!-- 17. Check / Copied -->
+  <symbol id="icon-check" viewBox="0 0 20 20">
+    <path d="M15.188 5.11a.5.5 0 0 1 .752.626l-.056.084-7.5 9a.5.5 0 0 1-.738.033l-3.5-3.5-.064-.078a.501.501 0 0 1 .693-.693l.078.064 3.113 3.113 7.15-8.58z"></path>
+  </symbol>
+  <!-- 18. Thumbs up -->
+  <symbol id="icon-thumbs-up" viewBox="0 0 20 20">
+    <path d="M9.56 2a2.5 2.5 0 0 1 2.452 2.99L11.609 7h2.235a2.75 2.75 0 0 1 2.713 3.202l-.681 4.082A3.25 3.25 0 0 1 12.67 17H4.5A1.5 1.5 0 0 1 3 15.5V9.238a1.5 1.5 0 0 1 1.059-1.433l1.14-.35.139-.048a2.75 2.75 0 0 0 1.56-1.453L8.41 2.59l.07-.13A1 1 0 0 1 9.322 2zM7.81 6.365a3.75 3.75 0 0 1-2.126 1.98l-.192.065-1.14.35A.5.5 0 0 0 4 9.239V15.5a.5.5 0 0 0 .5.5h8.17a2.25 2.25 0 0 0 2.22-1.88l.68-4.082A1.75 1.75 0 0 0 13.844 8H11a.5.5 0 0 1-.49-.598l.521-2.608A1.5 1.5 0 0 0 9.561 3h-.238z"></path>
+  </symbol>
+  <!-- 19. Thumbs down -->
+  <symbol id="icon-thumbs-down" viewBox="0 0 20 20">
+    <path d="M12.67 3a3.25 3.25 0 0 1 3.206 2.716l.68 4.082A2.75 2.75 0 0 1 13.845 13H11.61l.403 2.01A2.5 2.5 0 0 1 9.56 18h-.238a1 1 0 0 1-.843-.46l-.069-.13-1.514-3.364a2.75 2.75 0 0 0-1.56-1.453l-.139-.047-1.14-.35A1.5 1.5 0 0 1 3 10.761V4.5A1.5 1.5 0 0 1 4.5 3zM4.5 4a.5.5 0 0 0-.5.5v6.262a.5.5 0 0 0 .353.477l1.14.35.19.065a3.75 3.75 0 0 1 2.127 1.98L9.323 17h.238a1.5 1.5 0 0 0 1.47-1.794l-.521-2.608A.5.5 0 0 1 11 12h2.844a1.75 1.75 0 0 0 1.726-2.038l-.68-4.082A2.25 2.25 0 0 0 12.67 4z"></path>
+  </symbol>
+  <!-- 20. Arrow down (scroll to bottom) -->
+  <symbol id="icon-arrow-down" viewBox="0 0 20 20">
+    <path d="M10 3a.5.5 0 0 1 .5.5v11.793l4.147-4.146a.5.5 0 0 1 .707.707l-5 5a.5.5 0 0 1-.631.062l-.076-.062-5-5a.5.5 0 0 1 .707-.707L9.5 15.293V3.5A.5.5 0 0 1 10 3"></path>
+  </symbol>
+  <!-- 21. Chevron left -->
+  <symbol id="icon-chevron-left" viewBox="0 0 20 20">
+    <path d="M12.247 5.068a.501.501 0 0 1 .655.729l-.067.075L8.248 10l4.587 4.128a.501.501 0 0 1-.67.744l-5-4.5-.07-.078a.5.5 0 0 1 .07-.666l5-4.5z"></path>
+  </symbol>
+  <!-- 22. Chevron right -->
+  <symbol id="icon-chevron-right" viewBox="0 0 20 20">
+    <path d="M7.128 5.165a.5.5 0 0 1 .625-.097l.082.06 5 4.5a.5.5 0 0 1 .07.666l-.07.078-5 4.5a.501.501 0 0 1-.67-.744L11.752 10 7.165 5.872l-.068-.075a.5.5 0 0 1 .03-.632"></path>
+  </symbol>
+  <!-- 23. Plus (thin, composer attach) -->
+  <symbol id="icon-plus-thin" viewBox="0 0 20 20">
+    <path d="M10 3a.5.5 0 0 1 .5.5v6h6l.1.01a.5.5 0 0 1 0 .98l-.1.01h-6v6a.5.5 0 0 1-1 0v-6h-6a.5.5 0 0 1 0-1h6v-6A.5.5 0 0 1 10 3"></path>
+  </symbol>
+  <!-- 24. Microphone -->
+  <symbol id="icon-microphone" viewBox="0 0 20 20">
+    <path d="M15.5 8a.5.5 0 0 1 .5.5V9a6 6 0 0 1-5.5 5.977V17h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.023A6 6 0 0 1 4 9.001v-.5a.5.5 0 0 1 1 0V9a5 5 0 0 0 10 0v-.5a.5.5 0 0 1 .5-.5"></path>
+    <path fill-rule="evenodd" d="M10 1.5a3 3 0 0 1 3 3V9a3 3 0 0 1-6 0V4.5a3 3 0 0 1 3-3m0 1a2 2 0 0 0-2 2V9a2 2 0 0 0 4 0V4.5a2 2 0 0 0-2-2" clip-rule="evenodd"></path>
+  </symbol>
+  <!-- 25. Voice mode (equalizer bars) -->
+  <symbol id="icon-voice" viewBox="0 0 21 21">
+    <rect x="0" y="7.5" height="6" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+    <rect x="4" y="5.5" height="10" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+    <rect x="8" y="2.5" height="16" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+    <rect x="12" y="5.5" height="10" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+    <rect x="16" y="2.5" height="16" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+    <rect x="20" y="7.5" height="6" fill="currentColor" width="1" rx="0.5" ry="0.5"></rect>
+  </symbol>
+  <!-- 26. Chevron up -->
+  <symbol id="icon-chevron-up" viewBox="0 0 20 20">
+    <path d="M10 7c.106 0 .21.033.294.095l.078.07 4.5 5a.501.501 0 0 1-.744.67L10 8.248l-4.128 4.587-.075.067a.5.5 0 0 1-.729-.655l.06-.082 4.5-5A.5.5 0 0 1 10 7"></path>
+  </symbol>
+  <!-- 27. Paperclip / Attach -->
+  <symbol id="icon-paperclip" viewBox="0 0 20 20">
+    <path d="M6.068 2.161a2.72 2.72 0 0 1 3.524 1.533l3.206 8.14a1.61 1.61 0 0 1-.907 2.087l-.076.03a1.61 1.61 0 0 1-2.087-.908L8.027 8.726a.5.5 0 0 1 .93-.367l1.702 4.318a.61.61 0 0 0 .79.343l.076-.03a.61.61 0 0 0 .343-.79L8.662 4.06a1.72 1.72 0 0 0-2.227-.968l-.154.06a1.72 1.72 0 0 0-.97 2.228l3.87 9.821a2.826 2.826 0 0 0 3.665 1.594l.23-.09a2.83 2.83 0 0 0 1.595-3.666l-2.363-6a.5.5 0 1 1 .93-.366l2.363 6a3.826 3.826 0 0 1-2.158 4.962l-.23.09a3.827 3.827 0 0 1-4.963-2.157L4.382 5.747a2.72 2.72 0 0 1 1.532-3.525z"></path>
+  </symbol>
+  <!-- 28. Camera / Screenshot -->
+  <symbol id="icon-camera" viewBox="0 0 20 20">
+    <path d="M12 3a1.5 1.5 0 0 1 1.2.6L14.25 5h2.25A1.5 1.5 0 0 1 18 6.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 2 15.5v-9A1.5 1.5 0 0 1 3.5 5h2.25L6.8 3.6l.113-.134A1.5 1.5 0 0 1 8 3zM8 4a.5.5 0 0 0-.32.115L7.6 4.2 6.4 5.8A.5.5 0 0 1 6 6H3.5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H14a.5.5 0 0 1-.4-.2l-1.2-1.6A.5.5 0 0 0 12 4zm2 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7m0 1a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5"></path>
+  </symbol>
+  <!-- 29. Folder alt (simplified) -->
+  <symbol id="icon-folder-alt" viewBox="0 0 20 20">
+    <path fill-rule="evenodd" d="M15.82 7a1.5 1.5 0 0 1 1.498 1.576l-.019.171-1.165 7A1.5 1.5 0 0 1 14.654 17H5.347a1.5 1.5 0 0 1-1.48-1.253l-1.165-7A1.5 1.5 0 0 1 4.182 7zM4.181 8a.5.5 0 0 0-.493.582l1.166 7a.5.5 0 0 0 .493.418h9.307a.5.5 0 0 0 .493-.418l1.166-7 .006-.112A.5.5 0 0 0 15.82 8z" clip-rule="evenodd"></path>
+    <path d="M15.5 5a.5.5 0 0 1 0 1h-11a.5.5 0 0 1 0-1zM14 3a.5.5 0 0 1 0 1H6a.5.5 0 0 1 0-1z"></path>
+  </symbol>
+  <!-- 30. Play / Chevron right large -->
+  <symbol id="icon-play" viewBox="0 0 20 20">
+    <path d="M6.134 3.16a.5.5 0 0 1 .626-.088l.08.062 7 6.5a.5.5 0 0 1 .068.655l-.068.077-7 6.5a.5.5 0 1 1-.68-.732L12.767 10 6.16 3.866l-.067-.076a.5.5 0 0 1 .04-.63"></path>
+  </symbol>
+  <!-- 31. Skills / Coffee cup -->
+  <symbol id="icon-skills" viewBox="0 0 20 20">
+    <path d="M13.04 7.304a.5.5 0 0 1 .92.392C13.665 8.386 13.089 9 12.3 9c-.487 0-.892-.234-1.2-.574-.309.34-.713.574-1.2.574-.486 0-.892-.234-1.2-.574-.31.34-.714.574-1.2.574a.5.5 0 0 1 0-1c.212 0 .52-.18.74-.696a.5.5 0 0 1 .92 0c.221.516.528.696.74.696.213 0 .52-.18.74-.696l.035-.067a.5.5 0 0 1 .885.067c.22.516.527.696.74.696s.519-.18.74-.696"></path>
+    <path fill-rule="evenodd" d="M14 3a2 2 0 0 1 2 2v8h1.5a.5.5 0 0 1 .5.5V15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4H4a1 1 0 0 0-.745 1.667.5.5 0 0 1-.745.666A2 2 0 0 1 4 3zM6 15a1 1 0 1 0 2 0v-1.5a.5.5 0 0 1 .5-.5H15V5a1 1 0 0 0-1-1H6zm3 0c0 .365-.1.706-.27 1H16a1 1 0 0 0 1-1v-1H9z" clip-rule="evenodd"></path>
+  </symbol>
+  <!-- 32. Grid / Layout / Dashboard -->
+  <symbol id="icon-grid" viewBox="0 0 20 20">
+    <path fill-rule="evenodd" d="M8 6a1 1 0 0 1 1 .999V11h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zm1 10h4v-4H9zm-5 0h4v-4H4zm0-5h4V7H4z" clip-rule="evenodd"></path>
+    <path fill-rule="evenodd" d="M16.103 3.005A1 1 0 0 1 17 4v4l-.005.103a1 1 0 0 1-.893.892L16 9h-4a1 1 0 0 1-.995-.897L11 8V4a1 1 0 0 1 1-1h4zM12 8h4V4h-4z" clip-rule="evenodd"></path>
+  </symbol>
+  <!-- 33. Globe / Web -->
+  <symbol id="icon-globe" viewBox="0 0 20 20">
+    <path d="M7.27 3.05a7.467 7.467 0 1 1-.018.007l.01-.004zm1.372 11.478a8 8 0 0 0-1.464 1.362 6.53 6.53 0 0 0 3.373.62 6.2 6.2 0 0 1-.969-.835 10 10 0 0 1-.94-1.147m4.515-1.993c-.626.13-1.275.323-1.93.581-.654.258-1.26.56-1.808.892.276.386.555.73.835 1.02.45.468.88.788 1.258.958.376.17.665.178.881.093.218-.085.425-.289.584-.67.16-.383.257-.91.267-1.558a9 9 0 0 0-.087-1.316M3.637 8.52a6.5 6.5 0 0 0 .285 3.876 6.5 6.5 0 0 0 2.433 3.027 9 9 0 0 1 1.772-1.674 16.4 16.4 0 0 1-1.243-2.52 16.5 16.5 0 0 1-.81-2.693 9 9 0 0 1-2.436-.016m12.444 3.864a8 8 0 0 0-2 .003c.07.523.103 1.02.096 1.48a6.2 6.2 0 0 1-.14 1.272 6.53 6.53 0 0 0 2.044-2.755M11.095 6.77c-.607.37-1.271.701-1.98.981s-1.423.49-2.119.633c.165.79.417 1.638.757 2.5s.733 1.653 1.151 2.344c.607-.37 1.272-.701 1.982-.981s1.422-.49 2.117-.634a15.6 15.6 0 0 0-.756-2.499 15.6 15.6 0 0 0-1.152-2.344m2.548-2.194a9 9 0 0 1-1.77 1.674c.457.751.881 1.602 1.243 2.521.362.92.633 1.83.81 2.692a9 9 0 0 1 2.435.016 6.5 6.5 0 0 0-.282-3.875 6.5 6.5 0 0 0-2.436-3.028m-7.681.286a6.53 6.53 0 0 0-2.044 2.753c.603.08 1.279.082 1.999-.002-.07-.523-.1-1.02-.094-1.48a6.2 6.2 0 0 1 .139-1.27m2.526-.85c-.376-.17-.665-.177-.883-.091s-.423.288-.583.669c-.16.383-.256.91-.266 1.557a9 9 0 0 0 .086 1.316c.627-.13 1.276-.321 1.93-.58.655-.257 1.26-.561 1.807-.893a9 9 0 0 0-.833-1.02c-.45-.468-.88-.787-1.258-.957m4.334.096a6.53 6.53 0 0 0-3.372-.62c.328.224.654.506.969.834q.48.5.94 1.147a8 8 0 0 0 1.464-1.362"></path>
+  </symbol>
+  <!-- 34. Quill / Paint / Style -->
+  <symbol id="icon-quill" viewBox="0 0 20 20">
+    <path d="M15.512 1.997c.41.012.832.137 1.165.47.35.351.444.797.403 1.216-.04.404-.203.81-.401 1.168a6.3 6.3 0 0 1-1.044 1.358 2.3 2.3 0 0 1 .32.736c.125.553.016 1.189-.55 1.756-.548.548-1.431.847-2.21 1.016-.432.093-.865.15-1.248.185.113.354.143.803-.07 1.3l-.055.118c-.282.565-.794.883-1.343 1.076-.544.191-1.189.283-1.826.354-.657.073-1.31.124-1.952.227-.557.09-1.07.213-1.514.405l-.181.084c-.47.759-.869 1.5-1.196 2.18C4.439 15.277 5.194 15 6 15a.5.5 0 1 1 0 1c-.645 0-1.289.248-1.85.61-.561.364-1 .817-1.234 1.167l-.015.017a.48.48 0 0 1-.33.198l-.054.006h-.038l-.06-.006-.043-.01-.034-.007-.014-.007a.5.5 0 0 1-.09-.044l-.015-.008-.024-.02q-.023-.016-.044-.036l-.028-.03q-.019-.02-.035-.043-.012-.017-.022-.036l-.024-.045-.019-.049-.012-.04a.5.5 0 0 1-.014-.1l.001-.038q0-.03.005-.06.003-.02.01-.04l.008-.037c.393-1.177 1.157-2.876 2.28-4.64a29 29 0 0 1 .395-2.663c.317-1.62.868-3.641 1.806-5.048l.226-.322A7.8 7.8 0 0 1 8.61 2.852C9.38 2.333 10.222 2 11.001 2a2.36 2.36 0 0 1 1.7.706q.107.108.189.212c.393-.25.902-.523 1.427-.706.378-.131.792-.227 1.195-.215m1.528 13.557a.5.5 0 0 1 .92.392C17.483 17.061 16.692 18 15.5 18c-.87 0-1.524-.5-2-1.202-.476.702-1.13 1.202-2 1.202s-1.524-.5-2-1.202C9.024 17.5 8.37 18 7.5 18a.5.5 0 0 1 0-1c.57 0 1.11-.44 1.54-1.446l.034-.067a.5.5 0 0 1 .886.067l.082.181c.416.878.923 1.265 1.458 1.265.57 0 1.11-.44 1.54-1.446l.034-.067a.5.5 0 0 1 .886.067l.082.181c.416.878.923 1.265 1.458 1.265.57 0 1.11-.44 1.54-1.446M15.482 2.997c-.235-.007-.521.05-.835.16a6.4 6.4 0 0 0-1.597.863.5.5 0 0 1-.759-.2v-.002l-.009-.017a1.7 1.7 0 0 0-.288-.388A1.36 1.36 0 0 0 11.001 3c-.51 0-1.16.227-1.832.68a6.8 6.8 0 0 0-1.632 1.583l-.2.283c-.82 1.232-1.342 3.088-1.656 4.685q-.071.36-.127.693C7.03 9.018 8.942 7.19 11.28 6.05a.5.5 0 1 1 .438.898c-2.387 1.163-4.333 3.126-5.805 5.161q.315-.07.629-.12c.674-.108 1.384-.166 2-.234.636-.07 1.178-.154 1.604-.303.42-.147.66-.337.78-.58l.053-.118a.82.82 0 0 0-.02-.643 1 1 0 0 0-.189-.287l-.01-.01.002.001.002.002a.5.5 0 0 1 .336-.87c.427 0 1.159-.052 1.882-.209.747-.161 1.382-.413 1.714-.745.312-.311.336-.592.283-.827a1.4 1.4 0 0 0-.273-.54l-.111-.125a.5.5 0 0 1 .052-.753c.308-.23.826-.788 1.156-1.383.163-.296.26-.565.281-.78.02-.202-.027-.324-.115-.412-.107-.107-.26-.17-.488-.177"></path>
+  </symbol>
+  <!-- 35. Info circle -->
+  <symbol id="icon-info" viewBox="0 0 20 20">
+    <path d="M10 2.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15m0 1a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13m.1 5.51a.5.5 0 0 1 .4.49v3h1a.5.5 0 0 1 0 1h-3a.5.5 0 0 1 0-1h1V10h-1a.5.5 0 0 1 0-1H10zM10 6.5A.75.75 0 1 1 10 8a.75.75 0 0 1 0-1.5"></path>
+  </symbol>
+  <!-- 36. Hand / Touch (stroke) -->
+  <symbol id="icon-hand" viewBox="0 0 20 20">
+    <path d="M13.7301 6.24992C13.5196 3.91388 11.5562 2.08325 9.16537 2.08325C6.63406 2.08325 4.58203 4.13528 4.58203 6.66659C4.58203 7.09993 4.64217 7.51923 4.75456 7.91659M10.4154 9.58325V6.66659C10.4154 5.97623 9.8557 5.41659 9.16537 5.41659C8.47495 5.41659 7.91534 5.97623 7.91534 6.66659V11.3193L7.86533 11.2947C6.92861 10.8345 6.06941 11.2593 5.68046 12.2149L5.50793 12.6388L8.02532 16.3497C8.68937 17.3286 9.8072 17.9165 11.0043 17.9165H11.7734C14.2451 17.9165 16.2487 15.9475 16.2487 13.5184V12.0832C16.2487 10.6258 15.0465 9.58325 13.5636 9.58325H10.4154Z" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  
+  <symbol id="i-leaf" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#3D9522"/> <g> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(27.8022 -9.72834) rotate(51.4286)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(52.7425 5.94276) rotate(102.857)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(56.0403 35.2126) rotate(154.286)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(35.2124 56.0405) rotate(-154.286)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(20.7777 -3.7846) rotate(25.7143)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(43.7846 -3.78429) rotate(77.1429)" fill-opacity="0.88"/> <path d="M27.8693 15.2356C27.9867 19.5249 24.2142 23.1079 24.2142 23.1079C24.203 23.1687 20.2514 19.7366 20.134 15.4473C20.0166 11.1581 23.7891 7.57509 23.7891 7.57509C23.7891 7.57509 27.7519 10.9464 27.8693 15.2356Z" fill="#27761D" transform="translate(56.0405 20.7775) rotate(128.571)" fill-opacity="0.88"/> </g></symbol>
+  <symbol id="i-chev-ud" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.25L9 2.75L5.5 6.25"/> <path d="M12.5 11.75L9 15.25L5.5 11.75"/></symbol>
+  <symbol id="i-home" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.145 6.2L8.395 2.21C8.753 1.938 9.248 1.938 9.605 2.21L14.855 6.2C15.104 6.389 15.25 6.684 15.25 6.996V14.25C15.25 15.355 14.355 16.25 13.25 16.25H4.75C3.645 16.25 2.75 15.355 2.75 14.25V6.996C2.75 6.683 2.896 6.389 3.145 6.2Z"/> <path d="M11.652 12.152C10.188 13.616 7.813 13.616 6.349 12.152"/></symbol>
+  <symbol id="i-editor" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.75 6.75H7.75"/> <path d="M5.75 9.75H10.25"/> <path d="M15.16 6.24999H11.75C11.198 6.24999 10.75 5.80199 10.75 5.24999V1.85199"/> <path d="M15.25 8.584V6.664C15.25 6.399 15.145 6.144 14.957 5.957L11.043 2.043C10.855 1.855 10.601 1.75 10.336 1.75H4.75C3.645 1.75 2.75 2.646 2.75 3.75V14.25C2.75 15.354 3.645 16.25 4.75 16.25H8.385"/> <path d="M10.75 17.25C10.75 17.25 11.432 11.259 17.25 10.75C15.82 12.44 17.25 15.75 13.5 15.75"/></symbol>
+  <symbol id="i-analytics" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.25 3.75V11.75"/> <path d="M6.25 6.75V11.75"/> <path d="M9.75 9.75V11.75"/> <path d="M2.75 2.75V12.75C2.75 13.855 3.645 14.75 4.75 14.75H15.25"/></symbol>
+  <symbol id="i-workflow" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.25 10.75H12.25C11.6977 10.75 11.25 11.1977 11.25 11.75V13.75C11.25 14.3023 11.6977 14.75 12.25 14.75H14.25C14.8023 14.75 15.25 14.3023 15.25 13.75V11.75C15.25 11.1977 14.8023 10.75 14.25 10.75Z"/> <path d="M5.25 3.25H12.875C14.187 3.25 15.25 4.313 15.25 5.625C15.25 6.937 14.187 8 12.875 8H5.125C3.813 8 2.75 9.063 2.75 10.375C2.75 11.687 3.813 12.75 5.125 12.75H8.75"/></symbol>
+  <symbol id="i-agent" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.75L9.921 8.079L12.25 9L9.921 9.921L9 12.25L8.079 9.921L5.75 9L8.079 8.079L9 5.75Z"/> <path d="M9 16.25C13.0041 16.25 16.25 13.0041 16.25 9C16.25 4.99594 13.0041 1.75 9 1.75C4.99594 1.75 1.75 4.99594 1.75 9C1.75 13.0041 4.99594 16.25 9 16.25Z"/></symbol>
+  <symbol id="i-assistant" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.213 9.735C16.237 9.493 16.25 9.248 16.25 9C16.25 4.996 13.004 1.75 9 1.75C4.996 1.75 1.75 4.996 1.75 9C1.75 10.319 2.108 11.552 2.723 12.617C3.153 13.423 2.67 15.329 1.75 16.25C3 16.318 4.647 15.753 5.383 15.277C5.872 15.559 6.647 15.933 7.662 16.125C8.095 16.207 8.543 16.25 9 16.25C9.248 16.25 9.494 16.237 9.736 16.213"/> <path d="M14.25 11.25L15.25 13.25L17.25 14.25L15.25 15.25L14.25 17.25L13.25 15.25L11.25 14.25L13.25 13.25L14.25 11.25Z"/></symbol>
+  <symbol id="i-mcp" viewBox="0 0 16 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.62524 8.11636L7.6712 2.07042C8.50598 1.23564 9.85941 1.23564 10.6941 2.07042C11.5289 2.90518 11.5289 4.25861 10.6941 5.09339L6.12821 9.65934"/> <path d="M6.19116 9.59684L10.6941 5.09385C11.5289 4.25908 12.8823 4.25908 13.7171 5.09385L13.7486 5.12534C14.5834 5.96011 14.5834 7.31354 13.7486 8.14831L8.28059 13.6164C8.00233 13.8946 8.00233 14.3457 8.28059 14.6239L9.40336 15.7468"/> <path d="M9.18266 3.58203L4.71116 8.05351C3.87639 8.88826 3.87639 10.2417 4.71116 11.0765C5.54593 11.9112 6.89936 11.9112 7.73414 11.0765L12.2056 6.605"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10.749C9.9665 10.749 10.75 9.96549 10.75 8.99899C10.75 8.03249 9.9665 7.24899 9 7.24899C8.0335 7.24899 7.25 8.03249 7.25 8.99899C7.25 9.96549 8.0335 10.749 9 10.749Z"/> <path d="M15.175 7.278L14.246 6.95C14.144 6.689 14.027 6.43 13.883 6.18C13.739 5.93 13.573 5.7 13.398 5.481L13.578 4.513C13.703 3.842 13.391 3.164 12.8 2.823L12.449 2.62C11.857 2.278 11.115 2.347 10.596 2.791L9.851 3.428C9.291 3.342 8.718 3.342 8.148 3.428L7.403 2.79C6.884 2.346 6.141 2.277 5.55 2.619L5.199 2.822C4.607 3.163 4.296 3.841 4.421 4.512L4.601 5.477C4.241 5.926 3.955 6.423 3.749 6.951L2.825 7.277C2.181 7.504 1.75 8.113 1.75 8.796V9.201C1.75 9.884 2.181 10.493 2.825 10.72L3.754 11.048C3.856 11.309 3.972 11.567 4.117 11.817C4.262 12.067 4.427 12.297 4.602 12.517L4.421 13.485C4.296 14.156 4.608 14.834 5.199 15.175L5.55 15.378C6.142 15.72 6.884 15.651 7.403 15.207L8.148 14.569C8.707 14.655 9.28 14.655 9.849 14.569L10.595 15.208C11.114 15.652 11.857 15.721 12.448 15.379L12.799 15.176C13.391 14.834 13.702 14.157 13.577 13.486L13.397 12.52C13.756 12.071 14.043 11.575 14.248 11.047L15.173 10.721C15.817 10.494 16.248 9.885 16.248 9.202V8.797C16.248 8.114 15.817 7.505 15.173 7.278H15.175Z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4L4 14"/><path d="M4 4L14 14"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.75H14.25C15.355 2.75 16.25 3.645 16.25 4.75V13.25C16.25 14.355 15.355 15.25 14.25 15.25H11"/> <path d="M8.25 15.25H3.75C2.645 15.25 1.75 14.355 1.75 13.25V4.75C1.75 3.645 2.645 2.75 3.75 2.75H8.25V15.25Z"/></symbol>
+  <symbol id="i-chev-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.25 15.25L11.285 11.285"/> <path d="M7.75 12.75C10.5114 12.75 12.75 10.5114 12.75 7.75C12.75 4.98858 10.5114 2.75 7.75 2.75C4.98858 2.75 2.75 4.98858 2.75 7.75C2.75 10.5114 4.98858 12.75 7.75 12.75Z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.337 4.767C11.242 2.961 9.263 1.75 6.997 1.75C3.547 1.75 0.75 4.547 0.75 7.998C0.75 9.134 1.058 10.197 1.589 11.115C1.959 11.81 1.544 13.452 0.75 14.245C1.827 14.303 3.247 13.817 3.88 13.406C4.301 13.649 4.97 13.972 5.844 14.137C5.956 14.158 6.076 14.154 6.19 14.169"/> <path d="M12.75 7.246C15.235 7.246 17.25 9.261 17.25 11.746C17.25 12.565 17.028 13.33 16.646 13.992C16.379 14.492 16.679 15.675 17.25 16.247C16.474 16.289 15.452 15.938 14.995 15.643C14.692 15.818 14.21 16.05 13.58 16.17C13.311 16.221 13.033 16.248 12.749 16.248C10.263 16.248 8.24899 14.233 8.24899 11.748C8.24899 9.262 10.264 7.248 12.749 7.248L12.75 7.246Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/> <path d="M21 3v5h-5"/> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/> <path d="M8 16H3v5"/></symbol>
+  <symbol id="i-file-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5"/> <path d="M14 2v4a2 2 0 0 0 2 2h4"/> <path d="M13.378 15.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol>
+  <symbol id="i-arrow-ur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+  <symbol id="i-circle-dashed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/> <path d="M13.9 21.818a10 10 0 0 1-3.8 0"/> <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/> <path d="M2.182 13.9a10 10 0 0 1 0-3.8"/> <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/> <path d="M21.818 10.1a10 10 0 0 1 0 3.8"/> <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/> <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/> <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/> <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/> <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 16.25C13.0041 16.25 16.25 13.0041 16.25 9C16.25 4.99594 13.0041 1.75 9 1.75C4.99594 1.75 1.75 4.99594 1.75 9C1.75 13.0041 4.99594 16.25 9 16.25Z"/> <path d="M5.75 9.25L8 11.75L12.25 6.25"/></symbol>
+  <symbol id="i-mintlify-logo" viewBox="0 0 502 502"><path d="M501.413 185.636V30.2677C501.413 13.5952 487.887 0.305481 471.463 0.305481H316.167C291.774 0.305481 267.622 5.13791 245.161 14.3199C222.699 23.7435 202.17 37.2749 185.023 54.6723L183.815 55.8805C161.112 78.8354 144.93 107.348 136.719 138.76C151.451 134.893 166.666 132.96 181.882 132.719C222.457 132.236 262.308 145.284 294.672 169.688C323.896 191.435 346.115 221.397 358.191 255.95C370.75 290.987 372.199 329.165 362.78 365.167C393.936 356.952 422.677 340.763 445.621 318.05L446.829 316.841C463.977 299.686 477.743 279.147 487.162 256.675C496.581 234.204 501.171 210.041 501.171 185.636H501.413Z" fill="#18E299"/><path d="M132.082 183.012C132.323 135.349 151.331 89.6123 184.775 55.4301L55.5676 184.697C55.0864 185.178 54.6049 185.419 54.1237 185.9C22.6039 217.194 3.59626 259.079 0.468338 303.372C-2.41897 344.776 8.40821 385.698 31.5067 419.88C33.7099 423.141 39.6881 424.213 43.0566 421.084L122.217 342.128C147 317.333 154.699 280.503 142.909 247.525C135.451 227.063 131.841 205.158 132.082 183.012Z" fill="#0C8C5E"/><path d="M446.078 316.852C421.295 341.165 390.256 358.015 356.571 365.478C322.645 372.94 287.516 370.774 254.793 359.219C254.793 359.219 254.552 359.219 254.312 359.219C221.348 347.424 184.536 355.127 159.753 379.68L80.5915 458.637C77.223 462.007 77.7042 467.543 81.7946 470.191C115.961 493.059 156.866 504.133 198.25 501.244C242.522 498.115 284.147 479.098 315.667 447.563L316.87 446.36L446.078 317.093V316.852Z" fill="#0C8C5E"/></symbol>
+  <symbol id="i-headset" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 14.25H14.137C15.078 14.25 15.892 13.594 16.092 12.674L16.427 11.129C16.62 10.239 16.187 9.33 15.374 8.92L14.251 8.353"/><path d="M5.00004 14.25H3.86304C2.92204 14.25 2.10804 13.594 1.90804 12.674L1.57304 11.129C1.38004 10.239 1.81304 9.33 2.62604 8.92L3.74904 8.353"/><path d="M13 14.25L14.084 9.25C14.183 8.847 14.25 8.433 14.25 8C14.25 5.101 11.899 2.75 9 2.75C6.101 2.75 3.75 5.101 3.75 8C3.75 8.433 3.817 8.847 3.916 9.25L5 14.25"/></symbol>
+  <symbol id="i-help" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.25"/><path d="M7 7.25a2 2 0 0 1 4 .25c0 1-.75 1.25-1.5 1.75S9 10 9 10.75"/><circle cx="9" cy="13" r=".5" fill="currentColor"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.25 9H2.75"/><path d="M11 4.75L15.25 9 11 13.25"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.75 5.75L8.517 9.483C8.818 9.649 9.182 9.649 9.483 9.483L16.25 5.75"/><path d="M3.75 14.75H14.25C15.3546 14.75 16.25 13.8546 16.25 12.75V5.25C16.25 4.14543 15.3546 3.25 14.25 3.25H3.75C2.64543 3.25 1.75 4.14543 1.75 5.25V12.75C1.75 13.8546 2.64543 14.75 3.75 14.75Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.088 10.132C1.638 9.44902 1.638 8.55002 2.088 7.86702C3.106 6.32402 5.35 3.74902 9 3.74902C12.65 3.74902 14.895 6.32302 15.912 7.86702C16.362 8.55002 16.362 9.44902 15.912 10.132C14.894 11.675 12.65 14.25 9 14.25C5.35 14.25 3.105 11.676 2.088 10.132Z"/><path d="M9 11.25C10.2426 11.25 11.25 10.2426 11.25 9C11.25 7.75736 10.2426 6.75 9 6.75C7.75736 6.75 6.75 7.75736 6.75 9C6.75 10.2426 7.75736 11.25 9 11.25Z" fill="currentColor"/></symbol>
+  <symbol id="i-chevron-updown" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 6.25L9 2.75L5.5 6.25"/> <path d="M12.5 11.75L9 15.25L5.5 11.75"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-arrow-up-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></symbol>
+  <symbol id="i-docs" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.75 6.75H7.75"/> <path d="M5.75 9.75H10.25"/> <path d="M15.16 6.24999H11.75C11.198 6.24999 10.75 5.80199 10.75 5.24999V1.85199"/> <path d="M15.25 8.584V6.664C15.25 6.399 15.145 6.144 14.957 5.957L11.043 2.043C10.855 1.855 10.601 1.75 10.336 1.75H4.75C3.645 1.75 2.75 2.646 2.75 3.75V14.25C2.75 15.354 3.645 16.25 4.75 16.25H8.385"/> <path d="M10.75 17.25C10.75 17.25 11.432 11.259 17.25 10.75C15.82 12.44 17.25 15.75 13.5 15.75"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.75v10.5M3.75 9h10.5"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 9h10.5M9 3.75L14.25 9 9 14.25"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.25 12.25 13 10.75V7.5a4 4 0 0 0-8 0v3.25l-1.25 1.5h10.5Z"/><path d="M7.25 14.75a1.75 1.75 0 0 0 3.5 0"/></symbol>
+  <symbol id="i-check" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 9 3.5 3.5L14 6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.25"/><path d="M9 8v4.25M9 6V5.75"/></symbol>
+  <symbol id="i-warning" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.75 16 15H2L9 2.75Z"/><path d="M9 7.5v3.25M9 13v.25"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.75v3M9 12.25v3M2.75 9h3M12.25 9h3M5.25 5.25l1.5 1.5M11.25 11.25l1.5 1.5M5.25 12.75l1.5-1.5M11.25 6.75l1.5-1.5"/></symbol>
+  <symbol id="i-paperclip" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15.25 8.75-6.5 6.5a4 4 0 0 1-5.66-5.66L9.5 3.18a2.75 2.75 0 0 1 3.89 3.89L7.05 13.4a1.5 1.5 0 0 1-2.12-2.12L11 5.25"/></symbol>
+  <symbol id="i-send" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2.5 2.5 8l5.5 1.5L9.5 15l6-12.5Z"/><path d="M8 10 15.5 2.5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6.25"/><path d="M2.75 9h12.5M9 2.75a9.5 9.5 0 0 1 0 12.5M9 2.75a9.5 9.5 0 0 0 0 12.5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 5.5a1.5 1.5 0 0 1 1.5-1.5h2.5l1.5 1.75h5.5a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H4.25a1.5 1.5 0 0 1-1.5-1.5V5.5Z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 3.5 2 2L6 14H4v-2l8.5-8.5Z"/></symbol>
+  <symbol id="i-team" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6" r="2.25"/><path d="M2.75 14.25c0-2.07 1.68-3.75 3.75-3.75s3.75 1.68 3.75 3.75"/><circle cx="12.5" cy="6.5" r="1.75"/><path d="M11.75 10.5c1.93 0 3.5 1.57 3.5 3.5"/></symbol>
+</svg>
+
+<div class="kit nf-display nf-light">
+
+  <!-- HEADER -->
+  <header class="kit-head">
+        <h1 class="kit-h1">Mintlify · Design Kit 设计套件</h1>
+    <p class="kit-sub">从 https://app.mintlify.com/vechol/vechol 真站抓取的完整设计 Token、九大类组件与 44 个内嵌图标。 — bento 文档排版 · AI Context / Patterns / Tokens 均来自源 kit。</p>
+    <div class="kit-meta">
+      <span class="meta-chip">app.mintlify.com</span>
+      <span class="meta-chip"><b>BRAND</b> #16a34a</span>
+      <span class="meta-chip"><b>ACCENT</b> #26bd6c</span>
+      <span class="meta-chip"><b>INK</b> #1c1917</span>
+      <span class="meta-chip"><b>Inter</b> / JetBrains Mono</span>
+      <span class="meta-chip"><b>Radius</b> 6–14</span>
+      <span class="meta-chip"><b>Source</b> · Mintlify-kit.html</span>
+    </div>
+  </header>
+
+
+    <!-- LOGO -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">标志与字标</span><span class="sec-note">构建规范 · 实时 SVG · Mintlify Mark</span></div>
+
+    <div class="bento logo-build">
+      <div class="card-k build-stage">
+        <div class="bs-head"><span class="label-dim">构建网格</span></div>
+        <span class="bs-tag">grid · 12u</span>
+        <svg class="build-svg" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="mintlifyBgGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M40 0H0V40" class="grid-ln" fill="none"/>
+            </pattern>
+          </defs>
+          <rect x="60" y="40" width="400" height="300" fill="url(#mintlifyBgGrid)"/>
+          <rect x="60" y="40" width="400" height="300" fill="none" class="axis"/>
+          <line x1="260" y1="40" x2="260" y2="340" class="axis"/>
+          <line x1="60" y1="190" x2="460" y2="190" class="axis"/>
+          <circle cx="260" cy="190" r="120" class="guide-soft"/>
+          <circle cx="260" cy="190" r="86" class="guide"/>
+          <circle cx="260" cy="190" r="44" class="guide-soft"/>
+          <rect x="174" y="104" width="172" height="172" class="guide"/>
+          <svg x="198.08" y="128.08" width="123.84" height="123.84" viewBox="0 0 502 502" shape-rendering="geometricPrecision"><use href="#brand-logo"/></svg>
+          <line x1="260" y1="190" x2="346" y2="190" class="dim-tick"/>
+          <circle cx="260" cy="190" r="2.5" fill="var(--k-accent)"/>
+          <text x="300" y="182" class="dim-txt" text-anchor="middle">502×502</text>
+          <line x1="174" y1="296" x2="346" y2="296" class="dim-tick"/>
+          <line x1="174" y1="291" x2="174" y2="301" class="dim-tick"/>
+          <line x1="346" y1="291" x2="346" y2="301" class="dim-tick"/>
+          <text x="260" y="314" class="dim-txt" text-anchor="middle">12u</text>
+          <line x1="372" y1="104" x2="372" y2="276" class="dim-tick"/>
+          <line x1="367" y1="104" x2="377" y2="104" class="dim-tick"/>
+          <line x1="367" y1="276" x2="377" y2="276" class="dim-tick"/>
+          <text x="392" y="194" class="dim-soft" text-anchor="middle" transform="rotate(90 392 194)">12u</text>
+        </svg>
+      </div>
+
+      <div class="build-side">
+        <div class="spec-line"><span class="sl-k">基础网格单位</span><span class="sl-v">1u = 8px</span></div>
+        <div class="spec-line"><span class="sl-k">标志包围盒</span><span class="sl-v">502×502 · Leaf Mark</span></div>
+        <div class="spec-line"><span class="sl-k">安全边距</span><span class="sl-v">≥ 0.5× 标志高度</span></div>
+        <div class="spec-line"><span class="sl-k">Brand Green</span><span class="sl-v">#16a34a · btn-brand</span></div>
+        <div class="spec-line"><span class="sl-k">Accent</span><span class="sl-v">#26bd6c · focus</span></div>
+        <div class="spec-line"><span class="sl-k">字标</span><span class="sl-v">Inter 600</span></div>
+        <div class="clearspace-cell">
+          <div class="cs-box">
+            <span class="cs-lbl t">1u</span>
+            <span class="cs-lbl l">1u</span>
+            <div class="cs-pad"></div>
+            <div class="cs-logo"><svg viewBox="0 0 502 502" shape-rendering="geometricPrecision" width="36" height="36"><use href="#brand-logo"/></svg></div>
+          </div>
+          <div class="cs-cap">安全留白 = 标志高度的 ¼（1u 四周）</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bento logo-grid">
+      <div class="logo-cell">
+        <svg viewBox="0 0 502 502" shape-rendering="geometricPrecision" width="48" height="48"><use href="#brand-logo"/></svg>
+        <div class="lc-name">Leaf Mark</div>
+        <div class="lc-meta">502×502 · 双色矢量</div>
+      </div>
+      <div class="logo-cell" style="background:#0c0a09;color:#fff">
+        <svg viewBox="0 0 502 502" shape-rendering="geometricPrecision" width="48" height="48"><use href="#brand-logo"/></svg>
+        <div class="lc-name">On Dark</div>
+        <div class="lc-meta">#0c0a09 · multi-fill</div>
+      </div>
+      <div class="logo-cell" style="background:#fafaf9">
+        <div style="font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:22px;font-weight:600;letter-spacing:-.02em;color:#1c1917">Mintlify</div>
+        <div class="lc-name">Wordmark</div>
+        <div class="lc-meta">Inter · 600</div>
+      </div>
+      <div class="logo-cell">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg viewBox="0 0 502 502" shape-rendering="geometricPrecision" width="28" height="28"><use href="#brand-logo"/></svg>
+          <span style="font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;font-weight:600;letter-spacing:-.02em;color:#1c1917">Mintlify</span>
+        </div>
+        <div class="lc-name">Hero lockup</div>
+        <div class="lc-meta">Mark + wordmark</div>
+      </div>
+    </div>
+  </section>
+
+
+
+    <!-- TYPOGRAPHY HERO -->
+  <section class="sec">
+    <div class="card-k nf-panel nf-typography">
+      <div class="nf-panel-head">
+        <div class="nf-panel-head-left">
+          <span class="nf-panel-ico"><svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-edit"/></svg></span>
+          <h3>Typography</h3>
+        </div>
+      </div>
+      <div class="nf-type-split">
+        <div class="nf-type-left">
+          <div class="nf-type-dots"><i></i><i></i><i></i><i></i></div>
+          <div class="nf-type-systems">
+            <div class="nf-type-sys">
+              <span class="nf-lbl">Heading system</span>
+              <p>Inter · 28px / 600</p>
+            </div>
+            <div class="nf-type-sys">
+              <span class="nf-lbl">Body system</span>
+              <p>Inter · 14px / 400</p>
+            </div>
+          </div>
+          <div class="nf-type-specimen">Inter <span class="sub">+ JetBrains Mono</span></div>
+        </div>
+        <div class="nf-type-right">
+          <span class="nf-lbl">Letters</span>
+          <div class="nf-letters">
+            <span>Aa</span><span>Bb</span><span>Cc</span><span>Dd</span><span>Ee</span><span>Ff</span><span>Gg</span>
+            <span>Hh</span><span>Ii</span><span>Jj</span><span>Kk</span><span>Ll</span><span>Mm</span><span>Nn</span>
+            <span>Oo</span><span>Pp</span><span>Qq</span><span>Rr</span><span>Ss</span><span>Tt</span><span>Uu</span>
+            <span>Vv</span><span>Ww</span><span>Xx</span><span>Yy</span><span>Zz</span>
+          </div>
+          <span class="nf-lbl" style="margin-top:20px">Numbers</span>
+          <div class="nf-nums"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLORS -->
+  <section class="sec">
+    <div class="card-k nf-panel nf-colors">
+      <div class="nf-panel-head">
+        <div class="nf-panel-head-left">
+          <span class="nf-panel-ico"><svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-grid"/></svg></span>
+          <h3>Colors</h3>
+        </div>
+      </div>
+      <div class="nf-color-grid">
+      <div class="nf-color-block" data-color="#16a34a">
+        <div class="nf-face" style="background:#16a34a;color:#fff">
+          <div class="nf-face-top"><span class="nf-name">Brand Green</span><span class="nf-hex">#16a34a</span></div>
+        </div>
+        <div class="color-scale"><i style="background:#FFF1F3"></i><i style="background:#ffdae1"></i><i style="background:#FFC2CE"></i><i style="background:#7fb185"></i><i style="background:#16a34a"></i><i style="background:#E61E4D"></i><i style="background:#D70466"></i><i style="background:#a1034d"></i><i style="background:#760238"></i><i style="background:#4b0124"></i></div>
+      </div>
+      <div class="nf-color-block" data-color="#1c1917">
+        <div class="nf-face" style="background:#1c1917;color:#fafaf9">
+          <div class="nf-face-top"><span class="nf-name">Ink</span><span class="nf-hex">#1c1917</span></div>
+        </div>
+        <div class="color-scale"><i style="background:#1c1917"></i><i style="background:#0c0a09"></i><i style="background:#57534e"></i><i style="background:#78716c"></i><i style="background:#a8a29e"></i></div>
+      </div>
+      <div class="nf-color-block" data-color="#fafaf9">
+        <div class="nf-face" style="background:linear-gradient(135deg,#fff,#f5f5f4);color:#57534e">
+          <div class="nf-face-top"><span class="nf-name">Neutral</span><span class="nf-hex">#fafaf9</span></div>
+        </div>
+        <div class="color-scale"><i style="background:#fafaf9"></i><i style="background:#f5f5f4"></i><i style="background:#e7e5e4"></i><i style="background:#bebcba"></i><i style="background:#9e9c99"></i><i style="background:#78716c"></i><i style="background:#57534e"></i><i style="background:#35322f"></i><i style="background:#1f1c1a"></i><i style="background:#0c0a09"></i></div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERVIEW SPEC -->
+  <section class="sec">
+    <div class="card-k nf-panel nf-overview">
+      <div class="nf-panel-head">
+        <div class="nf-panel-head-left">
+          <span class="nf-panel-ico"><svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-quill"/></svg></span>
+          <h3>Overview</h3>
+        </div>
+      </div>
+      <div class="nf-overview-grid">
+        <div class="nf-overview-chip"><div class="nf-lbl">Layout</div><div class="nf-val">Grid</div></div>
+        <div class="nf-overview-chip"><div class="nf-lbl">Content Width</div><div class="nf-val">Bounded</div></div>
+        <div class="nf-overview-chip"><div class="nf-lbl">Framing</div><div class="nf-val">Light restrained</div></div>
+        <div class="nf-overview-chip"><div class="nf-lbl">Grid</div><div class="nf-val">Strong</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BACKGROUND STYLES -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">背景风格</span><span class="sec-note">Mintlify · 浅色三层 · #fafaf9 页面底</span></div>
+    <div class="bento bg-style-grid">
+      <div class="bg-swatch bg-swatch-base" data-color="#fafaf9" onclick="navigator.clipboard.writeText('#fafaf9');showToast('Copied #fafaf9')">
+        <span class="bg-swatch-label">bg-100 · 页面底</span>
+        <span class="bg-swatch-hex">#fafaf9</span>
+      </div>
+      <div class="bg-swatch bg-swatch-soft" data-color="#f5f5f4" onclick="navigator.clipboard.writeText('#f5f5f4');showToast('Copied #f5f5f4')">
+        <span class="bg-swatch-label">bg-200 · 分区 / 侧栏</span>
+        <span class="bg-swatch-hex">#f5f5f4</span>
+      </div>
+      <div class="bg-swatch bg-swatch-muted" data-color="#e7e5e4" onclick="navigator.clipboard.writeText('#e7e5e4');showToast('Copied #e7e5e4')">
+        <span class="bg-swatch-label">bg-300 · 悬停 / 分隔</span>
+        <span class="bg-swatch-hex">#e7e5e4</span>
+      </div>
+      <div class="bg-swatch bg-swatch-page">
+        <span class="bg-swatch-label">页面渐变 · 品牌光晕</span>
+        <span class="bg-swatch-hex">Brand Green · hairline borders</span>
+      </div>
+    </div>
+    <div class="card-k bg-recipe" style="margin-top:14px;">
+      <div class="recipe-title">使用规则</div>
+      <p>Mintlify 以<b style="color:var(--k-text)">浅色三层</b>构建 docs / dashboard 层级：页面底 <code style="font-family:var(--font-mono);font-size:11px">#fafaf9</code>、卡片表面 <code style="font-family:var(--font-mono);font-size:11px">#ffffff</code>、muted 面板 <code style="font-family:var(--font-mono);font-size:11px">#f5f5f4</code>。Brand Green CTA 用 <code style="font-family:var(--font-mono);font-size:11px">#16a34a</code>（btn-brand）；Ink primary 用 <code style="font-family:var(--font-mono);font-size:11px">#1c1917</code>（btn-primary）。</p>
+      <pre>background: #fafaf9;
+/* card / panel */
+background: #ffffff;
+border: 1px solid #e7e5e4;</pre>
+    </div>
+  </section>
+
+  <!-- OVERVIEW SPEC -->
+  <!-- SPACING -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">间距</span><span class="sec-note">4px 基准</span></div>
+    <div class="card-k ruler-card">
+      <div class="ruler-head">
+        <div class="rh-left"><span class="rh-ico"><svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-edit"/></svg></span><h4>间距</h4></div>
+        <span class="label-dim">4px 基准</span>
+      </div>
+
+      <!-- measured live demo -->
+      <div class="measure" id="measure">
+        <span class="measure-ai"><svg viewBox="0 0 93.2 99.9" fill="#16a34a"><use href="#brand-logo"/></svg></span>
+        <div class="m-eyebrow" id="m-eyebrow">Mintlify</div>
+        <h3 class="m-title" id="m-title">Projects</h3>
+        <p class="m-desc" id="m-desc">Geist · 256px sidebar · Ink CTA</p>
+        <span class="m-cta" id="m-cta">Add New… <svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-play"/></svg></span>
+      </div>
+
+      <!-- Scale -->
+      <div class="sp-block">
+        <span class="label-dim">刻度 · 4px base · space-1 → space-16</span>
+        <div class="sp-chips ml-space-chips" style="grid-template-columns:repeat(6,1fr);">
+          <div class="chip-card"><div class="cc-val">space-1 · 4px</div><div class="chip-ruler" data-w="8"></div></div>
+          <div class="chip-card"><div class="cc-val">space-2 · 8px</div><div class="chip-ruler" data-w="13"></div></div>
+          <div class="chip-card"><div class="cc-val">space-3 · 12px</div><div class="chip-ruler" data-w="19"></div></div>
+          <div class="chip-card"><div class="cc-val">space-4 · 16px</div><div class="chip-ruler" data-w="25"></div></div>
+          <div class="chip-card"><div class="cc-val">space-5 · 20px</div><div class="chip-ruler" data-w="31"></div></div>
+          <div class="chip-card"><div class="cc-val">space-6 · 24px</div><div class="chip-ruler" data-w="38"></div></div>
+          <div class="chip-card"><div class="cc-val">space-8 · 32px</div><div class="chip-ruler" data-w="50"></div></div>
+          <div class="chip-card"><div class="cc-val">space-10 · 40px</div><div class="chip-ruler" data-w="63"></div></div>
+          <div class="chip-card"><div class="cc-val">space-12 · 48px</div><div class="chip-ruler" data-w="75"></div></div>
+          <div class="chip-card"><div class="cc-val">space-16 · 64px</div><div class="chip-ruler" data-w="100"></div></div>
+        </div>
+      </div>
+
+      <!-- Card Padding -->
+      <div class="sp-block">
+        <span class="label-dim">组件内边距</span>
+        <div class="sp-chips ml-pad-chips">
+          <div class="chip-card"><div class="cc-val">panel · 24px</div><div class="chip-ruler" data-w="70"></div></div>
+          <div class="chip-card"><div class="cc-val">composer · 14px</div><div class="chip-ruler" data-w="50"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RADIUS -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">圆角</span><span class="sec-note">6px → 9999px · 10px btn · 12px card · 14px composer</span></div>
+    <div class="card-k">
+      <div class="radius-row">
+        <div class="radius-it"><div class="radius-box" style="border-radius:6px;"><span class="corner" style="width:24px;height:24px;border-radius:6px 0 0 0;"></span></div><span>6px · sm</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:8px;"><span class="corner" style="width:28px;height:28px;border-radius:8px 0 0 0;"></span></div><span>8px · md</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:10px;"><span class="corner" style="width:26px;height:26px;border-radius:10px 0 0 0;"></span></div><span>10px · lg</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:12px;"><span class="corner" style="width:30px;height:30px;border-radius:12px 0 0 0;"></span></div><span>12px · xl</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:14px;"><span class="corner" style="width:32px;height:32px;border-radius:14px 0 0 0;"></span></div><span>14px · 2xl</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:0.625rem;"><span class="corner" style="width:20px;height:20px;border-radius:0px 0 0 0;"></span></div><span>0.625rem · --radius token</span></div>
+        <div class="radius-it"><div class="radius-box" style="border-radius:9999px;"><span class="corner" style="width:32px;height:32px;border-radius:32px 0 0 0;"></span></div><span>9999px · pill</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOTION -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">动效</span><span class="sec-note">120ms hover · 200ms medium · ease</span></div>
+    <div class="bento motion-grid">
+      <div class="card-k">
+        <span class="label-dim">交互对比</span>
+        <p style="font-size:12.5px;color:var(--k-dim);line-height:1.55;margin-top:8px;">动效来自源 kit CSS：按钮 transition 120ms（ease），Composer/banner 200ms，禁止 bounce 与夸张 scale。</p>
+        <div class="motion-demo-row">
+          <button type="button" class="motion-btn claude">Mintlify · 120ms</button>
+          <button type="button" class="motion-btn slow">过慢 · 400ms</button>
+        </div>
+        <div class="motion-focus-wrap">
+          <label>Tab 聚焦此输入框查看 focus ring</label>
+          <input type="text" class="motion-focus-input" placeholder="Focus me">
+        </div>
+      </div>
+      <div class="card-k motion-copy">
+        <span class="label-dim">令牌</span>
+        <div class="motion-spec-grid">
+          <div class="motion-spec-item"><div class="mk">hover</div><div class="mv">150ms</div></div>
+          <div class="motion-spec-item"><div class="mk">medium</div><div class="mv">200ms</div></div>
+          <div class="motion-spec-item"><div class="mk">ease</div><div class="mv">ease</div></div>
+          <div class="motion-spec-item"><div class="mk">focus</div><div class="mv">1px #0c0a09</div></div>
+        </div>
+        <pre id="motionContext">Motion Rules (Mintlify from source kit):
+- Hover: 120ms, easing ease
+- Medium: 200ms (composer box-shadow, swatch hover)
+- Exit: ease
+- Linear: linear
+- Focus: .input:focus → border #0c0a09 + 1px ring
+- Button active: scale(0.98) (kit .btn:active)
+- Avoid bounce, spin, exaggerated scale</pre>
+        <button class="copy-btn" style="margin-top:12px" onclick="copyText('motionContext')"><svg viewBox="0 0 20 20"><use href="#icon-copy"/></svg>Copy Motion Context</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- DO'S & DON'TS -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">规范 · Do's &amp; Don'ts</span><span class="sec-note">整套设计系统的正确与错误用法</span></div>
+    <div class="dd-grid">
+
+      <div class="dd-col dd-do">
+
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-swatches"><i style="background:#16a34a"></i><i style="background:#0c0a09"></i><i style="background:#ffffff"></i></div></div>
+          <div class="dd-txt"><span class="dd-cat">色彩</span><div class="dd-t">沿用既定调色板</div><div class="dd-d">只用 Mintlify Dashboard token（--brand / --brand-accent / gray RGB）。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><span class="d-serif">Aa</span></div>
+          <div class="dd-txt"><span class="dd-cat">字体</span><div class="dd-t">保持 Inter / JetBrains Mono</div><div class="dd-d">UI 用 Inter；token / shortcut / code 用 JetBrains Mono。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-stack"><span style="width:100%"></span><span style="width:70%"></span><span style="width:85%"></span></div></div>
+          <div class="dd-txt"><span class="dd-cat">间距</span><div class="dd-t">遵循 4px 基准网格</div><div class="dd-d">所有间距取 4 的倍数，保持节奏一致。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-card r12"></div></div>
+          <div class="dd-txt"><span class="dd-cat">圆角</span><div class="dd-t">使用 token 档位圆角</div><div class="dd-d">从 sm 4px … md 6px … lg 8px … xl 12px · full 中取值，统一弧度。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><span class="d-btn">按钮</span></div>
+          <div class="dd-txt"><span class="dd-cat">组件</span><div class="dd-t">复用原生组件与状态</div><div class="dd-d">直接调用 kit 内组件，沿用其内边距与层级。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo" style="background:#1c1917"><svg viewBox="0 0 502 502" fill="currentColor" style="color:#ffffff" shape-rendering="geometricPrecision" width="24" height="24"><use href="#brand-logo"/></svg></div>
+          <div class="dd-txt"><span class="dd-cat">标志</span><div class="dd-t">保持比例并按底色反色</div><div class="dd-d">等比缩放、留足安全间距，深底用浅色标志。</div></div>
+        </div>
+      </div>
+
+      <div class="dd-col dd-dont">
+
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-swatches"><i style="background:#e0218a"></i><i style="background:#00e5ff"></i><i style="background:#7cff00"></i></div></div>
+          <div class="dd-txt"><span class="dd-cat">色彩</span><div class="dd-t">擅自引入新颜色</div><div class="dd-d">不要使用调色板之外的高饱和或随机色值。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><span class="d-serif wrong">Aa</span></div>
+          <div class="dd-txt"><span class="dd-cat">字体</span><div class="dd-t">替换为无关字体</div><div class="dd-d">不要混入系统装饰字体，破坏品牌字体气质。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-stack tight"><span style="width:100%"></span><span style="width:92%"></span><span style="width:78%"></span><span style="width:88%"></span></div></div>
+          <div class="dd-txt"><span class="dd-cat">间距</span><div class="dd-t">使用随意非网格间距</div><div class="dd-d">不要用 5px、13px 等脱离 4px 网格的数值。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><div class="d-card r0"></div></div>
+          <div class="dd-txt"><span class="dd-cat">圆角</span><div class="dd-t">混用不一致的圆角</div><div class="dd-d">不要给同类元素套用直角或随机半径。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo"><span class="d-btn sq" style="background:#e8736a;">按钮</span></div>
+          <div class="dd-txt"><span class="dd-cat">组件</span><div class="dd-t">改写组件形态与配色</div><div class="dd-d">不要把胶囊按钮改成直角或替换语义色。</div></div>
+        </div>
+        <div class="dd-item">
+          <div class="dd-demo mis-bg"><svg class="mis-rotate" viewBox="0 0 502 502" fill="#fff"><use href="#brand-logo"/></svg></div>
+          <div class="dd-txt"><span class="dd-cat">标志</span><div class="dd-t">变形 / 旋转 / 加特效</div><div class="dd-d">不要拉伸、旋转、加阴影或置于杂乱背景。</div></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+    <!-- COMPONENTS -->
+  <section class="sec">
+    <div class="card-k nf-panel nf-components">
+      <div class="nf-panel-head">
+        <div class="nf-panel-head-left">
+          <span class="nf-panel-ico"><svg viewBox="0 0 20 20" fill="currentColor"><use href="#icon-grid"/></svg></span>
+          <h3>Components</h3>
+        </div>
+      </div>
+      <div class="ml-kit kimi-comp-board">
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Button · ml-btn</div>
+          <div class="kimi-comp-body"><div class="ml-btn-grid">
+    <div class="ml-btn-row"><span class="ml-btn-label">Primary</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-primary">Primary</button></div></div>
+    <div class="ml-btn-row"><span class="ml-btn-label">Brand</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-brand"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-sparkles"/></svg>Get started</button></div></div>
+    <div class="ml-btn-row"><span class="ml-btn-label">Outline</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-outline">Outline</button></div></div>
+    <div class="ml-btn-row"><span class="ml-btn-label">Ghost</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-ghost">Ghost</button></div></div>
+    <div class="ml-btn-row"><span class="ml-btn-label">Danger</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-danger">Delete</button></div></div>
+    <div class="ml-btn-row"><span class="ml-btn-label">Link</span><div class="ml-btn-sizes"><button class="ml-btn ml-btn-link">Link</button></div></div>
+  </div></div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Icon Buttons</div>
+          <div class="kimi-comp-body"><div class="row ml-icon-row"><button class="icon-btn" aria-label="Messages"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chat"/></svg></button><button class="icon-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-refresh"/></svg></button><button class="icon-btn"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-settings"/></svg></button><button class="icon-btn"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg></button></div></div>
+        </div>
+        <div class="kimi-comp-split">
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Search / Text Input</div>
+          <div class="kimi-comp-body"><div class="input" style="max-width:320px"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-search"/></svg><input placeholder="Search pages…"/><span class="code">⌘K</span></div></div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Composer (AI)</div>
+          <div class="kimi-comp-body"><div class="composer"><textarea class="composer-input" rows="2" placeholder="Ask the docs assistant…"></textarea><div class="composer-actions"><svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-paperclip"/></svg><span class="chip chip-feature">AI · Beta</span><div class="spacer"></div><button class="ml-btn ml-btn-brand ml-btn-sm"><svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-send"/></svg>Send</button></div></div></div>
+        </div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Chips / Badges</div>
+          <div class="kimi-comp-body"><div class="row ml-chip-row"><span class="chip chip-brand"><span class="chip-dot"></span>Live</span><span class="chip chip-info">Syncing</span><span class="chip chip-warning">Pending</span><span class="chip chip-error">Failed</span></div></div>
+        </div>
+        <div class="kimi-comp-split">
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Sidebar Nav</div>
+          <div class="kimi-comp-body"><div class="ml-nav-shell"><div class="nav-mock"><div class="nav-item active"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-home"/></svg>Dashboard</div><div class="nav-item"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-editor"/></svg>Editor</div><div class="nav-item"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-analytics"/></svg>Analytics</div><div class="nav-item"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-settings"/></svg>Settings</div></div></div></div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Project Card</div>
+          <div class="kimi-comp-body"><div class="ml-project-shell"><div class="sc-project" style="margin:0"><div class="sc-preview">Preview</div><div class="sc-info"><div class="sc-info-head"><h2 class="sc-proj-title">vechol</h2><span class="sc-live"><span class="sc-live-dot"></span>Live</span></div><div class="sc-domain"><span class="sc-domain-url">vechol.mintlify.app</span></div></div></div></div></div>
+        </div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Toast Notifications</div>
+          <div class="kimi-comp-body"><div class="ml-toast-stack"><div class="toast toast-success"><span class="toast-icon"><svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check"/></svg></span><div class="toast-body"><div class="toast-title">Deployment succeeded</div><div class="toast-desc">Pushed in 3.2s</div></div></div></div></div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Avatar / Preview</div>
+          <div class="kimi-comp-body"><div class="row ml-avatar-row"><div class="sc-avatar">V</div><div class="sc-preview" style="width:200px;height:100px">Preview unavailable</div></div></div>
+        </div>
+        <div class="kimi-comp-group">
+          <div class="kimi-comp-label">Activity Table</div>
+          <div class="kimi-comp-body"><div class="ml-table-shell"><table class="sc-table" style="width:100%"><thead><tr><th>Update</th><th>Status</th></tr></thead><tbody><tr><td><div class="sc-update"><span class="sc-update-name">Deploy</span><span class="sc-update-time">1m ago</span></div></td><td><span class="sc-status-chip"><svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><use href="#i-check-circle"/></svg>Successful</span></td></tr></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="component-usage">
+      <div class="usage-card"><div class="u-k">Button</div><div class="u-v">ml-btn-primary #1c1917 · ml-btn-brand #16a34a · h 32 · radius 10</div></div>
+      <div class="usage-card"><div class="u-k">Nav</div><div class="u-v">nav-mock · nav-item active muted fill · 18px icons</div></div>
+      <div class="usage-card"><div class="u-k">Composer</div><div class="u-v">composer 14px radius · btn-brand Ask · chip-feature AI · Beta</div></div>
+      <div class="usage-card"><div class="u-k">Icons</div><div class="u-v">44 sprite symbols · 18×18 stroke 1.5 · logo/leaf fill</div></div>
+    </div>
+  </section>
+
+  <!-- ICONS -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">图标库</span><span class="sec-note">44 个 Mintlify 图标 · 点击复制 SVG</span></div>
+    <p style="font-size:12.5px;color:var(--k-dim);margin-bottom:16px;line-height:1.6;">以下图标来自 <a href="./Mintlify-kit.html" style="color:var(--k-accent)">Mintlify-kit.html</a> 真站抓取，使用 <code style="font-family:var(--font-mono);font-size:11px">&lt;svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"&gt;&lt;use href="#i-search"/&gt;&lt;/svg&gt;</code> 引用。</p>
+    <div class="icon-grid">
+      <div class="icon-cell" data-icon="i-agent" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-agent"/></svg><span class="icon-cell-label">agent</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-analytics" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-analytics"/></svg><span class="icon-cell-label">analytics</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-arrow-left" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-arrow-left"/></svg><span class="icon-cell-label">arrow-left</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-arrow-up-right" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arrow-up-right"/></svg><span class="icon-cell-label">arrow-up-right</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-arrow-ur" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arrow-ur"/></svg><span class="icon-cell-label">arrow-ur</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-assistant" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-assistant"/></svg><span class="icon-cell-label">assistant</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-chat" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-chat"/></svg><span class="icon-cell-label">chat</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-check-circle" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-check-circle"/></svg><span class="icon-cell-label">check-circle</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-chev-down" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-chev-down"/></svg><span class="icon-cell-label">chev-down</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-chev-ud" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-chev-ud"/></svg><span class="icon-cell-label">chev-ud</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-chevron-down" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-chevron-down"/></svg><span class="icon-cell-label">chevron-down</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-chevron-updown" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-chevron-updown"/></svg><span class="icon-cell-label">chevron-updown</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-circle-dashed" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-circle-dashed"/></svg><span class="icon-cell-label">circle-dashed</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-collapse" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-collapse"/></svg><span class="icon-cell-label">collapse</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-docs" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-docs"/></svg><span class="icon-cell-label">docs</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-editor" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-editor"/></svg><span class="icon-cell-label">editor</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-eye" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-eye"/></svg><span class="icon-cell-label">eye</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-file-pen" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-file-pen"/></svg><span class="icon-cell-label">file-pen</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-headset" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-headset"/></svg><span class="icon-cell-label">headset</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-help" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-help"/></svg><span class="icon-cell-label">help</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-home" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-home"/></svg><span class="icon-cell-label">home</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-leaf" onclick="copyIcon(this)"><svg class="ic--fill" width="20" height="20" viewBox="0 0 48 48" fill="currentColor"><use href="#i-leaf"/></svg><span class="icon-cell-label">leaf</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-mail" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-mail"/></svg><span class="icon-cell-label">mail</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-mcp" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 16 17" fill="none" stroke="currentColor"><use href="#i-mcp"/></svg><span class="icon-cell-label">mcp</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-mintlify-logo" onclick="copyIcon(this)"><svg class="ic--fill" width="20" height="20" viewBox="0 0 502 502" fill="currentColor"><use href="#i-mintlify-logo"/></svg><span class="icon-cell-label">mintlify-logo</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-refresh" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-refresh"/></svg><span class="icon-cell-label">refresh</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-rocket" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-rocket"/></svg><span class="icon-cell-label">rocket</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-search" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-search"/></svg><span class="icon-cell-label">search</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-settings" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-settings"/></svg><span class="icon-cell-label">settings</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-workflow" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-workflow"/></svg><span class="icon-cell-label">workflow</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-x" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-x"/></svg><span class="icon-cell-label">x</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-arrow-right" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-arrow-right"/></svg><span class="icon-cell-label">arrow-right</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-bell" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-bell"/></svg><span class="icon-cell-label">bell</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-check" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-check"/></svg><span class="icon-cell-label">check</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-edit" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-edit"/></svg><span class="icon-cell-label">edit</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-folder" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-folder"/></svg><span class="icon-cell-label">folder</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-globe" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-globe"/></svg><span class="icon-cell-label">globe</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-info" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-info"/></svg><span class="icon-cell-label">info</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-paperclip" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-paperclip"/></svg><span class="icon-cell-label">paperclip</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-plus" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-plus"/></svg><span class="icon-cell-label">plus</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-send" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-send"/></svg><span class="icon-cell-label">send</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-sparkles" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-sparkles"/></svg><span class="icon-cell-label">sparkles</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-team" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-team"/></svg><span class="icon-cell-label">team</span><span class="icon-cell-copied">Copied!</span></div>
+      <div class="icon-cell" data-icon="i-warning" onclick="copyIcon(this)"><svg class="ic--stroke" width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="currentColor"><use href="#i-warning"/></svg><span class="icon-cell-label">warning</span><span class="icon-cell-copied">Copied!</span></div>
+    </div>
+  </section>
+
+  <!-- AI CODING CONTEXT -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">AI Coding Context</span><span class="sec-note">DESIGN.md · Skill · Guardrails</span></div>
+    <div class="context-grid">
+      <div class="card-k context-card">
+        <div class="ctx-head"><div class="ctx-title"><svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><use href="#icon-code"/></svg>DESIGN.md 核心规则</div><span class="ctx-pill">copy to Claude / Cursor</span></div>
+<pre><b># Mintlify 设计系统 Design Kit</b>
+
+## Source
+从 https://app.mintlify.com/vechol/vechol 真站抓取的完整设计 Token、九大类组件与 44 个内嵌图标。
+Source file: Mintlify-kit.html
+
+## Visual Language
+- Canvas #fafaf9; surface #ffffff; muted #f5f5f4
+- Brand Green CTA #16a34a; Ink #1c1917 primary; Accent #26bd6c
+- Inter UI · JetBrains Mono · docs sidebar + project cards
+
+## Guardrails
+- Light stone surfaces · strong grid · minimal shadow
+- 10px button radius · 12px cards · 14px composer</pre>
+      </div>
+
+      <div class="card-k context-card">
+        <div class="ctx-head"><div class="ctx-title"><svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><use href="#icon-skills"/></svg>语义化映射</div><span class="ctx-pill">anti-drift layer</span></div>
+        <div class="ctx-list">
+          <div class="ctx-item"><div class="k">Primary</div><div class="v"><b>Mintlify Accent</b>，只用于 CTA、品牌标记、关键状态，不大面积铺满。</div></div>
+          <div class="ctx-item"><div class="k">Surface</div><div class="v"><b>#ffffff / #fafaf9</b> 作为主体背景，强调温和、可信赖、低噪音。</div></div>
+          <div class="ctx-item"><div class="k">Text</div><div class="v"><b>#0c0a09</b> 用于主文字，灰阶文字用于说明、meta、caption。</div></div>
+          <div class="ctx-item"><div class="k">Structure</div><div class="v"><b>Strong Grid</b>，源 kit 页面 1100px 居中、14px bento gap、4px spacing base。</div></div>
+          <div class="ctx-item"><div class="k">Expression</div><div class="v"><b>Docs Dashboard</b>，Inter + JetBrains Mono · Brand Green CTA，但整体保持 UI 的清晰和克制。</div></div>
+        </div>
+        <div class="token-alias">
+          <div class="alias"><span>--color-brand-primary</span><br>= var(--accent-main)</div>
+          <div class="alias"><span>--color-surface-base</span><br>= var(--bg-100)</div>
+          <div class="alias"><span>--color-surface-muted</span><br>= var(--bg-200)</div>
+          <div class="alias"><span>--color-text-primary</span><br>= var(--text-100)</div>
+          <div class="alias"><span>--color-border-subtle</span><br>= var(--border-200)</div>
+          <div class="alias"><span>--font-brand<br>= var(--font-brand)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-grid">
+      <div class="skill-card">
+        <h4>Marketplace Skill</h4>
+        <p>用于生成 Mintlify 首页、目的地页、搜索结果页。</p>
+        <ul>
+          <li>Dashboard：侧栏 nav + project cards + composer。</li>
+          <li>引用 #i-* sprite；焦点环 ##26bd6c。</li>
+          <li>Brand Green #16a34a 用于 btn-brand / Live chip。</li>
+        </ul>
+      </div>
+      <div class="skill-card">
+        <h4>Search &amp; Booking Skill</h4>
+        <p>用于生成搜索、筛选、预订流程界面。</p>
+        <ul>
+          <li>Composer 字段：地点 / 入住 / 退房 / 入住人（来自 kit）。</li>
+          <li>Filter chips：.active / .brand 状态来自 kit §8。</li>
+          <li>Listing card 280×280 + 价格 + 评分结构保持一致。</li>
+        </ul>
+      </div>
+      <div class="skill-card">
+        <h4>Host / Account Skill</h4>
+        <p>用于生成房东中心、账户设置（沿用 kit 表单组件）。</p>
+        <ul>
+          <li>表单：.field-stack + .input h44 r8。</li>
+          <li>Secondary 按钮 #222 底；Danger #dc2626。</li>
+          <li>Elevation el-1…el-3 建立层级，不用玻璃拟态。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  
+
+  <!-- GENERATION GUARDRAILS -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">生成防跑偏规则</span><span class="sec-note">给 Coding Agent 的正负约束</span></div>
+    <div class="guard-grid">
+      <div class="guard-card good">
+        <h4>Do</h4>
+        <ul>
+          <li>使用 #ffffff / #fafaf9 作为基础背景（kit Background swatches），保持柔和与可信赖。</li>
+          <li>优先使用细边框、轻阴影和明确留白建立层次。</li>
+          <li>复用 kit 内 .btn / .composer / .nav-item / .chip / .sc-project 规则。</li>
+          <li>标题可以更有编辑感，但正文必须保持清晰易读。</li>
+          <li>新增页面前先读取 DESIGN.md，再决定布局与组件。</li>
+        </ul>
+      </div>
+      <div class="guard-card bad">
+        <h4>Don’t</h4>
+        <ul>
+          <li>不要使用默认 Tailwind / shadcn 的蓝紫色 SaaS 风格。</li>
+          <li>不要加入玻璃拟态、霓虹光、复杂渐变或赛博质感。</li>
+          <li>不要随意新增字体、圆角、阴影和 container 宽度。</li>
+          <li>不要把 Brand Green #16a34a 作为大面积背景或过度强调色。</li>
+          <li>不要为了丰富而添加无意义插画、3D 或复杂动效。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENT STATES -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">组件状态矩阵</span><span class="sec-note">default · hover · focus · active · disabled</span></div>
+    <div class="card-k" style="padding:20px;">
+      <div class="state-grid">
+        <div class="sh"></div>
+        <div class="sh">Default</div><div class="sh">Hover</div><div class="sh">Focus</div><div class="sh">Active</div><div class="sh">Disabled</div>
+        <div class="rk">Button</div>
+        <div class="sc"><span class="st-btn">按钮</span></div>
+        <div class="sc"><span class="st-btn hover">按钮</span></div>
+        <div class="sc"><span class="st-btn focus">按钮</span></div>
+        <div class="sc"><span class="st-btn active">按钮</span></div>
+        <div class="sc"><span class="st-btn disabled">按钮</span></div>
+        <div class="rk">Input</div>
+        <div class="sc"><span class="st-inp">输入</span></div>
+        <div class="sc"><span class="st-inp hover">输入</span></div>
+        <div class="sc"><span class="st-inp focus">输入</span></div>
+        <div class="sc"><span class="st-inp active">输入|</span></div>
+        <div class="sc"><span class="st-inp disabled">输入</span></div>
+      </div>
+      <p style="font-size:11.5px;color:var(--k-faint);margin-top:14px;line-height:1.5;">状态规则：hover 仅变背景/边框（150ms）；focus 使用 kit .input:focus → 1px #0c0a09 ring（无障碍要求）；active 使用 kit .btn:active → scale(0.98)；disabled 降透明度至 40% 且禁用指针。所有交互组件必须实现完整五态。</p>
+    </div>
+  </section>
+
+  <!-- DARK MODE -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">深色模式映射</span><span class="sec-note">同一组件 · 双主题语义对照</span></div>
+    <div class="dm-grid">
+      <div class="dm-card light">
+        <div class="dm-head"><svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><use href="#icon-info"/></svg>Light</div>
+        <div class="dm-body">
+          <div class="dm-mini">
+            <div class="dm-t">民居 ｜ Sumida City</div>
+            <div class="dm-p">11 月 5 日 - 10 日 · ¥6,820 总价（含税费）</div>
+            <span class="dm-cta">立即搜索</span>
+          </div>
+        </div>
+      </div>
+      <div class="dm-card dark">
+        <div class="dm-head"><svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor"><use href="#icon-info"/></svg>Dark</div>
+        <div class="dm-body">
+          <div class="dm-mini">
+            <div class="dm-t">民居 ｜ Sumida City</div>
+            <div class="dm-p">11 月 5 日 - 10 日 · ¥6,820 总价（含税费）</div>
+            <span class="dm-cta">立即搜索</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-k" style="margin-top:14px;padding:20px;">
+      <div class="dm-map">
+        <div class="dm-row hd"><span>语义角色</span><span>Light</span><span>Dark</span></div>
+        <div class="dm-row"><span class="mk">surface-base</span><span class="mv"><span class="sw" style="background:#ffffff"></span>#ffffff</span><span class="mv"><span class="sw" style="background:#1c1917"></span>#1c1917 · Dark Surface</span></div>
+        <div class="dm-row"><span class="mk">surface-raised</span><span class="mv"><span class="sw" style="background:#fafaf9"></span>#fafaf9</span><span class="mv"><span class="sw" style="background:#1c1917"></span>#1c1917</span></div>
+        <div class="dm-row"><span class="mk">text-primary</span><span class="mv"><span class="sw" style="background:#0c0a09"></span>#0c0a09</span><span class="mv"><span class="sw" style="background:#ffffff"></span>#ffffff · FG on Dark</span></div>
+        <div class="dm-row"><span class="mk">text-secondary</span><span class="mv"><span class="sw" style="background:#57534e"></span>#57534e</span><span class="mv"><span class="sw" style="background:#78716c"></span>#78716c</span></div>
+        <div class="dm-row"><span class="mk">border-subtle</span><span class="mv"><span class="sw" style="background:rgba(11,11,11,.08)"></span>11,11,11/.08</span><span class="mv"><span class="sw" style="background:rgba(255,255,255,.08)"></span>255×3/.08</span></div>
+        <div class="dm-row"><span class="mk">accent</span><span class="mv"><span class="sw" style="background:#16a34a"></span>52% L</span><span class="mv"><span class="sw" style="background:#E61E4D"></span>56% L</span></div>
+      </div>
+      <p style="font-size:11.5px;color:var(--k-faint);margin-top:14px;line-height:1.5;">源 kit 仅记录 Light 画布 + Dark Surface #1c1917 / FG on Dark token，无完整 dark theme。组件应引用语义 token，不硬编码 Claude 暖中性值。</p>
+    </div>
+  </section>
+
+  <!-- TOKENS.json -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">Tokens 导出</span><span class="sec-note">机读 · W3C DTCG 格式</span></div>
+    <div class="card-k tok-card">
+      <div class="tok-head">
+        <span class="label-dim">tokens.json · 供构建工具 / AI 直接 import</span>
+        <button class="tok-copy" onclick="copyTokens(this)"><svg viewBox="0 0 20 20"><use href="#icon-copy"/></svg>复制 JSON</button>
+      </div>
+<pre id="tokensJson">{
+  "$schema": "https://design-tokens.org/dtcg",
+  "color": {
+    "surface": {
+      "base": {
+        "$value": "#fafaf9"
+      },
+      "raised": {
+        "$value": "#ffffff"
+      },
+      "muted": {
+        "$value": "#f5f5f4"
+      },
+      "tertiary": {
+        "$value": "#e7e5e4"
+      }
+    },
+    "text": {
+      "primary": {
+        "$value": "#0c0a09"
+      },
+      "secondary": {
+        "$value": "#57534e"
+      },
+      "muted": {
+        "$value": "#78716c"
+      },
+      "quaternary": {
+        "$value": "#d6d3d1"
+      }
+    },
+    "accent": {
+      "$value": "#16a34a"
+    },
+    "border": {
+      "$value": "var(--border-gray-default)"
+    },
+    "semantic": {
+      "success": {
+        "$value": "#16a34a"
+      },
+      "warning": {
+        "$value": "#ea580c"
+      },
+      "danger": {
+        "$value": "#dc2626"
+      },
+      "info": {
+        "$value": "#2563eb"
+      }
+    }
+  },
+  "font": {
+    "sans": {
+      "$value": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "serif": {
+      "$value": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    },
+    "mono": {
+      "$value": "ui-monospace, monospace"
+    }
+  },
+  "motion": {
+    "enterEase": {
+      "$value": "ease"
+    },
+    "exitEase": {
+      "$value": "ease"
+    },
+    "linearEase": {
+      "$value": "linear"
+    },
+    "hover": {
+      "$value": "120ms"
+    },
+    "medium": {
+      "$value": "200ms"
+    }
+  },
+  "meta": {
+    "source": "zh.airbnb.com/homes",
+    "brandName": "Mintlify 设计系统",
+    "spacingBase": "4px",
+    "iconCount": 44
+  },
+  "space": {
+    "base": {
+      "$value": "4px"
+    },
+    "scale": {
+      "$value": [
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        64
+      ]
+    }
+  },
+  "radius": {
+    "sm": {
+      "$value": "6px · sm · chip"
+    },
+    "md": {
+      "$value": "8px · md · btn-sm"
+    },
+    "lg": {
+      "$value": "10px · lg · button"
+    },
+    "xl": {
+      "$value": "12px · xl · card"
+    },
+    "2xl": {
+      "$value": "14px · 2xl · composer"
+    },
+    "--radius token": {
+      "$value": "0.625rem · --radius token"
+    },
+    "pill": {
+      "$value": "9999px"
+    }
+  }
+}</pre>
+    </div>
+  </section>
+
+  <!-- CSS VARS -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-title">CSS 变量</span><span class="sec-note">复制用于你的项目</span></div>
+    <div class="card-k var-card">
+<pre><span class="c">/* Surfaces · kit Background swatches */</span>
+--bg-100: <span class="v">#fafaf9</span>;
+--bg-200: <span class="v">#ffffff</span>;
+--bg-300: <span class="v">#f5f5f4</span>;
+
+<span class="c">/* Text · kit Foreground */</span>
+--text-100: <span class="v">#0c0a09</span>;
+--text-200: <span class="v">#57534e</span>;
+--text-300: <span class="v">#78716c</span>;
+--text-400: <span class="v">#78716c</span>;
+
+<span class="c">/* Borders · kit Border */</span>
+--border-100: <span class="v">#e7e5e4</span>;
+--border-200: <span class="v">#e7e5e4</span>;
+--border-300: <span class="v">#78716c</span>;
+
+<span class="c">/* Accent — Brand Green */</span>
+--accent-main: <span class="v">#16a34a</span>;
+--accent-hover: <span class="v">#15803d</span>;
+
+<span class="c">/* Type */</span>
+--font-brand: <span class="v">Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif</span>;
+--font-ui: <span class="v">PingFang SC, PingFang TC, -apple-system, BlinkMacSystemFont, Hiragino Sans GB, Microsoft YaHei, sans-serif</span>;
+--font-mono: <span class="v">ui-monospace, monospace</span>;
+
+<span class="c">/* Brand tints · kit §1 */</span>
+--brand-tint-1: <span class="v">#FFF1F3</span>;
+--brand-tint-2: <span class="v">#FFC2CE</span>;
+
+<span class="c">/* Semantic · kit §1 */</span>
+--color-success: <span class="v">#16a34a</span>;
+--color-warning: <span class="v">#ea580c</span>;
+--color-danger: <span class="v">#dc2626</span>;
+--color-info: <span class="v">#2563eb</span>;</pre>
+    </div>
+  </section>
+
+  <div class="foot">Mintlify 设计系统 设计套件 · 真实令牌与资源 · Mintlify 浅色三层 · Brand Green CTA</div>
+</div>
+
+
+
+<div class="toast" id="toast">Copied</div>
+
+
+</body>
+</html>

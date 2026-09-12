@@ -32,10 +32,11 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
+    forgetPty: (id: string) => calls.push('secret-revoke:' + id),
     handleEvent() {}
   })
   interrupt({}, 's')
-  assert.deepEqual(calls, ['revoke:s', 'kill'])
+  assert.deepEqual(calls, ['revoke:s', 'secret-revoke:s', 'kill'])
   calls.length = 0
   live.acp = { phase: () => 'prompting', interrupt: () => { calls.push('cancel'); return true } }
   interrupt({}, 's')
@@ -45,7 +46,7 @@ function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {},
+    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env,
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
@@ -114,7 +115,7 @@ test('启动同步失败后恢复空闲并返回失败，下一次可以直接�
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
-    agentMcpConfigPath() {}, sessionMcpServers: () => [], codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, approvalEnv: () => ({}), PROBE_ENV: {},
+    agentMcpConfigPath() {}, sessionMcpServers: () => [], codexServers: () => [], mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
     spawn: () => { if (++attempts === 1) throw new Error('fixture spawn failure'); return new FakeProcess() },
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { if (e.k === 'turn.start') live.rec.busy = true },
     logSession() {}, resolveAndBroadcastModels() {},
@@ -146,7 +147,7 @@ for (const [label, mcp, expected] of [
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],
       sessionMcpServers: () => { snapshots++; return enabled ? [{ name: 'eas-term', command: 'node', args: ['mcp.mjs'] }] : [] },
-      mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, approvalEnv: () => ({}), PROBE_ENV: {},
+      mcpEnv: () => ({}), capabilitySessionEnv: () => ({}), sessionCapabilityGuidance: () => '', revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, approvalEnv: () => ({}), PROBE_ENV: {},
       spawn: (_bin: string, args: string[]) => { launches.push(args); return new FakeProcess() },
       handleEvent() {}, logSession() {}, wireProc() {}, resolveAndBroadcastModels() {}
     })

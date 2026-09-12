@@ -33,7 +33,8 @@ export function CodeView({
   filePath,
   readOnly,
   saveVia,
-  onDirtyChange
+  onDirtyChange,
+  onEditingChange
 }: {
   filePath: string | null
   /** 只读预览：不出「编辑」按钮，从源头掐掉 editing 态（连带 ⌘S 保存也进不去）。
@@ -46,6 +47,8 @@ export function CodeView({
   /** 有未保存改动时通知外层。灯箱靠它拦住「改了没保存就被点掉」——
    *  dirty 是这里的内部状态，不冒出去的话外面只能猜。 */
   onDirtyChange?: (dirty: boolean) => void
+  /** 产物重提交不能打断尚未变脏的编辑。 */
+  onEditingChange?: (editing: boolean) => void
 }): JSX.Element {
   const rootRef = useRef<HTMLDivElement | null>(null)
   // 代码块复制按钮：用回调 ref 挂委托，不用 useEffect(…, [])。
@@ -105,32 +108,36 @@ export function CodeView({
     if (text === null || !filePath || rendered) return
     const host = hostRef.current
     if (!host) return
-    let view: EditorView | null = null
     let cancelled = false
-    void (async () => {
-      const fileName = filePath.split('/').pop() ?? filePath
-      const langDesc = LanguageDescription.matchFilename(languages, fileName)
-      const langSupport = langDesc ? await langDesc.load() : null
-      if (cancelled) return
-      // 只用 readOnly（不用 editable.of(false)）：内容不可改，但仍可获得焦点、
-      // 选中文字、用 ⌘/Ctrl+C 复制、⌘/Ctrl+A 全选——这些都是 CodeMirror 默认键位。
-      const extensions = [
-        basicSetup,
-        oneDark,
-        glassTheme,
+    const language = new Compartment()
+    // 正文先挂载。语法高亮是增强能力，不能因为异步 chunk 缺失把编辑器变成空白。
+    // 开发实例跨 build 时旧 hash 会消失；网络/磁盘失败也必须保留可读可编辑的原文。
+    const view = new EditorView({
+      state: EditorState.create({ doc: text, extensions: [
+        basicSetup, oneDark, glassTheme,
         roRef.current.of(EditorState.readOnly.of(!editing)),
-        EditorView.updateListener.of((u) => {
-          if (u.docChanged) setDirty(true)
-        })
-      ]
-      if (langSupport) extensions.push(langSupport)
-      view = new EditorView({ state: EditorState.create({ doc: text, extensions }), parent: host })
-      viewRef.current = view
+        language.of([]),
+        EditorView.updateListener.of((u) => { if (u.docChanged) setDirty(true) })
+      ] }),
+      parent: host
+    })
+    viewRef.current = view
+    if (editing) view.focus()
+    void (async () => {
+      try {
+        const fileName = filePath.split('/').pop() ?? filePath
+        const langDesc = LanguageDescription.matchFilename(languages, fileName)
+        const support = langDesc ? await langDesc.load() : null
+        if (!cancelled && support) view.dispatch({ effects: language.reconfigure(support) })
+      } catch {
+        // 不输出文件正文；失败只影响着色，不要求用户刷新并丢掉草稿。
+        if (!cancelled) console.warn('[CodeView] 语法高亮加载失败，保留纯文本编辑')
+      }
     })()
     return () => {
       cancelled = true
-      view?.destroy()
-      viewRef.current = null
+      view.destroy()
+      if (viewRef.current === view) viewRef.current = null
     }
   }, [text, filePath, rendered])
 
@@ -162,6 +169,9 @@ export function CodeView({
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+
+  useEffect(() => { onEditingChange?.(editing) }, [editing, onEditingChange])
+  useEffect(() => () => onEditingChange?.(false), [onEditingChange])
 
   // ⌘S / Ctrl+S 保存（只在编辑态、且焦点在本预览内时接管）
   useEffect(() => {

@@ -1,3 +1,5 @@
+import { withAgentSecrets } from '../agentSecretEnv'
+import { forgetPty, forgetSecretToken } from '../secrets'
 import { captureUsage, interruptUsage, markUsageInterrupted, resetUsageCost } from '../usage/index.ts'
 import { ownCodexLauncher, stopAgentProcess } from '../../../mcp/owned-launcher-control.mjs'
 import { cliInvocation } from '../cliInvocation.ts'
@@ -643,6 +645,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
   proc.on('error', (err) => {
     if (!isCurrent()) return
     revokeCapabilitySession(live.rec.id)
+    forgetPty(live.rec.id)
     // 进程级错误一定是中断 —— 正常收尾走的是 exit，不走这里
     live.rec = { ...live.rec, alive: false, busy: false, ended: 'interrupted' }
     handleEvent(live, { k: 'error', message: err.message, fatal: true })
@@ -651,6 +654,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
     if (!isCurrent()) return
     interruptUsage(live.rec)
     revokeCapabilitySession(live.rec.id)
+    forgetPty(live.rec.id)
     live.proc = undefined
     // busy 一并落回：进程都没了，不可能还在跑一轮。不清的话，崩在半路的会话会
     // 永远停在 busy=true，面板把一个连进程都没有的会话显示成「在跑」。
@@ -726,6 +730,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
   // 也就没有 exit 事件来清它 —— 于是**之后那个进程无论怎么没的，都会被当成
   // 「我们自己杀的」**，自动恢复永远不触发。2026-08-20 端到端验证时抓到：
   // kill -9 掉 agent 的进程，面板照样记成 ended:'ok'。
+  forgetPty(live.rec.id) // replacement retires the old secret credential immediately
   live.processGeneration = {} // retire old callbacks even if the replacement fails to spawn
   if (live.proc) {
     live.killing = true
@@ -735,6 +740,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
 
   const failStart = (message: string): AgentChatSendResult => {
     revokeCapabilitySession(live.rec.id)
+    forgetPty(live.rec.id)
     live.processGeneration = {}
     const failedProc = live.proc
     live.proc = undefined
@@ -848,7 +854,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     const controlledCodex = process.platform === 'win32' && live.rec.cli === 'codex'
     const proc = spawn(launch.command, launch.args, {
       cwd: opts.cwd,
-      env: {
+      env: withAgentSecrets(live.rec.id, {
         // **PROBE_ENV 而不是 process.env。** 从 Dock 启动的 Electron，PATH 是
         // launchd 给的精简版、不含 /opt/homebrew/bin —— `spawn('claude')` 直接
         // ENOENT。用户报的原话就是「spawn claude ENOENT」。
@@ -879,7 +885,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
         // 只有真的命中兜底分支才注入——见上面 hookNodeBin 的注释（I3）。
         ...(hookNodeBin === process.execPath ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
         ...launch.env
-      },
+      }),
       stdio: controlledCodex ? [built.stdin, 'pipe', 'pipe', 'ipc'] : [built.stdin, 'pipe', 'pipe']
     })
     if (controlledCodex) ownCodexLauncher(proc)
@@ -1210,6 +1216,7 @@ export function killAllAgentChatSessions(hard = false): void {
   for (const live of sessions.values()) {
     interruptUsage(live.rec)
     revokeCapabilitySession(live.rec.id)
+    forgetPty(live.rec.id)
     stopAgentProcess(live.proc, hard ? 'SIGKILL' : 'SIGTERM')
   }
 }
@@ -1232,6 +1239,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
     interruptUsage(live.rec)
     sessions.delete(id)
     revokeCapabilitySession(id)
+    forgetPty(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
     const proc = live.proc
     live.proc = undefined
@@ -1254,6 +1262,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
   return createAcpLive(
     {
       open(cwd) {
+        let secretToken: string | undefined
         // 受管配置**每次起进程之前重写一遍**：这是我们的目录、我们说了算
         // （与 agentRules 分发规则同一条纪律）。写不进去就不该起 —— 那等于分发一个
         // approvalMode 是 yolo、生图没被 deny 的 agent。
@@ -1277,6 +1286,12 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
           provider: setup.provider?.id,
           // MCP 桥的凭证由这里算好传进去 —— launch.ts 不再认识 mcpBridge
           //（那条 import 既是循环依赖的一环，也让整个模块没法单测，见它的文件头）
+          finalizeEnv(env) {
+            const next = withAgentSecrets(live.rec.id, env)
+            secretToken = next.EAS_SECRET_TOKEN
+            return next
+          },
+          onStopped() { if (secretToken) forgetSecretToken(secretToken) },
           mcpEnv: { ...mcpEnv({ project: cwd }), ...capabilitySessionEnv(live.rec.id, { project: cwd, agentSessionId: live.rec.id, agentLeafId: live.rec.agentLeafId, agentNodeId: live.rec.agentNodeId, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }) },
           // 角色契约 + 协同板快照。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
@@ -1824,6 +1839,7 @@ export function registerAgentChatHandlers(): void {
     // Retiring the generation suppresses its exit handler, so revoke here first.
     // A surviving MCP child must not retain authority after an explicit stop.
     revokeCapabilitySession(id)
+    forgetPty(id)
     interruptUsage(live.rec) // retired generation cannot drain queued accounting rounds on exit
     live.processGeneration = {} // explicit cancellation retires late output before a queued redirect resumes
     live.killing = true
@@ -1855,6 +1871,7 @@ export function registerAgentChatHandlers(): void {
     interruptUsage(live.rec)
     sessions.delete(id)
     revokeCapabilitySession(id)
+    forgetPty(id)
     // 刷板 ④：**在 delete 之后**才刷 —— 板是从 sessions 现算的，
     // 先刷的话这条已经不要了的会话还会留在板上，下一次刷新才消失。
     refreshBoard(projectRootOf(live.rec.cwd))

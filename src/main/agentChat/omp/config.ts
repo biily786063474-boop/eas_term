@@ -291,15 +291,13 @@ const FENCE_BEGIN =
   '<!-- omp:begin ——由 Eas-Term 在每次起 omp 会话前追加，改原版请去 skills/eas-term/，别改这里 -->'
 
 /** 决定 21 里那段唯一的 omp 专属文字。原版 SKILL.md 一个字不改，只在末尾追加它。
- *  存在的理由：`request_secret` / `secret_check` / `report_secret_invalid` 按 ptyId 授权，
- *  omp 会话没有 ptyId —— 工具**看得见、调不通**，不说清楚模型会一直去撞。 */
+ *  区分业务密钥的会话授权与模型服务商登录；二者不是同一条链路。 */
 const FENCE_BODY = [
-  '## 本会话是 omp 底座，只有这一条不同',
-  '上面「触发情境 C」与工具表里的 `request_secret` / `secret_check` / `report_secret_invalid`',
-  '在本会话里**看得见但调不通**（它们按终端授权，这个会话不是终端）。缺 key、401/403、鉴权失败时：',
-  '直接告诉用户「去 AI 对话面板的设置里检查模型服务商」——**别指定他该做什么**：',
-  '订阅那条路要重新登录，填 key 那条路才是改 key，你分不清他用的是哪条。',
-  '不要调那三个工具，也绝不让密钥进对话。其余规则原样适用。',
+  '## 本会话是 omp 底座',
+  '业务密钥可使用 `secret_check` / `request_secret` / `report_secret_invalid`，按本会话授权。',
+  '取用业务密钥只走 eas-secret run 包装命令，绝不让密钥进对话。',
+  '模型服务商本身的登录或鉴权失败：去 AI 对话面板的设置里检查模型服务商。',
+  '不要把模型登录与业务密钥授权混为一谈。',
 ].join('\n')
 
 export const OMP_SKILL_ADDENDUM = `${FENCE_BEGIN}\n${FENCE_BODY}\n${FENCE_END}`

@@ -1,7 +1,8 @@
+import { createArtifactRefreshGate } from './artifactRefresh'
 // 画布独有的文件预览节点（不进分屏）：渲染在装饰层 world 内，随视口矢量缩放。
 // 内容复用 CodeView / ImageView / WebView；头部可拖动、右下可 resize、× 删除。
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useStore } from '../../store'
 import { useHidingHolder, useMaximizeFlip } from '../workspace/useFlip.ts'
 import type { CanvasNode } from '../../store'
@@ -26,6 +27,20 @@ export function CanvasFileNode({
   selected?: boolean
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
+  const [revision, setRevision] = useState(0)
+  const refreshGate = useRef<ReturnType<typeof createArtifactRefreshGate> | null>(null)
+  if (!refreshGate.current) refreshGate.current = createArtifactRefreshGate(() => setRevision(v => v + 1))
+  const onDirtyChange = useCallback((dirty: boolean) => refreshGate.current!.setDirty(dirty), [])
+  const onEditingChange = useCallback((editing: boolean) => refreshGate.current!.setEditing(editing), [])
+  useEffect(() => {
+    const refresh = (event: Event): void => {
+      if ((event as CustomEvent).detail?.nodeId !== node.id) return
+      // 编辑期间（包括尚未输入/刚保存）不销毁编辑器；退出且无草稿后刷新。
+      refreshGate.current!.request()
+    }
+    window.addEventListener('eas-artifact-refresh', refresh)
+    return () => window.removeEventListener('eas-artifact-refresh', refresh)
+  }, [node.id])
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
@@ -273,7 +288,7 @@ export function CanvasFileNode({
         </button>
       </div>
       <div className="cfile-body">
-        {pane.kind === 'code' && <CodeView filePath={pane.filePath} />}
+        {pane.kind === 'code' && <CodeView key={revision} filePath={pane.filePath} onDirtyChange={onDirtyChange} onEditingChange={onEditingChange} />}
         {pane.kind === 'image' &&
           (isVid ? (
             <video
@@ -285,10 +300,10 @@ export function CanvasFileNode({
               playsInline
             />
           ) : (
-            <CanvasImageViewer filePath={pane.filePath} />
+            <CanvasImageViewer key={revision} filePath={pane.filePath} revision={revision} />
           ))}
         {pane.kind === 'web' && (
-          <WebView
+          <WebView key={revision}
               url={pane.url}
               frameId={frameId}
               nodeId={node.id}

@@ -35,7 +35,7 @@ test('production app shutdown and window cleanup route both soft/hard passes thr
  const proc={connected:true,exitCode:null,signalCode:null,send(m,cb){messages.push(m);cb(null)},disconnect(){},kill(){throw new Error('unsafe outer kill')}}
  ownCodexLauncher(proc)
  const sessions=new Map([['s',{wcId:7,rec:{id:'s'},proc}]])
- const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{sessions,stopAgentProcess,interruptUsage(rec){accounted.push(rec.id)},revokeCapabilitySession(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
+ const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{sessions,stopAgentProcess,interruptUsage(rec){accounted.push(rec.id)},revokeCapabilitySession(){},forgetPty(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
  api.killAllAgentChatSessions();api.killAllAgentChatSessions(true);api.killAgentChatSessionsForWebContents(7);timers.forEach(fn=>fn())
  assert.deepEqual(messages.map(m=>m.signal),['SIGTERM','SIGKILL','SIGTERM','SIGKILL']);assert.equal(sessions.size,0);assert.deepEqual(accounted,['s','s','s'])
 })

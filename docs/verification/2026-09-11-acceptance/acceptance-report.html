@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eas-Term 开发实例验收报告 · 2026-09-11</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --line:#2a2f3a;
+    --fg:#e7eaf0; --dim:#9aa3b2; --faint:#6b7280;
+    --pass:#3fb950; --fail:#f85149; --warn:#d29922; --info:#58a6ff;
+    --mono:"SF Mono",Menlo,Monaco,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 28px 80px}
+  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:8px}
+  h1{font-size:24px;margin:0 0 6px;letter-spacing:.3px}
+  .sub{color:var(--dim);font-size:13px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chip{font-size:12px;padding:3px 10px;border-radius:20px;background:var(--panel2);
+    color:var(--dim);border:1px solid var(--line)}
+  .chip b{color:var(--fg);font-weight:600}
+  h2{font-size:17px;margin:34px 0 12px;padding-left:11px;border-left:3px solid var(--info)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin:12px 0}
+  .row{display:flex;align-items:flex-start;gap:12px;margin:0 0 4px}
+  .st{flex:0 0 auto;font-size:12px;font-weight:600;padding:2px 9px;border-radius:6px;margin-top:3px}
+  .st.pass{background:rgba(63,185,80,.14);color:var(--pass)}
+  .st.fail{background:rgba(248,81,73,.14);color:var(--fail)}
+  .st.na{background:rgba(210,153,34,.14);color:var(--warn)}
+  .st.info{background:rgba(88,166,255,.14);color:var(--info)}
+  .title{font-weight:600;font-size:15px}
+  ul{margin:8px 0 2px;padding-left:20px}
+  li{margin:3px 0;color:var(--dim)}
+  li b{color:var(--fg);font-weight:600}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--panel2);
+    padding:1px 6px;border-radius:5px;color:#c9d1d9;border:1px solid var(--line)}
+  .flag{margin-top:8px;font-size:13px;color:var(--faint)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .kv{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kv .t{font-size:13px;color:var(--dim);margin-bottom:4px}
+  .kv .v{font-size:14px}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);
+    color:var(--faint);font-size:12px}
+  .bl{color:var(--fail);font-weight:600}
+  .defect{border-left:3px solid var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Eas-Term 开发实例验收报告</h1>
+  <div class="sub">2026-09-11 · 只读验收，未改代码 / 未提交 / 未发版</div>
+  <div class="meta">
+    <span class="chip">实例 <b>开发版 0.4.93 dev</b></span>
+    <span class="chip">隔离数据 <b>eas-verify-Tn07Pu</b></span>
+    <span class="chip">Frame <b>frame-1-4s6wx · voice-regression</b></span>
+    <span class="chip">生产版未触碰 <b>/Applications（pid 2711）</b></span>
+  </div>
+</header>
+
+<div class="card">
+  <div class="title">连接确认</div>
+  <ul>
+    <li>承载本会话的进程为 worktree 内 <code>node_modules/.bin/electron .</code>（pid 77931），userData 指向临时隔离目录 <code>eas-verify-Tn07Pu</code>，非 <code>~/Library/Application Support/Eas-Term</code>。</li>
+    <li>MCP <code>canvas_get_state</code> 返回当前 Frame = <code>frame-1-4s6wx</code>（voice-regression），窗口右下角标 <code>dev</code>。</li>
+    <li>生产版（<code>/Applications/…/Eas-Term</code>，pid 2711，正显示「Biily自媒体」）仅用于对照，全程未操作。</li>
+  </ul>
+</div>
+
+<h2>结论速览</h2>
+<div class="grid">
+  <div class="kv"><div class="t">1 · 密钥柜解锁</div><div class="v"><span class="st pass">通过</span> 含 1 观察</div></div>
+  <div class="kv"><div class="t">2 · 密钥柜界面</div><div class="v"><span class="st pass">通过</span></div></div>
+  <div class="kv"><div class="t">3 · AI 节点密钥能力</div><div class="v"><span class="st pass">通过</span> 2 项未验证</div></div>
+  <div class="kv"><div class="t">4 · 图片 popup</div><div class="v"><span class="st info">用户自验</span></div></div>
+  <div class="kv"><div class="t">5 · 产物交付到 Frame</div><div class="v"><span class="st pass">主体通过</span> 含 1 失败</div></div>
+  <div class="kv"><div class="t">6 · 终端 / 甘特 / 词典化</div><div class="v"><span class="st pass">通过</span></div></div>
+</div>
+
+<h2>1 · 密钥柜解锁 <span class="st pass">通过</span></h2>
+<div class="card">
+  <ul>
+    <li><b>锁定即弹窗</b>：柜子锁定后调 <code>secret_check</code>，开发实例自动弹出「解锁密钥柜」窗，底层画布灰化模糊；无需用户去找钥匙入口。</li>
+    <li><b>原请求自动续上</b>：用户输入六位码提交后（20:56:58 弹→20:57:05 关），同一次 <code>secret_check</code> 调用直接返回柜内清单，画布恢复。</li>
+    <li><b>解锁 ≠ 授权</b>：弹窗文案「解锁不会新增密钥授权」，且解锁只放行清单读取，不放行任一密钥组。</li>
+    <li><b>首次说明</b>：再次解锁窗无「在这台设备上加密保存 / 由你决定哪个会话可用」那段介绍（仅建柜 <code>!configured</code> 时渲染）。<span class="st na" style="margin-left:6px">未验证</span> 本轮未重建柜子，建柜首次说明未复核。</li>
+  </ul>
+  <div class="flag defect" style="padding-left:11px">观察缺陷 B2：弹窗挂满 10 分钟后主进程侧按上限超时，工具返回 <code>渲染层超时未响应</code>，但渲染层弹窗与 pending 不清除 → 孤儿弹窗残留，后续任何密钥请求被拒（<code>已经有一个密钥请求在等用户处理了</code>），需用户手动关窗。且该超时文案对密钥三件套词不达意（<code>wiki_archive_plan</code>/<code>team_spawn</code> 有人话版）。</div>
+</div>
+
+<h2>2 · 密钥柜界面 <span class="st pass">通过</span></h2>
+<div class="card">
+  <ul>
+    <li><b>最近使用记录</b>：收起时无大块空白；展开后区域可滚动（<code>.sec-audit[open]{max-height:180px;overflow-y:auto}</code>）。</li>
+    <li><b>预设切换</b>：新增密钥时点 Lovart → 阿里云 → AWS，组名与变量列表同步变化（如 <code>LOVART_ACCESS_KEY/…</code> ↔ <code>ALIBABA_CLOUD_ACCESS_KEY_ID/…</code>）。</li>
+    <li>全程未替用户填写或提交任何凭证。</li>
+  </ul>
+</div>
+
+<h2>3 · 当前 AI 节点的密钥能力 <span class="st pass">通过</span></h2>
+<div class="card">
+  <ul>
+    <li><b>命令可用</b>：<code>eas-secret</code> 在 PATH（隔离 <code>bin/</code>），会话通行证 <code>EAS_SECRET_TOKEN</code> 存在（长度 48，未打印值）。</li>
+    <li><b>先拒后批</b>：未授权时 <code>secret_check</code> 报 <code>missing</code>、<code>eas-secret run</code> 返回 <code>密钥柜里没有这些变量</code>；经 <code>request_secret</code> 授权后同一终端重跑成功，<b>无需重开终端</b>。</li>
+    <li><b>只输出长度</b>：<code>printf "%s" "${#VAR}"</code> 得 <code>EAS_VAULT_ACCEPTANCE_X=14</code>、<code>_Y=6</code>；值从未进对话。</li>
+    <li><b>拒绝即无权</b>：对 <code>_Z</code> 点取消 → <code>saved:false</code>，<code>secret_check</code> 仍 <code>missing</code>，<code>eas-secret</code> 被拒 → 未获得访问权。</li>
+    <li><b>审计可追溯</b>：记录形如 <code>eas-secret · ac-2 · EAS_VAULT_ACCEPTANCE_X</code>，含会话 ID 与变量名，<b>不含值</b>。</li>
+  </ul>
+  <div class="flag"><span class="st na">未验证</span> ①「已存在但未授权组，只授权不重填」子路径——本会话所有测试组建时即授权，无该中间态可测；②旧 token 在节点关闭后失效——需独立控制端，无法在本节点安全完成，未导出 token。</div>
+</div>
+
+<h2>4 · 图片 popup <span class="st info">用户自行验收</span></h2>
+<div class="card">
+  <ul>
+    <li>按用户明确要求，此项由用户自行验收，我未重复驱动，不对居中放大 / Esc / 遮罩 / 关闭按钮 / 滚动位置做独立结论。</li>
+  </ul>
+  <div class="flag defect" style="padding-left:11px">附带观察 B4（既有限制）：本项目路径含空格（<code>vibe coding</code>），而 Markdown 图片正则 <code>!\[..\]\(([^)\s]+)\)</code> 不接受带空格路径 → 本项目内 AI 回复里的图片无法以图渲染，只显示原始 <code>![](...)</code> 文本。</div>
+</div>
+
+<h2>5 · 产物交付到 Frame <span class="st pass">主体通过</span></h2>
+<div class="card">
+  <ul>
+    <li><b>三类落 Frame</b>：<code>test-doc.md</code>(code)、<code>test-page.html</code>(web)、<code>test-image.png</code>(image) 经 <code>canvas_open_file/html/image</code> 显式提交，全部落当前 Frame，<code>content_slots 3/5</code>。</li>
+    <li><b>重复提交复用</b>：三者再次提交均返回相同 <code>nodeId</code>、<code>reused:true</code>，名额仍 3/5，不新增节点。</li>
+    <li><b>内容刷新</b>：改为 v2 后再提交，Markdown 标题+追加行、HTML 标题、图片图案均刷新。</li>
+    <li><b>不越权</b>：提交前 Frame 仅 agent 节点；多次在回复中提到路径、Read 过图片，均未触发自动打开——不扫描回复路径、不把输入素材当产物。</li>
+    <li><b>脏草稿保留</b> <span class="st pass">通过</span>：隔离 CDP 中在编辑器输入 <code>ZZZ-DRAFT</code>（dirty=true），随即触发同一产物「重新提交」（refresh），草稿保留（仍 123 字符、仍在编辑态）；磁盘文件未改。</li>
+  </ul>
+  <div class="flag defect" style="padding-left:11px"><span class="bl">失败 B1</span>：dev 实例上某个 <code>test-doc.md</code> 节点点「编辑」后，编辑器正文<b>空白且无法输入</b>（「保存/完成」按钮在 = text 已加载，却无内容）。磁盘文件完好（213 字节），是显示问题非数据丢失。隔离实例三条路径（新建→编辑 / 反复刷新→编辑 / 编辑中途刷新）<b>均未稳定复现</b>该空白态，根因未隔离，记为「观察到一次的失败」，建议开发者在真实 dev 实例复查。</div>
+  <div class="flag defect" style="padding-left:11px">观察 B3（可复现）：进入编辑态但尚未输入（未变脏）时，若同一产物被重新提交，会被静默切回排版视图，编辑意图丢失（无数据丢失，因尚无草稿）。</div>
+</div>
+
+<h2>6 · 其他待验项</h2>
+<div class="card">
+  <div class="row"><span class="st pass">通过</span><div><div class="title">终端吸顶 / 低对比文字（亮 + 暗）</div>
+    <ul><li><code>minimumContrastRatio:4.5</code> 使前景 80/80/80、背景 58/58/58 的「吸顶条」式文字在<b>亮、暗两主题下都清晰可读</b>。</li>
+    <li>dim 弱化文字偏淡但仍可读——xterm 原生 dim 规则，不保证每种 dim 达 4.5（与实现说明一致）。</li></ul></div></div>
+  <div class="row"><span class="st pass">通过</span><div><div class="title">甘特图异常结束任务</div>
+    <ul><li><b>默认隐藏</b>：checkbox 未勾、<code>showAborted=false</code>、只显示正常条（1 条），异常条 0。</li>
+    <li><b>开关生效</b>：勾「显示异常中断任务」后异常条出现（终端 2 的粉色条），<code>localStorage.gantt-show-aborted=true</code>。</li>
+    <li><b>记住选择</b>：整页 reload 后 checkbox 仍勾选、异常条仍显示。</li></ul></div></div>
+  <div class="row"><span class="st na">不验收</span><div><div class="title">设计选型台词典化</div>
+    <ul><li>目前仅原型（<code>docs/prototypes</code>）与排期（plan P1），不作为已实现功能验收。</li></ul></div></div>
+</div>
+
+<h2>阻断问题与需修复项</h2>
+<div class="card">
+  <ul>
+    <li><b>阻断（生产/安全）</b>：<b>无</b>。密钥的拒绝→无权、授权→可用、只输出长度、审计不含值等安全属性均正确；隔离数据目录未污染真实柜。</li>
+    <li class="defect" style="list-style:none;margin-left:-20px;padding-left:11px"><b>B1</b> 产物编辑态空白 + 无法输入（dev 实例观察到一次，未稳定复现，根因未隔离）。</li>
+    <li class="defect" style="list-style:none;margin-left:-20px;padding-left:11px"><b>B2</b> 密钥请求/解锁超时后孤儿弹窗不清除，堵住后续所有密钥请求；密钥工具超时文案词不达意。</li>
+    <li class="defect" style="list-style:none;margin-left:-20px;padding-left:11px"><b>B3</b>（次要）进入编辑态未变脏时被重新提交踢回排版视图。</li>
+    <li class="defect" style="list-style:none;margin-left:-20px;padding-left:11px"><b>B4</b>（既有限制）含空格项目路径下 Markdown 回复图片不渲染。</li>
+  </ul>
+</div>
+
+<div class="card">
+  <div class="title">未验证清单</div>
+  <ul>
+    <li>建柜首次用途说明（本轮未重建柜子）</li>
+    <li>「已存在未授权组，只授权不重填」子路径</li>
+    <li>旧 token 在节点关闭后失效（需独立控制端，未导出 token）</li>
+    <li>图片 popup（用户自行验收，未由本次复核）</li>
+    <li>Windows 端一律未测</li>
+  </ul>
+</div>
+
+<div class="foot">
+  证据截图归档于 <code>/tmp/eas-accept/evidence/</code>（本机临时目录，含解锁弹窗、审计记录、请求弹窗、产物节点、编辑空白态、甘特开关、终端亮暗对比等）。本报告不含任何凭证或密钥值。测试变量与测试密钥组仅存在于隔离实例的测试柜，可自行删除。
+</div>
+</div>
+</body>
+</html>

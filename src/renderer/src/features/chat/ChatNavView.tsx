@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ImagePopup } from '../../ui/ImagePopup'
 import type { SessionTurn, SessionExchange } from '../../../../shared/types'
 import { MessageIcon, RefreshIcon, ImageIcon } from '../../ui/Icons'
 import './chat.css'
@@ -157,14 +157,7 @@ export function ChatNavView({ cwd }: { cwd: string }): JSX.Element {
           )}
         </div>
       </div>
-      {zoomSrc &&
-        // Portal 到 body：玻璃面板 backdrop-filter 会裁切 fixed 后代
-        createPortal(
-          <div className="chat-lightbox" onClick={() => setZoomSrc(null)}>
-            <img src={zoomSrc} alt="放大查看" />
-          </div>,
-          document.body
-        )}
+      {zoomSrc && <ImagePopup src={zoomSrc} onClose={() => setZoomSrc(null)} />}
     </div>
   )
 }

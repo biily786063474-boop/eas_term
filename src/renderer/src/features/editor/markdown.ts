@@ -44,9 +44,14 @@ function inline(t: string, baseDir: string): string {
     return `\u0000${codes.length - 1}\u0000`
   })
 
-  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^)]*&quot;)?\)/g, (_m, alt: string, src: string) => {
+  s = s.replace(/!\[([^\]]*)\]\(([^)\n]+)\)/g, (_m, alt: string, destination: string) => {
+    // 本地路径允许空格；仅剥离明确的可选标题，不按空白切断路径。
+    let src = destination.replace(/\s+&quot;[^]*&quot;\s*$/, '').trim()
+    if (src.startsWith('&lt;') && src.endsWith('&gt;')) src = src.slice(4, -4)
+    // 输入已转义：解析路径先还原，输出 URL 再做属性转义。
+    src = src.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
     const u = resolveSrc(src, baseDir)
-    return u ? `<img src="${u}" alt="${alt}" loading="lazy">` : `<span class="md-img-miss">[图片：${alt || src}]</span>`
+    return u ? `<img src="${esc(u)}" alt="${alt}" loading="lazy">` : `<span class="md-img-miss">[图片：${alt || esc(src)}]</span>`
   })
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;[^)]*&quot;)?\)/g, (_m, txt: string, href: string) =>
     /^(https?:|mailto:)/i.test(href) ? `<a href="${href}" target="_blank" rel="noreferrer">${txt}</a>` : `<span class="md-link">${txt}</span>`

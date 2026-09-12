@@ -80,6 +80,8 @@ export interface OmpLaunchInput {
    *  从「传 false」改成「不传」是有意的：默认值现在站在安全那一边，
    *  忘了传的后果是少一个能力，而不是多一条出口。 */
   mcpEnv?: Record<string, string>
+  finalizeEnv?: (env: Record<string, string>) => NodeJS.ProcessEnv
+  onStopped?: () => void
   /** 覆盖默认的 `omp acp` 参数。冒烟用它把工具集钉更窄 */
   extraArgs?: string[]
   /** 角色契约原文（`AgentRole.contract`）。走 `--append-system-prompt`。
@@ -212,13 +214,16 @@ export function openOmpProcess(
   try {
     child = spawn(plan.spec.bin, plan.spec.args, {
       cwd: plan.spec.cwd,
-      env: plan.spec.env,
+      env: input.finalizeEnv ? input.finalizeEnv(plan.spec.env) : plan.spec.env,
       stdio: ['pipe', 'pipe', 'pipe']
     })
   } catch (e) {
+    input.onStopped?.()
     return { ok: false, message: e instanceof Error ? e.message : String(e), setup: false }
   }
 
+  child.once('exit', () => input.onStopped?.())
+  child.once('error', () => input.onStopped?.())
   let buf = ''
   return {
     ok: true,
@@ -251,6 +256,7 @@ export function openOmpProcess(
         child.on('error', () => cb(null, 'error'))
       },
       kill() {
+        input.onStopped?.()
         child.kill()
       },
       pid: child.pid

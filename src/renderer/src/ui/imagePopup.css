@@ -1,0 +1,20 @@
+.image-popup {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 48px;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+  cursor: zoom-out;
+}
+.image-popup[open] { display: flex; align-items: center; justify-content: center; }
+.image-popup::backdrop { background: rgba(15, 17, 20, .64); backdrop-filter: blur(6px) saturate(.65); }
+.image-popup img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 24px 80px rgba(0,0,0,.3); cursor: default; }
+.image-popup-close { position: absolute; top: 16px; right: 20px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: #333; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; }
+.image-popup-close:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.ac-messages .ac-turn-imgs img, .ac-messages .ac-md img { cursor: zoom-in; }

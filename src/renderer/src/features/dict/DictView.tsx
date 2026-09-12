@@ -11,6 +11,7 @@ import { DictIcon } from '../../ui/Icons'
 import { DictHookBar } from './DictHookBar'
 import bundle from './dictionary-bundle.json'
 import './dict.css'
+import { DesignPicker } from './DesignPicker'
 
 // 专业名词词典：词条以胶囊平铺，hover 弹浮层看 SVG 图 + 实现逻辑，
 // 点击把「实现逻辑」文本插入到最近活动终端的命令行光标处（不带回车，不执行）。
@@ -131,7 +132,7 @@ function ClipVideo({ src }: { src: string }): JSX.Element {
   )
 }
 
-export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element {
+export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean; onDesignViewChange?: (active: boolean) => void } = {}): JSX.Element {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
   /** 选中的二级。**跟着一级走** —— 换一级时必须清掉，否则会筛出空列表
@@ -140,7 +141,8 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
   /** 选中的区块（多选）。**空 = 不筛**，不是「筛出没有区块的」 */
   const [blocks, setBlocks] = useState<string[]>([])
   /** 视图：词条列表 or 原型图预设 */
-  const [view, setView] = useState<'terms' | 'blueprint'>('terms')
+  const [view, setView] = useState<'terms' | 'blueprint' | 'design'>('terms')
+  useEffect(() => { onDesignViewChange?.(view === 'design') }, [view, onDesignViewChange])
   const [bpId, setBpId] = useState<string | null>(null)
   /** 蓝图里展开的那个槽位（一次只开一个 —— 同时开几个就又变成一张长列表了） */
   const [openSlot, setOpenSlot] = useState<string | null>(null)
@@ -372,6 +374,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
           >
             蓝图
           </button>
+          <button className={view === 'design' ? 'active' : ''} onClick={() => { setHover(null); setView('design') }}>设计选型台</button>
         </div>
         <span className="pane-spacer" />
         <input
@@ -383,7 +386,7 @@ export function DictView({ embedded }: { embedded?: boolean } = {}): JSX.Element
         />
       </div>
 
-      {view === 'blueprint' ? (
+      {view === 'design' ? <DesignPicker query={query} /> : view === 'blueprint' ? (
         <BlueprintPanel
           blueprints={BLUEPRINTS}
           terms={allTerms}

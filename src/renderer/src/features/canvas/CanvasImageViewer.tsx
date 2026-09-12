@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, CanvasIcon, CloseIcon } from '../../ui/Icons'
 import { easfileUrl, isImagePath } from './media'
 
-export function CanvasImageViewer({ filePath }: { filePath: string | null }): JSX.Element {
+export function CanvasImageViewer({ filePath, revision = 0 }: { filePath: string | null; revision?: number }): JSX.Element {
   const [images, setImages] = useState<string[]>([])
   const [index, setIndex] = useState(0)
   const [grid, setGrid] = useState(false)
@@ -61,7 +61,7 @@ export function CanvasImageViewer({ filePath }: { filePath: string | null }): JS
                 setGrid(false)
               }}
             >
-              <img src={easfileUrl(p)} loading="lazy" decoding="async" draggable={false} />
+              <img src={`${easfileUrl(p)}?artifact=${revision}`} loading="lazy" decoding="async" draggable={false} />
             </button>
           ))}
         </div>
@@ -71,7 +71,7 @@ export function CanvasImageViewer({ filePath }: { filePath: string | null }): JS
 
   return (
     <div className="civ">
-      <img className="civ-img" src={easfileUrl(cur)} draggable={false} />
+      <img className="civ-img" src={`${easfileUrl(cur)}?artifact=${revision}`} draggable={false} />
       {list.length > 1 && (
         <>
           <button className="civ-nav left" data-tip="上一张" onClick={() => go(-1)}>

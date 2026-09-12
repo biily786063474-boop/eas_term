@@ -17,6 +17,21 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
   const [placement, setPlacement] = useState<(NonNullable<ReturnType<typeof railPlacement>> & { zIndex: number }) | null>(null)
   const railRef = useRef<HTMLElement>(null)
   const [previewTop, setPreviewTop] = useState(0)
+  const ticksRef = useRef<HTMLDivElement>(null)
+  const [canScrollUp, setCanScrollUp] = useState(false)
+  // Keep the current question visible, but do not fight manual rail scrolling.
+  useEffect(() => {
+    const ticks = ticksRef.current
+    if (!ticks) return
+    const button = ticks.children[active] as HTMLElement | undefined
+    if (button) {
+      const top = button.offsetTop - ticks.offsetTop
+      if (top < ticks.scrollTop) ticks.scrollTop = top
+      else if (top + button.offsetHeight > ticks.scrollTop + ticks.clientHeight)
+        ticks.scrollTop = top + button.offsetHeight - ticks.clientHeight
+    }
+    setCanScrollUp(ticks.scrollTop > 1)
+  }, [active, entries.length, placement?.height])
 
   useEffect(() => {
     const root = scrollRef.current
@@ -61,7 +76,7 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
       if (next) root.dataset.questionRail = next.outside ? 'outside' : 'inside'
       else delete root.dataset.questionRail
       const tops = Array.from(root.querySelectorAll<HTMLElement>('[data-question-index]')).map(el => (el.getBoundingClientRect().top - r.top) / (r.height / root.clientHeight || 1) + root.scrollTop)
-      setActive(activeQuestion(tops, root.scrollTop))
+      setActive(root.scrollHeight - root.scrollTop - root.clientHeight <= 24 ? entriesRef.current.length - 1 : activeQuestion(tops, root.scrollTop))
       // PaneView uses a short FLIP transform on maximize/restore. Layout observers see
       // its final box only; sample the animation until its last frame, then go idle.
       if ([...pane.getAnimations(), ...(drawer?.getAnimations() ?? [])].some(animation => animation.playState === 'running')) raf = requestAnimationFrame(measure)
@@ -109,7 +124,7 @@ export function QuestionNavigator({ turns, scrollRef, leafId, onNavigate }: {
     data-leaf={leafId} aria-label="当前对话提问导航"
     style={{ left: placement.left, top: placement.top, height: placement.height, zIndex: placement.zIndex }}
     onMouseLeave={() => setHover(null)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setHover(null) }}>
-    <div className="ac-question-ticks">
+    <div ref={ticksRef} className={"ac-question-ticks" + (canScrollUp ? " has-history" : "")} onScroll={e => setCanScrollUp(e.currentTarget.scrollTop > 1)}>
       {entries.map((entry, index) => <button key={entry.turnIndex} type="button" aria-label={'定位第 ' + (index + 1) + ' 条提问：' + entry.title}
         aria-current={active === index ? 'location' : undefined}
         onFocus={e => { setHover(index); setPreviewTop(e.currentTarget.getBoundingClientRect().top) }}

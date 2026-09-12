@@ -131,6 +131,9 @@ export function TerminalView({ tabId, leafId, ptyId, isActive, canvasScale = 1 }
         '"SF Mono", Menlo, Monaco, "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace',
       fontSize: scaledFont(canvasScale),
       lineHeight: 1.25,
+      // CLI 吸顶条可能自带深色 ANSI 背景，不能只按终端底色选前景。
+      // 交给 xterm 按单元格背景校正低对比文字，不改 ANSI 数据或吸顶行为。
+      minimumContrastRatio: 4.5,
       cursorBlink: true,
       macOptionIsMeta: true,
       // **每终端的固定成本，乘以你开了几个终端。** 10 万行时可达数十 MB，

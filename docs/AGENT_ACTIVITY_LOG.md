@@ -57,3 +57,8 @@
 
 ### 2026-09-11 0.4.93 正式发布完成
 Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包官网与GitHub size/SHA256一致，官网/latest和GitHub Release已正式切换，八站状态一致，无重启/删除。密钥柜会话凭证与首次解锁功能仍待实现。
+
+- 2026-09-11：voice-regression worktree 接收验收 B1–B4，完成代码与回归测试；真实UI已核验编辑器正文、clean/dirty编辑保护、原AI回复空格路径图片。B1根因是旧构建动态chunk缺失导致await阻塞编辑器。密钥弹窗9分钟真实超时仍观察中。check 2890 pass/13 skip/0 fail，build通过。未提交发版，详见 docs/verification/2026-09-11-acceptance/fix-followup.md。
+- B2补充：真实9分钟弹窗生命周期通过，调用记录有明确超时文案；超时后新secret_check可立即弹窗，取消后正常返回。测试脚本fetch的5分钟HeadersTimeout已如实记录并改node:http，不是产品shim失败。
+
+- 2026-09-12：落实辞典设计选型台 V2，新增本地307套参考、检索、范围提示词、composerAddChip确认；构建+暗色开发实例验收通过，详细边界见 design-picker-implementation.md。未提交/发版。

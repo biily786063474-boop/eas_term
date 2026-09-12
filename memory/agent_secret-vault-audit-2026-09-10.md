@@ -64,3 +64,84 @@
 产品b67eabd；main快进c32fabc，tag v0.4.93。五包目录~/Eas-Term-release/0.4.93-prep；Mac签名公证/stapler/Gatekeeper/双架构smoke通过，Windows34573939599成功。服务器五包与页面/latest已完成并核验，八站未变化。GitHub draft五包上传仍运行exec74141（functions cell34等待），uploads.github.com经过Clash但字节仍增长，未擅改代理。上传完核对资产digest再gh release edit v0.4.93 --draft=false --latest，然后记录。不要重复上传已有资产，不要提前称GitHub完成。
 
 0.4.93发布收尾完成：GitHub五包上传完成，逐个size/digest与本地和官网一致，Release正式发布并设latest。没有遗留上传任务。官网/latest、Windows、Mac双架构均完成发布。密钥柜功能修复仍未实现，不因发版而变为完成。
+
+## 2026-09-11 甘特图新任务
+用户批准默认隐藏aborted并提供记忆开关。已实现GanttStage筛选及localStorage、主图/导航异常结束不再延伸now，保留记录及清空接口语义。新增taskVisibility工具与2测试，连同阶段测试17通过，typecheck通过。构建日志/tmp/eas-gantt-build.log。尚未实际UI验收、未提交/发版；0.4.93不含此改动。
+
+## 2026-09-11 终端吸顶对比度
+用户新增截图问题，TerminalView补minimumContrastRatio4.5，配置测试红绿通过，typecheck/build通过。已用隔离应用实际printf验证顶部深灰条+深灰字自动浅化；原Claude确切ANSI/滚动未验，dim仍遵循xterm弱化。未提交/发版。详情docs/verification/2026-09-11-terminal-sticky-contrast.md。词典选型台交互稿已开Frame，尚未接入正式产品。
+
+## 2026-09-11 19:29后 · 密钥柜正式落地进行中
+用户要求先做完密钥柜再排词典化。已实际改agent spawn/OMP/secrets授权/解锁UI/审计/长等待，非仅报告。详细文件及验收见docs/verification/secret-vault/2026-09-11-implementation.md。全量第3轮2879/2866pass/13skip/0fail，假柜+真实wrapper acceptance通过；实际建柜弹窗已看见，已异步请用户自行输入测试六位码，等待继续UI验收，未发版。测试当前verify-app --port9463，日志/tmp/eas-vault-final-verify.log，/invoke secret_check等待exec20780；不要读/打印码或生产柜。词典化P1记入docs/superpowers/plans/2026-09-11-secret-vault-completion.md，依赖密钥柜验收，不自动实施。原Gantt/终端contrast未提交改动仍保留。
+
+## 2026-09-11 19:44 密钥柜弹窗视觉重做
+用户认为当前UI丑，要求重新设计稿，popup时弱化下方画布。新稿docs/prototypes/secret-vault-popup-v2.html：首次介绍/六位码确认分步、日常解锁简化、已有密钥只授权；中性亮暗双主题，遮罩+4px blur+saturate(.6)，可切换对照。纯视觉不收密码，不改正式逻辑。等待用户审稿，旧UI验收不再当定稿。
+
+## 2026-09-11 用户确认Popup V2后落地
+新增VaultGate.tsx，手动SecretsPanel与AI SecretRequestModal共用两步六位码建柜/解锁，去掉旧重复介绍；vault-backdrop统一亮暗遮罩+4px模糊。build/typecheck、CSS balance、两个定向测试、fake-vault wrapper acceptance通过。CUA已在隔离应用验证手动暗色、手动亮色、AI触发亮色新弹窗，内容完整；关闭AI弹窗后背景恢复，/invoke返回用户取消。未输入新凭证，创建确认/解锁成功提交仍未实测，整体密钥柜验收未完成，未提交/发版。新样式与原稿对齐，管理器解锁后内容布局沿用原有。当前测试实例9463仍在，无密钥请求等待（89826已取消返回）。
+
+## 2026-09-11 19:54 新增排期：暗色终端吸顶对比度
+用户截图paste-20260911-195313.png，要求当前工作完成后修暗色吸顶看不清问题。不得把亮色minimumContrastRatio4.5及合成样例验证当暗色已验收。接手时检查真实ANSI前景/背景、dim弱化与canvas renderer，按用户截图位置前后对比；先排旧逻辑冲突，不叠颜色补丁。优先级：当前密钥柜收尾后处理，词典化后续。
+
+## 2026-09-11 续落：异步提交与请求隔离
+- VaultGate 增加同一渲染周期防重复提交与卸载后不续接，组件 handler harness 3 项通过（不是真实浏览器 E2E）。
+- 复现并修复旧弹窗异步保存回调消费新请求：Host 绑定请求对象，resolve 校验身份。新增回归先红后绿。
+- session-acceptance 再次通过：真实 wrapper + 隔离 fake vault，长度、授权、缺变量拒绝、轮换、关闭撤销及审计。
+- 修改请求身份之前全量 check：2883 tests / 2870 pass / 13 skip / 0 fail；build 成功。最后修改后另跑 final-check/build，结果待日志核对。
+- 未接触用户真实柜，未提交发版。真实 UI 六位码创建与提交仍需用户在隔离实例亲自完成，不能把组件测试称为真实 agent E2E。
+- 最终结果：check 2884 / 2870 pass / 13 skip / 1 fail（codexCapabilityLauncher owned IPC config child 5 秒未就绪）；该文件未改，单测复跑 6/6 通过。独立 build 成功。已刷新隔离 Electron，亲眼看到最新首次建柜页与灰化模糊画布，留在该页供用户亲自输入六位测试码。不可称全量绿或真实 agent E2E 完成。
+
+## 验收反馈：预设名称不随切换
+- 根因 SecretsPanel 新增预设 handler 使用 `draft.name || p.label`；改为选择时同步 `p.label` 和变量列表。
+- 新增 secretPreset.test.mjs 执行实际 handler，先复现 Lovart !== 阿里云，再通过；typecheck/build 成功。
+- 最新隔离实例实际点击 Lovart → 阿里云，AX 确认名称及两项变量同步变化。未输入/保存任何密钥。
+- 另观察到重载后审计区占较大空白，可滚动到表单；非本次名称修复范围，待后续检查布局。
+
+## 对话图片 popup（用户确认后新增）
+- ImagePopup 共享原生 dialog，MessageList 用户图/回复 Markdown 图点击打开，ChatNavView 同步复用。
+- typecheck/build + 2 项组件 harness 通过。独立 Electron 测试历史中实际点两类图片、Esc、遮罩关闭通过；未调用模型。
+- 图片专项实例 PID 67345，数据目录 /tmp/eas-image-verify-dir 记录。旧 verify launcher 31599 已结束、旧 app 退出；原隔离柜目录 eas-verify-Tn07Pu 保留，可重启继续验收。
+
+## AI 产物默认交付所属 Frame
+- 用户确认采用 MCP 显式提交 + 代码展示，不扫描回复路径。现有 canvas_open_file/html/image 统一 openArtifact，去重/复用/刷新/所属 Frame 校验。
+- 内置 guidance 与工具描述已要求最终回复前提交本次明确产物，不自动开输入素材/参考文件。
+- typecheck/build、10 项针对性测试通过。实际隔离 /invoke 指定 cnode-image-test，图片/Markdown 两次提交均复用原 nodeId，画布2/5；CUA看到两个预览。
+- 未实际测 HTML 更新、脏文档延迟刷新及变更图片字节缓存；全量 check 正在 /tmp/eas-artifact-full-check.log，未发版。
+- 本次全量 npm run check 退出码 0；实际失效 agentNodeId 打 open_file 被拒绝，没有错开到同项目 Frame。
+
+## 继续收尾：审计区大空白
+- 全局搜索确认 details 错用 sec-lock，继承 min-height:350px；改独立 sec-audit 紧凑折叠区，展开限高滚动。
+- 新增 vaultAuditLayout 回归先红后绿；build /tmp/eas-vault-audit-layout-build.log。
+- 将恢复原隔离柜 eas-verify-Tn07Pu；重启需用户自行解锁，不能读取六位码。未声称真实agent授权E2E完成。
+
+## 2026-09-11 21:51 新消息工具组跑到上面
+- 用户截图 paste-20260911-215043.png：新图/提问下有处理中，但工具继续挂前一段。
+- 根因 reduce.ensureAssistantTurn 无条件复用 turns 最后项；新请求工具先于文字时回写上轮，而且手机 user.message 也能误承载工具。
+- 新增2项失败测试复现；turn.start 记录上轮尾引用，ensure 仅复用本轮assistant；exec.done 不改仍按ID找。
+- 定向测试/typecheck/build日志 /tmp/eas-turn-boundary-{tests,types,build}.log。未重载用户正在验收的会话，真实UI效果尚未验证。
+
+## 2026-09-11 22:58 用户转交外部验收
+完整结论已存 docs/verification/2026-09-11-acceptance/user-handoff.md，现有acceptance-report.html。多数主体通过，但首次建柜/已有组纯授权/关闭旧token未验，不能全部打勾。待修B2孤儿密钥弹窗优先（请求生命周期）；B3干净编辑态被刷新退出；B1编辑空白先保留cnode-10现场和证据排查；B4空格路径Markdown图片。未清理测试数据，未提交发版。
+
+## 2026-09-11 用户授权“开始”：验收缺陷 B1–B4
+在 voice-regression worktree 落地四项。B1 通过 CUA 打开原开发窗口 DevTools 只读控制台，确认旧 hash index-D5zBNlgU.js ERR_FILE_NOT_FOUND，语言 chunk reject 阻止 EditorView 创建。改为同步正文编辑器 + 异步高亮 Compartment，失败纯文本可编辑。B2 secretRequest 增 9 分钟内部超时清 pending/emit/reject（外层10分钟/shim15分钟）；超时不计用户拒绝。B3 artifactRefresh gate 同时保护 editing/dirty，clean editing 重提不再被踢。B4 Markdown 图片目的路径支持空格/尖括号，实体还原后重新转义 URL，不改 easfile guard。
+定向9测试通过，完整 npm run check 2903/2890pass/13skip/0fail，build通过。原开发窗口PID77931已通过Cmd+R加载新构建；同一cnode-7上实际确认正文可输入、clean/dirty重提不丢，测试文字已撤销，磁盘213字节原文不变。原AI回复带空格路径图片已在同位置看到色块图，未重复测图片popup。B2真实9分钟测试正在跑（/tmp/eas-b2-real-timeout.json），别把等待中标成通过。
+未提交/未发版/未碰生产密钥；架构03/10追加边界，详细复核 docs/verification/2026-09-11-acceptance/fix-followup.md。原用户报告保留。
+B2收尾：原测试探针误用fetch，5分钟 UND_ERR_HEADERS_TIMEOUT（产品shim已是node:http不受影响）；没有重试原请求。继续等到9分钟后实际看到弹窗/遮罩消失，MCP日志显示明确超时/已关闭/重新请求文案。node:http新探针再调secret_check立即弹窗，取消后返回并清理，闭环通过。未输入六位码/未授权。当前开发实例已加载本轮renderer改动，未发版。
+收尾已打开原空白节点cnode-10-4d3ii并进入编辑，CUA截图正文/行号/高亮可见，留给用户查看。注意原安全未测项仍不随本轮修复自动通过。
+
+## 2026-09-12 设计选型台词典化 · 设计稿 V2
+用户要求先设计稿，未授权真实功能开发。已新建 docs/prototypes/dictionary-design-picker-v2.html（独立内联HTML，不联网、不调用模型）；原稿保留。复用现有辞典“词条/蓝图”分段导航，新增同级选型台，左卡片右详情，默认只配色，提示词确认原生dialog与遮罩，亮暗切换。ChatGPT/Claude/Notion三套摘要来自 docs/design-system-picker/index.html，样机明确标为配色示意，次级表面补色标注，非产品截图/官方最新规范。真实发送和目标会话选择仍未接入。
+已通过MCP打开当前frame-1-4s6wx并最大化 cnode-3-vygfd；新增时Frame满5项触发既有限额，自动移除最早1个内容预览（不删磁盘文件）。CUA实际验证卡片选择Claude更新详情、默认配色提示词、模拟发送不联网、亮暗切换，留亮色。初稿JS换行转义错误在node --check失败后修复，重新check通过并刷新同一节点，不以空稿交付。设计路由引用的 ~/.Codex/design-skills/visual-router 与 picker SKILL 路径不存在，因此按项目已有tokens/词典结构及本地语料落稿，未另装依赖。
+
+## 2026-09-12 用户「落」：设计选型台 V2 已进源码
+真实 DictView 第三页签 + 本地 307 套 JSON + DesignPicker；提示词复用 composerAddChip，不自动发消息。默认配色；完整范围是库摘要。开发版已构建打开、搜 Claude/选定/提示词/无目标禁用/实际 ChatGPT chip 附加验证；测试 chip 已清。dialog 居中问题现场修复并复验。check 2893 pass/13 skipped/0 fail，typecheck/build通过。亮色/窄屏/鼠标hover/真实模型发送未验。见验收 design-picker-implementation.md；未提交未发版。开发实例已停在真实选型台，正式版仍是旧代码与V2原型节点。
+
+2026-09-12 02:50 用户要求选型更小、辞典三入口不能竖排：改760×540，卡片/间距缩小；共享头部搜索单独下一行，三个入口不收缩不换字。typecheck/build通过，开发实例实际截图确认词条360宽横排、选型缩小。未提交未发版。
+
+2026-09-12 03:19 用户指出设计预览全是统一示意，要求实际选型台渲染封面。查明关键源在 ~/.claude/design-skills/design-system-picker（此前只找.Codex而漏掉）；完整 HTML 备份在 ~/Biily/cowork/设计规范/vechooool-backup。307条previewHtml全部存在，路径须相对备份/design-library。projects/<slug>/meta.json还有真实previewHtmlSrc和designKitSrc，原站入口应使用此映射而非只四个产品官网。见docs/design-system-picker/source-location.md。封面尚未渲染接入，不可说完成。
+
+2026-09-12 03:24 真实干活：DesignPicker已用design-previews.json映射本地public/design-covers/*.jpg，不再统一Sample假图。307原HTML完成截图，304非空接入，3项vortex-gallery/aristidebenoist/three-html-to-canvas置cover空+reason，保留真实previewUrl。ChatGPT/ElevenLabs/Lime Remix原图人工看过对应。2测试通过/typecheck/build通过。离线renderer脚本scripts/design/render-covers.cjs；起初builtin require错误、窗口销毁SIGTRAP修复为复用窗口、mac恢复弹窗阻塞用单进程-ApplePersistenceIgnoreState YES解决。最后CUA两次120秒超时，没能刷新开发实例验收，不可称全部完成。未提交发版。
+
+## 2026-09-12 设计类型筛选落地
+在 voice-regression worktree 新增独立 interfaceTypes 分类及UI筛选，307条初分，9条待确认，桌面无确证暂空。typecheck/build及4项单测通过；CUA已恢复，实际刷新开发实例并验证手机端17/307及底部CTA可见。未提交发版。分类依据保存在数据 classificationNote，28条组件暂沿源标签，其余按原始封面人工初分。

@@ -373,7 +373,7 @@ export function secretsEnv(names?: string[]): Record<string, string> {
 
 /** 注入进 PTY 的那一刻记一笔审计（只记名字）。pty.ts 拿到 env 之后调 */
 export function auditInjection(ptyId: string, names: string[]): void {
-  if (names.length) audit({ at: Date.now(), ptyId, source: 'pty-env', names })
+  if (names.length) audit({ at: Date.now(), sessionKey: ptyId, source: 'pty-env', names })
 }
 
 /**
@@ -405,29 +405,42 @@ export function injectedInPty(ptyId?: string): string[] {
 //   · 密钥柜面板上那句「新开的终端会自动带上 N 条」所暗示的上界
 //
 // 修法：每个 PTY 启动时单独发一张凭证（EAS_SECRET_TOKEN），主进程记住
-// 这张凭证对应哪个终端、那个终端**被允许取哪几组**。允许的范围刻意设成：
+// 这张凭证对应哪个会话、那个会话**被允许取哪几组**。允许的范围刻意设成：
 //   ① 这个终端启动时本来就会注入的组（拿得到不是新增权限，它 env 里已经有了）
 //   ② 本会话里用户通过 request_secret 现场给这个终端的组（eas-secret 的核心用例）
 // 关掉自动注入的组，对没被授权的终端就是取不到 —— 保护回来了。
-const ptyGrants = new Map<string, Set<string>>() // ptyId → 可取的组名
-const secretTokens = new Map<string, string>() // 一次性凭证 → ptyId
+const ptyGrants = new Map<string, Set<string>>() // sessionKey（PTY 或 agent id）→ 可取的组 ID
+const credentialEpochs = new Map<string, string>()
+const secretTokens = new Map<string, string>() // 进程凭证 → sessionKey
 
 export function issueSecretToken(ptyId: string, groups: string[]): string {
+  forgetPty(ptyId) // 同一会话重启时旧通行证立即失效
   const tok = crypto.randomBytes(24).toString('hex')
   secretTokens.set(tok, ptyId)
-  ptyGrants.set(ptyId, new Set(groups))
+  credentialEpochs.set(ptyId, crypto.randomBytes(12).toString('hex'))
+  ptyGrants.set(ptyId, new Set(readStore().items.filter(it => groups.includes(it.name)).map(it => it.id)))
   return tok
 }
 
 /** 用户当场把某一组给了这个终端（request_secret 存完就调）→ 它才能用 eas-secret 取 */
-export function grantGroupToPty(ptyId: string | undefined, group: string): void {
-  if (!ptyId) return
-  const s = ptyGrants.get(ptyId) ?? new Set<string>()
-  s.add(group)
+export function grantGroupToPty(ptyId: string | undefined, group: string, expectedEpoch?: string): void {
+  if (expectedEpoch && credentialEpochs.get(ptyId ?? "") !== expectedEpoch) throw new Error("会话已经重启，请重新请求授权")
+  if (!ptyId || !ptyGrants.has(ptyId)) throw new Error('该会话已关闭或没有取密钥凭证，请重新打开节点')
+  const s = ptyGrants.get(ptyId)!
+  const matches = readStore().items.filter(it => it.name === group)
+  if (!matches.length) throw new Error('要授权的密钥组已不存在')
+  for (const it of matches) s.add(it.id)
   ptyGrants.set(ptyId, s)
 }
 
+/** 只回收这张票所属的当前进程；旧进程退出不能撤销同会话新票。 */
+export function forgetSecretToken(token: string): void {
+  const id = secretTokens.get(token)
+  if (id) forgetPty(id)
+}
+
 export function forgetPty(ptyId: string): void {
+  credentialEpochs.delete(ptyId)
   ptyGrants.delete(ptyId)
   injectedByPty.delete(ptyId)
   for (const [tok, id] of secretTokens) if (id === ptyId) secretTokens.delete(tok)
@@ -564,7 +577,7 @@ export function secretsForRun(
     return { ok: false, error: '用户已在 Eas-Term 里关闭 MCP 接入，密钥也一并停发' }
   }
   if (!isUnlocked()) {
-    return { ok: false, error: '密钥柜锁着 —— 让用户点标题栏的钥匙图标输入六位码，然后重试这条命令' }
+    return { ok: false, error: '密钥柜锁着 —— 调用 secret_check 让应用弹出解锁窗口，然后重试这条命令' }
   }
   // 认「哪个终端在要」，不是只认「有没有 token」。见 ptyGrants 那段注释。
   const ptyId = auth.secretToken ? secretTokens.get(auth.secretToken) : undefined
@@ -580,7 +593,7 @@ export function secretsForRun(
   if (!picked.length) {
     return { ok: false, error: sel.group ? `密钥柜里没有「${sel.group}」这一组` : '密钥柜里没有这些变量' }
   }
-  const denied = picked.filter((it) => !allowed.has(it.name)).map((it) => it.name)
+  const denied = picked.filter((it) => !allowed.has(it.id)).map((it) => it.name)
   if (denied.length) {
     return {
       ok: false,
@@ -591,6 +604,7 @@ export function secretsForRun(
     }
   }
 
+  if (sel.vars?.some(name => !picked.some(it => it.vars.some(v => v.varName === name)))) return { ok: false, error: '部分请求变量不在密钥柜中，未发放任何值' }
   const env: Record<string, string> = {}
   const names: string[] = []
   const files: { varName: string; name: string; value: string }[] = []
@@ -610,7 +624,7 @@ export function secretsForRun(
     }
     it.lastUsedAt = Date.now()
   }
-  audit({ at: Date.now(), ptyId, source: 'eas-secret', names })
+  audit({ at: Date.now(), sessionKey: ptyId, source: 'eas-secret', names })
   try {
     writeStore(s)
   } catch {
@@ -626,7 +640,7 @@ export function secretsForRun(
 // 「这台机器上有哪些密钥」的清单躺在磁盘上，而它的用途只是给用户看最近发生了什么。
 export interface SecretAuditEntry {
   at: number
-  ptyId?: string
+  sessionKey?: string
   source: 'pty-env' | 'eas-secret' | 'reveal'
   names: string[]
 }
@@ -781,6 +795,8 @@ export function registerSecretHandlers(): void {
       vars: secretsHas(list, ptyId),
       // 告诉 agent 该用哪个组名去 eas-secret run --group
       groups: [...new Set(list.map((n) => groupOf(n)).filter(Boolean))] as string[],
+      hasCredential: !!ptyId && ptyGrants.has(ptyId),
+      credentialEpoch: ptyId ? credentialEpochs.get(ptyId) : undefined,
       locked: !isUnlocked()
     }
   })
@@ -818,8 +834,8 @@ export function registerSecretHandlers(): void {
    */
   /** 用户当场把一组密钥给了某个终端（走 request_secret 时）→ 那个终端才能用 eas-secret 取它。
    *  没有这一步的话，用户刚填的密钥反而是唯一取不到的（新组默认不在任何终端的授权里）。 */
-  ipcMain.handle('secrets:grantToPty', (_e, ptyId: string | undefined, group: string) => {
-    grantGroupToPty(ptyId, String(group))
+  ipcMain.handle('secrets:grantToPty', (_e, ptyId: string | undefined, group: string, expectedEpoch?: string) => {
+    grantGroupToPty(ptyId, String(group), expectedEpoch)
   })
 
   ipcMain.handle('secrets:audit', (): SecretAuditEntry[] => secretAudit())

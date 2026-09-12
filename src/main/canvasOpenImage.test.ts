@@ -16,6 +16,7 @@ function setup(count: number) {
   const state = { viewMode: 'canvas', canvas: { frames: [frame] }, setViewMode() {}, addFileNode(frameId: string, pane: unknown) { assert.equal(frameId, 'owned-frame'); frame.nodes.push({ id: 'new', pane } as any); const gone=new Set(nodesToEvict(frame.nodes as any)); for(let i=frame.nodes.length-1;i>=0;i--) if(gone.has(frame.nodes[i].id))frame.nodes.splice(i,1) } }
   let afterValidation = () => {}
   const invoke = runInNewContext(code, { useStore: { getState: () => state }, resolveFrame: () => valid ? { frameId: frame.id, projectPath: '/project' } : null,
+    openArtifact: (frameId: string, pane: any) => { const existing = frame.nodes.find(n => n.pane.filePath === pane.filePath); if (existing) return {nodeId: existing.id, reused: true}; state.addFileNode(frameId, pane); return {nodeId: 'new', reused: false} },
     contentStat, window: { api: { fs: { validateRasterImage: async () => { afterValidation(); return { path: '/project/ok.png' } } } } } })
   return { nodes, invoke: () => invoke({ path: '/project/ok.png' }, { project: '/project' }), after: (fn: () => void) => { afterValidation = fn }, revoke: () => { valid = false } }
 }
@@ -37,4 +38,12 @@ test('pinned content and live nodes are never evicted',async()=>{
 test('Frame identity is rechecked after async validation', async () => {
   const f = setup(0); f.after(f.revoke)
   await assert.rejects(f.invoke(), /Frame 已变化/); assert.equal(f.nodes.length, 0)
+})
+
+test('重复提交同一图片保留节点，不消耗第二个名额', async () => {
+ const f = setup(0)
+ const first = await f.invoke(), second = await f.invoke()
+ assert.equal(first.nodeId, second.nodeId)
+ assert.equal(second.reused, true)
+ assert.equal(f.nodes.length, 1)
 })

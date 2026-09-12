@@ -1,3 +1,4 @@
+import { ImagePopup } from '../../ui/ImagePopup'
 // 对话流渲染：把 ChatView 变成看得见的消息列表。
 //
 // 三条视觉规则（task-4-brief.md，背景 spec §B.2）：
@@ -45,6 +46,7 @@ export function MessageList({
    *  好把网页开在旁边而不是系统浏览器里 */
   leafId?: string
 }): JSX.Element {
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   // 贴底滚动：新内容到达时，如果用户本来就在（接近）底部，跟着滚下去；如果用户
   // 手动往上翻了历史，不打断他——判据是「滚动前离底部够不够近」，不是「有新内容就强制滚」。
@@ -115,7 +117,14 @@ export function MessageList({
   const pendingOnLastTurn = view.pending !== null && lastTurnIsAssistant
 
   return (
-    <><div className="ac-messages" ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
+    <>{zoomImage && <ImagePopup {...zoomImage} onClose={() => setZoomImage(null)} />}
+    <div className="ac-messages" onClickCapture={e => {
+      const target = e.target
+      if (!(target instanceof HTMLImageElement) || !target.closest('.ac-turn-imgs, .ac-md')) return
+      e.preventDefault()
+      e.stopPropagation()
+      setZoomImage({ src: target.currentSrc || target.src, alt: target.alt })
+    }} ref={scrollRef} onScroll={handleScroll} onContextMenu={onContextMenu}>
       {view.turns.map((turn, i) =>
         // 压缩标记不是一条消息，走另一条渲染路径。**在这里分流而不是在
         // MessageTurn 里提前返回**：那个组件顶上有一串 hook，条件返回会违反
@@ -343,7 +352,7 @@ function MessageTurn({
           用户自己发的消息保持纯文本：那是他刚敲进输入框的原话，照他写的样子显示才对。 */}
       {/* 用户带的图：显示图本身，不是那串路径。
           发给 CLI 的始终是磁盘路径（agent 认那个），这里只是让你看见自己发了什么。
-          点一下用系统默认程序打开原图——缩略图只有 96px，看细节得开原件。 */}
+          点一下通过共享图片弹窗放大，仍留在当前对话中。 */}
       {turn.role === 'user' && turn.images && turn.images.length > 0 && (
         <div className="ac-turn-imgs">
           {turn.images.map((im) => (
@@ -352,7 +361,6 @@ function MessageTurn({
               src={im.url}
               alt={im.path.split('/').pop() ?? ''}
               data-tip={im.path}
-              onClick={() => void window.api.fs.showInFolder(im.path)}
             />
           ))}
         </div>

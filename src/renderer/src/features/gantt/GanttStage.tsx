@@ -1,3 +1,4 @@
+import { visibleTasks, taskDisplayEnd } from './taskVisibility'
 // 甘特图：横轴时间，纵轴按项目分组、组内按终端分行（Task 18 改造，见下方
 // 「按终端分行」大注释）。同一个终端在同一时刻本不该有两条任务重叠（采集器
 // 保证），万一历史数据有坏数据导致重叠，仍然在那一行内上下堆叠而不是拿半透明
@@ -274,8 +275,8 @@ function isSaneTask(t: GanttTask): boolean {
 function layer(tasks: GanttTask[], now: number): GanttTask[][] {
   const rows: GanttTask[][] = []
   for (const t of [...tasks].sort((a, b) => a.startAt - b.startAt)) {
-    const end = t.endAt ?? now
-    const row = rows.find((r) => (r[r.length - 1].endAt ?? now) <= t.startAt)
+    const end = taskDisplayEnd(t, now)
+    const row = rows.find((r) => taskDisplayEnd(r[r.length - 1], now) <= t.startAt)
     if (row) row.push(t)
     else rows.push([t])
   }
@@ -372,6 +373,9 @@ export function GanttStage(): JSX.Element {
   // 了这个订阅的刷新频率可接受（tabsSlice.setTabTitle 标题没变就原样返回，不
   // 造新数组，OSC 高频刷屏不会导致这里跟着高频重渲染）。
   const tabs = useStore((s) => s.tabs)
+  const [showAborted, setShowAborted] = useState(() => {
+    try { return localStorage.getItem('gantt-show-aborted') === 'true' } catch { return false }
+  })
   const [tasks, setTasks] = useState<GanttTask[]>([])
   const [now, setNow] = useState(() => Date.now())
   /** 哪些项目的"按终端分行"分组被用户折叠了（见文件顶部大注释第 4 条）。
@@ -564,7 +568,7 @@ export function GanttStage(): JSX.Element {
 
   // 渲染安全的子集——geometry（分行/分层/时间映射）和导航带的密度桶都从这里取数，
   // 不直接碰 tasks。见 isSaneTask 顶部注释。
-  const safeTasks = useMemo(() => tasks.filter(isSaneTask), [tasks])
+  const safeTasks = useMemo(() => visibleTasks(tasks.filter(isSaneTask), showAborted), [tasks, showAborted])
 
   // 全量分组（不看当前时间窗口）：项目 → 按终端(runId+ptyId)分的组，只在
   // safeTasks 变化时重算，拖动/缩放时间轴不会碰它。用它取"这个终端最早一条
@@ -609,7 +613,7 @@ export function GanttStage(): JSX.Element {
     for (const [projectId, groups] of groupsByProject) {
       const visible: VisibleGroup[] = []
       groups.forEach((g, i) => {
-        const view = g.tasks.filter((t) => (t.endAt ?? now) >= t0 && t.startAt <= t1)
+        const view = g.tasks.filter((t) => (taskDisplayEnd(t, now)) >= t0 && t.startAt <= t1)
         if (view.length) visible.push({ ...g, view, ordinal: i + 1 })
       })
       if (visible.length) m.set(projectId, visible)
@@ -1233,7 +1237,7 @@ export function GanttStage(): JSX.Element {
           <div className="gantt-lane" key={li}>
             {ln.map((t) => {
               const s = Math.max(t.startAt, t0)
-              const e = Math.min(t.endAt ?? now, t1)
+              const e = Math.min(taskDisplayEnd(t, now), t1)
               const left = pct(s)
               const w = Math.max(pct(e) - left, 0)
               const state = t.aborted ? 'aborted' : t.endAt === null ? 'running' : 'done'
@@ -1422,6 +1426,16 @@ export function GanttStage(): JSX.Element {
               </button>
             ))}
           </div>
+          <label className="gantt-clean-btn">
+            <input type="checkbox" checked={showAborted} onChange={(e) => {
+              const enabled = e.target.checked
+              setShowAborted(enabled)
+              setHover(null)
+              setCtxMenu(null)
+              try { localStorage.setItem('gantt-show-aborted', String(enabled)) } catch { /* session-only fallback */ }
+            }} />
+            显示异常中断任务
+          </label>
           {/* 用户自行删除错误数据（2026-08-08 新需求）：批量清理的两个入口。
               「清空这段」复用当前已经在看的时间窗——不用另外造一个选日期的
               UI，用户拖导航带选到想清的那段，点一下就是清那段。 */}

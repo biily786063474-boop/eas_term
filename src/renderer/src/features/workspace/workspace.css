@@ -1687,23 +1687,22 @@ body.dragging-row * {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--wash-3);
-  backdrop-filter: blur(3px);
 }
-.sreq {
-  width: 460px;
+ .sreq {
+  position: relative;
+  width: 420px;
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 60px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--glass-border-strong);
-  background: var(--glass-3);
-  box-shadow: var(--glass-highlight), 0 24px 70px var(--ink-3);
-  color: var(--fg);
+  gap: 16px;
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--vault-line);
+  background: var(--vault-surface);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .18), 0 2px 8px rgba(0, 0, 0, .04);
+  color: var(--vault-text);
 }
 .sreq-flag {
   display: flex;
@@ -3270,3 +3269,61 @@ body.dragging-row * {
 .pane.cfile-node > .cfile-head > .cfile-title {
   flex: 0 1 auto;
 }
+
+/* 密钥柜弹层唯一背景处理；不更改画布节点本身的透明度或数据。 */
+.vault-backdrop {
+  --vault-surface: #292a2d;
+  --vault-text: #eeeeee;
+  --vault-muted: #aaaaaa;
+  --vault-soft: #333438;
+  --vault-line: rgba(255,255,255,.10);
+  --vault-button: #e4e4e7;
+  --vault-button-text: #252528;
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(8,9,11,.48);
+  backdrop-filter: blur(4px) saturate(.6);
+}
+[data-theme="light"] .vault-backdrop {
+  --vault-surface: #ffffff;
+  --vault-text: #242424;
+  --vault-muted: #707070;
+  --vault-soft: #f3f3f3;
+  --vault-line: rgba(11,11,11,.08);
+  --vault-button: #303030;
+  --vault-button-text: #ffffff;
+  background: rgba(38,40,43,.22);
+}
+.vault-backdrop.sreq-mask { z-index: 4000; }
+.vault-backdrop .sec-pop { background: var(--vault-surface); color: var(--vault-text); backdrop-filter: none; }
+.sec-pop.sec-pop-gated { width: min(420px, calc(100vw - 40px)); top: 50%; transform: translate(-50%, -50%); max-height: calc(100vh - 48px); }
+.sec-pop-gated .vault-gate { padding: 28px; }
+.sec-pop-gated > .vault-secondary { margin-bottom: 22px; }
+.vault-gate-dialog { gap: 0; }
+.vault-emblem { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--vault-line); background: var(--vault-soft); border-radius: 12px; margin-bottom: 22px; }
+.vault-gate h2 { margin: 0 0 10px; font-size: 23px; font-weight: 600; letter-spacing: -.7px; line-height: 1.4; }
+.vault-lead { margin: 0; font-size: 13px; color: var(--vault-muted); line-height: 1.75; }
+.vault-intro { display: grid; gap: 13px; margin: 23px 0; padding: 15px 17px; border-radius: 10px; background: var(--vault-soft); font-size: 12px; line-height: 1.6; }
+.vault-intro small { display: block; font-size: 11px; color: var(--vault-muted); margin-top: 2px; }
+.vault-code-label { display: block; font-size: 12px; font-weight: 500; margin: 23px 0 11px; }
+.vault-code-field { position: relative; border-radius: 8px; }
+.vault-digit-row { display: flex; gap: 9px; }
+.vault-digit-row span { display: grid; place-items: center; flex: 1; height: 49px; border: 1px solid var(--vault-line); border-radius: 8px; background: var(--vault-soft); font-size: 20px; }
+.vault-code-field input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: text; }
+.vault-code-field:focus-within { outline: 2px solid var(--vault-muted); outline-offset: 4px; }
+.vault-caption, .vault-footnote { font-size: 11px; color: var(--vault-muted); line-height: 1.7; margin: 11px 0 20px; }
+.vault-footnote { text-align: center; margin: 15px 0 0; }
+.vault-primary { width: 100%; height: 42px; border: 0; border-radius: 9px; background: var(--vault-button); color: var(--vault-button-text); font-size: 13px; font-weight: 500; cursor: pointer; }
+.vault-primary:hover:not(:disabled) { opacity: .86; }
+.vault-primary:disabled { opacity: .42; cursor: default; }
+.vault-secondary { display: block; width: 100%; margin-top: 14px; border: 0; background: transparent; color: var(--vault-muted); font-size: 12px; cursor: pointer; }
+.vault-close { position: absolute; top: 15px; right: 15px; display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--vault-muted); cursor: pointer; }
+.vault-close:hover { background: var(--vault-soft); }
+.vault-primary:focus-visible, .vault-secondary:focus-visible, .vault-close:focus-visible { outline: 2px solid var(--vault-muted); outline-offset: 3px; }
+
+/* 审计是紧凑折叠行，不能借用 .sec-lock 的 350px 解锁面板。 */
+.sec-audit { margin: 0 26px 16px; font-size: 11px; color: var(--fg-dim); }
+.sec-audit > summary { cursor: pointer; padding: 6px 0; }
+.sec-audit[open] { max-height: 180px; overflow-y: auto; }
+.sec-audit .sreq-hint { overflow-wrap: anywhere; }

@@ -1,3 +1,4 @@
+import { VaultGate } from './VaultGate'
 // 密钥柜：标题栏的钥匙按钮 + 弹层。
 //
 // **文案红线**（见 docs/密钥管理器-设计与可行性.html）：
@@ -120,6 +121,7 @@ export function SecretsPanel(): JSX.Element | null {
   const [st, setSt] = useState<SecretsStatus | null>(null)
   const [items, setItems] = useState<SecretMeta[]>([])
   const [code, setCode] = useState('')
+  const [auditEntries, setAuditEntries] = useState<Awaited<ReturnType<typeof window.api.secrets.audit>>>([])
   const [err, setErr] = useState('')
   const [draft, setDraft] = useState<Draft | null>(null)
   const [paste, setPaste] = useState<string | null>(null)
@@ -157,6 +159,7 @@ export function SecretsPanel(): JSX.Element | null {
     const s = await window.api.secrets.status()
     setSt(s)
     setItems(s.locked ? [] : await window.api.secrets.list())
+    setAuditEntries(s.locked ? [] : await window.api.secrets.audit())
   }, [])
 
   useEffect(() => {
@@ -455,7 +458,8 @@ export function SecretsPanel(): JSX.Element | null {
         createPortal(
           // portal 到 body：标题栏是 overflow:hidden 会裁掉它，
           // 画布里的 webview 也会盖住标题栏内的绝对定位元素
-          <div className="sec-pop" ref={popRef} role="dialog" aria-label="密钥柜">
+          <div className="vault-backdrop">
+          <div className={`sec-pop${!st.configured || st.locked ? ' sec-pop-gated' : ''}`} ref={popRef} role="dialog" aria-modal="true" aria-label="密钥柜">
             {/* 变量名补全候选。放在弹层里而不是表单里：表单会反复挂载卸载，
                 datalist 每次重建没必要，而且 id 要全局唯一 */}
             <datalist id="eas-known-vars">
@@ -463,7 +467,7 @@ export function SecretsPanel(): JSX.Element | null {
                 <option key={v} value={v} />
               ))}
             </datalist>
-            <div className="sec-head">
+            {!st.configured || st.locked ? <button className="vault-close" aria-label="关闭密钥柜" onClick={() => setOpen(false)}><CloseIcon size={15} /></button> : <div className="sec-head">
               <span>密钥柜 <small className="sec-state">{!st.configured ? '未启用' : st.locked ? '已锁定' : '已解锁'}</small></span>
               <div className="sec-head-acts">
                 {st.configured && !st.locked && (
@@ -477,13 +481,12 @@ export function SecretsPanel(): JSX.Element | null {
                   <CloseIcon size={11} />
                 </button>
               </div>
-            </div>
+            </div>}
 
             {/* 这段是这个功能的诚信所在，改文案前先看文件头的红线 */}
-            <p className="sec-note">
-              存在这里的密钥 <b>不会出现在你和 AI 的对话里，也不会上传</b>
-              —— 用的时候由本机直接注入终端环境变量。
-            </p>
+            {st.configured && !st.locked && <p className="sec-note">
+              密钥保存在本机，<b>不通过密钥工具回传给 AI</b>。使用时按会话授权；不要让命令打印密钥。
+            </p>}
 
             {/* 有多少会进每一个新终端，得一眼看见：这个数字就是
                 「终端里跑的任何东西（含 npm 包的 postinstall）能拿到几个变量」的上界。
@@ -508,9 +511,20 @@ export function SecretsPanel(): JSX.Element | null {
               </div>
             )}
 
+            {st.configured && !st.locked && <details className="sec-audit">
+              <summary>最近使用记录（仅当前应用运行期间）</summary>
+              <button className="sec-mini" onClick={() => void window.api.secrets.audit().then(setAuditEntries)}>刷新记录</button>
+              {auditEntries.length ? auditEntries.slice().reverse().slice(0, 30).map((entry, i) => <div className="sreq-hint" key={i}>
+                {new Date(entry.at).toLocaleTimeString()} · {entry.source} · {entry.sessionKey ?? '本机查看'} · {entry.names.join('、')}
+              </div>) : <div className="sreq-hint">暂无使用记录</div>}
+            </details>}
+
             {/* ── 三态：没启用 / 锁着 / 开着 ── */}
             {!st.configured || st.locked ? (
-              forgot === 'confirm' ? (
+              forgot === null ? (
+                <><VaultGate status={st} onUnlocked={status => { setSt(status); void refresh() }} />
+                {st.configured && <button className="vault-secondary" onClick={() => setForgot('confirm')}>忘记六位码了？</button>}</>
+              ) : forgot === 'confirm' ? (
                 // 「忘记了」的第一步：先把后果摆清楚。
                 // 这不是找回，是换一把新锁 —— 说成「找回」就是骗人
                 <div className="sec-lock">
@@ -548,7 +562,7 @@ export function SecretsPanel(): JSX.Element | null {
                     ? `设完直接进柜子，${st.count} 条密钥原样都在`
                     : st.configured
                       ? '15 分钟没操作会自动锁上'
-                      : '它只用来确认「是你本人在操作」，不参与加密 —— 真正的保护交给系统钥匙串'}
+                      : '密钥柜在本机加密保存 API 密钥，避免把密钥粘进聊天。六位码用于解锁，不参与加密；真正的加密由系统钥匙串完成。解锁不代表授权所有会话。'}
                 </div>
                 <input
                   className="sec-code"
@@ -859,7 +873,7 @@ export function SecretsPanel(): JSX.Element | null {
                                 onClick={() =>
                                   setDraft({
                                     ...draft,
-                                    name: draft.name || p.label,
+                                    name: p.label,
                                     vars: p.vars.map((varName) => ({ varName, value: '' }))
                                   })
                                 }
@@ -1068,7 +1082,7 @@ export function SecretsPanel(): JSX.Element | null {
                 </button>
               </div>
             )}
-          </div>,
+          </div></div>,
           document.body
         )}
     </>

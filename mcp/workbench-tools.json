@@ -170,7 +170,7 @@
   },
   {
     "name": "canvas_open_html",
-    "description": "把一个本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦。产出报告/预览页后调它，用户抬头就能看到。路径可用相对项目根的路径。",
+    "description": "把一个本地 HTML 文件在 Eas-Term 画板里打开成浏览器节点并聚焦。产出报告/预览页后调它，用户抬头就能看到。路径可用相对项目根的路径。 AI 本次产出的文档/图片应在最终回复前调用此工具提交；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -191,7 +191,7 @@
   },
   {
     "name": "canvas_open_image",
-    "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 名额满时自动关闭最早的未固定内容预览；不关闭终端、AI 对话、固定模块或其他 Frame，不删除源文件。展示图片优先使用此工具；它会新增画布节点，不是只读操作。",
+    "description": "把当前会话项目内的本地光栅图片添加到所属 Frame。支持 PNG/JPEG/GIF/WebP/BMP/ICO/AVIF，不接受 SVG、HTML、视频或网址。Frame 名额满时自动关闭最早的未固定内容预览；不关闭终端、AI 对话、固定模块或其他 Frame，不删除源文件。展示图片优先使用此工具；它会新增画布节点，不是只读操作。 AI 本次产出的文档/图片应在最终回复前调用此工具提交；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -212,7 +212,7 @@
   },
   {
     "name": "canvas_open_file",
-    "description": "在画板里打开一个文件的预览节点：代码/Markdown 走代码预览，图片/视频走媒体预览，HTML 走浏览器。",
+    "description": "在画板里打开一个文件的预览节点：代码/Markdown 走代码预览，图片/视频走媒体预览，HTML 走浏览器。 AI 本次产出的文档/图片应在最终回复前调用此工具提交；同 Frame 同文件复用并刷新已有节点，返回 nodeId/reused，不重复占用名额。不要自动提交参考文件。",
     "inputSchema": {
       "type": "object",
       "properties": {

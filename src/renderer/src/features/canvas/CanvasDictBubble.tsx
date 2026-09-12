@@ -41,6 +41,7 @@ export function CanvasDictBubble(): JSX.Element | null {
 
   /** 正在播收起动画。见文件头。 */
   const [closing, setClosing] = useState(false)
+  const [designView, setDesignView] = useState(false)
   const closeTimer = useRef<number | null>(null)
   const popRef = useRef<HTMLDivElement>(null)
   /** 拖动中的临时位置。**拖完才写 store** —— 每移动一像素写一次 localStorage
@@ -92,9 +93,11 @@ export function CanvasDictBubble(): JSX.Element | null {
 
   // **每次渲染都按当前窗口夹一次**：存的位置是上次那个窗口大小下的，
   // 换了屏幕 / 缩了窗口之后直接用会把面板放到看不见的地方
+  const width = designView ? Math.min(760, window.innerWidth - 16) : POP_W
+  const height = designView ? Math.min(540, window.innerHeight - 60) : POP_H
   const base = drag ?? savedPos ?? defaultPos()
-  const x = clamp(base.x, 8, Math.max(8, window.innerWidth - POP_W - 8))
-  const y = clamp(base.y, 44, Math.max(44, window.innerHeight - POP_H - 8))
+  const x = clamp(base.x, 8, Math.max(8, window.innerWidth - width - 8))
+  const y = clamp(base.y, 44, Math.max(44, window.innerHeight - height - 8))
 
   const onHeadDown = (e: React.MouseEvent): void => {
     // 只认左键，且不从关闭按钮上起拖
@@ -106,15 +109,15 @@ export function CanvasDictBubble(): JSX.Element | null {
     const oy = y
     const onMove = (ev: MouseEvent): void => {
       setDrag({
-        x: clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - POP_W - 8)),
-        y: clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - POP_H - 8))
+        x: clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - width - 8)),
+        y: clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - height - 8))
       })
     }
     const onUp = (ev: MouseEvent): void => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
-      const nx = clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - POP_W - 8))
-      const ny = clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - POP_H - 8))
+      const nx = clamp(ox + ev.clientX - sx, 8, Math.max(8, window.innerWidth - width - 8))
+      const ny = clamp(oy + ev.clientY - sy, 44, Math.max(44, window.innerHeight - height - 8))
       setDrag(null)
       // 真的挪了才写盘。原地点一下不该产生一次 localStorage 写入
       if (Math.hypot(nx - ox, ny - oy) >= 1) setSavedPos({ x: nx, y: ny })
@@ -127,7 +130,7 @@ export function CanvasDictBubble(): JSX.Element | null {
     <div
       ref={popRef}
       className={`cdict-pop${closing ? ' closing' : ''}`}
-      style={{ left: x, top: y }}
+      style={{ left: x, top: y, width, height }}
       // 拖动中把过渡关掉：不关的话每一帧都在补间上一帧的位置，跟手感全没了
       data-dragging={drag ? '1' : undefined}
     >
@@ -140,7 +143,7 @@ export function CanvasDictBubble(): JSX.Element | null {
       </div>
       <div className="cdict-pop-body">
         <Suspense fallback={<div className="pane-placeholder">加载辞典…</div>}>
-          <DictView embedded />
+          <DictView embedded onDesignViewChange={setDesignView} />
         </Suspense>
       </div>
     </div>

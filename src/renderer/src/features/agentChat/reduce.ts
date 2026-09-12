@@ -188,11 +188,11 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
    *  该「覆盖刚才攒的那个轮次」而不是「再 push 一个新轮次」（否则同一段话显示两次）。 */
   let streamingTurn: Turn | null = null
 
-  /** exec.start 要挂到的轮次：有就用当前最后一个（本归约器只产出 assistant 轮次，
-   *  所以「最后一个」必然是 assistant，不需要额外查 role）；没有就先造一个空文本的。 */
+  /** exec.start 只复用本请求的 assistant 尾段；新请求工具先行或手机用户轮次后须另起段。 */
+  let previousRequestTail: Turn | undefined
   function ensureAssistantTurn(): Turn {
     const last = turns[turns.length - 1]
-    if (last) return last
+    if (last && last.role === 'assistant' && last !== previousRequestTail) return last
     const created: Turn = { role: 'assistant', text: '', execs: [] }
     turns.push(created)
     return created
@@ -235,7 +235,11 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
     if (e.k === 'turn.done') trimTurns()
     // 一轮开始。放在 switch 之前而不是加一个 case：它只是给 turnActive 打个标，
     // 不产生任何视图内容，走 default 忽略仍然是对的。
-    if (e.k === 'turn.start') turnActive = true
+    if (e.k === 'turn.start') {
+      turnActive = true
+      // 新请求尚未产出文字时，工具不能借用上一请求的尾段。
+      previousRequestTail = turns[turns.length - 1]
+    }
     // CLI 报的当前模型。/model 切换后它会重推 init，这里跟着更新 —— 不自己记选择。
     if (e.k === 'session.ready') model = e.model || null
     // 额度：同一个窗口只留最新一条（就地更新，不堆历史——界面只关心"现在怎么样"）

@@ -225,7 +225,6 @@ export function CanvasWikiDrawer(): JSX.Element | null {
             }}
           >
             <span className="wk-edge-label">更多</span>
-            {!!st?.inbox && <span className="wk-edge-dot">{st.inbox}</span>}
           </span>
         </div>
       )}

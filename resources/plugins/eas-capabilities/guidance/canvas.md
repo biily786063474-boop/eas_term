@@ -106,3 +106,7 @@ Frame，你不用做额外的事，**但也别想办法绕开它**。
 ## 内置网站与收藏路由
 先调 `browser_routes` 查询稳定分类、网站意图、官方入口和随包离线 HTML 路径。发布小红书笔记对应创作者入口，不等于获得发布授权；pending 项请确认网址，不猜域名。
 `canvas_open_url` 支持 `eas-favorites://home?folder=media` 打开自媒体目录，或 `eas-favorites://save?folder=media&url=<编码的HTTP(S)网址>&name=<编码名称>` 打开预填收藏表单。表单须用户确认才保存；不导出 Cookie/令牌。项目内 `docs/browser/index.html#bookmark` 可用 `canvas_open_html` 打开，安装版优先打开 MCP 返回的内部 entryUrl，不放宽文件路径白名单。
+
+## 回复产物的默认交付
+
+AI 本次生成并准备交给用户的文档/图片，应先调用上述 open 工具，再回复结果。代码保证所属 Frame 校验与同文件复用刷新；返回 `nodeId`、`reused`。重复提交不新增节点、不挤掉其他预览；已打开文档有未保存编辑时延后刷新，不丢弃草稿。引用文献、读取的输入文件不自动提交。该约定依赖显式 MCP 提交，不扫描自然语言或 shell 输出。

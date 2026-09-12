@@ -1,3 +1,4 @@
+import { VaultGate } from './VaultGate'
 // AI 索要密钥的弹窗（MCP 工具 request_secret 触发）。
 //
 // **这个组件的全部意义在于「不被 AI 借刀」。** 它显示的文字有一部分是 AI 写的，
@@ -15,7 +16,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
-import type { SecretsStatus } from '../../../../shared/types'
+import type { SecretsStatus, SecretMeta } from '../../../../shared/types'
 import { KeyIcon, CloseIcon } from '../../ui/Icons'
 import {
   currentSecretRequest,
@@ -35,7 +36,7 @@ export interface SecretRequest {
   /** 去哪申请（可选，只接受 http/https） */
   docsUrl?: string
   /** 'fix' = AI 用着报错了，请用户改一个。默认是首次索要 */
-  mode?: 'ask' | 'fix'
+  mode?: 'ask' | 'fix' | 'unlock'
 }
 
 export interface SecretRequestResult {
@@ -47,6 +48,7 @@ export interface SecretRequestResult {
   autoInject?: boolean
   /** 存进了哪一组 —— 用来授权这个终端能取它 */
   group?: string
+  groups?: string[]
 }
 
 /** 这些词出现在变量名或组名里就红牌警告。
@@ -90,7 +92,7 @@ export function SecretRequestHost(): JSX.Element | null {
   const req = useSyncExternalStore(subscribeSecretRequest, currentSecretRequest)
   if (!req) return null
   // key：换一个请求就重建，免得上一个请求填了一半的值串到下一个
-  return <SecretRequestModal key={req.name + req.vars.join()} req={req} onDone={resolveSecretRequest} />
+  return <SecretRequestModal key={req.name + req.vars.join()} req={req} onDone={(result) => resolveSecretRequest(result, req)} />
 }
 
 function SecretRequestModal({
@@ -101,7 +103,7 @@ function SecretRequestModal({
   onDone: (r: SecretRequestResult) => void
 }): JSX.Element | null {
   const [st, setSt] = useState<SecretsStatus | null>(null)
-  const [code, setCode] = useState('')
+  const [items, setItems] = useState<SecretMeta[] | null>(null)
   const [values, setValues] = useState<string[]>(() => req.vars.map(() => ''))
   const [autoInject, setAutoInject] = useState(true)
   const [err, setErr] = useState('')
@@ -115,35 +117,41 @@ function SecretRequestModal({
   const danger = dangerHits(req)
   const locked = !!st && (!st.configured || st.locked)
   const fix = req.mode === 'fix'
+  const unlockOnly = req.mode === 'unlock'
+  const existing = new Set((items ?? []).flatMap(it => it.vars.map(v => v.varName)))
+  const missingVars = req.vars.filter(v => fix || !existing.has(v))
+  useEffect(() => {
+    if (st && !locked) void window.api.secrets.list().then(setItems)
+  }, [locked, st])
 
   useEffect(() => {
     if (!locked) firstRef.current?.focus()
   }, [locked, st])
 
-  if (!st) return null
+  useEffect(() => {
+    if (!locked) return
+    const timer = window.setInterval(() => { void window.api.secrets.status().then(setSt) }, 1000)
+    return () => window.clearInterval(timer)
+  }, [locked])
 
-  const unlock = async (): Promise<void> => {
-    setErr('')
-    const r = st.configured
-      ? await window.api.secrets.unlock(code)
-      : await window.api.secrets.setup(code)
-    setCode('')
-    setSt(r.status)
-    if (!r.ok) setErr(r.error ?? '出错了')
-  }
+  if (!st) return null
 
   const save = async (): Promise<void> => {
     setErr('')
-    if (values.some((v) => !v.trim())) {
+    if (missingVars.some(v => !values[req.vars.indexOf(v)].trim())) {
       setErr('每个变量都要填')
       return
     }
+    if (!items) return
+    if (unlockOnly) { onDone({ saved: true, vars: [] }); return }
+    const groups = items.filter(it => it.vars.some(v => req.vars.includes(v.varName))).map(it => it.name)
+    if (!fix && !missingVars.length) { onDone({ saved: true, vars: req.vars, groups }); return }
     setBusy(true)
     let input = {
       name: req.name,
       note: `AI 索要：${req.purpose}`.slice(0, 200),
       autoInject,
-      vars: req.vars.map((varName, i) => ({ varName, value: values[i] }))
+      vars: missingVars.map(varName => ({ varName, value: values[req.vars.indexOf(varName)] }))
     } as Parameters<typeof window.api.secrets.save>[0]
 
     if (fix) {
@@ -176,14 +184,14 @@ function SecretRequestModal({
           setBusy(false)
           // 回报只认真写成功的那些，别把没写进去的也说成改好了
           setErr(`「${owner.name}」保存失败：${r.error ?? '未知原因'}`)
-          if (written.length) onDone({ saved: true, vars: written, group: owners[0].name })
+          if (written.length) onDone({ saved: true, vars: written, groups: owners.filter(it => it.vars.some(v => written.includes(v.varName))).map(it => it.name) })
           return
         }
         setSt(r.status)
         written.push(...owner.vars.filter((v) => req.vars.includes(v.varName)).map((v) => v.varName))
       }
       setBusy(false)
-      onDone({ saved: true, vars: written, group: owners[0].name })
+      onDone({ saved: true, vars: written, groups: owners.filter(it => it.vars.some(v => written.includes(v.varName))).map(it => it.name) })
       return
     }
 
@@ -193,11 +201,21 @@ function SecretRequestModal({
       setErr(r.error ?? '保存失败')
       return
     }
-    onDone({ saved: true, vars: req.vars, autoInject })
+    onDone({ saved: true, vars: req.vars, autoInject, groups: [...groups, req.name] })
   }
 
+  if (locked) return createPortal(
+    <div className="vault-backdrop sreq-mask">
+      <div className="sreq vault-gate-dialog" role="dialog" aria-modal="true" aria-label="密钥柜">
+        <button className="vault-close" aria-label="取消密钥请求" onClick={() => onDone({ saved: false, reason: '用户取消了这次密钥请求' })}><CloseIcon size={15} /></button>
+        <VaultGate status={st} onUnlocked={status => { setSt(status); if (unlockOnly) onDone({ saved: true, vars: [] }) }} />
+        <p className="vault-footnote">由 AI 请求触发 · 解锁后继续原请求</p>
+      </div>
+    </div>, document.body
+  )
+
   return createPortal(
-    <div className="sreq-mask">
+    <div className="vault-backdrop sreq-mask">
       <div className="sreq" role="dialog" aria-modal="true">
         {/* 规矩 1：一眼看出这不是系统在问你，是 AI 在问你 */}
         <div className="sreq-flag">
@@ -206,16 +224,16 @@ function SecretRequestModal({
         </div>
 
         <div className="sreq-title">
-          {fix ? `这个密钥好像不对：${req.vars.join('、')}` : req.name}
+          {fix ? `这个密钥好像不对：${req.vars.join('、')}` : !missingVars.length ? '允许这个会话使用？' : req.name}
         </div>
 
         {/* 规矩 2：AI 的原话原样摆着。React 默认转义，不要改成 innerHTML */}
         <div className="sreq-field">
           <span className="sreq-label">
-            {fix ? '服务返回的报错（AI 转述）' : 'AI 说它要来做什么'}
+            {unlockOnly ? '解锁后继续' : fix ? '服务返回的报错（AI 转述）' : 'AI 说它要来做什么'}
           </span>
           <blockquote className="sreq-quote">{req.purpose}</blockquote>
-          <span className="sreq-hint">以上是 AI 的原话，未经改写 —— 自己判断合不合理</span>
+          {!unlockOnly && <span className="sreq-hint">以上是 AI 的原话，未经改写 —— 自己判断合不合理</span>}
         </div>
 
         {fix && (
@@ -225,8 +243,8 @@ function SecretRequestModal({
           </div>
         )}
 
-        <div className="sreq-field">
-          <span className="sreq-label">会存成这些环境变量</span>
+        {!unlockOnly && <div className="sreq-field">
+          <span className="sreq-label">本次请求的环境变量</span>
           <div className="sreq-vars">
             {req.vars.map((v) => (
               <code key={v} className="sec-var">
@@ -234,7 +252,7 @@ function SecretRequestModal({
               </code>
             ))}
           </div>
-        </div>
+        </div>}
 
         {req.docsUrl && (
           <div className="sreq-field">
@@ -257,38 +275,9 @@ function SecretRequestModal({
           </div>
         )}
 
-        {locked ? (
-          <div className="sreq-lock">
-            <div className="sreq-label">
-              {st.configured ? '先解锁密钥柜' : '先给密钥柜设一个六位码'}
-            </div>
-            <input
-              className="sec-code"
-              type="password"
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={6}
-              placeholder="······"
-              value={code}
-              autoFocus
-              disabled={!st.available || st.lockedOutMs > 0}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && code.length === 6) void unlock()
-              }}
-            />
-            <button
-              className="sec-primary"
-              disabled={code.length !== 6 || !st.available || st.lockedOutMs > 0}
-              onClick={() => void unlock()}
-            >
-              {st.configured ? '解锁' : '启用密钥柜'}
-            </button>
-          </div>
-        ) : (
           <>
             <div className="sreq-inputs">
-              {req.vars.map((v, i) => (
+              {req.vars.map((v, i) => !fix && existing.has(v) ? <div className="sreq-hint" key={v}><code>{v}</code> 已在柜中，仅授权当前会话，无需重新输入。</div> : (
                 <label key={v} className="sreq-input-row">
                   <code>{v}</code>
                   <input
@@ -305,7 +294,7 @@ function SecretRequestModal({
                 </label>
               ))}
             </div>
-            {!fix && (
+            {!fix && !unlockOnly && missingVars.length > 0 && (
               <label className="sec-check">
                 <input
                   type="checkbox"
@@ -322,7 +311,6 @@ function SecretRequestModal({
               进程的环境变量在启动那一刻就定死了；AI 要用会走 <code>eas-secret</code> 包装命令现取。
             </div>
           </>
-        )}
 
         {err && <div className="sec-err">{err}</div>}
 
@@ -335,8 +323,8 @@ function SecretRequestModal({
             取消
           </button>
           {!locked && (
-            <button className="sec-primary sm" disabled={busy} onClick={() => void save()}>
-              {busy ? '保存中…' : '存进密钥柜'}
+            <button className="sec-primary sm" disabled={busy || !items} onClick={() => void save()}>
+              {busy ? '保存中…' : unlockOnly ? '继续原请求' : !missingVars.length ? '授权当前会话' : '保存并授权当前会话'}
             </button>
           )}
         </div>

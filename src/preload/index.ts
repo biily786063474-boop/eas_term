@@ -792,6 +792,8 @@ const api = {
     ): Promise<{
       vars: { varName: string; inVault: boolean; readable: boolean; inThisTerminal: boolean }[]
       groups: string[]
+      hasCredential: boolean
+      credentialEpoch?: string
       locked: boolean
     }> => ipcRenderer.invoke('secrets:has', names, ptyId),
     /** 一条 = 一组变量（AK/SK 这类成对凭证）。某行 value 留空 = 不动那个变量已存的值 */
@@ -806,8 +808,8 @@ const api = {
       return () => ipcRenderer.removeListener('secrets:locked', h)
     },
     /** 用户当场把这一组授权给某个终端（request_secret 存完调）—— 没这步它取不到刚填的密钥 */
-    grantToPty: (ptyId: string | undefined, group: string): Promise<void> =>
-      ipcRenderer.invoke('secrets:grantToPty', ptyId, group),
+    grantToPty: (ptyId: string | undefined, group: string, expectedEpoch?: string): Promise<void> =>
+      ipcRenderer.invoke('secrets:grantToPty', ptyId, group, expectedEpoch),
     /** 选一个 .env 文件并解析。**只回变量名不回值** —— 值扣在主进程等确认 */
     pickEnvFile: (
       testFile?: string
@@ -837,7 +839,7 @@ const api = {
     injectedIn: (ptyId: string): Promise<string[]> =>
       ipcRenderer.invoke('secrets:injectedIn', ptyId),
     /** 密钥使用流水。**只有名字和时间，没有值** */
-    audit: (): Promise<{ at: number; ptyId?: string; source: string; names: string[] }[]> =>
+    audit: (): Promise<{ at: number; sessionKey?: string; source: string; names: string[] }[]> =>
       ipcRenderer.invoke('secrets:audit'),
     /** 唯一能把值交到渲染层的通道，给「查看 / 复制」用。不传 varName = 整组 */
     reveal: (id: string, varName?: string): Promise<SecretReveal> =>

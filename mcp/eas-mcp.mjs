@@ -32,7 +32,7 @@ const TOOLS = JSON.parse(fs.readFileSync(new URL('./workbench-tools.json', impor
  *  判据是「会不会阻塞着等」，不是「等的是谁」。
  *  `merge_preflight` / `repo_impact` 则是**慢**（merge-tree 30s、analyzeProject 大仓库几十秒），
  *  同样超过普通那道闸，一并放进来。 */
-const LONG_WAITS = new Set(['wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
+const LONG_WAITS = new Set(['secret_check', 'request_secret', 'report_secret_invalid', 'wiki_archive_plan', 'team_spawn', 'team_status', 'merge_preflight', 'repo_impact'])
 
 /** 普通工具 30 秒足够（主进程那侧 15 秒就会先返回错误）；
  *  长等待的那些给 15 分钟 —— **必须比主进程的 10 分钟长**，

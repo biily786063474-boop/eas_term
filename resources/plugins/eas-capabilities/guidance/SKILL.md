@@ -41,6 +41,8 @@ description: >
 写完一个 HTML 报告，不要说「已生成 docs/report.html，你可以打开看看」——
 直接 `canvas_open_html`，用户抬头就看见了。这是这个 app 存在的意义。
 
+**AI 回复本次产出的文档或图片前，必须先提交给所属 Frame**：文档用 `canvas_open_file`、HTML 用 `canvas_open_html`、光栅图片用 `canvas_open_image`。工具成功才说已打开。相同文件在同一 Frame 内复用并刷新原节点，不重复占位。只提交本次明确产物，不把引用、读过的参考文件、用户上传的输入素材自动打开；不靠扫描回复里的路径推断产物。失败时如实报告，不切到别人的 Frame。
+
 ---
 
 ## 什么时候用哪个工具

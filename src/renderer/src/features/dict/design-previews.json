@@ -1,0 +1,1233 @@
+{
+  "elevenlabs": {
+    "cover": "design-covers/elevenlabs.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/elevenlabs-1784478075057/home_38688763.html?v=2026-07-21T06%3A17%3A46.086Z"
+  },
+  "chatgpt": {
+    "cover": "design-covers/chatgpt.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/chatgpt-1784283254957/home_72812794.html?v=2026-08-02T07%3A01%3A38.399Z"
+  },
+  "claude": {
+    "cover": "design-covers/claude.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/claude-1784283258967/home_38710214.html?v=2026-08-08T20%3A51%3A17.001Z"
+  },
+  "perplexity": {
+    "cover": "design-covers/perplexity.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/perplexity-1784283266858/home_85381617.html?v=2026-07-19T16%3A53%3A55.678Z"
+  },
+  "astral-ai-insights": {
+    "cover": "design-covers/astral-ai-insights.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/astral-ai-insights-1784282662253/home_15334391.html?v=2026-07-19T10%3A33%3A30.505Z"
+  },
+  "atmospheric-data-console": {
+    "cover": "design-covers/atmospheric-data-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/atmospheric-data-console-1784281351242/home_58406604.html?v=2026-07-30T11%3A24%3A30.031Z"
+  },
+  "smart-environment-control": {
+    "cover": "design-covers/smart-environment-control.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/smart-environment-control-1786179957334/home_60279022.html?v=2026-08-08T09%3A29%3A52.856Z"
+  },
+  "rubidium-absolute-time-reference": {
+    "cover": "design-covers/rubidium-absolute-time-reference.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/rubidium-absolute-time-reference-1786179953608/home_10525535.html?v=2026-08-08T09%3A29%3A52.814Z"
+  },
+  "hardware-ui-skeuomorphic-interface": {
+    "cover": "design-covers/hardware-ui-skeuomorphic-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/hardware-ui-skeuomorphic-interface-1786179939883/home_03364240.html?v=2026-08-08T09%3A29%3A52.736Z"
+  },
+  "neon-sentinel-agent-deployment": {
+    "cover": "design-covers/neon-sentinel-agent-deployment.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/neon-sentinel-agent-deployment-1786179946976/home_59055071.html?v=2026-08-08T09%3A29%3A52.775Z"
+  },
+  "aegis-relay-orbital-defense-network": {
+    "cover": "design-covers/aegis-relay-orbital-defense-network.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aegis-relay-orbital-defense-network-1786179929178/home_12605600.html?v=2026-08-08T09%3A29%3A52.663Z"
+  },
+  "aura-system-calibration": {
+    "cover": "design-covers/aura-system-calibration.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-system-calibration-1786179934833/home_58900344.html?v=2026-08-08T09%3A29%3A52.702Z"
+  },
+  "premium": {
+    "cover": "design-covers/premium.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/premium-1784282775837/home_85613400.html?v=2026-07-30T11%3A39%3A14.641Z"
+  },
+  "vision-engine-scan-console": {
+    "cover": "design-covers/vision-engine-scan-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vision-engine-scan-console-1786180026834/home_27439297.html?v=2026-08-08T09%3A29%3A55.013Z"
+  },
+  "landing-page-twelve": {
+    "cover": "design-covers/landing-page-twelve.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/landing-page-twelve-1786180021899/home_64725508.html?v=2026-08-08T09%3A29%3A54.976Z"
+  },
+  "landing-page-thirteen": {
+    "cover": "design-covers/landing-page-thirteen.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/landing-page-thirteen-1786180014980/home_18153301.html?v=2026-08-08T09%3A29%3A54.939Z"
+  },
+  "cardfile-rotary-contact-drum": {
+    "cover": "design-covers/cardfile-rotary-contact-drum.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cardfile-rotary-contact-drum-1786180005094/home_85193382.html?v=2026-08-08T09%3A29%3A54.903Z"
+  },
+  "aura-mobile-flow-2": {
+    "cover": "design-covers/aura-mobile-flow-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-mobile-flow-1786179998340/home_07907811.html?v=2026-08-08T09%3A29%3A52.894Z"
+  },
+  "premium-app-ui": {
+    "cover": "design-covers/premium-app-ui.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/premium-app-ui-1784282785415/home_84143189.html?v=2026-07-30T11%3A36%3A18.790Z"
+  },
+  "lumina": {
+    "cover": "design-covers/lumina.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-1784283160696/home_45145397.html?v=2026-07-30T11%3A35%3A13.555Z"
+  },
+  "aether-centralized-network-console": {
+    "cover": "design-covers/aether-centralized-network-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-centralized-network-console-1784281377401/home_09408323.html?v=2026-08-03T16%3A52%3A21.856Z"
+  },
+  "aether-dynamics": {
+    "cover": "design-covers/aether-dynamics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-dynamics-1785663189381/home_80937927.html?v=2026-08-08T13%3A00%3A15.764Z"
+  },
+  "nexus-volumetric": {
+    "cover": "design-covers/nexus-volumetric.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-volumetric-1784278999522/home_51446700.html?v=2026-08-06T04%3A47%3A22.112Z"
+  },
+  "meridian-geo": {
+    "cover": "design-covers/meridian-geo.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/meridian-geo-1784278838694/home_65811115.html?v=2026-08-05T17%3A44%3A29.337Z"
+  },
+  "kinetic-high-fidelity": {
+    "cover": "design-covers/kinetic-high-fidelity.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/kinetic-high-fidelity-1784278656419/home_66933270.html?v=2026-08-03T02%3A34%3A47.975Z"
+  },
+  "aura-mobile-flow": {
+    "cover": "design-covers/aura-mobile-flow.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-mobile-flow-1784283157019/home_98070653.html?v=2026-08-06T04%3A47%3A13.939Z"
+  },
+  "a-e-r-i-s-precision": {
+    "cover": "design-covers/a-e-r-i-s-precision.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/a-e-r-i-s-precision-1784280802478/home_87722585.html?v=2026-07-19T15%3A44%3A26.774Z"
+  },
+  "nexora-vision-meets-reality": {
+    "cover": "design-covers/nexora-vision-meets-reality.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexora-vision-meets-reality-1784278784188/home_48910740.html?v=2026-08-03T06%3A14%3A54.623Z"
+  },
+  "squish-turn-your-ideas-into-stunning-visuals": {
+    "cover": "design-covers/squish-turn-your-ideas-into-stunning-visuals.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/squish-turn-your-ideas-into-stunning-visuals-1784282088725/home_42692819.html?v=2026-08-01T07%3A41%3A11.332Z"
+  },
+  "aether-9": {
+    "cover": "design-covers/aether-9.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-9-1784282429064/home_23174453.html?v=2026-07-30T12%3A03%3A04.769Z"
+  },
+  "novafall-iris-a-revolution-begins": {
+    "cover": "design-covers/novafall-iris-a-revolution-begins.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/novafall-iris-a-revolution-begins-1784282097177/home_14681891.html?v=2026-07-19T14%3A52%3A35.143Z"
+  },
+  "interactive-hero": {
+    "cover": "design-covers/interactive-hero.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/interactive-hero-1784280837643/home_19021710.html?v=2026-08-08T17%3A54%3A45.165Z"
+  },
+  "aura-field-engine": {
+    "cover": "design-covers/aura-field-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-field-engine-1784281038639/home_49474867.html?v=2026-08-08T12%3A57%3A38.297Z"
+  },
+  "laserflow-dashboard-interface": {
+    "cover": "design-covers/laserflow-dashboard-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/laserflow-dashboard-interface-1784281537049/home_19800016.html?v=2026-08-08T14%3A51%3A09.012Z"
+  },
+  "telemetry-state": {
+    "cover": "design-covers/telemetry-state.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/telemetry-state-1786180119186/home_04110331.html?v=2026-08-08T09%3A29%3A55.463Z"
+  },
+  "system-architecture-slide": {
+    "cover": "design-covers/system-architecture-slide.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/system-architecture-slide-1786180111064/home_98726363.html?v=2026-08-08T09%3A29%3A55.372Z"
+  },
+  "ship-faster-sync-github-workspace-2": {
+    "cover": "design-covers/ship-faster-sync-github-workspace-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ship-faster-sync-github-workspace-1786180108677/home_33339886.html?v=2026-08-08T09%3A29%3A55.336Z"
+  },
+  "tide-read-the-ocean": {
+    "cover": "design-covers/tide-read-the-ocean.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/tide-read-the-ocean-1786180126420/home_75428744.html?v=2026-08-08T09%3A29%3A55.412Z"
+  },
+  "pandora-operations-center": {
+    "cover": "design-covers/pandora-operations-center.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/pandora-operations-center-1786180101302/home_75313834.html?v=2026-08-08T09%3A29%3A55.253Z"
+  },
+  "platform-hero-lime-remix": {
+    "cover": "design-covers/platform-hero-lime-remix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/platform-hero-lime-remix-1786180103959/home_17101452.html?v=2026-08-08T09%3A29%3A55.292Z"
+  },
+  "nexuscore-display-grid": {
+    "cover": "design-covers/nexuscore-display-grid.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexuscore-display-grid-1786180096052/home_55728959.html?v=2026-08-08T09%3A29%3A55.216Z"
+  },
+  "digital-excellence-platform": {
+    "cover": "design-covers/digital-excellence-platform.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/digital-excellence-platform-1786180083650/home_00253565.html?v=2026-08-08T09%3A29%3A55.130Z"
+  },
+  "aura-visualization-slide-deck": {
+    "cover": "design-covers/aura-visualization-slide-deck.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-visualization-slide-deck-1786180078068/home_67450665.html?v=2026-08-08T09%3A29%3A55.092Z"
+  },
+  "nexus-ai-data-pipeline": {
+    "cover": "design-covers/nexus-ai-data-pipeline.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-ai-data-pipeline-1786180089515/home_30031149.html?v=2026-08-08T09%3A29%3A55.171Z"
+  },
+  "aether-semantic-context-engine": {
+    "cover": "design-covers/aether-semantic-context-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-semantic-context-engine-1786180067174/home_37537454.html?v=2026-08-08T09%3A29%3A55.052Z"
+  },
+  "northgrid-energy-intelligence": {
+    "cover": "design-covers/northgrid-energy-intelligence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/northgrid-energy-intelligence-1784282445745/home_30764200.html?v=2026-08-07T05%3A14%3A02.100Z"
+  },
+  "aethelgard-core": {
+    "cover": "design-covers/aethelgard-core.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethelgard-core-1784281104608/home_53676682.html?v=2026-08-05T06%3A20%3A57.097Z"
+  },
+  "lumina-sys-engineered-depth": {
+    "cover": "design-covers/lumina-sys-engineered-depth.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-sys-engineered-depth-1784282658482/home_84686226.html?v=2026-07-30T12%3A05%3A29.327Z"
+  },
+  "vortex-data-topography": {
+    "cover": "design-covers/vortex-data-topography.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vortex-data-topography-1784281532304/home_34464935.html?v=2026-07-30T12%3A08%3A35.895Z"
+  },
+  "next-gen-infrastructure-protocols": {
+    "cover": "design-covers/next-gen-infrastructure-protocols.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/next-gen-infrastructure-protocols-1784278585158/home_57056626.html?v=2026-07-30T11%3A44%3A46.400Z"
+  },
+  "synapse-data-orchestration": {
+    "cover": "design-covers/synapse-data-orchestration.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synapse-data-orchestration-1784282625418/home_31744947.html?v=2026-07-30T11%3A37%3A49.198Z"
+  },
+  "quantum-core-diagnostics-2": {
+    "cover": "design-covers/quantum-core-diagnostics-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/quantum-core-diagnostics-1784282629815/home_40062554.html?v=2026-07-30T11%3A37%3A56.348Z"
+  },
+  "lesson-loom-prairie-signal-console": {
+    "cover": "design-covers/lesson-loom-prairie-signal-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lesson-loom-prairie-signal-console-1784282243662/home_63456436.html?v=2026-07-30T11%3A37%3A21.182Z"
+  },
+  "lesson-loom-classrun-console": {
+    "cover": "design-covers/lesson-loom-classrun-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lesson-loom-classrun-console-1784282635388/home_70028425.html?v=2026-07-30T11%3A37%3A07.085Z"
+  },
+  "analytics-dashboard-remixed": {
+    "cover": "design-covers/analytics-dashboard-remixed.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/analytics-dashboard-remixed-1784282619416/home_76959934.html?v=2026-07-30T11%3A37%3A41.018Z"
+  },
+  "synthcore-mobile-systems": {
+    "cover": "design-covers/synthcore-mobile-systems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synthcore-mobile-systems-1784282779282/home_10363484.html?v=2026-07-30T11%3A36%3A53.588Z"
+  },
+  "aethel": {
+    "cover": "design-covers/aethel.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethel-1784283153404/home_19200824.html?v=2026-07-30T11%3A35%3A39.592Z"
+  },
+  "aether-nexus-mobile-flow": {
+    "cover": "design-covers/aether-nexus-mobile-flow.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-nexus-mobile-flow-1784282788794/home_53494190.html?v=2026-07-30T11%3A35%3A56.483Z"
+  },
+  "synchronized": {
+    "cover": "design-covers/synchronized.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synchronized-1784282791806/home_39246833.html?v=2026-07-30T11%3A35%3A21.410Z"
+  },
+  "nexus-core-app": {
+    "cover": "design-covers/nexus-core-app.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-core-app-1784283164252/home_34415330.html?v=2026-07-30T11%3A34%3A56.988Z"
+  },
+  "premium-saas-dashboard-experience": {
+    "cover": "design-covers/premium-saas-dashboard-experience.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/premium-saas-dashboard-experience-1784283166916/home_79123332.html?v=2026-07-30T11%3A34%3A46.840Z"
+  },
+  "neurosync-interface": {
+    "cover": "design-covers/neurosync-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/neurosync-interface-1784281354636/home_71471617.html?v=2026-07-30T11%3A34%3A18.254Z"
+  },
+  "nova-genomics": {
+    "cover": "design-covers/nova-genomics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nova-genomics-1784281112087/home_40585238.html?v=2026-07-30T11%3A32%3A09.550Z"
+  },
+  "novara-future-systems": {
+    "cover": "design-covers/novara-future-systems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/novara-future-systems-1784282526369/home_19789075.html?v=2026-07-30T11%3A29%3A14.179Z"
+  },
+  "axiom-observability-matrix": {
+    "cover": "design-covers/axiom-observability-matrix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/axiom-observability-matrix-1784281474781/home_33603398.html?v=2026-07-19T14%3A40%3A56.023Z"
+  },
+  "system-calibration-framework": {
+    "cover": "design-covers/system-calibration-framework.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/system-calibration-framework-1784281434195/home_41440607.html?v=2026-07-19T14%3A48%3A28.142Z"
+  },
+  "nexura-high-impact-creatives": {
+    "cover": "design-covers/nexura-high-impact-creatives.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexura-high-impact-creatives-1784281544130/home_17114616.html?v=2026-07-19T14%3A29%3A50.147Z"
+  },
+  "nexus-intelligent-discovery": {
+    "cover": "design-covers/nexus-intelligent-discovery.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-intelligent-discovery-1784282093277/home_87910637.html?v=2026-07-19T14%3A01%3A10.244Z"
+  },
+  "loyyal-loyalty-solutions": {
+    "cover": "design-covers/loyyal-loyalty-solutions.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/loyyal-loyalty-solutions-1784281553618/home_55741915.html?v=2026-07-19T14%3A28%3A13.037Z"
+  },
+  "nexus-framework": {
+    "cover": "design-covers/nexus-framework.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-framework-1784282547841/home_34341638.html?v=2026-07-19T10%3A41%3A10.736Z"
+  },
+  "summit-cloud-migration-platform": {
+    "cover": "design-covers/summit-cloud-migration-platform.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/summit-cloud-migration-platform-1784282555170/home_60281835.html?v=2026-07-19T13%3A40%3A48.639Z"
+  },
+  "stratum-system-coordination": {
+    "cover": "design-covers/stratum-system-coordination.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/stratum-system-coordination-1784278725461/home_40081940.html?v=2026-07-19T10%3A37%3A39.244Z"
+  },
+  "aura-compute-matrix": {
+    "cover": "design-covers/aura-compute-matrix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-compute-matrix-1784282453560/home_49900664.html?v=2026-07-19T10%3A34%3A56.555Z"
+  },
+  "nexus-core-workspace": {
+    "cover": "design-covers/nexus-core-workspace.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-core-workspace-1784282648933/home_80187243.html?v=2026-07-19T10%3A29%3A03.889Z"
+  },
+  "aether-architects": {
+    "cover": "design-covers/aether-architects.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-architects-1784278955354/home_30304680.html?v=2026-07-19T10%3A30%3A00.559Z"
+  },
+  "eco-tech-dashboard": {
+    "cover": "design-covers/eco-tech-dashboard.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/eco-tech-dashboard-1784281274752/home_43798411.html?v=2026-07-19T10%3A17%3A29.009Z"
+  },
+  "unlock-potential-pro-plan": {
+    "cover": "design-covers/unlock-potential-pro-plan.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/unlock-potential-pro-plan-1784281256458/home_89423892.html?v=2026-07-19T10%3A13%3A13.573Z"
+  },
+  "platform-features": {
+    "cover": "design-covers/platform-features.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/platform-features-1784281260023/home_73749809.html?v=2026-07-19T10%3A13%3A23.040Z"
+  },
+  "nexus-protocol": {
+    "cover": "design-covers/nexus-protocol.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-protocol-1784281206714/home_44358924.html?v=2026-07-19T10%3A04%3A19.954Z"
+  },
+  "system-access-tiers": {
+    "cover": "design-covers/system-access-tiers.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/system-access-tiers-1784281108387/home_17027557.html?v=2026-07-19T09%3A59%3A09.195Z"
+  },
+  "aether-analytics": {
+    "cover": "design-covers/aether-analytics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-analytics-1784281100668/home_72225262.html?v=2026-07-19T09%3A58%3A28.476Z"
+  },
+  "pricing-plans": {
+    "cover": "design-covers/pricing-plans.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/pricing-plans-1784281097163/home_92500682.html?v=2026-07-19T09%3A58%3A19.766Z"
+  },
+  "digital-experiences-premium-studio": {
+    "cover": "design-covers/digital-experiences-premium-studio.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/digital-experiences-premium-studio-1784280921127/home_49829350.html?v=2026-07-19T09%3A54%3A11.485Z"
+  },
+  "mindful": {
+    "cover": "design-covers/mindful.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/mindful-1784283170913/home_52505965.html?v=2026-07-19T09%3A46%3A12.301Z"
+  },
+  "dynamo-real-time-stream-processing": {
+    "cover": "design-covers/dynamo-real-time-stream-processing.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/dynamo-real-time-stream-processing-1784281028501/home_69629396.html?v=2026-07-19T09%3A42%3A41.065Z"
+  },
+  "aerith-fluid-engine": {
+    "cover": "design-covers/aerith-fluid-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aerith-fluid-engine-1784281045297/home_34514016.html?v=2026-07-19T09%3A51%3A17.345Z"
+  },
+  "aexis-plasma-core-interface": {
+    "cover": "design-covers/aexis-plasma-core-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aexis-plasma-core-interface-1784281025322/home_21200118.html?v=2026-07-19T09%3A42%3A26.625Z"
+  },
+  "particle-swell": {
+    "cover": "design-covers/particle-swell.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/particle-swell-1784281015683/home_74105681.html?v=2026-07-19T09%3A38%3A37.836Z"
+  },
+  "nexus-landing": {
+    "cover": "design-covers/nexus-landing.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-landing-1784283144229/home_82510736.html?v=2026-07-19T09%3A35%3A33.729Z"
+  },
+  "nexus-core-dashboard": {
+    "cover": "design-covers/nexus-core-dashboard.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-core-dashboard-1784282616399/home_17191746.html?v=2026-07-19T09%3A19%3A09.068Z"
+  },
+  "vision-framework-architect": {
+    "cover": "design-covers/vision-framework-architect.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vision-framework-architect-1784283150394/home_24692584.html?v=2026-07-19T09%3A36%3A05.196Z"
+  },
+  "platform-universe": {
+    "cover": "design-covers/platform-universe.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/platform-universe-1784282652103/home_72202686.html?v=2026-07-19T08%3A49%3A02.919Z"
+  },
+  "modern-intelligent-workspace": {
+    "cover": "design-covers/modern-intelligent-workspace.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/modern-intelligent-workspace-1784282642249/home_32906934.html?v=2026-07-19T09%3A25%3A03.760Z"
+  },
+  "nova-next-gen-intelligence": {
+    "cover": "design-covers/nova-next-gen-intelligence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nova-next-gen-intelligence-1786179577192/home_44896984.html?v=2026-08-09T13%3A42%3A19.537Z"
+  },
+  "technical-brand-geometry": {
+    "cover": "design-covers/technical-brand-geometry.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/technical-brand-geometry-1786260275155/home_43742178.html?v=2026-08-09T07%3A25%3A38.825Z"
+  },
+  "diagnostic-architecture-model-teardown": {
+    "cover": "design-covers/diagnostic-architecture-model-teardown.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/diagnostic-architecture-model-teardown-1786260272522/home_97241419.html?v=2026-08-09T07%3A25%3A38.781Z"
+  },
+  "vertex-dynamic-analytics": {
+    "cover": "design-covers/vertex-dynamic-analytics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vertex-dynamic-analytics-1786179641170/home_41893911.html?v=2026-08-08T09%3A29%3A49.035Z"
+  },
+  "synth-core-omega-protocol": {
+    "cover": "design-covers/synth-core-omega-protocol.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synth-core-omega-protocol-1786179638765/home_13622623.html?v=2026-08-08T09%3A29%3A48.996Z"
+  },
+  "spatial-editorial-system": {
+    "cover": "design-covers/spatial-editorial-system.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/spatial-editorial-system-1786179628575/home_75434923.html?v=2026-08-08T09%3A29%3A48.958Z"
+  },
+  "sentinel-better-business-decisions": {
+    "cover": "design-covers/sentinel-better-business-decisions.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/sentinel-better-business-decisions-1786179609072/home_96227634.html?v=2026-08-08T09%3A29%3A48.889Z"
+  },
+  "shadow-protocol-unit-calibration": {
+    "cover": "design-covers/shadow-protocol-unit-calibration.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/shadow-protocol-unit-calibration-1786179616508/home_41032479.html?v=2026-08-08T09%3A29%3A48.924Z"
+  },
+  "prime": {
+    "cover": "design-covers/prime.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/prime-1786179597940/home_42840319.html?v=2026-08-08T09%3A29%3A48.842Z"
+  },
+  "portfolio-technical-system": {
+    "cover": "design-covers/portfolio-technical-system.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/portfolio-technical-system-1786179590547/home_29952222.html?v=2026-08-08T09%3A29%3A48.807Z"
+  },
+  "ortopiazzolla-frutta-e-verdura-a-parabiago-dal": {
+    "cover": "design-covers/ortopiazzolla-frutta-e-verdura-a-parabiago-dal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ortopiazzolla-frutta-e-verdura-a-parabiago-dal-1786179581277/home_97542180.html?v=2026-08-08T09%3A29%3A48.773Z"
+  },
+  "northline-creative-studio": {
+    "cover": "design-covers/northline-creative-studio.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/northline-creative-studio-1786179566606/home_35151622.html?v=2026-08-08T09%3A29%3A48.704Z"
+  },
+  "northline-architecture-shaped-by-context": {
+    "cover": "design-covers/northline-architecture-shaped-by-context.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/northline-architecture-shaped-by-context-1786179557695/home_69934150.html?v=2026-08-08T09%3A29%3A48.667Z"
+  },
+  "nimbus-ai-streamline-your-team-s-workflows-with-ai": {
+    "cover": "design-covers/nimbus-ai-streamline-your-team-s-workflows-with-ai.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nimbus-ai-streamline-your-team-s-workflows-with-ai-1786179552926/home_32840191.html?v=2026-08-08T09%3A29%3A48.629Z"
+  },
+  "nexus-engineered-for-infinity": {
+    "cover": "design-covers/nexus-engineered-for-infinity.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-engineered-for-infinity-1786179541016/home_80712285.html?v=2026-08-08T09%3A29%3A48.549Z"
+  },
+  "nexus-architecture": {
+    "cover": "design-covers/nexus-architecture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-architecture-1786179524867/home_15940630.html?v=2026-08-08T09%3A29%3A48.474Z"
+  },
+  "nexus-digital-studio": {
+    "cover": "design-covers/nexus-digital-studio.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-digital-studio-1786179531770/home_64651133.html?v=2026-08-08T09%3A29%3A48.510Z"
+  },
+  "nexura-intelligent-orchestration": {
+    "cover": "design-covers/nexura-intelligent-orchestration.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexura-intelligent-orchestration-1786179517359/home_43638392.html?v=2026-08-08T09%3A29%3A48.434Z"
+  },
+  "nexus-interface-builder": {
+    "cover": "design-covers/nexus-interface-builder.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-interface-builder-1786179543651/home_42231936.html?v=2026-08-08T09%3A29%3A48.589Z"
+  },
+  "lumina-strategic-direction": {
+    "cover": "design-covers/lumina-strategic-direction.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-strategic-direction-1786179510960/home_27546732.html?v=2026-08-08T09%3A29%3A48.398Z"
+  },
+  "lumina-modern-furniture": {
+    "cover": "design-covers/lumina-modern-furniture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-modern-furniture-1786179504319/home_43108688.html?v=2026-08-08T09%3A29%3A48.354Z"
+  },
+  "lumina-digital-ecosystems": {
+    "cover": "design-covers/lumina-digital-ecosystems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-digital-ecosystems-1786179499161/home_31292540.html?v=2026-08-08T09%3A29%3A45.525Z"
+  },
+  "imprint-press-offset-risograph": {
+    "cover": "design-covers/imprint-press-offset-risograph.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/imprint-press-offset-risograph-1786179483202/home_28671687.html?v=2026-08-08T09%3A29%3A45.451Z"
+  },
+  "lexicon-for-creators": {
+    "cover": "design-covers/lexicon-for-creators.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lexicon-for-creators-1786179490493/home_74790000.html?v=2026-08-08T09%3A29%3A45.487Z"
+  },
+  "glassblown-neon-works-deptford": {
+    "cover": "design-covers/glassblown-neon-works-deptford.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/glassblown-neon-works-deptford-1786179475766/home_26883133.html?v=2026-08-08T09%3A29%3A45.416Z"
+  },
+  "craft-designers-who-leveled-up": {
+    "cover": "design-covers/craft-designers-who-leveled-up.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/craft-designers-who-leveled-up-1786179470698/home_60894261.html?v=2026-08-08T09%3A29%3A45.381Z"
+  },
+  "coinara-trade-save-and-grow": {
+    "cover": "design-covers/coinara-trade-save-and-grow.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/coinara-trade-save-and-grow-1786179464242/home_55430922.html?v=2026-08-08T09%3A29%3A45.344Z"
+  },
+  "cane-crown-murano-glass": {
+    "cover": "design-covers/cane-crown-murano-glass.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cane-crown-murano-glass-1786179448188/home_00712490.html?v=2026-08-08T09%3A29%3A45.274Z"
+  },
+  "charting-uncharted-galaxies": {
+    "cover": "design-covers/charting-uncharted-galaxies.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/charting-uncharted-galaxies-1786179455098/home_24173329.html?v=2026-08-08T09%3A29%3A45.308Z"
+  },
+  "campaign-engine-agency-remix": {
+    "cover": "design-covers/campaign-engine-agency-remix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/campaign-engine-agency-remix-1786179442444/home_79659367.html?v=2026-08-08T09%3A29%3A45.237Z"
+  },
+  "autonomous-systems-engine": {
+    "cover": "design-covers/autonomous-systems-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/autonomous-systems-engine-1786179432023/home_97233955.html?v=2026-08-08T09%3A29%3A45.163Z"
+  },
+  "axiom-payment-operations": {
+    "cover": "design-covers/axiom-payment-operations.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/axiom-payment-operations-1786179436986/home_39222601.html?v=2026-08-08T09%3A29%3A45.200Z"
+  },
+  "aura-intelligent-hub": {
+    "cover": "design-covers/aura-intelligent-hub.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-intelligent-hub-1786179427698/home_49760027.html?v=2026-08-08T09%3A29%3A45.119Z"
+  },
+  "aura-architecting-digital-frontiers": {
+    "cover": "design-covers/aura-architecting-digital-frontiers.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-architecting-digital-frontiers-1786179420869/home_49619157.html?v=2026-08-08T09%3A29%3A45.081Z"
+  },
+  "apogee-eq-prime-orrery-features": {
+    "cover": "design-covers/apogee-eq-prime-orrery-features.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/apogee-eq-prime-orrery-features-1786179418666/home_39796839.html?v=2026-08-08T09%3A29%3A45.035Z"
+  },
+  "aevora-longevity-infrastructure-advisory": {
+    "cover": "design-covers/aevora-longevity-infrastructure-advisory.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aevora-longevity-infrastructure-advisory-1786179409019/home_31562583.html?v=2026-08-08T09%3A29%3A44.992Z"
+  },
+  "aether-the-new-frontier": {
+    "cover": "design-covers/aether-the-new-frontier.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-the-new-frontier-1786179402816/home_78453707.html?v=2026-08-08T09%3A29%3A44.958Z"
+  },
+  "aethel-forge": {
+    "cover": "design-covers/aethel-forge.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethel-forge-1786179399148/home_09004264.html?v=2026-08-08T09%3A29%3A44.915Z"
+  },
+  "stellar-nova-cathode-terminal-boot-sequence": {
+    "cover": "design-covers/stellar-nova-cathode-terminal-boot-sequence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/stellar-nova-cathode-terminal-boot-sequence-1786179141592/home_56963999.html?v=2026-08-08T09%3A29%3A44.804Z"
+  },
+  "stochastic-dither-form-engine": {
+    "cover": "design-covers/stochastic-dither-form-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/stochastic-dither-form-engine-1786179143892/home_44011201.html?v=2026-08-08T09%3A29%3A44.840Z"
+  },
+  "spectral-dynamics-dispersion-matrix": {
+    "cover": "design-covers/spectral-dynamics-dispersion-matrix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/spectral-dynamics-dispersion-matrix-1786179132218/home_06129185.html?v=2026-08-08T09%3A29%3A40.158Z"
+  },
+  "absolute-execution": {
+    "cover": "design-covers/absolute-execution.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/absolute-execution-1786179393787/home_51178951.html?v=2026-08-08T09%3A29%3A44.878Z"
+  },
+  "omnistack-animated-opener": {
+    "cover": "design-covers/omnistack-animated-opener.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/omnistack-animated-opener-1786179130169/home_18787364.html?v=2026-08-08T09%3A29%3A40.119Z"
+  },
+  "nxa-decentralized-ai-compute-protocol": {
+    "cover": "design-covers/nxa-decentralized-ai-compute-protocol.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nxa-decentralized-ai-compute-protocol-1786179123574/home_30554437.html?v=2026-08-08T09%3A29%3A40.076Z"
+  },
+  "nexus-vision-logic": {
+    "cover": "design-covers/nexus-vision-logic.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-vision-logic-1786179118509/home_51466289.html?v=2026-08-08T09%3A29%3A40.040Z"
+  },
+  "nexus-neural-synchrony": {
+    "cover": "design-covers/nexus-neural-synchrony.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-neural-synchrony-1786179110034/home_73911218.html?v=2026-08-08T09%3A29%3A39.997Z"
+  },
+  "neurovox-neural-audio-engine": {
+    "cover": "design-covers/neurovox-neural-audio-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/neurovox-neural-audio-engine-1786179105334/home_79941475.html?v=2026-08-08T09%3A29%3A39.958Z"
+  },
+  "kelvin-rowe-see-the-air-move": {
+    "cover": "design-covers/kelvin-rowe-see-the-air-move.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/kelvin-rowe-see-the-air-move-1786179092316/home_37975380.html?v=2026-08-08T09%3A29%3A39.885Z"
+  },
+  "master-strategy": {
+    "cover": "design-covers/master-strategy.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/master-strategy-1786179099310/home_54172200.html?v=2026-08-08T09%3A29%3A39.920Z"
+  },
+  "holdfast-regenerative-kelp-accounting": {
+    "cover": "design-covers/holdfast-regenerative-kelp-accounting.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/holdfast-regenerative-kelp-accounting-1786179072924/home_73562964.html?v=2026-08-08T09%3A29%3A39.780Z"
+  },
+  "immersive-experience": {
+    "cover": "design-covers/immersive-experience.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/immersive-experience-1786179086075/home_65807830.html?v=2026-08-08T09%3A29%3A39.851Z"
+  },
+  "elias-thorne-interface-architect": {
+    "cover": "design-covers/elias-thorne-interface-architect.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/elias-thorne-interface-architect-1786179060500/home_78562456.html?v=2026-08-08T09%3A29%3A39.711Z"
+  },
+  "ignis-crimson-salt-flats-of-sol": {
+    "cover": "design-covers/ignis-crimson-salt-flats-of-sol.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ignis-crimson-salt-flats-of-sol-1786179080892/home_70730290.html?v=2026-08-08T09%3A29%3A39.816Z"
+  },
+  "fulcrum-edge-compute-infrastructure": {
+    "cover": "design-covers/fulcrum-edge-compute-infrastructure.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/fulcrum-edge-compute-infrastructure-1786179067454/home_47517262.html?v=2026-08-08T09%3A29%3A39.745Z"
+  },
+  "auralis-neural-audio-engine": {
+    "cover": "design-covers/auralis-neural-audio-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/auralis-neural-audio-engine-1786179052433/home_76129433.html?v=2026-08-08T09%3A29%3A39.642Z"
+  },
+  "bend-motion-sequence": {
+    "cover": "design-covers/bend-motion-sequence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/bend-motion-sequence-1786179056700/home_11743254.html?v=2026-08-08T09%3A29%3A39.676Z"
+  },
+  "aura-automated-scroll-n": {
+    "cover": "design-covers/aura-automated-scroll-n.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-automated-scroll-n-1786179043667/home_52713234.html?v=2026-08-08T09%3A29%3A39.562Z"
+  },
+  "aura-synthesis-simulation": {
+    "cover": "design-covers/aura-synthesis-simulation.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-synthesis-simulation-1786179048284/home_88696317.html?v=2026-08-08T09%3A29%3A39.603Z"
+  },
+  "agent-ui-sentinel-react": {
+    "cover": "design-covers/agent-ui-sentinel-react.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/agent-ui-sentinel-react-1786179038097/home_66900905.html?v=2026-08-08T09%3A29%3A39.526Z"
+  },
+  "aether-chronos-artifact": {
+    "cover": "design-covers/aether-chronos-artifact.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-chronos-artifact-1786179032684/home_73389152.html?v=2026-08-08T09%3A29%3A39.489Z"
+  },
+  "nexus-ready-player-one": {
+    "cover": "design-covers/nexus-ready-player-one.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-ready-player-one-1784278808845/home_43020992.html?v=2026-08-05T05%3A22%3A48.923Z"
+  },
+  "aethel-adaptive-edge-infrastructure": {
+    "cover": "design-covers/aethel-adaptive-edge-infrastructure.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethel-adaptive-edge-infrastructure-1786179029929/home_68167078.html?v=2026-08-08T09%3A29%3A39.440Z"
+  },
+  "aesthetic-synthesis": {
+    "cover": "design-covers/aesthetic-synthesis.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aesthetic-synthesis-1784282115714/home_90823439.html?v=2026-08-03T06%3A11%3A19.177Z"
+  },
+  "aethra-titan-frontier-2": {
+    "cover": "design-covers/aethra-titan-frontier-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethra-titan-frontier-1784281480510/home_06099838.html?v=2026-07-30T12%3A04%3A28.125Z"
+  },
+  "zenith": {
+    "cover": "design-covers/zenith.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/zenith-1784281520391/home_35272638.html?v=2026-08-03T06%3A09%3A45.511Z"
+  },
+  "aura-fluid-dynamics-engine": {
+    "cover": "design-covers/aura-fluid-dynamics-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-fluid-dynamics-engine-1784281035646/home_88028782.html?v=2026-08-09T15%3A15%3A35.107Z"
+  },
+  "vanguard-premium-apparel": {
+    "cover": "design-covers/vanguard-premium-apparel.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vanguard-premium-apparel-1784281540923/home_73018671.html?v=2026-08-10T08%3A19%3A10.287Z"
+  },
+  "technical-terminal-dark": {
+    "cover": "design-covers/technical-terminal-dark.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/technical-terminal-dark-1784278630972/home_96190779.html?v=2026-07-30T11%3A45%3A11.317Z"
+  },
+  "lumen-atelier": {
+    "cover": "design-covers/lumen-atelier.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumen-atelier-1784281429863/home_93292380.html?v=2026-07-30T12%3A04%3A17.313Z"
+  },
+  "novaflow-design": {
+    "cover": "design-covers/novaflow-design.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/novaflow-design-1784281549713/home_96952927.html?v=2026-07-19T14%3A55%3A10.708Z"
+  },
+  "aether-digital-artifacts": {
+    "cover": "design-covers/aether-digital-artifacts.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-digital-artifacts-1784281444589/home_62822898.html?v=2026-07-19T14%3A44%3A27.229Z"
+  },
+  "telemetry-interface": {
+    "cover": "design-covers/telemetry-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/telemetry-interface-1784280828128/home_95939614.html?v=2026-07-19T10%3A22%3A13.161Z"
+  },
+  "brand-experience": {
+    "cover": "design-covers/brand-experience.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/brand-experience-1784280806331/home_46546586.html?v=2026-07-19T10%3A09%3A38.031Z"
+  },
+  "testimonials-section": {
+    "cover": "design-covers/testimonials-section.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/testimonials-section-1784281121755/home_24374762.html?v=2026-07-19T10%3A03%3A47.758Z"
+  },
+  "studio-spatial-interfaces": {
+    "cover": "design-covers/studio-spatial-interfaces.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/studio-spatial-interfaces-1784280963168/home_38367460.html?v=2026-07-19T10%3A02%3A14.927Z"
+  },
+  "dynamic-signal-orchestration": {
+    "cover": "design-covers/dynamic-signal-orchestration.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/dynamic-signal-orchestration-1784281048112/home_24100564.html?v=2026-07-19T09%3A53%3A36.822Z"
+  },
+  "integration-ecosystem": {
+    "cover": "design-covers/integration-ecosystem.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/integration-ecosystem-1784281018820/home_65088419.html?v=2026-07-19T09%3A40%3A54.595Z"
+  },
+  "arena-status": {
+    "cover": "design-covers/arena-status.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/arena-status-1784283140514/home_47872528.html?v=2026-07-19T09%3A35%3A13.219Z"
+  },
+  "future-workplace": {
+    "cover": "design-covers/future-workplace.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/future-workplace-1784281524632/home_25194334.html?v=2026-07-17T09%3A50%3A03.794Z"
+  },
+  "aether-shader": {
+    "cover": "design-covers/aether-shader.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-shader-1784278547212/home_44561125.html?v=2026-08-03T02%3A35%3A36.653Z"
+  },
+  "marcus": {
+    "cover": "design-covers/marcus.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/marcus-1784281488825/home_04988490.html?v=2026-08-03T06%3A11%3A33.611Z"
+  },
+  "nathansmith": {
+    "cover": "design-covers/nathansmith.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nathansmith-1786274869956/home_11457516.html?v=2026-08-09T15%3A14%3A04.609Z"
+  },
+  "portfolio-taylor-reed": {
+    "cover": "design-covers/portfolio-taylor-reed.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/portfolio-taylor-reed-1784282522700/home_26233718.html?v=2026-07-30T14%3A00%3A20.717Z"
+  },
+  "julian-mercer-designer-developer": {
+    "cover": "design-covers/julian-mercer-designer-developer.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/julian-mercer-designer-developer-1784282084846/home_97996256.html?v=2026-07-30T12%3A03%3A44.500Z"
+  },
+  "studio-spatial-interfaces-2": {
+    "cover": "design-covers/studio-spatial-interfaces-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/studio-spatial-interfaces-1784281021544/home_76269038.html?v=2026-07-19T09%3A41%3A19.998Z"
+  },
+  "v0-dev": {
+    "cover": "design-covers/v0-dev.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/v0-dev-1784478148795/home_05725823.html?v=2026-07-30T11%3A28%3A55.544Z"
+  },
+  "trusted-by-engineers": {
+    "cover": "design-covers/trusted-by-engineers.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/trusted-by-engineers-1784281243738/home_35922398.html?v=2026-08-09T10%3A14%3A51.093Z"
+  },
+  "technical-terminal": {
+    "cover": "design-covers/technical-terminal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/technical-terminal-1784278607791/home_88474424.html?v=2026-08-04T03%3A04%3A57.823Z"
+  },
+  "the-botanist-rare-specimens": {
+    "cover": "design-covers/the-botanist-rare-specimens.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/the-botanist-rare-specimens-1784282235851/home_93515885.html?v=2026-07-30T12%3A05%3A56.597Z"
+  },
+  "ship-faster-sync-github-workspace": {
+    "cover": "design-covers/ship-faster-sync-github-workspace.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ship-faster-sync-github-workspace-1784282639273/home_37600159.html?v=2026-07-30T11%3A38%3A26.055Z"
+  },
+  "helio-core-signal-diagnostics": {
+    "cover": "design-covers/helio-core-signal-diagnostics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/helio-core-signal-diagnostics-1784281347339/home_09047859.html?v=2026-07-30T11%3A34%3A36.001Z"
+  },
+  "api-landing-page": {
+    "cover": "design-covers/api-landing-page.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/api-landing-page-1784282655784/home_04400249.html?v=2026-07-19T10%3A32%3A55.094Z"
+  },
+  "quantum-core-diagnostics-22": {
+    "cover": "design-covers/quantum-core-diagnostics-22.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/quantum-core-diagnostics-22-1784280941380/home_84124053.html?v=2026-07-19T09%3A55%3A56.794Z"
+  },
+  "creator": {
+    "cover": "design-covers/creator.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/creator-1784282782463/home_85599392.html?v=2026-07-30T11%3A36%3A30.963Z"
+  },
+  "brandbase-studio-presentation-mockup": {
+    "cover": "design-covers/brandbase-studio-presentation-mockup.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/brandbase-studio-presentation-mockup-1784282266156/home_21182447.html?v=2026-07-19T14%3A54%3A09.288Z"
+  },
+  "mintlify": {
+    "cover": "design-covers/mintlify.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/mintlify-1784478230175/home_88309475.html?v=2026-07-30T11%3A28%3A21.365Z"
+  },
+  "tally": {
+    "cover": "design-covers/tally.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/tally-1784478753825/home_34457311.html?v=2026-07-19T16%3A58%3A09.014Z"
+  },
+  "framer": {
+    "cover": "design-covers/framer.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/framer-1784478660957/home_72075082.html?v=2026-07-19T16%3A57%3A47.201Z"
+  },
+  "supabase": {
+    "cover": "design-covers/supabase.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/supabase-1784478233281/home_23796451.html?v=2026-08-10T08%3A13%3A48.808Z"
+  },
+  "vecel": {
+    "cover": "design-covers/vecel.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vecel-1784478226550/home_78123953.html?v=2026-07-19T17%3A31%3A24.644Z"
+  },
+  "notion": {
+    "cover": "design-covers/notion.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/notion-1784283262826/home_91389618.html?v=2026-08-03T05%3A37%3A05.342Z"
+  },
+  "ollio-automate-your-life": {
+    "cover": "design-covers/ollio-automate-your-life.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ollio-automate-your-life-1784282109286/home_19813080.html?v=2026-07-30T12%3A07%3A00.543Z"
+  },
+  "quantum-core-diagnostics": {
+    "cover": "design-covers/quantum-core-diagnostics.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/quantum-core-diagnostics-1784281358106/home_75405593.html?v=2026-07-30T11%3A34%3A06.722Z"
+  },
+  "matrix-harmonization-interface": {
+    "cover": "design-covers/matrix-harmonization-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/matrix-harmonization-interface-1784281477747/home_93935891.html?v=2026-07-19T14%3A39%3A33.887Z"
+  },
+  "dimensional-interface-schema": {
+    "cover": "design-covers/dimensional-interface-schema.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/dimensional-interface-schema-1784282438546/home_67875069.html?v=2026-07-19T10%3A28%3A09.967Z"
+  },
+  "airbab": {
+    "cover": "design-covers/airbab.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/airbab-1784283251047/home_39393008.html?v=2026-08-02T07%3A01%3A28.540Z"
+  },
+  "aether-node-network": {
+    "cover": "design-covers/aether-node-network.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-node-network-1784278678396/home_88459565.html?v=2026-08-03T02%3A34%3A04.070Z"
+  },
+  "lesson-loom-signal-scanner": {
+    "cover": "design-covers/lesson-loom-signal-scanner.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lesson-loom-signal-scanner-1784281368679/home_86806343.html?v=2026-07-30T11%3A23%3A56.691Z"
+  },
+  "zenith-hardware-architecture-console": {
+    "cover": "design-covers/zenith-hardware-architecture-console.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/zenith-hardware-architecture-console-1784281365096/home_93433391.html?v=2026-07-19T15%3A05%3A45.718Z"
+  },
+  "vellichor-studio-access": {
+    "cover": "design-covers/vellichor-studio-access.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vellichor-studio-access-1786179880084/home_05588919.html?v=2026-08-08T09%3A29%3A52.604Z"
+  },
+  "telemetry-dashboard": {
+    "cover": "design-covers/telemetry-dashboard.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/telemetry-dashboard-1786179875520/home_71516020.html?v=2026-08-08T09%3A29%3A52.568Z"
+  },
+  "strategic-roadmap": {
+    "cover": "design-covers/strategic-roadmap.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/strategic-roadmap-1786179866902/home_59946971.html?v=2026-08-08T09%3A29%3A52.524Z"
+  },
+  "registration-platform": {
+    "cover": "design-covers/registration-platform.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/registration-platform-1786179860340/home_00298560.html?v=2026-08-08T09%3A29%3A52.488Z"
+  },
+  "payment-interface": {
+    "cover": "design-covers/payment-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/payment-interface-1786179858220/home_36119219.html?v=2026-08-08T09%3A29%3A52.449Z"
+  },
+  "nexus-interface": {
+    "cover": "design-covers/nexus-interface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-interface-1786179846511/home_81659207.html?v=2026-08-08T09%3A29%3A52.373Z"
+  },
+  "nexus-next-generation-intelligence": {
+    "cover": "design-covers/nexus-next-generation-intelligence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-next-generation-intelligence-1786179849617/home_40274435.html?v=2026-08-08T09%3A29%3A52.411Z"
+  },
+  "nexus-autonomous-agent": {
+    "cover": "design-covers/nexus-autonomous-agent.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-autonomous-agent-1786179839902/home_96918581.html?v=2026-08-08T09%3A29%3A52.334Z"
+  },
+  "endgrain-type-endgrain-grotesk": {
+    "cover": "design-covers/endgrain-type-endgrain-grotesk.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/endgrain-type-endgrain-grotesk-1786179807843/home_97848947.html?v=2026-08-08T09%3A29%3A52.191Z"
+  },
+  "mentorfy-infinite-transformation": {
+    "cover": "design-covers/mentorfy-infinite-transformation.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/mentorfy-infinite-transformation-1786179827089/home_98599643.html?v=2026-08-08T09%3A29%3A52.298Z"
+  },
+  "lumina-edge-network": {
+    "cover": "design-covers/lumina-edge-network.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-edge-network-1786179818809/home_91811632.html?v=2026-08-08T09%3A29%3A52.262Z"
+  },
+  "lumina-brand-guidelines": {
+    "cover": "design-covers/lumina-brand-guidelines.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-brand-guidelines-1786179813608/home_69890824.html?v=2026-08-08T09%3A29%3A52.227Z"
+  },
+  "coki-fonts-turn-lettering-into-a-typeface": {
+    "cover": "design-covers/coki-fonts-turn-lettering-into-a-typeface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/coki-fonts-turn-lettering-into-a-typeface-1786179797587/home_91204518.html?v=2026-08-08T09%3A29%3A52.150Z"
+  },
+  "authentication-architecture": {
+    "cover": "design-covers/authentication-architecture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/authentication-architecture-1786179792542/home_43857440.html?v=2026-08-08T09%3A29%3A49.073Z"
+  },
+  "prairiesignal-field-dossier-split-index": {
+    "cover": "design-covers/prairiesignal-field-dossier-split-index.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/prairiesignal-field-dossier-split-index-1784282449905/home_71726739.html?v=2026-07-19T10%3A35%3A51.890Z"
+  },
+  "cleopatra-ultimate-lp-markets-partner": {
+    "cover": "design-covers/cleopatra-ultimate-lp-markets-partner.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cleopatra-ultimate-lp-markets-partner-1784282417973/home_89715961.html?v=2026-07-19T10%3A27%3A06.596Z"
+  },
+  "react-bits-gridscan": {
+    "cover": "design-covers/react-bits-gridscan.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/react-bits-gridscan-1784280841150/home_26201348.html?v=2026-07-19T10%3A24%3A34.699Z"
+  },
+  "nova-haven-intelligent-residence": {
+    "cover": "design-covers/nova-haven-intelligent-residence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nova-haven-intelligent-residence-1784282253977/home_49882739.html?v=2026-07-19T10%3A25%3A54.170Z"
+  },
+  "synthesis-autonomous-systems": {
+    "cover": "design-covers/synthesis-autonomous-systems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synthesis-autonomous-systems-1784278762859/home_07592612.html?v=2026-07-19T10%3A09%3A21.242Z"
+  },
+  "ethereal-minimal-system": {
+    "cover": "design-covers/ethereal-minimal-system.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/ethereal-minimal-system-1784281203205/home_35100527.html?v=2026-07-19T10%3A04%3A04.661Z"
+  },
+  "engage-portal": {
+    "cover": "design-covers/engage-portal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/engage-portal-1784281234361/home_51099103.html?v=2026-07-19T10%3A04%3A47.201Z"
+  },
+  "interactive-honor-system": {
+    "cover": "design-covers/interactive-honor-system.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/interactive-honor-system-1784281115332/home_24976204.html?v=2026-07-19T09%3A59%3A32.745Z"
+  },
+  "innovation-lab-connected-security": {
+    "cover": "design-covers/innovation-lab-connected-security.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/innovation-lab-connected-security-1784280959335/home_56724000.html?v=2026-07-19T10%3A01%3A54.960Z"
+  },
+  "aethra-titan-frontier": {
+    "cover": "design-covers/aethra-titan-frontier.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethra-titan-frontier-1784280933756/home_58210047.html?v=2026-07-19T09%3A54%3A22.653Z"
+  },
+  "aether-nexus-core-matrix": {
+    "cover": "design-covers/aether-nexus-core-matrix.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-nexus-core-matrix-1784283146972/home_80178588.html?v=2026-07-19T09%3A35%3A56.362Z"
+  },
+  "auraglow-adaptive-dermal-intelligence-design": {
+    "cover": "design-covers/auraglow-adaptive-dermal-intelligence-design.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/auraglow-adaptive-dermal-intelligence-design-1784280820664/home_07336181.html?v=2026-08-02T17%3A51%3A57.645Z"
+  },
+  "synth-core-systems": {
+    "cover": "design-covers/synth-core-systems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/synth-core-systems-1784281271222/home_89742192.html?v=2026-08-10T06%3A42%3A09.729Z"
+  },
+  "react-bits-ride-the-waves": {
+    "cover": "design-covers/react-bits-ride-the-waves.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/react-bits-ride-the-waves-1784280834272/home_87120989.html?v=2026-08-10T08%3A07%3A57.157Z"
+  },
+  "sacred-id-digital-architecture": {
+    "cover": "design-covers/sacred-id-digital-architecture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/sacred-id-digital-architecture-1784282122578/home_20062903.html?v=2026-08-09T10%3A12%3A54.875Z"
+  },
+  "accelerating-digital-growth": {
+    "cover": "design-covers/accelerating-digital-growth.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/accelerating-digital-growth-1784281240994/home_22478166.html?v=2026-08-09T10%3A12%3A12.718Z"
+  },
+  "aether-architecture": {
+    "cover": "design-covers/aether-architecture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-architecture-1784282269760/home_17509942.html?v=2026-08-09T09%3A43%3A37.050Z"
+  },
+  "cole-martin-product-designer": {
+    "cover": "design-covers/cole-martin-product-designer.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cole-martin-product-designer-1784282112427/home_46820429.html?v=2026-08-04T08%3A48%3A25.515Z"
+  },
+  "resilient-logical-frameworks": {
+    "cover": "design-covers/resilient-logical-frameworks.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/resilient-logical-frameworks-1784282246690/home_83478394.html?v=2026-07-30T14%3A04%3A20.860Z"
+  },
+  "nova-fluid-dimensions": {
+    "cover": "design-covers/nova-fluid-dimensions.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nova-fluid-dimensions-1784281567992/home_30192645.html?v=2026-07-30T12%3A08%3A22.694Z"
+  },
+  "cognitive-uplink-terminal": {
+    "cover": "design-covers/cognitive-uplink-terminal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cognitive-uplink-terminal-1784281371585/home_17643677.html?v=2026-07-30T11%3A33%3A16.669Z"
+  },
+  "omni-platform": {
+    "cover": "design-covers/omni-platform.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/omni-platform-1784280967487/home_09059892.html?v=2026-07-19T14%3A59%3A07.792Z"
+  },
+  "iria-sentient-voice-infrastructure": {
+    "cover": "design-covers/iria-sentient-voice-infrastructure.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/iria-sentient-voice-infrastructure-1784281484656/home_29875862.html?v=2026-07-19T14%3A37%3A43.671Z"
+  },
+  "axiom-engineered-presence": {
+    "cover": "design-covers/axiom-engineered-presence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/axiom-engineered-presence-1784281559813/home_06181827.html?v=2026-07-19T14%3A27%3A31.866Z"
+  },
+  "lumina-designing-clarity": {
+    "cover": "design-covers/lumina-designing-clarity.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-designing-clarity-1784281563818/home_60797114.html?v=2026-07-19T14%3A24%3A44.258Z"
+  },
+  "aura-a-mindful-companion-for-your-spiritual-journey": {
+    "cover": "design-covers/aura-a-mindful-companion-for-your-spiritual-journey.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aura-a-mindful-companion-for-your-spiritual-journey-1784282541230/home_58841804.html?v=2026-07-19T10%3A37%3A13.731Z"
+  },
+  "telemetry-interface-2": {
+    "cover": "design-covers/telemetry-interface-2.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/telemetry-interface-2-1784280831306/home_56138967.html?v=2026-07-19T10%3A22%3A33.429Z"
+  },
+  "volumetric-swells": {
+    "cover": "design-covers/volumetric-swells.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/volumetric-swells-1784282250441/home_43144765.html?v=2026-07-19T10%3A24%3A30.953Z"
+  },
+  "futuristic-architectural-developments": {
+    "cover": "design-covers/futuristic-architectural-developments.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/futuristic-architectural-developments-1784282441955/home_93418435.html?v=2026-07-19T10%3A28%3A28.707Z"
+  },
+  "fluxion-fluid-dynamics-component": {
+    "cover": "design-covers/fluxion-fluid-dynamics-component.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/fluxion-fluid-dynamics-component-1784281041509/home_62815007.html?v=2026-07-19T10%3A19%3A07.334Z"
+  },
+  "fluidmatrix-procedural-shaders-design": {
+    "cover": "design-covers/fluidmatrix-procedural-shaders-design.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/fluidmatrix-procedural-shaders-design-1784280812695/home_20896916.html?v=2026-07-19T10%3A14%3A04.558Z"
+  },
+  "motion-sequence-asset-sync": {
+    "cover": "design-covers/motion-sequence-asset-sync.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/motion-sequence-asset-sync-1784280816305/home_46593550.html?v=2026-07-19T10%3A14%3A35.277Z"
+  },
+  "neptune-base-seamless-subsea-sync": {
+    "cover": "design-covers/neptune-base-seamless-subsea-sync.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/neptune-base-seamless-subsea-sync-1784280824485/home_64107335.html?v=2026-07-19T10%3A18%3A14.217Z"
+  },
+  "lumina-cognitive-engine": {
+    "cover": "design-covers/lumina-cognitive-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lumina-cognitive-engine-1784281267524/home_65782832.html?v=2026-07-19T10%3A17%3A10.788Z"
+  },
+  "architecture-flow-remixed": {
+    "cover": "design-covers/architecture-flow-remixed.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/architecture-flow-remixed-1784281263922/home_15222431.html?v=2026-07-19T10%3A13%3A37.985Z"
+  },
+  "vertex-command-surface": {
+    "cover": "design-covers/vertex-command-surface.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vertex-command-surface-1784280809115/home_88617036.html?v=2026-07-19T10%3A12%3A46.376Z"
+  },
+  "a-e-t-h-e-r-interactive-interfaces": {
+    "cover": "design-covers/a-e-t-h-e-r-interactive-interfaces.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/a-e-t-h-e-r-interactive-interfaces-1784281247101/home_66560234.html?v=2026-07-19T10%3A12%3A39.673Z"
+  },
+  "platform-core-preview": {
+    "cover": "design-covers/platform-core-preview.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/platform-core-preview-1784281237677/home_53189649.html?v=2026-07-19T10%3A05%3A34.530Z"
+  },
+  "nexus-intelligent-data-routing": {
+    "cover": "design-covers/nexus-intelligent-data-routing.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nexus-intelligent-data-routing-1784280956039/home_67599960.html?v=2026-07-19T10%3A01%3A11.534Z"
+  },
+  "partner-testimonials": {
+    "cover": "design-covers/partner-testimonials.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/partner-testimonials-1784281118032/home_27114196.html?v=2026-07-19T10%3A03%3A22.370Z"
+  },
+  "aether-green-edition": {
+    "cover": "design-covers/aether-green-edition.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-green-edition-1784280952994/home_10650571.html?v=2026-07-19T10%3A00%3A56.612Z"
+  },
+  "prism-convergences": {
+    "cover": "design-covers/prism-convergences.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/prism-convergences-1784280944552/home_35734582.html?v=2026-07-19T09%3A57%3A13.070Z"
+  },
+  "instance-identity-protocol": {
+    "cover": "design-covers/instance-identity-protocol.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/instance-identity-protocol-1784281374697/home_95627577.html?v=2026-07-19T09%3A56%3A49.935Z"
+  },
+  "interplanetary-network-architecture": {
+    "cover": "design-covers/interplanetary-network-architecture.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/interplanetary-network-architecture-1784281032268/home_73680870.html?v=2026-07-19T09%3A45%3A38.194Z"
+  },
+  "cal": {
+    "cover": "design-covers/cal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cal-1784478533306/home_44673223.html?v=2026-07-19T16%3A56%3A33.911Z"
+  },
+  "platform": {
+    "cover": "design-covers/platform.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/platform-1784282613004/home_10582605.html?v=2026-07-30T11%3A38%3A11.588Z"
+  },
+  "aether-real-time-telemetry-engine": {
+    "cover": "design-covers/aether-real-time-telemetry-engine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aether-real-time-telemetry-engine-1784281362247/home_95946282.html?v=2026-07-30T11%3A33%3A55.369Z"
+  },
+  "aethel-analytical-intelligence": {
+    "cover": "design-covers/aethel-analytical-intelligence.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aethel-analytical-intelligence-1784282551222/home_81195934.html?v=2026-07-19T10%3A43%3A12.887Z"
+  },
+  "signal-ledger": {
+    "cover": "design-covers/signal-ledger.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/signal-ledger-1784278704551/home_69610342.html?v=2026-07-19T10%3A37%3A57.928Z"
+  },
+  "frovia-berry-landing": {
+    "cover": "design-covers/frovia-berry-landing.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/frovia-berry-landing-1784340104889/home_43511634.html?v=2026-07-19T09%3A06%3A18.717Z"
+  },
+  "lemon-squeezy": {
+    "cover": "design-covers/lemon-squeezy.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/lemon-squeezy-1784478479522/home_98552745.html?v=2026-07-30T11%3A29%3A29.363Z"
+  },
+  "strategic-wealth-architecture-wfg": {
+    "cover": "design-covers/strategic-wealth-architecture-wfg.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/strategic-wealth-architecture-wfg-1784280948426/home_54440835.html?v=2026-08-08T14%3A58%3A05.092Z"
+  },
+  "capital-overview-dashboard": {
+    "cover": "design-covers/capital-overview-dashboard.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/capital-overview-dashboard-1784282645316/home_68038580.html?v=2026-07-30T11%3A38%3A33.256Z"
+  },
+  "nimbus-the-wallet-built-for-everyone": {
+    "cover": "design-covers/nimbus-the-wallet-built-for-everyone.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/nimbus-the-wallet-built-for-everyone-1784282105021/home_32077838.html?v=2026-07-19T14%3A20%3A47.707Z"
+  },
+  "novus-capital-solutions-hero": {
+    "cover": "design-covers/novus-capital-solutions-hero.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/novus-capital-solutions-hero-1784282544787/home_05526197.html?v=2026-07-19T10%3A40%3A50.474Z"
+  },
+  "cognitive-market-systems": {
+    "cover": "design-covers/cognitive-market-systems.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cognitive-market-systems-1784278866392/home_24908096.html?v=2026-07-19T10%3A30%3A49.138Z"
+  },
+  "cinematic-3d-scroll": {
+    "cover": "design-covers/cinematic-3d-scroll.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/cinematic-3d-scroll-1786258615764/home_68203153.html?v=2026-08-09T06%3A58%3A31.372Z"
+  },
+  "spotify-visualiser": {
+    "cover": "design-covers/spotify-visualiser.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/spotify-visualiser-1786258635946/home_52846218.html?v=2026-08-09T06%3A58%3A31.523Z"
+  },
+  "osmo-side-nav-wipe": {
+    "cover": "design-covers/osmo-side-nav-wipe.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/osmo-side-nav-wipe-1786258630652/home_19058818.html?v=2026-08-09T06%3A58%3A31.447Z"
+  },
+  "wavy-cubes": {
+    "cover": "design-covers/wavy-cubes.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/wavy-cubes-1786190159279/home_75007051.html?v=2026-08-09T12%3A04%3A57.393Z"
+  },
+  "carla-trail": {
+    "cover": "design-covers/carla-trail.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/carla-trail-1786258606341/home_82387483.html?v=2026-08-10T07%3A54%3A58.003Z"
+  },
+  "three-html-to-canvas": {
+    "cover": "",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/three-html-to-canvas-1786258638460/home_53121559.html?v=2026-08-09T06%3A58%3A31.558Z",
+    "unavailableReason": "\u539f\u9875\u9762\u79bb\u7ebf\u6e32\u67d3\u4e3a\u7a7a\uff0c\u9700\u8865\u9f50\u4f9d\u8d56"
+  },
+  "css-glitch-effect": {
+    "cover": "design-covers/css-glitch-effect.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/css-glitch-effect-1786189969016/home_01883100.html?v=2026-08-08T11%3A56%3A56.126Z"
+  },
+  "circular-text-effect": {
+    "cover": "design-covers/circular-text-effect.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/circular-text-effect-1786189962802/home_18430164.html?v=2026-08-08T11%3A56%3A56.090Z"
+  },
+  "theodore": {
+    "cover": "design-covers/theodore.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/theodore-1786190149944/home_26929573.html?v=2026-08-08T11%3A56%3A53.061Z"
+  },
+  "pixel-gooey-tooltip": {
+    "cover": "design-covers/pixel-gooey-tooltip.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/pixel-gooey-tooltip-1786190067651/home_02809676.html?v=2026-08-08T11%3A56%3A56.480Z"
+  },
+  "scroll-3d-grid": {
+    "cover": "design-covers/scroll-3d-grid.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/scroll-3d-grid-1786190111887/home_78894336.html?v=2026-08-08T11%3A56%3A56.628Z"
+  },
+  "pixel-transition": {
+    "cover": "design-covers/pixel-transition.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/pixel-transition-1786190075700/home_70649980.html?v=2026-08-08T11%3A56%3A56.514Z"
+  },
+  "emitter-cursor-trail": {
+    "cover": "design-covers/emitter-cursor-trail.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/emitter-cursor-trail-1786189975676/home_54544521.html?v=2026-08-08T11%3A56%3A56.197Z"
+  },
+  "skeleton-fluid-reveal": {
+    "cover": "design-covers/skeleton-fluid-reveal.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/skeleton-fluid-reveal-1786258632203/home_74048737.html?v=2026-08-09T06%3A58%3A31.483Z"
+  },
+  "marquee-menu": {
+    "cover": "design-covers/marquee-menu.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/marquee-menu-1786190038240/home_78173158.html?v=2026-08-08T11%3A56%3A56.354Z"
+  },
+  "infinite-scroll-parallax": {
+    "cover": "design-covers/infinite-scroll-parallax.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/infinite-scroll-parallax-1786190006177/home_94203338.html?v=2026-08-08T11%3A56%3A56.279Z"
+  },
+  "morphing-background-shapes": {
+    "cover": "design-covers/morphing-background-shapes.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/morphing-background-shapes-1786210068261/home_09398918.html?v=2026-08-08T17%3A35%3A45.320Z"
+  },
+  "folding-dom": {
+    "cover": "design-covers/folding-dom.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/folding-dom-1786189978641/home_06787752.html?v=2026-08-08T11%3A56%3A56.237Z"
+  },
+  "xylophone": {
+    "cover": "design-covers/xylophone.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/xylophone-1786258660855/home_55828172.html?v=2026-08-09T06%3A58%3A31.675Z"
+  },
+  "make-way-grid-effect": {
+    "cover": "design-covers/make-way-grid-effect.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/make-way-grid-effect-1786190017668/home_61566456.html?v=2026-08-08T11%3A56%3A56.319Z"
+  },
+  "electric-border": {
+    "cover": "design-covers/electric-border.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/electric-border-1786189974276/home_09362884.html?v=2026-08-08T11%3A56%3A56.161Z"
+  },
+  "breathing-dots": {
+    "cover": "design-covers/breathing-dots.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/breathing-dots-1786189947961/home_53744797.html?v=2026-08-08T11%3A56%3A55.983Z"
+  },
+  "aristidebenoist": {
+    "cover": "",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/aristidebenoist-1786274153357/home_61063514.html?v=2026-08-09T17%3A47%3A43.744Z",
+    "unavailableReason": "\u539f\u9875\u9762\u79bb\u7ebf\u6e32\u67d3\u4e3a\u7a7a\uff0c\u9700\u8865\u9f50\u4f9d\u8d56"
+  },
+  "gregorcollienne": {
+    "cover": "design-covers/gregorcollienne.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/gregorcollienne-1786274192763/home_59678528.html?v=2026-08-09T11%3A20%3A35.302Z"
+  },
+  "card-beam-animation": {
+    "cover": "design-covers/card-beam-animation.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/card-beam-animation-1786189950891/home_01673392.html?v=2026-08-09T08%3A32%3A52.089Z"
+  },
+  "duo": {
+    "cover": "design-covers/duo.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/duo-1786258627723/home_26134309.html?v=2026-08-09T06%3A58%3A31.411Z"
+  },
+  "svg-drums": {
+    "cover": "design-covers/svg-drums.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/svg-drums-1786190142278/home_20827642.html?v=2026-08-08T11%3A56%3A56.702Z"
+  },
+  "record-player": {
+    "cover": "design-covers/record-player.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/record-player-1786190094271/home_35829421.html?v=2026-08-08T11%3A56%3A56.591Z"
+  },
+  "organic-shape-animations": {
+    "cover": "design-covers/organic-shape-animations.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/organic-shape-animations-1786190058483/home_32819803.html?v=2026-08-08T11%3A56%3A56.444Z"
+  },
+  "carnival-spinner": {
+    "cover": "design-covers/carnival-spinner.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/carnival-spinner-1786189955861/home_12992415.html?v=2026-08-08T11%3A56%3A56.052Z"
+  },
+  "the-orbit-featured-studio": {
+    "cover": "design-covers/the-orbit-featured-studio.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/the-orbit-featured-studio-1784281440815/home_53099906.html?v=2026-07-19T14%3A47%3A59.255Z"
+  },
+  "creative-cards": {
+    "cover": "design-covers/creative-cards.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/creative-cards-1784280798475/home_71830604.html?v=2026-07-19T10%3A07%3A49.192Z"
+  },
+  "rapid-layers-animation": {
+    "cover": "design-covers/rapid-layers-animation.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/rapid-layers-animation-1786190087450/home_40919858.html?v=2026-08-08T11%3A56%3A56.551Z"
+  },
+  "webgl-magazine": {
+    "cover": "design-covers/webgl-magazine.jpg",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/webgl-magazine-1786258652113/home_51067773.html"
+  },
+  "vortex-gallery": {
+    "cover": "",
+    "previewUrl": "https://cdn.vechooool.com/template-kits/vortex-gallery-1786258640662/home_88597010.html",
+    "unavailableReason": "\u539f\u9875\u9762\u79bb\u7ebf\u6e32\u67d3\u4e3a\u7a7a\uff0c\u9700\u8865\u9f50\u4f9d\u8d56"
+  }
+}

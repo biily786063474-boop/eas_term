@@ -723,3 +723,10 @@
   color: #c8f0e4;
   background: rgba(94, 201, 168, 0.18);
 }
+
+/* Shared header: controls never compete with the search field for one row. */
+.dict-head{flex-wrap:wrap}
+.dict-head .dict-count,.dict-head .dict-title{white-space:nowrap;flex:none}
+.dict-head .dict-seg{flex:none;white-space:nowrap;display:flex;flex-wrap:nowrap}
+.dict-head .dict-seg button{flex:none;white-space:nowrap;word-break:keep-all}
+.dict-head .dict-search{flex:0 0 100%;width:100%;max-width:100%;min-width:0;box-sizing:border-box}

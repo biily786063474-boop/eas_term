@@ -1,3 +1,4 @@
+import { taskDisplayEnd } from './taskVisibility'
 // 甘特图导航带：7 天全景 + 可拖取景框，选主区看哪一段。
 //
 // 这里是「丝滑」那五条硬要求真正落地的地方，先把道理说清楚，下面的实现都是照这个来的：
@@ -133,7 +134,7 @@ export const GanttNavigator = forwardRef<GanttNavigatorHandle, GanttNavigatorPro
     const aborted = new Array<boolean>(BUCKET_COUNT).fill(false)
     for (const t of tasks) {
       const s = Math.max(t.startAt, panoramaStart)
-      const e = Math.min(t.endAt ?? now, panoramaEnd)
+      const e = Math.min(taskDisplayEnd(t, now), panoramaEnd)
       if (e < panoramaStart || s > panoramaEnd) continue
       const bi0 = Math.max(0, Math.floor((s - panoramaStart) / BUCKET_MS))
       const bi1 = Math.min(BUCKET_COUNT - 1, Math.floor((e - panoramaStart) / BUCKET_MS))
