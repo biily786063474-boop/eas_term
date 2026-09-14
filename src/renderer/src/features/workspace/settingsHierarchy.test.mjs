@@ -2,10 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 const source=fs.readFileSync(new URL('./SettingsPanel.tsx',import.meta.url),'utf8')
-test('MCP entry and body use same dedicated page',()=>{
- const indicator=fs.readFileSync(new URL('./McpIndicator.tsx',import.meta.url),'utf8')
- assert.ok(indicator.includes("tab: 'mcp'"))
+test('titlebar alert opens MCP page; MCP body stays in settings; no permanent MCP/runtime titlebar entries',()=>{
+ const alert=fs.readFileSync(new URL('./TitlebarAlert.tsx',import.meta.url),'utf8')
+ assert.ok(alert.includes("tab: 'mcp'"))
+ assert.ok(alert.includes("tab: 'runtime'"))
  assert.match(source,/tab === 'mcp'[\s\S]*?<McpBody/)
+ const app=fs.readFileSync(new URL('../../App.tsx',import.meta.url),'utf8')
+ assert.ok(!app.includes('<McpIndicator'))
+ assert.ok(!app.includes('<RuntimeCenter'))
+ assert.ok(app.includes('<TitlebarAlert'))
 })
 test('diagnostics move to performance without losing extensions',()=>{
  assert.match(source,/tab === 'perf' && \([\s\S]*?title="诊断日志"/)

@@ -815,18 +815,9 @@ body.dragging-row * {
   color: var(--fg);
   background: var(--accent-soft);
 }
-.titlebar-actions .tb-item.mcp-ind.flash {
-  color: var(--accent);
-  border-color: rgba(var(--accent-rgb), 0.6);
-  background: rgba(var(--accent-rgb), 0.16);
-}
-.titlebar-actions .tb-item.mcp-ind.off {
-  opacity: 0.5;
-  text-decoration: line-through;
-}
-.mcp-ind-count {
-  line-height: 1;
-}
+/* 标题栏临时提示（TitlebarAlert）：只在有任务排队 / MCP 拒调用时出现 */
+.titlebar-actions .tb-item.tb-alert { color: var(--sem-warn); background: rgba(var(--sem-warn-rgb), .12); font-variant-numeric: tabular-nums; }
+.titlebar-actions .tb-item.tb-alert::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--sem-warn); margin-right: 6px; animation: rs-pulse 1.6s ease-in-out infinite; }
 .mcp-pop {
   /* portal 到 body，用 fixed —— 标题栏 overflow:hidden，绝对定位会被裁掉 */
   position: fixed;

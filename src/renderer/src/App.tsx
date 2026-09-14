@@ -1,4 +1,3 @@
-import {RuntimeCenter} from './features/workspace/RuntimeCenter'
 import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
 import { useEffect, useState } from 'react'
 
@@ -10,7 +9,7 @@ import { Sidebar } from './features/workspace/Sidebar'
 import { TabBar } from './features/workspace/TabBar'
 import { TerminalAttention } from './features/workspace/TerminalAttention'
 import { QuotaBar, QuotaBarToggle } from './features/quota/QuotaBar'
-import { McpIndicator } from './features/workspace/McpIndicator'
+import { TitlebarAlert } from './features/workspace/TitlebarAlert'
 import { FootprintPanel } from './features/workspace/FootprintPanel'
 import { SecretsPanel } from './features/workspace/SecretsPanel'
 import { SettingsPanel } from './features/workspace/SettingsPanel'
@@ -397,13 +396,12 @@ export function App(): JSX.Element {
               不然看板模式下「哪个终端在等你」只剩卡片上一个小点 */}
           {viewMode !== 'canvas' && <TerminalAttention />}
           <QuotaBarToggle />
-          <McpIndicator />
+          <TitlebarAlert />
           <DictBubbleToggle />
           {/* 「扩展能力」的按钮搬进设置 →「隐私」了（2026-08-31）。
               这个实例留着只为**一次性的启动提示** —— 它不能跟着搬进设置，
               它的意义就是在你还没想到要去设置里翻的时候拦你一下。 */}
           <FootprintPanel />
-          <RuntimeCenter />
           <SecretsPanel />
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />

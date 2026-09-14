@@ -1,13 +1,10 @@
-// MCP 指示灯 + 调用记录。
+// MCP 调用记录（设置 › MCP 接入那一段）。
 //
-// ── 2026-08-31：记录和开关搬进了设置，标题栏只留那盏灯 ──────────────
-// 用户要「MCP 调用记录放到设置里」。但**这盏灯不能一起搬走** ——
-// 它存在的全部理由是「看得见」：AI 在后台开预览、整理、发通知时，
-// 你得当场知道刚才发生了什么。搬进设置就等于没人看得见了。
-//
-// 所以拆成两半：标题栏留一盏会闪的灯（点它跳到设置 → AI 对话），
-// 记录列表和总开关搬进设置那一栏（McpBody）。
-import { useEffect, useRef, useState } from 'react'
+// ── 2026-08-31：记录和开关搬进了设置，标题栏只留一盏会闪的灯 ──────────
+// ── 2026-09-14：那盏灯也拆了 ──────────────────────────────────────────
+// 用户要标题栏不常驻任何运行态入口。「MCP 关着却有调用被拒」这种真需要当场知道的事，
+// 由 TitlebarAlert.tsx 的临时提示承接（有事才出现）；平时的调用记录来这里看。
+// 文件名没改：SettingsPanel 引的是这里的 McpBody。
 import { useStore } from '../../store'
 
 function ago(ts: number): string {
@@ -15,41 +12,6 @@ function ago(ts: number): string {
   if (d < 60) return `${d}s`
   if (d < 3600) return `${Math.floor(d / 60)}m`
   return `${Math.floor(d / 3600)}h`
-}
-
-export function McpIndicator(): JSX.Element | null {
-  const mcpLog = useStore((s) => s.mcpLog)
-  const mcpEnabled = useStore((s) => s.mcpEnabled)
-  const [flash, setFlash] = useState(false)
-  const lastId = useRef(0)
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  // 新调用进来 → 闪一下（1.2s 后熄）
-  useEffect(() => {
-    const top = mcpLog[0]
-    if (!top || top.id === lastId.current) return
-    lastId.current = top.id
-    setFlash(true)
-    const t = setTimeout(() => setFlash(false), 1200)
-    return () => clearTimeout(t)
-  }, [mcpLog])
-
-  // 从没被调用过、且没关过开关 → 完全不占标题栏空间
-  if (!mcpLog.length && mcpEnabled) return null
-
-  return (
-    <button
-      ref={btnRef}
-      className={`tb-item mcp-ind${flash ? ' flash' : ''}${mcpEnabled ? '' : ' off'}`}
-      data-tip={mcpEnabled ? 'AI 正在通过 MCP 操作画板，点击查看记录' : 'MCP 已关闭，点击查看'}
-      onClick={() =>
-        window.dispatchEvent(new CustomEvent('eas:open-settings', { detail: { tab: 'mcp' } }))
-      }
-    >
-      MCP
-      {!!mcpLog.length && <span className="tb-badge">{mcpLog.length}</span>}
-    </button>
-  )
 }
 
 /** 设置 →「AI 对话」里那一段：总开关 + 调用记录。
