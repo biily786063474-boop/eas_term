@@ -31,7 +31,18 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  })
  let mode:'normal'|'eco'='eco'
  try{mode=runtimeStateStore.read().mode}catch{/* Corrupt state is not overwritten; mode changes must fail visibly. */}
- const reader=createPlatformReader(),controller=createRuntimeController({mode,read:reader.read,now:()=>performance.now(),setTimer:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t},clearTimer:h=>clearTimeout(h as NodeJS.Timeout)})
+ // 标题栏「等待 N」靠推送，不靠渲染层轮询。调度器一变就 200ms 合并一次广播给所有窗口。
+ let waitingTimer: NodeJS.Timeout | undefined
+ const broadcastWaiting = (): void => {
+  if (waitingTimer) return
+  waitingTimer = setTimeout(() => {
+   waitingTimer = undefined
+   const queued = controller.manager.snapshot().queued
+   for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('runtime:waiting', { queued })
+  }, 200)
+  waitingTimer.unref()
+ }
+ const reader=createPlatformReader(),controller=createRuntimeController({mode,read:reader.read,now:()=>performance.now(),setTimer:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t},clearTimer:h=>clearTimeout(h as NodeJS.Timeout),onQueueChange:broadcastWaiting})
  guardedHandle('runtime:setMode',async(event,next:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may change resource mode')
   if(next!=='normal'&&next!=='eco')throw Error('invalid mode')
@@ -46,6 +57,10 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  controller.start()
  app.once('before-quit',()=>controller.dispose())
  app.once('will-quit',()=>sharedServices.shutdown())
+ guardedHandle('runtime:waiting',async event=>{
+  if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read the queue')
+  return { queued: controller.manager.snapshot().queued }
+ })
  guardedHandle('runtime:monitor',async event=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read resource metrics')
   return {...controller.readForControl(),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id)],recent:recentActivity.list(event.sender.id)}

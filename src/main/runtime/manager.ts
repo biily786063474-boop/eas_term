@@ -7,7 +7,7 @@ export interface ManagedWork extends Work {cost:TaskCost}
  * Adapter supplies validated memory bytes; does not guess memory from os.freemem.
  * No IPC, auto-start timer, persisted tasks, secrets or executable strings.
  */
-export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;waitTimeoutMs?:number;maxRunning?:number}){
+export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;waitTimeoutMs?:number;maxRunning?:number;onChange?:()=>void}){
  let mode:ResourceMode=opts.mode??'normal', latest:RuntimeSample|null=null
  const policy=createResourcePolicy(mode),ledger=createResourceLedger()
  const services=new Map<string,{held:boolean;release?:()=>void}>()
@@ -20,7 +20,7 @@ export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;wai
   allow:()=>!enforcement||(metricsAvailable&&startsThisSample<1&&policy.allow(opts.now())),
   // 交互型只在严重压力下等；采样不可用时不能把控制面吊死
   allowInteractive:()=>!enforcement||!metricsAvailable||policy.decision(opts.now()).reason!=='critical-pressure',
-  maxRunning:opts.maxRunning??4,maxQueued:128,waitTimeoutMs:opts.waitTimeoutMs,
+  maxRunning:opts.maxRunning??4,maxQueued:128,waitTimeoutMs:opts.waitTimeoutMs,onChange:opts.onChange,
   acquire:work=>{
    if(!enforcement)return {release(){}} // 闸门失效：空租约（null 会被调度器当成「预算不够、跳过」）
    const cost=costs.get(work.id)

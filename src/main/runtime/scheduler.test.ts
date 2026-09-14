@@ -133,3 +133,18 @@ test('interactive 条目绕过 allow 与 maxRunning，只受 allowInteractive �
  critical=false;s.tick();await i2;assert.deepEqual(ran,['i1','i2'])
  done();await bg
 })
+
+test('onChange：入队、开跑、结束、取消各触发一次，最后一次的 snapshot 队列为空', async () => {
+  let calls = 0
+  const s = createScheduler({ now: () => 0, allow: () => true, maxRunning: 1, maxQueued: 4, onChange: () => { calls++ } })
+  let finish!: () => void
+  const p1 = s.submit({ id: 'a', projectId: 'p', run: () => new Promise<void>((r) => { finish = r }) })
+  const p2 = s.submit({ id: 'b', projectId: 'p', run: async () => {} })
+  assert.equal(s.snapshot().queued, 1)          // a 在跑，b 排队
+  assert.ok(calls >= 3)                          // a 入队、a 开跑、b 入队
+  const before = calls
+  s.cancel('b'); await p2.catch(() => {})
+  assert.ok(calls > before)                      // 取消也算变化
+  finish(); await p1
+  assert.equal(s.snapshot().queued, 0); assert.equal(s.snapshot().running, 0)
+})

@@ -18,6 +18,8 @@ interface Options {
  allow: () => boolean; now: () => number; maxRunning: number; maxQueued: number; waitTimeoutMs?: number
  /** 交互型条目的门：默认恒开。 */
  allowInteractive?: () => boolean
+ /** 队列 / 运行集合任何变化后调用（入队、开跑、结束、拒绝、取消、dispose）。给标题栏「等待 N」用；不传就不调。 */
+ onChange?: () => void
 }
 /** Bounded non-persistent queue foundation. No automatic retries, process kills or timers.
  * Caller ticks on fresh samples; NEVER put a parent job waiting for its nested jobs
@@ -30,7 +32,8 @@ export function createScheduler(opts: Options) {
  const execution=new AsyncLocalStorage<Entry>()
  const queue: Entry[] = [], running = new Map<string, Entry>()
  let disposed = false, pumping = false, lastProject: string | null = null
- const rejectQueued = (index: number, reason: string) => { const [entry]=queue.splice(index,1);entry.reject(new Error(reason)) }
+ const changed = (): void => { try { opts.onChange?.() } catch { /* 观察者的错不能打断调度 */ } }
+ const rejectQueued = (index: number, reason: string) => { const [entry]=queue.splice(index,1);entry.reject(new Error(reason));changed() }
  const pump = (): void => {
   if (disposed || pumping) return
   pumping = true
@@ -76,6 +79,7 @@ export function createScheduler(opts: Options) {
  const backgroundRunning=():number=>{let n=0;for(const e of running.values())if(!e.work.interactive)n++;return n}
  const start=(entry:Entry):void=>{
   running.set(entry.work.id,entry)
+  changed()
   // Reserve synchronously before executing user work or yielding to microtasks.
   void Promise.resolve().then(()=> {
    if(entry.controller.signal.aborted)throw new Error('cancelled')
@@ -86,6 +90,7 @@ export function createScheduler(opts: Options) {
   entry.lease?.release()
   running.delete(entry.work.id)
   if(failed)entry.reject(error);else entry.resolve()
+  changed()
   pump()
  }
  return {
@@ -99,7 +104,7 @@ export function createScheduler(opts: Options) {
    const at=opts.now();if(!Number.isFinite(at))return Promise.reject(new Error('invalid clock'))
    // Snapshot metadata so caller mutation cannot defeat deduplication/release.
    const result=new Promise<void>((resolve,reject)=>queue.push({work:{...work},enqueuedAt:at,controller:new AbortController(),resolve,reject}))
-   pump();return result
+   changed();pump();return result
   },
   tick:pump,
   cancel(id:string):boolean{
@@ -112,6 +117,7 @@ export function createScheduler(opts: Options) {
    disposed=true
    while(queue.length)rejectQueued(0,'disposed')
    for(const entry of running.values())entry.controller.abort()
+   changed()
   },
   /** Metadata only: age is since submission, NOT process uptime. Unknown clock stays null. */
   details():readonly TaskDetail[]{

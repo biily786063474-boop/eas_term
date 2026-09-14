@@ -8,8 +8,8 @@ interface Reading {at:number;logicalCpus:number;totalMemoryBytes:number;memoryUs
  * Unverified platform memory is shown as estimated but NEVER passed to admission.
  * Constructor has no I/O; application bootstrap explicitly starts and disposes it.
  */
-export function createRuntimeController(deps:{mode?:ResourceMode;now:()=>number;read:()=>Promise<Reading>;setTimer:(fn:()=>void,ms:number)=>unknown;clearTimer:(handle:unknown)=>void}){
- const manager=createRuntimeManager({now:deps.now,mode:deps.mode,maxRunning:1})
+export function createRuntimeController(deps:{mode?:ResourceMode;now:()=>number;read:()=>Promise<Reading>;setTimer:(fn:()=>void,ms:number)=>unknown;clearTimer:(handle:unknown)=>void;onQueueChange?:()=>void}){
+ const manager=createRuntimeManager({now:deps.now,mode:deps.mode,maxRunning:1,onChange:deps.onQueueChange})
  let previous:Reading|null=null,latest:RuntimeMonitorSnapshot|null=null
  const driver=createRuntimeDriver({read:deps.read,setTimer:deps.setTimer,clearTimer:deps.clearTimer,tick:manager.tick,dispose:manager.dispose,
   invalidate:()=>{previous=null;manager.invalidateMetrics()},

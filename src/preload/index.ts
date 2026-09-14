@@ -172,6 +172,8 @@ const agentChatPendingEvents = new Map<string, ChatEvent[]>()
 // 浏览器节点的两个广播频道：一个频道只挂一个 ipc 监听，订阅者在 sharedChannel 里分发（理由与测试见那边）
 const onBrowserRoute = createSharedChannel<{guestId:number;url:string}>(ipcRenderer, 'browser:route')
 const onBrowserFavorites = createSharedChannel<Favorites>(ipcRenderer, 'browser:favoritesChanged')
+// 调度器队列变化的推送（标题栏「等待 N」），同样一个频道一个监听
+const onRuntimeWaitingShared = createSharedChannel<{queued:number}>(ipcRenderer, 'runtime:waiting')
 
 const stoppedAgentChatSessionIds = new Set<string>()
 
@@ -1110,6 +1112,8 @@ const api = {
   runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
   runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
   runtimeMonitor: (): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor'),
+  runtimeWaiting: (): Promise<{queued:number}> => ipcRenderer.invoke('runtime:waiting'),
+  onRuntimeWaiting: (cb: (d: {queued:number}) => void): (() => void) => onRuntimeWaitingShared(cb),
   diag: {
     event: (e: { kind: string; what: string }): void => ipcRenderer.send('diag:event', e),
     recent: (): Promise<string[]> => ipcRenderer.invoke('diag:recent'),
