@@ -301,6 +301,12 @@ export function SettingsPanel(): JSX.Element {
     window.addEventListener('eas:open-settings', h)
     return () => window.removeEventListener('eas:open-settings', h)
   }, [])
+  // 「运行与资源」页里点「定位」要跳去画布，先把设置收起（runtimeLocateActions.ts 发的事件）
+  useEffect(() => {
+    const h = (): void => setOpen(false)
+    window.addEventListener('eas:close-settings', h)
+    return () => window.removeEventListener('eas:close-settings', h)
+  }, [])
 
   return (
     <>

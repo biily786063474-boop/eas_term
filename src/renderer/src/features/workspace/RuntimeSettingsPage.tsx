@@ -8,6 +8,7 @@ import { resolveStopNotice, type RuntimeStopNotice } from '../../../../shared/ru
 import { runtimeProjectLabels } from '../../../../shared/runtimeProjectLabels'
 import { OUTCOME_LABEL, fmtAgo, fmtDuration, matchProject, queueReasonLabel, servicesSummary } from './runtimeView'
 import { RuntimeServiceCards } from './RuntimeServiceCards'
+import { canLocateService, locateService } from './runtimeLocateActions'
 import './runtimeSettings.css'
 
 // 三段准入范围说明。**一字不删**，只是从列表前面折进「包含什么」里（settingsHierarchy.test 钉着）。
@@ -54,7 +55,7 @@ function Summary({ services, onClick }: { services: readonly RuntimeObservedServ
   )
 }
 
-export function RuntimeSettingsPage(props: { onLocate?: (service: RuntimeObservedService) => void; canLocate?: (service: RuntimeObservedService) => boolean } = {}): JSX.Element {
+export function RuntimeSettingsPage(): JSX.Element {
   const projects = useStore((s) => s.projects)
   // runtimeProjectLabels 给的是「名字（id）」，卡片标题只要名字；主进程确认框里仍用带 id 的那份
   const labelOf = (id: string): string => runtimeProjectLabels([id], projects)[0].replace(/（[^）]*）$/, '')
@@ -171,7 +172,7 @@ export function RuntimeSettingsPage(props: { onLocate?: (service: RuntimeObserve
             <SectionHead title="托管服务" count={services.length} note={NOTE.services} open={showServices} onToggle={() => setOpenServices((v) => !v)} />
             {stopNotice.message && <p role="status">{stopNotice.message}</p>}
             {!services.length ? <div className="rs-empty">{projectFilter ? '该筛选下没有服务' : '当前没有运行中的托管服务'}</div>
-              : showServices ? <RuntimeServiceCards services={services} mode={mode} labelOf={labelOf} onStop={(s) => void stop(s)} onLocate={props.onLocate} canLocate={props.canLocate} />
+              : showServices ? <RuntimeServiceCards services={services} mode={mode} labelOf={labelOf} onStop={(s) => void stop(s)} onLocate={(s) => { locateService(s.id) }} canLocate={(s) => canLocateService(s.id)} />
               : <Summary services={services} onClick={() => setOpenServices(true)} />}
           </section>
 
