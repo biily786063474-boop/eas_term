@@ -273,7 +273,9 @@ if [ "$SITE_ONLY" != "--site-only" ]; then
         echo "  跳过 ${old}（下载页还指向它）"; continue
       fi
       echo "  删除 $old"
-      ssh $HOST "rm -rf $DL/$old"          # 只删版本子目录，绝不动 $DL 本身
+      # -n：不读 stdin。这条 ssh 跑在 `while read` 里，不加 -n 它会把版本列表剩下的行全吞掉，
+      # 循环只跑一轮、每次发版只删得掉一个旧版本（2026-09-14 线上因此攒到 4 个）。
+      ssh -n $HOST "rm -rf $DL/$old"       # 只删版本子目录，绝不动 $DL 本身
     done
     ssh $HOST "df -h / | tail -1 | sed 's/^/  清理后磁盘: /'"
   else
