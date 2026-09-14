@@ -57,4 +57,3 @@
 - `agentHistory:list` 改走 `historyListCache`（文件+mtime+size 缓存摘要与小写正文），文件变大后搜索不再整份重读。
 - 测试先红后绿：historyArchive 5、agentHistoryArchive 3、historyListCache 1、reduce/userMessages 各 1。隔离实例真实 IPC：两次窗口保存合并为 5 条、改过的以新为准、搜索索引更新、磁盘文件 v2 带序号。
 - 已被旧规则裁掉的开头找不回来（那 5 份顶到 100 条的记录）。面板脚注改为"只加载最近 100 条，完整记录已保存"，未单独眼验。未做：面板里"加载更早"翻页（磁盘已全量，只差 UI）。
-

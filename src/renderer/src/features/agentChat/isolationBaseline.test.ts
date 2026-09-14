@@ -143,7 +143,9 @@ const SYNTH: Record<string, ChatEvent[]> = {
 function viewOf(events: ChatEvent[]): unknown {
   const r = createChatReducer()
   for (const e of events) r.push(e)
-  return JSON.parse(JSON.stringify(r.view()))
+  // `seq` 是完整归档用的稳定序号（2026-09-14）：基于产生时刻的毫秒数，天然每次不同。
+  // 它不是归约语义的一部分，比对前剥掉；其余字段仍逐字比。
+  return JSON.parse(JSON.stringify(r.view(), (key, value) => (key === 'seq' ? undefined : value)))
 }
 
 const CASES: { name: string; events: ChatEvent[] }[] = [
