@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eas-Term · 代码领域耦合与安全边界评审 · 2026-09-14</title>
+<style>*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* 导航 */
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+/* 布局 */
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+/* 卡片与语义卡 */
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+/* 数字块 */
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+
+/* 表格 */
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+/* 徽章 */
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+/* 代码与流程图 */
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+
+/* 列表 */
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+/* 时间线 */
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+
+/* 进度条 */
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+
+/* 决策码 */
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+</style></head>
+<body>
+<nav><div class="navwrap"><span class="navbrand">EAS-TERM · REVIEW</span>
+<a href="#结论">结论</a><a href="#耦合">耦合</a><a href="#安全">安全边界</a><a href="#优化">优化建议</a><a href="#下一步">下一步</a></div></nav>
+<main>
+<header class="hero">
+<div class="eyebrow">代码评审 · 领域耦合 × 安全边界 · v1</div>
+<h1>结构整体健康；有一处安全边界要先补，五组实值循环和一个巨型文件值得拆</h1>
+<p class="lede">用软件自带的代码地图分析器对 <code>fix/background-render-budget</code>（提交 5d4e5f7）算了整张模块图，再对 IPC、写盘、shell、窗口安全选项做了静态扫描。本页只给结论与建议，未改任何代码。</p>
+<div class="meta"><span>日期 <b>2026-09-14</b></span><span>模块 <b>738</b></span><span>依赖边 <b>1599</b></span><span>IPC 处理器 <b>248</b></span><span>来源 <b>codeGraphAnalyze + grep 静态扫描</b></span></div>
+</header>
+
+<section id="结论">
+<h2>Verdict</h2><div class="sectitle">一句话结论</div>
+<p class="secnote">先看这里就能做决定。</p>
+<div class="verdict"><div class="vlabel">裁决</div>
+分层是干净的：渲染层 → 主进程、共享层 → 任何一层、mcp → src 这三类"不该有"的依赖方向 <b>0 条</b>；路径类写操作全部经过 <code>fsGuard</code>。需要动手的是：<b>1 处高优先级安全项</b>（渲染层回传的安装命令直接进 shell）、<b>2 处中优先级</b>（webview 未挂防御钩子、知识库根路径未过门），以及 <b>5 组实值循环依赖</b> 和 <b>1 个近两千行的枢纽文件</b>。</div>
+<div class="grid g4">
+<div class="stat"><div class="num n-em">0</div><div class="lab">跨层可疑方向的依赖边</div></div>
+<div class="stat"><div class="num n-ro">1</div><div class="lab">高优先级安全项</div></div>
+<div class="stat"><div class="num n-am">5</div><div class="lab">实值循环依赖（会在运行时成环）</div></div>
+<div class="stat"><div class="num n-am">1982</div><div class="lab">最大单文件行数（agentChat/session.ts）</div></div>
+</div>
+</section>
+
+<section id="耦合">
+<h2>Coupling</h2><div class="sectitle">领域耦合：哪块地在跨界拉扯</div>
+<p class="secnote">领地划分来自 10 号图纸的机器镜像。<code>crossOut</code> 是出边指向别的领地的条数，是耦合状态的主指标。</p>
+<div class="tw"><table><thead><tr><th>领地</th><th>文件</th><th>跨界出边</th><th>跨界入边</th><th>读法</th></tr></thead><tbody>
+<tr><td><b>画布</b></td><td>50</td><td>143</td><td>18</td><td>依赖 store 53 条、UI 原子 32 条。画布组件直接读 store 而不是经选择器层，是典型的"组件绑死全局状态"</td></tr>
+<tr><td><b>主进程</b></td><td>157</td><td>117</td><td>46</td><td>93 条指向契约层（正常），其余散向 AI 会话/omp。装配根 <code>index.ts</code> 扇出 53 属预期</td></tr>
+<tr><td>其余 feature</td><td>84</td><td>87</td><td>64</td><td>分散，没有单点</td></tr>
+<tr><td>工作区</td><td>28</td><td>78</td><td>19</td><td><code>PaneView</code> 扇出 19，是面板路由枢纽</td></tr>
+<tr><td><b>AI 对话</b></td><td>53</td><td>76</td><td>2</td><td>入边只有 2：这块地几乎没人依赖，但它依赖 UI 原子 22、契约层 30</td></tr>
+<tr><td><b>AI 会话</b></td><td>22</td><td>66</td><td>12</td><td>27 条指向主进程其他文件，绝大部分来自 <code>session.ts</code> 一个文件</td></tr>
+<tr><td>store</td><td>26</td><td>22</td><td>122</td><td><code>store/index.ts</code> 扇入 91，是全局状态根，被依赖多是设计使然</td></tr>
+<tr><td>契约层</td><td>42</td><td>0</td><td>275</td><td><code>shared/types.ts</code> 一个文件扇入 94，改一处牵全身</td></tr>
+</tbody></table></div>
+
+<h3>枢纽文件（扇出 × 行数）</h3>
+<div class="tw"><table><thead><tr><th>文件</th><th>行数</th><th>扇出</th><th>扇入</th><th>判断</th></tr></thead><tbody>
+<tr><td><code>src/main/agentChat/session.ts</code></td><td>1982</td><td>51</td><td>4</td><td><span class="b b-am">值得拆</span> 进程接线、恢复、IPC 注册、ACP 装配四类职责混在一个闭包里；已有 <code>sessionState</code>/<code>resumeOwner</code> 的抽离先例</td></tr>
+<tr><td><code>src/renderer/.../CanvasStage.tsx</code></td><td>1848</td><td>33</td><td>—</td><td><span class="b b-gy">先不动</span> 图纸 03 明确它有"刻意为之"的订阅策略，拆分风险高于收益</td></tr>
+<tr><td><code>src/renderer/.../AgentChatView.tsx</code></td><td>1767</td><td>43</td><td>1</td><td><span class="b b-am">值得拆</span> 历史归档、启动流程、发送队列三块可各自成模块（今晚的归档改动已经在往外抽）</td></tr>
+<tr><td><code>src/preload/index.ts</code></td><td>1257</td><td>18</td><td>1</td><td><span class="b b-gy">正常</span> 44 个命名空间、301 个函数，是暴露面清单本身，大是应该的</td></tr>
+<tr><td><code>src/main/secrets.ts</code></td><td>1160</td><td>—</td><td>—</td><td><span class="b b-gy">正常</span> 密钥柜自成一域，14 个处理器都在门后</td></tr>
+</tbody></table></div>
+
+<h3>实值循环依赖（5 组）</h3>
+<p>分析器把纯类型引用的环排除了，下面这些是运行时真的会成环的。ESM 循环的症状是"某个导入在初始化时是 undefined"，只在特定加载顺序下出现，很难复现。</p>
+<div class="tw"><table><thead><tr><th>环</th><th>层</th><th>实值边</th><th>解法建议</th></tr></thead><tbody>
+<tr><td><code>projects.ts</code> → <code>mergeTools.ts</code> → <code>codeGraph.ts</code> → <code>projects.ts</code></td><td>主进程</td><td>3/3</td><td><code>codeGraph.ts</code> 只需要 <code>loadProjects</code>；把它连同 <code>checkRoot</code> 挪到不依赖 <code>mergeTools</code> 的小模块，环即断</td></tr>
+<tr><td><code>mcpBridge.ts</code> ↔ <code>agentRules.ts</code></td><td>主进程</td><td>2/2</td><td>把 <code>syncRules</code> 需要的桥接信息改成注入（<code>installPluginAdmission</code> 就是这么做的），两边都别互相 import</td></tr>
+<tr><td><code>canvasSlice.ts</code> / <code>tabsSlice.ts</code> → <code>store/types.ts</code>（types 反向引 slices）</td><td>渲染层</td><td>2/8</td><td><code>types.ts</code> 里有实值导出被 slice 引用；把实值部分移出 types，types 只留类型</td></tr>
+<tr><td><code>CanvasRoleEditor.tsx</code> ↔ <code>CanvasAgentBar.tsx</code></td><td>渲染层</td><td>2/2</td><td>两个组件互相引用对方的实值；抽出共用的常量/工具到第三个文件</td></tr>
+<tr><td><code>PluginPanel.tsx</code> → <code>registry.tsx</code>；<code>SecretRequestModal.tsx</code> → <code>secretRequest.ts</code></td><td>渲染层</td><td>各 1</td><td>半环（另一边是类型）；registry 用注册回调而不是直接 import 组件即可</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="安全">
+<h2>Security boundary</h2><div class="sectitle">安全边界：渲染层能让主进程干什么</div>
+<p class="secnote">主进程是信任根；渲染层里有 AI 生成的 Markdown、网页节点、插件面板，任何一处出洞都会把"渲染层能调的 IPC"变成攻击面。扫了 248 个处理器。</p>
+
+<div class="dissent"><div class="vlabel">高 · 必须改</div>
+<b>安装命令由渲染层回传后直接进 shell。</b> <code>cliAuth/install.ts</code> 的 <code>startInstall(cli, cmd)</code> 把渲染层传来的字符串原样交给 <code>/bin/sh -c</code>（Windows 是 <code>powershell -Command</code>）。这个字符串本来就是主进程自己从 <code>installPlan()</code> 算出来、经 <code>cliList</code> 发给渲染层再收回的——绕了一圈却在入口处信任了它。渲染层一旦被注入，就是以你的完整环境执行任意命令。<br>
+<b>改法很小：</b>IPC 只收 <code>cli</code>（和可选的方案序号），主进程自己查 <code>installPlan()[cli].options[i].cmd</code>；渲染层不再持有可执行字符串。</div>
+
+<div class="warn"><div class="vlabel">中 · 建议补</div>
+<b>webview 没有挂 <code>will-attach-webview</code> 钩子。</b> 主窗口开了 <code>webviewTag: true</code>；网页节点的 <code>&lt;webview&gt;</code> 现在没设 preload，所以拿不到 <code>window.api</code>，但这依赖渲染层"不去设那个属性"。Electron 安全清单建议在主进程 <code>will-attach-webview</code> 里强制删掉 <code>preload</code>、关掉 <code>nodeIntegration</code>——十行代码，把这条防线从"约定"变成"强制"。现有的 <code>web-contents-created</code> 只处理了导航与弹窗。</div>
+
+<div class="warn"><div class="vlabel">中 · 建议补</div>
+<b>知识库根路径未过门。</b> <code>wiki:init(root)</code> 与 <code>wiki:setPath(root)</code> 只校验"是绝对路径"（后者再查目录存在）。<code>init</code> 会在该处建目录、写骨架文件——这是一个"在用户可写的任何位置创建文件"的原语。正常路径是先走 <code>wiki:pickPath</code> 对话框，但 IPC 本身不认这一点。<b>改法：</b>主进程记住自己对话框返回过的路径（或经 <code>guardDir</code> 允许的目录），<code>init</code>/<code>setPath</code> 只接受其中之一。</div>
+
+<h3>低优先级与已通过项</h3>
+<div class="tw"><table><thead><tr><th>项</th><th>状态</th><th>说明</th></tr></thead><tbody>
+<tr><td>IPC 发起方校验</td><td><span class="b b-am">低</span></td><td>248 个处理器中只有约 12 个文件做 <code>senderFrame === mainFrame</code> 校验（runtime、stt、codeGraph、pluginHost 等）。密钥柜 14 个处理器靠"已解锁"门禁，不校验 frame。建议给 <code>secrets</code>、<code>pty</code>、<code>agentChat</code> 这类有副作用的处理器统一补一行校验，可以做成一个包装函数</td></tr>
+<tr><td>路径类写操作</td><td><span class="b b-em">通过</span></td><td><code>fs.ts</code>（11 处 guard）、<code>git.ts</code>（<code>guardDir</code>）、<code>skillLibrary</code>、<code>snapshot</code>、<code>design</code> 均过 <code>fsGuard</code>；知识库归档与转写用 <code>basename</code> 挡住了 <code>../</code></td></tr>
+<tr><td>固定位置写盘</td><td><span class="b b-em">通过</span></td><td>prefs / todos / board / canvas / roles / dict / telemetry / diagLog / mcpBridge 的写点都是主进程自己算的 userData 或家目录配置文件，路径不来自渲染层参数</td></tr>
+<tr><td>shell 拼接</td><td><span class="b b-em">通过（除高优先级那一处）</span></td><td><code>probeEnv</code> 的登录 shell 命令是常量；Codex launcher 的 <code>-c</code> 是配置赋值不是 shell；PTY 走 node-pty 不拼字符串</td></tr>
+<tr><td>窗口安全选项</td><td><span class="b b-em">通过</span></td><td>主窗口用 preload 隔离，没有 <code>nodeIntegration</code>/<code>webSecurity:false</code>；权限请求有 <code>setPermissionRequestHandler</code>；webview 的弹窗被 <code>setWindowOpenHandler</code> 收回同一 webview</td></tr>
+<tr><td>密钥柜</td><td><span class="b b-em">通过</span></td><td><code>secrets:reveal</code> 等都先 <code>requireUnlocked()</code>；注入终端按 <code>ptyGrants</code> 认"哪个终端在要"，不是只认 token</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="优化">
+<h2>Optimizations</h2><div class="sectitle">非安全类的优化点</div>
+<p class="secnote">按收益/风险排，前两条建议做，后面的看心情。</p>
+<div class="tw"><table><thead><tr><th>#</th><th>点</th><th>收益</th><th>风险</th></tr></thead><tbody>
+<tr><td>P1</td><td><b>知识库搜索每次读全库</b>：<code>wiki:search</code> / <code>wiki:query</code> 每敲一个字 <code>walkNotes</code> + 逐篇 <code>readFileSync</code>。今晚给对话历史列表做的 mtime 缓存（<code>historyListCache</code>）可以原样套过来</td><td>大库搜索从秒级到毫秒级；主线程不再被 IO 卡</td><td>低，纯缓存</td></tr>
+<tr><td>P2</td><td><b>拆 <code>session.ts</code></b>：把 <code>wireProc</code>（进程接线）、恢复扫描、IPC 注册各抽成文件，闭包变量改显式传参</td><td>扇出 51 → 每块 10 出头；测试不再靠 AST 抽函数进 VM</td><td>中，动的是最核心文件，必须先红后绿逐块搬</td></tr>
+<tr><td>P3</td><td><b>解 5 组实值循环</b>（见上表）</td><td>消除"导入时 undefined"这类偶发问题</td><td>低到中，每组独立</td></tr>
+<tr><td>P4</td><td><b>拆 <code>shared/types.ts</code></b>：按域分文件（已有 <code>agentChat.ts</code>、<code>runtimeResources.ts</code> 先例），<code>types.ts</code> 只 re-export</td><td>改一个类型不再让 94 个文件重编译/重审</td><td>低，机械搬运</td></tr>
+<tr><td>P5</td><td><b>画布组件经选择器层读 store</b>：画布 → store 53 条边多数是组件直接 <code>useStore(s =&gt; s.xxx)</code></td><td>降低画布对 store 形状的绑定</td><td>中，触及 15 号图纸的渲染纪律，先读它</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="下一步">
+<h2>Next</h2><div class="sectitle">下一步：勾选后复制决策码</div>
+<p class="secnote">默认勾了三个安全项。勾选会实时改下面那条指令，复制粘回对话即可。</p>
+<div class="card">
+<label><input type="checkbox" data-k="S1" checked> <b>S1</b> 安装命令改为主进程按 cli 查表，IPC 不再收字符串（高）</label><br>
+<label><input type="checkbox" data-k="S2" checked> <b>S2</b> 挂 <code>will-attach-webview</code> 强制剥 preload、禁 nodeIntegration（中）</label><br>
+<label><input type="checkbox" data-k="S3" checked> <b>S3</b> 知识库 init/setPath 只接受对话框返回过或 guardDir 允许的路径（中）</label><br>
+<label><input type="checkbox" data-k="S4"> <b>S4</b> 有副作用的 IPC 统一补发起方校验包装（低）</label><br>
+<label><input type="checkbox" data-k="P1"> <b>P1</b> 知识库搜索接 mtime 缓存</label><br>
+<label><input type="checkbox" data-k="P3"> <b>P3</b> 解 5 组实值循环依赖</label><br>
+<label><input type="checkbox" data-k="P2"> <b>P2</b> 拆 session.ts（中风险，单独一轮做）</label><br>
+<label><input type="checkbox" data-k="P4"> <b>P4</b> 拆 shared/types.ts</label>
+</div>
+<div class="dcode"><div class="dlabel">复制这条粘回对话</div>
+<div class="dcmd"><span id="cmd">/fix S1 S2 S3</span><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='已复制'">复制</button></div></div>
+<script>
+(function(){const boxes=[...document.querySelectorAll('input[data-k]')];const cmd=document.getElementById('cmd');
+const sync=()=>{const ks=boxes.filter(b=>b.checked).map(b=>b.dataset.k);cmd.textContent=ks.length?'/fix '+ks.join(' '):'/fix 无';};
+boxes.forEach(b=>b.addEventListener('change',sync));sync();})();
+</script>
+</section>
+
+<footer>数据来源：本机运行 <code>src/main/codeGraphAnalyze.ts</code>（2026-09-14 00:50，worktree <code>.worktrees/voice-regression</code>，738 节点 / 1599 边 / 7 环），以及对 <code>src/main</code>、<code>mcp</code>、<code>src/preload</code> 的 grep 静态扫描（IPC 处理器、写盘调用、shell 参数、BrowserWindow 选项）。领地划分见 <code>docs/architecture/10-模块领地图.md</code>；所有权与禁区见 <code>13-所有权矩阵.md</code>；安全边界规则见 <code>03-agent角色边界.md</code>。本页未改任何代码。</footer>
+</main></body></html>
