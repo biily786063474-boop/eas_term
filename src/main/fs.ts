@@ -1,4 +1,5 @@
 import { clipboard, ipcMain, shell } from 'electron'
+import { guardedHandle } from './ipcGuard'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -63,7 +64,7 @@ const SKIP_DIRS = new Set([
 ])
 
 export function registerFsHandlers(): void {
-  ipcMain.handle('fs:readDir', async (_e, dirPath: string): Promise<DirEntry[]> => {
+  guardedHandle('fs:readDir', async (_e, dirPath: string): Promise<DirEntry[]> => {
     const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true })
     const entries: DirEntry[] = []
     for (const d of dirents) {
@@ -92,7 +93,7 @@ export function registerFsHandlers(): void {
 
   /** 读原始字节：给渲染层的 WebAudio 解码音频用（视频/音频转录）。
    *  2GB 上限——再大 decodeAudioData 那边也会先撑爆内存，早点说清楚比崩了强。 */
-  ipcMain.handle(
+  guardedHandle(
     'fs:readBinary',
     async (_e, filePath: string): Promise<{ ok: boolean; data: ArrayBuffer; error?: string }> => {
       try {
@@ -112,7 +113,7 @@ export function registerFsHandlers(): void {
   // 项目内「最近产生的文件」：递归扫描 + 按创建时间倒序。画布双击插入菜单的「最近」排序用。
   // 跳过依赖/产物目录和隐藏目录——node_modules 一个就能把扫描时间拖到几十秒，且没人想插它。
   const DOC_EXTS = new Set(['md', 'txt', 'html'])
-  ipcMain.handle(
+  guardedHandle(
     'fs:recentFiles',
     async (_e, rootPath: string, limit = 60, docsOnly = false): Promise<RecentFile[]> => {
       const out: RecentFile[] = []
@@ -159,7 +160,7 @@ export function registerFsHandlers(): void {
 
   // 写回文本文件（代码预览里的「编辑」用）。先写临时文件再 rename——中途崩了也不会
   // 留下半截内容把用户原文件毁掉。
-  ipcMain.handle(
+  guardedHandle(
     'fs:writeTextFile',
     async (_e, filePath: string, content: string): Promise<OpResult> => {
       try {
@@ -184,7 +185,7 @@ export function registerFsHandlers(): void {
     }
   )
 
-  ipcMain.handle('fs:readTextFile', async (_e, filePath: string): Promise<TextFileResult> => {
+  guardedHandle('fs:readTextFile', async (_e, filePath: string): Promise<TextFileResult> => {
     try {
       const stat = await fs.promises.stat(filePath)
       const fd = await fs.promises.open(filePath, 'r')
@@ -217,9 +218,9 @@ export function registerFsHandlers(): void {
     }
   })
 
-  ipcMain.handle('fs:validateRasterImage', (_e, input: string, roots: string[]) => validateRasterImage(input, roots, { path: guardPath, directory: guardDir }))
+  guardedHandle('fs:validateRasterImage', (_e, input: string, roots: string[]) => validateRasterImage(input, roots, { path: guardPath, directory: guardDir }))
 
-  ipcMain.handle('fs:readImageFile', async (_e, filePath: string): Promise<ImageFileResult> => {
+  guardedHandle('fs:readImageFile', async (_e, filePath: string): Promise<ImageFileResult> => {
     try {
       const ext = path.extname(filePath).toLowerCase()
       const mime = IMAGE_MIME[ext]
@@ -244,13 +245,13 @@ export function registerFsHandlers(): void {
     }
   })
 
-  ipcMain.handle('fs:openPath', (_e, target: string) => shell.openPath(target))
+  guardedHandle('fs:openPath', (_e, target: string) => shell.openPath(target))
 
-  ipcMain.handle('fs:showInFolder', (_e, target: string) => {
+  guardedHandle('fs:showInFolder', (_e, target: string) => {
     revealInFinder(target)
   })
 
-  ipcMain.handle('fs:rename', async (_e, oldPath: string, newName: string): Promise<OpResult> => {
+  guardedHandle('fs:rename', async (_e, oldPath: string, newName: string): Promise<OpResult> => {
     try {
       const bad = invalidNameReason(newName)
       if (bad) return { ok: false, error: bad }
@@ -266,7 +267,7 @@ export function registerFsHandlers(): void {
     }
   })
 
-  ipcMain.handle('fs:trash', async (_e, target: string): Promise<OpResult> => {
+  guardedHandle('fs:trash', async (_e, target: string): Promise<OpResult> => {
     try {
       const g = guardPath(target)
       if (!g.ok) return g
@@ -280,7 +281,7 @@ export function registerFsHandlers(): void {
   // ── 以下是文件树的 IDE 式操作。共同点：目标路径一律先过守卫，之后只用守卫返回的
   // 真实路径（realpath 解析过、确认在项目/知识库内），不再碰调用方传进来的原始字符串。
 
-  ipcMain.handle('fs:mkdir', async (_e, parentDir: string, name: string): Promise<OpResult> => {
+  guardedHandle('fs:mkdir', async (_e, parentDir: string, name: string): Promise<OpResult> => {
     try {
       const bad = invalidNameReason(name)
       if (bad) return { ok: false, error: bad }
@@ -298,7 +299,7 @@ export function registerFsHandlers(): void {
     }
   })
 
-  ipcMain.handle('fs:createFile', async (_e, parentDir: string, name: string): Promise<OpResult> => {
+  guardedHandle('fs:createFile', async (_e, parentDir: string, name: string): Promise<OpResult> => {
     try {
       const bad = invalidNameReason(name)
       if (bad) return { ok: false, error: bad }
@@ -318,7 +319,7 @@ export function registerFsHandlers(): void {
   })
 
   /** 移动（拖拽 / 剪切粘贴）。跨目录，所以不能复用 fs:rename —— 那个的目标目录是硬编码的 dirname(oldPath)。 */
-  ipcMain.handle('fs:move', async (_e, src: string, destDir: string): Promise<OpResult> => {
+  guardedHandle('fs:move', async (_e, src: string, destDir: string): Promise<OpResult> => {
     try {
       const gs = guardPath(src)
       if (!gs.ok) return gs
@@ -340,7 +341,7 @@ export function registerFsHandlers(): void {
 
   /** 复制（复制粘贴 / 复制副本）。目标同名时自动加「副本」后缀，不覆盖、不报错 ——
    *  复制粘贴到同一个目录是很常见的意图，这时报「已存在」等于什么也没干。 */
-  ipcMain.handle('fs:copy', async (_e, src: string, destDir: string): Promise<OpResult> => {
+  guardedHandle('fs:copy', async (_e, src: string, destDir: string): Promise<OpResult> => {
     try {
       const gs = guardPath(src)
       if (!gs.ok) return gs
@@ -364,18 +365,18 @@ export function registerFsHandlers(): void {
     }
   })
 
-  ipcMain.handle('clipboard:writeText', (_e, text: string) => {
+  guardedHandle('clipboard:writeText', (_e, text: string) => {
     clipboard.writeText(text)
   })
 
-  ipcMain.handle('clipboard:readText', () => clipboard.readText())
+  guardedHandle('clipboard:readText', () => clipboard.readText())
 
   // 剪贴板是否有图片：终端粘贴时据此判断"无文本但有图"，好补发粘贴信号让 Claude Code 读图
-  ipcMain.handle('clipboard:hasImage', () => !clipboard.readImage().isEmpty())
+  guardedHandle('clipboard:hasImage', () => !clipboard.readImage().isEmpty())
 
   // 把剪贴板里的图片落盘到 <项目>/assets/img/。截图/复制的图直接粘进项目，
   // 不用先存桌面再拖进来。
-  ipcMain.handle(
+  guardedHandle(
     'clipboard:saveImage',
     async (_e, projectPath: string): Promise<{ ok: boolean; error?: string; path?: string }> => {
       try {
@@ -399,14 +400,14 @@ export function registerFsHandlers(): void {
     }
   )
 
-  ipcMain.handle('shell:openExternal', (_e, url: string) => {
+  guardedHandle('shell:openExternal', (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url)
     return Promise.resolve()
   })
 
   // 终端链接解析：把候选路径（绝对 / ~ / file:// / 相对 baseCwd）解析为绝对路径，
   // 仅返回真实存在者，null 表示该候选不是文件/目录（不渲染为链接）。
-  ipcMain.handle(
+  guardedHandle(
     'fs:probePaths',
     // ── 这条是「Windows 卡死未响应」的元凶（2026-08-30 用户报的）────────
     //

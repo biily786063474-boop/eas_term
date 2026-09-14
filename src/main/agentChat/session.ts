@@ -32,7 +32,8 @@ import { spawn, type ChildProcess } from 'child_process'
 import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
-import { app, ipcMain, type WebContents } from 'electron'
+import { app, type WebContents } from 'electron'
+import { guardedHandle, guardedOn } from '../ipcGuard'
 
 import { alog } from '../cliAuth/log.ts'
 import { unauthedInLine } from '../cliAuth/detect.ts'
@@ -1497,7 +1498,7 @@ export function registerAgentChatHandlers(): void {
   // 失败不该拖垮整个列表，所以逐个 catch 成 false，而不是让 Promise.all 整体 reject。
   // 团队面板的数据源。**只读** —— 拿不到任何能改状态的东西，
   // 面板要停某个会话仍然走既有的 agentChat:stop。
-  ipcMain.handle('agentChat:listSessions', (e): SessionBrief[] =>
+  guardedHandle('agentChat:listSessions', (e): SessionBrief[] =>
     listSessionBriefs(e.sender.id)
   )
 
@@ -1524,7 +1525,7 @@ export function registerAgentChatHandlers(): void {
     cliCache = null
   }
 
-  ipcMain.handle('agentChat:modelCatalog', async (_e, cli: unknown, force: unknown): Promise<import('../../shared/agentChat').AgentChatModelCatalog> => {
+  guardedHandle('agentChat:modelCatalog', async (_e, cli: unknown, force: unknown): Promise<import('../../shared/agentChat').AgentChatModelCatalog> => {
     let result: import('../../shared/agentChat').AgentChatModelCatalog = { models: [], modelCatalog: { status: 'error', source: 'none', note: 'CLI 不可用' } }
     const adapter = typeof cli === 'string' ? getAdapter(cli) : undefined
     if (!adapter) return result
@@ -1532,7 +1533,7 @@ export function registerAgentChatHandlers(): void {
     return result
   })
 
-  ipcMain.handle('agentChat:listClis', async (): Promise<CliInfo[]> => {
+  guardedHandle('agentChat:listClis', async (): Promise<CliInfo[]> => {
     if (cliCache && Date.now() - cliCache.at < CLI_CACHE_MS) return cliCache.data
     if (cliInflight) return cliInflight
     cliInflight = probeClis()
@@ -1576,7 +1577,7 @@ export function registerAgentChatHandlers(): void {
     return buildCliList(adapters, availability, installCmds, terminalOnly)
   }
 
-  ipcMain.handle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
+  guardedHandle('agentChat:start', (e, params: unknown): AgentChatStartResult => {
     const p = params as Partial<AgentChatStartParams> | null
     if (!p || typeof p.cli !== 'string' || typeof p.cwd !== 'string' || typeof p.message !== 'string' || !p.message) {
       return { ok: false, error: '缺少必需参数（cli / cwd / message）' }
@@ -1744,12 +1745,12 @@ export function registerAgentChatHandlers(): void {
 
   /** 这个 resumeId 是谁签发的 —— 查磁盘（`resumeOwner.ts`）。渲染层重挂载老对话时
    *  靠它补上签发者，`start` 靠它兜底。cwd 改过名的项目要连旧路径一起找。 */
-  ipcMain.handle('agentChat:resumeOwner', (_e, resumeId: unknown, cwd: unknown): ResumeOwner | null => {
+  guardedHandle('agentChat:resumeOwner', (_e, resumeId: unknown, cwd: unknown): ResumeOwner | null => {
     if (typeof resumeId !== 'string' || typeof cwd !== 'string' || !resumeId || !cwd) return null
     return ownerOfResume(resumeId, cwd)
   })
 
-  ipcMain.handle('agentChat:send', (_e, sessionId: unknown, message: unknown): AgentChatSendResult => {
+  guardedHandle('agentChat:send', (_e, sessionId: unknown, message: unknown): AgentChatSendResult => {
     const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
     if (!live) return { ok: false, error: '会话不存在（可能已被关闭）' }
     if (typeof message !== 'string' || !message) return { ok: false, error: '消息不能为空' }
@@ -1758,7 +1759,7 @@ export function registerAgentChatHandlers(): void {
 
   // 中途改模型/effort：只记为待生效，不打断当前任务（决定 3）。下一次 send 触发的
   // planSend 会因为 pending 存在而走 restart，effectiveOpts 会把这里 patch 的值带上。
-  ipcMain.handle('agentChat:refreshModels', async (e, sessionId: unknown) => {
+  guardedHandle('agentChat:refreshModels', async (e, sessionId: unknown) => {
     const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
     if (!live || live.wcId !== e.sender.id) return { ok: false, error: '会话不存在' }
     const adapter = getAdapter(live.rec.cli)
@@ -1767,7 +1768,7 @@ export function registerAgentChatHandlers(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('agentChat:setParams', (_e, sessionId: unknown, patch: unknown): { ok: boolean; error?: string } => {
+  guardedHandle('agentChat:setParams', (_e, sessionId: unknown, patch: unknown): { ok: boolean; error?: string } => {
     const live = sessions.get(typeof sessionId === 'string' ? sessionId : '')
     if (!live) return { ok: false, error: '会话不存在' }
     const p = (patch ?? {}) as { model?: unknown; effort?: unknown }
@@ -1825,7 +1826,7 @@ export function registerAgentChatHandlers(): void {
   // 已经超时而返回 false（hook 脚本其实已经拿到 deny 退出）——修复前的实现会无视这个
   // false、照样把渲染层想要的 decision 当真相发出去，事件流断言"已批准"，事实却是
   // "已拒绝"。sessionId 不再需要，保留参数位只是不改 IPC 调用签名（renderer 侧不用跟着改）。
-  ipcMain.handle(
+  guardedHandle(
     'agentChat:resolveApproval',
     (_e, _sessionId: unknown, approvalId: unknown, decision: unknown): { ok: boolean } => {
       const d: 'allow' | 'deny' = decision === 'allow' ? 'allow' : 'deny'
@@ -1844,12 +1845,12 @@ export function registerAgentChatHandlers(): void {
   // 「AI 会话审批」hook 的状态展示与一键卸载——对齐既有 hook:status / hook:uninstall
   // 的形状（2026-08-14 全分支评审 C1 ③）。按 cwd 查/卸，不是全局唯一一份：这条 hook
   // 是按项目装进 <cwd>/.claude/settings.json 的。
-  ipcMain.handle('agentChat:hookStatus', (_e, cwd: unknown): AgentApprovalHookStatus => {
+  guardedHandle('agentChat:hookStatus', (_e, cwd: unknown): AgentApprovalHookStatus => {
     if (typeof cwd !== 'string' || !cwd) return { installed: false, outdated: false, configPath: '' }
     return approvalHookStatus(cwd)
   })
 
-  ipcMain.handle('agentChat:hookUninstall', (_e, cwd: unknown): { ok: boolean; error?: string } => {
+  guardedHandle('agentChat:hookUninstall', (_e, cwd: unknown): { ok: boolean; error?: string } => {
     if (typeof cwd !== 'string' || !cwd) return { ok: false, error: 'cwd 必填' }
     const r = uninstallApprovalHook(cwd)
     if (!r.ok) return { ok: false, error: r.reason }
@@ -1891,7 +1892,7 @@ export function registerAgentChatHandlers(): void {
    *
    *  代价：正在流的那一轮，CLI 那边可能没写进会话文件，恢复后模型不记得它。
    *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
-  ipcMain.on('agentChat:interrupt', (_e, sessionId: unknown) => {
+  guardedOn('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
     if (live) cancelRuntimeStartup(live)
@@ -1959,7 +1960,7 @@ export function registerAgentChatHandlers(): void {
     })
   })
 
-  ipcMain.on('agentChat:stop', (_e, sessionId: unknown) => {
+  guardedOn('agentChat:stop', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
     if (!live) return

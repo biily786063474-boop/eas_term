@@ -3,7 +3,8 @@ import {loadProjects} from './projects'
 import {ownedSessions} from './runtime/ownedSessions.ts'
 import {startManagedSession,cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
 import { ensureSecretShim } from './secretShim'
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
+import { guardedHandle, guardedOn } from './ipcGuard'
 import * as pty from 'node-pty'
 import os from 'os'
 import fs from 'fs'
@@ -382,7 +383,7 @@ export function readTermTail(ptyId: string, maxLines?: number): string[] {
 
 export function registerPtyHandlers(): void {
   watchUrlQueue() // 监听 CLI 经 open shim 投递的网址 → 通知渲染层在画板浏览器打开
-  ipcMain.handle('pty:create', async (e, opts: PtyCreateOptions) => {
+  guardedHandle('pty:create', async (e, opts: PtyCreateOptions) => {
     const id = String(nextId++)
     if(opts.startupRequestId!==undefined&&(typeof opts.startupRequestId!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(opts.startupRequestId)))throw Error('invalid terminal startup request')
     const startupId=opts.startupRequestId?'pty-request:'+opts.startupRequestId:'pty-start:'+id
@@ -506,7 +507,7 @@ export function registerPtyHandlers(): void {
     }})
   })
 
-  ipcMain.on('pty:write', (_e, id: string, data: string) => {
+  guardedOn('pty:write', (_e, id: string, data: string) => {
     // pty 可能已 exit/被杀但 onExit 尚未从 map 删除，此时对已关闭 fd 写会同步抛 EPIPE/EIO。
     // 不包 try/catch 的话 → uncaughtException → 主进程退出 → 全窗口白屏（与 resize/kill 一致做法）。
     try {
@@ -516,7 +517,7 @@ export function registerPtyHandlers(): void {
     }
   })
 
-  ipcMain.on('pty:resize', (_e, id: string, cols: number, rows: number) => {
+  guardedOn('pty:resize', (_e, id: string, cols: number, rows: number) => {
     if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0) return
     try {
       ptys.get(id)?.pty.resize(cols, rows)
@@ -525,7 +526,7 @@ export function registerPtyHandlers(): void {
     }
   })
 
-  ipcMain.on('pty:kill', (_e, id: string) => {
+  guardedOn('pty:kill', (_e, id: string) => {
     const entry = ptys.get(id)
     if (entry) {
       ptys.delete(id)
@@ -536,7 +537,7 @@ export function registerPtyHandlers(): void {
   })
 
   // 终端当前工作目录（供相对路径链接解析），取不到返回 null
-  ipcMain.handle('pty:cwd', (_e, id: string): Promise<string | null> => {
+  guardedHandle('pty:cwd', (_e, id: string): Promise<string | null> => {
     const pid = ptys.get(id)?.pty.pid
     if (typeof pid !== 'number') return Promise.resolve(null)
     return cwdOfPid(pid)
@@ -545,12 +546,12 @@ export function registerPtyHandlers(): void {
   // 给定一组 pty id，返回其中正在运行命令的那些
   // 「这个终端里跑的是 claude 还是 codex」。命令按钮据此决定显不显示、发哪一套命令。
   // 同步的 ps 调用，~10ms；由渲染层在「标题出现 spinner」那一刻问一次，不是轮询。
-  ipcMain.handle('pty:agentOf', (_e, id: string): AgentKind | null => {
+  guardedHandle('pty:agentOf', (_e, id: string): AgentKind | null => {
     const entry = ptys.get(id)
     return entry ? agentOnTty(entry) : null
   })
 
-  ipcMain.handle('pty:busyByIds', async (_e, ids: string[]) => {
+  guardedHandle('pty:busyByIds', async (_e, ids: string[]) => {
     const pairs: { id: string; pid: number }[] = []
     for (const id of ids) {
       const pid = ptys.get(id)?.pty.pid

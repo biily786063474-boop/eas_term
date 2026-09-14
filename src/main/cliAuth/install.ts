@@ -24,8 +24,11 @@
 //（进度条卡在 87% 半分钟，比没有进度条更让人焦虑）。
 // 报的是**我们真的知道的东西**：现在处于哪个阶段（下载安装 / 校验），
 // 外加安装器自己最后打出来的那一行。那一行是真的，也正是用户想看的。
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow } from 'electron'
+import { guardedHandle } from '../ipcGuard'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
+import { resolveInstallCommand } from './installCommand.ts'
+import { installPlan } from '../agentInstall'
 import { spawn, type ChildProcess } from 'child_process'
 
 import { PROBE_ENV } from '../probeEnv'
@@ -95,10 +98,13 @@ function finish(phase: 'done' | 'failed', error?: string): void {
  */
 let installGeneration = 0
 /** owner：发起安装的窗口。传了就把进程登记进运行中心（可见、可停、一次确认）。 */
-export function startInstall(cli: CliId, cmd: string, owner?: { windowId: number }): { ok: boolean; error?: string } {
+export function startInstall(cli: CliId, requested: string | undefined, owner?: { windowId: number }): { ok: boolean; error?: string } {
   const running = slot.any()
   if (running) return { ok: false, error: `正在安装 ${running.cli}，等它完成` }
-  if (!cmd || !cmd.trim()) return { ok: false, error: '没有可用的安装命令' }
+  // S1（2026-09-14）：渲染层传来的只是"选哪条"，命令本身从主进程的方案表查；不在表里一律拒绝。
+  const resolved = resolveInstallCommand(installPlan(), cli, requested)
+  if (!resolved.ok) { alog(`拒绝安装请求：${cli} → ${resolved.error}`); return { ok: false, error: resolved.error } }
+  const cmd = resolved.cmd
   alog(`开始安装：${cli} → ${cmd}`)
   let proc: ChildProcess
   try {
@@ -199,8 +205,8 @@ export function cancelInstall(): void {
 }
 
 export function registerCliInstallHandlers(): void {
-  ipcMain.handle('cliAuth:startInstall', (e, cli: CliId, cmd: string) => startInstall(cli, cmd, { windowId: e.sender.id }))
-  ipcMain.handle('cliAuth:cancelInstall', () => {
+  guardedHandle('cliAuth:startInstall', (e, cli: CliId, requested?: unknown) => startInstall(cli, typeof requested === 'string' ? requested : undefined, { windowId: e.sender.id }))
+  guardedHandle('cliAuth:cancelInstall', () => {
     cancelInstall()
     return { ok: true }
   })

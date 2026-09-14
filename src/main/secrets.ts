@@ -28,7 +28,8 @@
 //    对策：加密前把 checksum 一起封进明文，解密后校验（见 seal/open）。同样 3000 次实测 0 漏过。
 // 3. **改 productName 会丢光所有密钥**（钥匙串桶名由 app.getName() 决定）。
 //    对策：库里记下当时的 app 名，对不上时明确告知而不是抛一个看不懂的解密错误。
-import { app, ipcMain, safeStorage, BrowserWindow, dialog } from 'electron'
+import { app, safeStorage, BrowserWindow, dialog } from 'electron'
+import { guardedHandle } from './ipcGuard'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -705,10 +706,10 @@ export function registerSecretHandlers(): void {
   // 见文件头第 1 条坑：这个模块任何时候都不能在 ready 之前碰 safeStorage
   assertReady()
 
-  ipcMain.handle('secrets:status', () => status())
+  guardedHandle('secrets:status', () => status())
 
   /** 首次设置六位码。已经设过就得先解锁再改（走 secrets:changeCode） */
-  ipcMain.handle('secrets:setup', (_e, code: string): Res => {
+  guardedHandle('secrets:setup', (_e, code: string): Res => {
     try {
       if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
       const s = readStore()
@@ -739,7 +740,7 @@ export function registerSecretHandlers(): void {
    * 退避（lockedOutUntil）故意不管这里：那是防在线猜码的，而重置根本不用猜。
    * 真正的摩擦放在 UI 的二次确认上，文案必须说清「重置后柜子就开了」。
    */
-  ipcMain.handle('secrets:resetCode', (_e, code: string): Res => {
+  guardedHandle('secrets:resetCode', (_e, code: string): Res => {
     try {
       if (!CODE_RE.test(String(code))) return fail('六位码必须是 6 位数字')
       if (!safeStorage.isEncryptionAvailable()) return fail('这台机器上系统加密不可用，无法安全存储')
@@ -760,7 +761,7 @@ export function registerSecretHandlers(): void {
     }
   })
 
-  ipcMain.handle('secrets:unlock', (_e, code: string): Res => {
+  guardedHandle('secrets:unlock', (_e, code: string): Res => {
     try {
       const now = Date.now()
       if (now < lockedOutUntil) {
@@ -789,7 +790,7 @@ export function registerSecretHandlers(): void {
   })
 
   /** 给 secret_check 用。**不要求解锁**（只回布尔，理由见 secretsHas 的注释） */
-  ipcMain.handle('secrets:has', (_e, names: string[], ptyId?: string) => {
+  guardedHandle('secrets:has', (_e, names: string[], ptyId?: string) => {
     const list = Array.isArray(names) ? names.map((n) => String(n)) : []
     return {
       vars: secretsHas(list, ptyId),
@@ -801,13 +802,13 @@ export function registerSecretHandlers(): void {
     }
   })
 
-  ipcMain.handle('secrets:lock', (): SecretsStatus => {
+  guardedHandle('secrets:lock', (): SecretsStatus => {
     unlockedUntil = 0
     return status()
   })
 
   /** 列表**永远不含值**。渲染层拿不到值，只有 secrets:reveal 那一条通道能拿到 */
-  ipcMain.handle('secrets:list', (): SecretMeta[] => {
+  guardedHandle('secrets:list', (): SecretMeta[] => {
     if (!isUnlocked()) return []
     touch()
     const s = readStore()
@@ -834,17 +835,17 @@ export function registerSecretHandlers(): void {
    */
   /** 用户当场把一组密钥给了某个终端（走 request_secret 时）→ 那个终端才能用 eas-secret 取它。
    *  没有这一步的话，用户刚填的密钥反而是唯一取不到的（新组默认不在任何终端的授权里）。 */
-  ipcMain.handle('secrets:grantToPty', (_e, ptyId: string | undefined, group: string, expectedEpoch?: string) => {
+  guardedHandle('secrets:grantToPty', (_e, ptyId: string | undefined, group: string, expectedEpoch?: string) => {
     grantGroupToPty(ptyId, String(group), expectedEpoch)
   })
 
-  ipcMain.handle('secrets:audit', (): SecretAuditEntry[] => secretAudit())
+  guardedHandle('secrets:audit', (): SecretAuditEntry[] => secretAudit())
 
   /**
    * 选一个 .env 文件并解析。**只回变量名，不回值** —— 值扣在主进程等确认。
    * 给「金库里那些 .env 搬进柜子」这件事用：用户不用自己开文件复制。
    */
-  ipcMain.handle(
+  guardedHandle(
     'secrets:pickEnvFile',
     async (
       _e,
@@ -889,7 +890,7 @@ export function registerSecretHandlers(): void {
   )
 
   /** 把上一步选中的文件里的变量存成一条。值从主进程的暂存里取，不经渲染层 */
-  ipcMain.handle(
+  guardedHandle(
     'secrets:commitImport',
     (_e, input: { name: string; varNames: string[]; autoInject?: boolean }): Res => {
       try {
@@ -936,7 +937,7 @@ export function registerSecretHandlers(): void {
    * 和 pickEnvFile 的区别：那个是「文件里有 KEY=value，解析出变量」，
    * 这个是「文件本身就是密钥」—— 整个文件内容加密存起来，用的时候解成临时文件给路径。
    */
-  ipcMain.handle(
+  guardedHandle(
     'secrets:pickKeyFile',
     async (
       _e,
@@ -978,7 +979,7 @@ export function registerSecretHandlers(): void {
   )
 
   /** 把上一步选中的密钥文件存进柜子。值从主进程暂存取，不经渲染层 */
-  ipcMain.handle(
+  guardedHandle(
     'secrets:commitKeyFile',
     (_e, input: { groupName: string; varName: string }): Res => {
       try {
@@ -1029,14 +1030,14 @@ export function registerSecretHandlers(): void {
   )
 
   /** shell 配置里有没有同名变量在覆盖我们注入的值。**只回变量名和文件名** */
-  ipcMain.handle('secrets:rcConflicts', (_e, names: string[]) =>
+  guardedHandle('secrets:rcConflicts', (_e, names: string[]) =>
     shellRcConflicts(Array.isArray(names) ? names.map(String) : [])
   )
 
   /** 这个终端启动时带了哪些变量 —— 终端角标用。**只有名字** */
-  ipcMain.handle('secrets:injectedIn', (_e, ptyId: string): string[] => injectedInPty(ptyId))
+  guardedHandle('secrets:injectedIn', (_e, ptyId: string): string[] => injectedInPty(ptyId))
 
-  ipcMain.handle('secrets:save', (_e, input: SecretSaveInput): Res => {
+  guardedHandle('secrets:save', (_e, input: SecretSaveInput): Res => {
     try {
       const guard = requireUnlocked()
       if (guard) return fail(guard)
@@ -1109,7 +1110,7 @@ export function registerSecretHandlers(): void {
     }
   })
 
-  ipcMain.handle('secrets:remove', (_e, id: string): Res => {
+  guardedHandle('secrets:remove', (_e, id: string): Res => {
     try {
       const guard = requireUnlocked()
       if (guard) return fail(guard)
@@ -1130,7 +1131,7 @@ export function registerSecretHandlers(): void {
    * 单独一条而不是并进 list，是为了让「值离开主进程」这件事在代码里只有一个入口，
    * 将来加审计日志也只用盯这一处。
    */
-  ipcMain.handle('secrets:reveal', (_e, id: string, varName?: string): SecretReveal => {
+  guardedHandle('secrets:reveal', (_e, id: string, varName?: string): SecretReveal => {
     const guard = requireUnlocked()
     if (guard) return { ok: false, error: guard }
     const s = readStore()

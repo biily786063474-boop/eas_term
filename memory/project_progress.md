@@ -666,3 +666,8 @@ pluginHost两条tools/call → toolActivity → bootstrap唯一controller.manage
 
 ### 2026-09-14 01:20 PDT · 对话完整归档落地
 - seq 稳定序号（shared/historyArchive）+ 主进程按序号并集保存（agentHistoryArchive，v2）+ 读取只回最近 100 条 + 列表 mtime 缓存。渲染层 trimForSave 只是窗口。测试先红后绿 11 例；隔离实例真实 IPC 合并验证通过。已裁掉的旧开头不可恢复；缺"加载更早"翻页 UI。
+
+### 2026-09-14 02:10 PDT · 安全边界 S1–S4 修复
+- S1 `cliAuth/installCommand.ts`：安装命令主进程查表，渲染层字符串只能逐字命中方案表；S2 `webviewGuard.ts` + `index.ts` will-attach-webview 剥 preload/关 nodeIntegration；S3 `wiki/rootGate.ts`：init/setPath 只接受对话框/默认建议记住的或 guardDir 允许的目录；S4 `ipcGuard.ts`（核心判定在 `ipcGuardCore.ts`）：secrets/pty/fs/git/cliAuth×2/agentChat/session/wiki 共 100 处注册换 guardedHandle/guardedOn。
+- 测试先红后绿 5 文件（含 securityWiring 结构守卫）。隔离验收：伪造安装命令与未知 CLI 被拒；带 preload+nodeintegration 属性的 webview guest 里 require/window.api/process 全 undefined；/tmp 目录 setPath/init 被拒且未建目录，项目目录放行；密钥柜状态、终端创建/写入/回显/关闭正常，日志 0 次守卫拒绝。
+- 评审页 docs/reviews/2026-09-14-代码领域耦合与安全边界评审.html（已开在画布）；03/13 图纸已记。

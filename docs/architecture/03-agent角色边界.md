@@ -366,3 +366,9 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 
 ### 2026-09-13 流式语音迁移保护
 流式识别模型和decode仅在 `voicePreviewWorker`；禁止恢复主线程缓存recognizer或同步decode。`voicePreviewSession.takeText` 的FIFO与partialBoundary防止上一句迟到预览污染下一句（即使targetId相同）。不得转移定稿共享音频的原buffer；不得积压超限后静默丢语音。录音初始化取消/线程错误与正常收尾都保留sender/epoch守卫，驻留预算只认真实worker exit。
+
+### 2026-09-14 · 安全边界四道新闸（改了会静默失效）
+- `cliAuth/installCommand.resolveInstallCommand`：安装命令只认主进程方案表；给 `startInstall` 加"直接用参数"的分支 = 重新打开渲染层 RCE。
+- `webviewGuard` + `index.ts` 的 `will-attach-webview`：删钩子或在钩子里放行 preload = 网页节点能拿到 `window.api`。
+- `wiki/rootGate`：`wiki:init`/`wiki:setPath` 绕过 `allowed()` = 渲染层可指挥主进程在任意可写位置建目录。
+- `ipcGuard.guardedHandle/guardedOn`：八个敏感文件禁止裸 `ipcMain`；`securityWiring.test.ts` 是守卫。

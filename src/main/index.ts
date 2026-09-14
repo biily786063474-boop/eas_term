@@ -1,3 +1,4 @@
+import { hardenWebviewPreferences } from './webviewGuard.ts'
 import { registerRuntimeMonitor } from './runtime/ipc.ts'
 import { registerUsageHandlers } from './usage/index.ts'
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
@@ -75,6 +76,9 @@ process.on('unhandledRejection', (reason) => {
 // (不弹原生新窗),并通知渲染层「聚焦到这个浏览器节点」(画布模式下 pan 过去)。
 // 用 web-contents-created 捕获所有 webview guest(比 did-attach-webview 对命令式创建的 webview 更可靠)。
 app.on('web-contents-created', (_e, contents) => {
+  // S2（2026-09-14 评审）：宿主 webContents 上强制加固每一个将要挂上的 <webview>：
+  // 剥 preload、关 nodeIntegration、开 contextIsolation。渲染层设了也不算数。
+  contents.on('will-attach-webview', (_ev, webPreferences) => { hardenWebviewPreferences(webPreferences as unknown as Record<string, unknown>) })
   if (contents.getType() !== 'webview') return
   // Internal routes only open UI. No website can silently create a bookmark or publish.
   const routeFavorites = (url: string): boolean => {

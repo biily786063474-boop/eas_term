@@ -1,4 +1,5 @@
-import { ipcMain, shell } from 'electron'
+import { shell } from 'electron'
+import { guardedHandle } from './ipcGuard'
 import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -172,11 +173,11 @@ function clampBinary(text: string): { text: string; binary: boolean; truncated: 
 }
 
 export function registerGitHandlers(): void {
-  ipcMain.handle('git:historyFiles', async (_e, cwd: string, target: string, base?: string) => {
+  guardedHandle('git:historyFiles', async (_e, cwd: string, target: string, base?: string) => {
     try { return { ok: true, files: await historyFiles(cwd, base, target) } }
     catch (error) { return { ok: false, files: [], error: String(error) } }
   })
-  ipcMain.handle('git:historyAction', async (_e, cwd: string, action: HistoryAction, target: string, name?: string): Promise<OpResult> => {
+  guardedHandle('git:historyAction', async (_e, cwd: string, action: HistoryAction, target: string, name?: string): Promise<OpResult> => {
     try {
       const allowed = guardDir(cwd)
       if (!allowed.ok) return allowed
@@ -195,7 +196,7 @@ export function registerGitHandlers(): void {
       return { ok: true }
     } catch (error) { return { ok: false, error: error instanceof Error ? error.message : String(error) } }
   })
-  ipcMain.handle('git:status', async (_e, cwd: string): Promise<GitStatus> => {
+  guardedHandle('git:status', async (_e, cwd: string): Promise<GitStatus> => {
     const root = await repoRoot(cwd)
     if (!root) return { isRepo: false, files: [] }
     const r = await git(cwd, ['status', '--porcelain=v2', '--branch', '-z'])
@@ -205,7 +206,7 @@ export function registerGitHandlers(): void {
   })
 
   // mode='worktree'：暂存区(或HEAD) ↔ 工作区磁盘内容；mode='staged'：HEAD ↔ 暂存区
-  ipcMain.handle(
+  guardedHandle(
     'git:diff',
     async (_e, cwd: string, relPath: string, mode: 'worktree' | 'staged'): Promise<GitDiffResult> => {
       try {
@@ -254,13 +255,13 @@ export function registerGitHandlers(): void {
 
   // ⚠️ porcelain 状态给出的路径相对仓库根；项目可能是大仓库的子目录（monorepo），
   // 命令行 pathspec 相对 cwd 解析，所以带路径的写操作必须在仓库根目录执行才能命中。
-  ipcMain.handle('git:stage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
+  guardedHandle('git:stage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
     const root = (await repoRoot(cwd)) ?? cwd
     const r = await git(root, ['add', '--', ...paths])
     return r.ok ? { ok: true } : { ok: false, error: r.stderr.trim() }
   })
 
-  ipcMain.handle('git:unstage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
+  guardedHandle('git:unstage', async (_e, cwd: string, paths: string[]): Promise<OpResult> => {
     const root = (await repoRoot(cwd)) ?? cwd
     // 有 HEAD 时用 reset 取消暂存；仓库尚无提交时用 rm --cached
     let r = await git(root, ['reset', '-q', 'HEAD', '--', ...paths])
@@ -269,7 +270,7 @@ export function registerGitHandlers(): void {
   })
 
   // 丢弃改动：已跟踪文件恢复到暂存区版本；未跟踪文件移入废纸篓（可找回，不用 rm）
-  ipcMain.handle(
+  guardedHandle(
     'git:discard',
     async (_e, cwd: string, paths: string[], untracked: boolean): Promise<OpResult> => {
       if (untracked) {
@@ -293,7 +294,7 @@ export function registerGitHandlers(): void {
     }
   )
 
-  ipcMain.handle('git:commit', async (_e, cwd: string, message: string): Promise<OpResult> => {
+  guardedHandle('git:commit', async (_e, cwd: string, message: string): Promise<OpResult> => {
     const msg = message.trim()
     if (!msg) return { ok: false, error: '请填写提交信息' }
     const r = await git(cwd, ['commit', '-m', msg])
@@ -302,14 +303,14 @@ export function registerGitHandlers(): void {
 
   // 回退到指定版本：git reset --hard <hash>（当前分支 HEAD 移到该提交，丢弃其后提交与未提交改动）。
   // 破坏性操作，渲染层调用前必须弹确认。hash 白名单校验（参数以数组传，无 shell 注入，仍做格式兜底）。
-  ipcMain.handle('git:resetHard', async (_e, cwd: string, hash: string): Promise<OpResult> => {
+  guardedHandle('git:resetHard', async (_e, cwd: string, hash: string): Promise<OpResult> => {
     if (!/^[0-9a-fA-F]{7,40}$/.test(hash)) return { ok: false, error: '非法的提交哈希' }
     const r = await git(cwd, ['reset', '--hard', hash])
     return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
   })
 
   // 历史版本列表：一次 log + numstat，解析出 hash/时间/信息/文件数
-  ipcMain.handle('git:log', async (_e, cwd: string, limit: number): Promise<GitCommit[]> => {
+  guardedHandle('git:log', async (_e, cwd: string, limit: number): Promise<GitCommit[]> => {
     const root = await repoRoot(cwd)
     if (!root) return []
     // --all + topo-order：纳入所有分支/远程/tag 并保持分支不交错，供画轨道图。
@@ -346,7 +347,7 @@ export function registerGitHandlers(): void {
   })
 
   // 某次提交改动的文件列表（该提交 vs 其父）
-  ipcMain.handle(
+  guardedHandle(
     'git:commitFiles',
     async (_e, cwd: string, hash: string): Promise<GitCommitFile[]> => {
       // 对第一父提交 diff（普通提交 = 唯一父；合并提交 = 取对第一父的差异，diff-tree 默认对
@@ -377,7 +378,7 @@ export function registerGitHandlers(): void {
   )
 
   // 某次提交里某文件的 diff（父版本 ↔ 本提交版本）
-  ipcMain.handle(
+  guardedHandle(
     'git:commitDiff',
     async (_e, cwd: string, hash: string, relPath: string, base?: string, origPath?: string): Promise<GitDiffResult> => {
       try {
@@ -407,7 +408,7 @@ export function registerGitHandlers(): void {
   )
 
   // AI 简述：把某次提交的 diff 交给终端里的 claude CLI 翻成一句人话（复用 Claude Max，无需 key）
-  ipcMain.handle('git:describe', async (_e, cwd: string, hash: string): Promise<AiResult> => {
+  guardedHandle('git:describe', async (_e, cwd: string, hash: string): Promise<AiResult> => {
     const show = await git(cwd, ['show', hash, '--stat', '-p', '--no-color'])
     if (!show.ok) return { ok: false, error: show.stderr.trim() || '读取提交失败' }
     let diff = show.stdout

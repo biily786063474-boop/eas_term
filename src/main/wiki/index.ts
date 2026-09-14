@@ -10,7 +10,8 @@
 //   git.ts     快照与回滚（AI 动用户文件唯一的整体撤销手段）
 //   scan.ts    扫全库笔记（图谱和体检共用同一份数据）
 // 「agent 什么时候该来查」那套规则在 agentRules.ts。
-import { app, dialog, ipcMain, shell } from 'electron'
+import { app, dialog, shell } from 'electron'
+import { guardedHandle } from '../ipcGuard'
 import fs from 'fs'
 import path from 'path'
 
@@ -44,6 +45,8 @@ import { dirNames, initWiki, uniqueName } from './schema'
 import { readTaxonomy, taxonomyState, type ArchiveDirResult } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotesManaged } from './managedScan'
+import { createWikiRootGate } from './rootGate'
+import { guardDir } from '../fsGuard'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
@@ -107,7 +110,9 @@ export function registerWikiHandlers(): void {
     const { createScanWorker } = await import('./scanHost')
     return scanNotesManaged({ root, windowId, createWorker: workerData => createScanWorker({ workerData }) })
   }
-  ipcMain.handle('wiki:graph', async (e): Promise<WikiGraph> => {
+  // S3（2026-09-14 评审）：init/setPath 只接受对话框/默认建议返回过的路径，或 guardDir 允许的目录。
+  const rootGate = createWikiRootGate({ guardDir: p => ({ ok: guardDir(p).ok }) })
+  guardedHandle('wiki:graph', async (e): Promise<WikiGraph> => {
     const root = wikiPath()
     if (!root) return { nodes: [], edges: [] }
     const notes = await scanForWindow(root, e.sender.id)
@@ -141,7 +146,7 @@ export function registerWikiHandlers(): void {
    * 这里只做纯结构检查 —— 免费、瞬时、结果确定。
    * agent 拿到这份清单后再去做语义那半边，不用自己先把整个库扫一遍。
    */
-  ipcMain.handle('wiki:lint', async (e): Promise<LintFinding[]> => {
+  guardedHandle('wiki:lint', async (e): Promise<LintFinding[]> => {
     const root = wikiPath()
     if (!root) return []
     const notes = await scanForWindow(root, e.sender.id)
@@ -197,7 +202,7 @@ export function registerWikiHandlers(): void {
    * 这样 `grep "^## \[" log.md | tail -5` 能直接看最近动静（原文给的技巧）。
    * 同时它也是「放入 vs 查询」统计的唯一数据源。
    */
-  ipcMain.handle('wiki:log', (_e, action: string, title: string) => {
+  guardedHandle('wiki:log', (_e, action: string, title: string) => {
     const root = wikiPath()
     if (!root) return { ok: false }
     const act = ['ingest', 'query', 'lint'].includes(String(action)) ? String(action) : 'query'
@@ -220,7 +225,7 @@ export function registerWikiHandlers(): void {
    * 数据来自 log.md（agent 按约定记）+ 我们自己记的放入次数，两边都不完美，
    * 但方向足够说明问题。
    */
-  ipcMain.handle('wiki:stats', (): WikiStats => {
+  guardedHandle('wiki:stats', (): WikiStats => {
     const root = wikiPath()
     const empty = { added: 0, ingest: 0, query: 0, lint: 0, notes: 0 }
     if (!root) return empty
@@ -249,7 +254,7 @@ export function registerWikiHandlers(): void {
     return { added, ingest, query, lint, notes: walkNotes(root).length }
   })
 
-  ipcMain.handle('wiki:gitInit', () => {
+  guardedHandle('wiki:gitInit', () => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     try {
@@ -272,21 +277,21 @@ export function registerWikiHandlers(): void {
   })
 
   /** 归档前的快照：把当前状态先落一个提交，回滚就退到这里 */
-  ipcMain.handle('wiki:snapshot', (_e, label: string) => {
+  guardedHandle('wiki:snapshot', (_e, label: string) => {
     const root = wikiPath()
     if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
     const sha = commitAll(root, `归档前快照 · ${label}`)
     return sha ? { ok: true, sha } : { ok: false, error: '快照失败' }
   })
 
-  ipcMain.handle('wiki:commit', (_e, message: string) => {
+  guardedHandle('wiki:commit', (_e, message: string) => {
     const root = wikiPath()
     if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
     const sha = commitAll(root, message)
     return sha ? { ok: true, sha } : { ok: false, error: '提交失败' }
   })
 
-  ipcMain.handle('wiki:history', (_e, limit = 20): WikiCommit[] => {
+  guardedHandle('wiki:history', (_e, limit = 20): WikiCommit[] => {
     const root = wikiPath()
     if (!root || !isRepo(root)) return []
     try {
@@ -304,7 +309,7 @@ export function registerWikiHandlers(): void {
 
   /** 一键回滚到某个提交。**只在我们自己打的提交之间用**，且会先把当前状态另存一个提交，
    *  这样「回滚」本身也是可撤销的——用户后悔了还能再回来。 */
-  ipcMain.handle('wiki:rollback', (_e, sha: string) => {
+  guardedHandle('wiki:rollback', (_e, sha: string) => {
     const root = wikiPath()
     if (!root || !isRepo(root)) return { ok: false, error: '知识库还没用 git 管起来' }
     try {
@@ -322,7 +327,7 @@ export function registerWikiHandlers(): void {
    *   · 只移动，不删除、不覆盖（重名加后缀）
    *   · 目标固定在 素材/ 下，不接受任意路径 —— 防止一个坏计划把文件扔到库外
    */
-  ipcMain.handle('wiki:archive', (_e, items: ArchiveItem[]) => {
+  guardedHandle('wiki:archive', (_e, items: ArchiveItem[]) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     const ym = new Date().toISOString().slice(0, 7)
@@ -382,13 +387,13 @@ export function registerWikiHandlers(): void {
    * 才告诉他白点了。判定逻辑就是 wiki:archive 实际执行时用的那个 archiveDirOf，
    * 这里不重新算一遍，两处永远给同一个答案。
    */
-  ipcMain.handle('wiki:archiveDirCheck', (): ArchiveDirResult => {
+  guardedHandle('wiki:archiveDirCheck', (): ArchiveDirResult => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     return archiveDirOf(root)
   })
 
-  ipcMain.handle('wiki:status', () => wikiStatus())
+  guardedHandle('wiki:status', () => wikiStatus())
 
   /**
    * 知识库内容离开本机进程边界的**唯一**通道，供 MCP 工具 wiki_query 调用。
@@ -400,7 +405,7 @@ export function registerWikiHandlers(): void {
    *
    * 每次都当场读盘，不缓存——换位置、建库、解绑立即生效，没有「规则过期」这回事。
    */
-  ipcMain.handle('wiki:query', () => {
+  guardedHandle('wiki:query', () => {
     const st = wikiStatus()
     if (!st.configured || !st.exists || st.looksEmpty) {
       return { configured: st.configured, exists: st.exists, looksEmpty: st.looksEmpty }
@@ -445,13 +450,15 @@ export function registerWikiHandlers(): void {
     }
   })
 
-  ipcMain.handle('wiki:pickPath', async () => {
+  guardedHandle('wiki:pickPath', async () => {
     const r = await dialog.showOpenDialog({
       title: '选择知识库位置',
       properties: ['openDirectory', 'createDirectory'],
       buttonLabel: '就用这里'
     })
-    return r.canceled ? null : (r.filePaths[0] ?? null)
+    const chosen = r.canceled ? null : (r.filePaths[0] ?? null)
+    rootGate.remember(chosen)
+    return chosen
   })
 
   /** 默认建议位置。两条硬约束：
@@ -459,10 +466,10 @@ export function registerWikiHandlers(): void {
    *  2. **不带空格、不带中文** —— 这个路径会被拼进 shell 命令、agent 规则、脚本参数，
    *     带空格就得处处记得加引号，漏一处就出错（本项目被 `vibe coding` 那个空格
    *     坑掉过 node-pty 编译）。老的默认值是「Eas 知识库」，正是空格的来源。 */
-  ipcMain.handle('wiki:suggestPath', () => path.join(app.getPath('documents'), 'eas-wiki'))
+  guardedHandle('wiki:suggestPath', () => { const p = path.join(app.getPath('documents'), 'eas-wiki'); rootGate.remember(p); return p })
 
   /** 收件箱的「＋」入口：多选文件。拖拽之外必须有这个——不习惯拖的人也得进得来 */
-  ipcMain.handle('wiki:pickFiles', async (): Promise<string[]> => {
+  guardedHandle('wiki:pickFiles', async (): Promise<string[]> => {
     const r = await dialog.showOpenDialog({
       title: '选择要放进收件箱的文件',
       properties: ['openFile', 'multiSelections'],
@@ -471,8 +478,9 @@ export function registerWikiHandlers(): void {
     return r.canceled ? [] : r.filePaths
   })
 
-  ipcMain.handle('wiki:init', (_e, root: string) => {
+  guardedHandle('wiki:init', (_e, root: string) => {
     if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
+    if (!rootGate.allowed(root)) return { ok: false, error: '这个位置不是通过选择框指定的，也不在项目或知识库目录内' }
     try {
       const r = initWiki(root)
       setWikiPath(root)
@@ -482,13 +490,13 @@ export function registerWikiHandlers(): void {
     }
   })
 
-  ipcMain.handle('wiki:forget', () => {
+  guardedHandle('wiki:forget', () => {
     // 只忘掉位置，不删任何文件 —— 用户的笔记不该因为一次点击消失
     setWikiPath(null)
     return wikiStatus()
   })
 
-  ipcMain.handle('wiki:reveal', (_e, sub?: string) => {
+  guardedHandle('wiki:reveal', (_e, sub?: string) => {
     const p = wikiPath()
     if (!p) return
     const target = sub ? path.join(p, sub) : p
@@ -499,7 +507,7 @@ export function registerWikiHandlers(): void {
    * 往收件箱放文件。**默认复制不移动** —— 移动会让用户原来放文件的地方东西没了，
    * 这是最容易挨骂的一类操作。来源路径记在旁边的 .source 里，归档时能追溯。
    */
-  ipcMain.handle('wiki:addToInbox', async (_e, files: string[], move = false) => {
+  guardedHandle('wiki:addToInbox', async (_e, files: string[], move = false) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     const blocked = taxonomyBrokenError(root)
@@ -558,7 +566,7 @@ export function registerWikiHandlers(): void {
     return { ok: true, done, failed, inboxDir: inboxOf(root), status: wikiStatus() }
   })
 
-  ipcMain.handle('wiki:inbox', (): WikiInboxItem[] => {
+  guardedHandle('wiki:inbox', (): WikiInboxItem[] => {
     const root = wikiPath()
     if (!root) return []
     const dir = path.join(root, inboxOf(root))
@@ -592,7 +600,7 @@ export function registerWikiHandlers(): void {
    * 「省掉了整套 embedding RAG 基建」。真越过那个规模再接 qmd（本地混合搜索，
    * 同时提供 CLI 和 MCP server，agent 和界面都能用）。
    */
-  ipcMain.handle('wiki:search', (_e, q: string, limit = 40): WikiHit[] => {
+  guardedHandle('wiki:search', (_e, q: string, limit = 40): WikiHit[] => {
     const root = wikiPath()
     const query = String(q ?? '').trim().toLowerCase()
     if (!root || query.length < 1) return []
@@ -631,8 +639,9 @@ export function registerWikiHandlers(): void {
   })
 
   /** 换位置：只改指向，**不搬文件也不删文件**——搬家的决定该由用户在访达里做 */
-  ipcMain.handle('wiki:setPath', (_e, root: string) => {
+  guardedHandle('wiki:setPath', (_e, root: string) => {
     if (!root || !path.isAbsolute(root)) return { ok: false, error: '需要绝对路径' }
+    if (!rootGate.allowed(root)) return { ok: false, error: '这个位置不是通过选择框指定的，也不在项目或知识库目录内' }
     // **必须拦住不存在的目录。** 以前这里照收，于是绑到一个打错的路径上之后，
     // 界面显示的是「知识库是空的」——和「文件真的被删了」长得一模一样。
     // 真实踩过：路径少了一个空格，人以为整个知识库丢了。
@@ -660,7 +669,7 @@ export function registerWikiHandlers(): void {
    * 点号开头 → 访达里看不见、也不会被数进收件箱徽章。
    * 归档时它会跟着媒体文件一起搬进 素材/。
    */
-  ipcMain.handle('wiki:saveTranscript', (_e, mediaName: string, text: string) => {
+  guardedHandle('wiki:saveTranscript', (_e, mediaName: string, text: string) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
     const blocked = taxonomyBrokenError(root)
@@ -678,7 +687,7 @@ export function registerWikiHandlers(): void {
   })
 
   /** 读某个收件箱条目的逐字稿（agent 归档时用它来写笔记） */
-  ipcMain.handle('wiki:transcript', (_e, mediaName: string): string | null => {
+  guardedHandle('wiki:transcript', (_e, mediaName: string): string | null => {
     const root = wikiPath()
     if (!root) return null
     try {
@@ -692,7 +701,7 @@ export function registerWikiHandlers(): void {
     }
   })
 
-  ipcMain.handle('wiki:backlinks', (_e, target: string): Backlink[] => {
+  guardedHandle('wiki:backlinks', (_e, target: string): Backlink[] => {
     const root = wikiPath()
     if (!root) return []
     // [[链接]] 里写的通常是标题（不带扩展名），也允许写相对路径

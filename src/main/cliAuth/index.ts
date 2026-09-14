@@ -20,7 +20,8 @@
 // · codex 有 `--device-auth`：**它自己就不开浏览器**，给链接 + 一次性码
 // · claude 会自己弹浏览器 —— 用一个 no-op 的 `open` 垫在 PATH 最前面拦住它，
 //   它同时还要求把授权码**粘回 stdin**，所以界面上要多一个输入框
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow } from 'electron'
+import { guardedHandle } from '../ipcGuard'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
@@ -295,13 +296,13 @@ export function cancelLogin(): void {
 }
 
 export function registerCliAuthHandlers(): void {
-  ipcMain.handle('cliAuth:check', (_e, cli: CliId) => checkAuth(cli))
-  ipcMain.handle('cliAuth:startLogin', (e, cli: CliId) => startLogin(cli, { windowId: e.sender.id }))
-  ipcMain.handle('cliAuth:submitCode', (_e, code: string) => submitCode(code))
-  ipcMain.handle('cliAuth:cancelLogin', () => {
+  guardedHandle('cliAuth:check', (_e, cli: CliId) => checkAuth(cli))
+  guardedHandle('cliAuth:startLogin', (e, cli: CliId) => startLogin(cli, { windowId: e.sender.id }))
+  guardedHandle('cliAuth:submitCode', (_e, code: string) => submitCode(code))
+  guardedHandle('cliAuth:cancelLogin', () => {
     cancelLogin()
     return { ok: true }
   })
   /** 界面上「把日志给我看」的入口 —— 排障时不用让用户去翻 userData */
-  ipcMain.handle('cliAuth:log', () => ({ path: logPath(), lines: tail(200) }))
+  guardedHandle('cliAuth:log', () => ({ path: logPath(), lines: tail(200) }))
 }
