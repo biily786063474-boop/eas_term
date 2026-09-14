@@ -15,6 +15,8 @@ export function locateService(serviceId: string): boolean {
   if (!hit) return false
   window.dispatchEvent(new CustomEvent('eas:close-settings'))
   if (s.viewMode !== 'canvas') s.setViewMode('canvas')
+  // focusCanvasNode 只平移视口；选中要单独设。键格式与 CanvasStage / PaneView 一致：'n:<frameId>:<nodeId>'
+  useStore.getState().setCanvasSel(['n:' + hit.frameId + ':' + hit.nodeId])
   useStore.getState().focusCanvasNode(hit.frameId, hit.nodeId)
   return true
 }
