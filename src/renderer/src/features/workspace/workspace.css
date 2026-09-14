@@ -3339,3 +3339,6 @@ body.dragging-row * {
 .sec-audit > summary { cursor: pointer; padding: 6px 0; }
 .sec-audit[open] { max-height: 180px; overflow-y: auto; }
 .sec-audit .sreq-hint { overflow-wrap: anywhere; }
+
+/* 运行与资源页 / 标题栏临时提示共用的呼吸点（rs- 前缀 = runtime settings） */
+@keyframes rs-pulse { 50% { opacity: .35; } }

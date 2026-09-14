@@ -1,0 +1,88 @@
+/* 设置 › 运行与资源。视觉稿 docs/prototype/2026-09-14-runtime-center.html 提案 02。
+   只用 base.css 令牌；分区折叠、卡片、芯片、弹出面板。
+   `rs-pulse` 这条 keyframes 定义在 workspace.css（标题栏 TitlebarAlert 也用，设置没打开过时本文件未加载）。 */
+.rs-page { display: flex; flex-direction: column; }
+.rs-modebar { display: flex; align-items: center; gap: 12px; font-size: 11.5px; color: var(--t-3); }
+.rs-dim { color: var(--t-3); }
+.rs-seg { display: flex; gap: 3px; padding: 3px; background: var(--wash-1); border-radius: 9px; }
+.rs-seg button { border: 0; background: none; padding: 5px 11px; border-radius: 6px; font: inherit; font-size: 11.5px; color: var(--t-3); cursor: pointer; white-space: nowrap; }
+.rs-seg button[aria-pressed='true'] { background: var(--lift-3); color: var(--t-1); }
+.rs-seg button:disabled { opacity: .5; cursor: default; }
+.rs-seg small { font-size: 10px; opacity: .7; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.rs-note { position: relative; font-size: 11px; color: var(--t-3); }
+.rs-note-right { margin-left: auto; }
+.rs-note summary { cursor: pointer; list-style: none; user-select: none; }
+.rs-note summary::-webkit-details-marker { display: none; }
+.rs-note summary:hover { color: var(--t-2); }
+.rs-note p { margin: 6px 0 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--glass-3); backdrop-filter: var(--blur); border: 1px solid var(--glass-border-strong); color: var(--t-3); font-size: 11px; line-height: 1.75; position: absolute; right: 0; top: 100%; width: min(460px, 70vw); z-index: 3; box-shadow: 0 12px 40px var(--ink-3); }
+.rs-kpis { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+.rs-tile { padding: 12px 14px; border-radius: var(--radius-md); background: var(--lift-1); }
+.rs-lab { font-size: 11px; color: var(--t-3); display: flex; justify-content: space-between; align-items: baseline; }
+.rs-lab em { font-style: normal; font-size: 10px; }
+.rs-val { font-size: 22px; font-weight: 600; letter-spacing: -.2px; color: var(--t-1); line-height: 1.25; margin-top: 2px; }
+.rs-val small { font-size: 11px; font-weight: 400; color: var(--t-3); margin-left: 6px; letter-spacing: 0; }
+.rs-val.warn { color: var(--sem-warn); }
+.rs-meter { position: relative; height: 4px; border-radius: 2px; background: var(--lift-2); margin-top: 10px; }
+.rs-meter i { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width .3s; }
+.rs-meter.warn i { background: var(--sem-warn); }
+.rs-meter.danger i { background: var(--sem-danger); }
+.rs-meter b { position: absolute; top: -4px; width: 1px; height: 12px; background: var(--t-2); }
+.rs-meter b::after { content: attr(data-l); position: absolute; top: 13px; left: -10px; font-size: 9px; font-weight: 400; color: var(--t-3); white-space: nowrap; }
+.rs-kpi-note { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 11px; color: var(--t-3); }
+.rs-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sem-ok); box-shadow: 0 0 0 3px rgba(var(--sem-ok-rgb), .15); }
+.rs-tools { display: flex; align-items: center; gap: 8px; margin: 16px 0 2px; }
+.rs-tools select { height: 28px; padding: 0 10px; border-radius: var(--radius-sm); border: 1px solid var(--stroke-input); background: var(--lift-1); font: inherit; font-size: 11.5px; color: var(--t-1); max-width: 260px; }
+.rs-tools .rs-seg { margin-left: auto; }
+.rs-sec { margin-top: 18px; position: relative; }
+.rs-sec-hd { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; padding: 0 2px; }
+.rs-sec-hd h4 { margin: 0; font-size: 12px; font-weight: 600; color: var(--t-1); }
+.rs-tg { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--t-1); cursor: pointer; }
+.rs-tg svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: var(--t-3); transition: transform .15s; }
+.rs-tg[aria-expanded='true'] svg { transform: rotate(90deg); }
+.rs-n { font-size: 10.5px; color: var(--t-3); padding: 1px 6px; border-radius: 5px; background: var(--lift-1); font-variant-numeric: tabular-nums; }
+.rs-sec-hd .rs-note { margin-left: auto; }
+.rs-list { border-radius: var(--radius-md); background: var(--lift-1); overflow: hidden; }
+.rs-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; min-height: 44px; }
+.rs-row + .rs-row { border-top: 1px solid var(--glass-border); }
+.rs-row-main { flex: 1; min-width: 0; }
+.rs-row-name { font-size: 12.5px; color: var(--t-1); display: flex; align-items: center; gap: 7px; }
+.rs-row-name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-row-meta { font-size: 11px; color: var(--t-3); margin-top: 1px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.rs-row-recent { min-height: 38px; }
+.rs-st { display: inline-flex; align-items: center; gap: 5px; }
+.rs-st::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--t-3); }
+.rs-st.ok::before { background: var(--sem-ok); }
+.rs-st.warn::before { background: var(--sem-warn); }
+.rs-st.bad::before { background: var(--sem-danger); }
+.rs-st.off::before { opacity: .6; }
+.rs-st.pulse::before { animation: rs-pulse 1.6s ease-in-out infinite; }
+.rs-pill { font-size: 9.5px; padding: 0 5px; height: 16px; line-height: 16px; border-radius: 4px; background: var(--lift-2); color: var(--t-2); white-space: nowrap; }
+.rs-empty { padding: 22px 14px; text-align: center; color: var(--t-3); font-size: 11.5px; border-radius: var(--radius-md); background: var(--lift-1); }
+.rs-sum { width: 100%; display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 9px 12px; border: 0; border-radius: var(--radius-md); background: var(--lift-1); font: inherit; font-size: 11px; color: var(--t-2); cursor: pointer; align-items: center; text-align: left; }
+.rs-sum:hover { background: var(--lift-2); }
+.rs-k { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.rs-k b { font-weight: 500; color: var(--t-1); }
+.rs-att { margin-left: auto; color: var(--sem-warn); }
+.rs-more { margin-left: auto; color: var(--t-3); }
+.rs-att + .rs-more { margin-left: 0; }
+.rs-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rs-card { padding: 10px 12px 11px; border-radius: var(--radius-md); background: var(--lift-1); min-width: 0; }
+.rs-card-hd { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; font-size: 11.5px; font-weight: 500; color: var(--t-2); }
+.rs-card-hd > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-card-hd .rs-n { margin-left: auto; font-weight: 400; }
+.rs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-chip { height: 24px; padding: 0 8px 0 7px; border: 0; border-radius: 6px; background: var(--lift-2); color: var(--t-1); display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; max-width: 100%; cursor: pointer; }
+.rs-chip svg, .rs-pop-t svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .85; flex: none; }
+.rs-chip em { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-chip .rs-st::before { width: 5px; height: 5px; }
+.rs-chip:hover { background: var(--lift-3); }
+.rs-chip[aria-expanded='true'] { background: var(--hl-bg); color: var(--hl-fg); }
+/* 设置弹窗 .cset-overlay 是 1200，面板要压过它 */
+.rs-pop { position: fixed; z-index: 1300; width: 250px; padding: 12px 12px 10px; border-radius: var(--radius-md); background: var(--glass-3); backdrop-filter: var(--blur); border: 1px solid var(--glass-border-strong); box-shadow: var(--glass-highlight), 0 16px 50px var(--ink-3); color: var(--fg); }
+.rs-pop-t { font-size: 12.5px; font-weight: 600; color: var(--t-1); display: flex; align-items: center; gap: 6px; }
+.rs-pop-m { font-size: 11px; color: var(--t-3); margin-top: 3px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rs-pop-a { display: flex; gap: 6px; margin-top: 10px; }
+.rs-pop-a .cset-btn { flex: 1; }
+.rs-pop-hint { font-size: 10.5px; color: var(--t-3); margin-top: 6px; }
+.rs-foot { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--glass-border); font-size: 10.5px; color: var(--t-3); display: flex; gap: 14px; flex-wrap: wrap; }
+@media (max-width: 720px) { .rs-kpis { grid-template-columns: 1fr 1fr; } .rs-cards { grid-template-columns: 1fr; } .rs-tools { flex-wrap: wrap; } }

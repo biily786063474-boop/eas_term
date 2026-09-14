@@ -1,4 +1,4 @@
-import { RuntimeMonitorPanel } from './RuntimeMonitorPanel'
+import { RuntimeSettingsPage } from './RuntimeSettingsPage'
 // 标题栏最右的设置入口 + 灯箱面板。
 //
 // 这里收拢那些「偶尔改一次、改完就忘」的东西：主题、提示音。
@@ -664,7 +664,7 @@ export function SettingsPanel(): JSX.Element {
                   <FootprintPanel mode="inline" />
                 </SettingGroup>
               )}
-              {tab === 'perf' && <RuntimeMonitorPanel />}
+              {tab === 'runtime' && <RuntimeSettingsPage />}
               {tab === 'perf' && (
                 <SettingGroup title="诊断日志">
                   <div className="cset-note">

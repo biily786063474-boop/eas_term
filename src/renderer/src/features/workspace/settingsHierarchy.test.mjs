@@ -21,3 +21,12 @@ test('settings styles do not redefine shared update modal material',()=>{
  assert.ok(!css.includes('var(--fg-muted)'))
  assert.ok(source.includes('role="dialog"'))
 })
+test('runtime page lives in settings and perf no longer embeds the old monitor panel',()=>{
+ assert.match(source,/tab === 'runtime' && <RuntimeSettingsPage/)
+ assert.ok(!source.includes('RuntimeMonitorPanel'))
+ const page=fs.readFileSync(new URL('./RuntimeSettingsPage.tsx',import.meta.url),'utf8')
+ // 三段准入范围说明一字不删：抽样各取一句
+ for(const s of ['不包含 AI 会话内部工具','跨窗口共享服务不可关闭','重启即清'])assert.ok(page.includes(s),s)
+ // 折叠是组件 state，不持久化
+ assert.ok(!page.includes('localStorage'))
+})
