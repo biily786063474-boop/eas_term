@@ -663,3 +663,7 @@ pluginHost两条tools/call → toolActivity → bootstrap唯一controller.manage
 
 ### 2026-09-14 00:55 PDT · 共享服务按项目释放（首刀）
 - sharedServices.releaseProject 挂 projects:remove；单测先红后绿；未真机验（需真 LSP）。缺运行中心手动"释放本项目"与插件宿主按项目释放。
+
+### 2026-09-14 01:20 PDT · 对话完整归档落地
+- seq 稳定序号（shared/historyArchive）+ 主进程按序号并集保存（agentHistoryArchive，v2）+ 读取只回最近 100 条 + 列表 mtime 缓存。渲染层 trimForSave 只是窗口。测试先红后绿 11 例；隔离实例真实 IPC 合并验证通过。已裁掉的旧开头不可恢复；缺"加载更早"翻页 UI。
+

@@ -16,6 +16,8 @@ export interface SentMessage {
   beforeTurnCount: number
   /** 这条消息带的图（缩略图，只为界面预览）。发给 CLI 的是路径，不是这个 */
   images?: { path: string; url: string }[]
+  /** 发出时分配的稳定序号（完整归档按它并集）。 */
+  seq?: number
 }
 
 /**
@@ -60,7 +62,7 @@ export function mergeUserMessages(view: ChatView, sent: SentMessage[]): ChatView
   const posOf = (m: SentMessage): number => Math.max(0, m.beforeTurnCount - trimmed)
   const merged: Turn[] = []
   const take = (m: SentMessage): void => {
-    merged.push({ role: 'user', text: m.text, execs: [], images: m.images })
+    merged.push({ role: 'user', text: m.text, execs: [], images: m.images, ...(typeof m.seq === 'number' ? { seq: m.seq } : {}) })
   }
   let sentIdx = 0
   for (let i = 0; i <= view.turns.length; i++) {

@@ -1,4 +1,6 @@
 // 聊天记录落盘前的裁剪。
+// 2026-09-14 起这只是**发给主进程的窗口**：磁盘上按 seq 并集保留全量（见 shared/historyArchive.ts），
+// 这里的额度只决定一次传多少、以及界面读回多少，不再决定磁盘留多少。
 //
 // 为什么要裁：一次长对话的 turns 里，绝大部分体积在两个地方 ——
 //   · `exec.output`：一条 npm test 的输出就能上百 KB，而回看历史时只需要看个开头
@@ -71,6 +73,8 @@ export function trimForSave(turns: readonly Turn[]): Turn[] {
   return keepIndexes(turns).map((i) => turns[i]).map((t) => ({
     role: t.role,
     text: t.text,
+    // 序号必须留着：主进程按它把这份窗口并回全量归档（2026-09-14）
+    ...(typeof t.seq === 'number' ? { seq: t.seq } : {}),
     execs: t.execs.map((e) => ({
       execId: e.execId,
       label: e.label,

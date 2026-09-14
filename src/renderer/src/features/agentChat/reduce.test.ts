@@ -758,3 +758,18 @@ test('工具结果的公共元数据跨事件保留，未知实际模型不沿�
   assert.equal(v.turns[0].execs[0].tool?.server, 'reports')
   assert.equal(v.turns[0].execs[0].resources?.[0].name, '报告')
 })
+
+// 2026-09-14 完整归档：归约器产出的每个轮次都带稳定序号，且随产生顺序递增。
+test('每个轮次带递增的 seq（assistant、user、压缩标记都有）', () => {
+  const before = Date.now()
+  const v = run([
+    { k: 'user.message', text: '问' },
+    { k: 'text.done', text: '答' },
+    { k: 'turn.done', usage: { inputTokens: 1, outputTokens: 1 } },
+    { k: 'text.done', text: '再答' }
+  ])
+  const seqs = v.turns.map((t) => t.seq)
+  assert.equal(seqs.length, 3)
+  for (const s of seqs) assert.ok(typeof s === 'number' && s >= before, '每个轮次都要有序号 ' + JSON.stringify(seqs))
+  for (let i = 1; i < seqs.length; i++) assert.ok((seqs[i] as number) > (seqs[i - 1] as number), '序号必须递增')
+})

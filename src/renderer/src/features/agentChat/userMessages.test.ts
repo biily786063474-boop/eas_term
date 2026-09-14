@@ -101,3 +101,10 @@ test('长会话：提问按 turnCursor 记录后，落在各自答案的前面',
   assert.deepEqual(pos, [0, 1, 2, 3, 4 + (4 * PER_Q - trimmed)])
   assert.ok(pos[4] > 4, '第五问不能塌到开头')
 })
+
+// 2026-09-14 完整归档：用户消息插回轮次序列时要带上它发出时拿到的 seq。
+test('mergeUserMessages 把 SentMessage.seq 带到 user 轮次上', () => {
+  const view = V([A('答')])
+  const merged = mergeUserMessages(view, [{ text: '问', beforeTurnCount: 0, seq: 12345 }])
+  assert.equal(merged.turns[0].role, 'user'); assert.equal(merged.turns[0].seq, 12345)
+})

@@ -29,7 +29,7 @@
 ## 状态
 - [x] 源码审查与交互稿确认
 - [ ] 存储止损
-- [ ] 完整归档与迁移
+- [x] 完整归档（2026-09-14）；迁移=旧档读时补序号，无需搬文件
 - [ ] 生命周期与 IPC
 - [ ] 历史 UI
 - [ ] 隔离实例验收
@@ -50,3 +50,11 @@
 验证：typecheck、build 通过；history/catalog/mount/storage/transition 共25项单测通过（含尚未接入的 gate 单测，不当作 UI 生命周期已完成）。隔离桌面实例实测历史列表、只读正文、正文关键词、置顶与重启保留、窄分屏列表→详情、点击另一分屏关闭、确认弹窗与取消。未发真实 AI 消息、未复制生产柜。
 当前验收 app 为 /tmp/eas-history-ui-review/Eas-History-Dev.app（唯一 bundle ID，防止 CUA 选中旧实例）。userData=/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-history-review-4SkEoU，4份明确标注假数据。源码仍在 .worktrees/voice-regression，未提交/未发版。
 下一步：完整归档与迁移、真实收尾协议、纯分屏稳定身份与新建/恢复、恢复真机、安全失败注入测试、跨webview外点关闭；不是再画原型。
+
+### 2026-09-14 01:20 · 完整归档落地（Claude 续作）
+- 每条消息在产生时拿稳定序号 `seq`（`shared/historyArchive.nextSeq`：≥ 产生时刻毫秒且进程内递增；归约器三处创建、压缩标记、渲染层 SentMessage 各自赋号）。
+- 主进程 `agentHistoryArchive.saveArchive`：读旧档 → 按序号并集（内存裁掉的保留、同序号新来覆盖、无序号的追加不丢）→ 原子写，文件 `v:2`；`loadArchiveWindow` 只回最近 100 条（`HISTORY_WINDOW`）并对旧档按下标补序号，返回 `total`。渲染层 `trimForSave` 现在只是"发给主进程的窗口"，额度不再决定磁盘留多少；单条命令输出仍截 1200 字符，图片仍只存路径。
+- `agentHistory:list` 改走 `historyListCache`（文件+mtime+size 缓存摘要与小写正文），文件变大后搜索不再整份重读。
+- 测试先红后绿：historyArchive 5、agentHistoryArchive 3、historyListCache 1、reduce/userMessages 各 1。隔离实例真实 IPC：两次窗口保存合并为 5 条、改过的以新为准、搜索索引更新、磁盘文件 v2 带序号。
+- 已被旧规则裁掉的开头找不回来（那 5 份顶到 100 条的记录）。面板脚注改为"只加载最近 100 条，完整记录已保存"，未单独眼验。未做：面板里"加载更早"翻页（磁盘已全量，只差 UI）。
+

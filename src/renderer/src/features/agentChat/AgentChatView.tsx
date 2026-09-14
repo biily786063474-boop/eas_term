@@ -32,6 +32,7 @@ import type {
 import { createChatReducer, type ChatView, type Turn } from './reduce.ts'
 import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.ts'
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
+import { nextSeq } from '../../../../shared/historyArchive.ts'
 import { startupPhaseOf } from './startupPhase.ts'
 import { readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
@@ -1223,7 +1224,7 @@ export function AgentChatView({
     // 轮次之前，跟 mergeUserMessages 的合并逻辑对齐。
     setSentMessages((prev) => [
       ...prev,
-      { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()) }
+      { text: message, beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq() }
     ])
     setSessionId(result.sessionId)
     setStarting(false)

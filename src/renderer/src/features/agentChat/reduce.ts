@@ -13,6 +13,7 @@
 //    所以 done 必须**覆盖** delta 攒出来的那个轮次，不能再 push 一个——否则同一段话
 //    在界面上出现两次。这是这个文件里最容易改错的一条。
 
+import { nextSeq } from '../../../../shared/historyArchive.ts'
 import type { ChatEvent, Usage, CliCapabilities, ChatToolInfo, ChatResource, ExecKind } from '../../../../shared/agentChat.ts'
 
 export interface ExecItem {
@@ -30,6 +31,8 @@ export interface Turn {
   role: 'user' | 'assistant'
   text: string
   execs: ExecItem[]
+  /** 稳定序号（2026-09-14 完整归档）：产生时分配，磁盘并集按它去重。旧档读回来时由主进程补。 */
+  seq?: number
   /**
    * **这条不是对话，是一条分隔标记**：「上下文在这里被压缩了」。
    *
@@ -193,7 +196,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
   function ensureAssistantTurn(): Turn {
     const last = turns[turns.length - 1]
     if (last && last.role === 'assistant' && last !== previousRequestTail) return last
-    const created: Turn = { role: 'assistant', text: '', execs: [] }
+    const created: Turn = { role: 'assistant', text: '', execs: [], seq: nextSeq() }
     turns.push(created)
     return created
   }
@@ -259,7 +262,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 流式增量：攒进当前正在流的轮次，没有就开一个。
         // 空串在翻译器那层就被挡掉了，这里到达的一定有内容。
         if (!streamingTurn) {
-          streamingTurn = { role: 'assistant', text: '', execs: [] }
+          streamingTurn = { role: 'assistant', text: '', execs: [], seq: nextSeq() }
           turns.push(streamingTurn)
         }
         streamingTurn.text += e.text
@@ -274,7 +277,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
           streamingTurn.text = e.text
           streamingTurn = null
         } else {
-          turns.push({ role: 'assistant', text: e.text, execs: [] })
+          turns.push({ role: 'assistant', text: e.text, execs: [], seq: nextSeq() })
         }
         break
       }
@@ -334,6 +337,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
           role: 'assistant',
           text: '',
           execs: [],
+          seq: nextSeq(),
           compact: {
             trigger: e.trigger,
             preTokens: e.preTokens,
@@ -393,7 +397,7 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 它后面跟着的 assistant 轮次自然接在它下面。
         // 不需要 beforeTurnCount 那套（那是给「组件本地记录 + 事后合并」用的，
         // 这条一到就落位）。
-        turns.push({ role: 'user', text: e.text, execs: [] })
+        turns.push({ role: 'user', text: e.text, execs: [], seq: nextSeq() })
         // **不动 streamingTurn**：上一轮如果还在流式输出，它的引用还挂在那儿，
         // 清掉的话那一轮剩下的 delta 会另起一个轮次，看起来像回答被劈成两半。
         break

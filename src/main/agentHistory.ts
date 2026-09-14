@@ -21,7 +21,9 @@ import fs from 'fs'
 import path from 'path'
 import { safeHistoryKey } from './agentHistoryKey'
 import { writeHistorySnapshot } from './agentHistoryStorage'
-import { historyMatches, historySummary, type HistorySummary } from '../shared/historyCatalog'
+import { saveArchive, loadArchiveWindow } from './agentHistoryArchive'
+import { createHistoryListCache } from './historyListCache'
+import { type HistorySummary } from '../shared/historyCatalog'
 
 // 历史由用户管理；不可按数量静默淘汰。
 const dir = (): string => path.join(app.getPath('userData'), 'agent-history')
@@ -89,19 +91,16 @@ export function registerTeamFindings(): void {
 export function registerAgentHistory(): void {
   ipcMain.handle(
     'agentHistory:load',
-    (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null; resumeCli: string | null } => {
+    (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null; resumeCli: string | null; total?: number } => {
       const empty = { turns: [], resumeId: null, resumeCli: null }
       const f = typeof leafId === 'string' ? fileOf(leafId) : null
       if (!f) return empty
       try {
-        const raw = JSON.parse(fs.readFileSync(f, 'utf8')) as { turns?: unknown; resumeId?: unknown; resumeCli?: unknown }
-        return {
-          turns: Array.isArray(raw.turns) ? raw.turns : [],
-          // 写这份记录时 CLI 那边的会话 id。**读回来必须跟当前 pane.resumeId 比一次** ——
-          // 对不上就说明模型接不回这段上下文了，界面得说清楚，见 AgentChatView。
-          resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null,
-          resumeCli: typeof raw.resumeCli === 'string' ? raw.resumeCli : null
-        }
+        // 2026-09-14 完整归档：磁盘全量、界面只回最近一窗（HISTORY_WINDOW）；旧档补序号。
+        // resumeId：写这份记录时 CLI 那边的会话 id。**读回来必须跟当前 pane.resumeId 比一次** ——
+        // 对不上就说明模型接不回这段上下文了，界面得说清楚，见 AgentChatView。
+        const win = loadArchiveWindow(f)
+        return { turns: win.turns, resumeId: win.resumeId, resumeCli: win.resumeCli, total: win.total }
       } catch {
         // 文件不存在 / 坏了 —— 一律当成「没有历史」。
         // **绝不能因为这个抛错**：那会让对话框整个起不来，而它只是个锦上添花的功能。
@@ -120,34 +119,12 @@ export function registerAgentHistory(): void {
    * **只报元信息，不带 turns** —— 空态只需要显示「什么时候的、聊了几轮、开头是什么」，
    * 把几十份记录的正文全读进渲染层是纯浪费。
    */
-  ipcMain.handle(
-    'agentHistory:list',
-    (_e, cwd: unknown, query: unknown): HistorySummary[] => {
-      if (typeof cwd !== 'string' || !cwd) return []
-      let names: string[]
-      try {
-        names = fs.readdirSync(dir()).filter((f) => f.endsWith('.json'))
-      } catch {
-        return []
-      }
-      const out: HistorySummary[] = []
-      for (const n of names) {
-        try {
-          const raw = JSON.parse(fs.readFileSync(path.join(dir(), n), 'utf8')) as {
-            cwd?: unknown
-            resumeId?: unknown
-            savedAt?: unknown
-            turns?: { role?: string; text?: string }[]
-          }
-          if (!historyMatches(raw, cwd, typeof query === 'string' ? query.slice(0, 500) : '')) continue
-          out.push(historySummary(n.replace(/\.json$/, ''), raw))
-        } catch {
-          /* 坏文件跳过，不能让一份坏记录挡住整个列表 */
-        }
-      }
-      return out.sort((a, b) => b.savedAt - a.savedAt)
-    }
-  )
+  // 2026-09-14：完整归档后文件会变大，列表/搜索走 mtime 缓存（historyListCache.ts），没变的文件不重读。
+  const listCache = createHistoryListCache()
+  ipcMain.handle('agentHistory:list', (_e, cwd: unknown, query: unknown): HistorySummary[] => {
+    if (typeof cwd !== 'string' || !cwd) return []
+    return listCache.list(dir(), cwd, typeof query === 'string' ? query.slice(0, 500) : '')
+  })
 
   // 返回**真的写成了没有**。调用方里至少有一条路（adoptOrphan）要靠它决定
   // 敢不敢删掉旧的那一份 —— 先删后存、而存又失败了的话，那段对话就永久没了。
@@ -155,21 +132,15 @@ export function registerAgentHistory(): void {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return false
     try {
-      let previous: { moduleId?: string; pinned?: boolean } = {}
-      try { previous = JSON.parse(fs.readFileSync(f, 'utf8')) } catch { /* new record */ }
-      return writeHistorySnapshot(f, {
-          moduleId: typeof moduleId === 'string' && safeHistoryKey(moduleId) ? moduleId : previous.moduleId ?? null,
-          pinned: previous.pinned === true,
-          v: 1,
-          savedAt: Date.now(),
-          resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
-          // 签发者和 id 一起存：历史文件是老对话「接上上次」的入口，缺了签发者又得回去猜
-          resumeCli: typeof resumeCli === 'string' && resumeCli ? resumeCli : null,
-          // 项目路径：`agentHistory:list` 靠它把记录归到项目下。
-          // 没有它就只能把所有项目的历史混在一起给用户挑，那不可用
-          cwd: typeof cwd === 'string' ? cwd : null,
-          turns
-      })
+      // 2026-09-14 完整归档：渲染层送来的是窗口，主进程按 seq 并回全量（agentHistoryArchive.ts）。
+      // 签发者和 id 一起存：历史文件是老对话「接上上次」的入口，缺了签发者又得回去猜。
+      // 项目路径：`agentHistory:list` 靠它把记录归到项目下。
+      return saveArchive(f, {
+        moduleId: typeof moduleId === 'string' && safeHistoryKey(moduleId) ? moduleId : null,
+        resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
+        resumeCli: typeof resumeCli === 'string' && resumeCli ? resumeCli : null,
+        cwd: typeof cwd === 'string' ? cwd : null
+      }, turns as { seq?: number }[])
     } catch (e) {
       console.error('[agentHistory] 写入失败', e)
       return false
