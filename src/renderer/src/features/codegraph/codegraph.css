@@ -770,3 +770,7 @@
 .cg-svg {
   position: relative;
 }
+
+/* 文件列表行可点击打开（2026-09-14）：外观沿用 .cg-file-n，只去掉原生按钮底与边 */
+.cg-file-open{background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.cg-file-open:hover{text-decoration:underline}

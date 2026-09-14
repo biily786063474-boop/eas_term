@@ -10,6 +10,9 @@
 // 这里画的是「现在实际怎样」。两者对不上的时候，那个差就是最有价值的信息。
 // 领地划分与风险等级直接引自图纸（`shared/codeGraph.ts` 的 TERRITORIES 是它的镜像）。
 
+import { openArtifact } from '../canvas/openArtifact'
+import { useStore } from '../../store'
+import { openGraphFile } from './openFileTarget'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CodeGraphResult, Risk } from '../../../../shared/codeGraph.ts'
 import { RefreshIcon } from '../../ui/Icons'
@@ -71,7 +74,8 @@ const RISK_LABEL: Record<'mapped' | 'derived', Record<Risk, string>> = {
  *  分成两个而不是一个，是因为它们回答的不是同一个问题、规模也差两个数量级：
  *  模块级 448 个节点（聚合到 23 块地），符号级 22909 个（只能按文件下钻）。
  *  硬塞进一张图的结果是两边都读不了。 */
-export function CodeGraphView({ root }: { root: string }): JSX.Element {
+/** frameId：在画布节点里渲染时由注册表注入，点文件就在同一 Frame 开预览；分屏里不传，走 openFile。 */
+export function CodeGraphView({ root, frameId }: { root: string; frameId?: string }): JSX.Element {
   const [mode, setMode] = useState<'module' | 'symbol'>('module')
   return (
     <div className="cg-shell">
@@ -92,12 +96,15 @@ export function CodeGraphView({ root }: { root: string }): JSX.Element {
           符号
         </button>
       </div>
-      {mode === 'module' ? <ModuleGraphView root={root} /> : <SymbolView root={root} />}
+      {mode === 'module' ? <ModuleGraphView root={root} frameId={frameId} /> : <SymbolView root={root} />}
     </div>
   )
 }
 
-function ModuleGraphView({ root }: { root: string }): JSX.Element {
+function ModuleGraphView({ root, frameId }: { root: string; frameId?: string }): JSX.Element {
+  /** 点文件节点 / 文件列表 → 打开那个文件（2026-09-14）。落点判定在 openFileTarget.ts。 */
+  const openFileOnMap = (rel: string): void =>
+    openGraphFile(root, rel, { frameId, openArtifact, openFile: (abs) => { void useStore.getState().openFile(abs) } })
   const [graph, setGraph] = useState<CodeGraphResult | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -337,14 +344,14 @@ function ModuleGraphView({ root }: { root: string }): JSX.Element {
             links={drillGraph.links}
             groupOrder={RISK_ORDER}
             layout={layout}
-            onPick={() => undefined}
+            onPick={openFileOnMap}
           />
           <div className="cg-files">
             {drillFiles.map((f) => (
               <div key={f.id} className="cg-file">
-                <span className="cg-file-n" title={f.id}>
+                <button type="button" className="cg-file-n cg-file-open" title={`打开 ${f.id}`} onClick={() => openFileOnMap(f.id)}>
                   {f.id.split('/').slice(-2).join('/')}
-                </span>
+                </button>
                 <span className="cg-deg" title="被依赖 / 依赖别人">
                   ← {f.inDegree} · {f.outDegree} →
                 </span>

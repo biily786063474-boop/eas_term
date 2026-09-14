@@ -671,3 +671,6 @@ pluginHost两条tools/call → toolActivity → bootstrap唯一controller.manage
 - S1 `cliAuth/installCommand.ts`：安装命令主进程查表，渲染层字符串只能逐字命中方案表；S2 `webviewGuard.ts` + `index.ts` will-attach-webview 剥 preload/关 nodeIntegration；S3 `wiki/rootGate.ts`：init/setPath 只接受对话框/默认建议记住的或 guardDir 允许的目录；S4 `ipcGuard.ts`（核心判定在 `ipcGuardCore.ts`）：secrets/pty/fs/git/cliAuth×2/agentChat/session/wiki 共 100 处注册换 guardedHandle/guardedOn。
 - 测试先红后绿 5 文件（含 securityWiring 结构守卫）。隔离验收：伪造安装命令与未知 CLI 被拒；带 preload+nodeintegration 属性的 webview guest 里 require/window.api/process 全 undefined；/tmp 目录 setPath/init 被拒且未建目录，项目目录放行；密钥柜状态、终端创建/写入/回显/关闭正常，日志 0 次守卫拒绝。
 - 评审页 docs/reviews/2026-09-14-代码领域耦合与安全边界评审.html（已开在画布）；03/13 图纸已记。
+
+### 2026-09-14 02:40 PDT · 代码地图点文件即打开
+- `codegraph/openFileTarget.ts`（纯函数：路径拼接、画布 openArtifact 同 Frame 开节点、分屏 openFile、图片走 image、模块级 id 不开）；ModuleGraphView 下钻视图 onPick 与文件列表行接上；注册表传 frameId。测试先红后绿 3 例；隔离验收：点 pty.ts / fsGuard.ts 各开一个代码节点、同文件不重复。分屏模式未眼验。

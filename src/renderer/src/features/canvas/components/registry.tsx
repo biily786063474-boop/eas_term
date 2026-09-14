@@ -108,7 +108,7 @@ const codeGraphComponent: CanvasComponentDef = {
   description: '模块依赖图 / 耦合与循环依赖',
   defaultSize: { w: 620, h: 480 },
   needsProject: true,
-  render: (ctx) => <CodeGraphView root={ctx.cwd} />
+  render: (ctx) => <CodeGraphView root={ctx.cwd} frameId={ctx.frameId} />
 }
 
 /** 插件面板（设计稿 2026-09-05 决定 #5）：**只注册这一个**，插件身份放 `node.component.props`
