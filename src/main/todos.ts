@@ -9,7 +9,8 @@
 // 还存在是同一件事，不是这个功能单独的缺陷。
 //
 // 照 board.ts 的范式：主进程管文件、逐条校验、IPC + preload 暴露、坏数据整条丢。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { TodoItem } from '../shared/types'
@@ -74,14 +75,14 @@ function cleanItems(items: unknown): TodoItem[] {
 export function registerTodoHandlers(): void {
   // 返回 null 表示「这个 key 从没存过清单」，和「存过但是空清单」（返回 []）是两件事——
   // 前者是「还没插入」，后者是「插入了但一条没加」，渲染层要能分清楚哪种该显示什么
-  ipcMain.handle('todos:get', (_e, key: string) => {
+  guardedHandle('todos:get', (_e, key: string) => {
     if (typeof key !== 'string' || !key) return null
     const map = load()
     return map[key] ?? null
   })
 
   // 整份清单落盘：增删改都走它，「顺序」这种跨条目的改动没法拆成单条表达（同 board:save 的取舍）
-  ipcMain.handle('todos:save', (_e, key: string, items: unknown) => {
+  guardedHandle('todos:save', (_e, key: string, items: unknown) => {
     if (typeof key !== 'string' || !key || key.length > MAX_KEY) return { ok: false }
     const map = load()
     map[key] = cleanItems(items)
@@ -90,7 +91,7 @@ export function registerTodoHandlers(): void {
   })
 
   // 删掉整份清单（不是清空条目）——key 直接从表里消失，下次 get 回 null
-  ipcMain.handle('todos:remove', (_e, key: string) => {
+  guardedHandle('todos:remove', (_e, key: string) => {
     if (typeof key !== 'string' || !key) return { ok: true }
     const map = load()
     delete map[key]

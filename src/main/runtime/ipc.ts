@@ -1,3 +1,4 @@
+import { guardedHandle } from '../ipcGuard'
 import {sharedServices} from './sharedServices.ts'
 import {ownedSessions} from './ownedSessions.ts'
 import {recentActivity} from './recentActivity.ts'
@@ -6,19 +7,19 @@ import os from 'node:os'
 import {runtimeStateStore} from './persistentState.ts'
 import {runtimeProjectLabels} from '../../shared/runtimeProjectLabels.ts'
 import { installPluginAdmission, observedPluginTasks, cancelPluginTask, observedPluginServices, stopObservedPlugin } from '../pluginHost.ts'
-import {app,BrowserWindow,ipcMain,dialog} from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import {createPlatformReader} from './readPlatformMetrics.ts'
 import {createRuntimeController} from './controller.ts'
 import {createStopGate} from './stopGate.ts'
 /** Application-owned metrics and confirmed owned-plugin stop. Admission stays disabled until validated. */
 export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;name:string}[]){
  const stopGate=createStopGate()
- ipcMain.handle('runtime:cancelTask',(event,id:unknown)=>{
+ guardedHandle('runtime:cancelTask',(event,id:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may cancel its tasks')
   if(typeof id!=='string'||id.length>512)throw Error('invalid task id')
   return {ok:cancelSessionStart(id,event.sender.id)||cancelPluginTask(id,event.sender.id)}
  })
- ipcMain.handle('runtime:stopPlugin',async(event,id:unknown)=>{
+ guardedHandle('runtime:stopPlugin',async(event,id:unknown)=>{
   const win=BrowserWindow.fromWebContents(event.sender)
   if(event.senderFrame!==event.sender.mainFrame||!win)throw new Error('Only workbench may stop its plugins')
   if(typeof id!=='string'||id.length>512)throw new Error('invalid service id')
@@ -31,7 +32,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  let mode:'normal'|'eco'='eco'
  try{mode=runtimeStateStore.read().mode}catch{/* Corrupt state is not overwritten; mode changes must fail visibly. */}
  const reader=createPlatformReader(),controller=createRuntimeController({mode,read:reader.read,now:()=>performance.now(),setTimer:(fn,ms)=>{const t=setTimeout(fn,ms);t.unref();return t},clearTimer:h=>clearTimeout(h as NodeJS.Timeout)})
- ipcMain.handle('runtime:setMode',async(event,next:unknown)=>{
+ guardedHandle('runtime:setMode',async(event,next:unknown)=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw Error('Only workbench may change resource mode')
   if(next!=='normal'&&next!=='eco')throw Error('invalid mode')
   runtimeStateStore.write({...runtimeStateStore.read(),mode:next})
@@ -45,7 +46,7 @@ export function registerRuntimeMonitor(projectsSource:()=>readonly {id:string;na
  controller.start()
  app.once('before-quit',()=>controller.dispose())
  app.once('will-quit',()=>sharedServices.shutdown())
- ipcMain.handle('runtime:monitor',async event=>{
+ guardedHandle('runtime:monitor',async event=>{
   if(event.senderFrame!==event.sender.mainFrame||!BrowserWindow.fromWebContents(event.sender))throw new Error('Only workbench may read resource metrics')
   return {...controller.readForControl(),services:[...observedPluginServices(event.sender.id),...ownedSessions.list(event.sender.id),...sharedServices.list(event.sender.id)],tasks:[...observedPluginTasks(event.sender.id),...queuedSessionStarts(event.sender.id)],recent:recentActivity.list(event.sender.id)}
  })

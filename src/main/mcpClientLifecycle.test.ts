@@ -58,3 +58,9 @@ test('exited 在进程真实退出时落定；起不来（无 pid）同样落定
  await Promise.race([bad.exited,new Promise((_,rej)=>setTimeout(()=>rej(Error('起不来时 exited 没有落定')),5000))])
  assert.equal(bad.alive,false)
 })
+// 审查发现：spawn 起不来（ENOENT）时 Node 发 error 与 close、不发 exit，onExit 不被调用，宿主的复用表里留着死实例。
+test('起不来时也要调用 onExit，宿主才能把它从复用表摘掉',async()=>{
+ const c=new McpClient({name:'missing',command:'/nonexistent/eas-missing-binary',args:[],env:process.env as Record<string,string>,cwd:process.cwd()})
+ const exited=new Promise<number|null>(r=>{c.onExit=code=>r(code)})
+ assert.equal(await Promise.race([exited,new Promise<string>(r=>setTimeout(()=>r('timeout'),5000))]),null)
+})

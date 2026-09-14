@@ -41,3 +41,19 @@ test('空窗口不写盘、不删旧档', () => {
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).turns.length, 1)
  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
 })
+
+// 审查发现（2026-09-14）：旧档存在但读不出来（EBUSY/EPERM/半截文件）时，不能拿窗口把全量覆盖掉。
+test('旧档存在但读失败：拒绝保存并返回 false，文件原样', () => {
+ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arch-')), file = path.join(dir, 'k.json')
+ try {
+  fs.writeFileSync(file, '{"v":2,"turns":[{"role":"user","text":"旧","execs":[],"seq":1}]}')
+  fs.chmodSync(file, 0o000)
+  let ok: boolean
+  try { ok = saveArchive(file, { cwd: '/p', resumeId: null, resumeCli: null, moduleId: null }, [T(5, '新')]) } finally { fs.chmodSync(file, 0o600) }
+  assert.equal(ok, false)
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).turns.map((t: { text: string }) => t.text), ['旧'])
+  fs.writeFileSync(file, '{"v":2,"turns":[{"role":"user","text":"旧"')  // 半截 JSON
+  assert.equal(saveArchive(file, { cwd: '/p', resumeId: null, resumeCli: null, moduleId: null }, [T(5, '新')]), false)
+  assert.equal(fs.readFileSync(file, 'utf8').startsWith('{"v":2,"turns":[{"role":"user","text":"旧"'), true, '半截文件不被覆盖')
+ } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})

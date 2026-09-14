@@ -1,5 +1,6 @@
-import { shell } from 'electron'
 import { guardedHandle } from './ipcGuard'
+import { isCommitHash } from './gitHash.ts'
+import { shell } from 'electron'
 import { execFile } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -304,7 +305,7 @@ export function registerGitHandlers(): void {
   // 回退到指定版本：git reset --hard <hash>（当前分支 HEAD 移到该提交，丢弃其后提交与未提交改动）。
   // 破坏性操作，渲染层调用前必须弹确认。hash 白名单校验（参数以数组传，无 shell 注入，仍做格式兜底）。
   guardedHandle('git:resetHard', async (_e, cwd: string, hash: string): Promise<OpResult> => {
-    if (!/^[0-9a-fA-F]{7,40}$/.test(hash)) return { ok: false, error: '非法的提交哈希' }
+    if (!isCommitHash(hash)) return { ok: false, error: '非法的提交哈希' }
     const r = await git(cwd, ['reset', '--hard', hash])
     return r.ok ? { ok: true } : { ok: false, error: (r.stderr || r.stdout).trim() }
   })
@@ -350,6 +351,7 @@ export function registerGitHandlers(): void {
   guardedHandle(
     'git:commitFiles',
     async (_e, cwd: string, hash: string): Promise<GitCommitFile[]> => {
+      if (!isCommitHash(hash)) return []
       // 对第一父提交 diff（普通提交 = 唯一父；合并提交 = 取对第一父的差异，diff-tree 默认对
       // 合并提交输出为空）。根提交没有父 → 退回 diff-tree --root 对空树 diff。
       let r = await git(cwd, ['diff', '--name-status', '-z', `${hash}^`, hash])
@@ -409,6 +411,7 @@ export function registerGitHandlers(): void {
 
   // AI 简述：把某次提交的 diff 交给终端里的 claude CLI 翻成一句人话（复用 Claude Max，无需 key）
   guardedHandle('git:describe', async (_e, cwd: string, hash: string): Promise<AiResult> => {
+    if (!isCommitHash(hash)) return { ok: false, error: '非法的提交哈希' }
     const show = await git(cwd, ['show', hash, '--stat', '-p', '--no-color'])
     if (!show.ok) return { ok: false, error: show.stderr.trim() || '读取提交失败' }
     let diff = show.stdout

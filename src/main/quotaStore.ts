@@ -2,10 +2,11 @@
 //
 // 取数细节见 shared/quota.ts 的文件头。这里只管「什么时候采、存哪、怎么发」。
 
+import { guardedHandle } from './ipcGuard'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import {
   codexQuotaFromLine,
   claudeQuotaFromStatusline,
@@ -334,7 +335,7 @@ export function scheduleOmpRefresh(): void {
 
 export function registerQuotaHandlers(): void {
   load()
-  ipcMain.handle('quota:get', (): QuotaSnapshot => snapshot)
+  guardedHandle('quota:get', (): QuotaSnapshot => snapshot)
   // 开软件先拉一次：落盘那份可能是昨天的，甚至可能是**上一个账号的**
   // （见 QuotaSnapshot.claudeAccountUuid）。这一次请求同时兼任账号校验。
   void refreshFromApi()

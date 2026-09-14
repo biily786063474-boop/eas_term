@@ -674,3 +674,9 @@ pluginHost两条tools/call → toolActivity → bootstrap唯一controller.manage
 
 ### 2026-09-14 02:40 PDT · 代码地图点文件即打开
 - `codegraph/openFileTarget.ts`（纯函数：路径拼接、画布 openArtifact 同 Frame 开节点、分屏 openFile、图片走 image、模块级 id 不开）；ModuleGraphView 下钻视图 onPick 与文件列表行接上；注册表传 frameId。测试先红后绿 3 例；隔离验收：点 pty.ts / fsGuard.ts 各开一个代码节点、同文件不重复。分屏模式未眼验。
+
+### 2026-09-14 03:30 PDT · 对 2d884c2..HEAD 的独立代码审查与修复
+- 审查证实两条发版拦截级：未校准平台闸门关死（Windows/Intel Mac 全部启动 60s 失败）；交互启动被重任务闸门拦（节能内存 61% 开不了终端）。修：闸门失效而非关死；交互通道（终端/AI/插件/录音 interactive:true，只在 critical 等）；服务启动后 settleCpu。
+- 归档两条数据 bug（追问无 seq 每存一份、读失败覆盖全量）已修。安全：git hash 校验、主窗口导航守卫、webview 加固补齐、S4 全局（45 文件 166 处）、收件箱门、rootGate 符号链接归一化、代码地图 `..` 拒开。健壮：fatal 收整轮、selfKilled 也补 turn.done、retries 保住、插件崩溃不绕准入重启、MCP 起不来通知摘表、终端停止 killTree。清理：删 serviceRegistry、投影去重算、面板 key、采样常量缓存。
+- 隔离验收：节能内存 71% 终端 5ms 开；导航/window.open 拦；收件箱与 git 注入拒。证据 acceptance/review-fixes-20260914/。未做项在该 README 末尾。
+- 教训：批量插 import 别用「第一个 from 'electron'」定位（会落进注释）；测试断言"没采样就排队"的要改成 critical 样本。

@@ -29,11 +29,12 @@ function setup(name:string){
   registry,startManagedSession,manualStops:{stamp:()=>null},
   spawnHosted:()=>{spawns++;return hosted},Error,Promise,Map
  }) as (info:{name:string;displayName:string},ref:string)=>Promise<unknown>
- return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),info:{name,displayName:'演示插件'}}
+ return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),pressure:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:true}),info:{name,displayName:'演示插件'}}
 }
 
 test('插件服务器启动先准入：排队时不 spawn、并发请求合并、全窗口可见不可取消、预算等真实退出',async()=>{
  const s=setup('demo'),info=s.info
+ s.pressure() // 2026-09-14：插件启动是交互型，只在严重压力下排队
  const a=s.acquire(info,'panel:a'),b=s.acquire(info,'panel:b')
  await new Promise(r=>setImmediate(r))
  assert.equal(s.spawns(),0,'没准入之前不能起进程')
@@ -51,6 +52,7 @@ test('插件服务器启动先准入：排队时不 spawn、并发请求合并�
 
 test('排队超时翻译成资源紧张文案，不暴露调度器内部字样',async()=>{
  const s=setup('demo-timeout'),info=s.info
+ s.pressure()
  const p=s.acquire(info,'panel:x')
  await new Promise(r=>setImmediate(r))
  s.tick(1000)

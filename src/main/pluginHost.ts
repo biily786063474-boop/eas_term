@@ -1,3 +1,4 @@
+import { guardedHandle } from './ipcGuard'
 import {createToolActivity} from './runtime/toolActivity.ts'
 import { runtimeStateStore } from './runtime/persistentState.ts'
 import { createManualStopLatch } from './runtime/manualStop.ts'
@@ -18,7 +19,7 @@ import type { RuntimeObservedService } from '../shared/runtimeResources.ts'
 //   那条路走 mcpHandler 同一执行体与路径白名单
 // · 面板 HTML 走 eas-plugin://<panelSession>/，CSP 用响应头（panelHtml.ts）
 // · 面板只能调**本插件** server 的工具；resources/read 只许 ui://
-import { app, ipcMain, protocol, webContents, BrowserWindow, dialog } from 'electron'
+import { app, protocol, webContents, BrowserWindow, dialog } from 'electron'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -162,7 +163,7 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
     let starting = startingPlugins.get(info.name)
     if (!starting) {
       starting = startManagedSession<void>({
-        id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', projectId: null, cost: PLUGIN_START_COST,
+        id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', interactive: true, projectId: null, cost: PLUGIN_START_COST,
         start: async signal => {
           if (signal.aborted) throw new Error('插件启动已取消')
           if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
@@ -178,7 +179,8 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
     }
     await starting
   }
-  const h = registry.acquire(info.name, ref, () => spawnHosted(info))
+  // 准入回调里已经 spawn 过；这里只登记 ref。进程若在这一瞬间已死（onExit→drop），不能绕过准入再起一个。
+  const h = registry.acquire(info.name, ref, () => { throw new Error(`插件 ${info.name} 的进程起不来或已退出`) })
   if (h.kind !== 'plugin') throw new Error('插件身份冲突')
   await h.ready
   if (!h.client.alive) throw new Error(`插件 ${info.name} 的进程起不来或已退出`)
@@ -401,7 +403,7 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     if (!p) return new Response('no such panel', { status: 404 })
     return new Response(p.html, { status: 200, headers: p.headers })
   })
-  ipcMain.handle('plugin:panelOpen', async (e, args: { pluginId: string; panelId: string; ctx: PanelCtx; resumeStopped?:boolean }) => {
+  guardedHandle('plugin:panelOpen', async (e, args: { pluginId: string; panelId: string; ctx: PanelCtx; resumeStopped?:boolean }) => {
     const win=BrowserWindow.fromWebContents(e.sender)
     if(!win||e.senderFrame!==e.sender.mainFrame)return {ok:false,error:'仅工作台可打开插件面板'}
     try {
@@ -415,11 +417,11 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     return await panelOpen(e.sender.id,args)
     } catch(error) { return {ok:false,error:error instanceof Error?error.message:String(error)} }
   })
-  ipcMain.handle('plugin:panelClose', (_e, session: string) => {
+  guardedHandle('plugin:panelClose', (_e, session: string) => {
     panelClose(String(session))
     return { ok: true }
   })
-  ipcMain.handle('plugin:panelRpc', (_e, args: { panelSession: string; method: string; params: unknown }) => panelRpc(args))
+  guardedHandle('plugin:panelRpc', (_e, args: { panelSession: string; method: string; params: unknown }) => panelRpc(args))
   const t = setInterval(sweepShims, 15_000)
   t.unref()
   app.on('before-quit', () => {

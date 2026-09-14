@@ -419,7 +419,13 @@ export function createChatReducer(): { push(e: ChatEvent): void; view(): ChatVie
         // 致命错误 = 这一轮走不下去了（典型：spawn 失败）。不在这里收的话，
         // turn.done 永远不会来，界面会一直转下去。非致命的不动——那只是条提醒，
         // 会话还在正常跑。
-        if (e.fatal) turnActive = false
+        // 2026-09-14：fatal 就是这一轮结束，三支 busy 判据一起收（与 turn.done 同一套收尾），
+        // 不再依赖主进程在每条失败路径上手工合成 turn.done。
+        if (e.fatal) {
+          turnActive = false
+          sawExecStartSinceTurnDone = false
+          for (const t of turns) for (const x of t.execs) if (x.state === 'running') x.state = 'failed'
+        }
         break
       }
       case 'plugin.status': {

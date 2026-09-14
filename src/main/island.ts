@@ -6,6 +6,7 @@
 //
 // 状态永远只有一份，在主窗口的 zustand 里。这里只存「最后收到的那帧快照」用于新窗口首帧，
 // 绝不在主进程里二次加工——两处算同一件事，迟早算出两个结果。
+import { guardedOn } from './ipcGuard'
 import { app, BrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
@@ -738,7 +739,7 @@ export function registerIslandHandlers(): void {
   })
 
   // 主窗口推状态（已在渲染层节流过）
-  ipcMain.on('island:sync', (_e, state: IslandState) => {
+  guardedOn('island:sync', (_e, state: IslandState) => {
     // running 和 notices 都要校验：以前只查了 running，notices 若是 undefined/畸形，
     // 下面 noteFreshNotices 和 reconcile 到处 lastState.notices.map(...)/.filter(...)，
     // 会在主进程里直接抛 TypeError——这个 ipcMain 处理器一炸，这一帧状态就丢了，
@@ -757,13 +758,13 @@ export function registerIslandHandlers(): void {
   // 这段解析读的是画给人看的 TUI，claude/codex 换个边框样式它就瞎了——
   // 而「瞎了」的表现只是灵动岛少给几个按钮，不报错、不崩，光看现象根本不知道
   // 是没认出来还是本来就没框。有了样本，下次调正则有据可依。
-  ipcMain.on('island:parselog', (_e, reason: string, sample: string[]) => {
+  guardedOn('island:parselog', (_e, reason: string, sample: string[]) => {
     if (app.isPackaged) return
     console.log(`[island] 解析样本(${reason}):\n` + sample.map((l) => '  | ' + l).join('\n'))
   })
 
   // 灵动岛挂载好了 → 补推一次当前状态（首帧的时序保险，见 preload/island.ts 的 ready）
-  ipcMain.on('island:ready', () => {
+  guardedOn('island:ready', () => {
     if (islandWin && !islandWin.isDestroyed()) pushState(islandWin)
   })
 
@@ -780,7 +781,7 @@ export function registerIslandHandlers(): void {
   // 设置里那个开关一改就重算 —— 关掉时窗口当场消失，打开时当场按现有内容决定建不建
   onIslandPref(() => reconcile())
 
-  ipcMain.on('island:collapse-request', () => {
+  guardedOn('island:collapse-request', () => {
     // 主窗口里点了任何地方（App.tsx capture 阶段的 mousedown）→ 岛退场。
     //
     // **`browser-window-focus` 覆盖不到这一次**：岛是 focusable:false，
@@ -793,7 +794,7 @@ export function registerIslandHandlers(): void {
     if (islandWin && !islandWin.isDestroyed()) islandWin.webContents.send('island:collapse')
   })
 
-  ipcMain.on('island:hold', (_e, v: boolean) => {
+  guardedOn('island:hold', (_e, v: boolean) => {
     const next = !!v
     // **前台一律不接受「留着」的请求** —— 岛不能自己决定在前台露面。
     // 挡的是这条真实路径：岛在后台展开着 → 用户 cmd-tab 回软件 → 主进程清 held、
@@ -812,7 +813,7 @@ export function registerIslandHandlers(): void {
 
   // 灵动岛量完自己有多大 → 主进程照着摆。让渲染层说了算，
   // 这样调 UI 尺寸不用回来改主进程的魔法数字。
-  ipcMain.on('island:resize', (_e, w: number, h: number) => {
+  guardedOn('island:resize', (_e, w: number, h: number) => {
     // 下限 40 会把**收起态那颗圆点**（26×26）整条上报丢掉 —— 窗口停在展开时的
     // 三百多宽，里面只画了颗小点，剩下的透明区照样挡住底下的内容，等于没收起。
     // 降到 18：比圆点小、又足够挡住「渲染层还没布局好时报 0」那种异常值。
@@ -823,7 +824,7 @@ export function registerIslandHandlers(): void {
 
   // 灵动岛的点击 → 转给主窗口执行（聚焦某个 session / 关掉某条通知）。
   // 主进程不自己解释这个动作：ptyId 到底落在哪个 tab、哪个画布节点，只有渲染层知道。
-  ipcMain.on('island:action', (_e, action: IslandAction) => {
+  guardedOn('island:action', (_e, action: IslandAction) => {
     if (!app.isPackaged) console.log('[island] action', JSON.stringify(action))
     // mini/unmini 是**岛自己的形态**，跟哪个终端无关，不转给主窗口。
     // 落 prefs 再推一次状态：渲染层据此换形态、placeWindow 据此换位置。

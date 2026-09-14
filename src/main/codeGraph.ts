@@ -1,7 +1,7 @@
 // 代码可视化的 IPC 口。**分析逻辑在 `codeGraphAnalyze.ts`**（零 electron 依赖，可单测）——
 // 这里只负责把渲染层的请求接过去，以及那道「传进来的路径可不可信」的门槛。
 
-import { ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
 import {sharedServices} from './runtime/sharedServices.ts'
 import {projectAttribution} from './runtime/projectAttribution.ts'
 import {loadProjects} from './projects'
@@ -29,7 +29,7 @@ export function checkRoot(root: string): { ok: false; error: string } | null {
 }
 
 export function registerCodeGraphHandlers(): void {
-  ipcMain.handle('codeGraph:analyze', async (_e, raw: unknown) => {
+  guardedHandle('codeGraph:analyze', async (_e, raw: unknown) => {
     const root = typeof raw === 'string' ? raw : ''
     // **只扫真实存在的目录。** 路径来自渲染层，按 fsGuard 的同一条纪律：
     // 不信任传入路径，先落到「它必须是一个存在的目录」这道最低门槛上。
@@ -50,7 +50,7 @@ export function registerCodeGraphHandlers(): void {
 
   // 符号级（第一期：文件内结构 ＋ 死代码清单）。
   // **和模块级共用同一道门槛**，不另写一遍「这个路径可不可信」。
-  ipcMain.handle('codeGraph:symbols', async (_e, raw: unknown) => {
+  guardedHandle('codeGraph:symbols', async (_e, raw: unknown) => {
     const root = typeof raw === 'string' ? raw : ''
     const gate = checkRoot(root)
     if (gate) return gate
@@ -81,7 +81,7 @@ export function registerCodeGraphHandlers(): void {
 
   // 各语言服务器装没装、要不要项目配置。**界面上如实列出来** ——
   // 没装就说「装了 X 才能画 Y」，不静默降级。
-  ipcMain.handle('codeGraph:providers', async (_e, raw: unknown) => {
+  guardedHandle('codeGraph:providers', async (_e, raw: unknown) => {
     const root = typeof raw === 'string' ? raw : ''
     const gate = checkRoot(root)
     if (gate) return gate
@@ -104,7 +104,7 @@ export function registerCodeGraphHandlers(): void {
   // **按 LSP 的形状收参**（0-based 行列）—— 见 `shared/symbolProvider.ts` 的文件头：
   // 以后接 clangd / sourcekit-lsp / pyright 时，这个 handler 只需要按扩展名
   // 换一个 provider，入参出参一个字不用改。
-  ipcMain.handle('codeGraph:neighborhood', async (_e, raw: unknown) => {
+  guardedHandle('codeGraph:neighborhood', async (_e, raw: unknown) => {
     const p = (raw ?? {}) as { root?: unknown; ref?: unknown }
     const root = typeof p.root === 'string' ? p.root : ''
     const gate = checkRoot(root)

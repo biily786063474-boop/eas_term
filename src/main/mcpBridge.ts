@@ -9,7 +9,8 @@
 // /agent-approval/resolve，见文件下方与 agentChat/approvalRoute.ts）：hook 脚本
 // （resources/agent-hooks/eas-pretooluse.mjs，独立 Node 进程）POST request 后阻塞等决定，
 // 渲染层 POST resolve 把决定写回来唤醒它。同源复用这里的 127.0.0.1 + token，没有新开端口。
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { guardedHandle, guardedOn } from './ipcGuard'
+import { app, BrowserWindow } from 'electron'
 import { findPlugin } from './plugins'
 import { stripDshRegion, DSH_BEGIN } from './legacyDshCleanup'
 import http from 'http'
@@ -739,20 +740,20 @@ export function installMcpConfig(): void {
 
 export function registerMcpBridge(): void {
   void bizoneRuntime.refreshInstallation()
-  ipcMain.handle('capabilities:status', async () => { await bizoneRuntime.refreshInstallation(); return capabilityStatus() })
-  ipcMain.handle('capabilities:setModule', (_event, module: CapabilityModule, enabled: boolean) => {
+  guardedHandle('capabilities:status', async () => { await bizoneRuntime.refreshInstallation(); return capabilityStatus() })
+  guardedHandle('capabilities:setModule', (_event, module: CapabilityModule, enabled: boolean) => {
     capabilityPreferences()
     capabilityPreferenceStore!.set(module, enabled)
     return capabilityStatus()
   })
-  ipcMain.handle('mcp:removeConfig', () => removeMcpConfig())
-  ipcMain.handle('mcp:installConfig', () => installMcpConfig())
+  guardedHandle('mcp:removeConfig', () => removeMcpConfig())
+  guardedHandle('mcp:installConfig', () => installMcpConfig())
   // 渲染层的开关同步一份过来，好让 /secret-env 也能被它关掉
-  ipcMain.on('mcp:setEnabled', (_e, v: boolean) => {
+  guardedOn('mcp:setEnabled', (_e, v: boolean) => {
     mcpEnabled = v !== false
   })
 
-  ipcMain.on('mcp:result', (_e, r: { id: number; ok: boolean; data?: unknown; error?: string }) => {
+  guardedOn('mcp:result', (_e, r: { id: number; ok: boolean; data?: unknown; error?: string }) => {
     const done = pending.get(r.id)
     if (done) {
       pending.delete(r.id)

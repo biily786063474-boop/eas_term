@@ -114,3 +114,22 @@ test('父任务已结束后的异步后续工作不被误判为占槽嵌套',asy
  await s.submit(job('parent',async()=>{setImmediate(()=>{void s.submit(job('later')).then(resolve,reject)})}))
  await checked;assert.equal(s.snapshot().running,0)
 })
+
+// 2026-09-14 审查修正：用户亲手发起的启动（终端、AI 对话、插件面板、录音）是控制面，
+// 不能排在重任务后面等 60 秒。interactive 条目只受 allowInteractive 门（严重压力）约束，
+// 不受 allow() 与 maxRunning 限制。
+test('interactive 条目绕过 allow 与 maxRunning，只受 allowInteractive 门', async () => {
+ let open=false, critical=false, ran:string[]=[]
+ let done!:()=>void
+ const s=createScheduler({allow:()=>open,allowInteractive:()=>!critical,now:()=>0,maxRunning:1,maxQueued:8})
+ const bg=s.submit(job('bg',()=>new Promise(r=>{done=r})))
+ open=true;s.tick();await flush();assert.equal(s.snapshot().running,1)
+ open=false
+ const i1=s.submit({...job('i1',async()=>{ran.push('i1')}),interactive:true})
+ await i1;assert.deepEqual(ran,['i1'],'门关着、槽满着，交互条目也要立刻跑')
+ critical=true
+ const i2=s.submit({...job('i2',async()=>{ran.push('i2')}),interactive:true})
+ await flush();assert.deepEqual(ran,['i1'],'严重压力下交互条目也等')
+ critical=false;s.tick();await i2;assert.deepEqual(ran,['i1','i2'])
+ done();await bg
+})

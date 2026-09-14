@@ -2,9 +2,9 @@
 //
 // 纯解析在 shared/mergePreflight.ts / shared/repoImpact.ts（零依赖、裸测）；这里只负责跑 git、
 // 读文件、拼结果并挂 IPC。
+import { guardedHandle } from './ipcGuard'
 import fs from 'fs'
 import path from 'path'
-import { ipcMain } from 'electron'
 
 import { gitExec, gitExecCode, parseNameOnly, parsePorcelain } from './gitExec.ts'
 import { analyzeProject, type CodeGraphResult } from './codeGraphAnalyze.ts'
@@ -226,10 +226,10 @@ export async function impact(
 }
 
 export function registerMergeHandlers(): void {
-  ipcMain.handle('merge:preflight', (_e, p: unknown, b: unknown) =>
+  guardedHandle('merge:preflight', (_e, p: unknown, b: unknown) =>
     typeof p === 'string' && typeof b === 'string' ? preflight(p, b) : { ok: false, error: '参数不对' }
   )
-  ipcMain.handle('merge:impact', (_e, p: unknown, files: unknown) =>
+  guardedHandle('merge:impact', (_e, p: unknown, files: unknown) =>
     typeof p === 'string' && Array.isArray(files) ? impact(p, files as string[]) : { ok: false, error: '参数不对' }
   )
 }

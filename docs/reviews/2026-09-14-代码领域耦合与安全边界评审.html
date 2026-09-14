@@ -129,7 +129,7 @@ footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.
 <a href="#结论">结论</a><a href="#耦合">耦合</a><a href="#安全">安全边界</a><a href="#优化">优化建议</a><a href="#下一步">下一步</a></div></nav>
 <main>
 <header class="hero">
-<div class="eyebrow">代码评审 · 领域耦合 × 安全边界 · v1 · <span class="b b-em">S1–S4 已修（同日）</span></div>
+<div class="eyebrow">代码评审 · 领域耦合 × 安全边界 · v1 · <span class="b b-em">S1–S4 已修</span> · <span class="b b-em">对本分支 8 个提交的独立审查亦已完成并修复（见 acceptance/review-fixes-20260914）</span></div>
 <h1>结构整体健康；有一处安全边界要先补，五组实值循环和一个巨型文件值得拆</h1>
 <p class="lede">用软件自带的代码地图分析器对 <code>fix/background-render-budget</code>（提交 5d4e5f7）算了整张模块图，再对 IPC、写盘、shell、窗口安全选项做了静态扫描。本页只给结论与建议，未改任何代码。</p>
 <div class="meta"><span>日期 <b>2026-09-14</b></span><span>模块 <b>738</b></span><span>依赖边 <b>1599</b></span><span>IPC 处理器 <b>248</b></span><span>来源 <b>codeGraphAnalyze + grep 静态扫描</b></span></div>

@@ -7,7 +7,8 @@
 //
 // 现在只剩一条入口：用户主动说「把 X 收进辞典」，agent 走完分类/结构/演示图/提示词
 // 四步，最后调 dict_add 落盘。写入路径一个字没变 —— 变的是**谁发起**。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -144,13 +145,13 @@ export function registerDictHandlers(): void {
   dropLegacyShells()
 
   /** 读用户词条（词典气泡把它和内置的 242 条合并显示） */
-  ipcMain.handle('dict:userTerms', (): UserTerm[] => readUser())
+  guardedHandle('dict:userTerms', (): UserTerm[] => readUser())
 
   /**
    * agent 补全后写入。**格式必须和内置词条同构**，缺关键字段一律拒收——
    * 宁可少一条，也不能让半截词条混进去（那正是上一版的问题）。
    */
-  ipcMain.handle(
+  guardedHandle(
     'dict:add',
     (_e, raw: unknown): { ok: boolean; added: string[]; rejected: { name: string; why: string }[] } => {
       const list = Array.isArray(raw) ? raw : []
@@ -241,7 +242,7 @@ export function registerDictHandlers(): void {
     }
   )
 
-  ipcMain.handle('dict:remove', (_e, id: string) => {
+  guardedHandle('dict:remove', (_e, id: string) => {
     const next = readUser().filter((t) => t.id !== id)
     try {
       writeUser(next)

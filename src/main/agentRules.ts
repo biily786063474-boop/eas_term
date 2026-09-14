@@ -11,7 +11,8 @@
 // （按需加载，平时只露一行描述），装到 Codex 时被原样整份灌进了**常驻**文件。
 // 于是在 Codex 里改一行代码，都要先付这份画板指南的 token。
 // 现在改成：常驻区只留触发条件和路径，详细正文落到 ~/.eas/agent/ 下按需读。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -335,9 +336,9 @@ export function removeRules(): void {
 }
 
 export function registerRulesHandlers(): void {
-  ipcMain.handle('rules:status', () => rulesStatus())
-  ipcMain.handle('rules:sync', () => ({ ...syncRules(), status: rulesStatus() }))
-  ipcMain.handle('rules:remove', () => {
+  guardedHandle('rules:status', () => rulesStatus())
+  guardedHandle('rules:sync', () => ({ ...syncRules(), status: rulesStatus() }))
+  guardedHandle('rules:remove', () => {
     removeRules()
     return rulesStatus()
   })
@@ -348,7 +349,7 @@ export function registerRulesHandlers(): void {
    * 分散的开关等于没有开关——技能包在标题栏、钩子在词典里、知识库规则在知识库抽屉里，
    * 用户根本没法回答「这软件到底动了我什么」。写隐私策略时这份清单就是依据。
    */
-  ipcMain.handle('footprint:list', (): Footprint[] => {
+  guardedHandle('footprint:list', (): Footprint[] => {
     const mcp = mcpConfigStatus()
     const r = rulesStatus()
     const kb = wikiPath()

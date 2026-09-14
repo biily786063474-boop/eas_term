@@ -1,7 +1,8 @@
 import { hardenWebviewPreferences } from './webviewGuard.ts'
+import { isAppNavigation } from './navigationGuard.ts'
 import { registerRuntimeMonitor } from './runtime/ipc.ts'
 import { registerUsageHandlers } from './usage/index.ts'
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog , shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { registerPtyHandlers, killPtysForWebContents, killAllPtys, anyPtyBusy, anyPtyAlive } from './pty'
@@ -79,6 +80,15 @@ app.on('web-contents-created', (_e, contents) => {
   // S2（2026-09-14 评审）：宿主 webContents 上强制加固每一个将要挂上的 <webview>：
   // 剥 preload、关 nodeIntegration、开 contextIsolation。渲染层设了也不算数。
   contents.on('will-attach-webview', (_ev, webPreferences) => { hardenWebviewPreferences(webPreferences as unknown as Record<string, unknown>) })
+  if (contents.getType() === 'window') {
+    // 2026-09-14 审查：带 preload 的窗口只许应用内导航。拖进来的链接 / window.open 一律交给系统浏览器，
+    // 否则远程页面在主窗口里跑起来就拿到了 window.api 和全部 IPC。
+    const env = { devUrl: process.env['ELECTRON_RENDERER_URL'], rendererDir: path.join(__dirname, '../renderer') }
+    const external = (url: string): void => { if (/^https?:$/.test((() => { try { return new URL(url).protocol } catch { return '' } })())) void shell.openExternal(url) }
+    contents.on('will-navigate', (event, url) => { if (!isAppNavigation(url, env)) { event.preventDefault(); external(url) } })
+    contents.setWindowOpenHandler(({ url }) => { external(url); return { action: 'deny' } })
+    return
+  }
   if (contents.getType() !== 'webview') return
   // Internal routes only open UI. No website can silently create a bookmark or publish.
   const routeFavorites = (url: string): boolean => {

@@ -11,6 +11,8 @@ test('managed VAD queues before worker launch, isolates cancellation and retains
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText
  let now=0,starts=0,stops=0,exit!:()=>void
  const manager=createRuntimeManager({now:()=>now});installSessionStartup(manager)
+ // 2026-09-14：录音启动是交互型，只在严重压力下排队；用 critical 样本制造排队阶段
+ manager.update({at:++now,cpu:1,memoryUsedBytes:1,totalMemoryBytes:8*1024**3,critical:true})
  const owned=createOwnedSessions(()=>now),notices:string[]=[]
  const owner=Object.assign(new EventEmitter(),{id:7,isDestroyed:()=>false})
  const raw=async()=>{starts++;return {completed:new Promise<void>(r=>exit=r),stop(){stops++},drain:async()=>{},push:()=>true}}
@@ -29,6 +31,7 @@ test('managed VAD queues before worker launch, isolates cancellation and retains
  assert.equal(stops,1);assert.equal(notices.length,1);assert.equal(manager.snapshot().reserved.memoryBytes,held)
  exit();await new Promise(r=>setImmediate(r));assert.equal(manager.snapshot().reserved.memoryBytes,0);assert.equal(owned.list(7).length,0)
  assert.equal(owner.listenerCount('destroyed'),0)
+ manager.update({at:++now,cpu:1,memoryUsedBytes:1,totalMemoryBytes:8*1024**3,critical:true}) // 再次制造排队
  const aborter=new AbortController()
  const aborted=open(...args,aborter.signal);const rejected=assert.rejects(aborted,/cancelled/)
  aborter.abort();assert.equal(queuedSessionStarts(7).length,0,'recording cancellation removes waiting VAD immediately');await rejected;assert.equal(starts,1);assert.equal(queuedSessionStarts(7).length,0)

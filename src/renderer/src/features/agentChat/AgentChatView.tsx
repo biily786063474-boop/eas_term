@@ -1345,7 +1345,8 @@ export function AgentChatView({
     const entry: SentMessage = {
       text: meta ? meta.text : trimmed,
       images: meta?.images?.length ? meta.images : undefined,
-      beforeTurnCount
+      beforeTurnCount,
+      seq: nextSeq() // 完整归档按它并集；漏了会每次保存都复制一份（2026-09-14 审查发现）
     }
     const previous = queueId === undefined ? undefined : queuedEntriesRef.current.get(queueId)
     if (queueId !== undefined) queuedEntriesRef.current.set(queueId, entry)

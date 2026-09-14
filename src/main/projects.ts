@@ -1,5 +1,6 @@
+import { guardedHandle } from './ipcGuard'
 import { sharedServices } from './runtime/sharedServices.ts'
-import { app, dialog, ipcMain, BrowserWindow } from 'electron'
+import { app, dialog, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
@@ -30,9 +31,9 @@ function saveProjects(list: Project[]): void {
 export function registerProjectHandlers(): void {
   // 合并官预检要读 Project.testCmd；mergeTools 不直接 import 本模块（同 collabBoard 的注入手法）
   setProjectsSource(loadProjects)
-  ipcMain.handle('projects:list', () => loadProjects())
+  guardedHandle('projects:list', () => loadProjects())
 
-  ipcMain.handle('projects:addViaDialog', async (e) => {
+  guardedHandle('projects:addViaDialog', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const result = await dialog.showOpenDialog(win!, {
       title: '选择或新建项目文件夹',
@@ -55,7 +56,7 @@ export function registerProjectHandlers(): void {
     return list
   })
 
-  ipcMain.handle('projects:remove', (_e, id: string) => {
+  guardedHandle('projects:remove', (_e, id: string) => {
     const list = loadProjects().filter((p) => p.id !== id)
     saveProjects(list)
     // 2026-09-14 P3：移除项目 = 释放它在共享服务（语言服务器等）上的引用；只有没人再持有的才停。
@@ -67,7 +68,7 @@ export function registerProjectHandlers(): void {
 
   /** 打/清项目状态标签（传 null 清除 = 回到未分类）。
    *  看板拖拽、画布右键、分屏 tab 右键三处共用这一条 —— 各写各的迟早对不上。 */
-  ipcMain.handle('projects:setStatus', (_e, id: string, status: ProjectStatus | null) => {
+  guardedHandle('projects:setStatus', (_e, id: string, status: ProjectStatus | null) => {
     const list = loadProjects()
     const p = list.find((x) => x.id === id)
     if (p) {
@@ -79,7 +80,7 @@ export function registerProjectHandlers(): void {
   })
 
   /** 设/清项目的回归测试命令（合并官合并前后各跑一次）。清空 = 删掉字段，回落到 package.json 推断 */
-  ipcMain.handle('projects:setTestCmd', (_e, id: string, cmd: string) => {
+  guardedHandle('projects:setTestCmd', (_e, id: string, cmd: string) => {
     const trimmed = String(cmd ?? '').trim().slice(0, 200)
     const list = loadProjects()
     const p = list.find((x) => x.id === id)
@@ -94,7 +95,7 @@ export function registerProjectHandlers(): void {
   /** 改项目显示名。只改列表里的 name，**不动磁盘上的目录名** ——
    *  项目名一开始是 path.basename 推导出来的，但它是个显示标签：
    *  用户可能有两个都叫 web 的目录，想在侧栏区分开，不该被迫去动真实目录。 */
-  ipcMain.handle('projects:rename', (_e, id: string, name: string) => {
+  guardedHandle('projects:rename', (_e, id: string, name: string) => {
     const trimmed = String(name ?? '').trim().slice(0, 60)
     const list = loadProjects()
     const p = list.find((x) => x.id === id)
@@ -112,7 +113,7 @@ export function registerProjectHandlers(): void {
    *  顺序是「先动盘、再动配置」：盘上改失败是常见的（权限、重名、被别的程序占着），
    *  配置改失败几乎不会。先做容易失败的那个，失败就直接返回，不留半截状态。
    *  反过来的话——配置改了盘没改——项目在应用里就彻底找不到了，用户也不知道去哪找。 */
-  ipcMain.handle(
+  guardedHandle(
     'projects:renameFolder',
     async (_e, id: string, newName: string): Promise<RenameFolderResult> => {
       const list = loadProjects()

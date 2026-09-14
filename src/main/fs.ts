@@ -1,5 +1,5 @@
-import { clipboard, ipcMain, shell } from 'electron'
 import { guardedHandle } from './ipcGuard'
+import { clipboard, ipcMain, shell } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'

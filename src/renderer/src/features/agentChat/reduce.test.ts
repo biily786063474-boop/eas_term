@@ -773,3 +773,15 @@ test('每个轮次带递增的 seq（assistant、user、压缩标记都有）', 
   for (const s of seqs) assert.ok(typeof s === 'number' && s >= before, '每个轮次都要有序号 ' + JSON.stringify(seqs))
   for (let i = 1; i < seqs.length; i++) assert.ok((seqs[i] as number) > (seqs[i - 1] as number), '序号必须递增')
 })
+
+// 2026-09-14 审查：fatal 只复位 turnActive，跑过工具的那一轮 sawExecStartSinceTurnDone 和 running exec
+// 仍然让 busy 卡住——主进程为此在五处手工合成 turn.done。根治：fatal 就是这一轮结束，三支一起收。
+test('fatal error 收掉整轮：跑过工具、还有 running exec 也不再 busy', () => {
+  const v = run([
+    { k: 'turn.start' },
+    { k: 'exec.start', execId: 'x', label: '运行 ls', detail: '' },
+    { k: 'error', fatal: true, message: 'CLI 进程退出（code 1）' }
+  ])
+  assert.equal(v.busy, false)
+  assert.equal(v.turns.flatMap((t) => t.execs).find((e) => e.execId === 'x')?.state, 'failed', '半路的命令标失败')
+})

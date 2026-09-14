@@ -1,5 +1,6 @@
 // App-owned persistence only; no caller-selected ledger path or network traffic.
-import { app, ipcMain, dialog, BrowserWindow } from 'electron'
+import { guardedHandle } from '../ipcGuard'
+import { app, dialog, BrowserWindow } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -61,15 +62,15 @@ export function registerUsageHandlers():void {
   const win=BrowserWindow.fromWebContents(e.sender)
   if(!win||e.senderFrame!==e.sender.mainFrame)throw new Error('只允许应用主窗口访问用量')
  }
- ipcMain.handle('usage:query',(e,raw)=>{trusted(e);book.prune(Date.now());return {...queryLedger({version:1,since,rows:book.rows},validateQuery(raw)),error}})
- ipcMain.handle('usage:stage',async(e,id:unknown,stage:unknown)=>{
+ guardedHandle('usage:query',(e,raw)=>{trusted(e);book.prune(Date.now());return {...queryLedger({version:1,since,rows:book.rows},validateQuery(raw)),error}})
+ guardedHandle('usage:stage',async(e,id:unknown,stage:unknown)=>{
   trusted(e)
   if(disabled)throw new Error(error)
   if(typeof id!=='string'||typeof stage!=='string'||stage.length>60||/[\x00-\x1f]/.test(stage))throw new Error('阶段名称最多60字且不能含控制字符')
   const row=book.rows.find(r=>r.id===id);if(!row)throw new Error('记录已不存在')
   row.stage=stage.trim()||undefined;await flush();if(error)throw new Error(error)
  })
- ipcMain.handle('usage:export',async(e,raw)=>{
+ guardedHandle('usage:export',async(e,raw)=>{
   trusted(e);const q=validateQuery(raw)
   const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:'导出用量到项目目录',defaultPath:q.project?path.join(q.project,'usage.csv'):'usage.csv',filters:[{name:'CSV',extensions:['csv']}]})
   if(result.canceled||!result.filePath)return {ok:false,cancelled:true}

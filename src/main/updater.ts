@@ -6,7 +6,8 @@
 // 出问题最多是下载失败，重试即可。
 //
 // 数据源是发布脚本写的 latest.json，里面已经有版本号、各平台链接和这一版的更新条目。
-import { app, ipcMain, net, shell, BrowserWindow } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app, net, shell, BrowserWindow } from 'electron'
 import https from 'node:https'
 import fs from 'fs'
 import path from 'path'
@@ -183,9 +184,9 @@ export async function checkForUpdate(manual = false): Promise<UpdateInfo | null>
 let downloadSeq = 0
 export function registerUpdaterHandlers(): void {
   // 渲染层问「现在有没有已知的新版本」——窗口重载后要能拿回状态
-  ipcMain.handle('update:known', () => latest)
+  guardedHandle('update:known', () => latest)
 
-  ipcMain.handle('update:check', async (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string }> => {
+  guardedHandle('update:check', async (): Promise<{ ok: boolean; info?: UpdateInfo | null; error?: string }> => {
     try {
       return { ok: true, info: await checkForUpdate(true) }
     } catch (e) {
@@ -193,7 +194,7 @@ export function registerUpdaterHandlers(): void {
     }
   })
 
-  ipcMain.handle('update:download', async (e): Promise<{ ok: boolean; path?: string; error?: string }> => {
+  guardedHandle('update:download', async (e): Promise<{ ok: boolean; path?: string; error?: string }> => {
     if (!latest?.url) return { ok: false, error: '这个平台没有可下载的包' }
     const wc = e.sender
     const url = latest.url
@@ -225,7 +226,7 @@ export function registerUpdaterHandlers(): void {
   })
 
   // 用户在设置里关掉自动检查 → 立刻停掉轮询，不用等重启
-  ipcMain.handle('update:reschedule', () => {
+  guardedHandle('update:reschedule', () => {
     schedule()
     return true
   })

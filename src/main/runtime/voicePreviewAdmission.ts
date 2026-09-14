@@ -22,7 +22,7 @@ export async function openManagedPreview(owner:PreviewOwner,signal:AbortSignal,c
  owner.on('did-navigate',release);owner.on('render-process-gone',release);owner.once('destroyed',release)
  signal.addEventListener('abort',release,{once:true})
  try{
-  return await startManagedSession({id,windowId:owner.id,name:'流式语音模型加载',projectId:null,
+  return await startManagedSession({id,windowId:owner.id,name:'流式语音模型加载',interactive:true,projectId:null,
    cost:{cpu:10,memoryBytes:512*1024**2},start:async admitted=>{
     if(admitted.aborted||signal.aborted||owner.isDestroyed()||stopped)throw Error('cancelled')
     session=create()

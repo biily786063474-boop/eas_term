@@ -10,5 +10,9 @@ export function hardenWebviewPreferences(prefs: Record<string, unknown>): Record
   prefs.contextIsolation = true
   prefs.webSecurity = true
   prefs.allowRunningInsecureContent = false
+  prefs.nodeIntegrationInWorker = false
+  prefs.webviewTag = false
+  prefs.experimentalFeatures = false
+  prefs.sandbox = true
   return prefs
 }

@@ -6,7 +6,8 @@
 // enabled=false 时**根本不调 server.start()**，不是「监听了但拒绝」。
 // 装了没用过这个功能的人，`lsof` 里看不到任何新端口，userData 里连
 // phone.json 都不该有（见 store.ts 的 load）。
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { guardedHandle } from '../ipcGuard'
+import { app, BrowserWindow } from 'electron'
 import crypto from 'crypto'
 
 import {
@@ -170,9 +171,9 @@ export function registerPhoneHandlers(): void {
     if (!r.ok) console.log('[phone] 开着但没起来：' + r.error)
   }
 
-  ipcMain.handle('phone:status', () => status())
+  guardedHandle('phone:status', () => status())
 
-  ipcMain.handle('phone:enable', (_e, on: boolean) => {
+  guardedHandle('phone:enable', (_e, on: boolean) => {
     setState(setEnabled(state, on))
     if (on) return startServer()
     stop()
@@ -182,7 +183,7 @@ export function registerPhoneHandlers(): void {
   })
 
   /** 生成一张新配对码。每次调用都换一张 —— 「刷新」按钮走的也是这个。 */
-  ipcMain.handle('phone:newCode', () => {
+  guardedHandle('phone:newCode', () => {
     if (!isRunning()) return { ok: false, error: '服务没在跑' }
     // 6 位大写字母数字，去掉容易看错的 0/O/1/I/L。二维码里带的是完整 URL，
     // 这个码只在「手输」和日志里露面，可读性比熵更重要（它只活 60 秒）。
@@ -196,7 +197,7 @@ export function registerPhoneHandlers(): void {
 
   /** 人在电脑上点了「允许」。**明文 token 只在这一刻存在**：
    *  存哈希进设备表，明文交给 server 等手机来取一次，之后系统里再也没有。 */
-  ipcMain.handle('phone:approve', () => {
+  guardedHandle('phone:approve', () => {
     const token = crypto.randomBytes(32).toString('base64url')
     const hash = crypto.createHash('sha256').update(token).digest('hex')
     const r = approve(state, { id: crypto.randomUUID(), tokenHash: hash }, Date.now())
@@ -206,12 +207,12 @@ export function registerPhoneHandlers(): void {
     return { ok: true, name: r.device.name }
   })
 
-  ipcMain.handle('phone:rejectPair', () => {
+  guardedHandle('phone:rejectPair', () => {
     setState(cancelPair(state))
     return { ok: true }
   })
 
-  ipcMain.handle('phone:revoke', (_e, deviceId: string) => {
+  guardedHandle('phone:revoke', (_e, deviceId: string) => {
     setState(revoke(state, deviceId))
     return { ok: true }
   })
@@ -219,16 +220,16 @@ export function registerPhoneHandlers(): void {
   /** 网络换了（换 Wi-Fi、插网线）之后地址会变，界面上那个二维码得跟着换。
    *  不做自动侦测 —— 界面上给一句「地址变了？点这里重启服务」更诚实，
    *  自动重启会在用户不知情时把端口挪到别的网段上。 */
-  ipcMain.handle('phone:restart', () => {
+  guardedHandle('phone:restart', () => {
     if (!state.enabled) return { ok: false, error: '功能没开' }
     stop()
     return startServer()
   })
 
-  ipcMain.handle('phone:lanAddress', () => lanAddress())
+  guardedHandle('phone:lanAddress', () => lanAddress())
 
   /** 隧道开关 / 换隧道服务器。 */
-  ipcMain.handle('phone:setTunnel', (_e, t: Partial<TunnelPrefs>) => {
+  guardedHandle('phone:setTunnel', (_e, t: Partial<TunnelPrefs>) => {
     // **合并而不是替换。** 只传 {enabled:false} 来关隧道时，
     // 替换会把用户自定义的服务器地址一起抹掉 —— 再打开就悄悄连回默认那台了
     setState(setTunnel(state, { ...state.tunnel, ...t }))
@@ -242,7 +243,7 @@ export function registerPhoneHandlers(): void {
   /** 换一个 TLS 身份。**已配对的手机会全部失效** —— 指纹变了，
    *  它们钉的是旧的那把。所以这个动作要在界面上说清后果、要用户确认。
    *  用途：怀疑私钥泄漏，或者想把所有已授权的手机一次性断干净。 */
-  ipcMain.handle('phone:resetIdentity', () => {
+  guardedHandle('phone:resetIdentity', () => {
     resetIdentity()
     // 证书换了，正在跑的 TLS 口还拿着旧的 —— 必须重起，否则「重置了但
     // 手机还能用旧指纹连上」，那就等于没重置
@@ -255,7 +256,7 @@ export function registerPhoneHandlers(): void {
   })
 
   /** 清空留痕。**不自动清** —— 这份东西什么时候不要了由人决定。 */
-  ipcMain.handle('phone:clearAudit', () => {
+  guardedHandle('phone:clearAudit', () => {
     audit.clear()
     pushStatus()
     return { ok: true }

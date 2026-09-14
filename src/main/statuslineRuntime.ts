@@ -5,7 +5,8 @@
 // 分成两个文件是硬要求：node --test 直接跑 .ts，一旦文件里 import 了 electron，
 // 整个测试文件都加载不起来（tidyOrder.ts 立的规矩）。
 
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import {
   planInstall,
   planUninstall,
@@ -78,9 +79,9 @@ export function statuslineStatus(): { installed: boolean; wrapped: string | null
 }
 
 export function registerStatuslineHandlers(): void {
-  ipcMain.handle('statusline:status', () => statuslineStatus())
+  guardedHandle('statusline:status', () => statuslineStatus())
 
-  ipcMain.handle('statusline:install', () => {
+  guardedHandle('statusline:install', () => {
     const s = readSettings()
     const cur = s.statusLine as StatusLineCfg | undefined
     // 原命令只在「还没被我们包过」时才从 command 取 —— 已经包过的话，
@@ -92,7 +93,7 @@ export function registerStatuslineHandlers(): void {
     return { ok, changed: ok, reason: plan.reason }
   })
 
-  ipcMain.handle('statusline:uninstall', () => {
+  guardedHandle('statusline:uninstall', () => {
     const s = readSettings()
     const r = planUninstall(s.statusLine as StatusLineCfg | undefined)
     if (!r.changed) return { ok: true, changed: false, reason: '不是我们装的，没动' }

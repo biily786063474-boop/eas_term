@@ -108,3 +108,13 @@ test('mergeUserMessages 把 SentMessage.seq 带到 user 轮次上', () => {
   const merged = mergeUserMessages(view, [{ text: '问', beforeTurnCount: 0, seq: 12345 }])
   assert.equal(merged.turns[0].role, 'user'); assert.equal(merged.turns[0].seq, 12345)
 })
+
+// 审查发现：追问（handleFollowupSend）建的 SentMessage 没带 seq。结构守卫：所有创建 SentMessage 的地方都要带。
+test('AgentChatView 里每处创建 SentMessage 都带 seq', async () => {
+  const fs = await import('node:fs')
+  const src = fs.readFileSync(new URL('./AgentChatView.tsx', import.meta.url), 'utf8')
+  assert.ok(src.includes('beforeTurnCount: turnCursor(reducerRef.current.view()), seq: nextSeq()'), '首发消息缺 seq')
+  const at = src.indexOf('const entry: SentMessage = {'); assert.ok(at >= 0)
+  assert.ok(/seq:\s*nextSeq\(\)/.test(src.slice(at, at + 300)), '追问的 entry 缺 seq')
+  assert.equal((src.match(/beforeTurnCount\b(?!:)/g) ?? []).length + (src.match(/beforeTurnCount:/g) ?? []).length, (src.match(/seq: nextSeq\(\)/g) ?? []).length + (src.match(/beforeTurnCount\b/g) ?? []).length - (src.match(/seq: nextSeq\(\)/g) ?? []).length, '每个 beforeTurnCount 附近都应有 seq')
+})

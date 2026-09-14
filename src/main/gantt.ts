@@ -2,7 +2,8 @@
 //
 // 为什么保留期在写入时执行而不是定时器：定时器要考虑休眠唤醒、时钟跳变、
 // 多窗口重复触发；而写入时清理天然只在有新数据时发生，没有这些问题。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -108,9 +109,9 @@ function overlapsRange(t: GanttTask, from: number, to: number): boolean {
 }
 
 export function registerGanttHandlers(): void {
-  ipcMain.handle('gantt:list', () => withAbortedFlag(load()))
+  guardedHandle('gantt:list', () => withAbortedFlag(load()))
 
-  ipcMain.handle('gantt:push', (_e, t: GanttTask) => {
+  guardedHandle('gantt:push', (_e, t: GanttTask) => {
     if (!valid(t)) return
     const list = prune(load())
     // runId 由主进程盖章，不采信渲染层传来的值（渲染层也确实拿不到这个值，
@@ -120,7 +121,7 @@ export function registerGanttHandlers(): void {
     save(list)
   })
 
-  ipcMain.handle('gantt:finish', (_e, id: string, endAt: number) => {
+  guardedHandle('gantt:finish', (_e, id: string, endAt: number) => {
     const list = load()
     const hit = list.find((t) => t.id === id)
     if (!hit) return
@@ -128,7 +129,7 @@ export function registerGanttHandlers(): void {
     save(prune(list))
   })
 
-  ipcMain.handle('gantt:follow', (_e, id: string, text: string) => {
+  guardedHandle('gantt:follow', (_e, id: string, text: string) => {
     const list = load()
     const hit = list.find((t) => t.id === id)
     if (!hit) return
@@ -139,7 +140,7 @@ export function registerGanttHandlers(): void {
   // 用户自行删除错误数据（2026-08-08 新需求）：单条删除。找不到这个 id 就当没这回事——
   // 不当错误处理，调用方（渲染层）传的 id 本来就来自它自己刚拿到的列表，正常不会落空，
   // 落空多半是短时间内两处操作重叠（比如快速连点两次同一条的删除），静默忽略即可。
-  ipcMain.handle('gantt:remove', (_e, id: string) => {
+  guardedHandle('gantt:remove', (_e, id: string) => {
     const list = load().filter((t) => t.id !== id)
     save(list)
     return withAbortedFlag(list)
@@ -148,7 +149,7 @@ export function registerGanttHandlers(): void {
   // 批量清理：不传 range = 清空全部；传了就只清 [from, to] 内的。range 字段类型不对
   // （渲染层理论上不会传出这种调用，这里只是不信任边界）时保守地什么都不删，而不是
   // 静默滑向「清空全部」——批量删除这种不可逆操作，参数存疑就该是no-op，不是最大杀伤。
-  ipcMain.handle('gantt:clear', (_e, range?: GanttClearRange) => {
+  guardedHandle('gantt:clear', (_e, range?: GanttClearRange) => {
     let list: GanttTask[]
     if (range === undefined) {
       list = []

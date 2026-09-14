@@ -7,7 +7,8 @@
 // ── 开销纪律 ─────────────────────────────────────────────────────────────
 // 没有轮询、没有定时器、没有截图；只有事件发生才写一行。渲染层的观察器只挂在容器的
 // **直接子级**上（flickerRecorder.ts），不进终端内部。所以空闲时为零。
-import { app, ipcMain, shell, type BrowserWindow } from 'electron'
+import { guardedHandle, guardedOn } from './ipcGuard'
+import { app, shell, type BrowserWindow } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { formatLine, Ring, trimLog, type DiagEvent } from './diagRing.ts'
@@ -90,9 +91,9 @@ function hookWindow(win: BrowserWindow): void {
 }
 
 export function registerDiagHandlers(): void {
-  ipcMain.on('diag:event', (_e, ev: Partial<DiagEvent>) => fromRenderer(ev))
-  ipcMain.handle('diag:recent', () => ring.items())
-  ipcMain.handle('diag:showLog', () => {
+  guardedOn('diag:event', (_e, ev: Partial<DiagEvent>) => fromRenderer(ev))
+  guardedHandle('diag:recent', () => ring.items())
+  guardedHandle('diag:showLog', () => {
     const p = logPath()
     if (!fs.existsSync(p)) fs.writeFileSync(p, '')
     shell.showItemInFolder(p)

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { guardedHandle } from '../ipcGuard'
+import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import { CliUpdateManager, CLI_IDS } from './manager.ts'
 import { latestVersion, systemVersion, verifyVersion } from './packages.ts'
@@ -22,20 +23,20 @@ export function registerCliUpdateHandlers(): void {
   catch (e) { setManagedCliPaths([]); console.error('[cliUpdates] 无法保存更新状态，保留系统 CLI', e) }
   const ready = manager.refreshVersions()
   const validId = (id: unknown): id is UpdatableCli => CLI_IDS.includes(id as UpdatableCli)
-  ipcMain.handle('cliUpdates:get', async () => { await ready; return manager.snapshot() })
-  ipcMain.handle('cliUpdates:setEnabled', async (_e, id: unknown, value: unknown) => {
+  guardedHandle('cliUpdates:get', async () => { await ready; return manager.snapshot() })
+  guardedHandle('cliUpdates:setEnabled', async (_e, id: unknown, value: unknown) => {
     if (!validId(id) || typeof value !== 'boolean') throw new Error('无效 CLI 更新设置')
     manager.setEnabled(id, value)
     if (value) void ready.then(() => manager.check(id))
     return manager.snapshot()
   })
-  ipcMain.handle('cliUpdates:retry', async (_e, id: unknown) => {
+  guardedHandle('cliUpdates:retry', async (_e, id: unknown) => {
     if (!validId(id)) throw new Error('无效 CLI')
     await ready
     void manager.check(id)
     return manager.snapshot()
   })
-  ipcMain.handle('cliUpdates:rollback', (_e, id: unknown) => {
+  guardedHandle('cliUpdates:rollback', (_e, id: unknown) => {
     if (!validId(id)) throw new Error('无效 CLI')
     manager.rollback(id)
     return manager.snapshot()

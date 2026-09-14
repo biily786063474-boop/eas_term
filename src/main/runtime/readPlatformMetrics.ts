@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { parseMacMemory, parseLinuxMemory, parseMacPressure } from './platformMetrics.ts'
 const exec=promisify(execFile)
+let usableCached:Promise<{stdout:string}>|null=null
 /** Explicit one-shot read, never auto-started. One in-flight read per instance.
  * No user command, shell or environment copied to output; mac helper bounded 1s.
  */
@@ -17,7 +18,7 @@ export function createPlatformReader(){
    if(process.platform==='darwin'){
     const [{stdout},{stdout:usableRaw},{stdout:pressureRaw}]=await Promise.all([
      exec('/usr/bin/vm_stat',[],{timeout:1000,maxBuffer:64*1024,env:{LC_ALL:'C',LANG:'C'}}),
-     exec('/usr/sbin/sysctl',['-n','hw.memsize_usable'],{timeout:1000,maxBuffer:1024,env:{LC_ALL:'C',LANG:'C'}}),
+     usableCached??exec('/usr/sbin/sysctl',['-n','hw.memsize_usable'],{timeout:1000,maxBuffer:1024,env:{LC_ALL:'C',LANG:'C'}}).then(r=>{usableCached=Promise.resolve(r);return r}), // 硬件常量，读一次就够（2026-09-14 审查：原来每秒三次 fork）
      exec('/usr/sbin/sysctl',['-n','kern.memorystatus_vm_pressure_level'],{timeout:1000,maxBuffer:1024,env:{LC_ALL:'C',LANG:'C'}})
     ])
     memoryPressure=parseMacPressure(pressureRaw)

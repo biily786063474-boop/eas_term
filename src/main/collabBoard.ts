@@ -10,9 +10,9 @@
 //
 // 每条分支还有一份台账 `.eas/board/<branch>.md`（main/branchLedger.ts）：头部随板一起
 // upsert，「记录」段由角色经 `board:note` 追加，`board:read` 把各份尾部一并带回。
+import { guardedHandle } from './ipcGuard'
 import fs from 'fs'
 import path from 'path'
-import { ipcMain } from 'electron'
 
 import { BOARD_REL, findOverlaps, renderBoard, type BoardRow, type Overlap } from '../shared/board'
 import { belongsToProject } from '../shared/teamWorktree'
@@ -260,12 +260,12 @@ export function registerCollabBoardHandlers(): void {
   // 就在 `.worktrees/<角色>-<id>/` 里 —— 不剥的话：refresh 会在那棵工作树底下再落一份
   // 板（真正那份没人更新），read 则因为 `belongsToProject(cwd, worktreeCwd)` 收不到
   // 任何会话而永远返回空板。板只有一份，在项目根的 .eas/ 下。
-  ipcMain.handle('board:refresh', async (_e, projectPath: unknown) => {
+  guardedHandle('board:refresh', async (_e, projectPath: unknown) => {
     if (typeof projectPath !== 'string') return { ok: false }
     await writeBoard(projectRootOf(projectPath))
     return { ok: true }
   })
-  ipcMain.handle(
+  guardedHandle(
     'board:read',
     async (
       _e,
@@ -291,7 +291,7 @@ export function registerCollabBoardHandlers(): void {
   )
   // 往某条分支的台账「记录」段追加一条。cwd 在 worktree 里时默认写自己那条分支；
   // 主工作区没有自己的台账，必须带 branch 指名写给谁（合并官给某条分支留话就是这个用法）。
-  ipcMain.handle(
+  guardedHandle(
     'board:note',
     async (
       _e,

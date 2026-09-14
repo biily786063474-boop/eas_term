@@ -15,7 +15,7 @@ function harness(){
   sessions.push(session);return session
  }
  const rec={createStream:()=>({}),reset(){},getResult:()=>({text:''})}
- const deps={ipcMain:{handle:(n:string,f:any)=>handlers[n]=f,on:(n:string,f:any)=>handlers[n]=f},VoiceGate,process:{platform:'linux'},readyDir:()=>'/model',MODELS:{stream:{},vad:{}},path:{join:()=>'/model'},openManagedPreview:open,createPreviewWorker:()=>{throw Error('stub open must not create real model')},loadVoicePreview:(_o:any,_s:any,load:any)=>load(),ensureRecognizer:async()=>rec,recognizer:rec,transcribeAsync:async()=>null,console}
+ const deps={ipcMain:{handle:(n:string,f:any)=>handlers[n]=f,on:(n:string,f:any)=>handlers[n]=f},guardedHandle:(n:string,f:any)=>handlers[n]=f,guardedOn:(n:string,f:any)=>handlers[n]=f,VoiceGate,process:{platform:'linux'},readyDir:()=>'/model',MODELS:{stream:{},vad:{}},path:{join:()=>'/model'},openManagedPreview:open,createPreviewWorker:()=>{throw Error('stub open must not create real model')},loadVoicePreview:(_o:any,_s:any,load:any)=>load(),ensureRecognizer:async()=>rec,recognizer:rec,transcribeAsync:async()=>null,console}
  new Function(...Object.keys(deps),ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText+';registerSttHandlers()')(...Object.values(deps))
  return {handlers,sender,sessions,events,event:{sender}}
 }

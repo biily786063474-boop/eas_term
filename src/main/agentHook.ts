@@ -15,7 +15,8 @@
 // 为什么全程用 JSON.parse/stringify 而不是正则改文本：
 // 之前用正则改 Codex 的 TOML，`[^[]*` 在 `args = [` 处截断，把用户真实配置写坏过。
 // JSON 有现成的解析器，就别自己发明字符串手术。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -207,9 +208,9 @@ export function hookStatus(hasClaude: boolean, hasCodex: boolean): HookStatus {
 }
 
 export function registerHookHandlers(hasCli: (bin: string) => boolean): void {
-  ipcMain.handle('hook:status', () => hookStatus(hasCli('claude'), hasCli('codex')))
+  guardedHandle('hook:status', () => hookStatus(hasCli('claude'), hasCli('codex')))
 
-  ipcMain.handle('hook:install', (_e, targets: (AgentKind)[]) => {
+  guardedHandle('hook:install', (_e, targets: (AgentKind)[]) => {
     const cmd = buildCommand()
     if (!cmd) return { ok: false, error: '找不到 node 或钩子脚本，无法安装' }
     const done: string[] = []
@@ -230,7 +231,7 @@ export function registerHookHandlers(hasCli: (bin: string) => boolean): void {
     return { ok: true, done, status: hookStatus(hasCli('claude'), hasCli('codex')) }
   })
 
-  ipcMain.handle('hook:uninstall', (_e, targets: (AgentKind)[]) => {
+  guardedHandle('hook:uninstall', (_e, targets: (AgentKind)[]) => {
     try {
       if (targets.includes('claude')) uninstall(claudeSettings())
       if (targets.includes('codex')) uninstall(codexHooks())

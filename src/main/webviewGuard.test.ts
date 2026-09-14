@@ -12,3 +12,7 @@ test('剥掉 preload/preloadURL，关掉 node 集成，强制隔离与 webSecuri
   assert.equal(out.contextIsolation, true); assert.equal(out.webSecurity, true); assert.equal(out.allowRunningInsecureContent, false)
   assert.equal(out.partition, 'persist:web'); assert.equal(out.backgroundThrottling, false)
 })
+test('也关掉 worker 里的 node、嵌套 webview、实验特性，并打开 sandbox', () => {
+  const out = hardenWebviewPreferences({ nodeIntegrationInWorker: true, webviewTag: true, experimentalFeatures: true, sandbox: false })
+  assert.equal(out.nodeIntegrationInWorker, false); assert.equal(out.webviewTag, false); assert.equal(out.experimentalFeatures, false); assert.equal(out.sandbox, true)
+})

@@ -46,3 +46,13 @@ test('a fresh-looking cached sample is invalid immediately after reader failure'
  assert.throws(()=>c.read(),/暂不可用/)
  assert.equal(c.readForControl().metricsAvailable,false);c.dispose()
 })
+
+// 2026-09-14 审查修正：未校准平台 → 闸门失效（只监测），提交的启动照常运行；不把估算读数送进准入。
+test('unverified platform disables enforcement instead of closing the gate',async()=>{
+ const c=createRuntimeController({now:()=>1,read:async()=>({at:1,logicalCpus:1,totalMemoryBytes:1000,memoryUsedBytes:100,memoryMethod:'windows-free',memoryAdmissionVerified:false,cpuTicks:[]}),setTimer:()=>0,clearTimer(){}})
+ c.start();await flush()
+ assert.equal(c.readForControl().enforcement,'disabled')
+ assert.equal(c.snapshot().policyDecision.allowed,false,'估算读数仍不进准入决策')
+ let ran=0;await c.manager.submit({id:'t',projectId:'p',cost:{cpu:50,memoryBytes:1},run:async()=>{ran++}})
+ assert.equal(ran,1,'闸门失效时任务直接跑');c.dispose()
+})

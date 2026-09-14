@@ -12,7 +12,8 @@
 // 把结果发给我，是不是软件合成一眼就看出来了。
 //
 // **不做上报、不联网** —— 只在本机显示，用户自己决定要不要发出来。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import os from 'os'
 
 import type { GpuInfo } from '../shared/types'
@@ -48,5 +49,5 @@ export function readGpuInfo(): GpuInfo {
 }
 
 export function registerGpuInfo(): void {
-  ipcMain.handle('app:gpuInfo', () => readGpuInfo())
+  guardedHandle('app:gpuInfo', () => readGpuInfo())
 }

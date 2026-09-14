@@ -372,3 +372,5 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 - `webviewGuard` + `index.ts` 的 `will-attach-webview`：删钩子或在钩子里放行 preload = 网页节点能拿到 `window.api`。
 - `wiki/rootGate`：`wiki:init`/`wiki:setPath` 绕过 `allowed()` = 渲染层可指挥主进程在任意可写位置建目录。
 - `ipcGuard.guardedHandle/guardedOn`：八个敏感文件禁止裸 `ipcMain`；`securityWiring.test.ts` 是守卫。
+- （同日续）`gitHash.isCommitHash`：git 处理器收到的 hash 必须过它，否则 `--output=` 能写任意文件。`navigationGuard.isAppNavigation` + `index.ts` 对 `window` 类 contents 的 `will-navigate`/`setWindowOpenHandler`：主窗口只许应用内导航。`ipcGuard` 现在是**默认**：`src/main` 除 `ipcGuard.ts` 外不得出现裸 `ipcMain.handle/on`（`securityWiring.test.ts` 全局断言）。`wiki:addToInbox` 只收 `wiki:pickFiles` 记住的或 `guardPath` 允许的文件。
+- 归约器 `case 'error'` 的 fatal 分支必须收整轮三支；只复位 turnActive 就是 2026-09-13 那个卡死 bug 的翻版。

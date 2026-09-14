@@ -1,5 +1,6 @@
+import { guardedHandle } from './ipcGuard'
 import { cliInvocation, cliInvocationEnv } from './cliInvocation.ts'
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -112,13 +113,13 @@ export function codexServers(): string[] {
 }
 
 export function registerAgentHandlers(): void {
-  ipcMain.handle('agent:codexServers', () => codexServers())
+  guardedHandle('agent:codexServers', () => codexServers())
   // 渲染层（RolePicker 的降级徽章、CanvasRoleEditor 的能力矩阵）算 imageGen 的 hard/degraded
   // 档位要用到 codexHome——不给的话这两处只能假设拿不到，把真实会话已经是 hard 的角色
   // 显示成 degraded，tooltip 里还会露出「调用方未给 codexHome」这种内部黑话。
-  ipcMain.handle('agent:codexHome', () => codexHome())
+  guardedHandle('agent:codexHome', () => codexHome())
 
-  ipcMain.handle('agent:probe', async (): Promise<AgentProbe> => {
+  guardedHandle('agent:probe', async (): Promise<AgentProbe> => {
     const [claude, codex] = await Promise.all([probeClaude(), probeCodex()])
     return { claude, codex }
   })
@@ -126,7 +127,7 @@ export function registerAgentHandlers(): void {
 /** Codex 没有 --session-id 这类参数指定会话标识，只能起完之后去 sessions 目录捞。
  *  会话文件第一行 session_meta 里有 cwd，按它过滤能把竞态压到「同一项目同时起两个
  *  codex」才可能撞——真撞上（多个候选）就放弃绑定，宁可保持现状也不要瞎猜一个错的。 */
-ipcMain.handle(
+guardedHandle(
   'codex:captureSession',
   async (_e, cwd: string, sinceMs: number): Promise<{ id: string | null }> => {
     try {

@@ -17,6 +17,14 @@ export function createResourceLedger(){
    if(view.cpu+used.cpu+cost.cpu>=view.threshold||view.memoryUsedBytes+used.memoryBytes+cost.memoryBytes>=view.totalMemoryBytes*view.threshold/100)return null
    const entry={...cost};entries.set(id,entry)
    return {release(){if(entries.get(id)===entry)entries.delete(id)}}
-  }
+  },
+  /** 交互型启动：不比阈值，但仍记账（让后台重任务看得见它）。 */
+  acquireForced(id:string,cost:TaskCost):ResourceLease|null{
+   if(!id||entries.has(id)||![cost.cpu,cost.memoryBytes].every(n=>Number.isFinite(n)&&n>=0))return null
+   const entry={...cost};entries.set(id,entry)
+   return {release(){if(entries.get(id)===entry)entries.delete(id)}}
+  },
+  /** 服务启动完成：CPU 预留是给启动那一下的，驻留只占内存。空闲终端不该一直占着一份 CPU 额度。 */
+  settleCpu(id:string):void{const e=entries.get(id);if(e)e.cpu=0}
  }
 }

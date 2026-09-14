@@ -24,11 +24,38 @@ export function mergeArchiveTurns<T extends SeqTurn>(prev: readonly T[], incomin
   const byKey = new Map<number, T>()
   for (const t of base) byKey.set(t.seq as number, t)
   let max = base.reduce((m, t) => Math.max(m, t.seq as number), 0)
-  for (const t of incoming) {
-    if (typeof t.seq === 'number') { byKey.set(t.seq, t); max = Math.max(max, t.seq) }
-    else { max = Math.max(max + 1, Date.now()); byKey.set(max, { ...t, seq: max }) }
+  // 无序号的新消息（不该有，但真出现过：追问一度没带 seq）：不能每次保存都发新号追加，
+  // 否则流式期间每秒一存就复制几十份。按「紧邻前驱的序号 + 角色 + 正文」定位：
+  // 同一位置同样的话已经在档里就复用它的序号，否则才发新号。
+  // 序号取**前后邻居的中点**（都没有就取当前时间），这样它落在正确的位置，且只要邻居不变、
+  // 下一次保存算出同一把 key 就复用同一个序号，不会重复。
+  let prevSeq: number | null = null
+  const existing = new Map<string, number>()
+  for (const t of base) existing.set(keyOf(t, prevSeqOf(base, t)), t.seq as number)
+  for (let i = 0; i < incoming.length; i++) {
+    const t = incoming[i]
+    if (typeof t.seq === 'number') { byKey.set(t.seq, t); max = Math.max(max, t.seq); prevSeq = t.seq; continue }
+    const k = keyOf(t, prevSeq)
+    let seq = existing.get(k)
+    if (seq === undefined) {
+      const next = incoming.slice(i + 1).find(x => typeof x.seq === 'number')?.seq ?? null
+      seq = prevSeq === null ? (next === null ? Date.now() : next - 0.5) : (next === null ? prevSeq + 0.5 : (prevSeq + next) / 2)
+      while (byKey.has(seq)) seq += 1e-6
+      max = Math.max(max, seq)
+    }
+    byKey.set(seq, { ...t, seq })
+    existing.set(k, seq)
+    prevSeq = seq
   }
   return [...byKey.values()].sort((a, b) => (a.seq as number) - (b.seq as number))
+}
+
+function keyOf(t: SeqTurn & { role?: string; text?: string }, prev: number | null): string {
+  return `${prev ?? '-'}|${t.role ?? ''}|${t.text ?? ''}`
+}
+function prevSeqOf(sorted: readonly SeqTurn[], t: SeqTurn): number | null {
+  const i = sorted.indexOf(t)
+  return i > 0 ? (sorted[i - 1].seq as number) : null
 }
 
 /** 只取最近 n 条，顺序不变。 */

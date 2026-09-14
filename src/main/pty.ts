@@ -1,10 +1,10 @@
+import { guardedHandle, guardedOn } from './ipcGuard'
 import {projectAttribution} from './runtime/projectAttribution.ts'
 import {loadProjects} from './projects'
 import {ownedSessions} from './runtime/ownedSessions.ts'
 import {startManagedSession,cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
 import { ensureSecretShim } from './secretShim'
 import { app, BrowserWindow } from 'electron'
-import { guardedHandle, guardedOn } from './ipcGuard'
 import * as pty from 'node-pty'
 import os from 'os'
 import fs from 'fs'
@@ -388,7 +388,7 @@ export function registerPtyHandlers(): void {
     if(opts.startupRequestId!==undefined&&(typeof opts.startupRequestId!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(opts.startupRequestId)))throw Error('invalid terminal startup request')
     const startupId=opts.startupRequestId?'pty-request:'+opts.startupRequestId:'pty-start:'+id
     const projectId=projectAttribution(opts.cwd||os.homedir(),loadProjects())
-    return startManagedSession({id:startupId,windowId:e.sender.id,name:'终端启动',projectId,cost:{cpu:Math.max(5,100/os.availableParallelism()),memoryBytes:256*1024**2},start:async signal=>{
+    return startManagedSession({id:startupId,windowId:e.sender.id,name:'终端启动',interactive:true,projectId,cost:{cpu:Math.max(5,100/os.availableParallelism()),memoryBytes:256*1024**2},start:async signal=>{
     if(signal.aborted||e.sender.isDestroyed())throw Error('终端启动已取消')
     let completedResolve!:()=>void
     const completed=new Promise<void>(resolve=>{completedResolve=resolve})
@@ -502,7 +502,7 @@ export function registerPtyHandlers(): void {
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
     })
     ptys.set(id, { pty: proc, wcId: wc.id })
-    ownedSessions.add({id:'pty:'+id,name:'终端',windowId:wc.id,projectId:projectAttribution(cwd,loadProjects()),kind:'terminal',completed,stop:()=>proc.kill()})
+    ownedSessions.add({id:'pty:'+id,name:'终端',windowId:wc.id,projectId,kind:'terminal',completed,stop:()=>{const entry=ptys.get(id);if(entry)killTree(entry);else proc.kill()}})
     return { value:{id},completed }
     }})
   })

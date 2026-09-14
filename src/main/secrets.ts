@@ -28,8 +28,8 @@
 //    对策：加密前把 checksum 一起封进明文，解密后校验（见 seal/open）。同样 3000 次实测 0 漏过。
 // 3. **改 productName 会丢光所有密钥**（钥匙串桶名由 app.getName() 决定）。
 //    对策：库里记下当时的 app 名，对不上时明确告知而不是抛一个看不懂的解密错误。
-import { app, safeStorage, BrowserWindow, dialog } from 'electron'
 import { guardedHandle } from './ipcGuard'
+import { app, safeStorage, BrowserWindow, dialog } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'

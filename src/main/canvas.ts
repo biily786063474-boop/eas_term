@@ -1,5 +1,6 @@
+import { guardedHandle, guardedOn } from './ipcGuard'
 import { shouldBackup, backupName, prunable } from '../shared/canvasBackup'
-import { app, ipcMain, net, protocol } from 'electron'
+import { app, net, protocol } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { pathToFileURL } from 'url'
@@ -40,7 +41,7 @@ export function registerMediaScheme(): void {
 }
 
 export function registerCanvasHandlers(): void {
-  ipcMain.handle('canvas:load', () => {
+  guardedHandle('canvas:load', () => {
     try {
       return JSON.parse(fs.readFileSync(storeFile(), 'utf8'))
     } catch {
@@ -105,9 +106,9 @@ export function registerCanvasHandlers(): void {
       return false
     }
   }
-  ipcMain.handle('canvas:save', (_e, scene: unknown) => writeScene(scene))
+  guardedHandle('canvas:save', (_e, scene: unknown) => writeScene(scene))
   // 同步落盘：退出/刷新前(beforeunload)用它,阻塞到写完再放行,杜绝「改完就退,防抖没落盘」丢失。
-  ipcMain.on('canvas:save-sync', (e, scene: unknown) => {
+  guardedOn('canvas:save-sync', (e, scene: unknown) => {
     // **返回真实结果。** 以前这里无条件 `true`，于是「阻塞到写完再放行」
     // 只做到了「阻塞」：写盘失败时渲染层照样收到 true、判定已落盘、放行退出，
     // 这一整场改动无提示无日志地消失（.plans/silent-fail S-08）。

@@ -32,7 +32,7 @@ export async function openManagedVad(
   recordingSignal?.addEventListener('abort', release, {once: true})
   try {
     return await startManagedSession({
-      id, windowId: owner.id, name: '人声检测', projectId: null,
+      id, windowId: owner.id, name: '人声检测', interactive: true, projectId: null,
       cost: {cpu: 5, memoryBytes: 128 * 1024 * 1024},
       start: async signal => {
         if (signal.aborted || owner.isDestroyed()) throw new Error('cancelled')

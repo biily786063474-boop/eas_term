@@ -9,9 +9,9 @@
 //     不解释成人话的话，用户只会看到派活失败而不知道为什么
 //   · 目标目录已存在 → 同上，且可能是上一批留下的残骸
 
+import { guardedHandle } from './ipcGuard'
 import fs from 'fs'
 import path from 'path'
-import { ipcMain } from 'electron'
 
 import { newShortId, roleWorktreeBranch, roleWorktreeName } from '../shared/roleWorktree'
 import { refreshBoard } from './collabBoard'
@@ -66,7 +66,7 @@ export async function addWorktree(
 }
 
 export function registerTeamWorktree(): void {
-  ipcMain.handle(
+  guardedHandle(
     'team:worktreeAdd',
     async (_e, projectPath: unknown, relPath: unknown, branch: unknown): Promise<WorktreeResult> => {
       if (typeof projectPath !== 'string' || typeof relPath !== 'string' || typeof branch !== 'string')
@@ -76,7 +76,7 @@ export function registerTeamWorktree(): void {
   )
 
   // 角色会话自己开的 worktree：命名在 shared/roleWorktree.ts。**只有 isolation='worktree' 的角色会走到这**。
-  ipcMain.handle('role:worktreeAdd', async (_e, projectPath: unknown, roleId: unknown) => {
+  guardedHandle('role:worktreeAdd', async (_e, projectPath: unknown, roleId: unknown) => {
     if (typeof projectPath !== 'string' || typeof roleId !== 'string')
       return { ok: false, reason: 'other', error: '参数不对' }
     // 短 id 撞车的概率极低，但撞了就换一个再试；三次都撞说明不是运气问题
@@ -102,7 +102,7 @@ export function registerTeamWorktree(): void {
     return { ok: false, reason: 'other', error: '连续三次撞上已存在的名字，先清理 .worktrees/' }
   })
 
-  ipcMain.handle(
+  guardedHandle(
     'team:worktreeRemove',
     async (
       _e,
@@ -149,7 +149,7 @@ export function registerTeamWorktree(): void {
 
   /** 这一批的 worktree 里有没有改动。收活时要报给主 agent —— 
    *  「跑完了」和「改了东西」是两件事，一个 agent 可能什么都没动。 */
-  ipcMain.handle(
+  guardedHandle(
     'team:worktreeStat',
     async (_e, projectPath: unknown, relPath: unknown): Promise<{ exists: boolean; changed: number }> => {
       if (typeof projectPath !== 'string' || typeof relPath !== 'string') return { exists: false, changed: 0 }

@@ -180,3 +180,21 @@ test('进程在 busy 中异常退出：先补 turn.done 再报 fatal，三支 bu
   assert.equal((events[1] as { fatal: boolean }).fatal, true)
   assert.equal(live.rec.busy, false)
 })
+
+// 2026-09-14 审查：运行中心「关闭服务」走的是 ownedSessions 的 stop（killing=true），exit 时 selfKilled
+// 跳过了 turn.done，渲染层 busy 卡死。判据应是「退出时还 busy」，与谁杀的无关；interrupt 自己已先把 busy 落回，不会重复。
+test('我们自己杀的进程，退出时若还 busy 也要补 turn.done', () => {
+  const { live, current, events } = setup()
+  live.rec.busy = true
+  live.killing = true
+  current.emit('exit', null, 'SIGTERM')
+  assert.deepEqual(events.map(e => (e as { k: string }).k), ['turn.done'], '只补 turn.done，不再报 fatal')
+})
+
+test('启动准入失败的 catch 保住 retries（自动恢复计数不能被清零）', () => {
+  const src = readFileSync(new URL('./session.ts', import.meta.url), 'utf8')
+  const i = src.indexOf("live.runtimeStartupId!==id || sessions.get(live.rec.id)!==live)return")
+  assert.ok(i > 0)
+  const block = src.slice(i, i + 500)
+  assert.ok(/const retries\s*=\s*live\.rec\.retries/.test(block) && /retries\s*\}/.test(block) || /keepRetries|preserveRetries/.test(block), '启动失败路径补 turn.done 时没有保住 retries')
+})

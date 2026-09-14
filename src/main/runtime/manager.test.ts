@@ -82,3 +82,27 @@ test('failed service completion observer cannot free live process budget',async(
  await m.submitService({id:'service',projectId:'p',cost:{cpu:3,memoryBytes:100},start:async()=>({completed:Promise.reject(Error('observer failed'))})})
  await flush();assert.equal(m.snapshot().reserved.memoryBytes,100);m.dispose()
 })
+
+// 2026-09-14 审查修正（发版拦截级）：平台未校准时闸门必须**失效而不是关死**——
+// 否则 Windows / Intel Mac / 旧 macOS 上终端、AI、插件全部排队 60 秒后失败。
+test('闸门失效（未校准平台）：没有采样也直接放行，不记预算',async()=>{
+ const m=createRuntimeManager({now:()=>0});m.setEnforcement(false)
+ let ran=0;await m.submit({id:'a',projectId:'p',cost:{cpu:50,memoryBytes:1},run:async()=>{ran++}})
+ assert.equal(ran,1);assert.equal(m.snapshot().enforcement,'disabled');assert.equal(m.snapshot().reserved.cpu,0)
+ m.setEnforcement(true);assert.equal(m.snapshot().enforcement,'enabled')
+ let ran2=0;const p=m.submit({id:'b',projectId:'p',cost:{cpu:1,memoryBytes:1},run:async()=>{ran2++}})
+ await flush();assert.equal(ran2,0,'恢复闸门后又要等采样');m.update(sample(0,10));await p;assert.equal(ran2,1)
+})
+test('交互型服务：内存超阈值也放行并记预算；严重压力才等；启动后释放 CPU 预留只留内存',async()=>{
+ let now=0;const m=createRuntimeManager({now:()=>now,maxRunning:1})
+ m.update({at:0,cpu:10,memoryUsedBytes:900,totalMemoryBytes:1000,critical:false}) // 90% > 80%
+ let exit!:()=>void
+ const p=m.submitService({id:'pty',projectId:'p',cost:{cpu:12,memoryBytes:5},interactive:true,start:async()=>({completed:new Promise<void>(r=>{exit=r})})})
+ await p
+ assert.equal(m.snapshot().reserved.memoryBytes,5,'内存预留保留到退出');assert.equal(m.snapshot().reserved.cpu,0,'启动完成后 CPU 预留释放')
+ now=1000;m.update({at:1000,cpu:10,memoryUsedBytes:900,totalMemoryBytes:1000,critical:true})
+ let ran=0;const q=m.submitService({id:'pty2',projectId:'p',cost:{cpu:12,memoryBytes:5},interactive:true,start:async()=>{ran++;return {completed:Promise.resolve()}}})
+ await flush();assert.equal(ran,0,'严重压力下交互型也等')
+ now=2000;m.update({at:2000,cpu:10,memoryUsedBytes:900,totalMemoryBytes:1000,critical:false});await q;assert.equal(ran,1)
+ exit();await flush();assert.equal(m.snapshot().reserved.memoryBytes,0)
+})

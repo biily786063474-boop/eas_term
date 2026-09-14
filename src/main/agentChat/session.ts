@@ -1,3 +1,4 @@
+import { guardedHandle, guardedOn } from '../ipcGuard'
 import {startupFailure} from '../runtime/startupFailure.ts'
 import {startManagedSession,cancelSessionStart} from '../runtime/sessionStartup.ts'
 import {ownedSessions} from '../runtime/ownedSessions.ts'
@@ -33,7 +34,6 @@ import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, type WebContents } from 'electron'
-import { guardedHandle, guardedOn } from '../ipcGuard'
 
 import { alog } from '../cliAuth/log.ts'
 import { unauthedInLine } from '../cliAuth/detect.ts'
@@ -711,7 +711,9 @@ function wireProc(live: Live, proc: ChildProcess): void {
     // handleEvent 的 turn.done 分支会把它清成 0，那是给「真跑完一轮」用的；
     // 崩溃不算，清了自动恢复就永远数不到「试到头」。
     // 静默期也一并结束：进程都没了，slash 回执不会再来，留着只会把这条 turn.done 吞掉。
-    if (!selfKilled && live.rec.busy === true) {
+    // 判据只看「退出时还 busy」，与谁杀的无关：运行中心「关闭服务」也是我们杀的，可渲染层同样要收尾。
+    // interrupt 那条路自己已经先把 busy 落回，这里不会重复。
+    if (live.rec.busy === true) {
       const retries = live.rec.retries
       live.silence = endSilence()
       handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
@@ -757,7 +759,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
   if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
   const id = 'agent-start:' + live.rec.id + ':' + (++runtimeStartupSequence)
   live.runtimeStartupId = id
-  void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',
+  void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',interactive:true, // 用户亲手发的消息：控制面，只在严重压力下等
     projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
     start:async signal=>{
       if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
@@ -769,8 +771,12 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
     }
   }).catch(error=>{
     if(live.runtimeStartupId!==id || sessions.get(live.rec.id)!==live)return
+    // 补 turn.done 时保住 retries：handleEvent 的 turn.done 分支会清零，那是给「真跑完一轮」用的；
+    // 启动失败不算，清了自动恢复就永远数不到「试到头」（2026-09-14 审查）。
+    const retries=live.rec.retries
     live.rec={...live.rec,busy:false}
     handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    live.rec={...live.rec,retries}
     handleEvent(live,{k:'error',...startupFailure(error)})
   }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
   return {ok:true}
@@ -1333,7 +1339,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
         if(signal.aborted)throw Error('cancelled')
         const id='acp-start:'+live.rec.id+':'+(++runtimeStartupSequence)
         const cancel=()=>cancelSessionStart(id,live.wcId)
-        const result=startManagedSession<ReturnType<typeof openOmpProcess>>({id,windowId:live.wcId,name:'OMP 启动',projectId:projectAttribution(cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},start:async admitted=>{
+        const result=startManagedSession<ReturnType<typeof openOmpProcess>>({id,windowId:live.wcId,name:'OMP 启动',interactive:true,projectId:projectAttribution(cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},start:async admitted=>{
           if(admitted.aborted||signal.aborted||live.wc.isDestroyed()||sessions.get(live.rec.id)!==live)throw Error('cancelled')
           const opened=this.open(cwd)
           if(!opened.ok)return {value:opened,completed:Promise.resolve()}

@@ -5,7 +5,8 @@
 //     projects/<projectId>.json       项目节点，node.mediaId 引用本地媒体
 //     media/<mediaId>.bin             媒体二进制
 //     media/<mediaId>.meta.json       { mimeType, size, createdAt }
-import { app, ipcMain, net, protocol, shell } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app, net, protocol, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
@@ -77,7 +78,7 @@ export function registerBizoneHandlers(): void {
     return new Response(res.body, { status: 200, headers: { 'Content-Type': mime } })
   })
 
-  ipcMain.handle('bizone:check', async (): Promise<BizoneCheck> => {
+  guardedHandle('bizone:check', async (): Promise<BizoneCheck> => {
     const installed = fs.existsSync(APP_BUNDLE) || fs.existsSync(dataDir())
     let downloadUrl = WEBSITE
     if (!installed) {
@@ -101,7 +102,7 @@ export function registerBizoneHandlers(): void {
     return { installed, website: WEBSITE, downloadUrl }
   })
 
-  ipcMain.handle('bizone:listProjects', (): BizoneProject[] => {
+  guardedHandle('bizone:listProjects', (): BizoneProject[] => {
     interface IndexEntry {
       id: string
       name: string
@@ -130,7 +131,7 @@ export function registerBizoneHandlers(): void {
     ]
   })
 
-  ipcMain.handle('bizone:listMedia', (_e, projectId: string): BizoneMedia[] => {
+  guardedHandle('bizone:listMedia', (_e, projectId: string): BizoneMedia[] => {
     const out: BizoneMedia[] = []
     if (projectId === '__all__') {
       let files: string[] = []
@@ -184,7 +185,7 @@ export function registerBizoneHandlers(): void {
     return out.sort((a, b) => b.createdAt - a.createdAt)
   })
 
-  ipcMain.handle(
+  guardedHandle(
     'bizone:insertToVAssets',
     async (_e, mediaId: string, projectPath: string): Promise<InsertResult> => {
       try {
@@ -213,7 +214,7 @@ export function registerBizoneHandlers(): void {
     }
   )
 
-  ipcMain.handle('bizone:revealMedia', (_e, mediaId: string) => {
+  guardedHandle('bizone:revealMedia', (_e, mediaId: string) => {
     if (!MEDIA_ID_RE.test(mediaId)) return
     const target = path.join(mediaDir(), `${mediaId}.bin`)
     // 绝对路径 /usr/bin/open：打包应用 PATH 受限，'open' 可能找不到（见 fs.ts 同因）

@@ -4,9 +4,18 @@
 import fs from 'fs'
 import path from 'path'
 
+/** 最深的已存在祖先取 realpath，剩余部分原样接上：目录还没建时记下的路径，建好后（哪怕祖先是符号链接）也能对上。 */
 function normalize(p: string): string {
   const abs = path.resolve(p)
-  try { return fs.realpathSync(abs) } catch { return abs }
+  const rest: string[] = []
+  let cur = abs
+  for (;;) {
+    try { return path.join(fs.realpathSync.native ? fs.realpathSync.native(cur) : fs.realpathSync(cur), ...rest) } catch { /* 不存在，往上找 */ }
+    const parent = path.dirname(cur)
+    if (parent === cur) return abs
+    rest.unshift(path.basename(cur))
+    cur = parent
+  }
 }
 
 export function createWikiRootGate(deps: { guardDir: (p: string) => { ok: boolean } }) {

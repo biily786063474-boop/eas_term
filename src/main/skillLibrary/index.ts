@@ -21,7 +21,8 @@
 // **只写 app 自己配置、不碰硬盘 skill 的**（addDir / removeDir / setDisabled /
 // setCategories）：全部落在 <userData>/skills.json。禁用与分类刻意走这条路——
 // 「不动硬盘上的 skill 文件」是用户拍板的决定（design 文档 §六 第 1 条 / §四）。
-import { app, dialog, ipcMain } from 'electron'
+import { guardedHandle } from '../ipcGuard'
+import { app, dialog } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -150,11 +151,11 @@ function listSkillsIn(dirPath: unknown): SkillListResult {
 }
 
 export function registerSkillLibraryHandlers(): void {
-  ipcMain.handle('skillLibrary:listDirs', (): SkillDirEntry[] => allDirs())
+  guardedHandle('skillLibrary:listDirs', (): SkillDirEntry[] => allDirs())
 
   /** 目录选择器，纯挑路径不落盘——落盘交给 addDir，两步分开和 wiki:pickPath/wiki:init
    *  同一个模式，方便面板在「选完之后要不要再确认一次标签」上留有余地。 */
-  ipcMain.handle('skillLibrary:pickDir', async (): Promise<string | null> => {
+  guardedHandle('skillLibrary:pickDir', async (): Promise<string | null> => {
     const r = await dialog.showOpenDialog({
       title: '选择 skill 目录',
       properties: ['openDirectory'],
@@ -163,7 +164,7 @@ export function registerSkillLibraryHandlers(): void {
     return r.canceled ? null : (r.filePaths[0] ?? null)
   })
 
-  ipcMain.handle('skillLibrary:addDir', (_e, newPath: unknown, label?: unknown): SkillDirAddResult => {
+  guardedHandle('skillLibrary:addDir', (_e, newPath: unknown, label?: unknown): SkillDirAddResult => {
     const existing = allDirs()
     const plan = planAddDir(existing, newPath, typeof label === 'string' ? label : undefined)
     if (!plan.ok) return { ok: false, error: plan.error, dirs: existing }
@@ -173,20 +174,20 @@ export function registerSkillLibraryHandlers(): void {
     return { ok: true, dirs: mergeDirs(resolveBuiltinDirs(app.getPath('home')), customDirs) }
   })
 
-  ipcMain.handle('skillLibrary:removeDir', (_e, id: unknown): SkillDirEntry[] => {
+  guardedHandle('skillLibrary:removeDir', (_e, id: unknown): SkillDirEntry[] => {
     const cfg = loadConfig()
     const customDirs = planRemoveDir(Array.isArray(cfg.customDirs) ? cfg.customDirs : [], String(id ?? ''))
     saveConfig({ customDirs })
     return mergeDirs(resolveBuiltinDirs(app.getPath('home')), customDirs)
   })
 
-  ipcMain.handle('skillLibrary:list', (_e, dirPath: unknown): SkillListResult => listSkillsIn(dirPath))
+  guardedHandle('skillLibrary:list', (_e, dirPath: unknown): SkillListResult => listSkillsIn(dirPath))
 
   // ── 写：复制一个 skill 到另一个 skill 目录 ─────────────────────────────
   // 这是本模块**唯一会往用户 skill 目录里放新东西**的口子。边界见 write.ts 文件头。
   // 重名一律拒绝、不覆盖不改名（design 文档 §六 第 4 条）；
   // 落盘走「临时名 → 改名」，失败不留半个残缺的 skill 目录。
-  ipcMain.handle('skillLibrary:copySkill', (_e, srcPath: unknown, destDirPath: unknown): SkillCopyResult => {
+  guardedHandle('skillLibrary:copySkill', (_e, srcPath: unknown, destDirPath: unknown): SkillCopyResult => {
     const src = typeof srcPath === 'string' ? srcPath : ''
     const destDir = typeof destDirPath === 'string' ? destDirPath : ''
     if (!src || !destDir) return { ok: false, error: '缺少源或目标' }
@@ -219,7 +220,7 @@ export function registerSkillLibraryHandlers(): void {
   // **不动硬盘上的 skill 文件**（design 文档 §六 第 1 条，用户拍板过）。
   // 代价（已知并接受）：CLI 自己仍会加载它，禁用只在本软件的视图里生效——
   // 这句话要在面板上说给用户看，见 CanvasSkillPanel 的 .skl-note。
-  ipcMain.handle('skillLibrary:setDisabled', (_e, skillPath: unknown, want: unknown): SkillDisableResult => {
+  guardedHandle('skillLibrary:setDisabled', (_e, skillPath: unknown, want: unknown): SkillDisableResult => {
     const p = typeof skillPath === 'string' ? skillPath.trim() : ''
     if (!p || !path.isAbsolute(p)) return { ok: false, error: '需要 skill 的绝对路径', disabled: [] }
     const cur = sanitizeDisabled(loadConfig().disabled)
@@ -233,7 +234,7 @@ export function registerSkillLibraryHandlers(): void {
   // 为什么不走 fs:writeTextFile：那条路过 fsGuard，边界是「项目根 + 知识库根」，
   // 全局 skill 目录不在里面——保存会失败。正确做法是本模块给出自己的窄边界（见 write.ts），
   // 而不是去放宽 fsGuard（那会把所有写操作的边界一起放宽）。
-  ipcMain.handle(
+  guardedHandle(
     'skillLibrary:writeFile',
     (_e, filePath: unknown, content: unknown): { ok: boolean; error?: string } => {
       const p = typeof filePath === 'string' ? filePath : ''
@@ -260,7 +261,7 @@ export function registerSkillLibraryHandlers(): void {
   // ── 给 agent 的分类口子：读全景 ────────────────────────────────────────
   // 面板一次只看一个目录，agent 要整理分类必须看全量（含项目 skill 目录）。
   // 只读，不写任何东西。
-  ipcMain.handle('skillLibrary:listAll', (): SkillLibrarySnapshot => {
+  guardedHandle('skillLibrary:listAll', (): SkillLibrarySnapshot => {
     const cfg = loadConfig()
     const disabledSet = new Set(sanitizeDisabled(cfg.disabled))
     const dirs: SkillLibrarySnapshot['dirs'] = []
@@ -309,7 +310,7 @@ export function registerSkillLibraryHandlers(): void {
   // 校验逻辑在 category.ts 的 validateCategoryBatch，有单测。
   // 分类只写 app 自己的配置，**不写进用户的 skill 目录**。
   /** 面板里手动建一个分类（可以是空的，先建好再往里拖）。 */
-  ipcMain.handle('skillLibrary:addCategoryName', (_e, name: unknown): SkillCategorizeResult => {
+  guardedHandle('skillLibrary:addCategoryName', (_e, name: unknown): SkillCategorizeResult => {
     if (typeof name !== 'string') return { ok: false, error: '分类名必须是字符串' }
     const n = name.trim()
     if (!n) return { ok: false, error: '分类名不能为空' }
@@ -323,7 +324,7 @@ export function registerSkillLibraryHandlers(): void {
 
   /** 删一个分类。**里面的 skill 不删**，只是回到未分类 —— 分类是视图上的标记，
    *  删标记不该牵连被标记的东西。同时把它们的手动锁一并解掉。 */
-  ipcMain.handle('skillLibrary:removeCategoryName', (_e, name: unknown): SkillCategorizeResult => {
+  guardedHandle('skillLibrary:removeCategoryName', (_e, name: unknown): SkillCategorizeResult => {
     if (typeof name !== 'string' || !name.trim()) return { ok: false, error: '分类名必须是非空字符串' }
     const n = name.trim()
     const cfg = loadConfig()
@@ -343,7 +344,7 @@ export function registerSkillLibraryHandlers(): void {
 
   /** 面板里手动把一个 skill 归到某个分类（拖拽落点）。
    *  `category` 传 null / 空串 = 拿回未分类，同时**解锁**（用户把它交还给 AI 管）。 */
-  ipcMain.handle(
+  guardedHandle(
     'skillLibrary:assignCategory',
     (_e, skillPath: unknown, category: unknown): SkillCategorizeResult => {
       if (typeof skillPath !== 'string' || !skillPath) return { ok: false, error: 'skill 路径必须是非空字符串' }
@@ -376,7 +377,7 @@ export function registerSkillLibraryHandlers(): void {
     }
   )
 
-  ipcMain.handle('skillLibrary:setCategories', (_e, raw: unknown): SkillCategorizeResult => {
+  guardedHandle('skillLibrary:setCategories', (_e, raw: unknown): SkillCategorizeResult => {
     const valid = new Set<string>()
     const projectSkillDirs = projectRoots().map((root) => path.join(root, '.claude', 'skills'))
     for (const dirPath of [...allDirs().map((d) => d.path), ...projectSkillDirs]) {

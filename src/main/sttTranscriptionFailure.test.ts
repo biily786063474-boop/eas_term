@@ -4,10 +4,10 @@ import {readFileSync} from 'node:fs'
 import ts from 'typescript'
 const source=readFileSync(new URL('./stt.ts',import.meta.url),'utf8')
 function handler(transcribeAsync:()=>Promise<string|null>){
- const start=source.indexOf("  ipcMain.handle('stt:transcribeChunk'")
- const code=source.slice(start,source.indexOf("\n  ipcMain.handle('stt:modelStatus'",start))
+ const start=source.indexOf("  guardedHandle('stt:transcribeChunk'")
+ const code=source.slice(start,source.indexOf("\n  guardedHandle('stt:modelStatus'",start))
  let handle:any
- new Function('ipcMain','transcribeAsync',ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText)({handle:(_name:string,fn:any)=>handle=fn},transcribeAsync)
+ new Function('guardedHandle','transcribeAsync',ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText)((_name:string,fn:any)=>{handle=fn},transcribeAsync)
  return (buf=new Float32Array(100).buffer)=>handle({sender:{}},buf)
 }
 test('file transcription must reject unavailable or timed-out decode, not report silence',async()=>{

@@ -1,6 +1,7 @@
 // 设计模块：把导出的产物（PNG / WebM / MP4 …）写入项目的 demo/ 目录。
 // 渲染层把导出 Blob 转成 ArrayBuffer 传来，这里按项目路径落盘（目录不存在则建）。
-import { ipcMain, shell } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -13,7 +14,7 @@ interface ExportResult {
 }
 
 export function registerDesignHandlers(): void {
-  ipcMain.handle(
+  guardedHandle(
     'design:exportToDemo',
     async (_e, projectPath: string, filename: string, data: ArrayBuffer): Promise<ExportResult> => {
       try {
@@ -38,5 +39,5 @@ export function registerDesignHandlers(): void {
   )
 
   // 导出后在访达里定位产物（可选）
-  ipcMain.handle('design:revealDemo', (_e, filePath: string) => shell.showItemInFolder(filePath))
+  guardedHandle('design:revealDemo', (_e, filePath: string) => shell.showItemInFolder(filePath))
 }

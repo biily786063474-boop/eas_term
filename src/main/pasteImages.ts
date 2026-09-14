@@ -6,7 +6,8 @@
 //
 // 为什么不常驻在项目里：这些图是「说这句话时顺手贴的一张截图」，
 // 不是项目资产。塞进 <项目>/assets/img 会把用户的仓库弄脏。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -68,7 +69,7 @@ export function sweepPasteImages(): void {
 
 export function registerPasteImageHandlers(): void {
   // 粘贴 / 拖入的图片字节 → 临时文件，返回绝对路径
-  ipcMain.handle(
+  guardedHandle(
     'pasteImage:save',
     async (
       _e,
@@ -98,7 +99,7 @@ export function registerPasteImageHandlers(): void {
   )
 
   // 从输入框叉掉某张图 → 立刻删。没发出去的东西不该在磁盘上留着。
-  ipcMain.handle('pasteImage:remove', async (_e, p: string): Promise<boolean> => {
+  guardedHandle('pasteImage:remove', async (_e, p: string): Promise<boolean> => {
     if (!p || !insideOurDir(p)) return false // 拖进来的外部文件不归我们删
     try {
       await fs.promises.unlink(p)

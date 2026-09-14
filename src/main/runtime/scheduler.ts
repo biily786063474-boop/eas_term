@@ -5,6 +5,8 @@ export interface Work {
  id: string
  projectId: string
  run: (signal: AbortSignal) => Promise<void>
+ /** 交互型（用户亲手发起的启动）：不受 allow()/maxRunning 约束，只受 allowInteractive（严重压力）门。 */
+ interactive?: boolean
 }
 interface Entry {
  lease?: ResourceLease
@@ -14,6 +16,8 @@ interface Entry {
 interface Options {
  acquire?: (work:Work)=>ResourceLease|null
  allow: () => boolean; now: () => number; maxRunning: number; maxQueued: number; waitTimeoutMs?: number
+ /** 交互型条目的门：默认恒开。 */
+ allowInteractive?: () => boolean
 }
 /** Bounded non-persistent queue foundation. No automatic retries, process kills or timers.
  * Caller ticks on fresh samples; NEVER put a parent job waiting for its nested jobs
@@ -34,13 +38,23 @@ export function createScheduler(opts: Options) {
    const now = opts.now()
    if (!Number.isFinite(now)) return
    for(let i=queue.length-1;i>=0;i--) if(now-queue[i].enqueuedAt>=timeout) rejectQueued(i,'wait timeout')
-   while(queue.length && running.size<opts.maxRunning) {
+   // 交互型先走：不占 maxRunning 名额、不看 allow()；只在严重压力（allowInteractive 关）时等。
+   for(let i=0;i<queue.length;){
+    const entry=queue[i]
+    if(!entry.work.interactive){i++;continue}
+    let ok=true
+    try { ok=opts.allowInteractive?opts.allowInteractive():true } catch { ok=false }
+    if(!ok)break
+    if(opts.acquire){try{entry.lease=opts.acquire(entry.work)??undefined}catch{/* 记账失败不挡交互型 */}}
+    queue.splice(i,1);start(entry)
+   }
+   while(queue.some(e=>!e.work.interactive) && backgroundRunning()<opts.maxRunning) {
     let allowed=false
     try { allowed=opts.allow() } catch { /* monitoring error fails closed */ }
     if(!allowed)break
     // Prefer another project, but a non-fitting candidate must not block the pool.
     // Each bounded queue entry is attempted at most once per admission scan.
-    const indexes=queue.map((_,i)=>i)
+    const indexes=queue.map((_,i)=>i).filter(i=>!queue[i].work.interactive)
     const ordered=[...indexes.filter(i=>queue[i].work.projectId!==lastProject),...indexes.filter(i=>queue[i].work.projectId===lastProject)]
     let index=-1
     for(const candidateIndex of ordered){
@@ -55,14 +69,18 @@ export function createScheduler(opts: Options) {
     }
     if(index<0)break
     const [entry]=queue.splice(index,1)
-    lastProject=entry.work.projectId;running.set(entry.work.id,entry)
-    // Reserve synchronously before executing user work or yielding to microtasks.
-    void Promise.resolve().then(()=> {
-     if(entry.controller.signal.aborted)throw new Error('cancelled')
-     return execution.run(entry,()=>entry.work.run(entry.controller.signal))
-    }).then(()=>finish(entry),error=>finish(entry,error,true))
+    lastProject=entry.work.projectId;start(entry)
    }
   } finally { pumping=false }
+ }
+ const backgroundRunning=():number=>{let n=0;for(const e of running.values())if(!e.work.interactive)n++;return n}
+ const start=(entry:Entry):void=>{
+  running.set(entry.work.id,entry)
+  // Reserve synchronously before executing user work or yielding to microtasks.
+  void Promise.resolve().then(()=> {
+   if(entry.controller.signal.aborted)throw new Error('cancelled')
+   return execution.run(entry,()=>entry.work.run(entry.controller.signal))
+  }).then(()=>finish(entry),error=>finish(entry,error,true))
  }
  const finish=(entry: Entry,error?:unknown,failed=false):void=>{
   entry.lease?.release()

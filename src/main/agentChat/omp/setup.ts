@@ -9,8 +9,8 @@
 // 而且服务商 id 只允许 `[a-z0-9-]+`（它会被拼进环境变量名与文件路径）。
 // 不套 fsGuard 的理由与另外两条相同：那份白名单是「项目根 ＋ 知识库根」，
 // 这个目录整个在它之外，放宽 fsGuard 会把**所有**写通道的边界一起放宽。
+import { guardedHandle } from '../../ipcGuard'
 import { execFile } from 'node:child_process'
-import { ipcMain } from 'electron'
 
 import { readOmpUsage, writeManagedConfig } from './launch.ts'
 import { hostPaths } from './host.ts'
@@ -133,13 +133,13 @@ async function cachedModels(): Promise<{ id: string; label: string }[] | undefin
 }
 
 export function registerOmpSetupHandlers(): void {
-  ipcMain.handle('omp:status', (): Promise<OmpStatus> => statusOf())
+  guardedHandle('omp:status', (): Promise<OmpStatus> => statusOf())
 
   /** 改审批档位。**改完当场重写受管配置** —— 不然要等下一次
    *  saveProvider 或起会话才生效，用户会以为开关没用。
    *  （起会话那条路径也照读一遍，两处都写是有意的冗余：
    *  设置面板改完立刻生效，而起会话是那条谁也绕不开的必经之路。） */
-  ipcMain.handle('omp:setApprovalMode', (_e, raw: unknown): Res => {
+  guardedHandle('omp:setApprovalMode', (_e, raw: unknown): Res => {
     const mode = safeApprovalMode((raw as { mode?: unknown } | null)?.mode)
     const host = hostPaths()
     try {
@@ -153,7 +153,7 @@ export function registerOmpSetupHandlers(): void {
 
   // 面板主动拉清单时**绕开缓存**：它多半正是刚登录完过来的，
   // 这时候给他一份 20 秒前的旧答案，就是让他盯着一个空列表发呆。
-  ipcMain.handle('omp:listModels', async (): Promise<{ id: string; label: string }[]> => {
+  guardedHandle('omp:listModels', async (): Promise<{ id: string; label: string }[]> => {
     invalidateModels()
     return (await cachedModels()) ?? []
   })
@@ -161,7 +161,7 @@ export function registerOmpSetupHandlers(): void {
   /** 选定服务商与模型。**key 本身不经这里** —— 它由渲染层直接走
    *  `secrets:save` 存进密钥柜（与用户手填密钥同一条路），这一层只记「选了谁」。
    *  这么分是有意的：密钥的明文一次都不该多经过一个 IPC 通道。 */
-  ipcMain.handle('omp:saveProvider', (_e, raw: unknown): Res => {
+  guardedHandle('omp:saveProvider', (_e, raw: unknown): Res => {
     const inp = (raw ?? {}) as { provider?: unknown; model?: unknown; thinking?: unknown }
     const id = safeProvider(inp.provider)
     if (!id) return { ok: false, error: '不认识这个模型服务商' }
@@ -200,7 +200,7 @@ export function registerOmpSetupHandlers(): void {
 
   /** 记一次冒烟结果。**真正的冒烟由渲染层驱动**（它已经有起会话、收事件那套），
    *  这里只负责把结论落盘 —— 免得同一件事有两套起进程的代码。 */
-  ipcMain.handle('omp:noteSmoke', (_e, raw: unknown): Res => {
+  guardedHandle('omp:noteSmoke', (_e, raw: unknown): Res => {
     const inp = (raw ?? {}) as { ok?: unknown; message?: unknown }
     const host = hostPaths()
     const prev = readOmpSetup(host.userData)
@@ -233,7 +233,7 @@ export function registerOmpSetupHandlers(): void {
   /** omp 支持登录的服务商全名单（`auth-broker list --json`）。
    *  **从它那儿取而不是我们写死** —— 写死的清单会随上游更新而过期，
    *  而且「哪家能订阅登录」本来就该由 omp 说了算。 */
-  ipcMain.handle('omp:listAuthProviders', (): Promise<{ id: string; name: string }[]> => {
+  guardedHandle('omp:listAuthProviders', (): Promise<{ id: string; name: string }[]> => {
     const host = hostPaths()
     const bin = ompBinPathOrNull(host)
     if (!bin) return Promise.resolve([])
@@ -254,7 +254,7 @@ export function registerOmpSetupHandlers(): void {
     })
   })
 
-  ipcMain.handle('omp:startLogin', (e, raw: unknown): { ok: boolean; error?: string } => {
+  guardedHandle('omp:startLogin', (e, raw: unknown): { ok: boolean; error?: string } => {
     const provider = typeof raw === 'string' && /^[a-z0-9.-]+$/.test(raw) ? raw : null
     if (!provider) return { ok: false, error: '不认识这个服务商' }
     const wc = e.sender
@@ -284,17 +284,17 @@ export function registerOmpSetupHandlers(): void {
     return result
   })
 
-  ipcMain.handle('omp:submitLogin', (e, raw: unknown): { ok: boolean; error?: string } =>
+  guardedHandle('omp:submitLogin', (e, raw: unknown): { ok: boolean; error?: string } =>
     typeof raw === 'string' ? submitOmpLogin(raw, e.sender.id) : { ok: false, error: '要提交的内容不能为空' }
   )
 
-  ipcMain.handle('omp:cancelLogin', (e): { ok: boolean } => cancelOmpLogin(e.sender.id))
+  guardedHandle('omp:cancelLogin', (e): { ok: boolean } => cancelOmpLogin(e.sender.id))
 
-  ipcMain.handle('omp:loginInFlight', (e): OmpLoginState | null => ompLoginInFlight(e.sender.id))
+  guardedHandle('omp:loginInFlight', (e): OmpLoginState | null => ompLoginInFlight(e.sender.id))
 
   /** 订阅额度的原始数据（数据层用）。**不做任何裁剪之外的加工** ——
    *  额度条那条路走 `quotaStore`，这里是给「看一眼原始输出」用的。 */
-  ipcMain.handle('omp:usage', async (): Promise<unknown> => {
+  guardedHandle('omp:usage', async (): Promise<unknown> => {
     const ok = await ompAdapter.detect(hostPaths())
     return ok ? readOmpUsage(hostPaths()) : null
   })

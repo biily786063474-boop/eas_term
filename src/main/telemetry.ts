@@ -24,9 +24,10 @@
 //
 // 上报走官网那个 /e 端点（nginx 直接 return 204 写日志，服务端零常驻进程），
 // 用 t=app 和网页访问区分开。
+import { guardedOn } from './ipcGuard'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { app, ipcMain, net } from 'electron'
+import { app, net } from 'electron'
 import { getPrefs } from './prefs'
 
 const ENDPOINT = process.env.EAS_TELEMETRY_URL || 'https://eas.biily.top/e'
@@ -175,10 +176,10 @@ export function bump(key: string, n = 1): void {
 }
 
 export function registerTelemetry(): void {
-  ipcMain.on('telemetry:event', (_e, key: string) => bump(key))
+  guardedOn('telemetry:event', (_e, key: string) => bump(key))
 
   // 开关改了：关掉时把攒着的计数丢掉（那是用户没同意上报的数据，不该留着等下次开）
-  ipcMain.on('telemetry:refresh', () => {
+  guardedOn('telemetry:refresh', () => {
     if (!getPrefs().telemetry) {
       counts.clear()
       reportedUntil = Date.now()

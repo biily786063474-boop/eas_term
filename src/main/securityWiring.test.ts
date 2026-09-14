@@ -20,10 +20,18 @@ test('S3：wiki:init / wiki:setPath 走根路径门', () => {
     assert.ok(s.slice(i, i + 700).includes('rootGate.allowed('), ch + ' 没有过门')
   }
 })
-test('S4：敏感文件里不再有裸的 ipcMain.handle / ipcMain.on', () => {
-  for (const f of ['secrets.ts', 'pty.ts', 'fs.ts', 'git.ts', 'cliAuth/index.ts', 'cliAuth/install.ts', 'agentChat/session.ts', 'wiki/index.ts']) {
-    const s = src(f)
-    assert.equal((s.match(/ipcMain\.(handle|on)\(/g) ?? []).length, 0, f + ' 还有裸的 ipcMain 注册')
-    assert.ok(/guarded(Handle|On)\(/.test(s), f + ' 没有用守卫版注册')
+test('S4：src/main 下除 ipcGuard.ts 外不再有裸的 ipcMain.handle / ipcMain.on（守卫是默认，不是清单）', async () => {
+  const fs = await import('node:fs'), path = await import('node:path'), { fileURLToPath } = await import('node:url')
+  const root = fileURLToPath(new URL('./', import.meta.url))
+  const bad: string[] = []
+  const walk = (dir: string): void => {
+    for (const name of fs.readdirSync(dir)) {
+      const full = path.join(dir, name)
+      if (fs.statSync(full).isDirectory()) { if (name !== '__fixtures__') walk(full); continue }
+      if (!name.endsWith('.ts') || name.endsWith('.test.ts') || name === 'ipcGuard.ts') continue
+      if (/ipcMain\.(handle|on)\(/.test(fs.readFileSync(full, 'utf8'))) bad.push(path.relative(root, full))
+    }
   }
+  walk(root)
+  assert.deepEqual(bad, [], '这些文件仍在裸用 ipcMain，改用 guardedHandle / guardedOn')
 })

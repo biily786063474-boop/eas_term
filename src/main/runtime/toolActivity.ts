@@ -34,7 +34,7 @@ export function createToolActivity(now:()=>number){
    void call.completed.then(()=>remove('done'),e=>remove(outcomeOfError(e)))
    return call.result
   },
-  list(windowId:number){return [...entries.values()].filter(e=>e.owner.windowId===windowId).map(e=>({id:e.owner.id,name:e.owner.name,projectId:e.owner.projectId,ageMs:Math.max(0,now()-e.at),state:e.cancelled?'cancel-requested' as const:admission?.details().find(t=>t.id===e.owner.id)?.state??'running' as const,reason:admission?.snapshot().policyDecision.reason}))},
+  list(windowId:number){const details=admission?.details()??[];const reason=admission?.snapshot().policyDecision.reason;const byId=new Map(details.map(d=>[d.id,d]));return [...entries.values()].filter(e=>e.owner.windowId===windowId).map(e=>({id:e.owner.id,name:e.owner.name,projectId:e.owner.projectId,ageMs:Math.max(0,now()-e.at),state:e.cancelled?'cancel-requested' as const:admission?.details().find(t=>t.id===e.owner.id)?.state??'running' as const,reason:reason}))},
   /** Main-only source identity; not a renderer-supplied cancellation capability. */
   closeSource(sourceKey:string){
    for(const e of entries.values())if(e.owner.sourceKey===sourceKey&&!e.cancelled){e.call.cancel();e.cancelled=true}

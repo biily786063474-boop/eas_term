@@ -37,3 +37,12 @@ test('窗口：只取最近 n 条，顺序不变', () => {
  assert.deepEqual(tailWindow([t(1), t(2), t(3)], 2).map(x => x.seq), [2, 3])
  assert.deepEqual(tailWindow([t(1)], 5).map(x => x.seq), [1])
 })
+
+// 审查发现（2026-09-14）：没有序号的消息若每次保存都追加新序号，流式期间每秒一存就会复制几十份。
+// 并集必须对无序号消息做内容去重：同 role+text 且紧邻同一前驱的只保留一份。
+test('无序号消息重复保存不重复入档', () => {
+ let disk: T[] = []
+ const win = () => [t(100, '答'), { role: 'user', text: '追问', execs: [] } as T, t(101, '再答')]
+ for (let i = 0; i < 3; i++) disk = mergeArchiveTurns(disk, win())
+ assert.deepEqual(disk.map(x => x.text), ['答', '追问', '再答'])
+})

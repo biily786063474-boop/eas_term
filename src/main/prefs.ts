@@ -5,7 +5,8 @@
 // 所以这两个开关以主进程为准，渲染层通过 IPC 读写。
 //
 // 主题、提示音那些只影响界面的仍留在渲染层，不用搬过来。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -99,8 +100,8 @@ export function onIslandPref(fn: () => void): void {
 }
 
 export function registerPrefsHandlers(): void {
-  ipcMain.handle('prefs:get', () => getPrefs())
-  ipcMain.handle('prefs:set', (_e, key: keyof Prefs, value: unknown) => {
+  guardedHandle('prefs:get', () => getPrefs())
+  guardedHandle('prefs:set', (_e, key: keyof Prefs, value: unknown) => {
     if (
       key === 'autoUpdateCheck' ||
       key === 'telemetry' ||

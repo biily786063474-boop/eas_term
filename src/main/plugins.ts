@@ -28,10 +28,10 @@
 // **只读，绝不写。** 装插件是 `codex plugin add` / `claude plugin install` 的事，
 // 而那条命令只能预填进终端交给用户按回车，不许代跑 —— 理由同 agentInstall.ts：
 // 静默装全局 CLI + 改配置是恶意软件的行为特征。
+import { guardedHandle } from './ipcGuard'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { ipcMain } from 'electron'
 
 import type { PluginInfo } from '../shared/types'
 import { parseManifest } from './pluginManifest.ts'
@@ -224,5 +224,5 @@ export function findPlugin(id: string): PluginInfo | undefined {
 }
 
 export function registerPluginHandlers(): void {
-  ipcMain.handle('plugins:list', (): PluginInfo[] => listPlugins())
+  guardedHandle('plugins:list', (): PluginInfo[] => listPlugins())
 }

@@ -10,8 +10,8 @@
 //   git.ts     快照与回滚（AI 动用户文件唯一的整体撤销手段）
 //   scan.ts    扫全库笔记（图谱和体检共用同一份数据）
 // 「agent 什么时候该来查」那套规则在 agentRules.ts。
-import { app, dialog, shell } from 'electron'
 import { guardedHandle } from '../ipcGuard'
+import { app, dialog, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -46,7 +46,7 @@ import { readTaxonomy, taxonomyState, type ArchiveDirResult } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
 import { scanNotesManaged } from './managedScan'
 import { createWikiRootGate } from './rootGate'
-import { guardDir } from '../fsGuard'
+import { guardDir, guardPath } from '../fsGuard'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
@@ -112,6 +112,8 @@ export function registerWikiHandlers(): void {
   }
   // S3（2026-09-14 评审）：init/setPath 只接受对话框/默认建议返回过的路径，或 guardDir 允许的目录。
   const rootGate = createWikiRootGate({ guardDir: p => ({ ok: guardDir(p).ok }) })
+  // 收件箱来源文件同理：只接受 wiki:pickFiles 返回过的，或 guardPath 允许的（2026-09-14 审查：move=true 能把任意文件搬走）
+  const fileGate = createWikiRootGate({ guardDir: p => ({ ok: guardPath(p).ok }) })
   guardedHandle('wiki:graph', async (e): Promise<WikiGraph> => {
     const root = wikiPath()
     if (!root) return { nodes: [], edges: [] }
@@ -475,7 +477,9 @@ export function registerWikiHandlers(): void {
       properties: ['openFile', 'multiSelections'],
       buttonLabel: '放进收件箱'
     })
-    return r.canceled ? [] : r.filePaths
+    const files = r.canceled ? [] : r.filePaths
+    for (const f of files) fileGate.remember(f)
+    return files
   })
 
   guardedHandle('wiki:init', (_e, root: string) => {
@@ -510,6 +514,7 @@ export function registerWikiHandlers(): void {
   guardedHandle('wiki:addToInbox', async (_e, files: string[], move = false) => {
     const root = wikiPath()
     if (!root) return { ok: false, error: '还没设置知识库位置' }
+    if (!Array.isArray(files) || files.some(f => typeof f !== 'string' || !fileGate.allowed(f))) return { ok: false, error: '只能放入通过选择框选中的文件，或项目 / 知识库目录内的文件' }
     const blocked = taxonomyBrokenError(root)
     if (blocked) return { ok: false, error: blocked }
     const dir = path.join(root, inboxOf(root))

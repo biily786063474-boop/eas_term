@@ -15,7 +15,8 @@
 // ⚠️ **反向不兼容**：v2 存档被 0.4.78 及更早版本读到会把 caps 整份丢掉（那版按 v1 清洗且不看
 // version）。表现是勘探员/验官的写保护、画师的生图限制静默解除而界面一切正常——回滚旧版前
 // 先从 .eas-backup 取回那份存档。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -85,7 +86,7 @@ export function registerRoleHandlers(): void {
   // 每次现查而不是快照一份：角色可以在运行期改名/新增（roles:save）。
   setRoleNameLookup(() => Object.fromEntries(load().map((r) => [r.id, r.name])))
 
-  ipcMain.handle('roles:list', () => load())
+  guardedHandle('roles:list', () => load())
 
   /**
    * 把某个角色的契约落成文件，返回路径。
@@ -94,7 +95,7 @@ export function registerRoleHandlers(): void {
    * 命令行里那样会变成一条又长又难读的命令，而且契约里的换行/引号都要转义。
    * （Codex 没有对应的文件参数，那边只能内联，所以会压成单行。）
    */
-  ipcMain.handle('roles:contractFile', (_e, roleId: string): string | null => {
+  guardedHandle('roles:contractFile', (_e, roleId: string): string | null => {
     const role = load().find((r) => r.id === roleId)
     if (!role?.contract.trim()) return null
     try {
@@ -109,7 +110,7 @@ export function registerRoleHandlers(): void {
     }
   })
 
-  ipcMain.handle('roles:save', (_e, roles: unknown) => {
+  guardedHandle('roles:save', (_e, roles: unknown) => {
     const clean = sanitizeRoles({ roles })
     if (!clean.length) return { ok: false, error: '没有有效角色，拒绝写入' }
     try {
@@ -121,7 +122,7 @@ export function registerRoleHandlers(): void {
   })
 
   /** 恢复内置角色：用户自建的保留，同 id 的内置项覆盖回原样 */
-  ipcMain.handle('roles:reset', () => {
+  guardedHandle('roles:reset', () => {
     const cur = load()
     const builtinIds = new Set(BUILTIN_ROLES.map((r) => r.id))
     const mine = cur.filter((r) => !builtinIds.has(r.id))

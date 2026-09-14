@@ -13,7 +13,8 @@
 // 命令来源（2026-07 核对过官方文档，不是凭记忆写的）：
 //   Claude Code  https://code.claude.com/docs/en/setup
 //   Codex        https://github.com/openai/codex  README
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -102,5 +103,5 @@ export function installPlan(): InstallPlan {
 }
 
 export function registerAgentInstallHandlers(): void {
-  ipcMain.handle('agent:installPlan', () => installPlan())
+  guardedHandle('agent:installPlan', () => installPlan())
 }

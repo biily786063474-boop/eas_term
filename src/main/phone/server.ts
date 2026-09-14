@@ -23,7 +23,8 @@
 //   ③ 每一次请求都留痕，读也记（audit.ts，记在业务分支之前）
 //   ④ 写动作的具体边界只在渲染层 provider 判一次，别在这里重复判
 // 手机页面上那行「局域网明文连接」仍然要留着。TLS 是隧道那条路的事。
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { guardedOn } from '../ipcGuard'
+import { app, BrowserWindow } from 'electron'
 import { createHash } from 'crypto'
 import crypto from 'crypto'
 import fs from 'fs'
@@ -133,7 +134,7 @@ export function queryRenderer(action: string, args: unknown): Promise<unknown> {
 }
 
 export function registerPhoneQueryReply(): void {
-  ipcMain.on('phone:query:reply', (_e, id: number, data: unknown) => {
+  guardedOn('phone:query:reply', (_e, id: number, data: unknown) => {
     const fn = pending.get(id)
     pending.delete(id)
     fn?.(data)

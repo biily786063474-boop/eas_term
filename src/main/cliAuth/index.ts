@@ -20,8 +20,8 @@
 // · codex 有 `--device-auth`：**它自己就不开浏览器**，给链接 + 一次性码
 // · claude 会自己弹浏览器 —— 用一个 no-op 的 `open` 垫在 PATH 最前面拦住它，
 //   它同时还要求把授权码**粘回 stdin**，所以界面上要多一个输入框
-import { BrowserWindow } from 'electron'
 import { guardedHandle } from '../ipcGuard'
+import { BrowserWindow } from 'electron'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'

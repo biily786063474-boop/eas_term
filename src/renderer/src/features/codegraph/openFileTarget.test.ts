@@ -26,3 +26,11 @@ test('模块级节点（Swift target 这类不是文件的 id）不打开', () =
   openGraphFile('/p', 'MyTarget', { frameId: 'f', openArtifact: () => { n++; return { nodeId: '', reused: false } }, openFile: () => { n++ } })
   assert.equal(n, 0)
 })
+test('图上 id 含 .. 逃出项目根的一律不开；同一文件不同写法归一到同一路径', () => {
+  let n = 0
+  const deps = { frameId: 'f', openArtifact: () => { n++; return { nodeId: '', reused: false } }, openFile: () => { n++ } }
+  openGraphFile('/p/root', '../shared/util.ts', deps); openGraphFile('/p/root', 'src/../../x.ts', deps)
+  assert.equal(n, 0)
+  assert.equal(fileAbsPath('/p/root', 'src/./a/../b.ts'), '/p/root/src/b.ts')
+  assert.equal(fileAbsPath('/p/root', '../x.ts'), null)
+})

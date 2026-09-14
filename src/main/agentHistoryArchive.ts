@@ -7,14 +7,18 @@ import { mergeArchiveTurns, assignLegacySeq, tailWindow, HISTORY_WINDOW, type Se
 interface Meta { cwd: string | null; resumeId: string | null; resumeCli: string | null; moduleId: string | null }
 type Raw = { moduleId?: unknown; pinned?: unknown; turns?: unknown; resumeId?: unknown; resumeCli?: unknown }
 
-function readRaw(file: string): Raw {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')) as Raw } catch { return {} }
+/** 「没有文件」= 新记录，可以从空开始；「有文件但读不出/解析不了」= 不能用窗口覆盖全量，返回 null 让保存拒绝。 */
+function readRaw(file: string): Raw | null {
+  let text: string
+  try { text = fs.readFileSync(file, 'utf8') } catch (e) { return (e as NodeJS.ErrnoException).code === 'ENOENT' ? {} : null }
+  try { return JSON.parse(text) as Raw } catch { return null }
 }
 
 /** 空窗口不写盘也不删旧档（与 writeHistorySnapshot 的约定一致）。 */
 export function saveArchive(file: string, meta: Meta, incoming: readonly SeqTurn[]): boolean {
   if (!incoming.length) return false
   const previous = readRaw(file)
+  if (previous === null) { console.error('[agentHistory] 旧档存在但读不出来，拒绝用窗口覆盖：', file); return false }
   const prevTurns = Array.isArray(previous.turns) ? (previous.turns as SeqTurn[]) : []
   return writeHistorySnapshot(file, {
     moduleId: meta.moduleId ?? (typeof previous.moduleId === 'string' ? previous.moduleId : null),
@@ -29,7 +33,7 @@ export function saveArchive(file: string, meta: Meta, incoming: readonly SeqTurn
 }
 
 export function loadArchiveWindow(file: string, n = HISTORY_WINDOW): { turns: SeqTurn[]; total: number; resumeId: string | null; resumeCli: string | null } {
-  const raw = readRaw(file)
+  const raw = readRaw(file) ?? {}
   const all = Array.isArray(raw.turns) ? assignLegacySeq(raw.turns as SeqTurn[]) : []
   return {
     turns: tailWindow(all, n),

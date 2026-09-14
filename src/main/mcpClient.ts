@@ -75,7 +75,8 @@ export class McpClient {
     this.proc.on('error', (e) => {
       console.error(`[plugin:${this.name}] 起不来`, e)
       this.failAll(new Error(`插件进程起不来：${e.message}`))
-      if(!this.proc.pid){this.closed=true;this.finishTracked('not-started');this.settleExited()}
+      // 起不来（ENOENT）时 Node 只发 error/close 不发 exit：这里也要通知宿主，复用表才会把死实例摘掉（2026-09-14 审查）
+      if(!this.proc.pid){this.closed=true;this.finishTracked('not-started');this.settleExited();this.onExit?.(null)}
     })
     this.proc.on('exit', (code) => {
       this.closed = true

@@ -1,4 +1,5 @@
-import {app,ipcMain,BrowserWindow,webContents,protocol,net} from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app, BrowserWindow, webContents, protocol, net } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import {randomUUID} from 'node:crypto'
@@ -34,9 +35,9 @@ export function registerBrowserFavorites():void{
  protocol.handle('eas-favorite-preview',request=>{
   try{const u=new URL(request.url),name=u.pathname.slice(1);if(u.hostname!=='local'||!/^[-a-f0-9]+\.jpg$/.test(name))return new Response('',{status:404});const target=file(name);if(!fs.existsSync(target))return new Response('',{status:404});return net.fetch(pathToFileURL(target).href)}catch{return new Response('',{status:404})}
  })
- ipcMain.handle('browser:favorites',event=>{owner(event);return snapshot(read())})
- ipcMain.handle('browser:routes',event=>{owner(event);return {catalog:routes,entryUrl:'eas-favorites://home',htmlPath:path.join(app.isPackaged?process.resourcesPath:path.join(app.getAppPath(),'resources'),'browser','index.html')}})
- ipcMain.handle('browser:favoriteChange',(event,op:FavoriteChange)=>{
+ guardedHandle('browser:favorites',event=>{owner(event);return snapshot(read())})
+ guardedHandle('browser:routes',event=>{owner(event);return {catalog:routes,entryUrl:'eas-favorites://home',htmlPath:path.join(app.isPackaged?process.resourcesPath:path.join(app.getAppPath(),'resources'),'browser','index.html')}})
+ guardedHandle('browser:favoriteChange',(event,op:FavoriteChange)=>{
  owner(event)
  const task=queue.then(async()=>{
  const old=read(),id=randomUUID(),next=applyFavoriteChange(old,op,id)

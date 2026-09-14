@@ -16,7 +16,8 @@
 //
 // 裁剪在渲染层做（features/agentChat/history.ts），这里只负责存取与容量。
 
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { safeHistoryKey } from './agentHistoryKey'
@@ -47,7 +48,7 @@ const rosterFile = (projectPath: string): string =>
   path.join(projectPath, '.plans', 'team.json')
 
 export function registerTeamRoster(): void {
-  ipcMain.handle('team:roster', (_e, projectPath: unknown): string | null => {
+  guardedHandle('team:roster', (_e, projectPath: unknown): string | null => {
     if (typeof projectPath !== 'string' || !projectPath) return null
     try {
       return fs.readFileSync(rosterFile(projectPath), 'utf8')
@@ -56,7 +57,7 @@ export function registerTeamRoster(): void {
     }
   })
 
-  ipcMain.handle('team:rosterSave', (_e, projectPath: unknown, json: unknown): void => {
+  guardedHandle('team:rosterSave', (_e, projectPath: unknown, json: unknown): void => {
     if (typeof projectPath !== 'string' || !projectPath || typeof json !== 'string') return
     try {
       const f = rosterFile(projectPath)
@@ -70,7 +71,7 @@ export function registerTeamRoster(): void {
 }
 
 export function registerTeamFindings(): void {
-  ipcMain.handle(
+  guardedHandle(
     'team:findings',
     (_e, projectPath: unknown, roles: unknown): Record<string, number | null> => {
       const out: Record<string, number | null> = {}
@@ -89,7 +90,7 @@ export function registerTeamFindings(): void {
 }
 
 export function registerAgentHistory(): void {
-  ipcMain.handle(
+  guardedHandle(
     'agentHistory:load',
     (_e, leafId: unknown): { turns: unknown[]; resumeId: string | null; resumeCli: string | null; total?: number } => {
       const empty = { turns: [], resumeId: null, resumeCli: null }
@@ -121,14 +122,14 @@ export function registerAgentHistory(): void {
    */
   // 2026-09-14：完整归档后文件会变大，列表/搜索走 mtime 缓存（historyListCache.ts），没变的文件不重读。
   const listCache = createHistoryListCache()
-  ipcMain.handle('agentHistory:list', (_e, cwd: unknown, query: unknown): HistorySummary[] => {
+  guardedHandle('agentHistory:list', (_e, cwd: unknown, query: unknown): HistorySummary[] => {
     if (typeof cwd !== 'string' || !cwd) return []
     return listCache.list(dir(), cwd, typeof query === 'string' ? query.slice(0, 500) : '')
   })
 
   // 返回**真的写成了没有**。调用方里至少有一条路（adoptOrphan）要靠它决定
   // 敢不敢删掉旧的那一份 —— 先删后存、而存又失败了的话，那段对话就永久没了。
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown, resumeCli: unknown, moduleId: unknown): boolean => {
+  guardedHandle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown, resumeCli: unknown, moduleId: unknown): boolean => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return false
     try {
@@ -148,7 +149,7 @@ export function registerAgentHistory(): void {
   })
 
   // App-private metadata: validated key, no caller-provided filesystem paths.
-  ipcMain.handle('agentHistory:pin', (_e, key: unknown, cwd: unknown, pinned: unknown): boolean => {
+  guardedHandle('agentHistory:pin', (_e, key: unknown, cwd: unknown, pinned: unknown): boolean => {
     const f = typeof key === 'string' ? fileOf(key) : null
     if (!f || typeof cwd !== 'string' || typeof pinned !== 'boolean') return false
     try {
@@ -160,7 +161,7 @@ export function registerAgentHistory(): void {
 
   /** 节点被永久关闭时清掉它的记录。**跟着节点走** ——
    *  节点都没了还留着聊天记录，既占地方又没有任何入口能看到。 */
-  ipcMain.handle('agentHistory:forget', (_e, leafId: unknown): void => {
+  guardedHandle('agentHistory:forget', (_e, leafId: unknown): void => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (f) fs.rmSync(f, { force: true })
   })

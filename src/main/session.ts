@@ -1,4 +1,5 @@
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -236,7 +237,7 @@ function parse(file: string): Parsed {
 }
 
 export function registerSessionHandlers(): void {
-  ipcMain.handle('session:index', (_e, cwd: string): SessionIndex => {
+  guardedHandle('session:index', (_e, cwd: string): SessionIndex => {
     try {
       const file = findJsonl(cwd)
       if (!file) return { found: false, turns: [] }
@@ -247,7 +248,7 @@ export function registerSessionHandlers(): void {
     }
   })
 
-  ipcMain.handle(
+  guardedHandle(
     'session:exchange',
     (_e, cwd: string, uuid: string, sessionId?: string): SessionExchange => {
       try {
@@ -265,7 +266,7 @@ export function registerSessionHandlers(): void {
   // sessionId 是**必须优先**的：按 cwd 取「最近修改的 jsonl」在同一项目开了多个终端时会串——
   // 终端 A 答完了，取到的却是刚好后写盘的终端 B 的会话，卡片上就出现张冠李戴的回答。
   // 每个终端节点自己绑着 session id（NodeAgent.session），传进来就能锁到正确的那份。
-  ipcMain.handle('session:last', (_e, cwd: string, sessionId?: string): SessionLast => {
+  guardedHandle('session:last', (_e, cwd: string, sessionId?: string): SessionLast => {
     const empty: SessionLast = { found: false, ask: '', answer: '', at: 0 }
     try {
       const file = findJsonl(cwd, sessionId)

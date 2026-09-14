@@ -8,7 +8,8 @@
 //   · Claude Code → ~/.claude/skills/eas-term/ 整个目录（原生 skill 机制，SKILL.md 是入口，
 //     其余 .md 按渐进式披露按需读，见下面 skillSrcDir/skillFiles）
 //   · Codex       → ~/.codex/AGENTS.md 里插一段（旧版分发使用全局 AGENTS.md；新版受管会话使用内置包短指引）
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -148,7 +149,7 @@ export function skillStatus(): SkillStatus {
 }
 
 export function registerSkillHandlers(): void {
-  ipcMain.handle('skill:status', () => skillStatus())
+  guardedHandle('skill:status', () => skillStatus())
 
   // 装指引统一走 rules:sync（agentRules.ts）。这里原来还有一个 skill:install，
   // 界面上早就没人调它了，但它会把**完整 SKILL.md 全文**灌进 ~/.codex/AGENTS.md ——
@@ -157,7 +158,7 @@ export function registerSkillHandlers(): void {
   // 谁要是调了它，「有更新待安装」就会重新变成恒为真。删掉，只留一条路。
 
   // 「永远不要提醒我」：只关掉启动弹窗，标题栏按钮照旧，用户随时能回来装
-  ipcMain.handle('skill:mute', (_e, muted: boolean) => {
+  guardedHandle('skill:mute', (_e, muted: boolean) => {
     writePrefs({ ...readPrefs(), muted })
     return skillStatus()
   })

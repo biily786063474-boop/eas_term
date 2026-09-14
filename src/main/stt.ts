@@ -1,3 +1,4 @@
+import { guardedHandle, guardedOn } from './ipcGuard'
 import {openManagedPreview} from './runtime/voicePreviewAdmission.ts'
 import {createVoicePreviewSession} from './voicePreviewSession.ts'
 import {voicePreviewWorkerCode} from './voicePreviewWorker.ts'
@@ -16,7 +17,7 @@ import { openManagedVad } from './runtime/managedVad'
 //  · SenseVoice 缺失/失败 → 回退流式收尾，不中断。
 // 模型「首次使用时下载」：不随包附带(省 ~300MB 包体)，按需从 hf-mirror 拉到 userData/models。
 //  dev 若 resources/models 已有则直接用，不触发下载。
-import { app, ipcMain, systemPreferences, WebContents } from 'electron'
+import { app, systemPreferences, WebContents } from 'electron'
 import { Worker } from 'worker_threads'
 import fs from 'fs'
 import path from 'path'
@@ -319,7 +320,7 @@ export function registerSttHandlers(): void {
    * 不用引 ffmpeg）；这里只负责把样本喂给已有的 SenseVoice worker。
    * 模型支持 zh/en/ja/ko/yue 且 language:'auto'，参考视频基本都覆盖得到。
    */
-  ipcMain.handle('stt:transcribeChunk', async (_e, buf: ArrayBuffer): Promise<string> => {
+  guardedHandle('stt:transcribeChunk', async (_e, buf: ArrayBuffer): Promise<string> => {
     if (!(buf instanceof ArrayBuffer) || buf.byteLength > 16000 * 30 * 4 || buf.byteLength % 4) throw new Error('转录音频格式或长度无效')
     const samples = new Float32Array(buf)
     if (!samples.length) return ''
@@ -329,15 +330,15 @@ export function registerSttHandlers(): void {
     return text
   })
 
-  ipcMain.handle('stt:modelStatus', (): { ready: boolean; missing: string[] } => {
+  guardedHandle('stt:modelStatus', (): { ready: boolean; missing: string[] } => {
     const missing = [MODELS.stream, MODELS.sense, MODELS.vad].filter((m) => !readyDir(m)).map((m) => m.name)
     return { ready: missing.length === 0, missing }
   })
 
   // 首次使用下载模型(带进度事件 stt:downloadProgress)
-  ipcMain.handle('stt:downloadModels', (e) => downloadModels(e.sender as WebContents))
+  guardedHandle('stt:downloadModels', (e) => downloadModels(e.sender as WebContents))
 
-  ipcMain.handle('stt:start', async (e, mode: unknown): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> => {
+  guardedHandle('stt:start', async (e, mode: unknown): Promise<{ ok: boolean; error?: string; needDownload?: boolean }> => {
     if (recordingOwner !== null) return { ok: false, error: '已有语音录音，请先停止' }
     voiceMode = mode === 'strong' || mode === 'basic' ? mode : 'standard'
     const epoch = ++recordingEpoch
@@ -434,7 +435,7 @@ export function registerSttHandlers(): void {
       }
     } catch (err) { console.error('[stt:audio]', err) }
   }
-  ipcMain.on('stt:audio', (e, buf: ArrayBuffer, targetId: unknown) => {
+  guardedOn('stt:audio', (e, buf: ArrayBuffer, targetId: unknown) => {
     if (typeof targetId !== 'string' || targetId.length > 100) return
     if (stoppingRecording || e.sender.id !== recordingOwner || !stream || !(buf instanceof ArrayBuffer) || buf.byteLength !== 4096) return
     const i16 = new Int16Array(buf)
@@ -446,7 +447,7 @@ export function registerSttHandlers(): void {
   })
 
   // 停止录音：只需收尾「最后一句还没到静音阈值就被手动停掉」的残句（已自动落字的不重复）
-  ipcMain.handle('stt:stop', async (e): Promise<{ text: string; segments?: VoiceFinal[] }> => {
+  guardedHandle('stt:stop', async (e): Promise<{ text: string; segments?: VoiceFinal[] }> => {
     if (e.sender.id !== recordingOwner || stoppingRecording) return { text: '' }
     if (recordingStartup) {
       recordingStartup.abort(); recordingStartup = null

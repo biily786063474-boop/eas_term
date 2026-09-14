@@ -71,7 +71,7 @@ export function RuntimeMonitorPanel(){
    </div>)}
    <h4>最近结束</h4>
    <div className="cset-note">本窗口与应用级的任务、服务结束记录（完成 / 取消 / 排队超时 / 失败 / 退出），只留最近若干条，重启即清。</div>
-   {!recent.length?<p>{projectFilter?'该筛选下没有记录':'还没有结束的任务或服务'}</p>:recent.slice(0,20).map(item=><div key={item.id+':'+item.ageMs}>
+   {!recent.length?<p>{projectFilter?'该筛选下没有记录':'还没有结束的任务或服务'}</p>:recent.slice(0,20).map((item,i)=><div key={item.id+':'+i}>
     <p>{item.name} · {outcomeLabel[item.outcome]} · {Math.floor(item.ageMs/1000)} 秒前{item.durationMs>=1000?` · 用时 ${Math.floor(item.durationMs/1000)} 秒`:''}</p>
     <div className="cset-note">项目：{runtimeProjectLabels(item.projectId?[item.projectId]:[],projects).join('、')||'未关联'}{item.scope==='app'?' · 应用级':''}</div>
    </div>)}

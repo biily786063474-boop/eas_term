@@ -24,8 +24,8 @@
 //（进度条卡在 87% 半分钟，比没有进度条更让人焦虑）。
 // 报的是**我们真的知道的东西**：现在处于哪个阶段（下载安装 / 校验），
 // 外加安装器自己最后打出来的那一行。那一行是真的，也正是用户想看的。
-import { BrowserWindow } from 'electron'
 import { guardedHandle } from '../ipcGuard'
+import { BrowserWindow } from 'electron'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { resolveInstallCommand } from './installCommand.ts'
 import { installPlan } from '../agentInstall'

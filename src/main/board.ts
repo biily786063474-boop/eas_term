@@ -6,7 +6,8 @@
 // 内置三列（待执行 / 进行中 / 已完结）预置进去，但**和自建的列没有区别** ——
 // 一样能改名、能删。硬留几个「删不掉的官方列」只会让人困惑：
 // 别人的流程凭什么长成我们想的样子。
-import { app, ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
@@ -47,11 +48,11 @@ function save(list: BoardColumn[]): void {
 }
 
 export function registerBoardHandlers(): void {
-  ipcMain.handle('board:list', () => load())
+  guardedHandle('board:list', () => load())
 
   /** 整表落盘。增删改序都走这一条 —— 每个动作一个 handler 的话，
    *  「顺序」这种跨条目的改动没法原子地表达 */
-  ipcMain.handle('board:save', (_e, list: BoardColumn[]) => {
+  guardedHandle('board:save', (_e, list: BoardColumn[]) => {
     if (!Array.isArray(list)) return load()
     const clean = list
       .filter((c) => c && typeof c.id === 'string' && c.id.trim())
@@ -66,5 +67,5 @@ export function registerBoardHandlers(): void {
 
   /** 发一个新 id。放主进程是因为 crypto.randomUUID 在渲染层要走 web crypto，
    *  两边生成规则不一致以后对不上 */
-  ipcMain.handle('board:newId', () => 'col-' + crypto.randomUUID().slice(0, 8))
+  guardedHandle('board:newId', () => 'col-' + crypto.randomUUID().slice(0, 8))
 }

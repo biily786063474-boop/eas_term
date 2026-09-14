@@ -2,7 +2,7 @@
 //
 // 为什么是主进程截而不是渲染层用 canvas 画：画布上跑着活终端（xterm 渲染到 canvas）
 // 和内嵌网页（webview），渲染层没法把它们画进一张图 —— 只有 capturePage 拿得到合成后的结果。
-import { ipcMain } from 'electron'
+import { guardedHandle } from './ipcGuard'
 import fs from 'fs'
 import { snapshotTarget } from './snapshotPaths'
 import { mainWindow } from './island'
@@ -28,7 +28,7 @@ function withSnapshotLock<T>(task: () => Promise<T>): Promise<T> {
 }
 
 export function registerSnapshotHandlers(): void {
-  ipcMain.handle(
+  guardedHandle(
     'canvas:snapshot',
     async (_e, projectPath: string, rect: SnapshotRect): Promise<SnapshotResult> => {
       try {
