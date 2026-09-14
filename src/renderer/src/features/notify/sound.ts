@@ -27,6 +27,10 @@ let master: GainNode | null = null
 let dry: GainNode | null = null
 let reverb: ConvolverNode | null = null
 let lastPlayAt = 0
+/** 播完之后把 AudioContext 挂起的定时器。见 scheduleSuspend */
+let suspendTimer: ReturnType<typeof setTimeout> | null = null
+/** 最后一个音符 + 混响尾巴（0.9s 脉冲响应）都落定之后再挂起 */
+const SUSPEND_AFTER_MS = 1600
 
 /** 默认音量。比系统提示音略轻——它一天要响很多次 */
 const DEFAULT_VOLUME = 0.28
@@ -150,6 +154,22 @@ export function playNotice(kind: 'done' | 'approval'): void {
     tone(1046.5, 0, 0.22, 0.55)
     tone(1568, 0.055, 0.22, 0.45)
   }
+  scheduleSuspend()
+}
+
+/** 响完就把 AudioContext 挂起。
+ *
+ *  不挂起的话，输出设备的时钟线程（AudioOutputDevice）和混响的两条卷积线程会**从第一声起
+ *  一直活到退出**——2026-09-14 在正式版的渲染进程里数到了它们。它们不烧 CPU（全在等消息），
+ *  但占着音频设备、每个渲染周期都醒一次，是纯粹的待机成本。
+ *  `playNotice` 开头本来就有「挂起了就 resume」，所以挂起对下一声毫无影响。
+ *  连着响时每次重排定时器，最后一声之后 1.6 秒才真的挂。 */
+function scheduleSuspend(): void {
+  if (suspendTimer) clearTimeout(suspendTimer)
+  suspendTimer = setTimeout(() => {
+    suspendTimer = null
+    if (ctx && ctx.state === 'running') void ctx.suspend().catch(() => { /* 挂不起来就留着，下次照常播 */ })
+  }, SUSPEND_AFTER_MS)
 }
 
 /** 设置面板里的「试听」用：绕过节流，否则连点两下第二下没声音会让人以为坏了 */

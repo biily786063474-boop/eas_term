@@ -2,6 +2,7 @@ import type { RuntimeMonitorSnapshot } from '../shared/runtimeResources.ts'
 import type { HistorySummary } from '../shared/historyCatalog'
 import type { UsageQuery, UsageSnapshot } from '../shared/usage.ts'
 import type {Favorites,FavoriteChange} from '../shared/browserFavorites'
+import { createSharedChannel } from '../shared/sharedChannel'
 import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
 import type { CodeGraphResult } from '../shared/codeGraph.ts'
 import type { BoardRow, Overlap } from '../shared/board'
@@ -167,6 +168,11 @@ const agentChatPendingEvents = new Map<string, ChatEvent[]>()
  *  **绝不能反过来做成白名单**（只有 start() resolve 之后才允许缓冲）——那样会把 C1
  *  刚修好的窗口重新打开：最早那批事件正是在 start() 的 promise resolve 之前就同步
  *  到达的，此时还不知道 sessionId 是"活的"，白名单里不会有它。 */
+
+// 浏览器节点的两个广播频道：一个频道只挂一个 ipc 监听，订阅者在 sharedChannel 里分发（理由与测试见那边）
+const onBrowserRoute = createSharedChannel<{guestId:number;url:string}>(ipcRenderer, 'browser:route')
+const onBrowserFavorites = createSharedChannel<Favorites>(ipcRenderer, 'browser:favoritesChanged')
+
 const stoppedAgentChatSessionIds = new Set<string>()
 
 ipcRenderer.on(AGENT_CHAT_EVENT_CHANNEL, (_e: IpcRendererEvent, envelope: AgentChatEventEnvelope) => {
@@ -503,11 +509,11 @@ const api = {
     codexHome: (): Promise<string> => ipcRenderer.invoke('agent:codexHome')
   },
   browser: {
-    onRoute: (cb: (data: {guestId:number;url:string}) => void): (() => void) => { const handler = (_e: Electron.IpcRendererEvent, data: {guestId:number;url:string}): void => cb(data); ipcRenderer.on('browser:route', handler); return () => { ipcRenderer.removeListener('browser:route', handler) } },
+    onRoute: (cb: (data: {guestId:number;url:string}) => void): (() => void) => onBrowserRoute(cb),
     favorites: (): Promise<Favorites> => ipcRenderer.invoke('browser:favorites'),
     change: (op: FavoriteChange): Promise<{data:Favorites;warning?:string}> => ipcRenderer.invoke('browser:favoriteChange',op),
     routes: (): Promise<{catalog:typeof import('../shared/browserRoutes.json');entryUrl:string;htmlPath:string}> => ipcRenderer.invoke('browser:routes'),
-    onFavorites: (cb:(data:Favorites)=>void): (()=>void) => {const h=(_e:unknown,data:Favorites):void=>cb(data);ipcRenderer.on('browser:favoritesChanged',h);return ()=>ipcRenderer.removeListener('browser:favoritesChanged',h)},
+    onFavorites: (cb:(data:Favorites)=>void): (()=>void) => onBrowserFavorites(cb),
 
     // 迷你浏览器里链接开新窗被拦成同 view 导航时,主进程通知渲染层聚焦该浏览器节点(传 guest webContents id)
     onFocus: (cb: (guestId: number) => void): (() => void) => {

@@ -13,7 +13,7 @@
 // `AgentChatView` 挂载时按它决定直接进对话、还是开装/登录/配置那张面板。
 // 分支全在那一侧（见 AgentChatView 里 setupFor 的注释），这里只负责送值。
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import type { CliInfo } from '../../../../shared/agentChat'
 import type { OmpStatus } from '../../../../shared/ompSetup'
@@ -42,6 +42,21 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
   const [auth, setAuth] = useState<Record<string, boolean | undefined>>({})
   /** 正在建节点。**防连点** —— 建节点是异步的，连点两下会开出两个模块。 */
   const [busy, setBusy] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  // 光环那圈扫光是 infinite transform 动画。画布上每个空 Frame 一排三颗，25 个 Frame 就是几十个
+  // 一直转的动画 —— 2026-09-14 实测正式版空闲时 9 个全在视口外照转，每 4 秒 480 次样式重算。
+  // 出视口就打上 data-offscreen，CSS 把动画 paused（和 hover 停转用的是同一个属性，见 canvas.css）。
+  // 用 IntersectionObserver 而不是读 store 的视口：它认 transform 后的真实位置，且只在进出边界时回调。
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) delete el.dataset.offscreen
+      else el.dataset.offscreen = '1'
+    })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [clis])
 
   useEffect(() => {
     let alive = true
@@ -78,7 +93,7 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
   }
 
   return (
-    <div className="cframe-start">
+    <div className="cframe-start" ref={rootRef}>
       <div className="cframe-start-hd">选一个 AI 开始</div>
       <div className="cframe-start-row">
         {choices.map(({ cli, state }) => (

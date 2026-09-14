@@ -1,6 +1,9 @@
 import { hardenWebviewPreferences } from './webviewGuard.ts'
 import { isAppNavigation } from './navigationGuard.ts'
 import { registerRuntimeMonitor } from './runtime/ipc.ts'
+import { installIdleWatchdog } from './runtime/idleWatchdog.ts'
+import { ownedSessions } from './runtime/ownedSessions.ts'
+import { sharedServices } from './runtime/sharedServices.ts'
 import { registerUsageHandlers } from './usage/index.ts'
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog , shell } from 'electron'
 import path from 'path'
@@ -34,7 +37,7 @@ import { registerDesignHandlers } from './design'
 import { registerMcpBridge, invokeRenderer } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
 import { registerPluginHostHandlers, registerPluginScheme } from './pluginHost.ts'
-import { registerDiagHandlers } from './diagLog.ts'
+import { registerDiagHandlers, diag } from './diagLog.ts'
 import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
 import { registerAgentHistory, registerTeamFindings, registerTeamRoster } from './agentHistory'
 import { registerTeamWorktree } from './teamWorktreeOps'
@@ -58,8 +61,7 @@ import { registerCodeGraphHandlers } from './codeGraph.ts'
 import {
   registerAgentChatHandlers,
   killAllAgentChatSessions,
-  killAgentChatSessionsForWebContents
-} from './agentChat/session.ts'
+  killAgentChatSessionsForWebContents, anyAgentSessionBusy } from './agentChat/session.ts'
 
 // 不再全局关闭 Chromium 后台节流：网页节点应遵守默认后台预算。
 // 主工作台单独保留事件/解析调度，终端输出不再依赖 rAF；装饰层由可见性暂停。
@@ -444,6 +446,17 @@ app.whenReady().then(() => {
   registerAgentChatHandlers()
   registerUsageHandlers()
   registerRuntimeMonitor(loadProjects)
+  // 空闲看门狗：没会话在跑、没采麦，渲染进程却连续一分钟 >20% 时，自己抓 5 秒 profile 进 diagnostics/
+  // （2026-09-14 那次空闲 25% 烧了 25 分钟、事后复现不出，只有当场抓才有函数名）。
+  // 两个环境变量只给 verify-app 用：EAS_IDLE_WATCHDOG_INTERVAL_MS / EAS_IDLE_WATCHDOG_THRESHOLD
+  installIdleWatchdog({
+    window: () => mainWindow(),
+    anySessionBusy: anyAgentSessionBusy,
+    voiceActive: () => ownedSessions.hasKind('voice') || sharedServices.hasPrefix('voice-'),
+    log: (what) => diag('m', 'idle-watchdog', what),
+    intervalMs: Number(process.env.EAS_IDLE_WATCHDOG_INTERVAL_MS) || undefined,
+    threshold: process.env.EAS_IDLE_WATCHDOG_THRESHOLD !== undefined ? Number(process.env.EAS_IDLE_WATCHDOG_THRESHOLD) : undefined
+  })
   // omp 的引导 IPC。**放在 registerAgentChatHandlers 之后、installIpcProfiler 之后**
   // （02-分层架构的启动顺序）：它不参与「MCP 桥 → 密钥柜 → PTY」那条硬依赖链，
   // 只是又一组 handler；放在 profiler 之前的话这组 IPC 不进 ipc-slow.log，而且不报错。

@@ -165,6 +165,12 @@ export function isSessionBusy(sessionId: string): boolean {
   return sessions.get(sessionId)?.rec.busy === true
 }
 
+/** 任一会话 turn 未结束。空闲看门狗用它判断「pane 在动是正常的」 */
+export function anyAgentSessionBusy(): boolean {
+  for (const live of sessions.values()) if (live.rec.busy === true) return true
+  return false
+}
+
 /** 起会话那一刻的协同板，截断后拼进系统提示。
  *  **只在 spawn 时取一次** —— 三家 CLI 都没有中途注入系统提示的通道，
  *  所以契约里要求「改文件前先 board_read」，那才是拿到最新一版的办法。 */

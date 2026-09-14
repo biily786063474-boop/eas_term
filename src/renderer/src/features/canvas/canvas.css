@@ -5856,6 +5856,12 @@
   animation-play-state: paused;
 }
 
+/* 视口外的 Frame：光环停转（FrameStart 用 IntersectionObserver 打的标）。
+   离屏动画用户看不见，却照样每帧样式重算 —— 2026-09-14 正式版空闲时 9 个全在视口外转。 */
+.cframe-start[data-offscreen] .cframe-start-ring::before {
+  animation-play-state: paused;
+}
+
 /* 被 hover 的那颗：高光整个收掉，位置让给下面那道扫光 */
 .cframe-start-btn:hover .cframe-start-ring {
   opacity: 0;

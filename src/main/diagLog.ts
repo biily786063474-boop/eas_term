@@ -52,6 +52,8 @@ function cpuSnapshot(): string {
     // （2026-09-06 实测：不预热的话每条 longtask 后面都是空的）。所以启动时先调一次预热，
     // 之后每次取到的就是「从上一个事件到现在」这段的平均 —— 连着几条 longtask 时窗口很短、
     // 正是我们要的「此刻谁在烧」；久违的第一条则是一段长平均，也够看出「一直在烧」。
+    // 2026-09-14 起 runtime/idleWatchdog.ts 每 30 秒也调一次 getAppMetrics，所以这个窗口
+    // 最长 30 秒 —— 更准了；「绝不轮询」从此只对黑匣子自己成立，那条轮询在主进程、渲染层零开销。
     const rows = app
       .getAppMetrics()
       .map((m) => ({ t: m.type === 'Tab' ? 'renderer' : m.type, cpu: m.cpu?.percentCPUUsage ?? 0 }))

@@ -10,6 +10,8 @@ export function createOwnedSessions(now:()=>number){
    const entry={...input,at:now(),stopping:false};entries.set(input.id,entry)
    void input.completed.then(()=>{if(entries.get(input.id)===entry){entries.delete(input.id);recentActivity.record({id:input.id,name:input.name,windowId:input.windowId,projectId:input.projectId,kind:'service',outcome:'exited',startedAt:entry.at})}},()=>{/* Observation failure does not prove exit. */})
   },
+  /** 有没有某一类会话在跑（任何窗口）。空闲看门狗用它排除「麦克风开着」 */
+  hasKind(kind:OwnedSession['kind']):boolean{for(const e of entries.values())if(e.kind===kind)return true;return false},
   list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.windowId===windowId).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:e.projectId?[e.projectId]:[],unknownRefs:0,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const entry=entries.get(id)

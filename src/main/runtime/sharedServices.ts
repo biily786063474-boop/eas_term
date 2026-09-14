@@ -24,6 +24,8 @@ export function createSharedServices(now:()=>number){
    return stopped
   },
   releaseWindow(windowId:number){for(const e of entries.values()){if(!e.refs.delete(windowId))continue;if(!e.refs.size)try{stopEntry(e)}catch{/* Retain tracked state on stop failure. */}}},
+  /** 有没有 id 以某前缀开头的共享服务在跑（如 'voice-'）。空闲看门狗用 */
+  hasPrefix(prefix:string):boolean{for(const id of entries.keys())if(id.startsWith(prefix))return true;return false},
   list(windowId:number):RuntimeObservedService[]{return [...entries.values()].filter(e=>e.refs.has(windowId)).map(e=>({id:e.id,name:e.name,kind:e.kind,projectIds:[...new Set([...e.refs.values()].filter((p):p is string=>p!==null))],unknownRefs:[...e.refs.values()].filter(p=>p===null).length,uptimeMs:Math.max(0,now()-e.at),state:e.stopping?'stopping':'running',canStop:!e.stopping&&e.refs.size===1}))},
   async stop(id:string,windowId:number,confirm:(name:string,projects:string[])=>Promise<boolean>){
    const e=entries.get(id)
