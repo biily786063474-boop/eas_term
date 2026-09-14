@@ -1,3 +1,4 @@
+import { sharedServices } from './runtime/sharedServices.ts'
 import { app, dialog, ipcMain, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -11,7 +12,7 @@ import { setProjectsSource } from './mergeTools'
 
 const storeFile = (): string => path.join(app.getPath('userData'), 'projects.json')
 
-function loadProjects(): Project[] {
+export function loadProjects(): Project[] {
   try {
     const list = JSON.parse(fs.readFileSync(storeFile(), 'utf8'))
     if (Array.isArray(list)) return list
@@ -57,6 +58,10 @@ export function registerProjectHandlers(): void {
   ipcMain.handle('projects:remove', (_e, id: string) => {
     const list = loadProjects().filter((p) => p.id !== id)
     saveProjects(list)
+    // 2026-09-14 P3：移除项目 = 释放它在共享服务（语言服务器等）上的引用；只有没人再持有的才停。
+    // 终端 / AI 这类自有会话由渲染层关闭 Frame 时各自收掉，不在这里按项目扫杀。
+    const stopped = sharedServices.releaseProject(id)
+    if (stopped.length) console.log(`[projects] 移除项目 ${id}，释放共享服务：${stopped.join('、')}`)
     return list
   })
 

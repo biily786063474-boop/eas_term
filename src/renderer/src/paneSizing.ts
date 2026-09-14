@@ -4,8 +4,11 @@ import type { LayoutNode, PaneKind } from './layout'
 export const AGENT_CHAT_MIN_WIDTH = 640
 export const paneMinimumWidth = (kind?: PaneKind): number => kind === 'agent' ? AGENT_CHAT_MIN_WIDTH : 120
 
+// Split panes use responsive composers; canvas placement retains its 640px minimum.
+export const SPLIT_AGENT_MIN_WIDTH = 320
+
 export function minimumTreeWidth(node: LayoutNode): number {
-  if (node.type === 'leaf') return paneMinimumWidth(node.pane.kind) + 6
+  if (node.type === 'leaf') return (node.pane.kind === 'agent' ? SPLIT_AGENT_MIN_WIDTH : paneMinimumWidth(node.pane.kind)) + 6
   const [a, b] = node.children.map(minimumTreeWidth)
   return node.dir === 'row' ? a + b : Math.max(a, b)
 }

@@ -1,0 +1,5 @@
+
+> eas-term@0.4.94 typecheck
+> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json
+
+EXIT_CODE=0 (verified sequence session 7421)

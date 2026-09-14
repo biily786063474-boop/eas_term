@@ -1,0 +1,12 @@
+Original: /tmp/eas-preview-worker-check.log
+✔ 手机该连的主机名 (0.045416ms)
+✔ **读行要按 UTF-8 解** —— 错误原因是给人看的中文 (0.048125ms)
+✔ 多字节字符跨在换行两侧也不会切坏 (0.054ms)
+ℹ tests 3114
+ℹ suites 60
+ℹ pass 3099
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 15
+ℹ todo 0
+ℹ duration_ms 36212.164625

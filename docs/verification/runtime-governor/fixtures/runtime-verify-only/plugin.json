@@ -1,0 +1,1 @@
+{"name":"runtime-verify-only","displayName":"资源停止验收（临时）","description":"无网络、无文件读写、无密钥的本地测试插件","mcp":{"command":"node","args":["./server.mjs"]},"panels":[{"id":"main","title":"资源停止验收","entry":"panel.html"}],"permissions":{"canvas":[]}}

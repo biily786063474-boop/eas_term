@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import ts from 'typescript'
+import {createOwnedSessions} from '../runtime/ownedSessions.ts'
 import { planSend } from './sessionState.ts'
 import { codexAdapter } from './adapters/codex.ts'
 
@@ -29,6 +30,7 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   const live = { rec: { id: 's', busy: true }, proc: { kill: () => calls.push('kill') }, acp: undefined as undefined | { interrupt(): boolean; phase(): string } }
   const compiled = ts.transpileModule('const interrupt = ' + handler.arguments[1].getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const interrupt = runInNewContext(compiled + '\ninterrupt', {
+    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
@@ -45,8 +47,9 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
 function setup() {
   const events: unknown[] = []
   const wire = runInNewContext(code + '\nwireProc', {
+    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env,
+    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, endSilence: () => null,
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
@@ -88,6 +91,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const compiled = ts.transpileModule(deliverNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   const calls: unknown[] = []
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
+    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
@@ -105,11 +109,12 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   assert.equal(calls.length, count)
 })
 
-test('启动同步失败后恢复空闲并返回失败，下一次可以直接重试', () => {
-  const names = new Set(['wireProc', 'deliverMessage', 'restartAndDeliver'])
-  const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+test('准入后的实际启动失败恢复空闲，显式下一次启动可重试', () => {
+  const names = new Set(['wireProc', 'deliverMessage', 'restartAndDeliverNow'])
+  const compiled = ts.transpileModule(source.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name?.text ?? '')).map(n => n.getText(source)).join('\n').replaceAll('restartAndDeliverNow','restartAndDeliver'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
   let attempts = 0
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
+    runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
@@ -136,12 +141,13 @@ for (const [label, mcp, expected] of [
   ['单工具', { denyTools: ['eas-term__canvas_open_file'] }, 'mcp_servers.eas-term.disabled_tools=["canvas_open_file"]']
 ] as const) {
   test('MCP 关闭时启动、开启后续发仍保留角色' + label + '禁用', () => {
-    const restartNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'restartAndDeliver')!
-    const compiled = ts.transpileModule(restartNode.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+    const restartNode = source.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'restartAndDeliverNow')!
+    const compiled = ts.transpileModule(restartNode.getText(source).replaceAll('restartAndDeliverNow','restartAndDeliver'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
     let enabled = false, snapshots = 0
     const launches: string[][] = []
     const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
-      resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
+      runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
+    resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
     stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
@@ -162,3 +168,15 @@ for (const [label, mcp, expected] of [
     assert.equal(snapshots, 2, '每次启动只读取一次用于 Codex 的服务快照')
   })
 }
+
+// 2026-09-13 用户实拍：Codex 遇到「Selected model is at capacity」带 code=1 退出，
+// 界面停在「正在处理」、新消息一直排队。exit 路径缺 turn.done。
+test('进程在 busy 中异常退出：先补 turn.done 再报 fatal，三支 busy 判据一次放倒', () => {
+  const { live, current, events } = setup()
+  live.rec.busy = true
+  current.emit('exit', 1, null)
+  const kinds = events.map(e => (e as { k: string }).k)
+  assert.deepEqual(kinds, ['turn.done', 'error'])
+  assert.equal((events[1] as { fatal: boolean }).fatal, true)
+  assert.equal(live.rec.busy, false)
+})

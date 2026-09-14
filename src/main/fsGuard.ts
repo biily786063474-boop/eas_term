@@ -108,3 +108,17 @@ export function guardDir(target: unknown): GuardOk | GuardFail {
   }
   return { ok: false, error: '路径不在任何项目或知识库目录内，出于安全不允许操作' }
 }
+
+/** Fixed app-owned runtime state only. This is NOT added to guardPath's file-IPC
+ * roots: renderer/agent file operations still cannot write arbitrary userData.
+ * No caller-supplied filename, no symlink target. */
+export function guardRuntimeStateFile(): GuardOk | GuardFail {
+  const root = realResolve(app.getPath('userData'))
+  const target = path.join(root, 'runtime-state.json')
+  try {
+    if (fs.lstatSync(target).isSymbolicLink()) return { ok: false, error: '运行状态文件不能是符号链接' }
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') return { ok: false, error: '运行状态文件不可访问' }
+  }
+  return { ok: true, path: target }
+}

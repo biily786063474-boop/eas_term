@@ -21,6 +21,7 @@
 // · claude 会自己弹浏览器 —— 用一个 no-op 的 `open` 垫在 PATH 最前面拦住它，
 //   它同时还要求把授权码**粘回 stdin**，所以界面上要多一个输入框
 import { BrowserWindow, ipcMain } from 'electron'
+import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -195,7 +196,10 @@ function endLogin(phase: LoginState['phase'], error?: string): void {
   loginSlot.clear()
 }
 
-export function startLogin(cli: CliId): { ok: boolean; error?: string } {
+let loginGeneration = 0
+/** owner：发起登录的窗口。传了就把进程登记进运行中心（可见、可停、一次确认）；
+ *  没传（内部调用/测试）只跑登录本身。 */
+export function startLogin(cli: CliId, owner?: { windowId: number }): { ok: boolean; error?: string } {
   // **同一个 CLI 再点一次登录 = 重来一遍，不是错误。**
   // 界面上「重试」的实现是先 cancel 再 start，中间隔着两次 IPC 往返；
   // 靠消息顺序保证「cancel 一定先到」太脆 —— 一旦顺序颠倒，用户看到的是
@@ -218,6 +222,9 @@ export function startLogin(cli: CliId): { ok: boolean; error?: string } {
     return { ok: false, error: String(e) }
   }
   loginSlot.claim(proc, { cli, proc, sofar: '', state: { cli, phase: 'starting' } })
+  // 运行中心登记（2026-09-13 缺口 4）。id 带代次：重试是先 cancel 再 start，旧进程的 close
+  // 晚到 400 多毫秒，同名会撞「duplicate owned session」。stop 走既有 cancelLogin，不另起杀法。
+  if (owner) registerOwnedCliProcess({ id: `cli-login:${cli}:${++loginGeneration}`, name: `CLI 登录（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (loginSlot.any()?.proc === proc) cancelLogin() } })
   // **每个回调都包 guard(proc, …)。** 包了之后，「这条回调属于哪个进程」
   // 由闭包捕获的 proc 决定，旧进程的回调一律拿不到 live ——
   // 漏写的唯一方式是不包，而不包就拿不到 live，写不出能跑的代码。
@@ -289,7 +296,7 @@ export function cancelLogin(): void {
 
 export function registerCliAuthHandlers(): void {
   ipcMain.handle('cliAuth:check', (_e, cli: CliId) => checkAuth(cli))
-  ipcMain.handle('cliAuth:startLogin', (_e, cli: CliId) => startLogin(cli))
+  ipcMain.handle('cliAuth:startLogin', (e, cli: CliId) => startLogin(cli, { windowId: e.sender.id }))
   ipcMain.handle('cliAuth:submitCode', (_e, code: string) => submitCode(code))
   ipcMain.handle('cliAuth:cancelLogin', () => {
     cancelLogin()

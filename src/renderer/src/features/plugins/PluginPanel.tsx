@@ -60,7 +60,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
     let live = true
     initializedRef.current = false
     setState({ k: 'loading' })
-    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx }).then((r) => {
+    void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx, resumeStopped: reloadKey > 0 }).then((r) => {
       if (!live) {
         if (r.ok) void window.api.plugins.panelClose(r.panelSession)
         return

@@ -38,3 +38,20 @@ test('native package pipeline checks integrity, extracts, validates version/help
   assert.equal(execFileSync(bin,['--version'],{encoding:'utf8'}).trim(),'codex-cli 99.0.1')
   assert.equal(fs.readFileSync(path.join(path.dirname(bin),'resource.txt'),'utf8'),'companion')
 })
+
+// 2026-09-13：verifyBinary 原来是 execFileSync，8 秒 timeout 内主线程整个卡住（全量高负载时正是它 ETIMEDOUT）。
+// 异步版本必须让事件循环继续转：卡住的假 CLI 超时被拒绝的同时，定时器仍在走。
+test('异步校验挂住的 CLI 时事件循环不被阻塞，超时后拒绝', {skip: process.platform === 'win32'}, async t => {
+  const { verifyVersionAsync } = await import('./packages.ts')
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'eas-cli-verify-async-'))
+  t.after(() => fs.rmSync(root, {recursive:true,force:true}))
+  const dir = path.join(root, 'codex', '9.9.9'), bin = path.join(dir, 'package', 'bin', 'codex')
+  fs.mkdirSync(path.dirname(bin), {recursive:true})
+  fs.writeFileSync(bin, '#!/bin/sh\nsleep 5\n', {mode:0o755})
+  fs.writeFileSync(path.join(dir, 'entry.json'), JSON.stringify({bin:'package/bin/codex'}))
+  let ticks = 0
+  const timer = setInterval(() => { ticks++ }, 20)
+  t.after(() => clearInterval(timer))
+  await assert.rejects(verifyVersionAsync(root, 'codex', '9.9.9', {timeoutMs: 300}), /ETIMEDOUT|timeout|超时/i)
+  assert.ok(ticks >= 5, `事件循环应持续运行，实际 ticks=${ticks}`)
+})

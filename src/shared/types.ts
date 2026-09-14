@@ -406,6 +406,8 @@ export interface RecentFile {
 }
 
 export interface PtyCreateOptions {
+  /** Optional renderer correlation key; main still validates window ownership. */
+  startupRequestId?: string
   cwd?: string
   cols?: number
   rows?: number

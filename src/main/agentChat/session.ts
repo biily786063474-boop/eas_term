@@ -1,3 +1,8 @@
+import {startupFailure} from '../runtime/startupFailure.ts'
+import {startManagedSession,cancelSessionStart} from '../runtime/sessionStartup.ts'
+import {ownedSessions} from '../runtime/ownedSessions.ts'
+import {projectAttribution} from '../runtime/projectAttribution.ts'
+import {loadProjects} from '../projects'
 import { withAgentSecrets } from '../agentSecretEnv'
 import { forgetPty, forgetSecretToken } from '../secrets'
 import { captureUsage, interruptUsage, markUsageInterrupted, resetUsageCost } from '../usage/index.ts'
@@ -86,6 +91,7 @@ import type {
 } from '../../shared/agentChat.ts'
 
 interface Live {
+  runtimeStartupId?: string
   /** Only the latest spawn may mutate this session; keep ownership through stdio drain after exit. */
   processGeneration?: object
   rec: SessionRecord
@@ -611,6 +617,7 @@ async function resolveAdapterModels(
   }
 }
 
+let runtimeProcessGeneration = 0
 function wireProc(live: Live, proc: ChildProcess): void {
   resetUsageCost(live.rec.id)
   const generation = {}
@@ -620,6 +627,16 @@ function wireProc(live: Live, proc: ChildProcess): void {
   // 这是第二道保险：万一还有别的路径立了标记却没等到 exit，
   // 也不会连累下一个进程的判定。
   live.killing = false
+  ownedSessions.add({
+    id: 'agent:' + live.rec.id + ':' + (++runtimeProcessGeneration),
+    name: live.rec.cli + ' 对话', windowId: live.wcId, kind: 'agent',
+    projectId: projectAttribution(live.rec.cwd, loadProjects()),
+    completed: new Promise<void>(resolve => { proc.once('close', resolve) }),
+    stop: () => {
+      if (isCurrent()) live.killing = true
+      stopAgentProcess(proc)
+    }
+  })
   const diagnostics = createStderrDiagnostics()
   let reportedFatal = false
   proc.stdout?.setEncoding('utf8')
@@ -685,6 +702,20 @@ function wireProc(live: Live, proc: ChildProcess): void {
     )
     const interrupted =
       !selfKilled && (!!signal || live.rec.busy === true || (code !== 0 && code !== null))
+    // **崩在半路的一轮，要给渲染层一个 turn.done。** 2026-09-13 用户实拍：Codex 遇到
+    // 「Selected model is at capacity」带 code=1 退出，这里只推了下面那条 fatal error，
+    // 而归约器收到 fatal 只复位 turnActive —— 这一轮跑过工具的话
+    // sawExecStartSinceTurnDone 仍为 true，busy 永远不落，新消息一直排队。
+    // 能一次放倒三支的只有 turn.done。用量给零（没有新用量），retries 要**保住** ——
+    // handleEvent 的 turn.done 分支会把它清成 0，那是给「真跑完一轮」用的；
+    // 崩溃不算，清了自动恢复就永远数不到「试到头」。
+    // 静默期也一并结束：进程都没了，slash 回执不会再来，留着只会把这条 turn.done 吞掉。
+    if (!selfKilled && live.rec.busy === true) {
+      const retries = live.rec.retries
+      live.silence = endSilence()
+      handleEvent(live, { k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
+      live.rec = { ...live.rec, retries }
+    }
     live.rec = {
       ...live.rec,
       alive: false,
@@ -714,7 +745,36 @@ function wireProc(live: Live, proc: ChildProcess): void {
  *  若 alive 因系统休眠等原因滞后，不先 kill 就 spawn 会造成两个进程同时存活、
  *  stdout 都灌进同一个 translator。kill 是幂等的（已经死的进程再 kill 一次没有副作用），
  *  无脑调即可。 */
+let runtimeStartupSequence = 0
+function cancelRuntimeStartup(live: Live): void {
+  const id = live.runtimeStartupId
+  live.runtimeStartupId = undefined
+  if (id) cancelSessionStart(id, live.wcId)
+}
 function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentChatSendResult {
+  if (live.acp) return restartAndDeliverNow(live, opts, message)
+  if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
+  const id = 'agent-start:' + live.rec.id + ':' + (++runtimeStartupSequence)
+  live.runtimeStartupId = id
+  void startManagedSession({id,windowId:live.wcId,name:live.rec.cli+' 启动',
+    projectId:projectAttribution(opts.cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},
+    start:async signal=>{
+      if (signal.aborted || live.wc.isDestroyed() || sessions.get(live.rec.id) !== live || live.runtimeStartupId !== id) throw Error('对话启动已取消')
+      const result = restartAndDeliverNow(live,opts,message)
+      if (!result.ok) throw Error(result.error)
+      const proc = live.proc
+      if (!proc) throw Error('对话进程未启动')
+      return {value:undefined,completed:new Promise<void>(resolve=>{proc.once('close', resolve)})}
+    }
+  }).catch(error=>{
+    if(live.runtimeStartupId!==id || sessions.get(live.rec.id)!==live)return
+    live.rec={...live.rec,busy:false}
+    handleEvent(live,{k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+    handleEvent(live,{k:'error',...startupFailure(error)})
+  }).finally(()=>{if(live.runtimeStartupId===id)live.runtimeStartupId=undefined})
+  return {ok:true}
+}
+function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): AgentChatSendResult {
   // **必须在下面那句 kill 之前**：ACP 那条路自己决定怎么收尾旧进程
   // （先发 session/close 再 kill），被这里裸 SIGTERM 掉的话 close 永远没机会发，
   // omp 那一轮可能没写进会话文件，resume 接回来就缺一段。
@@ -931,6 +991,7 @@ function restartAndDeliver(live: Live, opts: StartOpts, message: string): AgentC
  *  这不是业务判定，是"我有没有能力执行这个动作"的机械检查，答不了就如实报错，
  *  不能假装写成功了却悄悄把消息丢了。 */
 function deliverMessage(live: Live, message: string): AgentChatSendResult {
+  if (live.runtimeStartupId) return {ok:false,error:'当前消息正在等待资源，请等待或取消'}
   if (live.rec.cli === 'codex' && live.rec.busy === true) {
     return { ok: false, error: '当前回复尚未结束，请等待完成或先停止生成；草稿已保留' }
   }
@@ -1106,6 +1167,7 @@ function reapIdleSessions(): void {
         `（${idleSec}s 没动静，busy=${String(live.rec.busy)}，交活=${delivered ? '是' : '否'}）`
     )
     live.killing = true // 空闲回收是预期内的，别让它触发自动恢复
+    live.acp?.close()
     stopAgentProcess(live.proc)
     live.proc = undefined
     live.rec = { ...live.rec, alive: false } // resumeId 保留，下次发送时接上
@@ -1217,6 +1279,8 @@ export function killAllAgentChatSessions(hard = false): void {
     interruptUsage(live.rec)
     revokeCapabilitySession(live.rec.id)
     forgetPty(live.rec.id)
+    cancelRuntimeStartup(live)
+    live.acp?.close()
     stopAgentProcess(live.proc, hard ? 'SIGKILL' : 'SIGTERM')
   }
 }
@@ -1237,10 +1301,12 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
   for (const [id, live] of sessions) {
     if (live.wcId !== wcId) continue
     interruptUsage(live.rec)
+    cancelRuntimeStartup(live)
     sessions.delete(id)
     revokeCapabilitySession(id)
     forgetPty(id)
     transcripts.drop(id) // 会话没了，它那份摘要也别赖着
+    live.acp?.close()
     const proc = live.proc
     live.proc = undefined
     if (!proc) continue
@@ -1259,8 +1325,31 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
  *  不认识密钥柜、不认识 MCP 桥 —— 它只收这个 deps 对象，所以能在 `node --test` 下裸跑。 */
 function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
   const host = hostPaths()
+  let currentProcess: Extract<ReturnType<typeof openOmpProcess>, {ok:true}>['proc'] | undefined
   return createAcpLive(
     {
+      async openAsync(cwd,signal) {
+        if(signal.aborted)throw Error('cancelled')
+        const id='acp-start:'+live.rec.id+':'+(++runtimeStartupSequence)
+        const cancel=()=>cancelSessionStart(id,live.wcId)
+        const result=startManagedSession<ReturnType<typeof openOmpProcess>>({id,windowId:live.wcId,name:'OMP 启动',projectId:projectAttribution(cwd,loadProjects()),cost:{cpu:7,memoryBytes:512*1024**2},start:async admitted=>{
+          if(admitted.aborted||signal.aborted||live.wc.isDestroyed()||sessions.get(live.rec.id)!==live)throw Error('cancelled')
+          const opened=this.open(cwd)
+          if(!opened.ok)return {value:opened,completed:Promise.resolve()}
+          const completed = opened.proc.completed
+          if(!completed){opened.proc.kill();throw Error('OMP进程缺少退出观察')}
+          const proc = opened.proc
+          currentProcess = proc
+          void completed.then(()=>{if(currentProcess===proc)currentProcess=undefined})
+          ownedSessions.add({id:'agent:'+live.rec.id+':'+(++runtimeProcessGeneration),name:'OMP 对话',windowId:live.wcId,kind:'agent',projectId:projectAttribution(cwd,loadProjects()),completed,stop:()=>{
+            if(currentProcess===proc){live.killing=true;live.acp?.close()}
+            else proc.kill()
+          }})
+          return {value:opened,completed}
+        }})
+        signal.addEventListener('abort',cancel,{once:true})
+        try{return await result}finally{signal.removeEventListener('abort',cancel)}
+      },
       open(cwd) {
         let secretToken: string | undefined
         // 受管配置**每次起进程之前重写一遍**：这是我们的目录、我们说了算
@@ -1805,6 +1894,7 @@ export function registerAgentChatHandlers(): void {
   ipcMain.on('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
     const live = sessions.get(id)
+    if (live) cancelRuntimeStartup(live)
     if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)
     if (live?.acp?.phase() === 'opening') interruptUsage(live.rec) // transport drops the whole handshake queue
     // **ACP 那条路不 kill。** 上游收到 session/cancel 会立刻用 stopReason:'cancelled'
@@ -1835,7 +1925,12 @@ export function registerAgentChatHandlers(): void {
       handleEvent(live, { k: 'error', fatal: false, message: '已停下这一轮。上下文还在，接着说就行。' })
       return
     }
-    if (!live?.proc) return
+    if (!live) return
+    if (!live.proc) {
+      handleEvent(live, {k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+      live.rec={...live.rec,busy:false,ended:'ok'}
+      return
+    }
     // Retiring the generation suppresses its exit handler, so revoke here first.
     // A surviving MCP child must not retain authority after an explicit stop.
     revokeCapabilitySession(id)
@@ -1869,6 +1964,7 @@ export function registerAgentChatHandlers(): void {
     const live = sessions.get(id)
     if (!live) return
     interruptUsage(live.rec)
+    cancelRuntimeStartup(live)
     sessions.delete(id)
     revokeCapabilitySession(id)
     forgetPty(id)

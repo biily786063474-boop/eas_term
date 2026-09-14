@@ -1713,7 +1713,7 @@ export function CanvasStage(): JSX.Element {
                 <button className="csnap-keep-btn" onClick={() => finishClear('keep')}>
                   保留
                 </button>
-                <button className="danger-btn" onClick={() => finishClear('clear')}>
+                <button className="primary-btn" onClick={() => finishClear('clear')}>
                   清掉
                 </button>
               </div>

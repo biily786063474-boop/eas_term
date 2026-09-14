@@ -37,7 +37,7 @@ import { statsSegments } from './chatStats.ts'
 import { VoiceButton } from '../voice/VoiceButton'
 import { stopVoiceOnSend } from '../voice/voiceControl'
 import { useStore } from '../../store'
-import { RefreshIcon, ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, MessageIcon, SendIcon, StopIcon } from '../../ui/Icons'
+import { RefreshIcon, ChipIcon, CloseIcon, CompressIcon, DictIcon, ImageIcon, SendIcon, StopIcon } from '../../ui/Icons'
 import { autoDismisses, NOTICE_AUTO_MS } from './noticeDismiss.ts'
 import { BranchBadge } from './BranchBadge'
 import { usePastedImages } from '../terminal/usePastedImages'
@@ -114,7 +114,6 @@ export function ChatToolbar({
   onSetParams,
   onRefreshModels,
   onLogin,
-  onNewChat,
   sendError,
   onDismissSendError,
   worktree,
@@ -157,7 +156,6 @@ export function ChatToolbar({
   onSetParams: (patch: { model?: string; effort?: string }) => void
   onRefreshModels?: () => void
   /** 「新对话」：结束当前这段，给这个窗口挂一段新的。旧记录不删。 */
-  onNewChat?: () => void
   // ⚠️ **这里曾经有 `roleId` / `onPickRole`，别再加回来。**
   // 角色契约走系统提示，`roleContract` 只在 `agentChat:start` 读一次 ——
   // 会话跑起来之后改它一点效果都没有。摆在对话态工具栏上等于给了一个
@@ -614,30 +612,6 @@ export function ChatToolbar({
             {caps.modelCatalog.status === 'loading' ? '读取中' : caps.modelCatalog.status === 'error' ? (caps.modelCatalog.source === 'cache' ? '读取失败 · 缓存清单' : caps.modelCatalog.source === 'fallback' ? '读取失败 · 内置清单' : '读取失败') : caps.modelCatalog.source === 'cache' ? '缓存清单' : caps.modelCatalog.source === 'fallback' ? '内置清单' : ''}
 
           </span>
-        )}
-
-        {onNewChat && (
-          <button
-            type="button"
-            className="ac-bar-btn icon-only"
-            aria-label="新对话"
-            // **名字进 tip，第一句就是功能名**（用户 2026-09-02：「hover 的时候再
-            // 显示功能名」）。后半句说明留着是有意的 —— 这两个按钮都不可撤销，
-            // 只报个名字等于把「会发生什么」藏起来。
-            data-tip="新对话 —— 结束这一段，开一段新的（旧记录还在，能从空态找回来）"
-            onClick={() => {
-              void stopVoiceOnSend()
-              // 会结束当前会话，上下文接不回来了 —— 照「压缩」那条的规矩弹确认
-              requestConfirm({
-                message:
-                  '开一段新对话会结束当前会话，之后的消息不再带着现在的上下文。旧的对话记录不会删除，之后能从空态的「接上上次的对话」里找回来。继续吗？',
-                confirmLabel: '开新对话',
-                onConfirm: onNewChat
-              })
-            }}
-          >
-            <MessageIcon size={11} />
-          </button>
         )}
 
         {model.showCompact && (

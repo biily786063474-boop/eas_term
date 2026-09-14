@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body><h2>资源停止验收</h2><p>一次性本地测试服务。不读写项目文件，不访问网络或密钥。</p><button id="start">启动可取消测试任务</button><p id="status">就绪</p><script>
+parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{}},'*');
+let seq=1;document.getElementById('start').onclick=()=>{document.getElementById('status').textContent='测试任务执行中';parent.postMessage({jsonrpc:'2.0',id:++seq,method:'tools/call',params:{name:'verify_wait',arguments:{}}},'*')};
+window.addEventListener('message',e=>{if(e.source===parent&&e.data.id>1)document.getElementById('status').textContent=e.data.error?'测试调用结束：'+e.data.error.message:'测试任务已结束'});
+</script></body></html>

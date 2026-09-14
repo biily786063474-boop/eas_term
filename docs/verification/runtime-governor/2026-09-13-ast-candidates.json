@@ -1,0 +1,944 @@
+[
+  {
+    "file": "src/main/agent.ts",
+    "line": 15,
+    "callee": "pExecFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/adapters/detect.ts",
+    "line": 25,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/codexModels.ts",
+    "line": 99,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/launch.ts",
+    "line": 215,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/launch.ts",
+    "line": 335,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/login.ts",
+    "line": 80,
+    "callee": "spawnLogin",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/paths.ts",
+    "line": 247,
+    "callee": "/omp\\/(\\d+\\.\\d+\\.\\d+[^\\s]*)/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/setup.ts",
+    "line": 107,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/omp/setup.ts",
+    "line": 241,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/ompEvents.ts",
+    "line": 225,
+    "callee": "/^Allow tool:\\s*(.+)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/session.ts",
+    "line": 855,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/session.ts",
+    "line": 1372,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/agentChat/session.ts",
+    "line": 1374,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/bizone.ts",
+    "line": 221,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/bizoneRuntime.ts",
+    "line": 60,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/branchLedger.ts",
+    "line": 170,
+    "callee": "TITLE_RE.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/canvas.ts",
+    "line": 148,
+    "callee": "/^bytes=(\\d*)-(\\d*)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliAuth/index.ts",
+    "line": 143,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliAuth/index.ts",
+    "line": 215,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliAuth/install.ts",
+    "line": 106,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliAuth/install.ts",
+    "line": 107,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliContractRun.ts",
+    "line": 27,
+    "callee": "pExecFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/index.ts",
+    "line": 44,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 51,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 53,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 92,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 93,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 98,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/cliUpdates/packages.ts",
+    "line": 112,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/fs.ts",
+    "line": 28,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/git.ts",
+    "line": 63,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/git.ts",
+    "line": 426,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitExec.ts",
+    "line": 57,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 11,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 16,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 21,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 22,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 23,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 27,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 29,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 30,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 44,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/gitHistory.ts",
+    "line": 54,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/index.ts",
+    "line": 132,
+    "callee": "BrowserWindow",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/island.ts",
+    "line": 430,
+    "callee": "BrowserWindow",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/island.ts",
+    "line": 868,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/island.ts",
+    "line": 947,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/lspClient.ts",
+    "line": 64,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/mcpClient.ts",
+    "line": 48,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/phone/tunnelClient.ts",
+    "line": 198,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/phone/tunnelClient.ts",
+    "line": 207,
+    "callee": "/^open ([0-9a-f]{32})$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pluginHost.ts",
+    "line": 361,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/probeEnv.ts",
+    "line": 161,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 225,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 228,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 274,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 280,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 291,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 334,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 393,
+    "callee": "pty.spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 568,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 594,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/pty.ts",
+    "line": 614,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/quotaApi.ts",
+    "line": 55,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/quotaStore.ts",
+    "line": 345,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/quotaStore.ts",
+    "line": 355,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/secrets.ts",
+    "line": 484,
+    "callee": "/^(?:export\\s+)?([A-Za-z_][A-Za-z0-9_]*)=/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/secrets.ts",
+    "line": 489,
+    "callee": "/(?:^|&&\\s*)(?:source|\\.)\\s+[\"']?([^\"'\\s;]+)/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/skillLibrary/parse.ts",
+    "line": 62,
+    "callee": "/^---\\r?\\n([\\s\\S]*?)\\r?\\n---(?:\\r?\\n|$)/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/skillLibrary/parse.ts",
+    "line": 70,
+    "callee": "/^(\\w[\\w-]*)\\s*:\\s*(.*)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/stt.ts",
+    "line": 151,
+    "callee": "Worker",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/telemetry.ts",
+    "line": 197,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/updater.ts",
+    "line": 270,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/voiceVad.ts",
+    "line": 11,
+    "callee": "Worker",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/wiki/git.ts",
+    "line": 19,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/wiki/index.ts",
+    "line": 226,
+    "callee": "/^## \\[[\\d-]+\\]\\s*(\\w+)/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/wiki/index.ts",
+    "line": 617,
+    "callee": "/^summary:\\s*(.+)$/m.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/wiki/scan.ts",
+    "line": 35,
+    "callee": "/^---\\r?\\n([\\s\\S]*?)\\r?\\n---/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/main/wiki/scan.ts",
+    "line": 40,
+    "callee": "/^(\\w+)\\s*:\\s*(.*)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/AgentChatView.tsx",
+    "line": 452,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/AgentChatView.tsx",
+    "line": 463,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/SlashPicker.tsx",
+    "line": 49,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/SlashPicker.tsx",
+    "line": 85,
+    "callee": "/^\\/(mention|model|effort|compact)\\s*$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/composerCandidates.ts",
+    "line": 11,
+    "callee": "/(?:^|[\\s（(，,。:：])@([^\\s@]*)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/linkify.ts",
+    "line": 55,
+    "callee": "URL_RE.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/linkify.ts",
+    "line": 55,
+    "callee": "URL_RE.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/linkify.ts",
+    "line": 61,
+    "callee": "PATH_RE.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/agentChat/linkify.ts",
+    "line": 61,
+    "callee": "PATH_RE.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/AgentCmdBar.tsx",
+    "line": 90,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/AgentCmdBar.tsx",
+    "line": 132,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/CanvasAgentBar.tsx",
+    "line": 223,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/CanvasStage.tsx",
+    "line": 57,
+    "callee": "/^#?([\\da-f]{2})([\\da-f]{2})([\\da-f]{2})$/i.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/CanvasStage.tsx",
+    "line": 287,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/CanvasStage.tsx",
+    "line": 328,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/canvas/UsageDashboard.tsx",
+    "line": 36,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/dict/DictHookBar.tsx",
+    "line": 97,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/dict/DictHookBar.tsx",
+    "line": 166,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/editor/CodeView.tsx",
+    "line": 331,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/editor/CodeView.tsx",
+    "line": 334,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/editor/CodeView.tsx",
+    "line": 335,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/gantt/GanttStage.tsx",
+    "line": 547,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 96,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 127,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 129,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 136,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 145,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/git/SidebarGit.tsx",
+    "line": 148,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 78,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 106,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 123,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 143,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 150,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 195,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 220,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/PhonePanel.tsx",
+    "line": 238,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/phone/pairPayload.ts",
+    "line": 46,
+    "callee": "/:(\\d+)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/quota/QuotaBar.tsx",
+    "line": 95,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/team/AutoTuck.tsx",
+    "line": 96,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/team/TeamPanel.tsx",
+    "line": 90,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 804,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 812,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 815,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 818,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 824,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 827,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 830,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 833,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 839,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 843,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 850,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 853,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 854,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/TerminalView.tsx",
+    "line": 856,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/approvalParse.ts",
+    "line": 72,
+    "callee": "/^(\\d{1,2})\\s*[.、)]\\s*(.+)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/pathLinks.ts",
+    "line": 32,
+    "callee": "re.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/terminal/pathLinks.ts",
+    "line": 62,
+    "callee": "startRe.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/wiki/WikiView.tsx",
+    "line": 24,
+    "callee": "/^---\\r?\\n([\\s\\S]*?)\\r?\\n---\\r?\\n?/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/wiki/WikiView.tsx",
+    "line": 29,
+    "callee": "/^(\\w+)\\s*:\\s*(.*)$/.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/workspace/CliUpdatesPanel.tsx",
+    "line": 18,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/workspace/SecretRequestModal.tsx",
+    "line": 133,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "src/renderer/src/features/workspace/VaultGate.tsx",
+    "line": 20,
+    "callee": "window.setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/bizone-mcp.mjs",
+    "line": 85,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/codex-capability-config.mjs",
+    "line": 60,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-capability-shim.mjs",
+    "line": 15,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-codex-launcher.mjs",
+    "line": 84,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-plugin-shim.mjs",
+    "line": 90,
+    "callee": "setInterval",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-pty-launcher.mjs",
+    "line": 100,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-secret.mjs",
+    "line": 142,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "mcp/eas-selected-mcp-launcher.mjs",
+    "line": 26,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/agent-hooks/eas-statusline.mjs",
+    "line": 91,
+    "callee": "spawn",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/agent-hooks/eas-write-guard.mjs",
+    "line": 271,
+    "callee": "re.exec",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 69,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 128,
+    "callee": "execFileSync",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 154,
+    "callee": "execFile",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 160,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 195,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  },
+  {
+    "file": "resources/plugins/computer/server.mjs",
+    "line": 205,
+    "callee": "run",
+    "review": "candidate: resolve binding and lifecycle before counting"
+  }
+]

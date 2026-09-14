@@ -46,7 +46,7 @@ export function ConfirmDialog(): JSX.Element | null {
             {pending.cancelLabel ?? '取消'}
           </button>
           <button
-            className="danger-btn"
+            className="primary-btn"
             autoFocus
             onClick={() => {
               pending.onConfirm()

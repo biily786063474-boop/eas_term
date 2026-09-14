@@ -1,0 +1,64 @@
+Original: /tmp/eas-preview-resident-final-check.log
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ **只放行 <门牌号>.eas-term.local:443，别的一律拒** (0.757ms)
+✔ 不是 CONNECT 的请求也拒 —— 别拿它当普通 HTTP 代理 (0.08425ms)
+✔ 头没收全时说 need-more，不误判成坏请求 (0.111667ms)
+✔ 头无限长要掐掉，不能一直缓冲 (0.046334ms)
+✔ **头后面的字节要原样交出来** —— 那是 TLS 握手的第一段 (0.350833ms)
+✔ LF-only 的请求也认（不能假设对方一定发 CRLF） (0.0635ms)
+✔ 混着换行时取**先出现**的终止符，别把正文吞进头 (0.056542ms)
+✔ agent / data 两种握手，格式全对才认 (0.138917ms)
+✔ 握手行任何一处不对都是 bad —— 不认识的角色一律拒 (0.097125ms)
+✔ **data 握手必须带凭证之外的流水号，且流水号要够长** —— 不然能被抢流 (0.079542ms)
+✔ 切行：收全了给行和剩下的字节 (0.107208ms)
+✔ 切行：\r\n 也认 (0.103166ms)
+✔ 切行：没换行且没超长 → need-more (0.043417ms)
+✔ **切行：不发换行的连接要被掐掉**，不能一直缓冲 (0.095875ms)
+✔ 手机该连的主机名 (0.045083ms)
+✔ **读行要按 UTF-8 解** —— 错误原因是给人看的中文 (0.04125ms)
+✔ 多字节字符跨在换行两侧也不会切坏 (0.039917ms)
+ℹ tests 3114
+ℹ suites 60
+ℹ pass 3098
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 15
+ℹ todo 0
+ℹ duration_ms 60442.360542
+
+✖ failing tests:
+
+test at src/main/cliUpdates/packages.test.ts:10:1
+✖ native package pipeline checks integrity, extracts, validates version/help, and preserves package resources (8047.498958ms)
+  Error: spawnSync /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-test-mvc56H/installed/codex/99.0.1.download-ab3d37fa-63b8-4720-b76e-191d367c913e/package/bin/codex ETIMEDOUT
+      at Object.spawnSync (node:internal/child_process:1144:20)
+      at spawnSync (node:child_process:928:24)
+      at execFileSync (node:child_process:971:15)
+      at verifyBinary (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.ts:51:18)
+      at stageVersion (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.ts:101:5)
+      at async TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.test.ts:36:3)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    errno: -60,
+    code: 'ETIMEDOUT',
+    syscall: 'spawnSync /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-test-mvc56H/installed/codex/99.0.1.download-ab3d37fa-63b8-4720-b76e-191d367c913e/package/bin/codex',
+    path: '/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-test-mvc56H/installed/codex/99.0.1.download-ab3d37fa-63b8-4720-b76e-191d367c913e/package/bin/codex',
+    spawnargs: [ '--version' ],
+    error: Error: spawnSync /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-cli-package-test-mvc56H/installed/codex/99.0.1.download-ab3d37fa-63b8-4720-b76e-191d367c913e/package/bin/codex ETIMEDOUT
+        at Object.spawnSync (node:internal/child_process:1144:20)
+        at spawnSync (node:child_process:928:24)
+        at execFileSync (node:child_process:971:15)
+        at verifyBinary (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.ts:51:18)
+        at stageVersion (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.ts:101:5)
+        at async TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/cliUpdates/packages.test.ts:36:3)
+        at async Test.run (node:internal/test_runner/test:1389:7)
+        at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3),
+    status: null,
+    signal: 'SIGTERM',
+    output: [ null, '', '' ],
+    pid: 76716,
+    stdout: '',
+    stderr: ''
+  }

@@ -1,3 +1,5 @@
+import {pendingPaneStarts} from './pendingPaneStarts'
+import { canMountHistory } from './canvas/historyMount'
 // 画布切片：全局唯一的无限画布场景（单例，不属于任何 tab）。
 // viewMode 全局切换分屏 / 画布；canvas 场景与 split 树共享同一批 leaf（见 §04 数据模型）。
 // 节点通过 leafId 引用 split 树里的 leaf → 两视图同一个 PaneView 实例 → 终端不断连。
@@ -239,6 +241,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                   .tabs.filter((t) => t.projectId === f.projectId)
                   .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
               )
+              let terminalLeafId: string | undefined
               if (isAgent)
                 // **cwd 和 resumeId 都要带上。**
                 // 以前这里只传 projectId：cwd 靠项目路径兜底（节点指向子目录或
@@ -266,11 +269,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
                   ...(agentPane?.pluginId ? { pluginId: agentPane.pluginId } : {}),
                   ...(agentPane?.initialMessage ? { initialMessage: agentPane.initialMessage } : {})
                 })
-              else await get().openTerminal({ projectId: f.projectId })
+              else terminalLeafId = await get().openTerminal({ projectId: f.projectId, sourceFrameId: f.id })
+              if (!isAgent && !terminalLeafId) continue
               const newLeaf = get()
                 .tabs.filter((t) => t.projectId === f.projectId)
                 .flatMap((t) => collectLeaves(t.root))
-                .find((l) => !before.has(l.id))
+                .find((l) => terminalLeafId ? l.id === terminalLeafId : !before.has(l.id))
               if (!newLeaf) continue
               set((s) => ({
                 canvas: {
@@ -922,6 +926,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     const s = get()
     const desc = collectDescendants(s.canvas.frames, id)
     const toRemove = new Set([id, ...desc])
+    for (const frameId of toRemove) pendingPaneStarts.cancel('frame:' + frameId)
     s.canvas.frames
       .filter((f) => toRemove.has(f.id))
       .forEach((frame) =>
@@ -979,16 +984,9 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
   addTerminalNode: async (frameId, roleId) => {
     const frame = get().canvas.frames.find((f) => f.id === frameId)
     if (!frame) return
-    const before = new Set(
-      get()
-        .tabs.filter((t) => t.projectId === frame.projectId)
-        .flatMap((t) => collectLeaves(t.root).map((l) => l.id))
-    )
-    await get().openTerminal({ projectId: frame.projectId })
-    const newLeaf = get()
-      .tabs.filter((t) => t.projectId === frame.projectId)
-      .flatMap((t) => collectLeaves(t.root))
-      .find((l) => !before.has(l.id))
+    const leafId = await get().openTerminal({ projectId: frame.projectId, sourceFrameId: frameId })
+    if (!leafId) return
+    const newLeaf = get().tabs.flatMap(t => collectLeaves(t.root)).find(l => l.id === leafId)
     if (!newLeaf) return
     set((s) => ({
       canvas: {
@@ -1026,6 +1024,7 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
         )
       }
     }))
+    return newLeaf.id
   },
 
   // 与 addTerminalNode 同构，只把「开哪种 leaf」换掉。**刻意不复用它加参数** ——
@@ -1188,14 +1187,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
 
   prefillTerminal: async (cmd, opts) => {
     const s = get()
-    const before = new Set(s.tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id)))
+
     // 画布模式且有顶层 Frame → 开成画布上的终端节点（用户正看着那儿）；否则退回普通新终端
     const frame = s.viewMode === 'canvas' ? s.canvas.frames.find((f) => !f.parentId) : undefined
-    if (frame) await get().addTerminalNode(frame.id)
-    else await get().openTerminal()
-    const leaf = get()
-      .tabs.flatMap((t) => collectLeaves(t.root))
-      .find((l) => !before.has(l.id))
+    const leafId = frame ? await get().addTerminalNode(frame.id) : await get().openTerminal()
+    if (!leafId) return
+    const leaf = get().tabs.flatMap(t => collectLeaves(t.root)).find(l => l.id === leafId)
     if (leaf?.pane.kind !== 'terminal') return
     const ptyId = leaf.pane.ptyId
     // 新开的终端要先把 shell 的启动输出（提示符、rc 脚本回显）吐完，
@@ -1205,7 +1202,12 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     // 仍然送进**终端**而不是后台执行：装完还要 `claude login`（那步绕不过去）、
     // 公司网络/代理失败时报错摆在眼前比一句「安装失败」有用，
     // 这两条是 agentInstall.ts 开头写的理由，和「是否静默」无关，所以保留。
-    setTimeout(() => window.api.pty.write(ptyId, opts?.run ? cmd + '\r' : cmd), 700)
+    setTimeout(() => {
+      // 排队结束到 shell 就绪之间，用户仍可能关闭或替换原面板。
+      const current = get().tabs.flatMap(t => collectLeaves(t.root)).find(l => l.id === leafId)
+      if (current?.pane !== leaf.pane || current.pane.kind !== 'terminal' || current.pane.ptyId !== ptyId) return
+      window.api.pty.write(ptyId, opts?.run ? cmd + '\r' : cmd)
+    }, 700)
     // 顺手把画布挪到这个新终端上，不然它可能落在视口外
     if (frame) {
       const node = get().canvas.frames.find((f) => f.id === frame.id)?.nodes.find((n) => n.leafId === leaf.id)
@@ -1339,6 +1341,13 @@ export const createCanvasSlice: StateCreator<AppState, [], [], CanvasSlice> = (s
     }),
 
   // 重命名画布节点 → 同步分屏那边的标签名（两个模式的终端名双向一致）
+  mountChatHistory: (frameId, nodeId, chatId) => {
+    if (!canMountHistory(get().canvas.frames, frameId, nodeId, chatId)) return false
+    set(s => ({ canvas: { ...s.canvas, frames: s.canvas.frames.map(f => f.id === frameId
+      ? { ...f, nodes: f.nodes.map(n => n.id === nodeId ? { ...n, chatId } : n) } : f) } }))
+    return true
+  },
+
   startNewChat: (frameId, nodeId) => {
     const exists = get()
       .canvas.frames.find((f) => f.id === frameId)

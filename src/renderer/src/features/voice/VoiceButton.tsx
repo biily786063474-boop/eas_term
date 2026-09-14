@@ -165,7 +165,7 @@ export function VoiceButton({
       run.cancel(); clearVoiceStopper(stopOwner)
       pendingTextRef.current = []
       capRef.current?.stop()
-      if (capRef.current) void window.api.stt.stop()
+      if (capRef.current || starting.current) void window.api.stt.stop()
     } },
     []
   )
@@ -221,7 +221,7 @@ export function VoiceButton({
   const stop = (writeTail = true): Promise<void> => {
     if (!writeTail) { run.cancel(); document.dispatchEvent(new Event('voice:discard')) }
     if (stopping.current) return stopping.current
-    if (starting.current) return Promise.resolve() // start's finally owns cleanup after its await.
+    if (starting.current) return window.api.stt.stop().then(() => {}, () => {}) // Cancel main's queued startup too; finally still owns local cleanup.
     if (!capRef.current && !rec) { clearVoiceStopper(stopOwner); return Promise.resolve() }
     const token = run.token
     capRef.current?.stop(); capRef.current = null

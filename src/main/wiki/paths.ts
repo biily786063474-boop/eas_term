@@ -7,7 +7,10 @@ import fs from 'fs'
 import path from 'path'
 
 import type { WikiStatus } from '../../shared/types'
-import { isRawName, libraryDirs, rawDirOf, taxonomyState, TAXONOMY_FILE, type ArchiveDirResult } from './taxonomy'
+import { libraryDirs, rawDirOf, taxonomyState, TAXONOMY_FILE, type ArchiveDirResult } from './taxonomy'
+// 目录遍历与目录名映射搬到 walk.ts（零 electron，Worker 里也能用）；这里转出口，调用方不用改
+import { dirOf, walkNotes } from './walk'
+export { dirOf, isRawDir, isMd, walkNotes } from './walk'
 
 /** 记「库在哪」的配置文件。统计字段（added 等）也放这儿 */
 export const cfgFile = (): string => path.join(app.getPath('userData'), 'wiki.json')
@@ -45,29 +48,6 @@ export const SOURCES = '.eas-sources.json'
  * 就发现「知识库空了」，而文件明明还在盘上。这个坑刚踩过一次，不能靠改名再造一次。
  * 判据是**盘上有哪个用哪个**，不做自动搬迁：搬用户的文件该由用户在访达里决定。
  */
-const LEGACY: Record<string, string> = {
-  '00-inbox': '00-收件箱',
-  // me 是后加的，没有中文旧名 —— dirOf 查不到别名就直接返回 'me'
-  people: '人物',
-  methods: '方法',
-  domains: '领域',
-  projects: '项目',
-  sources: '素材',
-  _templates: '_模板'
-}
-
-/** 这个库在盘上实际用的目录名：优先英文，老库回落中文 */
-export function dirOf(root: string, key: string): string {
-  const legacy = LEGACY[key]
-  if (!legacy) return key
-  try {
-    if (!fs.existsSync(path.join(root, key)) && fs.existsSync(path.join(root, legacy))) return legacy
-  } catch {
-    /* 读不到就按新名走 */
-  }
-  return key
-}
-
 export const INBOX = '00-inbox'
 
 /** 这个库的收件箱目录名。自定义库按配置里 role:"inbox" 那个，内置库还是 00-inbox
@@ -89,7 +69,6 @@ export const archiveDirOf = (root: string): ArchiveDirResult => rawDirOf(root, (
  *  唯一调用点是下面的 walkNotes，它本来就有 root。
  *  判定逻辑在 taxonomy.ts 的 isRawName（那边不引 electron，测试能直接打到实现）——
  *  这里只做一行转发：把 dirOf 注入当 resolve。 */
-export const isRawDir = (root: string, rel: string): boolean => isRawName(root, rel, (k) => dirOf(root, k))
 
 /** 收件箱里存逐字稿的隐藏目录（点号开头：访达看不见、不进徽章计数） */
 export const TRANSCRIPTS = '.transcripts'
@@ -124,34 +103,7 @@ export function setWikiPath(p: string | null): void {
   fs.writeFileSync(cfgFile(), JSON.stringify({ ...cur, path: p }, null, 2))
 }
 
-const MD = new Set(['.md', '.markdown'])
-export const isMd = (f: string): boolean => MD.has(path.extname(f).toLowerCase())
 
-/** 递归收集 .md（跳过素材/收件箱和隐藏目录，它们不是笔记） */
-export function walkNotes(root: string, rel = '', out: string[] = [], budget = { n: 20000 }): string[] {
-  if (budget.n <= 0) return out
-  let ents: fs.Dirent[]
-  try {
-    ents = fs.readdirSync(path.join(root, rel), { withFileTypes: true })
-  } catch {
-    return out
-  }
-  for (const d of ents) {
-    if (budget.n-- <= 0) return out
-    if (d.name.startsWith('.')) continue
-    const r = rel ? path.join(rel, d.name) : d.name
-    if (d.isDirectory()) {
-      if (isRawDir(root, r)) continue // 原始素材不是笔记，不进索引也不算反链（含老库的中文目录名）
-      walkNotes(root, r, out, budget)
-    } else if (d.isFile() && isMd(d.name)) {
-      // CLAUDE.md / AGENTS.md 是给 agent 看的**约定文件**，不是笔记。
-      // 不排掉的话它们会被当成孤儿页、缺 summary、正文里的 [[双链]] 示例还会被判成死链
-      if (rel === '' && (d.name === 'CLAUDE.md' || d.name === 'AGENTS.md')) continue
-      out.push(r)
-    }
-  }
-  return out
-}
 
 /** 这个目录里有没有知识库该有的东西。判据取最宽松的一组：
  *  骨架文件或任一顶层目录（含老库中文名）存在，就认。全都看不到才叫「不像」。 */

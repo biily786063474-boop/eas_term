@@ -101,3 +101,20 @@ test('releaseAll：一个会话退出，它持有的所有插件都减一', () =
   assert.equal(reg.refs('a'), 0)
   assert.equal(reg.refs('b'), 1)
 })
+test('drain与acquire互斥，旧租约版本不能停止新归属',()=>{
+ const {reg}=make();reg.acquire('x','a',()=>({pid:1}));const old=reg.leaseSnapshot('x')!
+ reg.acquire('x','b',()=>({pid:2}));assert.equal(reg.beginDrain('x',old),false)
+ const current=reg.leaseSnapshot('x')!;assert.equal(reg.beginDrain('x',current),true)
+ assert.throws(()=>reg.acquire('x','c',()=>({pid:3})),/draining/)
+})
+test('旧代次退出不能drop新实例，drain期间release不触发闲置回收',()=>{
+ const {reg,t,idle}=make();reg.acquire('x','a',()=>({pid:1}));const old=reg.leaseSnapshot('x')!
+ assert.equal(reg.beginDrain('x',old),true);reg.release('x','a');t.fire();assert.deepEqual(idle,[])
+ assert.equal(reg.finishDrain('x',old),true)
+ reg.acquire('x','b',()=>({pid:2}));assert.equal(reg.finishDrain('x',old),false);assert.equal(reg.get('x')?.pid,2)
+})
+test('带实例身份的退出回调不能摘掉后来创建的host',()=>{
+ const {reg}=make();const old=reg.acquire('x','a',()=>({pid:1}));reg.drop('x',old)
+ const current=reg.acquire('x','b',()=>({pid:2}));assert.equal(reg.drop('x',old),undefined)
+ assert.equal(reg.get('x'),current)
+})

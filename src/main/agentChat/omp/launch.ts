@@ -228,6 +228,7 @@ export function openOmpProcess(
   return {
     ok: true,
     proc: {
+      completed: new Promise<void>(resolve=>{child.once('close',()=>resolve())}),
       write(line) {
         child.stdin?.write(line)
       },

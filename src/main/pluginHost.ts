@@ -1,3 +1,9 @@
+import {createToolActivity} from './runtime/toolActivity.ts'
+import { runtimeStateStore } from './runtime/persistentState.ts'
+import { createManualStopLatch } from './runtime/manualStop.ts'
+import { stopHost } from './runtime/stopHost.ts'
+import { projectServiceOwners, canStopHostRefs } from './runtime/serviceProjection.ts'
+import type { RuntimeObservedService } from '../shared/runtimeResources.ts'
 // 插件面板的**宿主**：起插件进程（一个插件一个，面板与会话共用）、取面板 HTML、
 // 面板桥的主进程半边、给转发 shim 的 RPC 入口、`eas-plugin://` 协议。
 // 设计稿：docs/superpowers/specs/2026-09-05-插件面板宿主-design.md §H
@@ -12,11 +18,12 @@
 //   那条路走 mcpHandler 同一执行体与路径白名单
 // · 面板 HTML 走 eas-plugin://<panelSession>/，CSP 用响应头（panelHtml.ts）
 // · 面板只能调**本插件** server 的工具；resources/read 只许 ui://
-import { app, ipcMain, protocol, webContents } from 'electron'
+import { app, ipcMain, protocol, webContents, BrowserWindow, dialog } from 'electron'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { HostRegistry } from './hostRegistry.ts'
+import { startManagedSession } from './runtime/sessionStartup.ts'
 import { BuiltinCapabilityHost, type BuiltinHosted } from './builtinCapabilityHost.ts'
 import { McpClient, type McpToolDef } from './mcpClient.ts'
 import { preparePanelHtml } from './panelHtml.ts'
@@ -28,8 +35,10 @@ import { CANVAS_CALL_ALLOWLIST, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND
 import type { PluginInfo } from '../shared/types'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
+const manualStops=createManualStopLatch({load:()=>runtimeStateStore.read().stoppedPlugins,save:stoppedPlugins=>runtimeStateStore.write({...runtimeStateStore.read(),stoppedPlugins})})
 
 interface Hosted {
+  startedAt: number
   kind: 'plugin'
   name: string
   info: PluginInfo
@@ -83,6 +92,10 @@ export const builtinCapabilityHost = new BuiltinCapabilityHost<Hosted>(registry)
 
 const panels = new Map<string, Panel>()
 const shims = new Map<string, Shim>()
+const toolActivity=createToolActivity(()=>performance.now())
+export const installPluginAdmission=toolActivity.setAdmission
+export const observedPluginTasks=toolActivity.list
+export const cancelPluginTask=toolActivity.cancel
 
 /** 某个插件的数据目录（userData/plugin-data/<名>/）。宿主负责建，插件只管用。 */
 function pluginDataDir(name: string): string {
@@ -112,14 +125,15 @@ function spawnHosted(info: PluginInfo): Hosted {
     ...info.mcp.env
   }
   const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
-  const hosted: Hosted = { kind: 'plugin', name: info.name, info, client, tools: [], ready: Promise.resolve() }
+  const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())
     hosted.tools = await client.listTools()
   })()
   hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, e))
   client.onExit = () => {
-    registry.drop(info.name)
+    if (registry.get(info.name) !== hosted) return
+    registry.drop(info.name, hosted)
     // 进程没了，挂在它上面的面板要知道（渲染层显示「插件进程退出」并给重开）
     for (const p of panels.values()) if (p.pluginName === info.name) notifyPanel(p, 'ui/resource-teardown', { reason: 'process-exit' })
   }
@@ -130,7 +144,40 @@ function spawnHosted(info: PluginInfo): Hosted {
   return hosted
 }
 
+/** 插件服务器进程的首版启动预留：一个 node 进程 + 握手。不是实测峰值，不是硬上限。 */
+const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
+/** 同一插件同时被几块面板 / 几个 shim 请求时，只排一次队、只起一个进程；
+ *  准入落定后各自再 registry.acquire 登记自己的 ref。 */
+const startingPlugins = new Map<string, Promise<void>>()
+
+/** 起进程前先过资源准入（2026-09-13 缺口 1）。McpClient 在构造函数里就 spawn，
+ *  而 registry.acquire 的 create 是同步的，所以准入必须包在它外面：
+ *  registry 里还没有这个插件 → 走 startManagedSession，回调里才 registry.acquire 触发 spawn，
+ *  预算随 client.exited（真实退出）释放；已有进程 → 直接复用，不再排队。
+ *  归属按**应用级**（windowId null）：宿主本来就跨窗口、跨项目、跨会话共享，
+ *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
+  if(manualStops.stamp(info.name)!==null)throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
+  if (!registry.get(info.name)) {
+    let starting = startingPlugins.get(info.name)
+    if (!starting) {
+      starting = startManagedSession<void>({
+        id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', projectId: null, cost: PLUGIN_START_COST,
+        start: async signal => {
+          if (signal.aborted) throw new Error('插件启动已取消')
+          if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
+          const started = registry.acquire(info.name, ref, () => spawnHosted(info))
+          return { value: undefined, completed: started.kind === 'plugin' ? started.client.exited : Promise.resolve() }
+        }
+      }).catch(e => {
+        // 调度器的 'wait timeout' = 资源紧张排队没放行，不是插件的错；说人话，不漏内部字样。
+        if (e instanceof Error && e.message === 'wait timeout') throw new Error('资源紧张，插件启动排队等待未获准入；稍后重试，或在运行中心切回普通模式')
+        throw e
+      }).finally(() => { if (startingPlugins.get(info.name) === starting) startingPlugins.delete(info.name) })
+      startingPlugins.set(info.name, starting)
+    }
+    await starting
+  }
   const h = registry.acquire(info.name, ref, () => spawnHosted(info))
   if (h.kind !== 'plugin') throw new Error('插件身份冲突')
   await h.ready
@@ -201,6 +248,7 @@ async function panelOpen(wcId: number, args: { pluginId: string; panelId: string
 function panelClose(session: string): void {
   const p = panels.get(session)
   if (!p) return
+  toolActivity.closeSource(`panel:${session}`)
   panels.delete(session)
   registry.release(p.pluginName, `panel:${session}`)
 }
@@ -228,7 +276,7 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
         const full = withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
-        const result = await h.client.request('tools/call', full, 10 * 60 * 1000)
+        const result = await toolActivity.track({id:crypto.randomUUID(),name:p.pluginName+' / '+name,projectId:p.ctx.projectId,windowId:p.webContentsId,sourceKey:`panel:${p.session}`},()=>{if(panels.get(p.session)!==p||registry.get(p.pluginName)!==h||!h.client.alive)throw Error('原面板或插件已关闭，排队任务不再执行');return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)})
         broadcastToolResult(p.pluginName, name, params.arguments ?? {}, result, p.session)
         return { ok: true, result }
       }
@@ -298,7 +346,7 @@ export async function pluginRpcFromShim(body: {
         return { ok: true, result: { tools: h.tools } }
       case 'tools/call': {
         const toolName = String(params.name ?? '')
-        const result = await h.client.request('tools/call', params, 10 * 60 * 1000)
+        const result = await toolActivity.track({id:crypto.randomUUID(),name:name+' / '+toolName,projectId:null,windowId:null,sourceKey:`shim:${shimId}`},()=>{if(shims.get(shimId)?.pluginName!==name||registry.get(name)!==h||!h.client.alive)throw Error('原会话或插件已关闭，排队任务不再执行');return h.client.requestTracked('tools/call', params, 10 * 60 * 1000)})
         broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }
@@ -322,6 +370,7 @@ export function pluginHeartbeat(shimId: string): void {
 export function pluginBye(shimId: string): void {
   const s = shims.get(shimId)
   if (!s) return
+  toolActivity.closeSource(`shim:${shimId}`)
   shims.delete(shimId)
   registry.release(s.pluginName, `shim:${shimId}`)
 }
@@ -352,7 +401,20 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     if (!p) return new Response('no such panel', { status: 404 })
     return new Response(p.html, { status: 200, headers: p.headers })
   })
-  ipcMain.handle('plugin:panelOpen', (e, args: { pluginId: string; panelId: string; ctx: PanelCtx }) => panelOpen(e.sender.id, args))
+  ipcMain.handle('plugin:panelOpen', async (e, args: { pluginId: string; panelId: string; ctx: PanelCtx; resumeStopped?:boolean }) => {
+    const win=BrowserWindow.fromWebContents(e.sender)
+    if(!win||e.senderFrame!==e.sender.mainFrame)return {ok:false,error:'仅工作台可打开插件面板'}
+    try {
+    const info=findPlugin(args.pluginId),stamp=info?manualStops.stamp(info.name):null
+    if(info&&stamp!==null&&args.resumeStopped===true){
+      if(registry.get(info.name))return {ok:false,error:'服务仍在停止中，请稍后重试'}
+      const result=await dialog.showMessageBox(win,{type:'question',title:'重新启动插件服务',message:'重新启动 '+info.displayName+'？',detail:'该服务之前已由你手动关闭。确认后重新启动，供此插件面板使用。',buttons:['取消','重新启动'],defaultId:0,cancelId:0})
+      if(result.response!==1||win.isDestroyed())return {ok:false,error:'已取消重新启动'}
+      if(!manualStops.resume(info.name,stamp))return {ok:false,error:'服务停止状态已变化，请重新确认'}
+    }
+    return await panelOpen(e.sender.id,args)
+    } catch(error) { return {ok:false,error:error instanceof Error?error.message:String(error)} }
+  })
   ipcMain.handle('plugin:panelClose', (_e, session: string) => {
     panelClose(String(session))
     return { ok: true }
@@ -367,4 +429,32 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
       else h?.client.close()
     }
   })
+}
+
+/** Read-only projection of actual hosted plugin processes, not all app services.
+ * Shim identities currently lack project metadata; preserve unknown ownership.
+ */
+export function observedPluginServices(callerWindowId:number):RuntimeObservedService[]{
+  const windows=new Map([...panels.values()].map(p=>['panel:'+p.session,p.webContentsId] as const))
+  const owners=new Map<string,string>()
+  for(const panel of panels.values())if(panel.ctx.projectId)owners.set('panel:'+panel.session,panel.ctx.projectId)
+  return registry.keys().flatMap(key=>{
+    const hosted=registry.get(key),stamp=registry.leaseSnapshot(key)
+    if(!hosted||hosted.kind!=='plugin'||!stamp)return []
+    return [{id:'plugin:'+key+':'+stamp.generation,name:hosted.info.displayName,kind:'plugin' as const,
+      ...projectServiceOwners(stamp.refs,owners),uptimeMs:Math.max(0,performance.now()-hosted.startedAt),
+      state:hosted.client.alive?'running' as const:'stopping' as const,canStop:hosted.client.alive&&canStopHostRefs(stamp.refs,windows,callerWindowId)}]
+  })
+}
+
+/** Confirmation is UI-owned; final authority is the actual host lease stamp. */
+export async function stopObservedPlugin(serviceId:string,callerWindowId:number,confirm:(name:string,projects:readonly string[])=>Promise<boolean>):Promise<{ok:boolean;reason?:string}>{
+ const find=()=>registry.keys().find(key=>{const stamp=registry.leaseSnapshot(key);return stamp&&'plugin:'+key+':'+stamp.generation===serviceId})
+ const key=find();if(!key)return {ok:false,reason:'服务已退出或实例已改变'}
+ const scope=()=>new Map([...panels.values()].map(p=>['panel:'+p.session,p.webContentsId] as const))
+ return stopHost(registry,key,
+  (host,refs)=>host.kind==='plugin'&&host.client.alive&&canStopHostRefs(refs,scope(),callerWindowId),
+  host=>host.kind==='plugin'?confirm(host.info.displayName,observedPluginServices(callerWindowId).find(s=>s.id===serviceId)?.projectIds??[]):Promise.resolve(false),
+  host=>{if(host.kind==='plugin')host.client.close()},
+  host=>{if(host.kind==='plugin')manualStops.stop(host.name)})
 }

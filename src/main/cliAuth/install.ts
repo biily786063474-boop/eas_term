@@ -25,6 +25,7 @@
 // 报的是**我们真的知道的东西**：现在处于哪个阶段（下载安装 / 校验），
 // 外加安装器自己最后打出来的那一行。那一行是真的，也正是用户想看的。
 import { BrowserWindow, ipcMain } from 'electron'
+import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { spawn, type ChildProcess } from 'child_process'
 
 import { PROBE_ENV } from '../probeEnv'
@@ -92,7 +93,9 @@ function finish(phase: 'done' | 'failed', error?: string): void {
  * **命令是渲染层传下来的**（来自 installPlan / CliInfo.installCmd），
  * 这一层不拼命令 —— 拼命令的地方只有 agentInstall.ts 一处，两处各拼一份必然分叉。
  */
-export function startInstall(cli: CliId, cmd: string): { ok: boolean; error?: string } {
+let installGeneration = 0
+/** owner：发起安装的窗口。传了就把进程登记进运行中心（可见、可停、一次确认）。 */
+export function startInstall(cli: CliId, cmd: string, owner?: { windowId: number }): { ok: boolean; error?: string } {
   const running = slot.any()
   if (running) return { ok: false, error: `正在安装 ${running.cli}，等它完成` }
   if (!cmd || !cmd.trim()) return { ok: false, error: '没有可用的安装命令' }
@@ -110,6 +113,9 @@ export function startInstall(cli: CliId, cmd: string): { ok: boolean; error?: st
     return { ok: false, error: String(e) }
   }
   slot.claim(proc, { cli, proc, out: [], state: { cli, phase: 'running', step: '正在准备…' } })
+  // 运行中心登记（2026-09-13 缺口 3）：安装按方案不可任意中断，所以不排队；但要看得见、
+  // 能经一次确认停掉。stop 走既有 cancelInstall（kill + 标失败），不另起杀法。
+  if (owner) registerOwnedCliProcess({ id: `cli-install:${cli}:${++installGeneration}`, name: `CLI 安装（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (slot.any()?.proc === proc) cancelInstall() } })
 
   // **每个回调都包 guard(proc, …)** —— 见 slot.ts：漏写的唯一方式是不包，
   // 而不包就拿不到 live，写不出能跑的代码
@@ -193,7 +199,7 @@ export function cancelInstall(): void {
 }
 
 export function registerCliInstallHandlers(): void {
-  ipcMain.handle('cliAuth:startInstall', (_e, cli: CliId, cmd: string) => startInstall(cli, cmd))
+  ipcMain.handle('cliAuth:startInstall', (e, cli: CliId, cmd: string) => startInstall(cli, cmd, { windowId: e.sender.id }))
   ipcMain.handle('cliAuth:cancelInstall', () => {
     cancelInstall()
     return { ok: true }

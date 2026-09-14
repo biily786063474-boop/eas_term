@@ -1,3 +1,4 @@
+import {RuntimeCenter} from './features/workspace/RuntimeCenter'
 import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
 import { useEffect, useState } from 'react'
 
@@ -402,6 +403,7 @@ export function App(): JSX.Element {
               这个实例留着只为**一次性的启动提示** —— 它不能跟着搬进设置，
               它的意义就是在你还没想到要去设置里翻的时候拦你一下。 */}
           <FootprintPanel />
+          <RuntimeCenter />
           <SecretsPanel />
           {/* 常驻但平时不渲染任何东西，AI 调 request_secret 时才弹出来 */}
           <SecretRequestHost />

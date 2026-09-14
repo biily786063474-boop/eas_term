@@ -1,0 +1,21 @@
+2026-09-13; verified command chain 38359 exit 0
+../../out/renderer/assets/index-BQT_kJBy.js                 35.48 kB
+../../out/renderer/assets/javascript-C_OHM9hj.js            37.13 kB
+../../out/renderer/assets/stylus-BkS-boTH.js                38.26 kB
+../../out/renderer/assets/css-c-jst79C.js                   40.35 kB
+../../out/renderer/assets/index-D-LieBNd.js                 42.21 kB
+../../out/renderer/assets/sql-BSrOzCRI.js                   42.67 kB
+../../out/renderer/assets/index-CIGfziCX.js                 43.89 kB
+../../out/renderer/assets/index-CTctAONU.js                 43.93 kB
+../../out/renderer/assets/index-BuyCqzrZ.js                 54.94 kB
+../../out/renderer/assets/index-FlxwCDeJ.js                 55.83 kB
+../../out/renderer/assets/index-BlS5M-ZA.js                 73.54 kB
+../../out/renderer/assets/index-CRJ8JWXz.js                 86.49 kB
+../../out/renderer/assets/index-EO70z7N8.js                 97.45 kB
+../../out/renderer/assets/index-8c_8rm2c.js                102.86 kB
+../../out/renderer/assets/index-BKWG7dMY.js                106.82 kB
+../../out/renderer/assets/index-C4udKwyM.js                228.28 kB
+../../out/renderer/assets/DictView-c8dcTRQz.js             656.69 kB
+../../out/renderer/assets/dictionary-bundle-ZdkIBe8W.js  1,489.45 kB
+../../out/renderer/assets/index-DFpiIqV0.js              4,330.46 kB
+✓ built in 3.81s

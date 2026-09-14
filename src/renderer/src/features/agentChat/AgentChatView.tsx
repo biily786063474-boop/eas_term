@@ -1,3 +1,4 @@
+import { HistoryPanel } from './HistoryPanel'
 import { insertVoiceAtSelection } from '../voice/voiceTarget'
 import { useMessageQueue } from './useMessageQueue'
 import type { QueuedMessage } from './messageQueue'
@@ -39,7 +40,7 @@ import { MessageList } from './MessageList'
 import { ChatToolbar } from './ChatToolbar'
 import { RolePicker } from './RolePicker'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
-import { SendIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, DictIcon } from '../../ui/Icons'
+import { SendIcon, ChevronDownIcon, CloseIcon, DictIcon } from '../../ui/Icons'
 import { BranchBadge } from './BranchBadge'
 import { CliSetupPanel } from './CliSetupPanel'
 import { OmpSetupPanel } from './OmpSetupPanel'
@@ -63,17 +64,6 @@ import { addChip, dropChip, expandChips, type DictChip } from './chips.ts'
 // busy 给 true 是合理的默认值：start() 已经 resolve、进程正在跑，只是还没吐出第一个事件。
 /** 「3 分钟前 / 2 小时前 / 8月19日」。孤儿记录列表用 —— 精确到秒没有意义，
  *  人要判断的是「这是不是我刚才那个」。 */
-function fmtWhen(ts: number): string {
-  const d = Math.max(0, Date.now() - ts)
-  const m = Math.floor(d / 60000)
-  if (m < 1) return '刚刚'
-  if (m < 60) return `${m} 分钟前`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h} 小时前`
-  const dt = new Date(ts)
-  return `${dt.getMonth() + 1}月${dt.getDate()}日`
-}
-
 const EMPTY_VIEW: ChatView = { model: null, quotas: [], turns: [], pending: null, notices: [], usage: null, costUsd: undefined, busy: true }
 
 /** 预检的结果。**比 `CliAuthState` 宽一格，宽的只有 `cli` 这一个字段。**
@@ -568,7 +558,9 @@ export function AgentChatView({
    *  from 决定从哪一步进：没装从安装进，装了没登录直接进登录。 */
   const [setupFor, setSetupFor] = useState<{ cli: CliInfo; from: 'install' | 'login' } | null>(null)
   /** 「关掉的对话」那段展开了没有。**默认收起** —— 见渲染处的注释。 */
-  const [orphansOpen, setOrphansOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [archiveError, setArchiveError] = useState('')
+  const switchingRef = useRef(false)
   useEffect(() => {
     // 没选、没装、或者这个 CLI 不支持会话，都不用查 —— 那些有各自的提示路径
     setAuth(null)
@@ -673,6 +665,7 @@ export function AgentChatView({
   // 而 hook 不能放在条件分支里。
   const lastSaveRef = useRef(0)
   /** 最新一份待落盘的数据。卸载时的兜底写用它 —— 那一刻 view 已经取不到了。 */
+  const latestSaveRef = useRef<Parameters<typeof window.api.agentChat.saveHistory> | null>(null)
   const pendingSaveRef = useRef<Parameters<typeof window.api.agentChat.saveHistory> | null>(null)
   useEffect(() => {
     const turns = view?.turns
@@ -695,8 +688,10 @@ export function AgentChatView({
       trimForSave([...restored.turns, ...merged]),
       savedResumeId || null,
       cwd,
-      savedResumeCli || null
+      savedResumeCli || null,
+      nodeRef.split('|')[1] || leafId
     ] as Parameters<typeof window.api.agentChat.saveHistory>
+    latestSaveRef.current = args
     pendingSaveRef.current = args
     const save = (): void => {
       lastSaveRef.current = Date.now()
@@ -956,7 +951,7 @@ export function AgentChatView({
    *
    *  为什么连会话一起停：用户要的是「重启一个任务」。留着旧进程的话，
    *  新对话的第一条消息会带着旧 resumeId 续上去，那就不是新的了。 */
-  const handleNewChat = (discardQueue = false): void => {
+  const handleNewChat = async (discardQueue = false): Promise<void> => {
     if (!nodeRef) return
     const queued = messageQueueRef.current.controller.snapshot().items
     if (queued.length && !discardQueue) {
@@ -965,6 +960,23 @@ export function AgentChatView({
       } })
       return
     }
+    if (switchingRef.current) return
+    if (view?.busy || messageQueueRef.current.controller.snapshot().sendingId) {
+      setArchiveError('任务仍在运行，请先停止或等待完成，再创建新对话。')
+      return
+    }
+    switchingRef.current = true
+    const snapshot = trimForSave([...restored.turns, ...mergeUserMessages(view ?? EMPTY_VIEW, sentMessages).turns])
+    const args = latestSaveRef.current?.[0] === histKey ? latestSaveRef.current : [histKey, snapshot, savedResumeId || null, cwd, savedResumeCli || null, nodeRef.split('|')[1] || leafId] as Parameters<typeof window.api.agentChat.saveHistory>
+    const saved = !args[1].length || await window.api.agentChat.saveHistory(...args).catch(() => false)
+    switchingRef.current = false
+    if (!aliveRef.current) return
+    if (!saved) { setArchiveError('记录保存失败，当前对话已保留，请重试。'); return }
+    if (reducerRef.current.view().busy || (latestSaveRef.current && latestSaveRef.current !== args) || (messageQueueRef.current.controller.snapshot().items.length && !discardQueue)) { setArchiveError('对话状态发生变化，请稍后重试。'); return }
+    latestSaveRef.current = null
+    pendingSaveRef.current = null
+    setArchiveError('')
+    setHistoryOpen(false)
     const [fid, nid] = nodeRef.split('|')
     if (!fid || !nid) return
     messageQueueRef.current.controller.dispose()
@@ -1016,6 +1028,7 @@ export function AgentChatView({
   }
 
   const handleSend = async (override?: string): Promise<void> => {
+    if (switchingRef.current) return
     if (override === undefined && emptySlash.consumeCommand()) return
     // override 是程序性发送（空态卡片上的「接上上次的对话」那种），不该带上 chip；
     // 用户自己按发送才展开挂着的提示词
@@ -1275,59 +1288,40 @@ export function AgentChatView({
    *
    *  关节点不再删记录，于是它们成了孤儿 —— 新开的对话框是新 leafId，对不上。
    *  没有这个入口的话，留着跟删了没区别。 */
-  const [orphans, setOrphans] = useState<
-    { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]
-  >([])
-  useEffect(() => {
-    // 只有自己是空的时候才需要这个入口；已经有内容就别拿别的对话去打扰
-    if (sessionId || restored.turns.length > 0) return setOrphans([])
-    let alive = true
-    void window.api.agentChat
-      .listHistory(cwd)
-      .then((list) => {
-        if (!alive) return
-        // 「节点已经没了」现读一次布局算 —— 不订阅 tabs：这个判断只在打开空态那一刻
-        // 需要，订阅了会让整个对话框跟着画布的任何变动重渲染
-        const live = new Set(
-          useStore
-            .getState()
-            .tabs.flatMap((t) => collectLeaves(t.root).map((l) => l.id))
-        )
-        setOrphans(list.filter((h) => !live.has(h.leafId)))
-      })
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [cwd, sessionId, restored.turns.length])
-
-  /** 把一份孤儿记录接管到当前这个节点：内容搬过来，resumeId 也接过来
-   *  （模型那边才接得上），旧的那份再删掉，避免同一段对话留两份。
-   *
-   *  **顺序必须是先存后删。** 以前是读进内存 state 就立刻删磁盘上那份，而新的一份
-   *  要等「有 view.turns」才写盘 —— 用户不发消息就永远没有 view。于是点了
-   *  「接上上次」之后关掉节点 / 退出应用，那段对话既不在旧 leafId 文件里、
-   *  也没进新 leafId，**不可恢复**（.plans/data-safety H1）。
-   *  这条路径本来就是为「误关了要能捞回来」造的，结果它自己会把记录弄丢。 */
   const adoptOrphan = async (h: { leafId: string; resumeId: string | null }): Promise<void> => {
-    const got = await window.api.agentChat.loadHistory(h.leafId).catch(() => null)
-    if (!got) return
-    const turns = settleOnLoad(got.turns as Turn[])
-    setRestored({ turns, resumeId: got.resumeId, resumeCli: got.resumeCli })
-    if (h.resumeId) setAgentResumeId(tabId, leafId, h.resumeId, got.resumeCli ?? undefined)
-    setOrphans([])
-    // 立刻把它写到新 leafId 名下 —— 不等 view，那要等用户发消息才有。
-    const saved = await window.api.agentChat
-      .saveHistory(histKey, trimForSave(turns), h.resumeId ?? got.resumeId ?? null, cwd, got.resumeCli)
-      .catch(() => false)
-    if (!saved) {
-      // **存不成就不删。** 界面上内容已经接过来了，旧文件留着无非是多一份，
-      // 而删掉是不可逆的。turns 为空时 save 也返回 false（那时本来也没什么可搬）。
-      console.error('[agentChat] 接管的记录没能写到新节点名下，旧的那份保留不删')
-      return
-    }
-    void window.api.agentChat.forgetHistory(h.leafId).catch(() => undefined)
+    if (!nodeRef || sessionId || restored.turns.length || switchingRef.current) throw new Error('当前对话不为空')
+    switchingRef.current = true
+    try {
+      const got = await window.api.agentChat.loadHistory(h.leafId)
+      if (!got.turns.length || !got.resumeId) throw new Error('缺少恢复信息')
+      const owner = got.resumeCli ?? await window.api.agentChat.resumeOwner(got.resumeId, cwd)
+      if (!owner || !clis?.some(c => c.id === owner && c.available)) throw new Error('原 CLI 不可用')
+      if (!aliveRef.current) return
+      const [fid, nid] = nodeRef.split('|')
+      // Recheck the original mount after async IO; never redirect a reused node.
+      const node = useStore.getState().canvas.frames.find(f => f.id === fid)?.nodes.find(n => n.id === nid)
+      if (!node || (node.chatId ?? node.id) !== histKey || node.leafId !== leafId) throw new Error('节点已变化')
+      if (!useStore.getState().mountChatHistory(fid, nid, h.leafId)) throw new Error('此记录已在其他模块打开')
+      latestSaveRef.current = null
+      pendingSaveRef.current = null
+      setRestored({ turns: settleOnLoad(got.turns as Turn[]), resumeId: got.resumeId, resumeCli: owner })
+      setAgentResumeId(tabId, leafId, got.resumeId, owner)
+      setHistoryOpen(false)
+    } finally { switchingRef.current = false }
   }
+
+  const historyControls = <>
+    <div className="ac-history-bar"><span>{restored.turns[0]?.text?.slice(0, 50) || '当前对话'}</span><div>
+      <button type="button" aria-label="历史对话" onClick={() => setHistoryOpen(true)}>历史</button>
+      {nodeRef && <button type="button" onClick={() => requestConfirm({
+        message: '创建新对话？当前记录将先保存，新对话不携带旧上下文。未发送的草稿会清空；如有任务正在运行，请先停止或等待完成。',
+        confirmLabel: '保存并新建', onConfirm: () => { void handleNewChat() }
+      })}>＋ 新对话</button>}
+    </div></div>
+    {archiveError && <div className="ac-history-error" role="alert">{archiveError}</div>}
+    {historyOpen && <HistoryPanel cwd={cwd} moduleId={nodeRef.split('|')[1] || leafId} currentKey={histKey} leafId={leafId}
+      onClose={() => setHistoryOpen(false)} onResume={adoptOrphan} canResume={!!nodeRef && !sessionId && !restored.turns.length} />}
+  </>
 
   // 对话态：MessageList 渲染真正的消息流（Task 4），审批卡片挂在里面（Task 5）。
   const handleFollowupSend = async (
@@ -1388,7 +1382,7 @@ export function AgentChatView({
     return false
   }
   followupRef.current = item => handleFollowupSend(item.text, item.meta, item.id)
-  const enqueueFollowup = (text: string, meta?: QueuedMessage['meta'], mode: 'queue' | 'redirect' = 'queue') => messageQueue.controller.submit({ text, meta }, mode)
+  const enqueueFollowup = (text: string, meta?: QueuedMessage['meta'], mode: 'queue' | 'redirect' = 'queue') => switchingRef.current ? Promise.resolve(false) : messageQueue.controller.submit({ text, meta }, mode)
 
   if (sessionId) {
     // resolveApproval 需要 sessionId——ApprovalCard/MessageList 都不持有它（各自的
@@ -1411,6 +1405,7 @@ export function AgentChatView({
 
     return (
       <div className="agent-chat-view">
+      {historyControls}
         <MessageList
           view={displayView}
           onApprovalDecide={handleApprovalDecide}
@@ -1433,7 +1428,6 @@ export function AgentChatView({
           approvalHook={selected!.approvalHook}
           view={displayView}
           cwd={cwd}
-          onNewChat={() => handleNewChat()}
           sessionId={sessionId}
           onSend={enqueueFollowup}
           queue={messageQueue}
@@ -1532,6 +1526,7 @@ export function AgentChatView({
 
   return (
     <div className="agent-chat-view">
+      {historyControls}
       <div className="ac-empty">
         {/* 有上次的聊天记录就直接摆出来，没有才显示 slogan。
             这一步是「看得见」那一半 —— 另一半（模型记得）靠 pane.resumeId，
@@ -1703,41 +1698,6 @@ export function AgentChatView({
             <SemanticIcon kind="worktree" size={16} /><span className="ac-ctxbar-name">Worktree · 待创建</span>
           </span>}
         </div>
-        {/* 这个项目里还留着、但节点已经关掉的对话。**不自动带进来** ——
-            那是别的对话框的内容，替用户决定接上哪一段是越权；给入口、他自己挑。
-            只列最近 3 条，再多就成了历史管理界面，不是这里该干的事。 */}
-        {restored.turns.length === 0 && orphans.length > 0 && (
-          <div className="ac-orphans">
-            {/* **默认折叠**（用户 2026-09-03：「中间这个部分应该默认折叠，
-                现在这种状态看起来太满了」）。
-                空态第一屏该只有一句 slogan 和输入框 —— 三条历史摊开会把它填满，
-                而那是「可能要接回去」的东西，不是「现在要做」的事。
-                条数写在标题上：不展开也知道有没有、有几条。 */}
-            <button
-              type="button"
-              className={`ac-orphans-t${orphansOpen ? ' on' : ''}`}
-              onClick={() => setOrphansOpen((v) => !v)}
-            >
-              <ChevronRightIcon size={11} />
-              这个项目里还有 {orphans.length} 段关掉的对话
-            </button>
-            {orphansOpen &&
-              orphans.slice(0, 3).map((h) => (
-              <button
-                key={h.leafId}
-                type="button"
-                className="ac-orphan"
-                onClick={() => void adoptOrphan(h)}
-                title={h.preview}
-              >
-                <span className="ac-orphan-p">{h.preview || '（没有文字内容）'}</span>
-                <span className="ac-orphan-m">
-                  {h.turns} 轮 · {fmtWhen(h.savedAt)}
-                </span>
-              </button>
-              ))}
-          </div>
-        )}
         {/* 有 resumeId = 这个节点之前聊过，上下文在 CLI 那边留着，发第一条就续上。
             不说的话用户会以为记录丢了。
             **但上面已经摆着历史时不要说这句** —— 它的原文是「上面的对话记录不保留」，

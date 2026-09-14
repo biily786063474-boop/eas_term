@@ -1,0 +1,24 @@
+Original: /tmp/eas-preview-worker-targeted.log
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual recording uses bounded worker session, drains each editor FIFO and closes on stop (51.128542ms)
+✔ page loss terminates preview and permits a new recording without old callbacks stopping it (12.94675ms)
+(node:72475) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/voicePreviewWorker.real.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real streaming model decodes fixture in a worker, drains once and exits without blocking main heartbeat (5435.125666ms)
+(node:72476) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/voicePreviewWorker.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ streaming worker processes audio/take FIFO and resets text at sentence boundaries (8.35825ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5554.712584

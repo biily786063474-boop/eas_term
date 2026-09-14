@@ -46,26 +46,59 @@ function versionDir(root: string, id: UpdatableCli, version: string): string {
   if (!validVersion(version)) throw new Error('无效 CLI 版本。')
   return path.join(root, id, version)
 }
-function verifyBinary(bin: string, id: UpdatableCli, version: string): void {
-  const options = { env: managedEnv(), timeout: 8000, maxBuffer: 2 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'], encoding: 'utf8' as const }
-  const actual = execFileSync(bin, ['--version'], options).match(/\b\d+\.\d+\.\d+\b/)?.[0]
-  if (actual !== version) throw new Error('CLI 版本校验不一致，继续使用当前版本。')
-  const help = execFileSync(bin, id === 'codex' ? ['exec', '--help'] : ['--help'], options)
+// 校验规则是纯函数，同步/异步两条执行路径共用，规则只写一处。
+function checkVersionOutput(stdout: string, version: string): void {
+  if (stdout.match(/\b\d+\.\d+\.\d+\b/)?.[0] !== version) throw new Error('CLI 版本校验不一致，继续使用当前版本。')
+}
+function helpArgs(id: UpdatableCli): string[] { return id === 'codex' ? ['exec', '--help'] : ['--help'] }
+function checkHelpOutput(help: string, id: UpdatableCli): void {
   const flags = id === 'codex' ? ['--json', '--sandbox', '--skip-git-repo-check'] : ['--input-format', '--output-format', '--strict-mcp-config', '--effort', '--include-partial-messages']
   if (flags.some(flag => !help.includes(flag))) throw new Error('新 CLI 缺少对话所需参数，已保留当前版本。')
 }
-export function verifyVersion(root: string, id: UpdatableCli, version: string): string {
+const verifyOptions = (timeoutMs: number) => ({ env: managedEnv(), timeout: timeoutMs, maxBuffer: 2 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] as ['ignore', 'pipe', 'pipe'], encoding: 'utf8' as const })
+/** **只给 boot()/rollback() 用**：那时窗口和资源管理器都还没有，而激活前必须跑一次二进制。
+ *  其余路径一律用下面的异步版本 —— 同步版 8 秒 timeout 内主线程整个卡住，
+ *  2026-09-13 全量高负载时 stage 路径正是在这里 ETIMEDOUT。 */
+function verifyBinarySync(bin: string, id: UpdatableCli, version: string): void {
+  checkVersionOutput(execFileSync(bin, ['--version'], verifyOptions(8000)), version)
+  checkHelpOutput(execFileSync(bin, helpArgs(id), verifyOptions(8000)), id)
+}
+async function verifyBinary(bin: string, id: UpdatableCli, version: string, timeoutMs = 8000): Promise<void> {
+  // execFile 超时给的是「Command failed: <完整路径>」外加 killed/signal，既不好看也让上层的
+  // /abort|timeout/ 判据失手。这里翻译成一句带 timeout 字样的人话；其余错误原样抛。
+  const probe = async (args: string[]): Promise<string> => {
+    try { return (await run(bin, args, verifyOptions(timeoutMs))).stdout }
+    catch (e) {
+      const err = e as { killed?: boolean; signal?: string | null }
+      if (err.killed || err.signal) throw new Error('CLI 启动校验超时（timeout），继续使用当前版本。')
+      throw e
+    }
+  }
+  checkVersionOutput(await probe(['--version']), version)
+  checkHelpOutput(await probe(helpArgs(id)), id)
+}
+function resolveEntry(root: string, id: UpdatableCli, version: string): string {
   const dir = versionDir(root, id, version)
   const marker = JSON.parse(fs.readFileSync(path.join(dir, 'entry.json'), 'utf8'))
   if (typeof marker.bin !== 'string' || !marker.bin.startsWith('package/') || marker.bin.includes('\\') || marker.bin.split('/').includes('..')) throw new Error('CLI 入口无效。')
   const bin = path.join(dir, marker.bin)
   if (!fs.realpathSync(bin).startsWith(fs.realpathSync(dir) + path.sep)) throw new Error('CLI 入口越界。')
-  verifyBinary(bin, id, version)
+  return bin
+}
+/** 同步版：仅 boot()/rollback()（见 verifyBinarySync 的说明）。 */
+export function verifyVersion(root: string, id: UpdatableCli, version: string): string {
+  const bin = resolveEntry(root, id, version)
+  verifyBinarySync(bin, id, version)
+  return bin
+}
+export async function verifyVersionAsync(root: string, id: UpdatableCli, version: string, opts?: { timeoutMs?: number }): Promise<string> {
+  const bin = resolveEntry(root, id, version)
+  await verifyBinary(bin, id, version, opts?.timeoutMs)
   return bin
 }
 export async function stageVersion(root: string, id: UpdatableCli, version: string, signal: AbortSignal): Promise<void> {
   const final = versionDir(root, id, version)
-  if (fs.existsSync(final)) { verifyVersion(root, id, version); return }
+  if (fs.existsSync(final)) { await verifyVersionAsync(root, id, version); return }
   const [name, packageVersion] = platformPackage(id, version)
   const meta = await metadata(name, packageVersion, signal)
   const url = new URL(meta.dist?.tarball)
@@ -98,7 +131,7 @@ export async function stageVersion(root: string, id: UpdatableCli, version: stri
     await run(tar, ['-xzf', archive, '-C', temp], opts)
     const bin = path.join(temp, candidates[0])
     if (process.platform !== 'win32') await fsp.chmod(bin, 0o755)
-    verifyBinary(bin, id, version)
+    await verifyBinary(bin, id, version)
     signal.throwIfAborted()
     await fsp.writeFile(path.join(temp, 'entry.json'), JSON.stringify({ bin: candidates[0], integrity: meta.dist.integrity }))
     await fsp.unlink(archive)

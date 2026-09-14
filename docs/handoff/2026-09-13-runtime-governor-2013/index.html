@@ -1,0 +1,141 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eas-Term 资源治理 · 详细交接 2026-09-13</title><style>*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* 导航 */
+nav{position:sticky;top:0;z-index:50;background:rgba(10,10,10,.86);
+  backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid #262626}
+.navwrap{max-width:1080px;margin:0 auto;padding:11px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.navbrand{font-size:12.5px;color:#525252;letter-spacing:.06em;margin-right:8px;white-space:nowrap}
+nav a{font-size:12.5px;color:#a3a3a3;text-decoration:none;padding:5px 10px;border-radius:8px;
+  transition:color .15s,background-color .15s;white-space:nowrap}
+nav a:hover{color:#f5f5f5;background:#1c1c1c}
+
+/* 布局 */
+main{max-width:1080px;margin:0 auto;padding:0 24px 120px}
+header.hero{padding:76px 0 48px;border-bottom:1px solid #1f1f1f;margin-bottom:56px}
+.eyebrow{display:inline-block;font-size:11.5px;letter-spacing:.16em;color:#737373;
+  border:1px solid #2e2e2e;border-radius:999px;padding:5px 13px;margin-bottom:22px}
+h1{font-size:38px;line-height:1.25;margin:0 0 18px;letter-spacing:-.02em;font-weight:600}
+.lede{font-size:16.5px;color:#a3a3a3;max-width:660px;margin:0 0 30px;line-height:1.8}
+.meta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#525252}
+.meta b{color:#d4d4d4;font-weight:500}
+section{margin-bottom:76px;scroll-margin-top:76px}
+h2{font-size:12px;letter-spacing:.15em;color:#737373;font-weight:600;text-transform:uppercase;margin:0 0 10px}
+h2+.sectitle{font-size:25px;font-weight:600;margin:0 0 12px;letter-spacing:-.01em;line-height:1.35}
+.secnote{color:#a3a3a3;margin:0 0 30px;max-width:720px;font-size:14.5px}
+h3{font-size:17px;font-weight:600;margin:38px 0 14px}
+h4{font-size:14.5px;font-weight:600;margin:24px 0 10px;color:#e5e5e5}
+p{margin:0 0 14px}
+
+/* 卡片与语义卡 */
+.card{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:24px 26px;margin-bottom:18px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.verdict{border-left:2px solid #34d399;background:rgba(16,185,129,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.dissent{border-left:2px solid #fb7185;background:rgba(244,63,94,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.warn{border-left:2px solid #fbbf24;background:rgba(245,158,11,.05);border-radius:0 14px 14px 0;padding:20px 24px;margin:22px 0}
+.vlabel{font-size:11px;letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+.verdict .vlabel{color:#6ee7b7}.dissent .vlabel{color:#fda4af}.warn .vlabel{color:#fcd34d}
+
+/* 数字块 */
+.stat{background:rgba(23,23,23,.5);border:1px solid #262626;border-radius:14px;padding:20px}
+.stat .num{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-bottom:6px}
+.stat .lab{font-size:12.5px;color:#737373;line-height:1.5}
+.n-em{color:#6ee7b7}.n-am{color:#fcd34d}.n-sk{color:#7dd3fc}.n-ro{color:#fda4af}.n-vi{color:#c4b5fd}
+
+/* 表格 */
+.tw{overflow-x:auto;margin:18px 0;border:1px solid #262626;border-radius:14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;padding:12px 16px;background:#141414;color:#a3a3a3;font-weight:500;
+  font-size:12px;letter-spacing:.05em;border-bottom:1px solid #262626;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #1f1f1f;color:#d4d4d4;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background-color .15s}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td b,th b{color:#f5f5f5;font-weight:600}
+
+/* 徽章 */
+.b{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:6px;font-weight:500;white-space:nowrap;line-height:1.6}
+.b-em{background:rgba(16,185,129,.14);color:#6ee7b7}
+.b-am{background:rgba(245,158,11,.14);color:#fcd34d}
+.b-sk{background:rgba(14,165,233,.14);color:#7dd3fc}
+.b-ro{background:rgba(244,63,94,.14);color:#fda4af}
+.b-vi{background:rgba(139,92,246,.14);color:#c4b5fd}
+.b-gy{background:#1f1f1f;color:#a3a3a3}
+
+/* 代码与流程图 */
+code{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  background:#171717;border:1px solid #262626;padding:1.5px 6px;border-radius:5px;color:#e5e5e5}
+pre{background:#111;border:1px solid #262626;border-radius:12px;padding:20px 22px;overflow-x:auto;
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:12.5px;
+  line-height:1.85;color:#d4d4d4;margin:16px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.flow{color:#6ee7b7}.dim{color:#525252}.hi{color:#fcd34d}
+
+/* 列表 */
+ul,ol{margin:0 0 14px;padding-left:20px}
+li{margin-bottom:7px;color:#d4d4d4}
+li::marker{color:#525252}
+.clean{list-style:none;padding-left:0}
+.clean li{padding-left:22px;position:relative}
+.clean li::before{content:"→";position:absolute;left:0;color:#525252}
+
+/* 时间线 */
+.tl{border-left:1px solid #262626;padding-left:24px;margin:20px 0 20px 6px}
+.tl .it{position:relative;padding-bottom:22px}
+.tl .it::before{content:"";position:absolute;left:-29px;top:7px;width:7px;height:7px;
+  border-radius:50%;background:#404040;border:2px solid #0a0a0a}
+.tl .it.on::before{background:#34d399}
+.tl .tm{font-size:11.5px;color:#737373;letter-spacing:.05em;margin-bottom:3px}
+.tl .tt{font-size:14.5px;font-weight:500;margin-bottom:3px}
+.tl .td{font-size:13px;color:#a3a3a3}
+
+/* 进度条 */
+.bar{height:6px;background:#1f1f1f;border-radius:999px;overflow:hidden;margin:8px 0 4px}
+.bar > i{display:block;height:100%;border-radius:999px}
+
+/* 决策码 */
+.dcode{background:#111;border:1px solid #2e2e2e;border-radius:12px;padding:18px 20px;margin:20px 0}
+.dcode .dlabel{font-size:11px;letter-spacing:.14em;color:#737373;margin-bottom:10px}
+.dcode .dcmd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:#fcd34d;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dcode button{background:#1f1f1f;border:1px solid #2e2e2e;color:#a3a3a3;font-size:12px;
+  padding:5px 12px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}
+.dcode button:hover{color:#f5f5f5;border-color:#525252}
+
+hr{border:none;border-top:1px solid #1f1f1f;margin:44px 0}
+footer{border-top:1px solid #1f1f1f;padding:34px 0 0;color:#525252;font-size:12.5px;line-height:1.9}
+
+@media (max-width:640px){
+  h1{font-size:29px}
+  header.hero{padding:48px 0 34px}
+  main{padding:0 18px 80px}
+  .navwrap{padding:10px 18px}
+  .card{padding:20px}
+  section{margin-bottom:56px}
+}
+body{overflow-x:hidden}p,td,li,code,.dcmd{overflow-wrap:anywhere}.meta{color:#a3a3a3}nav .navwrap{max-height:130px;overflow:auto}</style></head><body><nav><div class="navwrap"><span class="navbrand">EAS-TERM · HANDOFF</span><a href="#decision">可以接手开发，不能据此提交发布</a><a href="#background">项目背景和用户原始目标</a><a href="#workspace">先进入正确工作树</a><a href="#progress">整体做到哪里</a><a href="#latest">流式 Worker 这轮具体改了什么</a><a href="#verification">验证结果：必须区分版本和层次</a><a href="#application">隔离应用在哪里</a><a href="#rollback">三个“回退点”，用途不能混为一谈</a><a href="#files">接手先读哪些文件</a><a href="#next">接手第一轮怎么做</a></div></nav><main><header class="hero"><div class="eyebrow">DEVELOPMENT HANDOFF · 2026-09-13</div><h1>资源治理继续开发交接</h1><p class="lede">背景、源码现状、验证边界和灾难恢复材料放在一处。接手人无需猜测上一轮做过什么，也不会把旧 main 当成当前成果。</p><div class="meta"><span>截止：<b>2026-09-13 20:13 PDT</b></span><span>工作分支：<b>fix/background-render-budget</b></span><span>状态：<b>未提交 · 未发布 · 整体未完</b></span></div></header><section id="decision"><h2>HANDOFF STATUS</h2><div class="sectitle">可以接手开发，不能据此提交发布</div><p class="secnote">截至 2026-09-13 20:13 PDT 的源码与证据；本轮只整理交接，未继续修改业务实现。</p><div class="warn"><b>原目标未完成。</b> 已推进统一资源软准入与运行中心，最新落到流式识别 Worker 驻留与取消闭环；仍有全量测试不稳定、录音整链和全软件入口覆盖缺口。</div><div class="dissent"><b>最新全量不是绿灯：</b>3114 项中 3096 通过、3 失败、15 跳过。3 项来自 Codex launcher 配置阶段等待断言；单独复跑 6/6 通过，根因未确认。不得用更早的一次全绿覆盖这个结论。</div><div class="verdict"><b>已验证切片：</b>17 项流式专项通过；真实官方 WAV + Worker + 资源管理器测试通过；最终 typecheck/build 通过。隔离应用实际排队→取消、模型驻留→原生确认关闭已眼验。真实麦克风采集未验。</div><p>当前分支没有新 commit、没有发版、没有回退。已构建的隔离实例用于测试，不代表正式应用已安装这些改动。</p></section><section id="background"><h2>PRODUCT & INTENT</h2><div class="sectitle">项目背景和用户原始目标</div><p class="secnote">Eas-Term 是当前仓库；不是笔纵画板 taptv 的源码仓库。</p><p>Eas-Term 是 Electron / TypeScript / React 桌面工作台：无限画布按项目组织 Frame，承载终端、AI 对话、浏览器、文件、代码地图、辞典、知识库等模块；可管理 CLI 会话和 MCP 插件。用户是独立开发者，中文沟通，多项目/多会话并行工作，不能影响正在跑的生产任务。</p><p>本次大任务是 <b>运行资源闸门与统一服务中心</b>：自动识别设备能力；普通模式 80%、节能模式 50%；对软件发起的工作统一准入/排队；服务可追溯归属、时长并安全停止。工作必须由确定性本地代码完成，不让模型判是否放行，不额外消耗模型 token。</p><div class="warn">80%/50% 分别是整机 CPU 与内存的软调度阈值，不是两者相加、不是单进程配额，也不是任何瞬间绝不越线的硬上限。外部程序、已在运行的不可抢占工作和估算误差均可能超线。未知指标不能伪装为 0；成本估计不是实测峰值。</div><p>队列等待不能自动重试带副作用或结果未知任务。停止只能操作软件确有所有权的实例，禁止按进程名全局杀服务。共享服务不能因一个项目的关闭伤及其他项目。</p><p>方案与完整验收标准：<code>docs/superpowers/plans/2026-09-13-runtime-resource-governor.md</code>。状态：用户已确认实施，整体未交付。原粗估 12–21 工程日只是规划估计，不是剩余时间或承诺。</p></section><section id="workspace"><h2>SOURCE OF TRUTH</h2><div class="sectitle">先进入正确工作树</div><p class="secnote">根 main、发布记录、开发工作树是三个不同层面的状态。</p><div class="tw"><table><thead><tr><th>位置 / 标识</th><th>当前事实</th><th>接手含义</th></tr></thead><tbody><tr><td>根目录 main</td><td><code>/Users/biily/Biily/Projects/vibe coding/terminal</code><br>HEAD <code>4562768</code>，package 0.4.90</td><td>有自己的混合未提交改动。不要在这里继续资源治理，也不要从根 memory 的旧段落推断最新状态。</td></tr><tr><td>实际开发工作树</td><td><code>/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression</code><br>分支 <code>fix/background-render-budget</code><br>HEAD <code>2d884c2</code></td><td>本次资源治理与其它未提交功能共存；不要因目录名 voice-regression 误认为只有语音改动。</td></tr><tr><td>最近已发布基线</td><td>本地发布记录：0.4.94，产品源码 <code>98a20f8</code>；随后发布文档提交至 <code>2d884c2</code></td><td>发布记录称五包和 GitHub 镜像核验完成。本交接未重新访问线上，不把记录等同当前线上实时核验。</td></tr><tr><td>本轮实现</td><td>大批 tracked 修改和 untracked 新文件；交接前盘点 229 条文件状态（49 tracked 修改，余下未跟踪）</td><td>这是整个混合工作树，不是本 agent 独占的文件归属或纯资源治理 diff。交接新增文件会使后续数量增加。</td></tr></tbody></table></div><pre><code>cd &#x27;/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression&#x27;
+git status --short
+git log -6 --oneline
+git rev-parse HEAD
+git rev-parse checkpoint/runtime-governor-baseline-20260913^{}</code></pre><p>优先级：实际 Git/源码 → 最新验收证据 → 架构17末尾更新 → memory最新追加。历史文档会保留“未接线/未发布”等旧状态；读后续覆盖段，不把所有历史段合并成一张当前完成表。</p></section><section id="progress"><h2>COVERAGE MATRIX</h2><div class="sectitle">整体做到哪里、还有哪些边界</div><p class="secnote">下表是交接摘要，不替代逐条验收；没有编造整体完成百分比。</p><div class="tw"><table><thead><tr><th>子系统</th><th>已实现 / 已有证据</th><th>未闭合部分</th></tr></thead><tbody><tr><td>采样与软策略</td><td>CPU核心数归一化、平台内存适配、80/50策略、迟滞、采样失效关准入、控制器显式生命周期。</td><td>跨平台校准、长期压力/睡眠恢复/热状态/GPU覆盖；不能宣称硬配额。</td></tr><tr><td>队列与预算</td><td>manager/policy/scheduler/ledger；有界队列、项目轮转、取消、成本预留；每采样周期最多准入1项。</td><td>父子工具额度交接、成本学习、全优先级语义、完整压力验收；嵌套同池拒绝不等于父子预算已经实现。</td></tr><tr><td>插件 / MCP</td><td>调用结果与真实完成分离；宿主归属/停止确认/手动停止意图持久化，避免重挂自动拉起。</td><td>未知shim归属、跨窗口共享按项目释放、所有插件能力覆盖不能笼统宣称完成。</td></tr><tr><td>PTY / Frame</td><td>终端启动准入，源pane/Frame取消意图，晚到PTY身份复核，精确leafId，延迟预填复核；实测交互shell用默认SIGHUP关闭。</td><td>恢复中单个无leaf占位节点删除及错误反馈仍需细化；主动脱离TTY的所有后代不保证回收。</td></tr><tr><td>AI / OMP ACP</td><td>普通AI和ACP启动准入、真实退出持有预算；实际Claude回应/关闭、ACP真实本地假模型协议证据。</td><td>ACP隔离UI遇账号引导，不能迁移生产凭证来冒充验收；AI内部工具未逐项纳管。</td></tr><tr><td>LSP / 代码地图</td><td>初始化Promise去重、旧代次清理、共享窗口引用、实际close生命周期、启动准入。</td><td>已有索引工作不可抢占；共享默认“释放本项目”的UI动作与完整项目归属待补。</td></tr><tr><td>文件ASR</td><td>共享模型独立启动准入/驻留预算；解码独立提交；失败不当空文本；部分结果保留。真实文件→排队→非空逐字稿→确认关闭已验。</td><td>多段中止/保存失败/运行中取消部分仍仅行为测试，更多UI场景待做。</td></tr><tr><td>VAD</td><td>启动准入、录音信号取消、真实exit预算回收；真实Worker测试。</td><td>标准/强过滤实际录音与噪声整链、Windows待验；初始化取消可能等raw就绪/原超时，不承诺立即停线程。</td></tr><tr><td>流式预览（本轮）</td><td>模型/decode移出主线程、单录音Worker、FIFO切句、ACK有界、预算驻留、退出与服务停止。</td><td>实麦、标准/强VAD到定稿整链、持续音频压力与跨平台；驻留成本仍为估算。</td></tr><tr><td>运行中心</td><td>全局入口、真实队列/服务、模式切换、原生确认；亮色流式路径已验；此前暗色/焦点返回已有记录。</td><td>按项目筛选、最近结束、完整进程树、全平台窄屏/压力体验仍缺。</td></tr></tbody></table></div></section><section id="latest"><h2>LATEST IMPLEMENTATION</h2><div class="sectitle">流式 Worker 这轮具体改了什么</div><p class="secnote">上一轮 19:18 的“仅模型加载准入”实现已经被本轮替换，不要把旧路径加回来。</p><pre><code>stt:start（真实 sender + recordingEpoch + AbortSignal）
+  → openManagedPreview → startManagedSession → manager/ledger
+  → 准入后才 new Worker → ready 释放启动槽，驻留预算继续持有
+stt:audio → VoiceGate / VAD → bounded preview session → Worker decode
+flush / 切编辑器 / stop → FIFO takeText → fallback + SenseVoice 定稿
+取消 / 页面离开 / 服务关闭 → terminate 请求 → 实际 exit → 释放预算</code></pre><div class="tw"><table><thead><tr><th>文件</th><th>责任与不可破坏的契约</th></tr></thead><tbody><tr><td><code>src/main/stt.ts</code></td><td>删除主线程ensureRecognizer/loadRecognizer/decode循环；录音独占session。保留sender、epoch、跨编辑器目标、VAD drain、旧异步回调隔离。不自动发送消息或执行识别文本。</td></tr><tr><td><code>voicePreviewWorker.ts</code></td><td>线程内加载Zipformer WASM；音频和take按FIFO处理；take结束旧流并建新流。已有19:28未接线代码被接回，非本轮从零独创。</td></tr><tr><td><code>voicePreviewSession.ts</code></td><td>pending音频≤32768个16kHz样本（约2.048秒），单帧≤16384，总请求≤64；复制再转移，不detatch定稿音频。超限明确错误并停，不静默丢语音。ready与take超时30秒；completed只认exit。</td></tr><tr><td><code>runtime/voicePreviewAdmission.ts</code></td><td>openManagedPreview替换并移除loadVoicePreview旧分配-only路径；估计10% CPU/512MiB覆盖本录音流式工作，ready放计算槽、exit放驻留预算。初始化取消请求terminate，失败/取消等待真实exit。</td></tr><tr><td><code>runtime/ipc.ts</code></td><td>voice-preview:路由至ownedSessions，使用真实窗口归属和原生确认，不走插件或共享ASR停止路由。</td></tr><tr><td><code>RuntimeMonitorPanel.tsx</code></td><td>覆盖说明加入流式模型/线程及有界缓冲，不再误写“主线程流式未覆盖”；仍明示其它入口未全覆盖。</td></tr></tbody></table></div><h3>已防住的竞态</h3><ul><li>take发出后旧partial不得回显，即使下一句仍是同一个编辑器targetId。</li><li>音频原buffer留给SenseVoice，Worker拿副本转移，避免定稿突然变空。</li><li>排队取消不创建线程；加载取消和真实exit分开，不能只用terminate返回值或JS置null假装释放内存。</li><li>旧Worker错误/旧VAD初始化晚到不许清除新录音；页面导航、崩溃、销毁都触发对应生命周期。</li><li>切目标时不够最短语音的旧流也清理；有效句同步提交FIFO边界，再异步收定稿。</li></ul><p>最新16个流式切片文件已与上一轮证据哈希重新对照，0项变化。不是新的全量测试，不能据此宣称全量恢复。</p></section><section id="verification"><h2>EVIDENCE & FAILURES</h2><div class="sectitle">验证结果：必须区分版本和层次</div><p class="secnote">本轮交接没有重新跑功能测试；下面是已核对并复制留存的最近执行证据。</p><div class="tw"><table><thead><tr><th>执行</th><th>结果</th><th>结论</th></tr></thead><tbody><tr><td>流式定向测试</td><td>17/17；真实WAV+manager+Worker单独测试1/1</td><td>FIFO、退出、预算、主线程心跳等专项有效；不是实麦UI。</td></tr><tr><td>首轮 npm run check</td><td>3114总数；3099通过，15跳过，0失败</td><td>早于最后文案/测试增强的通过记录。不能覆盖后两轮全量失败。</td></tr><tr><td>最终全量第1次</td><td>3098通过，1失败，15跳过；packages.test.ts</td><td>假CLI --version 的 execFileSync 8000ms ETIMEDOUT，SIGTERM；单文件原样复跑1/1。</td></tr><tr><td>最终全量第2次</td><td>3096通过，3失败，15跳过；codexCapabilityLauncher.test.mjs</td><td>配置阶段5秒内未见夹具PID：SIGTERM、owned IPC cancel、disconnect三条断言。该文件单独6/6通过。</td></tr><tr><td>最终类型 / 构建</td><td>npm run typecheck 和 npm run build exit 0</td><td>构建成功不等于最新全量通过。保留Node模块类型/DevTools Autofill警告。</td></tr><tr><td>git diff --check</td><td>通过</td><td>只证明空白格式检查，不是业务验收。</td></tr></tbody></table></div><div class="dissent">失败根因未证实。不能称“肯定机器忙”“已确认旧测试问题”，也不能为了过关删除权限/真实退出断言、增加超时、降低测试门槛或跳过用例。第一轮失败未稳定复现，第二轮是另一组失败。</div><h3>先看这些错误位置</h3><ul><li><code>src/main/cliUpdates/packages.test.ts:36</code> → <code>packages.ts:51</code>，verifyBinary对临时假CLI执行--version，8秒timeout。</li><li><code>src/main/codexCapabilityLauncher.test.mjs</code>，5秒内等待fixture日志中的pid；不满足时尚不能判断真正launch/probe失败在哪层。</li></ul><p>接手时采集失败同一次执行的父子进程身份、启动时间、夹具日志、退出状态与负载；定位首个缺口，不凭测试末行猜隧道或Worker。不能全局杀Node/Electron/CLI“清环境”。</p></section><section id="application"><h2>ISOLATED APP</h2><div class="sectitle">隔离应用在哪里、实测到底做了什么</div><p class="secnote">PID是时点记录，任何操作前再次核对路径和profile，不能拿旧PID直接kill。</p><div class="tw"><table><thead><tr><th>项目</th><th>内容</th></tr></thead><tbody><tr><td>当前隔离实例</td><td><code>/tmp/eas-history-ui-review/Eas-History-Dev.app</code>；主进程PID <code>84898</code>，本次交接ps核对仍存在。</td></tr><tr><td>profile</td><td><code>/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-history-review-4SkEoU</code></td></tr><tr><td>隔离知识库</td><td><code>/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-runtime-transcription-wiki-80any_28</code>，先前官方测试WAV用途；不要迁入生产密钥。</td></tr><tr><td>实例凭据</td><td><code>preview-resident/instance.json</code>及本交接evidence/instance.json；当前构建引用原worktree out，后续build不代表主进程自动更新。</td></tr><tr><td>实测排队</td><td>节能50%，内存33.1/48GB：点语音输入→取消初始化，运行中心流式模型加载排队7秒、无服务→取消→队列清空、按钮恢复。</td></tr><tr><td>实测驻留与关闭</td><td>切普通80%；DevTools仅执行window.api.stt.start('basic')初始化模型，没有getUserMedia/送音频。运行中心显示流式服务；原生确认→退出→服务已关闭/列表空。恢复节能。</td></tr><tr><td>明确未验</td><td>麦克风采集、连续口述、实际三模式过滤、跨编辑器定稿全链、超载时真实音频体验、Windows/Linux。</td></tr><tr><td>其它运行态</td><td>旧43056已正常Cmd+Q退出。本轮无尚在运行的验证命令句柄；隔离应用保留，生产/其它用户会话未动。</td></tr></tbody></table></div><p>软件操作先发现可用MCP；本任务MCP不覆盖隔离应用的运行中心与DevTools，才用CUA。CUA粘贴曾超时，typeText漏标点导致SyntaxError未执行；用AX setValue核对完整命令后才成功执行一次。不要见pending就重发未知任务。</p><div class="warn">不要用 npm run dev 验收：它可能与正式版共用 userData。沿用已明确隔离的实例，或读 scripts/verify-app.mjs 建新临时profile；npm run verify含额外构建/OMP准备，不是免费刷新。正式 /Applications/Eas-Term.app 不杀、不换、不装包。</div></section><section id="rollback"><h2>RECOVERY BOUNDARIES</h2><div class="sectitle">三个“回退点”，用途不能混为一谈</div><p class="secnote">本次只核对，不执行任何恢复。没有承诺一键精确撤销资源治理。</p><div class="tw"><table><thead><tr><th>恢复材料</th><th>验证 / 适用</th><th>不能承诺</th></tr></thead><tbody><tr><td>A · 用户明确指定灾难基线</td><td>tag <code>checkpoint/runtime-governor-baseline-20260913</code><br>完整提交 <code>2d884c284b4456b4eeef532857f2b5a45fcfe1d8</code><br>用户12:54明确：大功能改坏无法用时以此作为回退点。当前再次核对tag仍指向此提交。</td><td>恢复的是0.4.94发布基线源码，会撤掉基线后所有改动，不只资源治理；不自动替换应用，不恢复数据库，不回滚服务器。</td></tr><tr><td>B · 12:51当前源码检查点</td><td><code>/Users/biily/Biily/Projects/vibe coding/terminal/.checkpoints/runtime-governor-20260913-125147</code><br>source.tar.gz 138190968字节；history.bundle 167281957字节；2970文件（原检查点记录）。附manifest/status/tracked.patch/head/README。原轮逐文件SHA读回通过；本次bundle verify再次通过，完整历史。</td><td>这是12:51时的混合源码，不是功能开始前；不含今晚后续修改，不含node_modules/out/ignored运行数据与凭证。本次未重新解包逐文件核验，未做恢复演练。</td></tr><tr><td>C · 本次交接包</td><td>当前状态清单/文件SHA256、完整Git tracked补丁、工作树列表、最近日志与验收摘要。可对照接手时漂移。</td><td>不是完整源码备份；tracked.patch不含untracked文件内容，file-manifest只有指纹，不能从哈希恢复文件。不要把此目录单独拷走当作完整开发源码。</td></tr></tbody></table></div><h3>真的要灾难恢复时</h3><ol><li>先确认用户当前要恢复源码、隔离实例还是正式应用；三者不同。先保全届时所有tracked和untracked混合改动。</li><li>默认在新目录/新worktree检出已核对tag，不在脏工作树reset/clean；或把12:51归档解到全新空目录，按manifest校验后再评估。</li><li>读native依赖与平台构建规则；不要凭习惯npm install覆盖Electron/node-pty原生模块。</li><li>新目录构建并使用独立userData验证。只有验收后、用户明确同意才决定合并/替换；不能因为回退授权就自动安装正式版。</li><li>检查点和tag不是远端备份；未push，不假设别人电脑上能找到。移交另一台机器须另外按项目同步/家庭云守则传源码和所需检查点，本轮没有上传。</li></ol><pre><code># 只读核对；不执行恢复
+git rev-parse checkpoint/runtime-governor-baseline-20260913^{}
+git show --no-patch --oneline 2d884c2
+git bundle verify &#x27;/Users/biily/Biily/Projects/vibe coding/terminal/.checkpoints/runtime-governor-20260913-125147/history.bundle&#x27;</code></pre></section><section id="files"><h2>READING MAP</h2><div class="sectitle">接手先读哪些文件</div><p class="secnote">按下面顺序渐进阅读，不要一上来把所有日志或memory历史塞进上下文。</p><div class="tw"><table><thead><tr><th>顺序 / 路径</th><th>用途</th></tr></thead><tbody><tr><td>1 · AGENTS.md + 架构03、10</td><td>安全边界、历史修复区、文件领地。改了代码要同步对应架构图纸；不重排whenReady，不删guard。</td></tr><tr><td>2 · 本页 + evidence/ + file-manifest.json</td><td>当前交接结论、失败证据、快照指纹；本页优先于旧交接。</td></tr><tr><td>3 · docs/architecture/17-运行资源与服务所有权.md</td><td>策略/入口/生命周期的连续增量记录。最新节覆盖旧“未接线”，清单仍待全量闭合。</td></tr><tr><td>4 · docs/superpowers/plans/2026-09-13-runtime-resource-governor.md</td><td>原目标、P0–P5、9类验收标准、软闸门边界；别只做仪表盘便宣布整体完成。</td></tr><tr><td>5 · memory/project_progress.md 尾部 + docs/AGENT_ACTIVITY_LOG.md</td><td>最新操作、失败、已验/未验、实例与后续排期。不要从根main的旧memory接活。</td></tr><tr><td>6 · docs/verification/runtime-governor/acceptance/transcription-handoff.html</td><td>文件失败传播→ASR驻留→流式迁移的历史验收报告；preview-resident包含最新摘要与16文件哈希。</td></tr><tr><td>7 · runtime/{manager,scheduler,resourceLedger,sessionStartup}.ts</td><td>核心调度、实际完成与调用方结果分离；不要新增第二套调度/租约。</td></tr><tr><td>8 · runtime/{ownedSessions,sharedServices,stopHost,ipc}.ts</td><td>独占/共享停止、确认归属与版本检查。先理解现有所有权再扩共享释放。</td></tr><tr><td>9 · 后续相关图纸02/11/13</td><td>启动顺序、MCP链路和跨文件同步清单，按触及范围读。</td></tr><tr><td>10 · docs/verification/releases/computer-use-lifecycle.md</td><td>外部CUA指针残留未解决；不得任务完成时全局杀服务，必须软件会话级释放。</td></tr></tbody></table></div><h3>混合工作区里的其它功能，别误删</h3><p>对话历史归档、HistoryPanel/新对话、分屏AI窄屏、确认CTA、辞典预览数据等与本任务混在未提交区。历史归档完整性、真实CLI续聊、独立分屏ID等另有未完成项。不要看到不相关便回滚，不要用 git add -A 一次性替所有历史改动认领。</p><p>AI工具执行可见性/等待续接：<code>docs/superpowers/plans/2026-09-13-agent-tool-observability-followup.md</code>。用户明确排在资源治理完成之后；仅确认过CLI链，原始协议丢失位置未定位，未实施。不要抢占当前任务，也不要把“不同事件流”当已证实根因。</p></section><section id="next"><h2>NEXT OPERATOR</h2><div class="sectitle">接手第一轮怎么做</div><p class="secnote">先恢复可信验证，再扩覆盖；本交接不是新的架构重选题。</p><ol><li><b>定位与防碰撞：</b>进入worktree，读AGENTS/图纸、MCP board_read，核对HEAD/tag和manifest；发现变化先看diff，不覆盖别人新改动。</li><li><b>复查失败：</b>先读本包full-failure日志；同条件复跑原失败文件并采集父子进程/夹具阶段证据，之后跑标准npm run check。标准测试并发4。若只在全量失败，建立可复现的最小并发组合；不要靠“再跑到绿”为最终结论。</li><li><b>语音整链：</b>在隔离profile补标准/强/基础模式、停止/取消、窗口重载、跨编辑器、迟到结果、有界缓冲压力；需真实麦克风权限或用户现场音频时先说明并取得适当确认，不复制生产凭证。</li><li><b>完整资源任务：</b>按原P0/P3逐项清点spawn/fork/exec/PTY/Worker/webContents、后台索引/下载/更新；补launchCoverage回归，不把静态搜索当所有权证明。</li><li><b>后续里程碑：</b>共享服务按项目释放、父子额度/成本学习、运行中心项目筛选/近期任务，最后做跨平台与压力验收。</li><li><b>每轮留证：</b>测试先红后绿、类型/构建、隔离眼验；同步架构与memory，记录精确版本/失败/未验。未经用户指令不commit/push/发版。</li></ol><pre><code># 在实际工作树运行；不是本轮交接已经重跑
+node --test src/main/cliUpdates/packages.test.ts
+node --test src/main/codexCapabilityLauncher.test.mjs
+node --test src/main/runtime/*Preview*.test.ts src/main/runtime/voiceStartCancellation.test.ts src/main/runtime/asrStopRouting.test.ts src/main/voicePreview*.test.ts
+npm run check
+npm run build
+git diff --check</code></pre><div class="dcode"><div class="dlabel">给接手人的可复制启动指令</div><div class="dcmd">读取这份交接页，在 voice-regression 工作树继续资源治理；先核对回退点与文件漂移，排查最新全量3项launcher失败，再补录音整链；不提交、不发版、不动生产。</div></div></section><footer>本文为本地standalone HTML，无网络资源或外部字体。report预设从实际存在的 ~/.claude/design-skills/visual-router/references/report-preset.md 读取；原 ~/.Codex 路径不存在。<br>同目录附件：file-manifest.json（混合工作树指纹）、git-status.txt、tracked.patch、worktrees.txt、evidence/（持久化验证日志）。它们不是完整源码备份。<br>只读来源：Git、工作树memory与架构/验证文件、本次ps和bundle核验。没有重新验证线上、Windows或麦克风。</footer></main></body></html>

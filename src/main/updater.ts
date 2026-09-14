@@ -12,6 +12,8 @@ import fs from 'fs'
 import path from 'path'
 import { getPrefs } from './prefs'
 import type { UpdateInfo } from '../shared/types'
+import { downloadFile } from './updateDownload.ts'
+import { runManagedTask } from './runtime/sessionStartup.ts'
 
 // 允许用环境变量指到别处，**只为了能真机验证**：线上的 latest.json 版本总是 ≤ 本地，
 // 不换个源就永远走不到「有新版本」那条分支，只能靠读代码猜它对不对。
@@ -177,50 +179,8 @@ export async function checkForUpdate(manual = false): Promise<UpdateInfo | null>
   }
 }
 
-/** 下载安装包到「下载」文件夹，边下边报进度，下完打开它（mac 挂载 dmg / Windows 起安装程序） */
-function download(url: string, onProgress: (got: number, total: number) => void): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const name = decodeURIComponent(url.split('/').pop() || 'Eas-Term-update')
-    const dest = path.join(app.getPath('downloads'), name)
-    const req = net.request({ url, cache: 'no-cache' })
-    req.on('response', (res) => {
-      if (res.statusCode !== 200) {
-        res.on('data', () => {})
-        reject(new Error(`下载失败：服务器返回 ${res.statusCode}`))
-        return
-      }
-      const total = Number(res.headers['content-length'] ?? 0)
-      let got = 0
-      // 先写到 .part，下完再改名：中途断了不会在「下载」里留下一个看着完整、
-      // 其实缺一截的 dmg —— 那种包双击会报「映像已损坏」，很难让人联想到是没下完
-      const tmp = dest + '.part'
-      const out = fs.createWriteStream(tmp)
-      res.on('data', (c) => {
-        got += c.length
-        out.write(Buffer.from(c))
-        onProgress(got, total)
-      })
-      res.on('end', () => {
-        out.end(() => {
-          try {
-            fs.renameSync(tmp, dest)
-            resolve(dest)
-          } catch (e) {
-            reject(e as Error)
-          }
-        })
-      })
-      res.on('error', (e: Error) => {
-        out.destroy()
-        fs.rmSync(tmp, { force: true })
-        reject(e)
-      })
-    })
-    req.on('error', reject)
-    req.end()
-  })
-}
-
+/** 安装包下载：实现在 updateDownload.ts（零 electron、可取消）；这里只注入 electron.net 与目标路径。 */
+let downloadSeq = 0
 export function registerUpdaterHandlers(): void {
   // 渲染层问「现在有没有已知的新版本」——窗口重载后要能拿回状态
   ipcMain.handle('update:known', () => latest)
@@ -236,9 +196,26 @@ export function registerUpdaterHandlers(): void {
   ipcMain.handle('update:download', async (e): Promise<{ ok: boolean; path?: string; error?: string }> => {
     if (!latest?.url) return { ok: false, error: '这个平台没有可下载的包' }
     const wc = e.sender
+    const url = latest.url
+    const dest = path.join(app.getPath('downloads'), decodeURIComponent(url.split('/').pop() || 'Eas-Term-update'))
     try {
-      const p = await download(latest.url, (got, total) => {
-        if (!wc.isDestroyed()) wc.send('update:progress', { got, total })
+      // 2026-09-13：经窗口归属的任务准入（运行中心可见、可取消 = abort 请求 + 删 .part）。
+      // 网络 IO 为主，预留很小；不是实测。完成只认下载本身结束。
+      const p = await runManagedTask<string>({
+        id: 'update-download:' + (++downloadSeq), windowId: wc.id, name: '更新包下载', projectId: null,
+        cost: { cpu: 3, memoryBytes: 64 * 1024 ** 2 },
+        start: async signal => {
+          const done = downloadFile({
+            url, dest, signal,
+            request: u => net.request({ url: u, cache: 'no-cache' }) as unknown as import('./updateDownload.ts').DownloadRequest,
+            onProgress: (got, total) => { if (!wc.isDestroyed()) wc.send('update:progress', { got, total }) }
+          })
+          return { result: done, completed: done.then(() => {}, () => {}) }
+        }
+      }).catch(err => {
+        if (err instanceof Error && err.message === 'wait timeout') throw new Error('资源紧张，更新包下载排队等待未获准入；稍后重试，或在运行中心切回普通模式')
+        if (err instanceof Error && err.message === 'cancelled') throw new Error('更新包下载已取消')
+        throw err
       })
       await shell.openPath(p)
       return { ok: true, path: p }

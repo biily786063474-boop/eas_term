@@ -19,10 +19,11 @@ function fixture() {
   const connector = createBizoneConnector({
     version: '1.0',
     backend: { ensureRunning: async () => { starts++; return { revision } } },
+    admit: async opts => (await opts.start(new AbortController().signal)).value,
     createClient: rev => {
       revisions.push(rev)
       const client = {
-        alive: true, calls: 0, closes: 0,
+        alive: true, calls: 0, closes: 0, exited: new Promise<void>(() => {}),
         initialize: async (version: string) => {
           assert.equal(version, '1.0')
           if (failInitialize) throw new Error('handshake failed')
@@ -144,6 +145,7 @@ test('backend dependency failure prevents any request submission', async () => {
   const connector = createBizoneConnector({
     version: '1.0',
     backend: { ensureRunning: async () => { throw new Error('not authenticated') } },
+    admit: async opts => (await opts.start(new AbortController().signal)).value,
     createClient: () => { creates++; throw new Error('must not spawn') }
   })
   await assert.rejects(connector.call('generate', {}, context, () => {}), /not authenticated/)
@@ -179,8 +181,9 @@ test('revoked authorization during backend startup prevents submission', async (
   const connector = createBizoneConnector({
     version: '1.0',
     backend: { ensureRunning: async () => { entered.resolve(); await release.promise; return { revision: 'one' } } },
+    admit: async opts => (await opts.start(new AbortController().signal)).value,
     createClient: () => ({
-      alive: true, initialize: async () => {}, listTools: async () => [], close: () => {},
+      alive: true, exited: new Promise<void>(() => {}), initialize: async () => {}, listTools: async () => [], close: () => {},
       request: async () => { requests++; return {} }
     })
   })
@@ -194,4 +197,29 @@ test('revoked authorization during backend startup prevents submission', async (
   await rejected
   assert.equal(requests, 0)
   connector.close()
+})
+
+// 2026-09-13 缺口收口：官方 stdio 客户端是一个 node 进程，创建前先过资源准入（应用级）。
+// 准入没放行不能 spawn；交给准入的 completed 必须是进程真实退出（client.exited）；换端点再来一次。
+test('official client is created only after admission and its budget is tied to actual exit', async () => {
+  const admissions: { id: string; name: string; start: (signal: AbortSignal) => Promise<{ value: unknown; completed: Promise<unknown> }> }[] = []
+  const completions: Promise<unknown>[] = []
+  let created = 0
+  const exited = deferred()
+  const connector = createBizoneConnector({
+    version: '1.0',
+    backend: { ensureRunning: async () => ({ revision: 'r1' }) },
+    admit: async opts => { admissions.push(opts); return new Promise(() => {}) as never },
+    createClient: () => { created++; return { alive: true, exited: exited.promise, initialize: async () => {}, listTools: async () => [], request: async () => ({}), close: () => {} } }
+  })
+  const pending = connector.tools()
+  await new Promise(r => setImmediate(r))
+  assert.equal(admissions.length, 1, '目录读取要先提交准入')
+  assert.match(admissions[0].name, /笔纵/)
+  assert.equal(created, 0, '准入没放行不得创建客户端进程')
+  const started = await admissions[0].start(new AbortController().signal)
+  assert.equal(created, 1)
+  completions.push(started.completed)
+  assert.equal(started.completed, exited.promise, '交给准入的完成承诺必须是进程真实退出')
+  connector.close(); void pending.catch(() => {})
 })

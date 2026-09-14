@@ -1,3 +1,4 @@
+import { registerRuntimeMonitor } from './runtime/ipc.ts'
 import { registerUsageHandlers } from './usage/index.ts'
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions, dialog } from 'electron'
 import path from 'path'
@@ -10,7 +11,7 @@ import { registerGpuInfo } from './gpuInfo'
 import { registerCliInstallHandlers } from './cliAuth/install'
 import { registerPhoneHandlers } from './phone'
 import { registerTodoHandlers } from './todos'
-import { registerProjectHandlers } from './projects'
+import { registerProjectHandlers, loadProjects } from './projects'
 import { registerFsHandlers } from './fs'
 import { registerPasteImageHandlers, sweepPasteImages } from './pasteImages'
 import { registerBrowserFavorites, registerFavoritePreviewScheme } from './browserFavorites'
@@ -428,6 +429,7 @@ app.whenReady().then(() => {
   registerIslandHandlers()
   registerAgentChatHandlers()
   registerUsageHandlers()
+  registerRuntimeMonitor(loadProjects)
   // omp 的引导 IPC。**放在 registerAgentChatHandlers 之后、installIpcProfiler 之后**
   // （02-分层架构的启动顺序）：它不参与「MCP 桥 → 密钥柜 → PTY」那条硬依赖链，
   // 只是又一组 handler；放在 profiler 之前的话这组 IPC 不进 ipc-slow.log，而且不报错。

@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { CliUpdateManager, CLI_IDS } from './manager.ts'
-import { latestVersion, stageVersion, systemVersion, verifyVersion } from './packages.ts'
+import { latestVersion, systemVersion, verifyVersion } from './packages.ts'
+import { managedStage } from './managedStage.ts'
 import { setManagedCliPaths } from '../probeEnv.ts'
 import type { UpdatableCli } from '../../shared/cliUpdates.ts'
 
@@ -9,7 +10,8 @@ export function registerCliUpdateHandlers(): void {
   const root = path.join(app.getPath('userData'), 'cli-versions')
   const manager = new CliUpdateManager(root, {
     latest: latestVersion,
-    stage: (id, version, signal) => stageVersion(root, id, version, signal),
+    // 下载/校验走应用级托管任务（首次检查在启动 30 秒后，资源管理器那时已装好）。
+    stage: (id, version, signal) => managedStage(root, id, version, signal),
     verify: (id, version) => verifyVersion(root, id, version),
     systemVersion,
     changed: () => {

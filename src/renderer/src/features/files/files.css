@@ -71,7 +71,7 @@
   z-index: 5;
   padding: 6px 9px;
   border-radius: var(--radius-sm);
-  /* 危险色在这个项目里是硬编码的 rgba(247,118,142,…)（见 base.css 的 .danger-btn），
+  /* 危险色在这个项目里是硬编码的 rgba(247,118,142,…)（文件删除警示色），
      没有全局 --danger 变量，这里跟着用同一组值 */
   background: rgba(var(--sem-danger-rgb), 0.18);
   border: 1px solid rgba(var(--sem-danger-rgb), 0.5);

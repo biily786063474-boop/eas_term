@@ -1,3 +1,4 @@
+import {startupFailure} from '../../runtime/startupFailure.ts'
 // omp 那条路的传输层：一条**双向** JSON-RPC over stdio（ACP）。
 //
 // ── 为什么它不能复用既有那条路 ──────────────────────────────────────────────
@@ -40,6 +41,8 @@ import { createAcpApprovals, type AcpApprovals } from './approvals.ts'
 /** 我们对进程的全部要求。**只要这几件事** —— 真实实现包一层 `child_process`，
  *  测试实现是个假 agent，两边都不需要认识对方。 */
 export interface AcpProcess {
+  /** Actual child close; optional only for protocol test doubles. */
+  completed?:Promise<void>
   write(line: string): void
   onLine(cb: (line: string) => void): void
   onStderr(cb: (chunk: string) => void): void
@@ -61,7 +64,10 @@ export interface AcpMcpServer {
   env: { name: string; value: string }[]
 }
 
+type OpenResult = {ok:true;proc:AcpProcess}|{ok:false;message:string;setup:boolean}
 export interface AcpDeps {
+  /** Optional main-owned resource admission; handshake starts only after admission. */
+  openAsync?(cwd:string,signal:AbortSignal):Promise<OpenResult>
   /** 起进程。失败时的 `message` 会原样进 `{k:'error'}`，`setup` 决定它是不是
    *  「去设置」那一类（`kind:'setup'`）而不是普通报错。 */
   open(cwd: string): { ok: true; proc: AcpProcess } | { ok: false; message: string; setup: boolean }
@@ -112,7 +118,7 @@ export interface AcpLive {
    *  渲染层的 busy 有三支判据，**能一次放倒三支的只有 `turn.done`**
    *  （非 ACP 分支的注释里早写着，那边为此修过一次）。 */
   interrupt(): boolean
-  /** 会话被关掉：发 `session/close`（不等），随后调用方照旧 kill */
+  /** 关闭当前连接：通知 session/close，退役状态并结束本连接实际进程。 */
   close(): void
   /** 渲染层点了审批卡片。不是这条路的 id 返回 false */
   resolveApproval(approvalId: unknown, decision: unknown): boolean
@@ -150,6 +156,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
   const translator = createOmpTranslator(decide, cwd, { idPrefix: opts.idPrefix, now: deps.now })
   translator.onEvent((e) => deps.emit(e))
 
+  let admission: AbortController | null = null
   let phase: Phase = 'dead'
   let proc: AcpProcess | null = null
   let sessionId = opts.resumeId
@@ -278,12 +285,12 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
 
   // ── 起进程与握手 ──────────────────────────────────────────────────────────
 
-  function open(): boolean {
+  function open(admitted?:OpenResult): boolean {
     if (!path.isAbsolute(cwd)) {
       deps.emit({ k: 'error', fatal: true, kind: 'setup', message: 'OMP 对话未关联有效的项目目录。请在已绑定项目的 Frame 中新建对话；账号登录状态不受影响。' })
       return false
     }
-    const got = deps.open(cwd)
+    const got = admitted ?? deps.open(cwd)
     if (!got.ok) {
       deps.emit({ k: 'error', fatal: true, message: got.message, ...(got.setup ? { kind: 'setup' as const } : {}) })
       return false
@@ -314,6 +321,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
 
   /** 进程没了：把在飞的请求全 reject、审批全 deny 落地、状态回 dead。**幂等**。 */
   function onGone(why: string): void {
+    admission?.abort(); admission = null
     clearCancel()
     activePrompt = null
     const wasPrompting = phase === 'prompting'
@@ -484,13 +492,28 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       pump()
       return
     }
-    if (!open()) {
-      queue.length = 0
-      return
-    }
+    if (deps.openAsync) {
+      const current = new AbortController()
+      admission = current; phase = 'opening'
+      try {
+        if (!path.isAbsolute(cwd)) throw Error('OMP 对话未关联有效的项目目录')
+        const got = await deps.openAsync(cwd,current.signal)
+        if (current.signal.aborted || admission !== current) { if(got.ok)got.proc.kill(); return }
+        admission = null
+        if (!open(got)) { phase='dead'; queue.length=0; deps.emit({k:'turn.done',usage:{inputTokens:0,outputTokens:0}}); return }
+      } catch(error) {
+        if(current.signal.aborted || admission!==current)return
+        admission=null; phase='dead'; queue.length=0
+        deps.emit({k:'error',...startupFailure(error)})
+        deps.emit({k:'turn.done',usage:{inputTokens:0,outputTokens:0}})
+        return
+      }
+    } else if (!open()) { queue.length=0; return }
+    const openingProcess = proc
     try {
       await handshake()
     } catch (e) {
+      if (proc !== openingProcess) return // a retired handshake cannot clear its replacement
       const msg = (e as Error).message || String(e)
       // 握手失败：把 stderr 尾巴带上 —— omp 自己的报错比我们编的准。
       // 「没配 provider」那支已经在 handshake 里发过一条更准的了，这里不重复发。
@@ -531,6 +554,7 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
       // 还没发 session/prompt 就没有可 cancel 的 RPC。撤掉待发送的旧方向，
       // 保留握手和会话；确认后收到的新方向继续等同一握手完成。
       if (phase === 'opening' && queue.length > 0) {
+        if (admission) onGone('已取消资源等待')
         queue.length = 0
         deps.emit({ k: 'turn.done', usage: { inputTokens: 0, outputTokens: 0 } })
         return true
@@ -560,8 +584,11 @@ export function createAcpLive(deps: AcpDeps, cwd: string, opts: AcpLiveOptions):
     },
 
     close(): void {
-      clearCancel()
-      if (sessionId && proc) notify('session/close', { sessionId })
+      const closingProcess = proc
+      if (sessionId && closingProcess) notify('session/close', { sessionId })
+      queue.length = 0
+      onGone('会话已关闭')
+      closingProcess?.kill()
     },
 
     resolveApproval(approvalId, decision): boolean {

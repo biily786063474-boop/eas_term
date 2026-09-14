@@ -1,0 +1,5 @@
+2026-09-13; verified command chain 38359 exit 0
+
+> eas-term@0.4.94 typecheck
+> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json
+

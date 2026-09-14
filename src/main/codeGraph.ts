@@ -2,9 +2,16 @@
 // 这里只负责把渲染层的请求接过去，以及那道「传进来的路径可不可信」的门槛。
 
 import { ipcMain } from 'electron'
+import {sharedServices} from './runtime/sharedServices.ts'
+import {projectAttribution} from './runtime/projectAttribution.ts'
+import {loadProjects} from './projects'
+import {cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
+import {observeSharedWindow} from './runtime/sharedWindowLifecycle.ts'
 import fs from 'node:fs'
 
 import { analyzeProject } from './codeGraphAnalyze.ts'
+import { analyzeSymbolsManaged } from './managedSymbols.ts'
+import os from 'node:os'
 
 /** 「这个路径能不能扫」。**两个 handler 共用一份** ——
  *  各写一遍的话，以后收紧了其中一处，另一处会一直松着。
@@ -48,9 +55,10 @@ export function registerCodeGraphHandlers(): void {
     const gate = checkRoot(root)
     if (gate) return gate
     try {
-      // 动态 import：TS Compiler API 建 Program 要几百毫秒 ＋ 几十 MB，
-      // 只有真点开符号视图才值得把它拉进主进程（同 dependency-cruiser 那条）。
-      const { analyzeSymbols } = await import('./tsSymbols.ts')
+      // 2026-09-13：提取搬进独立 Worker（tsSymbolsWorker.ts），按窗口归属经 runManagedTask 准入。
+      // 原先在主进程同步 ts.createProgram，大项目整个界面冻几秒；现在主线程只等消息，
+      // 取消 = terminate，预算随线程 exit 释放。工厂由 ?nodeWorker 打包，动态 import 只为不在启动期加载它。
+      const { createSymbolsWorker } = await import('./tsSymbolsHost.ts')
       // 重新解析时把邻域那侧的 Program 缓存也丢掉 —— **两处各存一份 Program，
       // 只清一处的话「重新解析」之后邻域仍然是旧的**，而界面上看不出来
       const { dropTsCache } = await import('./tsProvider.ts')
@@ -58,8 +66,14 @@ export function registerCodeGraphHandlers(): void {
       // 语言服务器那侧也要清 —— **三处各存一份状态，只清一处的话**
       // 「重新解析」之后邻域仍然是旧的，而界面上看不出来
       const { dropLspClients } = await import('./lspProvider.ts')
-      dropLspClients(root)
-      return { ok: true as const, graph: analyzeSymbols(root) }
+      dropLspClients(root, _e.sender.id)
+      const graph = await analyzeSymbolsManaged({
+        root, windowId: _e.sender.id, projectId: projectAttribution(root, loadProjects()),
+        // 一个核跑满 + TS Program 内存：估算，不是实测峰值。
+        cost: { cpu: Math.max(7, 100 / Math.max(1, os.availableParallelism())), memoryBytes: 768 * 1024 ** 2 },
+        createWorker: workerData => createSymbolsWorker({ workerData })
+      })
+      return { ok: true as const, graph }
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }
@@ -120,7 +134,9 @@ export function registerCodeGraphHandlers(): void {
         return { ok: true as const, neighborhood: n }
       }
       const { lspNeighborhood } = await import('./lspProvider.ts')
-      return await lspNeighborhood(root, ref)
+      if (_e.sender.isDestroyed()) return {ok:false as const,error:'窗口已关闭'}
+      observeSharedWindow(_e.sender,id=>{cancelSessionStartsForWindow(id);sharedServices.releaseWindow(id)})
+      return await lspNeighborhood(root, ref, {windowId:_e.sender.id,projectId:projectAttribution(root,loadProjects())})
     } catch (e) {
       return { ok: false as const, error: e instanceof Error ? e.message : String(e) }
     }

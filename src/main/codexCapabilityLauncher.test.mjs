@@ -31,10 +31,14 @@ if(args[0]==='app-server'){
  return {root,binary,log,read,cleanup:()=>fs.rmSync(root,{recursive:true,force:true})}
 }
 function start(f,args,extraEnv={},ipc=false){
+ const startedAt=Date.now()
  const p=spawn(process.execPath,[launcher,JSON.stringify({binary:f.binary,args,managedAssignments:['instructions="MANAGED"','mcp_servers.audit.disabled_tools=["role"]']})],{cwd:f.root,env:{...process.env,FIXTURE_LOG:f.log,...extraEnv},stdio:ipc?['ignore','pipe','pipe','ipc']:['ignore','pipe','pipe']})
  let stderr='';p.stderr.on('data',x=>stderr+=x)
  const done=new Promise(resolve=>p.on(ipc?'exit':'close',(code,signal)=>resolve({code,signal,stderr})))
- return {p,done}
+ // 2026-09-13 两次全量里这组在 5 秒内等不到夹具 pid，断言只留一个 falsy，没有任何可查的东西。
+ // 这里把等待期间能拿到的父子进程状态一次收齐：不改期限、不放宽断言，只让下次失败留下证据。
+ const diagnose=phase=>JSON.stringify({phase,elapsedMs:Date.now()-startedAt,launcherPid:p.pid,launcherExitCode:p.exitCode,launcherSignal:p.signalCode,stderr:stderr.slice(-800),rows:f.read(),loadavg:os.loadavg().map(v=>v.toFixed(1)),freeMemMB:Math.round(os.freemem()/1048576)})
+ return {p,done,diagnose}
 }
 test('actual owned launcher separates user CLI overrides, preserves prompt after --, and forwards effective cwd',async()=>{
  const f=fixture()
@@ -56,10 +60,10 @@ test('actual owned launcher separates user CLI overrides, preserves prompt after
 test('SIGTERM during actual launcher config probe kills only its owned probe and never executes native turn',async()=>{
  const f=fixture()
  try{
-  const {p,done}=start(f,['exec','not sent'],{FIXTURE_HANG:'1'})
+  const {p,done,diagnose}=start(f,['exec','not sent'],{FIXTURE_HANG:'1'})
   const deadline=Date.now()+5000
   while(!f.read().some(r=>r.pid)&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10))
-  assert.ok(f.read().some(r=>r.pid))
+  assert.ok(f.read().some(r=>r.pid),'5 秒内夹具探测进程没写下 pid：'+diagnose('config'))
   p.kill('SIGTERM')
   assert.notEqual((await done).code,0)
   const rows=f.read();assert.equal(rows.filter(r=>r.executed).length,0)
@@ -68,11 +72,11 @@ test('SIGTERM during actual launcher config probe kills only its owned probe and
 })
 
 for(const phase of ['config','exec']) for(const action of ['cancel','disconnect']) test(`owned IPC ${action} during ${phase} waits for the actual child to exit`,{skip:process.platform==='win32'},async()=>{
- const f=fixture(), {p,done}=start(f,['exec','not sent'],phase==='config'?{FIXTURE_HANG:'1'}:{FIXTURE_HANG_EXEC:'1'},true)
+ const f=fixture(), {p,done,diagnose}=start(f,['exec','not sent'],phase==='config'?{FIXTURE_HANG:'1'}:{FIXTURE_HANG_EXEC:'1'},true)
  try{
   const deadline=Date.now()+5000
   while(!f.read().some(r=>phase==='config'?r.pid:r.executed)&&Date.now()<deadline)await new Promise(r=>setTimeout(r,10))
-  assert.ok(f.read().some(r=>phase==='config'?r.pid:r.executed))
+  assert.ok(f.read().some(r=>phase==='config'?r.pid:r.executed),'5 秒内夹具没到达 '+phase+' 阶段：'+diagnose(phase))
   if(action==='cancel')p.send({type:'eas:codex:cancel',signal:'SIGTERM'});else p.disconnect()
   const result=await Promise.race([done,new Promise(resolve=>setTimeout(()=>resolve(null),1500))])
   assert.ok(result,'outer launcher ignored owned cancellation channel')

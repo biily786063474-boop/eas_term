@@ -1,0 +1,15 @@
+Original: /tmp/eas-preview-launcher-repro.log
+✔ actual owned launcher separates user CLI overrides, preserves prompt after --, and forwards effective cwd (1940.525292ms)
+✔ SIGTERM during actual launcher config probe kills only its owned probe and never executes native turn (729.530917ms)
+✔ owned IPC cancel during config waits for the actual child to exit (775.413916ms)
+✔ owned IPC disconnect during config waits for the actual child to exit (713.751709ms)
+✔ owned IPC cancel during exec waits for the actual child to exit (548.155792ms)
+✔ owned IPC disconnect during exec waits for the actual child to exit (533.630791ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6780.3335

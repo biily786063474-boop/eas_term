@@ -11,12 +11,12 @@ test('trusted host catalogs without GUI and rotates official client before calls
   const clients: McpClientOpts[] = []
   let starts = 0, closes = 0, calls = 0
   const server = '/Applications/笔纵 画板.app/Contents/Resources/app/electron/mcpServer.js'
-  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test',
+  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test', admit: async opts => (await opts.start(new AbortController().signal)).value,
     runtime: { installed: () => ({ app: '/app', executable: '/exe', server }), tokenFile: '/private/token.json',
       ensureRunning: async () => { starts++; return { revision: 'new-token' } } },
     runner: args => ({ command: '/bundled/electron', args, env: { ELECTRON_RUN_AS_NODE: '1' } }),
     client: opts => { clients.push(opts); return {
-      alive: true, initialize: async () => {}, listTools: async () => [{ name: 'list_nodes' }],
+      alive: true, exited: new Promise<void>(() => {}), initialize: async () => {}, listTools: async () => [{ name: 'list_nodes' }],
       request: async () => { calls++; return { content: [] } }, close: () => { closes++ }
     } }
   })
@@ -38,7 +38,7 @@ test('trusted host catalogs without GUI and rotates official client before calls
 
 test('missing installation fails catalog without spawning an unverified executable', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bizone-host-'))
-  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test',
+  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test', admit: async opts => (await opts.start(new AbortController().signal)).value,
     runtime: { installed: () => undefined, tokenFile: '/none', ensureRunning: async () => { throw new Error('must not launch') } },
     client: () => { throw new Error('must not spawn') }
   })
@@ -49,11 +49,11 @@ test('missing installation fails catalog without spawning an unverified executab
 test('first catalog awaits asynchronous protocol discovery before constructing official client', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bizone-host-'))
   let discovered = false, created = 0
-  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test',
+  const host = createBizoneHosted({ appOwnedDataDir: root, version: 'test', admit: async opts => (await opts.start(new AbortController().signal)).value,
     runtime: { installed: () => discovered ? { app: '/app', executable: '/exe', server: '/app/mcpServer.js' } : undefined,
       tokenFile: '/token', refreshInstallation: async () => { await new Promise(resolve => setImmediate(resolve)); discovered = true },
       ensureRunning: async () => ({ revision: 'test' }) },
-    client: () => { created++; return { alive: true, initialize: async () => {}, listTools: async () => [], request: async () => ({}), close: () => {} } }
+    client: () => { created++; return { alive: true, exited: new Promise<void>(() => {}), initialize: async () => {}, listTools: async () => [], request: async () => ({}), close: () => {} } }
   })
   try { await host.tools(); assert.equal(created, 1) }
   finally { host.close(); await new Promise(resolve => setImmediate(resolve)); fs.rmSync(root, { recursive: true, force: true }) }

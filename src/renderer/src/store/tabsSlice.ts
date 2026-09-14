@@ -1,3 +1,4 @@
+import {pendingPaneStarts} from './pendingPaneStarts'
 // 标签/面板切片：标签页生命周期 + Blender 式面板树操作 + 各类「在主区域打开」入口
 
 import type { StateCreator } from 'zustand'
@@ -39,7 +40,7 @@ export interface TabsSlice {
    *  指向一个已经不存在的目录。这个计数器就是让那四个 setter 能把订阅叫醒的那根线。 */
   paneSaveTick: number
 
-  openTerminal: (opts?: { projectId?: string | null; cwd?: string }) => Promise<void>
+  openTerminal: (opts?: { projectId?: string | null; cwd?: string; sourceFrameId?: string }) => Promise<string | undefined>
   /** 开一个 AI 对话面板（空态，用户选完 CLI 发第一条消息才真正起会话）。
    *  与 openTerminal 同构，差别只在建的 pane 是 agent —— **不 spawn pty**，
    *  所以不能拿 openTerminal + setPaneKind 凑：那样会先起一个 shell 再丢掉。 */
@@ -235,7 +236,18 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const projectId = opts?.projectId !== undefined ? opts.projectId : s.activeProjectId
     const project = s.projects.find((p) => p.id === projectId) ?? null
     const cwd = opts?.cwd ?? project?.path ?? ''
-    const { id: ptyId } = await window.api.pty.create({ cwd: cwd || undefined })
+    const sourceFrame = opts?.sourceFrameId ? s.canvas.frames.find(f => f.id === opts.sourceFrameId) : undefined
+    if (opts?.sourceFrameId && !sourceFrame) return
+    const startupRequestId = uid('pty-request')
+    const create = () => window.api.pty.create({ cwd: cwd || undefined, startupRequestId })
+    const created = sourceFrame ? await pendingPaneStarts.run('frame:' + sourceFrame.id, create,
+      () => { void window.api.runtimeCancelTask('pty-request:' + startupRequestId).catch(() => {}) }) : await create()
+    if (!created) return
+    const { id: ptyId } = created
+    if (sourceFrame && !get().canvas.frames.some(f => f.id === sourceFrame.id && f.projectId === sourceFrame.projectId)) {
+      window.api.pty.kill(ptyId)
+      return
+    }
     const leaf: LeafNode = { type: 'leaf', id: uid('leaf'), pane: { kind: 'terminal', ptyId } }
     const tab: TermTab = {
       id: uid('tab'),
@@ -250,6 +262,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
       activeTabId: tab.id,
       activeTabByProject: { ...st.activeTabByProject, [projectKey(tab.projectId)]: tab.id }
     }))
+    return leaf.id
   },
 
   // 与 openTerminal 同构（标题/cwd/activeTabByProject 的处理逐条对齐），
@@ -362,7 +375,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     const s = get()
     const tab = s.tabs.find((t) => t.id === tabId)
     if (!tab) return
-    for (const leaf of collectLeaves(tab.root)) killPanePty(leaf.pane)
+    for (const leaf of collectLeaves(tab.root)) { pendingPaneStarts.cancel(leaf.id); killPanePty(leaf.pane) }
     set(closeTabInState(s.tabs, s.activeTabId, s.activeTabByProject, tabId))
     // 这条一次带走整棵树的 leaf，画布上引用它们的节点全成孤儿——同 closeLeaf 的理由
     get().pruneOrphanNodes()
@@ -446,7 +459,20 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     if (!target) return
     let pane: PaneState
     if (target.pane.kind === 'terminal') {
-      const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
+      const startupRequestId = uid('pty-request')
+      const created = await pendingPaneStarts.run(leafId,
+        () => window.api.pty.create({ cwd: tab.cwd || undefined, startupRequestId }),
+        () => { void window.api.runtimeCancelTask('pty-request:' + startupRequestId).catch(() => {}) })
+      if (!created) return
+      const { id: ptyId } = created
+      // Resource admission may outlive the source pane. Never attach a late shell
+      // to a replacement or leave its process without a view/owner.
+      const currentTab = get().tabs.find(t => t.id === tabId)
+      const current = currentTab && collectLeaves(currentTab.root).find(l => l.id === leafId)
+      if (!current || current.pane !== target.pane) {
+        window.api.pty.kill(ptyId)
+        return
+      }
       pane = { kind: 'terminal', ptyId }
     } else if (target.pane.kind === 'agent') {
       // 显式白名单，避免 sessionId/resumeId/initialMessage 等把新面板接进旧流程。
@@ -482,6 +508,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     if (opts?.ptyId) {
       if (target.pane.kind !== 'terminal' || target.pane.ptyId !== opts.ptyId) return
     }
+    pendingPaneStarts.cancel(leafId)
     if (!opts?.alreadyExited) killPanePty(target.pane)
     // **关节点不删聊天记录**（用户 2026-08-19 要求：误关了要能捞回来）。
     // 代价是记录会成为孤儿——新开的对话框是新 leafId，对不上旧记录。
@@ -541,10 +568,23 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     // 同类切换直接忽略——唯一例外：code 面板带 diff 时选「代码预览」= 去掉 diff 回到普通预览
     const isDiffPane = target.pane.kind === 'code' && !!target.pane.diff
     if (target.pane.kind === kind && !(kind === 'code' && isDiffPane)) return
-    killPanePty(target.pane)
+    pendingPaneStarts.cancel(leafId)
     let pane: PaneState
     if (kind === 'terminal') {
-      const { id: ptyId } = await window.api.pty.create({ cwd: tab.cwd || undefined })
+      const startupRequestId = uid('pty-request')
+      const created = await pendingPaneStarts.run(leafId,
+        () => window.api.pty.create({ cwd: tab.cwd || undefined, startupRequestId }),
+        () => { void window.api.runtimeCancelTask('pty-request:' + startupRequestId).catch(() => {}) })
+      if (!created) return
+      const { id: ptyId } = created
+      // Resource admission may outlive the source pane. Never attach a late shell
+      // to a replacement or leave its process without a view/owner.
+      const currentTab = get().tabs.find(t => t.id === tabId)
+      const current = currentTab && collectLeaves(currentTab.root).find(l => l.id === leafId)
+      if (!current || current.pane !== target.pane) {
+        window.api.pty.kill(ptyId)
+        return
+      }
       pane = { kind: 'terminal', ptyId }
     } else if (kind === 'history') {
       pane = { kind: 'history', cwd: tab.cwd }
@@ -568,6 +608,7 @@ export const createTabsSlice: StateCreator<AppState, [], [], TabsSlice> = (set, 
     } else {
       pane = { kind, filePath: null }
     }
+    killPanePty(target.pane) // only retire old content after replacement creation succeeds
     set((st) => ({
       tabs: st.tabs.map((t) =>
         t.id === tabId ? { ...t, root: updatePane(t.root, leafId, pane) } : t

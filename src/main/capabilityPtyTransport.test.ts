@@ -51,7 +51,7 @@ async function fixture(){
  })
  return {root,project,sessions,released,port,parent,payload,post,runtime,
   waitBody:()=>{nextBodyStarted=new Promise(r=>bodyStarted=r);return nextBodyStarted},
-  exit:(id:string)=>runInNewContext(exitCode+'\nexitCallback', {id,flushOut(){},ptys:new Map(),revokeCapabilitySession:runtime.revokeCapabilitySession,termTail:{drop(){}},forgetPty(){},wc:{isDestroyed:()=>true}})({exitCode:0}),
+  exit:(id:string)=>{let completed=false;runInNewContext(exitCode+'\nexitCallback', {id,completedResolve(){completed=true},flushOut(){},ptys:new Map(),revokeCapabilitySession:runtime.revokeCapabilitySession,termTail:{drop(){}},forgetPty(){},wc:{isDestroyed:()=>true}})({exitCode:0});assert.equal(completed,true)},
   close:async()=>{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));fs.rmSync(root,{recursive:true,force:true})}}
 }
 

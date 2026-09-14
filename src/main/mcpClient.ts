@@ -29,6 +29,13 @@ interface Pending {
   timer: NodeJS.Timeout
 }
 
+export interface TrackedMcpRequest {
+  result: Promise<unknown>
+  /** RPC response (including error), actual process exit, or never dispatched. */
+  completed: Promise<'response'|'exit'|'not-started'>
+  cancel(): void
+}
+
 export const MCP_CLIENT_PROTOCOL = '2025-06-18'
 
 export class McpClient {
@@ -37,14 +44,21 @@ export class McpClient {
   private nextId = 1
   private pending = new Map<number, Pending>()
   private closed = false
+  private tracked = new Map<number,(why:'response'|'exit'|'not-started')=>void>()
   /** server 主动发来的通知（resources/updated 之类） */
   onNotification: ((method: string, params: unknown) => void) | null = null
   /** 进程没了（不管谁杀的）。宿主据此把它从复用表里摘掉 */
   onExit: ((code: number | null) => void) | null = null
+  /** 进程**真实**退出（或根本起不来、没有 pid）时落定。启动准入的预算只认它，
+   *  不认 close() 的返回——close 只是发了信号，不是退出证据。onExit 是单个回调，
+   *  宿主已经占着；这里是可以多方 await 的承诺。 */
+  readonly exited: Promise<void>
+  private settleExited!: () => void
   readonly name: string
 
   constructor(opts: McpClientOpts) {
     this.name = opts.name
+    this.exited = new Promise<void>((resolve) => { this.settleExited = resolve })
     this.proc = spawn(opts.command, opts.args, {
       cwd: opts.cwd,
       env: opts.env,
@@ -61,10 +75,13 @@ export class McpClient {
     this.proc.on('error', (e) => {
       console.error(`[plugin:${this.name}] 起不来`, e)
       this.failAll(new Error(`插件进程起不来：${e.message}`))
+      if(!this.proc.pid){this.closed=true;this.finishTracked('not-started');this.settleExited()}
     })
     this.proc.on('exit', (code) => {
       this.closed = true
       this.failAll(new Error('插件进程已退出'))
+      this.finishTracked('exit')
+      this.settleExited()
       this.onExit?.(code)
     })
   }
@@ -85,6 +102,8 @@ export class McpClient {
       const kind = classify(m)
       if (kind === 'response') {
         const id = typeof m.id === 'number' ? m.id : Number(m.id)
+        this.tracked.get(id)?.('response')
+        this.tracked.delete(id)
         const p = this.pending.get(id)
         if (!p) continue
         this.pending.delete(id)
@@ -122,6 +141,50 @@ export class McpClient {
       this.pending.set(id, { resolve, reject, timer })
       this.proc.stdin?.write(encodeFrame({ jsonrpc: '2.0', id, method, params }))
     })
+  }
+
+  private finishTracked(why:'exit'|'not-started'):void {
+    for(const finish of this.tracked.values())finish(why)
+    this.tracked.clear()
+  }
+
+  /** Caller timeout is NOT execution completion. Keep only bounded ID/resolver
+   * metadata until a late response or actual exit; never replay the request.
+   * Cancellation is advisory and cannot release the resource lease by itself.
+   */
+  requestTracked(method:string,params:unknown,timeoutMs=30_000):TrackedMcpRequest {
+    let finish!:(why:'response'|'exit'|'not-started')=>void
+    const completed=new Promise<'response'|'exit'|'not-started'>(r=>{finish=r})
+    const id=this.nextId++
+    let dispatched=false,cancelled=false
+    const result=new Promise<unknown>((resolve,reject)=>{
+      try {
+        if(!this.alive)throw Error('插件进程不在')
+        if(this.tracked.size>=128)throw Error('插件未结束的请求过多，请等待完成或关闭服务')
+        if(!Number.isFinite(timeoutMs)||timeoutMs<=0)throw Error('invalid request timeout')
+        const frame=encodeFrame({jsonrpc:'2.0',id,method,params})
+        const timer=setTimeout(()=>{
+          this.pending.delete(id)
+          reject(Error(`插件 ${method} 超时；后台执行状态尚未确认，请勿自动重试`))
+        },timeoutMs)
+        this.pending.set(id,{resolve,reject,timer})
+        this.tracked.set(id,finish)
+        dispatched=true
+        this.proc.stdin?.write(frame, error=>{
+          // A write failure does not prove the server did not receive bytes.
+          if(error){const p=this.pending.get(id);if(p){clearTimeout(p.timer);this.pending.delete(id);p.reject(error)}}
+        })
+      }catch(error){
+        reject(error)
+        if(!dispatched)finish('not-started')
+        else {const p=this.pending.get(id);if(p){clearTimeout(p.timer);this.pending.delete(id)}}
+      }
+    })
+    return {result,completed,cancel:()=>{
+      if(cancelled||!dispatched||!this.tracked.has(id))return
+      cancelled=true
+      this.notify('notifications/cancelled',{requestId:id,reason:'User requested cancellation'})
+    }}
   }
 
   notify(method: string, params: unknown): void {

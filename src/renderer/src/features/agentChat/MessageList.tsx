@@ -35,9 +35,11 @@ export function MessageList({
   view,
   onApprovalDecide,
   leafId,
-  onPickOption
+  onPickOption,
+  historyPreview = false
 }: {
   view: ChatView
+  historyPreview?: boolean
   onApprovalDecide: (approvalId: string, decision: ApprovalDecision) => void
   /** 点了某个选项。**填进输入框，不自动发送** —— 选完常常还要补一句
    *  「但是 xxx」；而且不自动发意味着误点零代价，这是敢用启发式识别的前提之一 */
@@ -70,7 +72,7 @@ export function MessageList({
 
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || !stickToBottomRef.current) return
+    if (!el || historyPreview || !stickToBottomRef.current) return
     el.scrollTop = el.scrollHeight
   }, [view])
 
@@ -188,7 +190,7 @@ export function MessageList({
           ]}
         />
       )}
-    </div><QuestionNavigator turns={view.turns} scrollRef={scrollRef} leafId={leafId} onNavigate={() => { stickToBottomRef.current = false; setAtBottom(false) }} /></>
+    </div>{!historyPreview && <QuestionNavigator turns={view.turns} scrollRef={scrollRef} leafId={leafId} onNavigate={() => { stickToBottomRef.current = false; setAtBottom(false) }} />}</>
   )
 }
 

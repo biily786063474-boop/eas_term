@@ -1005,7 +1005,6 @@
   background: var(--bg-2); color: var(--text-1); font-size: 11px; cursor: pointer;
   font-family: inherit;
 }
-.uc__complib-confirm-del { background: var(--danger, #e53e3e) !important; color: #fff !important; border-color: transparent !important; }
 /* Left panel tab switcher */
 .uc__left-tabs {
   display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;

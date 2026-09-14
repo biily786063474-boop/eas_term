@@ -20,34 +20,15 @@ import { app, ipcMain } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { safeHistoryKey } from './agentHistoryKey'
+import { writeHistorySnapshot } from './agentHistoryStorage'
+import { historyMatches, historySummary, type HistorySummary } from '../shared/historyCatalog'
 
-/** 最多留多少个节点的记录。超了删最旧的 —— 画布上的对话框会不断新建/关闭，
- *  不设上限的话这个目录只增不减。200 份 × 每份几十 KB，量级可控。 */
-const MAX_FILES = 200
-
+// 历史由用户管理；不可按数量静默淘汰。
 const dir = (): string => path.join(app.getPath('userData'), 'agent-history')
 
 function fileOf(leafId: string): string | null {
   const key = safeHistoryKey(leafId)
   return key ? path.join(dir(), `${key}.json`) : null
-}
-
-function prune(): void {
-  try {
-    const d = dir()
-    const files = fs
-      .readdirSync(d)
-      .filter((f) => f.endsWith('.json'))
-      .map((f) => {
-        const p = path.join(d, f)
-        return { p, m: fs.statSync(p).mtimeMs }
-      })
-    if (files.length <= MAX_FILES) return
-    files.sort((a, b) => a.m - b.m)
-    for (const f of files.slice(0, files.length - MAX_FILES)) fs.unlinkSync(f.p)
-  } catch {
-    /* 清理失败不影响主流程 */
-  }
 }
 
 /** 一批 agent 的产出状态：每个 role 的 `.plans/<role>/findings.md` 在不在、多大。
@@ -141,7 +122,7 @@ export function registerAgentHistory(): void {
    */
   ipcMain.handle(
     'agentHistory:list',
-    (_e, cwd: unknown): { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[] => {
+    (_e, cwd: unknown, query: unknown): HistorySummary[] => {
       if (typeof cwd !== 'string' || !cwd) return []
       let names: string[]
       try {
@@ -149,7 +130,7 @@ export function registerAgentHistory(): void {
       } catch {
         return []
       }
-      const out: { leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[] = []
+      const out: HistorySummary[] = []
       for (const n of names) {
         try {
           const raw = JSON.parse(fs.readFileSync(path.join(dir(), n), 'utf8')) as {
@@ -158,16 +139,8 @@ export function registerAgentHistory(): void {
             savedAt?: unknown
             turns?: { role?: string; text?: string }[]
           }
-          if (raw.cwd !== cwd || !Array.isArray(raw.turns) || !raw.turns.length) continue
-          // 预览取第一条用户消息 —— 「上次聊的是什么」比「最后说到哪」更好认
-          const first = raw.turns.find((t) => t?.role === 'user') ?? raw.turns[0]
-          out.push({
-            leafId: n.replace(/\.json$/, ''),
-            resumeId: typeof raw.resumeId === 'string' ? raw.resumeId : null,
-            savedAt: typeof raw.savedAt === 'number' ? raw.savedAt : 0,
-            turns: raw.turns.length,
-            preview: (first?.text ?? '').slice(0, 60)
-          })
+          if (!historyMatches(raw, cwd, typeof query === 'string' ? query.slice(0, 500) : '')) continue
+          out.push(historySummary(n.replace(/\.json$/, ''), raw))
         } catch {
           /* 坏文件跳过，不能让一份坏记录挡住整个列表 */
         }
@@ -178,21 +151,15 @@ export function registerAgentHistory(): void {
 
   // 返回**真的写成了没有**。调用方里至少有一条路（adoptOrphan）要靠它决定
   // 敢不敢删掉旧的那一份 —— 先删后存、而存又失败了的话，那段对话就永久没了。
-  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown, resumeCli: unknown): boolean => {
+  ipcMain.handle('agentHistory:save', (_e, leafId: unknown, turns: unknown, resumeId: unknown, cwd: unknown, resumeCli: unknown, moduleId: unknown): boolean => {
     const f = typeof leafId === 'string' ? fileOf(leafId) : null
     if (!f || !Array.isArray(turns)) return false
     try {
-      fs.mkdirSync(dir(), { recursive: true })
-      // 空记录就删文件，别留一堆 {"turns":[]}
-      if (turns.length === 0) {
-        fs.rmSync(f, { force: true })
-        // **返回 false**：删掉不等于「保存好了」。调用方拿它当「可以删旧的了」
-        // 会正好在这条路径上丢数据（.plans/silent-fail S-12 记的那颗雷）。
-        return false
-      }
-      fs.writeFileSync(
-        f,
-        JSON.stringify({
+      let previous: { moduleId?: string; pinned?: boolean } = {}
+      try { previous = JSON.parse(fs.readFileSync(f, 'utf8')) } catch { /* new record */ }
+      return writeHistorySnapshot(f, {
+          moduleId: typeof moduleId === 'string' && safeHistoryKey(moduleId) ? moduleId : previous.moduleId ?? null,
+          pinned: previous.pinned === true,
           v: 1,
           savedAt: Date.now(),
           resumeId: typeof resumeId === 'string' && resumeId ? resumeId : null,
@@ -202,15 +169,22 @@ export function registerAgentHistory(): void {
           // 没有它就只能把所有项目的历史混在一起给用户挑，那不可用
           cwd: typeof cwd === 'string' ? cwd : null,
           turns
-        }),
-        { mode: 0o600 }
-      )
-      prune()
-      return true
+      })
     } catch (e) {
       console.error('[agentHistory] 写入失败', e)
       return false
     }
+  })
+
+  // App-private metadata: validated key, no caller-provided filesystem paths.
+  ipcMain.handle('agentHistory:pin', (_e, key: unknown, cwd: unknown, pinned: unknown): boolean => {
+    const f = typeof key === 'string' ? fileOf(key) : null
+    if (!f || typeof cwd !== 'string' || typeof pinned !== 'boolean') return false
+    try {
+      const raw = JSON.parse(fs.readFileSync(f, 'utf8'))
+      if (raw.cwd !== cwd || !Array.isArray(raw.turns)) return false
+      return writeHistorySnapshot(f, { ...raw, pinned })
+    } catch { return false }
   })
 
   /** 节点被永久关闭时清掉它的记录。**跟着节点走** ——

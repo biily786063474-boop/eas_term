@@ -1,0 +1,82 @@
+Original: /tmp/eas-preview-resident-recheck.log
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/voice-regression/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ **只放行 <门牌号>.eas-term.local:443，别的一律拒** (0.819417ms)
+✔ 不是 CONNECT 的请求也拒 —— 别拿它当普通 HTTP 代理 (0.104708ms)
+✔ 头没收全时说 need-more，不误判成坏请求 (0.131666ms)
+✔ 头无限长要掐掉，不能一直缓冲 (0.054792ms)
+✔ **头后面的字节要原样交出来** —— 那是 TLS 握手的第一段 (0.334709ms)
+✔ LF-only 的请求也认（不能假设对方一定发 CRLF） (0.047167ms)
+✔ 混着换行时取**先出现**的终止符，别把正文吞进头 (0.049833ms)
+✔ agent / data 两种握手，格式全对才认 (0.12325ms)
+✔ 握手行任何一处不对都是 bad —— 不认识的角色一律拒 (0.096208ms)
+✔ **data 握手必须带凭证之外的流水号，且流水号要够长** —— 不然能被抢流 (0.073625ms)
+✔ 切行：收全了给行和剩下的字节 (0.062333ms)
+✔ 切行：\r\n 也认 (0.039ms)
+✔ 切行：没换行且没超长 → need-more (0.029291ms)
+✔ **切行：不发换行的连接要被掐掉**，不能一直缓冲 (0.032292ms)
+✔ 手机该连的主机名 (0.025ms)
+✔ **读行要按 UTF-8 解** —— 错误原因是给人看的中文 (0.05375ms)
+✔ 多字节字符跨在换行两侧也不会切坏 (0.057583ms)
+ℹ tests 3114
+ℹ suites 60
+ℹ pass 3096
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 15
+ℹ todo 0
+ℹ duration_ms 55589.640958
+
+✖ failing tests:
+
+test at src/main/codexCapabilityLauncher.test.mjs:56:1
+✖ SIGTERM during actual launcher config probe kills only its owned probe and never executes native turn (5008.468209ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(f.read().some(r=>r.pid))
+  
+      at TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/codexCapabilityLauncher.test.mjs:62:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src/main/codexCapabilityLauncher.test.mjs:70:84
+✖ owned IPC cancel during config waits for the actual child to exit (5011.117042ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(f.read().some(r=>phase==='config'?r.pid:r.executed))
+  
+      at TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/codexCapabilityLauncher.test.mjs:75:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at src/main/codexCapabilityLauncher.test.mjs:70:84
+✖ owned IPC disconnect during config waits for the actual child to exit (5013.377166ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(f.read().some(r=>phase==='config'?r.pid:r.executed))
+  
+      at TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/voice-regression/src/main/codexCapabilityLauncher.test.mjs:75:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

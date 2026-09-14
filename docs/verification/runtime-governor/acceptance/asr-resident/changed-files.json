@@ -1,0 +1,60 @@
+{
+  "note": "Files touched by this slice; may also contain mixed earlier changes, not an authorship claim.",
+  "files": [
+    {
+      "path": "src/main/runtime/managedAsr.ts",
+      "bytes": 2900,
+      "sha256": "1f4e8d7a52f640121efa08f5ca13a681cf1460a0150ec490eeaecb3c843c24dd"
+    },
+    {
+      "path": "src/main/runtime/asrWorkerLifecycle.ts",
+      "bytes": 1521,
+      "sha256": "34bc502f923da58532ebe0b827f41308289f7e9eda2ee61225baddc7b15ecf5b"
+    },
+    {
+      "path": "src/main/runtime/managedAsr.test.ts",
+      "bytes": 2800,
+      "sha256": "463d47882bfbb04d107be734d911f64dc68624013c29032a46f470b098715c28"
+    },
+    {
+      "path": "src/main/runtime/asrWorkerLifecycle.test.ts",
+      "bytes": 1283,
+      "sha256": "35745a24a52f5d2b8838cea0a07d2c51187587682071ab3bc359810375baa0f0"
+    },
+    {
+      "path": "src/main/runtime/managedAsr.real.test.ts",
+      "bytes": 2290,
+      "sha256": "0c956897b10c1152d6fe510b16bec28d3365c63c41ac78bdc8b2c260a3e87e52"
+    },
+    {
+      "path": "src/main/runtime/asrStopRouting.test.ts",
+      "bytes": 1855,
+      "sha256": "511bb8f39192c8e982d985289d53174bf7d0f165cd9197aeed4518038d2e5751"
+    },
+    {
+      "path": "src/main/runtime/voiceWorkerWiring.test.ts",
+      "bytes": 4005,
+      "sha256": "8cfd4783405f5338c101b08e0f0a83fc577dbef90a5f5272501afc8f6e9965eb"
+    },
+    {
+      "path": "src/main/runtime/sharedServices.ts",
+      "bytes": 2495,
+      "sha256": "9fd331a64b3f47aa2c3f9db43c728afddd4565baf98a3737bae6511766f014fb"
+    },
+    {
+      "path": "src/main/runtime/ipc.ts",
+      "bytes": 4105,
+      "sha256": "5fdbd464d4390d14996773300bf039c9991fbd0804bd8c620fe7602804d3807a"
+    },
+    {
+      "path": "src/main/stt.ts",
+      "bytes": 25117,
+      "sha256": "e3efbee7af989cd34ae3ccb1b17bee821f4f06968b157685ecb700120227e780"
+    },
+    {
+      "path": "src/renderer/src/features/workspace/RuntimeMonitorPanel.tsx",
+      "bytes": 6112,
+      "sha256": "153ca3c1c5da65cc173388e9cd41d97d565948da5b17618eec8edf5134579726"
+    }
+  ]
+}

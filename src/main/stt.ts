@@ -1,7 +1,15 @@
+import {openManagedPreview} from './runtime/voicePreviewAdmission.ts'
+import {createVoicePreviewSession} from './voicePreviewSession.ts'
+import {voicePreviewWorkerCode} from './voicePreviewWorker.ts'
+import {createManagedAsr} from './runtime/managedAsr.ts'
+import {trackAsrWorker} from './runtime/asrWorkerLifecycle.ts'
+import {runManagedTask, cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
+import {createWorkerRequests} from './runtime/workerRequests.ts'
 import { voiceAsrWorkerCode } from './voiceAsrWorker'
 import { createHash } from 'node:crypto'
 import { VoiceGate } from './voiceGate'
-import { openVoiceVad, type VadSession } from './voiceVad'
+import type { VadSession } from './voiceVad'
+import { openManagedVad } from './runtime/managedVad'
 // 离线语音转文字(STT)服务 —— 混合双模型，零 key、离线、隐私：
 //  · 录音中：流式 zipformer 出「易变预览」(partial)，边说边看；
 //  · 停手时：用离线大模型 SenseVoice 对整段缓存音频重跑，出「准确定稿」(带标点/数字规整)。
@@ -67,60 +75,13 @@ function readyDir(spec: ModelSpec): string | null {
   return null
 }
 
-// 在模型目录里找 encoder/decoder/joiner（优先 int8）
-function pick(dir: string, kind: 'encoder' | 'decoder' | 'joiner'): string {
-  const files = fs.readdirSync(dir).filter((f) => f.startsWith(kind) && f.endsWith('.onnx'))
-  const int8 = files.find((f) => f.includes('int8'))
-  return path.join(dir, int8 ?? files[0] ?? `${kind}.onnx`)
-}
-
-// ---------- 流式识别器（录音中实时预览） ----------
-interface Recognizer {
-  createStream(): unknown
-  isReady(s: unknown): boolean
-  decode(s: unknown): void
-  isEndpoint(s: unknown): boolean
-  getResult(s: unknown): { text: string }
-  reset(s: unknown): void
-}
-let recognizer: Recognizer | null = null
-let loadError: string | null = null
-async function ensureRecognizer(): Promise<Recognizer | null> {
-  if (recognizer || loadError) return recognizer
+// ---------- 流式识别器（单录音独占 Worker，主线程不加载模型或解码） ----------
+function createPreviewWorker(onPartial:(text:string,targetId:string)=>void,onError:(message:string)=>void) {
   const dir = readyDir(MODELS.stream)
-  if (!dir) {
-    loadError = '流式语音模型未下载'
-    return null
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const runtimeDir = path.dirname(require.resolve('sherpa-onnx'))
-    const wasm = await require(path.join(runtimeDir, 'sherpa-onnx-wasm-nodejs.js'))({})
-    const binding = require(path.join(runtimeDir, 'sherpa-onnx-asr.js'))
-    recognizer = binding.createOnlineRecognizer(wasm, {
-      featConfig: { sampleRate: 16000, featureDim: 80 },
-      modelConfig: {
-        transducer: {
-          encoder: pick(dir, 'encoder'),
-          decoder: pick(dir, 'decoder'),
-          joiner: pick(dir, 'joiner')
-        },
-        tokens: path.join(dir, 'tokens.txt'),
-        numThreads: 2,
-        provider: 'cpu',
-        debug: 0
-      },
-      decodingMethod: 'greedy_search',
-      enableEndpoint: 1,
-      rule1MinTrailingSilence: 2.4,
-      rule2MinTrailingSilence: 1.0,
-      rule3MinUtteranceLength: 20
-    }) as Recognizer
-  } catch (e) {
-    loadError = e instanceof Error ? e.message : String(e)
-    console.error('[stt] 加载流式识别器失败', e)
-  }
-  return recognizer
+  if (!dir) throw Error('流式语音模型未下载')
+  const owned = new Worker(voicePreviewWorkerCode, {eval:true,execArgv:[],workerData:{dir,sherpaPath:require.resolve('sherpa-onnx')}})
+  owned.unref()
+  return createVoicePreviewSession(owned,onPartial,onError)
 }
 
 // ---------- 离线识别器 SenseVoice（跑在 worker 线程，绝不阻塞主进程） ----------
@@ -129,7 +90,8 @@ async function ensureRecognizer(): Promise<Recognizer | null> {
 let worker: Worker | null = null
 let workerDead = false
 let seq = 1
-const pending = new Map<number, (text: string | null) => void>()
+const voiceOwners = new WeakSet<WebContents>()
+const pending = createWorkerRequests<string>(8)
 
 function ensureWorker(): Worker | null {
   if (worker || workerDead) return worker
@@ -148,25 +110,25 @@ function ensureWorker(): Worker | null {
   }
   const code = voiceAsrWorkerCode
   try {
-    worker = new Worker(code, { eval: true, execArgv: [], workerData: { dir, sherpaPath } })
-    worker.unref() // 别因为它挡住退出
-    worker.on('message', (m: { type: string; id?: number; text?: string; err?: string }) => {
+    const ownedWorker = new Worker(code, { eval: true, execArgv: [], workerData: { dir, sherpaPath } })
+    worker = ownedWorker
+    ownedWorker.unref() // 别因为它挡住退出
+    ownedWorker.on('message', (m: { type: string; id?: number; text?: string; err?: string; error?: string }) => {
       if (m.type === 'result' && typeof m.id === 'number') {
-        pending.get(m.id)?.(m.text ?? '')
-        pending.delete(m.id)
+        pending.settle(m.id, ownedWorker, m.error ? null : (m.text ?? ''))
       } else if (m.type === 'fatal') {
         console.error('[stt worker] 初始化失败,回退流式', m.err)
-        workerDead = true
-        pending.forEach(resolve => resolve(null)); pending.clear()
-        void worker?.terminate(); worker = null
+        if(worker===ownedWorker){workerDead = true;worker = null}
+        // The exit event, not the fatal notification, settles actual completion.
+        void ownedWorker.terminate()
       }
     })
-    worker.on('error', (e) => {
+    ownedWorker.on('error', (e) => {
       console.error('[stt worker] 错误', e)
-      worker = null
-      pending.forEach((r) => r(null))
-      pending.clear()
+      if(worker===ownedWorker)worker = null
+      void ownedWorker.terminate()
     })
+    ownedWorker.once('exit',()=>{pending.failOwner(ownedWorker);if(worker===ownedWorker)worker=null})
   } catch (e) {
     console.error('[stt worker] 启动失败', e)
     workerDead = true
@@ -175,30 +137,47 @@ function ensureWorker(): Worker | null {
   return worker
 }
 
+// A separate resident lease precedes per-segment decode admission; never nest two execution slots.
+const managedAsr = createManagedAsr(() => {
+  const ownedWorker = ensureWorker()
+  if (!ownedWorker) return null
+  const handle = trackAsrWorker(ownedWorker)
+  return {...handle, stop(): void {
+    if (worker === ownedWorker) worker = null
+    handle.stop()
+  }}
+})
+
 // 异步识别一段音频；worker 不可用/超时 → null（调用方回退流式结果）
 //
 // timeoutMs 可调：麦克风那条路是短句，20 秒足够；
 // 文件转录一段是 20–30 秒音频，CPU 上解码要久一些，用 20 秒卡它会把长句全丢掉。
-function transcribeAsync(samples: Float32Array, timeoutMs = 20000): Promise<string | null> {
+async function transcribeAsync(samples: Float32Array, timeoutMs = 20000, owner?: WebContents): Promise<string | null> {
   if (pending.size >= 8 || samples.length > 16000 * 31) return Promise.resolve(null)
-  const w = ensureWorker()
-  if (!w) return Promise.resolve(null)
+  if (!owner || owner.isDestroyed()) return Promise.resolve(null)
+  if (!voiceOwners.has(owner)) {
+    voiceOwners.add(owner)
+    const release = (): void => cancelSessionStartsForWindow(owner.id)
+    owner.on('did-navigate', release)
+    owner.on('render-process-gone', release)
+    owner.once('destroyed', release)
+  }
+  const w = await managedAsr.get(owner)
+  if (!w) return null
   const id = seq++
-  return new Promise((resolve) => {
-    pending.set(id, resolve)
-    try {
-      w.postMessage({ id, samples }, [samples.buffer as ArrayBuffer])
-    } catch {
-      pending.delete(id)
-      resolve(null)
-      return
+  return runManagedTask<string|null>({
+    id: `voice-decode:${id}`, windowId: owner.id, name: '语音解码', projectId: null,
+    cost: {cpu: 10, memoryBytes: 64 * 1024 * 1024},
+    start: async signal => {
+      if (signal.aborted || owner.isDestroyed()) throw Error('cancelled')
+      if (w !== worker) return {result: Promise.resolve(null), completed: Promise.resolve()}
+      const request = pending.begin(id,w,timeoutMs)
+      if (!request) return {result: Promise.resolve(null), completed: Promise.resolve()}
+      // Do not terminate a shared worker to cancel one window's decode.
+      try { w.postMessage({id,samples},[samples.buffer as ArrayBuffer]) }
+      catch { pending.settle(id,w,null) }
+      return request
     }
-    setTimeout(() => {
-      if (pending.has(id)) {
-        pending.delete(id)
-        resolve(null)
-      }
-    }, timeoutMs)
   })
 }
 
@@ -253,8 +232,6 @@ async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: s
       }
     }
     // 下完清缓存的加载错误,让下次 ensure 重新建
-    loadError = null
-    recognizer = null
     workerDead = false
     worker?.terminate()
     worker = null
@@ -270,9 +247,8 @@ async function downloadModels(wc: WebContents): Promise<{ ok: boolean; error?: s
 }
 
 // 会话态
-let stream: unknown = null
+let stream: Awaited<ReturnType<typeof openManagedPreview>> | null = null
 let chunks: Float32Array[] = [] // 当前这一句的音频（自动切句后清空）
-let committed = ''
 
 // VAD supplies the speech decision; silence duration only determines sentence boundaries.
 const SILENCE_MS = 650 // 连续静音多久算「说完一句」（+ 采集/识别耗时 ≈ 用户体感 1s）
@@ -287,6 +263,7 @@ let voiceMode: 'standard' | 'strong' | 'basic' = 'standard'
 let voiceSegment = 0
 const finalJobs = new Set<Promise<void>>()
 let recordingOwner: number | null = null
+let recordingStartup: AbortController | null = null
 let detachOwner = (): void => {}
 const voiceGate = new VoiceGate()
 let silentMs = 0
@@ -313,14 +290,14 @@ async function flushSentence(wc: WebContents): Promise<void> {
   // 同步部分只做「取走音频 + 复位计数」，之后立刻返回；识别在 worker 里跑，主进程不阻塞，
   // 用户可以马上接着说下一句（新音频进新的一批 chunks，worker 内部按序处理，不会串）。
   chunks = []
-  const streamFallback = committed + (recognizer && stream ? recognizer.getResult(stream).text.trim() : '')
-  committed = ''
+  // Queue the sentence boundary before any next audio; never repaint delayed old partials.
+  const streamFallback = stream?.takeText().catch(() => '') ?? Promise.resolve('')
   silentMs = 0
   speechMs = 0
-  if (recognizer && stream) recognizer.reset(stream)
   if (!wc.isDestroyed()) wc.send('stt:partial', '')
   try {
-    const text = (await transcribeAsync(audio)) || streamFallback
+    const [offline, fallback] = await Promise.all([transcribeAsync(audio, 20000, wc).catch(() => null), streamFallback])
+    const text = offline || fallback
     if (text && epoch === recordingEpoch) {
       const deduped = text
       if (deduped) {
@@ -343,11 +320,13 @@ export function registerSttHandlers(): void {
    * 模型支持 zh/en/ja/ko/yue 且 language:'auto'，参考视频基本都覆盖得到。
    */
   ipcMain.handle('stt:transcribeChunk', async (_e, buf: ArrayBuffer): Promise<string> => {
-    if (!(buf instanceof ArrayBuffer) || buf.byteLength > 16000 * 30 * 4 || buf.byteLength % 4) return ''
+    if (!(buf instanceof ArrayBuffer) || buf.byteLength > 16000 * 30 * 4 || buf.byteLength % 4) throw new Error('转录音频格式或长度无效')
     const samples = new Float32Array(buf)
     if (!samples.length) return ''
     // 一段最长 30 秒，给 90 秒余量——慢机器上 CPU 解码确实要这么久
-    return (await transcribeAsync(samples, 90000)) ?? ''
+    const text = await transcribeAsync(samples, 90000, _e.sender)
+    if (text === null) throw new Error('转录未完成：识别器不可用、超时或资源不足；未自动重试')
+    return text
   })
 
   ipcMain.handle('stt:modelStatus', (): { ready: boolean; missing: string[] } => {
@@ -363,15 +342,24 @@ export function registerSttHandlers(): void {
     voiceMode = mode === 'strong' || mode === 'basic' ? mode : 'standard'
     const epoch = ++recordingEpoch
     recordingOwner = e.sender.id
-    const release = (): void => { if (recordingEpoch === epoch) { recordingOwner = null; detachOwner(); detachOwner = () => {} } }
+    const startup = new AbortController()
+    recordingStartup = startup
+    stoppingRecording = false
+    const release = (): void => { if (recordingEpoch === epoch) { startup.abort(); if (recordingStartup === startup) recordingStartup = null; recordingOwner = null; detachOwner(); detachOwner = () => {} } }
     const destroyed = (): void => {
       if (recordingEpoch !== epoch) return
-      release(); recordingEpoch++; (stream as {free?:()=>void} | null)?.free?.(); stream = null; chunks = []; voiceGate.reset()
+      release(); recordingEpoch++; stream?.stop(); stream = null; chunks = []; voiceGate.reset()
       vadSession?.stop(); vadSession = null
     }
     e.sender.once('destroyed', destroyed)
-    detachOwner = () => e.sender.removeListener('destroyed', destroyed)
-    const valid = (): boolean => epoch === recordingEpoch && !e.sender.isDestroyed()
+    e.sender.on('did-navigate', destroyed)
+    e.sender.on('render-process-gone', destroyed)
+    detachOwner = () => {
+      e.sender.removeListener('destroyed', destroyed)
+      e.sender.removeListener('did-navigate', destroyed)
+      e.sender.removeListener('render-process-gone', destroyed)
+    }
+    const valid = (): boolean => epoch === recordingEpoch && !e.sender.isDestroyed() && !startup.signal.aborted
     try {
     if (process.platform === 'darwin') {
       const st = systemPreferences.getMediaAccessStatus('microphone')
@@ -383,41 +371,42 @@ export function registerSttHandlers(): void {
     }
     // 流式模型缺失 → 让渲染层去下载(而非报死)
     if (!readyDir(MODELS.stream) || (voiceMode !== 'basic' && !readyDir(MODELS.vad))) { release(); return { ok: false, error: '语音或人声检测模型未下载', needDownload: true } }
-    const r = await ensureRecognizer()
-    if (!valid()) return {ok:false,error:'录音初始化已取消'}
-    if (!r) { release(); return { ok: false, error: loadError ?? '识别器不可用' } }
-    try {
-      if (voiceMode !== 'basic') {
-      const created = await openVoiceVad(path.join(readyDir(MODELS.vad)!, 'silero_vad.onnx'), (samples, speech, targetId) => {
+    const failed = (message:string):void => {
+      if (epoch !== recordingEpoch) return
+      destroyed()
+      if (!e.sender.isDestroyed()) e.sender.send('stt:error',message)
+    }
+    const createdPreview = await openManagedPreview(e.sender, startup.signal,
+      () => createPreviewWorker((text,targetId) => {
+        if (epoch === recordingEpoch && targetId === currentTargetId && !stoppingRecording && !e.sender.isDestroyed()) e.sender.send('stt:partial',text)
+      },failed), failed)
+    if (!valid()) { createdPreview.stop(); return {ok:false,error:'录音初始化已取消'} }
+    stream = createdPreview
+    if (voiceMode !== 'basic') {
+      const created = await openManagedVad(e.sender, path.join(readyDir(MODELS.vad)!, 'silero_vad.onnx'), (samples, speech, targetId) => {
         if (epoch !== recordingEpoch || !stream) return
         routeAudio(e.sender, samples, speech, targetId)
-      }, message => {
-        if (epoch !== recordingEpoch) return
-        release(); (stream as {free?:()=>void} | null)?.free?.(); stream = null; chunks = []; recordingEpoch++
-        if (!e.sender.isDestroyed()) e.sender.send('stt:error', message)
-      }, voiceMode === 'strong')
+      }, failed, voiceMode === 'strong', startup.signal)
       if (!valid()) { created.stop(); return {ok:false,error:'录音初始化已取消'} }
       vadSession = created
-      }
-    } catch (error) { release(); return { ok: false, error: String(error) } }
+    }
     voiceGate.reset()
     stoppingRecording = false; stoppedFinals = []; currentTargetId = ''; voiceSegment = 0
-    stream = r.createStream()
     chunks = []
-    committed = ''
     silentMs = 0
     speechMs = 0
+    if (recordingStartup === startup) recordingStartup = null
     return { ok: true }
-    } catch (error) { release(); vadSession?.stop(); vadSession = null; return {ok:false,error:String(error)} }
+    } catch (error) { destroyed(); return {ok:false,error:String(error)} }
   })
 
   function routeAudio(wc: WebContents, samples: Float32Array, speech: boolean, targetId: string): void {
         if (targetId !== currentTargetId) {
           if (speechMs >= MIN_SPEECH_MS) {
             const job = flushSentence(wc); finalJobs.add(job); void job.finally(() => finalJobs.delete(job))
-          }
-          chunks = []; committed = ''; speechMs = 0; silentMs = 0
-          voiceGate.reset(); if (recognizer && stream) recognizer.reset(stream)
+          } else { void stream?.takeText().catch(() => {}) }
+          chunks = []; speechMs = 0; silentMs = 0
+          voiceGate.reset()
           currentTargetId = targetId
         }
         if (!targetId) return
@@ -425,8 +414,7 @@ export function registerSttHandlers(): void {
   }
 
   function processAudio(wc: WebContents, f32: Float32Array, detectedSpeech: boolean): void {
-    const r = recognizer
-    if (!r || !stream) return
+    if (!stream) return
     try {
       const ms = (f32.length / 16000) * 1000
       const loud = detectedSpeech
@@ -438,17 +426,7 @@ export function registerSttHandlers(): void {
       } else if (chunks.length) {
         silentMs += ms
       }
-      ;(stream as { acceptWaveform(sr: number, s: Float32Array): void }).acceptWaveform(16000, f32)
-      while (r.isReady(stream)) r.decode(stream)
-      const seg = r.getResult(stream).text.trim()
-      // 说话中：流式预览（灰字），让用户看到在听
-      if (r.isEndpoint(stream)) {
-        committed = (committed + seg).trim()
-        r.reset(stream)
-        if (!wc.isDestroyed()) wc.send('stt:partial', committed)
-      } else if (!wc.isDestroyed()) {
-        wc.send('stt:partial', (committed + seg).trim())
-      }
+      if (!stream.push(f32,currentTargetId)) return
       // 停顿够久且这一句确实有内容 → 就地用 SenseVoice 出定稿并落字（处理藏在静音里，无 loading）
       if ((silentMs >= SILENCE_MS || chunks.length >= 235) && speechMs >= MIN_SPEECH_MS) {
         const job = flushSentence(wc); finalJobs.add(job)
@@ -470,6 +448,14 @@ export function registerSttHandlers(): void {
   // 停止录音：只需收尾「最后一句还没到静音阈值就被手动停掉」的残句（已自动落字的不重复）
   ipcMain.handle('stt:stop', async (e): Promise<{ text: string; segments?: VoiceFinal[] }> => {
     if (e.sender.id !== recordingOwner || stoppingRecording) return { text: '' }
+    if (recordingStartup) {
+      recordingStartup.abort(); recordingStartup = null
+      recordingOwner = null; detachOwner(); detachOwner = () => {}
+      recordingEpoch++
+      stream?.stop(); stream = null; chunks = []; voiceGate.reset()
+      vadSession?.stop(); vadSession = null
+      return {text: ''}
+    }
     stoppingRecording = true
     const stoppingEpoch = recordingEpoch
     const ownVad = vadSession
@@ -482,30 +468,20 @@ export function registerSttHandlers(): void {
     const tailTarget = currentTargetId
     const tailSegment = `${recordingEpoch}:${++voiceSegment}`
     stoppedFinals = []
+    const validSpeech = speechMs >= MIN_SPEECH_MS
+    const ownPreview = stream
+    const all = chunks.length ? concatChunks() : new Float32Array(0)
+    const fallback = await ownPreview?.takeText().catch(() => '') ?? ''
+    if (stoppingEpoch !== recordingEpoch || e.sender.id !== recordingOwner) return {text:''}
+    ownPreview?.stop()
+    stream = null
     recordingOwner = null; detachOwner(); detachOwner = () => {}
     const epoch = ++recordingEpoch
-    const validSpeech = speechMs >= MIN_SPEECH_MS
-    const r = recognizer
-    let streamTail = ''
-    if (r && stream) {
-      try {
-        ;(stream as { inputFinished(): void }).inputFinished()
-        while (r.isReady(stream)) r.decode(stream)
-        streamTail = r.getResult(stream).text.trim()
-      } catch {
-        /* 忽略 */
-      }
-    }
-    const all = chunks.length ? concatChunks() : new Float32Array(0)
-    const fallback = (committed + streamTail).trim()
-    ;(stream as {free?:()=>void} | null)?.free?.()
-    stream = null
     chunks = []
-    committed = ''
     silentMs = 0
     speechMs = 0
     // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字；识别同样走 worker，不卡主进程
-    const offlineText = validSpeech && all.length / 16000 > 0.3 ? await transcribeAsync(all) : null
+    const offlineText = validSpeech && all.length / 16000 > 0.3 ? await transcribeAsync(all, 20000, e.sender).catch(() => null) : null
     const text = validSpeech && epoch === recordingEpoch ? (offlineText || fallback).trim() : ''
     const deduped = text
     if (deduped && tailTarget) flushed.push({text: deduped, targetId: tailTarget, segmentId: tailSegment})

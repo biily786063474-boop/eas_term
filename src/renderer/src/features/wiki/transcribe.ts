@@ -74,6 +74,16 @@ function stamp(sec: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function failureMessage(error: unknown): string {
+  const message = (error instanceof Error ? error.message : String(error))
+    .replace(/^Error invoking remote method '[^']+':\s*(?:Error:\s*)?/, '')
+  if (message === 'cancelled') return '已取消'
+  if (message === 'wait timeout') return '等待资源超时'
+  if (message === 'queue full') return '资源队列已满'
+  if (message === 'disposed') return '资源调度已关闭'
+  return message
+}
+
 /**
  * 转录一个媒体文件，返回带时间戳的逐字稿。
  * onProgress 每完成一段回调一次——半小时的视频要跑几分钟，进度必须看得见。
@@ -97,7 +107,15 @@ export async function transcribeFile(
     const [a, b] = segs[i]
     // 复制一份传过去：postMessage 会把 buffer 转移走，切片共享同一块内存会出事
     const chunk = pcm.slice(a, b)
-    const text = await window.api.stt.transcribeChunk(chunk.buffer as ArrayBuffer)
+    let text: string
+    try {
+      text = await window.api.stt.transcribeChunk(chunk.buffer as ArrayBuffer)
+    } catch (e) {
+      return {
+        ok: false, text: lines.join('\n'),
+        error: `第 ${i + 1}/${segs.length} 段转录中止：${failureMessage(e)}；未自动重试`
+      }
+    }
     if (text.trim()) lines.push(`[${stamp(a / TARGET_SR)}] ${text.trim()}`)
     onProgress?.({ done: i + 1, total: segs.length, text: lines.join('\n') })
   }

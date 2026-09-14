@@ -1,0 +1,12 @@
+Original: /tmp/eas-preview-delivery-build.log
+../../out/renderer/assets/index-B5UoQMQF.js                 55.83 kB
+../../out/renderer/assets/index-BqlegVxS.js                 73.54 kB
+../../out/renderer/assets/index-DUkTZsUM.js                 86.49 kB
+../../out/renderer/assets/index--6f_LpHi.js                 97.45 kB
+../../out/renderer/assets/index-D9AgjGq-.js                102.86 kB
+../../out/renderer/assets/index-C3-P53pM.js                106.82 kB
+../../out/renderer/assets/index-C4udKwyM.js                228.28 kB
+../../out/renderer/assets/DictView-DvComzlX.js             656.69 kB
+../../out/renderer/assets/dictionary-bundle-ZdkIBe8W.js  1,489.45 kB
+../../out/renderer/assets/index-DzfkJsIv.js              4,330.58 kB
+✓ built in 3.69s

@@ -1,0 +1,53 @@
+src/main/git.ts:63:    execFile(
+src/main/git.ts:426:    execFile(
+mcp/eas-pty-launcher.mjs:100:      try { child = spawn(result.command, result.args, { cwd: process.cwd(), env: childEnv, stdio: 'inherit', shell: false }) }
+mcp/eas-secret.mjs:142:const child = spawn(cmd[0], cmd.slice(1), {
+src/main/probeEnv.ts:6:// 所以直接 execFile('which', ['claude']) 会说「没装」，而它明明装着。
+src/main/probeEnv.ts:161:      proc = spawn(process.env.SHELL || '/bin/zsh', ['-lic', `printf '${MARK}%s${MARK}' "$PATH"`], {
+src/main/island.ts:430:  const win = new BrowserWindow({
+src/main/island.ts:868:  execFile(
+src/main/island.ts:947:  execFile(
+mcp/eas-selected-mcp-launcher.mjs:26:  child = spawn(cfg.command, cfg.args, { env, ...(cwd ? { cwd } : {}), stdio: 'inherit', windowsHide: true })
+mcp/codex-capability-config.mjs:60:    try { child = spawn(binary, [...prefixArgs, 'app-server', ...args], { cwd, env, stdio: ['pipe', 'pipe', 'ignore'] }) }
+mcp/eas-codex-launcher.mjs:84:    child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...args], { cwd: process.cwd(), env: cliEnv, stdio: 'inherit', windowsHide: true })
+mcp/bizone-mcp.mjs:85:    spawn('open', ['-g', '-a', APP_BUNDLE], { detached: true, stdio: 'ignore' }).unref()
+src/main/quotaApi.ts:55:    execFile(
+src/main/canvas.ts:148:    const m = range ? /^bytes=(\d*)-(\d*)$/.exec(range) : null
+src/main/index.ts:132:  const win = new BrowserWindow({
+src/main/gitExec.ts:57:    execFile(
+src/main/pty.ts:274:      execFile('ps', ['-axo', 'ppid='], { timeout: 2500 }, (err, stdout) =>
+src/main/pty.ts:280:      execFile(
+src/main/pty.ts:291:    execFile(
+src/main/pty.ts:334:    execFile(
+src/main/pty.ts:393:      proc = pty.spawn(defaultShell(), shellArgs, {
+src/main/bizoneRuntime.ts:60:    const child = spawn(command, args, { env, stdio: 'ignore', detached: true, shell: false })
+src/main/nodeBin.ts:2:// /usr/bin:/bin:…，没有 /opt/homebrew/bin），`spawn('node')` 直接 ENOENT ——
+src/main/fs.ts:28:    execFile('/usr/bin/open', ['-R', target], (err) => {
+src/main/wiki/index.ts:226:        const m = /^## \[[\d-]+\]\s*(\w+)/.exec(l.trim())
+src/main/wiki/index.ts:617:        const m = /^summary:\s*(.+)$/m.exec(text)
+src/main/lspClient.ts:64:      p = spawn(this.spec.bin, this.spec.args, { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'] })
+src/main/bizone.ts:221:      execFile('/usr/bin/open', ['-R', target], (err) => {
+src/main/skillLibrary/parse.ts:62:  const m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(raw)
+src/main/skillLibrary/parse.ts:70:    const kv = /^(\w[\w-]*)\s*:\s*(.*)$/.exec(lines[i])
+src/main/mcpClient.ts:48:    this.proc = spawn(opts.command, opts.args, {
+src/main/branchLedger.ts:170:    const m = TITLE_RE.exec(readText(abs))
+src/main/wiki/scan.ts:35:    const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)
+src/main/wiki/scan.ts:40:        const kv = /^(\w+)\s*:\s*(.*)$/.exec(line.trim())
+src/main/cliAuth/index.ts:143:      proc = spawn(cli, args, { env: PROBE_ENV, stdio: ['ignore', 'pipe', 'pipe'] })
+src/main/cliAuth/index.ts:215:    proc = spawn(cli, args, { env: loginEnv(), stdio: ['pipe', 'pipe', 'pipe'] })
+src/main/secrets.ts:484:      const m = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=/.exec(line)
+src/main/secrets.ts:489:      const s = /(?:^|&&\s*)(?:source|\.)\s+["']?([^"'\s;]+)/.exec(line)
+src/main/cliAuth/install.ts:106:        ? spawn('powershell.exe', ['-NoProfile', '-Command', cmd], { env: PROBE_ENV })
+src/main/cliAuth/install.ts:107:        : spawn('/bin/sh', ['-c', cmd], { env: PROBE_ENV })
+src/main/phone/tunnelClient.ts:207:        const m = /^open ([0-9a-f]{32})$/.exec(r.line)
+src/main/agentChat/ompEvents.ts:225:  const m = /^Allow tool:\s*(.+)$/.exec(first.trim())
+src/main/agentChat/session.ts:855:    const proc = spawn(launch.command, launch.args, {
+src/main/agentChat/session.ts:859:        // launchd 给的精简版、不含 /opt/homebrew/bin —— `spawn('claude')` 直接
+src/main/agentChat/session.ts:1417:  // detect 是 `execFile('which', [bin])` —— 每次都 spawn 一个子进程。
+src/main/agentChat/omp/paths.ts:247:  const m = /omp\/(\d+\.\d+\.\d+[^\s]*)/.exec(stdout)
+src/main/agentChat/omp/launch.ts:215:    child = spawn(plan.spec.bin, plan.spec.args, {
+src/main/agentChat/omp/launch.ts:335:    execFile(
+src/main/agentChat/omp/setup.ts:107:    execFile(bin, ['models', 'ls', '--json'], { env: ompBaseEnv(host), timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
+src/main/agentChat/omp/setup.ts:241:      execFile(bin, ['auth-broker', 'list', '--json'], { env: ompBaseEnv(host), timeout: 12_000 }, (err, stdout) => {
+src/main/agentChat/codexModels.ts:99:    try { const launch = cliInvocation('codex', bin, ['app-server'], env); p = spawn(launch.command, launch.args, { stdio: ['pipe', 'pipe', 'ignore'], env: cliInvocationEnv(env, launch) }) }
+src/main/agentChat/adapters/detect.ts:25:      execFile(WHICH_BIN, [bin], { env: PROBE_ENV }, (err) => resolve(!err))

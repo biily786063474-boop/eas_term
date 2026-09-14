@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-09-13T07:42:50.726Z",
+  "platform": "darwin",
+  "scope": "isolated Node subprocesses; NOT proof of production launcher cleanup",
+  "results": [
+    {
+      "mode": "ordinary",
+      "parentExited": true,
+      "childAliveAfterParentExit": true,
+      "afterParentExit": "4517     1 S    Sun Sep 13 00:42:43 2026",
+      "afterSelfExpiry": null
+    },
+    {
+      "mode": "detached",
+      "parentExited": true,
+      "childAliveAfterParentExit": true,
+      "afterParentExit": "4521     1 Ss   Sun Sep 13 00:42:47 2026",
+      "afterSelfExpiry": null
+    }
+  ]
+}

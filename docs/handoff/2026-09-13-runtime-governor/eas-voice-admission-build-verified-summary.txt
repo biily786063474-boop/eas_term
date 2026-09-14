@@ -1,0 +1,17 @@
+../../out/renderer/assets/sql-BSrOzCRI.js                   42.67 kB
+../../out/renderer/assets/index-W8Hyjetw.js                 43.89 kB
+../../out/renderer/assets/index-CXH_1exg.js                 43.93 kB
+../../out/renderer/assets/index-BY1_Xoo6.js                 54.94 kB
+../../out/renderer/assets/index-DcSD6iXa.js                 55.83 kB
+../../out/renderer/assets/index-FQ55f0TI.js                 73.54 kB
+../../out/renderer/assets/index-0ZnSQbEg.js                 86.49 kB
+../../out/renderer/assets/index-_unD9qup.js                 97.45 kB
+../../out/renderer/assets/index-74jZBfru.js                102.86 kB
+../../out/renderer/assets/index-M1hjXiws.js                106.82 kB
+../../out/renderer/assets/index-C4udKwyM.js                228.28 kB
+../../out/renderer/assets/DictView-D6jGukLR.js             656.69 kB
+../../out/renderer/assets/dictionary-bundle-ZdkIBe8W.js  1,489.45 kB
+../../out/renderer/assets/index-CVLVR4o6.js              4,329.55 kB
+✓ built in 3.42s
+
+EXIT_CODE=0

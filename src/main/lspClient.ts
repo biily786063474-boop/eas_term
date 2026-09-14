@@ -38,6 +38,10 @@ interface Pending {
 
 export class LspClient {
   private proc: ChildProcess | null = null
+  private started = false
+  private resolveCompleted!: () => void
+  /** Only actual child close (or a synchronous spawn failure) proves completion. */
+  readonly completed = new Promise<void>(resolve => { this.resolveCompleted = resolve })
   private readonly dec = new LspDecoder()
   private readonly pending = new Map<number, Pending>()
   private seq = 0
@@ -59,13 +63,17 @@ export class LspClient {
 
   /** 起进程并握手。失败时抛一句**人话**（调用方直接显示给用户）。 */
   async start(): Promise<void> {
+    if (this.started || this.dead) throw new Error('LSP client cannot be restarted')
+    this.started = true
     let p: ChildProcess
     try {
       p = spawn(this.spec.bin, this.spec.args, { cwd: this.root, stdio: ['pipe', 'pipe', 'pipe'] })
     } catch {
+      this.resolveCompleted()
       throw new Error(`起不了 ${this.spec.label} —— 这台机器上没有 ${this.spec.bin}`)
     }
     this.proc = p
+    p.once('close', () => this.resolveCompleted())
     p.on('error', () => this.die(`起不了 ${this.spec.label} —— 这台机器上没有 ${this.spec.bin}`))
     p.stderr?.setEncoding('utf8')
     p.stderr?.on('data', (s: string) => {
@@ -79,28 +87,33 @@ export class LspClient {
       this.die(`${this.spec.label} 退出了（code ${code ?? '?'}）${this.hint()}`)
     )
 
-    const res = (await this.request(
-      'initialize',
-      {
-        processId: process.pid,
-        rootUri: pathToUri(this.root),
-        workspaceFolders: [{ uri: pathToUri(this.root), name: path.basename(this.root) }],
-        capabilities: {
-          textDocument: {
-            callHierarchy: { dynamicRegistration: false },
-            documentSymbol: { hierarchicalDocumentSymbolSupport: true },
-            references: {}
+    try {
+      const res = (await this.request(
+        'initialize',
+        {
+          processId: process.pid,
+          rootUri: pathToUri(this.root),
+          workspaceFolders: [{ uri: pathToUri(this.root), name: path.basename(this.root) }],
+          capabilities: {
+            textDocument: {
+              callHierarchy: { dynamicRegistration: false },
+              documentSymbol: { hierarchicalDocumentSymbolSupport: true },
+              references: {}
+            }
           }
-        }
-      },
-      INIT_TIMEOUT_MS
-    )) as { capabilities?: { callHierarchyProvider?: unknown } } | null
+        },
+        INIT_TIMEOUT_MS
+      )) as { capabilities?: { callHierarchyProvider?: unknown } } | null
 
-    if (!res) throw new Error(`${this.spec.label} 没有回应 initialize${this.hint()}`)
-    if (!res.capabilities?.callHierarchyProvider) {
-      throw new Error(`${this.spec.label} 不支持调用层级（callHierarchy），画不了邻域`)
+      if (!res) throw new Error(`${this.spec.label} 没有回应 initialize${this.hint()}`)
+      if (!res.capabilities?.callHierarchyProvider) {
+        throw new Error(`${this.spec.label} 不支持调用层级（callHierarchy），画不了邻域`)
+      }
+      this.notify('initialized', {})
+    } catch (error) {
+      this.stop()
+      throw error
     }
-    this.notify('initialized', {})
   }
 
   /** stderr 尾部里最像原因的那一行，拼进错误消息。**不倒整段日志给用户。** */

@@ -1,0 +1,238 @@
+ M docs/AGENT_ACTIVITY_LOG.md
+ M "docs/architecture/03-agent\350\247\222\350\211\262\350\276\271\347\225\214.md"
+ M "docs/architecture/10-\346\250\241\345\235\227\351\242\206\345\234\260\345\233\276.md"
+ M memory/project_progress.md
+ M src/main/agentChat/omp/launch.ts
+ M src/main/agentChat/omp/transport.ts
+ M src/main/agentChat/processHandoff.test.ts
+ M src/main/agentChat/session.ts
+ M src/main/agentHistory.ts
+ M src/main/capabilityPtyTransport.test.ts
+ M src/main/codeGraph.ts
+ M src/main/fsGuard.ts
+ M src/main/hostRegistry.test.ts
+ M src/main/hostRegistry.ts
+ M src/main/index.ts
+ M src/main/lspClient.ts
+ M src/main/lspProvider.ts
+ M src/main/mcpClient.ts
+ M src/main/ownedLauncherControl.test.mjs
+ M src/main/pluginHost.ts
+ M src/main/projects.ts
+ M src/main/pty.ts
+ M src/main/stt.ts
+ M src/main/voiceVad.ts
+ M src/preload/index.ts
+ M src/renderer/src/App.tsx
+ M src/renderer/src/features/agentChat/AgentChatView.tsx
+ M src/renderer/src/features/agentChat/ChatToolbar.tsx
+ M src/renderer/src/features/agentChat/MessageList.tsx
+ M src/renderer/src/features/agentChat/agentChat.css
+ M src/renderer/src/features/canvas/CanvasStage.tsx
+ M src/renderer/src/features/canvas/canvas.css
+ M src/renderer/src/features/design/composer/designer/styles.css
+ M src/renderer/src/features/dict/design-previews.json
+ M src/renderer/src/features/files/files.css
+ M src/renderer/src/features/plugins/PluginPanel.tsx
+ M src/renderer/src/features/voice/VoiceButton.tsx
+ M src/renderer/src/features/wiki/transcribe.ts
+ M src/renderer/src/features/workspace/SettingsPanel.tsx
+ M src/renderer/src/paneSizing.test.ts
+ M src/renderer/src/paneSizing.ts
+ M src/renderer/src/store/canvas/types.ts
+ M src/renderer/src/store/canvasSlice.ts
+ M src/renderer/src/store/splitLeaf.test.mjs
+ M src/renderer/src/store/tabsSlice.ts
+ M src/renderer/src/store/uiSlice.ts
+ M src/renderer/src/styles/base.css
+ M src/renderer/src/ui/ConfirmDialog.tsx
+ M src/shared/types.ts
+?? "docs/architecture/17-\350\277\220\350\241\214\350\265\204\346\272\220\344\270\216\346\234\215\345\212\241\346\211\200\346\234\211\346\235\203.md"
+?? docs/handoff/2026-09-13-runtime-governor-2013/bundle-verify.txt
+?? docs/handoff/2026-09-13-runtime-governor-2013/evidence/instance.json
+?? docs/handoff/2026-09-13-runtime-governor-2013/file-manifest.json
+?? docs/handoff/2026-09-13-runtime-governor-2013/git-status.txt
+?? docs/handoff/2026-09-13-runtime-governor-2013/head.txt
+?? docs/handoff/2026-09-13-runtime-governor-2013/index.html
+?? docs/handoff/2026-09-13-runtime-governor-2013/tracked.patch
+?? docs/handoff/2026-09-13-runtime-governor-2013/validation.json
+?? docs/handoff/2026-09-13-runtime-governor-2013/worktrees.txt
+?? docs/handoff/2026-09-13-runtime-governor/eas-hub-recheck-summary.txt
+?? docs/handoff/2026-09-13-runtime-governor/eas-voice-admission-build-verified-summary.txt
+?? docs/handoff/2026-09-13-runtime-governor/eas-voice-recheck-full-summary.txt
+?? docs/handoff/2026-09-13-runtime-governor/file-manifest.json
+?? docs/handoff/2026-09-13-runtime-governor/index.html
+?? docs/superpowers/plans/2026-09-12-conversation-archive.md
+?? docs/superpowers/plans/2026-09-13-agent-tool-observability-followup.md
+?? docs/superpowers/plans/2026-09-13-runtime-resource-governor.html
+?? docs/superpowers/plans/2026-09-13-runtime-resource-governor.md
+?? docs/verification/runtime-governor/2026-09-13-ast-candidates.json
+?? docs/verification/runtime-governor/2026-09-13-launch-search.txt
+?? docs/verification/runtime-governor/2026-09-13-ownership-probe-v2.json
+?? docs/verification/runtime-governor/2026-09-13-ownership-probe.json
+?? docs/verification/runtime-governor/acceptance/adversarial.json
+?? docs/verification/runtime-governor/acceptance/asr-resident/build-summary.txt
+?? docs/verification/runtime-governor/acceptance/asr-resident/changed-files.json
+?? docs/verification/runtime-governor/acceptance/asr-resident/instance.json
+?? docs/verification/runtime-governor/acceptance/asr-resident/tests-summary.txt
+?? docs/verification/runtime-governor/acceptance/asr-resident/types-summary.txt
+?? docs/verification/runtime-governor/acceptance/current-delivery.html
+?? docs/verification/runtime-governor/acceptance/memory-calibration/carveout-idle-series.jsonl
+?? docs/verification/runtime-governor/acceptance/memory-calibration/carveout-series.jsonl
+?? docs/verification/runtime-governor/acceptance/memory-calibration/collect.mjs
+?? docs/verification/runtime-governor/acceptance/memory-calibration/findings.md
+?? docs/verification/runtime-governor/acceptance/memory-calibration/series.jsonl
+?? docs/verification/runtime-governor/acceptance/memory-calibration/top.txt
+?? docs/verification/runtime-governor/acceptance/memory-calibration/vm-stat.txt
+?? docs/verification/runtime-governor/acceptance/persistence-result.html
+?? docs/verification/runtime-governor/acceptance/persistence/verification.md
+?? docs/verification/runtime-governor/acceptance/preview-admission/build-summary.txt
+?? docs/verification/runtime-governor/acceptance/preview-admission/instance.json
+?? docs/verification/runtime-governor/acceptance/preview-admission/tests-summary.txt
+?? docs/verification/runtime-governor/acceptance/preview-admission/types-summary.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/build.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/cli-isolated.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/files.json
+?? docs/verification/runtime-governor/acceptance/preview-resident/first-full-pass.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/full-failure-1.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/full-failure-2.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/instance.json
+?? docs/verification/runtime-governor/acceptance/preview-resident/launcher-isolated.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/real-worker.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/targeted.txt
+?? docs/verification/runtime-governor/acceptance/preview-resident/types.txt
+?? docs/verification/runtime-governor/acceptance/remediation.html
+?? docs/verification/runtime-governor/acceptance/remediation.md
+?? docs/verification/runtime-governor/acceptance/report.html
+?? docs/verification/runtime-governor/acceptance/transcription-handoff.html
+?? docs/verification/runtime-governor/acceptance/transcription-handoff/build-summary.txt
+?? docs/verification/runtime-governor/acceptance/transcription-handoff/changed-files.json
+?? docs/verification/runtime-governor/acceptance/transcription-handoff/instance.json
+?? docs/verification/runtime-governor/acceptance/transcription-handoff/tests-summary.txt
+?? docs/verification/runtime-governor/acceptance/transcription-handoff/types-summary.txt
+?? docs/verification/runtime-governor/fixtures/runtime-verify-only/panel.html
+?? docs/verification/runtime-governor/fixtures/runtime-verify-only/plugin.json
+?? docs/verification/runtime-governor/fixtures/runtime-verify-only/server.mjs
+?? docs/verification/runtime-governor/platform-read.json
+?? scripts/probe-runtime-ownership.mjs
+?? src/main/agentChat/omp/admission.real.test.ts
+?? src/main/agentChat/omp/admission.test.ts
+?? src/main/agentHistoryStorage.test.ts
+?? src/main/agentHistoryStorage.ts
+?? src/main/lspCache.test.ts
+?? src/main/lspLifecycle.test.ts
+?? src/main/mcpClientLifecycle.test.ts
+?? src/main/pluginToolLifecycle.test.mjs
+?? src/main/runtime/acpSessionWiring.test.ts
+?? src/main/runtime/agentAdmissionWiring.test.ts
+?? src/main/runtime/agentServiceWiring.test.ts
+?? src/main/runtime/agentStartupLifecycle.test.ts
+?? src/main/runtime/asrStopRouting.test.ts
+?? src/main/runtime/asrWorkerLifecycle.test.ts
+?? src/main/runtime/asrWorkerLifecycle.ts
+?? src/main/runtime/controller.test.ts
+?? src/main/runtime/controller.ts
+?? src/main/runtime/cpuMetrics.test.ts
+?? src/main/runtime/cpuMetrics.ts
+?? src/main/runtime/driver.test.ts
+?? src/main/runtime/driver.ts
+?? src/main/runtime/ipc.ts
+?? src/main/runtime/lspAdmission.real.test.ts
+?? src/main/runtime/managedAsr.real.test.ts
+?? src/main/runtime/managedAsr.test.ts
+?? src/main/runtime/managedAsr.ts
+?? src/main/runtime/managedMcp.test.ts
+?? src/main/runtime/managedMcp.ts
+?? src/main/runtime/managedPreview.test.ts
+?? src/main/runtime/managedTask.test.ts
+?? src/main/runtime/managedVad.real.test.ts
+?? src/main/runtime/managedVad.test.ts
+?? src/main/runtime/managedVad.ts
+?? src/main/runtime/manager.test.ts
+?? src/main/runtime/manager.ts
+?? src/main/runtime/manualStop.test.ts
+?? src/main/runtime/manualStop.ts
+?? src/main/runtime/monitor.test.ts
+?? src/main/runtime/monitor.ts
+?? src/main/runtime/ownedSessions.test.ts
+?? src/main/runtime/ownedSessions.ts
+?? src/main/runtime/persistentState.ts
+?? src/main/runtime/platformMetrics.test.ts
+?? src/main/runtime/platformMetrics.ts
+?? src/main/runtime/policy.test.ts
+?? src/main/runtime/policy.ts
+?? src/main/runtime/projectAttribution.test.ts
+?? src/main/runtime/projectAttribution.ts
+?? src/main/runtime/ptyClose.test.ts
+?? src/main/runtime/readPlatformMetrics.ts
+?? src/main/runtime/resourceLedger.test.ts
+?? src/main/runtime/resourceLedger.ts
+?? src/main/runtime/sampler.test.ts
+?? src/main/runtime/sampler.ts
+?? src/main/runtime/scheduler.test.ts
+?? src/main/runtime/scheduler.ts
+?? src/main/runtime/serviceProjection.test.ts
+?? src/main/runtime/serviceProjection.ts
+?? src/main/runtime/serviceRegistry.test.ts
+?? src/main/runtime/serviceRegistry.ts
+?? src/main/runtime/sessionStartup.test.ts
+?? src/main/runtime/sessionStartup.ts
+?? src/main/runtime/sharedServices.test.ts
+?? src/main/runtime/sharedServices.ts
+?? src/main/runtime/sharedWindowLifecycle.test.ts
+?? src/main/runtime/sharedWindowLifecycle.ts
+?? src/main/runtime/startupFailure.test.ts
+?? src/main/runtime/startupFailure.ts
+?? src/main/runtime/stateStore.test.ts
+?? src/main/runtime/stateStore.ts
+?? src/main/runtime/stopGate.test.ts
+?? src/main/runtime/stopGate.ts
+?? src/main/runtime/stopHost.test.ts
+?? src/main/runtime/stopHost.ts
+?? src/main/runtime/toolActivity.test.ts
+?? src/main/runtime/toolActivity.ts
+?? src/main/runtime/vadLifecycle.test.ts
+?? src/main/runtime/voicePreviewAdmission.test.ts
+?? src/main/runtime/voicePreviewAdmission.ts
+?? src/main/runtime/voicePreviewLoading.test.ts
+?? src/main/runtime/voicePreviewWiring.test.ts
+?? src/main/runtime/voiceStartCancellation.test.ts
+?? src/main/runtime/voiceWorkerWiring.test.ts
+?? src/main/runtime/workerRequests.real.test.ts
+?? src/main/runtime/workerRequests.test.ts
+?? src/main/runtime/workerRequests.ts
+?? src/main/sttTranscriptionFailure.test.ts
+?? src/main/voicePreviewSession.test.ts
+?? src/main/voicePreviewSession.ts
+?? src/main/voicePreviewStt.test.ts
+?? src/main/voicePreviewWorker.real.test.ts
+?? src/main/voicePreviewWorker.test.ts
+?? src/main/voicePreviewWorker.ts
+?? src/renderer/src/features/agentChat/HistoryPanel.tsx
+?? src/renderer/src/features/agentChat/archiveTransition.test.ts
+?? src/renderer/src/features/agentChat/archiveTransition.ts
+?? src/renderer/src/features/agentChat/historyPanel.css
+?? src/renderer/src/features/dict/designCdn.test.mjs
+?? src/renderer/src/features/voice/voiceStartupCancel.test.ts
+?? src/renderer/src/features/wiki/transcribe.test.ts
+?? src/renderer/src/features/workspace/RuntimeCenter.tsx
+?? src/renderer/src/features/workspace/RuntimeMonitorPanel.tsx
+?? src/renderer/src/features/workspace/runtimeCenter.css
+?? src/renderer/src/store/canvas/historyMount.test.ts
+?? src/renderer/src/store/canvas/historyMount.ts
+?? src/renderer/src/store/canvasTerminalIdentity.test.mjs
+?? src/renderer/src/store/openTerminal.test.mjs
+?? src/renderer/src/store/paneStartup.test.mjs
+?? src/renderer/src/store/pendingPaneStarts.test.ts
+?? src/renderer/src/store/pendingPaneStarts.ts
+?? src/renderer/src/store/transcribeQueue.test.ts
+?? src/renderer/src/ui/confirmStyle.test.mjs
+?? src/shared/historyCatalog.test.ts
+?? src/shared/historyCatalog.ts
+?? src/shared/runtimeCounts.test.ts
+?? src/shared/runtimeCounts.ts
+?? src/shared/runtimeProjectLabels.test.ts
+?? src/shared/runtimeProjectLabels.ts
+?? src/shared/runtimeResources.ts
+?? src/shared/runtimeStopNotice.test.ts
+?? src/shared/runtimeStopNotice.ts

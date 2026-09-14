@@ -1,0 +1,19 @@
+{
+  "scope": "synthetic pure modules; no OS processes stopped",
+  "sharedOwnershipRace": {
+    "initialOwners": [
+      "a"
+    ],
+    "ownersBeforeStopCallback": [
+      "a",
+      "b"
+    ],
+    "stopCallsWithoutSharedConfirmation": 1
+  },
+  "unreservedAdmission": {
+    "cpuSnapshot": 75,
+    "threshold": 80,
+    "jobsStartedBeforeNextSample": 4,
+    "declaredCostPerJob": "unsupported by scheduler"
+  }
+}

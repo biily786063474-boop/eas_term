@@ -1,3 +1,7 @@
+import {projectAttribution} from './runtime/projectAttribution.ts'
+import {loadProjects} from './projects'
+import {ownedSessions} from './runtime/ownedSessions.ts'
+import {startManagedSession,cancelSessionStartsForWindow} from './runtime/sessionStartup.ts'
 import { ensureSecretShim } from './secretShim'
 import { app, ipcMain, BrowserWindow } from 'electron'
 import * as pty from 'node-pty'
@@ -378,8 +382,15 @@ export function readTermTail(ptyId: string, maxLines?: number): string[] {
 
 export function registerPtyHandlers(): void {
   watchUrlQueue() // 监听 CLI 经 open shim 投递的网址 → 通知渲染层在画板浏览器打开
-  ipcMain.handle('pty:create', (e, opts: PtyCreateOptions) => {
+  ipcMain.handle('pty:create', async (e, opts: PtyCreateOptions) => {
     const id = String(nextId++)
+    if(opts.startupRequestId!==undefined&&(typeof opts.startupRequestId!=='string'||!/^[a-zA-Z0-9_-]{1,120}$/.test(opts.startupRequestId)))throw Error('invalid terminal startup request')
+    const startupId=opts.startupRequestId?'pty-request:'+opts.startupRequestId:'pty-start:'+id
+    const projectId=projectAttribution(opts.cwd||os.homedir(),loadProjects())
+    return startManagedSession({id:startupId,windowId:e.sender.id,name:'终端启动',projectId,cost:{cpu:Math.max(5,100/os.availableParallelism()),memoryBytes:256*1024**2},start:async signal=>{
+    if(signal.aborted||e.sender.isDestroyed())throw Error('终端启动已取消')
+    let completedResolve!:()=>void
+    const completed=new Promise<void>(resolve=>{completedResolve=resolve})
     let cwd = opts.cwd || os.homedir()
     try {
       if (!fs.statSync(cwd).isDirectory()) cwd = os.homedir()
@@ -481,6 +492,7 @@ export function registerPtyHandlers(): void {
       else if (!flushTimer) flushTimer = setTimeout(flushOut, 16)
     })
     proc.onExit(({ exitCode }) => {
+      completedResolve()
       flushOut() // 把残留输出先发完再发 exit,避免丢尾巴
       ptys.delete(id)
       revokeCapabilitySession('pty:' + id)
@@ -489,7 +501,9 @@ export function registerPtyHandlers(): void {
       if (!wc.isDestroyed()) wc.send(`pty:exit:${id}`, exitCode)
     })
     ptys.set(id, { pty: proc, wcId: wc.id })
-    return { id }
+    ownedSessions.add({id:'pty:'+id,name:'终端',windowId:wc.id,projectId:projectAttribution(cwd,loadProjects()),kind:'terminal',completed,stop:()=>proc.kill()})
+    return { value:{id},completed }
+    }})
   })
 
   ipcMain.on('pty:write', (_e, id: string, data: string) => {
@@ -644,9 +658,14 @@ function killTree(entry: Entry, signal: NodeJS.Signals = 'SIGTERM'): void {
   } catch {
     /* shell 已退出 */
   }
+  // Interactive zsh can ignore SIGTERM; close the owned terminal with PTY hangup.
+  if (signal !== 'SIGKILL') {
+    try { entry.pty.kill() } catch { /* already exited */ }
+  }
 }
 
 export function killPtysForWebContents(wcId: number): void {
+  cancelSessionStartsForWindow(wcId)
   for (const [id, entry] of ptys) {
     if (entry.wcId === wcId) {
       ptys.delete(id)

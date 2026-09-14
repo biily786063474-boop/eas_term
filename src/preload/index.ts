@@ -1,3 +1,5 @@
+import type { RuntimeMonitorSnapshot } from '../shared/runtimeResources.ts'
+import type { HistorySummary } from '../shared/historyCatalog'
 import type { UsageQuery, UsageSnapshot } from '../shared/usage.ts'
 import type {Favorites,FavoriteChange} from '../shared/browserFavorites'
 import type { CapabilityBundleStatus, CapabilityModule } from '../shared/builtinCapabilities.ts'
@@ -1098,6 +1100,10 @@ const api = {
   // 命名上跟既有的 window.api.skill 区分开——那是"CLI 认不认识某个 skill"的探测，
   // 这里是"驱动一个 CLI 会话跑对话"，完全不是一回事。
   /** 闪烁黑匣子（main/diagLog.ts）。event 是单向通知，不等回。 */
+  runtimeCancelTask: (id: string): Promise<{ok:boolean}> => ipcRenderer.invoke('runtime:cancelTask', id),
+  runtimeStopPlugin: (id: string): Promise<{ok:boolean;reason?:string}> => ipcRenderer.invoke('runtime:stopPlugin', id),
+  runtimeSetMode: (mode:'normal'|'eco'): Promise<{mode:'normal'|'eco';threshold:number}> => ipcRenderer.invoke('runtime:setMode',mode),
+  runtimeMonitor: (): Promise<RuntimeMonitorSnapshot> => ipcRenderer.invoke('runtime:monitor'),
   diag: {
     event: (e: { kind: string; what: string }): void => ipcRenderer.send('diag:event', e),
     recent: (): Promise<string[]> => ipcRenderer.invoke('diag:recent'),
@@ -1109,6 +1115,7 @@ const api = {
     list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list'),
     // ── 自家插件的面板（设计稿 2026-09-05 §P）。主进程半边在 pluginHost.ts ──
     panelOpen: (args: {
+      resumeStopped?: boolean
       pluginId: string
       panelId: string
       ctx: { nodeId: string; frameId: string; projectId: string | null; cwd: string }
@@ -1152,17 +1159,19 @@ const api = {
      *  前者随 canvas.json 落盘、跨重启稳定，对应用户心里的「这个对话框」。 */
     loadHistory: (leafId: string): Promise<{ turns: unknown[]; resumeId: string | null; resumeCli: string | null }> =>
       ipcRenderer.invoke('agentHistory:load', leafId),
-    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null, cwd: string, resumeCli?: string | null): Promise<boolean> =>
-      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId, cwd, resumeCli ?? null),
+    saveHistory: (leafId: string, turns: unknown[], resumeId: string | null, cwd: string, resumeCli?: string | null, moduleId?: string): Promise<boolean> =>
+      ipcRenderer.invoke('agentHistory:save', leafId, turns, resumeId, cwd, resumeCli ?? null, moduleId),
     /** 这个 resumeId 是哪个 harness 签发的（查磁盘）。老对话没记签发者时靠它补；
      *  null = 三处都没找到（会话被清了 / 换了机器）。 */
     resumeOwner: (resumeId: string, cwd: string): Promise<'claude' | 'codex' | 'omp' | null> =>
       ipcRenderer.invoke('agentChat:resumeOwner', resumeId, cwd),
     /** 这个项目下的历史记录清单（只有元信息）。用来在空态给出「接上上次的对话」入口 */
     listHistory: (
-      cwd: string
-    ): Promise<{ leafId: string; resumeId: string | null; savedAt: number; turns: number; preview: string }[]> =>
-      ipcRenderer.invoke('agentHistory:list', cwd),
+      cwd: string, query?: string
+    ): Promise<HistorySummary[]> =>
+      ipcRenderer.invoke('agentHistory:list', cwd, query),
+    pinHistory: (key: string, cwd: string, pinned: boolean): Promise<boolean> =>
+      ipcRenderer.invoke('agentHistory:pin', key, cwd, pinned),
     forgetHistory: (leafId: string): Promise<void> =>
       ipcRenderer.invoke('agentHistory:forget', leafId),
     /** 一批 agent 的产出状态：role → findings.md 的字节数（null = 文件不存在）。

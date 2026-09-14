@@ -1,0 +1,47 @@
+[
+  {
+    "path": "src/main/stt.ts",
+    "sha256": "37f5c06186164c1f00fa946b9acd3d1e35143848e4745e7386e43abb8afdd355",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/main/sttTranscriptionFailure.test.ts",
+    "sha256": "a2cad7be4d7078930af039d06dd4909e0bed7006b310e0791da586f1e1f5bfa5",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/main/runtime/sessionStartup.ts",
+    "sha256": "fc9aad441d7706b255b5118cbdfacbb84519d2b04e502b509d366f30ad6fce22",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/main/runtime/managedTask.test.ts",
+    "sha256": "3dc3de4010426445cf74fee9f8f0ed25c5134a6091fdf4bc52aea33b30e8350b",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/main/runtime/voiceWorkerWiring.test.ts",
+    "sha256": "2600a3ac88a69fdb94b2b96d4de695caed50d1c9841b61b5b3907ca44f89b765",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/renderer/src/features/wiki/transcribe.ts",
+    "sha256": "bc07e4761d7fbc6c0c6011c19e7a7eb3d0bf953684c64f827d4fd313506df7a7",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/renderer/src/features/wiki/transcribe.test.ts",
+    "sha256": "2bbf031efcffd31cc37b386e17eca105f33ecef459f066c6d319d20baf07a30a",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/renderer/src/store/uiSlice.ts",
+    "sha256": "38449663484640aba2960a9d548736902b616b1ae68e27b4579dbeb033282074",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  },
+  {
+    "path": "src/renderer/src/store/transcribeQueue.test.ts",
+    "sha256": "e9b5bff3b6daae816f9e24f2b0aec59a4f9e541f12d34508db36ff05364b7467",
+    "note": "本轮触及，部分文件含交接前历史改动；不是独占作者归属"
+  }
+]

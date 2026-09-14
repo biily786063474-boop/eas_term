@@ -43,7 +43,7 @@ import {
 import { dirNames, initWiki, uniqueName } from './schema'
 import { readTaxonomy, taxonomyState, type ArchiveDirResult } from './taxonomy'
 import { MARK, commitAll, git, gitOk, isDirty, isRepo } from './git'
-import { scanNotes } from './scan'
+import { scanNotesManaged } from './managedScan'
 
 // 上游还从这里取这两个（agentRules 要知道库在哪，index 要注册 handler）
 export { wikiPath, wikiStatus }
@@ -101,10 +101,16 @@ export function registerWikiHandlers(): void {
    * 哪些是枢纽、哪些是孤儿」。注意他说的用途是**看形状**，不是日常查询，
    * 所以这块和体检放在一起做（孤儿页正是体检要处理的东西）。
    */
-  ipcMain.handle('wiki:graph', (): WikiGraph => {
+  // 2026-09-13：全库扫描搬进 Worker（scanWorker.ts）并按窗口归属经 runManagedTask 准入；
+  // 原来两个处理器同步逐篇 readFileSync，库大时主线程按篇数比例卡住。
+  const scanForWindow = async (root: string, windowId: number) => {
+    const { createScanWorker } = await import('./scanHost')
+    return scanNotesManaged({ root, windowId, createWorker: workerData => createScanWorker({ workerData }) })
+  }
+  ipcMain.handle('wiki:graph', async (e): Promise<WikiGraph> => {
     const root = wikiPath()
     if (!root) return { nodes: [], edges: [] }
-    const notes = scanNotes(root)
+    const notes = await scanForWindow(root, e.sender.id)
     const byTitle = new Map(notes.map((n) => [n.title, n.rel]))
     const inbound = new Map<string, number>()
     const edges: { from: string; to: string }[] = []
@@ -135,10 +141,10 @@ export function registerWikiHandlers(): void {
    * 这里只做纯结构检查 —— 免费、瞬时、结果确定。
    * agent 拿到这份清单后再去做语义那半边，不用自己先把整个库扫一遍。
    */
-  ipcMain.handle('wiki:lint', (): LintFinding[] => {
+  ipcMain.handle('wiki:lint', async (e): Promise<LintFinding[]> => {
     const root = wikiPath()
     if (!root) return []
-    const notes = scanNotes(root)
+    const notes = await scanForWindow(root, e.sender.id)
     const byTitle = new Map(notes.map((n) => [n.title, n.rel]))
     const inbound = new Map<string, number>()
     for (const n of notes)

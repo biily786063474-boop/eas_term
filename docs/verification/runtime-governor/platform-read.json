@@ -1,0 +1,11 @@
+{
+  "at": 42.595833,
+  "platform": "darwin",
+  "arch": "arm64",
+  "logicalCpus": 15,
+  "totalMemoryBytes": 51539607552,
+  "memoryUsedBytes": 35650256896,
+  "memoryMethod": "mac-resident-estimate",
+  "memoryAdmissionVerified": false,
+  "concurrentReadDeduped": true
+}

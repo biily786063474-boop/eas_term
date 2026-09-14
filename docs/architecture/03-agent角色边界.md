@@ -360,3 +360,9 @@ BlueprintPanel的词条按钮必须有局部onMouseLeave；仅bp-view外层leave
 - 默认只参考配色，保留项目字体/圆角/布局/交互；完整选项是本地库摘要，不冒充官方完整/最新规范。
 - 确认时校验 composer 回调仍是打开弹窗时的目标；无目标禁用。原生 dialog 必须保留在辞典 DOM 子树（否则浮动辞典的外部点击捕获会误关闭），用 top layer + 显式 margin:auto 居中。
 - 选型封面必须来自对应原始HTML实渲，不得回退统一配色mock；原始预览地址来自备份meta索引，不用slug猜网址。构建截图子进程与应用凭证、会话隔离，不把原HTML脚本注入主应用renderer。
+
+### 2026-09-13 · 固定运行状态文件例外
+fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的窄入口，无路径参数，不扩展 guardPath/guardDir 项目根白名单。runtime 持久化只可调用此入口；损坏或拒绝读写必须失败关闭，不自动重置手动停止名单。
+
+### 2026-09-13 流式语音迁移保护
+流式识别模型和decode仅在 `voicePreviewWorker`；禁止恢复主线程缓存recognizer或同步decode。`voicePreviewSession.takeText` 的FIFO与partialBoundary防止上一句迟到预览污染下一句（即使targetId相同）。不得转移定稿共享音频的原buffer；不得积压超限后静默丢语音。录音初始化取消/线程错误与正常收尾都保留sender/epoch守卫，驻留预算只认真实worker exit。

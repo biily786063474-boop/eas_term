@@ -1,0 +1,69 @@
+{
+  "note": "Touched/inherited slice files; hashes describe current mixed worktree, not exclusive authorship.",
+  "files": [
+    {
+      "file": "src/main/stt.ts",
+      "sha256": "96f673a26ee3469fd23ac85f2386831f180b832208d282e52f98c7957a8cfe27"
+    },
+    {
+      "file": "src/main/voicePreviewSession.ts",
+      "sha256": "9bd017c7ec1b24fc7c666d60b6117131465b4c37a09aff9b8d3dc75d14e38650"
+    },
+    {
+      "file": "src/main/voicePreviewWorker.ts",
+      "sha256": "5e436333307d7472e4863e2692e5599e94ddfcb067b23e13d6b0fd8708f4429d"
+    },
+    {
+      "file": "src/main/voicePreviewSession.test.ts",
+      "sha256": "e7e10bb1e95f0c0700bdf574aebb369a73f9968d60da95e639dd6b5a575732e7"
+    },
+    {
+      "file": "src/main/voicePreviewWorker.test.ts",
+      "sha256": "519811ba342279dec5aea673503d22fb86026e244b5036450d1487bd190b5d6f"
+    },
+    {
+      "file": "src/main/voicePreviewWorker.real.test.ts",
+      "sha256": "652bb25f81a29ecabc21620ce23f21b07980413252b56bdea2e90dde1ff22f81"
+    },
+    {
+      "file": "src/main/voicePreviewStt.test.ts",
+      "sha256": "c7decc4cc9eff03232fae373171467c5349be8cf3625dc7c62468f438c5bff9e"
+    },
+    {
+      "file": "src/main/runtime/voicePreviewAdmission.ts",
+      "sha256": "59b9c57430eda0dbbfdbf11469139116d1f64e2aa77c2f1ad4076ded0324e79d"
+    },
+    {
+      "file": "src/main/runtime/voicePreviewAdmission.test.ts",
+      "sha256": "f60cd5c88d9b795a2c4003770adb53a6a77f4c4cf23eaf53c264da0a13bfee08"
+    },
+    {
+      "file": "src/main/runtime/voicePreviewLoading.test.ts",
+      "sha256": "272abaf25b692cfc7a18816d7138f679e12e35ebfc00bc45cb3f6d2c0b538bdd"
+    },
+    {
+      "file": "src/main/runtime/voicePreviewWiring.test.ts",
+      "sha256": "4b7845a1e5af812c504a1d87b0e6d639cc1b732348b600f82d7ec7c15e30d7ce"
+    },
+    {
+      "file": "src/main/runtime/voiceStartCancellation.test.ts",
+      "sha256": "80d35843a79c2935d7a940e80f4505e0c4e89d6cb5f0a7fa0e7159c68ceb945c"
+    },
+    {
+      "file": "src/main/runtime/managedPreview.test.ts",
+      "sha256": "aa291371db8024c9d76a7fb71a0b207c4c20c802c54c6fce3c78b5a5ca00b9b3"
+    },
+    {
+      "file": "src/main/runtime/asrStopRouting.test.ts",
+      "sha256": "88e31c47e03827165f5c19192ee0a311c3fd9d99fbdfabbbecfbaea3dddefc70"
+    },
+    {
+      "file": "src/main/runtime/ipc.ts",
+      "sha256": "b1a2d180a61df25231a26d1fde3f552ead2e61b14f0f7c644ff0311f306127a1"
+    },
+    {
+      "file": "src/renderer/src/features/workspace/RuntimeMonitorPanel.tsx",
+      "sha256": "f1a8129e3b9c1d8e85b624d04e011d41c9d0c10f68e9ec8ed5687a6a723e2752"
+    }
+  ]
+}

@@ -4657,9 +4657,7 @@
   cursor: pointer;
 }
 
-/* 快照后「清掉标记」确认框里的「保留」按钮——中性色，跟它同排的「清掉」用全局
-   .danger-btn（base.css）：清空标记不可撤销，危险操作理应是那个更显眼的红色。
-   尺寸抄 .danger-btn 的 8px 18px / 13px，两颗按钮挨在一起高度得对得上。 */
+/* 快照确认：保留为次级按钮，清掉复用全局 primary-btn CTA。危险性由文案说明。 */
 .csnap-keep-btn {
   padding: 8px 18px;
   border: 1px solid var(--glass-border-strong);

@@ -1,0 +1,5 @@
+Original: /tmp/eas-preview-delivery-types.log
+
+> eas-term@0.4.94 typecheck
+> tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json
+

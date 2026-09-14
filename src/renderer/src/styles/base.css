@@ -854,23 +854,6 @@ body {
   gap: 10px;
 }
 
-.danger-btn {
-  padding: 8px 18px;
-  border: 1px solid rgba(247, 118, 142, 0.5);
-  border-radius: 999px;
-  background: rgba(247, 118, 142, 0.18);
-  color: #ff8fa3;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.danger-btn:hover {
-  background: rgba(247, 118, 142, 0.3);
-  color: #ffb3c0;
-}
-
 .icon-btn {
   border: none;
   background: none;

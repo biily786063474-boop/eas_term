@@ -316,7 +316,7 @@ export interface CanvasSlice {
   /** 复制画布独有节点（文件/组件；终端节点不复制，pty 唯一） */
   duplicateNode: (frameId: string, nodeId: string) => void
   /** 在 Frame 里新开一个终端节点（openTerminal + 挂到 Frame，自动堆叠） */
-  addTerminalNode: (frameId: string, roleId?: string) => Promise<void>
+  addTerminalNode: (frameId: string, roleId?: string) => Promise<string | undefined>
   /** 往 Frame 里放一个 AI 对话节点。与 addTerminalNode 同构，但**不 spawn pty** ——
    *  agent 面板在用户发第一条消息之前不占任何进程。 */
   /** 建一个 AI 对话节点并**挂到画布 Frame 上**。返回新 leaf 的 id。
@@ -372,6 +372,7 @@ export interface CanvasSlice {
    *  **只换 key，不删任何东西** —— 旧记录还躺在磁盘上。
    *  返回新 chatId；节点不存在时返回 undefined。 */
   startNewChat: (frameId: string, nodeId: string) => string | undefined
+  mountChatHistory: (frameId: string, nodeId: string, chatId: string) => boolean
   /** 重命名节点（自定义名称） */
   renameNode: (frameId: string, nodeId: string, name: string) => void
   /** 钉住 / 取消钉住一个内容模块。钉住的不受 5 个上限约束，也不会被自动清理。 */

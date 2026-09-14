@@ -2455,6 +2455,18 @@ body.dragging-row * {
   font-size: 12px;
   cursor: pointer;
 }
+/* 运行中心「按项目筛选」的下拉：与上面同一组令牌，只是不靠右（它跟在标签后面） */
+.runtime-project-filter select {
+  margin-left: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--lift-2);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
 
 .cset-rowname {
   color: var(--fg-dim);

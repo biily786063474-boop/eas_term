@@ -1,0 +1,5 @@
+The bundle contains this ref:
+2d884c284b4456b4eeef532857f2b5a45fcfe1d8 HEAD
+The bundle records a complete history.
+The bundle uses this hash algorithm: sha1
+/Users/biily/Biily/Projects/vibe coding/terminal/.checkpoints/runtime-governor-20260913-125147/history.bundle is okay

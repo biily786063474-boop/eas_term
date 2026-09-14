@@ -5,7 +5,7 @@
 import fs from 'fs'
 import path from 'path'
 
-import { walkNotes } from './paths'
+import { walkNotes } from './walk.ts'
 
 /** 一篇笔记的原始信息：给图谱和体检共用，只扫一遍盘 */
 export interface NoteInfo {

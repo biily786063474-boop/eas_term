@@ -248,7 +248,7 @@ export interface UiSlice {
   requestArchivePlan: (items: ArchiveItem[]) => Promise<ArchiveItem[] | null>
   resolveArchivePlan: (approved: ArchiveItem[] | null) => void
   /** 转录队列。串行跑——CPU 密集，并行只会互相拖慢 */
-  ttQueue: { name: string; path: string; state: 'wait' | 'run' | 'done' | 'fail'; done: number; total: number; error?: string }[]
+  ttQueue: { name: string; path: string; state: 'wait' | 'run' | 'done' | 'fail'; done: number; total: number; error?: string; text?: string }[]
   enqueueTranscribe: (files: { name: string; path: string }[]) => void
   /** 整表写回（编辑器改完调它）。主进程会再 sanitize 一遍，全是坏数据时拒绝写入 */
   saveRoles: (roles: AgentRole[]) => Promise<string | null>
@@ -312,12 +312,26 @@ async function runTranscribeQueue(
           ttQueue: s.ttQueue.map((x) => (x.path === next.path ? { ...x, ...patch } : x))
         }))
       upd({ state: 'run' })
-      const r = await transcribeFile(next.path, (p) => upd({ done: p.done, total: p.total }))
-      if (r.ok) {
-        await window.api.wiki.saveTranscript(next.name, r.text)
-        upd({ state: 'done' })
-      } else {
-        upd({ state: 'fail', error: r.error })
+      try {
+        const r = await transcribeFile(next.path, (p) => upd({ done: p.done, total: p.total, text: p.text }))
+        upd({ text: r.text })
+        if (r.ok) {
+          const saved = await window.api.wiki.saveTranscript(next.name, r.text)
+          if (!saved.ok) throw new Error(saved.error ?? '逐字稿保存失败')
+          upd({ state: 'done' })
+        } else {
+          // Partial results never overwrite the complete transcript. Failed jobs are not replayed.
+          let error = r.error ?? '转录未完成'
+          if (r.text) {
+            const saved = await window.api.wiki.saveTranscript(
+              next.name + '.incomplete', '【转录未完成】' + error + '\n\n' + r.text
+            )
+            error = saved.ok ? '部分逐字稿已保存；' + error : '部分逐字稿保存失败：' + (saved.error ?? '未知错误') + '；' + error
+          }
+          upd({ state: 'fail', error })
+        }
+      } catch (e) {
+        upd({ state: 'fail', error: e instanceof Error ? e.message : String(e) })
       }
     }
   } finally {
