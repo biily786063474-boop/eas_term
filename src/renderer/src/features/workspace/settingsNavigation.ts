@@ -8,6 +8,7 @@ export const SETTINGS_PAGES = [
  {key:'mcp',label:'MCP 接入',group:'AI 与连接',description:'管理 AI 对工作台的工具调用。',keywords:'工具 记录 接入 允许 拒绝'},
  {key:'phone',label:'手机连接',group:'AI 与连接',description:'连接你的手机，远程查看电脑上的项目。',keywords:'配对 二维码 局域网 Wi-Fi 隧道 设备'},
  {key:'update',label:'更新',group:'系统管理',description:'应用与 AI CLI 的更新分别管理。',keywords:'版本 自动更新 Claude Code Codex OMP'},
+ {key:'runtime',label:'运行与资源',group:'系统管理',description:'看机器现在多忙、谁在排队、有什么在跑。',keywords:'运行 资源 排队 等待 托管 服务 终端 对话 CPU 内存 阈值 节能 关闭 取消 定位'},
  {key:'perf',label:'性能与诊断',group:'系统管理',description:'图形状态与问题排查放在同一个地方。',keywords:'GPU 加速 栅格化 2D 卡顿 黑匣子 闪烁 日志 事件'},
  {key:'privacy',label:'隐私与扩展',group:'系统管理',description:'清楚知道采集了什么、在本机写入了什么。',keywords:'匿名 统计 扩展 卸载 配置 隐私'}
 ] as const
