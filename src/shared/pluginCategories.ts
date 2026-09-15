@@ -5,20 +5,19 @@
 export interface MarketCategory {
   id: string
   name: string
-  /** 侧栏图标（emoji，够用；真实商店里换成线性图标） */
-  icon: string
 }
 
+// 图标是单色线条，在渲染层按 id 映射（`pluginCategoryIcons.tsx`）——这里保持零 UI 依赖。
 export const MARKET_CATEGORIES: MarketCategory[] = [
-  { id: 'office', name: '办公文档', icon: '📄' },
-  { id: 'life', name: '生活出行', icon: '🗺️' },
-  { id: 'dev', name: '开发工具', icon: '🧩' },
-  { id: 'comms', name: '通讯协作', icon: '💬' },
-  { id: 'media', name: '自媒体', icon: '📣' },
-  { id: 'design', name: '设计创意', icon: '🎨' },
-  { id: 'data', name: '数据搜索', icon: '🔎' },
-  { id: 'storage', name: '文件存储', icon: '📁' },
-  { id: 'other', name: '其他', icon: '🧰' }
+  { id: 'office', name: '办公文档' },
+  { id: 'life', name: '生活出行' },
+  { id: 'dev', name: '开发工具' },
+  { id: 'comms', name: '通讯协作' },
+  { id: 'media', name: '自媒体' },
+  { id: 'design', name: '设计创意' },
+  { id: 'data', name: '数据搜索' },
+  { id: 'storage', name: '文件存储' },
+  { id: 'other', name: '其他' }
 ]
 
 // registry 里 category 字段可能是中文分类名、也可能是英文（自家老插件写的 "Productivity" 之类）。

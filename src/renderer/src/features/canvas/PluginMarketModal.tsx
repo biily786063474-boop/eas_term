@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
+import { CategoryIcon } from './pluginCategoryIcons'
 import { PlusIcon, CheckIcon, RefreshIcon, CloseIcon } from '../../ui/Icons'
 
 const PERM_LABEL: Record<string, string> = {
@@ -178,7 +179,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         {MARKET_CATEGORIES.filter((c) => catCount(c.id)).map((c) => (
           <div key={c.id}>
             <div className="pm-sech">
-              {c.icon} {c.name}
+              <CategoryIcon id={c.id} size={15} /> {c.name}
             </div>
             <div className="pm-grid">{items.filter((it) => it.catId === c.id).map(card)}</div>
           </div>
@@ -202,7 +203,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     body = (
       <>
         <div className="pm-sech">
-          {c?.icon} {c?.name} <span className="pm-n">· {list.length} 个</span>
+          {c && <CategoryIcon id={c.id} size={15} />} {c?.name} <span className="pm-n">· {list.length} 个</span>
         </div>
         {list.length ? <div className="pm-grid">{list.map(card)}</div> : <div className="pm-empty">这个分类还没有插件</div>}
       </>
@@ -218,19 +219,25 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <nav className="pm-nav">
             <div className="pm-navg">浏览</div>
             <button className={`pm-navb${active === 'featured' ? ' on' : ''}`} onClick={() => setActive('featured')}>
-              <span className="pm-ci">✨</span>
+              <span className="pm-ci">
+                <CategoryIcon id="featured" />
+              </span>
               <span className="pm-cn">精选</span>
               <span className="pm-cc">{items.length}</span>
             </button>
             <button className={`pm-navb${active === 'installed' ? ' on' : ''}`} onClick={() => setActive('installed')}>
-              <span className="pm-ci">✓</span>
+              <span className="pm-ci">
+                <CategoryIcon id="installed" />
+              </span>
               <span className="pm-cn">已安装</span>
               <span className="pm-cc">{items.filter((it) => it.installed).length}</span>
             </button>
             <div className="pm-navg">分类</div>
             {MARKET_CATEGORIES.map((c) => (
               <button key={c.id} className={`pm-navb${active === c.id ? ' on' : ''}`} onClick={() => setActive(c.id)}>
-                <span className="pm-ci">{c.icon}</span>
+                <span className="pm-ci">
+                  <CategoryIcon id={c.id} />
+                </span>
                 <span className="pm-cn">{c.name}</span>
                 <span className="pm-cc">{catCount(c.id)}</span>
               </button>
