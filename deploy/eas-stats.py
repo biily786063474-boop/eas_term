@@ -47,7 +47,14 @@ TREND_DAYS = 30
 # ⚠️ 这是**识别自己**，不是识别爬虫池。用网段去判爬虫池是错的
 #    （spb-stats.py 的文件头记着那次教训），但用来圈自己家的出口 IP 正合适。
 # ⚠️ 只做**单列**不做剔除：完全剔掉就看不出「数据里有多少是自己」了。
+#   ③ **行为**：同一个 IP 一天里启动过 ≥3 个不同版本 —— 只有开发者会这么干。
+#      2026-09-15 复盘发现：8 月 13–23 日我家宽还是 124.90.240.x，那台机器
+#      24 小时挂着、一天跑 7 个版本、2380 条事件，占了「外部」桌面端事件的一半，
+#      而 ①② 都抓不到它（访问日志只留 1 份归档、前缀又变了）。
+#      按 IP 全天候剔，所以命中一次，这个 IP 在整个窗口内的事件全部归本人。
+#      阈值 `EAS_OWNER_VER_CHURN`，反证：设成 999 后 8 月中旬那段 24h/天的曲线要回来。
 OWNER_PREFIXES = [x.strip() for x in os.environ.get("EAS_OWNER_IPS", "116.148.").split(",") if x.strip()]
+OWNER_VER_CHURN = int(os.environ.get("EAS_OWNER_VER_CHURN", "3"))
 _owner_ips = set()
 
 
@@ -65,6 +72,47 @@ def scan_owner_ips():
         ip, _t, _me, path, status, _s, _r, _ua = m.groups()
         if status == "200" and path.startswith("/dashboard/"):
             _owner_ips.add(ip)
+    # ③ 版本翻腾：一天启动 ≥ OWNER_VER_CHURN 个不同版本的 IP
+    churn = defaultdict(set)
+    for line in read_lines(EVENTS_LOG):
+        parts = line.split("|", 3)
+        if len(parts) < 3 or "t=app" not in parts[2] or "e=start" not in parts[2]:
+            continue
+        q = parse_qs(parts[2])
+        ver = (q.get("v") or [""])[0]
+        if ver:
+            churn[(parts[0][:10], parts[1])].add(ver)
+    for (_day, ip), vers in churn.items():
+        if len(vers) >= OWNER_VER_CHURN:
+            _owner_ips.add(ip)
+
+
+# ── 地域（2026-09-13 起）─────────────────────────────────────────
+# 用宝塔自带的 GeoLite2（/www/server/panel/config/，2023-09 版，它改造过：字段全塞在
+# country 下、中文直出、国内带省市）。**IP 查完即弃，落盘的只有国家 / 省**。
+# 粒度定为「中国到省、海外到国家」，不到城市：日活个位数时，
+# 「某天某市 1 人 + 版本 + 系统」这一行就是那个人。用户量过百再议。
+# 本地没装 maxminddb 或没这个库文件时返回空串，统计照跑、地域那块显示为空。
+def _geo_reader():
+    try:
+        import maxminddb
+        return maxminddb.open_database("/www/server/panel/config/GeoLite2-City.mmdb")
+    except Exception:
+        return None
+
+
+_GEO = _geo_reader()
+
+
+def geo_of(ip):
+    """IP → (国家, 省份)。海外省份为空串。"""
+    if not _GEO:
+        return ("", "")
+    try:
+        d = (_GEO.get(ip) or {}).get("country", {})
+        return (d.get("country") or "", d.get("province") or "")
+    except Exception:
+        return ("", "")
 
 
 BOT = re.compile(
@@ -174,6 +222,8 @@ def load_events():
                 "day": day_key(dt),
                 "vid": visitor_id(day_key(dt), ip, ua),
                 "mine": is_owner(ip),
+                "geo": geo_of(ip),                       # (国家, 省)，IP 本身不进这个 dict
+                "hour": dt.astimezone(TZ).hour,
                 "t": one("t"),
                 "p": unquote(one("p", "/")),
                 "k": one("k"),
@@ -268,7 +318,19 @@ def main():
     events = load_events()
     downloads = load_downloads()
     # 一个 IP 无论下几次、下几个文件，都只算一个人
-    dl_people = {r["who"] for r in downloads}
+    # ── 下载的三个口径（2026-09-10 拆开）─────────────────────────────
+    # 应用内更新和官网下载走的是**同一个 URL**（latest.json 指向 /download/vX/…），
+    # 唯一能分开的是 UA：带 Eas-Term/x.y.z Electron/ 的是更新。之前混在一个数里去重，
+    # 「下载 26 人」到底几个是新用户、几个是老用户在升级，看不出来。现在三个数各自独立：
+    #   web_dl   官网下载 —— 报**去重 IP 数**（同一 IP 下几次、下几个文件都算一人）
+    #   upd_dl   应用内更新 —— 报**次数**（每次升级算一次）和**去重 IP 数**（多少人在持续升级）
+    # 去重规则：who = sha1(ip)，按 IP。局限：一个人换网络会被算成两人、
+    # 一个 IP 后面的多台机器会被算成一人 —— 这是没有客户端 ID 的代价（隐私红线）。
+    # 自己的下载都不计入（本人的量单列在 stats["mine"]）。
+    web_dl = [r for r in downloads if r.get("via") == "web" and not r.get("mine")]
+    upd_dl = [r for r in downloads if r.get("via") == "update" and not r.get("mine")]
+    dl_people = {r["who"] for r in web_dl}
+    upd_people = {r["who"] for r in upd_dl}
     now = datetime.now(TZ)
     today = now.strftime("%Y-%m-%d")
 
@@ -300,6 +362,12 @@ def main():
 
     for e in events:
         d = e["day"]
+        # ⚠️ **网站侧的日活剔除我自己**（2026-09-07 起）：官网的 uv/pv/dau 是拿来看
+        #    「有多少真实用户」的，自家浏览混进去会把它抬高一大截。
+        #    桌面端那侧（t=app）**不剔**，那边要看的是真实使用总量，
+        #    自用部分单列在 stats["mine"] 里。
+        if e["t"] == "pv" and e.get("mine"):
+            continue
         if e["t"] == "pv":
             pv_by_day[d] += 1
             uv_by_day[d].add(e["vid"])
@@ -324,6 +392,13 @@ def main():
                 stay_total += sec
                 stay_n += 1
         elif e["t"] == "app":
+            # ⚠️ **桌面端也剔除我自己**（2026-09-13 起，用户拍板）。
+            #    之前只剔网站侧、桌面端保留全量 —— 结果那条曲线 30 天里 493 小时是本人，
+            #    「活跃 1 人 10.7 小时」就是我自己挂着没关的那台。
+            #    按 IP 剔，所以这个 IP 下**所有实例**（正式版、开发版、多台机器）一并不算。
+            #    本人的量仍单列在 stats["mine"]。
+            if e.get("mine"):
+                continue
             app_active[d].add(e["vid"])
             if e["e"] == "start":
                 app_starts += 1
@@ -345,7 +420,7 @@ def main():
                     if fn.isdigit():
                         app_feat[fk] += int(fn)
 
-    for r in downloads:
+    for r in web_dl:          # 趋势只看官网下载，更新走 downloadSplit
         dl_by_day[r["day"]].add(r["who"])
 
     def uv_in(days_back):
@@ -358,7 +433,7 @@ def main():
     dl_files = defaultdict(set)
     dl_plat = defaultdict(set)
     dl_ver = defaultdict(set)
-    for r in downloads:
+    for r in web_dl:          # 文件/平台/版本分布只看官网下载 —— 更新永远是最新版，混进去没意义
         dl_files[r["file"]].add(r["who"])
         dl_plat[r["plat"]].add(r["who"])
         if r["ver"]:
@@ -383,7 +458,7 @@ def main():
     ]
     age_today, age_window = defaultdict(set), defaultdict(set)
     for e in events:
-        if e["t"] != "app" or not e.get("age"):
+        if e["t"] != "app" or not e.get("age") or e.get("mine"):
             continue
         age_window[e["age"]].add(e["vid"])
         if e["day"] == today:
@@ -393,6 +468,43 @@ def main():
         return [{"k": k, "label": lab, "n": len(src.get(k, ()))} for k, lab in AGE_LABEL]
 
     has_age = bool(age_window)
+
+    # ── 地域 / 时段 / 会话深度（2026-09-13 新增，全部只算外部用户）──────────
+    # 地域：网站访客与桌面端用户分开数 —— 一个人可能只逛官网没装，或只用软件没再来官网
+    geo_site, geo_app = defaultdict(set), defaultdict(set)
+    # 时段：7×24 热力，值是「人-时」（同一人同一小时算一次）。国内用户看 +08:00
+    heat_site, heat_app = defaultdict(set), defaultdict(set)
+    # 会话深度：网站侧，一个访客当天看了几页
+    pages_per_visitor = defaultdict(int)
+    for e in events:
+        if e.get("mine"):
+            continue
+        country, prov = e.get("geo") or ("", "")
+        # 中国到省、海外到国家；查不到的归「未知」而不是丢掉，否则总数对不上
+        region = (country + " · " + prov) if (country == "中国" and prov) else (country or "未知")
+        wd = e["dt"].astimezone(TZ).weekday()   # 0=周一
+        cell = "%d-%02d" % (wd, e["hour"])
+        if e["t"] == "pv":
+            geo_site[region].add(e["vid"])
+            heat_site[cell].add(e["vid"])
+            pages_per_visitor[e["vid"]] += 1
+        elif e["t"] == "app":
+            geo_app[region].add(e["vid"])
+            heat_app[cell].add(e["vid"])
+
+    def geo_rows(src, n=12):
+        rows = sorted(((k, len(v)) for k, v in src.items()), key=lambda kv: (-kv[1], kv[0]))
+        return [{"k": k, "n": v} for k, v in rows[:n]]
+
+    def heat_rows(src):
+        # 168 格全给，前端按 7×24 铺；没数据的格子也要有，否则热力图缺角
+        return [{"d": d, "h": h, "n": len(src.get("%d-%02d" % (d, h), ()))}
+                for d in range(7) for h in range(24)]
+
+    # 会话深度分桶：看 1 页就走 / 2–3 页 / 4 页以上
+    depth = {"1": 0, "2_3": 0, "4p": 0}
+    for n in pages_per_visitor.values():
+        depth["1" if n <= 1 else "2_3" if n <= 3 else "4p"] += 1
 
     # ── 其中我自己 ──────────────────────────────────────────────
     # 单列不剔除：主口径保持原样，另给一行「其中我自己」，
@@ -413,8 +525,7 @@ def main():
     mine_dl = {r["who"] for r in downloads if r.get("mine")}
 
     # 下载来源：应用内更新和官网下载路径相同，只能靠 UA 分
-    dl_web = {r["who"] for r in downloads if r.get("via") == "web"}
-    dl_update = [r for r in downloads if r.get("via") == "update"]
+
 
     # 功能计数的中文名。看板上直接显示英文 key 没人看得懂
     FEAT_NAME = {
@@ -452,12 +563,29 @@ def main():
             ],
         },
         # 客户端发版前这里全是 0：老版本不带 age 参数。has=False 时前端提示等发版
+        "geo": {
+            "site": geo_rows(geo_site),
+            "app": geo_rows(geo_app),
+            "granularity": "中国到省 · 海外到国家",
+        },
+        "heat": {
+            "site": heat_rows(heat_site),
+            "app": heat_rows(heat_app),
+        },
+        "depth": [
+            {"k": "只看 1 页", "n": depth["1"]},
+            {"k": "看 2–3 页", "n": depth["2_3"]},
+            {"k": "看 4 页以上", "n": depth["4p"]},
+        ],
         "retention": {
             "has": has_age,
             "today": age_rows(age_today),
             "window": age_rows(age_window),
         },
         "mine": {
+            # 网站侧（pv/uv/dau/下载）已经把这些剔出去了；桌面端那侧没剔，只是单列
+            "excludedFromSite": True,
+            "excludedFromApp": True,     # 桌面端也剔了（2026-09-13 起）
             "events": len(mine_events),
             "appDays": len(mine_app_days),
             "hours": round(mine_sec / 3600, 1),
@@ -465,8 +593,9 @@ def main():
             "ips": len(_owner_ips),
         },
         "downloadSplit": {
-            "web": len(dl_web),
-            "update": len(dl_update),
+            "web": len(dl_people),           # 官网下载人数（去重 IP）
+            "updateCount": len(upd_dl),      # 应用内更新次数
+            "updatePeople": len(upd_people), # 应用内更新人数（去重 IP）
         },
         "totals": {
             "pv": sum(pv_by_day.values()),
