@@ -24,10 +24,35 @@
   `computer` 依赖 macOS 专用二进制 `bin/eas-windows`（构建产物），跨平台一键装需分平台打包，留第二步；
   收录开源 MCP server（工具型）是策展步骤，同样后置。往 `build-plugin-registry.mjs` 的 `PLUGINS` 加目录即可扩充。
 
-## 待办（需构建产物 + 生产/真机）
+## 已发布（2026-09-15）
 
-- [ ] 真机 CDP：装一个插件走完 install→权限确认→commit→发现区标「已安装」→卸载。
-      做法：本地起静态服务托 `dist/plugins`，`EAS_PLUGIN_REGISTRY_URL` 指过去（避免动生产），
-      隔离实例开插入选择器「插件」tab 验证。截图放本目录。
-- [ ] 发布到官方目录：`bash scripts/publish-plugins.sh`（逐个 scp + 字节/SHA256 核对 + 线上自检）。
-      **对外操作，发前确认。** 只往 `/www/wwwroot/eas/plugins/` 加文件，不碰站点其它内容、不 reload nginx。
+`bash scripts/publish-plugins.sh` → `eas.biily.top/plugins/`：`registry.json`(620B) + `board/board-1.0.0.zip`(7344B)。
+线上 zip 的 sha256 与 registry 声明逐字节一致；六站发布前后全 301 未变；纯新增，未碰 nginx/pm2。
+详见服务器档案 `~/.claude/servers/39.105.40.173-阿里云.md` 的 2026-09-15 变更记录。
+
+## 真机 CDP 已验（2026-09-15，对着线上生产服务器）
+
+隔离实例（`verify-app.mjs`，CDP 9333）里走完整条链，**registry 指向真实 `eas.biily.top`**，不碰安全绕过：
+
+- `plugins.registry()` → 从线上拉到目录，`看板` 正确解码（客户端按 UTF-8 读，印证浏览器里的乱码只是 nginx Content-Type 缺 charset 的显示问题）。
+- `plugins.install('board')` → 下载线上 zip、sha256 校验、解压、`parseManifest` 全过，返回权限 `[canvas_open_file]` + 一次性 token。
+- `plugins.installCommit(token)` → 原子落盘到 `~/.eas/plugins/board/`（plugin.json + server.mjs + ui/ 全）。
+- `plugins.list()` → board 作为用户装的自家插件出现（builtin:false、带面板）。
+- UI：插入选择器「插件」tab 的「发现」区渲染出 board 卡片（品牌色点 + 看板 + Productivity + 描述）。截图 `discover-card.png`。
+- 验后 `uninstall('board')` 清回，真实 home 干净。
+
+**权限确认弹窗**：`install()` 返回权限、`installCommit` 落盘这条两段式在 IPC 层已验；但**弹窗的 UI 截图没截到**——因为 board 是内置样板（见下），卡片显示「内置」而非「安装」，点不出弹窗。弹窗组件只是渲染 `install()` 返回的权限，逻辑已通。
+
+## ⚠️ 发现：registry 里放内置插件，市场里点不了「安装」
+
+board 同时是**内置样板**（`resources/plugins/board`）。UI 的「已装」判定认 `cli:'eas'` 的插件（含内置），
+所以 board 卡片永远显示「内置」徽标、没有「安装」按钮——**一键安装 + 权限确认这条用户路径用 board 演示不出来**。
+
+含义:**要让市场首发就能真的装东西,registry 首批得有一个「非内置」插件**(用户手上没有、点「安装」能拿到的)。
+现在只有 board/computer 两个插件且都是内置。选项:① 造一个非内置的示例/工具插件进 registry;
+② 接受首发市场只展示内置(点不了装),等有真第三方插件再充实。这是**策展决策**,留给发版前定。
+
+## 截图
+
+- `discover-tab.png` —— 插件 tab 顶部（已装列表）
+- `discover-card.png` —— 「发现」区的 board 卡片（从线上 registry 拉取渲染）
