@@ -26,13 +26,15 @@ import {
 } from '../../ui/Icons'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { CanvasSkillPanel } from './CanvasSkillPanel'
+import { CanvasMarketPanel } from './CanvasMarketPanel'
 
 /** 更多抽屉三页共用外壳，保留 Skill 与知识库的既有功能和点击边界。 */
-type DrawerMode = 'usage' | 'wiki' | 'skill'
+type DrawerMode = 'usage' | 'wiki' | 'skill' | 'market'
 
 const MODES: { id: DrawerMode; label: string; tip: string }[] = [
   { id: 'usage', label: '用量', tip: '项目、会话与每轮请求的真实用量' },
   { id: 'skill', label: '技能库', tip: '可复用的做事套路（Skill）' },
+  { id: 'market', label: '插件', tip: '安装、开关插件 —— 只有开启的才进插入面板和 @' },
   { id: 'wiki', label: '知识库', tip: '攒下来的资料与笔记' }
 ]
 
@@ -283,6 +285,8 @@ export function CanvasWikiDrawer(): JSX.Element | null {
         <UsageDashboard active={open} />
       ) : mode === 'skill' ? (
         <CanvasSkillPanel />
+      ) : mode === 'market' ? (
+        <CanvasMarketPanel />
       ) : (
         <>
           {/* ── 未配置：一屏引导 ── */}

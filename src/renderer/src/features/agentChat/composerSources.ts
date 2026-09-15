@@ -37,7 +37,8 @@ export async function loadSkills(): Promise<Candidate[]> {
 }
 export async function loadPlugins(cli: string, boundPluginId?: string): Promise<Candidate[]> {
   const plugins = await window.api.plugins.list()
-  return plugins.filter(p => p.cli === cli || p.cli === 'eas').map(p => ({ id: `plugin:${p.id}`, category: !p.mcpServers && !p.mcp ? 'app' : 'plugin', name: p.displayName, description: p.description || p.name, insert: '使用插件「' + p.displayName + '」', disabled: p.id === boundPluginId ? undefined : '请从插件面板打开绑定该插件的对话；引用名称不会建立连接' }))
+  // 总闸：只 @ 得到**开启的**插件（在「更多 › 插件」里关掉的不出现）
+  return plugins.filter(p => (p.cli === cli || p.cli === 'eas') && p.enabled !== false).map(p => ({ id: `plugin:${p.id}`, category: !p.mcpServers && !p.mcp ? 'app' : 'plugin', name: p.displayName, description: p.description || p.name, insert: '使用插件「' + p.displayName + '」', disabled: p.id === boundPluginId ? undefined : '请从插件面板打开绑定该插件的对话；引用名称不会建立连接' }))
 }
 export function browserCandidates(): Candidate[] {
   const s = useStore.getState()

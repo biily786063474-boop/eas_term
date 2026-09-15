@@ -1,0 +1,184 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eas-Term · 完整插件市场（弹窗）视觉稿</title><style>
+*{box-sizing:border-box}
+:root{color-scheme:dark;
+ --bg:#0d0d0d;--s-1:#171717;--s-2:#1c1c1c;--s-3:#212121;
+ --t-1:#ececec;--t-2:#b4b4b4;--t-3:#8f8f8f;--fg:#e2e4ea;
+ --accent:#dfe3e8;--on-accent:#0b0d12;
+ --glass-3:rgba(25,28,38,.9);--glass-border:rgba(255,255,255,.06);--glass-border-strong:rgba(255,255,255,.09);
+ --glass-highlight:inset 0 1px 0 rgba(255,255,255,.07);--blur:blur(30px) saturate(160%);
+ --lift-1:rgba(255,255,255,.035);--lift-2:rgba(255,255,255,.07);--lift-3:rgba(255,255,255,.12);
+ --ink-3:rgba(0,0,0,.55);--stroke-input:rgba(255,255,255,.14);
+ --sem-ok:#6ee7b7;--sem-warn:#fcd34d;--sem-warn-rgb:252,211,77;
+ --radius-lg:20px;--radius-md:12px;--radius-sm:8px}
+body{margin:0;background:#070809;color:var(--fg);font:13px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{padding:22px 30px 40px;max-width:1240px;margin:auto}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.brand{letter-spacing:2px;font-size:12px;color:#a4a7af}.badge{font-size:11px;padding:4px 9px;border:1px solid var(--glass-border-strong);border-radius:6px;color:#aaaeb8}
+.cap{margin:0 0 16px;color:var(--t-3);font-size:12px}.cap b{color:var(--t-2);font-weight:600}
+.scrim{border-radius:22px;padding:34px;background:radial-gradient(ellipse at 50% 0,#20242e88,transparent 62%),radial-gradient(#ffffff0d 1px,transparent 1px) 0 0/22px 22px,var(--bg);border:1px solid #ffffff08}
+.modal{width:100%;max-width:1020px;height:720px;margin:auto;display:grid;grid-template-columns:216px 1fr;
+ background:var(--glass-3);border:1px solid var(--glass-border-strong);border-radius:var(--radius-lg);
+ box-shadow:var(--glass-highlight),0 40px 120px var(--ink-3);backdrop-filter:var(--blur);overflow:hidden}
+.side{background:#0e10154d;border-right:1px solid var(--glass-border);padding:22px 12px 14px;display:flex;flex-direction:column;min-height:0}
+.side h1{font-size:19px;letter-spacing:.5px;margin:0 10px 4px}
+.side .sub{margin:0 10px 16px;color:var(--t-3);font-size:11px}
+.nav{overflow:auto;flex:1;scrollbar-width:thin;scrollbar-color:#ffffff1c transparent}
+.navg{margin:12px 10px 5px;color:#6f7480;font-size:10px;letter-spacing:1.4px}
+.nav button{width:100%;display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid transparent;background:none;border-radius:9px;text-align:left;font-size:12.5px;color:#a8acb6;margin:2px 0}
+.nav button:hover{background:#ffffff06;color:#fff}
+.nav button.on{background:linear-gradient(110deg,#ffffff12,#ffffff06);color:#fafafa;border-color:#ffffff0d;box-shadow:inset 2px 0 #cfd3da}
+.nav .ci{width:20px;text-align:center;font-size:14px}
+.nav .cn{flex:1;min-width:0}.nav .cc{font-size:10.5px;color:var(--t-3)}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.mhead{padding:20px 26px 14px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;gap:12px}
+.search{position:relative;flex:1}
+.search input{width:100%;padding:9px 12px 9px 34px;background:#ffffff05;border:1px solid var(--stroke-input);border-radius:11px;color:var(--t-1);font-size:12.5px}
+.search .mag{position:absolute;left:12px;top:9px;color:var(--t-3)}
+.mhead .close{width:30px;height:30px;border-radius:8px;border:1px solid var(--glass-border);background:none;color:var(--t-3);font-size:16px}
+.body{overflow:auto;flex:1;padding:8px 26px 26px;scrollbar-width:thin;scrollbar-color:#ffffff1c transparent}
+.sech{display:flex;align-items:baseline;gap:9px;margin:20px 2px 12px;font-size:13px;font-weight:700;color:var(--t-1)}
+.sech .n{font-weight:400;font-size:11px;color:var(--t-3)}.sech:first-child{margin-top:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card{display:flex;align-items:center;gap:12px;padding:12px 13px;border-radius:14px;border:1px solid var(--glass-border);background:var(--lift-1)}
+.card:hover{background:var(--lift-2);border-color:var(--glass-border-strong)}
+.ic{width:42px;height:42px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;background:#2a2f3a;overflow:hidden}
+.ic.logo{background:none}.ic svg{width:100%;height:100%;display:block}
+.cb{flex:1;min-width:0}
+.ct{display:flex;align-items:center;gap:7px}
+.ct b{font-size:13px;font-weight:600;color:var(--t-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{flex:none;font-size:9px;padding:1px 6px;border-radius:5px;background:rgba(var(--sem-warn-rgb),.14);color:var(--sem-warn);letter-spacing:.02em}
+.cd{font-size:11px;color:var(--t-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.add{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--glass-border-strong);background:var(--lift-2);color:var(--t-1);font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center}
+.add:hover{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.add.done{background:none;border-color:transparent;color:var(--sem-ok);font-size:15px;cursor:default}
+.empty{color:var(--t-3);font-size:12px;padding:30px 4px;text-align:center}
+.legend{margin-top:14px;color:var(--t-3);font-size:12px;display:flex;gap:24px;flex-wrap:wrap}.legend b{color:var(--t-2)}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="brand">EAS-TERM · 完整插件市场</span><span class="badge">视觉稿 · 提案 01 · 真实 logo</span></div>
+  <p class="cap">「更多 › 插件」的发现区点<b>「查看完整插件市场」</b>后弹出。左边<b>智能分类</b>、顶部<b>搜索</b>，卡片用<b>真实品牌 logo</b> + 名字 + 简介 + 安装。<b style="color:var(--sem-warn)">需登录</b> = 装后要授权/给 key。</p>
+  <div class="scrim">
+    <div class="modal">
+      <div class="side">
+        <h1>插件市场</h1><p class="sub">在你常用的工具里用上 AI</p>
+        <div class="nav" id="nav"></div>
+      </div>
+      <div class="main">
+        <div class="mhead">
+          <div class="search"><span class="mag">⌕</span><input id="q" placeholder="搜索插件…（Word、地图、GitHub…）"></div>
+          <button class="close" title="关闭">✕</button>
+        </div>
+        <div class="body" id="body"></div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><b>+</b>：一键接入（装了即用的直接可用；需登录的引导授权一次）</span>
+    <span><b>✓</b>：已装</span>
+    <span><b style="color:var(--sem-warn)">需登录</b>：远程连接，授权 / 填 key（密钥柜托管，不进对话）</span>
+  </div>
+</div>
+<script>
+// ── 真实品牌 logo（内联 SVG，40×40 自带圆角底）──
+const L = {
+  word:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#2b579a"/><rect x="8.5" y="9" width="23" height="22" rx="2.5" fill="#fff"/><rect x="8.5" y="9" width="23" height="22" rx="2.5" fill="#2b579a" opacity="0"/><path d="M13 15l2.2 11 2.3-8 2.3 8 2.2-11" fill="none" stroke="#2b579a" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+  excel:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#217346"/><rect x="8.5" y="9" width="23" height="22" rx="2.5" fill="#fff"/><path d="M14 15l6 10M20 15l-6 10" stroke="#217346" stroke-width="1.9" stroke-linecap="round"/></svg>',
+  ppt:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#c43e1c"/><rect x="8.5" y="9" width="23" height="22" rx="2.5" fill="#fff"/><path d="M15 25V15h4a3.2 3.2 0 0 1 0 6.4h-4" fill="none" stroke="#c43e1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  gdocs:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><path fill="#4285f4" d="M14 8h7l7 7v15a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/><path fill="#a1c2fa" d="M21 8l7 7h-7z"/><g stroke="#fff" stroke-width="1.4" stroke-linecap="round"><path d="M16 20h8M16 23h8M16 26h6"/></g></svg>',
+  gdrive:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><g transform="translate(7,9)"><path fill="#ffcf63" d="M9 0h8l9 15.5h-8z"/><path fill="#12a150" d="M0 15.5L4.5 8 13 0 4.5 15.5z" opacity="0"/><path fill="#12a150" d="M9 0L0 15.5l4 6.5 9-15.5z"/><path fill="#2684fc" d="M4 22L8 15.5h18L22 22z"/><path fill="#ffcf63" d="M9 0h8l9 15.5h-8z"/><path fill="#12a150" d="M9 0L0 15.5l4 6.5L13 6.5z"/></g></svg>',
+  gcal:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><rect x="10" y="11" width="20" height="19" rx="2.5" fill="#f1f3f4" stroke="#dadce0"/><rect x="10" y="11" width="20" height="5" rx="2.5" fill="#4285f4"/><text x="20" y="28" font-size="11" font-weight="700" fill="#4285f4" text-anchor="middle" font-family="Arial">31</text></svg>',
+  gmail:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><path fill="#4285f4" d="M10 28V15l10 7.5"/><path fill="#34a853" d="M30 28V15L20 22.5"/><path fill="#fbbc04" d="M10 15l10 7.5L30 15v-1.5a2 2 0 0 0-3.2-1.6"/><path fill="#ea4335" d="M10 13.5V15l10 7.5V16l-6.8-5.1A2 2 0 0 0 10 13.5z"/><path fill="#c5221f" d="M30 13.5V15l-10 7.5V16l6.8-5.1a2 2 0 0 1 3.2 1.6z" opacity=".0"/><path fill="#ea4335" d="M20 22.5L10 15v-1.5a2 2 0 0 1 3.2-1.6L20 17l6.8-5.1a2 2 0 0 1 3.2 1.6V15z"/></svg>',
+  github:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#1b1f23"/><path fill="#fff" d="M20 9c-6 0-11 5-11 11 0 4.9 3.2 9 7.6 10.5.6.1.8-.2.8-.5v-1.9c-3.1.7-3.8-1.3-3.8-1.3-.5-1.3-1.2-1.7-1.2-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.1-1.2-5.1-5.5 0-1.2.4-2.2 1.1-3-.1-.3-.5-1.4.1-2.9 0 0 .9-.3 3 1.1.9-.2 1.8-.4 2.8-.4s1.9.1 2.8.4c2.1-1.4 3-1.1 3-1.1.6 1.5.2 2.6.1 2.9.7.8 1.1 1.8 1.1 3 0 4.3-2.6 5.2-5.1 5.5.4.3.8 1 .8 2.1v3.1c0 .3.2.6.8.5C27.8 29 31 24.9 31 20c0-6-5-11-11-11z"/></svg>',
+  slack:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><rect x="12" y="16.7" width="16" height="2.7" rx="1.35" fill="#36C5F0"/><rect x="12" y="21.6" width="16" height="2.7" rx="1.35" fill="#2EB67D"/><rect x="16.7" y="12" width="2.7" height="16" rx="1.35" fill="#ECB22E"/><rect x="21.6" y="12" width="2.7" height="16" rx="1.35" fill="#E01E5A"/></svg>',
+  notion:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fff"/><rect x="9" y="9" width="22" height="22" rx="3" fill="#fff" stroke="#e5e5e5"/><path d="M15 26V15l10 11V15" fill="none" stroke="#111" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  figma:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#f7f7f8"/><path d="M20 8h-4a4 4 0 0 0 0 8h4V8z" fill="#f24e1e"/><path d="M16 16h4v8h-4a4 4 0 0 1 0-8z" fill="#a259ff"/><path d="M16 24h4v4a4 4 0 1 1-4-4z" fill="#0acf83"/><path d="M20 8h4a4 4 0 0 1 0 8h-4V8z" fill="#ff7262"/><circle cx="24" cy="20" r="4" fill="#1abcfe"/></svg>',
+  canva:'<svg viewBox="0 0 40 40"><defs><linearGradient id="cv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00c4cc"/><stop offset="1" stop-color="#7d2ae8"/></linearGradient></defs><circle cx="20" cy="20" r="16" fill="url(#cv)"/><text x="20" y="27" font-size="18" font-weight="600" fill="#fff" text-anchor="middle" font-family="Georgia,serif">C</text></svg>',
+  amap:'<svg viewBox="0 0 40 40"><defs><linearGradient id="am" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#41c4ff"/><stop offset="1" stop-color="#0072ff"/></linearGradient></defs><rect width="40" height="40" rx="9" fill="url(#am)"/><path fill="#fff" d="M20 10a6 6 0 0 0-6 6c0 4.5 6 12 6 12s6-7.5 6-12a6 6 0 0 0-6-6zm0 8.4a2.4 2.4 0 1 1 0-4.8 2.4 2.4 0 0 1 0 4.8z"/></svg>',
+  zhihu:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#0084ff"/><text x="20" y="27" font-size="16" font-weight="700" fill="#fff" text-anchor="middle" font-family="PingFang SC,sans-serif">知</text></svg>',
+  wechatmp:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#07c160"/><ellipse cx="17" cy="18" rx="7" ry="6" fill="#fff"/><path d="M12.5 22.5l-2.2 1.6.7-2.8z" fill="#fff"/><ellipse cx="25.5" cy="24" rx="5.5" ry="4.8" fill="#fff"/><path d="M29.5 27.5l1.8 1.3-.6-2.4z" fill="#fff"/><circle cx="14.6" cy="17.4" r="1" fill="#07c160"/><circle cx="19.4" cy="17.4" r="1" fill="#07c160"/><circle cx="23.6" cy="23.6" r=".85" fill="#07c160"/><circle cx="27.4" cy="23.6" r=".85" fill="#07c160"/></svg>',
+  xhs:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#ff2442"/><path d="M20 14.5c-2.2-1.6-5.2-1.6-7.5 0v11c2.3-1.6 5.3-1.6 7.5 0 2.2-1.6 5.2-1.6 7.5 0v-11c-2.3-1.6-5.3-1.6-7.5 0z" fill="#fff"/><path d="M20 14.5v11" stroke="#ff2442" stroke-width="1.3"/></svg>',
+  douyin:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#010101"/><g><path d="M21 10v12a4 4 0 1 1-3.2-3.92V15.1c1.3 1.6 3.2 2.4 5.2 2.4v-3.1c-1.1 0-2-.9-2-2.1z" fill="#25f4ee" transform="translate(-1.1,-1)"/><path d="M21 10v12a4 4 0 1 1-3.2-3.92V15.1c1.3 1.6 3.2 2.4 5.2 2.4v-3.1c-1.1 0-2-.9-2-2.1z" fill="#fe2c55" transform="translate(1.1,1)"/><path d="M21 10v12a4 4 0 1 1-3.2-3.92V15.1c1.3 1.6 3.2 2.4 5.2 2.4v-3.1c-1.1 0-2-.9-2-2.1z" fill="#fff"/></g></svg>',
+  bilibili:'<svg viewBox="0 0 40 40"><rect width="40" height="40" rx="9" fill="#fb7299"/><path d="M15.5 12.5l-2.2-2.2M24.5 12.5l2.2-2.2" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/><rect x="10.5" y="14" width="19" height="13.5" rx="4" fill="#fff"/><circle cx="16.2" cy="21" r="1.4" fill="#fb7299"/><circle cx="23.8" cy="21" r="1.4" fill="#fb7299"/></svg>',
+  weibo:'<svg viewBox="0 0 40 40"><defs><linearGradient id="wb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a2e"/><stop offset="1" stop-color="#e6162d"/></linearGradient></defs><rect width="40" height="40" rx="9" fill="url(#wb)"/><ellipse cx="20" cy="20.5" rx="9.5" ry="7.2" fill="#fff"/><circle cx="20" cy="20.5" r="3.6" fill="#e6162d"/><circle cx="18.6" cy="19.2" r="1.1" fill="#fff"/></svg>',
+  notionmem:''
+};
+const CATS = [
+  { id:'feat', name:'精选', icon:'✨' },{ id:'installed', name:'已安装', icon:'✓' },
+  { id:'office', name:'办公文档', icon:'📄' },{ id:'life', name:'生活出行', icon:'🗺️' },
+  { id:'dev', name:'开发工具', icon:'🧩' },{ id:'comms', name:'通讯协作', icon:'💬' },
+  { id:'media', name:'自媒体', icon:'📣' },
+  { id:'design', name:'设计创意', icon:'🎨' },{ id:'data', name:'数据搜索', icon:'🔎' },
+  { id:'storage', name:'文件存储', icon:'📁' }
+];
+const P = [
+  { n:'番茄钟', d:'专注计时，可让 AI 帮你开始', c:'life', i:'🍅', bg:'#ef4444', inst:1, feat:1 },
+  { n:'看板', d:'项目待办三栏看板', c:'office', i:'🗂️', bg:'#5e6ad2', inst:1 },
+  { n:'电脑视野', d:'让 AI 看你的屏幕并代操作', c:'dev', i:'🖥️', bg:'#7dd3fc', inst:1 },
+  { n:'Word 文档', d:'读写 Word，排版、生成、修订', c:'office', logo:'word', auth:1, feat:1 },
+  { n:'Excel 表格', d:'读写 Excel，公式、透视、图表', c:'office', logo:'excel', auth:1 },
+  { n:'PowerPoint', d:'生成与编辑 PPT 幻灯片', c:'office', logo:'ppt', auth:1 },
+  { n:'Google 文档', d:'Docs / Sheets / Slides 读写', c:'office', logo:'gdocs', auth:1 },
+  { n:'Notion', d:'读写 Notion 页面与数据库', c:'office', logo:'notion', auth:1, feat:1 },
+  { n:'高德地图', d:'路线规划、周边搜索、地理编码', c:'life', logo:'amap', feat:1 },
+  { n:'天气', d:'查实时天气与未来预报', c:'life', i:'⛅', bg:'#38bdf8' },
+  { n:'Google 日历', d:'读写日程、创建提醒', c:'life', logo:'gcal', auth:1 },
+  { n:'12306 火车票', d:'查余票、时刻、正晚点', c:'life', i:'🚄', bg:'#2563eb' },
+  { n:'GitHub', d:'仓库、Issue、PR、CI', c:'dev', logo:'github', inst:1, feat:1 },
+  { n:'本地文件', d:'读写你授权的目录', c:'dev', i:'📁', bg:'#64748b' },
+  { n:'数据库', d:'查 Postgres / MySQL / SQLite', c:'dev', i:'🗄️', bg:'#0ea5e9', auth:1 },
+  { n:'Sentry', d:'查线上报错与告警', c:'dev', i:'🐞', bg:'#362d59', auth:1 },
+  { n:'Slack', d:'读写 Slack 消息', c:'comms', logo:'slack', auth:1 },
+  { n:'企业微信', d:'消息、待办、审批', c:'comms', i:'💼', bg:'#07c160', auth:1 },
+  { n:'钉钉', d:'消息、待办、审批', c:'comms', i:'📨', bg:'#3296fa', auth:1 },
+  { n:'Gmail', d:'读写与整理邮件', c:'comms', logo:'gmail', auth:1, feat:1 },
+  { n:'微信公众号', d:'发文章、管粉丝、看阅读数据', c:'media', logo:'wechatmp', auth:1, feat:1 },
+  { n:'微博', d:'发博、读评论、查热搜', c:'media', logo:'weibo', auth:1 },
+  { n:'B站', d:'查视频数据、评论、粉丝', c:'media', logo:'bilibili', auth:1 },
+  { n:'抖音', d:'查作品数据与评论（开放平台）', c:'media', logo:'douyin', auth:1 },
+  { n:'小红书', d:'查笔记数据（接口有限）', c:'media', logo:'xhs', auth:1 },
+  { n:'Figma', d:'读写设计稿与组件', c:'design', logo:'figma', inst:1 },
+  { n:'Canva', d:'生成、评审、编辑设计', c:'design', logo:'canva', auth:1 },
+  { n:'网页抓取', d:'把网页内容抓成可读文本', c:'data', i:'🌐', bg:'#0ea5e9', feat:1 },
+  { n:'知乎', d:'搜索、读取与回答', c:'media', logo:'zhihu' },
+  { n:'维基百科', d:'查词条、摘要', c:'data', i:'📚', bg:'#636466' },
+  { n:'Google Drive', d:'文件、Docs、Sheets、Slides', c:'storage', logo:'gdrive', auth:1 },
+  { n:'阿里云盘', d:'读写网盘文件', c:'storage', i:'☁️', bg:'#ff6a00', auth:1 }
+];
+let active='feat', q='';
+const catName=id=>(CATS.find(c=>c.id===id)||{}).name||'';
+function renderNav(){
+  const el=document.getElementById('nav'); let h='';
+  const count=id=> id==='feat'?P.filter(p=>p.feat).length : id==='installed'?P.filter(p=>p.inst).length : P.filter(p=>p.c===id).length;
+  h+='<div class="navg">浏览</div>';
+  for(const c of CATS){ if(c.id==='office') h+='<div class="navg">分类</div>';
+    h+=`<button class="${active===c.id?'on':''}" data-id="${c.id}"><span class="ci">${c.icon}</span><span class="cn">${c.name}</span><span class="cc">${count(c.id)}</span></button>`; }
+  el.innerHTML=h;
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{ active=b.dataset.id; q=''; document.getElementById('q').value=''; render(); });
+}
+function iconHtml(p){ return p.logo && L[p.logo] ? `<div class="ic logo">${L[p.logo]}</div>` : `<div class="ic" style="background:${p.bg}22">${p.i}</div>`; }
+function card(p){
+  const act = p.inst ? '<button class="add done" title="已安装">✓</button>' : '<button class="add" title="接入">＋</button>';
+  const tag = p.auth ? '<span class="tag">需登录</span>' : '';
+  return `<div class="card">${iconHtml(p)}<div class="cb"><div class="ct"><b>${p.n}</b>${tag}</div><div class="cd">${p.d}</div></div>${act}</div>`;
+}
+function render(){
+  renderNav();
+  const body=document.getElementById('body');
+  if(q){ const hits=P.filter(p=>(p.n+p.d).toLowerCase().includes(q.toLowerCase()));
+    body.innerHTML=`<div class="sech">搜索「${q}」<span class="n">· ${hits.length} 个</span></div>`+(hits.length?`<div class="grid">${hits.map(card).join('')}</div>`:'<div class="empty">没找到，换个词试试</div>'); return; }
+  if(active==='feat'){
+    let h=`<div class="sech">热门<span class="n">· 装了即用与最常用的</span></div><div class="grid">${P.filter(p=>p.feat).map(card).join('')}</div>`;
+    for(const c of CATS.filter(c=>c.id!=='feat'&&c.id!=='installed')){ const list=P.filter(p=>p.c===c.id).slice(0,2);
+      if(list.length) h+=`<div class="sech">${c.icon} ${c.name}</div><div class="grid">${list.map(card).join('')}</div>`; }
+    body.innerHTML=h; return;
+  }
+  const list=active==='installed'?P.filter(p=>p.inst):P.filter(p=>p.c===active);
+  const title=active==='installed'?'已安装':(CATS.find(c=>c.id===active).icon+' '+catName(active));
+  body.innerHTML=`<div class="sech">${title}<span class="n">· ${list.length} 个</span></div>`+(list.length?`<div class="grid">${list.map(card).join('')}</div>`:'<div class="empty">这个分类暂时是空的</div>');
+}
+document.getElementById('q').addEventListener('input', e=>{ q=e.target.value.trim(); render(); });
+render();
+</script>
+</body></html>

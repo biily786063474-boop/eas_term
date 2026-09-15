@@ -1123,6 +1123,9 @@ const api = {
     /** 已装的 CLI 插件全表。**每次都当场扫盘**（见 main/plugins.ts），
      *  用户刚在终端里装完一个，回画布就能看到，不用重开软件。 */
     list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list'),
+    /** 总闸：开/关一个插件（关 ≠ 卸载）。只有开启的才出现在双击插入面板与输入框 @ 里。 */
+    setEnabled: (id: string, enabled: boolean): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke('plugins:setEnabled', { id, enabled }),
     // ── 插件市场（设计稿 2026-09-15）。主进程半边在 pluginMarket.ts。两段式安装：
     //    install 只下载/校验/解压到临时目录并返回待确认权限；用户确认后 installCommit 才落盘 ──
     /** 拉官方目录（联网失败退回本地缓存，stale 标记提示是旧的）。 */

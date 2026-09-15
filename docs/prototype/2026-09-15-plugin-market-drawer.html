@@ -1,0 +1,185 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eas-Term · 插件市场（更多抽屉页）视觉稿</title><style>
+*{box-sizing:border-box}
+:root{color-scheme:dark;
+ /* 与 styles/base.css 暗色令牌同值，落地时全换成 var(--…)，不写死 */
+ --bg:#0d0d0d;--s-1:#171717;--s-2:#1c1c1c;--s-3:#212121;
+ --t-1:#ececec;--t-2:#b4b4b4;--t-3:#8f8f8f;--fg:#e2e4ea;--fg-dim:#969aa8;
+ --accent:#dfe3e8;--on-accent:#0b0d12;
+ --glass-1:rgba(20,22,30,.72);--glass-3:rgba(25,28,38,.82);
+ --glass-border:rgba(255,255,255,.06);--glass-border-strong:rgba(255,255,255,.09);
+ --glass-highlight:inset 0 1px 0 rgba(255,255,255,.07);--blur:blur(28px) saturate(160%);
+ --lift-1:rgba(255,255,255,.035);--lift-2:rgba(255,255,255,.07);--lift-3:rgba(255,255,255,.12);
+ --ink-1:rgba(0,0,0,.28);--ink-3:rgba(0,0,0,.55);--stroke-input:rgba(255,255,255,.14);
+ --sem-danger:#fda4af;--sem-warn:#fcd34d;--sem-ok:#6ee7b7;--sem-danger-rgb:253,164,175;
+ --radius-xl:26px;--radius-lg:20px;--radius-md:10px;--radius-sm:7px}
+body{margin:0;background:#090b0f;color:var(--fg);font:13px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+.page{padding:26px 34px 44px;max-width:1240px;margin:auto}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.brand{letter-spacing:2px;font-size:12px;color:#a4a7af}
+.badge{font-size:11px;padding:4px 9px;border:1px solid var(--glass-border-strong);border-radius:6px;color:#aaaeb8}
+.caption{margin:0 0 20px;color:var(--t-3);font-size:12px}
+.caption b{color:var(--t-2);font-weight:600}
+
+/* 舞台：模拟 app 画布，抽屉停在右侧 */
+.stage{position:relative;height:1010px;border:1px solid #ffffff08;border-radius:22px;overflow:hidden;
+ background:radial-gradient(ellipse at 72% 30%,#262b3455,transparent 60%),radial-gradient(#ffffff10 1px,transparent 1px) 0 0/22px 22px,var(--bg)}
+.titlebar{position:absolute;inset:0 0 auto 0;height:44px;display:flex;align-items:center;gap:14px;padding:0 22px 0 84px;font-size:12px;color:var(--t-3);border-bottom:1px solid var(--glass-border)}
+.titlebar .sp{flex:1}
+.titlebar .mi{color:var(--t-3)}
+.titlebar .mi.on{color:var(--t-1)}
+.ghost{position:absolute;left:60px;top:360px;width:300px;color:var(--t-3);font-size:12px;opacity:.5;text-align:center}
+.ghost .k{display:inline-block;padding:2px 7px;border:1px solid var(--glass-border-strong);border-radius:5px;font-size:11px;color:var(--t-2)}
+
+/* ── 更多抽屉：右侧竖排页签 + 抽屉本体 ── */
+.shell{position:absolute;top:56px;bottom:20px;right:18px;display:flex;align-items:stretch;gap:0}
+.seg{display:flex;flex-direction:column;gap:6px;justify-content:center;padding-right:9px}
+.seg button{writing-mode:vertical-lr;text-orientation:upright;letter-spacing:3px;font-size:12px;padding:14px 5px;border:1px solid transparent;border-radius:9px;background:none;color:var(--t-3)}
+.seg button:hover{background:var(--lift-1);color:var(--t-2)}
+.seg button.on{background:linear-gradient(180deg,#ffffff12,#ffffff06);color:#fafafa;border-color:#ffffff10;box-shadow:inset 0 2px #cfd3da}
+.drawer{width:426px;display:flex;flex-direction:column;background:var(--glass-1);backdrop-filter:var(--blur);border:1px solid var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--glass-highlight),0 10px 36px var(--ink-1);overflow:hidden}
+.head{display:flex;align-items:center;gap:10px;padding:16px 16px 12px}
+.head h2{font-size:16px;font-weight:600;margin:0}
+.head .cnt{font-size:11px;color:var(--t-3)}
+.head .sp{flex:1}
+.head .gear{width:26px;height:26px;border-radius:7px;background:var(--lift-2);display:flex;align-items:center;justify-content:center;color:var(--t-2);border:0}
+.search{margin:0 16px 12px;position:relative}
+.search input{width:100%;padding:8px 10px 8px 30px;background:#ffffff05;border:1px solid var(--stroke-input);border-radius:9px;color:var(--t-1);font-size:12px}
+.search .mag{position:absolute;left:10px;top:8px;color:var(--t-3)}
+.scroll{flex:1;overflow:auto;padding:2px 16px 14px;scrollbar-width:thin;scrollbar-color:#ffffff1c transparent}
+
+.sec{display:flex;align-items:center;gap:8px;margin:14px 2px 9px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--t-2)}
+.sec .n{font-weight:400;color:var(--t-3)}
+.sec:first-child{margin-top:4px}
+.sec .line{flex:1;height:1px;background:var(--glass-border)}
+
+.card{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:13px;border:1px solid var(--glass-border);background:var(--lift-1)}
+.card+.card{margin-top:8px}
+.card:hover{background:var(--lift-2)}
+.card.off{opacity:.46}
+.ico{width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.ico svg{width:24px;height:24px}
+.ico.txt{font-weight:700;font-size:15px;color:#0b0d12}
+.body{flex:1;min-width:0}
+.nm{display:flex;align-items:center;gap:7px}
+.nm b{font-size:13px;font-weight:600;color:var(--t-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src{flex:none;font-size:9.5px;padding:1px 6px;border-radius:5px;background:var(--lift-2);color:var(--t-3);letter-spacing:.02em}
+.src.eas{color:#c7b299;background:rgba(199,178,153,.12)}
+.desc{font-size:11px;line-height:1.45;color:var(--t-3);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.act{flex:none;display:flex;align-items:center;gap:9px}
+.install{display:inline-flex;align-items:center;gap:4px;padding:6px 15px;border:0;border-radius:9px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:12px}
+.install.done{background:var(--lift-2);color:var(--t-3);font-weight:500}
+.kebab{width:24px;height:24px;border-radius:7px;border:1px solid var(--glass-border);background:none;color:var(--t-3);display:flex;align-items:center;justify-content:center}
+.kebab:hover{color:var(--t-1);border-color:var(--glass-border-strong)}
+
+/* 开关 */
+.sw{width:36px;height:21px;border-radius:999px;background:var(--lift-3);position:relative;border:0;flex:none;transition:background .15s}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#c9cdd6;transition:left .15s}
+.sw.on{background:var(--accent)}
+.sw.on::after{left:17px;background:var(--on-accent)}
+
+.foot{padding:11px 16px;border-top:1px solid var(--glass-border);font-size:11px;color:var(--t-3);display:flex;gap:7px;align-items:flex-start;line-height:1.5}
+.foot .dot{margin-top:6px;width:5px;height:5px;border-radius:50%;background:var(--sem-ok);flex:none}
+.foot b{color:var(--t-2);font-weight:600}
+
+/* 批注 */
+.note{position:absolute;font-size:11px;color:#c2ad88;display:flex;align-items:center;gap:7px;pointer-events:none}
+.note .ln{width:26px;height:1px;background:#c2ad88;opacity:.55}
+.note.n1{right:472px;top:300px}
+.note.n2{right:472px;top:640px;max-width:190px;text-align:right}
+.note.n2 .ln{align-self:center}
+.legend{margin-top:16px;color:var(--t-3);font-size:12px;display:flex;gap:26px;flex-wrap:wrap}
+.legend b{color:var(--t-2)}
+</style></head>
+<body>
+<div class="page">
+  <div class="top"><span class="brand">EAS-TERM · 插件市场</span><span class="badge">视觉稿 · 提案 01</span></div>
+  <p class="caption">「更多」抽屉新增第四页 <b>插件</b>。这里是插件的<b>总开关</b>：安装 + 开启都在这做，<b>只有开启的</b>插件才出现在双击的插入面板和输入框 @ 里。开关也管你在 Claude / Codex 里装的插件（默认开启）。</p>
+
+  <div class="stage">
+    <div class="titlebar"><span>plugin-marketplace</span><span class="sp"></span><span class="mi">额度</span><span class="mi">辞典</span><span class="mi">密钥</span><span class="mi on">画布 ▾</span><span class="mi">设置</span></div>
+    <div class="ghost">双击画布空白 → 插入面板<br>输入框里打 <span class="k">@</span> → 提及插件<br><span style="opacity:.8">这两处，只列已开启的插件</span></div>
+
+    <div class="note n1"><span>可安装的新插件</span><span class="ln"></span></div>
+    <div class="note n2"><span class="ln"></span><span>Claude / Codex 装的插件也在这，<br>关掉就不在面板 / @ 里出现</span></div>
+
+    <div class="shell">
+      <div class="seg">
+        <button>用量</button><button>技能库</button><button>知识库</button><button class="on">插件</button>
+      </div>
+      <div class="drawer">
+        <div class="head"><h2>插件</h2><span class="cnt">已装 6 · 开启 5</span><span class="sp"></span><button class="gear" title="管理源">⚙</button></div>
+        <div class="search"><span class="mag">⌕</span><input placeholder="搜索插件…" value=""></div>
+        <div class="scroll">
+
+          <div class="sec">发现<span class="line"></span></div>
+
+          <div class="card">
+            <div class="ico" style="background:radial-gradient(circle at 50% 40%,#fb7185,#ef4444)">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M8.5 3.2c1-.9 2.2-.2 3.5-.2s2.5-.7 3.5.2" stroke="#4ade80" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="14" r="7.5" fill="#fecaca"/><path d="M12 14V9.5" stroke="#7f1d1d" stroke-width="1.6" stroke-linecap="round"/><path d="M12 14l3 1.8" stroke="#7f1d1d" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="body"><div class="nm"><b>番茄钟</b><span class="src eas">自家</span></div><div class="desc">专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。</div></div>
+            <div class="act"><button class="install">＋ 安装</button></div>
+          </div>
+
+          <div class="card" style="opacity:.72">
+            <div class="ico txt" style="background:#3a3f4b;color:#aeb4c0">✦</div>
+            <div class="body"><div class="nm"><b>更多插件陆续上架</b></div><div class="desc">官方目录会不断收录自家插件与精选的开源工具，装好即用。</div></div>
+            <div class="act"><button class="install done" disabled>敬请期待</button></div>
+          </div>
+
+          <div class="sec">已装<span class="n">· 6</span><span class="line"></span></div>
+
+          <div class="card">
+            <div class="ico" style="background:rgba(94,106,210,.18)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#8b95e8" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.2"/><rect x="9.5" y="4" width="5" height="11" rx="1.2"/><rect x="16" y="4" width="5" height="14" rx="1.2"/></svg>
+            </div>
+            <div class="body"><div class="nm"><b>看板</b><span class="src eas">自家 · 内置</span></div><div class="desc">项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json。</div></div>
+            <div class="act"><button class="kebab" title="打开 / 更多">⋯</button><button class="sw on" title="已开启"></button></div>
+          </div>
+
+          <div class="card">
+            <div class="ico" style="background:rgba(125,211,252,.16)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#7dd3fc" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.6"/><path d="M9 20h6M12 16v4"/></svg>
+            </div>
+            <div class="body"><div class="nm"><b>电脑视野</b><span class="src eas">自家 · 内置</span></div><div class="desc">让 AI 看见你的屏幕并代你操作，截图对敏感窗口打码，点击键盘要单独授权。</div></div>
+            <div class="act"><button class="kebab" title="打开 / 更多">⋯</button><button class="sw on"></button></div>
+          </div>
+
+          <div class="card">
+            <div class="ico txt" style="background:#d97757">S</div>
+            <div class="body"><div class="nm"><b>superpowers</b><span class="src">Claude</span></div><div class="desc">一套可复用的做事套路与技能骨架。</div></div>
+            <div class="act"><button class="kebab" title="更多">⋯</button><button class="sw on"></button></div>
+          </div>
+
+          <div class="card">
+            <div class="ico txt" style="background:#5b8def">F</div>
+            <div class="body"><div class="nm"><b>figma</b><span class="src">Claude</span></div><div class="desc">读写 Figma 文件、组件与设计稿，设计与代码互转。</div></div>
+            <div class="act"><button class="kebab" title="更多">⋯</button><button class="sw on"></button></div>
+          </div>
+
+          <div class="card">
+            <div class="ico txt" style="background:#3fb950">G</div>
+            <div class="body"><div class="nm"><b>GitHub</b><span class="src">Codex</span></div><div class="desc">操作仓库、Issue、PR 与代码检索。</div></div>
+            <div class="act"><button class="kebab" title="更多">⋯</button><button class="sw on"></button></div>
+          </div>
+
+          <div class="card off">
+            <div class="ico txt" style="background:#8a6fd4">M</div>
+            <div class="body"><div class="nm"><b>claude-mem</b><span class="src">Claude</span></div><div class="desc">跨会话的长期记忆库。<b style="color:var(--t-3)">已关闭 —— 不在插入面板和 @ 里出现</b></div></div>
+            <div class="act"><button class="kebab" title="更多">⋯</button><button class="sw"></button></div>
+          </div>
+
+        </div>
+        <div class="foot"><span class="dot"></span><span><b>只有开启的插件</b>会出现在双击的插入面板、和输入框 @ 里。关掉不卸载，随时能开回来。</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><b>发现</b>：官方目录里可一键装的插件，装前弹权限确认。</span>
+    <span><b>已装</b>：所有装了的插件（自家 + Claude / Codex），每个带开关。</span>
+    <span><b>⋯</b>：自家带面板的 → 打开面板 / 卸载；两家 CLI 的 → 去哪装的、怎么移除。</span>
+  </div>
+</div>
+</body></html>

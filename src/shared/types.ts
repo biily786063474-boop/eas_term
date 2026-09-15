@@ -780,6 +780,9 @@ export interface PluginInfo {
   mcpServers?: Record<string, unknown>
   /** 插件目录的绝对路径。`${CLAUDE_PLUGIN_ROOT}` 这类变量靠它替换 */
   root: string
+  /** 总闸：是否开启（默认 true）。只有开启的才出现在双击插入面板与输入框 @ 里。
+   *  由 `plugins:list` 标注；市场页据它画开关，消费点据它筛。见 pluginEnabledState.ts */
+  enabled?: boolean
   // ── 以下只有自家插件（cli === 'eas'）才有；两家的插件一律 undefined ──
   // 设计稿：docs/superpowers/specs/2026-09-05-插件面板宿主-design.md §M
   /** 面板：每个是一份 `ui://` HTML 资源，渲染成画布上的 `plugin-panel` 组件节点 */

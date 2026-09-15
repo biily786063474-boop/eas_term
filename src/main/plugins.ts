@@ -35,6 +35,7 @@ import os from 'node:os'
 
 import type { PluginInfo } from '../shared/types'
 import { parseManifest } from './pluginManifest.ts'
+import { parseEnabledState, isPluginEnabled, setPluginEnabled, type EnabledState } from './pluginEnabledState.ts'
 import { app } from 'electron'
 
 const rd = (p: string): unknown => {
@@ -210,12 +211,35 @@ function easPlugins(): PluginInfo[] {
   return [...user, ...builtin]
 }
 
+// ── 开启/关闭总闸（设计 2026-09-15）──────────────────────────────────────
+// 只有开启的插件才出现在双击的插入面板与输入框 @ 里。默认全开，持久化「关掉的 id」。
+// 纯逻辑在 pluginEnabledState.ts；这里只管落盘 userData/plugin-enabled.json。
+function enabledStatePath(): string {
+  return path.join(app.getPath('userData'), 'plugin-enabled.json')
+}
+function loadEnabledState(): EnabledState {
+  return parseEnabledState(rd(enabledStatePath()))
+}
+function saveEnabledState(st: EnabledState): void {
+  const p = enabledStatePath()
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(p, JSON.stringify(st, null, 2))
+}
+
 /** 已装插件全表。**每次都当场扫盘**，不缓存 —— 用户可能刚在终端里装了一个，
  *  缓存会让他看不到，而扫几个目录的代价可以忽略。
- *  顺序：自家插件在前（它们有面板，是画布上真正能「插」的东西），两家的按名排后。 */
+ *  顺序：自家插件在前（它们有面板，是画布上真正能「插」的东西），两家的按名排后。
+ *  每条带上 `enabled`（默认 true）：市场页据它画开关，消费点据它筛。 */
 export function listPlugins(): PluginInfo[] {
   const others = [...codexPlugins(), ...claudePlugins()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh'))
-  return [...easPlugins(), ...others]
+  const all = [...easPlugins(), ...others]
+  const st = loadEnabledState()
+  return all.map((p) => ({ ...p, enabled: isPluginEnabled(p.id, st) }))
+}
+
+/** 只要**开着的**插件。双击插入面板、输入框 @ 都走它（关掉的插件不该在那两处冒出来）。 */
+export function listEnabledPlugins(): PluginInfo[] {
+  return listPlugins().filter((p) => p.enabled !== false)
 }
 
 /** 按 id 取一个。给「这次会话带哪个插件」那条路用。 */
@@ -225,4 +249,11 @@ export function findPlugin(id: string): PluginInfo | undefined {
 
 export function registerPluginHandlers(): void {
   guardedHandle('plugins:list', (): PluginInfo[] => listPlugins())
+  // 开/关一个插件的总闸。只写 userData/plugin-enabled.json，不碰插件本身（关 ≠ 卸载）。
+  guardedHandle('plugins:setEnabled', (_e, arg: { id?: unknown; enabled?: unknown }): { ok: boolean } => {
+    const id = typeof arg?.id === 'string' ? arg.id : ''
+    if (!id) return { ok: false }
+    saveEnabledState(setPluginEnabled(loadEnabledState(), id, arg?.enabled !== false))
+    return { ok: true }
+  })
 }
