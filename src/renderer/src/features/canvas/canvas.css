@@ -2620,8 +2620,9 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--ink-3);
-  backdrop-filter: blur(3px);
+  /* 近乎不透明的深色遮罩：压住背后右侧的「更多」抽屉，别露边 */
+  background: rgba(6, 7, 9, 0.82);
+  backdrop-filter: blur(4px);
 }
 .pm-modal {
   width: 100%;
