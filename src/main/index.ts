@@ -32,7 +32,7 @@ import { applyLoginShellPath } from './probeEnv'
 import { checkContracts } from './cliContractRun'
 import { registerStatuslineHandlers } from './statuslineRuntime'
 import { registerQuotaHandlers } from './quotaStore'
-import { registerSttHandlers } from './stt'
+import { registerSttHandlers, dropVoicePreviewWorker } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge, invokeRenderer } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
@@ -529,6 +529,7 @@ app.on('before-quit', (e) => {
 })
 
 app.on('will-quit', () => {
+  dropVoicePreviewWorker() // 常驻的流式识别 worker 随应用退出
   // 把 IPC 耗时的累计统计落一份 —— 单看慢调用会漏掉「每次 30ms 但被调一千次」那种
   flushIpcProfile()
   killAllPtys(true) // 兜底：任何路径走到这里都确保清干净

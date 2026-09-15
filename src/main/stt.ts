@@ -1,6 +1,7 @@
 import { guardedHandle, guardedOn } from './ipcGuard'
 import {openManagedPreview} from './runtime/voicePreviewAdmission.ts'
-import {createVoicePreviewSession} from './voicePreviewSession.ts'
+import {createVoicePreviewLink} from './voicePreviewSession.ts'
+import {createVoicePreviewPool} from './voicePreviewPool.ts'
 import {voicePreviewWorkerCode} from './voicePreviewWorker.ts'
 import {createManagedAsr} from './runtime/managedAsr.ts'
 import {trackAsrWorker} from './runtime/asrWorkerLifecycle.ts'
@@ -77,13 +78,30 @@ function readyDir(spec: ModelSpec): string | null {
 }
 
 // ---------- 流式识别器（单录音独占 Worker，主线程不加载模型或解码） ----------
+// 流式识别 worker 常驻池：第一次录音加载模型 ~3 秒，之后每次录音只换一个 stream（1ms）；
+// 闲置 10 分钟释放（常驻约 95MB）。为什么：74MB int8 zipformer 在 WASM onnxruntime 里加载实测 2.8 秒，
+// 以前每次录音都重来，用户每按一次麦克风都等这 3 秒（2026-09-14 实测 2965 / 3087 ms）。
+const PREVIEW_IDLE_MS = 10 * 60_000
+const previewPool = createVoicePreviewPool({
+  create: () => {
+    const dir = readyDir(MODELS.stream)
+    if (!dir) throw Error('流式语音模型未下载')
+    const owned = new Worker(voicePreviewWorkerCode, {eval:true,execArgv:[],workerData:{dir,sherpaPath:require.resolve('sherpa-onnx')}})
+    owned.unref()
+    return createVoicePreviewLink(owned)
+  },
+  idleMs: PREVIEW_IDLE_MS,
+  setTimer: (fn, ms) => { const t = setTimeout(fn, ms); t.unref(); return t },
+  clearTimer: (h) => clearTimeout(h as NodeJS.Timeout)
+})
+/** 一次录音一个 lease；lease 结束把 worker 交回池里计时，不销毁 */
 function createPreviewWorker(onPartial:(text:string,targetId:string)=>void,onError:(message:string)=>void) {
-  const dir = readyDir(MODELS.stream)
-  if (!dir) throw Error('流式语音模型未下载')
-  const owned = new Worker(voicePreviewWorkerCode, {eval:true,execArgv:[],workerData:{dir,sherpaPath:require.resolve('sherpa-onnx')}})
-  owned.unref()
-  return createVoicePreviewSession(owned,onPartial,onError)
+  const lease = previewPool.acquire().open(onPartial, onError)
+  void lease.completed.then(() => previewPool.release())
+  return lease
 }
+/** 退出 / 模型重新下载时立刻释放常驻 worker */
+export function dropVoicePreviewWorker(): void { previewPool.drop() }
 
 // ---------- 离线识别器 SenseVoice（跑在 worker 线程，绝不阻塞主进程） ----------
 // SenseVoice 解码是 CPU 密集的同步调用（~1s 量级）。放主进程会把整个 app 冻住（IPC 积压、窗口卡顿），

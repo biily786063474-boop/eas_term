@@ -1,9 +1,11 @@
 import type {WebContents} from 'electron'
 import {openVoiceVad, type VadSession} from '../voiceVad'
-import {startManagedSession, cancelSessionStart} from './sessionStartup.ts'
 import {ownedSessions} from './ownedSessions.ts'
 let sequence = 0
-/** One VAD worker per recording owner. This lease covers its full resident lifetime. */
+/** 一次录音一个 VAD worker，登记进托管服务（可见、可关闭）。
+ *
+ *  **不走资源准入**（2026-09-14，用户要语音永不排队）：不经 startManagedSession，不占 ledger。
+ *  VAD 就绪实测 ~250ms，不做常驻；慢的是流式识别那 2.8 秒，见 voicePreviewPool。 */
 export async function openManagedVad(
   owner: WebContents, model: string,
   onAudio: (samples: Float32Array, speech: boolean, targetId: string) => void,
@@ -19,7 +21,9 @@ export async function openManagedVad(
     session.stop()
     onError('人声检测服务已关闭，录音已停止')
   }
-  const release = (): void => { cancelSessionStart(id, owner.id); stop() }
+  // 启动期间就被取消：session 还没有，记下来等 openVoiceVad 回来再停
+  let cancelled = false
+  const release = (): void => { cancelled = true; stop() }
   const detach = (): void => {
     recordingSignal?.removeEventListener('abort', release)
     owner.removeListener('did-navigate', release)
@@ -31,24 +35,18 @@ export async function openManagedVad(
   owner.once('destroyed', release)
   recordingSignal?.addEventListener('abort', release, {once: true})
   try {
-    return await startManagedSession({
-      id, windowId: owner.id, name: '人声检测', interactive: true, projectId: null,
-      cost: {cpu: 5, memoryBytes: 128 * 1024 * 1024},
-      start: async signal => {
-        if (signal.aborted || owner.isDestroyed()) throw new Error('cancelled')
-        // openVoiceVad rejects failed startup only after the actual worker exit.
-        session = await openVoiceVad(model, onAudio, onError, strong)
-        void session.completed.then(detach)
-        if (signal.aborted || owner.isDestroyed()) {
-          session.stop()
-          await session.completed
-          throw new Error('cancelled')
-        }
-        ownedSessions.add({id, name: '人声检测 VAD', kind: 'voice', windowId: owner.id,
-          projectId: null, completed: session.completed, stop})
-        return {value: session, completed: session.completed}
-      }
-    })
+    // openVoiceVad rejects failed startup only after the actual worker exit.
+    const created = await openVoiceVad(model, onAudio, onError, strong)
+    void created.completed.then(detach)
+    if (cancelled || owner.isDestroyed()) {
+      created.stop()
+      await created.completed
+      throw new Error('cancelled')
+    }
+    session = created
+    ownedSessions.add({id, name: '人声检测 VAD', kind: 'voice', windowId: owner.id,
+      projectId: null, completed: created.completed, stop})
+    return created
   } catch (error) {
     detach()
     throw error

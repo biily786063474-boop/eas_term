@@ -23,6 +23,9 @@ ready.catch(fatal)
 let queue=Promise.resolve(),queued=0
 parentPort.on('message',m=>{
  if(failed)return
+ // reset：录音结束（或被取消）时换一个新 stream，不重建 worker —— 模型加载 2.8s，stream 1ms。
+ // 走同一条 FIFO，排在已收到的音频之后，不会把上一句正在处理的帧切掉一半。
+ if(m.type==='reset'){queued++;queue=queue.then(async()=>{try{await ready;if(failed)return;stream.free();stream=rec.createStream();committed=''}catch(error){fatal(error)}finally{queued--}});return}
  if(queued>=64||!Number.isSafeInteger(m.id)||!['audio','take'].includes(m.type)){fatal('invalid preview request or queue full');return}
  if(m.type==='audio'&&(!(m.samples instanceof Float32Array)||m.samples.length<1||m.samples.length>16384||typeof m.targetId!=='string'||m.targetId.length>100)){fatal('invalid preview audio');return}
  queued++

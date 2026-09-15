@@ -46,8 +46,8 @@ const MANIFEST: Record<string, Entry> = {
   'src/main/agentChat/session.ts': { status: 'managed', counts: { spawn: 1 }, note: 'Claude/Codex 直连进程：restartAndDeliver 经 startManagedSession，close 才释放；agent:<session>:<gen> 服务登记' },
   'src/main/agentChat/omp/launch.ts': { status: 'managed', counts: { spawn: 1, execFile: 1 }, note: 'ACP 进程经 openAsync→startManagedSession；execFile 是 omp usage --json 额度读取，8s timeout 的有界探测' },
   'src/main/lspClient.ts': { status: 'managed', counts: { spawn: 1 }, note: '语言服务器经 lspProvider startManagedSession（共享窗口引用），completed 只认 close' },
-  'src/main/stt.ts': { status: 'managed', counts: { 'new Worker': 2 }, note: '流式预览 Worker 经 openManagedPreview；ASR 共享模型 Worker 经 managedAsr；预算随 worker exit 释放' },
-  'src/main/voiceVad.ts': { status: 'managed', counts: { 'new Worker': 1 }, note: 'VAD Worker 经 managedVad startManagedSession；stop 不等于 exit，completed 只认 exit' },
+  'src/main/stt.ts': { status: 'managed', counts: { 'new Worker': 2 }, note: '流式预览 Worker 由 voicePreviewPool 常驻（2026-09-14：不经准入，openManagedPreview 只登记 ownedSessions；闲置 10 分钟释放）；ASR 共享模型 Worker 经 managedAsr，预算随 exit 释放' },
+  'src/main/voiceVad.ts': { status: 'managed', counts: { 'new Worker': 1 }, note: 'VAD Worker 经 managedVad 直接起（2026-09-14：不经准入，登记 ownedSessions）；stop 不等于 exit，completed 只认 exit' },
   'src/main/wiki/scanHost.ts': { status: 'managed', counts: { 'import ?nodeWorker': 1 }, note: '知识库全库扫描 Worker 工厂；wiki:graph / wiki:lint 经 scanNotesManaged→runOneShotWorker→runManagedTask（窗口归属，projectId null），取消 terminate，预算随 exit 释放（2026-09-13）' },
   'src/main/tsSymbolsHost.ts': { status: 'managed', counts: { 'import ?nodeWorker': 1 }, note: '符号索引 Worker 工厂；codeGraph:symbols 经 analyzeSymbolsManaged→runManagedTask（窗口归属、项目归属），取消 terminate，预算随 exit 释放（2026-09-13）' },
   // ── 有界探测：一次性系统/CLI 查询，带 timeout，不产生驻留，不排队 ──
