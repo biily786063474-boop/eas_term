@@ -370,6 +370,7 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 ### 2026-09-14 · 安全边界四道新闸（改了会静默失效）
 - `cliAuth/installCommand.resolveInstallCommand`：安装命令只认主进程方案表；给 `startInstall` 加"直接用参数"的分支 = 重新打开渲染层 RCE。
 - `webviewGuard` + `index.ts` 的 `will-attach-webview`：删钩子或在钩子里放行 preload = 网页节点能拿到 `window.api`。
+- **`webviewPopup.popupWebPreferences` + `index.ts` 的 `pendingWebviewPopups`（2026-09-15）**：webview 的 `window.open` 现在开成受控子窗口（OAuth 登录需要，见 10 图纸）。弹窗的 `webPreferences` **必须过 `popupWebPreferences`（= `hardenWebviewPreferences`）** —— 给它 preload 或 nodeIntegration = 远程登录页拿到 `window.api`。`pendingWebviewPopups` 只由 webview 的 handler `++`，`type==='window'` 分支消费一个就给 OAuth 策略（不装 external）；**别让主窗口的 window.open 路径去 `++` 它**，否则主窗口的意外弹窗会被误判成 OAuth 弹窗、绕过 external。
 - `wiki/rootGate`：`wiki:init`/`wiki:setPath` 绕过 `allowed()` = 渲染层可指挥主进程在任意可写位置建目录。
 - `ipcGuard.guardedHandle/guardedOn`：八个敏感文件禁止裸 `ipcMain`；`securityWiring.test.ts` 是守卫。
 - （同日续）`gitHash.isCommitHash`：git 处理器收到的 hash 必须过它，否则 `--output=` 能写任意文件。`navigationGuard.isAppNavigation` + `index.ts` 对 `window` 类 contents 的 `will-navigate`/`setWindowOpenHandler`：主窗口只许应用内导航。`ipcGuard` 现在是**默认**：`src/main` 除 `ipcGuard.ts` 外不得出现裸 `ipcMain.handle/on`（`securityWiring.test.ts` 全局断言）。`wiki:addToInbox` 只收 `wiki:pickFiles` 记住的或 `guardPath` 允许的文件。

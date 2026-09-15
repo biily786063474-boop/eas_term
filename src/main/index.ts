@@ -1,5 +1,6 @@
 import { hardenWebviewPreferences } from './webviewGuard.ts'
 import { isAppNavigation } from './navigationGuard.ts'
+import { webviewOpenAction, popupWebPreferences } from './webviewPopup.ts'
 import { registerRuntimeMonitor } from './runtime/ipc.ts'
 import { installIdleWatchdog } from './runtime/idleWatchdog.ts'
 import { ownedSessions } from './runtime/ownedSessions.ts'
@@ -75,18 +76,38 @@ process.on('unhandledRejection', (reason) => {
   console.error('[main:unhandledRejection]', reason)
 })
 
-// 画布迷你浏览器(webview):点链接 / target=_blank / window.open 都在**同一 webview 内**导航
+// 画布迷你浏览器(webview):点链接 / target=_blank 在**同一 webview 内**导航
 // (不弹原生新窗),并通知渲染层「聚焦到这个浏览器节点」(画布模式下 pan 过去)。
+// window.open 例外:2026-09-15 起开成受控子窗口(见下 pendingWebviewPopups)。
 // 用 web-contents-created 捕获所有 webview guest(比 did-attach-webview 对命令式创建的 webview 更可靠)。
+//
+// **webview 的 window.open → 受控子窗口**(2026-09-15,用户报「用 Google 登录点了没反应」):
+// 原来所有 window.open 都被拦成「当前 webview 内 loadURL」,这破坏了 OAuth 弹窗流 ——
+// Google 登录先 window.open('about:blank') 拿 window 引用、再设 location 到 accounts.google.com,
+// 被拦后 about:blank 顶掉了登录页(变空白)、window.open 返回 null,后续全落空。
+// 现在 webview 的 handler 返回 allow,计数 +1;下面 type==='window' 分支据此认出这个弹窗,
+// 给它 OAuth 专用策略(自由导航、无 preload)而不是主窗口那套 external。
+// 计数消费无竞态:handler 同步 ++,Electron 随即触发 web-contents-created 同步 --,单线程无交错。
+let pendingWebviewPopups = 0
+const BROWSER_PARTITION = 'persist:browser' // 与 renderer/features/web/WebView.tsx 的 partition 一致
 app.on('web-contents-created', (_e, contents) => {
   // S2（2026-09-14 评审）：宿主 webContents 上强制加固每一个将要挂上的 <webview>：
   // 剥 preload、关 nodeIntegration、开 contextIsolation。渲染层设了也不算数。
   contents.on('will-attach-webview', (_ev, webPreferences) => { hardenWebviewPreferences(webPreferences as unknown as Record<string, unknown>) })
+  const external = (url: string): void => { if (/^https?:$/.test((() => { try { return new URL(url).protocol } catch { return '' } })())) void shell.openExternal(url) }
   if (contents.getType() === 'window') {
+    if (pendingWebviewPopups > 0) {
+      pendingWebviewPopups--
+      // webview 开出来的受控弹窗（OAuth / 新标签）：webPreferences 已在下面 override 成无 preload + 沙箱。
+      // **不装主窗口那套 external** —— 让它自己导航（OAuth 要跳 accounts.google.com 等），
+      // 否则 will-navigate 会把登录跳转踢到系统浏览器、弹窗停在 about:blank。
+      // 弹窗内部若再 window.open（罕见），才交给系统浏览器。
+      contents.setWindowOpenHandler(({ url }) => { external(url); return { action: 'deny' } })
+      return
+    }
     // 2026-09-14 审查：带 preload 的窗口只许应用内导航。拖进来的链接 / window.open 一律交给系统浏览器，
     // 否则远程页面在主窗口里跑起来就拿到了 window.api 和全部 IPC。
     const env = { devUrl: process.env['ELECTRON_RENDERER_URL'], rendererDir: path.join(__dirname, '../renderer') }
-    const external = (url: string): void => { if (/^https?:$/.test((() => { try { return new URL(url).protocol } catch { return '' } })())) void shell.openExternal(url) }
     contents.on('will-navigate', (event, url) => { if (!isAppNavigation(url, env)) { event.preventDefault(); external(url) } })
     contents.setWindowOpenHandler(({ url }) => { external(url); return { action: 'deny' } })
     return
@@ -101,20 +122,10 @@ app.on('web-contents-created', (_e, contents) => {
   }
   contents.on('will-navigate', (event, url) => { if (routeFavorites(url)) event.preventDefault() })
   contents.setWindowOpenHandler(({ url }) => {
-    if (routeFavorites(url)) return { action: 'deny' }
-    // 在 handler 里同步 loadURL 会被 Electron 忽略 → setImmediate 延迟到 handler 返回后导航
-    setImmediate(() => {
-      if (contents.isDestroyed()) return
-      try {
-        void contents.loadURL(url)
-      } catch {
-        /* 非法 url 忽略 */
-      }
-      for (const w of BrowserWindow.getAllWindows()) {
-        if (!w.isDestroyed()) w.webContents.send('browser:focus', contents.id)
-      }
-    })
-    return { action: 'deny' }
+    if (webviewOpenAction(url) === 'favorites') { routeFavorites(url); return { action: 'deny' } }
+    // OAuth / 新标签：开成受控子窗口（无 preload/api、沙箱、共享会话）。父页面不动。
+    pendingWebviewPopups++
+    return { action: 'allow', overrideBrowserWindowOptions: { webPreferences: popupWebPreferences(BROWSER_PARTITION) as Electron.WebPreferences } }
   })
 })
 
