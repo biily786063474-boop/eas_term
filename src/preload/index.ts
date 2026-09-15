@@ -61,7 +61,7 @@ import type {
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
-  PluginInfo
+  PluginInfo, PluginRegistryEntry
 } from '../shared/types'
 import type { CliAuthState, GpuInfo, InstallState, LoginState, PhoneStatus } from '../shared/types'
 
@@ -1123,6 +1123,26 @@ const api = {
     /** 已装的 CLI 插件全表。**每次都当场扫盘**（见 main/plugins.ts），
      *  用户刚在终端里装完一个，回画布就能看到，不用重开软件。 */
     list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list'),
+    // ── 插件市场（设计稿 2026-09-15）。主进程半边在 pluginMarket.ts。两段式安装：
+    //    install 只下载/校验/解压到临时目录并返回待确认权限；用户确认后 installCommit 才落盘 ──
+    /** 拉官方目录（联网失败退回本地缓存，stale 标记提示是旧的）。 */
+    registry: (): Promise<
+      | { ok: true; entries: PluginRegistryEntry[]; warnings: string[]; stale: boolean }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke('plugins:registry'),
+    /** 第一段：下载→校验 sha256→解压临时→清单校验，返回待确认（含要展示的权限与一次性 token）。 */
+    install: (
+      name: string
+    ): Promise<
+      | { ok: true; token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke('plugins:install', name),
+    /** 第二段：用户确认后凭 token 把临时目录移入 ~/.eas/plugins/<name>/。 */
+    installCommit: (token: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('plugins:installCommit', token),
+    /** 卸载：只删 ~/.eas/plugins/<name>/（内置样板与两家 CLI 插件删不到）。 */
+    uninstall: (name: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('plugins:uninstall', name),
     // ── 自家插件的面板（设计稿 2026-09-05 §P）。主进程半边在 pluginHost.ts ──
     panelOpen: (args: {
       resumeStopped?: boolean

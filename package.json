@@ -160,7 +160,8 @@
     "polygon-clipping": "^0.15.7",
     "react-konva": "^18.2.16",
     "sherpa-onnx": "^1.13.4",
-    "svgpath": "^2.6.0"
+    "svgpath": "^2.6.0",
+    "yauzl": "^2.10.0"
   },
   "devDependencies": {
     "@codemirror/language": "^6.12.3",

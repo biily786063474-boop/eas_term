@@ -37,6 +37,7 @@ import { registerSttHandlers, dropVoicePreviewWorker } from './stt'
 import { registerDesignHandlers } from './design'
 import { registerMcpBridge, invokeRenderer } from './mcpBridge'
 import { registerPluginHandlers } from './plugins'
+import { registerPluginMarketHandlers } from './pluginMarket.ts'
 import { registerPluginHostHandlers, registerPluginScheme } from './pluginHost.ts'
 import { registerDiagHandlers, diag } from './diagLog.ts'
 import { registerDictClipScheme, registerDictClipHandlers } from './dictClips'
@@ -394,6 +395,7 @@ app.whenReady().then(() => {
 
   registerMcpBridge() // 先起 MCP 桥：PTY spawn 时要注入它的 port/token
   registerPluginHandlers()
+  registerPluginMarketHandlers() // 插件市场：拉目录 + 两段式安装（确认权限后落盘）+ 卸载，只碰 ~/.eas/plugins
   // 插件面板宿主：画布透传走 mcpBridge 的 invokeRenderer，在这里注入（pluginHost 不 import mcpBridge，避免成环）
   registerPluginHostHandlers((tool, args, ctx) => invokeRenderer(tool, args, ctx))
   registerDiagHandlers()

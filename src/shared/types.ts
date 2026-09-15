@@ -792,6 +792,21 @@ export interface PluginInfo {
   builtin?: boolean
 }
 
+/** 官方插件目录 `registry.json` 里的一条（主进程 parseRegistry 校验后的形状，展示给市场 UI）。
+ *  设计稿 docs/superpowers/specs/2026-09-15-插件市场-第一步-design.md。 */
+export interface PluginRegistryEntry {
+  name: string
+  displayName: string
+  description?: string
+  category?: string
+  brandColor?: string
+  version: string
+  url: string
+  sha256: string
+  size: number
+  permissions?: Record<string, string[]>
+}
+
 export interface PluginPanelDef {
   id: string
   title: string
