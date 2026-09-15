@@ -37,14 +37,14 @@ find "$SRC" -name '*.zip' | while read -r f; do
   if [ "$L" != "$R" ] || [ "$LSHA" != "$RSHA" ]; then
     echo "  ✗ $rel 传输不一致，远端已删"; ssh -n $HOST "rm -f $PDIR/$rel"; exit 1
   fi
-  echo "  ✓ $rel（$L B）"
+  echo "  OK ${rel}  ${L}B"
 done
 
 echo "── 传 registry.json（最后传）──"
 scp -q "$SRC/registry.json" "$HOST:$PDIR/registry.json"
 L=$(stat -f%z "$SRC/registry.json"); R=$(ssh -n $HOST "stat -c%s $PDIR/registry.json")
 [ "$L" = "$R" ] || { echo "  ✗ registry.json 字节不一致"; exit 1; }
-echo "  ✓ registry.json（$L B）"
+echo "  OK registry.json  ${L}B"
 
 echo "── 线上自检 ──"
 code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL/registry.json")
