@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>番茄钟</title>
+<style>
+  :root { --bg: transparent; --fg: #e5e5e5; --dim: #8a8a8a; --card: rgba(255,255,255,.06); --line: rgba(255,255,255,.12); --accent: #F87171; --track: rgba(255,255,255,.10); }
+  html[data-theme="light"] { --fg: #1a1a1a; --dim: #6b6b6b; --card: rgba(0,0,0,.04); --line: rgba(0,0,0,.12); --track: rgba(0,0,0,.10); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 12px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; height: 100vh; display: flex; flex-direction: column; align-items: center; }
+  .mode { margin-top: 16px; font-size: 12px; color: var(--dim); letter-spacing: .08em; }
+  .ring { position: relative; margin: 10px 0 4px; }
+  .ring svg { display: block; transform: rotate(-90deg); }
+  .ring .time { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .time b { font-size: 40px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .ring .time .sub { font-size: 11px; color: var(--dim); margin-top: 2px; min-height: 15px; }
+  .presets { display: flex; gap: 8px; margin-top: 8px; }
+  .presets button { padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: inherit; cursor: pointer; }
+  .presets button:hover { border-color: var(--accent); }
+  .presets button.on { border-color: var(--accent); color: var(--accent); }
+  .main { margin-top: 12px; }
+  .main button { padding: 8px 26px; border: none; border-radius: 999px; background: var(--accent); color: #431407; font: inherit; font-weight: 600; cursor: pointer; }
+  .main button.stop { background: var(--card); color: var(--fg); border: 1px solid var(--line); }
+  .foot { margin-top: auto; width: 100%; padding: 7px 10px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; color: var(--dim); font-size: 10.5px; }
+  .foot .note { padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; font-size: 10.5px; cursor: pointer; opacity: .55; }
+  .foot .note.live { opacity: 1; border-color: var(--accent); }
+  .foot .note:hover { border-color: var(--accent); }
+  .err { color: #fda4af; }
+</style>
+</head>
+<body>
+<div class="mode" id="mode">专注</div>
+<div class="ring">
+  <svg width="180" height="180" viewBox="0 0 180 180">
+    <circle cx="90" cy="90" r="80" fill="none" stroke="var(--track)" stroke-width="8"/>
+    <circle id="prog" cx="90" cy="90" r="80" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="502.65" stroke-dashoffset="0"/>
+  </svg>
+  <div class="time"><b id="clock">25:00</b><span class="sub" id="sub"></span></div>
+</div>
+<div class="presets">
+  <button type="button" id="pFocus" class="on">专注 25</button>
+  <button type="button" id="pBreak">休息 5</button>
+</div>
+<div class="main"><button type="button" id="go">开始</button></div>
+<div class="foot">
+  <span id="stat">今天 0 个 🍅</span>
+  <button type="button" class="note" id="noteBtn">记到画布</button>
+</div>
+<script>
+// ── 最小 MCP Apps 面板桥（postMessage 上跑 JSON-RPC），照样板「看板」来 ──
+const pending = new Map(); let seq = 0; let host = { cwd: '', theme: 'dark', canEas: false };
+function rpc(method, params) {
+  return new Promise((resolve, reject) => {
+    const id = ++seq; pending.set(id, { resolve, reject });
+    parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+    setTimeout(() => { if (pending.has(id)) { pending.delete(id); reject(new Error(method + ' 超时')) } }, 30000);
+  });
+}
+window.addEventListener('message', (e) => {
+  if (e.source !== parent) return;
+  const m = e.data; if (!m || m.jsonrpc !== '2.0') return;
+  if (m.id !== undefined && pending.has(m.id)) {
+    const p = pending.get(m.id); pending.delete(m.id);
+    m.error ? p.reject(Object.assign(new Error(m.error.message), { code: m.error.code })) : p.resolve(m.result);
+    return;
+  }
+  // 只对**写类**工具刷新（跟着 pomodoro_status 再刷会和宿主广播喂成循环）
+  if (m.method === 'ui/notifications/tool-result') {
+    const n = m.params && m.params.name;
+    if (n === 'pomodoro_start' || n === 'pomodoro_stop' || n === 'pomodoro_done') refresh();
+  }
+  if (m.method === 'ui/notifications/host-context-changed') { applyContext(m.params); }
+  if (m.method === 'ui/resource-teardown') { document.getElementById('stat').textContent = '宿主已断开'; }
+});
+function applyContext(hc) {
+  if (!hc) return;
+  if (hc.theme) { host.theme = hc.theme; document.documentElement.setAttribute('data-theme', hc.theme); }
+  const eas = hc._meta && hc._meta.eas && hc._meta.eas.context;
+  if (eas && typeof eas.cwd === 'string') host.cwd = eas.cwd;
+}
+async function tool(name, args) {
+  const r = await rpc('tools/call', { name, arguments: args || {} });
+  if (r && r.isError) throw new Error((r.content && r.content[0] && r.content[0].text) || '工具报错');
+  if (r && r.structuredContent) return r.structuredContent;
+  try { return JSON.parse(r.content[0].text); } catch { return r; }
+}
+
+// ── 计时状态：权威来自 server（running/startedAt/minutes/mode），面板本地按秒倒数 ──
+const CIRC = 2 * Math.PI * 80; // 502.65
+let st = { running: false, startedAt: 0, minutes: 25, mode: 'focus', todayFocus: 0 };
+let doneSent = false;
+let selMode = 'focus'; // 未开始时按钮上选中的模式
+const DEF = { focus: 25, break: 5 };
+
+function localRemaining() {
+  if (!st.running) return st.minutes * 60;
+  return Math.max(0, st.minutes * 60 - Math.floor((Date.now() - st.startedAt) / 1000));
+}
+function fmt(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+function paint() {
+  const total = st.minutes * 60;
+  const rem = st.running ? localRemaining() : DEF[selMode] * 60;
+  document.getElementById('clock').textContent = fmt(rem);
+  const frac = st.running ? (total ? rem / total : 0) : 1;
+  document.getElementById('prog').style.strokeDashoffset = String(CIRC * (1 - frac));
+  document.getElementById('mode').textContent = (st.running ? st.mode : selMode) === 'break' ? '休息' : '专注';
+  const go = document.getElementById('go');
+  go.textContent = st.running ? '停止' : '开始';
+  go.className = st.running ? 'stop' : '';
+  document.getElementById('pFocus').className = (!st.running && selMode === 'focus') ? 'on' : '';
+  document.getElementById('pBreak').className = (!st.running && selMode === 'break') ? 'on' : '';
+  document.getElementById('stat').textContent = '今天 ' + (st.todayFocus || 0) + ' 个 🍅';
+  const sub = document.getElementById('sub');
+  sub.textContent = st.running ? '' : (selMode === 'focus' ? '点开始专注' : '点开始休息');
+}
+function apply(v) {
+  st.running = !!v.running; st.startedAt = v.startedAt || 0; st.minutes = v.minutes || DEF[selMode];
+  st.mode = v.mode || selMode; st.todayFocus = v.todayFocus || 0;
+  if (st.running) { doneSent = false; selMode = st.mode; }
+  paint();
+}
+async function refresh() {
+  try { apply(await tool('pomodoro_status')); }
+  catch (e) { document.getElementById('sub').innerHTML = '<span class="err">' + esc(e.message.slice(0, 40)) + '</span>'; }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+
+// 每 250ms 本地重绘；倒数到 0 且在跑 → 标记完成 + 提示音
+setInterval(() => {
+  if (st.running && localRemaining() <= 0 && !doneSent) {
+    doneSent = true;
+    beep();
+    tool('pomodoro_done').then(apply).catch(() => {});
+    flashNote();
+  }
+  paint();
+}, 250);
+
+function beep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.value = 880; o.type = 'sine';
+    g.gain.setValueAtTime(0.001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ac.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.5);
+    o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.55);
+    setTimeout(() => ac.close().catch(() => {}), 800);
+  } catch {}
+}
+function flashNote() {
+  const b = document.getElementById('noteBtn'); b.classList.add('live'); b.textContent = '完成！记到画布';
+}
+
+// ── 交互 ──
+document.getElementById('pFocus').addEventListener('click', () => { if (!st.running) { selMode = 'focus'; paint(); } });
+document.getElementById('pBreak').addEventListener('click', () => { if (!st.running) { selMode = 'break'; paint(); } });
+document.getElementById('go').addEventListener('click', async () => {
+  try {
+    if (st.running) apply(await tool('pomodoro_stop'));
+    else { doneSent = false; apply(await tool('pomodoro_start', { mode: selMode })); }
+  } catch (e) { document.getElementById('sub').innerHTML = '<span class="err">' + esc(e.message.slice(0, 40)) + '</span>'; }
+});
+document.getElementById('noteBtn').addEventListener('click', async () => {
+  const mins = st.minutes || DEF[selMode];
+  const label = (st.mode === 'break' ? '休息' : '专注');
+  try {
+    // Eas-Term 扩展：在画布贴一条便签。别的宿主回 -32601，静默。
+    await rpc('eas/canvas.call', { tool: 'canvas_add_note', args: { text: '🍅 完成一个 ' + mins + ' 分钟' + label } });
+    const b = document.getElementById('noteBtn'); b.textContent = '已记到画布'; b.classList.remove('live');
+    setTimeout(() => { b.textContent = '记到画布'; }, 1600);
+  } catch (e) {
+    document.getElementById('sub').innerHTML = '<span class="err">这个宿主不支持记到画布</span>';
+  }
+});
+
+// ── 握手 ──
+(async () => {
+  try {
+    const r = await rpc('ui/initialize', { appInfo: { name: 'pomodoro', version: '1.0.0' }, appCapabilities: {}, protocolVersion: '2026-01-26' });
+    applyContext(r && r.hostContext);
+    host.canEas = !!(r && r.hostCapabilities && r.hostCapabilities.experimental && r.hostCapabilities.experimental.eas);
+    parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/initialized' }, '*');
+    await refresh();
+  } catch (e) { document.getElementById('sub').innerHTML = '<span class="err">握手失败</span>'; }
+})();
+</script>
+</body>
+</html>

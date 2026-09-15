@@ -1,0 +1,15 @@
+{
+  "name": "pomodoro",
+  "version": "1.0.0",
+  "displayName": "番茄钟",
+  "description": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+  "category": "Productivity",
+  "brandColor": "#F87171",
+  "composerIcon": "./ui/icon.svg",
+  "defaultPrompt": "帮我开一个 25 分钟的专注。",
+  "mcp": { "command": "node", "args": ["./server.mjs"] },
+  "panels": [
+    { "id": "timer", "title": "番茄钟", "tool": "pomodoro_show", "entry": "ui://pomodoro/panel", "defaultSize": { "w": 300, "h": 380 } }
+  ],
+  "permissions": { "canvas": ["canvas_add_note"] }
+}

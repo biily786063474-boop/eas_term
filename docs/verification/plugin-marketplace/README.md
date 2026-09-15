@@ -43,16 +43,31 @@
 
 **权限确认弹窗**：`install()` 返回权限、`installCommit` 落盘这条两段式在 IPC 层已验；但**弹窗的 UI 截图没截到**——因为 board 是内置样板（见下），卡片显示「内置」而非「安装」，点不出弹窗。弹窗组件只是渲染 `install()` 返回的权限，逻辑已通。
 
-## ⚠️ 发现：registry 里放内置插件，市场里点不了「安装」
+## 内置插件在市场里只显示「内置」（已解决）
 
-board 同时是**内置样板**（`resources/plugins/board`）。UI 的「已装」判定认 `cli:'eas'` 的插件（含内置），
-所以 board 卡片永远显示「内置」徽标、没有「安装」按钮——**一键安装 + 权限确认这条用户路径用 board 演示不出来**。
+board 同时是**内置样板**（`resources/plugins/board`）→ UI 的「已装」判定认 `cli:'eas'` 插件（含内置），
+所以 board 卡片显示「内置」徽标、没有「安装」按钮——一键安装那条路用 board 演示不出来。
 
-含义:**要让市场首发就能真的装东西,registry 首批得有一个「非内置」插件**(用户手上没有、点「安装」能拿到的)。
-现在只有 board/computer 两个插件且都是内置。选项:① 造一个非内置的示例/工具插件进 registry;
-② 接受首发市场只展示内置(点不了装),等有真第三方插件再充实。这是**策展决策**,留给发版前定。
+**解决**：新增 `pomodoro`（番茄钟，`plugins-store/pomodoro`，**非内置**）进 registry。
+现在市场里 board 显示「内置」、pomodoro 显示「安装」，一键装的用户路径能真的走通。
+往后市场丰不丰富取决于收录多少非内置插件（`build-plugin-registry.mjs` 的 `PLUGINS` 里加）。
+
+## 番茄钟（pomodoro）真机全链验（2026-09-15，对着线上）
+
+隔离实例里走完整个用户路径，全过：
+
+1. 「发现」区看到 `番茄钟` 卡片（红点 + Productivity + 描述 + 「安装」按钮）——从线上 registry 拉取。
+2. 点「安装」→ 主进程下载线上 zip、校验 sha256、解压临时、`parseManifest`，弹**权限确认框**：
+   「装上后它可以：**在画布上贴便签**」。截图 `install-permission.png`。
+3. 点「确认安装」→ `installCommit` 原子落盘到 `~/.eas/plugins/pomodoro/`，`list()` 里 builtin:false、带面板。
+4. 「已装」里点它 → 面板作为画布节点开出（`eas-plugin://` OOPIF iframe，pluginHost spawn 了 server.mjs），
+   渲染出倒计时环 `25:00` + 专注/休息按钮 + 「记到画布」。截图 `pomodoro-panel.png`——**插件真能跑**。
+5. 验后卸载清回，真实 home 干净。
+
+`pluginMarketChain.test.ts` 现在把 board + pomodoro 两个都过一遍打包→安装链（CI 回归）。
 
 ## 截图
 
-- `discover-tab.png` —— 插件 tab 顶部（已装列表）
-- `discover-card.png` —— 「发现」区的 board 卡片（从线上 registry 拉取渲染）
+- `install-permission.png` —— 番茄钟卡片「安装」+ 权限确认框（在画布上贴便签）
+- `pomodoro-panel.png` —— 装好后打开的番茄钟面板（25:00 倒计时环，真能跑）
+- `discover-tab.png` / `discover-card.png` —— 早期 board 卡片渲染

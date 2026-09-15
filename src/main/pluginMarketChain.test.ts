@@ -24,41 +24,47 @@ try {
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const boardDir = path.resolve(here, '../../resources/plugins/board')
+// 首批 registry 里两个插件都过一遍链：board（内置样板）+ pomodoro（非内置，市场里能真装的）
+const CASES = [
+  { name: 'board', dir: path.resolve(here, '../../resources/plugins/board') },
+  { name: 'pomodoro', dir: path.resolve(here, '../../plugins-store/pomodoro') }
+]
 
-test('board 打包 → 客户端安装校验链全程通', { skip: !hasZip }, async () => {
-  const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-out-'))
-  const { entry, zipPath } = packPlugin(boardDir, { outRoot, baseUrl: 'https://eas.biily.top/plugins' })
+for (const { name, dir } of CASES) {
+  test(`${name} 打包 → 客户端安装校验链全程通`, { skip: !hasZip }, async () => {
+    const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-out-'))
+    const { entry, zipPath } = packPlugin(dir, { outRoot, baseUrl: 'https://eas.biily.top/plugins' })
 
-  // 1. registry 校验:url https + 官方域名、sha256/version/size 格式,全过
-  const reg = parseRegistry({ schema: 1, updated: '2026-09-15T00:00:00Z', plugins: [entry] }, { allowedHosts: ['eas.biily.top'] })
-  assert.equal(reg.ok, true)
-  if (!reg.ok) return
-  assert.equal(reg.entries.length, 1)
-  const e = reg.entries[0]
-  assert.equal(e.name, 'board')
+    // 1. registry 校验:url https + 官方域名、sha256/version/size 格式,全过
+    const reg = parseRegistry({ schema: 1, updated: '2026-09-15T00:00:00Z', plugins: [entry] }, { allowedHosts: ['eas.biily.top'] })
+    assert.equal(reg.ok, true)
+    if (!reg.ok) return
+    assert.equal(reg.entries.length, 1)
+    const e = reg.entries[0]
+    assert.equal(e.name, name)
 
-  // 2. sha256 校验:声明的哈希与真包一致
-  const buf = fs.readFileSync(zipPath)
-  assert.equal(verifySha256(buf, e.sha256), true)
+    // 2. sha256 校验:声明的哈希与真包一致
+    const buf = fs.readFileSync(zipPath)
+    assert.equal(verifySha256(buf, e.sha256), true)
 
-  // 3. 解压 + 4. 清单校验:根部直接是 plugin.json、parseManifest 过
-  // 解到 <tmp>/board（内层目录名 = 插件名，parseManifest 要求 name 等于目录名，同真实 staging 布局）
-  const dest = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chain-dest-')), 'board')
-  await extractZip(buf, dest)
-  const raw = JSON.parse(fs.readFileSync(path.join(dest, 'plugin.json'), 'utf8'))
-  const man = parseManifest(raw, dest, { builtin: false, exists: (p) => fs.existsSync(p) })
-  assert.equal(man.ok, true)
-  if (!man.ok) return
-  assert.equal(man.info.name, 'board')
+    // 3. 解压 + 4. 清单校验:根部直接是 plugin.json、parseManifest 过
+    // 解到 <tmp>/<name>（内层目录名 = 插件名，parseManifest 要求 name 等于目录名，同真实 staging 布局）
+    const dest = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'chain-dest-')), name)
+    await extractZip(buf, dest)
+    const raw = JSON.parse(fs.readFileSync(path.join(dest, 'plugin.json'), 'utf8'))
+    const man = parseManifest(raw, dest, { builtin: false, exists: (p) => fs.existsSync(p) })
+    assert.equal(man.ok, true)
+    if (!man.ok) return
+    assert.equal(man.info.name, name)
 
-  // 5. 权限核对:registry 声明的权限与包内清单一致(防目录谎报)
-  assert.deepEqual(new Set(e.permissions?.canvas ?? []), new Set(man.info.permissions?.canvas ?? []))
-})
+    // 5. 权限核对:registry 声明的权限与包内清单一致(防目录谎报)
+    assert.deepEqual(new Set(e.permissions?.canvas ?? []), new Set(man.info.permissions?.canvas ?? []))
+  })
+}
 
 test('包被篡改一个字节 → sha256 校验挡下', { skip: !hasZip }, () => {
   const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'chain-out-'))
-  const { entry, zipPath } = packPlugin(boardDir, { outRoot, baseUrl: 'https://eas.biily.top/plugins' })
+  const { entry, zipPath } = packPlugin(CASES[0].dir, { outRoot, baseUrl: 'https://eas.biily.top/plugins' })
   const buf = fs.readFileSync(zipPath)
   buf[buf.length - 1] ^= 0xff // 翻一位
   assert.equal(verifySha256(buf, entry.sha256), false)
