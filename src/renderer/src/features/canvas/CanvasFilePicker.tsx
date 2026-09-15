@@ -16,6 +16,7 @@ import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
 import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, PlugIcon, FilesIcon } from '../../ui/Icons'
 import { SplitText } from '../../ui/SplitText'
+import { PluginDiscover } from './PluginDiscover'
 
 const MAX_RECENT = 60
 
@@ -67,6 +68,8 @@ export function CanvasFilePicker({
   // 已装插件。**切到这个 tab 才拉** —— 扫两个 CLI 的缓存目录是同步 IO，
   // 没人看的时候没必要每次开选择器都跑一遍。
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
+  // 装/卸插件后自增，重扫已装列表（发现区据它更新「已安装」标记）
+  const [pluginNonce, setPluginNonce] = useState(0)
   const [dir, setDir] = useState(root)
   const [entries, setEntries] = useState<DirEntry[]>([])
   const [recent, setRecent] = useState<RecentFile[] | null>(null)
@@ -130,7 +133,7 @@ export function CanvasFilePicker({
     return () => {
       alive = false
     }
-  }, [mode])
+  }, [mode, pluginNonce])
 
   // 路径分隔符跟随平台（Windows 是 \），否则「返回上级」在 Windows 上会切出个空串
   const sep = root.includes('\\') ? '\\' : '/'
@@ -299,6 +302,7 @@ export function CanvasFilePicker({
         {mode === 'plugin' && (
           <>
             {plugins === null && <div className="cpk-empty">读取中…</div>}
+            {!!plugins?.length && <div className="cpk-sec">已装</div>}
             {plugins?.map((p) => {
               const panel = p.cli === 'eas' && onOpenPanel ? p.panels?.[0] : undefined
               return (
@@ -341,9 +345,13 @@ export function CanvasFilePicker({
             })}
             {plugins && !plugins.length && (
               <div className="cpk-empty">
-                还没装任何插件 —— 在终端里跑 <code>codex plugin add …</code> 或{' '}
-                <code>claude plugin install …</code> 装一个
+                还没装任何插件 —— 从下面的「发现」里装一个，或在终端跑{' '}
+                <code>codex plugin add …</code> / <code>claude plugin install …</code>
               </div>
+            )}
+            {/* 插件市场：拉官方目录，卡片式一键装（装前弹权限确认） */}
+            {plugins !== null && (
+              <PluginDiscover installed={plugins} onChanged={() => setPluginNonce((n) => n + 1)} />
             )}
           </>
         )}
