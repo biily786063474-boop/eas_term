@@ -240,6 +240,8 @@ def load_events():
                 # 使用龄桶（d1 / d2_3 / d4_7 / d8_30 / d30p）。
                 # 客户端本地算好只报桶，服务端拿不到天数、更拿不到 ID
                 "age": one("age"),
+                # 在用秒数（0.4.95 起）：窗口在前台且 60s 内有键鼠的那部分。没有就是 "0"
+                "act": one("act", "0"),
             }
         )
     return out
@@ -355,6 +357,10 @@ def main():
     # 同样没有客户端 ID，日活按当日 IP+UA 哈希估，隔天对不上（见 telemetry.ts 的取舍说明）。
     app_active = defaultdict(set)
     app_sec = defaultdict(int)
+    # 「在用」秒数与「带 act 字段的事件数」—— 后者用来判断客户端发版了没有，
+    # 没发版之前看板要显示「等发版」而不是画一条全 0 的线
+    app_act = defaultdict(int)
+    act_events = 0
     app_starts = 0
     app_ver = defaultdict(int)
     app_os = defaultdict(int)
@@ -414,6 +420,15 @@ def main():
             # 超了多半是机器改过时间或日志错位，计进去会把「总时长」顶到离谱的数
             if 0 < sec < 86400:
                 app_sec[d] += sec
+            if e.get("act") not in ("", "0", None):
+                act_events += 1
+                try:
+                    act = int(e["act"])
+                except ValueError:
+                    act = 0
+                # 在用不可能超过这段的总时长；客户端封过顶，这里再守一次
+                if 0 < act <= max(sec, 0):
+                    app_act[d] += act
             for part in (e["f"] or "").split(","):
                 if ":" in part:
                     fk, fn = part.split(":", 1)
@@ -547,11 +562,16 @@ def main():
             "starts": app_starts,
             "hoursTotal": round(sum(app_sec.values()) / 3600, 1),
             "todayHours": round(app_sec.get(today, 0) / 3600, 1),
+            # 「在用」那一半。hasAct=False 表示还没有任何客户端报过 act（没发版 / 没人升级）
+            "hasAct": act_events > 0,
+            "actHoursTotal": round(sum(app_act.values()) / 3600, 1),
+            "todayActHours": round(app_act.get(today, 0) / 3600, 1),
             "trend": [
                 {
                     "d": d,
                     "active": len(app_active.get(d, set())),
                     "hours": round(app_sec.get(d, 0) / 3600, 2),
+                    "actHours": round(app_act.get(d, 0) / 3600, 2),
                 }
                 for d in days
             ],

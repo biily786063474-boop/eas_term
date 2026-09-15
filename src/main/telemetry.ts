@@ -26,7 +26,7 @@
 // 用 t=app 和网页访问区分开。
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { app, ipcMain, net } from 'electron'
+import { app, BrowserWindow, ipcMain, net, powerMonitor } from 'electron'
 import { getPrefs } from './prefs'
 
 const ENDPOINT = process.env.EAS_TELEMETRY_URL || 'https://eas.biily.top/e'
@@ -36,6 +36,15 @@ const FORCE_DEV = process.env.EAS_TELEMETRY_FORCE === '1'
 
 /** 心跳间隔。崩溃时最多丢这么久的时长，同时不至于把日志刷爆 */
 const HEARTBEAT_MS = 5 * 60 * 1000
+
+/** 「开着」和「在用」分开算（2026-09-15 起，用户要求「要分开」）。
+ *  每 ACTIVE_SAMPLE_MS 看一眼：有 Eas-Term 窗口在前台 **且** 系统 ACTIVE_IDLE_S 秒内有过键鼠
+ *  → 这一格记为在用。心跳里除了总时长 sec，再带一个 act = 这段里在用的秒数。
+ *  看板上「使用时长」原来含挂机（实测有人 24 小时开着），拆开之后才知道真在用多久。
+ *  ⚠️ 上报的只是一个秒数，不是「距上次操作多久」本身，更不是任何标识符；
+ *     也不看用户在别的应用里干什么 —— 只问「我这个窗口在不在前台」。 */
+const ACTIVE_SAMPLE_MS = 15 * 1000
+const ACTIVE_IDLE_S = 60
 
 /** 允许上报的计数器白名单。渲染层报上来的名字不在这里面就直接丢，
  *  免得日后有人顺手 bump 一个带项目名的 key 就把隐私承诺破了。 */
@@ -56,6 +65,19 @@ let startedAt = Date.now()
 /** 上一次把时长报出去的时刻。只报增量，服务端累加 */
 let reportedUntil = Date.now()
 let timer: ReturnType<typeof setInterval> | null = null
+/** 这段心跳里累计的在用毫秒数，flush 时清零 */
+let activeMs = 0
+let sampler: ReturnType<typeof setInterval> | null = null
+
+function sampleActivity(): void {
+  try {
+    if (BrowserWindow.getFocusedWindow() && powerMonitor.getSystemIdleTime() < ACTIVE_IDLE_S) {
+      activeMs += ACTIVE_SAMPLE_MS
+    }
+  } catch {
+    /* 采样失败就当这一格没在用，绝不能影响应用 */
+  }
+}
 
 /** 使用龄的本地账本。**这个文件永远不上报**，只用来算「今天是第几个使用日」。
  *  刻意不存日期列表，只存三个值 —— 存了列表就等于在本机留了一份作息记录，没必要。 */
@@ -152,10 +174,13 @@ function flush(reason: 'hb' | 'quit'): void {
 
   const now = Date.now()
   const sec = Math.round((now - reportedUntil) / 1000)
+  // 在用秒数不可能超过这段的总时长（采样粒度 15s 会略多算，这里封顶）
+  const act = Math.min(Math.max(sec, 0), Math.round(activeMs / 1000))
   const f = packCounts()
   // 没时长也没动作就别发了（比如刚启动就退出）
   if (sec <= 0 && !f) return
   reportedUntil = now
+  activeMs = 0
   counts.clear()
 
   send({
@@ -165,6 +190,7 @@ function flush(reason: 'hb' | 'quit'): void {
     os: osName(),
     arch: process.arch,
     sec: sec > 0 ? sec : 0,
+    act,
     f
   })
 }
@@ -182,6 +208,7 @@ export function registerTelemetry(): void {
     if (!getPrefs().telemetry) {
       counts.clear()
       reportedUntil = Date.now()
+      activeMs = 0
     }
   })
 
@@ -195,6 +222,7 @@ export function registerTelemetry(): void {
   }, Number(process.env.EAS_TELEMETRY_START_MS) || 20_000)
 
   timer = setInterval(() => flush('hb'), HEARTBEAT_MS)
+  sampler = setInterval(sampleActivity, ACTIVE_SAMPLE_MS)
 
   // 退出前尽力报最后一段。**不阻塞退出**：请求发出去就走，
   // 卡在这里等响应的话，网络不通时用户会觉得「关不掉」。
@@ -207,6 +235,8 @@ export function registerTelemetry(): void {
     quitReported = true
     if (timer) clearInterval(timer)
     timer = null
+    if (sampler) clearInterval(sampler)
+    sampler = null
     flush('quit')
   })
 }
