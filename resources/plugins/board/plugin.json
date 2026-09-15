@@ -1,5 +1,6 @@
 {
   "name": "board",
+  "version": "1.0.0",
   "displayName": "看板",
   "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
   "category": "Productivity",

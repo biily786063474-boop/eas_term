@@ -22,17 +22,15 @@ import os from 'node:os'
 import { guardedHandle } from './ipcGuard'
 import { parseManifest } from './pluginManifest.ts'
 import { parseRegistry, type RegistryEntry } from './pluginRegistry.ts'
-import { guardPluginDir, safeExtractTarget, verifySha256 } from './pluginInstall.ts'
+import { guardPluginDir, verifySha256 } from './pluginInstall.ts'
+import { extractZip } from './pluginUnzip.ts'
 import { createInstallGate } from './pluginInstallGate.ts'
-import yauzl from 'yauzl'
 
 // 第一步托管在个人站;切阿里云 OSS/CDN 时把新域名加进来即可(对客户端透明,客户端只认 https + 域名白名单)
 const ALLOWED_HOSTS = ['eas.biily.top'] as const
 const REGISTRY_URL = process.env.EAS_PLUGIN_REGISTRY_URL || 'https://eas.biily.top/plugins/registry.json'
 const REGISTRY_MAX_BYTES = 2 * 1024 ** 2      // registry.json 上限 2MB
 const PLUGIN_HARD_CAP = 25 * 1024 ** 2         // 单个插件包硬上限 25MB
-const EXTRACT_MAX_BYTES = 50 * 1024 ** 2       // 解压后总字节上限(防 zip bomb)
-const EXTRACT_MAX_ENTRIES = 5000
 
 const gate = createInstallGate()
 
@@ -96,7 +94,8 @@ function fetchBuffer(url: string, maxBytes: number): Promise<Buffer> {
 
 /** 删过期临时目录:gate 里晾着没确认的(过 30 秒)+ staging 下的孤儿(可能上次崩溃留的)。 */
 function reapExpiredStaging(): void {
-  for (const rec of gate.sweep()) fs.rmSync(rec.dir, { recursive: true, force: true })
+  // rec.dir 是内层 <随机>/<name>,要删的是随机父目录
+  for (const rec of gate.sweep()) fs.rmSync(path.dirname(rec.dir), { recursive: true, force: true })
   // 孤儿:staging 下 mtime 超 10 分钟的目录(正常安装几秒内就 commit 或被 gate 清)
   const root = stagingRoot()
   let names: string[] = []
@@ -115,95 +114,6 @@ function reapExpiredStaging(): void {
     }
   }
 }
-
-/** 把 zip buffer 逐条解压到 dest。每条过 safeExtractTarget(穿越即拒整包);
- *  软链不还原(只写字节,中和软链逃逸);限制条目数与解压总字节(防 zip bomb)。 */
-function extractZip(buf: Buffer, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    yauzl.fromBuffer(buf, { lazyEntries: true }, (err, zip) => {
-      if (err || !zip) {
-        reject(err || new Error('zip 打不开'))
-        return
-      }
-      let entries = 0
-      let bytes = 0
-      let settled = false
-      const fail = (e: Error): void => {
-        if (settled) return
-        settled = true
-        try {
-          zip.close()
-        } catch {
-          /* ignore */
-        }
-        reject(e)
-      }
-      zip.on('entry', (entry: yauzl.Entry) => {
-        if (settled) return
-        if (++entries > EXTRACT_MAX_ENTRIES) {
-          fail(new Error('包内文件过多,已拒'))
-          return
-        }
-        const name = entry.fileName
-        const target = safeExtractTarget(name.replace(/\/+$/, ''), dest)
-        if (target === null) {
-          fail(new Error(`包内路径越界:${name}`))
-          return
-        }
-        if (name.endsWith('/')) {
-          // 目录条目
-          try {
-            fs.mkdirSync(target, { recursive: true })
-          } catch (e) {
-            fail(e as Error)
-            return
-          }
-          zip.readEntry()
-          return
-        }
-        zip.openReadStream(entry, (e2, stream) => {
-          if (e2 || !stream) {
-            fail(e2 || new Error('读 zip 条目失败'))
-            return
-          }
-          try {
-            fs.mkdirSync(path.dirname(target), { recursive: true })
-          } catch (e) {
-            fail(e as Error)
-            return
-          }
-          const ws = fs.createWriteStream(target)
-          stream.on('data', (c: Buffer) => {
-            bytes += c.length
-            if (bytes > EXTRACT_MAX_BYTES) {
-              try {
-                stream.destroy()
-              } catch {
-                /* ignore */
-              }
-              fail(new Error('解压体积超上限,已拒'))
-            }
-          })
-          stream.on('error', (e: Error) => fail(e))
-          ws.on('error', (e: Error) => fail(e))
-          ws.on('close', () => {
-            if (!settled) zip.readEntry()
-          })
-          stream.pipe(ws)
-        })
-      })
-      zip.on('end', () => {
-        if (!settled) {
-          settled = true
-          resolve()
-        }
-      })
-      zip.on('error', (e: Error) => fail(e))
-      zip.readEntry()
-    })
-  })
-}
-
 /** 拉 registry:先联网,成功就写缓存;失败退回缓存(标 stale)。都没有 → 报错。 */
 async function loadRegistry(): Promise<
   { ok: true; entries: RegistryEntry[]; warnings: string[]; stale: boolean } | { ok: false; error: string }
@@ -280,12 +190,15 @@ async function installStage(name: unknown): Promise<InstallResult> {
   }
   if (!verifySha256(buf, entry.sha256)) return { ok: false, error: '哈希校验不通过,包可能被篡改或损坏' }
 
-  const dir = path.join(stagingRoot(), `${entry.name}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
+  // 临时布局:<stagingRoot>/<随机>/<name>/。**内层目录名必须等于插件名** ——
+  // parseManifest 要求 name 等于目录名,解到随机名的目录会被它拒。commit 时搬内层、删随机父。
+  const stageParent = path.join(stagingRoot(), `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`)
+  const dir = path.join(stageParent, entry.name)
   try {
     fs.mkdirSync(dir, { recursive: true })
     await extractZip(buf, dir)
   } catch (e) {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: e instanceof Error ? e.message : '解压失败' }
   }
 
@@ -294,22 +207,22 @@ async function installStage(name: unknown): Promise<InstallResult> {
   try {
     raw = JSON.parse(fs.readFileSync(path.join(dir, 'plugin.json'), 'utf8'))
   } catch {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: '包内根目录缺 plugin.json' }
   }
   const man = parseManifest(raw, dir, { builtin: false, exists: (p) => fs.existsSync(p) })
   if (!man.ok) {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: `清单校验失败:${man.errors.join('；')}` }
   }
   if (man.info.name !== entry.name) {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: '包内插件名与目录声明不一致' }
   }
   const canvasPerms = man.info.permissions?.canvas ?? []
   // registry 声明了权限就必须与包内一致(防目录谎报权限);没声明则以包内为准
   if (entry.permissions && !sameCanvasPerms(entry.permissions.canvas, canvasPerms)) {
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: '目录声明的权限与包内清单不一致,已拒' }
   }
 
@@ -338,9 +251,10 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
   reapExpiredStaging()
   const rec = typeof token === 'string' ? gate.consume(token) : undefined
   if (!rec) return { ok: false, error: '确认已过期,请重新安装' }
+  const stageParent = path.dirname(rec.dir) // <随机>,搬完内层后要删它
   const guard = guardPluginDir(rec.name, os.homedir())
   if (!guard.ok) {
-    fs.rmSync(rec.dir, { recursive: true, force: true })
+    fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: guard.reason }
   }
   const target = guard.dir
@@ -353,15 +267,15 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
       // 跨卷 rename 会 EXDEV;退回复制+删
       if ((e as NodeJS.ErrnoException).code === 'EXDEV') {
         fs.cpSync(rec.dir, target, { recursive: true })
-        fs.rmSync(rec.dir, { recursive: true, force: true })
       } else {
         throw e
       }
     }
     return { ok: true, name: rec.name }
   } catch (e) {
-    fs.rmSync(rec.dir, { recursive: true, force: true })
     return { ok: false, error: e instanceof Error ? e.message : '落盘失败' }
+  } finally {
+    fs.rmSync(stageParent, { recursive: true, force: true }) // 无论成败,清掉随机父目录
   }
 }
 
