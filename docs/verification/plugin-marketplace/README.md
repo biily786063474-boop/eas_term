@@ -66,8 +66,20 @@ board 同时是**内置样板**（`resources/plugins/board`）→ UI 的「已�
 
 `pluginMarketChain.test.ts` 现在把 board + pomodoro 两个都过一遍打包→安装链（CI 回归）。
 
+## 骨架 + 完整市场（2026-09-15，真机验过）
+
+- **总开关**（`pluginEnabledState`，6 测）：默认全开、持久化「关掉的 id」到 `userData/plugin-enabled.json`。
+- **「更多 › 插件」页**（`CanvasMarketPanel`）：已装带开关 + 卸载、发现可一键装、「查看完整插件市场」入口。
+  真机验：关掉 `superpowers` → 主进程 `enabled:false`、卡片变灰、**双击插件面板里它消失**（@ 走同一 enabled 过滤）。
+  截图 `drawer-market.png`。
+- **完整市场弹窗**（`PluginMarketModal`）：左侧智能分类（`pluginCategories`，9 类，4 测）+ 顶部搜索 + 卡片。
+  真机验：弹窗按分类分组（办公文档/开发工具/其他…带数量）、**GitHub/figma 显示真实品牌 logo**（`pluginLogos`）、
+  搜索「figma」→ 命中 1 个、番茄钟点「安装」弹权限确认框。截图 `full-market.png`。
+
 ## 截图
 
+- `full-market.png` —— 完整市场弹窗（分类 + 真 logo + 已装/可装）
+- `drawer-market.png` —— 「更多 › 插件」页（已装带开关 + 发现）
 - `install-permission.png` —— 番茄钟卡片「安装」+ 权限确认框（在画布上贴便签）
 - `pomodoro-panel.png` —— 装好后打开的番茄钟面板（25:00 倒计时环，真能跑）
 - `discover-tab.png` / `discover-card.png` —— 早期 board 卡片渲染

@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
+import { PluginMarketModal } from './PluginMarketModal'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL: Record<string, string> = {
@@ -31,6 +32,7 @@ export function CanvasMarketPanel(): JSX.Element {
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [q, setQ] = useState('')
+  const [showMarket, setShowMarket] = useState(false)
 
   const reload = (): Promise<void> =>
     window.api.plugins
@@ -213,13 +215,20 @@ export function CanvasMarketPanel(): JSX.Element {
         )
       })}
 
-      {/* ── 完整市场入口（骨架先占位）── */}
-      <button className="mk-full" onClick={() => setErr('完整插件市场（分类 + 搜索）即将上线')}>
+      {/* ── 完整市场入口 ── */}
+      <button className="mk-full" onClick={() => setShowMarket(true)}>
         <span>查看完整插件市场</span>
         <ChevronRightIcon size={14} />
       </button>
 
       <div className="mk-foot">只有开启的插件会出现在双击的插入面板、和输入框 @ 里。关掉不卸载，随时能开回来。</div>
+
+      {showMarket && (
+        <PluginMarketModal
+          onClose={() => setShowMarket(false)}
+          onChanged={() => void reload()}
+        />
+      )}
 
       {/* ── 确认框（内联在抽屉里）── */}
       {confirm && (
