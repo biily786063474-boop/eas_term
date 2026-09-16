@@ -54,6 +54,17 @@
       <div class="wrap cl-body">
       <section class="rel">
         <div class="rel-head">
+          <h2 id="v0.4.100">0.4.100</h2>
+          <time datetime="2026-09-16">2026-09-16</time>
+        </div>
+        <h3 class="grp">改进</h3>
+        <ul>
+          <li>机器繁忙时点画布生图不再干等：生图连接器（笔纵画板）启动改成和终端、插件一样「立刻起、不排队」，以前高负载下可能要等十几秒才连上。</li>
+          <li>语音听写在机器繁忙时更跟手：一句话说完的定稿不再会卡在资源队列里（表现为刚说完的字先消失、隔一会儿才落下）；实时听写现在永远不排队。文件 / 视频转录这类批量活仍按原样排队，不和前台抢资源。</li>
+        </ul>
+      </section>
+      <section class="rel">
+        <div class="rel-head">
           <h2 id="v0.4.99">0.4.99</h2>
           <time datetime="2026-09-15">2026-09-15</time>
         </div>
