@@ -34,7 +34,7 @@ export function cancelSessionStartsForWindow(windowId:number):void{
  }
 }
 /** Caller-facing result and actual completion are independent (e.g. worker timeout). */
-export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
+export function runManagedTask<T>(opts:{id:string;windowId:number|null;name:string;projectId:string|null;interactive?:boolean;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{result:Promise<T>;completed:Promise<void>}>}):Promise<T>{
  if(!manager)return Promise.reject(Error('资源管理器尚未就绪'))
  if(owners.has(opts.id))return Promise.reject(Error('duplicate task'))
  const m=manager

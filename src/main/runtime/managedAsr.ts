@@ -18,7 +18,7 @@ export function createManagedAsr<T>(open:()=>AsrHandle<T>|null){
   entry.stopping=true;invalidate(entry)
   entry.handle?.stop()
  }
- return {async get(owner:AsrWindow):Promise<T|null>{
+ return {async get(owner:AsrWindow,interactive?:boolean):Promise<T|null>{
   if(owner.isDestroyed())throw Error('cancelled')
   if(!epochs.has(owner)){
    epochs.set(owner,0)
@@ -37,7 +37,7 @@ export function createManagedAsr<T>(open:()=>AsrHandle<T>|null){
    entry={id:`voice-asr:${++sequence}`,windows:new Set([owner.id]),promise:Promise.resolve(null),stopping:false}
    current=entry
    const owned=entry
-   owned.promise=startManagedSession({id:owned.id,windowId:owner.id,sharedWindows:owned.windows,
+   owned.promise=startManagedSession({id:owned.id,windowId:owner.id,sharedWindows:owned.windows,interactive,
     name:'语音识别模型',projectId:null,cost:{cpu:10,memoryBytes:512*1024**2},
     start:async signal=>{
      if(signal.aborted||owned.stopping)throw Error('cancelled')

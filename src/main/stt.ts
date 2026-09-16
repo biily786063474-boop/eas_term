@@ -171,7 +171,13 @@ const managedAsr = createManagedAsr(() => {
 //
 // timeoutMs 可调：麦克风那条路是短句，20 秒足够；
 // 文件转录一段是 20–30 秒音频，CPU 上解码要久一些，用 20 秒卡它会把长句全丢掉。
-async function transcribeAsync(samples: Float32Array, timeoutMs = 20000, owner?: WebContents): Promise<string | null> {
+//
+// interactive：实时听写（flushSentence / stop 收尾）传 true —— 用户一句话说完就等这条出定稿，
+//   flushSentence 会先清掉流式预览再 await 它，若排在准入队列后面（曾见连接器排 16 秒），
+//   这句会先消失、等队列清了才落字，正是「语音输入不要等待队列」要避免的。所以模型加载与解码都走
+//   acquireForced：跳过 80/50 阈值、不排队，成本仍照登记。文件/视频转录（transcribeChunk）是重的
+//   批量活，保持 false 走队列，不与前台 AI 抢名额。
+async function transcribeAsync(samples: Float32Array, timeoutMs = 20000, owner?: WebContents, interactive = false): Promise<string | null> {
   if (pending.size >= 8 || samples.length > 16000 * 31) return Promise.resolve(null)
   if (!owner || owner.isDestroyed()) return Promise.resolve(null)
   if (!voiceOwners.has(owner)) {
@@ -181,11 +187,11 @@ async function transcribeAsync(samples: Float32Array, timeoutMs = 20000, owner?:
     owner.on('render-process-gone', release)
     owner.once('destroyed', release)
   }
-  const w = await managedAsr.get(owner)
+  const w = await managedAsr.get(owner, interactive)
   if (!w) return null
   const id = seq++
   return runManagedTask<string|null>({
-    id: `voice-decode:${id}`, windowId: owner.id, name: '语音解码', projectId: null,
+    id: `voice-decode:${id}`, windowId: owner.id, name: '语音解码', projectId: null, interactive,
     cost: {cpu: 10, memoryBytes: 64 * 1024 * 1024},
     start: async signal => {
       if (signal.aborted || owner.isDestroyed()) throw Error('cancelled')
@@ -315,7 +321,7 @@ async function flushSentence(wc: WebContents): Promise<void> {
   speechMs = 0
   if (!wc.isDestroyed()) wc.send('stt:partial', '')
   try {
-    const [offline, fallback] = await Promise.all([transcribeAsync(audio, 20000, wc).catch(() => null), streamFallback])
+    const [offline, fallback] = await Promise.all([transcribeAsync(audio, 20000, wc, true).catch(() => null), streamFallback])
     const text = offline || fallback
     if (text && epoch === recordingEpoch) {
       const deduped = text
@@ -500,7 +506,7 @@ export function registerSttHandlers(): void {
     silentMs = 0
     speechMs = 0
     // 残句太短(多是静音尾巴)就不识别了，免得吐出噪声字；识别同样走 worker，不卡主进程
-    const offlineText = validSpeech && all.length / 16000 > 0.3 ? await transcribeAsync(all, 20000, e.sender).catch(() => null) : null
+    const offlineText = validSpeech && all.length / 16000 > 0.3 ? await transcribeAsync(all, 20000, e.sender, true).catch(() => null) : null
     const text = validSpeech && epoch === recordingEpoch ? (offlineText || fallback).trim() : ''
     const deduped = text
     if (deduped && tailTarget) flushed.push({text: deduped, targetId: tailTarget, segmentId: tailSegment})
