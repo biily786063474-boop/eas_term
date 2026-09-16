@@ -9,12 +9,14 @@ export {
   IMAGE_EXTS,
   VIDEO_EXTS,
   AUDIO_EXTS,
+  MODEL_EXTS,
   isImagePath,
   isVideoPath,
   isAudioPath,
+  isModelPath,
   isMediaPath
 } from './mediaExts'
-import { IMAGE_EXTS, VIDEO_EXTS, AUDIO_EXTS } from './mediaExts'
+import { IMAGE_EXTS, VIDEO_EXTS, AUDIO_EXTS, MODEL_EXTS } from './mediaExts'
 
 const ext = (p: string): string => p.split('.').pop()?.toLowerCase() ?? ''
 
@@ -38,10 +40,10 @@ export function paneForFile(path: string, as?: 'web' | 'code'): PaneState {
   if (e === 'html' || e === 'htm') {
     return as === 'code' ? { kind: 'code', filePath: path } : { kind: 'web', url: fileUrlOf(path) }
   }
-  // 图片 / 动图(gif,webp) / 视频 / 音频 都归 image 型媒体节点，由 CanvasFileNode 按扩展名分流渲染
-  // （视频 → <video>、音频 → <audio>、其余 → 图查看器）。复用 image 型是刻意的：和视频一路，
-  // data-kind 只挑 CSS 色相、不参与逻辑，新增一种 kind 反而要动更多地方。
-  if (IMAGE_EXTS.has(e) || VIDEO_EXTS.has(e) || AUDIO_EXTS.has(e)) return { kind: 'image', filePath: path }
+  // 图片 / 动图(gif,webp) / 视频 / 音频 / 3D 模型 都归 image 型媒体节点，由 CanvasFileNode 按扩展名
+  // 分流渲染（视频 → <video>、音频 → <audio>、.glb → 3D 查看器、其余 → 图查看器）。复用 image 型
+  // 是刻意的：和视频一路，data-kind 只挑 CSS 色相、不参与逻辑，新增一种 kind 反而要动更多地方。
+  if (IMAGE_EXTS.has(e) || VIDEO_EXTS.has(e) || AUDIO_EXTS.has(e) || MODEL_EXTS.has(e)) return { kind: 'image', filePath: path }
   return { kind: 'code', filePath: path }
 }
 

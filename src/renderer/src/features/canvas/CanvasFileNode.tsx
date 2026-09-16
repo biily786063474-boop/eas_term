@@ -10,9 +10,10 @@ import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
 import { CanvasAudioPlayer } from './CanvasAudioPlayer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MusicIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
+import { Canvas3DViewer } from './Canvas3DViewer'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MusicIcon, CubeIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
 import { useIdleVideoPause } from './useIdleVideoPause'
-import { easfileUrl, isVideoPath, isAudioPath } from './media'
+import { easfileUrl, isVideoPath, isAudioPath, isModelPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
@@ -136,15 +137,18 @@ export function CanvasFileNode({
     projectPath && absPath.startsWith(projectPath + '/') ? absPath.slice(projectPath.length + 1) : absPath
   const isVid = pane.kind === 'image' && !!pane.filePath && isVideoPath(pane.filePath)
   const isAud = pane.kind === 'image' && !!pane.filePath && isAudioPath(pane.filePath)
+  const isModel = pane.kind === 'image' && !!pane.filePath && isModelPath(pane.filePath)
   const Icon = isVid
     ? PlayIcon
     : isAud
       ? MusicIcon
-      : pane.kind === 'image'
-        ? ImageIcon
-        : pane.kind === 'web'
-          ? GlobeIcon
-          : CodeIcon
+      : isModel
+        ? CubeIcon
+        : pane.kind === 'image'
+          ? ImageIcon
+          : pane.kind === 'web'
+            ? GlobeIcon
+            : CodeIcon
 
   const startDrag = (e: React.MouseEvent): void => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
@@ -305,6 +309,8 @@ export function CanvasFileNode({
             />
           ) : isAud ? (
             <CanvasAudioPlayer key={revision} filePath={pane.filePath!} />
+          ) : isModel ? (
+            <Canvas3DViewer key={revision} filePath={pane.filePath!} />
           ) : (
             <CanvasImageViewer key={revision} filePath={pane.filePath} revision={revision} />
           ))}

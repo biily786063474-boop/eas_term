@@ -561,6 +561,18 @@ const api = {
       return () => ipcRenderer.removeListener('stt:downloadProgress', h)
     }
   },
+  modelDep: {
+    // 3D 查看器（model-viewer）按需下载：查状态 / 触发下载 / 订阅进度。不进主包。
+    status: (): Promise<{ installed: boolean }> => ipcRenderer.invoke('modelDep:status'),
+    download: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('modelDep:download'),
+    onDownloadProgress: (
+      cb: (p: { phase: string; received?: number; total?: number; error?: string }) => void
+    ): (() => void) => {
+      const h = (_e: unknown, p: { phase: string; received?: number; total?: number; error?: string }): void => cb(p)
+      ipcRenderer.on('modelDep:downloadProgress', h)
+      return () => ipcRenderer.removeListener('modelDep:downloadProgress', h)
+    }
+  },
   mcp: {
     // MCP 桥：主进程把 AI 的工具调用转过来，渲染层执行 store action 后回传结果
     onInvoke: (

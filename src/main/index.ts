@@ -28,6 +28,7 @@ import { registerTelemetry } from './telemetry'
 import { registerGitHandlers } from './git'
 import { registerSessionHandlers } from './session'
 import { registerCanvasHandlers, registerMediaScheme } from './canvas'
+import { registerModelScheme, registerModelViewerHandlers } from './modelViewer'
 import { registerAgentHandlers } from './agent'
 import { applyLoginShellPath } from './probeEnv'
 import { checkContracts } from './cliContractRun'
@@ -154,6 +155,7 @@ registerPluginScheme()
 // 词典动效短片的私有协议。**和 bizone 一样必须在 ready 之前注册**
 registerDictClipScheme()
 registerMediaScheme()
+registerModelScheme()
 registerFavoritePreviewScheme()
 
 function createWindow(): void {
@@ -449,6 +451,7 @@ app.whenReady().then(() => {
   registerGitHandlers()
   registerSessionHandlers()
   registerCanvasHandlers()
+  registerModelViewerHandlers()
   registerAgentHandlers()
   registerStatuslineHandlers()
   registerQuotaHandlers()

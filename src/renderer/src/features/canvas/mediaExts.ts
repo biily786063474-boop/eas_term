@@ -11,12 +11,16 @@ export const VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'mov', 'mkv', 'ogv'])
  *  「仅多媒体」筛选（找素材时音频跟图片视频是同一类东西）。
  *  将来真做音频节点，播放能力另说，这份清单可以直接复用。 */
 export const AUDIO_EXTS = new Set(['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus', 'aiff'])
+/** 3D 模型。**首版只收单文件 .glb** —— .gltf/.obj 引外部 .bin/.mtl/贴图，相对路径解析在
+ *  单文件协议下很别扭，留到后续。查看器（model-viewer）不进主包，按需下载，见 modelViewerDep.ts。 */
+export const MODEL_EXTS = new Set(['glb'])
 
 const ext = (p: string): string => p.split('.').pop()?.toLowerCase() ?? ''
 
 export const isImagePath = (p: string): boolean => IMAGE_EXTS.has(ext(p))
 export const isVideoPath = (p: string): boolean => VIDEO_EXTS.has(ext(p))
 export const isAudioPath = (p: string): boolean => AUDIO_EXTS.has(ext(p))
-/** 图片 / 视频 / 音频三者之一 */
+export const isModelPath = (p: string): boolean => MODEL_EXTS.has(ext(p))
+/** 图片 / 视频 / 音频 / 3D 模型之一（画布能预览的媒体） */
 export const isMediaPath = (p: string): boolean =>
-  isImagePath(p) || isVideoPath(p) || isAudioPath(p)
+  isImagePath(p) || isVideoPath(p) || isAudioPath(p) || isModelPath(p)
