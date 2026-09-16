@@ -1176,12 +1176,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* 放大后图片超出节点的部分裁掉，不溢出到别的节点上 */
+}
+.civ.zoomed {
+  cursor: grab;
+}
+.civ.zoomed:active {
+  cursor: grabbing;
 }
 .civ-img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   display: block;
+  transform-origin: center center;
 }
 .civ-nav {
   position: absolute;
@@ -1249,6 +1257,20 @@
   font-size: 11px;
   color: #fff;
   font-variant-numeric: tabular-nums;
+}
+.civ-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.civ-zoom {
+  min-width: 38px;
+  text-align: center;
+  font-size: 11px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
 }
 .civ-name {
   flex: 1;
