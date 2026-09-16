@@ -20,7 +20,10 @@ export function createBizoneHosted(options: {
   const connector = createBizoneConnector({
     version: options.version,
     backend: runtime,
-    admit: options.admit ?? (opts => startManagedSession({ ...opts, windowId: null, projectId: null })),
+    // interactive: true —— 用户触发的一次性、跨会话共享的连接器启动，和插件 server（pluginHost）、
+    // 终端（pty）一样「立即起、不排队」，跳过 80/50 预算阈值（manager 里走 acquireForced）；
+    // 成本照样登记，运行中心仍如实显示它占的 256MB。否则点了画布得干等资源名额（曾排 16 秒）。
+    admit: options.admit ?? (opts => startManagedSession({ ...opts, windowId: null, projectId: null, interactive: true })),
     createClient: () => {
       const installed = runtime.installed()
       if (!installed) throw Object.assign(new Error('未找到已验证的笔纵画板应用及正式 MCP 依赖'), { code: 'BIZONE_MISSING' })
