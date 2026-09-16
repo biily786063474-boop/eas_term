@@ -213,3 +213,6 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 
 ### 当前内置链路可视化（2026-09-08）
 见 `docs/prototype/2026-09-08-mcp-injection.html`。顶部旧 bizone-mcp 每会话进程图仅描述遗留全局配置，受管内置链路以本文“内置笔纵连接器生产装配”为准。图片FIFO改动待下一版本发布，0.4.86仍满额拒绝。
+
+### 2026-09-16 时间线 MCP
+`eas:timeline` 经既有 `eas-plugin-shim.mjs → /plugin/rpc → pluginHost → server.mjs`，提供 show/list/get/record/review；固定项目存储，无外网依赖。仅该插件转发 `EAS_TIMELINE_SESSION`，宿主按会话与 cwd 匹配成功回执。面板写入通知复用现有宿主机制；读取不触发刷新循环。record 以 taskKey 更新同一成果、保持发生日；verified/accepted 要求证据。list 是分页摘要，get 才返回正文。

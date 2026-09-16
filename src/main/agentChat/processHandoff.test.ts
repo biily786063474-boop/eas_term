@@ -1,3 +1,4 @@
+import { timelineGuidance, timelineRuntime } from '../timelineRuntime.ts'
 import { stopAgentProcess, ownCodexLauncher } from '../../../mcp/owned-launcher-control.mjs'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -32,7 +33,7 @@ test('显式打断先撤销旧进程的能力，再终止进程；ACP 取消保�
   const interrupt = runInNewContext(compiled + '\ninterrupt', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
+    timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, sessions: new Map([['s', live]]),
     revokeCapabilitySession: (id: string) => calls.push('revoke:' + id),
     forgetPty: (id: string) => calls.push('secret-revoke:' + id),
     handleEvent() {}
@@ -49,7 +50,7 @@ function setup() {
   const wire = runInNewContext(code + '\nwireProc', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, endSilence: () => null,
+    timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, console: { error() {} }, revokeCapabilitySession() {}, forgetPty() {}, withAgentSecrets: (_id: string, env: unknown) => env, endSilence: () => null,
     createStderrDiagnostics: () => ({ push: () => true, reason: () => 'fixture' }),
     feed: (_live: unknown, chunk: string) => events.push(chunk),
     handleEvent: (_live: unknown, e: unknown) => events.push(e),
@@ -93,7 +94,7 @@ test('真实投递判定：完成但未退出的 Codex 接受续聊，忙时拒�
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
+    timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, planSend, endSilence: () => null,
     handleEvent: (live: { rec: { busy: boolean } }, e: { k: string }) => { calls.push(e.k); if (e.k === 'turn.start') live.rec.busy = true },
     restartAndDeliver: (_live: unknown, opts: unknown, message: string) => { calls.push({ opts, message }); return { ok: true } },
     writeStdin: () => { throw new Error('Codex must not use stdin') }
@@ -116,7 +117,7 @@ test('准入后的实际启动失败恢复空闲，显式下一次启动可重�
   const deliver = runInNewContext(compiled + '\ndeliverMessage', {
     runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+    timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
     codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }), console: { error() {} }, planSend,
     endSilence: () => null, nodeBinForHook: () => '/fixture/node',
     getAdapter: () => ({ buildArgs: () => ({ bin: '/fixture/codex', args: [], stdin: 'ignore' }) }),
@@ -148,7 +149,7 @@ for (const [label, mcp, expected] of [
     const restart = runInNewContext(compiled + '\nrestartAndDeliver', {
       runtimeProcessGeneration:0, ownedSessions:createOwnedSessions(()=>0), projectAttribution:()=>null, loadProjects:()=>[], cancelRuntimeStartup(){},
     resetUsageCost() {}, interruptUsage() {}, markUsageInterrupted() {},
-    stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
+    timelineGuidance, timelineRuntime, stopAgentProcess, ownCodexLauncher, Date, process: { execPath: '/fixture/node' }, app: { getAppPath: () => '/fixture/app' },
       codexCapabilityLaunch: (command: string, args: string[]) => ({ command, args }),
       getAdapter: () => codexAdapter, nodeBinForHook: () => '/fixture/node',
       agentMcpConfigPath() {}, codexServers: () => [],

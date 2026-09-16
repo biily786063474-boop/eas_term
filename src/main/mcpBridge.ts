@@ -670,7 +670,7 @@ export function easPluginMcpServer(
  * an app-owned 0600 snapshot instead of Codex command-line arguments. */
 export function sessionMcpServers(pluginId?: string): SessionMcpServer[] {
   const preferences = capabilityPreferences().preferences
-  const envVars = ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT', 'EAS_TEAM_ROLE', 'EAS_CAPABILITY_LEASE']
+  const envVars = ['EAS_TERM_PORT', 'EAS_TERM_TOKEN', 'EAS_PTY_ID', 'EAS_PROJECT', 'EAS_TEAM_ROLE', 'EAS_CAPABILITY_LEASE', 'EAS_TIMELINE_SESSION']
   const scoped = runnerFor([path.join(path.dirname(serverScriptPath()), 'eas-capability-shim.mjs')])
   const base = (['workbench', 'bizone'] as const).map(module => ({
     enabled: preferences[module] && (module !== 'bizone' || process.platform === 'win32' || !!bizoneRuntime.installed()),

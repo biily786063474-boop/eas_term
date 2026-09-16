@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "checks": [
+    "builtin plugin discovered",
+    "real panel starts empty, no fixture UI data",
+    "decorative particles present and do not intercept input",
+    "particles have independent breathing animation",
+    "reduce motion stops particle drift",
+    "real plugin gateway initializes",
+    "record through AI gateway succeeds",
+    "AI write notification refreshes mounted panel",
+    "gateway retry idempotent",
+    "host guard rejects unauthorized cwd",
+    "off-center wheel items have stepped blur",
+    "particles visibly drift and breathe over time",
+    "title opens persisted detail",
+    "five durable milestones on disk",
+    "panel reload retains milestone"
+  ]
+}

@@ -28,6 +28,7 @@ import { cliInvocation } from '../cliInvocation.ts'
 //   自己声明的 stdin 能力位来决定，第三个 CLI 只要照这个约定填 stdin 字段就能直接工作。
 //   恢复轮的 --sandbox 必须位于 exec 与 resume 之间；CLI 契约及隔离三轮探针验证此顺序。
 import { findPlugin } from '../plugins.ts'
+import { timelineRuntime, timelineGuidance } from '../timelineRuntime.ts'
 import { chatPluginState } from '../../shared/chatPlugin.ts'
 import { spawn, type ChildProcess } from 'child_process'
 import { createStderrDiagnostics, exitMessage } from './stderrReason.ts'
@@ -481,6 +482,11 @@ function handleEvent(live: Live, e: ChatEvent): void {
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
   const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
   if (!repairOnly) captureUsage(live.rec, e)
+  if (live.rec.pluginId === 'eas:timeline') {
+    if (e.k === 'turn.start') timelineRuntime.begin(live.rec.id, live.rec.cwd)
+    else if (e.k === 'text.done') timelineRuntime.text(live.rec.id, e.text)
+    else if (e.k === 'turn.done') timelineRuntime.end(live.rec.id)
+  }
   // 对话摘要：**只挂在「一轮一次」的事件上**（text.done / user.message），
   // 不挂 text.delta —— 那个每几十毫秒一次，挂上去这份旁支记录就成了事件流上的热点。
   // 静默期（切模型/切强度的 slash 回执）已经在上面被 return 掉了，不会混进来。
@@ -915,7 +921,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
       knownMcpServers,
       mcpConfigPath: agentMcpConfigPath(live.rec.pluginId, live.rec.id, sessionMcp),
       sessionMcp,
-      capabilityGuidance: sessionCapabilityGuidance()
+      capabilityGuidance: [sessionCapabilityGuidance(), timelineGuidance(live.rec.pluginId)].filter(Boolean).join('\n')
     })
     // stdin:'ignore' 的 CLI（目前是 Codex）没有活跃的 stdin 通道，prompt 只能是位置参数，
     // 追加在 buildArgs() 已经拼好的 args 末尾——见文件头说明，这是能力位驱动而非 CLI 分支。
@@ -937,6 +943,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
         // probeEnv.ts，**这处漏了** —— 表现最阴险：探测说「装着」，UI 让你选，
         // 一点就 ENOENT。
         ...PROBE_ENV,
+        ...(live.rec.pluginId === 'eas:timeline' ? { EAS_TIMELINE_SESSION: live.rec.id } : {}),
         DISABLE_AUTOUPDATER: '1',
         DISABLE_UPDATES: '1',
         // 团队派生的会话把角色名带进环境，让 MCP 那侧能**准确**判出「调用方是成员」，
@@ -1012,6 +1019,10 @@ function deliverMessage(live: Live, message: string): AgentChatSendResult {
   // slash 没引出 turn.done，计数会残留；那时如果不在这里清掉，用户接下来问的
   // 那句话的回答就被吞了 —— 比多显示一条回执严重得多。
   live.silence = endSilence()
+  if (live.rec.pluginId === 'eas:timeline') {
+    const reminder = timelineRuntime.takeReminder(live.rec.id)
+    if (reminder) message += '\n\n[宿主时间线提醒] ' + reminder
+  }
   if (live.rec.pluginId) handleEvent(live, { k: 'plugin.status', plugin: chatPluginState(live.rec.pluginId, findPlugin(live.rec.pluginId)) })
   // **ACP 那条路整个从这里截走。** 这是三条消息入口（start / send / 手机端
   // deliverExternalMessage）的汇合点，一行 if-return 就够，下面那套一个字节不动。
@@ -1315,6 +1326,7 @@ export function killAgentChatSessionsForWebContents(wcId: number): void {
     if (live.wcId !== wcId) continue
     interruptUsage(live.rec)
     cancelRuntimeStartup(live)
+    timelineRuntime.drop(id)
     sessions.delete(id)
     revokeCapabilitySession(id)
     forgetPty(id)
@@ -1394,7 +1406,7 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
             return next
           },
           onStopped() { if (secretToken) forgetSecretToken(secretToken) },
-          mcpEnv: { ...mcpEnv({ project: cwd }), ...capabilitySessionEnv(live.rec.id, { project: cwd, agentSessionId: live.rec.id, agentLeafId: live.rec.agentLeafId, agentNodeId: live.rec.agentNodeId, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }) },
+          mcpEnv: { ...(live.rec.pluginId === 'eas:timeline' ? { EAS_TIMELINE_SESSION: live.rec.id } : {}), ...mcpEnv({ project: cwd }), ...capabilitySessionEnv(live.rec.id, { project: cwd, agentSessionId: live.rec.id, agentLeafId: live.rec.agentLeafId, agentNodeId: live.rec.agentNodeId, teamRole: live.rec.owner === 'team' ? live.rec.role : undefined }) },
           // 角色契约 + 协同板快照。omp 不走 adapter 的 buildArgs（它是独立 ACP 传输层），
           // 所以这条要单独接 —— 漏了的话「默认 harness」上选角色永远没反应。
           // `ompAcpArgs` 只收一段文本（`--append-system-prompt=`），板文（Task 3 的
@@ -1407,7 +1419,8 @@ function makeAcpLive(live: Live, adapter: CliAdapter): AcpLive {
               live.rec.boardText?.trim() ? `## 协同板（起会话时的快照）\n${live.rec.boardText.trim()}` : '',
               // 角色文档指针段（P3 的 StartOpts.roleDocs），与 claude adapter 同序：放最末
               live.rec.roleDocs?.trim(),
-              sessionCapabilityGuidance()
+              sessionCapabilityGuidance(),
+              timelineGuidance(live.rec.pluginId)
             ]
               .filter(Boolean)
               .join('\n\n') || undefined,
@@ -1978,6 +1991,7 @@ export function registerAgentChatHandlers(): void {
     if (!live) return
     interruptUsage(live.rec)
     cancelRuntimeStartup(live)
+    timelineRuntime.drop(id)
     sessions.delete(id)
     revokeCapabilitySession(id)
     forgetPty(id)

@@ -1,3 +1,4 @@
+import { timelineRuntime } from './timelineRuntime.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {spawn} from 'node:child_process'
@@ -35,7 +36,7 @@ test('production app shutdown and window cleanup route both soft/hard passes thr
  const proc={connected:true,exitCode:null,signalCode:null,send(m,cb){messages.push(m);cb(null)},disconnect(){},kill(){throw new Error('unsafe outer kill')}}
  ownCodexLauncher(proc)
  const sessions=new Map([['s',{wcId:7,rec:{id:'s'},proc,acp:{close(){acpClosed.push('s')}}}]])
- const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{sessions,cancelRuntimeStartup(live){cancelled.push(live.rec.id)},stopAgentProcess,interruptUsage(rec){accounted.push(rec.id)},revokeCapabilitySession(){},forgetPty(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
+ const api=runInNewContext(code+'\n({killAllAgentChatSessions,killAgentChatSessionsForWebContents})',{timelineRuntime,sessions,cancelRuntimeStartup(live){cancelled.push(live.rec.id)},stopAgentProcess,interruptUsage(rec){accounted.push(rec.id)},revokeCapabilitySession(){},forgetPty(){},transcripts:{drop(){}},setTimeout(fn){timers.push(fn);return {unref(){}}}})
  api.killAllAgentChatSessions();api.killAllAgentChatSessions(true);api.killAgentChatSessionsForWebContents(7);timers.forEach(fn=>fn())
  assert.deepEqual(messages.map(m=>m.signal),['SIGTERM','SIGKILL','SIGTERM','SIGKILL']);assert.equal(sessions.size,0);assert.deepEqual(accounted,['s','s','s']);assert.deepEqual(cancelled,['s','s','s']);assert.deepEqual(acpClosed,['s','s','s'])
 })
