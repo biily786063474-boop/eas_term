@@ -37,6 +37,10 @@ export interface SecretRequest {
   docsUrl?: string
   /** 'fix' = AI 用着报错了，请用户改一个。默认是首次索要 */
   mode?: 'ask' | 'fix' | 'unlock'
+  /** 请求来自哪个项目（项目名，取自 EAS_PROJECT / 所在 Frame，不是 AI 自报——不可伪造）。 */
+  project?: string
+  /** 请求来自哪个节点/任务（发起这次请求的画布节点标题）。 */
+  origin?: string
 }
 
 export interface SecretRequestResult {
@@ -119,6 +123,19 @@ function SecretRequestModal({
   const fix = req.mode === 'fix'
   const unlockOnly = req.mode === 'unlock'
   const existing = new Set((items ?? []).flatMap(it => it.vars.map(v => v.varName)))
+
+  // 「请求来自」——哪个项目、哪个节点在要。项目名来自 EAS_PROJECT / 所在 Frame（不可伪造），
+  // 不是 AI 自报。解锁弹窗信息最少，这块尤其要有，让越权取密钥能被一眼看见。
+  const originBlock = (req.project || req.origin) ? (
+    <div className="sreq-origin">
+      <span className="sreq-origin-label">请求来自</span>
+      <span className="sreq-origin-val">
+        {req.project ? <b>{req.project}</b> : null}
+        {req.project && req.origin ? <span className="sreq-origin-sep"> · </span> : null}
+        {req.origin ? <span>{req.origin}</span> : null}
+      </span>
+    </div>
+  ) : null
   const missingVars = req.vars.filter(v => fix || !existing.has(v))
   useEffect(() => {
     if (st && !locked) void window.api.secrets.list().then(setItems)
@@ -208,6 +225,15 @@ function SecretRequestModal({
     <div className="vault-backdrop sreq-mask">
       <div className="sreq vault-gate-dialog" role="dialog" aria-modal="true" aria-label="密钥柜">
         <button className="vault-close" aria-label="取消密钥请求" onClick={() => onDone({ saved: false, reason: '用户取消了这次密钥请求' })}><CloseIcon size={15} /></button>
+        {originBlock}
+        {req.vars.length > 0 && (
+          <div className="sreq-origin-keys">
+            <span className="sreq-origin-label">要用的密钥</span>
+            <div className="sreq-vars">
+              {req.vars.map((v) => <code key={v} className="sec-var">{v}</code>)}
+            </div>
+          </div>
+        )}
         <VaultGate status={st} onUnlocked={status => { setSt(status); if (unlockOnly) onDone({ saved: true, vars: [] }) }} />
         <p className="vault-footnote">由 AI 请求触发 · 解锁后继续原请求</p>
       </div>
@@ -222,6 +248,8 @@ function SecretRequestModal({
           <KeyIcon size={13} />
           这是 <b>AI 发起</b>的{fix ? '密钥修正请求' : '密钥请求'}，不是 Eas-Term 在向你索要
         </div>
+
+        {originBlock}
 
         <div className="sreq-title">
           {fix ? `这个密钥好像不对：${req.vars.join('、')}` : !missingVars.length ? '允许这个会话使用？' : req.name}

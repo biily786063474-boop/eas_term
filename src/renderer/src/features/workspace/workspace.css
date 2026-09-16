@@ -1744,6 +1744,34 @@ body.dragging-row * {
   flex-wrap: wrap;
   gap: 5px;
 }
+/* 「请求来自」——哪个项目 / 哪个节点在要密钥（项目名来自 EAS_PROJECT，不可伪造） */
+.sreq-origin {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--wash-1);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sreq-origin-label {
+  flex: none;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.sreq-origin-val {
+  color: var(--fg);
+  word-break: break-word;
+}
+.sreq-origin-sep {
+  color: var(--fg-dim);
+}
+.sreq-origin-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 .sreq-link {
   align-self: flex-start;
   padding: 0;

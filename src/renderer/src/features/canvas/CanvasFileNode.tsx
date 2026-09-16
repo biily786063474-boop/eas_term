@@ -9,9 +9,10 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
+import { CanvasAudioPlayer } from './CanvasAudioPlayer'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MusicIcon, MaximizeIcon, RestoreIcon, FolderIcon, PinIcon } from '../../ui/Icons'
 import { useIdleVideoPause } from './useIdleVideoPause'
-import { easfileUrl, isVideoPath } from './media'
+import { easfileUrl, isVideoPath, isAudioPath } from './media'
 import { makeSubframeDrop } from './subframeDrop'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
@@ -134,13 +135,16 @@ export function CanvasFileNode({
   const relPath =
     projectPath && absPath.startsWith(projectPath + '/') ? absPath.slice(projectPath.length + 1) : absPath
   const isVid = pane.kind === 'image' && !!pane.filePath && isVideoPath(pane.filePath)
+  const isAud = pane.kind === 'image' && !!pane.filePath && isAudioPath(pane.filePath)
   const Icon = isVid
     ? PlayIcon
-    : pane.kind === 'image'
-      ? ImageIcon
-      : pane.kind === 'web'
-        ? GlobeIcon
-        : CodeIcon
+    : isAud
+      ? MusicIcon
+      : pane.kind === 'image'
+        ? ImageIcon
+        : pane.kind === 'web'
+          ? GlobeIcon
+          : CodeIcon
 
   const startDrag = (e: React.MouseEvent): void => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
@@ -299,6 +303,8 @@ export function CanvasFileNode({
               loop
               playsInline
             />
+          ) : isAud ? (
+            <CanvasAudioPlayer key={revision} filePath={pane.filePath!} />
           ) : (
             <CanvasImageViewer key={revision} filePath={pane.filePath} revision={revision} />
           ))}

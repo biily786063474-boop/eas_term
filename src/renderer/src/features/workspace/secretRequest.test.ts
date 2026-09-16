@@ -50,3 +50,30 @@ test('请求超时清除弹窗、不记作用户拒绝，且旧回调不影响�
   t.mock.timers.tick(9 * 60_000)
   assert.equal(currentSecretRequest(), null)
 })
+
+// 「请求来自」上下文要真的到达弹窗的数据源。mcpHandler 把 project/origin 塞进请求对象后，
+// askForSecret 整体透传、currentSecretRequest() 原样吐出给 SecretRequestModal。
+// 这条钉住那个透传——将来谁把字段从接口或 askForSecret 里漏掉，这里当场红。
+test('project / origin 随密钥请求透传到弹窗数据源', () => {
+  // 跳过 MIN_GAP 限流（前面的 unlock 测试刚设过 lastAskAt['unlock']），同 test 2 的手法
+  const originalNow = Date.now
+  Date.now = () => originalNow() + 300_000
+  try {
+    const p = askForSecret(
+      { name: '解锁密钥柜', vars: ['IMAGE_API_KEY'], purpose: '检查密钥', mode: 'unlock', project: '命运呐', origin: '部署终端' },
+      'pty-origin-passthrough'
+    )
+    const cur = currentSecretRequest()
+    assert.equal(cur?.project, '命运呐')
+    assert.equal(cur?.origin, '部署终端')
+    assert.deepEqual(cur?.vars, ['IMAGE_API_KEY'])
+    // 收尾：resolve 掉那个 Promise（内部会 clearTimeout，避免 9 分钟定时器吊住测试进程）
+    resolveSecretRequest({ saved: false })
+    return p.then(
+      () => {},
+      () => {}
+    )
+  } finally {
+    Date.now = originalNow
+  }
+})

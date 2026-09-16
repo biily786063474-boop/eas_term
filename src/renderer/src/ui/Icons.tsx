@@ -173,6 +173,14 @@ export const PlayIcon = (p: IconProps): JSX.Element => (
   </Svg>
 )
 
+export const MusicIcon = (p: IconProps): JSX.Element => (
+  <Svg {...p}>
+    <path d="M9 18V5l12-2v13" />
+    <circle cx="6" cy="18" r="3" />
+    <circle cx="18" cy="16" r="3" />
+  </Svg>
+)
+
 export const PencilIcon = (p: IconProps): JSX.Element => (
   <Svg {...p}>
     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />

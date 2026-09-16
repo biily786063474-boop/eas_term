@@ -11,7 +11,9 @@ import { pathToFileURL } from 'url'
 // 重开时按占位重新 spawn 绑定。
 const storeFile = (): string => path.join(app.getPath('userData'), 'canvas.json')
 
-// 画布媒体预览：只服务这些媒体扩展名（图片/动图/视频），其它一律拒绝（纵深防御）
+// 画布媒体预览：只服务这些媒体扩展名（图片/动图/视频/音频），其它一律拒绝（纵深防御）。
+// 扩展名清单的唯一事实源在渲染层 mediaExts.ts（零 import、可单测）；这里是主进程侧的
+// easfile:// 白名单，要给出具体 MIME，所以单独一份 —— 两处的扩展名集合必须一致（音频加过来了）。
 const MEDIA_MIME: Record<string, string> = {
   mp4: 'video/mp4',
   m4v: 'video/x-m4v',
@@ -27,7 +29,16 @@ const MEDIA_MIME: Record<string, string> = {
   avif: 'image/avif',
   svg: 'image/svg+xml',
   bmp: 'image/bmp',
-  ico: 'image/x-icon'
+  ico: 'image/x-icon',
+  // 音频（2026-09-16：画布新增 <audio> 预览）
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  flac: 'audio/flac',
+  ogg: 'audio/ogg',
+  opus: 'audio/ogg',
+  aiff: 'audio/aiff'
 }
 
 // 必须在 app ready 前注册为 privileged（可被 <video>/<img> 以 secure origin 加载、支持流式 range）

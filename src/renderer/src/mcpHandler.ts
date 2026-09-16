@@ -1,4 +1,5 @@
 import { openArtifact } from './features/canvas/openArtifact'
+import { isMediaPath } from './features/canvas/mediaExts'
 import {parseFavoriteRoute} from '../../shared/browserFavorites'
 // MCP 工具执行器（渲染层）：主进程把 AI 的调用转过来，这里落到 store action 再回结果。
 //
@@ -145,6 +146,21 @@ function resolveFrame(ctx: Ctx): { frameId: string; nodeId?: string; projectPath
   if (!fallback) return null
   const proj = s.projects.find((p) => p.id === fallback.projectId)
   return { frameId: fallback.id, projectPath: proj?.path ?? ctx.project ?? '' }
+}
+
+// 密钥请求弹窗的「请求来自」上下文：哪个项目、哪个节点在要。
+// **项目名取自 ctx（EAS_PROJECT，我们注入的、不可伪造）/ 所在 Frame，绝不让 AI 自报** ——
+// 不然它能谎称来自别的项目骗用户点解锁。origin 是发起请求的画布节点标题（node.name）。
+function secretRequestContext(ctx: Ctx): { project?: string; origin?: string } {
+  const s = useStore.getState()
+  const loc = resolveFrame(ctx)
+  const frame = loc ? s.canvas.frames.find((f) => f.id === loc.frameId) : undefined
+  let project = frame ? s.projects.find((p) => p.id === frame.projectId)?.name : undefined
+  if (!project && ctx.project) {
+    project = s.projects.find((p) => !!p.path && belongsToProject(ctx.project as string, p.path))?.name
+  }
+  const node = loc?.nodeId && frame ? frame.nodes.find((n) => n.id === loc.nodeId) : undefined
+  return { project, origin: node?.name }
 }
 
 // 路径白名单：只允许项目目录内（防止把 ~/.ssh/id_rsa 之类渲染出来）
@@ -685,13 +701,14 @@ const SHELL_TRAP =
   // 返回值只有真的走到密钥场景才付。所以那边只留一句触发条件，
   // 「怎么做、红线是什么、下一步」这些字全部放在这儿按需给。
   if (tool === 'secret_check') {
+    const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
     const initial = await window.api.secrets.status()
     if (!initial.configured || initial.locked) {
-      const unlocked = await askForSecret({ name: '解锁密钥柜', vars: [], purpose: '继续检查本次任务所需的密钥；解锁不会授权额外的密钥组。', mode: 'unlock' }, ctx.agentSessionId ?? ctx.ptyId)
+      // 解锁弹窗带上「哪个项目 / 哪个节点 / 本次要检查哪些密钥」——它信息最少，尤其需要上下文
+      const unlocked = await askForSecret({ name: '解锁密钥柜', vars, purpose: '继续检查本次任务所需的密钥；解锁不会授权额外的密钥组。', mode: 'unlock', ...secretRequestContext(ctx) }, ctx.agentSessionId ?? ctx.ptyId)
       if (!unlocked.saved) return { ready: false, locked: true, next: unlocked.reason ?? '用户取消解锁，请停止索要密钥。' }
     }
 
-    const vars = (Array.isArray(args.vars) ? args.vars : []).map((v) => String(v ?? '').trim()).filter(Boolean)
 
     // ── 不带参数 = 列出柜里有什么 ────────────────────────────────────────
     //
@@ -803,7 +820,8 @@ const SHELL_TRAP =
         name: `修正：${vars.join('、')}`,
         vars,
         purpose: detail,
-        mode: 'fix'
+        mode: 'fix',
+        ...secretRequestContext(ctx)
       },
       ctx.agentSessionId ?? ctx.ptyId
     )
@@ -1284,7 +1302,7 @@ const SHELL_TRAP =
     const docsUrl = /^https?:\/\//i.test(String(args.docs_url ?? '')) ? String(args.docs_url) : undefined
 
     // askForSecret 抛异常 = 压根没弹（限流/已有一个在等），要让 AI 明确知道而不是干等
-    const r = await askForSecret({ name, vars, purpose, docsUrl }, ctx.agentSessionId ?? ctx.ptyId)
+    const r = await askForSecret({ name, vars, purpose, docsUrl, ...secretRequestContext(ctx) }, ctx.agentSessionId ?? ctx.ptyId)
     if (!r.saved) return { saved: false, reason: r.reason ?? '用户没有提供' }
     // 用户当场把这组给了这个终端 → 授权它用 eas-secret 取。
     // 少了这一步最荒唐：刚填的密钥反而是唯一取不到的（新组不在任何终端的默认授权里）
@@ -1552,10 +1570,10 @@ const SHELL_TRAP =
       const result = openArtifact(loc.frameId, { kind: 'web', url: fileUrlOf(abs) })
       return { opened: abs, as: 'browser', frameId: loc.frameId, ...result, ...capReport(loc.frameId, before) }
     }
-    // 其它文件：按扩展名给出预览节点（图片/视频走 image，其余走 code）
-    const ext = abs.split('.').pop()?.toLowerCase() ?? ''
-    const media = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'mp4', 'm4v', 'webm', 'mov', 'mkv']
-    const pane = media.includes(ext)
+    // 其它文件：按扩展名给出预览节点（图片/视频/音频走 image，其余走 code）。
+    // 扩展名清单用共享 isMediaPath（mediaExts.ts，零 import 可单测），不再在这里内联一份
+    // —— 曾经内联的那份漏了音频、也和别处对不上。
+    const pane = isMediaPath(abs)
       ? ({ kind: 'image', filePath: abs } as const)
       : ({ kind: 'code', filePath: abs } as const)
     const result = openArtifact(loc.frameId, pane)

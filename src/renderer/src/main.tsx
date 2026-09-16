@@ -4,6 +4,7 @@ import { useStore } from './store'
 import { applyTheme, loadTheme } from './themes'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { registerMcpHandler } from './mcpHandler'
+import { askForSecret } from './features/workspace/secretRequest'
 import './styles/base.css'
 
 // 渲染前先套用持久化的主题，避免首帧闪默认色
@@ -22,6 +23,8 @@ window.addEventListener('unhandledrejection', (e) => console.error('[window:unha
 // 它由 preload 读 EAS_VERIFY 决定，正式打包不带那个环境变量，用户版本照旧没有。
 if (import.meta.env.DEV || (window as unknown as { __easVerify?: boolean }).__easVerify) {
   ;(window as unknown as Record<string, unknown>).__store = useStore
+  // 验证密钥请求弹窗（含「请求来自」上下文块）用：正式打包不带 EAS_VERIFY，用户版没有它。
+  ;(window as unknown as Record<string, unknown>).__askForSecret = askForSecret
 }
 
 // 根级 ErrorBoundary:任一组件渲染抛错只落到兜底 UI,不再卸载整树成永久白屏

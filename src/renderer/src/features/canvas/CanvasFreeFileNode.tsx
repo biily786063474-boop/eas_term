@@ -12,8 +12,9 @@ import type { CanvasNode } from '../../store'
 import { CodeView } from '../editor/CodeView'
 import { WebView } from '../web/WebView'
 import { CanvasImageViewer } from './CanvasImageViewer'
-import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
-import { easfileUrl, isVideoPath } from './media'
+import { CanvasAudioPlayer } from './CanvasAudioPlayer'
+import { CodeIcon, ImageIcon, GlobeIcon, CopyIcon, PlayIcon, MusicIcon, MaximizeIcon, RestoreIcon } from '../../ui/Icons'
+import { easfileUrl, isVideoPath, isAudioPath } from './media'
 import { useIdleVideoPause } from './useIdleVideoPause'
 import { liveMaximizedNode } from '../../store/canvas/selectors'
 import { dropModuleOnTerminal } from './dropOnTerminal'
@@ -112,13 +113,16 @@ export function CanvasFreeFileNode({
         ? (pane.filePath ?? '')
         : ''
   const isVid = pane.kind === 'image' && !!pane.filePath && isVideoPath(pane.filePath)
+  const isAud = pane.kind === 'image' && !!pane.filePath && isAudioPath(pane.filePath)
   const Icon = isVid
     ? PlayIcon
-    : pane.kind === 'image'
-      ? ImageIcon
-      : pane.kind === 'web'
-        ? GlobeIcon
-        : CodeIcon
+    : isAud
+      ? MusicIcon
+      : pane.kind === 'image'
+        ? ImageIcon
+        : pane.kind === 'web'
+          ? GlobeIcon
+          : CodeIcon
 
   const startDrag = (e: React.MouseEvent): void => {
     if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
@@ -245,6 +249,8 @@ export function CanvasFreeFileNode({
               loop
               playsInline
             />
+          ) : isAud ? (
+            <CanvasAudioPlayer filePath={pane.filePath!} />
           ) : (
             <CanvasImageViewer filePath={pane.filePath} />
           ))}
