@@ -1,0 +1,13 @@
+# 时间线插件交接 · 2026-09-16
+- 当前分支 design/timeline-plugin-20260916，未 commit/push；原工作区很多既有改动，禁止一键全量提交。
+- 批准稿 docs/prototype/2026-09-16-timeline-plugin.html。月热力图→日期 zoom→边缘弧形拨轮（每级 blur 2px）→标题左移详情；CSS 动效、默认静音、reduced motion。
+- 独立可验收成果算一条，taskKey 去重；pending/verified/accepted，后两者要求证据；发生日不因更新改变。热力图按发生日独立成果数，含待验证，0/1–2/3–4/5–6/7+。
+- resources/plugins/timeline 是完整本地插件；固定 .eas/timeline.json，排他锁+原子写、拒绝软链与坏库覆盖。崩溃残留 lock 需检查，不自动删锁。
+- 选中时间线插件的受管 AI 会话才注入短规则；不额外唤醒 AI、不扫描历史。宿主措辞启发式+成功回执，在下一用户轮提醒一次，不能保证零漏记。补漏按钮仅给可复制请求，不自动执行扫描。
+- 集成涉及 pluginHost.ts、mcpBridge.ts、mcp/eas-plugin-shim.mjs、agentChat/session.ts、timelineRuntime.ts；session.ts 里其他崩溃/取消改动是原有的，不要覆盖。
+- npm test：2848 total / 2835 pass / 13 skip / 0 fail。VM 测试夹具已加入新 runtime 依赖，未移除断言。
+- scripts/verify-timeline.mjs 使用隔离 Electron profile + 临时项目，真实插件网关/iframe，非真实模型。未读取真实密钥，未覆盖/重启正式应用。mac 嵌套 sandbox 启动初次失败，按已有验收脚本用 --no-sandbox 启动开发实例，生产安全代码未改。
+- 证据 docs/verification/timeline/；真实模型主动调用、Windows、正式安装包未验收。后续如发版先完成相关平台验收。
+- 04:33 用户批准并实现背景增强：墨绿—灰蓝渐变 + 8 个缓慢漂移柔焦粒子，纯 CSS，装饰层不拦截输入，减少动态效果关闭动画。批准原型同步。构建通过，7 项插件测试通过，隔离应用 13 项检查通过，已亲眼检查 wheel.png 并刷新当前 Frame 截图。
+- 04:35 用户确认加强粒子呼吸与漂浮：独立 opacity/scale 呼吸、错向多段漂移。构建及 7 项插件测试通过；隔离应用 15 项检查通过，含间隔 2.2 秒位移/透明度变化与停用动画。已看 wheel.png / wheel-motion.png 连续截图。纯 CSS，无额外模型消耗。
+- 05:00 用户要求提交并合并。仅暂存时间线改动；session.ts/processHandoff.test.ts 中原有 Sept13 崩溃修复、其他 agent 变更继续保留工作区不夹带。目标为实际分叉源本地 main；远端分歧，未 push。发版 agent 必读 docs/verification/timeline/RELEASE-HANDOFF.md，需显式带入时间线提交并做发布前验收。

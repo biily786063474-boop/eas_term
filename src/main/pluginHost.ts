@@ -26,6 +26,9 @@ import { resolveCommand } from './nodeBin.ts'
 import { PROBE_ENV } from './probeEnv'
 import { CANVAS_CALL_ALLOWLIST, JSONRPC_INVALID_PARAMS, JSONRPC_METHOD_NOT_FOUND } from '../shared/pluginProtocol.ts'
 import type { PluginInfo } from '../shared/types'
+import { guardDir, guardPath } from './fsGuard.ts'
+import { timelineRuntime, timelineGuidance } from './timelineRuntime.ts'
+import { projectRootOf } from '../shared/roleWorktree.ts'
 
 export const PLUGIN_SCHEME = 'eas-plugin'
 
@@ -158,6 +161,17 @@ function withEasMeta(params: unknown, ctx: { cwd: string; frameId?: string; node
   return p
 }
 
+/** Timeline is a project writer: authorize at the host before handing cwd to stdio. */
+function timelineParams(params: Record<string, unknown>, cwd: unknown): Record<string, unknown> {
+  const checked = guardDir(cwd)
+  if (!checked.ok) throw new Error(checked.error)
+  const root = guardDir(projectRootOf(checked.path))
+  if (!root.ok) throw new Error(root.error)
+  const file = guardPath(path.join(root.path, '.eas', 'timeline.json'))
+  if (!file.ok) throw new Error(file.error)
+  return withEasMeta(params, { cwd: root.path })
+}
+
 async function readEntry(h: Hosted, info: PluginInfo, entry: string): Promise<string> {
   if (entry.startsWith('ui://')) {
     const r = (await h.client.request('resources/read', { uri: entry })) as { contents?: { text?: string; mimeType?: string; uri?: string }[] } | undefined
@@ -227,7 +241,9 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
       case 'tools/call': {
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
-        const full = withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
+        const full = p.pluginName === 'timeline'
+          ? timelineParams({ name, arguments: params.arguments ?? {} }, p.ctx.cwd)
+          : withEasMeta({ name, arguments: params.arguments ?? {} }, p.ctx)
         const result = await h.client.request('tools/call', full, 10 * 60 * 1000)
         broadcastToolResult(p.pluginName, name, params.arguments ?? {}, result, p.session)
         return { ok: true, result }
@@ -268,6 +284,7 @@ export async function pluginRpcFromShim(body: {
   plugin?: string
   shimId?: string
   project?: string
+  timelineSession?: string
   method?: string
   params?: unknown
 }): Promise<RpcResult> {
@@ -286,7 +303,8 @@ export async function pluginRpcFromShim(body: {
         result: {
           protocolVersion: (params.protocolVersion as string) || '2024-11-05',
           capabilities: { tools: {}, resources: {} },
-          serverInfo: { name: `eas-plugin-${h.name}`, version: app.getVersion() }
+          serverInfo: { name: `eas-plugin-${h.name}`, version: app.getVersion() },
+          ...(name === 'timeline' ? { instructions: timelineGuidance('eas:timeline') } : {})
         }
       }
     }
@@ -298,7 +316,9 @@ export async function pluginRpcFromShim(body: {
         return { ok: true, result: { tools: h.tools } }
       case 'tools/call': {
         const toolName = String(params.name ?? '')
-        const result = await h.client.request('tools/call', params, 10 * 60 * 1000)
+        const full = name === 'timeline' ? timelineParams(params, body.project) : params
+        const result = await h.client.request('tools/call', full, 10 * 60 * 1000)
+        if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') timelineRuntime.receipt(body.timelineSession, body.project, toolName, result)
         broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }

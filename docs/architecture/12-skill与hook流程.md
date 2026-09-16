@@ -187,3 +187,6 @@ id 对不上号整批拒。
 规则迁移入口为 `capabilityMigrationService.ts`：可信主进程在受管 workbench 工具实际成功且禁用策略允许后调用，仅移除与 `agentRules.expectedCodexRegion()` 精确匹配的固定全局/可信项目规则段。备份、清单与执行结果位于 `userData/capability-migrations/`。回退仅接受 migrationId，重新验证目标与哈希，并持久阻止自动再次迁移。禁止把 renderer/MCP 参数直接用于路径、归属文本或信任判断；第三方和归属不明的旧 MCP 配置原样保留。
 
 所选原生 MCP 的 stdio `cwd` 经插件根变量替换及当前平台绝对路径校验后，只保存在私有快照，由 `eas-selected-mcp-launcher.mjs` 在 spawn 时执行；不能丢掉 cwd 后在项目目录解析同名脚本。跨 CLI 无法可靠转换的权限、必需服务、超时或未知配置字段明确拒绝，不静默丢弃。remote 当前只保留兼容配置：Claude 接收原配置，Codex 保留已有原生注册而不创建 URL 覆盖，omp 提示不支持；不宣称三端 remote 已统一可用。
+
+### 2026-09-16 时间线省 token 策略
+`timelineRuntime.ts` 仅为选中 `eas:timeline` 的受管会话注入短规则，普通适配器和 OMP 路径保持一致。无需 Git hook，也不监听每次 commit；AI 在原任务轮次判断独立交付成果并调用 record。宿主只用交付措辞启发式和成功回执做零模型费用检查，疑似漏记提示延迟到下一条用户消息、消费一次，不主动唤醒模型。review 是无需记录的短回执。提示不是成果判定保证；当前补漏按钮只生成可复制请求，用户发送后才执行，不自动扫描历史。

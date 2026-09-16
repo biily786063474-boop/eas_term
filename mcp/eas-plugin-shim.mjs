@@ -69,7 +69,7 @@ function post(path, body, timeoutMs) {
 }
 
 async function rpc(method, params, timeoutMs) {
-  const j = await post('/plugin/rpc', { plugin: PLUGIN, shimId: SHIM_ID, project: PROJECT, method, params }, timeoutMs)
+  const j = await post('/plugin/rpc', { plugin: PLUGIN, shimId: SHIM_ID, project: PROJECT, ...(PLUGIN === 'timeline' ? { timelineSession: process.env.EAS_TIMELINE_SESSION } : {}), method, params }, timeoutMs)
   if (!j.ok) {
     const e = new Error(j.error || `${method} 失败`)
     e.code = j.code
