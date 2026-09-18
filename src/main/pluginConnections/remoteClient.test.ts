@@ -34,3 +34,23 @@ test('real HTTP handshake, tool listing, tool call, no write replay, and close',
  await client.close()
  await assert.rejects(client.callTool('echo',{}),/未连接/)
 })
+
+test('tracked timeout is not remote completion; only connection close releases local tracking',async t=>{
+ const server=http.createServer(async(req,res)=>{
+  if(req.method!=='POST'){res.writeHead(405);res.end();return}
+  let raw='';for await(const chunk of req)raw+=chunk
+  const m=JSON.parse(raw)
+  if(m.id===undefined){res.writeHead(202);res.end();return}
+  if(m.method==='tools/call')return
+  res.setHeader('content-type','application/json');res.end(JSON.stringify({jsonrpc:'2.0',id:m.id,result:{protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'fixture',version:'1'}}}))
+ })
+ await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));t.after(()=>{server.closeAllConnections();server.close()})
+ const port=(server.address() as {port:number}).port
+ const client=new remote.RemotePluginClient({url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],version:'test',fetch:async(_url,init)=>fetch('http://127.0.0.1:'+port+'/mcp',init)})
+ t.after(()=>client.close());await client.connect()
+ const call=client.requestTracked('tools/call',{name:'slow',arguments:{}},10)
+ let completed=false;void call.completed.then(()=>{completed=true})
+ await assert.rejects(call.result,/超时/);assert.equal(completed,false)
+ call.cancel();await new Promise(r=>setTimeout(r,10));assert.equal(completed,false)
+ await client.close();assert.equal(await call.completed,'connection-closed')
+})

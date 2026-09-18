@@ -378,3 +378,5 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 
 ### 2026-09-18 插件兼容性门禁
 `pluginCompatibility` 对未知/畸形 requirements 失败关闭。`pluginMarket` 的下载前检查与 commit 前包内检查不可只留 UI 判断；声明能力只认真实实现（当前 mcp.stdio）。新增 remote/oauth 必须完成对应运行时与授权验收后再加入能力集，不能为让插件安装通过而提前标支持。不得把新协议插件发布到旧客户端 schema 1 目录。
+
+插件市场增量红线：远程requestTracked的timeout/cancel不能作为上游执行完成证明；connectionClosed只代表本地网络资源释放。stdio仍使用真实exited预算，禁止改为close()完成。密钥柜插件租约不走PTY/env注入，锁定/重新解锁后的旧授权不得保存token；此链路禁止增加renderer明文token IPC。

@@ -61,7 +61,7 @@ import type {
   RenameFolderResult, SnapshotRect, SnapshotResult,
   SkillDirEntry, SkillDirAddResult, SkillListResult,
   SkillCopyResult, SkillDisableResult, SkillLibrarySnapshot, SkillCategorizeResult, AgentKind,
-  PluginInfo, PluginRegistryEntry
+  PluginInfo, PluginRegistryEntry, PluginUnavailableEntry
 } from '../shared/types'
 import type { CliAuthState, GpuInfo, InstallState, LoginState, PhoneStatus } from '../shared/types'
 
@@ -1142,7 +1142,7 @@ const api = {
     //    install 只下载/校验/解压到临时目录并返回待确认权限；用户确认后 installCommit 才落盘 ──
     /** 拉官方目录（联网失败退回本地缓存，stale 标记提示是旧的）。 */
     registry: (): Promise<
-      | { ok: true; entries: PluginRegistryEntry[]; warnings: string[]; stale: boolean }
+      | { ok: true; entries: PluginRegistryEntry[]; unavailable: PluginUnavailableEntry[]; warnings: string[]; stale: boolean }
       | { ok: false; error: string }
     > => ipcRenderer.invoke('plugins:registry'),
     /** 第一段：下载→校验 sha256→解压临时→清单校验，返回待确认（含要展示的权限与一次性 token）。 */

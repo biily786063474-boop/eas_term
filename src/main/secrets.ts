@@ -29,6 +29,7 @@
 // 3. **改 productName 会丢光所有密钥**（钥匙串桶名由 app.getName() 决定）。
 //    对策：库里记下当时的 app 名，对不上时明确告知而不是抛一个看不懂的解密错误。
 import { guardedHandle } from './ipcGuard'
+import { CredentialLeases } from './pluginConnections/credentialLease.ts'
 import { app, safeStorage, BrowserWindow, dialog } from 'electron'
 import crypto from 'crypto'
 import fs from 'fs'
@@ -275,6 +276,41 @@ function verifyCode(s: StoreFile, code: string): boolean {
 }
 
 const isUnlocked = (): boolean => Date.now() < unlockedUntil
+const pluginCredentialLeases = new CredentialLeases(isUnlocked)
+
+/** Main-process-only; no IPC and no access to PTY/env entries. Never plaintext fallback. */
+export function acquirePluginCredentialAccess() {
+  const guard = () => {
+    assertReady()
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('系统加密不可用')
+    if (process.platform === 'linux' && safeStorage.getSelectedStorageBackend() === 'basic_text') {
+      throw new Error('系统密钥存储不可用，拒绝明文后端')
+    }
+  }
+  guard()
+  const lease = pluginCredentialLeases.acquire()
+  const assertActive = () => { lease.assertActive(); guard() }
+  return {
+    signal: lease.signal, dispose: lease.dispose, assertActive,
+    seal: (value: string) => {
+      assertActive()
+      const cipher = seal(JSON.stringify({ purpose: 'plugin-credential-v1', app: app.getName(), value }))
+      touch()
+      return cipher
+    },
+    open: (cipher: string) => {
+      assertActive()
+      const result = open(cipher)
+      if (!result.ok) throw new Error('插件凭证不可解密或已损坏')
+      const value = JSON.parse(result.value)
+      if (value.purpose !== 'plugin-credential-v1' || value.app !== app.getName() || typeof value.value !== 'string') {
+        throw new Error('插件凭证用途或应用不匹配')
+      }
+      touch()
+      return value.value as string
+    }
+  }
+}
 
 /**
  * 闲置到期时主动告诉界面一声。
@@ -291,6 +327,7 @@ function scheduleLockNotice(): void {
   lockTimer = setTimeout(() => {
     lockTimer = null
     if (isUnlocked()) return // 期间又续期了
+    pluginCredentialLeases.invalidate()
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed() && !w.webContents.isDestroyed()) w.webContents.send('secrets:locked')
     }
@@ -720,6 +757,7 @@ export function registerSecretHandlers(): void {
       s.app = app.getName()
       s.platform = process.platform
       writeStore(s)
+      pluginCredentialLeases.invalidate()
       unlockedUntil = Date.now() + IDLE_MS // 刚设完直接进解锁态，省一次输入
       failCount = 0
       scheduleLockNotice()
@@ -750,6 +788,7 @@ export function registerSecretHandlers(): void {
       s.app = app.getName()
       s.platform = process.platform
       writeStore(s) // items 原样写回去，一条没动
+      pluginCredentialLeases.invalidate()
       unlockedUntil = Date.now() + IDLE_MS
       failCount = 0
       lockedOutUntil = 0
@@ -781,6 +820,7 @@ export function registerSecretHandlers(): void {
       }
       failCount = 0
       lockedOutUntil = 0
+      pluginCredentialLeases.invalidate()
       unlockedUntil = now + IDLE_MS
       scheduleLockNotice()
       return done()
@@ -804,6 +844,7 @@ export function registerSecretHandlers(): void {
 
   guardedHandle('secrets:lock', (): SecretsStatus => {
     unlockedUntil = 0
+    pluginCredentialLeases.invalidate()
     return status()
   })
 

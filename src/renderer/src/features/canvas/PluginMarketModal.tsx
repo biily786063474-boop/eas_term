@@ -3,7 +3,7 @@
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
+import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
 import { PluginLogo } from './pluginLogos'
 import { CategoryIcon } from './pluginCategoryIcons'
@@ -24,6 +24,7 @@ type Item = {
   description?: string
   brandColor?: string
   catId: string
+  reason?: string
   installed: boolean
   reg?: PluginRegistryEntry
   cli?: string
@@ -32,7 +33,7 @@ type Pending = { token: string; name: string; displayName: string; version: stri
 
 export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }): JSX.Element {
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
-  const [reg, setReg] = useState<{ entries: PluginRegistryEntry[] } | null | 'error'>(null)
+  const [reg, setReg] = useState<{ entries: PluginRegistryEntry[]; unavailable: PluginUnavailableEntry[]; stale:boolean } | null | 'error'>(null)
   const [active, setActive] = useState<string>('featured')
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -48,7 +49,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     void reload()
     window.api.plugins
       .registry()
-      .then((r) => setReg(r.ok ? { entries: r.entries } : 'error'))
+      .then((r) => setReg(r.ok ? { entries: r.entries, unavailable:r.unavailable??[],stale:r.stale } : 'error'))
       .catch(() => setReg('error'))
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
@@ -62,6 +63,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     const map = new Map<string, Item>()
     const installedEas = new Set((plugins ?? []).filter((p) => p.cli === 'eas').map((p) => p.name))
     if (reg && reg !== 'error') {
+      for(const e of reg.unavailable){
+        map.set(e.name,{name:e.name,displayName:e.displayName,description:e.description,brandColor:e.brandColor,catId:categoryIdOf(e.category),installed:installedEas.has(e.name),reason:e.reason})
+      }
       for (const e of reg.entries) {
         map.set(e.name, {
           name: e.name,
@@ -139,6 +143,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
           </div>
           {it.description && <div className="pm-cd">{it.description}</div>}
+          {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
         </div>
         <div className="pm-cact">
           {it.installed ? (
@@ -255,6 +260,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             </button>
           </div>
           {err && <div className="pm-err">{err}</div>}
+          {reg && reg !== 'error' && reg.stale && <div className="pm-err">目录离线，正在显示缓存；条目状态可能已过期。</div>}
+          {reg && reg !== 'error' && <div className="pm-sech">已发布包 {reg.entries.length} · 待接入 {reg.unavailable.length}（不代表已授权或可调用）</div>}
           {reg === 'error' && <div className="pm-err">拉不到插件目录，检查网络后重开</div>}
           <div className="pm-body">{body}</div>
         </div>

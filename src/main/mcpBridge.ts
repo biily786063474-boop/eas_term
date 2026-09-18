@@ -661,7 +661,7 @@ export function easPluginMcpServer(
 ): { name: string; command: string; args: string[]; env: Record<string, string> } | null {
   if (!pluginId) return null
   const plug = findPlugin(pluginId)
-  if (plug?.cli !== 'eas' || !plug.mcp) return null
+  if (plug?.cli !== 'eas' || (!plug.mcp && !plug.remote)) return null
   const r = runnerFor([pluginShimPath()])
   return { name: plug.name, command: r.command, args: r.args, env: { ...(r.env ?? {}), EAS_PLUGIN: plug.name } }
 }

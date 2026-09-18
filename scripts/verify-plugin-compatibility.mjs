@@ -10,7 +10,7 @@ fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'picker-
 fs.writeFileSync(path.join(profile,'skill-prefs.json'),JSON.stringify({muted:true}))
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck:false,telemetry:false,island:false}))
 const requests=[]
-const server=http.createServer((req,res)=>{requests.push(req.url);res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:1,plugins:[{name:'compat-fixture',displayName:'兼容性验收插件',description:'隔离测试，不会安装',category:'Development',version:'1.0.0',url:'https://eas.biily.top/plugins/compat-fixture/1.0.0.zip',sha256:'a'.repeat(64),size:123,requirements:{minHostVersion:'999.0.0'}}]}))})
+const server=http.createServer((req,res)=>{requests.push(req.url);res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,unavailable:[{name:'pending-fixture',displayName:'待授权审核验收插件',reason:'等待服务商回调审核',category:'Design'}],plugins:[{name:'compat-fixture',displayName:'兼容性验收插件',description:'隔离测试，不会安装',category:'Development',version:'1.0.0',url:'https://eas.biily.top/plugins/compat-fixture/1.0.0.zip',sha256:'a'.repeat(64),size:123,requirements:{minHostVersion:'999.0.0'}}]}))})
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
 const executable=process.env.EAS_VERIFY_EXECUTABLE||path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:'http://127.0.0.1:'+server.address().port+'/registry.json'}
 for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_'))delete env[n]
@@ -35,6 +35,7 @@ try {
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('兼容性验收插件'))"))
  check(true,'市场展示隔离目录条目')
+ check(await main.eval("(()=>{const card=[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('待授权审核验收插件'));return !!card&&card.textContent.includes('等待服务商回调审核')&&!card.querySelector('button')})()"),'v2待接入条目展示原因且无安装按钮')
  await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('兼容性验收插件')).querySelector('button').click()")
  await until(()=>main.eval("document.body.innerText.includes('需要软件 999.0.0 或更高版本')"))
  check(true,'点击接入后显示明确宿主版本错误')

@@ -1,3 +1,4 @@
+import { replacePluginDirectory } from './pluginReplace.ts'
 // 插件市场:主进程编排(网络 IO + 解压 + 落盘)。**纯逻辑在 pluginRegistry / pluginInstall /
 // pluginInstallGate,这里只做有副作用的胶水。**
 //
@@ -22,8 +23,10 @@ import os from 'node:os'
 
 import { guardedHandle } from './ipcGuard'
 import { parseManifest } from './pluginManifest.ts'
-import { parseRegistry, type RegistryEntry } from './pluginRegistry.ts'
-import { guardPluginDir, verifySha256 } from './pluginInstall.ts'
+import { type RegistryEntry } from './pluginRegistry.ts'
+import { parseCatalog } from './pluginCatalog.ts'
+import type { PluginUnavailableEntry } from '../shared/types'
+import { guardPluginDir, verifySha256, packageManifestHash } from './pluginInstall.ts'
 import { extractZip } from './pluginUnzip.ts'
 import { createInstallGate } from './pluginInstallGate.ts'
 
@@ -42,7 +45,7 @@ function currentPluginHost() {
 
 
 function registryCachePath(): string {
-  return path.join(app.getPath('userData'), 'plugin-registry.json')
+  return path.join(app.getPath('userData'), 'plugin-registry-v2.json')
 }
 function stagingRoot(): string {
   return path.join(app.getPath('userData'), 'plugin-staging')
@@ -123,13 +126,13 @@ function reapExpiredStaging(): void {
 }
 /** 拉 registry:先联网,成功就写缓存;失败退回缓存(标 stale)。都没有 → 报错。 */
 async function loadRegistry(): Promise<
-  { ok: true; entries: RegistryEntry[]; warnings: string[]; stale: boolean } | { ok: false; error: string }
+  { ok: true; entries: RegistryEntry[]; unavailable: PluginUnavailableEntry[]; warnings: string[]; stale: boolean } | { ok: false; error: string }
 > {
   // 先尝试联网
   try {
     const buf = await fetchBuffer(REGISTRY_URL, REGISTRY_MAX_BYTES)
     const raw = JSON.parse(buf.toString('utf8'))
-    const r = parseRegistry(raw, { allowedHosts: ALLOWED_HOSTS })
+    const r = parseCatalog(raw, { allowedHosts: ALLOWED_HOSTS })
     if (r.ok) {
       try {
         fs.mkdirSync(path.dirname(registryCachePath()), { recursive: true })
@@ -137,7 +140,7 @@ async function loadRegistry(): Promise<
       } catch {
         /* 缓存写不进不致命 */
       }
-      return { ok: true, entries: r.entries, warnings: r.warnings, stale: false }
+      return { ok: true, entries: r.entries, unavailable:r.unavailable, warnings: r.warnings, stale: false }
     }
     // 联网拿到了但格式错 —— 退回缓存,别拿坏目录顶替
   } catch {
@@ -146,8 +149,8 @@ async function loadRegistry(): Promise<
   // 缓存兜底
   try {
     const raw = JSON.parse(fs.readFileSync(registryCachePath(), 'utf8'))
-    const r = parseRegistry(raw, { allowedHosts: ALLOWED_HOSTS })
-    if (r.ok) return { ok: true, entries: r.entries, warnings: r.warnings, stale: true }
+    const r = parseCatalog(raw, { allowedHosts: ALLOWED_HOSTS })
+    if (r.ok) return { ok: true, entries: r.entries, unavailable:r.unavailable, warnings: r.warnings, stale: true }
   } catch {
     /* 没缓存 */
   }
@@ -240,13 +243,19 @@ async function installStage(name: unknown): Promise<InstallResult> {
     return { ok: false, error: '目录声明的权限与包内清单不一致,已拒' }
   }
 
+  const networkPerms=man.info.remote?.approvedOrigins??[]
+  if(networkPerms.length&&(!entry.permissions||!sameCanvasPerms(entry.permissions.network,networkPerms))){
+    fs.rmSync(stageParent,{recursive:true,force:true})
+    return {ok:false,error:'目录声明的远程来源与包内清单不一致'}
+  }
   const token = gate.stage({
+    manifestSha256: packageManifestHash(raw),
     name: entry.name,
     dir,
     version: entry.version,
     requirements: entry.requirements,
     displayName: man.info.displayName,
-    permissions: { canvas: canvasPerms } as Record<string, string[]>,
+    permissions: { canvas: canvasPerms, network: networkPerms } as Record<string, string[]>,
     size: entry.size
   })
   return {
@@ -256,7 +265,7 @@ async function installStage(name: unknown): Promise<InstallResult> {
     displayName: man.info.displayName,
     version: entry.version,
     size: entry.size,
-    permissions: canvasPerms,
+    permissions: [...canvasPerms,...networkPerms.map(origin=>"连接远程服务："+origin)],
     installed: fs.existsSync(guard.dir)
   }
 }
@@ -275,20 +284,10 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
   const target = guard.dir
   try {
     const raw = JSON.parse(fs.readFileSync(path.join(rec.dir, 'plugin.json'), 'utf8'))
+    if(!rec.manifestSha256||packageManifestHash(raw)!==rec.manifestSha256)return {ok:false,error:'确认后的插件清单已改变，请重新安装'}
     const check = checkPackageRequirements(raw?.requirements, rec.requirements, currentPluginHost())
     if (!check.ok) return { ok: false, error: check.reason }
-    fs.mkdirSync(path.dirname(target), { recursive: true })
-    fs.rmSync(target, { recursive: true, force: true }) // 更新:先清旧的
-    try {
-      fs.renameSync(rec.dir, target)
-    } catch (e) {
-      // 跨卷 rename 会 EXDEV;退回复制+删
-      if ((e as NodeJS.ErrnoException).code === 'EXDEV') {
-        fs.cpSync(rec.dir, target, { recursive: true })
-      } else {
-        throw e
-      }
-    }
+    replacePluginDirectory(rec.dir, target)
     return { ok: true, name: rec.name }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : '落盘失败' }

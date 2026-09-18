@@ -792,12 +792,24 @@ export interface PluginInfo {
   permissions?: { canvas?: string[] }
   /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
+  /** Main-validated remote descriptor; no credentials. OAuth requires separate capability. */
+  remote?: { transport: 'streamable-http'; url: string; approvedOrigins: string[]; auth: 'none' }
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */
   builtin?: boolean
 }
 
 /** 官方插件目录 `registry.json` 里的一条（主进程 parseRegistry 校验后的形状，展示给市场 UI）。
  *  设计稿 docs/superpowers/specs/2026-09-15-插件市场-第一步-design.md。 */
+/** A catalog record without an installable package; never pass to the installer. */
+export interface PluginUnavailableEntry {
+  name: string
+  displayName: string
+  description?: string
+  category?: string
+  brandColor?: string
+  source?: string
+  reason: string
+}
 export interface PluginRegistryEntry {
   requirements?: PluginRequirements
   name: string

@@ -7,8 +7,10 @@ import path from 'node:path'
 import vm from 'node:vm'
 import {EventEmitter} from 'node:events'
 import ts from 'typescript'
+import * as replace from './pluginReplace.ts'
 import * as compatibility from './pluginCompatibility.ts'
 import * as manifest from './pluginManifest.ts'
+import * as catalog from './pluginCatalog.ts'
 import * as registry from './pluginRegistry.ts'
 import * as install from './pluginInstall.ts'
 import * as unzip from './pluginUnzip.ts'
@@ -38,7 +40,7 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
     })
     return req
   }}
-  const imports:Record<string,unknown>={electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  const imports:Record<string,unknown>={'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
@@ -79,4 +81,13 @@ test('legacy package still stages and installs with a one-use token',async t=>{
   assert.equal(h.call('plugins:installCommit',staged.token).ok,true)
   assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
   assert.equal(JSON.parse(fs.readFileSync(path.join(h.home,'.eas','plugins','sample','plugin.json'),'utf8')).name,'sample')
+})
+
+test('commit refuses a changed command after user confirmation was staged',async t=>{
+ const h=harness(t),staged=await h.call('plugins:install','sample')
+ assert.equal(staged.ok,true)
+ const staging=path.join(h.userData,'plugin-staging'),file=path.join(staging,fs.readdirSync(staging)[0],'sample','plugin.json')
+ const raw=JSON.parse(fs.readFileSync(file,'utf8'));raw.mcp.command='unexpected-command';fs.writeFileSync(file,JSON.stringify(raw))
+ assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
+ assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
 })

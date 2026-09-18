@@ -43,3 +43,18 @@
 新增5项测试：PKCE一致/精确目标、错误目标无浏览器或网络副作用、token进行中取消且迟到不接收、503不重放不泄漏错误体、真实隔离HTTP token服务器的SDK交换。现有callback4项回归通过。
 范围：只是主进程内部编排，fetch/openBrowser依赖必须由生产适配提供，尚无生产调用者。未实现SDK OAuthClientProvider自动发现/DCR/refresh、密钥柜持久化或真实账号/UI；固定clientId必须来自服务商合法注册，不能冒充别的客户端。默认仍严格要求iss。不宣称已能实际登录。
 本轮最终check/build退出0：3293项，3275通过/18跳过/0失败；新增真实HTTP测试也被全量包含，随后typecheck再次通过。当前无后台命令。未真实账号/UI验收，未发布。
+
+## 05:10用户要求持续自行推进到最终结果（不要每个小提交停下等继续）
+持续工作中，尚未整体完成；没有发布生产目录/正式app。
+已新增但尚未提交：credentialLease + secrets内部插件专属seal/open桥接（app-ready/系统加密/锁定/拒绝Linux basic_text，锁/重新解锁旧租约失效）、按plugin/issuer/resource/account绑定的加密文件store（0600/原子替换/拒绝损坏掉包及符号硬链接）、authorizationManager同账号单飞和迟到授权防复活。
+credentialStore测试第一轮在mac /var -> /private/var 别名触发目录symlink保护，修正测试夹具使用真实路径，没放宽产品检查。manager额外红测修复同步authorize抛错后死pending、close后仍能login。
+另补pluginReplace更新失败回退（先同卷备份旧树，不再先删旧包；不承诺断电恢复/活跃升级安全）、install确认后manifest摘要核验（防命令/权限改变），远程origin与目录一致并显示确认权限。
+RemotePluginClient增加宿主通用request、通知、connectionClosed和tracked请求。超时/取消不落定completed；仅真实响应或本地连接关闭释放跟踪，明确不表示上游执行停止。pluginHost接入显式no-auth remote分支并区分stdio.exited/remote.connectionClosed；共享PluginInfo.remote和parser已同步，要求mcp.remote capability，但市场仍仅广告mcp.stdio。OAuth清单仍拒绝，没接真实授权UI。
+实际pluginHost源码抽取+真实本地HTTP服务器测试通过：三个模拟shimId复用同一个remote连接并调用。不是三CLI真实进程/模型端到端，不能夸大。旧stdio准入测试同步stopped字段仍通过。
+公开上游核验新增Google Workspace官方MCP、Slack应用限制、B站/抖音审核、高德key、小红书仅核到电商范围等，已落台账官方来源。没有账号级调用证据。
+之前首次完整check/build通过（凭证初版）；后来又有manager/host/installer增量，需要重新跑最终完整检查与隔离app眼验。所有正式app/真实密钥未触碰。
+后续继续：发现mcpBridge.easPluginMcpServer仅认plug.mcp会静默丢失remote，写红测后补remote条件。pluginRemoteHost测试现额外启动真实eas-plugin-shim.mjs三个独立子进程，经过测试HTTP网关→真实宿主函数→远程测试MCP服务；所有list/call通过。仍不是实际三CLI模型进程测试。
+首轮最终check/build+隔离app市场验收通过（已亲眼看截图版本999门禁），随后又有bridge/目录增量需重新全量。
+新增pluginCatalog.ts v2不可安装条目独立列表（无伪包链接）与校验；主进程loader/preload/types/完整市场同步原因、数量、缓存标识。旧parseRegistry仍拒schema2；默认URL仍v1，未部署切换。隔离UI脚本已增加schema2不可安装条目无安装按钮断言，待构建执行。
+密钥路由索引仅阅读元数据：没有从gh/rclone/其他CLI复制任何token，索引里的其他服务凭证不等同插件OAuth客户端注册。没有要求用户贴key。
+该批最终check/build+隔离UI通过：3313项，3295通过/18跳过/0失败；v2待接入原因无安装按钮已亲眼看截图，4项断言通过。最后命令15781/1635已结束，无后台运行。准备提交里程碑后继续，不是整体完成。当前默认在线目录仍v1，远程能力仍不对市场广告，oauth descriptor/UI/refresh未接宿主，32条目仍大部分未实施。

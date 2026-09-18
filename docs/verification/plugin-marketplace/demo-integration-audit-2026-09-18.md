@@ -70,3 +70,17 @@
 3. 直接转交各 CLI 自己安装：体验与配置会分裂，不作为统一市场默认路线。
 
 当前阶段：清单已锁定，完成局部源码与上游核验；未实施接入、未测试新插件、未发布。
+
+## 官方来源增量核验（2026-09-18，非真实账号验收）
+
+- Google Docs / Calendar / Gmail / Drive：官方现有Workspace MCP配置文档要求Google Cloud项目和OAuth配置；各服务scope不同，不能把文档列出的Calendar只读能力宣传成任意写日程。来源：https://developers.google.com/workspace/guides/configure-mcp-servers 。本项目尚无已注册客户端或账号调用证据。
+- 高德地图：官方MCP快速接入明确需要AMAP_MAPS_API_KEY。来源：https://developer.amap.com/api/mcp-server/gettingstarted 。正文抓取失败，仅检索摘要确认key要求，完整传输/商用条件待核。
+- Sentry：官方仓库 https://github.com/getsentry/sentry-mcp 与授权安全说明 https://github.com/getsentry/sentry-mcp/blob/main/docs/security.md ，已有远程OAuth实现；本项目未完成账号授权与工具调用。
+- Slack：官方MCP仅允许已发布Marketplace应用及内部应用，未列出应用不能使用；需要应用OAuth配置及权限。来源：https://docs.slack.dev/ai/slack-mcp-server 。不能拿其他客户端身份绕过准入，PKCE细节仍需逐项核验。
+- B站：官方入驻流程包括账号注册、资质认证、应用接入、集成开发。来源：https://open.bilibili.com/ 。本轮没有申请资质或创建应用。
+- 抖音：上线需要平台审核；来源：https://partner.open-douyin.com/docs/resource/zh-CN/dop/develop/app-mgmt/pub-app 。没有代用户提交企业资料或审核。
+- 小红书：已核到的 https://open.xiaohongshu.com/ 是电商开放平台，不能据此宣称支持Demo里的通用笔记数据。相应条目仍待能力核验，不接入Cookie抓取替代官方授权。
+- 微博：官方CLI要求开发者认证、体验服务或正式服务开通，再OAuth登录。来源：https://open.weibo.com/cli/quickstart 。未执行远程安装脚本、未订购服务。
+- 知乎：官方组织仓库 https://github.com/zhihu/zhihu-mediacloud-uploader/blob/main/references/auth-info.md 使用OpenAPI app key/secret；媒体上传不等同Demo全部搜索/回答能力，其余仍待核验。
+
+以上是公开接入条件核验；不是已获许可、已完成连接器分发或账号E2E。其余条目保留原“待核验”，不推断不存在官方能力。

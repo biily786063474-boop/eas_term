@@ -88,3 +88,11 @@ test('builtin 标记透传', () => {
   const r = parseManifest(good(), DIR, { builtin: true })
   assert.ok(r.ok && r.info.builtin === true)
 })
+
+test('remote no-auth transport is explicit, origin-bound and never becomes a command',()=>{
+ const raw={name:'board',requirements:{capabilities:['mcp.remote']},mcp:{transport:'streamable-http',url:'https://mcp.example.com/mcp',auth:'none',approvedOrigins:['https://mcp.example.com']}}
+ const result=parseManifest(raw,DIR)
+ assert.ok(result.ok);if(!result.ok)return
+ assert.equal(result.info.mcp,undefined);assert.equal(result.info.remote?.url,raw.mcp.url)
+ for(const mcp of [{...raw.mcp,command:'node'},{...raw.mcp,url:'https://evil.example/mcp'},{...raw.mcp,auth:'oauth'},{...raw.mcp,transport:'unknown'}])assert.equal(parseManifest({...raw,mcp},DIR).ok,false)
+})

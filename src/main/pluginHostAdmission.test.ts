@@ -24,7 +24,7 @@ const m=createRuntimeManager({now:()=>now,maxRunning:1,waitTimeoutMs:50});instal
 function setup(name:string){
  const registry=new HostRegistry<unknown>({graceMs:1,setTimer:()=>0,clearTimer(){},onIdle(){}})
  let spawns=0,exit!:()=>void
- const hosted={kind:'plugin',name,ready:Promise.resolve(),client:{alive:true,exited:new Promise<void>(r=>{exit=r})}}
+ const hosted={kind:'plugin',name,ready:Promise.resolve(),stopped:new Promise<void>(r=>{exit=r}),client:{alive:true}}
  const acquire=runInNewContext(code+'\nacquire',{
   registry,startManagedSession,manualStops:{stamp:()=>null},
   spawnHosted:()=>{spawns++;return hosted},Error,Promise,Map

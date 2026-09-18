@@ -1,3 +1,5 @@
+import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
+import { createPluginNetwork } from './pluginConnections/pluginNetwork.ts'
 import { guardedHandle } from './ipcGuard'
 import {createToolActivity} from './runtime/toolActivity.ts'
 import { runtimeStateStore } from './runtime/persistentState.ts'
@@ -19,7 +21,7 @@ import type { RuntimeObservedService } from '../shared/runtimeResources.ts'
 //   那条路走 mcpHandler 同一执行体与路径白名单
 // · 面板 HTML 走 eas-plugin://<panelSession>/，CSP 用响应头（panelHtml.ts）
 // · 面板只能调**本插件** server 的工具；resources/read 只许 ui://
-import { app, protocol, webContents, BrowserWindow, dialog } from 'electron'
+import { app, protocol, webContents, BrowserWindow, dialog, session } from 'electron'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -46,7 +48,9 @@ interface Hosted {
   kind: 'plugin'
   name: string
   info: PluginInfo
-  client: McpClient
+  client: McpClient | RemotePluginClient
+  /** Process exit for stdio, local connection shutdown for remote (not upstream cancellation). */
+  stopped: Promise<void>
   tools: McpToolDef[]
   ready: Promise<void>
 }
@@ -113,6 +117,12 @@ function pluginDataDir(name: string): string {
 }
 
 function spawnHosted(info: PluginInfo): Hosted {
+  let client: McpClient | RemotePluginClient
+  let stopped: Promise<void>
+  if(info.remote){
+    client=new RemotePluginClient({url:info.remote.url,approvedOrigins:info.remote.approvedOrigins,version:app.getVersion(),fetch:createPluginNetwork(info.remote.approvedOrigins,session.defaultSession)})
+    stopped=client.connectionClosed
+  } else {
   if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
   // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
   // 解析走 nodeBin.ts（和 MCP shim 同一份规则）；PATH 用探过登录 shell 的 PROBE_ENV。
@@ -128,19 +138,23 @@ function spawnHosted(info: PluginInfo): Hosted {
     EAS_COMPUTER_SHOTS: path.join(pluginDataDir(info.name), 'shots'),
     ...info.mcp.env
   }
-  const client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
-  const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, tools: [], ready: Promise.resolve() }
+  client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
+  stopped=client.exited
+  }
+  const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, stopped, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
     await client.initialize(app.getVersion())
     hosted.tools = await client.listTools()
   })()
   hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, e))
-  client.onExit = () => {
+  const onEnded = () => {
     if (registry.get(info.name) !== hosted) return
     registry.drop(info.name, hosted)
     // 进程没了，挂在它上面的面板要知道（渲染层显示「插件进程退出」并给重开）
-    for (const p of panels.values()) if (p.pluginName === info.name) notifyPanel(p, 'ui/resource-teardown', { reason: 'process-exit' })
+    for (const p of panels.values()) if (p.pluginName === info.name) notifyPanel(p, 'ui/resource-teardown', { reason: info.remote ? 'connection-closed' : 'process-exit' })
   }
+  if(client instanceof RemotePluginClient)client.onClose=onEnded
+  else client.onExit=onEnded
   client.onNotification = (method, params) => {
     // server 主动通知（如 notifications/resources/updated）→ 转给这个插件的所有面板
     for (const p of panels.values()) if (p.pluginName === info.name) notifyPanel(p, method, params)
@@ -157,7 +171,7 @@ const startingPlugins = new Map<string, Promise<void>>()
 /** 起进程前先过资源准入（2026-09-13 缺口 1）。McpClient 在构造函数里就 spawn，
  *  而 registry.acquire 的 create 是同步的，所以准入必须包在它外面：
  *  registry 里还没有这个插件 → 走 startManagedSession，回调里才 registry.acquire 触发 spawn，
- *  预算随 client.exited（真实退出）释放；已有进程 → 直接复用，不再排队。
+ *  预算随 stopped（stdio真实退出／remote本地连接关闭）释放；已有进程 → 直接复用，不再排队。
  *  归属按**应用级**（windowId null）：宿主本来就跨窗口、跨项目、跨会话共享，
  *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
@@ -171,7 +185,7 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
           if (signal.aborted) throw new Error('插件启动已取消')
           if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
           const started = registry.acquire(info.name, ref, () => spawnHosted(info))
-          return { value: undefined, completed: started.kind === 'plugin' ? started.client.exited : Promise.resolve() }
+          return { value: undefined, completed: started.kind === 'plugin' ? started.stopped : Promise.resolve() }
         }
       }).catch(e => {
         // 调度器的 'wait timeout' = 资源紧张排队没放行，不是插件的错；说人话，不漏内部字样。

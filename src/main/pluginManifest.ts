@@ -6,6 +6,7 @@
 // （拒了整份会让一个拼错的权限名把插件整个藏起来，用户看到的是「插件不见了」）；
 // name / mcp.command / panels[].entry 这些错了没法运行，才整份拒。
 import path from 'node:path'
+import { validateRemoteEndpoint } from './pluginConnections/endpointPolicy.ts'
 import type { PluginInfo, PluginPanelDef } from '../shared/types'
 import { CANVAS_CALL_ALLOWLIST, PANEL_SIZE_MAX, PANEL_SIZE_MIN } from '../shared/pluginProtocol.ts'
 
@@ -45,7 +46,23 @@ export function parseManifest(
   // mcp
   const mcpRaw = rec(m.mcp)
   const command = str(mcpRaw?.command)
-  if (!command) errors.push('mcp.command 必填')
+  let remote: PluginInfo['remote']
+  if (mcpRaw?.transport === 'streamable-http') {
+    try {
+      if (Object.keys(mcpRaw).some(k => !['transport','url','auth','approvedOrigins'].includes(k))) throw Error('远程清单不接受命令、环境变量或未知字段')
+      const requirements=rec(m.requirements)
+      if(!Array.isArray(requirements?.capabilities)||!requirements.capabilities.includes('mcp.remote'))throw Error('远程插件必须声明mcp.remote兼容要求')
+      const origins=mcpRaw.approvedOrigins
+      if (!Array.isArray(origins)||!origins.length||origins.length>16||origins.some(v=>typeof v!=='string')||new Set(origins).size!==origins.length) throw Error('远程来源列表无效')
+      for(const origin of origins) if(validateRemoteEndpoint(origin,origins).origin!==origin) throw Error('远程授权来源必须是精确origin')
+      if(mcpRaw.auth!=='none')throw Error('此传输接线目前仅接受显式无需认证的端点')
+      const url=validateRemoteEndpoint(String(mcpRaw.url),origins).href
+      remote={transport:'streamable-http',url,approvedOrigins:[...origins],auth:'none'}
+    } catch(error) {errors.push(error instanceof Error?error.message:'远程配置无效')}
+  } else {
+    if(mcpRaw?.transport!==undefined&&mcpRaw.transport!=='stdio')errors.push('未知MCP传输')
+    if (!command) errors.push('mcp.command 必填')
+  }
   const argsRaw = Array.isArray(mcpRaw?.args) ? mcpRaw!.args : []
   const args: string[] = []
   for (const a of argsRaw) {
@@ -145,7 +162,8 @@ export function parseManifest(
     root: dir,
     panels,
     permissions: { canvas },
-    mcp: { command: command!, args, env, cwd: dir },
+    mcp: remote ? undefined : { command: command!, args, env, cwd: dir },
+    remote,
     builtin: !!opts.builtin
   }
   return { ok: true, info, warnings }

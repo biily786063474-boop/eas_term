@@ -41,3 +41,6 @@ export function verifySha256(buf: Buffer, expected: string): boolean {
   if (!SHA256_RE.test(exp)) return false
   return createHash('sha256').update(buf).digest('hex') === exp
 }
+
+/** Freeze the full parsed manifest across the user-confirmation boundary. */
+export function packageManifestHash(raw:unknown):string {return createHash('sha256').update(JSON.stringify(raw)).digest('hex')}

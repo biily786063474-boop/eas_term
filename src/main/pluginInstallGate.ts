@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto'
 
 /** 一份已解压到临时目录、等用户确认的插件。dir 是临时目录,commit 时从这里搬走。 */
 export interface StagedPlugin {
+  manifestSha256?: string
   requirements?: PluginRequirements
   name: string
   dir: string
