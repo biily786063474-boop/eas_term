@@ -153,6 +153,7 @@
     "@codemirror/merge": "^6.12.2",
     "@modelcontextprotocol/sdk": "1.30.0",
     "dependency-cruiser": "^18.2.0",
+    "https-proxy-agent": "7.0.6",
     "imagetracerjs": "^1.2.6",
     "konva": "^9.3.22",
     "mp4-muxer": "^5.2.2",

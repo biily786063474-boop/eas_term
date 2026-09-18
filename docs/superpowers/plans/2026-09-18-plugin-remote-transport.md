@@ -29,3 +29,8 @@ Files: src/main/pluginConnections/remoteClient.ts 与 .test.ts。
 
 ### 3. 后续依赖
 授权、凭证、v2目录和三CLI接线依照总设计分别实现；本计划不把纯策略测试冒充远程服务接通。
+
+### 4. 生产网络层分解（本轮执行）
+- [ ] `networkPlan.ts`：精确origin与公开DNS→固定地址+原TLS servername；系统PROXY/HTTPS使用首选CONNECT，SOCKS或不支持代理明确失败，不偷偷直连。
+- [ ] `pinnedFetch.ts`：HTTPS按固定IP建连接；Host/SNI保留原域；CONNECT目标使用固定IP；拒绝重定向、不转发Cookie/Proxy-Authorization、请求体与响应体限额、超时/取消收尾。
+- [ ] 先测发包参数和拒绝副作用，再加真实TLS/代理fixture，最后Electron resolveProxy接线；不能把模拟网络测试说成真实供应商验证。
