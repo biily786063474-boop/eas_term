@@ -149,3 +149,11 @@ PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有vers
 红测覆盖清单拒绝旧实现、Bearer host被旧闸拦；随后实际三shim/真实HTTP共用连接测试新增bearer情形通过。新增GitHub候选包，官方端点/PAT文档重核并落README/audit；真实打包通过，不进入默认目录、不提前广告remote/bearer能力、不借用户CLI token。不能增加已验业务插件数。
 57194 typecheck失败（空对象case数组推断token?:undefined），原错误已读，改测试数组显式Record类型；86801 typecheck/build/隔离兼容UI11项退出0，账号控件截图已眼验；它只是既有UI回归，不是Bearer配置/真实账号E2E。99301完整check退出0：3374项/3356通过/18skip/0失败。所有命令已结束；无生产发布/实际GitHub账号出站。
 下一完整里程碑：给配置插件（包括Bearer）接软件“测试连接/断开清除”动作并做真实隔离app密文保存→remote shared host→三shim→锁定验收。现PluginConfigurationControls只有status/save/directory；OAuth专属测试不适用于Bearer。候选GitHub仍需真实用户提供令牌（软件控件而非聊天）和上游调用，实际模型/Windows仍缺。其余清单自主工程仍未完成，不能笼统归因只等账号。保持active，不向用户再发未完成阶段性汇报。
+
+## 继续：配置测试与清除真实应用闭环
+统一配置入口已加 test/clear，复用共享宿主工具列表，不跑业务工具；clear 原生确认后写当前 scope 空密文并撤销插件级租约，阻止旧 shim 与待确认保存，不影响其他插件/业务文件/新授权。ConfigurationLeases 和 controller 红绿测试已通过。原生确认期间锁定重开保护不变。
+89636 最终退出0：实际隔离应用 local-files 23项与兼容 UI 11项通过；截图已眼验并复用 Frame cnode-115-7jnie。首次重授权读取失败“插件进程不在（先 initialize）”，修正验收脚本在重授权后重新 initialize，没有放松生产宿主协议。此前 UI 红测“配置卡片提供真实测试连接入口”失败也已复现。原生 picker/确认返回值仍为测试适配，不是实际模型CLI。
+22015完整check退出1：3377项/3358通过/18跳过/1失败，capabilityPtyLauncher真实POSIX Ctrl-C夹具在3秒等待内报 RuntimeError: native CLI not ready；原日志 /tmp/eas-plugin-config-clear-check.log。未改测试超时/断言，63564正在隔离重跑原测试再完整check，取结果后才能下结论。构建和实际UI已于前一执行批次通过，本次生产代码未再变化。
+Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution: JSON.stringify），文件未生成、未执行；不能称该验收完成。下一步用apply_patch创建脚本，保留真实safeStorage/host/三shim，只有自有fixture网络和native确认适配，不动公共地址检查，不用真实凭证。目标仍active，其余32插件工程缺口没消失。
+
+63564最终退出0：原PTY专项12项通过，完整check复跑3377项/3359通过/18skip/0失败。保留前次超时事实，不宣称根除时序抖动。所有本批监测结束；local-files实际应用23项与旧兼容UI11项已通过且截图已眼验。下一步Bearer真实隔离app纵向验收尚未执行，目标不完成。

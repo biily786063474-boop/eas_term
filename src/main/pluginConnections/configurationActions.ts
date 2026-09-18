@@ -1,12 +1,14 @@
 import type {PluginInfo} from '../../shared/types'
-export type ConfigurationResult={ok:true;configured:string[]}|{ok:false;error:string}
+export type ConfigurationResult={ok:true;configured:string[];tools?:number}|{ok:false;error:string}
 interface Dependencies {
- acquire:()=>{assertActive:()=>void;dispose:()=>void}
+ acquire:(info:PluginInfo)=>{assertActive:()=>void;dispose:()=>void}
  find:(id:string)=>PluginInfo|undefined
- confirm:(info:PluginInfo)=>Promise<boolean>
+ confirm:(info:PluginInfo,action:'save'|'clear')=>Promise<boolean>
  assertIdle:(name:string)=>void
  load:(info:PluginInfo)=>Record<string,string>|undefined
  save:(info:PluginInfo,values:Record<string,string>)=>void
+ clear?:(info:PluginInfo)=>void
+ probe?:(info:PluginInfo)=>Promise<number>
  pickDirectory?:(info:PluginInfo,field:string)=>Promise<string|undefined>
 }
 export const configurationIdentity=(info:PluginInfo)=>JSON.stringify([info.name,info.root,info.config,info.mcp,info.remote,info.permissions])
@@ -16,10 +18,20 @@ export function createConfigurationActions(deps:Dependencies){
  return async(action:unknown,id:unknown,patch?:unknown):Promise<ConfigurationResult>=>{
   let lease:ReturnType<Dependencies["acquire"]>|undefined
   try{
-   if(typeof action!=='string'||!['status','save','directory'].includes(action)||typeof id!=='string'||!/^eas:[a-z0-9][a-z0-9-]{0,39}$/.test(id))throw Error('配置参数无效')
+   if(typeof action!=='string'||!['status','save','directory','test','clear'].includes(action)||typeof id!=='string'||!/^eas:[a-z0-9][a-z0-9-]{0,39}$/.test(id))throw Error('配置参数无效')
    const info=deps.find(id)
    if(!info||info.cli!=='eas'||!info.config)throw Error('插件没有配置声明')
-   if(action!=='status')lease=deps.acquire()
+   if(action!=='status')lease=deps.acquire(info)
+   if(action==='test'){
+    if(info.enabled===false||!deps.probe)throw Error('插件未启用或不支持测试连接')
+    const snapshot=configurationIdentity(info),tools=await deps.probe(info)
+    lease!.assertActive()
+    const current=deps.find(id)
+    if(!current||current.enabled===false||configurationIdentity(current)!==snapshot)throw Error('插件配置已变化，请重新测试')
+    if(!Number.isInteger(tools)||tools<0)throw Error('插件返回的工具列表无效')
+    const values=deps.load(info)??{}
+    return {ok:true,configured:info.config.fields.filter(f=>!!values[f.id]).map(f=>f.id),tools}
+   }
    if(action==='directory'){
     const field=info.config.fields.find(f=>f.id===patch&&f.type==='directory')
     if(!field||!deps.pickDirectory)throw Error('目录选择参数无效')
@@ -34,16 +46,17 @@ export function createConfigurationActions(deps:Dependencies){
     deps.save(info,values)
     return {ok:true,configured:info.config.fields.filter(f=>!!values[f.id]).map(f=>f.id)}
    }
-   if(action==='save'){
-    if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).length>32)throw Error('配置输入无效')
+   if(action==='save'||action==='clear'){
+    if(action==='save'&&(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).length>32))throw Error('配置输入无效')
     const snapshot=configurationIdentity(info)
-    if(!await deps.confirm(info))return {ok:false,error:'已取消'}
+    if(!await deps.confirm(info,action))return {ok:false,error:'已取消'}
     lease!.assertActive()
     const current=deps.find(id)
     if(!current||configurationIdentity(current)!==snapshot)throw Error('插件配置已变化，请重新确认')
+    if(action==='clear'){if(!deps.clear)throw Error('清除配置不可用');deps.clear(info);return {ok:true,configured:[]}}
     deps.assertIdle(info.name)
     const values={...deps.load(info)}
-    for(const [key,value] of Object.entries(patch)){
+    for(const [key,value] of Object.entries(patch as Record<string,unknown>)){
      const field=info.config.fields.find(f=>f.id===key)
      if(!field)throw Error('存在未知配置字段')
      if(value===null){delete values[key];continue}

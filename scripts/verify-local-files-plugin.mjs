@@ -25,7 +25,7 @@ app.whenReady().then(()=>session.defaultSession.webRequest.onBeforeRequest({urls
 app.setAppPath(${JSON.stringify(root)});
 const calls=[];
 dialog.showOpenDialog=async()=>{calls.push('directory-picker');require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));return {canceled:false,filePaths:[${JSON.stringify(allowed)}]}};
-dialog.showMessageBox=async(_win,options)=>{if(!['确认插件目录授权','保存插件配置'].includes(options.title))throw Error('Unexpected native dialog');calls.push(options.title);require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));while(require('fs').existsSync(${JSON.stringify(holdDialog)}))await new Promise(r=>setTimeout(r,20));return {response:1}};
+dialog.showMessageBox=async(_win,options)=>{if(!['确认插件目录授权','保存插件配置','断开并清除插件配置'].includes(options.title))throw Error('Unexpected native dialog');calls.push(options.title);require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));while(options.title!=='断开并清除插件配置'&&require('fs').existsSync(${JSON.stringify(holdDialog)}))await new Promise(r=>setTimeout(r,20));return {response:1}};
 require(${JSON.stringify(path.join(root,'out/main/index.js'))});`)
 const env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:serverUrl+'/plugins/v2/registry.json'}
 for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(n))delete env[n]
@@ -72,6 +72,11 @@ try{
   const late=await main.eval('window.__pendingConfig')
   check(!late.ok&&late.error.includes('失效')&&fs.readFileSync(credentialFile).equals(savedBytes),action+'旧确认结果不能跨解锁代次写入，原密文不变')
  }
+ check(await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].some(e=>e.textContent==='测试连接')"),'配置卡片提供真实测试连接入口')
+ await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].find(e=>e.textContent==='测试连接').click()")
+ await until(()=>main.eval("document.querySelector('[data-plugin-config]').innerText.includes('连接测试通过')"))
+ check(fs.readdirSync(allowed).length===0,'配置连接测试只列工具，不执行业务写入')
+ const tested=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'configured.png'),Buffer.from(tested.data,'base64'))
  const endpoint=JSON.parse(fs.readFileSync(path.join(profile,'mcp-endpoint.json')))
  for(const label of ['claude','codex','omp']){
   const c=new McpClient({name:'verify-'+label,command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:fixture,env:{PATH:process.env.PATH||'',EAS_PLUGIN:'local-files',EAS_TERM_PORT:String(endpoint.port),EAS_TERM_TOKEN:endpoint.token}});clients.push(c)
@@ -80,6 +85,23 @@ try{
   check(!result.isError&&fs.readFileSync(path.join(allowed,label+'.txt'),'utf8')===text,label+'真实工具调用写入授权临时目录')
  }
  const bad=await clients[0].request('tools/call',{name:'files_read',arguments:{path:'../profile/secrets.json'}});check(bad.isError,'真实宿主调用拒绝越出授权目录')
+ const beforeClear=JSON.parse(fs.readFileSync(dialogLog)).length
+ fs.writeFileSync(holdDialog,'hold pending save')
+ await main.eval('window.__pendingConfig=window.api.plugins.configuration("save","eas:local-files",{});void 0')
+ await until(()=>JSON.parse(fs.readFileSync(dialogLog)).length>beforeClear)
+ await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].find(e=>e.textContent==='断开并清除配置').click()")
+ await until(()=>main.eval("document.querySelector('[data-plugin-config]').innerText.includes('本地配置已清除')"))
+ fs.unlinkSync(holdDialog)
+ check(!(await main.eval('window.__pendingConfig')).ok,'清除配置使此前悬挂的保存确认失效')
+ const cleared=await main.eval('window.api.plugins.configuration("status","eas:local-files")')
+ check(cleared.ok&&cleared.configured.length===0&&fs.readdirSync(allowed).length===3,'清除真实配置但保留三个业务文件')
+ let revoked=false;try{revoked=!!(await clients[0].request('tools/call',{name:'files_write',arguments:{path:'after-clear.txt',text:'forbidden'}})).isError}catch{revoked=true}
+ check(revoked&&!fs.existsSync(path.join(allowed,'after-clear.txt')),'清除使旧shim连接不能继续写入')
+ await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].find(e=>e.textContent.includes('选择目录')).click()")
+ await until(()=>main.eval("document.querySelector('[data-plugin-config]').innerText.includes('已保存')"))
+ await clients[0].initialize('0.4.102')
+ const restored=await clients[0].request('tools/call',{name:'files_read',arguments:{path:'claude.txt'}})
+ check(!restored.isError,'重新授权后可以重新建立连接读取原业务文件')
  await main.eval('window.api.secrets.lock()');await wait(500)
  let blocked=false;try{const r=await clients[0].request('tools/call',{name:'files_write',arguments:{path:'after-lock.txt',text:'must-not-write'}});blocked=!!r.isError}catch{blocked=true}
  check(blocked&&!fs.existsSync(path.join(allowed,'after-lock.txt')),'密钥柜锁定关闭实际配置插件，后续调用不能写入')

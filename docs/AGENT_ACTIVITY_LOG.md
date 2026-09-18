@@ -188,3 +188,6 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 - 已接secret引用清单、密文scope+lease、exact-resource Bearer到真实共享宿主，三实际shim/受控HTTP测试通过；GitHub官方远程候选包打包通过但未上架/未真实账号验收。
 - 初轮类型检查失败已记录于memory；修正后build+隔离兼容UI11项通过，完整check3374项/3356通过/18skip。
 - 用户要求完成再汇报；后续只执行与可见轮询，不在每个增量后发送阶段性总结。目标active，配置连接测试/清除UI仍待补。
+
+## 2026-09-18：配置测试与清除接线
+配置卡片增加共享宿主测试连接、原生确认断开清除；插件级租约同时撤销runtime与pending确认，重新授权独立。实际隔离app本地文件23项/兼容UI11项通过并眼验；全量首次PTY夹具native CLI not ready失败，未改断言，专项12项与完整3377项复跑通过（3359通过/18skip）。证据local-files/result.json；远程Bearer实际app/真实上游/模型CLI/Windows仍未完成，无生产发布。

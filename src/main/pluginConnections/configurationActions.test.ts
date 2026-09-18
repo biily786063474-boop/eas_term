@@ -52,3 +52,20 @@ test('locking and unlocking during either native dialog irreversibly invalidates
   assert.equal(writes,0);assert.equal(disposed,1)
  }
 })
+
+test('configuration test probes shared host without saving, returns tool count only, and rejects stale success',async()=>{
+ const leases=new CredentialLeases(()=>true);let probes=0,writes=0,mode='ok',current=info
+ const run=createConfigurationActions({acquire:()=>leases.acquire(),find:()=>current,confirm:async()=>true,assertIdle(){},load:()=>({key:'private',region:'cn'}),save:()=>{writes++},probe:async()=>{probes++;if(mode==='lock')leases.invalidate();if(mode==='change')current={...info,root:'/changed'};return 3}})
+ assert.deepEqual(await run('test',info.id),{ok:true,configured:['key','region'],tools:3})
+ assert.equal(writes,0);assert.equal(probes,1)
+ mode='lock';assert.equal((await run('test',info.id)).ok,false)
+ mode='change';assert.equal((await run('test',info.id)).ok,false)
+ current={...info,enabled:false};assert.equal((await run('test',info.id)).ok,false);assert.equal(probes,3)
+})
+
+test('clear asks explicitly and clears without requiring inactive host; cancellation preserves configuration',async()=>{
+ let cleared=0,allowed=false,confirmation=''
+ const run=createConfigurationActions({acquire,find:()=>info,confirm:async(_info,action)=>{confirmation=action;return allowed},assertIdle(){throw Error('active host must be invalidated, not ignored')},load:()=>({key:'private'}),save:()=>{throw Error('ordinary save not allowed')},clear:()=>{cleared++}})
+ assert.equal((await run('clear',info.id)).ok,false);assert.equal(cleared,0)
+ allowed=true;assert.deepEqual(await run('clear',info.id),{ok:true,configured:[]});assert.equal(cleared,1);assert.equal(confirmation,'clear')
+})
