@@ -4,7 +4,10 @@ import {buildSync} from 'esbuild'
 import fs from 'node:fs'
 import path from 'node:path'
 const source='scripts/word-connector',target='plugins-store/word'
-buildSync({entryPoints:[source+'/document.mjs'],bundle:true,platform:'node',format:'cjs',target:'node22',outfile:target+'/lib/document.cjs',legalComments:'none'})
+buildSync({entryPoints:[source+'/document.mjs'],bundle:true,platform:'node',format:'cjs',target:'node22',outfile:target+'/lib/document.cjs',legalComments:'external'})
+// Preserve notices embedded by upstream bundles as well as lockfile dependencies.
+const embedded=target+'/lib/document.cjs.LEGAL.txt'
+fs.writeFileSync(embedded,fs.readFileSync(embedded,'utf8').split(/\r?\n/).map(line=>line.trimEnd()).join('\n'))
 const lock=JSON.parse(fs.readFileSync(source+'/package-lock.json','utf8'))
 const notices=[]
 for(const [relative,p] of Object.entries(lock.packages)){
