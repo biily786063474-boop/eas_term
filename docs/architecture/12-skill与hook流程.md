@@ -190,3 +190,6 @@ id 对不上号整批拒。
 
 ### 2026-09-16 时间线省 token 策略
 `timelineRuntime.ts` 仅为选中 `eas:timeline` 的受管会话注入短规则，普通适配器和 OMP 路径保持一致。无需 Git hook，也不监听每次 commit；AI 在原任务轮次判断独立交付成果并调用 record。宿主只用交付措辞启发式和成功回执做零模型费用检查，疑似漏记提示延迟到下一条用户消息、消费一次，不主动唤醒模型。review 是无需记录的短回执。提示不是成果判定保证；当前补漏按钮只生成可复制请求，用户发送后才执行，不自动扫描历史。
+
+### 2026-09-18 全局时间线接线
+全局候选不依赖提交钩子、不改 CLI MCP 绑定、不唤醒额外模型。session handleEvent 收集 text.done，在 turn.done 摘取末尾 4000 字；取消与进程异常先 cancelPluginTurn。正式 timeline_record 成功 ID 回执抑制同轮候选。自动候选不算验证成果。

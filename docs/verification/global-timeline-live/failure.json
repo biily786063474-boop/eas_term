@@ -1,0 +1,44 @@
+{
+  "checks": [
+    "builtin plugin discovered",
+    "codex ordinary chat while disabled does not capture",
+    "codex existing non-timeline session automatically captures candidate",
+    "claude ordinary chat while disabled does not capture"
+  ],
+  "results": [
+    {
+      "cli": "codex",
+      "phase": "enabled-existing-session",
+      "ok": true,
+      "id": "ac-1",
+      "text": "已完成：17 + 25 = 42。",
+      "errors": [],
+      "events": [
+        "turn.start",
+        "capabilities",
+        "capabilities",
+        "session.ready",
+        "exec.done",
+        "text.done",
+        "turn.done"
+      ],
+      "candidateDelta": 1
+    },
+    {
+      "cli": "claude",
+      "phase": "enabled-existing-session",
+      "ok": true,
+      "id": "ac-2",
+      "text": "Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access",
+      "errors": [],
+      "events": [
+        "turn.start",
+        "session.ready",
+        "text.done",
+        "turn.done"
+      ],
+      "candidateDelta": 0
+    }
+  ],
+  "error": "Error: claude existing non-timeline session automatically captures candidate"
+}

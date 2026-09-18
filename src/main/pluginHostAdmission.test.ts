@@ -24,12 +24,12 @@ const m=createRuntimeManager({now:()=>now,maxRunning:1,waitTimeoutMs:50});instal
 function setup(name:string){
  const registry=new HostRegistry<unknown>({graceMs:1,setTimer:()=>0,clearTimer(){},onIdle(){}})
  let spawns=0,exit!:()=>void
- const hosted={kind:'plugin',name,ready:Promise.resolve(),client:{alive:true,exited:new Promise<void>(r=>{exit=r})}}
+ const hosted={kind:'plugin',name,info:{root:'/fixture/'+name},ready:Promise.resolve(),client:{alive:true,exited:new Promise<void>(r=>{exit=r})}}
  const acquire=runInNewContext(code+'\nacquire',{
   registry,startManagedSession,manualStops:{stamp:()=>null},
   spawnHosted:()=>{spawns++;return hosted},Error,Promise,Map
  }) as (info:{name:string;displayName:string},ref:string)=>Promise<unknown>
- return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),pressure:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:true}),info:{name,displayName:'演示插件'}}
+ return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),pressure:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:true}),info:{name,displayName:'演示插件',root:'/fixture/'+name}}
 }
 
 test('插件服务器启动先准入：排队时不 spawn、并发请求合并、全窗口可见不可取消、预算等真实退出',async()=>{

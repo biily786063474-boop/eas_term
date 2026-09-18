@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "builtin plugin discovered"
+  ],
+  "results": [
+    {
+      "cli": "omp",
+      "phase": "ordinary-turn",
+      "ok": false,
+      "id": "ac-1",
+      "text": "",
+      "errors": [
+        "还没选模型服务商，先在设置里选一家。"
+      ],
+      "events": [
+        "turn.start",
+        "error"
+      ],
+      "blocked": true
+    }
+  ]
+}

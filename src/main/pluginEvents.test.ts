@@ -1,0 +1,37 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {PluginEventBus,observePluginTurn,setPluginTurnReceiver,markPluginTurnRecorded,cancelPluginTurn} from './pluginEvents.ts'
+const event=(projectId='a')=>({kind:'agent.turn.completed' as const,eventId:'event',projectId,text:'已完成',outcome:'completed' as const})
+const tick=()=>new Promise(r=>setImmediate(r))
+test('disabled plugins receive nothing; enabling existing runtime works without session rebinding',async()=>{const bus=new PluginEventBus(),got:unknown[]=[];bus.publish(event());bus.enable('plugin',['a'],async e=>{got.push(e)});bus.publish(event());await tick();assert.equal(got.length,1)})
+test('project allowlist gates delivery and replacing subscription revokes queued events',async()=>{const bus=new PluginEventBus(),got:unknown[]=[];bus.enable('plugin',['a'],async e=>{got.push(e)});bus.publish(event('b'));bus.publish(event());bus.enable('plugin',['b'],async e=>{got.push(e)});await tick();assert.equal(got.length,0);bus.publish(event('b'));await tick();assert.equal(got.length,1)})
+test('disable aborts active sink and discards pending queue; reenabling does not replay',async()=>{const bus=new PluginEventBus();let release:()=>void=()=>{},signal:AbortSignal|undefined,n=0;bus.enable('plugin',['a'],async(_e,s)=>{n++;signal=s;await new Promise<void>(r=>release=r)});bus.publish(event());bus.publish(event());await tick();bus.disable('plugin');assert.equal(signal?.aborted,true);release();await tick();bus.enable('plugin',['a'],async()=>{n++});await tick();assert.equal(n,1)})
+test('queue is bounded, errors observable, failure does not stop next delivery',async()=>{const errors:string[]=[],bus=new PluginEventBus(2,(_id,error)=>errors.push(error));let n=0;bus.enable('plugin',['a'],async()=>{if(++n===1)throw Error('write failed')});bus.publish(event());bus.publish(event());bus.publish(event());await tick();await tick();assert.equal(n,2);assert.ok(errors.some(x=>x.includes('队列')));assert.ok(errors.some(x=>x.includes('write failed')))})
+test('event copies isolate subscribers and caller mutations',async()=>{const bus=new PluginEventBus(),got:string[]=[];bus.enable('one',['a'],async e=>{e.text='mutated'});bus.enable('two',['a'],async e=>{got.push(e.text)});const e=event();bus.publish(e);e.text='caller mutation';await tick();assert.deepEqual(got,['已完成'])})
+
+test('turn collector supports late enable, receipts, cancellation and receiver isolation',()=>{
+ const got:any[]=[];setPluginTurnReceiver((_cwd,e)=>got.push(e))
+ observePluginTurn('live','/p',{k:'text.done',text:'已完成全局记录'})
+ observePluginTurn('live','/p',{k:'turn.done'});observePluginTurn('live','/p',{k:'turn.done'})
+ assert.equal(got.length,1)
+ observePluginTurn('r','/p',{k:'turn.start'});markPluginTurnRecorded('r')
+ observePluginTurn('r','/p',{k:'text.done',text:'已完成成果'});observePluginTurn('r','/p',{k:'turn.done'})
+ assert.equal(got[1].recorded,true)
+ observePluginTurn('c','/p',{k:'text.done',text:'已完成成果'});cancelPluginTurn('c')
+ observePluginTurn('c','/p',{k:'text.done',text:'已完成迟到输出'});observePluginTurn('c','/p',{k:'turn.done'})
+ assert.equal(got.length,2)
+ setPluginTurnReceiver(()=>{throw Error('broken consumer')})
+ observePluginTurn('e','/p',{k:'text.done',text:'已完成成果'})
+ assert.doesNotThrow(()=>observePluginTurn('e','/p',{k:'turn.done'}))
+ setPluginTurnReceiver()
+})
+test('a recovered session starts a fresh turn after failed or cancelled unfinished output',()=>{
+ const got:unknown[]=[];setPluginTurnReceiver((_cwd,e)=>got.push(e))
+ observePluginTurn('recover','/p',{k:'turn.start'})
+ observePluginTurn('recover','/p',{k:'text.done',text:'partial'})
+ cancelPluginTurn('recover')
+ observePluginTurn('recover','/p',{k:'turn.start'})
+ observePluginTurn('recover','/p',{k:'text.done',text:'已完成恢复后的成果'})
+ observePluginTurn('recover','/p',{k:'turn.done'})
+ assert.equal(got.length,1);setPluginTurnReceiver()
+})

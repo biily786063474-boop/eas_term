@@ -788,7 +788,7 @@ export interface PluginInfo {
   /** 面板：每个是一份 `ui://` HTML 资源，渲染成画布上的 `plugin-panel` 组件节点 */
   panels?: PluginPanelDef[]
   /** 面板桥 `eas/canvas.call` 的允许集（已经和宿主全局白名单取过交集） */
-  permissions?: { canvas?: string[] }
+  permissions?: { canvas?: string[]; events?: string[] }
   /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */

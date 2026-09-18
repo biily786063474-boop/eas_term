@@ -27,6 +27,7 @@ export const VIEW_REQUESTS = [
   // 工具面里根本没有 grant，模型给自己授权是不可能的（2026-09-06）。
   'panel/grant',
   'panel/revoke',
+  'panel/resolve-candidate',
   'panel/state'
 ] as const
 /** 面板 → 宿主 的通知（不回） */
