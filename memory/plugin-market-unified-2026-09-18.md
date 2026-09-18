@@ -64,3 +64,8 @@ RemotePluginClient增加宿主通用request、通知、connectionClosed和tracke
 下一块要做OAuth正式宿主/界面，但必须保持安全：现PluginInfo.remote.auth仅'none'；需要引入显式OAuth配置（issuer/auth/token端点、合法注册clientId、scope、auth.oauth要求），主进程固定配置不可renderer任意端点。新增runtime应从app-ready canonical userData插件目录构造store、用acquirePluginCredentialAccess租约；fetch附Bearer前核验精确remote URL，锁定信号取消请求/关闭所属连接；过期才manager.refresh，不在tools/call失败后重放。native确认后系统浏览器登录，renderer只拿状态；卸载/断开先取消连接再清本地凭证，不能全局杀服务。
 仍缺：OAuth实际宿主/UI、发现/DCR/供应商适配、v2默认目录切换+发布链、32真实连接器与逐项上游许可、实际模型CLI验证、正常安装/更新/断开UI与独立更新演练。不要把已跑的真实shim子进程测试说成实际模型三CLI。保持原Demo清单，不换项凑数。读keys-vault只拿过索引元数据，没有借其他CLI token。
 refresh/expiry批最终check/build退出0：3316项，3298通过/18跳过/0失败，build通过；监测命令34244已结束。持续目标仍active，下一自动续轮继续OAuth宿主/UI，不等待用户再说继续、不标完成。上游候选核验新增Word/PPT归档与DBHub<0.22.6 readonly漏洞，台账已记官方来源，未安装这些候选。
+
+## 用户催促执行后的 OAuth 宿主增量
+实际新增 authenticatedFetch + authorizationRuntime + pluginAuthorization 生产适配、OAuth descriptor、宿主接线。先红后绿：exact resource Bearer/拒绝注入/过期刷新/401不重放/锁定取消/refresh迟到不发包4测，runtime显式登录与断开清理2测，manifest公共客户端及origin/scope/secret拒绝1测，真实宿主shim测试扩到oauth/noauth两模式，Bearer真实HTTP收到且锁定后client关闭。
+首轮typecheck测试类型失败（SDK FetchLike不接受Request、Promise缺void），已修声明，后续typecheck通过。没有调用真实账号或打开授权浏览器；没有UI入口、卸载历史配置凭证清理。尚未发版/广告能力。继续下一块应是guarded IPC + preload +现有市场授权状态/登录/测试/断开，native确认与隔离应用眼验，不能再把基础模块当全部完成。当前准备跑最终全量check/build，结果未出之前不称全量通过。
+本批最终check/build退出0（3324项，3306通过/18跳过/0失败），日志 /tmp/eas-plugin-oauth-host-check.log。隔离应用市场回归4项通过，截图已眼验（只证明原市场入口/不可安装原因/兼容性拒绝，不能证明OAuth用户登录）。监测命令60855/13603已结束，无后台任务。目标继续active，下一轮直接接授权IPC/UI，不等待再催。

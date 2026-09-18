@@ -793,7 +793,10 @@ export interface PluginInfo {
   /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
   /** Main-validated remote descriptor; no credentials. OAuth requires separate capability. */
-  remote?: { transport: 'streamable-http'; url: string; approvedOrigins: string[]; auth: 'none' }
+  remote?: { transport: 'streamable-http'; url: string; approvedOrigins: string[] } & (
+    | { auth: 'none'; oauth?: never }
+    | { auth: 'oauth'; oauth: { issuer: string; authorizationEndpoint: string; tokenEndpoint: string; clientId: string; scope?: string } }
+  )
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */
   builtin?: boolean
 }

@@ -380,3 +380,7 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 `pluginCompatibility` 对未知/畸形 requirements 失败关闭。`pluginMarket` 的下载前检查与 commit 前包内检查不可只留 UI 判断；声明能力只认真实实现（当前 mcp.stdio）。新增 remote/oauth 必须完成对应运行时与授权验收后再加入能力集，不能为让插件安装通过而提前标支持。不得把新协议插件发布到旧客户端 schema 1 目录。
 
 插件市场增量红线：远程requestTracked的timeout/cancel不能作为上游执行完成证明；connectionClosed只代表本地网络资源释放。stdio仍使用真实exited预算，禁止改为close()完成。密钥柜插件租约不走PTY/env注入，锁定/重新解锁后的旧授权不得保存token；此链路禁止增加renderer明文token IPC。
+
+### 2026-09-18 OAuth 宿主连接链路（尚未广告能力）
+`pluginManifest`/`PluginInfo.remote` 增加显式 OAuth public-client 固定端点描述，要求 `auth.oauth`，拒绝内嵌 secret/额外 resource/未知字段/未确认 origin。`pluginAuthorization.ts` 只从已安装清单构造配置，固定 canonical userData/plugin-credentials；配置变化关闭旧 runtime，客户端/权限/端点变化不复用旧授权（旧密文暂保留，不算已撤销上游授权）。`authorizationRuntime` 编排既有 manager/store/密钥柜租约，连接令牌经 `authenticatedFetch` 仅发送精确 resource，过期先刷新，不在 401 或调用失败后重放。`pluginHost.spawnHosted` OAuth 分支使用它，锁定关闭所属 RemotePluginClient、停止信号沿原生命周期释放；stdio/no-auth 保持旧路径。
+登录尚无 IPC/UI 入口，不会自动打开浏览器；不能将已接宿主说成用户已能登录。尚缺卸载清理所有历史配置凭证、真实 safeStorage/UI/供应商/实际三 CLI 验收，市场暂不声明 `mcp.remote`/`auth.oauth`。测试含真实 shim 三子进程→宿主→本地 HTTP fixture 的 Bearer 与锁定关闭，不是实际模型 CLI。

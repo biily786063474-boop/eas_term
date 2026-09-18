@@ -96,3 +96,13 @@ test('remote no-auth transport is explicit, origin-bound and never becomes a com
  assert.equal(result.info.mcp,undefined);assert.equal(result.info.remote?.url,raw.mcp.url)
  for(const mcp of [{...raw.mcp,command:'node'},{...raw.mcp,url:'https://evil.example/mcp'},{...raw.mcp,auth:'oauth'},{...raw.mcp,transport:'unknown'}])assert.equal(parseManifest({...raw,mcp},DIR).ok,false)
 })
+
+test('OAuth public-client descriptor preserves only approved fixed endpoints and requires auth.oauth',()=>{
+ const oauth={issuer:'https://auth.example.com',authorizationEndpoint:'https://auth.example.com/authorize',tokenEndpoint:'https://auth.example.com/token',clientId:'registered-public-client',scope:'read write'}
+ const raw={name:'board',requirements:{capabilities:['mcp.remote','auth.oauth']},mcp:{transport:'streamable-http',url:'https://mcp.example.com/mcp',auth:'oauth',approvedOrigins:['https://mcp.example.com','https://auth.example.com'],oauth}}
+ const result=parseManifest(raw,DIR);assert.ok(result.ok)
+ if(result.ok)assert.deepEqual(result.info.remote?.oauth,oauth)
+ for(const change of [{tokenEndpoint:'https://evil.example/token'},{clientSecret:'must-not-be-in-package'},{clientId:''},{scope:'read\nwrite'},{resource:'https://other.example'}])assert.equal(parseManifest({...raw,mcp:{...raw.mcp,oauth:{...oauth,...change}}},DIR).ok,false)
+ assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote']}},DIR).ok,false)
+ assert.equal(parseManifest({...raw,mcp:{...raw.mcp,auth:'none'}},DIR).ok,false)
+})

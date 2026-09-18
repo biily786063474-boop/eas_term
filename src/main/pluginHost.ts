@@ -1,3 +1,4 @@
+import { getPluginAuthorization } from './pluginAuthorization'
 import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
 import { createPluginNetwork } from './pluginConnections/pluginNetwork.ts'
 import { guardedHandle } from './ipcGuard'
@@ -120,8 +121,16 @@ function spawnHosted(info: PluginInfo): Hosted {
   let client: McpClient | RemotePluginClient
   let stopped: Promise<void>
   if(info.remote){
-    client=new RemotePluginClient({url:info.remote.url,approvedOrigins:info.remote.approvedOrigins,version:app.getVersion(),fetch:createPluginNetwork(info.remote.approvedOrigins,session.defaultSession)})
-    stopped=client.connectionClosed
+    const authorization=info.remote.auth==='oauth'?getPluginAuthorization(info).connect():undefined
+    const remoteClient=new RemotePluginClient({url:info.remote.url,approvedOrigins:info.remote.approvedOrigins,version:app.getVersion(),fetch:authorization?.fetch??createPluginNetwork(info.remote.approvedOrigins,session.defaultSession)})
+    client=remoteClient
+    stopped=remoteClient.connectionClosed
+    if(authorization){
+      const revoke=()=>{void remoteClient.close()}
+      authorization.signal.addEventListener('abort',revoke,{once:true})
+      if(authorization.signal.aborted)revoke()
+      void stopped.then(()=>{authorization.signal.removeEventListener('abort',revoke);authorization.close()})
+    }
   } else {
   if (!info.mcp) throw new Error(`插件 ${info.name} 没有 mcp 启动方式`)
   // 裸 `node` 在 Dock 启动的 app 里 spawn 不到（PATH 贫瘠）—— 2026-09-05 正式版事故。
