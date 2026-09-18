@@ -8,4 +8,4 @@ const {v1,v2}=buildPluginRegistries({
  baseUrl:process.env.EAS_PLUGIN_BASE_URL||'https://eas.biily.top/plugins'
 })
 console.log(`Built registry.json: ${v1.plugins.length} legacy packages`)
-console.log(`Built registry-v2.json: ${v2.plugins.length} packages, ${v2.unavailable.length} unavailable entries`)
+console.log(`Built v2/registry.json: ${v2.plugins.length} packages, ${v2.unavailable.length} unavailable entries`)

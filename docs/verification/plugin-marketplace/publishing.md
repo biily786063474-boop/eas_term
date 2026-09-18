@@ -26,3 +26,7 @@
 - `.release-<uuid>` 保留旧目录或失败暂存供核对与人工恢复，没有自动垃圾回收。恢复旧目录只应使用已经核对内容的 `previous-registry*.json` 原子替换对应文件；不要删旧包。回滚后再做公开 HTTPS 与隔离客户端验收。
 - SSH 超时/断线意味着结果未知：停止，不自动重试上传/替换。先核对锁 owner、release 目录、最终目录 hash/包 hash。可能需要有权限的操作者清理已确认没有活跃发布者的锁，脚本不代做。
 - finally 只释放本次已确认取得且 owner 匹配的锁；如果获得锁的 SSH 回复丢失，锁可能保留，刻意不猜测删除。进程被 kill 或磁盘/网络中断也可能留锁/暂存，属于上述人工恢复流程。
+
+## 2026-09-18 已批准路径对齐
+
+构建与发布使用 `/plugins/registry.json`（v1）及 `/plugins/v2/registry.json`（v2），不再产出开发期的 `registry-v2.json`。客户端默认源仍未切换。两个目录同名，暂存分别用 `registry.json` 和 `v2-registry.json` 避免覆盖；备份分别为 `previous-registry.json` 和 `previous-v2-registry.json`。首次发布创建 v2 目录（755），拒绝符号链接；本地构建也拒绝 v2 链接重定向。不删除开发期旧产物，发布前使用独立干净的输出目录。

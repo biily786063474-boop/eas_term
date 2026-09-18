@@ -107,3 +107,8 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 同时实际IPC红测发现目录1.1.0可接受包内1.0.0，现installStage比对man.info.version，失败删暂存。hot-update verifier增加真实UI点击1.3.0但archive1.2.0/哈希正确的拒绝检查。全量check/build/UI监测85554在跑；网络边界测试另补目标IP/SNI/UA/redirect/1MB，最终仍需再取结果。全目标active，无上线。
 85554最终退出0：全量3349项/3331通过/18skip/0失败、构建成功、隔离热更新UI14项通过；版本谎报拒绝截图已眼验。全量期间新增最后一项Wikipedia网络边界测试，随后单独重跑Wikipedia5项全通过（不是声称全量已包含最后新增那项）。维基百科真实请求仍失败、未改DNS/代理；不把回归通过混为公开接口成功。下一步可推进统一配置UI/API key安全注入、本地目录授权和其余连接器；DNS问题需安全方案或有范围的Clash配置批准，不能关闭公共地址守卫。
 补充待统一：批准spec写新目录`/plugins/v2/registry.json`，当前构建/上传实现是`/plugins/registry-v2.json`，未上线所以仍可安全对齐；不能略过编号交付物的路径审计。用户指定`~/.Codex/playbook/网络排障-代理卡死.md`本机此路径不存在，本轮未调整Clash，不能凭印象套命令。
+
+## 继续：已批准 v2 路径落地
+构建/发布现统一 `v2/registry.json`，v1仍`registry.json`。红测先复现旧路径不产出已批准位置；两个目录同名不能沿用basename暂存，改用相对路径扁平名（v2-registry.json/registry.json）及区分备份。生产适配器首次创建v2目录755、拒绝父目录符号链接；本地v2 symlink重定向红测复现后拒绝。13专项全过，真实CLI在独立临时目录连续两次打包，并逐个比对两个目录的包size/hash通过，默认仍仅两包。
+全量check/build监测43838退出0：3352项/3334通过/18跳过/0失败，已包含上一轮最后的Wikipedia网络边界项。未生产上传、未切客户端默认URL、未改Clash或正式app。隔离应用回归61207正在运行，需取结果并眼验截图；不把本轮路径修正称32插件完成。下一轮必须优先补统一配置/API key/受控目录的真实生产接线，或推进真实连接器，不再只做发布基础设施；已有OAuth store仅存OAuthTokens，未支持通用secret/config，批准spec3.2/5/7是依据。
+61207回归退出0；随后将验收fixture目录URL也改为`/plugins/v2/registry.json`，重新开隔离应用监测40856退出0，14项全部通过。实际请求记录已对齐新路径，仍是localhost受控网络不是线上HTTPS。眼验失败截图：版本不一致拒绝、缓存提示、保留1.1.0；更新截图已复用Frame节点cnode-106-hn6rb。所有本轮监测已结束，无后台命令、未发布。全量结果仍是3352项，最后仅修改验收脚本URL并完整执行该脚本。

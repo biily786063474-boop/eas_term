@@ -11,6 +11,10 @@ export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='h
  if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('目录下载基址必须是公开HTTPS地址')
  const output=path.resolve(outRoot)
  fs.mkdirSync(output,{recursive:true})
+ const v2Dir=path.join(output,'v2')
+ const v2Stat=fs.lstatSync(v2Dir,{throwIfNoEntry:false})
+ if(v2Stat?.isSymbolicLink())throw Error('拒绝目录符号链接：v2')
+ if(v2Stat&&!v2Stat.isDirectory())throw Error('v2 必须是目录')
  const stage=fs.mkdtempSync(path.join(output,'.build-'))
  try{
   const seen=new Set(),packages=[]
@@ -41,8 +45,10 @@ export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='h
    if(!fs.existsSync(file))fs.copyFileSync(zipPath,file,fs.constants.COPYFILE_EXCL)
   }
   // Individually atomic catalogs; deliberately NOT a cross-file transaction.
-  for(const [name,data] of [['registry-v2.json',v2],['registry.json',v1]]){
+  for(const [name,data] of [['v2/registry.json',v2],['registry.json',v1]]){
    const file=path.join(stage,name)
+   fs.mkdirSync(path.dirname(file),{recursive:true})
+   fs.mkdirSync(path.dirname(path.join(output,name)),{recursive:true})
    fs.writeFileSync(file,JSON.stringify(data,null,2)+'\n')
    fs.renameSync(file,path.join(output,name))
   }

@@ -17,21 +17,21 @@
     "全程同一应用PID，无宿主重启"
   ],
   "requests": [
-    "/registry.json",
-    "/registry.json",
-    "/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.0.0.zip",
-    "/registry.json",
-    "/registry.json",
-    "/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.1.0.zip",
-    "/registry.json",
-    "/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.2.0.zip",
-    "/registry.json",
-    "/registry.json",
+    "/plugins/v2/registry.json",
+    "/plugins/v2/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.2.0.zip",
-    "/registry.json"
+    "/plugins/v2/registry.json"
   ],
   "scope": "Same-process UI install, refresh, update, failure preservation and offline cache. Controlled network + home adapters; NOT production HTTPS/CDN or plugin business tool validation."
 }

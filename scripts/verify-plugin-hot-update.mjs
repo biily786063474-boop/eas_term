@@ -24,13 +24,13 @@ for(const v of ['1.0.0','1.1.0','1.2.0']){
 const server=http.createServer((req,res)=>{
  requests.push(req.url)
  if(offline){res.statusCode=503;res.end('offline fixture');return}
- if(req.url==='/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[entries.get(version)],unavailable:[]}));return}
+ if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[entries.get(version)],unavailable:[]}));return}
  const bytes=archives.get(req.url)
  if(!bytes){res.statusCode=404;res.end();return}
  res.end(broken?Buffer.from('corrupt archive'):bytes)
 })
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
-const executable=process.env.EAS_VERIFY_EXECUTABLE||path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:'http://127.0.0.1:'+server.address().port+'/registry.json'}
+const executable=process.env.EAS_VERIFY_EXECUTABLE||path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:'http://127.0.0.1:'+server.address().port+'/plugins/v2/registry.json'}
 for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(n))delete env[n]
 const policy='(version 1) (allow default) '+['.codex','.claude','.claude.json','.eas','.dsh'].map(n=>'(deny file-read* file-write* (subpath '+JSON.stringify(path.join(os.homedir(),n))+'))').join(' ')
 // Disposable launch adapter substitutes only the package network destination;

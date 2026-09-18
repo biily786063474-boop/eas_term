@@ -13,16 +13,17 @@ function fixture(t){
  const baseUrl='https://eas.biily.top/plugins';const bytes=Buffer.from('controlled archive bytes')
  const entry={name:'demo',version:'1.0.0',displayName:'Demo',url:baseUrl+'/demo/demo-1.0.0.zip',sha256:hash(bytes),size:bytes.length}
  fs.mkdirSync(path.join(source,'demo'));fs.writeFileSync(path.join(source,'demo/demo-1.0.0.zip'),bytes)
- const write=()=>{fs.writeFileSync(path.join(source,'registry.json'),JSON.stringify({schema:1,plugins:[entry]}));fs.writeFileSync(path.join(source,'registry-v2.json'),JSON.stringify({schema:2,plugins:[entry],unavailable:[]}))};write()
- fs.writeFileSync(path.join(remote,'registry.json'),'old v1');fs.writeFileSync(path.join(remote,'registry-v2.json'),'old v2')
+ fs.mkdirSync(path.join(source,'v2'));fs.mkdirSync(path.join(remote,'v2'))
+ const write=()=>{fs.writeFileSync(path.join(source,'registry.json'),JSON.stringify({schema:1,plugins:[entry]}));fs.writeFileSync(path.join(source,'v2/registry.json'),JSON.stringify({schema:2,plugins:[entry],unavailable:[]}))};write()
+ fs.writeFileSync(path.join(remote,'registry.json'),'old v1');fs.writeFileSync(path.join(remote,'v2/registry.json'),'old v2')
  let uploads=0;let corrupt=false;let restricted=false;let failLegacy=false
  // Only substitute the remote process boundary. Run the actual generated POSIX
  // commands against a temporary filesystem, including links, locks and renames.
  const run=(command,args)=>{
-  if(command==='ssh'){assert.equal(args[0],'-n');assert.equal(args.at(-2),'fixture');if(failLegacy&&args.at(-1).includes('mv -f')&&args.at(-1).endsWith("/registry.json'"))throw Error('injected legacy promotion failure');return execFileSync('/bin/sh',['-c',args.at(-1)],{encoding:'utf8',stdio:['ignore','pipe','pipe']})}
+  if(command==='ssh'){assert.equal(args[0],'-n');assert.equal(args.at(-2),'fixture');if(failLegacy&&args.at(-1).includes('mv -f')&&args.at(-1).endsWith("/remote/registry.json'"))throw Error('injected legacy promotion failure');return execFileSync('/bin/sh',['-c',args.at(-1)],{encoding:'utf8',stdio:['ignore','pipe','pipe']})}
   assert.equal(command,'scp');assert.equal(args[0],'-q');const dest=args.at(-1);assert.ok(dest.startsWith('fixture:'))
   const target=dest.slice('fixture:'.length);fs.copyFileSync(args.at(-2),target);if(restricted)fs.chmodSync(target,0o600);uploads++
-  if(corrupt&&target.endsWith('registry-v2.json'))fs.appendFileSync(target,'corrupt')
+  if(corrupt&&target.endsWith('v2-registry.json'))fs.appendFileSync(target,'corrupt')
   return ''
  }
  const publish=()=>publisher.publishPluginRegistries({source,baseUrl,transport:new publisher.SshPluginPublisher({host:'fixture',root:remote,run})})
@@ -30,10 +31,10 @@ function fixture(t){
 }
 test('publishes verified packages before two catalogs, preserves old catalogs, and safely repeats',{skip:process.platform==='win32'},async t=>{
  const f=fixture(t);await f.publish()
- for(const name of ['registry.json','registry-v2.json','demo/demo-1.0.0.zip'])assert.deepEqual(fs.readFileSync(path.join(f.remote,name)),fs.readFileSync(path.join(f.source,name)))
+ for(const name of ['registry.json','v2/registry.json','demo/demo-1.0.0.zip'])assert.deepEqual(fs.readFileSync(path.join(f.remote,name)),fs.readFileSync(path.join(f.source,name)))
  const release=fs.readdirSync(f.remote).find(x=>x.startsWith('.release-'))
  assert.equal(fs.readFileSync(path.join(f.remote,release,'previous-registry.json'),'utf8'),'old v1')
- assert.equal(fs.readFileSync(path.join(f.remote,release,'previous-registry-v2.json'),'utf8'),'old v2')
+ assert.equal(fs.readFileSync(path.join(f.remote,release,'previous-v2-registry.json'),'utf8'),'old v2')
  await f.publish();assert.equal(fs.existsSync(path.join(f.remote,'.publish-lock')),false)
 })
 test('remote same-version conflict rejects before uploads and does not delete the previous package',{skip:process.platform==='win32'},async t=>{
@@ -45,7 +46,7 @@ test('remote same-version conflict rejects before uploads and does not delete th
 test('corrupt upload leaves both live catalogs unchanged and releases its own lock',{skip:process.platform==='win32'},async t=>{
  const f=fixture(t);f.setCorrupt();await assert.rejects(f.publish(),/integrity|校验/)
  assert.equal(fs.readFileSync(path.join(f.remote,'registry.json'),'utf8'),'old v1')
- assert.equal(fs.readFileSync(path.join(f.remote,'registry-v2.json'),'utf8'),'old v2')
+ assert.equal(fs.readFileSync(path.join(f.remote,'v2/registry.json'),'utf8'),'old v2')
  assert.equal(fs.existsSync(path.join(f.remote,'.publish-lock')),false)
 })
 test('another publisher lock is never removed or bypassed',{skip:process.platform==='win32'},async t=>{
@@ -67,12 +68,18 @@ test('publish CLI requires explicit approval flag without contacting transport',
 
 test('private upload modes are made readable before promotion',{skip:process.platform==='win32'},async t=>{
  const f=fixture(t);f.setRestricted();await f.publish()
- for(const rel of ['demo/demo-1.0.0.zip','registry.json','registry-v2.json'])assert.equal(fs.statSync(path.join(f.remote,rel)).mode&0o777,0o644)
+ for(const rel of ['demo/demo-1.0.0.zip','registry.json','v2/registry.json'])assert.equal(fs.statSync(path.join(f.remote,rel)).mode&0o777,0o644)
 })
 test('late second catalog failure leaves two individually valid generations, not missing package references',{skip:process.platform==='win32'},async t=>{
  const f=fixture(t);f.failLegacy();await assert.rejects(f.publish(),/injected legacy/)
  assert.equal(fs.readFileSync(path.join(f.remote,'registry.json'),'utf8'),'old v1')
- assert.deepEqual(fs.readFileSync(path.join(f.remote,'registry-v2.json')),fs.readFileSync(path.join(f.source,'registry-v2.json')))
+ assert.deepEqual(fs.readFileSync(path.join(f.remote,'v2/registry.json')),fs.readFileSync(path.join(f.source,'v2/registry.json')))
  assert.deepEqual(fs.readFileSync(path.join(f.remote,'demo/demo-1.0.0.zip')),fs.readFileSync(path.join(f.source,'demo/demo-1.0.0.zip')))
  assert.equal(fs.existsSync(path.join(f.remote,'.publish-lock')),false)
+})
+test('first v2 publish creates its readable directory without mixing the two registry payloads',{skip:process.platform==='win32'},async t=>{
+ const f=fixture(t);fs.rmSync(path.join(f.remote,'v2'),{recursive:true});await f.publish()
+ assert.equal(JSON.parse(fs.readFileSync(path.join(f.remote,'registry.json'))).schema,1)
+ assert.equal(JSON.parse(fs.readFileSync(path.join(f.remote,'v2/registry.json'))).schema,2)
+ assert.equal(fs.statSync(path.join(f.remote,'v2')).mode&0o777,0o755)
 })

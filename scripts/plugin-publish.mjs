@@ -21,7 +21,7 @@ function releaseFiles(source,baseUrl){
  const base=new URL(baseUrl)
  if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('URL 基址无效')
  const prefix=base.href.replace(/\/$/,'')
- const catalogs=['registry-v2.json','registry.json'].map(rel=>{
+ const catalogs=['v2/registry.json','registry.json'].map(rel=>{
   const bytes=readFile(source,rel),raw=JSON.parse(bytes)
   const parsed=parseCatalog(raw,{allowedHosts:[base.hostname]})
   if(raw.schema!==(rel==='registry.json'?1:2)||!parsed.ok||parsed.warnings.length)throw Error('目录校验失败：'+rel)
@@ -61,7 +61,7 @@ export async function publishPluginRegistries({source,baseUrl='https://eas.biily
   transport.stage(id)
   // Verify ALL uploads before promoting ANY live catalog or package.
   for(const file of [...missing,...files.catalogs]){
-   file.staged=`.release-${id}/${path.basename(file.rel)}`
+   file.staged=`.release-${id}/${file.rel.replaceAll('/','-')}`
    transport.upload(file.local,file.staged)
    if(!same(transport.inspect(file.staged),file))throw Error('上传 integrity 校验失败：'+file.rel)
   }
@@ -107,8 +107,9 @@ export class SshPluginPublisher {
   this.ssh(`test ! -L ${parent}; mkdir -p -m 755 ${parent}; chmod 644 ${from}; ln ${from} ${to}; rm ${from}`)
  }
  promoteCatalog(staged,rel,id){
-  if(!['registry.json','registry-v2.json'].includes(rel))throw Error('目录名无效')
-  const to=q(this.remote(rel)),from=q(this.remote(staged)),backup=q(this.remote(`.release-${id}/previous-${rel}`))
-  this.ssh(`test ! -L ${to}; if test -e ${to}; then test -f ${to}; cp ${to} ${backup}; fi; chmod 644 ${from}; mv -f ${from} ${to}`)
+  if(!['registry.json','v2/registry.json'].includes(rel))throw Error('目录名无效')
+  const to=q(this.remote(rel)),from=q(this.remote(staged)),backup=q(this.remote(`.release-${id}/previous-${rel.replaceAll('/','-')}`))
+  const parent=q(path.posix.dirname(this.remote(rel)))
+  this.ssh(`test ! -L ${parent}; mkdir -p -m 755 ${parent}; test ! -L ${to}; if test -e ${to}; then test -f ${to}; cp ${to} ${backup}; fi; chmod 644 ${from}; mv -f ${from} ${to}`)
  }
 }
