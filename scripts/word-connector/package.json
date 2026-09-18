@@ -1,0 +1,1 @@
+{"name":"eas-word-connector","version":"1.0.0","private":true,"type":"module","dependencies":{"docx":"9.7.1","jszip":"3.10.1","xml-js":"1.6.11"}}

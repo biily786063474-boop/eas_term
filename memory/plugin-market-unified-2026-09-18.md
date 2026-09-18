@@ -162,3 +162,12 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 前一用户询问停顿后的纯回复是no-progress，本轮真正继续：新增verify-bearer-plugin.mjs，隔离Electron配置表单输入自有测试令牌→真实safeStorage密文→生产共享宿主→Claude/Codex/OMP三真实shim调用自有HTTP服务→清除阻断旧连接→重新配置建立新连接→锁定拒绝继续调用。25975初版11项和37049扩展13项均退出0，connected.png已亲眼查看。没有生产代码改动、没有新的上游账号能力，也不是实际模型CLI。
 只在验收bootstrap里适配精确fixture域名的DNS/PAC/HTTPS拨号到自有loopback HTTP与原生确认返回；生产公开地址验证/pinned fetch/精确Bearer资源匹配都仍执行。不能把此证据说成真实TLS/上游GitHub验收。fixtures自动清理，没有读取CLI授权缓存/真实凭证。没有提前广告remote/bearer能力或把GitHub加入默认市场。
 本批无全量重跑：生产代码未动，前批3377项回归结果仍是前批证据。目标active，仍缺真实32连接器、正式v2 URL迁移、更新权限/目标差异UI、实际模型CLI和Windows验收；不以fixture增加可用插件数。下一段优先处理32连接器自主工程，不要继续围着fixture扩测试打转。
+
+## 用户再次指出停止后：推进真正的Word连接器
+不再只扩Bearerfixture，本轮新增plugins-store/word候选：自有stdio三个工具create/read/revise，目录授权、二进制8MB守卫、hash覆盖、生成标题/粗斜体、顶层正文读取、简单段落带作者跟踪修订（复杂结构/已有修订拒绝）。TDD先module missing红，后3项通过，含真实pack/extract/child生成读取修订和越界/软链拒绝。没有把三工具说成完整Word范围；默认builder未包含候选。
+脚本源scripts/word-connector/document.mjs，独立package-lock固定docx9.7.1/jszip3.10.1/xml-js1.6.11，npm ignore-scripts安装，audit0已知漏洞。用esbuild生成离线CJS并带22份许可证，root测试不依赖未安装的开发子目录node_modules。第一次build许可证收集报Missing license notice: hash.js；查证其/isarray README含完整MIT后显式收集，构建成功。不改root依赖或用户正式app。
+28113完整check正在可见节点运行，需同handle取结果。Word实际app/UI/Word渲染/Windows和真实CLI未验；也还没有实现表格等全部Demo范围，不可称已完成。上一批Bearer f47e450已提交，所有前批进程终止。当前新Word文件未提交；下一步需要安全边界更多测试和应用纵向验收/独立渲染，再推进剩余真实包。
+
+28113全量退出0：3380项/3362通过/18skip。随后补ZIP实际解压流量限制，初用for-await失败stream is not async iterable（JSZip旧readable-stream），改data/end/error计数并保留destroy上限；重新build bundle，4专项全通过（含8MB展开/DOCTYPE拒绝）。69867build+实际Word应用23项通过；流量限制最终版9543实际应用再次23项通过并眼验截图。原生picker/确认适配，不是人工操作/Word渲染/实际模型。最终完整check 7518当前在运行，取同handle结果后再提交；无正式发布，其他32范围仍未完成。
+
+7518最终完整check退出0：3381项/3363通过/18skip/0fail，包含最后ZIP限流测试。所有本轮进程终止，候选尚无真实Word渲染/完整排版/Windows/实际模型证明。已将Word实际应用截图放当前Frame（关闭自己旧account-controls截图腾位，未碰用户模块），进度节点仍保留。

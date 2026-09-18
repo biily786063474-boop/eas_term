@@ -119,3 +119,7 @@
 新增 plugins-store/github 原创连接描述包，固定官方远程端点 https://api.githubcopilot.com/mcp/ ，凭证由用户在软件配置控件提供，secret引用不含值。依据：https://github.com/github/github-mcp-server/blob/main/README.md （端点与PAT支持）、https://github.com/github/github-mcp-server/blob/main/docs/host-integration.md （宿主自行获取访问令牌、组织政策、DCR尚不支持）。不分发上游服务代码、不冒充已注册OAuth客户端。
 
 宿主Bearer配置scope/租约/精确资源发送已接；模拟HTTP服务通过三真实shim共享连接、无重放与锁定关闭，包真实打包验证通过。这不是GitHub上游账号成功调用。未加入默认构建目录、未广告auth.bearer/mcp.remote；连接测试与清除配置UI已统一接线，本地文件实际隔离应用验收通过；Bearer实际应用保存到远程连接已用自有网络fixture跑通13项（verify-bearer-plugin）；DNS/PAC/HTTPS拨号与原生确认为测试适配，非真实TLS或GitHub账号证明。真实账号/模型/Windows仍待验收。
+
+## Word独立实包起步（2026-09-18，仍未上架）
+新增原创Word候选，锁docx9.7.1/jszip3.10.1/xml-js1.6.11及传递依赖；专属依赖树audit 0已知漏洞，含22份许可。官方资料见包README；生成bundle在包内，不要求终端运行npm或系统Python。初次许可收集因hash.js无独立LICENSE失败，查到README完整许可后显式提取，isarray同理，没有跳过缺失许可。
+实际pack→解包→真实McpClient子进程已跑通DOCX创建/读取/跟踪修订，旧hash/越界/软链拒绝。基础段落排版支持标题/粗体/斜体，读取只含正文顶层段落；已有修订及复杂结构拒绝改写。不是完整Word编辑器，不将三工具替代Demo全部读写排版修订范围；隔离实际应用市场安装→加密目录授权→三shim真实生成DOCX及锁定/清除已通过23项；Word渲染/三模型CLI/Windows待验收。不会增加默认市场已验证可用数量。
