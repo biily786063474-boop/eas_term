@@ -387,3 +387,5 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 
 ### 2026-09-18 插件包变更生命周期
 pluginMarket的installCommit/uninstall在同步写盘前调用pluginHost.assertPluginPackageIdle：已起宿主（含30s宽限期）或正在资源准入都拒绝，不偷偷停止其他会话；用户先关闭引用等待释放或在运行中心显式停止。检查与文件替换之间不能增加await，否则可能起新宿主造成竞态。随后invalidatePluginAuthorization关闭该插件pending登录/refresh及runtime；更新保留绑定配置凭证，卸载清理该插件所有账号/配置。没有全局杀进程。
+
+配置声明不能被静默丢弃：pluginManifest必须保留或拒绝config，不得恢复未知配置忽略。config.fields在真实配置运行时/UI验收前不加入宿主能力；pluginHost.acquire的临时关闭闸仅在主进程配置解析/目录授权/密钥租约真正接通后替换，不能为启动成功而直接删除。

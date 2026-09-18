@@ -1,3 +1,4 @@
+import { parsePluginConfig } from '../shared/pluginConfig.ts'
 import { pluginVersion } from '../shared/pluginUpdate.ts'
 // 自家插件清单 `plugin.json` → PluginInfo。**纯函数，零 electron。**
 // 设计稿 §M。字段名借 Codex 的 interface 块（displayName / brandColor / composerIcon /
@@ -43,6 +44,15 @@ export function parseManifest(
   const name = str(m.name)
   if (!name || !NAME_RE.test(name)) errors.push('name 只许小写字母/数字/连字符，1–40 位')
   else if (name !== path.basename(dir)) errors.push(`name「${name}」必须和目录名「${path.basename(dir)}」一致`)
+
+  let config: PluginInfo['config']
+  try {
+    config=parsePluginConfig(m.config)
+    if(config){
+      const caps=rec(m.requirements)?.capabilities
+      if(!Array.isArray(caps)||!caps.includes('config.fields'))throw Error('配置插件必须声明config.fields兼容要求')
+    }
+  } catch(error){errors.push(error instanceof Error?error.message:'配置无效')}
 
   // mcp
   const mcpRaw = rec(m.mcp)
@@ -180,6 +190,7 @@ export function parseManifest(
     permissions: { canvas },
     mcp: remote ? undefined : { command: command!, args, env, cwd: dir },
     remote,
+    config,
     builtin: !!opts.builtin
   }
   return { ok: true, info, warnings }

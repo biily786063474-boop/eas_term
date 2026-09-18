@@ -114,3 +114,18 @@ test('installed package version reaches PluginInfo for update comparison; unknow
   if(result.ok)assert.equal(result.info.version,want)
  }
 })
+
+test('config declarations must survive parsing and explicitly require config.fields capability',()=>{
+ const raw=good();raw.config={fields:[{id:'api-key',type:'secret',label:'API Key',purpose:'访问指定服务',required:true}]}
+ assert.equal(parseManifest(raw,DIR).ok,false)
+ raw.requirements={capabilities:['config.fields']}
+ const result=parseManifest(raw,DIR);assert.ok(result.ok)
+ if(result.ok)assert.deepEqual(result.info.config,raw.config)
+})
+test('config rejects inline secrets, executable validation, duplicate fields and unbounded schemas',()=>{
+ const field={id:'api-key',type:'secret',label:'API Key',purpose:'访问服务',required:true}
+ for(const config of [null,{fields:[]},{fields:[{...field,value:'private-key'}]},{fields:[{...field,validate:'return true'}]},{fields:[field,field]},{fields:[{...field,type:'unknown'}]},{fields:Array.from({length:33},(_,i)=>({...field,id:'f'+i}))}]){
+  const raw={...good(),requirements:{capabilities:['config.fields']},config}
+  assert.equal(parseManifest(raw,DIR).ok,false,JSON.stringify(config))
+ }
+})

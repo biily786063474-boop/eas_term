@@ -112,3 +112,9 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 构建/发布现统一 `v2/registry.json`，v1仍`registry.json`。红测先复现旧路径不产出已批准位置；两个目录同名不能沿用basename暂存，改用相对路径扁平名（v2-registry.json/registry.json）及区分备份。生产适配器首次创建v2目录755、拒绝父目录符号链接；本地v2 symlink重定向红测复现后拒绝。13专项全过，真实CLI在独立临时目录连续两次打包，并逐个比对两个目录的包size/hash通过，默认仍仅两包。
 全量check/build监测43838退出0：3352项/3334通过/18跳过/0失败，已包含上一轮最后的Wikipedia网络边界项。未生产上传、未切客户端默认URL、未改Clash或正式app。隔离应用回归61207正在运行，需取结果并眼验截图；不把本轮路径修正称32插件完成。下一轮必须优先补统一配置/API key/受控目录的真实生产接线，或推进真实连接器，不再只做发布基础设施；已有OAuth store仅存OAuthTokens，未支持通用secret/config，批准spec3.2/5/7是依据。
 61207回归退出0；随后将验收fixture目录URL也改为`/plugins/v2/registry.json`，重新开隔离应用监测40856退出0，14项全部通过。实际请求记录已对齐新路径，仍是localhost受控网络不是线上HTTPS。眼验失败截图：版本不一致拒绝、缓存提示、保留1.1.0；更新截图已复用Frame节点cnode-106-hn6rb。所有本轮监测已结束，无后台命令、未发布。全量结果仍是3352项，最后仅修改验收脚本URL并完整执行该脚本。
+
+## 继续：统一配置声明与失败关闭（尚非配置功能完成）
+从批准spec3.2/5/7推进：新增shared/pluginConfig类型+严格解析（1–32字段，string长度上限、enum独立选项、secret引用元数据、directory read/read-write），并接入真实pluginManifest/PluginInfo；禁止内嵌值/默认密钥/清单目录/未知字段/可执行校验/任意regex。要求config.fields能力，不提前广告。红测确认旧解析器会静默忽略config；另用真实宿主acquire+registry/调度器测试复现手动安装配置包仍启动，现临时失败关闭，待配置解析/授权/注入完整接线替换，不是永远禁用配置插件。
+18项宿主+manifest测试、2项配置边界测试通过。typecheck暴露目录access推断string，修为map明确返回PluginConfigField；第二次暴露assert.throws三参undefined与Node类型签名不符，改Error判定。监测36209/76783均退出2，未粉饰；最后全量check/build/hotupdate监测8261运行中，需取结果。
+下一步配置值储存及APIkey/目录原生选择UI、安全注入和租约清理仍完全缺失；当前只完成声明与拒绝静默降级，不是第三个真实连接器、不增加32完成数。不要继续调整发布器小项冒充接入进展。
+8261最终退出0：全量3357项/3339通过/18跳过/0失败、构建通过、隔离热更新14项通过。已眼验更新截图的1.1.0与布局并刷新Frame原图节点。这是旧安装/更新回归，不是配置UI（尚不存在）的验收；配置声明/拒绝启动由manifest及实际acquire函数测试证明。所有本轮进程已终止，无后台任务，目标active，下一轮需要从本契约接配置存储/用户输入/主进程注入完整链路，不能把临时拒绝启动保留成最终功能。
