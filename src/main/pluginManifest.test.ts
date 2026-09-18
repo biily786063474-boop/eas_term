@@ -106,3 +106,11 @@ test('OAuth public-client descriptor preserves only approved fixed endpoints and
  assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote']}},DIR).ok,false)
  assert.equal(parseManifest({...raw,mcp:{...raw.mcp,auth:'none'}},DIR).ok,false)
 })
+
+test('installed package version reaches PluginInfo for update comparison; unknown versions stay unknown',()=>{
+ for(const [version,want] of [['1.2.3','1.2.3'],['latest',undefined],[undefined,undefined]] as const){
+  const result=parseManifest({...good(),version},DIR)
+  assert.ok(result.ok)
+  if(result.ok)assert.equal(result.info.version,want)
+ }
+})

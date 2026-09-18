@@ -92,3 +92,11 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 替换旧直接覆盖上传脚本为显式 --publish Node 入口和可演练生产 SSH/SCP 适配器：校验双目录/版本URL/本地hash并快照；owner目录锁；全部远端同版本包预检；逐文件SCP后大小/hash核对；所有暂存通过再硬链接独占晋升包；v2/v1备份后分别原子rename。保留旧包和release目录，断线不自动重试，不抢锁/不reload。两目录不是事务：第二目录失败允许v2新/v1旧，引用包仍完整。
 8项专项通过（包含故障注入与实际POSIX临时文件系统操作），新增权限红测发现上传0600可能让静态托管不可读，已在晋升前设644并测试。Node既有MODULE_TYPELESS_PACKAGE_JSON警告仍在，不为消警告改项目module类型。未执行生产脚本、没有SSH服务器操作。全量check/build监测93755正在运行，结果待取；目标不完成，接下来需独立更新宿主端到端演练及32真实包/凭证配置/上游授权，不用占位冒充完成。
 安全发布链最终全量check/build退出0（3342项：3324通过、18跳过、0失败）；监测93755已结束，无遗留运行命令。脚本本地真实POSIX验证通过但未在生产SSH/HTTP执行；本轮无宿主UI改动，未新增应用端到端证明。持续目标active，下一步应做同一隔离宿主不重构建的目录刷新/安装更新演练，再推进32连接器实包与配置授权。
+
+## 继续：独立更新实际宿主与UI
+先跑真实隔离app证明同PID经真实IPC刷新/更新/损坏包保留/缓存可行（11项），但发现完整市场缺显式刷新、版本与更新按钮，不能把内部调用当用户已能热更新。新增PluginInfo.version和pluginVersion/canUpdatePlugin，数字版本比较排除内置/其他CLI/未知/降级；完整市场增加刷新、当前/目标版本、更新按钮、确认更新，沿用两段安装与权限确认。
+版本单元测试先红后绿14项。UI红测在实际构建应用报“市场提供显式刷新目录入口”后才补按钮。验收启动早期曾Promise was collected，后续若全局改HOME导致renderer CDP卡住，原compatibility verifier对照通过；最终隔离启动适配器只替换Node homedir与fixture包网络目的地，原生HOME保持，OS沙箱仍拒真实凭证目录，走相同out/main/index.js。不把该适配器当真实HTTPS/CDN证明。真实授权、业务MCP工具和32连接器仍未验证。
+全量check/build + UI新增脚本监测1609运行中；结束前不能称整轮通过。旧基线UI截图本轮对照重新生成，无正式应用修改。下一步还需账号配置/32真实包/上游授权、真实CLI模型验证，不标目标完成。
+第一批check/build/UI退出0：3344项（3326通过/18跳过）+同进程UI12项，截图看到新版1.1.0/损坏1.2.0错误与缓存提示。同时眼验抓到长描述撑开grid裁右列，新增真实DOM边界红测复现，改minmax(0,1fr)+min-width:0；最终check/build+热更新13项+旧授权兼容UI回归监测22531运行中。不要依据第一批截图说布局修复已验收。
+最终22531已退出0：全量3344项/3326通过/18跳过/0失败，构建通过，热更新UI13项和账号/兼容UI7项通过。updated.png与failed-update.png已亲眼核对：1.1.0安装版本、1.2.0失败后保留1.1.0、离线缓存提示，双列卡片不再溢出；新截图提交当前Frame节点cnode-106-hn6rb（4/5槽）。旧失败保留layout-red.json作红测证据，无后台进程。未发布、未改正式软件、未验证生产HTTPS/CDN/插件业务工具/真实模型CLI。
+下一轮重点回到32真实插件包与统一配置入口（API key/本地目录/数据库权限等）；先核对approved spec与demo audit，不要继续只扩基础设施。仍缺真实provider OAuth注册/发现、凭证配置UI、源站v2切换/缓存迁移、32项逐项上游资格/许可与可运行包。新发现待补：installStage目前核对name/requirements却没核对包内version与目录version一致；更新UI依赖真实安装版本，宜加实际IPC红测防目录撒谎。composerSources还未把remote识别为MCP。持续目标active。

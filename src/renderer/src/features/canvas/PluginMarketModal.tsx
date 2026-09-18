@@ -1,3 +1,4 @@
+import { canUpdatePlugin } from '../../../../shared/pluginUpdate'
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
@@ -31,7 +32,7 @@ type Item = {
   cli?: string
   plugin?: PluginInfo
 }
-type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[] }
+type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean }
 
 export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }): JSX.Element {
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
@@ -40,6 +41,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Pending | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
   const reload = (): Promise<void> =>
@@ -47,12 +49,19 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       .list()
       .then((l) => setPlugins(l))
       .catch(() => setPlugins([]))
+  const refreshRegistry = async (): Promise<void> => {
+    setRefreshing(true)
+    try {
+      await reload()
+      const r = await window.api.plugins.registry()
+      setReg(r.ok ? { entries:r.entries, unavailable:r.unavailable??[], stale:r.stale } : 'error')
+    } catch { setReg('error') }
+    finally { setRefreshing(false) }
+  }
   useEffect(() => {
-    void reload()
-    window.api.plugins
-      .registry()
-      .then((r) => setReg(r.ok ? { entries: r.entries, unavailable:r.unavailable??[],stale:r.stale } : 'error'))
-      .catch(() => setReg('error'))
+    void refreshRegistry()
+  }, [])
+  useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
@@ -81,12 +90,12 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       }
     }
     for (const p of plugins ?? []) {
-      if (map.has(p.name)) {
+      if (p.cli === 'eas' && map.has(p.name)) {
         map.get(p.name)!.installed = true
         map.get(p.name)!.plugin = p
         continue
       }
-      map.set(p.name, {
+      map.set(p.cli === 'eas' ? p.name : p.id, {
         name: p.name,
         displayName: p.displayName,
         description: p.description,
@@ -138,8 +147,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
 
   const card = (it: Item): JSX.Element => {
     const working = busy === it.name
+    const update = !!it.plugin && !!it.reg && canUpdatePlugin(it.plugin,it.reg.version)
     return (
-      <div key={it.name} className="pm-card">
+      <div key={it.plugin?.id ?? it.name} className="pm-card">
         <PluginLogo name={it.name} brandColor={it.brandColor} />
         <div className="pm-cb">
           <div className="pm-ct">
@@ -147,20 +157,21 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
           </div>
           {it.description && <div className="pm-cd">{it.description}</div>}
+          {it.plugin?.version && <div className="pm-cd">已安装 v{it.plugin.version}{update ? ` · 可更新至 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 随软件更新' : ''}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
           {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} enabled={it.plugin.enabled!==false}/>}
         </div>
         <div className="pm-cact">
-          {it.installed ? (
-            <span className="pm-done" title="已安装">
-              <CheckIcon size={15} />
-            </span>
-          ) : working ? (
-            <span className="pm-spin">
-              <RefreshIcon size={13} />
-            </span>
+          {working ? (
+            <span className="pm-spin"><RefreshIcon size={13} /></span>
+          ) : update ? (
+            <button className="pm-add" title={`更新到 ${it.reg!.version}`} aria-label={`更新${it.displayName}到${it.reg!.version}`} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
+              <RefreshIcon size={16} />
+            </button>
+          ) : it.installed ? (
+            <span className="pm-done" title="已安装"><CheckIcon size={15} /></span>
           ) : it.reg ? (
-            <button className="pm-add" title="接入" onClick={() => startInstall(it.name)}>
+            <button className="pm-add" title="接入" disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
               <PlusIcon size={16} />
             </button>
           ) : null}
@@ -260,6 +271,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
               <span className="pm-mag">⌕</span>
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索插件…（Word、地图、GitHub…）" autoFocus />
             </div>
+            <button className="pm-close" title="刷新目录" aria-label="刷新目录" disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
+              <RefreshIcon size={16} />
+            </button>
             <button className="pm-close" title="关闭" onClick={onClose}>
               <CloseIcon size={16} />
             </button>
@@ -267,7 +281,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {err && <div className="pm-err">{err}</div>}
           {reg && reg !== 'error' && reg.stale && <div className="pm-err">目录离线，正在显示缓存；条目状态可能已过期。</div>}
           {reg && reg !== 'error' && <div className="pm-sech">已发布包 {reg.entries.length} · 待接入 {reg.unavailable.length}（不代表已授权或可调用）</div>}
-          {reg === 'error' && <div className="pm-err">拉不到插件目录，检查网络后重开</div>}
+          {reg === 'error' && <div className="pm-err">拉不到插件目录，检查网络后点击刷新目录</div>}
           <div className="pm-body">{body}</div>
         </div>
       </div>
@@ -276,7 +290,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       {confirm && (
         <div className="cpk-modal-back" style={{ zIndex: 1600 }} onMouseDown={(e) => e.stopPropagation()}>
           <div className="cpk-modal">
-            <div className="cpk-modal-title">安装「{confirm.displayName}」</div>
+            <div className="cpk-modal-title">{confirm.installed ? '更新' : '安装'}「{confirm.displayName}」</div>
             <div className="cpk-modal-sub">
               v{confirm.version} · {fmtSize(confirm.size)}
             </div>
@@ -297,7 +311,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
                 取消
               </button>
               <button className="cpk-btn primary" onClick={commitInstall}>
-                确认安装
+                {confirm.installed ? '确认更新' : '确认安装'}
               </button>
             </div>
           </div>
