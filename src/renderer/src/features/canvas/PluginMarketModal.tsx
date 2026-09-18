@@ -33,7 +33,7 @@ type Item = {
   cli?: string
   plugin?: PluginInfo
 }
-type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean }
+type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean; permissionChanges?: {added:string[];removed:string[]}|null }
 
 export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }): JSX.Element {
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
@@ -296,6 +296,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             <div className="cpk-modal-sub">
               v{confirm.version} · {fmtSize(confirm.size)}
             </div>
+            {confirm.installed&&<section aria-label="更新权限变更">
+              <div className="cpk-modal-label">相较已安装版本（画布权限与远程目标）：</div>
+              {confirm.permissionChanges==null?<div className="cpk-modal-sub">旧版清单无法核验，请检查下方完整权限；不能确认是否新增权限。</div>:<>
+                {confirm.permissionChanges.added.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.added.map(p=><li key={p}>新增：{PERM_LABEL[p]??p}</li>)}</ul>}
+                {confirm.permissionChanges.removed.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.removed.map(p=><li key={p}>移除：{PERM_LABEL[p]??p}</li>)}</ul>}
+                {!confirm.permissionChanges.added.length&&!confirm.permissionChanges.removed.length&&<div className="cpk-modal-sub">声明的画布权限与远程目标未变化。</div>}
+              </>}
+            </section>}
             {confirm.permissions.length ? (
               <>
                 <div className="cpk-modal-label">装上后它可以：</div>

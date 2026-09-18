@@ -1,3 +1,4 @@
+import * as permissionChangesModule from '../shared/pluginPermissionChanges.ts'
 import * as catalogSourceModule from './pluginCatalogSource.ts'
 // Run the actual IPC handlers with isolated filesystem and deterministic network responses.
 import {test} from 'node:test'
@@ -44,7 +45,7 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
   let busy=false;const cleared:string[]=[]
   const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')}}
   const authorization={invalidatePluginAuthorization:(name:string,remove:boolean)=>{if(remove)cleared.push(name)}}
-  const imports:Record<string,unknown>={'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  const imports:Record<string,unknown>={'../shared/pluginPermissionChanges.ts':permissionChangesModule,'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
@@ -124,4 +125,19 @@ test('actual registry IPC requests default v2 endpoint',async t=>{
  assert.equal(result.ok,true)
  assert.equal(h.requests[0],catalogSourceModule.DEFAULT_PLUGIN_CATALOG_URL)
  assert.equal(fs.existsSync(path.join(h.userData,catalogSourceModule.catalogSource().cacheFile)),true)
+})
+
+test('staged update compares validated installed manifest permissions',async t=>{
+ const h=harness(t),dir=path.join(h.home,'.eas/plugins/sample')
+ fs.mkdirSync(dir,{recursive:true})
+ fs.writeFileSync(path.join(dir,'plugin.json'),JSON.stringify({name:'sample',version:'0.9.0',mcp:{command:'node'},permissions:{canvas:['canvas_open_file']}}))
+ const result=await h.call('plugins:install','sample')
+ assert.equal(result.ok,true)
+ assert.deepEqual(JSON.parse(JSON.stringify(result.permissionChanges)),{added:[],removed:['canvas_open_file']})
+})
+test('unreadable old manifest is unknown, never a no-change claim',async t=>{
+ const h=harness(t),dir=path.join(h.home,'.eas/plugins/sample')
+ fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'plugin.json'),'invalid JSON')
+ const result=await h.call('plugins:install','sample')
+ assert.equal(result.ok,true);assert.equal(result.permissionChanges,null)
 })

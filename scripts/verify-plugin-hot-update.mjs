@@ -17,7 +17,7 @@ const source=path.join(fixture,'hot-fixture');fs.mkdirSync(source)
 let version='1.0.0',broken=false,offline=false,debugPage
 const archives=new Map(),entries=new Map(),requests=[]
 for(const v of ['1.0.0','1.1.0','1.2.0']){
- fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify({name:'hot-fixture',version:v,displayName:'独立热更新验收插件',description:'受控隔离包 '+v,category:'Development',mcp:{command:'node',args:['./server.mjs']}}))
+ fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify({name:'hot-fixture',version:v,displayName:'独立热更新验收插件',description:'受控隔离包 '+v,category:'Development',permissions:{canvas:v==='1.0.0'?['canvas_open_url']:['canvas_open_file']},mcp:{command:'node',args:['./server.mjs']}}))
  fs.writeFileSync(path.join(source,'server.mjs'),'// inert fixture '+v+'\n')
  const packed=packPlugin(source,{outRoot:path.join(fixture,'packages'),baseUrl:'https://eas.biily.top/plugins'})
  entries.set(v,packed.entry);archives.set(new URL(packed.entry.url).pathname,fs.readFileSync(packed.zipPath))
@@ -86,6 +86,8 @@ try {
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent==='确认更新')"))
  check(await main.eval("document.querySelector('.cpk-modal-sub').textContent.includes('1.1.0')"),'更新按钮展示新版和权限确认，不静默覆盖')
  check(JSON.parse(fs.readFileSync(installed)).version==='1.0.0','更新确认前旧版本保持可用')
+ check(await main.eval("(()=>{const p=document.querySelector('[aria-label=\"更新权限变更\"]');return p?.innerText.includes('新增：')&&p.innerText.includes('移除：')})()"),'update confirmation shows added and removed permissions')
+ const consentShot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'permission-changes.png'),Buffer.from(consentShot.data,'base64'))
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent==='确认更新').click()")
  await until(()=>JSON.parse(fs.readFileSync(installed)).version==='1.1.0')
  await until(()=>main.eval("document.body.innerText.includes('已安装 v1.1.0')"))

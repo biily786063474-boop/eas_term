@@ -1,5 +1,6 @@
 import { assertPluginPackageIdle } from './pluginHost'
 import {catalogSource} from './pluginCatalogSource.ts'
+import {permissionChanges,type PluginPermissionChanges} from '../shared/pluginPermissionChanges.ts'
 import { invalidatePluginAuthorization } from './pluginAuthorization'
 import { replacePluginDirectory } from './pluginReplace.ts'
 // 插件市场:主进程编排(网络 IO + 解压 + 落盘)。**纯逻辑在 pluginRegistry / pluginInstall /
@@ -179,6 +180,7 @@ export type InstallStaged = {
   size: number
   permissions: string[]
   installed: boolean
+  permissionChanges?: PluginPermissionChanges | null
 }
 export type InstallResult = InstallStaged | { ok: false; error: string }
 
@@ -266,6 +268,15 @@ async function installStage(name: unknown): Promise<InstallResult> {
     permissions: { canvas: canvasPerms, network: networkPerms } as Record<string, string[]>,
     size: entry.size
   })
+  const permissions=[...canvasPerms,...networkPerms.map(origin=>"连接远程服务："+origin)]
+  const installed=fs.existsSync(guard.dir)
+  let changes:PluginPermissionChanges|null=null
+  if(installed){
+    try{
+      const previous=parseManifest(JSON.parse(fs.readFileSync(path.join(guard.dir,'plugin.json'),'utf8')),guard.dir,{builtin:false,exists:p=>fs.existsSync(p)})
+      if(previous.ok)changes=permissionChanges([...(previous.info.permissions?.canvas??[]),...(previous.info.remote?.approvedOrigins??[]).map(origin=>"连接远程服务："+origin)],permissions)
+    }catch{/* Unknown previous manifest must never be presented as no changes. */}
+  }
   return {
     ok: true,
     token,
@@ -273,8 +284,9 @@ async function installStage(name: unknown): Promise<InstallResult> {
     displayName: man.info.displayName,
     version: entry.version,
     size: entry.size,
-    permissions: [...canvasPerms,...networkPerms.map(origin=>"连接远程服务："+origin)],
-    installed: fs.existsSync(guard.dir)
+    permissions,
+    installed,
+    permissionChanges:installed?changes:undefined
   }
 }
 

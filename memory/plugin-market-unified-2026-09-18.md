@@ -201,3 +201,7 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 按已批准方案补实际入口：pluginCatalogSource 默认 v2，按 URL SHA-256 隔离缓存。旧来源不明缓存保留但不导入，首次升级离线需先联网一次；不修改既有安装或凭证。四专项先 module missing 红，再全过。47714 全量失败6项，均为 pluginMarketBoundary 的 VM import 白名单未接新增模块；已接真实模块并增加实际 IPC 默认 URL/缓存落盘断言（未绕过生产校验）。49895 正在重跑全量/构建/真实热更新，需同handle跟踪。实际应用新增 source-cache 落盘、离线不读取旧无来源cache、旧cache不被更改三项。未部署服务端、未替换正式app。
 
 2026-09-18 v2 source acceptance: 49895 exited 0; full check 3386 total / 3368 pass / 18 skip / 0 fail. Built actual isolated app hot-update 17 checks passed, including source-bound cache persistence, offline rejection of unbound legacy cache, old cache preserved. Screenshot of offline market inspected. Production catalog endpoint not deployed or verified; no app replacement/release. Initial 6 VM import failures fixed by loading actual source helper into test harness.
+
+## 2026-09-18 更新前权限差异
+用户要求接入完成前自行按计划做，不再每小步询问继续。新增画布权限/远程目标集合差异，stage校验新旧manifest后返回；旧版清单无效明确未知。新增纯函数2项红绿、实际IPC旧权限移除及未知manifest测试，已通过。28221类型/构建/原热更新通过；59700正在全量与增强真实UI（1.0 snapshot->1.1 open_file 的新增/移除确认截图）验证。未发布。
+59700 全量3388/3370pass/18skip/0fail，UI等待安装确认超时：测试fixture使用了不支持的canvas_snapshot，被现有权限交集/目录一致性规则拒绝，非生产放宽。将fixture改为白名单内canvas_open_url->canvas_open_file后88626实际UI全部18项通过，新增/移除确认截图亲眼验证。额外旧manifest移除/未知两项在独立IPC测试9项中通过（晚于全量启动，不冒称该全量已含它们）。

@@ -1152,7 +1152,7 @@ const api = {
     install: (
       name: string
     ): Promise<
-      | { ok: true; token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean }
+      | { ok: true; token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean; permissionChanges?: {added:string[];removed:string[]}|null }
       | { ok: false; error: string }
     > => ipcRenderer.invoke('plugins:install', name),
     /** 第二段：用户确认后凭 token 把临时目录移入 ~/.eas/plugins/<name>/。 */
