@@ -142,3 +142,10 @@ PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有vers
 本轮两个红测复现后修复：1）原生保存/目录确认弹窗期间锁定再解锁，旧输入仍能写；configurationActions 必填 acquire 租约，await 前获取、确认后 assertActive、finally dispose，plugins.ts 接真实 acquirePluginCredentialAccess。2）McpClient 直接记录配置插件 stderr，secret 可跨块泄漏；host 对 configured stdio 开 suppressStderr（消费但不记录），并隐藏握手失败原始日志。非配置插件日志不变；不声称恶意插件工具结果能完全防泄漏。
 真实隔离app验收增加两条 pending native dialog →实际锁定/解锁→旧确认拒绝→原密文字节不变。1299 build + local-files 17检查 + compatibility 11检查退出0；已眼验配置卡片和已保存状态。原生窗口返回仍为适配，不是亲自点击，也不是实际模型CLI。82443完整check退出0：3369项/3351通过/18skip/0失败。无生产发布、无用户真实凭证修改；活动目标继续，不得因安全修复增加可用插件计数。
 新增天气/钉钉官方来源条件已存 demo audit；Open-Meteo 商用非免费，MET需标识/缓存/总量条件。天气域名仍fakeIP；未改Clash。其余工程工作没有消失，不能说全都只等账号。正式v2 URL/缓存迁移、remote Bearer、远程配置测试入口、真实连接器包均仍待做。下一段应选一个完整连接器交付里程碑，不再只做单函数提交。
+
+## 继续：远程Bearer真正接入共享宿主与GitHub候选包
+用户最新指令“完成了再汇报，继续”：不再发阶段性口头总结，保持可见轮询和目标active。
+前轮1762ae3为progress，不是阻塞；本轮 revalidate worktree只有旧ui/failure.json未跟踪。新增remote auth=bearer清单严格引用唯一必填secret，声明mcp.remote/auth.bearer/config.fields，拒绝内嵌值、混OAuth、optional或非secret。pluginConfiguration.connectPluginBearer从原加密configuration scope和长期lease读token，bearerConfiguration校验格式、复用authenticatedFetch精确资源/无401重放/锁定取消，pluginHost实际remote分支消费；非bearer remote+config继续拒绝。
+红测覆盖清单拒绝旧实现、Bearer host被旧闸拦；随后实际三shim/真实HTTP共用连接测试新增bearer情形通过。新增GitHub候选包，官方端点/PAT文档重核并落README/audit；真实打包通过，不进入默认目录、不提前广告remote/bearer能力、不借用户CLI token。不能增加已验业务插件数。
+57194 typecheck失败（空对象case数组推断token?:undefined），原错误已读，改测试数组显式Record类型；86801 typecheck/build/隔离兼容UI11项退出0，账号控件截图已眼验；它只是既有UI回归，不是Bearer配置/真实账号E2E。99301完整check退出0：3374项/3356通过/18skip/0失败。所有命令已结束；无生产发布/实际GitHub账号出站。
+下一完整里程碑：给配置插件（包括Bearer）接软件“测试连接/断开清除”动作并做真实隔离app密文保存→remote shared host→三shim→锁定验收。现PluginConfigurationControls只有status/save/directory；OAuth专属测试不适用于Bearer。候选GitHub仍需真实用户提供令牌（软件控件而非聊天）和上游调用，实际模型/Windows仍缺。其余清单自主工程仍未完成，不能笼统归因只等账号。保持active，不向用户再发未完成阶段性汇报。

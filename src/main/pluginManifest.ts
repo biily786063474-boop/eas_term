@@ -60,7 +60,7 @@ export function parseManifest(
   let remote: PluginInfo['remote']
   if (mcpRaw?.transport === 'streamable-http') {
     try {
-      if (Object.keys(mcpRaw).some(k => !['transport','url','auth','approvedOrigins','oauth'].includes(k))) throw Error('远程清单不接受命令、环境变量或未知字段')
+      if (Object.keys(mcpRaw).some(k => !['transport','url','auth','approvedOrigins','oauth','bearer'].includes(k))) throw Error('远程清单不接受命令、环境变量或未知字段')
       const requirements=rec(m.requirements)
       if(!Array.isArray(requirements?.capabilities)||!requirements.capabilities.includes('mcp.remote'))throw Error('远程插件必须声明mcp.remote兼容要求')
       const origins=mcpRaw.approvedOrigins
@@ -69,9 +69,17 @@ export function parseManifest(
       const url=validateRemoteEndpoint(String(mcpRaw.url),origins).href
       const base={transport:'streamable-http' as const,url,approvedOrigins:[...origins]}
       if(mcpRaw.auth==='none'){
-        if(mcpRaw.oauth!==undefined)throw Error('无需认证的端点不能附带OAuth配置')
+        if(mcpRaw.oauth!==undefined||mcpRaw.bearer!==undefined)throw Error('无需认证的端点不能附带OAuth配置')
         remote={...base,auth:'none'}
+      }else if(mcpRaw.auth==='bearer'){
+        if(!requirements!.capabilities.includes('auth.bearer'))throw Error('Bearer插件必须声明auth.bearer兼容要求')
+        const bearer=rec(mcpRaw.bearer)
+        if(mcpRaw.oauth!==undefined||!bearer||Object.keys(bearer).length!==1||typeof bearer.field!=='string')throw Error('Bearer仅允许引用配置secret字段')
+        const field=config?.fields.find(f=>f.id===bearer.field)
+        if(config?.fields.length!==1||!field||field.type!=='secret'||!field.required)throw Error('Bearer需要唯一的必填secret配置字段')
+        remote={...base,auth:'bearer',bearer:{field:bearer.field}}
       }else if(mcpRaw.auth==='oauth'){
+        if(mcpRaw.bearer!==undefined)throw Error('OAuth不能混用Bearer配置')
         if(!(requirements!.capabilities as unknown[]).includes('auth.oauth'))throw Error('OAuth插件必须声明auth.oauth兼容要求')
         const o=rec(mcpRaw.oauth)
         if(!o||Object.keys(o).some(k=>!['issuer','authorizationEndpoint','tokenEndpoint','clientId','scope'].includes(k)))throw Error('OAuth仅接受公开客户端固定配置，禁止内嵌密钥')

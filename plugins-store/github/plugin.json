@@ -1,0 +1,11 @@
+{
+  "name":"github",
+  "version":"1.0.0",
+  "displayName":"GitHub",
+  "description":"连接 GitHub 官方远程 MCP，按所提供令牌权限访问仓库、Issue、PR 与工作流。开发候选，真实账号尚未验收。",
+  "category":"开发工具",
+  "requirements":{"capabilities":["mcp.remote","auth.bearer","config.fields"]},
+  "config":{"fields":[{"id":"token","type":"secret","label":"GitHub 访问令牌","purpose":"仅发送至 api.githubcopilot.com/mcp/；工具可能写入仓库、Issue、PR 或工作流，请限制令牌的资源和权限。","required":true}]},
+  "mcp":{"transport":"streamable-http","url":"https://api.githubcopilot.com/mcp/","approvedOrigins":["https://api.githubcopilot.com"],"auth":"bearer","bearer":{"field":"token"}},
+  "permissions":{"canvas":[]}
+}

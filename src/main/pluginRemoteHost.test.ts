@@ -14,10 +14,10 @@ import {createAuthenticatedFetch} from './pluginConnections/authenticatedFetch.t
 import {HostRegistry} from './hostRegistry.ts'
 import {createToolActivity} from './runtime/toolActivity.ts'
 
-for(const oauth of [false,true])test('actual host shim gateway shares one remote connection across Claude/Codex/OMP identities; oauth='+oauth,async t=>{
+for(const auth of ['none','oauth','bearer'])test('actual host shim gateway shares one remote connection across Claude/Codex/OMP identities; auth='+auth,async t=>{
  let initialized=0,calls=0
  const server=http.createServer(async(req,res)=>{
-  if(oauth)assert.equal(req.headers.authorization,'Bearer fixture-token')
+  if(auth!=='none')assert.equal(req.headers.authorization,'Bearer fixture-token')
   if(req.method!=='POST'){res.writeHead(405);res.end();return}
   let text='';for await(const chunk of req)text+=chunk
   const rpc=JSON.parse(text)
@@ -33,14 +33,15 @@ for(const oauth of [false,true])test('actual host shim gateway shares one remote
  const source=ts.createSourceFile('pluginHost.ts',readFileSync(new URL('./pluginHost.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
  const pick=(name:string)=>{const node=source.statements.find(n=>(ts.isFunctionDeclaration(n)&&n.name?.text===name)||(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>ts.isIdentifier(d.name)&&d.name.text===name)));assert.ok(node);return node.getText(source)}
  const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','spawnHosted','acquire','pluginRpcFromShim','testPluginConnection','assertPluginPackageIdle'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
- const info={name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth:oauth?'oauth':'none'}}
+ const info={name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth,...(auth==='bearer'?{bearer:{field:'token'}}:{})}}
+ if(auth==='bearer')Object.assign(info,{config:{fields:[{id:'token',type:'secret',required:true}]}})
  const leases=new CredentialLeases(()=>true)
  const authorized=createAuthenticatedFetch({url:info.remote.url,lease:leases.acquire(),load:()=>({access_token:'fixture-token',token_type:'Bearer'}),refresh:async()=>{throw Error('not expired')},fetch:async(_url,init)=>fetch('http://127.0.0.1:'+port+'/mcp',init)})
  t.after(()=>authorized.close())
  const registry=new HostRegistry<any>({graceMs:1,setTimer:()=>0,clearTimer:()=>{},onIdle:()=>{}})
  t.after(async()=>{await registry.get('fixture')?.client.close()})
  const exports:Record<string,any>={}
- runInNewContext(code,{exports,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
+ runInNewContext(code,{exports,connectPluginBearer:()=>authorized,getPluginAuthorization:()=>({connect:()=>authorized}),RemotePluginClient,McpClient:class {constructor(){throw Error('remote must not spawn stdio')}},app:{getVersion:()=> 'test'},session:{defaultSession:{}},createPluginNetwork:()=>async(_url:unknown,init:RequestInit)=>fetch('http://127.0.0.1:'+port+'/mcp',init),registry,panels:new Map(),shims:new Map(),manualStops:{stamp:()=>null},findPlugin:()=>info,toolActivity:createToolActivity(()=>performance.now()),startManagedSession:async(options:any)=>{await options.start(new AbortController().signal)},broadcastToolResult:()=>{},performance,crypto,console,Promise,Map,Error,JSONRPC_INVALID_PARAMS:-32602,JSONRPC_METHOD_NOT_FOUND:-32601})
  for(const shimId of ['claude-fixture','codex-fixture','omp-fixture']){
   const call=(method:string,params={})=>exports.pluginRpcFromShim({plugin:'fixture',shimId,method,params})
   assert.equal((await call('initialize')).ok,true)
@@ -69,5 +70,5 @@ for(const oauth of [false,true])test('actual host shim gateway shares one remote
  assert.equal(initialized,1);assert.equal(calls,6)
  assert.throws(()=>exports.assertPluginPackageIdle('fixture'));assert.doesNotThrow(()=>exports.assertPluginPackageIdle('not-running'))
  const refs=registry.refs('fixture');assert.equal(await exports.testPluginConnection(info),1);assert.equal(registry.refs('fixture'),refs);assert.equal(calls,6);assert.equal(initialized,1)
- if(oauth){const client=registry.get('fixture')!.client;leases.invalidate();await client.connectionClosed;assert.equal(client.alive,false)}
+ if(auth!=='none'){const client=registry.get('fixture')!.client;leases.invalidate();await client.connectionClosed;assert.equal(client.alive,false)}
 })

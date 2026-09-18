@@ -1,4 +1,4 @@
-import { connectPluginConfiguration } from './pluginConfiguration'
+import { connectPluginConfiguration, connectPluginBearer } from './pluginConfiguration'
 import { getPluginAuthorization } from './pluginAuthorization'
 import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
 import { createPluginNetwork } from './pluginConnections/pluginNetwork.ts'
@@ -122,7 +122,7 @@ function spawnHosted(info: PluginInfo): Hosted {
   let client: McpClient | RemotePluginClient
   let stopped: Promise<void>
   if(info.remote){
-    const authorization=info.remote.auth==='oauth'?getPluginAuthorization(info).connect():undefined
+    const authorization=info.remote.auth==='oauth'?getPluginAuthorization(info).connect():info.remote.auth==='bearer'?connectPluginBearer(info,createPluginNetwork(info.remote.approvedOrigins,session.defaultSession)):undefined
     const remoteClient=new RemotePluginClient({url:info.remote.url,approvedOrigins:info.remote.approvedOrigins,version:app.getVersion(),fetch:authorization?.fetch??createPluginNetwork(info.remote.approvedOrigins,session.defaultSession)})
     client=remoteClient
     stopped=remoteClient.connectionClosed
@@ -196,7 +196,7 @@ const startingPlugins = new Map<string, Promise<void>>()
  *  归属按**应用级**（windowId null）：宿主本来就跨窗口、跨项目、跨会话共享，
  *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
-  if (info.config && info.remote) throw Error('远程插件配置注入尚未接通，不能启动')
+  if (info.config && info.remote && info.remote.auth!=='bearer') throw Error('远程插件配置注入尚未接通，不能启动')
   if(manualStops.stamp(info.name)!==null)throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
   if (!registry.get(info.name)) {
     let starting = startingPlugins.get(info.name)

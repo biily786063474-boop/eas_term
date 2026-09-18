@@ -798,7 +798,8 @@ export interface PluginInfo {
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
   /** Main-validated remote descriptor; no credentials. OAuth requires separate capability. */
   remote?: { transport: 'streamable-http'; url: string; approvedOrigins: string[] } & (
-    | { auth: 'none'; oauth?: never }
+    | { auth: 'none'; oauth?: never; bearer?: never }
+    | { auth: 'bearer'; bearer: { field: string }; oauth?: never }
     | { auth: 'oauth'; oauth: { issuer: string; authorizationEndpoint: string; tokenEndpoint: string; clientId: string; scope?: string } }
   )
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */

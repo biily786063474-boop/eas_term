@@ -113,3 +113,9 @@
 - 企业微信、阿里云盘、12306 的本次定向检索未拿到足以确认完整接入的官方接口正文；维持未核验，不把搜索不到推断成没有API。
 
 **归因边界**：Word/Excel/PPT、数据库、网页抓取等尚有自主工程工作，不是“全部只等用户账号”；OAuth 应用注册/审核和用户登录另列外部条件。当前三项有本轮真实业务证据，绝不是32项完成。当前市场截图是隔离单包目录，不是正式市场32项已上线的截图。
+
+## GitHub候选与Bearer接线
+
+新增 plugins-store/github 原创连接描述包，固定官方远程端点 https://api.githubcopilot.com/mcp/ ，凭证由用户在软件配置控件提供，secret引用不含值。依据：https://github.com/github/github-mcp-server/blob/main/README.md （端点与PAT支持）、https://github.com/github/github-mcp-server/blob/main/docs/host-integration.md （宿主自行获取访问令牌、组织政策、DCR尚不支持）。不分发上游服务代码、不冒充已注册OAuth客户端。
+
+宿主Bearer配置scope/租约/精确资源发送已接；模拟HTTP服务通过三真实shim共享连接、无重放与锁定关闭，包真实打包验证通过。这不是GitHub上游账号成功调用。未加入默认构建目录、未广告auth.bearer/mcp.remote；连接测试与清除配置UI、真实账号/模型/Windows仍待验收。

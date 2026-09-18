@@ -1,3 +1,5 @@
+import type {FetchLike} from '@modelcontextprotocol/sdk/shared/transport.js'
+import {connectBearerConfiguration} from './pluginConnections/bearerConfiguration.ts'
 import { configurationEnvironment } from './pluginConnections/configurationRuntime.ts'
 import {app} from 'electron'
 import fs from 'node:fs'
@@ -28,5 +30,16 @@ export function connectPluginConfiguration(info:PluginInfo){
   const environment=configurationEnvironment(info,store.loadConfiguration(scope,lease))
   lease.assertActive()
   return {environment,signal:lease.signal,close:lease.dispose}
+ }catch(error){lease.dispose();throw error}
+}
+
+/** Holds the original vault lease for the entire remote connection. */
+export function connectPluginBearer(info:PluginInfo,fetch:FetchLike){
+ if(!app.isReady()||info.cli!=='eas'||info.remote?.auth!=='bearer')throw Error('Bearer配置不可用')
+ const lease=acquirePluginCredentialAccess()
+ try{
+  const scope={plugin:info.name,issuer:'eas:configuration:v1',resource:createHash('sha256').update(configurationIdentity(info)).digest('hex'),account:'local-primary'}
+  const store=new PluginCredentialStore(path.join(fs.realpathSync(app.getPath('userData')),'plugin-credentials'))
+  return connectBearerConfiguration({info,lease,fetch,load:()=>store.loadConfiguration(scope,lease)})
  }catch(error){lease.dispose();throw error}
 }

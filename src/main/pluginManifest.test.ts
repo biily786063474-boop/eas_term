@@ -129,3 +129,11 @@ test('config rejects inline secrets, executable validation, duplicate fields and
   assert.equal(parseManifest(raw,DIR).ok,false,JSON.stringify(config))
  }
 })
+
+test('remote bearer binds exactly one required secret reference, never an inline token',()=>{
+ const raw={name:'board',requirements:{capabilities:['mcp.remote','auth.bearer','config.fields']},config:{fields:[{id:'token',type:'secret',label:'Token',purpose:'连接指定服务',required:true}]},mcp:{transport:'streamable-http',url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth:'bearer',bearer:{field:'token'}}}
+ const good=parseManifest(raw,DIR);assert.ok(good.ok)
+ for(const change of [{bearer:{field:'other'}},{bearer:{field:'token',value:'secret'}},{auth:'none'},{oauth:{clientId:'mixed'}}])assert.equal(parseManifest({...raw,mcp:{...raw.mcp,...change}},DIR).ok,false)
+ assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote','config.fields']}},DIR).ok,false)
+ for(const field of [{...raw.config.fields[0],required:false},{...raw.config.fields[0],type:'string',maxLength:100}])assert.equal(parseManifest({...raw,config:{fields:[field]}},DIR).ok,false)
+})
