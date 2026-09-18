@@ -227,3 +227,6 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 2026-09-18 用户调整优先级：最终用户安装后自行登录，先补剩余插件，不等Biily账号、不反复扩OAuth基础fixture。前两轮解释属于no-progress，本轮实作web-fetch无账号stdio插件，静态HTML/纯文本标题正文链接，严格pinned公开DNS+5跳+15s+2MB，htmlparser2 10.0.0专属lock/bundle/7许可证audit0。5专项红→绿，87745全量3424/3406通过/18skip+build+builtin6项；72905实际市场下载确认安装+3shim业务+私网拒绝7项通过，截图眼验。公网example.com真实调用退出2“DNS 包含非公开地址”，未绕过。已加入默认本地v2第4包，非发布/非所有网络可用。98240最终全量+临时目录构建进行中，需取同handle结果再提交。Frame新web-fetch截图取工具结果，关闭自己的remote-chip cnode139，保留用户timeline/设计。
 98240退出0：全量3425/3407通过/18skip/0fail，实际v1=2/v2=4构建；12814最终市场7项通过。7份许可证仅行尾空格规范化后6专项复验通过。所有后台本轮进程终止。网页抓取当前Frame图cnode145；工程接入≠公网已验，live.json仍记录DNS拒绝。接下来优先Excel/PPT等其余实包，账号由用户安装后自行配置，开发者注册/审核另列，目标active。
+
+2026-09-18 Excel基础接入：scripts/excel-connector固定ExcelJS4.4/JSZip/Saxes，uuid11.1.1 override消除2moderate，离线bundle及31实际依赖许可。excel_read/create/update支持多表标量/显式白名单公式，不计算；目录/hash/zip实体宏外部关系/复杂编辑边界保留。6专项通过；2932构建+实际隔离市场UI、安全存储、三shim业务/撤销锁定26项通过并眼验，Frame截图cnode147替换自身旧OAuth图，保留其他任务。默认本地v2加入第5包，未发布。25453全量回归尚在执行，必须取同session结果。缺图表/透视/公式引擎，不能算完整Demo Excel。下步PPT等剩余真实包；目标仍active，不等用户账号、不动正式应用。
+25453结束exit0：check全量3431/3413通过/18跳过/0失败，本地构建v1=2/v2=5。所有本轮子进程已结束。Excel仅基础接入，不是32插件全部完成。

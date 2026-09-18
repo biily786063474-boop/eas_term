@@ -1,0 +1,34 @@
+{
+  "name": "excel",
+  "version": "1.0.0",
+  "displayName": "Excel 表格",
+  "description": "读取、创建XLSX及更新普通单元格，支持显式数值公式写入但不计算；透视表和图表未实现。",
+  "category": "办公文档",
+  "requirements": {
+    "capabilities": [
+      "mcp.stdio",
+      "config.fields"
+    ]
+  },
+  "config": {
+    "fields": [
+      {
+        "id": "root",
+        "type": "directory",
+        "label": "表格目录",
+        "purpose": "读取和创建XLSX，覆盖须校验当前SHA256",
+        "required": true,
+        "access": "read-write"
+      }
+    ]
+  },
+  "mcp": {
+    "command": "node",
+    "args": [
+      "./server.mjs"
+    ]
+  },
+  "permissions": {
+    "canvas": []
+  }
+}
