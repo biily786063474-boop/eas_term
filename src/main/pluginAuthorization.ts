@@ -30,3 +30,13 @@ export function getPluginAuthorization(info:PluginInfo){
  if(!watchingQuit){watchingQuit=true;app.on('before-quit',()=>{for(const entry of runtimes.values())entry.runtime.close();runtimes.clear()})}
  return runtime
 }
+
+/** Called only after the package mutation gate, before synchronous replacement/deletion. */
+export function invalidatePluginAuthorization(name:string,removeCredentials=false):void{
+ if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(name))throw Error('插件身份无效')
+ runtimes.get(name)?.runtime.close();runtimes.delete(name)
+ if(removeCredentials){
+  if(!app.isReady())throw Error('应用尚未就绪')
+  new PluginCredentialStore(path.join(fs.realpathSync(app.getPath('userData')),'plugin-credentials')).removePlugin(name)
+ }
+}

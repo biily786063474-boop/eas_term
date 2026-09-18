@@ -1,3 +1,5 @@
+import { assertPluginPackageIdle } from './pluginHost'
+import { invalidatePluginAuthorization } from './pluginAuthorization'
 import { replacePluginDirectory } from './pluginReplace.ts'
 // 插件市场:主进程编排(网络 IO + 解压 + 落盘)。**纯逻辑在 pluginRegistry / pluginInstall /
 // pluginInstallGate,这里只做有副作用的胶水。**
@@ -287,6 +289,8 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
     if(!rec.manifestSha256||packageManifestHash(raw)!==rec.manifestSha256)return {ok:false,error:'确认后的插件清单已改变，请重新安装'}
     const check = checkPackageRequirements(raw?.requirements, rec.requirements, currentPluginHost())
     if (!check.ok) return { ok: false, error: check.reason }
+    assertPluginPackageIdle(rec.name)
+    invalidatePluginAuthorization(rec.name)
     replacePluginDirectory(rec.dir, target)
     return { ok: true, name: rec.name }
   } catch (e) {
@@ -302,6 +306,8 @@ function uninstall(name: unknown): { ok: true } | { ok: false; error: string } {
   if (!guard.ok) return { ok: false, error: guard.reason }
   if (!fs.existsSync(guard.dir)) return { ok: false, error: '没装这个插件' }
   try {
+    assertPluginPackageIdle(String(name))
+    invalidatePluginAuthorization(String(name),true)
     fs.rmSync(guard.dir, { recursive: true, force: true })
     return { ok: true }
   } catch (e) {

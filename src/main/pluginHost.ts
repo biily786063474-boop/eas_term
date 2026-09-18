@@ -513,3 +513,8 @@ export async function testPluginConnection(info:PluginInfo):Promise<number>{
   return tools.length
  }finally{registry.release(info.name,ref)}
 }
+
+/** Synchronous disk mutation gate: do not replace files while any host or admission is live. */
+export function assertPluginPackageIdle(name:string):void{
+ if(startingPlugins.has(name)||registry.get(name))throw Error('插件仍在启动或运行，请先关闭相关会话/面板并等待释放，或在运行中心停止后重试')
+}

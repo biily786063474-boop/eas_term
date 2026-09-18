@@ -32,7 +32,7 @@ for(const oauth of [false,true])test('actual host shim gateway shares one remote
  const port=(server.address() as {port:number}).port
  const source=ts.createSourceFile('pluginHost.ts',readFileSync(new URL('./pluginHost.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true)
  const pick=(name:string)=>{const node=source.statements.find(n=>(ts.isFunctionDeclaration(n)&&n.name?.text===name)||(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>ts.isIdentifier(d.name)&&d.name.text===name)));assert.ok(node);return node.getText(source)}
- const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','spawnHosted','acquire','pluginRpcFromShim','testPluginConnection'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const code=ts.transpileModule(['PLUGIN_START_COST','startingPlugins','spawnHosted','acquire','pluginRpcFromShim','testPluginConnection','assertPluginPackageIdle'].map(pick).join('\n'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  const info={name:'fixture',displayName:'Fixture',cli:'eas',remote:{url:'https://mcp.example.com/mcp',approvedOrigins:['https://mcp.example.com'],auth:oauth?'oauth':'none'}}
  const leases=new CredentialLeases(()=>true)
  const authorized=createAuthenticatedFetch({url:info.remote.url,lease:leases.acquire(),load:()=>({access_token:'fixture-token',token_type:'Bearer'}),refresh:async()=>{throw Error('not expired')},fetch:async(_url,init)=>fetch('http://127.0.0.1:'+port+'/mcp',init)})
@@ -67,6 +67,7 @@ for(const oauth of [false,true])test('actual host shim gateway shares one remote
   }finally{shim.close();await shim.exited}
  }
  assert.equal(initialized,1);assert.equal(calls,6)
+ assert.throws(()=>exports.assertPluginPackageIdle('fixture'));assert.doesNotThrow(()=>exports.assertPluginPackageIdle('not-running'))
  const refs=registry.refs('fixture');assert.equal(await exports.testPluginConnection(info),1);assert.equal(registry.refs('fixture'),refs);assert.equal(calls,6);assert.equal(initialized,1)
  if(oauth){const client=registry.get('fixture')!.client;leases.invalidate();await client.connectionClosed;assert.equal(client.alive,false)}
 })

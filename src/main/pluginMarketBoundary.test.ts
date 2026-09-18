@@ -40,13 +40,16 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
     })
     return req
   }}
-  const imports:Record<string,unknown>={'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  let busy=false;const cleared:string[]=[]
+  const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')}}
+  const authorization={invalidatePluginAuthorization:(name:string,remove:boolean)=>{if(remove)cleared.push(name)}}
+  const imports:Record<string,unknown>={'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
   vm.runInNewContext(output,{exports,require:(id:string)=>{if(!(id in imports))throw Error('Unexpected import '+id);return imports[id]},process:{platform:'darwin',arch:'arm64',env:{}},Buffer,URL,console,setTimeout,clearTimeout})
   exports.registerPluginMarketHandlers()
-  return {root,home,userData,requests,call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
+  return {root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
 }
 
 test('incompatible host rejects before downloading an archive or creating installation',async t=>{
@@ -90,4 +93,17 @@ test('commit refuses a changed command after user confirmation was staged',async
  const raw=JSON.parse(fs.readFileSync(file,'utf8'));raw.mcp.command='unexpected-command';fs.writeFileSync(file,JSON.stringify(raw))
  assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
  assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
+})
+
+
+test('active plugin cannot be replaced or uninstalled; idle uninstall clears authorization',async t=>{
+ const h=harness(t),target=path.join(h.home,'.eas','plugins','sample')
+ fs.mkdirSync(target,{recursive:true});fs.writeFileSync(path.join(target,'old.txt'),'keep')
+ const staged=await h.call('plugins:install','sample');assert.equal(staged.ok,true)
+ h.setBusy(true)
+ assert.equal(h.call('plugins:installCommit',staged.token).ok,false)
+ assert.equal(h.call('plugins:uninstall','sample').ok,false)
+ assert.equal(fs.readFileSync(path.join(target,'old.txt'),'utf8'),'keep');assert.deepEqual(h.cleared,[])
+ h.setBusy(false);assert.equal(h.call('plugins:uninstall','sample').ok,true)
+ assert.equal(fs.existsSync(target),false);assert.deepEqual(h.cleared,['sample'])
 })

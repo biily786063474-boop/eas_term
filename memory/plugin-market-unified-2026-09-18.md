@@ -78,3 +78,8 @@ refresh/expiry批最终check/build退出0：3316项，3298通过/18跳过/0失�
 ## 继续：测试连接
 已实现授权UI的测试连接按钮和credential-free结果，真正走共享宿主acquire+临时test ref，finally释放，工具列表探测不调用业务工具。实际HTTP宿主测试断言共享initialize次数仍1、业务call次数不增、refs回到原数；未授权无probe/不自动登录。额外红测复现probe期间授权失效仍报成功，现完成后重验status与安装清单拒绝迟到结果。专项通过，完整check/build/隔离应用正在原进度节点运行；未发布，卸载历史凭证清理与32真实接入仍缺。
 测试连接批最终check/build/隔离应用全部退出0：3329项/3311通过/18跳过/0失败，UI7项通过，截图眼验四按钮与未授权明确拒绝已通过。监测31426已结束。没有真实账号连接成功证据；测试fixture成功仅说明共享宿主只读探测、引用释放和不额外initialize。下一步卸载/升级生命周期安全与v2独立构建发布链，仍不发布生产、不广告未验能力。
+
+## 继续：包变更与凭证生命周期
+已补installCommit/uninstall同步写前assertPluginPackageIdle：registry仍有宿主或startingPlugins仍在准入时拒绝替换/卸载；沿用用户运行中心停止与引用自然回收，不自动全局杀服务。写前invalidatePluginAuthorization关闭此插件pending授权/refresh，更新保留绑定密文、卸载清全部该插件配置/账号。
+credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需解锁，固定目录、ID校验、目标文件类型全量预检，避免删其他插件。没有正式用户旧格式数据迁移；早期分支无前缀文件不能安全推定归属，不猜测删除。专项9项（store+实际install IPC）及真实宿主2项通过，完整check/build/UI回归正在进度节点运行。主worktree与正式app未改，未发布。
+本批最终check/build/隔离市场回归退出0：3331项/3313通过/18skip/0失败；UI7项截图眼验通过（仍不包括真实安装更新/卸载交互，变更边界由实际IPC隔离文件测试证明）。监测34160已结束，无后台任务。后续优先双目录构建发布链：现build-plugin-registry仍只有2包schema1，publish脚本仍直接覆盖正式registry和zip，需要本地fake-transport演练不可变包/目录原子切换、v1/v2隔离，绝不直接跑生产publish脚本。再补32条目真实连接器与账号条件；不把待接入卡片当连接器。

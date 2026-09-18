@@ -18,7 +18,7 @@ export class PluginCredentialStore {
  private readonly directory:string
  private readonly now:()=>number
  constructor(directory:string,now:()=>number=Date.now){this.directory=path.resolve(directory);this.now=now}
- private file(scope:CredentialScope){return path.join(this.directory,createHash('sha256').update(identity(scope)).digest('hex')+'.json')}
+ private file(scope:CredentialScope){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)).digest('hex')+'.json')}
  private checkDirectory(create=false){
   if(create)fs.mkdirSync(this.directory,{recursive:true,mode:0o700})
   if(fs.realpathSync(this.directory)!==this.directory||!fs.lstatSync(this.directory).isDirectory())throw Error('凭证目录不能经过符号链接')
@@ -56,6 +56,19 @@ export class PluginCredentialStore {
    fs.chmodSync(tmp,0o600)
    protection.assertActive();fs.renameSync(tmp,file)
   }finally{try{fs.unlinkSync(tmp)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
+ }
+ /** Remove all configurations/accounts for one plugin without unlocking/decrypting.
+  * Owner prefix is deliberately non-secret; encrypted payload remains scope-bound.
+  * This is the pre-release storage layout, not a migration of other apps' credentials.
+  */
+ removePlugin(plugin:string){
+  if(!/^[a-z0-9][a-z0-9-]{0,39}$/.test(plugin))throw Error('插件身份无效')
+  if(!fs.existsSync(this.directory))return
+  this.checkDirectory()
+  const pattern=new RegExp('^'+plugin+'-[a-f0-9]{64}\\.json$')
+  const files=fs.readdirSync(this.directory).filter(name=>pattern.test(name)).map(name=>path.join(this.directory,name))
+  for(const file of files)this.checkFile(file)
+  for(const file of files){try{fs.unlinkSync(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
  }
  /** Local removal needs no decryption/unlock; caller must first invalidate active requests. */
  remove(scope:CredentialScope){
