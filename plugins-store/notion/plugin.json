@@ -1,0 +1,31 @@
+{
+  "name": "notion",
+  "version": "1.0.0",
+  "displayName": "Notion",
+  "description": "连接 Notion 官方 MCP，访问本人授权工作区内容；开发候选，真实账号与回调兼容性未验收。",
+  "category": "办公",
+  "requirements": {
+    "capabilities": [
+      "mcp.remote",
+      "auth.oauth",
+      "auth.oauth.dcr"
+    ]
+  },
+  "mcp": {
+    "transport": "streamable-http",
+    "url": "https://mcp.notion.com/mcp",
+    "approvedOrigins": [
+      "https://mcp.notion.com"
+    ],
+    "auth": "oauth",
+    "oauth": {
+      "issuer": "https://mcp.notion.com",
+      "authorizationEndpoint": "https://mcp.notion.com/authorize",
+      "tokenEndpoint": "https://mcp.notion.com/token",
+      "registrationEndpoint": "https://mcp.notion.com/register"
+    }
+  },
+  "permissions": {
+    "canvas": []
+  }
+}

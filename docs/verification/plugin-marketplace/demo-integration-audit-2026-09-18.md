@@ -126,3 +126,6 @@
 
 ### 2026-09-18 Word 矩形表格增量
 Word 候选 createDocument/word_create 支持追加矩形文本表格；readDocument/word_read 单列顶层表格文本，不改变段落索引；简单段落修订保持原表格。限50表、200行/50列、总5000单元格；合并/嵌套表格标记complex，不伪称还原复杂布局或支持单元格编辑。库源码变更后重建离线bundle；不加入默认目录。官方Table/TableCell文档来源记入包README。
+
+### 2026-09-18 动态 OAuth 纵向与两份供应商候选
+显式动态清单已串入真实工厂、UI和共享宿主；实际隔离Electron完成DCR/PKCE/loopback/系统密文/三shim调用/锁定阻断，13项通过，固定OAuth兼容11项通过。自有fixture网络与浏览器适配，不是供应商登录。截图眼验修正“已连通”与“尚未测试”并存。`plugins-store/notion` / `sentry` 保存官方公开端点、严格单origin与动态能力要求，真实打包可生成v2候选，但不进默认市场。公开PRM未取得、Notion实际iss回调兼容及两家真实账号待验；详见oauth/providers-2026-09-18.md。不能由包数量推定可用数量。

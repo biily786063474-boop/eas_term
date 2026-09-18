@@ -226,3 +226,6 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18 动态授权管理：上一轮fabc19f为实质进展。新增DynamicAuthorizationManager消费动态身份存储，配置hash绑定scope，登录single-flight/刷新复用存储clientId/保留旧refresh_token；主动登录取消旧刷新，close/disconnect/密钥失效阻止迟到落盘。先模块缺失红，5项专项纳入38650全量3411项/3393通过/18跳过/0失败。尚未接动态连接runtime、manifest和登录按钮，无供应商账号验证；下一步接createAuthenticatedFetch的动态凭证读取及撤销关闭，再接宿主工厂。无后台进程遗留，无发布或正式app修改。
 
 2026-09-18 动态MCP连接runtime：上一轮e538c07是实质进展，本轮新增DynamicAuthorizationRuntime复用authenticatedFetch发送边界、动态manager与密文token读取。先模块缺失红后3项专项通过；4430全量3414/3396通过/18跳过/0失败。实测边界包含重建runtime从AES-GCM磁盘记录恢复clientId并刷新、不重新注册、精确URL拒绝、401不重放、disconnect/lock/close使全部活动连接失效。未接pluginAuthorization工厂/manifest/UI，非供应商账号或真实模型CLI证明；未修改正式app或发布。下一步显式dynamic manifest分支及工厂连接、发现与批准端点一致性，再实际隔离UI端到端。
+
+## 2026-09-18：插件动态OAuth纵向与供应商候选
+工作树 feat/plugin-market-unified-20260918：bd74793 将 dynamic manifest、发现校对、DCR、系统密文、共享宿主及账号UI串通。真实隔离app13项+旧兼容11项通过，截图已眼验，修复已连通仍说尚未测试。Notion/Sentry候选只保留官方公开地址，未上默认目录、未声称真实账号可用。两次检查失败（测试文件类型、启动器5秒夹具超时）均保留证据；未触碰正式app/其他会话进程或发布。

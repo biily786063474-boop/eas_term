@@ -1,0 +1,10 @@
+{
+  "task": 47251,
+  "exitCode": 1,
+  "tests": 3419,
+  "passed": 3400,
+  "failed": 1,
+  "skipped": 18,
+  "failure": "✖ failing tests:\n\ntest at src/main/codexCapabilityLauncher.test.mjs:74:84\n✖ owned IPC disconnect during exec waits for the actual child to exit (5010.980958ms)\n  AssertionError [ERR_ASSERTION]: 5 秒内夹具没到达 exec 阶段：{\"phase\":\"exec\",\"elapsedMs\":5005,\"launcherPid\":99520,\"launcherExitCode\":null,\"launcherSignal\":null,\"stderr\":\"\",\"rows\":[],\"loadavg\":[\"9.1\",\"8.4\",\"7.2\"],\"freeMemMB\":5285}\n      at TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/codexCapabilityLauncher.test.mjs:79:10)\n      at async Test.run (node:internal/test_runner/test:1389:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: false,\n    expected: true,\n    operator: '==',\n    diff: 'simple'\n  }",
+  "note": "Same machine had another full check running; no proof of causality. No timeout or production launcher change."
+}

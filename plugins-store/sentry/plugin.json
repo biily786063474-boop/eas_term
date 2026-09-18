@@ -1,0 +1,31 @@
+{
+  "name": "sentry",
+  "version": "1.0.0",
+  "displayName": "Sentry",
+  "description": "连接 Sentry 官方 MCP，查询错误和项目；可能包含写入工具，开发候选，真实账号未验收。",
+  "category": "开发工具",
+  "requirements": {
+    "capabilities": [
+      "mcp.remote",
+      "auth.oauth",
+      "auth.oauth.dcr"
+    ]
+  },
+  "mcp": {
+    "transport": "streamable-http",
+    "url": "https://mcp.sentry.dev/mcp",
+    "approvedOrigins": [
+      "https://mcp.sentry.dev"
+    ],
+    "auth": "oauth",
+    "oauth": {
+      "issuer": "https://mcp.sentry.dev",
+      "authorizationEndpoint": "https://mcp.sentry.dev/oauth/authorize",
+      "tokenEndpoint": "https://mcp.sentry.dev/oauth/token",
+      "registrationEndpoint": "https://mcp.sentry.dev/oauth/register"
+    }
+  },
+  "permissions": {
+    "canvas": []
+  }
+}
