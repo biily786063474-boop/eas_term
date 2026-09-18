@@ -18,3 +18,5 @@
 `authorizeDynamicPlugin` 先建立本机一次性回调，再向已批准注册端点提交公共客户端元数据；注册、授权浏览器和换token共享同一redirect URI，PKCE保持S256。注册POST不重试，要求201、无跳转、64KB返回限制；服务端返回secret、其他认证方法或不同回调均拒绝。结果只向主进程返回clientId和tokens，不回传注册管理凭证。
 
 这仍非完整接入：需将clientId与tokens一起绑定/加密保存后才可跨重启刷新。当前没有在登录按钮上启用动态路径，未向真实服务商提交注册。静态clientId授权与刷新保留，动态流程复用其取消/超时/回调安全边界。单元用真实本机回调、受控注册/token响应验证串联；不声称真实供应商授权。
+
+动态身份存储增量：credentialStore提供save/load/removeDynamicAuthorization，clientId和tokens共用加密version3信封，scope包含plugin/issuer/resource/account，独立文件命名空间不会覆盖静态OAuth或配置。保存时校验客户端身份，加载按savedAt扣减有效期；锁定中断不替换旧文件；跨scope复制密文拒绝。存储API已补，动态runtime/刷新/按钮尚待接入，不改变前述供应商验收边界。

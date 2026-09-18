@@ -95,3 +95,36 @@ test('configuration ciphertext cannot be swapped between accounts or with OAuth 
  fs.copyFileSync(path.join(dir,second),path.join(dir,token))
  assert.throws(()=>store.load(scope,lease),/凭证损坏/)
 })
+test('dynamic authorization persists client and tokens atomically in a separate encrypted namespace',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-dynamic-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ let now=1000;const store=new PluginCredentialStore(dir,()=>now),lease=protection()
+ store.save(scope,{access_token:'static',token_type:'Bearer'},lease)
+ store.saveDynamicAuthorization(scope,{clientId:'dynamic-client',tokens:{access_token:'dynamic-secret',token_type:'Bearer',expires_in:60}},lease)
+ assert.equal(fs.readdirSync(dir).length,2)
+ for(const f of fs.readdirSync(dir))assert.doesNotMatch(fs.readFileSync(path.join(dir,f),'utf8'),/dynamic-client|dynamic-secret/)
+ now+=15_000
+ const value=new PluginCredentialStore(dir,()=>now).loadDynamicAuthorization(scope,lease)!
+ assert.equal(value.clientId,'dynamic-client');assert.equal(value.tokens.expires_in,45)
+ assert.equal(store.load(scope,lease)?.access_token,'static')
+ lease.dispose();assert.throws(()=>store.saveDynamicAuthorization(scope,{clientId:'late',tokens:{access_token:'late',token_type:'Bearer'}},lease))
+ store.removeDynamicAuthorization(scope);assert.equal(fs.readdirSync(dir).length,1)
+})
+test('invalid dynamic client identity cannot overwrite a previously saved authorization',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-dynamic-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection(),tokens={access_token:'safe',token_type:'Bearer'}
+ store.saveDynamicAuthorization(scope,{clientId:'good',tokens},lease)
+ for(const clientId of ['', 'bad\nidentity', 'x'.repeat(2049)])assert.throws(()=>store.saveDynamicAuthorization(scope,{clientId,tokens},lease))
+ assert.equal(store.loadDynamicAuthorization(scope,lease)?.clientId,'good')
+ store.removePlugin(scope.plugin);assert.equal(fs.readdirSync(dir).length,0)
+})
+test('dynamic authorization rejects copied ciphertext across scopes and a lock during sealing',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-dynamic-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection(),value={clientId:'client',tokens:{access_token:'token',token_type:'Bearer'}}
+ store.saveDynamicAuthorization(scope,value,lease);const original=fs.readdirSync(dir)[0],bytes=fs.readFileSync(path.join(dir,original))
+ const other={...scope,account:'other'};store.saveDynamicAuthorization(other,value,lease)
+ const target=fs.readdirSync(dir).find(x=>x!==original)!
+ fs.copyFileSync(path.join(dir,original),path.join(dir,target));assert.throws(()=>store.loadDynamicAuthorization(other,lease))
+ const interrupted={...lease,seal:(v:string)=>{const cipher=lease.seal(v);lease.dispose();return cipher}}
+ assert.throws(()=>store.saveDynamicAuthorization(scope,{...value,clientId:'late'},interrupted))
+ assert.ok(fs.readFileSync(path.join(dir,original)).equals(bytes));assert.equal(fs.readdirSync(dir).filter(x=>x.endsWith('.tmp')).length,0)
+})

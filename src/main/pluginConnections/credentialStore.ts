@@ -18,7 +18,7 @@ export class PluginCredentialStore {
  private readonly directory:string
  private readonly now:()=>number
  constructor(directory:string,now:()=>number=Date.now){this.directory=path.resolve(directory);this.now=now}
- private file(scope:CredentialScope,kind:'oauth'|'configuration'='oauth'){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)+(kind==='configuration'?'\nconfiguration':'' )).digest('hex')+'.json')}
+ private file(scope:CredentialScope,kind:'oauth'|'configuration'|'dynamic-oauth'='oauth'){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)+(kind==='oauth'?'':'\n'+kind)).digest('hex')+'.json')}
  private checkDirectory(create=false){
   if(create)fs.mkdirSync(this.directory,{recursive:true,mode:0o700})
   if(fs.realpathSync(this.directory)!==this.directory||!fs.lstatSync(this.directory).isDirectory())throw Error('凭证目录不能经过符号链接')
@@ -48,6 +48,35 @@ export class PluginCredentialStore {
   protection.assertActive();const file=this.file(scope)
   const payload=JSON.stringify({version:1,savedAt:this.now(),scope:identity(scope),tokens:OAuthTokensSchema.parse(tokens)})
   this.writePayload(file,payload,protection)
+ }
+ /** Dynamic public client and tokens form one atomic encrypted record; never two files. */
+ saveDynamicAuthorization(scope:CredentialScope,value:{clientId:string;tokens:OAuthTokens},protection:CredentialProtection){
+  protection.assertActive();assertClientId(value.clientId)
+  const payload=JSON.stringify({version:3,kind:'dynamic-oauth',scope:identity(scope),savedAt:this.now(),clientId:value.clientId,tokens:OAuthTokensSchema.parse(value.tokens)})
+  this.writePayload(this.file(scope,'dynamic-oauth'),payload,protection)
+ }
+ loadDynamicAuthorization(scope:CredentialScope,protection:CredentialProtection):{clientId:string;tokens:OAuthTokens}|undefined{
+  protection.assertActive();const file=this.file(scope,'dynamic-oauth')
+  if(!fs.existsSync(this.directory))return undefined
+  this.checkDirectory();this.checkFile(file)
+  let cipher:string
+  try{cipher=fs.readFileSync(file,'utf8')}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return undefined;throw error}
+  try{
+   const payload=JSON.parse(protection.open(cipher))
+   if(payload.version!==3||payload.kind!=='dynamic-oauth'||payload.scope!==identity(scope))throw Error('scope')
+   assertClientId(payload.clientId)
+   const tokens=OAuthTokensSchema.parse(payload.tokens)
+   if(tokens.expires_in!==undefined){
+    if(typeof payload.savedAt!=='number'||!Number.isFinite(payload.savedAt)||payload.savedAt>this.now())tokens.expires_in=0
+    else tokens.expires_in=Math.max(0,tokens.expires_in-Math.ceil((this.now()-payload.savedAt)/1000))
+   }
+   protection.assertActive();return {clientId:payload.clientId,tokens}
+  }catch{throw Error('插件动态授权损坏或作用域不匹配，请重新授权')}
+ }
+ removeDynamicAuthorization(scope:CredentialScope){
+  const file=this.file(scope,'dynamic-oauth');if(!fs.existsSync(this.directory))return
+  this.checkDirectory();this.checkFile(file)
+  try{fs.unlinkSync(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
  }
  private writePayload(file:string,payload:string,protection:CredentialProtection){
   protection.assertActive()
@@ -113,4 +142,8 @@ function configurationValues(raw:unknown):Record<string,string>{
   if(!/^[a-z][a-z0-9-]{0,39}$/.test(id)||typeof value!=='string'||value.length>16384||value.includes('\0'))throw Error('插件配置值无效')
  }
  return Object.fromEntries(entries) as Record<string,string>
+}
+
+function assertClientId(value:unknown):asserts value is string{
+ if(typeof value!=='string'||!value.trim()||value.length>2048||/[\x00-\x1f\x7f]/.test(value))throw Error('动态客户端身份无效')
 }

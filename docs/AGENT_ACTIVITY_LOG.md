@@ -220,3 +220,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18 OAuth发现基础：上一轮d1de829属于实质进展，当前继续已批准远程授权方案。核验Notion/Sentry官方AS元数据均支持S256/none/注册端点/CIMD；PRM根路径网页工具未取到，不推定不存在。新增oauthDiscovery显式资源/issuer绑定、预批准origins、64KB流式限制、15秒总时限、无凭证/禁止重定向、path-aware OAuth/OIDC与404回退。先模块缺失红，专项4项绿，后补2项共6项绿。35429全量检查退出0（统计见本次日志）；未接manifest或授权按钮，不冒充Notion/Sentry已接入。下一步：401 metadata解析、客户端身份策略与存储、实际宿主接线及账号验收；仍无发布。参考文件 docs/verification/plugin-marketplace/oauth/discovery-2026-09-18.md。
 
 2026-09-18 动态客户端注册串联：上一轮476c11d为实质进展。新增authorizeDynamicPlugin，与既有PKCE/本地回调共用同一redirect URI，拒绝secret/回调变更/非none，注册POST不重试、晚返回取消丢弃。红灯TypeError后专项通过；78680全量3403项/3385通过/18跳过/0失败。62932构建与实际隔离市场/账号配置11项回归通过，截图亲眼查看（是旧UI回归，不是动态供应商登录）。动态身份持久化及manifest/按钮接线仍未完成，因此未启用或上架Notion/Sentry；下一步将clientId与tokens原子绑定到加密scope、刷新复用该clientId。未对真实服务商注册、未发布或替换正式app。
+
+2026-09-18 动态身份原子存储：新增dynamic-oauth version3加密信封，clientId/tokens同文件保存，静态OAuth/config命名不变。新增3项真实临时文件+AES-GCM租约测试，验证重载/有效期扣减/作用域换密文/保存中锁定不覆盖旧文件/无临时残留/单scope与插件清除。先saveDynamicAuthorization缺失红，专项及57726全量检查退出0。存储方法尚未由动态runtime消费，撤销异步授权结果需后续manager接线验证；未宣称账号登录或32项完成。未发布、未修改正式应用。
