@@ -87,3 +87,8 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 ## 双目录构建增量
 新增scripts/plugin-registry-build.mjs并实际接build-plugin-registry：staging内打包+parseManifest/parseCatalog校验、v1排除requirements包、v2保留、同版本archive变更拒绝覆盖、预检后复制不可变包、分别原子rename两个目录（非跨文件事务）。tests三项先红后绿，测试了legacy隔离/真实zip大小/不可安装字段拒绝/重复名/失败后旧目录与archive不变。当前仅两已有包，不是32包落地。全量check/build及真实CLI双次构建到/tmp新目录正在可见节点运行。未改在线默认URL，publish-plugins旧脚本仍不能安全发布新格式，本轮没有执行生产上传。
 本批最终全量check/build退出0：3334项/3316通过/18skip/0失败。真实build-plugin-registry CLI在新/tmp目录连续两次构建成功，产物v1两包/v2两包，逐包重新计算SHA256和size与两目录一致。没有宿主重构或任何生产上传。监测54399已结束。下一步发布器原子切换/不可变包与独立更新演练，32包与实际账号仍未完成；不能把构建目录存在称线上已支持。
+
+## 继续：双目录安全发布链
+替换旧直接覆盖上传脚本为显式 --publish Node 入口和可演练生产 SSH/SCP 适配器：校验双目录/版本URL/本地hash并快照；owner目录锁；全部远端同版本包预检；逐文件SCP后大小/hash核对；所有暂存通过再硬链接独占晋升包；v2/v1备份后分别原子rename。保留旧包和release目录，断线不自动重试，不抢锁/不reload。两目录不是事务：第二目录失败允许v2新/v1旧，引用包仍完整。
+8项专项通过（包含故障注入与实际POSIX临时文件系统操作），新增权限红测发现上传0600可能让静态托管不可读，已在晋升前设644并测试。Node既有MODULE_TYPELESS_PACKAGE_JSON警告仍在，不为消警告改项目module类型。未执行生产脚本、没有SSH服务器操作。全量check/build监测93755正在运行，结果待取；目标不完成，接下来需独立更新宿主端到端演练及32真实包/凭证配置/上游授权，不用占位冒充完成。
+安全发布链最终全量check/build退出0（3342项：3324通过、18跳过、0失败）；监测93755已结束，无遗留运行命令。脚本本地真实POSIX验证通过但未在生产SSH/HTTP执行；本轮无宿主UI改动，未新增应用端到端证明。持续目标active，下一步应做同一隔离宿主不重构建的目录刷新/安装更新演练，再推进32连接器实包与配置授权。
