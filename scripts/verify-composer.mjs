@@ -145,7 +145,7 @@ export async function verifyComposer({cdp,projectDir,root,waitFor}) {
     const point=await cdp.eval('(()=>{const r=document.querySelector('+JSON.stringify(selector)+').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()')
     await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',...point})
   }
-  await cdp.eval('window.__composerTestSetup('+JSON.stringify({plugins:[{id:'reference-plugin',cli:'omp',displayName:'ReferencePlugin',name:'reference-plugin',description:'设计文件与组件信息',mcpServers:{fixture:{}}}]})+')')
+  await cdp.eval('window.__composerTestSetup('+JSON.stringify({plugins:[{id:'reference-plugin',cli:'omp',displayName:'ReferencePlugin',name:'reference-plugin',description:'设计文件与组件信息',remote:{transport:'streamable-http',url:'https://example.com/mcp',approvedOrigins:['https://example.com'],auth:'none'}}]})+')')
   await cdp.eval('window.__agentChatTestPush("composer-omp-active",'+JSON.stringify({k:'plugin.status',plugin:{id:'reference-plugin',name:'ReferencePlugin',status:'selected',note:'测试已选择'}})+')')
   await type('@ReferencePlugin')
   await ready('document.querySelector(".ac-mentions")?.innerText.includes("ReferencePlugin")')
@@ -153,7 +153,8 @@ export async function verifyComposer({cdp,projectDir,root,waitFor}) {
   await ready('!!document.querySelector(".ac-reference-chip[data-kind=plugin]")')
   await hoverElement('.ac-reference-chip[data-kind=plugin]')
   await ready('document.querySelector(".ac-reference-preview")?.textContent.includes("设计文件与组件信息")')
-  await assert('document.querySelector(".ac-reference-preview pre").textContent==="使用插件「ReferencePlugin」" && document.querySelector(".ac-reference-preview").textContent.includes("不会建立新的连接")','插件 chip 显示详情、绑定边界与准确发送文本')
+  await assert('document.querySelector(".ac-reference-preview pre").textContent==="使用插件「ReferencePlugin」" && document.querySelector(".ac-reference-preview").textContent.includes("不会建立新的连接")','远程插件 chip 正确归类并显示详情、绑定边界与准确发送文本')
+  const remoteShot=await cdp.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(out,'remote-plugin.png'),Buffer.from(remoteShot.result.data,'base64'))
   await cdp.eval('(()=>{const e=document.querySelector("[data-composer-input]");e.focus();e.setSelectionRange(0,e.value.length);const d=new DataTransfer();e.dispatchEvent(new ClipboardEvent("copy",{clipboardData:d,bubbles:true,cancelable:true}));window.__copiedReference=d.getData("text/plain")})()')
   await assert('window.__copiedReference==="使用插件「ReferencePlugin」 "','复制引用得到原始文本而非 chip 装饰标签')
   await type('')

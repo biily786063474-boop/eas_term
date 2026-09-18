@@ -227,7 +227,7 @@ function runBuild(label) {
 
 const PRELOAD_TS = path.join(PROJECT_ROOT, 'src/preload/index.ts')
 
-const PRELOAD_CONST_ANCHOR = `const api = {\n  platform: process.platform,`
+const PRELOAD_CONST_ANCHOR = `const api = {`
 const PRELOAD_CONST_PATCHED = `// TEMP(task-8 e2e，见 scripts/verify-agent-chat-ui.mjs)：只在显式传 EAS_AGENT_CHAT_TEST=1
 // 时启用，正常开发/生产构建不受影响。只替换 agentChat.start/onEvent 对渲染层暴露的行为
 // （避免真的 spawn CLI 花 token），resolveApproval 保留真实 IPC 调用、只是顺手记一份
@@ -238,7 +238,7 @@ const fakeAgentChatListeners = new Map<string, (e: ChatEvent) => void>()
 const testStartCalls: AgentChatStartParams[] = []
 const testResolveApprovalCalls: { sessionId: string; approvalId: string; decision: string }[] = []
 
-const api = {\n  platform: process.platform,`
+const api = {`
 
 // 2026-08-17 最终评审 C1 之后，preload 的 start/onEvent 换成了「常驻单频道 + 模块加载期
 // 挂监听」的形状，下面两组锚点跟着原样更新（锚点必须逐字等于当前源码，否则 applyPatch
