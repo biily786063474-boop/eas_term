@@ -222,3 +222,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18 动态客户端注册串联：上一轮476c11d为实质进展。新增authorizeDynamicPlugin，与既有PKCE/本地回调共用同一redirect URI，拒绝secret/回调变更/非none，注册POST不重试、晚返回取消丢弃。红灯TypeError后专项通过；78680全量3403项/3385通过/18跳过/0失败。62932构建与实际隔离市场/账号配置11项回归通过，截图亲眼查看（是旧UI回归，不是动态供应商登录）。动态身份持久化及manifest/按钮接线仍未完成，因此未启用或上架Notion/Sentry；下一步将clientId与tokens原子绑定到加密scope、刷新复用该clientId。未对真实服务商注册、未发布或替换正式app。
 
 2026-09-18 动态身份原子存储：新增dynamic-oauth version3加密信封，clientId/tokens同文件保存，静态OAuth/config命名不变。新增3项真实临时文件+AES-GCM租约测试，验证重载/有效期扣减/作用域换密文/保存中锁定不覆盖旧文件/无临时残留/单scope与插件清除。先saveDynamicAuthorization缺失红，专项及57726全量检查退出0。存储方法尚未由动态runtime消费，撤销异步授权结果需后续manager接线验证；未宣称账号登录或32项完成。未发布、未修改正式应用。
+
+2026-09-18 动态授权管理：上一轮fabc19f为实质进展。新增DynamicAuthorizationManager消费动态身份存储，配置hash绑定scope，登录single-flight/刷新复用存储clientId/保留旧refresh_token；主动登录取消旧刷新，close/disconnect/密钥失效阻止迟到落盘。先模块缺失红，5项专项纳入38650全量3411项/3393通过/18跳过/0失败。尚未接动态连接runtime、manifest和登录按钮，无供应商账号验证；下一步接createAuthenticatedFetch的动态凭证读取及撤销关闭，再接宿主工厂。无后台进程遗留，无发布或正式app修改。
