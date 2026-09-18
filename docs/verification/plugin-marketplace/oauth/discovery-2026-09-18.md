@@ -22,3 +22,5 @@
 动态身份存储增量：credentialStore提供save/load/removeDynamicAuthorization，clientId和tokens共用加密version3信封，scope包含plugin/issuer/resource/account，独立文件命名空间不会覆盖静态OAuth或配置。保存时校验客户端身份，加载按savedAt扣减有效期；锁定中断不替换旧文件；跨scope复制密文拒绝。存储API已补，动态runtime/刷新/按钮尚待接入，不改变前述供应商验收边界。
 
 动态管理增量：DynamicAuthorizationManager已消费新存储方法，串联登录/刷新/清除，完整配置hash纳入scope，刷新保留原clientId，重复登录合并。已验证取消/关闭/密钥租约失效后的迟到结果不写入。尚缺动态MCP连接runtime、manifest/按钮接线与真实服务商验证；不能将该层通过测试计为账号插件完成。
+
+动态连接runtime增量：已复用原authenticatedFetch令牌发送边界，测试覆盖精确目标、刷新clientId复用、401不重放、全部连接断开/锁定/关闭。新增实际临时文件AES-GCM持久化→重建runtime→用磁盘clientId刷新→删除记录测试，不等同safeStorage/真实服务器/三模型CLI验证。下一步接pluginAuthorization工厂与manifest显式动态模式、能力门禁、实际应用账号路径；发现结果不可自动扩大manifest批准端点。

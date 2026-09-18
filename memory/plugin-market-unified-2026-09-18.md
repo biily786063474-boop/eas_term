@@ -217,3 +217,5 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 2026-09-18 动态身份原子存储：新增dynamic-oauth version3加密信封，clientId/tokens同文件保存，静态OAuth/config命名不变。新增3项真实临时文件+AES-GCM租约测试，验证重载/有效期扣减/作用域换密文/保存中锁定不覆盖旧文件/无临时残留/单scope与插件清除。先saveDynamicAuthorization缺失红，专项及57726全量检查退出0。存储方法尚未由动态runtime消费，撤销异步授权结果需后续manager接线验证；未宣称账号登录或32项完成。未发布、未修改正式应用。
 
 2026-09-18 动态授权管理：上一轮fabc19f为实质进展。新增DynamicAuthorizationManager消费动态身份存储，配置hash绑定scope，登录single-flight/刷新复用存储clientId/保留旧refresh_token；主动登录取消旧刷新，close/disconnect/密钥失效阻止迟到落盘。先模块缺失红，5项专项纳入38650全量3411项/3393通过/18跳过/0失败。尚未接动态连接runtime、manifest和登录按钮，无供应商账号验证；下一步接createAuthenticatedFetch的动态凭证读取及撤销关闭，再接宿主工厂。无后台进程遗留，无发布或正式app修改。
+
+2026-09-18 动态MCP连接runtime：上一轮e538c07是实质进展，本轮新增DynamicAuthorizationRuntime复用authenticatedFetch发送边界、动态manager与密文token读取。先模块缺失红后3项专项通过；4430全量3414/3396通过/18跳过/0失败。实测边界包含重建runtime从AES-GCM磁盘记录恢复clientId并刷新、不重新注册、精确URL拒绝、401不重放、disconnect/lock/close使全部活动连接失效。未接pluginAuthorization工厂/manifest/UI，非供应商账号或真实模型CLI证明；未修改正式app或发布。下一步显式dynamic manifest分支及工厂连接、发现与批准端点一致性，再实际隔离UI端到端。
