@@ -58,3 +58,9 @@ RemotePluginClient增加宿主通用request、通知、connectionClosed和tracke
 新增pluginCatalog.ts v2不可安装条目独立列表（无伪包链接）与校验；主进程loader/preload/types/完整市场同步原因、数量、缓存标识。旧parseRegistry仍拒schema2；默认URL仍v1，未部署切换。隔离UI脚本已增加schema2不可安装条目无安装按钮断言，待构建执行。
 密钥路由索引仅阅读元数据：没有从gh/rclone/其他CLI复制任何token，索引里的其他服务凭证不等同插件OAuth客户端注册。没有要求用户贴key。
 该批最终check/build+隔离UI通过：3313项，3295通过/18跳过/0失败；v2待接入原因无安装按钮已亲眼看截图，4项断言通过。最后命令15781/1635已结束，无后台运行。准备提交里程碑后继续，不是整体完成。当前默认在线目录仍v1，远程能力仍不对市场广告，oauth descriptor/UI/refresh未接宿主，32条目仍大部分未实施。
+
+持续目标已建立（用户明确要求自行做完所有直到最终结果），create_goal为active，不要仅因为某个commit完成就标目标complete。没有token预算。里程碑c0e258f已提交41文件719行，最终验证3313/3295pass/18skip+build+4UI断言，截图眼验。未push/发布。
+最新尚未提交增量：credentialStore.savedAt+expires_in剩余时间（新增红测通过）；authorizationManager.refresh单飞，断开晚到refresh不落盘，显式login取消已有refresh；oauthAuthorization新增refreshPluginAuthorization锁定精确token endpoint、SDK刷新保留refresh token，取消/60秒总限不重放。专项15项及typecheck通过，将跑完整检查后提交。
+下一块要做OAuth正式宿主/界面，但必须保持安全：现PluginInfo.remote.auth仅'none'；需要引入显式OAuth配置（issuer/auth/token端点、合法注册clientId、scope、auth.oauth要求），主进程固定配置不可renderer任意端点。新增runtime应从app-ready canonical userData插件目录构造store、用acquirePluginCredentialAccess租约；fetch附Bearer前核验精确remote URL，锁定信号取消请求/关闭所属连接；过期才manager.refresh，不在tools/call失败后重放。native确认后系统浏览器登录，renderer只拿状态；卸载/断开先取消连接再清本地凭证，不能全局杀服务。
+仍缺：OAuth实际宿主/UI、发现/DCR/供应商适配、v2默认目录切换+发布链、32真实连接器与逐项上游许可、实际模型CLI验证、正常安装/更新/断开UI与独立更新演练。不要把已跑的真实shim子进程测试说成实际模型三CLI。保持原Demo清单，不换项凑数。读keys-vault只拿过索引元数据，没有借其他CLI token。
+refresh/expiry批最终check/build退出0：3316项，3298通过/18跳过/0失败，build通过；监测命令34244已结束。持续目标仍active，下一自动续轮继续OAuth宿主/UI，不等待用户再说继续、不标完成。上游候选核验新增Word/PPT归档与DBHub<0.22.6 readonly漏洞，台账已记官方来源，未安装这些候选。

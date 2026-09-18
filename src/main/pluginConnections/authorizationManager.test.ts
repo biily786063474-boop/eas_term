@@ -40,3 +40,10 @@ test('closed manager cannot start new authorization',async()=>{
  if(f.counts().starts)f.finish()
  await assert.rejects(result);assert.equal(f.counts().starts,0)
 })
+test('refresh is single-flight and disconnect prevents late refresh commit',async()=>{
+ const leases=new CredentialLeases(()=>true);let requests=0,writes=0,finish!:(v:{access_token:string;token_type:string})=>void
+ const manager=new PluginAuthorizationManager({acquire:()=>({...leases.acquire(),seal:(v:string)=>v,open:(v:string)=>v}),store:{save:()=>{writes++},remove:()=>{},load:()=>({access_token:'expired',token_type:'Bearer',refresh_token:'fixture-refresh'})},authorize:async()=>{throw Error('must not login')},refresh:async(_config,token)=>{assert.equal(token,'fixture-refresh');requests++;return new Promise(r=>{finish=r})}})
+ const a=manager.refresh(scope,config),b=manager.refresh(scope,config)
+ manager.disconnect(scope);finish({access_token:'late',token_type:'Bearer'})
+ await assert.rejects(a);await assert.rejects(b);assert.equal(requests,1);assert.equal(writes,0)
+})

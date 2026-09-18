@@ -36,3 +36,11 @@ test('corrupt or symlink credential files fail closed without overwriting',t=>{
  assert.throws(()=>store.save(scope,{access_token:'fixture',token_type:'Bearer'},lease))
  assert.equal(fs.readFileSync(target,'utf8'),'keep')
 })
+test('stored expiry is reduced by elapsed time rather than reset on every load',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-expiry-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ let now=1000
+ const store=new PluginCredentialStore(dir,()=>now),lease=protection()
+ store.save(scope,{access_token:'fixture',token_type:'Bearer',expires_in:60},lease)
+ now+=45_000;assert.equal(store.load(scope,lease)?.expires_in,15)
+ now+=20_000;assert.equal(store.load(scope,lease)?.expires_in,0)
+})

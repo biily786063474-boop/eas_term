@@ -16,7 +16,8 @@ function identity(scope:CredentialScope){
  */
 export class PluginCredentialStore {
  private readonly directory:string
- constructor(directory:string){this.directory=path.resolve(directory)}
+ private readonly now:()=>number
+ constructor(directory:string,now:()=>number=Date.now){this.directory=path.resolve(directory);this.now=now}
  private file(scope:CredentialScope){return path.join(this.directory,createHash('sha256').update(identity(scope)).digest('hex')+'.json')}
  private checkDirectory(create=false){
   if(create)fs.mkdirSync(this.directory,{recursive:true,mode:0o700})
@@ -35,12 +36,17 @@ export class PluginCredentialStore {
   try{
    const payload=JSON.parse(protection.open(cipher))
    if(payload.version!==1||payload.scope!==identity(scope))throw Error('scope')
-   const tokens=OAuthTokensSchema.parse(payload.tokens);protection.assertActive();return tokens
+   const tokens=OAuthTokensSchema.parse(payload.tokens)
+   if(tokens.expires_in!==undefined){
+    if(typeof payload.savedAt!=='number'||!Number.isFinite(payload.savedAt)||payload.savedAt>this.now())tokens.expires_in=0
+    else tokens.expires_in=Math.max(0,tokens.expires_in-Math.ceil((this.now()-payload.savedAt)/1000))
+   }
+   protection.assertActive();return tokens
   }catch{throw Error('插件凭证损坏或作用域不匹配，请重新授权')}
  }
  save(scope:CredentialScope,tokens:OAuthTokens,protection:CredentialProtection){
   protection.assertActive();const file=this.file(scope)
-  const payload=JSON.stringify({version:1,scope:identity(scope),tokens:OAuthTokensSchema.parse(tokens)})
+  const payload=JSON.stringify({version:1,savedAt:this.now(),scope:identity(scope),tokens:OAuthTokensSchema.parse(tokens)})
   if(Buffer.byteLength(payload)>64*1024)throw Error('插件凭证大小超限')
   const cipher=protection.seal(payload)
   this.checkDirectory(true);this.checkFile(file)

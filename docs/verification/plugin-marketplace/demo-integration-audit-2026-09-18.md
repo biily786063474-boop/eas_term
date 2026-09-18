@@ -84,3 +84,11 @@
 - 知乎：官方组织仓库 https://github.com/zhihu/zhihu-mediacloud-uploader/blob/main/references/auth-info.md 使用OpenAPI app key/secret；媒体上传不等同Demo全部搜索/回答能力，其余仍待核验。
 
 以上是公开接入条件核验；不是已获许可、已完成连接器分发或账号E2E。其余条目保留原“待核验”，不推断不存在官方能力。
+
+### 本地/数据库候选安全检查（尚未选定或安装）
+
+- Word候选：https://github.com/GongRzhe/Office-Word-MCP-Server ，官方仓库页面标明2026-03-03已归档（MIT），需要审查Python运行时、具体版本/许可证与目录权限；不是微软官方MCP。
+- Excel候选：https://github.com/haris-musa/excel-mcp-server ，需要同样的锁版、跨平台和文件权限验证；不能以README支持Excel推断所有公式/透视/图表可用。
+- PowerPoint候选：https://github.com/GongRzhe/Office-PowerPoint-MCP-Server ，检索结果标记仓库已归档，不能不经维护/安全评审直接打包。
+- 本地文件候选：https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem ，需要在本项目的用户确认目录边界下锁版封装，不能把整个home默认授权。
+- 数据库候选DBHub存在官方安全公告：https://github.com/bytebase/dbhub/security/advisories/GHSA-mwwr-p57h-56pf 。公告列出<0.22.6的readonly模式不能真正阻止写入，0.22.6修复；旧版或“只检测SQL首词”的防护禁止采纳。锁定修复版本也不替代数据库账号最小权限和实际只读验证。当前未安装该候选。

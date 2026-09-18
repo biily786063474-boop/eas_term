@@ -64,3 +64,13 @@ test('authorization exchanges a code with a real isolated HTTP token server',asy
  assert.equal(new URLSearchParams(body).get('client_id'),config.clientId)
  assert.equal(new URLSearchParams(body).get('grant_type'),'authorization_code')
 })
+test('SDK refresh uses only the approved token endpoint and preserves refresh token',async()=>{
+ const {refreshPluginAuthorization}=await import('./oauthAuthorization.ts')
+ let calls=0
+ const result=await refreshPluginAuthorization(config,'fixture-refresh',{fetch:async(input,init)=>{
+  calls++;assert.equal(String(input),config.tokenEndpoint)
+  const body=new URLSearchParams(String(init?.body));assert.equal(body.get('grant_type'),'refresh_token');assert.equal(body.get('refresh_token'),'fixture-refresh');assert.equal(body.get('resource'),config.resource)
+  return Response.json({access_token:'renewed-fixture',token_type:'Bearer',expires_in:120})
+ }})
+ assert.equal(calls,1);assert.equal(result.refresh_token,'fixture-refresh')
+})
