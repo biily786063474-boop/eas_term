@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "checks": [
+    "市场安装先确认，不静默落包",
+    "实际市场下载安装网页抓取包，无登录或密钥配置前置",
+    "claude真实shim抓取自有网页并解码正文",
+    "codex真实shim抓取自有网页并解码正文",
+    "omp真实shim抓取自有网页并解码正文",
+    "三个shim经共享stdio插件实际抓取三次",
+    "实际宿主调用拒绝内网，不发额外请求"
+  ],
+  "scope": "Real isolated Electron market download/hash/extraction/install confirmation, shared stdio host and three shim subprocesses; no account required. Exact DNS/HTTPS-dial adapter only in disposable fixture plugin. Not real TLS, public Internet or model CLI. Actual package installation, not a built-in fixture."
+}

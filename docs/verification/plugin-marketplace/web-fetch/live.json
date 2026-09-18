@@ -1,0 +1,13 @@
+{
+  "livePassed": false,
+  "result": {
+    "isError": true,
+    "content": [
+      {
+        "type": "text",
+        "text": "DNS 包含非公开地址"
+      }
+    ]
+  },
+  "scope": "Actual stdio connector public HTTPS request; no account, proxy or DNS adapter."
+}

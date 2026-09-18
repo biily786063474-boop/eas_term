@@ -1,0 +1,6 @@
+{
+ "name":"web-fetch","version":"1.0.0","displayName":"网页抓取",
+ "description":"把公开HTTPS网页转成可读文本，返回标题、链接与来源；不执行脚本、不读取登录态，不支持内网和付费墙绕过。",
+ "category":"数据搜索","requirements":{"capabilities":["mcp.stdio"]},
+ "mcp":{"command":"node","args":["./server.mjs"]},"permissions":{"canvas":[]}
+}

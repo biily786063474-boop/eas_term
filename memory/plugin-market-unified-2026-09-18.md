@@ -224,3 +224,6 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 
 bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-143-n795j（关闭自己的旧local-files configured截图cnode115，未碰用户timeline/设计节点）。继续创建Notion/Sentry纯远程候选清单和打包回归；官方文档及元数据已核查并持久化providers-2026-09-18.md。PRM web工具不可读，不是不存在证据；Notion未声明iss支持，不移除宿主iss校验。默认市场未加入二者，真实账号仍未验。首全量58448类型检查TS7016/TS7006失败，新测试按同类打包测试改.mjs，不关类型校验；47251重跑中，需取同handle终态。
 47251退出1：全量3419/3400通过/18skip/1fail，owned IPC disconnect during exec 5秒夹具未进入执行、rows空。保留oauth/candidate-recheck-failure.json；同机另有全量进程但未证明因果，也未碰其进程。46650专项7/全量3419项3401通过18skip0fail退出0。两候选工程已完成清单+实际打包，不上架/不冒称上游已验收。现无本会话后台进程；目标仍active。下一步PRM发现与实际供应商账号验证，同时推进Excel/PPT/数据库等剩余自主工程，不再反复扩fixture冒充接入数。
+
+2026-09-18 用户调整优先级：最终用户安装后自行登录，先补剩余插件，不等Biily账号、不反复扩OAuth基础fixture。前两轮解释属于no-progress，本轮实作web-fetch无账号stdio插件，静态HTML/纯文本标题正文链接，严格pinned公开DNS+5跳+15s+2MB，htmlparser2 10.0.0专属lock/bundle/7许可证audit0。5专项红→绿，87745全量3424/3406通过/18skip+build+builtin6项；72905实际市场下载确认安装+3shim业务+私网拒绝7项通过，截图眼验。公网example.com真实调用退出2“DNS 包含非公开地址”，未绕过。已加入默认本地v2第4包，非发布/非所有网络可用。98240最终全量+临时目录构建进行中，需取同handle结果再提交。Frame新web-fetch截图取工具结果，关闭自己的remote-chip cnode139，保留用户timeline/设计。
+98240退出0：全量3425/3407通过/18skip/0fail，实际v1=2/v2=4构建；12814最终市场7项通过。7份许可证仅行尾空格规范化后6专项复验通过。所有后台本轮进程终止。网页抓取当前Frame图cnode145；工程接入≠公网已验，live.json仍记录DNS拒绝。接下来优先Excel/PPT等其余实包，账号由用户安装后自行配置，开发者注册/审核另列，目标active。

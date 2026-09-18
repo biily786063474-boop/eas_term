@@ -42,7 +42,7 @@
 |自媒体|小红书|查笔记数据（接口有限）|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |设计创意|Figma|读写设计稿与组件|官方 MCP 提供设计上下文与写入能力；账号权限、接入方式与具体工具待核对|
 |设计创意|Canva|生成、评审、编辑设计|官方远程 MCP；独立宿主回调 URI 需申请放行，逐用户授权；不可借用其他客户端身份|
-|数据搜索|网页抓取|把网页内容抓成可读文本|待核验上游来源、许可、授权、实际工具及平台兼容性|
+|数据搜索|网页抓取|把网页内容抓成可读文本|实包已接默认v2构建；真实市场安装及三shim抓取通过；公网因非公开DNS被拒，系统代理/Windows/真实模型未验|
 |自媒体|知乎|搜索、读取与回答|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |数据搜索|维基百科|查词条、摘要|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |文件存储|Google Drive|文件、Docs、Sheets、Slides|待核验上游来源、许可、授权、实际工具及平台兼容性|
@@ -53,7 +53,7 @@
 - `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
 - `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；stdio 统一配置/目录授权已接；remote Bearer 与 provider 注册适配仍缺。
 - `src/main/mcpClient.ts` 与 `pluginHost.ts`：已接 stdio/remote 共享宿主并做真实shim/隔离测试；远程正式 capability 尚未公布，实际模型与真实账号验证不能由这些测试代替。
-- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files；v1 仅前两项，v2 三项，尚未发布。
+- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files、web-fetch；v1 仅前两项，v2 四项，新增目录尚未发布。
 - 分发热更新已有基础，但原 Demo 的远程连接、授权和配置不能靠扩大 PLUGINS 数组完成。
 
 ## 已查看官方来源
@@ -129,3 +129,6 @@ Word 候选 createDocument/word_create 支持追加矩形文本表格；readDocu
 
 ### 2026-09-18 动态 OAuth 纵向与两份供应商候选
 显式动态清单已串入真实工厂、UI和共享宿主；实际隔离Electron完成DCR/PKCE/loopback/系统密文/三shim调用/锁定阻断，13项通过，固定OAuth兼容11项通过。自有fixture网络与浏览器适配，不是供应商登录。截图眼验修正“已连通”与“尚未测试”并存。`plugins-store/notion` / `sentry` 保存官方公开端点、严格单origin与动态能力要求，真实打包可生成v2候选，但不进默认市场。公开PRM未取得、Notion实际iss回调兼容及两家真实账号待验；详见oauth/providers-2026-09-18.md。不能由包数量推定可用数量。
+
+### 用户优先级调整与网页抓取落地
+用户明确账号由最终用户安装后登录，先补剩余插件，不等个人账号再写工程。区分工程接入/待用户授权/真实账号验证/平台审核。网页抓取已实现无账号stdio静态HTML/文本读取，离线htmlparser2与7份许可，实际市场安装到三shim调用已验；加入默认本地v2构建（第4包），尚未生产发布。公网DNS被拒证据与限制见web-fetch/implementation.md。
