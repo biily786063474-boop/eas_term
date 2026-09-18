@@ -15,6 +15,9 @@ import type { SessionMcpServer } from './builtinCapabilities'
 import type { RoleBounds } from './roleBinding'
 import type { RoleCaps, RoleRaw } from './types'
 
+export type { ChatImage } from './chatImages'
+import type { ChatImage } from './chatImages'
+
 export interface ChatToolInfo { server?: string; name: string }
 export interface ChatResource { uri: string; name: string; mimeType?: string }
 /** 执行的语义类型。可选以兼容旧历史；未知来源使用 generic。 */
@@ -66,13 +69,14 @@ export type ChatEvent =
    *  补上 turnActive 之后又漏了第二条消息（普通 send 不产生 session.ready，
    *  turnActive 永远不为真）。turn.start 让这件事回到唯一真相 —— 事件流。 */
   | { k: 'turn.start' }
+  | { k: 'images'; images: ChatImage[] }
   | { k: 'text.delta'; text: string }
   | { k: 'text.done'; text: string }
   | { k: 'thinking'; tokens: number }
   | { k: 'exec.start'; execId: string; label: string; detail: string; kind?: ExecKind; tool?: ChatToolInfo }
   /** `label` 可选：有些执行到**完成时**才知道自己在干什么（Codex 的 web_search 在
    *  `item.started` 时 query 是空的，完成才带上）。给了就覆盖 exec.start 那个标签。 */
-  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; kind?: ExecKind; tool?: ChatToolInfo; resources?: ChatResource[] }
+  | { k: 'exec.done'; execId: string; ok: boolean; output: string; label?: string; kind?: ExecKind; tool?: ChatToolInfo; resources?: ChatResource[]; images?: ChatImage[] }
   | {
       k: 'approval.request'
       approvalId: string

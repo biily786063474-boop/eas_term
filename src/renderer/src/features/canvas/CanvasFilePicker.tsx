@@ -1,8 +1,6 @@
 // 在 Frame 空白处双击 → 弹出「插入」选择器。
 //
-// 三个选项卡：文件夹 / 最近 / **插件**。前两个插的是文件，第三个插的是
-// 「一个绑定了某插件的 AI 对话节点」——插件本身没有界面可渲染（两个生态的插件
-// 都不含 UI 代码，2026-08-24 实测），能插进画布的只有「带着它的工具的会话」。
+// 双击只含文件视图，插件从 Frame 右键独立打开，不覆盖文件视图偏好。
 //
 // 两种排序（用户可切）：
 //   · 文件夹 —— 和访达/资源管理器一致的顺序（目录在前、名称升序），可逐级进入子目录
@@ -14,13 +12,22 @@ import { createPortal } from 'react-dom'
 import type { DirEntry, PluginInfo, PluginPanelDef, RecentFile } from '../../../../shared/types'
 import { useMenuAnchor, useDismiss } from '../../ui/CanvasContextMenu'
 import { isImagePath, isVideoPath, isMediaPath } from './media'
-import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, PlugIcon, FilesIcon } from '../../ui/Icons'
+import { ChevronLeftIcon, ClockIcon, CodeIcon, FileIcon, FolderIcon, GlobeIcon, ImageIcon, FilesIcon } from '../../ui/Icons'
+import { is3DPath } from './mediaExts'
+import { readFilePickerMode, saveFilePickerMode } from './filePickerMode'
 import { SplitText } from '../../ui/SplitText'
 
 const MAX_RECENT = 60
 
+function ModelIcon({ size = 12 }: { size?: number }): JSX.Element {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+    <path d="m12 2 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10" />
+  </svg>
+}
+
 function FileGlyph({ path }: { path: string }): JSX.Element {
   const ext = path.split('.').pop()?.toLowerCase() ?? ''
+  if (is3DPath(path)) return <ModelIcon size={13} />
   if (isImagePath(path) || isVideoPath(path)) return <ImageIcon size={13} />
   if (ext === 'html' || ext === 'htm') return <GlobeIcon size={13} />
   if (/^(ts|tsx|js|jsx|py|go|rs|java|c|h|cpp|sh|json|css|vue|swift|rb|php)$/.test(ext))
@@ -49,8 +56,10 @@ export function CanvasFilePicker({
   onPick,
   onPickPlugin,
   onOpenPanel,
-  onClose
+  onClose,
+  pluginsOnly = false
 }: {
+  pluginsOnly?: boolean
   x: number
   y: number
   /** 起始目录：子 Frame 用它的 folderPath，项目 Frame 用项目根 */
@@ -63,8 +72,13 @@ export function CanvasFilePicker({
   onOpenPanel?: (p: PluginInfo, panel: PluginPanelDef) => void
   onClose: () => void
 }): JSX.Element {
-  const [mode, setMode] = useState<'tree' | 'recent' | 'plugin'>('tree')
-  // 已装插件。**切到这个 tab 才拉** —— 扫两个 CLI 的缓存目录是同步 IO，
+  const [mode, setMode] = useState<'tree' | 'recent' | 'plugin'>(() => pluginsOnly ? 'plugin' : readFilePickerMode(localStorage))
+  const chooseMode = (next: 'tree' | 'recent'): void => {
+    setMode(next)
+    saveFilePickerMode(localStorage, next)
+  }
+  const filterTouched = useRef(false)
+  // 已装插件。**仅右键打开插件视图时才拉** —— 扫两个 CLI 的缓存目录是同步 IO，
   // 没人看的时候没必要每次开选择器都跑一遍。
   const [plugins, setPlugins] = useState<PluginInfo[] | null>(null)
   const [dir, setDir] = useState(root)
@@ -72,19 +86,19 @@ export function CanvasFilePicker({
   const [recent, setRecent] = useState<RecentFile[] | null>(null)
   const [loading, setLoading] = useState(true)
   // 「只保留文档文件」勾选状态：从 prefs 初始化，变化时写回并触发重拉（见下面的 effect）
-  // 过滤三选一。**「文档」走主进程**（recentFiles 的第三个参数，它要扫全项目并限量 60，
-  // 在那边筛才不会「筛完只剩三条」）；**「多媒体」走客户端**（两种模式共用一份判定，
+  // 过滤四选一。**「文档」走主进程**（recentFiles 的第三个参数，它要扫全项目并限量 60，
+  // 在那边筛才不会「筛完只剩三条」）；**「多媒体 / 3D」走客户端**（两种模式共用一份判定，
   // 而且主进程那条 IPC 只认 docsOnly 一个布尔，扩它得改签名和 prefs 类型）。
   // 代价写在这儿：「最近」+「多媒体」时，60 条里没有媒体文件就会是空列表 ——
   // 那时切到「文件夹」模式按目录找。
-  const [filter, setFilter] = useState<'all' | 'docs' | 'media'>('all')
+  const [filter, setFilter] = useState<'all' | 'docs' | 'media' | '3d'>('all')
   const docsOnly = filter === 'docs'
   useEffect(() => {
     // 记着的「只看文档」偏好恢复回来；没设过就是「全部」。
     // 「多媒体」不持久化 —— 它是「这一次我要找图」的临时意图，不是长期偏好
     void window.api.prefs.get().then((p) => {
-      if (p.recentDocsOnly) setFilter('docs')
-    })
+      if (!filterTouched.current && p.recentDocsOnly) setFilter('docs')
+    }).catch(() => {})
   }, [])
   const ref = useRef<HTMLDivElement>(null)
   // 尺寸固定（宽 + 定高列表），所以只在挂载时定位一次，切排序/进目录都不会让菜单乱跳
@@ -109,10 +123,12 @@ export function CanvasFilePicker({
     if (mode !== 'recent') return
     let alive = true
     setRecent(null)
+    setLoading(true)
     window.api.fs
       .recentFiles(root, MAX_RECENT, docsOnly)
       .then((list) => alive && setRecent(list))
       .catch(() => alive && setRecent([]))
+      .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
@@ -137,6 +153,9 @@ export function CanvasFilePicker({
   const rel = dir === root ? '' : dir.slice(root.length + 1)
   const upDir = dir.slice(0, dir.lastIndexOf(sep))
 
+  const matchesFilter = (path: string): boolean =>
+    filter === '3d' ? is3DPath(path) : filter === 'media' ? isMediaPath(path) : true
+
   const pick = (p: string): void => {
     onPick(p)
     onClose()
@@ -150,7 +169,7 @@ export function CanvasFilePicker({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="cpk-head">
-        <span className="cpk-title">插入</span>
+        <span className="cpk-title">{pluginsOnly ? '插件' : '插入'}</span>
         <span className="cpk-scope">{rootName}</span>
       </div>
       {/* ── 两组展开式胶囊 ────────────────────────────────────────
@@ -163,12 +182,12 @@ export function CanvasFilePicker({
           胶囊挤成一团。那两块已删，样式统一由 `.cpk-pill` 一处管。
 
           hover 刻意**不**展开：六个按钮挨着，鼠标扫过去会一路把邻居顶来顶去。 */}
-      <div className="cpk-bar">
+      {!pluginsOnly && <div className="cpk-bar">
       <div className="cpk-tabs cpk-pills">
         <button
           className={`cpk-pill${mode === 'tree' ? ' on' : ''}`}
           aria-label="文件夹"
-          onClick={() => setMode('tree')}
+          onClick={() => chooseMode('tree')}
         >
           <FolderIcon size={12} />
           <SplitText text="文件夹" />
@@ -176,31 +195,24 @@ export function CanvasFilePicker({
         <button
           className={`cpk-pill${mode === 'recent' ? ' on' : ''}`}
           aria-label="最近"
-          onClick={() => setMode('recent')}
+          onClick={() => chooseMode('recent')}
         >
           <ClockIcon size={12} />
           <SplitText text="最近" />
         </button>
-        <button
-          className={`cpk-pill${mode === 'plugin' ? ' on' : ''}`}
-          aria-label="插件"
-          onClick={() => setMode('plugin')}
-        >
-          <PlugIcon size={12} />
-          <SplitText text="插件" />
-        </button>
       </div>
 
-      {/* 过滤三选一。原来这里是「只保留文档」一个复选框、而且只在「最近」模式出现——
+      {/* 过滤四选一。原来这里是「只保留文档」一个复选框、而且只在「最近」模式出现——
           插图片进画布是这个选择器最常见的用途之一，却只能靠肉眼在一堆代码文件里找。
-          **插件 tab 不出现这条** —— 「文档/多媒体」对插件没有意义，留着只是噪声。 */}
+          **独立插件视图不出现这条** —— 「文档/多媒体」对插件没有意义，留着只是噪声。 */}
       {mode !== 'plugin' && (
       <div className="cpk-filters cpk-pills">
         {(
           [
             { id: 'all', label: '全部', Icon: FilesIcon },
             { id: 'docs', label: '文档', Icon: FileIcon },
-            { id: 'media', label: '多媒体', Icon: ImageIcon }
+            { id: 'media', label: '多媒体', Icon: ImageIcon },
+            { id: '3d', label: '3D', Icon: ModelIcon }
           ] as const
         ).map((f) => (
           <button
@@ -212,9 +224,10 @@ export function CanvasFilePicker({
                 ? '.md / .txt / .html'
                 : f.id === 'media'
                   ? '图片 / 视频 / 音频'
-                  : undefined
+                  : f.id === '3d' ? 'GLB / GLTF / OBJ / FBX / STL' : undefined
             }
             onClick={() => {
+              filterTouched.current = true
               setFilter(f.id)
               // 「文档」那档由主进程筛（见 filter 的说明），要同步过去
               void window.api.prefs.set('recentDocsOnly', f.id === 'docs')
@@ -226,7 +239,7 @@ export function CanvasFilePicker({
         ))}
       </div>
       )}
-      </div>
+      </div>}
 
       {mode === 'tree' && (
         <div className="cpk-path" title={dir}>
@@ -235,7 +248,7 @@ export function CanvasFilePicker({
       )}
 
       <div className="cpk-list">
-        {loading && <div className="cpk-empty">读取中…</div>}
+        {!pluginsOnly && loading && <div className="cpk-empty">读取中…</div>}
 
         {!loading && mode === 'tree' && (
           <>
@@ -246,7 +259,7 @@ export function CanvasFilePicker({
               </button>
             )}
             {entries
-              .filter((e) => e.isDir || filter !== 'media' || isMediaPath(e.path))
+              .filter((e) => e.isDir || matchesFilter(e.path))
               .map((e) =>
               e.isDir ? (
                 <button
@@ -271,9 +284,9 @@ export function CanvasFilePicker({
             )}
             {!entries.length && dir === root && <div className="cpk-empty">这个文件夹是空的</div>}
             {!!entries.length &&
-              filter === 'media' &&
-              !entries.some((e) => !e.isDir && isMediaPath(e.path)) && (
-                <div className="cpk-empty">这个文件夹里没有图片 / 视频 / 音频</div>
+              (filter === 'media' || filter === '3d') &&
+              !entries.some((e) => !e.isDir && matchesFilter(e.path)) && (
+                <div className="cpk-empty">{filter === '3d' ? '这个文件夹里没有 3D 模型文件' : '这个文件夹里没有图片 / 视频 / 音频'}</div>
               )}
           </>
         )}
@@ -281,7 +294,7 @@ export function CanvasFilePicker({
         {!loading && mode === 'recent' && (
           <>
             {(recent ?? [])
-              .filter((f) => filter !== 'media' || isMediaPath(f.path))
+              .filter((f) => matchesFilter(f.path))
               .map((f) => (
               <button key={f.path} className="cpk-row" onClick={() => pick(f.path)} title={f.rel}>
                 <FileGlyph path={f.path} />
@@ -292,7 +305,10 @@ export function CanvasFilePicker({
                 <span className="cpk-time">{fmtTime(f.time)}</span>
               </button>
             ))}
-            {recent && !recent.length && <div className="cpk-empty">没扫到文件</div>}
+            {recent && !recent.some((f) => matchesFilter(f.path)) && (
+              <div className="cpk-empty">{filter === '3d' || filter === 'media'
+                ? '最近 60 个文件中没有匹配项，可切换文件夹查找' : '没扫到文件'}</div>
+            )}
           </>
         )}
 

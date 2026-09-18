@@ -3365,3 +3365,13 @@
 .ac-native-providers .ac-native-logo { flex: none; }
 
 .ac-native-close-confirm { min-height: 0; padding: 16px; margin: 12px 0; }
+
+/* 返回图片独立于工具文本折叠，避免收到图但用户看不到。 */
+.ac-returned-images { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.ac-returned-images button { padding:0; overflow:hidden; border:1px solid var(--border); border-radius:10px; background:var(--bg); cursor:zoom-in; }
+.ac-returned-images img { display:block; max-width:260px; max-height:180px; object-fit:contain; }
+.ac-returned-image-error { color:var(--fg-dim); font-size:12px; margin:6px 0; }
+.ac-image-preview { max-width:92vw; max-height:90vh; padding:40px 12px 12px; border:1px solid var(--border); border-radius:12px; background:var(--bg); color:var(--fg); }
+.ac-image-preview::backdrop { background:rgba(0,0,0,.65); }
+.ac-image-preview > button { position:absolute; right:12px; top:8px; border:0; border-radius:6px; padding:4px 10px; background:var(--bg); color:var(--fg); cursor:pointer; }
+.ac-image-preview > img { display:block; max-width:85vw; max-height:78vh; object-fit:contain; }

@@ -129,6 +129,7 @@ const TRIM: ChatEvent[] = [
 ]
 
 const SYNTH: Record<string, ChatEvent[]> = {
+  'synth-returned-images': [{ k: 'images', images: [{ mimeType: 'image/png', url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7xQAAAAASUVORK5CYII=' }] }],
   'synth-all-variants': ALL_VARIANTS,
   'synth-notices': NOTICES,
   'synth-notice-overflow': NOTICE_OVERFLOW,
@@ -172,7 +173,7 @@ try {
 test('两组用例都在，且与快照覆盖同一批', () => {
   const fx = CASES.filter((c) => c.name.startsWith('fx-'))
   assert.ok(fx.length > 0, `读不到上半场的事件基线：${EVENTS}`)
-  assert.equal(Object.keys(SYNTH).length, 6, '手写组少了用例')
+  assert.equal(Object.keys(SYNTH).length, 7, '手写组少了用例')
   assert.deepEqual(Object.keys(snap).sort(), CASES.map((c) => c.name).sort())
 })
 
@@ -183,6 +184,7 @@ test('两组用例都在，且与快照覆盖同一批', () => {
 // 新变体时，这张表少一个键就**编译不过** —— 于是「加了事件却忘了补覆盖」在 typecheck
 // 阶段就被拦住，而不是等到某天有人发现基线其实没盖到它。
 const ALL_KINDS: Record<ChatEvent['k'], true> = {
+  images: true,
   'session.ready': true, 'turn.start': true, 'text.delta': true, 'text.done': true,
   thinking: true, 'exec.start': true, 'exec.done': true, 'approval.request': true,
   'approval.resolved': true, 'turn.done': true, quota: true, compacted: true,

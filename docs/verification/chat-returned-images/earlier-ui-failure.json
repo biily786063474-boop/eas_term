@@ -1,0 +1,7 @@
+{
+  "checks": [
+    "codex 历史图片加载与点击放大",
+    "codex 关闭预览不误退出模块最大化"
+  ],
+  "error": "Error: Timed out"
+}

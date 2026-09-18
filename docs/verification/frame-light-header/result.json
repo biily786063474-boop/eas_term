@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "checks": [
+    "亮色标题栏具有渐变而非纯黑底",
+    "亮色标题栏具有高光层次",
+    "亮色标题文字为深色",
+    "切回暗色恢复原样式",
+    "折叠状态无底部分隔线"
+  ],
+  "dark": {
+    "image": "linear-gradient(rgba(223, 227, 232, 0.14), rgba(223, 227, 232, 0.05))",
+    "bg": "rgba(0, 0, 0, 0)",
+    "shadow": "none",
+    "fg": "rgb(226, 228, 234)"
+  },
+  "light": {
+    "image": "linear-gradient(rgba(226, 228, 231, 0.96), rgba(208, 211, 215, 0.94))",
+    "bg": "rgba(0, 0, 0, 0)",
+    "shadow": "rgba(255, 255, 255, 0.8) 0px 1px 0px 0px inset, rgba(30, 35, 42, 0.035) 0px 2px 5px 0px",
+    "fg": "rgb(48, 52, 59)"
+  }
+}

@@ -1,7 +1,7 @@
 // 画布右键菜单：按右键落点（终端面板 / 文件节点 / 图形 / Frame / 空白）算出菜单项。
 //
 // 从 CanvasStage 里搬出来的。它够格独立是因为**数据全部从 useStore.getState() 现取**，
-// 不依赖组件的任何渲染态——只有三个「要改谁的编辑态」的回调需要传进来。
+// 不依赖组件的任何渲染态——编辑态与插件选择器由回调交回 CanvasStage。
 // 留在 937 行的组件里时，这 70 行夹在一堆手势 effect 中间，
 // 想加一个菜单项得先分清哪些变量是闭包捕获的、哪些是当场读的。
 import { useStore } from '../../store'
@@ -38,6 +38,7 @@ function closeTerminalItem(leafId: string): CanvasMenuItem {
 }
 
 export interface StageMenuDeps {
+  openPlugins: (frameId: string, x: number, y: number) => void
   /** 便签进入编辑态 */
   setEditingSticky: (id: string) => void
   /** Frame 标题进入改名态 */
@@ -117,6 +118,12 @@ export function stageMenuItems(e: MouseEvent, deps: StageMenuDeps): CanvasMenuIt
     // 一级菜单会被它撑成一长条，而「重命名 / 折叠 / 删除」这些反而被挤到看不见。
     const curName = boardColumnsNow().find((c) => c.id === cur)?.name
     items = [
+      {
+        label: '插件',
+        disabled: !frame || !(frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path),
+        hint: !frame || !(frame.folderPath ?? st.projects.find((p) => p.id === frame.projectId)?.path) ? '需绑定文件夹' : undefined,
+        onClick: () => deps.openPlugins(fid, e.clientX, e.clientY)
+      },
       { label: '重命名', onClick: () => setEditingFrame(fid) },
       { label: frame?.collapsed ? '展开' : '折叠', onClick: () => st.toggleCollapse(fid) },
       { sep: true, label: '', onClick: () => {} },
