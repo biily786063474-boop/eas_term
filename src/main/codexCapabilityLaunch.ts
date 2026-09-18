@@ -5,7 +5,7 @@ import { nodeRunner, type NodeRunner } from './nodeBin.ts'
  * This keeps asynchronous preflight inside the existing process lifecycle. */
 export function codexCapabilityLaunch(binary: string, args: string[], host: {
   isPackaged: boolean; appPath: string; resourcesPath: string; electron: string; platform?: NodeJS.Platform
-}, options?: { managedAssignments: string[] }): NodeRunner {
+}, options?: { managedAssignments?: string[]; taskLifecycle?: boolean }): NodeRunner {
   const root = host.isPackaged ? host.resourcesPath : host.appPath
   const runner = nodeRunner([path.join(root, 'mcp', 'eas-codex-launcher.mjs'), JSON.stringify({ binary, args, ...options })], {
     electron: host.electron, platform: host.platform

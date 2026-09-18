@@ -1,0 +1,279 @@
+{
+  "cliVersion": "0.153.4",
+  "threadId": "01a0b29a-021a-7391-9e1e-fda0b09e5230",
+  "source": "local Codex rollout; timestamps UTC",
+  "evidence": [
+    {
+      "complete": "2026-09-18T12:41:16.506Z",
+      "nextStart": "2026-09-18T12:41:16.523Z",
+      "abort": "2026-09-18T12:41:16.558Z",
+      "reason": "interrupted",
+      "durationMs": 35,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T12:53:02.595Z",
+      "nextStart": "2026-09-18T12:53:02.612Z",
+      "abort": "2026-09-18T12:53:02.743Z",
+      "reason": "interrupted",
+      "durationMs": 132,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T13:03:52.122Z",
+      "nextStart": "2026-09-18T13:03:52.127Z",
+      "abort": "2026-09-18T13:03:52.266Z",
+      "reason": "interrupted",
+      "durationMs": 139,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T13:15:45.771Z",
+      "nextStart": "2026-09-18T13:15:45.777Z",
+      "abort": "2026-09-18T13:15:45.911Z",
+      "reason": "interrupted",
+      "durationMs": 135,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T13:33:14.868Z",
+      "nextStart": "2026-09-18T13:33:14.884Z",
+      "abort": "2026-09-18T13:33:14.917Z",
+      "reason": "interrupted",
+      "durationMs": 33,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T13:47:17.655Z",
+      "nextStart": "2026-09-18T13:47:17.671Z",
+      "abort": "2026-09-18T13:47:17.803Z",
+      "reason": "interrupted",
+      "durationMs": 132,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T13:59:44.173Z",
+      "nextStart": "2026-09-18T13:59:44.177Z",
+      "abort": "2026-09-18T13:59:44.318Z",
+      "reason": "interrupted",
+      "durationMs": 142,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:15:10.715Z",
+      "nextStart": "2026-09-18T14:15:10.721Z",
+      "abort": "2026-09-18T14:15:10.866Z",
+      "reason": "interrupted",
+      "durationMs": 145,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:25:38.318Z",
+      "nextStart": "2026-09-18T14:25:38.324Z",
+      "abort": "2026-09-18T14:25:38.366Z",
+      "reason": "interrupted",
+      "durationMs": 43,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:34:10.116Z",
+      "nextStart": "2026-09-18T14:34:10.134Z",
+      "abort": "2026-09-18T14:34:10.271Z",
+      "reason": "interrupted",
+      "durationMs": 138,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:39:52.707Z",
+      "nextStart": "2026-09-18T14:39:52.714Z",
+      "abort": "2026-09-18T14:39:52.864Z",
+      "reason": "interrupted",
+      "durationMs": 149,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:43:40.569Z",
+      "nextStart": "2026-09-18T14:43:40.577Z",
+      "abort": "2026-09-18T14:43:40.732Z",
+      "reason": "interrupted",
+      "durationMs": 156,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:51:24.098Z",
+      "nextStart": "2026-09-18T14:51:24.115Z",
+      "abort": "2026-09-18T14:51:24.262Z",
+      "reason": "interrupted",
+      "durationMs": 146,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T14:53:45.949Z",
+      "nextStart": "2026-09-18T14:53:45.964Z",
+      "abort": "2026-09-18T14:53:45.999Z",
+      "reason": "interrupted",
+      "durationMs": 35,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:22:43.591Z",
+      "nextStart": "2026-09-18T15:22:43.609Z",
+      "abort": "2026-09-18T15:22:43.656Z",
+      "reason": "interrupted",
+      "durationMs": 47,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:29:25.781Z",
+      "nextStart": "2026-09-18T15:29:25.789Z",
+      "abort": "2026-09-18T15:29:25.833Z",
+      "reason": "interrupted",
+      "durationMs": 45,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:30:39.977Z",
+      "nextStart": "2026-09-18T15:30:39.993Z",
+      "abort": "2026-09-18T15:30:40.053Z",
+      "reason": "interrupted",
+      "durationMs": 60,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:44:27.344Z",
+      "nextStart": "2026-09-18T15:44:27.392Z",
+      "abort": "2026-09-18T15:44:27.523Z",
+      "reason": "interrupted",
+      "durationMs": 132,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:46:11.949Z",
+      "nextStart": "2026-09-18T15:46:11.962Z",
+      "abort": "2026-09-18T15:46:12.096Z",
+      "reason": "interrupted",
+      "durationMs": 133,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T15:53:12.256Z",
+      "nextStart": "2026-09-18T15:53:12.271Z",
+      "abort": "2026-09-18T15:53:12.318Z",
+      "reason": "interrupted",
+      "durationMs": 47,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:05:30.951Z",
+      "nextStart": "2026-09-18T16:05:30.966Z",
+      "abort": "2026-09-18T16:05:31.028Z",
+      "reason": "interrupted",
+      "durationMs": 62,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:08:27.298Z",
+      "nextStart": "2026-09-18T16:08:27.313Z",
+      "abort": "2026-09-18T16:08:27.360Z",
+      "reason": "interrupted",
+      "durationMs": 47,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:25:44.273Z",
+      "nextStart": "2026-09-18T16:25:44.288Z",
+      "abort": "2026-09-18T16:25:44.326Z",
+      "reason": "interrupted",
+      "durationMs": 39,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:28:45.296Z",
+      "nextStart": "2026-09-18T16:28:45.337Z",
+      "abort": "2026-09-18T16:28:45.365Z",
+      "reason": "interrupted",
+      "durationMs": 29,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:37:48.939Z",
+      "nextStart": "2026-09-18T16:37:48.952Z",
+      "abort": "2026-09-18T16:37:48.990Z",
+      "reason": "interrupted",
+      "durationMs": 38,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:47:19.412Z",
+      "nextStart": "2026-09-18T16:47:19.428Z",
+      "abort": "2026-09-18T16:47:19.581Z",
+      "reason": "interrupted",
+      "durationMs": 153,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:51:46.900Z",
+      "nextStart": "2026-09-18T16:51:46.916Z",
+      "abort": "2026-09-18T16:51:46.966Z",
+      "reason": "interrupted",
+      "durationMs": 50,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T16:56:52.947Z",
+      "nextStart": "2026-09-18T16:56:52.963Z",
+      "abort": "2026-09-18T16:56:53.115Z",
+      "reason": "interrupted",
+      "durationMs": 152,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:01:37.393Z",
+      "nextStart": "2026-09-18T17:01:37.398Z",
+      "abort": "2026-09-18T17:01:37.553Z",
+      "reason": "interrupted",
+      "durationMs": 155,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:08:30.923Z",
+      "nextStart": "2026-09-18T17:08:30.929Z",
+      "abort": "2026-09-18T17:08:31.087Z",
+      "reason": "interrupted",
+      "durationMs": 159,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:14:54.478Z",
+      "nextStart": "2026-09-18T17:14:54.495Z",
+      "abort": "2026-09-18T17:14:54.545Z",
+      "reason": "interrupted",
+      "durationMs": 51,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:19:58.979Z",
+      "nextStart": "2026-09-18T17:19:58.995Z",
+      "abort": "2026-09-18T17:19:59.052Z",
+      "reason": "interrupted",
+      "durationMs": 57,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:24:47.337Z",
+      "nextStart": "2026-09-18T17:24:47.351Z",
+      "abort": "2026-09-18T17:24:47.403Z",
+      "reason": "interrupted",
+      "durationMs": 52,
+      "goalContinuation": true
+    },
+    {
+      "complete": "2026-09-18T17:29:08.174Z",
+      "nextStart": "2026-09-18T17:29:08.181Z",
+      "abort": "2026-09-18T17:29:08.253Z",
+      "reason": "interrupted",
+      "durationMs": 72,
+      "goalContinuation": true
+    }
+  ]
+}
