@@ -74,3 +74,40 @@ test('SDK refresh uses only the approved token endpoint and preserves refresh to
  }})
  assert.equal(calls,1);assert.equal(result.refresh_token,'fixture-refresh')
 })
+
+test('dynamic public-client registration shares exact callback and PKCE with token exchange',async()=>{
+ const {authorizeDynamicPlugin}=await import('./oauthAuthorization.ts')
+ let registeredRedirect='',registered=false,authUrl!:URL
+ const result=await authorizeDynamicPlugin({...config,registrationEndpoint:config.issuer+'/register'}, {
+  openBrowser:async url=>{authUrl=new URL(url);assert.equal(authUrl.searchParams.get('client_id'),'new-public-client');await callback(authUrl)},
+  fetch:async(input,init)=>{
+   if(String(input)===config.issuer+'/register'){
+    assert.equal(registered,false);registered=true
+    const body=JSON.parse(String(init?.body));registeredRedirect=body.redirect_uris[0]
+    assert.equal(body.token_endpoint_auth_method,'none');assert.equal(body.client_name,'Eas-Term')
+    return Response.json({...body,client_id:'new-public-client'},{status:201})
+   }
+   const body=new URLSearchParams(String(init?.body));assert.equal(body.get('client_id'),'new-public-client');assert.equal(body.get('redirect_uri'),registeredRedirect)
+   assert.equal(createHash('sha256').update(body.get('code_verifier')!).digest('base64url'),authUrl.searchParams.get('code_challenge'))
+   return Response.json({access_token:'dynamic-token',token_type:'Bearer'})
+  }
+ })
+ assert.equal(result.clientId,'new-public-client');assert.equal(result.tokens.access_token,'dynamic-token')
+})
+test('dynamic registration rejects client secrets and changed callback without opening browser',async()=>{
+ const {authorizeDynamicPlugin}=await import('./oauthAuthorization.ts')
+ for(const changes of [{client_secret:'not-public'},{redirect_uris:['https://evil.example/callback']},{token_endpoint_auth_method:'client_secret_post'}]){
+  let opened=false
+  await assert.rejects(authorizeDynamicPlugin({...config,registrationEndpoint:config.issuer+'/register'}, {openBrowser:async()=>{opened=true},fetch:async(_input,init)=>Response.json({...JSON.parse(String(init?.body)),client_id:'id',...changes},{status:201})}))
+  assert.equal(opened,false)
+ }
+})
+test('dynamic registration timeout/cancel does not retry or open browser after a late response',async()=>{
+ const {authorizeDynamicPlugin}=await import('./oauthAuthorization.ts')
+ const controller=new AbortController();let calls=0,opened=0,release!:(r:Response)=>void,started!:()=>void
+ const ready=new Promise<void>(r=>{started=r})
+ const pending=authorizeDynamicPlugin({...config,registrationEndpoint:config.issuer+'/register'},{signal:controller.signal,openBrowser:async()=>{opened++},fetch:async()=>{calls++;started();return new Promise(r=>{release=r})}})
+ await ready;controller.abort();await assert.rejects(pending)
+ release(Response.json({client_id:'late'},{status:201}));await new Promise(r=>setTimeout(r,10))
+ assert.equal(calls,1);assert.equal(opened,0)
+})

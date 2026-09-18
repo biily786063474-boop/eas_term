@@ -218,3 +218,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18 远程插件输入框分类：全局搜索唯一旧判定遗漏remote，专项先红(app !== plugin)后绿，三CLI禁用/绑定边界保持。81278全量3394/3376通过/18跳过/0失败；UI脚本旧preload锚点因usage字段插入而失败，恢复源码和构建成功。锚点收窄至const api后10501完整真实隔离应用160项通过（受控清单/发送，无真实推理）；远程插件chip截图已亲眼核验，脚本退出时已恢复源码且重建成功。32项仍未完成，未发布或替换正式app。
 
 2026-09-18 OAuth发现基础：上一轮d1de829属于实质进展，当前继续已批准远程授权方案。核验Notion/Sentry官方AS元数据均支持S256/none/注册端点/CIMD；PRM根路径网页工具未取到，不推定不存在。新增oauthDiscovery显式资源/issuer绑定、预批准origins、64KB流式限制、15秒总时限、无凭证/禁止重定向、path-aware OAuth/OIDC与404回退。先模块缺失红，专项4项绿，后补2项共6项绿。35429全量检查退出0（统计见本次日志）；未接manifest或授权按钮，不冒充Notion/Sentry已接入。下一步：401 metadata解析、客户端身份策略与存储、实际宿主接线及账号验收；仍无发布。参考文件 docs/verification/plugin-marketplace/oauth/discovery-2026-09-18.md。
+
+2026-09-18 动态客户端注册串联：上一轮476c11d为实质进展。新增authorizeDynamicPlugin，与既有PKCE/本地回调共用同一redirect URI，拒绝secret/回调变更/非none，注册POST不重试、晚返回取消丢弃。红灯TypeError后专项通过；78680全量3403项/3385通过/18跳过/0失败。62932构建与实际隔离市场/账号配置11项回归通过，截图亲眼查看（是旧UI回归，不是动态供应商登录）。动态身份持久化及manifest/按钮接线仍未完成，因此未启用或上架Notion/Sentry；下一步将clientId与tokens原子绑定到加密scope、刷新复用该clientId。未对真实服务商注册、未发布或替换正式app。
