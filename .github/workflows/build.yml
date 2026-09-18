@@ -54,6 +54,9 @@ jobs:
           node --test src/main/capabilityTransport.test.ts src/main/builtinCapabilityHost.test.ts src/main/agentChat/omp/transport.test.ts src/main/agentChat/omp/redirect.real.test.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test src/shared/ompQuota.test.ts src/renderer/src/features/quota/segments.test.ts
+      - name: Returned images and timeline contracts
+        run: node --test src/main/agentChat/returnedImages.test.mjs src/main/timelineRuntime.test.ts resources/plugins/timeline/lib/store.test.ts resources/plugins/timeline/lib/server.test.ts src/renderer/src/features/canvas/mediaExts.test.ts src/renderer/src/features/canvas/filePickerMode.test.ts
+
       - name: Smoke test
         run: node scripts/smoke.mjs "release/win-unpacked/Eas-Term.exe"
 

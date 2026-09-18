@@ -26,12 +26,13 @@ test('没有扩展名 / 只有点不会误判成媒体', () => {
   assert.ok(isMediaPath('.mp3'))
 })
 
-test('3D 分类识别模型，且不混入多媒体或辅助文件', async () => {
+test('3D 分类与可预览媒体独立，保留新版 GLB 预览', async () => {
   const m = await import('./mediaExts.ts')
   assert.equal(typeof m.is3DPath, 'function')
   for (const p of ['模型.GLB', 'x.gltf', 'x.obj', 'x.fbx', 'x.stl', 'C:\\模型\\X.OBJ'])
     assert.equal(m.is3DPath(p), true, p)
   for (const p of ['x.png', 'x.mp4', 'x.mtl', 'x.bin', 'README', '/x.obj/readme'])
     assert.equal(m.is3DPath(p), false, p)
-  assert.equal(isMediaPath('model.glb'), false)
+  assert.equal(isMediaPath('model.glb'), true)
+  assert.equal(isMediaPath('model.obj'), false)
 })

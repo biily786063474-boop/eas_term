@@ -1,3 +1,4 @@
+import {timelineGuidance, timelineRuntime} from '../timelineRuntime.ts'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -16,7 +17,7 @@ test('actual main ACP assembly uses admission, window-owned service, and actual 
  const proc={completed:new Promise<void>(r=>done=r),kill(){killed++}}
  const live:any={rec:{id:'acp',cwd:'/fixture',cli:'omp'},wcId:7,wc:{isDestroyed:()=>false}}
  const make=runInNewContext(code+';makeAcpLive',{
-  hostPaths:()=>({}),createAcpLive:(d:unknown)=>{deps=d;return{close:()=>proc.kill()}},app:{getVersion:()=> 'test'},
+  timelineGuidance, timelineRuntime, hostPaths:()=>({}),createAcpLive:(d:unknown)=>{deps=d;return{close:()=>proc.kill()}},app:{getVersion:()=> 'test'},
   startManagedSession,cancelSessionStart,ownedSessions:owned,runtimeStartupSequence:0,runtimeProcessGeneration:0,
   sessions:new Map([['acp',live]]),projectAttribution:()=> 'p',loadProjects:()=>[],readOmpSetup:()=>({}),
   writeManagedConfig(){},capabilityGuidanceEnabled:()=>false,openOmpProcess:()=>{started++;return{ok:true,proc}},
