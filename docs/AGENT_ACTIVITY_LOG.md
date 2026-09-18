@@ -191,3 +191,6 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 
 ## 2026-09-18：配置测试与清除接线
 配置卡片增加共享宿主测试连接、原生确认断开清除；插件级租约同时撤销runtime与pending确认，重新授权独立。实际隔离app本地文件23项/兼容UI11项通过并眼验；全量首次PTY夹具native CLI not ready失败，未改断言，专项12项与完整3377项复跑通过（3359通过/18skip）。证据local-files/result.json；远程Bearer实际app/真实上游/模型CLI/Windows仍未完成，无生产发布。
+
+## 2026-09-18：Bearer软件配置纵向验收
+新增真实隔离应用脚本verify-bearer-plugin，13项通过并眼验：密码保存密文、共享宿主三shim、清除/重新配置/锁定。仅自有网络fixture/原生确认适配，非GitHub真实账号/TLS/模型CLI证明；未发布，未改生产代码。

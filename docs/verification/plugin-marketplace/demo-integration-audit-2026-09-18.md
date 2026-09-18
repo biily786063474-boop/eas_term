@@ -118,4 +118,4 @@
 
 新增 plugins-store/github 原创连接描述包，固定官方远程端点 https://api.githubcopilot.com/mcp/ ，凭证由用户在软件配置控件提供，secret引用不含值。依据：https://github.com/github/github-mcp-server/blob/main/README.md （端点与PAT支持）、https://github.com/github/github-mcp-server/blob/main/docs/host-integration.md （宿主自行获取访问令牌、组织政策、DCR尚不支持）。不分发上游服务代码、不冒充已注册OAuth客户端。
 
-宿主Bearer配置scope/租约/精确资源发送已接；模拟HTTP服务通过三真实shim共享连接、无重放与锁定关闭，包真实打包验证通过。这不是GitHub上游账号成功调用。未加入默认构建目录、未广告auth.bearer/mcp.remote；连接测试与清除配置UI已统一接线，本地文件实际隔离应用验收通过；Bearer实际应用保存到远程连接、真实账号/模型/Windows仍待验收。
+宿主Bearer配置scope/租约/精确资源发送已接；模拟HTTP服务通过三真实shim共享连接、无重放与锁定关闭，包真实打包验证通过。这不是GitHub上游账号成功调用。未加入默认构建目录、未广告auth.bearer/mcp.remote；连接测试与清除配置UI已统一接线，本地文件实际隔离应用验收通过；Bearer实际应用保存到远程连接已用自有网络fixture跑通13项（verify-bearer-plugin）；DNS/PAC/HTTPS拨号与原生确认为测试适配，非真实TLS或GitHub账号证明。真实账号/模型/Windows仍待验收。

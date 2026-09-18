@@ -157,3 +157,8 @@ PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有vers
 Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution: JSON.stringify），文件未生成、未执行；不能称该验收完成。下一步用apply_patch创建脚本，保留真实safeStorage/host/三shim，只有自有fixture网络和native确认适配，不动公共地址检查，不用真实凭证。目标仍active，其余32插件工程缺口没消失。
 
 63564最终退出0：原PTY专项12项通过，完整check复跑3377项/3359通过/18skip/0失败。保留前次超时事实，不宣称根除时序抖动。所有本批监测结束；local-files实际应用23项与旧兼容UI11项已通过且截图已眼验。下一步Bearer真实隔离app纵向验收尚未执行，目标不完成。
+
+## 继续：Bearer真实隔离应用纵向验收
+前一用户询问停顿后的纯回复是no-progress，本轮真正继续：新增verify-bearer-plugin.mjs，隔离Electron配置表单输入自有测试令牌→真实safeStorage密文→生产共享宿主→Claude/Codex/OMP三真实shim调用自有HTTP服务→清除阻断旧连接→重新配置建立新连接→锁定拒绝继续调用。25975初版11项和37049扩展13项均退出0，connected.png已亲眼查看。没有生产代码改动、没有新的上游账号能力，也不是实际模型CLI。
+只在验收bootstrap里适配精确fixture域名的DNS/PAC/HTTPS拨号到自有loopback HTTP与原生确认返回；生产公开地址验证/pinned fetch/精确Bearer资源匹配都仍执行。不能把此证据说成真实TLS/上游GitHub验收。fixtures自动清理，没有读取CLI授权缓存/真实凭证。没有提前广告remote/bearer能力或把GitHub加入默认市场。
+本批无全量重跑：生产代码未动，前批3377项回归结果仍是前批证据。目标active，仍缺真实32连接器、正式v2 URL迁移、更新权限/目标差异UI、实际模型CLI和Windows验收；不以fixture增加可用插件数。下一段优先处理32连接器自主工程，不要继续围着fixture扩测试打转。

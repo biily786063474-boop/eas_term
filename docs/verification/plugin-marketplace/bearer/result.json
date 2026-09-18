@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    "真实隔离密钥柜解锁",
+    "密码输入经真实safeStorage加密落盘",
+    "保存后不回显令牌",
+    "测试连接发送Bearer且仅列工具",
+    "claude真实shim调用自有远程业务工具",
+    "codex真实shim调用自有远程业务工具",
+    "omp真实shim调用自有远程业务工具",
+    "三个shim共享同一远程宿主",
+    "清除配置阻止旧shim继续远程调用",
+    "配置状态已清空",
+    "重新配置产生新连接且旧撤销代次不复活",
+    "密钥柜锁定阻断远程Bearer业务调用",
+    "应用日志不包含测试令牌"
+  ],
+  "scope": "Real isolated Electron UI, safeStorage, shared host and three shim subprocesses. Owned HTTP endpoint with exact DNS/HTTPS-dial/PAC adapters; native confirmations adapted. Not real TLS, GitHub, model CLI or production."
+}
