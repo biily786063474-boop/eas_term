@@ -1,18 +1,16 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {createHash} from 'node:crypto'
 import {startOAuthCallback} from './oauthCallback.ts'
 
-test('loopback callback binds PKCE/state and consumes exactly once',async()=>{
+test('loopback callback binds state and consumes exactly once',async()=>{
  const flow=await startOAuthCallback({issuer:'https://auth.example.com',resource:'https://mcp.example.com',timeoutMs:1000})
  try{
   assert.equal(new URL(flow.redirectUri).hostname,'127.0.0.1')
-  assert.equal(flow.challenge,createHash('sha256').update(flow.verifier).digest('base64url'))
   const bad=await fetch(flow.redirectUri+'?state=wrong&code=bad')
   assert.equal(bad.status,400)
   const response=await fetch(flow.redirectUri+'?state='+flow.state+'&code=fixture&iss='+encodeURIComponent('https://auth.example.com'))
   assert.equal(response.status,200)
-  assert.deepEqual(await flow.result,{code:'fixture',issuer:'https://auth.example.com',resource:'https://mcp.example.com',redirectUri:flow.redirectUri,verifier:flow.verifier})
+  assert.deepEqual(await flow.result,{code:'fixture',issuer:'https://auth.example.com',resource:'https://mcp.example.com',redirectUri:flow.redirectUri})
   await assert.rejects(fetch(flow.redirectUri+'?state='+flow.state+'&code=replay'))
  }finally{flow.cancel()}
 })

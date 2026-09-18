@@ -37,3 +37,9 @@
 自查新增第4项回归：调用者在授权期间修改options不能改换本次issuer/resource；红测复现后改为创建时复制不可变值，专项4项通过。首轮完整check/build通过后因该变更已重新跑最终完整回归，结果以最终命令为准。
 后续接SDK注意：OAuthClientProvider.saveCodeVerifier由SDK产生verifier；当前回调原语自行产生challenge/verifier，正式整合必须统一为单一来源，不能混用两套PKCE（尚未接线所以当前不影响用户）。已核对本地1.30.0 auth.d.ts。secrets.ts的isUnlocked仍是私有，不能绕开锁定或拿PTY token冒充插件授权。
 最终完整check/build通过：3288项，3270通过、18跳过、0失败，build通过。当前无后台命令；只有本地授权回调基础经过测试，生产OAuth/真实供应商/UI仍未验。
+
+## SDK授权码编排继续
+新增oauthAuthorization.ts：预审固定公开HTTPS端点的public client授权码流程，使用SDK startAuthorization/exchangeAuthorization。删除callback原语重复PKCE来源，SDK产出的verifier与authorize challenge/换token唯一一致。scope/resource/redirect/state精确绑定；拒绝未批准token地址；外部错误体不透传；POST无自动重试；取消/总期限即刻结束等待并传AbortSignal到网络，迟到token丢弃。
+新增5项测试：PKCE一致/精确目标、错误目标无浏览器或网络副作用、token进行中取消且迟到不接收、503不重放不泄漏错误体、真实隔离HTTP token服务器的SDK交换。现有callback4项回归通过。
+范围：只是主进程内部编排，fetch/openBrowser依赖必须由生产适配提供，尚无生产调用者。未实现SDK OAuthClientProvider自动发现/DCR/refresh、密钥柜持久化或真实账号/UI；固定clientId必须来自服务商合法注册，不能冒充别的客户端。默认仍严格要求iss。不宣称已能实际登录。
+本轮最终check/build退出0：3293项，3275通过/18跳过/0失败；新增真实HTTP测试也被全量包含，随后typecheck再次通过。当前无后台命令。未真实账号/UI验收，未发布。
