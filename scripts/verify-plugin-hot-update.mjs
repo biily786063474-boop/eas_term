@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {spawn} from 'node:child_process'
 import {packPlugin} from './pack-plugin.mjs'
+import {catalogSource} from '../src/main/pluginCatalogSource.ts'
 const root=process.cwd(),output=process.env.EAS_VERIFY_OUTPUT||path.join(root,'docs/verification/plugin-marketplace/hot-update');fs.mkdirSync(output,{recursive:true})
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'eas-timeline-ui-')),fixture=fs.mkdtempSync(path.join(os.tmpdir(),'eas-timeline-data-'))
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'picker-fixture',name:'插入菜单验收',path:fixture}]))
@@ -110,6 +111,14 @@ try {
  check(true,'离线刷新展示缓存提示而不是空市场')
  shot=await main.send('Page.captureScreenshot',{format:'png'})
  fs.writeFileSync(path.join(output,'failed-update.png'),Buffer.from(shot.data,'base64'))
+ const sourceCache=path.join(profile,catalogSource(env.EAS_PLUGIN_REGISTRY_URL).cacheFile)
+ check(fs.existsSync(sourceCache),'source-specific catalog cache was written by real app')
+ const legacyCache=path.join(profile,'plugin-registry-v2.json'),legacyBytes=JSON.stringify({schema:2,plugins:[entries.get('1.0.0')],unavailable:[]})
+ fs.writeFileSync(legacyCache,legacyBytes)
+ fs.unlinkSync(sourceCache)
+ const withoutSourceCache=await main.eval('window.api.plugins.registry()')
+ check(!withoutSourceCache.ok,'offline client refuses source-less old cache instead of showing wrong catalog')
+ check(fs.readFileSync(legacyCache,'utf8')===legacyBytes,'old cache left unchanged for older clients')
  check(child.pid===initialPid&&child.exitCode===null,'全程同一应用PID，无宿主重启')
  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks,requests,scope:'Same-process UI install, refresh, update, failure preservation and offline cache. Controlled network + home adapters; NOT production HTTPS/CDN or plugin business tool validation.'},null,2))
  console.log(JSON.stringify({passed:true,checks},null,2))

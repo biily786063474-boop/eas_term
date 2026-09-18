@@ -196,3 +196,8 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 前版只隐藏按钮、始终占94px，与用户图不符。全局搜索确认相关样式只有 canvas.css 一处后直接替换该段：默认不留配置空位；hover/focus 才显示通高右侧操作面、入口居中、右圆角，简介此时让位，整体卡片尺寸不变。71248 红灯证实旧布局不满足通高；90053 构建/类型/真实本地文件与兼容UI通过，已看图。68209 最终默认/hover宽度与截图、兼容与热更新复验中。没有替换正式 app。
 
 2026-09-18 full-height hover panel: 68209 build passed but immediate tooltip assertion failed (pointer hover reveals purpose tooltip). Verifier now waits for actual browser tooltip visibility, not a fixed sleep. 6563 exited 0: local-files 34, compatibility 11, hot-update 14. Idle/hover screenshots inspected: default full content width, hover end-cap full height/right corners, centered entry, unchanged card bounds. Current Frame screenshot refreshed. No formal app replacement/release.
+
+## 2026-09-18 新客户端 v2 目录与来源缓存
+按已批准方案补实际入口：pluginCatalogSource 默认 v2，按 URL SHA-256 隔离缓存。旧来源不明缓存保留但不导入，首次升级离线需先联网一次；不修改既有安装或凭证。四专项先 module missing 红，再全过。47714 全量失败6项，均为 pluginMarketBoundary 的 VM import 白名单未接新增模块；已接真实模块并增加实际 IPC 默认 URL/缓存落盘断言（未绕过生产校验）。49895 正在重跑全量/构建/真实热更新，需同handle跟踪。实际应用新增 source-cache 落盘、离线不读取旧无来源cache、旧cache不被更改三项。未部署服务端、未替换正式app。
+
+2026-09-18 v2 source acceptance: 49895 exited 0; full check 3386 total / 3368 pass / 18 skip / 0 fail. Built actual isolated app hot-update 17 checks passed, including source-bound cache persistence, offline rejection of unbound legacy cache, old cache preserved. Screenshot of offline market inspected. Production catalog endpoint not deployed or verified; no app replacement/release. Initial 6 VM import failures fixed by loading actual source helper into test harness.

@@ -1,3 +1,4 @@
+import * as catalogSourceModule from './pluginCatalogSource.ts'
 // Run the actual IPC handlers with isolated filesystem and deterministic network responses.
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
@@ -43,7 +44,7 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
   let busy=false;const cleared:string[]=[]
   const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')}}
   const authorization={invalidatePluginAuthorization:(name:string,remove:boolean)=>{if(remove)cleared.push(name)}}
-  const imports:Record<string,unknown>={'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  const imports:Record<string,unknown>={'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
@@ -115,4 +116,12 @@ test('catalog version cannot mislabel a differently versioned archive',async t=>
  assert.match(result.error,/版本/)
  assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
  assert.equal(fs.readdirSync(path.join(h.userData,'plugin-staging')).length,0)
+})
+
+test('actual registry IPC requests default v2 endpoint',async t=>{
+ const h=harness(t)
+ const result=await h.call('plugins:registry')
+ assert.equal(result.ok,true)
+ assert.equal(h.requests[0],catalogSourceModule.DEFAULT_PLUGIN_CATALOG_URL)
+ assert.equal(fs.existsSync(path.join(h.userData,catalogSourceModule.catalogSource().cacheFile)),true)
 })

@@ -1,4 +1,5 @@
 import { assertPluginPackageIdle } from './pluginHost'
+import {catalogSource} from './pluginCatalogSource.ts'
 import { invalidatePluginAuthorization } from './pluginAuthorization'
 import { replacePluginDirectory } from './pluginReplace.ts'
 // 插件市场:主进程编排(网络 IO + 解压 + 落盘)。**纯逻辑在 pluginRegistry / pluginInstall /
@@ -34,7 +35,8 @@ import { createInstallGate } from './pluginInstallGate.ts'
 
 // 第一步托管在个人站;切阿里云 OSS/CDN 时把新域名加进来即可(对客户端透明,客户端只认 https + 域名白名单)
 const ALLOWED_HOSTS = ['eas.biily.top'] as const
-const REGISTRY_URL = process.env.EAS_PLUGIN_REGISTRY_URL || 'https://eas.biily.top/plugins/registry.json'
+const CATALOG_SOURCE = catalogSource(process.env.EAS_PLUGIN_REGISTRY_URL)
+const REGISTRY_URL = CATALOG_SOURCE.url
 const REGISTRY_MAX_BYTES = 2 * 1024 ** 2      // registry.json 上限 2MB
 const PLUGIN_HARD_CAP = 25 * 1024 ** 2         // 单个插件包硬上限 25MB
 
@@ -47,7 +49,7 @@ function currentPluginHost() {
 
 
 function registryCachePath(): string {
-  return path.join(app.getPath('userData'), 'plugin-registry-v2.json')
+  return path.join(app.getPath('userData'), CATALOG_SOURCE.cacheFile)
 }
 function stagingRoot(): string {
   return path.join(app.getPath('userData'), 'plugin-staging')
