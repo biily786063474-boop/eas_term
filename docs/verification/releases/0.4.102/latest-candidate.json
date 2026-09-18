@@ -1,0 +1,17 @@
+{
+  "version": "0.4.102",
+  "mac_arm64": "/download/v0.4.102/Eas-Term-0.4.102-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.102/Eas-Term-0.4.102-arm64.zip",
+  "mac_x64": "/download/v0.4.102/Eas-Term-0.4.102-x64.dmg",
+  "macZip_x64": "/download/v0.4.102/Eas-Term-0.4.102-x64.zip",
+  "mac": "/download/v0.4.102/Eas-Term-0.4.102-arm64.dmg",
+  "win": "/download/v0.4.102/Eas-Term-0.4.102-x64-setup.exe",
+  "notes": [
+    "内置时间线插件：按项目记录成果，支持月度概览、日期拨轮与详情，同一任务更新不重复计数。",
+    "Claude、Codex、OMP 对话支持显示 CLI 返回的内联图片，可点击放大并随历史保存；未传出的图片不在支持范围内。",
+    "Frame 双击插入菜单新增 3D 分类，识别 GLB/GLTF/OBJ/FBX/STL；画布预览仍支持 GLB，其余格式仅分类。",
+    "插件入口移至 Frame 右键菜单；双击记住上次选择的“文件夹 / 最近”。",
+    "亮色模式的项目标题栏改用银灰渐变与轻高光，不再是纯黑色。"
+  ],
+  "published": "2026-09-18T08:03:14.153208+00:00"
+}

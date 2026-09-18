@@ -1,0 +1,18 @@
+{
+  "arm64": {
+    "dmgSignature": true,
+    "stapled": true,
+    "gatekeeper": "Notarized Developer ID",
+    "matchesTestedApp": true,
+    "timelineBundled": true,
+    "smokePassed": true
+  },
+  "x64": {
+    "dmgSignature": true,
+    "stapled": true,
+    "gatekeeper": "Notarized Developer ID",
+    "matchesTestedApp": true,
+    "timelineBundled": true,
+    "smokePassed": true
+  }
+}
