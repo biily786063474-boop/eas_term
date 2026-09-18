@@ -234,6 +234,10 @@ async function installStage(name: unknown): Promise<InstallResult> {
     return { ok: false, error: '包内插件名与目录声明不一致' }
   }
   const packageCheck = checkPackageRequirements((raw as Record<string, unknown>).requirements, entry.requirements, currentPluginHost())
+  if (man.info.version !== entry.version) {
+    fs.rmSync(stageParent, { recursive: true, force: true })
+    return { ok: false, error: '包内版本与目录声明不一致，已拒绝安装' }
+  }
   if (!packageCheck.ok) {
     fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: packageCheck.reason }

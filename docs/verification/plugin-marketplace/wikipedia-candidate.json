@@ -1,0 +1,39 @@
+{
+  "packed": true,
+  "manifest": true,
+  "tools": [
+    "wikipedia_search",
+    "wikipedia_summary"
+  ],
+  "liveAttempt": true,
+  "livePassed": false,
+  "entry": {
+    "name": "wikipedia",
+    "displayName": "维基百科",
+    "description": "只读查询中英文维基百科词条与正文导言，返回原文链接和来源；不需要账号。不支持编辑词条。",
+    "category": "数据搜索",
+    "brandColor": "#63666A",
+    "version": "1.0.0",
+    "url": "https://eas.biily.top/plugins/wikipedia/wikipedia-1.0.0.zip",
+    "sha256": "fd9df5d3666ea588e97d802e69290956abb3730fea3b25233771fa48889b1c48",
+    "size": 6419,
+    "permissions": {
+      "canvas": []
+    },
+    "requirements": {
+      "capabilities": [
+        "mcp.stdio"
+      ]
+    }
+  },
+  "call": {
+    "isError": true,
+    "content": [
+      {
+        "type": "text",
+        "text": "DNS 包含非公开地址"
+      }
+    ]
+  },
+  "scope": "Actual archive -> extract -> host McpClient -> stdio child. Not actual CLI model or production marketplace install."
+}

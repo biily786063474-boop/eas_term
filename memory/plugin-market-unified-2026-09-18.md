@@ -100,3 +100,10 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 第一批check/build/UI退出0：3344项（3326通过/18跳过）+同进程UI12项，截图看到新版1.1.0/损坏1.2.0错误与缓存提示。同时眼验抓到长描述撑开grid裁右列，新增真实DOM边界红测复现，改minmax(0,1fr)+min-width:0；最终check/build+热更新13项+旧授权兼容UI回归监测22531运行中。不要依据第一批截图说布局修复已验收。
 最终22531已退出0：全量3344项/3326通过/18跳过/0失败，构建通过，热更新UI13项和账号/兼容UI7项通过。updated.png与failed-update.png已亲眼核对：1.1.0安装版本、1.2.0失败后保留1.1.0、离线缓存提示，双列卡片不再溢出；新截图提交当前Frame节点cnode-106-hn6rb（4/5槽）。旧失败保留layout-red.json作红测证据，无后台进程。未发布、未改正式软件、未验证生产HTTPS/CDN/插件业务工具/真实模型CLI。
 下一轮重点回到32真实插件包与统一配置入口（API key/本地目录/数据库权限等）；先核对approved spec与demo audit，不要继续只扩基础设施。仍缺真实provider OAuth注册/发现、凭证配置UI、源站v2切换/缓存迁移、32项逐项上游资格/许可与可运行包。新发现待补：installStage目前核对name/requirements却没核对包内version与目录version一致；更新UI依赖真实安装版本，宜加实际IPC红测防目录撒谎。composerSources还未把remote识别为MCP。持续目标active。
+
+## 继续：开始真实连接器包，不再只改基础设施
+新增plugins-store/wikipedia候选（零第三方运行依赖，自写stdio两个工具search/summary、中英文、只读、来源和许可链接）；固定Wikipedia HTTPS、全DNS答案公共检查/固定IP+TLS原域、15s/1MB、禁redirect、不读key/token。地址策略从宿主endpointPolicy转译生成，脚本build-wikipedia-policy维护。官方API/UA/许可来源已落台账和包README、架构01/隐私开发文案，非法律或平台批准结论。
+真实pack→extract→parseManifest→McpClient→stdio握手/list/call已运行：公开query失败，DNS“非公开地址”，en.wikipedia.org实际lookup=198.18.0.76（Clash fakeIP）。监测19631退出2，wikipedia-candidate.json livePassed=false。没有为了通过而放松私网规则，没有借CLI凭证或修改Clash；仅直连且系统PAC/代理仍缺，因此未加入默认目录、不能报第三项可用。
+同时实际IPC红测发现目录1.1.0可接受包内1.0.0，现installStage比对man.info.version，失败删暂存。hot-update verifier增加真实UI点击1.3.0但archive1.2.0/哈希正确的拒绝检查。全量check/build/UI监测85554在跑；网络边界测试另补目标IP/SNI/UA/redirect/1MB，最终仍需再取结果。全目标active，无上线。
+85554最终退出0：全量3349项/3331通过/18skip/0失败、构建成功、隔离热更新UI14项通过；版本谎报拒绝截图已眼验。全量期间新增最后一项Wikipedia网络边界测试，随后单独重跑Wikipedia5项全通过（不是声称全量已包含最后新增那项）。维基百科真实请求仍失败、未改DNS/代理；不把回归通过混为公开接口成功。下一步可推进统一配置UI/API key安全注入、本地目录授权和其余连接器；DNS问题需安全方案或有范围的Clash配置批准，不能关闭公共地址守卫。
+补充待统一：批准spec写新目录`/plugins/v2/registry.json`，当前构建/上传实现是`/plugins/registry-v2.json`，未上线所以仍可安全对齐；不能略过编号交付物的路径审计。用户指定`~/.Codex/playbook/网络排障-代理卡死.md`本机此路径不存在，本轮未调整Clash，不能凭印象套命令。

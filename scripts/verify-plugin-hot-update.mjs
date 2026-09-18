@@ -97,6 +97,12 @@ try {
  await until(()=>main.eval("document.body.innerText.includes('哈希校验不通过')"))
  check(true,'真实更新按钮下载损坏的1.2.0后明确显示哈希拒绝')
  check(JSON.parse(fs.readFileSync(installed)).version==='1.1.0','失败更新保留1.1.0文件')
+ version='1.3.0';broken=false;entries.set(version,{...entries.get('1.2.0'),version})
+ await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
+ await until(()=>main.eval("!!document.querySelector('button[title=\"更新到 1.3.0\"]')"))
+ await main.eval("document.querySelector('button[title=\"更新到 1.3.0\"]').click()")
+ await until(()=>main.eval("document.body.innerText.includes('包内版本与目录声明不一致')"))
+ check(JSON.parse(fs.readFileSync(installed)).version==='1.1.0','有效hash但版本谎报的更新被真实UI拒绝，旧版保持')
  offline=true
  await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()")
  await until(()=>main.eval("document.body.innerText.includes('目录离线，正在显示缓存')"))

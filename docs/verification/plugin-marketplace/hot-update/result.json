@@ -12,6 +12,7 @@
     "真实市场UI确认后替换为1.1.0并显示已安装版本",
     "真实更新按钮下载损坏的1.2.0后明确显示哈希拒绝",
     "失败更新保留1.1.0文件",
+    "有效hash但版本谎报的更新被真实UI拒绝，旧版保持",
     "离线刷新展示缓存提示而不是空市场",
     "全程同一应用PID，无宿主重启"
   ],
@@ -24,6 +25,9 @@
     "/registry.json",
     "/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.1.0.zip",
+    "/registry.json",
+    "/registry.json",
+    "/plugins/hot-fixture/hot-fixture-1.2.0.zip",
     "/registry.json",
     "/registry.json",
     "/plugins/hot-fixture/hot-fixture-1.2.0.zip",

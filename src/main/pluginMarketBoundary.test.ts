@@ -49,7 +49,7 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
   const exports:Record<string,any>={}
   vm.runInNewContext(output,{exports,require:(id:string)=>{if(!(id in imports))throw Error('Unexpected import '+id);return imports[id]},process:{platform:'darwin',arch:'arm64',env:{}},Buffer,URL,console,setTimeout,clearTimeout})
   exports.registerPluginMarketHandlers()
-  return {root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
+  return {entry,root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
 }
 
 test('incompatible host rejects before downloading an archive or creating installation',async t=>{
@@ -106,4 +106,13 @@ test('active plugin cannot be replaced or uninstalled; idle uninstall clears aut
  assert.equal(fs.readFileSync(path.join(target,'old.txt'),'utf8'),'keep');assert.deepEqual(h.cleared,[])
  h.setBusy(false);assert.equal(h.call('plugins:uninstall','sample').ok,true)
  assert.equal(fs.existsSync(target),false);assert.deepEqual(h.cleared,['sample'])
+})
+
+test('catalog version cannot mislabel a differently versioned archive',async t=>{
+ const h=harness(t);h.entry.version='1.1.0'
+ const result=await h.call('plugins:install','sample')
+ assert.equal(result.ok,false)
+ assert.match(result.error,/版本/)
+ assert.equal(fs.existsSync(path.join(h.home,'.eas','plugins','sample')),false)
+ assert.equal(fs.readdirSync(path.join(h.userData,'plugin-staging')).length,0)
 })

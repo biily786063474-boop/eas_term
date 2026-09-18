@@ -1,0 +1,11 @@
+{
+  "name":"wikipedia",
+  "version":"1.0.0",
+  "displayName":"维基百科",
+  "description":"只读查询中英文维基百科词条与正文导言，返回原文链接和来源；不需要账号。不支持编辑词条。",
+  "category":"数据搜索",
+  "brandColor":"#63666A",
+  "mcp":{"command":"node","args":["./server.mjs"]},
+  "permissions":{"canvas":[]},
+  "requirements":{"capabilities":["mcp.stdio"]}
+}

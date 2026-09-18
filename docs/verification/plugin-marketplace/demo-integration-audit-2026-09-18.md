@@ -51,8 +51,8 @@
 ## 代码证据与缺口
 
 - `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
-- `src/main/pluginManifest.ts`：要求 `mcp.command`，当前是本地进程型插件清单。
-- `src/main/mcpClient.ts` 与 `pluginHost.ts`：当前插件宿主是 stdio 子进程客户端；不能仅填远程 URL 就视为已接入。
+- `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；统一配置/API key 与 provider 注册适配仍缺。
+- `src/main/mcpClient.ts` 与 `pluginHost.ts`：已接 stdio/remote 共享宿主并做真实shim/隔离测试；远程正式 capability 尚未公布，实际模型与真实账号验证不能由这些测试代替。
 - `scripts/build-plugin-registry.mjs`：构建清单只有 pomodoro 和 board。
 - 分发热更新已有基础，但原 Demo 的远程连接、授权和配置不能靠扩大 PLUGINS 数组完成。
 
@@ -92,3 +92,11 @@
 - PowerPoint候选：https://github.com/GongRzhe/Office-PowerPoint-MCP-Server ，检索结果标记仓库已归档，不能不经维护/安全评审直接打包。
 - 本地文件候选：https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem ，需要在本项目的用户确认目录边界下锁版封装，不能把整个home默认授权。
 - 数据库候选DBHub存在官方安全公告：https://github.com/bytebase/dbhub/security/advisories/GHSA-mwwr-p57h-56pf 。公告列出<0.22.6的readonly模式不能真正阻止写入，0.22.6修复；旧版或“只检测SQL首词”的防护禁止采纳。锁定修复版本也不替代数据库账号最小权限和实际只读验证。当前未安装该候选。
+
+## 维基百科实包增量（未上架）
+
+`plugins-store/wikipedia` 新增自写零第三方运行依赖的 stdio 连接器：中英文搜索与正文导言两个只读工具，结果含来源/许可链接，不复制第三方MCP代码，不声称官方背书。官方接口依据：REST search/page（https://www.mediawiki.org/wiki/API:REST_API/Reference）、TextExtracts（https://www.mediawiki.org/wiki/Extension:TextExtracts）；只按需查询，不批量抓取，User-Agent按 https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy 标识；内容用途/许可遵循来源声明，见 https://www.mediawiki.org/wiki/Wikimedia_APIs/Access_policy 。本段是接口说明与工程记录，不是法律意见或平台批准证明。
+
+已实际：打包、解包、清单解析、宿主McpClient握手/列工具/调用；协议及格式测试通过。公开查询实测返回错误“DNS 包含非公开地址”，本机en.wikipedia.org解析为198.18.0.76（Clash fake-IP），没有绕过私网检测。证据`wikipedia-candidate.json`记录livePassed=false。
+
+仍缺：系统PAC/代理适配（当前候选仅直连）、真实公开查询成功、跨平台与真实模型三CLI验证；因此默认目录仍只有两已存在包，不能把源代码候选算成第三个已可用插件。
