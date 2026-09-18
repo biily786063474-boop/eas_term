@@ -59,3 +59,25 @@ test('Word connector rejects malformed input instead of dropping content',async(
  await assert.rejects(()=>reviseDocument(original,{paragraph:9,text:'new',author:'user'}),/段落/)
  await assert.rejects(()=>reviseDocument(original,{paragraph:0,text:'new',author:''}),/作者/)
 })
+
+test('Word creates rectangular tables and reads cells without mixing them into paragraph indices',async()=>{
+ const bytes=await createDocument({paragraphs:[{text:'Intro'}],tables:[{rows:[['Name','Count'],['Apples','3']]}]})
+ const result=await readDocument(bytes)
+ assert.deepEqual(result.paragraphs.map(p=>p.text),['Intro'])
+ assert.deepEqual(result.tables[0].rows,[['Name','Count'],['Apples','3']])
+ const changed=await reviseDocument(bytes,{paragraph:0,text:'Changed',author:'Test'})
+ assert.deepEqual((await readDocument(changed)).tables,result.tables)
+ await assert.rejects(()=>createDocument({paragraphs:[{text:'x'}],tables:[{rows:[['a','b'],['c']]}]}),/表格/)
+})
+
+ test('Word table limits reject invalid and oversized structures',async()=>{
+  for(const tables of [[{rows:[]}],Array(51).fill({rows:[['x']]}),[{rows:Array(201).fill(['x'])}],[{rows:[Array(51).fill('x')]}],[{rows:Array(101).fill(Array(50).fill('x'))}],[{rows:[[42]]}],[{rows:[['x'.repeat(10001)]]}]]){
+   await assert.rejects(()=>createDocument({paragraphs:[{text:'x'}],tables}))
+  }
+ })
+ test('Word marks merged and nested tables as complex without flattening nested cells',async()=>{
+  const xml='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>Outer</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>Inner</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:tc></w:tr></w:tbl></w:body></w:document>'
+  const result=await readDocument(singleEntryZip(xml))
+  assert.equal(result.tables.length,1);assert.equal(result.tables[0].complex,true)
+  assert.deepEqual(result.tables[0].rows,[['Outer']]);assert.deepEqual(result.paragraphs,[])
+ })

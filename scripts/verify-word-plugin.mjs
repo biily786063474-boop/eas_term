@@ -82,8 +82,10 @@ try{
  for(const label of ['claude','codex','omp']){
   const c=new McpClient({name:'verify-'+label,command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:fixture,env:{PATH:process.env.PATH||'',EAS_PLUGIN:'word',EAS_TERM_PORT:String(endpoint.port),EAS_TERM_TOKEN:endpoint.token}});clients.push(c)
   await c.initialize('0.4.102');check((await c.listTools()).some(t=>t.name==='word_create'),label+'真实shim经实际应用宿主获得工具')
-  const text='actual-'+label,result=await c.request('tools/call',{name:'word_create',arguments:{path:label+'.docx',paragraphs:[{text}]}})
+  const text='actual-'+label,result=await c.request('tools/call',{name:'word_create',arguments:{path:label+'.docx',paragraphs:[{text}],tables:[{rows:[['CLI','Value'],[label,text]]}]}})
   check(!result.isError&&(await readDocument(fs.readFileSync(path.join(allowed,label+'.docx')))).paragraphs[0].text===text,label+'真实工具调用写入授权临时目录')
+  const read=await c.request('tools/call',{name:'word_read',arguments:{path:label+'.docx'}})
+  check(!read.isError&&JSON.parse(read.content[0].text).tables[0].rows[1][0]===label&&(await readDocument(fs.readFileSync(path.join(allowed,label+'.docx')))).tables[0].rows[1][0]===label,label+'真实宿主往返创建并读取矩形表格')
  }
  const bad=await clients[0].request('tools/call',{name:'word_read',arguments:{path:'../profile/secrets.docx'}});check(bad.isError,'真实宿主调用拒绝越出授权目录')
  const beforeClear=JSON.parse(fs.readFileSync(dialogLog)).length

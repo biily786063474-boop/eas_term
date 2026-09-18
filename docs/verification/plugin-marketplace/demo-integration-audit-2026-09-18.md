@@ -123,3 +123,6 @@
 ## Word独立实包起步（2026-09-18，仍未上架）
 新增原创Word候选，锁docx9.7.1/jszip3.10.1/xml-js1.6.11及传递依赖；专属依赖树audit 0已知漏洞，含22份许可。官方资料见包README；生成bundle在包内，不要求终端运行npm或系统Python。初次许可收集因hash.js无独立LICENSE失败，查到README完整许可后显式提取，isarray同理，没有跳过缺失许可。
 实际pack→解包→真实McpClient子进程已跑通DOCX创建/读取/跟踪修订，旧hash/越界/软链拒绝。基础段落排版支持标题/粗体/斜体，读取只含正文顶层段落；已有修订及复杂结构拒绝改写。不是完整Word编辑器，不将三工具替代Demo全部读写排版修订范围；隔离实际应用市场安装→加密目录授权→三shim真实生成DOCX及锁定/清除已通过23项；Word渲染/三模型CLI/Windows待验收。不会增加默认市场已验证可用数量。
+
+### 2026-09-18 Word 矩形表格增量
+Word 候选 createDocument/word_create 支持追加矩形文本表格；readDocument/word_read 单列顶层表格文本，不改变段落索引；简单段落修订保持原表格。限50表、200行/50列、总5000单元格；合并/嵌套表格标记complex，不伪称还原复杂布局或支持单元格编辑。库源码变更后重建离线bundle；不加入默认目录。官方Table/TableCell文档来源记入包README。

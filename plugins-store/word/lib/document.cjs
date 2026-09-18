@@ -19881,6 +19881,15 @@ var hexColorValue = (val) => {
 var signedTwipsMeasureValue = (val) => typeof val === "string" ? universalMeasureValue(val) : decimalNumber(val);
 var hpsMeasureValue = (val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val);
 var twipsMeasureValue = (val) => typeof val === "string" ? positiveUniversalMeasureValue(val) : unsignedDecimalNumber(val);
+var percentageValue = (val) => {
+  const percent = val.substring(0, val.length - 1);
+  return `${Number(percent)}%`;
+};
+var measurementOrPercentValue = (val) => {
+  if (typeof val === "number") return decimalNumber(val);
+  if (val.slice(-1) === "%") return percentageValue(val);
+  return universalMeasureValue(val);
+};
 var eighthPointMeasureValue = unsignedDecimalNumber;
 var pointMeasureValue = unsignedDecimalNumber;
 var dateTimeValue = (val) => val.toISOString();
@@ -22827,6 +22836,91 @@ var Paragraph = class extends FileChild {
     return this;
   }
 };
+var createGridCol = (width) => new BuilderElement({
+  name: "w:gridCol",
+  attributes: width !== void 0 ? { width: {
+    key: "w:w",
+    value: twipsMeasureValue(width)
+  } } : void 0
+});
+var TableGrid = class extends XmlComponent {
+  constructor(widths, revision) {
+    super("w:tblGrid");
+    for (const width of widths) this.root.push(createGridCol(width));
+    if (revision) this.root.push(new TableGridChange(revision));
+  }
+};
+var TableGridChangeAttributes = class extends XmlAttributeComponent {
+  constructor(..._args) {
+    super(..._args);
+    _defineProperty(this, "xmlKeys", { id: "w:id" });
+  }
+};
+var TableGridChange = class extends XmlComponent {
+  constructor(options) {
+    super("w:tblGridChange");
+    this.root.push(new TableGridChangeAttributes({ id: options.id }));
+    this.root.push(new TableGrid(options.columnWidths));
+  }
+};
+var InsertedTableRow = class extends XmlComponent {
+  constructor(options) {
+    super("w:ins");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+  }
+};
+var DeletedTableRow = class extends XmlComponent {
+  constructor(options) {
+    super("w:del");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+  }
+};
+var InsertedTableCell = class extends XmlComponent {
+  constructor(options) {
+    super("w:cellIns");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+  }
+};
+var DeletedTableCell = class extends XmlComponent {
+  constructor(options) {
+    super("w:cellDel");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+  }
+};
+var CellMergeAttributes = class extends XmlAttributeComponent {
+  constructor(..._args) {
+    super(..._args);
+    _defineProperty(this, "xmlKeys", {
+      id: "w:id",
+      author: "w:author",
+      date: "w:date",
+      verticalMerge: "w:vMerge",
+      verticalMergeOriginal: "w:vMergeOrig"
+    });
+  }
+};
+var CellMerge = class extends XmlComponent {
+  constructor(options) {
+    super("w:cellMerge");
+    this.root.push(new CellMergeAttributes(options));
+  }
+};
 var VerticalAlignTable = {
   TOP: "top",
   CENTER: "center",
@@ -22840,6 +22934,174 @@ var createVerticalAlign = (value) => new BuilderElement({
     value
   } }
 });
+var buildMarginChildren = ({ marginUnitType = WidthType.DXA, top, left, bottom, right }) => [
+  {
+    name: "w:top",
+    size: top
+  },
+  {
+    name: "w:left",
+    size: left
+  },
+  {
+    name: "w:bottom",
+    size: bottom
+  },
+  {
+    name: "w:right",
+    size: right
+  }
+].filter((entry) => entry.size !== void 0).map(({ name, size }) => createTableWidthElement(name, {
+  type: marginUnitType,
+  size
+}));
+var createTableCellMargin = (options) => {
+  const children = buildMarginChildren(options);
+  if (children.length === 0) return;
+  return new BuilderElement({
+    name: "w:tblCellMar",
+    children
+  });
+};
+var createCellMargin = (options) => {
+  const children = buildMarginChildren(options);
+  if (children.length === 0) return;
+  return new BuilderElement({
+    name: "w:tcMar",
+    children
+  });
+};
+var WidthType = {
+  /** Auto. */
+  AUTO: "auto",
+  /** Value is in twentieths of a point */
+  DXA: "dxa",
+  /** No (empty) value. */
+  NIL: "nil",
+  /** Value is in percentage. */
+  PERCENTAGE: "pct"
+};
+var createTableWidthElement = (name, { type = WidthType.AUTO, size }) => {
+  let tableWidthValue = size;
+  if (type === WidthType.PERCENTAGE && typeof size === "number") tableWidthValue = `${size}%`;
+  return new BuilderElement({
+    name,
+    attributes: {
+      type: {
+        key: "w:type",
+        value: type
+      },
+      size: {
+        key: "w:w",
+        value: measurementOrPercentValue(tableWidthValue)
+      }
+    }
+  });
+};
+var TableCellBorders = class extends IgnoreIfEmptyXmlComponent {
+  constructor(options) {
+    super("w:tcBorders");
+    if (options.top) this.root.push(createBorderElement("w:top", options.top));
+    if (options.start) this.root.push(createBorderElement("w:start", options.start));
+    if (options.left) this.root.push(createBorderElement("w:left", options.left));
+    if (options.bottom) this.root.push(createBorderElement("w:bottom", options.bottom));
+    if (options.end) this.root.push(createBorderElement("w:end", options.end));
+    if (options.right) this.root.push(createBorderElement("w:right", options.right));
+  }
+};
+var GridSpanAttributes = class extends XmlAttributeComponent {
+  constructor(..._args) {
+    super(..._args);
+    _defineProperty(this, "xmlKeys", { val: "w:val" });
+  }
+};
+var GridSpan = class extends XmlComponent {
+  constructor(value) {
+    super("w:gridSpan");
+    this.root.push(new GridSpanAttributes({ val: decimalNumber(value) }));
+  }
+};
+var VerticalMergeType = {
+  /**
+  * Cell that is merged with upper one.
+  * This cell continues a vertical merge started by a cell above it.
+  */
+  CONTINUE: "continue",
+  /**
+  * Cell that is starting the vertical merge.
+  * This cell begins a new vertical merge region.
+  */
+  RESTART: "restart"
+};
+var VerticalMergeAttributes = class extends XmlAttributeComponent {
+  constructor(..._args2) {
+    super(..._args2);
+    _defineProperty(this, "xmlKeys", { val: "w:val" });
+  }
+};
+var VerticalMerge = class extends XmlComponent {
+  constructor(value) {
+    super("w:vMerge");
+    this.root.push(new VerticalMergeAttributes({ val: value }));
+  }
+};
+var TDirectionAttributes = class extends XmlAttributeComponent {
+  constructor(..._args3) {
+    super(..._args3);
+    _defineProperty(this, "xmlKeys", { val: "w:val" });
+  }
+};
+var TDirection = class extends XmlComponent {
+  constructor(value) {
+    super("w:textDirection");
+    this.root.push(new TDirectionAttributes({ val: value }));
+  }
+};
+var TableCellProperties = class extends IgnoreIfEmptyXmlComponent {
+  constructor(options) {
+    super("w:tcPr", options.includeIfEmpty);
+    if (options.width) this.root.push(createTableWidthElement("w:tcW", options.width));
+    if (options.columnSpan) this.root.push(new GridSpan(options.columnSpan));
+    if (options.verticalMerge) this.root.push(new VerticalMerge(options.verticalMerge));
+    else if (options.rowSpan && options.rowSpan > 1) this.root.push(new VerticalMerge(VerticalMergeType.RESTART));
+    if (options.borders) this.root.push(new TableCellBorders(options.borders));
+    if (options.shading) this.root.push(createShading(options.shading));
+    if (options.margins) {
+      const cellMargin = createCellMargin(options.margins);
+      if (cellMargin) this.root.push(cellMargin);
+    }
+    if (options.textDirection) this.root.push(new TDirection(options.textDirection));
+    if (options.verticalAlign) this.root.push(createVerticalAlign(options.verticalAlign));
+    if (options.insertion) this.root.push(new InsertedTableCell(options.insertion));
+    if (options.deletion) this.root.push(new DeletedTableCell(options.deletion));
+    if (options.revision) this.root.push(new TableCellPropertiesChange(options.revision));
+    if (options.cellMerge) this.root.push(new CellMerge(options.cellMerge));
+  }
+};
+var TableCellPropertiesChange = class extends XmlComponent {
+  constructor(options) {
+    super("w:tcPrChange");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+    this.root.push(new TableCellProperties(_objectSpread2(_objectSpread2({}, options), {}, { includeIfEmpty: true })));
+  }
+};
+var TableCell = class extends XmlComponent {
+  constructor(options) {
+    super("w:tc");
+    _defineProperty(this, "options", void 0);
+    this.options = options;
+    this.root.push(new TableCellProperties(options));
+    for (const child of options.children) this.root.push(child);
+  }
+  prepForXml(context) {
+    if (!(this.root[this.root.length - 1] instanceof Paragraph)) this.root.push(new Paragraph({}));
+    return super.prepForXml(context);
+  }
+};
 var NONE_BORDER = {
   style: BorderStyle.NONE,
   size: 0,
@@ -22870,6 +23132,264 @@ _defineProperty(TableBorders, "NONE", {
   insideHorizontal: NONE_BORDER,
   insideVertical: NONE_BORDER
 });
+var createOverlapElement = (overlap) => new BuilderElement({
+  name: "w:tblOverlap",
+  attributes: { val: {
+    key: "w:val",
+    value: overlap
+  } }
+});
+var createTableFloatProperties = ({ horizontalAnchor, verticalAnchor, absoluteHorizontalPosition, relativeHorizontalPosition, absoluteVerticalPosition, relativeVerticalPosition, bottomFromText, topFromText, leftFromText, rightFromText, overlap }) => new BuilderElement({
+  name: "w:tblpPr",
+  attributes: {
+    leftFromText: {
+      key: "w:leftFromText",
+      value: leftFromText === void 0 ? void 0 : twipsMeasureValue(leftFromText)
+    },
+    rightFromText: {
+      key: "w:rightFromText",
+      value: rightFromText === void 0 ? void 0 : twipsMeasureValue(rightFromText)
+    },
+    topFromText: {
+      key: "w:topFromText",
+      value: topFromText === void 0 ? void 0 : twipsMeasureValue(topFromText)
+    },
+    bottomFromText: {
+      key: "w:bottomFromText",
+      value: bottomFromText === void 0 ? void 0 : twipsMeasureValue(bottomFromText)
+    },
+    absoluteHorizontalPosition: {
+      key: "w:tblpX",
+      value: absoluteHorizontalPosition === void 0 ? void 0 : signedTwipsMeasureValue(absoluteHorizontalPosition)
+    },
+    absoluteVerticalPosition: {
+      key: "w:tblpY",
+      value: absoluteVerticalPosition === void 0 ? void 0 : signedTwipsMeasureValue(absoluteVerticalPosition)
+    },
+    horizontalAnchor: {
+      key: "w:horzAnchor",
+      value: horizontalAnchor
+    },
+    relativeHorizontalPosition: {
+      key: "w:tblpXSpec",
+      value: relativeHorizontalPosition
+    },
+    relativeVerticalPosition: {
+      key: "w:tblpYSpec",
+      value: relativeVerticalPosition
+    },
+    verticalAnchor: {
+      key: "w:vertAnchor",
+      value: verticalAnchor
+    }
+  },
+  children: overlap ? [createOverlapElement(overlap)] : void 0
+});
+var createTableLayout = (type) => new BuilderElement({
+  name: "w:tblLayout",
+  attributes: { type: {
+    key: "w:type",
+    value: type
+  } }
+});
+var CellSpacingType = {
+  /** Value is in twentieths of a point */
+  DXA: "dxa",
+  /** No (empty) value. */
+  NIL: "nil"
+};
+var createTableCellSpacing = ({ type = CellSpacingType.DXA, value }) => new BuilderElement({
+  name: "w:tblCellSpacing",
+  attributes: {
+    type: {
+      key: "w:type",
+      value: type
+    },
+    value: {
+      key: "w:w",
+      value: measurementOrPercentValue(value)
+    }
+  }
+});
+var createTableLook = ({ firstRow, lastRow, firstColumn, lastColumn, noHBand, noVBand }) => new BuilderElement({
+  name: "w:tblLook",
+  attributes: {
+    firstRow: {
+      key: "w:firstRow",
+      value: firstRow
+    },
+    lastRow: {
+      key: "w:lastRow",
+      value: lastRow
+    },
+    firstColumn: {
+      key: "w:firstColumn",
+      value: firstColumn
+    },
+    lastColumn: {
+      key: "w:lastColumn",
+      value: lastColumn
+    },
+    noHBand: {
+      key: "w:noHBand",
+      value: noHBand
+    },
+    noVBand: {
+      key: "w:noVBand",
+      value: noVBand
+    }
+  }
+});
+var TableProperties = class extends IgnoreIfEmptyXmlComponent {
+  constructor(options) {
+    super("w:tblPr", options.includeIfEmpty);
+    if (options.style) this.root.push(new StringValueElement("w:tblStyle", options.style));
+    if (options.float) this.root.push(createTableFloatProperties(options.float));
+    if (options.visuallyRightToLeft !== void 0) this.root.push(new OnOffElement("w:bidiVisual", options.visuallyRightToLeft));
+    if (options.width) this.root.push(createTableWidthElement("w:tblW", options.width));
+    if (options.alignment) this.root.push(createAlignment(options.alignment));
+    if (options.indent) this.root.push(createTableWidthElement("w:tblInd", options.indent));
+    if (options.borders) this.root.push(new TableBorders(options.borders));
+    if (options.shading) this.root.push(createShading(options.shading));
+    if (options.layout) this.root.push(createTableLayout(options.layout));
+    if (options.cellMargin) {
+      const cellMargin = createTableCellMargin(options.cellMargin);
+      if (cellMargin) this.root.push(cellMargin);
+    }
+    if (options.tableLook) this.root.push(createTableLook(options.tableLook));
+    if (options.cellSpacing) this.root.push(createTableCellSpacing(options.cellSpacing));
+    if (options.revision) this.root.push(new TablePropertiesChange(options.revision));
+  }
+};
+var TablePropertiesChange = class extends XmlComponent {
+  constructor(options) {
+    super("w:tblPrChange");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+    this.root.push(new TableProperties(_objectSpread2(_objectSpread2({}, options), {}, { includeIfEmpty: true })));
+  }
+};
+var Table = class extends FileChild {
+  constructor({ rows, width, columnWidths = Array(Math.max(...rows.map((row) => row.CellCount))).fill(100), columnWidthsRevision, margins, indent, float, layout, style, borders, alignment, visuallyRightToLeft, tableLook, cellSpacing, revision }) {
+    super("w:tbl");
+    this.root.push(new TableProperties({
+      borders: borders !== null && borders !== void 0 ? borders : {},
+      width: width !== null && width !== void 0 ? width : { size: 100 },
+      indent,
+      float,
+      layout,
+      style,
+      alignment,
+      cellMargin: margins,
+      visuallyRightToLeft,
+      tableLook,
+      cellSpacing,
+      revision
+    }));
+    this.root.push(new TableGrid(columnWidths, columnWidthsRevision));
+    for (const row of rows) this.root.push(row);
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex === rows.length - 1) return;
+      let columnIndex = 0;
+      row.cells.forEach((cell) => {
+        if (cell.options.rowSpan && cell.options.rowSpan > 1) {
+          const continueCell = new TableCell({
+            rowSpan: cell.options.rowSpan - 1,
+            columnSpan: cell.options.columnSpan,
+            borders: cell.options.borders,
+            children: [],
+            verticalMerge: VerticalMergeType.CONTINUE
+          });
+          rows[rowIndex + 1].addCellToColumnIndex(continueCell, columnIndex);
+        }
+        columnIndex += cell.options.columnSpan || 1;
+      });
+    });
+  }
+};
+var createTableRowHeight = (value, rule) => new BuilderElement({
+  name: "w:trHeight",
+  attributes: {
+    value: {
+      key: "w:val",
+      value: twipsMeasureValue(value)
+    },
+    rule: {
+      key: "w:hRule",
+      value: rule
+    }
+  }
+});
+var TableRowProperties = class extends IgnoreIfEmptyXmlComponent {
+  constructor(options) {
+    super("w:trPr", options.includeIfEmpty);
+    if (options.cantSplit !== void 0) this.root.push(new OnOffElement("w:cantSplit", options.cantSplit));
+    if (options.tableHeader !== void 0) this.root.push(new OnOffElement("w:tblHeader", options.tableHeader));
+    if (options.height) this.root.push(createTableRowHeight(options.height.value, options.height.rule));
+    if (options.cellSpacing) this.root.push(createTableCellSpacing(options.cellSpacing));
+    if (options.insertion) this.root.push(new InsertedTableRow(options.insertion));
+    if (options.deletion) this.root.push(new DeletedTableRow(options.deletion));
+    if (options.revision) this.root.push(new TableRowPropertiesChange(options.revision));
+  }
+};
+var TableRowPropertiesChange = class extends XmlComponent {
+  constructor(options) {
+    super("w:trPrChange");
+    this.root.push(new ChangeAttributes({
+      id: options.id,
+      author: options.author,
+      date: options.date
+    }));
+    this.root.push(new TableRowProperties(_objectSpread2(_objectSpread2({}, options), {}, { includeIfEmpty: true })));
+  }
+};
+var TableRow = class extends XmlComponent {
+  constructor(options) {
+    super("w:tr");
+    _defineProperty(this, "options", void 0);
+    this.options = options;
+    this.root.push(new TableRowProperties(options));
+    for (const child of options.children) this.root.push(child);
+  }
+  get CellCount() {
+    return this.options.children.length;
+  }
+  get cells() {
+    return this.root.filter((xmlComponent) => xmlComponent instanceof TableCell);
+  }
+  addCellToIndex(cell, index) {
+    this.root.splice(index + 1, 0, cell);
+  }
+  addCellToColumnIndex(cell, columnIndex) {
+    const rootIndex = this.columnIndexToRootIndex(columnIndex, true);
+    this.addCellToIndex(cell, rootIndex - 1);
+  }
+  rootIndexToColumnIndex(rootIndex) {
+    if (rootIndex < 1 || rootIndex >= this.root.length) throw new Error(`cell 'rootIndex' should between 1 to ${this.root.length - 1}`);
+    let colIdx = 0;
+    for (let rootIdx = 1; rootIdx < rootIndex; rootIdx++) {
+      const cell = this.root[rootIdx];
+      colIdx += cell.options.columnSpan || 1;
+    }
+    return colIdx;
+  }
+  columnIndexToRootIndex(columnIndex, allowEndNewCell = false) {
+    if (columnIndex < 0) throw new Error(`cell 'columnIndex' should not less than zero`);
+    let colIdx = 0;
+    let rootIdx = 1;
+    while (colIdx <= columnIndex) {
+      if (rootIdx >= this.root.length) if (allowEndNewCell) return this.root.length;
+      else throw new Error(`cell 'columnIndex' should not great than ${colIdx - 1}`);
+      const cell = this.root[rootIdx];
+      rootIdx += 1;
+      colIdx += cell && cell.options.columnSpan || 1;
+    }
+    return rootIdx - 1;
+  }
+};
 var AppPropertiesAttributes = class extends XmlAttributeComponent {
   constructor(..._args) {
     super(..._args);
@@ -29704,7 +30224,7 @@ function text(v, max = 1e5) {
   return v;
 }
 async function createDocument(args) {
-  keys(args, ["title", "paragraphs"]);
+  keys(args, ["title", "paragraphs", "tables"]);
   if (!Array.isArray(args.paragraphs) || !args.paragraphs.length || args.paragraphs.length > 1e3) throw Error("\u6BB5\u843D\u53C2\u6570\u65E0\u6548");
   const paragraphs = args.paragraphs.map((p) => {
     keys(p, ["text", "heading", "bold", "italic"]);
@@ -29713,6 +30233,21 @@ async function createDocument(args) {
     return new Paragraph({ children: [new TextRun({ text: text(p.text), bold: p.bold, italics: p.italic })], ...p.heading ? { heading: HeadingLevel["HEADING_" + p.heading] } : {} });
   });
   if (JSON.stringify(args).length > MAX / 2) throw Error("\u6587\u6863\u8FC7\u5927");
+  if (args.tables !== void 0) {
+    if (!Array.isArray(args.tables) || args.tables.length > 50) throw Error("\u8868\u683C\u53C2\u6570\u65E0\u6548");
+    let cells = 0;
+    for (const table of args.tables) {
+      keys(table, ["rows"]);
+      if (!Array.isArray(table.rows) || !table.rows.length || table.rows.length > 200) throw Error("\u8868\u683C\u884C\u6570\u65E0\u6548");
+      const width = table.rows[0]?.length;
+      if (!Number.isInteger(width) || width < 1 || width > 50) throw Error("\u8868\u683C\u5217\u6570\u65E0\u6548");
+      const rows = table.rows.map((row) => {
+        if (!Array.isArray(row) || row.length !== width || (cells += width) > 5e3) throw Error("\u8868\u683C\u5FC5\u987B\u4E3A\u77E9\u5F62\u4E14\u603B\u5355\u5143\u683C\u4E0D\u8D85\u8FC75000");
+        return new TableRow({ children: row.map((value) => new TableCell({ children: [new Paragraph(text(value, 1e4))] })) });
+      });
+      paragraphs.push(new Table({ rows }));
+    }
+  }
   if (args.title !== void 0) paragraphs.unshift(new Paragraph({ text: text(args.title, 1e3), heading: HeadingLevel.TITLE }));
   return Packer.toBuffer(new File({ sections: [{ children: paragraphs }] }));
 }
@@ -29757,7 +30292,7 @@ async function unpack(buffer) {
   if (/<!DOCTYPE|<!ENTITY/i.test(raw)) throw Error("\u4E0D\u652F\u6301XML\u5B9E\u4F53\u58F0\u660E");
   const doc = import_xml_js.default.xml2js(raw, { compact: false }), document2 = doc.elements?.find((e) => e.name === "w:document"), body = document2?.elements?.find((e) => e.name === "w:body");
   if (!body) throw Error("\u4E0D\u652F\u6301\u6B64Word\u547D\u540D\u7A7A\u95F4\u6216\u6587\u6863\u7ED3\u6784");
-  return { zip, doc, paragraphs: (body.elements ?? []).filter((e) => e.name === "w:p") };
+  return { zip, doc, paragraphs: (body.elements ?? []).filter((e) => e.name === "w:p"), tables: (body.elements ?? []).filter((e) => e.name === "w:tbl") };
 }
 function collect(node, name) {
   return [...node.name === name ? [node] : [], ...(node.elements ?? []).flatMap((e) => collect(e, name))];
@@ -29766,8 +30301,8 @@ function content(node, name) {
   return collect(node, name).map((e) => (e.elements ?? []).filter((x) => x.type === "text").map((x) => x.text).join("")).join("");
 }
 async function readDocument(buffer) {
-  const { paragraphs } = await unpack(buffer);
-  return { scope: "\u6B63\u6587\u9876\u5C42\u6BB5\u843D\uFF1B\u4E0D\u542B\u8868\u683C\u3001\u9875\u7709\u9875\u811A\u6216\u6587\u672C\u6846", paragraphs: paragraphs.map((p, index) => ({ index, text: content(p, "w:t"), deletedText: content(p, "w:delText"), tracked: !!(collect(p, "w:ins").length + collect(p, "w:del").length) })) };
+  const { paragraphs, tables } = await unpack(buffer);
+  return { scope: "\u6B63\u6587\u9876\u5C42\u6BB5\u843D\u4E0E\u9876\u5C42\u8868\u683C\u5355\u5143\u683C\u6587\u672C\uFF1B\u4E0D\u542B\u9875\u7709\u9875\u811A\u3001\u6587\u672C\u6846\u3001\u5D4C\u5957\u8868\u683C\u5185\u5BB9\u6216\u5408\u5E76\u5355\u5143\u683C\u5E03\u5C40\u8FD8\u539F", paragraphs: paragraphs.map((p, index) => ({ index, text: content(p, "w:t"), deletedText: content(p, "w:delText"), tracked: !!(collect(p, "w:ins").length + collect(p, "w:del").length) })), tables: tables.map((table, index) => ({ index, complex: collect(table, "w:tbl").length > 1 || !!(collect(table, "w:gridSpan").length + collect(table, "w:vMerge").length), rows: (table.elements ?? []).filter((e) => e.name === "w:tr").map((row) => (row.elements ?? []).filter((e) => e.name === "w:tc").map((cell) => (cell.elements ?? []).filter((e) => e.name === "w:p").map((p) => content(p, "w:t")).join("\n"))) })) };
 }
 async function reviseDocument(buffer, args) {
   keys(args, ["paragraph", "text", "author"]);

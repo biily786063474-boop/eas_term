@@ -212,3 +212,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18 v2 source acceptance: 49895 exited 0; full check 3386 total / 3368 pass / 18 skip / 0 fail. Built actual isolated app hot-update 17 checks passed, including source-bound cache persistence, offline rejection of unbound legacy cache, old cache preserved. Screenshot of offline market inspected. Production catalog endpoint not deployed or verified; no app replacement/release. Initial 6 VM import failures fixed by loading actual source helper into test harness.
 
 2026-09-18 更新前声明权限/目标差异已接 stage->preload->确认框，旧manifest未知不报无变化。全量3388/3370pass/18skip；实际旧manifest边界9项过；构建并实际app增强热更新18项过，截图已验。期间fixture误用canvas_snapshot导致安装被拒/等待超时，修正为允许的canvas_open_url，无生产安全放宽。32项接入未完成，未发布。
+
+2026-09-18 Word表格增量验收：初始红灯“参数无效”；实现矩形表格生成/顶层单元格读取、修订保留表格。28586 可见轮询退出0：全量3391/3373通过/18跳过/0失败，构建成功，实际隔离应用市场安装→加密目录→三shim表格往返/撤销锁定26项通过。后补两项边界与复杂表格测试，专项7/7通过（不冒充已包含在此前全量统计）。已查看配置面板截图；真实Word渲染、模型CLI、Windows、32项全量接入仍未完成，未替换正式app或发布。

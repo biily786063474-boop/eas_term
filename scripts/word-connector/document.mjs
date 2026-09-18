@@ -1,4 +1,4 @@
-import {Document,Paragraph,TextRun,Packer,HeadingLevel} from 'docx'
+import {Document,Paragraph,TextRun,Packer,HeadingLevel,Table,TableRow,TableCell} from 'docx'
 import JSZip from 'jszip'
 import xml from 'xml-js'
 const MAX=8*1024*1024
@@ -7,7 +7,7 @@ const textElement=(name,text)=>element(name,[{type:'text',text}],{'xml:space':'p
 function keys(v,allowed){if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!allowed.includes(k)))throw Error('参数无效')}
 function text(v,max=100000){if(typeof v!=='string'||v.length>max||/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(v))throw Error('文本参数无效');return v}
 export async function createDocument(args){
- keys(args,['title','paragraphs'])
+ keys(args,['title','paragraphs','tables'])
  if(!Array.isArray(args.paragraphs)||!args.paragraphs.length||args.paragraphs.length>1000)throw Error('段落参数无效')
  const paragraphs=args.paragraphs.map(p=>{
   keys(p,['text','heading','bold','italic'])
@@ -16,6 +16,21 @@ export async function createDocument(args){
   return new Paragraph({children:[new TextRun({text:text(p.text),bold:p.bold,italics:p.italic})],...(p.heading?{heading:HeadingLevel['HEADING_'+p.heading]}:{})})
  })
  if(JSON.stringify(args).length>MAX/2)throw Error('文档过大')
+ if(args.tables!==undefined){
+  if(!Array.isArray(args.tables)||args.tables.length>50)throw Error('表格参数无效')
+  let cells=0
+  for(const table of args.tables){
+   keys(table,['rows'])
+   if(!Array.isArray(table.rows)||!table.rows.length||table.rows.length>200)throw Error('表格行数无效')
+   const width=table.rows[0]?.length
+   if(!Number.isInteger(width)||width<1||width>50)throw Error('表格列数无效')
+   const rows=table.rows.map(row=>{
+    if(!Array.isArray(row)||row.length!==width||(cells+=width)>5000)throw Error('表格必须为矩形且总单元格不超过5000')
+    return new TableRow({children:row.map(value=>new TableCell({children:[new Paragraph(text(value,10000))]}))})
+   })
+   paragraphs.push(new Table({rows}))
+  }
+ }
  if(args.title!==undefined)paragraphs.unshift(new Paragraph({text:text(args.title,1000),heading:HeadingLevel.TITLE}))
  return Packer.toBuffer(new Document({sections:[{children:paragraphs}]}))
 }
@@ -54,13 +69,13 @@ async function unpack(buffer){
  if(/<!DOCTYPE|<!ENTITY/i.test(raw))throw Error('不支持XML实体声明')
  const doc=xml.xml2js(raw,{compact:false}),document=doc.elements?.find(e=>e.name==='w:document'),body=document?.elements?.find(e=>e.name==='w:body')
  if(!body)throw Error('不支持此Word命名空间或文档结构')
- return {zip,doc,paragraphs:(body.elements??[]).filter(e=>e.name==='w:p')}
+ return {zip,doc,paragraphs:(body.elements??[]).filter(e=>e.name==='w:p'),tables:(body.elements??[]).filter(e=>e.name==='w:tbl')}
 }
 function collect(node,name){return [...(node.name===name?[node]:[]),...(node.elements??[]).flatMap(e=>collect(e,name))]}
 function content(node,name){return collect(node,name).map(e=>(e.elements??[]).filter(x=>x.type==='text').map(x=>x.text).join('')).join('')}
 export async function readDocument(buffer){
- const {paragraphs}=await unpack(buffer)
- return {scope:'正文顶层段落；不含表格、页眉页脚或文本框',paragraphs:paragraphs.map((p,index)=>({index,text:content(p,'w:t'),deletedText:content(p,'w:delText'),tracked:!!(collect(p,'w:ins').length+collect(p,'w:del').length)}))}
+ const {paragraphs,tables}=await unpack(buffer)
+ return {scope:'正文顶层段落与顶层表格单元格文本；不含页眉页脚、文本框、嵌套表格内容或合并单元格布局还原',paragraphs:paragraphs.map((p,index)=>({index,text:content(p,'w:t'),deletedText:content(p,'w:delText'),tracked:!!(collect(p,'w:ins').length+collect(p,'w:del').length)})),tables:tables.map((table,index)=>({index,complex:collect(table,'w:tbl').length>1||!!(collect(table,'w:gridSpan').length+collect(table,'w:vMerge').length),rows:(table.elements??[]).filter(e=>e.name==='w:tr').map(row=>(row.elements??[]).filter(e=>e.name==='w:tc').map(cell=>(cell.elements??[]).filter(e=>e.name==='w:p').map(p=>content(p,'w:t')).join('\n')))}))}
 }
 export async function reviseDocument(buffer,args){
  keys(args,['paragraph','text','author'])
