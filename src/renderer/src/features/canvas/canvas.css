@@ -7053,13 +7053,24 @@
 .pm-settings-danger p { margin: 0 0 10px; color: var(--fg-dim); font-size: 11px; line-height: 1.65; }
 .pm-settings-danger button { color: var(--fg-dim); }
 
-/* Reserve the action rail; hide only triggers, never the top-layer dialog. */
-.pm-cact { gap: 8px; align-self: stretch; align-items: flex-start; }
-.pm-card-settings { align-self: center; min-width: 94px; }
-.pm-setting-entry { position: relative; }
-.pm-settings-trigger { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--fg-dim); font-size: 11px; cursor: pointer; opacity: 0; pointer-events: none; }
+/* Hover reveals a full-height end cap, not a permanently reserved button slot. */
+.pm-card { position: relative; }
+.pm-cact { align-self: stretch; align-items: flex-start; }
+.pm-card-settings { display: contents; }
+.pm-cact > .pm-add, .pm-cact > .pm-spin { position: relative; z-index: 2; }
+.pm-card:has(.pm-cact > .pm-add) .pm-setting-entry { right: 38px; border-radius: 0; }
+.pm-setting-entry { position: absolute; right: 0; top: 0; bottom: 0; width: 112px; display: flex; align-items: center; justify-content: center; border-radius: 0 12px 12px 0; background: color-mix(in srgb, var(--s-2) 55%, black); border-left: 1px solid var(--glass-border); opacity: 0; pointer-events: none; z-index: 1; }
+.pm-settings-trigger { display: flex; align-items: center; gap: 6px; padding: 9px 8px; border: 0; border-radius: 7px; background: transparent; color: var(--fg-dim); font-size: 11px; cursor: pointer; opacity: 0; pointer-events: none; }
+.pm-card:hover .pm-setting-entry, .pm-card:focus-within .pm-setting-entry,
 .pm-card:hover .pm-settings-trigger, .pm-card:focus-within .pm-settings-trigger { opacity: 1; pointer-events: auto; }
-.pm-settings-trigger:hover, .pm-settings-trigger:focus-visible { background: var(--lift-3); color: var(--fg); }
+.pm-card:has(.pm-card-settings):hover .pm-cb, .pm-card:has(.pm-card-settings):focus-within .pm-cb { margin-right: 84px; }
+.pm-card:has(.pm-card-settings):hover .pm-done, .pm-card:has(.pm-card-settings):focus-within .pm-done { opacity: 0; }
+.pm-settings-trigger:hover, .pm-settings-trigger:focus-visible { background: var(--lift-2); color: var(--fg); }
 .pm-setting-tip { position: absolute; right: 0; bottom: calc(100% + 8px); width: 210px; padding: 9px 11px; border: 1px solid var(--glass-border-strong); border-radius: 8px; background: var(--s-2); color: var(--fg); box-shadow: 0 5px 18px #0003; font-size: 11px; line-height: 1.6; white-space: normal; opacity: 0; visibility: hidden; pointer-events: none; z-index: 2; }
-.pm-setting-entry:hover .pm-setting-tip, .pm-setting-entry:focus-within .pm-setting-tip { opacity: 1; visibility: visible; }
-@media (hover: none) { .pm-settings-trigger { opacity: 1; pointer-events: auto; } }
+.pm-settings-trigger:hover + .pm-setting-tip, .pm-setting-entry:focus-within .pm-setting-tip { opacity: 1; visibility: visible; }
+[data-theme="light"] .pm-setting-entry { background: color-mix(in srgb, var(--s-2) 90%, black); }
+@media (hover: none) {
+ .pm-setting-entry, .pm-settings-trigger { opacity: 1; pointer-events: auto; }
+ .pm-card:has(.pm-card-settings) .pm-cb { margin-right: 84px; }
+ .pm-card:has(.pm-card-settings) .pm-done { opacity: 0; }
+}

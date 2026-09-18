@@ -20,6 +20,8 @@
     "pointer leaves card: settings trigger is hidden",
     "pointer hover reveals purpose tooltip",
     "hover does not change card dimensions",
+    "hover action panel fills card height without reserving layout space",
+    "default content uses space released by hidden panel",
     "claude真实shim经实际应用宿主获得工具",
     "claude真实工具调用写入授权临时目录",
     "codex真实shim经实际应用宿主获得工具",

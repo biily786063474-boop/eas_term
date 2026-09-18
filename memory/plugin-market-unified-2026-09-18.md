@@ -191,3 +191,8 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 用户先选仅齿轮，随后明确“按你推荐的来”：本轮采用图标＋具体文字（授权目录/连接账号/连接设置），右侧独立区域，hover 或键盘 focus 显示用途提示，触屏常显。47848 预期红灯定位旧入口；94979 编辑脚本编码失败未落代码，旧 UI 测试继续红灯。改用 apply_patch 后 63457 构建、类型检查、本地文件29及兼容11通过。68592 正在追加真实鼠标移入/移出、尺寸不变及 Bearer/Word/热更新回归，按同句柄跟踪。未发布或替换正式应用。
 
 2026-09-18 hover rail: 68592 exited 0. Local-files 32, compatibility 11, Bearer 13, Word 23, hot-update 14 checks passed. Actual pointer hide/reveal, purpose tooltip, unchanged geometry and keyboard focus restoration verified. Built isolated app screenshot inspected and refreshed in current Frame. No formal app replacement or release. Full 32-provider goal remains incomplete.
+
+## 2026-09-18 根据 094239 参考图修正布局
+前版只隐藏按钮、始终占94px，与用户图不符。全局搜索确认相关样式只有 canvas.css 一处后直接替换该段：默认不留配置空位；hover/focus 才显示通高右侧操作面、入口居中、右圆角，简介此时让位，整体卡片尺寸不变。71248 红灯证实旧布局不满足通高；90053 构建/类型/真实本地文件与兼容UI通过，已看图。68209 最终默认/hover宽度与截图、兼容与热更新复验中。没有替换正式 app。
+
+2026-09-18 full-height hover panel: 68209 build passed but immediate tooltip assertion failed (pointer hover reveals purpose tooltip). Verifier now waits for actual browser tooltip visibility, not a fixed sleep. 6563 exited 0: local-files 34, compatibility 11, hot-update 14. Idle/hover screenshots inspected: default full content width, hover end-cap full height/right corners, centered entry, unchanged card bounds. Current Frame screenshot refreshed. No formal app replacement/release.

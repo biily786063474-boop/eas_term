@@ -206,3 +206,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 - 此批为开发工作树落地与隔离应用验证，未替换正式 app、未上传发布；32 项全量供应商接入、真实三 CLI 模型调用、Windows 及正式目录迁移仍不计完成。
 
 2026-09-18 hover rail: 68592 exited 0. Local-files 32, compatibility 11, Bearer 13, Word 23, hot-update 14 checks passed. Actual pointer hide/reveal, purpose tooltip, unchanged geometry and keyboard focus restoration verified. Built isolated app screenshot inspected and refreshed in current Frame. No formal app replacement or release. Full 32-provider goal remains incomplete.
+
+2026-09-18 full-height hover panel: 68209 build passed but immediate tooltip assertion failed (pointer hover reveals purpose tooltip). Verifier now waits for actual browser tooltip visibility, not a fixed sleep. 6563 exited 0: local-files 34, compatibility 11, hot-update 14. Idle/hover screenshots inspected: default full content width, hover end-cap full height/right corners, centered entry, unchanged card bounds. Current Frame screenshot refreshed. No formal app replacement/release.
