@@ -416,6 +416,28 @@
   "busy": false,
   "trimmedFromHead": 0
  },
+ "synth-returned-images": {
+  "model": null,
+  "quotas": [],
+  "turns": [
+   {
+    "role": "assistant",
+    "text": "",
+    "execs": [],
+    "returnedImages": [
+     {
+      "mimeType": "image/png",
+      "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7xQAAAAASUVORK5CYII="
+     }
+    ]
+   }
+  ],
+  "pending": null,
+  "notices": [],
+  "usage": null,
+  "busy": false,
+  "trimmedFromHead": 0
+ },
  "synth-trim": {
   "model": "test-model",
   "quotas": [],

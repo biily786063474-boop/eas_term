@@ -1,3 +1,4 @@
+import { ReturnedImages } from './ReturnedImages'
 // 对话流渲染：把 ChatView 变成看得见的消息列表。
 //
 // 三条视觉规则（task-4-brief.md，背景 spec §B.2）：
@@ -403,6 +404,14 @@ function MessageTurn({
           ))}
         </div>
       )}
+      {turn.role === 'assistant' && <>
+        <ReturnedImages images={turn.returnedImages} />
+        {turn.imageNotice && <div className="ac-returned-image-error">{turn.imageNotice}</div>}
+        {turn.execs.map(item => <div key={item.execId}>
+          <ReturnedImages images={item.images} />
+          {item.imageNotice && <div className="ac-returned-image-error">{item.imageNotice}</div>}
+        </div>)}
+      </>}
       {turn.role === 'assistant' && turn.execs.length > 0 && (
         <div className="ac-execs">
           <div className="ac-execs-list" id={execListId} role="region" aria-label="工具调用记录" tabIndex={0}>

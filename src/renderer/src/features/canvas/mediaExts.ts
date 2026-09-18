@@ -20,3 +20,8 @@ export const isAudioPath = (p: string): boolean => AUDIO_EXTS.has(ext(p))
 /** 图片 / 视频 / 音频三者之一 */
 export const isMediaPath = (p: string): boolean =>
   isImagePath(p) || isVideoPath(p) || isAudioPath(p)
+
+/** 仅分类文件，不声明渲染支持。 */
+export const MODEL_3D_EXTS = new Set(['glb', 'gltf', 'obj', 'fbx', 'stl'])
+export const is3DPath = (p: string): boolean =>
+  MODEL_3D_EXTS.has(ext(p.split(/[\\/]/).pop() ?? ''))

@@ -1,3 +1,4 @@
+import { safeChatImages, MAX_HISTORY_IMAGE_CHARS } from '../../../../shared/chatImages.ts'
 // 聊天记录落盘前的裁剪。
 //
 // 为什么要裁：一次长对话的 turns 里，绝大部分体积在两个地方 ——
@@ -66,16 +67,40 @@ function keepIndexes(turns: readonly Turn[]): number[] {
   return keep.reverse()
 }
 
+function imageBudget() {
+  let imageChars = 0
+  const keepImages = (value: unknown) => {
+    const safe = safeChatImages(value)
+    let dropped = Array.isArray(value) && safe.length < value.length
+    const images = safe.filter(im => {
+      if (imageChars + im.url.length > MAX_HISTORY_IMAGE_CHARS) { dropped = true; return false }
+      imageChars += im.url.length
+      return true
+    })
+    return { images, ...(dropped ? { imageNotice: '图片无效或总量超过 8 MiB，部分图片未保留' } : {}) }
+  }
+  const keepTurnImages = (value: unknown) => {
+    const { images, ...rest } = keepImages(value)
+    return { returnedImages: images, ...rest }
+  }
+  return { keepImages, keepTurnImages }
+}
+
 /** 落盘前把一份 turns 裁到合理体积。**不改变顺序，也不合并任何轮次。** */
 export function trimForSave(turns: readonly Turn[]): Turn[] {
+  const { keepImages, keepTurnImages } = imageBudget()
   return keepIndexes(turns).map((i) => turns[i]).map((t) => ({
     role: t.role,
     text: t.text,
+    ...(t.imageNotice ? { imageNotice: t.imageNotice } : {}),
+    ...(t.returnedImages?.length ? keepTurnImages(t.returnedImages) : {}),
     execs: t.execs.map((e) => ({
       execId: e.execId,
       label: e.label,
       detail: e.detail,
       state: e.state,
+      ...(e.imageNotice ? { imageNotice: e.imageNotice } : {}),
+      ...(e.images?.length ? keepImages(e.images) : {}),
       ...(e.kind ? { kind: e.kind } : {}),
       ...(e.tool ? { tool: e.tool } : {}),
       ...(e.resources?.length ? { resources: e.resources.slice(0, 50) } : {}),
@@ -122,8 +147,14 @@ export function contextLostOf(
 /** 读回来的历史里，`state: 'running'` 是**上次退出时卡在半路的那一条**。
  *  原样渲染的话界面上会有一个永远转不完的圈 —— 进程早就没了，不会再有事件来收尾。 */
 export function settleOnLoad(turns: readonly Turn[]): Turn[] {
+  const { keepImages, keepTurnImages } = imageBudget()
   return turns.map((t) => ({
     ...t,
-    execs: t.execs.map((e) => (e.state === 'running' ? { ...e, state: 'failed' as const } : e))
+    ...(t.returnedImages?.length ? keepTurnImages(t.returnedImages) : {}),
+    execs: t.execs.map((e) => ({
+      ...e,
+      ...(e.images?.length ? keepImages(e.images) : {}),
+      ...(e.state === 'running' ? { state: 'failed' as const } : {})
+    }))
   }))
 }

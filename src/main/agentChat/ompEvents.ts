@@ -426,6 +426,11 @@ export function createOmpTranslator(
       const u = ((m.params as Record<string, unknown>)?.update ?? {}) as Record<string, unknown>
       switch (u.sessionUpdate) {
         case 'agent_message_chunk': {
+          if ((u.content as { type?: string } | undefined)?.type === 'image') {
+            const result = normalizeToolContent([u.content], '')
+            if (result.images?.length) out.push({ k: 'images', images: result.images })
+            if (result.output) { flushText(out); out.push({ k: 'text.done', text: result.output }) }
+          }
           const text = ((u.content ?? {}) as Record<string, unknown>).text
           if (typeof text === 'string' && text) {
             const mid = typeof u.messageId === 'string' ? u.messageId : ''

@@ -218,6 +218,10 @@ export function createClaudeTranslator(opts?: ClaudeTranslatorOptions): ClaudeTr
       // （2026-08-14 全分支评审「6 条小的」第 5 条）。
       if (b.type === 'text' && typeof b.text === 'string' && b.text.length > 0) {
         out.push({ k: 'text.done', text: b.text })
+      } else if (b.type === 'image') {
+        const result = normalizeToolContent([b], '')
+        if (result.images?.length) out.push({ k: 'images', images: result.images })
+        if (result.output) out.push({ k: 'text.done', text: result.output })
       } else if (b.type === 'tool_use' && typeof b.id === 'string') {
         out.push({
           k: 'exec.start',

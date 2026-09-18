@@ -103,19 +103,8 @@
   background: linear-gradient(180deg, rgba(var(--frame-rgb), 0.14), rgba(var(--frame-rgb), 0.05));
 }
 
-/* ── 亮色主题下这条改成**黑底白字**（2026-09-02 用户点名）───────────────────
-   为什么单独给它开一条、而不是跟着令牌走：
-   模块窗口条在亮色下如果也是白的，整块模块就**没有「窗口」这个边界**了 ——
-   卡片、内容、标题条连成一片白，用户找不到「哪儿能拖、哪儿能关」。
-   深色的条是操作系统窗口栏的通用语汇，它承担的是**「这是一扇窗」**这个信息，
-   而不是层级明度 —— 所以它不适用「靠明度差分层」那条规矩。
-
-   同理这里保留了那条 `border-bottom`：它分的不是层级，是窗与内容的界。 */
-/* Frame 本体：**整块填灰，不描蓝边**（2026-09-02 用户点名）。
-   `--accent` 在亮色下已经是中性近黑，所以 `rgba(var(--frame-rgb), …)` 自动跟着
-   变成灰 —— 但那点 0.045 的灰在白底上几乎看不见，Frame 会「没有身体」，
-   只剩一条黑标题栏浮着。所以显式给一层能看见的灰底，边整个去掉：
-   **Frame 的边界靠「灰底 vs 白画布」的明度差表达**，正是那条总规矩。 */
+/* 亮色 Frame 保留灰色半透明本体；标题栏用略深的银灰渐变建立柔和层次。
+   2026-09-17 用户确认替换旧的黑底白字，不影响暗色标题栏。 */
 :root[data-theme='light'] .cframe {
   /* 0.72 而不是实色：**留出透明度，毛玻璃才有东西可模糊**。
      叠在白画布上视觉仍然是 #e8e8e8 那一档灰（用户要的「再深一点」），
@@ -126,19 +115,20 @@
 }
 
 :root[data-theme='light'] .cframe-head {
-  background: #1c1c1c;
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(226, 228, 231, 0.96), rgba(208, 211, 215, 0.94));
+  border-bottom-color: rgba(44, 48, 55, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 2px 5px rgba(30, 35, 42, 0.035);
 }
 :root[data-theme='light'] .cframe-name {
-  color: #f2f2f2;
+  color: #30343b;
 }
-/* 条上的图标/按钮也要跟着翻，否则深色底上是一排看不见的深色图标 */
+/* 图标与文字跟随浅色标题栏；状态点仍保留其分类色。 */
 :root[data-theme='light'] .cframe-head button:not(.cframe-dot) {
-  color: rgba(242, 242, 242, 0.72);
+  color: #626872;
 }
 :root[data-theme='light'] .cframe-head button:not(.cframe-dot):hover {
-  color: #f2f2f2;
-  background: rgba(255, 255, 255, 0.1);
+  color: #252a32;
+  background: rgba(30, 35, 42, 0.07);
 }
 
 .cframe.collapsed .cframe-head {

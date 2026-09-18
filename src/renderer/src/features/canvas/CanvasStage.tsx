@@ -178,6 +178,7 @@ export function CanvasStage(): JSX.Element {
   const [statusPop, setStatusPop] = useState<{ x: number; y: number; frameId: string } | null>(null)
   // Frame 内双击 → 「插入文件」选择器（wx/wy 是双击处的世界坐标，插进来的节点就落在那儿）
   const [picker, setPicker] = useState<{
+    pluginsOnly?: boolean
     x: number
     y: number
     frameId: string
@@ -410,6 +411,17 @@ export function CanvasStage(): JSX.Element {
       const items = stageMenuItems(e, {
         setEditingSticky,
         setEditingFrame,
+        openPlugins: (fid, x, y) => {
+          const st = useStore.getState()
+          const frame = st.canvas.frames.find((f) => f.id === fid)
+          const root = frame?.folderPath ?? st.projects.find((p) => p.id === frame?.projectId)?.path
+          const r = viewportRef.current?.getBoundingClientRect()
+          if (!frame || !root || !r) return
+          const v = st.canvas.viewport
+          setPicker({ x, y, frameId: fid, root, rootName: frame.name,
+            wx: (x - r.left - v.x) / v.scale, wy: (y - r.top - v.y) / v.scale,
+            pluginsOnly: true })
+        },
         viewportEl: viewportRef.current
       })
       if (!items) return // 右键落在画布之外，让它走系统菜单
@@ -1768,6 +1780,8 @@ export function CanvasStage(): JSX.Element {
 
       {picker && (
         <CanvasFilePicker
+          key={picker.pluginsOnly ? 'plugins' : 'files'}
+          pluginsOnly={picker.pluginsOnly}
           x={picker.x}
           y={picker.y}
           root={picker.root}
