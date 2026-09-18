@@ -1,3 +1,5 @@
+import {PluginSettingsIcon} from "./PluginSettingsIcon"
+
 import {useEffect,useRef,useState} from 'react'
 import {PluginSettingsDialog} from './PluginSettingsDialog'
 import {pluginAuthorizationLabel,type PluginAuthorizationAction,type PluginAuthorizationStatus} from '../../../../shared/pluginAuthorization'
@@ -34,5 +36,5 @@ function PluginAccountForm({id,enabled}:{id:string;enabled:boolean}):JSX.Element
 export function PluginAccountControls({id,enabled,title='账号与连接'}:{id:string;enabled:boolean;title?:string}):JSX.Element{
  const [open,setOpen]=useState(false)
  const trigger=useRef<HTMLButtonElement>(null)
- return <div className="pm-auth"><div className="pm-auth-actions"><button ref={trigger} type="button" data-plugin-account-trigger={id} onClick={()=>setOpen(true)}>账号与连接</button></div>{open&&<PluginSettingsDialog returnFocus={trigger} title={title} onClose={()=>setOpen(false)}><p className="pm-settings-intro">由你在浏览器授权，不读取其他 CLI 的账号凭证。</p><PluginAccountForm id={id} enabled={enabled}/></PluginSettingsDialog>}</div>
+ return <div className="pm-card-settings"><div className="pm-setting-entry"><button className="pm-settings-trigger" ref={trigger} type="button" title="连接你自己的服务账号，管理授权并测试连接" aria-label="连接账号：连接你自己的服务账号，管理授权并测试连接" data-plugin-account-trigger={id} onClick={()=>setOpen(true)}><PluginSettingsIcon/><span>连接账号</span></button><span className="pm-setting-tip" role="tooltip">连接你自己的服务账号，管理授权并测试连接</span></div>{open&&<PluginSettingsDialog returnFocus={trigger} title={title} onClose={()=>setOpen(false)}><p className="pm-settings-intro">由你在浏览器授权，不读取其他 CLI 的账号凭证。</p><PluginAccountForm id={id} enabled={enabled}/></PluginSettingsDialog>}</div>
 }

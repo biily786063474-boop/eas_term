@@ -186,3 +186,8 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 - 已亲眼查看最终紧凑市场、独立设置面板暗色与亮色截图：卡片图标/标题顶对齐，不再因配置表单拉伸同排卡片；Esc 仅关设置并将焦点还原到入口，保留键盘焦点环。
 - 中途热更新首次卡片等待超时已保留失败证据；增加诊断后连续两次完整热更新通过，不能据此宣称瞬态原因已根治。
 - 此批为开发工作树落地与隔离应用验证，未替换正式 app、未上传发布；32 项全量供应商接入、真实三 CLI 模型调用、Windows 及正式目录迁移仍不计完成。
+
+## 2026-09-18 右侧悬停入口（用户最新确认按推荐）
+用户先选仅齿轮，随后明确“按你推荐的来”：本轮采用图标＋具体文字（授权目录/连接账号/连接设置），右侧独立区域，hover 或键盘 focus 显示用途提示，触屏常显。47848 预期红灯定位旧入口；94979 编辑脚本编码失败未落代码，旧 UI 测试继续红灯。改用 apply_patch 后 63457 构建、类型检查、本地文件29及兼容11通过。68592 正在追加真实鼠标移入/移出、尺寸不变及 Bearer/Word/热更新回归，按同句柄跟踪。未发布或替换正式应用。
+
+2026-09-18 hover rail: 68592 exited 0. Local-files 32, compatibility 11, Bearer 13, Word 23, hot-update 14 checks passed. Actual pointer hide/reveal, purpose tooltip, unchanged geometry and keyboard focus restoration verified. Built isolated app screenshot inspected and refreshed in current Frame. No formal app replacement or release. Full 32-provider goal remains incomplete.

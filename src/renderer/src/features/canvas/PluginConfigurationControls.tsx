@@ -1,10 +1,14 @@
 import {useEffect,useRef,useState} from 'react'
 import {PluginSettingsDialog} from './PluginSettingsDialog'
+import {PluginSettingsIcon} from './PluginSettingsIcon'
 import type {PluginInfo} from '../../../../shared/types'
 export function PluginConfigurationControls({plugin}:{plugin:PluginInfo}):JSX.Element{
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[configured,setConfigured]=useState<string[]|null>(null),[draft,setDraft]=useState<Record<string,string|null>>({}),[message,setMessage]=useState('')
  const generation=useRef(0)
  const trigger=useRef<HTMLButtonElement>(null)
+ const directoryOnly=!!plugin.config?.fields.length&&plugin.config.fields.every(f=>f.type==='directory')
+ const label=directoryOnly?'授权目录':'连接设置'
+ const purpose=directoryOnly?'选择允许 AI 访问的文件夹，并管理目录权限':'填写此插件所需的连接信息，并测试是否连通'
  useEffect(()=>()=>{generation.current++},[plugin.id])
  const run=async(action:'status'|'save'|'directory'|'test'|'clear',field?:string)=>{
   const seq=++generation.current;setBusy(true)
@@ -16,10 +20,10 @@ export function PluginConfigurationControls({plugin}:{plugin:PluginInfo}):JSX.El
   }catch{if(seq===generation.current)setMessage('配置操作失败，请重试')}
   finally{if(seq===generation.current){setBusy(false);if(action==='save'||action==='clear')setDraft({})}}
  }
- return <div className="pm-auth" data-plugin-config={plugin.id}>
-  <div className="pm-auth-actions"><button ref={trigger} type="button" disabled={busy} onClick={()=>{setOpen(!open);setDraft({});if(!open)void run('status')}}>{open?'关闭配置':'配置插件'}</button></div>
+ return <div className="pm-card-settings" data-plugin-config={plugin.id}>
+  <div className="pm-setting-entry"><button className="pm-settings-trigger" ref={trigger} type="button" title={purpose} aria-label={label+'：'+purpose} disabled={busy} onClick={()=>{setOpen(!open);setDraft({});if(!open)void run('status')}}><PluginSettingsIcon/><span>{label}</span></button><span className="pm-setting-tip" role="tooltip">{purpose}</span></div>
   {open&&<PluginSettingsDialog returnFocus={trigger} title={plugin.displayName} busy={busy} onClose={()=>{setOpen(false);setDraft({});generation.current++}}><form autoComplete="off" onSubmit={e=>{e.preventDefault();void run('save')}}>
-   <p className="pm-settings-intro">配置仅保存在本机。安装插件不代表已授权或已连接。</p>
+   <p className="pm-settings-intro">{purpose}。信息仅保存在本机；安装不代表已授权或已连接。</p>
    {plugin.config?.fields.map(field=><label key={field.id} className="pm-config-field">
     <span>{field.label}{field.required?'（必填）':''} · {configured===null?'状态未知':configured.includes(field.id)?field.type==='directory'?'已保存目录授权':'已保存，留空保留':'未配置'}</span>
     <span className="pm-cd">{field.purpose}</span>
