@@ -503,3 +503,13 @@ export async function stopObservedPlugin(serviceId:string,callerWindowId:number,
   host=>{if(host.kind==='plugin')host.client.close()},
   host=>{if(host.kind==='plugin')manualStops.stop(host.name)})
 }
+
+/** Read-only explicit connectivity probe. Reuses managed admission and shared host. */
+export async function testPluginConnection(info:PluginInfo):Promise<number>{
+ const ref='test:'+crypto.randomUUID()
+ try{
+  const hosted=await acquire(info,ref)
+  const tools=await hosted.client.listTools()
+  return tools.length
+ }finally{registry.release(info.name,ref)}
+}

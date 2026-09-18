@@ -20,3 +20,16 @@ test('confirmation cannot authorize a changed manifest or disabled plugin',async
  assert.equal((await api('login',plugin.id)).ok,false);assert.equal(logins,0)
  const f=setup();f.replace({...plugin,enabled:false});assert.equal((await f.api('login',plugin.id)).ok,false)
 })
+test('test connection requires credentials and reports only tool count without login',async()=>{
+ let state='disconnected',probes=0
+ const api=actions.createAuthorizationActions({find:()=>plugin,runtime:()=>({status:()=>state as 'disconnected'|'authorized',login:async()=>{throw Error('must not login')},disconnect:()=>{}}),confirm:async()=>{throw Error('not a login')},probe:async()=>{probes++;return 3}})
+ assert.equal((await api('test',plugin.id)).ok,false);assert.equal(probes,0)
+ state='authorized';const result=await api('test',plugin.id)
+ assert.equal(result.ok,true);if(result.ok){assert.equal(result.connection?.toolCount,3);assert.equal(typeof result.connection?.checkedAt,'number')}
+ assert.equal(probes,1)
+})
+test('connection result is discarded if authorization disappears while probing',async()=>{
+ let state:'authorized'|'disconnected'='authorized'
+ const api=actions.createAuthorizationActions({find:()=>plugin,runtime:()=>({status:()=>state,login:async()=>({authorized:true}),disconnect:()=>{}}),confirm:async()=>true,probe:async()=>{state='disconnected';return 4}})
+ assert.equal((await api('test',plugin.id)).ok,false)
+})

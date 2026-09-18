@@ -74,3 +74,7 @@ refresh/expiry批最终check/build退出0：3316项，3298通过/18跳过/0失�
 新增shared/pluginAuthorization契约、authorizationActions纯执行体、plugins.ts guarded plugins:authorization（status/login/disconnect）、preload、市场已装OAuth卡片PluginAccountControls。登录/断开原生确认，确认后重扫插件清单拒绝替换或禁用，renderer只传动作+ID，不能指定URL/路径/token。状态无轮询，只初次/显式刷新，保存token不标可用。保持现有市场视觉token。
 专项3项先红后绿；最终npm run check/build/verify-plugin-compatibility全部退出0：3327项/3309通过/18跳过/0失败，隔离UI6项通过。动态临时builtin账号fixture在finally删除，实际IPC返回locked-or-unavailable且仅ok/status；截图account-controls.png已亲眼看到连接/刷新/断开按钮与锁定提示，并提交当前Frame。正式app和真实凭证未动，未发布。
 此轮没有真实账号授权成功、浏览器跳转/原生确认点击的完整UI验收；没有测试连接按钮、卸载历史配置清理、v2发布、32真实连接器，不能视为全目标完成。监测命令13138已结束。下一轮优先补连接测试/取消状态和生命周期卸载清理，再推进32包与独立发布演练；持续目标active不等待用户再催。
+
+## 继续：测试连接
+已实现授权UI的测试连接按钮和credential-free结果，真正走共享宿主acquire+临时test ref，finally释放，工具列表探测不调用业务工具。实际HTTP宿主测试断言共享initialize次数仍1、业务call次数不增、refs回到原数；未授权无probe/不自动登录。额外红测复现probe期间授权失效仍报成功，现完成后重验status与安装清单拒绝迟到结果。专项通过，完整check/build/隔离应用正在原进度节点运行；未发布，卸载历史凭证清理与32真实接入仍缺。
+测试连接批最终check/build/隔离应用全部退出0：3329项/3311通过/18跳过/0失败，UI7项通过，截图眼验四按钮与未授权明确拒绝已通过。监测31426已结束。没有真实账号连接成功证据；测试fixture成功仅说明共享宿主只读探测、引用释放和不额外initialize。下一步卸载/升级生命周期安全与v2独立构建发布链，仍不发布生产、不广告未验能力。

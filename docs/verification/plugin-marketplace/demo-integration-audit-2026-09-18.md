@@ -50,7 +50,7 @@
 
 ## 代码证据与缺口
 
-- `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，尚无兼容性/授权状态/不可安装原因的正式契约。
+- `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
 - `src/main/pluginManifest.ts`：要求 `mcp.command`，当前是本地进程型插件清单。
 - `src/main/mcpClient.ts` 与 `pluginHost.ts`：当前插件宿主是 stdio 子进程客户端；不能仅填远程 URL 就视为已接入。
 - `scripts/build-plugin-registry.mjs`：构建清单只有 pomodoro 和 board。
@@ -69,7 +69,7 @@
 2. 宿主原生远程 MCP + 通用授权/配置层；一次客户端升级，后续兼容插件独立上架。
 3. 直接转交各 CLI 自己安装：体验与配置会分裂，不作为统一市场默认路线。
 
-当前阶段：清单已锁定，完成局部源码与上游核验；未实施接入、未测试新插件、未发布。
+当前阶段：宿主、授权基础与账号控件已实现并做隔离验证；32真实连接器和账号仍未验收，未发布。
 
 ## 官方来源增量核验（2026-09-18，非真实账号验收）
 

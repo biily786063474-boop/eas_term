@@ -254,7 +254,7 @@ export function registerPluginHandlers(): void {
   guardedHandle('plugins:authorization', (event, args: {action?:unknown;id?:unknown}) => {
     const win=BrowserWindow.fromWebContents(event.sender)
     if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
-    return createAuthorizationActions({find:findPlugin,runtime:getPluginAuthorization,confirm:async(info,action)=>{
+    return createAuthorizationActions({find:findPlugin,runtime:getPluginAuthorization,probe:async info=>(await import('./pluginHost')).testPluginConnection(info),confirm:async(info,action)=>{
       const remote=info.remote!
       const response=await dialog.showMessageBox(win,{type:'question',title:action==='login'?'连接插件账号':'断开插件账号',
         message:action==='login'?`连接「${info.displayName}」的账号？`:`断开「${info.displayName}」？`,
