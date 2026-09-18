@@ -30,3 +30,10 @@
 完整check/build使用同一个progress节点运行，不能在结果前宣称通过。
 随后补CONNECT响应头期限：读锁定代理库源码确认opts.signal进入net/tls.connect；真实无响应代理红测复现挂起，添加默认60秒头部期限并把取消传到底层socket，测试验证连接实际关闭后转绿。收到响应头即撤销该期限，保留流空闲限制。专项2项和typecheck通过，包含原有TLS/SNI/固定IP/16MB回归。已重新启动完整check/build覆盖这次增量。OAuth本轮尚未开始，不宣称完成。
 本轮最终npm run check与npm run build退出码0；网络准备/响应头超时增量仅本地网络测试，未做真实供应商及UI验收。后台回归已结束。
+
+## OAuth回调基础（继续）
+新增oauthCallback.ts及3项本地HTTP集成测试：随机loopback端口/路径，state与S256 challenge生成，精确Host/GET/path、重复参数、state、iss校验；单次消费防重放；取消/180秒默认超时关闭所属socket。测试覆盖错误state不消费、issuer混淆/重复参数拒绝、成功返回绑定resource/issuer/redirect/verifier、重放拒绝、取消和超时后端口关闭。专项3项及typecheck通过，完整check/build使用原进度节点运行。
+严格要求授权响应带iss；实际供应商兼容性尚未核验，不可用时不能静默移除此校验。本模块仅主进程内部原语，不打开浏览器、不换token、不落盘，不代表完成OAuth；还缺SDK provider、元数据/授权URL出站验证、密钥柜绑定、宿主会话代次/关闭接线、真实账号与UI验收。
+自查新增第4项回归：调用者在授权期间修改options不能改换本次issuer/resource；红测复现后改为创建时复制不可变值，专项4项通过。首轮完整check/build通过后因该变更已重新跑最终完整回归，结果以最终命令为准。
+后续接SDK注意：OAuthClientProvider.saveCodeVerifier由SDK产生verifier；当前回调原语自行产生challenge/verifier，正式整合必须统一为单一来源，不能混用两套PKCE（尚未接线所以当前不影响用户）。已核对本地1.30.0 auth.d.ts。secrets.ts的isUnlocked仍是私有，不能绕开锁定或拿PTY token冒充插件授权。
+最终完整check/build通过：3288项，3270通过、18跳过、0失败，build通过。当前无后台命令；只有本地授权回调基础经过测试，生产OAuth/真实供应商/UI仍未验。

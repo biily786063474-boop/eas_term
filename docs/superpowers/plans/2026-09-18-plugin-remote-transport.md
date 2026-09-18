@@ -34,3 +34,8 @@ Files: src/main/pluginConnections/remoteClient.ts 与 .test.ts。
 - [ ] `networkPlan.ts`：精确origin与公开DNS→固定地址+原TLS servername；系统PROXY/HTTPS使用首选CONNECT，SOCKS或不支持代理明确失败，不偷偷直连。
 - [ ] `pinnedFetch.ts`：HTTPS按固定IP建连接；Host/SNI保留原域；CONNECT目标使用固定IP；拒绝重定向、不转发Cookie/Proxy-Authorization、请求体与响应体限额、超时/取消收尾。
 - [ ] 先测发包参数和拒绝副作用，再加真实TLS/代理fixture，最后Electron resolveProxy接线；不能把模拟网络测试说成真实供应商验证。
+
+### OAuth授权阶段增量（继续执行已批准设计）
+- 本地回调原语：随机loopback端口/路径，state、S256 challenge，单次消费，issuer/resource创建时绑定，取消/超时清理。4项本地HTTP测试已覆盖；不是完整PKCE令牌验证。
+- 下一步：SDK OAuthClientProvider适配、发现文档与授权/令牌URL出站策略、加密柜的插件作用域、宿主会话代次及取消接线。
+- 正式启用前必须真实账号/三CLI/隔离UI验收；不提前声明oauth capability。要求响应iss的策略须逐供应商核验，不能为了兼容静默放开。
