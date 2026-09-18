@@ -83,3 +83,7 @@ refresh/expiry批最终check/build退出0：3316项，3298通过/18跳过/0失�
 已补installCommit/uninstall同步写前assertPluginPackageIdle：registry仍有宿主或startingPlugins仍在准入时拒绝替换/卸载；沿用用户运行中心停止与引用自然回收，不自动全局杀服务。写前invalidatePluginAuthorization关闭此插件pending授权/refresh，更新保留绑定密文、卸载清全部该插件配置/账号。
 credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需解锁，固定目录、ID校验、目标文件类型全量预检，避免删其他插件。没有正式用户旧格式数据迁移；早期分支无前缀文件不能安全推定归属，不猜测删除。专项9项（store+实际install IPC）及真实宿主2项通过，完整check/build/UI回归正在进度节点运行。主worktree与正式app未改，未发布。
 本批最终check/build/隔离市场回归退出0：3331项/3313通过/18skip/0失败；UI7项截图眼验通过（仍不包括真实安装更新/卸载交互，变更边界由实际IPC隔离文件测试证明）。监测34160已结束，无后台任务。后续优先双目录构建发布链：现build-plugin-registry仍只有2包schema1，publish脚本仍直接覆盖正式registry和zip，需要本地fake-transport演练不可变包/目录原子切换、v1/v2隔离，绝不直接跑生产publish脚本。再补32条目真实连接器与账号条件；不把待接入卡片当连接器。
+
+## 双目录构建增量
+新增scripts/plugin-registry-build.mjs并实际接build-plugin-registry：staging内打包+parseManifest/parseCatalog校验、v1排除requirements包、v2保留、同版本archive变更拒绝覆盖、预检后复制不可变包、分别原子rename两个目录（非跨文件事务）。tests三项先红后绿，测试了legacy隔离/真实zip大小/不可安装字段拒绝/重复名/失败后旧目录与archive不变。当前仅两已有包，不是32包落地。全量check/build及真实CLI双次构建到/tmp新目录正在可见节点运行。未改在线默认URL，publish-plugins旧脚本仍不能安全发布新格式，本轮没有执行生产上传。
+本批最终全量check/build退出0：3334项/3316通过/18skip/0失败。真实build-plugin-registry CLI在新/tmp目录连续两次构建成功，产物v1两包/v2两包，逐包重新计算SHA256和size与两目录一致。没有宿主重构或任何生产上传。监测54399已结束。下一步发布器原子切换/不可变包与独立更新演练，32包与实际账号仍未完成；不能把构建目录存在称线上已支持。
