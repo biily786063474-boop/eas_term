@@ -104,3 +104,6 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 
 ## 2026-09-18 03:00 可见轮询与兼容性验收
 已挂当前Frame进度HTML节点 cnode-81-o6swz，长命令每5秒更新，终态明确停止。打包requirements限v2、安装真实IPC边界3测试通过；全check3251通过/18跳过。隔离UI显示明确版本错误且不下载测试包，截图已查看。远程连接/OAuth/32项接入未完成，未上线。
+
+## 2026-09-18 远程MCP协议基础
+锁SDK1.30.0；endpointPolicy 4测试+真实本地HTTP协议测试通过，包含并发connect合并/不重放写请求。全check3256通过/18跳过/0失败、build通过。还未生产接线/真实供应商授权，不声明mcp.remote能力。审计18项告警逐节点比对旧lock均已存在（含tar critical），风险记录于dependency-audit-2026-09-18.md，未强制升级。
