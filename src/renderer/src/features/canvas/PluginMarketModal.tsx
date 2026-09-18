@@ -161,7 +161,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {it.plugin?.version && <div className="pm-cd">已安装 v{it.plugin.version}{update ? ` · 可更新至 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 随软件更新' : ''}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
           {it.plugin?.config&&<PluginConfigurationControls plugin={it.plugin}/>}
-          {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} enabled={it.plugin.enabled!==false}/>}
+          {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} title={it.displayName} enabled={it.plugin.enabled!==false}/>}
         </div>
         <div className="pm-cact">
           {working ? (

@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState} from 'react'
+import {PluginSettingsDialog} from './PluginSettingsDialog'
 import {pluginAuthorizationLabel,type PluginAuthorizationAction,type PluginAuthorizationStatus} from '../../../../shared/pluginAuthorization'
 /** No timers/decryption polling. Refresh explicitly; credentials never cross this boundary. */
-export function PluginAccountControls({id,enabled}:{id:string;enabled:boolean}):JSX.Element {
+function PluginAccountForm({id,enabled}:{id:string;enabled:boolean}):JSX.Element {
  const [status,setStatus]=useState<PluginAuthorizationStatus|null>(null)
  const [connection,setConnection]=useState<{toolCount:number;checkedAt:number}|null>(null)
  const [busy,setBusy]=useState(false)
@@ -26,7 +27,12 @@ export function PluginAccountControls({id,enabled}:{id:string;enabled:boolean}):
    <button type="button" disabled={busy||!enabled} onClick={()=>void run('login')}>{status==='authorized'?'重新授权':'连接账号'}</button>
    <button type="button" disabled={busy} onClick={()=>void run('status')}>刷新状态</button>
    <button type="button" disabled={busy||!enabled} onClick={()=>void run('test')}>测试连接</button>
-   <button type="button" onClick={()=>void run('disconnect')}>断开</button>
   </div>
+  <div className="pm-settings-danger"><p>断开会清除本机授权并关闭连接，不等于撤销服务商授权或已执行的操作。</p><div className="pm-auth-actions"><button type="button" onClick={()=>void run('disconnect')}>断开</button></div></div>
  </div>
+}
+export function PluginAccountControls({id,enabled,title='账号与连接'}:{id:string;enabled:boolean;title?:string}):JSX.Element{
+ const [open,setOpen]=useState(false)
+ const trigger=useRef<HTMLButtonElement>(null)
+ return <div className="pm-auth"><div className="pm-auth-actions"><button ref={trigger} type="button" data-plugin-account-trigger={id} onClick={()=>setOpen(true)}>账号与连接</button></div>{open&&<PluginSettingsDialog returnFocus={trigger} title={title} onClose={()=>setOpen(false)}><p className="pm-settings-intro">由你在浏览器授权，不读取其他 CLI 的账号凭证。</p><PluginAccountForm id={id} enabled={enabled}/></PluginSettingsDialog>}</div>
 }

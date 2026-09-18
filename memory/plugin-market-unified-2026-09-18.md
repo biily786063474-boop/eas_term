@@ -171,3 +171,18 @@ Bearer隔离UI脚本生成被PreToolUse shell解析器阻止（Bad substitution:
 28113全量退出0：3380项/3362通过/18skip。随后补ZIP实际解压流量限制，初用for-await失败stream is not async iterable（JSZip旧readable-stream），改data/end/error计数并保留destroy上限；重新build bundle，4专项全通过（含8MB展开/DOCTYPE拒绝）。69867build+实际Word应用23项通过；流量限制最终版9543实际应用再次23项通过并眼验截图。原生picker/确认适配，不是人工操作/Word渲染/实际模型。最终完整check 7518当前在运行，取同handle结果后再提交；无正式发布，其他32范围仍未完成。
 
 7518最终完整check退出0：3381项/3363通过/18skip/0fail，包含最后ZIP限流测试。所有本轮进程终止，候选尚无真实Word渲染/完整排版/Windows/实际模型证明。已将Word实际应用截图放当前Frame（关闭自己旧account-controls截图腾位，未碰用户模块），进度节点仍保留。
+
+## 用户截图指出UI问题，批准独立面板及全量落地
+最新用户“OK继续优化，并且之前的修改要全量落地”。先执行UI修正，不把此话推断成生产发版许可。已明确告诉用户回归既有安装更新授权三路链路，保留未验项目。
+截图问题真实红测43879失败“配置在独立对话面板中打开，而非撑高列表卡片”。新增PluginSettingsDialog原生top layer，配置/OAuth都只在卡片留入口，配置表单和危险操作分区；目录文案/无用保存按钮修正。96274 typecheck/build + 本地文件25项/兼容11项通过。眼验发现dialog初始焦点的全框橙outline，改仅dialog容器outline:none，按钮keyboard焦点规则保持；surface用s-2，明暗主题沿用项目token。
+68594正在全量check/build + local-files/compatibility/Bearer/Word/hot-update实际隔离应用串行回归。check已输出3381项/3363通过/18skip，整个handle还需取最终结果。local-files新增明暗截图/Esc只关设置/焦点恢复/同排卡片高度/目录文案检查；程序click前显式focus模拟真实点击。末尾OAuth危险分区和保存hover对比修正发生在build前，需核对构建最终证据。
+目前这些UI修改未提交，正式应用未替换，无真实上游账号调用。之前Word/Bearer等实包提交仍保留在feat/plugin-market-unified-20260918，不将本轮UI完善称32完成。
+
+68594退出1，真实UI发现“关闭后焦点回到配置入口”失败：原生showModal时入口因status请求被disabled，不能只依赖native默认回焦点。已由显式trigger ref+卸载microtask恢复，不移除按钮焦点环；6748本地文件28/兼容11/Bearer13/Word23全通过，最后热更新等待首卡超时。保留原failure.json；加失败诊断requests/UI（不改timeout），96517原热更新14项复跑通过，尚不能断言消除启动偶发超时。最后卡片icon/check已改顶对齐。33796正在最终全量check+五组app回归，需同handle取最终结果。
+
+## 2026-09-18 插件设置面板最终验收
+
+- 最终轮询任务 33796 退出 0：npm run check 共 3381 项，3363 通过、18 跳过、0 失败。真实隔离应用回归：本地文件 28、兼容与授权界面 11、Bearer 13、Word 23、热更新 14 项全部通过。
+- 已亲眼查看最终紧凑市场、独立设置面板暗色与亮色截图：卡片图标/标题顶对齐，不再因配置表单拉伸同排卡片；Esc 仅关设置并将焦点还原到入口，保留键盘焦点环。
+- 中途热更新首次卡片等待超时已保留失败证据；增加诊断后连续两次完整热更新通过，不能据此宣称瞬态原因已根治。
+- 此批为开发工作树落地与隔离应用验证，未替换正式 app、未上传发布；32 项全量供应商接入、真实三 CLI 模型调用、Windows 及正式目录迁移仍不计完成。

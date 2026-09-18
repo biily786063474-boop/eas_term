@@ -2901,13 +2901,14 @@
 }
 .pm-grid {
   display: grid;
+  align-items: start;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
 }
 .pm-card {
   display: flex;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   gap: 11px;
   padding: 11px 12px;
   border-radius: 13px;
@@ -7031,3 +7032,23 @@
 
 .pm-config-field { display: flex; flex-direction: column; gap: 5px; margin: 9px 0; font-size: 12px; }
 .pm-config-field input, .pm-config-field select { width: 100%; min-width: 0; box-sizing: border-box; color: var(--fg); background: var(--lift-2); border: 1px solid var(--glass-border-strong); border-radius: 6px; padding: 6px 8px; }
+
+/* Configuration belongs in the top layer, never in a stretched market grid row. */
+.pm-settings { width: min(520px, calc(100vw - 48px)); max-height: min(760px, calc(100vh - 64px)); margin: auto; padding: 0; overflow: auto; outline: none; color: var(--fg); background: var(--s-2); border: 1px solid var(--glass-border-strong); border-radius: 18px; box-shadow: 0 24px 90px #0006; }
+.pm-settings::backdrop { background: #0007; backdrop-filter: blur(6px); }
+.pm-settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 24px 18px; border-bottom: 1px solid var(--glass-border); }
+.pm-settings-eyebrow { color: var(--fg-dim); font-size: 11px; margin-bottom: 6px; }
+.pm-settings h2 { margin: 0; font-size: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.pm-settings-close { flex: none; width: 30px; height: 30px; border: 1px solid var(--glass-border); border-radius: 8px; background: var(--lift-1); color: var(--fg); font-size: 22px; cursor: pointer; }
+.pm-settings-body { padding: 20px 24px 24px; }
+.pm-settings-intro { margin: 0 0 22px; color: var(--fg-dim); font-size: 12px; line-height: 1.7; }
+.pm-settings .pm-config-field { margin: 0 0 22px; gap: 8px; font-size: 13px; }
+.pm-settings .pm-config-field input, .pm-settings .pm-config-field select { padding: 10px 12px; border-radius: 8px; }
+.pm-settings .pm-auth-actions button { padding: 8px 12px; font-size: 12px; }
+.pm-settings-primary { margin: 22px 0 12px; }
+.pm-settings .pm-settings-save { background: var(--fg); color: var(--bg); }
+.pm-settings .pm-settings-save:hover:not(:disabled) { background: var(--fg); filter: brightness(.9); }
+.pm-settings .pm-cd { white-space: normal; font-size: 12px; line-height: 1.65; }
+.pm-settings-danger { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--glass-border); }
+.pm-settings-danger p { margin: 0 0 10px; color: var(--fg-dim); font-size: 11px; line-height: 1.65; }
+.pm-settings-danger button { color: var(--fg-dim); }

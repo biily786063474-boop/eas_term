@@ -13,7 +13,7 @@ fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck
 // Controlled package server; production URL validation remains unchanged.
 const home=path.join(fixture,'home');fs.mkdirSync(home)
 const source=path.join(fixture,'hot-fixture');fs.mkdirSync(source)
-let version='1.0.0',broken=false,offline=false
+let version='1.0.0',broken=false,offline=false,debugPage
 const archives=new Map(),entries=new Map(),requests=[]
 for(const v of ['1.0.0','1.1.0','1.2.0']){
  fs.writeFileSync(path.join(source,'plugin.json'),JSON.stringify({name:'hot-fixture',version:v,displayName:'独立热更新验收插件',description:'受控隔离包 '+v,category:'Development',mcp:{command:'node',args:['./server.mjs']}}))
@@ -53,6 +53,7 @@ try {
  const initialPid=child.pid
  const targets=async()=>await(await fetch('http://127.0.0.1:'+port+'/json/list')).json()
  const main=await connect((await until(async()=>(await targets()).find(x=>x.type==='page'&&x.title==='Eas-Term'))).webSocketDebuggerUrl)
+ debugPage=main
  await until(()=>main.eval('!!window.__store && !!window.api?.plugins'))
  check(JSON.parse(fs.readFileSync(homeProof)).home===home,'主进程插件 homedir 适配至临时目录，正式凭证目录仍受 OS 沙箱拒绝')
  await main.eval("(async()=>{const s=window.__store.getState();s.setViewMode('canvas');await s.addProjectFrame('picker-fixture',30,30);s.setViewport({x:0,y:0,scale:1})})()")
@@ -112,7 +113,7 @@ try {
  check(child.pid===initialPid&&child.exitCode===null,'全程同一应用PID，无宿主重启')
  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks,requests,scope:'Same-process UI install, refresh, update, failure preservation and offline cache. Controlled network + home adapters; NOT production HTTPS/CDN or plugin business tool validation.'},null,2))
  console.log(JSON.stringify({passed:true,checks},null,2))
-} catch(e) {console.error(e);process.exitCode=1;fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(e)},null,2))}
+} catch(e) {console.error(e);process.exitCode=1;fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(e),requests,ui:await debugPage?.eval('document.body.innerText').catch(()=>null)},null,2))}
 finally {
  for(const ws of sockets)ws.close()
  child.kill('SIGTERM')
