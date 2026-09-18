@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    "真实隔离密钥柜解锁",
+    "动态发现、注册、同一loopback回调和S256校验通过",
+    "clientId与token经真实safeStorage原子加密落盘",
+    "实际IPC仅返回状态，不泄露动态身份或token",
+    "测试连接仅握手列工具，不调用业务工具",
+    "连接通过后不再同时显示尚未测试",
+    "claude真实shim调用自有远程业务工具",
+    "codex真实shim调用自有远程业务工具",
+    "omp真实shim调用自有远程业务工具",
+    "三个shim共享同一远程宿主",
+    "密钥柜锁定阻断全部远程OAuth调用",
+    "三shim共享登录，不隐式重复注册或交换",
+    "应用日志不包含测试令牌"
+  ],
+  "scope": "Real isolated Electron UI, safeStorage, shared host and three shim subprocesses. Owned HTTP endpoint with exact DNS/HTTPS-dial/PAC adapters; native confirmations adapted. Dynamic registration/discovery, PKCE callback and safeStorage are real; browser opener and owned HTTP boundary adapted. Not real TLS, upstream account, model CLI or production."
+}

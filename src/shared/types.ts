@@ -800,7 +800,10 @@ export interface PluginInfo {
   remote?: { transport: 'streamable-http'; url: string; approvedOrigins: string[] } & (
     | { auth: 'none'; oauth?: never; bearer?: never }
     | { auth: 'bearer'; bearer: { field: string }; oauth?: never }
-    | { auth: 'oauth'; oauth: { issuer: string; authorizationEndpoint: string; tokenEndpoint: string; clientId: string; scope?: string } }
+    | { auth: 'oauth'; oauth: { issuer: string; authorizationEndpoint: string; tokenEndpoint: string; scope?: string } & (
+      | { clientId: string; registrationEndpoint?: never }
+      | { registrationEndpoint: string; clientId?: never }
+    ) }
   )
   /** 内置样板（随包分发在 resources/plugins/）。用户目录同名的会覆盖它 */
   builtin?: boolean

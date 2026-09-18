@@ -110,7 +110,7 @@ export async function refreshPluginAuthorization(config:PluginOAuthConfig,refres
 }
 
 /** Explicit user-initiated public-client DCR flow. Caller must persist clientId with tokens;
- * not wired to manifest/UI yet. Never re-register on token refresh or retry a POST.
+ * The host selects this only for explicit dynamic manifests. Never re-register on token refresh or retry a POST.
  */
 export async function authorizeDynamicPlugin(config:Omit<PluginOAuthConfig,'clientId'> & {registrationEndpoint:string},deps:Dependencies){
  validateRemoteEndpoint(config.registrationEndpoint,config.approvedOrigins)

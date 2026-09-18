@@ -137,3 +137,12 @@ test('remote bearer binds exactly one required secret reference, never an inline
  assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote','config.fields']}},DIR).ok,false)
  for(const field of [{...raw.config.fields[0],required:false},{...raw.config.fields[0],type:'string',maxLength:100}])assert.equal(parseManifest({...raw,config:{fields:[field]}},DIR).ok,false)
 })
+
+test('dynamic OAuth requires a separately declared capability and one approved registration mode',()=>{
+ const oauth={issuer:'https://auth.example.com',authorizationEndpoint:'https://auth.example.com/authorize',tokenEndpoint:'https://auth.example.com/token',registrationEndpoint:'https://auth.example.com/register'}
+ const raw={name:'board',requirements:{capabilities:['mcp.remote','auth.oauth','auth.oauth.dcr']},mcp:{transport:'streamable-http',url:'https://mcp.example.com/mcp',auth:'oauth',approvedOrigins:['https://mcp.example.com','https://auth.example.com'],oauth}}
+ const result=parseManifest(raw,DIR);assert.ok(result.ok)
+ if(result.ok)assert.deepEqual(result.info.remote?.oauth,oauth)
+ assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote','auth.oauth']}},DIR).ok,false)
+ for(const change of [{clientId:'ambiguous'},{registrationEndpoint:''},{registrationEndpoint:'https://evil.example/register'},{clientSecret:'secret'},{registrationAccessToken:'secret'}])assert.equal(parseManifest({...raw,mcp:{...raw.mcp,oauth:{...oauth,...change}}},DIR).ok,false)
+})

@@ -22,7 +22,7 @@ function PluginAccountForm({id,enabled}:{id:string;enabled:boolean}):JSX.Element
  }
  useEffect(()=>{void run('status');return()=>{generation.current++}},[id])
  return <div className="pm-auth" data-plugin-account={id}>
-  <div className="pm-cd" role="status">{busy?'账号操作中…':status?pluginAuthorizationLabel(status):'读取账号状态…'}</div>
+  <div className="pm-cd" role="status">{busy?'账号操作中…':status?(connection&&status==='authorized'?'凭证已保存':pluginAuthorizationLabel(status)):'读取账号状态…'}</div>
   {connection&&<div className="pm-cd" role="status">已连通 · {connection.toolCount} 个工具 · {new Date(connection.checkedAt).toLocaleTimeString()} 检测（未执行业务操作）</div>}
   {error&&<div className="pm-cd" role="alert">{error}</div>}
   <div className="pm-auth-actions">

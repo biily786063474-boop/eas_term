@@ -82,14 +82,22 @@ export function parseManifest(
         if(mcpRaw.bearer!==undefined)throw Error('OAuth不能混用Bearer配置')
         if(!(requirements!.capabilities as unknown[]).includes('auth.oauth'))throw Error('OAuth插件必须声明auth.oauth兼容要求')
         const o=rec(mcpRaw.oauth)
-        if(!o||Object.keys(o).some(k=>!['issuer','authorizationEndpoint','tokenEndpoint','clientId','scope'].includes(k)))throw Error('OAuth仅接受公开客户端固定配置，禁止内嵌密钥')
+        if(!o||Object.keys(o).some(k=>!['issuer','authorizationEndpoint','tokenEndpoint','clientId','registrationEndpoint','scope'].includes(k)))throw Error('OAuth仅接受公开客户端配置，禁止内嵌密钥')
         for(const key of ['issuer','authorizationEndpoint','tokenEndpoint']){
           if(typeof o[key]!=='string')throw Error('OAuth端点无效')
           validateRemoteEndpoint(o[key] as string,origins)
         }
-        if(typeof o.clientId!=='string'||!o.clientId.trim()||o.clientId.length>2048||/[\x00-\x1f\x7f]/.test(o.clientId))throw Error('OAuth客户端ID无效')
+        let client:{clientId:string}|{registrationEndpoint:string}
+        if(o.registrationEndpoint!==undefined){
+          if(o.clientId!==undefined||!requirements!.capabilities.includes('auth.oauth.dcr'))throw Error('动态OAuth必须独立声明auth.oauth.dcr且不能混用固定客户端')
+          if(typeof o.registrationEndpoint!=='string')throw Error('OAuth注册端点无效')
+          client={registrationEndpoint:validateRemoteEndpoint(o.registrationEndpoint,origins).href}
+        }else{
+          if(typeof o.clientId!=='string'||!o.clientId.trim()||o.clientId.length>2048||/[\x00-\x1f\x7f]/.test(o.clientId))throw Error('OAuth客户端ID无效')
+          client={clientId:o.clientId}
+        }
         if(o.scope!==undefined&&(typeof o.scope!=='string'||!o.scope||o.scope.length>4096||!/^[\x21\x23-\x5b\x5d-\x7e]+(?: [\x21\x23-\x5b\x5d-\x7e]+)*$/.test(o.scope)))throw Error('OAuth scope无效')
-        remote={...base,auth:'oauth',oauth:{issuer:o.issuer as string,authorizationEndpoint:new URL(o.authorizationEndpoint as string).href,tokenEndpoint:new URL(o.tokenEndpoint as string).href,clientId:o.clientId,...(o.scope?{scope:o.scope as string}:{})}}
+        remote={...base,auth:'oauth',oauth:{issuer:o.issuer as string,authorizationEndpoint:new URL(o.authorizationEndpoint as string).href,tokenEndpoint:new URL(o.tokenEndpoint as string).href,...client,...(o.scope?{scope:o.scope as string}:{})}}
       }else throw Error('远程认证方式必须明确声明')
     } catch(error) {errors.push(error instanceof Error?error.message:'远程配置无效')}
   } else {
