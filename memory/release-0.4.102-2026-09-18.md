@@ -1,4 +1,4 @@
-# 0.4.102 发布进行中（2026-09-18）
+# 0.4.102 发布完成（2026-09-18）
 用户已明确授权以最新版合入并发版、独立 worktree。
 - 路径 `.worktrees/release-0.4.102`，分支同名。基线38ad965（0.4.101），挑入时间线62999d0→3caf679、Frame/返回图片fdafd0f→2cc91f1。产品发布准备76e2a3e已push。
 - check3258：3239通过/19跳过；首次两项测试夹具冲突已修。build与开发/正式arm64四组UI（菜单、亮色、三CLI返回图、时间线）全过。正式arm64 smoke含PTY通过。
@@ -12,3 +12,9 @@
 
 ## 01:30 后续
 网络精确DNS pins恢复访问。Windows CI成功及EXE下载完成；Mac x64公证30523755-492f-4246-9628-738c5e2132ea Accepted。两架构smoke/签名/Gatekeeper通过；arm64正式包四组UI通过。builder显式--x64仍受配置arch影响重打arm64，x64 archive完成后停止冗余进程；交付arm64使用原已公证ZIP/DMG，ZIP解到verified-arm64并再次核对。/tmp/eas-0102-publish.py正按五包→三页→latest上传，日志/tmp/eas-0102-publish.log，不删旧版不reload。临时DNS pins仍待收尾移除。
+
+## 官网已完成，GitHub最后收尾
+官网0.4.102五包大小/SHA256、三页hash、latest、HEAD/Range、八站HTTP和五个pm2 PID/状态全部核验通过；未reload/未删旧版。远端main与tag已到d4f7c50，产品同76e2a3e，无重复CI。GitHub draft五包并行HTTP2上传约793MB/1090MB，进程24173，日志/tmp/eas-0102-github-upload.log，exec会话32882。完成后用gh api核对五个asset digest，再gh release edit --draft=false --latest。**尚需移除临时DNS pins/本轮域名路由和DNS策略，恢复原配置；别忘了收尾。**最后提交发布证据并push main（skip ci），更新服务器档案镜像完成。
+
+## 最终收尾（以上为过程记录，不代表当前待办）
+官网与GitHub Release v0.4.102均正式发布。GitHub五包size/digest与本地/官网一致，发布2026-09-18T09:20:11Z。main已合入，tag d4f7c50产品同76e2a3e。临时Clash两域规则/DNS策略/hosts pins已移除并热重载，备份保留；没有全局切节点/重启服务。原主工作区仍design/timeline-plugin-20260916及其原脏改动，没有换分支/替换已安装应用。0.4.100/101服务器旧包保留。所有功能与发布证据在本worktree docs/verification/releases/0.4.102/。

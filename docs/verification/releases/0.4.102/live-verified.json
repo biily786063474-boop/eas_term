@@ -1,0 +1,58 @@
+{
+  "version": "0.4.102",
+  "sitesAfter": {
+    "https://www.biily.top": 200,
+    "https://aurora.biily.top": 200,
+    "https://rove.biily.top": 200,
+    "https://bzone.biily.top": 200,
+    "http://spb.biily.top": 200,
+    "https://eas.biily.top": 200,
+    "https://mini.biily.top": 200,
+    "https://spb.biily.top": 200
+  },
+  "latest": {
+    "version": "0.4.102",
+    "mac_arm64": "/download/v0.4.102/Eas-Term-0.4.102-arm64.dmg",
+    "macZip_arm64": "/download/v0.4.102/Eas-Term-0.4.102-arm64.zip",
+    "mac_x64": "/download/v0.4.102/Eas-Term-0.4.102-x64.dmg",
+    "macZip_x64": "/download/v0.4.102/Eas-Term-0.4.102-x64.zip",
+    "mac": "/download/v0.4.102/Eas-Term-0.4.102-arm64.dmg",
+    "win": "/download/v0.4.102/Eas-Term-0.4.102-x64-setup.exe",
+    "notes": [
+      "内置时间线插件：按项目记录成果，支持月度概览、日期拨轮与详情，同一任务更新不重复计数。",
+      "Claude、Codex、OMP 对话支持显示 CLI 返回的内联图片，可点击放大并随历史保存；未传出的图片不在支持范围内。",
+      "Frame 双击插入菜单新增 3D 分类，识别 GLB/GLTF/OBJ/FBX/STL；画布预览仍支持 GLB，其余格式仅分类。",
+      "插件入口移至 Frame 右键菜单；双击记住上次选择的“文件夹 / 最近”。",
+      "亮色模式的项目标题栏改用银灰渐变与轻高光，不再是纯黑色。"
+    ],
+    "published": "2026-09-18T08:03:14.153208+00:00"
+  },
+  "servicesUnchanged": true,
+  "filesVerified": [
+    {
+      "name": "Eas-Term-0.4.102-arm64.dmg",
+      "size": 218049778,
+      "sha256": "6509fa0394322cd0e507711a91813064ff81b07abc89b8bdc3847aa92435e206"
+    },
+    {
+      "name": "Eas-Term-0.4.102-arm64.zip",
+      "size": 216176669,
+      "sha256": "d9f24b473c0eb588c229be0c7cf1c8ca06cf99b9ac960d3e3a04f6d624953545"
+    },
+    {
+      "name": "Eas-Term-0.4.102-x64.dmg",
+      "size": 230023204,
+      "sha256": "90790adb6bfedb40e81fdd9f3339ca3806cadcdae2e59a944cecc8ae4a45e396"
+    },
+    {
+      "name": "Eas-Term-0.4.102-x64.zip",
+      "size": 228275080,
+      "sha256": "813d8356be5c7666d83aa0021a108e8a4d48333eb5239af4a64721297b64ccae"
+    },
+    {
+      "name": "Eas-Term-0.4.102-x64-setup.exe",
+      "size": 197508279,
+      "sha256": "51045189ff5bce27a400d1a1c555f68ae3e689c242dfbe1ac0243f620d3c9cef"
+    }
+  ]
+}
