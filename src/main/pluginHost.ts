@@ -151,7 +151,7 @@ function spawnHosted(info: PluginInfo): Hosted {
   const configuration=info.config?connectPluginConfiguration(info):undefined
   try{
     if(configuration)env.EAS_PLUGIN_CONFIG=configuration.environment
-    client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
+    client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd, suppressStderr:!!configuration })
   }catch(error){configuration?.close();throw error}
   finally{delete env.EAS_PLUGIN_CONFIG;if(configuration)configuration.environment=''}
   stopped=client.exited
@@ -167,7 +167,7 @@ function spawnHosted(info: PluginInfo): Hosted {
     await client.initialize(app.getVersion())
     hosted.tools = await client.listTools()
   })()
-  hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, e))
+  hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, info.config?'配置插件握手失败（原始诊断已隐藏）':e))
   const onEnded = () => {
     if (registry.get(info.name) !== hosted) return
     registry.drop(info.name, hosted)

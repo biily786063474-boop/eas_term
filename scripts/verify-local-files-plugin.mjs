@@ -18,14 +18,14 @@ const archive=fs.readFileSync(packed.zipPath)
 const server=http.createServer((req,res)=>{if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[packed.entry],unavailable:[]}))}else if(req.url===new URL(packed.entry.url).pathname){res.end(archive)}else {res.writeHead(404);res.end()}})
 await new Promise(r=>server.listen(0,'127.0.0.1',r))
 const serverUrl='http://127.0.0.1:'+server.address().port
-const bootstrap=path.join(fixture,'launch.cjs'),dialogLog=path.join(fixture,'dialog-log.json')
+const bootstrap=path.join(fixture,'launch.cjs'),dialogLog=path.join(fixture,'dialog-log.json'),holdDialog=path.join(fixture,'hold-dialog')
 fs.writeFileSync(bootstrap,`require('os').homedir=()=>${JSON.stringify(home)};
 const {app,dialog,session}=require('electron');
 app.whenReady().then(()=>session.defaultSession.webRequest.onBeforeRequest({urls:['https://eas.biily.top/plugins/local-files/*']},(details,callback)=>callback({redirectURL:${JSON.stringify(serverUrl)}+new URL(details.url).pathname})));
 app.setAppPath(${JSON.stringify(root)});
 const calls=[];
 dialog.showOpenDialog=async()=>{calls.push('directory-picker');require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));return {canceled:false,filePaths:[${JSON.stringify(allowed)}]}};
-dialog.showMessageBox=async(_win,options)=>{if(!['确认插件目录授权','保存插件配置'].includes(options.title))throw Error('Unexpected native dialog');calls.push(options.title);require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));return {response:1}};
+dialog.showMessageBox=async(_win,options)=>{if(!['确认插件目录授权','保存插件配置'].includes(options.title))throw Error('Unexpected native dialog');calls.push(options.title);require('fs').writeFileSync(${JSON.stringify(dialogLog)},JSON.stringify(calls));while(require('fs').existsSync(${JSON.stringify(holdDialog)}))await new Promise(r=>setTimeout(r,20));return {response:1}};
 require(${JSON.stringify(path.join(root,'out/main/index.js'))});`)
 const env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:serverUrl+'/plugins/v2/registry.json'}
 for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(n))delete env[n]
@@ -60,6 +60,18 @@ try{
  const files=fs.readdirSync(path.join(profile,'plugin-credentials'));check(files.length===1&&!fs.readFileSync(path.join(profile,'plugin-credentials',files[0]),'utf8').includes(allowed),'原生目录授权真实加密落盘，不以明文路径持久化')
  await main.eval("document.querySelector('[data-plugin-config]').closest('.pm-card').scrollIntoView({block:'center'})")
  const shot=await main.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'configured.png'),Buffer.from(shot.data,'base64'))
+ const credentialFile=path.join(profile,'plugin-credentials',files[0]),savedBytes=fs.readFileSync(credentialFile)
+ for(const action of ['save','directory']){
+  const before=JSON.parse(fs.readFileSync(dialogLog)).length
+  fs.writeFileSync(holdDialog,'hold native confirmation')
+  await main.eval('window.__pendingConfig=window.api.plugins.configuration('+JSON.stringify(action)+',"eas:local-files",'+(action==='save'?'{}':'"root"')+');void 0')
+  await until(()=>JSON.parse(fs.readFileSync(dialogLog)).length>before+(action==='directory'?1:0))
+  await main.eval('window.api.secrets.lock()')
+  const unlocked=await main.eval('window.api.secrets.unlock("837194")');check(unlocked.ok,action+'等待原生确认时实际锁定并重新解锁')
+  fs.unlinkSync(holdDialog)
+  const late=await main.eval('window.__pendingConfig')
+  check(!late.ok&&late.error.includes('失效')&&fs.readFileSync(credentialFile).equals(savedBytes),action+'旧确认结果不能跨解锁代次写入，原密文不变')
+ }
  const endpoint=JSON.parse(fs.readFileSync(path.join(profile,'mcp-endpoint.json')))
  for(const label of ['claude','codex','omp']){
   const c=new McpClient({name:'verify-'+label,command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:fixture,env:{PATH:process.env.PATH||'',EAS_PLUGIN:'local-files',EAS_TERM_PORT:String(endpoint.port),EAS_TERM_TOKEN:endpoint.token}});clients.push(c)

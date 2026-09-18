@@ -1,6 +1,7 @@
 import type {PluginInfo} from '../../shared/types'
 export type ConfigurationResult={ok:true;configured:string[]}|{ok:false;error:string}
 interface Dependencies {
+ acquire:()=>{assertActive:()=>void;dispose:()=>void}
  find:(id:string)=>PluginInfo|undefined
  confirm:(info:PluginInfo)=>Promise<boolean>
  assertIdle:(name:string)=>void
@@ -13,16 +14,19 @@ export const configurationIdentity=(info:PluginInfo)=>JSON.stringify([info.name,
  * null explicitly clears an optional field. Directory grants require a separate native picker. */
 export function createConfigurationActions(deps:Dependencies){
  return async(action:unknown,id:unknown,patch?:unknown):Promise<ConfigurationResult>=>{
+  let lease:ReturnType<Dependencies["acquire"]>|undefined
   try{
-   if(!['status','save','directory'].includes(String(action))||typeof id!=='string'||!/^eas:[a-z0-9][a-z0-9-]{0,39}$/.test(id))throw Error('配置参数无效')
+   if(typeof action!=='string'||!['status','save','directory'].includes(action)||typeof id!=='string'||!/^eas:[a-z0-9][a-z0-9-]{0,39}$/.test(id))throw Error('配置参数无效')
    const info=deps.find(id)
    if(!info||info.cli!=='eas'||!info.config)throw Error('插件没有配置声明')
+   if(action!=='status')lease=deps.acquire()
    if(action==='directory'){
     const field=info.config.fields.find(f=>f.id===patch&&f.type==='directory')
     if(!field||!deps.pickDirectory)throw Error('目录选择参数无效')
     const snapshot=configurationIdentity(info)
     const grant=await deps.pickDirectory(info,field.id)
     if(grant===undefined)return {ok:false,error:'已取消'}
+    lease!.assertActive()
     const current=deps.find(id)
     if(!current||configurationIdentity(current)!==snapshot)throw Error('插件配置已变化，请重新确认')
     deps.assertIdle(info.name)
@@ -34,6 +38,7 @@ export function createConfigurationActions(deps:Dependencies){
     if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.keys(patch).length>32)throw Error('配置输入无效')
     const snapshot=configurationIdentity(info)
     if(!await deps.confirm(info))return {ok:false,error:'已取消'}
+    lease!.assertActive()
     const current=deps.find(id)
     if(!current||configurationIdentity(current)!==snapshot)throw Error('插件配置已变化，请重新确认')
     deps.assertIdle(info.name)
@@ -56,6 +61,6 @@ export function createConfigurationActions(deps:Dependencies){
    }
    const values=deps.load(info)??{}
    return {ok:true,configured:info.config.fields.filter(f=>!!values[f.id]).map(f=>f.id)}
-  }catch(error){return {ok:false,error:error instanceof Error?error.message:'插件配置操作失败'}}
+  }catch(error){return {ok:false,error:error instanceof Error?error.message:'插件配置操作失败'}}finally{lease?.dispose()}
  }
 }

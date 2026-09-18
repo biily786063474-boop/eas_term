@@ -137,3 +137,8 @@ PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有vers
 维基百科本轮重查lookup/resolve4仍198.18.0.76，系统DNS114.114.114.114；未改Clash/绕过安全检查；指定网络排障指南文件仍不存在。32项仍未全接，完整目标active。
 5215完整复跑check退出0：3367项/3349通过/18skip/0失败；此前两项失败不删除记录，不能断言已解决所有负载时序问题。真实看板（add/move/list/remove）、番茄钟（start/done/重复done不重记）子进程业务回归也成功，结果existing-business.json，不冒充本轮市场UI/实际模型验证。所有监测已结束。
 下一段应继续真实插件逐项闭环，目标不完成。仍需配置存储对话期间锁定/重新解锁的代次审计、secret字段注入的日志脱敏（McpClient当前直记stderr，local-files不输出配置但通用第三方secret尚需防泄漏）、本地文件真实模型CLI/native picker交互/Windows验收；远程+config仍拒绝，Bearer未接；Wiki fakeIP外部阻碍；其余29项上游资格/授权/包/工具验收缺口仍大量存在。不要再回到单个小基础函数后汇报“全部快好了”。
+
+## 继续：先关闭已复现的配置凭证漏洞
+本轮两个红测复现后修复：1）原生保存/目录确认弹窗期间锁定再解锁，旧输入仍能写；configurationActions 必填 acquire 租约，await 前获取、确认后 assertActive、finally dispose，plugins.ts 接真实 acquirePluginCredentialAccess。2）McpClient 直接记录配置插件 stderr，secret 可跨块泄漏；host 对 configured stdio 开 suppressStderr（消费但不记录），并隐藏握手失败原始日志。非配置插件日志不变；不声称恶意插件工具结果能完全防泄漏。
+真实隔离app验收增加两条 pending native dialog →实际锁定/解锁→旧确认拒绝→原密文字节不变。1299 build + local-files 17检查 + compatibility 11检查退出0；已眼验配置卡片和已保存状态。原生窗口返回仍为适配，不是亲自点击，也不是实际模型CLI。82443完整check退出0：3369项/3351通过/18skip/0失败。无生产发布、无用户真实凭证修改；活动目标继续，不得因安全修复增加可用插件计数。
+新增天气/钉钉官方来源条件已存 demo audit；Open-Meteo 商用非免费，MET需标识/缓存/总量条件。天气域名仍fakeIP；未改Clash。其余工程工作没有消失，不能说全都只等账号。正式v2 URL/缓存迁移、remote Bearer、远程配置测试入口、真实连接器包均仍待做。下一段应选一个完整连接器交付里程碑，不再只做单函数提交。

@@ -15,8 +15,8 @@
 
 |分类|插件|Demo 目标（不是实现证明）|核验状态|
 |---|---|---|---|
-|生活出行|番茄钟|专注计时，可让 AI 帮你开始|已有官方市场包；本轮尚未回归|
-|办公文档|看板|项目待办三栏看板|已有内置插件及市场包；本轮尚未回归|
+|生活出行|番茄钟|专注计时，可让 AI 帮你开始|已有市场包；真实 stdio start/done/重复完成回归通过，实际模型未验|
+|办公文档|看板|项目待办三栏看板|已有内置及市场包；真实 stdio 增/移/查/删回归通过，实际模型未验|
 |开发工具|电脑视野|让 AI 看你的屏幕并代操作|已有内置实现；跨平台打包及生命周期验收待核对|
 |办公文档|Word 文档|读写 Word，排版、生成、修订|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |办公文档|Excel 表格|读写 Excel，公式、透视、图表|待核验上游来源、许可、授权、实际工具及平台兼容性|
@@ -28,7 +28,7 @@
 |生活出行|Google 日历|读写日程、创建提醒|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |生活出行|12306 火车票|查余票、时刻、正晚点|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |开发工具|GitHub|仓库、Issue、PR、CI|官方 MCP 可用；本地/远程与认证方案待定|
-|开发工具|本地文件|读写你授权的目录|待核验上游来源、许可、授权、实际工具及平台兼容性|
+|开发工具|本地文件|读写你授权的目录|自写包已打通市场安装、加密目录授权、三 shim 实际写入、锁定与迟到确认拒绝；Windows/实际模型未验|
 |开发工具|数据库|查 Postgres / MySQL / SQLite|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |开发工具|Sentry|查线上报错与告警|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |通讯协作|Slack|读写 Slack 消息|待核验上游来源、许可、授权、实际工具及平台兼容性|
@@ -51,9 +51,9 @@
 ## 代码证据与缺口
 
 - `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
-- `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；统一配置/API key 与 provider 注册适配仍缺。
+- `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；stdio 统一配置/目录授权已接；remote Bearer 与 provider 注册适配仍缺。
 - `src/main/mcpClient.ts` 与 `pluginHost.ts`：已接 stdio/remote 共享宿主并做真实shim/隔离测试；远程正式 capability 尚未公布，实际模型与真实账号验证不能由这些测试代替。
-- `scripts/build-plugin-registry.mjs`：构建清单只有 pomodoro 和 board。
+- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files；v1 仅前两项，v2 三项，尚未发布。
 - 分发热更新已有基础，但原 Demo 的远程连接、授权和配置不能靠扩大 PLUGINS 数组完成。
 
 ## 已查看官方来源
@@ -104,3 +104,12 @@
 ## 本地文件纵向证据（2026-09-18，未生产发布）
 
 自写`plugins-store/local-files`，不冒充官方filesystem MCP。实现授权目录list/read/write，文本1MB/列表500项，覆盖SHA256、symlink/硬链/路径越界拒绝。实际隔离app已完成native-dialog适配→真实safeStorage→真实共享宿主→Claude/Codex/OMP各自真实shim子进程→临时文件写入，以及锁定关闭后拒绝写入（12检查通过）。后续市场安装完整验证结果见`local-files/result.json`；未验证真实模型CLI/native picker手动交互/Windows/生产HTTPS，不能宣称32全就绪。
+
+## 2026-09-18 补核：天气与钉钉的接入条件
+
+- Open-Meteo 免费接口仅限非商业使用，商业调用需要订阅及 customer-api 的 API key；不可因免登录评估接口可调用，就默认塞进商业软件。来源：https://open-meteo.com/en/pricing 。未订阅，未选择其为正式上游。
+- MET Norway Locationforecast 提供按经纬度的全球预报，需要标识应用的 User-Agent、缓存/过期处理、坐标最多四位小数及署名；这是预报，不冒充实测当前天气。来源：https://api.met.no/doc/locationforecast/HowTO 、https://api.met.no/doc/TermsOfService 。聚合超过每秒20请求需特殊约定，不能将单机实验视为不限量市场分发许可。本轮 DNS 探测 api.met.no=198.18.0.91、api.open-meteo.com=198.18.0.92，公开地址守卫仍会拒绝；未关闭守卫或修改代理。
+- 钉钉官方创建应用流程要求开发组织权限和 Client ID/Client Secret；机器人发送消息与审批工作流是不同接入范围，不能用一个 webhook 冒充 Demo 全部能力。来源：https://open-dingtalk.github.io/developerpedia/docs/explore/tutorials/stream/event/python/create-app/ 、https://open.dingtalk.com/tutorial/ 。本轮无应用创建/凭证授权/实际调用。
+- 企业微信、阿里云盘、12306 的本次定向检索未拿到足以确认完整接入的官方接口正文；维持未核验，不把搜索不到推断成没有API。
+
+**归因边界**：Word/Excel/PPT、数据库、网页抓取等尚有自主工程工作，不是“全部只等用户账号”；OAuth 应用注册/审核和用户登录另列外部条件。当前三项有本轮真实业务证据，绝不是32项完成。当前市场截图是隔离单包目录，不是正式市场32项已上线的截图。

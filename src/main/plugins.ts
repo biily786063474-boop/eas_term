@@ -1,3 +1,4 @@
+import { acquirePluginCredentialAccess } from './secrets'
 import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
 import { loadPluginConfiguration, savePluginConfiguration } from './pluginConfiguration'
@@ -258,7 +259,7 @@ export function registerPluginHandlers(): void {
     const win=BrowserWindow.fromWebContents(event.sender)
     if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
     const {assertPluginPackageIdle}=await import('./pluginHost')
-    return createConfigurationActions({find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,pickDirectory:async(info,id)=>{
+    return createConfigurationActions({acquire:acquirePluginCredentialAccess,find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,pickDirectory:async(info,id)=>{
       const field=info.config!.fields.find(f=>f.id===id)!
       if(field.type!=='directory')throw Error('目录字段无效')
       const picked=await dialog.showOpenDialog(win,{title:`${info.displayName} · ${field.label} · ${field.access==='read'?'只读':'读写'}授权`,properties:['openDirectory']})

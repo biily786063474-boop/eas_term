@@ -14,6 +14,8 @@ export interface McpClientOpts {
   args: string[]
   env: Record<string, string>
   cwd: string
+  /** Configured plugins may print secrets; drain stderr without logging it. */
+  suppressStderr?: boolean
 }
 
 export interface McpToolDef {
@@ -69,6 +71,7 @@ export class McpClient {
     this.proc.stdout?.on('data', (chunk: string) => this.feed(chunk))
     this.proc.stderr?.setEncoding('utf8')
     this.proc.stderr?.on('data', (s: string) => {
+      if (opts.suppressStderr) return
       const t = s.trim()
       if (t) console.log(`[plugin:${this.name}] ${t.slice(0, 400)}`)
     })
