@@ -1,3 +1,4 @@
+import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
 import { loadPluginConfiguration, savePluginConfiguration } from './pluginConfiguration'
 import { createAuthorizationActions } from './pluginConnections/authorizationActions.ts'
@@ -257,7 +258,15 @@ export function registerPluginHandlers(): void {
     const win=BrowserWindow.fromWebContents(event.sender)
     if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
     const {assertPluginPackageIdle}=await import('./pluginHost')
-    return createConfigurationActions({find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,confirm:async info=>{
+    return createConfigurationActions({find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,pickDirectory:async(info,id)=>{
+      const field=info.config!.fields.find(f=>f.id===id)!
+      if(field.type!=='directory')throw Error('目录字段无效')
+      const picked=await dialog.showOpenDialog(win,{title:`${info.displayName} · ${field.label} · ${field.access==='read'?'只读':'读写'}授权`,properties:['openDirectory']})
+      if(picked.canceled||picked.filePaths.length!==1||win.isDestroyed())return undefined
+      const grant=createDirectoryGrant(picked.filePaths[0],field.access)
+      const confirm=await dialog.showMessageBox(win,{type:'warning',title:'确认插件目录授权',message:`允许「${info.displayName}」${field.access==='read'?'读取':'读写'}此目录？`,detail:`${JSON.parse(grant).path}\n用途：${field.purpose}\nstdio插件是本机代码，这不是操作系统沙箱。`,buttons:['取消','授权此目录'],defaultId:0,cancelId:0})
+      return confirm.response===1&&!win.isDestroyed()?grant:undefined
+    },confirm:async info=>{
       const result=await dialog.showMessageBox(win,{type:'question',title:'保存插件配置',message:`保存「${info.displayName}」的配置？`,detail:'配置加密保存在本机，密钥不回显。配置变更不会自动启动插件或连接服务。目录必须单独授权。',buttons:['取消','保存'],defaultId:0,cancelId:0})
       return result.response===1&&!win.isDestroyed()
     }})(args?.action,args?.id,args?.values)

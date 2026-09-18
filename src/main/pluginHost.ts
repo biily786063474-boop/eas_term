@@ -1,3 +1,4 @@
+import { connectPluginConfiguration } from './pluginConfiguration'
 import { getPluginAuthorization } from './pluginAuthorization'
 import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
 import { createPluginNetwork } from './pluginConnections/pluginNetwork.ts'
@@ -147,8 +148,19 @@ function spawnHosted(info: PluginInfo): Hosted {
     EAS_COMPUTER_SHOTS: path.join(pluginDataDir(info.name), 'shots'),
     ...info.mcp.env
   }
-  client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
+  const configuration=info.config?connectPluginConfiguration(info):undefined
+  try{
+    if(configuration)env.EAS_PLUGIN_CONFIG=configuration.environment
+    client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd })
+  }catch(error){configuration?.close();throw error}
+  finally{delete env.EAS_PLUGIN_CONFIG;if(configuration)configuration.environment=''}
   stopped=client.exited
+  if(configuration){
+    const revoke=()=>{client.close()}
+    configuration.signal.addEventListener('abort',revoke,{once:true})
+    if(configuration.signal.aborted)revoke()
+    void stopped.then(()=>{configuration.signal.removeEventListener('abort',revoke);configuration.close()})
+  }
   }
   const hosted: Hosted = { startedAt: performance.now(), kind: 'plugin', name: info.name, info, client, stopped, tools: [], ready: Promise.resolve() }
   hosted.ready = (async () => {
@@ -184,8 +196,7 @@ const startingPlugins = new Map<string, Promise<void>>()
  *  归属按**应用级**（windowId null）：宿主本来就跨窗口、跨项目、跨会话共享，
  *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
-  // Fail closed for manually installed packages too, until configuration resolution is wired.
-  if (info.config) throw Error('此插件需要统一配置；配置运行时尚未接通，不能启动')
+  if (info.config && info.remote) throw Error('远程插件配置注入尚未接通，不能启动')
   if(manualStops.stamp(info.name)!==null)throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
   if (!registry.get(info.name)) {
     let starting = startingPlugins.get(info.name)

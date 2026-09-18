@@ -51,7 +51,7 @@ try {
  check(await main.eval("!!document.querySelector('[data-plugin-config]')"),'配置插件提供软件内配置入口')
  await main.eval("document.querySelector('[data-plugin-config] button').click()")
  await until(()=>main.eval("!!document.querySelector('[data-plugin-config] input[type=password]')"))
- check(await main.eval("document.querySelector('[data-plugin-config]').innerText.includes('目录选择器待接入')"),'目录不允许文本路径冒充授权')
+ check(await main.eval("document.querySelector('[data-plugin-config]').innerText.includes('选择目录（只读授权）')"),'目录不允许文本路径冒充授权')
  const configState=await main.eval('window.api.plugins.configuration("status",'+JSON.stringify('eas:'+authFixtureName)+')')
  check(!configState.ok&&!('values' in configState),'锁定密钥柜拒绝配置读取且不返回值')
  check(await main.eval("document.querySelector('[data-plugin-config]').innerText.includes('状态未知')"),'锁定读取失败不误报未配置')

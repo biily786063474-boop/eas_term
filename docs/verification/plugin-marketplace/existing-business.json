@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "checks": [
+    "看板真实stdio：创建→移动到完成→列出→删除，文件落临时项目",
+    "番茄钟真实stdio：开始→完成→重复完成不重复记账，文件落临时项目"
+  ],
+  "scope": "Actual stdio subprocess tools and disk data, not market/native UI/model CLI proof."
+}

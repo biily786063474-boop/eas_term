@@ -25,3 +25,12 @@ test('manifest changes while confirmation is open cannot save into the new confi
  const result=await run('save',info.id,{key:'private',region:'cn'})
  assert.equal(result.ok,false);if(!result.ok)assert.match(result.error,/已变化/);assert.equal(writes,0)
 })
+test('native directory selection saves only host-provided grants and rechecks configuration after picker',async()=>{
+ const dir:PluginInfo={...info,config:{fields:[{id:'root',type:'directory',label:'目录',purpose:'读取文件',required:true,access:'read'}]}}
+ let values:Record<string,string>|undefined,current=dir
+ const run=createConfigurationActions({find:()=>current,confirm:async()=>true,assertIdle(){},load:()=>values,save:(_i,v)=>{values=v},pickDirectory:async()=>'{"host":"grant"}'})
+ assert.equal((await run('directory',info.id,'root')).ok,true);assert.equal(values?.root,'{"host":"grant"}')
+ assert.equal((await run('save',info.id,{root:'/etc'})).ok,false)
+ const stale=createConfigurationActions({find:()=>current,confirm:async()=>true,assertIdle(){},load:()=>values,save:()=>{throw Error('must not save')},pickDirectory:async()=>{current={...dir,root:'/changed'};return 'stale'}})
+ const result=await stale('directory',info.id,'root');assert.equal(result.ok,false)
+})

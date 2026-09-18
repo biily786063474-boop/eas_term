@@ -50,9 +50,9 @@ test('插件服务器启动先准入：排队时不 spawn、并发请求合并�
  assert.equal(s.m.snapshot().reserved.memoryBytes,0,'真实退出才释放')
 })
 
-test('配置运行时未接通前，手动安装的配置插件不能静默启动',async()=>{
+test('远程配置注入未接通前，手动安装的远程配置插件不能静默启动',async()=>{
  const s=setup('configured-manual');s.admit()
- const info={...s.info,config:{fields:[{id:'root',type:'directory',label:'目录',purpose:'读取文件',required:true,access:'read'}]}}
+ const info={...s.info,remote:{auth:'none'},config:{fields:[{id:'root',type:'directory',label:'目录',purpose:'读取文件',required:true,access:'read'}]}}
  await assert.rejects(s.acquire(info,'shim:configured'),/配置/)
  assert.equal(s.spawns(),0)
  assert.equal(s.registry.refs(info.name),0)

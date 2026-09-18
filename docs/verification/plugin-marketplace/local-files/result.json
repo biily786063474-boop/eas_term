@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    "隔离密钥柜真实设置并解锁，没有替换safeStorage",
+    "本地文件包安装前需真实市场确认",
+    "真实UI触发目录选择和二次确认（原生对话框返回值受控）",
+    "原生目录授权真实加密落盘，不以明文路径持久化",
+    "claude真实shim经实际应用宿主获得工具",
+    "claude真实工具调用写入授权临时目录",
+    "codex真实shim经实际应用宿主获得工具",
+    "codex真实工具调用写入授权临时目录",
+    "omp真实shim经实际应用宿主获得工具",
+    "omp真实工具调用写入授权临时目录",
+    "真实宿主调用拒绝越出授权目录",
+    "密钥柜锁定关闭实际配置插件，后续调用不能写入",
+    "锁定后配置IPC不返回明文"
+  ],
+  "scope": "Real market UI install/hash/extraction -> actual app/native-dialog adapter -> real safeStorage -> actual shared host -> three shim subprocesses -> real temp files. Not actual model CLI or native picker interaction; no production publish."
+}

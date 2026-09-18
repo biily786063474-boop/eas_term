@@ -42,7 +42,7 @@ const gate = createInstallGate()
 
 // Only advertise implemented capabilities; remote/OAuth are not ready yet.
 function currentPluginHost() {
-  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio'] }
+  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio', 'config.fields'] }
 }
 
 

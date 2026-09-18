@@ -1,3 +1,4 @@
+import { configurationEnvironment } from './pluginConnections/configurationRuntime.ts'
 import {app} from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -16,3 +17,16 @@ function access<T>(info:PluginInfo,op:(store:PluginCredentialStore,scope:{plugin
 }
 export const loadPluginConfiguration=(info:PluginInfo)=>access(info,(store,scope,lease)=>store.loadConfiguration(scope,lease))
 export const savePluginConfiguration=(info:PluginInfo,values:Record<string,string>)=>access(info,(store,scope,lease)=>store.saveConfiguration(scope,values,lease))
+
+/** Long-lived lease: locking the vault closes precisely the configured child. */
+export function connectPluginConfiguration(info:PluginInfo){
+ if(!app.isReady()||info.cli!=='eas'||!info.config)throw Error('插件配置不可用')
+ const lease=acquirePluginCredentialAccess()
+ try{
+  const scope={plugin:info.name,issuer:'eas:configuration:v1',resource:createHash('sha256').update(configurationIdentity(info)).digest('hex'),account:'local-primary'}
+  const store=new PluginCredentialStore(path.join(fs.realpathSync(app.getPath('userData')),'plugin-credentials'))
+  const environment=configurationEnvironment(info,store.loadConfiguration(scope,lease))
+  lease.assertActive()
+  return {environment,signal:lease.signal,close:lease.dispose}
+ }catch(error){lease.dispose();throw error}
+}

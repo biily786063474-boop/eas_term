@@ -129,3 +129,11 @@ PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有vers
 隔离实际UI红测已复现缺“配置插件”入口才实现组件。当前全量check/build/compatibility UI监测5414运行中；新增最后manifest变更确认测试另跑3项通过。样式修正为项目已有--fg/--glass-border-strong。不能把锁定状态UI验收说成真实safeStorage保存成功，尚缺解锁后保存流程/原生目录picker/运行时注入/真实32连接器。
 5414退出0，3362项/3344通过/18skip；10项UI通过。23204重截图也退出0；眼验真实表单后发现锁定不能称未配置，现配置状态初值null/错误置null，显示“状态未知”，21307正在typecheck/build/UI重跑，结束后需眼验并提交。最后新确认变更测试单独3项全过不冒充全量计数已包含。整个功能仍缺真实解锁保存原生确认验收、目录选择、运行时注入（acquire阻止config插件仍在）。
 21307最终退出0：类型检查、构建成功，11项隔离UI通过。最新完整表单截图已眼验“状态未知”“密钥柜已锁定”、密码输入与目录待接入，已复用Frame原账号截图节点。无后台命令；下一步应实际接原生目录picker与运行时配置注入、用隔离自有密钥柜做保存成功验收，不能宣称当前配置链路完整。
+
+## 用户要求一次性完成后的推进策略与本地文件纵向结果
+用户指出长期只做基础设施；改按真实插件完整链路交付，不再以小commit/测试数代替接入。本轮打通本地文件：原生picker+二次确认（默认取消）→inode/access绑定grant加密保存→stdio EAS_PLUGIN_CONFIG专属注入→长期租约锁定关闭实际子进程；remote+config仍不支持。新增自写local-files三个工具list/read/write，1MB限制、SHA256覆盖、路径/symlink/hardlink检查，无网络，不宣称OS沙箱。需要同用户恶意并发文件系统攻击隔离的场景不适用。
+实际隔离app先手动解包12检查通过，然后改为真实市场安装13检查通过：真实safeStorage（设置隔离PIN）/真实安装IPC和hash解包/真实共享宿主/Claude,Codex,OMP三个真实shim子进程真实写临时目录/越界拒绝/锁定后写入拒绝。脚本verify-local-files-plugin；native picker与二次确认返回值为测试适配，未亲手验native窗口，也不是实际模型CLI。开始广告config.fields，默认构建新增local-files仅v2，实测v1=2/v2=3。生产没发布。
+全量50182失败两项：codexModels timeout probe缺log.pid，codexCapabilityLauncher 5s夹具pid未出现；保留/tmp/eas-local-files-full-check-failed.log，未改超时或测试断言。随后48731单独重跑23项全通过。74817build+真实市场local-files13项+兼容UI11项全通过；已眼验本地文件市场安装和授权已保存截图并放Frame cnode-115-7jnie（5/5槽，后续复用已有图）。全量仍需再跑，不把专项复跑当全量通过。
+维基百科本轮重查lookup/resolve4仍198.18.0.76，系统DNS114.114.114.114；未改Clash/绕过安全检查；指定网络排障指南文件仍不存在。32项仍未全接，完整目标active。
+5215完整复跑check退出0：3367项/3349通过/18skip/0失败；此前两项失败不删除记录，不能断言已解决所有负载时序问题。真实看板（add/move/list/remove）、番茄钟（start/done/重复done不重记）子进程业务回归也成功，结果existing-business.json，不冒充本轮市场UI/实际模型验证。所有监测已结束。
+下一段应继续真实插件逐项闭环，目标不完成。仍需配置存储对话期间锁定/重新解锁的代次审计、secret字段注入的日志脱敏（McpClient当前直记stderr，local-files不输出配置但通用第三方secret尚需防泄漏）、本地文件真实模型CLI/native picker交互/Windows验收；远程+config仍拒绝，Bearer未接；Wiki fakeIP外部阻碍；其余29项上游资格/授权/包/工具验收缺口仍大量存在。不要再回到单个小基础函数后汇报“全部快好了”。

@@ -100,3 +100,7 @@
 已实际：打包、解包、清单解析、宿主McpClient握手/列工具/调用；协议及格式测试通过。公开查询实测返回错误“DNS 包含非公开地址”，本机en.wikipedia.org解析为198.18.0.76（Clash fake-IP），没有绕过私网检测。证据`wikipedia-candidate.json`记录livePassed=false。
 
 仍缺：系统PAC/代理适配（当前候选仅直连）、真实公开查询成功、跨平台与真实模型三CLI验证；因此默认目录仍只有两已存在包，不能把源代码候选算成第三个已可用插件。
+
+## 本地文件纵向证据（2026-09-18，未生产发布）
+
+自写`plugins-store/local-files`，不冒充官方filesystem MCP。实现授权目录list/read/write，文本1MB/列表500项，覆盖SHA256、symlink/硬链/路径越界拒绝。实际隔离app已完成native-dialog适配→真实safeStorage→真实共享宿主→Claude/Codex/OMP各自真实shim子进程→临时文件写入，以及锁定关闭后拒绝写入（12检查通过）。后续市场安装完整验证结果见`local-files/result.json`；未验证真实模型CLI/native picker手动交互/Windows/生产HTTPS，不能宣称32全就绪。
