@@ -18,7 +18,7 @@ export class PluginCredentialStore {
  private readonly directory:string
  private readonly now:()=>number
  constructor(directory:string,now:()=>number=Date.now){this.directory=path.resolve(directory);this.now=now}
- private file(scope:CredentialScope){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)).digest('hex')+'.json')}
+ private file(scope:CredentialScope,kind:'oauth'|'configuration'='oauth'){return path.join(this.directory,scope.plugin+'-'+createHash('sha256').update(identity(scope)+(kind==='configuration'?'\nconfiguration':'' )).digest('hex')+'.json')}
  private checkDirectory(create=false){
   if(create)fs.mkdirSync(this.directory,{recursive:true,mode:0o700})
   if(fs.realpathSync(this.directory)!==this.directory||!fs.lstatSync(this.directory).isDirectory())throw Error('凭证目录不能经过符号链接')
@@ -47,6 +47,10 @@ export class PluginCredentialStore {
  save(scope:CredentialScope,tokens:OAuthTokens,protection:CredentialProtection){
   protection.assertActive();const file=this.file(scope)
   const payload=JSON.stringify({version:1,savedAt:this.now(),scope:identity(scope),tokens:OAuthTokensSchema.parse(tokens)})
+  this.writePayload(file,payload,protection)
+ }
+ private writePayload(file:string,payload:string,protection:CredentialProtection){
+  protection.assertActive()
   if(Buffer.byteLength(payload)>64*1024)throw Error('插件凭证大小超限')
   const cipher=protection.seal(payload)
   this.checkDirectory(true);this.checkFile(file)
@@ -56,6 +60,28 @@ export class PluginCredentialStore {
    fs.chmodSync(tmp,0o600)
    protection.assertActive();fs.renameSync(tmp,file)
   }finally{try{fs.unlinkSync(tmp)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}}
+ }
+ /** Configuration values are never OAuth tokens, even under the same scope.
+  * Scope must include the installed connection + schema identity chosen by main.
+  * All values (including ordinary strings) are encrypted; no renderer readback here.
+  */
+ saveConfiguration(scope:CredentialScope,values:unknown,protection:CredentialProtection){
+  protection.assertActive()
+  const payload=JSON.stringify({version:2,kind:'configuration',scope:identity(scope),values:configurationValues(values)})
+  this.writePayload(this.file(scope,'configuration'),payload,protection)
+ }
+ loadConfiguration(scope:CredentialScope,protection:CredentialProtection):Record<string,string>|undefined{
+  protection.assertActive();const file=this.file(scope,'configuration')
+  if(!fs.existsSync(this.directory))return undefined
+  this.checkDirectory();this.checkFile(file)
+  let cipher:string
+  try{cipher=fs.readFileSync(file,'utf8')}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return undefined;throw error}
+  try{
+   const payload=JSON.parse(protection.open(cipher))
+   if(payload.version!==2||payload.kind!=='configuration'||payload.scope!==identity(scope))throw Error('scope')
+   const values=configurationValues(payload.values)
+   protection.assertActive();return values
+  }catch{throw Error('插件配置损坏或作用域不匹配，请重新配置')}
  }
  /** Remove all configurations/accounts for one plugin without unlocking/decrypting.
   * Owner prefix is deliberately non-secret; encrypted payload remains scope-bound.
@@ -76,4 +102,15 @@ export class PluginCredentialStore {
   this.checkDirectory();this.checkFile(file)
   try{fs.unlinkSync(file)}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
  }
+}
+
+/** Storage envelope bounds only; field/type/grant validation is mandatory upstream. */
+function configurationValues(raw:unknown):Record<string,string>{
+ if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('插件配置值必须是对象')
+ const entries=Object.entries(raw)
+ if(entries.length>32)throw Error('插件配置字段超限')
+ for(const [id,value] of entries){
+  if(!/^[a-z][a-z0-9-]{0,39}$/.test(id)||typeof value!=='string'||value.length>16384||value.includes('\0'))throw Error('插件配置值无效')
+ }
+ return Object.fromEntries(entries) as Record<string,string>
 }

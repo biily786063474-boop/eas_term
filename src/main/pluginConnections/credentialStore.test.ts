@@ -55,3 +55,43 @@ test('removePlugin removes every account/config for only that plugin without dec
  assert.equal(fs.readdirSync(dir).length,1)
  assert.throws(()=>store.removePlugin('../other'))
 })
+
+test('configuration is encrypted, scope-bound, separate from OAuth and removed with its plugin',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-config-store-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection()
+ store.save(scope,{access_token:'oauth-value',token_type:'Bearer'},lease)
+ store.saveConfiguration(scope,{'api-key':'private-config-value',region:'cn'},lease)
+ assert.equal(store.load(scope,lease)?.access_token,'oauth-value')
+ assert.deepEqual(new PluginCredentialStore(dir).loadConfiguration(scope,lease),{'api-key':'private-config-value',region:'cn'})
+ const files=fs.readdirSync(dir);assert.equal(files.length,2)
+ for(const file of files){assert.doesNotMatch(fs.readFileSync(path.join(dir,file),'utf8'),/private-config-value|oauth-value/);assert.equal(fs.statSync(path.join(dir,file)).mode&0o777,0o600)}
+ assert.equal(store.loadConfiguration({...scope,resource:'https://changed.example.com'},lease),undefined)
+ lease.dispose();assert.throws(()=>store.loadConfiguration(scope,lease));assert.throws(()=>store.saveConfiguration(scope,{region:'us'},lease))
+ store.removePlugin(scope.plugin);assert.deepEqual(fs.readdirSync(dir),[])
+})
+test('invalid configuration and revoked save cannot overwrite prior encrypted state',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-config-invalid-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection()
+ store.saveConfiguration(scope,{region:'cn'},lease)
+ for(const value of [null,[],{region:2},{'../path':'x'},Object.fromEntries(Array.from({length:33},(_,i)=>['f'+i,'v'])),{key:'x'.repeat(16385)}])assert.throws(()=>store.saveConfiguration(scope,value,lease))
+ const late=protection(),seal=late.seal;late.seal=v=>{const cipher=seal(v);late.dispose();return cipher}
+ assert.throws(()=>store.saveConfiguration(scope,{region:'changed'},late))
+ assert.deepEqual(store.loadConfiguration(scope,lease),{region:'cn'})
+ assert.equal(fs.readdirSync(dir).length,1)
+})
+test('configuration ciphertext cannot be swapped between accounts or with OAuth ciphertext',t=>{
+ const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'plugin-config-swap-')));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}))
+ const store=new PluginCredentialStore(dir),lease=protection(),other={...scope,account:'other'}
+ store.saveConfiguration(scope,{key:'one'},lease)
+ const first=fs.readdirSync(dir)[0]
+ store.saveConfiguration(other,{key:'two'},lease)
+ const second=fs.readdirSync(dir).find(x=>x!==first)!
+ fs.copyFileSync(path.join(dir,first),path.join(dir,second))
+ assert.throws(()=>store.loadConfiguration(other,lease),/配置损坏/)
+ store.save(scope,{access_token:'oauth',token_type:'Bearer'},lease)
+ const token=fs.readdirSync(dir).find(x=>x!==first&&x!==second)!
+ fs.copyFileSync(path.join(dir,token),path.join(dir,first))
+ assert.throws(()=>store.loadConfiguration(scope,lease),/配置损坏/)
+ fs.copyFileSync(path.join(dir,second),path.join(dir,token))
+ assert.throws(()=>store.load(scope,lease),/凭证损坏/)
+})

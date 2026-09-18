@@ -118,3 +118,8 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 18项宿主+manifest测试、2项配置边界测试通过。typecheck暴露目录access推断string，修为map明确返回PluginConfigField；第二次暴露assert.throws三参undefined与Node类型签名不符，改Error判定。监测36209/76783均退出2，未粉饰；最后全量check/build/hotupdate监测8261运行中，需取结果。
 下一步配置值储存及APIkey/目录原生选择UI、安全注入和租约清理仍完全缺失；当前只完成声明与拒绝静默降级，不是第三个真实连接器、不增加32完成数。不要继续调整发布器小项冒充接入进展。
 8261最终退出0：全量3357项/3339通过/18跳过/0失败、构建通过、隔离热更新14项通过。已眼验更新截图的1.1.0与布局并刷新Frame原图节点。这是旧安装/更新回归，不是配置UI（尚不存在）的验收；配置声明/拒绝启动由manifest及实际acquire函数测试证明。所有本轮进程已终止，无后台任务，目标active，下一轮需要从本契约接配置存储/用户输入/主进程注入完整链路，不能把临时拒绝启动保留成最终功能。
+
+## 继续：统一配置密文存储层
+PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有version1和文件哈希保持不变；configuration独立哈希命名空间、version2/kind、同样scope绑定，不把API key伪装OAuth token。配置全部加密，固定目录/租约重验/0600原子写/64KB封装上限复用writePayload，最多32个string值且单值16KB，非法字段/类型拒绝。removePlugin既有前缀清理自然覆盖配置并保持其他插件不动。
+新增红测先失败方法不存在，补实现后6项通过，再补跨账号/与OAuth密文互换拒绝测试。完整check/build/hotupdate监测43254运行中，需取结果。没有配置IPC/UI或主进程schema+endpoint scope factory，方法目前只由测试消费；不把存储层存在说成用户能配置。下一轮优先真正接main controller/IPC/UI/注入而不是另造未消费工具函数。配置字段声明宿主临时阻止启动仍保留，到真实解析/租约注入接通时替换。
+43254最终退出0：3360项/3342通过/18跳过/0失败，build通过，隔离热更新14项通过并眼验1.1.0截图，已刷新Frame原图节点。这是存储回归和旧市场行为证明，不含配置UI/真实密钥/真实连接器。当前无运行命令，目标仍active。
