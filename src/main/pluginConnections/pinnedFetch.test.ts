@@ -27,3 +27,25 @@ test('redirect is rejected, never followed with Authorization',async()=>{
  await assert.rejects(f('https://mcp.example.com/mcp',{headers:{authorization:'Bearer fixture'}}),/跳转/)
  assert.equal(sends,1)
 })
+
+test('abort during DNS/PAC rejects promptly and late resolution never sends',async()=>{
+ let release!:(value:string[])=>void
+ let sends=0
+ const pending=new Promise<string[]>(r=>{release=r})
+ const controller=new AbortController()
+ const f=network.createPinnedFetch({origins:['https://mcp.example.com'],resolve:()=>pending,proxy:async()=> 'DIRECT',send:async()=>{sends++;return new Response('{}')}})
+ const result=f('https://mcp.example.com/mcp',{signal:controller.signal}).then(()=> 'sent',()=> 'aborted')
+ controller.abort()
+ const outcome=await Promise.race([result,new Promise(resolve=>setTimeout(()=>resolve('hung'),50))])
+ release(['8.8.8.8'])
+ await result
+ assert.equal(outcome,'aborted')
+ assert.equal(sends,0)
+})
+test('DNS/PAC preparation has a bounded deadline',async()=>{
+ let sends=0
+ const f=network.createPinnedFetch({origins:['https://mcp.example.com'],preparationTimeoutMs:10,resolve:()=>new Promise(()=>{}),proxy:async()=> 'DIRECT',send:async()=>{sends++;return new Response('{}')}})
+ const outcome=await Promise.race([f('https://mcp.example.com/mcp').then(()=> 'sent',e=>String(e)),new Promise(resolve=>setTimeout(()=>resolve('hung'),60))])
+ assert.match(String(outcome),/解析超时/)
+ assert.equal(sends,0)
+})

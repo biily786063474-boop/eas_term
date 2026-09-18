@@ -1,6 +1,7 @@
 import {planConnection,type ConnectionPlan} from './networkPlan.ts'
 import {validateRemoteEndpoint} from './endpointPolicy.ts'
 interface Dependencies {
+ preparationTimeoutMs?:number
  origins:readonly string[]
  resolve:(hostname:string)=>Promise<string[]>
  proxy:(url:string)=>Promise<string>
@@ -19,7 +20,18 @@ export function createPinnedFetch(deps:Dependencies) {
   if(init.body!==undefined && init.body!==null && typeof init.body!=='string' && !(init.body instanceof URLSearchParams))throw Error('远程插件请求体类型不支持')
   const body=init.body==null?undefined:String(init.body)
   if(body && Buffer.byteLength(body)>1024*1024)throw Error('远程插件请求体超限')
-  const [addresses,proxy]=await Promise.all([deps.resolve(url.hostname),deps.proxy(url.href)])
+  // OS DNS/PAC APIs cannot be cancelled here. Detach their result on cancellation;
+  // importantly, no send continuation is attached to those underlying operations.
+  const [addresses,proxy]=await new Promise<[string[],string]>((resolve,reject)=>{
+   const signal=init.signal
+   const cleanup=()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort)}
+   const abort=()=>{cleanup();reject(Error('远程请求已取消'))}
+   const timer=setTimeout(()=>{cleanup();reject(Error('远程 DNS/代理解析超时'))},deps.preparationTimeoutMs??15_000)
+   signal?.addEventListener('abort',abort,{once:true})
+   if(signal?.aborted){abort();return}
+   Promise.all([Promise.resolve().then(()=>deps.resolve(url.hostname)),Promise.resolve().then(()=>deps.proxy(url.href))])
+    .then(value=>{cleanup();resolve(value)},error=>{cleanup();reject(error)})
+  })
   if(init.signal?.aborted)throw Error('远程请求已取消')
   const plan=planConnection(url.href,deps.origins,addresses,proxy)
   headers.set('host',url.host)

@@ -42,3 +42,18 @@ test('real TLS and CONNECT preserve original SNI/Host but dial pinned address',a
  assert.deepEqual(tunnels,['127.0.0.1:'+port])
  assert.equal(seen.length,3);for(const s of seen){assert.equal(s.host,'mcp.fixture.test');assert.equal(s.sni,'mcp.fixture.test')}
 })
+
+test('header deadline closes a proxy socket even before CONNECT completes',async t=>{
+ const sockets=new Set<net.Socket>();let closed=false
+ const proxy=net.createServer(socket=>{sockets.add(socket);socket.on('data',()=>{});socket.on('close',()=>{closed=true;sockets.delete(socket)})})
+ await new Promise<void>(r=>proxy.listen(0,'127.0.0.1',r))
+ t.after(()=>{for(const s of sockets)s.destroy();proxy.close()})
+ const controller=new AbortController()
+ const plan={url:new URL('https://mcp.fixture.test/mcp'),address:'8.8.8.8',servername:'mcp.fixture.test',proxy:new URL('http://127.0.0.1:'+(proxy.address() as net.AddressInfo).port)}
+ const result=sender.createHttpsSender({},30)(plan,{signal:controller.signal}).then(()=> 'success',()=> 'rejected')
+ const outcome=await Promise.race([result,new Promise(resolve=>setTimeout(()=>resolve('hung'),150))])
+ await new Promise(r=>setTimeout(r,20))
+ controller.abort()
+ assert.equal(outcome,'rejected')
+ assert.equal(closed,true,'pending CONNECT socket must close, not only reject the fetch')
+})
