@@ -1,3 +1,4 @@
+import type { PluginAuthorizationAction, PluginAuthorizationResult } from '../shared/pluginAuthorization'
 import type { RuntimeMonitorSnapshot } from '../shared/runtimeResources.ts'
 import type { HistorySummary } from '../shared/historyCatalog'
 import type { UsageQuery, UsageSnapshot } from '../shared/usage.ts'
@@ -1132,6 +1133,7 @@ const api = {
     showLog: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('diag:showLog')
   },
   plugins: {
+    authorization: (action: PluginAuthorizationAction, id: string): Promise<PluginAuthorizationResult> => ipcRenderer.invoke('plugins:authorization', {action,id}),
     /** 已装的 CLI 插件全表。**每次都当场扫盘**（见 main/plugins.ts），
      *  用户刚在终端里装完一个，回画布就能看到，不用重开软件。 */
     list: (): Promise<PluginInfo[]> => ipcRenderer.invoke('plugins:list'),

@@ -7015,3 +7015,15 @@
     opacity: 0;
   }
 }
+
+/* Plugin account controls reuse market tokens in both themes. */
+.pm-auth { margin-top: 9px; }
+.pm-auth .pm-cd { white-space: normal; overflow-wrap: anywhere; }
+.pm-auth-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.pm-auth-actions button {
+  border: 1px solid var(--glass-border-strong); border-radius: 7px;
+  padding: 5px 8px; font: inherit; font-size: 11px;
+  color: var(--fg); background: var(--lift-2); cursor: pointer;
+}
+.pm-auth-actions button:hover:not(:disabled) { background: var(--lift-3); }
+.pm-auth-actions button:disabled { opacity: .5; cursor: default; }

@@ -1,3 +1,6 @@
+import { createAuthorizationActions } from './pluginConnections/authorizationActions.ts'
+import { getPluginAuthorization } from './pluginAuthorization'
+import { BrowserWindow, dialog } from 'electron'
 // 扫出用户**已安装**的 CLI 插件，归一化成 PluginInfo 交给画布用。
 //
 // ── 为什么读文件而不是跑 `codex plugin list` / `claude plugin list` ──────────
@@ -248,6 +251,18 @@ export function findPlugin(id: string): PluginInfo | undefined {
 }
 
 export function registerPluginHandlers(): void {
+  guardedHandle('plugins:authorization', (event, args: {action?:unknown;id?:unknown}) => {
+    const win=BrowserWindow.fromWebContents(event.sender)
+    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    return createAuthorizationActions({find:findPlugin,runtime:getPluginAuthorization,confirm:async(info,action)=>{
+      const remote=info.remote!
+      const response=await dialog.showMessageBox(win,{type:'question',title:action==='login'?'连接插件账号':'断开插件账号',
+        message:action==='login'?`连接「${info.displayName}」的账号？`:`断开「${info.displayName}」？`,
+        detail:action==='login'?`将在系统浏览器中打开服务商授权页。资源：${remote.url}\n授权服务：${remote.auth==='oauth'?remote.oauth.issuer:''}\n权限：${remote.auth==='oauth'?(remote.oauth.scope??'服务商默认'):''}\n凭证加密保存在本机，不传给模型。`:'关闭此插件的授权连接并删除当前配置的本地凭证。不撤销已发生的操作；上游授权请到服务商设置撤销。',
+        buttons:['取消',action==='login'?'连接账号':'断开'],defaultId:0,cancelId:0})
+      return response.response===1&&!win.isDestroyed()
+    }})(args?.action,args?.id)
+  })
   guardedHandle('plugins:list', (): PluginInfo[] => listPlugins())
   // 开/关一个插件的总闸。只写 userData/plugin-enabled.json，不碰插件本身（关 ≠ 卸载）。
   guardedHandle('plugins:setEnabled', (_e, arg: { id?: unknown; enabled?: unknown }): { ok: boolean } => {

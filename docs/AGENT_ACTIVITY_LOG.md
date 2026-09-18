@@ -123,3 +123,5 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 2026-09-18继续：补token持久有效期扣减与同账号SDK刷新单飞，取消/断开晚到refresh不得落盘，专项15项及typecheck通过；持续目标active，后续不再等用户逐条说继续。完整检查仍按可见节点运行。
 
 2026-09-18 OAuth宿主链路：显式public-client descriptor、exact-resource Bearer、过期刷新不重放、锁定关闭所属连接、main-owned runtime。新增8项回归；check 3324项/3306通过/18跳过/0失败，build通过，隔离市场4项眼验通过。OAuth登录IPC/UI及真实账号未完成；正式app/凭证未触碰，未发布。继续既有active目标。
+
+2026-09-18：账号状态/连接/断开已接guarded IPC及完整市场UI；native确认后校验已装清单未改变，renderer无凭证。3327项检查3309通过/18skip，build通过，隔离应用6项及截图眼验通过（锁定状态与三按钮；非真实账号成功授权）。截图已交Frame，目标仍在进行，未发布。

@@ -1,6 +1,7 @@
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
+import { PluginAccountControls } from './PluginAccountControls'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
@@ -28,6 +29,7 @@ type Item = {
   installed: boolean
   reg?: PluginRegistryEntry
   cli?: string
+  plugin?: PluginInfo
 }
 type Pending = { token: string; name: string; displayName: string; version: string; size: number; permissions: string[] }
 
@@ -81,6 +83,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     for (const p of plugins ?? []) {
       if (map.has(p.name)) {
         map.get(p.name)!.installed = true
+        map.get(p.name)!.plugin = p
         continue
       }
       map.set(p.name, {
@@ -90,6 +93,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
         brandColor: p.brandColor,
         catId: categoryIdOf(p.category),
         installed: true,
+        plugin: p,
         cli: p.cli
       })
     }
@@ -144,6 +148,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           </div>
           {it.description && <div className="pm-cd">{it.description}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
+          {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} enabled={it.plugin.enabled!==false}/>}
         </div>
         <div className="pm-cact">
           {it.installed ? (

@@ -9,6 +9,10 @@ const profile=fs.mkdtempSync(path.join(os.tmpdir(),'eas-timeline-ui-')),fixture=
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'picker-fixture',name:'插入菜单验收',path:fixture}]))
 fs.writeFileSync(path.join(profile,'skill-prefs.json'),JSON.stringify({muted:true}))
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck:false,telemetry:false,island:false}))
+// A disposable built-in fixture in the isolated worktree; never a user/global install.
+const authFixtureName='auth-ui-fixture-'+process.pid,authFixture=path.join(root,'resources/plugins',authFixtureName)
+fs.mkdirSync(authFixture)
+fs.writeFileSync(path.join(authFixture,'plugin.json'),JSON.stringify({name:authFixtureName,displayName:'账号连接验收插件',category:'Development',requirements:{capabilities:['mcp.remote','auth.oauth']},mcp:{transport:'streamable-http',url:'https://fixture.example.com/mcp',approvedOrigins:['https://fixture.example.com'],auth:'oauth',oauth:{issuer:'https://fixture.example.com',authorizationEndpoint:'https://fixture.example.com/auth',tokenEndpoint:'https://fixture.example.com/token',clientId:'isolated-ui-fixture'}}}))
 const requests=[]
 const server=http.createServer((req,res)=>{requests.push(req.url);res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,unavailable:[{name:'pending-fixture',displayName:'待授权审核验收插件',reason:'等待服务商回调审核',category:'Design'}],plugins:[{name:'compat-fixture',displayName:'兼容性验收插件',description:'隔离测试，不会安装',category:'Development',version:'1.0.0',url:'https://eas.biily.top/plugins/compat-fixture/1.0.0.zip',sha256:'a'.repeat(64),size:123,requirements:{minHostVersion:'999.0.0'}}]}))})
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
@@ -35,6 +39,14 @@ try {
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('兼容性验收插件'))"))
  check(true,'市场展示隔离目录条目')
+ await until(()=>main.eval("!!document.querySelector('[data-plugin-account]') && document.querySelector('[data-plugin-account]').innerText.includes('解锁密钥柜')"))
+ check(await main.eval("[...document.querySelectorAll('[data-plugin-account] button')].map(x=>x.textContent).join(',')==='连接账号,刷新状态,断开'"),'OAuth账号控制显示连接/刷新/断开与真实锁定状态')
+ await main.eval("[...document.querySelectorAll('[data-plugin-account] button')].find(x=>x.textContent==='刷新状态').click()")
+ await until(()=>main.eval("document.querySelector('[data-plugin-account]').innerText.includes('解锁密钥柜')"))
+ const accountResult=await main.eval('window.api.plugins.authorization("status",'+JSON.stringify('eas:'+authFixtureName)+')')
+ check(accountResult.ok&&accountResult.status==='locked-or-unavailable'&&Object.keys(accountResult).length===2,'实际IPC只返回状态，不返回凭证')
+ const accountShot=await main.send('Page.captureScreenshot',{format:'png'})
+ fs.writeFileSync(path.join(output,'account-controls.png'),Buffer.from(accountShot.data,'base64'))
  check(await main.eval("(()=>{const card=[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('待授权审核验收插件'));return !!card&&card.textContent.includes('等待服务商回调审核')&&!card.querySelector('button')})()"),'v2待接入条目展示原因且无安装按钮')
  await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('兼容性验收插件')).querySelector('button').click()")
  await until(()=>main.eval("document.body.innerText.includes('需要软件 999.0.0 或更高版本')"))
@@ -46,6 +58,7 @@ try {
  console.log(JSON.stringify({passed:true,checks},null,2))
 } catch(e) {console.error(e);process.exitCode=1;fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(e)},null,2))}
 finally {
+ fs.rmSync(authFixture,{recursive:true,force:true})
  for(const ws of sockets)ws.close()
  child.kill('SIGTERM')
  await Promise.race([new Promise(r=>child.once('exit',r)),wait(2000)])
