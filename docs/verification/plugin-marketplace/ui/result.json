@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "市场展示隔离目录条目",
+    "点击接入后显示明确宿主版本错误",
+    "请求仅为目录，未下载插件包"
+  ],
+  "requests": [
+    "/registry.json",
+    "/registry.json",
+    "/registry.json",
+    "/registry.json"
+  ]
+}

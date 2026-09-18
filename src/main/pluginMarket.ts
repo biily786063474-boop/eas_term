@@ -14,6 +14,7 @@
 //   4. sha256 强制:下载内容与 registry 声明不符即拒
 //   5. 清单必过:解压后 parseManifest 必须 ok,且权限与 registry 声明一致(防目录谎报)
 //   6. 卸载边界:只删 ~/.eas/plugins/<name>/(内置样板与两家 CLI 插件从这里删不了)
+import { checkPluginCompatibility, checkPackageRequirements } from './pluginCompatibility.ts'
 import { app, net } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -33,6 +34,12 @@ const REGISTRY_MAX_BYTES = 2 * 1024 ** 2      // registry.json 上限 2MB
 const PLUGIN_HARD_CAP = 25 * 1024 ** 2         // 单个插件包硬上限 25MB
 
 const gate = createInstallGate()
+
+// Only advertise implemented capabilities; remote/OAuth are not ready yet.
+function currentPluginHost() {
+  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio'] }
+}
+
 
 function registryCachePath(): string {
   return path.join(app.getPath('userData'), 'plugin-registry.json')
@@ -179,6 +186,8 @@ async function installStage(name: unknown): Promise<InstallResult> {
   if (!reg.ok) return { ok: false, error: reg.error }
   const entry = reg.entries.find((e) => e.name === name)
   if (!entry) return { ok: false, error: `目录里没有插件「${String(name)}」` }
+  const compatible = checkPluginCompatibility(entry.requirements, currentPluginHost())
+  if (!compatible.ok) return { ok: false, error: compatible.reason }
   if (!httpsHostAllowed(entry.url)) return { ok: false, error: '下载地址不在允许域名内' }
   if (entry.size > PLUGIN_HARD_CAP) return { ok: false, error: '插件包过大,已拒' }
 
@@ -219,6 +228,11 @@ async function installStage(name: unknown): Promise<InstallResult> {
     fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: '包内插件名与目录声明不一致' }
   }
+  const packageCheck = checkPackageRequirements((raw as Record<string, unknown>).requirements, entry.requirements, currentPluginHost())
+  if (!packageCheck.ok) {
+    fs.rmSync(stageParent, { recursive: true, force: true })
+    return { ok: false, error: packageCheck.reason }
+  }
   const canvasPerms = man.info.permissions?.canvas ?? []
   // registry 声明了权限就必须与包内一致(防目录谎报权限);没声明则以包内为准
   if (entry.permissions && !sameCanvasPerms(entry.permissions.canvas, canvasPerms)) {
@@ -230,6 +244,7 @@ async function installStage(name: unknown): Promise<InstallResult> {
     name: entry.name,
     dir,
     version: entry.version,
+    requirements: entry.requirements,
     displayName: man.info.displayName,
     permissions: { canvas: canvasPerms } as Record<string, string[]>,
     size: entry.size
@@ -259,6 +274,9 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
   }
   const target = guard.dir
   try {
+    const raw = JSON.parse(fs.readFileSync(path.join(rec.dir, 'plugin.json'), 'utf8'))
+    const check = checkPackageRequirements(raw?.requirements, rec.requirements, currentPluginHost())
+    if (!check.ok) return { ok: false, error: check.reason }
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.rmSync(target, { recursive: true, force: true }) // 更新:先清旧的
     try {

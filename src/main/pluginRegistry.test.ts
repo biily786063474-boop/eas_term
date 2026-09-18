@@ -64,3 +64,13 @@ test('重名条目：保留第一个，后者丢弃 + warning', () => {
   assert.equal(r.entries[0].version, '1.0.0')
   assert.equal(r.warnings.length, 1)
 })
+
+test('host requirements survive registry parsing; malformed constraints fail closed', () => {
+  const requirements = { minHostVersion:'0.4.103', capabilities:['mcp.remote'] }
+  const r = parseRegistry({schema:1, plugins:[entry({requirements}), entry({name:'bad',requirements:{futureConstraint:true}})]}, OPTS)
+  assert.equal(r.ok,true)
+  if (!r.ok) return
+  assert.deepEqual(r.entries[0].requirements,requirements)
+  assert.equal(r.entries.length,1)
+  assert.equal(r.warnings.length,1)
+})

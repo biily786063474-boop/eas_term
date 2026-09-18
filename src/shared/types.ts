@@ -1,3 +1,4 @@
+import type { PluginRequirements } from './pluginCompatibility'
 /** 项目状态标签：看板按它分列，画布 Frame 按它染色，分屏右键菜单按它打勾。
  *
  *  **归属在项目，不在画布 Frame。** 早先它是 frame.status，只是个视觉标记；
@@ -798,6 +799,7 @@ export interface PluginInfo {
 /** 官方插件目录 `registry.json` 里的一条（主进程 parseRegistry 校验后的形状，展示给市场 UI）。
  *  设计稿 docs/superpowers/specs/2026-09-15-插件市场-第一步-design.md。 */
 export interface PluginRegistryEntry {
+  requirements?: PluginRequirements
   name: string
   displayName: string
   description?: string

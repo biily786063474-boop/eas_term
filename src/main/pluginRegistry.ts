@@ -1,3 +1,5 @@
+import type { PluginRequirements } from '../shared/pluginCompatibility.ts'
+import { parsePluginRequirements } from './pluginCompatibility.ts'
 // 官方插件目录 `registry.json` → 校验后的条目。**纯函数，零 electron，`node --test` 裸跑。**
 //
 // registry 是「目录」:哪些插件、下载地址、哈希、展示元数据。它**不是**插件清单——
@@ -8,6 +10,7 @@
 // 原则同 parseManifest:**坏条目丢弃记 warning,整份格式错才拒**——一个拼错的条目
 // 不该把整个市场藏起来。
 export interface RegistryEntry {
+  requirements?: PluginRequirements
   name: string
   displayName: string
   description?: string
@@ -72,10 +75,13 @@ export function parseRegistry(raw: unknown, opts: { allowedHosts: readonly strin
     if (!sha256 || !SHA256_RE.test(sha256)) { warnings.push(`丢弃 ${name}:sha256 格式错`); continue }
     const size = e?.size
     if (typeof size !== 'number' || !Number.isInteger(size) || size <= 0) { warnings.push(`丢弃 ${name}:size 非正整数`); continue }
+    const requirementResult = parsePluginRequirements(e?.requirements)
+    if (!requirementResult.ok) { warnings.push(name + ":" + requirementResult.reason); continue }
     const brandColor = str(e?.brandColor)
     seen.add(name)
     entries.push({
       name,
+      requirements: requirementResult.requirements,
       displayName: str(e?.displayName) ?? name,
       description: str(e?.description),
       category: str(e?.category),

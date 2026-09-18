@@ -1,3 +1,4 @@
+import type { PluginRequirements } from '../shared/pluginCompatibility.ts'
 // 安装确认闸门:两段式安装的一次性凭证。**零 electron,`node --test` 裸跑。**
 //
 // 为什么要闸门(延续「不静默装」红线):`plugins:install` 只把包下载、校验、解压到
@@ -10,6 +11,7 @@ import { randomUUID } from 'node:crypto'
 
 /** 一份已解压到临时目录、等用户确认的插件。dir 是临时目录,commit 时从这里搬走。 */
 export interface StagedPlugin {
+  requirements?: PluginRequirements
   name: string
   dir: string
   version: string

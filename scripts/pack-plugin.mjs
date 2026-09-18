@@ -8,6 +8,7 @@
 // 用法：
 //   node scripts/pack-plugin.mjs resources/plugins/board [--out dist/plugins]
 // 也被 build-plugin-registry.mjs 当函数用（packPlugin）。
+import { parsePluginRequirements } from '../src/main/pluginCompatibility.ts'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -29,6 +30,10 @@ export function packPlugin(dir, opts = {}) {
   if (!NAME_RE.test(name || '')) throw new Error(`${dir}: plugin.json.name 非法`)
   if (path.basename(pdir) !== name) throw new Error(`${dir}: 目录名须等于 plugin.json.name（${name}）`)
   if (!SEMVER_RE.test(version || '')) throw new Error(`${dir}: plugin.json.version 必须是 x.y.z`)
+
+  const parsed = parsePluginRequirements(m.requirements)
+  if (!parsed.ok) throw new Error('requirements: ' + parsed.reason)
+  if (m.requirements !== undefined && opts.registrySchema !== 2) throw new Error('requirements 插件只允许发布到 v2 目录')
 
   const outDir = path.resolve(outRoot, name)
   fs.mkdirSync(outDir, { recursive: true })
@@ -53,7 +58,8 @@ export function packPlugin(dir, opts = {}) {
     url: `${baseUrl}/${name}/${name}-${version}.zip`,
     sha256,
     size,
-    ...(m.permissions ? { permissions: m.permissions } : {})
+    ...(m.permissions ? { permissions: m.permissions } : {}),
+    ...(parsed.requirements ? { requirements: parsed.requirements } : {})
   }
   return { entry, zipPath }
 }

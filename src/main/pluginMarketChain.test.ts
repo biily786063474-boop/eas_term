@@ -69,3 +69,19 @@ test('包被篡改一个字节 → sha256 校验挡下', { skip: !hasZip }, () =
   buf[buf.length - 1] ^= 0xff // 翻一位
   assert.equal(verifySha256(buf, entry.sha256), false)
 })
+
+test('new requirements cannot enter legacy registry; v2 packaging preserves constraints', { skip: !hasZip }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-requirements-'))
+  try {
+    const dir = path.join(root,'sample')
+    fs.mkdirSync(dir)
+    const requirements = {minHostVersion:'0.4.103',capabilities:['mcp.remote']}
+    fs.writeFileSync(path.join(dir,'plugin.json'),JSON.stringify({name:'sample',version:'1.0.0',mcp:{command:'node'},requirements}))
+    assert.throws(() => packPlugin(dir,{outRoot:path.join(root,'legacy')}), /v2/)
+    assert.equal(fs.existsSync(path.join(root,'legacy')),false)
+    const {entry} = packPlugin(dir,{outRoot:path.join(root,'v2'),registrySchema:2,baseUrl:'https://eas.biily.top/plugins/v2'})
+    assert.deepEqual(entry.requirements,requirements)
+    fs.writeFileSync(path.join(dir,'plugin.json'),JSON.stringify({name:'sample',version:'1.0.0',requirements:{capabilities:[]}}))
+    assert.throws(() => packPlugin(dir,{outRoot:path.join(root,'bad'),registrySchema:2}), /requirements/)
+  } finally { fs.rmSync(root,{recursive:true,force:true}) }
+})

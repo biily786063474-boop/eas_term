@@ -375,3 +375,6 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 - `ipcGuard.guardedHandle/guardedOn`：八个敏感文件禁止裸 `ipcMain`；`securityWiring.test.ts` 是守卫。
 - （同日续）`gitHash.isCommitHash`：git 处理器收到的 hash 必须过它，否则 `--output=` 能写任意文件。`navigationGuard.isAppNavigation` + `index.ts` 对 `window` 类 contents 的 `will-navigate`/`setWindowOpenHandler`：主窗口只许应用内导航。`ipcGuard` 现在是**默认**：`src/main` 除 `ipcGuard.ts` 外不得出现裸 `ipcMain.handle/on`（`securityWiring.test.ts` 全局断言）。`wiki:addToInbox` 只收 `wiki:pickFiles` 记住的或 `guardPath` 允许的文件。
 - 归约器 `case 'error'` 的 fatal 分支必须收整轮三支；只复位 turnActive 就是 2026-09-13 那个卡死 bug 的翻版。
+
+### 2026-09-18 插件兼容性门禁
+`pluginCompatibility` 对未知/畸形 requirements 失败关闭。`pluginMarket` 的下载前检查与 commit 前包内检查不可只留 UI 判断；声明能力只认真实实现（当前 mcp.stdio）。新增 remote/oauth 必须完成对应运行时与授权验收后再加入能力集，不能为让插件安装通过而提前标支持。不得把新协议插件发布到旧客户端 schema 1 目录。
