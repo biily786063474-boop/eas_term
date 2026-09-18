@@ -1,3 +1,5 @@
+import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
+import { loadPluginConfiguration, savePluginConfiguration } from './pluginConfiguration'
 import { createAuthorizationActions } from './pluginConnections/authorizationActions.ts'
 import { getPluginAuthorization } from './pluginAuthorization'
 import { BrowserWindow, dialog } from 'electron'
@@ -251,6 +253,16 @@ export function findPlugin(id: string): PluginInfo | undefined {
 }
 
 export function registerPluginHandlers(): void {
+  guardedHandle('plugins:configuration', async(event,args:{action?:unknown;id?:unknown;values?:unknown})=>{
+    const win=BrowserWindow.fromWebContents(event.sender)
+    if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}
+    const {assertPluginPackageIdle}=await import('./pluginHost')
+    return createConfigurationActions({find:findPlugin,load:loadPluginConfiguration,save:savePluginConfiguration,assertIdle:assertPluginPackageIdle,confirm:async info=>{
+      const result=await dialog.showMessageBox(win,{type:'question',title:'保存插件配置',message:`保存「${info.displayName}」的配置？`,detail:'配置加密保存在本机，密钥不回显。配置变更不会自动启动插件或连接服务。目录必须单独授权。',buttons:['取消','保存'],defaultId:0,cancelId:0})
+      return result.response===1&&!win.isDestroyed()
+    }})(args?.action,args?.id,args?.values)
+  })
+
   guardedHandle('plugins:authorization', (event, args: {action?:unknown;id?:unknown}) => {
     const win=BrowserWindow.fromWebContents(event.sender)
     if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}

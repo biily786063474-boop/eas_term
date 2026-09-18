@@ -1,3 +1,4 @@
+import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { canUpdatePlugin } from '../../../../shared/pluginUpdate'
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
@@ -159,6 +160,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {it.description && <div className="pm-cd">{it.description}</div>}
           {it.plugin?.version && <div className="pm-cd">已安装 v{it.plugin.version}{update ? ` · 可更新至 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 随软件更新' : ''}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
+          {it.plugin?.config&&<PluginConfigurationControls plugin={it.plugin}/>}
           {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} enabled={it.plugin.enabled!==false}/>}
         </div>
         <div className="pm-cact">

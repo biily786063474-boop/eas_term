@@ -123,3 +123,9 @@ credentialStore未发布格式改为plugin前缀+scopehash，removePlugin无需�
 PluginCredentialStore增加saveConfiguration/loadConfiguration，OAuth原有version1和文件哈希保持不变；configuration独立哈希命名空间、version2/kind、同样scope绑定，不把API key伪装OAuth token。配置全部加密，固定目录/租约重验/0600原子写/64KB封装上限复用writePayload，最多32个string值且单值16KB，非法字段/类型拒绝。removePlugin既有前缀清理自然覆盖配置并保持其他插件不动。
 新增红测先失败方法不存在，补实现后6项通过，再补跨账号/与OAuth密文互换拒绝测试。完整check/build/hotupdate监测43254运行中，需取结果。没有配置IPC/UI或主进程schema+endpoint scope factory，方法目前只由测试消费；不把存储层存在说成用户能配置。下一轮优先真正接main controller/IPC/UI/注入而不是另造未消费工具函数。配置字段声明宿主临时阻止启动仍保留，到真实解析/租约注入接通时替换。
 43254最终退出0：3360项/3342通过/18跳过/0失败，build通过，隔离热更新14项通过并眼验1.1.0截图，已刷新Frame原图节点。这是存储回归和旧市场行为证明，不含配置UI/真实密钥/真实连接器。当前无运行命令，目标仍active。
+
+## 继续：配置主进程接口与软件表单真正接线
+新增configurationActions校验保存补丁/枚举/长度/必填，省略保留已有secret、null清可选；只返回configured字段名。插件描述确认前后变化拒绝，保存前assertPluginPackageIdle。pluginConfiguration固定userData目录+系统密钥柜lease，scope由installed info的config/mcp/remote/root/permissions哈希构造，不收renderer路径。guarded plugins:configuration→preload→PluginConfigurationControls已连接，配置按钮/密码输入/刷新状态/原生保存确认；不回显secret。目录文本值拒绝，UI标“目录选择器待接入”，宿主注入临时拒绝仍在。
+隔离实际UI红测已复现缺“配置插件”入口才实现组件。当前全量check/build/compatibility UI监测5414运行中；新增最后manifest变更确认测试另跑3项通过。样式修正为项目已有--fg/--glass-border-strong。不能把锁定状态UI验收说成真实safeStorage保存成功，尚缺解锁后保存流程/原生目录picker/运行时注入/真实32连接器。
+5414退出0，3362项/3344通过/18skip；10项UI通过。23204重截图也退出0；眼验真实表单后发现锁定不能称未配置，现配置状态初值null/错误置null，显示“状态未知”，21307正在typecheck/build/UI重跑，结束后需眼验并提交。最后新确认变更测试单独3项全过不冒充全量计数已包含。整个功能仍缺真实解锁保存原生确认验收、目录选择、运行时注入（acquire阻止config插件仍在）。
+21307最终退出0：类型检查、构建成功，11项隔离UI通过。最新完整表单截图已眼验“状态未知”“密钥柜已锁定”、密码输入与目录待接入，已复用Frame原账号截图节点。无后台命令；下一步应实际接原生目录picker与运行时配置注入、用隔离自有密钥柜做保存成功验收，不能宣称当前配置链路完整。

@@ -7028,3 +7028,6 @@
 }
 .pm-auth-actions button:hover:not(:disabled) { background: var(--lift-3); }
 .pm-auth-actions button:disabled { opacity: .5; cursor: default; }
+
+.pm-config-field { display: flex; flex-direction: column; gap: 5px; margin: 9px 0; font-size: 12px; }
+.pm-config-field input, .pm-config-field select { width: 100%; min-width: 0; box-sizing: border-box; color: var(--fg); background: var(--lift-2); border: 1px solid var(--glass-border-strong); border-radius: 6px; padding: 6px 8px; }

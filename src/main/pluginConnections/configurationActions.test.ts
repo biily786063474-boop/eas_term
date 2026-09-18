@@ -1,0 +1,27 @@
+import {test} from 'node:test'
+import assert from 'node:assert/strict'
+import {createConfigurationActions} from './configurationActions.ts'
+import type {PluginInfo} from '../../shared/types'
+const info:PluginInfo={id:'eas:fixture',cli:'eas',name:'fixture',root:'/fixture',displayName:'Fixture',mcp:{command:'node',args:[],env:{},cwd:'/fixture'},config:{fields:[{id:'key',type:'secret',label:'Key',purpose:'连接服务',required:true},{id:'region',type:'enum',label:'区域',purpose:'选择服务区域',required:true,options:[{value:'cn',label:'中国'}]}]}}
+function setup(){let current=structuredClone(info),values:Record<string,string>|undefined,allowed=true,locked=false,writes=0;const run=createConfigurationActions({find:()=>current,confirm:async()=>allowed,assertIdle:()=>{if(locked)throw Error('busy')},load:()=>values,save:(_i,v)=>{values=v;writes++}});return {run,values:()=>values,writes:()=>writes,cancel:()=>{allowed=false},busy:()=>{locked=true},change:()=>{current={...current,config:{fields:[]}}}}}
+test('save validates fields, preserves omitted secrets and returns presence only',async()=>{
+ const s=setup();assert.equal((await s.run('save',info.id,{key:'private',region:'cn'})).ok,true)
+ const state=await s.run('status',info.id);assert.deepEqual(state,{ok:true,configured:['key','region']});assert.doesNotMatch(JSON.stringify(state),/private/)
+ assert.equal((await s.run('save',info.id,{region:'cn'})).ok,true);assert.equal(s.values()?.key,'private')
+ for(const patch of [{region:'us'},{key:null},{unknown:'x'},{key:3}])assert.equal((await s.run('save',info.id,patch)).ok,false)
+ assert.equal(s.writes(),2)
+})
+test('cancel and active plugin block writes, directory strings do not grant access',async()=>{
+ const s=setup();s.cancel();assert.equal((await s.run('save',info.id,{key:'private',region:'cn'})).ok,false);assert.equal(s.writes(),0)
+ const b=setup();b.busy();assert.equal((await b.run('save',info.id,{key:'private',region:'cn'})).ok,false);assert.equal(b.writes(),0)
+ let writes=0
+ const dir={...info,config:{fields:[{id:'root',type:'directory' as const,label:'目录',purpose:'读文件',required:true,access:'read' as const}]}}
+ const run=createConfigurationActions({find:()=>dir,confirm:async()=>true,assertIdle(){},load:()=>undefined,save:()=>{writes++}})
+ assert.equal((await run('save',info.id,{root:'/Users'})).ok,false);assert.equal(writes,0)
+})
+test('manifest changes while confirmation is open cannot save into the new configuration',async()=>{
+ let current=structuredClone(info),writes=0
+ const run=createConfigurationActions({find:()=>current,confirm:async()=>{current={...current,mcp:{...current.mcp!,args:['different']}};return true},assertIdle(){},load:()=>undefined,save:()=>{writes++}})
+ const result=await run('save',info.id,{key:'private',region:'cn'})
+ assert.equal(result.ok,false);if(!result.ok)assert.match(result.error,/已变化/);assert.equal(writes,0)
+})
