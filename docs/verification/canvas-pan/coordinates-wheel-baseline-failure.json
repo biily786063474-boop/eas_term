@@ -1,0 +1,4 @@
+{
+  "error": "Error: Lifecycle failed {\"releaseStable\":false,\"releaseFinal\":true,\"blurStable\":true,\"blurFinal\":false,\"retained\":true}",
+  "lastExpression": "({text:document.body.innerText.slice(0,4000),images:[...document.images].map(i=>({width:i.naturalWidth,src:i.src.slice(0,80)})),canvas:window.__store?.getState().canvas})"
+}

@@ -375,3 +375,12 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 - `ipcGuard.guardedHandle/guardedOn`：八个敏感文件禁止裸 `ipcMain`；`securityWiring.test.ts` 是守卫。
 - （同日续）`gitHash.isCommitHash`：git 处理器收到的 hash 必须过它，否则 `--output=` 能写任意文件。`navigationGuard.isAppNavigation` + `index.ts` 对 `window` 类 contents 的 `will-navigate`/`setWindowOpenHandler`：主窗口只许应用内导航。`ipcGuard` 现在是**默认**：`src/main` 除 `ipcGuard.ts` 外不得出现裸 `ipcMain.handle/on`（`securityWiring.test.ts` 全局断言）。`wiki:addToInbox` 只收 `wiki:pickFiles` 记住的或 `guardPath` 允许的文件。
 - 归约器 `case 'error'` 的 fatal 分支必须收整轮三支；只复位 turnActive 就是 2026-09-13 那个卡死 bug 的翻版。
+
+## Codex 原生目标生命周期（2026-09-18）
+
+AI 对话专用 `taskLifecycle: true` 由 `session.ts` 传给 `codexCapabilityLaunch.ts`，经 `mcp/eas-codex-launcher.mjs` 转入 `mcp/codex-task-bridge.mjs`。外层仍用 adapter 的 exec 参数与 stdin ignore，但 launcher 内部实际运行 app-server，原生子进程 stdin/stdout 为 JSON-RPC 管道；终端入口不启用此模式。
+
+原生每轮 completed 不等于宿主任务结束：本地 thread/goal/get 为 active 时保留服务、等待原生续轮，不造目标、不发送“继续”。只在无活动轮次且 goal 非 active 时输出一次宿主 turn.completed。事件按 thread 过滤而非锁死初始 turn；工具 ID 带 turn 前缀。停止只关闭所属进程，协议不兼容失败关闭，不静默回退 exec，不额外付费轮询。角色、配置合并、MCP 和沙箱约束沿用现有预检。证据与边界见 `../verification/codex-goal/`。
+
+## 画布平移第一阶段（2026-09-21，12闲置对话场景已验收）
+CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提交一次，松手/失焦/卸载收尾 flush 并取消残留帧；不改变全局 setViewport 同步语义，不改滚轮/缩放算法。PaneView 对 TerminalView 与 AgentChatView 使用 React.memo 默认浅比较：位置只影响外壳，内容内部 store/state 更新不被阻断。禁止通过卸载不可见面板或停止进程换取性能。源码基于 main 471456f，不混入其他未提交修改。

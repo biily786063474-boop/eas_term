@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "requests": 2,
+  "userTurnStarts": 1,
+  "nativeTurns": 2,
+  "emitted": [
+    {
+      "type": "thread.started",
+      "thread_id": "01a0b5ae-6666-78e1-bd86-ca74f8566803"
+    },
+    {
+      "type": "item.started",
+      "item": {
+        "id": "01a0b5ae-6678-73c3-a03f-788a941fa50f:msg_1",
+        "type": "agent_message",
+        "text": "",
+        "phase": "final_answer"
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "01a0b5ae-6678-73c3-a03f-788a941fa50f:msg_1",
+        "type": "agent_message",
+        "text": "native goal step 1",
+        "phase": "final_answer"
+      }
+    },
+    {
+      "type": "item.started",
+      "item": {
+        "id": "01a0b5ae-677d-7841-ba13-22223888c244:msg_2",
+        "type": "agent_message",
+        "text": "",
+        "phase": "final_answer"
+      }
+    },
+    {
+      "type": "item.completed",
+      "item": {
+        "id": "01a0b5ae-677d-7841-ba13-22223888c244:msg_2",
+        "type": "agent_message",
+        "text": "native goal step 2",
+        "phase": "final_answer"
+      }
+    },
+    {
+      "type": "turn.completed",
+      "usage": {
+        "input_tokens": 40,
+        "output_tokens": 10,
+        "cached_input_tokens": 0
+      }
+    }
+  ],
+  "realCli": true,
+  "realModel": false
+}

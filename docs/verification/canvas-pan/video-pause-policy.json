@@ -1,0 +1,33 @@
+{
+  "videoProgress": 0.531725,
+  "videoPlaying": true,
+  "streamBytesDuringPan": 0,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 529.4000000953674,
+  "p95": 9.5,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 4,
+  "outsidePointerPauses": true,
+  "cpuMs": {
+    "TaskDuration": 126.95799999999998,
+    "ScriptDuration": 44.905,
+    "LayoutDuration": 5.438,
+    "RecalcStyleDuration": 24.434
+  },
+  "lifecycle": {
+    "releaseStable": true,
+    "releaseFinal": true,
+    "blurStable": true,
+    "blurFinal": true,
+    "retained": true,
+    "imagesRestored": true
+  },
+  "appRoot": "/private/tmp/eas-canvas-pan-20260921",
+  "heavy": false,
+  "agentSessions": 0,
+  "agentStarts": 0
+}

@@ -1,0 +1,4 @@
+{
+  "error": "Error: Lifecycle failed {\"releaseStable\":false,\"releaseFinal\":true,\"blurStable\":false,\"blurFinal\":false,\"retained\":true}",
+  "lastExpression": "(async()=>{const s=window.__store,old={...s.getState().canvas.viewport},panes=[...document.querySelectorAll('.pane')];const start=()=>document.querySelector('.canvas-viewport').dispatchEvent(new MouseEvent('mousedown',{bubbles:true,button:1,clientX:100,clientY:100}));const move=x=>document.dispatchE"
+}

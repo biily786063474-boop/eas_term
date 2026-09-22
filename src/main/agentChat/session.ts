@@ -931,7 +931,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
     const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
 
     const launch = live.rec.cli === 'codex'
-      ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
+      ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath }, { taskLifecycle: true })
       : cliInvocation(live.rec.cli, built.bin, args)
     const controlledCodex = process.platform === 'win32' && live.rec.cli === 'codex'
     const proc = spawn(launch.command, launch.args, {

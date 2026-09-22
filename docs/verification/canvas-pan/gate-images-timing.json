@@ -1,0 +1,21 @@
+{
+  "videoProgress": null,
+  "videoPlaying": null,
+  "streamBytesDuringPan": 0,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 501.90000009536743,
+  "p95": 9.100000023841858,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 12,
+  "cpuMs": {
+    "TaskDuration": 120.352,
+    "ScriptDuration": 64.71300000000001,
+    "LayoutDuration": 0,
+    "RecalcStyleDuration": 9.927999999999999
+  },
+  "phase": "timing-only-before-lifecycle"
+}
