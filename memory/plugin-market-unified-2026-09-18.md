@@ -247,3 +247,9 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 静态隐私页隔离Electron真实打开，全部HTTP(S)禁止、temp profile。第一次390px出现横向溢出；实际元素诊断发现site/style.css全局code white-space:nowrap覆盖长文换行（既有OMP许可路径与新增高德URL）。复用pv-body并只在该页code覆盖white-space:normal；1200/390宽度均无溢出，截图已看。初次截图受smooth-scroll影响错位，验证脚本改instant定位后重新截图，不是产品逻辑故障。脚本verify-plugin-privacy.mjs、result及失败诊断保留。
 额外核对官方来源：Figma MCP仅Catalog客户端，可waitlist；Slack固定注册App，Marketplace/内部准入，无DCR，有PKCE桌面模式但需显式启用、callback/iss/token适配未验。来源存台账，不冒用其他客户端或宣称只差终端用户登录。
 本轮没有增加连接器数量、没有发布目录/app/官网。默认本地v2仍8包；32项未完成。所有本轮命令结束（3885最终全量成功、69877重截成功）。下一步仍做数据库及其显式本地授权、Google组与其他剩余连接器；不要把准入条件变成停止全部工程工作的借口。
+
+## 2026-09-21 用户纠正优先级：先补原定功能再逐项验收
+用户明确指出“已好”插件为何缺功能，已确认先补齐已开工插件而非继续扩卡片数。顺序Excel公式/透视/图表→PPT→Word；包数量不代表完成数。上一状态问答仅汇报、非工程进展，本轮已执行依赖资格验证。
+独立工作树271797b基线。ExcelJS4.4.0缺完整图表/透视/计算路径，新增scripts/excel-engine真实库资格测试，Excelize固定v2.11.0（实际LICENSE BSD3-Clause），Go开发工具此前不存在，官方SHA校验的Go1.26.8解在/tmp/eas-excel-go-1.26.8，不安装系统。64312准备exit0，17948首次2测试exit0。后增第3测试检测同引擎更新依赖后无旧计算缓存；1202运行最终3项+darwin-amd64/windows-amd64交叉编译，需取终态。3项测试log已通过但编译尚未取终态。
+重要真实缺口：Excelize AddPivotTable的缓存SaveData=false/RefreshOnLoad=true，不能把OOXML存在当成透视汇总已计算可视。必须实际Excel刷新验收。当前只是资格测试，现有Excel插件仍未换引擎/未新增工具，不增完成数。后续协议/安全守卫/统一新引擎/离线打包与三端app验收清单在scripts/excel-engine/README.md。所有官方资料与限制存excel-engine/provider.md。继续工作，不标goalcomplete/blocked。
+1202终态exit0：最终3项真实工作簿测试通过，darwin-amd64与windows-amd64测试可执行文件交叉编译通过；仅编译未在目标OS运行。无后台命令残留。未替换用户正式app/未发布/未声称Excel插件已补齐。
