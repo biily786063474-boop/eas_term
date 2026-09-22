@@ -35,3 +35,11 @@ ZIP预检：8MB输入/32MB展开/2000项/100层XML/50000单元格/10000行/1000�
 编译入口：`go build -trimpath -o /tmp/eas-excel-engine ./cmd/excel-engine`。
 仓库根运行真实进程验证：`node scripts/verify-excel-engine.mjs /tmp/eas-excel-engine`。
 测试生成native-analytics.xlsx用于后续实际Excel验收，当前未做视觉验证。
+
+## 父进程适配（仍未接入插件包）
+
+`worker.mjs` 的 `runEngine(packageRoot, request, options)` 只接受连接器代码提供的可信包根目录，不能把它暴露到MCP参数或用户配置。固定 `bin/excel-engine-<Node platform>-<Node arch>[.exe]` 与 `bin/integrity.json`；manifest按平台键提供size/sha256，不接受文件名。拒绝链接目录/链接或硬链接可执行文件，执行前校验长度和SHA256。哈希用于包损坏检测，不防能同时改manifest与binary的本地恶意写入者，不替代安装包来源验证。
+
+单次请求12MB、响应12MB、stderr64KB、默认16秒；支持AbortSignal，失败只杀本次所属进程，不全局清理；等close再完成。子进程env空、无shell、stderr不回显。合法响应字段/规范base64/8MB XLSX头检查，完整OOXML守卫仍在Go层。不是OS文件/网络沙箱。平台候选darwin-arm64/darwin-x64/win32-x64，后两者本轮未实际运行。
+
+`node --test scripts/excel-engine/worker.test.mjs` 用真实短命测试进程覆盖父进程生命周期；`node scripts/verify-excel-worker.mjs /absolute/development/binary` 临时复制真实Go引擎跑6项业务检查，结束删除临时目录。尚未自动构建bin/integrity.json或集成market包；先补create/read、多系列与透视防覆盖，再统一迁移，不能直接移除旧ExcelJS复杂工作簿拒绝规则。

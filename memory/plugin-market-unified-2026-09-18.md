@@ -258,3 +258,6 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 上一轮6359191/3e661b3为依赖资格进展，当前HEAD复核无冲突。新增scripts/excel-engine/engine.go（calculate/update/chart/pivot）、protocol.go单请求JSON、cmd/excel-engine/main.go独立进程。先写红测undefined Process/Run再实现；中间测试发现Excelize合法关系Target=/xl/sharedStrings.xml被误判，以及/package子串错误命中标准metadata namespace；修为ZIP内真实目标解析、活动type后缀判断，不放开OS路径或外部网络。
 预检8MB/32MB/2000项/100层XML/50000cells/行10000列1000，宏/外链/实体/活动关系/高风险公式拒绝。新模块独立守卫没有删除旧JS守卫。单进程15秒退出、128MB软GC预算，非OS沙箱/硬内存上限。
 48934初次编译检查exit0；后增行列dimension守卫及真实子进程验证，79844最终exit0：Go6测试、vet、darwin-arm64实际binary业务6检查通过，darwin-amd64/windows-amd64交叉编译通过未运行。证据engine-process.log/process-result.json/native-analytics.xlsx。原Excel插件仍没接引擎，不增完成数，无应用/Excel视觉验收。下一步父进程适配限时限输出/取消、create/read统一迁移、图表多系列等补齐、离线多平台打包许可/哈希、MCP工具接线、实际应用和Excel眼验。无后台命令残留，目标active未发布。
+
+## 2026-09-21 Excel父进程调用层
+上一轮e97a3fe为真实工程进展，本轮复核HEAD及原4个failure.json未动。新增scripts/excel-engine/worker.mjs（固定平台路径+sha/size、无继承env、超时/取消/输出限额、close收尾）、worker.test.mjs、scripts/verify-excel-worker.mjs。先红测8fail；93132首次实现验证exit1，根因macOS临时目录祖先是符号链接，测试fixture未canonical化，修fixture realpath，没有放开生产守卫；37610复测exit0；25922最终exit0：8父进程测试+真实Go binary6业务检查。证据worker.log/worker-result.json。当前原插件仍未调用此模块，不增加完成数；Windows未运行、ExcelGUI未验证。下一步create/read迁移+图表多系列/透视防覆盖，再离线打包及MCP接线。现无后台进程。进度节点原81已被用户/其他任务移除，本轮重新打开cnode-152-snk2h，5/5内容，117他任务禁止关闭。目标active未发布，正式app未修改。

@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "checks": 6,
+  "actualBinary": true,
+  "parentAdapter": true,
+  "platform": "darwin",
+  "arch": "arm64",
+  "pluginIntegrated": false,
+  "excelVisualVerified": false
+}

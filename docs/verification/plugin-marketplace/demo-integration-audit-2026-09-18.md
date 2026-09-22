@@ -144,3 +144,6 @@ Excel 基础（cd1d084）：read/create/update真实XLSX，三shim26项已验；
 - Slack 官方 MCP 支持 Streamable HTTP `https://mcp.slack.com/mcp`，不支持 DCR；客户端必须关联固定注册 app ID，仅 Marketplace 已发布应用或内部应用可用，unlisted 不可用。来源：https://docs.slack.dev/ai/slack-mcp-server/ 。
 - Slack 支持显式启用 PKCE 的公共客户端，启用不可自行撤销；桌面回调不可请求 bot scopes，refresh token 期限为30天。来源：https://docs.slack.dev/authentication/using-pkce/ 。不能据旧概览一概说桌面必须内嵌 client_secret，也不能直接复用当前通用DCR模板；随机loopback/iss/token格式仍须专项验证。本轮未改应用注册配置、未发送任何真实消息。
 - 以上属于平台客户端准入/授权适配，不是让最终用户登录就能消除的条件。其余无需账号的工程工作仍应继续，不以这两项代表全项目阻塞。
+
+### Excel父进程适配增量 2026-09-21
+8项真实测试进程检查及6项真实Go引擎业务链检查通过（worker.log/worker-result.json），含校验binary、空env、超时/取消和输出限额。仍是引擎接线准备，原插件不变，未补齐原定Excel功能，不新增完成条目。create/read、多系列图表、安全透视目的地、许可证/打包、MCP及应用/Excel验收仍待做。

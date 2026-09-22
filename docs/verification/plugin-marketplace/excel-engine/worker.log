@@ -1,0 +1,17 @@
+✔ worker adapter exists (0.337083ms)
+✔ one shot request uses scrubbed env and waits for close (1722.7825ms)
+✔ changed executable fails integrity before spawn (2.013583ms)
+✔ symlink executable is refused (1.729292ms)
+✔ timeout kills owned worker and cancellation is distinct (124.194208ms)
+✔ output flood is bounded and worker killed (735.31025ms)
+✔ stderr and malformed responses do not leak raw contents (908.167458ms)
+✔ oversized request rejected before process and pre-abort honored (8.814625ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3542.692959
+{"passed":true,"checks":6,"actualBinary":true,"parentAdapter":true,"platform":"darwin","arch":"arm64","pluginIntegrated":false,"excelVisualVerified":false}

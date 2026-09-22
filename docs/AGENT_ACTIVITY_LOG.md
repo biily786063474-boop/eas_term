@@ -261,3 +261,8 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 
 ## 2026-09-21 Excel统一内存处理层
 新增公式计算/原生图表/原生透视/保留内容更新的Go处理层与单请求独立进程；ZIP/XML等守卫、15秒期限及明确非OS沙箱。Go6测试/vet/真实二进制6检查通过，三平台构建成功但非本机平台未运行。MCP接线/create-read迁移/多系列/实际Excel渲染尚未完成；未发布、不称Excel插件完成。
+
+### 2026-09-21 Excel父进程适配（原定能力补齐中）
+- 新增固定平台binary完整性校验、空env、超时/取消/输出限额及close收尾；没有修改正式Excel插件包。
+- 先红测；一次fixture因macOS临时目录symlink失败，canonical化fixture后8测试通过；真实Go引擎经adapter 6业务检查通过（25922 exit0）。
+- 尚未插件市场/三CLI/Excel视觉验收；下一步统一create/read及离线包/MCP接线。无发布。
