@@ -1,0 +1,4 @@
+{
+  "error": "Error: Runtime.evaluate timeout",
+  "lastExpression": "!!window.__store&&document.querySelectorAll(\".pane\").length===24"
+}
