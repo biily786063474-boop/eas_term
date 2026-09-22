@@ -19,8 +19,8 @@
 |办公文档|看板|项目待办三栏看板|已有内置及市场包；真实 stdio 增/移/查/删回归通过，实际模型未验|
 |开发工具|电脑视野|让 AI 看你的屏幕并代操作|已有内置实现；跨平台打包及生命周期验收待核对|
 |办公文档|Word 文档|读写 Word，排版、生成、修订|原创离线候选：格式段落/矩形表格创建、顶层文本读取、简单段落跟踪修订；隔离应用26项通过；复杂排版编辑/真实Word渲染/模型CLI/Windows未验，未上架|
-|办公文档|Excel 表格|读写 Excel，公式、透视、图表|待核验上游来源、许可、授权、实际工具及平台兼容性|
-|办公文档|PowerPoint|生成与编辑 PPT 幻灯片|待核验上游来源、许可、授权、实际工具及平台兼容性|
+|办公文档|Excel 表格|读写 Excel，公式、透视、图表|基础实包read/create/update与三shim26项已验；公式只写不算，透视/图表未实现，未发布|
+|办公文档|PowerPoint|生成与编辑 PPT 幻灯片|基础实包创建/读/编辑文字与三shim29项已验；图表/图片/动画编辑、视觉效果未验，未发布|
 |办公文档|Google 文档|Docs / Sheets / Slides 读写|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |办公文档|Notion|读写 Notion 页面与数据库|官方远程 MCP + OAuth；宿主接入及真实账号验证待做|
 |生活出行|高德地图|路线规划、周边搜索、地理编码|待核验上游来源、许可、授权、实际工具及平台兼容性|
@@ -51,9 +51,9 @@
 ## 代码证据与缺口
 
 - `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
-- `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；stdio 统一配置/目录授权已接；remote Bearer 与 provider 注册适配仍缺。
+- `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；stdio 统一配置/目录授权已接；remote Bearer与动态OAuth已接线并有候选；真实供应商账号/兼容性仍待验。
 - `src/main/mcpClient.ts` 与 `pluginHost.ts`：已接 stdio/remote 共享宿主并做真实shim/隔离测试；远程正式 capability 尚未公布，实际模型与真实账号验证不能由这些测试代替。
-- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files、web-fetch；v1 仅前两项，v2 四项，新增目录尚未发布。
+- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files、web-fetch、excel、powerpoint；v1 仅前两项，v2 六项，新增目录尚未发布。
 - 分发热更新已有基础，但原 Demo 的远程连接、授权和配置不能靠扩大 PLUGINS 数组完成。
 
 ## 已查看官方来源
@@ -132,3 +132,9 @@ Word 候选 createDocument/word_create 支持追加矩形文本表格；readDocu
 
 ### 用户优先级调整与网页抓取落地
 用户明确账号由最终用户安装后登录，先补剩余插件，不等个人账号再写工程。区分工程接入/待用户授权/真实账号验证/平台审核。网页抓取已实现无账号stdio静态HTML/文本读取，离线htmlparser2与7份许可，实际市场安装到三shim调用已验；加入默认本地v2构建（第4包），尚未生产发布。公网DNS被拒证据与限制见web-fetch/implementation.md。
+
+### 2026-09-21 办公文档新增实包
+Excel 基础（cd1d084）：read/create/update真实XLSX，三shim26项已验；公式仅写入不计算，
+图表/透视等未实现。PowerPoint 本轮：create/read/edit真实文本PPTX，三shim29项已验，
+按真实幻灯片关系顺序，编辑保持非目标ZIP条目内容；复杂视觉能力/模型CLI/Windows未验。
+默认本地v2现含6实包，不是32项已完整接入、不等于生产已上架。

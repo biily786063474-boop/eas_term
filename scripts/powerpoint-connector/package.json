@@ -1,0 +1,14 @@
+{
+  "name": "eas-powerpoint-connector",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "pptxgenjs": "4.0.1",
+    "jszip": "3.10.1",
+    "saxes": "5.0.1"
+  },
+  "overrides": {
+    "image-size": "2.0.3"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "session": 98684,
+  "check": "3436 tests / 3418 passed / 18 skipped / 0 failed",
+  "registryError": "同版本包内容已改变，请升级版本：excel@1.0.0",
+  "cause": "Prior Excel commit normalized generated bundle whitespace and added README after the local archive was built. Source differs from retained immutable local 1.0.0 archive.",
+  "action": "Bump Excel package/server to 1.0.1; keep old archive and safety check intact."
+}

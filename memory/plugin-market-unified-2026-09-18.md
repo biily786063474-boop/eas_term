@@ -230,3 +230,7 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 2026-09-18 Excel基础接入：scripts/excel-connector固定ExcelJS4.4/JSZip/Saxes，uuid11.1.1 override消除2moderate，离线bundle及31实际依赖许可。excel_read/create/update支持多表标量/显式白名单公式，不计算；目录/hash/zip实体宏外部关系/复杂编辑边界保留。6专项通过；2932构建+实际隔离市场UI、安全存储、三shim业务/撤销锁定26项通过并眼验，Frame截图cnode147替换自身旧OAuth图，保留其他任务。默认本地v2加入第5包，未发布。25453全量回归尚在执行，必须取同session结果。缺图表/透视/公式引擎，不能算完整Demo Excel。下步PPT等剩余真实包；目标仍active，不等用户账号、不动正式应用。
 25453结束exit0：check全量3431/3413通过/18跳过/0失败，本地构建v1=2/v2=5。所有本轮子进程已结束。Excel仅基础接入，不是32插件全部完成。
+
+2026-09-21 继续：前轮cd1d084为实质进展，当前工作树HEAD复核一致，无本会话旧进程运行。新增PowerPoint实包create/read/edit，先缺失模块红后5专项通过（含zip/XML/路径/hash/顺序/编辑保留非目标部件）。独立固定PptxGenJS4.0.1/JSZip/Saxes离线bundle16许可。首次audit2high，image-size2.0.3 override后audit0，旧新审计保存且未夸大上游修复确认。89980构建+实际app通过，41153最终依赖重打包+专项+三shim实际PPTX创建读取编辑29项通过，截图亲眼验，Frame cnode148替换自己的web-fetch图cnode145，保留用户timeline/设计。默认本地v2加入第6包；98684全量check+目录构建进行中，需取同session终态。文本PPT核心不是图表/图片/动画完整体验，未验真正模型CLI/Windows/PowerPoint视觉，未动正式app/未发布。目标仍active，剩余自主工程包括数据库/其他32项实包。
+98684：全量3436/3418通过/18skip但构建失败“同版本包内容已改变：excel@1.0.0”。因上轮归档之后README/空白规范化改变包内容，未删除旧归档或绕校验，Excel升1.0.1。35544专项11+目录v1=2/v2=6+Excel实际app26通过。审查发现PPT活动部件改名绕文件名检查，新红测证实；补关系Type/外部Target检查后6专项通过，PowerPoint也升1.0.1。66918最终全量/目录/实际PPT29项运行中，必须取同session结果再提交。无生产发布。
+66918最终exit0：全量3437/3419通过/18skip/0fail，目录v1=2/v2=6，PowerPoint1.0.1实际app29项再次通过并眼验。所有本轮已知进程终态，Frame进度显示真实完成结果。仍有32项总体缺口，目标active。下一轮继续数据库或其他未接实包，不把当前六个默认包等同全部完成。

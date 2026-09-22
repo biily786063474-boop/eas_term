@@ -1,8 +1,8 @@
 {
-  "name": "excel",
+  "name": "powerpoint",
   "version": "1.0.1",
-  "displayName": "Excel 表格",
-  "description": "读取、创建XLSX及更新普通单元格，支持显式数值公式写入但不计算；透视表和图表未实现。",
+  "displayName": "PowerPoint 演示",
+  "description": "创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。",
   "category": "办公文档",
   "requirements": {
     "capabilities": [
@@ -15,8 +15,8 @@
       {
         "id": "root",
         "type": "directory",
-        "label": "表格目录",
-        "purpose": "读取和创建XLSX，覆盖须校验当前SHA256",
+        "label": "演示文稿目录",
+        "purpose": "读取和创建PPTX，覆盖须校验当前SHA256",
         "required": true,
         "access": "read-write"
       }

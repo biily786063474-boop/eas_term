@@ -3,7 +3,7 @@
 // v1 receives legacy packages only. v2 preserves compatibility requirements.
 import {buildPluginRegistries} from './plugin-registry-build.mjs'
 const {v1,v2}=buildPluginRegistries({
- plugins:['plugins-store/pomodoro','resources/plugins/board','plugins-store/local-files','plugins-store/web-fetch','plugins-store/excel'],
+ plugins:['plugins-store/pomodoro','resources/plugins/board','plugins-store/local-files','plugins-store/web-fetch','plugins-store/excel','plugins-store/powerpoint'],
  outRoot:process.env.EAS_PLUGIN_OUT_ROOT||'dist/plugins',
  baseUrl:process.env.EAS_PLUGIN_BASE_URL||'https://eas.biily.top/plugins'
 })
