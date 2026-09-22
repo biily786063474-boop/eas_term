@@ -25,3 +25,13 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/eas-excel-qualificati
 4. 多平台离线打包、二进制哈希与全部依赖许可/安全审查，不要求用户装Go。
 5. 隔离应用市场安装→配置→三shim业务调用→撤权；实际Excel打开图表/透视刷新并截图。
 6. 原Demo功能逐项标验证证据；未满足的仍开发中，不按工具数量报完成。
+
+## 统一处理层增量
+
+`engine.go` 已实现内存工作簿的 calculate/update/chart/pivot；`protocol.go` 的单请求JSON协议拒绝未知字段与多请求；`cmd/excel-engine` 是15秒硬退出的独立进程入口，128MB为Go软GC预算，**不是OS硬内存隔离**。
+ZIP预检：8MB输入/32MB展开/2000项/100层XML/50000单元格/10000行/1000列；拒绝宏、外部数据、实体指令、外部关系、活动嵌入、越界单元格和高风险公式。OOXML包内绝对部件引用仅在目标确实存在于ZIP时接受，不是文件系统路径授权。
+图表当前实现column/bar/line/pie/scatter单系列；透视行列及Sum/Count/Average/Min/Max，返回需要Excel刷新的明确提示。还没有完成完整多系列图表操作、透视刷新显示、create/read迁移及插件接线，不把当前处理层标成完整Excel功能。
+
+编译入口：`go build -trimpath -o /tmp/eas-excel-engine ./cmd/excel-engine`。
+仓库根运行真实进程验证：`node scripts/verify-excel-engine.mjs /tmp/eas-excel-engine`。
+测试生成native-analytics.xlsx用于后续实际Excel验收，当前未做视觉验证。

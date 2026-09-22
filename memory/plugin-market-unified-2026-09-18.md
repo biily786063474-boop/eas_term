@@ -253,3 +253,8 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 独立工作树271797b基线。ExcelJS4.4.0缺完整图表/透视/计算路径，新增scripts/excel-engine真实库资格测试，Excelize固定v2.11.0（实际LICENSE BSD3-Clause），Go开发工具此前不存在，官方SHA校验的Go1.26.8解在/tmp/eas-excel-go-1.26.8，不安装系统。64312准备exit0，17948首次2测试exit0。后增第3测试检测同引擎更新依赖后无旧计算缓存；1202运行最终3项+darwin-amd64/windows-amd64交叉编译，需取终态。3项测试log已通过但编译尚未取终态。
 重要真实缺口：Excelize AddPivotTable的缓存SaveData=false/RefreshOnLoad=true，不能把OOXML存在当成透视汇总已计算可视。必须实际Excel刷新验收。当前只是资格测试，现有Excel插件仍未换引擎/未新增工具，不增完成数。后续协议/安全守卫/统一新引擎/离线打包与三端app验收清单在scripts/excel-engine/README.md。所有官方资料与限制存excel-engine/provider.md。继续工作，不标goalcomplete/blocked。
 1202终态exit0：最终3项真实工作簿测试通过，darwin-amd64与windows-amd64测试可执行文件交叉编译通过；仅编译未在目标OS运行。无后台命令残留。未替换用户正式app/未发布/未声称Excel插件已补齐。
+
+## 2026-09-21 Excel统一处理层（用户说继续）
+上一轮6359191/3e661b3为依赖资格进展，当前HEAD复核无冲突。新增scripts/excel-engine/engine.go（calculate/update/chart/pivot）、protocol.go单请求JSON、cmd/excel-engine/main.go独立进程。先写红测undefined Process/Run再实现；中间测试发现Excelize合法关系Target=/xl/sharedStrings.xml被误判，以及/package子串错误命中标准metadata namespace；修为ZIP内真实目标解析、活动type后缀判断，不放开OS路径或外部网络。
+预检8MB/32MB/2000项/100层XML/50000cells/行10000列1000，宏/外链/实体/活动关系/高风险公式拒绝。新模块独立守卫没有删除旧JS守卫。单进程15秒退出、128MB软GC预算，非OS沙箱/硬内存上限。
+48934初次编译检查exit0；后增行列dimension守卫及真实子进程验证，79844最终exit0：Go6测试、vet、darwin-arm64实际binary业务6检查通过，darwin-amd64/windows-amd64交叉编译通过未运行。证据engine-process.log/process-result.json/native-analytics.xlsx。原Excel插件仍没接引擎，不增完成数，无应用/Excel视觉验收。下一步父进程适配限时限输出/取消、create/read统一迁移、图表多系列等补齐、离线多平台打包许可/哈希、MCP工具接线、实际应用和Excel眼验。无后台命令残留，目标active未发布。

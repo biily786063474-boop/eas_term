@@ -1,0 +1,16 @@
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.01s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.01s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+PASS
+ok  	eas-term/excel-engine	3.214s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+Actual Excel engine subprocess: 6 checks passed; not plugin or Excel visual acceptance

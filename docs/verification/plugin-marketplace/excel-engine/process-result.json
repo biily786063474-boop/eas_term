@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "calculate",
+    "native chart",
+    "native pivot with refresh warning",
+    "update analytics workbook",
+    "recalculate dependency",
+    "reject path with no output"
+  ],
+  "actualBinary": true,
+  "excelVisualVerified": false,
+  "pluginIntegrated": false
+}
