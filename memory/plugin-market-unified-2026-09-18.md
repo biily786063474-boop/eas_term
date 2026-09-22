@@ -237,3 +237,6 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 2026-09-21 天气实包：前轮a92e984为实质进展，HEAD/clean scoped状态已复核。新增高德weather_current/forecast，无第三方依赖，用户Web服务Key统一密文配置；固定官方HTTPS接口、公开DNS pinnedIP/TLSSNI/15s/1MB/不跟跳转，白名单字段/错误隐藏不泄Key。官方资料已落weather/provider.md，支持地域与商业Key额度明确。3专项实际解包stdio/重定向私网超大拒绝通过。90002 build成功但app握手失败，根因fixture prepend import放在shebang前，原错误保留fixture-shebang-failure.json；只修临时适配，不改安全守卫。65990实际市场配置/safeStorage/3shim六次天气查询/清配置15项通过并眼验。默认本地v2加入第7包，5160全量+目录构建进行中需取同handle。未使用个人Key、未请求付费天气、未验真实供应商数据/TLS/模型CLI/Windows，不是32项完成。
 5160最终exit0：全量3440/3422通过/18skip/0fail，本地目录v1=2/v2=7。Frame天气截图cnode149替换自身Excel cnode147；保留用户timeline/设计与进度。无本轮后台任务遗留。下一步高德地图或数据库等剩余真实连接器，目标active，不将配置后待上游验收当全部完成。
+
+2026-09-21 高德地图实包：前轮aecf3d5为实质进展，HEAD及scoped状态复核。新增amap_geocode/nearby/route，步行+驾车路径、GCJ-02坐标/分页/输入白名单，固定官方4路径，密文Key注入/错误隐藏/白名单结果，canonical地址策略生成。4专项红→绿包含真实解包stdio+重定向私网体积防护。96333构建+隔离实际市场/配置/三shim12次业务/清配置21项通过，截图眼验。默认本地v2第8包；70095全量+目录构建进行中，需取同session终态。无真实Key/付费调用，不算上游账号/TLS/真实模型CLI/Windows已验。目标active；后续优先数据库或Google系列等剩余实际连接器。
+70095最终exit0：全量3444/3426通过/18skip/0fail，本地目录v1=2/v2=8。截图Frame cnode150替换自身PPT cnode148，保留用户timeline/设计和进度。无本轮后台进程，未发布；继续其余原32项，默认包数不代表完整验收数。

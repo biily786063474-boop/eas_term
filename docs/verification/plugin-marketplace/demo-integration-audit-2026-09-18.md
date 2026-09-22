@@ -23,7 +23,7 @@
 |办公文档|PowerPoint|生成与编辑 PPT 幻灯片|基础实包创建/读/编辑文字与三shim29项已验；图表/图片/动画编辑、视觉效果未验，未发布|
 |办公文档|Google 文档|Docs / Sheets / Slides 读写|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |办公文档|Notion|读写 Notion 页面与数据库|官方远程 MCP + OAuth；宿主接入及真实账号验证待做|
-|生活出行|高德地图|路线规划、周边搜索、地理编码|待核验上游来源、许可、授权、实际工具及平台兼容性|
+|生活出行|高德地图|路线规划、周边搜索、地理编码|stdio实包地理编码/周边/步行驾车路线，密文Key与三shim21项已验；真实账号/供应商数据/TLS/模型CLI/Windows未验|
 |生活出行|天气|查实时天气与未来预报|高德stdio实包、用户Key统一密文配置，隔离三shim实况/预报15项已验；中国支持区域，真实账号/TLS/模型CLI/Windows未验|
 |生活出行|Google 日历|读写日程、创建提醒|待核验上游来源、许可、授权、实际工具及平台兼容性|
 |生活出行|12306 火车票|查余票、时刻、正晚点|待核验上游来源、许可、授权、实际工具及平台兼容性|
@@ -53,7 +53,7 @@
 - `src/main/pluginRegistry.ts`：schema 1 目录只支持下载包元数据，（初次核验时的缺口，现已由requirements门禁及pluginCatalog v2补上；线上目录尚未切换）。
 - `src/main/pluginManifest.ts`：现支持 stdio/remote-none/remote-oauth 清单；stdio 统一配置/目录授权已接；remote Bearer与动态OAuth已接线并有候选；真实供应商账号/兼容性仍待验。
 - `src/main/mcpClient.ts` 与 `pluginHost.ts`：已接 stdio/remote 共享宿主并做真实shim/隔离测试；远程正式 capability 尚未公布，实际模型与真实账号验证不能由这些测试代替。
-- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files、web-fetch、excel、powerpoint、weather；v1 仅前两项，v2 七项，新增目录尚未发布。
+- `scripts/build-plugin-registry.mjs`：默认构建为 pomodoro、board、local-files、web-fetch、excel、powerpoint、weather、amap；v1 仅前两项，v2 八项，新增目录尚未发布。
 - 分发热更新已有基础，但原 Demo 的远程连接、授权和配置不能靠扩大 PLUGINS 数组完成。
 
 ## 已查看官方来源
