@@ -261,3 +261,6 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 ## 2026-09-21 Excel父进程调用层
 上一轮e97a3fe为真实工程进展，本轮复核HEAD及原4个failure.json未动。新增scripts/excel-engine/worker.mjs（固定平台路径+sha/size、无继承env、超时/取消/输出限额、close收尾）、worker.test.mjs、scripts/verify-excel-worker.mjs。先红测8fail；93132首次实现验证exit1，根因macOS临时目录祖先是符号链接，测试fixture未canonical化，修fixture realpath，没有放开生产守卫；37610复测exit0；25922最终exit0：8父进程测试+真实Go binary6业务检查。证据worker.log/worker-result.json。当前原插件仍未调用此模块，不增加完成数；Windows未运行、ExcelGUI未验证。下一步create/read迁移+图表多系列/透视防覆盖，再离线打包及MCP接线。现无后台进程。进度节点原81已被用户/其他任务移除，本轮重新打开cnode-152-snk2h，5/5内容，117他任务禁止关闭。目标active未发布，正式app未修改。
+
+## 2026-09-21 Excel创建/读取迁移
+用户OK继续，复核19c021f为上一轮实际进展；前轮所有进程terminal，无需重启。新增io.go与io_test.go：create多表/标量/显式公式，read类型/公式/缓存，不改写文件、calculated:false。日期数值保持Excel原始序列并披露，非旧ExcelJS的ISO转换。Go测试先红Response.Sheets缺失再实现；29888 Go9测试exit0。worker read结构校验新增红测8pass1fail后实现，38133最终exit0：Go9测试/vet/arm64build、Node9测试、真binary8业务检查。证据io-worker.log与worker-result.json。本轮某shell测试写入被hook拒绝（JS模板插值），改等价字符串拼接后执行，无绕过安全规则。仍没换插件server/打包，正式app未改；下步多系列图表/透视目的地防覆盖、update合并与清除公式兼容，再离线打包及MCP接线。不增加完成插件数，goalactive。

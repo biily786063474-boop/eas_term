@@ -45,7 +45,10 @@ export async function runEngine(packageRoot,request,{signal,timeoutMs=16000,maxO
    if(code!==0)return reject(Error('Excel worker failed ('+code+')'))
    try{
     const value=JSON.parse(Buffer.concat(chunks).toString('utf8'))
-    if(!value||Array.isArray(value)||typeof value!=='object'||Object.keys(value).some(k=>!['workbook','value','note'].includes(k))||Object.values(value).some(v=>typeof v!=='string'))throw Error()
+    if(!value||Array.isArray(value)||typeof value!=='object'||Object.keys(value).some(k=>!['workbook','value','note','sheets','calculated'].includes(k))||['workbook','value','note'].some(k=>value[k]!==undefined&&typeof value[k]!=='string'))throw Error()
+    if(value.sheets!==undefined){
+     if(request.operation!=='read'||value.calculated!==false||value.workbook!==undefined||!validSheets(value.sheets)||bytes>4*1024*1024)throw Error()
+    }else if(request.operation==='read'||value.calculated!==undefined)throw Error()
     if(value.workbook!==undefined){
      if(!/^[A-Za-z0-9+/]*={0,2}$/.test(value.workbook)||value.workbook.length%4!==0)throw Error()
      const b=Buffer.from(value.workbook,'base64')
@@ -56,4 +59,17 @@ export async function runEngine(packageRoot,request,{signal,timeoutMs=16000,maxO
   })
   child.stdin.end(input)
  })
+}
+
+function validSheets(sheets){
+ if(!Array.isArray(sheets)||sheets.length<1||sheets.length>20)return false
+ let count=0
+ const primitive=v=>v===null||typeof v==='boolean'||typeof v==='string'||(typeof v==='number'&&Number.isFinite(v))
+ const cell=v=>{
+  if(primitive(v))return true
+  if(!v||Array.isArray(v)||typeof v!=='object')return false
+  if(typeof v.formula==='string')return Object.keys(v).every(k=>['formula','cachedResult'].includes(k))&&(v.cachedResult===undefined||primitive(v.cachedResult)||(v.cachedResult&&typeof v.cachedResult.error==='string'&&Object.keys(v.cachedResult).length===1))
+  return Object.keys(v).length===1&&(typeof v.error==='string'||typeof v.date==='string')
+ }
+ return sheets.every(s=>s&&typeof s.name==='string'&&Object.keys(s).every(k=>['name','rows'].includes(k))&&Array.isArray(s.rows)&&s.rows.length<=10000&&s.rows.every(r=>Array.isArray(r)&&r.length<=1000&&(count+=r.length)<=50000&&r.every(cell)))
 }

@@ -1,0 +1,39 @@
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.01s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.01s)
+=== RUN   TestCreateReadRoundtrip
+--- PASS: TestCreateReadRoundtrip (0.00s)
+=== RUN   TestCreateRejectsUnsafeOrAmbiguousData
+--- PASS: TestCreateRejectsUnsafeOrAmbiguousData (0.00s)
+=== RUN   TestReadAnalyticsWithoutRewriting
+--- PASS: TestReadAnalyticsWithoutRewriting (0.00s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+PASS
+ok  	eas-term/excel-engine	1.882s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+✔ worker adapter exists (0.339583ms)
+✔ one shot request uses scrubbed env and waits for close (451.19275ms)
+✔ changed executable fails integrity before spawn (2.412334ms)
+✔ symlink executable is refused (2.421584ms)
+✔ timeout kills owned worker and cancellation is distinct (125.645541ms)
+✔ output flood is bounded and worker killed (620.801875ms)
+✔ stderr and malformed responses do not leak raw contents (879.563042ms)
+✔ oversized request rejected before process and pre-abort honored (10.273625ms)
+✔ accepts bounded typed read result but refuses malformed sheet rows (1443.346792ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3584.689375
+{"passed":true,"checks":8,"actualBinary":true,"parentAdapter":true,"platform":"darwin","arch":"arm64","pluginIntegrated":false,"excelVisualVerified":false}

@@ -25,13 +25,14 @@ var cellPattern = regexp.MustCompile(`^[A-Z]{1,3}[1-9][0-9]{0,4}$`)
 var forbiddenFormula = regexp.MustCompile(`(?i)(WEBSERVICE|HYPERLINK|RTD|DDE|CALL|REGISTER\.ID|IMPORTXML|IMPORTDATA)\s*\(`)
 
 type Request struct {
-	Operation string     `json:"operation"`
-	Workbook  []byte     `json:"workbook"`
-	Sheet     string     `json:"sheet,omitempty"`
-	Cell      string     `json:"cell,omitempty"`
-	Changes   []Change   `json:"changes,omitempty"`
-	Chart     *ChartSpec `json:"chart,omitempty"`
-	Pivot     *PivotSpec `json:"pivot,omitempty"`
+	Sheets    []SheetData `json:"sheets,omitempty"`
+	Operation string      `json:"operation"`
+	Workbook  []byte      `json:"workbook"`
+	Sheet     string      `json:"sheet,omitempty"`
+	Cell      string      `json:"cell,omitempty"`
+	Changes   []Change    `json:"changes,omitempty"`
+	Chart     *ChartSpec  `json:"chart,omitempty"`
+	Pivot     *PivotSpec  `json:"pivot,omitempty"`
 }
 type Change struct {
 	Cell    string      `json:"cell"`
@@ -57,9 +58,11 @@ type PivotValue struct {
 	Aggregate string `json:"aggregate"`
 }
 type Response struct {
-	Workbook []byte `json:"workbook,omitempty"`
-	Value    string `json:"value,omitempty"`
-	Note     string `json:"note,omitempty"`
+	Sheets     []SheetData `json:"sheets,omitempty"`
+	Calculated *bool       `json:"calculated,omitempty"`
+	Workbook   []byte      `json:"workbook,omitempty"`
+	Value      string      `json:"value,omitempty"`
+	Note       string      `json:"note,omitempty"`
 }
 
 func cell(v string) error {
@@ -273,7 +276,10 @@ func validateArchive(b []byte) error {
 	return nil
 }
 func Process(r Request) (Response, error) {
-	if r.Operation != "calculate" && r.Operation != "update" && r.Operation != "chart" && r.Operation != "pivot" {
+	if r.Operation == "create" {
+		return create(r)
+	}
+	if r.Operation != "read" && r.Operation != "calculate" && r.Operation != "update" && r.Operation != "chart" && r.Operation != "pivot" {
 		return Response{}, errors.New("unsupported operation")
 	}
 	if e := validateArchive(r.Workbook); e != nil {
@@ -286,6 +292,9 @@ func Process(r Request) (Response, error) {
 	defer f.Close()
 	if len(f.GetSheetList()) > 20 {
 		return Response{}, errors.New("too many sheets")
+	}
+	if r.Operation == "read" {
+		return read(f)
 	}
 	if r.Operation != "pivot" {
 		if e := sheet(f, r.Sheet); e != nil {

@@ -266,3 +266,7 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 - 新增固定平台binary完整性校验、空env、超时/取消/输出限额及close收尾；没有修改正式Excel插件包。
 - 先红测；一次fixture因macOS临时目录symlink失败，canonical化fixture后8测试通过；真实Go引擎经adapter 6业务检查通过（25922 exit0）。
 - 尚未插件市场/三CLI/Excel视觉验收；下一步统一create/read及离线包/MCP接线。无发布。
+
+### 2026-09-21 Excel创建/读取统一处理层
+- 新增create/read至Excelize，保留类型、公式/旧缓存与显式未计算说明；日期数值保留原始序列并披露。父进程新增read结构/大小校验。
+- 38133 exit0：Go9测试+vet+arm64构建、Node9测试、真实引擎8业务检查；未实际应用/Excel验收，插件入口尚未换用，无发布。

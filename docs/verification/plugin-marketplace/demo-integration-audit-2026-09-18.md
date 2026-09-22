@@ -147,3 +147,5 @@ Excel 基础（cd1d084）：read/create/update真实XLSX，三shim26项已验；
 
 ### Excel父进程适配增量 2026-09-21
 8项真实测试进程检查及6项真实Go引擎业务链检查通过（worker.log/worker-result.json），含校验binary、空env、超时/取消和输出限额。仍是引擎接线准备，原插件不变，未补齐原定Excel功能，不新增完成条目。create/read、多系列图表、安全透视目的地、许可证/打包、MCP及应用/Excel验收仍待做。
+
+Excel 2026-09-21增量：引擎create/read已实现并经真实进程8项流程检查；读取calculated:false、日期数值保留原始序列。Go/Node各9测试通过。证据io-worker.log；插件入口、包和实际Excel验收尚未完成，不增可用插件数。

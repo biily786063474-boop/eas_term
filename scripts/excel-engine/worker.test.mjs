@@ -53,3 +53,12 @@ test('oversized request rejected before process and pre-abort honored',async t=>
  await assert.rejects(f.run({operation:'calculate',workbook:'x'.repeat(12*1024*1024)}),/request limit/)
  const c=new AbortController();c.abort();await assert.rejects(f.run({operation:'calculate'},{signal:c.signal}),/cancelled/)
 })
+test('accepts bounded typed read result but refuses malformed sheet rows',async t=>{
+ const value={sheets:[{name:'Sheet1',rows:[[12,true,null,{formula:'SUM(A1:A2)'}]]}],calculated:false,note:'cached only'}
+ const f=await fixture(t,'process.stdout.write('+JSON.stringify(JSON.stringify(value))+')')
+ assert.deepEqual(await f.run({operation:'read'}),value)
+ for(const sheets of [[{name:'x',rows:'bad'}],[{name:'x',rows:[[{secret:'bad'}]]}]]){
+  const g=await fixture(t,'process.stdout.write('+JSON.stringify(JSON.stringify({sheets,calculated:false}))+')')
+  await assert.rejects(g.run({operation:'read'}),/response/)
+ }
+})

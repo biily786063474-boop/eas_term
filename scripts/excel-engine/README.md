@@ -43,3 +43,7 @@ ZIP预检：8MB输入/32MB展开/2000项/100层XML/50000单元格/10000行/1000�
 单次请求12MB、响应12MB、stderr64KB、默认16秒；支持AbortSignal，失败只杀本次所属进程，不全局清理；等close再完成。子进程env空、无shell、stderr不回显。合法响应字段/规范base64/8MB XLSX头检查，完整OOXML守卫仍在Go层。不是OS文件/网络沙箱。平台候选darwin-arm64/darwin-x64/win32-x64，后两者本轮未实际运行。
 
 `node --test scripts/excel-engine/worker.test.mjs` 用真实短命测试进程覆盖父进程生命周期；`node scripts/verify-excel-worker.mjs /absolute/development/binary` 临时复制真实Go引擎跑6项业务检查，结束删除临时目录。尚未自动构建bin/integrity.json或集成market包；先补create/read、多系列与透视防覆盖，再统一迁移，不能直接移除旧ExcelJS复杂工作簿拒绝规则。
+
+## 创建/读取统一迁移（2026-09-21）
+`io.go` 添加create/read，统一使用Excelize；创建支持多工作表、字符串/数字/布尔/null/显式公式，大小/重复工作表/危险公式检查，生成后仍完整ZIP预检。读取保留类型、公式与旧缓存，`calculated:false`；日期数值保留原始Excel序列值（不是原ExcelJS的ISO日期转换），ISO date单元格返回date字段，说明中明确该差异。读取只输出数据，不重新编码原文件，不声称还原图表/透视排版。
+父进程校验read响应结构、4MB/50000cells范围；`verify-excel-worker.mjs`现在用真实引擎create/read，不再借ExcelJS创建fixture，共8项实际业务检查。当前仍未替换插件入口/打包；下一步补齐多系列图表与透视防覆盖、update合并单元格/公式清除兼容性，再接MCP。
