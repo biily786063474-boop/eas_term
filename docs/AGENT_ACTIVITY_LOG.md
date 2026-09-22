@@ -360,3 +360,5 @@ feat/global-timeline-20260918：宿主权限、全局项目聚合、零模型候
 fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合并冲突。重新check3495通过/19跳过/0失败，build通过；保存迁移和公网验收证据。本次未push/发布，未改根工作区。
 
 2026-09-22 插件独立更新/外部来源/离线迁移随0.4.104完成官网与GitHub发布。产品efbb5bf，tag e915531；Windows35726706720 success；Mac双架构公证与归档一致性、ARM CUA迁移历史/重启、x64 Rosetta真实终端通过。全量3496pass/18skip；生产audit0；未修改运行中正式app/根工作树，未全局杀CUA服务。详见docs/verification/releases/0.4.104.md。
+
+2026-09-22 0.4.104发布后用户指出市场卡片不等高并确认方案。已统一96px卡片/三内容槽/可展开完整说明；真实CUA同页及悬停配置验证，全量3498pass/18skip。尚未提交和发布，见docs/verification/plugin-marketplace/card-height/。

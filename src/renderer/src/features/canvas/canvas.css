@@ -2906,6 +2906,8 @@
   gap: 9px;
 }
 .pm-card {
+  box-sizing: border-box;
+  height: 96px;
   display: flex;
   min-width: 0;
   align-items: flex-start;
@@ -2920,6 +2922,9 @@
   border-color: var(--glass-border-strong);
 }
 .pm-cb {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
   flex: 1;
   min-width: 0;
 }
@@ -7085,3 +7090,18 @@
 .pm-source-form { margin:0 22px 12px; padding:14px; border:1px solid var(--glass-border); border-radius:10px; color:var(--fg); font-size:12px; }
 .pm-source-form p { color:var(--fg-dim); line-height:1.6; }
 .pm-source-form input { display:block; width:100%; margin:8px 0; box-sizing:border-box; }
+
+/* Card content has three fixed slots; expanded notes never participate in row sizing. */
+.pm-card .pm-ct { height: 20px; flex: none; }
+.pm-card-description { line-height: 16px; height: 16px; flex: none; }
+.pm-card-meta { display: flex; align-items: center; gap: 8px; margin-top: auto; min-width: 0; height: 18px; }
+.pm-card-status { flex: 1; min-width: 0; margin: 0; line-height: 18px; }
+.pm-card-details { flex: none; font-size: 11px; color: var(--fg-dim); }
+.pm-card-details summary { cursor: pointer; list-style: none; border-radius: 3px; }
+.pm-card-details summary::-webkit-details-marker { display: none; }
+.pm-card-details summary:hover, .pm-card-details[open] summary { color: var(--fg); }
+.pm-card-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pm-card:has(.pm-card-details[open]) { z-index: 5; }
+.pm-card-notes { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5; padding: 12px; max-height: 240px; overflow: auto; border: 1px solid var(--glass-border-strong); border-radius: 10px; background: var(--s-2); box-shadow: 0 8px 24px #0003; color: var(--fg); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.pm-card-notes p { margin: 6px 0; }
+.pm-card-notes .pm-cd { white-space: normal; }

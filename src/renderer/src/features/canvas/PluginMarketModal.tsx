@@ -175,13 +175,24 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             <b>{it.displayName}</b>
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
           </div>
-          {it.description && <div className="pm-cd">{it.description}</div>}
-          {it.plugin?.cli === 'eas' && <div className="pm-cd">{it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}{update ? ` · 有更新 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 内置副本' : ''}</div>}
-          {action === 'migrate' && <div className="pm-cd pm-update-notice">可安装独立版 v{it.reg!.version}；{it.plugin?.version ? '之后通过市场更新' : '旧版无版本号，无法比较新旧'}</div>}
-          {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
-          {it.plugin?.marketSource?.url && <div className="pm-cd pm-update-notice">安装来源：{it.plugin.marketSource.url}</div>}
-          {!sameSource && it.reg && <div className="pm-cd pm-update-notice">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
-          {it.plugin?.shadowedBuiltin && <div className="pm-cd pm-update-notice">{it.plugin.shadowedBuiltin}</div>}
+          <div className="pm-cd pm-card-description" title={it.description}>{it.description || '暂无简介'}</div>
+          <div className="pm-card-meta">
+            <span className="pm-cd pm-card-status" title={it.plugin?.version ? `已安装 v${it.plugin.version}` : undefined}>
+              {!sameSource && it.reg ? '来源不符 · 禁止覆盖' : it.reason ? '未开放接入' : it.plugin?.cli === 'eas' ? `${it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}${update ? ` · 有更新 v${it.reg!.version}` : ''}${it.plugin.builtin ? ' · 内置副本' : ''}` : it.installed ? '已安装' : '未安装'}
+            </span>
+            <details className="pm-card-details">
+              <summary aria-label={`${it.displayName}的完整说明`}>详情</summary>
+              <div className="pm-card-notes">
+                <b>{it.displayName}</b>
+                <p>{it.description || '暂无简介'}</p>
+                {action === 'migrate' && <div className="pm-cd pm-update-notice">可安装独立版 v{it.reg!.version}；{it.plugin?.version ? '之后通过市场更新' : '旧版无版本号，无法比较新旧'}</div>}
+                {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
+                {it.plugin?.marketSource?.url && <div className="pm-cd pm-update-notice">安装来源：{it.plugin.marketSource.url}</div>}
+                {!sameSource && it.reg && <div className="pm-cd pm-update-notice">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
+                {it.plugin?.shadowedBuiltin && <div className="pm-cd pm-update-notice">{it.plugin.shadowedBuiltin}</div>}
+              </div>
+            </details>
+          </div>
         </div>
         <div className="pm-cact">
           {it.plugin?.config&&<PluginConfigurationControls plugin={it.plugin}/>}
