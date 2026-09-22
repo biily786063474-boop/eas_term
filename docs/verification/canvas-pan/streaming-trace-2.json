@@ -1,0 +1,43 @@
+{
+  "viewportStacks": [
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9",
+    "Error\n    at <anonymous>:1:382\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:40\n    at Set.forEach (<anonymous>)\n    at setState (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:28:18)\n    at setViewport (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:2303:5)\n    at flush (file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56440:16)\n    at file:///private/tmp/eas-canvas-pan-20260921/out/renderer/assets/index-CXGpgFM_.js:56447:9"
+  ],
+  "streamBytesDuringPan": 494,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 496.2000000476837,
+  "p95": 9.299999952316284,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 13,
+  "cpuMs": {
+    "TaskDuration": 325.187,
+    "ScriptDuration": 84.03099999999999,
+    "LayoutDuration": 8.61,
+    "RecalcStyleDuration": 60.078
+  },
+  "lifecycle": {
+    "releaseStable": true,
+    "releaseFinal": true,
+    "blurStable": true,
+    "blurFinal": true,
+    "retained": true
+  },
+  "appRoot": "/private/tmp/eas-canvas-pan-20260921",
+  "heavy": true,
+  "agentSessions": 0,
+  "agentStarts": 0
+}

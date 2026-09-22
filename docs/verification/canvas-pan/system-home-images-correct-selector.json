@@ -1,0 +1,29 @@
+{
+  "streamBytesDuringPan": 0,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 499.8000000715256,
+  "p95": 9,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 0,
+  "cpuMs": {
+    "TaskDuration": 108.553,
+    "ScriptDuration": 55.737,
+    "LayoutDuration": 0,
+    "RecalcStyleDuration": 9.201
+  },
+  "lifecycle": {
+    "releaseStable": true,
+    "releaseFinal": true,
+    "blurStable": true,
+    "blurFinal": true,
+    "retained": true
+  },
+  "appRoot": "/private/tmp/eas-canvas-pan-20260921",
+  "heavy": false,
+  "agentSessions": 0,
+  "agentStarts": 0
+}
