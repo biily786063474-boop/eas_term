@@ -267,3 +267,7 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 ## 2026-09-21 用户选择1：补Excel功能保护
 上一轮是状态答复（no progress），本轮复核7121f46，执行mutation.go与5项测试。支持<=20多系列、类别值等长向量；update拒绝合并区域、普通值/null清除公式；pivot拒绝源/目的有值或公式/合并/table/已存在pivot重叠。首次测试红缺Series，并发现测试用了不存在GetCharts，改为真实ZIP中XML namespace-aware ser计数；55702初跑因测试假设c:前缀fail，改标准XML解析；新增未刷新pivot重复目标红测后补GetPivotTables检查。99027最终exit0：Go14 tests/vet/arm64build，Node9 tests，真worker8业务检查，mutation.log。防覆盖仅声明区域，不保证Excel刷新后扩张。新发现上游drawing.go drawChartSeries Name直接写strRef/f，历史纯文字Name可能不正确，下一步先解决图表名称语义再插件接线；不要将原生series存在冒充显示正确。原插件仍未改，无GUI/Windows验证、无发布、goalactive。进度节点152沿用，无后台命令剩余。
+
+## 2026-09-21 用户要求收尾第一项：图例文字修正
+复核c7950ba；前次状态答复no progress，转执行。chart_names_test先红literal encoded as formula reference；新增chart_names.go，比较before/after ZIP仅处理本次新chart，XML token定位series/tx，写转义文本v而非strRef公式，原文件其余部件复制且再次validateArchive。51473 Go15/vet/build/真实worker8 exit0。再加旧图不变测试，93167最终需核对exit：Go16、Node9、真实worker8。本机/Applications与~/Applications都无Microsoft Excel（仅Numbers Creator Studio），工具发现无Excel MCP，不能声称Excel实机验收通过。第1项还欠实际显示/刷新及声明区域外增长策略；插件server仍未接入，不增加完成数，不发布。继续可自主工程工作，不把缺Excel视为整个goalblocked。
+93167已核对exit0：Go16、Node9、真实worker8通过，chart-names.log已保存。无本轮后台命令残留。

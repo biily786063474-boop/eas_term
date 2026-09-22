@@ -416,10 +416,17 @@ func Process(r Request) (Response, error) {
 	if e != nil {
 		return Response{}, errors.New("cannot encode workbook")
 	}
-	if e = validateArchive(b.Bytes()); e != nil {
+	encoded := b.Bytes()
+	if r.Operation == "chart" {
+		encoded, e = literalChartNames(r.Workbook, encoded, r.Chart)
+		if e != nil {
+			return Response{}, e
+		}
+	}
+	if e = validateArchive(encoded); e != nil {
 		return Response{}, e
 	}
-	out := Response{Workbook: b.Bytes()}
+	out := Response{Workbook: encoded}
 	if r.Operation == "pivot" {
 		out.Note = "原生透视表已写入；须由Excel打开刷新，未计算缓存汇总"
 	}

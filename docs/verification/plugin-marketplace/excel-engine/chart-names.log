@@ -1,0 +1,53 @@
+=== RUN   TestChartNamesAreLiteralAndSurviveUpdate
+--- PASS: TestChartNamesAreLiteralAndSurviveUpdate (0.01s)
+=== RUN   TestLiteralNamesOnlyChangeNewChart
+--- PASS: TestLiteralNamesOnlyChangeNewChart (0.01s)
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.02s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.01s)
+=== RUN   TestCreateReadRoundtrip
+--- PASS: TestCreateReadRoundtrip (0.00s)
+=== RUN   TestCreateRejectsUnsafeOrAmbiguousData
+--- PASS: TestCreateRejectsUnsafeOrAmbiguousData (0.00s)
+=== RUN   TestReadAnalyticsWithoutRewriting
+--- PASS: TestReadAnalyticsWithoutRewriting (0.01s)
+=== RUN   TestUpdateClearsFormulaAndRejectsMergedCells
+--- PASS: TestUpdateClearsFormulaAndRejectsMergedCells (0.04s)
+=== RUN   TestChartMultipleSeries
+--- PASS: TestChartMultipleSeries (0.01s)
+=== RUN   TestChartRejectsMismatchedVector
+--- PASS: TestChartRejectsMismatchedVector (0.00s)
+=== RUN   TestPivotRejectsSourceAndOccupiedDestination
+--- PASS: TestPivotRejectsSourceAndOccupiedDestination (0.00s)
+=== RUN   TestPivotRejectsExistingUnrefreshedPivot
+--- PASS: TestPivotRejectsExistingUnrefreshedPivot (0.01s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+PASS
+ok  	eas-term/excel-engine	0.968s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+✔ worker adapter exists (0.656541ms)
+✔ one shot request uses scrubbed env and waits for close (935.168ms)
+✔ changed executable fails integrity before spawn (8.402916ms)
+✔ symlink executable is refused (7.399416ms)
+✔ timeout kills owned worker and cancellation is distinct (135.784292ms)
+✔ output flood is bounded and worker killed (1533.767792ms)
+✔ stderr and malformed responses do not leak raw contents (1946.96275ms)
+✔ oversized request rejected before process and pre-abort honored (15.383ms)
+✔ accepts bounded typed read result but refuses malformed sheet rows (4281.935542ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8942.342125
+{"passed":true,"checks":8,"actualBinary":true,"parentAdapter":true,"platform":"darwin","arch":"arm64","pluginIntegrated":false,"excelVisualVerified":false}
