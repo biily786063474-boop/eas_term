@@ -7,12 +7,12 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"ok\":true,\"pid\":10505,\"note\":\"时间线面板已请求打开\"}"
+            "text": "{\"ok\":true,\"pid\":85773,\"note\":\"时间线面板已请求打开\"}"
           }
         ],
         "structuredContent": {
           "ok": true,
-          "pid": 10505,
+          "pid": 85773,
           "note": "时间线面板已请求打开"
         }
       }
@@ -28,12 +28,12 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"ok\":true,\"pid\":10563,\"note\":\"HOT-UPDATE-PROBE\"}"
+            "text": "{\"ok\":true,\"pid\":85823,\"note\":\"HOT-UPDATE-PROBE\"}"
           }
         ],
         "structuredContent": {
           "ok": true,
-          "pid": 10563,
+          "pid": 85823,
           "note": "HOT-UPDATE-PROBE"
         }
       }
@@ -51,8 +51,8 @@
     "passed": true,
     "opened": {
       "ok": true,
-      "panelSession": "eeb8bfadce2370a2763373f3",
-      "url": "eas-plugin://eeb8bfadce2370a2763373f3/",
+      "panelSession": "bb88735f72525adfeaf76e9b",
+      "url": "eas-plugin://bb88735f72525adfeaf76e9b/",
       "tools": [
         {
           "name": "timeline_global_list",
@@ -269,12 +269,12 @@
         "content": [
           {
             "type": "text",
-            "text": "{\"ok\":true,\"pid\":10757,\"note\":\"HOT-UPDATE-PROBE\"}"
+            "text": "{\"ok\":true,\"pid\":85927,\"note\":\"HOT-UPDATE-PROBE\"}"
           }
         ],
         "structuredContent": {
           "ok": true,
-          "pid": 10757,
+          "pid": 85927,
           "note": "HOT-UPDATE-PROBE"
         }
       }

@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "productCommit": "97494eb",
+  "windowsRun": 35703021002,
+  "macSmoke": [
+    "arm64",
+    "x64-Rosetta"
+  ],
+  "archives": [
+    "arm64",
+    "x64"
+  ],
+  "physicalIntel": false
+}

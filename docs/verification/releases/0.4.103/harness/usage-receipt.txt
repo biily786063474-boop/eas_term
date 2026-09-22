@@ -1,0 +1,83 @@
+// Run against scripts/verify-usage-drawer.mjs (synthetic ledger, isolated userData).
+// Catches global filtering, leaked rows and shared pagination.
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import {execFileSync} from 'node:child_process'
+const port = process.env.USAGE_VERIFY_PORT || '9452'
+const target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(p => p.type === 'page' && p.title === 'Eas-Term')
+assert.ok(target, 'isolated Eas-Term must be running')
+const ws = new WebSocket(target.webSocketDebuggerUrl)
+await new Promise(resolve => { ws.onopen = resolve })
+let seq = 0
+const pending = new Map()
+ws.onmessage = e => { const m = JSON.parse(e.data); if (m.id) { pending.get(m.id)?.(m); pending.delete(m.id) } }
+const call = (method, params = {}) => new Promise((resolve, reject) => {
+ const id = ++seq
+ const timeout=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timed out: '+method))},15000)
+ pending.set(id, m => {clearTimeout(timeout);m.error ? reject(new Error(m.error.message)) : resolve(m.result)})
+ ws.send(JSON.stringify({id, method, params}))
+})
+const run = async expression => {
+ const r = await call('Runtime.evaluate', {expression, returnByValue: true, awaitPromise: true})
+ if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text)
+ return r.result.value
+}
+const wait = async expression => {
+ for (let i = 0; i < 100; i++) { if (await run(`!!(${expression})`)) return; await new Promise(r => setTimeout(r, 50)) }
+ assert.fail(`Timed out: ${expression}`)
+}
+const click=async selector=>{
+ const p=await run(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+ await call('Input.dispatchMouseEvent',{type:'mousePressed',...p,button:'left',clickCount:1})
+ await call('Input.dispatchMouseEvent',{type:'mouseReleased',...p,button:'left',clickCount:1})
+}
+try {
+ await call('Page.bringToFront'); await call('Page.reload'); await new Promise(r=>setTimeout(r,700))
+ await run(`document.querySelector('.wk-edge-guide')?.click()`)
+ await wait(`document.querySelector('.ud-hero')`)
+ assert.equal(await run(`document.querySelectorAll('.ud-report-trigger').length`),2,'week and month receipt buttons exist')
+ const pid=execFileSync('lsof',['-ti',`tcp:${port}`,'-sTCP:LISTEN'],{encoding:'utf8'}).trim().split('\n')[0]
+ assert.match(execFileSync('ps',['-p',pid,'-o','command='],{encoding:'utf8'}),/eas-usage-verify-/)
+ const activate=()=>call('Page.bringToFront')
+ activate()
+ await run(`document.querySelector('.ud-report-trigger').click()`)
+ await wait(`document.querySelector('.ur-paper')`)
+ assert.equal(await run(`(()=>{const paper=document.querySelector('.ur-paper-window'),slot=document.querySelector('.ur-slot'),p=paper.getBoundingClientRect(),s=slot.getBoundingClientRect();return p.top>=s.top&&p.top<s.bottom&&Number(getComputedStyle(paper).zIndex)>Number(getComputedStyle(document.querySelector('.ur-printer')).zIndex)})()`),true,'paper emerges above machine body from inside slot')
+ assert.equal(await run(`!!document.querySelector('.ur-paper-curve')`),true,'preview has a separate curved paper surface')
+ await new Promise(r=>setTimeout(r,250))
+ assert.equal(await run(`new DOMMatrix(getComputedStyle(document.querySelector('.ur-paper')).transform).m42<0`),true,'paper moves down from printer slot')
+ fs.mkdirSync('docs/verification/usage-receipt',{recursive:true})
+ const printing=await call('Page.captureScreenshot',{format:'png',fromSurface:false})
+ fs.writeFileSync('docs/verification/usage-receipt/printing.png',Buffer.from(printing.data,'base64'))
+ await wait(`document.querySelector('.ur-actions button:not(:disabled)')`)
+ assert.equal(await run(`document.querySelector('.ur-dialog').open`),true)
+ assert.equal(await run(`(()=>{const r=document.querySelector('.ur-dialog').getBoundingClientRect();return Math.abs(r.x+(r.width/2)-innerWidth/2)<2&&r.y>=15})()`),true,'receipt dialog is centered with viewport padding')
+ assert.match(await run(`document.querySelector('.ur-paper').getAttribute('src')`),/svg/)
+ await click('[data-receipt-action="text"]')
+ await wait(`document.querySelector('.ur-status').textContent.includes('已复制文字')`)
+ assert.match(await run(`window.api.clipboard.readText()`),/本周用量小票/)
+ await click('[data-receipt-action="copy"]')
+ await wait(`document.querySelector('.ur-status').textContent.includes('已复制图片')`)
+ assert.equal(await run(`window.api.clipboard.hasImage()`),true)
+ const png=await run(`(()=>{const img=document.querySelector('.ur-paper');const c=document.createElement('canvas');c.width=880;c.height=1600;c.getContext('2d').drawImage(img,0,0,880,1600);return c.toDataURL('image/png').split(',')[1]})()`)
+ fs.mkdirSync('docs/verification/usage-receipt',{recursive:true})
+ fs.writeFileSync('docs/verification/usage-receipt/receipt.png',Buffer.from(png,'base64'))
+ const shot=await call('Page.captureScreenshot',{format:'png',fromSurface:false})
+ fs.mkdirSync('docs/verification/usage-receipt',{recursive:true})
+ fs.writeFileSync('docs/verification/usage-receipt/weekly.png',Buffer.from(shot.data,'base64'))
+ await run(`document.querySelector('.ur-close').click();document.querySelectorAll('.ud-report-trigger')[1].click()`)
+ await wait(`document.querySelector('.ur-paper')`)
+ await wait(`document.querySelector('.ur-actions button:not(:disabled)')`)
+ await click('[data-receipt-action="text"]')
+ await wait(`document.querySelector('.ur-status').textContent.includes('已复制文字')`)
+ assert.match(await run(`window.api.clipboard.readText()`),/本月用量小票/)
+ await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+ await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+ await wait(`!document.querySelector('.ur-dialog')`)
+ await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})
+ await run(`document.querySelector('.ud-report-trigger').click()`)
+ await wait(`document.querySelector('.ur-actions button:not(:disabled)')`)
+ assert.equal(await run(`getComputedStyle(document.querySelector('.ur-paper')).animationName`),'none')
+ await call('Emulation.setEmulatedMedia',{features:[]})
+ console.log('Receipt UI: weekly/monthly, PNG clipboard and text clipboard passed')
+} finally { ws.close() }

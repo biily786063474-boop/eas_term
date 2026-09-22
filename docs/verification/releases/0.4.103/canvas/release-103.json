@@ -1,0 +1,32 @@
+{
+  "videoProgress": null,
+  "videoPlaying": null,
+  "streamBytesDuringPan": 0,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 523.1000000238419,
+  "p95": 9.399999976158142,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 12,
+  "cpuMs": {
+    "TaskDuration": 198.74,
+    "ScriptDuration": 62.702999999999996,
+    "LayoutDuration": 6.153,
+    "RecalcStyleDuration": 52.276999999999994
+  },
+  "lifecycle": {
+    "releaseStable": true,
+    "releaseFinal": true,
+    "blurStable": true,
+    "blurFinal": true,
+    "retained": true,
+    "imagesRestored": true
+  },
+  "appRoot": "/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.103",
+  "heavy": false,
+  "agentSessions": 0,
+  "agentStarts": 0
+}
