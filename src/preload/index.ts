@@ -230,6 +230,7 @@ interface PrefsSnapshot {
 
 const api = {
   usage: {
+    receipt: (mode: 'copy'|'save', data: string): Promise<{ok:boolean;cancelled?:boolean;path?:string;error?:string}> => ipcRenderer.invoke('usage:receipt',mode,data),
     query: (q: UsageQuery): Promise<UsageSnapshot> => ipcRenderer.invoke('usage:query', q),
     stage: (id: string, stage: string): Promise<void> => ipcRenderer.invoke('usage:stage', id, stage),
     export: (q: UsageQuery): Promise<{ok: boolean; cancelled?: boolean; path?: string; error?: string}> => ipcRenderer.invoke('usage:export', q)

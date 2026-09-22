@@ -26,7 +26,7 @@ function validateQuery(args) {
   if (taskKey!==undefined && (typeof taskKey!=='string' || taskKey.length>100)) throw Error('taskKey 无效')
   return {limit,offset,month,date,query,taskKey}
 }
-export function listGlobal(authorizedProjects,args={}) {
+export function collectGlobal(authorizedProjects,args={}) {
   const {limit,offset,...query}=validateQuery(args)
   const selected=selection(authorizedProjects,args.projectIds)
   const rows=[],errors=[],roots=new Set()
@@ -49,7 +49,11 @@ export function listGlobal(authorizedProjects,args={}) {
   rows.sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||a.projectId.localeCompare(b.projectId)||a.id.localeCompare(b.id))
   const days={}
   for(const row of rows)days[row.date]=(days[row.date]??0)+1
-  return {total:rows.length,days,items:rows.slice(offset,offset+limit),nextOffset:offset+limit<rows.length?offset+limit:null,partial:errors.length>0,errors}
+  return {total:rows.length,days,items:rows,nextOffset:null,partial:errors.length>0,errors}
+}
+export function listGlobal(authorizedProjects,args={}) {
+ const {limit,offset}=validateQuery(args),result=collectGlobal(authorizedProjects,args)
+ return {...result,items:result.items.slice(offset,offset+limit),nextOffset:offset+limit<result.total?offset+limit:null}
 }
 export function getGlobal(authorizedProjects,{projectId,id}) {
   const p=selection(authorizedProjects,[projectId])[0]

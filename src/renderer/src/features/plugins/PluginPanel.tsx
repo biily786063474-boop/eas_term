@@ -10,6 +10,9 @@
 //
 // 安全判据：只处理 `event.source === iframe.contentWindow` 的消息 —— iframe 是 sandbox 且没有
 // allow-same-origin，origin 是 opaque（"null"），**不能拿 origin 当判据**（2026-09-05 核对 §八.3）。
+import { ReceiptDialog } from '../canvas/ReceiptDialog'
+import type { ReceiptContent } from '../canvas/receiptReport'
+import { timelineReceipt } from './timelineReceipt'
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { getCanvasComponent, type CanvasComponentCtx } from '../canvas/components/registry'
@@ -45,6 +48,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
   const nodeH = useStore((s) => s.canvas.frames.find((x) => x.id === ctx.frameId)?.nodes.find((x) => x.id === ctx.nodeId)?.h ?? 340)
   const nodeSize = { w: nodeW, h: nodeH }
   const [state, setState] = useState<State>({ k: 'loading' })
+  const [report,setReport]=useState<ReceiptContent|null>(null)
+  const reportPending=useRef(false)
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const initializedRef = useRef(false)
@@ -58,6 +63,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
       return
     }
     let live = true
+    setReport(null)
     initializedRef.current = false
     setState({ k: 'loading' })
     void window.api.plugins.panelOpen({ pluginId, panelId, ctx: panelCtx, resumeStopped: reloadKey > 0 }).then((r) => {
@@ -111,6 +117,19 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
           initializedRef.current = true
           return
         }
+        case 'panel/timeline-report': {
+          if(pluginId!=='eas:timeline'||reportPending.current||report){post(errorResponse(r.id,-32602,'无法重复打开成果周报'));return}
+          reportPending.current=true
+          try {
+            const res=await window.api.plugins.panelRpc(state.session,r.method,r.params)
+            if(sessionRef.current!==state.session)return
+            if(!res.ok)throw new Error(res.error)
+            setReport(timelineReceipt(res.result))
+            post(resultResponse(r.id,{opened:true}))
+          }catch(error){post(errorResponse(r.id,-32603,String(error)))}
+          finally{reportPending.current=false}
+          return
+        }
         case 'ping':
           post(resultResponse(r.id, {}))
           return
@@ -129,7 +148,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, nodeW, nodeH, ctx.frameId, ctx.nodeId])
+  }, [state, nodeW, nodeH, ctx.frameId, ctx.nodeId, report])
 
   // 宿主 → 面板
   useEffect(() => {
@@ -137,6 +156,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
     return window.api.plugins.onPanelNotify((p) => {
       if (p.panelSession !== state.session) return
       if (p.method === 'ui/resource-teardown') {
+        setReport(null)
         setState({ k: 'error', msg: '插件进程退出了' })
         return
       }
@@ -167,6 +187,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
       </div>
     )
   return (
+    <>
+    {report&&<ReceiptDialog title={report.title} initialContent={report} privacy="分享包含项目名称和成果标题，不包含路径、正文或证据。" onClose={()=>setReport(null)}/>}
     <iframe
       key={state.session}
       ref={iframeRef}
@@ -177,5 +199,6 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
       // top-navigation / forms。这是设计稿第五节的第 1 条验收项。
       sandbox="allow-scripts"
     />
+    </>
   )
 }

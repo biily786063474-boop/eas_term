@@ -45,3 +45,8 @@ test('a ledger too large to read is never written over the previous file',async(
  await assert.rejects(saveLedger(file,{version:1,since:1,rows:[row]}))
  assert.equal(loadLedger(file).rows.length,0)
 })
+test('report activity counts the full range, not the hundred-row page',()=>{
+ const rows=Array.from({length:120},(_,i)=>({id:String(i),session:'s'+i,project:'/a',projectName:'A',cli:'codex',model:'m',startedAt:new Date(2026,8,21+(i%2),12).getTime(),status:'completed' as const}))
+ const q=queryLedger({version:1,since:1,rows},{from:new Date(2026,8,21).getTime(),to:new Date(2026,8,23).getTime()})
+ assert.deepEqual(q.activity,{days:2,sessions:120})
+})
