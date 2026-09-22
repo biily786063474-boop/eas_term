@@ -1,0 +1,290 @@
+{
+  "update": {
+    "passed": true,
+    "before": {
+      "ok": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"ok\":true,\"pid\":85773,\"note\":\"时间线面板已请求打开\"}"
+          }
+        ],
+        "structuredContent": {
+          "ok": true,
+          "pid": 85773,
+          "note": "时间线面板已请求打开"
+        }
+      }
+    },
+    "oldUpdated": {
+      "ok": false,
+      "code": -32602,
+      "error": "面板已失效，请重新打开插件"
+    },
+    "actual": {
+      "ok": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"ok\":true,\"pid\":85823,\"note\":\"HOT-UPDATE-PROBE\"}"
+          }
+        ],
+        "structuredContent": {
+          "ok": true,
+          "pid": 85823,
+          "note": "HOT-UPDATE-PROBE"
+        }
+      }
+    }
+  },
+  "uninstall": {
+    "passed": true,
+    "actual": {
+      "ok": false,
+      "code": -32602,
+      "error": "面板已失效，请重新打开插件"
+    }
+  },
+  "reinstall": {
+    "passed": true,
+    "opened": {
+      "ok": true,
+      "panelSession": "bb88735f72525adfeaf76e9b",
+      "url": "eas-plugin://bb88735f72525adfeaf76e9b/",
+      "tools": [
+        {
+          "name": "timeline_global_list",
+          "description": "查询已授权项目的全局成果摘要与热力图。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "month": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "projectIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "offset": {
+                "type": "integer"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_global_get",
+          "description": "读取指定项目的一项成果。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "projectId",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_candidates",
+          "description": "查询待确认候选，不计入成果热力图。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_show",
+          "description": "打开项目时间线面板。不回传完整历史。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "_meta": {
+            "ui/resourceUri": "ui://timeline/panel"
+          }
+        },
+        {
+          "name": "timeline_list",
+          "description": "按月份/日期/taskKey/标题查询里程碑摘要（默认30，最多200）。按需读取，不每轮全量扫描。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "month": {
+                "type": "string"
+              },
+              "date": {
+                "type": "string"
+              },
+              "taskKey": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_get",
+          "description": "按 ID 读取一项成果的详细说明与依据。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_record",
+          "description": "新增/更新一个独立成果。taskKey 为同一目标稳定标识；已有记录更新不重复计数，date 保留发生日。只在交付阶段调用，禁止把工具调用/普通问答拆成里程碑。回执只含ID与状态。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskKey": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "summary": {
+                "type": "string",
+                "maxLength": 4000
+              },
+              "date": {
+                "type": "string",
+                "description": "成果发生日 YYYY-MM-DD，本地日期；更新保留原日期"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "verified",
+                  "accepted"
+                ]
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12
+              },
+              "artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12
+              },
+              "author": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskKey",
+              "title",
+              "summary",
+              "date"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "timeline_review",
+          "description": "仅收到补漏提醒后，若上轮无需里程碑，用简短理由确认已检查；不会新增成果。",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "canvasAllow": [],
+      "title": "时间线",
+      "version": "0.0.0"
+    },
+    "actual": {
+      "ok": true,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"ok\":true,\"pid\":85927,\"note\":\"HOT-UPDATE-PROBE\"}"
+          }
+        ],
+        "structuredContent": {
+          "ok": true,
+          "pid": 85927,
+          "note": "HOT-UPDATE-PROBE"
+        }
+      }
+    }
+  },
+  "checks": [
+    "builtin plugin discovered",
+    "updated plugin can reinitialize",
+    "retired update process has exited",
+    "old exit callback cannot remove replacement process",
+    "uninstalled process has exited"
+  ]
+}

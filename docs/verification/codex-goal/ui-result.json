@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "checks": [
+    "native second turn begins without another user message; host remains busy",
+    "native goal token budget stops continuation after two turns",
+    "both real CLI replies visible in Electron",
+    "ordinary resumed question finishes without automatic extra turn",
+    "user stop clears busy and does not restart"
+  ],
+  "realCli": true,
+  "realModel": false
+}

@@ -1,0 +1,19 @@
+{
+  "streamBytesDuringPan": 0,
+  "updates": 60,
+  "events": 480,
+  "elapsed": 533.7000000476837,
+  "p95": 9.5,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 12,
+  "cpuMs": {
+    "TaskDuration": 115.983,
+    "ScriptDuration": 58.903,
+    "LayoutDuration": 0,
+    "RecalcStyleDuration": 10.02
+  },
+  "phase": "timing-only-before-lifecycle"
+}

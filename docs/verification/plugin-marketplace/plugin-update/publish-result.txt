@@ -1,0 +1,14 @@
+(node:71614) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/plugin-update-release/src/main/pluginCatalog.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "release": "85aa81d4-ab5f-477e-81ec-75b0a47c18c0",
+  "packages": 7,
+  "uploadedPackages": 1,
+  "catalogs": [
+    "v2/registry.json",
+    "registry.json"
+  ]
+}
+Remote files promoted. HTTP/CDN visibility still requires separate verification; no service reload performed.

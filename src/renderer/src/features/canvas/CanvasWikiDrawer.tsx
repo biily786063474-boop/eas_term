@@ -94,7 +94,7 @@ export function CanvasWikiDrawer(): JSX.Element | null {
       const t = e.target as HTMLElement
       // 右键菜单/确认弹窗 portal 到 body，DOM 上不在抽屉里但逻辑上属于它。
       // 不放过的话：右键笔记点「重命名」，抽屉当场收起，输入框跟着滑出屏幕
-      if (t.closest?.('.canvas-ctxmenu') || t.closest?.('.context-menu') || t.closest?.('.confirm-overlay')) return
+      if (t.closest?.('.canvas-ctxmenu') || t.closest?.('.context-menu') || t.closest?.('.confirm-overlay') || t.closest?.('.ur-dialog')) return
       // 判的是**外壳**不是抽屉本体：模式胶囊挂在抽屉左侧、DOM 上是它的兄弟，
       // 但逻辑上就是抽屉的一部分。把边界画在 .wk-shell 上，胶囊自然在里面 ——
       // 比给它单开一条豁免干净（那种名单迟早会漏下一个新控件）。

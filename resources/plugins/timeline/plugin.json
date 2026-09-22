@@ -1,3 +1,41 @@
 {
- "name":"timeline","displayName":"时间线","description":"AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。","category":"Productivity","brandColor":"#B7D2C5","composerIcon":"./ui/icon.svg","defaultPrompt":"请在完成独立成果后调用时间线记录；同一成果沿用 taskKey 更新。先推进当前任务，不要扫描全部历史。","mcp":{"command":"node","args":["./server.mjs"]},"panels":[{"id":"main","title":"时间线","tool":"timeline_show","entry":"ui://timeline/panel","defaultSize":{"w":850,"h":720}}],"permissions":{"canvas":[]}
+  "name": "timeline",
+  "displayName": "时间线",
+  "description": "AI 记录项目里程碑；月度热力图、弧形拨轮与成果详情。项目内保存，按成果去重。",
+  "category": "Productivity",
+  "brandColor": "#B7D2C5",
+  "composerIcon": "./ui/icon.svg",
+  "defaultPrompt": "请在完成独立成果后调用时间线记录；同一成果沿用 taskKey 更新。先推进当前任务，不要扫描全部历史。",
+  "mcp": {
+    "command": "node",
+    "args": [
+      "./server.mjs"
+    ]
+  },
+  "panels": [
+    {
+      "id": "main",
+      "title": "时间线",
+      "tool": "timeline_show",
+      "entry": "ui://timeline/panel",
+      "defaultSize": {
+        "w": 850,
+        "h": 720
+      }
+    }
+  ],
+  "permissions": {
+    "canvas": [],
+    "events": [
+      "agent.turn.completed"
+    ]
+  },
+  "version": "1.0.0",
+  "requirements": {
+    "minHostVersion": "0.4.103",
+    "capabilities": [
+      "mcp.stdio",
+      "events.agent-turn-completed"
+    ]
+  }
 }

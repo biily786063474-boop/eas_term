@@ -20,12 +20,12 @@ import * as gate from './pluginInstallGate.ts'
 // @ts-expect-error packaging script has no declaration
 import {packPlugin} from '../../scripts/pack-plugin.mjs'
 
-function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown) {
+function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown, permissions?: unknown) {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'market-boundary-'))
   t.after(()=>fs.rmSync(root,{recursive:true,force:true}))
   const userData=path.join(root,'data'), home=path.join(root,'home'), dir=path.join(root,'sample')
   fs.mkdirSync(dir,{recursive:true})
-  const raw={name:'sample',version:'1.0.0',mcp:{command:'node'},...(requirements === undefined ? {}:{requirements})}
+  const raw={name:'sample',version:'1.0.0',mcp:{command:'node'},...(permissions?{permissions}:{}),...(requirements === undefined ? {}:{requirements})}
   fs.writeFileSync(path.join(dir,'plugin.json'),JSON.stringify(raw))
   const {entry,zipPath}=packPlugin(dir,{outRoot:path.join(root,'out'),registrySchema:2})
   const handlers=new Map<string, (...args:any[])=>any>()
@@ -140,4 +140,15 @@ test('unreadable old manifest is unknown, never a no-change claim',async t=>{
  fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'plugin.json'),'invalid JSON')
  const result=await h.call('plugins:install','sample')
  assert.equal(result.ok,true);assert.equal(result.permissionChanges,null)
+})
+
+ test('event access is disclosed as an added update permission without enabling recording',async t=>{
+ const h=harness(t,undefined,{canvas:[],events:['agent.turn.completed']})
+ const dir=path.join(h.home,'.eas/plugins/sample');fs.mkdirSync(dir,{recursive:true})
+ fs.writeFileSync(path.join(dir,'plugin.json'),JSON.stringify({name:'sample',mcp:{command:'node'}}))
+ const staged=await h.call('plugins:install','sample')
+ assert.equal(staged.ok,true,staged.error)
+ assert.ok(staged.permissions.includes('订阅事件：agent.turn.completed（仍需单独授权）'))
+ assert.ok(staged.permissionChanges.added.includes('订阅事件：agent.turn.completed（仍需单独授权）'))
+ assert.equal(fs.existsSync(path.join(h.userData,'plugin-event-grants.json')),false)
 })

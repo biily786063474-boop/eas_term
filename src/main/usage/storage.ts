@@ -55,6 +55,7 @@ export function queryLedger(data:LedgerFile,q:UsageQuery):UsageSnapshot {
  const sessions=new Map<string,UsageRow[]>()
  for(const r of rows){if(!visibleSessions.has(r.session))continue;const group=sessions.get(r.session)??[];group.push(r);sessions.set(r.session,group)}
  return {
+  activity:{days:new Set(rows.map(r=>{const d=new Date(r.startedAt);return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`})).size,sessions:new Set(rows.map(r=>r.session)).size},
   sessions:[...sessions].map(([id,rs])=>({id,summary:summarize(rs,q.from,q.to)})),
   summary:summarize(rows,q.from,q.to),
   projects:[...projects].map(([path,rs])=>({path,name:rs[rs.length-1].projectName,trend:trend(rs),summary:summarize(rs,q.from,q.to)})).sort((a,b)=>b.summary.tokens-a.summary.tokens),

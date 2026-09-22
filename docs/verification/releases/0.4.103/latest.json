@@ -1,0 +1,16 @@
+{
+  "version": "0.4.103",
+  "mac_arm64": "/download/v0.4.103/Eas-Term-0.4.103-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.103/Eas-Term-0.4.103-arm64.zip",
+  "mac_x64": "/download/v0.4.103/Eas-Term-0.4.103-x64.dmg",
+  "macZip_x64": "/download/v0.4.103/Eas-Term-0.4.103-x64.zip",
+  "mac": "/download/v0.4.103/Eas-Term-0.4.103-arm64.dmg",
+  "win": "/download/v0.4.103/Eas-Term-0.4.103-x64-setup.exe",
+  "notes": [
+    "全局时间线汇总多个项目的成果，支持按项目与时间筛选。",
+    "用量与时间线支持生成可打印小票；用量页可直接展开项目明细。",
+    "优化多模块画布拖动，减少平移时不必要的内容更新。",
+    "修复 Codex 原生目标跨轮次继续执行时的忙碌状态与续跑处理，保留普通问答和主动停止的行为。"
+  ],
+  "published": "2026-09-22T08:38:27.612727+00:00"
+}

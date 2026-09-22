@@ -45,7 +45,7 @@ const gate = createInstallGate()
 
 // Only advertise implemented capabilities; remote/OAuth are not ready yet.
 function currentPluginHost() {
-  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio', 'config.fields'] }
+  return { version: app.getVersion(), platform: process.platform, architecture: process.arch, capabilities: ['mcp.stdio', 'config.fields', 'events.agent-turn-completed'] }
 }
 
 
@@ -247,12 +247,17 @@ async function installStage(name: unknown): Promise<InstallResult> {
     return { ok: false, error: packageCheck.reason }
   }
   const canvasPerms = man.info.permissions?.canvas ?? []
+  const eventPerms = man.info.permissions?.events ?? []
   // registry 声明了权限就必须与包内一致(防目录谎报权限);没声明则以包内为准
   if (entry.permissions && !sameCanvasPerms(entry.permissions.canvas, canvasPerms)) {
     fs.rmSync(stageParent, { recursive: true, force: true })
     return { ok: false, error: '目录声明的权限与包内清单不一致,已拒' }
   }
 
+  if (!sameCanvasPerms(entry.permissions?.events, eventPerms)) {
+    fs.rmSync(stageParent, { recursive: true, force: true })
+    return { ok: false, error: '目录声明的事件权限与包内清单不一致，已拒' }
+  }
   const networkPerms=man.info.remote?.approvedOrigins??[]
   if(networkPerms.length&&(!entry.permissions||!sameCanvasPerms(entry.permissions.network,networkPerms))){
     fs.rmSync(stageParent,{recursive:true,force:true})
@@ -265,16 +270,16 @@ async function installStage(name: unknown): Promise<InstallResult> {
     version: entry.version,
     requirements: entry.requirements,
     displayName: man.info.displayName,
-    permissions: { canvas: canvasPerms, network: networkPerms } as Record<string, string[]>,
+    permissions: { canvas: canvasPerms, network: networkPerms, events: eventPerms } as Record<string, string[]>,
     size: entry.size
   })
-  const permissions=[...canvasPerms,...networkPerms.map(origin=>"连接远程服务："+origin)]
+  const permissions=[...canvasPerms,...eventPerms.map(event=>"订阅事件："+event+"（仍需单独授权）"),...networkPerms.map(origin=>"连接远程服务："+origin)]
   const installed=fs.existsSync(guard.dir)
   let changes:PluginPermissionChanges|null=null
   if(installed){
     try{
       const previous=parseManifest(JSON.parse(fs.readFileSync(path.join(guard.dir,'plugin.json'),'utf8')),guard.dir,{builtin:false,exists:p=>fs.existsSync(p)})
-      if(previous.ok)changes=permissionChanges([...(previous.info.permissions?.canvas??[]),...(previous.info.remote?.approvedOrigins??[]).map(origin=>"连接远程服务："+origin)],permissions)
+      if(previous.ok)changes=permissionChanges([...(previous.info.permissions?.canvas??[]),...(previous.info.permissions?.events??[]).map(event=>"订阅事件："+event+"（仍需单独授权）"),...(previous.info.remote?.approvedOrigins??[]).map(origin=>"连接远程服务："+origin)],permissions)
     }catch{/* Unknown previous manifest must never be presented as no changes. */}
   }
   return {

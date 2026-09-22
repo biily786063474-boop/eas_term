@@ -216,3 +216,9 @@ EAS_VERIFY_REAL_OMP="$PWD/resources/omp/mac-arm64/omp" node --test src/main/capa
 
 ### 2026-09-16 时间线 MCP
 `eas:timeline` 经既有 `eas-plugin-shim.mjs → /plugin/rpc → pluginHost → server.mjs`，提供 show/list/get/record/review；固定项目存储，无外网依赖。仅该插件转发 `EAS_TIMELINE_SESSION`，宿主按会话与 cwd 匹配成功回执。面板写入通知复用现有宿主机制；读取不触发刷新循环。record 以 taskKey 更新同一成果、保持发生日；verified/accepted 要求证据。list 是分页摘要，get 才返回正文。
+
+### 2026-09-18 全局时间线接线
+时间线增加 timeline_global_list / timeline_global_get / timeline_candidates，宿主注入可信 _meta.projects，模型不能自报授权目录。panel/grant/revoke/state 为用户面板权限；panel/resolve-candidate 为时间线专用；events/turn-completed 仅宿主→子进程，shim 不允许透传。
+
+### 2026-09-18 插件连接撤销
+插件文件变化或卸载使旧 panelSession/shimId 失效；旧 shim 必须重新 initialize，不能仅因同名新进程存在而复用旧授权连接。事件队列 invalidatePluginEvents 丢弃旧 generation，下一次授权完成事件重新订阅。用户已保存的采集开关与历史数据不删除。

@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "checks": [
+    "whole selected week counts independent records",
+    "status counts are current states",
+    "no summaries or evidence in receipt",
+    "timeline receipt PNG clipboard",
+    "previous week excludes current week",
+    "receipt follows project filter",
+    "invalid week rejected"
+  ],
+  "output": "/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.103/docs/verification/releases/0.4.103/packaged-timeline"
+}

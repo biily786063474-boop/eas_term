@@ -13,6 +13,7 @@ export interface UsageSummary {
 }
 export interface UsageQuery { from: number; to: number; project?: string; page?: number }
 export interface UsageSnapshot {
+  activity?: {days:number; sessions:number}
   summary: UsageSummary
   projects: {path: string; name: string; summary: UsageSummary; trend: (number|null)[]}[]
   cli: {name: string; summary: UsageSummary}[]

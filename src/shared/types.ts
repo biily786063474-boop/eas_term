@@ -760,6 +760,8 @@ export interface PluginInfo {
   config?: import('./pluginConfig').PluginConfig
   /** Valid installed package version; absent for legacy/unknown manifests. */
   version?: string
+  /** User copy masks a bundled copy; informational, never permission to auto-replace. */
+  shadowedBuiltin?: string
   /** `<cli>:<name>`，唯一。用于 UI key 和「这次会话带哪个插件」的引用 */
   id: string
   /** 属于哪个 CLI —— **决定用哪个 adapter 起会话**，不能猜。
@@ -793,7 +795,7 @@ export interface PluginInfo {
   /** 面板：每个是一份 `ui://` HTML 资源，渲染成画布上的 `plugin-panel` 组件节点 */
   panels?: PluginPanelDef[]
   /** 面板桥 `eas/canvas.call` 的允许集（已经和宿主全局白名单取过交集） */
-  permissions?: { canvas?: string[] }
+  permissions?: { canvas?: string[]; events?: string[] }
   /** 插件 MCP server 的启动方式。相对路径已按插件目录解成绝对路径；cwd = 插件目录 */
   mcp?: { command: string; args: string[]; env: Record<string, string>; cwd: string }
   /** Main-validated remote descriptor; no credentials. OAuth requires separate capability. */

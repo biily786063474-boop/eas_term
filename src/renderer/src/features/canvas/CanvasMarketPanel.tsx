@@ -217,7 +217,7 @@ export function CanvasMarketPanel(): JSX.Element {
 
       {/* ── 完整市场入口 ── */}
       <button className="mk-full" onClick={() => setShowMarket(true)}>
-        <span>查看完整插件市场</span>
+        <span>查看完整插件市场 · 检查更新</span>
         <ChevronRightIcon size={14} />
       </button>
 

@@ -7074,3 +7074,8 @@
  .pm-card:has(.pm-card-settings) .pm-cb { margin-right: 84px; }
  .pm-card:has(.pm-card-settings) .pm-done { opacity: 0; }
 }
+
+/* Version/migration notices must not inherit the one-line description ellipsis. */
+.pm-update-notice { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; margin-top: 5px; }
+.pm-update-action { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.pm-card:has(.pm-update-action) .pm-setting-entry { right: 110px; border-radius: 0; }

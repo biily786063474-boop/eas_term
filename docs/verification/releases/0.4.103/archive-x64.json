@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "hashes": {
+    "Resources/app.asar": "e90ba2dc337c8e5d97b7b9073a74ed26bf472736a0ce5f107611c5cc95d0bf22",
+    "MacOS/Eas-Term": "ea26aa23ae3825fe58d2b3cd1fd142a4ee1b5b064150803d678cb4d317dca695"
+  },
+  "zipExtract": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-103-archive-x64-bokdrwwb",
+  "arch": "x64"
+}

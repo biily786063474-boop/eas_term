@@ -1,0 +1,54 @@
+[
+  {
+    "file": "registry.json",
+    "sha256": "837ea2316d4c3af2533ac7166d37d5a5698a1b6dd3e61b0c5efe25893e110b99",
+    "bytes": 1221
+  },
+  {
+    "file": "v2/registry.json",
+    "sha256": "06446df264eb2284baaeb54e68851910c28befb1004d3625f0d82d7a235a0391",
+    "bytes": 4641
+  },
+  {
+    "file": "pomodoro",
+    "version": "1.0.0",
+    "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+    "bytes": 8033
+  },
+  {
+    "file": "board",
+    "version": "1.0.0",
+    "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+    "bytes": 7344
+  },
+  {
+    "file": "excel",
+    "version": "1.1.0",
+    "sha256": "44a57c6c6ec52ed5f552c97860954e8e5944ff4e7d5b11db52fc977fc0b9c734",
+    "bytes": 11197190
+  },
+  {
+    "file": "word",
+    "version": "1.0.0",
+    "sha256": "8d36d110c69f81d80d78205a5ae2dab7c2c5b1f6d175ef25e98bcfd4ff03c16a",
+    "bytes": 237473
+  },
+  {
+    "file": "powerpoint",
+    "version": "1.0.1",
+    "sha256": "f951223f78bdfaa5e02acf841dae04c8231964e7b9a7de22a6e751e182c78fa8",
+    "bytes": 200997
+  },
+  {
+    "file": "local-files",
+    "version": "1.0.0",
+    "sha256": "774ca7c91330c18788c923768052804ecabc4659ed26929d044f8c28f908ee89",
+    "bytes": 4554
+  },
+  {
+    "file": "timeline",
+    "version": "1.0.0",
+    "sha256": "a3b36fbe52565b31de1094ed133423fee576ce002bb00ce559ec564f9c4b0a77",
+    "bytes": 24978
+  }
+]

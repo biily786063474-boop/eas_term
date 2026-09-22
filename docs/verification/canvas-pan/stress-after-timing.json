@@ -1,0 +1,18 @@
+{
+  "updates": 60,
+  "events": 480,
+  "elapsed": 544.7000000476837,
+  "p95": 16.300000071525574,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 24,
+  "cpuMs": {
+    "TaskDuration": 540.8870000000001,
+    "ScriptDuration": 95.22999999999999,
+    "LayoutDuration": 7.574,
+    "RecalcStyleDuration": 116.73400000000001
+  },
+  "phase": "timing-only-before-lifecycle"
+}

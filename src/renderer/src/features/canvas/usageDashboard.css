@@ -9,7 +9,7 @@
 .ud-hero{background:linear-gradient(135deg,rgba(var(--accent-rgb),.12),transparent)}
 .ud-hero>strong{display:block;font-size:39px;font-weight:600;letter-spacing:-1.5px;margin:8px 0}.ud-hero p,.ud-foot,.ud-round p,.ud-empty p{font-size:11px;line-height:1.8;opacity:.65;margin:5px 0}
 .ud-metrics{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}.ud-metrics div{font-size:11px;opacity:.85}.ud-metrics b{display:block;font-size:17px;margin-top:5px;font-weight:500}
-.ud-heading{margin-bottom:12px}.ud-heading>span,.ud-axis,.ud-chart-caption,.ud-session small{font-size:10px;opacity:.55}
+.ud-heading{margin-bottom:12px}.ud-heading>span,.ud-axis,.ud-chart-caption{font-size:10px;opacity:.55}
 .ud-chart{width:100%;display:block;overflow:visible}.ud-grid{stroke:var(--glass-border);stroke-dasharray:3 4}.ud-line{stroke:var(--accent);stroke-width:2;fill:none}.ud-dot{fill:var(--accent);cursor:pointer}.ud-unknown{fill:none;stroke:var(--accent);cursor:pointer}
 .ud-axis{display:flex;justify-content:space-between}.ud-chart-caption{min-height:28px;line-height:1.6;margin:12px 0 0}
 .ud-project{width:100%;display:flex;position:relative;align-items:center;justify-content:space-between;text-align:left;margin-top:8px!important;padding:12px!important;overflow:hidden;gap:10px}.ud-project span{min-width:0;overflow-wrap:anywhere}.ud-project small{display:block;opacity:.5;font-size:10px;margin-top:5px}.ud-project i{position:absolute;height:2px;bottom:0;left:0;background:var(--accent);opacity:.6}.ud-project.selected{border-color:var(--accent)}
@@ -19,3 +19,36 @@
 .ud-project{flex-wrap:wrap}.ud-project-trend{width:100%;height:40px;display:block;flex-basis:100%}
 
 .ud-line{stroke-linecap:round;stroke-linejoin:round}
+
+.ud-project-name{flex:1}.ud-project>b{white-space:nowrap}
+.ud-project-chevron{display:inline-block;margin-right:6px;color:var(--accent)}
+.ud-project-details{padding:0 12px 12px;margin-top:6px;border:1px solid var(--glass-border);border-radius:7px;background:var(--glass-1);min-width:0}
+.ud-project-coverage{font-size:10px;line-height:1.7;color:var(--text-2);margin:14px 0}
+.ud-project-details .ud-metrics{gap:12px}.ud-project-details .ud-metrics b{font-size:15px}
+.ud-project-details .ud-heading{flex-wrap:wrap}.ud-project-details .ud-pagination{flex-wrap:wrap}
+
+.ud-three-scroll{display:flex;flex-direction:column;min-height:0;max-height:180px;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;border-radius:6px}
+.ud-three-scroll>details{flex-shrink:0}
+.ud-three-scroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ud-rounds-scroll{background:transparent}
+
+/* Secondary drill-down surface; totals and project metrics remain the visual lead. */
+.ud-session-list{margin-top:16px;padding:12px;background:var(--ink-1);border-top:1px solid var(--glass-border);border-radius:0 0 8px 8px;color:var(--text-2);font-size:11px}
+.ud-session-list>.ud-heading{margin-bottom:0;gap:6px;flex-wrap:wrap;cursor:pointer;list-style:none}
+.ud-session-list>.ud-heading::-webkit-details-marker{display:none}
+.ud-session-list>.ud-heading::before{content:'▸';font-size:10px;color:var(--text-3)}
+.ud-session-list[open]>.ud-heading{margin-bottom:8px}
+.ud-session-list[open]>.ud-heading::before{content:'▾'}
+.ud-session-list>.ud-heading>b{flex:1}
+.ud-session-list>.ud-heading:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+.ud-session-list>.ud-heading>b{font-size:11px;font-weight:400;color:var(--text-2)}
+.ud-session-list>.ud-heading>span,.ud-session-list .ud-session small{font-size:10px;color:var(--text-3);opacity:1}
+.ud-session-list .ud-session>summary{line-height:1.65}
+.ud-session-list .ud-session small{display:block;margin-left:12px;line-height:1.6}
+.ud-session-list .ud-round summary b{font-weight:400}
+.ud-session-list .ud-round p{font-size:10px;color:var(--text-2);opacity:1}
+.ud-session-list summary:hover{color:var(--text-1)}
+.ud-session-list .ud-pagination{color:var(--text-3);padding-top:10px;border-top:1px solid var(--glass-border)}
+.ud-session-list button,.ud-session-list input{background:transparent;color:var(--text-2)}
+.ud-panel>.ud-card:has(>.ud-session-list){padding:0;border:0;background:transparent}
+.ud-panel>.ud-card>.ud-session-list{margin-top:0}

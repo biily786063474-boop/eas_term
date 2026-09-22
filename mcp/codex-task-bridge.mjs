@@ -1,0 +1,104 @@
+// App-server lifetime belongs to the submitted task, not its first native turn.
+// This bridge never creates goals or sends synthetic continuation prompts.
+import readline from 'node:readline'
+export function parseTaskArgs(args) {
+ if(args[0]!=='exec'||args.length<2)throw Error('Expected managed exec arguments')
+ const out={prompt:args.at(-1),flags:[],sandbox:'workspace-write'}
+ for(let i=1;i<args.length-1;i++) {
+  const a=args[i]
+  if(a==='--json'||a==='--skip-git-repo-check')continue
+  if(['--sandbox','-m','--model','resume','--disable','--enable'].includes(a)) {
+   if(i+1>=args.length-1)throw Error('Missing managed argument')
+   const v=args[++i]
+   if(a==='--sandbox')out.sandbox=v
+   else if(a==='resume')out.resumeId=v
+   else if(a==='-m'||a==='--model')out.model=v
+   else out.flags.push(a,v)
+  } else throw Error('Unsupported managed task argument: '+a)
+ }
+ if(!['read-only','workspace-write','danger-full-access'].includes(out.sandbox))throw Error('Invalid sandbox')
+ return out
+}
+function itemEvent(item,turnId) {
+ const id=turnId+':'+item.id
+ switch(item.type) {
+  case 'agentMessage':return {id,type:'agent_message',text:item.text,phase:item.phase}
+  case 'reasoning':return null
+  case 'userMessage':case 'hookPrompt':return null
+  case 'commandExecution':return {id,type:'command_execution',command:item.command,aggregated_output:item.aggregatedOutput,exit_code:item.exitCode,status:item.status==='completed'&&item.exitCode? 'failed':item.status}
+  case 'fileChange':return {id,type:'file_change',changes:item.changes?.map(c=>({...c,kind:typeof c.kind==='object'?c.kind.type:c.kind})),status:item.status==='declined'?'failed':item.status}
+  case 'mcpToolCall':return {id,type:'mcp_tool_call',server:item.server,tool:item.tool,arguments:item.arguments,result:item.result,error:item.error,status:item.status}
+  case 'webSearch':return {id,type:'web_search',query:item.query,action:item.action,status:'completed'}
+  default:return {...item,id,type:item.type.replace(/[A-Z]/g,x=>'_'+x.toLowerCase())}
+ }
+}
+export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model,emit,signal,requestTimeoutMs=30000}) {
+ let seq=0,threadId,settled=false,revision=0,started=false
+ let usage={input_tokens:0,output_tokens:0,cached_input_tokens:0}
+ const pending=new Map(),active=new Set(),finished=new Set(),seenItems=new Set(),early=[]
+ let resolveDone,rejectDone
+ const done=new Promise((r,j)=>{resolveDone=r;rejectDone=j});done.catch(()=>{})
+ const write=m=>{if(!proc.stdin.writable)throw Error('Codex input closed');proc.stdin.write(JSON.stringify(m)+'\n')}
+ const fail=e=>{if(settled)return;settled=true;for(const p of pending.values()){clearTimeout(p.timer);p.reject(e)}pending.clear();rejectDone(e)}
+ const rpc=(method,params)=>new Promise((resolve,reject)=>{
+  const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('Codex RPC timeout: '+method))},requestTimeoutMs)
+  pending.set(id,{resolve,reject,timer})
+  try{write({id,method,params})}catch(e){clearTimeout(timer);pending.delete(id);reject(e)}
+ })
+ const finish=()=>{if(settled)return;settled=true;emit({type:'turn.completed',usage});resolveDone()}
+ async function checkGoal(mark) {
+  const r=await rpc('thread/goal/get',{threadId})
+  if(settled||mark!==revision||active.size)return
+  if(r.goal?.status==='active')return
+  if(r.goal && !['paused','blocked','usageLimited','budgetLimited','complete'].includes(r.goal.status))throw Error('Unknown native goal state')
+  finish()
+ }
+ function notification(m) {
+  if(settled)return
+  const p=m.params??{}
+  if(!threadId){early.push(m);if(early.length>1000)fail(Error('Codex notification overflow'));return}
+  if(p.threadId!==threadId)return
+  if(m.method==='turn/started') {if(!finished.has(p.turn.id)){active.add(p.turn.id);revision++}return}
+  if(m.method==='thread/tokenUsage/updated') {
+   const u=p.tokenUsage?.total;if(u)usage={input_tokens:u.inputTokens??0,output_tokens:u.outputTokens??0,cached_input_tokens:u.cachedInputTokens??0};return
+  }
+  if(m.method==='item/started'||m.method==='item/completed') {
+   const key=m.method+':'+p.turnId+':'+p.item.id;if(seenItems.has(key))return;seenItems.add(key)
+   const item=itemEvent(p.item,p.turnId);if(item)emit({type:m.method==='item/started'?'item.started':'item.completed',item});return
+  }
+  if(m.method==='error'&&!p.willRetry) {fail(Error(p.error?.message||'Codex task failed'));return}
+  if(m.method==='turn/completed') {
+   const t=p.turn;if(finished.has(t.id))return;finished.add(t.id);active.delete(t.id);revision++
+   if(t.status!=='completed'){fail(Error(t.error?.message||'Codex turn '+t.status));return}
+   void checkGoal(revision).catch(fail);return
+  }
+  if((m.method==='thread/goal/updated'||m.method==='thread/goal/cleared')&&started&&finished.size&&!active.size)void checkGoal(++revision).catch(fail)
+ }
+ const lines=readline.createInterface({input:proc.stdout})
+ lines.on('line',line=>{
+  try {
+   const m=JSON.parse(line)
+   if(m.id!==undefined&&m.method) {write({id:m.id,error:{code:-32601,message:'Eas-Term does not support this interactive request in managed task mode'}});fail(Error('Codex requires unsupported interactive request: '+m.method));return}
+   if(m.id!==undefined){const p=pending.get(m.id);if(!p)return;pending.delete(m.id);clearTimeout(p.timer);m.error?p.reject(Error(m.error.message||'Codex RPC failed')):p.resolve(m.result);return}
+   notification(m)
+  }catch(e){fail(e)}
+ })
+ const exited=()=>fail(Error('Codex app-server exited before task completion'))
+ const aborted=()=>fail(Error('Codex task cancelled'))
+ proc.on('exit',exited);proc.on('error',fail);proc.stdin.on('error',fail);proc.stdout.on('error',fail);signal?.addEventListener('abort',aborted,{once:true})
+ try {
+  if(signal?.aborted)throw Error('Codex task cancelled')
+  await rpc('initialize',{clientInfo:{name:'eas-term',version:'1'},capabilities:{experimentalApi:true}});write({method:'initialized'})
+  const r=await rpc(resumeId?'thread/resume':'thread/start',{...(resumeId?{threadId:resumeId}:{}),cwd,sandbox,approvalPolicy:'never',...(model?{model}:{})})
+  threadId=r.thread.id;emit({type:'thread.started',thread_id:threadId});for(const m of early.splice(0))notification(m)
+  // Check protocol support before starting a paid turn. Never silently fall back to exec.
+  await rpc('thread/goal/get',{threadId})
+  started=true
+  const result=await rpc('turn/start',{threadId,input:[{type:'text',text:prompt}],...(model?{model}:{})})
+  if(!finished.has(result.turn.id))active.add(result.turn.id)
+  await done
+ }finally {
+  settled=true;lines.close();proc.off('exit',exited);proc.off('error',fail);proc.stdin.off('error',fail);proc.stdout.off('error',fail);signal?.removeEventListener('abort',aborted)
+  for(const p of pending.values()){clearTimeout(p.timer);p.reject(Error('Codex task closed'))}pending.clear()
+ }
+}

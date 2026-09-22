@@ -393,3 +393,14 @@ pluginMarket的installCommit/uninstall在同步写盘前调用pluginHost.assertP
 配置存储不许复用OAuth token字段藏值：独立configuration命名空间和payload kind/version防交换；写入复用同一writePayload租约重验与原子替换。所有配置值只允许主进程用，不能新增renderer明文读取接口；storage envelope校验不等于字段规则或目录授权。
 
 配置启动闸替换条件已落实到stdio：不能再一律拒绝info.config，需connectPluginConfiguration校验并持有租约；remote+config仍失败关闭。EAS_PLUGIN_CONFIG由宿主最后覆盖、仅传插件进程，spawn后清引用；所有关闭路径释放租约，锁定必须关闭准确的插件client，不能全局杀服务。目录picker返回值只在主进程转为inode绑定grant，再确认/重验清单/检查idle后保存；普通save不接受目录字符串。
+
+## Codex 原生目标生命周期（2026-09-18）
+
+AI 对话专用 `taskLifecycle: true` 由 `session.ts` 传给 `codexCapabilityLaunch.ts`，经 `mcp/eas-codex-launcher.mjs` 转入 `mcp/codex-task-bridge.mjs`。外层仍用 adapter 的 exec 参数与 stdin ignore，但 launcher 内部实际运行 app-server，原生子进程 stdin/stdout 为 JSON-RPC 管道；终端入口不启用此模式。
+
+原生每轮 completed 不等于宿主任务结束：本地 thread/goal/get 为 active 时保留服务、等待原生续轮，不造目标、不发送“继续”。只在无活动轮次且 goal 非 active 时输出一次宿主 turn.completed。事件按 thread 过滤而非锁死初始 turn；工具 ID 带 turn 前缀。停止只关闭所属进程，协议不兼容失败关闭，不静默回退 exec，不额外付费轮询。角色、配置合并、MCP 和沙箱约束沿用现有预检。证据与边界见 `../verification/codex-goal/`。
+
+## 画布平移第一阶段（2026-09-21，12闲置对话场景已验收）
+CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提交一次，松手/失焦/卸载收尾 flush 并取消残留帧；不改变全局 setViewport 同步语义，不改滚轮/缩放算法。PaneView 对 TerminalView 与 AgentChatView 使用 React.memo 默认浅比较：位置只影响外壳，内容内部 store/state 更新不被阻断。禁止通过卸载不可见面板或停止进程换取性能。源码基于 main 471456f，不混入其他未提交修改。
+
+2026-09-22 合并市场更新与热插拔时，pluginHost 的 onEnded 同时保留配置日志脱敏、remote.onClose/stdio.onExit 与 stopWatching。远程测试须提供真实可监听的临时插件目录，不能删除生产 watchPluginFiles 来让旧夹具通过。事件权限加入目录/包一致性和更新差异提示；当前新增 events.agent-turn-completed 能力仅代表现有受授权事件桥，不等于全局记录自动开启。

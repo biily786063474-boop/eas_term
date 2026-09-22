@@ -2,6 +2,7 @@
 // Owned by one Eas-Term process generation. Never edits user config or retries a turn.
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import {parseTaskArgs,runCodexTaskBridge} from './codex-task-bridge.mjs'
 import { resolveCliInvocation, cliInvocationEnv } from './cli-entry.mjs'
 import { readAndMergeCodexConfig } from './codex-capability-config.mjs'
 
@@ -80,12 +81,26 @@ try {
   const merged = await readAndMergeCodexConfig({ binary: invocation.command, prefixArgs: invocation.args, cwd: configCwd, env: cliEnv, userConfigArgs, managedAssignments: assignments, signal: abort.signal })
   if (terminating) process.exitCode = 130
   else {
-    // Global config options precede the exec subcommand, preserving positional prompts.
-    child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...args], { cwd: process.cwd(), env: cliEnv, stdio: 'inherit', windowsHide: true })
-    const code = await new Promise(resolve => {
+    const task = input.taskLifecycle === true ? parseTaskArgs(args) : undefined
+    const nativeArgs = task ? ['app-server', ...task.flags] : args
+    child = spawn(invocation.command, [...invocation.args, ...userConfigArgs, ...merged.flatMap(value => ['-c', value]), ...nativeArgs], { cwd: process.cwd(), env: cliEnv, stdio: task ? ['pipe', 'pipe', 'inherit'] : 'inherit', windowsHide: true })
+    const exited = new Promise(resolve => {
       child.once('error', () => resolve(1))
       child.once('exit', (status, signal) => resolve(status ?? (signal === 'SIGINT' ? 130 : 143)))
     })
+    let code
+    if (task) {
+      try {
+        await runCodexTaskBridge({proc: child, ...task, cwd: process.cwd(), signal: abort.signal, emit: event => process.stdout.write(JSON.stringify(event) + '\n')})
+        code = 0
+      } catch {
+        code = terminating ? 130 : 1
+        if (!terminating) process.stdout.write(JSON.stringify({type:'turn.failed',error:{message:'Codex 原生任务连接中断或协议不兼容；未自动重试，请检查 CLI 版本及连接。'}}) + '\n')
+      } finally {
+        stop('SIGTERM')
+        await exited
+      }
+    } else code = await exited
     clearTimeout(killTimer)
     process.exitCode = code
   }

@@ -41,6 +41,7 @@ import os from 'node:os'
 
 import type { PluginInfo } from '../shared/types'
 import { parseManifest } from './pluginManifest.ts'
+import { mergePluginCopies } from './pluginCopies.ts'
 import { parseEnabledState, isPluginEnabled, setPluginEnabled, type EnabledState } from './pluginEnabledState.ts'
 import { app } from 'electron'
 
@@ -212,9 +213,7 @@ function easPluginsIn(root: string, builtin: boolean): PluginInfo[] {
 }
 function easPlugins(): PluginInfo[] {
   const user = easPluginsIn(userPluginsDir(), false)
-  const taken = new Set(user.map((p) => p.name))
-  const builtin = easPluginsIn(builtinPluginsDir(), true).filter((p) => !taken.has(p.name))
-  return [...user, ...builtin]
+  return mergePluginCopies(user, easPluginsIn(builtinPluginsDir(), true))
 }
 
 // ── 开启/关闭总闸（设计 2026-09-15）──────────────────────────────────────

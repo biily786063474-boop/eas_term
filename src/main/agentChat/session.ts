@@ -7,6 +7,7 @@ import {loadProjects} from '../projects'
 import { withAgentSecrets } from '../agentSecretEnv'
 import { forgetPty, forgetSecretToken } from '../secrets'
 import { captureUsage, interruptUsage, markUsageInterrupted, resetUsageCost } from '../usage/index.ts'
+import { observePluginTurn, cancelPluginTurn } from '../pluginEvents.ts'
 import { ownCodexLauncher, stopAgentProcess } from '../../../mcp/owned-launcher-control.mjs'
 import { cliInvocation } from '../cliInvocation.ts'
 // 会话进程管理。这一层是胶水：spawn / 喂行 / 推事件 / 定时回收。
@@ -482,6 +483,7 @@ function handleEvent(live: Live, e: ChatEvent): void {
   // A dead ACP's UI-only repair receipt does not consume its retained send queue.
   const repairOnly = e.k === 'turn.done' && live.acp?.phase() === 'dead' && !e.meter && !e.interrupted
   if (!repairOnly) captureUsage(live.rec, e)
+  observePluginTurn(live.rec.id, live.rec.cwd, e)
   if (live.rec.pluginId === 'eas:timeline') {
     if (e.k === 'turn.start') timelineRuntime.begin(live.rec.id, live.rec.cwd)
     else if (e.k === 'text.done') timelineRuntime.text(live.rec.id, e.text)
@@ -715,6 +717,7 @@ function wireProc(live: Live, proc: ChildProcess): void {
     )
     const interrupted =
       !selfKilled && (!!signal || live.rec.busy === true || (code !== 0 && code !== null))
+    if (interrupted || live.rec.busy === true) cancelPluginTurn(live.rec.id)
     // **崩在半路的一轮，要给渲染层一个 turn.done。** 2026-09-13 用户实拍：Codex 遇到
     // 「Selected model is at capacity」带 code=1 退出，这里只推了下面那条 fatal error，
     // 而归约器收到 fatal 只复位 turnActive —— 这一轮跑过工具的话
@@ -928,7 +931,7 @@ function restartAndDeliverNow(live: Live, opts: StartOpts, message: string): Age
     const args = built.stdin === 'ignore' ? [...built.args, message] : built.args
 
     const launch = live.rec.cli === 'codex'
-      ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath })
+      ? codexCapabilityLaunch(built.bin, args, { isPackaged: app.isPackaged, appPath: app.getAppPath(), resourcesPath: process.resourcesPath, electron: process.execPath }, { taskLifecycle: true })
       : cliInvocation(live.rec.cli, built.bin, args)
     const controlledCodex = process.platform === 'win32' && live.rec.cli === 'codex'
     const proc = spawn(launch.command, launch.args, {
@@ -1919,6 +1922,7 @@ export function registerAgentChatHandlers(): void {
    *  用户按下「停」本来就是不想要那一轮，这个代价是他要的。 */
   guardedOn('agentChat:interrupt', (_e, sessionId: unknown) => {
     const id = typeof sessionId === 'string' ? sessionId : ''
+    cancelPluginTurn(id)
     const live = sessions.get(id)
     if (live) cancelRuntimeStartup(live)
     if (live && (!live.acp || live.acp.phase() === 'prompting')) markUsageInterrupted(live.rec)

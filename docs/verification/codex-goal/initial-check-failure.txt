@@ -1,0 +1,15 @@
+✖ failing tests:
+
+test at src/main/codexCapabilityLauncher.test.mjs:74:84
+✖ owned IPC disconnect during config waits for the actual child to exit (5011.51575ms)
+  AssertionError [ERR_ASSERTION]: 5 秒内夹具没到达 config 阶段：{"phase":"config","elapsedMs":5005,"launcherPid":92175,"launcherExitCode":null,"launcherSignal":null,"stderr":"","rows":[],"loadavg":["10.6","7.8","6.8"],"freeMemMB":2320}
+      at TestContext.<anonymous> (file:///private/tmp/eas-timeline-integrate/src/main/codexCapabilityLauncher.test.mjs:79:10)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

@@ -1,5 +1,5 @@
 import { AGENT_CHAT_MIN_WIDTH } from '../../paneSizing'
-import { lazy, Suspense, useEffect, useRef, useState, useLayoutEffect} from 'react'
+import { memo, lazy, Suspense, useEffect, useRef, useState, useLayoutEffect} from 'react'
 import { useMaximizeFlip } from './useFlip.ts'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
@@ -188,6 +188,11 @@ interface Props {
   /** 画布模式定位；存在时用像素 + transform 缩放，否则用分屏百分比 rect */
   canvasRect?: CanvasPlacement
 }
+
+// Position changes must not rerender heavy content with unchanged props.
+// Default shallow comparison only: internal store/state updates still propagate.
+const StableTerminalView = memo(TerminalView)
+const StableAgentChatView = memo(AgentChatView)
 
 export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Props): JSX.Element {
   const setPaneKind = useStore((s) => s.setPaneKind)
@@ -510,7 +515,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           （改动前 grep 实证）。这里拆掉的只是 UI 入口。 */}
       <div className={canvasSession ? 'pane-body cfile-body' : 'pane-body'}>
         {pane.kind === 'terminal' && (
-          <TerminalView
+          <StableTerminalView
             key={pane.ptyId}
             tabId={tabId}
             leafId={leaf.id}
@@ -532,7 +537,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
         {pane.kind === 'history' && <HistoryView cwd={pane.cwd} />}
         {pane.kind === 'chat' && <ChatNavView cwd={pane.cwd} />}
         {pane.kind === 'agent' && (
-          <AgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
+          <StableAgentChatView cwd={pane.cwd} tabId={tabId} leafId={leaf.id} />
         )}
         {pane.kind === 'wiki' && (
           <Suspense fallback={<div className="pane-placeholder">加载知识库…</div>}>

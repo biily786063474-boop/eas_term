@@ -9,6 +9,9 @@ import { createManualStopLatch } from './runtime/manualStop.ts'
 import { stopHost } from './runtime/stopHost.ts'
 import { projectServiceOwners, canStopHostRefs } from './runtime/serviceProjection.ts'
 import type { RuntimeObservedService } from '../shared/runtimeResources.ts'
+import { watchPluginFiles } from './pluginLifecycle.ts'
+import { initPluginEvents, eventPanel, eventProjects, invalidatePluginEvents, eventGrantFile, eventGrantEpoch } from './pluginEventHost.ts'
+import { markPluginTurnRecorded } from './pluginEvents.ts'
 // 插件面板的**宿主**：起插件进程（一个插件一个，面板与会话共用）、取面板 HTML、
 // 面板桥的主进程半边、给转发 shim 的 RPC 入口、`eas-plugin://` 协议。
 // 设计稿：docs/superpowers/specs/2026-09-05-插件面板宿主-design.md §H
@@ -54,6 +57,7 @@ interface Hosted {
   /** Process exit for stdio, local connection shutdown for remote (not upstream cancellation). */
   stopped: Promise<void>
   tools: McpToolDef[]
+  stopWatching?: () => void
   ready: Promise<void>
 }
 
@@ -72,6 +76,7 @@ interface Panel {
   /** 打开它的渲染进程，通知往这里发 */
   webContentsId: number
   html: string
+  stale?: boolean
   headers: Record<string, string>
 }
 
@@ -94,7 +99,7 @@ const registry = new HostRegistry<Hosted | BuiltinHosted>({
   onIdle: (name, h) => {
     console.log(`[plugin] ${name} 没人用了，回收进程`)
     if (h.kind === 'builtin') h.close()
-    else h.client.close()
+    else { h.stopWatching?.(); h.client.close() }
   }
 })
 /** Main-only binding API, not exposed through plugin RPC or renderer IPC. */
@@ -146,7 +151,9 @@ function spawnHosted(info: PluginInfo): Hosted {
     // 由宿主给，插件自己不该去猜 userData 在哪。
     EAS_PLUGIN_DATA: pluginDataDir(info.name),
     EAS_COMPUTER_SHOTS: path.join(pluginDataDir(info.name), 'shots'),
-    ...info.mcp.env
+    ...info.mcp.env,
+    EAS_EVENT_GRANTS_FILE: eventGrantFile(),
+    EAS_EVENT_PLUGIN_NAME: info.name
   }
   const configuration=info.config?connectPluginConfiguration(info):undefined
   try{
@@ -169,6 +176,7 @@ function spawnHosted(info: PluginInfo): Hosted {
   })()
   hosted.ready.catch((e) => console.error(`[plugin] ${info.name} 握手失败`, info.config?'配置插件握手失败（原始诊断已隐藏）':e))
   const onEnded = () => {
+    hosted.stopWatching?.()
     if (registry.get(info.name) !== hosted) return
     registry.drop(info.name, hosted)
     // 进程没了，挂在它上面的面板要知道（渲染层显示「插件进程退出」并给重开）
@@ -177,11 +185,28 @@ function spawnHosted(info: PluginInfo): Hosted {
   if(client instanceof RemotePluginClient)client.onClose=onEnded
   else client.onExit=onEnded
   client.onNotification = (method, params) => {
+    if (registry.get(info.name) !== hosted) return
     // server 主动通知（如 notifications/resources/updated）→ 转给这个插件的所有面板
     for (const p of panels.values()) if (p.pluginName === info.name) notifyPanel(p, method, params)
   }
+  try { hosted.stopWatching = watchPluginFiles(info.root, () => retirePlugin(hosted, 'plugin-files-changed')) }
+  catch (e) { client.close(); throw e }
   return hosted
 }
+
+function retirePlugin(h: Hosted, reason: string): void {
+  if (registry.get(h.name) !== h) return
+  invalidatePluginEvents(h.name)
+  registry.drop(h.name, h)
+  h.stopWatching?.()
+  for (const p of panels.values()) if (p.pluginName === h.name) {
+    p.stale = true
+    notifyPanel(p, 'ui/resource-teardown', { reason })
+  }
+  for (const [id, shim] of shims) if (shim.pluginName === h.name) shims.delete(id)
+  h.client.close()
+}
+
 
 /** 插件服务器进程的首版启动预留：一个 node 进程 + 握手。不是实测峰值，不是硬上限。 */
 const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
@@ -197,6 +222,8 @@ const startingPlugins = new Map<string, Promise<void>>()
  *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
   if (info.config && info.remote && info.remote.auth!=='bearer') throw Error('远程插件配置注入尚未接通，不能启动')
+  const previous=registry.get(info.name)
+  if(previous?.kind==='plugin'&&previous.info.root!==info.root)retirePlugin(previous,'plugin-replaced')
   if(manualStops.stamp(info.name)!==null)throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
   if (!registry.get(info.name)) {
     let starting = startingPlugins.get(info.name)
@@ -254,7 +281,7 @@ function timelineParams(params: Record<string, unknown>, cwd: unknown): Record<s
   if (!root.ok) throw new Error(root.error)
   const file = guardPath(path.join(root.path, '.eas', 'timeline.json'))
   if (!file.ok) throw new Error(file.error)
-  return withEasMeta(params, { cwd: root.path })
+  const full = withEasMeta(params, { cwd: root.path }); (full._meta as Record<string, unknown>).projects = eventProjects('timeline'); return full
 }
 
 async function readEntry(h: Hosted, info: PluginInfo, entry: string): Promise<string> {
@@ -309,12 +336,25 @@ type RpcResult = { ok: true; result: unknown } | { ok: false; code: number; erro
 
 async function panelRpc(args: { panelSession: string; method: string; params: unknown }): Promise<RpcResult> {
   const p = panels.get(args.panelSession)
-  if (!p) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '面板会话不存在' }
+  if (!p || p.stale) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: '面板已失效，请重新打开插件' }
   const h = registry.get(p.pluginName)
   if (!h || h.kind !== 'plugin' || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在' }
+  const installed = findPlugin('eas:' + p.pluginName)
+  if (!installed || installed.root !== h.info.root) {
+    retirePlugin(h, 'plugin-removed-or-replaced')
+    return { ok: false, code: -32603, error: '插件已卸载或替换，请重新打开' }
+  }
   const params = (args.params ?? {}) as Record<string, unknown>
   try {
     switch (args.method) {
+      case 'panel/timeline-report': {
+        if(p.pluginName!=='timeline')throw Error('仅时间线插件支持成果周报')
+        if(params.week!==undefined&&params.week!==0&&params.week!==-1)throw Error('仅支持本周或上周')
+        const authorized=timelineParams({week:params.week??0,projectIds:params.projectIds},p.ctx.cwd)
+        const result=await h.client.request(args.method,authorized)
+        if(p.stale||panels.get(p.session)!==p||registry.get(p.pluginName)!==h)throw Error('原时间线面板已失效')
+        return {ok:true,result}
+      }
       case 'ping':
         return { ok: true, result: {} }
       // 插件的**面板私有方法**（`panel/` 前缀）：只有面板走得到，会话里的转发 shim 那条路
@@ -323,7 +363,18 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
       case 'panel/grant':
       case 'panel/revoke':
       case 'panel/state':
+        if (h.info.permissions?.events?.includes('agent.turn.completed')) return { ok: true, result: eventPanel(p.pluginName, args.method, params) }
         return { ok: true, result: await h.client.request(args.method, { ...params, by: p.session }, 30_000) }
+      case 'panel/resolve-candidate': {
+        if (p.pluginName !== 'timeline') throw Error('不支持的候选操作')
+        const authorized=timelineParams(params, p.ctx.cwd)
+        const project=eventProjects('timeline').find(x=>x.id===params.projectId)
+        if(!project)throw Error('项目未授权')
+        for(const file of ['timeline.json','timeline-candidates.json']){const checked=guardPath(path.join(project.cwd,'.eas',file));if(!checked.ok)throw Error(checked.error)}
+        const result = await h.client.request(args.method, authorized)
+        broadcastToolResult(p.pluginName, 'timeline_capture', {}, result, null)
+        return {ok:true,result}
+      }
       case 'tools/call': {
         const name = String(params.name ?? '')
         if (!h.tools.some((t) => t.name === name)) return { ok: false, code: JSONRPC_INVALID_PARAMS, error: `本插件没有工具 ${name}` }
@@ -396,7 +447,9 @@ export async function pluginRpcFromShim(body: {
     }
     const h = registry.get(name)
     if (!h || h.kind !== 'plugin' || !h.client.alive) return { ok: false, code: -32603, error: '插件进程不在（先 initialize）' }
-    if (shims.has(shimId)) shims.get(shimId)!.lastBeat = Date.now()
+    if (h.info.root !== info.root) { retirePlugin(h,'plugin-replaced'); return { ok:false, code:-32603, error:'插件已替换，请重新 initialize' } }
+    if (!shims.has(shimId) || shims.get(shimId)!.pluginName !== name) return { ok: false, code: -32603, error: '插件连接已失效，请重新 initialize' }
+    shims.get(shimId)!.lastBeat = Date.now()
     switch (body.method) {
       case 'tools/list':
         return { ok: true, result: { tools: h.tools } }
@@ -404,7 +457,7 @@ export async function pluginRpcFromShim(body: {
         const toolName = String(params.name ?? '')
         const full = name === 'timeline' ? timelineParams(params, body.project) : params
         const result = await toolActivity.track({id:crypto.randomUUID(),name:name+' / '+toolName,projectId:null,windowId:null,sourceKey:`shim:${shimId}`},()=>{if(shims.get(shimId)?.pluginName!==name||registry.get(name)!==h||!h.client.alive)throw Error('原会话或插件已关闭，排队任务不再执行');return h.client.requestTracked('tools/call', full, 10 * 60 * 1000)})
-        if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') timelineRuntime.receipt(body.timelineSession, body.project, toolName, result)
+        if (name === 'timeline' && typeof body.timelineSession === 'string' && typeof body.project === 'string') { timelineRuntime.receipt(body.timelineSession, body.project, toolName, result); if (toolName === 'timeline_record' && !(result as {isError?:boolean})?.isError && typeof (result as {structuredContent?:{id?:string}})?.structuredContent?.id === 'string') markPluginTurnRecorded(body.timelineSession) }
         broadcastToolResult(name, toolName, params.arguments ?? {}, result, null)
         return { ok: true, result }
       }
@@ -448,6 +501,19 @@ export function registerPluginScheme(): void {
 /** ready 之后调。`invoke` 是 mcpBridge 的 invokeRenderer —— 由调用方注入，避免成环 */
 export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanvas>): void {
   invokeCanvas = invoke
+  initPluginEvents(name => !!findPlugin('eas:' + name)?.permissions?.events?.includes('agent.turn.completed'), async (name, event, project, signal) => {
+    const info = findPlugin('eas:' + name)
+    if (!info || signal.aborted) return
+    if (name === 'timeline') { const checked=guardPath(path.join(project.cwd,'.eas','timeline-candidates.json')); if(!checked.ok)throw Error(checked.error) }
+    const ref = 'event:' + crypto.randomUUID()
+    try {
+      const h = await acquire(info, ref)
+      if (signal.aborted) return
+      const result = await h.client.request('events/turn-completed', withEasMeta({ event, grantEpoch: eventGrantEpoch(name) }, { cwd: project.cwd }), 10000)
+      if ((result as {isError?:boolean})?.isError) throw Error('插件候选写入失败')
+      broadcastToolResult(name, 'timeline_capture', {}, result, null)
+    } finally { registry.release(name, ref) }
+  })
   protocol.handle(PLUGIN_SCHEME, async (request) => {
     let session = ''
     try {
@@ -484,7 +550,7 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
     for (const name of registry.keys()) {
       const h = registry.drop(name)
       if (h?.kind === 'builtin') h.close()
-      else h?.client.close()
+      else if (h) { h.stopWatching?.(); h.client.close() }
     }
   })
 }

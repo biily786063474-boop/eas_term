@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "builtin plugin discovered",
+    "real panel starts empty, no fixture UI data",
+    "decorative particles present and do not intercept input",
+    "particles have independent breathing animation",
+    "reduce motion stops particle drift",
+    "global grant persisted by explicit UI action",
+    "real plugin gateway initializes",
+    "record through AI gateway succeeds"
+  ],
+  "error": "Error: CDP timeout Runtime.evaluate"
+}

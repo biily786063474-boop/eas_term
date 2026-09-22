@@ -1,3 +1,4 @@
+import { frameLatest } from './frameLatest'
 import { useHidingHolder } from '../workspace/useFlip'
 // 画布装饰层：viewport（点阵背景 + 平移缩放捕获）→ world（transform 变换）→ Frame 卡片。
 // 这一层只画「死内容」（Frame 边框/标题/点阵/缩放条），可随意位图缩放。
@@ -691,20 +692,27 @@ export function CanvasStage(): JSX.Element {
     }
   }, [])
 
+  const endPanRef = useRef<(() => void) | null>(null)
+  useEffect(() => () => endPanRef.current?.(), [])
   const beginPan = useCallback(
     (clientX: number, clientY: number): void => {
+      endPanRef.current?.()
       const cur = useStore.getState().canvas.viewport
       const el = viewportRef.current
       el?.classList.add('panning')
+      const motion = frameLatest(setViewport, requestAnimationFrame, cancelAnimationFrame)
       let detachBlur = (): void => {}
       const onMove = (ev: MouseEvent): void =>
-        setViewport({ x: cur.x + (ev.clientX - clientX), y: cur.y + (ev.clientY - clientY) })
+        motion.push({ x: cur.x + (ev.clientX - clientX), y: cur.y + (ev.clientY - clientY) })
       const onUp = (): void => {
+        motion.flush()
+        endPanRef.current = null
         document.removeEventListener('mousemove', onMove)
         document.removeEventListener('mouseup', onUp)
         detachBlur()
         el?.classList.remove('panning')
       }
+      endPanRef.current = onUp
       document.addEventListener('mousemove', onMove)
       document.addEventListener('mouseup', onUp)
       // 拖拽中真的失焦（灵动岛跳转、⌘Tab……）→ 当场收尾，别留悬空的拖拽状态；

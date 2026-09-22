@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "builtin plugin discovered",
+    "real app restart restores global enabled state",
+    "real app restart restores excluded projects",
+    "real app restart retains persisted milestone in heatmap"
+  ]
+}

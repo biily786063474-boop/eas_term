@@ -1,0 +1,6 @@
+{
+  "error": "Error: Runtime.evaluate timeout",
+  "lastExpression": "!!window.__store&&!!window.api?.agentChat",
+  "checks": [],
+  "requests": 0
+}

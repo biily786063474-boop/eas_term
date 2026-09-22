@@ -1,0 +1,6 @@
+{
+  "checks": [
+    "builtin plugin discovered"
+  ],
+  "error": "Error: CDP timeout Runtime.evaluate"
+}

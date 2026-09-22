@@ -203,7 +203,7 @@ export function parseManifest(
     mcpServers: undefined,
     root: dir,
     panels,
-    permissions: { canvas },
+    permissions: { canvas, events: Array.isArray(rec(m.permissions)?.events) ? (rec(m.permissions)!.events as unknown[]).filter((x): x is string => x === 'agent.turn.completed') : [] },
     mcp: remote ? undefined : { command: command!, args, env, cwd: dir },
     remote,
     config,

@@ -1,5 +1,5 @@
 import { PluginConfigurationControls } from './PluginConfigurationControls'
-import { canUpdatePlugin } from '../../../../shared/pluginUpdate'
+import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
@@ -52,6 +52,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       .catch(() => setPlugins([]))
   const refreshRegistry = async (): Promise<void> => {
     setRefreshing(true)
+    setErr(null)
     try {
       await reload()
       const r = await window.api.plugins.registry()
@@ -148,7 +149,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
 
   const card = (it: Item): JSX.Element => {
     const working = busy === it.name
-    const update = !!it.plugin && !!it.reg && canUpdatePlugin(it.plugin,it.reg.version)
+    const action = it.plugin && it.reg ? pluginUpdateAction(it.plugin,it.reg.version) : null
+    const update = action === 'update'
     return (
       <div key={it.plugin?.id ?? it.name} className="pm-card">
         <PluginLogo name={it.name} brandColor={it.brandColor} />
@@ -158,17 +160,19 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
           </div>
           {it.description && <div className="pm-cd">{it.description}</div>}
-          {it.plugin?.version && <div className="pm-cd">已安装 v{it.plugin.version}{update ? ` · 可更新至 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 随软件更新' : ''}</div>}
+          {it.plugin?.cli === 'eas' && <div className="pm-cd">{it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}{update ? ` · 有更新 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 内置副本' : ''}</div>}
+          {action === 'migrate' && <div className="pm-cd pm-update-notice">可安装独立版 v{it.reg!.version}；{it.plugin?.version ? '之后通过市场更新' : '旧版无版本号，无法比较新旧'}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
+          {it.plugin?.shadowedBuiltin && <div className="pm-cd pm-update-notice">{it.plugin.shadowedBuiltin}</div>}
         </div>
         <div className="pm-cact">
           {it.plugin?.config&&<PluginConfigurationControls plugin={it.plugin}/>}
           {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} title={it.displayName} enabled={it.plugin.enabled!==false}/>}
           {working ? (
             <span className="pm-spin"><RefreshIcon size={13} /></span>
-          ) : update ? (
-            <button className="pm-add" title={`更新到 ${it.reg!.version}`} aria-label={`更新${it.displayName}到${it.reg!.version}`} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
-              <RefreshIcon size={16} />
+          ) : action ? (
+            <button className="cpk-btn ghost pm-update-action" title={action === 'migrate' ? '确认后安装独立版本' : `更新到 ${it.reg!.version}`} aria-label={`${action === 'migrate' ? '安装独立版' : '更新'}${it.displayName}到${it.reg!.version}`} disabled={!!busy || !!confirm || refreshing} onClick={() => startInstall(it.name)}>
+              <RefreshIcon size={16} />{action === 'migrate' ? '安装独立版' : '更新'}
             </button>
           ) : it.installed ? (
             <span className="pm-done" title="已安装"><CheckIcon size={15} /></span>
@@ -273,8 +277,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
               <span className="pm-mag">⌕</span>
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索插件…（Word、地图、GitHub…）" autoFocus />
             </div>
-            <button className="pm-close" title="刷新目录" aria-label="刷新目录" disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
-              <RefreshIcon size={16} />
+            <button className="cpk-btn ghost" title="刷新目录并检查插件更新" aria-label="检查更新" disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
+              <RefreshIcon size={16} />{refreshing ? '检查中…' : '检查更新'}
             </button>
             <button className="pm-close" title="关闭" onClick={onClose}>
               <CloseIcon size={16} />
@@ -295,13 +299,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             <div className="cpk-modal-title">{confirm.installed ? '更新' : '安装'}「{confirm.displayName}」</div>
             <div className="cpk-modal-sub">
               v{confirm.version} · {fmtSize(confirm.size)}
+              <p>仅替换插件程序，保留项目历史与配置；不会自动开启全局记录。请先关闭正在使用此插件的面板或连接。</p>
             </div>
             {confirm.installed&&<section aria-label="更新权限变更">
-              <div className="cpk-modal-label">相较已安装版本（画布权限与远程目标）：</div>
+              <div className="cpk-modal-label">相较已安装版本（画布、事件权限与远程目标）：</div>
               {confirm.permissionChanges==null?<div className="cpk-modal-sub">旧版清单无法核验，请检查下方完整权限；不能确认是否新增权限。</div>:<>
                 {confirm.permissionChanges.added.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.added.map(p=><li key={p}>新增：{PERM_LABEL[p]??p}</li>)}</ul>}
                 {confirm.permissionChanges.removed.length>0&&<ul className="cpk-perms">{confirm.permissionChanges.removed.map(p=><li key={p}>移除：{PERM_LABEL[p]??p}</li>)}</ul>}
-                {!confirm.permissionChanges.added.length&&!confirm.permissionChanges.removed.length&&<div className="cpk-modal-sub">声明的画布权限与远程目标未变化。</div>}
+                {!confirm.permissionChanges.added.length&&!confirm.permissionChanges.removed.length&&<div className="cpk-modal-sub">声明的画布、事件权限与远程目标未变化。</div>}
               </>}
             </section>}
             {confirm.permissions.length ? (

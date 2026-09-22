@@ -10,3 +10,11 @@ export function canUpdatePlugin(plugin:{cli:string;version?:string;builtin?:bool
  for(let i=0;i<3;i++){if(candidate[i]!==current[i])return candidate[i]>current[i]}
  return false
 }
+
+/** Unknown versions require explicit migration, not a claim that they are older. */
+export function pluginUpdateAction(plugin:{cli:string;version?:string;builtin?:boolean},next:string):'update'|'migrate'|null {
+ if(plugin.cli!=='eas'||!pluginVersion(next))return null
+ if(!pluginVersion(plugin.version))return 'migrate'
+ if(plugin.builtin)return next===plugin.version||canUpdatePlugin({...plugin,builtin:false},next)?'migrate':null
+ return canUpdatePlugin(plugin,next)?'update':null
+}

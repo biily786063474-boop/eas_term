@@ -1,0 +1,13 @@
+{
+  "updates": 479,
+  "events": 480,
+  "elapsed": 523.8999999761581,
+  "p95": 9.399999976158142,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 12,
+  "agentSessions": 0,
+  "agentStarts": 0
+}

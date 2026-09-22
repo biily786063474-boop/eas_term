@@ -1,0 +1,33 @@
+import test from 'node:test'
+import {createCodexTranslator} from './agentChat/codexEvents.ts'
+import assert from 'node:assert/strict'
+import {EventEmitter} from 'node:events'
+import {PassThrough,Writable} from 'node:stream'
+import {runCodexTaskBridge,parseTaskArgs} from '../../mcp/codex-task-bridge.mjs'
+function fixture(goal='active') {
+ const proc=new EventEmitter();proc.stdout=new PassThrough();let thread='thread',status=goal;const calls=[]
+ const send=x=>proc.stdout.write(JSON.stringify(x)+'\n')
+ proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);calls.push(m);queueMicrotask(()=>{
+ if(m.id){let result={};if(m.method==='thread/start'||m.method==='thread/resume')result={thread:{id:thread}};if(m.method==='thread/goal/get')result={goal:status?{status}:null};if(m.method==='turn/start')result={turn:{id:'a'}};send({id:m.id,result})} });cb()}})
+ return {proc,calls,send,setGoal:g=>status=g,note:(method,params)=>send({method,params:{threadId:thread,...params}})}
+}
+const tick=()=>new Promise(r=>setTimeout(r,15))
+test('native goal second turn survives first completion without synthetic continue',async()=>{
+ const f=fixture(),events=[];let done=false
+ const running=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:500}).then(()=>done=true)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('item/completed',{turnId:'a',item:{id:'m',type:'agentMessage',text:'step one',phase:'final_answer'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await tick();assert.equal(done,false);assert.equal(events.some(e=>e.type==='turn.completed'),false)
+ f.note('turn/started',{turn:{id:'b'}});f.note('item/completed',{turnId:'b',item:{id:'m',type:'agentMessage',text:'step two',phase:'final_answer'}});f.setGoal('complete');f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await running;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.filter(e=>e.type==='turn.completed').length,1);assert.deepEqual(events.filter(e=>e.item?.type==='agent_message').map(e=>e.item.text),['step one','step two'])
+})
+test('ordinary response finishes and never creates a goal',async()=>{const f=fixture(null),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p;assert.equal(events.at(-1).type,'turn.completed');assert.equal(f.calls.some(x=>x.method==='thread/goal/set'),false)})
+test('preserve model, sandbox, resume and role restrictions; reject unknown arguments',()=>{
+ const p=parseTaskArgs(['exec','--sandbox','read-only','resume','id','--json','--skip-git-repo-check','-m','gpt-6-astra','--disable','shell_tool','--message'])
+ assert.equal(p.prompt,'--message');assert.equal(p.resumeId,'id');assert.equal(p.sandbox,'read-only');assert.equal(p.model,'gpt-6-astra');assert.deepEqual(p.flags,['--disable','shell_tool']);assert.throws(()=>parseTaskArgs(['exec','--unknown','hi']))
+})
+for(const status of ['paused','blocked','usageLimited','budgetLimited','complete'])test('goal '+status+' ends without another user prompt',async()=>{const f=fixture(status),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p;assert.equal(events.filter(x=>x.type==='turn.completed').length,1)})
+test('user stop rejects active goal without claiming completion or restarting',async()=>{const f=fixture(),events=[],a=new AbortController();const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',signal:a.signal,emit:e=>events.push(e)});const check=assert.rejects(p,/cancelled/);await tick();a.abort();await check;assert.equal(events.some(e=>e.type==='turn.completed'),false);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)})
+test('foreign threads, duplicate completion and reused item ids are isolated',async()=>{const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.send({method:'turn/completed',params:{threadId:'other',turn:{id:'x',status:'failed'}}});f.note('item/completed',{turnId:'a',item:{type:'mcpToolCall',id:'1',server:'x',tool:'read',result:{content:[{type:'image',mimeType:'image/png',data:'fixture'}]},status:'completed'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await tick();f.note('turn/started',{turn:{id:'b'}});f.note('item/completed',{turnId:'b',item:{type:'commandExecution',id:'1',command:'x',exitCode:1,status:'completed'}});f.setGoal('complete');f.note('turn/completed',{turn:{id:'b',status:'completed'}});await p;assert.equal(events.filter(x=>x.type==='turn.completed').length,1);assert.equal(events.find(x=>x.item?.id==='a:1').item.result.content[0].type,'image');assert.equal(events.find(x=>x.item?.id==='b:1').item.status,'failed')})
+test('RPC timeout fails closed before any paid turn, no exec fallback',async()=>{const f=fixture(),events=[];f.proc.stdin=new Writable({write(c,e,cb){cb()}});await assert.rejects(runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:10}),/timeout/);assert.equal(events.length,0)})
+test('failed native turn rejects without terminal success',async()=>{const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});const check=assert.rejects(p,/failed/);await tick();f.note('turn/completed',{turn:{id:'a',status:'failed'}});await check;assert.equal(events.some(e=>e.type==='turn.completed'),false)})
+test('declined file changes remain failures with native change kinds preserved',async()=>{const f=fixture(null),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.note('item/completed',{turnId:'a',item:{type:'fileChange',id:'patch',status:'declined',changes:[{path:'/tmp/new',kind:{type:'add'},diff:'x'}]}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p;const item=events.find(e=>e.item?.type==='file_change').item;assert.equal(item.status,'failed');assert.equal(item.changes[0].kind,'add');const translated=events.flatMap(e=>createCodexTranslator().push(JSON.stringify(e)));assert.equal(translated.find(e=>e.k==='exec.done').ok,false)})

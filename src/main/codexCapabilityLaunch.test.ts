@@ -13,3 +13,10 @@ test('managed Codex launch retains exact native argv and packaged paths with spa
   assert.equal(launch.env?.ELECTRON_RUN_AS_NODE, '1')
   assert.equal(launch.env?.EAS_CAPABILITY_NODE_FALLBACK, '1')
 })
+
+test('task lifecycle bridge is explicitly opt-in; terminal launch remains native',()=>{
+ const host={isPackaged:false,appPath:'/app',resourcesPath:'/resources',electron:'/electron',platform:'win32' as const}
+ const active=codexCapabilityLaunch('codex',['exec','--json','hello'],host,{taskLifecycle:true})
+ assert.equal(JSON.parse(active.args[1]).taskLifecycle,true)
+ assert.equal(JSON.parse(codexCapabilityLaunch('codex',['hello'],host).args[1]).taskLifecycle,undefined)
+})

@@ -1,0 +1,17 @@
+{
+  "message": "Successfully received submission history.",
+  "history": [
+    {
+      "name": "Eas-Term.zip",
+      "status": "Accepted",
+      "createdDate": "2026-09-22T08:28:42.023Z",
+      "id": "685962ff-335f-4572-a857-3040de89cedc"
+    },
+    {
+      "id": "d4f8ecb9-fd70-4ca9-bc68-caadbc59a3f5",
+      "name": "Eas-Term.zip",
+      "status": "Accepted",
+      "createdDate": "2026-09-22T08:24:14.356Z"
+    }
+  ]
+}

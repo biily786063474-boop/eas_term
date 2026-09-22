@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "hashes": {
+    "Resources/app.asar": "e90ba2dc337c8e5d97b7b9073a74ed26bf472736a0ce5f107611c5cc95d0bf22",
+    "MacOS/Eas-Term": "21c0aff36c88170a7747d3184794627618ef154fa0abe5715e5818720a95b531"
+  },
+  "zipExtract": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-103-archive-arm64-5967ixo9",
+  "arch": "arm64"
+}

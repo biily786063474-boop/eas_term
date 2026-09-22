@@ -1,0 +1,21 @@
+{
+  "updates": 60,
+  "events": 480,
+  "elapsed": 537.5,
+  "p95": 10.599999904632568,
+  "longFrames": 0,
+  "finalX": -479,
+  "expectedX": -479,
+  "identityPreserved": true,
+  "paneCount": 12,
+  "lifecycle": {
+    "releaseStable": true,
+    "releaseFinal": true,
+    "blurStable": true,
+    "blurFinal": true,
+    "retained": true
+  },
+  "heavy": true,
+  "agentSessions": 0,
+  "agentStarts": 0
+}

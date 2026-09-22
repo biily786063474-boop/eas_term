@@ -1,0 +1,32 @@
+(node:49478) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/plugin-update-release/src/main/pluginCopies.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✖ user copy stays selected but shadowing a bundled copy is never silent (0.528208ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 62.9615
+
+✖ failing tests:
+
+test at src/main/pluginCopies.test.ts:4:1
+✖ user copy stays selected but shadowing a bundled copy is never silent (0.528208ms)
+  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/src/main/pluginCopies.ts' imported from /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/src/main/pluginCopies.test.ts
+      at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+      at moduleResolve (node:internal/modules/esm/resolve:879:10)
+      at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+      at #cachedDefaultResolve (node:internal/modules/esm/loader:708:20)
+      at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:728:38)
+      at ModuleLoader.resolveSync (node:internal/modules/esm/loader:766:56)
+      at #resolve (node:internal/modules/esm/loader:690:17)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:610:35)
+      at node:internal/modules/esm/loader:639:32
+      at TracingChannel.tracePromise (node:diagnostics_channel:539:22) {
+    code: 'ERR_MODULE_NOT_FOUND',
+    url: 'file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/plugin-update-release/src/main/pluginCopies.ts'
+  }
