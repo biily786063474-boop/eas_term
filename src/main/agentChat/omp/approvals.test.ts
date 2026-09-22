@@ -56,7 +56,11 @@ test('缺 approvalId 的请求立刻 deny，**不进表** —— 它没法被 re
 
 // ── 三个出口，每个条目必定 settle 一次、且只一次 ──────────────────────────
 
-test('等不到就兜底 deny —— **不能永远挂着**，那边 session/prompt 在干等', async () => {
+test('等不到就兜底 deny —— **不能永远挂着**，那边 session/prompt 在干等', async t => {
+  // Production timeout is intentionally unref'ed. A test awaiting only that
+  // timeout must keep its own event loop alive (Node 22 otherwise cancels it).
+  const keepAlive = setInterval(() => {}, 1000)
+  t.after(() => clearInterval(keepAlive))
   // omp 侧对两条通道都是无限等（acp-client-bridge.ts:114-152 没有 timer、
   // wrapper.ts:331 不传 dialogOptions），这一刀只能由我们来切。
   const a = createAcpApprovals({ timeoutMs: 1 })
