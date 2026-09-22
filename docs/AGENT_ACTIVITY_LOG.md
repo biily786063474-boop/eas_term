@@ -143,3 +143,5 @@ feat/global-timeline-20260918：宿主权限、全局项目聚合、零模型候
 
 ## 2026-09-21 · 用量抽屉／共享小票／时间轴成果周报
 在 /private/tmp/eas-timeline-integrate 完成并隔离验收，未提交/推送/安装。用户确认的口径、文件边界、真实点击与出纸层级陷阱、37项定向测试和体验实例入口见 memory/agent_usage-receipts-2026-09-21.md；截图与技术证据见 docs/verification/timeline-receipt/。正式版与原主目录混合改动未动。
+
+2026-09-22 · 按用户要求暂停插件/WPS，合入已完成分支并发布0.4.103。Windows35703021002成功，Mac两架构公证/实际smoke/ZIP-DMG一致性验证通过；首轮共享依赖漏fd-slicer被真实验收拦截，改独立npm ci/Node22重打。官网+GitHub五包逐个size/SHA256一致，发布完成。详见docs/verification/releases/0.4.103.md。
