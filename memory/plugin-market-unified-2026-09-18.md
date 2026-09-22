@@ -240,3 +240,10 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 2026-09-21 高德地图实包：前轮aecf3d5为实质进展，HEAD及scoped状态复核。新增amap_geocode/nearby/route，步行+驾车路径、GCJ-02坐标/分页/输入白名单，固定官方4路径，密文Key注入/错误隐藏/白名单结果，canonical地址策略生成。4专项红→绿包含真实解包stdio+重定向私网体积防护。96333构建+隔离实际市场/配置/三shim12次业务/清配置21项通过，截图眼验。默认本地v2第8包；70095全量+目录构建进行中，需取同session终态。无真实Key/付费调用，不算上游账号/TLS/真实模型CLI/Windows已验。目标active；后续优先数据库或Google系列等剩余实际连接器。
 70095最终exit0：全量3444/3426通过/18skip/0fail，本地目录v1=2/v2=8。截图Frame cnode150替换自身PPT cnode148，保留用户timeline/设计和进度。无本轮后台进程，未发布；继续其余原32项，默认包数不代表完整验收数。
+
+## 2026-09-21 接入边界补漏（未新增可用插件）
+恢复bf0fee2后发现架构01/site/privacy未随web-fetch/weather/amap新增联网同步，且旧页多处错误宣称内容不出本机。已同步精确出站端点/字段、Key查询参数、stdio仅直连无系统PAC、EAS_PLUGIN_CONFIG仅插件子进程注入、非OS沙箱和真实账号未验；新增2项文档契约回归，红→绿。
+全量首次3446项中1项CLI package启动超时，原样保留privacy/initial-check-failure.txt；单跑该文件2项通过，未调整产品8秒超时。最终npm run check 3446/3428通过/18跳过/0失败。
+静态隐私页隔离Electron真实打开，全部HTTP(S)禁止、temp profile。第一次390px出现横向溢出；实际元素诊断发现site/style.css全局code white-space:nowrap覆盖长文换行（既有OMP许可路径与新增高德URL）。复用pv-body并只在该页code覆盖white-space:normal；1200/390宽度均无溢出，截图已看。初次截图受smooth-scroll影响错位，验证脚本改instant定位后重新截图，不是产品逻辑故障。脚本verify-plugin-privacy.mjs、result及失败诊断保留。
+额外核对官方来源：Figma MCP仅Catalog客户端，可waitlist；Slack固定注册App，Marketplace/内部准入，无DCR，有PKCE桌面模式但需显式启用、callback/iss/token适配未验。来源存台账，不冒用其他客户端或宣称只差终端用户登录。
+本轮没有增加连接器数量、没有发布目录/app/官网。默认本地v2仍8包；32项未完成。所有本轮命令结束（3885最终全量成功、69877重截成功）。下一步仍做数据库及其显式本地授权、Google组与其他剩余连接器；不要把准入条件变成停止全部工程工作的借口。

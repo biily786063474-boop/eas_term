@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "width": 1200,
+      "overflow": false,
+      "disclosure": true,
+      "sectionHeight": 807.5
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "disclosure": true,
+      "sectionHeight": 1215.875
+    }
+  ],
+  "network": "blocked",
+  "productionPublished": false
+}

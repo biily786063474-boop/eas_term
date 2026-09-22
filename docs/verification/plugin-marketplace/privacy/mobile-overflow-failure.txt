@@ -1,0 +1,25 @@
+(node:77767) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/cliUpdates/packages.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ native package pipeline checks integrity, extracts, validates version/help, and preserves package resources (155.186042ms)
+✔ 异步校验挂住的 CLI 时事件循环不被阻塞，超时后拒绝 (306.482542ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 538.86025
+Error: horizontal overflow {"text":"网页、天气与地图插件（本地开发验收中，尚未发布）\n\n安装并启用后，你或 AI 可以调用插件工具；不能理解成每次联网都会另弹确认。仅浏览市场不会执行这些查询。真实账号、供应商返回及跨平台验证仍未全部完成。\n\n网页读取（web-fetch）：访问工具参数里的公开 HTTPS URL，包括路径与查询参数；最多跟随 5 次重新安全校验的跳转。不携带浏览器 Cookie 或登录状态、不执行网页脚本，限 15 秒和 2MB。请勿将秘密放进 URL；目标网站可以看到请求。\n天气（weather）：向 https://restapi.amap.com/v3/weather/weatherInfo 发送城市 adcode、实况或预报类型和你配置的高德 Key。\n地图（amap）：向 https://restapi.amap.com 的 /v3/geocode/geo、/v3/place/around、/v3/direction/walking 或 /v3/direction/driving 发送地址、关键词、GCJ-02 坐标、查询选项和高德 Key。\n\n天气与地图不自动获取设备位置；Key 按高德接口要求放在 HTTPS 查询参数中，仅发往上述固定端点，不跟随重定向，限 15 秒和 1MB。服务额度、授权及条款由你的供应商账号决定。\n\n这三个 stdio 连接器目前仅直连 HTTPS，尚未接系统PAC/代理，与上节主进程远程 MCP 的代理支持不同。非公开 DNS（包括 fake-IP 保留地址）会拒绝；不能通过放开私网守卫绕过连接失败。\n\n配置密文保存在应用数据目录的 plugin-credentials，受系统加密与密钥柜锁定约束。stdio 配置启动时经 EAS_PLUGIN_CONFIG 注入对应插件子进程，不注入 AI CLI/PTY；连接器读入后删除环境变量，但运行时仍会在内存中保留所需配置。插件是获准运行的本机代码，不是OS沙箱，不能防御同用户权限的恶意程序。\n\n清除配置或锁定会关闭本地连接，不等同于撤销高德 Key，也不保证已发出的查询停止。撤销 Key 请到供应商账号操作。本地文件及 Office 文档工具自身不上传文件，但返回给 AI 的内容仍可能发送到你选择的模型服务。","width":390,"scroll":526,"sectionHeight":1123}
+    at /private/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-privacy-xILysB/verify.cjs:11:37
+file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/scripts/verify-plugin-privacy.mjs:34
+ clearTimeout(timeout);if(code!==0)throw Error('Privacy verification exit '+code)
+                                         ^
+
+Error: Privacy verification exit 1
+    at file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/scripts/verify-plugin-privacy.mjs:34:42
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v26.5.0
