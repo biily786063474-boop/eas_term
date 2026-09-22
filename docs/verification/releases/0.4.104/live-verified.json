@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "backup": "/www/wwwroot/eas-release-backups/0.4.104-20260922T124920Z",
+  "manifest": [
+    {
+      "name": "Eas-Term-0.4.104-arm64.dmg",
+      "size": 220935516,
+      "sha256": "f9eb479cbd228225bd7e60f7a8bfb40c980a433ffdf83f7c87e97f35cd039a5a"
+    },
+    {
+      "name": "Eas-Term-0.4.104-arm64.zip",
+      "size": 219011634,
+      "sha256": "95a4827cd0b2a9a295d11ad9a5d2c293fd88ea779ae38e494fda1b49e80c1454"
+    },
+    {
+      "name": "Eas-Term-0.4.104-x64.dmg",
+      "size": 232881597,
+      "sha256": "bef0df3d450a1dbf02eae496ff06e82edbf7de8f24b9ad9cd289dd2bfac112d5"
+    },
+    {
+      "name": "Eas-Term-0.4.104-x64.zip",
+      "size": 231110047,
+      "sha256": "aa8bc581e26856cecf6b684329a50391bd381ec51dff31567142431cf0e8087e"
+    },
+    {
+      "name": "Eas-Term-0.4.104-x64-setup.exe",
+      "size": 199413251,
+      "sha256": "480ea40056d4b31a9315d4b4f3394826f9c3080ba91e14a892f1c48febf0cf2e"
+    }
+  ]
+}

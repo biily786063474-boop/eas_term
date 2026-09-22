@@ -27,3 +27,7 @@ check3514/3495pass/19skip/0fail，build0；CUA真实应用看到独立时间线�
 
 ## 2026-09-22 05:10 最新主线同步核查
 用户要求合并最新主线。git fetch origin main成功，最新仍eda14a4；当前分支已包含它（HEAD...origin/main=61/0），无新增主线代码需要处理。重新check3514/3495pass/19skip/0fail，build通过。将前轮未提交迁移实现、图纸与公网/迁移验收证据一起提交。此次不移动main、不push、不发版；根工作区未提交改动不碰。
+
+## 最终发布完成
+官网与GitHub均已发布0.4.104。GitHub 2026-09-22T13:06:35Z 公开/latest，五包size与sha256 digest与本地/官网完全一致。main已包含本次产品和发布提交，tag e915531、产品efbb5bf。所有自有验收实例退出，未替换用户 /Applications 应用；已知Computer Use外部指针、32插件真实账号覆盖限制保留。
+验收记录：docs/verification/releases/0.4.104.md。后续不要重新发布时间线/重做公网源链路，也不要把已发布误报成未合并。

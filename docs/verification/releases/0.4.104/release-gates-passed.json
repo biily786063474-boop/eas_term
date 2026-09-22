@@ -1,0 +1,16 @@
+{
+  "source": "efbb5bf3baad89f7c1f9e6965ebf721a3a1754c1",
+  "check": {
+    "passed": 3496,
+    "skip": 18,
+    "failed": 0
+  },
+  "windowsRun": 35726706720,
+  "arm64": "CUA terminal, market, timeline history and restart verified",
+  "x64": "Rosetta CUA terminal and native PTY verified; not physical Intel",
+  "archives": "both signatures, staples, Gatekeeper, ZIP/DMG asar and executable hashes verified",
+  "knownLimitations": [
+    "External Computer Use pointer lifecycle still open",
+    "Not all 32 plugins live-account verified"
+  ]
+}

@@ -1,0 +1,25 @@
+
+Processing: /Users/biily/Eas-Term-release/mac/Eas-Term.app
+The validate action worked!
+
+/Users/biily/Eas-Term-release/mac/Eas-Term.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+
+
+Processing: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-archive-x64-opqb3sbr/Eas-Term.app
+The validate action worked!
+
+/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-archive-x64-opqb3sbr/Eas-Term.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+
+
+Processing: /var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-dmg-x64-29syaagi/Eas-Term.app
+The validate action worked!
+
+/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-dmg-x64-29syaagi/Eas-Term.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: Zang Yawen (D4FVS6QJXV)
+
+ARCHIVE VERIFIED x64

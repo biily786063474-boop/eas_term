@@ -1,0 +1,8 @@
+  • electron-builder  version=26.15.2 os=25.5.0
+  • loaded configuration  file=package.json ("build" field)
+  • author is missed in the package.json  appPackageFile=/Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/package.json
+  • @electron/rebuild already used by electron-builder, please consider to remove excess dependency from devDependencies
+
+To ensure your native dependencies are always matched electron version, simply add script `"postinstall": "electron-builder install-app-deps" to your `package.json`
+  • building        target=macOS zip arch=x64 file=/Users/biily/Eas-Term-release/Eas-Term-0.4.104-x64.zip
+  • building block map  blockMapFile=/Users/biily/Eas-Term-release/Eas-Term-0.4.104-x64.zip.blockmap
