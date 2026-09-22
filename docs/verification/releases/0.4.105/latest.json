@@ -1,0 +1,15 @@
+{
+  "version": "0.4.105",
+  "mac_arm64": "/download/v0.4.105/Eas-Term-0.4.105-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.105/Eas-Term-0.4.105-arm64.zip",
+  "mac_x64": "/download/v0.4.105/Eas-Term-0.4.105-x64.dmg",
+  "macZip_x64": "/download/v0.4.105/Eas-Term-0.4.105-x64.zip",
+  "mac": "/download/v0.4.105/Eas-Term-0.4.105-arm64.dmg",
+  "win": "/download/v0.4.105/Eas-Term-0.4.105-x64-setup.exe",
+  "notes": [
+    "插件市场卡片统一高度，标题、简介与状态对齐，已安装及迁移提示不再撑高卡片。",
+    "完整简介、迁移与来源说明可展开查看，悬停配置区域保持原布局。",
+    "Computer Use 外部服务指针残留仍未解决，本版不宣称修复。"
+  ],
+  "published": "2026-09-22T13:39:57.416968+00:00"
+}

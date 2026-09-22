@@ -362,3 +362,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 2026-09-22 插件独立更新/外部来源/离线迁移随0.4.104完成官网与GitHub发布。产品efbb5bf，tag e915531；Windows35726706720 success；Mac双架构公证与归档一致性、ARM CUA迁移历史/重启、x64 Rosetta真实终端通过。全量3496pass/18skip；生产audit0；未修改运行中正式app/根工作树，未全局杀CUA服务。详见docs/verification/releases/0.4.104.md。
 
 2026-09-22 0.4.104发布后用户指出市场卡片不等高并确认方案。已统一96px卡片/三内容槽/可展开完整说明；真实CUA同页及悬停配置验证，全量3498pass/18skip。尚未提交和发布，见docs/verification/plugin-marketplace/card-height/。
+
+## 2026-09-22 0.4.105 发布完成
+产品 ade2fe5，发布tag cb3fac5。官网与 GitHub 2026-09-22T13:54:28Z 已公开/latest，Mac ARM/Intel 的 DMG/ZIP 和 Windows EXE 共五包，size/SHA256 与本地一致。卡片等高修复已包含，3498测试通过、18跳过、0失败；双Mac公证/归档核验，ARM/Rosetta真实市场UI及x64原生PTY、Windows CI35732994971通过。正式用户应用未替换，隔离测试实例已退出；非实体Intel验收。生产8站/5PM2前后无变化，未重启/删旧包。Computer Use指针生命周期仍未解决，32插件并非全部真实账号验收。完整证据 docs/verification/releases/0.4.105/。
