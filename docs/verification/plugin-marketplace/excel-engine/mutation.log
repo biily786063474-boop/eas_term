@@ -1,0 +1,49 @@
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.01s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.01s)
+=== RUN   TestCreateReadRoundtrip
+--- PASS: TestCreateReadRoundtrip (0.00s)
+=== RUN   TestCreateRejectsUnsafeOrAmbiguousData
+--- PASS: TestCreateRejectsUnsafeOrAmbiguousData (0.00s)
+=== RUN   TestReadAnalyticsWithoutRewriting
+--- PASS: TestReadAnalyticsWithoutRewriting (0.00s)
+=== RUN   TestUpdateClearsFormulaAndRejectsMergedCells
+--- PASS: TestUpdateClearsFormulaAndRejectsMergedCells (0.01s)
+=== RUN   TestChartMultipleSeries
+--- PASS: TestChartMultipleSeries (0.00s)
+=== RUN   TestChartRejectsMismatchedVector
+--- PASS: TestChartRejectsMismatchedVector (0.00s)
+=== RUN   TestPivotRejectsSourceAndOccupiedDestination
+--- PASS: TestPivotRejectsSourceAndOccupiedDestination (0.00s)
+=== RUN   TestPivotRejectsExistingUnrefreshedPivot
+--- PASS: TestPivotRejectsExistingUnrefreshedPivot (0.00s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+PASS
+ok  	eas-term/excel-engine	1.747s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+✔ worker adapter exists (0.962334ms)
+✔ one shot request uses scrubbed env and waits for close (2695.648542ms)
+✔ changed executable fails integrity before spawn (1.819209ms)
+✔ symlink executable is refused (3.074042ms)
+✔ timeout kills owned worker and cancellation is distinct (126.593208ms)
+✔ output flood is bounded and worker killed (5959.080667ms)
+✔ stderr and malformed responses do not leak raw contents (226.50925ms)
+✔ oversized request rejected before process and pre-abort honored (13.600708ms)
+✔ accepts bounded typed read result but refuses malformed sheet rows (339.783667ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9412.842209
+{"passed":true,"checks":8,"actualBinary":true,"parentAdapter":true,"platform":"darwin","arch":"arm64","pluginIntegrated":false,"excelVisualVerified":false}

@@ -40,10 +40,11 @@ type Change struct {
 	Formula string      `json:"formula,omitempty"`
 }
 type ChartSpec struct {
-	Type       string `json:"type"`
-	Categories string `json:"categories"`
-	Values     string `json:"values"`
-	Name       string `json:"name"`
+	Series     []ChartSeries `json:"series,omitempty"`
+	Type       string        `json:"type"`
+	Categories string        `json:"categories"`
+	Values     string        `json:"values"`
+	Name       string        `json:"name"`
 }
 type PivotSpec struct {
 	Source      string       `json:"source"`
@@ -324,6 +325,10 @@ func Process(r Request) (Response, error) {
 				return Response{}, errors.New("duplicate update")
 			}
 			seen[c.Cell] = true
+			x, y, _ := excelize.CellNameToCoordinates(c.Cell)
+			if e := rejectMerged(f, rect{r.Sheet, x, y, x, y}); e != nil {
+				return Response{}, e
+			}
 			if c.Formula != "" {
 				if c.Value != nil {
 					return Response{}, errors.New("value and formula conflict")
@@ -346,6 +351,9 @@ func Process(r Request) (Response, error) {
 				default:
 					return Response{}, errors.New("invalid cell value")
 				}
+				if e = f.SetCellFormula(r.Sheet, c.Cell, ""); e != nil {
+					return Response{}, e
+				}
 				e = f.SetCellValue(r.Sheet, c.Cell, c.Value)
 			}
 			if e != nil {
@@ -365,13 +373,11 @@ func Process(r Request) (Response, error) {
 		if !ok {
 			return Response{}, errors.New("unsupported chart type")
 		}
-		if e := reference(f, c.Categories); e != nil {
-			return Response{}, e
+		series, err := chartSeries(f, c)
+		if err != nil {
+			return Response{}, err
 		}
-		if e := reference(f, c.Values); e != nil {
-			return Response{}, e
-		}
-		e = f.AddChart(r.Sheet, r.Cell, &excelize.Chart{Type: typ, Series: []excelize.ChartSeries{{Name: c.Name, Categories: c.Categories, Values: c.Values}}})
+		e = f.AddChart(r.Sheet, r.Cell, &excelize.Chart{Type: typ, Series: series})
 	case "pivot":
 		p := r.Pivot
 		if p == nil || len(p.Name) == 0 || len(p.Name) > 255 || len(p.Rows) == 0 || len(p.Rows) > 20 || len(p.Columns) > 20 || len(p.Data) == 0 || len(p.Data) > 20 {
@@ -381,6 +387,9 @@ func Process(r Request) (Response, error) {
 			return Response{}, e
 		}
 		if e := reference(f, p.Destination); e != nil {
+			return Response{}, e
+		}
+		if e := pivotDestination(f, p); e != nil {
 			return Response{}, e
 		}
 		o := &excelize.PivotTableOptions{DataRange: p.Source, PivotTableRange: p.Destination, Name: p.Name, RowGrandTotals: true, ColGrandTotals: true}

@@ -264,3 +264,6 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 
 ## 2026-09-21 Excel创建/读取迁移
 用户OK继续，复核19c021f为上一轮实际进展；前轮所有进程terminal，无需重启。新增io.go与io_test.go：create多表/标量/显式公式，read类型/公式/缓存，不改写文件、calculated:false。日期数值保持Excel原始序列并披露，非旧ExcelJS的ISO转换。Go测试先红Response.Sheets缺失再实现；29888 Go9测试exit0。worker read结构校验新增红测8pass1fail后实现，38133最终exit0：Go9测试/vet/arm64build、Node9测试、真binary8业务检查。证据io-worker.log与worker-result.json。本轮某shell测试写入被hook拒绝（JS模板插值），改等价字符串拼接后执行，无绕过安全规则。仍没换插件server/打包，正式app未改；下步多系列图表/透视目的地防覆盖、update合并与清除公式兼容，再离线打包及MCP接线。不增加完成插件数，goalactive。
+
+## 2026-09-21 用户选择1：补Excel功能保护
+上一轮是状态答复（no progress），本轮复核7121f46，执行mutation.go与5项测试。支持<=20多系列、类别值等长向量；update拒绝合并区域、普通值/null清除公式；pivot拒绝源/目的有值或公式/合并/table/已存在pivot重叠。首次测试红缺Series，并发现测试用了不存在GetCharts，改为真实ZIP中XML namespace-aware ser计数；55702初跑因测试假设c:前缀fail，改标准XML解析；新增未刷新pivot重复目标红测后补GetPivotTables检查。99027最终exit0：Go14 tests/vet/arm64build，Node9 tests，真worker8业务检查，mutation.log。防覆盖仅声明区域，不保证Excel刷新后扩张。新发现上游drawing.go drawChartSeries Name直接写strRef/f，历史纯文字Name可能不正确，下一步先解决图表名称语义再插件接线；不要将原生series存在冒充显示正确。原插件仍未改，无GUI/Windows验证、无发布、goalactive。进度节点152沿用，无后台命令剩余。
