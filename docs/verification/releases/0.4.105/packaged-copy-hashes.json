@@ -1,0 +1,10 @@
+{
+  "arm64": {
+    "Contents/Resources/app.asar": "7ff3fdc4e4d77f58ca64aec58541fd9bac7d067f361e613479f9bf46a993e87c",
+    "Contents/MacOS/Eas-Term": "bc92cb345301a2ec9dc8e448f3939ab79309b6ea6099eecfa4546f09b9fe918a"
+  },
+  "x64": {
+    "Contents/Resources/app.asar": "7ff3fdc4e4d77f58ca64aec58541fd9bac7d067f361e613479f9bf46a993e87c",
+    "Contents/MacOS/Eas-Term": "064ec552540aeb48e6ab6176a1adbc45e83a1a797ea982e41527287509828847"
+  }
+}

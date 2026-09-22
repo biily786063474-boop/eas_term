@@ -1,0 +1,17 @@
+{
+  "source": "ade2fe5891f40e47e35248b8bca7a50f862dc1e8",
+  "check": {
+    "passed": 3498,
+    "skip": 18,
+    "failed": 0
+  },
+  "productionAuditVulnerabilities": 0,
+  "windowsRun": 35732994971,
+  "arm64": "CUA packaged market equal-height and details verified",
+  "x64": "Rosetta CUA packaged market equal-height and native PTY verified; not physical Intel",
+  "archives": "Both architectures signed, notarized/stapled, Gatekeeper accepted, ZIP/DMG hashes verified",
+  "knownLimitations": [
+    "External Computer Use pointer lifecycle still open",
+    "Not all 32 plugins live-account verified"
+  ]
+}
