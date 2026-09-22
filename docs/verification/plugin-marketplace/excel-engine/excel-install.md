@@ -12,3 +12,6 @@ HTTP200，Content-Length 1179079831。不是Updater包，也不是Office全套�
 下载中先使用.pkg.part；成功后改.pkg并运行pkgutil --check-signature及sha256。只有签名核实Microsoft后才能启动安装。
 若需要系统管理员密码，用户在原生认证界面输入；激活由用户在Microsoft界面登录，不收集聊天凭证。
 下载成功、安装成功、激活成功、图表/透视实际验收是四个独立状态，不得混同。
+
+最终状态：下载完整1179079831字节；pkgutil验证为Apple信任的Microsoft Corporation安装器（见installer-signature.txt）。SHA256：`9db8f0c5fae677d7b06526730cf8cab4a2050c7eb21e3c8b8214a1c4c02c4459`。
+原30分钟下载在98.6%正常超时退出28，确认旧PID不存在后续传成功（76890退出0）。尚未安装、激活或做Excel GUI验收，不能据下载完成计功能完成。
