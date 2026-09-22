@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "checks": [
+    "真实隔离密钥柜解锁",
+    "市场安装先确认，不静默落包",
+    "实际市场下载安装天气包，安装不自动授权",
+    "配置真实加密保存",
+    "配置保存后不回显Key",
+    "连接测试不消耗天气查询额度",
+    "claude真实shim查询实况天气",
+    "codex真实shim查询实况天气",
+    "omp真实shim查询实况天气",
+    "claude真实shim查询未来预报",
+    "codex真实shim查询未来预报",
+    "omp真实shim查询未来预报",
+    "三个shim分别查询实况和预报",
+    "实际宿主调用拒绝内网，不发额外请求",
+    "清除配置使旧shim失效，不再携Key查询"
+  ],
+  "scope": "Real isolated Electron market download/hash/extraction/install confirmation, shared stdio host and three shim subprocesses; encrypted fixture credential with real safeStorage. Exact DNS/HTTPS-dial adapter only in disposable fixture plugin. Not real TLS, public Internet or model CLI. Actual package installation, not a built-in fixture."
+}

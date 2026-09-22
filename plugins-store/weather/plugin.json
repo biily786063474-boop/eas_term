@@ -1,0 +1,33 @@
+{
+  "name": "weather",
+  "version": "1.0.0",
+  "displayName": "天气",
+  "description": "查询高德支持地区的实况与未来天气；需自行配置Web服务Key，按供应商权限与额度使用。",
+  "category": "生活出行",
+  "requirements": {
+    "capabilities": [
+      "mcp.stdio",
+      "config.fields"
+    ]
+  },
+  "config": {
+    "fields": [
+      {
+        "id": "key",
+        "type": "secret",
+        "label": "高德 Web 服务 Key",
+        "purpose": "仅发送至restapi.amap.com天气查询接口；额度及商业授权依你的高德账号协议。",
+        "required": true
+      }
+    ]
+  },
+  "mcp": {
+    "command": "node",
+    "args": [
+      "./server.mjs"
+    ]
+  },
+  "permissions": {
+    "canvas": []
+  }
+}
