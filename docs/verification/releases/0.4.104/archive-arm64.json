@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "hashes": {
+    "Resources/app.asar": "4c68107bfa636769ba5256e8edfbfe1e2751e74f0c3eedb09b30014b223f0979",
+    "MacOS/Eas-Term": "978f5069e232e3270a1ca1a7066b216f82eed605fe21f66dcf41aebf5b1771cb"
+  },
+  "zipExtract": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-archive-arm64-guiwbgbb",
+  "arch": "arm64"
+}

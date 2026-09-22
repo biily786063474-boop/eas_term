@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "hashes": {
+    "Resources/app.asar": "4c68107bfa636769ba5256e8edfbfe1e2751e74f0c3eedb09b30014b223f0979",
+    "MacOS/Eas-Term": "6c54511a9d0a7ee3c6366048d7827a706cab2c0c488646487963c0d5e835b98c"
+  },
+  "zipExtract": "/var/folders/7s/29s7qf5s7w778xnb_txz3_q00000gn/T/eas-104-archive-x64-opqb3sbr",
+  "arch": "x64"
+}
