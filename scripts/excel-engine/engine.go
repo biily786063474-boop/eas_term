@@ -176,6 +176,8 @@ func validateArchive(b []byte) error {
 		d := xml.NewDecoder(bytes.NewReader(data))
 		depth := 0
 		inFormula := false
+		sharedCell, sharedValue := false, false
+		var sharedIndex strings.Builder
 		var current strings.Builder
 		for {
 			tok, e := d.Token()
@@ -196,6 +198,14 @@ func validateArchive(b []byte) error {
 				attrs := map[string]string{}
 				for _, a := range x.Attr {
 					attrs[a.Name.Local] = a.Value
+				}
+				// Validate all XML parts, including nonstandard worksheet relationship targets.
+				if x.Name.Local == "c" {
+					sharedCell = attrs["t"] == "s"
+				}
+				if x.Name.Local == "v" && sharedCell {
+					sharedValue = true
+					sharedIndex.Reset()
 				}
 				if x.Name.Local == "Relationship" {
 					typ := strings.ToLower(attrs["Type"])
@@ -254,6 +264,12 @@ func validateArchive(b []byte) error {
 					}
 				}
 			case xml.CharData:
+				if sharedValue {
+					sharedIndex.Write(x)
+					if sharedIndex.Len() > 20 {
+						return errors.New("invalid shared-string index")
+					}
+				}
 				if inFormula {
 					current.Write(x)
 					if current.Len() > 2048 {
@@ -261,6 +277,16 @@ func validateArchive(b []byte) error {
 					}
 				}
 			case xml.EndElement:
+				if x.Name.Local == "v" && sharedValue {
+					n, err := strconv.ParseInt(strings.TrimSpace(sharedIndex.String()), 10, 32)
+					if err != nil || n < 0 {
+						return errors.New("invalid shared-string index")
+					}
+					sharedValue = false
+				}
+				if x.Name.Local == "c" {
+					sharedCell = false
+				}
 				if inFormula && x.Name.Local == "f" {
 					inFormula = false
 					if e := formula(current.String()); e != nil {
@@ -327,6 +353,9 @@ func Process(r Request) (Response, error) {
 			seen[c.Cell] = true
 			x, y, _ := excelize.CellNameToCoordinates(c.Cell)
 			if e := rejectMerged(f, rect{r.Sheet, x, y, x, y}); e != nil {
+				return Response{}, e
+			}
+			if e := rejectPivotOutput(f, rect{r.Sheet, x, y, x, y}); e != nil {
 				return Response{}, e
 			}
 			if c.Formula != "" {

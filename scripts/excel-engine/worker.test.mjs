@@ -62,3 +62,12 @@ test('accepts bounded typed read result but refuses malformed sheet rows',async 
   await assert.rejects(g.run({operation:'read'}),/response/)
  }
 })
+test('host-extracted non-executable worker is enabled only after integrity validation',async t=>{
+ const f=await fixture(t,`process.stdin.resume();process.stdin.on('end',()=>process.stdout.write('{"value":"ok"}'))`)
+ const file=path.join(f.root,'bin',f.name);await fs.chmod(file,0o600)
+ assert.deepEqual(await f.run({operation:'calculate'}),{value:'ok'})
+ if(process.platform!=='win32')assert.equal((await fs.stat(file)).mode&0o777,0o700)
+ await fs.chmod(file,0o600);await fs.appendFile(file,'\n//tampered')
+ await assert.rejects(f.run({operation:'calculate'}),/integrity/)
+ if(process.platform!=='win32')assert.equal((await fs.stat(file)).mode&0o777,0o600)
+})

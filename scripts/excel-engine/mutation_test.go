@@ -99,3 +99,43 @@ func TestPivotRejectsExistingUnrefreshedPivot(t *testing.T) {
 		t.Fatal("overlapping unrefreshed pivot accepted")
 	}
 }
+
+func TestPivotRejectsUndersizedRefreshReservation(t *testing.T) {
+	for _, dest := range []string{"Sheet1!J1:K2", "Sheet1!J1:K12", "Sheet1!J1:M3"} {
+		_, e := Process(Request{Operation: "pivot", Workbook: fixture(t), Pivot: &PivotSpec{Source: "Sheet1!A1:B3", Destination: dest, Name: "Totals", Rows: []string{"Region"}, Data: []PivotValue{{Field: "Amount", Aggregate: "Sum"}}}})
+		if e == nil {
+			t.Fatal("undersized refresh reservation accepted: " + dest)
+		}
+	}
+}
+func TestUpdateRejectsPivotOutputReservation(t *testing.T) {
+	r, e := Process(Request{Operation: "pivot", Workbook: fixture(t), Pivot: &PivotSpec{Source: "Sheet1!A1:B3", Destination: "Sheet1!J1:M12", Name: "Totals", Rows: []string{"Region"}, Data: []PivotValue{{Field: "Amount", Aggregate: "Sum"}}}})
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, cell := range []string{"J1", "M12"} {
+		if _, e = Process(Request{Operation: "update", Workbook: r.Workbook, Sheet: "Sheet1", Changes: []Change{{Cell: cell, Value: "would be overwritten"}}}); e == nil {
+			t.Fatal("pivot output update accepted: " + cell)
+		}
+	}
+	if _, e = Process(Request{Operation: "update", Workbook: r.Workbook, Sheet: "Sheet1", Changes: []Change{{Cell: "B2", Value: 45.0}}}); e != nil {
+		t.Fatal("source update should remain supported", e)
+	}
+}
+
+func TestPivotReservationIncludesColumnGroupsAndMultipleValues(t *testing.T) {
+	f := excelize.NewFile()
+	defer f.Close()
+	p := &PivotSpec{Source: "Sheet1!A1:D4", Destination: "Sheet1!J1:Q20", Rows: []string{"Region"}, Columns: []string{"Month"}, Data: []PivotValue{{Field: "Amount", Aggregate: "Sum"}, {Field: "Units", Aggregate: "Sum"}}}
+	if e := pivotDestination(f, p); e == nil {
+		t.Fatal("column/value expansion accepted in narrow range")
+	}
+	p.Destination = "Sheet1!J1:Z20"
+	if e := pivotDestination(f, p); e != nil {
+		t.Fatal("sufficient empty reservation rejected", e)
+	}
+	f.SetCellValue("Sheet1", "Y19", "keep outside current summary")
+	if e := pivotDestination(f, p); e == nil {
+		t.Fatal("occupied future refresh reservation accepted")
+	}
+}

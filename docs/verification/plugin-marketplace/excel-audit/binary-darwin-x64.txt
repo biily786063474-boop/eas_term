@@ -1,0 +1,75 @@
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6452
+    Panic via negative shared-string index in github.com/xuri/excelize
+  More info: https://pkg.go.dev/vuln/GO-2026-6452
+  Module: github.com/xuri/excelize/v2
+    Found in: github.com/xuri/excelize/v2@v2.11.0
+    Fixed in: N/A
+    Vulnerable symbols found:
+      #1: excelize.Cols.Rows
+      #2: excelize.File.AddPicture
+      #3: excelize.File.AddPictureFromBytes
+      #4: excelize.File.AddPivotTable
+      #5: excelize.File.AddSlicer
+      Use '-show traces' to see the other 23 found symbols
+
+Vulnerability #2: GO-2026-6355
+    Prevent DoS on deadlocked established channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6355
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.53.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+    Vulnerable symbols found:
+      #1: ssh.Dial
+      #2: ssh.Dial
+      #3: ssh.NewClientConn
+      #4: ssh.NewClientConn
+      #5: ssh.NewControlClientConn
+      Use '-show traces' to see the other 4 found symbols
+
+Vulnerability #3: GO-2026-6354
+    Prevent DoS on deadlocked undecided channel in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6354
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.53.0
+    Fixed in: golang.org/x/crypto@v0.56.0
+    Vulnerable symbols found:
+      #1: ssh.Dial
+      #2: ssh.Dial
+      #3: ssh.NewClientConn
+      #4: ssh.NewClientConn
+      #5: ssh.NewControlClientConn
+      Use '-show traces' to see the other 5 found symbols
+
+Vulnerability #4: GO-2026-6303
+    Source-address critical option not enforced for non-public-key auth
+    callbacks in golang.org/x/crypto/ssh
+  More info: https://pkg.go.dev/vuln/GO-2026-6303
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.53.0
+    Fixed in: golang.org/x/crypto@v0.55.0
+    Vulnerable symbols found:
+      #1: ssh.NewServerConn
+      #2: ssh.NewServerConn
+      #3: ssh.NewServerConn
+
+Vulnerability #5: GO-2026-5932
+    The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design,
+    and has known security issues
+  More info: https://pkg.go.dev/vuln/GO-2026-5932
+  Module: golang.org/x/crypto
+    Found in: golang.org/x/crypto@v0.53.0
+    Fixed in: N/A
+    Vulnerable symbols found:
+      #1: armor.golang.org/x/crypto/openpgp/armor/*
+      #2: clearsign.golang.org/x/crypto/openpgp/clearsign/*
+      #3: elgamal.golang.org/x/crypto/openpgp/elgamal/*
+      #4: errors.golang.org/x/crypto/openpgp/errors/*
+      #5: openpgp.golang.org/x/crypto/openpgp/*
+      Use '-show traces' to see the other 2 found symbols
+
+Your code is affected by 5 vulnerabilities from 2 modules.
+This scan found no other vulnerabilities in packages you import or modules you
+require.
+Use '-show verbose' for more details.

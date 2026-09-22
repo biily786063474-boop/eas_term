@@ -56,3 +56,42 @@ ZIP预检：8MB输入/32MB展开/2000项/100层XML/50000单元格/10000行/1000�
 ## 图表名称收尾（2026-09-21）
 `chart_names.go`修正本API的Name字面量语义：只对本次新增chart部件的series/tx写入OOXML文本v（正确XML转义），不把用户文字当成strRef公式；既有chart部件不改。完整生成文件再次过原ZIP/XML安全预检。测试覆盖中文/特殊字符、二次单元格编辑保留、再加多系列图不改旧图。
 本机/Applications与~/Applications未发现Microsoft Excel，也无可用Excel MCP；实际Excel图例与透视刷新验收仍未完成，不能拿Numbers或XML测试替代。第1项不标全量验收完成；透视刷新超出声明区域的风险仍需要实际Excel验证与策略收尾。
+
+### Offline staging build
+`node scripts/excel-engine/package.mjs /absolute/go1.26.8/bin/go /absolute/new-staging-dir`
+builds darwin-arm64, darwin-x64 and win32-x64 with CGO disabled, readonly
+modules, trimpath and no network/toolchain downloads. Populate the qualified
+module cache first. Existing output directories are refused. Includes the
+parent worker, fixed-name SHA-256/size manifest, linked-module license notices
+and Go runtime license. This is a staging payload, not yet the market plugin;
+platform signatures, dependency vulnerability audit, archive size and installed
+plugin end-to-end acceptance remain gates. Cross-compilation is not a Windows
+or Intel runtime test.
+
+Staging also now includes an Excel 1.1.0 candidate manifest, six-tool MCP server,
+connector and the unchanged directory/SHA/inode file guard. Verify with
+`node scripts/verify-excel-native-plugin.mjs /absolute/staging-dir`.
+This packs/extracts the complete candidate and calls create/read/update/calculate/
+chart/pivot through a real stdio process, including stale SHA, traversal, symlink,
+unsafe formula and read-only write refusal. It does not verify the app host or
+actual models. Do not publish/promote before those acceptance gates and pivot
+refresh expansion protection are resolved.
+
+Pivot refresh reservation: creation now requires a conservative empty rectangle
+based on the fixed source record count, row/column hierarchy counts and value
+field count (not merely current distinct values). Existing data, merges, tables
+and pivots inside the entire reservation remain rejected. Ordinary updates to
+the currently recorded pivot output range are refused; update source cells instead.
+This does not promise protection after a user changes source ranges/layout or
+writes into reserved cells using Excel itself. External refresh can rewrite the
+recorded range. Excel GUI verification remains necessary; no cached pivot totals
+are produced by this engine.
+
+Security gate (2026-09-21): x/text is pinned to 0.39.0 after audit; shared-string
+negative indices are rejected in preflight. govulncheck still reports Excelize
+GO-2026-6452 (no upstream fixed version), and stripped-binary scans report extra
+x/crypto findings requiring reachability review. Do not publish or call audit
+clean. Evidence: docs/verification/plugin-marketplace/excel-audit/README.md.
+Actual old→candidate update acceptance: `node --experimental-strip-types
+scripts/verify-excel-plugin.mjs /absolute/candidate --update`; filesystem rollback:
+`node --experimental-strip-types scripts/verify-excel-update-rollback.mjs /absolute/candidate`.

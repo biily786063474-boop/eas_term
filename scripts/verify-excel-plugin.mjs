@@ -8,15 +8,20 @@ import {spawn} from 'node:child_process'
 import {packPlugin} from './pack-plugin.mjs'
 import http from 'node:http'
 import {McpClient} from '../src/main/mcpClient.ts'
-const root=process.cwd(),output=path.join(root,'docs/verification/plugin-marketplace/excel');fs.mkdirSync(output,{recursive:true})
+const nativePackage=process.argv[2];if(nativePackage&&!path.isAbsolute(nativePackage))throw Error('Pass absolute native staging package')
+const updateMode=process.argv.includes('--update');if(updateMode&&!nativePackage)throw Error('Update requires native candidate')
+const root=process.cwd(),output=path.join(root,'docs/verification/plugin-marketplace',updateMode?'excel-update':nativePackage?'excel-native':'excel');fs.mkdirSync(output,{recursive:true})
 const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'eas-excel-vertical-')),profile=path.join(fixture,'profile'),home=path.join(fixture,'home'),allowed=path.join(fixture,'allowed')
 for(const dir of [profile,home,allowed])fs.mkdirSync(dir)
 fs.writeFileSync(path.join(profile,'projects.json'),JSON.stringify([{id:'picker-fixture',name:'Excel 表格验收',path:fixture}]))
 fs.writeFileSync(path.join(profile,'prefs.json'),JSON.stringify({autoUpdateCheck:false,telemetry:false,island:false}))
 fs.writeFileSync(path.join(profile,'skill-prefs.json'),JSON.stringify({muted:true}))
-const packed=packPlugin('plugins-store/excel',{outRoot:path.join(fixture,'packages'),registrySchema:2})
-const archive=fs.readFileSync(packed.zipPath)
-const server=http.createServer((req,res)=>{if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[packed.entry],unavailable:[]}))}else if(req.url===new URL(packed.entry.url).pathname){res.end(archive)}else {res.writeHead(404);res.end()}})
+const packageSource=nativePackage?path.join(fixture,'excel'):'plugins-store/excel'
+if(nativePackage)fs.cpSync(nativePackage,packageSource,{recursive:true})
+const packed=packPlugin(packageSource,{outRoot:path.join(fixture,'packages'),registrySchema:2})
+const legacy=updateMode?packPlugin('plugins-store/excel',{outRoot:path.join(fixture,'packages'),registrySchema:2}):packed
+let active=legacy,broken=false
+const server=http.createServer((req,res)=>{if(req.url==='/plugins/v2/registry.json'){res.setHeader('content-type','application/json');res.end(JSON.stringify({schema:2,plugins:[active.entry],unavailable:[]}))}else if(req.url===new URL(active.entry.url).pathname){res.end(broken?Buffer.from('corrupt candidate'):fs.readFileSync(active.zipPath))}else {res.writeHead(404);res.end()}})
 await new Promise(r=>server.listen(0,'127.0.0.1',r))
 const serverUrl='http://127.0.0.1:'+server.address().port
 const bootstrap=path.join(fixture,'launch.cjs'),dialogLog=path.join(fixture,'dialog-log.json'),holdDialog=path.join(fixture,'hold-dialog')
@@ -32,15 +37,16 @@ const env={...process.env,EAS_VERIFY:'1',EAS_PLUGIN_REGISTRY_URL:serverUrl+'/plu
 for(const n of Object.keys(env))if(n.startsWith('EAS_TERM_')||n.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(n))delete env[n]
 const policy='(version 1) (allow default) '+['.codex','.claude','.claude.json','.eas','.dsh'].map(n=>'(deny file-read* file-write* (subpath '+JSON.stringify(path.join(os.homedir(),n))+'))').join(' ')
 const child=spawn('/usr/bin/sandbox-exec',['-p',policy,path.join(root,'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'),bootstrap,'--no-sandbox','--remote-debugging-port=0','--user-data-dir='+profile],{env,stdio:['ignore','pipe','pipe']})
-let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x)
+let debugPage;let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x)
 const wait=ms=>new Promise(r=>setTimeout(r,ms)),sockets=[],checks=[],clients=[]
 const check=(v,n)=>{if(!v)throw Error(n);checks.push(n)}
 async function connect(url,awaitPromise=true){const ws=new WebSocket(url);sockets.push(ws);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true})});let seq=0;const pending=new Map();ws.addEventListener('message',e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);clearTimeout(p.timer);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result)}});const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++seq,timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout '+method))},15000);pending.set(id,{resolve,reject,timer});ws.send(JSON.stringify({id,method,params}))});return {send,eval:async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result?.value}}}
-async function until(fn){for(let i=0;i<120;i++){const x=await fn();if(x)return x;await wait(100)}throw Error('Timed out')}
+async function until(fn){for(let i=0;i<600;i++){const x=await fn();if(x)return x;await wait(100)}throw Error('Timed out')}
 
 try{
  const port=await until(async()=>{try{return Number(fs.readFileSync(path.join(profile,'DevToolsActivePort'),'utf8').split('\n')[0])}catch{if(child.exitCode!==null)throw Error(logs.slice(-1500))}})
  const main=await connect((await until(async()=>(await(await fetch('http://127.0.0.1:'+port+'/json/list')).json()).find(x=>x.type==='page'&&x.title==='Eas-Term'))).webSocketDebuggerUrl)
+ debugPage=main
  await until(()=>main.eval('!!window.api?.plugins && !!window.__store'))
  const setup=await main.eval('window.api.secrets.setup("837194")');check(setup.ok,'隔离密钥柜真实设置并解锁，没有替换safeStorage')
  await main.eval("(async()=>{const s=window.__store.getState();s.setViewMode('canvas');await s.addProjectFrame('picker-fixture',30,30);s.setViewport({x:0,y:0,scale:1})})()")
@@ -73,6 +79,36 @@ try{
   const late=await main.eval('window.__pendingConfig')
   check(!late.ok&&late.error.includes('失效')&&fs.readFileSync(credentialFile).equals(savedBytes),action+'旧确认结果不能跨解锁代次写入，原密文不变')
  }
+ if(updateMode){
+  const installed=path.join(home,'.eas/plugins/excel/plugin.json'),oldBytes=fs.readFileSync(installed)
+  check(JSON.parse(oldBytes).version==='1.0.1','真实旧版1.0.1安装并授权')
+  const ep=JSON.parse(fs.readFileSync(path.join(profile,'mcp-endpoint.json')))
+  const old=new McpClient({name:'old-excel',command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:fixture,env:{PATH:process.env.PATH||'',EAS_PLUGIN:'excel',EAS_TERM_PORT:String(ep.port),EAS_TERM_TOKEN:ep.token}});clients.push(old)
+  await old.initialize('0.4.102');check((await old.listTools()).length===3,'旧版真实宿主运行三工具')
+  active=packed
+  const refresh=async()=>{await main.eval('window.api.plugins.registry(true)');await main.eval("document.querySelector('button[title=\"刷新目录\"]').click()");await until(()=>main.eval("document.querySelector('button[title=\"更新到 1.1.0\"]')?.disabled===false"))}
+  await refresh()
+  const blocked=await main.eval('window.api.plugins.install("excel")')
+  let refusal=blocked
+  if(blocked.ok)refusal=await main.eval('window.api.plugins.installCommit('+JSON.stringify(blocked.token)+')')
+  check(!refusal.ok&&/运行|启动/.test(refusal.error),'运行中的真实Excel宿主拒绝包替换')
+  check(fs.readFileSync(installed).equals(oldBytes)&&fs.readFileSync(credentialFile).equals(savedBytes),'运行中更新拒绝后旧包和配置密文不变')
+  old.close();await old.exited;clients.splice(clients.indexOf(old),1)
+  await main.eval('window.api.secrets.lock()');check((await main.eval('window.api.secrets.unlock("837194")')).ok,'锁柜关闭本次隔离宿主后解锁')
+  broken=true
+  const corrupt=await main.eval('window.api.plugins.install("excel")')
+  check(!corrupt.ok&&/哈希/.test(corrupt.error),'真实Excel候选损坏包被哈希校验拒绝')
+  check(fs.readFileSync(installed).equals(oldBytes)&&fs.readFileSync(credentialFile).equals(savedBytes),'失败下载保持旧版和授权密文（非提交后回滚）')
+  broken=false;await refresh()
+  await main.eval("document.querySelector('button[title=\"更新到 1.1.0\"]').click()")
+  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent==='确认更新')"))
+  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent==='确认更新').click()")
+  await until(()=>JSON.parse(fs.readFileSync(installed)).version==='1.1.0')
+  check(fs.readFileSync(credentialFile).equals(savedBytes),'真实市场升级1.0.1到1.1.0，目录授权密文原样保留')
+  check(child.exitCode===null,'升级未重启应用进程')
+  await until(()=>main.eval("!!document.querySelector('[data-plugin-config=\"eas:excel\"]')"))
+  if(!await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].some(e=>e.textContent==='测试连接')"))await main.eval("document.querySelector('[data-plugin-config=\"eas:excel\"] button').click()")
+ }
  check(await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].some(e=>e.textContent==='测试连接')"),'配置卡片提供真实测试连接入口')
  await main.eval("[...document.querySelectorAll('[data-plugin-config] button')].find(e=>e.textContent==='测试连接').click()")
  await until(()=>main.eval("document.querySelector('[data-plugin-config]').innerText.includes('连接测试通过')"))
@@ -82,10 +118,23 @@ try{
  for(const label of ['claude','codex','omp']){
   const c=new McpClient({name:'verify-'+label,command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:fixture,env:{PATH:process.env.PATH||'',EAS_PLUGIN:'excel',EAS_TERM_PORT:String(endpoint.port),EAS_TERM_TOKEN:endpoint.token}});clients.push(c)
   await c.initialize('0.4.102');check((await c.listTools()).some(t=>t.name==='excel_create'),label+'真实shim经实际应用宿主获得工具')
-  const text='actual-'+label,result=await c.request('tools/call',{name:'excel_create',arguments:{path:label+'.xlsx',sheets:[{name:'数据',rows:[['CLI','Value'],[label,text]]}]}})
+  const text='actual-'+label,result=await c.request('tools/call',{name:'excel_create',arguments:{path:label+'.xlsx',sheets:[{name:'数据',rows:nativePackage?[['CLI','Value',null,{formula:'SUM(B3:B4)'}],[label,text],['East',10],['West',20]]:[['CLI','Value'],[label,text]]}]}})
+  if(result.isError)throw Error(label+' create response: '+JSON.stringify(result))
   check(!result.isError&&(await readWorkbook(fs.readFileSync(path.join(allowed,label+'.xlsx')))).sheets[0].rows[1][1]===text,label+'真实工具调用写入授权临时目录')
   const read=await c.request('tools/call',{name:'excel_read',arguments:{path:label+'.xlsx'}})
   check(!read.isError&&JSON.parse(read.content[0].text).sheets[0].rows[1][0]===label&&(await readWorkbook(fs.readFileSync(path.join(allowed,label+'.xlsx')))).sheets[0].rows[1][0]===label,label+'真实宿主往返创建并读取矩形表格')
+  if(nativePackage){
+   const invoke=async(name,args)=>{const r=await c.request('tools/call',{name,arguments:{path:label+'.xlsx',...args}});check(!r.isError,label+' '+name+'真实宿主调用');return JSON.parse(r.content[0].text)}
+   check((await c.listTools()).length===6,label+'六项原生工具完整暴露')
+   check((await invoke('excel_calculate',{sheet:'数据',cell:'D1'})).value==='30',label+'公式计算为30')
+   let revision=JSON.parse(read.content[0].text).sha256
+   revision=(await invoke('excel_chart',{sheet:'数据',cell:'F2',chart:{type:'column',series:[{name:'金额 & Amount',categories:'数据!$A$3:$A$4',values:'数据!$B$3:$B$4'}]},expectedSha256:revision})).sha256
+   const pivot=await invoke('excel_pivot',{pivot:{source:'数据!A1:B4',destination:'数据!J1:M12',name:'Totals',rows:['CLI'],data:[{field:'Value',aggregate:'Sum'}]},expectedSha256:revision})
+   check(/刷新/.test(pivot.note),label+'透视表明确需要Excel刷新')
+   await invoke('excel_update',{sheet:'数据',cells:[{address:'B3',value:40}],expectedSha256:pivot.sha256})
+   check((await invoke('excel_calculate',{sheet:'数据',cell:'D1'})).value==='60',label+'含图表和透视表更新后重算为60')
+  }
+
  }
  const bad=await clients[0].request('tools/call',{name:'excel_read',arguments:{path:'../profile/secrets.xlsx'}});check(bad.isError,'真实宿主调用拒绝越出授权目录')
  const beforeClear=JSON.parse(fs.readFileSync(dialogLog)).length
@@ -111,7 +160,7 @@ try{
  const state=await main.eval('window.api.plugins.configuration("status","eas:excel")');check(!state.ok&&!('values' in state),'锁定后配置IPC不返回明文')
  fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:true,checks,scope:'Real market UI install/hash/extraction -> actual app/native-dialog adapter -> real safeStorage -> actual shared host -> three shim subprocesses -> real temp XLSX files. Not Excel rendering or actual model CLI or native picker interaction; no production publish.'},null,2))
  console.log(JSON.stringify({passed:true,checks},null,2))
-}catch(error){process.exitCode=1;console.error(error);fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(error)},null,2))}
+}catch(error){if(debugPage)console.error(await debugPage.eval('document.body.innerText'));process.exitCode=1;console.error(error);fs.writeFileSync(path.join(output,'failure.json'),JSON.stringify({checks,error:String(error)},null,2))}
 finally{
  for(const c of clients){c.close();await c.exited}
  for(const ws of sockets)ws.close()

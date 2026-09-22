@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": [
+    "Old Excel directory moved before injected promotion failure",
+    "Every old Excel file SHA restored; temporary backup/incoming removed",
+    "Retry promotes complete native candidate byte-for-byte"
+  ],
+  "scope": "Production filesystem replacement with injected IO error, not crash recovery or live-app injection"
+}

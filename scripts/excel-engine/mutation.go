@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"github.com/xuri/excelize/v2"
 	"strings"
 )
@@ -89,6 +90,23 @@ func pivotDestination(f *excelize.File, p *PivotSpec) error {
 	if e != nil {
 		return e
 	}
+	// Conservative reservation for this fixed source range and the generated
+	// layout (no show-all combinations, user grouping or additional subtotals).
+	// Every row/column hierarchy prefix has at most one group per source record;
+	// include leaf groups, headers and grand totals rather than using current
+	// distinct values, which may grow after a source-cell update.
+	records := source.y2 - source.y1
+	if records < 1 {
+		return errors.New("pivot source needs header and data rows")
+	}
+	minRows := records*(len(p.Rows)+1) + len(p.Columns) + 4
+	minCols := len(p.Rows) + len(p.Data) + 1
+	if len(p.Columns) > 0 {
+		minCols = len(p.Rows) + 1 + (records*(len(p.Columns)+1)+1)*len(p.Data)
+	}
+	if dest.y2-dest.y1+1 < minRows || dest.x2-dest.x1+1 < minCols {
+		return fmt.Errorf("pivot refresh reservation needs at least %d rows and %d columns", minRows, minCols)
+	}
 	if overlap(source, dest) {
 		return errors.New("pivot destination overlaps source")
 	}
@@ -135,6 +153,25 @@ func pivotDestination(f *excelize.File, p *PivotSpec) error {
 			if v != "" || form != "" {
 				return errors.New("pivot destination contains data")
 			}
+		}
+	}
+	return nil
+}
+
+// Only the currently recorded output range is protected. Excel can change the
+// range/layout after external refresh; this is not a workbook-wide edit lock.
+func rejectPivotOutput(f *excelize.File, r rect) error {
+	pivots, e := f.GetPivotTables(r.s)
+	if e != nil {
+		return e
+	}
+	for _, p := range pivots {
+		dest, e := parseRect(f, p.PivotTableRange)
+		if e != nil {
+			return e
+		}
+		if overlap(r, dest) {
+			return errors.New("cannot edit pivot output reservation; update source cells instead")
 		}
 	}
 	return nil

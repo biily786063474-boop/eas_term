@@ -1,0 +1,15 @@
+--- FAIL: TestSharedStringIndexPreflight (0.00s)
+    --- FAIL: TestSharedStringIndexPreflight/-1 (0.00s)
+        security_test.go:17: unsafe index not rejected: <nil>
+    --- FAIL: TestSharedStringIndexPreflight/-2147483648 (0.00s)
+        security_test.go:17: unsafe index not rejected: <nil>
+    --- FAIL: TestSharedStringIndexPreflight/999999999999999999999999 (0.00s)
+        security_test.go:17: unsafe index not rejected: <nil>
+    --- FAIL: TestSharedStringIndexPreflight/bad (0.00s)
+        security_test.go:17: unsafe index not rejected: <nil>
+    --- FAIL: TestSharedStringIndexPreflight/&#45;1 (0.00s)
+        security_test.go:17: unsafe index not rejected: <nil>
+FAIL
+FAIL	eas-term/excel-engine	2.577s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+FAIL

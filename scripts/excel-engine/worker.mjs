@@ -2,6 +2,7 @@
 // The installed package is trusted code; hashes detect corruption, not a malicious
 // writer able to replace both manifest and executable. This is not an OS sandbox.
 import fs from 'node:fs/promises'
+import {constants} from 'node:fs'
 import path from 'node:path'
 import {createHash} from 'node:crypto'
 import {spawn} from 'node:child_process'
@@ -23,7 +24,14 @@ export async function runEngine(packageRoot,request,{signal,timeoutMs=16000,maxO
  const binary=path.join(dir,'excel-engine-'+key+(process.platform==='win32'?'.exe':''))
  const stat=await fs.lstat(binary)
  if(!stat.isFile()||stat.nlink!==1)throw Error('Excel worker must be regular non-symlink file')
- if(stat.size!==entry.size||createHash('sha256').update(await fs.readFile(binary)).digest('hex')!==entry.sha256)throw Error('Excel worker integrity mismatch')
+ const handle=await fs.open(binary,constants.O_RDONLY|constants.O_NOFOLLOW)
+ try{
+  const opened=await handle.stat()
+  if(!opened.isFile()||opened.nlink!==1||opened.dev!==stat.dev||opened.ino!==stat.ino||opened.size!==entry.size||createHash('sha256').update(await handle.readFile()).digest('hex')!==entry.sha256)throw Error('Excel worker integrity mismatch')
+  // Host extraction intentionally ignores archive modes. Only the verified fixed
+  // worker gets owner execute; never restore arbitrary archive permissions.
+  if(process.platform!=='win32'&&(opened.mode&0o777)!==0o700)await handle.chmod(0o700)
+ }finally{await handle.close()}
  if(signal?.aborted)throw Error('Excel worker cancelled')
  return new Promise((resolve,reject)=>{
   // Deliberately do not inherit plugin config, tokens, PATH, proxy or loader env.

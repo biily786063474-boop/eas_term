@@ -1,0 +1,22 @@
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6452
+    Panic via negative shared-string index in github.com/xuri/excelize
+  More info: https://pkg.go.dev/vuln/GO-2026-6452
+  Module: github.com/xuri/excelize/v2
+    Found in: github.com/xuri/excelize/v2@v2.11.0
+    Fixed in: N/A
+    Example traces found:
+      #1: engine.go:439:22: excel.Process calls excelize.File.AddPivotTable
+      #2: engine.go:336:26: excel.Process calls excelize.File.CalcCellValue
+      #3: io.go:135:32: excel.read calls excelize.File.GetCellFormula
+      #4: io.go:116:28: excel.read calls excelize.File.GetCellType
+      #5: mutation.go:145:26: excel.pivotDestination calls excelize.File.GetCellValue
+      #6: mutation.go:41:30: excel.rejectMerged calls excelize.File.GetMergeCells
+      #7: io.go:100:23: excel.read calls excelize.File.GetRows
+
+Your code is affected by 1 vulnerability from 1 module.
+This scan also found 0 vulnerabilities in packages you import and 4
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.
+Use '-show verbose' for more details.

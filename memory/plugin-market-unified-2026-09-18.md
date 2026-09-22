@@ -271,3 +271,28 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 ## 2026-09-21 用户要求收尾第一项：图例文字修正
 复核c7950ba；前次状态答复no progress，转执行。chart_names_test先红literal encoded as formula reference；新增chart_names.go，比较before/after ZIP仅处理本次新chart，XML token定位series/tx，写转义文本v而非strRef公式，原文件其余部件复制且再次validateArchive。51473 Go15/vet/build/真实worker8 exit0。再加旧图不变测试，93167最终需核对exit：Go16、Node9、真实worker8。本机/Applications与~/Applications都无Microsoft Excel（仅Numbers Creator Studio），工具发现无Excel MCP，不能声称Excel实机验收通过。第1项还欠实际显示/刷新及声明区域外增长策略；插件server仍未接入，不增加完成数，不发布。继续可自主工程工作，不把缺Excel视为整个goalblocked。
 93167已核对exit0：Go16、Node9、真实worker8通过，chart-names.log已保存。无本轮后台命令残留。
+
+## 2026-09-21 用户授权下载Excel并继续
+已核实官方下载页+fwlink525135重定向至Microsoft_Excel_16.113.26091740_Installer.pkg，1,179,079,831字节。下载在~/Downloads/Eas-Term-Excel-verification/*.pkg.part；真实后台句柄45170（plugin-progress.py包curl，最长1800s，下载后mv/pkgutil签名/sha256）。必须继续轮询45170至终态，不因观察超时重启。进度节点152同路径刷新已确认4/5槽。22:14下载59MB约5.2%，Clash链CDN-evx5ooa1，持续增长非卡死，未修改代理。网络排障playbook指定文件不存在，find只读查找句柄76873后需取终态。尚未安装/启动Excel，签名未查完，不能称下载完成；后续只有验证微软签名后才能打开Installer，密码/激活由用户原生界面输入，不购买订阅、不绕许可。官方链接及步骤存excel-engine/excel-install.md。旧代码HEAD6bec529未改变，本轮下载为实际进展，goalactive。
+
+2026-09-21 恢复中断：67791句柄missing且ps无下载进程，文件112MiB；以独立session进程91756恢复curl -C -，现有Frame进度页仍5秒轮询，子任务只下载+校验不自动安装。上轮时序解释属no progress，本轮新增native staging打包器及2项红→绿测试。首次go list -m all离线失败（/tmp/eas-excel-package-build.log），因包含未缓存的非链接依赖；改为list -deps按实际链接Module去重，不放开联网。95135最终exit0三架构构建，产物/tmp/eas-excel-package-20260921-2231，含worker、完整性清单、链接依赖与Go许可。44086实际包及worker回归需核对终态。仍未接插件server、无GUI/Windows运行验证/签名/漏洞全审/发布。不能将staging包计成Excel插件完成。
+
+44086已核对exit0：11项测试全过，真实staging包create/calculate通过，实际arm64 worker 8业务检查通过；Intel/Windows只验证文件格式，未运行。下载本次采样138207232字节，91756监控仍存活。
+
+2026-09-21 原生Excel接线：上轮确有打包进展。91756下载监控本轮ps已确认存活，不重启。新增connector/server，六工具通过路径无关worker调用；files.mjs原样复制，保留授权目录/inode/link/SHA写守卫。构建器生成1.1.0候选manifest但默认store/registry不动。工具测试先missingmodule红、包契约先缺manifest红，再3专项通过。候选/tmp/eas-excel-plugin-20260921-2236；14936真实pack→unzip→McpClient→六工具往返exit0，ZIP11192691字节低于25MiB，创建/计算30/图表/透视/更新/重算60及旧SHA、路径、危险公式拒绝通过。新增只读和symlink验收后98922重跑12项+真实包，待核对终态。尚欠app三shim验收、ExcelGUI、透视增长防护、签名和跨平台实跑，不声称新插件可发布；未改正式app。
+
+98922终态exit0：12测试通过，真实11.2MB候选包六工具及只读/符号链接/旧SHA/路径/危险公式保护通过；证据native-stdio.log、connector-tests.log。下一步隔离app市场安装与三shim调用新工具，默认市场尚未切换。
+
+2026-09-21 原生插件隔离应用验收：上轮候选包接线属实质进展；91756下载仍存活30.9%起继续。增强既有verify-excel-plugin接受绝对候选路径，每个shim新增公式30→图表→透视→更新→60。47325构建成功但实际app第一笔create失败；19658诊断原文“Excel worker failed to start”。全局查pluginUnzip确认刻意忽略ZIP mode，不能改宿主解包安全策略。79939新增非可执行worker测试9pass1fail复现同错误（shell tail导致命令exit0，不代表测试通过）。worker改O_NOFOLLOW打开固定文件并同fd验证inode/link/size/hash，仅验证成功后fchmod0700。75074执行13测试绿、候选/tmp/eas-excel-plugin-20260921-2243构建及实际app复验，当前仍在跑，需取同handle终态。首次失败证据excel-native/initial-failure.json保留。Frame进度152刷新reused5/5；正式app未动，无发布。
+
+75074最终exit0：13专项测试通过；新候选包经真实市场安装/原生密文配置/三shim新增计算图表透视及更新53项通过，configured.png已亲眼看见“发现6个工具”。不是三个实际模型推理或Excel视觉证明。首次失败与诊断保留，未更改pluginUnzip权限策略。下一步透视刷新扩展防覆盖和真实Excel安装验收，正式市场不变。
+
+2026-09-21 透视刷新预留保护：91756仍存活42.7%起继续。先写测试路径误用（已在engine cwd又加scripts前缀），出现no tests to run，不计通过；纠正后两项真实红灯：小输出区域和透视输出单元格更新均被错误接受。mutation.go按固定源记录数与行列层级/数据字段数预留保守空间，不按当前去重计数；原有全区域占用/合并/table/pivot拒绝保留。update拒绝写入当前记录的pivot输出范围，源数据更新继续允许。新增列层级/多指标/未来预留区有值测试。84981 Go全套/vet→三架构新候选2247→实际stdio→实际app53链路复验，需同handle终态。外部Excel用户修改源范围/布局/占用空白不在保护承诺内；仍须GUI验收。未发布/未改变默认市场。
+
+84981终态exit0：Go19测试+vet、三架构构建、实际包stdio和隔离app53项复验通过；新engine候选2247。Excel真实视觉仍未验证。
+
+## 2026-09-21 用户“先做12项”：工程收尾＋真实旧版升级验收
+按第1、2项执行，不是12个插件。41917和98626全量均3446/3428pass/18skip/0fail；13Node专项、Go20顶层测试+vet、三平台构建、审计后原生stdio通过。候选路径/tmp/eas-excel-plugin-20260921-audited，旧2247候选缺本轮安全防护不要使用。
+官方govulncheck1.8.0审计发现x/text5970与Excelize6452可达；x/text升0.39.0，负共享字符串索引增加5红→绿预检。最终源码扫描仍exit3/1可达，三个stripped二进制扫描各5告警（含x/crypto），不是零漏洞/不可发布，详见excel-audit。未谎称上游已修复。来源与原始扫描保存。
+新增--update真实app路径：1.0.1安装授权→真实旧宿主三工具→运行中替换拒绝→锁柜释放→损坏候选哈希拒绝→真实UI升级1.1.0→密文原样保留→三shim六工具，90087终态exit0/62项，截图亲眼看6工具。初次fixture刷新按钮disabled误点，随后配置已开重复toggle，失败保存；修测试等待条件，没动产品保护。真实完整Excel树注入promotion rename失败后每个旧文件SHA恢复，后续重试成功；不是断电恢复/活app中途注入。
+默认商店仍Excel1.0.1、8包，无发布/无正式app替换；Excel GUI、真实模型CLI与Windows执行未验。安装包下载PID91756到29分钟93.2%，30分钟上限可能需核实后续传；未完成不要打开.part。进度节点仍由单一下载wrapper每5秒更新。当前优先处理剩余审计风险后才候选推广。
