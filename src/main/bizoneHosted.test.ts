@@ -58,3 +58,9 @@ test('first catalog awaits asynchronous protocol discovery before constructing o
   try { await host.tools(); assert.equal(created, 1) }
   finally { host.close(); await new Promise(resolve => setImmediate(resolve)); fs.rmSync(root, { recursive: true, force: true }) }
 })
+
+test('builtin plugin connector startup uses the same no-wait path',async()=>{
+ const {readFileSync}=await import('node:fs')
+ const source=readFileSync(new URL('./bizoneHosted.ts',import.meta.url),'utf8')
+ assert.match(source,/startManagedSession\(\{[^\n]*immediate: true/)
+})

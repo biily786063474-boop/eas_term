@@ -18,7 +18,7 @@ export function createToolActivity(now:()=>number){
     const manager=admission
     let resolveResult!:(value:unknown)=>void,rejectResult!:(error:unknown)=>void
     const result=new Promise<unknown>((resolve,reject)=>{resolveResult=resolve;rejectResult=reject})
-    const completed=manager.submit({id:owner.id,projectId:owner.projectId??'unattributed',cost:cost(),run:async signal=>{
+    const completed=manager.submit({id:owner.id,projectId:owner.projectId??'unattributed',cost:cost(),immediate:true,run:async signal=>{
      if(signal.aborted)throw Error('cancelled')
      const actual=start(),cancel=()=>actual.cancel()
      signal.addEventListener('abort',cancel,{once:true})

@@ -28,7 +28,7 @@ const server=http.createServer(async(req,res)=>{
  let result={}
  if(m.method==='initialize'){initialized++;result={protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'owned-fixture',version:'1'}}}
  if(m.method==='tools/list')result={tools:[{name:'echo',description:'Owned echo',inputSchema:{type:'object',properties:{label:{type:'string'}}}}]}
- if(m.method==='tools/call'){calls++;result={content:[{type:'text',text:'owned-echo-'+m.params.arguments.label}]}}
+ if(m.method==='tools/call'){calls++;await new Promise(r=>setTimeout(r,250));result={content:[{type:'text',text:'owned-echo-'+m.params.arguments.label}]}}
  res.setHeader('content-type','application/json');res.end(JSON.stringify({jsonrpc:'2.0',id:m.id,result}))
 })
 await new Promise(r=>server.listen(0,'127.0.0.1',r))
@@ -74,7 +74,11 @@ try{
  const endpoint=JSON.parse(fs.readFileSync(path.join(profile,'mcp-endpoint.json')))
  for(const label of ['claude','codex','omp']){
   const c=new McpClient({name:'verify-'+label,command:process.execPath,args:[path.join(root,'mcp/eas-plugin-shim.mjs')],cwd:tmp,env:{PATH:process.env.PATH||'',EAS_PLUGIN:name,EAS_TERM_PORT:String(endpoint.port),EAS_TERM_TOKEN:endpoint.token}});clients.push(c)
-  await c.initialize('0.4.102');const r=await c.request('tools/call',{name:'echo',arguments:{label}})
+  await c.initialize('0.4.102')
+  const pending=c.request('tools/call',{name:'echo',arguments:{label}})
+  await wait(50)
+  check((await main.eval('window.api.runtimeWaiting()')).queued===0,label+'插件调用进行中全局等待数为0')
+  const r=await pending
   check(r.content?.[0]?.text==='owned-echo-'+label,label+'真实shim调用自有远程业务工具')
  }
  check(initialized===1&&calls===3,'三个shim共享同一远程宿主')

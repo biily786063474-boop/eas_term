@@ -24,8 +24,8 @@ export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;wai
   acquire:work=>{
    if(!enforcement)return {release(){}} // 闸门失效：空租约（null 会被调度器当成「预算不够、跳过」）
    const cost=costs.get(work.id)
-   const lease=!cost?null:work.interactive?ledger.acquireForced(work.id,cost):latest?ledger.acquire(work.id,cost,{cpu:latest.cpu,memoryUsedBytes:latest.memoryUsedBytes,totalMemoryBytes:latest.totalMemoryBytes,threshold:mode==='eco'?50:80}):null
-   if(lease&&!work.interactive)startsThisSample++
+   const lease=!cost?null:(work.interactive||work.immediate)?ledger.acquireForced(work.id,cost):latest?ledger.acquire(work.id,cost,{cpu:latest.cpu,memoryUsedBytes:latest.memoryUsedBytes,totalMemoryBytes:latest.totalMemoryBytes,threshold:mode==='eco'?50:80}):null
+   if(lease&&!work.interactive&&!work.immediate)startsThisSample++
    const service=services.get(work.id)
    if(lease&&service){service.release=lease.release;return {release(){if(!service.held)lease.release()}}}
    return lease
@@ -38,7 +38,7 @@ export function createRuntimeManager(opts:{now:()=>number;mode?:ResourceMode;wai
   return scheduler.submit(work).finally(()=>{costs.delete(work.id)})
  }
  return {
-  async submitService(work:{id:string;projectId:string;cost:TaskCost;interactive?:boolean;start:(signal:AbortSignal)=>Promise<{completed:Promise<unknown>}>}):Promise<void>{
+  async submitService(work:{id:string;projectId:string;cost:TaskCost;interactive?:boolean;immediate?:boolean;start:(signal:AbortSignal)=>Promise<{completed:Promise<unknown>}>}):Promise<void>{
    if(services.has(work.id)||costs.has(work.id))throw Error('duplicate')
    const service:{held:boolean;release?:()=>void}={held:false};services.set(work.id,service)
    try{await submit({...work,run:async signal=>{
