@@ -1,0 +1,16 @@
+{
+  "schema": 2,
+  "plugins": [
+    {
+      "name": "market-live-check",
+      "displayName": "公网更新验收",
+      "description": "隔离验收包：验证公网下载及原来源升级，不读取用户文件。",
+      "category": "Productivity",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/verification/external-20260922-a/market-live-check/market-live-check-1.0.0.zip",
+      "sha256": "3a9b1dec8b1a837b1a7b18845d40904e484b0bd0203ba7e60cb10e40bd6a74a0",
+      "size": 725
+    }
+  ],
+  "unavailable": []
+}

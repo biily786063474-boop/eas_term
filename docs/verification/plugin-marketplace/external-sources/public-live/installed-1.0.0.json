@@ -1,0 +1,1 @@
+{"name":"market-live-check","version":"1.0.0","displayName":"公网更新验收","description":"隔离验收包：验证公网下载及原来源升级，不读取用户文件。","category":"Productivity","mcp":{"command":"node","args":["./server.mjs"]}}

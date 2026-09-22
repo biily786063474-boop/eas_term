@@ -31,7 +31,7 @@ import { BrowserWindow, dialog } from 'electron'
 //   · MCP 在同级的 `.mcp.json`，值里带 `${CLAUDE_PLUGIN_ROOT}` 变量
 //
 // ── 纪律 ──────────────────────────────────────────────────────────────────
-// **只读，绝不写。** 装插件是 `codex plugin add` / `claude plugin install` 的事，
+// **CLI 插件目录只读，绝不写。** Eas 自有时间线仅启动时做一次授权的离线迁移。装 CLI 插件是 `codex plugin add` / `claude plugin install` 的事，
 // 而那条命令只能预填进终端交给用户按回车，不许代跑 —— 理由同 agentInstall.ts：
 // 静默装全局 CLI + 改配置是恶意软件的行为特征。
 import { guardedHandle } from './ipcGuard'
@@ -41,6 +41,7 @@ import os from 'node:os'
 
 import type { PluginInfo } from '../shared/types'
 import { parseManifest } from './pluginManifest.ts'
+import { migrateTimeline } from './pluginMigration.ts'
 import { mergePluginCopies } from './pluginCopies.ts'
 import { parseEnabledState, isPluginEnabled, setPluginEnabled, type EnabledState } from './pluginEnabledState.ts'
 import { app } from 'electron'
@@ -213,9 +214,21 @@ function easPluginsIn(root: string, builtin: boolean): PluginInfo[] {
   }
   return out
 }
+function timelineSeedDir(): string {
+  return app.isPackaged ? path.join(process.resourcesPath, 'plugin-migrations', 'timeline') : path.join(app.getAppPath(), 'resources', 'plugins', 'timeline')
+}
+let timelineMigrationError: string | undefined
 function easPlugins(): PluginInfo[] {
   const user = easPluginsIn(userPluginsDir(), false)
-  return mergePluginCopies(user, easPluginsIn(builtinPluginsDir(), true))
+  const builtin = easPluginsIn(builtinPluginsDir(), true).filter(p => p.name !== 'timeline')
+  // A failed migration must not strand old panels. Recovery fallback is visible,
+  // never overwrites a user copy and is never used after a completed migration.
+  if (timelineMigrationError && !user.some(p => p.name === 'timeline')) {
+    const seed = timelineSeedDir()
+    const parsed = parseManifest(rd(path.join(seed, 'plugin.json')), seed, { builtin: true, exists: fs.existsSync })
+    if (parsed.ok) builtin.push({ ...parsed.info, shadowedBuiltin: '离线迁移未完成，暂用恢复副本：' + timelineMigrationError })
+  }
+  return mergePluginCopies(user, builtin)
 }
 
 // ── 开启/关闭总闸（设计 2026-09-15）──────────────────────────────────────
@@ -255,6 +268,11 @@ export function findPlugin(id: string): PluginInfo | undefined {
 }
 
 export function registerPluginHandlers(): void {
+  try { migrateTimeline(os.homedir(), timelineSeedDir()) }
+  catch (error) {
+    timelineMigrationError = error instanceof Error ? error.message : String(error)
+    console.error('[plugin] 时间线离线迁移未完成：', timelineMigrationError)
+  }
   guardedHandle('plugins:configuration', async(event,args:{action?:unknown;id?:unknown;values?:unknown})=>{
     const win=BrowserWindow.fromWebContents(event.sender)
     if(!win||win.isDestroyed())return {ok:false,error:'工作台窗口已关闭'}

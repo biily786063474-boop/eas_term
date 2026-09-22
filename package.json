@@ -124,7 +124,12 @@
       },
       {
         "from": "resources/plugins",
-        "to": "plugins"
+        "to": "plugins",
+        "filter": ["**/*", "!timeline{,/**}"]
+      },
+      {
+        "from": "resources/plugins/timeline",
+        "to": "plugin-migrations/timeline"
       },
       {
         "from": "resources/dict-clips",

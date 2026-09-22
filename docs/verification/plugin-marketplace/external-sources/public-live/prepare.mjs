@@ -1,0 +1,6 @@
+import fs from 'node:fs';import path from 'node:path';
+const root=process.cwd(),base='/tmp/eas-public-market-20260922',name='market-live-check',url='https://eas.biily.top/plugins/verification/external-20260922-a';
+const {packPlugin}=await import(path.join(root,'scripts/pack-plugin.mjs'));
+const dir=base+'/'+name;fs.mkdirSync(dir,{recursive:true});
+fs.writeFileSync(dir+'/server.mjs',`import readline from 'node:readline';for await(const line of readline.createInterface({input:process.stdin})){try{const m=JSON.parse(line);if(m.id!==undefined)console.log(JSON.stringify({jsonrpc:'2.0',id:m.id,result:m.method==='initialize'?{protocolVersion:'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'market-live-check',version:'1'}}:m.method==='tools/list'?{tools:[]}:{}}))}catch{}}`);
+for(const version of ['1.0.0','1.1.0']){fs.writeFileSync(dir+'/plugin.json',JSON.stringify({name,version,displayName:'公网更新验收',description:'隔离验收包：验证公网下载及原来源升级，不读取用户文件。',category:'Productivity',mcp:{command:'node',args:['./server.mjs']}}));const p=packPlugin(dir,{outRoot:base+'/packages',baseUrl:url,registrySchema:2});fs.writeFileSync(base+'/registry-'+version+'.json',JSON.stringify({schema:2,plugins:[p.entry],unavailable:[]},null,2));}

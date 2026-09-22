@@ -1,0 +1,6 @@
+import fs from 'node:fs';import path from 'node:path';import {spawn} from 'node:child_process';
+const root=process.cwd(),base='/tmp/eas-timeline-migration-ui',home=base+'/home',profile=base+'/profile',project=base+'/project';
+const bootstrap=base+'/launch.cjs';fs.writeFileSync(bootstrap,`require('os').homedir=()=>${JSON.stringify(home)};const {app}=require('electron');app.setAppPath(${JSON.stringify(root)});require(${JSON.stringify(root+'/out/main/index.js')});`);
+const env={...process.env,EAS_VERIFY:'1'};for(const k of Object.keys(env))if(k.startsWith('EAS_TERM_')||k.startsWith('EAS_CAPABILITY_')||/TOKEN|API_KEY|SECRET|PASSWORD/.test(k))delete env[k];
+const policy='(version 1) (allow default) '+['.codex','.claude','.claude.json','.eas','.dsh'].map(n=>'(deny file-read* file-write* (subpath '+JSON.stringify('/Users/biily/'+n)+'))').join(' ');
+const log=fs.openSync(base+'/restart.log','w');const child=spawn('/usr/bin/sandbox-exec',['-p',policy,'/tmp/eas-plugin-update-ui/PluginUpdateVerify.app/Contents/MacOS/Electron',bootstrap,'--no-sandbox','--user-data-dir='+profile],{env,stdio:['ignore',log,log]});fs.writeFileSync(base+'/process.json',JSON.stringify({pid:child.pid,launcher:process.pid,root}));console.log('isolated app pid',child.pid);child.on('exit',code=>{console.log('app exited',code)});process.on('SIGTERM',()=>{child.kill('SIGTERM');server.close()});
