@@ -1,0 +1,25 @@
+[
+  {
+    "file": "extract-darwin-arm64.json",
+    "symbolCount": 0,
+    "cryptoPackages": []
+  },
+  {
+    "file": "extract-darwin-x64.json",
+    "symbolCount": 0,
+    "cryptoPackages": []
+  },
+  {
+    "file": "extract-symbols.json",
+    "symbolCount": 9635,
+    "cryptoPackages": [
+      "golang.org/x/crypto/md4",
+      "golang.org/x/crypto/ripemd160"
+    ]
+  },
+  {
+    "file": "extract-win32-x64.exe.json",
+    "symbolCount": 0,
+    "cryptoPackages": []
+  }
+]

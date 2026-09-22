@@ -1,0 +1,21 @@
+✔ native connector exposes six tools and validates arguments before engine access (1.702541ms)
+✔ seals all three binaries with fixed names, notices and worker (4.46825ms)
+✔ missing binaries or blank notices cannot produce integrity manifest (1.168167ms)
+✔ worker adapter exists (0.470625ms)
+✔ one shot request uses scrubbed env and waits for close (834.663875ms)
+✔ changed executable fails integrity before spawn (2.035042ms)
+✔ symlink executable is refused (1.792917ms)
+✔ timeout kills owned worker and cancellation is distinct (125.164208ms)
+✔ output flood is bounded and worker killed (1604.214666ms)
+✔ stderr and malformed responses do not leak raw contents (2295.5885ms)
+✔ oversized request rejected before process and pre-abort honored (14.718625ms)
+✔ accepts bounded typed read result but refuses malformed sheet rows (4548.548625ms)
+✔ host-extracted non-executable worker is enabled only after integrity validation (2253.187417ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11732.831167

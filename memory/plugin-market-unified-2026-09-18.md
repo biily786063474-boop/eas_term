@@ -297,3 +297,9 @@ bd74793已提交动态宿主及真实隔离app13项纵向。Frame新截图cnode-
 新增--update真实app路径：1.0.1安装授权→真实旧宿主三工具→运行中替换拒绝→锁柜释放→损坏候选哈希拒绝→真实UI升级1.1.0→密文原样保留→三shim六工具，90087终态exit0/62项，截图亲眼看6工具。初次fixture刷新按钮disabled误点，随后配置已开重复toggle，失败保存；修测试等待条件，没动产品保护。真实完整Excel树注入promotion rename失败后每个旧文件SHA恢复，后续重试成功；不是断电恢复/活app中途注入。
 默认商店仍Excel1.0.1、8包，无发布/无正式app替换；Excel GUI、真实模型CLI与Windows执行未验。安装包下载PID91756到29分钟93.2%，30分钟上限可能需核实后续传；未完成不要打开.part。进度节点仍由单一下载wrapper每5秒更新。当前优先处理剩余审计风险后才候选推广。
 e991005已提交候选工程与升级验收，未push/发布。最终全量98626终态exit0。下载旧PID91756到30分钟98.6%超时28，确认停止后76890断点续传终态exit0，1179079831字节，微软受信任安装器签名核实，SHA256存excel-install.md。尚未安装/激活/Excel GUI验收。本轮无仍运行的已知任务；进度页显示完成仅指下载安装包，不是32项接入完成。
+
+## 2026-09-21 用户选“1”：安全告警处理
+前次问答仅建议（no-progress）；本轮实际升级依赖/回归，不重复空汇报。基线e2603da。发现govulncheck1.8.0 binary.go在去符号且PkgSymbols空时回落go.mod精度；三发布binary extract确实0symbol，另构建有符号arm64提取9635symbol，crypto只有md4/ripemd160，没SSH/OpenPGP。x/crypto升0.56.0，连带net0.57.0/text0.41.0，3SSH告警消失。扫描未屏蔽/不以exit3当clean。
+Excelize2.11.0 checksum验证源码其实已有93f0b3c的内存SST负索引修复，最初数据库“无已知fixed版本”不能当源码未修证据；新真实XLSX直接库调用3非法索引返回错误。发现临时SST getFromStringItem静态仍缺下界，不宣称整个库安全；工程32MiB全包/XML相同阈值+预检保留，后续继续审定该分支可达性。
+扩大Process回归初次5818退出1：正数999999被GetRows接受；原红证据保存。engine预检增实际SST条目数上界，3非法索引×5现有工作簿操作绿；新候选/tmp/eas-excel-plugin-20260921-security3。旧security2仅用于依赖/符号审计，不是最终candidate。23771最终exit0：Go21顶层+vet/三平台build/真实stdio/实际隔离app升级62/全量3446(3428pass18skip0fail)。截图再次眼验六工具。最终security3扫描19671运行中需同handle取终态；此前source与有符号各1(6452)，stripped各2(6452/5932)。证据excel-audit-resolution。原四个failure文件保留未碰，正式app/发布目录不动，goal仍active。
+19671终态exit0指扫描编排正常结束，四次scanner本身均exit3（source1/各binary2告警），不是auditclean。最终文件final-*.txt。所有本轮任务已终态，进度节点仅“扫描任务结束”，剩余安全适用范围审定与ExcelGUI等未完成。

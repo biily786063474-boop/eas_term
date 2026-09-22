@@ -1,0 +1,21 @@
+{
+	"Path": "github.com/xuri/excelize/v2",
+	"Version": "v2.10.2-0.20260621025955-93f0b3caed37",
+	"Query": "93f0b3caed37f21ef5079e3259c6c21dcfe68453",
+	"Time": "2026-06-21T02:59:55Z",
+	"GoMod": "/Users/biily/go/pkg/mod/cache/download/github.com/xuri/excelize/v2/@v/v2.10.2-0.20260621025955-93f0b3caed37.mod",
+	"GoVersion": "1.25.0",
+	"Origin": {
+		"VCS": "git",
+		"URL": "https://github.com/xuri/excelize",
+		"Hash": "93f0b3caed37f21ef5079e3259c6c21dcfe68453"
+	}
+}
+go: downloading golang.org/x/crypto v0.56.0
+go: downloading golang.org/x/text v0.41.0
+go: downloading golang.org/x/net v0.57.0
+go: upgraded golang.org/x/crypto v0.53.0 => v0.56.0
+go: upgraded golang.org/x/net v0.56.0 => v0.57.0
+go: upgraded golang.org/x/text v0.39.0 => v0.41.0
+golang.org/x/crypto/md4
+golang.org/x/crypto/ripemd160

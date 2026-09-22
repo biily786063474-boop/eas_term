@@ -1,0 +1,61 @@
+=== RUN   TestChartNamesAreLiteralAndSurviveUpdate
+--- PASS: TestChartNamesAreLiteralAndSurviveUpdate (0.01s)
+=== RUN   TestLiteralNamesOnlyChangeNewChart
+--- PASS: TestLiteralNamesOnlyChangeNewChart (0.01s)
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.01s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.01s)
+=== RUN   TestCreateReadRoundtrip
+--- PASS: TestCreateReadRoundtrip (0.00s)
+=== RUN   TestCreateRejectsUnsafeOrAmbiguousData
+--- PASS: TestCreateRejectsUnsafeOrAmbiguousData (0.00s)
+=== RUN   TestReadAnalyticsWithoutRewriting
+--- PASS: TestReadAnalyticsWithoutRewriting (0.00s)
+=== RUN   TestUpdateClearsFormulaAndRejectsMergedCells
+--- PASS: TestUpdateClearsFormulaAndRejectsMergedCells (0.01s)
+=== RUN   TestChartMultipleSeries
+--- PASS: TestChartMultipleSeries (0.00s)
+=== RUN   TestChartRejectsMismatchedVector
+--- PASS: TestChartRejectsMismatchedVector (0.00s)
+=== RUN   TestPivotRejectsSourceAndOccupiedDestination
+--- PASS: TestPivotRejectsSourceAndOccupiedDestination (0.00s)
+=== RUN   TestPivotRejectsExistingUnrefreshedPivot
+--- PASS: TestPivotRejectsExistingUnrefreshedPivot (0.00s)
+=== RUN   TestPivotRejectsUndersizedRefreshReservation
+--- PASS: TestPivotRejectsUndersizedRefreshReservation (0.00s)
+=== RUN   TestUpdateRejectsPivotOutputReservation
+--- PASS: TestUpdateRejectsPivotOutputReservation (0.01s)
+=== RUN   TestPivotReservationIncludesColumnGroupsAndMultipleValues
+--- PASS: TestPivotReservationIncludesColumnGroupsAndMultipleValues (0.00s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+=== RUN   TestSharedStringIndexPreflight
+=== RUN   TestSharedStringIndexPreflight/-1
+=== RUN   TestSharedStringIndexPreflight/-2147483648
+=== RUN   TestSharedStringIndexPreflight/999999999999999999999999
+=== RUN   TestSharedStringIndexPreflight/bad
+=== RUN   TestSharedStringIndexPreflight/&#45;1
+--- PASS: TestSharedStringIndexPreflight (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/-1 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/-2147483648 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/999999999999999999999999 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/bad (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/&#45;1 (0.00s)
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-1
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/999999
+--- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-1 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/999999 (0.00s)
+PASS
+ok  	eas-term/excel-engine	3.084s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]

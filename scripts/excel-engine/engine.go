@@ -139,6 +139,7 @@ func validateArchive(b []byte) error {
 	seen := map[string]bool{}
 	total := int64(0)
 	cells := 0
+	sharedStringCount, largestSharedIndex := 0, int64(-1)
 	for _, f := range z.File {
 		n := f.Name
 		lower := strings.ToLower(n)
@@ -192,6 +193,9 @@ func validateArchive(b []byte) error {
 				return errors.New("XML directives forbidden")
 			case xml.StartElement:
 				depth++
+				if n == "xl/sharedStrings.xml" && depth == 2 && x.Name.Local == "si" {
+					sharedStringCount++
+				}
 				if depth > 100 {
 					return errors.New("XML nesting exceeds limit")
 				}
@@ -282,6 +286,9 @@ func validateArchive(b []byte) error {
 					if err != nil || n < 0 {
 						return errors.New("invalid shared-string index")
 					}
+					if n > largestSharedIndex {
+						largestSharedIndex = n
+					}
 					sharedValue = false
 				}
 				if x.Name.Local == "c" {
@@ -296,6 +303,9 @@ func validateArchive(b []byte) error {
 				depth--
 			}
 		}
+	}
+	if largestSharedIndex >= int64(sharedStringCount) {
+		return errors.New("shared-string index exceeds table bounds")
 	}
 	if !seen["xl/workbook.xml"] {
 		return errors.New("missing workbook")

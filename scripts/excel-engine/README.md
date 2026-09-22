@@ -95,3 +95,10 @@ clean. Evidence: docs/verification/plugin-marketplace/excel-audit/README.md.
 Actual old→candidate update acceptance: `node --experimental-strip-types
 scripts/verify-excel-plugin.mjs /absolute/candidate --update`; filesystem rollback:
 `node --experimental-strip-types scripts/verify-excel-update-rollback.mjs /absolute/candidate`.
+
+Follow-up: dependencies now use x/crypto 0.56.0, x/net 0.57.0, x/text 0.41.0.
+The verified Excelize 2.11.0 in-memory shared-string reader already includes the
+upstream fix, but its temporary-SST reader still needs scoped review. We retain
+preflight and equal archive/XML limits. Original and post-upgrade findings plus
+symbol-level diagnostic evidence are in excel-audit-resolution; no scanner
+suppression, release permission, or whole-library security guarantee is implied.

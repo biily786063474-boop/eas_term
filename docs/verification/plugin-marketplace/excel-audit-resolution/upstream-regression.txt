@@ -1,0 +1,11 @@
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-1
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/999999
+--- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex (0.01s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-1 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/999999 (0.00s)
+PASS
+ok  	eas-term/excel-engine	0.668s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]

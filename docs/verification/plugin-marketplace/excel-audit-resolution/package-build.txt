@@ -1,0 +1,17 @@
+Building darwin-arm64
+Building darwin-x64
+Building win32-x64
+{
+  "darwin-arm64": {
+    "size": 9503954,
+    "sha256": "6d036534e2e4795953a5831f0b81fd0b77f6bcfcd3ad9bfc503e42d6c10ee85d"
+  },
+  "darwin-x64": {
+    "size": 10257632,
+    "sha256": "241a757705c15ad2b49e9506edef8d9668d78a464e2a6fef0ce256603fafdac6"
+  },
+  "win32-x64": {
+    "size": 10323968,
+    "sha256": "97345b8b3609b8b3d2fabe585323cd1afbec06b6d939dff22e253629c1ba979a"
+  }
+}
