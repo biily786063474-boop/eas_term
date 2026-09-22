@@ -1,0 +1,9 @@
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.01s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+PASS
+ok  	eas-term/excel-engine	1.811s
+Cross-compilation passed: darwin-amd64/windows-amd64. Runtime not verified.
