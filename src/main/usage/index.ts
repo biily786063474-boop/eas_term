@@ -1,6 +1,6 @@
 // App-owned persistence only; no caller-selected ledger path or network traffic.
 import { guardedHandle } from '../ipcGuard'
-import { app, dialog, BrowserWindow } from 'electron'
+import { app, dialog, BrowserWindow, nativeImage, clipboard } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -63,6 +63,22 @@ export function registerUsageHandlers():void {
   if(!win||e.senderFrame!==e.sender.mainFrame)throw new Error('只允许应用主窗口访问用量')
  }
  guardedHandle('usage:query',(e,raw)=>{trusted(e);book.prune(Date.now());return {...queryLedger({version:1,since,rows:book.rows},validateQuery(raw)),error}})
+ guardedHandle('usage:receipt',async(e,mode:unknown,data:unknown)=>{
+  trusted(e)
+  if((mode!=='copy'&&mode!=='save')||typeof data!=='string'||data.length>5_000_000||!data.startsWith('data:image/png;base64,'))throw new Error('无效的小票图片')
+  const bytes=Buffer.from(data.slice('data:image/png;base64,'.length),'base64')
+  // Bound dimensions before native decoding, not only after allocation.
+  if(bytes.length<33||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||bytes.toString('ascii',12,16)!=='IHDR'||bytes.readUInt32BE(16)!==880||![1600,1920].includes(bytes.readUInt32BE(20)))throw new Error('无效的小票尺寸')
+  const image=nativeImage.createFromDataURL(data)
+  const size=image.getSize()
+  if(image.isEmpty()||size.width!==880||![1600,1920].includes(size.height))throw new Error('无效的小票尺寸')
+  if(mode==='copy'){clipboard.writeImage(image);return {ok:true}}
+  const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender)!,{title:'保存小票到项目目录或知识库',defaultPath:'eas-usage-receipt.png',filters:[{name:'PNG',extensions:['png']}]})
+  if(result.canceled||!result.filePath)return {ok:false,cancelled:true}
+  const g=guardPath(result.filePath);if(!g.ok)return g
+  await fs.promises.writeFile(g.path,image.toPNG())
+  return {ok:true,path:g.path}
+ })
  guardedHandle('usage:stage',async(e,id:unknown,stage:unknown)=>{
   trusted(e)
   if(disabled)throw new Error(error)

@@ -140,3 +140,6 @@ feat/global-timeline-20260918：宿主权限、全局项目聚合、零模型候
 - 验证：typecheck/build通过；低并发全量2879项，2866通过、13跳过、0失败。随后根软链/不可读目录防护再次通过3项定向、typecheck/build及真实生命周期复验。原21项UI检查、实际重启恢复均通过。
 - verify-global-timeline-lifecycle：更新新代码、旧PID真正退出、旧退出回调不移除新进程、卸载拒绝及PID退出、重装重新握手通过；截图invalidated-panel.png已亲眼查看。最初CDP向销毁iframe求值超时属验收脚本问题，保留earlier-probe-failure.json，改从主窗口RPC校验失效会话，不掩盖失败。
 - 仍未完成：Claude账号权限恢复后的真实模型验收、OMP隔离provider配置后的真实模型验收、Windows、跨轮候选关联已有成果。之前Codex真实自动采集通过，本轮未重复付费模型调用。未提交/合并/发布，未动正式应用。
+
+## 2026-09-21 · 用量抽屉／共享小票／时间轴成果周报
+在 /private/tmp/eas-timeline-integrate 完成并隔离验收，未提交/推送/安装。用户确认的口径、文件边界、真实点击与出纸层级陷阱、37项定向测试和体验实例入口见 memory/agent_usage-receipts-2026-09-21.md；截图与技术证据见 docs/verification/timeline-receipt/。正式版与原主目录混合改动未动。

@@ -311,6 +311,14 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
   const params = (args.params ?? {}) as Record<string, unknown>
   try {
     switch (args.method) {
+      case 'panel/timeline-report': {
+        if(p.pluginName!=='timeline')throw Error('仅时间线插件支持成果周报')
+        if(params.week!==undefined&&params.week!==0&&params.week!==-1)throw Error('仅支持本周或上周')
+        const authorized=timelineParams({week:params.week??0,projectIds:params.projectIds},p.ctx.cwd)
+        const result=await h.client.request(args.method,authorized)
+        if(p.stale||panels.get(p.session)!==p||registry.get(p.pluginName)!==h)throw Error('原时间线面板已失效')
+        return {ok:true,result}
+      }
       case 'ping':
         return { ok: true, result: {} }
       // 插件的**面板私有方法**（`panel/` 前缀）：只有面板走得到，会话里的转发 shim 那条路
