@@ -312,6 +312,13 @@ func validateArchive(b []byte) error {
 	}
 	return nil
 }
+
+// Equal XML and total expansion limits prevent the dependency's temporary-SST
+// branch: a single part cannot exceed the total accepted expanded archive.
+func workbookReadOptions() excelize.Options {
+	return excelize.Options{UnzipSizeLimit: maxExpanded, UnzipXMLSizeLimit: maxExpanded, MaxCalcIterations: 1000}
+}
+
 func Process(r Request) (Response, error) {
 	if r.Operation == "create" {
 		return create(r)
@@ -322,7 +329,7 @@ func Process(r Request) (Response, error) {
 	if e := validateArchive(r.Workbook); e != nil {
 		return Response{}, e
 	}
-	f, e := excelize.OpenReader(bytes.NewReader(r.Workbook), excelize.Options{UnzipSizeLimit: maxExpanded, UnzipXMLSizeLimit: maxExpanded, MaxCalcIterations: 1000})
+	f, e := excelize.OpenReader(bytes.NewReader(r.Workbook), workbookReadOptions())
 	if e != nil {
 		return Response{}, errors.New("cannot open workbook")
 	}
@@ -399,6 +406,21 @@ func Process(r Request) (Response, error) {
 				return Response{}, e
 			}
 		}
+		// A desktop editor may have saved cached formula values. Source edits
+		// must invalidate them across sheets, not only in changed cells.
+		props, err := f.GetCalcProps()
+		if err != nil {
+			return Response{}, err
+		}
+		if err = f.UpdateLinkedValue(); err != nil {
+			return Response{}, err
+		}
+		yes := true
+		props.FullCalcOnLoad = &yes
+		props.ForceFullCalc = &yes
+		if err = f.SetCalcProps(&props); err != nil {
+			return Response{}, err
+		}
 	case "chart":
 		if e := cell(r.Cell); e != nil {
 			return Response{}, e
@@ -444,7 +466,7 @@ func Process(r Request) (Response, error) {
 			default:
 				return Response{}, errors.New("unsupported aggregate")
 			}
-			o.Data = append(o.Data, excelize.PivotTableField{Data: v.Field, Subtotal: v.Aggregate})
+			o.Data = append(o.Data, excelize.PivotTableField{Data: v.Field, Subtotal: v.Aggregate, Name: v.Aggregate + " of " + v.Field})
 		}
 		e = f.AddPivotTable(o)
 	}

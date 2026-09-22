@@ -1,0 +1,314 @@
+[
+  {
+    "name": "excel_create",
+    "args": {
+      "path": "wps-table.xlsx",
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            [
+              "Region",
+              "Amount",
+              "Units",
+              null,
+              "合计"
+            ],
+            [
+              "East",
+              10,
+              1,
+              null,
+              {
+                "formula": "SUM(B2:B4)"
+              }
+            ],
+            [
+              "West",
+              20,
+              2
+            ],
+            [
+              "East",
+              30,
+              3
+            ]
+          ]
+        }
+      ]
+    },
+    "result": {
+      "path": "wps-table.xlsx",
+      "bytes": 6115,
+      "sha256": "2237a65d36f5a559d6a82a29ba199f49438249297427cada5e1f083e83aee0b1"
+    }
+  },
+  {
+    "name": "excel_chart",
+    "args": {
+      "path": "wps-table.xlsx",
+      "sheet": "Sheet1",
+      "cell": "A7",
+      "chart": {
+        "type": "column",
+        "series": [
+          {
+            "name": "金额 Amount",
+            "categories": "Sheet1!$A$2:$A$4",
+            "values": "Sheet1!$B$2:$B$4"
+          },
+          {
+            "name": "数量 Units",
+            "categories": "Sheet1!$A$2:$A$4",
+            "values": "Sheet1!$C$2:$C$4"
+          }
+        ]
+      },
+      "expectedSha256": "2237a65d36f5a559d6a82a29ba199f49438249297427cada5e1f083e83aee0b1"
+    },
+    "result": {
+      "path": "wps-table.xlsx",
+      "bytes": 8957,
+      "sha256": "d333f7f159b848326311340ef847a1d50dfec3502c8d8fe196ee15e0cbd00558"
+    }
+  },
+  {
+    "name": "excel_pivot",
+    "args": {
+      "path": "wps-table.xlsx",
+      "pivot": {
+        "source": "Sheet1!A1:C4",
+        "destination": "Sheet1!J1:M12",
+        "name": "RegionalTotals",
+        "rows": [
+          "Region"
+        ],
+        "data": [
+          {
+            "field": "Amount",
+            "aggregate": "Sum"
+          }
+        ]
+      },
+      "expectedSha256": "d333f7f159b848326311340ef847a1d50dfec3502c8d8fe196ee15e0cbd00558"
+    },
+    "result": {
+      "path": "wps-table.xlsx",
+      "bytes": 10589,
+      "sha256": "2773a9fd5cd815a59b34b5d28d540c0ffa275fb072803cce2cab253aa8aa67d2",
+      "note": "原生透视表已写入；须由Excel打开刷新，未计算缓存汇总"
+    }
+  },
+  {
+    "name": "excel_read",
+    "args": {
+      "path": "wps-table.xlsx"
+    },
+    "result": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            [
+              "Region",
+              "Amount",
+              "Units",
+              null,
+              "合计"
+            ],
+            [
+              "East",
+              10,
+              1,
+              null,
+              {
+                "formula": "SUM(B2:B4)"
+              }
+            ],
+            [
+              "West",
+              20,
+              2
+            ],
+            [
+              "East",
+              30,
+              3
+            ]
+          ]
+        }
+      ],
+      "calculated": false,
+      "note": "只读取公式及已有缓存，不执行计算；日期数值保留原始序列值，不代表完整图表/透视/排版还原",
+      "sha256": "2773a9fd5cd815a59b34b5d28d540c0ffa275fb072803cce2cab253aa8aa67d2"
+    }
+  },
+  {
+    "name": "excel_calculate",
+    "args": {
+      "path": "wps-table.xlsx",
+      "sheet": "Sheet1",
+      "cell": "E2"
+    },
+    "result": {
+      "value": "60"
+    }
+  },
+  {
+    "name": "word_create",
+    "args": {
+      "path": "wps-document.docx",
+      "title": "WPS 文字 · 插件验收",
+      "paragraphs": [
+        {
+          "text": "生成与格式",
+          "heading": 1
+        },
+        {
+          "text": "这是一段待修订的验收正文。"
+        },
+        {
+          "text": "粗体验证 Bold",
+          "bold": true
+        },
+        {
+          "text": "斜体验证 Italic",
+          "italic": true
+        }
+      ],
+      "tables": [
+        {
+          "rows": [
+            [
+              "分类",
+              "结果"
+            ],
+            [
+              "中文表格",
+              "可编辑"
+            ],
+            [
+              "保存重开",
+              "待验证"
+            ]
+          ]
+        }
+      ]
+    },
+    "result": {
+      "path": "wps-document.docx",
+      "bytes": 8879,
+      "sha256": "8d656899705a08a3e4aa976018c1c39b10df0f8b676442869fe493e7bfcfc9c0"
+    }
+  },
+  {
+    "name": "word_read",
+    "args": {
+      "path": "wps-document.docx"
+    },
+    "result": {
+      "scope": "正文顶层段落与顶层表格单元格文本；不含页眉页脚、文本框、嵌套表格内容或合并单元格布局还原",
+      "paragraphs": [
+        {
+          "index": 0,
+          "text": "WPS 文字 · 插件验收",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 1,
+          "text": "生成与格式",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 2,
+          "text": "这是一段待修订的验收正文。",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 3,
+          "text": "粗体验证 Bold",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 4,
+          "text": "斜体验证 Italic",
+          "deletedText": "",
+          "tracked": false
+        }
+      ],
+      "tables": [
+        {
+          "index": 0,
+          "complex": false,
+          "rows": [
+            [
+              "分类",
+              "结果"
+            ],
+            [
+              "中文表格",
+              "可编辑"
+            ],
+            [
+              "保存重开",
+              "待验证"
+            ]
+          ]
+        }
+      ],
+      "sha256": "8d656899705a08a3e4aa976018c1c39b10df0f8b676442869fe493e7bfcfc9c0"
+    }
+  },
+  {
+    "name": "powerpoint_create",
+    "args": {
+      "path": "wps-slides.pptx",
+      "slides": [
+        {
+          "title": "WPS 演示 · 插件验收",
+          "body": "中文标题与正文\n创建 → 保存 → 插件编辑 → 重新打开"
+        },
+        {
+          "title": "第二页：往返验证",
+          "body": "原始正文：等待插件更新。"
+        }
+      ]
+    },
+    "result": {
+      "path": "wps-slides.pptx",
+      "bytes": 51559,
+      "sha256": "70194b5c4a137fd0bc9bb1b1fe8d507df0b61a483d4436bdc97a54a7d840e25f"
+    }
+  },
+  {
+    "name": "powerpoint_read",
+    "args": {
+      "path": "wps-slides.pptx"
+    },
+    "result": {
+      "slides": [
+        {
+          "index": 0,
+          "texts": [
+            "WPS 演示 · 插件验收",
+            "中文标题与正文",
+            "创建 → 保存 → 插件编辑 → 重新打开"
+          ]
+        },
+        {
+          "index": 1,
+          "texts": [
+            "第二页：往返验证",
+            "原始正文：等待插件更新。"
+          ]
+        }
+      ],
+      "note": "按幻灯片顺序提取文本，不渲染图表、图片或排版。",
+      "sha256": "70194b5c4a137fd0bc9bb1b1fe8d507df0b61a483d4436bdc97a54a7d840e25f"
+    }
+  }
+]

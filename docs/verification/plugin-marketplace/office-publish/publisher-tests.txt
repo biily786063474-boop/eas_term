@@ -1,0 +1,21 @@
+(node:3274) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/pluginCatalog.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ publishes verified packages before two catalogs, preserves old catalogs, and safely repeats (151.790458ms)
+✔ remote same-version conflict rejects before uploads and does not delete the previous package (23.244458ms)
+✔ corrupt upload leaves both live catalogs unchanged and releases its own lock (38.8265ms)
+✔ another publisher lock is never removed or bypassed (8.314875ms)
+✔ local tampering, URL traversal and legacy capability leakage fail before transport (2.466958ms)
+✔ publish CLI requires explicit approval flag without contacting transport (61.658334ms)
+✔ private upload modes are made readable before promotion (76.472917ms)
+✔ late second catalog failure leaves two individually valid generations, not missing package references (67.749667ms)
+✔ first v2 publish creates its readable directory without mixing the two registry payloads (77.271125ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 586.329833

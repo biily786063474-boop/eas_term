@@ -3,8 +3,10 @@ package engine
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"github.com/xuri/excelize/v2"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -83,6 +85,74 @@ func TestPinnedDependencyRejectsNegativeSharedStringIndex(t *testing.T) {
 			value, err := f.GetCellValue("Sheet1", "A1")
 			if err == nil || !strings.Contains(err.Error(), "invalid shared string index") || value != "" {
 				t.Fatalf("upstream accepted invalid index: %q %v", value, err)
+			}
+		})
+	}
+}
+
+// Positive control proves the temporary-file observation actually sees a spill;
+// production options must keep the same valid, >default-threshold SST in memory.
+func TestProductionOptionsPreventSharedStringSpill(t *testing.T) {
+	opts := workbookReadOptions()
+	if opts.UnzipXMLSizeLimit != maxExpanded || opts.UnzipSizeLimit != maxExpanded {
+		t.Fatal("XML threshold must equal total archive expansion limit")
+	}
+	input := fixture(t)
+	z, err := zip.NewReader(bytes.NewReader(input), int64(len(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	out := zip.NewWriter(&buf)
+	for _, part := range z.File {
+		r, err := part.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := io.ReadAll(r)
+		r.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if part.Name == "xl/sharedStrings.xml" {
+			b = bytes.Replace(b, []byte("</sst>"), []byte("<!--"+strings.Repeat("x", 17<<20)+"--></sst>"), 1)
+		}
+		w, err := out.Create(part.Name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = w.Write(b); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = out.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = validateArchive(buf.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	for _, spill := range []bool{true, false} {
+		t.Run(fmt.Sprint("spill_control=", spill), func(t *testing.T) {
+			o := opts
+			o.TmpDir = t.TempDir()
+			if spill {
+				o.UnzipXMLSizeLimit = 1024
+			}
+			f, err := excelize.OpenReader(bytes.NewReader(buf.Bytes()), o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			value, err := f.GetCellValue("Sheet1", "A1")
+			if err != nil || value != "Region" {
+				t.Fatalf("value=%q err=%v", value, err)
+			}
+			files, err := os.ReadDir(o.TmpDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (len(files) > 0) != spill {
+				t.Fatalf("unexpected temporary files: %d", len(files))
 			}
 		})
 	}

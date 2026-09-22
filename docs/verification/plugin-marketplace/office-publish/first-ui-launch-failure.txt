@@ -1,0 +1,75 @@
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[island] dock menu: 没有任务在跑 | — | 显示灵动岛
+[mcp] bridge listening on 127.0.0.1:52861
+Failed to initialize sandbox.[island] {"show":false,"focused":true,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+[12335:0922/031146.088520:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[12335:0922/031146.090424:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[render-process-gone] crashed
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[12335:0922/031146.174106:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[12335:0922/031146.175037:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[12335:0922/031146.204343:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[12335:0922/031146.205205:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Osandbox initialization failed: Operation not permitted
+peration not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[12335:0922/031146.232540:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[12335:0922/031146.233240:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[12335:0922/031146.261365:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[main:child-process-gone] Utility crashed
+[12335:0922/031146.262115:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.329137:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[12335:0922/031146.330172:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.365136:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[12335:0922/031146.365368:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.399930:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[12335:0922/031146.400400:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.430729:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[12335:0922/031146.431200:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.460188:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[12335:0922/031146.460623:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.491198:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[main:child-process-gone] GPU crashed
+[12335:0922/031146.491625:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+sandbox initialization failed: Operation not permitted
+sandbox initialization failed: Operation not permitted
+Failed to initialize sandbox.Failed to initialize sandbox.[main:child-process-gone] Utility crashed
+[12335:0922/031146.520211:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=6
+[12335:0922/031146.520224:FATAL:content/browser/gpu/gpu_data_manager_impl_private.cc:415] GPU process isn't usable. Goodbye.

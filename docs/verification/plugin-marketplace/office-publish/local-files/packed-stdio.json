@@ -1,0 +1,114 @@
+{
+  "passed": true,
+  "dir": "/tmp/eas-local-files-promotion-Mv7eKD",
+  "entry": {
+    "name": "local-files",
+    "displayName": "本地文件",
+    "description": "列出、读取和写入你明确授权目录内的文本文件；覆盖已有文件必须提供原内容SHA256。不是操作系统沙箱。",
+    "category": "开发工具",
+    "version": "1.0.0",
+    "url": "https://eas.biily.top/plugins/local-files/local-files-1.0.0.zip",
+    "sha256": "774ca7c91330c18788c923768052804ecabc4659ed26929d044f8c28f908ee89",
+    "size": 4554,
+    "permissions": {
+      "canvas": []
+    },
+    "requirements": {
+      "capabilities": [
+        "mcp.stdio",
+        "config.fields"
+      ]
+    }
+  },
+  "evidence": [
+    {
+      "name": "files_write",
+      "args": {
+        "path": "验收.txt",
+        "text": "目录授权文件验收"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"path\":\"验收.txt\",\"bytes\":24,\"sha256\":\"932746a016ee1cb571d3faa2737afb90f70459e325d0db7d9ca529952db5f148\"}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "files_read",
+      "args": {
+        "path": "验收.txt"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"text\":\"目录授权文件验收\",\"sha256\":\"932746a016ee1cb571d3faa2737afb90f70459e325d0db7d9ca529952db5f148\"}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "files_write",
+      "args": {
+        "path": "验收.txt",
+        "text": "更新保留业务文件",
+        "expectedSha256": "932746a016ee1cb571d3faa2737afb90f70459e325d0db7d9ca529952db5f148"
+      },
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"path\":\"验收.txt\",\"bytes\":24,\"sha256\":\"3381c885b5b2f8eb85ac053704d0c2b80b740cba71a069eacda45c20cb074cab\"}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "files_write",
+      "args": {
+        "path": "验收.txt",
+        "text": "bad",
+        "expectedSha256": "932746a016ee1cb571d3faa2737afb90f70459e325d0db7d9ca529952db5f148"
+      },
+      "result": {
+        "isError": true,
+        "content": [
+          {
+            "type": "text",
+            "text": "覆盖前必须提供当前文件SHA256"
+          }
+        ]
+      }
+    },
+    {
+      "name": "files_read",
+      "args": {
+        "path": "../outside"
+      },
+      "result": {
+        "isError": true,
+        "content": [
+          {
+            "type": "text",
+            "text": "仅接受授权目录内相对路径"
+          }
+        ]
+      }
+    },
+    {
+      "name": "files_list",
+      "args": {},
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"entries\":[{\"name\":\"验收.txt\",\"type\":\"file\"}],\"truncated\":false}"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+[island] dock menu: 没有任务在跑 | — | 显示灵动岛
+[mcp] bridge listening on 127.0.0.1:53051
+[island] {"show":false,"focused":true,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+[cliAuth] 查状态：claude auth status
+[cliAuth] 查状态：codex login status
+[cliAuth] 状态结果：codex installed=true loggedIn=读不到
+[cliAuth] 状态结果：claude installed=true loggedIn=true
+[island] {"show":false,"focused":false,"minimized":true,"visible":false,"running":0,"notices":0,"held":false,"hasWin":false}
+[island] {"show":false,"focused":false,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+[island] {"show":false,"focused":true,"minimized":false,"visible":true,"running":0,"notices":0,"held":false,"hasWin":false}
+[cliAuth] 查状态：claude auth status
+[cliAuth] 查状态：codex login status
+[cliAuth] 状态结果：codex installed=true loggedIn=读不到
+[island] {"show":false,"focused":false,"minimized":true,"visible":false,"running":0,"notices":0,"held":false,"hasWin":false}
+[cliAuth] 状态结果：claude installed=true loggedIn=true

@@ -1,0 +1,13 @@
+Tue Sep 22 10:09:59 UTC 2026
+Filesystem       1B-blocks        Used   Available Use% Mounted on
+/dev/vda3      41881894912 29537067008 10409185280  74% /
+[{"name":"biily","pid":3473977,"status":"online"},{"name":"bizone-cms","pid":126856,"status":"online"},{"name":"survey","pid":126871,"status":"online"},{"name":"spb-cms","pid":898359,"status":"online"},{"name":"eas-tunnel","pid":598956,"status":"online"}]
+www 200
+aurora 200
+rove 200
+bzone 200
+spb 200
+eas 200
+mini 504
+siming 200
+drwx------ 2 root root 4096 Sep 22 18:08 /www/wwwroot/eas/plugins/.release-51ae19ca-2eb9-42b0-bd91-6f9de2a10935

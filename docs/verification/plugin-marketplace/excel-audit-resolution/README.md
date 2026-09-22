@@ -83,3 +83,30 @@ root regression: 3,446 total / 3,428 passed / 18 skipped / zero failures. Final
 source scan and all three final distributed-binary scans were repeated after the
 upper-bound fix; outputs final-*.txt still report source=1, stripped binaries=2,
 exit 3. Remaining findings are documented, not waived or declared clean.
+
+## Temporary SST applicability closure (2026-09-21)
+
+Production `workbookReadOptions()` keeps both expansion limits at 32 MiB.
+Pinned Excelize lib.go ReadZipReader rejects cumulative expanded size above
+UnzipSizeLimit before considering any individual part for temporary-file spill;
+spill requires its size strictly greater than UnzipXMLSizeLimit. A single part
+cannot exceed the equal total limit without rejection first. Preflight additionally
+checks actual decompressed bytes, and rejects invalid shared-string indices.
+
+`TestProductionOptionsPreventSharedStringSpill` opens a valid 17 MiB SST fixture
+with the exact production options and observes zero temporary files. Its positive
+control lowers XML threshold to 1 KiB and observes temporary files for the same
+fixture, so the negative observation is meaningful. Original output:
+`sst-spill-control.txt`. Do not lower the XML threshold independently.
+
+This closes the identified temporary-SST applicability question **for the current
+plugin configuration**, not for arbitrary Excelize clients. Existing source and
+stripped-binary scan exit 3 findings remain retained; this is not a clean scan or
+a claim of general vulnerability absence. OpenPGP applicability remains scoped by
+the prior actual import/symbol evidence.
+
+Fresh candidate `/tmp/eas-excel-plugin-20260921-security4`: full Go tests and vet,
+Node adapter tests, three target builds, packed stdio and actual isolated app
+old-to-new update (62 checks) passed, command exit 0. Evidence:
+`sst-final-verification.txt`; configured.png inspected. Cross-platform execution,
+real model CLI inference and real Excel workbook acceptance are not implied.

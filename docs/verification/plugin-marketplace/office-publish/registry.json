@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "updated": "2026-09-22T10:07:30.881Z",
+  "plugins": [
+    {
+      "name": "pomodoro",
+      "displayName": "番茄钟",
+      "description": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+      "category": "Productivity",
+      "brandColor": "#F87171",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/pomodoro/pomodoro-1.0.0.zip",
+      "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+      "size": 8033,
+      "permissions": {
+        "canvas": [
+          "canvas_add_note"
+        ]
+      }
+    },
+    {
+      "name": "board",
+      "displayName": "看板",
+      "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+      "category": "Productivity",
+      "brandColor": "#5E6AD2",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/board/board-1.0.0.zip",
+      "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+      "size": 7344,
+      "permissions": {
+        "canvas": [
+          "canvas_open_file"
+        ]
+      }
+    }
+  ]
+}

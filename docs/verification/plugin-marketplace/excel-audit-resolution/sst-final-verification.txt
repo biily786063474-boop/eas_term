@@ -1,0 +1,201 @@
+=== RUN   TestChartNamesAreLiteralAndSurviveUpdate
+--- PASS: TestChartNamesAreLiteralAndSurviveUpdate (0.01s)
+=== RUN   TestLiteralNamesOnlyChangeNewChart
+--- PASS: TestLiteralNamesOnlyChangeNewChart (0.01s)
+=== RUN   TestProcessCalculatesAndPreservesAnalytics
+--- PASS: TestProcessCalculatesAndPreservesAnalytics (0.01s)
+=== RUN   TestProcessRejectsUnsafeInputs
+--- PASS: TestProcessRejectsUnsafeInputs (0.00s)
+=== RUN   TestCreateReadRoundtrip
+--- PASS: TestCreateReadRoundtrip (0.00s)
+=== RUN   TestCreateRejectsUnsafeOrAmbiguousData
+--- PASS: TestCreateRejectsUnsafeOrAmbiguousData (0.00s)
+=== RUN   TestReadAnalyticsWithoutRewriting
+--- PASS: TestReadAnalyticsWithoutRewriting (0.00s)
+=== RUN   TestUpdateClearsFormulaAndRejectsMergedCells
+--- PASS: TestUpdateClearsFormulaAndRejectsMergedCells (0.01s)
+=== RUN   TestChartMultipleSeries
+--- PASS: TestChartMultipleSeries (0.00s)
+=== RUN   TestChartRejectsMismatchedVector
+--- PASS: TestChartRejectsMismatchedVector (0.00s)
+=== RUN   TestPivotRejectsSourceAndOccupiedDestination
+--- PASS: TestPivotRejectsSourceAndOccupiedDestination (0.00s)
+=== RUN   TestPivotRejectsExistingUnrefreshedPivot
+--- PASS: TestPivotRejectsExistingUnrefreshedPivot (0.00s)
+=== RUN   TestPivotRejectsUndersizedRefreshReservation
+--- PASS: TestPivotRejectsUndersizedRefreshReservation (0.00s)
+=== RUN   TestUpdateRejectsPivotOutputReservation
+--- PASS: TestUpdateRejectsPivotOutputReservation (0.01s)
+=== RUN   TestPivotReservationIncludesColumnGroupsAndMultipleValues
+--- PASS: TestPivotReservationIncludesColumnGroupsAndMultipleValues (0.00s)
+=== RUN   TestOneShotProtocol
+--- PASS: TestOneShotProtocol (0.00s)
+=== RUN   TestNativeAnalyticsSurviveCellEdit
+--- PASS: TestNativeAnalyticsSurviveCellEdit (0.00s)
+=== RUN   TestCalculationErrorsAreNotReportedAsSuccess
+--- PASS: TestCalculationErrorsAreNotReportedAsSuccess (0.00s)
+=== RUN   TestRecalculationAfterMutationDoesNotReturnOldResult
+--- PASS: TestRecalculationAfterMutationDoesNotReturnOldResult (0.00s)
+=== RUN   TestSharedStringIndexPreflight
+=== RUN   TestSharedStringIndexPreflight/-1
+=== RUN   TestSharedStringIndexPreflight/-2147483648
+=== RUN   TestSharedStringIndexPreflight/999999999999999999999999
+=== RUN   TestSharedStringIndexPreflight/bad
+=== RUN   TestSharedStringIndexPreflight/&#45;1
+--- PASS: TestSharedStringIndexPreflight (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/-1 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/-2147483648 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/999999999999999999999999 (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/bad (0.00s)
+    --- PASS: TestSharedStringIndexPreflight/&#45;1 (0.00s)
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-1
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648
+=== RUN   TestPinnedDependencyRejectsNegativeSharedStringIndex/999999
+--- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex (0.01s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-1 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/-2147483648 (0.00s)
+    --- PASS: TestPinnedDependencyRejectsNegativeSharedStringIndex/999999 (0.00s)
+=== RUN   TestProductionOptionsPreventSharedStringSpill
+=== RUN   TestProductionOptionsPreventSharedStringSpill/spill_control=true
+=== RUN   TestProductionOptionsPreventSharedStringSpill/spill_control=false
+--- PASS: TestProductionOptionsPreventSharedStringSpill (0.28s)
+    --- PASS: TestProductionOptionsPreventSharedStringSpill/spill_control=true (0.09s)
+    --- PASS: TestProductionOptionsPreventSharedStringSpill/spill_control=false (0.08s)
+PASS
+ok  	eas-term/excel-engine	0.526s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+✔ native connector exposes six tools and validates arguments before engine access (1.578166ms)
+✔ seals all three binaries with fixed names, notices and worker (4.162334ms)
+✔ missing binaries or blank notices cannot produce integrity manifest (0.878625ms)
+✔ worker adapter exists (0.36075ms)
+✔ one shot request uses scrubbed env and waits for close (145.01775ms)
+✔ changed executable fails integrity before spawn (1.782625ms)
+✔ symlink executable is refused (1.715625ms)
+✔ timeout kills owned worker and cancellation is distinct (125.956375ms)
+✔ output flood is bounded and worker killed (115.959584ms)
+✔ stderr and malformed responses do not leak raw contents (220.518792ms)
+✔ oversized request rejected before process and pre-abort honored (11.115667ms)
+✔ accepts bounded typed read result but refuses malformed sheet rows (335.552916ms)
+✔ host-extracted non-executable worker is enabled only after integrity validation (115.272375ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1118.875542
+Building darwin-arm64
+Building darwin-x64
+Building win32-x64
+{
+  "darwin-arm64": {
+    "size": 9503954,
+    "sha256": "6fa45cf2281f6b60e7c04fd0c182c1b2aeac0401960be42a923481c61040b271"
+  },
+  "darwin-x64": {
+    "size": 10257632,
+    "sha256": "709bbcf4335d53d935e5f8f9b83c6fe82fbb817cf0d31ee97a335e969092aa4d"
+  },
+  "win32-x64": {
+    "size": 10324480,
+    "sha256": "4d2c4fa2c95298acfb58028c8a958d01e8e5f01a2e195f5169be920a76e2c60c"
+  }
+}
+(node:89786) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/mcpClient.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "passed": true,
+  "packedStdio": true,
+  "tools": 6,
+  "archiveBytes": 11197050,
+  "create": true,
+  "read": true,
+  "update": true,
+  "calculate": true,
+  "chart": true,
+  "pivot": true,
+  "revisionGuard": true,
+  "pathGuard": true,
+  "unsafeFormulaGuard": true,
+  "symlinkGuard": true,
+  "readOnlyGuard": true,
+  "appHostVerified": false,
+  "excelVisualVerified": false,
+  "platform": "darwin",
+  "arch": "arm64"
+}
+(node:89709) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/pluginCompatibility.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "passed": true,
+  "checks": [
+    "隔离密钥柜真实设置并解锁，没有替换safeStorage",
+    "Excel 表格包安装前需真实市场确认",
+    "真实UI触发目录选择和二次确认（原生对话框返回值受控）",
+    "原生目录授权真实加密落盘，不以明文路径持久化",
+    "save等待原生确认时实际锁定并重新解锁",
+    "save旧确认结果不能跨解锁代次写入，原密文不变",
+    "directory等待原生确认时实际锁定并重新解锁",
+    "directory旧确认结果不能跨解锁代次写入，原密文不变",
+    "真实旧版1.0.1安装并授权",
+    "旧版真实宿主运行三工具",
+    "运行中的真实Excel宿主拒绝包替换",
+    "运行中更新拒绝后旧包和配置密文不变",
+    "锁柜关闭本次隔离宿主后解锁",
+    "真实Excel候选损坏包被哈希校验拒绝",
+    "失败下载保持旧版和授权密文（非提交后回滚）",
+    "真实市场升级1.0.1到1.1.0，目录授权密文原样保留",
+    "升级未重启应用进程",
+    "配置卡片提供真实测试连接入口",
+    "配置连接测试只列工具，不执行业务写入",
+    "claude真实shim经实际应用宿主获得工具",
+    "claude真实工具调用写入授权临时目录",
+    "claude真实宿主往返创建并读取矩形表格",
+    "claude六项原生工具完整暴露",
+    "claude excel_calculate真实宿主调用",
+    "claude公式计算为30",
+    "claude excel_chart真实宿主调用",
+    "claude excel_pivot真实宿主调用",
+    "claude透视表明确需要Excel刷新",
+    "claude excel_update真实宿主调用",
+    "claude excel_calculate真实宿主调用",
+    "claude含图表和透视表更新后重算为60",
+    "codex真实shim经实际应用宿主获得工具",
+    "codex真实工具调用写入授权临时目录",
+    "codex真实宿主往返创建并读取矩形表格",
+    "codex六项原生工具完整暴露",
+    "codex excel_calculate真实宿主调用",
+    "codex公式计算为30",
+    "codex excel_chart真实宿主调用",
+    "codex excel_pivot真实宿主调用",
+    "codex透视表明确需要Excel刷新",
+    "codex excel_update真实宿主调用",
+    "codex excel_calculate真实宿主调用",
+    "codex含图表和透视表更新后重算为60",
+    "omp真实shim经实际应用宿主获得工具",
+    "omp真实工具调用写入授权临时目录",
+    "omp真实宿主往返创建并读取矩形表格",
+    "omp六项原生工具完整暴露",
+    "omp excel_calculate真实宿主调用",
+    "omp公式计算为30",
+    "omp excel_chart真实宿主调用",
+    "omp excel_pivot真实宿主调用",
+    "omp透视表明确需要Excel刷新",
+    "omp excel_update真实宿主调用",
+    "omp excel_calculate真实宿主调用",
+    "omp含图表和透视表更新后重算为60",
+    "真实宿主调用拒绝越出授权目录",
+    "清除配置使此前悬挂的保存确认失效",
+    "清除真实配置但保留三个业务文件",
+    "清除使旧shim连接不能继续写入",
+    "重新授权后可以重新建立连接读取原业务文件",
+    "密钥柜锁定关闭实际配置插件，后续调用不能写入",
+    "锁定后配置IPC不返回明文"
+  ]
+}

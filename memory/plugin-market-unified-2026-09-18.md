@@ -303,3 +303,20 @@ e991005已提交候选工程与升级验收，未push/发布。最终全量98626
 Excelize2.11.0 checksum验证源码其实已有93f0b3c的内存SST负索引修复，最初数据库“无已知fixed版本”不能当源码未修证据；新真实XLSX直接库调用3非法索引返回错误。发现临时SST getFromStringItem静态仍缺下界，不宣称整个库安全；工程32MiB全包/XML相同阈值+预检保留，后续继续审定该分支可达性。
 扩大Process回归初次5818退出1：正数999999被GetRows接受；原红证据保存。engine预检增实际SST条目数上界，3非法索引×5现有工作簿操作绿；新候选/tmp/eas-excel-plugin-20260921-security3。旧security2仅用于依赖/符号审计，不是最终candidate。23771最终exit0：Go21顶层+vet/三平台build/真实stdio/实际隔离app升级62/全量3446(3428pass18skip0fail)。截图再次眼验六工具。最终security3扫描19671运行中需同handle取终态；此前source与有符号各1(6452)，stripped各2(6452/5932)。证据excel-audit-resolution。原四个failure文件保留未碰，正式app/发布目录不动，goal仍active。
 19671终态exit0指扫描编排正常结束，四次scanner本身均exit3（source1/各binary2告警），不是auditclean。最终文件final-*.txt。所有本轮任务已终态，进度节点仅“扫描任务结束”，剩余安全适用范围审定与ExcelGUI等未完成。
+
+2026-09-21 用户新增硬规则：每个插件方法论必须以已跑通的方法论为基准，不重复试错。
+已写docs/knowledge/plugin-integration-baseline.md并挂AGENTS强制入口；内容含类型样板路由、统一执行顺序、验收边界、实际历史坑与进度轮询规则。后续开工先列原功能/基准/差异/验收，再只做差异部分；不把候选风险或受控业务验收当通用成熟能力。
+
+2026-09-21 第一项安全收尾：生产read options提取共用函数，17MiB SST正反对照证明当前相等32MiB阈值不会进入temp SST；低1KiB阈值对照确实spill。67834全回归终态exit0：Go/vet/Node/三平台security4构建/真实stdio/隔离app升级62检查。截图已眼验。原始scanner exit3保留，不宣称零漏洞。安装器已显示成功，Excel打开在订阅登录/只读选择页，等待用户原生登录；已发选项卡。真实MCP生成excel-real/native-acceptance.xlsx，公式60、pivot East40/West20，总计60待真实GUI证明。未安装ChatGPT add-in、无live Excel session核验，不冒充完成。无已知后台任务，未改正式Eas-Term、未push/发布。
+
+2026-09-21 WPS acceptance requested: official installer downloaded and signed/notarized (99441 exit0). CUA wpsi at unchecked EULA/privacy gate; async confirmation requested, no install yet. See excel-real/wps-acceptance.md. No need to redownload.
+
+2026-09-22 WPS installed after explicit agreement; actual home launched. Opening exact wps-roundtrip.xlsx via Finder brings account QR login. Waiting user native login, no workbook GUI checks passed yet. Original fixture preserved. No live download command, no release.
+
+2026-09-22 WPS real acceptance made substantive progress. User logged in; actual WPS UI verified formula60/chart labels/pivot40+20. WPS save -> native MCP update B2=40 -> reopen exposed stale formula60 while chart/pivot90 correct. Preserved failure and XML cache diagnosis, TestUpdateInvalidatesWPSFormulaCache red confirmed. engine update calls UpdateLinkedValue, restores calcprops with full recalc flags. Candidate /tmp/eas-excel-plugin-20260922-wps1,37219 finalexit0 Go/vet/3targetbuild/stdio/isolatedappupgrade. wps-fixed.xlsx real WPS now formula90/chart40,20,30/pivot70+20=90, saved/closed/readback cached90, exact filename reopened and90 seen. UI screenshots in conversation; local readback and failure retained. Pivot value-field caption blank despite correct native sums; followup. No formal release/defaultmarket switch, no known live commands, goal active. Must not repeat login/download or mistake old wps-roundtrip for fixed.
+
+2026-09-22 用户明确暂停插件工作，优先合并其他分支并发版。保留全部当前未提交WPS/安全收尾代码与证据；不把未完成插件候选混入本次发布。下一次恢复从透视值列标题缺失开始，不重复下载安装。
+
+2026-09-22 03:03 PDT：用户恢复 WPS 的 PPT/Word/Excel 三项。三项本机真实文件往返全部通过，详见 wps-office/README.md：Excel透视值标题显式Name修好，Go/vet/三目标打包/stdio通过，最终WPS公式缓存90/透视70+20标题保留；Word真实WPS序列化后MCP读改再开，两条作者和删除记录保留；PPT真实WPS序列化后MCP读改再开，两页布局与更新文本正确。Word/PPT13自动测试全通过；final-assertions.json通过。无修改Cmd+S可能不写盘，已按哈希发现并纠正初轮证据，真正roundtrip-edit证据保留；方法论已补。候选 /tmp/eas-excel-plugin-20260922-wps-office。无后台命令存活，未commit/push/市场发布。下一步是候选正式市场晋级/集成，而非重复三件套安装或本轮基础GUI验收；32项总目标仍未完成。
+
+2026-09-22 用户授权三件套发布市场并继续其他插件。已生产发布v2三件套，随后完成本地文件真实打包stdio回归并增量发布，最终v2共6包（pomodoro/board/excel1.1.0/word1.0.0/powerpoint1.0.1/local-files1.0.0），旧v1仅2。公开HTTPS完整字节逐包一致，8站+5pm2 PID/状态不变，锁释放，回退 .release-ID保留。证据office-publish。发现关键：正式0.4.103根本未合入此分支宿主、仍v1，已发异步选择卡问合入最新版再发宿主，尚无回复，不替用户发版。check/build3446总3428过18跳过0失败，发布器9过。CUA原生生产目录安装UI未完成（同bundle Electron歧义），启动嵌套sandbox首失败保存；本轮自有实例14019已核路径SIGTERM退出。继续核验Notion/Sentry真实授权元数据与候选端点一致、Notion资源发现首次成功；Sentry根资源404保留、真实账号未验均未上架。维基仍fake-IP拒绝，未绕守卫。默认build-plugin-registry仍开发清单旧Excel且漏Word，禁止直接覆盖生产；下次按已发布v2增量。暂存/tmp/eas-office-market-20260922/dist。

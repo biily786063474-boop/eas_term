@@ -276,3 +276,18 @@ Mac双架构签名公证和smoke通过，Windows34573939599全部通过；五包
 
 ### 2026-09-21 Excel第一项收尾：图例字面量
 修新增图表series名称被当公式引用的问题，保留旧chart部件与安全预检；新增真实XLSX中文/特殊字符/二次编辑/旧图保留测试。Microsoft Excel本机未安装且无Excel MCP，实际图例/透视刷新尚未验证，不宣称第1项验收完成。
+
+## 2026-09-21：插件方法论基准固化
+- 用户要求后续各插件复用已经跑通的方法论，避免重复试错。
+- 新增 docs/knowledge/plugin-integration-baseline.md；AGENTS.md 添加强制先读入口。
+- 覆盖样板路由、差异验证、历史坑、证据与发布边界；文档规则变更，无产品行为改动。
+
+2026-09-21 Excel：临时SST适用性正反对照完成，security4完整回归与真实隔离升级62检查通过。Excel安装成功并已打开，当前待原生订阅登录，实机工作簿验收未完成；fixture已由真实候选MCP生成。保留audit exit3证据与跨平台/真实CLI边界。
+
+2026-09-22 WPS real acceptance: found and fixed stale formula cache after native update of a WPS-saved workbook. Real WPS same-cell90 and save/reopen/readback verified; chart/pivot preserved. All-target candidate build + actual isolated host upgrade passed. Detailed scoped evidence excel-real/wps-acceptance.md. Not published.
+
+## 2026-09-22 03:03 PDT · WPS 三件套真实验收
+插件分支完成当前Mac WPS的Excel/Word/PPT文件生成—实际保存—stdio插件编辑—重开—回读。Excel补透视标题并跑RED/GREEN、Go/vet/三目标打包/stdio；Word/PPT13测试通过。哈希排除Cmd+S未真正保存的假阳性，WPS元数据和原文件保存于wps-office。见该目录README和final-assertions.json。未修改正式应用、未发布；默认市场候选晋级仍待做，不把32项目标标完成。
+
+## 2026-09-22 · 用户授权插件生产发布
+三件套与后续本地文件分两次发布到v2（6项），v1原2项安全保留；真实公网完整包/目录字节一致，5pm2/8HTTP前后相同。新版宿主check/build3446/3428pass/18skip/0fail；旧正式0.4.103仍v1，应用发版选择卡待回复，生产UI贯通未冒称完成。Notion/Sentry端点公开元数据复核通过但账号未验；维基fake-IP仍拒绝。生产记录与回退ID在office-publish与服务器档案，无后台构建/上传遗留。

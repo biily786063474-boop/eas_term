@@ -1,0 +1,11 @@
+{
+  "read": true,
+  "calculateBefore": "60",
+  "update": {
+    "path": "wps-roundtrip.xlsx",
+    "bytes": 16605,
+    "sha256": "35923399b888693338d5ac017670809169f187b9ba7c00efbed5f2f559cc5f5d"
+  },
+  "calculateAfter": "90",
+  "afterUpdateVisualVerified": false
+}

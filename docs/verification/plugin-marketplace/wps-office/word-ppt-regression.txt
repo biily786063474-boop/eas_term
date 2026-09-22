@@ -1,0 +1,39 @@
+(node:95489) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/mcpClient.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[plugin:wps-word] (node:95495) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Real MCP phase passed: roundtrip-edit
+(node:95501) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/pluginCompatibility.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ create real PPTX and edit a text run preserving presentation order and other parts (48.135125ms)
+✔ presentation limits and argument validation reject oversized inputs (0.245042ms)
+✔ packed PowerPoint runs offline through stdio with directory and overwrite guards (117.198292ms)
+✔ reject active parts, external relationships, XML entities, nested text and expanded bombs (149.418917ms)
+✔ edit preserves non-target entries and reads relationship order rather than filename order (80.118958ms)
+✔ active relationship types cannot evade guards using renamed package parts (31.838916ms)
+(node:95502) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/mcpClient.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95502) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+✔ Word rejects expanded XML over limit and entity declarations without resolving anything (35.89275ms)
+✔ Word connector creates formatted DOCX, reads paragraphs and records a tracked replacement (37.790084ms)
+[plugin:word-test] (node:95522) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ packed Word connector runs without npm dependencies, writes only granted DOCX and requires fresh revision hash (136.769333ms)
+✔ Word connector rejects malformed input instead of dropping content (7.57675ms)
+✔ Word creates rectangular tables and reads cells without mixing them into paragraph indices (18.581417ms)
+✔ Word table limits reject invalid and oversized structures (8.741708ms)
+✔ Word marks merged and nested tables as complex without flattening nested cells (1.005208ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 506.649041

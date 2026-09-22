@@ -1,0 +1,181 @@
+[
+  {
+    "name": "excel_read",
+    "args": {
+      "path": "wps-table.xlsx"
+    },
+    "result": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            [
+              "Region",
+              "Amount",
+              "Units",
+              null,
+              "合计",
+              null,
+              null,
+              null,
+              null,
+              "行标签",
+              "Sum of Amount"
+            ],
+            [
+              "East",
+              40,
+              1,
+              null,
+              {
+                "cachedResult": 90,
+                "formula": "SUM(B2:B4)"
+              },
+              null,
+              null,
+              null,
+              null,
+              "East",
+              70
+            ],
+            [
+              "West",
+              20,
+              2,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              "West",
+              20
+            ],
+            [
+              "East",
+              30,
+              3,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              "总计",
+              90
+            ]
+          ]
+        }
+      ],
+      "calculated": false,
+      "note": "只读取公式及已有缓存，不执行计算；日期数值保留原始序列值，不代表完整图表/透视/排版还原",
+      "sha256": "164f68fc3d66df03def089638628945ad9c9e70ccbeeed0bffce7ab6c290cd41"
+    }
+  },
+  {
+    "name": "excel_calculate",
+    "args": {
+      "path": "wps-table.xlsx",
+      "sheet": "Sheet1",
+      "cell": "E2"
+    },
+    "result": {
+      "value": "90"
+    }
+  },
+  {
+    "name": "word_read",
+    "args": {
+      "path": "wps-document.docx"
+    },
+    "result": {
+      "scope": "正文顶层段落与顶层表格单元格文本；不含页眉页脚、文本框、嵌套表格内容或合并单元格布局还原",
+      "paragraphs": [
+        {
+          "index": 0,
+          "text": "WPS 文字 · 插件验收",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 1,
+          "text": "生成与格式",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 2,
+          "text": "修订后的正文：WPS 保存后，插件仍可安全编辑。",
+          "deletedText": "这是一段待修订的验收正文。",
+          "tracked": true
+        },
+        {
+          "index": 3,
+          "text": "粗体验证 Bold：WPS 往返通过",
+          "deletedText": "粗体验证 Bold",
+          "tracked": true
+        },
+        {
+          "index": 4,
+          "text": "斜体验证 Italic",
+          "deletedText": "",
+          "tracked": false
+        },
+        {
+          "index": 5,
+          "text": "",
+          "deletedText": "",
+          "tracked": false
+        }
+      ],
+      "tables": [
+        {
+          "index": 0,
+          "complex": false,
+          "rows": [
+            [
+              "分类",
+              "结果"
+            ],
+            [
+              "中文表格",
+              "可编辑"
+            ],
+            [
+              "保存重开",
+              "待验证"
+            ]
+          ]
+        }
+      ],
+      "sha256": "f600455cde4f0f269b2d39486e5a6fa5802c659f4835a3b1df0f36e4da0bcb4c"
+    }
+  },
+  {
+    "name": "powerpoint_read",
+    "args": {
+      "path": "wps-slides.pptx"
+    },
+    "result": {
+      "slides": [
+        {
+          "index": 0,
+          "texts": [
+            "WPS 演示 · 插件验收",
+            "中文标题与正文",
+            "创建 → 保存 → 插件编辑 → 重新打开"
+          ]
+        },
+        {
+          "index": 1,
+          "texts": [
+            "第二页：往返验证",
+            "真实往返通过：WPS 保存 → 插件修改 → WPS 重开。"
+          ]
+        }
+      ],
+      "note": "按幻灯片顺序提取文本，不渲染图表、图片或排版。",
+      "sha256": "857e5e6befb3712f88a4104cc2c960dc4b689460c44f8fbcf93c0cebd7ee909f"
+    }
+  }
+]

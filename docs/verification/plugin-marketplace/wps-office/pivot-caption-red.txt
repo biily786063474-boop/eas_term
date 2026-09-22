@@ -1,0 +1,6 @@
+=== RUN   TestPivotValueCaptionIsExplicit
+    pivot_caption_test.go:22: blank or ambiguous pivot caption: ""
+--- FAIL: TestPivotValueCaptionIsExplicit (0.00s)
+FAIL
+exit status 1
+FAIL	eas-term/excel-engine	2.543s

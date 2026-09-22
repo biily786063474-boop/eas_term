@@ -1,0 +1,23 @@
+{
+  "candidate": "/tmp/eas-excel-plugin-20260921-security4",
+  "path": "native-acceptance.xlsx",
+  "bytes": 11608,
+  "sha256": "5b9b004bd2bd11ea5c6a4a1a04bf87f9abb5e0075303ddbb67b33bc94f3a0fbb",
+  "note": "原生透视表已写入；须由Excel打开刷新，未计算缓存汇总",
+  "calculated": {
+    "value": "60"
+  },
+  "expected": {
+    "formula": 60,
+    "pivot": {
+      "East": 40,
+      "West": 20,
+      "total": 60
+    },
+    "chartSeries": [
+      "金额 & Amount",
+      "数量 Units"
+    ]
+  },
+  "excelVisualVerified": false
+}

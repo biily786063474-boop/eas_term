@@ -1,0 +1,16 @@
+[
+  {
+    "name": "notion",
+    "manifestEndpointsMatchLiveMetadata": true,
+    "publicClientAndPKCE": true,
+    "businessAccountVerified": false,
+    "published": false
+  },
+  {
+    "name": "sentry",
+    "manifestEndpointsMatchLiveMetadata": true,
+    "publicClientAndPKCE": true,
+    "businessAccountVerified": false,
+    "published": false
+  }
+]

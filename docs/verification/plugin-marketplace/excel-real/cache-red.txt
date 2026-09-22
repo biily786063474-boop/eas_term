@@ -1,0 +1,6 @@
+=== RUN   TestUpdateInvalidatesWPSFormulaCache
+    recalculation_test.go:15: stale cache survives update: "60" <nil>
+--- FAIL: TestUpdateInvalidatesWPSFormulaCache (0.01s)
+FAIL
+exit status 1
+FAIL	eas-term/excel-engine	0.225s

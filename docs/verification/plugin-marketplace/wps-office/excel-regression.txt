@@ -1,0 +1,44 @@
+ok  	eas-term/excel-engine	0.982s
+?   	eas-term/excel-engine/cmd/excel-engine	[no test files]
+Building darwin-arm64
+Building darwin-x64
+Building win32-x64
+{
+  "darwin-arm64": {
+    "size": 9503954,
+    "sha256": "d614a369b763d9b7ccfe5435b86a51d933c270d918173b83aeb0b18021f8b07f"
+  },
+  "darwin-x64": {
+    "size": 10257632,
+    "sha256": "1cbf919af633a1435faaf4447a3a5c0e4f05ca252ddf8379dc6fcc864e76e56a"
+  },
+  "win32-x64": {
+    "size": 10325504,
+    "sha256": "b86241fda7db7d8119862b3095416893aa9aaa1ad160590aa158bf408d2fcba3"
+  }
+}
+(node:86594) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/release-0.4.102/src/main/mcpClient.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/release-0.4.102/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{
+  "passed": true,
+  "packedStdio": true,
+  "tools": 6,
+  "archiveBytes": 11197190,
+  "create": true,
+  "read": true,
+  "update": true,
+  "calculate": true,
+  "chart": true,
+  "pivot": true,
+  "revisionGuard": true,
+  "pathGuard": true,
+  "unsafeFormulaGuard": true,
+  "symlinkGuard": true,
+  "readOnlyGuard": true,
+  "appHostVerified": false,
+  "excelVisualVerified": false,
+  "platform": "darwin",
+  "arch": "arm64"
+}

@@ -1,0 +1,63 @@
+{
+  "sheets": [
+    {
+      "name": "Data",
+      "rows": [
+        [
+          "Region",
+          "Amount",
+          "Units",
+          null,
+          "Total"
+        ],
+        [
+          "East",
+          40,
+          1,
+          null,
+          {
+            "cachedResult": 90,
+            "formula": "SUM(B2:B4)"
+          }
+        ],
+        [
+          "West",
+          20,
+          2
+        ],
+        [
+          "East",
+          30,
+          3
+        ]
+      ]
+    },
+    {
+      "name": "Charts",
+      "rows": []
+    },
+    {
+      "name": "Pivot",
+      "rows": [
+        [
+          "行标签"
+        ],
+        [
+          "East",
+          70
+        ],
+        [
+          "West",
+          20
+        ],
+        [
+          "总计",
+          90
+        ]
+      ]
+    }
+  ],
+  "calculated": false,
+  "note": "只读取公式及已有缓存，不执行计算；日期数值保留原始序列值，不代表完整图表/透视/排版还原",
+  "sha256": "bc8733c715aea4b44af57d4ce205d9330f3ed47e34735efb4e231cdb30857c0f"
+}

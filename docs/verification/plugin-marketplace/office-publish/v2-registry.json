@@ -1,0 +1,96 @@
+{
+  "schema": 2,
+  "updated": "2026-09-22T10:07:30.881Z",
+  "plugins": [
+    {
+      "name": "pomodoro",
+      "displayName": "番茄钟",
+      "description": "专注计时：25 分钟专注 / 5 分钟休息，可让 AI 帮你开始，完成后一键记到画布。记录落在项目内 .eas/pomodoro.json",
+      "category": "Productivity",
+      "brandColor": "#F87171",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/pomodoro/pomodoro-1.0.0.zip",
+      "sha256": "a97d96f45caed15b101f1e4c0440e6572043b69d386dfd145f726d8909b81835",
+      "size": 8033,
+      "permissions": {
+        "canvas": [
+          "canvas_add_note"
+        ]
+      }
+    },
+    {
+      "name": "board",
+      "displayName": "看板",
+      "description": "项目待办三栏看板（待办 / 进行中 / 完成）。数据落在项目内 .eas/board.json",
+      "category": "Productivity",
+      "brandColor": "#5E6AD2",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/board/board-1.0.0.zip",
+      "sha256": "a3876e3069ac86bc3dd244a5bf3339b0516874ae3aaafdde0f516d27bd857526",
+      "size": 7344,
+      "permissions": {
+        "canvas": [
+          "canvas_open_file"
+        ]
+      }
+    },
+    {
+      "name": "excel",
+      "displayName": "Excel 表格",
+      "description": "读取、创建和更新XLSX，计算受支持公式，添加多系列图表与需刷新显示的透视表。",
+      "category": "办公文档",
+      "version": "1.1.0",
+      "url": "https://eas.biily.top/plugins/excel/excel-1.1.0.zip",
+      "sha256": "44a57c6c6ec52ed5f552c97860954e8e5944ff4e7d5b11db52fc977fc0b9c734",
+      "size": 11197190,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "word",
+      "displayName": "Word 文档",
+      "description": "在授权目录创建带标题/粗体/斜体的DOCX，读取正文顶层段落，按段落写入带作者的跟踪修订。复杂段落拒绝改写；开发候选，完整Word排版和平台验收未完成。",
+      "category": "办公文档",
+      "version": "1.0.0",
+      "url": "https://eas.biily.top/plugins/word/word-1.0.0.zip",
+      "sha256": "8d36d110c69f81d80d78205a5ae2dab7c2c5b1f6d175ef25e98bcfd4ff03c16a",
+      "size": 237473,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    },
+    {
+      "name": "powerpoint",
+      "displayName": "PowerPoint 演示",
+      "description": "创建文本幻灯片、读取文字、按索引编辑文本并保留其余包内容；不提供图表和动画编辑或视觉渲染。",
+      "category": "办公文档",
+      "version": "1.0.1",
+      "url": "https://eas.biily.top/plugins/powerpoint/powerpoint-1.0.1.zip",
+      "sha256": "f951223f78bdfaa5e02acf841dae04c8231964e7b9a7de22a6e751e182c78fa8",
+      "size": 200997,
+      "permissions": {
+        "canvas": []
+      },
+      "requirements": {
+        "capabilities": [
+          "mcp.stdio",
+          "config.fields"
+        ]
+      }
+    }
+  ],
+  "unavailable": []
+}

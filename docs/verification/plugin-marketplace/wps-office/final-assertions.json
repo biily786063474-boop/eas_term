@@ -1,0 +1,33 @@
+{
+  "passed": true,
+  "wordTrackedRevisions": 2,
+  "powerpointSlides": 2,
+  "excelFormulaCached": 90,
+  "pivotCaption": "Sum of Amount",
+  "files": {
+    "wps-saved-wps-document.docx": {
+      "bytes": 11813,
+      "sha256": "e52d7cd6be92a65f4f2160fc818b236aa0171d44c1e39850f09fd5dad9a4df4c"
+    },
+    "wps-slides.pptx": {
+      "bytes": 19231,
+      "sha256": "857e5e6befb3712f88a4104cc2c960dc4b689460c44f8fbcf93c0cebd7ee909f"
+    },
+    "wps-saved-wps-slides.pptx": {
+      "bytes": 19290,
+      "sha256": "a050536161e48be63b3467f1be04a6ed8ba9b2ea01526bbad1a4c1e2d5eb042b"
+    },
+    "wps-table.xlsx": {
+      "bytes": 14680,
+      "sha256": "164f68fc3d66df03def089638628945ad9c9e70ccbeeed0bffce7ab6c290cd41"
+    },
+    "wps-document.docx": {
+      "bytes": 11907,
+      "sha256": "f600455cde4f0f269b2d39486e5a6fa5802c659f4835a3b1df0f36e4da0bcb4c"
+    },
+    "wps-saved-wps-table.xlsx": {
+      "bytes": 14685,
+      "sha256": "93f84f7effc1dc754ecc8d63e7683c91789a0d8f8dca96c2637768c6138b9c4c"
+    }
+  }
+}

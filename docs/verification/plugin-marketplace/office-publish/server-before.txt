@@ -1,0 +1,18 @@
+Tue Sep 22 10:06:59 UTC 2026
+Filesystem       1B-blocks        Used   Available Use% Mounted on
+/dev/vda3      41881894912 29525344256 10420908032  74% /
+[{"name":"biily","pid":3473977,"status":"online"},{"name":"bizone-cms","pid":126856,"status":"online"},{"name":"survey","pid":126871,"status":"online"},{"name":"spb-cms","pid":898359,"status":"online"},{"name":"eas-tunnel","pid":598956,"status":"online"}]
+total 20
+drwxr-xr-x 4 root root 4096 Sep 15 22:48 .
+drwxr-xr-x 6 root root 4096 Sep 18 16:59 ..
+drwxr-xr-x 2 root root 4096 Sep 15 21:57 board
+drwxr-xr-x 2 root root 4096 Sep 15 22:48 pomodoro
+-rw-r--r-- 1 root root 1221 Sep 15 22:48 registry.json
+www 200
+aurora 200
+rove 200
+bzone 200
+spb 200
+eas 200
+mini 504
+siming 200

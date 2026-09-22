@@ -15,3 +15,6 @@ HTTP200，Content-Length 1179079831。不是Updater包，也不是Office全套�
 
 最终状态：下载完整1179079831字节；pkgutil验证为Apple信任的Microsoft Corporation安装器（见installer-signature.txt）。SHA256：`9db8f0c5fae677d7b06526730cf8cab4a2050c7eb21e3c8b8214a1c4c02c4459`。
 原30分钟下载在98.6%正常超时退出28，确认旧PID不存在后续传成功（76890退出0）。尚未安装、激活或做Excel GUI验收，不能据下载完成计功能完成。
+
+2026-09-21 实机状态更新：CUA 亲眼确认安装器“安装成功。软件已安装。”；随后打开 Microsoft Excel，显示“已有订阅? 登录”及“跳转到只读模式”。尚未登录或激活，已请用户在原生窗口登录已有授权账号，不购买订阅。
+原生候选 security4 已通过真实 MCP 生成 `../excel-real/native-acceptance.xlsx`，含 Data/Charts/Pivot 三表；公式预期60，透视 East40/West20/总计60，双系列图例“金额 & Amount”“数量 Units”。fixture.json 保存生成SHA及引擎计算结果，**不是Excel GUI验收证据**。真实显示、刷新、保存重开待验。

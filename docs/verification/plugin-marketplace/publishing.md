@@ -30,3 +30,7 @@
 ## 2026-09-18 已批准路径对齐
 
 构建与发布使用 `/plugins/registry.json`（v1）及 `/plugins/v2/registry.json`（v2），不再产出开发期的 `registry-v2.json`。客户端默认源仍未切换。两个目录同名，暂存分别用 `registry.json` 和 `v2-registry.json` 避免覆盖；备份分别为 `previous-registry.json` 和 `previous-v2-registry.json`。首次发布创建 v2 目录（755），拒绝符号链接；本地构建也拒绝 v2 链接重定向。不删除开发期旧产物，发布前使用独立干净的输出目录。
+
+## 2026-09-22 首次生产 v2 发布（覆盖上文历史“未执行”状态）
+
+三件套加本地文件已上线，v2共6项、v1维持原2项。逐包公开HTTPS完整哈希和前后生产状态通过，见 office-publish/README.md。正式0.4.103尚无新版插件宿主，需要独立应用发版；不要把v2包投进v1绕过能力校验。现有默认build脚本仍是开发候选集，不得直接覆盖这次生产版本；后续发布必须基于最新生产目录增量、保留不可变旧包，尤其不能将Excel降回1.0.1或漏掉Word。
