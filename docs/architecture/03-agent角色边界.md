@@ -404,3 +404,6 @@ AI 对话专用 `taskLifecycle: true` 由 `session.ts` 传给 `codexCapabilityLa
 CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提交一次，松手/失焦/卸载收尾 flush 并取消残留帧；不改变全局 setViewport 同步语义，不改滚轮/缩放算法。PaneView 对 TerminalView 与 AgentChatView 使用 React.memo 默认浅比较：位置只影响外壳，内容内部 store/state 更新不被阻断。禁止通过卸载不可见面板或停止进程换取性能。源码基于 main 471456f，不混入其他未提交修改。
 
 2026-09-22 合并市场更新与热插拔时，pluginHost 的 onEnded 同时保留配置日志脱敏、remote.onClose/stdio.onExit 与 stopWatching。远程测试须提供真实可监听的临时插件目录，不能删除生产 watchPluginFiles 来让旧夹具通过。事件权限加入目录/包一致性和更新差异提示；当前新增 events.agent-turn-completed 能力仅代表现有受授权事件桥，不等于全局记录自动开启。
+
+### 2026-09-22 源码引用边界
+设计选型台 `dict:designSource` 不接受任意URL，只按既有索引slug读取固定HTTPS源，拒绝redirect/非HTML/超时/超限。源码为不可信参考文件，禁止自动执行；外部CSS/JS不递归下载，也不声称完整产品工程。落盘须经guardDir/guardPath，不写用户凭据目录。composerAddChip与composerCwd一起在空态/对话态登记和清空，异步结果不得插到其他输入框；完整源码以本地文件引用传给模型，不把数百KB正文塞进CLI位置参数。

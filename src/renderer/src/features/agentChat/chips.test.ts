@@ -153,3 +153,13 @@ test('preview badges distinguish explicit references from legacy fallback withou
   assert.deepEqual(expandChips('@a', chips, false).usedIds, ['a'])
   assert.equal(expandChips('普通消息', chips).text, '普通消息\n\n---\nA\n\nB')
 })
+
+test('switching a design reference scope replaces its prompt rather than silently deduplicating', () => {
+  const full = { id: 'design:chatgpt', label: 'ChatGPT · 设计系统', text: '完整规范' }
+  const colors = { ...full, label: 'ChatGPT · 配色', text: '仅参考颜色' }
+  const next = addChip([full], colors)
+  assert.deepEqual(next, [colors])
+  assert.equal(expandChips('', next).text, '仅参考颜色')
+  assert.strictEqual(addChip(next, colors), next)
+  assert.deepEqual(addChip(next, full), [full])
+})

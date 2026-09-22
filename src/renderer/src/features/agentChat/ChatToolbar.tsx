@@ -494,7 +494,7 @@ export function ChatToolbar({
             slash.syncSelection()
             const st = useStore.getState()
             st.setComposerAppend(appendVoice)
-            st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
+            st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)), effectiveCwd ?? cwd)
           }}
           placeholder="继续和它说…（可粘贴或拖入图片）"
           onChange={setText}

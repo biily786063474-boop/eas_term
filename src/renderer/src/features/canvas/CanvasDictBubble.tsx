@@ -74,6 +74,8 @@ export function CanvasDictBubble(): JSX.Element | null {
       if (!t) return
       if (popRef.current?.contains(t)) return
       if (t.closest('[data-dict-toggle]')) return
+      // The design scope picker is portalled out of the clipped catalog.
+      if (t.closest('[data-dict-overlay="prompt-scope"]')) return
       close()
     }
     window.addEventListener('mousedown', h, { capture: true })

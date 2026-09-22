@@ -1617,7 +1617,7 @@ export function AgentChatView({
               st.setComposerAppend((t) =>
                 setText((v) => (v && !/\s$/.test(v) ? v + ' ' : v) + t)
               )
-              st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)))
+              st.setComposerAddChip((c) => setChips((cur) => addChip(cur, c)), effectiveCwd)
             }}
             onKeyDown={(e) => {
               // 候选开着时先归它管 —— 上下键/Tab/Esc 在这一刻的意思跟平时不一样

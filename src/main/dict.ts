@@ -7,6 +7,9 @@
 //
 // 现在只剩一条入口：用户主动说「把 X 收进辞典」，agent 走完分类/结构/演示图/提示词
 // 四步，最后调 dict_add 落盘。写入路径一个字没变 —— 变的是**谁发起**。
+import { guardDir, guardPath } from './fsGuard'
+import { readDesignSource, saveDesignSource } from './designSource'
+import designPreviews from '../renderer/src/features/dict/design-previews.json'
 import { guardedHandle } from './ipcGuard'
 import { app } from 'electron'
 import fs from 'fs'
@@ -145,6 +148,12 @@ export function registerDictHandlers(): void {
   dropLegacyShells()
 
   /** 读用户词条（词典气泡把它和内置的 242 条合并显示） */
+  guardedHandle('dict:designSource', async (_e, slug: unknown, project: string) => {
+    const dir = guardDir(project); if (!dir.ok) throw Error(dir.error)
+    const result = await readDesignSource(slug, designPreviews)
+    const file = saveDesignSource(dir.path, String(slug), result.source, target => target === dir.path ? guardDir(target) : guardPath(target))
+    return { path: file, url: result.url, bytes: result.bytes }
+  })
   guardedHandle('dict:userTerms', (): UserTerm[] => readUser())
 
   /**

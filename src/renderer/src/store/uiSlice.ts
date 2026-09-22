@@ -89,7 +89,8 @@ export interface UiSlice {
    *  登记方式和 composerAppend 一样：谁聚焦谁注册自己的 addChip。
    *  为 null 时 DictView 退回插纯文本（终端 / 没有输入框可插）。 */
   composerAddChip: ((chip: { id: string; label: string; text: string }) => void) | null
-  setComposerAddChip: (fn: ((chip: { id: string; label: string; text: string }) => void) | null) => void
+  composerCwd: string | null
+  setComposerAddChip: (fn: ((chip: { id: string; label: string; text: string }) => void) | null, cwd?: string) => void
   /** 最近一次快照。给终端输入框上方的浮层用 —— 只在同项目的终端里显示。
    *  不持久化：它是「刚拍完这一下」的临时状态，重启后没有意义 */
   lastSnapshot: { path: string; projectId: string; at: number } | null
@@ -352,7 +353,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   // set 的对象形式：函数是**值**不是 updater（updater 是 set(fn) 那种写法）
   setComposerAppend: (fn) => set({ composerAppend: fn }),
   composerAddChip: null,
-  setComposerAddChip: (fn) => set({ composerAddChip: fn }),
+  composerCwd: null,
+  setComposerAddChip: (fn, cwd) => set({ composerAddChip: fn, composerCwd: fn ? cwd ?? null : null }),
   lastSnapshot: null,
   setLastSnapshot: (v) => set({ lastSnapshot: v }),
   boardLeafByProject: {},

@@ -98,10 +98,17 @@ export function expandChips(text: string, chips: readonly DictChip[], fallback =
  * 加一个 chip。**同一个词条只挂一次** —— 重复点同一条时不该攒出两份相同的提示词，
  * 那既浪费上下文又会让模型以为要做两遍。
  *
- * 返回新数组；已存在时返回原数组本身，调用方可以据此跳过一次 setState。
+ * 设计引用允许切换范围：同一设计更新内容，不叠加相互冲突的范围。
+ * 普通词条或内容未变时返回原数组，保持去重语义。
  */
 export function addChip(chips: readonly DictChip[], chip: DictChip): DictChip[] {
-  if (chips.some((c) => c.id === chip.id)) return chips as DictChip[]
+  const existing = chips.find((c) => c.id === chip.id)
+  if (existing) {
+    if (chip.id.startsWith('design:') && (existing.text !== chip.text || existing.label !== chip.label)) {
+      return chips.map((c) => c.id === chip.id ? chip : c)
+    }
+    return chips as DictChip[]
+  }
   return [...chips, chip]
 }
 

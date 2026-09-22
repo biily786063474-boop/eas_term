@@ -614,6 +614,7 @@ const api = {
       ipcRenderer.invoke('hook:uninstall', targets)
   },
   dict: {
+    designSource: (slug: string, project: string): Promise<{path: string; url: string; bytes: number}> => ipcRenderer.invoke('dict:designSource', slug, project),
     add: (
       terms: unknown[]
     ): Promise<{ ok: boolean; added: string[]; rejected: { name: string; why: string }[] }> =>

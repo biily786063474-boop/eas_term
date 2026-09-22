@@ -67,3 +67,17 @@
 .dsp-preview-actions button:disabled{opacity:.4;cursor:default}
 
 .dsp-browser-popup{flex:1;min-height:0;display:flex;overflow:hidden;border-radius:0 0 12px 12px}.dsp-browser-popup>div{flex:1;min-width:0;min-height:0}
+
+/* One sticky group, anchored in the catalog scrollport, including both filters. */
+.dsp-sticky-filters{position:sticky;top:-12px;z-index:3;background:var(--bg);padding:6px 0;border-bottom:1px solid var(--glass-border)}
+.dsp-sticky-filters .dsp-filters{margin:6px 0}
+.dsp-use-actions{display:flex;gap:6px;align-items:stretch}
+.dsp-use-actions>button{flex:1;min-width:0;width:auto;margin:0}
+.dsp-source{border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:var(--lift-2);color:var(--fg);padding:8px 6px;font:inherit;font-size:11px;cursor:pointer}
+.dsp-source:disabled{opacity:.45;cursor:default}
+
+.dsp-prompt-menu{position:fixed;z-index:10000;width:260px;padding:5px;border:1px solid var(--glass-border);border-radius:10px;background:var(--bg);color:var(--fg);box-shadow:0 10px 32px #0004}
+.dsp-prompt-menu button{display:flex;flex-direction:column;gap:5px;width:100%;padding:11px;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}
+.dsp-prompt-menu button:hover,.dsp-prompt-menu button:focus-visible{background:var(--lift-2);outline:1px solid var(--glass-border)}
+.dsp-prompt-menu b{font-size:12px}.dsp-prompt-menu small{font-size:11px;color:var(--fg-dim)}
+.dsp-prompt-menu button:disabled{opacity:.45;cursor:default}
