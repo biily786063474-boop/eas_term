@@ -148,3 +148,26 @@ test('onChange：入队、开跑、结束、取消各触发一次，最后一次
   finish(); await p1
   assert.equal(s.snapshot().queued, 0); assert.equal(s.snapshot().running, 0)
 })
+
+test('immediate plugin work never queues even with closed gates and a full queue', async()=>{
+ const states:number[]=[]
+ const s=createScheduler({allow:()=>false,allowInteractive:()=>false,now:()=>0,maxRunning:1,maxQueued:1,onChange:()=>states.push(s.snapshot().queued)})
+ const queued=s.submit(job('background'));const cancelled=assert.rejects(queued,/cancelled/)
+ let runs=0
+ await s.submit({...job('plugin',async()=>{runs++}),immediate:true})
+ assert.equal(runs,1);assert.equal(s.snapshot().queued,1);assert.ok(states.every(n=>n===1))
+ s.cancel('background');await cancelled;s.dispose()
+})
+test('immediate plugin work does not consume background slots; cancellation holds lease until actual completion',async()=>{
+ let finish!:()=>void,aborted=false,releases=0
+ const s=createScheduler({allow:()=>true,now:()=>0,maxRunning:1,maxQueued:1,acquire:()=>({release(){releases++}})})
+ const p=s.submit({id:'plugin',projectId:'p',immediate:true,run:async signal=>{signal.addEventListener('abort',()=>aborted=true);await new Promise<void>(r=>finish=r)}})
+ await flush();await s.submit(job('background'));assert.equal(releases,1)
+ assert.equal(s.cancel('plugin'),true);assert.equal(aborted,true);assert.equal(releases,1)
+ finish();await p;assert.equal(releases,2);s.dispose()
+})
+test('plugin child may run directly from a scheduled parent without nested waiting',async()=>{
+ const s=createScheduler({allow:()=>true,now:()=>0,maxRunning:1,maxQueued:1})
+ await s.submit(job('parent',()=>s.submit({...job('plugin'),immediate:true})))
+ assert.equal(s.snapshot().queued,0);s.dispose()
+})

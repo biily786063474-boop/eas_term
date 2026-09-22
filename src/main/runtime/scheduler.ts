@@ -5,7 +5,9 @@ export interface Work {
  id: string
  projectId: string
  run: (signal: AbortSignal) => Promise<void>
- /** 交互型（用户亲手发起的启动）：不受 allow()/maxRunning 约束，只受 allowInteractive（严重压力）门。 */
+ /** Main-owned plugin work: start directly, never enter the waiting queue. */
+ immediate?: boolean
+ /** 交互型只受严重压力门约束；与插件 immediate 不同。 */
  interactive?: boolean
 }
 interface Entry {
@@ -76,7 +78,7 @@ export function createScheduler(opts: Options) {
    }
   } finally { pumping=false }
  }
- const backgroundRunning=():number=>{let n=0;for(const e of running.values())if(!e.work.interactive)n++;return n}
+ const backgroundRunning=():number=>{let n=0;for(const e of running.values())if(!e.work.interactive&&!e.work.immediate)n++;return n}
  const start=(entry:Entry):void=>{
   running.set(entry.work.id,entry)
   changed()
@@ -97,13 +99,20 @@ export function createScheduler(opts: Options) {
   submit(work:Work):Promise<void>{
    if(disposed)return Promise.reject(new Error('disposed'))
    const parent=execution.getStore()
-   if(parent&&running.get(parent.work.id)===parent)return Promise.reject(new Error('nested admission unsupported: parent must not wait for work in the same pool'))
+   if(!work.immediate&&parent&&running.get(parent.work.id)===parent)return Promise.reject(new Error('nested admission unsupported: parent must not wait for work in the same pool'))
    if(!work.id||!work.projectId)return Promise.reject(new Error('invalid identity'))
    if(running.has(work.id)||queue.some(e=>e.work.id===work.id))return Promise.reject(new Error('duplicate'))
-   if(queue.length>=opts.maxQueued)return Promise.reject(new Error('queue full'))
+   if(!work.immediate&&queue.length>=opts.maxQueued)return Promise.reject(new Error('queue full'))
    const at=opts.now();if(!Number.isFinite(at))return Promise.reject(new Error('invalid clock'))
    // Snapshot metadata so caller mutation cannot defeat deduplication/release.
-   const result=new Promise<void>((resolve,reject)=>queue.push({work:{...work},enqueuedAt:at,controller:new AbortController(),resolve,reject}))
+   const result=new Promise<void>((resolve,reject)=>{
+    const entry:Entry={work:{...work},enqueuedAt:at,controller:new AbortController(),resolve,reject}
+    if(work.immediate){
+     // Retain accounting and cancellation, but do not publish even a transient queued state.
+     try{entry.lease=opts.acquire?.(entry.work)??undefined}catch(error){reject(error);return}
+     start(entry)
+    }else queue.push(entry)
+   })
    changed();pump();return result
   },
   tick:pump,

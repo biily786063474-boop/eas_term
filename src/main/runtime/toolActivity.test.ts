@@ -18,15 +18,17 @@ test('unknown window cannot grant cancellation; synchronous dispatch failure lea
  assert.equal(activity.list(7).length,0)
 })
 
-test('real admission queues before dispatch; queued cancellation never runs tool',async()=>{
+test('插件调用在严重压力下立即执行，不占等待队列',async()=>{
  const {createRuntimeManager}=await import('./manager.ts')
  const manager=createRuntimeManager({now:()=>100})
+ manager.update({at:100,cpu:99,memoryUsedBytes:990,totalMemoryBytes:1000,critical:true})
  const activity=createToolActivity(()=>100);activity.setAdmission(manager,()=>({cpu:10,memoryBytes:100}))
- let calls=0
- const p=activity.track({id:'q',name:'tool',projectId:'p',windowId:7},()=>{calls++;return {result:Promise.resolve('ok'),completed:Promise.resolve(),cancel(){}}})
- assert.equal(activity.list(7)[0].state,'queued');assert.equal(calls,0)
- assert.equal(activity.cancel('q',7),true);await assert.rejects(p,/cancelled/);assert.equal(calls,0)
- manager.dispose()
+ let calls=0,finish!:()=>void
+ const p=activity.track({id:'q',name:'tool',projectId:'p',windowId:7},()=>{calls++;return {result:Promise.resolve('ok'),completed:new Promise<void>(r=>finish=r),cancel(){}}})
+ await new Promise(r=>setImmediate(r))
+ assert.equal(calls,1);assert.equal(manager.snapshot().queued,0)
+ assert.equal(activity.list(7)[0].state,'running');assert.equal(await p,'ok')
+ finish();await new Promise(r=>setImmediate(r));manager.dispose()
 })
 test('fresh capacity dispatches once and result timeout does not release queue occupancy',async()=>{
  const {createRuntimeManager}=await import('./manager.ts')
@@ -39,16 +41,15 @@ test('fresh capacity dispatches once and result timeout does not release queue o
  finish();await new Promise(r=>setImmediate(r));assert.equal(manager.snapshot().running,0);manager.dispose()
 })
 
-test('closing the actual source removes its queued calls without touching another source',async()=>{
- const {createRuntimeManager}=await import('./manager.ts');const manager=createRuntimeManager({now:()=>100})
- const activity=createToolActivity(()=>100);activity.setAdmission(manager,()=>({cpu:10,memoryBytes:100}))
- let calls=0
- const start=()=>{calls++;return {result:Promise.resolve(),completed:Promise.resolve(),cancel(){}}}
- const a=activity.track({id:'a',name:'tool',projectId:'p',windowId:7,sourceKey:'panel:a'},start)
- const b=activity.track({id:'b',name:'tool',projectId:'p',windowId:7,sourceKey:'panel:b'},start)
- activity.closeSource('panel:a');await assert.rejects(a,/cancelled/)
- assert.equal(calls,0);assert.deepEqual(activity.list(7).map(x=>x.id),['b'])
- manager.dispose();await assert.rejects(b,/disposed/)
+test('closing one source cancels only its running calls and keeps them until actual completion',async()=>{
+ const activity=createToolActivity(()=>100)
+ const cancelled:string[]=[],finishes:Array<()=>void>=[]
+ const start=(id:string)=>()=>({result:Promise.resolve('ok'),completed:new Promise<void>(r=>finishes.push(r)),cancel(){cancelled.push(id)}})
+ await activity.track({id:'a',name:'tool',projectId:'p',windowId:7,sourceKey:'panel:a'},start('a'))
+ await activity.track({id:'b',name:'tool',projectId:'p',windowId:7,sourceKey:'panel:b'},start('b'))
+ activity.closeSource('panel:a');activity.closeSource('panel:a')
+ assert.deepEqual(cancelled,['a']);assert.deepEqual(activity.list(7).map(x=>x.state),['cancel-requested','running'])
+ finishes.forEach(f=>f());await new Promise(r=>setImmediate(r));assert.equal(activity.list(7).length,0)
 })
 
 // 2026-09-14：插件工具调用结束也要进「最近结束」（完成 / 取消 / 失败），按窗口投影。

@@ -6,7 +6,7 @@ let manager:ReturnType<typeof createRuntimeManager>|null=null
 const owners=new Map<string,{windowId:number|null;sharedWindows?:Set<number>;name:string;projectId:string|null;at:number}>()
 /** Installed by main bootstrap. No timer or process work at import time. */
 export function installSessionStartup(value:ReturnType<typeof createRuntimeManager>){if(manager)throw Error('startup manager already installed');manager=value}
-export async function startManagedSession<T>(opts:{id:string;windowId:number|null;sharedWindows?:Set<number>;interactive?:boolean;name:string;projectId:string|null;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{value:T;completed:Promise<unknown>}>}):Promise<T>{
+export async function startManagedSession<T>(opts:{id:string;windowId:number|null;sharedWindows?:Set<number>;interactive?:boolean;immediate?:boolean;name:string;projectId:string|null;cost:TaskCost;start:(signal:AbortSignal)=>Promise<{value:T;completed:Promise<unknown>}>}):Promise<T>{
  if(!manager)throw Error('资源管理器尚未就绪')
  if(owners.has(opts.id))throw Error('duplicate startup')
  const m=manager

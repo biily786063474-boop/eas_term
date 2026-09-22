@@ -210,16 +210,12 @@ function retirePlugin(h: Hosted, reason: string): void {
 
 /** 插件服务器进程的首版启动预留：一个 node 进程 + 握手。不是实测峰值，不是硬上限。 */
 const PLUGIN_START_COST = { cpu: 5, memoryBytes: 256 * 1024 ** 2 }
-/** 同一插件同时被几块面板 / 几个 shim 请求时，只排一次队、只起一个进程；
- *  准入落定后各自再 registry.acquire 登记自己的 ref。 */
+/** 并发面板 / shim 合并启动，所有 ref 仍由 HostRegistry 管理。 */
 const startingPlugins = new Map<string, Promise<void>>()
 
-/** 起进程前先过资源准入（2026-09-13 缺口 1）。McpClient 在构造函数里就 spawn，
- *  而 registry.acquire 的 create 是同步的，所以准入必须包在它外面：
- *  registry 里还没有这个插件 → 走 startManagedSession，回调里才 registry.acquire 触发 spawn，
- *  预算随 stopped（stdio真实退出／remote本地连接关闭）释放；已有进程 → 直接复用，不再排队。
- *  归属按**应用级**（windowId null）：宿主本来就跨窗口、跨项目、跨会话共享，
- *  任何一个窗口都无权替别人取消它；所有窗口都能在运行中心看到它在排队。 */
+/** 插件启动直达执行，不进全局等待队列（2026-09-22 用户要求）。
+ * 保留预算记账、共享进程、手动停止保护；预算随真实 stopped 释放。
+ * immediate 仅由主进程声明，不接受插件 RPC/渲染层传参。 */
 async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
   if (info.config && info.remote && info.remote.auth!=='bearer') throw Error('远程插件配置注入尚未接通，不能启动')
   const previous=registry.get(info.name)
@@ -229,17 +225,13 @@ async function acquire(info: PluginInfo, ref: string): Promise<Hosted> {
     let starting = startingPlugins.get(info.name)
     if (!starting) {
       starting = startManagedSession<void>({
-        id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', interactive: true, projectId: null, cost: PLUGIN_START_COST,
+        id: 'plugin-start:' + info.name, windowId: null, name: '插件 ' + info.displayName + ' 启动', immediate: true, projectId: null, cost: PLUGIN_START_COST,
         start: async signal => {
           if (signal.aborted) throw new Error('插件启动已取消')
           if (manualStops.stamp(info.name) !== null) throw new Error('服务已由用户关闭；请在插件面板点击重试并确认重新启动')
           const started = registry.acquire(info.name, ref, () => spawnHosted(info))
           return { value: undefined, completed: started.kind === 'plugin' ? started.stopped : Promise.resolve() }
         }
-      }).catch(e => {
-        // 调度器的 'wait timeout' = 资源紧张排队没放行，不是插件的错；说人话，不漏内部字样。
-        if (e instanceof Error && e.message === 'wait timeout') throw new Error('资源紧张，插件启动排队等待未获准入；稍后重试，或在运行中心切回普通模式')
-        throw e
       }).finally(() => { if (startingPlugins.get(info.name) === starting) startingPlugins.delete(info.name) })
       startingPlugins.set(info.name, starting)
     }

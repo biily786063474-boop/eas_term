@@ -365,3 +365,10 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 
 ## 2026-09-22 0.4.105 发布完成
 产品 ade2fe5，发布tag cb3fac5。官网与 GitHub 2026-09-22T13:54:28Z 已公开/latest，Mac ARM/Intel 的 DMG/ZIP 和 Windows EXE 共五包，size/SHA256 与本地一致。卡片等高修复已包含，3498测试通过、18跳过、0失败；双Mac公证/归档核验，ARM/Rosetta真实市场UI及x64原生PTY、Windows CI35732994971通过。正式用户应用未替换，隔离测试实例已退出；非实体Intel验收。生产8站/5PM2前后无变化，未重启/删旧包。Computer Use指针生命周期仍未解决，32插件并非全部真实账号验收。完整证据 docs/verification/releases/0.4.105/。
+
+### 2026-09-22 插件免全局等待（独立分支，未发布）
+- 用户确认插件启动/调用直接执行，保留安全与生命周期控制。
+- `fix/plugin-no-queue-20260922`（基于 3546c13），不混入 offscreen-decor 或其他工作区修改。
+- 主进程 immediate 路径：不入队、不占后台槽位，预算/取消/真实退出释放仍保留；含内置笔纵连接器启动。
+- 初次验证误链接旧根目录依赖，缺 MCP SDK；改为当前基线的已有 node_modules 后 typecheck/build、全量测试通过。没有安装新依赖。
+- 真实隔离 Electron Bearer 插件验证通过；未安装/替换正式 app，未调用收费生成或真实模型。
