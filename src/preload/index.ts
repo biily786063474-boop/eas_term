@@ -1145,17 +1145,18 @@ const api = {
     // ── 插件市场（设计稿 2026-09-15）。主进程半边在 pluginMarket.ts。两段式安装：
     //    install 只下载/校验/解压到临时目录并返回待确认权限；用户确认后 installCommit 才落盘 ──
     /** 拉官方目录（联网失败退回本地缓存，stale 标记提示是旧的）。 */
-    registry: (): Promise<
+    sources: (args: {action: 'list'|'add'|'remove'; name?:string;url?:string;id?:string}): Promise<{ok:true;sources:{id:string;name:string;url:string}[]}|{ok:false;error:string}> => ipcRenderer.invoke('plugins:sources',args),
+    registry: (sourceId?:string): Promise<
       | { ok: true; entries: PluginRegistryEntry[]; unavailable: PluginUnavailableEntry[]; warnings: string[]; stale: boolean }
       | { ok: false; error: string }
-    > => ipcRenderer.invoke('plugins:registry'),
+    > => ipcRenderer.invoke('plugins:registry',sourceId),
     /** 第一段：下载→校验 sha256→解压临时→清单校验，返回待确认（含要展示的权限与一次性 token）。 */
     install: (
-      name: string
+      name: string, sourceId?: string
     ): Promise<
       | { ok: true; token: string; name: string; displayName: string; version: string; size: number; permissions: string[]; installed: boolean; permissionChanges?: {added:string[];removed:string[]}|null }
       | { ok: false; error: string }
-    > => ipcRenderer.invoke('plugins:install', name),
+    > => ipcRenderer.invoke('plugins:install', sourceId?{name,sourceId}:name),
     /** 第二段：用户确认后凭 token 把临时目录移入 ~/.eas/plugins/<name>/。 */
     installCommit: (token: string): Promise<{ ok: true; name: string } | { ok: false; error: string }> =>
       ipcRenderer.invoke('plugins:installCommit', token),

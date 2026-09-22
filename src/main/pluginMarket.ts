@@ -1,3 +1,5 @@
+import {createMarketSourceStore,marketSourceIdentity,assertOriginalMarketSource,type MarketSource} from './pluginMarketSource.ts'
+import {createPluginNetwork} from './pluginConnections/pluginNetwork.ts'
 import { assertPluginPackageIdle } from './pluginHost'
 import {catalogSource} from './pluginCatalogSource.ts'
 import {permissionChanges,type PluginPermissionChanges} from '../shared/pluginPermissionChanges.ts'
@@ -20,7 +22,7 @@ import { replacePluginDirectory } from './pluginReplace.ts'
 //   5. 清单必过:解压后 parseManifest 必须 ok,且权限与 registry 声明一致(防目录谎报)
 //   6. 卸载边界:只删 ~/.eas/plugins/<name>/(内置样板与两家 CLI 插件从这里删不了)
 import { checkPluginCompatibility, checkPackageRequirements } from './pluginCompatibility.ts'
-import { app, net } from 'electron'
+import { app, net, dialog, session } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -49,8 +51,8 @@ function currentPluginHost() {
 }
 
 
-function registryCachePath(): string {
-  return path.join(app.getPath('userData'), CATALOG_SOURCE.cacheFile)
+function registryCachePath(source?:MarketSource): string {
+  return path.join(app.getPath('userData'), source ? catalogSource(source.url).cacheFile : CATALOG_SOURCE.cacheFile)
 }
 function stagingRoot(): string {
   return path.join(app.getPath('userData'), 'plugin-staging')
@@ -130,36 +132,38 @@ function reapExpiredStaging(): void {
   }
 }
 /** 拉 registry:先联网,成功就写缓存;失败退回缓存(标 stale)。都没有 → 报错。 */
-async function loadRegistry(): Promise<
+async function loadRegistry(source?:MarketSource): Promise<
   { ok: true; entries: RegistryEntry[]; unavailable: PluginUnavailableEntry[]; warnings: string[]; stale: boolean } | { ok: false; error: string }
 > {
+  let failure='网络连接失败'
   // 先尝试联网
   try {
-    const buf = await fetchBuffer(REGISTRY_URL, REGISTRY_MAX_BYTES)
+    const buf = await downloadFromSource(source?.url ?? REGISTRY_URL, REGISTRY_MAX_BYTES,source)
     const raw = JSON.parse(buf.toString('utf8'))
-    const r = parseCatalog(raw, { allowedHosts: ALLOWED_HOSTS })
+    const r = parseCatalog(raw, { allowedHosts: source ? [new URL(source.url).hostname] : ALLOWED_HOSTS })
     if (r.ok) {
       try {
-        fs.mkdirSync(path.dirname(registryCachePath()), { recursive: true })
-        fs.writeFileSync(registryCachePath(), buf)
+        fs.mkdirSync(path.dirname(registryCachePath(source)), { recursive: true })
+        fs.writeFileSync(registryCachePath(source), buf)
       } catch {
         /* 缓存写不进不致命 */
       }
       return { ok: true, entries: r.entries, unavailable:r.unavailable, warnings: r.warnings, stale: false }
     }
+    failure=r.errors.join('；')
     // 联网拿到了但格式错 —— 退回缓存,别拿坏目录顶替
-  } catch {
-    /* 网络失败,走缓存 */
+  } catch(e) {
+    failure=e instanceof Error?e.message:String(e)
   }
   // 缓存兜底
   try {
-    const raw = JSON.parse(fs.readFileSync(registryCachePath(), 'utf8'))
-    const r = parseCatalog(raw, { allowedHosts: ALLOWED_HOSTS })
+    const raw = JSON.parse(fs.readFileSync(registryCachePath(source), 'utf8'))
+    const r = parseCatalog(raw, { allowedHosts: source ? [new URL(source.url).hostname] : ALLOWED_HOSTS })
     if (r.ok) return { ok: true, entries: r.entries, unavailable:r.unavailable, warnings: r.warnings, stale: true }
   } catch {
     /* 没缓存 */
   }
-  return { ok: false, error: '拉取插件目录失败,且本地无缓存' }
+  return { ok: false, error: '无法读取插件目录，且无有效缓存：'+failure+'。仅支持 Eas registry v1/v2 格式。' }
 }
 
 /** 两个 canvas 权限集是否等价(顺序无关)。registry 声明的权限须与包内清单一致。 */
@@ -185,24 +189,30 @@ export type InstallStaged = {
 export type InstallResult = InstallStaged | { ok: false; error: string }
 
 /** 第一段:下载 → 校验 sha256 → 解压临时 → parseManifest → 权限核对 → 返回待确认。落盘留给 commit。 */
-async function installStage(name: unknown): Promise<InstallResult> {
+async function installStage(input: unknown): Promise<InstallResult> {
+  const request=input&&typeof input==='object'?input as {name?:unknown;sourceId?:unknown}:undefined
+  const name=request?request.name:input
+  let source:MarketSource|undefined
+  try{if(request?.sourceId)source=sourceStore().require(request.sourceId)}catch(e){return {ok:false,error:String(e)}}
   reapExpiredStaging()
   const home = os.homedir()
   const guard = guardPluginDir(name, home)
   if (!guard.ok) return { ok: false, error: guard.reason }
 
-  const reg = await loadRegistry()
+  if(source && fs.existsSync(path.join(app.isPackaged?process.resourcesPath:path.join(app.getAppPath(),'resources'),'plugins',String(name),'plugin.json')))return {ok:false,error:'外部市场不能覆盖同名内置插件'}
+  try { assertInstallSource(guard.dir,source?.id ?? 'official') } catch(e){return {ok:false,error:String(e)}}
+  const reg = await loadRegistry(source)
   if (!reg.ok) return { ok: false, error: reg.error }
   const entry = reg.entries.find((e) => e.name === name)
   if (!entry) return { ok: false, error: `目录里没有插件「${String(name)}」` }
   const compatible = checkPluginCompatibility(entry.requirements, currentPluginHost())
   if (!compatible.ok) return { ok: false, error: compatible.reason }
-  if (!httpsHostAllowed(entry.url)) return { ok: false, error: '下载地址不在允许域名内' }
+  if (source ? !externalUrlAllowed(entry.url,source) : !httpsHostAllowed(entry.url)) return { ok: false, error: '下载地址不在允许域名内' }
   if (entry.size > PLUGIN_HARD_CAP) return { ok: false, error: '插件包过大,已拒' }
 
   let buf: Buffer
   try {
-    buf = await fetchBuffer(entry.url, Math.min(entry.size + 64 * 1024, PLUGIN_HARD_CAP))
+    buf = await downloadFromSource(entry.url, Math.min(entry.size + 64 * 1024, PLUGIN_HARD_CAP),source)
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -264,6 +274,7 @@ async function installStage(name: unknown): Promise<InstallResult> {
     return {ok:false,error:'目录声明的远程来源与包内清单不一致'}
   }
   const token = gate.stage({
+    marketSource: source ? {id:source.id,generation:source.generation,url:source.url} : {id:'official'},
     manifestSha256: packageManifestHash(raw),
     name: entry.name,
     dir,
@@ -308,12 +319,17 @@ function installCommit(token: unknown): { ok: true; name: string } | { ok: false
   }
   const target = guard.dir
   try {
+    if(rec.marketSource?.id!==undefined&&rec.marketSource.id!=='official')sourceStore().require(rec.marketSource.id,rec.marketSource.generation)
+    assertInstallSource(target,rec.marketSource?.id ?? 'official')
     const raw = JSON.parse(fs.readFileSync(path.join(rec.dir, 'plugin.json'), 'utf8'))
     if(!rec.manifestSha256||packageManifestHash(raw)!==rec.manifestSha256)return {ok:false,error:'确认后的插件清单已改变，请重新安装'}
     const check = checkPackageRequirements(raw?.requirements, rec.requirements, currentPluginHost())
     if (!check.ok) return { ok: false, error: check.reason }
     assertPluginPackageIdle(rec.name)
     invalidatePluginAuthorization(rec.name)
+    const receipt=path.join(rec.dir,'.eas-market-source.json')
+    if(fs.existsSync(receipt))throw Error('插件包包含宿主保留的来源文件，已拒绝')
+    fs.writeFileSync(receipt,JSON.stringify(rec.marketSource??{id:'official'}),{flag:'wx',mode:0o600})
     replacePluginDirectory(rec.dir, target)
     return { ok: true, name: rec.name }
   } catch (e) {
@@ -339,8 +355,57 @@ function uninstall(name: unknown): { ok: true } | { ok: false; error: string } {
 }
 
 export function registerPluginMarketHandlers(): void {
-  guardedHandle('plugins:registry', () => loadRegistry())
+  guardedHandle('plugins:sources', (_e, args:unknown) => sourceOperation(args))
+  guardedHandle('plugins:registry', async (_e, id:unknown) => {try{return await loadRegistry(id?sourceStore().require(id):undefined)}catch(e){return {ok:false,error:String(e)}}})
   guardedHandle('plugins:install', (_e, name: unknown) => installStage(name))
   guardedHandle('plugins:installCommit', (_e, token: unknown) => installCommit(token))
   guardedHandle('plugins:uninstall', (_e, name: unknown) => uninstall(name))
+}
+
+function sourceStore(){return createMarketSourceStore(app.getPath('userData'))}
+function externalUrlAllowed(url:string,source:MarketSource):boolean {
+ try{return marketSourceIdentity(url).origin===source.origin}catch{return false}
+}
+async function downloadFromSource(url:string,maxBytes:number,source?:MarketSource):Promise<Buffer>{
+ if(!source)return fetchBuffer(url,maxBytes)
+ if(!externalUrlAllowed(url,source))throw Error('下载地址不属于已确认的市场来源')
+ sourceStore().require(source.id,source.generation)
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60_000)
+ try{
+  const res=await createPluginNetwork([source.origin],session.defaultSession)(url,{signal:controller.signal})
+  if(res.status!==200){await res.body?.cancel();throw Error('外部来源下载失败：HTTP '+res.status)}
+  const reader=res.body?.getReader();if(!reader)throw Error('外部来源响应为空')
+  let size=0;const chunks:Buffer[]=[]
+  try{for(;;){const item=await reader.read();if(item.done)break;size+=item.value.length;if(size>maxBytes)throw Error('外部来源下载超过体积限制');chunks.push(Buffer.from(item.value))}}
+  catch(e){await reader.cancel();throw e}
+  sourceStore().require(source.id,source.generation)
+  return Buffer.concat(chunks)
+ }finally{clearTimeout(timer);controller.abort()}
+}
+function assertInstallSource(dir:string,sourceId:string){
+ if(!fs.existsSync(dir))return
+ const receipt=path.join(dir,'.eas-market-source.json')
+ if(!fs.existsSync(receipt)){if(sourceId==='official')return;throw Error('已安装同名插件来源未知，不能由外部市场覆盖')}
+ if(fs.lstatSync(receipt).isSymbolicLink()||fs.statSync(receipt).size>4096)throw Error('插件来源记录无效')
+ const raw=JSON.parse(fs.readFileSync(receipt,'utf8'))
+ assertOriginalMarketSource(raw.id,sourceId)
+}
+async function sourceOperation(input:unknown){
+ try{
+  const a=input&&typeof input==='object'?input as Record<string,unknown>:{action:'list'}
+  if(a.action==='add'){
+   const identity=marketSourceIdentity(a.url)
+   if(identity.url===catalogSource().url)throw Error('官方来源已经内置')
+   if(typeof a.name!=='string'||!a.name.trim()||a.name.length>80)throw Error('请输入1至80字的来源名称')
+   const result=await dialog.showMessageBox({type:'warning',title:'添加外部插件来源',message:'是否信任并添加此插件目录？',detail:identity.url+'\n仅支持 Eas registry v1/v2。添加后只读取目录，安装另行确认。外部插件可能执行本地代码；不会自动兼容其他平台专用插件。',buttons:['添加来源','取消'],defaultId:1,cancelId:1})
+   if(result.response!==0)return {ok:false,error:'已取消添加来源'}
+   sourceStore().add(a.name,identity.url)
+  }else if(a.action==='remove'){
+   const source=sourceStore().require(a.id)
+   const result=await dialog.showMessageBox({type:'question',message:'移除来源「'+source.name+'」？',detail:'已安装插件和数据保留，但不能继续从该源检查更新。',buttons:['移除来源','取消'],defaultId:1,cancelId:1})
+   if(result.response!==0)return {ok:false,error:'已取消移除来源'}
+   sourceStore().require(source.id,source.generation);sourceStore().remove(source.id)
+  }else if(a.action!=='list')throw Error('不支持的来源操作')
+  return {ok:true as const,sources:sourceStore().list()}
+ }catch(e){return {ok:false as const,error:e instanceof Error?e.message:String(e)}}
 }

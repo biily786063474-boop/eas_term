@@ -1,3 +1,4 @@
+import * as marketSources from './pluginMarketSource.ts'
 import * as permissionChangesModule from '../shared/pluginPermissionChanges.ts'
 import * as catalogSourceModule from './pluginCatalogSource.ts'
 // Run the actual IPC handlers with isolated filesystem and deterministic network responses.
@@ -45,11 +46,11 @@ function harness(t: {after: (fn:()=>void)=>void}, requirements?: unknown, permis
   let busy=false;const cleared:string[]=[]
   const lifecycle={assertPluginPackageIdle:()=>{if(busy)throw Error('plugin busy')}}
   const authorization={invalidatePluginAuthorization:(name:string,remove:boolean)=>{if(remove)cleared.push(name)}}
-  const imports:Record<string,unknown>={'../shared/pluginPermissionChanges.ts':permissionChangesModule,'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{app:{getPath:()=>userData,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
+  const imports:Record<string,unknown>={'./pluginMarketSource.ts':marketSources,'./pluginConnections/pluginNetwork.ts':{createPluginNetwork:()=>async(url:string)=>new Response(url.endsWith('registry.json')?JSON.stringify({schema:2,plugins:[entry],unavailable:[]}):fs.readFileSync(zipPath))},'../shared/pluginPermissionChanges.ts':permissionChangesModule,'./pluginCatalogSource.ts':catalogSourceModule,'./pluginHost':lifecycle,'./pluginAuthorization':authorization,'./pluginReplace.ts':replace,'./pluginCatalog.ts':catalog,electron:{dialog:{showMessageBox:async()=>({response:0})},session:{defaultSession:{}},app:{getPath:()=>userData,getAppPath:()=>root,getVersion:()=> '0.4.102'},net},'node:fs':fs,'node:path':path,'node:os':{homedir:()=>home},'./ipcGuard':{guardedHandle:(name:string,fn:(...args:any[])=>any)=>handlers.set(name,fn)},'./pluginCompatibility.ts':compatibility,'./pluginManifest.ts':manifest,'./pluginRegistry.ts':registry,'./pluginInstall.ts':install,'./pluginUnzip.ts':unzip,'./pluginInstallGate.ts':gate}
   const source=fs.readFileSync(new URL('./pluginMarket.ts',import.meta.url),'utf8')
   const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
   const exports:Record<string,any>={}
-  vm.runInNewContext(output,{exports,require:(id:string)=>{if(!(id in imports))throw Error('Unexpected import '+id);return imports[id]},process:{platform:'darwin',arch:'arm64',env:{}},Buffer,URL,console,setTimeout,clearTimeout})
+  vm.runInNewContext(output,{exports,require:(id:string)=>{if(!(id in imports))throw Error('Unexpected import '+id);return imports[id]},process:{platform:'darwin',arch:'arm64',env:{}},Buffer,URL,AbortController,Error,console,setTimeout,clearTimeout})
   exports.registerPluginMarketHandlers()
   return {entry,root,home,userData,requests,cleared,setBusy:(value:boolean)=>{busy=value},call:(channel:string,arg?:unknown)=>handlers.get(channel)!({},arg)}
 }
@@ -151,4 +152,31 @@ test('unreadable old manifest is unknown, never a no-change claim',async t=>{
  assert.ok(staged.permissions.includes('订阅事件：agent.turn.completed（仍需单独授权）'))
  assert.ok(staged.permissionChanges.added.includes('订阅事件：agent.turn.completed（仍需单独授权）'))
  assert.equal(fs.existsSync(path.join(h.userData,'plugin-event-grants.json')),false)
+})
+
+test('external source installation pins provenance and cannot cross-update from official source',async t=>{
+ const h=harness(t)
+ const added=await h.call('plugins:sources',{action:'add',name:'社区',url:'https://eas.biily.top/community/registry.json'})
+ assert.equal(added.ok,true,added.error)
+ const source=added.sources[0]
+ const staged=await h.call('plugins:install',{name:'sample',sourceId:source.id})
+ assert.equal(staged.ok,true,staged.error)
+ assert.equal(h.call('plugins:installCommit',staged.token).ok,true)
+ const foreign=await h.call('plugins:install','sample')
+ assert.equal(foreign.ok,false);assert.match(foreign.error,/来源/)
+ const again=await h.call('plugins:install',{name:'sample',sourceId:source.id});assert.equal(again.ok,true,again.error)
+ await h.call('plugins:sources',{action:'remove',id:source.id})
+ const expired=h.call('plugins:installCommit',again.token);assert.equal(expired.ok,false);assert.match(expired.error,/来源/)
+ assert.equal(JSON.parse(fs.readFileSync(path.join(h.home,'.eas/plugins/sample/plugin.json'),'utf8')).version,'1.0.0')
+})
+
+test('unknown installed provenance cannot be adopted by an external source',async t=>{
+ const h=harness(t),dir=path.join(h.home,'.eas/plugins/sample');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'plugin.json'),'{}')
+ const added=await h.call('plugins:sources',{action:'add',name:'社区',url:'https://eas.biily.top/community/registry.json'})
+ const r=await h.call('plugins:install',{name:'sample',sourceId:added.sources[0].id});assert.equal(r.ok,false);assert.match(r.error,/来源未知/)
+})
+test('external source cannot shadow a bundled plugin with the same name',async t=>{
+ const h=harness(t),dir=path.join(h.root,'resources/plugins/sample');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'plugin.json'),'{}')
+ const added=await h.call('plugins:sources',{action:'add',name:'社区',url:'https://eas.biily.top/community/registry.json'})
+ const r=await h.call('plugins:install',{name:'sample',sourceId:added.sources[0].id});assert.equal(r.ok,false);assert.match(r.error,/内置/)
 })

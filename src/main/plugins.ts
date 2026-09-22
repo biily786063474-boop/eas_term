@@ -207,6 +207,8 @@ function easPluginsIn(root: string, builtin: boolean): PluginInfo[] {
       continue
     }
     for (const w of r.warnings) console.warn(`[plugin] ${name}：${w}`)
+    const receipt=rd(path.join(dir,'.eas-market-source.json')) as {id?:unknown;url?:unknown}|undefined
+    if(receipt && typeof receipt.id==='string' && (receipt.id==='official'||/^[a-f0-9]{64}$/.test(receipt.id)))r.info.marketSource={id:receipt.id,...(typeof receipt.url==='string'?{url:receipt.url}:{})}
     out.push(r.info)
   }
   return out

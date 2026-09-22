@@ -4,7 +4,7 @@ import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
 import { PluginAccountControls } from './PluginAccountControls'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { PluginInfo, PluginRegistryEntry, PluginUnavailableEntry } from '../../../../shared/types'
 import { MARKET_CATEGORIES, categoryIdOf } from '../../../../shared/pluginCategories'
@@ -43,6 +43,12 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   const [busy, setBusy] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Pending | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [sources,setSources]=useState<{id:string;name:string;url:string}[]>([])
+  const [sourceId,setSourceId]=useState('')
+  const [sourceForm,setSourceForm]=useState(false)
+  const [sourceName,setSourceName]=useState('')
+  const [sourceUrl,setSourceUrl]=useState('')
+  const refreshGeneration=useRef(0)
   const [err, setErr] = useState<string | null>(null)
 
   const reload = (): Promise<void> =>
@@ -51,18 +57,27 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       .then((l) => setPlugins(l))
       .catch(() => setPlugins([]))
   const refreshRegistry = async (): Promise<void> => {
+    const generation=++refreshGeneration.current
     setRefreshing(true)
     setErr(null)
     try {
       await reload()
-      const r = await window.api.plugins.registry()
+      const r = await window.api.plugins.registry(sourceId || undefined)
+      if(generation!==refreshGeneration.current)return
+      if(!r.ok)setErr(r.error)
       setReg(r.ok ? { entries:r.entries, unavailable:r.unavailable??[], stale:r.stale } : 'error')
-    } catch { setReg('error') }
-    finally { setRefreshing(false) }
+    } catch { if(generation===refreshGeneration.current)setReg('error') }
+    finally { if(generation===refreshGeneration.current)setRefreshing(false) }
   }
   useEffect(() => {
-    void refreshRegistry()
-  }, [])
+    setReg(null); void refreshRegistry()
+    return ()=>{refreshGeneration.current++}
+  }, [sourceId])
+  useEffect(()=>{void window.api.plugins.sources({action:'list'}).then(r=>{if(r.ok)setSources(r.sources);else setErr(r.error)})},[])
+  const changeSources=async(action:'add'|'remove')=>{
+    setBusy('source-management');setErr(null)
+    try{const r=await window.api.plugins.sources(action==='add'?{action,name:sourceName,url:sourceUrl}:{action,id:sourceId});if(!r.ok){setErr(r.error);return}setSources(r.sources);setSourceForm(false);setSourceName('');setSourceUrl('');if(action==='remove')setSourceId('')}catch(e){setErr(String(e))}finally{setBusy(null)}
+  }
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
@@ -118,7 +133,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     setBusy(name)
     setErr(null)
     try {
-      const r = await window.api.plugins.install(name)
+      const r = await window.api.plugins.install(name,sourceId || undefined)
       if (!r.ok) setErr(r.error)
       else setConfirm(r)
     } catch (e) {
@@ -149,7 +164,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
 
   const card = (it: Item): JSX.Element => {
     const working = busy === it.name
-    const action = it.plugin && it.reg ? pluginUpdateAction(it.plugin,it.reg.version) : null
+    const sameSource = !it.plugin || (it.plugin.marketSource?.id ?? 'official') === (sourceId || 'official')
+    const action = sameSource && it.plugin && it.reg ? pluginUpdateAction(it.plugin,it.reg.version) : null
     const update = action === 'update'
     return (
       <div key={it.plugin?.id ?? it.name} className="pm-card">
@@ -163,6 +179,8 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {it.plugin?.cli === 'eas' && <div className="pm-cd">{it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}{update ? ` · 有更新 v${it.reg!.version}` : ''}{it.plugin.builtin ? ' · 内置副本' : ''}</div>}
           {action === 'migrate' && <div className="pm-cd pm-update-notice">可安装独立版 v{it.reg!.version}；{it.plugin?.version ? '之后通过市场更新' : '旧版无版本号，无法比较新旧'}</div>}
           {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
+          {it.plugin?.marketSource?.url && <div className="pm-cd pm-update-notice">安装来源：{it.plugin.marketSource.url}</div>}
+          {!sameSource && it.reg && <div className="pm-cd pm-update-notice">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
           {it.plugin?.shadowedBuiltin && <div className="pm-cd pm-update-notice">{it.plugin.shadowedBuiltin}</div>}
         </div>
         <div className="pm-cact">
@@ -284,10 +302,22 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
               <CloseIcon size={16} />
             </button>
           </div>
+          <div className="pm-sources">
+            <label>市场来源 <select aria-label="市场来源" value={sourceId} disabled={!!busy||!!confirm} onChange={e=>setSourceId(e.target.value)}><option value="">Eas 官方</option>{sources.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+            <button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>setSourceForm(v=>!v)}>添加外部来源</button>
+            {sourceId&&<button className="cpk-btn ghost" disabled={!!busy||!!confirm} onClick={()=>void changeSources('remove')}>移除来源</button>}
+          </div>
+          {sourceForm&&<section className="pm-source-form" aria-label="添加外部来源">
+            <b>添加外部插件目录</b>
+            <p>支持 Eas registry v1/v2，插件包需包含 plugin.json、版本与 SHA-256。其他平台专用插件不能直接安装；添加来源不会执行插件。</p>
+            <input aria-label="来源名称" placeholder="来源名称" maxLength={80} value={sourceName} onChange={e=>setSourceName(e.target.value)}/>
+            <input aria-label="目录 HTTPS 地址" placeholder="https://example.com/plugins/registry.json" value={sourceUrl} onChange={e=>setSourceUrl(e.target.value)}/>
+            <button className="cpk-btn primary" disabled={!!busy||!sourceName.trim()||!sourceUrl.trim()} onClick={()=>void changeSources('add')}>添加来源</button>
+          </section>}
           {err && <div className="pm-err">{err}</div>}
           {reg && reg !== 'error' && reg.stale && <div className="pm-err">目录离线，正在显示缓存；条目状态可能已过期。</div>}
           {reg && reg !== 'error' && <div className="pm-sech">已发布包 {reg.entries.length} · 待接入 {reg.unavailable.length}（不代表已授权或可调用）</div>}
-          {reg === 'error' && <div className="pm-err">拉不到插件目录，检查网络后点击刷新目录</div>}
+          {reg === 'error' && <div className="pm-err">无法读取此来源：检查网络、目录格式及同源下载地址；仅支持 Eas registry v1/v2。</div>}
           <div className="pm-body">{body}</div>
         </div>
       </div>
@@ -299,6 +329,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             <div className="cpk-modal-title">{confirm.installed ? '更新' : '安装'}「{confirm.displayName}」</div>
             <div className="cpk-modal-sub">
               v{confirm.version} · {fmtSize(confirm.size)}
+              <p>来源：{sources.find(s=>s.id===sourceId)?.url ?? 'Eas 官方'}。插件可运行本地程序，请仅安装信任的来源。</p>
               <p>仅替换插件程序，保留项目历史与配置；不会自动开启全局记录。请先关闭正在使用此插件的面板或连接。</p>
             </div>
             {confirm.installed&&<section aria-label="更新权限变更">

@@ -762,6 +762,7 @@ export interface PluginInfo {
   version?: string
   /** User copy masks a bundled copy; informational, never permission to auto-replace. */
   shadowedBuiltin?: string
+  marketSource?: {id:string;url?:string}
   /** `<cli>:<name>`，唯一。用于 UI key 和「这次会话带哪个插件」的引用 */
   id: string
   /** 属于哪个 CLI —— **决定用哪个 adapter 起会话**，不能猜。

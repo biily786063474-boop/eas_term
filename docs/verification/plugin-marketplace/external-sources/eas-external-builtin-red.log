@@ -1,0 +1,44 @@
+(node:8749) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/plugin-update-release/src/main/pluginMarketBoundary.test.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/biily/Biily/Projects/vibe coding/terminal/.worktrees/plugin-update-release/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ incompatible host rejects before downloading an archive or creating installation (63.037041ms)
+✔ commit revalidates staged package and leaves existing install untouched (29.712833ms)
+✔ legacy package still stages and installs with a one-use token (23.020291ms)
+✔ commit refuses a changed command after user confirmation was staged (20.519917ms)
+✔ active plugin cannot be replaced or uninstalled; idle uninstall clears authorization (19.89475ms)
+✔ catalog version cannot mislabel a differently versioned archive (19.908917ms)
+✔ actual registry IPC requests default v2 endpoint (15.48425ms)
+✔ staged update compares validated installed manifest permissions (20.03975ms)
+✔ unreadable old manifest is unknown, never a no-change claim (19.315ms)
+✔ event access is disclosed as an added update permission without enabling recording (16.531375ms)
+✔ external source installation pins provenance and cannot cross-update from official source (40.720708ms)
+✔ unknown installed provenance cannot be adopted by an external source (20.314083ms)
+✖ external source cannot shadow a bundled plugin with the same name (23.058709ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 559.958542
+
+✖ failing tests:
+
+test at src/main/pluginMarketBoundary.test.ts:178:1
+✖ external source cannot shadow a bundled plugin with the same name (23.058709ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/biily/Biily/Projects/vibe%20coding/terminal/.worktrees/plugin-update-release/src/main/pluginMarketBoundary.test.ts:181:94)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
