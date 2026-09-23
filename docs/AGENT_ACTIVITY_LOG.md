@@ -370,3 +370,10 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 实现并在隔离构建应用实测：分类/明暗吸顶，引用完整原HTML到项目文件，输入框@源码及局部参考发送预览。完整源码hash匹配；未自动发送模型、未替换用户应用。check3502通过18跳过0失败，追加2项接线测试通过。见docs/verification/design-source；未发版，Computer Use残留继续搁置。
 
 - 2026-09-22：完成设计选型台「引用提示词」二级选择与直接引用。真实验收发现并修复 portal 外部关闭、范围切换旧 chip 去重两处问题，最终完整→配色→完整正文核验通过；typecheck/build/check 成功（3507 pass /18 skip）。证据 docs/verification/design-source/。未提交/未发版。
+
+### 2026-09-22 插件免全局等待（独立分支，未发布）
+- 用户确认插件启动/调用直接执行，保留安全与生命周期控制。
+- `fix/plugin-no-queue-20260922`（基于 3546c13），不混入 offscreen-decor 或其他工作区修改。
+- 主进程 immediate 路径：不入队、不占后台槽位，预算/取消/真实退出释放仍保留；含内置笔纵连接器启动。
+- 初次验证误链接旧根目录依赖，缺 MCP SDK；改为当前基线的已有 node_modules 后 typecheck/build、全量测试通过。没有安装新依赖。
+- 真实隔离 Electron Bearer 插件验证通过；未安装/替换正式 app，未调用收费生成或真实模型。

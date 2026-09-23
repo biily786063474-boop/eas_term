@@ -32,15 +32,14 @@ function setup(name:string){
  return {m,registry,acquire,hosted,spawns:()=>spawns,exit:()=>exit(),tick:(t:number)=>{now=t;m.invalidateMetrics()},admit:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:false}),pressure:()=>m.update({at:++now,cpu:10,memoryUsedBytes:1024**3,totalMemoryBytes:16*1024**3,critical:true}),info:{name,displayName:'演示插件',root:'/fixture/'+name}}
 }
 
-test('插件服务器启动先准入：排队时不 spawn、并发请求合并、全窗口可见不可取消、预算等真实退出',async()=>{
+test('插件服务器直接启动：严重压力不排队、并发合并、预算等真实退出',async()=>{
  const s=setup('demo'),info=s.info
- s.pressure() // 2026-09-14：插件启动是交互型，只在严重压力下排队
+ s.pressure() // 即使严重资源压力也不进全局等待队列
  const a=s.acquire(info,'panel:a'),b=s.acquire(info,'panel:b')
  await new Promise(r=>setImmediate(r))
- assert.equal(s.spawns(),0,'没准入之前不能起进程')
+ assert.equal(s.spawns(),1,'严重压力下插件也必须直接启动')
  const seen=queuedSessionStarts(42)
- assert.equal(seen.length,1);assert.equal(seen[0].scope,'app');assert.match(seen[0].name,/演示插件/)
- assert.equal(cancelSessionStart(seen[0].id,42),false)
+ assert.equal(seen.length,0,'插件不得进入等待队列')
  s.admit()
  assert.equal(await a,s.hosted);assert.equal(await b,s.hosted)
  assert.equal(s.spawns(),1,'两个并发请求只起一个进程');assert.equal(s.registry.refs('demo'),2)
@@ -58,13 +57,11 @@ test('远程配置注入未接通前，手动安装的远程配置插件不能�
  assert.equal(s.registry.refs(info.name),0)
 })
 
-test('排队超时翻译成资源紧张文案，不暴露调度器内部字样',async()=>{
- const s=setup('demo-timeout'),info=s.info
- s.pressure()
- const p=s.acquire(info,'panel:x')
- await new Promise(r=>setImmediate(r))
- s.tick(1000)
- await assert.rejects(p,e=>/资源紧张/.test((e as Error).message)&&!/wait timeout/.test((e as Error).message))
- assert.equal(s.spawns(),0)
- s.m.dispose()
+test('严重压力持续超过等待超时也不影响插件启动',async()=>{
+ const s=setup('demo-timeout');s.pressure()
+ const p=s.acquire(s.info,'panel:x')
+ await new Promise(r=>setImmediate(r));s.tick(1000)
+ assert.equal(await p,s.hosted);assert.equal(s.spawns(),1)
+ assert.equal(queuedSessionStarts(42).length,0)
+ s.exit();await new Promise(r=>setImmediate(r));s.m.dispose()
 })
