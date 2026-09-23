@@ -110,6 +110,9 @@ try {
    check(await evaluate("document.querySelector('.bp-slot.open .bp-slot-b').textContent==='"+pick+"'&&document.querySelector('.bp-view').scrollTop>0"),name+'重复鼠标点击仍定位不折叠')
    check(await evaluate("getComputedStyle(document.querySelector('.bp-slot.open')).getPropertyValue('--bp-color')===getComputedStyle(document.querySelector('.bp-diagram .bp-region.is-selected')).getPropertyValue('--bp-color')"),name+'图与词条同色')
    await shot(name==='首页'?'mobile-jump':'desktop-jump')
+   // Move the pointer off the scrolling panel before testing keyboard-only focus.
+   // Otherwise scroll-induced mouseenter may legitimately replace the inspected region.
+   await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:10,y:70})
    await evaluate("document.querySelector('.bp-slot-hd').focus()")
    await until(()=>evaluate("document.querySelector('.bp-region.is-active text').textContent===document.querySelector('.bp-slot-b').textContent"))
    check(true,name+'列表聚焦联动SVG高亮')

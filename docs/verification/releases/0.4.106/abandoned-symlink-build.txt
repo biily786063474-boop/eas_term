@@ -1,0 +1,21 @@
+  • electron-builder  version=26.15.2 os=25.5.0
+  • loaded configuration  file=package.json ("build" field)
+  • author is missed in the package.json  appPackageFile=/private/tmp/eas-release-0.4.106/package.json
+  • @electron/rebuild already used by electron-builder, please consider to remove excess dependency from devDependencies
+
+To ensure your native dependencies are always matched electron version, simply add script `"postinstall": "electron-builder install-app-deps" to your `package.json`
+  • executing @electron/rebuild  electronVersion=37.10.3 arch=arm64 buildFromSource=false workspaceRoot=/private/tmp/eas-release-0.4.106 projectDir=./ appDir=./
+  • installing native dependencies  arch=arm64
+  • preparing       moduleName=node-pty arch=arm64
+  • finished        moduleName=node-pty arch=arm64
+  • completed installing native dependencies
+  • packaging       platform=darwin arch=arm64 electron=37.10.3 appOutDir=/tmp/eas-release106-packages/mac-arm64
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/tmp/eas-release106-packages/mac-arm64
+  • searching for node modules  pm=npm searchDir=/private/tmp/eas-release-0.4.106
+  • duplicate dependency references  dependencies=["minimatch@3.1.5","jsonfile@6.2.1"]
+  • cannot find path for dependency  dependencies=["@codemirror/language@undefined","@codemirror/state@undefined","@codemirror/view@undefined","@lezer/highlight@undefined","style-mod@undefined","@hono/node-server@undefined","ajv-formats@undefined","ajv@undefined","content-type@undefined","cors@undefined","cross-spawn@undefined","eventsource-parser@undefined","eventsource@undefined","express-rate-limit@undefined","express@undefined","hono@undefined","jose@undefined","json-schema-typed@undefined","pkce-challenge@undefined","raw-body@undefined","zod-to-json-schema@undefined","zod@undefined","acorn-jsx-walk@undefined","acorn-jsx@undefined","acorn-loose@undefined","acorn-walk@undefined","acorn@undefined","enhanced-resolve@undefined","ignore@undefined","interpret@undefined","is-installed-globally@undefined","json5@undefined","picomatch@undefined","prompts@undefined","rechoir@undefined","safe-regex@undefined","semver@undefined","tsconfig-paths-webpack-plugin@undefined","watskeburt@undefined","debug@undefined","@types/dom-webcodecs@undefined","@types/wicg-file-system-access@undefined","node-addon-api@undefined","robust-predicates@undefined","splaytree@undefined","@types/react-reconciler@undefined","its-fine@undefined","react-reconciler@undefined","scheduler@undefined","buffer-crc32@undefined","fd-slicer@undefined"]
+[afterPack] chmod +x Eas-Term.app/Contents/Resources/app.asar.unpacked/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper
+[afterPack] chmod +x Eas-Term.app/Contents/Resources/app.asar.unpacked/node_modules/node-pty/prebuilds/darwin-x64/spawn-helper
+[afterPack] 已配置正式签名(Zang Yawen (D4FVS6QJXV))，跳过 ad-hoc 重签
+  • signing         file=/tmp/eas-release106-packages/mac-arm64/Eas-Term.app platform=darwin type=distribution identityName=Developer ID Application: Zang Yawen (D4FVS6QJXV) identityHash=575D1DD988FEDA4EB66C7E5FE1F6C6BF1C3C487A provisioningProfile=none
