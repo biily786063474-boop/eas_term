@@ -15,4 +15,4 @@
 - 外部 Computer Use 指针残留问题仍开放；不因这次版本发布视为已修复。
 
 ## 分发
-五包大小与 SHA256 见 `manifest.json`；官网和 GitHub Release 切换后补充公开核验与服务器前后状态。
+五包大小与 SHA256 见 `manifest.json`。官网 `latest.json` 于 2026-09-23T13:57:21Z 切至 0.4.107；GitHub Release 于 2026-09-23T13:57:50Z 公开并设为 Latest，tag `v0.4.107` 指向 `cf4048b1`。公开页面/latest/五包 HEAD+Range 共 9 项核验通过；GitHub 五包 digest 与本地一致。服务器五个 PM2 PID/status 与发布前相同，其他站状态相同；mini.biily.top 本地 curl 000 是发布前既有。没有 reload、没有删除旧包；回退备份 `/www/wwwroot/eas-release-backups/0.4.107-20260923T133908Z`。正式用户应用未替换。
