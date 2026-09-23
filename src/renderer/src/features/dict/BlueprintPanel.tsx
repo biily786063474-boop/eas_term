@@ -103,7 +103,7 @@ export function BlueprintPanel<T extends Term>({
   }
 
   const regions = blueprintRegions(cur)
-  const active = inspected ?? openSlot ?? cur.slots[0]?.block
+  const active = inspected ?? openSlot
   const region = regions.find(r => r.block === active)
 
   // ── 看一张蓝图 ────────────────────────────────────────────────────────
@@ -118,10 +118,10 @@ export function BlueprintPanel<T extends Term>({
       </div>
       <div className="bp-intent">{cur.intent}</div>
       <div className="bp-visual">
-        <div className="bp-location" aria-live="polite"><strong>{region?.block}</strong><span>{region?.location}</span>
-          <small>{cur.slots.find(s => s.block === active)?.note}</small></div>
         <BlueprintDiagram blueprint={cur} active={active} selected={openSlot} onInspect={setInspected}
           onSelect={block => {setOpenSlot(block); setInspected(null); setJump({block, bpId: cur.id})}} />
+        <div className="bp-location" aria-live="polite"><strong>{region?.block ?? '页面结构'}</strong><span>{region?.location ?? '选择区域，查看它在页面中的作用'}</span>
+          <small>{cur.slots.find(s => s.block === active)?.note}</small></div>
         <p className="bp-legend">位置示意 · 点击跳转至对应词条，同色表示同一区块。弹层与空状态按需出现。</p>
       </div>
 
