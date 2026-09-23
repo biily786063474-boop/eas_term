@@ -33,6 +33,16 @@ function loadClis(): Promise<CliInfo[]> {
 export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null {
   const addAgentNode = useStore((s) => s.addAgentNode)
   const addTerminalNode = useStore((s) => s.addTerminalNode)
+  return <StartOptions onStart={(cli) => addAgentNode(frameId, { cli })} onTerminal={() => addTerminalNode(frameId)} />
+}
+
+/** Shared launch UI; caller owns canvas-vs-split placement. No mode switching here. */
+export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始', terminalLabel='先开个终端' }: {
+  onStart: (cli: string) => Promise<unknown>
+  onTerminal: () => Promise<unknown>
+  title?: string
+  terminalLabel?: string
+}): JSX.Element | null {
   const [clis, setClis] = useState<CliInfo[] | null>(null)
   const [omp, setOmp] = useState<OmpStatus | null>(null)
   /** claude / codex 各自登没登录。**值是三态**：`true` 已登、`false` 没登、
@@ -42,6 +52,7 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
   const [auth, setAuth] = useState<Record<string, boolean | undefined>>({})
   /** 正在建节点。**防连点** —— 建节点是异步的，连点两下会开出两个模块。 */
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
   // 光环那圈扫光是 infinite transform 动画。画布上每个空 Frame 一排三颗，25 个 Frame 就是几十个
   // 一直转的动画 —— 2026-09-14 实测正式版空闲时 9 个全在视口外照转，每 4 秒 480 次样式重算。
@@ -76,25 +87,24 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
     }
   }, [])
 
-  if (!clis) return null // 清单还没到：**什么都不画**，别先闪一排空按钮再重排
-
-  const choices = startChoices(clis, (c) =>
+  const choices = startChoices(clis ?? [], (c) =>
     // 随包那个（omp）的「配好了没有」不看登录态 —— 它随包分发、探测必过，
     // 真正的判据是它自己那套四档状态机（选服务商 → 登录 → 选模型 → ready）。
     // 拿 available 判它会得出「一直可用」，而用户点进去撞到的是选服务商那一屏。
     c.bundled ? (omp ? omp.step.k === 'ready' : undefined) : auth[c.id]
   )
-  if (!choices.length) return null
 
   const start = (cli: string): void => {
     if (busy) return
-    setBusy(true)
-    void addAgentNode(frameId, { cli }).finally(() => setBusy(false))
+    setError(''); setBusy(true)
+    void onStart(cli).catch(() => setError('创建失败，请重试')).finally(() => setBusy(false))
   }
 
   return (
     <div className="cframe-start" ref={rootRef}>
-      <div className="cframe-start-hd">选一个 AI 开始</div>
+      <div className="cframe-start-hd">{title}</div>
+      {!clis && <div role="status">正在检查 AI…</div>}
+      {clis && !choices.length && <div role="status">暂时无法获取 AI 列表，可先创建终端</div>}
       <div className="cframe-start-row">
         {choices.map(({ cli, state }) => (
           <button
@@ -122,12 +132,13 @@ export function FrameStart({ frameId }: { frameId: string }): JSX.Element | null
         onClick={() => {
           if (busy) return
           setBusy(true)
-          void addTerminalNode(frameId).finally(() => setBusy(false))
+          void onTerminal().catch(() => setError('创建失败，请重试')).finally(() => setBusy(false))
         }}
       >
         <TerminalIcon size={12} />
-        先开个终端
+        {terminalLabel}
       </button>
+      {error && <div role="alert">{error}</div>}
     </div>
   )
 }

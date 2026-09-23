@@ -1270,3 +1270,6 @@ body {
   font-size: 12px;
   color: var(--fg-dim);
 }
+
+/* Split empty state reuses Frame choices, but must not shrink to intrinsic button text. */
+.empty-card > .cframe-start { width:min(100%,460px); box-sizing:border-box; padding:16px 0; }
