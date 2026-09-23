@@ -1,3 +1,5 @@
+import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
+import { boardMoveMenu } from './moveMenu'
 // 看板视图：按项目状态分列，一个项目一张卡片。
 //
 // **卡片上不放终端** —— 卡片是摘要（项目名 / 状态 / 有几个终端 / 谁在等你），
@@ -38,6 +40,7 @@ interface TermLeaf {
 }
 
 export function BoardStage(): JSX.Element {
+  const [moveMenu, setMoveMenu] = useState<{x:number;y:number;projectId:string}|null>(null)
   const projects = useStore((s) => s.projects)
   const tabs = useStore((s) => s.tabs)
   const setProjectStatus = useStore((s) => s.setProjectStatus)
@@ -369,6 +372,8 @@ export function BoardStage(): JSX.Element {
                   <div
                     key={p.id}
                     className={`board-card${dragId === p.id ? ' dragging' : ''}${need ? ' need' : ''}`}
+                    data-project-id={p.id}
+                    onContextMenu={(e) => {e.preventDefault();e.stopPropagation();setMoveMenu({x:e.clientX,y:e.clientY,projectId:p.id})}}
                     draggable
                     onDragStart={(e) => {
                       setDragId(p.id)
@@ -483,6 +488,13 @@ export function BoardStage(): JSX.Element {
         新看板
       </button>
       </div>
+      {moveMenu && projects.some(p=>p.id===moveMenu.projectId) && <CanvasContextMenu
+        x={moveMenu.x} y={moveMenu.y} onClose={()=>setMoveMenu(null)}
+        items={[boardMoveMenu(columns,projects.find(p=>p.id===moveMenu.projectId)?.status,(status)=>{
+          const s=useStore.getState()
+          if(!s.projects.some(p=>p.id===moveMenu.projectId)||(status!==null&&!s.boardColumns.some(c=>c.id===status)))return
+          void s.setProjectStatus(moveMenu.projectId,status)
+        })]} />}
     </>
   )
 }

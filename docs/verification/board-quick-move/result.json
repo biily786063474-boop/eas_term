@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "user-defined destinations appear in right-click submenu",
+    "click instantly moves the entire project card into destination column",
+    "destination persisted using real projects IPC",
+    "current destination disabled, cannot accidentally unclassify",
+    "right click never opens project session",
+    "unclassified move survives reload"
+  ]
+}
