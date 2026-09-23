@@ -1,0 +1,21 @@
+{
+  "arm64": {
+    "codesign": "passed",
+    "notarization": "passed",
+    "stapler": "passed",
+    "gatekeeper": "accepted, Notarized Developer ID",
+    "asarSha256": "06ce80290da10649b1ac17deaf0b34240c656e4db01b5ecaf014e6703c29b4bc",
+    "zipDmgAppAsarMatch": true,
+    "isolatedLaunch": "passed; UI v0.4.107 screenshot arm-app.png"
+  },
+  "x64": {
+    "codesign": "passed",
+    "notarization": "passed",
+    "stapler": "passed",
+    "gatekeeper": "accepted, Notarized Developer ID",
+    "asarSha256": "06ce80290da10649b1ac17deaf0b34240c656e4db01b5ecaf014e6703c29b4bc",
+    "zipDmgAppAsarMatch": true,
+    "isolatedLaunch": "passed under Rosetta; UI v0.4.107 screenshot x64-app.png",
+    "physicalIntel": "not tested"
+  }
+}

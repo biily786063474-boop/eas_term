@@ -1,0 +1,27 @@
+{
+  "Eas-Term-0.4.107-arm64.dmg": {
+    "local": "/Users/biily/Eas-Term-release/Eas-Term-0.4.107-arm64.dmg",
+    "size": 220916697,
+    "sha256": "5f96a9322cded419a62ce745c1079cf66a56ffb0d2b2fce06e17f1201bc45344"
+  },
+  "Eas-Term-0.4.107-arm64.zip": {
+    "local": "/Users/biily/Eas-Term-release/Eas-Term-0.4.107-arm64.zip",
+    "size": 219093954,
+    "sha256": "0a9248eab22f076c163b56bf4af35d4dc06d5797b2ec9b7f490a70d6426338b8"
+  },
+  "Eas-Term-0.4.107-x64.dmg": {
+    "local": "/Users/biily/Eas-Term-release/Eas-Term-0.4.107-x64.dmg",
+    "size": 232956824,
+    "sha256": "9f1f48b5b55bb99a0e097751dcb42428e4cd08239551e22680737298d0ab2e3c"
+  },
+  "Eas-Term-0.4.107-x64.zip": {
+    "local": "/Users/biily/Eas-Term-release/Eas-Term-0.4.107-x64.zip",
+    "size": 231192353,
+    "sha256": "f976dd2153eb4fb9fa8f483007928aee28fad56681d7b72abe0bf92757e7fc5f"
+  },
+  "Eas-Term-0.4.107-x64-setup.exe": {
+    "local": "/tmp/eas-release107-win/Eas-Term-0.4.107-x64-setup.exe",
+    "size": 199485284,
+    "sha256": "1cba1853740902126464d51ba466ac75c68576785829ee3b604a7c1464ddfc67"
+  }
+}

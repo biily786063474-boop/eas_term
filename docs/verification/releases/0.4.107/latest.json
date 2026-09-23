@@ -1,0 +1,17 @@
+{
+  "version": "0.4.107",
+  "mac_arm64": "/download/v0.4.107/Eas-Term-0.4.107-arm64.dmg",
+  "macZip_arm64": "/download/v0.4.107/Eas-Term-0.4.107-arm64.zip",
+  "mac_x64": "/download/v0.4.107/Eas-Term-0.4.107-x64.dmg",
+  "macZip_x64": "/download/v0.4.107/Eas-Term-0.4.107-x64.zip",
+  "mac": "/download/v0.4.107/Eas-Term-0.4.107-arm64.dmg",
+  "win": "/download/v0.4.107/Eas-Term-0.4.107-x64-setup.exe",
+  "notes": [
+    "Codex 长任务在短暂状态查询超时、启动确认回包丢失时尽量保持原任务运行，不重复提交或计费。",
+    "可选 MCP 工具连接失败不再误中断主对话，登录故障与进程/协议问题给出更明确的提示。",
+    "原生输出通道中断后不再永久显示运行中；错误日志仅记录脱敏类别。",
+    "原生进程真正退出或任务状态无法确认时仍安全停止，不自动重做任务；真实线上断网与 Windows 尚需持续观察。",
+    "外部 Computer Use 指针残留问题仍未解决。"
+  ],
+  "published": "2026-09-23T13:27:40.214Z"
+}

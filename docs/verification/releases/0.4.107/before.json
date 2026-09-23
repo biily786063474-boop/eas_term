@@ -1,0 +1,42 @@
+{
+  "time": "2026-09-23 UTC before deployment",
+  "df": "/dev/vda3      41881894912 32854568960 7091683328  83% /",
+  "latestVersion": "0.4.106",
+  "pm2": [
+    {
+      "name": "biily",
+      "pid": 3473977,
+      "status": "online"
+    },
+    {
+      "name": "bizone-cms",
+      "pid": 126856,
+      "status": "online"
+    },
+    {
+      "name": "survey",
+      "pid": 126871,
+      "status": "online"
+    },
+    {
+      "name": "spb-cms",
+      "pid": 898359,
+      "status": "online"
+    },
+    {
+      "name": "eas-tunnel",
+      "pid": 598956,
+      "status": "online"
+    }
+  ],
+  "sites": {
+    "eas.biily.top": 200,
+    "www.biily.top": 200,
+    "aurora.biily.top": 200,
+    "rove.biily.top": 200,
+    "bzone.biily.top": 200,
+    "spb.biily.top": 200,
+    "mini.biily.top": 0
+  },
+  "note": "mini.biily.top local curl returned 000 before deploy."
+}
