@@ -740,11 +740,15 @@
 .bp-device { fill:var(--bg-1); stroke:var(--t-3); stroke-width:1; }
 .bp-chrome { fill:var(--t-3); }
 .bp-region { cursor:pointer; outline:none; }
-.bp-region>rect:first-child { fill:var(--s-2); stroke:var(--t-3); stroke-width:.7; }
+.bp-pick,.bp-view { --bp-tone-0:#6398d5; --bp-tone-1:#65aaa0; --bp-tone-2:#ba91cc; --bp-tone-3:#d1a36c; --bp-tone-4:#ca8b9a; --bp-tone-5:#8fae73; --bp-tone-6:#8196c7; }
+.bp-region>rect:first-child { fill:color-mix(in srgb,var(--bp-color) 12%,var(--bg-2)); stroke:var(--bp-color); stroke-width:.7; }
 .bp-region text { fill:var(--t-2); font:10px -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif; pointer-events:none; }
 .bp-wire { stroke:var(--t-3); stroke-width:1; opacity:.4; pointer-events:none; }
-.bp-region-pulse { fill:var(--accent); opacity:0; pointer-events:none; }
-.bp-region.is-active>rect:first-child,.bp-region:focus-visible>rect:first-child { stroke:var(--accent); stroke-width:2; }
+.bp-region-pulse { fill:var(--bp-color); opacity:0; pointer-events:none; }
+.bp-region.is-active>rect:first-child,.bp-region:focus-visible>rect:first-child { fill:color-mix(in srgb,var(--bp-color) 23%,var(--bg-2)); stroke:var(--bp-color); stroke-width:1.5; }
+.bp-region.is-selected>rect:first-child { stroke:var(--bp-color); stroke-width:3; }
+.bp-slot-i { border-left:3px solid var(--bp-color); padding-left:4px; }
+.bp-slot.open .bp-slot-hd { background:color-mix(in srgb,var(--bp-color) 13%,var(--bg-2)); box-shadow:inset 2px 0 var(--bp-color); }
 .bp-region.is-active .bp-region-pulse { animation:bp-location-pulse 2.4s ease-in-out infinite; }
 .bp-region:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 .bp-location { display:flex; flex-direction:column; gap:5px; min-height:82px; padding:0 0 8px; font-size:12px; color:var(--t-2); }
@@ -753,3 +757,14 @@
 .bp-legend { margin:4px 0 0; }
 @keyframes bp-location-pulse { 0%,100% { opacity:.05 } 50% { opacity:.2 } }
 @media(prefers-reduced-motion:reduce) { .bp-region.is-active .bp-region-pulse { animation:none; opacity:.12; } }
+
+/* Invitation stays secondary; details and installation consent remain opt-in. */
+.dhb-invite.compact { display:grid; grid-template-columns:12px minmax(0,1fr) auto; align-items:center; gap:6px; padding:8px 4px; background:transparent; border:0; }
+.dhb-invite.compact .dhb-text { gap:2px; min-width:0; }
+.dhb-invite.compact .dhb-text b { font-size:11px; font-weight:500; }
+.dhb-invite.compact .dhb-text span { font-size:10px; }
+.dhb-invite.compact .dhb-acts { gap:3px; }
+.dhb-invite.compact .dhb-acts button { padding:4px 6px; }
+.dhb-info { grid-column:2 / -1; color:var(--t-3); font-size:11px; line-height:1.6; }
+.bp-thumb .bp-region>rect:first-child { fill:color-mix(in srgb,var(--bp-color) 30%,var(--bg-2)); stroke-width:1.8; }
+.bp-card:hover .bp-thumb .bp-region>rect:first-child,.bp-card:focus-visible .bp-thumb .bp-region>rect:first-child { fill:color-mix(in srgb,var(--bp-color) 48%,var(--bg-2)); stroke-width:2.5; }

@@ -11,7 +11,7 @@
 // 所以打标质量比蓝图本身更要紧（见 `docs/词典区块打标-脚本.mjs`）。
 //
 // 2026-09-23：SVG 展示区块位置，词条仍按 slots + blocks 匹配。
-import { useState, type JSX } from 'react'
+import { useState, useRef, useLayoutEffect, type CSSProperties, type JSX } from 'react'
 import { BlueprintDiagram } from './BlueprintDiagram'
 import { blueprintRegions } from './blueprintGeometry'
 
@@ -56,6 +56,17 @@ export function BlueprintPanel<T extends Term>({
   onPick
 }: Props<T>): JSX.Element {
   const [inspected, setInspected] = useState<string | null>(null)
+  const viewRef = useRef<HTMLDivElement>(null)
+  const slotsRef = useRef(new Map<string, HTMLDivElement>())
+  const [jump, setJump] = useState<{block: string; bpId: string} | null>(null)
+  useLayoutEffect(() => {
+    if (!jump || jump.bpId !== bpId) return
+    const view = viewRef.current, slot = slotsRef.current.get(jump.block)
+    if (view && slot) view.scrollTo({
+      top: view.scrollTop + slot.getBoundingClientRect().top - view.getBoundingClientRect().top - 12,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    })
+  }, [jump, bpId])
   const cur = blueprints.find((b) => b.id === bpId) ?? null
 
   // ── 选蓝图 ────────────────────────────────────────────────────────────
@@ -76,6 +87,7 @@ export function BlueprintPanel<T extends Term>({
                     setBpId(b.id)
                     setOpenSlot(null)
                     setInspected(null)
+                    setJump(null)
                   }}
                 >
                   <BlueprintDiagram blueprint={b} preview />
@@ -96,7 +108,7 @@ export function BlueprintPanel<T extends Term>({
 
   // ── 看一张蓝图 ────────────────────────────────────────────────────────
   return (
-    <div className="bp-view" onMouseLeave={onLeave}>
+    <div ref={viewRef} className="bp-view" onMouseLeave={onLeave}>
       <div className="bp-head">
         <button className="bp-back" onClick={() => setBpId(null)}>
           ← 全部预设
@@ -108,9 +120,9 @@ export function BlueprintPanel<T extends Term>({
       <div className="bp-visual">
         <div className="bp-location" aria-live="polite"><strong>{region?.block}</strong><span>{region?.location}</span>
           <small>{cur.slots.find(s => s.block === active)?.note}</small></div>
-        <BlueprintDiagram blueprint={cur} active={active} onInspect={setInspected}
-          onSelect={block => setOpenSlot(openSlot === block ? null : block)} />
-        <p className="bp-legend">位置示意 · 悬停或聚焦查看位置，点击展开相关词条。弹层与空状态按需出现。</p>
+        <BlueprintDiagram blueprint={cur} active={active} selected={openSlot} onInspect={setInspected}
+          onSelect={block => {setOpenSlot(block); setInspected(null); setJump({block, bpId: cur.id})}} />
+        <p className="bp-legend">位置示意 · 点击跳转至对应词条，同色表示同一区块。弹层与空状态按需出现。</p>
       </div>
 
       {/* 竖排的区块 = 页面从上到下的顺序。**这就是「页面的关系」那句话的落点** */}
@@ -119,7 +131,9 @@ export function BlueprintPanel<T extends Term>({
           const hits = terms.filter((t) => t.blocks?.includes(s.block))
           const open = openSlot === s.block
           return (
-            <div key={s.block} className={`bp-slot${open ? ' open' : ''}`}>
+            <div key={s.block} ref={el => {if (el) slotsRef.current.set(s.block, el); else slotsRef.current.delete(s.block)}}
+              style={{'--bp-color': `var(--bp-tone-${i % 7})`} as CSSProperties}
+              className={`bp-slot${open ? ' open' : ''}`}>
               <button
                 className="bp-slot-hd"
                 onMouseEnter={() => setInspected(s.block)} onMouseLeave={() => setInspected(null)}
