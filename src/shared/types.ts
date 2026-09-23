@@ -781,6 +781,7 @@ export interface PluginInfo {
   /** 图标的**绝对路径**（已由主进程把相对路径解开）。渲染层不能直接 file://，
    *  要走已注册的自定义协议 —— 同 bizone.ts 的 registerBizoneScheme */
   iconPath?: string
+  iconDataUrl?: string
   /** Codex 的 interface.defaultPrompt[0]。选中插件时预填进对话框的首条消息 */
   defaultPrompt?: string
   /** 这个插件带的 MCP server 配置（原样，未做变量替换）。

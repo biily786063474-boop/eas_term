@@ -10,7 +10,12 @@ export type PluginConfigField = {
  | {type:'secret'}
  | {type:'directory';access:'read'|'read-write'}
 )
-export interface PluginConfig {fields:PluginConfigField[]}
+export interface PluginConfig {
+ /** Explicit credential-free onboarding. No configuration is loaded at process spawn.
+  * Credentials require a subsequent trusted-host activation and live vault lease. */
+ startup?:'deferred'
+ fields:PluginConfigField[]
+}
 const record=(v:unknown):Record<string,unknown>=>{
  if(!v||typeof v!=='object'||Array.isArray(v))throw Error('配置必须是对象')
  return v as Record<string,unknown>
@@ -25,7 +30,8 @@ function keys(r:Record<string,unknown>,allowed:string[]){
 /** Fail closed rather than silently dropping a required constraint. */
 export function parsePluginConfig(raw:unknown):PluginConfig|undefined{
  if(raw===undefined)return undefined
- const c=record(raw);keys(c,['fields'])
+ const c=record(raw);keys(c,['fields','startup'])
+ if(c.startup!==undefined&&c.startup!=='deferred')throw Error('未知配置启动方式')
  if(!Array.isArray(c.fields)||!c.fields.length||c.fields.length>32)throw Error('配置字段数量必须为1–32')
  const ids=new Set<string>()
  const fields=c.fields.map((value):PluginConfigField=>{
@@ -58,5 +64,5 @@ export function parsePluginConfig(raw:unknown):PluginConfig|undefined{
    default:throw Error('未知配置类型')
   }
  })
- return {fields}
+ return {...(c.startup==='deferred'?{startup:'deferred' as const}:{}),fields}
 }

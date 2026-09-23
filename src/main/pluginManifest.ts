@@ -51,6 +51,7 @@ export function parseManifest(
     if(config){
       const caps=rec(m.requirements)?.capabilities
       if(!Array.isArray(caps)||!caps.includes('config.fields'))throw Error('配置插件必须声明config.fields兼容要求')
+      if(config.startup==='deferred'&&!caps.includes('config.deferred'))throw Error('引导启动插件必须声明config.deferred兼容要求')
     }
   } catch(error){errors.push(error instanceof Error?error.message:'配置无效')}
 
@@ -160,6 +161,11 @@ export function parseManifest(
       entry,
       defaultSize: { w: clamp(size?.w, 460), h: clamp(size?.h, 340) }
     })
+  }
+
+  if (config?.startup === 'deferred') {
+    if (remote) errors.push('引导启动仅支持本地 stdio 插件')
+    if (!panels.length) errors.push('引导启动插件必须提供配置引导面板')
   }
 
   // permissions.canvas：和宿主全局白名单取交集，不认识的丢掉记 warning

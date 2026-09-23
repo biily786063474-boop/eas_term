@@ -47,7 +47,7 @@ test('packaging separates offline seed from runtime builtin plugins',()=>{
  assert.ok(resources.some((r:{from:string;to:string})=>r.from==='resources/plugins/timeline'&&r.to==='plugin-migrations/timeline'))
  const code=fs.readFileSync('src/main/plugins.ts','utf8')
  assert.ok(code.includes('migrateTimeline(os.homedir(), timelineSeedDir())'))
- assert.ok(code.includes(".filter(p => p.name !== 'timeline')"))
+ assert.ok(code.includes(".filter(p => p.name !== 'timeline' && p.name !== 'jev')"))
 })
 test('completed migration no longer requires seed to ship',t=>{
  const f=fixture(t);migrateTimeline(f.home,f.seed);fs.rmSync(path.dirname(f.seed),{recursive:true})

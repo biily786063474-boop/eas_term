@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-22",
+  "branch": "feat/jev-plugin-20260922",
+  "baseline": "61c890a",
+  "implementation": "complete",
+  "check": {
+    "passed": 3530,
+    "skipped": 19,
+    "failed": 0
+  },
+  "build": "passed",
+  "isolatedUI": 35,
+  "market": 20,
+  "review": "No remaining P1/P2 in final scoped re-review",
+  "liveProvider": false,
+  "realOnlineCLI": false,
+  "windows": false,
+  "published": false,
+  "committed": false,
+  "notes": [
+    "HTTP transport was an explicit test-only fixture; no real paid model request",
+    "One earlier shim timeout was not reproduced in subsequent runs; cause not established",
+    "failure.json files are historical attempts, final result files and this record identify current outcome",
+    "Narrow screenshot changes only iframe viewport for responsive testing; outer canvas node remains wide"
+  ]
+}

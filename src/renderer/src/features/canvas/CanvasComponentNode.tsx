@@ -1,3 +1,6 @@
+import {PluginLogo} from './pluginLogos'
+import {useEffect} from 'react'
+import type {PluginInfo} from '../../../../shared/types'
 // 画布组件节点（画布独有）：按 node.component.type 查注册表渲染，Frame 注入 projectId/cwd。
 // 外壳（头部/拖动/resize）复用文件预览节点的 .cfile-* 样式。
 
@@ -22,6 +25,9 @@ export function CanvasComponentNode({
   selected?: boolean
   onSelect?: (additive: boolean) => void
 }): JSX.Element | null {
+  const pluginId=node.component?.type==='plugin-panel'?node.component.props?.pluginId:undefined
+  const [plugin,setPlugin]=useState<PluginInfo|null>(null)
+  useEffect(()=>{let live=true;setPlugin(null);if(typeof pluginId==='string')void window.api.plugins.list().then(items=>{if(live)setPlugin(items.find(p=>p.id===pluginId)??null)}).catch(()=>{});return()=>{live=false}},[pluginId])
   const moveNode = useStore((s) => s.moveNode)
   const settleNode = useStore((s) => s.settleNode)
   const resizeNode = useStore((s) => s.resizeNode)
@@ -153,7 +159,7 @@ export function CanvasComponentNode({
     >
       <div className="cfile-head" onMouseDown={startDrag} onDoubleClick={() => setEditing(true)}>
         <span className="cfile-badge">
-          <def.Icon size={13} />
+          {plugin?<PluginLogo name={plugin.name} brandColor={plugin.brandColor} iconDataUrl={plugin.iconDataUrl} size={20} radius={4}/>:<def.Icon size={13} />}
         </span>
         {editing ? (
           <input

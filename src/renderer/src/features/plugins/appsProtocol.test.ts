@@ -68,3 +68,11 @@ test('methodNotFound 用标准 -32601（别的宿主也这么回）', () => {
   const e = methodNotFound(3, 'x') as { error: { code: number } }
   assert.equal(e.error.code, -32601)
 })
+
+test('configuration opens host-owned UI; credential injection is never an iframe method',()=>{
+ assert.equal(routeViewMessage({jsonrpc:'2.0',id:1,method:'panel/configuration'},false).kind,'drop')
+ assert.equal(routeViewMessage({jsonrpc:'2.0',id:1,method:'panel/configuration'},true).kind,'request')
+ assert.equal(routeViewMessage({jsonrpc:'2.0',id:1,method:'host/configure',params:{configuration:'secret'}},true).kind,'drop')
+})
+
+test('host suggestion RPC is unavailable to plugin panels',()=>{assert.equal(routeViewMessage({jsonrpc:'2.0',id:1,method:'host/attach-jev-suggestion'},true).kind,'drop')})
