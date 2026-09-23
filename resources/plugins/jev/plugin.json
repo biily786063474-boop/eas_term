@@ -1,0 +1,10 @@
+{
+ "name":"jev","version":"0.1.0","displayName":"Jev 智能辅助",
+ "description":"可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
+ "category":"AI","brandColor":"#B7D2C5","composerIcon":"./ui/icon.svg",
+ "requirements":{"capabilities":["mcp.stdio","config.fields","config.deferred"]},
+ "config":{"startup":"deferred","fields":[{"id":"api-key","type":"secret","label":"TypeSafe API 密钥","purpose":"仅供 Jev 服务验证及你开启的判断请求使用；不发送给对话模型。","required":true}]},
+ "mcp":{"command":"node","args":["./server.mjs"]},
+ "panels":[{"id":"main","title":"Jev 智能辅助","tool":"jev_show","entry":"ui://jev/panel","defaultSize":{"w":1040,"h":800}}],
+ "permissions":{"canvas":[]}
+}

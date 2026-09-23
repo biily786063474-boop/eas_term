@@ -25,6 +25,7 @@ export const VIEW_REQUESTS = [
   // 插件的**面板私有方法**（`panel/` 前缀）：只有面板发得出，会话里的转发 shim 不认这个前缀。
   // 用途是「只有用户真手点才能做的事」—— 电脑操作的授权就是这样，
   // 工具面里根本没有 grant，模型给自己授权是不可能的（2026-09-06）。
+  'panel/configuration',
   'panel/grant',
   'panel/revoke',
   'panel/resolve-candidate',

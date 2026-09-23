@@ -146,3 +146,11 @@ test('dynamic OAuth requires a separately declared capability and one approved r
  assert.equal(parseManifest({...raw,requirements:{capabilities:['mcp.remote','auth.oauth']}},DIR).ok,false)
  for(const change of [{clientId:'ambiguous'},{registrationEndpoint:''},{registrationEndpoint:'https://evil.example/register'},{clientSecret:'secret'},{registrationAccessToken:'secret'}])assert.equal(parseManifest({...raw,mcp:{...raw.mcp,oauth:{...oauth,...change}}},DIR).ok,false)
 })
+
+test('deferred onboarding requires explicit capability, local transport and panel', () => {
+  const manifest = { ...good(), config: { startup: 'deferred', fields: [{ id: 'api-key', type: 'secret', label: 'API key', purpose: 'Connect provider', required: true }] }, requirements: { capabilities: ['config.fields', 'config.deferred'] } }
+  assert.equal(parseManifest(manifest, DIR).ok, true)
+  assert.equal(parseManifest({ ...manifest, requirements: { capabilities: ['config.fields'] } }, DIR).ok, false)
+  assert.equal(parseManifest({ ...manifest, panels: [] }, DIR).ok, false)
+  assert.equal(parseManifest({ ...manifest, requirements: { capabilities: ['config.fields', 'config.deferred', 'mcp.remote'] }, mcp: { transport: 'streamable-http', url: 'https://example.com/mcp', approvedOrigins: ['https://example.com'], auth: 'none' } }, DIR).ok, false)
+})

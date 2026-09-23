@@ -169,7 +169,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     const update = action === 'update'
     return (
       <div key={it.plugin?.id ?? it.name} className="pm-card">
-        <PluginLogo name={it.name} brandColor={it.brandColor} />
+        <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl} />
         <div className="pm-cb">
           <div className="pm-ct">
             <b>{it.displayName}</b>

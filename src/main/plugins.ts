@@ -1,3 +1,4 @@
+import {pluginIconData} from './pluginIcon.ts'
 import { createDirectoryGrant } from './pluginConnections/directoryGrant.ts'
 import { createConfigurationActions } from './pluginConnections/configurationActions.ts'
 import { loadPluginConfiguration, savePluginConfiguration, clearPluginConfiguration, acquireConfigurationAccess } from './pluginConfiguration'
@@ -220,7 +221,7 @@ function timelineSeedDir(): string {
 let timelineMigrationError: string | undefined
 function easPlugins(): PluginInfo[] {
   const user = easPluginsIn(userPluginsDir(), false)
-  const builtin = easPluginsIn(builtinPluginsDir(), true).filter(p => p.name !== 'timeline')
+  const builtin = easPluginsIn(builtinPluginsDir(), true).filter(p => p.name !== 'timeline' && p.name !== 'jev')
   // A failed migration must not strand old panels. Recovery fallback is visible,
   // never overwrites a user copy and is never used after a completed migration.
   if (timelineMigrationError && !user.some(p => p.name === 'timeline')) {
@@ -254,7 +255,7 @@ export function listPlugins(): PluginInfo[] {
   const others = [...codexPlugins(), ...claudePlugins()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh'))
   const all = [...easPlugins(), ...others]
   const st = loadEnabledState()
-  return all.map((p) => ({ ...p, enabled: isPluginEnabled(p.id, st) }))
+  return all.map((p) => ({ ...p, iconDataUrl: pluginIconData(p.root,p.iconPath), enabled: isPluginEnabled(p.id, st) }))
 }
 
 /** 只要**开着的**插件。双击插入面板、输入框 @ 都走它（关掉的插件不该在那两处冒出来）。 */

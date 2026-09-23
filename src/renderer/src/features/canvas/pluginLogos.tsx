@@ -1,3 +1,4 @@
+import {useState} from 'react'
 // 插件图标：已知品牌用真实品牌 logo（内联 SVG），其余用品牌色字母头像兜底。
 // 用户要求「有真实品牌 logo 就用人家的」（2026-09-15）。SVG 是可信静态串，dangerouslySetInnerHTML 安全。
 // 品牌 logo 按插件名匹配（github / figma / 高德 / 知乎 …）；名字里含关键词就命中。
@@ -61,13 +62,17 @@ export function PluginLogo({
   name,
   brandColor,
   size = 42,
-  radius = 11
+  radius = 11,
+  iconDataUrl
 }: {
   name: string
+  iconDataUrl?: string
   brandColor?: string
   size?: number
   radius?: number
 }): JSX.Element {
+  const [failed,setFailed]=useState<string|null>(null)
+  if(iconDataUrl&&iconDataUrl!==failed)return <img className="pl-logo" src={iconDataUrl} alt="" style={{width:size,height:size,borderRadius:radius,objectFit:'contain'}} onError={()=>setFailed(iconDataUrl)}/>
   const key = logoKeyFor(name)
   if (key) {
     return (

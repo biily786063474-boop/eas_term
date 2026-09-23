@@ -18,3 +18,8 @@ test('constraints fail closed instead of downgrading to unconstrained text or fi
   {...base,type:'secret',id:'../escape'}, {...base,type:'secret',purpose:'line\nbreak'}
  ])assert.throws(()=>parsePluginConfig({fields:[field]}),Error,JSON.stringify(field))
 })
+test('deferred configuration explicitly declares credential-free onboarding, not optional fields',()=>{
+ const config={startup:'deferred',fields:[{...base,type:'secret'}]}
+ assert.deepEqual(parsePluginConfig(config),config)
+ assert.throws(()=>parsePluginConfig({...config,startup:'ignore-errors'}))
+})

@@ -1,3 +1,5 @@
+import {PluginConfigurationControls} from '../canvas/PluginConfigurationControls'
+import type {PluginInfo} from '../../../../shared/types'
 // 插件面板：画布组件 `plugin-panel` 的渲染体。**插件身份在 ctx.props**（pluginId / panelId），
 // 组件只注册这一个（设计稿决定 #5）。
 //
@@ -48,6 +50,8 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
   const nodeH = useStore((s) => s.canvas.frames.find((x) => x.id === ctx.frameId)?.nodes.find((x) => x.id === ctx.nodeId)?.h ?? 340)
   const nodeSize = { w: nodeW, h: nodeH }
   const [state, setState] = useState<State>({ k: 'loading' })
+  const [configuration,setConfiguration]=useState<PluginInfo|null>(null)
+  const configurationPending=useRef(false)
   const [report,setReport]=useState<ReceiptContent|null>(null)
   const reportPending=useRef(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -117,6 +121,20 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
           initializedRef.current = true
           return
         }
+        case 'panel/configuration': {
+          if(configurationPending.current){post(errorResponse(r.id,-32602,'设置已在打开'));return}
+          configurationPending.current=true
+          try{
+            const result=await window.api.plugins.panelRpc(state.session,r.method,{})
+            if(!result.ok)throw Error(result.error)
+            const plugin=(await window.api.plugins.list()).find(item=>item.id===pluginId)
+            if(!plugin?.config)throw Error('插件已移除或配置已改变')
+            setConfiguration(plugin)
+            post(resultResponse(r.id,{opened:true}))
+          }catch(error){post(errorResponse(r.id,-32603,String(error)))}
+          finally{configurationPending.current=false}
+          return
+        }
         case 'panel/timeline-report': {
           if(pluginId!=='eas:timeline'||reportPending.current||report){post(errorResponse(r.id,-32602,'无法重复打开成果周报'));return}
           reportPending.current=true
@@ -174,6 +192,7 @@ export function PluginPanel({ ctx }: { ctx: CanvasComponentCtx }): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.frameId, ctx.cwd, ctx.projectId])
 
+  if(configuration)return <PluginConfigurationControls plugin={configuration} initialOpen onClose={()=>{setConfiguration(null);setReloadKey(k=>k+1)}}/>
   if (state.k === 'loading') return <div className="plg-state">正在起插件…</div>
   if (state.k === 'error')
     return (

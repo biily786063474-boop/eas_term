@@ -1,3 +1,6 @@
+import {jevTimelineReady} from './pluginConnections/jevTimeline.ts'
+import {activateDeferredConfiguration} from './pluginConnections/deferredConfiguration.ts'
+import {startupConfiguration} from './pluginConnections/configurationStartup.ts'
 import { connectPluginConfiguration, connectPluginBearer } from './pluginConfiguration'
 import { getPluginAuthorization } from './pluginAuthorization'
 import { RemotePluginClient } from './pluginConnections/remoteClient.ts'
@@ -57,6 +60,8 @@ interface Hosted {
   /** Process exit for stdio, local connection shutdown for remote (not upstream cancellation). */
   stopped: Promise<void>
   tools: McpToolDef[]
+  configurationActive?: boolean
+  configurationConnecting?: boolean
   stopWatching?: () => void
   ready: Promise<void>
 }
@@ -106,6 +111,7 @@ const registry = new HostRegistry<Hosted | BuiltinHosted>({
 export const builtinCapabilityHost = new BuiltinCapabilityHost<Hosted>(registry)
 
 const panels = new Map<string, Panel>()
+let jevSuggestionsPending=0
 const shims = new Map<string, Shim>()
 const toolActivity=createToolActivity(()=>performance.now())
 export const installPluginAdmission=toolActivity.setAdmission
@@ -155,10 +161,10 @@ function spawnHosted(info: PluginInfo): Hosted {
     EAS_EVENT_GRANTS_FILE: eventGrantFile(),
     EAS_EVENT_PLUGIN_NAME: info.name
   }
-  const configuration=info.config?connectPluginConfiguration(info):undefined
+  const configuration=startupConfiguration(info.config,()=>connectPluginConfiguration(info))
   try{
     if(configuration)env.EAS_PLUGIN_CONFIG=configuration.environment
-    client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd, suppressStderr:!!configuration })
+    client = new McpClient({ name: info.name, command: run.command, args: run.args, env, cwd: info.mcp.cwd, suppressStderr:!!info.config })
   }catch(error){configuration?.close();throw error}
   finally{delete env.EAS_PLUGIN_CONFIG;if(configuration)configuration.environment=''}
   stopped=client.exited
@@ -339,6 +345,22 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
   const params = (args.params ?? {}) as Record<string, unknown>
   try {
     switch (args.method) {
+      case 'panel/configuration': {
+        if (!h.info.config) throw Error('插件没有连接设置')
+        const observed = observedPluginServices(p.webContentsId).find(service => service.id.startsWith('plugin:' + p.pluginName + ':'))
+        if (!observed) throw Error('插件状态已改变')
+        const stopped = await stopObservedPlugin(observed.id, p.webContentsId, async name => {
+          const wc = webContents.fromId(p.webContentsId)
+          const owner = wc ? BrowserWindow.fromWebContents(wc) : null
+          if (!owner) return false
+          const answer = await dialog.showMessageBox(owner, { type: 'question', title: '打开安全连接设置', message: `先停止「${name}」再修改连接信息？`, detail: '停止后不能发起新调用。保存后重新打开插件并验证连接；其他窗口或对话占用时不能强制停止。', buttons: ['取消', '停止并设置'], defaultId: 0, cancelId: 0 })
+          return answer.response === 1
+        })
+        if (!stopped.ok) throw Error(stopped.reason)
+        await h.stopped
+        assertPluginPackageIdle(p.pluginName)
+        return { ok: true, result: { pluginId: h.info.id } }
+      }
       case 'panel/timeline-report': {
         if(p.pluginName!=='timeline')throw Error('仅时间线插件支持成果周报')
         if(params.week!==undefined&&params.week!==0&&params.week!==-1)throw Error('仅支持本周或上周')
@@ -356,7 +378,27 @@ async function panelRpc(args: { panelSession: string; method: string; params: un
       case 'panel/revoke':
       case 'panel/state':
         if (h.info.permissions?.events?.includes('agent.turn.completed')) return { ok: true, result: eventPanel(p.pluginName, args.method, params) }
-        return { ok: true, result: await h.client.request(args.method, { ...params, by: p.session }, 30_000) }
+        if (h.info.config?.startup === 'deferred' && args.method === 'panel/grant' && params.action === 'connect') {
+          if (h.configurationActive || h.configurationConnecting) throw Error('连接已建立或正在验证')
+          h.configurationConnecting = true
+          try {
+            const wc = webContents.fromId(p.webContentsId)
+            const owner = wc ? BrowserWindow.fromWebContents(wc) : null
+            if (!owner) throw Error('原窗口已关闭')
+            const confirmation = await dialog.showMessageBox(owner, { type: 'question', title: '验证插件连接', message: `允许「${h.info.displayName}」使用已保存的连接信息进行一次服务验证？`, detail: '验证可能产生少量服务费用；不会发送项目内容。验证成功后仍需单独开启能力。', buttons: ['取消', '验证连接'], defaultId: 0, cancelId: 0 })
+            if (confirmation.response !== 1) throw Error('已取消连接验证')
+            const valid = () => !p.stale && panels.get(p.session) === p && registry.get(p.pluginName) === h && h.client.alive
+            if (!valid()) throw Error('原面板已失效')
+            await activateDeferredConfiguration({ connect: () => connectPluginConfiguration(h.info), request: (method, params) => h.client.request(method, params, 30_000), valid, stop: () => { h.client.close() }, stopped: h.stopped })
+            h.configurationActive = true
+            return { ok: true, result: { ...await h.client.request('panel/state', {}) as object, timelineReady: jevTimelineReady(findPlugin('eas:timeline')?.version) } }
+          } finally { h.configurationConnecting = false }
+        }
+        {
+          const result = await h.client.request(args.method, { ...params, by: p.session }, 30_000)
+          if (h.info.config?.startup === 'deferred' && args.method !== 'panel/state') h.tools = await h.client.listTools()
+          return { ok: true, result: p.pluginName==='jev'?{...result as object,timelineReady:jevTimelineReady(findPlugin('eas:timeline')?.version)}:result }
+        }
       case 'panel/resolve-candidate': {
         if (p.pluginName !== 'timeline') throw Error('不支持的候选操作')
         const authorized=timelineParams(params, p.ctx.cwd)
@@ -504,6 +546,40 @@ export function registerPluginHostHandlers(invoke: NonNullable<typeof invokeCanv
       const result = await h.client.request('events/turn-completed', withEasMeta({ event, grantEpoch: eventGrantEpoch(name) }, { cwd: project.cwd }), 10000)
       if ((result as {isError?:boolean})?.isError) throw Error('插件候选写入失败')
       broadcastToolResult(name, 'timeline_capture', {}, result, null)
+      if(name==='timeline'&&jevTimelineReady(h.info.version)&&(result as {captured?:boolean})?.captured&&jevSuggestionsPending<2){
+        jevSuggestionsPending++
+        void (async()=>{
+        const jev=registry.get('jev'),jevInfo=findPlugin('eas:jev')
+        if(jev?.kind==='plugin'&&jev.client.alive&&jevInfo?.enabled!==false&&jevInfo?.root===jev.info.root){
+          try{
+            const support=await h.client.request('host/jev-capabilities',{}) as {suggestions?:boolean}
+            if(support.suggestions!==true)return
+            const before=await jev.client.request('panel/state',{}) as {enabled:boolean;connected:boolean;generation:number;selected:{milestone:boolean;project:boolean}}
+            if(before.enabled&&before.connected&&(before.selected.milestone||before.selected.project)&&!signal.aborted){
+              // Existing timeline authorization defines the project boundary, never model-supplied paths.
+              // @ts-expect-error standalone plugin library
+              const {candidates}=await import('../../resources/plugins/timeline/lib/candidates.mjs')
+              const id=(result as {id:string}).id,candidate=candidates(project.cwd).find((c:{id:string})=>c.id===id)
+              const authorized=eventProjects('timeline')
+              if(candidate&&!signal.aborted&&registry.get('jev')===jev&&jev.client.alive&&authorized.some(p=>p.id===project.id&&p.cwd===project.cwd)){
+                const request=jev.client.requestTracked('host/timeline',{candidate,projects:authorized.slice(0,32).map(p=>({id:p.id,name:p.name}))},35000)
+                const cancel=()=>request.cancel();signal.addEventListener('abort',cancel,{once:true});if(signal.aborted)cancel()
+                let advice:unknown
+                try{advice=await request.result}finally{signal.removeEventListener('abort',cancel)}
+                const after=await jev.client.request('panel/state',{}) as {enabled:boolean;generation:number}
+                if(!signal.aborted&&registry.get('jev')===jev&&after.enabled&&after.generation===before.generation&&eventProjects('timeline').some(p=>p.id===project.id&&p.cwd===project.cwd)){
+                  const checked=guardPath(path.join(project.cwd,'.eas','timeline-candidates.json'));if(!checked.ok)throw Error(checked.error)
+                  if(signal.aborted||registry.get(name)!==h||!h.client.alive)return
+                  await h.client.request('host/attach-jev-suggestion',withEasMeta({id,advice,projectId:project.id,grantEpoch:eventGrantEpoch(name)},{cwd:project.cwd}),10000)
+                  broadcastToolResult(name,'timeline_capture',{},result,null)
+                }
+              }
+            }
+          }catch{console.warn('[jev] 时间线建议未完成；原始候选保留，未自动重试')}
+        }
+        })().catch(()=>{console.warn('[jev] 可选建议已停止')}).finally(()=>{jevSuggestionsPending--})
+      }
+
     } finally { registry.release(name, ref) }
   })
   protocol.handle(PLUGIN_SCHEME, async (request) => {
