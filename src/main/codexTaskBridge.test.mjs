@@ -31,3 +31,68 @@ test('foreign threads, duplicate completion and reused item ids are isolated',as
 test('RPC timeout fails closed before any paid turn, no exec fallback',async()=>{const f=fixture(),events=[];f.proc.stdin=new Writable({write(c,e,cb){cb()}});await assert.rejects(runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:10}),/timeout/);assert.equal(events.length,0)})
 test('failed native turn rejects without terminal success',async()=>{const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});const check=assert.rejects(p,/failed/);await tick();f.note('turn/completed',{turn:{id:'a',status:'failed'}});await check;assert.equal(events.some(e=>e.type==='turn.completed'),false)})
 test('declined file changes remain failures with native change kinds preserved',async()=>{const f=fixture(null),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.note('item/completed',{turnId:'a',item:{type:'fileChange',id:'patch',status:'declined',changes:[{path:'/tmp/new',kind:{type:'add'},diff:'x'}]}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p;const item=events.find(e=>e.item?.type==='file_change').item;assert.equal(item.status,'failed');assert.equal(item.changes[0].kind,'add');const translated=events.flatMap(e=>createCodexTranslator().push(JSON.stringify(e)));assert.equal(translated.find(e=>e.k==='exec.done').ok,false)})
+test('transient post-turn goal query timeout retries read-only status without restarting a paid turn',async()=>{
+ const f=fixture(null),events=[];let goalGets=0
+ const original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='thread/goal/get' && ++goalGets===2){f.calls.push(m);cb();return}original.write(chunk,cb)}})
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:20})
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await p;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(goalGets,3);assert.equal(events.filter(x=>x.type==='turn.completed').length,1)
+})
+test('persistent post-turn status loss fails closed after read-only retries',async()=>{
+ const f=fixture(null),events=[];let goalGets=0,original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='thread/goal/get' && ++goalGets>1){f.calls.push(m);cb();return}original.write(chunk,cb)}})
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:10})
+ const check=assert.rejects(p,/Codex RPC timeout: thread\/goal\/get/)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await check;assert.equal(goalGets,4);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.some(x=>x.type==='turn.completed'),false)
+})
+test('lost turn/start acknowledgment does not kill a turn that already emitted start',async()=>{
+ const f=fixture(null),events=[];const original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='turn/start'){f.calls.push(m);queueMicrotask(()=>f.note('turn/started',{turn:{id:'a'}}));cb();return}original.write(chunk,cb)}})
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:15})
+ await new Promise(r=>setTimeout(r,35));f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await p;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.filter(x=>x.type==='turn.completed').length,1)
+})
+test('native failure before paid turn must not submit a turn',async()=>{
+ const f=fixture(null),events=[];const original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='thread/goal/get'){f.send({method:'error',params:{threadId:'thread',willRetry:false,error:{message:'fixture failure'}}})}original.write(chunk,cb)}})
+ await assert.rejects(runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)}),/Codex native error/)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,0)
+})
+test('delayed native turn event after lost acknowledgment is accepted without a second submission',async()=>{
+ const f=fixture(null),events=[];const original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='turn/start'){f.calls.push(m);setTimeout(()=>f.note('turn/started',{turn:{id:'a'}}),25);cb();return}original.write(chunk,cb)}})
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:15})
+ await new Promise(r=>setTimeout(r,38));f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await p;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.filter(x=>x.type==='turn.completed').length,1)
+})
+test('missing acknowledgment and native events never resubmits an uncertain turn',async()=>{
+ const f=fixture(null),events=[];const original=f.proc.stdin
+ f.proc.stdin=new Writable({write(chunk,_,cb){const m=JSON.parse(chunk);if(m.method==='turn/start'){f.calls.push(m);cb();return}original.write(chunk,cb)}})
+ await assert.rejects(runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e),requestTimeoutMs:10}),/timeout: turn\/start/)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.some(x=>x.type==='turn.completed'),false)
+})
+test('closed native output channel fails promptly rather than leaving a permanently busy task',async()=>{
+ const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ const check=assert.rejects(p,/Codex output closed/)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.proc.stdout.end();await check
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.some(x=>x.type==='turn.completed'),false)
+})
+test('native failure text never escapes into bridge error or logs',async()=>{
+ const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ const check=assert.rejects(p,e=>e.message==='Codex turn failed')
+ await tick();f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:'secret sk-do-not-log'}}});await check
+})
+test('native auth failure retains a safe login signal without exposing provider text',async()=>{
+ const f=fixture(),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ const check=assert.rejects(p,e=>e.message==='Codex authentication_error')
+ await tick();f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:'401 Unauthorized at https://private.example/secret'}}});await check
+})
+test('optional MCP 401 warns but does not kill the native turn or prompt account login',async()=>{
+ const f=fixture(null),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ await tick();f.note('error',{willRetry:false,error:{message:'MCP client for docs failed to start: 401 Unauthorized'}})
+ f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p
+ assert.equal(events.filter(x=>x.type==='turn.completed').length,1)
+ assert.equal(events.some(x=>JSON.stringify(x).includes('Unauthorized')),false)
+})

@@ -32,12 +32,21 @@ function itemEvent(item,turnId) {
   default:return {...item,id,type:item.type.replace(/[A-Z]/g,x=>'_'+x.toLowerCase())}
  }
 }
+function nativeFailure(error,fallback) {
+ const message=String(error?.message??'')
+ // Preserve only a bounded, actionable category, never provider text that may
+ // contain a prompt, endpoint, local path, or credential.
+ if(/\b401\b[\s\S]{0,80}unauthoriz|unauthoriz[\s\S]{0,80}\b401\b|authentication[_\s-]?error|\bunauthenticated\b/i.test(message))return Error('Codex authentication_error')
+ return Error(fallback)
+}
 export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model,emit,signal,requestTimeoutMs=30000}) {
  let seq=0,threadId,settled=false,revision=0,started=false
  let usage={input_tokens:0,output_tokens:0,cached_input_tokens:0}
  const pending=new Map(),active=new Set(),finished=new Set(),seenItems=new Set(),early=[]
  let resolveDone,rejectDone
+ let resolveTurnObserved
  const done=new Promise((r,j)=>{resolveDone=r;rejectDone=j});done.catch(()=>{})
+ const turnObserved=new Promise(r=>{resolveTurnObserved=r})
  const write=m=>{if(!proc.stdin.writable)throw Error('Codex input closed');proc.stdin.write(JSON.stringify(m)+'\n')}
  const fail=e=>{if(settled)return;settled=true;for(const p of pending.values()){clearTimeout(p.timer);p.reject(e)}pending.clear();rejectDone(e)}
  const rpc=(method,params)=>new Promise((resolve,reject)=>{
@@ -47,7 +56,16 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
  })
  const finish=()=>{if(settled)return;settled=true;emit({type:'turn.completed',usage});resolveDone()}
  async function checkGoal(mark) {
-  const r=await rpc('thread/goal/get',{threadId})
+  let r
+  // A goal read is idempotent. A short IPC stall must not kill an otherwise
+  // healthy native task, but never retry turn/start (which may already be paid).
+  for(let attempt=0;attempt<3;attempt++) {
+   if(settled||mark!==revision||active.size)return
+   try {r=await rpc('thread/goal/get',{threadId});break}
+   catch(e) {
+    if(attempt===2||!String(e?.message).startsWith('Codex RPC timeout: thread/goal/get'))throw e
+   }
+  }
   if(settled||mark!==revision||active.size)return
   if(r.goal?.status==='active')return
   if(r.goal && !['paused','blocked','usageLimited','budgetLimited','complete'].includes(r.goal.status))throw Error('Unknown native goal state')
@@ -58,7 +76,7 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   const p=m.params??{}
   if(!threadId){early.push(m);if(early.length>1000)fail(Error('Codex notification overflow'));return}
   if(p.threadId!==threadId)return
-  if(m.method==='turn/started') {if(!finished.has(p.turn.id)){active.add(p.turn.id);revision++}return}
+  if(m.method==='turn/started') {if(!finished.has(p.turn.id)){active.add(p.turn.id);revision++;resolveTurnObserved()}return}
   if(m.method==='thread/tokenUsage/updated') {
    const u=p.tokenUsage?.total;if(u)usage={input_tokens:u.inputTokens??0,output_tokens:u.outputTokens??0,cached_input_tokens:u.cachedInputTokens??0};return
   }
@@ -66,15 +84,23 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
    const key=m.method+':'+p.turnId+':'+p.item.id;if(seenItems.has(key))return;seenItems.add(key)
    const item=itemEvent(p.item,p.turnId);if(item)emit({type:m.method==='item/started'?'item.started':'item.completed',item});return
   }
-  if(m.method==='error'&&!p.willRetry) {fail(Error(p.error?.message||'Codex task failed'));return}
+  if(m.method==='error'&&!p.willRetry) {
+   const message=String(p.error?.message??'')
+   if(/MCP client for .+ failed to start|handshaking with MCP server failed|MCP startup failed/i.test(message)) {
+    emit({type:'error',message:'部分 MCP 工具连接失败，相关工具暂不可用。'});return
+   }
+   fail(nativeFailure(p.error,'Codex native error'));return
+  }
   if(m.method==='turn/completed') {
+   resolveTurnObserved()
    const t=p.turn;if(finished.has(t.id))return;finished.add(t.id);active.delete(t.id);revision++
-   if(t.status!=='completed'){fail(Error(t.error?.message||'Codex turn '+t.status));return}
+   if(t.status!=='completed'){fail(nativeFailure(t.error,'Codex turn '+t.status));return}
    void checkGoal(revision).catch(fail);return
   }
   if((m.method==='thread/goal/updated'||m.method==='thread/goal/cleared')&&started&&finished.size&&!active.size)void checkGoal(++revision).catch(fail)
  }
  const lines=readline.createInterface({input:proc.stdout})
+ lines.on('close',()=>fail(Error('Codex output closed')))
  lines.on('line',line=>{
   try {
    const m=JSON.parse(line)
@@ -93,9 +119,24 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   threadId=r.thread.id;emit({type:'thread.started',thread_id:threadId});for(const m of early.splice(0))notification(m)
   // Check protocol support before starting a paid turn. Never silently fall back to exec.
   await rpc('thread/goal/get',{threadId})
+  // A terminal native error may race the preflight response. Never submit a
+  // paid turn after the bridge has already failed or been cancelled.
+  if(settled){await done;return}
   started=true
-  const result=await rpc('turn/start',{threadId,input:[{type:'text',text:prompt}],...(model?{model}:{})})
-  if(!finished.has(result.turn.id))active.add(result.turn.id)
+  try {
+   const result=await rpc('turn/start',{threadId,input:[{type:'text',text:prompt}],...(model?{model}:{})})
+   if(!finished.has(result.turn.id))active.add(result.turn.id)
+  } catch(e) {
+   // Lost acknowledgment != lost task. If this thread has already emitted a
+   // native turn event, keep listening to that same turn; never send it again.
+   if(!String(e?.message).startsWith('Codex RPC timeout: turn/start'))throw e
+   if(!active.size&&!finished.size) {
+    let timer
+    try {await Promise.race([turnObserved,done,new Promise(r=>{timer=setTimeout(r,requestTimeoutMs)})])}
+    finally {clearTimeout(timer)}
+   }
+   if(!active.size&&!finished.size)throw e
+  }
   await done
  }finally {
   settled=true;lines.close();proc.off('exit',exited);proc.off('error',fail);proc.stdin.off('error',fail);proc.stdout.off('error',fail);signal?.removeEventListener('abort',aborted)

@@ -418,3 +418,11 @@ CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提�
 - 面板关闭/最小化不得杀安装；停止请求不等于停止完成，真实 close 后才释放槽位。禁止全局 taskkill/pkill。
 - 程序安装完成后必须明确点击登录，不能把“查看进度/状态”解释成启动登录；不得自动发送用户草稿。
 - 重入优先恢复活动任务，历史 done 不能覆盖当前已卸载状态。运行中心登记、命令白名单和 guardedHandle 保持不变。
+
+### 2026-09-23 Codex 原生任务短时状态查询容错
+`codex-task-bridge.mjs` 仅对已启动原生轮次后的 `thread/goal/get` **超时**做最多三次只读查询（第一次加两次重查）；revision/active/settled 改变立即放弃过时查询。绝不重发 `turn/start`、不创建/续写 goal，也不将进程退出伪装为成功。`codex-task-error.mjs` 把失败归类为脱敏提示，不回显提供商的任意原文；不可确认状态时仍失败关闭，避免重复执行或计费。启动前协议探测与用户取消仍按原边界。
+`turn/start` 回包超时不等于原生轮次没启动：若已收到同一 thread 的 `turn/started`/`turn/completed`，或短暂等待后收到，沿用原轮次等待完成；没有原生事件时失败关闭，绝不第二次提交。这一段与用户取消、启动前协议探测、goal 状态查询的分支分开测试。
+原生 stdout EOF 也必须结束桥接并清除 busy，不能只监听子进程 exit（可能管道先断而进程仍未退出）；失败提示仅给脱敏类别，不照抄 stdout 的不可信内容。
+故障日志只输出 `codexTaskFailureKind` 的固定枚举（如 `goal-read-timeout`、`channel-closed`），不记录原生异常文本、prompt、路径或凭证；用于后续统计真实现场频次，不能把单测覆盖率冒充现场成功率。
+原生失败事件的 provider 文本先收敛为安全类别：仅识别认证失败（保留登录引导）及轮次/任务失败；不让 provider 原文进入桥接异常、通用日志或 UI。MCP 可选握手错误不能当主模型登录失败，沿用原认证检测边界。
+app-server 的可选 MCP 启动/握手失败只发脱敏非致命提示，不中断主模型任务，且不能因其 401 误提示主模型重新登录；原生 `turn/completed` 失败仍是致命边界。此分类与既有 `stderrReason.ts` / `cliAuth/detect.ts` 的 MCP 过滤口径保持一致。
