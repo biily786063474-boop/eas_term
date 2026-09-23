@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-23T07:18:14.701Z",
+  "branch": "main",
+  "testedCommit": "57b75f569a7a9a5147349fe4fb65c6a351099933",
+  "featureCommit": "d3a27ea",
+  "check": {
+    "passed": 3546,
+    "skipped": 19,
+    "failed": 0
+  },
+  "build": true,
+  "isolatedUI": 36,
+  "market": 20,
+  "liveProvider": false,
+  "realOnlineCLI": false,
+  "windows": false,
+  "pushed": false,
+  "published": false,
+  "review": "Two P2 findings fixed: serialized candidate writer and legacy timeline gate; final re-review no remaining P1/P2",
+  "limitations": [
+    "Earlier native PTY startup readiness test failed; isolated rerun and merged full suite passed without timeout changes",
+    "Timeline 1.0.1 must be published independently before existing installations can enable enhancements",
+    "HTTP fixture is not live model validation"
+  ]
+}

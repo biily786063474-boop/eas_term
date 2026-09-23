@@ -377,3 +377,6 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 - 主进程 immediate 路径：不入队、不占后台槽位，预算/取消/真实退出释放仍保留；含内置笔纵连接器启动。
 - 初次验证误链接旧根目录依赖，缺 MCP SDK；改为当前基线的已有 node_modules 后 typecheck/build、全量测试通过。没有安装新依赖。
 - 真实隔离 Electron Bearer 插件验证通过；未安装/替换正式 app，未调用收费生成或真实模型。
+
+## 2026-09-23 Jev 插件合入本地 main
+特性 d3a27ea、合并57b75f56。安全连接、仪表台、按需工具、时间线建议与注册图标落地。复审修正跨进程候选锁争用与旧时间线兼容；timeline 1.0.1 单独打包，旧版本不发付费增强。合并后check3546通过19跳过，build及隔离实机36项/市场20项通过。在线模型、实际CLI在线与Windows未验证；未push/发布/替换正式应用。证据docs/verification/jev/integration.json。
