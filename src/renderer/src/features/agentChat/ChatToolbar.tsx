@@ -22,11 +22,9 @@ import { SemanticIcon } from '../../ui/SemanticIcons'
 // 关闭记的是"关闭那一刻它发生过几次"——同一条之后又发生一次就会重新出现，
 // 不会因为关过一次就把一次**新的**"这次会话没有审批保护"永久静音掉。
 //
-// 模型/effort/沙箱的可选项全部来自 toolbarModel(caps)——不判断是哪个 CLI（spec §B.3）。
-// **沙箱只做只读展示**：agentChat:setParams 的 patch 类型只收 { model?, effort? }
-// （preload/index.ts 与 session.ts 的 IPC handler 都明确只读这两个字段），没有能中途
-// 改沙箱的通道——沙箱只能在 start() 时定一次。渲染一个看着能选、点了却没反应的下拉，
-// 比不渲染更糟，所以这里只把 sandboxLevels 列出来给用户看，不做成可交互控件。
+// 模型/effort 的可选项来自 toolbarModel(caps)——不判断是哪个 CLI（spec §B.3）。
+// 沙箱在启动时确定，运行中不支持切换。capabilities 的 sandboxLevels 是可用选项，
+// 并非本次会话的实际权限；不要在运行中把整张选项表显示成「沙箱状态」。
 import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
 import { ComposerActions } from './ComposerActions'
 import { useSlashPicker, SlashList } from './SlashPicker'
@@ -185,7 +183,7 @@ export function ChatToolbar({
   onOpenBranchMenu?: (e: React.MouseEvent) => void
 }): JSX.Element {
   const [text, setText] = useState('')
-  /** 挂在输入框上的辞典提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
+  /** 挂在输入框上的创作参考提示词。输入框里只显示名字，submit 时才展开成全文（见 chips.ts） */
   const [chips, setChips] = useState<DictChip[]>([])
   /** 正文里**这一刻**引用到了哪些 chip（同空态那份的理由，见 AgentChatView）。 */
   const refIds = useMemo(() => expandChips(text, chips, false).usedIds, [text, chips])
@@ -268,7 +266,7 @@ export function ChatToolbar({
     if (slash.consumeCommand()) return
     const t = text.trim()
     // 只有图没有字也该能发（同终端输入框：图本身就是内容）。
-    // **挂了辞典 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
+    // **挂了创作参考 chip 一个字没打也算有内容** —— 用户就是想让模型照那条提示词做
     if (!t && !pics.imgs.length && !chips.length) return
     // chip 在**发送这一刻**才展开成全文：输入框里始终只有名字，模型收到的是整条指令
     const { text: body, usedIds } = expandChips(t, chips)
@@ -412,7 +410,7 @@ export function ChatToolbar({
         {(pics.imgs.length > 0 || snapHere || chips.length > 0) && (
           <div className="ac-attach-row">
             {chips.map((c) => (
-              <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"辞典提示词"}}><span
+              <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"创作参考提示词"}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
                   data-kind="dict"
@@ -626,15 +624,6 @@ export function ChatToolbar({
           </button>
         )}
 
-
-        {model.showSandbox && model.sandboxLevels.length > 0 && (
-          <span
-            className="ac-bar-note"
-            data-tip="沙箱级别在启动会话时就定下了，当前版本暂不支持中途切换"
-          >
-            沙箱：{model.sandboxLevels.map((s) => s.label).join(' / ')}
-          </span>
-        )}
 
       </div>
 

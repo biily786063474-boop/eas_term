@@ -121,7 +121,7 @@ body {
      不受贴顶态那条限制。 */
   border-radius: 32px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
 
@@ -146,7 +146,7 @@ body {
   border-color: rgba(var(--accent-rgb), 0.55);
   box-shadow:
     0 0 0 1px rgba(var(--accent-rgb), 0.4),
-    0 10px 30px rgba(0, 0, 0, 0.55);
+    0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
 /* 贴顶态：光边画在内侧。下面两个角跟着圆角走，上边不画 —— 那条边贴着屏幕边缘，

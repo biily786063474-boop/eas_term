@@ -1,7 +1,53 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, writeFileSync, chmodSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
-import { installVerdict, lastLine, outLines } from './installOut.ts'
+import { createInstallOutput, installVerdict, lastLine, outLines, shellForInstall } from './installOut.ts'
+
+test('安装输出按完整行发布，跨 chunk 的凭证不会泄漏', () => {
+  const output = createInstallOutput()
+  assert.deepEqual(output.write('Downloading 10%\r'), ['Downloading 10%'])
+  assert.deepEqual(output.write('token: sk-abc'), [])
+  assert.deepEqual(output.write('defghijklmnop\nInstalling\n'), ['token: <抹去>', 'Installing'])
+  assert.deepEqual(output.lines(), ['Downloading 10%', 'token: <抹去>', 'Installing'])
+})
+
+test('安装输出有界，控制字符与 CR 动态行不撑坏界面', () => {
+  const output = createInstallOutput(3)
+  output.write('one\n\x1b[32mtwo\x1b[0m\rthree\nfour\n')
+  assert.deepEqual(output.lines(), ['two', 'three', 'four'])
+  assert.deepEqual(output.write('x'.repeat(600) + '\n'), ['x'.repeat(240)])
+  assert.equal(output.lines().length, 3)
+})
+
+test('超长未结束行不展示可能被截断标签的秘密片段', () => {
+  const output = createInstallOutput()
+  assert.deepEqual(output.write('token: ' + 'x'.repeat(5000)), [])
+  assert.deepEqual(output.write('\n'), ['安装器输出过长，已省略'])
+})
+
+test('官方 curl 管道用 bash pipefail，其他命令保留原 shell', () => {
+  assert.deepEqual(shellForInstall('curl -fsSL https://chatgpt.com/codex/install.sh | sh', 'darwin'), {
+    file: '/bin/bash', args: ['-o', 'pipefail', '-c', 'curl -fsSL https://chatgpt.com/codex/install.sh | sh']
+  })
+  assert.equal(shellForInstall('npm install -g @openai/codex', 'darwin').file, '/bin/sh')
+  assert.equal(shellForInstall('curl -fsSL https://claude.ai/install.sh | bash', 'win32').file, 'powershell.exe')
+})
+
+test('模拟 curl 返回 22 时安装必须失败，不能让空 sh 报成功', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'eas-install-pipefail-'))
+  try {
+    const fakeCurl = join(dir, 'curl')
+    writeFileSync(fakeCurl, '#!/bin/sh\nexit 22\n')
+    chmodSync(fakeCurl, 0o755)
+    const shell = shellForInstall('curl -fsSL https://chatgpt.com/codex/install.sh | sh', 'darwin')
+    const run = spawnSync(shell.file, shell.args, { env: { ...process.env, PATH: `${dir}:/usr/bin:/bin` } })
+    assert.equal(run.status, 22)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
 
 test('**进度条按 \\r 覆盖同一行，必须按 \\r 切**', () => {
   // 不切的话用户看到的是「10%20%30%」这种残影
@@ -56,7 +102,7 @@ test('退出码 0 且命令在 → 成功', () => {
   assert.deepEqual(installVerdict(0, true), { ok: true })
 })
 
-test('code 为 null（被信号带走）当作没有退出码，只看命令在不在', () => {
-  assert.deepEqual(installVerdict(null, true), { ok: true })
+test('code 为 null（被信号带走）必须失败，旧版仍在也不能当成功', () => {
+  assert.equal(installVerdict(null, true).ok, false)
   assert.equal(installVerdict(null, false).ok, false)
 })

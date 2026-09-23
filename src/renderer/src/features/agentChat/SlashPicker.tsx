@@ -13,7 +13,7 @@ type SourceState = { status: 'loading' | 'ready' | 'error'; rows: Candidate[]; t
 export function useSlashPicker(text: string, setText: (v: string) => void, onPicked?: () => void, cwd?: string, anchorRef?: RefObject<HTMLTextAreaElement | ComposerInputElement | null>, chips: readonly DictChip[] = [], options: PickerOptions = {}) {
   const [pickedReferences, setPickedReferences] = useState<ComposerReference[]>([])
   useEffect(() => setPickedReferences([]), [cwd, options.cli, options.boundPluginId])
-  const references = useMemo(() => [...pickedReferences.filter(r => r.kind !== 'dict'), ...chips.map(c => referenceFromCandidate({id:c.id,category:'dict',name:c.label,description:'辞典提示词',insert:'@'+c.label,chip:c}))], [pickedReferences, chips])
+  const references = useMemo(() => [...pickedReferences.filter(r => r.kind !== 'dict'), ...chips.map(c => referenceFromCandidate({id:c.id,category:'dict',name:c.label,description:'创作参考提示词',insert:'@'+c.label,chip:c}))], [pickedReferences, chips])
   const [selection, setSelection] = useState<[number, number]>([text.length, text.length])
   const [focused, setFocused] = useState(false)
   const [off, setOff] = useState(false)
@@ -136,12 +136,12 @@ export function SlashList(s: SlashPickerState): JSX.Element | null {
     <div className="ac-mentions-body"><nav aria-label="候选分类">{s.categories.map(c => <button type="button" key={c} aria-pressed={s.category === c} onClick={() => s.setCategory(c)}>{CATEGORY_LABELS[c]}</button>)}</nav>
       <div className="ac-mentions-results" ref={listRef}>
         {(s.loading || s.errors.length > 0) && <div className="ac-mentions-status" role="status">
-          <span>{s.errors.length ? s.errors.map(k => ({dict:'内置辞典',userDict:'用户辞典',files:'项目文件',skills:'技能',plugins:'插件与应用'}[k])).join('、') + '读取失败' : '正在读取候选…'}{s.errors.length > 0 && s.loading ? ' · 部分来源仍在读取' : ''}</span>
+          <span>{s.errors.length ? s.errors.map(k => ({dict:'内置创作参考',userDict:'用户创作参考',files:'项目文件',skills:'技能',plugins:'插件与应用'}[k])).join('、') + '读取失败' : '正在读取候选…'}{s.errors.length > 0 && s.loading ? ' · 部分来源仍在读取' : ''}</span>
           {s.errors.length > 0 && <button type="button" onClick={s.retry}>重试</button>}
         </div>}
         {!s.loading && !s.hits.length && <div className="ac-mentions-empty">没有匹配结果<small>{s.category === 'browser' ? '仅列出 Eas-Term 中已打开的网页' : s.category === 'file' || s.category === 'folder' ? '搜索项目文件（跳过隐藏、依赖与构建目录）' : '换一个名称或关键词试试'}</small></div>}
         <div role="listbox" id={s.id} aria-label="引用与命令候选">{s.hits.map((c, i) => <div key={c.id}>
-          {c.category === 'dict' && (i === 0 || s.hits[i - 1].preloaded !== c.preloaded) && <div className="ac-mentions-group">{c.preloaded ? '已加入候选' : '全部辞典'}</div>}
+          {c.category === 'dict' && (i === 0 || s.hits[i - 1].preloaded !== c.preloaded) && <div className="ac-mentions-group">{c.preloaded ? '已加入候选' : '全部创作参考'}</div>}
           <div role="option" id={s.id + '-' + i} data-index={i} aria-selected={s.idx === i} aria-disabled={!!c.disabled} className={'ac-mentions-row' + (s.idx === i ? ' on' : '')} onMouseEnter={() => s.setIdx(i)} onClick={() => s.pick(i)} title={c.disabled || c.description}>
             <span className="ac-mentions-glyph">{c.category === 'dict' ? '▤' : c.category === 'common' ? '/' : c.category === 'skill' ? '✧' : '@'}</span><span className="ac-mentions-copy"><strong>{c.name}</strong><small>{c.disabled || c.description}</small></span><span className="ac-mentions-kind">{c.preloaded ? '备选' : CATEGORY_LABELS[c.category]}</span>
           </div>

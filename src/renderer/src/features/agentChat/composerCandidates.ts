@@ -1,7 +1,7 @@
 // Renderer-only candidate contract. No transport commands, IO or store mutations here.
 import type { DictChip } from './chips.ts'
 export type Category = 'all' | 'dict' | 'file' | 'folder' | 'skill' | 'plugin' | 'app' | 'browser' | 'common' | 'native'
-export const CATEGORY_LABELS: Record<Category,string> = {all:'全部',dict:'辞典',file:'文件',folder:'文件夹',skill:'技能',plugin:'插件',app:'应用',browser:'浏览器标签',common:'通用操作',native:'当前端口命令'}
+export const CATEGORY_LABELS: Record<Category,string> = {all:'全部',dict:'创作参考',file:'文件',folder:'文件夹',skill:'技能',plugin:'插件',app:'应用',browser:'浏览器标签',common:'通用操作',native:'当前端口命令'}
 export interface Candidate { id:string; category:Exclude<Category,'all'>; name:string; description:string; insert:string; aliases?:string[]; chip?:DictChip; preloaded?:boolean; disabled?:string; imagePath?:string }
 export interface Trigger {mode:'@'|'/';query:string;start:number;end:number}
 export function triggerAt(text:string, caret:number, end=caret):Trigger|null {

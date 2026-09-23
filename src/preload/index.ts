@@ -416,7 +416,8 @@ const api = {
     /** 后台装 CLI（**不开终端**）。cmd 从 CliInfo.installCmd 来，这一层不拼命令 */
     startInstall: (cli: 'claude' | 'codex', cmd: string): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke('cliAuth:startInstall', cli, cmd),
-    cancelInstall: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('cliAuth:cancelInstall'),
+    installSnapshot: (cli: 'claude' | 'codex'): Promise<InstallState | null> => ipcRenderer.invoke('cliAuth:installSnapshot', cli),
+    cancelInstall: (cli: 'claude' | 'codex', taskId?: number): Promise<{ ok: boolean }> => ipcRenderer.invoke('cliAuth:cancelInstall', cli, taskId),
     /** 安装进度（当前步骤 / 成败 / **失败时的输出尾部**） */
     onInstall: (cb: (s: InstallState) => void): (() => void) => {
       const h = (_e: unknown, s: InstallState): void => cb(s)

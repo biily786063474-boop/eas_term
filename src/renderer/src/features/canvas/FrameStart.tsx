@@ -1,7 +1,7 @@
 // 空造梦空间（空 Frame）里的引导：三颗 AI 按钮 + 一颗「先开个终端」。
 //
 // 用户 2026-09-02：「初次建立 frame 是空的 frame，空的 frame 上面有三个按钮，
-// 分别是 claude code、codex 和系统默认的 harness。用户点击后自动在 frame 中
+// 分别是 Claude Code、Codex 和原生 Harness。用户点击后自动在 frame 中
 // 创建 AI 对话模块，并切换到相应的流程。」
 //
 // **它取代的是终端控制条上那个 CLI 选择器**（`CanvasAgentBar`）。那条 2026-08-27
@@ -18,6 +18,7 @@ import { useStore } from '../../store'
 import type { CliInfo } from '../../../../shared/agentChat'
 import type { OmpStatus } from '../../../../shared/ompSetup'
 import { startChoices } from './startChoices.ts'
+import { startChoicePresentation } from './startChoicePresentation.ts'
 import { TerminalIcon } from '../../ui/Icons'
 import { CliBrandIcon } from '../../ui/CliBrandIcon'
 
@@ -106,19 +107,24 @@ export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始',
       {!clis && <div role="status">正在检查 AI…</div>}
       {clis && !choices.length && <div role="status">暂时无法获取 AI 列表，可先创建终端</div>}
       <div className="cframe-start-row">
-        {choices.map(({ cli, state }) => (
-          <button
-            key={cli.id}
-            type="button"
-            className={`cframe-start-btn${state === 'ready' ? '' : ' pending'}`}
-            disabled={busy}
-            onClick={() => start(cli.id)}
-          >
-            <span className="cframe-start-ring" aria-hidden="true" />
-            <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
-            <span className="cframe-start-name">{cli.displayName}</span>
-          </button>
-        ))}
+        {choices.map(({ cli, state }) => {
+          const { name, tip } = startChoicePresentation(cli)
+          return (
+            <button
+              key={cli.id}
+              type="button"
+              className={`cframe-start-btn${state === 'ready' ? '' : ' pending'}`}
+              aria-label={`${name}：${tip}`}
+              data-tip={tip}
+              disabled={busy}
+              onClick={() => start(cli.id)}
+            >
+              <span className="cframe-start-ring" aria-hidden="true" />
+              <CliBrandIcon cliId={cli.id} bundled={cli.bundled} />
+              <span className="cframe-start-name">{name}</span>
+            </button>
+          )
+        })}
       </div>
       {/* 逃生口。**视觉弱一档** —— 它不是主路。
           用户 2026-09-02 要的「先开个终端」：建造梦空间有时候只是想跑几条命令，
@@ -128,6 +134,7 @@ export function StartOptions({ onStart, onTerminal, title='选一个 AI 开始',
       <button
         type="button"
         className="cframe-start-term"
+        data-tip="先打开终端处理项目，之后仍可新建 AI 对话"
         disabled={busy}
         onClick={() => {
           if (busy) return

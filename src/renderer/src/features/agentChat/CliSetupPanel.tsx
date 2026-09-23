@@ -19,10 +19,14 @@
 // 这是终端那条路唯一不可替代的地方（agentInstall.ts 顶上第三条理由）：
 // 公司网络 / 代理 / 权限失败时，一句「安装失败」什么忙也帮不上。
 // 换成进度条就得把它补回来 —— 所以失败时展开输出尾部，并留一条「填进终端」的退路。
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 
 import { CheckIcon, TerminalIcon } from '../../ui/Icons'
+import { restoreInstallSnapshot } from '../../../../shared/cliInstallPolicy'
+import { installFeedback } from '../../../../shared/cliInstallFeedback'
+import { installActivity } from '../../../../shared/cliInstallActivity'
+import { SetupSnake } from './SetupSnake'
 import { CliLoginPanel } from './CliLoginPanel'
 import { useStore } from '../../store'
 import type { CliAuthStatus, InstallState } from '../../../../shared/types'
@@ -50,7 +54,7 @@ type Step =
   | { k: 'login' }
   | { k: 'ready'; status: CliAuthStatus | null }
 
-export function CliSetupPanel(props: {
+export type CliSetupProps = {
   cliId: 'claude' | 'codex'
   displayName: string
   /** 要执行的安装命令。**由调用方给** —— AI 对话那侧用 CliInfo.installCmd，
@@ -65,8 +69,39 @@ export function CliSetupPanel(props: {
   from: 'install' | 'login'
   onDone: (status: CliAuthStatus | null) => void
   onCancel: () => void
-}): React.JSX.Element {
+}
+let currentSetup: CliSetupProps | null = null
+const setupListeners = new Set<() => void>()
+const subscribeSetup = (fn: () => void): (() => void) => { setupListeners.add(fn); return () => { setupListeners.delete(fn) } }
+function publishSetup(): void { for (const fn of setupListeners) fn() }
+export function CliSetupPanel(props: CliSetupProps): null {
+  useEffect(() => {
+    // Window-owned: unmounting the originating pane must not cancel or hide the task.
+    if (!currentSetup) { currentSetup = props; publishSetup() }
+    else { props.onCancel() } // Consume reused/rejected caller so its next click mounts a fresh request.
+    window.dispatchEvent(new CustomEvent('eas:reopen-cli-setup', { detail: props.cliId }))
+  }, [props.cliId])
+  return null
+}
+export function CliSetupHost(): React.JSX.Element | null {
+  const request = useSyncExternalStore(subscribeSetup, () => currentSetup, () => null)
+  if (!request) return null
+  const release = (): void => { currentSetup = null; publishSetup() }
+  return <CliSetupDialog key={request.cliId} {...request}
+    onCancel={() => { release(); request.onCancel() }}
+    onDone={(status) => { release(); request.onDone(status) }} />
+}
+function CliSetupDialog(props: CliSetupProps): React.JSX.Element {
   const { cliId, displayName, installCmd, autoStart, from, onDone, onCancel } = props
+  const [loginApproved, setLoginApproved] = useState(false)
+  const [minimized, setMinimized] = useState(false)
+  const [gameOpen, setGameOpen] = useState(false)
+  const gameOpenRef = useRef(gameOpen); gameOpenRef.current = gameOpen
+  const [hydrated, setHydrated] = useState(false)
+  const [now, setNow] = useState(Date.now())
+  const [actionError, setActionError] = useState('')
+  const [installChoice, setInstallChoice] = useState(installCmd ?? '')
+  const [options, setOptions] = useState<{via:string;cmd:string}[]>([])
   const [step, setStep] = useState<Step>(from === 'login' ? { k: 'login' } : { k: 'confirm' })
 
   // ── 「点了安装就直接装」──────────────────────────────────────────────────
@@ -84,11 +119,11 @@ export function CliSetupPanel(props: {
   // 从别的入口（没有明确表达过「装」的地方）进来时，那一屏仍然是必要的知情环节。
   const started = useRef(false)
   useEffect(() => {
-    if (!autoStart || started.current) return
+    if (!hydrated || !autoStart || started.current) return
     if (step.k !== 'confirm' || !installCmd) return
     started.current = true
     begin()
-  }, [autoStart, step.k, installCmd])
+  }, [autoStart, step.k, installCmd, hydrated])
   const aliveRef = useRef(true)
   const doneRef = useRef(onDone)
   doneRef.current = onDone
@@ -103,19 +138,27 @@ export function CliSetupPanel(props: {
 
   useEffect(() => {
     aliveRef.current = true
-    const off = window.api.cliAuth.onInstall((s: InstallState) => {
+    let eventSeen = false
+    const apply = (s: InstallState): void => {
       if (!aliveRef.current || s.cli !== cliId) return
-      if (s.phase === 'failed') {
-        setStep({ k: 'failed', error: s.error || '安装没能完成', output: s.output ?? [] })
-        return
+      if (['failed', 'done', 'canceled'].includes(s.phase)) { setMinimized(false); setGameOpen(false) }
+      if (s.phase === 'failed' || s.phase === 'canceled') {
+        setStep({ k: 'failed', error: s.error || '安装未完成', output: s.output ?? [] }); return
       }
-      if (s.phase === 'done') {
-        // **装完不停在「装好了」** —— 直接进登录，那才是「能用了」
-        setStep({ k: 'login' })
-        return
-      }
+      if (s.phase === 'done') { setLoginApproved(false); setStep({ k: 'login' }); return }
       setStep({ k: 'installing', state: s })
-    })
+    }
+    const off = window.api.cliAuth.onInstall((s) => { if(s.cli === cliId) { eventSeen = true; apply(s) } })
+    void window.api.cliAuth.installSnapshot(cliId).then(async (s) => {
+      if (!aliveRef.current) return
+      if (s && !eventSeen) {
+        const installed = s.phase === 'done' && from === 'install' ? (await window.api.cliAuth.check(cliId)).installed : true
+        if (!aliveRef.current) return
+        if (!eventSeen && restoreInstallSnapshot(s.phase, from, installed)) { started.current = true; apply(s) }
+      }
+      setHydrated(true)
+    }).catch(() => { if(aliveRef.current) { setActionError('无法读取安装任务，请关闭后重试；未启动新安装。'); setHydrated(false) } })
+    void window.api.skill.installPlan().then(p => { if(aliveRef.current) setOptions(p[cliId].options) }).catch(() => {})
     return () => {
       aliveRef.current = false
       off()
@@ -126,32 +169,65 @@ export function CliSetupPanel(props: {
   // 一下误触取消掉跑了两分钟的安装，代价太大
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      if (gameOpenRef.current || minimized) return
+      if (e.key === 'Tab') {
+        const panel = document.querySelector<HTMLElement>('.ac-setup')
+        const nodes = Array.from(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, summary, a[href]') ?? [])
+        const first=nodes[0], last=nodes.at(-1)
+        if (!panel?.contains(document.activeElement) || (!e.shiftKey && document.activeElement === last)) { e.preventDefault(); first?.focus() }
+        else if (e.shiftKey && (document.activeElement === first || document.activeElement === panel)) { e.preventDefault(); last?.focus() }
+        return
+      }
       if (e.key !== 'Escape') return
-      if (stepRef.current.k === 'installing') return
+      if (stepRef.current.k === 'installing') { e.preventDefault(); e.stopImmediatePropagation(); setGameOpen(false); setMinimized(true); return }
       e.stopPropagation()
       onCancelRef.current()
     }
     // 捕获阶段：画布那侧也听 Esc（退出最大化），不抢在前面的话两个会一起响应
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [])
+  }, [minimized])
+
+  useEffect(() => { if(!minimized) document.querySelector<HTMLElement>('.ac-setup')?.focus() }, [minimized])
 
   const begin = (): void => {
-    if (!installCmd) return
-    setStep({ k: 'installing', state: { cli: cliId, phase: 'running', step: '正在准备…' } })
-    void window.api.cliAuth.startInstall(cliId, installCmd).then((r) => {
+    if (!installChoice || !hydrated) return
+    setActionError('')
+    setStep({ k: 'installing', state: { cli: cliId, phase: 'running', step: '正在准备…', startedAt: Date.now(), updatedAt: Date.now() } })
+    void window.api.cliAuth.startInstall(cliId, installChoice).then((r) => {
       if (!aliveRef.current || r.ok) return
       setStep({ k: 'failed', error: r.error || '起不来安装进程', output: [] })
-    })
+    }).catch((error: unknown) => { if(aliveRef.current) setStep({ k:'failed', error: '启动安装失败：'+String(error), output:[] }) })
   }
 
   const close = (): void => {
     // 装到一半关掉 = 取消安装。留着它在后台跑完，用户既看不到进度也不知道成没成
-    if (step.k === 'installing') void window.api.cliAuth.cancelInstall()
+    if (step.k === 'installing') { setMinimized(true); setGameOpen(false); return }
     onCancel()
   }
 
+  useEffect(() => {
+    const reopen = (event: Event): void => { setMinimized(false); if ((event as CustomEvent).detail !== cliId) setActionError('已有 '+displayName+' 设置任务，请先完成或关闭当前任务，再设置其他助手。') }
+    window.addEventListener('eas:reopen-cli-setup', reopen)
+    return () => window.removeEventListener('eas:reopen-cli-setup', reopen)
+  }, [])
+  useEffect(() => {
+    if (step.k !== 'installing') return
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [step.k])
+  const cancelTask = (): void => {
+    setGameOpen(false)
+    void window.api.cliAuth.cancelInstall(cliId, step.k === 'installing' ? step.state.taskId : undefined).then(r => { if(!r.ok) setActionError('这不是当前窗口拥有的任务，或任务已变化；未执行取消。') }).catch(() => setActionError('取消请求未送达，安装可能仍在进行，请重试。'))
+  }
+  if (minimized) return createPortal(<div className="ac-install-mini" role="status">
+    <strong>{displayName} · {step.k === 'installing' ? '安装进行中' : '等待继续设置'}</strong>
+    <p>安装结束后自动展开，不会自动登录或发送消息。</p>
+    <button onClick={() => setMinimized(false)}>查看进度</button>
+  </div>, document.body)
+
   const termCmd = TERMINAL_LOGIN[cliId]
+  const activity = step.k === 'installing' ? installActivity(step.state, now) : null
 
   // **灯箱，不是内嵌。** 原来它长在对话框空态里 —— 画布上的节点常常只有三四百像素高，
   // 面板一展开就把输入框和历史全挤没了，网址那一长串还要在里面横向滚。
@@ -165,7 +241,7 @@ export function CliSetupPanel(props: {
         if (e.target === e.currentTarget && step.k !== 'installing') close()
       }}
     >
-      <div className="ac-setup" onMouseDown={(e) => e.stopPropagation()}>
+      <div className="ac-setup" tabIndex={-1} role="dialog" aria-modal={!gameOpen} aria-label={displayName + " 设置"} ref={node => { if(node) node.inert = gameOpen }} onMouseDown={(e) => e.stopPropagation()}>
       <div className="ac-login-head">
         <span className="ac-login-title">
           {step.k === 'login' ? `登录 ${displayName}` : `安装 ${displayName}`}
@@ -183,12 +259,13 @@ export function CliSetupPanel(props: {
           >
             ?
           </button>
-          <button type="button" className="ac-login-x" onClick={close} aria-label="取消">
-            ×
+          <button type="button" className="ac-login-x" onClick={close} aria-label={step.k === 'installing' ? '最小化' : '关闭'}>
+            {step.k === 'installing' ? '−' : '×'}
           </button>
         </span>
       </div>
 
+      {actionError && <p role="alert" className="ac-login-err">{actionError}</p>}
       {/* 展开态：把 hover 里说的那些变成能点的。
           hover 只能看不能复制，而命令是要拿去用的 */}
       {helpOpen && (
@@ -235,7 +312,7 @@ export function CliSetupPanel(props: {
               <div className="ac-setup-cmd-l">会执行这条命令</div>
               <div className="ac-setup-cmd">{installCmd}</div>
               <div className="ac-setup-row">
-                <button type="button" className="ac-login-go ac-setup-primary" onClick={begin}>
+                <button type="button" className="ac-login-go ac-setup-primary" onClick={begin} disabled={!hydrated}>
                   开始安装
                 </button>
                 {/* 退路：不想让我们代跑的人，可以拿去自己在终端里执行 */}
@@ -263,17 +340,28 @@ export function CliSetupPanel(props: {
           <div className="ac-setup-bar" role="progressbar" aria-label="正在安装">
             <span className="ac-setup-bar-run" />
           </div>
-          <div className="ac-setup-step">
-            {step.state.phase === 'verifying' ? '装好了，正在核实…' : step.state.step || '正在安装…'}
+          <div className="ac-setup-stage"><span className="ac-setup-stage-dot" />{activity?.stage}</div>
+          <div className="ac-setup-activity" aria-label="最近安装动态" aria-live="polite">
+            {activity?.recent.length ? activity.recent.map((line, index) => <div key={`${index}-${line}`} className="ac-setup-activity-line">{line}</div>) : <div className="ac-setup-activity-empty">{step.state.phase === 'verifying' ? '正在检查程序能否正常启动…' : '等待安装器的第一条输出…'}</div>}
           </div>
-          <div className="ac-login-hint">这一步可能要几分钟，取决于你的网络。</div>
+          <div className="ac-login-hint">已等待 {Math.max(0, Math.floor((now - (step.state.startedAt ?? now)) / 1000))} 秒 · 不显示估算百分比</div>
+          {activity?.stalled && <p className="ac-login-hint">距上次安装器输出 {activity.secondsSinceOutput} 秒；可能在下载或等待网络，可继续等待或取消。</p>}
+          {!!step.state.output?.length && <details className="ac-setup-log"><summary>查看详细输出（最近 {step.state.output.length} 行）</summary><pre className="ac-setup-out">{step.state.output.join('\n')}</pre></details>}
+          <div className="ac-setup-row">
+            <button className="ac-login-retry" onClick={() => setMinimized(true)}>最小化，完成后提醒我</button>
+            <button className="ac-login-retry" onClick={() => setGameOpen(true)} disabled={step.state.phase === 'stopping'}>贪吃蛇</button>
+            <button className="ac-login-retry" onClick={cancelTask}>{step.state.phase === 'stopping' ? '再次停止' : '取消安装'}</button>
+          </div>
         </>
       )}
 
       {/* ── 失败：把输出给他看 ───────────────────────────────────── */}
       {step.k === 'failed' && (
         <>
-          <div className="ac-login-err ac-setup-err">{step.error}</div>
+          <div className="ac-login-err ac-setup-err" role="alert">{step.error === '安装已停止' ? '安装已取消' : installFeedback(step.error, step.output).title}</div>
+          <p className="ac-login-hint">{installFeedback(step.error, step.output).advice}</p>
+          <details><summary>查看诊断详情</summary><pre className="ac-setup-out">{step.error}</pre></details>
+          {options.length > 1 && <label className="ac-login-hint">重试的安装方式<select value={installChoice} onChange={e => setInstallChoice(e.target.value)}>{options.map(o => <option key={o.cmd} value={o.cmd}>{o.via}</option>)}</select></label>}
           {step.output.length > 0 && (
             <>
               <div className="ac-setup-cmd-l">安装器最后说的话</div>
@@ -306,7 +394,8 @@ export function CliSetupPanel(props: {
       )}
 
       {/* ── 第三步：登录。复用同一个面板，不另做一套 ───────────────── */}
-      {step.k === 'login' && (
+      {step.k === 'login' && !loginApproved && <><p className="ac-setup-say">{displayName} 安装已完成，接下来登录你的账号。</p><button className="ac-login-go" onClick={() => setLoginApproved(true)}>登录并继续</button><p className="ac-login-hint">不会自动发送草稿。</p></>}
+      {step.k === 'login' && hydrated && loginApproved && (
         <CliLoginPanel
           cli={cliId}
           displayName={displayName}
@@ -330,7 +419,7 @@ export function CliSetupPanel(props: {
   )
   // portal 到 body：它原来长在画布节点里，被节点的 overflow 和层级裁着。
   // 灯箱要盖住整个窗口，就不能待在那棵子树里
-  return createPortal(body, document.body)
+  return <>{createPortal(body, document.body)}{gameOpen && step.k === 'installing' && <SetupSnake onClose={() => setGameOpen(false)} />}</>
 }
 
 /** 首启引导里那一行「某个 CLI 的状态」。抽出来是因为引导页和空态都要用同一套措辞 */

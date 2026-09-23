@@ -169,7 +169,7 @@ export function CanvasRoleEditor({
     if (k === 'omp') {
       return (
         <div className={`re-kind${disabled ? ' off' : ''}`} key={k}>
-          <div className="re-kind-name">默认 harness</div>
+          <div className="re-kind-name">原生 Harness</div>
           <input
             value={draft.model?.omp ?? ''}
             onChange={(e) => setPer('model', 'omp', e.target.value)}
@@ -195,7 +195,7 @@ export function CanvasRoleEditor({
     const efforts = probe?.[k].efforts ?? []
     return (
       <div className={`re-kind${disabled ? ' off' : ''}`} key={k}>
-        <div className="re-kind-name">{{ claude: 'Claude', codex: 'Codex', omp: '默认 harness' }[k]}</div>
+        <div className="re-kind-name">{{ claude: 'Claude', codex: 'Codex', omp: '原生 Harness' }[k]}</div>
         <select
           value={draft.model?.[k] ?? ''}
           onChange={(e) => setPer('model', k, e.target.value)}
@@ -319,7 +319,7 @@ export function CanvasRoleEditor({
             />
             <span className="re-hint">
               全新启动时拼进命令（Claude 走 <code>--append-system-prompt[-file]</code>，
-              Codex 走 <code>-c instructions=</code>，默认 harness 走 <code>--append-system-prompt</code>）。
+              Codex 走 <code>-c instructions=</code>，原生 Harness 走 <code>--append-system-prompt</code>）。
               <b>回溯不生效</b> —— CLI 的 resume 不重放系统提示词。
               写产出、落点、完成判据，别写人设。
             </span>
@@ -381,7 +381,7 @@ export function CanvasRoleEditor({
               <b>只能收紧</b>：没点的就是允许。下表是每家实际落成什么，由绑定层现算，压暗的行是「点亮后会这样」。
             </span>
             <span className="re-hint warn">
-              「不许改文件」在 Claude 与默认 harness 上留着命令行就仍能 <code>echo &gt; 文件</code>；要封死连「不许跑命令」一起点。
+              「不许改文件」在 Claude 与原生 Harness 上留着命令行就仍能 <code>echo &gt; 文件</code>；要封死连「不许跑命令」一起点。
             </span>
 
             <button className="re-raw-toggle" onClick={() => setShowRaw((v) => !v)}>

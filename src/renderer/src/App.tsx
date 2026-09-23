@@ -18,6 +18,7 @@ import { UpdateBadge } from './features/workspace/UpdateBadge'
 import { SecretRequestHost } from './features/workspace/SecretRequestModal'
 import { TeamBatchHost } from './features/team/TeamBatchModal'
 import { TeamAutoTuckHost } from './features/team/AutoTuck'
+import { CliSetupHost } from './features/agentChat/CliSetupPanel'
 import { AgentOnboarding } from './features/workspace/AgentOnboarding'
 import { ModeSwitch } from './features/workspace/ModeSwitch'
 import { ArchivePlanPanel } from './features/wiki/ArchivePlanPanel'
@@ -467,6 +468,7 @@ export function App(): JSX.Element {
       </div>
       <ConfirmDialog />
       <AgentOnboarding />
+      <CliSetupHost />
       <ArchivePlanPanel />
       <Tooltip />
       <BuildStamp />

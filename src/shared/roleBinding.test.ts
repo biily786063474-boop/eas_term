@@ -356,7 +356,7 @@ test('**每条参数都有对应报告行** —— 报告是绑定的副产物�
 test('标签表齐全：六个 cap、三家、四档都有中文名', () => {
   for (const k of ['write', 'shell', 'imageGen', 'mcpServers', 'mcpTools', 'raw'] as const) assert.ok(CAP_LABEL[k])
   assert.deepEqual(HARNESSES, ['claude', 'codex', 'omp'])
-  assert.equal(HARNESS_LABEL.omp, '默认 harness')
+  assert.equal(HARNESS_LABEL.omp, '原生 Harness')
   for (const l of ['hard', 'soft', 'degraded', 'unsupported'] as const) assert.ok(LEVEL_LABEL[l])
 })
 

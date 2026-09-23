@@ -101,19 +101,19 @@ export function CliLoginPanel(props: {
               error: st.status ? '登录流程结束了，但还是没登上' : '登录流程结束了，但读不到登录状态'
             })
           }
-        })
+        }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:'无法读取登录状态，请重新检测或稍后重试'}) })
       }
     })
     void window.api.cliAuth.startLogin(cli).then((r) => {
       if (!aliveRef.current || r.ok) return
       setPhase({ k: 'failed', error: r.error || '起不来登录流程' })
-    })
+    }).catch(() => { if(aliveRef.current) setPhase({k:'failed',error:'无法启动登录，请检查程序后重试'}) })
     return () => {
       aliveRef.current = false
       off()
       // 面板关了就把登录进程带走 —— 留着它会占住「同时只能有一个登录流程」的位置，
       // 下次点登录会被拒
-      void window.api.cliAuth.cancelLogin()
+      void window.api.cliAuth.cancelLogin().catch(() => {})
     }
   }, [cli, attempt])
 

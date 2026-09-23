@@ -2,14 +2,17 @@
 //
 // 打钩这件事**完全是用户自己点**——不解析终端输出、不代 agent 判断「这条做完了没」。
 // 这是产品上明确定过的：agent 说完成了 和 事情真的做完了 是两回事，这个组件不参与判断。
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { TerminalTodos } from './useTerminalTodos'
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, PlusIcon, TrashIcon } from '../../ui/Icons'
+import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 
 export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Element | null {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const addRef = useRef<HTMLInputElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  const bodyId = useId()
 
   // 还没插入过清单：不占地方，右键菜单是唯一入口
   if (!todos.exists) return null
@@ -31,8 +34,14 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
           按钮套按钮是无效 HTML，键盘可达性也会乱。拆成「展开区」+「删除」两个平级按钮 */}
       <div className="term-todo-hd">
         <button
+          ref={toggleRef}
           className="term-todo-toggle"
-          onClick={() => todos.setExpanded(!todos.expanded)}
+          aria-expanded={todos.expanded}
+          aria-controls={todos.expanded ? bodyId : undefined}
+          onClick={() => {
+            if (todos.expanded && document.getElementById(bodyId)?.contains(document.activeElement)) toggleRef.current?.focus()
+            todos.setExpanded(!todos.expanded)
+          }}
           data-tip={todos.expanded ? '收起' : '展开'}
         >
           {todos.expanded ? <ChevronDownIcon size={11} /> : <ChevronRightIcon size={11} />}
@@ -46,8 +55,7 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
         </button>
       </div>
 
-      {todos.expanded && (
-        <div className="term-todo-body">
+      <MotionDisclosure open={todos.expanded} id={bodyId} className="term-todo-body">
           {todos.items.length > 0 && (
             <div className="term-todo-list">
               {todos.items.map((it) => (
@@ -123,8 +131,7 @@ export function TerminalTodoPanel({ todos }: { todos: TerminalTodos }): JSX.Elem
               <PlusIcon size={11} />
             </button>
           </div>
-        </div>
-      )}
+      </MotionDisclosure>
     </div>
   )
 }

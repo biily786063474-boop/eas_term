@@ -72,12 +72,9 @@
      而毛玻璃 + 半透明底在深色画布上跟背景差得很少，光靠明度看不出边在哪。
      虚线比实线合适 —— 它读作「范围」而不是「容器的外壳」。 */
   border: 1px dashed rgba(var(--frame-rgb), 0.34);
-  /* **两个主题用同一档投影**（2026-09-02 用户：「暗色模式下 frame 的投影仍然夸张，
-     保持和亮色模式一致」）。
-     `--ink-*` 会跟主题翻（暗 0.42 / 亮 0.07），本意是「暗底上投影要更黑才看得见」——
-     但 Frame 这么大一块，60px 的扩散配 0.42 的黑，糊出来的是一圈脏晕而不是纵深。
-     写死成亮色那一档：**大面积的浮层靠明度差就分开了，投影只该点到为止。** */
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.07);
+  /* Frame 面积很大，宽达 60px 的投影即使只有 7% 黑也会形成灰晕；
+     两种主题都只用短而浅的一档，层级主要靠表面明度。 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.035);
   /* **两个主题都要毛玻璃**（2026-09-02 用户点名）。
      Frame 是「盖在画布上的一块地」，透出底下的点阵才有「浮在上面」的实感；
      实心底会把它压成一块贴纸。
@@ -196,11 +193,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 120ms ease, color 120ms ease, transform 90ms ease;
 }
 
 .cframe-btn:hover {
   background: var(--lift-3);
   color: var(--fg);
+}
+
+.cframe-btn:active:not(:disabled) { background: var(--lift-2); transform: scale(.94); }
+.cframe-btn:focus-visible, .cframe-start-btn:focus-visible, .cframe-start-term:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
 }
 
 .cframe-empty {
@@ -270,6 +273,7 @@
   border-color: var(--stroke-input-hover, var(--stroke-input));
   transform: translateY(-1px);
 }
+.cframe-start-btn:active:not(:disabled) { background: var(--lift-3); transform: translateY(0) scale(.985); }
 
 .cframe-start-btn:disabled {
   opacity: 0.5;
@@ -278,7 +282,7 @@
 
 .cframe-start-name {
   font-weight: 600;
-  /* 缩到很窄时截断而不是撑破容器。三颗里「默认 harness」最长，
+  /* 缩到很窄时截断而不是撑破容器。三颗里「原生 Harness」最长，
      它是第一个会撞到这条的。 */
   max-width: 100%;
   overflow: hidden;
@@ -311,6 +315,12 @@
 .cframe-start-term:hover:not(:disabled) {
   background: var(--lift-1);
   color: var(--t-2);
+}
+.cframe-start-term:active:not(:disabled) { background: var(--lift-2); color: var(--t-1); }
+@media (prefers-reduced-motion: reduce) {
+  .cframe-btn, .cframe-start-btn, .cframe-start-term { transition: none; }
+  .cframe-btn:active:not(:disabled), .cframe-start-btn:active:not(:disabled),
+  .cframe-start-btn:hover:not(:disabled) { transform: none; }
 }
 
 .cframe-rz {
@@ -1358,7 +1368,7 @@
 /* 拖文件落区高亮 */
 .cframe.drop-target {
   border-color: rgb(var(--frame-rgb));
-  box-shadow: 0 0 0 2px rgba(var(--frame-rgb), 0.5), 0 18px 60px var(--ink-3);
+  box-shadow: 0 0 0 2px rgba(var(--frame-rgb), 0.5), 0 8px 24px var(--ink-2);
 }
 
 .pane.drop-target {
@@ -3025,7 +3035,7 @@
 
 .cframe.sel {
   border-color: rgba(var(--frame-rgb), 0.85);
-  box-shadow: 0 0 0 1px rgba(var(--frame-rgb), 0.6), 0 18px 60px var(--ink-3);
+  box-shadow: 0 0 0 1px rgba(var(--frame-rgb), 0.6), 0 8px 24px var(--ink-2);
 }
 
 .cfile-node.sel {
@@ -7039,7 +7049,7 @@
 .pm-config-field input, .pm-config-field select { width: 100%; min-width: 0; box-sizing: border-box; color: var(--fg); background: var(--lift-2); border: 1px solid var(--glass-border-strong); border-radius: 6px; padding: 6px 8px; }
 
 /* Configuration belongs in the top layer, never in a stretched market grid row. */
-.pm-settings { width: min(520px, calc(100vw - 48px)); max-height: min(760px, calc(100vh - 64px)); margin: auto; padding: 0; overflow: auto; outline: none; color: var(--fg); background: var(--s-2); border: 1px solid var(--glass-border-strong); border-radius: 18px; box-shadow: 0 24px 90px #0006; }
+.pm-settings { width: min(520px, calc(100vw - 48px)); max-height: min(760px, calc(100vh - 64px)); margin: auto; padding: 0; overflow: auto; outline: none; color: var(--fg); background: var(--s-2); border: 1px solid var(--glass-border-strong); border-radius: 18px; box-shadow: 0 16px 48px var(--ink-3); }
 .pm-settings::backdrop { background: #0007; backdrop-filter: blur(6px); }
 .pm-settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 24px 18px; border-bottom: 1px solid var(--glass-border); }
 .pm-settings-eyebrow { color: var(--fg-dim); font-size: 11px; margin-bottom: 6px; }

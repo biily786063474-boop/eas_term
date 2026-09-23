@@ -26,6 +26,7 @@ import { rankSkills } from './skillSearch'
 import { useOpenInCanvas, viewportCenter } from './useOpenInCanvas'
 import { FileLightbox } from './FileLightbox'
 import { ChevronRightIcon, CheckIcon, PlusIcon, CopyIcon, CloseIcon } from '../../ui/Icons'
+import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 
 /** 项目 Frame 的「项目 skill」目录：约定死的相对路径，不需要用户选。
  *  用模板字符串拼、不引 Node 的 path 模块——渲染层历来这么拼路径
@@ -418,7 +419,7 @@ export function CanvasSkillPanel(): JSX.Element {
               }}
             >
               <div className="skl-cat-head-row">
-                <button className="skl-cat-head" onClick={() => toggleCat(catKey)}>
+                <button className="skl-cat-head" aria-expanded={!collapsed} onClick={() => toggleCat(catKey)}>
                   <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
                     <ChevronRightIcon size={10} />
                   </span>
@@ -436,8 +437,7 @@ export function CanvasSkillPanel(): JSX.Element {
                   </button>
                 )}
               </div>
-              {!collapsed && (
-                <div className="skl-cat-body">
+              <MotionDisclosure open={!collapsed} id={`skl-cat-${encodeURIComponent(catKey)}`} className="skl-cat-body">{() => <>
                   {shown.map((sk) => {
                     const expanded = expandedSkill === sk.path
                     const off = disabledSet.has(sk.path)
@@ -453,6 +453,7 @@ export function CanvasSkillPanel(): JSX.Element {
                       >
                         <button
                           className="skl-item-head"
+                          aria-expanded={expanded}
                           // 拖头部而不是整张卡：展开后卡里挂着文件树，那棵树自己
                           // 也要拖（拖文件到画布），两套拖拽不能抢同一块区域。
                           draggable
@@ -474,7 +475,7 @@ export function CanvasSkillPanel(): JSX.Element {
                           {off && <span className="skl-off-tag">已禁用</span>}
                         </button>
                         {!!sk.description && <div className="skl-item-desc">{sk.description}</div>}
-                        {expanded && (
+                        <MotionDisclosure open={expanded} id={`skl-tree-${encodeURIComponent(sk.path)}`} className="skl-tree-disclosure">{() =>
                           <div
                             className="skl-item-tree"
                             onMouseDown={(e) => {
@@ -499,12 +500,11 @@ export function CanvasSkillPanel(): JSX.Element {
                           >
                             <FileTree key={sk.path} rootPath={sk.path} refreshKey={0} viewOnly />
                           </div>
-                        )}
+                        }</MotionDisclosure>
                       </div>
                     )
                   })}
-                </div>
-              )}
+              </>}</MotionDisclosure>
             </div>
           )
         })}
@@ -635,7 +635,7 @@ export function CanvasSkillPanel(): JSX.Element {
               {/* 单段时不画段头：工具栏那个按钮已经写着目录名了，再来一行是重复。
                   两段并存才需要标注谁是谁——那正是用户要的「标注清楚」。 */}
               {sections.length > 1 && (
-                <button className="skl-sec-head" onClick={() => toggleSec(sec.key)} data-tip={sec.path}>
+                <button className="skl-sec-head" aria-expanded={!collapsed} onClick={() => toggleSec(sec.key)} data-tip={sec.path}>
                   <span className={`skl-chevron${collapsed ? '' : ' open'}`}>
                     <ChevronRightIcon size={10} />
                   </span>
@@ -651,7 +651,7 @@ export function CanvasSkillPanel(): JSX.Element {
                   可压缩的 flex 子项且 overflow:visible，段被挤扁时那三支的内容
                   既不裁剪也不滚动，直接画到下一段的段头上（项目目录不存在时那段
                   长路径最明显，实测溢出 101px、和下一个段头重叠 89px）。 */}
-              {!collapsed && <div className="skl-list">{renderSectionBody(sec)}</div>}
+              <MotionDisclosure open={!collapsed} id={`skl-section-${encodeURIComponent(sec.key)}`} className="skl-list">{() => renderSectionBody(sec)}</MotionDisclosure>
             </div>
           )
         })}

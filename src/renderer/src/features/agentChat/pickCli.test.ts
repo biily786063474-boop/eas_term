@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { pickDefaultCli } from './pickCli.ts'
+import { pickDefaultCli, pickNewPaneCli } from './pickCli.ts'
 import type { CliInfo } from '../../../../shared/agentChat.ts'
 
 const cli = (id: string, bundled = false): CliInfo =>
@@ -10,6 +10,15 @@ const cli = (id: string, bundled = false): CliInfo =>
 const claude = cli('claude')
 const codex = cli('codex')
 const boxed = cli('omp', true)
+
+test('空 Frame 明选未安装 Claude 时仍进 Claude 安装页，不被上次的 Codex 覆盖', () => {
+  const missingClaude = { ...claude, available: false }
+  assert.equal(pickNewPaneCli([missingClaude, codex, boxed], 'claude', 'codex')?.id, 'claude')
+})
+
+test('未指定 CLI 的新面板仍沿用上次可用的选择', () => {
+  assert.equal(pickNewPaneCli([claude, codex, boxed], undefined, 'codex')?.id, 'codex')
+})
 
 test('**装了 Claude / Codex 时，随包那个排最后** —— 老用户升级当天不该被换掉', () => {
   // 它的 available 恒真（就在安装包里），跟着「取第一个」走就会把人换走，

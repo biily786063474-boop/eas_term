@@ -32,3 +32,27 @@
 - [ ] 用实际分发安装包、干净用户环境执行上述检查；记录平台、架构、后端版本和前后截图，不能只验开发机或 JS mock。
 
 下一步：取得外部服务会话级释放契约/上游修复，或设计可隔离的自有控制会话；先复现并写失败验证，再接软件生命周期。此前不宣称分发后已杜绝此问题。
+
+## 2026-09-22 收尾核查（0.4.105 之后，仍未解决）
+
+本次证据：`../computer-use/2026-09-22/audit.json`。
+
+### 新发现：不能继续断言「上游完全没有收尾机制」
+
+本机 unified-computer-use **26.903.61454** 的官方 manifest 声明了 Stop / Interrupt / SubagentStop → `cua_repl.turn_ended`，传 `session_id` 和 `turn_id`。旧 SkyComputerUseClient 的 `turn-ended --help` 也存在，用户配置已有 legacy notify；因此不能用「补一条 notify」解释或修复本次问题。
+
+但以下事实仍阻止产品层安全接入：
+
+- 当前公开 CUA 工具只提供 js / js_reset，getState 返回的公开 API 没有原生会话释放/隐藏指针接口。manifest 的内部 MCP hook 不能当作当前可调用工具。
+- 当前 @oai/sky 0.6.26 的 service.js RPC 分支仅 setup / execute / Linux drag_start/move/end；没有可从此层确认的 turn_ended 原生释放处理。**这不证明 native 或 node_repl 内部绝无处理**，只说明不能从现有接口证明已串通。
+- legacy `turn-ended` 的 help 未定义 payload 格式、会话所有权、返回/幂等/超时语义；不能猜 payload 向正在使用的全局服务发送，也不能把发送成功当指针已消失。
+- 当前原生服务父进程为 ChatGPT，另外存在不同 Codex 客户端。PPID 只能说明进程树，不足以证明某个叠加指针对应 Eas-Term 哪个 session/turn，不能据此杀服务。
+- Eas-Term 自带 computer 插件与外部 CUA 是不同后端。只改自带插件，不会修掉外部叠加指针。Claude strict MCP 配置/OMP 的后端还需独立真实验收，不能从 Codex 推断三家全覆盖。
+
+### 本次没有做的危险捷径
+
+没有 kill/pkill 外部服务，没有改用户 config 或官方插件缓存，没有向真实会话伪造 Stop/Interrupt，没有把任意本机 PID/路径写入产品，没有新增「保证自动清理」假钩子。没有完成新的残留前后视觉复现，历史残留证据保持原结论，验收框不勾选。
+
+### 明确下一步门槛
+
+取得官方可支持的 native session-scoped end/lease 契约，核实 manifest → node_repl → sky/native 的真实路由，再用隔离会话复现 Stop/Interrupt/崩溃及两个并发客户端，最终接入 Eas-Term 生命周期。若上游仍不提供，需要另立「自有 Computer Use 会话后端」方案；新增自有后端只能保证自有会话，不会自动清除外部服务已存在的指针。不可把另造一个本地指针层当成修复外部服务。

@@ -83,7 +83,7 @@ const MANIFEST: Record<string, Entry> = {
   'hooks/scan-commit.mjs': { status: 'dev-hook', counts: { execFileSync: 1 }, note: 'git hook 用 git 查询，开发期' },
   // ── 缺口：会占资源或长时间驻留，尚未接准入/登记 ──
   'src/main/mcpClient.ts': { status: 'managed', counts: { spawn: 1 }, note: '两条路共用这一处 spawn，都保留预算记账（插件不排队）：插件宿主 pluginHost.acquire 经应用级 startManagedSession；builtin-bizone 连接器 bizoneConnector.clientFor 经 deps.admit（bizoneHosted 注入应用级 startManagedSession，**immediate:true** —— 同插件 server/终端，用户触发的一次性共享启动立即起、不排队，成本照登记）。预算都随 McpClient.exited 释放。笔纵客户端进程在运行中心只见排队任务、不作为服务投影（builtin 宿主不在 observedPluginServices 里）' },
-  'src/main/cliAuth/install.ts': { status: 'registered', counts: { spawn: 2 }, note: 'CLI 安装脚本（curl|sh / npm -g）：按方案不排队、不自动中断；spawn 后登记为 cli-install: 自有服务，运行中心可见、一次确认可停（走既有 cancelInstall），真实 close 才消失（2026-09-13）' },
+  'src/main/cliAuth/install.ts': { status: 'registered', counts: { spawn: 2 }, note: 'CLI 安装脚本经 shellForInstall 选择 shell（官方 curl 管道启用 bash pipefail）+ Windows taskkill 定向终止当前 pid 的子树（短生命周期停止助手，无 shell / 不创建安装任务）：按方案不排队、不自动中断；spawn 后登记为 cli-install: 自有服务，运行中心可见、一次确认可停（走既有 cancelInstall），真实 close 才消失（2026-09-22）' },
   'src/main/cliUpdates/packages.ts': { status: 'managed', counts: { 'promisify(execFile)': 1, execFileSync: 2 }, note: '下载/解包/校验整段经 managedStage→runAppTask（应用级任务，全窗口可见不可取消）；stage 路径校验已异步。仅存的两处 execFileSync 是 boot()/rollback() 激活前校验：那时窗口与资源管理器都还没有，保留同步' }
 }
 
