@@ -25,10 +25,10 @@ export function DictBubbleToggle(): JSX.Element | null {
     <button
       className={`tb-item${open ? ' on' : ''}`}
       data-dict-toggle=""
-      data-tip={open ? '收起辞典' : '辞典'}
+      data-tip={open ? '收起创作参考' : '查找预设提示词、浏览蓝图，挑选设计风格'}
       onClick={() => setOpen(!open)}
     >
-      辞典
+      创作参考
     </button>
   )
 }

@@ -10,6 +10,7 @@ import { createPortal } from 'react-dom'
 import { PhonePanel } from '../phone/PhonePanel'
 import { FootprintPanel } from './FootprintPanel'
 import { GpuPanel } from './GpuPanel'
+import { AiAssistantsSettings } from './AiAssistantsSettings'
 import { CliUpdatesPanel } from './CliUpdatesPanel'
 import { McpBody } from './McpIndicator'
 import { useStore } from '../../store'
@@ -392,6 +393,7 @@ export function SettingsPanel(): JSX.Element {
 
               {tab === 'ai' && (
               <>
+              <SettingGroup title="AI 助手"><AiAssistantsSettings /></SettingGroup>
               <SettingGroup title="协作方式">
                 <label className="cset-row">
                   <input

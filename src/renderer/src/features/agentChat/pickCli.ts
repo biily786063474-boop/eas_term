@@ -33,6 +33,16 @@ export function pickDefaultCli(usable: CliInfo[], pinned?: CliInfo, lastUsed?: s
   return usable.find((c) => !c.bundled) ?? usable[0] ?? null
 }
 
+/** 新面板的显式选择可以是未安装的 CLI：它仍要进入对应安装流程。
+ *  `pickDefaultCli` 只负责无指定时从可用 CLI 里推测，不能拿它过滤用户刚点的按钮。 */
+export function pickNewPaneCli(list: CliInfo[], pinnedId?: string, lastUsed?: string): CliInfo | null {
+  const supported = list.filter((c) => c.chatSupported)
+  const pinned = pinnedId ? supported.find((c) => c.id === pinnedId) : undefined
+  if (pinned) return pinned
+  const usable = supported.filter((c) => c.available)
+  return pickDefaultCli(usable, undefined, lastUsed) ?? supported[0] ?? null
+}
+
 /** 「上次用的是哪个」存在哪。**localStorage，不是 prefs** ——
  *  `prefs:set` 是一张 key 白名单且只收布尔（`!!value`），加一个字符串字段要同时改四处
  *  （Prefs 接口、getPrefs 兜底、prefs:set 白名单、preload 手抄的 PrefsSnapshot），

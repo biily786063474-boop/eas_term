@@ -11,7 +11,7 @@ export interface ComposerReference {
   imagePath?: string
   imageUrl?: string
 }
-export const REFERENCE_LABELS: Record<ReferenceKind, string> = { dict: '辞典', file: '文件', folder: '文件夹', skill: '技能', plugin: '插件', app: '应用', browser: '网页', image: '图片' }
+export const REFERENCE_LABELS: Record<ReferenceKind, string> = { dict: '创作参考', file: '文件', folder: '文件夹', skill: '技能', plugin: '插件', app: '应用', browser: '网页', image: '图片' }
 export const REFERENCE_GLYPHS: Record<ReferenceKind, string> = { dict: '▤', file: '▧', folder: '▱', skill: '✧', plugin: '◇', app: '▦', browser: '↗', image: '▣' }
 export function referenceFromCandidate(c: Candidate): ComposerReference {
   return { id: c.id, kind: c.imagePath ? 'image' : c.category as ReferenceKind, label: c.name, raw: c.insert, payload: c.chip?.text.trim() ?? c.insert, detail: c.description, imagePath: c.imagePath }

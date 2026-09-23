@@ -55,7 +55,7 @@ const KIND_OPTIONS: { kind: PaneKind; label: string; Icon: typeof TerminalIcon }
   { kind: 'code', label: '代码预览', Icon: CodeIcon },
   { kind: 'image', label: '图片预览', Icon: ImageIcon },
   { kind: 'web', label: '网页', Icon: GlobeIcon },
-  { kind: 'dict', label: '辞典', Icon: DictIcon },
+  { kind: 'dict', label: '创作参考', Icon: DictIcon },
   { kind: 'wiki', label: '知识库', Icon: FilesIcon }
 ]
 
@@ -68,7 +68,7 @@ const KIND_LABEL: Record<PaneKind, { label: string; Icon: typeof TerminalIcon }>
   codegraph: { label: '代码地图', Icon: GitBranchIcon },
   chat: { label: '对话', Icon: MessageIcon },
   agent: { label: 'AI 对话', Icon: SparkleIcon },
-  dict: { label: '辞典', Icon: DictIcon },
+  dict: { label: '创作参考', Icon: DictIcon },
   web: { label: '网页', Icon: GlobeIcon },
   wiki: { label: '知识库', Icon: FilesIcon }
 }
@@ -550,7 +550,7 @@ export function PaneView({ tabId, leaf, rect, isActive, hidden, canvasRect }: Pr
           </Suspense>
         )}
         {pane.kind === 'dict' && (
-          <Suspense fallback={<div className="pane-placeholder">加载辞典…</div>}>
+          <Suspense fallback={<div className="pane-placeholder">加载创作参考…</div>}>
             <DictView />
           </Suspense>
         )}

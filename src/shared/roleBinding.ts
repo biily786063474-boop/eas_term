@@ -386,7 +386,7 @@ export function bindRole(bounds: RoleBounds | undefined, kind: HarnessId, ctx: B
 // 「各家怎么落」那些句子仍然只由 bindRole 生成 —— 界面不许再手写它们。
 
 export const HARNESSES: readonly HarnessId[] = ['claude', 'codex', 'omp']
-export const HARNESS_LABEL: Record<HarnessId, string> = { claude: 'Claude', codex: 'Codex', omp: '默认 harness' }
+export const HARNESS_LABEL: Record<HarnessId, string> = { claude: 'Claude', codex: 'Codex', omp: '原生 Harness' }
 export const CAP_LABEL: Record<CapKey, string> = {
   write: '不许改文件',
   shell: '不许跑命令',

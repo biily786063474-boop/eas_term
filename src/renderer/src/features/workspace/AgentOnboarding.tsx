@@ -182,7 +182,7 @@ export function AgentOnboarding(): JSX.Element | null {
           它们是各自厂商的命令行工具，要用你自己的账号登录。
           <b>装好任意一个就能开始</b>，两个都装也行；
           <b>也可以直接用自带的 omp</b> —— 它随软件一起装好了，选家模型服务商，用订阅登录或填一把 API key 都行。
-          没装它们，终端、画布、文件预览、辞典照常可用。
+          没装它们，终端、画布、文件预览、创作参考照常可用。
         </p>
 
         <div className="onb-cards">

@@ -138,13 +138,13 @@ export function CanvasDictBubble(): JSX.Element | null {
     >
       <div className="cdict-pop-head" onMouseDown={onHeadDown}>
         <DictIcon size={13} />
-        <span>辞典</span>
+        <span>创作参考</span>
         <button className="cdict-pop-x" data-tip="收起" onClick={close}>
           <CloseIcon size={13} />
         </button>
       </div>
       <div className="cdict-pop-body">
-        <Suspense fallback={<div className="pane-placeholder">加载辞典…</div>}>
+        <Suspense fallback={<div className="pane-placeholder">加载创作参考…</div>}>
           <DictView embedded onDesignViewChange={setDesignView} />
         </Suspense>
       </div>

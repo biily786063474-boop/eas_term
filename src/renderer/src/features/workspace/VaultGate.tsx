@@ -39,19 +39,22 @@ export function VaultGate({ status, onUnlocked }: { status: SecretsStatus; onUnl
   const confirming = !st.configured && step === 'confirm'
   return <div className="vault-gate">
     <div className="vault-emblem"><LockIcon size={21} /></div>
-    <h2>{st.configured ? '解锁密钥柜' : confirming ? '再确认一次六位码' : '让密钥留在密钥柜里'}</h2>
-    <p className="vault-lead">{st.configured ? '输入六位数字码，继续刚才的操作。' : confirming ? '确保下一次解锁时，你能顺利打开。' : <>保存一次，按需授权。<br />不必再把 API 密钥粘进聊天。</>}</p>
-    {!st.configured && !confirming && <div className="vault-intro"><div>在这台设备上加密保存<small>由系统安全存储保护你的密钥。</small></div><div>由你决定，哪个会话可以使用<small>解锁密钥柜，不等于授权所有密钥。</small></div></div>}
+    <h2>{st.configured ? '解锁密钥柜' : confirming ? '确认六位数字码' : '设置密钥柜'}</h2>
+    <p className="vault-lead">{st.configured ? '输入六位数字码，继续刚才的操作。' : confirming ? '再输入一次，确认你的数字码。' : '保存一次密钥，之后按需授权使用。'}</p>
     <label className="vault-code-label" htmlFor={codeId}>{confirming ? '再次输入六位数字码' : st.configured ? '六位数字码' : '创建六位数字码'}</label>
     <div className="vault-code-field">
       <div className="vault-digit-row" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <span key={i}>{i < code.length ? '●' : '·'}</span>)}</div>
       <input ref={input} id={codeId} aria-label={confirming ? '再次输入六位数字码' : '六位数字码'} type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={code} disabled={busy || !st.available || st.lockedOutMs > 0} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} onKeyDown={e => { if (e.key === 'Enter') void submit() }} />
     </div>
-    <p className="vault-caption">{st.configured ? '解锁不会新增密钥授权。' : '用于日常解锁，不是 API 密钥，也不参与密钥加密。'}</p>
     {!st.available && <p role="alert" className="sec-err">系统加密不可用，暂时不能启用密钥柜。</p>}
     {st.lockedOutMs > 0 && <p role="status" className="sec-err">请等待 {Math.ceil(st.lockedOutMs / 1000)} 秒后再试</p>}
     {error && <p role="alert" className="sec-err">{error}</p>}
     <button className="vault-primary" disabled={busy || code.length !== 6 || !st.available || st.lockedOutMs > 0} onClick={() => void submit()}>{busy ? '处理中…' : st.configured ? '解锁并继续' : confirming ? '启用密钥柜' : '继续'}</button>
-    {confirming ? <button className="vault-secondary" disabled={busy} onClick={() => { setStep('create'); setFirst(''); setCode(''); setError('') }}>返回</button> : !st.configured && <p className="vault-footnote">下一步确认六位码 · 这段介绍仅首次显示</p>}
+    {confirming && <button className="vault-secondary" disabled={busy} onClick={() => { setStep('create'); setFirst(''); setCode(''); setError('') }}>返回</button>}
+    {!st.configured && !confirming && <span
+      className="vault-help"
+      tabIndex={0}
+      data-tip={'密钥只存本机，由系统安全存储保护。\n使用前按会话授权，解锁不等于全部授权。\n六位码仅用于日常解锁，不参与密钥加密。'}
+    >密钥如何保护？</span>}
   </div>
 }

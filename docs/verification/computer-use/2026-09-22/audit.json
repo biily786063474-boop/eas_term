@@ -1,0 +1,72 @@
+{
+  "checkedAt": "2026-09-22T14:08:00.858647+00:00",
+  "status": "blocked-on-supported-native-session-release-contract",
+  "pluginVersion": "26.903.61454",
+  "declaredHooks": {
+    "hooks": {
+      "Interrupt": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "cua_repl",
+              "tool": "turn_ended",
+              "input": {
+                "hook_event_name": "${hook_event_name}",
+                "session_id": "${session_id}",
+                "turn_id": "${turn_id}"
+              }
+            }
+          ]
+        }
+      ],
+      "SubagentStop": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "cua_repl",
+              "tool": "turn_ended",
+              "input": {
+                "hook_event_name": "${hook_event_name}",
+                "session_id": "${agent_id}",
+                "turn_id": "${turn_id}"
+              }
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "cua_repl",
+              "tool": "turn_ended",
+              "input": {
+                "hook_event_name": "${hook_event_name}",
+                "session_id": "${session_id}",
+                "turn_id": "${turn_id}"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "nativeClientHelp": "OVERVIEW: Handles a Codex turn-ended notification\n\nUSAGE: cua turn-ended [--previous-notify <previous-notify>] <payload>\n\nARGUMENTS:\n  <payload>\n\nOPTIONS:\n  --previous-notify <previous-notify>\n  -h, --help              Show help information.\n\n",
+  "skyServiceSha256": "89ad06f8264b99bfd1d46723b72f1a78f8b51c720cb3ff6d1dbc0de43854065d",
+  "skyServiceRpcCases": [
+    "setup",
+    "execute",
+    "drag_start",
+    "drag_move",
+    "drag_end"
+  ],
+  "ownership": "Observed native service parent is ChatGPT, with separate Codex clients active. PPID is not proof of session ownership.",
+  "publicCuaApi": "No native session release/hide cursor API exposed; js_reset documents JS-binding reset only.",
+  "legacyNotifyConfigured": true,
+  "performedCleanup": false,
+  "modifiedExternalPluginOrUserConfig": false,
+  "runtimeFixVerified": false
+}

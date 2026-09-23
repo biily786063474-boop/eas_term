@@ -34,7 +34,7 @@ import { mergeUserMessages, turnCursor, type SentMessage } from './userMessages.
 import { trimForSave, settleOnLoad, contextLostOf } from './history.ts'
 import { nextSeq } from '../../../../shared/historyArchive.ts'
 import { startupPhaseOf } from './startupPhase.ts'
-import { readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
+import { pickNewPaneCli, readLastCli, resolveConversationCli, writeLastCli } from './pickCli.ts'
 import { usesApprovalHookFile } from './toolbarModel.ts'
 import type { ApprovalDecision } from './ApprovalCard'
 import { MessageList } from './MessageList'
@@ -326,6 +326,12 @@ export function AgentChatView({
       if (aliveRef.current && epoch === selectionEpoch.current) setRefreshingClis(false)
     }
   }
+  // Installing from the persistent setup host does not finish the setup flow:
+  // the user may close the login dialog. Refresh availability at the install
+  // boundary itself so the card behind it says "待登录", not "未安装".
+  useEffect(() => window.api.cliAuth.onInstall((state) => {
+    if (state.phase === 'done') void refreshClis(selectedIdRef.current)
+  }), [])
   const completeSetup = (cliId: string): void => {
     if (selectedIdRef.current !== cliId) return
     setSetupFor(null)
@@ -336,7 +342,7 @@ export function AgentChatView({
     label: c.displayName,
     leadingIcon: <CliBrandIcon cliId={c.id} bundled={c.bundled} />,
     hint: !c.available ? (c.bundled ? '运行文件缺失' : '未安装') : !c.chatSupported ? '仅终端' : c.id === selected?.id ? '当前' : undefined,
-    onClick: () => pickCli(c)
+    onClick: () => { pickCli(c); if (!c.available && !c.bundled && (c.id === 'claude' || c.id === 'codex')) installCli(c) }
   }))
   // **配好之后也要有路回设置面板。**
   //
@@ -357,7 +363,7 @@ export function AgentChatView({
     })
   }
   const [text, setText] = useState('')
-  /** 空态输入框上挂的辞典提示词。对话态那份在 ChatToolbar 里，两边各管各的 —— 
+  /** 空态输入框上挂的创作参考提示词。对话态那份在 ChatToolbar 里，两边各管各的 ——
    *  发出第一条之后这个框就没了，状态跟着它一起走正好 */
   const [chips, setChips] = useState<DictChip[]>([])
   /** 正文里**这一刻**引用到了哪些 chip。
@@ -742,6 +748,13 @@ export function AgentChatView({
         const activeCli = paneSessionId && list.find(c => c.id === pinnedCli)
         if (activeCli) { setSelected(cur => cur ?? activeCli); return }
 
+        // 空 Frame 的按钮是本次明确选择，即使 CLI 尚未安装，也必须进入它自己的安装页。
+        // 不能先按 available 过滤，否则 pinned 丢失后会回退到上次用的 Codex。
+        if (!savedResumeId && pinnedCli) {
+          const chosen = pickNewPaneCli(list, pinnedCli, readLastCli())
+          if (chosen) { setSelected(cur => cur ?? chosen); return }
+        }
+
         // 默认只选**现在就能用**的：装了 + 支持会话。没有就不预选，
         // 让用户自己点（点到没装的会给安装入口）
         const usable = list.filter((c) => c.available && c.chatSupported)
@@ -1035,7 +1048,13 @@ export function AgentChatView({
     // 用户自己按发送才展开挂着的提示词
     const expanded = override !== undefined ? null : expandChips(text, chips)
     const message = override !== undefined ? override.trim() : expanded!.text
-    if (!message || !selected || !selected.available || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
+    if (!message || !selected || !selected.chatSupported || starting || sessionId || refreshingClis || authChecking) return
+    if (!selected.available) {
+      if (override === undefined && (selected.id === 'claude' || selected.id === 'codex')) {
+        requestConfirm({message:'安装 '+selected.displayName+' 后即可使用。草稿会保留，安装后不会自动发送。',confirmLabel:'立即安装',onConfirm:()=>installCli(selected)})
+      }
+      return
+    }
     // **没登录就别起进程。** 起了也是撞 401 死掉，还白花一次冷启动，
     // 而用户看到的只会是「CLI 进程退出（code 1）」（2026-08-30 实测的原始症状）。
     // 打的字**留在输入框里** —— 登录完回来就能直接发，不用重打
@@ -1515,7 +1534,7 @@ export function AgentChatView({
         aria-label="发送消息"
         data-tip={phase.k === 'starting' ? '正在启动会话…' : `发送（${SEND_HINT}）`}
         onClick={() => void handleSend()}
-        disabled={(!text.trim() && !chips.length) || phase.k !== 'ready' || refreshingClis || authChecking || blockedByAuth}
+        disabled={(!text.trim() && !chips.length) || phase.k !== 'ready' || refreshingClis || authChecking}
       >
         {phase.k === 'starting' ? (
           <span className="ac-dot" aria-hidden="true" />
@@ -1579,7 +1598,7 @@ export function AgentChatView({
           {chips.length > 0 && (
             <div className="ac-attach-row in-empty">
               {chips.map((c) => (
-                <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"辞典提示词"}}><span
+                <ReferenceHover key={c.id} reference={{id:c.id,kind:"dict",label:c.label,raw:"@"+c.label,payload:c.text,detail:"创作参考提示词"}}><span
                   className={`ac-chip${refIds.includes(c.id) ? '' : ' idle'}`}
                   key={c.id}
                   data-kind="dict"

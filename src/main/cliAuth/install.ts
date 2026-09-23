@@ -29,12 +29,14 @@ import { BrowserWindow } from 'electron'
 import { registerOwnedCliProcess } from './ownedProcess.ts'
 import { resolveInstallCommand } from './installCommand.ts'
 import { installPlan } from '../agentInstall'
+import { refreshCliCache } from '../agentChat/session'
 import { spawn, type ChildProcess } from 'child_process'
+import { StringDecoder } from 'string_decoder'
 
 import { PROBE_ENV } from '../probeEnv'
 import { alog } from './log'
 import { checkAuth, type CliAuthState } from './index'
-import { installVerdict, lastLine, outLines } from './installOut'
+import { createInstallOutput, installVerdict, shellForInstall } from './installOut'
 import { createSlot } from './slot'
 import type { CliId } from './parse'
 
@@ -45,16 +47,10 @@ const INSTALL_TIMEOUT_MS = 10 * 60 * 1000
 /** 失败时回给界面多少行输出。够看清报错，又不至于糊满面板 */
 const TAIL_LINES = 40
 
-export interface InstallState {
-  cli: CliId
-  /** running=装着；verifying=装完在核实；done=真的能用了；failed=没成 */
-  phase: 'running' | 'verifying' | 'done' | 'failed'
-  /** 安装器自己最后说的那句话。**原样透传，不改写** */
-  step?: string
-  error?: string
-  /** **失败时才有**：输出尾部。理由见文件头 ③ —— 这是终端那条路唯一不可替代的地方 */
-  output?: string[]
-}
+import type { InstallState } from '../../shared/types'
+export type { InstallState } from '../../shared/types'
+import { redact } from './redact'
+import { canCancelTask } from '../../shared/cliInstallPolicy'
 
 
 // **同时只允许一个，且旧进程的回调必须哑掉** —— 靠 slot.guard 结构性保证，
@@ -64,28 +60,49 @@ interface InstallLive {
   proc: ChildProcess
   out: string[]
   state: InstallState
+  exited?: boolean
+  stopReason?: string
+  windowId?: number
+  stopTimer?: ReturnType<typeof setTimeout>
+  updateTimer?: ReturnType<typeof setTimeout>
 }
 const slot = createSlot<InstallLive>()
+const snapshots = new Map<CliId, InstallState>()
+export function installSnapshot(cli: CliId): InstallState | null { return snapshots.get(cli) ?? null }
 
 function push(): void {
   const live = slot.any()
   if (!live) return
+  snapshots.set(live.cli, { ...live.state })
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send('cliAuth:install', live.state)
   }
 }
 
-function finish(phase: 'done' | 'failed', error?: string): void {
+function schedulePush(live: InstallLive): void {
+  if (live.updateTimer) return
+  live.updateTimer = setTimeout(() => {
+    live.updateTimer = undefined
+    if (slot.any() === live) push()
+  }, 120)
+}
+
+function finish(phase: 'done' | 'failed' | 'canceled', error?: string): void {
   const live = slot.any()
   if (!live) return
+  if (live.stopTimer) clearTimeout(live.stopTimer)
+  if (live.updateTimer) clearTimeout(live.updateTimer)
   alog(`安装结束：${live.cli} → ${phase}${error ? '（' + error + '）' : ''}`)
   live.state = {
     ...live.state,
     phase,
-    error,
-    // 成功时不回输出：那几十行没人要看，还会把面板撑开
-    output: phase === 'failed' ? live.out.slice(-TAIL_LINES) : undefined
+    error: error ? redact(error) : undefined,
+    updatedAt: Date.now(),
+    output: live.out.slice(phase === 'failed' ? -TAIL_LINES : -80)
   }
+  // listClis has its own availability cache. Invalidate before broadcasting
+  // "done", so a renderer refresh triggered by this event sees the new binary.
+  if (phase === 'done') refreshCliCache()
   push()
   slot.clear()
 }
@@ -110,54 +127,48 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
   try {
     // 走 shell 是安装命令本身的形态（`curl … | bash`、`npm install -g …`），
     // 不是我们额外加的一层。跑的是**和终端那条路一模一样的命令**。
-    proc =
-      process.platform === 'win32'
-        ? spawn('powershell.exe', ['-NoProfile', '-Command', cmd], { env: PROBE_ENV })
-        : spawn('/bin/sh', ['-c', cmd], { env: PROBE_ENV })
+    const shell = shellForInstall(cmd, process.platform)
+    proc = spawn(shell.file, shell.args, { env: PROBE_ENV, detached: process.platform !== 'win32' })
   } catch (e) {
     alog('安装进程起不来：' + String(e))
     return { ok: false, error: String(e) }
   }
-  slot.claim(proc, { cli, proc, out: [], state: { cli, phase: 'running', step: '正在准备…' } })
+  slot.claim(proc, { cli, proc, windowId: owner?.windowId, out: [], state: { cli, phase: 'running', step: '正在准备…', startedAt: Date.now(), updatedAt: Date.now(), taskId: ++installGeneration } })
   // 运行中心登记（2026-09-13 缺口 3）：安装按方案不可任意中断，所以不排队；但要看得见、
   // 能经一次确认停掉。stop 走既有 cancelInstall（kill + 标失败），不另起杀法。
-  if (owner) registerOwnedCliProcess({ id: `cli-install:${cli}:${++installGeneration}`, name: `CLI 安装（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (slot.any()?.proc === proc) cancelInstall() } })
+  if (owner) registerOwnedCliProcess({ id: `cli-install:${cli}:${installGeneration}`, name: `CLI 安装（${cli}）`, windowId: owner.windowId, proc, stop: () => { if (slot.any()?.proc === proc) cancelInstall() } })
 
   // **每个回调都包 guard(proc, …)** —— 见 slot.ts：漏写的唯一方式是不包，
   // 而不包就拿不到 live，写不出能跑的代码
-  const onData = slot.guard(proc, (live, d: Buffer) => {
-    const chunk = d.toString()
-    live.out.push(...outLines(chunk))
-    // 只留够回显的量，别让一次 npm 安装把内存吃掉
-    if (live.out.length > 400) live.out.splice(0, live.out.length - 400)
-    const step = lastLine(chunk)
-    if (step && step !== live.state.step) {
-      live.state = { ...live.state, step }
-      push()
-    }
-  })
-  proc.stdout?.on('data', onData)
+  const stdoutText = new StringDecoder('utf8')
+  const stderrText = new StringDecoder('utf8')
+  const stdoutLines = createInstallOutput()
+  const stderrLines = createInstallOutput()
+  const append = (live: InstallLive, lines: string[]): void => {
+    if (!lines.length) return
+    live.out.push(...lines)
+    if (live.out.length > 80) live.out.splice(0, live.out.length - 80)
+    live.state = { ...live.state, step: lines.at(-1), output: [...live.out], updatedAt: Date.now() }
+    schedulePush(live)
+  }
+  proc.stdout?.on('data', slot.guard(proc, (live, d: Buffer) => append(live, stdoutLines.write(stdoutText.write(d)))))
   // **stderr 也当进度看**：curl 的进度、npm 的 warning 全在 stderr，
   // 只收 stdout 的话进度条会一直停在「正在准备…」
-  proc.stderr?.on('data', onData)
+  proc.stderr?.on('data', slot.guard(proc, (live, d: Buffer) => append(live, stderrLines.write(stderrText.write(d)))))
 
   const timer = setTimeout(
     slot.guard(proc, () => {
       alog(`安装超时：${cli}`)
-      try {
-        proc.kill()
-      } catch {
-        /* 已经没了 */
-      }
-      finish('failed', `超过 ${INSTALL_TIMEOUT_MS / 60000} 分钟还没装完`)
+      requestStop(`超过 ${INSTALL_TIMEOUT_MS / 60000} 分钟还没装完`)
     }),
     INSTALL_TIMEOUT_MS
   )
 
   proc.on(
     'error',
-    slot.guard(proc, (_l, e: Error) => {
+    slot.guard(proc, (live, e: Error) => {
       clearTimeout(timer)
+      append(live, [...stdoutLines.write(stdoutText.end()), ...stdoutLines.flush(), ...stderrLines.write(stderrText.end()), ...stderrLines.flush()])
       finish('failed', String(e))
     })
   )
@@ -165,12 +176,20 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
     'close',
     slot.guard(proc, (live, code: number | null) => {
       clearTimeout(timer)
+      append(live, [...stdoutLines.write(stdoutText.end()), ...stdoutLines.flush(), ...stderrLines.write(stderrText.end()), ...stderrLines.flush()])
+      if (live.updateTimer) { clearTimeout(live.updateTimer); live.updateTimer = undefined }
+      live.exited = true
+      if (live.state.phase === 'stopping') { finish(live.stopReason ? 'failed' : 'canceled', live.stopReason || '安装已停止'); return }
       alog(`安装进程退出：${cli} code=${String(code)}`)
+      // The installer is authoritative on failure. Do not let a second probe
+      // (or an older, already-installed CLI) obscure its exit status/output.
+      const exitVerdict = installVerdict(code, true)
+      if (!exitVerdict.ok) { finish('failed', exitVerdict.error); return }
       // **退出码 0 不等于装上了**（装到不在 PATH 的地方、脚本吞了错、半路网断），
       // 所以还要查一次命令在不在。但**两条判据都要**：
       // 只看命令在不在会让「本来就装着、这次升级失败了」被报成成功
       //（2026-08-30 真机验证抓到的洞，判定逻辑抽成了 installVerdict 并有测试盯着）。
-      live.state = { ...live.state, phase: 'verifying', step: '装好了，正在核实…' }
+      live.state = { ...live.state, phase: 'verifying', step: '正在验证安装结果…' }
       push()
       // **这里要重新认一次身份**：checkAuth 是异步的，等它回来时槽位可能已经换人
       //（用户取消了这次安装又开了新的）。外层那个 guard 只保证进入 close 那一刻
@@ -180,33 +199,50 @@ export function startInstall(cli: CliId, requested: string | undefined, owner?: 
           // 判据是 st.installed（命令在不在），**不是 st.status**：
           // 状态读不到是解析层跟上游脱节，不是安装失败，
           // 别拿我们自己的问题去告诉用户「装失败了」
+          if (st.error) { finish('failed', '无法验证程序启动：' + st.error); return }
           const v = installVerdict(code, st.installed)
           if (v.ok) finish('done')
           else finish('failed', v.error)
         })
-      )
+      ).catch(slot.guard(proc, () => finish('failed', '安装验证异常，请重试或查看诊断')))
     })
   )
   push()
   return { ok: true }
 }
 
-export function cancelInstall(): void {
-  // 外部调用（用户点取消），不属于任何进程的回调 —— 用 any() 拿当前那个
+function requestStop(reason?: string): void {
   const live = slot.any()
   if (!live) return
-  alog(`用户取消安装：${live.cli}`)
+  live.stopReason = reason ?? live.stopReason
+  if (live.exited) { finish(reason ? 'failed' : 'canceled', reason || '安装已停止'); return }
+  live.state = { ...live.state, phase: 'stopping', step: '正在等待安装进程退出…' }
+  push()
   try {
-    live.proc.kill()
-  } catch {
-    /* 已经没了 */
+    if (process.platform === 'win32' && live.proc.pid) {
+      const killer = spawn('taskkill.exe', ['/PID', String(live.proc.pid), '/T', '/F'], { windowsHide: true })
+      killer.on('close', (code) => { if(code !== 0 && slot.any() === live) { live.state = {...live.state,step:'停止请求未成功，可再次停止或在运行中心查看'}; push() } })
+      killer.on('error', () => { if(slot.any() === live) { live.state = {...live.state,step:'停止请求失败，等待进程退出；请在运行中心查看'}; push() } })
+    } else if (live.proc.pid) process.kill(-live.proc.pid, 'SIGTERM')
+    else live.proc.kill()
+  } catch { live.state = {...live.state,step:'未确认进程退出，请在运行中心查看'}; push() }
+  if (!live.stopTimer && process.platform !== 'win32' && live.proc.pid) {
+    live.stopTimer = setTimeout(() => {
+      if (slot.any() !== live || live.exited) return
+      try { process.kill(-live.proc.pid!, 'SIGKILL') }
+      catch { live.state = {...live.state,step:'尚未确认退出，可再次停止或在运行中心查看'}; push() }
+    }, 5000)
   }
-  finish('failed', '你取消了安装')
+  // Keep ownership until close; don't claim that kill() means completed.
 }
+export function cancelInstall(): void { requestStop() }
 
 export function registerCliInstallHandlers(): void {
+  guardedHandle('cliAuth:installSnapshot', (_e, cli: CliId) => installSnapshot(cli))
   guardedHandle('cliAuth:startInstall', (e, cli: CliId, requested?: unknown) => startInstall(cli, typeof requested === 'string' ? requested : undefined, { windowId: e.sender.id }))
-  guardedHandle('cliAuth:cancelInstall', () => {
+  guardedHandle('cliAuth:cancelInstall', (e, cli: unknown, taskId: unknown) => {
+    const live = slot.any()
+    if (!live || !canCancelTask({cli: live.cli, taskId: live.state.taskId, windowId: live.windowId}, cli, taskId, e.sender.id)) return { ok: false }
     cancelInstall()
     return { ok: true }
   })

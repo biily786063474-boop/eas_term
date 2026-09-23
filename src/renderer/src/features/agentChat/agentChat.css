@@ -589,8 +589,11 @@
   }
 }
 
-.ac-exec-body {
+.ac-exec-body.motion-disclosure {
   margin: 1px 0 4px 17px;
+  display: grid;
+}
+.ac-exec-body .motion-disclosure-inner {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -973,7 +976,7 @@
 .ac-notice-fatal { --ac-status-accent: var(--sem-danger); }
 .ac-notice-close:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
-/* 次级信息行：用量 / 审批 hook 状态 / 压缩 / 沙箱只读展示。始终可见、弱视觉层级
+/* 次级信息行：用量 / 审批 hook 状态 / 压缩。始终可见、弱视觉层级
    （task-6-brief.md「用量...次级视觉层级」——次级指小字弱层级，不是点了才看到，
    跟 MessageList 执行区那一套语言一致，见 agentChat.css 文件头规则①）。 */
 .ac-meta-item {
@@ -1211,12 +1214,6 @@
   border-color: rgba(var(--accent-rgb), 0.5);
   color: var(--fg);
   background: rgba(var(--accent-rgb), 0.12);
-}
-.ac-bar-note {
-  font-size: 10.5px;
-  color: var(--fg-dim);
-  cursor: default;
-  border-bottom: 1px dotted var(--glass-border-strong);
 }
 /* `.ac-bar-send` 的样式在本文件下方「聊天态的发送键」那一段，只此一处。
    这里原本还有一份早期定义（整块 12 个属性 + hover + disabled），2026-08-19 删掉了：
@@ -1669,6 +1666,10 @@
   background: rgb(var(--accent-rgb));
   transform: scale(1.06);
 }
+.ac-input-send:active:not(:disabled) { background: rgb(var(--accent-rgb)); transform: scale(.96); }
+.ac-input-send:focus-visible, .ac-bar-send:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
 .ac-input-send:disabled {
   /* 空框时仍然要看得见 —— 原来用 rgba(255,255,255,.1)，在暗底上几乎消失，
      真机截图里那颗按钮整个不见了。照参考 UI：空框时是一颗淡的强调色圆。 */
@@ -1705,6 +1706,7 @@
   background: rgb(var(--accent-rgb));
   transform: scale(1.06);
 }
+.ac-bar-send:active:not(:disabled) { background: rgb(var(--accent-rgb)); transform: scale(.96); }
 .ac-bar-send:disabled {
   background: rgba(var(--accent-rgb), 0.28);
   color: var(--on-accent);
@@ -3194,7 +3196,8 @@
 @media (prefers-reduced-motion: reduce) {
   .ac-input-wrap, .ac-composer-box { animation: none; }
   .ac-input-send, .ac-bar-send, .ac-icon-button { transition: none; }
-  .ac-input-send:hover:not(:disabled), .ac-bar-send:hover:not(:disabled) { transform: none; }
+  .ac-input-send:hover:not(:disabled), .ac-bar-send:hover:not(:disabled),
+  .ac-input-send:active:not(:disabled), .ac-bar-send:active:not(:disabled) { transform: none; }
 }
 
 /* Keep primary actions on one line. The host enforces a 640px pane minimum;
@@ -3267,7 +3270,7 @@
 .ac-composer-shortcuts > button:disabled { opacity: .4; cursor: default; }
 .ac-composer-shortcuts > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .ac-chip-state { font-size: 9px; color: var(--fg-dim); white-space: nowrap; }
-.ac-send-preview { position: fixed; z-index: 9980; display: flex; flex-direction: column; box-sizing: border-box; padding: 12px; border: 1px solid var(--glass-border); border-radius: 14px; background: var(--popover-solid); color: var(--fg); box-shadow: 0 16px 48px #0004; }
+.ac-send-preview { position: fixed; z-index: 9980; display: flex; flex-direction: column; box-sizing: border-box; padding: 12px; border: 1px solid var(--glass-border); border-radius: 14px; background: var(--popover-solid); color: var(--fg); box-shadow: 0 12px 32px var(--ink-2); }
 .ac-send-preview-head { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .ac-send-preview-head button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 20px; }
 .ac-send-preview pre { white-space: pre-wrap; overflow-wrap: anywhere; min-height: 0; max-height: 240px; overflow: auto; font: inherit; line-height: 1.7; user-select: text; }
@@ -3375,3 +3378,35 @@
 .ac-image-preview::backdrop { background:rgba(0,0,0,.65); }
 .ac-image-preview > button { position:absolute; right:12px; top:8px; border:0; border-radius:6px; padding:4px 10px; background:var(--bg); color:var(--fg); cursor:pointer; }
 .ac-image-preview > img { display:block; max-width:85vw; max-height:78vh; object-fit:contain; }
+
+/* CLI onboarding: window-owned task, opaque semantic surfaces (2026-09-22). */
+.ac-setup { background: var(--s-3); color: var(--t-1); box-shadow: var(--shadow-pop); }
+.ac-setup-stage { display:flex;align-items:center;gap:8px;margin:13px 0 9px;color:var(--t-1);font-size:12px;font-weight:600; }
+.ac-setup-stage-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent); }
+.ac-setup-activity { display:grid;gap:4px;min-height:68px;padding:10px 12px;border:1px solid var(--stroke-input);border-radius:var(--radius-md);background:var(--s-1);overflow:hidden; }
+.ac-setup-activity-line { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t-2);font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.ac-setup-activity-line:last-child { color:var(--t-1); }
+.ac-setup-activity-empty { align-self:center;color:var(--t-2);font-size:12px; }
+.ac-setup-log { margin-top:10px;color:var(--t-2);font-size:11px; }
+.ac-setup-log summary { cursor:pointer; }
+.ac-setup-log .ac-setup-out { max-height:180px;overflow:auto;margin:8px 0 0; }
+.ac-install-mini {
+ position:fixed;right:24px;bottom:24px;z-index:3200;width:min(330px,calc(100vw - 32px));
+ padding:var(--pop-pad);border-radius:var(--radius-lg);background:var(--s-3);color:var(--t-1);box-shadow:var(--shadow-pop);
+}
+.ac-install-mini p {color:var(--t-2);font-size:12px;margin:8px 0 14px}
+.ac-install-mini button {border:0;border-radius:var(--radius-md);background:var(--s-1);color:var(--t-1);padding:8px 12px;cursor:pointer}
+.ac-setup select {display:block;width:100%;margin-top:8px;padding:8px;border-radius:var(--radius-md);border:1px solid var(--stroke-input);background:var(--s-1);color:var(--t-1)}
+.ac-snake-mask {z-index:3300}
+.ac-snake {width:380px;outline:none}
+.ac-snake-board {display:block;width:100%;aspect-ratio:1;background:var(--s-1);border-radius:var(--radius-md);margin:var(--pop-gap) 0}
+.ac-snake-head {fill:var(--t-1)} .ac-snake-body {fill:var(--t-2)} .ac-snake-food {fill:var(--sem-warn)}
+.ac-snake-scrim {fill:var(--s-1);opacity:.78}
+.ac-snake-board text {fill:var(--t-1);font-size:14px}
+.ac-snake-controls {justify-content:space-between;color:var(--t-2)}
+.ac-snake-controls button {min-width:90px;width:auto;flex:none;border:0;background:linear-gradient(180deg,var(--accent),color-mix(in srgb,var(--accent) 88%,#000));color:var(--on-accent)}
+.ac-snake-controls > span {white-space:nowrap}
+.ac-snake .ac-login-hint {text-align:center;margin-top:16px}
+.ac-assistant-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}
+.ac-assistant-row strong {display:block;color:var(--t-1)}
+.ac-assistant-row span {font-size:12px;color:var(--t-2)}

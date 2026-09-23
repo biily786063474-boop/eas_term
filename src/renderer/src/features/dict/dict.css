@@ -113,6 +113,7 @@
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-start;
   align-content: flex-start;
   gap: 8px;
   padding: 12px;
@@ -121,6 +122,7 @@
 /* 词条胶囊：平铺自动换行 */
 .dict-pill {
   display: inline-flex;
+  flex-grow: 0;
   align-items: center;
   gap: 7px;
   padding: 5px 12px 5px 10px;

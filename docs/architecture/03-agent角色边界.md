@@ -369,6 +369,8 @@ fsGuard.guardRuntimeStateFile 是主进程固定 userData/runtime-state.json 的
 
 ### 2026-09-14 · 安全边界四道新闸（改了会静默失效）
 - `cliAuth/installCommand.resolveInstallCommand`：安装命令只认主进程方案表；给 `startInstall` 加"直接用参数"的分支 = 重新打开渲染层 RCE。
+- `cliAuth/install.ts` 的失败顺序：子进程非 0 或被信号中断必须直接以退出码/原始脱敏尾部输出报告失败；只有退出 0 才执行 `checkAuth`。否则二次探测失败或旧版本仍存在会掩盖本次安装错误。
+- CLI 安装成功要同步 `agentChat/session.refreshCliCache` 与 renderer 的 `AgentChatView`：只有弹窗改“登录”而启动卡片继续读 60 秒旧缓存，会出现“未安装”按钮点开却要求登录。不要仅改按钮文案掩盖数据源分叉。
 - `webviewGuard` + `index.ts` 的 `will-attach-webview`：删钩子或在钩子里放行 preload = 网页节点能拿到 `window.api`。
 - **`webviewPopup.popupWebPreferences` + `index.ts` 的 `pendingWebviewPopups`（2026-09-15）**：webview 的 `window.open` 现在开成受控子窗口（OAuth 登录需要，见 10 图纸）。弹窗的 `webPreferences` **必须过 `popupWebPreferences`（= `hardenWebviewPreferences`）** —— 给它 preload 或 nodeIntegration = 远程登录页拿到 `window.api`。`pendingWebviewPopups` 只由 webview 的 handler `++`，`type==='window'` 分支消费一个就给 OAuth 策略（不装 external）；**别让主窗口的 window.open 路径去 `++` 它**，否则主窗口的意外弹窗会被误判成 OAuth 弹窗、绕过 external。
 - `wiki/rootGate`：`wiki:init`/`wiki:setPath` 绕过 `allowed()` = 渲染层可指挥主进程在任意可写位置建目录。
@@ -407,3 +409,12 @@ CanvasStage 的鼠标拖动以 frameLatest 合并绝对位置，每帧最多提�
 
 ### 2026-09-22 源码引用边界
 设计选型台 `dict:designSource` 不接受任意URL，只按既有索引slug读取固定HTTPS源，拒绝redirect/非HTML/超时/超限。源码为不可信参考文件，禁止自动执行；外部CSS/JS不递归下载，也不声称完整产品工程。落盘须经guardDir/guardPath，不写用户凭据目录。composerAddChip与composerCwd一起在空态/对话态登记和清空，异步结果不得插到其他输入框；完整源码以本地文件引用传给模型，不把数百KB正文塞进CLI位置参数。
+
+
+### CLI 安装引导边界补充（2026-09-22）
+- 安装唯一槽位与 window/taskId 取消校验不能为了 UI 方便绕过；只读快照不赋予取消他人任务的权限。
+- 安装器非零或 signal/null 退出、程序无法启动均不可报安装成功；状态读不到不等于未登录。done 只表示安装验证通过。
+- 官方 curl 管道必须启用 pipefail，不能让 `curl` 失败被空 `sh` 的 0 掩盖。安装器输出只在完整行组装后脱敏，跨 data chunk 的 token 不得进入 IPC；超长行整行省略，不截掉前缀后透传秘密尾部。实时输出有界，不能把安装器文字推断成虚构百分比。
+- 面板关闭/最小化不得杀安装；停止请求不等于停止完成，真实 close 后才释放槽位。禁止全局 taskkill/pkill。
+- 程序安装完成后必须明确点击登录，不能把“查看进度/状态”解释成启动登录；不得自动发送用户草稿。
+- 重入优先恢复活动任务，历史 done 不能覆盖当前已卸载状态。运行中心登记、命令白名单和 guardedHandle 保持不变。

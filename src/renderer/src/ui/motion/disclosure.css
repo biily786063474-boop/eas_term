@@ -1,0 +1,11 @@
+.motion-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 180ms ease, opacity 140ms ease;
+}
+.motion-disclosure[data-open='true'] { grid-template-rows: 1fr; opacity: 1; }
+.motion-disclosure-inner { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .motion-disclosure { transition: none; }
+}

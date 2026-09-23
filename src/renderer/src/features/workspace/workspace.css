@@ -2356,6 +2356,18 @@ body.dragging-row * {
   font-weight: 600;
 }
 
+.cset-tab:active:not(:disabled), .cset-btn:active:not(:disabled),
+.cset-trybtn:active:not(:disabled), .cset-close:active:not(:disabled) {
+  background: var(--lift-3); color: var(--fg);
+}
+.cset-tab:focus-visible, .cset-btn:focus-visible,
+.cset-trybtn:focus-visible, .cset-close:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cset-tab, .cset-btn, .cset-trybtn, .cset-close { transition: none; }
+}
+
 /* 内容区自己滚，标签栏不动 —— 不然滚长内容时标签会跟着跑掉 */
 .cset-pane {
   flex: 1;
@@ -3303,17 +3315,18 @@ body.dragging-row * {
 
 /* 密钥柜弹层唯一背景处理；不更改画布节点本身的透明度或数据。 */
 .vault-backdrop {
-  --vault-surface: #292a2d;
-  --vault-text: #eeeeee;
-  --vault-muted: #aaaaaa;
-  --vault-soft: #333438;
-  --vault-line: rgba(255,255,255,.10);
-  --vault-button: #e4e4e7;
-  --vault-button-text: #252528;
+  /* 和全局 --glass-3 / --popover-solid 同一冷蓝黑色相，不使用暖中性灰。 */
+  --vault-surface: #1b1e28;
+  --vault-text: #e2e4ea;
+  --vault-muted: #969aa8;
+  --vault-soft: #262a36;
+  --vault-line: rgba(255,255,255,.075);
+  --vault-button: #e2e4ea;
+  --vault-button-text: #171a23;
   position: fixed;
   inset: 0;
   z-index: 3000;
-  background: rgba(8,9,11,.48);
+  background: rgba(6,7,10,.5);
   backdrop-filter: blur(4px) saturate(.6);
 }
 [data-theme="light"] .vault-backdrop {
@@ -3335,17 +3348,16 @@ body.dragging-row * {
 .vault-emblem { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--vault-line); background: var(--vault-soft); border-radius: 12px; margin-bottom: 22px; }
 .vault-gate h2 { margin: 0 0 10px; font-size: 23px; font-weight: 600; letter-spacing: -.7px; line-height: 1.4; }
 .vault-lead { margin: 0; font-size: 13px; color: var(--vault-muted); line-height: 1.75; }
-.vault-intro { display: grid; gap: 13px; margin: 23px 0; padding: 15px 17px; border-radius: 10px; background: var(--vault-soft); font-size: 12px; line-height: 1.6; }
-.vault-intro small { display: block; font-size: 11px; color: var(--vault-muted); margin-top: 2px; }
-.vault-code-label { display: block; font-size: 12px; font-weight: 500; margin: 23px 0 11px; }
+.vault-code-label { display: block; font-size: 12px; font-weight: 500; margin: 27px 0 11px; }
 .vault-code-field { position: relative; border-radius: 8px; }
 .vault-digit-row { display: flex; gap: 9px; }
 .vault-digit-row span { display: grid; place-items: center; flex: 1; height: 49px; border: 1px solid var(--vault-line); border-radius: 8px; background: var(--vault-soft); font-size: 20px; }
 .vault-code-field input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: text; }
 .vault-code-field:focus-within { outline: 2px solid var(--vault-muted); outline-offset: 4px; }
-.vault-caption, .vault-footnote { font-size: 11px; color: var(--vault-muted); line-height: 1.7; margin: 11px 0 20px; }
-.vault-footnote { text-align: center; margin: 15px 0 0; }
-.vault-primary { width: 100%; height: 42px; border: 0; border-radius: 9px; background: var(--vault-button); color: var(--vault-button-text); font-size: 13px; font-weight: 500; cursor: pointer; }
+.vault-primary { width: 100%; height: 42px; margin-top: 25px; border: 0; border-radius: 9px; background: var(--vault-button); color: var(--vault-button-text); font-size: 13px; font-weight: 500; cursor: pointer; }
+.vault-help { display: block; width: max-content; margin: 17px auto 0; color: var(--vault-muted); font-size: 11px; line-height: 1.7; cursor: help; }
+.vault-help:hover { color: var(--vault-text); }
+.vault-help:focus-visible { outline: 2px solid var(--vault-muted); outline-offset: 3px; border-radius: 3px; }
 .vault-primary:hover:not(:disabled) { opacity: .86; }
 .vault-primary:disabled { opacity: .42; cursor: default; }
 .vault-secondary { display: block; width: 100%; margin-top: 14px; border: 0; background: transparent; color: var(--vault-muted); font-size: 12px; cursor: pointer; }

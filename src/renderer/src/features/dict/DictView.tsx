@@ -12,6 +12,7 @@ import { DictHookBar } from './DictHookBar'
 import bundle from './dictionary-bundle.json'
 import './dict.css'
 import { DesignPicker } from './DesignPicker'
+import { rowLetterSpacing } from './rowLetterSpacing'
 
 // 专业名词词典：词条以胶囊平铺，hover 弹浮层看 SVG 图 + 实现逻辑，
 // 点击把「实现逻辑」文本插入到最近活动终端的命令行光标处（不带回车，不执行）。
@@ -155,6 +156,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
   const popRef = useRef<HTMLDivElement>(null)
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   // 用户自建词条：运行时从 ~/.eas/dict-user.json 读，和编译进包的 242 条合并。
   // 词典 bundle 是 Vite 静态 import（编译期定死），不做这一步的话补全多少词都看不见。
@@ -239,6 +241,45 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
       [t.cat1, t.cat2].filter(Boolean).join(' ') || CATS[t.category]
     )
   }, [query, cat, cat2, blocks, onlyUser, allTerms])
+
+  // 气泡间距始终 8px；只有完整行把剩余宽度均摊到中文字距。
+  // 先清除旧字距再测量，避免筛选/面板缩放后在旧布局基础上累积误差。
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    let frame = 0
+    const align = (): void => {
+      const pills = [...list.querySelectorAll<HTMLButtonElement>('.dict-pill')]
+      const labels = pills.map((pill) => pill.querySelector<HTMLElement>('.dict-pill-zh'))
+      labels.forEach((label) => { if (label) label.style.letterSpacing = '' })
+      const rows: { width: number; chars: number }[][] = []
+      const rowLabels: (HTMLElement | null)[][] = []
+      let previousTop = Number.NaN
+      pills.forEach((pill, index) => {
+        // offset 尺寸与 clientWidth 同为未缩放 CSS 像素；getBoundingClientRect
+        // 会受画布 zoom/transform 影响，混用会把字距算大导致换行。
+        const top = pill.offsetTop
+        if (Math.abs(top - previousTop) > 1 || rows.length === 0) {
+          rows.push([])
+          rowLabels.push([])
+          previousTop = top
+        }
+        rows[rows.length - 1].push({ width: pill.offsetWidth, chars: [...(labels[index]?.textContent ?? '')].length })
+        rowLabels[rowLabels.length - 1].push(labels[index])
+      })
+      const style = getComputedStyle(list)
+      const width = list.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      const gap = parseFloat(style.columnGap) || 0
+      rowLetterSpacing(rows, width, gap).forEach((spacing, index) => {
+        rowLabels[index].forEach((label) => { if (label) label.style.letterSpacing = `${Math.max(0, spacing - 0.05)}px` })
+      })
+    }
+    const schedule = (): void => { cancelAnimationFrame(frame); frame = requestAnimationFrame(align) }
+    schedule()
+    const observer = new ResizeObserver(schedule)
+    observer.observe(list)
+    return () => { cancelAnimationFrame(frame); observer.disconnect() }
+  }, [filtered, view])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   //
@@ -351,7 +392,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
         {!embedded && (
           <>
             <DictIcon size={13} />
-            <span className="dict-title">辞典</span>
+            <span className="dict-title">创作参考</span>
           </>
         )}
         <span className="dict-count">
@@ -499,7 +540,7 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
 
       <DictHookBar />
 
-      <div className="dict-list" onMouseLeave={() => setHover(null)}>
+      <div className="dict-list" ref={listRef} onMouseLeave={() => setHover(null)}>
         {filtered.length === 0 && <div className="git-empty">没有匹配的词条</div>}
         {filtered.map(({ item: term, hit, excerpt }) => (
           <button

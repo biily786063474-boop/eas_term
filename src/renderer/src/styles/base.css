@@ -132,7 +132,7 @@
   --stroke-input: rgba(255, 255, 255, 0.14);
   --stroke-input-focus: rgba(var(--accent-rgb), 0.55);
   /* 浮层投影：暗色几乎不需要（靠明度差已经分开了），亮色才是主力 */
-  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.22);
 
   /* ── 「压一层」的叠色（wash）─────────────────────────────────────────────
      暗色主题里到处在用 `background: rgba(0,0,0,.4)` 表达「比周围沉一点」。
@@ -153,11 +153,11 @@
      用户 2026-09-02 看着亮色截图说：「投影太重了 太脏了。」
 
      所以投影的**颜色**也要跟着主题走。三档对应原来的三个黑度区间；
-     **暗色这三档与原值几乎一致**（改动只为归一，不改观感），
-     亮色则整体降到 1/6 上下 —— 白底上投影是用来「托一下」，不是画一圈边。 */
-  --ink-1: rgba(0, 0, 0, 0.28);
-  --ink-2: rgba(0, 0, 0, 0.42);
-  --ink-3: rgba(0, 0, 0, 0.55);
+     暗色也只轻托起，不用浓黑轮廓；亮色保持更浅。
+     阴影负责提示浮起，层级主体仍靠 surface 明度表达。 */
+  --ink-1: rgba(0, 0, 0, 0.10);
+  --ink-2: rgba(0, 0, 0, 0.17);
+  --ink-3: rgba(0, 0, 0, 0.24);
 
   /* ── 「提一层」的叠色（lift）—— wash 的镜像 ───────────────────────────────
      暗色主题里 211 处用 `background: rgba(255,255,255,x)` 表达「比周围浮一点」。
@@ -292,15 +292,15 @@
   --t-2: #5d5d5d;
   --t-3: #737373;
   --stroke-input: rgba(0, 0, 0, 0.16);
-  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.09);
   /* 亮色下「沉一档」= 压出浅灰，不是加黑 */
   --wash-1: rgba(0, 0, 0, 0.035);
   --wash-2: rgba(0, 0, 0, 0.055);
   --wash-3: rgba(0, 0, 0, 0.08);
   /* 白底上的投影：**托一下就够**，重了就是脏 */
-  --ink-1: rgba(0, 0, 0, 0.04);
-  --ink-2: rgba(0, 0, 0, 0.07);
-  --ink-3: rgba(0, 0, 0, 0.10);
+  --ink-1: rgba(0, 0, 0, 0.03);
+  --ink-2: rgba(0, 0, 0, 0.05);
+  --ink-3: rgba(0, 0, 0, 0.07);
   /* 白底上「浮一档」只能靠比底沉一点点 —— 加白是看不见的 */
   --lift-1: rgba(0, 0, 0, 0.028);
   --lift-2: rgba(0, 0, 0, 0.05);
@@ -387,15 +387,26 @@
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 22px var(--ink-3);
   pointer-events: none;
-  animation: app-tooltip-in 0.11s ease;
+  /* translate 是独立属性，不覆盖上方气泡用的定位 transform。 */
+  animation: app-tooltip-in 200ms ease-out both;
 }
 .app-tooltip.above {
   transform: translate(-50%, -100%);
 }
+.app-tooltip.leaving {
+  animation: app-tooltip-out 200ms ease-in both;
+}
 @keyframes app-tooltip-in {
-  from {
-    opacity: 0;
-  }
+  from { opacity: 0; translate: 0 4px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes app-tooltip-out {
+  from { opacity: 1; translate: 0 0; }
+  to { opacity: 0; translate: 0 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-tooltip,
+  .app-tooltip.leaving { animation: none; }
 }
 
 * {
@@ -1051,6 +1062,35 @@ body {
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-highlight), 0 16px 48px var(--ink-3);
+  /* 外壳只淡入，不移动：独立定位的沿边滚动条必须始终与菜单对齐。 */
+  animation: cctx-enter 150ms ease-out both;
+}
+
+.canvas-ctxmenu > .cctx-item,
+.canvas-ctxmenu > .cctx-head,
+.canvas-ctxmenu > .cctx-none,
+.canvas-ctxmenu > .cctx-sep {
+  animation: cctx-content-enter 150ms ease-out both;
+}
+
+@keyframes cctx-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cctx-content-enter {
+  from { opacity: 0.7; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-ctxmenu,
+  .canvas-ctxmenu > .cctx-item,
+  .canvas-ctxmenu > .cctx-head,
+  .canvas-ctxmenu > .cctx-none,
+  .canvas-ctxmenu > .cctx-sep {
+    animation: none;
+  }
 }
 
 .cctx-item {

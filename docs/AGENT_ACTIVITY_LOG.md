@@ -366,7 +366,15 @@ fetch确认origin/main=eda14a4，插件分支已包含该主线，无新增合�
 ## 2026-09-22 0.4.105 发布完成
 产品 ade2fe5，发布tag cb3fac5。官网与 GitHub 2026-09-22T13:54:28Z 已公开/latest，Mac ARM/Intel 的 DMG/ZIP 和 Windows EXE 共五包，size/SHA256 与本地一致。卡片等高修复已包含，3498测试通过、18跳过、0失败；双Mac公证/归档核验，ARM/Rosetta真实市场UI及x64原生PTY、Windows CI35732994971通过。正式用户应用未替换，隔离测试实例已退出；非实体Intel验收。生产8站/5PM2前后无变化，未重启/删旧包。Computer Use指针生命周期仍未解决，32插件并非全部真实账号验收。完整证据 docs/verification/releases/0.4.105/。
 
+## 2026-09-22 Computer Use 生命周期核查
+0.4.105之后用户要求收尾。发现官方26.903.61454已声明turn_ended内部hook且legacy notify已配置；公开API仍无可安全调用的native会话释放契约。核实外部服务由ChatGPT持有并有多客户端，未杀进程/改用户配置/缓存。仅更新证据与边界，残留未修复，分发验收未勾选。详见docs/verification/releases/computer-use-lifecycle.md与memory/computer-use-lifecycle-2026-09-22.md。
+
 ## 2026-09-22 设计分类吸顶与引用源码
 实现并在隔离构建应用实测：分类/明暗吸顶，引用完整原HTML到项目文件，输入框@源码及局部参考发送预览。完整源码hash匹配；未自动发送模型、未替换用户应用。check3502通过18跳过0失败，追加2项接线测试通过。见docs/verification/design-source；未发版，Computer Use残留继续搁置。
 
 - 2026-09-22：完成设计选型台「引用提示词」二级选择与直接引用。真实验收发现并修复 portal 外部关闭、范围切换旧 chip 去重两处问题，最终完整→配色→完整正文核验通过；typecheck/build/check 成功（3507 pass /18 skip）。证据 docs/verification/design-source/。未提交/未发版。
+
+## 2026-09-22 CLI onboarding 计划与落地
+窗口级设置宿主、任务快照/归属取消、重入入口、明确登录、失败反馈、独立小游戏已实施。typecheck/build 通过；npm test 3514 pass / 18 skip / 0 fail。生产组件模拟 IPC 隔离验收通过；真实新用户跨平台安装/账号授权未验证。未提交/合并/发布；Computer Use 原有脏改动不属于本任务。交接见 memory/agent_cli-onboarding-2026-09-22.md。
+
+- 2026-09-22 20:54：修安装后启动卡片仍显示“未安装”的缓存分叉；主进程成功时失效 `listClis` 缓存，渲染层收到 done 后重探测登录态。`npm run check` 3523 pass /18 skip，构建与隔离应用启动通过；新待验包已公证，Tart 客体尚未换装，详见 memory/agent_cli-onboarding-2026-09-22.md。

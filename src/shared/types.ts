@@ -1114,16 +1114,19 @@ export interface LoginState {
 
 export interface InstallState {
   cli: 'claude' | 'codex'
-  /** running=装着；verifying=装完在核实命令真的在了；done=能用了；failed=没成 */
-  phase: 'running' | 'verifying' | 'done' | 'failed'
+  /** running=装着；verifying=装完在核实命令真的在了；done=安装验证通过（不代表登录）；failed=没成 */
+  phase: 'running' | 'verifying' | 'done' | 'failed' | 'stopping' | 'canceled'
   /** 安装器自己最后打出来的那句话。**原样透传** ——
    *  不编百分比：curl|bash 和 npm 都不给可解析的进度，凑一个数字是在骗人 */
   step?: string
   error?: string
-  /** **失败时才有**：输出尾部。
-   *  这是终端那条路唯一不可替代的地方（公司网络 / 代理 / 权限失败时，
-   *  一句「安装失败」什么忙也帮不上），换成进度条必须把它补回来。 */
+  /** 已脱敏、去控制序列的安装器输出尾部；安装中供实时活动与展开详情使用，
+   *  失败时保留最近 40 行。不能把这里的文字当作可信百分比。 */
   output?: string[]
+  startedAt?: number
+  updatedAt?: number
+  taskId?: number
+
 }
 
 /** GPU 加速有没有生效。**排障用** —— Windows 上退回软件合成时，

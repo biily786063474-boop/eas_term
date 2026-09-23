@@ -3,6 +3,7 @@
 //
 // 这一层看着琐碎，但它决定了进度条上那行字是「正在下载 claude-code…」
 // 还是一串控制字符残影。
+import { redact } from './redact.ts'
 
 /** 终端控制序列。**不只是颜色** —— 安装器还会发光标移动、清行（\[2K）、
  *  隐藏光标（\[?25l）这些，只挡 `[0-9;]*m` 会把它们原样显示出来 */
@@ -33,6 +34,56 @@ export function outLines(s: string): string[] {
     .filter(Boolean)
 }
 
+/** 只发布完整行：凭证可能被拆在两个 data chunk 中，逐 chunk 脱敏会泄漏。 */
+export function createInstallOutput(limit = 80): {
+  write(chunk: string): string[]
+  flush(): string[]
+  lines(): string[]
+} {
+  let pending = ''
+  let discarding = false
+  const history: string[] = []
+  const add = (raw: string): string[] => {
+    const line = discarding || raw.length > 4096
+      ? '安装器输出过长，已省略'
+      : redact(raw.replace(ANSI, '').replace(/\x08/g, '').trim()).slice(0, 240)
+    discarding = false
+    if (!line) return []
+    history.push(line)
+    if (history.length > limit) history.splice(0, history.length - limit)
+    return [line]
+  }
+  return {
+    write(chunk) {
+      pending += chunk
+      const emitted: string[] = []
+      let boundary = pending.search(/[\r\n]/)
+      while (boundary >= 0) {
+        const raw = pending.slice(0, boundary)
+        const delimiter = pending[boundary]
+        pending = pending.slice(boundary + 1)
+        if (delimiter === '\r' && pending.startsWith('\n')) pending = pending.slice(1)
+        emitted.push(...add(raw))
+        boundary = pending.search(/[\r\n]/)
+      }
+      // A broken installer must not retain unbounded data without a newline.
+      if (pending.length > 4096) { pending = ''; discarding = true }
+      return emitted
+    },
+    flush() { const remaining = add(pending); pending = ''; return remaining },
+    lines() { return [...history] }
+  }
+}
+
+/** 官方命令仍原样执行；pipefail 让 curl 失败不会被右侧空 shell 的 0 掩盖。 */
+export function shellForInstall(cmd: string, platform: string): { file: string; args: string[] } {
+  if (platform === 'win32') return { file: 'powershell.exe', args: ['-NoProfile', '-Command', cmd] }
+  if (/^curl -fsSL https:\/\/(?:claude\.ai|chatgpt\.com)\/[^\s]+ \| (?:bash|sh)$/.test(cmd)) {
+    return { file: '/bin/bash', args: ['-o', 'pipefail', '-c', cmd] }
+  }
+  return { file: '/bin/sh', args: ['-c', cmd] }
+}
+
 /** 安装到底成没成。**纯函数，因为这里错过一次**（2026-08-30 真机验证抓到）。
  *
  *  第一版写成「只看命令在不在」，理由是「退出码 0 不等于装上了」——
@@ -49,7 +100,8 @@ export function installVerdict(
   code: number | null,
   installed: boolean
 ): { ok: true } | { ok: false; error: string } {
-  if (code !== 0 && code !== null) {
+  if (code === null) return { ok: false, error: '安装进程被中断，未确认安装完成' }
+  if (code !== 0) {
     return { ok: false, error: `安装没成功（退出码 ${String(code)}），下面是安装器的输出` }
   }
   if (!installed) {

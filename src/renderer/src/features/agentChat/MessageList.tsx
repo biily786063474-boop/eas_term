@@ -30,6 +30,7 @@ import { CanvasContextMenu } from '../../ui/CanvasContextMenu'
 import { renderMarkdown, bindCodeCopy } from '../editor/markdown'
 import { useLinkify } from './useLinkify.ts'
 import { ThinkingOrb } from './ThinkingOrb'
+import { MotionDisclosure } from '../../ui/motion/MotionDisclosure'
 import '../editor/editor.css'
 
 export function MessageList({
@@ -450,12 +451,16 @@ function MessageTurn({
 function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; pluginId?: string }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
   const detailId = useId()
+  const headRef = useRef<HTMLButtonElement>(null)
   const hasDetails = !!(item.detail || item.output)
   return (
     <div className={`ac-exec-row ac-exec-${item.state}`}>
-      <button type="button" className="ac-exec-row-head" disabled={!hasDetails}
-        aria-expanded={hasDetails ? expanded : undefined} aria-controls={hasDetails ? detailId : undefined}
-        onClick={() => setExpanded(v => !v)}>
+      <button ref={headRef} type="button" className="ac-exec-row-head" disabled={!hasDetails}
+        aria-expanded={hasDetails ? expanded : undefined} aria-controls={hasDetails && expanded ? detailId : undefined}
+        onClick={() => {
+          if (expanded && document.getElementById(detailId)?.contains(document.activeElement)) headRef.current?.focus()
+          setExpanded(v => !v)
+        }}>
         <SemanticIcon kind={item.kind ?? 'generic'} size={16} />
         <span className="ac-dot" aria-hidden="true" />
         <span className="ac-exec-label">{item.tool ? [item.tool.server, item.tool.name].filter(Boolean).join(' / ') : item.label}</span>
@@ -465,12 +470,10 @@ function ExecRow({ item, leafId, pluginId }: { item: ExecItem; leafId?: string; 
       {!!item.resources?.length && <div className="ac-resource-links">
         {item.resources.map((resource) => <ResourceLink key={resource.uri} resource={resource} leafId={leafId} pluginId={pluginId} />)}
       </div>}
-      {expanded && (item.detail || item.output) && (
-        <div className="ac-exec-body" id={detailId}>
+      {hasDetails && <MotionDisclosure open={expanded} id={detailId} className="ac-exec-body">{() => <>
           {item.detail && <pre className="ac-exec-pre">{prettyJson(item.detail)}</pre>}
           {item.output && <pre className="ac-exec-pre">{prettyJson(item.output)}</pre>}
-        </div>
-      )}
+        </>}</MotionDisclosure>}
     </div>
   )
 }

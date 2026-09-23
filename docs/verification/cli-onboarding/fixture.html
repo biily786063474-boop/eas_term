@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'"><title>CLI 设置 · 隔离组件验收（模拟 IPC）</title></head><body><div id="root"></div><script>
+const listeners=new Set(),snapshots={};window.fixture={starts:0,logins:0,done:0,installed:false};
+window.emitInstall=s=>{snapshots[s.cli]=s;for(const fn of listeners)fn(s)};
+window.api={platform:'darwin',cliAuth:{
+installSnapshot:async id=>snapshots[id]||null,onInstall:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},
+startInstall:async cli=>{fixture.starts++;emitInstall({cli,phase:'running',step:'隔离验收：正在下载',startedAt:Date.now(),updatedAt:Date.now()});return {ok:true}},
+cancelInstall:async cli=>{emitInstall({cli,phase:'stopping',step:'等待退出'});return {ok:true}},
+check:async cli=>({cli,installed:fixture.installed,status:{loggedIn:false}}),
+onLogin:()=>()=>{},startLogin:async()=>{fixture.logins++;return {ok:true}},cancelLogin:async()=>({ok:true})
+},skill:{installPlan:async()=>({platform:'darwin',claude:{name:'Claude Code',options:[{via:'模拟官方安装',cmd:'DEMO-ONLY'}]},codex:{name:'Codex',options:[{via:'模拟官方安装',cmd:'DEMO-ONLY'}]}})},clipboard:{writeText:async()=>{}},shell:{openExternal:async()=>{throw Error('No external browser during fixture')}}};
+</script><script type="module" src="./fixture.tsx"></script></body></html>
