@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 import {parseTaskArgs,runCodexTaskBridge} from './codex-task-bridge.mjs'
+import {codexTaskFailure,codexTaskFailureKind} from './codex-task-error.mjs'
 import { resolveCliInvocation, cliInvocationEnv } from './cli-entry.mjs'
 import { readAndMergeCodexConfig } from './codex-capability-config.mjs'
 
@@ -93,9 +94,10 @@ try {
       try {
         await runCodexTaskBridge({proc: child, ...task, cwd: process.cwd(), signal: abort.signal, emit: event => process.stdout.write(JSON.stringify(event) + '\n')})
         code = 0
-      } catch {
+      } catch (error) {
         code = terminating ? 130 : 1
-        if (!terminating) process.stdout.write(JSON.stringify({type:'turn.failed',error:{message:'Codex 原生任务连接中断或协议不兼容；未自动重试，请检查 CLI 版本及连接。'}}) + '\n')
+        if (!terminating) process.stderr.write('[eas-codex-task] failure=' + codexTaskFailureKind(error) + '\n')
+        if (!terminating) process.stdout.write(JSON.stringify({type:'turn.failed',error:{message:codexTaskFailure(error)}}) + '\n')
       } finally {
         stop('SIGTERM')
         await exited
