@@ -1,3 +1,4 @@
+import { StartOptions } from './features/canvas/FrameStart'
 import { useBackgroundVisuals } from './ui/motion/useBackgroundVisuals'
 import { useEffect, useState } from 'react'
 
@@ -425,15 +426,15 @@ export function App(): JSX.Element {
             {viewMode === 'split' && !hasVisibleTab && (
               <div className="empty-state">
                 <div className="empty-card">
-                  <div className="empty-title">没有打开的终端</div>
+
                   {projects.length === 0 ? (
                     <button className="primary-btn" onClick={() => void addProject()}>
                       添加项目文件夹
                     </button>
                   ) : (
-                    <button className="primary-btn" onClick={() => void openTerminal({})}>
-                      在 {activeProject?.name ?? '主目录'} 打开终端
-                    </button>
+                    <StartOptions title="选择开始方式" terminalLabel="先创建一个终端"
+                      onStart={(cli) => useStore.getState().openAgentPane({ cli })}
+                      onTerminal={() => openTerminal({})} />
                   )}
                   <div className="empty-hint">
                     <span>⌘T 新建终端 · ⌘D 分屏 · ⌘W 关闭面板</span>

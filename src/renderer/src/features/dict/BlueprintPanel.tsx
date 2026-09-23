@@ -10,11 +10,10 @@
 // 于是加词条零维护。代价：某个区块标签打错会在所有蓝图里同时错 ——
 // 所以打标质量比蓝图本身更要紧（见 `docs/词典区块打标-脚本.mjs`）。
 //
-// ── 刻意不做的：真实渲染的原型图 ────────────────────────────────────────
-// 需求原话是「主要是去展现页面的关系」。竖排方块 ＋ 顺序 ＋ 一句说明就够了。
-// 画成像素级的原型图是另一个量级的活，而且会立刻和真实产品脱节。
-
-import type { JSX } from 'react'
+// 2026-09-23：SVG 展示区块位置，词条仍按 slots + blocks 匹配。
+import { useState, type JSX } from 'react'
+import { BlueprintDiagram } from './BlueprintDiagram'
+import { blueprintRegions } from './blueprintGeometry'
 
 interface Slot {
   block: string
@@ -56,6 +55,7 @@ export function BlueprintPanel<T extends Term>({
   onLeave,
   onPick
 }: Props<T>): JSX.Element {
+  const [inspected, setInspected] = useState<string | null>(null)
   const cur = blueprints.find((b) => b.id === bpId) ?? null
 
   // ── 选蓝图 ────────────────────────────────────────────────────────────
@@ -75,8 +75,10 @@ export function BlueprintPanel<T extends Term>({
                   onClick={() => {
                     setBpId(b.id)
                     setOpenSlot(null)
+                    setInspected(null)
                   }}
                 >
+                  <BlueprintDiagram blueprint={b} preview />
                   <span className="bp-card-n">{b.name}</span>
                   <span className="bp-card-i">{b.intent}</span>
                   <span className="bp-card-s">{b.slots.length} 块</span>
@@ -87,6 +89,10 @@ export function BlueprintPanel<T extends Term>({
       </div>
     )
   }
+
+  const regions = blueprintRegions(cur)
+  const active = inspected ?? openSlot ?? cur.slots[0]?.block
+  const region = regions.find(r => r.block === active)
 
   // ── 看一张蓝图 ────────────────────────────────────────────────────────
   return (
@@ -99,6 +105,13 @@ export function BlueprintPanel<T extends Term>({
         <span className="bp-head-p">{cur.platform}端</span>
       </div>
       <div className="bp-intent">{cur.intent}</div>
+      <div className="bp-visual">
+        <div className="bp-location" aria-live="polite"><strong>{region?.block}</strong><span>{region?.location}</span>
+          <small>{cur.slots.find(s => s.block === active)?.note}</small></div>
+        <BlueprintDiagram blueprint={cur} active={active} onInspect={setInspected}
+          onSelect={block => setOpenSlot(openSlot === block ? null : block)} />
+        <p className="bp-legend">位置示意 · 悬停或聚焦查看位置，点击展开相关词条。弹层与空状态按需出现。</p>
+      </div>
 
       {/* 竖排的区块 = 页面从上到下的顺序。**这就是「页面的关系」那句话的落点** */}
       <div className="bp-stack">
@@ -109,6 +122,8 @@ export function BlueprintPanel<T extends Term>({
             <div key={s.block} className={`bp-slot${open ? ' open' : ''}`}>
               <button
                 className="bp-slot-hd"
+                onMouseEnter={() => setInspected(s.block)} onMouseLeave={() => setInspected(null)}
+                onFocus={() => setInspected(s.block)} onBlur={() => setInspected(null)}
                 aria-expanded={open}
                 onClick={() => setOpenSlot(open ? null : s.block)}
               >

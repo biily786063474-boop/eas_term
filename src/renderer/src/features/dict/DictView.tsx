@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../store'
-import { DICT_BLOCKS } from '../../../../shared/dictBlocks'
 import bp from './blueprints.json'
 import { BlueprintPanel } from './BlueprintPanel'
 import { searchTerms } from './search.ts'
@@ -135,11 +134,6 @@ function ClipVideo({ src }: { src: string }): JSX.Element {
 export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean; onDesignViewChange?: (active: boolean) => void } = {}): JSX.Element {
   const [query, setQuery] = useState('')
   const [cat, setCat] = useState<string>('all')
-  /** 选中的二级。**跟着一级走** —— 换一级时必须清掉，否则会筛出空列表
-   *  （二级名不跨一级重复，但「材质›玻璃与模糊」在「运动规律」下一条都没有） */
-  const [cat2, setCat2] = useState<string | null>(null)
-  /** 选中的区块（多选）。**空 = 不筛**，不是「筛出没有区块的」 */
-  const [blocks, setBlocks] = useState<string[]>([])
   /** 视图：词条列表 or 原型图预设 */
   const [view, setView] = useState<'terms' | 'blueprint' | 'design'>('terms')
   useEffect(() => { onDesignViewChange?.(view === 'design') }, [view, onDesignViewChange])
@@ -199,8 +193,6 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
   const allTerms = useMemo(() => [...dict.terms, ...userTerms], [userTerms])
   /** 有没有还没归类的词条 —— 没有就不摆那个筛子出来 */
   const hasUnsorted = useMemo(() => allTerms.some((t) => !t.cat1), [allTerms])
-  /** 当前一级下的二级清单。「全部」和「未分类」没有二级 */
-  const subCats = cat === 'all' || cat === UNSORTED ? [] : (TAX[cat] ?? [])
 
   // 选中的那个 chip 滚进视野。
   //
@@ -211,14 +203,12 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
   // **手动算 scrollLeft，不用 scrollIntoView**：那个会把能滚的祖先一起滚，
   // 面板是浮在画布上的，一路滚上去会把画布也带偏。
   const catsRef = useRef<HTMLDivElement>(null)
-  const subsRef = useRef<HTMLDivElement>(null)
   const center = (box: HTMLDivElement | null): void => {
     const el = box?.querySelector<HTMLElement>('.dict-chip.active')
     if (!el || !box) return
     box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' })
   }
   useEffect(() => center(catsRef.current), [cat])
-  useEffect(() => center(subsRef.current), [cat2, cat])
 
   // 分类/自建这两个筛子先过一遍（它们是「只看这一堆」，不参与打分），
   // 剩下的交给 searchTerms 按字段加权排序：名字 > 英文 > 关键词 > 分类 > 提示词 > 解释。
@@ -228,17 +218,13 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
     const base = allTerms.filter((t) => {
       if (onlyUser && !t.user) return false
       if (cat !== 'all' && (t.cat1 ?? UNSORTED) !== cat) return false
-      if (cat2 && t.cat2 !== cat2) return false
-      // **多选是「或」不是「与」。** 选了卡片＋弹层，要的是「这两块能用上的手法」
-      // 的并集；取交集的话结果几乎总是空的（同时属于两个区块的本来就少）。
-      if (blocks.length && !blocks.some((b) => t.blocks?.includes(b))) return false
       return true
     })
     // 分类名也参与搜索：打「玻璃」既能命中词条名，也能把整个「玻璃与模糊」捞出来
     return searchTerms(base, query, (t) =>
       [t.cat1, t.cat2].filter(Boolean).join(' ') || CATS[t.category]
     )
-  }, [query, cat, cat2, blocks, onlyUser, allTerms])
+  }, [query, cat, onlyUser, allTerms])
 
   // 浮层出现后测量真实尺寸，把它 clamp 进视口——超出软件边缘就贴边向内移，绝不截断。
   //
@@ -407,7 +393,6 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
           className={`dict-chip${cat === 'all' ? ' active' : ''}`}
           onClick={() => {
             setCat('all')
-            setCat2(null)
           }}
         >
           全部
@@ -419,7 +404,6 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
             onClick={() => {
               // 再点一次已选中的 → 退回全部。没有这条的话选错了得先找到「全部」
               setCat(cat === k ? 'all' : k)
-              setCat2(null)
             }}
           >
             {k}
@@ -431,7 +415,6 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
             data-tip="还没归类的词条（自建的都在这儿）"
             onClick={() => {
               setCat(cat === UNSORTED ? 'all' : UNSORTED)
-              setCat2(null)
             }}
           >
             {UNSORTED}
@@ -448,54 +431,6 @@ export function DictView({ embedded, onDesignViewChange }: { embedded?: boolean;
           </button>
         )}
       </div>
-
-      {/* 区块：**横切在分类之上的一维筛子**，跟选没选一级无关。
-          放在二级上面是因为它常用 —— 「我在做弹层」比「我在找某个具体手法」先发生。
-          每个 chip 后面带条数：0 条的格子（表格 / 页脚）如实显示 0 而不是藏起来，
-          藏起来的话用户不知道那是「没有」还是「不支持」。 */}
-      {/* **当前一级里一条带区块的词条都没有时，整排收起来。**
-          「后端 · 服务」就是这种情况 —— 区块是页面上的位置，后端没有页面。
-          留着的话每个 chip 点下去都是 0 条，像坏的。
-          判据用数据不用写死分类名，以后再加别的非页面类目也不用改这里。 */}
-      {allTerms.some((t) => (t.cat1 ?? UNSORTED) === cat || cat === 'all' ? t.blocks?.length : false) && (
-      <div className="dict-cats dict-cats-blk">
-        {DICT_BLOCKS.map((b) => {
-          const n = allTerms.filter((t) => t.blocks?.includes(b)).length
-          const on = blocks.includes(b)
-          return (
-            <button
-              key={b}
-              className={`dict-chip blk${on ? ' active' : ''}${n === 0 ? ' empty' : ''}`}
-              data-tip={n === 0 ? `还没有归到「${b}」的词条` : `${n} 条能用在${b}`}
-              onClick={() => setBlocks((v) => (on ? v.filter((x) => x !== b) : [...v, b]))}
-            >
-              {b} <span className="dict-chip-n">{n}</span>
-            </button>
-          )
-        })}
-        {blocks.length > 0 && (
-          <button className="dict-chip clear" onClick={() => setBlocks([])}>
-            清除
-          </button>
-        )}
-      </div>
-      )}
-
-      {/* 二级：只在选了一级之后出现。没选一级时摆 48 个二级出来等于没分类 */}
-      {subCats.length > 0 && (
-        <div className="dict-cats dict-cats-2" ref={subsRef}>
-          {subCats.map((sc) => (
-            <button
-              key={sc.name}
-              className={`dict-chip sub${cat2 === sc.name ? ' active' : ''}`}
-              data-tip={sc.desc || undefined}
-              onClick={() => setCat2(cat2 === sc.name ? null : sc.name)}
-            >
-              {sc.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       <DictHookBar />
 
