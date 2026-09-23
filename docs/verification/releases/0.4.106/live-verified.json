@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "url": "https://eas.biily.top/index.html",
+      "hashMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download.html",
+      "hashMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/changelog.html",
+      "hashMatch": true
+    },
+    {
+      "latest": "0.4.106",
+      "hashMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.106/Eas-Term-0.4.106-arm64.dmg",
+      "size": 220914298,
+      "rangeMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.106/Eas-Term-0.4.106-arm64.zip",
+      "size": 219091942,
+      "rangeMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.106/Eas-Term-0.4.106-x64.dmg",
+      "size": 232957969,
+      "rangeMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.106/Eas-Term-0.4.106-x64.zip",
+      "size": 231190367,
+      "rangeMatch": true
+    },
+    {
+      "url": "https://eas.biily.top/download/v0.4.106/Eas-Term-0.4.106-x64-setup.exe",
+      "size": 199483575,
+      "rangeMatch": true
+    }
+  ]
+}

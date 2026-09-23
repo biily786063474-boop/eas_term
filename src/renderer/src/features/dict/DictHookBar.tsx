@@ -28,6 +28,7 @@ export function DictHookBar(): JSX.Element | null {
   const [msg, setMsg] = useState('')
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === '1')
   const [expanded, setExpanded] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
   // 点了「开启」之后先摊开会发生什么再问一次。它要往用户的 CLI 配置里写东西，
   // 不是走过场
   const [confirming, setConfirming] = useState(false)
@@ -72,7 +73,7 @@ export function DictHookBar(): JSX.Element | null {
   if (pending.length && !hookOn && !dismissed) {
     return (
       // 确认态的文案有三行，横排会把按钮挤成一条缝，改成上下摞
-      <div className={`dhb dhb-invite${confirming ? ' stack' : ''}`}>
+      <div className={`dhb dhb-invite${confirming ? ' stack' : ' compact'}`}>
         <SparkleIcon size={12} />
         {confirming ? (
           <>
@@ -104,26 +105,28 @@ export function DictHookBar(): JSX.Element | null {
         ) : (
           <>
             <div className="dhb-text">
-              <b>记下这个项目用过哪些概念</b>
-              <span>
-                开启后，每次 git commit 会扫一遍新增代码，把你这次用到的、创作参考里已收录的概念
-                记进项目的知识手册。<b>纯本地脚本，零 token</b>。
-              </span>
+              <b>自动记录项目概念</b>
+              <span>本地运行 · 不消耗 token</span>
+
             </div>
             <div className="dhb-acts">
+              <button className="dhb-ghost" aria-label="了解自动记录" aria-expanded={infoOpen}
+                onClick={() => setInfoOpen(v => !v)}>ⓘ</button>
+              <button className="dhb-primary" onClick={() => setConfirming(true)}>
+                开启
+              </button>
               <button
-                className="dhb-ghost"
+                className="dhb-ghost" aria-label="收起自动记录提示"
                 onClick={() => {
                   localStorage.setItem(DISMISS_KEY, '1')
                   setDismissed(true)
                 }}
               >
-                不用
-              </button>
-              <button className="dhb-primary" onClick={() => setConfirming(true)}>
-                开启
+                ×
               </button>
             </div>
+            {infoOpen && <div className="dhb-info">提交代码后扫描新增代码，将匹配到的已有概念记入项目知识手册。不联网，也不会调用模型。</div>}
+            {!!msg && <div className="dhb-info" role="status">{msg}</div>}
           </>
         )}
       </div>
@@ -135,7 +138,7 @@ export function DictHookBar(): JSX.Element | null {
     <div className={`dhb${expanded ? ' open' : ''}`}>
       <button className="dhb-toggle" onClick={() => setExpanded((v) => !v)}>
         {hookOn ? <CheckIcon size={11} /> : <SparkleIcon size={11} />}
-        <span>{hookOn ? '提交即复盘已开启' : '提交即复盘已关闭'}</span>
+        <span>{hookOn ? '自动记录已开启' : '自动记录已关闭'}</span>
         {!!msg && <span className="dhb-msg">{msg}</span>}
         <span className="dhb-chev">{expanded ? '收起' : '详情'}</span>
       </button>

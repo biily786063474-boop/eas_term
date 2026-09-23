@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "checkedAt": "2026-09-23T10:23:23.556056+00:00",
+  "assets": [
+    {
+      "name": "Eas-Term-0.4.106-x64-setup.exe",
+      "size": 199483575,
+      "digest": "sha256:3b863de281e759892805bf85b59c7359aa3a9b3bcef56e7944b8be5c8267648f",
+      "passed": true
+    },
+    {
+      "name": "Eas-Term-0.4.106-arm64.dmg",
+      "size": 220914298,
+      "digest": "sha256:0f4889d85a62f41d3e5ea8b43caa024fb78e5a08390812bd9380b306e16ba4d5",
+      "passed": true
+    },
+    {
+      "name": "Eas-Term-0.4.106-x64.zip",
+      "size": 231190367,
+      "digest": "sha256:2a75d78bf4970c2a0dff53882064cf9efadf47aedacc3b752f096fe8b9f74394",
+      "passed": true
+    },
+    {
+      "name": "Eas-Term-0.4.106-x64.dmg",
+      "size": 232957969,
+      "digest": "sha256:4661a564e294a156290248224c38d31294e27aad0571c91be204e2a5e384ca69",
+      "passed": true
+    },
+    {
+      "name": "Eas-Term-0.4.106-arm64.zip",
+      "size": 219091942,
+      "digest": "sha256:6f0b4b0775c374d98190d06d16a7b4fa175e00cb38825d2ad3b51b319ef785d1",
+      "passed": true
+    }
+  ]
+}

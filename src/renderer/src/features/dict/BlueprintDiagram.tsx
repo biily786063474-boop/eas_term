@@ -1,22 +1,25 @@
 import { blueprintRegions } from './blueprintGeometry'
+import type { CSSProperties } from 'react'
 interface Props {
  blueprint:{id:string;name:string;platform:string;slots:{block:string;note:string}[]}
  active?:string|null
+ selected?:string|null
  preview?:boolean
  onInspect?:(block:string|null)=>void
  onSelect?:(block:string)=>void
 }
-export function BlueprintDiagram({blueprint,active,preview=false,onInspect,onSelect}:Props):JSX.Element{
+export function BlueprintDiagram({blueprint,active,selected,preview=false,onInspect,onSelect}:Props):JSX.Element{
  const mobile=blueprint.platform==='移动',regions=blueprintRegions(blueprint)
  return <svg className={preview?'bp-thumb':'bp-diagram'} viewBox="0 0 320 360"
    role={preview?undefined:'group'} aria-hidden={preview||undefined} aria-label={preview?undefined:blueprint.name+'页面位置示意图'}>
    <rect className="bp-device" x={mobile?66:7} y="12" width={mobile?188:306} height="338" rx={mobile?19:9}/>
    {!mobile&&<g className="bp-chrome"><circle cx="18" cy="20" r="2"/><circle cx="26" cy="20" r="2"/><circle cx="34" cy="20" r="2"/></g>}
    {regions.filter(r=>!r.overlay||r.block===active).map(r=><g key={r.block}
-     className={'bp-region'+(active===r.block?' is-active':'')}
+     style={{'--bp-color': `var(--bp-tone-${blueprint.slots.findIndex(s => s.block === r.block) % 7})`} as CSSProperties}
+     className={'bp-region'+(active===r.block?' is-active':'')+(selected===r.block?' is-selected':'')}
      role={preview?undefined:'button'} tabIndex={preview?undefined:0}
      aria-label={preview?undefined:r.block+'：'+r.location+'；点击查看相关词条'}
-     aria-pressed={preview?undefined:active===r.block}
+     aria-pressed={preview?undefined:selected===r.block}
      onMouseEnter={()=>onInspect?.(r.block)} onMouseLeave={()=>onInspect?.(null)}
      onFocus={()=>onInspect?.(r.block)} onBlur={()=>onInspect?.(null)}
      onClick={()=>onSelect?.(r.block)}
