@@ -1,0 +1,40 @@
+{
+  "pm2": [
+    {
+      "name": "biily",
+      "pid": 3473977,
+      "status": "online"
+    },
+    {
+      "name": "bizone-cms",
+      "pid": 126856,
+      "status": "online"
+    },
+    {
+      "name": "survey",
+      "pid": 126871,
+      "status": "online"
+    },
+    {
+      "name": "spb-cms",
+      "pid": 898359,
+      "status": "online"
+    },
+    {
+      "name": "eas-tunnel",
+      "pid": 598956,
+      "status": "online"
+    }
+  ],
+  "sites": {
+    "biily.top": "200",
+    "www.biily.top": "200",
+    "aurora.biily.top": "200",
+    "rove.biily.top": "200",
+    "bzone.biily.top": "200",
+    "spb.biily.top": "200",
+    "mini.biily.top": "504",
+    "eas.biily.top": "200"
+  },
+  "disk": "Filesystem       1B-blocks        Used  Available Use% Mounted on\n/dev/vda3      41881894912 31741136896 8205115392  80% /\n"
+}

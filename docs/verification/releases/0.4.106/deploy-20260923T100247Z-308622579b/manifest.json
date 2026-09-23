@@ -1,0 +1,38 @@
+{
+  "/tmp/eas-release106-final/Eas-Term-0.4.106-arm64.dmg": {
+    "size": 220914298,
+    "sha256": "0f4889d85a62f41d3e5ea8b43caa024fb78e5a08390812bd9380b306e16ba4d5"
+  },
+  "/tmp/eas-release106-final/Eas-Term-0.4.106-arm64.zip": {
+    "size": 219091942,
+    "sha256": "6f0b4b0775c374d98190d06d16a7b4fa175e00cb38825d2ad3b51b319ef785d1"
+  },
+  "/tmp/eas-release106-final/Eas-Term-0.4.106-x64.dmg": {
+    "size": 232957969,
+    "sha256": "4661a564e294a156290248224c38d31294e27aad0571c91be204e2a5e384ca69"
+  },
+  "/tmp/eas-release106-final/Eas-Term-0.4.106-x64.zip": {
+    "size": 231190367,
+    "sha256": "2a75d78bf4970c2a0dff53882064cf9efadf47aedacc3b752f096fe8b9f74394"
+  },
+  "/tmp/eas-release106-final/Eas-Term-0.4.106-x64-setup.exe": {
+    "size": 199483575,
+    "sha256": "3b863de281e759892805bf85b59c7359aa3a9b3bcef56e7944b8be5c8267648f"
+  },
+  "/tmp/eas-release-0.4.106/site/index.html": {
+    "size": 28224,
+    "sha256": "96a0825fb6526b6ede0756e54eab4362812c42d63e8c09c934a8cf601b302276"
+  },
+  "/tmp/eas-release-0.4.106/site/download.html": {
+    "size": 12921,
+    "sha256": "e0048383dfa004a4ccb2abecba6c867601a77b0ca8753ee8b44db8d0a0228df6"
+  },
+  "/tmp/eas-release-0.4.106/site/changelog.html": {
+    "size": 109941,
+    "sha256": "b40471b7132e5f8616da60d3a1bffdb15f00bd1fdb012282263966f460ce4128"
+  },
+  "/tmp/eas-release-0.4.106/docs/verification/releases/0.4.106/latest.json": {
+    "size": 1585,
+    "sha256": "d260abfbecf661237d6ffb55fa12ffc337c5df98c94a19684617067005f28ef2"
+  }
+}

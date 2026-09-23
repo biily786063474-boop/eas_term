@@ -1,0 +1,18 @@
+{
+  "/www/wwwroot/eas/index.html": {
+    "size": 28224,
+    "sha256": "b53d61a0834109388cd59d7afe11869842c10de2c0c5f97eace023ef99b48f07"
+  },
+  "/www/wwwroot/eas/download.html": {
+    "size": 12921,
+    "sha256": "b573e8cf4aa72431aa8765984ff5f13b9329877e85a200da30d214e9f5f7e118"
+  },
+  "/www/wwwroot/eas/changelog.html": {
+    "size": 108322,
+    "sha256": "059979a2801334c0ef3bc3076be6ca9127774ad3be2b5a5736a078070360412d"
+  },
+  "/www/wwwroot/eas-dl/latest.json": {
+    "size": 769,
+    "sha256": "5c89d3d9de3854ab3694cebc2e65587c490802df10bd67fa135e1e518ac70836"
+  }
+}
