@@ -15,3 +15,17 @@
 可选 MCP 的 401/握手失败不会误判为主模型账号故障，也不会强制关闭正在执行的轮次；输出脱敏非致命警告。补有故障注入测试。一次全量检查在新增这个预期失败用例的编写过程中运行，出现该用例失败；修复后专项通过，最终全量复跑另记。
 
 最终复跑：`npm run check` 3624 项，其中 3605 通过、19 跳过、0 失败；`npm run build` 通过。隔离 Electron + 真实 Codex CLI + 本地 Responses 夹具 5 项通过，人工查看两轮回复截图。此为故障路径覆盖与本地验收，不是生产成功概率。未触及正在使用的正式应用；本记录在功能分支验收时写成；随后按用户指令提交并合入本地 main，不推送、不发布。
+
+## 2026-09-23：精确路由超时的有界分叉恢复（隔离分支）
+
+仅在原生 `turn/completed failed` 的错误全文**恰为** `workspace routing discovery timed out`、付费启动 ACK 确认、无 assistant／工具／用量活动、无其他活跃轮次、goal 明确为 null 且用户未停止时，允许最多两次恢复。每次先退避（5 秒／20 秒），只读 `account/read(refreshToken:false)` 最多探测两次，再以 `thread/fork.beforeTurnId` 排除失败轮；确认新 thread ID 后才提交下一次 `turn/start`。不修改代理、凭证、旧线程，也不重试其他原生错误。分叉累计 token 无可靠基线时标为未知，避免重复计算。
+
+验收（本 worktree，Node 22 兼容环境）：
+
+- `node --test src/main/codexTaskBridge.test.mjs`：45 项全过；包含首次健康探测失败、二次恢复、活动／用量／goal／ACK 不明／取消等失败关闭边界。
+- `npm exec --yes --package=node@22 -- node scripts/verify-codex-goal-native.mjs`：原有真实 Codex CLI + localhost Responses 正常路径通过；本地服务**不能**模拟真实帐号的工作区路由故障。
+- `npm exec --yes --package=node@22 -- node scripts/verify-codex-goal-ui.mjs`：原有隔离 Electron 正常路径通过。
+- `npm exec --yes --package=node@22 -- node scripts/verify-codex-safe-retry-ui.mjs`：隔离 Electron + fake app-server 故障注入通过；首次健康探测失败、第二次恢复；真实 UI 可见 1/2、2/2 与完成状态；两个 `beforeTurnId` 分叉、总共三个付费提交、resumeId 指向最终线程；停止后未继续提交，第三次失败后没有第四次提交。截图：`safe-retry-1-of-2.png`、`safe-retry-2-of-2.png`、`safe-retry-completed.png`（同目录，已人工查看）。测试夹具不使用真实帐号或模型。
+- 全量 `npm exec --yes --package=node@22 -- npm run check`：3665 项，3646 通过、19 跳过、0 失败；同环境 `npm run build` 退出码 0。
+
+未验证：真实线上 Codex 帐号路由超时的触发与恢复成功率、实际账单、Windows 构建。首次隔离应用 CDP 启动曾偶发超时；最终成功执行使用全新临时 HOME/userData，未触及正式版。`npm ci` 的 Node 26 postinstall 遇 ESM `require` 错误，改在 Node 22 完成 postinstall/Electron 安装后再运行构建与验收；这不是产品恢复路径的结果。

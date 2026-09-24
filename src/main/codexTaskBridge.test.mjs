@@ -156,7 +156,10 @@ function recoveryFixture({goal=null,health=true,fork=true}={}) {
    let result={}
    if(m.method==='thread/start')result={thread:{id:'thread'}}
    if(m.method==='thread/goal/get')result={goal:goal?{status:goal}:null}
-   if(m.method==='account/read')result=health?{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:{backendOrigin:'https://fixture.invalid'}}:{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:null}
+   if(m.method==='account/read'){
+    const healthy=Array.isArray(health)?health.shift():health
+    result=healthy?{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:{backendOrigin:'https://fixture.invalid'}}:{account:{type:'chatgpt'},requiresOpenaiAuth:true,workspaceRouting:null}
+   }
    if(m.method==='thread/fork')result=fork?{thread:{id:'thread-'+(++turn)}}:undefined
    if(m.method==='turn/start')result={turn:{id:['a','b','c'][calls.filter(x=>x.method==='turn/start').length-1]}}
    send(result===undefined?{id:m.id,error:{code:-32602,message:'unsupported'}}:{id:m.id,result})
@@ -175,6 +178,19 @@ test('terminal route timeout forks before failed turn and submits one recovered 
  assert.deepEqual(f.calls.filter(x=>x.method==='turn/start').map(x=>x.params.threadId),['thread','thread-1'])
  assert.equal(events.filter(e=>e.type==='retry.status').length,1)
  assert.equal(events.filter(e=>e.type==='thread.started').at(-1).thread_id,'thread-1')
+ f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}});f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await p;assert.equal(events.filter(e=>e.type==='turn.completed').length,1)
+})
+
+test('read-only routing health may fail once then recover before the sole paid retry',async()=>{
+ const f=recoveryFixture({health:[false,true]}),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',recoverySleep:async()=>{},emit:e=>events.push(e)})
+ await tick();f.note('turn/started',{turn:{id:'a'}})
+ f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick()
+ assert.equal(f.calls.filter(x=>x.method==='account/read').length,2)
+ assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,1)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,2)
  f.setThread('thread-1');f.note('turn/started',{turn:{id:'b'}});f.note('turn/completed',{turn:{id:'b',status:'completed'}})
  await p;assert.equal(events.filter(e=>e.type==='turn.completed').length,1)
 })
