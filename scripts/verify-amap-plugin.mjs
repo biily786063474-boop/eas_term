@@ -51,7 +51,7 @@ try{
  await until(()=>main.eval("[...document.querySelectorAll('.wk-seg-btn')].some(e=>e.textContent.includes('插件'))"));await main.eval("[...document.querySelectorAll('.wk-seg-btn')].find(e=>e.textContent.includes('插件')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('查看完整插件市场'))"));await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('高德地图隔离验收'))"))
- await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('高德地图隔离验收')).querySelector('button').click()")
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('高德地图隔离验收')).querySelector('.pm-add').click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('确认安装'))"))
  check(!fs.existsSync(path.join(home,'.eas/plugins',name,'plugin.json')),'市场安装先确认，不静默落包')
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('确认安装')).click()")

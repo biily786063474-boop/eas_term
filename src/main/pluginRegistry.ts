@@ -1,5 +1,6 @@
 import type { PluginRequirements } from '../shared/pluginCompatibility.ts'
 import { parsePluginRequirements } from './pluginCompatibility.ts'
+import { parsePluginDetail, type PluginDetail } from '../shared/pluginDetail.ts'
 // 官方插件目录 `registry.json` → 校验后的条目。**纯函数，零 electron，`node --test` 裸跑。**
 //
 // registry 是「目录」:哪些插件、下载地址、哈希、展示元数据。它**不是**插件清单——
@@ -10,6 +11,7 @@ import { parsePluginRequirements } from './pluginCompatibility.ts'
 // 原则同 parseManifest:**坏条目丢弃记 warning,整份格式错才拒**——一个拼错的条目
 // 不该把整个市场藏起来。
 export interface RegistryEntry {
+  detail?: PluginDetail
   requirements?: PluginRequirements
   name: string
   displayName: string
@@ -78,6 +80,8 @@ export function parseRegistry(raw: unknown, opts: { allowedHosts: readonly strin
     const requirementResult = parsePluginRequirements(e?.requirements)
     if (!requirementResult.ok) { warnings.push(name + ":" + requirementResult.reason); continue }
     const brandColor = str(e?.brandColor)
+    let detail:PluginDetail|undefined
+    try{detail=parsePluginDetail(e?.detail)}catch(error){warnings.push(`${name}:详情已忽略（${String(error)}）`)}
     seen.add(name)
     entries.push({
       name,
@@ -87,7 +91,8 @@ export function parseRegistry(raw: unknown, opts: { allowedHosts: readonly strin
       category: str(e?.category),
       brandColor: brandColor && HEX_COLOR_RE.test(brandColor) ? brandColor : undefined,
       version, url, sha256, size,
-      permissions: normalizePermissions(e?.permissions)
+      permissions: normalizePermissions(e?.permissions),
+      detail
     })
   }
   return { ok: true, entries, warnings }

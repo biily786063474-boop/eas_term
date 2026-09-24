@@ -826,6 +826,7 @@ export interface PluginUnavailableEntry {
   reason: string
 }
 export interface PluginRegistryEntry {
+  detail?: import('./pluginDetail').PluginDetail
   requirements?: PluginRequirements
   name: string
   displayName: string

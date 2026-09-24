@@ -4,9 +4,23 @@ import {createHash} from 'node:crypto'
 import {packPlugin} from './pack-plugin.mjs'
 import {parseCatalog} from '../src/main/pluginCatalog.ts'
 import {parseManifest} from '../src/main/pluginManifest.ts'
+import {parsePluginDetail} from '../src/shared/pluginDetail.ts'
 const digest=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+/** Detail copy is an independent catalog asset, but must describe these exact immutable package bytes. */
+export function attachDetails(entries,detailsRoot){
+ if(!detailsRoot)return entries
+ if(fs.lstatSync(detailsRoot).isSymbolicLink())throw Error('详情目录不可为符号链接')
+ return entries.map(entry=>{
+  const file=path.join(detailsRoot,entry.name+'.json')
+  if(!fs.existsSync(file))return entry
+  if(fs.lstatSync(file).isSymbolicLink())throw Error('详情文件不可为符号链接：'+entry.name)
+  const raw=JSON.parse(fs.readFileSync(file,'utf8'))
+  if(raw.name!==entry.name||raw.version!==entry.version||raw.sha256!==entry.sha256)throw Error('详情版本或包哈希不匹配：'+entry.name)
+  return {...entry,detail:parsePluginDetail(raw.detail)}
+ })
+}
 /** Local build only. Never invokes upload, network, dependency installation or host build. */
-export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='https://eas.biily.top/plugins',unavailable=[]}){
+export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='https://eas.biily.top/plugins',unavailable=[],detailsRoot}){
  const base=new URL(baseUrl)
  if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('目录下载基址必须是公开HTTPS地址')
  const output=path.resolve(outRoot)
@@ -29,7 +43,7 @@ export function buildPluginRegistries({plugins,outRoot='dist/plugins',baseUrl='h
   const updated=new Date().toISOString()
   const entries=packages.map(p=>p.entry)
   const v1={schema:1,updated,plugins:entries.filter(entry=>entry.requirements===undefined)}
-  const v2={schema:2,updated,plugins:entries,unavailable}
+  const v2={schema:2,updated,plugins:attachDetails(entries,detailsRoot),unavailable}
   for(const catalog of [v1,v2]){
    const result=parseCatalog(catalog,{allowedHosts:[base.hostname]})
    if(!result.ok||result.warnings.length)throw Error('目录校验失败：'+(result.ok?result.warnings:result.errors).join(';'))

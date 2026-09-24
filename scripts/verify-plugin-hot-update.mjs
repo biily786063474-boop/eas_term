@@ -66,7 +66,7 @@ try {
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('查看完整插件市场')).click()")
  await until(()=>main.eval("[...document.querySelectorAll('.pm-card')].some(e=>e.textContent.includes('独立热更新验收插件'))"))
  const installed=path.join(home,'.eas/plugins/hot-fixture/plugin.json')
- await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('独立热更新验收插件')).querySelector('button').click()")
+ await main.eval("[...document.querySelectorAll('.pm-card')].find(e=>e.textContent.includes('独立热更新验收插件')).querySelector('.pm-add').click()")
  await until(()=>main.eval("[...document.querySelectorAll('button')].some(e=>e.textContent.includes('确认安装'))"))
  check(!fs.existsSync(installed),'安装权限确认前没有落入插件目录')
  await main.eval("[...document.querySelectorAll('button')].find(e=>e.textContent.includes('确认安装')).click()")

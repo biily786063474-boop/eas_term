@@ -1,5 +1,7 @@
 import { PluginConfigurationControls } from './PluginConfigurationControls'
 import { pluginUpdateAction } from '../../../../shared/pluginUpdate'
+import { resolvePluginDetail } from '../../../../shared/pluginDetailBuiltins'
+import { missingRequiredSecrets } from './pluginDrawerGate'
 // 完整插件市场弹窗（「更多 › 插件」页点「查看完整插件市场」进来）。
 // 左边智能分类、顶部搜索、卡片用真实品牌 logo + 名字 + 简介 + 安装。设计稿
 // docs/prototype/2026-09-15-plugin-market-full.html。数据来自 registry（可装）+ 已装列表。
@@ -50,6 +52,11 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   const [sourceUrl,setSourceUrl]=useState('')
   const refreshGeneration=useRef(0)
   const [err, setErr] = useState<string | null>(null)
+  const [setupPlugin, setSetupPlugin] = useState<PluginInfo | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const returnFocus = useRef<HTMLButtonElement | null>(null)
+  const backToList = (): void => { setSelected(null); requestAnimationFrame(() => returnFocus.current?.focus()) }
 
   const reload = (): Promise<void> =>
     window.api.plugins
@@ -70,7 +77,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     finally { if(generation===refreshGeneration.current)setRefreshing(false) }
   }
   useEffect(() => {
-    setReg(null); void refreshRegistry()
+    setSelected(null); setReg(null); void refreshRegistry()
     return ()=>{refreshGeneration.current++}
   }, [sourceId])
   useEffect(()=>{void window.api.plugins.sources({action:'list'}).then(r=>{if(r.ok)setSources(r.sources);else setErr(r.error)})},[])
@@ -80,11 +87,15 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   }
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        if (confirm) { setConfirm(null); return }
+        if (selected) { backToList(); return }
+        onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, selected, confirm])
 
   // ── 合并 registry（可装）+ 已装，成统一条目，按名去重 ──
   const items: Item[] = (() => {
@@ -102,7 +113,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           brandColor: e.brandColor,
           catId: categoryIdOf(e.category),
           installed: installedEas.has(e.name),
-          reg: e
+          reg: { ...e, detail: resolvePluginDetail(e) }
         })
       }
     }
@@ -127,6 +138,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
   })()
 
   const kw = q.trim().toLowerCase()
+  const selectedItem = items.find(it => (it.plugin?.id ?? it.name) === selected)
+  const selectedSameSource = !selectedItem?.plugin || (selectedItem.plugin.marketSource?.id ?? 'official') === (sourceId || 'official')
+  const selectedAction = selectedSameSource && selectedItem?.plugin && selectedItem.reg ? pluginUpdateAction(selectedItem.plugin, selectedItem.reg.version) : null
   const catCount = (id: string): number => items.filter((it) => it.catId === id).length
 
   const startInstall = async (name: string): Promise<void> => {
@@ -152,8 +166,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
       const r = await window.api.plugins.installCommit(token)
       if (!r.ok) setErr(r.error)
       else {
-        await reload()
+        const updated = await window.api.plugins.list()
+        setPlugins(updated)
         onChanged()
+        const item = updated.find(p => p.cli === 'eas' && p.name === name)
+        if (item?.config?.fields.some(field => field.required && field.type === 'secret')) {
+          const status = await window.api.plugins.configuration('status', item.id)
+          if (!status.ok || missingRequiredSecrets(item, status.configured).length) setSetupPlugin(item)
+        }
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
@@ -168,9 +188,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
     const action = sameSource && it.plugin && it.reg ? pluginUpdateAction(it.plugin,it.reg.version) : null
     const update = action === 'update'
     return (
-      <div key={it.plugin?.id ?? it.name} className="pm-card">
+      <div key={it.plugin?.id ?? it.name} className="pm-card" onClick={e => {
+        if (e.target instanceof Element && e.target.closest('button, a, input, select, textarea')) return
+        returnFocus.current = e.currentTarget.querySelector('.pm-card-open')
+        setSelected(it.plugin?.id ?? it.name)
+      }}>
+        <button className="pm-card-open" aria-label={`查看${it.displayName}详情`} onClick={e => { returnFocus.current=e.currentTarget; setSelected(it.plugin?.id ?? it.name) }}>
         <PluginLogo name={it.name} brandColor={it.brandColor} iconDataUrl={it.plugin?.iconDataUrl} />
-        <div className="pm-cb">
+        <span className="pm-cb">
           <div className="pm-ct">
             <b>{it.displayName}</b>
             {it.cli && it.cli !== 'eas' && <span className="pm-src">{it.cli === 'claude' ? 'Claude' : 'Codex'}</span>}
@@ -180,20 +205,9 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             <span className="pm-cd pm-card-status" title={it.plugin?.version ? `已安装 v${it.plugin.version}` : undefined}>
               {!sameSource && it.reg ? '来源不符 · 禁止覆盖' : it.reason ? '未开放接入' : it.plugin?.cli === 'eas' ? `${it.plugin.version ? `已安装 v${it.plugin.version}` : '已安装 · 版本未知'}${update ? ` · 有更新 v${it.reg!.version}` : ''}${it.plugin.builtin ? ' · 内置副本' : ''}` : it.installed ? '已安装' : '未安装'}
             </span>
-            <details className="pm-card-details">
-              <summary aria-label={`${it.displayName}的完整说明`}>详情</summary>
-              <div className="pm-card-notes">
-                <b>{it.displayName}</b>
-                <p>{it.description || '暂无简介'}</p>
-                {action === 'migrate' && <div className="pm-cd pm-update-notice">可安装独立版 v{it.reg!.version}；{it.plugin?.version ? '之后通过市场更新' : '旧版无版本号，无法比较新旧'}</div>}
-                {it.reason && <div className="pm-cd" title={it.reason}>未开放接入 · {it.reason}</div>}
-                {it.plugin?.marketSource?.url && <div className="pm-cd pm-update-notice">安装来源：{it.plugin.marketSource.url}</div>}
-                {!sameSource && it.reg && <div className="pm-cd pm-update-notice">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
-                {it.plugin?.shadowedBuiltin && <div className="pm-cd pm-update-notice">{it.plugin.shadowedBuiltin}</div>}
-              </div>
-            </details>
           </div>
-        </div>
+        </span>
+        </button>
         <div className="pm-cact">
           {it.plugin?.config&&<PluginConfigurationControls plugin={it.plugin}/>}
           {it.plugin?.remote?.auth==='oauth'&&<PluginAccountControls id={it.plugin.id} title={it.displayName} enabled={it.plugin.enabled!==false}/>}
@@ -274,14 +288,14 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <p className="pm-sub">在你常用的工具里用上 AI</p>
           <nav className="pm-nav">
             <div className="pm-navg">浏览</div>
-            <button className={`pm-navb${active === 'featured' ? ' on' : ''}`} onClick={() => setActive('featured')}>
+            <button className={`pm-navb${active === 'featured' ? ' on' : ''}`} onClick={() => {setActive('featured');setSelected(null)}}>
               <span className="pm-ci">
                 <CategoryIcon id="featured" />
               </span>
               <span className="pm-cn">精选</span>
               <span className="pm-cc">{items.length}</span>
             </button>
-            <button className={`pm-navb${active === 'installed' ? ' on' : ''}`} onClick={() => setActive('installed')}>
+            <button className={`pm-navb${active === 'installed' ? ' on' : ''}`} onClick={() => {setActive('installed');setSelected(null)}}>
               <span className="pm-ci">
                 <CategoryIcon id="installed" />
               </span>
@@ -290,7 +304,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
             </button>
             <div className="pm-navg">分类</div>
             {MARKET_CATEGORIES.map((c) => (
-              <button key={c.id} className={`pm-navb${active === c.id ? ' on' : ''}`} onClick={() => setActive(c.id)}>
+              <button key={c.id} className={`pm-navb${active === c.id ? ' on' : ''}`} onClick={() => {setActive(c.id);setSelected(null)}}>
                 <span className="pm-ci">
                   <CategoryIcon id={c.id} />
                 </span>
@@ -304,7 +318,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           <div className="pm-head">
             <div className="pm-search">
               <span className="pm-mag">⌕</span>
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索插件…（Word、地图、GitHub…）" autoFocus />
+              <input value={q} onChange={(e) => {setQ(e.target.value);setSelected(null)}} placeholder="搜索插件…（Word、地图、GitHub…）" autoFocus />
             </div>
             <button className="cpk-btn ghost" title="刷新目录并检查插件更新" aria-label="检查更新" disabled={refreshing || !!busy || !!confirm} onClick={() => void refreshRegistry()}>
               <RefreshIcon size={16} />{refreshing ? '检查中…' : '检查更新'}
@@ -329,7 +343,22 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           {reg && reg !== 'error' && reg.stale && <div className="pm-err">目录离线，正在显示缓存；条目状态可能已过期。</div>}
           {reg && reg !== 'error' && <div className="pm-sech">已发布包 {reg.entries.length} · 待接入 {reg.unavailable.length}（不代表已授权或可调用）</div>}
           {reg === 'error' && <div className="pm-err">无法读取此来源：检查网络、目录格式及同源下载地址；仅支持 Eas registry v1/v2。</div>}
-          <div className="pm-body">{body}</div>
+          <div className="pm-body" ref={listRef} hidden={!!selectedItem}>{body}</div>
+          {selectedItem && <div className="pm-body pm-detail" role="region" aria-label={`${selectedItem.displayName}详情`}>
+            <button className="pm-detail-back" onClick={backToList}>← 返回插件列表</button>
+            <div className="pm-detail-hero"><PluginLogo name={selectedItem.name} brandColor={selectedItem.brandColor} iconDataUrl={selectedItem.plugin?.iconDataUrl} /><div><div className="pm-detail-kicker">插件详情 · {selectedItem.reg?.version ? `v${selectedItem.reg.version}` : selectedItem.plugin?.version ? `v${selectedItem.plugin.version}` : '版本未提供'}</div><h2>{selectedItem.displayName}</h2><p>{selectedItem.reg?.detail?.summary ?? selectedItem.description ?? '开发者暂未提供简介。'}</p></div>{selectedItem.reg && selectedSameSource && (!selectedItem.installed || selectedAction) && <button className="cpk-btn primary pm-detail-action" disabled={!!busy || !!confirm || refreshing} onClick={() => void startInstall(selectedItem.name)}>{selectedAction === 'update' ? '更新插件' : selectedAction === 'migrate' ? '安装独立版' : '安装插件'}</button>}</div>
+            {selectedItem.reason && <div className="pm-detail-warning">尚未开放接入：{selectedItem.reason}</div>}
+            {!selectedSameSource && selectedItem.reg && <div className="pm-detail-warning">同名插件已安装自其他或未知来源，不能跨市场覆盖。</div>}
+            {selectedItem.plugin?.shadowedBuiltin && <div className="pm-detail-warning">{selectedItem.plugin.shadowedBuiltin}</div>}
+            <div className="pm-detail-grid">
+              <section><h3>适合什么场景</h3>{selectedItem.reg?.detail?.scenarios?.length ? <ul>{selectedItem.reg.detail.scenarios.map((x,i)=><li key={i}>{x}</li>)}</ul> : <p>开发者暂未提供使用场景。</p>}</section>
+              <section><h3>如何使用</h3>{selectedItem.reg?.detail?.steps?.length ? <ol>{selectedItem.reg.detail.steps.map((x,i)=><li key={i}>{x}</li>)}</ol> : <p>安装后可在插件面板查看可用入口；开发者暂未提供步骤。</p>}</section>
+              <section className="pm-detail-wide"><h3>功能与工具</h3>{selectedItem.reg?.detail?.capabilities?.length ? <div className="pm-detail-capabilities">{selectedItem.reg.detail.capabilities.map((x,i)=><div key={i}><b>{x.title}</b><span>{x.kind==='tool' ? 'AI 工具' : x.kind==='panel' ? '界面' : '建议'}</span><p>{x.description}</p>{x.tool && <code>{x.tool}</code>}</div>)}</div> : <p>开发者暂未提供详细功能清单，不代表没有工具。</p>}</section>
+              <section><h3>权限与数据</h3><p>{selectedItem.reg?.permissions && Object.values(selectedItem.reg.permissions).flat().length ? Object.values(selectedItem.reg.permissions).flat().map(x=>PERM_LABEL[x]??x).join('、') : '不请求画布权限。'}安装前仍会显示完整权限确认。</p><p>{selectedItem.reg?.detail?.dataUse ?? '开发者暂未提供数据使用说明。'}</p></section>
+              <section><h3>兼容与限制</h3><p>{selectedItem.reg?.detail?.limitations ?? '开发者暂未提供兼容与限制说明。'}</p><p>来源：{selectedItem.plugin?.marketSource?.url ?? (sourceId ? sources.find(s=>s.id===sourceId)?.name ?? '外部市场' : 'Eas 官方市场')}</p></section>
+              <section className="pm-detail-wide"><h3>版本记录与支持</h3><p>{selectedItem.reg?.detail?.changelog ?? '暂无版本说明。'}</p>{selectedItem.reg?.detail?.supportUrl && <p>支持地址：{selectedItem.reg.detail.supportUrl}</p>}</section>
+            </div>
+          </div>}
         </div>
       </div>
 
@@ -374,6 +403,7 @@ export function PluginMarketModal({ onClose, onChanged }: { onClose: () => void;
           </div>
         </div>
       )}
+      {setupPlugin && <div onMouseDown={e => e.stopPropagation()}><PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)} /></div>}
     </div>,
     document.body
   )

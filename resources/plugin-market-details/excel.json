@@ -1,0 +1,55 @@
+{
+  "name": "excel",
+  "version": "1.1.0",
+  "sha256": "44a57c6c6ec52ed5f552c97860954e8e5944ff4e7d5b11db52fc977fc0b9c734",
+  "detail": {
+    "summary": "读取、创建和更新XLSX，计算受支持公式，添加多系列图表与需刷新显示的透视表。",
+    "scenarios": [
+      "让 AI 协助读取或编辑 XLSX 文件"
+    ],
+    "steps": [
+      "安装并授权目录后，让 AI 指定文件和操作；保存前检查结果"
+    ],
+    "capabilities": [
+      {
+        "title": "read",
+        "description": "读取 XLSX。",
+        "kind": "tool",
+        "tool": "excel_read"
+      },
+      {
+        "title": "create",
+        "description": "创建 XLSX。",
+        "kind": "tool",
+        "tool": "excel_create"
+      },
+      {
+        "title": "update",
+        "description": "更新单元格。",
+        "kind": "tool",
+        "tool": "excel_update"
+      },
+      {
+        "title": "calculate",
+        "description": "计算受支持的公式。",
+        "kind": "tool",
+        "tool": "excel_calculate"
+      },
+      {
+        "title": "chart",
+        "description": "添加图表。",
+        "kind": "tool",
+        "tool": "excel_chart"
+      },
+      {
+        "title": "pivot",
+        "description": "添加需在 Excel 刷新后显示的透视表定义。",
+        "kind": "tool",
+        "tool": "excel_pivot"
+      }
+    ],
+    "dataUse": "具体数据范围以安装确认及插件设置为准。",
+    "limitations": "功能受插件版本、授权和当前宿主兼容性限制。",
+    "changelog": "1.1.0：读取、创建和更新XLSX，计算受支持公式，添加多系列图表与需刷新显示的透视表。"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "jev",
+  "version": "0.1.1",
+  "sha256": "b17eb331dc5d5fe24a8712d88c8166f3ea6ab632307a5b570d855eb567bbf855",
+  "detail": {
+    "summary": "可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。",
+    "scenarios": [
+      "按需使用结构化判断能力"
+    ],
+    "steps": [
+      "安装后获取并填写 TypeSafe 密钥，启用插件及需要的能力，再由 AI 适时调用"
+    ],
+    "capabilities": [
+      {
+        "title": "show",
+        "description": "打开连接引导与能力面板。",
+        "kind": "tool",
+        "tool": "jev_show"
+      },
+      {
+        "title": "triage",
+        "description": "已连接且开启后，对记录分类。",
+        "kind": "tool",
+        "tool": "jev_triage"
+      },
+      {
+        "title": "docs",
+        "description": "已连接且开启后，核对提供的资料。",
+        "kind": "tool",
+        "tool": "jev_docs"
+      },
+      {
+        "title": "eval",
+        "description": "已连接且开启后，辅助评审。",
+        "kind": "tool",
+        "tool": "jev_eval"
+      },
+      {
+        "title": "route",
+        "description": "已连接且开启后，推荐工具或模型。",
+        "kind": "tool",
+        "tool": "jev_route"
+      },
+      {
+        "title": "custom",
+        "description": "已连接且开启后，按自定义问题判断。",
+        "kind": "tool",
+        "tool": "jev_custom"
+      }
+    ],
+    "dataUse": "启用并连接后会向 TypeSafe 服务发送所选任务所需的数据；未连接时不调用。",
+    "limitations": "需要用户自行获取密钥并明确开启；无密钥时不可使用智能辅助。",
+    "changelog": "0.1.1：可选的结构化判断服务：分类、资料核对、评审与能力推荐。默认关闭，需自行连接 TypeSafe。"
+  }
+}
