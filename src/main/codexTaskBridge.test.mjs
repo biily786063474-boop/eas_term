@@ -145,7 +145,7 @@ test('optional MCP 401 warns but does not kill the native turn or prompt account
  assert.equal(events.some(x=>JSON.stringify(x).includes('Unauthorized')),false)
 })
 
-function recoveryFixture({goal=null,health=true,fork=true}={}) {
+function recoveryFixture({goal=null,health=true,fork=true,holdMethod=null}={}) {
  const proc=new EventEmitter(),calls=[];proc.stdout=new PassThrough()
  let current='thread',turn=0
  const send=x=>proc.stdout.write(JSON.stringify(x)+'\n')
@@ -153,6 +153,7 @@ function recoveryFixture({goal=null,health=true,fork=true}={}) {
   const m=JSON.parse(chunk);calls.push(m)
   queueMicrotask(()=>{
    if(!m.id)return
+   if(m.method===holdMethod)return
    let result={}
    if(m.method==='thread/start')result={thread:{id:'thread'}}
    if(m.method==='thread/goal/get')result={goal:goal?{status:goal}:null}
@@ -245,6 +246,28 @@ test('stopping during backoff prevents fork or another paid turn',async()=>{
  const rejection=assert.rejects(p)
  await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
  await rejection;assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,0);assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+})
+
+for(const method of ['account/read','thread/fork'])test(`stopping while ${method} is pending prevents another paid turn`,async()=>{
+ const f=recoveryFixture({holdMethod:method}),abort=new AbortController()
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',signal:abort.signal,recoverySleep:async()=>{},emit:()=>{}})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await tick();assert.equal(f.calls.filter(x=>x.method===method).length,1)
+ abort.abort();await rejection
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+ assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,method==='thread/fork'?1:0)
+})
+
+test('lost thread/fork acknowledgment leaves the old pointer and never blindly starts a paid turn',async()=>{
+ const f=recoveryFixture({holdMethod:'thread/fork'}),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'work',sandbox:'read-only',requestTimeoutMs:12,recoverySleep:async()=>{},emit:e=>events.push(e)})
+ const rejection=assert.rejects(p)
+ await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'failed',error:{message:ROUTE_TIMEOUT}}})
+ await rejection
+ assert.equal(f.calls.filter(x=>x.method==='thread/fork').length,1)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+ assert.deepEqual(events.filter(x=>x.type==='thread.started').map(x=>x.thread_id),['thread'])
 })
 
 test('a failed turn with an unacknowledged paid start never forks',async()=>{
