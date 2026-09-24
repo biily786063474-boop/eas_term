@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-23",
+  "scope": "Jev plugin marketplace v2 listing only; no desktop release",
+  "releaseId": "dfcd0fd0-681a-492c-8628-ba98bd6daac8",
+  "catalog": "https://eas.biily.top/plugins/v2/registry.json",
+  "catalogSha256": "74694a4e901fbd79b39fd26d30e8770de59358d3f9f33bb110c333f5fc63ea23",
+  "legacyCatalogSha256": "837ea2316d4c3af2533ac7166d37d5a5698a1b6dd3e61b0c5efe25893e110b99",
+  "jev": {
+    "version": "0.1.0",
+    "url": "https://eas.biily.top/plugins/jev/jev-0.1.0.zip",
+    "size": 27878,
+    "sha256": "f78247e53089e3c18770056c86e4274e25e6cac96f9120001742709d65e21c53"
+  },
+  "checks": {
+    "jevUnitTests": "24 passed",
+    "catalogV2Entries": 8,
+    "catalogV1Entries": 2,
+    "existingPackagesPreserved": 7,
+    "newPackagesUploaded": 1,
+    "publicCatalogAndPackageHashes": "matched local release candidate",
+    "pm2PidsAndRestartCounts": "unchanged",
+    "publishLock": "released"
+  },
+  "notVerified": ["Production client install through live HTTPS catalog", "Live TypeSafe API request with user credentials", "Windows client"]
+}
