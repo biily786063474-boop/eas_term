@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react'
 import type { PluginInfo, PluginRegistryEntry } from '../../../../shared/types'
 import { PlusIcon, TrashIcon, RefreshIcon, ChevronRightIcon } from '../../ui/Icons'
 import { PluginMarketModal } from './PluginMarketModal'
+import { PluginConfigurationControls } from './PluginConfigurationControls'
+import { missingRequiredSecrets } from './pluginDrawerGate'
 
 /** canvas 权限的人话（白名单只有这四个，见 shared/pluginProtocol.ts）。 */
 const PERM_LABEL: Record<string, string> = {
@@ -33,6 +35,7 @@ export function CanvasMarketPanel(): JSX.Element {
   const [err, setErr] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [showMarket, setShowMarket] = useState(false)
+  const [setupPlugin, setSetupPlugin] = useState<PluginInfo | null>(null)
 
   const reload = (): Promise<void> =>
     window.api.plugins
@@ -85,7 +88,15 @@ export function CanvasMarketPanel(): JSX.Element {
     try {
       const r = await window.api.plugins.installCommit(token)
       if (!r.ok) setErr(r.error)
-      else await reload()
+      else {
+        const updated = await window.api.plugins.list()
+        setPlugins(updated)
+        const item = updated.find(p => p.cli === 'eas' && p.name === name)
+        if (item?.config?.fields.some(field => field.required && field.type === 'secret')) {
+          const status = await window.api.plugins.configuration('status', item.id)
+          if (!status.ok || missingRequiredSecrets(item, status.configured).length) setSetupPlugin(item)
+        }
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
@@ -229,6 +240,7 @@ export function CanvasMarketPanel(): JSX.Element {
           onChanged={() => void reload()}
         />
       )}
+      {setupPlugin && <PluginConfigurationControls key={setupPlugin.id} plugin={setupPlugin} initialOpen onClose={() => setSetupPlugin(null)} />}
 
       {/* ── 确认框（内联在抽屉里）── */}
       {confirm && (
