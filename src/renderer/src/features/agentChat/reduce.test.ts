@@ -454,6 +454,19 @@ test('**紧跟其后的 text.done 覆盖 delta 攒的那段，不是再加一条
   assert.equal(v.turns[0].text, '你好在的。', 'done 是权威版本，delta 可能不全')
 })
 
+test('Codex 连续两段增量各自收口，最终文字不重复', () => {
+  const v = run([
+    ready,
+    { k: 'text.delta', text: '先' },
+    { k: 'text.delta', text: '查' },
+    { k: 'text.done', text: '先查。' },
+    { k: 'text.delta', text: '结' },
+    { k: 'text.delta', text: '论' },
+    { k: 'text.done', text: '结论。' }
+  ])
+  assert.deepEqual(v.turns.map((turn) => turn.text), ['先查。', '结论。'])
+})
+
 test('流式途中挂上的 exec 不会被随后的 text.done 抹掉', () => {
   // done 覆盖的是 text，execs 得留着——工具调用可能在文字中间就挂到这个轮次上了
   const v = run([

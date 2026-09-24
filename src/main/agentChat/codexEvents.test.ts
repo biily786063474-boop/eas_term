@@ -30,6 +30,23 @@ test('agent_message 类型的 item.completed 产出 text.done', () => {
   assert.ok(texts[0].k === 'text.done' && texts[0].text.length > 0)
 })
 
+test('桥接的 item.delta 逐段产 text.delta，完成项仍给权威 text.done', () => {
+  const t = createCodexTranslator()
+  const events = [
+    { type: 'item.delta', item: { id: 't:m', type: 'agent_message', delta: '你' } },
+    { type: 'item.delta', item: { id: 't:m', type: 'agent_message', delta: '好' } },
+    { type: 'item.completed', item: { id: 't:m', type: 'agent_message', text: '你好！' } }
+  ].flatMap((event) => t.push(JSON.stringify(event)))
+  assert.deepEqual(events, [
+    { k: 'text.delta', text: '你' },
+    { k: 'text.delta', text: '好' },
+    { k: 'text.done', text: '你好！' }
+  ])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'item.delta', item: { type: 'reasoning', delta: '思考' } })), [])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'item.delta', item: { type: 'agent_message', delta: '' } })), [])
+  assert.deepEqual(t.push(JSON.stringify({ type: 'item.delta', item: { type: 'agent_message', delta: 1 } })), [])
+})
+
 test('turn.completed 产出 turn.done，usage 字段名被正确映射', () => {
   const evs = runAll('codex-exec-write.jsonl')
   const done = evs.filter((e) => e.k === 'turn.done')

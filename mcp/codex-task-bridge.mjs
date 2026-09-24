@@ -80,6 +80,12 @@ export async function runCodexTaskBridge({proc,cwd,prompt,resumeId,sandbox,model
   if(m.method==='thread/tokenUsage/updated') {
    const u=p.tokenUsage?.total;if(u)usage={input_tokens:u.inputTokens??0,output_tokens:u.outputTokens??0,cached_input_tokens:u.cachedInputTokens??0};return
   }
+  if(m.method==='item/agentMessage/delta') {
+   if(typeof p.turnId!=='string'||!p.turnId||typeof p.itemId!=='string'||!p.itemId||typeof p.delta!=='string'||!p.delta)return
+   if(finished.has(p.turnId)||seenItems.has('item/completed:'+p.turnId+':'+p.itemId))return
+   emit({type:'item.delta',item:{id:p.turnId+':'+p.itemId,type:'agent_message',delta:p.delta}})
+   return
+  }
   if(m.method==='item/started'||m.method==='item/completed') {
    const key=m.method+':'+p.turnId+':'+p.item.id;if(seenItems.has(key))return;seenItems.add(key)
    const item=itemEvent(p.item,p.turnId);if(item)emit({type:m.method==='item/started'?'item.started':'item.completed',item});return

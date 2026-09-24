@@ -21,6 +21,53 @@ test('native goal second turn survives first completion without synthetic contin
  await running;assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1);assert.equal(events.filter(e=>e.type==='turn.completed').length,1);assert.deepEqual(events.filter(e=>e.item?.type==='agent_message').map(e=>e.item.text),['step one','step two'])
 })
 test('ordinary response finishes and never creates a goal',async()=>{const f=fixture(null),events=[];const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)});await tick();f.note('turn/started',{turn:{id:'a'}});f.note('turn/completed',{turn:{id:'a',status:'completed'}});await p;assert.equal(events.at(-1).type,'turn.completed');assert.equal(f.calls.some(x=>x.method==='thread/goal/set'),false)})
+test('native agent message deltas stream before authoritative completion without changing task lifecycle',async()=>{
+ const f=fixture(null),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ await tick()
+ f.note('turn/started',{turn:{id:'a'}})
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'你'})
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'好'})
+ f.note('item/completed',{turnId:'a',item:{id:'m',type:'agentMessage',text:'你好',phase:'final_answer'}})
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'迟到'})
+ f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await p
+ assert.deepEqual(events.filter(e=>e.type==='item.delta').map(e=>e.item),[
+  {id:'a:m',type:'agent_message',delta:'你'},
+  {id:'a:m',type:'agent_message',delta:'好'}
+ ])
+ assert.equal(events.find(e=>e.type==='item.completed')?.item.text,'你好')
+ const translator=createCodexTranslator()
+ assert.deepEqual(events.flatMap(e=>translator.push(JSON.stringify(e))).filter(e=>e.k==='text.delta'||e.k==='text.done'),[
+  {k:'text.delta',text:'你'},{k:'text.delta',text:'好'},{k:'text.done',text:'你好'}
+ ])
+ assert.equal(events.filter(e=>e.type==='turn.completed').length,1)
+ assert.equal(f.calls.filter(x=>x.method==='turn/start').length,1)
+})
+test('foreign or malformed deltas are ignored; same item id in another turn remains independent',async()=>{
+ const f=fixture(),events=[]
+ const p=runCodexTaskBridge({proc:f.proc,cwd:'/tmp',prompt:'hi',sandbox:'read-only',emit:e=>events.push(e)})
+ await tick()
+ f.send({method:'item/agentMessage/delta',params:{threadId:'foreign',turnId:'a',itemId:'m',delta:'外'}})
+ for(const params of [
+  {turnId:'a',itemId:'m',delta:''},
+  {turnId:1,itemId:'m',delta:'坏'},
+  {turnId:'a',itemId:1,delta:'坏'},
+  {turnId:'a',itemId:'m',delta:1}
+ ])f.note('item/agentMessage/delta',params)
+ f.note('turn/started',{turn:{id:'a'}})
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'一'})
+ f.note('item/completed',{turnId:'a',item:{id:'m',type:'agentMessage',text:'一'}})
+ f.note('turn/completed',{turn:{id:'a',status:'completed'}})
+ await tick()
+ f.note('item/agentMessage/delta',{turnId:'a',itemId:'m',delta:'旧'})
+ f.note('turn/started',{turn:{id:'b'}})
+ f.note('item/agentMessage/delta',{turnId:'b',itemId:'m',delta:'二'})
+ f.note('item/completed',{turnId:'b',item:{id:'m',type:'agentMessage',text:'二'}})
+ f.setGoal('complete');f.note('turn/completed',{turn:{id:'b',status:'completed'}})
+ await p
+ assert.deepEqual(events.filter(e=>e.type==='item.delta').map(e=>e.item.delta),['一','二'])
+})
 test('preserve model, sandbox, resume and role restrictions; reject unknown arguments',()=>{
  const p=parseTaskArgs(['exec','--sandbox','read-only','resume','id','--json','--skip-git-repo-check','-m','gpt-6-astra','--disable','shell_tool','--message'])
  assert.equal(p.prompt,'--message');assert.equal(p.resumeId,'id');assert.equal(p.sandbox,'read-only');assert.equal(p.model,'gpt-6-astra');assert.deepEqual(p.flags,['--disable','shell_tool']);assert.throws(()=>parseTaskArgs(['exec','--unknown','hi']))

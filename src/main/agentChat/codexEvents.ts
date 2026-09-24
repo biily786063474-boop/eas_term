@@ -73,6 +73,12 @@ export function createCodexTranslator(): CodexTranslator {
         return []
       case 'item.started':
         return scoped(translateItemStarted(j))
+      case 'item.delta': {
+        const item = asRecord(j.item)
+        return item?.type === 'agent_message' && typeof item.delta === 'string' && item.delta.length > 0
+          ? [{ k: 'text.delta', text: item.delta }]
+          : []
+      }
       case 'item.completed':
         return scoped(translateItemCompleted(j))
       case 'turn.completed':
